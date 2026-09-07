@@ -116,6 +116,17 @@ create table public.conversation (
   -- sahibidir — iki katlı kanıt, `wa_link_token`ın (0011) aynı kuralı, ters yönde.
   link_proof text check (link_proof in ('order_ref', 'email', 'phone', 'cart_link')),
 
+  -- ── Müşteriyle KONUŞTUĞUMUZ dil (15.28) ─────────────────────────────────────
+  -- Giden mesajın çevrileceği hedef. Enum (tr|fr|de), serbest ISO kodu DEĞİL: alan "müşteri
+  -- hangi dilde yazdı"yı değil "biz ona hangi dilde yazarız"ı söyler ve o küme bizim konuştuğumuz
+  -- üç dildir — Boşnakça yazan müşteriye Boşnakça cevap üretemeyiz, onun satırı boş kalır ve hedef
+  -- yedek zincirden gelir (profil dili → piyasa varsayılanı; karar motorda, `outboundLanguage`).
+  --
+  -- GELEN mesajın tespit edilen dilinden öğrenilir ve SON GELEN KAZANIR: müşterinin yazdığı dil,
+  -- kayıtta operatörün de doldurmuş olabileceği profil tercihinden daha güçlü kanıttır. Üç dilden
+  -- biri değilse ("ok" → en, Boşnakça → bs) dokunulmaz; önceki bilgi kalır.
+  language preferred_language,
+
   -- 24 saatlik servis penceresinin bitişi. Kararı motor verir (`serviceWindowExpiry`), burası
   -- yalnız saklar — süreyi SQL'e de yazsaydık aynı kural iki dilde iki kopya olurdu.
   window_expires_at timestamptz,
@@ -199,6 +210,18 @@ create table public.message (
   -- Boş kalması normaldir: çözülemeyen kayıt, fotoğraf/belge, ya da çözüm henüz koşmamış.
   media_transcript text,
 
+  -- ── Çeviri üçlüsü (15.28) — `ticket_message` ile aynı desen, aynı torba ────
+  -- `language` KANALDAN GEÇEN metnin dilidir: gelen mesajda müşterinin yazdığı, giden mesajda
+  -- müşteriye GÖNDERİLEN cümle. `body->>'text'` daima kanaldan geçen hâldir; operatörün/ajanın
+  -- Türkçesi giden mesajda torbaya düşer (`translations->'tr'`). Kural tek olsun diye: telefondan
+  -- ya da echo'dan düşen giden mesaj da API'den gönderilen de "müşteri ne okudu" sorusuna aynı
+  -- kolondan cevap verir. Sesli mesajda dil transkriptin dilidir (alt yazı yok).
+  -- Serbest ISO 639 (Boşnakça da gelir); torbada kaynak dil YOKTUR; `translated_at` başarısızlıkta
+  -- da dolar ki bozuk tek satır kuyruğun önünü tıkamasın (0026'nın kuralı).
+  language text check (language ~ '^[a-z]{2,3}$'),
+  translations jsonb,
+  translated_at timestamptz,
+
   created_at timestamptz not null default now(),
 
   -- Metin mesajı metinsiz olamaz: `body->>'text'` boşsa ortada bir mesaj yoktur ve ekranda boş bir
@@ -233,6 +256,9 @@ alter table public.message enable row level security;
 
 -- Tek okuma deseni: bir konuşmanın mesajları, eskiden yeniye.
 create index message_conversation_idx on public.message (conversation_id, created_at);
+-- Çeviri kuyruğu (15.28): bakılmamış satırlar, eskiden yeniye — `ticket_message_untranslated_idx`
+-- ile aynı biçim. Kısmi, çünkü kuyruk küçüktür ve tablo büyür; tam indeks çevrilmiş milyonu taşırdı.
+create index message_untranslated_idx on public.message (created_at) where translated_at is null;
 -- Mesaj-düzeyi idempotency'nin SON savunma hattı (15.7): Meta teslimatı 7 gün boyunca tekrarlar;
 -- birincil koruma `webhook_event` claim'idir (provider+event_id = mesaj kimliği), bu indeks ise
 -- claim'in atlandığı bir yolda aynı sağlayıcı mesajının deftere iki kez yazılmasını VERİDE keser.
@@ -330,7 +356,13 @@ create or replace function public.record_message(
   -- satır yazılır; RPC burada karar vermez, yalnız taşır (kural `send.ts`/webhook tarafında).
   p_media_key text default null,
   p_media_mime text default null,
-  p_media_transcript text default null
+  p_media_transcript text default null,
+  -- Çeviri üçlüsü (15.28): giden mesaj gönderimden ÖNCE çevrilir ve gönderilen metinle tek turda
+  -- yazılır — ayrı bir güncelleme, "gitti ama çevirisi yazılamadı" diye ikinci bir yarım hâl
+  -- doğururdu. Gelen mesajda üçü de boş kalır; çeviri yazımdan sonra, webhook'un dışında koşar.
+  p_language text default null,
+  p_translations jsonb default null,
+  p_translated_at timestamptz default null
 ) returns public.message
 language plpgsql
 security invoker
@@ -348,7 +380,7 @@ begin
     raise exception 'template mesaji yalniz whatsapp konusmasina yazilabilir (conversation %)', p_conversation_id;
   end if;
 
-  insert into public.message (conversation_id, direction, author, kind, body, template_name, template_category, provider_message_id, media_key, media_mime, media_transcript)
+  insert into public.message (conversation_id, direction, author, kind, body, template_name, template_category, provider_message_id, media_key, media_mime, media_transcript, language, translations, translated_at)
   values (
     p_conversation_id,
     p_direction,
@@ -360,7 +392,10 @@ begin
     p_provider_message_id,
     p_media_key,
     p_media_mime,
-    p_media_transcript
+    p_media_transcript,
+    p_language,
+    p_translations,
+    p_translated_at
   )
   returning * into v_message;
 
@@ -374,7 +409,7 @@ end;
 $$;
 
 revoke all on function public.open_conversation(conversation_source, text, uuid, text, text) from anon;
-revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender, text, text, text) from anon;
+revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender, text, text, text, text, jsonb, timestamptz) from anon;
 
 comment on table public.conversation is
   'Mesajlaşma konuşması (15.1 · üç kanal 21.08): kaynak (whatsapp/messenger/instagram), kimlik bağı, opt-in, 24s servis penceresi, son hareket.';

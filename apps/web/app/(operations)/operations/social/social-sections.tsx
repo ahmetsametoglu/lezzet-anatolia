@@ -25,7 +25,17 @@ import { Textarea } from '@/components/operation/form/input';
 import { ORDERS_PATH } from '../orders/orders-url';
 import { TICKETS_PATH } from '../tickets/tickets-url';
 import { customersUrl } from '../customers/customers-url';
-import { AI_OUTBOUND_LABEL, OUTBOUND_LABEL, SOURCE_EDGE, SOURCE_LABELS, WINDOW_NOTE, WINDOW_TONE } from './social-labels';
+import {
+  AI_OUTBOUND_LABEL,
+  LANGUAGE_BASIS_NOTE,
+  LANGUAGE_LABELS,
+  languageLabel,
+  OUTBOUND_LABEL,
+  SOURCE_EDGE,
+  SOURCE_LABELS,
+  WINDOW_NOTE,
+  WINDOW_TONE,
+} from './social-labels';
 import type { ConversationDetailView, InboxRowView, MessageView } from './social-types';
 
 // Sosyal gelen kutusunun PANOLARI (15.5 · üç kanal 15.15) — sol kuyruk satırı, orta sohbet, sağ
@@ -128,6 +138,17 @@ function Bubble({ message }: { message: MessageView }) {
   // AI'ın KENDİ gönderdiği mesaj ayrı tonda (16.08): müşteri farkı görmez ama operatör görmeli —
   // "bunu kim söyledi" sorusu sonradan da cevaplanabilmeli (talep yazışmasıyla aynı kural).
   const ai = message.author === 'ai';
+  /*
+    ÇEVİRİ ORİJİNALİN YERİNE GEÇMEZ (15.28 · talep ekranının 20.2 kuralı): varsayılan Türkçe
+    (operatör kuyruğu tarayabilmeli), kanaldan geçen metin bir tık uzakta. Gelen mesajda o metin
+    müşterinin cümlesi (aynen alıntılamak gerekebilir), giden mesajda müşterinin GERÇEKTE okuduğu
+    cümle — "ben öyle demedim" tartışmasında bakılacak yer orası. Künye sesli mesajda transkripte,
+    ötekilerde gövdeye aittir; hangisiyse orijinal onun yerine geçer.
+  */
+  const [showOriginal, setShowOriginal] = useState(false);
+  const original = message.translation && showOriginal ? message.translation : null;
+  const transcript = original && message.mediaTranscript ? original.original : message.mediaTranscript;
+  const text = original && !message.mediaTranscript ? original.original : message.text;
   return (
     <MessageRow
       side={mine ? 'out' : 'in'}
@@ -150,11 +171,30 @@ function Bubble({ message }: { message: MessageView }) {
           çiziyordu; operatör aynı mesajı çıplak yıldızlarla görüyordu — iki taraf aynı cümleyi
           farklı okuyordu. Çizici ortak (`ChatText`), balonun DERİSİ yine `bubbleClass`. */}
       <div className={bubbleClass(ai ? 'violet' : mine ? 'olive' : 'neutral', 'flex flex-col gap-2')}>
-        <MediaBody message={message} />
+        <MediaBody message={message} transcript={transcript} lang={original?.language ?? undefined} />
         {/* Metin medyanın ALTINDA: gelen bir fotoğrafta metin alt yazıdır, başlık değil. Metin
-            yoksa satır hiç çizilmiyor — boş bir balon gövdesi, olmayan bir mesaj gösterirdi. */}
-        {message.text ? <ChatText text={message.text} /> : null}
+            yoksa satır hiç çizilmiyor — boş bir balon gövdesi, olmayan bir mesaj gösterirdi.
+            Orijinal gösteriliyorsa dili söylenir: tarayıcı çevirisi Fransızcayı Türkçe sanmasın. */}
+        {text ? <ChatText text={text} lang={original && !message.mediaTranscript ? (original.language ?? undefined) : undefined} /> : null}
       </div>
+      {message.translation ? (
+        <span className={`flex items-center gap-2 ${mine ? 'self-end' : ''}`}>
+          {/* MOR = makine konuştu (`ui/tone.ts`): gelen mesajda ekrandaki cümle makine çevirisidir;
+              giden mesajda müşteriye giden cümle makine çevirisidir. Rozet iki yönde de bunu söyler. */}
+          <Badge tone="violet">
+            {mine
+              ? `${languageLabel(message.translation.language)} gönderildi`
+              : `otomatik çevrildi · ${languageLabel(message.translation.language)}`}
+          </Badge>
+          <button
+            type="button"
+            onClick={() => setShowOriginal((v) => !v)}
+            className="cursor-pointer font-ops-body text-ops-micro font-semibold text-ops-olive-dark underline-offset-2 hover:underline"
+          >
+            {showOriginal ? (mine ? 'Türkçesini göster' : 'Çeviriyi göster') : mine ? 'Gönderileni göster' : 'Orijinali göster'}
+          </button>
+        </span>
+      ) : null}
     </MessageRow>
   );
 }
@@ -169,7 +209,7 @@ function Bubble({ message }: { message: MessageView }) {
  * **Adres yoksa gövde YİNE ÇİZİLİR** ("[medya]" değil, sebebiyle birlikte): mesajın kendisi
  * kaybolmadı, yalnız dosyası elimizde yok. Boş bırakmak, operatöre olmayan bir sessizlik gösterirdi.
  */
-function MediaBody({ message }: { message: MessageView }) {
+function MediaBody({ message, transcript, lang }: { message: MessageView; transcript: string | null; lang?: string }) {
   if (message.kind !== 'media') return null;
 
   const mime = message.mediaMime ?? '';
@@ -178,11 +218,16 @@ function MediaBody({ message }: { message: MessageView }) {
   }
   if (mime.startsWith('image/')) {
     return (
-      /* Ham `<img>` ve sebebi var: adres İMZALI ve SÜRELİ. `next/image` onu kendi önbelleğine
-         almaya çalışır; adres birkaç dakikada öldüğü için önbellekte kırık bir kayıt kalır ve
-         optimizasyondan kazanılan hiçbir şey yoktur — dosya zaten operatörün tek seferlik baktığı
-         bir kanıt, katalog görseli değil. */
-      <img src={message.mediaUrl} alt="Müşterinin gönderdiği görsel" className="max-h-72 w-auto rounded-ops-sm" />
+      /* Tıklayınca yeni sekmede TAM boy (talep ekranının ek küçük resimleriyle aynı desen): ezik
+         kutunun köşesi 288 piksellik önizlemede görünmez, operatör kanıta yakından bakabilmeli.
+         Bağlantı GEÇİDE gider — gezinme anında yeniden imzalanır, bayat adres yok. */
+      <a href={message.mediaUrl} target="_blank" rel="noreferrer" className="cursor-pointer transition-opacity hover:opacity-80">
+        {/* Ham `<img>` ve sebebi var: geçidin arkasındaki adres İMZALI ve SÜRELİ. `next/image` onu
+            kendi önbelleğine almaya çalışır; adres birkaç dakikada öldüğü için önbellekte kırık bir
+            kayıt kalır ve optimizasyondan kazanılan hiçbir şey yoktur — dosya zaten operatörün tek
+            seferlik baktığı bir kanıt, katalog görseli değil. */}
+        <img src={message.mediaUrl} alt="Müşterinin gönderdiği görsel" className="max-h-72 w-auto rounded-ops-sm" />
+      </a>
     );
   }
   if (mime.startsWith('audio/')) {
@@ -192,10 +237,13 @@ function MediaBody({ message }: { message: MessageView }) {
         {/* Çözülmüş metin kaydın ALTINDA ve künyeli. Balonun kendi metniymiş gibi çizilseydi
             operatör onu müşterinin YAZDIĞI cümle sanırdı; oysa makine duyduğunu yazdı ve
             yanılmış olabilir. Kayıt yerinde duruyor — şüphelenen dinler. */}
-        {message.mediaTranscript ? (
+        {transcript ? (
           <>
             <span className="font-ops-mono text-ops-micro text-ops-faint">yazıya çevrildi · makine</span>
-            <span className="whitespace-pre-wrap font-ops-body text-ops-micro italic text-ops-lead">{message.mediaTranscript}</span>
+            {/* Transkript operatörün dilinde gelir (15.28); orijinali gösterilirken `lang` dolar. */}
+            <span lang={lang} className="whitespace-pre-wrap font-ops-body text-ops-micro italic text-ops-lead">
+              {transcript}
+            </span>
           </>
         ) : null}
       </div>
@@ -265,6 +313,8 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
           </Button>
         ) : null}
         <Badge tone={WINDOW_TONE[detail.window.tone]}>{detail.window.chip}</Badge>
+        {/* Müşterinin dili (15.28) — operatör Türkçe yazar, giden bu dile çevrilir; dayanağı altlıkta. */}
+        <Badge tone="slate">{LANGUAGE_LABELS[detail.language.language]}</Badge>
         <Button variant="secondary" size="sm" className="flex-none whitespace-nowrap" onClick={onIncoming}>
           Gelen mesaj işle
         </Button>
@@ -333,6 +383,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
         key={detail.id}
         source={detail.source}
         window={detail.window}
+        language={detail.language}
         busy={busy}
         error={error}
         prefill={prefill}
@@ -345,6 +396,8 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
 interface ReplyBoxProps {
   source: ConversationDetailView['source'];
   window: ConversationDetailView['window'];
+  /** Müşteriye hangi dilde gideceği ve dayanağı (15.28) — altlık bunu operatöre SÖYLER. */
+  language: ConversationDetailView['language'];
   busy: boolean;
   error: string | null;
   /** Hibrit taslağın taşıdığı metin — nesne kimliği değişince kutuya yazılır (16.08). */
@@ -371,8 +424,19 @@ interface ReplyBoxProps {
  * **GELEN mesaj burada işlenmez** — o iş "Gelen mesaj işle" penceresinin, çünkü gelen mesaj
  * pencereyi AÇAN olaydır ve alınma anını ister.
  */
-function ReplyBox({ source, window: win, busy, error, prefill, onSendReply }: ReplyBoxProps) {
+function ReplyBox({ source, window: win, language, busy, error, prefill, onSendReply }: ReplyBoxProps) {
   const [text, setText] = useState('');
+
+  /*
+    DİL CÜMLESİ (15.28): operatör Türkçe yazar ve mesaj müşterinin diline çevrilerek gider — bunu
+    görmeden gönderen operatör, müşterinin Fransızca okuduğunu bilmez ve "neden Türkçe cevap
+    yazdın" sorusu asla cevaplanamaz. Türkçe konuşan müşteride çeviri yok ve bu da söylenir.
+    Dayanak parantezde: varsayılana düşmüş sohbet (müşteri henüz yazmadı) dikkat ister.
+  */
+  const dilNotu =
+    language.language === 'tr'
+      ? `Müşteriyle Türkçe yazışılıyor (${LANGUAGE_BASIS_NOTE[language.basis]}).`
+      : `Türkçe yazın — müşteriye ${LANGUAGE_LABELS[language.language]} çevrilerek gider (${LANGUAGE_BASIS_NOTE[language.basis]}).`;
 
   // Taslak kutuya OPERATÖRÜN kararıyla taşınır ("Cevap kutusuna taşı") — ezmesi bu yüzden kabul:
   // basılan düğme zaten "bu metinle çalışacağım" demek (talep ekranıyla aynı kural).
@@ -421,6 +485,7 @@ function ReplyBox({ source, window: win, busy, error, prefill, onSendReply }: Re
           </>
         )}
       </span>
+      <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">{dilNotu}</span>
     </div>
   );
 }

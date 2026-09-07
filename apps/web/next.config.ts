@@ -22,8 +22,19 @@ function supabaseOrigins(): { http: string; ws: string } {
 // cdn.<domain> buraya eklenir. Görsel `<img>` = img-src.
 const R2_HOSTS = 'https://*.r2.dev';
 
-// S3 API host'u — YALNIZ `connect-src`, yalnız YÜKLEME için (11.2, ölçüldü 08.08).
+// S3 API host'u — iki iş: YÜKLEME (`connect-src`, 11.2) ve PRIVATE kovadan OKUMA (`img-src` +
+// `media-src`, 15.25). Public kova (`*.r2.dev`) değil, imzalı adreslerin yaşadığı S3 host'u.
 //
+// ── OKUMA TARAFI 07.09'DA AÇILDI (15.25) — VE İLK TEŞHİS YANLIŞTI ────────────────────────────
+// Sohbet medyası (fotoğraf/ses) ve şikâyet ekleri private kovadan imzalı adresle okunuyor; adres bu
+// host'ta. `img-src` yalnız `*.r2.dev`i tanıyordu ve `media-src` HİÇ yoktu (`default-src 'self'`e
+// düşüyordu): tarayıcı fotoğrafı ve sesi CSP'de kesiyordu — sunucu 200 dönerken. Teşhis bir tur
+// "adres süresi doldu" oldu ve geçit yazıldı (o da gerekliydi: adres sekmede ölüyordu); asıl engel
+// ekran görüntüsü aracının konsol dökümünde çıktı: *"violates the following Content Security Policy
+// directive"*. Talep ekranının ek küçük resimleri (`Thumbnail`, private kova) de aynı sebeple hiç
+// çizilmiyordu — bağlantıyla açmak çalışıyordu, çünkü gezinme `img-src`e tabi değil.
+//
+// ── YÜKLEME TARAFININ TARİHİ (08.08) ──────────────────────────────────────────────────────────
 // 05.11'de bilerek dışarıda bırakılmıştı ve o gün doğruydu: *"yükleme sunucu tarafında, tarayıcı o
 // host'a hiç gitmiyor"*. Sonra kapı değişti — teslim kanıtının yükleme kapısı (`lib/courier/proof.ts`)
 // imzalı adres üretiyor ve künyesi *"dosya SUNUCUDAN GEÇMEZ: tarayıcı doğrudan R2'ye yükler"* diyor.
@@ -33,9 +44,9 @@ const R2_HOSTS = 'https://*.r2.dev';
 //
 // **Neden sunucuya taşımak değil de host açmak:** dosyayı sunucu üzerinden geçirmek fotoğrafı iki kez
 // taşımak ve Next'in gövde sınırıyla boğuşmak demek — kapının kendi künyesi bu yolu bilinçle
-// reddediyor. Açılan yüzey dar: yalnız `connect-src` (bu host'tan script çalıştırılamaz, çerçeve
-// açılamaz), ve giden şey imzalı, süreli (10 dk) bir adrese yapılan tek PUT.
-const R2_UPLOAD_HOST = 'https://*.r2.cloudflarestorage.com';
+// reddediyor. Açılan yüzey dar: `connect-src` (PUT) + `img-src`/`media-src` (GET) — bu host'tan
+// script çalıştırılamaz, çerçeve açılamaz; giden ve gelen her şey imzalı, süreli adreslerdir.
+const R2_S3_HOST = 'https://*.r2.cloudflarestorage.com';
 
 // Stripe host'ları (07.5) — kart alanı KENDİ checkout sayfamızda, Stripe'ın `PaymentElement`
 // iframe'i içinde (ADR Sapma 6). Barındırılan Checkout'a yönlendirseydik hiçbiri gerekmezdi;
@@ -89,8 +100,9 @@ const BAN_API = 'https://data.geopf.fr';
 
 /**
  * Güvenlik başlıkları (referans deseninden uyarlandı). CSP host'ları modül geldikçe genişler.
- * Bugün: self + Supabase + R2 görselleri + Stripe (kart alanı, 07.5) + harita karoları (bölge
- * kurulumu, 19.20) + adres servisi (BAN, 08.51) + next/font (self-hosted).
+ * Bugün: self + Supabase + R2 görselleri (public) + R2 private medya (fotoğraf/ses, 15.25) + Stripe
+ * (kart alanı, 07.5) + harita karoları (bölge kurulumu, 19.20) + adres servisi (BAN, 08.51) +
+ * next/font (self-hosted).
  */
 function securityHeaders(): Array<{ key: string; value: string }> {
   const { http: sbHttp, ws: sbWs } = supabaseOrigins();
@@ -102,9 +114,12 @@ function securityHeaders(): Array<{ key: string; value: string }> {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline' ${STRIPE_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_UPLOAD_HOST} ${STRIPE_API} ${BAN_API}`.replace(/\s+/g, ' ').trim(),
-    // Harita karoları BURADA ve yalnız burada: Leaflet onları `<img>` olarak yükler.
-    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${STRIPE_IMG} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
+    `connect-src 'self' ${sbHttp} ${sbWs} ${R2_HOSTS} ${R2_S3_HOST} ${STRIPE_API} ${BAN_API}`.replace(/\s+/g, ' ').trim(),
+    // Harita karoları BURADA ve yalnız burada: Leaflet onları `<img>` olarak yükler. Private kova
+    // (sohbet fotoğrafı, şikâyet eki) da burada — imzalı adres, S3 host'u (15.25).
+    `img-src 'self' data: blob: ${sbHttp} ${R2_HOSTS} ${R2_S3_HOST} ${STRIPE_IMG} ${MAP_TILES}`.replace(/\s+/g, ' ').trim(),
+    // Sesli mesaj `<audio>` (15.25): yönerge yoksa `default-src 'self'` devreye girer ve kaydı keser.
+    `media-src 'self' ${R2_S3_HOST}`,
     "font-src 'self' data:",
     `frame-src 'self' ${STRIPE_FRAME}`,
     "object-src 'none'",

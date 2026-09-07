@@ -1,13 +1,14 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { CustomerPhoneService, EmailVerificationService, OrderService, UserProfileService } from '@lezzet/database';
+import { ConversationService, CustomerPhoneService, EmailVerificationService, OrderService, UserProfileService } from '@lezzet/database';
 import { anchorStateOf, canOpenHistory, needsChallenge, sixDigitCodeIn, type AnchorState } from '@lezzet/domain-core';
-import type { ChallengeReason, CustomerPhone, UserProfile } from '@lezzet/types';
+import type { ChallengeReason, CustomerPhone, PreferredLanguage, UserProfile } from '@lezzet/types';
 import { brand } from '@lezzet/brand';
 import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { captureError, logger, maskEmail, SOURCES } from '@lezzet/observability';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { devOtpCode } from '../auth/otp';
 import { sendOutboundMessage, type MessageSender } from '../messaging/send';
+import { resolveOutboundLanguage } from '../messaging/translate';
 
 /*
   ── KİMLİK ÇAPASI — KURULUŞ (04.10) ──────────────────────────────────────────────────────────────
@@ -438,9 +439,18 @@ export async function anchorGateOf(db: SupabaseClient, customerId: string): Prom
   olmaz**: kapı sonsuza kadar kapalı, kimse de açamaz.
 */
 
-/** Kodun müşteriye söylendiği CÜMLE — tek yerde. İki çağıran var (operatör düğmesi · otomatik kapı). */
-const SECURITY_CODE_MESSAGE = (code: string): string =>
-  `Güvenlik kodunuz: ${code}\nBunu saklayın — zaman zaman siz olduğunuzu teyit etmek için isteyebiliriz.`;
+/**
+ * Kodun müşteriye söylendiği CÜMLE — tek yerde. İki çağıran var (operatör düğmesi · otomatik kapı).
+ *
+ * ELLE üç dilde (15.28): gönderim kapısı çeviriyor ama bu cümle bir sistem mesajı — sabit, kısa ve
+ * içinde bir SIR var. Modelden geçirmek hem her seferinde bir tur ödemek hem de kodu gereksiz yere
+ * üçüncü bir tarafa göstermek olurdu; kapıya dil bildirilince (`language`) model hiç çağrılmıyor.
+ */
+const SECURITY_CODE_MESSAGE: Record<PreferredLanguage, (code: string) => string> = {
+  tr: (code) => `Güvenlik kodunuz: ${code}\nBunu saklayın — zaman zaman siz olduğunuzu teyit etmek için isteyebiliriz.`,
+  fr: (code) => `Votre code de sécurité : ${code}\nConservez-le — nous pourrons vous le demander pour vérifier que c'est bien vous.`,
+  de: (code) => `Ihr Sicherheitscode: ${code}\nBewahren Sie ihn auf — wir fragen ihn gelegentlich ab, um sicherzugehen, dass Sie es sind.`,
+};
 
 export type IssueAndSendOutcome =
   /** Kod üretildi ve sohbete yazıldı. `code` yalnız GÖNDERİM DÜŞTÜYSE dolu — çağıran elle iletsin diye. */
@@ -465,7 +475,14 @@ export async function issueAndSendSecurityCode(
   const verilen = await issueSecurityCode(db, input.customerId);
   if (verilen.status !== 'ok') return { status: verilen.status };
 
-  const gonderim = await sendOutboundMessage(db, sender, { conversationId: input.conversationId, text: SECURITY_CODE_MESSAGE(verilen.code) });
+  // Dil KAPININ kararıyla aynı yerden okunur ki kapı bu hazır metni yanlış dilde sanıp modele sokmasın.
+  const konusma = await new ConversationService(db).getById(input.conversationId);
+  const { language: dil } = await resolveOutboundLanguage(db, { language: konusma?.language ?? null, customerId: input.customerId });
+  const gonderim = await sendOutboundMessage(db, sender, {
+    conversationId: input.conversationId,
+    text: SECURITY_CODE_MESSAGE[dil](verilen.code),
+    language: dil,
+  });
   if (gonderim.status === 'sent') return { status: 'sent', code: null };
   return { status: 'send_failed', code: verilen.code, reason: gonderim.reason };
 }

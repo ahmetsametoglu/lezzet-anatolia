@@ -1,5 +1,6 @@
+import { resolveOutboundLanguage } from '@lezzet/application';
 import { ConversationService, MessageService, TicketService, serviceDb } from '@lezzet/database';
-import { privateReadUrl } from '@lezzet/storage';
+import type { OutboundLanguage } from '@lezzet/domain-core';
 import type { Conversation, Message, Ticket } from '@lezzet/types';
 
 /**
@@ -16,20 +17,36 @@ import type { Conversation, Message, Ticket } from '@lezzet/types';
  * sarmalamak yalnız bir dolaylılık katmanı olurdu.
  */
 /**
- * Mesaj + **süreli** medya adresi. Adres satırda saklanmaz, her okumada üretilir: private kovanın
- * tek okuma yolu imzalı adrestir ve o adres dakikalar içinde ölür (`privateReadUrl`). Kalıcı bir
- * adres saklasaydık, sohbeti okuma yetkisi olmayan biri de bağlantıyı ele geçirdiğinde okurdu.
+ * Mesaj + medya adresi. Adres **imzalı R2 bağlantısı değil, kendi geçidimiz** (`media/[id]/route`).
+ *
+ * ── NEDEN GEÇİT (07.09, canlı turda ölçüldü) ────────────────────────────────
+ * İlk turda buradan imzalı adres dönüyordu ve o adres 15 dakikada ölüyor. Ekran SUNUCUDA çizildiği
+ * için adres sayfa yüklendiği an imzalanıyordu: operatör sekmeyi açık bıraktığında fotoğraf kırık
+ * kareye, ses `0:00 / 0:00`a döndü. Ölçüm sebebi kesinleştirdi — Origin ile istek 200, süresi
+ * geçmiş adres 403.
+ *
+ * Geçit adresi bayatlatmıyor (tarayıcı her seferinde bize geliyor) ve yetkiyi HER istekte
+ * denetliyor; imzalı adres yalnız o anlık yönlendirme için üretiliyor.
  */
 export interface MessageWithMedia extends Message {
-  /** `null`: medya yok, kova ayarlı değil (yerel), ya da indirme o gün düşmüştü. */
+  /** `null`: mesajın medyası yok — indirme düşmüşse de böyle. Geçit yolu, süreli adres değil. */
   mediaUrl: string | null;
 }
+
+/** Medyanın yetkili geçidi — imzalı R2 adresi burada DEĞİL, geçidin arkasında üretilir. */
+const MEDIA_GATE = '/operations/social/media';
 
 interface ConversationDetailData {
   conversation: Conversation;
   /** Eskiden yeniye — okunan şey bir sohbet. */
   messages: MessageWithMedia[];
   tickets: Ticket[];
+  /**
+   * Müşteriye hangi dilde yazılacağı ve dayanağı (15.28) — gönderim kapısıyla AYNI karardan
+   * (`resolveOutboundLanguage`). Ekran kendi hesaplasaydı bir gün kapıdan ayrışır ve operatör
+   * "Fransızca gönderilir" okurken mesaj Almanca giderdi.
+   */
+  language: OutboundLanguage;
 }
 
 /**
@@ -49,24 +66,18 @@ export async function readConversationDetail(conversationId: string): Promise<Co
   if (!conversation) return null;
 
   // Mesajlar ve talepler konuşmanın kendisine bağlı — müşteri çözülmese de okunurlar.
-  const [messages, tickets] = await Promise.all([
+  const [messages, tickets, language] = await Promise.all([
     new MessageService(db).listByConversation(conversationId),
     new TicketService(db).listByConversation(conversationId),
+    resolveOutboundLanguage(db, conversation),
   ]);
 
-  /*
-    Medya adresleri TEK TURDA imzalanır (`privateReadUrls` deseni): ayrı ayrı `await` edilseydi
-    beş fotoğraflı bir sohbet beş turluk gecikme yerdi ve imzalama zaten yerel bir hesap.
-
-    Yetki kapısı yukarıda: bu okuma `requireAdmin`in arkasında ve anahtar SATIRDAN geliyor, yani
-    dışarıdan gelen bir dizeyi imzalamıyoruz. `conversationMediaScope` kontrolü bu yüzden burada
-    değil — o, anahtarın istemciden geldiği yollar içindir.
-  */
-  const mediaUrls = await Promise.all(messages.map((m) => privateReadUrl(m.mediaKey)));
-
+  // Adres imzalanmıyor, GEÇİDE işaret ediliyor: imza mesajın açıldığı ana değil, tarayıcının
+  // dosyayı istediği ana ait olmalı (künye yukarıda).
   return {
     conversation,
-    messages: messages.map((m, i) => ({ ...m, mediaUrl: mediaUrls[i] ?? null })),
+    messages: messages.map((m) => ({ ...m, mediaUrl: m.mediaKey ? `${MEDIA_GATE}/${m.id}` : null })),
     tickets,
+    language,
   };
 }

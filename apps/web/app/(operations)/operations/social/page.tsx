@@ -87,6 +87,8 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
     externalRef: detail.conversation.externalRef,
     profileName: detail.conversation.profileName,
     window: toWindowView(detail.conversation.windowExpiresAt, now),
+    // Hedef dil okuma kapısından, gönderim kapısıyla aynı karar (15.28) — ekran hesaplamaz.
+    language: detail.language,
     messages: toMessageViews(detail.messages),
     context,
     tickets: detail.tickets.map((t) => ({

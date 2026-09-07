@@ -1,9 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { AiModel } from '@lezzet/ai';
 import { ConversationService } from '@lezzet/database';
 import { humanAgentWindowState, serviceWindowState } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { ConversationSource, Message, MessageKind, TemplateCategory, TicketSender } from '@lezzet/types';
+import type { ConversationSource, Message, MessageKind, PreferredLanguage, TemplateCategory, TicketSender } from '@lezzet/types';
 import { recordOutboundMessage } from './record';
+import { prepareOutboundText } from './translate';
 
 /**
  * **GİDEN MESAJ KAPISI** (15.11 iskeleti) — gönderim ve defter yazımı TEK yerde.
@@ -19,6 +21,15 @@ import { recordOutboundMessage } from './record';
  * alınamaz** — müşteri mesajı okumuştur. Defter yazımı ise telafi edilebilir; elimizde sağlayıcı
  * mesaj kimliği vardır ve Messenger/IG'de echo webhook'u satırı zaten geri getirir.
  * Bu yüzden düşen defter yazımı `captureError`la GÜRÜLTÜ çıkarır, sessizce yutulmaz.
+ *
+ * ── ÇEVİRİ KAPININ İÇİNDE (15.28) ───────────────────────────────────────────
+ * Operatör de ajan da Türkçe yazar; müşteri kendi dilinde okumalı. Çeviri gönderimden ÖNCE ve
+ * BURADA koşuyor (`prepareOutboundText`), çağıranlarda değil: bu kapının dört çağıranı var (web
+ * eylemi · özerk ajan · devir haberi · mobil uç) ve çeviriyi her birine bırakmak, birinin
+ * unutmasıydı — unutan çağıranın müşterisi Türkçe okurdu ve hiçbir yerde hata çıkmazdı.
+ * Gönderilen metin defterin `body.text`i olur, yazılan Türkçe torbaya düşer (künye `translate.ts`).
+ * Çeviri düşerse mesaj GİTMEZ (`failed/translation_failed`): Türkçeyi Fransız müşteriye
+ * göndermek sessiz arızadır, göndermemek gürültülü.
  *
  * ── SAĞLAYICI BİR PORTTUR, İSTEMCİ DEĞİL ────────────────────────────────────
  * Uygulama katmanı HTTP bilmez (`STACK §4`). `MessageSender` bir arayüzdür; Cloud API istemcisi onu
@@ -67,6 +78,13 @@ export interface SendMessageInput {
    * dilimizken sağlayıcı arızası gibi okunuyordu.
    */
   templateLanguage?: string | null;
+  /**
+   * Metnin YAZILDIĞI dil — çağıran biliyorsa söyler (15.28). Hedef dille aynıysa çeviri modeli hiç
+   * çağrılmaz: elle üç dilde yazılmış sistem mesajları (bağlama onayı, güvenlik kodu) böyle geçer —
+   * bedava, deterministik, ve güvenlik kodu gibi bir değer gereksiz yere modelden geçmez. Boşsa
+   * kapı dili tespit eder.
+   */
+  language?: PreferredLanguage | null;
 }
 
 export type SendResult =
@@ -107,10 +125,16 @@ export type SendOutcome =
  * yanlış kanal) ve tekrar denemek anlamsızdır; ikincisi sağlayıcı tarafıdır ve `retryable` olabilir.
  * Tek kovaya atmak, çağıranı "yeniden dene" düğmesini yanlış yere koymaya iterdi.
  */
+/** Test/enjeksiyon: çeviri modeli verilirse env ve ağ atlanır (`translate-user-text` deseni). */
+export interface SendOptions {
+  model?: AiModel;
+}
+
 export async function sendOutboundMessage(
   db: SupabaseClient,
   sender: MessageSender,
   input: SendMessageInput,
+  opts: SendOptions = {},
 ): Promise<SendOutcome> {
   const conversation = await new ConversationService(db).getById(input.conversationId);
   if (!conversation) return { status: 'refused', reason: 'conversation_not_found' };
@@ -184,7 +208,19 @@ export async function sendOutboundMessage(
     );
   }
 
-  const result = await sender.send(target, input);
+  /* ÇEVİRİ GÖNDERİMDEN ÖNCE (15.28) — künyesi yukarıda ve `translate.ts`te. Düşerse sağlayıcıya
+     HİÇ gidilmez ve deftere yazılmaz; `retryable`, çünkü sebep bizim tarafta ve geçici. */
+  const hazir = await prepareOutboundText(db, conversation, input, opts);
+  if (!hazir.ok) {
+    logger.warn(
+      { context: 'messaging/send', conversationId: conversation.id, reason: hazir.reason },
+      'giden mesaj ÇEVRİLEMEDİ — gönderilmedi, deftere yazılmadı',
+    );
+    return { status: 'failed', reason: 'translation_failed', retryable: true };
+  }
+  const giden: SendMessageInput = { ...input, text: hazir.text };
+
+  const result = await sender.send(target, giden);
   if (!result.ok) {
     logger.warn(
       { context: 'messaging/send', conversationId: conversation.id, driver: sender.name, reason: result.reason },
@@ -194,7 +230,14 @@ export async function sendOutboundMessage(
   }
 
   try {
-    const message = await recordOutboundMessage(db, { ...input, providerMessageId: result.providerMessageId });
+    // Deftere GÖNDERİLEN metin ve çeviri üçlüsü tek turda: satır "müşteri ne okudu" der.
+    const message = await recordOutboundMessage(db, {
+      ...giden,
+      language: hazir.language,
+      translations: hazir.translations,
+      translatedAt: hazir.translatedAt,
+      providerMessageId: result.providerMessageId,
+    });
     return { status: 'sent', message, providerMessageId: result.providerMessageId };
   } catch (err) {
     /*

@@ -243,6 +243,13 @@ export {
   type SendResult,
   type SendTarget,
 } from './messaging/send';
+/*
+  Sohbet çevirisi (15.28): kuyruk (`apps/backend`) mesaj kaynağını buradan kurar, web'in okuma
+  kapısı hedef dili buradan sorar. Gönderim anındaki çeviri dışa VERİLMİYOR — kapının içinde
+  (`sendOutboundMessage`) yaşıyor ki ikinci bir çağıran doğmasın.
+*/
+export { resolveOutboundLanguage, saveMessageTranslation } from './messaging/translate';
+export type { MessageTranslationPatch } from './messaging/translate';
 export type { RecordMessageInput } from './messaging/record';
 export type { LinkProof, LinkOutcome } from './messaging/link';
 export type { ConversationOptInOutcome } from './messaging/opt-in';

@@ -441,11 +441,13 @@ describe('siparislerim — durum söyler, TUTAR söylemez', () => {
     expect(bizimki!.durum).not.toBe('pending');
   });
 
-  it('siparişi olmayan müşteride BOŞ liste — "bilinmiyor" değil', async () => {
-    // Boş liste bir cevaptır: "hiç siparişiniz görünmüyor" denebilir. `bilinmiyor` ise okuma
-    // düştüğünde gelir ve devretmeyi gerektirir; ikisini karıştırmak müşteriyi boşuna beklet(ir)di.
+  it('siparişi olmayan müşteride boşluğun ADI söylenir — "bilinmiyor" değil', async () => {
+    // Boş liste bir cevaptır ama ADSIZ boş liste değil (f250e161): açıklamasız `[]` modelce
+    // "erişemiyorum" diye yorumlandı ve ajan boşuna devretti. Şimdi araç boşluğu cümleyle söylüyor.
+    // `bilinmiyor` ise okuma düştüğünde gelir ve devretmeyi gerektirir; ikisi karışmamalı.
     const sonuc = await cagir(customerSupportTools(db, adressizId), 'siparislerim');
-    expect(sonuc.siparisler).toEqual([]);
+    expect(sonuc.siparisler).toBeUndefined();
+    expect(String(sonuc.siparisYok)).toContain('kayıtlı siparişi YOK');
     expect(sonuc.bilinmiyor).toBeUndefined();
   });
 });

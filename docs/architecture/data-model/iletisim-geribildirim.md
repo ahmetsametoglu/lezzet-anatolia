@@ -28,6 +28,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | `linked_by` | uuid | • |  |
 | `linked_at` | timestamptz | • |  |
 | `link_proof` | text | • |  |
+| `language` | preferred_language | • |  |
 | `window_expires_at` | timestamptz | • |  |
 | `last_message_at` | timestamptz | • |  |
 | `created_at` | timestamptz |  | `now()` |
@@ -49,6 +50,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 - **`linked_by`** — bağı KURAN personel (15.19) — FK `set null`, yani kim bağladığı kaybolabilir
 - **`linked_at`** — bağın kurulduğu an; kanıtla BİRLİKTE dolar (kısıt)
 - **`link_proof`** — kanıtın TÜRÜ (`order_ref`,`email`,`phone` operatörün; `cart_link` sistemin — 15.22) — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan). `cart_link`: sohbette kurulan sepetin bağlantısını açıp giriş yapan kişi; kanıt operatörün değil sistemin doğruladığı jetondur (`cart_link` tablosu), `linked_by` bu yüzden boş
+- **`language`** — **müşteriyle KONUŞTUĞUMUZ dil** (15.28) — giden mesajın çevrileceği hedef. Enum (tr|fr|de), serbest ISO kodu DEĞİL: "müşteri hangi dilde yazdı"yı değil "biz ona hangi dilde yazarız"ı söyler; Boşnakça yazan müşteriye Boşnakça cevap üretemeyiz. Gelen mesajın tespit edilen dilinden öğrenilir, **son gelen kazanır**, üç dilden değilse dokunulmaz. `null` = müşteri henüz üç dilden birinde yazmadı → hedef yedek zincirden (profil tercihi → piyasa varsayılanı; karar motorda, `outboundLanguage`)
 - **`window_expires_at`** — 24s servis penceresi bitişi — süre üç kanalda aynı; EKONOMİSİ değil (ücret/şablon yalnız WhatsApp)
 
 **Bir kişi, bir konuşma — kanal başına** — tekillik `(source, external_ref)` üzerinde (0039). Üç kanalda da thread kavramı yoktur: aynı kişiden gelen her mesaj aynı sohbetin devamıdır. İndeks olmasaydı ikinci mesaj yeni bir satır açar, admin aynı müşteriyi gelen kutusunda iki kez görür, AI ajanı geçmişin yarısını okurdu. Açılış bu yüzden tek deyimlik upsert (`open_conversation`): oku-sonra-yaz yarışır ve canlı kanalda arka arkaya gelen iki mesajın ikincisi kaybolurdu. **Hesap boyutu tekillikte DEĞİL (bilinçli):** PSID sayfa-kapsamlıdır ve ikinci bir işletme hesabı (ikinci numara/sayfa) açıldığı gün tekillik `(source, provider_account_ref, external_ref)` üçlüsüne genişletilir — bugün genişletmek, elle işlenen (hesapsız) geçmişi webhook geçmişinden bölerdi; kolon yine de bugünden var, çünkü sonradan eklenen kolon o güne kadarki geçmişi belirsiz bırakır.
@@ -82,12 +84,16 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | `media_key` | text | • |  |
 | `media_mime` | text | • |  |
 | `media_transcript` | text | • |  |
+| `language` | text | • |  |
+| `translations` | jsonb | • |  |
+| `translated_at` | timestamptz | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 
 **Kararlar**
 
 - **`direction`** — müşteri→biz / biz→müşteri
+- **`language`** / **`translations`** / **`translated_at`** — çeviri üçlüsü (15.28), `ticket_message` ile aynı desen ve aynı torba kuralı (kaynak dil torbada YOK; damga başarısızlıkta da dolar). **`language` KANALDAN GEÇEN metnin dilidir:** gelen mesajda müşterinin yazdığı, giden mesajda müşteriye GÖNDERİLEN cümle — `body->>'text'` daima kanaldan geçen hâldir, operatörün/ajanın Türkçesi giden mesajda torbada (`translations->'tr'`) durur. Sesli mesajda dil transkriptin dilidir (alt yazı yok). Kural tek olsun diye: telefondan/echo'dan düşen giden mesaj da API'den gönderilen de "müşteri ne okudu" sorusuna aynı kolondan cevap verir. Kısmi indeks `message_untranslated_idx` kuyruk için
 - **`author`** — kim yazdı (16.08) — yönle çelişemez (kısıt): gelen daima `customer`
 - **`template_name`** — outbound template ise (Meta-onaylı)
 - **`template_category`** — şablonun **ücret sınıfı** — adla birlikte gelir, ondan ayrı düşemez

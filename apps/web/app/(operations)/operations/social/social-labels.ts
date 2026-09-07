@@ -1,4 +1,5 @@
-import type { ConversationSource, MessageKind, TemplateCategory } from '@lezzet/types';
+import type { OutboundLanguageBasis } from '@lezzet/domain-core';
+import { PreferredLanguageEnum, type ConversationSource, type MessageKind, type PreferredLanguage, type TemplateCategory } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { WindowView } from './social-types';
 
@@ -50,6 +51,34 @@ export const TEMPLATE_CATEGORY_LABELS: Record<TemplateCategory, string> = {
   marketing: 'pazarlama',
   utility: 'işlem',
   authentication: 'doğrulama',
+};
+
+/** Konuştuğumuz üç dilin adı — Türkçe, çünkü okuyan operatör (15.28). */
+export const LANGUAGE_LABELS: Record<PreferredLanguage, string> = {
+  tr: 'Türkçe',
+  fr: 'Fransızca',
+  de: 'Almanca',
+};
+
+/**
+ * Herhangi bir ISO kodunun rozet metni: konuştuğumuz dilse adı, değilse kodun kendisi (`BS`).
+ * Kod boşsa dil tespit edilmemiştir — uydurulmaz, "dil bilinmiyor" yazılır.
+ */
+export function languageLabel(code: string | null): string {
+  const parsed = PreferredLanguageEnum.safeParse(code);
+  if (parsed.success) return LANGUAGE_LABELS[parsed.data];
+  return code ? code.toUpperCase() : 'dil bilinmiyor';
+}
+
+/**
+ * Hedef dilin DAYANAĞI — kompozörün altındaki cümle. Varsayılana düşen sohbet ayrıca söylenir:
+ * müşteri henüz üç dilden birinde yazmamıştır ve operatörün kendisi dili biliyorsa Türkçe
+ * yerine doğrudan o dilde yazabilir (kapı yazılan dili tanır, çevirmez).
+ */
+export const LANGUAGE_BASIS_NOTE: Record<OutboundLanguageBasis, string> = {
+  conversation: 'son mesajından',
+  customer: 'profil tercihinden',
+  default: 'varsayılan — müşteri henüz Türkçe, Fransızca ya da Almanca yazmadı',
 };
 
 /** Pencere tonu → ortak renk sözlüğü. Ekranda ham renk seçilmez (CLAUDE.md §3). */

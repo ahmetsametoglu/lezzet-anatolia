@@ -1,20 +1,22 @@
 import { type AiModel, type TranslateInput } from '@lezzet/ai';
-import { translateUserText } from '@lezzet/application';
-import { ProductFeedbackService, TicketMessageService, UserProfileService, serviceDb } from '@lezzet/database';
+import { saveMessageTranslation, translateUserText } from '@lezzet/application';
+import { MessageService, ProductFeedbackService, TicketMessageService, UserProfileService, serviceDb } from '@lezzet/database';
+import { translatableTextOf } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { TranslationBag } from '@lezzet/types';
 
 export const TRANSLATE_USER_TEXT = 'translate_user_text';
 
 /**
- * **Kullanıcı metinlerinin çevirisi** (20.2) — yorum · talep mesajı · B2B ret gerekçesi.
+ * **Kullanıcı metinlerinin çevirisi** (20.2) — yorum · talep mesajı · B2B ret gerekçesi · sohbet
+ * mesajı (15.28).
  *
  * Orijinal ASLA değişmez; çeviri yanına yazılır. Okuyucu site dilinde okur, o dil yoksa orijinale
  * düşer (`resolveUserText`). Böylece Boşnakça yazılmış bir yorum üç yüzeyde de okunabilir hâle
  * gelirken müşterinin kendi cümlesi olduğu gibi durur.
  *
- * **Üç kaynak, TEK döngü.** Tablo başına ayrı iş yazmak aynı hata işlemesini, aynı parti frenini ve
- * aynı damga kuralını üç kez yazmak olurdu (`CLAUDE §1`) — ve üçü bir gün ayrışırdı. Farklılık
+ * **Dört kaynak, TEK döngü.** Tablo başına ayrı iş yazmak aynı hata işlemesini, aynı parti frenini ve
+ * aynı damga kuralını dört kez yazmak olurdu (`CLAUDE §1`) — ve biri bir gün ayrışırdı. Farklılık
  * yalnız "hangi satırlar" ve "hangi kolonlar" sorusundadır; o da aşağıdaki tanımda durur.
  */
 
@@ -39,6 +41,7 @@ function sources(): TranslationSource[] {
   const feedback = new ProductFeedbackService(db);
   const messages = new TicketMessageService(db);
   const profiles = new UserProfileService(db);
+  const chatMessages = new MessageService(db);
 
   return [
     {
@@ -52,6 +55,23 @@ function sources(): TranslationSource[] {
       kind: 'talep_mesaji',
       list: async (limit) => (await messages.listUntranslated(limit)).map((r) => ({ id: r.id, text: r.body })),
       save: (id, patch) => messages.update({ id, ...patch }).then(() => undefined),
+    },
+    {
+      /*
+        Sohbet mesajı (15.28) — 4. kaynak, ama asıl yol değil TELAFİ yolu: gelen mesaj gelişinde,
+        giden mesaj gönderimden önce çevriliyor. Buraya düşenler o an sağlayıcısı düşmüş satırlar
+        ve echo ile (Business Suite'ten yazılmış) gelip hiç çevrilmemiş giden mesajlar. Metin sesli
+        mesajda transkriptin kendisi (`translatableTextOf`); yazım konuşmanın dilini de öğretir
+        (`saveMessageTranslation` — gelişteki yolla AYNI kapı, kural iki yerde yaşamasın).
+      */
+      name: 'message',
+      kind: 'sohbet_mesaji',
+      list: async (limit) =>
+        (await chatMessages.listUntranslated(limit)).map((r) => ({
+          id: r.id,
+          text: translatableTextOf({ text: r.body.text, transcript: r.mediaTranscript }),
+        })),
+      save: (id, patch) => saveMessageTranslation(db, id, patch).then(() => undefined),
     },
     {
       name: 'b2b_reject_reason',

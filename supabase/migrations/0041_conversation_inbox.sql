@@ -31,14 +31,23 @@ select c.*,
        -- Son mesajın TAM metni; önizleme kırpması bir SUNUM kararıdır, veri kapısına ait değil.
        m.last_text                                   as last_message_text,
        m.last_direction                              as last_message_direction,
-       m.last_kind                                   as last_message_kind
+       m.last_kind                                   as last_message_kind,
+       -- **Önizlemenin ÇEVİRİSİ de buradan** (15.28 · `ticket_queue`nun aynı kararı): detay
+       -- çevrilip kuyruk çevrilmezse operatör sohbeti ancak AÇARAK tarayabilir. Sesli mesajın
+       -- çözümü de burada — o satırın önizlemesi "[görsel / dosya]" değil, müşterinin dediğidir.
+       m.last_language                               as last_message_language,
+       m.last_translations                           as last_message_translations,
+       m.last_transcript                             as last_message_transcript
   from public.conversation c
   left join public.user_profiles u on u.id = c.customer_id
   left join lateral (
     select count(*)                                              as message_count,
            (array_agg(direction  order by created_at desc))[1]   as last_direction,
            (array_agg(body->>'text' order by created_at desc))[1] as last_text,
-           (array_agg(kind       order by created_at desc))[1]   as last_kind
+           (array_agg(kind       order by created_at desc))[1]   as last_kind,
+           (array_agg(language     order by created_at desc))[1] as last_language,
+           (array_agg(translations order by created_at desc))[1] as last_translations,
+           (array_agg(media_transcript order by created_at desc))[1] as last_transcript
       from public.message
      where conversation_id = c.id
   ) m on true;

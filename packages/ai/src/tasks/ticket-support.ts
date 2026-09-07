@@ -31,9 +31,12 @@ import type { AiTask } from '../types';
  * diyebilir, ajan "emin değilsen SUS ve devret" demek zorunda. Riskleri farklı, talimatları ayrı.
  *
  * ── CEVAP DİLİ TÜRKÇE ───────────────────────────────────────────────────────
- * Personel cevabıyla aynı yoldan gider: müşteri kendi dilinde OKUR, çeviri 20.2'nin işidir
- * (`translate_user_text` cron'u mesajı iki yönlü çevirir). Modelden müşteri dilinde yazmasını
- * istemek çeviri kuralını ikinci bir yerde, denetimsiz yaşatmak olurdu.
+ * Personel cevabıyla aynı yoldan gider: müşteri kendi dilinde OKUR, çeviri sistemin işidir —
+ * talepte 20.2'nin kuyruğu (`translate_user_text`, iki yönlü), sohbette gönderim kapısı
+ * (`sendOutboundMessage`, 15.28: gönderimden ÖNCE çevirir, müşteriye giden metni deftere yazar).
+ * Modelden müşteri dilinde yazmasını istemek çeviri kuralını ikinci bir yerde, denetimsiz
+ * yaşatmak olurdu; üstelik operatör ajanın ne dediğini Türkçe okumak zorunda — Türkçe yazılıp
+ * çevrilen cevap iki ihtiyacı tek turda karşılıyor.
  */
 
 /** Yazışmanın bir satırı — kim söyledi, ne söyledi. Kimlik yok, ad yok: modele kimlik gitmez. */

@@ -28,6 +28,8 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     linkedBy: null,
     linkedAt: null,
     linkProof: null,
+    // Müşteriyle konuştuğumuz dil bilinmiyor (15.28): önizleme çeviriyi torbadan, hedefi motordan alır.
+    language: null,
     windowExpiresAt: null,
     lastMessageAt: NOW.toISOString(),
     createdAt: NOW.toISOString(),
@@ -37,6 +39,10 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     lastMessageText: 'Teslimat perşembe olur mu?',
     lastMessageDirection: 'inbound',
     lastMessageKind: 'text',
+    // Çeviri üçlüsü boş = tespit koşmadı; önizleme orijinali okur (15.28).
+    lastMessageLanguage: null,
+    lastMessageTranslations: null,
+    lastMessageTranscript: null,
     ...patch,
   };
 }
@@ -55,6 +61,9 @@ function message(patch: Partial<MessageWithMedia> = {}): MessageWithMedia {
     mediaKey: null,
     mediaMime: null,
     mediaTranscript: null,
+    language: null,
+    translations: null,
+    translatedAt: null,
     // Adres okuma kapısında imzalanıyor (`readConversationDetail`), çeviricinin işi değil —
     // fikstür de onu veri olarak taşıyor.
     mediaUrl: null,
@@ -164,6 +173,26 @@ describe('toInboxRows', () => {
   it('hiç mesajı olmayan konuşmanın yaşı uydurulmaz', () => {
     expect(toInboxRows([inboxRow({ lastMessageAt: null })], NOW)[0]?.ago).toBe('—');
   });
+
+  it('önizleme operatörün DİLİNDE — kuyruk açılmadan taranabilmeli (15.28)', () => {
+    // `ticket_queue`nun aynı kararı: detay çevrilip kuyruk çevrilmezse triyaj ancak açarak yapılır.
+    const rows = toInboxRows(
+      [
+        inboxRow({
+          lastMessageText: 'Livraison jeudi possible ?',
+          lastMessageLanguage: 'fr',
+          lastMessageTranslations: { tr: 'Teslimat perşembe mümkün mü?', de: 'Lieferung Donnerstag möglich?' },
+        }),
+      ],
+      NOW,
+    );
+    expect(rows[0]?.preview).toBe('Teslimat perşembe mümkün mü?');
+  });
+
+  it('sesli mesajın önizlemesi TRANSKRİPTTİR, "[görsel / dosya]" değil', () => {
+    const rows = toInboxRows([inboxRow({ lastMessageKind: 'media', lastMessageText: null, lastMessageTranscript: 'Merhaba baklava istiyorum' })], NOW);
+    expect(rows[0]?.preview).toBe('Merhaba baklava istiyorum');
+  });
 });
 
 describe('toMessageViews', () => {
@@ -203,5 +232,64 @@ describe('toMessageViews', () => {
 
   it('şablon değilse etiket YOK — süs bir alan uydurulmaz', () => {
     expect(toMessageViews([message()])[0]?.templateLabel).toBeNull();
+  });
+});
+
+/*
+  ÇEVİRİ (15.28) — operatör Türkçe okur, kanaldan geçen metin künyede durur. Gelen mesajda o metin
+  müşterinin cümlesi, giden mesajda müşterinin GERÇEKTE okuduğu çeviri: ikisi de bir tık uzakta
+  olmalı, ikisi de makine cümlesi diye işaretlenmeli.
+*/
+describe('toMessageViews — çeviri', () => {
+  it('GELEN mesaj Türkçe okunur, orijinal ve dili künyede durur', () => {
+    const [view] = toMessageViews([
+      message({
+        body: { text: 'Bonjour, ma commande est en retard' },
+        language: 'fr',
+        translations: { tr: 'Merhaba, siparişim gecikti', de: 'Hallo, meine Bestellung verspätet sich' },
+      }),
+    ]);
+    expect(view?.text).toBe('Merhaba, siparişim gecikti');
+    expect(view?.translation).toEqual({ original: 'Bonjour, ma commande est en retard', language: 'fr' });
+  });
+
+  it('GİDEN mesajda satır GÖNDERİLENİ taşır; ekran operatörün Türkçesini gösterir, gönderileni künyeye koyar', () => {
+    const [view] = toMessageViews([
+      message({
+        direction: 'outbound',
+        author: 'admin',
+        body: { text: 'Bonjour ! Votre commande arrive jeudi.' },
+        language: 'fr',
+        translations: { tr: 'Merhaba! Siparişiniz perşembe geliyor.', de: 'Hallo! Ihre Bestellung kommt am Donnerstag.' },
+      }),
+    ]);
+    expect(view?.text).toBe('Merhaba! Siparişiniz perşembe geliyor.');
+    expect(view?.translation).toEqual({ original: 'Bonjour ! Votre commande arrive jeudi.', language: 'fr' });
+  });
+
+  it('SESLİ mesajda çevrilen şey transkripttir; alt yazı satırı boş kalır', () => {
+    const [view] = toMessageViews([
+      message({
+        kind: 'media',
+        body: { text: null },
+        mediaMime: 'audio/ogg',
+        mediaTranscript: 'Bonjour je voudrais des baklavas',
+        language: 'fr',
+        translations: { tr: 'Merhaba baklava istiyorum', de: 'Hallo ich möchte Baklava' },
+      }),
+    ]);
+    expect(view?.mediaTranscript).toBe('Merhaba baklava istiyorum');
+    expect(view?.text).toBe('');
+    expect(view?.translation).toEqual({ original: 'Bonjour je voudrais des baklavas', language: 'fr' });
+  });
+
+  it('Türkçe yazan müşteride künye YOK — torba dolu olsa bile orijinal kazanır', () => {
+    const [view] = toMessageViews([message({ body: { text: 'Merhaba' }, language: 'tr', translations: { fr: 'Bonjour', de: 'Hallo' } })]);
+    expect(view?.text).toBe('Merhaba');
+    expect(view?.translation).toBeNull();
+  });
+
+  it('dili tespit edilmemiş mesaj olduğu gibi okunur — çeviri uydurulmaz', () => {
+    expect(toMessageViews([message({ body: { text: 'Bonjour' } })])[0]).toMatchObject({ text: 'Bonjour', translation: null });
   });
 });

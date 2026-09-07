@@ -1,7 +1,7 @@
 import { ConversationService, MessageService } from '@lezzet/database';
 import { isAvoidableTemplate, serviceWindowExpiry, serviceWindowState } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { Message, MessageBody, MessageKind, TemplateCategory, TicketSender } from '@lezzet/types';
+import type { Message, MessageBody, MessageKind, SourceLanguage, TemplateCategory, TicketSender, TranslationBag } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
@@ -56,6 +56,13 @@ export interface RecordMessageInput {
   author?: TicketSender | null;
   /** Sağlayıcı mesaj kimliği; elle kayıtta yok, webhook'tan gelir (idempotency'nin son savunma hattı). */
   providerMessageId?: string | null;
+  /**
+   * Çeviri üçlüsü (15.28) — giden mesajda gönderim kapısı doldurur (gönderilen metnin dili + öteki
+   * dillerin torbası, operatörün Türkçesi dahil). Gelen mesajda ve echo'da boş: çeviri sonra koşar.
+   */
+  language?: SourceLanguage | null;
+  translations?: TranslationBag | null;
+  translatedAt?: string | null;
 }
 
 /**
@@ -81,6 +88,9 @@ export async function recordInboundMessage(
     mediaKey: input.mediaKey,
     mediaMime: input.mediaMime,
     mediaTranscript: input.mediaTranscript,
+    language: input.language,
+    translations: input.translations,
+    translatedAt: input.translatedAt,
   });
 }
 
@@ -140,6 +150,9 @@ export async function recordOutboundMessage(
     templateName: input.templateName,
     templateCategory: input.templateCategory,
     providerMessageId: input.providerMessageId,
+    language: input.language,
+    translations: input.translations,
+    translatedAt: input.translatedAt,
   });
 }
 

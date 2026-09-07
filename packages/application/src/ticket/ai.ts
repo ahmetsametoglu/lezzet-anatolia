@@ -313,7 +313,16 @@ async function conversationContextOf(db: SupabaseClient, conversation: Conversat
     business: BUSINESS_CARD,
     messages: messages.slice(-THREAD_LIMIT).map((message, i, dizi) => ({
       who: message.direction === 'inbound' ? 'customer' : message.author === 'ai' ? 'ai' : 'staff',
-      text: message.body.text?.trim() || mediaPlaceholder(message, i === dizi.length - 1),
+      /*
+        MÜŞTERİ ORİJİNALİYLE, BİZ TÜRKÇEMİZLE (15.28). Giden mesajın `body.text`i müşteriye GİDEN
+        çeviridir (Fransızca); yazılan Türkçe torbada durur. Model kendi önceki turlarını Fransızca
+        görseydi "Türkçe yaz" kuralı her turda biraz daha aşınırdı. Müşterinin sözü ise olduğu gibi
+        gider: çeviri bir yorum katmanıdır ve model üç dili de okuyor.
+      */
+      text:
+        (message.direction === 'outbound' ? message.translations?.tr?.trim() : undefined) ||
+        message.body.text?.trim() ||
+        mediaPlaceholder(message, i === dizi.length - 1),
     })),
     order: null,
   };

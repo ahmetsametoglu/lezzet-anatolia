@@ -10,6 +10,7 @@ import {
   type TicketSender,
 } from '@lezzet/types';
 import type { AnchorSnapshot } from '@lezzet/application';
+import type { OutboundLanguage } from '@lezzet/domain-core';
 import type { CustomerContextData } from '@/lib/customer/context';
 import type { SocialChannelKey, SocialFilterKey, SocialUrlState } from './social-url';
 
@@ -64,7 +65,10 @@ export interface MessageView {
   /** Kim yazdı (16.08) — AI'ın gönderdiği balon ayrı tonda okunur; "bunu kim söyledi" sonradan da cevaplanmalı. */
   author: TicketSender;
   kind: MessageKind;
-  /** Gövde metni; yoksa türün okunabilir adı (kart/medya adım 2'de dolacak). */
+  /**
+   * Gövde metni — operatörün DİLİNDE (15.28): çeviri varsa Türkçesi, yoksa kanaldan geçen metin.
+   * Metinsiz türde türün okunabilir adı. Kanaldan geçen orijinal `translation.original`da durur.
+   */
   text: string;
   /** "22 Tem 14:30" — aynı gün iki mesajı ayırt etmek için saat şart. */
   stamp: string;
@@ -86,8 +90,25 @@ export interface MessageView {
    *
    * `null`: ses değil · çözüm henüz koşmadı · güvenle çözülemedi. Üçünde de operatörün yapacağı şey
    * aynı (kaydı kendisi dinlemek), o yüzden ekran ayırt etmiyor.
+   *
+   * Operatörün DİLİNDE (15.28): transkript çevrildiyse Türkçesi; orijinal `translation.original`da.
    */
   mediaTranscript: string | null;
+  /**
+   * **Çeviri künyesi** (15.28) — gösterilen metin kanaldan geçenden FARKLIYSA dolu.
+   *
+   * Gelen mesajda: ekrandaki Türkçe makine çevirisidir, `original` müşterinin yazdığı (ya da
+   * söylediği) cümle. Giden mesajda ters: ekrandaki operatörün/ajanın Türkçesidir, `original`
+   * müşteriye GÖNDERİLEN çeviri. İkisi de ekranda söylenmeli — operatör makine cümlesini
+   * müşterinin cümlesi sanmamalı, ve müşterinin gerçekte ne okuduğunu görebilmeli.
+   *
+   * Ses mesajında künye TRANSKRİPTE aittir (alt yazı yok), metin mesajında gövdeye.
+   */
+  translation: {
+    original: string;
+    /** Orijinalin dili (ISO 639) — rozet ve `lang` özniteliği için; tespit edilmemişse `null`. */
+    language: string | null;
+  } | null;
 }
 
 export interface ConversationDetailView {
@@ -104,6 +125,12 @@ export interface ConversationDetailView {
   /** Sağlayıcı profil adı — kimliksiz Messenger/IG sohbetinin tek okunur başlığı. */
   profileName: string | null;
   window: WindowView;
+  /**
+   * Müşteriye hangi dilde yazıldığı ve NEDEN (15.28) — kararı motor verir (`outboundLanguage`),
+   * burası taşır. Operatör Türkçe yazıp Fransızca gönderildiğini görecek; dayanağı da görmeli:
+   * varsayılana düşmüş bir sohbet (müşteri henüz yazmadı) dikkat ister.
+   */
+  language: OutboundLanguage;
   /**
    * Eskiden yeniye — okunan şey bir sohbet, ters sıralı sohbet okunmaz.
    *

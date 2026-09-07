@@ -4,10 +4,12 @@ import {
   ConversationSourceEnum,
   MessageDirectionEnum,
   MessageKindEnum,
+  PreferredLanguageEnum,
   TemplateCategoryEnum,
   TicketHandlerEnum,
   TicketSenderEnum,
 } from '../primitives/enums.schema';
+import { SourceLanguageSchema, TranslationBagSchema } from '../primitives/user-text.schema';
 
 // Conversation / Message — mesajlaşma konuşma zemini (15.1, migration 0039; üç kanal 21.08,
 // ADR-006). CHANNELS §7.
@@ -97,6 +99,19 @@ export const ConversationSchema = z.object({
    * kanıtı + sistemin doğruladığı sepet bağlantısı (`cart_link`, 15.22) — ayrım enum künyesinde.
    */
   linkProof: ConversationLinkProofEnum.nullable(),
+  /**
+   * **Müşteriyle KONUŞTUĞUMUZ dil** (15.28) — giden mesajın çevrileceği hedef.
+   *
+   * `preferred_language` enum'u (tr|fr|de), `SourceLanguage` DEĞİL: bu alan "müşteri hangi dilde
+   * yazdı"yı değil "biz ona hangi dilde yazarız"ı söyler ve o küme bizim konuştuğumuz üç dildir.
+   * Boşnakça yazan müşteriye Boşnakça cevap üretemeyiz; onun satırı boş kalır ve hedef yedek
+   * zincirden gelir (profil dili → piyasa varsayılanı, `outboundLanguage`).
+   *
+   * **Gelen mesajdan ÖĞRENİLİR, son gelen kazanır:** müşterinin yazdığı dil, profildeki tercihten
+   * daha güçlü kanıttır — profili kayıtta operatör de doldurmuş olabilir. `null` = müşteri henüz
+   * üç dilden birinde bir şey yazmadı (yalnız fotoğraf gönderdi, ya da "ok").
+   */
+  language: PreferredLanguageEnum.nullable(),
   /** Son hareketin anı; gelen kutusunun sıralama alanı. `recordMessage` yazar. */
   lastMessageAt: z.string().nullable(),
   createdAt: z.string(),
@@ -187,6 +202,25 @@ export const MessageSchema = z.object({
    * teyit kuralı (15.26) tam olarak bu ayrımın üstüne kurulu.
    */
   mediaTranscript: z.string().nullable(),
+  /**
+   * **Kanaldan geçen metnin dili** (15.28) — `ticket_message.language` ile aynı sözleşme, bir
+   * farkla: burada "metin" gelen mesajda müşterinin yazdığı, giden mesajda müşteriye GÖNDERİLEN
+   * cümledir. `body.text` daima kanaldan geçen hâldir; operatörün Türkçesi giden mesajda
+   * torbada durur (`translations.tr`). Böylece telefondan/echo'dan düşen mesaj ile API'den
+   * gönderilen mesaj aynı kuralı taşır — ledger "müşteri ne okudu" sorusuna hep aynı yerden
+   * cevap verir.
+   *
+   * Sesli mesajda dil TRANSKRİPTİN dilidir (alt yazı yok); torba da transkripti çevirir.
+   * Serbest ISO 639: müşteri Boşnakça da konuşabilir. `null` = tespit koşmadı ya da metin yok.
+   */
+  language: SourceLanguageSchema.nullable(),
+  /**
+   * Makine çevirileri — kaynak dil torbada YOKTUR (`TranslationBagSchema` künyesi). Operatör
+   * `tr`yi okur (`resolveUserText`), giden mesajda `tr` operatörün/ajanın kendi yazdığıdır.
+   */
+  translations: TranslationBagSchema.nullable(),
+  /** Çeviri baktı mı — başarısızlıkta da dolar (`ticket_message` kuralı); kuyruk bunu okur. */
+  translatedAt: z.string().nullable(),
   createdAt: z.string(),
 });
 export type Message = z.infer<typeof MessageSchema>;
@@ -206,6 +240,13 @@ export const MessageInsertSchema = z.object({
   mediaMime: z.string().nullish(),
   /** Çözülemeyen ya da henüz çözülmemiş kayıtta boş kalır — yokluğu normal bir hâl. */
   mediaTranscript: z.string().nullish(),
+  /**
+   * Çeviri üçlüsü YAZIMDA da gelebilir (15.28): giden mesaj gönderimden ÖNCE çevrilir ve gönderilen
+   * metinle birlikte tek turda yazılır. Gelen mesajda boş kalır, çeviri yazımdan sonra koşar.
+   */
+  language: SourceLanguageSchema.nullish(),
+  translations: TranslationBagSchema.nullish(),
+  translatedAt: z.string().nullish(),
 });
 export type MessageInsert = z.infer<typeof MessageInsertSchema>;
 
@@ -228,5 +269,14 @@ export const ConversationInboxRowSchema = ConversationSchema.extend({
   lastMessageText: z.string().nullable(),
   lastMessageDirection: MessageDirectionEnum.nullable(),
   lastMessageKind: MessageKindEnum.nullable(),
+  /**
+   * Son mesajın çeviri üçlüsü + sesli mesajın çözümü (15.28) — `ticket_queue` ile aynı gerekçe:
+   * detay çevrilip kuyruk çevrilmezse operatör sohbeti ancak AÇARAK tarayabilir. Görünüm son
+   * mesajı zaten okuyor, alanlar bedavaya geliyor.
+   */
+  lastMessageLanguage: SourceLanguageSchema.nullable(),
+  lastMessageTranslations: TranslationBagSchema.nullable(),
+  /** Sesli mesajın önizlemesi transkripttir — "[görsel / dosya]" değil, müşterinin dediği. */
+  lastMessageTranscript: z.string().nullable(),
 });
 export type ConversationInboxRow = z.infer<typeof ConversationInboxRowSchema>;

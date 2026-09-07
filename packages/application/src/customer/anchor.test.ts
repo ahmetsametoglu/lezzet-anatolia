@@ -434,7 +434,21 @@ describe('çapa kendiliğinden veriliyor', () => {
     expect((await profiles.getById(m.id))?.securityCodeHash).toBeNull();
   });
 
-  it('SİPARİŞ verdikten sonraki mesajda kod gider ve SOHBETE yazılır', async () => {
+  it('profili Türkçe olan müşteriye kod TÜRKÇE gider — çeviri modeli hiç çağrılmadan', async () => {
+    // Dil kapıyla aynı zincirden okunur (15.28): sohbetin dili bilinmiyor (testte gelen "merhaba"
+    // çevrilmez), profil tercihi kazanır. Metin elle üç dilde ve kapıya bildiriliyor — model yok.
+    const m = await musteri('Türkçe profil');
+    await profiles.update({ id: m.id, preferredLanguage: 'tr' });
+    await siparis(m.id);
+    const sohbet = await konusma(m.id, m.phone);
+    const sender = fakeSender();
+
+    expect(await offerAnchorIfDue(db, sender, { conversationId: sohbet.id, customerId: m.id })).toBe('sent');
+    expect(sender.texts[0]).toContain('Bunu saklayın');
+    expect(sender.texts[0]).toMatch(/\d{6}/);
+  });
+
+  it('SİPARİŞ verdikten sonraki mesajda kod gider ve SOHBETE yazılır — müşterinin DİLİNDE', async () => {
     const m = await musteri('Sipariş veren');
     await siparis(m.id);
     const sohbet = await konusma(m.id, m.phone);
@@ -442,7 +456,9 @@ describe('çapa kendiliğinden veriliyor', () => {
 
     expect(await offerAnchorIfDue(db, sender, { conversationId: sohbet.id, customerId: m.id })).toBe('sent');
     expect(sender.texts).toHaveLength(1);
-    expect(sender.texts[0]).toContain('Bunu saklayın');
+    /* Profil varsayılanı `fr` (0001) ve sohbet dili bilinmiyor → kod FRANSIZCA gider (15.28).
+       Türkçe beklemek, Fransız müşteriye Türkçe kod göndermeyi doğru saymak olurdu. */
+    expect(sender.texts[0]).toContain('Votre code de sécurité');
     expect(sender.texts[0]).toMatch(/\d{6}/);
 
     // Çapa gerçekten kuruldu: kapı açıldı ve dönüşünde sorulacak bir şey var.

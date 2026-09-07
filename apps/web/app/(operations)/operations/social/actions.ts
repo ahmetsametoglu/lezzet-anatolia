@@ -196,6 +196,11 @@ export async function sendOutboundAction(input: unknown): Promise<ActionResult<{
     if (outcome.status === 'refused') {
       return { data: null, error: SEND_REFUSAL[outcome.reason] ?? `Gönderilemedi (${outcome.reason}).` };
     }
+    // Çeviri düştü (15.28): mesaj GİTMEDİ ve bu bizim tarafımız, sağlayıcı değil — cümle onu
+    // "sağlayıcı" diye okutmamalı. Türkçesi müşteriye gönderilmedi; operatör birazdan yeniden dener.
+    if (outcome.reason === 'translation_failed') {
+      return { data: null, error: 'Mesaj çevrilemedi, o yüzden GÖNDERİLMEDİ — birazdan tekrar deneyin.' };
+    }
     // `failed` = sağlayıcı reddetti. Sebep ham geçiyor (`meta_131030: …` gibi) — operatör onu
     // arayabilsin; ayrıca yeniden denemenin anlamlı olup olmadığı söyleniyor.
     return {

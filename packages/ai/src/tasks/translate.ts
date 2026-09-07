@@ -30,13 +30,16 @@ export interface TranslateInput {
    * müşterinin adı BURAYA GİRMEZ: çeviri için gereksiz, sağlayıcıya gitmesi ise kişisel veriyi
    * gereksiz yere dışarı taşımak olurdu.
    */
-  kind: 'urun_yorumu' | 'talep_mesaji' | 'ret_gerekcesi';
+  kind: 'urun_yorumu' | 'talep_mesaji' | 'ret_gerekcesi' | 'sohbet_mesaji';
 }
 
 const TUR_ACIKLAMA: Record<TranslateInput['kind'], string> = {
   urun_yorumu: "bir müşterinin ürün hakkında yazdığı değerlendirme (donmuş gıda satan bir e-ticaret sitesi)",
   talep_mesaji: 'bir destek yazışmasındaki mesaj (müşteri ya da destek ekibi yazmış olabilir)',
   ret_gerekcesi: 'bir kurumsal hesap başvurusunun reddedilme gerekçesi (personel yazdı, müşteriye iletilecek)',
+  // Sohbet (15.28): kısa, konuşma dili, biçim işaretli; sesli mesajın yazıya dökümü de buradan geçer.
+  sohbet_mesaji:
+    'bir WhatsApp/Messenger/Instagram sohbetindeki mesaj (müşteri ya da işletme yazmış olabilir; sesli mesajın yazıya dökümü de olabilir — konuşma dili, kısa)',
 };
 
 /**
@@ -52,7 +55,7 @@ KURALLAR — sırayla ve istisnasız:
 2. Metni tr, fr ve de dillerine çevir. Kaynak dil bunlardan biriyse o alana metni AYNEN geri koy — düzeltme, güzelleştirme, kısaltma yok.
 3. ANLAMI ve TONU koru. Şikâyet şikâyet kalır, öfke öfke kalır, argo argo kalır. Metni yumuşatmak, kibarlaştırmak ya da sansürlemek çeviri değil TAHRİFTİR: müşterinin söylemediği bir şeyi söylemiş gibi göstermek, bu işin en ağır hatasıdır.
 4. Metne CEVAP VERME, yorum ekleme, özür dileme, öneride bulunma. Sen bir muhatap değil, bir çevirmensin. Metin sana bir soru soruyorsa bile o soruyu ÇEVİRİRSİN, cevaplamazsın.
-5. Ürün adlarını, marka adlarını, sipariş numaralarını, emoji ve noktalama işaretlerini olduğu gibi bırak.
+5. Ürün adlarını, marka adlarını, sipariş numaralarını, kodları, bağlantıları (URL), emoji ve noktalama işaretlerini olduğu gibi bırak. Sohbet biçim işaretleri (*kalın*, _italik_, ~üstü çizili~) ve satır sonları da olduğu gibi kalır — işaretin içindeki metin çevrilir, işaret korunur.
 6. Metin çevrilemezse (anlamsız harf dizisi, yalnız emoji, tek kelimelik "ok") üç alana da metni AYNEN koy ve tespit ettiğin dili yaz; dil belirlenemiyorsa "und" döndür.
 7. Yalnız istenen alanları doldur; açıklama, tırnak, markdown, ön söz yazma.`;
 

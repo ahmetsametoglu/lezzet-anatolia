@@ -16,9 +16,12 @@ import {
   type MessageDirection,
   type MessageInsert,
   type MessageKind,
+  type PreferredLanguage,
+  type SourceLanguage,
   type TemplateCategory,
   type TicketHandler,
   type TicketSender,
+  type TranslationBag,
   type KeysetCursor,
   type ConversationLinkProof,
   type Page,
@@ -201,6 +204,17 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   }
 
   /**
+   * Müşteriyle konuştuğumuz dili yaz (15.28) — **son gelen kazanır**, `updateIfNull` DEĞİL.
+   *
+   * Profil adının tersine (`setProfileName`: bir kez öğrenilir) dil değişebilir: Türk müşteri
+   * "Bonjour" ile başlayıp Türkçe sürdürür. Kararı çağıran verir (`spokenLanguageOf`: yalnız
+   * konuştuğumuz üç dil), burası yazar.
+   */
+  setLanguage(id: string, language: PreferredLanguage): Promise<Conversation> {
+    return this.update({ id, language });
+  }
+
+  /**
    * Cevabı insanın yazmadığı sohbet sayısı (16.5) — başlığın "N AI'da" sayacı.
    * `TicketService.countHandledByAi` ile aynı soru; konuşmanın "kapanmış" hâli olmadığı için
    * ek durum süzgeci yok. Kanal süzgeci var (21.08): başlık süzgeçli kuyruğu sayarken süzgeçsiz
@@ -236,6 +250,20 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
   }
 
   /**
+   * Çeviri üçlüsünü yazar (15.28) — `setTranscript` ile aynı sınır: türetilmiş alan, yalnız BOŞSA.
+   *
+   * Gelişteki çeviri ile kuyruk aynı satıra denk gelebilir; ikinci sonuç birincisini EZMEZ
+   * (`updateIfNull` damgaya bakar). `null` = zaten damgalıydı — çağıran bunu "yarışı kaybettim"
+   * diye okur, hata diye değil.
+   */
+  setTranslation(
+    id: string,
+    patch: { language: SourceLanguage | null; translations: TranslationBag | null; translatedAt: string },
+  ): Promise<Message | null> {
+    return this.updateIfNull(id, 'translatedAt', patch);
+  }
+
+  /**
    * Mesaj + konuşmanın damgaları, TEK turda (`record_message`).
    *
    * Ayrı iki yazım olsaydı ikincisi düştüğünde gelen kutusu sessizce bayatlardı: yeni mesaj gelmiş
@@ -264,6 +292,13 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     mediaMime?: string | null;
     /** Sesin makine çözümü (15.26) — müşterinin alt yazısıyla KARIŞMASIN diye ayrı alan. */
     mediaTranscript?: string | null;
+    /**
+     * Çeviri üçlüsü (15.28) — giden mesajda gönderilen metinle TEK turda yazılır; gelen mesajda
+     * boş kalır ve `setTranslation` sonradan doldurur.
+     */
+    language?: SourceLanguage | null;
+    translations?: TranslationBag | null;
+    translatedAt?: string | null;
   }): Promise<Message> {
     const raw = await this.executeRpc('record_message', {
       p_conversation_id: input.conversationId,
@@ -278,6 +313,9 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
       p_media_key: input.mediaKey ?? null,
       p_media_mime: input.mediaMime ?? null,
       p_media_transcript: input.mediaTranscript ?? null,
+      p_language: input.language ?? null,
+      p_translations: input.translations ?? null,
+      p_translated_at: input.translatedAt ?? null,
     });
     return MessageSchema.parse(dbToApp(raw));
   }
@@ -293,6 +331,30 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
    */
   listByConversation(conversationId: string): Promise<Message[]> {
     return this.getAll({ conversationId }, { orderBy: 'createdAt' });
+  }
+
+  /**
+   * Çeviri kuyruğu (15.28) — `TicketMessageService.listUntranslated` ile aynı soru, bir süzgeç fazla:
+   *
+   * **Çözümü henüz gelmemiş SES kuyruğa GİRMEZ.** Kuyruk "metni yok" gördüğü satırı damgalar
+   * (bir daha bakmaz); sesli mesajın transkripti ise yazımdan saniyeler sonra gelir. Aradaki
+   * pencerede kuyruk o satırı görse "bakıldı, metin yok" der ve transkript geldiğinde çevrilecek
+   * satır çoktan kapanmış olurdu. Çözülemeyen ses de girmez ve bu doğru: çevrilecek metin yok.
+   *
+   * PostgREST `or` grubu: metinsiz/medyasız satır (`media_mime` boş) · ses olmayan medya · çözümü
+   * gelmiş ses. Süzgeç DB'de, çağıranda değil — çağıranda süzülseydi çözümsüz sesler `limit`in
+   * dilimini doldurup kuyruğun önünü sonsuza dek tıkardı (20 çözümsüz ses = hiç ilerlemeyen tur).
+   */
+  listUntranslated(limit = 20): Promise<Message[]> {
+    return this.getAll(
+      {},
+      {
+        isNullFields: ['translatedAt'],
+        orFilters: ['media_mime.is.null,media_mime.not.like.audio/*,media_transcript.not.is.null'],
+        orderBy: 'createdAt',
+        limit,
+      },
+    );
   }
 
   /**

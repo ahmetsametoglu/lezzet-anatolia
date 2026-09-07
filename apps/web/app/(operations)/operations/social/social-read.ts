@@ -1,7 +1,8 @@
-import { serviceWindowState, stripChatFormatting } from '@lezzet/domain-core';
-import type { ConversationInboxRow } from '@lezzet/types';
+import { resolveUserText, serviceWindowState, stripChatFormatting, translatableTextOf } from '@lezzet/domain-core';
+import type { ConversationInboxRow, TranslationBag } from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
 import { agoShort, shortDateTime } from '@/components/operation/ui/format';
+import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { MESSAGE_KIND_LABELS, TEMPLATE_CATEGORY_LABELS } from './social-labels';
 import type { InboxRowView, MessageView, WindowView } from './social-types';
 
@@ -92,6 +93,27 @@ export function titleOf(row: { customerName?: string | null; profileName: string
 }
 
 /**
+ * Kanaldan geçen metnin operatöre GÖSTERİLECEK hâli + künyesi (15.28).
+ *
+ * Kararı motor verir (`resolveUserText`: operatörün dili → orijinal), hangi metnin çevrildiğini de
+ * motor söyler (`translatableTextOf`: transkript alt yazıyı yener). Burası yalnız ikisini bağlar ve
+ * "gösterilen ≠ kanaldan geçen" hâlini künyeye çevirir — orijinal bir tık uzakta durmalı.
+ */
+function shownTextOf(source: {
+  text: string | null;
+  transcript: string | null;
+  language: string | null;
+  translations: TranslationBag | null;
+}): { text: string | null; translation: MessageView['translation'] } {
+  const original = translatableTextOf(source);
+  const shown = resolveUserText({ text: original, language: source.language, translations: source.translations }, OPERATIONS_LOCALE);
+  return {
+    text: shown.text,
+    translation: shown.isTranslated && original ? { original, language: shown.sourceLanguage } : null,
+  };
+}
+
+/**
  * Gelen kutusu satırları. `now` DIŞARIDAN gelir — sayfa onu bir kez okur ve ekrandaki bütün yaşlar
  * aynı ana göre çıkar; içeride okunsaydı listenin başı ile sonu farklı anlara göre hesaplanırdı.
  */
@@ -101,7 +123,16 @@ export function toInboxRows(rows: readonly ConversationInboxRow[], now: Date): I
     id: row.id,
     source: row.source,
     title: titleOf(row),
-    preview: previewOf(row.lastMessageText, row.lastMessageKind),
+    // Önizleme operatörün dilinde ve sesli mesajda transkript (15.28): kuyruk açılmadan taranır.
+    preview: previewOf(
+      shownTextOf({
+        text: row.lastMessageText,
+        transcript: row.lastMessageTranscript,
+        language: row.lastMessageLanguage,
+        translations: row.lastMessageTranslations,
+      }).text,
+      row.lastMessageKind,
+    ),
     ago: row.lastMessageAt ? agoShort(ageMinutes(row.lastMessageAt, nowMs)) : '—',
     awaitingReply: row.awaitingReply,
     unidentified: row.customerId === null,
@@ -124,24 +155,30 @@ function ageMinutes(iso: string, nowMs: number): number {
  * bir mesajdan ayırt edilemez kılardı.
  */
 export function toMessageViews(messages: readonly MessageWithMedia[]): MessageView[] {
-  return messages.map((m) => ({
-    id: m.id,
-    direction: m.direction,
-    author: m.author,
-    kind: m.kind,
-    /*
-      MEDYADA YER TUTUCU YOK ARTIK: dosyanın kendisi çiziliyor, "[medya]" yazısı onun altında
-      ikinci kez aynı şeyi söylerdi. Alt yazı varsa o gösteriliyor, yoksa metin satırı hiç
-      çizilmiyor. Dosya alınamadıysa sebebini balonun kendisi yazıyor (`MediaBody`) — burada
-      bir yer tutucuya düşmek, "alınamadı" ile "yazısız fotoğraf"ı aynı görünüme sokardı.
-    */
-    text: m.body.text?.trim() || (m.kind === 'media' ? '' : MESSAGE_KIND_LABELS[m.kind]),
-    stamp: shortDateTime(m.createdAt),
-    templateLabel: m.templateName
-      ? `${m.templateName}${m.templateCategory ? ` · ${TEMPLATE_CATEGORY_LABELS[m.templateCategory]}` : ''}`
-      : null,
-    mediaUrl: m.mediaUrl,
-    mediaMime: m.mediaMime,
-    mediaTranscript: m.mediaTranscript,
-  }));
+  return messages.map((m) => {
+    // Çeviri künyesi tek metne aittir: sesli mesajda transkripte, ötekilerde gövdeye (15.28).
+    const shown = shownTextOf({ text: m.body.text, transcript: m.mediaTranscript, language: m.language, translations: m.translations });
+    const sesli = Boolean(m.mediaTranscript?.trim());
+    return {
+      id: m.id,
+      direction: m.direction,
+      author: m.author,
+      kind: m.kind,
+      /*
+        MEDYADA YER TUTUCU YOK ARTIK: dosyanın kendisi çiziliyor, "[medya]" yazısı onun altında
+        ikinci kez aynı şeyi söylerdi. Alt yazı varsa o gösteriliyor, yoksa metin satırı hiç
+        çizilmiyor. Dosya alınamadıysa sebebini balonun kendisi yazıyor (`MediaBody`) — burada
+        bir yer tutucuya düşmek, "alınamadı" ile "yazısız fotoğraf"ı aynı görünüme sokardı.
+      */
+      text: sesli ? m.body.text?.trim() || '' : shown.text || (m.kind === 'media' ? '' : MESSAGE_KIND_LABELS[m.kind]),
+      stamp: shortDateTime(m.createdAt),
+      templateLabel: m.templateName
+        ? `${m.templateName}${m.templateCategory ? ` · ${TEMPLATE_CATEGORY_LABELS[m.templateCategory]}` : ''}`
+        : null,
+      mediaUrl: m.mediaUrl,
+      mediaMime: m.mediaMime,
+      mediaTranscript: sesli ? shown.text : null,
+      translation: shown.translation,
+    };
+  });
 }

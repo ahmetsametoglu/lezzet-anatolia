@@ -7,11 +7,12 @@ import { storeConversationMedia } from './meta-media';
 import { transcribeConversationAudio } from './voice';
 import { recordInboundMessage, recordOutboundMessage } from './record';
 import { sendOutboundMessage } from './send';
-import { ConversationService, CustomerPhoneService, MessageService, UserProfileService, WebhookEventService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerPhoneService, MessageService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { maskSecretsInText, sixDigitCodeIn } from '@lezzet/domain-core';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { ConversationSource, MessageKind, PreferredLanguage } from '@lezzet/types';
+import type { Conversation, ConversationSource, Message, MessageKind, PreferredLanguage } from '@lezzet/types';
+import { resolveOutboundLanguage, translateConversationMessageNow } from './translate';
 import { findOrCreateCustomer } from '../customer/find-or-create';
 import { fetchMetaProfileName } from './meta-profile';
 import { runAutonomousConversationReply } from '../ticket/ai';
@@ -54,30 +55,40 @@ import type { TicketHandler } from '@lezzet/types';
  * ayrımı netleştirdi): mesajı yaz, 200 dön, bitir. Yavaş cevap müşteriyi bekletmez — Meta'ya
  * teslimatı başarısız saydırır ve aynı olayı 7 gün boyunca üstümüze döktürür.
  *
- * ── AJAN ÇÖZÜMÜ BEKLER, ÖTEKİ MESAJLARDA BEKLEMEZ ───────────────────────────
+ * ── AJAN ÇÖZÜMÜ BEKLER ──────────────────────────────────────────────────────
  * Sesli mesajda ajan tetiği çözümün ARDINDAN koşuyor: sırayla değil de paralel koşsaydı ajan tam
  * da okuması gereken turda transkripti göremez, "duyamıyorum" deyip devrederdi — çözümün varlık
- * sebebi ortadan kalkardı. Metin mesajında bekleme yok, tetik doğrudan.
+ * sebebi ortadan kalkardı.
+ *
+ * ── ÇEVİRİ DE BU ZİNCİRDE, AJANDAN ÖNCE (15.28) ─────────────────────────────
+ * Gelen metin (ya da transkript) ajandan önce Türkçeye çevrilir. Ajanın buna ihtiyacı yok (üç
+ * dili de okur); operatörün var — ajan devrettiğinde zil çalar ve operatör sohbeti AÇTIĞI AN
+ * Türkçesini görmeli, "yaz → çevir → haber ver" sırası (talep kanalının 17.08 kararı). Bedeli
+ * ajanın cevabına eklenen bir-iki saniye; çeviri düşerse ajan yine koşar, satır kuyrukta kalır.
+ * Zincir üç kanalda aynı: Messenger/IG'de medya indirilmiyor, o basamak boş geçer.
  */
-function triggerVoiceTranscript(input: {
-  messageId: string;
-  conversationId: string;
-  mediaKey: string;
-  mediaMime: string;
-  handledBy: TicketHandler;
+function triggerInboundPipeline(input: {
+  message: Message;
+  conversation: Conversation;
+  /** İndirilmiş medya — yalnız WhatsApp'ta dolu; ses ise önce çözülür. */
+  media: { key: string; mime: string } | null;
 }): void {
   void (async () => {
-    const metin = await transcribeConversationAudio(input.mediaKey, input.mediaMime, {
-      conversationId: input.conversationId,
-    });
-    // Çözülemese de ajan koşar: "duyamıyorum, bir arkadaşım dinleyecek" da bir cevaptır ve
-    // müşteriyi sessiz bırakmaz.
-    if (metin) await new MessageService(serviceDb()).setTranscript(input.messageId, metin);
-    triggerAutonomousReply(input.conversationId, input.handledBy);
+    let mesaj = input.message;
+    if (input.media?.mime.startsWith('audio/')) {
+      const metin = await transcribeConversationAudio(input.media.key, input.media.mime, {
+        conversationId: input.conversation.id,
+      });
+      // Çözülemese de zincir sürer: "duyamıyorum, bir arkadaşım dinleyecek" da bir cevaptır ve
+      // müşteriyi sessiz bırakmaz.
+      if (metin) mesaj = (await new MessageService(serviceDb()).setTranscript(mesaj.id, metin)) ?? mesaj;
+    }
+    await translateConversationMessageNow(serviceDb(), mesaj);
+    triggerAutonomousReply(input.conversation.id, input.conversation.handledBy);
   })().catch((err: unknown) =>
     captureError(err, {
       source: SOURCES.webhook,
-      context: { area: 'messaging/voice-trigger', conversationId: input.conversationId },
+      context: { area: 'messaging/inbound-pipeline', conversationId: input.conversation.id },
     }),
   );
 }
@@ -96,10 +107,11 @@ function triggerAutonomousReply(conversationId: string, handledBy: TicketHandler
 /**
  * Bağlama onayı — müşterinin KENDİ dilinde (07.09).
  *
- * Gönderim yolunda çeviri YOK (ölçüldü: `send.ts`te çeviri adımı yok; ajanın metnini çeviren
- * mekanizma talep kanalınındır). Bu yüzden metin burada dile göre seçiliyor — Fransız müşteriye
- * Türkçe onay göndermek, doğru işi yanlış dilde bildirmek olurdu ve hazır mesajı Fransızca
- * gönderdiğimiz akışta özellikle tuhaf kaçardı.
+ * Gönderim kapısı artık çeviriyor (15.28) ama bu metin yine ELLE üç dilde: sistem mesajıdır, sabit
+ * ve kısa — makine çevirisine vermek her seferinde bir model turu ödeyip aynı cümlenin küçük
+ * varyantlarını üretmek olurdu. Dil kapıyla AYNI karardan okunuyor (`resolveOutboundLanguage`) ve
+ * kapıya bildiriliyor (`language`): ikisi ayrı hesaplasaydı kapı bu hazır metni "yanlış dilde"
+ * sanıp modele sokabilirdi.
  *
  * Metin KISA ve tek işi var: işlemin OLDUĞUNU söylemek. Ne yapıldığının ayrıntısı (hangi hesap,
  * hangi numara) müşteriye bir şey katmaz, kimlik bilgisini sohbete taşırdı.
@@ -110,18 +122,20 @@ const LINK_CONFIRMATION: Record<PreferredLanguage, string> = {
   de: 'Ihre Nummer ist jetzt mit Ihrem Konto verknüpft — Sie können Ihre Bestellungen hier verfolgen. Wie können wir helfen?',
 };
 
-async function bagalamaOnayiGonder(conversationId: string, customerId: string | null): Promise<void> {
+async function bagalamaOnayiGonder(conversation: Pick<Conversation, 'id' | 'language'>, customerId: string | null): Promise<void> {
   const db = serviceDb();
-  const dil = customerId ? ((await new UserProfileService(db).getById(customerId))?.preferredLanguage ?? 'fr') : 'fr';
+  // Bağ AZ ÖNCE kuruldu: `conversation.customerId` bayat, taze kimlik parametreden.
+  const { language: dil } = await resolveOutboundLanguage(db, { language: conversation.language, customerId });
   const sonuc = await sendOutboundMessage(db, messageSenderFor(process.env.META_ACCESS_TOKEN), {
-    conversationId,
+    conversationId: conversation.id,
     text: LINK_CONFIRMATION[dil],
     author: 'admin',
+    language: dil,
   });
   // Onay gitmezse bağlama YİNE geçerlidir — yalnız müşteri bilmez. Sessiz geçilmez ki
   // "bağladım ama söyleyemedim" hâli teşhis edilebilsin (`CLAUDE §1`: sessiz catch yok).
   if (sonuc.status !== 'sent') {
-    logger.warn({ context: 'messaging/link-confirm', conversationId, outcome: sonuc.status }, 'bağlama onayı gönderilemedi');
+    logger.warn({ context: 'messaging/link-confirm', conversationId: conversation.id, outcome: sonuc.status }, 'bağlama onayı gönderilemedi');
   }
 }
 
@@ -439,26 +453,15 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally,
             onayı burada gönderiyor ve tetiği çağırmıyoruz.
           */
           if (bagliMi) {
-            await bagalamaOnayiGonder(conversation.id, customerId);
+            await bagalamaOnayiGonder(conversation, customerId);
             return;
           }
 
           /*
-            SESLİ MESAJDA SIRA: çöz → satıra yaz → ajanı tetikle; hepsi webhook'un DIŞINDA
-            (`triggerVoiceTranscript` künyesi). Ötekilerde ajan doğrudan tetikleniyor.
+            SIRA: (ses ise çöz → satıra yaz) → çevir → ajanı tetikle; hepsi webhook'un DIŞINDA
+            (`triggerInboundPipeline` künyesi).
           */
-          if (medya?.mime.startsWith('audio/')) {
-            triggerVoiceTranscript({
-              messageId: yazilan.id,
-              conversationId: conversation.id,
-              mediaKey: medya.key,
-              mediaMime: medya.mime,
-              handledBy: conversation.handledBy,
-            });
-            return;
-          }
-
-          triggerAutonomousReply(conversation.id, conversation.handledBy);
+          triggerInboundPipeline({ message: yazilan, conversation, media: medya });
         },
       });
     }
@@ -653,7 +656,7 @@ async function ingestMessengerEntry(
             // dokunmaz (giden mesaj pencere açmaz) ve yazar operatördür (RPC yönden türetir).
             await recordOutboundMessage(serviceDb(), { conversationId: conversation.id, text, kind, payload, providerMessageId: message.mid });
           } else {
-            await recordInboundMessage(serviceDb(), {
+            const yazilan = await recordInboundMessage(serviceDb(), {
               conversationId: conversation.id,
               text,
               kind,
@@ -661,6 +664,9 @@ async function ingestMessengerEntry(
               providerMessageId: message.mid,
               receivedAt: msTimestamp(event.timestamp),
             });
+            // Çeviri + ajan tetiği WhatsApp'la AYNI zincir (15.28): medya indirilmediği için ses
+            // basamağı boş geçer. Ajanı olay anında tetiklemek de artık üç kanalda ortak.
+            triggerInboundPipeline({ message: yazilan, conversation, media: null });
           }
         },
       });

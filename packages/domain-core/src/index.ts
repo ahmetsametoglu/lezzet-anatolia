@@ -60,6 +60,7 @@ export * from './bank/fingerprint';
 export * from './bank/match';
 export * from './support/ticket-flow';
 export * from './messaging/chat-formatting';
+export * from './messaging/conversation-language';
 export * from './messaging/notification-preferences';
 export * from './messaging/secret-masking';
 export * from './messaging/service-window';
