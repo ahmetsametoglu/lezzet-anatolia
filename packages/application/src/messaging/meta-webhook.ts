@@ -3,6 +3,7 @@ import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../cust
 import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationsBell } from '../realtime/bell';
 import { messageSenderFor } from './meta-sender';
+import { storeConversationMedia } from './meta-media';
 import { recordInboundMessage, recordOutboundMessage } from './record';
 import { sendOutboundMessage } from './send';
 import { ConversationService, CustomerPhoneService, UserProfileService, WebhookEventService, serviceDb } from '@lezzet/database';
@@ -214,7 +215,7 @@ export async function handleMetaWebhook(
 
   for (const entry of root.entry) {
     if (root.object === 'whatsapp_business_account') {
-      await ingestWhatsappEntry(entry as Record<string, unknown>, tally);
+      await ingestWhatsappEntry(entry as Record<string, unknown>, tally, opts.fetchImpl);
     } else if (root.object === 'page' || root.object === 'instagram') {
       await ingestMessengerEntry(
         root.object === 'page' ? 'messenger' : 'instagram',
@@ -238,7 +239,7 @@ export async function handleMetaWebhook(
 
 // ── WhatsApp: entry → changes[] → value.messages[] ───────────────────────────
 
-async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally): Promise<void> {
+async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally, fetchImpl?: typeof fetch): Promise<void> {
   const changes = Array.isArray(entry.changes) ? entry.changes : [];
   for (const change of changes as { field?: string; value?: Record<string, unknown> }[]) {
     // `messages` alanı hem gelen mesajları hem giden `statuses`'ı taşır.
@@ -345,11 +346,20 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
             Maskeleme yazımdan ÖNCE: bir kez düz yazılırsa geri alınamaz, üstelik satırın kopyası
             gerçek zamanlı olarak ekranlara da düşer (`ringConversationsBell`).
           */
+          // Medya varsa Meta'dan indirilip PRIVATE kovaya yazılır. Düşerse `null` döner ve satır
+          // medyasız yazılır — indirme mesajın ön koşulu değildir.
+          const mediaId = kind === 'media' ? waMediaIdOf(payload) : null;
+          const medya = mediaId
+            ? await storeConversationMedia(conversation.id, mediaId, process.env.META_ACCESS_TOKEN ?? null, fetchImpl)
+            : null;
+
           await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
             text: maskSecretsInText(text, [waLinkTokenIn(text), kimlikSirri]),
             kind,
             payload,
+            mediaKey: medya?.key ?? null,
+            mediaMime: medya?.mime ?? null,
             providerMessageId: message.id,
             // Pencere mesajın KENDİ anından başlar — webhook gecikmeli düşebilir, "şimdi" Meta'nın
             // penceresinden geç biter ve şablon ücreti ödetir (motorun kendi künyesi).
@@ -483,6 +493,20 @@ function waBodyOf(message: WaMessage): { kind: MessageKind; text: string | null;
   if (message.type === 'button') return { kind: 'interactive', text: message.button?.text ?? null, payload: { button: message.button ?? null } };
   const media = message.type ? (message[message.type] as { caption?: string } | undefined) : undefined;
   return { kind: 'media', text: media?.caption?.trim() || null, payload: { type: message.type ?? 'unknown', body: media ?? null } };
+}
+
+/**
+ * `waBodyOf`un kurduğu medya gövdesinden Meta'nın MEDYA KİMLİĞİ (`id`).
+ *
+ * Biçimi bilen tek yer burası: gövde `{ type, body }` şeklinde saklanıyor ve `body` sağlayıcının
+ * ham nesnesi. İndirme kapısına ham gövdeyi geçirip orada ayrıştırmak, sağlayıcı biçimini ikinci
+ * bir dosyaya sızdırırdı.
+ *
+ * `null` = kimlik yok (tanınmayan tür, gövdesiz medya) — indirme hiç denenmez, mesaj yine yazılır.
+ */
+function waMediaIdOf(payload: Record<string, unknown> | null): string | null {
+  const body = payload?.body as { id?: unknown } | null | undefined;
+  return typeof body?.id === 'string' && body.id.trim() ? body.id : null;
 }
 
 /** WhatsApp damgası SANİYE cinsindendir (Messenger/IG milisaniye — karıştıran, pencereyi 1970'e kurar). */

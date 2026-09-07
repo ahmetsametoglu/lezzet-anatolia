@@ -1,5 +1,6 @@
 import { serviceWindowState, stripChatFormatting } from '@lezzet/domain-core';
-import type { ConversationInboxRow, Message } from '@lezzet/types';
+import type { ConversationInboxRow } from '@lezzet/types';
+import type { MessageWithMedia } from '@/lib/messaging/read';
 import { agoShort, shortDateTime } from '@/components/operation/ui/format';
 import { MESSAGE_KIND_LABELS, TEMPLATE_CATEGORY_LABELS } from './social-labels';
 import type { InboxRowView, MessageView, WindowView } from './social-types';
@@ -122,16 +123,24 @@ function ageMinutes(iso: string, nowMs: number): number {
  * WhatsApp bize ne yazdı" sorusunun cevabı orada. Adı tek başına göstermek, pahalı bir mesajı ucuz
  * bir mesajdan ayırt edilemez kılardı.
  */
-export function toMessageViews(messages: readonly Message[]): MessageView[] {
+export function toMessageViews(messages: readonly MessageWithMedia[]): MessageView[] {
   return messages.map((m) => ({
     id: m.id,
     direction: m.direction,
     author: m.author,
     kind: m.kind,
-    text: m.body.text?.trim() || MESSAGE_KIND_LABELS[m.kind],
+    /*
+      MEDYADA YER TUTUCU YOK ARTIK: dosyanın kendisi çiziliyor, "[medya]" yazısı onun altında
+      ikinci kez aynı şeyi söylerdi. Alt yazı varsa o gösteriliyor, yoksa metin satırı hiç
+      çizilmiyor. Dosya alınamadıysa sebebini balonun kendisi yazıyor (`MediaBody`) — burada
+      bir yer tutucuya düşmek, "alınamadı" ile "yazısız fotoğraf"ı aynı görünüme sokardı.
+    */
+    text: m.body.text?.trim() || (m.kind === 'media' ? '' : MESSAGE_KIND_LABELS[m.kind]),
     stamp: shortDateTime(m.createdAt),
     templateLabel: m.templateName
       ? `${m.templateName}${m.templateCategory ? ` · ${TEMPLATE_CATEGORY_LABELS[m.templateCategory]}` : ''}`
       : null,
+    mediaUrl: m.mediaUrl,
+    mediaMime: m.mediaMime,
   }));
 }

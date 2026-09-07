@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ConversationInboxRow, Message } from '@lezzet/types';
+import type { ConversationInboxRow } from '@lezzet/types';
+import type { MessageWithMedia } from '@/lib/messaging/read';
 import { previewOf, remainingLabel, toInboxRows, toMessageViews, toWindowView, WINDOW_SOON_MS } from './social-read';
 
 // 15.5/15.15 — okuma dönüşümlerinin ölçütleri. Üçü de birer KARAR ve karar sınanabilir olmalı:
@@ -40,7 +41,7 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
   };
 }
 
-function message(patch: Partial<Message> = {}): Message {
+function message(patch: Partial<MessageWithMedia> = {}): MessageWithMedia {
   return {
     id: '33333333-3333-4333-8333-333333333333',
     conversationId: '11111111-1111-4111-8111-111111111111',
@@ -51,6 +52,11 @@ function message(patch: Partial<Message> = {}): Message {
     templateName: null,
     templateCategory: null,
     providerMessageId: null,
+    mediaKey: null,
+    mediaMime: null,
+    // Adres okuma kapısında imzalanıyor (`readConversationDetail`), çeviricinin işi değil —
+    // fikstür de onu veri olarak taşıyor.
+    mediaUrl: null,
     createdAt: NOW.toISOString(),
     ...patch,
   };
@@ -165,8 +171,28 @@ describe('toMessageViews', () => {
     expect(views.map((v) => v.text)).toEqual(['ilk', 'ikinci']);
   });
 
-  it('gövdesiz mesaj balonu boş bırakmaz', () => {
-    expect(toMessageViews([message({ kind: 'media', body: { text: null } })])[0]?.text).toBe('[görsel / dosya]');
+  /*
+    MEDYADA YER TUTUCU KALKTI (07.09) — dosyanın kendisi çizildiği gün "[görsel / dosya]" yazısı
+    onun altında aynı şeyi ikinci kez söylemeye başladı. Balonun boş kalmama güvencesi kayboLMADI,
+    yer değiştirdi: `MediaBody` ya dosyayı çiziyor ya "alınamadı" diyor. Bu ikisini tek yer
+    tutucuya indirmek, "yazısız fotoğraf" ile "dosyası elimizde yok"u aynı görünüme sokardı.
+  */
+  it('medyada yer tutucu YOK — dosyayı balon çiziyor, metin yalnız alt yazıdır', () => {
+    expect(toMessageViews([message({ kind: 'media', body: { text: null } })])[0]?.text).toBe('');
+    expect(toMessageViews([message({ kind: 'media', body: { text: 'ezik geldi' } })])[0]?.text).toBe('ezik geldi');
+  });
+
+  it('medya DIŞINDA gövdesiz mesaj hâlâ türünün adıyla okunur', () => {
+    // Kart/şablonun çizilecek bir dosyası yok; orada yer tutucu tek okunabilir çıkış.
+    expect(toMessageViews([message({ kind: 'interactive', body: { text: null } })])[0]?.text).toBe('[etkileşimli kart]');
+  });
+
+  it('medya adresi ve türü balona OLDUĞU GİBİ geçer — çevirici imzalamaz', () => {
+    // İmzalama okuma kapısının işi (`readConversationDetail`): süreli adres her okumada yeniden
+    // üretilir, saf çevirici ise ağa çıkmamalı.
+    const views = toMessageViews([message({ kind: 'media', mediaMime: 'image/jpeg', mediaUrl: 'https://r2.example/imzali' })]);
+    expect(views[0]?.mediaMime).toBe('image/jpeg');
+    expect(views[0]?.mediaUrl).toBe('https://r2.example/imzali');
   });
 
   it('şablon etiketi ADI ve ÜCRET SINIFINI birlikte yazar', () => {

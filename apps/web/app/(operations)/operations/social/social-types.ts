@@ -70,6 +70,16 @@ export interface MessageView {
   stamp: string;
   /** Yalnız şablon mesajında dolu: hangi kalıp, hangi ücret sınıfı (yalnız WhatsApp'ta olabilir). */
   templateLabel: string | null;
+  /**
+   * Gelen medyanın SÜRELİ adresi — her okumada yeniden imzalanır, satırda saklanmaz.
+   *
+   * `null` üç ayrı hâli birden taşır ve ekran bunları ayırt ETMEZ: medya yok · kova yerelde ayarlı
+   * değil · o gün indirme düşmüştü. Üçünde de operatörün yapabileceği bir şey yok; ayırt eden bir
+   * ekran, eyleme dönüşmeyen bir ayrım gösterirdi.
+   */
+  mediaUrl: string | null;
+  /** Fotoğraf mı ses mi çizileceği — `kind` hepsine `media` diyor. */
+  mediaMime: string | null;
 }
 
 export interface ConversationDetailView {

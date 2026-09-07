@@ -1,4 +1,5 @@
 import { ConversationService, MessageService, TicketService, serviceDb } from '@lezzet/database';
+import { privateReadUrl } from '@lezzet/storage';
 import type { Conversation, Message, Ticket } from '@lezzet/types';
 
 /**
@@ -14,10 +15,20 @@ import type { Conversation, Message, Ticket } from '@lezzet/types';
  * Gelen kutusu listesi de burada değil: o tek servis çağrısı (`ConversationInboxService.list`) ve
  * sarmalamak yalnız bir dolaylılık katmanı olurdu.
  */
+/**
+ * Mesaj + **süreli** medya adresi. Adres satırda saklanmaz, her okumada üretilir: private kovanın
+ * tek okuma yolu imzalı adrestir ve o adres dakikalar içinde ölür (`privateReadUrl`). Kalıcı bir
+ * adres saklasaydık, sohbeti okuma yetkisi olmayan biri de bağlantıyı ele geçirdiğinde okurdu.
+ */
+export interface MessageWithMedia extends Message {
+  /** `null`: medya yok, kova ayarlı değil (yerel), ya da indirme o gün düşmüştü. */
+  mediaUrl: string | null;
+}
+
 interface ConversationDetailData {
   conversation: Conversation;
   /** Eskiden yeniye — okunan şey bir sohbet. */
-  messages: Message[];
+  messages: MessageWithMedia[];
   tickets: Ticket[];
 }
 
@@ -43,5 +54,19 @@ export async function readConversationDetail(conversationId: string): Promise<Co
     new TicketService(db).listByConversation(conversationId),
   ]);
 
-  return { conversation, messages, tickets };
+  /*
+    Medya adresleri TEK TURDA imzalanır (`privateReadUrls` deseni): ayrı ayrı `await` edilseydi
+    beş fotoğraflı bir sohbet beş turluk gecikme yerdi ve imzalama zaten yerel bir hesap.
+
+    Yetki kapısı yukarıda: bu okuma `requireAdmin`in arkasında ve anahtar SATIRDAN geliyor, yani
+    dışarıdan gelen bir dizeyi imzalamıyoruz. `conversationMediaScope` kontrolü bu yüzden burada
+    değil — o, anahtarın istemciden geldiği yollar içindir.
+  */
+  const mediaUrls = await Promise.all(messages.map((m) => privateReadUrl(m.mediaKey)));
+
+  return {
+    conversation,
+    messages: messages.map((m, i) => ({ ...m, mediaUrl: mediaUrls[i] ?? null })),
+    tickets,
+  };
 }

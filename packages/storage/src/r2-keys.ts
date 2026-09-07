@@ -121,6 +121,27 @@ export const r2Keys = {
    */
   shippingLabel: (boxId: string): string => `shipping-labels/${sanitize(boxId)}.pdf`,
 
+  /**
+   * **Sohbetten gelen medya** (15.x) — müşterinin WhatsApp/Messenger/IG'den gönderdiği fotoğraf,
+   * ses ya da belge. `ticketAttachment` ile aynı aile: PRIVATE kova, public adresi YOK. İçeriği
+   * müşterinin kendi mesajıdır; herkese açık bir adreste durursa anahtarı bilen okur.
+   *
+   * **Neden İNDİRİYORUZ, adresi saklamıyoruz:** Meta'nın verdiği medya adresi dakikalar içinde
+   * ölüyor ve medyanın kendisi de ~30 gün sonra siliniyor. Adres saklansaydı ekran ertesi gün boş
+   * açılırdı; hiç saklanmasaydı ezik ürün fotoğrafı — yani şikâyetin tek kanıtı — talep
+   * sonuçlanmadan yok olurdu.
+   *
+   * Deterministik DEĞİL, `ticketAttachment` ile aynı gerekçe: bir sohbete sınırsız medya düşer ve
+   * hiçbiri ötekinin üstüne yazmamalı. `mediaToken` çağıranın ürettiği tek kullanımlık kimliktir
+   * (sağlayıcının medya kimliği KULLANILMAZ: kanal değiştiğinde biçimi değişir ve anahtar
+   * sağlayıcının adlandırmasına bağlanırdı).
+   *
+   * Konuşma kimliğine göre klasörlenir: müşteri GDPR ile anonimleştirildiğinde konuşma ve mesajlar
+   * zaten siliniyor (0037) — `messaging/conversations/{id}/` tek seferde onlarla gider.
+   */
+  conversationMedia: (conversationId: string, mediaToken: string, sourceFilename: string): string =>
+    `messaging/conversations/${sanitize(conversationId)}/${sanitize(mediaToken)}.${extOf(sourceFilename)}`,
+
   deliveryProof: (orderId: string, photoToken: string, sourceFilename: string): string =>
     `delivery/proofs/${sanitize(orderId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 } as const;
@@ -135,6 +156,19 @@ export const r2Keys = {
  * Anahtar biçimini bilen tek yer burasıdır; kapı biçimi yeniden ayrıştırmaz.
  */
 export type TicketAttachmentScope = { kind: 'ticket'; ticketId: string } | { kind: 'draft'; customerId: string } | null;
+
+/**
+ * Sohbet medyasının **hangi konuşmaya ait olduğu** — `ticketAttachmentScope` ile aynı iş, aynı
+ * gerekçe: imzalı okuma adresi sahipliği doğrulanmış bir konuşma üzerinden üretiliyor, ama
+ * anahtarın gerçekten O konuşmaya ait olduğu ayrıca kontrol edilmezse, yetkisi olan biri private
+ * kovadaki başka bir anahtarı okutabilir. Yetki doğrulanır ama yanlış nesnenin.
+ *
+ * Anahtar biçimini bilen tek yer burasıdır; kapı biçimi yeniden ayrıştırmaz.
+ */
+export function conversationMediaScope(key: string): string | null {
+  const m = /^messaging\/conversations\/([^/]+)\/[^/]+$/.exec(key);
+  return m ? m[1]! : null;
+}
 
 export function ticketAttachmentScope(key: string): TicketAttachmentScope {
   const draft = /^support\/tickets\/drafts\/([^/]+)\/[^/]+$/.exec(key);

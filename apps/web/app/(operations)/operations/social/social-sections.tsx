@@ -149,8 +149,49 @@ function Bubble({ message }: { message: MessageView }) {
       {/* Balonun METNİ biçimli çizilir (06.09). WhatsApp müşterinin ekranında `*kalın*`ı zaten
           çiziyordu; operatör aynı mesajı çıplak yıldızlarla görüyordu — iki taraf aynı cümleyi
           farklı okuyordu. Çizici ortak (`ChatText`), balonun DERİSİ yine `bubbleClass`. */}
-      <ChatText className={bubbleClass(ai ? 'violet' : mine ? 'olive' : 'neutral')} text={message.text} />
+      <div className={bubbleClass(ai ? 'violet' : mine ? 'olive' : 'neutral', 'flex flex-col gap-2')}>
+        <MediaBody message={message} />
+        {/* Metin medyanın ALTINDA: gelen bir fotoğrafta metin alt yazıdır, başlık değil. Metin
+            yoksa satır hiç çizilmiyor — boş bir balon gövdesi, olmayan bir mesaj gösterirdi. */}
+        {message.text ? <ChatText text={message.text} /> : null}
+      </div>
     </MessageRow>
+  );
+}
+
+/**
+ * Medya gövdesi — fotoğraf görünür, ses çalınır, ötekiler indirilir.
+ *
+ * **Adres SÜRELİ ve bu ekranın bilmesi gereken tek şey değil:** imzalı adres dakikalar içinde ölür,
+ * yani operatör sekmeyi bir saat açık bırakırsa görsel kırılır. Sayfa yenilenince yeni adres gelir;
+ * kalıcı adres saklamak, sohbeti okuma yetkisi olmayan birinin bağlantıyı ele geçirmesi demekti.
+ *
+ * **Adres yoksa gövde YİNE ÇİZİLİR** ("[medya]" değil, sebebiyle birlikte): mesajın kendisi
+ * kaybolmadı, yalnız dosyası elimizde yok. Boş bırakmak, operatöre olmayan bir sessizlik gösterirdi.
+ */
+function MediaBody({ message }: { message: MessageView }) {
+  if (message.kind !== 'media') return null;
+
+  const mime = message.mediaMime ?? '';
+  if (!message.mediaUrl) {
+    return <span className="font-ops-body text-ops-micro text-ops-faint">Medya dosyası alınamadı — mesaj kaydedildi.</span>;
+  }
+  if (mime.startsWith('image/')) {
+    return (
+      /* Ham `<img>` ve sebebi var: adres İMZALI ve SÜRELİ. `next/image` onu kendi önbelleğine
+         almaya çalışır; adres birkaç dakikada öldüğü için önbellekte kırık bir kayıt kalır ve
+         optimizasyondan kazanılan hiçbir şey yoktur — dosya zaten operatörün tek seferlik baktığı
+         bir kanıt, katalog görseli değil. */
+      <img src={message.mediaUrl} alt="Müşterinin gönderdiği görsel" className="max-h-72 w-auto rounded-ops-sm" />
+    );
+  }
+  if (mime.startsWith('audio/')) {
+    return <audio controls src={message.mediaUrl} className="w-full max-w-xs" />;
+  }
+  return (
+    <a href={message.mediaUrl} target="_blank" rel="noreferrer" className="cursor-pointer font-ops-body text-ops-micro underline">
+      Dosyayı aç
+    </a>
   );
 }
 

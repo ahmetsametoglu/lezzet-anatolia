@@ -34,6 +34,15 @@ export interface RecordMessageInput {
    */
   payload?: Record<string, unknown> | null;
   /**
+   * İndirilip PRIVATE kovaya yazılmış medyanın anahtarı ve türü (`storeConversationMedia`).
+   *
+   * Medya mesajında bile boş kalabilir ve bu bilinçli: indirme düşse de satır yazılır. Kayıt
+   * kapısının hiçbir yolu "medya gelmedi" diye mesajı reddetmez — defterin ilk kuralı mesajın
+   * kaybolmamasıdır.
+   */
+  mediaKey?: string | null;
+  mediaMime?: string | null;
+  /**
    * Kim yazdı (15.8). Verilmezse RPC yönden türetir (gelen → `customer`, giden → `admin`) ve bu
    * doğru varsayılandır: elle işlenen satırı gerçekten personel yazmıştır. **Özerk ajan kendini
    * `ai` diye bildirmek ZORUNDA** — yoksa defter "bunu kim söyledi" sorusuna personel der ve
@@ -64,6 +73,8 @@ export async function recordInboundMessage(
     body: bodyOf(input.text, input.payload),
     providerMessageId: input.providerMessageId,
     windowExpiresAt: serviceWindowExpiry(input.receivedAt),
+    mediaKey: input.mediaKey,
+    mediaMime: input.mediaMime,
   });
 }
 
