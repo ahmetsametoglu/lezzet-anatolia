@@ -18,6 +18,7 @@ Yöneticinin "site nasıl gidiyor, reklam çalışıyor mu, müşteri ne istiyor
 - **Pazarlama izni sayısı + köprü (kullanıcı kararı 04.08, `ANALYTICS §6`)** — kanal bazlı "kaç kişi izin verdi"; **liste burada DEĞİL**, Müşteriler ekranında. Analitik *kaç* der, Müşteriler *kim* der; kişi bazlı bir ekran açılmaz. Sayı ile listenin aynı ölçütten çıkması şart, yoksa köprünün iki ucu farklı sayı gösterir
 - **Bölge dışı talep — yalnız işaret ve köprü (kullanıcı kararı 04.08)** — posta kodu talep tablosunun kendisi **Depolar** ekranındadır, çünkü bölgeyi açma kararı orada veriliyor. Burada iki ekranda iki tablo olsaydı aynı soru iki farklı cevap verirdi
 - **Verinin ÜÇ hâli ayrı konuşur** — "sayı var" · "veri birikiyor" (kapı hazır, ölçüm başlamadı) · "bu sayı hesaplanmıyor" (kapı yok ya da özet o boyutu taşımıyor). Son ikisi ekranda aynı görünmemeli: biri beklemeyi, öteki beklememeyi söyler; birleştirilirse yönetici hiç dolmayacak bir bloğun dolmasını bekler
+- **Sohbet hunisi — platform verimliliği (kullanıcı sorusu 07.09, `build/15` 15.24)** — yöneticinin sorusu: *"WhatsApp, Messenger ve Instagram'dan hangisi daha verimli, insanlar hangisini tercih ediyor?"* Üç platform **yan yana**, aynı dönem, aynı beş adım: **açılan sohbet → sepet kurulan sohbet → gönderilen bağlantı → açılan bağlantı (giriş yapıldı) → sipariş**; sonuna ciro. Her adım arasındaki oran görünür ("sohbetlerin %X'i sepete, sepetlerin %Y'si siparişe"), böylece "nerede kaybediyorum" sorusu platform başına cevaplanır. Sayılar sohbet, bağlantı ve sipariş kayıtlarının damgalarından türer — yeni ölçüm kurulmaz, kişi takip edilmez; sipariş sayımı "sohbetin dokunduğu sepetin siparişi sohbetindir" kuralıyla yapılır (sitede ödense de). **Zaman ekseni ikinci soru:** dönem toplamının yanında haftalık gidiş — "tercih zamanla değişiyor mu" ancak böyle okunur. **Kim yürüttü ayrımı** (yapay zekâ / personel) platform sütununun içinde ikincil kırılım: aynı platformda ajanın yürüttüğü sohbet daha mı çok siparişe dönüyor — verimliliğin öteki yarısı. Bu blok trafik kaynağıyla (UTM'li site girişi) ve edinim kaynağıyla KARIŞTIRILMAZ: o ikisi siteye kimin geldiğini söyler, bu blok sohbetin siparişe dönüp dönmediğini
 
 ## 3. Aksiyonlar
 
@@ -34,6 +35,7 @@ Yöneticinin "site nasıl gidiyor, reklam çalışıyor mu, müşteri ne istiyor
 - **Sıfır-sonuç listesi boş** — iyi haber hali de tasarlanır
 - **Uç değerler/anormallik** — tek büyük B2B siparişi ortalamayı bozar; AI anlatısı bu tür yanıltıcı sıçramaları bağlamıyla söyler
 - Dil/ülke kırılımı (TR/FR/DE, FR/DE ülkeleri) — üç dilli pazarda hangi dil kitlesi ne yapıyor
+- **Sohbet hunisinde bağlı olmayan kanal** — Instagram ürünü uygulamaya henüz eklenmemişken sütun "sıfır" değil "bu kanal bağlı değil" demeli; sıfır ile yokluk ayrı (`ANALYTICS` üç hâl kuralı). **Küçük sayı** — dönemde ondan az sohbet varsa oran yüzdeyle değil sayıyla söylenir ("3 sohbetten 1'i"); %33 üç sohbette bir anlam taşımaz
 
 ## 5. Akış bağlantıları
 

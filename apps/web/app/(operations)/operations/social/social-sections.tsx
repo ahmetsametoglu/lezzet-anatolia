@@ -581,6 +581,8 @@ interface SocialContextPaneProps {
   anchor: AnchorSnapshot | null;
   onStartEmailAnchor: (email: string) => void;
   onIssueSecurityCode: () => void;
+  /** Sepet bağlantısı (15.21) — sohbeti personel yürütürken müşteriyi sepete taşıyan tek yol. */
+  onSendCartLink: () => void;
 }
 
 export function SocialContextPane({
@@ -596,6 +598,7 @@ export function SocialContextPane({
   anchor,
   onStartEmailAnchor,
   onIssueSecurityCode,
+  onSendCartLink,
   busy,
   onOptIn,
 }: SocialContextPaneProps) {
@@ -670,6 +673,22 @@ export function SocialContextPane({
           Messenger'da izni işaretleyen operatör onun kampanya listesine girdiğini sanırdı. */}
       <OptInRecorder source={source} optIn={optIn} busy={busy} onOptIn={onOptIn} />
       <AnchorPane anchor={anchor} busy={busy} onStartEmail={onStartEmailAnchor} onIssueCode={onIssueSecurityCode} />
+
+      {/* SEPET BAĞLANTISI (15.21 · kullanıcı kararı 07.09) — ajanın `sepet_baglantisi` aracının
+          insan eli. Sohbeti personel yürütürken ajan araçları çalışmaz; müşteriyi sepete taşımanın
+          tek yolu bu düğme. Aynı jeton kapısı, aynı cümle — ajanın gönderdiğiyle ayrışamaz. Kimliksiz
+          sohbette (Messenger/IG) bağlantı bir de kimlik köprüsüdür: giriş yapan kişi sohbete bağlanır.
+          Çizimde yok; kullanıcı 07.09'da bu panele eklenmesine izin verdi. */}
+      <div className="flex flex-col items-start gap-1.5">
+        <SectionLabel>Sepet</SectionLabel>
+        <Button variant="secondary" size="sm" disabled={busy} onClick={onSendCartLink}>
+          Sepet bağlantısı gönder
+        </Button>
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+          Müşteri bağlantıyı açıp giriş yapar; sepetini sitede onaylar ve öder. Onay, adres ve ödeme
+          sohbette değil, orada. Bağlantı 7 gün geçerli; yenisi eskisini geçersizler.
+        </span>
+      </div>
 
       <div className="flex flex-col gap-1.5">
         <SectionLabel>Bağlı talepler</SectionLabel>

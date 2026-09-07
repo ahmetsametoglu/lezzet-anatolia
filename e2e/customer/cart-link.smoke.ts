@@ -22,8 +22,10 @@ import { createStampedProduct, type StampedProduct } from '../fixtures/product-f
  * ── GİRİŞ: HIZLI GİRİŞ KAPISI ───────────────────────────────────────────────
  * OTP kodu 3001'de bilerek kapalı (README); `auth/dev-login` GERÇEK bir oturum kurar ve 07.09'dan
  * beri öteki iki giriş yolunun geçtiği devir kapısından geçer — yani bağlantı çerezi orada tüketilir.
- * Damgalı e-posta yeni bir müşteri doğurur (0002 tetikleyicisi); teardown `otp-fixture` deseniyle
- * auth kullanıcısını ve profili toplar.
+ * **Auth kullanıcısı ÖNCEDEN açılır** (admin API, e-posta doğrulanmış): hızlı giriş var olmayan
+ * e-postada oturum açamıyor — ölçüldü 07.09 3001'de, *"Email link is invalid or has expired"*;
+ * magic-link jetonu yeni doğan kullanıcıda tutmuyor, var olanda tutuyor (operasyon setup'ının yolu).
+ * Profili 0002 tetikleyicisi açar; teardown `otp-fixture` deseniyle auth kullanıcısını ve profili toplar.
  *
  * Gezinme sözleşmesi: `storefront.smoke.ts` başındaki gerekçe.
  */
@@ -40,6 +42,10 @@ test.beforeAll(async () => {
   const { CartService, ConversationService, serviceDb } = await import('@lezzet/database');
   const { startCartLink } = await import('@lezzet/application/cart/link');
   const db = serviceDb();
+
+  // Bağlantıyı açacak kişi — auth kullanıcısı önceden, doğrulanmış (dosya başındaki künye).
+  const { error } = await db.auth.admin.createUser({ email, password: crypto.randomUUID(), email_confirm: true });
+  if (error) throw new Error(`fikstür: auth kullanıcısı açılamadı — ${error.message}`);
 
   // Ajanın Messenger'da kurduğu sepet: kimliksiz sohbet + sohbet sepeti (0055).
   const conversation = await new ConversationService(db).open({ source: 'messenger', externalRef: `psid-e2e-${product.stamp}` });

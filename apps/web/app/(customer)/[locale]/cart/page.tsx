@@ -35,10 +35,12 @@ export default async function CartPage({ params, searchParams }: CartPageProps) 
   /* SOHBETTEN GELEN BAĞLANTI (15.21): ajanın gönderdiği adres bu sayfadır (`/fr/panier?link=…`)
      ki müşteri okunaklı bir bağlantı görsün. Ama jeton burada TÜKETİLEMEZ — sunucu bileşeni çerez
      yazamaz ve oturum yoksa önce giriş gerekir. Sayfa jetonu çerez kapısına devreder
-     (`/cart-link`): oturum varsa orada tüketilir ve buraya dönülür, yoksa giriş sayfasına gidilir
-     ve giriş anında tüketilir (`invite-handoff`). Sayfa görüntülemesi de o dönüşte sayılır. */
+     (`/auth/cart-link`): oturum varsa orada tüketilir ve buraya dönülür, yoksa giriş sayfasına
+     gidilir ve giriş anında tüketilir (`invite-handoff`). Sayfa görüntülemesi de o dönüşte sayılır.
+     Kapı `/auth/` altında ve bilerek: dil ara katmanı `auth` dışındaki her yolu dil önekine
+     çeviriyor — `/cart-link` 3001'de `/fr/cart-link` olup 404 düştü (ölçüldü 07.09, e2e). */
   const { [CART_LINK_PARAM]: linkToken } = await searchParams;
-  if (linkToken) redirect(`/cart-link?token=${encodeURIComponent(linkToken)}&locale=${locale}`);
+  if (linkToken) redirect(`/auth/cart-link?token=${encodeURIComponent(linkToken)}&locale=${locale}`);
 
   void recordPageView('/cart');
 

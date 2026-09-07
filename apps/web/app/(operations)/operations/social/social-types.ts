@@ -278,4 +278,6 @@ export interface SocialViewProps {
   onStartEmailAnchor: (email: string) => void;
   /** E-posta istemeyene 6 haneli kod ver; kod sohbete YAZILIR, ekrana değil. */
   onIssueSecurityCode: () => void;
+  /** Sepet bağlantısını sohbete gönder (15.21) — ajanın aracının insan eli; müşteri sitede tamamlar. */
+  onSendCartLink: () => void;
 }

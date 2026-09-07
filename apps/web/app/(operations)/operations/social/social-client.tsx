@@ -8,6 +8,7 @@ import {
   loadMoreConversationsAction,
   issueSecurityCodeAction,
   recordConversationOptInAction,
+  sendCartLinkAction,
   startEmailAnchorAction,
   sendOutboundAction,
   setConversationModeAction,
@@ -153,6 +154,10 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
     },
     onIssueSecurityCode: () => {
       if (detail) void run(() => issueSecurityCodeAction(detail.id));
+    },
+    /** Sepet bağlantısı (15.21) — aynı yazma sarmalı; bağlantı sohbete gider, ekrana değil. */
+    onSendCartLink: () => {
+      if (detail) void run(() => sendCartLinkAction(detail.id));
     },
   };
 

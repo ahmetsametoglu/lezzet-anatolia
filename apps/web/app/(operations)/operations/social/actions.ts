@@ -11,6 +11,9 @@ import {
   sendOutboundMessage,
   startEmailAnchor,
 } from '@lezzet/application';
+// Alt yoldan (`settings-keys` emsali): barrel o gün başka şeritlerin elindeydi (07.09).
+import { startCartLink } from '@lezzet/application/cart/link';
+import { CART_LINK_LINE } from '@lezzet/application/cart/link-text';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { ConversationHandlerEnum, DEFAULT_PAGE_SIZE, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
@@ -511,6 +514,48 @@ export async function issueSecurityCodeAction(conversationId: string): Promise<A
       already_anchored: 'Bu müşterinin e-posta çapası var; kod gerekmiyor.',
     };
     return { data: null, error: cumle[sonuc.status] };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * **Sepet bağlantısını sohbete gönder** (15.21 · operatör yarısı, kullanıcı kararı 07.09).
+ *
+ * Ajanın `sepet_baglantisi` aracının insan eli: sohbeti personel yürütüyorsa ajan araçları
+ * çalışmaz ve müşteriyi sepete taşıyacak tek yol buydu. Bağlantı AYNI kapıdan üretilir
+ * (`startCartLink` — yeni jeton eskisini geçersizler) ve AYNI cümleyle gider (`CART_LINK_LINE`):
+ * ajanın gönderdiğiyle operatörün gönderdiği ayrışamaz. Bağlantıyı açan kişi giriş yapınca sepet
+ * ve (kimliksiz sohbette) kimlik hesabına geçer — `cart/link.ts` künyesi.
+ *
+ * Gönderim `sendOutboundMessage`tan: pencere kapalıysa reddedilir ve sebebi operatöre söylenir
+ * (`SEND_REFUSAL`). Jeton yine de üretilmiş olur ve bir hafta bekler — pencere açılınca yeniden
+ * gönderilebilir, ikinci basış yenisini üretir.
+ */
+export async function sendCartLinkAction(conversationId: string): Promise<ActionResult<{ id: string | null }>> {
+  try {
+    await requireAdmin();
+
+    const link = await startCartLink(serviceDb(), { conversationId });
+    if (link.status !== 'ok') {
+      const cumle: Record<typeof link.status, string> = {
+        conversation_not_found: 'Konuşma bulunamadı — ekranı tazeleyin.',
+        unavailable: 'Bağlantı üretilemedi — bir kez daha deneyin.',
+      };
+      return { data: null, error: cumle[link.status] };
+    }
+
+    const outcome = await sendOutboundMessage(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
+      conversationId,
+      // Ajanın cevabına eklenen satırın aynısı (`withCartLink` biçimi): cümle, altında bağlantı.
+      text: `${CART_LINK_LINE}\n${link.url}`,
+      author: 'admin',
+    });
+    refresh();
+
+    if (outcome.status === 'sent') return { data: { id: outcome.message?.id ?? null }, error: null };
+    if (outcome.status === 'refused') return { data: null, error: SEND_REFUSAL[outcome.reason] ?? `Gönderilemedi (${outcome.reason}).` };
+    return { data: null, error: `Sağlayıcı reddetti (${outcome.reason}) — bağlantı üretildi, pencere açılınca yeniden deneyin.` };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

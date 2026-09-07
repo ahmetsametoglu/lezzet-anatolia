@@ -542,20 +542,15 @@ kompozisyonu orada henüz yok. Ön şartları hazır (uç: `POST /me/addresses/:
 sorudur; reddedilince akış aynen sürer. Sözcükler dört yüzeyde AYNI olmalı — operasyon tarafındaki
 eşleşme artık makineyle zorlanıyor (`docs:check §3k`), müşteri tarafındaki hâlâ künyeyle.
 
-**Sosyal gelen kutusu — "siteye devir" öğesi çizilmedi, 29.08.** `CHANNELS §3b` (28.08 kararı)
-Messenger/Instagram'ın rolünü *"danışma sohbette, işlem sitede"* diye bağladı ve devir anını
-tanımladı: kimliğe bağlı soru gelince ya da satış kapanacakken müşteri siteye yönlendirilir.
-Ajandaki yarısı YAZILDI (prompt kuralı — sipariş isteyen müşteriye "sitemizden verebilirsiniz",
-adres sohbette alınmaz). **Operatör yarısı çizilmedi:** sağ panelde (`SocialContextPane`) hazır
-devir cümlesini mesaj kutusuna koyan bir öğe. Ölçüldü — `Operasyon - WhatsApp.dc.html` yalnız
-"Sipariş oluştur" veriyor (o da uygulandı, 15.4), devir/yönlendirme öğesi yok; icat etmek
-`CLAUDE §3`'ü çiğnerdi.
-
-Çizime girmeden önce **değeri tartışılmalı**, çünkü bugün taşıyabileceği tek şey jenerik bir
-bağlantıdır ve operatör onu zaten elle yazabiliyor. Öğeyi anlamlı kılan iki şey ayrı işlerde duruyor:
-**adreslenebilir sepet** (`15-whatsapp.md` "Netleşecekler" — sepeti sohbette kur, bağlantıyı gönder;
-ön koşulu 15.8) ve **müşterinin dili** (`CustomerContextData` bugün `preferredLanguage` taşımıyor,
-yani doğru dilde bağlantı verilemiyor). İkisinden biri gelmeden düğme yalnız bir kısayoldur.
+**Sosyal gelen kutusu — "Sepet bağlantısı gönder" düğmesi KODDA var, ÇİZİMDE yok (07.09).** 29.08'de
+park edilen "siteye devir" öğesinin operatör yarısı, sohbetten sepet (15.20–15.22) gelince anlam
+kazandı ve kullanıcının açık izniyle sağ panele (`SocialContextPane`, kimlik çapası bloğunun altına)
+yazıldı: "Sepet bağlantısı gönder" — ajanın `sepet_baglantisi` aracının insan eli, aynı jeton, aynı
+cümle; bağlantı müşterinin dilinde üretiliyor (`cart/link.ts`, `preferredLanguage` sohbetin
+müşterisinden okunuyor). Kalan açık yalnız çizim: `Operasyon - WhatsApp.dc.html` bu düğmeyi
+taşımıyor; öğe mevcut panel dilinde (bölüm etiketi + ikincil düğme + açıklama satırı) kuruldu.
+Çizim güncellenirken ele alınacak tek soru yerleşim — düğme çapa bloğunun altında mı, "Sipariş
+oluştur"un yanında mı.
 
 **Yeni sayfa — Sistem (sağlık + hatalar), 29.07.** `pages/admin-sistem.md` yazıldı, **görsel kararı
 (`.dc.html`) yok** — Claude Design'a verilecek. Diğer 38 sayfa gibi tasarımdan doğmadı, ihtiyaçtan
