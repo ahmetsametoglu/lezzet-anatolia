@@ -69,7 +69,7 @@ Sipariş oluştuğunda kanal, sipariş verenin **şirket olup olmadığına** g�
 
 ### Kanal ≠ sipariş kaynağı
 
-"Kanal" (b2b/b2c) siparişi verenin **kim** olduğudur. Siparişin **nereden** kapandığı ayrı bir eksendir: `order_source` (`web`/`whatsapp`/`door`/`manual`). Bir B2C müşteri WhatsApp'tan da siteden de sipariş verebilir; kanalı değişmez, yalnızca kaynağı değişir. Günlük dilde "WhatsApp kanalı" denir ama veri modelinde bu `order_source=whatsapp`'tır — mali paylaşımla ilgisi yoktur. Ayrıntı: `CHANNELS.md`.
+"Kanal" (b2b/b2c) siparişi verenin **kim** olduğudur. Siparişin **nereden** kapandığı ayrı bir eksendir: `order_source` (`web`/`whatsapp`/`messenger`/`instagram`/`door`/`manual`). Bir B2C müşteri WhatsApp'tan da siteden de sipariş verebilir; kanalı değişmez, yalnızca kaynağı değişir. Günlük dilde "WhatsApp kanalı" denir ama veri modelinde bu `order_source=whatsapp`'tır — mali paylaşımla ilgisi yoktur. **"Kapandığı yer" ödemenin alındığı yer değil, sepetin netleştiği yerdir** (07.09): sohbette kurulup sitede ödenen sipariş sohbetin kanalını taşır — sohbetin dokunduğu sepet, sohbetin siparişidir. Ayrıntı: `CHANNELS.md`.
 
 ---
 

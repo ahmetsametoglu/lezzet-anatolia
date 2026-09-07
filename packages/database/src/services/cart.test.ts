@@ -237,3 +237,46 @@ describe('sohbet sepeti (15.22)', () => {
     expect(data).toEqual([]);
   });
 });
+
+/**
+ * SOHBETİN İZİ (15.23) — sepete dokunan sohbet damgalanır; checkout siparişin kaynağını bundan okur.
+ * Sınanan: damga yazma kalemlere dokunmaz, sonraki yazmalar damgayı SİLMEZ, sepet boşalınca satırla gider.
+ */
+describe('sohbetin izi (15.23)', () => {
+  const conversations = new ConversationService(db);
+  let sohbetId: string;
+
+  beforeAll(async () => {
+    sohbetId = (await conversations.open({ source: 'whatsapp', externalRef: `+339${String(stamp).slice(-8)}` })).id;
+  });
+
+  afterAll(async () => {
+    await purgeTestData(db, { conversationIds: [sohbetId] });
+  });
+
+  it('damga kalemlere dokunmaz ve sonraki yazmalar damgayı silmez', async () => {
+    await carts.addItem(customerId, { variantId: variantA, qty: 1, unitPrice: 4 });
+    await carts.stampChat({ customerId }, sohbetId);
+    let cart = await carts.get(customerId);
+    expect(cart.sourceConversationId).toBe(sohbetId);
+    expect(cart.items).toHaveLength(1);
+
+    await carts.addItem(customerId, { variantId: variantB, qty: 2, unitPrice: 9 });
+    await carts.setQty(customerId, { variantId: variantA }, 3);
+    cart = await carts.get(customerId);
+    expect(cart.items).toHaveLength(2);
+    expect(cart.sourceConversationId).toBe(sohbetId);
+  });
+
+  it('sepet boşalınca iz satırla birlikte gider — sonraki sipariş temiz başlar', async () => {
+    await carts.clear(customerId);
+    expect((await carts.get(customerId)).sourceConversationId).toBeNull();
+  });
+
+  it('henüz satırı olmayan sepete damga vurulunca satır boş kalemle doğar', async () => {
+    await carts.stampChat({ customerId }, sohbetId);
+    const cart = await carts.get(customerId);
+    expect(cart.items).toEqual([]);
+    expect(cart.sourceConversationId).toBe(sohbetId);
+  });
+});

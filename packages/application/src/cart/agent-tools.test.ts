@@ -189,9 +189,12 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
 });
 
 describe('müşterili sohbette (WhatsApp) sepet MÜŞTERİNİN gerçek sepetidir', () => {
-  it('eklenen kalem müşterinin sepetinde durur — siteyi açtığında aynı sepeti görür', async () => {
+  it('eklenen kalem müşterinin sepetinde durur — siteyi açtığında aynı sepeti görür; sohbetin İZİ sepette (15.23)', async () => {
     await cagir(araclar(whatsapp), 'sepete_ekle', { urun: AD('Cevizli Sarma'), adet: 3 });
-    expect((await new CartService(db).get(musteriId)).items).toMatchObject([{ qty: 3 }]);
+    const sepet = await new CartService(db).get(musteriId);
+    expect(sepet.items).toMatchObject([{ qty: 3 }]);
+    // Sipariş sitede ödense de kaynağı bu sohbetin kanalı olacak — iz burada doğuyor.
+    expect(sepet.sourceConversationId).toBe(whatsapp.id);
     const okunan = await cagir(araclar(whatsapp), 'sepetim');
     expect((okunan.kalemler as unknown[]).length).toBe(1);
   });

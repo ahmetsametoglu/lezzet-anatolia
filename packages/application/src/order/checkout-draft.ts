@@ -2,6 +2,7 @@ import {
   AddressService,
   BundleItemService,
   CartService,
+  ConversationService,
   OrderService,
   ProductService,
   ProductVariantService,
@@ -301,7 +302,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   //    karşılaştırmanın "önceki"si, müşterinin sepette en son GÖRDÜĞÜ ve sunucuya yazılmış fiyattır.
   //    Sonra okunsaydı karşılaştırma her zaman "değişmedi" derdi.
   const cartService = new CartService(db);
-  const previousPrices = storedPrices((await cartService.get(customer.id)).items);
+  const storedCart = await cartService.get(customer.id);
+  const previousPrices = storedPrices(storedCart.items);
   const cart = await getCartView(db, input.locale, input.entries, {
     customerId: customer.id,
     couponCode: input.couponCode,
@@ -550,7 +552,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       // Kaynak YÜZEYİ söyler, kanaldan bağımsız ayrı eksendir (DATA_MODEL). Telefonla gelip
       // masada yazılan sipariş `manual`dır; sohbetten açılan sipariş kendi kaynağını geçirir
       // (15.4 köprüsü — `staff.orderSource`), geçirmeyen personel yolu `manual` kalır.
-      orderSource: input.staff ? (input.staff.orderSource ?? 'manual') : 'web',
+      // MÜŞTERİ yolunda kaynak SEPETİN İZİNDEN okunur (15.23): sohbetin dokunduğu sepet sohbetin
+      // siparişidir — ödeme sitede alınsa da. İz yoksa `web`.
+      orderSource: input.staff ? (input.staff.orderSource ?? 'manual') : await chatSourceOf(db, storedCart.sourceConversationId),
       // Patron ikramı (DOMAIN §9) — yalnız personel yolundan işaretlenebilir.
       isGiftOrder: input.staff?.isGiftOrder ?? false,
       status: 'draft',
@@ -736,4 +740,18 @@ async function matchedNeighborInviteId(
     // bir log satırı aynı olayı iki kez anlatırdı.
     return null;
   }
+}
+
+/**
+ * **Sepetin izinden siparişin kaynağı** (15.23 · kullanıcı kararı 07.09).
+ *
+ * Sepete dokunan sohbetin kanalı siparişin kaynağıdır — `whatsapp` · `messenger` · `instagram`,
+ * `conversation.source` ile `order_source` aynı sözcükleri kullanır ve bu bilinçli: araya bir eşleme
+ * sözlüğü girseydi dördüncü kanal geldiği gün sözlük unutulur, sipariş sessizce `web` yazardı.
+ * İz yoksa (site sepeti) ya da sohbet silinmişse (`set null` sonrası bayat kimlik) `web`.
+ */
+async function chatSourceOf(db: Db, sourceConversationId: string | null): Promise<OrderSource> {
+  if (!sourceConversationId) return 'web';
+  const conversation = await new ConversationService(db).getById(sourceConversationId);
+  return conversation?.source ?? 'web';
 }

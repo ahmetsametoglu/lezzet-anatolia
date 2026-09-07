@@ -4,6 +4,7 @@ import {
   BundleService,
   CartService,
   CategoryService,
+  ConversationService,
   DeliveryZoneService,
   DiscountCodeService,
   DiscountService,
@@ -228,6 +229,31 @@ describe('sepet → taslak sipariş', () => {
     expect(items[0]!.unitPriceCents).toBe(2000);
     expect(items[0]!.qty).toBe(2);
     expect(items[0]!.bundleId).toBeNull();
+  });
+
+  it('SOHBETİN dokunduğu sepetin siparişi sohbetin KANALINI taşır; izsiz sepet `web` (15.23)', async () => {
+    /* Kullanıcı kararı 07.09: sepet Messenger'da kuruldu, ödeme sitede — sipariş `web` YAZMAMALI.
+       İz sepette (`source_conversation_id`), kaynak oradan okunur; sohbet kanalıyla aynı sözcük. */
+    const conversations = new ConversationService(db);
+    const carts = new CartService(db);
+    const sohbet = await conversations.open({ source: 'messenger', externalRef: `psid-checkout-${stamp}` });
+    try {
+      await carts.stampChat({ customerId }, sohbet.id);
+      const izli = await createCheckoutDraft({ ...(await base()), entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }] });
+      expect(izli.status).toBe('ok');
+      if (izli.status !== 'ok') return;
+      expect((await new OrderService(db).getById(izli.orderId))?.orderSource).toBe('messenger');
+
+      // İz gidince (sepet boşaldı) sonraki sipariş temiz başlar.
+      await carts.clear(customerId);
+      const izsiz = await createCheckoutDraft({ ...(await base()), entries: [{ kind: 'variant', variantId, qty: 1, stockId: null }] });
+      expect(izsiz.status).toBe('ok');
+      if (izsiz.status !== 'ok') return;
+      expect((await new OrderService(db).getById(izsiz.orderId))?.orderSource).toBe('web');
+    } finally {
+      await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+      await purgeTestData(db, { conversationIds: [sohbet.id] });
+    }
   });
 
   it('PAKET varyant kalemlerine parçalanır; birim fiyat paketin PAYIDIR', async () => {

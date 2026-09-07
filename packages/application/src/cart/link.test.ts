@@ -127,8 +127,11 @@ describe('kimliksiz sohbet (Messenger) — sepet taşınır, kimlik bağlanır',
     expect(sohbet).toMatchObject({ customerId: hesap, linkProof: 'cart_link', linkedBy: null });
     expect(sohbet?.linkedAt).not.toBeNull();
 
-    // Kalemler hesabın sepetinde, sohbet sepeti SİLİNDİ — sahipsiz satır kalmaz.
-    expect((await carts.get(hesap)).items).toMatchObject([{ variantId, qty: 3 }]);
+    // Kalemler hesabın sepetinde, sohbet sepeti SİLİNDİ — sahipsiz satır kalmaz. Sohbetin İZİ hedef
+    // sepete geçti (15.23): bu sepetten çıkacak sipariş `messenger` kaynaklı olacak.
+    const hesabinSepeti = await carts.get(hesap);
+    expect(hesabinSepeti.items).toMatchObject([{ variantId, qty: 3 }]);
+    expect(hesabinSepeti.sourceConversationId).toBe(conversationId);
     const { data } = await db.from('cart').select('id').eq('conversation_id', conversationId);
     expect(data).toEqual([]);
 

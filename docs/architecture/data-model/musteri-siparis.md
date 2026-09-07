@@ -285,7 +285,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 
 - **`warehouse_id`** — **bir sipariş tek depodan çıkar** (`DOMAIN §17`, istisnasız): bölünmüş sipariş yoktur; kendi deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur. Kaynağı ya adresin posta kodu ya işlemi yapan personelin sabit deposudur — **varsayılan depo kavramı yoktur**. Siparişe yazılan partilerin de bu depodan olduğunu ertelenmiş kısıt tutar
 - **`channel`** — *kim* — müşteri tipinden otomatik (`deriveChannel`) ve **DONAR**: müşteri sonradan şirkete dönse bile geçmiş siparişin kanalı sabit kalır. 27.08'e kadar bu satırdaki *"değişmez"* yalnız bir İDDİAYDI — ne şema ne veri koruyordu (`03.12`); artık iki katman zorluyor: `OrderUpdateSchema` alanı `omit` eder, `order_channel_frozen` tetikleyicisi şemayı atlayan yolu keser. Gerekçe: kanal `vat_treatment`ı ve fiyat kademesini belirler, yani sonradan değişmesi parası alınmış bir belgenin vergisini geriye dönük oynatırdı
-- **`order_source`** — *nereden kapandı* — kanaldan bağımsız eksen (bkz. `CHANNELS.md §2`)
+- **`order_source`** — *nereden kapandı* — kanaldan bağımsız eksen (bkz. `CHANNELS.md §2`). **Sohbetin dokunduğu sepetin siparişi sohbetin kanalıdır** (15.23 · 07.09): checkout, sepetin `source_conversation_id` izinden sohbetin kanalını okur (`whatsapp`/`messenger`/`instagram`); iz yoksa `web`. Personel yolu kendi kaynağını geçirir (`manual`, 15.4 köprüsünde `whatsapp`)
 - **`is_gift_order`** — patron ikramı (arkadaşa hediye); **yalnız muhasebe export'una girmez** — gelir/kâr/kasa/ortaklık dahil gerisi tam normal, parayı patron öder (bkz. `DOMAIN.md §9`)
 - **`status`** — bkz. `ORDER_LIFECYCLE.md`
 - **`provider_refunded_at`** — **Sağlayıcı ödemesi iade edildi mi** (07.14); `null` = edilmedi. `cancel_reason`dan AYRI çünkü ayrı sorular ve bir dalda ayrışıyorlar: sebep "neden iptal", bu "para çekilip geri verildi mi". `out_of_stock`ta çakışırlar; webhook'un birinci iade dalında (sipariş zaten `superseded`, ödeme geç geliyor) çakışmazlar — sebebi `out_of_stock`a çevirmek yalan, boş bırakmak ekrana "tahsilat yapılmadı" dedirtiyordu. **`settleRefund`'ın müşteri iade borcundan farklı:** orada mal eksik geldi, defterde hareket var; burada sipariş hiç doğmadı, para gelip geri gitti, defter net sıfır. Bayrak değil TARİH — "ekstremde görünmüyor" diyen müşteriye tarih söylenir
@@ -557,10 +557,12 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 | `saved_items` | jsonb |  | `'[]'::jsonb` |
 | `updated_at` | timestamptz |  | `now()` |
 | `conversation_id` | uuid | • |  |
+| `source_conversation_id` | uuid | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
 
+- **`source_conversation_id`** — sepete DOKUNAN sohbetin izi (15.23): ajan WhatsApp'ta yazınca ya da bağlantı devralınınca damgalanır; checkout `order_source`u bu sohbetin kanalından yazar; sepet boşalınca satırla gider (sonraki sipariş temiz başlar). Sahiplik değil iz — FK `set null`, sohbet silinse sepet kalır. Kısmi kalan sepette (kargo grubu bekliyor) iz DURUR: o kalemler de sohbette netleşmişti
 - **`id`** — sepetin KENDİ kimliği (0012, 07.09). Birincil anahtar bir zamanlar `customer_id`nin kendisiydi; sohbet sepeti için sahibin iki türü olunca anahtar ayrıldı
 - **`customer_id`** — müşteri sepeti, `unique` — "tek satır / müşteri" kuralı yine şemada; `null` = sohbet sepeti. Web, mobil, birleştirme (0040) ve GDPR silmesi (0037) sepeti yine bu kolonla anar
 - **`conversation_id`** — sohbet sepeti (0055), `unique`; `cart_owner` kısıtı ikisinden en az birini ister. İkisi birden dolu satır DOĞMAZ: sohbet müşteriye bağlanınca kalemler `takeOver` ile taşınır ve sohbet satırı silinir (kural kapıda, `cart/link.ts`)

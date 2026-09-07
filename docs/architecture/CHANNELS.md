@@ -17,15 +17,18 @@ Temel ilke (STACK §8, ADR-004): WhatsApp yeni bir *beyin* değil, `domain-core`
 Sistem üzerinden geçen her sipariş aynı `orders` tablosuna, aynı durum makinesine ve aynı domain motoruna düşer. Sipariş **nereden** kapatılırsa kapatılsın iş mantığı tektir:
 
 - **Vitrin sitesi** — müşteri katalog/sepet/checkout üzerinden kapatır.
-- **WhatsApp** — müşteri sohbette kapatır (zeminde admin elle işler; canlıda AI ajanı + interaktif kart + Stripe link — ikisi de Faz 1).
+- **WhatsApp · Messenger · Instagram** — müşteri sepeti SOHBETTE kurar (ajan ya da operatör), onay ve ödeme sitede (§3b). Sipariş sohbetin kanalını taşır: `order_source` = `whatsapp` / `messenger` / `instagram` (15.23, kullanıcı kararı 07.09).
 - **Kapı önü (hızlı satış)** — depo kapısında tek adımda kapanır (bkz. `ORDER_LIFECYCLE.md`).
 - **Elle giriş** — telefon/DM'den gelen siparişin admin tarafından sisteme işlenmesi.
 
 > WhatsApp, ADR-001'de **merkezî satış kanalı** olarak konumlandı: site vitrin ve katalog kalır, satışın kapandığı — yani **sepetin netleştiği** — yer büyük ölçüde WhatsApp'tır (onay ve ödeme sitede; §3b). Ama sistem tarafında hiçbir yüzey ayrıcalıklı değildir — hepsi domain-core'u çağırır.
 
-> **Messenger/Instagram bu listede YOK ve bilerek:** sipariş orada kapanmıyor, yani bir *sipariş
-> kaynağı* değiller (`order_source` enum'unda karşılıkları da yok — §2'nin "kullanılmayan enum
-> değeri yalan söyler" kuralı). Rolleri ayrı bölümde: **§3b**.
+> **Messenger/Instagram 07.09'a kadar bu listede YOKTU** — "sipariş orada kapanmıyor" deniyordu.
+> Sohbetten sepet (15.20–15.23) tanımı düzeltti: kapanma ödeme anı değil, sepetin netleştiği andır ve
+> o an sohbette olabilir. **Kural: sohbetin dokunduğu sepet, sohbetin siparişidir** — müşteri siteden
+> de ürün eklemiş olsa kaynak sohbet kalır. Sepet dokunan sohbeti hatırlar (`cart.source_conversation_id`),
+> checkout kaynağı oradan yazar, sepet boşalınca iz gider. "Kullanılmayan enum değeri yalan söyler"
+> kuralı hâlâ geçerli: iki değer de artık KULLANILIYOR.
 
 ---
 
@@ -36,7 +39,7 @@ Bir sipariş üç ayrı soruyu bağımsız yanıtlar. Bunlar **ortogonaldir**; b
 | Eksen | Soru | Değerler | Alan |
 | --- | --- | --- | --- |
 | **Kanal** | Sipariş veren *kim*? | `b2b` / `b2c` | `channel` (müşteri tipinden otomatik, değişmez) |
-| **Sipariş kaynağı** | Sipariş *nereden kapandı*? | `web` / `whatsapp` / `door` / `manual` | `order_source` |
+| **Sipariş kaynağı** | Sipariş *nereden kapandı* — sepet nerede netleşti? | `web` / `whatsapp` / `messenger` / `instagram` / `door` / `manual` | `order_source` |
 | **Teslimat tipi** | Sipariş *nasıl gidiyor*? | `route` / `shipping` | `delivery_type` |
 
 Örnek: bir B2C müşteri WhatsApp'tan sipariş verip rota-içi teslimat seçebilir → `channel=b2c`, `order_source=whatsapp`, `delivery_type=route`. Aynı müşteri bir dahaki sefere siteden kargoyla alabilir → yalnızca `order_source` ve `delivery_type` değişir, müşteri ve kanal aynı kalır.

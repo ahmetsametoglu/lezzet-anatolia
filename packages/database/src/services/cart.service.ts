@@ -55,11 +55,29 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
         id: '',
         customerId: owner.customerId ?? null,
         conversationId: owner.conversationId ?? null,
+        sourceConversationId: null,
         items: [],
         savedItems: [],
         updatedAt: new Date().toISOString(),
       }
     );
+  }
+
+  /**
+   * **Sepete dokunan sohbetin izi** (15.23) — sahiplik değil, damga.
+   *
+   * Ajan müşterinin sepetine yazdığında ya da bağlantı devralınıp kalemler taşındığında çağrılır;
+   * checkout `order_source`u bu sohbetin kanalından yazar (`checkout-draft.ts`). Son dokunan sohbet
+   * kazanır: iki sohbet aynı sepete dokunduysa sipariş sonuncusunun kanalını taşır — iki kanal
+   * yazmanın yolu yok, tek kolon tek cevap.
+   *
+   * `upsert` yalnız gönderilen kolonları günceller: kalemlere dokunmaz; sepet satırı henüz yoksa
+   * boş kalemle doğar (yazma yolu birazdan zaten dolduracak). Sepet boşalınca (`clear`) satırla
+   * birlikte gider — iz ayrıca silinmez, silinmesi gereken bir şey kalmaz.
+   */
+  stampChat(owner: CartOwner, conversationId: string): Promise<Cart> {
+    const onConflict = owner.customerId ? 'customer_id' : 'conversation_id';
+    return this.upsert({ ...owner, sourceConversationId: conversationId, updatedAt: new Date().toISOString() }, onConflict);
   }
 
   /**

@@ -81,6 +81,13 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
   const carts = new CartService(db);
   const log = { context: 'application/cart-agent-tools', conversationId: conversation.id };
 
+  /* SOHBETİN İZİ (15.23): müşteri sepetine yazan her araç sohbeti damgalar — sipariş sitede ödense de
+     kaynağı bu sohbetin kanalı olur. Sohbet sepetinde (kimliksiz) damga gerekmez: satırın sahibi
+     zaten sohbet, iz bağlantı devralınırken hedef sepete geçer (`link.ts`). */
+  const damgala = async (): Promise<void> => {
+    if (conversation.customerId) await carts.stampChat(owner, conversation.id);
+  };
+
   /* Yer üç kaynaktan, `urun_ara` ile aynı sırada: söylenen posta kodu · kayıtlı adres (yalnız
      izinliyse) · hiçbiri (depo-üstü okuma, "sana gelir mi" cevaplanamaz). */
   const yer = async (postaKodu: string | undefined) => {
@@ -153,6 +160,7 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
           const secim = await urunuCoz(db, { urun, boy, postaKodu }, input);
           if ('sonuc' in secim) return secim.sonuc;
           await carts.addItemsFor(owner, [{ variantId: secim.variantId, bundleId: secim.bundleId, qty: adet, unitPrice: secim.priceCents / 100, stockId: null }]);
+          await damgala();
           return { eklendi: { urun: secim.urun, boy: secim.boy, adet }, sepet: await ozet(postaKodu) };
         } catch (err) {
           logger.warn({ ...log, tool: 'sepete_ekle', err: String(err) }, 'sepet aracı yazamadı');
@@ -176,6 +184,7 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
           if ('sonuc' in bulunan) return bulunan.sonuc;
           const { line } = bulunan;
           await carts.setQtyFor(owner, { variantId: line.variantId ?? null, bundleId: line.bundleId ?? null, stockId: line.stockId ?? null }, adet);
+          await damgala();
           return adet === 0 ? { cikarildi: satirAdi(line), sepet: await ozet() } : { guncellendi: { urun: satirAdi(line), adet }, sepet: await ozet() };
         } catch (err) {
           logger.warn({ ...log, tool: 'sepet_adet', err: String(err) }, 'sepet aracı yazamadı');
@@ -197,6 +206,7 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
           if ('sonuc' in bulunan) return bulunan.sonuc;
           const { line } = bulunan;
           await carts.removeItemFor(owner, { variantId: line.variantId ?? null, bundleId: line.bundleId ?? null, stockId: line.stockId ?? null });
+          await damgala();
           return { cikarildi: satirAdi(line), sepet: await ozet() };
         } catch (err) {
           logger.warn({ ...log, tool: 'sepetten_cikar', err: String(err) }, 'sepet aracı yazamadı');

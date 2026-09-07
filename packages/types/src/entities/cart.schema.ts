@@ -52,6 +52,12 @@ export const CartSchema = z.object({
   customerId: z.string().uuid().nullable(),
   /** Sohbet sepeti (Messenger/IG) — müşteri bağlanınca sepet TAŞINIR ve bu satır silinir. */
   conversationId: z.string().uuid().nullable(),
+  /**
+   * Sepete DOKUNAN sohbet (15.23) — sahiplik değil, İZ. Ajan WhatsApp'ta yazınca ya da bağlantı
+   * devralınınca damgalanır; checkout siparişin kaynağını (`order_source`) bu sohbetin kanalından
+   * yazar. Sepet boşalınca satırla birlikte gider: sonraki sipariş temiz başlar.
+   */
+  sourceConversationId: z.string().uuid().nullable(),
   items: z.array(CartItemSchema),
   /**
    * Sonraya kaydedilenler (K35) — sepetten çıkmış ama VAZGEÇİLMEMİŞ kalemler. Teslimat yerine
@@ -67,6 +73,7 @@ export type Cart = z.infer<typeof CartSchema>;
 export const CartInsertSchema = z.object({
   customerId: z.string().uuid().nullish(),
   conversationId: z.string().uuid().nullish(),
+  sourceConversationId: z.string().uuid().nullish(),
   items: z.array(CartItemSchema).optional(),
   savedItems: z.array(CartItemSchema).optional(),
   /**
@@ -90,6 +97,7 @@ export const CartUpdateSchema = z.object({
   id: z.string().uuid(),
   customerId: z.string().uuid().nullish(),
   conversationId: z.string().uuid().nullish(),
+  sourceConversationId: z.string().uuid().nullish(),
   items: z.array(CartItemSchema).optional(),
   savedItems: z.array(CartItemSchema).optional(),
   updatedAt: z.string().optional(),

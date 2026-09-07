@@ -9,7 +9,10 @@ create type order_status as enum (
   'delivered', 'completed', 'cancelled', 'returned'
 );
 -- *Nereden kapandı* — kanaldan (b2b/b2c) BAĞIMSIZ eksen (CHANNELS §2).
-create type order_source as enum ('web', 'whatsapp', 'door', 'manual');
+-- `messenger` ve `instagram` 07.09'da geldi (15.23, kullanıcı kararı): sepet o sohbette KURULUYOR
+-- ve ödeme sitede tamamlansa bile sipariş sohbetin kanalını taşır — "satışın kapandığı yer,
+-- sepetin netleştiği yerdir" (ADR-001'in 07.09 okuması). Sohbetin dokunduğu sepet sohbetin siparişidir.
+create type order_source as enum ('web', 'whatsapp', 'messenger', 'instagram', 'door', 'manual');
 create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
 /**
  * İptalin SEBEBİ (07.14). Serbest metin DEĞİL: ekran buna göre farklı cümle kuruyor ve elle yazılan
@@ -666,7 +669,12 @@ create table public.cart (
   -- Sohbet sepeti (0055): kimliksiz sohbetin (Messenger/IG) niyeti. Kolon BURADA, yabancı anahtarı
   -- 0055'te — `conversation` tablosu bu dosyadan sonra doğuyor (0039); kısıt ancak o doğunca
   -- bağlanabilir. `unique`: sohbet başına tek sepet, müşteri başına tek sepetle aynı kural.
-  conversation_id uuid unique
+  conversation_id uuid unique,
+  -- Sepete DOKUNAN sohbet (15.23): ajan WhatsApp'ta yazınca ya da bağlantı devralınınca damgalanır;
+  -- checkout siparişin kaynağını bu sohbetin kanalından yazar, sepet boşalınca satırla birlikte
+  -- gider. Sahiplik DEĞİL, iz: müşteri sepeti müşterinin kalır, yalnız "kim dokundu" bilinir.
+  -- Yabancı anahtarı 0055'te (`set null` — sohbet silinse sepet kalır, izi düşer).
+  source_conversation_id uuid
 );
 
 alter table public.cart enable row level security;

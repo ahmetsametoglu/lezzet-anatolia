@@ -38,6 +38,8 @@ alter table public.cart
   -- dosyasında), yabancı anahtarı burada: `conversation` 0039'da doğuyor, kısıt ancak şimdi
   -- bağlanabilir. `cascade`: sohbet silinince (GDPR kovası, 0037) sepeti de gider.
   add constraint cart_conversation_id_fkey foreign key (conversation_id) references public.conversation (id) on delete cascade,
+  -- Sepete dokunan sohbetin izi (15.23): sohbet silinirse sepet KALIR, yalnız iz düşer.
+  add constraint cart_source_conversation_id_fkey foreign key (source_conversation_id) references public.conversation (id) on delete set null,
   -- Sahipsiz sepet olamaz — ikisinden en az biri dolu. İkisi birden DOLU olabilir mi? Hayır, ama
   -- bunu kısıt değil kapı söylüyor (`cart.service.ts`): sohbet müşteriye bağlanınca sepet
   -- TAŞINIR (`takeOver`), sohbet satırı silinir — iki sahipli bir satır hiç doğmaz.

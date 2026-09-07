@@ -107,7 +107,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `movement_source`: manual, bank_import
 - `movement_type`: order_payment, order_refund, purchase, expense, transfer, capital, misc
 - `order_cancel_reason`: payment_failed, superseded, out_of_stock, customer, staff
-- `order_source`: web, whatsapp, door, manual
+- `order_source`: web, whatsapp, messenger, instagram, door, manual
 - `order_status`: draft, confirmed, preparing, ready, out_for_delivery, delivered, completed, cancelled, returned
 - `payment_method`: online, cash, card, cheque, bank_transfer
 - `payment_status`: pending, paid, partial, refunded
@@ -168,7 +168,7 @@ kolon, okunabilirlik, AI-asistan araçlarına ucuz özet). *(b)* **Erken agregas
 tabloları (günlük KPI vb.) analitik modülüyle birlikte, soruları netleşince açılır.
 
 - **Kanal alanı siparişe yazılır ve değişmez** — sonradan raporlama ve audit için.
-- **Sipariş kaynağı (`order_source`) kanaldan bağımsız ayrı eksendir** — Faz 1'de bile var; WhatsApp siparişi elle girilse de kaynak=whatsapp. Yüzey otomasyona dönünce veri modeli değişmez (bkz. `CHANNELS.md §2`).
+- **Sipariş kaynağı (`order_source`) kanaldan bağımsız ayrı eksendir** — Faz 1'de bile var; WhatsApp siparişi elle girilse de kaynak=whatsapp. Yüzey otomasyona dönünce veri modeli değişmez (bkz. `CHANNELS.md §2`). **"Kapandığı yer" sepetin netleştiği yerdir (07.09 · 15.23):** sohbette kurulup sitede ödenen sipariş sohbetin kanalını taşır (`messenger`/`instagram` de kaynak oldu); sepet dokunan sohbeti `source_conversation_id` ile hatırlar, checkout oradan okur, sepet boşalınca iz gider.
 - **Telefon müşteri kimliğidir** — WhatsApp telefonla tanır; "telefonla bul-veya-oluştur" domain kuralı (bkz. `CHANNELS.md §3`).
 - **Konuşma/mesaj kendi DB'mizde yaşar** — opt-in ve 24s pencere bizde; sağlayıcı değişse de tarih bizde kalır.
 - **Sepetin sahibi müşteri YA DA sohbettir (07.09 · 15.22).** `cart` kendi kimliğini taşır; `customer_id` ve `conversation_id` ikisi de `unique`, en az biri dolu. Kimliksiz sohbetin (Messenger/IG) sepeti sohbete yazılır, bağlantıyı açıp giriş yapan kişinin hesabına `takeOver` ile TAŞINIR ve sohbet satırı silinir — iki sahipli satır doğmaz (kural kapıda). Kalemleri bağlantının içinde taşımak elendi: sepet 12 mesajlık pencerede yaşamaz, satırda yaşar. Bağlantı jetonu `cart_link` kendi tablosunda (iz kalsın), `wa_link_token`ın ters yönü (bkz. `data-model/musteri-siparis.md`).

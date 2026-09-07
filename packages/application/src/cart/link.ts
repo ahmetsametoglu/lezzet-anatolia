@@ -208,6 +208,8 @@ async function carryCart(db: Db, conversation: Conversation, customerId: string)
   if (source.items.length === 0) return 0;
 
   await carts.takeOver(customerId, source.items.map(stripAddedAt));
+  // Sohbetin İZİ hedef sepete geçer (15.23): bu sepetten çıkacak sipariş sohbetin kanalını taşır.
+  await carts.stampChat({ customerId }, conversation.id);
   if (!conversation.customerId) await carts.clearFor({ conversationId: conversation.id });
   return source.items.length;
 }

@@ -84,8 +84,12 @@ export const CustomerOrderStatusEnum = z.enum([
 ]);
 export type CustomerOrderStatus = z.infer<typeof CustomerOrderStatusEnum>;
 
-/** Sipariş kaynağı — *nereden kapandı*. Kanaldan BAĞIMSIZ eksen (DOMAIN §3, CHANNELS §2). */
-export const OrderSourceEnum = z.enum(['web', 'whatsapp', 'door', 'manual']);
+/**
+ * Sipariş kaynağı — *nereden kapandı*. Kanaldan BAĞIMSIZ eksen (DOMAIN §3, CHANNELS §2).
+ * `messenger`/`instagram` (15.23 · 07.09): sohbette kurulup sitede ödenen sipariş sohbetin kanalını
+ * taşır — "kapandığı yer" sepetin netleştiği yerdir, ödemenin alındığı yer değil.
+ */
+export const OrderSourceEnum = z.enum(['web', 'whatsapp', 'messenger', 'instagram', 'door', 'manual']);
 export type OrderSource = z.infer<typeof OrderSourceEnum>;
 
 /** KDV işleme tipi — siparişe yazılır, muhasebe export'u bunu okur (DOMAIN §5). */
