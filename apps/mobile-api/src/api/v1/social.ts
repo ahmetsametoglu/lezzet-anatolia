@@ -127,6 +127,25 @@ function shownTextOf(message: Message): { shownText: string | null; shownTransla
   return { shownText: shown.text ?? null, shownTranslated: shown.isTranslated, language: message.language ?? null };
 }
 
+/**
+ * KUYRUĞUN ÖNİZLEMESİ DE OPERASYON DİLİNDE (21.297) — cihazda ölçülen açık.
+ *
+ * Sohbetin içi çözülüp listesi çözülmeyince operatör kuyruğu **ancak açarak** tarayabiliyordu:
+ * gelen kutusunda Fransızca bir satır görüp içeri girmek zorundaydı. Talep kuyruğunun 15.28'de
+ * verdiği kararın aynısı (`staff-read.ts` → satır önizlemesi de çevriliyor) ve görünüm alanları
+ * zaten taşıyor (`lastMessageLanguage` · `lastMessageTranslations`) — okuma bedavaya geliyor.
+ *
+ * LİSTEDE "ORİJİNALİ GÖR" YOK ve olmamalı: kuyruk bir tarama yüzeyidir, satır başına bir geçiş
+ * düğmesi taramayı yavaşlatırdı. Asıl metin bir dokunuş ötede, sohbetin kendi baloncuğunda.
+ */
+function shownPreviewOf(row: ConversationInboxRow): ConversationInboxRow {
+  const shown = resolveUserText(
+    { text: row.lastMessageText, language: row.lastMessageLanguage, translations: row.lastMessageTranslations },
+    'tr',
+  );
+  return { ...row, lastMessageText: shown.text };
+}
+
 async function toDetailBody(
   row: ConversationInboxRow,
   messages: Message[],
@@ -173,7 +192,7 @@ social.get('/conversations', async (c) => {
   ]);
 
   const body: z.input<typeof SocialInboxResponseSchema> = {
-    rows: page.rows,
+    rows: page.rows.map(shownPreviewOf),
     nextCursor: page.nextCursor ? encodeCursor(page.nextCursor) : null,
     counts: { awaitingReply, handledByAi },
     /* CANLI ZİLİN ADI HER SAYFADA GELİR (21.289) — ayrı bir uç açmak, ekran açılışına ikinci bir

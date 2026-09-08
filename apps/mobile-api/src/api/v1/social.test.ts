@@ -278,3 +278,63 @@ describe('cevap ucu GÖNDERİR — akıbet zarfın içinde (21.286)', () => {
     expect(res.status).toBe(403);
   });
 });
+
+/*
+  ÇEVİRİ SÖZLEŞMEDE TAŞINIR (21.297) — cihazda ölçülen arızanın uç tarafındaki iddiası.
+
+  Kural `body.text` DAİMA KANALDAN GEÇEN metindir: Fransızca konuşulan bir sohbette giden mesajın
+  gövdesi Fransızcadır ve operatörün Türkçesi torbadadır. Uç bu ayrımı çözmeden geçirseydi operatör
+  telefonda kendi yazdığını değil, müşteriye giden çeviriyi okurdu.
+
+  İki yüzey birden çivileniyor çünkü ikisi ayrı ayrı bozulabilir: SOHBET çözülüp KUYRUK
+  çözülmezse operatör listeyi ancak açarak tarayabilir (cihazda tam bu görüldü 09.09).
+*/
+describe('çeviri sözleşmede TAŞINIR (21.297)', () => {
+  let frConversationId: string;
+
+  beforeAll(async () => {
+    const conversation = await conversations.open({
+      source: 'whatsapp',
+      externalRef: `+3368${String(stamp).slice(-7)}`,
+      customerId: null,
+      providerAccountRef: 'ACC-SOCIAL-FR',
+      profileName: 'Sosyal Çeviri Testi',
+    });
+    frConversationId = conversation.id;
+    conversationIds.push(conversation.id);
+
+    await recordInboundMessage(db, {
+      conversationId: frConversationId,
+      text: 'Bonjour, je voudrais commander deux plateaux.',
+      receivedAt: new Date().toISOString(),
+      language: 'fr',
+      translations: { tr: 'Merhaba, iki tepsi sipariş etmek istiyorum.' },
+    });
+  }, 60_000);
+
+  it('sohbet mesajı OPERASYON dilinde iner; aslı da yanında gelir', async () => {
+    const res = await get(`/api/v1/social/conversations/${frConversationId}`, adminToken);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { data: SocialConversationDetail; error: null };
+    const message = body.data.messages[0];
+    expect(message).toBeDefined();
+
+    // Gösterilen metin Türkçe; kanaldan geçen Fransızca `body.text`te DURUYOR (defter değişmedi).
+    expect(message?.shownText).toBe('Merhaba, iki tepsi sipariş etmek istiyorum.');
+    expect(message?.body.text).toBe('Bonjour, je voudrais commander deux plateaux.');
+    // İşaret olmadan ekran "orijinali gör" düğmesini çizemez — üçlünün taşıyıcı alanı bu.
+    expect(message?.shownTranslated).toBe(true);
+    expect(message?.language).toBe('fr');
+  });
+
+  it('KUYRUK önizlemesi de çevrilir — liste açılmadan taranabilmeli', async () => {
+    const res = await get('/api/v1/social/conversations', adminToken);
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { data: SocialInboxResponse; error: null };
+    const row = body.data.rows.find((item) => item.id === frConversationId);
+    expect(row).toBeDefined();
+    expect(row?.lastMessageText).toBe('Merhaba, iki tepsi sipariş etmek istiyorum.');
+  });
+});

@@ -14122,3 +14122,25 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Doğrulama: kök `typecheck` **20/20**, `lint` temiz, sosyal sohbet **37/37** (3'ü bu turda: giden
   mesajda Türkçe okunur · orijinal açılır ve geri alınır · çevrilmemişte düğme hiç çizilmez).
+
+  **CİHAZ TURU (09.09) — kullanıcı isteğiyle DEFTERE FRANSIZCA SOHBET YAZILDI.** Arıza yerelde
+  üretilemiyordu; kullanıcı *"veri tabanına çakma bir mesajlaşma oluştur"* dedi. Satırlar elle
+  uydurulmadı, defterin GERÇEK yazarından geçti (`record_message`, `p_language`/`p_translations`
+  parametreleriyle) — yani şekil boru hattının ürettiğinin aynısı. Sohbet: `+33600777111` ·
+  Claire Muller · `language=fr`, üç mesaj (müşteri FR · operatör TR yazdı FR gitti · müşteri FR).
+
+  Ölçüm: baloncukların üçü de **Türkçe** çizildi (*"Merhaba! Perşembe rotamız var…"* — kanaldan
+  giden Fransızca DEĞİL), her birinde "orijinali gör" duruyordu, dokununca o baloncuk Fransızcaya
+  döndü ve etiket "çeviriyi gör" oldu; öteki iki baloncuk Türkçe kaldı (geçiş baloncuğun kendi
+  durumu). Türkçe sohbetlerde düğme hiç çizilmedi.
+
+  **TUR BİR AÇIK DAHA GÖSTERDİ VE O DA KAPANDI: kuyruk önizlemesi çevrilmiyordu.** Sohbetin içi
+  çözülüp listesi çözülmeyince operatör gelen kutusunu **ancak açarak** tarayabiliyordu — cihazda
+  satır *"Bonjour, je voudrais commander…"* diyordu. Görünüm alanları zaten taşıyor
+  (`lastMessageLanguage` · `lastMessageTranslations`, 15.28'de tam bu gerekçeyle eklenmişler), uç
+  onları okumuyordu. `shownPreviewOf` eklendi; cihazda satır *"Merhaba, perşembe için iki tepsi
+  baklava…"* oldu. Listede "orijinali gör" YOK ve olmamalı: kuyruk bir tarama yüzeyidir.
+
+  Uç tarafına iki iddia yazıldı (`social.test.ts`): sohbet mesajı operasyon dilinde iner + aslı
+  `body.text`te durur; kuyruk önizlemesi de çevrilir. **KOŞULMADILAR** — DB'ye vuran koşu şerit
+  ajanına kapalı (`CLAUDE §4b`), sıradaki tam pakette denetmen görecek. Bugünkü kanıt cihaz turu.
