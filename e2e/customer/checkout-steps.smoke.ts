@@ -155,8 +155,22 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
     const submit = page.getByRole('button', { name: /confirmer la commande/i });
     await expect(submit).toBeEnabled({ timeout: 15_000 });
     await submit.click();
-    // Tek tıklama yeter: yazım sürerken düğme `busy` kilitlenir; ikinci tıklama çift sipariş
-    // riskine girer (idempotencyKey korur ama dumanın işi onu kurcalamak değil).
+    /* ADRES DOĞRULAMASI ARAYA GİRER (11.11 · 06.09'dan beri): ilk tıklama kapıyı sorar ve söyleyecek
+       bir şey varsa akış DURUR — müşteri kararını verir, İKİNCİ tıklama siparişi geçirir
+       (`checkout-client` `confirm`). Fikstür adresi uydurma ("1 rue du Test, Testville"), BAN onu
+       hep başka bir kapıda bulur; gerçek müşteri de burada iki kez tıklar. Test adresini KORUR —
+       "Corriger" fikstürün posta kodunu bölgenin dışına taşırdı. Kapı `confirmed`/`unknown` dönerse
+       teklif hiç çıkmaz ve ilk tıklama siparişi geçirir: ikisi de meşru, ikisi de doğrulanır.
+       Ölçüldü 07.09: teklif çıkınca `confirmCheckoutAction` hiç çağrılmıyordu, test 45 sn boşa bekliyordu. */
+    const keepMine = page.getByRole('button', { name: /mon adresse est correcte/i });
+    const noticed = await keepMine.waitFor({ state: 'visible', timeout: 15_000 }).then(() => true, () => false);
+    if (noticed) {
+      await keepMine.click();
+      await expect(submit).toBeEnabled({ timeout: 15_000 });
+      await submit.click();
+    }
+    // Sonrası tek tıklamayla yürür: yazım sürerken düğme `busy` kilitlenir; fazladan tıklama çift
+    // sipariş riskine girer (idempotencyKey korur ama dumanın işi onu kurcalamak değil).
     // `waitUntil` GEZİNME SÖZLEŞMESİNDEN (`domcontentloaded`): varsayılan `load` dev'de asılı
     // kalıyor — ölçüldü 08.08: sipariş 18:12:08'de confirmed YAZILMIŞTI, test yönlendirmeyi
     // "load" beklerken 45 sn'de düştü. Adres eylemi de soğuk pencerede 20 sn'yi aşabiliyor.

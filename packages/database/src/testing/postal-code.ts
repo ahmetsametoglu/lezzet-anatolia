@@ -15,10 +15,19 @@
  * zaman geri gelmez — üstelik bu düşüş koda hiç benzemiyor, "bölge kurulamadı" diyor.
  *
  * ── ÇÖZÜM ──────────────────────────────────────────────────────────────────
- * `9` öneki + **süreç içinde artan sayaç** + 3 hane rastgele. Sayaç aynı süreçte koşan dosyaları
+ * `00` öneki + **süreç içinde artan sayaç** + 2 hane rastgele. Sayaç aynı süreçte koşan dosyaları
  * kesin ayırır (entegrasyon projesi seri koşuyor); rastgele hane ise ayrı süreçlere ve önceki
- * koşulardan kalan satırlara karşı. Önek `9` bilinçli: besleme Alsace kodlarını (`67xxx`)
- * kullanıyor, `9` ile başlayan hiçbir gerçek fikstür kodu yok.
+ * koşulardan kalan satırlara karşı.
+ *
+ * ── ÖNEK NEDEN `00`, `9` DEĞİL (ölçüldü 29.08, düzeltildi 07.09) ────────────
+ * İlk sürüm `9` öneğiyle üretiyordu ve gerekçesi yarımdı: "9 ile başlayan hiçbir gerçek FİKSTÜR
+ * kodu yok" doğruydu, ama `postal_code_place` REFERANS verisinde `9` önekli 314 gerçek Fransız
+ * kodu duruyor (`90xxx`–`98xxx`: Belfort, Essonne, Hauts-de-Seine…) ve `checkout-draft` rota
+ * siparişinde adresi tam o tabloya soruyor. Üretilen kod bunlardan birine denk gelince `places`
+ * dolu dönüyor, fikstürün sabit şehri tutmuyor ve kapı `address_city_mismatch` veriyordu —
+ * koşu başına %3, ölçülen tekrar 4 koşuda 2. Bir çarpışmayı (`delivery_zone_postal_code`)
+ * kapatırken başkasını (`postal_code_place`) açmıştık. `00` iki tabloda da BOŞ: FR ve DE
+ * referansında `00` önekli tek gerçek kod yok (DE `01001`den başlar) — çarpışma yapıca sıfır.
  *
  * **Ülke FR kalmak zorunda** — teslimat çözümü ülkeye göre süzüyor; anahtarın öteki yarısını
  * değiştirip çarpışmayı sıfırlamak, testi gerçek yoldan çıkarırdı.
@@ -27,5 +36,5 @@ let sayac = 0;
 
 export function testPostalCode(): string {
   sayac = (sayac + 1) % 10;
-  return `9${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}${sayac}`;
+  return `00${String(Math.floor(Math.random() * 100)).padStart(2, '0')}${sayac}`;
 }

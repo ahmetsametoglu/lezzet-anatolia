@@ -91,6 +91,14 @@ export async function createSequencedRun(): Promise<RouteRun> {
   });
 
   const referenceNo = `SF-E2E-${String(stamp).slice(-6)}`;
+  /*
+    ÇIKIŞ DAMGASI İKİ ADIMDA (07.09, ölçülen yarış). `delivery_run_times` kısıtı `departed_at >=
+    created_at` ister; `created_at`i veritabanı kendi saatiyle yazar, `departed_at`i biz makine
+    saatinden yazıyorduk — ve iki damga arasında bir ağ gidiş dönüşü var. Makine önde olsa bile
+    gidiş dönüş saat farkından uzun sürünce `created_at` sonraya düşüyor ve fikstür kısıta takılıyordu
+    (ölçüldü: DB saati makineden 6 ms geride, tam paket 07.09). Doğrusu satırın KENDİ `created_at`ini
+    okuyup çıkışı ona eşitlemek: iki damga aynı saatten, sıra yapıca doğru.
+  */
   const { data: runRow, error: runError } = await db
     .from('delivery_run')
     .insert({
@@ -99,12 +107,16 @@ export async function createSequencedRun(): Promise<RouteRun> {
       delivery_date: today,
       warehouse_id: warehouse.id,
       courier_id: courier.id,
-      departed_at: new Date().toISOString(),
     })
-    .select('id')
+    .select('id, created_at')
     .single();
   if (runError) throw new Error(`e2e fikstürü: sefer açılamadı — ${runError.message}`);
   const runId = runRow.id as string;
+  const { error: departError } = await db
+    .from('delivery_run')
+    .update({ departed_at: runRow.created_at as string })
+    .eq('id', runId);
+  if (departError) throw new Error(`e2e fikstürü: sefer yola çıkarılamadı — ${departError.message}`);
 
   const orders = new OrderService(db);
   const orderIds: string[] = [];

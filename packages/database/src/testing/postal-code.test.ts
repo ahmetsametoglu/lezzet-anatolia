@@ -11,11 +11,14 @@ import { testPostalCode } from './postal-code';
  * eşit olabilir. Tutmayacağı bilinen bir iddia, bir gün kendi kararsız testini doğurur.
  */
 describe('testPostalCode', () => {
-  it('beş haneli ve `9` ile başlar — besleme 67xxx kullanıyor, çarpışma yapıca imkânsız', () => {
+  it('beş haneli ve `00` ile başlar — FR/DE referansında `00` önekli gerçek kod yok, çarpışma yapıca imkânsız', () => {
+    /* `9` öneği 29.08'de ölçülen tuzaktı: `postal_code_place`ta 314 gerçek `9xxxx` kodu var ve
+       checkout adresi o tabloya soruyor — %3 çarpışma, `address_city_mismatch`. `00` iki tabloda da boş. */
     for (let i = 0; i < 50; i++) {
       const kod = testPostalCode();
-      expect(kod).toMatch(/^9\d{4}$/);
+      expect(kod).toMatch(/^00\d{3}$/);
       expect(kod.startsWith('67')).toBe(false);
+      expect(kod.startsWith('9')).toBe(false);
     }
   });
 
