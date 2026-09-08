@@ -1,4 +1,4 @@
-import type { PreferredLanguage } from '@lezzet/types';
+import type { ConversationSource, PreferredLanguage } from '@lezzet/types';
 
 /**
  * Sepet bağlantısının cevaba EKLENMESİ (15.21) — saf metin kuralı, DB'siz.
@@ -10,11 +10,12 @@ import type { PreferredLanguage } from '@lezzet/types';
  *
  * Ayrı dosyada, çünkü kural saf ve birim testi DB istemez; `ai.ts` DB servislerini import ediyor.
  *
- * ── MESSENGER/IG'DE DÜĞME (08.09, kullanıcı kararı) ─────────────────────────
- * Bu kanallarda ham adres yerine DÜĞME gider: Meta'nın düğme şablonu (metin + `web_url` düğmesi,
- * onay ve alan adı beyaz listesi istemez — MCP doküman aramasıyla ölçüldü). Kural gönderim
- * kapısında (`send.ts`) uygulanır, çağıranlar bilmez: metin `withCartLink`in ürettiği sabit kuyruğu
- * taşıyorsa `splitCartLink` onu geri ayırır — gövde ayrı, bağlantı düğme olarak ayrı mesaj.
+ * ── ÜÇ KANALDA DÜĞME (08.09, kullanıcı kararı) ──────────────────────────────
+ * Ham adres yerine DÜĞME gider: Messenger/IG'de düğme şablonu (metin + `web_url`, onay ve alan adı
+ * beyaz listesi istemez), WhatsApp'ta `cta_url` etkileşimli mesajı (pencere içinde şablonsuz) — ikisi
+ * de MCP doküman aramasıyla ölçüldü. Kural gönderim kapısında (`send.ts`) uygulanır, çağıranlar
+ * bilmez: metin `withCartLink`in ürettiği sabit kuyruğu taşıyorsa `splitCartLink` onu geri ayırır —
+ * gövde ayrı, bağlantı düğme olarak ayrı mesaj.
  * Aynı sabit iki yönde de kullanılıyor; cümle değişirse iki fonksiyon birlikte değişir, biri
  * geride kalıp düğmeyi sessizce kaybedemez (testi `link-text.test.ts`).
  */
@@ -55,10 +56,21 @@ export const CART_LINK_BUTTON_TITLE: Record<PreferredLanguage, string> = {
 };
 
 /**
- * Messenger/Instagram düğme şablonu — `message.attachment` gövdesi (tel katmanı `interactive`
- * alanını olduğu gibi `attachment`a koyar, `cloud-api.ts`). Tek düğme: sepete git.
+ * Kanalın düğme gövdesi — tel katmanı `interactive` alanını olduğu gibi taşır (`cloud-api.ts`):
+ * WhatsApp'ta `type: interactive` gövdesi, Messenger/IG'de `message.attachment`. Tek düğme: sepete git.
+ *
+ * WhatsApp'ınki `cta_url` — 24 saatlik pencere içinde ŞABLONSUZ gider (kullanıcı kararı 08.09;
+ * şablon yalnız pencere dışı, işletme-başlatan mesaj içindir). Adres her mesajda ayrı verildiği için
+ * yerel ve canlı adres arasında Meta tarafında hiçbir şey değişmez.
  */
-export function cartLinkButtonTemplate(url: string, language: PreferredLanguage): Record<string, unknown> {
+export function cartLinkButton(url: string, language: PreferredLanguage, source: ConversationSource): Record<string, unknown> {
+  if (source === 'whatsapp') {
+    return {
+      type: 'cta_url',
+      body: { text: CART_LINK_BUTTON_TEXT[language] },
+      action: { name: 'cta_url', parameters: { display_text: CART_LINK_BUTTON_TITLE[language], url } },
+    };
+  }
   return {
     type: 'template',
     payload: {

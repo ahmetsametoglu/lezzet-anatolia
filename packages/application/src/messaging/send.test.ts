@@ -344,7 +344,7 @@ describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kull
     expect(defter[1]!.body.text).toContain(URL);
   });
 
-  it('WHATSAPP: metin OLDUĞU GİBİ tek mesaj — oradaki düğme şablon sorusuyla sonraya', async () => {
+  it('WHATSAPP: aynı ayrım, düğme `cta_url` etkileşimli mesajı — pencere içinde şablonsuz', async () => {
     const konusma = await acikKonusma('whatsapp');
     const sender = kaydedenSender();
     const sonuc = await sendOutboundMessage(db, sender, {
@@ -353,8 +353,27 @@ describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kull
     });
 
     expect(sonuc.status).toBe('sent');
+    expect(sender.inputs).toHaveLength(2);
+    expect(sender.inputs[0]!.text).not.toContain(URL);
+    const dugme = sender.inputs[1]!.payload?.interactive as { type: string; action: { parameters: { url: string } } };
+    expect(dugme.type).toBe('cta_url');
+    expect(dugme.action.parameters.url).toBe(URL);
+  });
+
+  it('KALIP mesajda ayırma YOK — şablonun gövdesi Meta\'da sabittir', async () => {
+    const konusma = await penceresizKonusma();
+    const sender = kaydedenSender();
+    const sonuc = await sendOutboundMessage(db, sender, {
+      conversationId: konusma.id,
+      text: `${CART_LINK_LINE}\n${URL}`,
+      kind: 'template',
+      templateName: 'sepet_hatirlatma',
+      templateCategory: 'utility',
+    });
+
+    expect(sonuc.status).toBe('sent');
     expect(sender.inputs).toHaveLength(1);
-    expect(sender.inputs[0]!.text).toContain(URL);
+    expect(sender.inputs[0]!.kind).toBe('template');
   });
 
   it('yalnız bağlantıdan ibaret metin → TEK mesaj, o da düğme (operatör taslaktan gövdeyi silmiş)', async () => {

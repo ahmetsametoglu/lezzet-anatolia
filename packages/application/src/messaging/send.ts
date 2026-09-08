@@ -4,7 +4,7 @@ import { ConversationService } from '@lezzet/database';
 import { humanAgentWindowState, serviceWindowState } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, Message, MessageKind, PreferredLanguage, TemplateCategory, TicketSender } from '@lezzet/types';
-import { CART_LINK_BUTTON_TEXT, CART_LINK_LINE, cartLinkButtonTemplate, splitCartLink } from '../cart/link-text';
+import { CART_LINK_BUTTON_TEXT, CART_LINK_LINE, cartLinkButton, splitCartLink } from '../cart/link-text';
 import { recordOutboundMessage } from './record';
 import { prepareOutboundText, resolveOutboundLanguage, type MessageTranslationPatch } from './translate';
 
@@ -212,19 +212,19 @@ export async function sendOutboundMessage(
   /*
     SEPET BAĞLANTISI DÜĞME OLARAK (08.09, kullanıcı kararı) — künyesi `cart/link-text.ts`.
 
-    Messenger/IG'de kuyruktaki sabit satır + adres gövdeden AYRILIR: gövde çevrilip gider, bağlantı
-    ikinci bir mesajda Meta'nın düğme şablonuyla gider (ham adres yerine "Sepete git"). Kural BURADA,
+    Üç kanalda kuyruktaki sabit satır + adres gövdeden AYRILIR: gövde çevrilip gider, bağlantı ikinci
+    bir mesajda düğmeyle gider (Messenger/IG düğme şablonu, WhatsApp `cta_url` — ham adres yerine
+    "Sepete git"; WhatsApp'ta pencere içinde şablonsuz, kullanıcı kararı 08.09). Kural BURADA,
     çağıranlarda değil: ajan, operatör (web/mobil) ve taslak yolu aynı metni üretiyor ve düğmeyi her
     birine bırakmak, birinin unutmasıydı. Ayırma çeviriden ÖNCE — çeviriden sonra sabit satır
     tanınmaz olurdu; düğme metni üç dilde elle yazılı, modelden geçmez.
 
     Defterde İKİ satır ve iki sağlayıcı kimliği: Messenger echo'su iki mesajı ayrı düşürür, tek
     satırda toplansaydı ikinci echo yeni bir mesaj sanılırdı (`send-echo.test.ts`in tuzağı).
-    WhatsApp'ta metin olduğu gibi gider — oradaki düğme (`cta_url`) şablon sorusuyla birlikte
-    sonraya (15.11). Gövde yalnız bağlantıdan ibaretse (operatör taslaktan gövdeyi silmiş) tek
-    mesaj gider: düğme.
+    Gövde yalnız bağlantıdan ibaretse (operatör taslaktan gövdeyi silmiş) tek mesaj gider: düğme.
+    Kalıp (template) mesajda ayırma yok: şablonun gövdesi Meta'da sabittir, bizim kuyruğumuz olamaz.
   */
-  const ayrik = conversation.source !== 'whatsapp' && input.text ? splitCartLink(input.text) : null;
+  const ayrik = !input.templateName && input.text ? splitCartLink(input.text) : null;
   const dugmeAdresi = ayrik?.url ?? null;
   const govdeGirdisi: SendMessageInput = dugmeAdresi ? { ...input, text: ayrik!.body } : input;
 
@@ -255,7 +255,7 @@ export async function sendOutboundMessage(
       conversationId: input.conversationId,
       text: dugmeMetni,
       kind: 'interactive',
-      payload: { ...(input.payload ?? {}), interactive: cartLinkButtonTemplate(dugmeAdresi, dil), cartLink: dugmeAdresi },
+      payload: { ...(input.payload ?? {}), interactive: cartLinkButton(dugmeAdresi, dil, conversation.source), cartLink: dugmeAdresi },
       author: input.author,
       language: dil,
     },

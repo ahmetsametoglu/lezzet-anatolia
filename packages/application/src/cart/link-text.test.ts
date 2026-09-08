@@ -3,7 +3,7 @@ import {
   CART_LINK_BUTTON_TEXT,
   CART_LINK_BUTTON_TITLE,
   CART_LINK_LINE,
-  cartLinkButtonTemplate,
+  cartLinkButton,
   splitCartLink,
   withCartLink,
 } from './link-text';
@@ -26,18 +26,34 @@ describe('sepet bağlantısının geri AYRILMASI — Messenger/IG düğmesi (08.
     expect(splitCartLink(`${CART_LINK_LINE}\n${URL}`)).toEqual({ body: '', url: URL });
   });
 
-  it('düğme şablonu Meta sınırlarında: tek `web_url` düğmesi, başlık ≤ 20 karakter, üç dilde', () => {
+  it('Messenger/IG düğme şablonu Meta sınırlarında: tek `web_url` düğmesi, başlık ≤ 20 karakter, üç dilde', () => {
     for (const dil of ['tr', 'fr', 'de'] as const) {
-      const sablon = cartLinkButtonTemplate(URL, dil) as {
-        type: string;
-        payload: { template_type: string; text: string; buttons: { type: string; url: string; title: string }[] };
-      };
-      expect(sablon.type).toBe('template');
-      expect(sablon.payload.template_type).toBe('button');
-      expect(sablon.payload.text).toBe(CART_LINK_BUTTON_TEXT[dil]);
-      expect(sablon.payload.text.length).toBeLessThanOrEqual(640);
-      expect(sablon.payload.buttons).toEqual([{ type: 'web_url', url: URL, title: CART_LINK_BUTTON_TITLE[dil] }]);
+      for (const kanal of ['messenger', 'instagram'] as const) {
+        const sablon = cartLinkButton(URL, dil, kanal) as {
+          type: string;
+          payload: { template_type: string; text: string; buttons: { type: string; url: string; title: string }[] };
+        };
+        expect(sablon.type).toBe('template');
+        expect(sablon.payload.template_type).toBe('button');
+        expect(sablon.payload.text).toBe(CART_LINK_BUTTON_TEXT[dil]);
+        expect(sablon.payload.text.length).toBeLessThanOrEqual(640);
+        expect(sablon.payload.buttons).toEqual([{ type: 'web_url', url: URL, title: CART_LINK_BUTTON_TITLE[dil] }]);
+      }
       expect(CART_LINK_BUTTON_TITLE[dil].length).toBeLessThanOrEqual(20);
+    }
+  });
+
+  it('WhatsApp `cta_url` etkileşimli mesajı: gövde ≤ 1024, düğme yazısı ≤ 20 — pencere içinde şablonsuz', () => {
+    for (const dil of ['tr', 'fr', 'de'] as const) {
+      const govde = cartLinkButton(URL, dil, 'whatsapp') as {
+        type: string;
+        body: { text: string };
+        action: { name: string; parameters: { display_text: string; url: string } };
+      };
+      expect(govde.type).toBe('cta_url');
+      expect(govde.body.text).toBe(CART_LINK_BUTTON_TEXT[dil]);
+      expect(govde.body.text.length).toBeLessThanOrEqual(1024);
+      expect(govde.action).toEqual({ name: 'cta_url', parameters: { display_text: CART_LINK_BUTTON_TITLE[dil], url: URL } });
     }
   });
 });
