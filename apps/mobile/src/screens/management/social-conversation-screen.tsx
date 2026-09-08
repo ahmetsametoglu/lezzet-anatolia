@@ -597,7 +597,11 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
       {/* GÖNDERİM REDDİ BİR CÜMLEDİR, HTTP hatası değil (21.286): pencere kapalıysa ya da sağlayıcı
           düştüyse uç 200 döner ama mesaj gitmez. Operatör bunu yukarıdaki tek hata satırında okur
           — ve metin kutuda DURUR, çünkü gitmeyen bir cevabı silmek onu yeniden yazdırmak olurdu. */}
-      <Text style={styles.recordNote}>{td.recordNote}</Text>
+      {/* NOT KANAL-DUYARLI (21.292 · cihazda görüldü 08.09): metin sabit "WhatsApp" diyordu ve
+          Messenger sohbetinde YANLIŞ bir cümle kuruyordu — operatöre mesajın hangi kanaldan
+          gideceğini söyleyen tek satır bu. Pencere bandı zaten kanal başına konuşuyor; bu satır
+          geride kalmıştı. */}
+      <Text style={styles.recordNote}>{fillCopy(td.recordNote, { channel: t.channel[conversation.source] })}</Text>
     </View>
   );
 

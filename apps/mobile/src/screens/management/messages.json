@@ -407,7 +407,7 @@
       "replyPlaceholder": "Cevap yaz…",
       "replyLabel": "Konuşmaya cevap",
       "record": "Gönder",
-      "recordNote": "Mesaj WhatsApp üzerinden müşteriye gider; gönderim geri alınamaz.",
+      "recordNote": "Mesaj {channel} üzerinden müşteriye gider; gönderim geri alınamaz.",
       "window": {
         "whatsapp": {
           "open": "Cevap süresi açık · {hours} saat kaldı",

@@ -13823,10 +13823,48 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   22 dp başlıyor, talep kartı 44'ten: kap (`body`) yatay dolguyu zaten veriyordu ve `ticketsWrap`
   ikinci kez yazıyordu. Tasarımda (v3:28) üçü de aynı 20 px kabın içinde. Fazla dolgu kaldırıldı.
 
-  **BEKLEYEN(BACKLOG §1): talep kartının BOŞ hâli tanımsız.** Sıfır talepte kart altı sıfır yazıyor
-  (*"0 açık · 0 tanesi top bizde / 0 bozuk · 0 eksik · 0 soru · 0 diğer"*) ve bir karar kutusunda
-  hiçbir şey söylemeyen tam boy bir kart kaplıyor. Tasarım kartı yalnız dolu hâliyle çiziyor; boş
-  hâl bizim kararımız ve kullanıcıya soruldu.
+  **Talep kartının boş hâli SORULDU ve karar verildi (kullanıcı 08.09): sayılar her hâlde görünür.**
+  Sıfır talepte kart altı sıfır yazıyor ve bu kabul edildi — kart bir kapı, sayı da bir bilgidir
+  ("bugün talep yok" da bir cevaptır). Tasarım kartı yalnız dolu hâliyle çiziyordu; boş hâl artık
+  tanımlı ve ayrı bir çizim gerektirmiyor.
 
   Doğrulama: kök `typecheck` **20/20**, `lint` temiz, sosyal sohbet ekranı **33/33** (3'ü bu turda),
   yazışma kabı **11/11** (kaydırma kuralının beş sınır durumu dahil), mobil yönetim + kit **299/299**.
+
+- [x] (21.292) **MESSENGER MOBİLDEN DE GÖNDERİLEBİLİR — mobil uç Sayfa jetonunu okumuyordu** (kullanıcı sorusu 08.09: *"messenger kısmının ayağa kaldırılması… mobil tarafın altyapısı tamam mı?"*)
+  `touches:` `apps/mobile-api/{.env.example,src/api/v1/social.ts}` · `apps/mobile/src/screens/management/{social-conversation-screen.tsx,social-conversation-screen.test.tsx,messages.json}`
+
+  **Durum (08.09) — TAMAM.** Soru bir ölçümle cevaplandı ve iki boşluk çıktı; ikisi de kapandı.
+
+  **1. Mobil uç TEK jeton okuyordu.** `messageSenderFor(process.env.META_ACCESS_TOKEN)` — o jeton
+  WhatsApp'ındır; Messenger ve Instagram **Sayfa jetonuyla** gönderilir (`tokenForChannel`). Yani
+  mobilden Messenger'a yazılan her cevap yanlış jetonla gidip `failed` dönerdi ve **WhatsApp
+  çalıştığı için fark edilmezdi.** Öteki üç yüzey (web action'ları · backend cron · webhook)
+  çoktan `metaSenderFromEnv()` çağırıyordu — mobil tek başına geride kalmıştı; 21.286'daki
+  gönderim asimetrisinin kanal eksenindeki ikizi. Jetonları okuyan tek satıra geçildi ve
+  `META_PAGE_ACCESS_TOKEN` mobil-api'nin `.env.example`ına künyesiyle yazıldı (web ve backend'de
+  zaten belgeliydi).
+
+  **2. Cevap kutusunun altındaki not KANAL KÖRDÜ.** Sabit "Mesaj **WhatsApp** üzerinden müşteriye
+  gider" diyordu ve Messenger sohbetinde yanlış bir cümle kuruyordu — cihazda görüldü. Operatöre
+  mesajın hangi kanaldan gideceğini söyleyen tek satır bu; pencere bandı kanal başına konuşurken bu
+  satır geride kalmıştı. Kanal adı artık sözlükten (`{channel}`), iki testle çivili.
+
+  **MESSENGER'IN GERİ KALANI ZATEN HAZIRDI** (ölçüldü, yazılmadı): kanal süzgeci enum'dan türüyor ·
+  satır başlığı PSID'siz kuruluyor · pencere bandı Messenger'da ÜCRET değil insan-temsilci kuralını
+  anlatıyor · `send.ts` kalıp mesajı yalnız WhatsApp'a bırakıyor · `formatForChannel` Messenger'da
+  biçim işaretlerini söküyor · Messenger ekleri de R2'ye indiriliyor (`messengerAttachmentOf`).
+
+  **Cihaz turu (gerçek Messenger sohbeti · PSID `27849725771376772`):** gelen fotoğraf çizildi,
+  sesli mesaj çaları ve transkript yerinde, ajanın madde işaretli cevabı biçimli göründü, başlık
+  "As · Messenger" dedi (PSID gösterilmiyor). Defterde sekiz mesajın **hepsi sağlayıcı kimliğiyle**
+  — yani ajanın Messenger cevapları gerçekten gitmiş.
+
+  **MOBİLDEN MESSENGER GÖNDERİMİ CİHAZDA ÖLÇÜLDÜ (08.09 · 09:57).** Kullanıcı uygulamadan "Tst"
+  yazdı; defterde `source=messenger · direction=outbound · author=admin · provider_message_id DOLU`.
+  İki ayrıntı kanıtı tamamlıyor: yazar `ai` değil **`admin`** (yani ajan değil, operatörün mobilden
+  yazdığı mesaj) ve sağlayıcı kimliği dolu (yani Meta **Sayfa jetonuyla** kabul etti). Jeton bugüne
+  kadar `apps/mobile-api/.env.local`'de yoktu — web ve backend'de vardı; eksiklik bu turda kapandı.
+
+  Zincirin tamamı ayakta: gelen (metin · fotoğraf · sesli mesaj + transkript) → ajan cevabı →
+  operatörün mobilden cevabı, hepsi sağlayıcı kimlikli.

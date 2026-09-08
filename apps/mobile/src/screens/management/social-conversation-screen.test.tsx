@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 
+import { fillCopy } from '@/screens/operations/copy';
 import { SocialConversationScreen } from './social-conversation-screen';
 import messages from './messages.json';
 
@@ -139,13 +140,25 @@ describe('kutu bir DEFTER kutusudur — mesaj göndermez', () => {
     expect(t.record).toBe('Gönder');
   });
 
-  it('altındaki not gönderimin GERİ ALINAMAZ olduğunu söyler', async () => {
-    // Cümle ekranın kendisi kadar önemli: operatörün "deneme yaparım" sanmasını engelleyen tek şey
-    // o. Mesaj müşteriye gidiyor ve geri çağrılamıyor.
+  it('altındaki not gönderimin GERİ ALINAMAZ olduğunu söyler — ve KANALI adıyla anar', async () => {
+    /* Cümle ekranın kendisi kadar önemli: operatörün "deneme yaparım" sanmasını engelleyen tek şey
+       o. Mesaj müşteriye gidiyor ve geri çağrılamıyor.
+
+       Kanal adı 21.292'de eklendi: metin sabit "WhatsApp" diyordu ve Messenger sohbetinde yanlış
+       bir cümle kuruyordu (cihazda görüldü 08.09). */
     mockDetay(detay());
     await ekranAc();
-    expect(screen.getByText(t.recordNote)).toBeOnTheScreen();
+    expect(screen.getByText(fillCopy(t.recordNote, { channel: messages.social.channel.whatsapp }))).toBeOnTheScreen();
     expect(t.recordNote).toContain('geri alınamaz');
+  });
+
+  it('MESSENGER sohbetinde not "WhatsApp" DEMEZ', async () => {
+    mockDetay(detay({ source: 'messenger', externalRef: 'PSID-9' }));
+    await ekranAc();
+    expect(
+      screen.getByText(fillCopy(t.recordNote, { channel: messages.social.channel.messenger })),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText(/WhatsApp üzerinden/)).not.toBeOnTheScreen();
   });
 
   it('cevap `reply` ucuna gider — uç adı değişmedi, DAVRANIŞI değişti', async () => {

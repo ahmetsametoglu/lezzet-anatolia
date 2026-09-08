@@ -4,7 +4,7 @@ import {
   conversationChannelName,
   conversationsChannelName,
   generateConversationDraft,
-  messageSenderFor,
+  metaSenderFromEnv,
   ringConversationBell,
   ringConversationsBell,
   sendOutboundMessage,
@@ -217,10 +217,20 @@ social.post('/conversations/:id/reply', async (c) => {
     kuralı iki yerde yaşatmak olurdu (CLAUDE §1) — ve pencere kuralı yanlış kopyalandığında bedeli
     para (gereksiz kalıp mesaj) ya da sessizce gitmeyen bir cevap.
 
-    Jetonu ÇAĞIRAN okur (`STACK §4` — paket `process.env` bilmez); jeton yoksa `messageSenderFor`
-    reddeden bir sürücü döndürür ve gönderim `failed` olur. Sessizce "gitti" demez.
+    Jetonu ÇAĞIRAN okur (`STACK §4` — paket `process.env` bilmez); jeton yoksa sürücü reddeder ve
+    gönderim `failed` olur. Sessizce "gitti" demez.
+
+    ── `metaSenderFromEnv` ÇAĞRILIR, JETON ELLE OKUNMAZ (21.292 · ölçülen boşluk 08.09) ──────────
+    Bir tur boyunca burada `messageSenderFor(process.env.META_ACCESS_TOKEN)` yazıyordu — TEK jeton.
+    O jeton WhatsApp'ındır; Messenger ve Instagram **Sayfa jetonuyla** gönderilir
+    (`tokenForChannel`). Yani mobilden Messenger'a yazılan her cevap yanlış jetonla gidip
+    başarısız olurdu ve WhatsApp çalıştığı için bu FARK EDİLMEZDİ.
+
+    Öteki üç yüzey (web action'ları · backend cron · webhook) çoktan `metaSenderFromEnv()`
+    çağırıyordu; mobil tek başına geride kalmıştı — 21.286'daki gönderim asimetrisinin aynısı,
+    bu kez kanal ekseninde. Jetonları okuyan tek satır artık ortak.
   */
-  const outcome = await sendOutboundMessage(db, messageSenderFor(process.env.META_ACCESS_TOKEN), {
+  const outcome = await sendOutboundMessage(db, metaSenderFromEnv(), {
     conversationId: id.data,
     text: body.data.text,
   });
