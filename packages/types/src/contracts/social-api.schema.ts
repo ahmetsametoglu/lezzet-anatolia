@@ -122,6 +122,35 @@ export const SocialMessageSchema = MessageSchema.pick({
    * fotoğrafsız çizer, çökmez.
    */
   mediaUrl: z.string().nullable(),
+
+  /* ── ÇEVİRİ ÜÇLÜSÜ (21.297) — talep ekranının kurduğu desenin üçüncü yüzeyi ────────────────
+     Sohbet mesajı 15.28'den beri İKİ YÖNLÜ çevriliyor ve kural şu: `body.text` DAİMA KANALDAN
+     GEÇEN metindir. Yani Fransızca konuşulan bir sohbette giden mesajın gövdesi Fransızcadır ve
+     operatörün yazdığı Türkçe torbadadır. Mobil bu üç alanı almadığı için telefonda operatör
+     kendi yazdığını değil, müşteriye giden çeviriyi okuyordu.
+
+     ADLAR TALEPTEKİNDEN FARKLI ve bilinçli: talepte gövde ZATEN çözülmüş gelir (`body` gösterilen,
+     `originalBody` asıl). Burada `body` defterin alanıdır ve anlamı değiştirilemez — medya, şablon
+     ve gönderim yolları hep onu okuyor. O yüzden çözülmüş metin AYRI bir alanda taşınıyor; ekran
+     `shownText`i çizer, "orijinali gör" `body.text`i açar.
+
+     Çözüm sunucuda ve motorla yapılır (`domain-core.resolveUserText`) — web'in sosyal ekranı da
+     aynı motoru çağırıyor (`social-read.ts` → `shownTextOf`). Kural tek yerde: iki yüzey iki ayrı
+     seçim yapamaz. */
+
+  /**
+   * Operasyon dilindeki metin (Türkçe). `null` = metinsiz mesaj (yalnız medya) ya da hiçbir dilde
+   * metin bulunamadı — ekran o hâlde gövde çizmez, `body.text`e DÜŞMEZ (yanlış dilde bir metni
+   * "Türkçe" diye göstermek, çevirinin varlığını yalanlardı).
+   */
+  shownText: z.string().nullable(),
+  /**
+   * `shownText` bir MAKİNE ÇEVİRİSİ mi. `false` ise "orijinali gör" düğmesi ÇİZİLMEZ — aynı metni
+   * iki kez açan bir düğme, operatöre olmayan bir fark vaat ederdi (talep baloncuğunun kararı).
+   */
+  shownTranslated: z.boolean(),
+  /** Mesajın KENDİ dili (kod, ör. `fr`) — etiket yüzeyde kurulur. `null` = dil ölçülemedi. */
+  language: z.string().nullable(),
 });
 export type SocialMessageContract = z.infer<typeof SocialMessageSchema>;
 

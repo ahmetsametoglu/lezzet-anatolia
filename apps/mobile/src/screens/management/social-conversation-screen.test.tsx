@@ -301,6 +301,7 @@ let mediaSeq = 0;
 /** Sözleşme şeklinde bir mesaj — verilmeyen medya alanları BOŞ (metin mesajının normali). */
 function mesaj(over: Record<string, unknown> = {}) {
   mediaSeq += 1;
+  const govde = (over.body as { text: string | null } | undefined) ?? { text: 'Merhaba', payload: null };
   return {
     id: `00000000-0000-4000-8000-00000000${String(1000 + mediaSeq)}`,
     direction: 'inbound',
@@ -311,6 +312,12 @@ function mesaj(over: Record<string, unknown> = {}) {
     mediaMime: null,
     mediaTranscript: null,
     mediaUrl: null,
+    /* ÇEVİRİSİZ VARSAYILAN (21.297): gösterilen metin gövdenin kendisi, çeviri YOK. Türkçe
+       konuşulan bir sohbetin gerçek hâli bu — uç `resolveUserText`ten aynısını döndürür.
+       Çevrilmiş hâli ölçen testler üçlüyü açıkça veriyor. */
+    shownText: govde.text,
+    shownTranslated: false,
+    language: 'tr',
     createdAt: new Date().toISOString(),
     ...over,
   };
@@ -546,3 +553,79 @@ describe('sohbet CANLI dinler — açık ekrana mesaj kendiliğinden düşer', (
     await waitFor(() => expect(mockRemoveChannel).toHaveBeenCalled());
   });
 });
+
+/*
+  ÇEVİRİ (21.297) — baloncuk OPERASYON dilinde konuşur, asıl metin bir dokunuş ötede.
+
+  Kural `body.text` DAİMA KANALDAN GEÇEN metindir: Fransızca konuşulan bir sohbette giden mesajın
+  gövdesi Fransızcadır, operatörün yazdığı Türkçe torbadadır ve uç onu `shownText`e çözer. Bu
+  ayrım yerelde ÜRETİLEMEZ (defterdeki sohbetlerin hepsi Türkçe), o yüzden fikstürle kuruluyor.
+*/
+describe('çeviri — baloncuk Türkçesini çizer, orijinali dokununca açılır', () => {
+  it('giden mesajda operatörün TÜRKÇESİ okunur, kanaldan geçen Fransızca değil', async () => {
+    mockDetay(
+      detay({}, [
+        mesaj({
+          direction: 'outbound',
+          author: 'admin',
+          body: { text: 'Bonjour ! Nous serons chez vous jeudi.', payload: null },
+          shownText: 'Merhaba! Perşembe kapınızdayız.',
+          shownTranslated: true,
+          language: 'fr',
+        }),
+      ]),
+    );
+
+    await ekranAc();
+
+    expect(screen.getByText('Merhaba! Perşembe kapınızdayız.')).toBeOnTheScreen();
+    expect(screen.queryByText('Bonjour ! Nous serons chez vous jeudi.')).toBeNull();
+  });
+
+  it('"orijinali gör" kanaldan geçen metni açar ve geri alır', async () => {
+    const id = '00000000-0000-4000-8000-000000009001';
+    mockDetay(
+      detay({}, [
+        mesaj({
+          id,
+          body: { text: 'Bonjour, je voudrais commander.', payload: null },
+          shownText: 'Merhaba, sipariş vermek istiyorum.',
+          shownTranslated: true,
+          language: 'fr',
+        }),
+      ]),
+    );
+
+    await ekranAc();
+
+    await fireEvent.press(screen.getByTestId(`management-social-original-${id}`));
+    expect(screen.getByText('Bonjour, je voudrais commander.')).toBeOnTheScreen();
+
+    // Geçiş BALONCUĞUN kendi durumu ve geri alınabilir — tek yönlü bir kapı değil.
+    await fireEvent.press(screen.getByTestId(`management-social-original-${id}`));
+    expect(screen.getByText('Merhaba, sipariş vermek istiyorum.')).toBeOnTheScreen();
+  });
+
+  it('ÇEVRİLMEMİŞ mesajda düğme HİÇ çizilmez — aynı metni iki kez açan bağlantı olmaz', async () => {
+    const id = '00000000-0000-4000-8000-000000009002';
+    mockDetay(mockDetayTekTurkce(id));
+
+    await ekranAc();
+
+    expect(screen.getByText('Merhaba, sipariş vermek istiyorum.')).toBeOnTheScreen();
+    expect(screen.queryByTestId(`management-social-original-${id}`)).toBeNull();
+  });
+});
+
+/** Türkçe yazılmış, çevrilmemiş tek mesaj — `shownTranslated: false` olan gerçek hâl. */
+function mockDetayTekTurkce(id: string) {
+  return detay({}, [
+    mesaj({
+      id,
+      body: { text: 'Merhaba, sipariş vermek istiyorum.', payload: null },
+      shownText: 'Merhaba, sipariş vermek istiyorum.',
+      shownTranslated: false,
+      language: 'tr',
+    }),
+  ]);
+}

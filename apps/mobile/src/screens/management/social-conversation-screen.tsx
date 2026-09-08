@@ -78,8 +78,13 @@ import { useSocialConversation } from './use-social-conversation.hook';
     Web'in aynı kararı (`consumeConversationDraftAction` künyesi): tek dürüst çıkış kutuya taşınmak.
   · "Üstlen" yok, YÜRÜTÜCÜ seçici var (İnsan · Hibrit · AI) — konuşmanın sahibi bir durum geçişi
     değil bir moddur (kullanıcı kararı 16.08, talep ekranıyla aynı üçlü).
-  · Çeviri/orijinal toggle'ı YOK: konuşma mesajında çeviri alanı henüz yok (AI ajan boşluk paketi
-    №7 — kullanıcı onayı bekliyor); olmayan alana toggle çizmek boş bir vaat olurdu.
+  · ~~Çeviri/orijinal toggle'ı YOK~~ — **21.297'de GELDİ.** Cümle yazıldığında doğruydu: konuşma
+    mesajının çeviri alanı yoktu. 15.28 alanları getirdi (`message.language · translations`) ve
+    yorum o gün bayatladı; mobil sözleşme onları almadığı için baloncuk KANALDAN GEÇEN metni
+    çiziyordu — yani Fransızca bir sohbette operatör kendi yazdığı Türkçeyi değil, müşteriye giden
+    çeviriyi okuyordu. Artık baloncuk operasyon dilindeki metni (`shownText`) çizer, "orijinali
+    gör" `body.text`i açar; düğme yalnız GERÇEKTEN çevrilmiş metinde çizilir. Talep ekranının
+    kurduğu desenin üçüncü yüzeyi — çeviri kararı üç yüzeyde de aynı motordan (`resolveUserText`).
 
   ── PENCERE BANDI KANAL BAŞINA CÜMLE KURAR (web `WINDOW_NOTE` kararı) ───────
   "Kapalı" WhatsApp'ta bir ÜCRET kararıdır, Messenger/IG'de bir KURAL sınırıdır (insan-temsilci,
@@ -351,6 +356,9 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
   const router = useRouter();
   const chat = useSocialConversation(conversationId);
   const [reply, setReply] = useState('');
+  /* Orijinal/çeviri geçişi BALONCUĞUN kendi durumu (talep ekranının aynı kararı, 21.297): tek
+     mesajın düğmesi bütün yazışmayı çevirmez — operatör genelde tek bir cümlenin aslını merak eder. */
+  const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
 
   /*
     KAYDIRMA KARARI KİTTE, BURADA DEĞİL (21.291 · kullanıcı kararı 08.09). `ChatLayout` artık
@@ -403,7 +411,12 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
 
   const bubbleOf = (message: SocialMessage) => {
     const content = contentOf(message);
-    const text = message.body.text?.trim() ?? '';
+    /* GÖSTERİLEN METİN OPERASYON DİLİNDE (21.297) — `body.text` DEĞİL.
+       `body.text` kanaldan geçen metindir: Fransızca konuşulan bir sohbette giden mesajın gövdesi
+       Fransızcadır ve operatörün yazdığı Türkçe torbadadır. Baloncuk `shownText`i çizer; asıl
+       metin bir dokunuş ötede (aşağıdaki dipnot). Çeviri kararı sunucuda, motorla verildi. */
+    const asil = showOriginal[message.id] === true;
+    const text = (asil ? message.body.text : message.shownText)?.trim() ?? '';
     /* YER TUTUCU YALNIZ ÇİZİLECEK ŞEY YOKKEN (21.287). `[görsel / dosya]` yazısı medyanın kendisi
        çizilemediği sürece doğruydu; artık çiziliyor. Geriye yalnız gövdesi boş METİN-DIŞI mesaj
        kalıyor (etkileşimli kart, kalıp) — orada yer tutucu hâlâ tek doğru cevap. */
@@ -416,6 +429,21 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         body={body}
         content={content}
         caption={captionOf(message)}
+        /* Düğme YALNIZ gerçekten çevrilmiş metinde çizilir (talep baloncuğunun kararı): aynı metni
+           iki kez açan bir bağlantı, operatöre olmayan bir fark vaat ederdi. */
+        footer={
+          message.shownTranslated ? (
+            <PressableSurface
+              onPress={() => setShowOriginal((current) => ({ ...current, [message.id]: !asil }))}
+              feedback="opacity"
+              compact
+              accessibilityLabel={asil ? td.translated : td.original}
+              testID={`management-social-original-${message.id}`}
+            >
+              <Text style={styles.bubbleLink}>{asil ? td.translated : td.original}</Text>
+            </PressableSurface>
+          ) : undefined
+        }
       />
     );
   };
@@ -842,6 +870,12 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.muted,
     textAlign: 'center',
+  },
+  /** "orijinali gör" — talep baloncuğuyla AYNI ölçü ve ton (iki ekran aynı işi aynı sesle söyler). */
+  bubbleLink: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.olive,
   },
 
   /* ── MEDYA (21.287) ──────────────────────────────────────────────────────

@@ -14088,3 +14088,37 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   merdiven · motorun sayısı · tek yayın · liste fiyatsız hâl). **Cihazda ölçüldü:** kart "Teklif
   ver" düğmesiyle çizildi, çekmece açıldı, üç çip satırı eşit paylaştı (316 dp), "%30 · öneri"
   işaretli geldi ve yayın düğmesi oranı yazdı.
+
+- [x] (21.297) **SOSYAL SOHBET ÇOK DİLLİ OKUNUYOR — operatör telefonda KENDİ yazdığını görecek** (kullanıcı sorusu 08.09: *"metin çok dilli olabiliyor ve bizim arayüzümüz bunu efektif kullanıyor diye biliyorum, yanılıyor muyum?"* · denetim notu `not-mobil-sohbet-cevirisi-alanlari.md`)
+  `touches:` `packages/types/src/contracts/social-api.schema.ts` · `apps/mobile-api/src/api/v1/social.ts` · `apps/mobile/src/screens/management/{social-conversation-screen.tsx,social-conversation-screen.test.tsx,messages.json}`
+
+  **Durum (08.09) — TAMAM.** Kullanıcı haklıydı ama YARISINDA: üç yüzeyin ikisi çeviriyi çoktan
+  kullanıyordu — **talep ekranı** (`staff-read.ts` → `resolveUserText`, baloncukta *"orijinali
+  gör"*) ve **web sosyal ekranı** (`social-read.ts` → `shownTextOf`). Eksik olan tek yer **mobil
+  sosyal sohbetti** ve kanıtı ekranın kendi künyesindeydi: *"Çeviri/orijinal toggle'ı YOK: konuşma
+  mesajında çeviri alanı henüz yok."* O cümle yazıldığında doğruydu; **15.28 alanları getirdi
+  (`message.language · translations · translated_at`) ve yorum o gün bayatladı.**
+
+  **ARIZANIN ŞEKLİ.** Kural: `body.text` DAİMA KANALDAN GEÇEN metindir. Fransızca konuşulan bir
+  sohbette giden mesajın gövdesi Fransızcadır, operatörün yazdığı Türkçe torbadadır. Mobil uç
+  mesajı ham geçiriyordu (`{...message, mediaUrl}`) ve sözleşmenin `pick`inde `language` ·
+  `translations` yoktu — yani operatör telefonda **kendi yazdığı Türkçeyi değil, müşteriye giden
+  çeviriyi** okuyordu. Gelen mesajda da aslı okurdu, Türkçesini değil.
+
+  **ÇÖZÜM SUNUCUDA VE MOTORLA.** Uç `resolveUserText(…, 'tr')` çağırıyor — web'in sosyal ekranıyla
+  AYNI motor. Kural üç yüzeyde tek yerde: iki yüzey iki ayrı seçim yapamaz. Operasyon dili sabit
+  Türkçedir (CLAUDE §2), cihazın diline bakılmaz — bakılsaydı Fransızca telefondaki operatör kendi
+  Türkçesini Fransızca görürdü.
+
+  **SÖZLEŞMEDE ÜÇ ALAN, ADLARI TALEPTEKİNDEN FARKLI VE BİLİNÇLİ.** Talepte gövde zaten çözülmüş
+  gelir (`body` gösterilen, `originalBody` asıl). Sohbette `body` DEFTERİN alanıdır ve anlamı
+  değiştirilemez — medya, kalıp ve gönderim yolları hep onu okuyor. Çözülmüş metin bu yüzden ayrı:
+  `shownText` · `shownTranslated` · `language`. Ekran `shownText`i çizer, *"orijinali gör"*
+  `body.text`i açar ve düğme YALNIZ gerçekten çevrilmiş metinde çizilir (aynı metni iki kez açan
+  bir bağlantı, olmayan bir fark vaat ederdi — talep baloncuğunun kararı).
+
+  **YERELDE ÜRETİLEMEZ, O YÜZDEN FİKSTÜRLE ÇİVİLENDİ:** defterdeki iki sohbetin ikisi de `tr`,
+  altı mesajın altısı `tr` (ölçüldü). Açık yapısaldır ve Strasbourg'da asıl hâl Fransızcadır.
+
+  Doğrulama: kök `typecheck` **20/20**, `lint` temiz, sosyal sohbet **37/37** (3'ü bu turda: giden
+  mesajda Türkçe okunur · orijinal açılır ve geri alınır · çevrilmemişte düğme hiç çizilmez).

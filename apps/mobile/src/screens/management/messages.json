@@ -413,6 +413,8 @@
       "you": "Siz",
       "ai": "AI ajanı",
       "template": "kalıp: {name}",
+      "original": "orijinali gör",
+      "translated": "çeviriyi gör",
       "draftEyebrow": "ASİSTAN TASLAĞI · HİBRİT MOD",
       "draftNote": "Hibrit modda asistan asla kendi başına göndermez.",
       "draftTake": "Cevap kutusuna al",

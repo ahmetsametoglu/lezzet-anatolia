@@ -10,6 +10,7 @@ import {
   sendOutboundMessage,
 } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, MessageService, serviceDb } from '@lezzet/database';
+import { resolveUserText } from '@lezzet/domain-core';
 import { privateReadUrl } from '@lezzet/storage';
 import {
   ConversationHandlerEnum,
@@ -108,6 +109,24 @@ social.use('*', requireStaffRole('admin'));
  * eklemeyi unutmak" derleme/çalışma anında görünür bir hata — sessizce fotoğrafsız çizen bir ekran
  * değil.
  */
+/**
+ * ÇEVİRİ ÇÖZÜMÜ (21.297) — mesajın operasyon dilindeki hâli, motorun ağzından.
+ *
+ * Kural `domain-core.resolveUserText`te ve TEK yerde: web'in sosyal ekranı da (`social-read.ts`)
+ * aynı motoru çağırıyor. Burada yapılan iş seçim değil taşıma — hangi dilin kazandığına motor
+ * karar veriyor, uç yalnız sonucu sözleşmenin alanlarına yerleştiriyor.
+ *
+ * Operasyon dili SABİT Türkçedir (CLAUDE §2: operasyon yüzeyi tek dilli) — cihazın diline
+ * bakılmaz; bakılsaydı Fransızca telefondaki operatör Türkçe yazdığını Fransızca görürdü.
+ */
+function shownTextOf(message: Message): { shownText: string | null; shownTranslated: boolean; language: string | null } {
+  const shown = resolveUserText(
+    { text: message.body.text, language: message.language, translations: message.translations },
+    'tr',
+  );
+  return { shownText: shown.text ?? null, shownTranslated: shown.isTranslated, language: message.language ?? null };
+}
+
 async function toDetailBody(
   row: ConversationInboxRow,
   messages: Message[],
@@ -117,7 +136,11 @@ async function toDetailBody(
   return {
     conversation: row,
     messages: await Promise.all(
-      messages.map(async (message) => ({ ...message, mediaUrl: await privateReadUrl(message.mediaKey) })),
+      messages.map(async (message) => ({
+        ...message,
+        mediaUrl: await privateReadUrl(message.mediaKey),
+        ...shownTextOf(message),
+      })),
     ),
     nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
     /* Zilin adı da BURADA (21.291): detayı üreten İKİ yol var (GET ve cevap ucu) ve alanı yalnız
