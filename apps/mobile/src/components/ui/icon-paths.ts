@@ -244,6 +244,17 @@ export const ICON_PATHS = {
    * çiziyor; satış ikonuyla çizmek "burada satış yapılıyor" derdi, oysa kart bir onay bekliyor.
    */
   tag: { paths: ['M20 13l-8 8-9-9V4h8z'], circles: [[7.5, 7.5, 1.3]] },
+  /**
+   * KURUMSAL BİNA — kurumsal hesap başvurusu kararı (v3:2626, 08.09).
+   *
+   * `account`tan AYRI ve ayrım rolde: `account` bir KİŞİDİR, bu bir İŞLETMEDİR — başvuran bir
+   * restoran, bir kurum. Kişi ikonuyla çizmek kartı "bir müşteri" gibi okuturdu, oysa karar tam
+   * da hesabın kurumsallığı üzerine. Pencereler dört nokta olarak duruyor (şablonun kendi
+   * çizimi); "sadeleştirilmez" kuralı gereği ayıklanmadılar.
+   */
+  business: {
+    paths: ['M3 21h18', 'M5 21V7l7-4 7 4v14', 'M9 21v-5h6v5', 'M9 10h.01M15 10h.01M9 13h.01M15 13h.01'],
+  },
 } as const satisfies Record<string, IconGeometry>;
 
 /** Kitin tanıdığı ikon adları — `Icon` bunun dışına çıkamaz (yanlış ad derlemede yakalanır). */

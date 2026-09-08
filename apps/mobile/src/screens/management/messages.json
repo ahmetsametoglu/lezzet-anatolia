@@ -48,6 +48,12 @@
         "action": "sistem önerisi hazır — kararı aç",
         "name": "Eksik kalem kararı"
       },
+      "b2b": {
+        "name": "Kurumsal hesap başvurusu",
+        "nameMany": "Kurumsal hesap başvuruları",
+        "titleMany": "{n} başvuru onay bekliyor",
+        "subtitleMany": "listeden seç · bayrak sırayı söyler"
+      },
       "offer": {
         "eyebrow": "YAKIN-SKT TEKLİFİ",
         "title": "{item} · {qty} adet · %{percent} öneri",

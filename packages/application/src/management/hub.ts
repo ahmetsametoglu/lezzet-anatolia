@@ -20,6 +20,7 @@ import type {
 } from '@lezzet/types';
 import { readExpiryThresholds, toBatchViews } from '../warehouse/batch-view';
 import { previewOf } from '../ticket/staff-read';
+import { readB2bQueue } from '../b2b/queue';
 import { countOrderExceptions } from './exceptions';
 
 /*
@@ -55,8 +56,17 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
   const tickets = new TicketQueueService(db);
   const stocks = new StockService(db);
 
-  const [complaintCount, ticketCounts, complaintPage, exceptions, batches, thresholds, supplyGroups, intentCount] =
-    await Promise.all([
+  const [
+    complaintCount,
+    ticketCounts,
+    complaintPage,
+    exceptions,
+    batches,
+    thresholds,
+    supplyGroups,
+    intentCount,
+    b2bQueue,
+  ] = await Promise.all([
       tickets.countAwaiting(),
       /* Karar kutusunun TALEP kartı için (v3:28) — açık kuyruğun tamamı ve tür kırılımı.
          Talep LİSTESİNİN şeridiyle aynı sayım (`countForFilters`), yani kart "6 açık" derken
@@ -76,6 +86,14 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
          GİZLİYDİ çünkü defterde yalnız WhatsApp sohbeti var; ilk Messenger/IG sohbetinde
          görünür olurdu — yani sessizce yanlış sayı gösteren bir kapı. */
       new ConversationInboxService(db).countAwaitingReply(),
+      /* Kurumsal başvuru kartı (v3:2625) — LİSTENİN okuyucusundan, ayrı bir sayaçtan değil. Kutu
+         ile listenin sekmesi böylece ayrışamaz ve "tek başvuruda listeyi atla" kestirmesi tek
+         yerde kalır (`B2bQueueView.single`); burada yeniden yazılsaydı iki kural bir gün ayrılırdı.
+
+         `limit: 1` yeter: kart en çok BİR künye yazıyor. Çoklu bekleyende o tek satırın montajı
+         (satır başına dört yerel okuma, `queue.ts` künyesi) boşa gider — ölçülmüş bir yavaşlık
+         yok, o yüzden ikinci bir ucuz yol AÇILMADI (CLAUDE §0: sebebi kanıtlanmadan müdahale yok). */
+      readB2bQueue(db, { limit: 1 }),
     ]);
 
   /*
@@ -118,6 +136,10 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
       : ((await new SupplierService(db).list()).find((supplier) => supplier.id === headGroup.supplierId)?.name ?? null);
   const supplyHead =
     headGroup === null || supplierName === null ? null : { supplierName, lineCount: headGroup.lines.length };
+
+  /* Künye YALNIZ tek bekleyende çizilir ve ölçütü kuyruğun kendi kararıdır (`single`), sayfanın
+     uzunluğu değil: `rows.length === 1` yalnız ilk sayfa doluysa doğru cevabı verirdi. */
+  const b2bRow = b2bQueue.single === null ? null : (b2bQueue.rows[0] ?? null);
 
   const head = complaintPage.rows[0] ?? null;
   return {
@@ -169,6 +191,10 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
       head: supplyHead,
     },
     intents: { count: intentCount },
+    b2b: {
+      pendingCount: b2bQueue.counts.pending,
+      head: b2bRow === null ? null : { customerId: b2bRow.customerId, name: b2bRow.name, flag: b2bRow.flag },
+    },
   };
 }
 

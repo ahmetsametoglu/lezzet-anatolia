@@ -55,6 +55,7 @@ function hubData(): ManagementHub {
       offers: { candidateCount: 4, head: null },
       supply: { groupCount: 2, unmappedVariantCount: 1, head: null },
       intents: { count: 2 },
+      b2b: { pendingCount: 0, head: null },
     },
     summary: {
       date: '2026-08-26',

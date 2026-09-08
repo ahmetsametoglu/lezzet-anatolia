@@ -113,6 +113,9 @@ function hubData(overrides: {
       },
       supply: { groupCount: 2, unmappedVariantCount: 1, head: { supplierName: 'Gaziantep Baklava', lineCount: 7 } },
       intents: { count: 2 },
+      /* Varsayılan BOŞ: kurumsal kart yalnız bekleyen başvuru varken doğuyor ve öteki testlerin
+         kart sayımını bozmasın. Kartın kendi testleri sayıyı açıkça veriyor. */
+      b2b: { pendingCount: 0, head: null },
       ...overrides.queue,
     },
     summary: {
@@ -309,6 +312,69 @@ describe('yönetim hub — karar kutusu', () => {
     for (const key of ['exception', 'offer', 'supply']) {
       expect(screen.queryByTestId(`management-decision-${key}`)).toBeNull();
     }
+  });
+
+  /*
+    KURUMSAL BAŞVURU KARTI (21.293) — ekranı vardı, KAPISI yoktu.
+
+    Liste ve kontrol kartı 21.217'de yazıldı ama uygulamada ikisine de yalnız bildirimden
+    giriliyordu; bildirimi kaçıran için başvuru görünmez bir işti. Kartın iki hâli tasarımın
+    ayrımı (v3:2625) ve ikisi de burada çivileniyor — tekte kestirme, çokluda liste.
+  */
+  it('TEK bekleyen başvuruda kart adı ve bayrağı yazar; dokunuş listeyi ATLAR', async () => {
+    routeHub(() =>
+      ok(
+        hubData({
+          queue: {
+            b2b: {
+              pendingCount: 1,
+              head: {
+                customerId: '00000000-0000-4000-8000-0000000000b2',
+                name: 'Restaurant Oberjaegerhof',
+                flag: { label: 'Mükerrer', tone: 'bad', reason: 'Aynı KDV numarasıyla ikinci kayıt' },
+              },
+            },
+          },
+        }),
+      ),
+    );
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.getByText(t.hub.rows.b2b.name)).toBeOnTheScreen();
+    expect(screen.getByText('Restaurant Oberjaegerhof')).toBeOnTheScreen();
+    // Bayrağın KELİMESİ yazılı — renk tek başına konuşmuyor (CLAUDE §3 · b2b-format künyesi).
+    expect(screen.getByText('Mükerrer')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('management-decision-b2b'));
+    // Tek başvuruda listeye uğramak bir dokunuş fazlası olurdu (kullanıcı kararı 07.09).
+    expect(mockNavigate).toHaveBeenCalledWith({
+      pathname: '/b2b-application',
+      params: { id: '00000000-0000-4000-8000-0000000000b2' },
+    });
+  });
+
+  it('ÇOK bekleyende kart sayıyı yazar ve LİSTEYE gider — künye uydurulmaz', async () => {
+    routeHub(() => ok(hubData({ queue: { b2b: { pendingCount: 3, head: null } } })));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.getByText(t.hub.rows.b2b.nameMany)).toBeOnTheScreen();
+    expect(screen.getByText(t.hub.rows.b2b.titleMany.replace('{n}', '3'))).toBeOnTheScreen();
+    expect(screen.getByText(t.hub.rows.b2b.subtitleMany)).toBeOnTheScreen();
+    // Üç başvurudan birinin adını kartın yüzü yapmak, ötekileri gizleyen bir seçim olurdu.
+    expect(screen.queryByText('Restaurant Oberjaegerhof')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('management-decision-b2b'));
+    expect(mockNavigate).toHaveBeenCalledWith('/b2b-applications');
+  });
+
+  it('bekleyen başvuru yoksa kurumsal kart HİÇ çizilmez', async () => {
+    routeHub(() => ok(hubData()));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.queryByTestId('management-decision-b2b')).toBeNull();
   });
 
   it('günün nabzı iki sayıyı da uçtan okur — sosyal kutu ve gün özeti kapıları', async () => {

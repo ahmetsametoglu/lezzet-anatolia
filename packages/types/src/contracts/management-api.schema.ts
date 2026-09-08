@@ -22,6 +22,27 @@ import { SourceLanguageSchema } from '../primitives/user-text.schema';
  * yüzey kurar. Sunucudan cümle göndermek, dil ve biçim kararını tele gömmek olurdu.
  */
 
+/* ── KURUMSAL BAŞVURUNUN ORTAK İLKELERİ ─────────────────────────────────────
+   İki bölüm birden okuyor: karar kutusunun B2B kartı (aşağıda) ve başvuru bölümünün kendisi
+   (dosyanın sonunda). Şema tanımları yukarıdan aşağı değerlendiği için ortak ilkeler EN ÜSTTE
+   durmak zorunda; ikinci bir bayrak tanımlamak (CLAUDE §1 · duplication) seçenek değildi —
+   kutunun bayrağı ile listenin bayrağı bir gün ayrışırdı. */
+
+/** Sinyalin üç tonu — `domain-core.SignalTone`un tel karşılığı; renk değil ANLAM taşır. */
+export const B2bSignalToneEnum = z.enum(['ok', 'warn', 'bad']);
+
+/** Başvurunun dört hâli — `domain-core.B2bApplicationStatus`un tel karşılığı. */
+export const B2bApplicationStatusEnum = z.enum(['none', 'pending', 'approved', 'rejected']);
+
+/**
+ * Bayrak İKİ uzunlukta konuşuyor ve ikisi de motordan geliyor (`b2bFlag`):
+ * `label` kuyruk satırının tek kelimesi, `reason` kartın şeridindeki gerekçeli cümledir.
+ *
+ * Cümle tele konuyor çünkü onu ekranın kurması, aynı yargının liste/kart/masaüstünde üç ayrı
+ * biçimde yazılması demekti — biri bir gün ötekinden başka bir sebep gösterirdi.
+ */
+export const B2bFlagSchema = z.object({ label: z.string(), tone: B2bSignalToneEnum, reason: z.string() });
+
 /* ── KARAR KUYRUĞU (hub'ın karar kutusu — v2:331-357) ───────────────────────── */
 
 /**
@@ -91,6 +112,25 @@ export const DecisionSupplyHeadSchema = z.object({
 });
 export type DecisionSupplyHead = z.infer<typeof DecisionSupplyHeadSchema>;
 
+/**
+ * Kurumsal başvuru kartının künyesi (v3:2634) — YALNIZ tek bekleyende dolu.
+ *
+ * Tasarım kartı iki hâlde konuşuyor: çoklu olunca "listeden seç · bayrak sırayı söyler", tekte
+ * başvuranın adı ve bayrağı. Künye bu yüzden çokluda `null` — üç başvurudan birinin adını kartın
+ * yüzü yapmak, ötekileri gizleyen bir seçim olurdu (aynı gerekçe teklif kartında "en acil"i
+ * SEÇTİRİYOR; burada seçtirecek bir ölçüt yok, sıra bayrağın işi ve o listenin içinde).
+ *
+ * `customerId` taşınıyor çünkü tek başvuruda kart listeyi ATLAYIP doğrudan kontrol kartını açıyor
+ * (kullanıcı 07.09, `B2bQueueView.single` ile aynı karar) — ekran kimliği ikinci bir turdan
+ * öğrenmek zorunda kalmasın.
+ */
+export const DecisionB2bHeadSchema = z.object({
+  customerId: z.string().uuid(),
+  name: z.string(),
+  flag: B2bFlagSchema,
+});
+export type DecisionB2bHead = z.infer<typeof DecisionB2bHeadSchema>;
+
 export const ManagementQueueSchema = z.object({
   /** Cevap bekleyen açık talepler (Y1). `head` en taze bekleyen; `null` = alan boş. */
   complaints: z.object({
@@ -126,6 +166,14 @@ export const ManagementQueueSchema = z.object({
   }),
   /** Cevap bekleyen WhatsApp konuşmaları (Y6'nın kaynağı — sipariş niyeti bunların içinden çıkar). */
   intents: z.object({ count: z.number().int().nonnegative() }),
+  /**
+   * Onay bekleyen kurumsal hesap başvuruları (v3:2625). Sayaç kuyruğun `counts.pending`i, yani
+   * LİSTENİN kendi sayacı — kutu "3 bekliyor" derken listenin sekmesinin 3 demesi garanti.
+   */
+  b2b: z.object({
+    pendingCount: z.number().int().nonnegative(),
+    head: DecisionB2bHeadSchema.nullable(),
+  }),
 });
 export type ManagementQueue = z.infer<typeof ManagementQueueSchema>;
 
@@ -517,20 +565,9 @@ export type ExceptionAskResponse = z.infer<typeof ExceptionAskResponseSchema>;
   kırılıyor, ekran değil.
 */
 
-/** Sinyalin üç tonu — `domain-core.SignalTone`un tel karşılığı; renk değil ANLAM taşır. */
-export const B2bSignalToneEnum = z.enum(['ok', 'warn', 'bad']);
-
-/** Başvurunun dört hâli — `domain-core.B2bApplicationStatus`un tel karşılığı. */
-export const B2bApplicationStatusEnum = z.enum(['none', 'pending', 'approved', 'rejected']);
-
-/**
- * Bayrak İKİ uzunlukta konuşuyor ve ikisi de motordan geliyor (`b2bFlag`):
- * `label` kuyruk satırının tek kelimesi, `reason` kartın şeridindeki gerekçeli cümledir.
- *
- * Cümle tele konuyor çünkü onu ekranın kurması, aynı yargının liste/kart/masaüstünde üç ayrı
- * biçimde yazılması demekti — biri bir gün ötekinden başka bir sebep gösterirdi.
- */
-export const B2bFlagSchema = z.object({ label: z.string(), tone: B2bSignalToneEnum, reason: z.string() });
+/* Bölümün üç ilkeli (`B2bSignalToneEnum` · `B2bApplicationStatusEnum` · `B2bFlagSchema`) DOSYANIN
+   BAŞINDA duruyor — karar kutusunun B2B kartı da onları okuyor ve şema değerlendirmesi yukarıdan
+   aşağı yapılıyor (aşağıda kalsalardı kutu şeması tanımlanmamış bir değere bakardı). */
 
 /**
  * KUYRUK SATIRI (brief `§2b`) — dört alan: ad · bayrak · şehir · yaş.

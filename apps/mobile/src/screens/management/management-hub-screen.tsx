@@ -20,6 +20,7 @@ import { useOperationsNotificationBadge } from '@/screens/operations/use-notific
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import type { ManagementHub, ManagementQueue } from '@lezzet/types';
+import { b2bFlagTone } from './b2b-format';
 import { managementCopy } from './copy';
 import { useManagementHub } from './use-management-hub.hook';
 
@@ -105,7 +106,20 @@ const SKELETON_QUIET_HEIGHT =
   sözleşmesi rota adreslerini literal olarak doğruluyor ve `string`e genişletilen bir alan o kapıyı
   kapatır — yanlış yazılmış bir adres ancak cihazda, boş ekran olarak görünürdü.
 */
-type ManagementRoute = '/offer-approval' | '/supply-suggestion' | '/social' | '/complaints' | '/day-summary';
+type ManagementRoute =
+  | '/offer-approval'
+  | '/supply-suggestion'
+  | '/social'
+  | '/complaints'
+  | '/day-summary'
+  | '/b2b-applications';
+
+/**
+ * Kartın hedefi bir adres YA DA adres+parametre olabilir: tek bekleyen kurumsal başvuruda kart
+ * listeyi atlayıp doğrudan kontrol kartını açıyor (`/b2b-application?id=`) — şikâyet kartının
+ * zaten yaptığı şeyin aynısı, o da künyesi varsa talebi doğrudan açıyor.
+ */
+type ManagementTarget = ManagementRoute | { pathname: '/b2b-application'; params: { id: string } };
 
 /** Sessiz satır kartının (teklif · tedarik) içeriği — ikisi de aynı iskeleti çiziyor (v3:2110-2126). */
 /*
@@ -118,16 +132,22 @@ type ManagementRoute = '/offer-approval' | '/supply-suggestion' | '/social' | '/
   kartlar artık aynı hizada üç satır taşıyor — ne, hangi kayıt, hangi hâl.
 */
 interface QuietCard {
-  key: 'offer' | 'supply';
+  key: 'b2b' | 'offer' | 'supply';
   /** Kartın rolünü söyleyen ikon — tanımayı harften önce yapan şey (künye yukarıda). */
   icon: IconName;
-  /** İkon kutusunun ailesi: `warn` terracotta (para/zaman baskısı), `neutral` kum. */
-  iconTone: 'warn' | 'neutral';
+  /** İkon kutusunun ailesi: `warn` terracotta (para/zaman baskısı), `neutral` kum, `ok` zeytin. */
+  iconTone: 'warn' | 'neutral' | 'ok';
   /** Cümle düzeninde başlık — eski `eyebrow`ün yerini aldı. */
   name: string;
   title: string;
   subtitle: string;
-  route: ManagementRoute;
+  /**
+   * Hâl satırının rengi AÇIKÇA verildiğinde (kurumsal başvurunun bayrağı) o kazanır; verilmezse
+   * kartın ailesinden türer. Bayrak üç tonlu (`ok · warn · bad`) ve kartın iki tonlu ailesine
+   * sığmıyor — renk yine de tek başına konuşmuyor, yanında bayrağın KELİMESİ yazılı.
+   */
+  subtitleColor?: string;
+  route: ManagementTarget;
 }
 
 /** "Günün nabzı" kutucuğu — büyük sayı + ad + alt satır (v3:2129-2137). */
@@ -249,9 +269,40 @@ function offerLifeOf(daysLeft: number): string {
   return fillCopy(copy.lifeDays, { n: String(daysLeft) });
 }
 
-/** Sessiz kartlar — sırası v3'ün sırası (teklif → tedarik), sayıdan bağımsız. */
+/** Sessiz kartlar — sırası v3'ün sırası (kurumsal → teklif → tedarik), sayıdan bağımsız. */
 function quietCardsOf(queue: ManagementQueue): QuietCard[] {
   const cards: QuietCard[] = [];
+
+  /*
+    KURUMSAL HESAP BAŞVURUSU (v3:2625) — ekranı yazılmış ama KAPISI OLMAYAN karar (21.293).
+
+    Liste (`/b2b-applications`) ve kontrol kartı (`/b2b-application`) 21.217'de yazıldı; uygulamada
+    ikisine de yalnız BİLDİRİMDEN giriliyordu. Bildirimi kaçıran için başvuru görünmez bir işti —
+    oysa karar kutusunun tanımı tam bu: "bekleyen kararlar burada durur".
+
+    Kart iki hâlde konuşuyor ve ayrımı tasarımın: TEK bekleyende başvuranın adı + bayrağı yazılıp
+    doğrudan kart açılıyor (listeye uğramak bir dokunuş fazlası olurdu), ÇOKLUDA sayı yazılıp
+    listeye gidiliyor — çünkü sırayı bayrak söyler ve bayrak listenin içinde.
+  */
+  if (queue.b2b.pendingCount > 0) {
+    const head = queue.b2b.head;
+    cards.push({
+      key: 'b2b',
+      /* BİNA — başvuran bir işletmedir; `account` (kişi) kartı "bir müşteri" gibi okuturdu. */
+      icon: 'business',
+      iconTone: 'ok',
+      name: head === null ? t.hub.rows.b2b.nameMany : t.hub.rows.b2b.name,
+      /* Künye yoksa (çoklu ya da sözleşmenin izin verdiği "sayı var künye yok" hâli) SAYI yazılır,
+         ad UYDURULMAZ. */
+      title:
+        head === null
+          ? fillCopy(t.hub.rows.b2b.titleMany, { n: String(queue.b2b.pendingCount) })
+          : head.name,
+      subtitle: head === null ? t.hub.rows.b2b.subtitleMany : head.flag.label,
+      subtitleColor: head === null ? undefined : b2bFlagTone(head.flag.tone),
+      route: head === null ? '/b2b-applications' : { pathname: '/b2b-application', params: { id: head.customerId } },
+    });
+  }
 
   /* KART ADEDİ DEĞİL İŞİ SÖYLER (21.164): "49 aday parti" bir sayaçtır, yönetici ona bakıp karar
      veremez; tasarımın kartı (v3:2113) partinin adını, adedini ve önerilen oranı yazıyor. Künye
@@ -309,6 +360,20 @@ function quietCardsOf(queue: ManagementQueue): QuietCard[] {
   }
 
   return cards;
+}
+
+/** İkon kutusunun zemini — kartın ailesi (künye `QuietCard.iconTone`). */
+function iconBoxStyle(tone: QuietCard['iconTone']) {
+  if (tone === 'warn') return styles.iconWarn;
+  if (tone === 'ok') return styles.iconOk;
+  return styles.iconNeutral;
+}
+
+/** İkonun çizgi rengi — zeminiyle aynı aileden, kontrastı tonun koyu ucundan. */
+function iconColor(tone: QuietCard['iconTone']): string {
+  if (tone === 'warn') return operationsTheme.colors.terracotta;
+  if (tone === 'ok') return operationsTheme.colors.olive;
+  return operationsTheme.colors.ink;
 }
 
 /**
@@ -555,12 +620,8 @@ export function ManagementHubScreen() {
                     kuruyor; metin sütunu `flex:1` + `minWidth:0` ki uzun tedarikçi adı kutuyu
                     itmesin, kendi içinde kırpılsın. */}
                 <View style={styles.cardRow}>
-                  <View style={[styles.iconBox, card.iconTone === 'warn' ? styles.iconWarn : styles.iconNeutral]}>
-                    <Icon
-                      name={card.icon}
-                      size={operationsTheme.size.decisionIcon}
-                      color={card.iconTone === 'warn' ? operationsTheme.colors.terracotta : operationsTheme.colors.ink}
-                    />
+                  <View style={[styles.iconBox, iconBoxStyle(card.iconTone)]}>
+                    <Icon name={card.icon} size={operationsTheme.size.decisionIcon} color={iconColor(card.iconTone)} />
                   </View>
                   <View style={styles.quietText}>
                     <Text style={styles.quietName} numberOfLines={1}>
@@ -570,8 +631,15 @@ export function ManagementHubScreen() {
                       {card.title}
                     </Text>
                     {/* Hâl satırının tonu KARTIN ailesinden: yakın-SKT bir süre baskısı taşıyor
-                        (terracotta), tedarik taslağı yalnız hazır olduğunu söylüyor (sönük). */}
-                    <Text style={[styles.quietSubtitle, card.iconTone === 'warn' ? styles.quietSubtitleWarn : null]}>
+                        (terracotta), tedarik taslağı yalnız hazır olduğunu söylüyor (sönük).
+                        Kart kendi rengini söylüyorsa (kurumsal başvurunun bayrağı) o kazanır. */}
+                    <Text
+                      style={[
+                        styles.quietSubtitle,
+                        card.iconTone === 'warn' ? styles.quietSubtitleWarn : null,
+                        card.subtitleColor === undefined ? null : { color: card.subtitleColor },
+                      ]}
+                    >
                       {card.subtitle}
                     </Text>
                   </View>
@@ -788,6 +856,8 @@ const styles = StyleSheet.create({
   iconWarn: { backgroundColor: operationsTheme.colors['terracotta-bg'] },
   /** Sıradan iş — kum. */
   iconNeutral: { backgroundColor: operationsTheme.colors['sand-200'] },
+  /** Büyüme kararı — zeytin ailesi (v3:2626 kurumsal başvurunun kendi rengi). */
+  iconOk: { backgroundColor: operationsTheme.colors['success-bg'] },
   quietText: {
     flex: 1,
     minWidth: 0,

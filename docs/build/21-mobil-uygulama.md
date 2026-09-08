@@ -13869,6 +13869,40 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Zincirin tamamı ayakta: gelen (metin · fotoğraf · sesli mesaj + transkript) → ajan cevabı →
   operatörün mobilden cevabı, hepsi sağlayıcı kimlikli.
 
+- [x] (21.293) **KURUMSAL BAŞVURUNUN KAPISI — ekranı vardı, karar kutusunda kartı yoktu** (kullanıcı sorusu 08.09: *"kurumsal başvuru kartı var mı şu an mevcut tasarımda? Aynı zamanda bizim kendi uygulamamızda da var mı?"*)
+  `touches:` `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/management/hub.ts` · `apps/mobile/src/components/ui/icon-paths.ts` · `apps/mobile/src/screens/management/{management-hub-screen.tsx,management-hub-screen.test.tsx,day-summary-screen.test.tsx,messages.json}`
+
+  **Durum (08.09) — TAMAM.** Soru bir ölçümle cevaplandı: kart tasarımda ÜÇ yerde çizili (karar
+  kutusu v3:2625 · "Kurumsal başvurular" listesi · onay ekranı v3:36), uygulamada ise liste ve
+  kontrol kartı 21.217'de YAZILMIŞ ama **hiçbir yerden açılmıyordu.** `/b2b-applications`e
+  uygulamanın içinden tek bir bağlantı yoktu; kontrol kartına yalnız bildirimden giriliyordu
+  (`b2b_application_received`). Yani bildirimi kaçıran için başvuru görünmez bir işti — oysa karar
+  kutusunun tanımı tam bu: *"bekleyen kararlar burada durur"*.
+
+  **KUTUNUN SAYISI LİSTENİN SAYACI.** Kuyruk zarfına `b2b: { pendingCount, head }` eklendi ve
+  motoru hub'ın kendi sayacı DEĞİL, listenin okuyucusu (`readB2bQueue`) — kutu "3 bekliyor" derken
+  listenin sekmesinin 3 demesi böylece garanti. Aynı sebeple "tek başvuruda listeyi atla"
+  kestirmesi de yeniden yazılmadı: kuyruğun kendi kararı (`B2bQueueView.single`) okunuyor. İki
+  ayrı hesap bir gün mutlaka ayrışırdı (CLAUDE §1).
+
+  **KART İKİ HÂLDE KONUŞUYOR** (tasarımın ayrımı, v3:2629-2638): **tek** bekleyende başvuranın adı
+  ve bayrağı yazılıp doğrudan kontrol kartı açılıyor (`/b2b-application?id=`), **çokluda** sayı
+  yazılıp listeye gidiliyor — çünkü sırayı bayrak söyler ve bayrak listenin içinde. Çoklu hâlde ad
+  UYDURULMUYOR: üç başvurudan birinin adını kartın yüzü yapmak, ötekileri gizleyen bir seçim
+  olurdu (teklif kartında "en acil"i seçtiren ölçüt burada yok).
+
+  **BAYRAK ÜÇ TONLU, KART İKİ TONLUYDU.** Sessiz kartların ailesi `warn`/`neutral` idi; bayrak
+  `ok · warn · bad` konuşuyor. Kart ailesine zorlamak yerine hâl satırının rengi açıkça veriliyor
+  (`subtitleColor`) ve renk yine tek başına konuşmuyor — yanında bayrağın KELİMESİ yazılı.
+
+  **İKİ KÜÇÜK EK:** ikon kitine `business` (tasarımın bina geometrisi, v3:2626 — `account` bir
+  KİŞİDİR, başvuran bir işletme) ve sözleşmenin B2B ilkeleri (`B2bFlagSchema` + tonlar) dosyanın
+  başına taşındı: karar kutusu şeması onları okuyor ve şema tanımları yukarıdan aşağı değerlendiği
+  için aşağıda kalamazlardı. İkinci bir bayrak tanımlamak seçenek değildi.
+
+  Doğrulama: kök `typecheck` **20/20**, `lint` temiz, yönetim ekranları + ikon kiti **162/162**
+  (3'ü bu turda: tek hâl · çoklu hâl · sıfırda kart yok).
+
 - [x] (21.294) **FATURA ADRESİ AYRI BİR ROL OLDU — onay kartı artık İŞ YERİNİ ölçüyor, başvuranın evini değil** (kullanıcı kararı 08.09: *"Şirketler kendi hesaplarında fatura adresini özellikle girsin. Fatura adresleri sabit olsun. Sipariş sırasında seçtikleri de teslimat adresi olsun."*)
   `touches:` `supabase/migrations/0011_customer_fields.sql` · `packages/types/src/entities/address.schema.ts` · `packages/types/src/contracts/{address-api,management-api}.schema.ts` · `packages/database/src/services/address.service.ts` · `packages/application/src/{customer/addresses.ts,customer/b2b.ts,b2b/check.ts,index.ts}` · `apps/mobile-api/src/api/v1/addresses.ts` · `apps/mobile/src/lib/api/addresses.ts` · `apps/mobile/src/screens/account/{address-card.tsx,account-screen.tsx,account-screen.test.tsx,messages.json}` · `apps/mobile/src/screens/management/{b2b-application-screen.tsx,b2b-screens.test.tsx,messages.json}`
 
