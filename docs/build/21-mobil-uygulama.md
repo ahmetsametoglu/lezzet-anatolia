@@ -13868,3 +13868,86 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Zincirin tamamı ayakta: gelen (metin · fotoğraf · sesli mesaj + transkript) → ajan cevabı →
   operatörün mobilden cevabı, hepsi sağlayıcı kimlikli.
+
+- [x] (21.294) **FATURA ADRESİ AYRI BİR ROL OLDU — onay kartı artık İŞ YERİNİ ölçüyor, başvuranın evini değil** (kullanıcı kararı 08.09: *"Şirketler kendi hesaplarında fatura adresini özellikle girsin. Fatura adresleri sabit olsun. Sipariş sırasında seçtikleri de teslimat adresi olsun."*)
+  `touches:` `supabase/migrations/0011_customer_fields.sql` · `packages/types/src/entities/address.schema.ts` · `packages/types/src/contracts/{address-api,management-api}.schema.ts` · `packages/database/src/services/address.service.ts` · `packages/application/src/{customer/addresses.ts,customer/b2b.ts,b2b/check.ts,index.ts}` · `apps/mobile-api/src/api/v1/addresses.ts` · `apps/mobile/src/lib/api/addresses.ts` · `apps/mobile/src/screens/account/{address-card.tsx,account-screen.tsx,account-screen.test.tsx,messages.json}` · `apps/mobile/src/screens/management/{b2b-application-screen.tsx,b2b-screens.test.tsx,messages.json}`
+
+  **Durum (08.09) — TAMAM, cihazda ölçüldü.**
+
+  ── NASIL BULUNDU: SEED VERİSİ BİR KUSURU SAKLIYORDU ─────────────────────────
+
+  21.217 dün seed verisiyle test edilmiş ve temiz görünmüştü. Kullanıcı *"akışı doğru yerden
+  oluştur ki tüm kayıtlar oluşsun"* deyince başvuru GERÇEK kapıdan açıldı (müşteri oturumu →
+  devletin açık işletme kaydı → `POST /me/b2b/application`) ve kusur ilk denemede çıktı:
+
+  · Liste **"Antoine Muller"** diyordu — oysa onaylanan işletme `RESTAURANT SUVALIC`.
+  · Kart **"Colmar · Rota içi ✓"** diyordu — oysa başvuru Strasbourg'daki restorandı.
+
+  Seed kusuru saklamıştı çünkü seed müşterilerinin profil adı ZATEN şirket adıydı (*"Épicerie
+  Madame"*) ve tek adresleri vardı. Gerçek hayatta hesap kişinin, işletme ayrı. **Hazır hesapla
+  yapılan hiçbir test bunu göstermez** — aynı sınıf hata `submitB2bApplication`ın kendi künyesinde
+  de kayıtlı (20.08, `type: 'company'` hiç yazılmıyordu).
+
+  İkincisi görsel değil KARAR hatasıydı: kartın altı sinyalinden biri *"Adres–rota"* ve o sinyal
+  işletmenin nerede olduğunu değil, başvuranın ev adresinin nerede olduğunu ölçüyordu.
+
+  ── ŞEKİL: `kind` ENUM'U DEĞİL, `is_default`İN İKİZİ ────────────────────────
+
+  `address.is_billing` — boolean + kısmi tekil indeks (`address_one_billing_per_customer`) +
+  `setExclusiveFlag` (önce temizle, sonra işaretle). Üçü de `is_default`in kurulu deseni.
+
+  Tür kolonu (`kind: 'billing' | 'delivery'`) ELENDİ: fatura adresi çoğu küçük işletmede teslimat
+  adresiyle **aynı satır**. Tür kolonu onu iki satıra bölerdi ve iki satır bir gün ayrışırdı —
+  kurye bir adrese giderken fatura başka adrese çıkardı (`CLAUDE §1`).
+
+  **Teslimat seçimi KISITLANMADI:** checkout tüm adresleri listelemeye devam ediyor. Fatura
+  adresini seçenekten çıkarmak, en yaygın hâli (iş yeri = teslimat yeri) bozardı — kullanıcının
+  cümlesi de bunu söylüyor: sipariş anında seçilen teslimat adresidir.
+
+  ── İŞARET BAŞVURUDA KONUYOR, ONAYDA DEĞİL ──────────────────────────────────
+
+  Kullanıcı *"bir şirketi onayladığımız zaman şirketin kendi adresi otomatik fatura adresi olarak
+  eklenmeli"* dedi; işaret bir adım ÖNCEYE, başvuru anına konuldu ve gerekçe şu: onay kartının
+  **karar verirken** iş adresini okuması gerekiyor. İşaret onay anında konsaydı kart hâlâ ev
+  adresine bakarak *"rota içi ✓"* derdi — operatör yanlış adrese bakarak onaylar, işaret ondan
+  SONRA konurdu. Düzeltmek istediğimiz şeyin ta kendisi. İstenen sonuç yine oluşuyor: onaylanan
+  şirketin adresi zaten fatura adresidir.
+
+  Adres ZATEN kayıtlıysa (aynı sokak ikinci kez yazılmasın diye atlanan dal) işaret yine konuyor —
+  atlanan şey SATIRIN kendisi, ROLÜ değil.
+
+  ── İKİ DAVRANIŞ KARARI ─────────────────────────────────────────────────────
+
+  · **Fatura seçimi VARSAYILANI DÜŞÜRMEZ.** İki ayrı rol; aynı satır ikisini birden taşıyabilir.
+    Düşürseydi müşteri, faturasını taşıdığı anda teslimat tercihini de kaybederdi.
+  · **Fatura işareti silmede DEVREDİLMEZ.** Varsayılan adres silinince en yenisi devralıyor (o bir
+    KOLAYLIK). Fatura adresi bir BEYANDIR — silinince kayıt işaretsiz kalır ve kart yedeğe düşer;
+    kendiliğinden başka bir adresi fatura adresi yapmak, sormadığımız bir soruya cevap uydurmaktı.
+
+  ── EKRAN: MEVCUT DESENİN SİMETRİĞİ ─────────────────────────────────────────
+
+  Hesap ekranının adres kartı zaten *"varsayılan"* rozeti + *"varsayılan yap"* eylemi çiziyordu;
+  fatura rolü bunun ikizi oldu (ayrı tonda rozet, ama İKİSİ DE ETİKETLİ — renk tek başına anlam
+  taşımaz). **Yalnız ŞİRKET hesaplarında** çiziliyor: bireysel müşteride bu kavramın karşılığı yok
+  ve göstermek, cevabı olmayan bir soru sormak olurdu. Ölçüt ekranın zaten okuduğu künye
+  (`data.company`). Metinler üç dilde (müşteri yüzeyi).
+
+  Onay kartında da ad ayrıştı: başlık İŞLETMENİN adı, başvuran kişi kendi satırında
+  (*"Başvuran: …"*) — kapıda o aranacak, mükerrer şüphesi de onun üzerinden bakılıyor.
+
+  ── CİHAZDA ÖLÇÜLDÜ (Oppo CPH1907, kablosuz) ────────────────────────────────
+
+  Üç başvuru gerçek akıştan yeniden açıldı; liste artık `RESTAURANT SUVALIC` · `RESTAURANT ET
+  CAVEAU DE LA CATHEDRALE` · `EPICERIE MADAME` diyor ve şehir **STRASBOURG** (iş yeri). Adres
+  defteri ayrımı da ölçüldü: `Colmar — varsayılan:E fatura:H` · `STRASBOURG — varsayılan:H
+  fatura:E`; ikinci kayıtta üçüncü bir adres (Mulhouse, ikisi de değil) rollerin bağımsızlığını
+  gösteriyor. *"Adres–rota"* sinyali artık iş yerinin adresini ölçüyor.
+
+  **Testler:** hesap ekranı 15/15 (üçü yeni — bireyselde rol çizilmez · şirkette uca gider · fatura
+  seçimi varsayılanı düşürmez) · b2b ekranları 11/11 (ikisi yeni — başlık işletmenin, kişi ayrı
+  satırda; aynı adsa satır çizilmez) · birim paketi 2113/2113 · kök typecheck temiz.
+
+  **AÇIK KALAN, benim alanımda değil:** web hesap sayfasında rozet/eylem yok — müşteri fatura
+  adresini SONRADAN değiştiremiyor (taşınma, farklı fatura adresi). Not:
+  `docs/talep/not-musteri-fatura-adresi-web-hesap-sayfasinda-yok.md`. Onay diyaloğunu web şeridi
+  aynı turda kendisi uyarladı (işletme adı · başvuran satırı · fatura adresi).

@@ -164,6 +164,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `phone` | text |  |  |
 | `country` | country_code |  | `'FR'` |
 | `is_default` | boolean |  | `false` |
+| `is_billing` | boolean |  | `false` |
 | `created_at` | timestamptz |  | `now()` |
 | `lat` | numeric(9, 6) | • |  |
 | `lng` | numeric(9, 6) | • |  |

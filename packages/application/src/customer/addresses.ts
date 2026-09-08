@@ -42,6 +42,9 @@ export type CustomerAddressWrite = Omit<
   AddressInsert,
   | 'customerId'
   | 'isDefault'
+  /* Fatura işareti FORMDAN gelmez, kendi kapısından (`setBillingCustomerAddress`): tekil bir bayrak
+     yazma gövdesine konsaydı iki adres aynı anda işaretlenebilir, kısmi indeks ihlal olurdu. */
+  | 'isBilling'
   | 'lat'
   | 'lng'
   | 'geoPrecision'
@@ -235,6 +238,24 @@ export async function setDefaultCustomerAddress(
   return { status: 'ok', addresses: await listCustomerAddresses(db, input.customerId) };
 }
 
+/**
+ * **FATURA ADRESİNİ SEÇ** (kullanıcı kararı 08.09) — `setDefaultCustomerAddress`ın ikizi.
+ *
+ * Ayrı kapı, çünkü ayrı soru: varsayılan adres *"malı nereye götürelim"*, fatura adresi *"fatura
+ * nereye kesilecek"*. İkisi aynı satır olabilir ve çoğu küçük işletmede öyledir — bu yüzden biri
+ * ötekini DÜŞÜRMEZ.
+ */
+export async function setBillingCustomerAddress(
+  db: SupabaseClient,
+  input: { customerId: string; addressId: string },
+): Promise<CustomerAddressOutcome> {
+  const service = new AddressService(db);
+  if (!(await ownedAddress(service, input.customerId, input.addressId))) return { status: 'not_found' };
+
+  await service.setBilling(input.addressId);
+  return { status: 'ok', addresses: await listCustomerAddresses(db, input.customerId) };
+}
+
 export async function deleteCustomerAddress(
   db: SupabaseClient,
   input: { customerId: string; addressId: string },
@@ -244,6 +265,11 @@ export async function deleteCustomerAddress(
   if (!own) return { status: 'not_found' };
 
   await service.delete(input.addressId);
+  /* FATURA İŞARETİ DEVREDİLMEZ (varsayılanın aksine). Varsayılan adres bir KOLAYLIKTIR — silinince
+     en yenisi devralır ve müşteri bir şey kaybetmez. Fatura adresi ise bir BEYANDIR: hangi adrese
+     fatura kesileceğini işletme söyler. Silinen beyanın yerine kendiliğinden başka bir adres
+     koymak, sormadığımız bir soruya cevap uydurmak olurdu — kayıt işaretsiz kalır ve onay kartı
+     "fatura adresi yok" der (uydurma bir adrese bakmaz). */
   if (own.isDefault) {
     const rest = await service.listByCustomer(input.customerId);
     const newest = rest.reduce<Address | null>(

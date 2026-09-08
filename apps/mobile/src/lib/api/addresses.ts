@@ -40,3 +40,13 @@ export function deleteAddress(id: string): Promise<ApiResult<MeAddress[]>> {
 export function makeDefaultAddress(id: string): Promise<ApiResult<MeAddress[]>> {
   return authorizedFetch(`/api/v1/me/addresses/${id}/default`, MeAddressListSchema, { method: 'POST' });
 }
+
+/**
+ * Fatura adresi seçimi — `/default`ün ikizi, AYRI uç (kullanıcı kararı 08.09).
+ *
+ * Tek uçta birleştirilmedi çünkü iki ayrı soru: varsayılan adres "malı nereye götürelim", fatura
+ * adresi "fatura nereye kesilecek". Biri ötekini düşürmüyor; çoğu işletmede ikisi aynı satır.
+ */
+export function makeBillingAddress(id: string): Promise<ApiResult<MeAddress[]>> {
+  return authorizedFetch(`/api/v1/me/addresses/${id}/billing`, MeAddressListSchema, { method: 'POST' });
+}

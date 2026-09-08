@@ -46,6 +46,7 @@ export {
   addCustomerAddress,
   deleteCustomerAddress,
   listCustomerAddresses,
+  setBillingCustomerAddress,
   setDefaultCustomerAddress,
   updateCustomerAddress,
 } from './customer/addresses';

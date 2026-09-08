@@ -76,6 +76,9 @@ const ADDRESS = {
   city: 'Paris',
   country: 'FR' as const,
   isDefault: true,
+  /* Fatura adresi teslimat seçimini KISITLAMIYOR (kullanıcı kararı 08.09): checkout tüm adresleri
+     listelemeye devam ediyor. Bu fikstür bireysel bir hesabın ev adresi — işaretsiz. */
+  isBilling: false,
 };
 
 /**

@@ -156,6 +156,12 @@ export function B2bApplicationScreen({ customerId }: { customerId: string }) {
           {kart.legalName === null || kart.legalName === kart.name ? null : (
             <Text style={styles.legal}>{fillCopy(t.b2b.legalName, { name: kart.legalName })}</Text>
           )}
+          {/* BAŞVURAN KİŞİ (kullanıcı bulgusu 08.09) — başlık işletmeye geçince kişi kartta hiç
+              görünmez olmuştu. Operatörün ihtiyacı var: kapıda onu arayacak ve mükerrer şüphesi
+              kişi üzerinden bakılıyor. Aynıysa çizilmiyor — hesap işletme adına açılmış demektir. */}
+          {kart.contactName === kart.name ? null : (
+            <Text style={styles.legal}>{fillCopy(t.b2b.contact, { name: kart.contactName })}</Text>
+          )}
 
           {/* KİMLİK KUTUSU — etiket + numara + kaynak + ülke çipi; numara okunacak bir VERİ, bu
               yüzden kendi çerçevesinde ve gövde metninden kalın. Etiket MOTORDAN geliyor: Fransa'da

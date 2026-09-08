@@ -433,6 +433,17 @@ create table public.address (
   country country_code not null default 'FR',
   -- Checkout'un önceden seçtiği adres; TEKİLDİR (yenisi seçilince eskisi düşer).
   is_default boolean not null default false,
+  -- ── FATURA ADRESİ (kullanıcı kararı 08.09) ────────────────────────────────
+  -- İşletmenin KÜNYE adresi: faturaya çıkan, siparişten siparişe değişmeyen adres. `is_default`ten
+  -- AYRI bir rol, çünkü ikisi ayrı soruların cevabı — "malı nereye götürelim" ile "fatura kime ve
+  -- nereye kesilecek". Bir hesapta ikisi de olabilir ve çoğu küçük işletmede AYNI satırdır; bu
+  -- yüzden `kind` gibi tekil bir tür kolonu seçilMEDİ — o, aynı adresi iki satıra bölerdi ve iki
+  -- satır bir gün ayrışırdı (`CLAUDE §1`).
+  --
+  -- Kurumsal başvuru onay kartı bu adresi okur: karar "bu İŞLETME toptan fiyatı görsün mü"dur ve
+  -- ölçülmesi gereken şey başvuranın ev adresi değil, iş yerinin nerede olduğudur (ölçüldü 08.09 —
+  -- kart "Colmar · rota içi" diyordu, oysa başvuru Strasbourg'daki restorandı).
+  is_billing boolean not null default false,
   created_at timestamptz not null default now(),
 
   -- ── COĞRAFİ NOKTA (11.9) ──────────────────────────────────────────────────
@@ -503,6 +514,14 @@ create index address_customer_idx on public.address (customer_id);
 create unique index address_one_default_per_customer
   on public.address (customer_id)
   where is_default;
+
+-- Fatura adresi de TEKİLDİR ve aynı gerekçeyle kısmi: bir hesabın faturası tek bir adrese kesilir.
+-- İki işaretli satır, "fatura adresi hangisi" sorusunu okuma anına ertelerdi ve okuyan her uç kendi
+-- yedeğini uydururdu — `is_default`in kendi künyesindeki hata. Yazımı da aynı sırayla
+-- (`setExclusiveFlag`: önce temizle, sonra işaretle).
+create unique index address_one_billing_per_customer
+  on public.address (customer_id)
+  where is_billing;
 
 alter table public.address enable row level security;
 

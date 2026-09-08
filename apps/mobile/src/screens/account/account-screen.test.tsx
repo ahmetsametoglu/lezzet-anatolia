@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { accountData } from './account-fixture';
 import { AccountScreen } from './account-screen';
 
 /*
@@ -52,12 +53,14 @@ const mockCreateAddress = jest.fn();
 const mockUpdateAddress = jest.fn();
 const mockDeleteAddress = jest.fn();
 const mockMakeDefaultAddress = jest.fn();
+const mockMakeBillingAddress = jest.fn();
 jest.mock('@/lib/api/addresses', () => ({
   fetchAddresses: () => mockFetchAddresses(),
   createAddress: (body: unknown) => mockCreateAddress(body),
   updateAddress: (id: string, body: unknown) => mockUpdateAddress(id, body),
   deleteAddress: (id: string) => mockDeleteAddress(id),
   makeDefaultAddress: (id: string) => mockMakeDefaultAddress(id),
+  makeBillingAddress: (id: string) => mockMakeBillingAddress(id),
 }));
 
 /* Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı
@@ -80,6 +83,7 @@ beforeEach(() => {
   mockUpdateAddress.mockReset();
   mockDeleteAddress.mockReset();
   mockMakeDefaultAddress.mockReset();
+  mockMakeBillingAddress.mockReset();
   mockToast.mockReset();
 });
 
@@ -132,6 +136,52 @@ describe('AccountScreen', () => {
     expect(screen.getByTestId('account-address-add')).toBeOnTheScreen();
     expect(screen.getByTestId('account-address-addr-home-edit')).toBeOnTheScreen();
     expect(mockFetchAddresses).toHaveBeenCalledTimes(1);
+  });
+
+  /*
+    FATURA ADRESİ — YALNIZ ŞİRKET HESABINDA (kullanıcı kararı 08.09).
+
+    İki rol ayrı: varsayılan adres "malı nereye götürelim", fatura adresi "fatura nereye kesilecek".
+    Bireysel hesapta ikincisinin karşılığı yok; göstermek, cevabı olmayan bir soru sormak olurdu.
+  */
+  it('BİREYSEL hesapta fatura adresi rolü HİÇ çizilmez', async () => {
+    await render(<AccountScreen />);
+    await screen.findByTestId('account-address-addr-home-edit');
+
+    expect(screen.queryByTestId('account-address-addr-home-billing')).toBeNull();
+    expect(screen.queryByTestId('account-address-addr-work-billing')).toBeNull();
+  });
+
+  it('ŞİRKET hesabında "fatura adresi yap" GERÇEK uca gider ve rozet sunucunun listesinden taşınır', async () => {
+    const sirket = { ...accountData(), company: { name: 'Bosphore SARL', siret: '81234567800019', vatNumber: 'FR12812345678' } };
+    mockMakeBillingAddress.mockResolvedValue(listResult([{ ...HOME, isBilling: false }, { ...WORK, isBilling: true }]));
+
+    await render(<AccountScreen data={sirket} />);
+    await screen.findByTestId('account-address-addr-work-billing');
+
+    await fireEvent.press(screen.getByTestId('account-address-addr-work-billing'));
+
+    expect(mockMakeBillingAddress).toHaveBeenCalledWith('addr-work');
+    /* İşaretli satırda eylem kalkar — rozet onun yerine geçer; "zaten fatura adresi" olan bir
+       satırda ikinci kez basılacak bir şey kalmamalı. */
+    await waitFor(() => expect(screen.queryByTestId('account-address-addr-work-billing')).toBeNull());
+  });
+
+  it('FATURA seçimi VARSAYILANI düşürmez — iki rol aynı satırda olabilir', async () => {
+    /* Küçük bir işletmede fatura adresi ile teslimat adresi çoğu zaman aynı yerdir. Biri ötekini
+       düşürseydi müşteri, faturasını taşıdığı anda teslimat tercihini de kaybederdi. */
+    const sirket = { ...accountData(), company: { name: 'Bosphore SARL', siret: '81234567800019', vatNumber: 'FR12812345678' } };
+    mockMakeBillingAddress.mockResolvedValue(listResult([{ ...HOME, isDefault: true, isBilling: true }, WORK]));
+
+    await render(<AccountScreen data={sirket} />);
+    await screen.findByTestId('account-address-addr-home-billing');
+
+    await fireEvent.press(screen.getByTestId('account-address-addr-home-billing'));
+
+    /* HOME hem varsayılan hem fatura: "varsayılan yap" eylemi yine yok (zaten varsayılan), fatura
+       eylemi de kalktı — iki rozet yan yana duruyor. */
+    await waitFor(() => expect(screen.queryByTestId('account-address-addr-home-billing')).toBeNull());
+    expect(screen.queryByTestId('account-address-addr-home-default')).toBeNull();
   });
 
   it('"varsayılan yap" GERÇEK uca gider; rozet sunucunun döndürdüğü listeye göre taşınır', async () => {

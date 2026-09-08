@@ -26,18 +26,29 @@ interface AddressCardProps {
   address: MeAddress;
   copy: AddressCopy;
   onMakeDefault: () => void;
+  /**
+   * **FATURA ADRESİ YAP** (kullanıcı kararı 08.09) — `null` ise bu kart fatura rolünü hiç
+   * göstermez. Bireysel hesapta bu kavramın karşılığı yok ve gösterilmesi, müşteriye cevabı
+   * olmayan bir soru sormak olurdu; ayrım çağıranda (`type === 'company'`).
+   */
+  onMakeBilling: (() => void) | null;
   /** Düzenleme kapısı — v3 kartının "Düzenle" ucu; çekmeceyi dolu açar. */
   onEdit: () => void;
   testID?: string;
 }
 
-export function AddressCard({ address, copy, onMakeDefault, onEdit, testID }: AddressCardProps) {
+export function AddressCard({ address, copy, onMakeDefault, onMakeBilling, onEdit, testID }: AddressCardProps) {
+  /* İki rol AYRI rozet: bir adres ikisi birden olabilir ve çoğu işletmede öyledir. Tek bir rozete
+     indirseydik ("Varsayılan · Fatura") müşteri hangi rolü kaldırdığını göremezdi. */
+  const faturaGoster = onMakeBilling !== null;
+
   return (
     <View style={styles.card} testID={testID}>
       <View style={styles.text}>
         <View style={styles.labelRow}>
           <Text style={styles.label}>{addressTitle(address)}</Text>
           {address.isDefault ? <Text style={styles.defaultBadge}>{copy.default}</Text> : null}
+          {faturaGoster && address.isBilling ? <Text style={styles.billingBadge}>{copy.billing}</Text> : null}
         </View>
         <Text style={styles.line}>{addressLine(address)}</Text>
       </View>
@@ -49,6 +60,14 @@ export function AddressCard({ address, copy, onMakeDefault, onEdit, testID }: Ad
           testID={testID === undefined ? undefined : `${testID}-default`}
         />
       )}
+      {faturaGoster && !address.isBilling ? (
+        <TextAction
+          label={copy.makeBilling}
+          onPress={onMakeBilling}
+          accessibilityHint={copy.makeBillingLabel.replace('{label}', addressTitle(address))}
+          testID={testID === undefined ? undefined : `${testID}-billing`}
+        />
+      ) : null}
       <TextAction
         label={copy.edit}
         onPress={onEdit}
@@ -84,6 +103,19 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.text.eyebrow,
     color: theme.colors['olive-dark'],
     backgroundColor: theme.colors['olive-bg'],
+    borderRadius: theme.radius.badge,
+    paddingVertical: theme.space['2xs'],
+    paddingHorizontal: theme.space.md,
+    overflow: 'hidden',
+  },
+  /* FATURA ROZETİ AYRI TONDA — aynı tonu paylaşsalardı yan yana duran iki rozet tek bir şey gibi
+     okunurdu. Zeytin "teslimat", kum "künye": renk ayrımı rolün ayrımını taşıyor, ama etiket de
+     yazılı (renk tek başına anlam taşımaz). */
+  billingBadge: {
+    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.eyebrow,
+    color: theme.colors.ink,
+    backgroundColor: theme.colors['sand-300'],
     borderRadius: theme.radius.badge,
     paddingVertical: theme.space['2xs'],
     paddingHorizontal: theme.space.md,

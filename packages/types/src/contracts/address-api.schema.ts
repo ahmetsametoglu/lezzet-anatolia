@@ -47,6 +47,10 @@ export const MeAddressSchema = AddressSchema.pick({
   city: true,
   country: true,
   isDefault: true,
+  /* Fatura adresi işareti — hesap ekranının rozeti ve "fatura adresi yap" eylemi bunu okuyor
+     (kullanıcı kararı 08.09). Alan tele konuyor çünkü kural İSTEMCİDE görünmeli: müşteri hangi
+     adrese fatura kesileceğini kartın üstünde görmeden bilemez. */
+  isBilling: true,
 });
 
 /**

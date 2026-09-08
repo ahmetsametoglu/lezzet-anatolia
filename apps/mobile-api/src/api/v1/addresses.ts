@@ -5,6 +5,7 @@ import {
   checkAddressForCustomer,
   deleteCustomerAddress,
   listCustomerAddresses,
+  setBillingCustomerAddress,
   setDefaultCustomerAddress,
   updateCustomerAddress,
   type CustomerAddressOutcome,
@@ -116,6 +117,17 @@ addresses.delete('/:id', async (c) => {
  * Varsayılan seçimi KENDİ ucudur, PATCH gövdesinin alanı değil: tek satırı işaretlemek yetmez,
  * öbürlerinin bayrağı düşmek zorunda — gövdeden kabul etmek "iki varsayılan" hatasını geri getirirdi.
  */
+/**
+ * FATURA ADRESİNİ SEÇ (kullanıcı kararı 08.09) — `/default`ün ikizi, AYRI uç.
+ *
+ * Ayrı olması bilinçli: varsayılan adres *"malı nereye götürelim"*, fatura adresi *"fatura nereye
+ * kesilecek"*. Biri ötekini düşürmez ve çoğu işletmede ikisi aynı satırdır. Tek uçta birleştirmek,
+ * müşteriye "teslimat adresimi değiştirdim" dedirtmeden faturasını taşımak olurdu.
+ */
+addresses.post('/:id/billing', async (c) => {
+  return respond(c, await setBillingCustomerAddress(serviceDb(), { customerId: c.get('customerId'), addressId: c.req.param('id') }));
+});
+
 addresses.post('/:id/default', async (c) => {
   return respond(c, await setDefaultCustomerAddress(serviceDb(), { customerId: c.get('customerId'), addressId: c.req.param('id') }));
 });

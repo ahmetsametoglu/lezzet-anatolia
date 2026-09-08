@@ -74,6 +74,9 @@ const check = (over: Record<string, unknown> = {}) => ({
   check: {
     customerId: CUSTOMER_ID,
     name: 'Bosphore SARL',
+    /* Hesabın sahibi işletmeden AYRI: gerçek başvurularda kart işletmenin adını yazar, kişi ayrı
+       satırda durur (kullanıcı bulgusu 08.09 — seed verisi ikisini aynı yaptığı için gizlenmişti). */
+    contactName: 'Mehmet Yılmaz',
     legalName: 'BOSPHORE SARL',
     identity: { label: 'SIRET', value: '81234567800019', source: 'resmî kayıttan' },
     country: 'FR',
@@ -152,6 +155,29 @@ describe('kurumsal başvuru kartı', () => {
 
     await waitFor(() => expect(screen.getByTestId('management-b2b-flag')).toBeOnTheScreen());
     expect(screen.getByTestId('management-b2b-flag')).toHaveTextContent('Dikkat — Resmî kayıt: Kayıt kapalı.');
+  });
+
+  it('BAŞLIK İŞLETMENİN adı; başvuran kişi AYRI satırda durur', async () => {
+    /*
+      Kullanıcı bulgusu 08.09: kart hesabın sahibini yazıyordu ("Antoine Muller"), oysa onaylanan
+      işletme `RESTAURANT SUVALIC`ti. Seed verisi kusuru saklamıştı — orada kişi ile işletme aynı
+      addı. Başlık işletmeye geçti; kişi kaybolmasın diye kendi satırında duruyor (kapıda o aranacak).
+    */
+    fetchMock.mockResolvedValue(ok(check()));
+
+    await render(<B2bApplicationScreen customerId={CUSTOMER_ID} />);
+
+    await waitFor(() => expect(screen.getByText('Bosphore SARL')).toBeOnTheScreen());
+    expect(screen.getByText(/Mehmet Yılmaz/)).toBeOnTheScreen();
+  });
+
+  it('kişi ile işletme AYNI adsa satır çizilmez — aynı ad iki kez yazılmaz', async () => {
+    fetchMock.mockResolvedValue(ok(check({ contactName: 'Bosphore SARL' })));
+
+    await render(<B2bApplicationScreen customerId={CUSTOMER_ID} />);
+
+    await waitFor(() => expect(screen.getByText('Bosphore SARL')).toBeOnTheScreen());
+    expect(screen.queryByText(/Başvuran:/)).toBeNull();
   });
 
   it('ASİSTAN ÖZETİ gelince BLOK çizilir; gelmezse yalnız cümle kalır', async () => {

@@ -34,6 +34,17 @@ export class AddressService extends BaseDbService<Address, AddressInsert, Addres
     return this.setExclusiveFlag(id, 'isDefault', 'customerId');
   }
 
+  /**
+   * Fatura adresini işaretler — `setDefault`ün ikizi, AYRI bayrak (kullanıcı kararı 08.09).
+   *
+   * Aynı yardımcıdan geçiyor çünkü değişmez aynı: hesap başına tek işaretli satır, ve yazım sırası
+   * "önce temizle sonra işaretle" olmak zorunda — ters sıra bir an iki işaretli satır üretir ve
+   * kısmi tekil indeks o anda ihlal olur.
+   */
+  async setBilling(id: string): Promise<Address> {
+    return this.setExclusiveFlag(id, 'isBilling', 'customerId');
+  }
+
   /** İlk adres otomatik varsayılandır — müşteriye "varsayılan yap" dedirtmeye gerek yok. */
   async addForCustomer(input: AddressInsert): Promise<Address> {
     const existing = await this.listByCustomer(input.customerId);

@@ -626,7 +626,13 @@ export const B2bDuplicateRowSchema = z.object({
  */
 export const B2bCheckSchema = z.object({
   customerId: z.string().uuid(),
+  /** İŞLETMENİN adı (künye adı; yoksa hesabın adı) — kartın ve kuyruk satırının başlığı. */
   name: z.string(),
+  /**
+   * Hesabın sahibi (kullanıcı bulgusu 08.09). Başlık işletmeye geçince kişi kaybolmasın diye ayrı
+   * alan: kapıda aranacak, mükerrer şüphesinde bakılacak ve "kim başvurdu" sorusunun cevabı odur.
+   */
+  contactName: z.string(),
   /** Resmî künye adı — ticari addan farklı olabilir. */
   legalName: z.string().nullable(),
   /**

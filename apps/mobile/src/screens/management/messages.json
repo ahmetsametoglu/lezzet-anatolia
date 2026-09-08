@@ -496,6 +496,7 @@
     "detailTitle": "Kurumsal hesap",
     "detailCaption": "başvuru · {age}",
     "legalName": "{name} · resmî unvan",
+    "contact": "Başvuran: {name}",
     "signals": "SİNYALLER",
     "signalsNote": "masaüstü kartıyla aynı kaynak",
     "duplicates": "AYNI KİŞİ OLABİLİR Mİ?",

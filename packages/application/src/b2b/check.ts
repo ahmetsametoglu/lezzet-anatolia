@@ -73,7 +73,10 @@ export interface B2bDuplicateRow {
  */
 export interface B2bCheckView {
   customerId: string;
+  /** İŞLETMENİN adı (künye adı; yoksa hesabın adı) — kartın ve kuyruk satırının başlığı. */
   name: string;
+  /** Hesabın sahibi — kapıda aranacak kişi ve mükerrer şüphesinin öznesi. */
+  contactName: string;
   /** Resmî künye adı (`company_info.legalName`) — ticari addan farklı olabilir. */
   legalName: string | null;
   /** Şirketin kimlik numarası, ADIYLA ve kaynağıyla (`b2bIdentity`). `null` = hiçbir numara yok. */
@@ -135,9 +138,19 @@ function inRouteOf(address: Address | null, zones: DeliveryZoneWithCodes[]): boo
   return isInRoute({ country: address.country, postalCode: address.postalCode }, zones);
 }
 
-/** Varsayılan adres, yoksa ilk adres — kartın gösterdiği tek adres. */
-function primaryAddressOf(addresses: Address[]): Address | null {
-  return addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+/**
+ * **KARTIN ADRESİ FATURA ADRESİDİR** (kullanıcı kararı 08.09), varsayılan teslimat adresi değil.
+ *
+ * Karar *"bu İŞLETME toptan fiyatı görsün mü"*dur; ölçülmesi gereken şey başvuranın nerede
+ * oturduğu değil, iş yerinin nerede olduğudur. Ölçülen arıza (08.09): gerçek akıştan açılan bir
+ * başvuruda kart *"Colmar · rota içi ✓"* diyordu — oysa başvuru Strasbourg'daki restorandı ve
+ * Colmar hesabın eski EV adresiydi. Altı karar sinyalinden biri (Adres–rota) yanlış adresi ölçüyordu.
+ *
+ * Yedek zinciri var çünkü eski kayıtlar işaretsiz: fatura adresi → varsayılan → ilk. Yedeğe
+ * düşmek bir arıza değil, "bu hesap henüz fatura adresini beyan etmemiş" hâlidir.
+ */
+function billingAddressOf(addresses: Address[]): Address | null {
+  return addresses.find((a) => a.isBilling) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
 }
 
 function toDuplicateRow(p: UserProfile): B2bDuplicateRow {
@@ -228,7 +241,7 @@ export async function readB2bCheck(
       : { valid: profile.vatNumberValid, checkedAt: profile.vatNumberCheckedAt, refreshed: false },
   ]);
 
-  const address = primaryAddressOf(addresses);
+  const address = billingAddressOf(addresses);
   const signals = b2bSignals({
     companyInfo: fresh ?? profile.companyInfo,
     vatNumber: profile.vatNumber,
@@ -242,7 +255,20 @@ export async function readB2bCheck(
 
   return {
     customerId,
-    name: profile.name,
+    /*
+      ── BAŞLIK İŞLETMENİN ADI, HESABIN SAHİBİNİNKİ DEĞİL (kullanıcı bulgusu 08.09) ─────────────
+      Bir tur `profile.name` yazılıydı ve SEED verisi kusuru saklıyordu: seed müşterilerinin profil
+      adı zaten şirket adıydı (*"Épicerie Madame"*), yani kişi ile işletme aynı görünüyordu. Gerçek
+      akıştan açılan ilk başvuruda ayrıştı — liste *"Antoine Muller"* diyordu, oysa onaylanan
+      `RESTAURANT SUVALIC`'ti. Operatör kuyruğu tararken hangi İŞLETMEYE baktığını göremiyordu.
+
+      Künye adı YOKSA hesabın adına düşülüyor: başvuru resmî kayıttan geçmemiş olabilir (AB yolu,
+      elle girilmiş künye) ve adsız bir satır kuyrukta hiçbir şey söylemez.
+    */
+    name: (fresh ?? profile.companyInfo)?.legalName ?? profile.name,
+    /* Hesabın kendi adı ayrı alanda: mükerrer şüphesinde ve kapıda aranacak kişide operatörün
+       ihtiyacı olan şey İŞLETME değil KİŞİdir. */
+    contactName: profile.name,
     // Künye de TAZE olanı gösterir: sinyaller tazeye bakarken başlık eskiyi yazsaydı, operatör
     // "kapalı" sinyalinin yanında eski unvanı okurdu ve hangisinin doğru olduğunu bilemezdi.
     legalName: (fresh ?? profile.companyInfo)?.legalName ?? null,

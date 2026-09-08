@@ -191,8 +191,25 @@ export async function submitB2bApplication(
   const alreadyThere = existing.some(
     (a) => a.line1.trim().toLowerCase() === line1.toLowerCase() && normalizePostalCode(a.postalCode) === postalCode,
   );
-  if (!alreadyThere) {
-    await addresses.addForCustomer({
+  /*
+    ── İŞ ADRESİ FATURA ADRESİDİR (kullanıcı kararı 08.09) ──────────────────────────────────────
+    Başvurunun adresi işletmenin KÜNYE adresidir; faturanın çıkacağı yer de orasıdır. İşaret bu
+    yüzden burada konuyor, müşteriye "bir de fatura adresini seç" dedirtmeden.
+
+    ÖLÇÜLEN ARIZA (08.09): adres yazılıyordu ama işaretsizdi ve onay kartı `is_default` olana
+    bakıyordu — hesabın eski EV adresi. Kartta "Colmar · rota içi ✓" görünüyordu, oysa başvuru
+    Strasbourg'daki restorandı. Kararın altı sinyalinden biri (Adres–rota) yanlış adresi ölçüyordu.
+
+    ZATEN KAYITLI adres de işaretleniyor: aynı sokak ikinci kez yazılmasın diye atlanan dal, işareti
+    de atlarsa aynı arıza sessizce sürerdi — atlanan şey SATIRIN kendisi, ROLÜ değil.
+  */
+  if (alreadyThere) {
+    const mevcut = existing.find(
+      (a) => a.line1.trim().toLowerCase() === line1.toLowerCase() && normalizePostalCode(a.postalCode) === postalCode,
+    );
+    if (mevcut && !mevcut.isBilling) await addresses.setBilling(mevcut.id);
+  } else {
+    const eklenen = await addresses.addForCustomer({
       customerId,
       // Etiket işletmenin künye adı: müşterinin checkout'ta iki adres arasında ayırt edeceği şey
       // sokak adı değil, "burası iş yerim" bilgisidir.
@@ -211,6 +228,11 @@ export async function submitB2bApplication(
       phone: phone ?? input.phone.trim(),
       country: isEuVat ? 'DE' : 'FR',
     });
+    /* İşaret EKLEMEDEN SONRA, `setBilling` ile — `addForCustomer`ın gövdesine `isBilling: true`
+       koymak tekilliği bozardı: kısmi indeks hesap başına tek işaretli satır istiyor ve eski işaret
+       temizlenmeden yeni satır yazılırsa o an iki işaretli satır olur. `setExclusiveFlag` sırayı
+       (önce temizle, sonra işaretle) zaten doğru kuruyor. */
+    await addresses.setBilling(eklenen.id);
   }
 
   // ONAY KUYRUĞUNUN KAPI ZİLİ (26.08): başvuru yazıldıktan sonra, sonucu değiştirmeden — yönetim

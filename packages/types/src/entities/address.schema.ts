@@ -41,6 +41,18 @@ export const AddressSchema = z.object({
   country: CountryEnum,
   /** Checkout'un önceden seçtiği adres — tekildir (yenisi seçilince eskisi düşer). */
   isDefault: z.boolean(),
+  /**
+   * **FATURA ADRESİ** — işletmenin künye adresi; faturaya çıkan, siparişten siparişe değişmeyen
+   * adres (kullanıcı kararı 08.09). Tekildir, `is_default` gibi kısmi indeksle zorlanıyor.
+   *
+   * `isDefault` ile AYRI iki rol ve ikisi aynı satırda olabilir: *"malı nereye götürelim"* ile
+   * *"fatura nereye kesilecek"* çoğu küçük işletmede aynı yeri gösterir. Bu yüzden tek bir tür
+   * kolonu (`kind`) seçilmedi — o, aynı adresi iki satıra bölerdi.
+   *
+   * Teslimat seçimini KISITLAMAZ: checkout tüm adresleri listelemeye devam eder. Fatura adresini
+   * seçenekten çıkarmak, en yaygın hâli (iş yeri = teslimat yeri) bozardı.
+   */
+  isBilling: z.boolean(),
   createdAt: z.string(),
 
   /**
@@ -112,6 +124,8 @@ export const AddressInsertSchema = z.object({
   phone: z.string().min(1),
   country: CountryEnum.optional(),
   isDefault: z.boolean().optional(),
+  /** Fatura adresi işareti — kurumsal başvuru akışı kendi kaydettiği iş adresini böyle işaretler. */
+  isBilling: z.boolean().optional(),
   /**
    * Koordinat künyesi — kapıdan (`resolveAddressPoint`) gelir, formdan DEĞİL. Beş alanın beşi de
    * opsiyonel: nokta çözülemeyen adres yine kaydedilir ve tarama kuyruğuna düşer.

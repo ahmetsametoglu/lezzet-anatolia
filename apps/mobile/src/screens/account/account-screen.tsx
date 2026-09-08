@@ -16,7 +16,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
-import { makeDefaultAddress, type MeAddress } from '@/lib/api/addresses';
+import { makeBillingAddress, makeDefaultAddress, type MeAddress } from '@/lib/api/addresses';
 import { redeemPoints } from '@/lib/api/points';
 import { deleteAccount, updateMe, updatePreferences } from '@/lib/api/me';
 import { resolvePostalCode } from '@/lib/api/places';
@@ -292,6 +292,22 @@ export function AccountScreen({
      yayınlanmasıdır. */
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   const [defaultFailed, setDefaultFailed] = useState(false);
+  const [billingFailed, setBillingFailed] = useState(false);
+
+  /*
+    FATURA ADRESİ SEÇİMİ (kullanıcı kararı 08.09) — `makeDefault`ün ikizi.
+
+    Ayrı hâlde tutuluyor (`billingFailed`), çünkü iki eylem ayrı: varsayılan seçimi düşerse fatura
+    seçimi hâlâ geçerli olabilir ve tek bir hata bayrağı ikisini birden kırmızıya boyardı.
+  */
+  const makeBilling = (address: MeAddress) => {
+    void makeBillingAddress(address.id).then((result) => {
+      if (result.error !== null) return setBillingFailed(true);
+      setBillingFailed(false);
+      addressBook.publish(result.data);
+      toastSuccess(t.addresses.billingDone.replace('{label}', address.label ?? address.city));
+    });
+  };
 
   const makeDefault = (address: MeAddress) => {
     void makeDefaultAddress(address.id).then((result) => {
@@ -629,14 +645,24 @@ export function AccountScreen({
                 address={address}
                 copy={t.addresses}
                 onMakeDefault={() => makeDefault(address)}
+                /* FATURA ROLÜ YALNIZ ŞİRKET HESABINDA (kullanıcı kararı 08.09): bireysel müşteride
+                   fatura adresi diye ayrı bir kavram yok ve göstermek, cevabı olmayan bir soru
+                   sormak olurdu. Ölçüt ekranın zaten okuduğu künye — `data.company`. */
+                onMakeBilling={data.company === null ? null : () => makeBilling(address)}
                 onEdit={() => setAddressSheet({ editing: address })}
                 testID={`account-address-${address.id}`}
               />
             </View>
           ))}
-          {addressBook.status === 'error' || defaultFailed ? (
+          {addressBook.status === 'error' || defaultFailed || billingFailed ? (
             <Note
-              description={addressBook.status === 'error' ? t.addresses.loadError : t.addresses.defaultFailed}
+              description={
+                addressBook.status === 'error'
+                  ? t.addresses.loadError
+                  : defaultFailed
+                    ? t.addresses.defaultFailed
+                    : t.addresses.billingFailed
+              }
               tone="terracotta"
               testID="account-address-error"
             />
