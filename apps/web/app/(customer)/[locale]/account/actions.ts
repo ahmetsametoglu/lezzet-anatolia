@@ -6,7 +6,7 @@ import { UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/databa
 import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
 import { currentCustomerId } from '@/lib/guard';
-import { addAddress, deleteAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
+import { addAddress, deleteAddress, setBillingAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
 import type { AddressPointCandidate } from '@lezzet/application';
 import { redeemPoints } from '@/lib/feedback/points';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
@@ -167,6 +167,11 @@ export async function updateAddressAction(
 
 export async function setDefaultAddressAction(addressId: string): Promise<CustomerResult<true>> {
   return guarded((customerId) => setDefaultAddress(customerId, addressId));
+}
+
+/** Fatura adresi seçimi (08.09) — varsayılanın ikizi, ayrı eylem; gerekçesi kapının künyesinde. */
+export async function setBillingAddressAction(addressId: string): Promise<CustomerResult<true>> {
+  return guarded((customerId) => setBillingAddress(customerId, addressId));
 }
 
 export async function deleteAddressAction(addressId: string): Promise<CustomerResult<true>> {

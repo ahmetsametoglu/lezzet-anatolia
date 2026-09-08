@@ -94,6 +94,31 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   - **Durum (03.08 · iki engelin ikisi de kalktı):** **gizlilik politikası** sayfası 08.8'de doğdu ve bağ verildi (masaüstünde kart içinde, mobilde ince satır — tasarımın iki ayrı kabuğu). **Kuponlarım** 17.5'te doldu: kutu artık kullanılabilir kişisel kuponları listeliyor, kod kopyalanabiliyor ve "Puanı kupona çevir" düğmesi onay diyaloğuyla çalışıyor.
     **Yeni ve tek açık:** `BEKLEYEN(08.5)` — kupon okuması keyset sayfalamıyor, **sabit tavanla** (50) okuyor (`DiscountService.listByCustomer`). Kişisel kupon kümesi puan çevrimiyle veriyle büyüyen bir kümedir ve `CLAUDE.md §1` keyset ister; tavan yanlışın küçüğü, çünkü kullanılabilir kupon her zaman en yenilerin arasındadır — ama bu bir varsayımdır ve yazılı olmalı. İşaret 17.5'ten buraya taşındı: o görev kapandı (çevirme + ekran ayakta), kalan boşluk **hesap ekranının okumasına** ait.
     **Durum (09.08 · ölçüldü, arka uca iletildi — `arka-uc-kupon-okumasi-sabit-tavanla.md`).** Bugün zarar yok ve bunu ölçerek söylüyorum: temiz seed'de kişisel kupon **2**, müşteri başına en çok **2** — tavan 50. Risk zamanla doğuyor, çünkü kullanılmış kupon silinmiyor **kapatılıyor** (`setActive` künyesi: *"geçmişi kalsın"*), yani 50'lik pencere yıllar içinde kullanılmışlarla dolar ve eleme sonrası ekranda kupon **sessizce eksik** görünür. **Önerim keyset DEĞİL:** `CLAUDE §1`'in ölçütü "sınırsız büyümek" ve sınırsız büyüyen şey kupon GEÇMİŞİ; müşterinin elinde aynı anda tuttuğu kullanılabilir kupon doğal tavanlı bir kümedir. Doğru düzeltme pencerenin doğru kümeye vurması — `isActive` ve tarih penceresi **sorguya**, kota elemesi uygulamada kalsın (`usageCounts` iptal/iade kuralını taşıyor, SQL'e ikinci kez yazmak bir gün ayrışan iki cevap olurdu). Ekranda "daha fazla göster" diye bir tasarım da yok: kutu hesap sayfasında sabit bir blok.
+  - **Durum (08.09 · FATURA ADRESİ — kurumsal hesabın adres kartında, native ile aynı kural).** Kurumsal
+    başvuru onayında *"fatura adresi ≠ teslimat adresi"* ayrımı doğdu (kullanıcı kararı 08.09; kolon
+    `address.is_billing`, kapı `setBillingCustomerAddress` — mobil şerit yazdı, `21.x`). Web hesap
+    sayfası bağlandı: kartta ayrı **"fatura adresi"** işareti ve fatura adresi OLMAYAN satırda
+    **"Fatura adresim yap"**; ikisi de yalnız **kurumsal hesapta** (`account.company !== null`) —
+    bireyselde kavramın karşılığı yok, göstermek cevapsız bir soru sormak olurdu. Varsayılanı
+    DÜŞÜRMEZ: iki ayrı soru, iki ayrı eylem; aynı satır ikisi birden olabilir. Web kapısı KÖPRÜ
+    (`lib/account/addresses.ts › setBillingAddress` → paket; BACKLOG §17'nin (a) hâli, üçüncü kopya
+    yazılmadı). Silinen fatura adresi devredilmez (paketin kararı: varsayılan bir kolaylık, fatura
+    adresi bir beyan). Checkout adres listesi DEĞİŞMEDİ: fatura adresi teslimat seçeneğinden
+    çıkarılmaz (şema künyesi — iş yeri = teslimat yeri en yaygın hâl). Üç test
+    (`lib/account/addresses.test.ts`): sahiplik · tekil işaret + varsayılana dokunmama · kutuyla
+    eklenen adresin işaretli doğması.
+    **İki karar daha (kullanıcı, aynı gün):** *(1)* adres ekleme/düzenleme FORMUNA kurumsal hesapta
+    **"Fatura adresim yap"** kutusu geldi (`AddressForm.billingChoice`; checkout'ta çizilmez), kaydet
+    ile aynı hamlede — kutu yalnız işaretlemeyi ister, boşaltmak işareti kaldırmaz ("fatura adresi
+    yok" ayrı bir beyandır, başka adresi seçmek eskisini zaten düşürür); yeni adreste `isBilling`
+    gövdeyle YAZILMAZ, kapı ekledikten sonra `setBilling` ile işaretler (tekil kısıt). *(2)* Rolün adı
+    işini söyler: hesap kartında **"varsayılan" → "teslimat adresi"**, eylem **"Teslimat adresim yap"**,
+    not *"teslimat adresi checkout'ta önceden seçilidir"* — üç dilde; operasyon panelinin rozeti de
+    "teslimat". Checkout formundaki *"Bu adresi varsayılan yap"* DEĞİŞMEDİ: orada eklenen adres zaten
+    o siparişin teslimat adresi, kutu "bir dahaki sefere önseçili olsun" demek. Native hesap ekranı
+    hâlâ "varsayılan" diyor ve form kutusu yok — not bırakıldı
+    (`docs/talep/not-mobil-adres-rolleri-sozluk-ve-form-kutusu.md`), karar mobil şeridin.
+    `touches: apps/web/lib/account/addresses.ts, apps/web/app/(customer)/[locale]/account/{actions.ts,messages.json,account.desktop.tsx,account.mobile.tsx,components/addresses-card.tsx}`
   - *Bitti:* tekrar sipariş güncel fiyatla sepet oluşturuyor; sipariş durumu sade dille görünüyor
 - [x] (08.6) **Talep grubu:** talep oluşturma (sipariş kalemi/tip/foto + genel "bize yaz" yönlendirmesi), talep listesi + yazışma (16'ya bağlanır)
   - *Bitti:* siparişli ve siparişsiz talep açılıyor; durum takip ediliyor

@@ -15,7 +15,7 @@ Self-servis açılan B2B hesaplarının toptan fiyatlara erişimine karar verile
 
 Sistem başvuruyu hazır sinyallerle sunar; admin sinyalleri okur, kararı verir:
 
-- **Şirket kimliği** — unvan, SIRET, adres, faaliyet kodu, kuruluş yılı (FR başvurusunda resmî kayıttan otomatik dolmuş; DE başvurusunda elle girilmiş)
+- **Şirket kimliği** — unvan, SIRET, adres, faaliyet kodu, kuruluş yılı (FR başvurusunda resmî kayıttan otomatik dolmuş; DE başvurusunda elle girilmiş). Başlık İŞLETMENİN adıdır; başvuran kişi yalnız işletmeden farklıysa ayrı satırda (kapıda aranacak ve mükerrer şüphesinde bakılacak olan kişidir). Kartın adresi **fatura adresidir** (08.09) — karar "bu işletme toptan fiyatı görsün mü"dür, ölçülen şey başvuranın ev adresi değil iş yerinin yeri
 - **Resmî kayıt aktifliği** — şirket resmî kayıtta aktif mi; kapanmış şirket ilk elenendir
 - **Faaliyet kodu değerlendirmesi** — gıda/restoran/market ile uyumlu mu; alakasız faaliyet risk işaretidir
 - **Kuruluş yılı** — köklülük sinyali; çok yeni şirket dikkat ister

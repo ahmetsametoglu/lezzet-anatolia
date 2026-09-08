@@ -58,6 +58,8 @@ export function toCustomerAddressRows(addresses: readonly Address[]): CustomerAd
     city: a.city,
     country: a.country,
     isDefault: a.isDefault,
+    // Fatura adresi (08.09): B2B onay kartı bu adresi ölçüyor — panel de hangisi olduğunu söylemeli.
+    isBilling: a.isBilling,
   }));
 }
 

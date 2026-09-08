@@ -470,6 +470,12 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     **`mc` yalnız `scope=marketing` iken yaşıyor** (`feedback-url` deseni): başka daraltmada adreste kalsaydı operatör hiçbir yerde görünmeyen bir süzgeci arkasında sürüklerdi. `toCustomerFilters` da farkı koruyor — `any` "izinlilerden biri", `undefined` "izne hiç bakma"; karışsalardı "Vadeli" çipi sessizce izinsizleri eler ve liste eksik dönerdi. 11 birim testi (`customers-url.test.ts`).
     **Mobilde "süzülüyor" şeridi eklendi.** Telefonda çip şeridi yok (tasarım kararı) ama süzgeç artık ADRESTEN geliyor: analitikten `?scope=marketing&mc=email` ile gelen operatör süzülmüş listeyi tam liste sanardı ve aradığı müşteriyi "yok" diye okurdu. Şerit ne süzdüğünü söylüyor ve kaldırma kapısını veriyor — kurulamayan bir süzgecin hiç değilse kapısı olmalı. Şerit `scope !== 'all'` olan HER hâlde çıkıyor, yalnız pazarlamada değil: aynı sessizlik `?scope=draft` bağlantısında da vardı.
     **Gönderim buraya KONMADI** (tasarım §6): daraltma kimin izin verdiğini gösterir, kampanyayı başlatmaz — gönderim `14`/`15`'in işi ve izin kontrolü iki yerde yaşamamalı.
+  - **Durum (08.09 · adres listesinde FATURA rozeti):** `address.is_billing` doğdu (kullanıcı kararı
+    08.09, mobil şerit) ve B2B onay kartı artık O adresi ölçüyor; panel de hangi adresin fatura
+    adresi olduğunu söylemeli — yoksa operatör kartın "rota içi" dediği adresi listede bulamazdı.
+    Satır tipi `Pick`e `isBilling` eklendi (elle alan yazılmadı), iki rol iki rozet (zeytin
+    "teslimat" · mavi "fatura" — rolün adı işini söyler, kullanıcı kararı: "varsayılan" değil),
+    aynı satır ikisini taşıyabilir.
   - *Bitti:* limit/vade değişiklikleri anında checkout kararına yansıyor; karne alanları sipariş verisinden hesaplanıyor
 - [~] (09.10) **Müşteriler: birleştirme + GDPR silme** — birleştirmede hedef/kaynak ve taşınacaklar onaydan önce net; RPC ile siparişler/puanlar/konuşmalar taşınır, kaynak kapanır. GDPR silme: kişisel veri silinir/anonimleşir, sipariş kayıtları muhasebe bütünlüğü için kalır; iki işlem de bilinçli onaylı
   - *Bitti:* birleştirme sonrası kaynak müşteriyle hiçbir aktif bağ kalmıyor; silinen müşterinin siparişleri anonim duruyor
@@ -544,6 +550,15 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
       motorun altında (STACK §4). Emsal `CourierStop` · `OrderBoxTrace`; mobil uç tel şemasını kendi sarar.
     - Tazeleme ölçüsü mobil için de aynı: kartın ilk açılışı `refreshExternal: true`, aynı kartın ikinci
       okuması `false` — kural yüzeye değil okumanın sırasına bağlı (künye).
+  - **Durum (08.09 · kart FATURA adresini ölçüyor, başlık İŞLETME, başvuran ayrı satırda).** Mobil
+    şeridin ölçtüğü arıza: gerçek akıştan açılan başvuruda kart hesabın eski EV adresine bakıp
+    *"Colmar · rota içi"* diyordu; başvuru Strasbourg'daki restorandı. Kapı (`readB2bCheck`) artık
+    fatura adresini okuyor (`is_billing`, yedek: varsayılan → ilk), `name` künye adı, `contactName`
+    hesabın sahibi. Web diyaloğu buna bağlandı: başlık `check.name` (yedek zinciri kapıda, ekran
+    ikinci kez kurmaz), **"Başvuran: …"** satırı yalnız işletmeden farklıysa (kapıda aranacak ve
+    mükerrer şüphesinde bakılacak olan KİŞİdir), adres satırı olduğu gibi. **Açık:** kapı yedeğe
+    düşüp düşmediğini söylemiyor; "fatura adresi yok, varsayılana bakıldı" uyarısı kapıya bir alan
+    gelince yazılır — uydurma etiket konmadı.
 - [x] (09.12) **Talepler** — kuyruk (durum/tip daraltma, AI'nın yanıtladıkları ayırt edilir) + detay (sipariş bağı, kalemler, fotoğraflar, yazışma); cevap → e-posta bildirimi; iade tetikleme köprüsü; AI'dan devralma; elle talep açma
   - *Bitti:* durum döngüsü `open → in_progress → resolved` (yeniden açılabilir) çalışıyor; devralınan talepte AI susuyor
   - **16. MODÜLDE TESLİM EDİLDİ (kayıt düzeltmesi 19.08 — satır `[ ]` görünüyordu, iş aylardır yayındaydı).**

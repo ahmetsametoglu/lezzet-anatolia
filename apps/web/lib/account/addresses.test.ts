@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { AddressService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { addAddress, deleteAddress, setDefaultAddress, updateAddress } from './addresses';
+import { addAddress, deleteAddress, setBillingAddress, setDefaultAddress, updateAddress } from './addresses';
 
 /**
  * Hesap sayfasının adres yazma kapısı (08.5).
@@ -96,6 +96,7 @@ describe('adres yazma kapısı', () => {
     // gerçekten var olduğunu doğrulamak olurdu.
     await expect(deleteAddress(otherId, benim)).rejects.toThrow('Adres bulunamadı');
     await expect(setDefaultAddress(otherId, benim)).rejects.toThrow('Adres bulunamadı');
+    await expect(setBillingAddress(otherId, benim)).rejects.toThrow('Adres bulunamadı');
     await expect(
       updateAddress(otherId, benim, { recipient: 'Ayşe Yılmaz', phone: '+33612345678', line1: 'Ele geçirildi', postalCode: '75000', city: 'Paris' }),
     ).rejects.toThrow(
@@ -106,6 +107,37 @@ describe('adres yazma kapısı', () => {
     const list = await addresses.listByCustomer(customerId);
     expect(list).toHaveLength(1);
     expect(list[0]!.city).toBe('Strasbourg');
+  });
+
+  it('fatura adresi seçimi VARSAYILANI düşürmez ve tek satırda kalır (08.09)', async () => {
+    const ev = await ekle('Strasbourg');
+    const isYeri = await ekle('Lingolsheim');
+
+    // İki ayrı soru: "malı nereye götürelim" (ev, varsayılan) ↔ "fatura nereye kesilecek" (iş yeri).
+    // Biri ötekini düşürmez — yoksa fatura adresini seçen işletme teslimat adresini kaybederdi.
+    await setBillingAddress(customerId, isYeri);
+    let list = await addresses.listByCustomer(customerId);
+    expect(list.find((a) => a.id === isYeri)).toMatchObject({ isBilling: true, isDefault: false });
+    expect(list.find((a) => a.id === ev)).toMatchObject({ isBilling: false, isDefault: true });
+
+    // İşaret TEKİL: yeni seçim eskisini düşürür (kısmi tekil indeks; sıra "önce temizle").
+    await setBillingAddress(customerId, ev);
+    list = await addresses.listByCustomer(customerId);
+    expect(list.filter((a) => a.isBilling).map((a) => a.id)).toEqual([ev]);
+  });
+
+  it('fatura kutusuyla EKLENEN adres işaretli doğar; ikinci ekleme işareti devralır (08.09)', async () => {
+    await ekle('Strasbourg');
+    // Form kutusu `isBilling` NİYETİNİ taşır; kapı gövdeyle yazmaz, ekledikten sonra işaretler —
+    // tek işaretli satır kısıtı yeni satır açılırken bile korunmalı.
+    await addAddress(customerId, { recipient: 'Ayşe Yılmaz', phone: '+33612345678', line1: 'İş yeri sokak', postalCode: '67000', city: 'Lingolsheim', isBilling: true });
+    let list = await addresses.listByCustomer(customerId);
+    expect(list.filter((a) => a.isBilling).map((a) => a.city)).toEqual(['Lingolsheim']);
+    expect(list.find((a) => a.city === 'Strasbourg')).toMatchObject({ isDefault: true, isBilling: false });
+
+    await addAddress(customerId, { recipient: 'Ayşe Yılmaz', phone: '+33612345678', line1: 'Depo sokak', postalCode: '67300', city: 'Schiltigheim', isBilling: true });
+    list = await addresses.listByCustomer(customerId);
+    expect(list.filter((a) => a.isBilling).map((a) => a.city)).toEqual(['Schiltigheim']);
   });
 
   it('güncelleme VARSAYILAN bayrağını taşımaz — o ayrı bir karardır', async () => {

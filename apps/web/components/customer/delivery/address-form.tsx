@@ -70,6 +70,12 @@ export interface NewAddressInput {
    */
   point?: { lat: number; lng: number; precision: AddressGeoPrecision };
   makeDefault?: boolean;
+  /**
+   * "Fatura adresim yap" (kullanıcı kararı 08.09) — `makeDefault`ın ikizi, ayrı rol. Yalnız
+   * kurumsal hesabın formunda sorulur (`billingChoice`); tabloda kolonu `is_billing` ve onu da
+   * ayrı bir eylem yönetir (tek işaretli satır kuralı), form yalnız NİYETİ taşır.
+   */
+  makeBilling?: boolean;
 }
 
 /**
@@ -166,6 +172,7 @@ export function toFormInput(address: Address): NewAddressInput {
     phone: nationalPhone(address.phone, address.country),
     country: address.country,
     makeDefault: address.isDefault,
+    makeBilling: address.isBilling,
   };
 }
 
@@ -186,6 +193,7 @@ interface AddressFormCopy extends AddressFieldsCopy {
   country: string;
   countryValue: string;
   makeDefault: string;
+  makeBilling: string;
   save: string;
   cancel: string;
   postalHint: string;
@@ -211,6 +219,13 @@ interface AddressFormProps {
    * demek olurdu ve müşteri o boşluğu kendi künyesi sanıp geçebilirdi.
    */
   defaults?: AddressDefaults;
+  /**
+   * "Fatura adresim yap" kutusu çizilsin mi — yalnız KURUMSAL hesabın adres kartı `true` geçer
+   * (kullanıcı kararı 08.09). Bireysel hesapta ve checkout'ta kavramın karşılığı yok; kutuyu
+   * orada göstermek cevapsız bir soru sormak olurdu. Varsayılan kapalı: formu çağıran her yer
+   * bilerek açar.
+   */
+  billingChoice?: boolean;
   onSave: (input: NewAddressInput) => Promise<void>;
   onCancel: () => void;
   /**
@@ -231,7 +246,7 @@ interface AddressFormProps {
   compact?: boolean;
 }
 
-export function AddressForm({ copy, locale, initial, defaults, onSave, onCancel, compact = false }: AddressFormProps) {
+export function AddressForm({ copy, locale, initial, defaults, billingChoice = false, onSave, onCancel, compact = false }: AddressFormProps) {
   const [form, setForm] = useState<NewAddressInput>(
     initial ?? { recipient: '', line1: '', postalCode: '', city: '', phone: '', ...defaults },
   );
@@ -504,6 +519,20 @@ export function AddressForm({ copy, locale, initial, defaults, onSave, onCancel,
         />
         <span className="font-sans text-body-sm text-ink">{copy.makeDefault}</span>
       </label>
+
+      {/* İkinci rol AYRI kutu (08.09): "malı nereye götürelim" ile "fatura nereye kesilecek" iki ayrı
+          soru; ikisi aynı adres olabilir, biri ötekini düşürmez. Yalnız kurumsal hesapta çizilir. */}
+      {billingChoice && (
+        <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
+          <input
+            type="checkbox"
+            checked={form.makeBilling ?? false}
+            onChange={(e) => setForm((prev) => ({ ...prev, makeBilling: e.target.checked }))}
+            className="size-[22px] flex-none cursor-pointer rounded-[6px] accent-olive"
+          />
+          <span className="font-sans text-body-sm text-ink">{copy.makeBilling}</span>
+        </label>
+      )}
 
       {/* Tasarımda eylem satırı İNCE BİR AYRAÇLA ayrılır: formun sonu ile kararın başladığı yer.
           ÇEKMECEDE bu satır gövdenin İÇİNDE DEĞİL, kabuğun kaymayan alt bölmesinde durur (aşağıda

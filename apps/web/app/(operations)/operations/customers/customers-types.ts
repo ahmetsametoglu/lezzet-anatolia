@@ -99,7 +99,7 @@ export interface CustomerOrderRow {
  * kalanı varlıktan gelir; alıcı adı ve teslimat telefonu bu dilimde yok — panel adresi listeliyor,
  * teslimat kurgulamıyor.
  */
-export type CustomerAddressRow = Pick<Address, 'id' | 'label' | 'postalCode' | 'city' | 'country' | 'isDefault'> & {
+export type CustomerAddressRow = Pick<Address, 'id' | 'label' | 'postalCode' | 'city' | 'country' | 'isDefault' | 'isBilling'> & {
   /** `line1` + `line2` — ekran iki kolonu değil, tek okunur adres satırını gösterir. */
   line: string;
 };

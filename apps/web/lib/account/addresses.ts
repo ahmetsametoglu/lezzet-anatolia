@@ -1,7 +1,7 @@
 import 'server-only';
 import { AddressService, serviceDb } from '@lezzet/database';
 import type { AddressInsert } from '@lezzet/types';
-import { resolveAddressPoint, type AddressPointCandidate } from '@lezzet/application';
+import { resolveAddressPoint, setBillingCustomerAddress, type AddressPointCandidate } from '@lezzet/application';
 
 /**
  * Hesap sayfasının adres YAZMA kapısı (08.5) — action'lar buraya delege eder.
@@ -34,8 +34,15 @@ export async function addAddress(
 ): Promise<void> {
   const db = serviceDb();
   const geo = await resolveAddressPoint(db, { candidate: point, postalCode: input.postalCode });
+  /* FATURA İŞARETİ gövdeyle YAZILMAZ, eklemeden SONRA kendi yolundan (08.09): kısmi tekil indeks
+     hesap başına tek işaretli satır istiyor; eski işaret temizlenmeden `isBilling: true` ile satır
+     açmak o an iki işaretli satır demekti. `setBilling` sırayı (önce temizle, sonra işaretle)
+     doğru kuruyor — paketin `submitB2bApplication`ıyla aynı gerekçe, aynı yol. */
+  const { isBilling, ...fields } = input;
+  const addresses = new AddressService(db);
   // İlk adresi varsayılan yapma kuralı SERVİSTE (`addForCustomer`) — burada tekrarlanmaz.
-  await new AddressService(db).addForCustomer({ ...input, ...geo, customerId });
+  const created = await addresses.addForCustomer({ ...fields, ...geo, customerId });
+  if (isBilling) await addresses.setBilling(created.id);
 }
 
 export async function updateAddress(
@@ -83,6 +90,20 @@ export async function updateAddress(
 export async function setDefaultAddress(customerId: string, addressId: string): Promise<void> {
   await ownedAddress(customerId, addressId);
   await new AddressService(serviceDb()).setDefault(addressId);
+}
+
+/**
+ * **FATURA ADRESİNİ SEÇ** (kullanıcı kararı 08.09) — `setDefaultAddress`ın ikizi, AYRI eylem.
+ *
+ * Varsayılan adres *"malı nereye götürelim"*, fatura adresi *"fatura nereye kesilecek"*: iki ayrı
+ * soru, ikisi aynı satır olabilir ve biri ötekini düşürmez. **Gövde pakette** (KÖPRÜ, BACKLOG §17):
+ * kural native uygulamayla ortak (`setBillingCustomerAddress` — sahiplik + tek işaretli satır);
+ * burada yalnız paketin sonucu bu kapının diline çevriliyor. Başkasının adresi için de
+ * "bulunamadı" — `ownedAddress` ile aynı gerekçe: varlığını doğrulamak bir bilgi sızdırmaktır.
+ */
+export async function setBillingAddress(customerId: string, addressId: string): Promise<void> {
+  const outcome = await setBillingCustomerAddress(serviceDb(), { customerId, addressId });
+  if (outcome.status !== 'ok') throw new Error('Adres bulunamadı');
 }
 
 /**

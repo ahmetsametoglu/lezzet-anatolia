@@ -345,7 +345,12 @@ export function CustomerPreview({
                       </span>
                       <span className="ml-auto flex flex-none items-center gap-1.5">
                         {a.label ? <Badge tone="neutral">{a.label}</Badge> : null}
-                        {a.isDefault ? <Badge tone="olive">varsayılan</Badge> : null}
+                        {/* İki rol İKİ rozet (08.09): zeytin "malı nereye götürüyoruz", mavi "fatura
+                            nereye kesiliyor". Aynı satır ikisini birden taşıyabilir; B2B onay kartı
+                            bu adresi ölçüyor, operatör hangisi olduğunu burada görmeli. Rolün adı
+                            işini söyler (kullanıcı kararı 08.09): "varsayılan" değil "teslimat". */}
+                        {a.isDefault ? <Badge tone="olive">teslimat</Badge> : null}
+                        {a.isBilling ? <Badge tone="blue">fatura</Badge> : null}
                       </span>
                     </div>
                   ))}

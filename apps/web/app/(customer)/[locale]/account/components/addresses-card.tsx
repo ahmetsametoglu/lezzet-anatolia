@@ -6,7 +6,7 @@ import type { Address } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { AddressForm, toAddressFields, toFormInput, type AddressDefaults } from '@/components/customer/delivery/address-form';
 import { errorText } from '@/lib/customer-error-text';
-import { addAddressAction, deleteAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
+import { addAddressAction, deleteAddressAction, setBillingAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead } from './account-cards';
 import type { Messages } from '../account-types';
@@ -36,9 +36,16 @@ interface AddressesCardProps {
    */
   defaults: AddressDefaults | undefined;
   compact: boolean;
+  /**
+   * **Fatura adresi rolü gösterilsin mi** (kullanıcı kararı 08.09) — yalnız KURUMSAL hesapta `true`.
+   * Bireysel hesapta bu kavramın karşılığı yok; rozeti ve "fatura adresim yap" eylemini orada
+   * göstermek müşteriye cevabı olmayan bir soru sormak olurdu. Ayrım çağıranda (`account.company`),
+   * kart hesabın türünü bilmez. Native hesap ekranıyla aynı kural (`address-card.tsx`).
+   */
+  billing: boolean;
 }
 
-export function AddressesCard({ t, locale, addresses, defaults, compact }: AddressesCardProps) {
+export function AddressesCard({ t, locale, addresses, defaults, compact, billing }: AddressesCardProps) {
   /** Tek seferde tek form: ekleme ile düzenleme aynı yerde açılır, ikisi birden açık kalamaz. */
   const [editing, setEditing] = useState<'new' | string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -87,6 +94,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact }: Addre
             // Mobil webde form ÇEKMECEDE açılır (21.08) — karar formun kendisinde, künyesi orada.
             compact={compact}
             initial={toFormInput(address)}
+            billingChoice={billing}
             onCancel={() => setEditing(null)}
             onSave={async (input) => {
               await run(async () => {
@@ -94,6 +102,10 @@ export function AddressesCard({ t, locale, addresses, defaults, compact }: Addre
                 // Varsayılan işareti AYRI eylemdir: tek satırı güncellemek yetmiyor, öbürlerinin
                 // bayrağı düşmek zorunda (tek varsayılan kuralı).
                 if (!result.errorKey && input.makeDefault && !address.isDefault) await setDefaultAddressAction(address.id);
+                // Fatura işareti de aynı sınıftan (08.09): kutu yalnız İŞARETLEMEyi ister — kutuyu
+                // boşaltmak işareti kaldırmaz, çünkü "fatura adresi yok" ayrı bir beyandır ve başka
+                // bir adresi seçmek eskisini zaten düşürür.
+                if (!result.errorKey && input.makeBilling && !address.isBilling) await setBillingAddressAction(address.id);
                 return result;
               });
             }}
@@ -111,6 +123,9 @@ export function AddressesCard({ t, locale, addresses, defaults, compact }: Addre
               <span className="truncate font-sans text-body-sm font-bold text-ink">
                 {address.label || address.city}
                 {address.isDefault && ` · ${t.addressDefault}`}
+                {/* İki rol AYRI yazılır: bir adres ikisi birden olabilir ve çoğu işletmede öyledir.
+                    Tek bir işarete indirilseydi müşteri hangi rolü taşıdığını göremezdi. */}
+                {billing && address.isBilling && ` · ${t.addressBilling}`}
               </span>
               <span className="truncate font-sans text-note text-body">
                 {address.line1}, {address.postalCode} {address.city}
@@ -142,6 +157,18 @@ export function AddressesCard({ t, locale, addresses, defaults, compact }: Addre
                     {t.addressMakeDefault}
                   </button>
                 )}
+                {/* "Fatura adresim yap" da aynı kuralla: yalnız kurumsal hesapta ve yalnız fatura
+                    adresi OLMAYANDA. Varsayılanı düşürmez — ayrı soru, ayrı eylem (kapının künyesi). */}
+                {billing && !address.isBilling && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void run(() => setBillingAddressAction(address.id))}
+                    className="cursor-pointer font-bold text-olive hover:text-olive-dark disabled:cursor-progress"
+                  >
+                    {t.addressMakeBilling}
+                  </button>
+                )}
                 <button type="button" onClick={() => setEditing(address.id)} className="cursor-pointer hover:text-olive">
                   {t.edit}
                 </button>
@@ -160,9 +187,11 @@ export function AddressesCard({ t, locale, addresses, defaults, compact }: Addre
           locale={locale}
           compact={compact}
           defaults={defaults}
+          billingChoice={billing}
           onCancel={() => setEditing(null)}
           onSave={async (input) => {
-            await run(() => addAddressAction({ ...toAddressFields(input), isDefault: input.makeDefault }, input.point));
+            // `isBilling` gövdeyle gitmez, kapı ekledikten sonra kendi yolundan işaretler (künyesi).
+            await run(() => addAddressAction({ ...toAddressFields(input), isDefault: input.makeDefault, isBilling: input.makeBilling }, input.point));
           }}
         />
       )}

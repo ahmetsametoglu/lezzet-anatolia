@@ -14,7 +14,7 @@ Müşteri kayıtlarının izlendiği ve müşteriye bağlı kararların (vade/li
 
 ### Detay
 
-- **Kimlik ve iletişim** — ad, telefon, e-posta, tercih dili, ülke, adresler (rota-içi mi türetilmiş haliyle); şirketse şirket bilgisi, vergi no ve VIES doğrulama sonucu, B2B onay durumu
+- **Kimlik ve iletişim** — ad, telefon, e-posta, tercih dili, ülke, adresler (rota-içi mi türetilmiş haliyle; **teslimat** ve **fatura** rolleri ayrı işaretle — B2B onay kartı fatura adresini ölçer, 08.09); şirketse şirket bilgisi, vergi no ve VIES doğrulama sonucu, B2B onay durumu
 - **Siparişleri** — müşterinin sipariş geçmişi (tutar, durum, ödeme durumu); sipariş detayına köprü. "Bu müşteri ne kadar, ne sıklıkla alıyor" ilk bakışta sezilmeli
 - **Vade / limit yönetimi** — vade yetkisi (varsayılan kapalı, elle açılır), limit (€, müşteri bazında), vade süresi (gün; boşsa varsayılan 30). **Açık bakiye ve gecikme türetilir**: ödenmemiş vadeli siparişlerin toplamı ve vadesi geçenler burada görünür — saklanan bir sayı değil, güncel gerçek
 - **Ödeme karnesi (türetilmiş)** — toplam ciro, ortalama ödeme günü, gecikme sayısı. Limit kararının dayanağıdır: sistem karneyi gösterir, **kararı admin verir** — limit puana göre otomatik belirlenmez

@@ -8,7 +8,7 @@ Müşterinin kendi bilgilerini, tercihlerini ve puanlarını yönettiği alan. K
 
 - **Profil** — ad, e-posta, telefon; telefon WhatsApp iletişiminin anahtarıdır, doğru olması müşterinin yararına
 - **Şirket bilgisi (B2B)** — unvan/adres/vergi no görüntülenir; onaylı B2B olduğu belli olur. Değişiklik talebi işletmeye iletilir (kritik alanlar müşteri tarafından serbestçe değiştirilmez)
-- **Adresler** — kayıtlı teslimat adresleri; ekleme/düzenleme/silme, varsayılan seçimi. Checkout'u hızlandırır
+- **Adresler** — kayıtlı adresler; ekleme/düzenleme/silme, **teslimat adresi** seçimi (checkout'ta önceden seçilen adres; rolün adı işini söyler, "varsayılan" denmez — kullanıcı kararı 08.09). Checkout'u hızlandırır. **Kurumsal hesapta ayrıca fatura adresi seçimi** (08.09): "fatura nereye kesilecek" sorusu "malı nereye götürelim"den ayrı — aynı adres ikisi birden olabilir, biri ötekini düşürmez; kartta eylem olarak ve formda kutu olarak sorulur; bireysel hesapta bu rol hiç görünmez
 - **Dil tercihi** — TR/FR/DE; bildirim ve e-postaların dili buna göre gider
 - **Pazarlama izinleri** — kanal bazlı (e-posta / WhatsApp) açık-kapalı; müşteri her an değiştirebilir. Verdiği izni görmesi ve geri alabilmesi yasal gereklilik
 - **Puan bakiyesi (yalnız B2C)** — biriken puan ve nasıl kazanıldığına dair sade döküm (yorum, geri bildirim, sipariş…). Puanlar süresiz birikir
@@ -19,7 +19,7 @@ Müşterinin kendi bilgilerini, tercihlerini ve puanlarını yönettiği alan. K
 ## 3. Aksiyonlar
 
 - Profil bilgisi düzenleme
-- Adres ekleme / düzenleme / silme / varsayılan yapma
+- Adres ekleme / düzenleme / silme / teslimat adresi yapma / fatura adresi yapma (yalnız kurumsal hesap)
 - Dil değiştirme
 - Pazarlama iznini kanal bazında açma/kapama
 - Puanı kupona çevirme (B2C)

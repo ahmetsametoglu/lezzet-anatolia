@@ -73,6 +73,7 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
         addresses={account.addresses}
         defaults={addressDefaultsOf(account.profile)}
         compact={compact}
+        billing={account.company !== null}
       />
 
       <Card compact={compact}>

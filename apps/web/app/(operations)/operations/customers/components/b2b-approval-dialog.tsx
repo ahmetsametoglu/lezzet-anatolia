@@ -150,9 +150,18 @@ function CheckPane({
       {/* ── Künye ── Resmî ad ticari addan farklı olabilir ve fatura resmî ada çıkar. */}
       <div className="flex flex-wrap items-start gap-2.5 rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="font-ops-display text-ops-base font-semibold text-ops-ink">
-            {check.legalName ?? check.name}
-          </span>
+          {/* Başlık İŞLETMENİN adı (08.09): `name` künye adını taşıyor, künye yoksa hesabın adına
+              düşüyor — yedek zinciri kapıda, ekran ikinci kez kurmaz. */}
+          <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{check.name}</span>
+          {/* BAŞVURAN KİŞİ ayrı satırda ve yalnız işletmeden FARKLIYSA (kullanıcı bulgusu 08.09):
+              başlık işletmeye geçince kişi karttan düşmüştü; oysa kapıda aranacak ve mükerrer
+              şüphesinde bakılacak olan KİŞİdir. Aynıysa hesap işletme adına açılmış demektir. */}
+          {check.contactName !== check.name ? (
+            <span className="font-ops-body text-ops-xs text-ops-muted">Başvuran: {check.contactName}</span>
+          ) : null}
+          {/* Adres artık FATURA adresi (kapının kararı 08.09): karar işletmenin yerine bakar, hesabın
+              eski ev adresine değil. Yedeğe düşüp düşmediğini kapı söylemiyor; etiket bu yüzden
+              satırın rolünü değil kendisini yazıyor. */}
           <span className="font-ops-body text-ops-xs text-ops-muted">
             {check.addressLine ?? 'kayıtlı adresi yok'}
           </span>
