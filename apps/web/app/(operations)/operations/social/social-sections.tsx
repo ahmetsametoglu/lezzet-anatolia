@@ -233,7 +233,10 @@ function MediaBody({ message, transcript, lang }: { message: MessageView; transc
   if (mime.startsWith('audio/')) {
     return (
       <div className="flex flex-col gap-1.5">
-        <audio controls src={message.mediaUrl} className="w-full max-w-xs" />
+        {/* Genişlik SABİT ve sebebi ölçülmüş (08.09): `w-full` balonun genişliğini alıyordu, balon ise
+            içeriğe göre daralıyor — transkript henüz yazılmamışken balonda yalnız bu öğe kalınca ikisi
+            birbirini sıfıra çekiyordu ve operatör boş bir kutu görüyordu. Oynatıcı kendi genişliğini taşır. */}
+        <audio controls src={message.mediaUrl} className="w-72 max-w-full" />
         {/* Çözülmüş metin kaydın ALTINDA ve künyeli. Balonun kendi metniymiş gibi çizilseydi
             operatör onu müşterinin YAZDIĞI cümle sanırdı; oysa makine duyduğunu yazdı ve
             yanılmış olabilir. Kayıt yerinde duruyor — şüphelenen dinler. */}

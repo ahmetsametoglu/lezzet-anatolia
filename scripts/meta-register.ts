@@ -63,12 +63,13 @@ const GRAPH = 'https://graph.facebook.com/v21.0';
   bekleyen işi) ama işleyici onu tanımıyor — abone etmek, anlamadığımız bir gövdeyi uca yollamak
   olurdu. Şablon izleme yazıldığı gün buraya bir satır eklenir.
 
-  Messenger'da üçü de işleyicide KARŞILIĞI OLAN alanlar — duman testi üçünü de kanıtlıyor:
+  Messenger'da dördü de işleyicide KARŞILIĞI OLAN alanlar:
   `messages` (gelen), `messaging_postbacks` (buton cevabı → interactive), `message_echoes`
-  (bizim/telefondan giden → defterin kendiliğinden dolması).
+  (bizim/telefondan giden → defterin kendiliğinden dolması), `message_reactions` (balona 👍 → müşterinin
+  cevabı; 08.09'da ölçüldü: abone değilken müşterinin "parmak"ı bize hiç düşmüyordu).
 */
 const WHATSAPP_FIELDS = ['messages'];
-const PAGE_FIELDS = ['messages', 'messaging_postbacks', 'message_echoes'];
+const PAGE_FIELDS = ['messages', 'messaging_postbacks', 'message_echoes', 'message_reactions'];
 
 const [, , urlArg] = process.argv;
 const onlyArg = process.argv.find((a) => a.startsWith('--only='))?.split('=')[1];

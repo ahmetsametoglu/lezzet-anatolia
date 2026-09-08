@@ -1,6 +1,7 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routing } from './i18n/routing';
+import { cartLinkRedirect } from './lib/cart-link-redirect';
 import { OPERATIONS_PATH_HEADER, isOperationsPath } from './lib/operations-request';
 import { refreshSession } from './lib/supabase/refresh';
 
@@ -22,6 +23,12 @@ export default async function middleware(request: NextRequest) {
   const applyAuthCookies = await refreshSession(request);
 
   const { pathname, search } = request.nextUrl;
+
+  // Sohbetten gelen sepet bağlantısı GERÇEK 307 ile çerez kapısına: sayfa içindeki akış-içi
+  // `redirect()` Next'in Router'ını düşürüyordu (karar ve ölçüm `lib/cart-link-redirect.ts`te).
+  const cartLink = cartLinkRedirect(request.nextUrl);
+  if (cartLink) return applyAuthCookies(NextResponse.redirect(cartLink));
+
   if (!isOperationsPath(pathname)) return applyAuthCookies(intlMiddleware(request));
 
   // Layout'un okuyacağı tek yol kaynağı — sorgu dizesiyle birlikte (operatör "imha geçmişi, bu

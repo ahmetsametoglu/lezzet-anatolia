@@ -140,6 +140,14 @@ export const PATHNAMES = {
 
 export type AppRoute = keyof typeof PATHNAMES;
 
+/**
+ * Sepet sayfasının bağlantı jetonunu taşıyan sorgu parametresi (15.21): sohbete yazılan adres
+ * `/{dil}/panier?link=…`. Burada duruyor çünkü onu ÜÇ taraf okuyor — üreten kapı
+ * (`application/cart/link`), sepet sayfası ve ara katman (`middleware.ts`, 08.09) — ve ara katman
+ * veritabanı çeken uygulama paketini içeri alamaz. Adı tek yerde; uygulama paketi yeniden yayar.
+ */
+export const CART_LINK_PARAM = 'link';
+
 /** Bir rotanın seçili dildeki yolu — `[param]` yer tutucuları doldurulmuş, önek YOK. */
 export function localizedPath(route: AppRoute, locale: Locale, params: Record<string, string> = {}): string {
   const entry: PathEntry = PATHNAMES[route];

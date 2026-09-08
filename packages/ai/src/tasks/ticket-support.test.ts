@@ -118,6 +118,10 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
 
   it('bağlantıyı model YAZMAZ, sistem ekler — kayan bir harf boş sayfaya götürür', () => {
     herIkisinde('sen bağlantıyı yazma');
+    // 08.09 canlı tur 2: "Sepetiniz hazır" iki kez çıktı — modelin cümlesi + sistemin satırı. Cümle
+    // artık sistemin; istem modele "sepetiniz hazır" dedirtmiyor.
+    expect(ticketAgentTask.system).toContain('"sepetiniz hazır" da deme');
+    expect(ticketAgentTask.system).not.toContain('aşağıdaki bağlantıdan giriş yapıp onaylayabilirsiniz" de');
   });
 
   it('yönlendirme bir EKSİKLİK gibi değil, doğru yol olarak anlatılıyor', () => {
@@ -189,6 +193,19 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
        görüyor. Operatör sohbeti YZ'ye geri verdiğinde ajan kendi eski cümlesini okuyup yeniden
        devrederse, sohbet insana yapışır ve otomasyon fiilen kapanır. */
     expect(ticketAgentTask.system).toContain('DAHA ÖNCE bir devir görünüyor');
+  });
+
+  it('KAPANIŞ devir sebebi değil ve metinsiz-mesaj kuralı SON TURLA sınırlı — canlı tur 4 (08.09)', () => {
+    /* Ölçüldü: müşteri sesli soruyla birlikte bir fotoğraf gönderdi, ajan sesi cevapladı; müşteri
+       "Anladım" deyince ajan devretti — gerekçe bir önceki turda kalan fotoğraf satırıydı (3 koşuda
+       2). Kural tur sınırı taşımıyordu ve kapanış mesajının ne olduğu yazılı değildi. */
+    expect(ticketAgentTask.system).toContain('ALTI DURUM');
+    // Beğeni/emoji bir cevaptır (08.09): Messenger'ın "parmak"ı fotoğraf sanılıp devrettirilmesin.
+    expect(ticketAgentTask.system).toContain('yalnız emoji, beğeni ya da çıkartma');
+    // Kargo + eşik + ödenecek toplam birlikte (08.09): ajan 61,02 € dedi, sitede kargo eklenmiş tutar çıktı.
+    expect(ticketAgentTask.system).toContain('"indirim", "kargo" ve "toplam" alanlarını BİRLİKTE');
+    expect(ticketAgentTask.system).toContain('Bu bir KAPANIŞTIR, devir değil');
+    expect(ticketAgentTask.system).toContain('yalnız müşterinin SON TURU içindir');
   });
 
   it('BAŞLANGIÇ FİYATI tek fiyat gibi sunulamaz — ölçülmüş arızanın prompt karşılığı', () => {

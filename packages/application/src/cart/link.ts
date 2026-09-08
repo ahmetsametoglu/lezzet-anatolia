@@ -1,6 +1,6 @@
 import { CartLinkService, CartService, ConversationService, UserProfileService, type Db } from '@lezzet/database';
 import { readableCode } from '@lezzet/domain-core';
-import { DEFAULT_LOCALE, LOCALES, localizedUrl, type Locale } from '@lezzet/i18n';
+import { CART_LINK_PARAM, DEFAULT_LOCALE, LOCALES, localizedUrl, type Locale } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
 import type { CartItem, Conversation } from '@lezzet/types';
 import { bindPhoneToAccount } from '../customer/whatsapp-link';
@@ -42,8 +42,8 @@ import { bindPhoneToAccount } from '../customer/whatsapp-link';
 /** Bağlantının ömrü — parametrik sabit; sepet bekleyebilir, bağlantı da bekleyebilir. Çerezin ömrü de bu (`invite-cookie.ts`). */
 const CART_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Sepet sayfasının bağlantıyı okuduğu sorgu parametresi — üretim de tüketim de bu adı kullanır. */
-export const CART_LINK_PARAM = 'link';
+/** Sepet sayfasının bağlantıyı okuduğu sorgu parametresi — adı `@lezzet/i18n`de (ara katman da okuyor, 08.09); burada yeniden yayılır. */
+export { CART_LINK_PARAM };
 
 /** 12 hane × okunabilir alfabe ≈ 60 bit (`readableCode`) — `wa_link_token` ile aynı ölçü. */
 const TOKEN_LENGTH = 12;

@@ -110,35 +110,97 @@ export async function storeConversationMedia(
     }
 
     // Adres imzalı DEĞİL: jeton başlıkta gitmezse 401 döner.
-    const dosya = await fetchImpl(descriptor.url, { headers: { authorization: `Bearer ${token}` } });
-    if (!dosya.ok) {
-      logger.info(
-        { context: 'messaging/meta-media', conversationId, mediaId, status: dosya.status },
-        'medya indirilemedi — mesaj medyasız yazılır',
-      );
-      return null;
-    }
+    const indirilen = await fetchBytes(descriptor.url, { authorization: `Bearer ${token}` }, { conversationId, ref: mediaId }, fetchImpl);
+    if (!indirilen) return null;
 
-    const bytes = new Uint8Array(await dosya.arrayBuffer());
-    // Beyan edilen boyut yalan olabilir; gerçek gövde de ölçülür.
-    if (bytes.byteLength > MAX_BYTES) {
-      logger.warn(
-        { context: 'messaging/meta-media', conversationId, mediaId, bytes: bytes.byteLength },
-        'indirilen medya sınırı aştı — mesaj medyasız yazılır',
-      );
-      return null;
-    }
-
-    const mime = baseMime(descriptor.mime_type ?? dosya.headers.get('content-type') ?? 'application/octet-stream');
-    // Anahtar SAĞLAYICININ kimliğinden türemez: kanal değiştiğinde biçimi değişir ve depo düzenimiz
-    // Meta'nın adlandırmasına bağlanırdı. Kendi tek kullanımlık kimliğimiz.
-    const key = r2Keys.conversationMedia(conversationId, randomUUID(), `medya.${extensionFor(mime)}`);
-    await r2.uploadFile(key, bytes, mime);
-
-    return { key, mime };
+    const mime = baseMime(descriptor.mime_type ?? indirilen.contentType ?? 'application/octet-stream');
+    return await putMedia(r2, conversationId, indirilen.bytes, mime);
   } catch (err) {
     // Beklenmedik olan burası (ağ, kova, ayrıştırma) — bilinen retlerin aksine iz bırakır.
     captureError(err, { source: SOURCES.webhook, context: { step: 'meta-media', conversationId, mediaId } });
     return null;
   }
+}
+
+/** Messenger/Instagram ekinin türü — webhook'un `attachments[].type` alanı. `fallback` (bağlantı önizlemesi) ve `template` dosya değildir, indirilmez. */
+export type MessengerAttachmentType = 'audio' | 'image' | 'video' | 'file';
+
+/**
+ * CDN türü söylemezse (octet-stream) ek türünden makul varsayılan. Boş bırakılamaz: ses çözümü
+ * `audio/*` görmeden koşmaz ve tür bilgisi elimizde varken dosyayı "bilinmeyen" yazmak kör nokta olurdu.
+ */
+const GENERIC_MIME_BY_TYPE: Record<MessengerAttachmentType, string> = {
+  audio: 'audio/mp4',
+  image: 'image/jpeg',
+  video: 'video/mp4',
+  file: 'application/octet-stream',
+};
+
+/**
+ * **MESSENGER / INSTAGRAM EKİ — ADRESTEN İNDİR** (08.09, canlıda ölçüldü).
+ *
+ * Bu kanallar medya KİMLİĞİ değil doğrudan CDN ADRESİ verir (`attachments[].payload.url`,
+ * `cdn.fbsbx.com`): adres imzalıdır, jeton istemez ve kısa ömürlüdür. İlk canlı sesli mesaj bunu
+ * gösterdi — ek `{type:'audio', payload:{url}}` geldi, indirilmediği için ajan "açamadığım bir dosya"
+ * görüp devretti; WhatsApp'ta çözülen ses Messenger'da kör noktaydı. İndirme aynı kovaya, aynı
+ * anahtar düzeniyle; ses çözümü ve ekran yolu ortak (15.25 · 15.26). Adres log'a yazılmaz (imzalı).
+ */
+export async function storeConversationMediaFromUrl(
+  conversationId: string,
+  attachment: { type: MessengerAttachmentType; url: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<StoredMedia | null> {
+  const r2 = getR2Private();
+  if (!r2) return null;
+
+  try {
+    const indirilen = await fetchBytes(attachment.url, {}, { conversationId, ref: attachment.type }, fetchImpl);
+    if (!indirilen) return null;
+
+    const bildirilen = indirilen.contentType ? baseMime(indirilen.contentType) : '';
+    const mime = bildirilen && bildirilen !== 'application/octet-stream' ? bildirilen : GENERIC_MIME_BY_TYPE[attachment.type];
+    return await putMedia(r2, conversationId, indirilen.bytes, mime);
+  } catch (err) {
+    captureError(err, { source: SOURCES.webhook, context: { step: 'meta-media-url', conversationId, type: attachment.type } });
+    return null;
+  }
+}
+
+/**
+ * Gövdeyi indirir ve boyut sınırını ölçer — iki kaynağın (Meta medya kimliği · Messenger CDN adresi)
+ * ortak yarısı. Başarısızlık `null`, gerekçesi log'da; `ref` teşhis için kimlik/tür, adres değil.
+ */
+async function fetchBytes(
+  url: string,
+  headers: Record<string, string>,
+  log: { conversationId: string; ref: string },
+  fetchImpl: typeof fetch,
+): Promise<{ bytes: Uint8Array; contentType: string | null } | null> {
+  const dosya = await fetchImpl(url, { headers });
+  if (!dosya.ok) {
+    logger.info({ context: 'messaging/meta-media', ...log, status: dosya.status }, 'medya indirilemedi — mesaj medyasız yazılır');
+    return null;
+  }
+  const bytes = new Uint8Array(await dosya.arrayBuffer());
+  // Beyan edilen boyut yalan olabilir; gerçek gövde de ölçülür.
+  if (bytes.byteLength > MAX_BYTES) {
+    logger.warn({ context: 'messaging/meta-media', ...log, bytes: bytes.byteLength }, 'indirilen medya sınırı aştı — mesaj medyasız yazılır');
+    return null;
+  }
+  return { bytes, contentType: dosya.headers.get('content-type') };
+}
+
+/**
+ * Kovaya yazar. Anahtar SAĞLAYICININ kimliğinden türemez: kanal değiştiğinde biçimi değişir ve depo
+ * düzenimiz Meta'nın adlandırmasına bağlanırdı. Kendi tek kullanımlık kimliğimiz.
+ */
+async function putMedia(
+  r2: NonNullable<ReturnType<typeof getR2Private>>,
+  conversationId: string,
+  bytes: Uint8Array,
+  mime: string,
+): Promise<StoredMedia> {
+  const key = r2Keys.conversationMedia(conversationId, randomUUID(), `medya.${extensionFor(mime)}`);
+  await r2.uploadFile(key, bytes, mime);
+  return { key, mime };
 }

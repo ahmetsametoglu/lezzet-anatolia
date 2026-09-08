@@ -303,6 +303,88 @@ describe('Messenger / Instagram — kişi hangi alanda?', () => {
     expect(Math.abs(new Date(konu!.windowExpiresAt!).getTime() - (anMs + SERVICE_WINDOW_HOURS * SAAT))).toBeLessThan(2000);
   });
 
+  it('SESLİ EK CDN adresinden indirilir ve zincire girer — Messenger\'ın kör noktası (08.09)', async () => {
+    /* Canlıda ölçüldü: Messenger sesi medya kimliğiyle değil `attachments[].payload.url` ile verir
+       (cdn.fbsbx.com, jetonsuz). İndirilmediği için ajan "açamadığım bir dosya" görüp devrediyordu.
+       Sahte fetch CDN'i oynar. Kova yoksa (yerel) medya anahtarsız kalır ve indirme hiç denenmez —
+       iki hâl de dürüst; iddia ona göre dallanır. */
+    const cdnUrl = `https://cdn.fbsbx.test/v/t59/${stamp}.mp4?oh=1`;
+    const istekler: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      istekler.push(url);
+      if (url === cdnUrl) return new Response(new Uint8Array([0, 1, 2, 3]), { status: 200, headers: { 'content-type': 'audio/mp4' } });
+      return new Response(JSON.stringify({ error: { message: 'kapalı', code: 100 } }), { status: 400, headers: { 'content-type': 'application/json' } });
+    };
+    const id = eventId('m_fb', 5);
+    const sonuc = await handleMetaWebhook(
+      messengerBody('page', {
+        sender: { id: FB_PERSON },
+        recipient: { id: PAGE_ACCOUNT },
+        message: { mid: id, attachments: [{ type: 'audio', payload: { url: cdnUrl } }] },
+      }),
+      { fetchImpl },
+    );
+    expect(sonuc).toMatchObject({ written: 1 });
+
+    const konu = await konusma('messenger', FB_PERSON);
+    const satir = (await messages.listByConversation(konu!.id)).find((m) => m.providerMessageId === id);
+    expect(satir?.kind).toBe('media');
+    expect(satir?.body.text).toBeNull();
+    // Ham liste korunur: ekran ve teşhis Meta'nın kendi şeklini görür.
+    expect(satir?.body.payload).toMatchObject({ attachments: [{ type: 'audio' }] });
+    if (satir?.mediaKey) {
+      expect(istekler).toContain(cdnUrl);
+      expect(satir.mediaMime?.startsWith('audio/')).toBe(true);
+    } else {
+      expect(satir?.mediaMime).toBeNull();
+    }
+  });
+
+  it('BEĞENİ çıkartması METİN olur (👍), fotoğraf değil — devir tetiklemez (08.09)', async () => {
+    /* Kullanıcı bulgusu: müşteri "evet" yerine parmak gönderir. Messenger onu `sticker_id`li bir görsel
+       eki olarak yollar; fotoğraf sanılsaydı ajan "göremiyorum" deyip devrederdi — oysa bu az önceki
+       önerinin onayıdır. Meta'nın üç sabit beğeni kimliğinden biri; indirme yok, ham ek korunur. */
+    const id = eventId('m_fb', 6);
+    const sonuc = await handleMetaWebhook(
+      messengerBody('page', {
+        sender: { id: FB_PERSON },
+        recipient: { id: PAGE_ACCOUNT },
+        message: { mid: id, attachments: [{ type: 'image', payload: { url: 'https://cdn.fbsbx.test/sticker.png', sticker_id: 369239263222822 } }] },
+      }),
+    );
+    expect(sonuc).toMatchObject({ written: 1 });
+
+    const konu = await konusma('messenger', FB_PERSON);
+    const satir = (await messages.listByConversation(konu!.id)).find((m) => m.providerMessageId === id);
+    expect(satir?.kind).toBe('text');
+    expect(satir?.body.text).toBe('👍');
+    expect(satir?.mediaKey).toBeNull();
+    expect(satir?.body.payload).toMatchObject({ attachments: [{ type: 'image' }] });
+  });
+
+  it('TEPKİ (message_reactions) müşterinin emojisi olarak yazılır; geri alma yok sayılır (08.09)', async () => {
+    /* Kullanıcı balona 👍 bastı ve bize hiçbir şey düşmedi: alan abone değildi. Tepki bir cevaptır —
+       ajan onu son önerinin onayı sayar. `unreact` defter olayı değil. */
+    const anMs = Date.now();
+    const tepki = { sender: { id: FB_PERSON }, recipient: { id: PAGE_ACCOUNT }, reaction: { reaction: 'like', emoji: '👍', action: 'react', mid: eventId('m_fb', 1) } };
+    webhookEventIds.push(`messenger:${PAGE_ACCOUNT}:${FB_PERSON}:${anMs}:reaction`);
+    const sonuc = await handleMetaWebhook(messengerBody('page', tepki, anMs));
+    expect(sonuc).toMatchObject({ written: 1 });
+
+    const konu = await konusma('messenger', FB_PERSON);
+    const satirlar = await messages.listByConversation(konu!.id);
+    const satir = satirlar.find((m) => (m.body.payload as { reaction?: { mid?: string } } | null)?.reaction?.mid === eventId('m_fb', 1));
+    expect(satir?.kind).toBe('text');
+    expect(satir?.direction).toBe('inbound');
+    expect(satir?.body.text).toBe('👍');
+
+    const geriAlma = await handleMetaWebhook(
+      messengerBody('page', { ...tepki, reaction: { ...tepki.reaction, action: 'unreact' } }, anMs + 1000),
+    );
+    expect(geriAlma).toMatchObject({ written: 0, ignored: 1 });
+  });
+
   it('ECHO\'da taraflar TERSTİR: kişi `recipient.id` — ve mesaj GİDEN yazılır', async () => {
     // Ters okuyan kod konuşmayı SAYFA kimliğiyle açar: herkesin yazışması tek sohbette birleşir ve
     // operatör iki müşteriyi aynı ekranda görür. Üstelik satır "gelen" olarak yazılırdı — kendi

@@ -3,7 +3,7 @@ import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../cust
 import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationBell, ringConversationsBell } from '../realtime/bell';
 import { metaSenderFromEnv } from './meta-sender';
-import { storeConversationMedia } from './meta-media';
+import { storeConversationMedia, storeConversationMediaFromUrl, type MessengerAttachmentType } from './meta-media';
 import { transcribeConversationAudio } from './voice';
 import { recordInboundMessage, recordOutboundMessage } from './record';
 import { sendOutboundMessage } from './send';
@@ -66,12 +66,12 @@ import type { TicketHandler } from '@lezzet/types';
  * dili de okur); operatörün var — ajan devrettiğinde zil çalar ve operatör sohbeti AÇTIĞI AN
  * Türkçesini görmeli, "yaz → çevir → haber ver" sırası (talep kanalının 17.08 kararı). Bedeli
  * ajanın cevabına eklenen bir-iki saniye; çeviri düşerse ajan yine koşar, satır kuyrukta kalır.
- * Zincir üç kanalda aynı: Messenger/IG'de medya indirilmiyor, o basamak boş geçer.
+ * Zincir üç kanalda aynı; Messenger/IG'nin eki de artık iniyor (08.09), ses basamağı orada da dolu.
  */
 function triggerInboundPipeline(input: {
   message: Message;
   conversation: Conversation;
-  /** İndirilmiş medya — yalnız WhatsApp'ta dolu; ses ise önce çözülür. */
+  /** İndirilmiş medya — WhatsApp'ta medya kimliğinden, Messenger/IG'de CDN adresinden (08.09); ses ise önce çözülür. */
   media: { key: string; mime: string } | null;
 }): void {
   void (async () => {
@@ -245,6 +245,8 @@ interface MessengerEvent {
     [key: string]: unknown;
   };
   postback?: { title?: string; payload?: string; [key: string]: unknown };
+  /** `message_reactions` alanı: müşteri bir balona tepki verdi (Meta: reaction · emoji · action · mid). */
+  reaction?: { reaction?: string; emoji?: string; action?: string; mid?: string; [key: string]: unknown };
   [key: string]: unknown;
 }
 
@@ -567,6 +569,45 @@ async function cevabiIsle(phone: string, text: string | null): Promise<string | 
 }
 
 /** WhatsApp mesaj tipi → defter türü. Enum dar ve bilinçli: tanınmayan tip payload'ıyla `media` kovasına düşer, kaybolmaz. */
+/**
+ * Messenger/IG ekinin indirilebilir ilk parçası: `{type, payload.url}`. Çoklu ekte ilki alınır —
+ * defterde tek medya alanı var, ham liste `payload.attachments`ta zaten duruyor. `fallback` (bağlantı
+ * önizlemesi) ve `template` dosya değildir, atlanır. Yapı savunmacı okunur: tanınmayan ek düşürülmez,
+ * yalnız indirilmez.
+ */
+function messengerAttachmentOf(attachments: unknown[] | undefined): { type: MessengerAttachmentType; url: string } | null {
+  if (!Array.isArray(attachments)) return null;
+  for (const raw of attachments) {
+    const ek = raw as { type?: unknown; payload?: { url?: unknown } } | null;
+    const type = ek?.type;
+    const url = ek?.payload?.url;
+    if ((type === 'audio' || type === 'image' || type === 'video' || type === 'file') && typeof url === 'string' && url) {
+      return { type, url };
+    }
+  }
+  return null;
+}
+
+/**
+ * Messenger'ın beğeni çıkartmaları — üç boy, üçü de aynı "parmak" (Meta'nın sabit kimlikleri).
+ * Metin karşılığı `👍`: ajan onu bir cevap olarak okur (istemin "emoji/beğeni bir CEVAPTIR" kuralı).
+ */
+const LIKE_STICKER_IDS = new Set(['369239263222822', '369239343222814', '369239383222810']);
+/** Anlamı bilinmeyen çıkartma — ajan "bir şey gönderdi, onay olabilir" diye okur, fotoğraf sanmaz. */
+const OTHER_STICKER_TEXT = '[çıkartma]';
+
+/** Ek bir çıkartmaysa metin karşılığı; değilse `null` (gerçek fotoğraf/ses/dosya yolu). */
+function messengerStickerOf(attachments: unknown[] | undefined): string | null {
+  if (!Array.isArray(attachments)) return null;
+  for (const raw of attachments) {
+    const ek = raw as { payload?: { sticker_id?: unknown } } | null;
+    const id = ek?.payload?.sticker_id;
+    if (id === undefined || id === null) continue;
+    return LIKE_STICKER_IDS.has(String(id)) ? '👍' : OTHER_STICKER_TEXT;
+  }
+  return null;
+}
+
 function waBodyOf(message: WaMessage): { kind: MessageKind; text: string | null; payload: Record<string, unknown> | null } {
   if (message.type === 'text') return { kind: 'text', text: message.text?.body ?? '', payload: null };
   if (message.type === 'interactive') {
@@ -666,7 +707,11 @@ async function ingestMessengerEntry(
           const conversation = await openSocialConversation(source, personId, accountRef, fetchImpl);
 
           const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
-          const text = typeof message.text === 'string' && message.text.trim() ? message.text : null;
+          /* BEĞENİ / ÇIKARTMA METİNDİR (08.09, kullanıcı bulgusu): Messenger'ın "parmak"ı `sticker_id`li
+             bir görsel eki olarak gelir; fotoğraf sanılsaydı ajan "göremiyorum" deyip devrederdi — oysa
+             müşteri az önceki öneriyi ONAYLAMIŞTIR. Ham ek `payload`ta duruyor, indirilmez. */
+          const sticker = messengerStickerOf(message.attachments);
+          const text = typeof message.text === 'string' && message.text.trim() ? message.text : sticker;
           const kind: MessageKind = text ? 'text' : 'media';
           const payload = hasAttachments || message.quick_reply
             ? { attachments: message.attachments ?? null, quickReply: message.quick_reply ?? null }
@@ -677,17 +722,23 @@ async function ingestMessengerEntry(
             // dokunmaz (giden mesaj pencere açmaz) ve yazar operatördür (RPC yönden türetir).
             await recordOutboundMessage(serviceDb(), { conversationId: conversation.id, text, kind, payload, providerMessageId: message.mid });
           } else {
+            // Ek varsa CDN adresinden indirilip PRIVATE kovaya yazılır (08.09); düşerse `null` döner ve
+            // satır medyasız yazılır — WhatsApp'la aynı kural: indirme mesajın ön koşulu değildir.
+            const ek = sticker ? null : messengerAttachmentOf(message.attachments);
+            const medya = ek ? await storeConversationMediaFromUrl(conversation.id, ek, fetchImpl) : null;
             const yazilan = await recordInboundMessage(serviceDb(), {
               conversationId: conversation.id,
               text,
               kind,
               payload,
+              mediaKey: medya?.key ?? null,
+              mediaMime: medya?.mime ?? null,
               providerMessageId: message.mid,
               receivedAt: msTimestamp(event.timestamp),
             });
-            // Çeviri + ajan tetiği WhatsApp'la AYNI zincir (15.28): medya indirilmediği için ses
-            // basamağı boş geçer. Ajanı olay anında tetiklemek de artık üç kanalda ortak.
-            triggerInboundPipeline({ message: yazilan, conversation, media: null });
+            // Çeviri + ajan tetiği WhatsApp'la AYNI zincir (15.28); ses artık burada da çözülür (08.09).
+            // Ajanı olay anında tetiklemek üç kanalda ortak.
+            triggerInboundPipeline({ message: yazilan, conversation, media: medya });
           }
         },
       });
@@ -710,8 +761,42 @@ async function ingestMessengerEntry(
           });
         },
       });
+    } else if (event.reaction && event.sender?.id) {
+      /*
+        TEPKİ BİR CEVAPTIR (08.09, kullanıcı bulgusu): müşteri "evet" yazmak yerine balona 👍 basıyor.
+        Meta bunu ayrı alanla gönderir (`message_reactions`) ve o alana abone değilken parmak bize hiç
+        düşmüyordu — ajan onayı bekliyor, müşteri onayı vermiş sanıyordu. `react` deftere müşterinin
+        emojisi olarak yazılır ve ajanı tetikler (istemin "emoji/beğeni bir CEVAPTIR" kuralı);
+        `unreact` yok sayılır — geri alınan tepkiyi defterden silmek yerine hiç yazmamak yeter.
+        Kendi mid'i yok; anahtar postback'le aynı kalıpta türetilir.
+      */
+      const personId = event.sender.id;
+      if (event.reaction.action !== 'react') {
+        tally.ignored += 1;
+        continue;
+      }
+      const reaction = event.reaction;
+      const emoji = typeof reaction.emoji === 'string' && reaction.emoji.trim() ? reaction.emoji.trim() : '👍';
+      await ingestOne(tally, {
+        provider: 'meta',
+        eventId: `${source}:${accountRef ?? '?'}:${personId}:${event.timestamp ?? 0}:reaction`,
+        type: `${source}.reaction`,
+        payload: reaction as Record<string, unknown>,
+        write: async () => {
+          const conversation = await openSocialConversation(source, personId, accountRef, fetchImpl);
+          const yazilan = await recordInboundMessage(serviceDb(), {
+            conversationId: conversation.id,
+            text: emoji,
+            kind: 'text',
+            // Hangi balona verildiği (`mid`) ve Meta'nın adı (`like`…) ham duruyor: ekran isterse "tepki" diye çizer.
+            payload: { reaction },
+            receivedAt: msTimestamp(event.timestamp),
+          });
+          triggerInboundPipeline({ message: yazilan, conversation, media: null });
+        },
+      });
     } else {
-      // read / delivery / reaction / optin — defter olayı değil; sayılır, tekrar döngüsüne girmez.
+      // read / delivery / optin — defter olayı değil; sayılır, tekrar döngüsüne girmez.
       tally.ignored += 1;
     }
   }

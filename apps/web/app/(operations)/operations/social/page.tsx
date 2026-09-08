@@ -1,4 +1,4 @@
-import { anchorOf, conversationsChannelName, defaultConversationHandler } from '@lezzet/application';
+import { anchorOf, conversationChannelName, conversationsChannelName, defaultConversationHandler } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TICKET_STATUS_LABELS } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
@@ -119,6 +119,12 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
           taslak belirmeli. Kanal talep kuyruğununkinden AYRI: her müşteri talebinde bu ekranı da
           tazelemek, konuşmayı okuyan operatörün altından sayfayı çekerdi. */}
       <LiveRefresh channel={conversationsChannelName()} />
+      {/* AÇIK SOHBETİN KENDİ ZİLİ (08.09, ölçüldü): kuyruk zili mesaj yazıldığı an ve ajan cevabında
+          çalıyor; sesin transkripti ve çeviri ise saniyeler SONRA yazılıyor ve o an yalnız sohbetin
+          tekil zili çalıyor (`triggerInboundPipeline`in ikinci zili). Bu ekran onu duymuyordu:
+          operatör sesli mesajı transkriptsiz görüyor, metin ancak kendisi bir şey yapınca beliriyordu.
+          Kanal adı sohbetin UUID'sinden türer — talep ekranındaki müşteri zilinin aynı kalıbı. */}
+      {selectedId ? <LiveRefresh channel={conversationChannelName(selectedId)} /> : null}
       <SocialClient data={data} urlState={{ ...urlState, c: selectedId }} />
     </>
   );

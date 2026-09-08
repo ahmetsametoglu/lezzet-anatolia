@@ -14,7 +14,7 @@ import { localizedPath, type AppRoute } from './paths';
 export { DEFAULT_LOCALE, LOCALES } from './locale';
 export type { Locale } from './locale';
 
-export { PATHNAMES, localizedPath } from './paths';
+export { CART_LINK_PARAM, PATHNAMES, localizedPath } from './paths';
 export type { AppRoute } from './paths';
 
 /**

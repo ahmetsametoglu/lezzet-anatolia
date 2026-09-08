@@ -3,7 +3,7 @@ import type { z, ToolSet } from '@lezzet/ai';
 import { BundleService, CartService, CategoryService, ConversationService, PriceService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import type { Conversation } from '@lezzet/types';
-import { cartAgentTools } from './agent-tools';
+import { cartAgentTools, cartLinkIfDue } from './agent-tools';
 
 /**
  * AJANIN SEPET ARAÇLARI (15.20 · 15.22) — ilk YAZAN araçlar.
@@ -118,7 +118,11 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
   it('ürün ADIYLA eklenir, özet fiyatı MOTORDAN söyler, satır sohbetin sepetinde durur', async () => {
     const sonuc = await cagir(araclar(messenger), 'sepete_ekle', { urun: AD('Fıstıklı Sarma'), adet: 2 });
     expect(sonuc).toMatchObject({ eklendi: { urun: AD('Fıstıklı Sarma'), adet: 2 } });
-    const sepet = sonuc.sepet as { kalemler: Array<{ birimFiyat: string; adet: number }>; toplam: string };
+    const sepet = sonuc.sepet as { kalemler: Array<{ birimFiyat: string; adet: number }>; toplam: string; kargo: string };
+    /* Kargo ve ödenecek tutar AÇIK söylenir (08.09): ajan ürün toplamını söyleyip kargoyu susmuştu,
+       müşteri sitede farklı bir tutar gördü. Adres bilinmese de EŞİK söylenir (satış cümlesi). */
+    expect(sepet.kargo).toMatch(/ÜCRETSİZ/);
+    expect(sepet.toplam).toMatch(/ödeyeceği tutar/);
     expect(sepet.kalemler).toHaveLength(1);
     expect(sepet.kalemler[0]).toMatchObject({ adet: 2 });
     expect(sepet.kalemler[0]!.birimFiyat).toMatch(/4,57/);
@@ -209,5 +213,24 @@ describe('müşterili sohbette (WhatsApp) sepet MÜŞTERİNİN gerçek sepetidir
     expect(sepet.sourceConversationId).toBe(whatsapp.id);
     const okunan = await cagir(araclar(whatsapp), 'sepetim');
     expect((okunan.kalemler as unknown[]).length).toBe(1);
+  });
+});
+
+describe('cartLinkIfDue — sepete yazıldıysa ya da söz verildiyse bağlantı sistemce üretilir (08.09)', () => {
+  it('dolu sepet + söz ya da yazım → bağlantı; boş sepet ya da (söz yok ve yazım yok) → yok', async () => {
+    /* Canlı Messenger turunda iki kez ölçüldü: model "aşağıdaki bağlantıdan…" yazıp aracı çağırmadı;
+       ertesi turda 👍'a "afiyet olsun" deyip bağlantısız kapattı. Kural araçla yan yana: söz VEYA bu
+       turda yazım + dolu sepet → bağlantı; boş sepet → yok (07.09 kuralı); ikisi de yoksa → yok.
+       Sıra önemli: WhatsApp sohbetinin müşteri sepeti önceki testte doldu. */
+    const bos = await new ConversationService(db).open({ source: 'messenger', externalRef: `psid-bos-${stamp}` });
+    conversationIds.push(bos.id);
+    expect(await cartLinkIfDue(db, bos, { reply: 'Sepetiniz hazır, aşağıdaki bağlantıdan onaylayabilirsiniz.', cartWritten: true })).toBeNull();
+
+    expect(await cartLinkIfDue(db, whatsapp, { reply: 'Teşekkürler, iyi günler.', cartWritten: false })).toBeNull();
+    const sozle = await cartLinkIfDue(db, whatsapp, { reply: 'Sepetiniz hazır, aşağıdaki bağlantıdan giriş yapıp onaylayabilirsiniz.', cartWritten: false });
+    expect(sozle).toMatch(/\/panier\?link=[A-Z0-9]{12}$/);
+    const yazimla = await cartLinkIfDue(db, whatsapp, { reply: 'Üç pastayı sepetinize ekledim.', cartWritten: true });
+    expect(yazimla).toMatch(/\/panier\?link=[A-Z0-9]{12}$/);
+    expect(yazimla).not.toBe(sozle); // her çağrı yeni jeton, öncekini kapatır (`startCartLink`)
   });
 });

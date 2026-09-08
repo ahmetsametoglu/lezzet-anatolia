@@ -329,6 +329,35 @@ describe('özerk sohbet motoru — cevap sağlayıcıya gider', () => {
     expect((await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound')).toHaveLength(0);
   });
 
+  it('KALICI sağlayıcı reddi → devir, TEK deneme — sahte alıcılara her tarama turunda yeniden yazılıyordu (08.09)', async () => {
+    /* Smoke betiğinin sahte sohbetleri `ai` varsayılanıyla açıldı; tarama her turda modeli çağırıp
+       Meta'ya yazmayı denedi ve aynı reddi yedi (iki sohbet, iki tur, dört deneme; fren yalnız
+       seyreltiyor). Kalıcı ret (kod 100: alıcı/istek hatası) tekrarla düzelmez — doğru davranış
+       devir, ve sağlayıcıya TEK istek. */
+    const conversationId = await sohbetAc('ai');
+    const oncekiCagri = metaOrtak.calls.length;
+    metaOrtak.failNext({ status: 400, code: 100 });
+    const sonuc = await runAutonomousConversationReply(db, senderOrtak, conversationId, {
+      model: fakeAiModel(AJAN_CEVABI),
+    });
+    expect(sonuc.status).toBe('handoff');
+    expect((await conversations.getById(conversationId))?.handledBy).toBe('human');
+    // Devir haberi denenmez (gidemezdi), sonraki tur da gelmez (mod insanda): bir istek, bir ret.
+    expect(metaOrtak.calls.length - oncekiCagri).toBe(1);
+    expect((await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound')).toHaveLength(0);
+  });
+
+  it('GEÇİCİ sağlayıcı hatası → `failed`, mod DEĞİŞMEZ — sonraki tur yeniden dener', async () => {
+    // 5xx sağlayıcı tarafı geçicidir (`retryableOf`): devretmek, bir kesinti yüzünden kuyruğu insana yığmak olurdu.
+    const conversationId = await sohbetAc('ai');
+    metaOrtak.failNext({ status: 503, code: 2 });
+    const sonuc = await runAutonomousConversationReply(db, senderOrtak, conversationId, {
+      model: fakeAiModel(AJAN_CEVABI),
+    });
+    expect(sonuc).toEqual({ status: 'failed', reason: 'provider_error' });
+    expect((await conversations.getById(conversationId))?.handledBy).toBe('ai');
+  });
+
   it('modu `ai` DEĞİLSE hiç koşmaz — cron ile kapı aynı kuralı iki kez yazmasın', async () => {
     const conversationId = await sohbetAc('hybrid');
     const sonuc = await runAutonomousConversationReply(db, unconfiguredSender, conversationId, {

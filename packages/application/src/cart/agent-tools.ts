@@ -9,7 +9,7 @@ import { getPackagesByIds, listStorefrontPackages } from '../catalog/packages';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
 import { resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
-import { cartGroupOf, entryOfItem, type CartLine, type CartView } from './cart-types';
+import { cartGroupOf, cartPayableCents, entryOfItem, shippingGroupFee, type CartLine, type CartView } from './cart-types';
 import { startCartLink } from './link';
 import { getCartView } from './read';
 
@@ -63,6 +63,8 @@ export interface CartAgentToolsInput {
   addressCustomerId: string | null;
   /** Bağlantı üretildiğinde çağrılır — `ai.ts` cevabın sonuna deterministik ekler. */
   onLink: (url: string) => void;
+  /** Sepete YAZILDI (ekle/adet/çıkar) — `ai.ts` bu turda bağlantıyı garantiler (`cartLinkIfDue`). */
+  onCartWrite?: () => void;
 }
 
 /**
@@ -75,9 +77,46 @@ export interface CartAgentToolsInput {
  * eşitler. Tek araçta ikisini bir bayrakla ayırmak, modelin bayrağı unuttuğu gün müşterinin
  * sepetinde istediğinin iki katı ürün demekti — sitedeki "+" ile adet kutusunun aynı ayrımı.
  */
+/** Sepetin sahibi: müşterili sohbette müşteri, kimliksizde sohbetin kendisi (15.22). Tek yerde — araçlar ve söz garantisi aynı sepete bakar. */
+function cartOwnerOf(conversation: Conversation): CartOwner {
+  return conversation.customerId ? { customerId: conversation.customerId } : { conversationId: conversation.id };
+}
+
+/**
+ * **BAĞLANTI SÖZÜ VERİLDİYSE BAĞLANTI OLUR** (08.09, canlı Messenger turunda ölçüldü).
+ *
+ * Model *"Sepetiniz hazır, aşağıdaki bağlantıdan giriş yapıp onaylayabilirsiniz"* yazdı ve
+ * `sepet_baglantisi`'ni ÇAĞIRMADI: kap boş kaldı, satır eklenmedi, müşteri boş bir söz okudu ve
+ * "bağlantı yok" dedi. Bağlantıyı model değil sistem ekler (`withCartLink`); sözü tutmak da sistemin
+ * işi olmalı — istemde "önce aracı çağır" yazmak bir ricadır, bu ise kural. Sepet BOŞSA yine
+ * üretilmez (aracın 07.09 kuralı): boş sepete bağlantı, boş sözden kötüdür. Kap zaten doluysa ya da
+ * cevapta söz yoksa dokunmaz; çağıran `null`da kendi kabını korur.
+ */
+export async function cartLinkIfDue(
+  db: Db,
+  conversation: Conversation,
+  input: { reply: string | null; cartWritten: boolean },
+): Promise<string | null> {
+  /* İKİNCİ ÖLÇÜM (08.09, aynı tur): müşteri "sepete koy" dedi, ajan koydu; sonraki turda 👍 gelince
+     ajan "afiyet olsun" deyip kapattı — bağlantı sözü de geçmedi, araç da çağrılmadı, müşteri siteye
+     bağlantısız kaldı. Onay ve ödeme yalnız sitede (15.21); bağlantısız bir sepet yazımı çıkmaz sokak.
+     Kural: bu turda sepete YAZILDIYSA bağlantı gider, modelin sözünü beklemeden. */
+  const promised = !!input.reply && /bağlant|\blink\b/i.test(input.reply);
+  if (!promised && !input.cartWritten) return null;
+  try {
+    const cart = await new CartService(db).getFor(cartOwnerOf(conversation));
+    if (cart.items.length === 0) return null;
+    const sonuc = await startCartLink(db, { conversationId: conversation.id });
+    return sonuc.status === 'ok' ? sonuc.url : null;
+  } catch (err) {
+    logger.warn({ context: 'application/cart-agent-tools', conversationId: conversation.id, err: String(err) }, 'söz verilen sepet bağlantısı üretilemedi');
+    return null;
+  }
+}
+
 export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
   const { conversation } = input;
-  const owner: CartOwner = conversation.customerId ? { customerId: conversation.customerId } : { conversationId: conversation.id };
+  const owner = cartOwnerOf(conversation);
   const carts = new CartService(db);
   const log = { context: 'application/cart-agent-tools', conversationId: conversation.id };
 
@@ -85,6 +124,8 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
      kaynağı bu sohbetin kanalı olur. Sohbet sepetinde (kimliksiz) damga gerekmez: satırın sahibi
      zaten sohbet, iz bağlantı devralınırken hedef sepete geçer (`link.ts`). */
   const damgala = async (): Promise<void> => {
+    // Yazan her araç buradan geçer: kabı "yazıldı" diye işaretlemek de bu tek noktanın işi (08.09).
+    input.onCartWrite?.();
     if (conversation.customerId) await carts.stampChat(owner, conversation.id);
   };
 
@@ -343,6 +384,22 @@ async function paketiCoz(db: Db, ad: string): Promise<CozulmusSatir | { sonuc: R
 }
 
 /**
+ * Kargo cümlesi — ücret, ücretsiz kargo eşiği ve eşiğe kalan tek cümlede; karar motorun
+ * (`shippingGroupFee` → `resolveShippingFee`), burası yalnız söyler. Adres bilinmiyorsa ücret de
+ * bilinmez ama EŞİK bilinir ve söylenir: "şu tutardan sonra kargo bedava" satış cümlesidir.
+ */
+function kargoCumlesi(view: CartView, yerBilinmiyor: boolean): string {
+  const esik = formatPrice(view.freeShippingCents, 'tr');
+  if (yerBilinmiyor) return `Kargo ücreti adres bilinince belli olur; kargo ürünleri ${esik} ve üzerindeyse kargo ÜCRETSİZ.`;
+  if (view.shippingSubtotalCents <= 0) return 'Sepettekiler kapıya teslim bölgesinde — kargo ücreti yok.';
+  const ucret = shippingGroupFee(view);
+  const kargoUrunleri = formatPrice(view.shippingSubtotalCents, 'tr');
+  if (ucret.feeCents === 0) return `Kargo ÜCRETSİZ — kargoyla giden ürünler ${kargoUrunleri}, ${esik} eşiği aşıldı.`;
+  const karisik = view.shippingOnly ? '' : ' Sepet karışık (kapıya teslim + kargo); kargo ücreti adreste kesinleşir.';
+  return `Kargo ücreti ${formatPrice(ucret.feeCents, 'tr')} (kargoyla giden ürünler ${kargoUrunleri}). ${esik} ve üzerinde kargo ÜCRETSİZ — eşiğe ${formatPrice(ucret.remainingForFreeCents, 'tr')} kaldı, müşteriye SÖYLE.${karisik}`;
+}
+
+/**
  * Sepet görünümünün modele söylenen hâli — cümleler AÇIK, bayrak değil: `false` bir alanı model
  * "önemsiz" sayıp atlayabilir, cümleyi atlayamaz (`urun_ara`nın kargo alanıyla aynı karar).
  */
@@ -356,6 +413,8 @@ function sepetOzeti(view: CartView, yerBilinmiyor: boolean): Record<string, unkn
   };
   const indirim =
     view.discount.status === 'applied' || view.discount.status === 'automatic' ? formatPrice(view.discount.amountCents, 'tr') : null;
+  const kargo = kargoCumlesi(view, yerBilinmiyor);
+  const odenecek = cartPayableCents(view);
 
   return {
     kalemler: view.lines.map((line) => ({
@@ -368,8 +427,12 @@ function sepetOzeti(view: CartView, yerBilinmiyor: boolean): Record<string, unkn
     })),
     kalemSayisi: view.itemCount,
     araToplam: formatPrice(view.subtotalCents, 'tr'),
-    ...(indirim ? { indirim } : {}),
-    toplam: formatPrice(view.totalCents, 'tr'),
+    ...(indirim ? { indirim: `${indirim} indirim uygulandı — müşteriye SÖYLE` } : {}),
+    /* Kargo ve ödenecek toplam AYRI AYRI ve açık (kullanıcı bulgusu 08.09): ajan "61,02 €" dedi,
+       müşteri sitede kargo eklenmiş bir tutar görüp şaşırdı. Sepet görünümü kargoyu zaten biliyor
+       (`shippingGroupFee`), söylenmiyordu. Tek kaynak korunur: ödenecek tutar `cartPayableCents`. */
+    kargo,
+    toplam: `${formatPrice(odenecek, 'tr')} — müşterinin ödeyeceği tutar${odenecek > view.totalCents ? ' (kargo dahil)' : ''}; ürün toplamı ${formatPrice(view.totalCents, 'tr')}`,
     ...(view.minBasketOk
       ? {}
       : { asgariSepet: `Asgari sepet ${formatPrice(view.minBasketCents, 'tr')} — ${formatPrice(view.missingForMinBasketCents, 'tr')} eksik; müşteri bu hâlde sipariş VEREMEZ, ürün eklemeli.` }),

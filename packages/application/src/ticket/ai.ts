@@ -15,7 +15,7 @@ import { formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { cartAgentTools } from '../cart/agent-tools';
+import { cartAgentTools, cartLinkIfDue } from '../cart/agent-tools';
 import { withCartLink } from '../cart/link-text';
 import { anchorGateOf, type AnchorGate } from '../customer/anchor';
 import { sendOutboundMessage, type MessageSender } from '../messaging/send';
@@ -75,6 +75,9 @@ async function runOpts(
           onLink: (url) => {
             cart.sink.url = url;
           },
+          onCartWrite: () => {
+            cart.sink.wrote = true;
+          },
         })
       : {};
   // ── KİMLİK KAPISI ÜÇLÜDÜR (04.10 · DOMAIN §10 · 28.08'de genişledi) ───────
@@ -103,6 +106,8 @@ async function runOpts(
  */
 interface CartLinkSink {
   url: string | null;
+  /** Bu turda sepete yazıldı mı — yazıldıysa bağlantı modelin sözünü beklemeden eklenir (08.09). */
+  wrote: boolean;
 }
 
 /**
@@ -377,7 +382,7 @@ export async function generateConversationDraft(
   // "benim siparişlerim" sorusu kimin siparişi olduğu belirsizken cevaplanamaz. Kamusal araçlar
   // (katalog, teslimat şartları, posta kodu) yine verilir — `runOpts`un üçlü kapısı.
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
-  const cartLink: CartLinkSink = { url: null };
+  const cartLink: CartLinkSink = { url: null, wrote: false };
   const result = await runTask(
     ticketDraftTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
@@ -389,6 +394,8 @@ export async function generateConversationDraft(
      gönderiyor, yani taslakta duran işaret müşteriye gidecek işarettir. WhatsApp'ta kalır,
      Messenger/IG'de sökülür — orada çizilmiyor ve müşteri çıplak yıldız görürdü.
      Sepet bağlantısı da taslağa BURADA girer: operatör onu görür, isterse siler. */
+  // Söz verilen bağlantı (08.09): model "bağlantı" deyip aracı çağırmadıysa sistem üretir (`cartLinkIfPromised`).
+  cartLink.url ??= await cartLinkIfDue(db, conversation, { reply: result.data.reply, cartWritten: cartLink.wrote });
   await conversations.update({
     id: conversation.id,
     aiDraftReply: withCartLink(formatForChannel(result.data.reply, conversation.source), cartLink.url),
@@ -682,7 +689,7 @@ async function autonomousConversationReply(
      numarasından gelmek zorunda (`verifySecurityCode` imzası), yani e-posta talebinde sormak
      cevaplanamayacak bir soru sormaktır. Kapı orada da kapalı — ama soru burada. */
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
-  const cartLink: CartLinkSink = { url: null };
+  const cartLink: CartLinkSink = { url: null, wrote: false };
   const result = await runTask(
     ticketAgentTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
@@ -694,6 +701,10 @@ async function autonomousConversationReply(
      çizmez ve müşteri `*Fıstıklı Baklava*` diye okurdu (`chat-formatting` künyesi).
      Sepet bağlantısı biçimlendirmeden SONRA eklenir: sökücü bağlantının alt çizgisine dokunmasın. */
   const govdeMetni = result.data.action === 'reply' ? formatForChannel(result.data.reply ?? '', conversation.source).trim() || null : null;
+  /* SÖZ VERİLEN BAĞLANTI (08.09, canlıda ölçüldü): model "aşağıdaki bağlantıdan…" yazıp aracı
+     çağırmadı, kap boş kaldı, müşteri boş bir söz okudu. Sepet doluysa sistem bağlantıyı yine
+     üretir — kural ve gerekçesi `cartLinkIfPromised`te; burası yalnız kabı doldurur. */
+  cartLink.url ??= await cartLinkIfDue(db, conversation, { reply: govdeMetni, cartWritten: cartLink.wrote });
   const reply = govdeMetni ? withCartLink(govdeMetni, cartLink.url) : null;
   if (!reply) return handOff(result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.', true);
 

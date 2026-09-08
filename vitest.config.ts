@@ -104,6 +104,8 @@ const WEB_LIB_DBSIZ = [
   'apps/web/lib/assistant/economics.test.ts',
   // Fırsat kararının yasakları (22.41) — saf: motoru (`expiryFlagOf`) çağırıyor, DB'ye gitmiyor.
   'apps/web/lib/assistant/offer-block.test.ts',
+  // Sepet bağlantısının ara katman yönlendirmesi (15.21 · 08.09) — saf: URL alır, URL verir.
+  'apps/web/lib/cart-link-redirect.test.ts',
   'apps/web/lib/auth/post-login-target.test.ts',
   'apps/web/lib/cart/cart-blocker.test.ts',
   'apps/web/lib/cart/discount-label.test.ts',

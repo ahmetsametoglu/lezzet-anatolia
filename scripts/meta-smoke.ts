@@ -76,7 +76,10 @@ const WA_PERSON = '33600000001';
 const WA_ACCOUNT = '1227633040438008'; // test numarasının phone_number_id'si (kimlik, sır değil)
 const FB_PERSON = 'SMOKE-PSID-0001';
 const IG_PERSON = 'SMOKE-IGSID-0001';
-const PAGE_ACCOUNT = '1297615503430731';
+// Gerçek Sayfa (Lezzet Anatolie, 08.09'da ölçüldü); '1297615503430731' 22.08'in test Sayfasıydı ve artık çözülmüyor.
+// Sahte sohbetler bu kimlikle doğar; AI varsayılanında ajan bir kez gerçek Sayfadan sahte PSID'ye yazmayı dener,
+// Meta reddeder (kalıcı ret → devir, 08.09), ikinci deneme olmaz.
+const PAGE_ACCOUNT = '1214267358444912';
 const IG_ACCOUNT = 'SMOKE-IGACCOUNT';
 
 /** Damga: WhatsApp SANİYE ister, Messenger/IG MİLİSANİYE. Karıştırmak tarihi 1970'e ya da binlerce yıl ileriye atar. */
