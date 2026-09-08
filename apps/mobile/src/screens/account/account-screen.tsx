@@ -635,6 +635,16 @@ export function AccountScreen({
             satırlar kesikli çizgiyle ayrılır. Adres kartının kendi zemini kalktı; kart zaten yüzey. */}
         <View style={styles.settingsCard}>
           <Text style={styles.cardTitle}>{t.addresses.title}</Text>
+          {/* ROLÜN ADI TEK BAŞINA YETMEZ (kullanıcı kararı 08.09). "varsayılan" bir MEKANİZMANIN
+              adıydı; rol "teslimat adresi" olunca rozet artık ne olduğunu söylüyor ama ne İŞE
+              yaradığını söylemiyor — bu tek satır onu söylüyor, ve iki rozet (teslimat · fatura)
+              yan yana durduğunda hangisinin siparişi etkilediği ancak böyle okunuyor.
+              Adres yokken çizilmez: olmayan bir rozetin açıklaması gürültüdür. */}
+          {addressBook.addresses.length === 0 ? null : (
+            <Text style={styles.addressesNote} testID="account-addresses-note">
+              {t.addresses.note}
+            </Text>
+          )}
           {/* Liste OKUNURKEN satırların yeri tutulur (kullanıcı isteği 10.08). Eskiden liste boş
               dizi olarak başlıyordu ve ekran "hiç adresin yok" ile "adresler yükleniyor"u aynı
               gösteriyordu — ölçülemeyen değeri sıfır saymanın ta kendisi (CLAUDE §1). */}
@@ -1098,6 +1108,13 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   pointsGap: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
+    fontSize: theme.text.helper,
+    color: theme.colors.muted,
+  },
+  /* Adres rollerinin dipnotu — yardımcı metin ölçüsünde ve sönük: satır bir bilgi değil bir
+     DİPNOT, kart başlığıyla aynı ağırlıkta okunmamalı. Ölçüsü `pointsGap`in ikizi. */
+  addressesNote: {
+    fontFamily: theme.font.body[400],
     fontSize: theme.text.helper,
     color: theme.colors.muted,
   },

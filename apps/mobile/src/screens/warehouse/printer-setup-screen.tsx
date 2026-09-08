@@ -6,6 +6,7 @@ import type { BoxPrinterContract, PrinterPurpose } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsSurface } from '@/components/operations/surface';
@@ -370,8 +371,7 @@ export function PrinterSetupScreen() {
         contentContainerStyle={styles.list}
         testID="warehouse-printers-list"
       >
-        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
-        <View style={styles.headBleed}>{header}</View>
+        <OperationsHeadBleed pad="5xl">{header}</OperationsHeadBleed>
         {failed ? (
           <OperationsNoticeBlock
             variant="error"
@@ -560,10 +560,6 @@ export function PrinterSetupScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },
   /** v3:1014 — `padding:0 20px 24px;gap:12px`; başlığın kendi nefesi `OperationsStackHeader`ta. */
-  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
-     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu.
-     Ters işaretli kenar boşluğu onu geri alıyor — başlık her hâlde aynı yerde. */
-  headBleed: { marginHorizontal: -operationsTheme.space['5xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['5xl'],
     paddingBottom: operationsTheme.space['6xl'],

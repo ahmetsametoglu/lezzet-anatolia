@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { RefreshControl, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -198,7 +199,7 @@ function SummaryBody({ hub, refresh, reloading, header }: SummaryBodyProps) {
       }
       testID="management-day-summary-body"
     >
-      {header}
+      <OperationsHeadBleed pad="5xl">{header}</OperationsHeadBleed>
       <View style={styles.revenue} testID="management-summary-revenue">
         <View style={styles.revenueHead}>
           <View style={styles.revenueHeadText}>

@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
@@ -145,13 +146,18 @@ export function OperationsNotificationsScreen() {
         contentContainerStyle={styles.list}
         testID="operations-notifications-list"
       >
-        <OperationsStackHeader
-          title={t.notifications.title}
-          subtitle={t.notifications.subtitle}
-          onBack={() => router.back()}
-          backLabel={t.notifications.back}
-          testID="operations-notifications-header"
-        />
+        {/* Bu ekranda başlık HER hâlde kaydırıcının içinde, yani YER DEĞİŞTİRMİYORDU; sarmalama
+            tasarım ölçüsü için: gövdenin dolgusu başlığın kendi 20'sinin üstüne binip onu 40'a
+            itiyordu ve öteki yığın başlıklarının hepsi 20'de duruyor. */}
+        <OperationsHeadBleed pad="5xl">
+          <OperationsStackHeader
+            title={t.notifications.title}
+            subtitle={t.notifications.subtitle}
+            onBack={() => router.back()}
+            backLabel={t.notifications.back}
+            testID="operations-notifications-header"
+          />
+        </OperationsHeadBleed>
         {feed.state.status === 'loading' ? (
           /* İlk yük — boş hâlle KARIŞMAZ: yüklemeyi "sakin" gibi okutmak yanlış boştu (26.08). */
           <OperationsSkeletonList

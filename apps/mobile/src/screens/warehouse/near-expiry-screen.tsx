@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsKeypadPanel } from '@/components/operations/keypad-panel';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -130,7 +131,7 @@ export function NearExpiryScreen() {
         contentContainerStyle={styles.list}
         testID="warehouse-near-expiry-list"
       >
-        {header}
+        <OperationsHeadBleed pad="6xl">{header}</OperationsHeadBleed>
         {/* REJİM KURALI EN ÜSTTE (tasarım 31.08) — listeyi okumadan önce okunacak tek cümle.
             Bu blok olmadan ekran doğru kararı gösteriyor ama SEBEBİNİ söylemiyordu: "geçti" yazan
             her satır imhalık sanılıyordu ve depocu satılabilir malı çöpe atabilirdi. */}

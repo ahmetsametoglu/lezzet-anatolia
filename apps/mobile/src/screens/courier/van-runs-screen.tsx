@@ -4,6 +4,7 @@ import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRunDetail } from '@lezzet/types';
 
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -114,7 +115,7 @@ export function CourierVanRunsScreen() {
         caption={operationsCopy.sections.courier.tab}
         contentContainerStyle={styles.list}
       >
-        {header}
+        <OperationsHeadBleed pad="2xl">{header}</OperationsHeadBleed>
         {/* ÜST BLOK KOYU (v3:16 `#2f353a`) — kitin `ink` tonu. Açık bir yüzeyle çizilmişti ve
             ekranın ağırlık merkezi kayboluyordu: bu blok "araçta ne var" özetini taşıyor ve
             tasarımda sayfanın tek koyu alanı. */}

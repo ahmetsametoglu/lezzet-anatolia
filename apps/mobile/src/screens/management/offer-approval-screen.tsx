@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProductThumb } from '@/components/operations/product-thumb';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -162,7 +163,9 @@ export function OfferApprovalScreen() {
             refresh={{ onRefresh: approval.refresh, refreshing: approval.reloading }}
             testID="management-offer-approval-body"
           >
-            {header}
+            <OperationsHeadBleed pad="5xl" padTop="sm">
+              {header}
+            </OperationsHeadBleed>
             {state.candidates.map((candidate) => (
               <CandidateCard
                 key={candidate.stockId}

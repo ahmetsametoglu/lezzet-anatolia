@@ -13,6 +13,7 @@ import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet'
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -229,8 +230,7 @@ export function TransferScreen() {
           contentContainerStyle={styles.list}
           testID="warehouse-transfer-queue"
         >
-          {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
-          <View style={styles.headBleed}>{header}</View>
+          <OperationsHeadBleed pad="6xl">{header}</OperationsHeadBleed>
           {/* GELEN bölümü boşsa BAŞLIĞI DA ÇİZİLMEZ: altında hiçbir satır olmayan bir "KABUL
               BEKLİYOR" başlığı, bir iş varmış gibi okunur. Aynı kural üç bölümde de geçerli. */}
           {transferState.transfers.length === 0 ? null : (
@@ -921,10 +921,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space['7xl'],
   },
-  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
-     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu.
-     Ters işaretli kenar boşluğu onu geri alıyor — başlık her hâlde aynı yerde. */
-  headBleed: { marginHorizontal: -operationsTheme.space['6xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],

@@ -139,9 +139,48 @@ describe('AccountScreen', () => {
   });
 
   /*
+    ROLÜN ADI — "TESLİMAT ADRESİ", "VARSAYILAN" DEĞİL (kullanıcı kararı 08.09).
+
+    *"varsayılan"* bir MEKANİZMANIN adıydı (alanın önden dolu gelmesi); müşterinin gördüğü şey bir
+    ROLDÜR. Web hesap sayfası aynı gün aynı kelimeye geçti ve notun tek derdi buydu: iki yüzey aynı
+    rolü iki adla anmamalı. Test kelimeyi TOPLUCA arıyor — rozet, eylem ve toast ayrı ayrı
+    yazılıyor ve biri geride kalırsa ekranda iki ad birden yaşar.
+  */
+  it('rol adı EKRANIN HER YERİNDE "teslimat adresi"; "varsayılan" kelimesi hiç geçmez', async () => {
+    await render(<AccountScreen />);
+    await screen.findByTestId('account-address-addr-home-edit');
+
+    // HOME `isDefault` — rozet onda; WORK değil, eylem onda.
+    expect(screen.getByText('teslimat adresi')).toBeOnTheScreen();
+    expect(screen.getByText('teslimat adresi yap')).toBeOnTheScreen();
+    expect(screen.queryByText(/varsayılan/i)).toBeNull();
+  });
+
+  /*
+    DİPNOT ROZETİ AÇIKLAR, O YÜZDEN ROZETSİZ ÇİZİLMEZ.
+
+    Rozet rolün ADINI söylüyor ama ne İŞE yaradığını söylemiyor; iki rozet (teslimat · fatura) yan
+    yana durduğunda hangisinin siparişi etkilediği ancak bu satırdan okunuyor. Adres yokken hiçbir
+    rozet yok — açıklayacak bir şey de yok, ve boş bir listenin altındaki kural cümlesi müşteriye
+    yapması gereken bir şey varmış gibi okunur.
+  */
+  it('adres rolleri DİPNOTU adres varken çizilir, liste BOŞKEN çizilmez', async () => {
+    await render(<AccountScreen />);
+
+    expect(await screen.findByTestId('account-addresses-note')).toBeOnTheScreen();
+
+    mockFetchAddresses.mockResolvedValue(listResult([]));
+    await render(<AccountScreen />);
+
+    await waitFor(() => expect(screen.queryByTestId('account-addresses-note')).toBeNull());
+    // Ekleme kapısı boş listede de duruyor — dipnotun kalkması bölümü kapatmaz.
+    expect(screen.getByTestId('account-address-add')).toBeOnTheScreen();
+  });
+
+  /*
     FATURA ADRESİ — YALNIZ ŞİRKET HESABINDA (kullanıcı kararı 08.09).
 
-    İki rol ayrı: varsayılan adres "malı nereye götürelim", fatura adresi "fatura nereye kesilecek".
+    İki rol ayrı: teslimat adresi "malı nereye götürelim", fatura adresi "fatura nereye kesilecek".
     Bireysel hesapta ikincisinin karşılığı yok; göstermek, cevabı olmayan bir soru sormak olurdu.
   */
   it('BİREYSEL hesapta fatura adresi rolü HİÇ çizilmez', async () => {
@@ -178,13 +217,13 @@ describe('AccountScreen', () => {
 
     await fireEvent.press(screen.getByTestId('account-address-addr-home-billing'));
 
-    /* HOME hem varsayılan hem fatura: "varsayılan yap" eylemi yine yok (zaten varsayılan), fatura
-       eylemi de kalktı — iki rozet yan yana duruyor. */
+    /* HOME hem teslimat hem fatura adresi: "teslimat adresi yap" eylemi yine yok (zaten o rolde),
+       fatura eylemi de kalktı — iki rozet yan yana duruyor. */
     await waitFor(() => expect(screen.queryByTestId('account-address-addr-home-billing')).toBeNull());
     expect(screen.queryByTestId('account-address-addr-home-default')).toBeNull();
   });
 
-  it('"varsayılan yap" GERÇEK uca gider; rozet sunucunun döndürdüğü listeye göre taşınır', async () => {
+  it('"teslimat adresi yap" GERÇEK uca gider; rozet sunucunun döndürdüğü listeye göre taşınır', async () => {
     mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...WORK, isDefault: true }, { ...HOME, isDefault: false }]));
     await render(<AccountScreen />);
     await screen.findByTestId('account-address-addr-work-default');
@@ -204,19 +243,19 @@ describe('AccountScreen', () => {
     üç iddia birlikte anlam taşıyor: metin, ETİKETSİZ adreste ne yazdığı, ve BAŞARISIZLIKTA
     basılmaması.
   */
-  it('varsayılan yapma ONAYI toast ile söylenir ve adresin ADIYLA söylenir', async () => {
+  it('teslimat adresi yapma ONAYI toast ile söylenir ve adresin ADIYLA söylenir', async () => {
     mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...WORK, isDefault: true }, { ...HOME, isDefault: false }]));
     await render(<AccountScreen />);
     await screen.findByTestId('account-address-addr-work-default');
 
     await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
 
-    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('İş varsayılan yapıldı'));
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('İş artık teslimat adresiniz.'));
   });
 
   it('ETİKETSİZ adreste toast ŞEHRİ yazar — yer tutucu ham ya da boş kalmaz', async () => {
-    /* Etiket isteğe bağlı bir alan; `{label}` yer tutucusu doldurulmazsa müşteri "undefined
-       varsayılan yapıldı" okur. Kart başlığıyla aynı kural: etiket yoksa şehir. */
+    /* Etiket isteğe bağlı bir alan; `{label}` yer tutucusu doldurulmazsa müşteri "undefined artık
+       teslimat adresiniz" okur. Kart başlığıyla aynı kural: etiket yoksa şehir. */
     const noLabel = { ...WORK, label: null };
     mockFetchAddresses.mockResolvedValue(listResult([HOME, noLabel]));
     mockMakeDefaultAddress.mockResolvedValue(listResult([{ ...noLabel, isDefault: true }, { ...HOME, isDefault: false }]));
@@ -225,11 +264,11 @@ describe('AccountScreen', () => {
 
     await fireEvent.press(screen.getByTestId('account-address-addr-work-default'));
 
-    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Strasbourg varsayılan yapıldı'));
+    await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Strasbourg artık teslimat adresiniz.'));
     expect(mockToast).not.toHaveBeenCalledWith(expect.stringContaining('{label}'));
   });
 
-  it('varsayılan DEĞİŞTİRİLEMEZSE onay toast\'ı BASILMAZ — yerine hata bloğu çıkar', async () => {
+  it('teslimat adresi DEĞİŞTİRİLEMEZSE onay toast\'ı BASILMAZ — yerine hata bloğu çıkar', async () => {
     /* Bu dosyanın asıl iddiası: başarısız yazmada da toast basılsaydı müşteri değişmemiş bir
        ayarı değişmiş sanırdı ve hatayı ancak bir sonraki siparişinde fark ederdi. */
     mockMakeDefaultAddress.mockResolvedValue({ data: null, error: 'unexpected', status: 500, retryAfterSec: null });

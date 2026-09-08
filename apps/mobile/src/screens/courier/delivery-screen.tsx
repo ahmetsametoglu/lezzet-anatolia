@@ -6,6 +6,7 @@ import { navigationLink } from '@lezzet/domain-core';
 
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsIconButton } from '@/components/operations/icon-button';
 import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
@@ -194,6 +195,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
       >
         {(bind) => (
       <FormScroll {...bind} contentContainerStyle={styles.body} testID="courier-delivery-body">
+      <OperationsHeadBleed pad="6xl">
       <OperationsStackHeader
         title={fillCopy(t.delivery.title, { n: String(delivery.order), total: String(delivery.total) })}
         subtitle={fillCopy(t.delivery.subtitle, {
@@ -212,6 +214,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         }
         testID="courier-delivery-header"
       />
+      </OperationsHeadBleed>
 
         {/* ROZET HER KANALDA (kullanıcı bulgusu 30.08 · tasarımda başlığın sabit öğesi): eskiden
             yalnız B2B'de çiziliyordu ve B2C durakta başlığın sağı boş kalıyordu. Kanal kapıda ne

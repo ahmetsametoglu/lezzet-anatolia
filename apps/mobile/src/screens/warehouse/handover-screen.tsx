@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ORDER_STATUS_LABELS, type AwaitingHandoverBoxContract } from '@lezzet/types';
 
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -233,13 +234,18 @@ export function HandoverScreen() {
         contentContainerStyle={styles.list}
         testID="warehouse-handover-list"
       >
-        <OperationsStackHeader
-          title={t.handover.title}
-          subtitle={t.handover.subtitle}
-          onBack={() => router.back()}
-          backLabel={t.common.back}
-          testID="warehouse-handover-header"
-        />
+        {/* Başlık burada HER hâlde kaydırıcının içinde, yani yer değiştirmiyordu; sarmalama
+            tasarım ölçüsü için — gövdenin dolgusu (12) başlığın kendi 20'sine binip onu 32'ye
+            itiyordu, öteki yığın başlıklarının hepsi 20'de. */}
+        <OperationsHeadBleed pad="xl">
+          <OperationsStackHeader
+            title={t.handover.title}
+            subtitle={t.handover.subtitle}
+            onBack={() => router.back()}
+            backLabel={t.common.back}
+            testID="warehouse-handover-header"
+          />
+        </OperationsHeadBleed>
 
         {/* EKRANIN KURALI HER ZAMAN GÖRÜNÜR (v3:1686) — "hangi siparişi vereceğini seçmiyorsun"
             bu ekranın tasarım kararıdır. Kaybolan bir kural, ikinci kutuda unutulur. */}

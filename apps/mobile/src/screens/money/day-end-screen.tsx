@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsDashedRule } from '@/components/operations/dashed-rule';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -144,7 +145,9 @@ function DayEndBody({ summary, header }: DayEndBodyProps) {
       contentContainerStyle={styles.body}
       testID="money-day-end-body"
     >
-      {header}
+      <OperationsHeadBleed pad="5xl" padTop="sm">
+        {header}
+      </OperationsHeadBleed>
       {/* GÜNÜN DÖKÜMÜ TEK KART (v3:24) — üç satır bir arada bir defter sayfası, ayrı ayrı üç
           cümle değil. Dolgu `none`: dikey nefes satırların kendisinde (v3: `padding:6px 16px`). */}
       <OperationsSurface tone="panel" padding="none" style={styles.summaryCard}>

@@ -15,6 +15,7 @@ import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { PrintProbe } from '@/components/print/print-probe';
@@ -251,8 +252,7 @@ export function PreparationScreen() {
           contentContainerStyle={styles.queueList}
           testID="warehouse-picking-queue"
         >
-          {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
-          <View style={styles.headBleed}>{header}</View>
+          <OperationsHeadBleed pad="5xl">{header}</OperationsHeadBleed>
           {/* Son kapanan kutunun etiketi (23.7): sipariş hazır olup kuyruktan düşse de kart
               burada kalır — depocu "ne bastıracağını" kapanış anında okur. */}
           <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
@@ -425,8 +425,7 @@ export function PreparationScreen() {
         contentContainerStyle={styles.list}
         testID="warehouse-picking-lines"
       >
-        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
-        <View style={styles.headBleed}>{header}</View>
+        <OperationsHeadBleed pad="5xl">{header}</OperationsHeadBleed>
 
         {/* Son kapanan kutunun etiketi (23.7) — ara kutu kapanışında burada görünür. */}
           <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
@@ -1664,10 +1663,6 @@ const styles = StyleSheet.create({
   },
   /* Ekranın yatay dolgusu 20 (tasarımın her bloğu `margin:… 20px`). 22 yazılıydı ve cihazda
      ölçüldü (31.08): kart kenarı 22 dp'de duruyordu, tasarımda 20. */
-  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
-     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu.
-     Ters işaretli kenar boşluğu onu geri alıyor — başlık her hâlde aynı yerde. */
-  headBleed: { marginHorizontal: -operationsTheme.space['5xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['5xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],

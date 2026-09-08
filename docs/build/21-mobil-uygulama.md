@@ -14052,6 +14052,19 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Cihaz turu yarım kaldı:** yalnız B2B kartı gözle doğrulandı, depo/kurye ekranları ölçülemedi —
   cihaz ağdan düştü (Wi-Fi istemci yalıtımı). Kalanların doğrulaması bir sonraki cihaz turunda.
 
+  ── ⚠ BU KAYIT YANILTICIYDI, DÜZELTMESİ (21.298)'DE ─────────────────────────
+
+  Yukarıda "TAMAM" yazıyor ve **iki bakımdan yanlıştı** (kullanıcı 09.09'da cihazda buldu):
+
+  1. ~~11 ekranda~~ — süpürme YARIM kaldı. Ekranlar elle bulunmuştu; makineyle tarandığında
+     kaydırıcının içinde başlık çizen **12 yer daha** çıktı, `offer-approval` dahil.
+  2. Yalnız YATAY eksen kapatılmıştı. Gövdenin ÜST dolgusu (`sm` = 6 birim = 15 px) geri
+     alınmamıştı, yani düzeltilmiş sayılan `b2b-application` ekranında bile dikey kayma sürüyordu.
+     "Beş ölçümde sabit" cümlesi yatay ekseni ölçüyordu; dikeyi kapattığı imasında bulunmak hataydı.
+
+  Ders: **elle süpürme tamamlandığını kanıtlayamaz.** Kapanışı (21.298) yapıyor ve orada tarama
+  artık makinede duruyor.
+
 - [x] (21.296) **YAKIN-SKT TEKLİFİ: LİSTE + ÇEKMECE — tasarımla bizim ekranın ÜÇÜNCÜ yolu** (kullanıcı kararı 08.09: *"kart kart listenin görülmesi ve buradan teklif vermek daha pratik… kartın üzerinde bir buton olsa, teklif ver dediğimiz anda bir çekmece açılsa"*)
   `touches:` `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/warehouse/offer.ts` · `apps/mobile/src/components/ui/chip.tsx` · `apps/mobile/src/screens/management/{offer-approval-screen.tsx,use-offer-approval.hook.ts,offer-supply-screens.test.tsx,messages.json}`
 
@@ -14144,3 +14157,125 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Uç tarafına iki iddia yazıldı (`social.test.ts`): sohbet mesajı operasyon dilinde iner + aslı
   `body.text`te durur; kuyruk önizlemesi de çevrilir. **KOŞULMADILAR** — DB'ye vuran koşu şerit
   ajanına kapalı (`CLAUDE §4b`), sıradaki tam pakette denetmen görecek. Bugünkü kanıt cihaz turu.
+
+- [x] (21.298) **BAŞLIK SÜPÜRMESİ TAMAMLANDI — ortak `OperationsHeadBleed`, 12 atlanan ekran, ve taramayı makineye devreden bekçi** (kullanıcı bulgusu 09.09: *"hâlâ başlık devam ediyor… içerik yüklendiği zaman header'ın içeriği ortaya doğru çekiliyor"*)
+  `touches:` `apps/mobile/src/components/operations/head-bleed.tsx` · `apps/mobile/src/components/operations/head-bleed.test.tsx` · `apps/mobile/src/screens/courier/delivery-screen.tsx` · `apps/mobile/src/screens/courier/route-pick-screen.tsx` · `apps/mobile/src/screens/courier/van-runs-screen.tsx` · `apps/mobile/src/screens/management/b2b-applications-screen.tsx` · `apps/mobile/src/screens/management/day-summary-screen.tsx` · `apps/mobile/src/screens/management/offer-approval-screen.tsx` · `apps/mobile/src/screens/management/order-exception-screen.tsx` · `apps/mobile/src/screens/management/supply-suggestion-screen.tsx` · `apps/mobile/src/screens/money/day-end-screen.tsx` · `apps/mobile/src/screens/operations/notifications-screen.tsx` · `apps/mobile/src/screens/warehouse/near-expiry-screen.tsx` · `apps/mobile/src/screens/warehouse/handover-screen.tsx` · ayrıca (21.295)'in 11 ekranı ortak komponente taşındı
+
+  **Durum (09.09) — TAMAM, cihazda kullanıcının bildirdiği ekranda ölçüldü.**
+
+  ── (21.295) NEDEN YETMEDİ ──────────────────────────────────────────────────
+
+  Kullanıcı cihazda teklif onayı ekranındaydı ve arıza aynen sürüyordu. Ölçüm:
+
+  ```
+  management-offer-approval-header-back = [102,143]   → x = 40 birim (olması gereken 20)
+  ```
+
+  Ekran (21.295)'in listesinde YOKTU. Liste elle kurulmuştu; makineyle tarayınca kaydırıcının
+  dolgulu gövdesine başlık koyan **12 yer daha** çıktı. Ayrıca kapatılan ekranlarda bile yalnız
+  yatay eksen alınmıştı: gövdenin `paddingTop`u (`sm` = 6 birim = 15 px) duruyordu.
+
+  İki uyarı YANLIŞ ALARMDI ve elle doğrulandı — `stock-count` ile `write-off`un sonuç dallarında
+  başlık `styles.screen`in doğrudan çocuğu, `FormScroll` bir ALT satırda başlıyor.
+
+  ── ORTAK KOMPONENT: kullanıcının sorusu haklıydı ───────────────────────────
+
+  (21.295)'te *"ortak bir komponent değil mi bu?"* sorusuna "yerleştirme komponentle çözülemez"
+  diye cevap verilmişti. Doğrusu ikisi arasında: ÖLÇÜ ortak olamaz (ekranın gövde dolgusunu ancak
+  ekran bilir), ama DÜZELTME ortak olur. 24 yerde aynı stil bloğunu ve aynı yorumu kopyalamak
+  CLAUDE §1'in yasakladığı duplication'dı. `OperationsHeadBleed pad="6xl" padTop="sm"` — mekanik,
+  gerekçe ve künye tek dosyada; ekran yalnız kendi ölçüsünü bildiriyor.
+
+  ── KAPSAMA GİREN AMA HAREKET ETMEYEN İKİ EKRAN ─────────────────────────────
+
+  `notifications` ve `handover`da başlık HER hâlde kaydırıcının içinde, yani yer değiştirmiyordu.
+  Yine de sarıldılar: gövdenin dolgusu başlığı 40'a (sırasıyla 32'ye) itiyordu ve öteki 22 yığın
+  başlığının hepsi tasarımın 20'sinde duruyor.
+
+  ── BEKÇİ: tarama artık makinede ────────────────────────────────────────────
+
+  `head-bleed.test.tsx` kaynağı tarıyor: kaydırıcının `contentContainerStyle`lı gövdesine konan
+  her başlık sarılmış olmalı. Dal sınırı (`return (` / `if (`) olmadan tarama, aynı dosyanın önceki
+  dalındaki kaydırıcıyı kap sanıyordu — yanlış alarmların kaynağı buydu. Bekçinin YAKALADIĞI
+  doğrulandı: `near-expiry`deki sarmalama geçici olarak açıldı, test tam o satırı gösterdi
+  (`warehouse/near-expiry-screen.tsx:134`), sonra geri alındı. Ayrıca sarılı sayısının >15 olması
+  da iddia ediliyor — hiçbir şey eşleştirmeyen bir tarama da "sıfır hata" der.
+
+  ── DOĞRULAMA (fiziksel Oppo CPH1907, ölçek 2,55) ───────────────────────────
+
+  Kullanıcının bildirdiği ekranda, geçiş yedi kez örneklendi; örnek 1 YÜKLEME hâlini yakaladı
+  (iskelet ekranda), 2–7 hazır hâl:
+
+  ```
+  yükleme : header [0,0][1080,261]   geri [51,128][153,230]
+  hazır   : header [0,0][1080,261]   geri [51,128][153,230]
+  ```
+
+  Öncesi `[102,143]`. Yatayda 51 px = 20 birim (gövdenin `5xl`i), dikeyde 15 px = 6 birim
+  (`sm`) — ikisi de teorinin sayısı, ve iki hâl arasında fark YOK. `near-expiry` ayrıca beş
+  örnekte sabit ölçüldü. Dokunulmayan `social-chat`/`social-inbox` başlıkları da `x=51`de:
+  ölçüt tutarlı.
+
+  Mobil paketi **1487/1489** (kalan iki düşüş italik font notunun, öteki şerit) · kök typecheck
+  20/20 · lint temiz.
+
+  ── AYRICA ÖLÇÜLDÜ, ARIZA DEĞİL ─────────────────────────────────────────────
+
+  Kullanıcı *"alt ekrana girerken içeriden dışarı doğru bir büyüme… başlık en üste çıkıyor, sonra
+  aşağı kayıyor"* dedi. Kare kare çekildi: geçiş anındaki kare YENİ ekran değil, **ÇIKAN ekranın
+  büyütülmüş hâli** — Android'in varsayılan yığın geçişi (yığında `animation` hiç verilmemiş,
+  `(operations)/_layout.tsx`). Başlığın üst boşluğu iki ekranda da doğru. İlk teorim
+  (`rt.insets.top` geçici olarak 0) ÖLÇÜMLE DÜŞTÜ. Animasyonun kendisi ayrı bir tercih konusu.
+
+- [x] (21.299) **ADRES ROLLERİNİN ADI: "varsayılan" → "TESLİMAT ADRESİ"** (kullanıcı kararı 08.09, web'de aynı gün uygulandı · denetim notu `not-mobil-adres-rolleri-sozluk-ve-form-kutusu.md`)
+  `touches:` `apps/mobile/src/screens/account/{messages.json,account-screen.tsx,address-card.tsx,account-screen.test.tsx}`
+
+  **Durum (09.09) — sözlük TAMAM; formdaki fatura kutusu AYRI, aşağıda.**
+
+  ── KARAR ───────────────────────────────────────────────────────────────────
+
+  *"varsayılan"* bir MEKANİZMANIN adı (bir alanın önden dolu gelmesi); müşterinin gördüğü şey bir
+  ROLDÜR — bu adres siparişte teslimat için önden seçilir. Web hesap sayfası aynı gün geçmişti,
+  mobil geçmemişti; notun tek derdi iki yüzeyin aynı rolü iki adla anmamasıydı.
+
+  Rozet üç dilde web'in kelimeleriyle birebir: `teslimat adresi` · `adresse de livraison` ·
+  `Lieferadresse`. Onay ve hata metinleri fatura ikiziyle simetrik hâle getirildi
+  (*"{label} artık teslimat adresiniz."* ↔ *"{label} artık fatura adresiniz."*).
+
+  ── EYLEM ETİKETİ MOBİLDE KISA, VE BU BİLİNÇLİ ──────────────────────────────
+
+  Web *"Teslimat adresim yap"* diyor; mobil `teslimat adresi yap`. Ölçüldü: v3'te kart satırı yatay
+  ve eylemler `flex:none` — KISALMIYORLAR, uzayan etiket adres satırını ezer. Üstelik fatura rolü
+  tasarımdan sonra doğduğu için satırda artık ÜÇ eylem olabiliyor. Ortak olması gereken rolün ADI,
+  eylemin cümlesi değil; iki yüzey de "teslimat adresi" / "fatura adresi" diyor.
+
+  ── DİPNOT EKLENDİ ──────────────────────────────────────────────────────────
+
+  Rozet rolün adını söylüyor ama ne işe yaradığını söylemiyor; iki rozet yan yana durunca hangisinin
+  siparişi etkilediği okunmuyordu. Kart başlığının altına tek satır: *"teslimat adresi sipariş
+  ekranında önceden seçili gelir"* (web'in `addressesNote` karşılığı). Liste BOŞKEN çizilmez —
+  olmayan bir rozetin açıklaması gürültüdür, üstelik yapılacak bir iş varmış gibi okunur.
+
+  ── ÖDEME EKRANI BİLEREK DEĞİŞMEDİ ──────────────────────────────────────────
+
+  Ölçüldü: **web'in kendi ödeme ekranı da "varsayılan" diyor** — yalnız hesap sayfası geçmiş. Mobil
+  ödeme ekranının bölüm başlığı zaten "Teslimat adresi"; rozeti de öyle yapmak
+  `TESLİMAT ADRESİ ▸ Ev … teslimat adresi` gibi kendini tekrar eden bir satır üretirdi. Tek yüzeyde
+  değiştirmek ayrıca mobil↔web ayrışması doğururdu — notun önlemek için açıldığı şeyin ta kendisi.
+
+  ── TESTLER ─────────────────────────────────────────────────────────────────
+
+  İki yeni iddia (`account-screen.test.tsx`, 19/19): rol adı ekranın HER yerinde "teslimat adresi"
+  ve `/varsayılan/i` HİÇ geçmiyor (rozet · eylem · toast ayrı ayrı yazılıyor, biri geride kalırsa
+  ekranda iki ad birden yaşar) · dipnot adres varken çizilir, liste boşken çizilmez.
+
+  ── AÇIK KALAN: FORMDAKİ FATURA KUTUSU ──────────────────────────────────────
+
+  BEKLEYEN(21.299): Web kurumsal hesabın adres formuna *"Fatura adresim yap"* kutusu koydu
+  (`AddressForm.billingChoice`). Mobilde form ne bu kutuyu ne de `makeDefault` ikizini taşıyor;
+  roller yalnız KARTIN eylemleriyle veriliyor. Kutunun kazandırdığı şey gerçek ama dar: yeni adres
+  eklerken şirket rolü aynı hamlede verebilir, bugün kaydet→kartı bul→dokun gerekiyor. Tasarımda
+  karşılığı YOK (karar tasarımdan sonra alındı) ve mobil kitte onay kutusu bileşeni de yok — yani
+  görsel bir karar gerektiriyor, uydurulmaz (CLAUDE §3). Kutu eklenirse kural notta yazılı:
+  yeni adreste `isBilling` gövdeyle YAZILMAZ, kapı ekledikten sonra `setBilling` ile işaretler; ve
+  kutuyu boşaltmak işareti KALDIRMAZ — "fatura adresi yok" ayrı bir beyandır.

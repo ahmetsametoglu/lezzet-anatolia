@@ -12,6 +12,7 @@ import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet'
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
@@ -150,8 +151,7 @@ export function CourierReturnScreen() {
       >
         {(bind) => (
       <FormScroll {...bind} contentContainerStyle={styles.list} testID="warehouse-return-body">
-        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
-        <View style={styles.headBleed}>{header}</View>
+        <OperationsHeadBleed pad="6xl">{header}</OperationsHeadBleed>
 
         {detail.drops.length === 0 ? null : <Text style={styles.heading}>{t.return.heading}</Text>}
 
@@ -443,9 +443,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
-     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu. */
-  headBleed: { marginHorizontal: -operationsTheme.space['6xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],

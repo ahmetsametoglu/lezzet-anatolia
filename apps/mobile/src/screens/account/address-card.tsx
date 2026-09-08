@@ -9,15 +9,27 @@ import { addressLine, addressTitle } from '@/screens/customer-kit/address-format
 import type accountMessages from './messages.json';
 
 /*
-  ADRES KARTI — "etiket · varsayılan rozeti · adres satırı · varsayılan yap · Düzenle" (v3:859-866).
+  ADRES KARTI — "etiket · rol rozeti · adres satırı · rol eylemi · Düzenle" (v3:859-866).
+
+  ROLÜN ADI "TESLİMAT ADRESİ", "VARSAYILAN" DEĞİL (kullanıcı kararı 08.09): *"varsayılan"* bir
+  MEKANİZMANIN adıdır (bir alanın önceden dolu gelmesi), rolün adı değil. Müşterinin gördüğü şey
+  bir roldür — bu adres siparişte teslimat için önden seçilir. Web hesap sayfası aynı gün aynı
+  kelimeye geçti; iki yüzey aynı rolü iki adla anmamalı. Ödeme ekranının rozeti BİLEREK
+  "varsayılan" kaldı ve web'de de öyle: başlığı zaten "Teslimat adresi" olan bir listede
+  "teslimat adresi" rozeti kendini tekrar ederdi.
   Veri artık SÖZLEŞMEDEN (`MeAddress`, 21.15) — fixture tipi kalktı; kart, uçların döndürdüğünü çizer.
 
   METİNLER TEK BLOK HÂLİNDE GEÇER (`copy`): çağıran sözlüğün (`account/messages.json`) `addresses`
   bölümünü okuyor; beş ayrı metin prop'u yerine bloğun kendisi geçince yeni bir metin eklendiğinde
   imza değişmez. Tip de o bloktan TÜRER, elle yazılmaz.
 
-  "VARSAYILAN YAP" yalnız varsayılan OLMAYAN kartta çıkar (şablonun kendi kuralı) — varsayılan bir
-  adresi varsayılan yapan bir düğme, basılınca hiçbir şey yapmayan bir düğmedir.
+  ROL EYLEMİ yalnız o rolü TAŞIMAYAN kartta çıkar (şablonun kendi kuralı) — teslimat adresini
+  teslimat adresi yapan bir düğme, basılınca hiçbir şey yapmayan bir düğmedir. Aynısı faturada.
+
+  EYLEM ETİKETİ MOBİLDE KISA ("teslimat adresi yap" · "fatura adresi yap"), web'de cümle
+  ("Teslimat adresim yap"). Ayrım bilinçli: tasarımda eylemler satırda `flex:none` duruyor, yani
+  KISALMIYORLAR — uzayan etiket adres satırını ezer. Ortak olması gereken şey rolün ADI, eylemin
+  cümlesi değil; iki yüzey de "teslimat adresi" ve "fatura adresi" diyor.
 */
 
 type AddressCopy = LocalizedCopy<typeof accountMessages>['addresses'];

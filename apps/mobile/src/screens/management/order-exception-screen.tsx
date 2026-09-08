@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
@@ -106,7 +107,9 @@ export function OrderExceptionScreen() {
           contentContainerStyle={styles.body}
           testID="management-order-exception-body"
         >
-          {header}
+          <OperationsHeadBleed pad="6xl" padTop="sm">
+            {header}
+          </OperationsHeadBleed>
           {state.exceptions.map((exception) => (
             <ExceptionCard key={exception.orderId} exception={exception} exceptions={exceptions} />
           ))}

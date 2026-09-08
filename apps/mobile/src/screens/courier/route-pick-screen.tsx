@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRoute } from '@lezzet/types';
 
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
@@ -149,7 +150,7 @@ export function CourierRoutePickScreen() {
         caption={operationsCopy.sections.courier.tab}
         contentContainerStyle={[styles.list, { paddingBottom: barHeight + operationsTheme.space.xl }]}
       >
-        {header}
+        <OperationsHeadBleed pad="5xl">{header}</OperationsHeadBleed>
         {/* ── ARAÇ: TEK SATIR + ÇEKMECE (v3:17) ───────────────────────── */}
         <VehicleGate
           value={

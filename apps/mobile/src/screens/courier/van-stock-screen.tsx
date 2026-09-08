@@ -8,6 +8,7 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProductRow } from '@/components/operations/product-row';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
@@ -322,8 +323,7 @@ export function CourierVanStockScreen() {
         caption={operationsCopy.sections.courier.tab}
         contentContainerStyle={styles.list}
       >
-        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
-        <View style={styles.headBleed}>{header}</View>
+        <OperationsHeadBleed pad="2xl">{header}</OperationsHeadBleed>
         {!hasVehicle ? (
           /* Araç deposu YOKSA ekran boş liste göstermez, SEBEBİ söyler: serbest ürün aracın
              stoğuna giriyor ve araç yoksa gidecek bir yer de yok. */
@@ -660,9 +660,6 @@ function VanLine({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },
-  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
-     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu. */
-  headBleed: { marginHorizontal: -operationsTheme.space['2xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['2xl'],
     // Yapışkan çubuk listenin ÜSTÜNDE duruyor; son satır onun altında kalmasın.

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { RefreshControl, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
@@ -122,7 +123,9 @@ export function SupplySuggestionScreen() {
           }
           testID="management-supply-suggestion-body"
         >
-          {header}
+          <OperationsHeadBleed pad="5xl" padTop="sm">
+            {header}
+          </OperationsHeadBleed>
           {state.groups
             .filter((group) => group.supplierId !== null)
             .map((group) => (

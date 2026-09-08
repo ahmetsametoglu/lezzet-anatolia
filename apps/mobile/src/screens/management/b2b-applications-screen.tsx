@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -119,7 +120,9 @@ export function B2bApplicationsScreen() {
         <OperationsScreenChrome title={t.b2b.listTitle} caption={operationsCopy.sections.management.tab}>
           {(bind) => (
             <FormScroll {...bind} contentContainerStyle={styles.body} onEndReached={queue.loadMore} testID="management-b2b-list-body">
-              {header}
+              <OperationsHeadBleed pad="6xl" padTop="sm">
+                {header}
+              </OperationsHeadBleed>
               {sekmeler}
               {state.rows.map((row) => (
                 <QueueRow key={row.customerId} row={row} onPress={() => router.push(`/b2b-application?id=${row.customerId}`)} />

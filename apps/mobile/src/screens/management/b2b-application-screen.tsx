@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
@@ -122,8 +123,11 @@ export function B2bApplicationScreen({ customerId }: { customerId: string }) {
         contentContainerStyle={[styles.body, { paddingBottom: operationsTheme.space['8xl'] + barHeight }]}
         testID="management-b2b-detail-body"
       >
-        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF (kullanıcı bulgusu 08.09) — künyesi `styles.headBleed`de. */}
-        <View style={styles.headBleed}>{header}</View>
+        {/* `padTop` gövdenin üst dolgusunu da geri alıyor — yükleme dalında o boşluk yok ve
+            verilmezse başlık dikeyde de kayıyordu (ölçüldü: `sm` = 6 birim = 15 px). */}
+        <OperationsHeadBleed pad="6xl" padTop="sm">
+          {header}
+        </OperationsHeadBleed>
 
         {/*
           BAYRAK BİR ŞERİT, ROZET DEĞİL (tasarım · cihaz turu 07.09).
@@ -393,20 +397,6 @@ export type B2bCheck = NonNullable<B2bCheckResponse['check']>;
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },
   block: { paddingTop: operationsTheme.space['7xl'], paddingHorizontal: operationsTheme.space['6xl'] },
-  /*
-    BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09).
-
-    `OperationsStackHeader`ın KENDİ dolgusu var ve tasarımın ölçüsü o: sayfa kenarı 20
-    (`stack-header` künyesi, v3 ölçümü). Ama hazır dalda başlık kaydırıcının gövdesinin İÇİNDE
-    duruyor ve gövdenin dolgusu (22) onun üstüne biniyordu → 42. Yükleme/hata/boş dallarında ise
-    gövde yok, başlık kendi 20'sinde kalıyordu.
-
-    Sonucu cihazda ölçüldü (Oppo CPH1907, ölçek 2,55): geri düğmesinin kenarı düzeltme öncesi
-    107 px = **42 birim** (20 + 22), sonrasında 51 px = **20 birim**. Fark tam olarak gövdenin
-    yatay dolgusu. Ters işaretli kenar boşluğu onu geri alıyor — başlık her hâlde tasarımın
-    20'sinde, ve iki hâl arasında yer değiştiren bir şey kalmıyor.
-  */
-  headBleed: { marginHorizontal: -operationsTheme.space['6xl'] },
   body: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space.sm,

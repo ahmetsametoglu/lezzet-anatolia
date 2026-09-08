@@ -71,9 +71,10 @@
     },
     "addresses": {
       "title": "Adreslerim",
-      "default": "varsayılan",
-      "makeDefault": "varsayılan yap",
-      "makeDefaultLabel": "{label} adresini varsayılan yap",
+      "note": "teslimat adresi sipariş ekranında önceden seçili gelir",
+      "default": "teslimat adresi",
+      "makeDefault": "teslimat adresi yap",
+      "makeDefaultLabel": "{label} adresini teslimat adresi yap",
       "billing": "fatura adresi",
       "makeBilling": "fatura adresi yap",
       "makeBillingLabel": "{label} adresini fatura adresi yap",
@@ -82,9 +83,9 @@
       "edit": "Düzenle",
       "editLabel": "{label} adresini düzenle",
       "add": "＋ Yeni adres ekle",
-      "defaultDone": "{label} varsayılan yapıldı",
+      "defaultDone": "{label} artık teslimat adresiniz.",
       "loadError": "Adresler yüklenemedi — sayfayı yeniden açın.",
-      "defaultFailed": "Varsayılan adres değiştirilemedi — yeniden deneyin."
+      "defaultFailed": "Teslimat adresi seçilemedi — yeniden deneyin."
     },
     "language": {
       "title": "Dil tercihi",
@@ -207,9 +208,10 @@
     },
     "addresses": {
       "title": "Mes adresses",
-      "default": "par défaut",
-      "makeDefault": "définir par défaut",
-      "makeDefaultLabel": "Définir {label} comme adresse par défaut",
+      "note": "l'adresse de livraison est présélectionnée au paiement",
+      "default": "adresse de livraison",
+      "makeDefault": "définir pour la livraison",
+      "makeDefaultLabel": "Définir {label} comme adresse de livraison",
       "billing": "adresse de facturation",
       "makeBilling": "définir pour la facturation",
       "makeBillingLabel": "Définir {label} comme adresse de facturation",
@@ -218,9 +220,9 @@
       "edit": "Modifier",
       "editLabel": "Modifier l'adresse {label}",
       "add": "＋ Ajouter une adresse",
-      "defaultDone": "{label} définie par défaut",
+      "defaultDone": "{label} est désormais votre adresse de livraison.",
       "loadError": "Impossible de charger les adresses — rouvrez la page.",
-      "defaultFailed": "Impossible de changer l'adresse par défaut — réessayez."
+      "defaultFailed": "L'adresse de livraison n'a pas pu être définie — réessayez."
     },
     "language": {
       "title": "Langue",
@@ -343,9 +345,10 @@
     },
     "addresses": {
       "title": "Meine Adressen",
-      "default": "Standard",
-      "makeDefault": "als Standard",
-      "makeDefaultLabel": "{label} als Standardadresse festlegen",
+      "note": "die Lieferadresse ist im Checkout vorausgewählt",
+      "default": "Lieferadresse",
+      "makeDefault": "als Lieferadresse",
+      "makeDefaultLabel": "{label} als Lieferadresse festlegen",
       "billing": "Rechnungsadresse",
       "makeBilling": "als Rechnungsadresse",
       "makeBillingLabel": "{label} als Rechnungsadresse festlegen",
@@ -354,9 +357,9 @@
       "edit": "Bearbeiten",
       "editLabel": "Adresse {label} bearbeiten",
       "add": "＋ Neue Adresse",
-      "defaultDone": "{label} als Standard festgelegt",
+      "defaultDone": "{label} ist jetzt Ihre Lieferadresse.",
       "loadError": "Adressen konnten nicht geladen werden — Seite erneut öffnen.",
-      "defaultFailed": "Standardadresse konnte nicht geändert werden — versuchen Sie es erneut."
+      "defaultFailed": "Lieferadresse konnte nicht festgelegt werden — bitte erneut versuchen."
     },
     "language": {
       "title": "Sprache",

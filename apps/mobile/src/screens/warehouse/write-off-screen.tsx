@@ -9,6 +9,7 @@ import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
+import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
@@ -180,8 +181,9 @@ export function WriteOffScreen() {
       >
         {(bind) => (
       <FormScroll {...bind} contentContainerStyle={styles.list} testID="warehouse-write-off-body">
-        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
-        <View style={styles.headBleed}>{header}</View>
+        <OperationsHeadBleed pad="6xl" padTop="3xl">
+          {header}
+        </OperationsHeadBleed>
 
         <BatchContextCard batch={batch} onChange={subject.clear} testID="warehouse-write-off-context" />
 
@@ -328,19 +330,6 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space['3xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
     gap: operationsTheme.space['2xl'],
-  },
-  /*
-    BAŞLIK GÖVDENİN DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09).
-
-    `OperationsStackHeader`ın kendi dolgusu var ve tasarımın ölçüsü o (sayfa kenarı 20). Hazır
-    dalda başlık kaydırıcının gövdesinin İÇİNDE; gövdenin dolgusu onun üstüne biniyor. Yükleme ve
-    ara dallarda gövde yok, başlık kendi ölçüsünde kalıyor — bu yüzden veri geldiği anda başlık yer
-    değiştiriyordu (cihazda ölçüldü). Ters işaretli kenar boşluğu gövdenin dolgusunu geri alıyor;
-    üst dolgu da geri alınıyor, çünkü ara dallarda başlığın üstünde o boşluk yok.
-  */
-  headBleed: {
-    marginHorizontal: -operationsTheme.space['6xl'],
-    marginTop: -operationsTheme.space['3xl'],
   },
   section: {
     gap: operationsTheme.space.md,
