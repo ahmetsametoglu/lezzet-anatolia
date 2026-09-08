@@ -2,8 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import type { B2bCheckView } from '@lezzet/application';
-import { readB2bCheck } from '@lezzet/application';
-import { b2bSummaryTask, runTask } from '@lezzet/ai';
+import { readB2bCheck, readB2bSummary } from '@lezzet/application';
 import {
   AddressService,
   DiscountCodeService,
@@ -202,25 +201,22 @@ export async function readB2bCheckAction(customerId: string): Promise<ActionResu
  *
  * Girdi MOTORUN sinyalleridir (`b2bSignals`) — model kendi kanıtını toplamaz, verilen sinyalleri
  * tek cümleye indirir (sınıf 3 çizgisi: ticari değer uydurulmaz, verilenden türetilir).
+ *
+ * **Montaj PAKETTE** (`readB2bSummary`, 21.285 · mobil notu 07.09): kart okuması + sinyal
+ * eşlemesi + model çağrısı bir tur burada da yazılıydı ve mobil aynı cümleyi isteyince paket
+ * kendi nüshasını kurdu. İki nüsha aynıyken bile tehlikeliydi — girdi bir tarafta değişse
+ * (mesela mükerrer sayısı unutulsa) aynı başvuru için iki yüzey farklı cümle gösterirdi. Burada
+ * kalan yalnız guard ve `ActionResult` sarmalı; tazeleme YOK kararı ve gerekçesi kapının künyesinde.
  */
 export async function b2bSummaryAction(customerId: string): Promise<ActionResult<{ summary: string }>> {
   try {
     await requireAdmin();
-    // TAZELEME YOK: kartı `readB2bCheckAction` az önce okudu ve dış servisleri o sordu (ekran
-    // sıraya bağlı — özet ancak kart çizildikten sonra isteniyor). Burada bir kez daha sormak kart
-    // başına iki SIRET + iki VIES çağrısı demekti; künye `lib/customer/b2b-check.ts`.
-    const check = await readB2bCheck(serviceDb(), customerId, { refreshExternal: false });
-    if (!check) throw new Error('Müşteri bulunamadı.');
-    const result = await runTask(b2bSummaryTask, {
-      legalName: check.legalName,
-      country: check.country,
-      signals: check.signals.map((signal) => ({ label: signal.label, value: signal.value, tone: signal.tone })),
-      duplicateCount: check.duplicates.length,
-    });
+    const result = await readB2bSummary(serviceDb(), customerId);
+    if (!result) throw new Error('Müşteri bulunamadı.');
     // Sebep ekrana AYRINTISIYLA gitmez: kartın üretilmemiş-özet hâli zaten dürüst ("sinyalleri
     // aşağıdan okuyun"); anahtar yoksa da sağlayıcı düştüyse de operatörün yapacağı şey aynı.
     if (!result.ok) return { data: null, error: result.reason };
-    return { data: { summary: result.data.summary }, error: null };
+    return { data: { summary: result.summary }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

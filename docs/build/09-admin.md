@@ -559,6 +559,12 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     mükerrer şüphesinde bakılacak olan KİŞİdir), adres satırı olduğu gibi. **Açık:** kapı yedeğe
     düşüp düşmediğini söylemiyor; "fatura adresi yok, varsayılana bakıldı" uyarısı kapıya bir alan
     gelince yazılır — uydurma etiket konmadı.
+  - **Durum (08.09 · AI özeti montajı da tek kapıdan — mobil notu `not-denetim-b2b-ozeti-tek-kapiya-tasindi.md`).**
+    `b2bSummaryAction` kart okumasını, sinyal eşlemesini ve model çağrısını kendi gövdesinde
+    taşıyordu; mobil (21.285) aynı montajı `readB2bSummary`ye terfi ettirmişti ve iki nüsha birebir
+    aynıydı. Eylem artık paketi çağırıyor; webde kalan yalnız `requireAdmin` + `ActionResult`
+    sarmalı. `@lezzet/ai` importu bu dosyadan düştü. Gerekçe mobilin notundaki gibi: iki nüsha aynıyken
+    bile bir unutma (mükerrer sayısı) iki yüzeye aynı başvuru için farklı cümle gösterirdi.
 - [x] (09.12) **Talepler** — kuyruk (durum/tip daraltma, AI'nın yanıtladıkları ayırt edilir) + detay (sipariş bağı, kalemler, fotoğraflar, yazışma); cevap → e-posta bildirimi; iade tetikleme köprüsü; AI'dan devralma; elle talep açma
   - *Bitti:* durum döngüsü `open → in_progress → resolved` (yeniden açılabilir) çalışıyor; devralınan talepte AI susuyor
   - **16. MODÜLDE TESLİM EDİLDİ (kayıt düzeltmesi 19.08 — satır `[ ]` görünüyordu, iş aylardır yayındaydı).**
