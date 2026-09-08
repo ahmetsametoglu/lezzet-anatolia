@@ -69,8 +69,26 @@ interface ShellScrollState {
 
 interface ShellScrollValue extends ShellScrollState {
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-  /** Ekran değişiminde sıfırlanır (M1d ile aynı kural: "ekran değişiminde sıfırlanır"). */
-  reset: () => void;
+  /**
+   * **ODAĞA GELEN EKRANIN KENDİ KONUMUNA HİZALA** (M1d: *"ekran değişiminde sıfırlanır"*).
+   *
+   * Bir tur burada `reset()` duruyordu ve HİÇBİR YERDEN ÇAĞRILMIYORDU — künye sözü tutulmamıştı.
+   * Cihazda arıza şöyle görünüyordu (kullanıcı bulgusu 08.09): kampanya kartına gir, aşağı kay,
+   * native geri ile dön → karar kutusu EN ÜSTTE olmasına rağmen yapışkan başlık inik kalıyor
+   * (asıl başlıkla üst üste biniyor) ve sekme çubuğu görünmüyor. Tek sebep, iki belirti: durum
+   * kabukta yaşıyor, ekran değişince kimse ona dokunmuyordu.
+   *
+   * **Neden körlemesine sıfırlama DEĞİL:** geri dönülen ekran kaydırma konumunu KORUYOR (yığında
+   * sökülmüyor). Kaydırılmış bir karar kutusuna dönüldüğünde `microVisible` DOĞRU cevabı `true`
+   * olur; sıfırlamak bu arızanın aynadaki eşini üretirdi — başlık gerektiği yerde kaybolurdu.
+   * Bu yüzden çağıran kendi kaydırıcısının son konumunu veriyor ve karar M1b'nin kendi eşiğinden
+   * yeniden türüyor.
+   *
+   * **Çubuk her hâlde geri gelir:** gizleme AŞAĞI KAYDIRMANIN göstergesidir (M1c) ve odak anında
+   * kaydırma yönü diye bir şey yoktur. Üstelik çubuk gezinmenin kendisidir — belirsizlikte
+   * görünür olması, kullanıcıyı menüsüz bir ekranda bırakmaktan iyidir.
+   */
+  syncTo: (offset: number) => void;
 }
 
 const ShellScrollContext = createContext<ShellScrollValue | null>(null);
@@ -86,12 +104,14 @@ export function OperationsShellScrollProvider({ children }: { children: ReactNod
   /** Kilidin bittiği an (ms); 0 = kilit yok. */
   const lockUntil = useRef(0);
 
-  const reset = useCallback(() => {
-    lastOffset.current = 0;
+  const syncTo = useCallback((offset: number) => {
+    lastOffset.current = offset;
     drift.current = 0;
     hidden.current = false;
     lockUntil.current = 0;
-    setState((prev) => (prev.microVisible || prev.tabBarHidden ? { microVisible: false, tabBarHidden: false } : prev));
+    // Eşik M1b'nin kendisi — `onScroll`daki karşılaştırmayla AYNI sabit, ikinci bir kopya değil.
+    const microVisible = offset > MICRO_THRESHOLD;
+    setState((prev) => (prev.microVisible === microVisible && !prev.tabBarHidden ? prev : { microVisible, tabBarHidden: false }));
   }, []);
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -154,7 +174,7 @@ export function OperationsShellScrollProvider({ children }: { children: ReactNod
     setState((prev) => ({ ...prev, tabBarHidden }));
   }, []);
 
-  const value = useMemo<ShellScrollValue>(() => ({ ...state, onScroll, reset }), [state, onScroll, reset]);
+  const value = useMemo<ShellScrollValue>(() => ({ ...state, onScroll, syncTo }), [state, onScroll, syncTo]);
 
   return <ShellScrollContext.Provider value={value}>{children}</ShellScrollContext.Provider>;
 }
@@ -172,5 +192,5 @@ const FALLBACK: ShellScrollValue = {
   microVisible: false,
   tabBarHidden: false,
   onScroll: () => undefined,
-  reset: () => undefined,
+  syncTo: () => undefined,
 };

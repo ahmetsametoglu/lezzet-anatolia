@@ -18,6 +18,8 @@ import { CourierVanStockScreen } from './van-stock-screen';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
+  /* Kabuk kromunun odak hizalaması (21.290) — taklit modülü bütünüyle değiştiriyor. */
+  useFocusEffect: () => undefined,
 }));
 
 const mockSession = { access_token: 'test-token' };

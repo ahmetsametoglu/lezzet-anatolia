@@ -31,6 +31,9 @@ import messages from './messages.json';
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: () => mockBack(), navigate: jest.fn(), push: jest.fn() }),
+  /* Kabuk kromu odakta kaydırma durumunu hizalıyor (21.290); taklit modülü BÜTÜNÜYLE değiştirdiği
+     için eksik bırakılan her dışa-vurum çağrı anında patlar. */
+  useFocusEffect: () => undefined,
 }));
 
 const mockSession = { access_token: 'test-token' };

@@ -17,6 +17,8 @@ const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, push: mockPush, back: jest.fn() }),
   useLocalSearchParams: () => ({ id: CUSTOMER_ID }),
+  /* Kabuk kromunun odak hizalaması (21.290) — taklit modülü bütünüyle değiştiriyor. */
+  useFocusEffect: () => undefined,
 }));
 
 const mockSession = { access_token: 'test-token' };

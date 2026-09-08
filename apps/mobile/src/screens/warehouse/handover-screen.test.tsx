@@ -15,7 +15,9 @@ import { resetWarehouseStatus } from './warehouse-status';
   Cevaplar sözleşme şeklinde: uç bir alanı düşürürse iddia değil DERLEME kırılır.
 */
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), navigate: jest.fn() }) }));
+/* `useFocusEffect` de taklit ediliyor: kabuk kromu odakta kaydırma durumunu hizalıyor (21.290) ve
+   `jest.mock` modülü BÜTÜNÜYLE değiştirdiği için eksik bırakılan her dışa-vurum çağrıda patlar. */
+jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), navigate: jest.fn() }), useFocusEffect: () => undefined }));
 
 const mockSession = { access_token: 'test-token' };
 jest.mock('@/lib/auth/supabase', () => ({

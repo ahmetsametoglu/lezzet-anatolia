@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, type ReactNode } from 'react';
 import {
   ScrollView,
   type NativeScrollEvent,
@@ -79,14 +80,47 @@ interface OperationsScreenChromeProps {
  * kullanan ekranlar `OperationsScreenScroll`u çağırır; o da buradan besleniyor.
  */
 export function OperationsScreenChrome({ title, caption, children }: OperationsScreenChromeProps) {
-  const { onScroll } = useOperationsShellScroll();
+  const { onScroll, syncTo } = useOperationsShellScroll();
+
+  /*
+    ODAK GELDİĞİNDE KABUĞU BU EKRANIN KONUMUNA HİZALA (kullanıcı bulgusu 08.09).
+
+    Kaydırma durumu KABUKTA yaşıyor ama kaydırıcı ekranda; ekran değişince kimse kabuğa haber
+    vermiyordu. Cihazda belirtisi şuydu: kampanya kartına gir, aşağı kay, native geri ile dön →
+    karar kutusu en üstteyken yapışkan başlık inik kalıyor (asıl başlıkla üst üste biniyor) ve
+    sekme çubuğu görünmüyordu. Sözü künyede duran `reset` hiçbir yerden çağrılmıyordu.
+
+    Hizalama BURADA çünkü kabuk davranışının tek kapısı burası (bu dosyanın kendi künyesi): ekran
+    başına elle kurulan bir davranış kurulmuyor — 30.08'de 17 ekranın 16'sında ölçülen şey buydu.
+
+    Konum kendi ref'imizden: ekran yığında sökülmediği için geri dönüldüğünde kaydırma konumunu
+    KORUYOR, dolayısıyla doğru cevap "sıfır" değil "en son neredeydik". Körlemesine sıfırlamak,
+    kaydırılmış bir ekrana dönüldüğünde başlığı gerektiği yerde kaybederdi.
+  */
+  const offset = useRef(0);
+
+  /* Kaydırma olayı bir de BURADA okunuyor: kabuk konumu kendi içinde tutuyor ama o değer TÜM
+     ekranların ortak sayacı; hizalama için gereken şey BU ekranın en son nerede kaldığı. */
+  const bindScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      offset.current = event.nativeEvent.contentOffset.y;
+      onScroll(event);
+    },
+    [onScroll],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      syncTo(offset.current);
+    }, [syncTo]),
+  );
 
   return (
     <>
       {/* Şerit kaydırıcının KARDEŞİ, çocuğu değil: mutlak konumlu ve kaydırma alanının üstünde
           durur. İçine konsaydı sayfayla birlikte kayardı. */}
       <OperationsMicroHeader title={title} caption={caption} />
-      {children({ onScroll, scrollEventThrottle: SCROLL_THROTTLE_MS })}
+      {children({ onScroll: bindScroll, scrollEventThrottle: SCROLL_THROTTLE_MS })}
     </>
   );
 }

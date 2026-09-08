@@ -30,6 +30,8 @@ jest.mock('@/lib/toast/toast-store', () => ({
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), back: mockBack, push: mockPush }),
   useLocalSearchParams: () => mockParams,
+  /* Kabuk kromunun odak hizalaması (21.290) — taklit modülü bütünüyle değiştiriyor. */
+  useFocusEffect: () => undefined,
 }));
 
 const mockSession = { access_token: 'test-token' };

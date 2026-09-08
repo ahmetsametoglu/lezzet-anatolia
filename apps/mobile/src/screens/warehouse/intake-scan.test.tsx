@@ -43,6 +43,8 @@ async function expectToast(pattern: RegExp): Promise<void> {
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
   useLocalSearchParams: () => mockParams,
+  /* Kabuk kromunun odak hizalaması (21.290) — taklit modülü bütünüyle değiştiriyor. */
+  useFocusEffect: () => undefined,
 }));
 
 const mockSession = { access_token: 'test-token' };

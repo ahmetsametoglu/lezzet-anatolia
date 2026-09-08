@@ -13719,3 +13719,51 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   sildi → "SDK location not found" (dosya geri yazıldı); *(2)* `mergeExtDexDebug`; *(3)*
   `mergeDebugNativeLibs` → `NoSuchFileException … libgifimage.so`. **`expo run:android` düşse bile
   exit 0 döndürüyor** — bu yüzden kurulumun kanıtı çıkış kodu değil `dumpsys package … lastUpdateTime`.
+
+- [x] (21.290) **KABUĞUN KAYDIRMA DURUMU EKRAN DEĞİŞİMİNDE SIZIYORDU — en üstteki ekranda yapışkan başlık inik, sekme çubuğu gizli kalıyordu** (kullanıcı bulgusu 08.09)
+  `touches:` `apps/mobile/src/lib/operations/{shell-scroll.tsx,shell-scroll.test.tsx}` · `apps/mobile/src/components/operations/screen-scroll.tsx`
+
+  **Durum (08.09) — TAMAM, cihazda ölçüldü.**
+
+  Kullanıcının tarifi birebir yeniden üretildi (Oppo CPH1907): karar kutusundan yakın-SKT kampanya
+  kartına gir → aşağı kay (yapışkan başlık iner) → native geri (tuş ya da kenar jesti) → karar
+  kutusu **en üstte** olmasına rağmen yapışkan başlık inik duruyor (asıl başlıkla ÜST ÜSTE
+  biniyor) ve sekme çubuğu çizilmiyor.
+
+  **SEBEP TEK, BELİRTİ İKİ:** kaydırma durumu KABUKTA yaşıyor (`OperationsShellScrollProvider`),
+  kaydırıcı ise her ekranın kendinde. Ekran değişince kabuğa kimse haber vermiyordu, iki boolean
+  da (`microVisible` · `tabBarHidden`) olduğu gibi sızıyordu.
+
+  **Kapı zaten yazılmıştı ve HİÇ ÇAĞRILMIYORDU.** Bağlamda bir `reset` duruyor, künyesi de
+  *"ekran değişiminde sıfırlanır (M1d)"* diyordu; `grep` tüm ağaçta tek çağrı bulamadı. Söz
+  künyede kalmış, koda hiç geçmemişti (`CLAUDE §5`: kapanmış satır vaat ettiğini teslim etmiş
+  olmalı).
+
+  **Sıfırlama DEĞİL, HİZALAMA.** `reset` → `syncTo(offset)`: geri dönülen ekran yığında
+  sökülmediği için kaydırma konumunu KORUYOR; körlemesine sıfırlamak bu arızanın aynadaki eşini
+  üretirdi — kaydırılmış bir ekrana dönüldüğünde başlık gerektiği yerde kaybolurdu. Karar M1b'nin
+  kendi eşiğinden (`44`) yeniden türüyor. Çubuk ise her hâlde geri gelir: gizleme AŞAĞI
+  KAYDIRMANIN göstergesidir (M1c) ve odak anında kaydırma yönü diye bir şey yoktur — üstelik çubuk
+  gezinmenin kendisi.
+
+  Çağrı `OperationsScreenChrome`'da (`useFocusEffect`), çünkü kabuk davranışının tek kapısı orası;
+  ekran başına elle kurulan bir davranış kurulmuyor (o dosyanın kendi künyesi, 30.08 ölçümü).
+
+  ── KURULMAYAN MAKİNE: ODAK KORUMASI (kendi hatam, ölçümle çürüttüm) ─────────
+
+  Hizalamadan sonra cihazda çubuk düzelmiş, başlık düzelmemiş göründü. Buradan bir teori kurdum —
+  *"ayrılan ekranın kaydırıcısı sönerken son bir olay yolluyor ve kabuğu yeniden sürüklüyor"* — ve
+  odaktan düşmüş ekranın olaylarını yutan bir koruma yazdım; künyesine de "ölçüldü" diye yazdım.
+
+  **İkisi de yanlıştı.** Metro'ya giden `adb reverse` tüneli düşmüştü: Fast Refresh sessizce
+  durmuş, cihaz ESKİ paketi koşturuyordu. Yani ölçtüğüm şey düzeltmemin sonucu değildi. Tüneller
+  kurulup uygulama taze paketle açılınca arıza `syncTo` ile tek başına kayboldu; korumayı geçici
+  olarak kapatıp senaryoyu **dört kez** (üç tuş + bir kenar jesti) tekrarladım, dördü de temiz.
+  Koruma silindi — olmayan bir soruna makine kurulmaz (`CLAUDE §0`).
+
+  **Kalıcı ders:** cihazda "düzeltmem işe yaramadı" gözlemi, önce **paketin taze olduğunu**
+  doğrulamayı gerektiriyor. Kanıtı ucuz: `adb reverse --list` boşsa Fast Refresh ölmüştür ve
+  ekranda görülen şey kodun değil, geçmişin resmidir.
+
+  **Testler:** `shell-scroll.test.tsx` (yeni, 4/4) — eşik davranışı, sızmanın kapanması,
+  hizalamanın körlemesine olmadığı, ve yön birikiminin de sıfırlandığı.

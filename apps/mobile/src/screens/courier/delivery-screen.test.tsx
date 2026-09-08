@@ -53,6 +53,8 @@ const lastToast: string[] = [];
 const mockBack = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({ back: () => mockBack(), navigate: jest.fn(), push: jest.fn() }),
+  /* Kabuk kromunun odak hizalaması (21.290) — taklit modülü bütünüyle değiştiriyor. */
+  useFocusEffect: () => undefined,
 }));
 
 const mockSession = { access_token: 'test-token' };

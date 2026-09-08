@@ -23,7 +23,9 @@ import { resetWarehouseStatus } from './warehouse-status';
   test "basıldı" demiyor; `printLabel` yalnız çağrılmadığını doğrulamak için duruyor.
 */
 
-jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), navigate: jest.fn() }) }));
+/* `useFocusEffect` kabuk kromunun odak hizalaması için (21.290) — taklit modülü bütünüyle
+   değiştirdiği için eksik bırakılan dışa-vurum çağrıda patlar. */
+jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), navigate: jest.fn() }), useFocusEffect: () => undefined }));
 
 const mockSession = { access_token: 'test-token' };
 jest.mock('@/lib/auth/supabase', () => ({
