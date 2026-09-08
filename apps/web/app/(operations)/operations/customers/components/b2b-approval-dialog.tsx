@@ -156,7 +156,14 @@ function CheckPane({
           <span className="font-ops-body text-ops-xs text-ops-muted">
             {check.addressLine ?? 'kayıtlı adresi yok'}
           </span>
-          {check.siret ? <span className="font-ops-mono text-ops-xs text-ops-muted">SIRET {check.siret}</span> : null}
+          {/* Etiket MOTORDAN (`b2bIdentity`, 07.09): bir tur `SIRET` diye sabitti ve Alman bir
+              başvurunun KDV numarası bu adla etiketleniyordu; SIRET'i olmayan başvuruda ise satır
+              hiç çizilmiyor, şirketin numarası kartta görünmüyordu. */}
+          {check.identity ? (
+            <span className="font-ops-mono text-ops-xs text-ops-muted">
+              {check.identity.label} {check.identity.value}
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-none items-center gap-1.5">
           <Badge tone={check.country === 'FR' ? 'blue' : 'amber'}>{check.country}</Badge>

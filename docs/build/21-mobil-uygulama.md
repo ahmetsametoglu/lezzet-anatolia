@@ -10312,7 +10312,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     susturur · olmayan uzun basma kanca kurmaz). Bekçi gerekliydi: fazla konan muafiyet uygulamayı
     sessizleştirir, eksik konan gezinirken titretir — ikisi de hata vermez.
 
-- [~] (21.217) **B2B onay ekranı yok ama bildirimi var** — yön seçildi (kullanıcı kararı 07.09: *"A seçeneğini istiyorum"*)
+- [x] (21.217) **KURUMSAL HESAP BAŞVURUSU TELEFONDAN ONAYLANIYOR — bildirim artık bir yere gidiyor** (kullanıcı kararı 07.09: *"A seçeneğini istiyorum"*)
   `touches:` `design/pages/app-yonetim-b2b-onay.md` · `docs/talep/operasyon-b2b-kontrol-karti-uygulama-paketine.md` ·
   (gelecek) `packages/types/src/contracts/management-api.schema.ts` · `apps/mobile-api/src/api/v1/management.ts` ·
   `apps/mobile/src/screens/management/`
@@ -10373,8 +10373,117 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   *Karar verilmiş*). Boş hâlde bölüme hiç girilmiyor — "bekleyen yok" ekranı olmayan bir işi varmış
   gibi gösterir.
 
-  **BEKLEYEN(21.217):** uç ve ekran, terfinin gelmesine bağlı. Tasarımın ikinci turu (liste + dört
-  rozet) terfiyi beklemeden çizilebilir — veri şekli brief'te ve değişmiyor.
+  **SATIR KÜNYESİ KARARI (kullanıcı 07.09):** bayrak satırda kalıyor, tam hesaplanıyor. Brief'e
+  *"masaüstünden aynen alındı"* diye yazmıştım; ölçünce öyle olmadığı çıktı — masaüstü TASARIMINDA
+  kuyruk ve bayrak var ama KODUNDA yok (`b2bPending` müşteri listesinin süzgeci, satır düz
+  `CustomerRow`). Yani bayrağı ilk hesaplayan bu ekran olacak. Maliyet ölçüldü: sinyalin yedi
+  girdisinden beşi profil satırında bedava, rota+adres sayfa başına iki sorgu, gerçek N+1 yalnız
+  mükerrer sayısı — ve **dış servis çağrısı yok** (`refreshExternal:false`). N sayfa boyuyla
+  tavanlı. İki seçenek elendi: bayraksız satır kuyruğu dizine çevirip sıralamayı yalnız yaşa
+  bırakıyordu; ucuz bayrak (mükerrersiz) ise "Temiz" yazıp operatörü açmadan onaylamaya davet
+  ederdi — yanlış etiket değil, yanlış EYLEM üretirdi. Gerekçelerin tamamı brief `§2b`de.
+
+  ~~**BEKLEYEN(21.217):** uç ve ekran, terfinin gelmesine bağlı.~~ **KAPANDI 07.09** — terfi aynı gün
+  geldi (web şeridi, `packages/application/src/b2b/check.ts`) ve tasarımın ikinci turu da (liste +
+  dört rozet) 14:12'de indi.
+
+  ── TAMAMLANDI (07.09) ───────────────────────────────────────────────────────
+
+  **Akış uçtan uca kapandı:** bildirim → başvurunun kartı → onay/ret. Ve liste, kartın ikinci
+  kapısı olarak yanında.
+
+  **Dört uç** (`management.ts`): kuyruk (iki sekme) · kontrol kartı · onay · ret. Kart da kuyruk da
+  `readB2bCheck`ten besleniyor — web'in müşteri panelindeki diyalogla AYNI okuma. İki yüzey aynı
+  başvuru için farklı bir şey söylerse operatör hangisine inanacağını bilemez.
+
+  **Veri katmanında iki ölçüm, ikisi de mevcut kodu kullanamamamın sebebi:**
+  · `list()` KULLANILMADI — `createdAt`e göre sıralıyor, oysa kuyruk BAŞVURU sırasına göre okunmalı
+    (`0011:369`ün kendi künyesi: *"`created_at` … B2C açılıp aylar sonra başvuran müşteriyi listenin
+    dibine gönderirdi"*). Kısmi indeks de o sıraya kurulu. Ayrı okuma: `listB2bQueue`.
+  · "Karar verilmiş" için `b2b_pending = false` TEK BAŞINA yetmiyor — o üretilmiş kolonu hiç
+    başvurmamış her müşteri de taşıyor ve tersini almak arşivi bütün müşteri listesine çevirirdi.
+    İkinci şart: künyesi dolu (`B2B_DECIDED`).
+
+  **`city` alanı görünüme eklendi.** Kuyruk satırı `şehir · ülke · yaş` yazıyor ve görünümde yalnız
+  birleşik `addressLine` vardı (*"12 rue des Fleurs, 67000 Strasbourg"*) — bir satıra sığmıyor.
+  Dizeyi virgülden BÖLMEDİM (biçim değişince ayrıştırma sessizce yanlış şehir yazar) ve adresi
+  ikinci kez OKUMADIM (aynı adres `readB2bCheck` içinde zaten çekiliyor); alan taşındı, tek satır.
+
+  **Bayrak listede hesaplanıyor, dış servise gidilmiyor** (`refreshExternal:false`) — tasarımın
+  dipnotu da bunu yazıyor. Maliyet satır başına dört YEREL okuma ve N sayfa boyuyla tavanlı; toplu
+  hâle getirmek montajı ikinci kez yazmak olurdu ve iki hesap bir gün ayrışır (CLAUDE §1).
+
+  **Tek kayıtta liste ATLANIYOR** — ölçüt kümenin sayacı (`single`, uçtan), `rows.length` değil:
+  sayfalanmış bir listede ilk sayfa doluysa uzunluk yanlış cevap verir. Yönlendirme `replace` ile,
+  yani atlanan liste geri yığınında kalmıyor.
+
+  **Bildirim bekleme tablosundan DÜŞTÜ.** `SECTION_WITHOUT_DESTINATION` künyesinin kendi kuralı:
+  *"hedef doğduğu gün bu tablodan düşer; iki tablo aynı anda aynı türü taşımaz."* Kimliksiz
+  bildirimde hedef yine `null` — dokunulunca hiçbir yere gitmeyen bir düğme doğmuyor.
+
+  **Tasarıma sadık kalındı:** iki sekme sayaçlarıyla, satırda renkli şerit + OKUNABİLİR rozet (renk
+  tek başına anlam taşımaz), karar rozeti yalnız karar verilmiş sekmesinde, sekme başına boş hâl
+  (*"Kuyruk kısa tutulur; yeni başvuru bildirimle gelir"*), ve kartta onay/ret asimetrisi — onay tek
+  dokunuş, ret sebep isteyen çekmece. Tasarımın *"AYNI KİŞİ OLABİLİR Mİ?"* soru tonu ve dipnotları
+  birebir alındı.
+
+  **Doğrulama:** `b2b-screens.test.tsx` 9/9 · `b2b-approval.test.ts` 29/29 · `notification-map.test.ts`
+  9/9 · birim paketi 2112/2112 · kök typecheck 20/20 · dokunulan dosyalarda lint temiz.
+
+  **Sözleşmenin kendi testi de açıldı** (`management-api.schema.test.ts`): kuyruk sorgusunun
+  `limit`i metinden sayıya ÇEVRİLİYOR ve sınırlanıyor — `rule-coverage.test.ts` bu borcu ben
+  kural eklediğim anda yakaladı. Sınanan şey Zod değil bizim kararımız: `max(50)` sessizce düşerse
+  bir istemci tek turda sayfalamanın tamamını dolaşır ve keyset'in tavanı anlamını yitirir. Testlerin en değerlisi üçü: tek
+  kayıtta listenin atlanması, ret sebebinin gövdeye girmesi, ve BAYAT kararın sessizce yutulmaması
+  (araya giren telefonun kararı cümleyle yazılıyor, rozet tazeleniyor, düğmeler kalkıyor).
+
+  ── CİHAZ TURU: YEDİ SAPMA ÖLÇÜLDÜ VE KAPANDI (kullanıcı bulgusu 07.09) ──────
+
+  Kullanıcı Oppo'da açtı ve *"orijinal tasarımla bunun arasında büyük farklılıklar görüyorum"*
+  dedi. `Operasyon Mobil v3.dc.html`in `b2bOnay` bloğu satır satır okundu; **yedi sapma** çıktı ve
+  ikisi görsel değil işlevsel:
+
+  1. **Bayrak şeridi tek kelime yazıyordu** (*"Dikkat"*), tasarım GEREKÇELİ CÜMLE istiyor. Yargıyı
+     söyleyip sebebini söylememek, operatöre hangi satıra bakacağını bırakmıyordu. Cümle MOTORA
+     eklendi (`b2bFlag` artık `reason` da döndürüyor) — ekranda kurulsaydı aynı yargı liste, kart
+     ve masaüstünde üç ayrı biçimde yazılırdı. En çok iki sebep anılıyor, gerisi sayılıyor: gerekçe
+     bir cümle, hemen altındaki ızgaranın ikinci nüshası değil.
+  2. **Sinyalin tonu solda çıplak noktaydı**, tasarım sağda yuvarlak rozet + SİMGE çiziyor. İki
+     kusur birden: göz değeri okurken tonu satırın öteki ucunda görmüyordu, ve renk tek başına
+     anlam taşıyordu. Rozet `✓ ! ×` ile renge yaslanmıyor.
+  3. **Satırlar boşlukla ayrıktı**, tasarım ince ayraçla bitişik yazıyor — altı sinyal iki ekrana
+     yayılıyordu, oysa ızgaranın işi tek bakışta karşılaştırılmak. Kullanıcı ikinci turda bunu
+     ayrıca söyledi (*"satır yüksekliklerini biraz azaltalım"*): satıra verdiğim `size.controlSm`
+     (46) DOKUNMA HEDEFİ ölçüsüydü ve bu satırlar basılmıyor, okunuyor. Yükseklik dolguya geçti.
+  4. **Onay düğmesinde ✓ simgesi ve zeytin ışıma yoktu.** Kullanıcı v3'te düğme gölgesi
+     hatırlamadığını söylemişti ve ben hepsini `flat` yapmıştım; ölçüm ikimizi de kısmen düzeltti —
+     v3'te SERT gri gölge hiç yok (kullanıcı haklı) ama **dokuz yumuşak zeytin ışıma var** ve
+     dokuzuncusu tam olarak bu düğme (tasarım satır 3247). Kitin `elevation="glow"` durağı bu değer
+     için açılmış ama HİÇBİR ekran kullanmıyordu — künyesinde *"bekleyen bir arıza"* diye yazılıydı.
+  5. **Eylemler akışın içindeydi**, tasarım sayfaya YAPIŞIK çiziyor: kart uzun olduğu için operatör
+     karar vermek üzere sona kadar kaydırmak zorundaydı. Kitin `OperationsStickyBar`ı kullanıldı;
+     çubuğun yüksekliği ÖLÇÜLÜP alt dolguya veriliyor. İlk yazımda `styles.body.paddingBottom`
+     okunuyordu ve cihazda kusur şuydu: unistyles o alanı render anında vermiyor, toplam `NaN`
+     çıkıyor ve RN'yi sessizce atlatıyor — *"masada devam et"* cümlesi çubuğun ardında kalmıştı.
+     Ölçülemeyen bir değerle aritmetik yapılmaz (`CLAUDE §1`).
+  6. **Özet yokken başlıklı çerçeveli blok çiziliyordu**, tasarım yalnız soluk bir cümle bırakıyor.
+     (Blokun kendisi 21.285'te gerçek cümleyle geri geldi.)
+  7. **Resmî unvan çıplak yazılıyordu**, tasarım *"· resmî unvan"* ekiyle ve YALNIZ ticari addan
+     farklıysa gösteriyor.
+
+  **VE BİR GERÇEK HATA ÇIKTI (işlevsel):** kimlik kutusunun etiketi `SIRET` diye SABİTTİ. Alman bir
+  başvuruda iki şey birden olurdu — SIRET'i olmadığı için kutu hiç çizilmez, çizilseydi de KDV
+  numarası *"SIRET"* diye etiketlenirdi. Hangi numaranın hangi adla anıldığı bir İŞ KURALIDIR
+  (FR: SIRET, DE: USt-IdNr), biçimlendirme değil — motora kondu (`b2bIdentity`) ve görünümdeki
+  çıplak `siret` alanı onun yerine geçti. Numaranın KAYNAĞI da yazılıyor (*"resmî kayıttan"* /
+  *"elle girilmiş"*): doğrulanmış numarayla başvuranın yazdığı numara aynı ağırlıkta okunmamalı.
+  Sözleşme değişikliği olduğu için web'in diyaloğu da aynı ada çevrildi — kök typecheck bunu
+  yakaladı ve zaten o yüzden koşuluyor.
+
+  **AÇIK KALAN, benim alanımda değil:** yönetim ANA EKRANINDAKİ kart. Tasarımda var (`kartCoklu` /
+  `kartTek`) ve listeye girişin tek yolu o; ana ekran paralel şeridin elinde, not açıldı
+  (`docs/talep/not-yonetim-b2b-hub-karti-eksik.md`) ve uç kartın istediği üçünü — `counts.pending`,
+  `single`, boş hâl — tek okumada veriyor. Bugün liste yalnız doğrudan adresle açılıyor.
 
 - [ ] (21.218) **"Eksikleri bildirerek siparişi kapat" düğmesi açık kutu varken görünmesin** —
   sunucu kuralı ZATEN var (`declareOrderShort` içi dolu açık kutuda `open_box_not_empty` dönüyor);
@@ -12252,9 +12361,10 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `fireEvent.press` işleyici ararken KOMPOZİT propları da tarıyor, o yüzden kartın prop'u `onPress`
   olamazdı — `onOpen` oldu; aksi hâlde "basılamaz kart basılmıyor" testi yanlış yerden yeşil geçerdi.
 
-  **BEKLEYEN(21.217):** belge · askıda kapanış · kurumsal başvuru için hedef ekranlar yok; o üç tür
-  bugün yalnız haber veriyor. Yeni bildirim türleri (sefer devri · WhatsApp penceresi · yazılamayan
-  iade · tahsil edilmemiş teslim) ayrı iş birimi.
+  **BEKLEYEN(21.284):** belge · askıda kapanış için hedef ekranlar yok; o İKİ tür bugün yalnız haber
+  veriyor. (**Kurumsal başvuru 07.09'da bu üçlüden çıktı** — ekranı doğdu, 21.217.) Yeni bildirim
+  türleri (sefer devri · WhatsApp penceresi · yazılamayan iade · tahsil edilmemiş teslim) ayrı iş
+  birimi.
 
 - [x] (21.265) **İPTAL EDİLEN SİPARİŞ — mal hâlâ çıkabiliyordu, para hâlâ bekleniyordu** (kullanıcı kararı 05.09: A ve B grupları kritik, uçtan uca)
   `touches:` `supabase/migrations/0012_order.sql` · `packages/types/src/entities/order.schema.ts` · `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/database/src/services/{order,order-box}.service.ts` · `packages/application/src/shipping/{cancel.ts,handover.ts,announce.ts,tracking.ts,announce.test.ts}` · `packages/application/src/warehouse/{boxes.ts,boxes.test.ts}` · `packages/application/src/order/{refund.ts,refund.test.ts}` · `packages/application/src/index.ts` · `apps/web/app/(operations)/operations/{dashboard-page-read.ts,orders/actions.ts,orders/orders-read.test.ts}` · `apps/mobile/src/screens/warehouse/messages.json`
@@ -13337,6 +13447,80 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **"GÜN İÇİNDE" AYRIMI AÇILMAYACAK** (kullanıcı kararı 07.09) — tasarım *"5 karar · 2 tanesi gün
   içinde"* diyor, bizde öyle bir kavram yok ve olmayacak. Ekran kendi cümlesinde kalıyor
   (*"{n} karar bekliyor"*); gerekçe `design/KARARLAR.md`de kayıtlı.
+
+- [ ] (21.284) **Hedefi olmayan iki bildirim türü — belge ve askıda kapanış** (21.217'den ayrıldı 07.09)
+  `touches:` `apps/mobile/src/screens/operations/notification-map.ts`
+
+  21.217 kurumsal başvuruyu kapattı ve o tür hedefsizler tablosundan düştü. Geriye **iki** tür kaldı
+  ve ikisi de aynı sebeple bekliyor: açacakları ekran mobilde YOK.
+
+  · `document_undeliverable` — hedefi sipariş detayı; operasyon kabuğunda öyle bir ekran yok.
+  · `run_close_pending` — hedefi seferin kapanışı; kurye kapanışı var ama askıda kalanın kendi
+    ekranı yok.
+
+  Üçüncü bir kalem daha bu kimliğe bağlı: transfer bildirimleri `?transferId=` taşımıyor, bugün
+  liste başına gidiliyor (satırı seçmiyor).
+
+  **Kural aynı kalıyor:** var olmayan adrese götürmektense hiç götürme. Satır haber veriyor,
+  tıklanmıyor — bölüm kökü bir cevap değil savuşturmaydı.
+
+- [x] (21.285) **ASİSTAN ÖZETİ BAĞLANDI — blok artık gerçek cümleyi taşıyor** (21.217'nin cihaz turundan · kullanıcı kararı 07.09: *"Asistan özeti bloğunu da ekleyelim. Ve bağlayalım."*)
+  `touches:` `packages/application/src/b2b/summary.ts` · `packages/types/src/contracts/management-api.schema.ts` ·
+  `apps/mobile-api/src/api/v1/management.ts` · `apps/mobile-api/.env.example` ·
+  `apps/mobile/src/lib/api/management.ts` · `apps/mobile/src/screens/management/{b2b-application-screen.tsx,use-b2b-check.hook.ts,messages.json}`
+
+  Tasarımın kartında *"ASİSTAN ÖZETİ · OKUMA YARDIMI, KARAR DEĞİL"* bloğu var ve blok çizildi —
+  ama bugün daima kendi boş hâlinde duruyor (*"Özet üretilemedi — sinyalleri yukarıdan okuyun"*).
+  Motor (`b2bSummaryTask`, `@lezzet/ai`) YALNIZ web'in bağımlılığında; `apps/mobile-api` o paketi
+  hiç tanımıyor.
+
+  **Blok neden şimdiden çizildi:** tasarımın kendi boş hâli dürüst bir cümle söylüyor ve özet
+  kararın dayanağı DEĞİL — sinyaller yukarıda, karar onlardan veriliyor. Bloğu sonraya bırakmak,
+  gelen özetin nereye oturacağını da belirsiz bırakırdı.
+
+  **Durum (07.09) — TAMAMLANDI.**
+
+  **Kilit dosyasına DOKUNULMADI ve ölçüm bunu söyledi:** görev satırı `@lezzet/ai`nin mobil arka uca
+  bağımlılık olarak ekleneceğini yazıyordu; ölçünce `@lezzet/application` o paketi ZATEN taşıyordu
+  (çeviri ve ses oradan koşuyor) ve `apps/mobile-api` de `application` bağımlısıydı. Yani gereken
+  şey yeni bir bağımlılık değil, montajın doğru katmana konmasıydı — `pnpm-lock.yaml` değişmedi.
+  Vaadin üstü bu yüzden çizili: ~~`@lezzet/ai` mobil arka uca eklenir~~.
+
+  **Montaj `packages/application/src/b2b/summary.ts`** (`readB2bSummary`): kartı
+  `refreshExternal:false` ile okur, `runTask(b2bSummaryTask, …)` çağırır, FIRLATMAZ. Buraya konması
+  bilinçli — aynı hesap web'in `b2bSummaryAction`ında da duruyordu ve ikinci nüsha yazılsaydı bir
+  gün biri girdiyi başka kurup (mesela `duplicateCount`ı unutup) iki yüzeyin aynı başvuru için
+  farklı cümleler göstermesine yol açardı (`CLAUDE §1`). Web'in eylemini bu kapıya çevirmek
+  denetimin alanında: `docs/talep/not-denetim-b2b-ozeti-tek-kapiya-tasindi.md`.
+
+  **Uç ayrı:** `GET /management/b2b/:id/summary`. Karttan ayrı olması taşıyıcı — model çağrısı
+  saniye mertebesinde ve kartın açılışı onu beklememeli; ekran kartı çizer, özet arkadan düşer.
+
+  **Üretilememek 200 döner, hata değil:** anahtar yapılandırılmamış da olabilir sağlayıcı düşmüş de;
+  5xx yapmak ekranı *"okuma yüklenemedi"* hâline düşürüp kararın dayanağı olan SİNYALLERİ de
+  götürürdü. Sebep sunucunun kaydına yazılır, tele çıkmaz — operatörün yapacağı şey her iki hâlde
+  de aynı: sinyalleri yukarıdan okumak.
+
+  **Ekranda iki hâl** (tasarımın kendi iki hâli): cümle varsa başlıklı kesikli çerçeveli blok,
+  yoksa yalnız soluk cümle. Bekleme hâlinde HİÇBİR ŞEY çizilmiyor — iskelet, kartı model dönene
+  kadar oynatırdı. Başlık ("okuma yardımı, karar değil") cümle kadar taşıyıcı: onsuz tek satırlık
+  bir makine metni, sinyallerin üstünde bir hüküm gibi okunur.
+
+  **YEREL KURULUMDA YAPILANDIRMA YOK** (ölçüldü 07.09): `apps/mobile-api/.env.local` hiçbir AI
+  değişkeni taşımıyor, yani uç bugün yerelde `summary: null` dönüyor ve kart dürüst boş hâlinde
+  duruyor. Env dosyası KULLANICININ — kopyalanmadı; gereksinim `.env.example`e gerekçesiyle yazıldı.
+
+  **SAĞLAYICI GEMINI, ANTHROPIC DEĞİL** (kullanıcı düzeltmesi 07.09). `.env.example`e önce
+  `ANTHROPIC_API_KEY` yazmıştım; ölçünce web ve backend'de o değişkenin BOŞ, `GOOGLE_GENERATIVE_AI_API_KEY`in
+  DOLU olduğu ve ikisinin de `AI_PROVIDER=google` taşıdığı çıktı. Örnek dosya düzeltildi ve üçlü
+  birlikte yazıldı — çünkü `AI_PROVIDER`ı atlamak SESSİZ bir tuzak: `resolveModel`ın varsayılanı
+  `anthropic` (`packages/ai/src/provider.ts:56`), yani yalnız Google anahtarını koyan bir kurulum
+  *"ANTHROPIC_API_KEY tanımlı değil"* diye reddedilir — anahtar dururken. Model adları da env'de
+  tutuluyor: `provider.ts`in kendi künyesi varsayılan listenin bayatladığını yazıyor
+  (`gemini-2.5-flash-lite` *"no longer available to new users"* ile reddedilmişti).
+
+  **Testler:** `b2b-screens.test.tsx` iki yeni durum — özet gelince blok çizilir, gelmeyince yalnız
+  cümle kalır ve blok BAŞLIĞI çizilmez.
 
 - [x] (21.286) **SOSYAL SOHBETTEN MESAJ GİDİYOR — defter evresi bitti** (kullanıcı kararı 07.09: *"Mobil bu konuda web'den daha kullanışlı olması lazım. Yani kesinlikle gönderilmeliyiz."*)
   `touches:` `apps/mobile-api/src/api/v1/social.ts` · `packages/types/src/contracts/social-api.schema.ts` · `apps/mobile/src/lib/api/social.ts` · `apps/mobile/src/screens/management/{social-conversation-screen.tsx,use-social-conversation.hook.ts,messages.json}`

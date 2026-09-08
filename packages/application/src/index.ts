@@ -84,6 +84,10 @@ export { checkEuVatNumber, refreshVatNumberCheck } from './b2b/vat-check';
 export type { VatCheckState } from './b2b/vat-check';
 export { readB2bCheck } from './b2b/check';
 export type { B2bCheckView, B2bDuplicateRow } from './b2b/check';
+export { readB2bQueue } from './b2b/queue';
+export type { B2bQueueRowView, B2bQueueView } from './b2b/queue';
+export { readB2bSummary } from './b2b/summary';
+export type { B2bSummaryResult } from './b2b/summary';
 // ── Davet altyapısı (17.7 zemin · 17.9 bağlantı) ────────────────────────────
 // Dört kapı tek dosyada: kodu ÜRET · kodu ADRESE çevir · karşılama durumunu OKU · bağı KUR.
 // `linkReferrer`ı doğrudan çağıran bir yüzey yok (kayıt akışının içinde, `verifyOtpCode`) ama

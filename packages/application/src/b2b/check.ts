@@ -1,6 +1,7 @@
 import { AddressService, DeliveryZoneService, UserProfileService } from '@lezzet/database';
 import {
   b2bFlag,
+  b2bIdentity,
   b2bSignals,
   b2bStatusOf,
   isInRoute,
@@ -75,11 +76,30 @@ export interface B2bCheckView {
   name: string;
   /** Resmî künye adı (`company_info.legalName`) — ticari addan farklı olabilir. */
   legalName: string | null;
-  siret: string | null;
+  /** Şirketin kimlik numarası, ADIYLA ve kaynağıyla (`b2bIdentity`). `null` = hiçbir numara yok. */
+  identity: { label: string; value: string; source: string } | null;
   country: Country;
   phone: string | null;
   /** Tek satırlık adres; `null` = kayıtlı adresi yok. */
   addressLine: string | null;
+  /**
+   * ŞEHİR AYRICA (21.217 · mobil şerit ekledi 07.09) — `addressLine` bir kuyruk satırına sığmıyor
+   * (`"12 rue des Fleurs, 67000 Strasbourg"`), mobil listenin satırı ise `şehir · ülke · yaş` yazıyor.
+   *
+   * Alan taşınıyor, ÇÖZÜMLENMİYOR: `addressLine`ı virgülden bölmek biçimi bir kurala çevirirdi ve
+   * biçim bir gün değişince ayrıştırma sessizce yanlış şehir yazardı. Değer zaten burada okunan
+   * adresin kendi kolonu.
+   */
+  city: string | null;
+  /**
+   * BAŞVURUNUN GELDİĞİ AN (21.217 · 07.09) — kart künyesini bundan yazıyor (*"başvuru · 3 saat
+   * önce"*). Cihazda ölçülen kusurun düzeltmesi: alan taşınmadığı için kart her başvuruda
+   * "tarihi yok" diyordu, oysa damga (`b2b_applied_at`) kayıtta duruyordu.
+   *
+   * `null` = damga yok (eski kayıt) ve bu SIFIR DEĞİLDİR: "az önce" demek, unutulmuş bir başvuruyu
+   * taze göstermek olurdu (CLAUDE §1).
+   */
+  appliedAt: string | null;
   mapsHref: string | null;
   /**
    * Başvurunun DÖRT hâli — bir tur `approved: boolean | null` yazılıydı ve o alan iki hâli birden
@@ -89,7 +109,7 @@ export interface B2bCheckView {
    */
   status: B2bApplicationStatus;
   signals: B2bSignal[];
-  flag: { label: string; tone: SignalTone };
+  flag: { label: string; tone: SignalTone; reason: string };
   duplicates: B2bDuplicateRow[];
 }
 
@@ -226,10 +246,14 @@ export async function readB2bCheck(
     // Künye de TAZE olanı gösterir: sinyaller tazeye bakarken başlık eskiyi yazsaydı, operatör
     // "kapalı" sinyalinin yanında eski unvanı okurdu ve hangisinin doğru olduğunu bilemezdi.
     legalName: (fresh ?? profile.companyInfo)?.legalName ?? null,
-    siret: (fresh ?? profile.companyInfo)?.siret ?? null,
+    /* Kimlik künyesi MOTORDAN: hangi numaranın hangi adla yazılacağı ülkeye bağlı bir iş kuralı
+       (FR: SIRET, DE: USt-IdNr), ekranın biçimlendirme kararı değil. */
+    identity: b2bIdentity({ companyInfo: fresh ?? profile.companyInfo, vatNumber: profile.vatNumber, country: profile.country }),
     country: profile.country,
     phone: profile.phone,
     addressLine: address ? `${address.line1}, ${address.postalCode} ${address.city}` : null,
+    city: address?.city ?? null,
+    appliedAt: profile.b2bAppliedAt,
     mapsHref: mapsHrefOf(address),
     status: b2bStatusOf(profile),
     signals,

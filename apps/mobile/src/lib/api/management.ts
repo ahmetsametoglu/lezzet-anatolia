@@ -1,4 +1,8 @@
 import {
+  B2bCheckResponseSchema,
+  B2bDecisionResponseSchema,
+  B2bQueueResponseSchema,
+  B2bSummaryResponseSchema,
   ComplaintDraftResponseSchema,
   ComplaintResponseSchema,
   ComplaintsResponseSchema,
@@ -9,6 +13,10 @@ import {
   OfferOpenResponseSchema,
   SupplyDraftResponseSchema,
   SupplyResponseSchema,
+  type B2bCheckResponse,
+  type B2bDecisionResponse,
+  type B2bQueueResponse,
+  type B2bSummaryResponse,
   type ComplaintDraftResponse,
   type ComplaintResponse,
   type ComplaintsResponse,
@@ -148,5 +156,45 @@ export function askException(orderItemId: string): Promise<ApiResult<ExceptionAs
   return authorizedFetch(`/api/v1/management/exceptions/${orderItemId}/ask`, ExceptionAskResponseSchema, {
     method: 'POST',
     body: {},
+  });
+}
+
+/* ── KURUMSAL HESAP BAŞVURUSU (21.217) ─────────────────────────────────────── */
+
+/**
+ * Onay kuyruğu — iki sekme. Cevap İKİ SEKMENİN sayacını birden taşıyor: okunmayan sekmenin sayısı
+ * boş kalırsa operatör oraya basmadan ne olduğunu bilemez.
+ */
+export function fetchB2bQueue(params: { filter?: 'pending' | 'decided'; cursor?: string } = {}): Promise<
+  ApiResult<B2bQueueResponse>
+> {
+  return authorizedFetch(
+    `/api/v1/management/b2b${queryString({ filter: params.filter, cursor: params.cursor })}`,
+    B2bQueueResponseSchema,
+  );
+}
+
+/** Kontrol kartı — açılışta dış servisleri tazeliyor (künyesi uçta), o yüzden liste değil DETAY okuması. */
+export function fetchB2bCheck(customerId: string): Promise<ApiResult<B2bCheckResponse>> {
+  return authorizedFetch(`/api/v1/management/b2b/${customerId}`, B2bCheckResponseSchema);
+}
+
+/**
+ * Asistan özeti — karttan AYRI okunuyor: model çağrısı saniye mertebesinde ve kartın açılışı onu
+ * beklememeli. Uç üretilememeyi de 200 + `summary: null` diye söylüyor (sözleşme künyesi).
+ */
+export function fetchB2bSummary(customerId: string): Promise<ApiResult<B2bSummaryResponse>> {
+  return authorizedFetch(`/api/v1/management/b2b/${customerId}/summary`, B2bSummaryResponseSchema);
+}
+
+export function approveB2bApplication(customerId: string): Promise<ApiResult<B2bDecisionResponse>> {
+  return authorizedFetch(`/api/v1/management/b2b/${customerId}/approve`, B2bDecisionResponseSchema, { method: 'POST' });
+}
+
+/** Ret SEBEPSİZ gönderilmez — uç da boş sebebi `invalid_body` ile reddediyor (sözleşme künyesi). */
+export function rejectB2bApplication(customerId: string, reason: string): Promise<ApiResult<B2bDecisionResponse>> {
+  return authorizedFetch(`/api/v1/management/b2b/${customerId}/reject`, B2bDecisionResponseSchema, {
+    method: 'POST',
+    body: { reason },
   });
 }

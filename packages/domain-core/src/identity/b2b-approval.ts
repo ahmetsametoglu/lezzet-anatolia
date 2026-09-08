@@ -171,11 +171,64 @@ export function b2bSignals(input: B2bSignalInput): B2bSignal[] {
   ];
 }
 
-/** Kartın üst köşesindeki tek kelimelik bayrak — kuyruğu tarayan göz için özet. */
-export function b2bFlag(signals: readonly B2bSignal[]): { label: string; tone: SignalTone } {
-  if (signals.some((s) => s.tone === 'bad')) {
-    return { label: signals.some((s) => s.label === 'Mükerrer' && s.tone === 'bad') ? 'Mükerrer' : 'Dikkat', tone: 'bad' };
+/**
+ * ŞİRKETİN KİMLİK NUMARASI — hangi numara, hangi adla ve nereden geldiği.
+ *
+ * Etiket ÜLKEYE göre değişir ve bu bir iş kuralıdır, biçimlendirme değil: Fransa'da şirketi
+ * SIRET tanımlar, Almanya'da USt-IdNr. Kart bir tur etiketi `SIRET` diye sabit yazıyordu ve iki
+ * kusuru vardı — Alman bir başvurunun KDV numarası "SIRET" diye etiketlenirdi (yanlış bilgi), ve
+ * SIRET'i olmayan başvuruda kimlik kutusu HİÇ çizilmediği için şirketin numarası kartta hiç
+ * görünmezdi. İkisi de kararın dayanağını eksiltir.
+ *
+ * `source` numaranın NEREDEN geldiğini söyler: resmî kayıt sorgusu şirketi bulduysa numara oradan
+ * doğrulanmıştır, bulamadıysa başvuranın kendi yazdığıdır — ve bu ikisi aynı ağırlıkta okunmamalı.
+ */
+export function b2bIdentity(input: {
+  companyInfo: CompanyInfo | null | undefined;
+  vatNumber: string | null;
+  country: string;
+}): { label: string; value: string; source: string } | null {
+  const { companyInfo: ci, vatNumber, country } = input;
+  // Resmî kayıt SORULDUYSA ve cevap verdiyse künye oradan; `isActive` o sorgunun tek kanıtı.
+  const source = ci?.isActive === null || ci?.isActive === undefined ? 'elle girilmiş' : 'resmî kayıttan';
+
+  if (ci?.siret) return { label: 'SIRET', value: ci.siret, source };
+  if (vatNumber) return { label: country === 'DE' ? 'USt-IdNr' : 'KDV no', value: vatNumber, source };
+  return null;
+}
+
+/**
+ * Bayrağın GEREKÇESİ — yargıyı doğuran sinyalleri adıyla söyleyen cümle.
+ *
+ * Kaç sinyal anılacağı sınırlı ve bu bilinçli: gerekçe bir CÜMLE, ikinci bir liste değil. Altı
+ * sinyalin altısı da bozuksa hepsini yazmak, zaten hemen altında duran ızgarayı tekrar etmek olur;
+ * okunan şey ilk iki sebep, gerisi "ve N sinyal daha" ile sayılır ve ızgaradan bakılır.
+ */
+const FLAG_REASON_LIMIT = 2;
+
+function flagReason(label: string, offenders: readonly B2bSignal[]): string {
+  const anilan = offenders.slice(0, FLAG_REASON_LIMIT).map((s) => `${s.label}: ${s.value}`);
+  const kalan = offenders.length - anilan.length;
+  return `${label} — ${anilan.join(', ')}${kalan > 0 ? ` ve ${kalan} sinyal daha` : ''}.`;
+}
+
+/**
+ * Kartın bayrağı — kuyruğu tarayan göz için tek kelime (`label`), kartı açan göz için gerekçeli
+ * cümle (`reason`).
+ *
+ * İKİSİ DE MOTORDAN, ve bu ayrımın yeri burası: cümleyi ekran kursaydı, aynı yargı liste satırında,
+ * kartın şeridinde ve masaüstünde üç farklı biçimde yazılırdı — biri bir gün ötekinden farklı bir
+ * sebep gösterirdi (CLAUDE §1). Yargıyı veren yer, gerekçesini de söyler.
+ */
+export function b2bFlag(signals: readonly B2bSignal[]): { label: string; tone: SignalTone; reason: string } {
+  const kotu = signals.filter((s) => s.tone === 'bad');
+  if (kotu.length > 0) {
+    const label = kotu.some((s) => s.label === 'Mükerrer') ? 'Mükerrer' : 'Dikkat';
+    return { label, tone: 'bad', reason: flagReason(label, kotu) };
   }
-  if (signals.some((s) => s.tone === 'warn')) return { label: 'Dikkat', tone: 'warn' };
-  return { label: 'Temiz', tone: 'ok' };
+
+  const uyari = signals.filter((s) => s.tone === 'warn');
+  if (uyari.length > 0) return { label: 'Dikkat', tone: 'warn', reason: flagReason('Dikkat', uyari) };
+
+  return { label: 'Temiz', tone: 'ok', reason: 'Sinyaller temiz — onaya engel görünmüyor.' };
 }

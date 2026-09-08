@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  CountryEnum,
   OrderSourceEnum,
   OrderStatusEnum,
   TicketHandlerEnum,
@@ -502,3 +503,183 @@ export const ExceptionAskResponseSchema = z.object({
   ticketId: z.string().uuid().nullable(),
 });
 export type ExceptionAskResponse = z.infer<typeof ExceptionAskResponseSchema>;
+
+/*
+  ── Y? · KURUMSAL HESAP BAŞVURUSU (21.217) ──────────────────────────────────
+
+  Tel şeması BURADA, görünüm tipi `@lezzet/application`da (`B2bCheckView`) — ve bu ayrım bilinçli,
+  web şeridinin ölçtüğü gerekçeyle: görünüm motorun tiplerini taşıyor (`B2bSignal`,
+  `B2bApplicationStatus`, `SignalTone` → `domain-core`) ve `types` motorun ALTINDA duruyor, yani
+  bağımlılık tek yönlü kalsın diye tip yukarı çıkamadı (STACK §4). Emsali `CourierStop`: uygulama
+  katmanının dışa verdiği görünüm, uçta sarılıyor.
+
+  Uç `const body: z.input<typeof …> = view` diye sarıyor; görünümden bir alan düşerse DERLEME
+  kırılıyor, ekran değil.
+*/
+
+/** Sinyalin üç tonu — `domain-core.SignalTone`un tel karşılığı; renk değil ANLAM taşır. */
+export const B2bSignalToneEnum = z.enum(['ok', 'warn', 'bad']);
+
+/** Başvurunun dört hâli — `domain-core.B2bApplicationStatus`un tel karşılığı. */
+export const B2bApplicationStatusEnum = z.enum(['none', 'pending', 'approved', 'rejected']);
+
+/**
+ * Bayrak İKİ uzunlukta konuşuyor ve ikisi de motordan geliyor (`b2bFlag`):
+ * `label` kuyruk satırının tek kelimesi, `reason` kartın şeridindeki gerekçeli cümledir.
+ *
+ * Cümle tele konuyor çünkü onu ekranın kurması, aynı yargının liste/kart/masaüstünde üç ayrı
+ * biçimde yazılması demekti — biri bir gün ötekinden başka bir sebep gösterirdi.
+ */
+export const B2bFlagSchema = z.object({ label: z.string(), tone: B2bSignalToneEnum, reason: z.string() });
+
+/**
+ * KUYRUK SATIRI (brief `§2b`) — dört alan: ad · bayrak · şehir · yaş.
+ *
+ * **Bayrak satırda ve bu ölçülmüş bir karar (kullanıcı 07.09):** onsuz liste "kaç tane var"ı söyler,
+ * "önce hangisi"ni söylemez ve sıralama yalnız YAŞA kalır — oysa temiz bir başvuru on saniyede
+ * kapanır, mükerrer olan masaya kalır. Ucuz bir bayrak (mükerrer girdisi olmadan) elendi: liste
+ * "Temiz" derken detay "Mükerrer" diyebilirdi ve ekran operatörü açmadan onaylamaya davet ederdi.
+ * Bayrak KARTLA AYNI hesaptan geliyor (`readB2bCheck` → `b2bFlag`), yani iki yüzey ayrışamaz.
+ */
+export const B2bQueueRowSchema = z.object({
+  customerId: z.string().uuid(),
+  name: z.string(),
+  /** Kuyrukta ayırt edici; `null` = kayıtlı adresi yok. */
+  city: z.string().nullable(),
+  /** Şehrin yanında (`şehir · ülke · yaş`) — FR/DE ayrımı sinyallerin okunuşunu değiştiriyor. */
+  country: CountryEnum,
+  /** Başvurunun geldiği an (ISO) — ekran yaşı buradan yazar. `null` = damga yok (eski kayıt). */
+  appliedAt: z.string().nullable(),
+  flag: B2bFlagSchema,
+  /**
+   * Başvurunun hâli — "Karar verilmiş" sekmesinde satır bunu ayrı bir rozetle yazıyor.
+   *
+   * Bekleyen sekmesinde daima `pending` ve rozet çizilmiyor: her satırda aynı şeyi tekrarlayan bir
+   * rozet, bilgi değil gürültüdür. Alan yine de HER satırda dolu — sekme değişince ekranın ikinci
+   * bir okumaya gitmesi gerekmesin.
+   */
+  status: B2bApplicationStatusEnum,
+});
+export type B2bQueueRow = z.infer<typeof B2bQueueRowSchema>;
+
+/**
+ * Hangi sekme okunuyor. `decided` = onaylanmış VE reddedilmiş birlikte — tasarımın sekmesi de tek:
+ * *"Karar verilmiş"*. İkiye bölmek, operatörün aradığı şeyi ("bunu neden reddetmişiz") iki sekmeye
+ * dağıtırdı.
+ */
+export const B2bQueueFilterEnum = z.enum(['pending', 'decided']);
+
+export const B2bQueueQuerySchema = z.object({
+  filter: B2bQueueFilterEnum.optional().default('pending'),
+  cursor: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+});
+
+/**
+ * Kuyruk cevabı. `total` SAYFANIN değil KÜMENİN sayısı: başlık *"2 bekleyen başvuru"* diyor ve o
+ * cümle sayfa boyuna göre değişemez.
+ *
+ * **`single` — tek kayıtta listeyi atlama kuralı (kullanıcı 07.09).** Ekranın bu kararı kendi
+ * sayması gerekmesin diye uç söylüyor: tek satırlık bir liste operatöre bir dokunuş fazladan
+ * ödetip hiçbir şey söylemez. Sayfalanmış bir listede "kaç tane var" sorusunun cevabı istemcide
+ * `rows.length` DEĞİLDİR — ilk sayfa doluysa yanlış cevap verir.
+ */
+export const B2bQueueResponseSchema = z.object({
+  rows: z.array(B2bQueueRowSchema),
+  nextCursor: z.string().nullable(),
+  /**
+   * İKİ SEKMENİN SAYACI, süzgeç ne olursa olsun ikisi de dolu — tasarım sekme başlıklarına
+   * sayıyı yazıyor (*"Bekliyor · 2"* · *"Karar verilmiş · 7"*) ve okunmayan sekmenin sayısı
+   * boş kalırsa operatör oraya basmadan ne olduğunu bilemez.
+   */
+  counts: z.object({ pending: z.number().int(), decided: z.number().int() }),
+  /**
+   * Tek bekleyen başvuru varsa onun kimliği; ekran listeyi atlayıp doğrudan açar (kullanıcı kararı
+   * 07.09). Yalnız `pending` süzgecinde anlamlı — "karar verilmiş"te tek kayıt olması bir kestirme
+   * sebebi değildir, orası bir arşiv.
+   */
+  single: z.string().uuid().nullable(),
+});
+export type B2bQueueResponse = z.infer<typeof B2bQueueResponseSchema>;
+
+/** Sinyal satırı — etiket + okunur değer + ton. Renk tek başına anlam taşımıyor, etiket okunuyor. */
+export const B2bSignalSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  tone: B2bSignalToneEnum,
+});
+
+/** Mükerrer ADAYI — kesinlik iddiası yok; ekranın sorusu "aynı kişi olabilir mi". */
+export const B2bDuplicateRowSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  phone: z.string().nullable(),
+  /** Taslak kayıt (WhatsApp telefonuyla açılmış) — mükerrer adaylarının en sık kaynağı. */
+  isDraft: z.boolean(),
+});
+
+/**
+ * KONTROL KARTI — `@lezzet/application.B2bCheckView`in tel karşılığı.
+ *
+ * Alanlar elle EŞLENMİYOR: uç `const body: z.input<typeof …> = view` diye sarıyor, yani görünümden
+ * bir alan düşerse ya da adı değişirse DERLEME kırılıyor — ekran değil. Aynı desen `CourierStop`ta.
+ */
+export const B2bCheckSchema = z.object({
+  customerId: z.string().uuid(),
+  name: z.string(),
+  /** Resmî künye adı — ticari addan farklı olabilir. */
+  legalName: z.string().nullable(),
+  /**
+   * Şirketin kimlik numarası KENDİ ADIYLA — etiket ülkeye göre değişir (FR `SIRET`, DE `USt-IdNr`)
+   * ve `source` numaranın resmî kayıttan mı, başvuranın elinden mi geldiğini söyler.
+   *
+   * Bir tur çıplak `siret: string | null` idi; o alan hem Alman başvurunun KDV numarasını yanlış
+   * adla etiketliyor, hem SIRET'i olmayan başvurunun numarasını kartta hiç göstermiyordu.
+   */
+  identity: z.object({ label: z.string(), value: z.string(), source: z.string() }).nullable(),
+  country: CountryEnum,
+  phone: z.string().nullable(),
+  addressLine: z.string().nullable(),
+  city: z.string().nullable(),
+  /** Başvurunun geldiği an (ISO) — kart künyesi yaşı bundan yazıyor. `null` = damga yok. */
+  appliedAt: z.string().nullable(),
+  mapsHref: z.string().nullable(),
+  status: B2bApplicationStatusEnum,
+  signals: z.array(B2bSignalSchema),
+  flag: B2bFlagSchema,
+  duplicates: z.array(B2bDuplicateRowSchema),
+});
+
+/** `check: null` = müşteri yok (bildirim bayat, kayıt silinmiş). Ekran "bulunamadı" çizer. */
+export const B2bCheckResponseSchema = z.object({ check: B2bCheckSchema.nullable() });
+export type B2bCheckResponse = z.infer<typeof B2bCheckResponseSchema>;
+
+/**
+ * ASİSTAN ÖZETİ — karttan AYRI okunuyor ve bu ayrım taşıyıcı: model çağrısı saniye mertebesinde,
+ * kartın açılışı onu beklemez (künye `application/b2b/summary.ts`).
+ *
+ * `summary: null` = özet üretilemedi ve bu bir ARIZA DEĞİL: anahtar yapılandırılmamış olabilir,
+ * sağlayıcı düşmüş olabilir. Ekran o hâlde kartı eksik çizmez — sinyaller zaten yukarıda.
+ * Sebep tele KOYULMUYOR: operatörün yapacağı şey her iki hâlde de aynı, ayrım sunucunun kaydında
+ * kalır (`captureError`); ekrana taşımak, hakkında bir şey yapılamayacak bir ayrıntı göstermektir.
+ */
+export const B2bSummaryResponseSchema = z.object({ summary: z.string().nullable() });
+export type B2bSummaryResponse = z.infer<typeof B2bSummaryResponseSchema>;
+
+/**
+ * RET SEBEBİ ZORUNLU (`min(1)`) — ret SİLMEZ: kayıt B2C olarak yaşamaya devam eder ve aday künyesini
+ * düzeltip yeniden başvurabilir. Sebep, "bunu neden reddetmişiz" sorusunun altı ay sonraki cevabıdır;
+ * boş bırakılabilseydi o cevap hiç yazılmazdı.
+ */
+export const B2bRejectRequestSchema = z.object({ reason: z.string().trim().min(1).max(500) });
+
+/**
+ * Onay/ret sonucu. `status` KARARDAN SONRAKİ hâl — ekran ikinci bir okumaya gitmeden rozetini
+ * güncelliyor. `not_found` = kayıt yok; `already_decided` = başka bir telefon araya girdi ve
+ * ekranın gördüğü hâl bayat (karar İKİLENMEDİ).
+ */
+export const B2bDecisionResponseSchema = z.object({
+  result: z.enum(['ok', 'not_found', 'already_decided']),
+  status: B2bApplicationStatusEnum.nullable(),
+});
+export type B2bDecisionResponse = z.infer<typeof B2bDecisionResponseSchema>;

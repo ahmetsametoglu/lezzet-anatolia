@@ -31,10 +31,25 @@ describe('toOperationsNotification', () => {
   });
 
   it('mobilde açılacak ekranı OLMAYAN tür hedefsizdir — satır tıklanmaz', () => {
-    // Belge sınıfının hedefi sipariş detayı; operasyon kabuğunda öyle bir ekran YOK (BEKLEYEN 21.217).
+    // Belge sınıfının hedefi sipariş detayı; operasyon kabuğunda öyle bir ekran YOK (BEKLEYEN 21.284).
     expect(toOperationsNotification(row()).destination).toBeNull();
     expect(toOperationsNotification(row({ kind: 'run_close_pending', payload: {} })).destination).toBeNull();
-    expect(toOperationsNotification(row({ kind: 'b2b_application_received', payload: {} })).destination).toBeNull();
+  });
+
+  it('KURUMSAL BAŞVURU artık başvurunun KENDİSİNE açılıyor (21.217)', () => {
+    /*
+      07.09'a kadar bu tür hedefsizler tablosundaydı: bildirim listede görünüyor ama dokunulamıyordu.
+      Ekran doğdu, tür oradan düştü. İki yönlü sınanıyor — hedefin VARLIĞI ve kimliğin YOLA girmesi:
+      bildirim hangi başvuruyu kastettiğini biliyor, araya liste konmuyor (brief §2b).
+    */
+    const hedef = toOperationsNotification(row({ kind: 'b2b_application_received', payload: {} })).destination;
+    expect(hedef).toMatchObject({ href: '/b2b-application?id=o-1', section: 'management' });
+  });
+
+  it('kimliksiz kurumsal başvuru bildirimi TIKLANMAZ — ölü düğme doğmaz', () => {
+    /* Hedef `targetId`den kuruluyor; kimlik yoksa "aç" düğmesi dokunulunca hiçbir yere gitmezdi. */
+    const hedef = toOperationsNotification(row({ kind: 'b2b_application_received', payload: {}, targetId: null })).destination;
+    expect(hedef).toBeNull();
   });
 
   it('BÖLÜM hedef ekrandan gelir: eşik düşüşü DEPO olayı ama YÖNETİM satırı', () => {

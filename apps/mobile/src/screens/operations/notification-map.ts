@@ -32,10 +32,11 @@ import type { OperationsSection } from '@/lib/operations/sections';
 
   ── HEDEFİ OLMAYAN SATIR TIKLANMAZ ─────────────────────────────────────────
   Tasarım bunu zaten öngörmüş (`sc-if bn.hedef`). Mobilde operasyon tarafında derin bağ altyapısı
-  yok ve üç türün (belge · askıda kapanış · kurumsal başvuru) açacağı ekran HENÜZ YOK — o satırlar
-  yalnız haber verir. "Var olmayan adrese götürmektense hiç götürme" kararının devamı; eskisinden
-  farkı, artık HERKESİ bölüm köküne götürmüyor olması (bölüm kökü bir cevap değil, bir savuşturmaydı).
-  BEKLEYEN(21.217): belge · askıda kapanış · kurumsal başvuru için hedef ekranlar.
+  yok ve İKİ türün (belge · askıda kapanış) açacağı ekran HENÜZ YOK — o satırlar yalnız haber
+  verir. "Var olmayan adrese götürmektense hiç götürme" kararının devamı; eskisinden farkı, artık
+  HERKESİ bölüm köküne götürmüyor olması (bölüm kökü bir cevap değil, bir savuşturmaydı).
+  **Kurumsal başvuru 07.09'da bu üçlüden ÇIKTI** — ekranı doğdu (21.217).
+  BEKLEYEN(21.284): belge · askıda kapanış için hedef ekranlar.
 */
 
 /** Ekranın çizdiği şekil — uçtan kurulur, sözlük + hedef eşlemesiyle zenginleşir. */
@@ -80,10 +81,17 @@ const DESTINATION: Partial<Record<AppNotificationKind, (targetId: string | null)
   ticket_opened: (targetId) => (targetId === null ? null : { href: `/complaint?id=${targetId}`, label: 'Talebi aç', section: 'management' }),
   /* Eşik listesi tedarik önerisinde yaşıyor; varyanta açılan bir ekran yok, kuyruk var. */
   stock_low: () => ({ href: '/supply-suggestion', label: 'Tedarik önerisini aç', section: 'management' }),
+  /*
+    BAŞVURUNUN KENDİSİNE (21.217) — bildirim hangisini kastettiğini biliyor, araya liste konmuyor.
+    Kimliksiz bildirimde satır tıklanmaz (`null`): hedefi olmayan bir "aç" düğmesi, dokunulunca
+    hiçbir yere gitmeyen ölü bir düğmedir.
+  */
+  b2b_application_received: (targetId) =>
+    targetId === null ? null : { href: `/b2b-application?id=${targetId}`, label: 'Başvuruyu aç', section: 'management' },
   /* Kapanış farkı gün sonu özetinde okunur (M2) — parametresiz, salt okuma. */
   run_close_mismatch: () => ({ href: '/day-end', label: 'Gün sonunu aç', section: 'money' }),
   /* Transferin iki yüzü de aynı ekranda: "son kapananlar" listesi gönderen satırını da taşıyor.
-     BEKLEYEN(21.217): ekran `?transferId=` alıp satırı seçmiyor — bugün liste başına gidiliyor. */
+     BEKLEYEN(21.284): ekran `?transferId=` alıp satırı seçmiyor — bugün liste başına gidiliyor. */
   transfer_shortfall: () => ({ href: '/inbound', label: 'Transferi aç', section: 'warehouse' }),
   transfer_excess: () => ({ href: '/inbound', label: 'Transferi aç', section: 'warehouse' }),
 };
@@ -95,7 +103,8 @@ const DESTINATION: Partial<Record<AppNotificationKind, (targetId: string | null)
 const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, OperationsSection>> = {
   document_undeliverable: 'management',
   run_close_pending: 'management',
-  b2b_application_received: 'management',
+  /* `b2b_application_received` 07.09'da BURADAN DÜŞTÜ — hedefi doğdu (21.217). Künyenin kendi
+     kuralı: "hedef doğduğu gün bu tablodan düşer; iki tablo aynı anda aynı türü taşımaz." */
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { b2bFlag, b2bSignals, isFoodActivityCode, VAT_CHECK_FRESH_DAYS, type B2bSignalInput } from './b2b-approval';
+import { b2bFlag, b2bIdentity, b2bSignals, isFoodActivityCode, VAT_CHECK_FRESH_DAYS, type B2bSignalInput } from './b2b-approval';
 
 /** Sabit "şimdi" — yaş hesabı sınandığı için saat okumak testi bir gün kendiliğinden kırardı. */
 const SIMDI = new Date('2026-08-27T12:00:00.000Z');
@@ -134,5 +134,47 @@ describe('b2bFlag', () => {
 
   it('yalnız eksik bilgi varsa Dikkat/amber — kırmızıya çekilmez', () => {
     expect(b2bFlag(b2bSignals({ ...temiz, inRoute: null }))).toMatchObject({ label: 'Dikkat', tone: 'warn' });
+  });
+
+  it('gerekçe yargıyı DOĞURAN sinyali adıyla söyler — bayrak tek başına "neden"i taşımaz', () => {
+    /* Ekranın şeridinde okunan cümle bu. "Dikkat" tek başına operatöre hangi satıra bakacağını
+       söylemez; gerekçe onu söyler ve sinyal ızgarasıyla aynı sözcükleri kullanır. */
+    const s = b2bSignals({ ...temiz, companyInfo: { ...temiz.companyInfo!, isActive: false } });
+    expect(b2bFlag(s).reason).toBe('Dikkat — Resmî kayıt: Kayıt kapalı.');
+  });
+
+  it('gerekçe İKİ sebepten sonra sayar — cümle, ikinci bir ızgara değil', () => {
+    /* Altı sinyalin dördü bozukken hepsini yazmak, hemen altındaki ızgarayı tekrar etmek olurdu. */
+    const s = b2bSignals({ ...temiz, companyInfo: null, vatNumberValid: null, inRoute: null });
+    const { reason } = b2bFlag(s);
+    expect(reason).toContain('ve 3 sinyal daha');
+    expect(reason.startsWith('Dikkat — Resmî kayıt: ')).toBe(true);
+  });
+
+  it('temizde gerekçe de olumlu — boş dize DEĞİL', () => {
+    /* Boş bırakılsaydı şerit tonunu çizer ama hiçbir şey söylemezdi; "engel yok" da bir cevaptır. */
+    expect(b2bFlag(b2bSignals(temiz)).reason).toBe('Sinyaller temiz — onaya engel görünmüyor.');
+  });
+});
+
+describe('b2bIdentity', () => {
+  it('FR başvurusunda numara SIRET adıyla anılır', () => {
+    const kimlik = b2bIdentity({ companyInfo: { legalName: 'ANATOLIE SAS', siret: '81245678900012', isActive: true }, vatNumber: null, country: 'FR' });
+    expect(kimlik).toEqual({ label: 'SIRET', value: '81245678900012', source: 'resmî kayıttan' });
+  });
+
+  it('SIRET YOKSA KDV numarası gösterilir ve DE\'de kendi adıyla', () => {
+    /* Kart bir tur yalnız SIRET'e bakıyordu: Alman başvurunun numarası hiç görünmüyordu ve
+       görünseydi de "SIRET" diye etiketlenirdi — ikisi de kararın dayanağını eksiltir. */
+    const kimlik = b2bIdentity({ companyInfo: null, vatNumber: 'DE314159265', country: 'DE' });
+    expect(kimlik).toMatchObject({ label: 'USt-IdNr', value: 'DE314159265' });
+  });
+
+  it('resmî kayıt SORULMAMIŞSA kaynak "elle girilmiş" — doğrulanmış numarayla aynı ağırlıkta okunmaz', () => {
+    expect(b2bIdentity({ companyInfo: { legalName: 'Kiosk Muller', siret: '999' }, vatNumber: null, country: 'DE' })?.source).toBe('elle girilmiş');
+  });
+
+  it('hiçbir numara yoksa null — boş bir kimlik kutusu çizilmez', () => {
+    expect(b2bIdentity({ companyInfo: null, vatNumber: null, country: 'FR' })).toBeNull();
   });
 });

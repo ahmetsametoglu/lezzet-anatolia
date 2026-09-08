@@ -45,6 +45,15 @@ const IMPOSSIBLE_ID = '00000000-0000-0000-0000-000000000000';
 
 const CUSTOMERS_ONLY = { containsFilters: [{ field: 'roles', values: ['customer'] as const }] } as const;
 
+/**
+ * KARARI VERİLMİŞ başvurunun ikinci şartı (21.217) — `b2b_pending = false` TEK BAŞINA yetmez.
+ *
+ * O kolon üretilmiş (`0011:361`) ve künyesi hiç olmayan sıradan bir B2C müşterisi de `false`
+ * taşıyor. Yani tersini almak, hiç başvurmamış herkesi "karar verilmiş" sayardı — arşiv bir anda
+ * bütün müşteri listesi olurdu. Ölçüt: başvurmuş (`company_info` dolu) VE bekleyende değil.
+ */
+const B2B_DECIDED = { isNotNullFields: ['companyInfo'] };
+
 /** İzin bayrağının jsonb yolu — `marketing_consent -> <kanal> ->> granted`. */
 const consentPath = (channel: MarketingChannel) => `marketing_consent->${channel}->>granted`;
 
@@ -279,6 +288,57 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   async counts(): Promise<{ total: number; draft: number }> {
     const [total, draft] = await Promise.all([this.count({}, CUSTOMERS_ONLY), this.count({ isDraft: true }, CUSTOMERS_ONLY)]);
     return { total, draft };
+  }
+
+  /**
+   * ONAY BEKLEYEN BAŞVURU SAYISI (21.217) — mobil kuyruğun başlık cümlesi (*"2 bekleyen başvuru"*).
+   *
+   * `counts()`e eklenmedi, ayrı durdu: o üçlü müşteri ekranının başlık sayaçları ve TÜM müşteri
+   * kümesini sayıyor; bu ise tek bir kuyruğun boyu. Aynı metoda sıkıştırmak, müşteri ekranını
+   * ihtiyacı olmayan bir sorgunun bedelini her açılışta ödemeye zorlardı.
+   *
+   * **Sayı sayfadan TÜRETİLEMEZ:** kuyruk sayfalanıyor ve `rows.length` yalnız ilk sayfa doluysa
+   * doğru cevabı verir. Başlıkta yanlış bir sayı, operatöre "hepsi bu" dedirtir.
+   *
+   * Süzgeç `list({ b2bPending: true })` ile AYNI: reddedilenler dışarıda (ret silmez, 09.11 — kayıt
+   * `b2bApproved === false` taşımaya devam eder ve onunla süzmek kararı verilmiş başvuruları
+   * kuyrukta gösterirdi).
+   */
+  async countB2bPending(): Promise<number> {
+    return this.count({ b2bPending: true }, CUSTOMERS_ONLY);
+  }
+
+  /** Karar VERİLMİŞ başvurular — onaylanmış ya da reddedilmiş. Ölçüt `B2B_DECIDED` künyesinde. */
+  async countB2bDecided(): Promise<number> {
+    return this.count({ b2bPending: false }, { ...CUSTOMERS_ONLY, ...B2B_DECIDED });
+  }
+
+  /**
+   * B2B ONAY KUYRUĞU (21.217) — mobil listenin iki sekmesi.
+   *
+   * **`list()` KULLANILMADI ve sebebi sıralama:** o metot `createdAt`e göre diziyor, oysa kuyruk
+   * BAŞVURU sırasına göre okunur. Migration'ın kendi künyesi bunu yazıyor (`0011:369`): *"`created_at`
+   * profilin doğduğu andır ve B2C açılıp aylar sonra başvuran müşteriyi listenin dibine gönderirdi."*
+   * Veritabanındaki kısmi indeks de tam bu sıraya kurulu (`user_profiles_b2b_pending_idx`).
+   *
+   * **İki küme, tek ölçüt:** `b2b_pending` ÜRETİLMİŞ bir kolon (`0011:361`) — "künyesi var, onay
+   * yok, ve reddedilmemiş ya da retten SONRA yeniden başvurmuş". `decided` onun tersi ama tersi
+   * yetmez: künyesi hiç olmayan müşteri de `b2b_pending = false` taşıyor ve o hiç BAŞVURMAMIŞTIR.
+   * Bu yüzden ikinci şart var — `company_info` dolu.
+   */
+  async listB2bQueue(opts: { decided?: boolean; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<UserProfile>> {
+    const decided = opts.decided ?? false;
+    return this.getPage(
+      { b2bPending: !decided },
+      {
+        ...CUSTOMERS_ONLY,
+        ...(decided ? B2B_DECIDED : {}),
+        orderBy: 'b2bAppliedAt',
+        orderDirection: 'desc',
+        keysetAfter: opts.cursor,
+        limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      },
+    );
   }
 
   /**
