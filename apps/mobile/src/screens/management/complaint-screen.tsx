@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Image, Linking, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsIconButton } from '@/components/operations/icon-button';
@@ -10,6 +10,7 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ChatLayout } from '@/components/ui/chat-layout';
 import { ChatText } from '@/components/ui/chat-text';
+import { PhotoViewer } from '@/components/ui/photo-viewer';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { agoOf, dayGroupLabelOf, stampOf, timeOf } from '@/lib/operations/stamp';
 import { fillCopy, operationsFailureText } from '@/screens/operations/copy';
@@ -60,13 +61,14 @@ import { useComplaint } from './use-complaint.hook';
     ayrıca tasarımın "jest" adı sistemdekinin TERSİNİ söylüyor (`ReturnDispositionEnum.goodwill`:
     *"mal müşteride kaldı"*), yani rozet çizilse yanlış bir sözlükle çizilecekti.
 
-  ── EKLER: IZGARA GERÇEK, "BÜYÜT" SİSTEM TARAYICISINDA ──────────────────────
+  ── EKLER: IZGARA GERÇEK, "BÜYÜT" UYGULAMANIN İÇİNDE ────────────────────────
   `attachmentUrls` sözleşmede zaten var ve uçta İMZALI (15 dk) üretiliyor (`ticket/read.ts` →
-  `privateReadUrls`) — ızgara uydurma değil, gerçek fotoğrafları çiziyor. Dokununca uygulama içi
-  bir görüntüleyici DEĞİL, sistem tarayıcısı açılıyor: webin talepler ekranı da aynı şeyi yapıyor
-  ("yeni sekmede açılır çünkü karar çoğu kez fotoğraftan verilir") ve uygulama içi tam ekran
-  görüntüleyici ayrı bir komponent + testi demek. İmzalı adres süreliyken açılırsa tarayıcı
-  hatayı kendisi gösterir; ekran "açılamadı" cümlesini yalnız `openURL` reddederse yazar.
+  `privateReadUrls`) — ızgara uydurma değil, gerçek fotoğrafları çiziyor. Dokunuş kitin tam ekran
+  görüntüleyicisini açıyor (`components/ui/photo-viewer`): kıstırmayla yakınlaştırma, sürükleme,
+  yatay geçiş. *(Bu künye 07.09'a kadar "sistem tarayıcısında açılır" diyordu ve gerekçesi
+  "ayrı bir komponent + testi demek"ti; kullanıcı kararı — "Uygulama dışına çıkışlar olmamalı" —
+  o gerekçeyi kapattı ve komponent yazıldı. Sosyal sohbetin fotoğrafları da aynı görüntüleyiciyi
+  kullanıyor, yani ikinci bir desen doğmadı.)*
 
   ── ÜSTLEN NEREYE GİTTİ ─────────────────────────────────────────────────────
   Tasarımda üstlenme çekmecenin içinde ("KAYDI YÖNET"). Çekmece yokken düğmeyi silmek, var olan
@@ -604,9 +606,16 @@ function RequestCard({ detail, request }: RequestCardProps) {
   );
 }
 
-/** Ekli görseller — üçlü ızgara; dokunuş imzalı adresi sistem tarayıcısında açar. */
+/**
+ * Ekli görseller — üçlü ızgara; dokunuş UYGULAMA İÇİNDE tam ekran görüntüleyiciyi açar.
+ *
+ * Bir tur boyunca `Linking.openURL` ile sistem tarayıcısı açılıyordu ve künye bunu *"uygulama içi
+ * tam ekran görüntüleyici ayrı bir komponent + testi demek"* diye gerekçelendiriyordu. Kullanıcı
+ * kararı 07.09 o gerekçeyi kapattı (*"Uygulama dışına çıkışlar olmamalı."*); komponent kite
+ * yazıldı ve sosyal sohbetin fotoğraflarıyla AYNI görüntüleyici burada da kullanılıyor.
+ */
 function AttachmentGrid({ urls }: { urls: readonly string[] }) {
-  const [failed, setFailed] = useState(false);
+  const [opened, setOpened] = useState<number | null>(null);
 
   return (
     <View style={styles.attachments} testID="management-complaint-attachments">
@@ -617,7 +626,7 @@ function AttachmentGrid({ urls }: { urls: readonly string[] }) {
         {urls.map((url, index) => (
           <PressableSurface
             key={url}
-            onPress={() => void Linking.openURL(url).catch(() => setFailed(true))}
+            onPress={() => setOpened(index)}
             feedback="opacity"
             compact
             style={styles.attachmentTile}
@@ -629,11 +638,14 @@ function AttachmentGrid({ urls }: { urls: readonly string[] }) {
         ))}
       </View>
       <Text style={styles.attachmentsNote}>{t.complaint.request.attachmentsNote}</Text>
-      {failed ? (
-        <Text style={styles.actionError} testID="management-complaint-attachment-error">
-          {t.complaint.request.attachmentFailed}
-        </Text>
-      ) : null}
+      <PhotoViewer
+        uris={urls}
+        initialIndex={opened ?? 0}
+        visible={opened !== null}
+        onClose={() => setOpened(null)}
+        labels={{ counter: t.complaint.request.attachmentCounter, close: managementCopy.common.close }}
+        testID="management-complaint-attachment-viewer"
+      />
     </View>
   );
 }

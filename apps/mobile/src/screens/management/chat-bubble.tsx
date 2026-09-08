@@ -40,8 +40,16 @@ export type ChatBubbleTone = 'customer' | 'operator' | 'ai' | 'draft';
 
 interface ManagementChatBubbleProps {
   tone: ChatBubbleTone;
-  /** Mesajın kendisi. */
-  body: string;
+  /** Mesajın SÖZÜ. Yalnız medya taşıyan baloncukta yoktur (sesli mesajın alt yazısı olmayabilir). */
+  body?: string;
+  /**
+   * Baloncuğun İÇİNE, sözün ÜSTÜNE giren içerik — fotoğraf ızgarası, ses kartı (21.287).
+   *
+   * Medya baloncuğun İÇİNDEDİR, altında değil: gönderilen şey odur. Söz varsa (fotoğrafın alt
+   * yazısı) altına iner — okuma sırası "ne gönderdi, ne dedi". `footer`la karıştırılmasın: o
+   * künyenin ALTINA inen ek eylemdir, mesajın parçası değil.
+   */
+  content?: ReactNode;
   /** Baloncuğun ALTINDAKİ künye — damga, yazar, kalıp adı. Yoksa satır hiç doğmaz. */
   caption?: string;
   /** Künyenin altına inen ek (çeviri düğmesi, taslak eylemleri). */
@@ -57,19 +65,25 @@ const SIDE = {
   draft: 'right',
 } as const satisfies Record<ChatBubbleTone, 'left' | 'right'>;
 
-export function ManagementChatBubble({ tone, body, caption, footer, testID }: ManagementChatBubbleProps) {
+export function ManagementChatBubble({ tone, body, content, caption, footer, testID }: ManagementChatBubbleProps) {
   return (
     <View style={[styles.line, SIDE[tone] === 'left' ? styles.lineLeft : styles.lineRight]} testID={testID}>
-      <View style={[styles.bubble, styles[tone]]}>
+      <View style={[styles.bubble, styles[tone], content === undefined ? null : styles.bubbleWithContent]}>
+        {content}
         {/* GÖVDE SOHBET METNİ olarak çiziliyor (06.09): ajan cevaplarını `*kalın*` · `_italik_` ·
             `~üstü çizili~` · `•` söz dizimiyle yazıyor ve bu yüzey artık onu çiziyor. Koyu
-            baloncukta kalın kesit 600 — 700 o puntoda mürekkep zeminden taşıyor. */}
-        <ChatText
-          style={tone === 'operator' ? styles.bodyOnInk : styles.body}
-          boldWeight={tone === 'operator' ? 600 : 700}
-        >
-          {body}
-        </ChatText>
+            baloncukta kalın kesit 600 — 700 o puntoda mürekkep zeminden taşıyor.
+
+            Sözü OLMAYAN baloncukta satır hiç doğmaz (21.287): boş bir `ChatText`, fotoğrafın
+            altında sebepsiz bir satır yüksekliği bırakırdı. */}
+        {body === undefined || body === '' ? null : (
+          <ChatText
+            style={tone === 'operator' ? styles.bodyOnInk : styles.body}
+            boldWeight={tone === 'operator' ? 600 : 700}
+          >
+            {body}
+          </ChatText>
+        )}
       </View>
       {caption === undefined ? null : <Text style={styles.caption}>{caption}</Text>}
       {footer}
@@ -89,6 +103,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['2xl'],
     borderRadius: operationsTheme.radius.control,
   },
+  /** Medyalı baloncuk: içerik ile sözün arası açılır — ikisi tek blok gibi okunmasın. */
+  bubbleWithContent: { gap: operationsTheme.space.md },
   customer: {
     borderBottomLeftRadius: operationsTheme.radius.tight,
     backgroundColor: operationsTheme.colors.card,

@@ -31,6 +31,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | `language` | preferred_language | • |  |
 | `window_expires_at` | timestamptz | • |  |
 | `last_message_at` | timestamptz | • |  |
+| `last_inbound_at` | timestamptz | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 

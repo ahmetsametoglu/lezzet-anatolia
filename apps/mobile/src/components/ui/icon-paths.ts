@@ -180,6 +180,15 @@ export const ICON_PATHS = {
     paths: ['M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'],
     circles: [[12, 13, 4]],
   },
+  /** Sesli mesaj — mikrofon kapsülü + ayağı (21.287; sohbette ses baloncuğunun işareti). */
+  mic: { paths: ['M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z', 'M19 11a7 7 0 0 1-14 0', 'M12 18v3'] },
+  /* SES ÇALARIN İKİ HÂLİ (21.287). Setin geri kalanı gibi ÇİZGİdirler, dolu değil: `Icon`
+     `fill="none"` çiziyor ve dolgu desteği eklemek tek bir düğme için kitin çizim sözleşmesini
+     değiştirmek olurdu. Yuvarlak uç/köşe zaten tek yerden geliyor. */
+  /** Çal — üçgen. */
+  play: { paths: ['M8 5.5v13l11-6.5z'] },
+  /** Duraklat — iki dik çizgi. */
+  pause: { paths: ['M10 5v14M14 5v14'] },
   /** "Kaydedildi" bandının onay halkası. */
   'check-circle': { paths: ['M22 11.08V12a10 10 0 1 1-5.93-9.14', 'M22 4 12 14.01l-3-3'] },
 

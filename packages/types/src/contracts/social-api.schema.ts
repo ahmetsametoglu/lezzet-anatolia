@@ -65,6 +65,23 @@ export const SocialInboxResponseSchema = z.object({
     awaitingReply: z.number().int(),
     handledByAi: z.number().int(),
   }),
+  /**
+   * **CANLI ZİLİN KANAL ADI** (21.289) — ekran bunu dinler, mesaj gelince kuyruğu tazeler.
+   *
+   * ── NEDEN SUNUCUDAN GELİYOR, İSTEMCİ HESAPLAMIYOR ───────────────────────────
+   * Talep ve bildirim kanallarının adı `@lezzet/types`ta hesaplanıyor, çünkü doğal bir sırdan
+   * (UUID) türüyorlar. Operasyon KUYRUKLARININ böyle bir kimliği yok: `ops:conversations` gibi
+   * açık bir ad, anon anahtarı olan herkese *"operasyona şu an mesaj düştü"* zaman bilgisini
+   * sızdırırdı (`opsChannel` künyesi). Bu yüzden ad sunucu sırrından türetiliyor ve istemci onu
+   * ancak SÖYLENEREK öğrenebilir.
+   *
+   * Söyleyen kapı `admin` guard'ının arkasında, yani adı öğrenen taraf kuyruğu görmeye zaten
+   * yetkili olan taraf — web'in aynı kararı (sunucu bileşeni `LiveRefresh`e prop olarak geçiriyor).
+   *
+   * Yük DAİMA BOŞ (zilin kendi kuralı): adı ele geçiren biri "bir hareket oldu"dan fazlasını
+   * öğrenemez, içeriği yine guard'lı uçtan istemek zorundadır.
+   */
+  channel: z.string().min(1),
 });
 export type SocialInboxResponse = z.infer<typeof SocialInboxResponseSchema>;
 
@@ -77,7 +94,34 @@ export const SocialMessageSchema = MessageSchema.pick({
   body: true,
   /** Dolu = Meta-onaylı kalıp mesaj (yalnız WhatsApp) — ekran bunu rozetle söyler. */
   templateName: true,
+  /** Fotoğraf mı ses mi çizileceği — `kind` ikisine de `media` diyor (varlık künyesi). */
+  mediaMime: true,
+  /**
+   * Sesli mesajın MAKİNE çözümü (15.26) — `body.text` DEĞİL ve o alana katılmaz. Mobil için
+   * kritik: ses ÇALINAMASA bile operatör ne söylendiğini buradan okur.
+   */
+  mediaTranscript: true,
   createdAt: true,
+}).extend({
+  /**
+   * Medyanın İMZALI okuma adresi (15 dk) — R2 anahtarı DEĞİL, geçit yolu da değil (21.287).
+   *
+   * ── NEDEN WEB'İN GEÇİDİ DEĞİL ───────────────────────────────────────────────
+   * Web `/operations/social/media/<id>` geçidine işaret ediyor ve gerekçesi ölçülmüş bir arıza:
+   * sayfa SUNUCUDA çiziliyor, adres HTML'e gömülüyor, açık sekmede 15 dakikada ölüyordu. Mobilde
+   * o arıza YOK — ekran her odaklanışta detayı yeniden okuyor (`useFocusEffect`), yani adres
+   * kullanıldığı ana yakın imzalanıyor. Geçit kurmak, `Image` bileşenine Bearer başlığı taşıtmayı
+   * ve o başlığın R2'ye yönlendirmede ne olacağını da çözmeyi gerektirirdi.
+   *
+   * Mobilin KENDİ İÇİNDE bu zaten kurulu bir karar: talep ekleri de sözleşmede imzalı geliyor
+   * (`ticket/read.ts` → `privateReadUrls`) ve ızgara onları doğrudan çiziyor. İkinci bir desen
+   * açmak, aynı soruyu iki yerde ayrı cevaplamak olurdu.
+   *
+   * `null` üç hâlde: medyası olmayan mesaj · indirmesi düşmüş medya mesajı (`mediaKey` boş —
+   * varlık künyesi bunu meşru sayıyor) · R2 ayarlı değil (yerel geliştirme). Üçünde de ekran
+   * fotoğrafsız çizer, çökmez.
+   */
+  mediaUrl: z.string().nullable(),
 });
 export type SocialMessageContract = z.infer<typeof SocialMessageSchema>;
 
@@ -105,6 +149,31 @@ export const SocialReplyRequestSchema = z.object({
   text: z.string().trim().min(1),
 });
 export type SocialReplyRequest = z.infer<typeof SocialReplyRequestSchema>;
+
+/**
+ * Cevabın AKIBETİ (21.286) — mobil artık deftere yazmıyor, GÖNDERİYOR.
+ *
+ * Üç hâl ve üçü ayrı, çünkü operatörün yapacağı şey üçünde farklı (`SendOutcome` künyesi):
+ *   · `sent`    — gitti; ekran yazışmayı tazeler.
+ *   · `refused` — BİZİM kuralımız reddetti (servis penceresi kapalı, yanlış kanal). Tekrar denemek
+ *                 anlamsız; operatör başka bir yol seçmeli (kalıp mesaj, telefon).
+ *   · `failed`  — SAĞLAYICI tarafı düştü. `retryable` ise aynı düğme yeniden basılabilir.
+ *
+ * Tek kovaya atmak çağıranı "yeniden dene" düğmesini yanlış yere koymaya iterdi: pencere kapalıyken
+ * yeniden denemek aynı reddi üretir ve operatör bunu ancak deneyerek öğrenirdi.
+ *
+ * `detail` yalnız `sent`te dolu: gönderilmemiş bir cevaptan sonra yazışmayı tazelemek, ekrana
+ * değişmemiş bir listeyi ikinci kez çizdirmekten başka bir şey yapmaz.
+ */
+export const SocialReplyResponseSchema = z.object({
+  status: z.enum(['sent', 'refused', 'failed']),
+  /** Ret ya da başarısızlığın ANAHTARI — ekran onu kendi sözlüğünden cümleye çevirir. */
+  reason: z.string().nullable(),
+  /** Yalnız `failed`te anlamlı: sağlayıcı geçici mi düştü, yeniden denenebilir mi. */
+  retryable: z.boolean(),
+  detail: SocialConversationDetailSchema.nullable(),
+});
+export type SocialReplyResponse = z.infer<typeof SocialReplyResponseSchema>;
 
 /**
  * Yürütücü modu isteği — `ConversationHandlerEnum`den TÜRER, elle sayılmaz.

@@ -5,7 +5,12 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { recordInboundMessage } from '@lezzet/application';
 // Beklenen şekiller ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME
 // kırılır (depo/kurye testlerinin kararı).
-import type { SocialConversationDetail, SocialInboxResponse, SocialModeResponse } from '@lezzet/types';
+import type {
+  SocialConversationDetail,
+  SocialInboxResponse,
+  SocialModeResponse,
+  SocialReplyResponse,
+} from '@lezzet/types';
 import { app } from '../../app';
 
 /**
@@ -15,9 +20,10 @@ import { app } from '../../app';
  *
  * 1. **Kapı yalnız yöneticiye açık.** Sosyal kutu müşteri yazışmalarını gösteriyor — depocu ya da
  *    kurye rolü buraya girememeli. "Personel" olmak yetmez.
- * 2. **`ai` modu SUNUCUDA reddedilir** (15.13). Ekranda kapatmak yetmez: kural sunucuda durmalı,
- *    tek istemcinin nezaketine bırakılmamalı. Arkasında motoru olmayan bir mod yazılabilir kalırsa
- *    sohbet, operatör AI ilgileniyor sanarken cevapsız bekler.
+ * 2. **Mod kuralı SUNUCUDA durur.** Ekranda kapatmak yetmez, tek istemcinin nezaketine
+ *    bırakılamaz: enum dışı bir değer 400 alır, aynı moda ikinci yazma 409 `mode_unchanged` ile
+ *    görünür bir yarış işareti üretir. *(Bu madde 29.08'e kadar "`ai` reddedilir" diyordu; özerk
+ *    motor bağlandığında `ai` kabul edilir oldu — künye o gün bayatladı, aşağıdaki iddia güncel.)*
  *
  * Paylaşılan-DB disiplini (`CLAUDE §4b`): zemin bu dosyanın kendi damgalı satırları; küresel sayıya
  * bakan tek iddia yok — sayaçlar bile kendi konuşmamızla değil, "en az bir" ile sınanıyor.
@@ -135,6 +141,49 @@ describe('kapı: Bearer + YALNIZ yönetici', () => {
   });
 });
 
+describe('medya sözleşmede TAŞINIR (21.287)', () => {
+  it('medya mesajı mime · transkript · adres alanlarıyla iner', async () => {
+    /*
+      Buraya kadar sözleşme medyayı hiç taşımıyordu ve mobil ekran fotoğrafı da sesi de aynı yer
+      tutucu yazısıyla ("[görsel / dosya]") çiziyordu. Alanların VARLIĞI sınanıyor:
+
+      · `mediaMime` — ekran fotoğrafı mı sesi mi çizeceğini yalnız buradan bilir (`kind` ikisine de
+        `media` diyor).
+      · `mediaTranscript` — sesli mesajın makine çözümü; ses çalınamasa bile okunacak tek içerik.
+      · `mediaUrl` — İMZALI adres. Yerelde R2 ayarlı olmadığı için `null` ve bu meşru bir hâl
+        (`privateReadUrl` kovasızken `null` döner); iddia adresin DOLU olması değil, ALANIN var
+        olmasıdır — `undefined` dönmesi sözleşmenin düştüğü anlamına gelirdi.
+    */
+    await recordInboundMessage(db, {
+      conversationId,
+      kind: 'media',
+      text: null,
+      mediaKey: `conversation-media/test-${stamp}.ogg`,
+      mediaMime: 'audio/ogg',
+      mediaTranscript: 'Siparişim bugün gelecek mi',
+      receivedAt: new Date().toISOString(),
+    });
+
+    const res = await get(`/api/v1/social/conversations/${conversationId}`, adminToken);
+    const body = (await res.json()) as { data: SocialConversationDetail; error: null };
+    const medya = body.data.messages.find((m) => m.kind === 'media');
+
+    expect(medya).toBeDefined();
+    expect(medya?.mediaMime).toBe('audio/ogg');
+    expect(medya?.mediaTranscript).toBe('Siparişim bugün gelecek mi');
+    expect(medya).toHaveProperty('mediaUrl');
+  });
+
+  it('medyası OLMAYAN mesajın alanları boş — uydurma adres üretilmez', async () => {
+    const res = await get(`/api/v1/social/conversations/${conversationId}`, adminToken);
+    const body = (await res.json()) as { data: SocialConversationDetail; error: null };
+    const metin = body.data.messages.find((m) => m.kind === 'text');
+
+    expect(metin?.mediaMime).toBeNull();
+    expect(metin?.mediaUrl).toBeNull();
+  });
+});
+
 describe('yürütücü modu — kural SUNUCUDA durur', () => {
   it('`ai` modu KABUL EDİLİR (29.08) — artık arkasında motoru olan bir mod', async () => {
     /* Bu iddia bir tur boyunca TERSİNİ söylüyordu ("400 ile reddedilir — arkasında motoru olmayan
@@ -183,10 +232,20 @@ describe('yürütücü modu — kural SUNUCUDA durur', () => {
   });
 });
 
-describe('defter kaydı — cevap ucu GÜNCEL detayı döndürür', () => {
-  it('kayıt yazılır ve dönen gövde yeni mesajı İÇERİR', async () => {
-    // Dönen detay, istemcinin elindeki kopyayı değil SUNUCUYU gerçek sayar: başka bir operatör az
-    // önce yazmış olabilir. Bu yüzden uç, yazdıktan sonra tam detayı geri veriyor.
+describe('cevap ucu GÖNDERİR — akıbet zarfın içinde (21.286)', () => {
+  /*
+    ZARF DEĞİŞTİ, UÇ ADI DEĞİŞMEDİ. Cevap artık `SocialConversationDetail` DÖNMÜYOR: dönen şey
+    `{status, reason, retryable, detail}` — çünkü uç 200 dönse de mesaj gitmemiş olabilir
+    (pencere kapalı → `refused`, sağlayıcı düştü → `failed`) ve detay yalnız gerçekten gidince
+    doldurulur.
+
+    YEREL KOŞUDA GÖNDERİM HEP DÜŞER ve bu ölçüldü, varsayılmadı: `vitest.setup.ts` yalnız KÖK
+    `.env`i yüklüyor, `META_ACCESS_TOKEN` ise `apps/mobile-api/.env.local`da duruyor. Yani test
+    paketi hiçbir zaman gerçek bir WhatsApp çağrısı yapmaz — `messageSenderFor(undefined)`
+    reddeden sürücüyü döndürür ve akıbet `failed · not_configured` olur. Bu, testin bir eksiği
+    değil bir GÜVENCESİDİR: jetonu köke taşıyan biri, paketi canlı mesaj göndermeye başlatırdı.
+  */
+  it('akıbet zarfı döner; jetonsuz yerelde gönderim DÜŞER ve detay boş kalır', async () => {
     const res = await post(
       `/api/v1/social/conversations/${conversationId}/reply`,
       { text: 'Merhaba, 225 g paket 4,57 €.' },
@@ -194,17 +253,27 @@ describe('defter kaydı — cevap ucu GÜNCEL detayı döndürür', () => {
     );
     expect(res.status).toBe(200);
 
-    const body = (await res.json()) as { data: SocialConversationDetail; error: null };
-    const giden = body.data.messages.filter((m) => m.direction === 'outbound');
-    expect(giden.some((m) => m.body.text === 'Merhaba, 225 g paket 4,57 €.')).toBe(true);
+    const body = (await res.json()) as { data: SocialReplyResponse; error: null };
+    expect(body.data.status).not.toBe('sent');
+    expect(body.data.reason).toBe('not_configured');
+    // Gitmemiş cevaptan sonra yazışma TAZELENMEZ — değişmemiş bir listeyi ikinci kez çizdirmek olurdu.
+    expect(body.data.detail).toBeNull();
   });
 
-  it('BOŞ metin 400 — deftere boş satır düşmez', async () => {
+  it('gitmeyen cevap DEFTERE de yazılmaz — sessiz "gitti" kaydı doğmaz', async () => {
+    /* En tehlikeli hâl budur: operatör gönderdiğini sanır, defter onu doğrular, müşteri hiçbir şey
+       almaz. Yukarıdaki düşen gönderimin ardından giden mesaj sayısı artmamalı. */
+    const res = await get(`/api/v1/social/conversations/${conversationId}`, adminToken);
+    const body = (await res.json()) as { data: SocialConversationDetail; error: null };
+    expect(body.data.messages.some((m) => m.body.text === 'Merhaba, 225 g paket 4,57 €.')).toBe(false);
+  });
+
+  it('BOŞ metin 400 — gövde doğrulaması kapıda', async () => {
     const res = await post(`/api/v1/social/conversations/${conversationId}/reply`, { text: '   ' }, adminToken);
     expect(res.status).toBe(400);
   });
 
-  it('müşteri rolü kayıt YAZAMAZ', async () => {
+  it('müşteri rolü cevap GÖNDEREMEZ', async () => {
     const res = await post(`/api/v1/social/conversations/${conversationId}/reply`, { text: 'olmaz' }, outsiderToken);
     expect(res.status).toBe(403);
   });

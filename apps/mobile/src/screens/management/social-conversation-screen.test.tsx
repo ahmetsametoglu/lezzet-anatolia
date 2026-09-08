@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 
 import { SocialConversationScreen } from './social-conversation-screen';
 import messages from './messages.json';
@@ -84,37 +85,47 @@ async function ekranAc() {
   await waitFor(() => expect(screen.getByTestId('management-social-chat')).toBeOnTheScreen());
 }
 
+let disariAc: jest.SpyInstance;
+
 beforeAll(() => {
   // `env.apiUrl` tanımsızsa `apiFetch` daha `fetch`e varmadan fırlar ve sonuç `network_error`
   // olur — yani ekran, sahte cevabı hiç görmeden hata durumuna düşer (ölçüldü 23.08). Kurye
   // testlerinin aynı satırı.
   process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
   globalThis.fetch = fetchMock as unknown as typeof fetch;
+  /* DIŞ ÇIKIŞ NÖBETİ (21.287): kullanıcı kararı *"Uygulama dışına çıkışlar olmamalı."* Casus
+     burada kuruluyor ki fotoğraf ve ses iddiaları "açılmadı"yı gerçekten ölçebilsin. */
+  disariAc = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 });
 
 beforeEach(() => {
   fetchMock.mockReset();
+  disariAc.mockClear();
 });
 
 describe('kutu bir DEFTER kutusudur — mesaj göndermez', () => {
-  it('düğme "Deftere işle" der, "gönder" demez', async () => {
+  /* DEFTER EVRESİ BİTTİ (21.286 · kullanıcı kararı 07.09). Bu üç iddia eskiden tam TERSİNİ
+     çiviliyordu ("Deftere işle" · "buradan gönderilmez" · "gönderim ucu YOK") ve o gün doğruydu:
+     mobil uç `recordOutboundMessage` çağırıyordu. Web `sendOutboundMessage` çağırırken mobilin
+     defterde kalması aynı konuşmayı iki yüzeyde iki ayrı yetenek yapıyordu. */
+  it('düğme "Gönder" der — mesaj gerçekten gidiyor', async () => {
     mockDetay(detay());
     await ekranAc();
     expect(screen.getByTestId('management-social-record')).toBeOnTheScreen();
     expect(screen.getByText(t.record)).toBeOnTheScreen();
-    expect(t.record).toBe('Deftere işle');
+    expect(t.record).toBe('Gönder');
   });
 
-  it('altında "buradan gönderilmez" uyarısı GÖRÜNÜR', async () => {
-    // Bu cümle ekranın kendisi kadar önemli: operatörün mesajı gönderdiğini sanmasını engelleyen
-    // tek şey o. Yumuşatılırsa bu iddia kırılır.
+  it('altındaki not gönderimin GERİ ALINAMAZ olduğunu söyler', async () => {
+    // Cümle ekranın kendisi kadar önemli: operatörün "deneme yaparım" sanmasını engelleyen tek şey
+    // o. Mesaj müşteriye gidiyor ve geri çağrılamıyor.
     mockDetay(detay());
     await ekranAc();
     expect(screen.getByText(t.recordNote)).toBeOnTheScreen();
-    expect(t.recordNote).toContain('gönderilmez');
+    expect(t.recordNote).toContain('geri alınamaz');
   });
 
-  it('kayıt isteği `reply` ucuna gider — gönderim ucu YOK', async () => {
+  it('cevap `reply` ucuna gider — uç adı değişmedi, DAVRANIŞI değişti', async () => {
     mockDetay(detay());
     await ekranAc();
 
@@ -128,8 +139,8 @@ describe('kutu bir DEFTER kutusudur — mesaj göndermez', () => {
       const yazmalar = fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'POST');
       expect(yazmalar).toHaveLength(1);
       expect(String(yazmalar[0]![0])).toContain(`/api/v1/social/conversations/${CONV_ID}/reply`);
-      // Gönderim ucu diye bir şey yok; olsaydı adı `send` olurdu ve bu iddia onu yakalardı.
-      expect(String(yazmalar[0]![0])).not.toContain('/send');
+      /* Uç ADI korundu ve bu bilinçli: aynı kapı, aynı gövde — değişen tek şey ucun içinde
+         `record` yerine `send` çağrılması. İkinci bir uç açmak aynı işe iki ad vermek olurdu. */
     });
   });
 
@@ -241,5 +252,217 @@ describe('pencere bandı — kanalın diliyle konuşur', () => {
     await ekranAc();
     expect(screen.getByText(t.window.messenger.closed)).toBeOnTheScreen();
     expect(t.window.messenger.closed).not.toContain('ücretli');
+  });
+});
+
+/*
+  MEDYA (21.287) — ekran buraya kadar fotoğrafı da sesi de aynı yer tutucu yazısıyla çiziyordu
+  (`[görsel / dosya]`), çünkü sözleşme ne `mediaMime` ne adres taşıyordu. Aşağıdaki iddialar o
+  yokluğun geri dönmemesini bekliyor: yer tutucuya düşen bir medya mesajı, testi kırar.
+*/
+let mediaSeq = 0;
+
+/** Sözleşme şeklinde bir mesaj — verilmeyen medya alanları BOŞ (metin mesajının normali). */
+function mesaj(over: Record<string, unknown> = {}) {
+  mediaSeq += 1;
+  return {
+    id: `00000000-0000-4000-8000-00000000${String(1000 + mediaSeq)}`,
+    direction: 'inbound',
+    author: 'customer',
+    kind: 'text',
+    body: { text: 'Merhaba', payload: null },
+    templateName: null,
+    mediaMime: null,
+    mediaTranscript: null,
+    mediaUrl: null,
+    createdAt: new Date().toISOString(),
+    ...over,
+  };
+}
+
+/** Alt yazısız gelen fotoğraf — ızgaraya giren tek şekil. */
+function foto(over: Record<string, unknown> = {}) {
+  return mesaj({
+    kind: 'media',
+    body: { text: null, payload: null },
+    mediaMime: 'image/jpeg',
+    mediaUrl: 'https://r2.test/imzali-1.jpg',
+    ...over,
+  });
+}
+
+describe('gelen fotoğraf ÇİZİLİR — yer tutucu yazısı değil', () => {
+  it('tek fotoğraf karesi çizilir', async () => {
+    mockDetay(detay({}, [foto()]));
+    await ekranAc();
+    expect(screen.getByTestId('management-social-photos')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-social-photo-0')).toBeOnTheScreen();
+  });
+
+  it('dokunuş UYGULAMA İÇİNDE tam ekranı açar — dışarı çıkmaz', async () => {
+    /* Kullanıcı kararı 07.09. Bir tur boyunca `Linking.openURL` sistem tarayıcısını açıyordu ve
+       cihazda çalışıyordu — ama operatörü yazışmadan çıkarıyordu. */
+    mockDetay(detay({}, [foto()]));
+    await ekranAc();
+    fireEvent.press(screen.getByTestId('management-social-photo-0'));
+
+    await waitFor(() => expect(screen.getByTestId('management-social-photo-viewer')).toBeOnTheScreen());
+    expect(disariAc).not.toHaveBeenCalled();
+  });
+
+  it('görüntüleyici KAPANIR — açık kalan bir perde yazışmayı kilitlerdi', async () => {
+    mockDetay(detay({}, [foto()]));
+    await ekranAc();
+    fireEvent.press(screen.getByTestId('management-social-photo-0'));
+    await waitFor(() => expect(screen.getByTestId('management-social-photo-viewer')).toBeOnTheScreen());
+    fireEvent.press(screen.getByTestId('management-social-photo-viewer-close'));
+
+    await waitFor(() => expect(screen.queryByTestId('management-social-photo-viewer')).not.toBeOnTheScreen());
+  });
+
+  it('İNDİRİLEMEMİŞ fotoğraf görüntüleyiciye GİRMEZ — sıra kayması olmaz', async () => {
+    /* Boş karo tam ekranda gösterilecek hiçbir şey taşımıyor, o yüzden görüntüleyiciye alınmıyor.
+       Karonun IZGARADAKİ sırası ile GÖRÜNTÜLEYİCİDEKİ sırası bu yüzden ayrı hesaplanır: eşit
+       sayılsaydı boş karodan sonraki her dokunuş bir öncekinin fotoğrafını açardı.
+
+       Telde mesajlar YENİDEN ESKİYE gelir, ekran onları çevirir (hook'un kararı) — dizi burada
+       bilerek ters yazıldı ki ızgarada `[url, url, boş]` sırası doğsun. */
+    mockDetay(
+      detay({}, [
+        foto({ mediaUrl: null }),
+        foto({ mediaUrl: 'https://r2.test/ikinci.jpg' }),
+        foto({ mediaUrl: 'https://r2.test/ucuncu.jpg' }),
+      ]),
+    );
+    await ekranAc();
+
+    // Izgarada üç karo var (`-photo-2` boş olan), görüntüleyicide İKİ fotoğraf: sayaç bunu söyler.
+    expect(screen.getByTestId('management-social-photo-missing')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('management-social-photo-1'));
+
+    await waitFor(() => expect(screen.getByTestId('management-social-photo-viewer')).toBeOnTheScreen());
+    expect(screen.getByTestId('management-social-photo-viewer-counter')).toHaveTextContent('2 / 2');
+  });
+
+  it('yer tutucu `[görsel / dosya]` ARTIK yazılmaz', async () => {
+    mockDetay(detay({}, [foto()]));
+    await ekranAc();
+    expect(screen.queryByText(messages.social.kind.media)).not.toBeOnTheScreen();
+  });
+
+  it('indirmesi düşmüş fotoğraf mesajı YOK SAYILMAZ — boş karo + sebep', async () => {
+    /* `mediaKey` boş kalabilir ve bu meşru (varlık künyesi: indirme düşse de satır yazılır).
+       Mesajı hiç çizmemek, defterin ilk kuralını ekranda bozmak olurdu. */
+    mockDetay(detay({}, [foto({ mediaUrl: null })]));
+    await ekranAc();
+    expect(screen.getByTestId('management-social-photos')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-social-photo-missing')).toBeOnTheScreen();
+  });
+});
+
+describe('ardışık fotoğraflar TEK ızgarada — yazışma alanı dolmaz', () => {
+  it('aynı taraftan gelen üç alt yazısız fotoğraf tek öbekte toplanır', async () => {
+    mockDetay(detay({}, [foto(), foto(), foto()]));
+    await ekranAc();
+    // Tek ızgara, üç karo: üç ayrı baloncuk olsaydı üç ayrı `-photos` düğümü olurdu.
+    expect(screen.getAllByTestId('management-social-photos')).toHaveLength(1);
+    expect(screen.getByTestId('management-social-photo-2')).toBeOnTheScreen();
+  });
+
+  it('ALT YAZILI fotoğraf öbeği kırar — söz kaybolmasın', async () => {
+    mockDetay(detay({}, [foto(), foto({ body: { text: 'Kutu ezilmiş', payload: null } }), foto()]));
+    await ekranAc();
+    // Üç öbek: [foto] · [alt yazılı foto] · [foto] — ortadaki kendi baloncuğunda, sözüyle.
+    expect(screen.getAllByTestId('management-social-photos')).toHaveLength(3);
+    expect(screen.getByText('Kutu ezilmiş')).toBeOnTheScreen();
+  });
+
+  it('ARADAKİ metin mesajı öbeği kırar — sıra korunur', async () => {
+    mockDetay(detay({}, [foto(), mesaj({ body: { text: 'Bir de şu', payload: null } }), foto()]));
+    await ekranAc();
+    expect(screen.getAllByTestId('management-social-photos')).toHaveLength(2);
+  });
+
+  it('KARŞI taraftan gelen fotoğraf öbeğe katılmaz — tonları ayrı', async () => {
+    mockDetay(detay({}, [foto(), foto({ direction: 'outbound', author: 'admin' })]));
+    await ekranAc();
+    expect(screen.getAllByTestId('management-social-photos')).toHaveLength(2);
+  });
+});
+
+describe('sesli mesaj — çalınamasa bile OKUNUR', () => {
+  const ses = (over: Record<string, unknown> = {}) =>
+    mesaj({
+      kind: 'media',
+      body: { text: null, payload: null },
+      mediaMime: 'audio/ogg',
+      mediaUrl: 'https://r2.test/imzali-1.ogg',
+      ...over,
+    });
+
+  it('ses kartı çizilir — fotoğraf ızgarası DEĞİL', async () => {
+    mockDetay(detay({}, [ses()]));
+    await ekranAc();
+    expect(screen.getByTestId('management-social-voice')).toBeOnTheScreen();
+    expect(screen.queryByTestId('management-social-photos')).not.toBeOnTheScreen();
+  });
+
+  it('ÇALAR UYGULAMANIN İÇİNDE — dışarı açan bir bağlantı yok', async () => {
+    /* Kullanıcı kararı 07.09: *"Uygulama dışına çıkışlar olmamalı."* Bir tur boyunca dokunuş
+       `Linking.openURL` ile sistem tarayıcısını açıyordu; bu iddia o dönüşü engeller. */
+    mockDetay(detay({}, [ses()]));
+    await ekranAc();
+    expect(screen.getByTestId('management-social-voice-play-toggle')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-social-voice-play-track')).toBeOnTheScreen();
+    expect(disariAc).not.toHaveBeenCalled();
+  });
+
+  it('süre bilinmiyorsa SIFIR yazılmaz — ölçülemeyen değer sıfır değildir', async () => {
+    mockDetay(detay({}, [ses()]));
+    await ekranAc();
+    // Sahte sürücü 5 saniyelik bir kayıt veriyor; ekran "0:00 / 0:05" yazar, "0:00 / 0:00" değil.
+    expect(screen.getByTestId('management-social-voice-play-time')).toHaveTextContent('0:00 / 0:05');
+  });
+
+  it('transkript çizilir ve MAKİNE ÇÖZÜMÜ olduğu yazar', async () => {
+    /* Ayrım 15.26'nın kuralı: makine çözümünü müşterinin kesin sözü sanmak, yanlış cevabın en
+       sessiz yoludur. Etiket düşerse bu test kırılır. */
+    mockDetay(detay({}, [ses({ mediaTranscript: 'Siparişim bugün gelecek mi' })]));
+    await ekranAc();
+    expect(screen.getByTestId('management-social-transcript')).toBeOnTheScreen();
+    expect(screen.getByText('Siparişim bugün gelecek mi')).toBeOnTheScreen();
+    expect(screen.getByText(t.media.transcript)).toBeOnTheScreen();
+  });
+
+  it('ses dosyası alınamamışsa kart yine durur, dinleme kapalı', async () => {
+    mockDetay(detay({}, [ses({ mediaUrl: null, mediaTranscript: 'Merhaba' })]));
+    await ekranAc();
+    expect(screen.getByText(t.media.voiceMissing)).toBeOnTheScreen();
+    // Transkript hâlâ okunabilir: ses düşse de söylenen kaybolmadı.
+    expect(screen.getByText('Merhaba')).toBeOnTheScreen();
+  });
+});
+
+describe('gönderim reddi TEK cümledir — ham anahtar ekrana çıkmaz', () => {
+  it('ret sebebi sözlükten cümleye çevrilir', async () => {
+    /* 21.286'da sebep İKİ kez çiziliyordu ve alttaki ham anahtarı ("window_closed") operatöre
+       gösteriyordu. Sözlük tek çeviri yeridir. */
+    mockDetay(detay());
+    await ekranAc();
+
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve(envelope({ status: 'refused', reason: 'window_closed', retryable: false, detail: null })),
+    );
+    fireEvent.changeText(screen.getByTestId('management-social-reply'), 'Merhaba');
+    // Düğme boş metinde kapalı — açıldığını beklemeden basmak sessizce yutulur (emsal: yukarıdaki
+    // "cevap `reply` ucuna gider" testi; ölçülmüş tuzak).
+    await waitFor(() => expect(screen.getByTestId('management-social-record')).toBeEnabled());
+    fireEvent.press(screen.getByTestId('management-social-record'));
+
+    await waitFor(() => expect(screen.getByTestId('management-social-action-error')).toBeOnTheScreen());
+    expect(screen.getByText(t.failure.window_closed)).toBeOnTheScreen();
+    expect(screen.queryByText(/window_closed/)).not.toBeOnTheScreen();
+    // Metin kutuda DURUR — gitmeyen bir cevabı silmek onu yeniden yazdırmaktır.
+    expect(screen.getByTestId('management-social-reply').props.value).toBe('Merhaba');
   });
 });

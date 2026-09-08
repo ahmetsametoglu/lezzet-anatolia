@@ -2,11 +2,12 @@ import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import type { ConversationHandler } from '@lezzet/types';
 
+import type { ApiFail } from '@/lib/api/client';
 import {
   consumeSocialDraft,
   fetchSocialConversation,
   generateSocialDraft,
-  recordSocialReply,
+  sendSocialReply,
   setSocialMode,
   type SocialConversationDetail,
   type SocialMessage,
@@ -37,6 +38,8 @@ type ConversationStatus = 'loading' | 'ready' | 'error';
 
 interface UseSocialConversationResult {
   status: ConversationStatus;
+  /** `status === 'error'` iken düşen OKUMA — sebep cümlesi ondan kurulur (gelen kutusunun kararı). */
+  failure: ApiFail | null;
   conversation: SocialRow | null;
   /** ESKİDEN YENİYE — ekran olduğu gibi çizer, en yeni altta. */
   messages: SocialMessage[];
@@ -58,6 +61,7 @@ interface UseSocialConversationResult {
 
 export function useSocialConversation(conversationId: string): UseSocialConversationResult {
   const [status, setStatus] = useState<ConversationStatus>('loading');
+  const [failure, setFailure] = useState<ApiFail | null>(null);
   const [conversation, setConversation] = useState<SocialRow | null>(null);
   const [messages, setMessages] = useState<SocialMessage[]>([]);
   const [olderCursor, setOlderCursor] = useState<string | null>(null);
@@ -86,10 +90,12 @@ export function useSocialConversation(conversationId: string): UseSocialConversa
 
       loaded.current = true;
       if (result.error !== null) {
+        setFailure(result);
         setStatus('error');
         return;
       }
       applyDetail(result.data);
+      setFailure(null);
       setStatus('ready');
     },
     [conversationId, applyDetail],
@@ -131,14 +137,29 @@ export function useSocialConversation(conversationId: string): UseSocialConversa
       setSending(true);
       setLastError(null);
 
-      const result = await recordSocialReply(conversationId, text);
+      const result = await sendSocialReply(conversationId, text);
       setSending(false);
       if (result.error !== null) {
         setLastError(result.error);
         return false;
       }
+
+      /*
+        AKIBET ÇAĞRININ İÇİNDE (21.286): uç 200 dönse de mesaj gitmemiş olabilir — servis penceresi
+        kapalıysa `refused`, sağlayıcı düştüyse `failed`. İkisi de HTTP hatası DEĞİL, çünkü istek
+        doğruydu; reddeden bizim kuralımız ya da Meta'nın hâli.
+
+        Ekran ikisini de aynı hata satırından okur ama SEBEP anahtarı farklı, yani sözlük ayrı
+        cümle yazabilir. Kutu TEMİZLENMEZ: operatörün yazdığı metin gitmediyse onu silmek, yeniden
+        yazdırmak olurdu — `true` yalnız gerçekten gidince döner.
+      */
+      if (result.data.status !== 'sent') {
+        setLastError(result.data.reason ?? result.data.status);
+        return false;
+      }
+
       generation.current += 1; // uçuştaki okuma bu taze detayı ezmesin
-      applyDetail(result.data);
+      if (result.data.detail !== null) applyDetail(result.data.detail);
       return true;
     },
     [conversationId, sending, applyDetail],
@@ -185,6 +206,7 @@ export function useSocialConversation(conversationId: string): UseSocialConversa
 
   return {
     status,
+    failure,
     conversation,
     messages,
     hasOlder: olderCursor !== null,

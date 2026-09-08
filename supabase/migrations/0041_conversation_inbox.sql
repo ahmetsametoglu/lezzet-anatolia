@@ -59,7 +59,12 @@ comment on view public.conversation_inbox is
 -- Kuyruğun sıralama ekseni. Konuşma kümesi veriyle SINIRSIZ büyür (canlı kanalda aylarca) →
 -- keyset sayfalama şart, keyset de sıralı bir indeks ister.
 --
--- `nulls last`: `last_message_at` yalnız mesajsız konuşmada boştur (adım 2'de webhook konuşmayı
--- açıp mesajı bir sonraki turda yazabilir). O satır kuyruğun BAŞINA değil sonuna düşmeli — henüz
--- kimse bir şey söylememiş bir sohbet, cevap bekleyenlerin önüne geçemez.
-create index conversation_last_message_idx on public.conversation (last_message_at desc nulls last);
+-- SIRALAMA `last_inbound_at` ÜZERİNDEN (21.289): kuyruk "karşıdan en son ne zaman yazıldı"ya göre
+-- diziliyor, "konuşma en son ne zaman kımıldadı"ya göre değil — gerekçe kolonun künyesinde
+-- (`0039`). İndeks bu yüzden o alanda; `last_message_at` üzerindeki indeks müşteri yazışma
+-- geçmişinin (`conversation_customer_idx`) işine yaramaya devam ediyor.
+--
+-- `nulls last`: alan yalnız müşterinin HİÇ yazmadığı konuşmada boştur. O satır kuyruğun BAŞINA
+-- değil sonuna düşmeli — henüz kimse bir şey söylememiş bir sohbet, cevap bekleyenlerin önüne
+-- geçemez.
+create index conversation_last_inbound_idx on public.conversation (last_inbound_at desc nulls last);

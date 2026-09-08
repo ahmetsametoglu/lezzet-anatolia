@@ -5,8 +5,10 @@ import {
   SocialDraftResponseSchema,
   SocialInboxResponseSchema,
   SocialModeResponseSchema,
+  SocialReplyResponseSchema,
   type ConversationSource,
   type SocialConversationDetail,
+  type SocialReplyResponse,
   type SocialConversationRowContract,
   type SocialMessageContract,
   type ConversationHandler,
@@ -27,8 +29,8 @@ import { queryString, type ApiResult } from './client';
   çağrı ağa çıkmadan 401 döner; rolsüz personel 403 `forbidden` görür — ekran ikisini de "bu kapı
   sana kapalı" olarak okur, operasyon kabuğu (`(operations)/_layout`) zaten admin'i içeri almıştı.
 
-  BURADAN MESAJ GÖNDERİLMEZ: `reply` DEFTER yazar (uç künyesi) — operatör metni telefonundan/
-  Business Suite'ten gönderir, gönderdiğini buraya işler. Gönderen kanal 15.11'in işi.
+  `reply` GÖNDERİR (21.286): defter evresi bitti, uç `sendOutboundMessage` çağırıyor ve dönen zarf
+  akıbeti taşıyor. Giden yönde MEDYA yok (21.287) — gelen fotoğraf/ses okunur, cevap yalnız metin.
 */
 
 /** Kuyruk satırı — alan kümesi sözleşmenin kendisi. */
@@ -47,9 +49,16 @@ export function fetchSocialInbox(params: {
   cursor?: string;
   filter?: 'all' | 'awaiting';
   source?: ConversationSource;
+  /** Yürütücü süzgeci (21.289) — insan · hibrit · yapay zekâ; verilmezse hepsi. */
+  handledBy?: ConversationHandler;
 }): Promise<ApiResult<z.infer<typeof SocialInboxResponseSchema>>> {
   return authorizedFetch(
-    `/api/v1/social/conversations${queryString({ cursor: params.cursor, filter: params.filter, source: params.source })}`,
+    `/api/v1/social/conversations${queryString({
+      cursor: params.cursor,
+      filter: params.filter,
+      source: params.source,
+      handledBy: params.handledBy,
+    })}`,
     SocialInboxResponseSchema,
   );
 }
@@ -66,20 +75,23 @@ export function fetchSocialConversation(
 }
 
 /**
- * Cevabı deftere işle — dönen şey GÜNCEL DETAYDIR, tek mesaj değil (talep istemcisinin aynı
- * kararı): yazım son mesajı ve "top bizde" durumunu da oynatır; ekran kendi durumunu tahmin etmez.
+ * Cevabı GÖNDER (21.286 — eskiden yalnız deftere işliyordu).
+ *
+ * Dönen zarf akıbeti taşır (`sent` · `refused` · `failed`), detay yalnız gönderildiğinde dolu:
+ * gönderilmemiş bir cevaptan sonra yazışmayı tazelemek değişmemiş bir listeyi ikinci kez
+ * çizdirirdi. Ret ile başarısızlık AYRI, çünkü operatörün yapacağı şey farklı — biri "başka yol
+ * dene", öteki "yeniden dene" (sözleşme künyesi).
  */
-export function recordSocialReply(id: string, text: string): Promise<ApiResult<SocialConversationDetail>> {
-  return authorizedFetch(`/api/v1/social/conversations/${encodeURIComponent(id)}/reply`, SocialConversationDetailSchema, {
+export function sendSocialReply(id: string, text: string): Promise<ApiResult<SocialReplyResponse>> {
+  return authorizedFetch(`/api/v1/social/conversations/${encodeURIComponent(id)}/reply`, SocialReplyResponseSchema, {
     method: 'POST',
     body: { text },
   });
 }
 
 /**
- * Yürütücü modu — sohbette İKİ değer (human · hybrid); `ai` sunucuda da reddedilir, çünkü özerk
- * sohbet motoru yok (15.13 künyesi `ConversationHandlerEnum`de). Aynı moda ikinci çağrı 409
- * `mode_unchanged` döner (yarış işareti).
+ * Yürütücü modu — ÜÇ değer (human · hybrid · ai) ve üçü de motorda bir kapı açıp kapatıyor; ayrım
+ * uç künyesinde. Aynı moda ikinci çağrı 409 `mode_unchanged` döner (yarış işareti).
  */
 export function setSocialMode(id: string, mode: ConversationHandler): Promise<ApiResult<z.infer<typeof SocialModeResponseSchema>>> {
   return authorizedFetch(`/api/v1/social/conversations/${encodeURIComponent(id)}/mode`, SocialModeResponseSchema, {

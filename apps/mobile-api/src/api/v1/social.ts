@@ -1,8 +1,16 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { generateConversationDraft, recordOutboundMessage, ringConversationsBell } from '@lezzet/application';
-import { ConversationInboxService, ConversationService, MessageService, serviceDb } from '@lezzet/database';
 import {
+  conversationsChannelName,
+  generateConversationDraft,
+  messageSenderFor,
+  ringConversationsBell,
+  sendOutboundMessage,
+} from '@lezzet/application';
+import { ConversationInboxService, ConversationService, MessageService, serviceDb } from '@lezzet/database';
+import { privateReadUrl } from '@lezzet/storage';
+import {
+  ConversationHandlerEnum,
   ConversationSourceEnum,
   DEFAULT_PAGE_SIZE,
   SocialConversationDetailSchema,
@@ -12,6 +20,7 @@ import {
   SocialModeRequestSchema,
   SocialModeResponseSchema,
   SocialReplyRequestSchema,
+  SocialReplyResponseSchema,
   type ConversationInboxRow,
   type KeysetCursor,
   type Message,
@@ -36,11 +45,16 @@ import { requireStaffRole, type StaffEnv } from './auth';
   bir güvence değildir"); mobil kapı aynı kararı `requireStaffRole('admin')` ile verir. Kurye/depo
   rolleri müşteri yazışmalarını görmez — yazışma içeriği kişisel veridir, rol kapısı en dar çevrede.
 
-  ── BURADAN MESAJ GÖNDERİLMEZ (defter evresi) ───────────────────────────────
-  Web ile aynı gerçek: gönderim kanalı henüz yok (Graph API sürücüsü 15.11). Cevap ucu DEFTER
-  tutar — operatör metni telefonundan/Business Suite'ten gönderir, gönderdiğini buraya işler.
-  Canlı kanal açıldığında gönderen kapı da `@lezzet/application`da kurulacak ve iki yüzey yine
-  aynı kapıyı çağıracak.
+  ── BURADAN MESAJ GÖNDERİLİR (21.286 · defter evresi bitti) ─────────────────
+  Cevap ucu artık `sendOutboundMessage` çağırıyor — web ile AYNI kapı. Eskiden yalnız deftere
+  yazıyordu ve bu, aynı konuşmayı iki yüzeyde iki ayrı yetenek taşır hâle getiriyordu; gerekçesi
+  cevap ucunun künyesinde.
+
+  ── MEDYA OKUNUR, GÖNDERİLEMEZ (21.287) ─────────────────────────────────────
+  Gelen fotoğraf ve sesli mesaj artık imzalı adresle ekrana iniyor (`toDetailBody`). Giden yönde
+  medya YOK: `SocialReplyRequestSchema` yalnız metin alıyor, çünkü giden medya ayrı bir yükleme
+  akışı + sağlayıcı kapısı demek (15.11'in kapsamı) — sözleşmeye alanı şimdiden açmak, hiç
+  gönderilemeyen bir eki ekranda vaat etmek olurdu.
 */
 
 /** Sayfa tavanı — talep/sipariş uçlarının aynı kararı: tek istekle arşivi boşaltmak sayfalamayı anlamsız kılar. */
@@ -56,6 +70,9 @@ const InboxQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
   filter: z.enum(['all', 'awaiting']).default('all'),
   source: ConversationSourceEnum.optional(),
+  /* YÜRÜTÜCÜ SÜZGECİ (21.289) — enum'dan doğrulanır, serbest dize değil: tanımadığı bir değer
+     gelirse sorgu SESSİZCE süzgeçsiz koşup "hepsi bu" diyen bir liste döndürürdü. */
+  handledBy: ConversationHandlerEnum.optional(),
 });
 
 /** Sohbet geçmişi sorgusu — yalnız imleç + tavan (yeniden eskiye, `listRecent`). */
@@ -76,16 +93,30 @@ function draftFailStatus(reason: string): 404 | 409 {
 export const social = new Hono<StaffEnv>();
 social.use('*', requireStaffRole('admin'));
 
-/** Detay gövdesi tek yerde kurulur: GET ve cevap ucu AYNI şekli döndürmek zorunda (tickets `toDetailBody` deseni). */
-function toDetailBody(
+/**
+ * Detay gövdesi tek yerde kurulur: GET ve cevap ucu AYNI şekli döndürmek zorunda (tickets
+ * `toDetailBody` deseni).
+ *
+ * MEDYA BURADA İMZALANIR (21.287): `mediaKey` private R2 anahtarıdır ve telde işi yoktur — ekrana
+ * giden şey süreli okuma adresidir. İmzalama yerel bir hesap, ağ turu değil; `Promise.all` ile
+ * hepsi birlikte üretilir (talep eklerinin `privateReadUrls` kararı — beş fotoğraflı bir sohbet
+ * beş turluk gecikme yemez).
+ *
+ * `async` olması sözleşmenin bir sonucu: imzasız bir gövde `parse`ta kırılırdı, yani "medyayı
+ * eklemeyi unutmak" derleme/çalışma anında görünür bir hata — sessizce fotoğrafsız çizen bir ekran
+ * değil.
+ */
+async function toDetailBody(
   row: ConversationInboxRow,
   messages: Message[],
   nextCursor: KeysetCursor | null,
-): z.input<typeof SocialConversationDetailSchema> {
+): Promise<z.input<typeof SocialConversationDetailSchema>> {
   // `parse` süzgeçtir (MeSchema kararı): pick'te olmayan alan (optIn, providerAccountRef) zarfa sızamaz.
   return {
     conversation: row,
-    messages,
+    messages: await Promise.all(
+      messages.map(async (message) => ({ ...message, mediaUrl: await privateReadUrl(message.mediaKey) })),
+    ),
     nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
   };
 }
@@ -103,7 +134,11 @@ social.get('/conversations', async (c) => {
   const db = serviceDb();
   const inbox = new ConversationInboxService(db);
   const [page, awaitingReply, handledByAi] = await Promise.all([
-    inbox.list({ awaitingReply: filter === 'awaiting' ? true : undefined, source }, decodeCursor(cursor), limit),
+    inbox.list(
+      { awaitingReply: filter === 'awaiting' ? true : undefined, source, handledBy: parsed.data.handledBy },
+      decodeCursor(cursor),
+      limit,
+    ),
     inbox.countAwaitingReply(source),
     new ConversationService(db).countHandledByAi(source),
   ]);
@@ -112,6 +147,10 @@ social.get('/conversations', async (c) => {
     rows: page.rows,
     nextCursor: page.nextCursor ? encodeCursor(page.nextCursor) : null,
     counts: { awaitingReply, handledByAi },
+    /* CANLI ZİLİN ADI HER SAYFADA GELİR (21.289) — ayrı bir uç açmak, ekran açılışına ikinci bir
+       tur eklerdi ve o turun cevabı hiç değişmiyor. Adı üreten kapı zaten `admin` guard'ının
+       arkasında; gerekçe sözleşme künyesinde. */
+    channel: conversationsChannelName(),
   };
   return ok(c, SocialInboxResponseSchema.parse(body));
 });
@@ -137,11 +176,11 @@ social.get('/conversations/:id', async (c) => {
   ]);
   if (!row) return fail(c, 'conversation_not_found', 404);
 
-  return ok(c, SocialConversationDetailSchema.parse(toDetailBody(row, messagePage.rows, messagePage.nextCursor)));
+  return ok(c, SocialConversationDetailSchema.parse(await toDetailBody(row, messagePage.rows, messagePage.nextCursor)));
 });
 
 /**
- * Cevabı deftere işle — pencereye dokunmaz (giden mesaj pencere açmaz). Cevap GÜNCEL DETAYI
+ * Cevabı GÖNDER — pencereye dokunmaz (giden mesaj pencere açmaz). Cevap GÜNCEL DETAYI
  * döndürür (tickets ucunun kararı): yazım son mesajı ve `awaitingReply`ı da oynatıyor, tek kaydı
  * dönmek ekranı kendi durumunu tahmin etmeye zorlardı.
  *
@@ -159,7 +198,42 @@ social.post('/conversations/:id/reply', async (c) => {
   const existing = await inbox.getById(id.data);
   if (!existing) return fail(c, 'conversation_not_found', 404);
 
-  await recordOutboundMessage(db, { conversationId: id.data, text: body.data.text });
+  /*
+    DEFTER EVRESİ BİTTİ — MESAJ GERÇEKTEN GİDİYOR (21.286 · kullanıcı kararı 07.09).
+
+    Buraya kadar `recordOutboundMessage` çağrılıyordu: cevap yalnız deftere yazılıyor, WhatsApp'a
+    gitmiyordu ve ekran bunu dürüstçe söylüyordu. Ama web `sendOutboundMessage` çağırıyor
+    (`3b4e0866`) — yani aynı konuşma iki yüzeyde iki ayrı yetenek taşıyordu ve operatör telefondayken
+    cevap veremiyordu. Kullanıcı kararı: *"Mobil bu konuda web'den daha kullanışlı olmalı."*
+
+    MOTOR YAZILMADI, ÇAĞRILDI: `sendOutboundMessage` paylaşılan pakette ve servis penceresini,
+    kalıp mesaj kuralını, kanal ayrımını zaten biliyor. İkinci bir gönderim yolu yazmak, aynı
+    kuralı iki yerde yaşatmak olurdu (CLAUDE §1) — ve pencere kuralı yanlış kopyalandığında bedeli
+    para (gereksiz kalıp mesaj) ya da sessizce gitmeyen bir cevap.
+
+    Jetonu ÇAĞIRAN okur (`STACK §4` — paket `process.env` bilmez); jeton yoksa `messageSenderFor`
+    reddeden bir sürücü döndürür ve gönderim `failed` olur. Sessizce "gitti" demez.
+  */
+  const outcome = await sendOutboundMessage(db, messageSenderFor(process.env.META_ACCESS_TOKEN), {
+    conversationId: id.data,
+    text: body.data.text,
+  });
+
+  /* Ret ve başarısızlık DEFTERE yazılmaz ve yazışma tazelenmez: gönderilmemiş bir cevaptan sonra
+     listeyi yeniden çizmek, değişmemiş bir şeyi ikinci kez çizdirmekten başka bir iş yapmaz —
+     üstelik operatöre "bir şey oldu" izlenimi verirdi. */
+  if (outcome.status !== 'sent') {
+    return ok(
+      c,
+      SocialReplyResponseSchema.parse({
+        status: outcome.status,
+        reason: outcome.reason,
+        retryable: outcome.status === 'failed' ? outcome.retryable : false,
+        detail: null,
+      } satisfies z.input<typeof SocialReplyResponseSchema>),
+    );
+  }
+
   await ringConversationsBell();
 
   const [row, messagePage] = await Promise.all([
@@ -167,15 +241,27 @@ social.post('/conversations/:id/reply', async (c) => {
     new MessageService(db).listRecent(id.data, undefined, DEFAULT_PAGE_SIZE),
   ]);
   if (!row) return fail(c, 'conversation_not_found', 404);
-  return ok(c, SocialConversationDetailSchema.parse(toDetailBody(row, messagePage.rows, messagePage.nextCursor)));
+  return ok(
+    c,
+    SocialReplyResponseSchema.parse({
+      status: 'sent',
+      reason: null,
+      retryable: false,
+      detail: await toDetailBody(row, messagePage.rows, messagePage.nextCursor),
+    } satisfies z.input<typeof SocialReplyResponseSchema>),
+  );
 });
 
 /**
- * Yürütücü modu — sohbette İKİ değer (`ConversationHandlerEnum`: human · hybrid), talepteki üçlü
- * değil: `ai` isteği `invalid_body` ile reddedilir, çünkü özerk sohbet motoru yok (15.13/15.8) ve
- * kabul edilseydi mobil ekran arkasında hiçbir şey koşmayan bir modu "AI yürütüyor" diye gösterirdi.
- * Web `setConversationModeAction`ın aynası: hedef enum'dan doğrulanır; aynı moda ikinci çağrı bir YARIŞIN işaretidir ve görünür retle döner (`409
- * mode_unchanged`) — sessizce "oldu" demek, öteki operatörün değişikliğini yutmak olurdu.
+ * Yürütücü modu — ÜÇ değer (`ConversationHandlerEnum = TicketHandlerEnum.options`: human · hybrid
+ * · ai) ve üçü de arkasında gerçek bir davranış taşıyor: `hybrid` taslak ürettirir
+ * (`ai.ts` üretim kapısı `handledBy === 'hybrid'` arar), `ai` özerk cevabı açar
+ * (`runAutonomousConversationReply`), `human` hiçbirini. *(Künye 29.08'e kadar "ai reddedilir"
+ * diyordu — özerk motor yokken doğruydu, motor bağlandığında bayatladı.)*
+ *
+ * Web `setConversationModeAction`ın aynası: hedef enum'dan doğrulanır; aynı moda ikinci çağrı bir
+ * YARIŞIN işaretidir ve görünür retle döner (`409 mode_unchanged`) — sessizce "oldu" demek, öteki
+ * operatörün değişikliğini yutmak olurdu.
  */
 social.post('/conversations/:id/mode', async (c) => {
   const id = UuidSchema.safeParse(c.req.param('id'));

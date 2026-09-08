@@ -13337,3 +13337,201 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **"GÜN İÇİNDE" AYRIMI AÇILMAYACAK** (kullanıcı kararı 07.09) — tasarım *"5 karar · 2 tanesi gün
   içinde"* diyor, bizde öyle bir kavram yok ve olmayacak. Ekran kendi cümlesinde kalıyor
   (*"{n} karar bekliyor"*); gerekçe `design/KARARLAR.md`de kayıtlı.
+
+- [x] (21.286) **SOSYAL SOHBETTEN MESAJ GİDİYOR — defter evresi bitti** (kullanıcı kararı 07.09: *"Mobil bu konuda web'den daha kullanışlı olması lazım. Yani kesinlikle gönderilmeliyiz."*)
+  `touches:` `apps/mobile-api/src/api/v1/social.ts` · `packages/types/src/contracts/social-api.schema.ts` · `apps/mobile/src/lib/api/social.ts` · `apps/mobile/src/screens/management/{social-conversation-screen.tsx,use-social-conversation.hook.ts,messages.json}`
+
+  **Durum (07.09) — BAŞLANDI.** Ölçüm: mobil uç `recordOutboundMessage` çağırıyor, yani mesajı
+  yalnız DEFTERE yazıyor; ekran da bunu söylüyor (*"Mesaj buradan gönderilmez — yazışma telefondan
+  yürür"*). Web ise `sendOutboundMessage` çağırıyor ve Meta'ya gerçekten gönderiyor (`3b4e0866`).
+  Aynı konuşma, iki yüzeyde iki ayrı yetenek: operatör telefondayken cevap veremiyor.
+
+  **Motor YAZILMAYACAK** — `sendOutboundMessage` paylaşılan pakette hazır ve pencere kuralını,
+  kalıp mesajı, ret/başarısızlık ayrımını zaten biliyor. Mobil yalnız yanlış fonksiyonu çağırıyor.
+
+  Cihazda ölçüldü: gerçek konuşma var (`+33769331366`), `providerAccountRef` **dolu**
+  (`1237911812747416` — webhook'tan geldi), servis penceresi **açık**, `META_ACCESS_TOKEN`
+  `apps/mobile-api/.env.local`'de mevcut. Yani gönderim için gereken her şey yerinde.
+
+  **Durum (07.09) — TAMAM.** Uç `sendOutboundMessage` çağırıyor; zarf akıbeti taşıyor
+  (`SocialReplyResponseSchema`: `sent` · `refused` · `failed` + `retryable` + `detail`). Üç hâl ayrı
+  tutuldu çünkü operatörün yapacağı şey üçünde farklı: ret bizim kuralımızdır (pencere kapalı →
+  başka yol dene), başarısızlık sağlayıcınındır (yeniden dene). Detay YALNIZ gönderildiğinde dolu —
+  gitmemiş bir cevaptan sonra yazışmayı tazelemek, değişmemiş bir listeyi ikinci kez çizdirmek olurdu.
+  Ekran gitmeyen mesajın metnini kutuda BIRAKIR.
+
+  Jetonu ÇAĞIRAN okur (`STACK §4`): `messageSenderFor(process.env.META_ACCESS_TOKEN)`; jeton yoksa
+  reddeden sürücü döner ve akıbet `failed · not_configured` olur — sessizce "gitti" demez.
+
+  ~~Cihaz turu~~ — kablo turda düştü, sonra yerel veritabanı sıfırlandı (ölçüldü 07.09: `conversation`
+  ve `message` **0 satır**), yani açılacak sohbet kalmadı. Gönderim yolu kod tarafında doğrulandı;
+  gerçek WhatsApp gönderimi kullanıcının onayına bağlı ve henüz alınmadı.
+
+- [x] (21.287) **SOSYAL SOHBET MEDYAYI GÖSTERİYOR — fotoğraf ızgarası + sesli mesaj transkripti** (kullanıcı sorusu 07.09: *"resimli ve sesli mesajları gösterebiliyor musun?"* · tasarım kararı: *"arka arkaya gönderildiği zaman mesajlaşma alanı dolmamalı… resimler yan yana"*)
+  `touches:` `packages/types/src/contracts/social-api.schema.ts` · `apps/mobile-api/{package.json,src/api/v1/social.ts,src/api/v1/social.test.ts}` · `apps/mobile/src/lib/api/social.ts` · `apps/mobile/src/components/ui/icon-paths.ts` · `apps/mobile/src/screens/management/{social-conversation-screen.tsx,social-conversation-screen.test.tsx,chat-bubble.tsx,messages.json}`
+
+  **Durum (07.09) — TAMAM (cihaz turu hariç).** Ölçülen açık: sözleşme `mediaMime`i, `mediaTranscript`i
+  ve adresi hiç taşımıyordu; ekranın tek satırı `message.body.text?.trim() || t.kind[message.kind]`
+  olduğu için her medya mesajı **`[görsel / dosya]`** yazısına düşüyordu — fotoğraf da ses de aynı
+  yazıya. Web ikisini de çiziyordu (`social-sections.tsx`: `<img>` · `<audio controls>` · transkript);
+  saha yüzeyi mobil olduğu hâlde operatör telefonundayken müşterinin gönderdiği fotoğrafı göremiyordu.
+  En ağır kayıp sesti: `mediaTranscript` (15.26) sesli mesajın tek okunabilir içeriği.
+
+  **Adres SÖZLEŞMEDE İMZALI geliyor, geçit kurulmadı.** Web `/operations/social/media/<id>` geçidine
+  işaret ediyor ve gerekçesi ölçülmüş bir arıza (SSR'da HTML'e gömülen adres açık sekmede ölüyordu).
+  Mobilde o arıza yok: ekran her odaklanışta detayı yeniden okuyor. Mobilin KENDİ deseni de bu —
+  talep ekleri de sözleşmede imzalı geliyor (`ticket/read.ts` → `privateReadUrls`). İkinci bir desen
+  açmak, `Image`e Bearer başlığı taşıtmayı ve o başlığın R2 yönlendirmesinde ne olacağını da çözmeyi
+  gerektirirdi. `mediaUrl` üç hâlde `null`: medyası yok · indirmesi düşmüş · R2 ayarlı değil.
+
+  **Ardışık fotoğraflar tek ızgarada.** Kural: aynı taraftan (yön + yazar) gelen, ALT YAZISIZ ardışık
+  fotoğraflar tek baloncukta toplanır (`threadItemsOf`). Alt yazılı fotoğraf öbeği KIRAR — alt yazı
+  okunacak bir sözdür ve ızgaraya karışsaydı hangi karonun sözü olduğu kaybolurdu. Ses ve öteki
+  dosyalar hiç toplanmaz: her birinin kendi eylemi ve kendi transkripti var. Öbekleme SUNUM işidir;
+  defterde "beş fotoğraflı mesaj" diye bir kayıt yok, beş mesaj var.
+
+  **Ses uygulama İÇİNDE çalmıyor** — dokunuş sistemin oynatıcısını açıyor (fotoğrafın açılışıyla aynı
+  kapı). Uygulama içi oynatıcı natif modül (`expo-audio`) ve dev client'ın yeniden derlenmesi demek;
+  o karar kullanıcınındır. Transkript her hâlde okunuyor ve **makine çözümü olduğu yazıyor**: operatör
+  hangi cümlenin insandan geldiğini bilmek zorunda.
+
+  **21.286'dan kalan iki bayat şey de kapandı:** (1) cevap çubuğunda ret sebebi İKİ kez çiziliyordu
+  ve alttaki ham anahtarı (`window_closed`) operatöre gösteriyordu — tek satıra indirildi, gönderim
+  sebepleri sözlüğe eklendi; (2) `social.test.ts`in cevap iddiası hâlâ eski zarfı (`SocialConversationDetail`)
+  bekliyordu — akıbet zarfına göre yeniden yazıldı. Ölçüldü: `vitest.setup.ts` yalnız KÖK `.env`i
+  yüklüyor, `META_ACCESS_TOKEN` ise `apps/mobile-api/.env.local`'de — yani test paketi hiçbir zaman
+  gerçek WhatsApp çağrısı yapmıyor; bu bir eksik değil, güvence (ve testte yazılı).
+
+  **CİHAZ TURU YAPILDI (07.09, Xiaomi değil OPPO CPH1907 · USB `5cf6c351`)** ve bir arıza yakaladı:
+  ilk turda üç fotoğrafın öbeği ekranda **boş, minik bir baloncuk** olarak çıktı. Sebep ölçüldü ve
+  bir ölçüm döngüsüydü: karo `flexBasis: '31%'` diyordu, ama baloncuk (`line`) genişliğini
+  İÇERİĞİNDEN alıyor (`maxWidth: 86%` bir tavan, genişlik değil) — referansı olmayan yüzde sıfıra
+  çöküyordu. Tek fotoğrafın çalışıyor görünmesi RASTLANTIYDI: o baloncukta alt yazı vardı ve
+  genişliği metin veriyordu; alt yazısız tek fotoğraf da aynı şekilde çökerdi. Düzeltme `photoFrame`:
+  karo ölçüsü cihaz genişliğinden, `thread`/`line`/`bubble` ile AYNI kaynaklardan hesaplanıyor —
+  sabit sayı yazılsaydı dar ekranda taşardı.
+
+  Turda ölçülenler: gerçek WhatsApp sesli mesajı (kullanıcının kendi gönderdiği) mikrofon kartı +
+  **MAKİNE ÇÖZÜMÜ** etiketli transkriptle çizildi · R2'den imzalı adresle inen gerçek fotoğraf alt
+  yazısıyla birlikte göründü · ardışık üç fotoğraf **tek ızgarada, tek damgayla** toplandı · ses
+  karosuna dokunuş imzalı adresi sistem tarayıcısında açtı ve dosya **gerçekten çaldı** (0:05).
+
+  Doğrulama: kök `typecheck` temiz (kalan tek hata 21.217'nin henüz commit'lenmemiş `b2b-application-screen.tsx`'i),
+  `lint` · `boundaries` · `knip` · `docs:check` temiz, mobil yönetim + kit paketi **273/273**, sosyal
+  sohbet ekranı **25/25** (11'i bu turda yazıldı).
+
+  **BEKLEYEN(BACKLOG §1): ızgaranın kendi testi CİHAZDA doğrulandı, birim testinde ölçü sınanmıyor**
+  — jest ortamında düzen hesaplanmıyor, yani "boş baloncuk" arızasını hiçbir birim testi yakalayamazdı.
+  Yakalayan şey cihaz turu oldu; kayıt bu yüzden burada duruyor.
+
+  **BEKLEYEN(BACKLOG §1): giden yönde medya YOK** — `SocialReplyRequestSchema` yalnız metin alıyor.
+  Kullanıcı 07.09'da sosyal kanalda müşterinin ses ve fotoğraf gönderebildiğini söyledi; bizim
+  gönderebilmemiz ayrı bir yükleme akışı + sağlayıcı kapısı demek (15.11'in kapsamı).
+
+- [x] (21.288) **SOSYAL SOHBET MEDYASI UYGULAMANIN İÇİNDE + GELEN KUTUSU TASARIMIN RENGİNE DÖNDÜ** (kullanıcı kararları 07.09: *"Sesli mesaj uygulama içerisinde dinlenebilmeli… resimlerin üzerine basınca da uygulama içerisinde tam ekran… Uygulama dışına çıkışlar olmamalı"* · *"liste ekranının renkleri ile bizim ekranın renkleriyle hiç alakası yok… Belki bu filtre konusu için bir açılır çekmece yapabiliriz"*)
+  `touches:` `apps/mobile/package.json` · `apps/mobile/jest.setup.ts` · `apps/mobile/src/testing/expo-audio.mock.ts` · `apps/mobile/src/components/ui/{photo-viewer.tsx,audio-player.tsx,icon-paths.ts}` · `apps/mobile/src/screens/management/{social-inbox-screen.tsx,social-inbox-screen.test.tsx,social-conversation-screen.tsx,social-conversation-screen.test.tsx,complaint-screen.tsx,messages.json}`
+
+  **Durum (07.09) — TAMAM, cihazda ölçüldü.**
+
+  **1. Dış çıkışlar kapandı.** Fotoğraf ve ses `Linking.openURL` ile sistem uygulamasına gidiyordu;
+  cihazda çalışıyordu (ölçüldü: imzalı R2 adresi Chrome'da açıldı, ses 0:05 çaldı) ama operatörü
+  yazışmadan çıkarıyordu. İki komponent kite yazıldı:
+  · `photo-viewer.tsx` — tam ekran, `contain`, kıstırmayla yakınlaştırma + sürükleme (mevcut
+    `gesture-handler`/`reanimated`; yeni bağımlılık yok), yatay geçiş, sayaç. **Talep ekleri de**
+    aynı görüntüleyiciye bağlandı: `complaint-screen`in künyesi "ayrı komponent + testi demek"
+    diyerek dış çıkışı savunuyordu, o gerekçe kapandı ve ikinci desen doğmadı.
+  · `audio-player.tsx` — `expo-audio` (SDK 57; `expo-av` bırakılmış). NATİF modül, dev client
+    yeniden derlendi (`apps/mobile`'ın `rebuild:android` script'i — prebuild + run:android; exit 0).
+    `setAudioModeAsync({playsInSilentMode:true})`
+    eklendi: yoksa telefon sessizdeyken çubuk ilerler ve HİÇBİR ŞEY DUYULMAZDI.
+  · `expo-audio`nun jest mock'u yok (arandı) — `testing/expo-audio.mock.ts` yazıldı; gerçek modül
+    testte yerel köprü arayıp `import` satırında düşüyordu.
+
+  **KALAN TEK DIŞ ÇIKIŞ video/belge** ve operatöre YAZIYOR ("Bu tür telefonun kendi uygulamasında
+  açılır"): içeride görüntüleyici yok — video ayrı bir natif modül (`expo-video`), belge hiç.
+  **BEKLEYEN(BACKLOG §1)**.
+
+  **2. Gelen kutusunun rengi.** Ölçülen: baş harf karesi KANALIN markasıyla boyanıyordu
+  (`brand-whatsapp` #128c4b) ve krem/zeytin paletin içinde bağırıyordu — üstelik kuyruk tek
+  kanaldan doluyken dört satır da aynı yeşili taşıyor, yani ayırt edici hiçbir bilgi vermeden
+  paleti bozuyordu. Tasarım (v3:31) kareyi DURUMA göre boyuyor ve dört değerin dördü de token
+  olarak zaten vardı — `olive-bg`(#e3ecd2) · `olive-dark`(#4a6121) · `neutral-bg`(#e7e2d2) ·
+  `body`(#6d7261) — tasarımın hexleriyle birebir. **Yeni renk kodlanmadı.** Kanal bilgisi
+  kaybolmadı, damganın yanına sönük bir kelime olarak geçti ("WhatsApp · 21:10").
+
+  Öteki kart değerleri ölçüldüğünde ZATEN tasarımla aynıydı: ad `control`=13.5 · ön izleme
+  `micro`=11.5 `body`(#6d7261) · damga `meta`=10.5 `muted`(#8a8270) · kart zemini `panel`(#fbfaf4)
+  · bekleyen çerçevesi `olive`(#5f7a2c). Tek sapma kum çerçeve: tasarım #ddd6c4, token `sand-300`
+  #e2d8bd — bu eşleme token setinde zaten kayıtlı.
+
+  **3. Süzgeç şeritten çekmeceye.** İki eksen iki ŞERİT demekti (sekiz çip) ve cihazda listenin
+  üstündeki alanı yiyordu; tasarım tek şerit çiziyor ve orada yalnız kanal var. Kullanıcı kararı
+  ikisini birden çözdü: seçili süzgeçler yukarıda METİN ("Tümü · Tüm kanallar" + `düzenle`),
+  düzenleme kitin `BottomSheet`inde iki başlıklı grupta (DURUM · KANAL). Seçim anında uygulanır,
+  çekmece açık kalır (iki eksen var; "uygula" düğmesi operatörü iki kez dokunmaya zorlardı).
+  "Sıfırla" yalnız sıfırlanacak bir şey varken çizilir. Özet satırı SEÇİMDEN türer — ikinci bir
+  metin tutulsaydı bir gün seçimden sapardı.
+
+  **Cihaz turu (OPPO CPH1907 · USB):** yeni palet, tek satırlık süzgeç özeti ve çekmece ekran
+  görüntüleriyle doğrulandı; sesli mesaj kartı ve fotoğraf ızgarası yerinde.
+
+  Doğrulama: mobil `typecheck` temiz (kalan tek hata 21.217'nin commit'lenmemiş `b2b-application-screen.tsx`'i),
+  `lint` temiz, yönetim ekranları **139/139**, kit + yönetim toplamı **278/278**.
+
+  **BEKLEYEN(BACKLOG §1): liste ön izlemesi medya mesajında hâlâ `[görsel / dosya]` yazıyor** —
+  detayda fotoğraf artık çiziliyor, listede yer tutucu kaldı. Küçük ama tutarsız.
+
+- [x] (21.289) **GELEN KUTUSU CANLI DİNLİYOR · SÜZGEÇ TASARIMIN RENGİNDE · SIRA SON GELEN MESAJA GÖRE** (kullanıcı bulguları 07.09: *"yeni bir mesaj geldi fakat gelen kutusuna otomatik düşmedi"* · *"Filtre butonları aynı renk değil… orijinal tasarımda siyah renkte"* · *"kimin yönettiğine göre de filtreleyebilmeliyim"* · *"Mesajlaşmanın son güncellendiği tarih değil, karşıdan son gelen mesajın tarihine göre"*)
+  `touches:` `supabase/migrations/{0039_conversation.sql,0041_conversation_inbox.sql}` · `packages/types/src/entities/conversation.schema.ts` · `packages/types/src/contracts/social-api.schema.ts` · `packages/database/src/services/conversation.service.ts` · `scripts/seed/conversation.ts` · `apps/mobile-api/src/api/v1/social.ts` · `apps/mobile/src/lib/api/social.ts` · `apps/mobile/src/screens/management/{social-inbox-screen.tsx,social-inbox-screen.test.tsx,use-social-inbox.hook.ts,messages.json}` · `apps/web/app/(operations)/operations/social/social-read.test.ts`
+
+  **Durum (07.09) — KOD TAMAM, cihaz turu YAPILAMADI (aşağıda).**
+
+  **1. Canlı dinleme.** Ölçülen arıza: ekran açıkken gelen yeni konuşma listeye HİÇ düşmüyordu —
+  veritabanında beş konuşma varken ekranda dört satır ve altında "Liste bitti". Tazelenmenin iki
+  yolu vardı ve ikisi de operatörün hareketini bekliyordu (odak · aşağı çekme). Sunucu zili ZATEN
+  çalıyordu (`ringConversationsBell`: webhook · özerk ajan · cevap ucu) ve web onu dinliyordu
+  (`LiveRefresh`); dinlemeyen yalnız mobildi — 21.286'nın gönderim asimetrisiyle aynı desen.
+
+  Kanal adı SÖZLEŞMEDE geliyor (`SocialInboxResponse.channel`) çünkü istemci onu hesaplayamaz:
+  operasyon kuyruğunun adı sunucu sırrından türetiliyor (`opsChannel` — açık bir ad, anon anahtarı
+  olan herkese "operasyona şu an mesaj düştü" zamanını sızdırırdı). Adı veren kapı zaten `admin`
+  guard'ının arkasında; web'in aynı kararı (sunucu bileşeni prop olarak geçiriyor). Kanaldan VERİ
+  geçmez — boş "changed", ekran kuyruğu sunucudan yeniden ister. Tazeleme SESSİZ: operatör listeye
+  bakıyor olabilir.
+
+  **2. Süzgeç çipleri MÜREKKEP.** Tasarımın kendi çip yardımcısı ölçüldü (v3 kaynak 4417-4419):
+  seçili `#2f353a / #f5f1e6 / #2f353a`, sönük `transparent / #2f353a / #ddd6c4`. Bizimki zeytindi.
+  Üç hex de token (`ink` · `on-image` · `sand-300`). Zeytin ayrıca ANLAMSAL olarak yanlıştı: bu
+  ekranda zeytin "cevap bekliyor" demek (kart çerçevesi) — aynı renk iki ayrı şey söylüyordu.
+
+  **3. Yürütücü süzgeci + rozet.** Çekmecede üçüncü grup (`ConversationHandlerEnum`'dan türer);
+  uç `handledBy` parametresini enum'dan doğruluyor. Satır rozeti YALNIZ `human` dışında çizilir —
+  insan varsayılan hâl, her satıra "İNSAN" koymak gürültü olurdu; rozet ancak beklenmeyeni
+  söylediğinde bilgi taşır. Ton ayrı: hibrit bir ONAY bekliyor (terracotta), yapay zekâ KENDİ
+  yürütüyor (zeytin).
+
+  **4. Sıra `last_inbound_at`.** Yeni kolon (`0039`), yalnız GELEN mesajla ilerler; `record_message`
+  içinde tek `case` ile yazılıyor (iki yazma yolu aynı kuralı iki kez yazmasın). `last_message_at`
+  yanlış eksendi ve sebebi somut: kendi cevabımız da onu ilerletiyordu — operatör bir sohbete
+  yazdığı an o sohbet tepeye çıkıyor, bekleyen müşteri aşağıda kalıyordu.
+
+  **"Top bizde önce" diye AYRI bir eksen açılmadı** (kullanıcı kararı: *"TOP BİZDE diye bir şey
+  yok. Ama cevap bekleyenler var… son gelen mesaja göre sıralarsak olay çözülmüş olur"*). Bekleyen
+  sohbet, tanımı gereği en son müşterinin yazdığı sohbettir — talebin `queue_sort_at` çözümü burada
+  gereksiz olurdu. İndeks alanın kendisinde (`conversation_last_inbound_idx`, `nulls last`).
+
+  Seed de yaşlandırılıyor: `record_message` iki damgayı da `now()` yazıyor (üretimde doğru) ve
+  düzeltilmeseydi bütün sohbetler seed anında kümelenir, kuyruk ilk açılışta rastgele sıralanmış
+  görünürdü. Web'in `social-read.test.ts` fikstürü aynı düzenlemede güncellendi — şemayı bu şerit
+  değiştirdi, testi de bu şerit giderdi.
+
+  Doğrulama: kök `typecheck` **20/20**, `lint` temiz, sosyal gelen kutusu **24/24** (9'u bu turda),
+  yönetim ekranları **139/139**.
+
+  **BEKLEYEN(BACKLOG §1): CİHAZ TURU YAPILAMADI — dev client derlenemiyor.** 21.287'de eklenen
+  `expo-audio` natif modülü cihazdaki APK'da yok (`Cannot find native module 'ExpoAudio'`; kurulum
+  **26.08**'den kalma) ve bu, sosyal sohbet DETAYINI açılamaz kılıyor — liste ekranı etkilenmiyor.
+  Üç derleme denendi, üçü de ayrı sebeple düştü: *(1)* `prebuild --clean` `android/local.properties`i
+  sildi → "SDK location not found" (dosya geri yazıldı); *(2)* `mergeExtDexDebug`; *(3)*
+  `mergeDebugNativeLibs` → `NoSuchFileException … libgifimage.so`. **`expo run:android` düşse bile
+  exit 0 döndürüyor** — bu yüzden kurulumun kanıtı çıkış kodu değil `dumpsys package … lastUpdateTime`.

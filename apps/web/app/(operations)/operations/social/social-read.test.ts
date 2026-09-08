@@ -32,6 +32,10 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     language: null,
     windowExpiresAt: null,
     lastMessageAt: NOW.toISOString(),
+    /* 21.289 · sözleşmeye eklendi: kuyruğun sıralama ekseni artık son GELEN mesaj (gerekçe
+       `conversation.schema` künyesinde). Bu fikstür sıralamayı sınamıyor — alan yalnız satırı
+       tamamlıyor; mobil şeridin şema değişikliğiyle aynı düzenlemede geldi. */
+    lastInboundAt: NOW.toISOString(),
     createdAt: NOW.toISOString(),
     customerName: 'Ayşe Kaya',
     messageCount: 3,

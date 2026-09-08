@@ -120,12 +120,27 @@ export async function seedConversations(db: Db): Promise<void> {
       Aralık dakikadır: bir konuşma dakikalar içinde akar. Son mesaj `alindi` anına denk gelir —
       gelen kutusu sıralaması değişmez.
     */
+    let sonGelen: string | null = null;
     for (const [n, id] of kayitlar.entries()) {
       const damga = new Date(new Date(alindi).getTime() - (kayitlar.length - 1 - n) * 60_000).toISOString();
       const { error: mErr } = await db.from('message').update({ created_at: damga }).eq('id', id);
       if (mErr) throw mErr;
+      if (sohbet.akis[n]?.gelen) sonGelen = damga;
     }
-    const { error: cErr } = await db.from('conversation').update({ last_message_at: alindi }).eq('id', konusma.id);
+    /*
+      İKİ DAMGA DA YAŞLANDIRILIR (21.289). `record_message` ikisini de `now()` ile yazıyor
+      (üretimde doğru) — seed'de düzeltilmezse bütün sohbetler seed ANINDA kümelenir ve kuyruğun
+      sıralaması sınanamaz hâle gelir. `last_inbound_at` kuyruğun EKSENİ olduğu için bu artık
+      yalnız bir kozmetik düzeltme değil: yanlış kalırsa gelen kutusu ilk açılışta rastgele
+      sıralanmış görünür.
+
+      `sonGelen` null olabilir — yalnız giden mesaj taşıyan bir sohbet (bugünkü akışlarda yok ama
+      şekil buna izin veriyor); o hâlde alan boş kalır ve satır kuyruğun sonuna düşer.
+    */
+    const { error: cErr } = await db
+      .from('conversation')
+      .update({ last_message_at: alindi, last_inbound_at: sonGelen })
+      .eq('id', konusma.id);
     if (cErr) throw cErr;
 
     // İkinci sohbet AI cevaplı: mod defterde de yazılı olmalı, yoksa ekran onu insan sohbeti sanar.

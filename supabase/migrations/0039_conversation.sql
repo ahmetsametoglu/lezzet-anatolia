@@ -130,8 +130,23 @@ create table public.conversation (
   -- 24 saatlik servis penceresinin bitişi. Kararı motor verir (`serviceWindowExpiry`), burası
   -- yalnız saklar — süreyi SQL'e de yazsaydık aynı kural iki dilde iki kopya olurdu.
   window_expires_at timestamptz,
-  -- Son hareketin anı; gelen kutusunun sıralama alanı. `record_message` yazar.
+  -- Son hareketin anı; konuşmanın "ne zaman kımıldadı" damgası. `record_message` yazar.
   last_message_at timestamptz,
+  -- KUYRUĞUN SIRALAMA ALANI — son GELEN mesajın anı (21.289 · kullanıcı kararı 07.09:
+  -- "Mesajlaşmanın son güncellendiği tarih değil, karşıdan son gelen mesajın tarihine göre").
+  --
+  -- `last_message_at` bu iş için YANLIŞ eksendi ve sebebi somut: kendi cevabımız da onu
+  -- ilerletiyor. Yani operatör bir sohbete cevap yazdığı an o sohbet kuyruğun tepesine çıkıyor —
+  -- oysa artık yapılacak bir şey yok. Bekleyen müşteri ise aşağıda kalıyordu.
+  --
+  -- Bu alan yalnız GELEN mesajla ilerler, giden mesaj dokunmaz. Kuyruk buna göre sıralanınca
+  -- "cevap bekleyenler" ayrı bir kurala gerek kalmadan üste çıkar: bekleyen bir sohbet, tanımı
+  -- gereği en son müşterinin yazdığı sohbettir. Ayrı bir "top bizde önce" ekseni bu yüzden
+  -- AÇILMADI (talebin `queue_sort_at` çözümü burada gereksiz olurdu).
+  --
+  -- `null` = müşteri hiç yazmamış (biz başlatmışız). O satır kuyruğun sonuna düşer — cevap
+  -- bekleyenlerin önüne geçemez.
+  last_inbound_at timestamptz,
 
   created_at timestamptz not null default now(),
 
@@ -405,6 +420,9 @@ begin
 
   update public.conversation
      set last_message_at = v_message.created_at,
+         /* YALNIZ GELEN MESAJ İLERLETİR (kolon künyesi): `case` burada, çağıranda değil —
+            iki yazma yolu (webhook · gönderim kapısı) aynı kuralı iki kez yazmasın. */
+         last_inbound_at = case when p_direction = 'inbound' then v_message.created_at else last_inbound_at end,
          window_expires_at = greatest(window_expires_at, p_window_expires_at)
    where id = p_conversation_id;
 

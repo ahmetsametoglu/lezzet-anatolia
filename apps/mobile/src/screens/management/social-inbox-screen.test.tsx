@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { operationsCopy } from '@/screens/operations/copy';
 import { SocialInboxScreen } from './social-inbox-screen';
 import messages from './messages.json';
 
@@ -26,12 +27,30 @@ jest.mock('expo-router', () => {
   };
 });
 
+/* CANLI ZİL SAHTESİ (21.289): hook artık `getSupabase().channel(...)` çağırıyor. Sahte zincir
+   gerçek imzanın en küçüğü — `on` kendini döndürür, `subscribe` bir tutamaç verir. Zilin ÇALDIĞINI
+   taklit etmiyoruz: aboneliğin kurulduğunu ve sökülürken kapatıldığını ölçüyoruz, çünkü sızan bir
+   soketin bedeli sessizdir. */
+const mockRemoveChannel = jest.fn();
+const mockSubscribe = jest.fn(() => ({ topic: 'test' }));
+const mockOnBroadcast = jest.fn();
 jest.mock('@/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: { access_token: 'test-token' } } }),
       refreshSession: async () => ({ data: { session: { access_token: 'test-token' } }, error: null }),
     },
+    channel: (name: string) => {
+      const kanal = {
+        on: (...args: unknown[]) => {
+          mockOnBroadcast(name, ...args);
+          return kanal;
+        },
+        subscribe: mockSubscribe,
+      };
+      return kanal;
+    },
+    removeChannel: mockRemoveChannel,
   }),
 }));
 
@@ -73,7 +92,10 @@ function mockInbox(rows: unknown[], counts = { awaitingReply: 3, handledByAi: 1 
   fetchMock.mockImplementation((url) => {
     // Sorgu dizesi kaydedilsin: süzgeçlerin SUNUCUYA gittiğini iddia edeceğiz.
     void url;
-    return Promise.resolve(envelope({ rows, nextCursor: null, counts }));
+    /* `channel` sözleşmenin ZORUNLU alanı (21.289): canlı zilin adı sunucudan gelir. Sahte cevaba
+       eklenmemiş olsaydı `parse` düşer ve ekran "beklenmedik" hatasına giderdi — testin ölçtüğü
+       şey de bu, sözleşmenin gerçekten zorunlu tuttuğu. */
+    return Promise.resolve(envelope({ rows, nextCursor: null, counts, channel: 'ops:conversations:test' }));
   });
 }
 
@@ -90,6 +112,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  mockRemoveChannel.mockClear();
+  mockSubscribe.mockClear();
+  mockOnBroadcast.mockClear();
 });
 
 describe('kuyruk — üç kanal tek listede', () => {
@@ -147,12 +172,34 @@ describe('kuyruk — üç kanal tek listede', () => {
   });
 });
 
-describe('iki süzgeç ekseni BAĞIMSIZ', () => {
-  it('durum ve kanal çipleri ayrı satırlarda ve ayrı ayrı seçilebilir', async () => {
+describe('iki süzgeç ekseni BAĞIMSIZ — çekmecenin içinde', () => {
+  /* SÜZGEÇ ŞERİTTEN ÇEKMECEYE TAŞINDI (kullanıcı kararı 07.09). Eskiden sekiz çip iki satırda
+     listenin üstünde duruyordu; şimdi yukarıda seçili süzgeçlerin METNİ, düzenleme çekmecede.
+     Çiplerin kendisi değişmedi — yalnız yerleri. */
+  const cekmeceyiAc = () => fireEvent.press(screen.getByTestId('management-social-filter-open'));
+
+  it('çipler ŞERİTTE DEĞİL — kapalıyken görünmezler', async () => {
     mockInbox([satir(ID.wa)]);
     await ekranAc();
+    expect(screen.queryByTestId('management-social-filter-awaiting')).not.toBeOnTheScreen();
+    expect(screen.queryByTestId('management-social-channel-messenger')).not.toBeOnTheScreen();
+  });
 
-    expect(screen.getByTestId('management-social-filter-all')).toBeOnTheScreen();
+  it('seçili süzgeçler yukarıda METİN olarak yazar', async () => {
+    // Operatör listenin neye göre süzüldüğünü çekmeceyi açmadan okuyabilmeli.
+    mockInbox([satir(ID.wa)]);
+    await ekranAc();
+    expect(screen.getByTestId('management-social-filter-summary')).toHaveTextContent(
+      `${t.filter.all} · ${t.channelAll} · ${t.handlerAll}`,
+    );
+  });
+
+  it('çekmece açılınca iki eksenin çipleri de gelir', async () => {
+    mockInbox([satir(ID.wa)]);
+    await ekranAc();
+    cekmeceyiAc();
+
+    await waitFor(() => expect(screen.getByTestId('management-social-filter-all')).toBeOnTheScreen());
     expect(screen.getByTestId('management-social-filter-awaiting')).toBeOnTheScreen();
     expect(screen.getByTestId('management-social-channel-all')).toBeOnTheScreen();
     expect(screen.getByTestId('management-social-channel-whatsapp')).toBeOnTheScreen();
@@ -164,6 +211,8 @@ describe('iki süzgeç ekseni BAĞIMSIZ', () => {
     // Yerel süzme, sayfalanmış bir listede kuyruğun geri kalanını sessizce yutardı.
     mockInbox([satir(ID.wa)]);
     await ekranAc();
+    cekmeceyiAc();
+    await waitFor(() => expect(screen.getByTestId('management-social-filter-awaiting')).toBeOnTheScreen());
     fetchMock.mockClear();
 
     fireEvent.press(screen.getByTestId('management-social-filter-awaiting'));
@@ -176,16 +225,44 @@ describe('iki süzgeç ekseni BAĞIMSIZ', () => {
   it('kanal çipi de SUNUCUYA gider ve durum eksenini sıfırlamaz', async () => {
     mockInbox([satir(ID.wa)]);
     await ekranAc();
+    cekmeceyiAc();
+    await waitFor(() => expect(screen.getByTestId('management-social-filter-awaiting')).toBeOnTheScreen());
 
     fireEvent.press(screen.getByTestId('management-social-filter-awaiting'));
     await waitFor(() => expect(String(fetchMock.mock.calls.at(-1)![0])).toContain('filter=awaiting'));
 
+    /* Çekmece seçimden sonra KAPANMAZ: iki eksen var ve her seçimde yeniden açtırmak, operatörü
+       aynı yolu iki kez yürütürdü. İkinci çipe doğrudan basılabiliyor olması bunun kanıtı. */
     fireEvent.press(screen.getByTestId('management-social-channel-messenger'));
     await waitFor(() => {
       const son = String(fetchMock.mock.calls.at(-1)![0]);
       expect(son).toContain('source=messenger');
       // İki eksen bağımsız: kanal seçmek "cevap bekleyen" süzgecini düşürmemeli.
       expect(son).toContain('filter=awaiting');
+    });
+
+    // Ve özet satırı seçimden TÜREDİĞİ için kendiliğinden güncellenmiş olmalı.
+    expect(screen.getByTestId('management-social-filter-summary')).toHaveTextContent(
+      `${t.filter.awaiting} · ${t.channel.messenger} · ${t.handlerAll}`,
+    );
+  });
+
+  it('"sıfırla" YALNIZ süzgeç varken çizilir', async () => {
+    mockInbox([satir(ID.wa)]);
+    await ekranAc();
+    cekmeceyiAc();
+    await waitFor(() => expect(screen.getByTestId('management-social-filter-awaiting')).toBeOnTheScreen());
+    // Hiçbir süzgeç yokken basıldığında hiçbir şey olmayacak bir düğme çizilmez.
+    expect(screen.queryByTestId('management-social-filter-reset')).not.toBeOnTheScreen();
+
+    fireEvent.press(screen.getByTestId('management-social-channel-messenger'));
+    await waitFor(() => expect(screen.getByTestId('management-social-filter-reset')).toBeOnTheScreen());
+
+    fireEvent.press(screen.getByTestId('management-social-filter-reset'));
+    await waitFor(() => {
+      const son = String(fetchMock.mock.calls.at(-1)![0]);
+      expect(son).not.toContain('source=');
+      expect(son).not.toContain('filter=awaiting');
     });
   });
 });
@@ -206,5 +283,159 @@ describe('boş ve hatalı hâller ayrı cümlelerdir', () => {
     await ekranAc();
     expect(screen.getByTestId('management-social-error')).toBeOnTheScreen();
     expect(screen.queryByTestId('management-social-empty')).toBeNull();
+  });
+});
+
+/*
+  ARIZANIN SEBEBİ — 06.09'da cihazda ölçülen yanlış teşhisin testi.
+
+  Ekran her sebebe tek cümle yazıyordu: "Bağlantıyı kontrol edip yeniden deneyin." Oturumu ölmüş
+  bir cihazda çağrı ağa HİÇ çıkmıyor (yerel kısa devre, `401`) ve operatör çalışan bir wifi'nin
+  peşine düşüyordu; uç, şema ve veri yolu boyunca yanlış olan tek şey EKRANIN CÜMLESİYDİ.
+
+  İddia CÜMLENİN KENDİSİ değil, SINIFI: metinler ortak sözlükten geliyor (`operationsCopy.failure`),
+  yani metin değişince test kırılmaz — kırılması gereken tek şey, 401'in "bağlantı" diye okunmasıdır.
+*/
+describe('arıza SEBEBİNE göre konuşur — ağ · oturum · yetki', () => {
+  const description = () => screen.getByTestId('management-social-error-description');
+
+  /** Cümle ARANIR, tamamı eşleşmez: geliştirmede sonuna ret anahtarı ekleniyor (`[unauthorized]`). */
+  const iceren = (text: string) => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
+  function mockStatus(status: number, error: string) {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve({ status, headers: { get: () => null }, json: async () => ({ data: null, error }) } as unknown as Response),
+    );
+  }
+
+  it('401 OTURUM der — "bağlantını kontrol et" demez', async () => {
+    mockStatus(401, 'unauthorized');
+    await ekranAc();
+
+    expect(description()).toHaveTextContent(iceren(operationsCopy.failure.session));
+    expect(description()).not.toHaveTextContent(iceren(operationsCopy.failure.connection));
+  });
+
+  it('403 YETKİ der — rol kapısı bir bağlantı arızası değildir', async () => {
+    mockStatus(403, 'forbidden');
+    await ekranAc();
+
+    expect(description()).toHaveTextContent(iceren(operationsCopy.failure.forbidden));
+  });
+
+  it('istek ağa hiç çıkamazsa BAĞLANTI der', async () => {
+    // `fetch`in fırlattığı tek hâl budur (`apiFetch` künyesi): ağ yok / istek atılamadı.
+    fetchMock.mockImplementation(() => Promise.reject(new Error('ağ yok')));
+    await ekranAc();
+
+    expect(description()).toHaveTextContent(iceren(operationsCopy.failure.connection));
+  });
+
+  it('sözleşmeye uymayan gövde BEKLENMEDİK sınıfına düşer — oturum suçlanmaz', async () => {
+    // 200 döndü ama satır şemayı tutmuyor: bu bizim hatamız, operatörün oturumu değil.
+    fetchMock.mockImplementation(() =>
+      Promise.resolve({
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({ data: { rows: [{ id: 'kısa-kimlik' }], nextCursor: null, counts: {} }, error: null }),
+      } as unknown as Response),
+    );
+    await ekranAc();
+
+    expect(description()).toHaveTextContent(iceren(operationsCopy.failure.unexpected));
+  });
+});
+
+/*
+  CANLI GELEN KUTUSU (21.289) — kullanıcı bulgusu 07.09: ekran açıkken gelen yeni bir konuşma
+  listeye HİÇ düşmüyordu. Ölçüldü: veritabanında beş konuşma varken ekranda dört satır ve altında
+  "Liste bitti". Sunucu zili zaten çalıyordu, dinlemeyen mobildi.
+*/
+describe('kuyruk CANLI dinler — yeni mesaj kendiliğinden düşer', () => {
+  it('zilin adı SUNUCUDAN gelir ve o kanala abone olunur', async () => {
+    /* Ad istemcide hesaplanamaz: operasyon kuyruğunun kanal adı sunucu sırrından türetiliyor
+       (`opsChannel`). Bu iddia, adın uydurulmadığını çivileyen tek şey. */
+    mockInbox([satir(ID.wa)]);
+    await ekranAc();
+
+    await waitFor(() => expect(mockSubscribe).toHaveBeenCalled());
+    expect(mockOnBroadcast).toHaveBeenCalledWith('ops:conversations:test', 'broadcast', { event: 'changed' }, expect.any(Function));
+  });
+
+  it('zil çalınca kuyruk SUNUCUDAN yeniden istenir', async () => {
+    mockInbox([satir(ID.wa)]);
+    await ekranAc();
+    await waitFor(() => expect(mockSubscribe).toHaveBeenCalled());
+
+    // Kanalın kendisinden veri GELMEZ — zil yalnız "bir şey oldu" der, liste yeniden okunur.
+    const zilCagrisi = mockOnBroadcast.mock.calls.at(-1);
+    const cal = zilCagrisi?.[3] as () => void;
+    fetchMock.mockClear();
+    cal();
+
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(0));
+    expect(String(fetchMock.mock.calls.at(-1)![0])).toContain('/api/v1/social/conversations');
+  });
+
+  it('ekran sökülünce abonelik KAPANIR — sızan soketin bedeli sessizdir', async () => {
+    mockInbox([satir(ID.wa)]);
+    const view = await render(<SocialInboxScreen />);
+    await waitFor(() => expect(mockSubscribe).toHaveBeenCalled());
+
+    view.unmount();
+    await waitFor(() => expect(mockRemoveChannel).toHaveBeenCalled());
+  });
+});
+
+describe('YÜRÜTÜCÜ süzgeci — kim yönetiyor', () => {
+  it('çipler ENUM\'dan doğar: insan · hibrit · yapay zekâ + "farketmez"', async () => {
+    mockInbox([satir(ID.wa)]);
+    await ekranAc();
+    fireEvent.press(screen.getByTestId('management-social-filter-open'));
+
+    await waitFor(() => expect(screen.getByTestId('management-social-handler-all')).toBeOnTheScreen());
+    expect(screen.getByTestId('management-social-handler-human')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-social-handler-hybrid')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-social-handler-ai')).toBeOnTheScreen();
+  });
+
+  it('seçim SUNUCUYA gider ve öteki eksenleri sıfırlamaz', async () => {
+    mockInbox([satir(ID.wa)]);
+    await ekranAc();
+    fireEvent.press(screen.getByTestId('management-social-filter-open'));
+    await waitFor(() => expect(screen.getByTestId('management-social-handler-ai')).toBeOnTheScreen());
+
+    fireEvent.press(screen.getByTestId('management-social-channel-whatsapp'));
+    await waitFor(() => expect(String(fetchMock.mock.calls.at(-1)![0])).toContain('source=whatsapp'));
+
+    fireEvent.press(screen.getByTestId('management-social-handler-ai'));
+    await waitFor(() => {
+      const son = String(fetchMock.mock.calls.at(-1)![0]);
+      expect(son).toContain('handledBy=ai');
+      expect(son).toContain('source=whatsapp');
+    });
+  });
+});
+
+describe('YÜRÜTÜCÜ ROZETİ — yalnız beklenmeyeni söyler', () => {
+  it('`human` satırda rozet YOK — varsayılan hâl gürültü olurdu', async () => {
+    mockInbox([satir(ID.wa, { handledBy: 'human' })]);
+    await ekranAc();
+    expect(screen.queryByTestId(`management-social-handler-badge-${ID.wa}`)).toBeNull();
+  });
+
+  it('`ai` ve `hybrid` satırlar rozet taşır', async () => {
+    mockInbox([
+      satir(ID.wa, { handledBy: 'ai' }),
+      satir(ID.fb, { source: 'messenger', externalRef: 'PSID-3', handledBy: 'hybrid' }),
+    ]);
+    await ekranAc();
+
+    expect(screen.getByTestId(`management-social-handler-badge-${ID.wa}`)).toHaveTextContent(
+      t.handler.ai.toLocaleUpperCase('tr'),
+    );
+    expect(screen.getByTestId(`management-social-handler-badge-${ID.fb}`)).toHaveTextContent(
+      t.handler.hybrid.toLocaleUpperCase('tr'),
+    );
   });
 });

@@ -425,21 +425,28 @@ export class ConversationInboxService extends BaseDbService<ConversationInboxRow
   }
 
   /**
-   * Kuyruk — **son harekete göre** sıralı: tek amacı cevap bekleyeni bekletmemek, o yüzden sıra
-   * açılış tarihine değil son mesaja bakar. Kanal süzgeci (21.08): sosyal gelen kutusu üç kanalı
-   * tek kuyrukta gösterir, operatör istediğinde tek kanala daraltır.
+   * Kuyruk — **son GELEN mesaja göre** sıralı (21.289 · kullanıcı kararı 07.09).
+   *
+   * Eksen `lastMessageAt` DEĞİL: kendi cevabımız da onu ilerletiyordu, yani operatör bir sohbete
+   * yazdığı an o sohbet tepeye çıkıyor, bekleyen müşteri aşağıda kalıyordu. `lastInboundAt` yalnız
+   * gelen mesajla ilerler — böylece "cevap bekleyenler üstte" ayrı bir kural olmadan sağlanır
+   * (kolon künyesi `0039`). Kanal süzgeci (21.08): sosyal gelen kutusu üç kanalı tek kuyrukta
+   * gösterir, operatör istediğinde tek kanala daraltır.
    *
    * Sayfalı, çünkü konuşma kümesi veriyle SINIRSIZ büyür (`CLAUDE §1`) — canlı kanalda aylarca.
    * İmleci ekran tüketiyor ("daha eski" düğmesi), yani sessiz kırpma yok.
    */
   list(
-    filter: { awaitingReply?: boolean; source?: ConversationSource } = {},
+    filter: { awaitingReply?: boolean; source?: ConversationSource; handledBy?: TicketHandler } = {},
     cursor?: KeysetCursor,
     limit = DEFAULT_PAGE_SIZE,
   ): Promise<Page<ConversationInboxRow>> {
     return this.getPage(
-      { awaitingReply: filter.awaitingReply, source: filter.source },
-      { orderBy: 'lastMessageAt', orderDirection: 'desc', limit, keysetAfter: cursor },
+      /* YÜRÜTÜCÜ SÜZGECİ (21.289 · kullanıcı isteği): *"kimin yönettiğine göre de
+         filtreleyebilmeliyim"*. Kuyruk üç yürütücüyü karıştırıyor ve "ajanın kendi başına
+         yürüttükleri" ile "insan bekleyenler" ayrı sorulardır — biri denetim, öteki iş. */
+      { awaitingReply: filter.awaitingReply, source: filter.source, handledBy: filter.handledBy },
+      { orderBy: 'lastInboundAt', orderDirection: 'desc', limit, keysetAfter: cursor },
     );
   }
 

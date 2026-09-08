@@ -112,8 +112,19 @@ export const ConversationSchema = z.object({
    * üç dilden birinde bir şey yazmadı (yalnız fotoğraf gönderdi, ya da "ok").
    */
   language: PreferredLanguageEnum.nullable(),
-  /** Son hareketin anı; gelen kutusunun sıralama alanı. `recordMessage` yazar. */
+  /** Son hareketin anı — konuşmanın "ne zaman kımıldadı" damgası. `recordMessage` yazar. */
   lastMessageAt: z.string().nullable(),
+  /**
+   * **Kuyruğun sıralama alanı** (21.289) — son GELEN mesajın anı; giden mesaj dokunmaz.
+   *
+   * `lastMessageAt` bu iş için yanlış eksendi: kendi cevabımız da onu ilerletiyor, yani operatör
+   * bir sohbete cevap yazdığı an o sohbet tepeye çıkıyordu — oysa artık yapılacak bir şey yok.
+   * Bu alana göre sıralayınca "cevap bekleyenler" ayrı bir kurala gerek kalmadan üste çıkar:
+   * bekleyen bir sohbet, tanımı gereği en son müşterinin yazdığı sohbettir.
+   *
+   * `null` = müşteri hiç yazmamış (konuşmayı biz açmışız) — o satır kuyruğun sonuna düşer.
+   */
+  lastInboundAt: z.string().nullable(),
   createdAt: z.string(),
 });
 export type Conversation = z.infer<typeof ConversationSchema>;
