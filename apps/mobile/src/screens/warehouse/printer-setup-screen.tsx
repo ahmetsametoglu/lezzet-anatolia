@@ -370,7 +370,8 @@ export function PrinterSetupScreen() {
         contentContainerStyle={styles.list}
         testID="warehouse-printers-list"
       >
-        {header}
+        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
+        <View style={styles.headBleed}>{header}</View>
         {failed ? (
           <OperationsNoticeBlock
             variant="error"
@@ -559,6 +560,10 @@ export function PrinterSetupScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },
   /** v3:1014 — `padding:0 20px 24px;gap:12px`; başlığın kendi nefesi `OperationsStackHeader`ta. */
+  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
+     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu.
+     Ters işaretli kenar boşluğu onu geri alıyor — başlık her hâlde aynı yerde. */
+  headBleed: { marginHorizontal: -operationsTheme.space['5xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['5xl'],
     paddingBottom: operationsTheme.space['6xl'],

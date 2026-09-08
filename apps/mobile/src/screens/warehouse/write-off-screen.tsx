@@ -180,7 +180,8 @@ export function WriteOffScreen() {
       >
         {(bind) => (
       <FormScroll {...bind} contentContainerStyle={styles.list} testID="warehouse-write-off-body">
-        {header}
+        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
+        <View style={styles.headBleed}>{header}</View>
 
         <BatchContextCard batch={batch} onChange={subject.clear} testID="warehouse-write-off-context" />
 
@@ -327,6 +328,19 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space['3xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
     gap: operationsTheme.space['2xl'],
+  },
+  /*
+    BAŞLIK GÖVDENİN DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09).
+
+    `OperationsStackHeader`ın kendi dolgusu var ve tasarımın ölçüsü o (sayfa kenarı 20). Hazır
+    dalda başlık kaydırıcının gövdesinin İÇİNDE; gövdenin dolgusu onun üstüne biniyor. Yükleme ve
+    ara dallarda gövde yok, başlık kendi ölçüsünde kalıyor — bu yüzden veri geldiği anda başlık yer
+    değiştiriyordu (cihazda ölçüldü). Ters işaretli kenar boşluğu gövdenin dolgusunu geri alıyor;
+    üst dolgu da geri alınıyor, çünkü ara dallarda başlığın üstünde o boşluk yok.
+  */
+  headBleed: {
+    marginHorizontal: -operationsTheme.space['6xl'],
+    marginTop: -operationsTheme.space['3xl'],
   },
   section: {
     gap: operationsTheme.space.md,

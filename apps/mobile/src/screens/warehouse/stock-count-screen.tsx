@@ -186,7 +186,8 @@ export function StockCountScreen() {
       >
         {(bind) => (
       <FormScroll {...bind} contentContainerStyle={styles.list} testID="warehouse-stock-count-body">
-        {header}
+        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
+        <View style={styles.headBleed}>{header}</View>
 
         <BatchContextCard batch={batch} onChange={subject.clear} testID="warehouse-stock-count-context" />
 
@@ -378,6 +379,13 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space['3xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
     gap: operationsTheme.space['2xl'],
+  },
+  /* BAŞLIK GÖVDENİN DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09) — gerekçe `write-off` ikizinde:
+     başlığın kendi ölçüsü tasarımın 20'si, gövdenin dolgusu onun üstüne biniyordu ve veri geldiği
+     anda başlık yer değiştiriyordu. Üst dolgu da geri alınıyor. */
+  headBleed: {
+    marginHorizontal: -operationsTheme.space['6xl'],
+    marginTop: -operationsTheme.space['3xl'],
   },
   section: {
     gap: operationsTheme.space.md,

@@ -150,7 +150,8 @@ export function CourierReturnScreen() {
       >
         {(bind) => (
       <FormScroll {...bind} contentContainerStyle={styles.list} testID="warehouse-return-body">
-        {header}
+        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
+        <View style={styles.headBleed}>{header}</View>
 
         {detail.drops.length === 0 ? null : <Text style={styles.heading}>{t.return.heading}</Text>}
 
@@ -442,6 +443,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
+  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
+     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu. */
+  headBleed: { marginHorizontal: -operationsTheme.space['6xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],

@@ -527,7 +527,8 @@ export function IntakeScreen() {
       >
         {(bind) => (
       <FormScroll {...bind} contentContainerStyle={styles.list} scrollRef={scroll} testID="warehouse-intake-lines">
-        {header}
+        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
+        <View style={styles.headBleed}>{header}</View>
 
         {/* ÖĞRENİLEN KOD LİSTENİN ÜSTÜNDE KALIR (v3:05 · kullanıcı bulgusu 30.08). Önceden yalnız
             geçip giden bir bildirimdi; oysa öğrenme bir ADIM değil bir SONUÇTUR — o kod bir dahaki
@@ -1627,6 +1628,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space['7xl'],
   },
+  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
+     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu.
+     Ters işaretli kenar boşluğu onu geri alıyor — başlık her hâlde aynı yerde. */
+  headBleed: { marginHorizontal: -operationsTheme.space['6xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     /* Alt nefes artık YAPIŞKAN ÇUBUK payı değil, listenin kendi sonu (03.09): düğmeler içeride. */

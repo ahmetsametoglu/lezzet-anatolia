@@ -206,7 +206,8 @@ export function CourierLoadScreen() {
         contentContainerStyle={styles.list}
         testID="courier-load-list"
       >
-        {header}
+        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
+        <View style={styles.headBleed}>{header}</View>
         {/*
           SAYAÇ KARTI KOYU (v3:1412 · 30.08 ikinci tur) — günün rotasındaki özet kartıyla AYNI
           aileden ve aynı sebeple: rampada kuryenin ilk bakışı buraya düşmeli. Krem çizilmişti ve
@@ -535,6 +536,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space['7xl'],
   },
+  /* BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09): başlığın kendi ölçüsü
+     tasarımın 20'si; gövdenin dolgusu onun üstüne binince veri geldiği anda başlık yana kayıyordu.
+     Ters işaretli kenar boşluğu onu geri alıyor — başlık her hâlde aynı yerde. */
+  headBleed: { marginHorizontal: -operationsTheme.space['6xl'] },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     /*

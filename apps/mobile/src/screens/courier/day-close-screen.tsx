@@ -147,7 +147,8 @@ export function CourierDayCloseScreen({ runId }: CourierDayCloseScreenProps) {
       >
         {(bind) => (
       <FormScroll {...bind} contentContainerStyle={styles.body} testID="courier-day-close-body">
-        {header}
+        {/* BAŞLIK GÖVDE DOLGUSUNDAN MUAF — künyesi `styles.headBleed`de. */}
+        <View style={styles.headBleed}>{header}</View>
         {dayClose.closed ? (
           <View style={styles.closedBox} testID="courier-day-close-readonly">
             <Text style={styles.closedText}>{t.dayClose.closed}</Text>
@@ -337,6 +338,16 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.space['6xl'],
     gap: operationsTheme.space['2xl'],
   },
+  /*
+    BAŞLIK GÖVDENİN YATAY DOLGUSUNU YEMEZ (kullanıcı bulgusu 08.09).
+
+    `OperationsStackHeader`ın KENDİ dolgusu var ve tasarımın ölçüsü o: sayfa kenarı 20 (o dosyanın
+    v3 ölçümü). Ama hazır dalda başlık kaydırıcının gövdesinin İÇİNDE duruyor ve gövdenin dolgusu
+    onun üstüne biniyor; yükleme/hata dallarında ise gövde yok ve başlık kendi 20'sinde kalıyor.
+    Sonuç: veri geldiği anda başlık yana kayıyordu (cihazda ölçüldü, B2B kartında 22 birim).
+    Ters işaretli kenar boşluğu gövdenin dolgusunu geri alıyor — başlık her hâlde aynı yerde.
+  */
+  headBleed: { marginHorizontal: -operationsTheme.space['6xl'] },
   closedBox: {
     paddingVertical: operationsTheme.space.xl,
     paddingHorizontal: operationsTheme.space['3xl'],

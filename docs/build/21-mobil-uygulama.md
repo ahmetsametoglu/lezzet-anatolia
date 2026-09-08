@@ -13985,3 +13985,69 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   adresini SONRADAN değiştiremiyor (taşınma, farklı fatura adresi). Not:
   `docs/talep/not-musteri-fatura-adresi-web-hesap-sayfasinda-yok.md`. Onay diyaloğunu web şeridi
   aynı turda kendisi uyarladı (işletme adı · başvuran satırı · fatura adresi).
+
+- [x] (21.295) **GERİ BUTONLU BAŞLIK SAYFA AÇILIRKEN YER DEĞİŞTİRİYORDU — 11 ekranda** (kullanıcı bulgusu 08.09: *"Geri butonlu header'ların bir padding ya da margin'i var. Ve bu sayfa açılırken o kısımda bir hareketlilik oluşturuyor."*)
+  `touches:` `apps/mobile/src/screens/management/b2b-application-screen.tsx` · `apps/mobile/src/screens/courier/{day-close,load,van-stock}-screen.tsx` · `apps/mobile/src/screens/warehouse/{write-off,stock-count,courier-return,intake,transfer,preparation,printer-setup}-screen.tsx`
+
+  **Durum (08.09) — TAMAM, cihazda ölçüldü.**
+
+  ── ÖLÇÜM ───────────────────────────────────────────────────────────────────
+
+  Cihazda (Oppo CPH1907, `wm density` → override **408**, yani ölçek **2,55**) geçiş anında
+  başlık bloğunun konumu art arda okundu:
+
+  ```
+  ölçüm 1: [184,128]   ← yükleme hâli
+  ölçüm 2: [235,143]   ← veri geldi
+  ölçüm 3-5: [235,143] ← oturdu
+  ```
+
+  Yani başlık, veri geldiği anda hem sağa hem aşağı kayıyor ve orada kalıyor.
+
+  **Birim karşılığını GERİ DÜĞMESİNİN kenarı verdi** — kutusu tek bir öğe olduğu için iki hâlde
+  de aynı şeyi ölçüyor (başlık metninin kutusu dallara göre değişiyor, ondan birim türetilmedi):
+
+  ```
+  düzeltme öncesi: x = 107 px → 107 / 2,55 = 42 birim   (= 20 + 22)
+  düzeltme sonrası: x =  51 px →  51 / 2,55 = 20 birim   (= tasarımın sayfa kenarı)
+  ```
+
+  42 = başlığın kendi dolgusu (`5xl` = 20) **artı** gövdenin dolgusu (`6xl` = 22). Fark tam olarak
+  gövdenin yatay dolgusu; teori böyle doğrulandı.
+
+  ── SEBEP: AYNI BAŞLIK, İKİ FARKLI KAP ──────────────────────────────────────
+
+  `OperationsStackHeader`ın KENDİ yatay dolgusu var ve tasarımın ölçüsü odur (sayfa kenarı 20 —
+  o dosyanın v3 ölçümü). Ama ekranlar başlığı iki ayrı yere koyuyordu:
+
+  · **yükleme/hata/boş dallarında** ekran kökünün doğrudan çocuğu → kendi 20'sinde
+  · **veri gelince** kaydırıcının gövdesinin içinde → gövdenin dolgusu (22) üstüne binip **42**
+
+  Yani hareket bir yana, **veri gelen hâl tasarımdan da sapıyordu**: doğru olan yükleme hâliydi.
+
+  ── NEDEN ORTAK KOMPONENTTE DÜZELTİLEMEDİ ───────────────────────────────────
+
+  Kullanıcının sorusu haklıydı (*"ortak bir komponent değil mi bu?"*). Komponent ortak ve kusur
+  ONDA DEĞİL: kendi dolgusu doğru. Kusur YERLEŞTİRMEDE — bir komponent kendisinin hangi kabın
+  içine konduğunu bilemez. Bu yüzden tek noktadan düzeltilemedi.
+
+  ── ÇÖZÜM: TERS İŞARETLİ KENAR BOŞLUĞU ──────────────────────────────────────
+
+  Hazır dalda başlık `headBleed` ile sarıldı: `marginHorizontal: -<o ekranın gövde dolgusu>`
+  (iki ekranda `marginTop` da). Gövdenin dolgusunu geri alıyor, başlık her hâlde tasarımın
+  ölçüsünde kalıyor ve iki hâl arasında yer değiştiren bir şey kalmıyor.
+
+  Dolgu ekrandan ekrana değişiyor (`6xl` sekiz ekranda · `5xl` ikide · `2xl` birde), o yüzden
+  değer tek bir sabite bağlanMADI — her ekran kendi gövdesinin dolgusunu geri alıyor.
+
+  `sale-receipt-screen` listeye alınmadı: iki başlığı da kabın dışında, hareketi yok.
+
+  ── DOĞRULAMA ───────────────────────────────────────────────────────────────
+
+  B2B kartında cihazda ölçüldü — geri düğmesi **beş ölçümde de** `[51,143][153,245]`, yani
+  `x = 51 px ≈ 20 birim` (tasarımın sayfa kenarı) ve yükleme→hazır arasında **kıpırdamıyor**.
+  Öncesi 107 px'ti ve zıplıyordu. Kalan on ekran aynı mekanik değişiklik; mobil paketi
+  **1478/1480** (kalan iki düşüş italik font notunun, öteki şerit) · typecheck ve lint temiz.
+
+  **Cihaz turu yarım kaldı:** yalnız B2B kartı gözle doğrulandı, depo/kurye ekranları ölçülemedi —
+  cihaz ağdan düştü (Wi-Fi istemci yalıtımı). Kalanların doğrulaması bir sonraki cihaz turunda.
