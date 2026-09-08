@@ -4,8 +4,9 @@ import { ConversationService } from '@lezzet/database';
 import { humanAgentWindowState, serviceWindowState } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, Message, MessageKind, PreferredLanguage, TemplateCategory, TicketSender } from '@lezzet/types';
+import { CART_LINK_BUTTON_TEXT, CART_LINK_LINE, cartLinkButtonTemplate, splitCartLink } from '../cart/link-text';
 import { recordOutboundMessage } from './record';
-import { prepareOutboundText } from './translate';
+import { prepareOutboundText, resolveOutboundLanguage, type MessageTranslationPatch } from './translate';
 
 /**
  * **GİDEN MESAJ KAPISI** (15.11 iskeleti) — gönderim ve defter yazımı TEK yerde.
@@ -208,22 +209,89 @@ export async function sendOutboundMessage(
     );
   }
 
-  /* ÇEVİRİ GÖNDERİMDEN ÖNCE (15.28) — künyesi yukarıda ve `translate.ts`te. Düşerse sağlayıcıya
-     HİÇ gidilmez ve deftere yazılmaz; `retryable`, çünkü sebep bizim tarafta ve geçici. */
-  const hazir = await prepareOutboundText(db, conversation, input, opts);
-  if (!hazir.ok) {
-    logger.warn(
-      { context: 'messaging/send', conversationId: conversation.id, reason: hazir.reason },
-      'giden mesaj ÇEVRİLEMEDİ — gönderilmedi, deftere yazılmadı',
-    );
-    return { status: 'failed', reason: 'translation_failed', retryable: true };
-  }
-  const giden: SendMessageInput = { ...input, text: hazir.text };
+  /*
+    SEPET BAĞLANTISI DÜĞME OLARAK (08.09, kullanıcı kararı) — künyesi `cart/link-text.ts`.
 
+    Messenger/IG'de kuyruktaki sabit satır + adres gövdeden AYRILIR: gövde çevrilip gider, bağlantı
+    ikinci bir mesajda Meta'nın düğme şablonuyla gider (ham adres yerine "Sepete git"). Kural BURADA,
+    çağıranlarda değil: ajan, operatör (web/mobil) ve taslak yolu aynı metni üretiyor ve düğmeyi her
+    birine bırakmak, birinin unutmasıydı. Ayırma çeviriden ÖNCE — çeviriden sonra sabit satır
+    tanınmaz olurdu; düğme metni üç dilde elle yazılı, modelden geçmez.
+
+    Defterde İKİ satır ve iki sağlayıcı kimliği: Messenger echo'su iki mesajı ayrı düşürür, tek
+    satırda toplansaydı ikinci echo yeni bir mesaj sanılırdı (`send-echo.test.ts`in tuzağı).
+    WhatsApp'ta metin olduğu gibi gider — oradaki düğme (`cta_url`) şablon sorusuyla birlikte
+    sonraya (15.11). Gövde yalnız bağlantıdan ibaretse (operatör taslaktan gövdeyi silmiş) tek
+    mesaj gider: düğme.
+  */
+  const ayrik = conversation.source !== 'whatsapp' && input.text ? splitCartLink(input.text) : null;
+  const dugmeAdresi = ayrik?.url ?? null;
+  const govdeGirdisi: SendMessageInput = dugmeAdresi ? { ...input, text: ayrik!.body } : input;
+
+  let govde: SendOutcome | null = null;
+  if (!dugmeAdresi || govdeGirdisi.text) {
+    /* ÇEVİRİ GÖNDERİMDEN ÖNCE (15.28) — künyesi yukarıda ve `translate.ts`te. Düşerse sağlayıcıya
+       HİÇ gidilmez ve deftere yazılmaz; `retryable`, çünkü sebep bizim tarafta ve geçici. */
+    const hazir = await prepareOutboundText(db, conversation, govdeGirdisi, opts);
+    if (!hazir.ok) {
+      logger.warn(
+        { context: 'messaging/send', conversationId: conversation.id, reason: hazir.reason },
+        'giden mesaj ÇEVRİLEMEDİ — gönderilmedi, deftere yazılmadı',
+      );
+      return { status: 'failed', reason: 'translation_failed', retryable: true };
+    }
+    govde = await teslimEtVeYaz(db, sender, conversation.id, target, { ...govdeGirdisi, text: hazir.text }, hazir);
+    if (!dugmeAdresi || govde.status !== 'sent') return govde;
+  }
+
+  const { language: dil } = await resolveOutboundLanguage(db, conversation);
+  const dugmeMetni = `${CART_LINK_BUTTON_TEXT[dil]}\n${dugmeAdresi}`;
+  const dugme = await teslimEtVeYaz(
+    db,
+    sender,
+    conversation.id,
+    target,
+    {
+      conversationId: input.conversationId,
+      text: dugmeMetni,
+      kind: 'interactive',
+      payload: { ...(input.payload ?? {}), interactive: cartLinkButtonTemplate(dugmeAdresi, dil), cartLink: dugmeAdresi },
+      author: input.author,
+      language: dil,
+    },
+    {
+      language: dil,
+      // Operatör Türkçe okur: müşteriye giden dil Türkçe değilse torbaya Türkçesi düşer (15.28 kuralı).
+      translations: dil === 'tr' ? null : { tr: `${CART_LINK_LINE}\n${dugmeAdresi}` },
+      translatedAt: new Date().toISOString(),
+    },
+  );
+  if (!govde) return dugme;
+  if (dugme.status !== 'sent') {
+    /* Gövde GİTTİ, düğme gitmedi: müşteri cevabı okudu ama bağlantıyı almadı. Gövdeyi "gönderilemedi"
+       diye geri çevirmek yalan olurdu (ajan devrederdi, operatör yeniden yazardı); kayıt gürültülü,
+       dönüş dürüst: gövde `sent`, düğmenin düşüşü `error_log`ta kimlikle. */
+    await captureError(new Error(`sepet düğmesi gönderilemedi: ${dugme.reason}`), {
+      source: SOURCES.webServer,
+      context: { area: 'messaging/send', conversationId: conversation.id, providerMessageId: govde.providerMessageId },
+    });
+  }
+  return govde;
+}
+
+/** Sağlayıcıya ver, sonra deftere yaz — gövde ve düğme aynı kapıdan geçer, sıra ve telafi tek yerde. */
+async function teslimEtVeYaz(
+  db: SupabaseClient,
+  sender: MessageSender,
+  conversationId: string,
+  target: SendTarget,
+  giden: SendMessageInput,
+  hazir: Pick<MessageTranslationPatch, 'language' | 'translations'> & { translatedAt: string | null },
+): Promise<SendOutcome> {
   const result = await sender.send(target, giden);
   if (!result.ok) {
     logger.warn(
-      { context: 'messaging/send', conversationId: conversation.id, driver: sender.name, reason: result.reason },
+      { context: 'messaging/send', conversationId, driver: sender.name, reason: result.reason },
       'giden mesaj gönderilemedi — deftere YAZILMADI',
     );
     return { status: 'failed', reason: result.reason, retryable: result.retryable };
@@ -249,7 +317,7 @@ export async function sendOutboundMessage(
       source: SOURCES.webServer,
       context: {
         area: 'messaging/send',
-        conversationId: conversation.id,
+        conversationId,
         providerMessageId: result.providerMessageId,
         note: 'mesaj gönderildi ama deftere yazılamadı',
       },

@@ -1,8 +1,16 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { ConversationService, MessageService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
+import { CART_LINK_BUTTON_TITLE, CART_LINK_LINE, withCartLink } from '../cart/link-text';
 import { recordInboundMessage } from './record';
-import { sendOutboundMessage, unconfiguredSender, type MessageSender, type SendResult, type SendTarget } from './send';
+import {
+  sendOutboundMessage,
+  unconfiguredSender,
+  type MessageSender,
+  type SendMessageInput,
+  type SendResult,
+  type SendTarget,
+} from './send';
 
 /**
  * Giden mesaj kapısı (15.11 · dalga 1a).
@@ -282,5 +290,96 @@ describe('sendOutboundMessage — gönderim ve defter', () => {
 
     const sonra = (await conversations.getById(konusma.id))?.windowExpiresAt;
     expect(new Date(sonra!).toISOString()).toBe(new Date(once!).toISOString());
+  });
+});
+
+describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kullanıcı kararı)', () => {
+  const URL = 'http://localhost:3000/tr/sepet?link=ABCDEFGH1234';
+
+  /** Girdileri KAYDEDEN sahte: her çağrıya ayrı kimlik verir; `basarisiz` verilen sıradaki çağrı düşer. */
+  function kaydedenSender(basarisiz: number | null = null): MessageSender & { inputs: SendMessageInput[] } {
+    const inputs: SendMessageInput[] = [];
+    /* Kimlik GÖNDERİCİ BAŞINA ayrışır: sağlayıcı kimliği defterde tekil (echo savunması) ve iki testin
+       aynı `m_<damga>_1`i üretmesi ikincinin satırını sessizce düşürüyordu (ölçüldü 08.09: kapı
+       dürüst davranıp `sent` + `message: null` döndü, defter boş kaldı). */
+    const nonce = (sira += 1);
+    return {
+      name: 'fake',
+      inputs,
+      send: async (_target, input) => {
+        inputs.push(input);
+        if (inputs.length === basarisiz) return { ok: false, reason: 'provider_down', retryable: false };
+        return { ok: true, providerMessageId: `m_${stamp}_${nonce}_${inputs.length}` };
+      },
+    };
+  }
+
+  it('MESSENGER: gövde metin olarak, bağlantı İKİNCİ mesajda düğme — defterde iki satır, iki kimlik', async () => {
+    const konusma = await acikKonusma('messenger');
+    const sender = kaydedenSender();
+    const sonuc = await sendOutboundMessage(db, sender, {
+      conversationId: konusma.id,
+      text: withCartLink('Sepetinize 2 baklava ekledim.', URL),
+      author: 'ai',
+    });
+
+    expect(sonuc.status).toBe('sent');
+    expect(sender.inputs).toHaveLength(2);
+    // Gövdede ne adres ne sabit satır kalır: ikisi düğmeye taşındı.
+    expect(sender.inputs[0]!.text).not.toContain(URL);
+    expect(sender.inputs[0]!.text).not.toContain(CART_LINK_LINE);
+
+    const dugme = sender.inputs[1]!;
+    expect(dugme.kind).toBe('interactive');
+    expect(dugme.author).toBe('ai');
+    const sablon = dugme.payload?.interactive as { payload: { template_type: string; buttons: { url: string; title: string }[] } };
+    expect(sablon.payload.template_type).toBe('button');
+    expect(sablon.payload.buttons[0]!.url).toBe(URL);
+    expect(Object.values(CART_LINK_BUTTON_TITLE)).toContain(sablon.payload.buttons[0]!.title);
+
+    // İki satır, iki sağlayıcı kimliği: echo ikisini ayrı düşürecek, ikincisi yeni mesaj sanılmayacak.
+    const defter = (await messages.listByConversation(konusma.id)).filter((m) => m.direction === 'outbound');
+    expect(defter).toHaveLength(2);
+    expect(new Set(defter.map((m) => m.providerMessageId)).size).toBe(2);
+    expect(defter[1]!.body.text).toContain(URL);
+  });
+
+  it('WHATSAPP: metin OLDUĞU GİBİ tek mesaj — oradaki düğme şablon sorusuyla sonraya', async () => {
+    const konusma = await acikKonusma('whatsapp');
+    const sender = kaydedenSender();
+    const sonuc = await sendOutboundMessage(db, sender, {
+      conversationId: konusma.id,
+      text: withCartLink('Sepetinize 2 baklava ekledim.', URL),
+    });
+
+    expect(sonuc.status).toBe('sent');
+    expect(sender.inputs).toHaveLength(1);
+    expect(sender.inputs[0]!.text).toContain(URL);
+  });
+
+  it('yalnız bağlantıdan ibaret metin → TEK mesaj, o da düğme (operatör taslaktan gövdeyi silmiş)', async () => {
+    const konusma = await acikKonusma('messenger');
+    const sender = kaydedenSender();
+    const sonuc = await sendOutboundMessage(db, sender, { conversationId: konusma.id, text: `${CART_LINK_LINE}\n${URL}` });
+
+    expect(sonuc.status).toBe('sent');
+    expect(sender.inputs).toHaveLength(1);
+    expect(sender.inputs[0]!.kind).toBe('interactive');
+  });
+
+  it('düğme DÜŞERSE gövde yine `sent` — cevap gitti, bağlantı gitmedi; iz `error_log`ta, deftere tek satır', async () => {
+    /* Gövdeyi "gönderilemedi" diye geri çevirmek yalan olurdu: ajan devreder, operatör aynı cevabı
+       ikinci kez yazardı. Dönüş gövdenin gerçeğini söyler; düğmenin düşüşü kimlikle kaydedilir. */
+    const konusma = await acikKonusma('messenger');
+    const sender = kaydedenSender(2);
+    const sonuc = await sendOutboundMessage(db, sender, {
+      conversationId: konusma.id,
+      text: withCartLink('Sepetinize 2 baklava ekledim.', URL),
+    });
+
+    expect(sonuc.status).toBe('sent');
+    expect(sender.inputs).toHaveLength(2);
+    const defter = (await messages.listByConversation(konusma.id)).filter((m) => m.direction === 'outbound');
+    expect(defter).toHaveLength(1);
   });
 });
