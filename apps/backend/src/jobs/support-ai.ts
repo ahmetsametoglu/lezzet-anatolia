@@ -1,7 +1,7 @@
 import {
   generateConversationDraft,
   generateTicketDraft,
-  messageSenderFor,
+  metaSenderFromEnv,
   runAutonomousConversationReply,
   runAutonomousTicketReply,
   type SupportAiOutcome,
@@ -144,7 +144,7 @@ export async function supportAiJob(): Promise<Record<string, unknown>> {
     motor modu DEĞİŞTİRMEZ — yapılandırma boşluğu yüzünden her sohbeti insana devretmek, geri
     alınması zor bir veri değişikliği olurdu (`runAutonomousConversationReply` künyesi).
   */
-  const sender = messageSenderFor(process.env.META_ACCESS_TOKEN);
+  const sender = metaSenderFromEnv();
   const conversations = await inbox.list({ awaitingReply: true }, undefined, BATCH);
   for (const row of conversations.rows.filter((r) => r.handledBy === 'ai')) {
     if (kalan <= 0) break;

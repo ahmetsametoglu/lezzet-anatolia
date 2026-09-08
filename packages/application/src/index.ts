@@ -237,7 +237,7 @@ export { linkConversationCustomer } from './messaging/link';
 // Sohbet izninin çift yazımı (15.12) — kural tek yerde, iki yüzey aynı kapıdan.
 export { recordConversationOptIn } from './messaging/opt-in';
 // Cloud API sürücüsü (15.11) — portun gerçek uygulaması; ekrana BAĞLI DEĞİL (künyesi dosyada).
-export { metaCloudSender, messageSenderFor } from './messaging/meta-sender';
+export { metaCloudSender, messageSenderFor, metaSenderFromEnv } from './messaging/meta-sender';
 export {
   sendOutboundMessage,
   unconfiguredSender,

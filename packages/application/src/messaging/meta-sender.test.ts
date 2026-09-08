@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fakeCloudApiConfig, fakeMeta } from '@lezzet/notify/testing';
-import { messageSenderFor, metaCloudSender } from './meta-sender';
+import { messageSenderFor, metaCloudSender, metaSenderFromEnv, metaTokensFromEnv } from './meta-sender';
 import { unconfiguredSender } from './send';
 
 /**
@@ -78,5 +78,58 @@ describe('çeviri katmanı — çağıranın söylediği sürücüye ULAŞIYOR m
 
     expect(meta.calls[0]!.url).toContain('PNID-1');
     expect(meta.calls[0]!.body).toMatchObject({ to: '+33600000000' });
+  });
+});
+
+describe('kanala göre jeton (08.09) — WhatsApp sistem jetonu, Messenger/IG Sayfa jetonu', () => {
+  /*
+    Ölçülen arıza: sistem jetonunda `pages_messaging` yoktu ve Messenger cevabı o jetonla gidecekti.
+    Meta'nın Send API'si Sayfa jetonu ister; seçim tek yerde (`tokenForChannel`) ve bu üç iddia onu
+    çiviliyor. Sahte Meta her çağrının jetonunu kaydediyor — "hangi jetonla gitti" doğrudan okunur.
+  */
+  const messenger = { source: 'messenger', externalRef: 'PSID-1', accountRef: 'PAGE-1' } as const;
+  const instagram = { source: 'instagram', externalRef: 'IGSID-1', accountRef: 'PAGE-1' } as const;
+  const whatsapp = { source: 'whatsapp', externalRef: '+33600000000', accountRef: 'PNID-1' } as const;
+  const girdi = { conversationId: 'c1', text: 'selam' };
+
+  it('Messenger ve Instagram SAYFA jetonuyla, WhatsApp sistem jetonuyla gider', async () => {
+    const meta = fakeMeta();
+    const sender = metaCloudSender({ ...fakeCloudApiConfig(meta), pageToken: 'SAYFA-JETONU' });
+    await sender.send(messenger, girdi);
+    await sender.send(instagram, girdi);
+    await sender.send(whatsapp, girdi);
+
+    expect(meta.calls.map((c) => c.token)).toEqual(['SAYFA-JETONU', 'SAYFA-JETONU', 'FAKE-TOKEN']);
+  });
+
+  it('Sayfa jetonu YOKSA ya da boşsa Messenger sistem jetonuna düşer — ret Meta\'dan gelir, sessiz değil', async () => {
+    const meta = fakeMeta();
+    await metaCloudSender({ ...fakeCloudApiConfig(meta), pageToken: '   ' }).send(messenger, girdi);
+    await metaCloudSender(fakeCloudApiConfig(meta)).send(messenger, girdi);
+
+    expect(meta.calls.map((c) => c.token)).toEqual(['FAKE-TOKEN', 'FAKE-TOKEN']);
+  });
+
+  it('env kapısı: adlar tek yerde, boşluk "yok" sayılır, sistem jetonu yoksa sürücü yapılandırılmamış', () => {
+    // Küresel env: önce oku, sonra geri koy (deponun "boşa çek de bir varsayımdır" kuralı).
+    const eski = { token: process.env.META_ACCESS_TOKEN, page: process.env.META_PAGE_ACCESS_TOKEN };
+    const geriKoy = (ad: string, deger: string | undefined) => {
+      if (deger === undefined) delete process.env[ad];
+      else process.env[ad] = deger;
+    };
+    try {
+      process.env.META_ACCESS_TOKEN = ' SISTEM ';
+      process.env.META_PAGE_ACCESS_TOKEN = '   ';
+      expect(metaTokensFromEnv()).toEqual({ token: 'SISTEM', pageToken: null });
+      expect(metaSenderFromEnv().name).toBe('meta-cloud-api');
+
+      process.env.META_ACCESS_TOKEN = '';
+      process.env.META_PAGE_ACCESS_TOKEN = 'SAYFA';
+      // Sayfa jetonu tek başına "yapılandırılmış" saymaz: WhatsApp'ın ve çapa kodunun jetonu sistemdir.
+      expect(metaSenderFromEnv()).toBe(unconfiguredSender);
+    } finally {
+      geriKoy('META_ACCESS_TOKEN', eski.token);
+      geriKoy('META_PAGE_ACCESS_TOKEN', eski.page);
+    }
   });
 });

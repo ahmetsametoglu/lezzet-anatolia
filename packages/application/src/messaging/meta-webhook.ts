@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../customer/anchor';
 import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationsBell } from '../realtime/bell';
-import { messageSenderFor } from './meta-sender';
+import { metaSenderFromEnv } from './meta-sender';
 import { storeConversationMedia } from './meta-media';
 import { transcribeConversationAudio } from './voice';
 import { recordInboundMessage, recordOutboundMessage } from './record';
@@ -96,7 +96,7 @@ function triggerInboundPipeline(input: {
 
 function triggerAutonomousReply(conversationId: string, handledBy: TicketHandler): void {
   if (handledBy !== 'ai') return;
-  void runAutonomousConversationReply(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), conversationId).catch(
+  void runAutonomousConversationReply(serviceDb(), metaSenderFromEnv(), conversationId).catch(
     (err: unknown) =>
       captureError(err, {
         source: SOURCES.webhook,
@@ -127,7 +127,7 @@ async function bagalamaOnayiGonder(conversation: Pick<Conversation, 'id' | 'lang
   const db = serviceDb();
   // Bağ AZ ÖNCE kuruldu: `conversation.customerId` bayat, taze kimlik parametreden.
   const { language: dil } = await resolveOutboundLanguage(db, { language: conversation.language, customerId });
-  const sonuc = await sendOutboundMessage(db, messageSenderFor(process.env.META_ACCESS_TOKEN), {
+  const sonuc = await sendOutboundMessage(db, metaSenderFromEnv(), {
     conversationId: conversation.id,
     text: LINK_CONFIRMATION[dil],
     author: 'admin',
@@ -437,7 +437,7 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally,
           // Mesaj kaydından SONRA: kod bir CEVAPTIR, müşterinin mesajı deftere girmeden gönderilen
           // bir cevap yazışmayı ters sırada gösterirdi.
           if (customerId) {
-            await offerAnchorIfDue(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
+            await offerAnchorIfDue(serviceDb(), metaSenderFromEnv(), {
               conversationId: conversation.id,
               customerId,
             });

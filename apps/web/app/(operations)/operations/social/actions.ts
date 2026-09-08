@@ -5,7 +5,7 @@ import {
   generateConversationDraft,
   issueAndSendSecurityCode,
   linkConversationCustomer,
-  messageSenderFor,
+  metaSenderFromEnv,
   recordConversationOptIn,
   recordInboundMessage,
   sendOutboundMessage,
@@ -186,7 +186,7 @@ export async function sendOutboundAction(input: unknown): Promise<ActionResult<{
   try {
     await requireAdmin();
     const parsed = RecordOutboundSchema.parse(input);
-    const outcome = await sendOutboundMessage(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
+    const outcome = await sendOutboundMessage(serviceDb(), metaSenderFromEnv(), {
       conversationId: parsed.conversationId,
       text: parsed.text,
       author: 'admin',
@@ -522,7 +522,7 @@ export async function issueSecurityCodeAction(conversationId: string): Promise<A
     // Üretim + gönderim TEK gövdede (`issueAndSendSecurityCode`): aynı kodu otomatik kapı da
     // veriyor (gelen mesajda, siparişi olan çapasız müşteriye) ve müşteriye söylenen cümlenin iki
     // kopyası olsaydı biri gün gelip ötekinden ayrılırdı.
-    const sonuc = await issueAndSendSecurityCode(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
+    const sonuc = await issueAndSendSecurityCode(serviceDb(), metaSenderFromEnv(), {
       conversationId,
       customerId: conversation.customerId,
     });
@@ -569,7 +569,7 @@ export async function sendCartLinkAction(conversationId: string): Promise<Action
       return { data: null, error: cumle[link.status] };
     }
 
-    const outcome = await sendOutboundMessage(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
+    const outcome = await sendOutboundMessage(serviceDb(), metaSenderFromEnv(), {
       conversationId,
       // Ajanın cevabına eklenen satırın aynısı (`withCartLink` biçimi): cümle, altında bağlantı.
       text: `${CART_LINK_LINE}\n${link.url}`,

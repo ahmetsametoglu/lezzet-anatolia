@@ -1,5 +1,31 @@
 import { sendCloudApiMessage, type CloudApiConfig } from '@lezzet/notify';
-import { unconfiguredSender, type MessageSender } from './send';
+import { unconfiguredSender, type MessageSender, type SendTarget } from './send';
+
+/** Boş ve boşluklu dizge "jeton yok"tur — `.env`'de `X=` satırı bırakmak jeton koymamaktır. */
+const blankToNull = (value: string | null | undefined): string | null => (value?.trim() ? value.trim() : null);
+
+/**
+ * Sürücünün yapılandırması: tel katmanının `CloudApiConfig`i + Messenger/Instagram için SAYFA jetonu.
+ *
+ * ── İKİ KANAL, İKİ JETON (08.09, ölçüldü) ───────────────────────────────────
+ * Gönderim her kanalda tek jetonla (`META_ACCESS_TOKEN`, sistem kullanıcısı) gidiyordu. `debug_token`
+ * o jetonda `pages_messaging` OLMADIĞINI gösterdi; Meta'nın Send API'si Messenger/IG'de Sayfa
+ * jetonu ister (ya da Sayfası atanmış, `pages_messaging` taşıyan bir sistem jetonu). WhatsApp'ta
+ * ise sistem jetonu doğru olan. Kural kanala göre ve TEK yerde: `tokenForChannel`.
+ */
+export interface MetaSenderConfig extends CloudApiConfig {
+  /**
+   * Sayfa jetonu — Messenger/Instagram gönderimi bununla gider. Yoksa `token`a düşülür: o jeton
+   * yetkiliyse mesaj yine gider, değilse Meta reddeder ve ret deftere `failed` düşer — sessiz değil.
+   * WhatsApp bu alana hiç bakmaz.
+   */
+  pageToken?: string | null;
+}
+
+/** Kanalın jetonu — WhatsApp sistem jetonu, Messenger/IG Sayfa jetonu (yoksa sistem jetonu). */
+function tokenForChannel(config: MetaSenderConfig, source: SendTarget['source']): string {
+  return source === 'whatsapp' ? config.token : (blankToNull(config.pageToken) ?? config.token);
+}
 
 /**
  * **CLOUD API SÜRÜCÜSÜ** (15.11) — `MessageSender` portunun gerçek uygulaması.
@@ -24,11 +50,17 @@ import { unconfiguredSender, type MessageSender } from './send';
  * (`@lezzet/notify/testing`) o sözleşmeyi makineyle zorluyor; ama gerçek Meta'nın kabul ettiği
  * ancak canlı bir gönderimle bilinir. Hesap açıldığı gün yapılacak iş bunu yazmak değil, doğrulamak.
  */
-export function metaCloudSender(config: CloudApiConfig): MessageSender {
+export function metaCloudSender(config: MetaSenderConfig): MessageSender {
   return {
     name: 'meta-cloud-api',
     async send(target, input) {
-      const result = await sendCloudApiMessage(config, {
+      // Tel katmanı tek jeton görür; hangisi olduğuna burası (çevirmen) karar verir.
+      const wire: CloudApiConfig = {
+        token: tokenForChannel(config, target.source),
+        fetchImpl: config.fetchImpl,
+        baseUrl: config.baseUrl,
+      };
+      const result = await sendCloudApiMessage(wire, {
         accountRef: target.accountRef ?? '',
         to: target.externalRef,
         channel: target.source,
@@ -58,14 +90,43 @@ export function metaCloudSender(config: CloudApiConfig): MessageSender {
 /**
  * **JETON VAR MI → SÜRÜCÜ SEÇ** (15.8) — "yapılandırılmış mı" kuralının TEK yeri.
  *
- * Jetonu ÇAĞIRAN okur (`process.env` bu paketin işi değil, `STACK §4`), ama *"jeton yoksa ne
- * olur"* kararı burada durur. İki tüketici var (backend cron'u ve web action'ı) ve kural onlarda
- * ayrı ayrı yazılsaydı, biri gün gelip boş jetonla gerçek sürücüyü kurar — sürücü de her çağrıda
- * Meta'dan `190` yer ve arıza "sağlayıcı hatası" gibi görünürdü. Oysa gerçek sebep bizim
- * yapılandırmamızdır ve `unconfiguredSender` bunu adıyla söyler (`not_configured`).
+ * Jetonu ÇAĞIRAN verir (saf kapı, testlenebilir), ama *"jeton yoksa ne olur"* kararı burada durur.
+ * Tüketiciler çok (backend cron'u, webhook, web ve mobil action'ları) ve kural onlarda ayrı ayrı
+ * yazılsaydı, biri gün gelip boş jetonla gerçek sürücüyü kurar — sürücü de her çağrıda Meta'dan
+ * `190` yer ve arıza "sağlayıcı hatası" gibi görünürdü. Oysa gerçek sebep bizim yapılandırmamızdır
+ * ve `unconfiguredSender` bunu adıyla söyler (`not_configured`).
  *
- * Boş dizge de yok sayılır: `.env`'de `META_ACCESS_TOKEN=` satırı bırakmak, jeton koymamaktır.
+ * Ölçüt SİSTEM jetonudur: WhatsApp'ın ve çapa kodunun jetonu o; Sayfa jetonu tek başına
+ * "yapılandırılmış" saymaz. Boş dizge de yok sayılır (`blankToNull`).
  */
-export function messageSenderFor(token: string | null | undefined): MessageSender {
-  return token?.trim() ? metaCloudSender({ token: token.trim() }) : unconfiguredSender;
+export function messageSenderFor(token: string | null | undefined, pageToken?: string | null): MessageSender {
+  const sistem = blankToNull(token);
+  return sistem ? metaCloudSender({ token: sistem, pageToken: blankToNull(pageToken) }) : unconfiguredSender;
+}
+
+/** Meta jetonları — ortam değişkeni ADLARININ tek yeri. */
+export interface MetaTokens {
+  /** Sistem kullanıcısı jetonu (`META_ACCESS_TOKEN`) — WhatsApp gönderimi, medya indirme, çapa kodu. */
+  token: string | null;
+  /** Sayfa jetonu (`META_PAGE_ACCESS_TOKEN`) — Messenger/IG gönderimi ve profil adı. */
+  pageToken: string | null;
+}
+
+/**
+ * **ENV OKUMASI TEK KAPIDA** (08.09). 08.09'a kadar sekiz çağıran `process.env.META_ACCESS_TOKEN`ı
+ * ayrı ayrı okuyordu; ikinci jeton gelince iki değişken adı sekiz yerde çoğalacak ve biri gün gelip
+ * yalnız birini okuyacaktı — Messenger o çağırandan sessizce reddedilirdi. Adlar artık burada durur;
+ * `messageSenderFor` env bilmeyen saf kapı olarak kalır ve testler ona vurur.
+ */
+export function metaTokensFromEnv(): MetaTokens {
+  return {
+    token: blankToNull(process.env.META_ACCESS_TOKEN),
+    pageToken: blankToNull(process.env.META_PAGE_ACCESS_TOKEN),
+  };
+}
+
+/** Env'den sürücü — mesaj yazan her yolun (webhook, cron, web/mobil action) çağırdığı tek satır. */
+export function metaSenderFromEnv(): MessageSender {
+  const jetonlar = metaTokensFromEnv();
+  return messageSenderFor(jetonlar.token, jetonlar.pageToken);
 }

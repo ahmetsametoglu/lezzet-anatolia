@@ -1,5 +1,6 @@
 import { logger } from '@lezzet/observability';
 import type { ConversationSource } from '@lezzet/types';
+import { metaTokensFromEnv } from './meta-sender';
 
 /**
  * **Messenger / Instagram profil adı çözümü** (15.7 · canlı ölçüm 22.08).
@@ -37,11 +38,6 @@ import type { ConversationSource } from '@lezzet/types';
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
-/** Sayfa erişim jetonu — yoksa ad çözümü sessizce atlanır (mesaj yine yazılır). */
-function pageAccessToken(): string | null {
-  return process.env.META_PAGE_ACCESS_TOKEN ?? null;
-}
-
 interface ProfileBody {
   first_name?: string;
   last_name?: string;
@@ -75,7 +71,8 @@ export async function fetchMetaProfileName(
   fetchImpl: typeof fetch = fetch,
 ): Promise<string | null> {
   if (source === 'whatsapp') return null;
-  const token = pageAccessToken();
+  // Sayfa jetonu — gönderimin okuduğu kapıdan (`metaTokensFromEnv`); yoksa ad çözümü sessizce atlanır.
+  const token = metaTokensFromEnv().pageToken;
   if (!token) return null;
 
   const fields = source === 'instagram' ? 'name,username' : 'first_name,last_name';

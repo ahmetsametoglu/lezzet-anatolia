@@ -30,6 +30,14 @@
  *   2. `POST /{waba_id}/subscribed_apps` → KULLANICI/sistem jetonu  (Sayfa jetonu `#200` verir)
  *   3. `POST /{page_id}/subscribed_apps` → SAYFA jetonu             (sistem jetonu yetmez)
  * Üçü de burada adıyla ayrılmış; hangisinin nereye gittiği okunabilsin diye tek satırda tutulmadı.
+ * Sayfa jetonu env'den de gelir (`META_PAGE_ACCESS_TOKEN`, 08.09) — gönderimin kullandığı jetonla
+ * aynı; türetim (`GET /{page_id}?fields=access_token`) yalnız yedek ve `pages_show_list` ister.
+ *
+ * ── SIRA: UYGULAMA ABONELİĞİ, SAYFA JETONUNDAN ÖNCE (08.09) ────────────────
+ * Ölçülen arıza: WhatsApp kaydı güncel adresteyken `page` kaydı üç tünel önceki adreste kalmıştı.
+ * Sebep bu dosyanın eski sırasıydı — uygulama aboneliği (yalnız uygulama jetonu ister) Sayfa jetonu
+ * türetiminin ARKASINDA duruyordu; türetim izin yüzünden düşünce adres hiç yazılmıyor ve Messenger
+ * olayları ölü adrese gidiyordu. Bağımsız adım bağımlı adımın arkasında beklemez.
  *
  * ── INSTAGRAM BİLEREK YOK ───────────────────────────────────────────────────
  * Kullanıcı kararı 06.09: Instagram en sona. Kanal eklendiğinde buraya bir dal daha gelir
@@ -204,19 +212,7 @@ async function messengerKaydet(): Promise<boolean> {
     return true;
   }
 
-  /* Sayfa jetonu TÜRETİLİR, elle taşınmaz: sistem kullanıcısına Sayfa varlığı atanmışsa Graph onu
-     zaten veriyor. Elle kopyalanan jeton bir gün eskisiyle karışır ve arıza "izin yok" diye
-     görünür — oysa sebep yanlış jetondur. */
-  const sayfa = await graph(`/${pageId}`, 'GET', { fields: 'access_token,name', access_token: userToken! });
-  if (!sayfa.ok) {
-    console.error(`  ✗ Sayfa jetonu türetilemedi: ${hataMetni(sayfa.body)}`);
-    console.error('    Beklenen sebep: META_ACCESS_TOKEN\'da pages_* izni yok ya da Sayfa sistem');
-    console.error('    kullanıcısına varlık olarak atanmamış. Jeton yenileme adımı bunu çözer.');
-    return false;
-  }
-  const pageToken = String(sayfa.body.access_token ?? '');
-  console.log(`  ✓ Sayfa jetonu türetildi — "${String(sayfa.body.name ?? pageId)}"`);
-
+  // 1) UYGULAMA aboneliği ÖNCE — yalnız uygulama jetonu ister (sıra gerekçesi dosya başında).
   const abone = await graph(`/${appId}/subscriptions`, 'POST', {
     object: 'page',
     callback_url: callbackUrl,
@@ -231,13 +227,34 @@ async function messengerKaydet(): Promise<boolean> {
   }
   console.log(`  ✓ uygulama aboneliği — alanlar: ${PAGE_FIELDS.join(', ')}`);
 
-  // SAYFA jetonu — sistem jetonu bu adımda yetmez.
+  /* 2) SAYFA jetonu: env'de varsa gönderimin jetonu o (`META_PAGE_ACCESS_TOKEN`) — burada başka bir
+     jeton kullanmak "kayıt geçti, gönderim düştü" diye ayrışan iki gerçek üretirdi. Yoksa sistem
+     jetonundan türetilir: Sayfa sistem kullanıcısına atanmışsa Graph onu zaten veriyor. */
+  let pageToken = process.env.META_PAGE_ACCESS_TOKEN?.trim() ?? '';
+  if (pageToken) {
+    console.log("  ✓ Sayfa jetonu env'den (META_PAGE_ACCESS_TOKEN)");
+  } else {
+    const sayfa = await graph(`/${pageId}`, 'GET', { fields: 'access_token,name', access_token: userToken! });
+    if (!sayfa.ok) {
+      console.error(`  ✗ Sayfa jetonu türetilemedi: ${hataMetni(sayfa.body)}`);
+      console.error("    Beklenen sebep: META_ACCESS_TOKEN'da pages_* izni yok ya da Sayfa sistem");
+      console.error('    kullanıcısına varlık olarak atanmamış. META_PAGE_ACCESS_TOKEN vermek de yeter.');
+      console.error('    Uygulama aboneliği YAZILDI — adres güncel; eksik olan yalnız Sayfa→uygulama adımı.');
+      return false;
+    }
+    pageToken = String(sayfa.body.access_token ?? '');
+    console.log(`  ✓ Sayfa jetonu türetildi — "${String(sayfa.body.name ?? pageId)}"`);
+  }
+
+  // 3) Sayfa → uygulama aboneliği. SAYFA jetonu ister ve o jetonda `pages_manage_metadata` olmalı.
   const sayfaAbone = await graph(`/${pageId}/subscribed_apps`, 'POST', {
     subscribed_fields: PAGE_FIELDS.join(','),
     access_token: pageToken,
   });
   if (!sayfaAbone.ok) {
     console.error(`  ✗ Sayfa aboneliği: ${hataMetni(sayfaAbone.body)}`);
+    console.error('    Uygulama aboneliği YAZILDI (adres güncel). Bu adım `pages_manage_metadata` ister; Sayfa daha');
+    console.error('    önce abone edildiyse kayıt Meta tarafında DURUR — canlı bir mesajla doğrulanır.');
     return false;
   }
   console.log(`  ✓ Sayfa ${pageId} uygulamaya abone`);
