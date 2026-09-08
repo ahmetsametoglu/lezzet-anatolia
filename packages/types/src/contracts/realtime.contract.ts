@@ -35,6 +35,25 @@ export function ticketChannelName(ticketId: string): string {
 }
 
 /**
+ * TEK BİR SOHBETİN KANALI (21.291) — adı konuşmanın UUID'sidir.
+ *
+ * `ticketChannelName`in ikizi ve aynı gerekçe: operatör AÇIK bir sohbete bakıyorken hangi mesajın
+ * geleceğini bilir — tam olarak o konuşmanın. Kuyruk kanalı (`conversationsChannelName`, çoğul)
+ * bu işi göremez: o "listede bir şey değişti" der ve açık sohbeti tazelemek için çalınması,
+ * kuyruktaki HER hareketin okunan yazışmayı yeniden çizdirmesi demek olurdu.
+ *
+ * ── NEDEN AYRI KANAL, NEDEN ÇOĞUL ZİL YETMEDİ (ölçülen arıza 08.09) ──────────
+ * Sohbet ekranı açıkken gelen mesaj düşmüyordu ve sebebi bir hata değil, YAZILMAMIŞ bir
+ * davranıştı: ekranda hiç abonelik yoktu ve dinleyebileceği bir kapı da üretilmemişti. Operatör
+ * "çıkıp geri girerek" (odak yeniden okuması) görüyordu.
+ *
+ * Yük boş; adı ele geçiren biri "bu sohbette bir hareket oldu"dan fazlasını öğrenemez.
+ */
+export function conversationChannelName(conversationId: string): string {
+  return `conversation:${conversationId}`;
+}
+
+/**
  * MÜŞTERİNİN BİLDİRİM KANALI (14.12) — adı profilin UUID'sidir.
  *
  * `ticketChannelName` ile aynı kalıp, bir fark: talep kanalı TEK yazışmayı izler, bu kanal kişinin

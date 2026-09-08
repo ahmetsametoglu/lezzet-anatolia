@@ -1,5 +1,14 @@
 import type { ReactNode, RefObject } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
+import { useCallback, useRef } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
@@ -43,6 +52,32 @@ import { StyleSheet } from 'react-native-unistyles';
   yerde durduğu için o tur bir satır değiştirecek — üç ekranı tek tek gezmeyecek.
 */
 
+/**
+ * "Dibe yapış" eşiği — bu kadar dp kalmışsa operatör GÜNCELİ okuyor sayılır (kullanıcı kararı
+ * 08.09: *"Scroll aşağıya çok yakınsa aşağı doğru çekmeli… ama kullanıcı yukarılarda eski
+ * mesajlaşmaları okuyorsa yeni gelen mesaj aşağı doğru kaydırmamalı"*).
+ *
+ * Değer bir baloncuk boyundan biraz büyük: tam dipte olmayı şart koşmak, bir parmak ucu kaymış
+ * listede davranışı kapatırdı; çok büyük tutmak ise okuyan operatörü yerinden ederdi.
+ */
+const STICK_SLOP = 80;
+
+/**
+ * Dibe yapışılacak mı — kaydırıcının ölçümünden çıkan TEK karar.
+ *
+ * Ayrı bir işlev, çünkü kural sınanabilir olmalı ve kaydırıcının içinde sınanamıyor: jest'te
+ * düzen hesaplanmıyor, `scrollToEnd` çağrısını ref taklidiyle yakalamak ise kırılgan çıktı
+ * (ölçüldü 08.09 — her test TEK BAŞINA geçiyor, toplu koşuda ilki dışında hepsi düşüyordu).
+ * Karar burada, bağlantı aşağıda: ikisi ayrı ayrı doğrulanabiliyor.
+ */
+export function shouldStickToBottom(metrics: {
+  layoutMeasurement: { height: number };
+  contentOffset: { y: number };
+  contentSize: { height: number };
+}): boolean {
+  return metrics.contentSize.height - metrics.layoutMeasurement.height - metrics.contentOffset.y <= STICK_SLOP;
+}
+
 interface ChatLayoutProps {
   /**
    * Kaydırıcının ÜSTÜNDE sabit duran şeritler — etiketler, mod satırı, pencere bandı. Kaçınmanın
@@ -57,7 +92,7 @@ interface ChatLayoutProps {
   scrollRef?: RefObject<ScrollView | null>;
   /** Yazışmanın kendi dolgusu/aralığı — ekranın `styles.content`u olduğu gibi geçer. */
   contentContainerStyle?: StyleProp<ViewStyle>;
-  /** İçerik büyüyünce ne yapılacağı ekranın kararı: kimi sona çeker, kimi yalnız taze içerikte. */
+  /** İçerik büyüyünce ekranın kendi eklemek istediği iş — dibe çekme kararı KİTİN (künye yukarıda). */
   onContentSizeChange?: () => void;
   /** Kaydırıcının kimliği — testler ve ekran görüntüsü araçları bunu arıyor, ekrandan gelir. */
   testID?: string;
@@ -72,14 +107,51 @@ export function ChatLayout({
   onContentSizeChange,
   testID,
 }: ChatLayoutProps) {
+  /* Parmağın nerede olduğu REF'te, state'te DEĞİL: her kaydırma karesinde yeniden çizim yapmak
+     uzun bir yazışmayı takılır hâle getirirdi ve bu değer çizime hiç girmiyor — yalnız karar anında
+     okunuyor. Başlangıç `true`: ekran açılışında yazışma zaten dipte durmalı. */
+  const dipte = useRef(true);
+  /** İlk yerleşim animasyonsuz olmalı — açılışta gözün önünde kayan bir liste, bir arıza gibi görünür. */
+  const ilkYerlesim = useRef(true);
+  const kendiRef = useRef<ScrollView | null>(null);
+
+  const olc = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    dipte.current = shouldStickToBottom(event.nativeEvent);
+  };
+
+  /** İki ref tek düğüme bakar: kitin kendi kaydırması için `kendiRef`, ekranın "dibe in" kapısı için verilen. */
+  const bagla = useCallback(
+    (node: ScrollView | null) => {
+      kendiRef.current = node;
+      if (scrollRef) scrollRef.current = node;
+    },
+    [scrollRef],
+  );
+
+  const buyudu = () => {
+    onContentSizeChange?.();
+    if (!dipte.current) return;
+    const kaydirici = scrollRef?.current ?? kendiRef.current;
+    kaydirici?.scrollToEnd({ animated: !ilkYerlesim.current });
+    ilkYerlesim.current = false;
+  };
+
   return (
     <KeyboardAvoidingView style={styles.layer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {above}
       <ScrollView
-        ref={scrollRef}
+        /* Ref KİMLİĞİ SABİT (`useCallback`): satır içi bir ok işlevi her çizimde yeni bir kimlik
+           demek ve React onu her seferinde önce `null`, sonra düğümle çağırır. Kaydırıcıda bu
+           gereksiz bir bağlama/çözme trafiği; testte ise gözle görülür bir tuzaktı — ekranın
+           tuttuğu ref her çizimde yenileniyordu. */
+        ref={bagla}
         style={styles.thread}
         contentContainerStyle={contentContainerStyle}
-        onContentSizeChange={onContentSizeChange}
+        onScroll={olc}
+        /* 16 ms = kare başına bir ölçüm. Daha seyreği "dipte miyim" sorusunu bayatlatır: parmağını
+           yeni kaldırmış operatöre yeni mesaj gelirse yanlış tarafa karar verilir. */
+        scrollEventThrottle={16}
+        onContentSizeChange={buyudu}
         /* Klavye açıkken düğmeye İLK dokunuş yutulmaz (MB-01) — kitin öteki iki kabının da
            taşıdığı yarı. Yazışmada bu özellikle görünür: çubuk klavyenin hemen üstünde durur ve
            "gönder"e basmak, klavyeyi kapatan bir dokunuşla aynı yere denk gelir. */

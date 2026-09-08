@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../customer/anchor';
 import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
-import { ringConversationsBell } from '../realtime/bell';
+import { ringConversationBell, ringConversationsBell } from '../realtime/bell';
 import { metaSenderFromEnv } from './meta-sender';
 import { storeConversationMedia } from './meta-media';
 import { transcribeConversationAudio } from './voice';
@@ -75,6 +75,20 @@ function triggerInboundPipeline(input: {
   media: { key: string; mime: string } | null;
 }): void {
   void (async () => {
+    /*
+      ── AÇIK YAZIŞMANIN ZİLİ, İKİ KEZ (21.291 · ölçülen arıza 08.09) ──────────
+      Kuyruk zili (`ringConversationsBell`, çoğul) toplu POST'un sonunda BİR kez çalıyor ve listeyi
+      uyandırıyor; ama o zil sohbet ekranını uyandıramaz — kuyruktaki her hareket, okunan yazışmayı
+      yeniden çizdirirdi. Sohbet ekranı bu yüzden kendi kanalını dinliyor ve zili burada çalınıyor.
+
+      İKİ KEZ ÇALINMASI BİLİNÇLİ: mesaj deftere düştüğü an operatör onu GÖRMELİ (birincisi), ama
+      sesli mesajın transkripti ve çevirisi saniyeler sonra yazılıyor (`setTranscript`,
+      `translateConversationMessageNow`) — ikinci zil olmasaydı ekran "[görsel / dosya]" ya da
+      çevirisiz metinle donup kalırdı. Zil ucuz ve yükü boş; ekran her ikisinde de sunucudan
+      okuyor, yani ikinci çağrının tek maliyeti bir tur.
+    */
+    await ringConversationBell(input.conversation.id);
+
     let mesaj = input.message;
     if (input.media?.mime.startsWith('audio/')) {
       const metin = await transcribeConversationAudio(input.media.key, input.media.mime, {
@@ -85,6 +99,8 @@ function triggerInboundPipeline(input: {
       if (metin) mesaj = (await new MessageService(serviceDb()).setTranscript(mesaj.id, metin)) ?? mesaj;
     }
     await translateConversationMessageNow(serviceDb(), mesaj);
+    // İkinci zil: transkript ve çeviri artık satırda — ekran zenginleşmiş hâli okusun (künye yukarıda).
+    await ringConversationBell(input.conversation.id);
     triggerAutonomousReply(input.conversation.id, input.conversation.handledBy);
   })().catch((err: unknown) =>
     captureError(err, {

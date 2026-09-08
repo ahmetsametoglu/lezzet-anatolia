@@ -265,8 +265,11 @@ export { defaultConversationHandler, setDefaultConversationHandler } from './mes
 // tazelenmesi için, zili çalan üç süreç (web · mobil arka uç · backend cron) tek çağrıyı paylaşsın.
 export {
   BELL_EVENT,
+  // Tek sohbetin kanalı/zili (21.291): AÇIK yazışma ekranı için — kuyruk zilinin ikizi değil, eşi.
+  conversationChannelName,
   conversationsChannelName,
   ringBell,
+  ringConversationBell,
   ringConversationsBell,
   ringTicketBell,
   ringTicketsBell,

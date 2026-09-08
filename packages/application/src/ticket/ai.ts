@@ -19,7 +19,7 @@ import { cartAgentTools } from '../cart/agent-tools';
 import { withCartLink } from '../cart/link-text';
 import { anchorGateOf, type AnchorGate } from '../customer/anchor';
 import { sendOutboundMessage, type MessageSender } from '../messaging/send';
-import { ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
+import { ringConversationBell, ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
 import { translateTicketMessageNow } from './translate';
 import { customerSupportTools } from './support-tools';
 import { queueTicketReplyMail } from './reply-mail';
@@ -394,8 +394,12 @@ export async function generateConversationDraft(
     aiDraftReply: withCartLink(formatForChannel(result.data.reply, conversation.source), cartLink.url),
     aiDraftGeneratedAt: new Date().toISOString(),
   });
-  // Taslağı cron yazdı — WhatsApp ekranı açık duran operatör onu elle yenilemeden görsün (16.8).
+  /* İKİ ZİL, İKİ EKRAN (21.291): çoğul olan kuyruğu, tekil olan AÇIK yazışmayı uyandırır. Taslak
+     satırda yaşıyor ve iki yüzeyde birden görünüyor — biri "rozet belirdi", öteki "cevap kutusunun
+     üstünde kart belirdi". Tek zil ikisini birden yapamaz: kuyruk zili açık yazışmayı her hareket
+     için yeniden çizdirirdi. */
   await ringConversationsBell();
+  await ringConversationBell(conversation.id);
   return { status: 'generated' };
 }
 
@@ -663,8 +667,10 @@ async function autonomousConversationReply(
     }
     await conversations.setMode(conversation.id, 'human');
     logger.info({ context: 'application/conversation-ai', conversationId: conversation.id }, `özerk ajan insana devretti: ${reason}`);
-    // Zil şart: kuyruk hâlâ "AI yürütüyor" yazarsa kimse o sohbete bakmaz (16.8).
+    // Zil şart: kuyruk hâlâ "AI yürütüyor" yazarsa kimse o sohbete bakmaz (16.8). Tekil zil de
+    // çalınır (21.291): sohbeti AÇMIŞ operatörün ekranındaki mod çipi ve devir haberi tazelensin.
     await ringConversationsBell();
+    await ringConversationBell(conversation.id);
     return { status: 'handoff', reason };
   };
 
@@ -721,9 +727,23 @@ async function autonomousConversationReply(
 
   if (outcome.status === 'refused') return handOff(`gönderilemedi: ${outcome.reason}`, false);
   if (outcome.status === 'failed') {
+    /*
+      ── KALICI SAĞLAYICI REDDİ DE DEVİRDİR (08.09, ölçüldü) ────────────────────
+      `retryable` sağlayıcı hatasının SINIFIDIR (`cloud-api` künyesi): geçersiz alıcı, izin yok,
+      yanlış hesap kimliği, geçersiz jeton tekrar denemekle düzelmez. Bu dal bir tur her hatada
+      "sonraki tur yeniden denenecek" diyordu ve tarama iki sahte sohbete (smoke Messenger + Instagram)
+      72 saniyede dört kez yazmayı denedi — her deneme bir model turu + Meta'ya bir çağrı. İş
+      katmanının katlanan freni (1 → 30 dk) döngüyü yavaşlatır, bitirmez: pencere kapanana kadar
+      sohbet başına onlarca deneme. Aynı reddi Meta'ya ısrarla yedirmek hesabın kendisini riske atar.
+      Yapılandırma boşluğu (`not_configured`) bu sınıfa GİRMEZ: jeton gelince aynı tur gider, veri
+      bozulmasın diye mod değişmez. Haber gönderilmez — gidemezdi (`refused` dalıyla aynı gerekçe).
+    */
+    if (outcome.reason !== 'not_configured' && !outcome.retryable) {
+      return handOff(`gönderilemedi (kalıcı sağlayıcı reddi): ${outcome.reason}`, false);
+    }
     logger.warn(
       { context: 'application/conversation-ai', conversationId: conversation.id, reason: outcome.reason },
-      'özerk cevap gönderilemedi — mod DEĞİŞMEDİ, sonraki tur yeniden denenecek',
+      'özerk cevap gönderilemedi — geçici; mod DEĞİŞMEDİ, sonraki tur yeniden denenecek',
     );
     return { status: 'failed', reason: outcome.reason === 'not_configured' ? 'send_not_configured' : 'provider_error' };
   }
@@ -733,6 +753,9 @@ async function autonomousConversationReply(
      Koşullu yazım (`markOptInAsked`) ilk anı koruyor — künyesi serviste. */
   if (izinSorulacak) await conversations.markOptInAsked(conversation.id);
 
+  /* Ajan MÜŞTERİYE cevap yazdı — operatör o sohbeti açık tutuyorsa baloncuğu görmeli (21.291).
+     Kullanıcının ölçtüğü arıza tam buydu: mesajlar deftere düşüyor, ekranda görünmüyordu. */
   await ringConversationsBell();
+  await ringConversationBell(conversation.id);
   return { status: 'replied' };
 }

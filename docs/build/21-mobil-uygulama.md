@@ -13767,3 +13767,66 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Testler:** `shell-scroll.test.tsx` (yeni, 4/4) — eşik davranışı, sızmanın kapanması,
   hizalamanın körlemesine olmadığı, ve yön birikiminin de sıfırlandığı.
+
+- [x] (21.291) **AÇIK SOHBET DE CANLI — sohbetin kendi zili** (mobil şeridin notu + kullanıcı cihaz turu 08.09: *"chat'in içindeyken uygulamaya yeni mesajlar gelmiyor… çıkıp geri girmem gerekiyor"*)
+  `touches:` `packages/types/src/contracts/{realtime.contract.ts,social-api.schema.ts}` · `packages/application/src/{realtime/bell.ts,index.ts,messaging/meta-webhook.ts,ticket/ai.ts}` · `apps/mobile-api/src/api/v1/social.ts` · `apps/mobile/src/screens/management/{use-social-conversation.hook.ts,social-conversation-screen.test.tsx}`
+
+  **Durum (08.09) — TAMAM, cihazda uçtan uca ölçüldü.**
+
+  **Arıza bir hata değil, YAZILMAMIŞ bir davranıştı.** Kancada `getSupabase`/`.channel(`/`.subscribe(`
+  geçen sıfır satır vardı ve dinleyebileceği bir kapı da üretilmemişti: konuşma tarafında yalnız
+  `ringConversationsBell()` (çoğul, kimliksiz) vardı. 21.289 kuyruğu canlandırmıştı, sohbeti değil.
+
+  Kuyruk zili bu işi GÖREMEZDİ: "listede bir şey değişti" diyor ve sohbet ekranı onu dinleseydi,
+  kuyruktaki her hareket okunan yazışmayı yeniden çizdirirdi. Bu yüzden sohbetin kendi kanalı
+  açıldı — `conversationChannelName(id)` + `ringConversationBell(id)`, talep yazışmasının
+  (`ticketChannelName`/`ringTicketBell`) kanıtlanmış ikizi; desen yeniden icat edilmedi.
+
+  **ZİL İKİ KEZ ÇALINIYOR ve bu bilinçli** (`triggerInboundPipeline`): mesaj deftere düştüğü an
+  operatör onu görmeli, ama sesli mesajın transkripti ve çevirisi saniyeler SONRA yazılıyor —
+  ikinci zil olmasaydı ekran "[görsel / dosya]" ya da çevirisiz metinle donup kalırdı. Ajanın
+  taslağı, devri ve özerk cevabı da tekil zili çalıyor; mobil cevap ucu da (aynı sohbete bakan
+  İKİNCİ operatörün ekranı için — gönderen ekran zaten dönen detayla tazeleniyor).
+
+  **CİHAZ TURU (OPPO CPH1907 · USB) — iki iddia da ölçüldü, telefona dokunulmadan:**
+  · Açık sohbette `pnpm meta:smoke whatsapp-text` sonrası yeni baloncuk **kendiliğinden düştü**
+    (09:59 · ekran görüntüsüyle).
+  · Liste açıkken tam smoke koşusu üç YENİ konuşma yazdı; satır sayısı **4 → 7** oldu ve
+    veritabanındaki 7 ile birebir eşleşti.
+
+  **NOTUN İKİNCİ MADDESİ TEKRAR ÜRETİLEMEDİ ve hipotezi ÖLÇÜMLE DÜŞTÜ.** *"Yeni konuşma listeye
+  gelmiyor"* için en güçlü aday `last_inbound_at`in NULL kalıp `nulls last` ile dibe düşmesiydi.
+  Ölçüldü: yeni konuşma yazıldığı anda alan DOLU (`record_message` aynı `update`te yazıyor) ve
+  yerelde açılan taze bir konuşma listenin BAŞINA çıkıyor; üç smoke konuşması da canlı zille
+  düştü. Kullanıcının gördüğü hâl büyük olasılıkla 21.289 ÖNCESİ paketti (o sürümde kuyruk zili
+  hiç dinlenmiyordu) ya da notun kendi 3. maddesindeki tuzak — `adb reverse` düşünce Fast Refresh
+  sessizce durur ve cihaz eski paketi koşturur. **Kanıtlanamadığı için düzeltme YAZILMADI**;
+  yeniden görülürse ilk bakılacak yer `adb reverse --list`.
+
+  ── AYNI TURUN İKİ EK BULGUSU ───────────────────────────────────────────────
+
+  **1. Yazışma artık DİBE YAPIŞIYOR** (kullanıcı kararı 08.09: *"Scroll aşağıya çok yakınsa aşağı
+  doğru çekmeli… ama kullanıcı yukarılarda eski mesajlaşmaları okuyorsa yeni gelen mesaj aşağı
+  doğru kaydırmamalı."*). Kural KİTTE (`ChatLayout`), yani talep ekranı da faydalanıyor: dibe 80 dp
+  kalmışsa yeni içerik dibe çeker, operatör yukarıdaysa dokunmaz. Tek istisna kendi gönderdiğin
+  mesaj — nerede olursan ol dibe inersin.
+
+  Ekranın eski `scrollPending` bayrağı silindi: "taze içerik" ile "operatör güncele bakıyor" AYRI
+  sorular ve ikincisini yalnız kaydırıcı bilebilir.
+
+  Kural saf bir işleve çıkarıldı (`shouldStickToBottom`) ve sebebi ölçüldü: `scrollToEnd` çağrısını
+  ref taklidiyle yakalamak kırılgan — her test TEK BAŞINA geçiyor, toplu koşuda ilki dışında
+  hepsi düşüyordu (dosyadaki ikinci render'dan sonra olaylar yutuluyor). Ayrıca satır içi callback
+  ref `useCallback`e alındı: her çizimde yeniden bağlanıyordu.
+
+  **2. Yönetim hub'ında talep kartı DARDI** (cihaz turu 08.09). Üstteki iki karar kartı kenardan
+  22 dp başlıyor, talep kartı 44'ten: kap (`body`) yatay dolguyu zaten veriyordu ve `ticketsWrap`
+  ikinci kez yazıyordu. Tasarımda (v3:28) üçü de aynı 20 px kabın içinde. Fazla dolgu kaldırıldı.
+
+  **BEKLEYEN(BACKLOG §1): talep kartının BOŞ hâli tanımsız.** Sıfır talepte kart altı sıfır yazıyor
+  (*"0 açık · 0 tanesi top bizde / 0 bozuk · 0 eksik · 0 soru · 0 diğer"*) ve bir karar kutusunda
+  hiçbir şey söylemeyen tam boy bir kart kaplıyor. Tasarım kartı yalnız dolu hâliyle çiziyor; boş
+  hâl bizim kararımız ve kullanıcıya soruldu.
+
+  Doğrulama: kök `typecheck` **20/20**, `lint` temiz, sosyal sohbet ekranı **33/33** (3'ü bu turda),
+  yazışma kabı **11/11** (kaydırma kuralının beş sınır durumu dahil), mobil yönetim + kit **299/299**.

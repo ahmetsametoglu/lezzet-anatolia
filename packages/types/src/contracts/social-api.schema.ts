@@ -137,6 +137,17 @@ export const SocialConversationDetailSchema = z.object({
   messages: z.array(SocialMessageSchema),
   /** Daha ESKİ mesajların imleci — sohbet penceresinin "geçmişi yükle" kapısı. */
   nextCursor: z.string().nullable(),
+  /**
+   * **BU SOHBETİN CANLI ZİLİ** (21.291) — ekran dinler, mesaj gelince yazışmayı tazeler.
+   *
+   * Kuyruğun kanalından AYRI ve bilerek: kuyruk zili "listede bir şey değişti" der ve onu dinleyen
+   * bir sohbet ekranı, ilgisiz her hareket için kendini yeniden çizerdi. Bu ad konuşmanın
+   * UUID'sinden türer (doğal sır) — ama yine SUNUCUDAN geliyor, çünkü adı üreten işlev zili çalan
+   * tarafla ortak; istemcide ikinci kez yazmak bir gün sessizce çalmayan bir zil demekti.
+   *
+   * Yük boş (zilin kendi kuralı): duyan taraf mesajı kanaldan değil, guard'lı uçtan okur.
+   */
+  channel: z.string().min(1),
 });
 export type SocialConversationDetail = z.infer<typeof SocialConversationDetailSchema>;
 

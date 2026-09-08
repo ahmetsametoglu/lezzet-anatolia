@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import {
+  conversationChannelName,
   conversationsChannelName,
   generateConversationDraft,
   messageSenderFor,
+  ringConversationBell,
   ringConversationsBell,
   sendOutboundMessage,
 } from '@lezzet/application';
@@ -118,6 +120,10 @@ async function toDetailBody(
       messages.map(async (message) => ({ ...message, mediaUrl: await privateReadUrl(message.mediaKey) })),
     ),
     nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    /* Zilin adı da BURADA (21.291): detayı üreten İKİ yol var (GET ve cevap ucu) ve alanı yalnız
+       birine eklemek, ötekinin cevabını sözleşmeden düşürürdü — `parse` bunu derleme değil çalışma
+       anında yakalardı. Tek yerde kurulan gövdenin var olma sebebi tam olarak bu. */
+    channel: conversationChannelName(row.id),
   };
 }
 
@@ -234,7 +240,11 @@ social.post('/conversations/:id/reply', async (c) => {
     );
   }
 
+  /* İKİ ZİL (21.291): çoğul kuyruğu, tekil AÇIK yazışmayı uyandırır — aynı sohbete bakan İKİNCİ
+     bir operatörün ekranı bizim yazdığımız cevabı elle yenilemeden görsün. Gönderen ekran zaten
+     dönen detayla tazeleniyor, yani tekil zil onun için değil ötekiler için çalıyor. */
   await ringConversationsBell();
+  await ringConversationBell(id.data);
 
   const [row, messagePage] = await Promise.all([
     inbox.getById(id.data),

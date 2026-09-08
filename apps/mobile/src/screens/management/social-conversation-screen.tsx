@@ -352,9 +352,17 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
   const chat = useSocialConversation(conversationId);
   const [reply, setReply] = useState('');
 
+  /*
+    KAYDIRMA KARARI KİTTE, BURADA DEĞİL (21.291 · kullanıcı kararı 08.09). `ChatLayout` artık
+    parmağın nerede olduğunu ölçüyor: dibe yakınsa yeni içerik geldiğinde dibe çekiyor, operatör
+    yukarıda eski mesajları okuyorsa DOKUNMUYOR. Ekranın eski `scrollPending` bayrağı bunu
+    yapamıyordu — "taze içerik" ile "operatör güncele bakıyor" ayrı sorular ve ikincisini yalnız
+    kaydırıcı bilebilir.
+
+    Ref burada KALIYOR çünkü bir istisna var: kendi mesajını GÖNDEREN operatör, o an nerede olursa
+    olsun dibe iner — yazdığı şeyi görmek ister (aşağıda `send`).
+  */
   const scrollRef = useRef<ScrollView>(null);
-  /** En alta kaydırma yalnız taze içerikte (ilk yük · cevap) — "daha eski" yüklerken dip aranmaz. */
-  const scrollPending = useRef(true);
 
   const conversation = chat.conversation;
   const window = socialWindowOf(conversation?.windowExpiresAt ?? null);
@@ -365,7 +373,8 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
     const written = await chat.reply(text);
     if (written) {
       setReply('');
-      scrollPending.current = true;
+      // Kendi sözünü gönderen operatör dibe iner — kitin "dibe yakınsan" kuralının tek istisnası.
+      scrollRef.current?.scrollToEnd({ animated: true });
     }
   };
 
@@ -620,11 +629,6 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         composer={composer}
         scrollRef={scrollRef}
         contentContainerStyle={styles.thread}
-        onContentSizeChange={() => {
-          if (!scrollPending.current) return;
-          scrollPending.current = false;
-          scrollRef.current?.scrollToEnd({ animated: false });
-        }}
         testID="management-social-thread"
       >
         {chat.hasOlder ? (

@@ -799,8 +799,10 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.body,
     color: operationsTheme.colors.ink,
   },
+  /* YATAY DOLGU YOK — kap (`body`) onu ZATEN veriyor (`6xl`). İkisi birden yazılınca kart 44 dp
+     içeriden başlıyordu, üstündeki karar kartları ise 22'den: cihazda ölçüldü (08.09), talep kartı
+     gözle görülür biçimde DAR duruyordu. Tasarımda üçü de aynı 20 px kabın içinde (v3:28). */
   ticketsWrap: {
-    paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space.lg,
   },
   /** Talep kartının sayı satırı — nabız kutucuğundan bir kademe küçük, kartın başlığı o değil. */

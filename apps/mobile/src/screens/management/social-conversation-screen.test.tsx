@@ -33,12 +33,29 @@ jest.mock('expo-router', () => {
 });
 
 const mockSession = { access_token: 'test-token' };
+/* CANLI ZİL SAHTESİ (21.291): kanca artık `getSupabase().channel(...)` çağırıyor. Sahte, gerçek
+   imzanın en küçüğü — `on` kendini döndürür, `subscribe` bir tutamaç verir. Zilin ÇALDIĞINI
+   testler kendi tetikliyor (yakalanan geri çağrıyı çağırarak); burada taklit edilen tek şey soket. */
+const mockRemoveChannel = jest.fn();
+const mockSubscribe = jest.fn(() => ({ topic: 'test' }));
+const mockOnBroadcast = jest.fn();
 jest.mock('@/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),
       refreshSession: async () => ({ data: { session: mockSession }, error: null }),
     },
+    channel: (name: string) => {
+      const kanal = {
+        on: (...args: unknown[]) => {
+          mockOnBroadcast(name, ...args);
+          return kanal;
+        },
+        subscribe: mockSubscribe,
+      };
+      return kanal;
+    },
+    removeChannel: mockRemoveChannel,
   }),
 }));
 
@@ -73,6 +90,9 @@ function detay(over: Record<string, unknown> = {}, mesajlar: unknown[] = []) {
     },
     messages: mesajlar,
     nextCursor: null,
+    /* `channel` sözleşmenin ZORUNLU alanı (21.291): bu sohbetin canlı zilinin adı sunucudan gelir.
+       Sahte cevaba eklenmemiş olsaydı `parse` düşer ve ekran "beklenmedik" hatasına giderdi. */
+    channel: `conversation:${CONV_ID}`,
   };
 }
 
@@ -101,6 +121,9 @@ beforeAll(() => {
 beforeEach(() => {
   fetchMock.mockReset();
   disariAc.mockClear();
+  mockRemoveChannel.mockClear();
+  mockSubscribe.mockClear();
+  mockOnBroadcast.mockClear();
 });
 
 describe('kutu bir DEFTER kutusudur — mesaj göndermez', () => {
@@ -464,5 +487,49 @@ describe('gönderim reddi TEK cümledir — ham anahtar ekrana çıkmaz', () => 
     expect(screen.queryByText(/window_closed/)).not.toBeOnTheScreen();
     // Metin kutuda DURUR — gitmeyen bir cevabı silmek onu yeniden yazdırmaktır.
     expect(screen.getByTestId('management-social-reply').props.value).toBe('Merhaba');
+  });
+});
+
+/*
+  CANLI YAZIŞMA (21.291 · kullanıcı cihaz turu 08.09) — ekran açıkken gelen mesaj düşmüyordu ve
+  sebebi bir hata değil, YAZILMAMIŞ bir davranıştı: bu kancada tek bir abonelik satırı yoktu.
+  Operatör "çıkıp geri girerek" görüyordu.
+*/
+describe('sohbet CANLI dinler — açık ekrana mesaj kendiliğinden düşer', () => {
+  it('zilin adı SUNUCUDAN gelir ve BU sohbetin kanalına abone olunur', async () => {
+    /* Kuyruğun kanalı değil, sohbetin KENDİ kanalı: kuyruk zili dinlenseydi listedeki her hareket
+       okunan yazışmayı yeniden çizdirirdi. */
+    mockDetay(detay());
+    await ekranAc();
+
+    await waitFor(() => expect(mockSubscribe).toHaveBeenCalled());
+    expect(mockOnBroadcast).toHaveBeenCalledWith(
+      `conversation:${CONV_ID}`,
+      'broadcast',
+      { event: 'changed' },
+      expect.any(Function),
+    );
+  });
+
+  it('zil çalınca yazışma SUNUCUDAN yeniden istenir — kanaldan veri gelmez', async () => {
+    mockDetay(detay({}, [mesaj({ body: { text: 'İlk', payload: null } })]));
+    await ekranAc();
+    await waitFor(() => expect(mockSubscribe).toHaveBeenCalled());
+
+    // Sunucu artık İKİ mesaj döndürüyor; zil yalnız "bir şey oldu" diyor, mesajı taşımıyor.
+    mockDetay(detay({}, [mesaj({ body: { text: 'İkinci', payload: null } }), mesaj({ body: { text: 'İlk', payload: null } })]));
+    const cal = mockOnBroadcast.mock.calls.at(-1)?.[3] as () => void;
+    cal();
+
+    await waitFor(() => expect(screen.getByText('İkinci')).toBeOnTheScreen());
+  });
+
+  it('ekran sökülünce abonelik KAPANIR — sızan soketin bedeli sessizdir', async () => {
+    mockDetay(detay());
+    const view = await render(<SocialConversationScreen conversationId={CONV_ID} />);
+    await waitFor(() => expect(mockSubscribe).toHaveBeenCalled());
+
+    view.unmount();
+    await waitFor(() => expect(mockRemoveChannel).toHaveBeenCalled());
   });
 });

@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import type { ConversationHandler } from '@lezzet/types';
+import { BELL_EVENT, type ConversationHandler } from '@lezzet/types';
 
+import { getSupabase } from '@/lib/auth/supabase';
 import type { ApiFail } from '@/lib/api/client';
 import {
   consumeSocialDraft,
@@ -69,6 +70,9 @@ export function useSocialConversation(conversationId: string): UseSocialConversa
   const [lastError, setLastError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [busy, setBusy] = useState(false);
+  /* Zilin adı sunucudan gelir (sözleşme künyesi): ilk detay okunana kadar abone olunacak bir kanal
+     yok, o yüzden `null` başlar ve zincir kendiliğinden sıraya girer. */
+  const [bellChannel, setBellChannel] = useState<string | null>(null);
 
   const generation = useRef(0);
   const loaded = useRef(false);
@@ -78,6 +82,7 @@ export function useSocialConversation(conversationId: string): UseSocialConversa
     setConversation(detail.conversation);
     setMessages([...detail.messages].reverse());
     setOlderCursor(detail.nextCursor);
+    setBellChannel(detail.channel);
   }, []);
 
   const load = useCallback(
@@ -110,6 +115,37 @@ export function useSocialConversation(conversationId: string): UseSocialConversa
   const retry = useCallback(() => {
     void load({ silent: false });
   }, [load]);
+
+  /*
+    CANLI YAZIŞMA (21.291 · kullanıcı cihaz turu 08.09) — **kapı zili, veri borusu değil.**
+
+    ── ÇÖZÜLEN ARIZA: EKRAN AÇIKKEN MESAJ GELMİYORDU ───────────────────────────
+    Ölçüm netti: bu kancada `getSupabase`/`.channel(`/`.subscribe(` geçen SIFIR satır vardı. Yani
+    bu bir hata değil, YAZILMAMIŞ bir davranıştı — mesaj deftere düşüyordu, ekran duymuyordu ve
+    operatör "çıkıp geri girerek" (odak yeniden okuması) görüyordu.
+
+    Kuyruk zili (`ringConversationsBell`) bu işi göremezdi: o "listede bir şey değişti" der ve
+    dinlenseydi, kuyruktaki HER hareket okunan yazışmayı yeniden çizdirirdi. Bu yüzden sohbetin
+    kendi kanalı açıldı (`ringConversationBell` — talep yazışmasının kanıtlanmış ikizi).
+
+    ── SESSİZ TAZELEME, GENEL YÜKLEME DEĞİL ────────────────────────────────────
+    `silent: true`: operatör yazışmayı OKUYOR olabilir; gelen bir mesaj yüzünden ekranı halkaya
+    çevirmek, okunan satırı gözün altından çekmek olurdu. `applyDetail` diziyi bütün değiştiriyor —
+    yeni mesaj sona ekleniyor, açık olan "daha eski" sayfası ise ilk sayfaya dönüyor ve bu kabul
+    edilmiş bir bedel (kanca künyesinin ilk kararı).
+  */
+  useEffect(() => {
+    if (bellChannel === null) return;
+
+    const supabase = getSupabase();
+    const subscription = supabase
+      .channel(bellChannel)
+      .on('broadcast', { event: BELL_EVENT }, () => void load({ silent: true }))
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(subscription);
+    };
+  }, [bellChannel, load]);
 
   const loadOlder = useCallback(() => {
     if (olderCursor === null || loadingOlder || status !== 'ready') return;

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { notificationsChannelName, ticketChannelName } from '@lezzet/types';
+import { conversationChannelName, notificationsChannelName, ticketChannelName } from '@lezzet/types';
 import { BELL_EVENT } from './bell-event';
 
 /*
@@ -114,7 +114,7 @@ export async function ringTicketsBell(): Promise<void> {
 // Adın KENDİSİ `@lezzet/types`ta (`realtime.contract`): onu duyan taraflardan biri native uygulama
 // ve o paket bu dosyayı (service-role + `node:crypto`) hiç göremez. Burada yalnız yeniden yayılıyor
 // ki zili çalan taraf da tek kaynaktan okusun.
-export { ticketChannelName };
+export { ticketChannelName, conversationChannelName };
 
 /**
  * Bir talepte müşteriyi ilgilendiren bir hareket oldu (personel ya da AI cevabı) — açık duran
@@ -125,6 +125,20 @@ export { ticketChannelName };
  */
 export async function ringTicketBell(ticketId: string): Promise<void> {
   await ringBell(ticketChannelName(ticketId));
+}
+
+/**
+ * **TEK BİR SOHBETİN ZİLİ** (21.291) — açık duran yazışma ekranını uyandırır.
+ *
+ * `ringConversationsBell` (çoğul) ile ikisi AYRI ve ikisi de çalınır: biri kuyruğu izleyen
+ * operatörü, bu ise o sohbeti AÇMIŞ olanı. Tek zille idare edilemezdi — kuyruk zili her hareketin
+ * her açık yazışmayı yeniden çizdirmesi demek olurdu; sohbet zili ise listeyi hiç uyandırmaz.
+ *
+ * Talep tarafındaki `ringTicketBell`in birebir ikizi (ad, yük, gerekçe); orada kanıtlanmış desen
+ * burada yeniden icat edilmedi.
+ */
+export async function ringConversationBell(conversationId: string): Promise<void> {
+  await ringBell(conversationChannelName(conversationId));
 }
 
 /**
