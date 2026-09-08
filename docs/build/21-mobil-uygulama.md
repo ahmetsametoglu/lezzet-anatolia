@@ -14051,3 +14051,40 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Cihaz turu yarım kaldı:** yalnız B2B kartı gözle doğrulandı, depo/kurye ekranları ölçülemedi —
   cihaz ağdan düştü (Wi-Fi istemci yalıtımı). Kalanların doğrulaması bir sonraki cihaz turunda.
+
+- [x] (21.296) **YAKIN-SKT TEKLİFİ: LİSTE + ÇEKMECE — tasarımla bizim ekranın ÜÇÜNCÜ yolu** (kullanıcı kararı 08.09: *"kart kart listenin görülmesi ve buradan teklif vermek daha pratik… kartın üzerinde bir buton olsa, teklif ver dediğimiz anda bir çekmece açılsa"*)
+  `touches:` `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/warehouse/offer.ts` · `apps/mobile/src/components/ui/chip.tsx` · `apps/mobile/src/screens/management/{offer-approval-screen.tsx,use-offer-approval.hook.ts,offer-supply-screens.test.tsx,messages.json}`
+
+  **Durum (08.09) — TAMAM.** Kullanıcı iki yüzeyi karşılaştırmamızı istedi: tasarımın kampanya
+  ekranı (`v3:3050`) TEK partinin detayı, bizimki 49 kartlık liste. Ölçüm ikisinin de yarım
+  olduğunu gösterdi — tasarımın akışı 49 aday için 49 ziyaret demek; bizim listede ise oran seçimi
+  yok, telefonda her partiye "0,89" yazmak orana dokunmaktan pahalı. Kullanıcı üçüncü yolu seçti:
+  **kartlar listede kalır, karar çekmecede verilir.**
+
+  **ÇEKMECE = TASARIMIN DETAY EKRANI, KATMAN OLARAK.** İçeriği ve sırası tasarımın: görsel + künye ·
+  üç ölçüm · ayraç · oran çipleri · fiyat · dipnot ("müşteri uygulamasında yakın-SKT rafında
+  görünür") · "Teklifi yayınla — %30" + "imhaya bırak".
+
+  **TOPLU DÜĞME DURUYOR** (kullanıcı seçimi): çekmece bir partiyi hemen yayınlar, alt çubuk
+  dokunulmamışları önerilen oranla toplu açar. Hızlı yol kaybolmadan hassas yol eklendi. Yazma
+  TEK kapıdan (`send`) geçiyor — akıbet işleme, sayaç ve tazeleme iki kopyada yaşasaydı çekmeceden
+  açılan partinin hatası kartında görünmezdi.
+
+  **ÇİPLER SABİT DEĞİL TÜREYEN — eski gerekçe çiğnenmedi.** Ekranın künyesi 21.12'den beri şunu
+  yazıyordu: *"tasarımın üç sabit oranından ikisi uydurma olur ve ayar değişince yalan söylerler."*
+  Gerekçe hâlâ doğru; çözüm oranları sabitlememek oldu — merdiven motorun kendi oranından türüyor
+  (`P−10 · P · P+10`) ve motorun basamağı **"öneri"** diye işaretli. Ayar %30'ken tasarımın tam
+  çipleri çıkıyor, %25'e çekilse merdiven kayardı. O basamakta motorun KENDİ sayısı kullanılıyor,
+  yeniden hesaplanmıyor: fikstürde liste 14,00 €, motorun önerisi 9,90 €, ham hesap 9,80 € ederdi.
+
+  **İKİ DÜZELTME, İKİSİ DE CİHAZDA GÖRÜLDÜ.** (1) Çipi ELLE yazmıştım; cihazda satırın soluna
+  sıkışmıştı — `flex` stile yazılınca dış yüzey içerik kadar daralıyor ve kitin `grow` künyesi bunu
+  23.08'de yazmış. Kopya silindi, kitin `Chip`i kullanıldı; kite yalnız `grow` eklendi (satırı
+  paylaşan çip, `v3:3068`). (2) Kullanıcı ürün görselini istedi: `OfferCandidate`e `imageUrl`
+  geldi, kaynağı `variantNames` (adres kurma tek kapıda). `StockBatchDetail`in gömülü ürününü
+  genişletmek depo tarafının BÜTÜN okumalarını etkilerdi — görseli isteyen tek yüzey bu.
+
+  Doğrulama: kök `typecheck` **20/20**, `lint` temiz, yönetim + kit **165/165** (4'ü bu turda:
+  merdiven · motorun sayısı · tek yayın · liste fiyatsız hâl). **Cihazda ölçüldü:** kart "Teklif
+  ver" düğmesiyle çizildi, çekmece açıldı, üç çip satırı eşit paylaştı (316 dp), "%30 · öneri"
+  işaretli geldi ve yayın düğmesi oranı yazdı.

@@ -3,6 +3,7 @@ import { PriceService, SettingsService, StockService, WarehouseService } from '@
 import { offerDecisionOf } from '@lezzet/domain-core';
 import type { OfferCandidate, Stock } from '@lezzet/types';
 import { readExpiryThresholds, toBatchViews } from './batch-view';
+import { variantNames } from './names';
 
 /*
   YAKIN-SKT TEKLİF KAPISI (21.12 · Y3) — aday listesi + teklife açma.
@@ -37,6 +38,14 @@ export async function listOfferCandidates(
   ]);
   if (rows.length === 0) return [];
 
+  /* GÖRSEL AYRI KAPIDAN (21.296): partinin gömülü ürünü görsel alanını taşımıyor
+     (`StockBatchDetail.variant.product` — ad, tarih türü, raf ömrü, KDV). Şemayı genişletmek
+     depo tarafının BÜTÜN okumalarını (FEFO, toplama, parti geçmişi) etkilerdi; oysa görseli
+     isteyen tek yüzey bu. `variantNames` görsel adresini zaten kuruyor ve kitin tek kapısı o —
+     ikinci bir `publicImageUrl` çağrısı, adresin nasıl kurulduğunu iki yere yazmak olurdu. */
+  const names = await variantNames(db, [...new Set(rows.map((row) => row.variantId))]);
+  const variantOfStock = new Map(rows.map((row) => [row.id, row.variantId]));
+
   const listPriceCents = new Map<string, number>();
   const priceMap = await new PriceService(db).findApplicableMap(
     [...new Set(rows.map((row) => row.variantId))],
@@ -68,6 +77,8 @@ export async function listOfferCandidates(
       suggestedCents: view.suggestedOfferCents,
       offerDiscountPercent: view.offerDiscountPercent,
       warehouse: view.warehouse,
+      // Görseli olmayan ürün `null` — yer tutucu ekranın işi, uydurma bir adres değil.
+      imageUrl: names.get(variantOfStock.get(view.id) ?? '')?.imageUrl ?? null,
     }));
 }
 

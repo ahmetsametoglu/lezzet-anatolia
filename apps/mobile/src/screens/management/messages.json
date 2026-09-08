@@ -268,7 +268,20 @@
       "lifeValueWithPercent": "{days} gün · %{percent}",
       "lifeValuePast": "tavsiye tarihi geçti",
       "listPrice": "Liste fiyatı",
-      "suggested": "Önerilen (%{percent})"
+      "suggested": "Önerilen (%{percent})",
+      "chosen": "Teklif fiyatı"
+    },
+    "sheet": {
+      "title": "Teklifi ayarla",
+      "open": "Teklif ver",
+      "openLabel": "{name} — teklifi ayarla",
+      "rate": "İNDİRİM ORANI",
+      "ratePercent": "%{percent}",
+      "rateEngine": "%{percent} · öneri",
+      "newPrice": "Yeni fiyat",
+      "noListPrice": "Liste fiyatı yok — oran hesaplanamıyor, fiyatı elle yazın.",
+      "publish": "Teklifi yayınla — %{percent}",
+      "publishCustom": "Teklifi yayınla"
     },
     "priceLabel": "{name} teklif fiyatı",
     "remove": "Teklif verme — imhaya bırak",

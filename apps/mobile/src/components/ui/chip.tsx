@@ -19,11 +19,27 @@ interface ChipProps {
   selected?: boolean;
   /** Köşe kademesi: kontrol (16) varsayılan, yumuşak (14) dar raylarda. */
   shape?: 'control' | 'soft';
+  /**
+   * SATIRI PAYLAŞAN ÇİP — üçü bir arada, eşit paylı (v3:3068 indirim oranı `flex:1`).
+   *
+   * Rayda çipler içerikleri kadar durur ve kayar; SEÇENEK satırında (üç oran) tasarım onları
+   * satıra yayıyor. Esneme `PressableSurface`ın `grow`una gider, stile YAZILMAZ — kitin kendi
+   * künyesi (ölçüldü 23.08): stil iç yüzeye iner, dış `Pressable` içerik kadar daralır.
+   */
+  grow?: boolean;
   disabled?: boolean;
   testID?: string;
 }
 
-export function Chip({ label, onPress, selected = false, shape = 'control', disabled = false, testID }: ChipProps) {
+export function Chip({
+  label,
+  onPress,
+  selected = false,
+  shape = 'control',
+  grow = false,
+  disabled = false,
+  testID,
+}: ChipProps) {
   return (
     <PressableSurface
       /* Çip bir GEZİNME/süzgeç yüzeyi: seçim değiştirmek gezinmektir, iş yapmak değil (16.08 kararı). */
@@ -32,10 +48,12 @@ export function Chip({ label, onPress, selected = false, shape = 'control', disa
       disabled={disabled}
       selected={selected}
       feedback="scale-small"
+      grow={grow ? true : undefined}
       compact
       style={[
         styles.base,
         styles[shape],
+        grow ? styles.grow : undefined,
         disabled ? styles.disabled : selected ? styles.selected : styles.idle,
       ]}
       accessibilityLabel={label}
@@ -59,6 +77,12 @@ const styles = StyleSheet.create((theme) => ({
   },
   control: { borderRadius: theme.radius.control },
   soft: { borderRadius: theme.radius.soft },
+  /** Satırı paylaşan çip: `alignSelf` sarması kalkar, boy tasarımın 48'ine oturur (v3:3068). */
+  grow: {
+    alignSelf: 'stretch',
+    minHeight: theme.size.controlMd,
+    paddingHorizontal: theme.space.md,
+  },
   selected: {
     backgroundColor: theme.colors.olive,
     borderColor: theme.colors.olive,

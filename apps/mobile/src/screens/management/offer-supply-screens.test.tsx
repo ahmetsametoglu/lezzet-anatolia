@@ -51,6 +51,15 @@ const VARIANT_1 = '00000000-0000-4000-8000-0000000000c1';
 const VARIANT_2 = '00000000-0000-4000-8000-0000000000c2';
 const VARIANT_3 = '00000000-0000-4000-8000-0000000000c3';
 
+/**
+ * Fiyat 21.296'ten beri ÇEKMECEDE yazılıyor: kart → "Teklif ver" → alan. Testler o yoldan geçiyor,
+ * çünkü ölçmek istediğimiz şey operatörün gerçekten yürüdüğü akış.
+ */
+async function cekmeceyeYaz(stockId: string, value: string): Promise<void> {
+  await fireEvent.press(screen.getByTestId(`management-offer-open-${stockId}`));
+  await fireEvent.changeText(screen.getByTestId(`management-offer-price-${stockId}`), value);
+}
+
 function candidates(): OfferCandidatesResponse {
   return {
     candidates: [
@@ -66,6 +75,7 @@ function candidates(): OfferCandidatesResponse {
         suggestedCents: 990,
         offerDiscountPercent: 30,
         warehouse: { code: 'STR', name: 'Strasbourg' },
+        imageUrl: 'https://cdn.test/su-boregi.jpg',
       },
       {
         stockId: STOCK_B,
@@ -79,6 +89,8 @@ function candidates(): OfferCandidatesResponse {
         suggestedCents: null,
         offerDiscountPercent: 30,
         warehouse: null,
+        // Görseli olmayan ürün — çekmece yer tutucu çizer, uydurma bir resim koymaz.
+        imageUrl: null,
       },
     ],
   };
@@ -183,9 +195,9 @@ describe('Y3 · teklif onayı', () => {
     // B'ye önce OKUNABİLİR bir fiyat yazılır, SONRA listeden çıkarılır: iddia yalnız "fiyatsız
     // gitmez"e değil, "çıkarılan gitmez"e de basar (ilk hâli fiyatsız B ile sahte yeşildi —
     // sabotaj süzgeci kaldırınca test yine geçiyordu, 21.111 dersinin üçüncü tekrarı).
-    await fireEvent.changeText(screen.getByTestId(`management-offer-price-${STOCK_B}`), '5,00');
+    await cekmeceyeYaz(STOCK_B, '5,00');
     await fireEvent.press(screen.getByTestId(`management-offer-toggle-${STOCK_B}`));
-    await fireEvent.changeText(screen.getByTestId(`management-offer-price-${STOCK_A}`), '8,50');
+    await cekmeceyeYaz(STOCK_A, '8,50');
     await fireEvent.press(screen.getByTestId('management-offer-cta'));
 
     await waitFor(() =>
@@ -211,7 +223,7 @@ describe('Y3 · teklif onayı', () => {
     });
 
     await renderScreen(<OfferApprovalScreen />, 'management-offer-loading');
-    await fireEvent.changeText(screen.getByTestId(`management-offer-price-${STOCK_B}`), '5,00');
+    await cekmeceyeYaz(STOCK_B, '5,00');
     await fireEvent.press(screen.getByTestId('management-offer-cta'));
 
     await waitFor(() => expect(screen.getByTestId(`management-offer-failed-${STOCK_B}`)).toBeOnTheScreen());
@@ -244,6 +256,68 @@ describe('Y3 · teklif onayı', () => {
     // Öneri oranı ayardan gelir ve etiketin İÇİNDE durur — operatör neyin üstüne yazdığını görür.
     expect(screen.getByText(t.offer.rows.suggested.replace('{percent}', '30'))).toBeOnTheScreen();
     expect(screen.getByText(t.offer.noSuggestion)).toBeOnTheScreen();
+  });
+
+  /*
+    TEKLİF ÇEKMECESİ (21.296) — liste + çekmece, üçüncü yol.
+
+    Merdiven motorun oranından TÜRÜYOR (`P−10 · P · P+10`), sabit değil: fikstürde `P=30` olduğu
+    için tasarımın tam çipleri (%20/%30/%40) çıkıyor, ama ayar kaysa çipler de kayardı.
+  */
+  it('çekmece motorun oranından TÜREYEN merdiveni çizer; motorun basamağı işaretlidir', async () => {
+    fetchMock.mockResolvedValue(ok(candidates()));
+
+    await renderScreen(<OfferApprovalScreen />, 'management-offer-loading');
+    await fireEvent.press(screen.getByTestId(`management-offer-open-${STOCK_A}`));
+
+    for (const rate of ['20', '30', '40']) {
+      expect(screen.getByTestId(`management-offer-rate-${rate}`)).toBeOnTheScreen();
+    }
+    // "öneri" işareti TEK basamakta: üçü de işaretli olsaydı merdiven motorun ağzından konuşurdu.
+    expect(screen.getByText(t.offer.sheet.rateEngine.replace('{percent}', '30'))).toBeOnTheScreen();
+    expect(screen.getByText(t.offer.sheet.ratePercent.replace('{percent}', '20'))).toBeOnTheScreen();
+  });
+
+  it('MOTORUN basamağı motorun KENDİ sayısını yazar — aynı oran yeniden hesaplanmaz', async () => {
+    /* Fikstürde liste 14,00 € ve öneri 9,90 €; %30'un ham hesabı 9,80 € ederdi. Çip motorun
+       basamağındayken motorun sayısını koymalı — yoksa ekran "önerilen" derken motordan on kuruş
+       sapan bir rakam gösterirdi. Öteki basamaklar liste fiyatından hesaplanır. */
+    fetchMock.mockResolvedValue(ok(candidates()));
+
+    await renderScreen(<OfferApprovalScreen />, 'management-offer-loading');
+    await fireEvent.press(screen.getByTestId(`management-offer-open-${STOCK_A}`));
+
+    await fireEvent.press(screen.getByTestId('management-offer-rate-30'));
+    expect(screen.getByTestId(`management-offer-price-${STOCK_A}`)).toHaveProp('value', '9,90');
+
+    await fireEvent.press(screen.getByTestId('management-offer-rate-40'));
+    expect(screen.getByTestId(`management-offer-price-${STOCK_A}`)).toHaveProp('value', '8,40');
+  });
+
+  it('çekmece TEK partiyi yayınlar; gövdeye yalnız o parti girer', async () => {
+    fetchMock.mockImplementation((url, init) => {
+      if (init?.method === 'POST') return Promise.resolve(ok({ results: [{ stockId: STOCK_A, status: 'ok' }] }));
+      return Promise.resolve(ok(candidates()));
+    });
+
+    await renderScreen(<OfferApprovalScreen />, 'management-offer-loading');
+    await fireEvent.press(screen.getByTestId(`management-offer-open-${STOCK_A}`));
+    await fireEvent.press(screen.getByTestId('management-offer-rate-20'));
+    await fireEvent.press(screen.getByTestId('management-offer-sheet-publish'));
+
+    // Alttaki toplu düğme DURUYOR ama bu tur onun turu değil: gövdede yalnız çekmecenin partisi.
+    await waitFor(() => expect(lastPostBody()).toEqual({ items: [{ stockId: STOCK_A, offerPriceCents: 1120 }] }));
+  });
+
+  it('liste fiyatı olmayan partide merdiven ÇİZİLMEZ — fiyat elle yazılır', async () => {
+    /* Hesaplanacak bir şey yok; boş çipler dokunulunca hiçbir şey yapmayan düğmeler olurdu. */
+    fetchMock.mockResolvedValue(ok(candidates()));
+
+    await renderScreen(<OfferApprovalScreen />, 'management-offer-loading');
+    await fireEvent.press(screen.getByTestId(`management-offer-open-${STOCK_B}`));
+
+    expect(screen.queryByTestId('management-offer-rate-30')).toBeNull();
+    expect(screen.getByText(t.offer.sheet.noListPrice)).toBeOnTheScreen();
   });
 
   it('kalan ömür GÜN ve YÜZDE yazar; ölçülemeyen üründe yalnız gün (v3:30)', async () => {

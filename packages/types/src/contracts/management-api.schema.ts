@@ -259,6 +259,15 @@ export const OfferCandidateSchema = z.object({
   offerDiscountPercent: z.number(),
   /** Partinin durduğu depo; ad çözülemediyse `null` ve ekran depo SÖYLEMEZ (uydurmaz). */
   warehouse: z.object({ code: z.string(), name: z.string() }).nullable(),
+  /**
+   * Ürünün görseli (21.296, kullanıcı isteği 08.09) — teklif çekmecesinde partiyi TANITAN şey.
+   *
+   * Adlar birbirine benziyor ("Limonlu Artisan Kek · 90 g" ile "· 9 × 90 g" yan yana duruyor) ve
+   * operatör indirim kararını ürüne bakarak veriyor; resim burada süs değil, ayırt edici.
+   * `null` = ürünün görseli yok — depo ekranlarının aynı kararı: yer tutucu çizilir, uydurma bir
+   * görsel konmaz (`OperationsProductThumb`).
+   */
+  imageUrl: z.string().nullable(),
 });
 export type OfferCandidate = z.infer<typeof OfferCandidateSchema>;
 
