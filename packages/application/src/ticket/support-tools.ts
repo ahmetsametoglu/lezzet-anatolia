@@ -21,7 +21,19 @@ import {
 import { getCatalogData } from '../catalog/catalog';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
-import { CARD_ADD_TITLE, CART_ADD_PREFIX, productCardInteractive, productCardText } from '../catalog/product-card';
+import {
+  CARD_ADD_TITLE,
+  CARD_OPEN_PREFIX,
+  CARD_OPEN_TITLE,
+  CAROUSEL_BODY,
+  CAROUSEL_CARD_RANGE,
+  CAROUSEL_FROM,
+  CART_ADD_PREFIX,
+  productCardInteractive,
+  productCardText,
+  productCarouselInteractive,
+  productCarouselText,
+} from '../catalog/product-card';
 import { resolveOutboundLanguage } from '../messaging/translate';
 import type { StorefrontDeclaration } from '../catalog/storefront-types';
 import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
@@ -239,21 +251,9 @@ function productCardTools(db: Db, customerId: string | null, card: ProductCardHo
         try {
           const { place, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu);
           const { language: dil } = await resolveOutboundLanguage(db, card.conversation);
-          const [detay, urun] = await Promise.all([
-            getProductDetail(db, { locale: dil, slug: kod, place, viewer }),
-            new ProductService(db).findBySlug(kod),
-          ]);
-          if (!detay) return { bilinmiyor: `"${kod}" kodlu ürün bulunamadı — urun_ara'daki "kod" alanını aynen geç.` };
-
-          const boylar = detay.variants.filter((v) => v.priceCents !== null);
-          if (boylar.length === 0) return { bilinmiyor: 'bu ürün bu kanalda satışa kapalı — kart gönderilmedi.' };
-
-          /* Görsel CDN dönüşümüyle JPEG (09.09, 05.37): WhatsApp WebP'yi çıkartma sayıp reddeder, Cloudflare
-             aynı kaynaktan `width=1200,format=jpeg` üretir (ölçüldü: 67 KB). Dönüşüm yoksa (r2.dev tabanı)
-             yalnız zaten JPEG/PNG olan görsel kartta; WebP'de kart görselsiz gider. */
-          const imageUrl =
-            cdnImageUrl(urun?.imageKey, urun?.imageUpdatedAt, { width: CARD_IMAGE_WIDTH, format: 'jpeg' }) ??
-            (META_IMAGE_KEY.test(urun?.imageKey ?? '') ? publicImageUrl(urun?.imageKey, urun?.imageUpdatedAt) : null);
+          const okunan = await kartUrunu(db, kod, dil, place, viewer);
+          if (okunan.durum !== 'ok') return { bilinmiyor: okunan.mesaj };
+          const { detay, boylar, imageUrl } = okunan;
 
           const tekBoy = boylar.length === 1;
           const buttons = tekBoy
@@ -276,7 +276,93 @@ function productCardTools(db: Db, customerId: string | null, card: ProductCardHo
         }
       },
     }),
+
+    /*
+      KARUSEL (09.09, kullanıcı isteği): çeşit sorusunda 4–5 ürünü arka arkaya fotoğraf olarak
+      göndermek kötü; tek mesajda kaydırılır kartlar. Her kartta tek düğme (Meta: düğme türü ve
+      sayısı bütün kartlarda aynı) — tek boylu üründe "Sepete ekle" (boy kimliğiyle), çok boyluda
+      "Boyları gör" (ürün koduyla; ajan sonra `urun_karti` gönderir). Görselsiz ürün karusele GİREMEZ
+      (Meta görsel başlığı zorunlu tutuyor); ikiden az kart kalırsa karusel yok, ajan metinle anlatır.
+      Kurucu ve sınırlar `catalog/product-card.ts`.
+    */
+    urun_karuseli: tool({
+      description:
+        'Müşteriye 2–10 ürünlük KAYDIRMALI KARUSEL gönderir: her kartta fotoğraf, ad, fiyat (ya da "n boy · …\'dan") ve tek düğme. ' +
+        '"Hangi baklavalarınız var", "ne tür pastalar var" gibi ÇEŞİT sorularında urun_ara\'dan sonra çağır; kodlar = urun_ara çıktısındaki "kod" alanları (en fazla 10). ' +
+        'Karusel cevabından ÖNCE kendiliğinden gider; cevabında ürünleri tek tek sayma, bir cümleyle bağla.',
+      inputSchema: z.object({
+        kodlar: z.array(z.string().min(1)).min(CAROUSEL_CARD_RANGE.min).max(CAROUSEL_CARD_RANGE.max).describe('urun_ara çıktısındaki "kod" alanları — aynen geç, sırası kartların sırası.'),
+        postaKodu: z.string().min(4).optional().describe('Müşteri SÖYLEDİYSE posta kodu; söylemediyse boş bırak.'),
+      }),
+      execute: async ({ kodlar, postaKodu }) => {
+        try {
+          const { place, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu);
+          const { language: dil } = await resolveOutboundLanguage(db, card.conversation);
+          const okunanlar = await Promise.all([...new Set(kodlar)].map((kod) => kartUrunu(db, kod, dil, place, viewer)));
+
+          const kartlar = [];
+          const disarida: string[] = [];
+          for (const o of okunanlar) {
+            if (o.durum !== 'ok' || !o.imageUrl) {
+              disarida.push(o.durum === 'ok' ? `${o.detay.name} (görselsiz)` : o.kod);
+              continue;
+            }
+            const tekBoy = o.boylar.length === 1;
+            const enUcuz = Math.min(...o.boylar.map((v) => v.priceCents!));
+            kartlar.push({
+              title: o.detay.name,
+              body: tekBoy ? formatPrice(enUcuz, dil) : CAROUSEL_FROM[dil](o.boylar.length, formatPrice(enUcuz, dil)),
+              imageUrl: o.imageUrl,
+              button: tekBoy
+                ? { id: `${CART_ADD_PREFIX}${o.boylar[0]!.id}`, title: CARD_ADD_TITLE[dil] }
+                : { id: `${CARD_OPEN_PREFIX}${o.kod}`, title: CARD_OPEN_TITLE[dil] },
+            });
+          }
+          if (kartlar.length < CAROUSEL_CARD_RANGE.min) {
+            return { bilinmiyor: `karusel için en az ${CAROUSEL_CARD_RANGE.min} görselli ürün gerekir (uygun: ${kartlar.length}) — ürünleri metinle say.`, disarida };
+          }
+          const girdi = { source: card.conversation.source, body: CAROUSEL_BODY[dil], cards: kartlar };
+          card.onCard({ text: productCarouselText(girdi), interactive: productCarouselInteractive(girdi), language: dil });
+          return {
+            karusel: 'cevabından önce gönderilecek',
+            kartSayisi: kartlar.length,
+            urunler: kartlar.map((k) => k.title),
+            ...(disarida.length > 0 ? { karuseleGirmeyen: disarida } : {}),
+          };
+        } catch (err) {
+          logger.warn({ context: 'application/support-tools', tool: 'urun_karuseli', err: errorMessageOf(err) }, 'karusel hazırlanamadı');
+          return { bilinmiyor: 'karusel hazırlanamadı — ürünleri metinle say.' };
+        }
+      },
+    }),
   };
+}
+
+type KartUrunu =
+  | { durum: 'ok'; kod: string; detay: NonNullable<Awaited<ReturnType<typeof getProductDetail>>>; boylar: { id: string; label: string; priceCents: number | null }[]; imageUrl: string | null }
+  | { durum: 'yok' | 'kapali'; kod: string; mesaj: string };
+
+/**
+ * Kart ve karuselin ORTAK okuması: detay (müşteri dili, yer, görüntüleyici) + satılabilir boylar +
+ * görsel adresi. Görsel CDN dönüşümüyle JPEG (09.09, 05.37): WhatsApp WebP'yi çıkartma sayıp reddeder,
+ * Cloudflare aynı kaynaktan `width=1200,format=jpeg` üretir (ölçüldü: 67 KB). Dönüşüm yoksa (r2.dev
+ * tabanı) yalnız zaten JPEG/PNG olan görsel alınır.
+ */
+async function kartUrunu(
+  db: Db,
+  kod: string,
+  dil: PreferredLanguage,
+  place: Parameters<typeof getProductDetail>[1]['place'],
+  viewer: Parameters<typeof getProductDetail>[1]['viewer'],
+): Promise<KartUrunu> {
+  const [detay, urun] = await Promise.all([getProductDetail(db, { locale: dil, slug: kod, place, viewer }), new ProductService(db).findBySlug(kod)]);
+  if (!detay) return { durum: 'yok', kod, mesaj: `"${kod}" kodlu ürün bulunamadı — urun_ara'daki "kod" alanını aynen geç.` };
+  const boylar = detay.variants.filter((v) => v.priceCents !== null);
+  if (boylar.length === 0) return { durum: 'kapali', kod, mesaj: 'bu ürün bu kanalda satışa kapalı — kart gönderilmedi.' };
+  const imageUrl =
+    cdnImageUrl(urun?.imageKey, urun?.imageUpdatedAt, { width: CARD_IMAGE_WIDTH, format: 'jpeg' }) ??
+    (META_IMAGE_KEY.test(urun?.imageKey ?? '') ? publicImageUrl(urun?.imageKey, urun?.imageUpdatedAt) : null);
+  return { durum: 'ok', kod, detay, boylar, imageUrl };
 }
 
 /**

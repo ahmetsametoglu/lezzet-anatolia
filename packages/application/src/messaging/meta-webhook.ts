@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../customer/anchor';
-import { cartAddReplyText } from '../catalog/product-card';
+import { buttonReplyText } from '../catalog/product-card';
 import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationBell, ringConversationsBell } from '../realtime/bell';
 import { metaSenderFromEnv } from './meta-sender';
@@ -615,7 +615,7 @@ function waBodyOf(message: WaMessage): { kind: MessageKind; text: string | null;
     // Ürün kartının düğmesi (08.09): kimlik `sepete_ekle:` önekliyse metin "Sepete ekle — <boy>" olur
     // ki ajan bağlamı okusun (`product-card.ts` künyesi); öteki düğmeler başlığıyla düşer.
     const secim = message.interactive?.button_reply ?? message.interactive?.list_reply;
-    return { kind: 'interactive', text: cartAddReplyText(secim?.id, secim?.title), payload: { interactive: message.interactive ?? null } };
+    return { kind: 'interactive', text: buttonReplyText(secim?.id, secim?.title), payload: { interactive: message.interactive ?? null } };
   }
   if (message.type === 'button') return { kind: 'interactive', text: message.button?.text ?? null, payload: { button: message.button ?? null } };
   const media = message.type ? (message[message.type] as { caption?: string } | undefined) : undefined;
@@ -758,7 +758,7 @@ async function ingestMessengerEntry(
           await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
             // Ürün kartının düğmesi (08.09): `sepete_ekle:` önekli payload "Sepete ekle — <boy>" metnine döner.
-            text: cartAddReplyText(event.postback?.payload, event.postback?.title),
+            text: buttonReplyText(event.postback?.payload, event.postback?.title),
             kind: 'interactive',
             payload: { postback: event.postback ?? null },
             receivedAt: msTimestamp(event.timestamp),

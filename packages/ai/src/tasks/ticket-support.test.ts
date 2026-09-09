@@ -208,6 +208,9 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
     // Ürün kartı (08.09): görmek isteyen müşteriye fotoğraf + fiyat + düğme; düğme cevabı sorusuz sepete.
     expect(ticketAgentTask.system).toContain('urun_karti aracını ÇAĞIR');
     expect(ticketAgentTask.system).toContain('"Sepete ekle — <boy>" yazarsa');
+    // Karusel (09.09): çeşit sorusunda liste değil kaydırmalı kartlar; düğmesi "Ürün kartı — <kod>".
+    expect(ticketAgentTask.system).toContain('urun_karuseli aracını ÇAĞIR');
+    expect(ticketAgentTask.system).toContain('"Ürün kartı — <kod>" yazarsa');
     expect(ticketAgentTask.system).toContain('yalnız müşterinin SON TURU içindir');
   });
 

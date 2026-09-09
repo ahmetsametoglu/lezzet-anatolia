@@ -212,6 +212,20 @@ describe('WhatsApp — üç tuzak tek gövdede', () => {
     expect(satir?.body.text).toBe('Sepete ekle — 1 kg');
   });
 
+  it('karuselin "Boyları gör" düğmesi (`urun_karti:<kod>`) "Ürün kartı — <kod>" metnine düşer (09.09)', async () => {
+    const id = eventId('wamid', 42);
+    await handleMetaWebhook(
+      whatsappBody({
+        id,
+        type: 'interactive',
+        interactive: { type: 'button_reply', button_reply: { id: 'urun_karti:fistikli-baklava', title: 'Boyları gör' } },
+      }),
+    );
+    const konu = await konusma('whatsapp', `+${WA_PERSON}`);
+    const satir = (await messages.listByConversation(konu!.id)).find((m) => m.providerMessageId === id);
+    expect(satir?.body.text).toBe('Ürün kartı — fistikli-baklava');
+  });
+
   it('REACTION defter satırı açmaz — mesaja düşülmüş işaret, mesaj değil', async () => {
     const konuOnce = await konusma('whatsapp', `+${WA_PERSON}`);
     const oncekiSayi = (await messages.listByConversation(konuOnce!.id)).length;
