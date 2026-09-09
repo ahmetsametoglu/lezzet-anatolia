@@ -92,6 +92,8 @@ const UYGULAMA_DBSIZ = [
   // Sepet bağlantısının cevaba eklenmesi (15.21) — saf metin kuralı; DB'siz olduğu için ayrı dosyada.
   'packages/application/src/cart/link-text.test.ts',
   'packages/application/src/catalog/campaign.test.ts',
+  // Ürün kartının kanal gövdeleri (08.09) — saf kurucu; Meta sınırları burada zorlanıyor.
+  'packages/application/src/catalog/product-card.test.ts',
   // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi
   // edince testi de birlikte taşındı (27.08). Üç fonksiyon da saf: dizi girer, dizi çıkar.
   'packages/application/src/catalog/showcase.test.ts',

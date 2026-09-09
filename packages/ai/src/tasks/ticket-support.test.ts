@@ -205,6 +205,9 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
     // Kargo + eşik + ödenecek toplam birlikte (08.09): ajan 61,02 € dedi, sitede kargo eklenmiş tutar çıktı.
     expect(ticketAgentTask.system).toContain('"indirim", "kargo" ve "toplam" alanlarını BİRLİKTE');
     expect(ticketAgentTask.system).toContain('Bu bir KAPANIŞTIR, devir değil');
+    // Ürün kartı (08.09): görmek isteyen müşteriye fotoğraf + fiyat + düğme; düğme cevabı sorusuz sepete.
+    expect(ticketAgentTask.system).toContain('urun_karti aracını ÇAĞIR');
+    expect(ticketAgentTask.system).toContain('"Sepete ekle — <boy>" yazarsa');
     expect(ticketAgentTask.system).toContain('yalnız müşterinin SON TURU içindir');
   });
 

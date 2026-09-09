@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../customer/anchor';
+import { cartAddReplyText } from '../catalog/product-card';
 import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationBell, ringConversationsBell } from '../realtime/bell';
 import { metaSenderFromEnv } from './meta-sender';
@@ -227,7 +228,7 @@ interface WaMessage {
   timestamp?: string;
   type?: string;
   text?: { body?: string };
-  interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } } & Record<string, unknown>;
+  interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } } & Record<string, unknown>;
   button?: { text?: string };
   [key: string]: unknown;
 }
@@ -611,8 +612,10 @@ function messengerStickerOf(attachments: unknown[] | undefined): string | null {
 function waBodyOf(message: WaMessage): { kind: MessageKind; text: string | null; payload: Record<string, unknown> | null } {
   if (message.type === 'text') return { kind: 'text', text: message.text?.body ?? '', payload: null };
   if (message.type === 'interactive') {
-    const title = message.interactive?.button_reply?.title ?? message.interactive?.list_reply?.title ?? null;
-    return { kind: 'interactive', text: title, payload: { interactive: message.interactive ?? null } };
+    // Ürün kartının düğmesi (08.09): kimlik `sepete_ekle:` önekliyse metin "Sepete ekle — <boy>" olur
+    // ki ajan bağlamı okusun (`product-card.ts` künyesi); öteki düğmeler başlığıyla düşer.
+    const secim = message.interactive?.button_reply ?? message.interactive?.list_reply;
+    return { kind: 'interactive', text: cartAddReplyText(secim?.id, secim?.title), payload: { interactive: message.interactive ?? null } };
   }
   if (message.type === 'button') return { kind: 'interactive', text: message.button?.text ?? null, payload: { button: message.button ?? null } };
   const media = message.type ? (message[message.type] as { caption?: string } | undefined) : undefined;
@@ -754,7 +757,8 @@ async function ingestMessengerEntry(
           const conversation = await openSocialConversation(source, personId, accountRef, fetchImpl);
           await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
-            text: event.postback?.title ?? null,
+            // Ürün kartının düğmesi (08.09): `sepete_ekle:` önekli payload "Sepete ekle — <boy>" metnine döner.
+            text: cartAddReplyText(event.postback?.payload, event.postback?.title),
             kind: 'interactive',
             payload: { postback: event.postback ?? null },
             receivedAt: msTimestamp(event.timestamp),

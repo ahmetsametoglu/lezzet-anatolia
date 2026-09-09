@@ -1,9 +1,10 @@
 // `z` de porttan geliyor ve gerekçesi teknik: SDK aracın şemasını doğrularken tek zod örneği
 // bekliyor, ikinci bir kopya sessizce tutmaz (`@lezzet/ai` barrel künyesi).
 import { tool, z, type ToolSet } from '@lezzet/ai';
-import { AddressService, OrderService, PostalCodePlaceService, type Db } from '@lezzet/database';
+import { AddressService, OrderService, PostalCodePlaceService, ProductService, type Db } from '@lezzet/database';
 import { formatPrice, formatShortDate } from '@lezzet/helper';
-import { logger } from '@lezzet/observability';
+import { errorMessageOf, logger } from '@lezzet/observability';
+import { publicImageUrl } from '@lezzet/storage';
 import {
   ALLERGEN_LABELS,
   COUNTRY_LABELS,
@@ -12,12 +13,16 @@ import {
   ORDER_STATUS_LABELS,
   resolveLocalizedText,
   type Address,
+  type Conversation,
+  type PreferredLanguage,
   type ProductAllergen,
   type StockStatus,
 } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
+import { CARD_ADD_TITLE, CART_ADD_PREFIX, productCardInteractive, productCardText } from '../catalog/product-card';
+import { resolveOutboundLanguage } from '../messaging/translate';
 import type { StorefrontDeclaration } from '../catalog/storefront-types';
 import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
@@ -153,6 +158,40 @@ function birincilAdres(adresler: Address[]): Address | null {
 }
 
 /**
+ * Katalog kapısının iki zorunlu bağlamı — `place` (hangi depo) ve `viewer` (hangi kanal/kademe) —
+ * `urun_ara` ve `urun_karti` için TEK yerde (`urun_ara` künyesindeki "yer üç kaynaktan" kuralı).
+ * `kod` çözülen posta kodudur; boşsa yer bilinmiyor ve `place` depo-üstüdür.
+ */
+async function yerVeGoruntuleyici(db: Db, customerId: string | null, postaKodu: string | undefined) {
+  const adres = customerId ? birincilAdres(await new AddressService(db).listByCustomer(customerId)) : null;
+  const kod = postaKodu?.trim() || adres?.postalCode || null;
+  const [place, viewer] = await Promise.all([
+    kod ? resolvePlaceWarehouses(db, kod) : Promise.resolve(UNRESOLVED_PLACE),
+    pricingViewerOf(db, customerId),
+  ]);
+  return { place, viewer, kod };
+}
+
+/**
+ * **ÜRÜN KARTI KANCASI** (08.09) — sohbet turunda verilir; araç kartı üretir, kaba bırakır, gönderimi
+ * `ai.ts` yapar (metin cevabından ÖNCE, yalnız özerk yolda). Talep yolunda (e-posta) sohbet yok,
+ * kart da yok. Kurucu ve sınırlar `catalog/product-card.ts`te.
+ */
+export interface ProductCardHook {
+  conversation: Pick<Conversation, 'source' | 'language' | 'customerId'>;
+  onCard: (card: PendingProductCard) => void;
+}
+
+export interface PendingProductCard {
+  /** Defter metni — "müşteri ne okudu"; ekranlar görseli değil bunu gösterir. */
+  text: string;
+  /** Kanalın etkileşimli gövdesi — `payload.interactive` olarak gider. */
+  interactive: Record<string, unknown>;
+  /** Kart metninin dili — müşteri dilinde üretildi, çeviri kapısı dokunmasın. */
+  language: PreferredLanguage;
+}
+
+/**
  * Bir müşteriye KAPATILMIŞ araç seti.
  *
  * Çağıran talebin sahibini geçirir; model o kimliği ne görür ne değiştirebilir. Araç gövdesinde
@@ -169,8 +208,71 @@ function birincilAdres(adresler: Address[]): Address | null {
  * Ayrım kanalda değil SORUDA: kimseye ait olmayan bilgi (katalog, fiyat listesi, teslimat şartları,
  * bir posta koduna gidip gitmediğimiz) kimlik istemez; müşterinin GEÇMİŞİ ister.
  */
-export function customerSupportTools(db: Db, customerId: string | null): ToolSet {
-  return { ...publicTools(db, customerId), ...(customerId ? identityTools(db, customerId) : {}) };
+export function customerSupportTools(db: Db, customerId: string | null, card: ProductCardHook | null = null): ToolSet {
+  return { ...publicTools(db, customerId), ...(card ? productCardTools(db, customerId, card) : {}), ...(customerId ? identityTools(db, customerId) : {}) };
+}
+
+/**
+ * `urun_karti` — müşteriye görsel + ad + boy/fiyat + "Sepete ekle" düğmeleri (08.09, kullanıcı
+ * kararı: katalogsuz, sabit fiyatsız ürün görseli). Fiyat `urun_ara` ile AYNI motordan ve aynı
+ * bağlamla (yer + görüntüleyici) okunur; ad ve fiyat biçimi müşterinin dilinde üretilir, çeviri
+ * kapısından geçmez. Görsel yalnız JPEG/PNG anahtarda kartta (WebP'yi Meta kabul etmez, dönüşüm kararı
+ * açık); yoksa kart görselsiz gider — görselsiz kart, kartsız cevaptan iyidir.
+ */
+/** Meta'nın görsel mesajda kabul ettiği biçimler — WebP değil (çıkartma sayılır). */
+const META_IMAGE_KEY = /\.(jpe?g|png)$/i;
+
+function productCardTools(db: Db, customerId: string | null, card: ProductCardHook): ToolSet {
+  return {
+    urun_karti: tool({
+      description:
+        'Müşteriye ÜRÜN KARTI gönderir: fotoğraf, ad, boylar ve müşterinin KENDİ fiyatı, "Sepete ekle" düğmeleri. ' +
+        'Müşteri bir ürünü görmek istediğinde, fotoğraf/görsel sorduğunda ya da TEK bir ürün önerdiğinde çağır; listede sayarken çağırma. ' +
+        'kod = urun_ara çıktısındaki "kod" alanı (ürünün adı DEĞİL). Kart senin cevabından ÖNCE kendiliğinden gider: cevabında ürünü yeniden anlatma, bir cümleyle bağla.',
+      inputSchema: z.object({
+        kod: z.string().min(1).describe('urun_ara çıktısındaki "kod" alanı — aynen geç.'),
+        postaKodu: z.string().min(4).optional().describe('Müşteri SÖYLEDİYSE posta kodu; söylemediyse boş bırak.'),
+      }),
+      execute: async ({ kod, postaKodu }) => {
+        try {
+          const { place, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu);
+          const { language: dil } = await resolveOutboundLanguage(db, card.conversation);
+          const [detay, urun] = await Promise.all([
+            getProductDetail(db, { locale: dil, slug: kod, place, viewer }),
+            new ProductService(db).findBySlug(kod),
+          ]);
+          if (!detay) return { bilinmiyor: `"${kod}" kodlu ürün bulunamadı — urun_ara'daki "kod" alanını aynen geç.` };
+
+          const boylar = detay.variants.filter((v) => v.priceCents !== null);
+          if (boylar.length === 0) return { bilinmiyor: 'bu ürün bu kanalda satışa kapalı — kart gönderilmedi.' };
+
+          /* Görsel yalnız Meta'nın kabul ettiği biçimdeyse (JPEG/PNG) kartta; WebP görselli ürünün kartı
+             görselsiz gider — WhatsApp WebP'yi çıkartma sayıp reddeder (ölçüldü 08.09; dönüşüm kararı
+             kullanıcıda, `15-whatsapp.md` 15.21 Durum). Biçim depo anahtarının uzantısından okunur. */
+          const imageUrl = META_IMAGE_KEY.test(urun?.imageKey ?? '') ? publicImageUrl(urun?.imageKey, urun?.imageUpdatedAt) : null;
+
+          const tekBoy = boylar.length === 1;
+          const buttons = tekBoy
+            ? [{ id: `${CART_ADD_PREFIX}${boylar[0]!.id}`, title: CARD_ADD_TITLE[dil] }]
+            : boylar.slice(0, 3).map((v) => ({ id: `${CART_ADD_PREFIX}${v.id}`, title: v.label }));
+          const body = boylar.map((v) => `${v.label} — ${formatPrice(v.priceCents!, dil)}`).join('\n');
+          const girdi = { source: card.conversation.source, imageUrl, title: detay.name, body, buttons };
+          card.onCard({ text: productCardText(girdi), interactive: productCardInteractive(girdi), language: dil });
+
+          return {
+            kart: 'cevabından önce gönderilecek',
+            urun: detay.name,
+            boySayisi: boylar.length,
+            gorsel: imageUrl ? 'var' : 'yok',
+            ...(boylar.length > 3 ? { not: 'yalnız ilk 3 boy düğme oldu; ötekileri cevabında say' } : {}),
+          };
+        } catch (err) {
+          logger.warn({ context: 'application/support-tools', tool: 'urun_karti', err: errorMessageOf(err) }, 'ürün kartı hazırlanamadı');
+          return { bilinmiyor: 'ürün kartı hazırlanamadı — ürünü metinle anlat.' };
+        }
+      },
+    }),
+  };
 }
 
 /**
@@ -320,12 +422,7 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             cevaplanabilir, "sana gelir mi" cevaplanamaz — ve model bunu bilsin diye cevapta ayrıca
             söyleniyor (`yerBilinmiyor`), üstelik çaresiyle: posta kodunu SOR ve yeniden çağır.
           */
-          const adres = customerId ? birincilAdres(await new AddressService(db).listByCustomer(customerId)) : null;
-          const kod = postaKodu?.trim() || adres?.postalCode || null;
-          const [place, viewer] = await Promise.all([
-            kod ? resolvePlaceWarehouses(db, kod) : Promise.resolve(UNRESOLVED_PLACE),
-            pricingViewerOf(db, customerId),
-          ]);
+          const { place, viewer, kod } = await yerVeGoruntuleyici(db, customerId, postaKodu);
 
           const ortak = {
             // Operasyon dili Türkçe ve model Türkçe yazıyor; cevabın müşteri diline çevrilmesi
@@ -381,6 +478,8 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             const fiyat = p.priceCents === null ? 'bu kanalda satışa kapalı' : formatPrice(p.priceCents, 'tr');
             return {
               ad: p.name,
+              // Ürün kartı aracının anahtarı (08.09): `urun_karti` bu kodu ister, adı değil.
+              kod: p.slug,
               durum: STOK_SOZLUGU[p.stockStatus],
               /* KARGO UYGUNLUĞU AYRI BİR GERÇEK (07.09 · ölçülmüş arıza). `durum` "bu adrese gider
                  mi" sorusunu cevaplıyor; bu "kargoyla hiç gider mi". Ajan bu alan yokken *"tüm

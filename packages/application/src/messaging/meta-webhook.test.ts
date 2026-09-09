@@ -197,6 +197,21 @@ describe('WhatsApp — üç tuzak tek gövdede', () => {
     expect(satir?.body.payload).toMatchObject({ interactive: { type: 'button_reply' } });
   });
 
+  it('ürün kartının düğmesi (`sepete_ekle:` kimliği) metne "Sepete ekle — <boy>" olarak düşer (08.09)', async () => {
+    // Başlık tek başına "1 kg" olurdu; ajan hangi işlemin istendiğini kimlikten okuyamaz, metinden okur.
+    const id = eventId('wamid', 41);
+    await handleMetaWebhook(
+      whatsappBody({
+        id,
+        type: 'interactive',
+        interactive: { type: 'button_reply', button_reply: { id: 'sepete_ekle:variant-1', title: '1 kg' } },
+      }),
+    );
+    const konu = await konusma('whatsapp', `+${WA_PERSON}`);
+    const satir = (await messages.listByConversation(konu!.id)).find((m) => m.providerMessageId === id);
+    expect(satir?.body.text).toBe('Sepete ekle — 1 kg');
+  });
+
   it('REACTION defter satırı açmaz — mesaja düşülmüş işaret, mesaj değil', async () => {
     const konuOnce = await konusma('whatsapp', `+${WA_PERSON}`);
     const oncekiSayi = (await messages.listByConversation(konuOnce!.id)).length;
@@ -439,6 +454,21 @@ describe('Messenger / Instagram — kişi hangi alanda?', () => {
     const satir = (await messages.listByConversation(konu!.id)).filter((m) => m.kind === 'interactive');
     expect(satir).toHaveLength(1);
     expect(satir[0]!.body.text).toBe('Ürüne git');
+  });
+
+  it('ürün kartının postback\'i (`sepete_ekle:` payload) "Sepete ekle — <boy>" metniyle yazılır (08.09)', async () => {
+    const anMs = Date.now() + 1;
+    const govde = messengerBody(
+      'page',
+      { sender: { id: FB_PERSON }, recipient: { id: PAGE_ACCOUNT }, postback: { title: '500 g', payload: 'sepete_ekle:variant-2' } },
+      anMs,
+    );
+    webhookEventIds.push(`messenger:${PAGE_ACCOUNT}:${FB_PERSON}:${anMs}:postback`);
+    expect(await handleMetaWebhook(govde)).toMatchObject({ written: 1 });
+
+    const konu = await konusma('messenger', FB_PERSON);
+    const satir = (await messages.listByConversation(konu!.id)).filter((m) => m.kind === 'interactive');
+    expect(satir.map((m) => m.body.text)).toContain('Sepete ekle — 500 g');
   });
 
   it('okundu/teslim zarfı defter olayı DEĞİLDİR — sayılır, geçilir', async () => {

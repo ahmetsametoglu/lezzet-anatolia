@@ -21,7 +21,7 @@ import { anchorGateOf, type AnchorGate } from '../customer/anchor';
 import { sendOutboundMessage, type MessageSender } from '../messaging/send';
 import { ringConversationBell, ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
 import { translateTicketMessageNow } from './translate';
-import { customerSupportTools } from './support-tools';
+import { customerSupportTools, type PendingProductCard } from './support-tools';
 import { queueTicketReplyMail } from './reply-mail';
 
 /**
@@ -93,11 +93,13 @@ async function runOpts(
   //
   // `known` sohbet yolundan gelir: orada kapı zaten okundu (soruyu da o okuma söylüyor) — iki kez
   // okumak aynı cevabı iki sorguya mal ederdi.
-  if (!customerId) return { tools: { ...customerSupportTools(db, null), ...cartTools(null) } };
+  // Ürün kartı kancası yalnız SOHBET turunda (kart kanala göre çizilir; e-posta talebinde kanal yok).
+  const cardHook = cart ? { conversation: cart.conversation, onCard: (card: PendingProductCard) => cart.sink.cards.push(card) } : null;
+  if (!customerId) return { tools: { ...customerSupportTools(db, null, cardHook), ...cartTools(null) } };
   const gate = known ?? (await anchorGateOf(db, customerId));
   if (!gate.open) logger.info({ customerId, anchor: gate.state }, 'ai: kimlik kapısı kapalı — yalnız kamusal araçlar verildi');
   const identity = toolsIdentityOf(customerId, gate);
-  return { tools: { ...customerSupportTools(db, identity), ...cartTools(identity) } };
+  return { tools: { ...customerSupportTools(db, identity, cardHook), ...cartTools(identity) } };
 }
 
 /**
@@ -108,6 +110,17 @@ interface CartLinkSink {
   url: string | null;
   /** Bu turda sepete yazıldı mı — yazıldıysa bağlantı modelin sözünü beklemeden eklenir (08.09). */
   wrote: boolean;
+  /**
+   * Bu turda üretilen ÜRÜN KARTLARI (`urun_karti`, 08.09) — özerk yolda metin cevabından ÖNCE
+   * gönderilir; taslak yolunda GÖNDERİLMEZ (operatör görmediği bir şeyi onaylamış olurdu), yalnız
+   * loglanır. Kurucu ve gerekçe `catalog/product-card.ts`.
+   */
+  cards: PendingProductCard[];
+}
+
+/** Sohbet turunun boş kabı — her tur yeni; kap sınıflar arasında paylaşılmaz. */
+function bosKap(): CartLinkSink {
+  return { url: null, wrote: false, cards: [] };
 }
 
 /**
@@ -382,7 +395,7 @@ export async function generateConversationDraft(
   // "benim siparişlerim" sorusu kimin siparişi olduğu belirsizken cevaplanamaz. Kamusal araçlar
   // (katalog, teslimat şartları, posta kodu) yine verilir — `runOpts`un üçlü kapısı.
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
-  const cartLink: CartLinkSink = { url: null, wrote: false };
+  const cartLink = bosKap();
   const result = await runTask(
     ticketDraftTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
@@ -396,6 +409,10 @@ export async function generateConversationDraft(
      Sepet bağlantısı da taslağa BURADA girer: operatör onu görür, isterse siler. */
   // Söz verilen bağlantı (08.09): model "bağlantı" deyip aracı çağırmadıysa sistem üretir (`cartLinkIfPromised`).
   cartLink.url ??= await cartLinkIfDue(db, conversation, { reply: result.data.reply, cartWritten: cartLink.wrote });
+  if (cartLink.cards.length > 0) {
+    // Taslak yolunda kart GÖNDERİLMEZ: operatör onaylamadığı bir şeyi göndermiş olurdu (`CartLinkSink.cards`).
+    logger.info({ context: 'application/conversation-ai', conversationId: conversation.id, cards: cartLink.cards.length }, 'taslak yolunda ürün kartı gönderilmedi');
+  }
   await conversations.update({
     id: conversation.id,
     aiDraftReply: withCartLink(formatForChannel(result.data.reply, conversation.source), cartLink.url),
@@ -689,7 +706,7 @@ async function autonomousConversationReply(
      numarasından gelmek zorunda (`verifySecurityCode` imzası), yani e-posta talebinde sormak
      cevaplanamayacak bir soru sormaktır. Kapı orada da kapalı — ama soru burada. */
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
-  const cartLink: CartLinkSink = { url: null, wrote: false };
+  const cartLink = bosKap();
   const result = await runTask(
     ticketAgentTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
@@ -727,6 +744,27 @@ async function autonomousConversationReply(
     conversation.source === 'whatsapp' && conversation.optInAskedAt === null && musteriMesaji >= OPT_IN_MIN_TURNS && !cartLink.url;
 
   const govde = izinSorulacak ? `${reply}\n\n${OPT_IN_QUESTION}` : reply;
+
+  /* ÜRÜN KARTLARI METİNDEN ÖNCE (08.09): kart görsel + fiyat + düğmedir, metin onu bağlar ("bu boyu
+     seçebilirsiniz"). Kart gidemezse metin YİNE gider ve düşüş kimlikle loglanır — kartsız cevap,
+     cevapsız müşteriden iyidir. Kart metni müşteri dilinde üretildi (`language`), çeviri dokunmaz. */
+  for (const kart of cartLink.cards) {
+    const kartSonucu = await sendOutboundMessage(db, sender, {
+      conversationId: conversation.id,
+      text: kart.text,
+      kind: 'interactive',
+      payload: { interactive: kart.interactive, productCard: true },
+      author: 'ai',
+      language: kart.language,
+    });
+    if (kartSonucu.status !== 'sent') {
+      logger.warn(
+        { context: 'application/conversation-ai', conversationId: conversation.id, reason: kartSonucu.reason },
+        'ürün kartı gönderilemedi — metin cevabı yine gidiyor',
+      );
+    }
+  }
+
   const outcome = await sendOutboundMessage(db, sender, {
     conversationId: conversation.id,
     text: alreadyDisclosed ? govde : `${AI_DISCLOSURE}\n\n${govde}`,
