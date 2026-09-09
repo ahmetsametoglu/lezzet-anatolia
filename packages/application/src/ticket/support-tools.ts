@@ -4,7 +4,7 @@ import { tool, z, type ToolSet } from '@lezzet/ai';
 import { AddressService, OrderService, PostalCodePlaceService, ProductService, type Db } from '@lezzet/database';
 import { formatPrice, formatShortDate } from '@lezzet/helper';
 import { errorMessageOf, logger } from '@lezzet/observability';
-import { publicImageUrl } from '@lezzet/storage';
+import { cdnImageUrl, publicImageUrl } from '@lezzet/storage';
 import {
   ALLERGEN_LABELS,
   COUNTRY_LABELS,
@@ -219,8 +219,10 @@ export function customerSupportTools(db: Db, customerId: string | null, card: Pr
  * kapısından geçmez. Görsel yalnız JPEG/PNG anahtarda kartta (WebP'yi Meta kabul etmez, dönüşüm kararı
  * açık); yoksa kart görselsiz gider — görselsiz kart, kartsız cevaptan iyidir.
  */
-/** Meta'nın görsel mesajda kabul ettiği biçimler — WebP değil (çıkartma sayılır). */
+/** Meta'nın görsel mesajda kabul ettiği biçimler — WebP değil (çıkartma sayılır). Dönüşümsüz yedek yol için. */
 const META_IMAGE_KEY = /\.(jpe?g|png)$/i;
+/** Kart görselinin uzun kenarı (px): telefonda tam genişlik, Meta 5 MB tavanının çok altında. */
+const CARD_IMAGE_WIDTH = 1200;
 
 function productCardTools(db: Db, customerId: string | null, card: ProductCardHook): ToolSet {
   return {
@@ -246,10 +248,12 @@ function productCardTools(db: Db, customerId: string | null, card: ProductCardHo
           const boylar = detay.variants.filter((v) => v.priceCents !== null);
           if (boylar.length === 0) return { bilinmiyor: 'bu ürün bu kanalda satışa kapalı — kart gönderilmedi.' };
 
-          /* Görsel yalnız Meta'nın kabul ettiği biçimdeyse (JPEG/PNG) kartta; WebP görselli ürünün kartı
-             görselsiz gider — WhatsApp WebP'yi çıkartma sayıp reddeder (ölçüldü 08.09; dönüşüm kararı
-             kullanıcıda, `15-whatsapp.md` 15.21 Durum). Biçim depo anahtarının uzantısından okunur. */
-          const imageUrl = META_IMAGE_KEY.test(urun?.imageKey ?? '') ? publicImageUrl(urun?.imageKey, urun?.imageUpdatedAt) : null;
+          /* Görsel CDN dönüşümüyle JPEG (09.09, 05.37): WhatsApp WebP'yi çıkartma sayıp reddeder, Cloudflare
+             aynı kaynaktan `width=1200,format=jpeg` üretir (ölçüldü: 67 KB). Dönüşüm yoksa (r2.dev tabanı)
+             yalnız zaten JPEG/PNG olan görsel kartta; WebP'de kart görselsiz gider. */
+          const imageUrl =
+            cdnImageUrl(urun?.imageKey, urun?.imageUpdatedAt, { width: CARD_IMAGE_WIDTH, format: 'jpeg' }) ??
+            (META_IMAGE_KEY.test(urun?.imageKey ?? '') ? publicImageUrl(urun?.imageKey, urun?.imageUpdatedAt) : null);
 
           const tekBoy = boylar.length === 1;
           const buttons = tekBoy

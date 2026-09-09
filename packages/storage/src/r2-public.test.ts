@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { publicImageUrl } from './r2-public';
+import { cdnImageUrl, publicImageUrl } from './r2-public';
 
 /**
  * Public okuma URL'i saf mantıktır (ağ yok) → birim test. Önemi: bu birleştirme yanlışsa hata
@@ -57,5 +57,28 @@ describe('publicImageUrl', () => {
   it('prefix boşsa anahtar kök altında çözülür (prod kurulumu)', () => {
     process.env.R2_PATH_PREFIX = '';
     expect(publicImageUrl(KEY)).toBe('https://pub-test.r2.dev/catalog/products/baklava.jpeg');
+  });
+});
+
+describe('cdnImageUrl — dönüşümlü adres (05.37 · 09.09)', () => {
+  it('r2.dev tabanında dönüşüm YOK → null; çağıran özgün adrese düşer', () => {
+    expect(cdnImageUrl(KEY, null, { width: 200, format: 'jpeg' })).toBeNull();
+  });
+
+  it('özel alan adında `cdn-cgi/image/<seçenekler>/<önek>/<anahtar>`; sürüm damgası da girer', () => {
+    process.env.R2_PUBLIC_BASE_URL = 'https://cdn.lezzetanatolie.com/';
+    expect(cdnImageUrl(KEY, '2026-09-08T10:00:00.000Z', { width: 1200, format: 'jpeg' })).toBe(
+      `https://cdn.lezzetanatolie.com/cdn-cgi/image/width=1200,fit=scale-down,format=jpeg/dev/catalog/products/baklava.jpeg?v=${Math.floor(Date.parse('2026-09-08T10:00:00.000Z') / 1000)}`,
+    );
+    expect(cdnImageUrl(KEY, null, { height: 300.4, quality: 80 })).toBe(
+      'https://cdn.lezzetanatolie.com/cdn-cgi/image/height=300,fit=scale-down,quality=80/dev/catalog/products/baklava.jpeg',
+    );
+  });
+
+  it('anahtar ya da taban yoksa null — görselsiz çizilir, çökmez', () => {
+    delete process.env.R2_PUBLIC_BASE_URL;
+    expect(cdnImageUrl(KEY, null, { width: 200 })).toBeNull();
+    process.env.R2_PUBLIC_BASE_URL = 'https://cdn.lezzetanatolie.com';
+    expect(cdnImageUrl(null, null, { width: 200 })).toBeNull();
   });
 });

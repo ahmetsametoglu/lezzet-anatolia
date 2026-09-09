@@ -24,12 +24,58 @@ import { resolvePrefixedKey } from './r2-key-prefix';
  * gelince `cdn.<domain>`'e geçilir, YALNIZ env değeri değişir (kod değişmez).
  */
 export function publicImageUrl(key: string | null | undefined, version?: string | null): string | null {
-  const base = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '');
+  const base = publicBase();
   if (!key || !base) return null;
+  return withVersion(`${base}/${resolvePrefixedKey(key)}`, version);
+}
 
-  const url = `${base}/${resolvePrefixedKey(key)}`;
+function publicBase(): string | null {
+  return process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '') || null;
+}
+
+function withVersion(url: string, version?: string | null): string {
   if (!version) return url;
-
   const epoch = Date.parse(version);
   return Number.isNaN(epoch) ? url : `${url}?v=${Math.floor(epoch / 1000)}`;
+}
+
+/** Cloudflare dönüşümünün desteklediği çıktı biçimleri — Meta görsel mesajı için `jpeg`. */
+export type CdnImageFormat = 'auto' | 'jpeg' | 'png' | 'webp' | 'avif';
+
+export interface CdnImageOptions {
+  /** En fazla genişlik (px); kaynak küçükse büyütülmez (`fit=scale-down`). */
+  width?: number;
+  /** En fazla yükseklik (px). */
+  height?: number;
+  format?: CdnImageFormat;
+  /** 1–100; boşsa Cloudflare varsayılanı. */
+  quality?: number;
+}
+
+/**
+ * **DÖNÜŞÜMLÜ okuma URL'i** (05.37 · 09.09) — aynı kaynak dosyadan istenen ölçü ve biçim, Cloudflare
+ * Image Transformations ile: `<kök>/cdn-cgi/image/<seçenekler>/<anahtar>`.
+ *
+ * Dönüşüm yalnız Cloudflare'in yönettiği bir zone'da çalışır; kovanın `pub-….r2.dev` geliştirme
+ * adresinde YOK (ölçüldü 27.08: parametre yok sayılıyor, `cdn-cgi` yolu 404). Taban o adresse
+ * `null` döner ve çağıran özgün adrese düşer — `null`, "dönüştürülemez"in adıdır, sıfır değil.
+ * Ölçüldü 09.09 (`cdn.lezzetanatolie.com`): `width=200,format=jpeg` → 200 `image/jpeg` 3,4 KB;
+ * `width=1200` → 67 KB (kaynak 1500² WebP 70 KB).
+ *
+ * Sürüm damgası dönüşümlü adrese de girer: kaynak değişince adres değişir, önbellek eskiyi tutamaz.
+ * Kadraj (odak + zoom → `trim`) bu fonksiyona SONRA eklenir (05.37'nin formülü `packages/types`e
+ * yazılınca); bugün yalnız ölçü ve biçim.
+ */
+export function cdnImageUrl(key: string | null | undefined, version: string | null | undefined, options: CdnImageOptions): string | null {
+  const base = publicBase();
+  if (!key || !base || /\.r2\.dev$/i.test(new URL(base).hostname)) return null;
+
+  const parts = [
+    options.width ? `width=${Math.round(options.width)}` : null,
+    options.height ? `height=${Math.round(options.height)}` : null,
+    'fit=scale-down',
+    options.format ? `format=${options.format}` : null,
+    options.quality ? `quality=${Math.round(options.quality)}` : null,
+  ].filter(Boolean);
+  return withVersion(`${base}/cdn-cgi/image/${parts.join(',')}/${resolvePrefixedKey(key)}`, version);
 }

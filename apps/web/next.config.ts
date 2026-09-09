@@ -18,9 +18,17 @@ function supabaseOrigins(): { http: string; ws: string } {
   }
 }
 
-// R2 host'u: public okuma adresi (05.11) — bugün r2.dev geliştirme adresi, alan adı gelince
-// cdn.<domain> buraya eklenir. Görsel `<img>` = img-src.
-const R2_HOSTS = 'https://*.r2.dev';
+// R2 host'u: public okuma adresi (05.11) — r2.dev geliştirme adresi + env'deki asıl köke (09.09'dan
+// beri `cdn.lezzetanatolie.com`, Cloudflare dönüşümleri o zone'da). Alan adı koda yazılmaz, env'den
+// türer: `R2_PUBLIC_BASE_URL` değişince CSP kendiliğinden onu tanır. Görsel `<img>` = img-src.
+const R2_PUBLIC_ORIGIN = (() => {
+  try {
+    return process.env.R2_PUBLIC_BASE_URL ? new URL(process.env.R2_PUBLIC_BASE_URL).origin : '';
+  } catch {
+    return ''; // bozuk env: CSP'ye çöp yazmaktansa r2.dev'le kal — görsel çizilmez, sayfa çökmez
+  }
+})();
+const R2_HOSTS = ['https://*.r2.dev', R2_PUBLIC_ORIGIN].filter(Boolean).join(' ');
 
 // S3 API host'u — iki iş: YÜKLEME (`connect-src`, 11.2) ve PRIVATE kovadan OKUMA (`img-src` +
 // `media-src`, 15.25). Public kova (`*.r2.dev`) değil, imzalı adreslerin yaşadığı S3 host'u.
