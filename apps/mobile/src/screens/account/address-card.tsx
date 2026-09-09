@@ -54,8 +54,52 @@ export function AddressCard({ address, copy, onMakeDefault, onMakeBilling, onEdi
      indirseydik ("Varsayılan · Fatura") müşteri hangi rolü kaldırdığını göremezdi. */
   const faturaGoster = onMakeBilling !== null;
 
+  const eylemler = [
+    address.isDefault ? null : (
+      <TextAction
+        key="default"
+        label={copy.makeDefault}
+        onPress={onMakeDefault}
+        accessibilityHint={copy.makeDefaultLabel.replace('{label}', addressTitle(address))}
+        testID={testID === undefined ? undefined : `${testID}-default`}
+      />
+    ),
+    faturaGoster && !address.isBilling ? (
+      <TextAction
+        key="billing"
+        label={copy.makeBilling}
+        onPress={onMakeBilling}
+        accessibilityHint={copy.makeBillingLabel.replace('{label}', addressTitle(address))}
+        testID={testID === undefined ? undefined : `${testID}-billing`}
+      />
+    ) : null,
+    <TextAction
+      key="edit"
+      label={copy.edit}
+      onPress={onEdit}
+      accessibilityHint={copy.editLabel.replace('{label}', addressTitle(address))}
+      testID={testID === undefined ? undefined : `${testID}-edit`}
+    />,
+  ].filter((eylem) => eylem !== null);
+
+  /*
+    ÜÇÜNCÜ EYLEM SATIRA SIĞMIYOR — KENDİ SATIRINA İNER (cihazda ölçüldü 09.09).
+
+    Tasarımın satırında İKİ eylem var ("varsayılan yap · Düzenle") ve eylemler `flex:none`, yani
+    KISALMIYORLAR — yeri metin bloğu veriyor. Fatura rolü tasarımdan SONRA doğdu ve rolsüz bir
+    adreste eylem sayısı üçe çıkıyor: ölçüldü, adres satırı 111 px'e sıkışıp kelime ortasından
+    bölünüyordu ("12 Quai des Ba / teliers"). Okunmuyordu.
+
+    Bu kusur bugüne kadar GÖRÜNMEDİ çünkü fatura rolünün kapısı ölü bir alana bağlıydı
+    (`account-screen` künyesi) — kapı açılınca ortaya çıktı.
+
+    İki eylemde tasarımın satırı aynen korunur; üçte eylemler metnin ALTINA, sağa yaslı tek şeride
+    iner. Sayıya bakılıyor çünkü kusur sayıdan doğuyor: sığmayan şey üçüncü eylemin genişliği.
+  */
+  const tekSatir = eylemler.length <= 2;
+
   return (
-    <View style={styles.card} testID={testID}>
+    <View style={tekSatir ? styles.card : styles.cardStacked} testID={testID}>
       <View style={styles.text}>
         <View style={styles.labelRow}>
           <Text style={styles.label}>{addressTitle(address)}</Text>
@@ -64,28 +108,7 @@ export function AddressCard({ address, copy, onMakeDefault, onMakeBilling, onEdi
         </View>
         <Text style={styles.line}>{addressLine(address)}</Text>
       </View>
-      {address.isDefault ? null : (
-        <TextAction
-          label={copy.makeDefault}
-          onPress={onMakeDefault}
-          accessibilityHint={copy.makeDefaultLabel.replace('{label}', addressTitle(address))}
-          testID={testID === undefined ? undefined : `${testID}-default`}
-        />
-      )}
-      {faturaGoster && !address.isBilling ? (
-        <TextAction
-          label={copy.makeBilling}
-          onPress={onMakeBilling}
-          accessibilityHint={copy.makeBillingLabel.replace('{label}', addressTitle(address))}
-          testID={testID === undefined ? undefined : `${testID}-billing`}
-        />
-      ) : null}
-      <TextAction
-        label={copy.edit}
-        onPress={onEdit}
-        accessibilityHint={copy.editLabel.replace('{label}', addressTitle(address))}
-        testID={testID === undefined ? undefined : `${testID}-edit`}
-      />
+      <View style={tekSatir ? styles.actions : styles.actionsBelow}>{eylemler}</View>
     </View>
   );
 }
@@ -98,6 +121,19 @@ const styles = StyleSheet.create((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.lg,
+  },
+  /* Üç eylemli hâl — künyesi komponentin içinde. Metin tam genişlikte, eylemler altında. */
+  cardStacked: { gap: theme.space.md },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
+  },
+  actionsBelow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: theme.space['2xl'],
   },
   text: { flex: 1, gap: theme.space['2xs'] },
   labelRow: {

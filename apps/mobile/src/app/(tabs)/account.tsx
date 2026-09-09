@@ -91,6 +91,11 @@ export default function AccountRoute() {
          okuduğu kuralın ta kendisi (`operationsHomeRoute`). Müşteride `null` döner ve ekranda
          satır hiç doğmaz. */
       staffRoute={operationsHomeRoute(me)}
+      /* FATURA ADRESİ ROLÜNÜN KAPISI (09.09) — `data.company` DEĞİL: o künyenin okuma ucu yok ve
+         aşağıda sabit `null` geçiyor, yani rol o kapının arkasında hiç görünmüyordu. Sorulan soru
+         yalnız "bu hesap şirket mi" ve cevabı `/me` zaten taşıyor; `type: 'company'` B2B onayında
+         yazılıyor, yani bekleyen başvuru kapıyı açmaz. */
+      companyAccount={me.type === 'company'}
       data={accountData({
         /* Ad OLDUĞU GİBİ taşınır — girilmemişse BOŞ (MB-66, 18.08). Yedeğe düşme kararı EKRANINDIR.
            Eskiden burada e-postaya düşülüyordu ("kart adsız kalmasın") ve karar doğruydu, yeri

@@ -1,6 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import { accountData } from './account-fixture';
 import { AccountScreen } from './account-screen';
 
 /*
@@ -192,10 +191,9 @@ describe('AccountScreen', () => {
   });
 
   it('ŞİRKET hesabında "fatura adresi yap" GERÇEK uca gider ve rozet sunucunun listesinden taşınır', async () => {
-    const sirket = { ...accountData(), company: { name: 'Bosphore SARL', siret: '81234567800019', vatNumber: 'FR12812345678' } };
     mockMakeBillingAddress.mockResolvedValue(listResult([{ ...HOME, isBilling: false }, { ...WORK, isBilling: true }]));
 
-    await render(<AccountScreen data={sirket} />);
+    await render(<AccountScreen companyAccount />);
     await screen.findByTestId('account-address-addr-work-billing');
 
     await fireEvent.press(screen.getByTestId('account-address-addr-work-billing'));
@@ -209,10 +207,9 @@ describe('AccountScreen', () => {
   it('FATURA seçimi VARSAYILANI düşürmez — iki rol aynı satırda olabilir', async () => {
     /* Küçük bir işletmede fatura adresi ile teslimat adresi çoğu zaman aynı yerdir. Biri ötekini
        düşürseydi müşteri, faturasını taşıdığı anda teslimat tercihini de kaybederdi. */
-    const sirket = { ...accountData(), company: { name: 'Bosphore SARL', siret: '81234567800019', vatNumber: 'FR12812345678' } };
     mockMakeBillingAddress.mockResolvedValue(listResult([{ ...HOME, isDefault: true, isBilling: true }, WORK]));
 
-    await render(<AccountScreen data={sirket} />);
+    await render(<AccountScreen companyAccount />);
     await screen.findByTestId('account-address-addr-home-billing');
 
     await fireEvent.press(screen.getByTestId('account-address-addr-home-billing'));

@@ -89,6 +89,20 @@ interface AccountScreenProps {
    * girişin okuduğu kuralın aynısı) orada verilir. Ekran yalnız "gidilecek bir yer var mı" bilir.
    */
   staffRoute?: Href | null;
+  /**
+   * ONAYLI ŞİRKET HESABI MI — fatura adresi rolünün TEK ölçütü (kullanıcı kararı 08.09).
+   *
+   * ── NEDEN `data.company` DEĞİL (ölçüldü 09.09, cihazda) ─────────────────────
+   * Rol ilk yazıldığında ölçüt `data.company !== null`du ve o kapı UYGULAMADA HİÇ AÇILMIYOR:
+   * `company` künyesinin (ad · SIRET · KDV) okuma ucu yok, rota onu SABİT `null` geçiyor
+   * (`(tabs)/account.tsx`). Yani fatura rozeti ve "fatura adresi yap" eylemi yazıldıkları günden
+   * beri çizilemiyordu; testler geçiyordu çünkü `company`yi prop'tan enjekte ediyorlar.
+   *
+   * Doğrusu ikisini AYIRMAK: künye KARTI gerçekten bir uca muhtaç, ama rolün sorduğu soru yalnız
+   * "bu hesap şirket mi" ve cevabı `/me` ZATEN taşıyor (`type`). `type: 'company'` B2B ONAY
+   * anında yazılıyor (`application/customer/b2b.ts`), yani onaylanmamış başvuru bu kapıyı açmaz.
+   */
+  companyAccount?: boolean;
 }
 
 export function AccountScreen({
@@ -96,6 +110,7 @@ export function AccountScreen({
   signedIn = true,
   onRefreshIdentity,
   staffRoute = null,
+  companyAccount = false,
 }: AccountScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
@@ -657,8 +672,8 @@ export function AccountScreen({
                 onMakeDefault={() => makeDefault(address)}
                 /* FATURA ROLÜ YALNIZ ŞİRKET HESABINDA (kullanıcı kararı 08.09): bireysel müşteride
                    fatura adresi diye ayrı bir kavram yok ve göstermek, cevabı olmayan bir soru
-                   sormak olurdu. Ölçüt ekranın zaten okuduğu künye — `data.company`. */
-                onMakeBilling={data.company === null ? null : () => makeBilling(address)}
+                   sormak olurdu. Ölçüt `/me`nin `type`ı — gerekçesi `companyAccount` künyesinde. */
+                onMakeBilling={companyAccount ? () => makeBilling(address) : null}
                 onEdit={() => setAddressSheet({ editing: address })}
                 testID={`account-address-${address.id}`}
               />

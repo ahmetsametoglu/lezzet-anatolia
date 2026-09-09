@@ -14279,3 +14279,65 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   görsel bir karar gerektiriyor, uydurulmaz (CLAUDE §3). Kutu eklenirse kural notta yazılı:
   yeni adreste `isBilling` gövdeyle YAZILMAZ, kapı ekledikten sonra `setBilling` ile işaretler; ve
   kutuyu boşaltmak işareti KALDIRMAZ — "fatura adresi yok" ayrı bir beyandır.
+
+- [x] (21.300) **FATURA ADRESİ ROLÜ ÖLÜ BİR KAPININ ARKASINDAYDI — hiç çizilmiyordu; açılınca da kartı eziyordu** (kullanıcı isteği 09.09: *"cihazdan kontrol ettin mi?"* — cihaz turunda çıktı)
+  `touches:` `apps/mobile/src/screens/account/account-screen.tsx` · `apps/mobile/src/app/(tabs)/account.tsx` · `apps/mobile/src/screens/account/address-card.tsx` · `apps/mobile/src/screens/account/address-card.test.tsx` · `apps/mobile/src/screens/account/account-screen.test.tsx`
+
+  **Durum (09.09) — TAMAM, ikisi de cihazda ölçüldü.**
+
+  ── BİRİNCİ KUSUR: KAPI ÖLÜYDÜ ──────────────────────────────────────────────
+
+  Fatura rolü (21.299 · 08.09) `data.company !== null` ölçütüne bağlanmıştı. Cihazda ölçüldü:
+  o kapı UYGULAMADA HİÇ AÇILMIYOR. `company` künyesinin (ad · SIRET · KDV) okuma ucu yok ve rota
+  onu SABİT `null` geçiyor (`(tabs)/account.tsx`; `account-fixture` künyesi bunu zaten yazıyordu).
+  Yani rozet ve "fatura adresi yap" yazıldıkları günden beri çizilemiyordu — testler geçiyordu
+  çünkü `company`yi prop'tan enjekte ediyorlardı.
+
+  Doğrusu ikisini AYIRMAK: künye KARTI gerçekten bir uca muhtaç, ama rolün sorduğu soru yalnız
+  "bu hesap şirket mi" ve cevabı `/me` ZATEN taşıyor. Ölçüt `me.type === 'company'` oldu —
+  `type: 'company'` B2B ONAY anında yazılıyor (`application/customer/b2b.ts`), yani bekleyen
+  başvuru kapıyı açmaz. Yeni prop `AccountScreen.companyAccount`.
+
+  ── İKİNCİ KUSUR: KAPI AÇILINCA KART EZİLDİ ─────────────────────────────────
+
+  Tasarımın kart satırında İKİ eylem var ("varsayılan yap · Düzenle") ve eylemler `flex:none`,
+  yani KISALMIYORLAR — yeri metin bloğu verir. Fatura rolü tasarımdan sonra doğdu ve hiçbir rolü
+  olmayan bir adreste eylem sayısı ÜÇE çıkıyor. Cihazda ölçüldü:
+
+  ```
+  adres satırı = [87,388][198,678]   → 111 px genişlik, 290 px yükseklik
+  ekranda: "12 Quai des Ba / teliers, 67000 Strasb / ourg"
+  ```
+
+  Kelime ortasından bölünüyordu. İki eylemde tasarımın satırı aynen korunur; üçte eylemler metnin
+  ALTINA, sağa yaslı tek şeride iner. Ölçüm sonrası:
+
+  ```
+  adres satırı = [87,388][995,432]   → tam genişlik, TEK satır
+  eylemler     = y 453-497           → kendi şeridinde
+  ```
+
+  Bu kusur bugüne kadar görünmedi çünkü birinci kusur onu saklıyordu — kapı açılmadığı için üçüncü
+  eylem hiç doğmuyordu. **İki arıza birbirini gizliyordu.**
+
+  ── DOĞRULAMA ───────────────────────────────────────────────────────────────
+
+  Cihazda (Oppo CPH1907) test hesabına iki adres yazıldı ve profil sırayla bireysel/şirket
+  yapıldı; dördü de gözle ve `uiautomator` sınırlarıyla ölçüldü: rozet (`teslimat adresi`) ·
+  eylem (`teslimat adresi yap` · `fatura adresi yap`) · dipnot (adres varken çizilir, boş listede
+  çizilmez) · bireysel hesapta fatura rolünün HİÇ çıkmaması. "teslimat adresi yap" gerçek uca
+  gitti ve satır veri tabanında değişti (`İş | is_default=t`).
+
+  Üç yeni test (`address-card.test.tsx`): iki eylemde tasarımın tek satırı korunur · üçte eylemler
+  alta iner · rolleri taşıyan adreste üçüncü eylem doğmaz, satır yine tek. Ekran testlerinin
+  şirket hâli artık `companyAccount` ile kuruluyor, ölü `company` alanıyla değil.
+
+  Kök typecheck 20/20 · lint temiz · mobil paketi 1490/1492 (kalan iki düşüş italik font notunun).
+
+  ── AYRICA GÖRÜLDÜ, TEKRAR ÜRETİLEMEDİ ──────────────────────────────────────
+
+  Cihazdan adres eklemenin İLK denemesi "Kaydedilemedi" ile düştü; `error_log`a hiçbir iz
+  düşmedi. Aynı akış ikinci denemede sorunsuz yazdı (satır oluştu), ve aynı oturumda
+  `POST /me/addresses/:id/default` da çalıştı — yani kimlik, profil ve tünel sağlamdı. Tek
+  seferlik; ARIZA OLARAK YAZILMADI (CLAUDE §0: sebebi kanıtlanmadan müdahale yok). Tekrarlarsa
+  bakılacak yer `POST /api/v1/me/addresses` gövde doğrulaması.
