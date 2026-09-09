@@ -42,6 +42,16 @@ const NEIGHBOR_MAX_AGE_SEC = 7 * 24 * 60 * 60;
 const CART_LINK_COOKIE = 'lz_cart_link';
 const CART_LINK_MAX_AGE_SEC = 7 * 24 * 60 * 60;
 
+/**
+ * Bağlanma sonucunun KISA ÖMÜRLÜ bildirimi (15.16) — hesap sayfası girişten hemen sonra okur.
+ *
+ * Ömür iki dakika ve silme yolu YOK, bilerek: sayfa bir sunucu bileşeni, çerez silemez; ayrı bir
+ * "okudum" eylemi ise iki dakikalık bir cümle için fazla makine olurdu. Aynı pencerede sayfayı
+ * yenileyen müşteri cümleyi bir kez daha görür — zararsız, çünkü cümle hâlâ doğrudur.
+ */
+const CHAT_LINK_NOTICE_COOKIE = 'lz_chat_linked';
+const CHAT_LINK_NOTICE_MAX_AGE_SEC = 2 * 60;
+
 async function remember(name: string, value: string, maxAge: number): Promise<void> {
   const jar = await cookies();
   jar.set(name, value, {
@@ -119,4 +129,14 @@ export function readCartLink(): Promise<string | null> {
  */
 export function forgetCartLink(): Promise<void> {
   return forget(CART_LINK_COOKIE);
+}
+
+/** Bağlanma sonucunu hesap sayfasına taşır — yalnız `invite-handoff` yazar (tüketim anı). */
+export function rememberChatLinkNotice(notice: string): Promise<void> {
+  return remember(CHAT_LINK_NOTICE_COOKIE, notice, CHAT_LINK_NOTICE_MAX_AGE_SEC);
+}
+
+/** Hesap sayfasının okuduğu ham değer; anlamlandırma `parseChatLinkNotice`te. */
+export function readChatLinkNotice(): Promise<string | null> {
+  return read(CHAT_LINK_NOTICE_COOKIE);
 }

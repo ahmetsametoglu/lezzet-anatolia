@@ -1,7 +1,9 @@
 import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import type { Locale } from '@lezzet/i18n';
+import { CART_LINK_PARAM, type Locale } from '@lezzet/i18n';
+import { readChatLinkNotice } from '@/lib/identity/invite-cookie';
+import { CART_LINK_TO_ACCOUNT, parseChatLinkNotice } from '@/lib/identity/cart-link-landing';
 import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getAccountView } from '@/lib/account/read';
@@ -25,16 +27,27 @@ import messages from './messages.json';
  */
 interface AccountPageProps {
   params: Promise<{ locale: string }>;
+  /** `?link=<jeton>` — sohbetten gelen HESAP bağlantısı (15.16); sayfa onu çerez kapısına devreder. */
+  searchParams: Promise<{ [CART_LINK_PARAM]?: string }>;
 }
 
-export default async function AccountPage({ params }: AccountPageProps) {
+export default async function AccountPage({ params, searchParams }: AccountPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+
+  /* SOHBETTEN GELEN BAĞLANTI (15.16, kullanıcı tasarımı 08.09): sepetsiz sohbeti hesaba bağlayan
+     bağlantı bu sayfaya düşer (`/fr/compte?link=…`). Jetonu çerez kapısına devrederiz
+     (`/auth/cart-link?to=hesap`): oturum varsa orada tüketilir ve buraya dönülür, yoksa giriş
+     sayfasına — cümlesi "sohbetinizi bağlamak için". Sepet sayfasıyla aynı desen; bu sayfanın
+     `loading.tsx`i olmadığı için yönlendirme akış-içi tuzağa düşmüyor (`cart-link-redirect.ts` künyesi). */
+  const { [CART_LINK_PARAM]: linkToken } = await searchParams;
+  if (linkToken) redirect(`/auth/cart-link?token=${encodeURIComponent(linkToken)}&locale=${locale}&to=${CART_LINK_TO_ACCOUNT}`);
+
   void recordPageView('/account');
 
   const t: Messages = messages[locale];
-  const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);
+  const [device, customerId, rawNotice] = await Promise.all([detectDevice(), currentCustomerId(), readChatLinkNotice()]);
   // Segment tablosu yolu BAŞINDA bölü ile taşıyor (`/giris`); ikinci bir bölü eklenmez.
   if (!customerId) redirect(`/${locale}${LOGIN_SEGMENT[locale]}`);
 
@@ -43,7 +56,7 @@ export default async function AccountPage({ params }: AccountPageProps) {
 
   return (
     <SiteFrame device={device} locale={locale} accountChrome={{ nav: 'account', title: t.title, right: <SignOutLink locale={locale as Locale} /> }}>
-      <AccountClient t={t} locale={locale} account={account} device={device} />
+      <AccountClient t={t} locale={locale} account={account} device={device} chatNotice={parseChatLinkNotice(rawNotice)} />
     </SiteFrame>
   );
 }

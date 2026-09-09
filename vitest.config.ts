@@ -107,6 +107,8 @@ const WEB_LIB_DBSIZ = [
   // Sepet bağlantısının ara katman yönlendirmesi (15.21 · 08.09) — saf: URL alır, URL verir.
   'apps/web/lib/cart-link-redirect.test.ts',
   'apps/web/lib/auth/post-login-target.test.ts',
+  // Sohbet bağlantısının kapı kararı (15.16 · 15.21) — saf: amaç + oturum → yol; DB'ye gitmiyor.
+  'apps/web/lib/identity/cart-link-landing.test.ts',
   'apps/web/lib/cart/cart-blocker.test.ts',
   'apps/web/lib/cart/discount-label.test.ts',
   'apps/web/lib/cart/place-change.test.ts',

@@ -5,6 +5,7 @@ import { Card } from '@/components/customer/ui/card';
 import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { setConsentAction } from './actions';
 import { AddressesCard } from './components/addresses-card';
+import { ChatLinkNoticeBanner, LinkedChatsCard } from './components/linked-chats-card';
 import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
 import { CouponsCard } from './components/coupons-card';
 import { DeleteAccount } from './components/delete-account';
@@ -20,13 +21,16 @@ import { ProfileCard } from './components/profile-card';
  * Kartlar masaüstüyle AYNI parçalar, yalnız `compact`. Ayrı bir mobil kart ailesi yazmak aynı
  * bölümün iki görünümü demekti; biri değiştiğinde öbürü eskirdi.
  */
-export function AccountMobile({ t, locale, account }: AccountViewProps) {
+export function AccountMobile({ t, locale, account, chatNotice }: AccountViewProps) {
   const compact = true;
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
       {/* Sayfa başlığı YOK: mobilde `accountChrome` zaten "Hesabım"ı başlık satırında taşıyor —
           h1 buradayken ekranda iki kez alt alta yazılıyordu (kullanıcı bulgusu 20.08). Tasarım tek
           satır çiziyor: "Hesabım … Çıkış". Masaüstünde başlık sekmelerde, orada h1 sorunu yok. */}
+      {/* Sohbet bağlantısının sonucu (15.16): girişten hemen sonra, en üstte, bir kez. */}
+      {chatNotice && <ChatLinkNoticeBanner t={t} notice={chatNotice} />}
+
       {account.points && <PointsCard t={t} locale={locale} points={account.points} compact={compact} />}
       {account.points && <InviteCard t={t} points={account.points} compact={compact} />}
 
@@ -52,6 +56,9 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
           <span className="text-olive">→</span>
         </Link>
       </Card>
+
+      {/* Bağlı sohbetler (15.16) — gezinme kartının hemen altında; salt okunur, gerekçesi kartta. */}
+      <LinkedChatsCard t={t} locale={locale} chats={account.chats} compact={compact} />
 
       <ProfileCard t={t} locale={locale} profile={account.profile} whatsappNumbers={account.whatsappNumbers} compact={compact} />
 

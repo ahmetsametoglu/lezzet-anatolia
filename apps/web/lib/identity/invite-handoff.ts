@@ -4,7 +4,8 @@ import { acceptNeighborInvite, tryAttachReferral } from '@lezzet/application';
 import { claimCartLink } from '@lezzet/application/cart/link';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { logger } from '@lezzet/observability';
-import { forgetCartLink, forgetInvite, forgetNeighborInvite, readCartLink, readInvite, readNeighborInvite } from './invite-cookie';
+import { forgetCartLink, forgetInvite, forgetNeighborInvite, readCartLink, readInvite, readNeighborInvite, rememberChatLinkNotice } from './invite-cookie';
+import { chatLinkNoticeOf } from './cart-link-landing';
 
 /**
  * **Çerezden KİŞİYE devir** — her giriş yolunun geçtiği tek nokta (17.11 · 12.08).
@@ -52,6 +53,9 @@ export async function handOffCartLink(authUserId: string, token: string): Promis
     const outcome = await claimCartLink(serviceDb(), { token, customerId: profile.id });
     logger.info({ context: 'identity/invite-handoff', customerId: profile.id, outcome: outcome.status }, 'sepet bağlantısı tüketildi');
     await forgetCartLink();
+    // Sonuç MÜŞTERİYE de söylenir (15.16): hesap sayfası girişten hemen sonra "sohbetiniz bağlandı"
+    // ya da "bu sohbet başka bir hesaba bağlı" der. Log kimliğe, çerez cümleye — ikisi ayrı okur.
+    await rememberChatLinkNotice(chatLinkNoticeOf(outcome.status));
   } catch (err) {
     logger.warn(
       { context: 'identity/invite-handoff', authUserId, err: err instanceof Error ? err.message : String(err) },

@@ -5,6 +5,7 @@ import { Card } from '@/components/customer/ui/card';
 import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { setConsentAction } from './actions';
 import { AddressesCard } from './components/addresses-card';
+import { ChatLinkNoticeBanner, LinkedChatsCard } from './components/linked-chats-card';
 import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
 import { CouponsCard } from './components/coupons-card';
 import { DeleteAccount } from './components/delete-account';
@@ -17,11 +18,13 @@ import { ProfileCard } from './components/profile-card';
  * izinler, veri notu), sağda hesabın kendisine ait olan (puan, kaydedilenler, gezinme). Ayrım
  * keyfi değil — sol sütun "ben kimim", sağ sütun "hesabımda ne var" sorusunu cevaplıyor.
  */
-export function AccountDesktop({ t, locale, account }: AccountViewProps) {
+export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewProps) {
   const compact = false;
   return (
     <div className="flex flex-col gap-5 px-12 pt-8 pb-12">
       <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
+      {/* Sohbet bağlantısının sonucu (15.16): girişten hemen sonra, başlığın altında, bir kez. */}
+      {chatNotice && <ChatLinkNoticeBanner t={t} notice={chatNotice} />}
 
       <div className="grid grid-cols-2 items-start gap-5">
         <div className="flex flex-col gap-5">
@@ -110,6 +113,10 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
               <span className="text-olive">→</span>
             </Link>
           </Card>
+
+          {/* Bağlı sohbetler (15.16) — "hesabımda ne var" sütununun son kartı: sohbetten gelen
+              siparişlerin neden burada göründüğünü anlatan bağ. Salt okunur, gerekçesi kartta. */}
+          <LinkedChatsCard t={t} locale={locale} chats={account.chats} compact={compact} />
         </div>
       </div>
     </div>

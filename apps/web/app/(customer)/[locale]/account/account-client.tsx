@@ -4,6 +4,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import type { AccountView } from '@/lib/account/read';
+import type { ChatLinkNotice } from '@/lib/identity/cart-link-landing';
 import type { Messages } from './account-types';
 import { AccountDesktop } from './account.desktop';
 import { AccountMobile } from './account.mobile';
@@ -17,9 +18,10 @@ interface AccountClientProps {
   locale: Locale;
   account: AccountView;
   device: Device;
+  chatNotice: ChatLinkNotice | null;
 }
 
-export function AccountClient({ t, locale, account, device }: AccountClientProps) {
-  const view = { t, locale, account };
+export function AccountClient({ t, locale, account, device, chatNotice }: AccountClientProps) {
+  const view = { t, locale, account, chatNotice };
   return useDevice(device) === 'mobile' ? <AccountMobile {...view} /> : <AccountDesktop {...view} />;
 }

@@ -6,13 +6,20 @@ import { getPathname } from '@/i18n/navigation';
 import { getSessionUser } from '@/lib/guard';
 import { handOffCartLink } from '@/lib/identity/invite-handoff';
 import { rememberCartLink } from '@/lib/identity/invite-cookie';
+import { cartLinkLanding, cartLinkPurposeOf } from '@/lib/identity/cart-link-landing';
 
 /**
- * **Sepet bağlantısının çerez kapısı** (15.21) — sepet sayfasının `?link=` ile devrettiği jeton.
+ * **Sohbet bağlantısının çerez kapısı** (15.21 · 15.16) — sepet ya da hesap sayfasının `?link=`
+ * ile devrettiği jeton.
  *
  * Route handler, çünkü çerez yalnız burada ya da server action'da yazılabilir; sepet sayfası bir
- * sunucu bileşeni ve yazamaz. Akış kısa: jeton çereze → oturum varsa hemen tüket ve sepete dön;
- * yoksa girişe götür (`next` sepet, `reason` sepet cümlesi) — giriş anında `invite-handoff` tüketir.
+ * sunucu bileşeni ve yazamaz. Akış kısa: jeton çereze → oturum varsa hemen tüket ve hedefe dön;
+ * yoksa girişe götür (`next` hedef, `reason` amacın cümlesi) — giriş anında `invite-handoff` tüketir.
+ *
+ * **İki amaç, tek kapı (08.09):** `?to=hesap` sepetsiz sohbeti hesaba bağlama bağlantısıdır —
+ * hedef hesap sayfası, giriş cümlesi "sohbetinizi bağlamak için". Karar saf ve testli
+ * (`cart-link-landing.ts`); amaç bugün adresten okunuyor, jeton amacı taşımaya başlayınca girdi
+ * oradan gelir.
  *
  * **Jeton burada DOĞRULANMAZ** ve bilinçli: geçersiz bağlantıya da aynı yol yürünür (girişe ya da
  * sepete). Kapıda "bu bağlantı geçersiz" demek jetonun varlığını sızdırırdı (`claimCartLink`in
@@ -30,18 +37,17 @@ export async function GET(request: Request): Promise<Response> {
   const rawLocale = url.searchParams.get('locale');
   const locale: Locale = rawLocale && hasLocale(routing.locales, rawLocale) ? rawLocale : DEFAULT_LOCALE;
   const cartPath = getPathname({ locale, href: '/cart' });
+  const accountPath = getPathname({ locale, href: '/account' });
+  const loginPath = getPathname({ locale, href: '/login' });
+  const purpose = cartLinkPurposeOf(url.searchParams.get('to'));
 
   const token = url.searchParams.get('token')?.trim() ?? '';
-  if (!token) return NextResponse.redirect(`${origin}${cartPath}`);
+  if (!token) return NextResponse.redirect(`${origin}${purpose === 'account' ? accountPath : cartPath}`);
 
   await rememberCartLink(token);
 
   const user = await getSessionUser();
-  if (user) {
-    await handOffCartLink(user.id, token);
-    return NextResponse.redirect(`${origin}${cartPath}`);
-  }
+  if (user) await handOffCartLink(user.id, token);
 
-  const loginPath = getPathname({ locale, href: '/login' });
-  return NextResponse.redirect(`${origin}${loginPath}?next=${encodeURIComponent(cartPath)}&reason=sepet`);
+  return NextResponse.redirect(`${origin}${cartLinkLanding({ purpose, signedIn: user !== null, cartPath, accountPath, loginPath })}`);
 }

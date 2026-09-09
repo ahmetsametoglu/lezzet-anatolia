@@ -1,6 +1,6 @@
 import 'server-only';
-import { AddressService, CartService, CustomerPhoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
-import type { Address, CompanyInfo, PointsEntry, PreferredLanguage } from '@lezzet/types';
+import { AddressService, CartService, ConversationService, CustomerPhoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import type { Address, CompanyInfo, ConversationSource, PointsEntry, PreferredLanguage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
@@ -19,6 +19,17 @@ import { listPointsHistory } from '@/lib/feedback/points';
  * **Puan yalnız B2C'de okunur.** B2B için sorgu atmak, sonucu hiç çizilmeyecek bir veriyi
  * getirmekti; üstelik oyunlaştırma B2C-only bir karardır (DOMAIN §14).
  */
+/**
+ * Hesaba bağlı bir sohbetin müşteriye gösterilen hâli: kanal + "ne zamandan beri". `since`
+ * bağlanma anı, o yoksa sohbetin açılışı — WhatsApp sohbeti müşterisiyle doğar ve ayrıca
+ * "bağlanmaz"; müşteri için ikisi de "tanıştığımız gün"dür.
+ */
+export interface LinkedChat {
+  id: string;
+  source: ConversationSource;
+  since: string;
+}
+
 export interface AccountView {
   profile: {
     name: string;
@@ -43,6 +54,11 @@ export interface AccountView {
   /** Doluysa profil B2B — puan/kupon bölümleri hiç çizilmez, şirket bölümü çizilir. */
   company: CompanyInfo | null;
   addresses: Address[];
+  /**
+   * **Bu hesaba bağlı sohbetler** (15.16) — Messenger/Instagram/WhatsApp; en yeni bağ başta.
+   * Salt okunur: bağ sohbetten gönderilen bağlantıyla kurulur, çözülmesi bir birleştirme kararıdır.
+   */
+  chats: LinkedChat[];
   /** Kampanya izinleri; kanal başına "verildi mi". Sipariş bildirimleri bundan BAĞIMSIZDIR. */
   consent: { email: boolean; whatsapp: boolean };
   points: {
@@ -96,14 +112,20 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   if (!profile) return null;
 
   const company = profile.companyInfo ?? null;
-  const [addresses, cart, zoneNotices, phones] = await Promise.all([
+  const [addresses, cart, zoneNotices, phones, conversations] = await Promise.all([
     new AddressService(db).listByCustomer(customerId),
     new CartService(db).get(customerId),
     readZoneNotices(db, customerId),
     // Kanıtlanmış numaralar (04.10). Emekli olanlar gelmez — müşteriye "bu numara sizde" demeyi
     // bıraktığımız satırı ona hâlâ göstermek, en kafa karıştırıcı hâl olurdu.
     new CustomerPhoneService(db).listActiveByCustomer(customerId),
+    // Bağlı sohbetler (15.16) — kaynak sayısı kadar satır, sayfalanmaz (servisin künyesi).
+    new ConversationService(db).listByCustomer(customerId),
   ]);
+
+  const chats: LinkedChat[] = conversations
+    .map((c) => ({ id: c.id, source: c.source, since: c.linkedAt ?? c.createdAt }))
+    .sort((a, b) => b.since.localeCompare(a.since));
 
   // Kaydedilenler sepetin kendi okumasıyla çözülür: ad, görsel, fiyat ve "bölge içi mi" bilgisi
   // orada zaten hesaplanıyor. İkinci bir çözüm yazmak, aynı satırın iki görünümü demekti.
@@ -125,6 +147,7 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
     whatsappNumbers: phones.map((p) => p.phone),
     company,
     addresses,
+    chats,
     consent: {
       email: Boolean(profile.marketingConsent?.email?.granted),
       whatsapp: Boolean(profile.marketingConsent?.whatsapp?.granted),

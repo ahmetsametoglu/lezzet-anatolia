@@ -119,6 +119,27 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     hâlâ "varsayılan" diyor ve form kutusu yok — not bırakıldı
     (`docs/talep/not-mobil-adres-rolleri-sozluk-ve-form-kutusu.md`), karar mobil şeridin.
     `touches: apps/web/lib/account/addresses.ts, apps/web/app/(customer)/[locale]/account/{actions.ts,messages.json,account.desktop.tsx,account.mobile.tsx,components/addresses-card.tsx}`
+  - **Durum (09.09 · SOHBET BAĞLANTISININ HESAP YÜZÜ — kullanıcı tasarımı 08.09, iş bölümü 09.09).** Messenger/IG
+    sohbetini müşterinin KENDİSİ bağlar: sohbete düğmeli bağlantı → giriş (e-posta kodu / Google) → sohbet hesaba.
+    Web'in payı bu turda yazıldı; jetonun amacı, ajan aracı ve operatör düğmesi sepet şeridinde
+    (`docs/talep/not-sosyal-eposta-koduyla-hesap-baglama.md` › Cevap 09.09).
+    **(1) Kapı iki amaç tanıyor:** `/auth/cart-link?…&to=hesap` → hedef hesap sayfası, giriş cümlesi
+    *"Sohbetinizi hesabınıza bağlamak için"* (`login/messages.json › reasons.baglanti`, üç dil). Karar saf
+    ve testli (`lib/identity/cart-link-landing.ts`, birim 6 iddia); amaç bugün ADRESTEN okunuyor,
+    `cart_link.purpose` gelince girdi oradan gelir. **(2) Hesap sayfası `?link=` alıyor** ve kapıya
+    devrediyor — sepet sayfasının deseni; bu sayfanın `loading.tsx`i yok, akış-içi yönlendirme tuzağı burada
+    yok. **(3) Sonuç müşteriye söyleniyor:** `invite-handoff` tüketim sonucunu 2 dakikalık çereze yazıyor
+    (`lz_chat_linked`), hesap sayfası girişten hemen sonra tek cümle basıyor — bağlandı · zaten bağlı ·
+    başka hesaba bağlı (bize yazın) · geçersiz. Silme yolu yok, bilerek: sunucu bileşeni çerez silemez,
+    iki dakikalık cümle için ayrı eylem fazla makine. **(4) "Bağlı sohbetler" kartı:** kanal + tarih
+    (`linkedAt`, yoksa açılış), salt okunur — ayırma kapısı 15.16'da bilerek yok, birleştirme kararıdır.
+    Okuma `ConversationService.listByCustomer` (vardı, 15.5). Boş hâl yol tarifi, gizlenmiyor.
+    **Doğrulama:** kök typecheck 20/20, lint, birim 2135/2135, knip. ⚠ **Tarayıcı ölçümü YAPILAMADI:**
+    dev sunucusu sosyal şeridin izlenmeyen `chat-image.ts`inin `sharp` importu yüzünden her rotada 500
+    veriyor (not bırakıldı: `not-sosyal-dev-sunucusu-sharp-yuzunden-500.md`); ölçüm sohbeti ve iki jeton
+    yerel veride hazır (`psid-olcum-15-16`), sunucu düzelince koşulacak. Koda bekleyen işareti
+    KONMADI: eksik olan kod değil kanıt.
+    `touches: apps/web/app/auth/cart-link/route.ts, apps/web/lib/identity/{cart-link-landing,cart-link-landing.test,invite-cookie,invite-handoff}.ts, apps/web/lib/account/read.ts, apps/web/app/(customer)/[locale]/account/{page.tsx,account-types.ts,account-client.tsx,account.desktop.tsx,account.mobile.tsx,messages.json,components/linked-chats-card.tsx}, apps/web/app/(customer)/[locale]/login/messages.json, vitest.config.ts`
   - *Bitti:* tekrar sipariş güncel fiyatla sepet oluşturuyor; sipariş durumu sade dille görünüyor
 - [x] (08.6) **Talep grubu:** talep oluşturma (sipariş kalemi/tip/foto + genel "bize yaz" yönlendirmesi), talep listesi + yazışma (16'ya bağlanır)
   - *Bitti:* siparişli ve siparişsiz talep açılıyor; durum takip ediliyor

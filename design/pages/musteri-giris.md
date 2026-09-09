@@ -9,7 +9,7 @@ Müşterinin şifresiz, birkaç saniyede kimliğini doğrulayıp devam ettiği g
 - **Google ile devam** — tek dokunuşta doğrulama; en hızlı yol
 - **E-posta ile devam** — müşteri e-postasını girer, gelen tek kullanımlık kodu yazar; şifre yoktur, hiç olmamıştır. "Şifremi unuttum" diye bir kavram da yoktur
 - **WhatsApp ile devam** — telefon numarası üzerinden doğrulama; WhatsApp'tan alışveriş yapan kitle için doğal yol
-- **Neden doğrulama istendiği** — bağlama göre kısa gerekçe ("siparişini tamamlamak için", "taleplerini görmek için"); müşteri anlamsız bir duvarla karşılaşmamalı
+- **Neden doğrulama istendiği** — bağlama göre kısa gerekçe ("siparişini tamamlamak için", "taleplerini görmek için", "sohbette hazırladığın sepeti görmek için", "sohbetini hesabına bağlamak için" — 15.16, 09.09); müşteri anlamsız bir duvarla karşılaşmamalı
 - **Yöntemlerin eşdeğerliği** — hangi yolla girerse girsin müşteri aynı hesaba ulaşır (e-posta ve telefon aynı kişiye bağlıysa sistem birleştirir); arayüz yöntemleri rakip değil alternatif olarak sunar
 - **Yasal bağlantılar** — gizlilik politikası bağlantısı; doğrulama kişisel veri işlemenin başladığı andır
 

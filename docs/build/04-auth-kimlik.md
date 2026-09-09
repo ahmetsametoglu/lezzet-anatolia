@@ -257,6 +257,16 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
     **(a) Teslim durumu erken tetiktir.** Taşıyıcının döndüğü `failed` (numara kapanmış / engellenmiş) bir tahmin değil beyandır; 3 aylık sessizliği beklemeye gerek yok. `delivered` ama okunmadı hâlâ belirsiz — `failed` erken tetik, sessizlik geç tetik, ikisi birbirinin yerine geçmez. Uygulaması 15.7 webhook'unun statü olaylarını numara kaydına yazmasını gerektiriyor.
     **(b) Dönüşte çapa ezberden değil kanaldan sorulur.** Bağlı e-postası olan müşteriden 6 haneyi hatırlaması beklenmez: kod yine e-postasına gider, WhatsApp'tan geri yazılır — bağlama anındaki çapraz kanal kanıtının dönüş anındaki tekrarı. Aylar sonra kimse kodu saklamış olmaz ama posta kutusu elindedir; güvenlik özelliği aynen korunur (devredilmiş hattın yeni sahibi o kutuyu okuyamaz). **6 hane bir yedek DEĞİL:** e-posta bağlanınca kod siliniyor, yani ikisi aynı müşteride hiç bir arada bulunmuyor. Kod, e-postasını hiç bağlamamış müşterinin dönüşünde sorulacak TEK çapadır — iki ayrı kitle, iki ayrı yol.
   - **Sorulmadan verilen karar (türetme):** puanı harcamak bir çapa ister — **e-posta ya da güvenlik kodu**, ikisi de sayılır. Gerekçe: devredilmiş hattın yeni sahibi ikisini de bilemez, koruma aynıdır. Başka türlü okunuyorsa düzeltilsin.
+  - **Durum (09.09 · E-POSTA KOLU BAŞKA YOLDAN KURULDU — Messenger/IG için, 15.16 kullanıcı tasarımı 08.09).**
+    Bu görevin "e-posta bağlama" ayağı WhatsApp müşterisi için "e-postaya kod, sohbetten geri yaz" diye
+    kurgulanmıştı ve sohbet çevrimini bekliyordu. Kullanıcı 08.09'da yönü çevirdi: müşteri sohbetteki
+    bağlantıya tıklar, **web'de** e-postasıyla giriş yapar (bugünkü OTP), sohbet o hesaba bağlanır
+    (`link_proof = cart_link`; sepet şeridi `email_code` değerini yazacak). Web tarafı 09.09'da yazıldı
+    (`08.5` Durum 09.09: kapı `?to=hesap`, giriş cümlesi, sonuç bildirimi, "Bağlı sohbetler" kartı).
+    **Bu satır için anlamı:** çapanın e-posta ayağı iki mekanizma olarak YAŞAMAMALI — WhatsApp için de
+    aynı bağlantı yolu geçerli olabilir (jeton sohbete göre üretiliyor, kanal fark etmiyor); "sohbetten
+    geri yaz" akışı ancak WhatsApp numarası kolu (onaylı doğrulama şablonu) gelince ayrıca gerekir.
+    Karar sepet şeridinin `purpose` kolonuyla birlikte verilir; bu görev o güne kadar `[~]`.
 
 - [x] (04.13) **DEV AUTH BYPASS SÖKÜLDÜ — guard yerelde de doğruyu söylüyor** (kullanıcı kararı 19.08).
   `touches: apps/web/lib/guard.ts, apps/web/app/(operations)/operations/layout.tsx,
