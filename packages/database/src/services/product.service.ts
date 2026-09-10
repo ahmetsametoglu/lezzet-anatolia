@@ -35,6 +35,7 @@ import {
   type ProductFamilyInsert,
   type ProductFamilyUpdate,
   type ProductFamilyOrder,
+  type ImageDimensions,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { ilikeContains, ilikeTerm } from '../utils/filter-term';
@@ -615,8 +616,8 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
   }
 
   /** Görsel anahtarını + sürüm damgasını yazar (R2 yüklemesinden sonra). Relative key; prefix R2'de. */
-  async setImageKey(id: string, imageKey: string): Promise<Product> {
-    return this.writeImageKey(id, imageKey);
+  async setImageKey(id: string, imageKey: string, dims: ImageDimensions | null = null): Promise<Product> {
+    return this.writeImageKey(id, imageKey, dims);
   }
 
   /**

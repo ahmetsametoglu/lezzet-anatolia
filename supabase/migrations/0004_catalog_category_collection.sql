@@ -45,6 +45,8 @@ create table public.category (
   -- okuma URL'i public+immutable → sürüm damgası olmadan CDN/tarayıcı bir yıl eskiyi gösterir.
   -- Yalnız dosya değişince yazılır; odak/zoom değişimi dosyayı değiştirmez (kırpma CSS'te).
   image_updated_at timestamptz,
+  image_width smallint,                         -- kaynak dosyanın piksel ölçüsü (05.37): CDN kadrajı kaynak oranını ister; boş = ölçülmemiş
+  image_height smallint,
   -- Kısa tanıtım — mobil vitrin bandının ALTYAZISI (05.17). Bugün o metin tasarımın içinde sabit
   -- bir sözlük (`Mobil - Musteri v3.dc.html`, `CSUB`): veriden gelmiyor, yani yeni kategori
   -- altyazısız doğuyor ve cümle operatörün elinde değil.
@@ -100,6 +102,8 @@ create table public.category_image (
   image_zoom smallint not null default 100,     -- zoom %, 100-400
   image_alt jsonb,                              -- LocalizedText; boşsa kategori adına düşer
   image_updated_at timestamptz,                 -- sürüm damgası (gerekçe: yukarıdaki kapak satırı)
+  image_width smallint,                         -- kaynak ölçüsü (gerekçe: kategori kapağı satırı)
+  image_height smallint,
   sort_order int not null default 0,            -- rotasyonun döngü sırası (sürükle-bırak)
   created_at timestamptz not null default now()
 );
@@ -125,6 +129,8 @@ create table public.collection (
   image_zoom smallint not null default 100,     -- zoom %, 100-400
   image_alt jsonb,                              -- LocalizedText; OG kartı alt metni (boşsa ada düşer)
   image_updated_at timestamptz,                 -- görsel dosyasının sürüm damgası (kategoridekiyle aynı gerekçe)
+  image_width smallint,                         -- kaynak ölçüsü (gerekçe: kategori kapağı satırı)
+  image_height smallint,
   sort_order int not null default 0,
   is_active boolean not null default true,
   -- Vitrinde göster (05.18) — gerekçe ve kural kategoridekiyle birebir aynı; ana sayfa tasarımı

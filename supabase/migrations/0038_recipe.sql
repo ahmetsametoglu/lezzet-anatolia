@@ -43,6 +43,8 @@ create table public.recipe (
   image_zoom smallint not null default 100,
   image_alt jsonb,
   image_updated_at timestamptz,
+  image_width smallint,                         -- kaynak ölçüsü (gerekçe: 0004 kategori satırı, 05.37)
+  image_height smallint,
   -- **VARSAYILAN `false` ve bu bir tercih DEĞİL, zorunluluk:** aşağıdaki kısıt yayın için üç dili
   -- şart koşuyor. Varsayılan `true` olsaydı tek dille açılan HER tarif kısıtta patlardı, yani
   -- operatör tarifi hiç oluşturamazdı. Taslak olarak doğar, üç dil dolunca yayınlanır.

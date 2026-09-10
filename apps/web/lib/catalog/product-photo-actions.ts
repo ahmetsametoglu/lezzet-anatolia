@@ -6,7 +6,7 @@ import { ProductImageService, ProductService, serviceDb } from '@lezzet/database
 import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import { pickCropFields, PRODUCT_GALLERY_MAX, type ImageCropFields, type ProductImage } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
-import { readImageUpload } from '@/lib/media/upload';
+import { readImageDimensions, readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from './paths';
 import type { GalleryPhotoView } from '@/components/operation/form/image-gallery-types';
@@ -48,7 +48,7 @@ export async function uploadProductImageAction(id: string, form: FormData): Prom
     const key = r2Keys.productImage(product.slug, file.name);
     // Biçim kapıda doğrulandı (`readImageUpload`); eski `|| 'image/jpeg'` yedeği bir tahmindi.
     await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
-    await svc.setImageKey(id, key);
+    await svc.setImageKey(id, key, readImageDimensions(form));
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {
@@ -88,7 +88,7 @@ export async function uploadGalleryPhotoAction(productId: string, form: FormData
     // Anahtar fotoğrafa özgü: ürün başına çok dosya var, slug tek başına ayırt etmez.
     const key = r2Keys.productGalleryImage(product.slug, randomUUID(), file.name);
     await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
-    const row = await svc.add(productId, key);
+    const row = await svc.add(productId, key, readImageDimensions(form));
     revalidatePath(PRODUCTS_PATH);
     return { data: toPhotoView(row), error: null };
   } catch (err) {

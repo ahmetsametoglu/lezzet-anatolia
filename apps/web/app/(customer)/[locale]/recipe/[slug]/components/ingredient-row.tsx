@@ -95,7 +95,7 @@ function RowFace({ item, locale, compact }: { item: StorefrontRecipeItem; locale
   return (
     <>
       <div className={['flex-none', compact ? 'w-12' : 'w-14'].join(' ')}>
-        <FramedImage src={item.image.url} alt={item.name} ratio={RATIO_SQUARE} crop={item.image.crop} />
+        <FramedImage src={item.image.url} alt={item.name} ratio={RATIO_SQUARE} crop={item.image.crop} frames={item.image.frames} />
       </div>
       <div className="flex flex-1 flex-col gap-0.5">
         <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body-sm'].join(' ')}>{item.name}</span>

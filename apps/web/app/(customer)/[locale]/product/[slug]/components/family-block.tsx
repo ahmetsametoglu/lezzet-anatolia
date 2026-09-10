@@ -98,7 +98,7 @@ function FamilyCard({ member, size, subLine }: FamilyCardProps) {
   );
 
   const image = (
-    <FramedImage src={member.image.url} alt={member.label} ratio={RATIO_SQUARE} crop={member.image.crop} />
+    <FramedImage src={member.image.url} alt={member.label} ratio={RATIO_SQUARE} crop={member.image.crop} frames={member.image.frames} />
   );
 
   // Aktif kart TIKLANAMAZ (tasarım): bulunduğu sayfaya götüren bir bağlantı, tıklayanı hiçbir yere

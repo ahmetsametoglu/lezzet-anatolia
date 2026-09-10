@@ -14,6 +14,7 @@ import {
   type BundleListRow,
   type BundleUpdate,
   type BundleWithItems,
+  type ImageDimensions,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
@@ -157,8 +158,8 @@ export class BundleService extends BaseDbService<Bundle, BundleInsert, BundleUpd
   }
 
   /** Görsel anahtarı + sürüm damgası (R2 yüklemesinden sonra). */
-  async setImageKey(id: string, imageKey: string): Promise<Bundle> {
-    return this.writeImageKey(id, imageKey);
+  async setImageKey(id: string, imageKey: string, dims: ImageDimensions | null = null): Promise<Bundle> {
+    return this.writeImageKey(id, imageKey, dims);
   }
 
   /** Kürasyon sırası (sürükle-bırak) — müşterinin gördüğü paket sırası. */

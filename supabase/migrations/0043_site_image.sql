@@ -49,7 +49,9 @@ create table public.site_image (
   image_focal_y smallint not null default 50,   -- odak %, 0-100 (object-position Y)
   image_zoom smallint not null default 100,     -- zoom %, 100-400
   image_alt jsonb,                              -- LocalizedText; erişilebilirlik + SEO
-  image_updated_at timestamptz                  -- dosyanın sürüm damgası (public cache'i kırar)
+  image_updated_at timestamptz,                 -- dosyanın sürüm damgası (public cache'i kırar)
+  image_width smallint,                         -- kaynak ölçüsü (gerekçe: 0004 kategori satırı, 05.37)
+  image_height smallint
 );
 
 alter table public.site_image enable row level security;

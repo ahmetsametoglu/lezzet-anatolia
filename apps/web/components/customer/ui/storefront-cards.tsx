@@ -83,7 +83,7 @@ export function CategoryCard({ category, circle = false }: CategoryCardProps) {
         src={category.image.url}
         alt={category.name}
         ratio={RATIO_SOURCE}
-        crop={category.image.crop}
+        crop={category.image.crop} frames={category.image.frames}
         circle={circle}
         className={circle ? 'w-[86px]' : 'w-full'}
         placeholder={<InitialMark name={category.name} />}
@@ -147,7 +147,7 @@ export function CollectionCard({ collection, labels, campaignValue = null, compa
         src={collection.image.url}
         alt={collection.name}
         ratio={RATIO_COLLECTION_BAND}
-        crop={collection.image.crop}
+        crop={collection.image.crop} frames={collection.image.frames}
         className="absolute inset-0 h-full w-full"
         placeholder={<InitialMark name={collection.name} />}
       />
@@ -263,7 +263,7 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           src={product.image.url}
           alt={product.name}
           ratio={RATIO_SOURCE}
-          crop={product.image.crop}
+          crop={product.image.crop} frames={product.image.frames}
           className={['!rounded-none', product.soldOut ? 'opacity-60 grayscale' : away ? 'opacity-85 grayscale-[.55]' : ''].join(' ')}
         />
         {/* Durum rozeti — tükendi fırsatı ezer: satın alınamayan üründe indirim vurgusu yanıltır. */}
@@ -424,7 +424,7 @@ export function OfferCard({ offer, locale, limitLabel, compact = false }: OfferC
         src={offer.image.url}
         alt={offer.name}
         ratio={1}
-        crop={offer.image.crop}
+        crop={offer.image.crop} frames={offer.image.frames}
         className={compact ? 'size-[72px] flex-none' : 'size-24 flex-none'}
       />
       <div className="flex flex-col gap-1">
@@ -459,7 +459,7 @@ export function PackageCard({ pack, locale, badgeLabel, itemsLabel, ctaLabel, co
         src={pack.image.url}
         alt={pack.name}
         ratio={1}
-        crop={pack.image.crop}
+        crop={pack.image.crop} frames={pack.image.frames}
         className={compact ? 'size-[84px] flex-none' : 'size-[130px] flex-none'}
       />
       <div className="flex flex-col gap-2">

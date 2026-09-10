@@ -63,6 +63,8 @@ create table public.product (
   -- yitirdi ve yayın kısıtına da bu yüzden alınmadı (27.08 künyesi aşağıda).
   image_alt jsonb,
   image_updated_at timestamptz,                      -- görsel dosyasının sürüm damgası (gerekçe: 0004 kategori satırı)
+  image_width smallint,                              -- kaynak ölçüsü (gerekçe: 0004 kategori satırı)
+  image_height smallint,
   -- Yasal beyan (INCO) — müşteri ürün sayfasının zorunlu bölümleri.
   -- ingredients/storage_instructions DÜZ METİN'dir; içinde yalnız `**vurgu**` işareti taşır. HTML
   -- SAKLANMAZ: temizleme (sanitize) yükü, XSS yüzeyi ve AI çevirinin etiketleri bozması buradan gelirdi.
@@ -291,6 +293,8 @@ create table public.product_image (
   image_zoom smallint not null default 100,          -- zoom %, 100-400
   image_alt jsonb,                                   -- LocalizedText; boşsa ürün adına düşer
   image_updated_at timestamptz,                      -- sürüm damgası (gerekçe: 0004 kategori satırı)
+  image_width smallint,                              -- kaynak ölçüsü (gerekçe: 0004 kategori satırı)
+  image_height smallint,
   sort_order int not null default 0,                 -- müşteri galerisinin sırası (sürükle-bırak)
   created_at timestamptz not null default now()
 );
@@ -321,6 +325,8 @@ create table public.bundle (
   image_zoom smallint not null default 100,
   image_alt jsonb,
   image_updated_at timestamptz,
+  image_width smallint,                              -- kaynak ölçüsü (gerekçe: 0004 kategori satırı)
+  image_height smallint,
   total_price numeric(10, 2) not null,               -- müşterinin gördüğü TEK fiyat, TTC
   -- "6 kişilik" — tasarımda ad üstü künyede duruyor (Paket Detay + Paketler listesi). Serbest metne
   -- gömülemez: künye olarak tutarlı basılması ve boş olduğunda satırın HİÇ çizilmemesi gerekiyor.

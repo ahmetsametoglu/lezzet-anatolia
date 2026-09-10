@@ -129,7 +129,7 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
     >
       {!compact && (
         <div className="w-14 flex-none">
-          <FramedImage src={last.image.url} alt="" ratio={1} crop={last.image.crop} />
+          <FramedImage src={last.image.url} alt="" ratio={1} crop={last.image.crop} frames={last.image.frames} />
         </div>
       )}
       <div className="flex flex-1 flex-col gap-1">

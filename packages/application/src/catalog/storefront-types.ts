@@ -1,6 +1,6 @@
 import type { TextSegment } from '@lezzet/helper';
 import type { CartLineRoute } from '@lezzet/domain-core';
-import type { ImageCrop, KeysetCursor, Nutrition, ProductAllergen, PurchaseMode, StockStatus } from '@lezzet/types';
+import type { FrameKey, ImageCrop, KeysetCursor, Nutrition, ProductAllergen, PurchaseMode, StockStatus } from '@lezzet/types';
 import type { ScopeCampaign } from './campaign';
 
 /**
@@ -64,7 +64,21 @@ export interface PlaceWarehouses {
 export interface StorefrontImage {
   url: string | null;
   crop: ImageCrop;
+  /**
+   * CDN türevleri (05.37): çerçeve başına, operatörün odak+zoom kadrajıyla KESİLMİŞ ve genişlik
+   * merdivenine ölçeklenmiş adresler. `null` = CDN yok (r2.dev tabanı) ya da kaynak ölçüsü
+   * bilinmiyor — çağıran `url` + CSS yoluyla aynı kareyi çizer. Native uygulama da aynı alanı
+   * okur (sözleşme eklemesi mobil şeridin işi).
+   */
+  frames: ImageFrameSources | null;
 }
+
+/** Bir çerçevenin CDN kaynakları — `src` orta basamak, `srcSet` merdivenin tamamı. */
+export interface ImageFrameSource {
+  src: string;
+  srcSet: string;
+}
+export type ImageFrameSources = Record<FrameKey, ImageFrameSource>;
 
 /** Kategori kartı — anasayfa şeridi ve katalog girişleri. */
 export interface StorefrontCategory {

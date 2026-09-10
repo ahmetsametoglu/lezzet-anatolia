@@ -8,6 +8,8 @@ import {
   type SiteImageInsert,
   type SiteImageSlot,
   type SiteImageUpdate,
+  imageDimensionsOf,
+  type ImageDimensions,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 
@@ -65,8 +67,8 @@ export class SiteImageService extends BaseDbService<SiteImage, SiteImageInsert, 
    * deterministik olduğu için (slot → aynı obje) damga olmadan yeni dosya bir yıllık `immutable`
    * cache'in arkasında kalırdı.
    */
-  put(slot: SiteImageSlot, imageKey: string): Promise<SiteImage> {
-    return this.upsert({ slot, imageKey, imageUpdatedAt: new Date().toISOString() }, 'slot');
+  put(slot: SiteImageSlot, imageKey: string, dims: ImageDimensions | null = null): Promise<SiteImage> {
+    return this.upsert({ slot, imageKey, imageUpdatedAt: new Date().toISOString(), ...imageDimensionsOf(dims) }, 'slot');
   }
 
   /**

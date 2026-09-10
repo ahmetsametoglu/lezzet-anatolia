@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { GalleryImage, ImageCropFields } from '@lezzet/types';
+import { imageDimensionsOf, type GalleryImage, type ImageCropFields, type ImageDimensions } from '@lezzet/types';
 import type { ZodType, ZodTypeDef } from 'zod';
 import { BaseDbService } from './base.service';
 
@@ -49,13 +49,14 @@ export abstract class GalleryDbService<TDb extends GalleryImage, TInsert, TUpdat
    * tip düzeyinde değil. Yanlış bir ad sessiz kalmaz — `insert` girdiyi `insertSchema` ile
    * doğruluyor ve tanımadığı bir alan orada patlar.
    */
-  protected async addPhoto(parentId: string, imageKey: string): Promise<TDb> {
+  protected async addPhoto(parentId: string, imageKey: string, dims: ImageDimensions | null = null): Promise<TDb> {
     const sortOrder = await this.count({ [this.parentField]: parentId });
     return this.insert({
       [this.parentField]: parentId,
       imageKey,
       sortOrder,
       imageUpdatedAt: new Date().toISOString(),
+      ...imageDimensionsOf(dims),
     } as TInsert);
   }
 

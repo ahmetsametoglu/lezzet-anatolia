@@ -5,7 +5,7 @@ import { CategoryService, CollectionService, ProductService, serviceDb } from '@
 import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import { pickCropFieldsPartial, resolveLocalizedText, type ImageCropFields, type LocalizedText } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
-import { readImageUpload } from '@/lib/media/upload';
+import { readImageDimensions, readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from '../../products-paths';
 import type { CatalogKind } from '../../products-types';
@@ -129,7 +129,7 @@ export async function uploadCatalogImageAction(kind: CatalogKind, id: string, fo
     const key = kind === 'category' ? r2Keys.categoryImage(row.slug, file.name) : r2Keys.collectionImage(row.slug, file.name);
     // Biçim kapıda doğrulandı (`readImageUpload`); eski `|| 'image/jpeg'` yedeği bir tahmindi.
     await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
-    await svc.setImageKey(id, key);
+    await svc.setImageKey(id, key, readImageDimensions(form));
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {

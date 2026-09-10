@@ -155,6 +155,7 @@ import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people'
 import { seedNegotiatedPrices, seedPrices } from './seed/pricing';
 import { seedSiteImages } from './seed/site-image';
 import { seedRecipes } from './seed/recipe';
+import { backfillImageDimensions } from './image-dims-backfill';
 import { seedScopedSettings } from './seed/settings';
 import { katalogVaryantlari } from './seed/shared';
 import { enAz, katmanOku, uzakHedefMi } from './seed/tier';
@@ -253,6 +254,10 @@ async function main(): Promise<void> {
   // Sayfa görselleri hiçbir şeye bağlı DEĞİL (bir varlığa değil bir sayfa yerine ait) — sırası
   // serbest; katalogun yanında duruyor çünkü ikisi de aynı kovaya yazıyor.
   await seedSiteImages(db);
+  // Görsel ölçüsü (05.37): seed'in yüklediği görseller ölçüsüz doğmasın — CDN'den sorulup yazılır.
+  // CDN yoksa (r2.dev tabanı) satırlar ölçüsüz kalır ve ekranlar CSS yoluyla aynı kareyi çizer.
+  const olcu = await backfillImageDimensions();
+  console.log(`  · görsel ölçüsü: ${olcu.written} yazıldı, ${olcu.skipped} ölçülemedi`);
 
   // FİYAT ARTIK `base`TE (kullanıcı kararı 19.08) — çünkü artık uydurma değil.
   //
@@ -293,6 +298,10 @@ async function main(): Promise<void> {
   // Paketler FİYATLARDAN SONRA: paket fiyatı kalemlerin birim fiyatlarından türetiliyor (elle
   // yazılan bir sayı değil). Sıra bozulursa paketler fiyatsız kalemlerle kurulur.
   await seedBundles(db);
+  // Paket görselleri bu katmanda yükleniyor → ölçü dolgusu ikinci kez (yalnız boş satırlara dokunur;
+  // ölçüldü 09.09: ilk dolgu paketlerden önce koştuğu için 4 paket ölçüsüz kalmıştı).
+  const paketOlcu = await backfillImageDimensions();
+  console.log(`  · paket görsel ölçüsü: ${paketOlcu.written} yazıldı, ${paketOlcu.skipped} ölçülemedi`);
   await seedDeliveryZones(db, depolar);
   // Kapsamlı ayarlar BÖLGELERDEN SONRA: bölge kapsamlı satır, bölgenin kimliğine yazılır.
   await seedScopedSettings(db, depolar);

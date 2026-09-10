@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ZodType, ZodTypeDef } from 'zod';
 import { fromCents, toCents } from '@lezzet/helper';
-import type { KeysetCursor, Page } from '@lezzet/types';
+import { imageDimensionsOf, type ImageDimensions, type KeysetCursor, type Page } from '@lezzet/types';
 import { appToDb, camelToSnake, dbToApp } from '../utils/case-transformers';
 
 // Filtre seçenekleri — base'in iç sözleşmesi (dışa verilmez; servisler nesne literaliyle geçer).
@@ -521,8 +521,10 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
    * Tek `as TUpdate`: alan adları jenerik imzada görünmez, ama üç Update şeması da tam varlık
    * şemasından türediği için (`.partial()`) alanlar orada MEVCUT — eksik olsa Zod sessizce atardı.
    */
-  protected async writeImageKey(id: string, imageKey: string): Promise<TDb> {
-    return this.update({ id, imageKey, imageUpdatedAt: new Date().toISOString() } as TUpdate);
+  protected async writeImageKey(id: string, imageKey: string, dims: ImageDimensions | null = null): Promise<TDb> {
+    // Ölçü dosyayla BİRLİKTE yazılır (05.37): yeni dosya yeni ölçüdür; ölçü verilmediyse eski değer
+    // kalmasın diye açıkça null'a çekilir — bayat ölçüyle CDN yanlış kadraj keserdi.
+    return this.update({ id, imageKey, imageUpdatedAt: new Date().toISOString(), ...imageDimensionsOf(dims) } as TUpdate);
   }
 
   /**

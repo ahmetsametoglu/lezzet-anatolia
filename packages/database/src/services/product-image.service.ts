@@ -6,6 +6,7 @@ import {
   type ProductImage,
   type ProductImageInsert,
   type ProductImageUpdate,
+  type ImageDimensions,
 } from '@lezzet/types';
 import { GalleryDbService } from '../core/gallery.service';
 
@@ -28,7 +29,7 @@ export class ProductImageService extends GalleryDbService<ProductImage, ProductI
   }
 
   /** Galerinin sonuna yeni fotoğraf. */
-  add(productId: string, imageKey: string): Promise<ProductImage> {
-    return this.addPhoto(productId, imageKey);
+  add(productId: string, imageKey: string, dims: ImageDimensions | null = null): Promise<ProductImage> {
+    return this.addPhoto(productId, imageKey, dims);
   }
 }

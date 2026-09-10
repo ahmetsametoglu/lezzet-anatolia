@@ -6,6 +6,21 @@ import { IMAGE_ACCEPT_ATTR } from '@lezzet/types';
 import type { ActionResult } from '@/lib/error';
 
 /**
+ * Seçilen dosyanın piksel ölçüsü — tarayıcı çözer (`createImageBitmap`), sunucu değil (05.37).
+ * Çözülemeyen dosyada `null`: ölçü dosyanın ön koşulu değildir, kapı biçimi ayrıca denetler.
+ */
+async function measureImage(file: File): Promise<{ width: number; height: number } | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const olcu = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return olcu.width > 0 && olcu.height > 0 ? olcu : null;
+  } catch {
+    return null; // tarayıcı bu biçimi çözemedi (ör. bozuk dosya) — sunucu ölçüsüz yazar, kapı biçime bakar
+  }
+}
+
+/**
  * Görsel yükleme tetikleyicisi — gizli file input + görünüşü çağırana bırakılmış buton. Web modalında
  * "Görsel değiştir", mobilde `capture` ile "Kameradan çek". Yükleme hedefini BİLMEZ: `upload` callback'i
  * FormData'yı ilgili server action'a taşır (ürün görseli, koleksiyon kapağı…) → tek bileşen, çok tüketici
@@ -45,6 +60,14 @@ export function ImageUploadButton({ upload, camera = false, multiple = false, cl
       for (const file of files) {
         const form = new FormData();
         form.set('file', file);
+        /* Kaynak ÖLÇÜSÜ dosyayla birlikte gider (05.37): CDN kadrajı kaynak oranını ister ve sunucuda
+           görsel çözücü YOK (bilinçli, `sharp` yok). Tarayıcı ölçer — ölçemezse (bozuk dosya) alanlar
+           boş kalır, sunucu `null` yazar, kapı dosyayı yine reddeder ya da kabul eder; ölçü ön koşul değil. */
+        const olcu = await measureImage(file);
+        if (olcu) {
+          form.set('width', String(olcu.width));
+          form.set('height', String(olcu.height));
+        }
         const { error: actionError } = await upload(form);
         if (actionError) {
           setError(actionError);

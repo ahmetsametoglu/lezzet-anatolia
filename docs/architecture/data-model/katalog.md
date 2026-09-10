@@ -22,6 +22,8 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 | `image_zoom` | smallint |  | `100` |
 | `image_alt` | jsonb | • |  |
 | `image_updated_at` | timestamptz | • |  |
+| `image_width` | smallint | • |  |
+| `image_height` | smallint | • |  |
 | `tagline` | jsonb | • |  |
 | `sort_order` | int |  | `0` |
 | `is_active` | boolean |  | `true` |
@@ -58,6 +60,8 @@ Kapak `Category.image_key`'de kalır — kartı çizen okuma kategoriyi zaten sa
 | `image_zoom` | smallint |  | `100` |
 | `image_alt` | jsonb | • |  |
 | `image_updated_at` | timestamptz | • |  |
+| `image_width` | smallint | • |  |
+| `image_height` | smallint | • |  |
 | `sort_order` | int |  | `0` |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
@@ -71,6 +75,7 @@ Kapak `Category.image_key`'de kalır — kartı çizen okuma kategoriyi zaten sa
 - **`image_zoom`** — zoom %, 100-400
 - **`image_alt`** — erişilebilirlik/SEO; boşsa kategori adı kullanılır
 - **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
+- **`image_width` · `image_height`** — kaynak dosyanın piksel ölçüsü (05.37; gerekçe: Category satırı)
 - **`sort_order`** — **rotasyonun döngü sırası** — vitrin sırası değil (aşağıya bakınız)
 
 **Havuz = kapak + bu satırlar.** Kapak dışarıda bırakılsaydı, havuza ilk fotoğraf eklendiği gün kapak sessizce emekliye ayrılırdı. Anahtarı olmayan satır havuza girmez (kapağı henüz yüklenmemiş kategori boş kare göstermesin).
@@ -100,6 +105,8 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 | `image_zoom` | smallint |  | `100` |
 | `image_alt` | jsonb | • |  |
 | `image_updated_at` | timestamptz | • |  |
+| `image_width` | smallint | • |  |
+| `image_height` | smallint | • |  |
 | `sort_order` | int |  | `0` |
 | `is_active` | boolean |  | `true` |
 | `is_featured` | boolean |  | `false` |
@@ -116,6 +123,7 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 - **`image_zoom`** — OG kartı zoom %, 100-400
 - **`image_alt`** — OG kartı alt metni; boşsa ada düşer
 - **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
+- **`image_width` · `image_height`** — kaynak dosyanın piksel ölçüsü (05.37; gerekçe: Category satırı)
 - **`is_featured`** — ana sayfada göster (05.18) — kural Category satırındakiyle birebir. Pasif bir koleksiyon (hazırlanan kampanya) işaretli kalabilir; okuma ikisini birden sorar
 
 `product_collections`: (`product_id`, `collection_id`) çoklu bağ + `position` (int) — koleksiyon **içindeki** vitrin sırası; admin sürükle-bırakla kürasyon yapar. Üyeler koleksiyon başına `position` ile sıralı okunur.
@@ -162,6 +170,8 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 | `image_zoom` | smallint |  | `100` |
 | `image_alt` | jsonb | • |  |
 | `image_updated_at` | timestamptz | • |  |
+| `image_width` | smallint | • |  |
+| `image_height` | smallint | • |  |
 | `ingredients` | jsonb | • |  |
 | `nutrition` | jsonb | • |  |
 | `storage_instructions` | jsonb | • |  |
@@ -199,6 +209,7 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 - **`image_zoom`** — kapak zoom %, 100-400; dikey/kare kaynağı yatay banda kırpar (yeniden çektirmeden)
 - **`image_alt`** — kapak alternatif metni (erişilebilirlik + SEO); **boşsa müşteride ürün adına düşer** (kopya tutulmaz)
 - **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
+- **`image_width` · `image_height`** — kaynak dosyanın piksel ölçüsü (05.37; gerekçe: Category satırı)
 - **`vat_rate`** — ürün bazında KDV (5.5 / 20)
 - **`date_type`** — son tarih tipi — güvenlik/kalite (varsayılan `DDM`)
 - **`shelf_life_days`** — toplam raf ömrü (gün); kalan % hesabı için
@@ -250,6 +261,8 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 | `image_zoom` | smallint |  | `100` |
 | `image_alt` | jsonb | • |  |
 | `image_updated_at` | timestamptz | • |  |
+| `image_width` | smallint | • |  |
+| `image_height` | smallint | • |  |
 | `sort_order` | int |  | `0` |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
@@ -263,6 +276,7 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 - **`image_zoom`** — zoom %, 100-400
 - **`image_alt`** — erişilebilirlik/SEO; boşsa ürün adı kullanılır
 - **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
+- **`image_width` · `image_height`** — kaynak dosyanın piksel ölçüsü (05.37; gerekçe: Category satırı)
 - **`sort_order`** — galeri sırası (sürükle-bırak)
 
 **Kapak ↔ galeri takası:** "bunu kapak yap" silme değil yer değiştirmedir — seçilen fotoğraf kapağa geçerken eski kapak onun galerideki sırasına oturur, künye (dosya + odak + zoom + alt + damga) bütün hâlinde taşınır. Odak fotoğrafın özelliğidir, çerçevenin değil. Ürünün kapağı yoksa satır galeriden çıkar (aynı dosya iki yerde görünmez).
@@ -284,6 +298,8 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 | `image_zoom` | smallint |  | `100` |
 | `image_alt` | jsonb | • |  |
 | `image_updated_at` | timestamptz | • |  |
+| `image_width` | smallint | • |  |
+| `image_height` | smallint | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
@@ -566,6 +582,8 @@ Birden çok ürünü tek fiyata sunan katalog kısayolu; sepete eklenince tek te
 | `image_zoom` | smallint |  | `100` |
 | `image_alt` | jsonb | • |  |
 | `image_updated_at` | timestamptz | • |  |
+| `image_width` | smallint | • |  |
+| `image_height` | smallint | • |  |
 | `total_price` | numeric(10, 2) |  |  |
 | `serves` | int | • |  |
 | `is_active` | boolean |  | `true` |
@@ -629,6 +647,8 @@ Tarif bir ürün DEĞİL, bir **vitrindir**: kendi ürünlerimizi bir yemeğin i
 | `image_zoom` | smallint |  | `100` |
 | `image_alt` | jsonb | • |  |
 | `image_updated_at` | timestamptz | • |  |
+| `image_width` | smallint | • |  |
+| `image_height` | smallint | • |  |
 | `is_active` | boolean |  | `false` |
 | `sort_order` | int |  | `0` |
 | `created_at` | timestamptz |  | `now()` |

@@ -395,6 +395,8 @@ describe('yedek kategoriler ÇAĞIRANIN kararıdır', () => {
           imageKey: null,
           imageAlt: null,
           imageUpdatedAt: null,
+          imageWidth: null,
+          imageHeight: null,
           // Kırpma varsayılanı elle yazılmaz, tek kaynaktan gelir (`CLAUDE §1`).
           ...DEFAULT_CROP_FIELDS,
         },

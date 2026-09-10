@@ -77,7 +77,7 @@ export function SwipeCard({ card, onVote, busy, compact }: SwipeCardProps) {
           transition: startX.current === null ? 'transform 200ms ease-out' : undefined,
         }}
       >
-        <FramedImage src={card.image.url} alt={card.name} ratio={RATIO_SOURCE} crop={card.image.crop} className="!rounded-none" />
+        <FramedImage src={card.image.url} alt={card.name} ratio={RATIO_SOURCE} crop={card.image.crop} frames={card.image.frames} className="!rounded-none" />
         <div className={`flex flex-col gap-1.5 ${compact ? 'px-5 pt-4.5 pb-5.5' : 'px-5.5 py-4.5'}`}>
           <h2 className={`font-serif ${compact ? 'text-card-title' : 'text-h2-sm'} text-ink`}>{card.name}</h2>
           {card.description && (

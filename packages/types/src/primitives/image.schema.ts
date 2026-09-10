@@ -43,6 +43,13 @@ export const RATIO_BAND = 16 / 9;
  * göstermek zorunda — iki yerde yazılsaydı operatörün kadrajladığı alan müşterininkinden farklı olurdu.
  */
 export const RATIO_ILLUSTRATION = 1.3;
+/**
+ * Sohbet kartı (09.09, kullanıcı önerisi): WhatsApp/Messenger/Instagram'a giden ürün kartı ve karusel
+ * görseli. Messenger'ın kart oranı 1.91:1 (yatay varsayılan); WhatsApp da kart başlığını geniş
+ * kırpıyor. Operatör kırpma penceresinde bu çerçeveyi de görür — sohbette ne görüneceğini
+ * yükleyen kişi bilir, CDN aynı formülle keser (`cropTrim`).
+ */
+export const RATIO_CHAT = 1.91;
 
 /** Kaynaktan türeyen görünüm çerçevesi — odak panelinin canlı önizlemesi bunları gösterir. */
 export interface ImageFrame {
@@ -60,6 +67,7 @@ const OBJECT_FRAMES: ImageFrame[] = [
   // telefon eninde kare — çerçeve zaten burada tanımlıydı, yalnız görünürlük listesi genişledi.
   { ratio: RATIO_SQUARE, label: '1:1', where: 'sepet · paket satırı · detay kahramanı (mobil)' },
   { ratio: RATIO_SQUARE, label: '1:1', where: 'kategori dairesi', circle: true },
+  { ratio: RATIO_CHAT, label: '1.91:1', where: 'sohbet kartı (WhatsApp · Messenger · Instagram)' },
 ];
 
 const BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'vitrin bandı · paylaşım kartı' }];
@@ -222,13 +230,90 @@ export function sourceAdvisory(role: ImageRole, info: SourceImageInfo, zoom = IM
   return null;
 }
 
-/** Ana çerçeveye `cover` + zoom ile oturunca görünen kaynak bölgesinin kısa kenarı (px). */
+/**
+ * Ana çerçeveye `cover` + zoom ile oturunca görünen kaynak bölgesinin kısa kenarı (px) —
+ * `visibleFraction`ın aynı matematiği; ikinci kopya değil, onun bir okuması.
+ */
 function shownSourceShortSide(frameRatio: number, info: SourceImageInfo, zoom: number): number {
   const ratio = info.width / info.height;
-  const z = zoom / 100;
-  // cover: kaynak oranı çerçeveden genişse yükseklik sınırlar, dar ise genişlik sınırlar.
-  const shortPx = ratio >= frameRatio ? info.height : info.width;
-  return shortPx / z;
+  const { fw, fh } = visibleFraction(ratio, frameRatio, zoom);
+  // cover: kaynak oranı çerçeveden genişse yükseklik sınırlar (fh = 1/z), dar ise genişlik (fw = 1/z).
+  return ratio >= frameRatio ? info.height * fh : info.width * fw;
+}
+
+// ── CDN KADRAJI: CSS'teki odak + zoom kesiminin AYNISI, dört kenar kesri olarak (05.37) ────────
+//
+// `object-fit: cover` + `object-position: x% y%` + `scale(z)` ile tarayıcının gösterdiği kare, kaynağın
+// şu parçasıdır: genişliğin `fw`, yüksekliğin `fh` kesri; odak o parçayı kaynağın içinde x/y oranında
+// konumlar. Cloudflare `trim=top;right;bottom;left` 0–1 kesir kabul ediyor ve ölçeklemeden ÖNCE
+// uyguluyor (doküman, 09.09) — kesirler doğrudan gider, piksel hesabı yok. Türetimin sağlaması:
+// `z = 1` ve `Rs = Rf` iken dört değer de 0 (hiç kesilmez). Formül BURADA yaşar, adresi kuran yerde
+// değil: iki yol tek matematikten türediği için CSS ile CDN kareleri ayrışamaz.
+
+/** Kaynağın çerçevede GÖRÜNEN parçası — genişlik ve yükseklik kesri (0–1). `zoom` yüzde (100 = cover). */
+export function visibleFraction(sourceRatio: number, frameRatio: number, zoom: number): { fw: number; fh: number } {
+  const z = Math.max(zoom, IMAGE_ZOOM_MIN) / 100;
+  return {
+    fw: 1 / (z * Math.max(1, sourceRatio / frameRatio)),
+    fh: 1 / (z * Math.max(1, frameRatio / sourceRatio)),
+  };
+}
+
+/** Dört kenardan kesilecek kesir (0–1), Cloudflare `trim` sırasıyla: üst · sağ · alt · sol. */
+export interface ImageTrim {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/**
+ * Odak + zoom → çerçeve oranı için kesim. Kaynak ölçüsü bilinmiyorsa `null`: kadraj kurulamaz,
+ * çağıran kesimsiz adrese (ve CSS yoluna) düşer — tahmin yok.
+ */
+export function cropTrim(source: { width: number | null; height: number | null }, frameRatio: number, crop: ImageCrop): ImageTrim | null {
+  if (!source.width || !source.height) return null;
+  const { fw, fh } = visibleFraction(source.width / source.height, frameRatio, crop.zoom);
+  const x = crop.x / 100;
+  const y = crop.y / 100;
+  const round = (v: number) => Math.round(v * 10000) / 10000;
+  return {
+    top: round(y * (1 - fh)),
+    right: round((1 - x) * (1 - fw)),
+    bottom: round((1 - y) * (1 - fh)),
+    left: round(x * (1 - fw)),
+  };
+}
+
+/**
+ * Genişlik merdiveni (px) — web `srcset` ve native aynı basamakları ister ki aynı dönüşüm paylaşılsın;
+ * ayrışan her basamak ayrı bir dönüşümdür ve faturaya ayrı yazılır (05.37).
+ */
+export const IMAGE_WIDTHS = [200, 400, 800, 1200, 1600] as const;
+export type ImageWidth = (typeof IMAGE_WIDTHS)[number];
+
+/** Müşteri yüzeyindeki çerçevelerin ADLI kümesi — CDN türevleri bu anahtarlarla üretilir ve okunur. */
+export const FRAME_RATIOS = {
+  source: RATIO_SOURCE,
+  square: RATIO_SQUARE,
+  band: RATIO_BAND,
+  illustration: RATIO_ILLUSTRATION,
+  chat: RATIO_CHAT,
+} as const;
+export type FrameKey = keyof typeof FRAME_RATIOS;
+
+/** Bir çerçeve oranını adlı kümeye eşler — en yakın oran; elle yazılmış `ratio={1}` de `square`a düşer. */
+export function frameKeyForRatio(ratio: number): FrameKey {
+  let best: FrameKey = 'source';
+  let fark = Number.POSITIVE_INFINITY;
+  for (const [key, r] of Object.entries(FRAME_RATIOS) as [FrameKey, number][]) {
+    const d = Math.abs(r - ratio);
+    if (d < fark) {
+      fark = d;
+      best = key;
+    }
+  }
+  return best;
 }
 
 /** "1,73:1" gibi okunur oran metni (operatöre gösterilir). */
@@ -262,11 +347,28 @@ export const ImageMetaSchema = z.object({
    * DEĞİŞTİRMEZ — CSS'te uygulanır — bu yüzden damga yalnız yükleme akışında yazılır.
    */
   imageUpdatedAt: z.string().nullable(),
+  /**
+   * Kaynak dosyanın piksel ölçüsü (05.37, 09.09). CDN kadrajı (`cropTrim`) kaynak ORANINI ister; oran
+   * saklanmaz, iki kenardan türetilir (CLAUDE §1). Yükleme anında istemci zaten ölçüyor
+   * (`SourceImageInfo`), artık kaydediyor; eski satırlar tek seferlik dolguyla (CDN `format=json`).
+   * `null` = ölçülmemiş: CDN kadrajı kurulamaz, CSS yolu (odak/zoom) yine aynı kareyi gösterir.
+   */
+  imageWidth: z.number().int().positive().nullable(),
+  imageHeight: z.number().int().positive().nullable(),
 });
 export type ImageMeta = z.infer<typeof ImageMetaSchema>;
 
 /** Insert tarafı: anahtar/odak/zoom/alt hepsi DB default'lu ya da nullable → opsiyonel. */
 export const ImageMetaInsertSchema = ImageMetaSchema.partial();
+
+/** Kaynak ölçüsü — yükleme yolunun dosyayla birlikte taşıdığı çift (05.37). */
+export const ImageDimensionsSchema = ImageMetaSchema.pick({ imageWidth: true, imageHeight: true });
+export type ImageDimensions = z.infer<typeof ImageDimensionsSchema>;
+
+/** Yazım yardımcısı: ölçü verilmediyse iki alan açıkça `null` — bayat ölçü kalmaz. */
+export function imageDimensionsOf(dims: ImageDimensions | null | undefined): ImageDimensions {
+  return { imageWidth: dims?.imageWidth ?? null, imageHeight: dims?.imageHeight ?? null };
+}
 
 /**
  * DÜZENLENEBİLİR kırpma alanları — dosyanın kendisi (imageKey) ve alt metin AYRI akışlardadır; form,
@@ -311,6 +413,8 @@ export function pickImageMeta(e: ImageMeta): ImageMeta {
     imageZoom: e.imageZoom,
     imageAlt: e.imageAlt,
     imageUpdatedAt: e.imageUpdatedAt,
+    imageWidth: e.imageWidth,
+    imageHeight: e.imageHeight,
   };
 }
 

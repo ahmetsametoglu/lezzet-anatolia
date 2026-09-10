@@ -1,5 +1,5 @@
 import 'server-only';
-import { validateImageUpload } from '@lezzet/types';
+import { validateImageUpload, type ImageDimensions } from '@lezzet/types';
 
 /**
  * **Görsel yüklemenin TEK KAPISI** (05.7) — R2'ye yazan hiçbir eylem `FormData`'dan dosyayı
@@ -34,4 +34,17 @@ export function readImageUpload(form: FormData, field = 'file'): File {
   const hata = validateImageUpload({ type: file.type, size: file.size });
   if (hata) throw new Error(hata);
   return file;
+}
+
+/**
+ * Yükleme formundaki KAYNAK ÖLÇÜSÜ (05.37) — tarayıcının ölçüp `width`/`height` alanlarına yazdığı
+ * değerler (`ImageUploadButton`). İkisi de pozitif tam sayı değilse `null`: ölçü dosyanın ön koşulu
+ * değil, CDN kadrajının ön koşulu; eksikse satır ölçüsüz yazılır ve CSS yolu aynı kareyi gösterir.
+ * Sunucu ölçmez — görsel çözücü bilinçli olarak yok (`STACK`: `sharp` yok, dönüşüm CDN'de).
+ */
+export function readImageDimensions(form: FormData): ImageDimensions | null {
+  const w = Number(form.get('width'));
+  const h = Number(form.get('height'));
+  if (!Number.isInteger(w) || !Number.isInteger(h) || w <= 0 || h <= 0) return null;
+  return { imageWidth: w, imageHeight: h };
 }

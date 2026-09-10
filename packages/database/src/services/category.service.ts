@@ -10,6 +10,7 @@ import {
   type CategoryUpdate,
   type ImageCropFields,
   type LocalizedText,
+  type ImageDimensions,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { CategoryImageService } from './category-image.service';
@@ -96,8 +97,8 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
   }
 
   /** Görsel anahtarını + sürüm damgasını yazar (R2 yüklemesinden sonra). Relative key; prefix R2'de. */
-  async setImageKey(id: string, imageKey: string): Promise<Category> {
-    return this.writeImageKey(id, imageKey);
+  async setImageKey(id: string, imageKey: string, dims: ImageDimensions | null = null): Promise<Category> {
+    return this.writeImageKey(id, imageKey, dims);
   }
 
   /**

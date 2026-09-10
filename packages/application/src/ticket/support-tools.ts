@@ -11,6 +11,9 @@ import {
   NUTRITION_KEYS,
   NUTRITION_LABELS,
   ORDER_STATUS_LABELS,
+  RATIO_CHAT,
+  cropOf,
+  cropTrim,
   resolveLocalizedText,
   type Address,
   type Conversation,
@@ -359,8 +362,11 @@ async function kartUrunu(
   if (!detay) return { durum: 'yok', kod, mesaj: `"${kod}" kodlu ürün bulunamadı — urun_ara'daki "kod" alanını aynen geç.` };
   const boylar = detay.variants.filter((v) => v.priceCents !== null);
   if (boylar.length === 0) return { durum: 'kapali', kod, mesaj: 'bu ürün bu kanalda satışa kapalı — kart gönderilmedi.' };
+  /* Kadraj (05.37): operatörün odak+zoom'u sohbet kartı çerçevesine (`RATIO_CHAT`) `trim` olarak gider —
+     kırpma penceresindeki "sohbet kartı" önizlemesiyle aynı kare. Kaynak ölçüsü yoksa kesim yok, tam görsel. */
+  const trim = urun ? cropTrim({ width: urun.imageWidth, height: urun.imageHeight }, RATIO_CHAT, cropOf(urun)) : null;
   const imageUrl =
-    cdnImageUrl(urun?.imageKey, urun?.imageUpdatedAt, { width: CARD_IMAGE_WIDTH, format: 'jpeg' }) ??
+    cdnImageUrl(urun?.imageKey, urun?.imageUpdatedAt, { width: CARD_IMAGE_WIDTH, format: 'jpeg', trim }) ??
     (META_IMAGE_KEY.test(urun?.imageKey ?? '') ? publicImageUrl(urun?.imageKey, urun?.imageUpdatedAt) : null);
   return { durum: 'ok', kod, detay, boylar, imageUrl };
 }

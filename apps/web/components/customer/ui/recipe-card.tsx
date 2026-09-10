@@ -82,7 +82,7 @@ export function RecipeTeaserCard({ recipe, labels }: RecipeTeaserCardProps) {
       href={{ pathname: '/recipe/[slug]', params: { slug: recipe.slug } }}
       className="group flex cursor-pointer flex-col gap-2.5"
     >
-      <FramedImage src={recipe.image.url} alt={recipe.name} ratio={RATIO_SOURCE} crop={recipe.image.crop} />
+      <FramedImage src={recipe.image.url} alt={recipe.name} ratio={RATIO_SOURCE} crop={recipe.image.crop} frames={recipe.image.frames} />
       <div className="flex flex-col gap-0.5">
         <span className="font-serif text-h2-sm text-ink">{recipe.name}</span>
         <span className="font-sans text-note text-muted">{meta}</span>
@@ -119,7 +119,7 @@ export function RecipeListCard({ recipe, locale, labels, compact = false }: Reci
           src={recipe.image.url}
           alt={recipe.name}
           ratio={compact ? RATIO_BAND : RATIO_SOURCE}
-          crop={recipe.image.crop}
+          crop={recipe.image.crop} frames={recipe.image.frames}
           className="!rounded-none"
         />
         {badge && (

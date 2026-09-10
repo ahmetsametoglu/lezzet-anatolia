@@ -5,7 +5,7 @@ import { SiteImageService, serviceDb } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
 import { SiteImageSlotSchema, type ImageCrop, type LocalizedText, type SiteImageSlot } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
-import { readImageUpload } from '@/lib/media/upload';
+import { readImageDimensions, readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { SETTINGS_PATH } from './settings-url';
 
@@ -52,7 +52,7 @@ export async function uploadSiteImageAction(slot: string, form: FormData): Promi
     const key = r2Keys.siteImage(target, file.name);
     // Biçim kapıda doğrulandı (`readImageUpload`); eski `|| 'image/jpeg'` yedeği bir tahmindi.
     await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
-    await new SiteImageService(serviceDb()).put(target, key);
+    await new SiteImageService(serviceDb()).put(target, key, readImageDimensions(form));
 
     revalidateSurfaces();
     return { data: null, error: null };

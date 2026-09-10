@@ -1,8 +1,8 @@
 import { percentOffCents, resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
 import { pricePerKg } from '@lezzet/helper';
-import { publicImageUrl } from '@lezzet/storage';
-import { cropOf, resolveLocalizedText } from '@lezzet/types';
+import { cdnImageUrl, publicImageUrl } from '@lezzet/storage';
+import { CROP_CENTER, cropOf, cropTrim, FRAME_RATIOS, IMAGE_WIDTHS, resolveLocalizedText, type FrameKey } from '@lezzet/types';
 import type {
   AvailableStockTotal,
   Category,
@@ -14,7 +14,7 @@ import type {
   StockStatus,
 } from '@lezzet/types';
 import type { ScopeCampaign } from './campaign';
-import type { StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
+import type { ImageFrameSources, StorefrontCategory, StorefrontImage, StorefrontProduct, StorefrontVariant } from './storefront-types';
 import { rotateDaily } from './featured';
 import { VISITOR, type PricingViewer } from './pricing-viewer';
 
@@ -29,9 +29,40 @@ import { VISITOR, type PricingViewer } from './pricing-viewer';
  * (`domain-core/resolvePrice`) — `database` motora bağlanmaz (STACK §4), birleştirme burada yapılır.
  */
 
-/** Görsel künyesini karta indirger — anahtar→URL ve odak/zoom çözümü TEK yerde. */
+/** Görsel künyesini karta indirger — anahtar→URL, odak/zoom ve CDN türevleri TEK yerde. */
 export function imageOf(row: ImageMeta): StorefrontImage {
-  return { url: publicImageUrl(row.imageKey, row.imageUpdatedAt), crop: cropOf(row) };
+  return { url: publicImageUrl(row.imageKey, row.imageUpdatedAt), crop: cropOf(row), frames: frameSourcesOf(row) };
+}
+
+/** Görseli çözülemeyen satırın yer tutucusu — vitrin, sepet ve sipariş kapılarının ortak son çaresi. */
+export const EMPTY_IMAGE: StorefrontImage = { url: null, crop: CROP_CENTER, frames: null };
+
+/** `srcSet`te `src` olarak seçilen basamak — orta boy; tarayıcı `sizes`e göre zaten doğrusunu seçer. */
+const FRAME_SRC_WIDTH = 800;
+
+/**
+ * Çerçeve başına CDN kaynakları (05.37): operatörün odak+zoom kadrajı `cropTrim` ile dört kenar
+ * kesrine çevrilir, genişlik merdiveninin her basamağı için adres kurulur. Tek yerde: web `FramedImage`
+ * da native API de aynı adresleri alır, aynı dönüşüm paylaşılır (ayrışan basamak ayrı faturadır).
+ *
+ * `null`: CDN yok (r2.dev tabanı — orada dönüşüm yok) ya da kaynak ölçüsü bilinmiyor (`image_width`
+ * boş; dolgu `pnpm images:dims`). İki hâlde de çağıran `url` + CSS yoluyla aynı kareyi çizer.
+ */
+export function frameSourcesOf(row: ImageMeta): ImageFrameSources | null {
+  const crop = cropOf(row);
+  const dims = { width: row.imageWidth, height: row.imageHeight };
+  const out: Partial<ImageFrameSources> = {};
+  for (const key of Object.keys(FRAME_RATIOS) as FrameKey[]) {
+    const trim = cropTrim(dims, FRAME_RATIOS[key], crop);
+    if (!trim) return null;
+    const basamaklar = IMAGE_WIDTHS.map((width) => ({ width, url: cdnImageUrl(row.imageKey, row.imageUpdatedAt, { width, trim, format: 'auto' }) }));
+    if (basamaklar.some((b) => !b.url)) return null;
+    out[key] = {
+      src: basamaklar.find((b) => b.width === FRAME_SRC_WIDTH)!.url!,
+      srcSet: basamaklar.map((b) => `${b.url} ${b.width}w`).join(', '),
+    };
+  }
+  return out as ImageFrameSources;
 }
 
 /**

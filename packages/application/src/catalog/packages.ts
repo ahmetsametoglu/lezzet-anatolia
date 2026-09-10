@@ -1,7 +1,6 @@
 import { BundleService, ProductService, ProductVariantService, StockService, type Db } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
 import {
-  CROP_CENTER,
   resolveLocalizedText,
   type Bundle,
   type BundleItem,
@@ -11,7 +10,7 @@ import {
   type ProductVariant,
 } from '@lezzet/types';
 import { decideBundleAgainstWarehouse } from '@lezzet/domain-core';
-import { imageOf } from './map';
+import { EMPTY_IMAGE, imageOf } from './map';
 import { pickFeatured } from './featured';
 import type { PlaceWarehouses, StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './storefront-types';
 
@@ -151,7 +150,7 @@ function toDetail(bundle: BundleRow, locale: PreferredLanguage, context: Package
       name: product ? resolveLocalizedText(product.name, locale) : '',
       unitLabel: variant ? resolveLocalizedText(variant.label, locale) : '',
       qty: item.qty,
-      image: product ? imageOf(product) : { url: null, crop: CROP_CENTER },
+      image: product ? imageOf(product) : EMPTY_IMAGE,
     };
   });
 

@@ -338,6 +338,8 @@ export type {
   StorefrontCollectionHead,
   StorefrontDeclaration,
   StorefrontFamilyMember,
+  ImageFrameSource,
+  ImageFrameSources,
   StorefrontImage,
   StorefrontProduct,
   StorefrontProductDetail,

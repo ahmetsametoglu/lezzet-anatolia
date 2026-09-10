@@ -16,7 +16,7 @@ import {
   orderTimeline,
 } from '@lezzet/domain-core';
 import type { OrderTimelineStep } from '@lezzet/domain-core';
-import { CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText } from '@lezzet/types';
 import type {
   CustomerOrderStatus,
   DeliveryType,
@@ -27,7 +27,7 @@ import type {
   PreferredLanguage,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { imageOf } from '../catalog/map';
+import { EMPTY_IMAGE, imageOf } from '../catalog/map';
 import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 import type { StorefrontImage } from '../catalog/storefront-types';
 
@@ -512,8 +512,6 @@ export async function getCustomerOrderDetail(
 
 /* ─────────────────────────── kalem künyesi (iç) ─────────────────────────── */
 
-/** Görseli çözülemeyen satırın yer tutucusu — vitrin kapılarının aynı son çaresi (`CROP_CENTER`). */
-const EMPTY_IMAGE: StorefrontImage = { url: null, crop: CROP_CENTER };
 
 /**
  * Sipariş kaleminin MÜŞTERİ künyesi — ürün adı, boy etiketi, görsel.

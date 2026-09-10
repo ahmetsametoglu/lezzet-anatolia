@@ -6,7 +6,7 @@ import { CategoryImageService, CategoryService, serviceDb } from '@lezzet/databa
 import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import { pickCropFields, CATEGORY_GALLERY_MAX, type CategoryImage, type ImageCropFields } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
-import { readImageUpload } from '@/lib/media/upload';
+import { readImageDimensions, readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from './paths';
 import type { GalleryPhotoView } from '@/components/operation/form/image-gallery-types';
@@ -64,7 +64,7 @@ export async function uploadCategoryPhotoAction(categoryId: string, form: FormDa
     // Biçim kapıda doğrulandı (`readImageUpload`) — `file.type` artık kabul listesinden bir değer,
     // eski `|| 'image/jpeg'` yedeği bilinmeyen biçimi JPEG diye etiketleyen bir tahmindi.
     await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
-    const row = await svc.add(categoryId, key);
+    const row = await svc.add(categoryId, key, readImageDimensions(form));
     revalidatePath(PRODUCTS_PATH);
     return { data: toPhotoView(row), error: null };
   } catch (err) {

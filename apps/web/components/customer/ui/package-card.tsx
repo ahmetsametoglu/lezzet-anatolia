@@ -86,7 +86,7 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
         .join(' ')}
     >
       <div className="relative">
-        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SOURCE} crop={pack.image.crop} className="!rounded-none" />
+        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SOURCE} crop={pack.image.crop} frames={pack.image.frames} className="!rounded-none" />
         {/* "6 kişilik" künyesi fotoğrafın üstünde durur; girilmemişse rozet HİÇ çizilmez. */}
         {pack.serves !== null && (
           <span
@@ -219,7 +219,7 @@ function WidePackageCard({ pack, locale, labels }: Omit<PackageListCardProps, 'c
         .join(' ')}
     >
       <div className="w-[260px] flex-none">
-        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SOURCE} crop={pack.image.crop} className="!rounded-none" />
+        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SOURCE} crop={pack.image.crop} frames={pack.image.frames} className="!rounded-none" />
       </div>
       <div className="flex flex-1 flex-col gap-2 px-6 py-5">
         <span className="font-serif text-h2-sm text-ink">{pack.name}</span>

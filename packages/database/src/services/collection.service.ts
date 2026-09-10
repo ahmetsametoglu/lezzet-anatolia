@@ -10,6 +10,7 @@ import {
   type CollectionUpdate,
   type ImageCropFields,
   type LocalizedText,
+  type ImageDimensions,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
 import { uniqueSlugForTable } from '../utils/slug';
@@ -108,8 +109,8 @@ export class CollectionService extends BaseDbService<Collection, CollectionInser
   }
 
   /** Kapak görseli anahtarı + sürüm damgası (R2'ye yükleme sonrası). */
-  async setImageKey(id: string, imageKey: string): Promise<Collection> {
-    return this.writeImageKey(id, imageKey);
+  async setImageKey(id: string, imageKey: string, dims: ImageDimensions | null = null): Promise<Collection> {
+    return this.writeImageKey(id, imageKey, dims);
   }
 
   /** Sürükle-bırak sırası: verilen id dizisine göre sortOrder'ı 0..n-1 yazar. */

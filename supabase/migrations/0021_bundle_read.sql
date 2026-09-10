@@ -28,6 +28,8 @@ returns table (
   image_zoom smallint,
   image_alt jsonb,
   image_updated_at timestamptz,
+  image_width smallint,                          -- kaynak ölçüsü (05.37) — açık kolon listesi, unutulursa Zod'da patlar (aşağıdaki not)
+  image_height smallint,
   total_price numeric,
   serves int,
   is_active boolean,
@@ -92,6 +94,7 @@ as $$
   select
     b.id, b.name, b.description, b.slug,
     b.image_key, b.image_focal_x, b.image_focal_y, b.image_zoom, b.image_alt, b.image_updated_at,
+    b.image_width, b.image_height,
     b.total_price, b.serves, b.is_active, b.sort_order, b.is_featured, b.created_at,
     coalesce(a.item_count, 0),
     coalesce(a.variant_ids, '{}'::uuid[]),

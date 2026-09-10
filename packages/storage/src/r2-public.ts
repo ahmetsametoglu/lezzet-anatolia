@@ -40,7 +40,7 @@ function withVersion(url: string, version?: string | null): string {
 }
 
 /** Cloudflare dönüşümünün desteklediği çıktı biçimleri — Meta görsel mesajı için `jpeg`. */
-export type CdnImageFormat = 'auto' | 'jpeg' | 'png' | 'webp' | 'avif';
+export type CdnImageFormat = 'auto' | 'jpeg' | 'png' | 'webp' | 'avif' | 'json';
 
 export interface CdnImageOptions {
   /** En fazla genişlik (px); kaynak küçükse büyütülmez (`fit=scale-down`). */
@@ -50,6 +50,11 @@ export interface CdnImageOptions {
   format?: CdnImageFormat;
   /** 1–100; boşsa Cloudflare varsayılanı. */
   quality?: number;
+  /**
+   * Dört kenardan kesilecek KESİR (0–1), üst·sağ·alt·sol — `cropTrim`in ürettiği kadraj (05.37).
+   * Cloudflare kesimi ölçeklemeden ÖNCE uygular; dört sıfır ise parametre hiç yazılmaz.
+   */
+  trim?: { top: number; right: number; bottom: number; left: number } | null;
 }
 
 /**
@@ -70,7 +75,10 @@ export function cdnImageUrl(key: string | null | undefined, version: string | nu
   const base = publicBase();
   if (!key || !base || /\.r2\.dev$/i.test(new URL(base).hostname)) return null;
 
+  const t = options.trim;
+  const kesim = t && (t.top || t.right || t.bottom || t.left) ? `trim=${[t.top, t.right, t.bottom, t.left].map((v) => Math.min(Math.max(v, 0), 0.99)).join(';')}` : null;
   const parts = [
+    kesim,
     options.width ? `width=${Math.round(options.width)}` : null,
     options.height ? `height=${Math.round(options.height)}` : null,
     'fit=scale-down',

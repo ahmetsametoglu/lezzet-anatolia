@@ -1,8 +1,8 @@
 import { ProductService, ProductVariantService, SettingsService, type Db } from '@lezzet/database';
 import { decideCartAgainstWarehouse, meetsMinBasket, type CartLineInput, type CartLineRoute, type DiscountableLine } from '@lezzet/domain-core';
-import { CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText } from '@lezzet/types';
 import type { PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
-import { EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '../catalog/map';
+import { EMPTY_IMAGE, EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '../catalog/map';
 import type { ProductContext } from '../catalog/map';
 import { loadProductContext } from '../catalog/product-context';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
@@ -502,7 +502,7 @@ function orphanLine(entry: CartEntry): CartLine {
     collectionIds: [],
     slug: '',
     name: '',
-    image: { url: null, crop: CROP_CENTER },
+    image: EMPTY_IMAGE,
     unitLabel: '',
     unitPriceCents: null,
     limitCap: null,
