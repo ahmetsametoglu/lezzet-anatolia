@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AuthErrorKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -257,7 +258,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           source={require('../../../assets/images/logo.png')}
           style={styles.logo}
-          accessibilityLabel={t.brand}
+          accessibilityLabel={brand.name}
         />
         <Text style={styles.title} accessibilityRole="header">
           {t.title}

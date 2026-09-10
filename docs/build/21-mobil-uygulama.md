@@ -14668,3 +14668,28 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     cümle, tek kapanış; auth kesintisi → personel kabukta kalır. Mobil paket 1526/1528 (iki düşüş
     `unistyles.test.ts`in italik yazı testleri — bu işle ilgisiz, önceden var) · mobil `typecheck` ·
     `lint` · `knip` temiz.
+
+- [x] (21.305) **MARKA ADI "LEZZET ANATOLIE" — mobilde 13 dosyadaki "Anatolia" düzeldi; tek başına ad `@lezzet/brand`dan okunuyor** (kullanıcı kararı 10.09: *"Projemizin adı A ile değil, e ile bitiyor"*; sosyal şeridinin notu `not-mobil-marka-adi-anatolie`; web ve ortak paketler `7ac1c878`te düzelmişti)
+  `touches:` `apps/mobile/app.config.ts` · `apps/mobile/README.md` · `apps/mobile/src/components/scan/scan-sheet.tsx` · `apps/mobile/src/components/screen-placeholder.test.tsx` · `apps/mobile/src/screens/login/login-screen.tsx` · `apps/mobile/src/screens/onboarding/onboarding-screen.tsx` · `apps/mobile/src/screens/profile-setup/profile-setup-screen.tsx` · `apps/mobile/src/screens/support/ticket-detail-screen.tsx` · `apps/mobile/src/screens/{account,checkout,invite,legal,login,onboarding,profile-setup,support}/messages.json` · `packages/brand/src/name.ts` · `packages/brand/src/index.ts` · `packages/brand/package.json`
+
+  **Durum (10.09) — TAMAM.**
+  · **Tek başına ad artık kopya değil:** giriş, onboarding ve künye ekranlarının logo etiketi (`t.brand`) ile
+    destek sohbetinin ekip etiketi (`fromTeam`) `brand.name` okuyor — sözlüklerdeki 12 kopya silindi.
+    Kamera izni cümlesi (`scan-sheet`) de öyle.
+  · **Uygulamanın adı `@lezzet/brand/name` alt yolundan:** `app.config.ts` Node'un kendi ESM
+    yükleyicisiyle okunuyor ve bekçi (`app-config-guard.test`) paket girişini yasaklıyor; ilk denemede
+    iki testi kırmızıya çevirdi. Pakete yaprak `src/name.ts` ve `./name` ihracı eklendi, `brand.name`
+    de ondan türüyor — ad tek yerde. `expo config` → `name: 'Lezzet Anatolie'`. Cihazdaki simgenin adı
+    native bir değerdir, geliştirme istemcisi yeniden derlenince değişir.
+  · **Cümle içindekiler elle, Türkçe ek uyumuyla:** "Anatolia'ya" → "Anatolie'ye" (davet), "Anatolia'da"
+    → "Anatolie'de" (hesap paylaşımı); checkout'un komşu mesajı, yasal metinler, README, test başlığı.
+  · **Bu satırın dışında kalanlar:** kimlikler — paket/bundle `com.lezzetanatolia.app`, şema
+    `lezzetanatolia://`, `slug` — kullanıcı kararıyla (10.09 akşam: *"her yerde düzeltilecek"*)
+    `…anatolie`ye geçecek; Firebase ve Apple kaydı E'li değerle yapılıyor. Bu yeni bir uygulama kimliği
+    demek (yeniden derleme, cihazlarda yeni kurulum, derin bağlantı şeması), o yüzden push kurulumu
+    talebiyle (`mobil-native-push-kurulumu`) aynı turda. Tohum hesaplarının `@lezzetanatolia.fr`
+    e-postaları seed + web + mobil geliştirme girişiyle birlikte, sosyal kümenin tazeleme penceresinde.
+    Logodaki "Anatolia" yazısı görsel dosyanın içinde; yenisi tasarımdan gelir.
+  · **Doğrulama:** mobilde büyük harfli "Anatolia" 0 · mobil paket 1538/1540 (iki düşüş
+    `unistyles.test.ts`in italik yazı testleri, önceden var) · kök `typecheck` 20/20 · birim projesi
+    2195/2195 · `lint` · `knip` temiz.

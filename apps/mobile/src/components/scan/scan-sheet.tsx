@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Platform, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -52,7 +53,7 @@ const MESSAGES = {
   permissionTitle: 'Kamera izni gerekiyor',
   permissionBody: 'Kod okutmak için kamera kullanılır; görüntü kaydedilmez.',
   permissionCta: 'İzin ver',
-  permissionDenied: 'Kamera izni kapalı. Cihaz ayarlarından Lezzet Anatolia için kamerayı açın.',
+  permissionDenied: `Kamera izni kapalı. Cihaz ayarlarından ${brand.name} için kamerayı açın.`,
   missingDev: 'Kamera bu derlemede yok — dev-client yeniden derlenince açılır. Alttaki simülasyon havuzu aynı akışı koşturur.',
   missingProd: 'Kamera modülü yüklenemedi — uygulamayı güncelleyin.',
   devPool: 'SİMÜLASYON · havuzdan okut (yalnız geliştirme)',

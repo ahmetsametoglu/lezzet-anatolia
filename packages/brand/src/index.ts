@@ -1,7 +1,10 @@
 // @lezzet/brand — marka sabitleri (ad, renkler, yasal metin yolları).
 // Renkler Tailwind token kaynağıyla hizalı (kesin palet Claude Design çıktısıyla gelir).
+import { BRAND_NAME } from './name';
+
 export const brand = {
-  name: 'Lezzet Anatolie',
+  /** Ad TEK yerde yazılı (`./name` — native `app.config.ts`in Node'dan okuduğu yaprak dosya). */
+  name: BRAND_NAME,
   locales: ['tr', 'fr', 'de'] as const,
   defaultLocale: 'fr' as const,
   /**

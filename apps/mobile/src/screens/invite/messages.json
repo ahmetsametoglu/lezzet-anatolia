@@ -6,7 +6,7 @@
     "errorBody": "Daveti açamadık. Bağlantınızı kontrol edip tekrar deneyin.",
     "retry": "Tekrar dene",
     "ok": {
-      "title": "{name} sizi Lezzet Anatolia'ya davet etti",
+      "title": "{name} sizi Lezzet Anatolie'ye davet etti",
       "someone": "Bir tanıdığınız",
       "body": "Ev yapımı Anadolu lezzetleri. Önce kataloğa göz atın; hesabınızı dilediğiniz an açarsınız.",
       "primary": "Kataloğa göz at",
@@ -35,7 +35,7 @@
     "errorBody": "Impossible d'ouvrir l'invitation. Vérifiez votre connexion et réessayez.",
     "retry": "Réessayer",
     "ok": {
-      "title": "{name} vous invite chez Lezzet Anatolia",
+      "title": "{name} vous invite chez Lezzet Anatolie",
       "someone": "Une connaissance",
       "body": "Des saveurs anatoliennes faites maison. Parcourez d'abord le catalogue ; vous créerez votre compte quand vous voudrez.",
       "primary": "Voir le catalogue",
@@ -64,7 +64,7 @@
     "errorBody": "Die Einladung konnte nicht geöffnet werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
     "retry": "Erneut versuchen",
     "ok": {
-      "title": "{name} lädt Sie zu Lezzet Anatolia ein",
+      "title": "{name} lädt Sie zu Lezzet Anatolie ein",
       "someone": "Jemand, den Sie kennen",
       "body": "Hausgemachte anatolische Spezialitäten. Sehen Sie sich zuerst den Katalog an; Ihr Konto eröffnen Sie, wann Sie möchten.",
       "primary": "Katalog ansehen",

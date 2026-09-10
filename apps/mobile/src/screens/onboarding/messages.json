@@ -1,6 +1,5 @@
 {
   "tr": {
-    "brand": "Lezzet Anatolia",
     "skip": "Atla",
     "next": "Devam",
     "start": "Alışverişe başla",
@@ -96,7 +95,6 @@
     }
   },
   "fr": {
-    "brand": "Lezzet Anatolia",
     "skip": "Passer",
     "next": "Continuer",
     "start": "Commencer mes achats",
@@ -192,7 +190,6 @@
     }
   },
   "de": {
-    "brand": "Lezzet Anatolia",
     "skip": "Überspringen",
     "next": "Weiter",
     "start": "Einkauf starten",

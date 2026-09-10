@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import { formatCompactEuro } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { MePointsEarnWayKey } from '@lezzet/types';
@@ -307,7 +308,7 @@ export function OnboardingScreen() {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           source={require('../../../assets/images/logo.png')}
           style={styles.logo}
-          accessibilityLabel={t.brand}
+          accessibilityLabel={brand.name}
         />
         <PressableSurface
           onPress={() => leave('/')}

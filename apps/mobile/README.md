@@ -1,4 +1,4 @@
-# @lezzet/mobile — Lezzet Anatolia mobil uygulaması
+# @lezzet/mobile — Lezzet Anatolie mobil uygulaması
 
 Expo SDK 57 (React Native 0.86, expo-router, Unistyles 3). Mimari ve şerit sınırları:
 `docs/uygulama/02-mimari-ve-sinirlar.md` · görev takibi: `docs/build/21-mobil-uygulama.md`.

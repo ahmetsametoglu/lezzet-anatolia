@@ -6,6 +6,9 @@ import type { ExpoConfig } from 'expo/config';
 import { LOCALES } from '@lezzet/i18n/locale';
 import { localizedPath } from '@lezzet/i18n/paths';
 import { customerSand } from '@lezzet/design-tokens/customer';
+/* Marka adı TEK kaynaktan ve ALT YOLDAN (`@lezzet/brand/name` — yaprak; web'in `brand.name`i de ondan
+   türer). Paketin girişini okumak bekçinin yasağı (`src/lib/app-config-guard.test.ts`). */
+import { BRAND_NAME } from '@lezzet/brand/name';
 
 /*
   EXPO YAPILANDIRMASI — `app.json`ın yerine geçti (21.7).
@@ -71,7 +74,7 @@ function deepLinkPrefixes(): string[] {
 const deepLinkDomain = deepLinkHost(process.env.EXPO_PUBLIC_SITE_URL);
 
 const config: ExpoConfig = {
-  name: 'Lezzet Anatolia',
+  name: BRAND_NAME,
   slug: 'lezzet-anatolia',
   version: '1.0.0',
   orientation: 'portrait',

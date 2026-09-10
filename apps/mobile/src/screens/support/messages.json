@@ -46,7 +46,6 @@
       "refunded": "{amount} iade edildi",
       "notice": "Cevap geldiğinde e-posta ile haber veririz.",
       "fromCustomer": "Siz",
-      "fromTeam": "Lezzet Anatolia",
       "translatedNotice": "Bu yazışmadaki mesajlar otomatik çevriliyor.",
       "photo": "Ekli fotoğraf",
       "reply": {
@@ -152,7 +151,6 @@
       "refunded": "{amount} remboursés",
       "notice": "Nous vous préviendrons par e-mail dès notre réponse.",
       "fromCustomer": "Vous",
-      "fromTeam": "Lezzet Anatolia",
       "translatedNotice": "Les messages de cette conversation sont traduits automatiquement.",
       "photo": "Photo jointe",
       "reply": {
@@ -258,7 +256,6 @@
       "refunded": "{amount} erstattet",
       "notice": "Sobald wir antworten, benachrichtigen wir Sie per E-Mail.",
       "fromCustomer": "Sie",
-      "fromTeam": "Lezzet Anatolia",
       "translatedNotice": "Die Nachrichten in dieser Unterhaltung werden automatisch übersetzt.",
       "photo": "Angehängtes Foto",
       "reply": {

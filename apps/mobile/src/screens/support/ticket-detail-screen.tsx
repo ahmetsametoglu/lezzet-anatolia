@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
@@ -57,7 +58,7 @@ import { useTicket } from './use-ticket.hook';
      de sürüyor; toast onu ezmiyor, süreliyor.
 
   BALONCUĞUN KİMLİĞİ EKRAN OKUYUCUYA DA GİDER: hizalama ve renk "kim yazdı"yı yalnız GÖRENE
-  söyler; her baloncuk `Siz:` / `Lezzet Anatolia:` önekiyle tek parça okunur.
+  söyler; her baloncuk `Siz:` / marka adı (`brand.name`) önekiyle tek parça okunur.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -151,7 +152,9 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   const canSend = draft.trim().length > 0 && !ticket.sending;
 
   const renderMessage = (message: TicketMessage) => {
-    const who = message.fromCustomer ? t.detail.fromCustomer : t.detail.fromTeam;
+    // Ekip etiketi marka adıdır ve çevrilmez — tek kaynağı `@lezzet/brand` (sözlükte üç dilde aynı
+    // kopya duruyordu ve marka yazımı düzeltilince biri eskide kalırdı).
+    const who = message.fromCustomer ? t.detail.fromCustomer : brand.name;
 
     return (
       <View

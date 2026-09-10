@@ -1,6 +1,5 @@
 {
   "tr": {
-    "brand": "Lezzet Anatolia",
     "step": "Adım {n} / {total}",
     "back": "Geri",
     "next": "Devam",
@@ -36,7 +35,6 @@
     }
   },
   "fr": {
-    "brand": "Lezzet Anatolia",
     "step": "Étape {n} / {total}",
     "back": "Retour",
     "next": "Continuer",
@@ -72,7 +70,6 @@
     }
   },
   "de": {
-    "brand": "Lezzet Anatolia",
     "step": "Schritt {n} / {total}",
     "back": "Zurück",
     "next": "Weiter",

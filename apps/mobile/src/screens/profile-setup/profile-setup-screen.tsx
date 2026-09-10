@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -225,7 +226,7 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           source={require('../../../assets/images/logo.png')}
           style={styles.logo}
-          accessibilityLabel={t.brand}
+          accessibilityLabel={brand.name}
         />
       </View>
 

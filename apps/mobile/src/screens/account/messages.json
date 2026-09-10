@@ -61,7 +61,7 @@
       "body": "Bağlantınızı paylaşın. Davet ettiğiniz kişi hesabını açıp ilk siparişinin ödemesini tamamladığında puanınız yazılır.",
       "share": "Paylaş",
       "shareLabel": "Davet bağlantısını paylaş",
-      "shareMessage": "Lezzet Anatolia'da ev yapımı Anadolu lezzetleri. Davetim: {url}"
+      "shareMessage": "Lezzet Anatolie'de ev yapımı Anadolu lezzetleri. Davetim: {url}"
     },
     "menu": {
       "orders": "Siparişlerim",
@@ -198,7 +198,7 @@
       "body": "Partagez votre lien. Vos points sont crédités lorsque la personne invitée crée son compte et règle sa première commande.",
       "share": "Partager",
       "shareLabel": "Partager le lien d’invitation",
-      "shareMessage": "Des saveurs anatoliennes faites maison chez Lezzet Anatolia. Mon invitation : {url}"
+      "shareMessage": "Des saveurs anatoliennes faites maison chez Lezzet Anatolie. Mon invitation : {url}"
     },
     "menu": {
       "orders": "Mes commandes",
@@ -335,7 +335,7 @@
       "body": "Teilen Sie Ihren Link. Ihre Punkte werden gutgeschrieben, sobald die eingeladene Person ein Konto eröffnet und ihre erste Bestellung bezahlt.",
       "share": "Teilen",
       "shareLabel": "Einladungslink teilen",
-      "shareMessage": "Hausgemachte anatolische Köstlichkeiten bei Lezzet Anatolia. Meine Einladung: {url}"
+      "shareMessage": "Hausgemachte anatolische Köstlichkeiten bei Lezzet Anatolie. Meine Einladung: {url}"
     },
     "menu": {
       "orders": "Meine Bestellungen",
