@@ -62,6 +62,14 @@ beforeEach(async () => {
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
+describe('defter append-only', () => {
+  it('servis üzerinden satır silinemez — iptal ters kayıtla yapılır', async () => {
+    // Taban silmeyi varsayılan açık bırakır; defter servisi kurucuda kapatır (10.09). Ret DB'ye
+    // gitmeden taban sınıfta döner, bu yüzden var olmayan bir kimlik yeter.
+    await expect(movements.delete('00000000-0000-0000-0000-000000000000')).rejects.toThrow('delete kapalı');
+  });
+});
+
 describe('elle düzeltme (06.6)', () => {
   it('imha kaydı fiiliyi düşürür ve maliyeti o anda kopyalar', async () => {
     const batch = await stocks.insert({ variantId, warehouseId, physicalQty: 10, expiryDate: dayOffset(20), purchasePriceCents: 320 });

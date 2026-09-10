@@ -78,7 +78,10 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   protected override readonly moneyFields = ['unitCostCents'];
 
   constructor(supabase: SupabaseClient) {
-    super(supabase, 'stock_movement', StockMovementSchema, StockMovementInsertSchema, StockMovementUpdateSchema);
+    // Silme de KAPALI: defter append-only (`reverses_id` — iptal ters kayıtla yapılır, satır silinmez).
+    // Taban silmeyi varsayılan AÇIK bırakır; kapatmayan defter tek bir `delete` ile geçmişini sessizce
+    // kaybeder (10.09). Test artığını purge'ün ham silmesi toplar, bu kapıdan geçmez.
+    super(supabase, 'stock_movement', StockMovementSchema, StockMovementInsertSchema, StockMovementUpdateSchema, false);
   }
 
   /** Elle düzeltme yazar ve partinin fiilisini aynı transaction'da günceller. */

@@ -163,7 +163,7 @@ export type LocalizedText = z.infer<typeof LocalizedText>;
 
 ## 6. Katman 2 — `database`: tek taban sınıf
 
-`BaseDbService` genel blueprint ile **birebir aynı**: Zod doğrulama, camelCase↔snake_case, ortak filtre/sıralama/sayfalama, hata normalizasyonu. `allowDelete=false` varsayılan. `GetAllOptions`, `dbToApp`/`appToDb`, RPC yardımcıları (`toRpcParams`, `nullify`) aynen.
+`BaseDbService` genel blueprint'ten alındı: Zod doğrulama, camelCase↔snake_case (`dbToApp`/`appToDb`), ortak filtre/sıralama/sayfalama (`GetAllOptions`, keyset), RPC çağrısı (`executeRpc`), para çevirisi (`moneyFields`, §8). **Silme varsayılan olarak AÇIKTIR** (`allowDelete = true`, blueprint ile aynı); silinmemesi gereken tablonun servisi kurucuda `false` geçer — yalnız eklenen defterler ve iz tabloları (ör. `order_status_log`, `points_entry`, `shipment_event`, `stock_movement`: iptal ters kayıtla yapılır). Blueprint'ten farklar: RPC yardımcıları `toRpcParams`/`nullify` taşınmadı; hata metni tabanda değil `@lezzet/observability` `errorMessageOf`'ta, kısıt adı `core/constraint.ts`'te çözülür (10.09'da koda karşı düzeltildi — eski metin "`allowDelete=false` varsayılan" diyordu, kod ilk günden `true`).
 
 Ölçüt aynı: yeni entity = 1 şema + ~20 satır servis + 1 migration.
 
