@@ -112,7 +112,7 @@ function hubData(overrides: {
         head: { title: 'Su Böreği · tepsi', qty: 6, daysLeft: 2, discountPercent: 30 },
       },
       supply: { groupCount: 2, unmappedVariantCount: 1, head: { supplierName: 'Gaziantep Baklava', lineCount: 7 } },
-      intents: { count: 2 },
+      intents: { count: 2, draftCount: 0 },
       /* Varsayılan BOŞ: kurumsal kart yalnız bekleyen başvuru varken doğuyor ve öteki testlerin
          kart sayımını bozmasın. Kartın kendi testleri sayıyı açıkça veriyor. */
       b2b: { pendingCount: 0, head: null },
@@ -251,7 +251,7 @@ describe('yönetim hub — karar kutusu', () => {
             exceptions: { count: 2, head: null },
             offers: { candidateCount: 4, head: null },
             supply: { groupCount: 2, unmappedVariantCount: 0, head: null },
-            intents: { count: 2 },
+            intents: { count: 2, draftCount: 0 },
           },
         }),
       ),
@@ -281,7 +281,7 @@ describe('yönetim hub — karar kutusu', () => {
               head: { title: 'Fıstıklı Kek · 90 g', qty: 8, daysLeft: -2, discountPercent: 30 },
             },
             supply: { groupCount: 0, unmappedVariantCount: 0, head: null },
-            intents: { count: 0 },
+            intents: { count: 0, draftCount: 0 },
           },
         }),
       ),
@@ -300,7 +300,7 @@ describe('yönetim hub — karar kutusu', () => {
             exceptions: { count: 0, head: null },
             offers: { candidateCount: 0, head: null },
             supply: { groupCount: 0, unmappedVariantCount: 0, head: null },
-            intents: { count: 0 },
+            intents: { count: 0, draftCount: 0 },
           },
         }),
       ),
@@ -389,6 +389,31 @@ describe('yönetim hub — karar kutusu', () => {
     expect(screen.getByText(t.hub.tiles.summary.subtitle.replace('{orders}', '12'))).toBeOnTheScreen();
   });
 
+  /*
+    SOSYAL KUTUCUK İKİ OLGU TAŞIR (21.301, v3:2132) — büyük sayı "kaç konuşma cevap bekliyor",
+    alt satır "kaçının cevabı ZATEN YAZILMIŞ ama gönderilmemiş". İkincisi kuyruktaki en pahalı
+    bekleyiş: hibrit modda asistan yazdı, müşteri henüz almadı.
+  */
+  it('taslak bekleyen varsa kutucuğun alt satırı SAYIYI yazar', async () => {
+    routeHub(() => ok(hubData({ queue: { intents: { count: 5, draftCount: 2 } } })));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.getByTestId('management-pulse-social-value')).toHaveTextContent('5');
+    expect(screen.getByText(t.hub.tiles.social.drafts.replace('{n}', '2'))).toBeOnTheScreen();
+    // Büyük sayının tanımı yerini taslağa bıraktı — iki satır aynı anda yazılmaz.
+    expect(screen.queryByText(t.hub.tiles.social.subtitle)).toBeNull();
+  });
+
+  it('taslak YOKSA satır kutucuğun kendi tanımına döner — "0 taslak" yazılmaz', async () => {
+    routeHub(() => ok(hubData({ queue: { intents: { count: 5, draftCount: 0 } } })));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.getByText(t.hub.tiles.social.subtitle)).toBeOnTheScreen();
+    expect(screen.queryByText(t.hub.tiles.social.drafts.replace('{n}', '0'))).toBeNull();
+  });
+
   it('şikâyet kartı başı KİMLİĞİYLE açar; sosyal kutucuk gelen kutusuna gider (Y6 kararı)', async () => {
     routeHub(() => ok(hubData()));
 
@@ -434,7 +459,7 @@ describe('yönetim hub — karar kutusu', () => {
     let hubCalls = 0;
     routeHub(() => {
       hubCalls += 1;
-      return ok(hubData({ queue: { intents: { count: hubCalls === 1 ? 2 : 0 } } }));
+      return ok(hubData({ queue: { intents: { count: hubCalls === 1 ? 2 : 0, draftCount: 0 } } }));
     });
 
     await renderScreen(<ManagementHubScreen />, 'management-hub-loading');

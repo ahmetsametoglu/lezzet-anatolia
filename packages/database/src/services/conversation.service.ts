@@ -229,6 +229,41 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   countHandledByAi(source?: ConversationSource): Promise<number> {
     return this.count({ handledBy: ['ai', 'hybrid'], source });
   }
+
+  /**
+   * **ONAY BEKLEYEN TASLAK SAYISI** (21.301) — karar kutusunun sosyal kutucuğunun alt satırı.
+   *
+   * Tasarım o satıra *"1 taslak onay bekliyor"* yazıyor ve saydığı şey bir işlem değil bir
+   * BEKLEYİŞ: hibrit modda asistan cevabı yazdı, **müşteri onu henüz almadı**. Yani sayı
+   * "kaç müşteri, cevabı hazır olduğu hâlde bekliyor" demek — kuyruktaki en pahalı bekleyiş,
+   * çünkü iş bitmiş, yalnız bir dokunuş eksik.
+   *
+   * Mod SÜZGECİ YOK ve bu bilinçli: taslağı yazan hibrit moddur, ama sohbet o sırada `human`a
+   * çevrilmiş olabilir ve taslak satırda DURMAYA devam eder (`ai_draft_reply` temizlenmiyor).
+   * Modla süzseydik o taslaklar sayıdan düşer, ekranda ise durmaya devam ederdi.
+   */
+  countPendingDrafts(source?: ConversationSource): Promise<number> {
+    return this.count({ source }, { isNotNullFields: ['ai_draft_reply'] });
+  }
+
+  /**
+   * **KİMLİK → SERVİS PENCERESİNİN BİTİŞİ** (21.301) — talep kuyruğu pencereyi böyle öğrenir.
+   *
+   * Talep satırı konuşmanın kimliğini taşıyor (`ticket.conversation_id`) ama penceresini
+   * taşımıyor: `ticket_queue` görünümü o kolonu hiç seçmiyor. Görünümü genişletmek migration ve
+   * **veritabanı yenilemesi** isterdi (kullanıcının kararı, `CLAUDE §0`) — oysa soru sayfa başına
+   * TEK toplu okumayla cevaplanıyor. N+1 açılmadı: satır başına sorgu değil, sayfanın tamamı için
+   * bir `in(...)`.
+   *
+   * Dönen harita YALNIZ damga taşır, satırın tamamını değil: çağıran pencerenin hâlini motordan
+   * hesaplıyor (`serviceWindowState`), buradan bir karar çıkmıyor.
+   */
+  async windowsByIds(ids: readonly string[]): Promise<Map<string, string | null>> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return new Map();
+    const rows = await this.getAll({ id: unique });
+    return new Map(rows.map((row) => [row.id, row.windowExpiresAt ?? null]));
+  }
 }
 
 /**

@@ -20,6 +20,7 @@ import { allowedTicketTransitions } from '@lezzet/domain-core';
 import { type ComplaintDetail, type ComplaintMessage, TicketHandlerEnum, type TicketStatus, TicketTypeEnum } from '@lezzet/types';
 import { ManagementChatBubble } from './chat-bubble';
 import { managementCopy } from './copy';
+import { WINDOW_URGENT_HOURS, socialWindowOf } from './social-format';
 import { useComplaint } from './use-complaint.hook';
 
 /*
@@ -397,6 +398,9 @@ function ComplaintBody({ detail, complaint, onOpenActions }: ComplaintBodyProps)
 
   /* İlk mesaj TALEP METNİDİR (şemanın kararı: anlatım da bir mesajdır), kalanı yazışma. */
   const [request, ...thread] = detail.messages;
+  /* Pencere kuralı SOSYALİN kuralı — ikinci bir hesap yazılmadı (`socialWindowOf`, liste ekranıyla
+     aynı gerekçe): aynı 24 saati iki ekran ayrı yuvarlarsa biri gün gelip bir saat sapardı. */
+  const window = socialWindowOf(detail.windowExpiresAt);
 
   /* BANT — topun kimde olduğu + son mesajın yaşı. Rengi de bilgidir: bizde bekleyen iş dikkat
      tonunda, onlarda bekleyen sessiz nötrde. */
@@ -412,6 +416,18 @@ function ComplaintBody({ detail, complaint, onOpenActions }: ComplaintBodyProps)
             ago: agoLabelOf(detail.lastMessageAt),
           })}
         </Text>
+        {/* SERVİS PENCERESİ (21.301, v3:2800 *"Top bizde · 22 sa kaldı"*) — bandın ikinci yarısı.
+            Bu bir gecikme uyarısı DEĞİL: WhatsApp'ın 24 saatlik penceresi açıkken serbest metin
+            ücretsiz, kapandıktan sonra yalnız onaylı kalıp gider. Konuşması olmayan talepte
+            (sipariş · form · elle) pencere KAVRAMI yok — satır hiç doğmaz, "—" bile yazılmaz. */}
+        {window.state === 'open' ? (
+          <Text
+            style={[styles.bandWindow, window.hoursLeft <= WINDOW_URGENT_HOURS ? styles.bandWindowUrgent : null]}
+            testID="management-complaint-window"
+          >
+            {fillCopy(t.complaint.band.windowLeft, { n: String(window.hoursLeft) })}
+          </Text>
+        ) : null}
       </View>
       <View style={styles.bandTail}>
         {/* Durum tasarımın bandında YOK (orada karar durumu var, bizde karar kavramı yok) ama
@@ -754,6 +770,17 @@ const styles = StyleSheet.create({
   },
   bandTextOurTurn: { color: operationsTheme.colors.terracotta },
   bandTextTheirTurn: { color: operationsTheme.colors.muted },
+  /** Pencerenin kalan süresi — bandın ikinci yarısı; sönük, çünkü asıl söz topun kimde olduğu. */
+  bandWindow: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.muted,
+  },
+  /** Pencere daralınca yükselen ses (v3'ün kırmızı "4 sa kaldı"sı). */
+  bandWindowUrgent: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    color: operationsTheme.colors.error,
+  },
   bandTail: {
     flexDirection: 'row',
     alignItems: 'center',

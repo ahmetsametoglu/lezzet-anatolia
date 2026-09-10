@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  ConversationService,
   MoneyMovementService,
   OrderItemService,
   OrderService,
@@ -138,6 +139,14 @@ export async function listTicketQueue(
   const profiles = namelessIds.length > 0 ? await new UserProfileService(db).listByIds(namelessIds) : [];
   const emailById = new Map(profiles.map((p) => [p.id, p.email]));
 
+  /* SERVİS PENCERESİ (21.301): WhatsApp kaynaklı talebin arkasında bir konuşma var ve o konuşmanın
+     24 saatlik penceresi operatörün "bedava mı, ücretli mi" sorusunun cevabı. Kuyruk görünümü
+     kimliği taşıyor ama pencereyi taşımıyor; sayfa başına TEK toplu okumayla birleştiriliyor.
+     Konuşması olmayan talepte (sipariş · form · elle) pencere kavramı YOKTUR ve `null` kalır. */
+  const windowById = await new ConversationService(db).windowsByIds(
+    page.rows.map((row) => row.conversationId).filter((id): id is string => id !== null),
+  );
+
   return {
     rows: page.rows.map((row) => {
       const shown = resolveUserText(
@@ -162,6 +171,7 @@ export async function listTicketQueue(
         hasAttachment: row.hasAttachment,
         orderReferenceNo: row.orderReferenceNo,
         returnBound: isReturnBound(row.type),
+        windowExpiresAt: row.conversationId === null ? null : (windowById.get(row.conversationId) ?? null),
       };
     }),
     nextCursor: page.nextCursor,

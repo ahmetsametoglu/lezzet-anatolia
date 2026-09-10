@@ -408,16 +408,26 @@ function ticketsBreakdown(queue: ManagementQueue): string {
 function pulseTilesOf(hub: ManagementHub | null): PulseTile[] {
   const copy = t.hub.tiles;
   const intents = hub === null ? null : hub.queue.intents.count;
+  /* Kutucuğun İKİNCİ olgusu (v3:2132, 21.301): cevabı ZATEN YAZILMIŞ ama gönderilmemiş sohbetler.
+     Hibrit modda asistan yazar, müşteri henüz almamıştır — yani "cevabı hazır olduğu hâlde bekleyen
+     müşteri" sayısı. Kuyruktaki en pahalı bekleyiş: iş bitmiş, yalnız bir dokunuş eksik. */
+  const drafts = hub === null ? null : hub.queue.intents.draftCount;
 
   return [
     {
       key: 'social',
       value: intents === null ? null : String(intents),
       title: copy.social.title,
-      subtitle: copy.social.subtitle,
-      /* Bekleyen konuşma varsa alt satır dikkat rengine geçer (v3'ün terracotta alt satırı):
-         sıfırken aynı renk kalsaydı "bekleyen var" ile "bekleyen yok" aynı sesle konuşurdu. */
-      alert: intents !== null && intents > 0,
+      /* SIFIRDA TASLAK SATIRI YAZILMAZ — "0 taslak onay bekliyor" bir olgu değil, gürültüdür;
+         o hâlde alt satır büyük sayının NE OLDUĞUNU söyler (kutucuğun kendi tanımı). Tasarım
+         satırı yalnız dolu hâliyle çiziyor. */
+      subtitle:
+        drafts !== null && drafts > 0
+          ? fillCopy(copy.social.drafts, { n: String(drafts) })
+          : copy.social.subtitle,
+      /* Alt satır dikkat rengine geçer (v3'ün terracotta alt satırı): sıfırken aynı renk kalsaydı
+         "bekleyen var" ile "bekleyen yok" aynı sesle konuşurdu. */
+      alert: (intents !== null && intents > 0) || (drafts !== null && drafts > 0),
       route: '/social',
     },
     /* Talep kuyruğunun kapısı 21.281'de BURAYA konmuştu; 07.09'da tasarımın kendi yerine taşındı

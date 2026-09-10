@@ -180,6 +180,10 @@ management.get('/complaints', async (c) => {
       awaitingReply: row.awaitingReply,
       hasAttachment: row.hasAttachment,
       orderReferenceNo: row.orderReferenceNo,
+      /* Bağlı konuşmanın servis penceresi (21.301) — satırın "22 sa kaldı"sı. Konuşmasız talepte
+         `null` ve ekran susar. Satır burada ELLE kuruluyor (parse süzgeci), o yüzden alan buraya
+         da yazılmak zorunda: unutulsaydı `parse` bütün listeyi 500'e düşürürdü. */
+      windowExpiresAt: row.windowExpiresAt,
     })),
     nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
     counts,

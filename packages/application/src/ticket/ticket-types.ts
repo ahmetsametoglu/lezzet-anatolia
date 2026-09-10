@@ -145,6 +145,17 @@ export interface TicketQueueItem {
   orderReferenceNo: string | null;
   /** Bozuk/eksik — kuyruğun "bu iş para işi" işareti. */
   returnBound: boolean;
+  /**
+   * Bağlı konuşmanın servis penceresinin bitişi (21.301) — *"Top bizde · 22 sa kaldı"*.
+   *
+   * Bu bir SLA DEĞİL, WhatsApp'ın 24 saatlik penceresi: açıkken serbest metin ücretsiz, kapandıktan
+   * sonra yalnız onaylı kalıp gider ve ücretlidir. Yani satırın söylediği şey "geç kaldın" değil,
+   * **"bedava cevap hakkın ne kadar sürecek"**.
+   *
+   * `null` = talebin arkasında konuşma yok (sipariş · form · elle açılmış) — o hâlde pencere
+   * KAVRAMI yoktur ve ekran susar. Ölçülemeyen bir değer değil, var olmayan bir değer.
+   */
+  windowExpiresAt: string | null;
 }
 
 /**

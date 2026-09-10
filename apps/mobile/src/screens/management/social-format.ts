@@ -71,6 +71,19 @@ interface SocialWindowView {
  * satıra yazılmıştır (`windowExpiresAt`), burada yalnız üç hâle ayrılır. `null` = pencere hiç
  * açılmadı (müşteri hiç yazmadı) ve `closed`dan AYRI bir cümledir (web `WINDOW_NOTE` kararı).
  */
+/**
+ * **PENCERENİN ACİL EŞİĞİ** (21.301) — tasarımın kendi ayrımı: v3 "22 sa kaldı"yı sönük, "4 sa
+ * kaldı"yı kırmızı yazıyor (`v3:2717` ⟷ `v3:2732`).
+ *
+ * BURADA duruyor çünkü İKİ ekran okuyor (talep listesi + talep detayı) ve ileride sosyal yüzey de
+ * okuyabilir. İkisine ayrı ayrı yazılsaydı aynı talep iki ekranda iki ayrı aciliyette görünürdü —
+ * ve fark ancak biri değiştirilince, aylar sonra fark edilirdi (CLAUDE §1 · sabit de duplication).
+ *
+ * Parametrik DEĞİL: pencerenin kendisi Meta'nın 24 saati (motorda), bu ise tasarımın verdiği bir
+ * SUNUM kararı — işletmenin ayarlayacağı bir eşik değil.
+ */
+export const WINDOW_URGENT_HOURS = 4;
+
 export function socialWindowOf(windowExpiresAt: string | null, now: Date = new Date()): SocialWindowView {
   if (!windowExpiresAt) return { state: 'never', hoursLeft: 0 };
   const msLeft = new Date(windowExpiresAt).getTime() - now.getTime();

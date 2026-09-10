@@ -25,6 +25,9 @@ const row = (patch: Partial<TicketQueueItem> = {}): TicketQueueItem => ({
   hasAttachment: true,
   orderReferenceNo: 'LZA-2451',
   returnBound: true,
+  /* Kuyruk satırına servis penceresi eklendi (mobil talep listesi "22 sa kaldı" yazıyor); web bu
+     alanı çizmiyor ama tip ZORUNLU. Kaynak `order` — arkasında konuşma yok, dolayısıyla `null`. */
+  windowExpiresAt: null,
   ...patch,
 });
 

@@ -14341,3 +14341,64 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `POST /me/addresses/:id/default` da çalıştı — yani kimlik, profil ve tünel sağlamdı. Tek
   seferlik; ARIZA OLARAK YAZILMADI (CLAUDE §0: sebebi kanıtlanmadan müdahale yok). Tekrarlarsa
   bakılacak yer `POST /api/v1/me/addresses` gövde doğrulaması.
+
+- [x] (21.301) **YÖNETİM DENETİMİNİN İKİ BULGUSU: taslak sayacı + talepte servis penceresi** (karar kutusu 28 · talep listesi 29 tasarımla yan yana okundu, kullanıcı kararları 09.09)
+  `touches:` `packages/types/src/contracts/management-api.schema.ts` · `packages/database/src/services/conversation.service.ts` · `packages/application/src/{management/hub.ts,management/complaint.ts,ticket/staff-read.ts,ticket/ticket-types.ts}` · `apps/mobile-api/src/api/v1/management.ts` · `apps/mobile/src/screens/management/{management-hub-screen.tsx,complaints-screen.tsx,complaint-screen.tsx,social-format.ts,messages.json}` + testleri · `apps/web/app/(operations)/operations/tickets/tickets-read.test.ts` (fikstür) · `design/KARARLAR.md`
+
+  **Durum (10.09) — TAMAM, cihazda ölçüldü.** 21.164'ün açık bıraktığı "28 · 29 hiç yan
+  yana görülmedi" maddesi kapandı: beş fark çıktı, kullanıcıyla tek tek konuşuldu.
+
+  **Kullanıcının kararları (09.09):**
+  · **F1 — taslak sayacı: YAPILDI.** Tasarımın sosyal kutucuğu iki olgu taşıyor; alt satır
+    *"1 taslak onay bekliyor"*. Kullanıcının tanımı: *"hibrit modda yapay zekâ tarafından
+    oluşturulmuş ama henüz müşteriye gönderilmemiş — cevaba hazır ama cevabını almamış müşteri
+    adedi."* `intents.draftCount` · `countPendingDrafts` (`ai_draft_reply is not null`). **Mod
+    süzgeci YOK:** sohbet sonradan `human`a çevrilse taslak satırda durmaya devam ediyor; modla
+    süzmek sayıyı ekrandan ayırırdı. Sıfırda satır kutucuğun kendi tanımına döner.
+  · **F2 — tür sözlüğü farklı: BİZİMKİ KALIYOR** (*"türlerimiz tutmayabilir… bunda problem
+    yok"*). `design/KARARLAR.md`ye bilinçli sapma olarak yazıldı.
+  · **F3 — "22 sa kaldı": YAPILDI.** İnceleme gösterdi ki bu bir SLA değil, **WhatsApp'ın 24
+    saatlik servis penceresi** (konumu hep "Top bizde"nin yanı, rengi 22 sa sönük → 4 sa kırmızı,
+    veri yolu `ticket.conversation_id → conversation.window_expires_at`). Web'de de yoktu;
+    `serviceWindowState` hiçbir yüzeyde talebe bağlanmamıştı. Kullanıcı: *"WhatsApp'ta bedava
+    cevap verebildiğimiz veya artık ücretli olduğu an bizim için önemli."* Talep satırının zaman
+    yuvası pencere açıkken kalan süreyi, değilse yaşı yazar (ikisi birden değil); detay bandına
+    *"· ücretsiz cevap N sa"* eklendi. **Yalnız WhatsApp kaynaklı talepte** — sipariş/form/elle
+    açılmış talepte kavram yok, satır hiç doğmuyor.
+  · **F4 — ek sayısı: YAPILMADI**, 07.09'da verilmiş karar zaten sözleşmede yazılıymış
+    (`hasAttachment` künyesi). · **F5 — fazladan "kapandı" süzgeci: kalıyor.**
+  · **A — taslak "sil" (×): YAPILMAYACAK**, `KARARLAR.md`ye yazıldı.
+
+  **Migration YAZILMADI.** `ticket_queue` görünümü konuşma kimliğini taşıyor, pencereyi taşımıyor;
+  görünümü genişletmek DB yenilemesi isterdi. Onun yerine sayfa başına TEK toplu okuma
+  (`ConversationService.windowsByIds`) — N+1 yok. Kural motorda, ekranda tek yardımcı
+  (`socialWindowOf`); acil eşiği tek sabit (`WINDOW_URGENT_HOURS`, `social-format.ts`) — iki ekrana
+  ayrı yazılmıştı, duplication olarak yakalanıp tek yere alındı.
+
+  **Kaçırılan bir alan ve bir kimlik çakışması — ikisi de düzeldi.** (1) Talep listesinin ucu
+  satırı ELLE kuruyor (`parse` süzgeci) ve `windowExpiresAt` oraya yazılmamıştı — kök typecheck o
+  gün başka şeridin görsel hatalarıyla kırmızıydı ve bu satır gürültünün altında kaldı; cihaz
+  turuna girilseydi liste 500 verecekti. (2) Kimlik önce 21.298 diye yazılmıştı; rakip şerit
+  aldığı için 21.301'e taşındı. Web'in bir test fikstürü (`tickets-read.test.ts`) zorunlu alanla
+  kırıldı ve onarıldı — kıran taraf onarır (21.281'in aynı emsali).
+
+  **Cihaz turu (10.09) — ÖLÇÜLDÜ.** İlk deneme hub'da 500'e takıldı: `imageWidth/imageHeight:
+  Required` — başka şeridin görsel ölçüleri migration'daydı, yerel DB'de değildi; kullanıcı
+  yeniledi. Fikstür yeniden kuruldu (`+33600777111`, bekleyen taslaklı hibrit sohbet + ona bağlı
+  WhatsApp talebi). Önce uç cihazsız ölçüldü (yönetici oturumu uçtan alındı, değer basılmadı):
+  hub `draftCount: 1`, liste ve detay `windowExpiresAt` = sohbetin damgası. Sonra cihazda (OPPO,
+  kablosuz — telefonun bu Mac'e güveni kaybolmuştu, kodla yeniden eşleştirildi):
+  · **Karar kutusu:** sosyal kutucuk *"2 · 1 taslak onay bekliyor"* (terracotta); talep kartı
+    *"1 açık · 1 tanesi top bizde"*.
+  · **Talep listesi:** satır `BOZUK · TOP BİZDE · 20 sa kaldı` — kalan süre tasarımın yerinde
+    (rozetlerin sağında), 4 saatin üstünde olduğu için sönük.
+  · **Talep detayı:** bant *"Top bizde · 24 dk önce · ücretsiz cevap 20 sa"*. Bantta sürenin ADI
+    konuyor çünkü aynı satırda zaten bir zaman var ("24 dk önce"); çıplak "20 sa kaldı" iki zamanı
+    yan yana koyup hangisinin neyi saydığını belirsizleştirirdi.
+  · **Yan kazanç — 21.293'ün TEK başvuru hâli ilk kez cihazda görüldü:** yenileme sonrası defterde
+    tek bekleyen başvuru kalmıştı; kart *"Kurumsal hesap başvurusu · EPICERIE MADAME · Dikkat"*
+    dedi ve dokununca listeyi atlayıp doğrudan kontrol kartını açtı (`management-b2b-detail`).
+
+  Doğrulama: `typecheck` (mobil · mobile-api · application) temiz — kökte kalan iki hata başka
+  şeridin görsel işi (`frames` · `imageWidth`); `lint` temiz; yönetim ekranları **167/167** (5'i
+  bu turda: taslak satırı dolu/sıfır · pencere açık/yok/kapalı).

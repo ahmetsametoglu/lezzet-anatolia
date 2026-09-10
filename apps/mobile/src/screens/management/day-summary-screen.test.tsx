@@ -54,7 +54,7 @@ function hubData(): ManagementHub {
       exceptions: { count: 0, head: null },
       offers: { candidateCount: 4, head: null },
       supply: { groupCount: 2, unmappedVariantCount: 1, head: null },
-      intents: { count: 2 },
+      intents: { count: 2, draftCount: 0 },
       b2b: { pendingCount: 0, head: null },
     },
     summary: {

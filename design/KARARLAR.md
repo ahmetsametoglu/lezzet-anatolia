@@ -2380,3 +2380,38 @@ Gerekçe ölçülebilirlikte: "gün içinde" tanımsız bir eşik — teslim tar
 saat dolmayan mı, vardiya sonuna kalan mı? Üçü üç ayrı sayı verir. Tanımı olmayan bir ayrımı ekrana
 yazmak, `design/KARARLAR.md`'nin *"ekranda yalnız olgu"* hükmünü çiğnerdi: operatör o sayıya bakıp
 bir şey yapamaz, çünkü neyi saydığını bilemez.
+
+
+## Talep ekranı — asistan taslağında "sil" (×) YOK (09.09)
+
+Tasarımın 30. ekranı taslak yuvasının sağına küçük bir çarpı koyuyor (`title="taslağı sil"`).
+**Bu düğme çizilmeyecek** (kullanıcı kararı 09.09, gerekçe birlikte tartışıldı).
+
+Sebep değeri değil, değersizliği: taslak zaten **gönderilmemiş** bir tekliftir ve operatörü hiçbir
+şeye zorlamaz — görmezden gelinebilir, üstüne yazılabilir (yeni taslak üretimi eskisini değiştirir),
+cevap kutusuna alınıp düzenlenebilir. "Sil" bunların hiçbirini açmıyor, yalnız görsel bir rahatlama
+sağlıyor; karşılığında bir uç, bir yetki kapısı ve bir "gerçekten sil?" sorusu istiyor.
+
+**Kural şu değil "yapmadık", şu: yapılmayacak.** Ekran bugün düğmeyi çizmiyor ve bunu bir test
+koruyor — hiçbir şey yapmayan bir düğme operatöre "reddettim" dedirtip taslağı yerinde bırakırdı
+(21.164'ün ölçümü). Taslaktan kurtulmanın yolu onu kullanmamaktır.
+
+**Kapsam:** yalnız SİLME. Taslağı kutuya alma ("düzenle") ve gönderme yerinde duruyor.
+
+
+## Talep TÜR sözlüğü tasarımdan farklı — bizimki kalıyor (09.09)
+
+Tasarım talepleri üç türe ayırıyor: **şikâyet · talep · soru** (karar kutusunun talep kartı
+*"3 şikâyet · 2 talep · 1 soru"*, talep listesinin çip şeridi). Sistemin türleri dört ve motorun
+enum'undan geliyor: **bozuk · eksik · soru · diğer** (`TicketTypeEnum`). **Sapma bilinçli ve
+yeniden tartışılmaz** (kullanıcı kararı 09.09: *"türlerimiz tutmayabilir, biz sonradan yeni bir şey
+eklemiş olabiliriz, bunda problem yok"*).
+
+Gerekçe: bizim ayrım işin kendisinden türüyor — bozuk ve eksik İADE ile sonuçlanabilen iki ayrı
+olaydır (`isReturnBound`), soru ise sipariş kaydına dokunmaz. Tasarımın "şikâyet"i bu ikisini tek
+kovaya koyar ve iade kapısını türden okuyamaz hâle getirirdi. Enum veriyi de zorluyor; tasarımın
+üçlüsüne dönmek DB enum'u + migration + bütün ekranlar demekti.
+
+**Aynı turda kapanan iki küçük fark:** talep listesinin fazladan **"kapandı"** süzgeci kalıyor
+(arşive erişim — tasarımda yok ama kullanıcı onayladı); satırda ek SAYISI ("2 görsel") yazılmıyor,
+yalnız var/yok — bu 07.09'da zaten verilmiş bir karar (`ComplaintRowSchema.hasAttachment` künyesi).

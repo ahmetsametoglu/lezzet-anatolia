@@ -61,6 +61,9 @@ function complaintData(overrides: Partial<ComplaintResponse['complaint'] & objec
       orderReferenceNo: 'LA-26-TEST01',
       lastMessageAt: '2026-08-26T10:00:00Z',
       aiDraftReply: 'Özür dileriz — yarınki rotaya yeni kutu değişimi ekliyoruz.',
+      /* Kaynağı `order` — arkasında konuşma YOK, dolayısıyla servis penceresi de yok (21.301).
+         Pencereli hâli kendi testinde kuruluyor. */
+      windowExpiresAt: null,
       messages: [
         {
           id: '00000000-0000-4000-8000-0000000000c1',

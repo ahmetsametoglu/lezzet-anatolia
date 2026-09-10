@@ -165,7 +165,17 @@ export const ManagementQueueSchema = z.object({
     head: DecisionSupplyHeadSchema.nullable(),
   }),
   /** Cevap bekleyen WhatsApp konuşmaları (Y6'nın kaynağı — sipariş niyeti bunların içinden çıkar). */
-  intents: z.object({ count: z.number().int().nonnegative() }),
+  intents: z.object({
+    count: z.number().int().nonnegative(),
+    /**
+     * Onay bekleyen asistan taslağı sayısı (v3:2132, 21.301) — kutucuğun İKİNCİ olgusu.
+     *
+     * Tasarımın kutucuğu iki sayı taşıyor ve ikisi ayrı şey söylüyor: büyük sayı "kaç konuşma
+     * cevap bekliyor", alt satır "kaçında cevap ZATEN YAZILMIŞ ama gönderilmemiş". İkincisi
+     * kuyruktaki en pahalı bekleyiştir — iş bitmiş, yalnız bir dokunuş eksik.
+     */
+    draftCount: z.number().int().nonnegative(),
+  }),
   /**
    * Onay bekleyen kurumsal hesap başvuruları (v3:2625). Sayaç kuyruğun `counts.pending`i, yani
    * LİSTENİN kendi sayacı — kutu "3 bekliyor" derken listenin sekmesinin 3 demesi garanti.
@@ -357,6 +367,25 @@ export const SupplyDraftResponseSchema = z.discriminatedUnion('status', [
 ]);
 export type SupplyDraftResponse = z.infer<typeof SupplyDraftResponseSchema>;
 
+/**
+ * **SERVİS PENCERESİNİN BİTİŞİ — talep yüzeyinde de taşınır** (21.301, v3:2717 · 2800).
+ *
+ * Tasarım talep satırına ve detayın bandına *"Top bizde · 22 sa kaldı"* yazıyor; renk 22 saatte
+ * sönük, 4 saatte kırmızı. Bu bir SLA değil — bizim zaten sahip olduğumuz **WhatsApp 24 saatlik
+ * servis penceresi**: açıkken serbest metin ücretsiz, kapandıktan sonra yalnız onaylı kalıp gider
+ * (ücretli). Operatörün "bu talebe bedava cevap verebilir miyim" sorusunun cevabı.
+ *
+ * **YALNIZ WhatsApp kaynaklı talepte doludur.** `TicketSourceEnum` dört değer taşıyor
+ * (`order · form · whatsapp · admin`) ve ötekilerin arkasında konuşma yoktur; oralarda `null`
+ * gelir ve ekran hiçbir şey yazmaz — "—" bile değil, çünkü ortada ölçülmemiş bir şey yok, ölçülecek
+ * bir şey yok.
+ *
+ * Damga TALEBİN kendi alanı değil, bağlı konuşmanınkidir (`ticket.conversation_id` →
+ * `conversation.window_expires_at`); uç okurken birleştirir. Kural yine motorda kalır
+ * (`serviceWindowState` · ekranda `socialWindowOf`) — burada yalnız damga taşınıyor.
+ */
+export const ServiceWindowExpirySchema = z.string().nullable();
+
 /* ── Y1 · ŞİKÂYET / TALEP DETAYI (v2:530-579) ───────────────────────────────── */
 
 /**
@@ -391,6 +420,8 @@ export const ComplaintDetailSchema = z.object({
   lastMessageAt: z.string(),
   /** Hibrit modun bekleyen YZ taslağı — operatör cevabı DEĞİLDİR; tüketilince düşer (16.5). */
   aiDraftReply: z.string().nullable(),
+  /** Bandın "kaç saat kaldı" yarısı — künyesi `ServiceWindowExpirySchema`da. */
+  windowExpiresAt: ServiceWindowExpirySchema,
   messages: z.array(ComplaintMessageSchema).min(1),
 });
 export type ComplaintDetail = z.infer<typeof ComplaintDetailSchema>;
@@ -434,6 +465,7 @@ export const ComplaintRowSchema = z.object({
    */
   hasAttachment: z.boolean(),
   orderReferenceNo: z.string().nullable(),
+  windowExpiresAt: ServiceWindowExpirySchema,
 });
 export type ComplaintRow = z.infer<typeof ComplaintRowSchema>;
 

@@ -1,5 +1,6 @@
 import {
   ConversationInboxService,
+  ConversationService,
   OrderService,
   ReorderService,
   SettingsService,
@@ -65,6 +66,7 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
     thresholds,
     supplyGroups,
     intentCount,
+    draftCount,
     b2bQueue,
   ] = await Promise.all([
       tickets.countAwaiting(),
@@ -86,6 +88,8 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
          GİZLİYDİ çünkü defterde yalnız WhatsApp sohbeti var; ilk Messenger/IG sohbetinde
          görünür olurdu — yani sessizce yanlış sayı gösteren bir kapı. */
       new ConversationInboxService(db).countAwaitingReply(),
+      /* Kutucuğun ikinci olgusu (21.301): cevabı yazılmış ama gönderilmemiş sohbet sayısı. */
+      new ConversationService(db).countPendingDrafts(),
       /* Kurumsal başvuru kartı (v3:2625) — LİSTENİN okuyucusundan, ayrı bir sayaçtan değil. Kutu
          ile listenin sekmesi böylece ayrışamaz ve "tek başvuruda listeyi atla" kestirmesi tek
          yerde kalır (`B2bQueueView.single`); burada yeniden yazılsaydı iki kural bir gün ayrılırdı.
@@ -190,7 +194,7 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
       unmappedVariantCount,
       head: supplyHead,
     },
-    intents: { count: intentCount },
+    intents: { count: intentCount, draftCount },
     b2b: {
       pendingCount: b2bQueue.counts.pending,
       head: b2bRow === null ? null : { customerId: b2bRow.customerId, name: b2bRow.name, flag: b2bRow.flag },

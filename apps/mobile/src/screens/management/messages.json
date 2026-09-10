@@ -78,7 +78,8 @@
     "tiles": {
       "social": {
         "title": "Sosyal gelen kutusu",
-        "subtitle": "cevap bekleyen konuşma"
+        "subtitle": "cevap bekleyen konuşma",
+        "drafts": "{n} taslak onay bekliyor"
       },
       "complaints": {
         "title": "Talep ve şikâyetler",
@@ -102,7 +103,8 @@
       "ourTurn": "Top bizde · {ago}",
       "theirTurn": "Top onlarda · {ago}",
       "ago": "{ago} önce",
-      "agoNow": "az önce"
+      "agoNow": "az önce",
+      "windowLeft": "· ücretsiz cevap {n} sa"
     },
     "request": {
       "eyebrow": "TALEP METNİ",
@@ -199,6 +201,7 @@
     "ourTurn": "TOP BİZDE",
     "theirTurn": "TOP ONLARDA",
     "closed": "KAPANDI",
+    "windowLeft": "{n} sa kaldı",
     "attachment": "görsel var",
     "quoted": "\"{text}\"",
     "translated": "{lang} · çeviri var",

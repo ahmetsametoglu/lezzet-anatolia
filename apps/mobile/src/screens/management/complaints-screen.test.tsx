@@ -64,6 +64,9 @@ function satir(ticketId: string, over: Record<string, unknown> = {}) {
     awaitingReply: true,
     hasAttachment: false,
     orderReferenceNo: null,
+    /* Varsayılan PENCERESİZ (21.301): talebin arkasında konuşma yok — sipariş/form kaynaklı hâl.
+       Satır o zaman son hareketin yaşını yazar. Pencereli hâl kendi testinde kuruluyor. */
+    windowExpiresAt: null,
     ...over,
   };
 }
@@ -215,5 +218,38 @@ describe('hâller', () => {
     await ekranAc();
 
     await waitFor(() => expect(screen.getByTestId('management-complaints-error')).toBeOnTheScreen());
+  });
+});
+
+/*
+  SERVİS PENCERESİ SATIRDA (21.301, v3:2717 · 2732).
+
+  Tasarım zaman yuvasına *"22 sa kaldı"* yazıyor ve 4 saatte kırmızıya çeviriyor. Bu bir SLA
+  DEĞİL — WhatsApp'ın 24 saatlik penceresi: açıkken serbest metin ücretsiz, kapandıktan sonra
+  yalnız onaylı kalıp gider (ücretli). Operatörün sorusu "ne kadar bekledi" değil, "bedava cevap
+  hakkım ne kadar sürecek".
+*/
+describe('servis penceresi — bedava cevap hakkı satırda okunur', () => {
+  const saatSonra = (n: number) => new Date(Date.now() + n * 3_600_000).toISOString();
+
+  it('pencere AÇIKSA kalan süre yazılır, yaş DEĞİL', async () => {
+    mockListe([satir(ID.a, { windowExpiresAt: saatSonra(22) })]);
+    await ekranAc();
+
+    expect(screen.getByTestId(`management-complaints-window-${ID.a}`)).toHaveTextContent('22 sa kaldı');
+  });
+
+  it('pencere YOKSA (konuşmasız talep) satır yaşı yazar — uydurma bir süre değil', async () => {
+    mockListe([satir(ID.a, { windowExpiresAt: null })]);
+    await ekranAc();
+
+    expect(screen.queryByTestId(`management-complaints-window-${ID.a}`)).toBeNull();
+  });
+
+  it('pencere KAPANMIŞSA da yazılmaz — "0 sa kaldı" bir bilgi değil', async () => {
+    mockListe([satir(ID.a, { windowExpiresAt: saatSonra(-3) })]);
+    await ekranAc();
+
+    expect(screen.queryByTestId(`management-complaints-window-${ID.a}`)).toBeNull();
   });
 });

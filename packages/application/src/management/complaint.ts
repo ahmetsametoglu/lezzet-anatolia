@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { TicketQueueService, UserProfileService, type TicketQueueFilter } from '@lezzet/database';
+import { ConversationService, TicketQueueService, UserProfileService, type TicketQueueFilter } from '@lezzet/database';
 import type { ComplaintDetail, KeysetCursor, TicketType } from '@lezzet/types';
 import { getStaffTicketDetail, listTicketQueue } from '../ticket/staff-read';
 import type { TicketQueueItem } from '../ticket/ticket-types';
@@ -24,6 +24,12 @@ async function toComplaint(
   const authors = authorIds.length > 0 ? await new UserProfileService(db).listByIds(authorIds) : [];
   const nameOf = new Map(authors.map((profile) => [profile.id, profile.name]));
 
+  /* SERVİS PENCERESİ (21.301) — bandın "22 sa kaldı" yarısı. Talebin arkasında konuşma varsa
+     (WhatsApp kaynağı) penceresi okunur; yoksa kavram yoktur ve `null` kalır. Tek talep, tek
+     okuma — kuyruğun toplu haritasının tekil hâli (`windowsByIds`). */
+  const conversationId = detail.ticket.conversationId ?? null;
+  const windows = conversationId === null ? new Map() : await new ConversationService(db).windowsByIds([conversationId]);
+
   return {
     ticketId: detail.ticket.id,
     type: detail.ticket.type,
@@ -35,6 +41,7 @@ async function toComplaint(
     orderReferenceNo: detail.order?.referenceNo ?? null,
     lastMessageAt: detail.ticket.lastMessageAt,
     aiDraftReply: detail.ticket.aiDraftReply,
+    windowExpiresAt: conversationId === null ? null : (windows.get(conversationId) ?? null),
     messages: detail.messages.map((message) => ({
       id: message.id,
       sender: message.sender,

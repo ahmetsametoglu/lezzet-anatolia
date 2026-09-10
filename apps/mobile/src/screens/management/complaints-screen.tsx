@@ -17,6 +17,7 @@ import { agoOf } from '@/lib/operations/stamp';
 import { fillCopy, operationsCopy, operationsFailureText } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { managementCopy } from './copy';
+import { WINDOW_URGENT_HOURS, socialWindowOf } from './social-format';
 import { sameFilter, useComplaints, type ComplaintFilter } from './use-complaints.hook';
 
 /*
@@ -102,6 +103,10 @@ export function ComplaintsScreen() {
 
   const renderRow = ({ item }: { item: ComplaintRow }) => {
     const closed = item.status === 'resolved';
+    /* Pencere kuralı SOSYALİN kuralı — ikinci bir hesap yazılmadı (`socialWindowOf`): aynı
+       24 saatlik pencereyi iki ekran iki ayrı şekilde yuvarlarsa biri gün gelip ötekinden
+       bir saat sapardı. `null` damga = talebin arkasında konuşma yok → `never`. */
+    const window = socialWindowOf(item.windowExpiresAt, now);
     /* Çeviri satırı: dil VARSA dille, yoksa yalnız "çeviri var". Dil saptanmamışken bir kod
        uydurmak, olmayan bir olguyu ekrana yazmak olurdu (04.09 kuralı). */
     const translation = !item.previewTranslated
@@ -129,8 +134,22 @@ export function ComplaintsScreen() {
             tone={closed ? 'idle' : item.awaitingReply ? 'critical' : 'idle'}
             testID={`management-complaints-turn-${item.ticketId}`}
           />
-          {/* SLA yerine son hareketin yaşı — künyedeki gerekçe. */}
-          <Text style={styles.age}>{agoOf(item.lastMessageAt, now)}</Text>
+          {/* ZAMAN YUVASI TEK VE İÇERİĞİ DEĞİŞİYOR (21.301).
+              Pencere AÇIKSA kalan süre yazılır (v3:2717 *"22 sa kaldı"*) — WhatsApp talebinde
+              operatörün sorusu "ne kadar bekledi" değil, **"bedava cevap hakkım ne kadar sürecek"**:
+              pencere kapanınca yalnız ücretli kalıp gider. Öteki hâllerde (konuşması olmayan talep,
+              kapanmış pencere) son hareketin yaşı yazılır — SLA'mız yok, künyedeki gerekçe.
+              İkisi birden yazılmaz: aynı yuvada iki zaman, hangisinin acil olduğunu belirsizleştirir. */}
+          {window.state === 'open' ? (
+            <Text
+              style={[styles.age, window.hoursLeft <= WINDOW_URGENT_HOURS ? styles.ageUrgent : null]}
+              testID={`management-complaints-window-${item.ticketId}`}
+            >
+              {fillCopy(t.windowLeft, { n: String(window.hoursLeft) })}
+            </Text>
+          ) : (
+            <Text style={styles.age}>{agoOf(item.lastMessageAt, now)}</Text>
+          )}
         </View>
 
         <Text style={styles.name} numberOfLines={1}>
@@ -312,6 +331,11 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body['400'],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
+  },
+  /** Pencere daralınca satır kendi sesini yükseltir (v3'ün kırmızı "4 sa kaldı"sı). */
+  ageUrgent: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    color: operationsTheme.colors.error,
   },
   /*
     AD 14/700 — `body-sm` (kullanıcı bulgusu 07.09: *"bu listenin tasarımı çok kötüydü"*).
