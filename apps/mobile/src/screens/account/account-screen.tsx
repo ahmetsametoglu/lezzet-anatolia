@@ -1,5 +1,6 @@
 import { formatCompactEuro, formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
+import type { Country } from '@lezzet/types';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, Share, Text, View } from 'react-native';
@@ -19,13 +20,15 @@ import { TextField } from '@/components/ui/text-field';
 import { makeBillingAddress, makeDefaultAddress, type MeAddress } from '@/lib/api/addresses';
 import { redeemPoints } from '@/lib/api/points';
 import { deleteAccount, updateMe, updatePreferences } from '@/lib/api/me';
-import { resolvePostalCode } from '@/lib/api/places';
+import { resolvePostalCode, submitPlaceNotice } from '@/lib/api/places';
 import { signOut } from '@/lib/auth/sign-out';
 import { FONT_SCALES, readFontScale, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
 import { hapticCommit, hapticError } from '@/lib/haptics/haptics';
-import { toastSuccess } from '@/lib/toast/toast-store';
+import { toastError, toastSuccess } from '@/lib/toast/toast-store';
 import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
 import { upperIn } from '@/lib/i18n/locale';
+import placeMessages from '@/lib/places/messages.json';
+import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-notice-store';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
@@ -271,34 +274,66 @@ export function AccountScreen({
      çıkar. Yer sorusu gerçek uca gider (`/places/by-postal-code`), tahmin edilmez. */
   const defaultAddress = addressBook.addresses.find((a) => a.isDefault) ?? addressBook.addresses[0];
   const zipOfDefault = defaultAddress?.postalCode;
-  const [outOfZone, setOutOfZone] = useState(false);
+  /** Varsayılan adresin ÇÖZÜLMÜŞ yeri — yalnız rota DIŞINDAYSA dolu. Kaydın anahtarı: ülke + kod. */
+  const [zonePlace, setZonePlace] = useState<{ country: Country; postalCode: string } | null>(null);
   useEffect(() => {
     if (zipOfDefault === undefined) {
-      setOutOfZone(false);
+      setZonePlace(null);
       return;
     }
     let alive = true;
     void resolvePostalCode(zipOfDefault).then((result) => {
       // Çözülemeyen kod "bölge dışı" SAYILMAZ: bilinmeyeni olumsuz okumak, ölçemediğimiz şeyi
       // ölçmüş gibi göstermek olurdu (CLAUDE §1).
-      if (alive && result.error === null) setOutOfZone(result.data.kind === 'resolved' && !result.data.place.inRoute);
+      if (!alive || result.error !== null) return;
+      const place = result.data.kind === 'resolved' && !result.data.place.inRoute ? result.data.place : null;
+      setZonePlace(place === null ? null : { country: place.country, postalCode: place.postalCode });
     });
     return () => {
       alive = false;
     };
   }, [zipOfDefault]);
+  const outOfZone = zonePlace !== null;
 
-  const [interestSent, setInterestSent] = useState(false);
-  /**
-   * Kuvvetli talep. BUGÜN KAYDEDİLEN ŞEY İZİNDİR: talebin kendisi (hangi posta kodundan kaç kişi
-   * istedi) için tablo YOK — `BEKLEYEN(21.15)`, web denetmene talep açıldı
-   * (`docs/talep/talep-web-teslimat-talebi-kaydi.md`); tablo gelince buraya tek çağrı eklenir.
-   * Düğme boş söz vermiyor: kanalı açıyor, yani hat açıldığında haber gerçekten gidebilir.
-   */
+  /*
+    KUVVETLİ TALEP ARTIK GERÇEK BİR KAYIT (21.307) — `zone_notice`, vitrin bandının yazdığı kaydın
+    TA KENDİSİ (`POST /places/notice`, kaynak `app-account`).
+
+    10.09'a kadar bu düğme hiçbir şey yazmıyordu: künyesi "tablo YOK" diyordu (`BEKLEYEN(21.15)`) ve
+    tek etkisi e-posta kampanya iznini açmaktı. Tablo ve uç 21.20'de doğmuştu, bu ekran güncellenmemişti
+    — metin "talebiniz sayılır" derken hiçbir şey sayılmıyordu ve bölge açılınca haberi gönderen iş
+    (`zone-available`) yalnız bu kayıtları okuduğu için o müşteriye haber de gitmeyecekti.
+
+    İZİN ARTIK SESSİZCE AÇILMIYOR: kampanya iznini açmak bu düğmenin işi değildi (künyenin kendi
+    itirafı: *"teslimat açılsın diyen müşteri kampanya iznine evet demiş sayılamaz"*). Kaydın kendi
+    e-postası ve bırakma anı zaten o haberin dar kapsamlı iznidir; bölge açıldığında gönderilen tek
+    e-posta ona gider.
+
+    HAFIZA ORTAK DEPODA (`place-notice-store`): katalogda bandı kullanan müşteri buraya geldiğinde
+    aynı yer için düğmeyi yeniden görmez — bandın 11.08 kararıyla aynı gerekçe.
+  */
+  const zoneRecord = usePlaceNoticeRecord(zonePlace?.country ?? 'FR', zonePlace?.postalCode ?? '');
+  const [zoneSending, setZoneSending] = useState(false);
   const sendZoneInterest = () => {
-    setInterestSent(true);
-    toastSuccess(t.marketing.zone.sent);
-    if (!marketingEmail) toggleConsent('email', true);
+    if (zonePlace === null) return;
+    const placeCopy = placeMessages[locale].placeNotice;
+    setZoneSending(true);
+    void submitPlaceNotice(locale, { postalCode: zonePlace.postalCode, country: zonePlace.country, source: 'app-account' }).then(
+      (result) => {
+        setZoneSending(false);
+        /* Dört hâlin dördü de söylenir; sessiz geçilen hâl müşteriye "sayıldım mı?" diye sordururdu. */
+        if (result.error !== null) {
+          toastError(placeCopy.failed);
+          return;
+        }
+        if (result.data.status === 'place_unknown' || result.data.status === 'email_required') {
+          toastError(result.data.status === 'place_unknown' ? placeCopy.placeUnknown : placeCopy.emailRequired);
+          return;
+        }
+        rememberPlaceNotice(zonePlace.country, zonePlace.postalCode, result.data.status);
+        toastSuccess(result.data.status === 'ok' ? t.marketing.zone.sent : placeCopy.alreadyRecorded);
+      },
+    );
   };
 
   /* Adres yazımının TAMAMI kitin ortak çekmecesinde (`customer-kit/address-sheet`, 10.08): form,
@@ -761,21 +796,18 @@ export function AccountScreen({
               <Text style={styles.zoneBody}>
                 {t.marketing.zone.body.replace('{place}', defaultAddress?.city ?? '')}
               </Text>
-              {interestSent ? (
-                <Text style={styles.zoneDone}>{t.marketing.zone.done}</Text>
+              {zoneRecord !== null ? (
+                <Text style={styles.zoneDone} testID="account-zone-done">{t.marketing.zone.done}</Text>
               ) : (
                 <>
-                  {/* İZİN SESSİZCE ALINMAZ (kullanıcı kararı 19.08). Düğme, kapalıysa kampanya
-                      iletişiminin e-posta kanalını AÇIYOR — bu bugün tek gerçek etkisi, çünkü
-                      talebin kendisini yazacak tablo yok (`BEKLEYEN(21.15)`). Müşteri "teslimat
-                      açılsın" derken kampanya iznine evet demiş sayılamaz; niyeti bir haber
-                      almaktı. Çare izni kaldırmak DEĞİL — kaldırırsak düğme boş söz verir ve hat
-                      açıldığında kimseye ulaşamayız. Çare NE OLACAĞINI ÖNCEDEN SÖYLEMEK: satır
-                      yalnız kanal kapalıyken çıkıyor ve geri almanın yerini de gösteriyor
-                      (anahtar hemen yukarıda). Dar kapsamlı bir "yalnız bu haber" izni ayrı bir
-                      alan ister; o, talep tablosuyla birlikte gelir. */}
-                  {marketingEmail ? null : <Text style={styles.zoneConsent}>{t.marketing.zone.consentNote}</Text>}
-                  <PrimaryButton label={t.marketing.zone.cta} onPress={sendZoneInterest} testID="account-zone-interest" />
+                  {/* Kayıt `zone_notice`a gider (21.307) — kampanya izni artık sessizce açılmıyor;
+                      "yalnız bu haber" izni kaydın kendisidir (künye yukarıda). */}
+                  <PrimaryButton
+                    label={t.marketing.zone.cta}
+                    onPress={sendZoneInterest}
+                    disabled={zoneSending}
+                    testID="account-zone-interest"
+                  />
                 </>
               )}
             </View>
@@ -1235,15 +1267,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   zoneBody: {
     fontFamily: theme.font.body[400],
-    fontSize: theme.text.note,
-    lineHeight: theme.text.note * theme.text['lead--line-height'],
-    color: theme.colors.body,
-  },
-  /* İzin satırı gövdeyle AYNI boyda (`note`), `helper`da değil: bu bir dipnot değil, düğmeye
-     basmadan önce okunması gereken karar bilgisi (MB-46 ölçütünün aynısı). Ağırlık 600 —
-     bilgilendirme değil, uyarı sesi. */
-  zoneConsent: {
-    fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
     lineHeight: theme.text.note * theme.text['lead--line-height'],
     color: theme.colors.body,

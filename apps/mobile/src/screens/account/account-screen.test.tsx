@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { resetPlaceNotices } from '@/lib/places/place-notice-store';
 import { AccountScreen } from './account-screen';
+import messages from './messages.json';
 
 /*
   HESAP EKRANI TESTİ — bu turda EKLENEN şey ekranın ÇIKIŞLARIDIR (21.14 ikinci dilim): profil
@@ -360,5 +362,41 @@ describe('AccountScreen', () => {
     await fireEvent.press(screen.getByTestId('account-login'));
 
     expect(mockPush).toHaveBeenCalledWith('/login');
+  });
+
+  /*
+    "BURAYA TESLİMAT AÇILSIN" GERÇEK KAYIT (21.307). 10.09'a kadar düğme hiçbir şey yazmıyordu —
+    "talebiniz sayılır" diyor, yalnız kampanya iznini açıyordu. Artık vitrin bandının kaydını
+    (`zone_notice`) aynı uçtan bırakıyor ve izin YAN ETKİ olmaktan çıktı.
+  */
+  it('bölge dışı varsayılan adreste "Buraya teslimat açılsın" GERÇEK kayıt bırakır — izin sessizce açılmaz', async () => {
+    const reply = (status: number, data: unknown) =>
+      ({ status, headers: { get: () => null }, json: async () => ({ data, error: status === 200 ? null : 'not_found' }) }) as unknown as Response;
+    process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    fetchMock.mockReset().mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/places/by-postal-code')) {
+        return reply(200, {
+          kind: 'resolved',
+          place: { country: 'FR', postalCode: '67000', placeName: 'Strasbourg', places: ['Strasbourg'], inRoute: false },
+        });
+      }
+      if (url.includes('/places/notice')) return reply(200, { status: 'ok' });
+      return reply(404, null);
+    });
+    resetPlaceNotices();
+    await render(<AccountScreen />);
+
+    await fireEvent.press(await screen.findByTestId('account-zone-interest'));
+
+    expect(await screen.findByTestId('account-zone-done')).toHaveTextContent(messages.tr.marketing.zone.done);
+    const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/places/notice'));
+    expect(String(call?.[0])).toContain('locale=tr');
+    // Gövdede YER ve KAYNAK var, e-posta YOK: adresi sunucu oturumdan çözer (sözleşme künyesi).
+    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ postalCode: '67000', country: 'FR', source: 'app-account' });
+    expect(mockToast).toHaveBeenCalledWith(messages.tr.marketing.zone.sent);
+    // Kampanya izni artık yan etki DEĞİL: tercih ucuna hiçbir yazım gitmedi.
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/me/preferences'))).toBe(false);
   });
 });

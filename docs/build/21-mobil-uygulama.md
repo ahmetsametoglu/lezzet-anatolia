@@ -14726,3 +14726,22 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     (`router.test.ts`).
   · **Doğrulama:** dokunulan dört ekran klasörü (ürün · checkout · hesap · müşteri kiti) 117/117, 15
     dosya · kök `typecheck` 20/20 · `lint` temiz · `knip`in 4 bulgusu bu işin dosyalarında değil.
+
+- [x] (21.307) **HESAP EKRANINDA "BURAYA TESLİMAT AÇILSIN" GERÇEK KAYIT — `zone_notice`a yazıyor; kampanya izni artık sessizce açılmıyor** (kullanıcı bulgusu 10.09: *"web tarafındaki rota haritasında müşterinin talebi görünüyordu. Yani teslimat açılsın isteği adet olarak görünüyordu"* — ölçünce haritadaki sayı `zone_notice` kayıtlarından geliyor; hesap ekranının düğmesi o tabloya hiç yazmıyordu)
+  `touches:` `apps/mobile/src/screens/account/account-screen.tsx` · `apps/mobile/src/screens/account/account-screen.test.tsx` · `apps/mobile/src/screens/account/messages.json`
+
+  **Durum (10.09) — TAMAM.**
+  · **Ölçülen açık:** düğmenin künyesi "tablo YOK" diyordu ve tek etkisi e-posta kampanya iznini
+    açmaktı. Tablo ve uç 21.20'de doğmuş, bu ekran güncellenmemişti: metin "talebiniz sayılır" derken
+    hiçbir şey sayılmıyordu, ve bölge açılınca haberi gönderen iş (`zone-available`) yalnız `zone_notice`
+    okuduğu için bu müşteriye haber de gitmeyecekti.
+  · **Artık vitrin bandının kaydının TA KENDİSİ:** `POST /places/notice`, kaynak `app-account` — haritanın
+    "haber bekleyen" sayısına ve `zone-available`in listesine giriyor. Hafıza ortak depoda
+    (`place-notice-store`): bandı kullanan müşteri aynı yer için düğmeyi yeniden görmez.
+  · **İzin sessizce açılmıyor:** kampanya izni bu düğmenin işi değildi; kaydın kendi e-postası o tek
+    haberin dar kapsamlı iznidir. Metin *"açık bıraktığınız kanaldan"* yerine *"e-postayla haber
+    veririz"* (üç dil), izin cümlesi (`consentNote`) silindi. Dört sonucun dördü de bildirimle söylenir.
+  · **Test:** `account-screen.test.tsx` → bölge dışı varsayılan adreste gerçek kayıt; gövde
+    `{postalCode, country, source: 'app-account'}`, `/me/preferences` çağrısı YOK.
+  · **Doğrulama:** `21.306` ile aynı koşular — dokunulan dört ekran klasörü 117/117 · kök `typecheck`
+    20/20 · `lint` temiz.
