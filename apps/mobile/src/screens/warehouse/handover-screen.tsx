@@ -235,9 +235,9 @@ export function HandoverScreen() {
         testID="warehouse-handover-list"
       >
         {/* Başlık burada HER hâlde kaydırıcının içinde, yani yer değiştirmiyordu; sarmalama
-            tasarım ölçüsü için — gövdenin dolgusu (12) başlığın kendi 20'sine binip onu 32'ye
-            itiyordu, öteki yığın başlıklarının hepsi 20'de. */}
-        <OperationsHeadBleed pad="xl">
+            tasarım ölçüsü için — gövdenin dolgusu başlığın kendi 20'sine binip onu itiyordu,
+            öteki yığın başlıklarının hepsi 20'de. */}
+        <OperationsHeadBleed pad="5xl">
           <OperationsStackHeader
             title={t.handover.title}
             subtitle={t.handover.subtitle}
@@ -375,7 +375,10 @@ export function HandoverScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },
   list: {
-    paddingHorizontal: operationsTheme.space.xl,
+    /* SAYFA KENARI 20 (tasarım ölçümü 09.09: bu ekranın blokları `margin:0 20px`). 12 yazılıydı ve
+       ekranın gövdesi başlığından 8 birim solda duruyordu — cihazda görüldü. Öteki 22 yığın
+       ekranının hepsi 20/22'de. */
+    paddingHorizontal: operationsTheme.space['5xl'],
     paddingBottom: operationsTheme.space['4xl'],
     gap: operationsTheme.space.md,
   },

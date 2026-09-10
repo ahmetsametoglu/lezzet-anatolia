@@ -14232,7 +14232,32 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   aşağı kayıyor"* dedi. Kare kare çekildi: geçiş anındaki kare YENİ ekran değil, **ÇIKAN ekranın
   büyütülmüş hâli** — Android'in varsayılan yığın geçişi (yığında `animation` hiç verilmemiş,
   `(operations)/_layout.tsx`). Başlığın üst boşluğu iki ekranda da doğru. İlk teorim
-  (`rt.insets.top` geçici olarak 0) ÖLÇÜMLE DÜŞTÜ. Animasyonun kendisi ayrı bir tercih konusu.
+  (`rt.insets.top` geçici olarak 0) ÖLÇÜMLE DÜŞTÜ. Animasyonun kendisi ayrı bir tercih konusu —
+  kullanıcı kararı 09.09: **dokunulmadı**, platformun varsayılanı kalıyor.
+
+  ── GEÇİŞ ÖRNEKLEMESİ TAMAMLANDI (09.09, ikinci tur) ────────────────────────
+
+  İlk turda 23 ekranın hepsi ölçüldü ama çoğu YALNIZ oturmuş hâlde; arıza bir ZIPLAMAYDI, o yüzden
+  geçiş anı da örneklendi. Yöntem: dokunuşun ardından sekiz hızlı ekran karesi, her karede geri
+  düğmesinin KUTUSU (metin değil — aşağıdaki nota bakınız).
+
+  `day-close` (6xl) · `van-runs` (2xl) · `preparation` KUYRUK ve SATIRLAR dalları (5xl, ikincisi
+  ilk turda hiç ölçülmemişti) · `b2b-applications` ve `b2b-application` (6xl + padTop) ·
+  `handover` (düzeltme sonrası) — **hepsi sekiz karede SABİT**, `(51,128)`.
+
+  **ÖLÇÜM ARACININ KENDİ HATASI (iki kez):** "geri sütununda ilk koyu satır" sezgiseli önce 17,
+  sonra 14 px'lik sahte kaymalar bildirdi. Düğmenin KUTUSU ölçülünce ikisi de düştü: kutu iki hâlde
+  de `(51,128)`. Kayan şey başlık METNİYDİ — künye satırı veriyle geldiğinde metin bloğu uzuyor ve
+  satır `alignItems:center` olduğu için başlık ~6 birim yukarı çıkıyor. Düğme kıpırdamıyor.
+  BEKLEYEN(21.298): bu, dolgu arızası DEĞİL, başlığın ortalanmış düzeninin doğal sonucu; istenirse
+  künye satırının yeri yüklemede de ayrılabilir — tasarım kararı, ölçüldü ve kayda geçti.
+
+  ── `handover` GÖVDESİ TASARIMDAN SAPIYORMUŞ (09.09) ────────────────────────
+
+  Başlık 20'ye çekilince ortaya çıktı: o ekranın gövdesi 12 birimde duruyordu, yani metin ve kartlar
+  başlığın 8 birim SOLUNDA. Tasarım ölçüldü — bu ekranın blokları `margin:0 20px`, yani gövde 20
+  olmalı. `paddingHorizontal` `xl` → `5xl`, sarmalayıcı da `pad="5xl"`. Cihazda doğrulandı: başlık,
+  gövde metni ve kesikli kutu artık aynı kenarda; sekiz karede sabit.
 
 - [x] (21.299) **ADRES ROLLERİNİN ADI: "varsayılan" → "TESLİMAT ADRESİ"** (kullanıcı kararı 08.09, web'de aynı gün uygulandı · denetim notu `not-mobil-adres-rolleri-sozluk-ve-form-kutusu.md`)
   `touches:` `apps/mobile/src/screens/account/{messages.json,account-screen.tsx,address-card.tsx,account-screen.test.tsx}`
