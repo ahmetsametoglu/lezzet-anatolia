@@ -322,4 +322,6 @@ export interface SocialViewProps {
   onIssueSecurityCode: () => void;
   /** Sepet bağlantısını sohbete gönder (15.21) — ajanın aracının insan eli; müşteri sitede tamamlar. */
   onSendCartLink: () => void;
+  /** Hesap bağlantısını sohbete gönder (15.16) — müşteri e-postasıyla giriş yapar, sohbet kendi hesabına bağlanır. */
+  onSendAccountLink: () => void;
 }

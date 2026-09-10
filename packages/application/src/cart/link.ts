@@ -1,8 +1,8 @@
 import { CartLinkService, CartService, ConversationService, UserProfileService, type Db } from '@lezzet/database';
 import { readableCode } from '@lezzet/domain-core';
-import { CART_LINK_PARAM, DEFAULT_LOCALE, LOCALES, localizedUrl, type Locale } from '@lezzet/i18n';
+import { CART_LINK_PARAM, DEFAULT_LOCALE, LOCALES, localizedUrl, type AppRoute, type Locale } from '@lezzet/i18n';
 import { logger } from '@lezzet/observability';
-import type { CartItem, Conversation } from '@lezzet/types';
+import type { CartItem, CartLinkPurpose, Conversation } from '@lezzet/types';
 import { bindPhoneToAccount } from '../customer/whatsapp-link';
 
 /*
@@ -37,6 +37,13 @@ import { bindPhoneToAccount } from '../customer/whatsapp-link';
   Üçüncü bir birleştirme kuralı yok. SIRA ZORUNLU: önce sepet, sonra kimlik — `merge_customers`
   (0040) hedefin sepeti varsa KAYNAĞINKİNİ SİLER; birleşme önce koşsaydı sohbette kurulan sepet
   tam da taşınacağı anda kaybolurdu.
+
+  ── İKİ AMAÇ, TEK KAPI (15.16 · kullanıcı tasarımı 08.09) ───────────────────────
+  Aynı jeton sepetsiz sohbeti HESABA bağlamak için de üretilir (`purpose = 'account'`): Messenger/IG
+  sohbetinde kimliğin müşterinin kendi eliyle kurulduğu yol. Tüketim DEĞİŞMEZ — giriş yapan kişiye
+  sohbet bağlanır, sepet varsa taşınır; fark yalnız varılan sayfa (hesap) ve sohbetteki cümle
+  (`link-text.ts`). Kanıt da aynı (`link_proof = cart_link`): giriş yöntemi (e-posta kodu ya da
+  Google) hesabın kendi doğrulamasıdır; bağın kanıtı sohbette duran, tek kullanımlık jetondur.
 */
 
 /** Bağlantının ömrü — parametrik sabit; sepet bekleyebilir, bağlantı da bekleyebilir. Çerezin ömrü de bu (`invite-cookie.ts`). */
@@ -73,32 +80,43 @@ async function linkLocaleOf(db: Db, conversation: Conversation): Promise<Locale>
   return tercih && (LOCALES as readonly string[]).includes(tercih) ? (tercih as Locale) : DEFAULT_LOCALE;
 }
 
-/** Bağlantının kendisi — sepet sayfası, müşterinin dilinde, jeton sorgu parametresinde. */
-function cartLinkUrl(token: string, locale: Locale): string {
-  return `${localizedUrl('/cart', locale)}?${CART_LINK_PARAM}=${token}`;
+/**
+ * Amacın vardığı sayfa — sepet bağlantısı sepete, hesap bağlantısı hesaba. Hesap sayfası `?link=`i
+ * kendisi kapıya devrediyor (`/auth/cart-link?to=hesap`, web 08.5); yolların dile göre adı `@lezzet/i18n`de.
+ */
+const LINK_ROUTE: Record<CartLinkPurpose, AppRoute> = { cart: '/cart', account: '/account' };
+
+/** Bağlantının kendisi — amacın sayfası, müşterinin dilinde, jeton sorgu parametresinde. */
+function cartLinkUrl(token: string, locale: Locale, purpose: CartLinkPurpose): string {
+  return `${localizedUrl(LINK_ROUTE[purpose], locale)}?${CART_LINK_PARAM}=${token}`;
 }
 
 /**
- * **Bağlantı üret** — ajanın `sepet_baglantisi` aracının sunucu yarısı.
+ * **Bağlantı üret** — ajanın `sepet_baglantisi` / `hesap_baglantisi` araçlarının ve operatörün iki
+ * düğmesinin sunucu yarısı. Amaç verilmezse sepet (kapının ilk ve olağan işi).
  *
- * Her çağrı YENİ jeton üretir ve sohbetin açık bağlantılarını kapatır (`expireOpen`): müşteri
- * "tekrar gönder" dediğinde eski bağlantı bir hafta daha geçerli kalmamalı. Kapatılan satır
+ * Her çağrı YENİ jeton üretir ve sohbetin AYNI AMAÇLI açık bağlantılarını kapatır (`expireOpen`):
+ * müşteri "tekrar gönder" dediğinde eski bağlantı bir hafta daha geçerli kalmamalı. Kapatılan satır
  * silinmez — "kaç bağlantı üretildi, hangisi açıldı" sorusu sonradan da cevaplanır (0055).
  */
-export async function startCartLink(db: Db, input: { conversationId: string }): Promise<StartCartLinkOutcome> {
+export async function startCartLink(
+  db: Db,
+  input: { conversationId: string; purpose?: CartLinkPurpose },
+): Promise<StartCartLinkOutcome> {
   const conversation = await new ConversationService(db).getById(input.conversationId);
   if (!conversation) return { status: 'conversation_not_found' };
 
+  const purpose = input.purpose ?? 'cart';
   const links = new CartLinkService(db);
-  await links.expireOpen(conversation.id);
+  await links.expireOpen(conversation.id, purpose);
   const locale = await linkLocaleOf(db, conversation);
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     const token = readableCode(TOKEN_LENGTH);
     const expiresAt = new Date(Date.now() + CART_LINK_TTL_MS).toISOString();
     try {
-      await links.insert({ token, conversationId: conversation.id, expiresAt });
-      return { status: 'ok', url: cartLinkUrl(token, locale), expiresAt };
+      await links.insert({ token, conversationId: conversation.id, purpose, expiresAt });
+      return { status: 'ok', url: cartLinkUrl(token, locale, purpose), expiresAt };
     } catch (err) {
       // Çakışma (23505) → yeniden dene. Başka hata gerçek bir arızadır, yukarı gider.
       const message = err instanceof Error ? err.message : String(err);
@@ -107,7 +125,7 @@ export async function startCartLink(db: Db, input: { conversationId: string }): 
   }
 
   // Jetonun KENDİSİ hiçbir hâlde log'a yazılmaz (CLAUDE §1) — kimlik yeter.
-  logger.warn({ context: LOG, conversationId: conversation.id }, 'sepet bağlantısı üretilemedi (çakışma tekrarı tükendi)');
+  logger.warn({ context: LOG, conversationId: conversation.id, purpose }, 'sohbet bağlantısı üretilemedi (çakışma tekrarı tükendi)');
   return { status: 'unavailable' };
 }
 

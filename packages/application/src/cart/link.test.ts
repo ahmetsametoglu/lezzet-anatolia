@@ -110,6 +110,27 @@ describe('bağlantı üretimi', () => {
     expect(eski).not.toBeNull();
     expect(new Date(eski!.expiresAt).getTime()).toBeLessThanOrEqual(Date.now());
   });
+
+  it('HESAP bağlantısı hesap sayfasına gider ve SEPET bağlantısını kapatmaz — iki amaç ayrı yaşar (15.16)', async () => {
+    const conversationId = await messengerSohbeti();
+    const sepet = await startCartLink(db, { conversationId });
+    const hesapLinki = await startCartLink(db, { conversationId, purpose: 'account' });
+    if (sepet.status !== 'ok' || hesapLinki.status !== 'ok') throw new Error('bağlantı üretilemedi');
+    expect(hesapLinki.url).toMatch(/\/fr\/compte\?link=[A-Z0-9]{12}$/);
+    expect((await links.findByToken(tokenOf(hesapLinki.url)))?.purpose).toBe('account');
+    // Sepet bağlantısı AÇIK kaldı: hesap bağlantısı gönderildi diye sohbetteki "Sepete git" ölmez.
+    const sepetSatiri = await links.findByToken(tokenOf(sepet.url));
+    expect(new Date(sepetSatiri!.expiresAt).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('HESAP bağlantısı boş sepetle açılınca da sohbeti bağlar — kanıt aynı (cart_link), taşınan kalem yok', async () => {
+    const conversationId = await messengerSohbeti();
+    const link = await startCartLink(db, { conversationId, purpose: 'account' });
+    if (link.status !== 'ok') throw new Error('bağlantı üretilemedi');
+    const hesap = await musteri('Hesap bağlantısı');
+    expect(await claimCartLink(db, { token: tokenOf(link.url), customerId: hesap })).toMatchObject({ status: 'linked', customerId: hesap, movedItems: 0 });
+    expect(await conversations.getById(conversationId)).toMatchObject({ customerId: hesap, linkProof: 'cart_link' });
+  });
 });
 
 describe('kimliksiz sohbet (Messenger) — sepet taşınır, kimlik bağlanır', () => {
@@ -204,7 +225,7 @@ describe('geçersiz ve yabancı', () => {
     expect((await claimCartLink(db, { token: 'YOKBOYLEBIR1', customerId: hesap })).status).toBe('invalid');
 
     const conversationId = await messengerSohbeti();
-    await links.insert({ token: `ESKI${String(stamp).slice(-8)}`, conversationId, expiresAt: new Date(Date.now() - 1000).toISOString() });
+    await links.insert({ token: `ESKI${String(stamp).slice(-8)}`, conversationId, purpose: 'cart', expiresAt: new Date(Date.now() - 1000).toISOString() });
     expect((await claimCartLink(db, { token: `ESKI${String(stamp).slice(-8)}`, customerId: hesap })).status).toBe('invalid');
   });
 

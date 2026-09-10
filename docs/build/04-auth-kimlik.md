@@ -267,6 +267,11 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
     aynı bağlantı yolu geçerli olabilir (jeton sohbete göre üretiliyor, kanal fark etmiyor); "sohbetten
     geri yaz" akışı ancak WhatsApp numarası kolu (onaylı doğrulama şablonu) gelince ayrıca gerekir.
     Karar sepet şeridinin `purpose` kolonuyla birlikte verilir; bu görev o güne kadar `[~]`.
+  - **Durum (10.09):** `purpose` kolonu geldi (`15.16` Durum 10.09) ve kanıt `cart_link` kaldı — `email_code`
+    açılmadı, Google girişinde yanlış söylerdi. Hesap bağlantısı WhatsApp'ta da verilir (kapı kapalı ve kimlik
+    sorusu yokken: taslak hesaba birleşir, çapasız kayıttan numara devralınır — `bindPhoneToAccount`). Açık kalan
+    tek soru KULLANICININ: çapanın "e-postaya kod, sohbetten geri yaz" yolu bu bağlantının yanında yaşamaya devam
+    etsin mi. Karar gelene kadar ikisi de duruyor; bu görev `[~]`.
 
 - [x] (04.13) **DEV AUTH BYPASS SÖKÜLDÜ — guard yerelde de doğruyu söylüyor** (kullanıcı kararı 19.08).
   `touches: apps/web/lib/guard.ts, apps/web/app/(operations)/operations/layout.tsx,

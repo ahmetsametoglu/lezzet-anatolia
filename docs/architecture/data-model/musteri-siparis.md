@@ -583,7 +583,7 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 
 ## CartLink (sepet bağlantısı)
 
-Sohbette kurulan sepeti siteye TAŞIYAN jeton (15.21 · 15.22 · 0055). Ajan bağlantıyı sohbete yazar; açıp giriş yapan kişi sepetini ve kimliğini kazanır. `wa_link_token`ın (0011) ters yönü: orada jeton siteden sohbete gider, burada sohbetten siteye — kanıt aynı iki kattan oluşur (bağlantıyı ALAN kişi sohbetin öteki ucunda, GİRİŞ yapan posta kutusunun sahibi).
+Sohbette kurulan sepeti siteye TAŞIYAN jeton (15.21 · 15.22 · 0055) — 15.16'dan beri sepetsiz sohbeti hesaba bağlamak için de (`purpose`). Ajan bağlantıyı sohbete yazar; açıp giriş yapan kişi sepetini ve kimliğini kazanır. `wa_link_token`ın (0011) ters yönü: orada jeton siteden sohbete gider, burada sohbetten siteye — kanıt aynı iki kattan oluşur (bağlantıyı ALAN kişi sohbetin öteki ucunda, GİRİŞ yapan posta kutusunun sahibi).
 
 <!-- alanlar:cart_link -->
 | Kolon | Tip | Null | Varsayılan |
@@ -591,6 +591,7 @@ Sohbette kurulan sepeti siteye TAŞIYAN jeton (15.21 · 15.22 · 0055). Ajan ba�
 | `id` | uuid |  | `gen_random_uuid()` |
 | `token` | text |  |  |
 | `conversation_id` | uuid |  |  |
+| `purpose` | text |  |  |
 | `expires_at` | timestamptz |  |  |
 | `claimed_at` | timestamptz | • |  |
 | `claimed_by` | uuid | • |  |
@@ -601,6 +602,7 @@ Sohbette kurulan sepeti siteye TAŞIYAN jeton (15.21 · 15.22 · 0055). Ajan ba�
 
 - **`token`** — 12 hane okunabilir alfabe (`readableCode`) ≈ 60 bit, `unique`, BÜYÜK harf. 6 haneli çapa kodu DEĞİLDİR; "koddan kimliğe gidilmez" kuralı ona uygulanmaz — güvenlik entropiden gelir (0011 künyesindeki ayrım)
 - **`conversation_id`** — bağlantı SOHBETİN bağlantısıdır, müşterinin değil: WhatsApp'ta sohbetin müşterisi var (taslak ya da gerçek), Messenger'da yok; sahip açılış anında sohbetten bulunur. `cascade`
+- **`purpose`** — `cart` | `account` (15.16 · kullanıcı tasarımı 08.09). Tüketim ikisinde AYNI (`claimCartLink`: kimlik bağlanır, sepet varsa taşınır); fark varılan sayfa (sepet · hesap) ve sohbetteki cümle/düğme. Varsayılan YOK — üreten amacını söyler. Yeni bağlantı yalnız AYNI amaçlı açık bağlantıyı kapatır: hesap bağlantısı sohbetteki "Sepete git" düğmesini öldürmez. Kapı (`/auth/cart-link`) bu kolonu OKUMAZ — jetonu doğrulamaz; amaç adresin yolundan gelir (`/compte?link=…` → `to=hesap`). Ayrı tablo açılmadı: tek kullanım, ömür ve iz kuralları iki yerde yaşardı
 - **`expires_at`** — 7 gün (`CART_LINK_TTL_MS`, uygulama sabiti). Rezervasyon TTL'ine bağlı DEĞİL: bağlantı bir niyettir, stok ayırmaz (DOMAIN §4); fiyat açılışta yeniden çözülür (§5). Yeni bağlantı üretilince eskisinin süresi ŞİMDİYE çekilir — satır silinmez, iz kalır
 - **`claimed_at` · `claimed_by`** — tek kullanım damgası, koşullu yazım (`updateIfNull`): iki sekme aynı bağlantıyı aynı anda açarsa ikincisi düşer, sepet iki kez taşınmaz. `claimed_by` hesap silinince `null` (FK `set null`), damga kalır — kısıt bu yüzden tek yönlü
 - **Neden kendi tablosu, kolon çifti değil:** bir sohbete birden çok bağlantı üretilebilir ("tekrar gönder") ve "hangisi ne zaman, kim tarafından açıldı" sorusu sonradan cevaplanabilmeli (15.19'un kuralı)

@@ -4,7 +4,7 @@ import { ConversationService } from '@lezzet/database';
 import { humanAgentWindowState, serviceWindowState } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, Message, MessageKind, PreferredLanguage, TemplateCategory, TicketSender } from '@lezzet/types';
-import { CART_LINK_BUTTON_TEXT, CART_LINK_LINE, cartLinkButton, splitCartLink } from '../cart/link-text';
+import { cartLinkButton, LINK_BUTTON_TEXT, linkTail, splitCartLink } from '../cart/link-text';
 import { recordOutboundMessage } from './record';
 import { prepareOutboundText, resolveOutboundLanguage, type MessageTranslationPatch } from './translate';
 
@@ -217,7 +217,8 @@ export async function sendOutboundMessage(
     "Sepete git"; WhatsApp'ta pencere içinde şablonsuz, kullanıcı kararı 08.09). Kural BURADA,
     çağıranlarda değil: ajan, operatör (web/mobil) ve taslak yolu aynı metni üretiyor ve düğmeyi her
     birine bırakmak, birinin unutmasıydı. Ayırma çeviriden ÖNCE — çeviriden sonra sabit satır
-    tanınmaz olurdu; düğme metni üç dilde elle yazılı, modelden geçmez.
+    tanınmaz olurdu; düğme metni üç dilde elle yazılı, modelden geçmez. Hesap bağlantısı (15.16) aynı
+    yoldan gider: kuyruğun cümlesi amacı söyler, düğme ona göre "Hesabı bağla" olur.
 
     Defterde İKİ satır ve iki sağlayıcı kimliği: Messenger echo'su iki mesajı ayrı düşürür, tek
     satırda toplansaydı ikinci echo yeni bir mesaj sanılırdı (`send-echo.test.ts`in tuzağı).
@@ -225,11 +226,11 @@ export async function sendOutboundMessage(
     Kalıp (template) mesajda ayırma yok: şablonun gövdesi Meta'da sabittir, bizim kuyruğumuz olamaz.
   */
   const ayrik = !input.templateName && input.text ? splitCartLink(input.text) : null;
-  const dugmeAdresi = ayrik?.url ?? null;
-  const govdeGirdisi: SendMessageInput = dugmeAdresi ? { ...input, text: ayrik!.body } : input;
+  const baglanti = ayrik?.link ?? null;
+  const govdeGirdisi: SendMessageInput = baglanti ? { ...input, text: ayrik!.body } : input;
 
   let govde: SendOutcome | null = null;
-  if (!dugmeAdresi || govdeGirdisi.text) {
+  if (!baglanti || govdeGirdisi.text) {
     /* ÇEVİRİ GÖNDERİMDEN ÖNCE (15.28) — künyesi yukarıda ve `translate.ts`te. Düşerse sağlayıcıya
        HİÇ gidilmez ve deftere yazılmaz; `retryable`, çünkü sebep bizim tarafta ve geçici. */
     const hazir = await prepareOutboundText(db, conversation, govdeGirdisi, opts);
@@ -241,11 +242,11 @@ export async function sendOutboundMessage(
       return { status: 'failed', reason: 'translation_failed', retryable: true };
     }
     govde = await teslimEtVeYaz(db, sender, conversation.id, target, { ...govdeGirdisi, text: hazir.text }, hazir);
-    if (!dugmeAdresi || govde.status !== 'sent') return govde;
+    if (!baglanti || govde.status !== 'sent') return govde;
   }
 
   const { language: dil } = await resolveOutboundLanguage(db, conversation);
-  const dugmeMetni = `${CART_LINK_BUTTON_TEXT[dil]}\n${dugmeAdresi}`;
+  const dugmeMetni = `${LINK_BUTTON_TEXT[baglanti.purpose][dil]}\n${baglanti.url}`;
   const dugme = await teslimEtVeYaz(
     db,
     sender,
@@ -255,14 +256,14 @@ export async function sendOutboundMessage(
       conversationId: input.conversationId,
       text: dugmeMetni,
       kind: 'interactive',
-      payload: { ...(input.payload ?? {}), interactive: cartLinkButton(dugmeAdresi, dil, conversation.source), cartLink: dugmeAdresi },
+      payload: { ...(input.payload ?? {}), interactive: cartLinkButton(baglanti, dil, conversation.source), cartLink: baglanti.url },
       author: input.author,
       language: dil,
     },
     {
       language: dil,
       // Operatör Türkçe okur: müşteriye giden dil Türkçe değilse torbaya Türkçesi düşer (15.28 kuralı).
-      translations: dil === 'tr' ? null : { tr: `${CART_LINK_LINE}\n${dugmeAdresi}` },
+      translations: dil === 'tr' ? null : { tr: linkTail(baglanti) },
       translatedAt: new Date().toISOString(),
     },
   );
@@ -271,7 +272,7 @@ export async function sendOutboundMessage(
     /* Gövde GİTTİ, düğme gitmedi: müşteri cevabı okudu ama bağlantıyı almadı. Gövdeyi "gönderilemedi"
        diye geri çevirmek yalan olurdu (ajan devrederdi, operatör yeniden yazardı); kayıt gürültülü,
        dönüş dürüst: gövde `sent`, düğmenin düşüşü `error_log`ta kimlikle. */
-    await captureError(new Error(`sepet düğmesi gönderilemedi: ${dugme.reason}`), {
+    await captureError(new Error(`bağlantı düğmesi gönderilemedi (${baglanti.purpose}): ${dugme.reason}`), {
       source: SOURCES.webServer,
       context: { area: 'messaging/send', conversationId: conversation.id, providerMessageId: govde.providerMessageId },
     });

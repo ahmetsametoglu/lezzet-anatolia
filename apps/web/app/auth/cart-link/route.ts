@@ -18,8 +18,9 @@ import { cartLinkLanding, cartLinkPurposeOf } from '@/lib/identity/cart-link-lan
  *
  * **İki amaç, tek kapı (08.09):** `?to=hesap` sepetsiz sohbeti hesaba bağlama bağlantısıdır —
  * hedef hesap sayfası, giriş cümlesi "sohbetinizi bağlamak için". Karar saf ve testli
- * (`cart-link-landing.ts`); amaç bugün adresten okunuyor, jeton amacı taşımaya başlayınca girdi
- * oradan gelir.
+ * (`cart-link-landing.ts`); amaç ADRESTEN okunur — hesap bağlantısı hesap sayfasına üretilir ve
+ * sayfa `to=hesap` ekler. Jetonun satırındaki amaç (`cart_link.purpose`) burada okunmaz: kapı jetonu
+ * doğrulamaz (aşağıdaki not).
  *
  * **Jeton burada DOĞRULANMAZ** ve bilinçli: geçersiz bağlantıya da aynı yol yürünür (girişe ya da
  * sepete). Kapıda "bu bağlantı geçersiz" demek jetonun varlığını sızdırırdı (`claimCartLink`in

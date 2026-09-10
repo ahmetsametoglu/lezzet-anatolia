@@ -22,14 +22,18 @@ export class CartLinkService extends BaseDbService<CartLink, CartLinkInsert, Car
   }
 
   /**
-   * Sohbetin AÇIK bağlantılarını kapatır — yeni bağlantı üretilirken eskisi geçersizlenir.
+   * Sohbetin AYNI AMAÇLI açık bağlantılarını kapatır — yeni bağlantı üretilirken eskisi geçersizlenir.
    *
    * Satır SİLİNMEZ, süresi şimdiye çekilir: "bu sohbete kaç bağlantı üretildi, hangisi açıldı"
    * sorusu sonradan da cevaplanabilmeli (0055). Açılmış bağlantıya dokunulmaz — o zaten bitmiştir.
+   * Öteki amacın bağlantısına da dokunulmaz (15.16): hesap bağlantısı gönderildi diye sohbetteki
+   * "Sepete git" düğmesi ölmemeli — ikisi de açılınca aynı bağı kurar, ikinci açılan `own` görür.
    */
-  async expireOpen(conversationId: string): Promise<void> {
+  async expireOpen(conversationId: string, purpose: CartLink['purpose']): Promise<void> {
     const now = new Date();
-    const acik = (await this.getAll({ conversationId })).filter((row) => !row.claimedAt && new Date(row.expiresAt) > now);
+    const acik = (await this.getAll({ conversationId })).filter(
+      (row) => row.purpose === purpose && !row.claimedAt && new Date(row.expiresAt) > now,
+    );
     // Satır sayısı bir sohbette bir elin parmağını geçmez; tek tek yazmak taban metodundan geçer (CLAUDE §1).
     await Promise.all(acik.map((row) => this.update({ id: row.id, expiresAt: now.toISOString() })));
   }

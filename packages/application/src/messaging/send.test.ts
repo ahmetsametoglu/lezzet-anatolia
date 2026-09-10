@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { ConversationService, MessageService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { CART_LINK_BUTTON_TITLE, CART_LINK_LINE, withCartLink } from '../cart/link-text';
+import { ACCOUNT_LINK_LINE, CART_LINK_LINE, LINK_BUTTON_TITLE, withCartLink } from '../cart/link-text';
 import { recordInboundMessage } from './record';
 import {
   sendOutboundMessage,
@@ -319,7 +319,7 @@ describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kull
     const sender = kaydedenSender();
     const sonuc = await sendOutboundMessage(db, sender, {
       conversationId: konusma.id,
-      text: withCartLink('Sepetinize 2 baklava ekledim.', URL),
+      text: withCartLink('Sepetinize 2 baklava ekledim.', { url: URL, purpose: 'cart' }),
       author: 'ai',
     });
 
@@ -335,7 +335,7 @@ describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kull
     const sablon = dugme.payload?.interactive as { payload: { template_type: string; buttons: { url: string; title: string }[] } };
     expect(sablon.payload.template_type).toBe('button');
     expect(sablon.payload.buttons[0]!.url).toBe(URL);
-    expect(Object.values(CART_LINK_BUTTON_TITLE)).toContain(sablon.payload.buttons[0]!.title);
+    expect(Object.values(LINK_BUTTON_TITLE.cart)).toContain(sablon.payload.buttons[0]!.title);
 
     // İki satır, iki sağlayıcı kimliği: echo ikisini ayrı düşürecek, ikincisi yeni mesaj sanılmayacak.
     const defter = (await messages.listByConversation(konusma.id)).filter((m) => m.direction === 'outbound');
@@ -344,12 +344,31 @@ describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kull
     expect(defter[1]!.body.text).toContain(URL);
   });
 
+  it('HESAP bağlantısı da düğmeye döner — cümle ve düğme yazısı amacın, adres aynen (15.16)', async () => {
+    const konusma = await acikKonusma('messenger');
+    const sender = kaydedenSender();
+    const hesapAdresi = 'https://www.lezzetanatolia.fr/fr/compte?link=ABCDEFGH1234';
+    const sonuc = await sendOutboundMessage(db, sender, {
+      conversationId: konusma.id,
+      text: withCartLink('Siparişlerinizi görmek için sohbetinizi hesabınıza bağlayın.', { url: hesapAdresi, purpose: 'account' }),
+      author: 'ai',
+    });
+
+    expect(sonuc.status).toBe('sent');
+    expect(sender.inputs).toHaveLength(2);
+    expect(sender.inputs[0]!.text).not.toContain(ACCOUNT_LINK_LINE);
+    const sablon = sender.inputs[1]!.payload?.interactive as { payload: { buttons: { url: string; title: string }[] } };
+    expect(sablon.payload.buttons[0]!.url).toBe(hesapAdresi);
+    // Müşteri hesap bağlantısında "Sepete git" görmez: düğme yazısı amacın kendi yazısı.
+    expect(Object.values(LINK_BUTTON_TITLE.account)).toContain(sablon.payload.buttons[0]!.title);
+  });
+
   it('WHATSAPP: aynı ayrım, düğme `cta_url` etkileşimli mesajı — pencere içinde şablonsuz', async () => {
     const konusma = await acikKonusma('whatsapp');
     const sender = kaydedenSender();
     const sonuc = await sendOutboundMessage(db, sender, {
       conversationId: konusma.id,
-      text: withCartLink('Sepetinize 2 baklava ekledim.', URL),
+      text: withCartLink('Sepetinize 2 baklava ekledim.', { url: URL, purpose: 'cart' }),
     });
 
     expect(sonuc.status).toBe('sent');
@@ -393,7 +412,7 @@ describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kull
     const sender = kaydedenSender(2);
     const sonuc = await sendOutboundMessage(db, sender, {
       conversationId: konusma.id,
-      text: withCartLink('Sepetinize 2 baklava ekledim.', URL),
+      text: withCartLink('Sepetinize 2 baklava ekledim.', { url: URL, purpose: 'cart' }),
     });
 
     expect(sonuc.status).toBe('sent');

@@ -9,6 +9,7 @@ import {
   issueSecurityCodeAction,
   recordConversationOptInAction,
   sendCartLinkAction,
+  sendAccountLinkAction,
   startEmailAnchorAction,
   sendOutboundAction,
   setConversationModeAction,
@@ -163,6 +164,10 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
     /** Sepet bağlantısı (15.21) — aynı yazma sarmalı; bağlantı sohbete gider, ekrana değil. */
     onSendCartLink: () => {
       if (detail) void run(() => sendCartLinkAction(detail.id));
+    },
+    /** Hesap bağlantısı (15.16) — aynı yazma sarmalı; müşteri bağlantıyı açıp giriş yapınca sohbet onun hesabına bağlanır. */
+    onSendAccountLink: () => {
+      if (detail) void run(() => sendAccountLinkAction(detail.id));
     },
   };
 

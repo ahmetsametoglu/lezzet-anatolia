@@ -14,9 +14,9 @@ import {
 } from '@lezzet/application';
 // Alt yoldan (`settings-keys` emsali): barrel o gün başka şeritlerin elindeydi (07.09).
 import { startCartLink } from '@lezzet/application/cart/link';
-import { CART_LINK_LINE } from '@lezzet/application/cart/link-text';
+import { linkTail } from '@lezzet/application/cart/link-text';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
-import { ConversationHandlerEnum, DEFAULT_PAGE_SIZE, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
+import { ConversationHandlerEnum, DEFAULT_PAGE_SIZE, type CartLinkPurpose, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
@@ -544,23 +544,33 @@ export async function issueSecurityCodeAction(conversationId: string): Promise<A
 }
 
 /**
- * **Sepet bağlantısını sohbete gönder** (15.21 · operatör yarısı, kullanıcı kararı 07.09).
+ * **Sohbet bağlantısını gönder** — sepet (15.21 · kullanıcı kararı 07.09) ya da hesap (15.16 ·
+ * kullanıcı tasarımı 08.09); operatör yarısı.
  *
- * Ajanın `sepet_baglantisi` aracının insan eli: sohbeti personel yürütüyorsa ajan araçları
- * çalışmaz ve müşteriyi sepete taşıyacak tek yol buydu. Bağlantı AYNI kapıdan üretilir
- * (`startCartLink` — yeni jeton eskisini geçersizler) ve AYNI cümleyle gider (`CART_LINK_LINE`):
- * ajanın gönderdiğiyle operatörün gönderdiği ayrışamaz. Bağlantıyı açan kişi giriş yapınca sepet
- * ve (kimliksiz sohbette) kimlik hesabına geçer — `cart/link.ts` künyesi.
+ * Ajanın `sepet_baglantisi` / `hesap_baglantisi` araçlarının insan eli: sohbeti personel yürütüyorsa
+ * ajan araçları çalışmaz ve müşteriyi sepete ya da hesabına taşıyacak tek yol bu düğmeler. Bağlantı
+ * AYNI kapıdan üretilir (`startCartLink` — yeni jeton aynı amaçlı eskisini geçersizler) ve AYNI
+ * kuyrukla gider (`linkTail`): ajanın gönderdiğiyle operatörün gönderdiği ayrışamaz. Bağlantıyı açan
+ * kişi giriş yapınca sepet ve (kimliksiz sohbette) kimlik hesabına geçer — `cart/link.ts` künyesi.
  *
  * Gönderim `sendOutboundMessage`tan: pencere kapalıysa reddedilir ve sebebi operatöre söylenir
  * (`SEND_REFUSAL`). Jeton yine de üretilmiş olur ve bir hafta bekler — pencere açılınca yeniden
  * gönderilebilir, ikinci basış yenisini üretir.
  */
 export async function sendCartLinkAction(conversationId: string): Promise<ActionResult<{ id: string | null }>> {
+  return sendChatLink(conversationId, 'cart');
+}
+
+/** Hesap bağlantısı (15.16) — sepetsiz sohbeti müşteri KENDİSİ bağlasın; gövde yukarıdakiyle tek. */
+export async function sendAccountLinkAction(conversationId: string): Promise<ActionResult<{ id: string | null }>> {
+  return sendChatLink(conversationId, 'account');
+}
+
+async function sendChatLink(conversationId: string, purpose: CartLinkPurpose): Promise<ActionResult<{ id: string | null }>> {
   try {
     await requireAdmin();
 
-    const link = await startCartLink(serviceDb(), { conversationId });
+    const link = await startCartLink(serviceDb(), { conversationId, purpose });
     if (link.status !== 'ok') {
       const cumle: Record<typeof link.status, string> = {
         conversation_not_found: 'Konuşma bulunamadı — ekranı tazeleyin.',
@@ -571,8 +581,8 @@ export async function sendCartLinkAction(conversationId: string): Promise<Action
 
     const outcome = await sendOutboundMessage(serviceDb(), metaSenderFromEnv(), {
       conversationId,
-      // Ajanın cevabına eklenen satırın aynısı (`withCartLink` biçimi): cümle, altında bağlantı.
-      text: `${CART_LINK_LINE}\n${link.url}`,
+      // Ajanın cevabına eklenen kuyruğun aynısı (`withCartLink` biçimi): cümle, altında bağlantı.
+      text: linkTail({ url: link.url, purpose }),
       author: 'admin',
     });
     refresh();

@@ -4,6 +4,7 @@ import { BundleService, CartService, CategoryService, ConversationService, Price
 import { purgeTestData } from '@lezzet/database/testing';
 import type { Conversation } from '@lezzet/types';
 import { cartAgentTools, cartLinkIfDue } from './agent-tools';
+import type { ChatLink } from './link-text';
 
 /**
  * AJANIN SEPET ARAÇLARI (15.20 · 15.22) — ilk YAZAN araçlar.
@@ -62,8 +63,8 @@ async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>
 
 const AD = (kisa: string) => `${kisa} ${stamp}`;
 
-function araclar(conversation: Conversation, onLink: (url: string) => void = () => {}): ToolSet {
-  return cartAgentTools(db, { conversation, pricingCustomerId: null, addressCustomerId: null, onLink });
+function araclar(conversation: Conversation, onLink: (link: ChatLink) => void = () => {}, accountLink = false): ToolSet {
+  return cartAgentTools(db, { conversation, pricingCustomerId: null, addressCustomerId: null, onLink, accountLink });
 }
 
 beforeAll(async () => {
@@ -100,9 +101,9 @@ afterAll(async () => {
 });
 
 describe('değişmez: kimlik ARGÜMAN değil, KAPANIŞTIR', () => {
-  it('beş aracın hiçbirinin girdisinde müşteri ya da sohbet kimliği YOK', () => {
-    const tools = araclar(messenger);
-    expect(Object.keys(tools).sort()).toEqual(['sepet_adet', 'sepet_baglantisi', 'sepete_ekle', 'sepetim', 'sepetten_cikar']);
+  it('altı aracın hiçbirinin girdisinde müşteri ya da sohbet kimliği YOK — hesap bağlantısı dahil', () => {
+    const tools = araclar(messenger, () => {}, true);
+    expect(Object.keys(tools).sort()).toEqual(['hesap_baglantisi', 'sepet_adet', 'sepet_baglantisi', 'sepete_ekle', 'sepetim', 'sepetten_cikar']);
     for (const arac of Object.values(tools)) {
       const alanlar = Object.keys((arac.inputSchema as z.ZodObject<z.ZodRawShape>).shape ?? {});
       expect(alanlar.some((a) => /customer|conversation|Id$/i.test(a))).toBe(false);
@@ -190,7 +191,7 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
     const bos = await new ConversationService(db).open({ source: 'messenger', externalRef: `psid-bos-${stamp}` });
     conversationIds.push(bos.id);
     let alinan: string | null = null;
-    const sonuc = await cagir(araclar(bos, (url) => (alinan = url)), 'sepet_baglantisi');
+    const sonuc = await cagir(araclar(bos, (link) => (alinan = link.url)), 'sepet_baglantisi');
     expect(sonuc).toHaveProperty('bos');
     expect(sonuc).not.toHaveProperty('hazir');
     expect(alinan).toBeNull();
@@ -198,7 +199,7 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
 
   it('bağlantı aracı KABI doldurur ve modele "yazma" der — adres sohbetin dilinde sepet sayfası', async () => {
     let alinan: string | null = null;
-    const sonuc = await cagir(araclar(messenger, (url) => (alinan = url)), 'sepet_baglantisi');
+    const sonuc = await cagir(araclar(messenger, (link) => (alinan = link.url)), 'sepet_baglantisi');
     expect(sonuc).toHaveProperty('hazir');
     expect(alinan).toMatch(/\/fr\/panier\?link=[A-Z0-9]{12}$/);
   });
@@ -228,9 +229,24 @@ describe('cartLinkIfDue — sepete yazıldıysa ya da söz verildiyse bağlantı
 
     expect(await cartLinkIfDue(db, whatsapp, { reply: 'Teşekkürler, iyi günler.', cartWritten: false })).toBeNull();
     const sozle = await cartLinkIfDue(db, whatsapp, { reply: 'Sepetiniz hazır, aşağıdaki bağlantıdan giriş yapıp onaylayabilirsiniz.', cartWritten: false });
-    expect(sozle).toMatch(/\/panier\?link=[A-Z0-9]{12}$/);
+    expect(sozle).toMatchObject({ purpose: 'cart', url: expect.stringMatching(/\/panier\?link=[A-Z0-9]{12}$/) });
     const yazimla = await cartLinkIfDue(db, whatsapp, { reply: 'Üç pastayı sepetinize ekledim.', cartWritten: true });
-    expect(yazimla).toMatch(/\/panier\?link=[A-Z0-9]{12}$/);
-    expect(yazimla).not.toBe(sozle); // her çağrı yeni jeton, öncekini kapatır (`startCartLink`)
+    expect(yazimla).toMatchObject({ purpose: 'cart', url: expect.stringMatching(/\/panier\?link=[A-Z0-9]{12}$/) });
+    expect(yazimla?.url).not.toBe(sozle?.url); // her çağrı yeni jeton, öncekini kapatır (`startCartLink`)
+  });
+});
+
+describe('hesap bağlantısı (15.16) — yalnız verildiğinde var, kabı HESAP amacıyla doldurur', () => {
+  it('verilmediğinde araç sette YOK — karar `accountLinkOffered`ın, araç kendini sunmaz', () => {
+    expect(Object.keys(araclar(messenger))).not.toContain('hesap_baglantisi');
+  });
+
+  it('BOŞ sepette de bağlantı üretir — işi sepet değil kimlik; adres hesap sayfası, amaç account', async () => {
+    const bos = await new ConversationService(db).open({ source: 'messenger', externalRef: `psid-hesap-${stamp}` });
+    conversationIds.push(bos.id);
+    let alinan: ChatLink | null = null;
+    const sonuc = await cagir(araclar(bos, (link) => (alinan = link), true), 'hesap_baglantisi');
+    expect(sonuc).toHaveProperty('hazir');
+    expect(alinan).toMatchObject({ purpose: 'account', url: expect.stringMatching(/\/fr\/compte\?link=[A-Z0-9]{12}$/) });
   });
 });

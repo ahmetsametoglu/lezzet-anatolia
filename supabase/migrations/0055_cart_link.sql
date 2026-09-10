@@ -52,6 +52,13 @@ create table public.cart_link (
   -- Bağlantı SOHBETİN bağlantısıdır, müşterinin değil: WhatsApp'ta sohbetin müşterisi var
   -- (taslak ya da gerçek), Messenger'da yok — sahibi bulmak açılış anında sohbetten yapılır.
   conversation_id uuid not null references public.conversation (id) on delete cascade,
+  -- AMAÇ (15.16 · kullanıcı tasarımı 08.09) — aynı jeton iki iş görür ve TÜKETİMİ İKİSİNDE AYNIDIR
+  -- (`claimCartLink`: kimlik bağlanır, sohbette sepet varsa taşınır). Fark yalnız müşterinin vardığı
+  -- sayfa ve sohbetteki cümle: `cart` sohbette kurulan sepete, `account` sepetsiz sohbeti hesaba
+  -- bağlamaya. Varsayılan YOK: üreten amacını söyler. Ayrı tablo açılmadı — tek kullanım, ömür ve iz
+  -- kuralları iki yerde yaşardı. Yeni bağlantı yalnız AYNI amaçlı açık bağlantıyı kapatır: hesap
+  -- bağlantısı gönderildi diye sohbetteki "Sepete git" düğmesi ölmemeli.
+  purpose text not null check (purpose in ('cart', 'account')),
   expires_at timestamptz not null,
   -- Tek kullanım: açılıp giriş yapıldığı an damgalanır; ikinci açılış `invalid` görür.
   claimed_at timestamptz,

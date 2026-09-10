@@ -211,6 +211,9 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
     // Karusel (09.09): çeşit sorusunda liste değil kaydırmalı kartlar; düğmesi "Ürün kartı — <kod>".
     expect(ticketAgentTask.system).toContain('urun_karuseli aracını ÇAĞIR');
     expect(ticketAgentTask.system).toContain('"Ürün kartı — <kod>" yazarsa');
+    // Hesap bağlantısı (15.16): kimliksiz sohbette "siparişim nerede" devredilmez, bağlantıyla cevaplanır.
+    expect(ticketAgentTask.system).toContain("hesap_baglantisi'ni ÇAĞIR");
+    expect(ticketAgentTask.system).toContain('Hesap bilgisi sorusu için DEVRETME');
     expect(ticketAgentTask.system).toContain('yalnız müşterinin SON TURU içindir');
   });
 

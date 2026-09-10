@@ -11,6 +11,7 @@ import { getProductDetail } from '../catalog/product';
 import { resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
 import { cartGroupOf, cartPayableCents, entryOfItem, shippingGroupFee, type CartLine, type CartView } from './cart-types';
 import { startCartLink } from './link';
+import type { ChatLink } from './link-text';
 import { getCartView } from './read';
 
 /*
@@ -47,6 +48,11 @@ import { getCartView } from './read';
   Müşterili sohbette (WhatsApp) müşterinin gerçek sepeti — siteyi açtığında aynı sepeti görür.
   Kimliksiz sohbette (Messenger/IG) sohbet sepeti (`cart.conversation_id`, 0055); bağlantıyı açıp
   giriş yapınca hesabına taşınır (`link.ts`).
+
+  ── HESAP BAĞLANTISI DA BURADA (15.16 · 10.09) ─────────────────────────────
+  `hesap_baglantisi` sepet aracı değil ama sepet bağlantısının kardeşi: aynı jeton kapısı, aynı kap
+  (`onLink`), yalnız amacı ve vardığı sayfa farklı. Kimlik kapısı KAPALIYKEN verilir — kapıyı
+  müşterinin kendi eliyle açmanın yolu bu; açık kapıda araç hiç yok (`accountLinkOffered`, `ai.ts`).
 */
 
 /** Tek soruda gösterilecek en fazla aday — `urun_ara`nın tavanıyla aynı ölçü. */
@@ -61,8 +67,13 @@ export interface CartAgentToolsInput {
   pricingCustomerId: string | null;
   /** Kayıtlı adresi okumaya izin — çapa açıkken müşteri kimliği, kapalıyken `null`. */
   addressCustomerId: string | null;
-  /** Bağlantı üretildiğinde çağrılır — `ai.ts` cevabın sonuna deterministik ekler. */
-  onLink: (url: string) => void;
+  /** Bağlantı üretildiğinde çağrılır — `ai.ts` cevabın sonuna deterministik ekler; amaç cümleyi ve düğmeyi seçer. */
+  onLink: (link: ChatLink) => void;
+  /**
+   * `hesap_baglantisi` verilsin mi (15.16) — yalnız kimlik kapısı kapalıyken ve işe yarayacakken;
+   * kararı `accountLinkOffered` (`ai.ts`) verir. Verilmezse araç sette HİÇ yok.
+   */
+  accountLink?: boolean;
   /** Sepete YAZILDI (ekle/adet/çıkar) — `ai.ts` bu turda bağlantıyı garantiler (`cartLinkIfDue`). */
   onCartWrite?: () => void;
 }
@@ -96,7 +107,7 @@ export async function cartLinkIfDue(
   db: Db,
   conversation: Conversation,
   input: { reply: string | null; cartWritten: boolean },
-): Promise<string | null> {
+): Promise<ChatLink | null> {
   /* İKİNCİ ÖLÇÜM (08.09, aynı tur): müşteri "sepete koy" dedi, ajan koydu; sonraki turda 👍 gelince
      ajan "afiyet olsun" deyip kapattı — bağlantı sözü de geçmedi, araç da çağrılmadı, müşteri siteye
      bağlantısız kaldı. Onay ve ödeme yalnız sitede (15.21); bağlantısız bir sepet yazımı çıkmaz sokak.
@@ -107,7 +118,7 @@ export async function cartLinkIfDue(
     const cart = await new CartService(db).getFor(cartOwnerOf(conversation));
     if (cart.items.length === 0) return null;
     const sonuc = await startCartLink(db, { conversationId: conversation.id });
-    return sonuc.status === 'ok' ? sonuc.url : null;
+    return sonuc.status === 'ok' ? { url: sonuc.url, purpose: 'cart' } : null;
   } catch (err) {
     logger.warn({ context: 'application/cart-agent-tools', conversationId: conversation.id, err: String(err) }, 'söz verilen sepet bağlantısı üretilemedi');
     return null;
@@ -278,7 +289,7 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
           }
           const sonuc = await startCartLink(db, { conversationId: conversation.id });
           if (sonuc.status !== 'ok') return { bilinmiyor: 'Bağlantı şu an üretilemedi — müşteriye sitemizden devam edebileceğini söyle.' };
-          input.onLink(sonuc.url);
+          input.onLink({ url: sonuc.url, purpose: 'cart' });
           return {
             hazir: 'Bağlantı üretildi ve cevabının SONUNA otomatik eklenecek — sen bağlantıyı YAZMA.',
             nasil: 'Müşteri bağlantıyı açar, e-postasıyla giriş yapar (şifre yok), sepetini görür, adresini seçer ve öder. Sepet hesabına geçer.',
@@ -290,6 +301,42 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
         }
       },
     }),
+
+    /*
+      HESAP BAĞLANTISI (15.16 · kullanıcı tasarımı 08.09) — sohbeti müşterinin HESABINA bağlatan
+      bağlantı. Yalnız kimlik kapısı kapalıyken verilir (`input.accountLink`, karar `ai.ts`te):
+      Messenger/IG'de kimlik başka yoldan kurulamaz ve "siparişim nerede" sorusu o kapı açılmadan
+      cevaplanamaz. Sepet boş olabilir — bu bağlantının işi sepet değil kimlik; doluysa giriş anında
+      yine taşınır (`claimCartLink` iki amaçta aynı).
+    */
+    ...(input.accountLink
+      ? {
+          hesap_baglantisi: tool({
+            description:
+              'Sohbeti müşterinin SİTEDEKİ hesabına bağlayacak bağlantıyı üretir. Müşteri siparişlerini, sipariş durumunu, adreslerini, puanlarını ya da hesabını sorduğunda ÇAĞIR — ' +
+              'bu sohbet henüz bir hesaba bağlı değil, o bilgiler bağlanınca açılır. Bağlantı cevabının sonuna otomatik eklenir; sen yazma. ' +
+              'Müşteri sepetini tamamlamak istiyorsa bunun yerine sepet_baglantisi: o da giriş yapınca sohbeti hesaba bağlar.',
+            inputSchema: z.object({}),
+            execute: async () => {
+              try {
+                const sonuc = await startCartLink(db, { conversationId: conversation.id, purpose: 'account' });
+                if (sonuc.status !== 'ok') {
+                  return { bilinmiyor: 'Bağlantı şu an üretilemedi — müşteriye sitemizde hesabına girerek siparişlerini görebileceğini söyle.' };
+                }
+                input.onLink({ url: sonuc.url, purpose: 'account' });
+                return {
+                  hazir: 'Hesap bağlantısı üretildi ve cevabının SONUNA otomatik eklenecek — sen bağlantıyı YAZMA.',
+                  nasil: 'Müşteri bağlantıyı açar, e-postasına gelen kodla giriş yapar (şifre yok); sohbet o anda hesabına bağlanır. Sonra siparişlerini ve hesabını bu sohbetten sorabilir.',
+                  gecerlilik: '7 gün',
+                };
+              } catch (err) {
+                logger.warn({ ...log, tool: 'hesap_baglantisi', err: String(err) }, 'hesap bağlantısı üretilemedi');
+                return { bilinmiyor: 'Bağlantı şu an üretilemedi.' };
+              }
+            },
+          }),
+        }
+      : {}),
   };
 }
 

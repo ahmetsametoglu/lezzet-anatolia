@@ -1,3 +1,5 @@
+import type { CartLinkPurpose } from '@lezzet/types';
+
 /**
  * Sohbet bağlantısının KAPI KARARI — saf, DB'siz, testli (15.16 · 15.21).
  *
@@ -6,16 +8,16 @@
  *   · **hesap** — sepetsiz sohbeti hesaba bağlama (kullanıcı tasarımı 08.09: müşteri KENDİSİ
  *     bağlar — e-posta koduyla giriş, aynı ekranda kod); hedef hesap sayfası.
  *
- * Amaç bugün BAĞLANTININ ADRESİNDEN okunur (`?to=hesap`): jetonun kendisi amacı henüz
- * taşımıyor (`cart_link.purpose` sepet şeridinin işi, `not-sosyal-eposta-koduyla-hesap-baglama.md`).
- * Kolon geldiğinde bu fonksiyonun girdisi değişir, kararı değişmez. Adres kurcalanırsa olacak tek
- * şey yanlış sayfaya varmaktır — jeton yine tek kullanımlık ve girişe bağlı.
+ * Amaç ADRESTEN okunur (`?to=hesap`) ve öyle kalıyor: hesap bağlantısı hesap sayfasına üretilir
+ * (`cart_link.purpose = 'account'` → `/fr/compte?link=…`, `cart/link.ts`), sayfa kapıya `to=hesap`
+ * ile devreder. Satırdaki amaç kapıda OKUNMAZ ve bilinçli: kapı jetonu doğrulamaz, varlığını
+ * sızdırmamak için (`route.ts` künyesi). Adres kurcalanırsa olacak tek şey yanlış sayfaya varmaktır —
+ * jeton yine tek kullanımlık ve girişe bağlı.
  *
  * Oturum varsa doğrudan hedefe (jeton kapıda tüketildi); yoksa giriş sayfasına, hedefi `next`te,
  * amacı `reason`da — giriş sayfası cümlesini oradan seçer ("sepetinizi görmek için" ≠
  * "sohbetinizi bağlamak için"). Çerezdeki jeton girişte tüketilir (`invite-handoff`).
  */
-export type CartLinkPurpose = 'cart' | 'account';
 
 /** Bağlantı adresindeki amaç değeri — sepet şeridi hesap amaçlı bağlantıyı bununla üretir. */
 export const CART_LINK_TO_ACCOUNT = 'hesap';

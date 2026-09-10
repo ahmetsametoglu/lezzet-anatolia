@@ -16,7 +16,7 @@ import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cartAgentTools, cartLinkIfDue } from '../cart/agent-tools';
-import { withCartLink } from '../cart/link-text';
+import { withCartLink, type ChatLink } from '../cart/link-text';
 import { anchorGateOf, type AnchorGate } from '../customer/anchor';
 import { sendOutboundMessage, type MessageSender } from '../messaging/send';
 import { ringConversationBell, ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
@@ -66,14 +66,17 @@ async function runOpts(
   cart: { conversation: Conversation; sink: CartLinkSink } | null = null,
 ) {
   if (opts.model) return { model: opts.model };
-  const cartTools = (identity: string | null) =>
+  const cartTools = (identity: string | null, gate: AnchorGate | null) =>
     cart
       ? cartAgentTools(db, {
           conversation: cart.conversation,
           pricingCustomerId: identity,
           addressCustomerId: identity,
-          onLink: (url) => {
-            cart.sink.url = url;
+          accountLink: accountLinkOffered(cart.conversation, gate),
+          onLink: (link) => {
+            // Sepet bağlantısı hesap bağlantısını EZER (o da hesabı bağlar, üstelik sepete götürür);
+            // tersi olmaz — aynı turda ikisi çağrılırsa sohbette tek düğme kalır ve o sepetinki.
+            if (link.purpose === 'cart' || !cart.sink.link) cart.sink.link = link;
           },
           onCartWrite: () => {
             cart.sink.wrote = true;
@@ -95,19 +98,19 @@ async function runOpts(
   // okumak aynı cevabı iki sorguya mal ederdi.
   // Ürün kartı kancası yalnız SOHBET turunda (kart kanala göre çizilir; e-posta talebinde kanal yok).
   const cardHook = cart ? { conversation: cart.conversation, onCard: (card: PendingProductCard) => cart.sink.cards.push(card) } : null;
-  if (!customerId) return { tools: { ...customerSupportTools(db, null, cardHook), ...cartTools(null) } };
+  if (!customerId) return { tools: { ...customerSupportTools(db, null, cardHook), ...cartTools(null, null) } };
   const gate = known ?? (await anchorGateOf(db, customerId));
   if (!gate.open) logger.info({ customerId, anchor: gate.state }, 'ai: kimlik kapısı kapalı — yalnız kamusal araçlar verildi');
   const identity = toolsIdentityOf(customerId, gate);
-  return { tools: { ...customerSupportTools(db, identity, cardHook), ...cartTools(identity) } };
+  return { tools: { ...customerSupportTools(db, identity, cardHook), ...cartTools(identity, gate) } };
 }
 
 /**
- * Sohbet turunun sepet bağlantısı — araç üretir (`sepet_baglantisi`), kabı doldurur; cevabın
- * sonuna `withCartLink` ekler (kural ve gerekçesi `cart/link-text.ts`te, saf ve birim testli).
+ * Sohbet turunun bağlantısı — araç üretir (`sepet_baglantisi` · `hesap_baglantisi`), kabı doldurur;
+ * cevabın sonuna `withCartLink` ekler (kural ve gerekçesi `cart/link-text.ts`te, saf ve birim testli).
  */
 interface CartLinkSink {
-  url: string | null;
+  link: ChatLink | null;
   /** Bu turda sepete yazıldı mı — yazıldıysa bağlantı modelin sözünü beklemeden eklenir (08.09). */
   wrote: boolean;
   /**
@@ -120,7 +123,7 @@ interface CartLinkSink {
 
 /** Sohbet turunun boş kabı — her tur yeni; kap sınıflar arasında paylaşılmaz. */
 function bosKap(): CartLinkSink {
-  return { url: null, wrote: false, cards: [] };
+  return { link: null, wrote: false, cards: [] };
 }
 
 /**
@@ -132,6 +135,25 @@ function bosKap(): CartLinkSink {
  */
 export function toolsIdentityOf(customerId: string | null, gate: AnchorGate | null): string | null {
   return customerId && gate?.open ? customerId : null;
+}
+
+/**
+ * **Hesap bağlantısı aracı verilsin mi** (15.16) — kimlik kapısını müşterinin kendi eliyle açmanın
+ * yolu; yalnız işe yarayacağı yerde verilir, çünkü aracı vermemek kısıttır, "çağırma" demek ricadır.
+ *
+ *   · Sohbette müşteri YOK → ver. Messenger/IG'nin olağan hâli; WhatsApp'ta çakışmada da olur.
+ *   · Messenger/IG sohbeti bir kayda BAĞLI → verme. O bağı operatör kurdu; bağlantıyı başka hesapla
+ *     açan kişi `foreign_identity` alırdı — iki gerçek kaydı buluşturmak insanın kararıdır (DOMAIN §10).
+ *   · WhatsApp, kapı KAPALI ve bekleyen kimlik sorusu YOK (taslak ya da çapasız kayıt) → ver: giriş
+ *     numarayı hesaba bağlar (taslak birleşir, çapasız kayıttan devralınır — `bindPhoneToAccount`).
+ *     Kimlik sorusu bekliyorsa verme: o sohbette geçerli yol sorunun kendisi (04.10); iki yol aynı
+ *     anda açılırsa müşteri hangisini izleyeceğini bilemez.
+ *   · Kapı AÇIK → verme: bağlanacak bir şey yok.
+ */
+export function accountLinkOffered(conversation: Pick<Conversation, 'customerId' | 'source'>, gate: AnchorGate | null): boolean {
+  if (!conversation.customerId) return true;
+  if (conversation.source !== 'whatsapp') return false;
+  return gate !== null && !gate.open && gate.ask === null;
 }
 
 export type SupportAiOutcome =
@@ -408,14 +430,14 @@ export async function generateConversationDraft(
      Messenger/IG'de sökülür — orada çizilmiyor ve müşteri çıplak yıldız görürdü.
      Sepet bağlantısı da taslağa BURADA girer: operatör onu görür, isterse siler. */
   // Söz verilen bağlantı (08.09): model "bağlantı" deyip aracı çağırmadıysa sistem üretir (`cartLinkIfPromised`).
-  cartLink.url ??= await cartLinkIfDue(db, conversation, { reply: result.data.reply, cartWritten: cartLink.wrote });
+  cartLink.link ??= await cartLinkIfDue(db, conversation, { reply: result.data.reply, cartWritten: cartLink.wrote });
   if (cartLink.cards.length > 0) {
     // Taslak yolunda kart GÖNDERİLMEZ: operatör onaylamadığı bir şeyi göndermiş olurdu (`CartLinkSink.cards`).
     logger.info({ context: 'application/conversation-ai', conversationId: conversation.id, cards: cartLink.cards.length }, 'taslak yolunda ürün kartı gönderilmedi');
   }
   await conversations.update({
     id: conversation.id,
-    aiDraftReply: withCartLink(formatForChannel(result.data.reply, conversation.source), cartLink.url),
+    aiDraftReply: withCartLink(formatForChannel(result.data.reply, conversation.source), cartLink.link),
     aiDraftGeneratedAt: new Date().toISOString(),
   });
   /* İKİ ZİL, İKİ EKRAN (21.291): çoğul olan kuyruğu, tekil olan AÇIK yazışmayı uyandırır. Taslak
@@ -721,8 +743,8 @@ async function autonomousConversationReply(
   /* SÖZ VERİLEN BAĞLANTI (08.09, canlıda ölçüldü): model "aşağıdaki bağlantıdan…" yazıp aracı
      çağırmadı, kap boş kaldı, müşteri boş bir söz okudu. Sepet doluysa sistem bağlantıyı yine
      üretir — kural ve gerekçesi `cartLinkIfPromised`te; burası yalnız kabı doldurur. */
-  cartLink.url ??= await cartLinkIfDue(db, conversation, { reply: govdeMetni, cartWritten: cartLink.wrote });
-  const reply = govdeMetni ? withCartLink(govdeMetni, cartLink.url) : null;
+  cartLink.link ??= await cartLinkIfDue(db, conversation, { reply: govdeMetni, cartWritten: cartLink.wrote });
+  const reply = govdeMetni ? withCartLink(govdeMetni, cartLink.link) : null;
   if (!reply) return handOff(result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.', true);
 
   /*
@@ -741,7 +763,7 @@ async function autonomousConversationReply(
   // Sepet bağlantısı taşıyan cevaba izin sorusu EKLENMEZ (07.09): o mesajın tek işi ödeme bağlantısı;
   // altına pazarlama paragrafı koymak hem uzatır hem müşteriyi bağlantıdan uzaklaştırır.
   const izinSorulacak =
-    conversation.source === 'whatsapp' && conversation.optInAskedAt === null && musteriMesaji >= OPT_IN_MIN_TURNS && !cartLink.url;
+    conversation.source === 'whatsapp' && conversation.optInAskedAt === null && musteriMesaji >= OPT_IN_MIN_TURNS && !cartLink.link;
 
   const govde = izinSorulacak ? `${reply}\n\n${OPT_IN_QUESTION}` : reply;
 

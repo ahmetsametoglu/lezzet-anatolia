@@ -51,6 +51,7 @@ export function SocialDesktop({
   onStartEmailAnchor,
   onIssueSecurityCode,
   onSendCartLink,
+  onSendAccountLink,
 }: SocialViewProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -132,6 +133,7 @@ export function SocialDesktop({
               onStartEmailAnchor={onStartEmailAnchor}
               onIssueSecurityCode={onIssueSecurityCode}
               onSendCartLink={onSendCartLink}
+              onSendAccountLink={onSendAccountLink}
               busy={busy}
               onOptIn={onOptIn}
             />

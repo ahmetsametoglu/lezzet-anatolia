@@ -666,6 +666,8 @@ interface SocialContextPaneProps {
   onIssueSecurityCode: () => void;
   /** Sepet bağlantısı (15.21) — sohbeti personel yürütürken müşteriyi sepete taşıyan tek yol. */
   onSendCartLink: () => void;
+  /** Hesap bağlantısı (15.16) — müşteri e-postasıyla giriş yapar, sohbet kendi hesabına bağlanır. */
+  onSendAccountLink: () => void;
 }
 
 export function SocialContextPane({
@@ -682,6 +684,7 @@ export function SocialContextPane({
   onStartEmailAnchor,
   onIssueSecurityCode,
   onSendCartLink,
+  onSendAccountLink,
   busy,
   onOptIn,
 }: SocialContextPaneProps) {
@@ -711,6 +714,16 @@ export function SocialContextPane({
         <Button variant="secondary" onClick={onLinkCustomer}>
           Müşteriye bağla
         </Button>
+        {/* MÜŞTERİNİN KENDİ BAĞLADIĞI YOL (15.16 · kullanıcı tasarımı 08.09) — operatör kaydı aramak
+            zorunda kalmaz: bağlantı sohbete gider, müşteri e-postasıyla giriş yapınca sohbet onun
+            hesabına bağlanır (`cart_link`, amaç `account`). "Müşteriye bağla"nın yanında, çünkü ikisi
+            aynı soruyu iki yoldan cevaplıyor. Çizimde yok; sepet düğmesinin deseni izlendi (07.09 izni). */}
+        <Button variant="secondary" size="sm" disabled={busy} onClick={onSendAccountLink}>
+          Hesap bağlantısı gönder
+        </Button>
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+          Müşteri bağlantıyı açıp e-postasıyla giriş yapar; sohbet kendi hesabına bağlanır. Bağlantı 7 gün geçerli.
+        </span>
         {(whatsapp || profileName) ? (
           <Link href={searchHref} className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive hover:underline">
             Müşterilerde ara →

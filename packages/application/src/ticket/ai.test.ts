@@ -7,7 +7,7 @@ import { fakeCloudApiConfig, fakeMeta } from '@lezzet/notify/testing';
 import { metaCloudSender } from '../messaging/meta-sender';
 import { recordInboundMessage, recordOutboundMessage } from '../messaging/record';
 import { unconfiguredSender } from '../messaging/send';
-import { generateConversationDraft, runAutonomousConversationReply, runAutonomousTicketReply, toolsIdentityOf } from './ai';
+import { accountLinkOffered, generateConversationDraft, runAutonomousConversationReply, runAutonomousTicketReply, toolsIdentityOf } from './ai';
 
 /**
  * AI DESTEK ÇEKİRDEĞİNİN ÜÇ DALI (16.5 · 15.13 · test dalgası 15.18).
@@ -115,6 +115,26 @@ describe('araç kimliği ÜÇLÜ kapıdan geçer (28.08 · CHANNELS §3b)', () =
 
   it('çapa AÇIKSA kimlik geçer — tam set', () => {
     expect(toolsIdentityOf('musteri-1', { open: true, state: 'email', ask: null })).toBe('musteri-1');
+  });
+});
+
+describe('hesap bağlantısı aracı YALNIZ işe yarayacağı yerde (15.16)', () => {
+  /* Aracı vermemek kısıttır, "çağırma" demek ricadır. Yanlış yerde verilen araç iki şekilde bozulur:
+     bağlı Messenger sohbetinde müşteri `foreign_identity` görür; kimlik sorusu bekleyen WhatsApp
+     sohbetinde iki yol aynı anda açılır. Saf karar, DB'siz sınanıyor. */
+  it('müşterisiz sohbette VAR — Messenger/IG\'nin olağan hâli', () => {
+    expect(accountLinkOffered({ customerId: null, source: 'messenger' }, null)).toBe(true);
+  });
+
+  it('bir kayda bağlı Messenger/IG sohbetinde YOK — bağı operatör kurdu, kaydırmak insanın kararı', () => {
+    expect(accountLinkOffered({ customerId: 'musteri-1', source: 'instagram' }, { open: false, state: 'none', ask: null })).toBe(false);
+  });
+
+  it('WhatsApp: kapı kapalı ve soru yoksa VAR; kimlik sorusu bekliyorsa ya da kapı açıksa YOK', () => {
+    const whatsapp = { customerId: 'musteri-1', source: 'whatsapp' } as const;
+    expect(accountLinkOffered(whatsapp, { open: false, state: 'none', ask: null })).toBe(true);
+    expect(accountLinkOffered(whatsapp, { open: false, state: 'email', ask: 'email' })).toBe(false);
+    expect(accountLinkOffered(whatsapp, { open: true, state: 'email', ask: null })).toBe(false);
   });
 });
 
