@@ -22,7 +22,15 @@
       "default": "varsayılan",
       "add": "＋ Yeni adres ekle",
       "empty": "Henüz kayıtlı adresiniz yok. Nereye getirelim?",
-      "emptyBody": "Adresinizi buradan ekleyin — siparişinizden çıkmanıza gerek yok."
+      "emptyBody": "Adresinizi buradan ekleyin — siparişinizden çıkmanıza gerek yok.",
+      "editHint": "Düzenlemek için basılı tutun"
+    },
+    "addressCheck": {
+      "foundElsewhere": "Bu adresi şurada bulduk:",
+      "useIt": "Böyle kaydet",
+      "keepMine": "Benim yazdığım doğru",
+      "streetOnly": "Kapı numarasını doğrulayamadık. Adresiniz doğruysa devam edebilirsiniz.",
+      "notFound": "Bu adresi bulamadık. Yazımını kontrol eder misiniz?"
     },
     "undeliverable": {
       "title": "Bazı kalemler bu siparişe girmiyor",
@@ -177,7 +185,15 @@
       "default": "par défaut",
       "add": "＋ Ajouter une adresse",
       "empty": "Vous n'avez pas encore d'adresse enregistrée. Où livrons-nous ?",
-      "emptyBody": "Ajoutez votre adresse ici — pas besoin de quitter votre commande."
+      "emptyBody": "Ajoutez votre adresse ici — pas besoin de quitter votre commande.",
+      "editHint": "Maintenez appuyé pour modifier"
+    },
+    "addressCheck": {
+      "foundElsewhere": "Nous avons trouvé cette adresse ici :",
+      "useIt": "Corriger",
+      "keepMine": "Mon adresse est correcte",
+      "streetOnly": "Nous n'avons pas pu vérifier le numéro. Si votre adresse est correcte, vous pouvez continuer.",
+      "notFound": "Nous n'avons pas trouvé cette adresse. Pouvez-vous vérifier l'orthographe ?"
     },
     "undeliverable": {
       "title": "Certains articles ne font pas partie de cette commande",
@@ -332,7 +348,15 @@
       "default": "Standard",
       "add": "＋ Neue Adresse",
       "empty": "Sie haben noch keine gespeicherte Adresse. Wohin liefern wir?",
-      "emptyBody": "Fügen Sie Ihre Adresse hier hinzu — Sie müssen Ihre Bestellung nicht verlassen."
+      "emptyBody": "Fügen Sie Ihre Adresse hier hinzu — Sie müssen Ihre Bestellung nicht verlassen.",
+      "editHint": "Zum Bearbeiten gedrückt halten"
+    },
+    "addressCheck": {
+      "foundElsewhere": "Wir haben diese Adresse hier gefunden:",
+      "useIt": "Übernehmen",
+      "keepMine": "Meine Adresse stimmt",
+      "streetOnly": "Wir konnten die Hausnummer nicht bestätigen. Wenn Ihre Adresse stimmt, können Sie fortfahren.",
+      "notFound": "Wir konnten diese Adresse nicht finden. Können Sie die Schreibweise prüfen?"
     },
     "undeliverable": {
       "title": "Einige Artikel gehören nicht zu dieser Bestellung",

@@ -10293,11 +10293,17 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   dünyayı kurar, işi insan yapar.** Kapsam denetimi etkilenmiyor: zorunlu kovalar deponun araç
   TÜRÜNÜ ve araç kaydını sayıyor, araçtaki stoğu değil.
 
-- [ ] (21.215) **Sipariş tamamlamada mevcut adres düzenlenebilsin** — bugün yalnız YENİ adres
+- [x] (21.215) **Sipariş tamamlamada mevcut adres düzenlenebilsin** — bugün yalnız YENİ adres
   kurulabiliyor; adres kartına dokunmanın düzenleme karşılığı yok (kullanıcı bulgusu, web şeridi
   aktardı). Kullanıcının istediği yol: karta UZUN BASINCA düzenleme açılsın, keşfedilebilirlik için
   kartın bir köşesinde silik bir ipucu dursun (*"düzenlemek için uzun basınız"*).
 
+  - **Durum (10.09) — yazıldı.** Checkout'un adres satırı uzun basınca hesap ekranının AYNI
+    çekmecesini dolu açıyor; kısa dokunuş seçmeye devam ediyor. İpucu satırın sağ alt köşesinde
+    (*"Düzenlemek için basılı tutun"*, üç dil) ve ekran okuyucuya ipucu olarak da gidiyor. Kitin
+    satırına iki prop girdi (`apps/mobile/src/screens/customer-kit/option-row.tsx` → `onLongPress` ·
+    `hint`); ikinci bir form yazılmadı. Tasarımda yok → `design/KARARLAR.md`. Test:
+    `checkout-screen.test.tsx` (uzun basma "Adresi düzenle" çekmecesini açar · ipucu satırda).
 - [x] (21.216) **Dokunmatik geri bildirim KİTE bağlandı — "eylem titresin, gezinme sessiz"**
   (kullanıcı bulgusu 01.09 + kararı 02.09)
   - **Durum (02.09) — sözlük eksik değildi, BAĞLANMAMIŞTI.** `lib/haptics` beş niyeti iyi tarif
@@ -14743,5 +14749,29 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     veririz"* (üç dil), izin cümlesi (`consentNote`) silindi. Dört sonucun dördü de bildirimle söylenir.
   · **Test:** `account-screen.test.tsx` → bölge dışı varsayılan adreste gerçek kayıt; gövde
     `{postalCode, country, source: 'app-account'}`, `/me/preferences` çağrısı YOK.
+  · **Doğrulama:** `21.306` ile aynı koşular — dokunulan dört ekran klasörü 117/117 · kök `typecheck`
+    20/20 · `lint` temiz.
+
+- [x] (21.308) **ADRES DÜZELTME TEKLİFİ NATIVE CHECKOUT'TA — "Siparişi onayla"da bir kez sorulur, kabul kodu + şehri düzeltir; adres satırına uzun basma düzenler** (kullanıcı kararları 10.09: *"Adres formunda adres düzeltme teklifi yapalım"* · *"Üzerine uzun süre basıldığı zaman adres düzenleme açılıyor olması lazım"*; web şeridinin talebi `mobil-adres-dogrulanabilirligi` — `11.11`in native müşteri yarısı; `21.215` bu turla kapandı)
+  `touches:` `apps/mobile/src/lib/api/addresses.ts` · `apps/mobile/src/screens/checkout/checkout-screen.tsx` · `apps/mobile/src/screens/checkout/checkout-screen.test.tsx` · `apps/mobile/src/screens/checkout/messages.json` · `apps/mobile/src/screens/customer-kit/option-row.tsx` · `docs/build/11-kurye-rota.md` · `design/KARARLAR.md`
+
+  **Durum (10.09) — TAMAM.**
+  · **Akış web'in birebir aynısı** (talebin §④'ü · `design/pages/musteri-checkout.md` §4c): "Siparişi
+    onayla"ya basılınca `POST /me/addresses/:id/check` AYNI adres için BİR KEZ sorulur; `confirmed` ·
+    `unknown` hiçbir şey göstermez, öteki üçünde akış durur ve ikinci dokunuşta sipariş geçer. Seçili adres
+    değişince soru sıfırlanır; soru düşerse sipariş durmaz (FAIL-OPEN).
+  · **Yer formda değil sipariş anında:** doğrulama satırın niteliği değil bir ANIN cevabı (web şeridinin
+    06.09 kararı — alan olarak taşınsaydı istemci bayat cevabı taze sanardı). Adres formu değişmedi.
+  · **Ayrım yapısal:** `wrong_postal_code` → başlık + servisin etiketi + iki düğme (*"Böyle kaydet"* ·
+    *"Benim yazdığım doğru"*); `street_only` · `not_found` → düğmesiz tek satır. Ton sıcak not, alarm
+    yok. Metinler talebin §①–③'ünden birebir, üç dil.
+  · **Kabul YALNIZ kod + şehri değiştirir** (gövdenin kalanı satırın kendi değerleri — `AddressWriteSchema`
+    tam gövde istiyor) ve anlık görüntü yeniden okunur: kod değişimi bölgeyi, kargo ücretini ve teslim
+    gününü oynatabilir. *"Benim yazdığım doğru"* bir beyandır — aynı adres için soru tekrarlanmaz.
+  · **Uzun basma (`21.215`) aynı turda:** satır uzun basınca hesap ekranının aynı çekmecesi dolu açılır,
+    ipucu satırın köşesinde (`option-row` → `onLongPress` · `hint`). `11.11` satırına Durum notu düşüldü.
+  · **Testler:** `checkout-screen.test.tsx` → *"CheckoutScreen — adres teklifi ve düzenleme"* 7 test
+    (teklif servisin etiketiyle gelir · kabul yalnız kod + şehir · beyandan sonra ikinci dokunuş geçer ·
+    doğrulanan kapıda soru yok · istek düşerse satış durmaz · düğmesiz tek satır · uzun basma).
   · **Doğrulama:** `21.306` ile aynı koşular — dokunulan dört ekran klasörü 117/117 · kök `typecheck`
     20/20 · `lint` temiz.

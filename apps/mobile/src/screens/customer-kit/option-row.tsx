@@ -22,6 +22,17 @@ interface OptionRowProps {
   description?: string;
   selected: boolean;
   onPress: () => void;
+  /**
+   * UZUN BASMA — satırın ikincil eylemi (21.215: checkout'ta kayıtlı adresi düzenlemek). Kısa
+   * dokunuş seçer, uzun basma düzenler; iki ayrı hareket olduğu için titreşimleri de ayrı
+   * (`PressableSurface` künyesi: uzun basma `hapticCommit`).
+   */
+  onLongPress?: () => void;
+  /**
+   * Köşedeki silik ipucu — uzun basmanın VARLIĞINI söyler (kullanıcı isteği 21.215). Uzun basma
+   * görünmez bir harekettir; ipucusuz yalnız bilen bulur. Ekran okuyucuya da ipucu olarak gider.
+   */
+  hint?: string;
   disabled?: boolean;
   /**
    * Alt satır SEBEP bildiriyor mu (kullanıcı kararı 10.08). Kapalı bir seçeneğin sadece
@@ -40,6 +51,8 @@ export function OptionRow({
   description,
   selected,
   onPress,
+  onLongPress,
+  hint,
   disabled = false,
   descriptionTone = 'muted',
   trailing,
@@ -48,11 +61,13 @@ export function OptionRow({
   return (
     <PressableSurface
       onPress={onPress}
+      onLongPress={onLongPress}
       feedback="scale"
       disabled={disabled}
       selected={selected}
       style={[styles.row, selected ? styles.selected : styles.idle, disabled ? styles.disabled : undefined]}
       accessibilityLabel={description === undefined ? label : `${label} · ${description}`}
+      accessibilityHint={hint}
       testID={testID}
     >
       <View style={styles.head}>
@@ -62,6 +77,7 @@ export function OptionRow({
       {description === undefined ? null : (
         <Text style={[styles.description, descriptionTone === 'danger' ? styles.dangerDescription : null]}>{description}</Text>
       )}
+      {hint === undefined ? null : <Text style={styles.hint}>{hint}</Text>}
     </PressableSurface>
   );
 }
@@ -103,6 +119,13 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
+    color: theme.colors.muted,
+  },
+  /** Silik ipucu — sağ alt köşe, yardımcı kademe (MB-46: `helper` yalnız gerçek yardımcı rolde). */
+  hint: {
+    alignSelf: 'flex-end',
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.helper,
     color: theme.colors.muted,
   },
 }));

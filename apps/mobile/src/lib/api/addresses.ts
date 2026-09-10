@@ -1,5 +1,11 @@
 import type { z } from 'zod';
-import { MeAddressListSchema, type AddressWriteSchema, type MeAddressSchema } from '@lezzet/types';
+import {
+  AddressCheckResultSchema,
+  MeAddressListSchema,
+  type AddressCheckResult,
+  type AddressWriteSchema,
+  type MeAddressSchema,
+} from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
 import type { ApiResult } from './client';
@@ -49,4 +55,15 @@ export function makeDefaultAddress(id: string): Promise<ApiResult<MeAddress[]>> 
  */
 export function makeBillingAddress(id: string): Promise<ApiResult<MeAddress[]>> {
   return authorizedFetch(`/api/v1/me/addresses/${id}/billing`, MeAddressListSchema, { method: 'POST' });
+}
+
+/**
+ * ADRES DOĞRULAMASI — `POST /api/v1/me/addresses/:id/check` (11.11 · native bağı 21.308).
+ *
+ * Sipariş ANINDA sorulur (kullanıcı kararı 02.09) ve cevap o an ekranda yaşar — listeye alan olarak
+ * girmez (sözleşme künyesi: istemci bayat bir cevabı taze sanardı). Uç hiçbir hâlde 4xx dönmez;
+ * servis düşerse `unknown` gelir ve ekran susar.
+ */
+export function checkAddress(id: string): Promise<ApiResult<AddressCheckResult>> {
+  return authorizedFetch(`/api/v1/me/addresses/${id}/check`, AddressCheckResultSchema, { method: 'POST' });
 }

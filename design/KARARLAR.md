@@ -2472,3 +2472,12 @@ konusu da çok doğru bir ifade değil."* Bar artık yalnız olguyu söyler ("T�
 Aynı turda "gelince haber ver" düğmesi gerçek kayda bağlandı (`variant_stock_notice`, 21.306) ve
 sonucu "✓ Not aldık" der — "haber verilecek" DEMEZ: stok gelince haberi gönderen iş henüz yok —
 kullanıcı kararıyla (10.09) yazılacak, web şeridine not düşüldü. Web'in katalog kartında aynı "yakında yeniden" cümlesi duruyor; aynı nota yazıldı.
+
+
+## Checkout'ta adres satırına UZUN BASMA düzenler — tasarımda YOK, eklendi (10.09)
+
+Kullanıcı isteği (21.215): sipariş tamamlanırken kayıtlı adres düzenlenebilsin; yol **uzun basma**,
+keşfedilebilirlik için kartın köşesinde silik bir ipucu (*"Düzenlemek için basılı tutun"*). v3'ün
+checkout satırı yalnız seçim çiziyor. Kısa dokunuş seçmeye devam eder; uzun basma hesap ekranının
+aynı adres çekmecesini DOLU açar — ikinci bir form yazılmadı. İpucu kitin satırına prop olarak girdi
+(`OptionRow hint`), yardımcı kademede (MB-46) ve ekran okuyucuya ipucu olarak gider.

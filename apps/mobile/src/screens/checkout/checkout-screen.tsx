@@ -1,8 +1,8 @@
 import { formatPrice } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
-import type { PaymentMethod } from '@lezzet/types';
+import type { AddressCheckResult, PaymentMethod } from '@lezzet/types';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -18,7 +18,7 @@ import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { declineNeighborInvite } from '@/lib/invite/invite-api';
 import { TextField } from '@/components/ui/text-field';
-import type { MeAddress } from '@/lib/api/addresses';
+import { checkAddress, updateAddress, type MeAddress } from '@/lib/api/addresses';
 import { placeCheckoutOrder } from '@/lib/api/checkout';
 import { updateMe, type Me } from '@/lib/api/me';
 import { useAppLocale } from '@/lib/i18n/app-locale';
@@ -140,6 +140,16 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const [submitting, setSubmitting] = useState(false);
   /** Sunucunun ya da ödeme kartının söylediği son şey. `warm` = hata değil (vazgeçilen ödeme). */
   const [notice, setNotice] = useState<{ tone: 'error' | 'warm'; text: string } | null>(null);
+  /**
+   * ADRES DOĞRULAMASININ SONUCU (11.11 · 21.308) — sipariş anında sorulur, ekranda gösterilir.
+   *
+   * `checkedFor` hangi adres için sorulduğunu tutuyor: müşteri cevabını verdikten sonra AYNI adres
+   * için ikinci kez tutulmuyor (web'in birebir kuralı, `checkout-client.tsx`). Tutulsaydı "Benim
+   * yazdığım doğru" diyen müşteri sonsuz döngüye girerdi — ret bir vazgeçiş değil bir BEYAN ve bir
+   * kez alınır.
+   */
+  const [addressNotice, setAddressNotice] = useState<AddressCheckResult | null>(null);
+  const checkedFor = useRef<string | null>(null);
 
   /* ── İLETİŞİM KÜNYESİ: AD + TELEFON, İLK SİPARİŞTE (kullanıcı kararı 15.08) ──────────────────
      Bu alanlar eskiden GİRİŞTEN hemen sonra zorunlu bir akışta isteniyordu (`/profile-setup`;
@@ -179,6 +189,12 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
      ücreti hesaplanan adres ancak böyle aynı olur. Ekran açılışta bir seçim YAZMAZ — yazsaydı
      kullanıcının yapmadığı bir seçim, cevabın gecikmesine bağlı olarak doğardı. */
   const selectedAddress = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+  /* Adres değişti: önceki doğrulama artık BU adresin cevabı değil (web'in `onSelectAddress` kuralı). */
+  const selectedAddressId = selectedAddress?.id ?? null;
+  useEffect(() => {
+    checkedFor.current = null;
+    setAddressNotice(null);
+  }, [selectedAddressId]);
 
   /**
    * Çekmece bir adres yazdı (ekleme · düzenleme · silme). İKİ ŞEY birden olmalı: yazılan adres
@@ -553,6 +569,21 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     setSubmitting(true);
     setNotice(null);
 
+    /* ADRES DOĞRULAMASI SİPARİŞ ANINDA — ve BİR KEZ (11.11 · kullanıcı kararı 02.09). Söylenecek bir
+       şey varsa akış burada DURUR; müşteri görür, kararını verir, ikinci dokunuşta sipariş geçer.
+       `confirmed` ve `unknown` hiç göstermez: birincisinde söylenecek şey yok, ikincisinde söyleyecek
+       bilgimiz yok. Soru DÜŞERSE (ağ) akış da durmaz — FAIL-OPEN: bir dış servisin ya da bizim
+       ucumuzun kesintisi satışı durduramaz (uç künyesi). */
+    if (checkedFor.current !== selectedAddress.id) {
+      const check = await checkAddress(selectedAddress.id);
+      checkedFor.current = selectedAddress.id;
+      if (check.error === null && check.data.status !== 'confirmed' && check.data.status !== 'unknown') {
+        setSubmitting(false);
+        setAddressNotice(check.data);
+        return;
+      }
+    }
+
     const result = await placeCheckoutOrder(locale, {
       addressId: selectedAddress.id,
       // Kargoda gün SORULMAZ ve gönderilmez: tarih taşıyıcıya bağlıdır, söz verilmez.
@@ -616,6 +647,36 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     // Her ret "ekrandaki resim eskidi" ihtimalidir (gün düştü, yöntem kapandı, fiyat değişti):
     // anlık görüntü tazelenir ki müşteri düzeltmeyi GÜNCEL seçeneklerle yapsın.
     checkout.reload();
+  };
+
+  /**
+   * TEKLİF KABUL EDİLDİ — hem siparişin adresi hem KAYIT düzelir (kullanıcı kararı 02.09). Tek yazım
+   * yeter: sipariş henüz açılmadı ve seçili adres kaydın kendisi. Değişen YALNIZ kod ve şehir —
+   * `wrong_postal_code`ın tanımı bu (sokak ve numara aynı, kapı başka kodda); alıcıya, telefona,
+   * etikete dokunulmaz. Ülke gönderilmez: kapı yeni kodu kendisi çözer (web'in aynı çağrısı).
+   */
+  const acceptAddressFix = async (): Promise<void> => {
+    if (selectedAddress === null || addressNotice?.status !== 'wrong_postal_code') return;
+    setSubmitting(true);
+    const result = await updateAddress(selectedAddress.id, {
+      label: selectedAddress.label,
+      recipient: selectedAddress.recipient,
+      phone: selectedAddress.phone,
+      line1: selectedAddress.line1,
+      line2: selectedAddress.line2,
+      postalCode: addressNotice.postalCode,
+      city: addressNotice.city,
+    });
+    setSubmitting(false);
+    if (result.error !== null) {
+      showNotice({ tone: 'error', text: t.reject.transport });
+      return;
+    }
+    /* Adres değişti → yeniden sorulacak; ve tazeleme ŞART: kod değişimi bölgeyi, kargo ücretini ve
+       teslim gününü de oynatabilir (`applyAddressWrite` künyesi). */
+    checkedFor.current = null;
+    setAddressNotice(null);
+    applyAddressWrite(result.data, selectedAddress.id);
   };
 
   const confirmLabel = (selectedPayment?.method === 'online' ? t.confirmPay : t.confirm).replace(
@@ -776,6 +837,10 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   description={addressLine(candidate)}
                   selected={candidate.id === selectedAddress?.id}
                   onPress={() => setAddressId(candidate.id)}
+                  /* UZUN BASMA DÜZENLER (21.215 · kullanıcı isteği): kayıtlı adresi düzeltmek için
+                     sipariş akışından çıkmak gerekmesin — hesap ekranıyla aynı çekmece, dolu açılır. */
+                  onLongPress={() => setAddressSheet({ editing: candidate })}
+                  hint={t.address.editHint}
                   trailing={candidate.isDefault ? <Text style={styles.defaultBadge}>{t.address.default}</Text> : undefined}
                   testID={`checkout-address-${candidate.id}`}
                 />
@@ -965,6 +1030,41 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           <Text style={styles.consentLabel}>{t.marketing}</Text>
         </PressableSurface>
 
+        {/* ADRES TEKLİFİ — onay düğmesinin hemen üstünde: soru "Siparişi onayla"ya basıldığı an doğuyor
+            ve müşterinin gözü orada. İki hâl AYRI YAPI (tasarım `musteri-checkout.md` §4c): kapı başka
+            kodda bulunduysa iki düğme, doğrulanamadıysa tek yumuşak satır — birinde tıklanacak bir
+            şey var, ötekinde yok. Metin SERVİSİN etiketidir (`label`); biz cümle kurmayız. */}
+        {addressNotice === null ? null : addressNotice.status === 'wrong_postal_code' ? (
+          <Note
+            tone="warm"
+            title={t.addressCheck.foundElsewhere}
+            description={addressNotice.label}
+            action={
+              <View style={styles.checkActions}>
+                <PrimaryButton
+                  label={t.addressCheck.useIt}
+                  shape="pill"
+                  onPress={() => void acceptAddressFix()}
+                  disabled={submitting}
+                  testID="checkout-address-fix"
+                />
+                <TextAction
+                  label={t.addressCheck.keepMine}
+                  onPress={() => setAddressNotice(null)}
+                  testID="checkout-address-keep"
+                />
+              </View>
+            }
+            testID="checkout-address-check"
+          />
+        ) : addressNotice.status === 'street_only' || addressNotice.status === 'not_found' ? (
+          <Note
+            tone="warm"
+            description={addressNotice.status === 'street_only' ? t.addressCheck.streetOnly : t.addressCheck.notFound}
+            testID="checkout-address-check"
+          />
+        ) : null}
+
         {notice === null ? null : <Note tone={notice.tone} description={notice.text} testID="checkout-notice" />}
 
         {blocked === null ? null : <Text style={styles.blockLine}>{blocked}</Text>}
@@ -1024,6 +1124,11 @@ function keepDelivery(): void {
 }
 
 const styles = StyleSheet.create((theme, rt) => ({
+  /** Adres teklifinin iki eylemi — kutunun eninde, alt alta (bölge bandının yığın kararı). */
+  checkActions: {
+    alignSelf: 'stretch',
+    rowGap: theme.space.lg,
+  },
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],

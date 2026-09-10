@@ -669,6 +669,14 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     - **Kalan tek yüzey:** native uygulamanın müşteri adres akışı — mobil şeridin kuyruğunda, önü
       tamamen açık (`docs/talep/mobil-adres-dogrulanabilirligi.md`). **BEKLEYEN(11.11)**
 
+  - **Durum (10.09) — native MÜŞTERİ yüzeyi yazıldı (`21.308`).** Native checkout "Siparişi onayla"ya
+    basıldığı an adresi BİR KEZ soruyor (`POST /me/addresses/:id/check`), web'in akışının ve üç dilli
+    cümlelerinin birebir aynısı: `wrong_postal_code` → servisin etiketi + [Böyle kaydet] [Benim yazdığım
+    doğru]; `street_only`/`not_found` → düğmesiz tek satır; `confirmed`/`unknown` → hiçbir şey; istek
+    düşerse satış durmaz. Dört yüzeyin (web checkout · native checkout · kurye kartı · operasyon
+    aynaları) dördü de artık konuşuyor; görevin açık kalanı yalnız `design/BACKLOG §4` (depo formunun
+    haritalı kompozisyonu).
+
 ## Netleşecekler
 
 - **İmza yakalama tekniği:** ekran imzası mı, foto mu, ikisi de mi — sahada (eldiven/soğuk) hangisi güvenilir; tasarım+pratik test sırasında kesinleşir.
