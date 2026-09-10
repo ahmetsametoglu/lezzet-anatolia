@@ -5,9 +5,11 @@
  * Üç ajan aynı ağacı ve aynı yerel Supabase'i paylaşıyor; üçü de iş bitiminde aynı paketi
  * koşturuyordu — üç koşu, aynı soru, çakışan satırlar. Kural artık şu:
  *
- *   - Koşu YOKKEN tetikleyen koşuyu BAŞLATIR (önceki sonuç klasörü silinir).
- *   - Koşu SÜRERKEN tetikleyen yenisini başlatMAZ: süren koşuya katılır, bitişini bekler ve
+ *   - Koşu YOKKEN tetikleyen koşuyu BAŞLATIR (önceki sonuç `previous.json` + `previous.log` olur).
+ *   - TAM PAKET SÜRERKEN tetikleyen yenisini başlatMAZ: süren koşuya katılır, bitişini bekler ve
  *     AYNI sonucu okur (single-flight). Çıkış kodu da o koşunun kodudur.
+ *   - Kilidi tam paket DEĞİL başka bir iş tutuyorsa (e2e, entegrasyon, ölçüm, şema işi) katılmaz:
+ *     bitmesini bekler, sonra kendisi KOŞUCU olur. Ayrım `test-lock-owner.mjs`te (10.09).
  *   - Sonuç herkes için tek yerden okunur: `.test-results/latest.json` (özet) + `run.log` (tam
  *     çıktı). `pnpm test:status` son durumu koşturmadan basar.
  *
@@ -21,6 +23,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, createWriteStream } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { SUITE_KIND, ownerAction } from './test-lock-owner.mjs';
 
 const ROOT = join(import.meta.dirname, '..');
 const LOCK = join(tmpdir(), 'lezzet-anatolia-test.lock');
@@ -70,35 +73,41 @@ if (process.argv.includes('--status')) {
 
 // ── Kilidi almayı dene: alan KOŞUCU olur, alamayan KATILIMCI ─────────────────
 //
-// **DDL kuyruğu döngünün İÇİNDE** (besleme şeridinin notu, 03.08): kilidi `db:reset`/migration
-// tutuyorsa (`--kind=ddl`) katılımcı yoluna girilmez, boşalması BEKLENİR ve baştan denenir.
-// Ayrım şart: katılımcı `latest.json`'ın "running" olmaktan çıkmasını bekler, ama bir DDL sırasında
-// o dosya zaten ÖNCEKİ koşunun bitmiş sonucudur — ayrım olmasaydı kilit bırakılır bırakılmaz o
-// bayat sonuç okunup "geçti" denirdi, hiçbir test koşmadan.
+// **Katılımcı yolu YALNIZ tam paket içindir** (`test-lock-owner.mjs`). Katılımcı `latest.json`ın
+// "running" olmaktan çıkmasını bekler; oysa kilidi başka bir iş tutuyorken o dosya ÖNCEKİ koşunun
+// bitmiş sonucudur — katılınsaydı kilit bırakılır bırakılmaz o bayat sonuç okunup "geçti" denirdi,
+// hiçbir test koşmadan. Önce DDL'de yaşandı (besleme şeridinin notu, 03.08), sonra e2e ve
+// entegrasyonda (10.09 — ikisi de kilidi `test` türüyle alıyor ve "süren paket" sanılıyordu).
+// Kural artık tür sayarak değil TERSİNDEN kurulu: sahip tam paket değilse beklenir, sonra koşulur.
 //
 // Kontrol döngünün içinde, çünkü dışarıda yapılan bir kontrol ile `mkdir` arasına giren bir
 // `db:reset` aynı tuzağı geri getirirdi — yarışı kapatan şey tekrar denemektir.
 async function tryAcquire() {
+  let announced = null; // bekleme notu sahip başına BİR kez — 2 sn'lik yoklama ekranı doldurmasın
   for (;;) {
     try {
       mkdirSync(LOCK);
-      writeFileSync(join(LOCK, 'owner.json'), JSON.stringify({ pid: process.pid, at: Date.now(), kind: 'test' }));
+      writeFileSync(join(LOCK, 'owner.json'), JSON.stringify({ pid: process.pid, at: Date.now(), kind: SUITE_KIND }));
       return true;
     } catch {
       const owner = readJson(join(LOCK, 'owner.json'));
-      const dead = owner?.pid ? !isAlive(owner.pid) : true;
-      const stale = !owner || Date.now() - owner.at > STALE_MS;
-      if (dead || stale) {
+      const action = ownerAction(owner, { now: Date.now(), staleMs: STALE_MS, isAlive });
+      if (action === 'takeover') {
         console.warn(`[test] sahipsiz kilit devralınıyor (pid ${owner?.pid ?? '?'})`);
         rmSync(LOCK, { recursive: true, force: true });
         continue;
       }
-      if ((owner.kind ?? 'test') !== 'test') {
-        console.warn(`[test] şema işi sürüyor (${owner.kind}, pid ${owner.pid}) — bitmesini bekliyorum, sonra KOŞUCU olacağım…`);
+      if (action === 'wait') {
+        if (announced !== owner.pid) {
+          console.warn(
+            `[test] kilidi tam paket değil başka bir iş tutuyor (${owner.kind ?? 'türsüz'}, pid ${owner.pid}) — katılmıyorum; bitmesini bekliyorum, sonra KOŞUCU olacağım…`,
+          );
+          announced = owner.pid;
+        }
         await sleep(POLL_MS);
         continue;
       }
-      return false; // canlı bir TEST koşusu var → katılımcı yolu
+      return false; // canlı bir TAM PAKET koşusu var → katılımcı yolu
     }
   }
 }

@@ -14,8 +14,11 @@
  * `db:reset` KULLANICININ kararıdır ve öyle kalıyor; değişen tek şey, sürmekte olan bir koşunun
  * bitmesini beklemesi. Reset'in 90 saniye gecikmesi, yalancı bir kırmızı paketin teşhisinden ucuz.
  *
- * Sahibin `kind`'ı yazılır (`test` | `ddl`) çünkü `shared-test-run.mjs` ikisini AYIRMAK ZORUNDA:
- * kilidi bir DDL tutuyorken "süren koşuya katıl" yolu bir öncekinin sonucunu yeni sanardı.
+ * Sahibin `kind`'ı yazılır: `test` (varsayılan — e2e, entegrasyon, ölçüm koşuları) ya da `ddl`
+ * (şema işi). Tam paket koşucusu kendi türünü (`suite`) yazar. `shared-test-run.mjs` YALNIZ
+ * `suite`e katılır, öteki her sahipte bekler — `latest.json`a yalnız tam paket yazar, başka bir işe
+ * "katılmak" bir öncekinin sonucunu yeni sanmaktır (DDL için 03.08, e2e/entegrasyon için 10.09
+ * ölçüldü). Devral/katıl/bekle kararı tek yerde: `test-lock-owner.mjs`.
  *
  * Beklemek çakışmaktan ucuzdur. Kilit **kuyruk kurar, iş reddetmez**.
  *
@@ -25,6 +28,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ownerAction } from './test-lock-owner.mjs';
 
 const LOCK = join(tmpdir(), 'lezzet-anatolia-test.lock');
 /** `--kind=ddl` ilk argüman olarak verilir; verilmezse iş bir test koşusudur. */
@@ -50,10 +54,10 @@ function acquire() {
       return;
     } catch {
       const owner = heldBy();
-      // Sahibi yaşıyor mu — ölü bir sürecin kilidi ertesi gün de kimseyi bekletmemeli.
-      const dead = owner?.pid ? !isAlive(owner.pid) : true;
-      const stale = !owner || Date.now() - owner.at > STALE_MS;
-      if (dead || stale) {
+      // Sahibi yaşıyor mu — ölü bir sürecin kilidi ertesi gün de kimseyi bekletmemeli. "Katıl"
+      // kararı bu betik için anlamsız (katılmak yalnız tam paket koşucusunun yolu): devralınmayan
+      // her sahip SIRA demektir.
+      if (ownerAction(owner, { now: Date.now(), staleMs: STALE_MS, isAlive }) === 'takeover') {
         console.warn(`[test-lock] sahipsiz kilit devralınıyor (pid ${owner?.pid ?? '?'})`);
         rmSync(LOCK, { recursive: true, force: true });
         continue;
