@@ -229,7 +229,7 @@ interface WaMessage {
   type?: string;
   text?: { body?: string };
   interactive?: { button_reply?: { id?: string; title?: string }; list_reply?: { id?: string; title?: string } } & Record<string, unknown>;
-  button?: { text?: string };
+  button?: { text?: string; payload?: string };
   [key: string]: unknown;
 }
 
@@ -617,7 +617,12 @@ function waBodyOf(message: WaMessage): { kind: MessageKind; text: string | null;
     const secim = message.interactive?.button_reply ?? message.interactive?.list_reply;
     return { kind: 'interactive', text: buttonReplyText(secim?.id, secim?.title), payload: { interactive: message.interactive ?? null } };
   }
-  if (message.type === 'button') return { kind: 'interactive', text: message.button?.text ?? null, payload: { button: message.button ?? null } };
+  /* KARUSEL DÜĞMESİ BURADAN DÜŞER (ölçüldü 09.09 canlı): karuselin hızlı cevabı `button_reply` değil,
+     şablon düğmesinin biçimiyle `type: "button"` + `button.payload` (bizim kimlik) + `button.text`
+     (başlık) gelir. Yalnız başlık yazılınca ajan "Boyları gör"ü gördü, hangi ürün olduğunu göremedi. */
+  if (message.type === 'button') {
+    return { kind: 'interactive', text: buttonReplyText(message.button?.payload, message.button?.text), payload: { button: message.button ?? null } };
+  }
   const media = message.type ? (message[message.type] as { caption?: string } | undefined) : undefined;
   return { kind: 'media', text: media?.caption?.trim() || null, payload: { type: message.type ?? 'unknown', body: media ?? null } };
 }
