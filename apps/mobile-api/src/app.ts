@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
+import { compress } from 'hono/compress';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { v1 } from './api/v1/router';
 import { fail } from './lib/respond';
@@ -29,6 +30,17 @@ app.use('*', async (c, next) => {
   else if (status >= 400) logger.warn(line, 'request');
   else logger.info(line, 'request');
 });
+
+/*
+  YANIT SIKIŞTIRMA (21.303). Katalog cevapları görsel türevleriyle (`frames`) büyüdü — ölçüldü 10.09:
+  vitrin 5,9 → 90,5 KB, 20 ürünlük sayfa 10,5 → 113,5 KB. Büyüyen şey tekrar eden CDN adresleri ve gzip
+  onları ~%95 küçültüyor (vitrin 4,4 KB — sözleşme büyümeden önceki ham boyundan az). İstemcinin `fetch`i
+  (Android OkHttp · iOS NSURLSession) `Accept-Encoding: gzip` gönderip açıyor; uygulamada değişiklik yok.
+
+  İstek izinin ARDINDA: iz cevabın durumunu okur, sıkıştırma gövdeyi değiştirir. Akış ucu yok (SSE —
+  ölçüldü); ikili gövdeler (PDF, medya) Hono'nun sıkıştırılabilir tür süzgecine takılmaz, olduğu gibi gider.
+*/
+app.use('*', compress());
 
 /**
  * Yakalanmamış hata → kayıt + zarf. Kayıt cevabı BEKLETMEZ (`void` — apps/backend deseni);
