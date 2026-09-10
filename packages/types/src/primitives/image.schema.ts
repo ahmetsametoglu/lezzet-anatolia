@@ -50,6 +50,18 @@ export const RATIO_ILLUSTRATION = 1.3;
  * yükleyen kişi bilir, CDN aynı formülle keser (`cropTrim`).
  */
 export const RATIO_CHAT = 1.91;
+/**
+ * Dikey kart 4:5 (10.09, kullanıcı kararı: *"her tasarım kendi en boy oranındaki görseli almaya
+ * çalışsın"*). Native vitrinin tarif rafı (220 × 280 dp = 0,79) ve keşif destesi (≈ 0,8) kareden
+ * besleniyordu: rafta genişliğin %21'i kesiliyor, 280 dp'lik yükseklik için 1200'lük basamak iniyordu.
+ */
+export const RATIO_PORTRAIT = 4 / 5;
+/**
+ * Geniş kart 2:1 (10.09, aynı karar). Native tarif listesi (350 × 168 = 2,08) ve vitrin paket kartı
+ * (350 × 172 = 2,03) sohbet kartından (1,91), web vitrinin koleksiyon kartı (16:7 = 2,29) de sohbet
+ * kartından besleniyordu.
+ */
+export const RATIO_WIDE = 2;
 
 /** Kaynaktan türeyen görünüm çerçevesi — odak panelinin canlı önizlemesi bunları gösterir. */
 export interface ImageFrame {
@@ -70,7 +82,8 @@ const OBJECT_FRAMES: ImageFrame[] = [
   { ratio: RATIO_CHAT, label: '1.91:1', where: 'sohbet kartı (WhatsApp · Messenger · Instagram)' },
 ];
 
-const BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'vitrin bandı · paylaşım kartı' }];
+// Vitrin kartı ve bandı 10.09'dan beri geniş (2:1) çerçeveden (`COLLECTION_FRAMES`); 16:9'u paylaşım kartı kullanıyor.
+const BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'paylaşım kartı' }];
 
 /**
  * Galeri fotoğrafı İKİ çerçevede görünür: masaüstü detay galerisi 3:2, mobil detay kahramanı 1:1
@@ -94,6 +107,25 @@ const GALLERY_FRAMES: ImageFrame[] = [
 const PAGE_BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'sayfa kahramanı' }];
 const PAGE_WIDE_FRAMES: ImageFrame[] = [{ ratio: RATIO_SOURCE, label: '3:2', where: 'sayfa kahramanı' }];
 const ILLUSTRATION_FRAMES: ImageFrame[] = [{ ratio: RATIO_ILLUSTRATION, label: '13:10', where: 'çizim alanı' }];
+
+/**
+ * Rolüne göre EK önizlemeler (10.09, kullanıcı kararı: *"ön izleme en boy oranlarıyla uyumlu değilse
+ * bunları da ekleyelim"*). Operatör odağı çerçevelere bakarak seçiyor; önizlemede olmayan oran,
+ * hiç görmediği bir kırpmadır. Ürün · kategori · paket aynı kaynak beklentisini paylaşıyor
+ * (`OBJECT_SPEC`), türev çerçeveleri ayrışıyor. Tarifin kırpma düzenleyicisi yok — tarif rafı ve
+ * listesinin önizlemesi o düzenleyiciyle gelir; o güne dek tarif merkezden kırpılır.
+ */
+const PRODUCT_FRAMES: ImageFrame[] = [...OBJECT_FRAMES, { ratio: RATIO_PORTRAIT, label: '4:5', where: 'keşif kartı (native)' }];
+const PACKAGE_FRAMES: ImageFrame[] = [
+  ...OBJECT_FRAMES,
+  { ratio: RATIO_BAND, label: '16:9', where: 'paket listesi (native)' },
+  { ratio: RATIO_WIDE, label: '2:1', where: 'vitrin paket kartı (native)' },
+];
+const COLLECTION_FRAMES: ImageFrame[] = [
+  ...BAND_FRAMES,
+  { ratio: RATIO_WIDE, label: '2:1', where: 'vitrin kartı (web) · vitrin bandı (native)' },
+  { ratio: RATIO_SQUARE, label: '1:1', where: 'koleksiyon dairesi (native vitrin)', circle: true },
+];
 
 /** Görselin ait olduğu nesne — kaynak oranını ve türev çerçeveleri belirler (envanter O15 tablosu). */
 export const ImageRoleEnum = z.enum([
@@ -126,11 +158,11 @@ const BAND_SPEC: ImageRoleSpec = { ratio: RATIO_BAND, label: '16:9', minWidth: 2
 const GALLERY_SPEC: ImageRoleSpec = { ...OBJECT_SPEC, frames: GALLERY_FRAMES };
 
 export const IMAGE_ROLES: Record<ImageRole, ImageRoleSpec> = {
-  product: OBJECT_SPEC,
+  product: { ...OBJECT_SPEC, frames: PRODUCT_FRAMES },
   gallery: GALLERY_SPEC,
   category: OBJECT_SPEC,
-  package: OBJECT_SPEC,
-  collection: BAND_SPEC,
+  package: { ...OBJECT_SPEC, frames: PACKAGE_FRAMES },
+  collection: { ...BAND_SPEC, frames: COLLECTION_FRAMES },
   // Sayfa kahramanı bantla AYNI kaynağı ister, yalnız türev çerçevesi tek → BAND_SPEC'ten türer.
   banner: { ...BAND_SPEC, frames: PAGE_BAND_FRAMES },
   page_wide: { ...OBJECT_SPEC, frames: PAGE_WIDE_FRAMES },
@@ -299,6 +331,8 @@ export const FRAME_RATIOS = {
   band: RATIO_BAND,
   illustration: RATIO_ILLUSTRATION,
   chat: RATIO_CHAT,
+  portrait: RATIO_PORTRAIT,
+  wide: RATIO_WIDE,
 } as const;
 export type FrameKey = keyof typeof FRAME_RATIOS;
 

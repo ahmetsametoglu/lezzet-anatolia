@@ -41,10 +41,18 @@ export const EMPTY_IMAGE: StorefrontImage = { url: null, crop: CROP_CENTER, fram
  * Çerçevenin TEK adresi (`src`) hangi basamaktan. `srcSet`i okuyan tarayıcı seçimde buna bakmaz
  * (genişlik betimleyicili kümede `src` aday değildir); tek adres gereken yerler içindir — `srcset`
  * okumayan istemci ve **paylaşım kartı** (Open Graph, `apps/web/lib/seo/open-graph.ts`). Sohbet kartı
- * ve bant 1200: paylaşım kartının önerilen ölçüsü 1200×630 ve `RATIO_CHAT` zaten 1.91:1. Öteki
- * çerçeveler orta boy.
+ * ve bant 1200: paylaşım kartının önerilen ölçüsü 1200×630 ve `RATIO_CHAT` zaten 1.91:1. Geniş kart
+ * (2:1) de 1200 — kutusu ekran eninde; öteki çerçeveler orta boy.
  */
-const FRAME_SRC_WIDTH: Record<FrameKey, ImageWidth> = { source: 800, square: 800, band: 1200, illustration: 800, chat: 1200 };
+const FRAME_SRC_WIDTH: Record<FrameKey, ImageWidth> = {
+  source: 800,
+  square: 800,
+  band: 1200,
+  illustration: 800,
+  chat: 1200,
+  portrait: 800,
+  wide: 1200,
+};
 
 /**
  * Tek çerçevenin tek basamağı: kadraj (`cropTrim`) + ölçü. Çerçeve kümesi de küçük resim de BURADAN

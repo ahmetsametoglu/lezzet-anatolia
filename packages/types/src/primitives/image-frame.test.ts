@@ -7,8 +7,10 @@ import {
   IMAGE_ROLES,
   IMAGE_WIDTHS,
   RATIO_CHAT,
+  RATIO_PORTRAIT,
   RATIO_SOURCE,
   RATIO_SQUARE,
+  RATIO_WIDE,
   visibleFraction,
 } from './image.schema';
 
@@ -53,6 +55,22 @@ describe('çerçeve kümesi ve merdiven', () => {
     expect(frameKeyForRatio(1.91)).toBe('chat');
     expect(FRAME_RATIOS.chat).toBe(RATIO_CHAT);
     expect(IMAGE_ROLES.product.frames.some((f) => f.ratio === RATIO_CHAT)).toBe(true);
+  });
+
+  it('dikey ve geniş kartın kendi çerçevesi var (10.09); web koleksiyon kartı (16:7) geniş çerçeveden', () => {
+    expect(frameKeyForRatio(0.79)).toBe('portrait');
+    expect(frameKeyForRatio(2.08)).toBe('wide');
+    expect(frameKeyForRatio(16 / 7)).toBe('wide');
+    expect(FRAME_RATIOS.portrait).toBe(RATIO_PORTRAIT);
+    expect(FRAME_RATIOS.wide).toBe(RATIO_WIDE);
+  });
+
+  it('önizleme native kutuları da gösteriyor: ürün dikey, paket geniş, koleksiyon daire (10.09)', () => {
+    expect(IMAGE_ROLES.product.frames.some((f) => f.ratio === RATIO_PORTRAIT)).toBe(true);
+    expect(IMAGE_ROLES.package.frames.some((f) => f.ratio === RATIO_WIDE)).toBe(true);
+    expect(IMAGE_ROLES.collection.frames.some((f) => f.circle === true)).toBe(true);
+    // Kategori ürünle aynı kaynak beklentisini paylaşıyor ama native keşif kartı yalnız ürünün.
+    expect(IMAGE_ROLES.category.frames.some((f) => f.ratio === RATIO_PORTRAIT)).toBe(false);
   });
 
   it('merdiven artan ve tek yerde', () => {

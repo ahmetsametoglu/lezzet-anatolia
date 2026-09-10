@@ -36,10 +36,12 @@ const ROW: ImageMeta = {
 };
 
 describe('frameSourcesOf — çerçevenin tek adresi', () => {
-  it('paylaşım çerçeveleri (sohbet · bant) 1200, ötekiler 800 basamağından; küme her çerçevede beş basamak', () => {
+  it('sohbet · bant · geniş çerçeveler 1200, ötekiler 800 basamağından; küme her çerçevede beş basamak', () => {
     const f = frameSourcesOf(ROW)!;
     expect(f.chat.src).toContain('width=1200,');
     expect(f.band.src).toContain('width=1200,');
+    expect(f.wide.src).toContain('width=1200,');
+    expect(f.portrait.src).toContain('width=800,');
     expect(f.source.src).toContain('width=800,');
     expect(f.square.src).toContain('width=800,');
     expect(f.illustration.src).toContain('width=800,');

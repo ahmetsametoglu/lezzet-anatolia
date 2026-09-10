@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CROP_CENTER } from '@lezzet/types';
+import { CROP_CENTER, FRAME_RATIOS, type FrameKey } from '@lezzet/types';
 import type { ImageFrameSources, StorefrontImage } from '@lezzet/application';
 import { openGraphOf, shareImageUrl } from './open-graph';
 
@@ -8,13 +8,8 @@ import { openGraphOf, shareImageUrl } from './open-graph';
  * hiç yoksa alan HİÇ yazılmaz (boş `og:image` kartı kırar, kapının künyesi). Saf: DB ve ağ yok.
  */
 const frame = (name: string) => ({ src: `https://cdn.test/${name}-1200`, srcSet: `https://cdn.test/${name}-200 200w` });
-const FRAMES: ImageFrameSources = {
-  source: frame('source'),
-  square: frame('square'),
-  band: frame('band'),
-  illustration: frame('illustration'),
-  chat: frame('chat'),
-};
+// Anahtar kümesi `FRAME_RATIOS`tan — çerçeve eklendiğinde fikstür elle güncellenmez.
+const FRAMES = Object.fromEntries((Object.keys(FRAME_RATIOS) as FrameKey[]).map((key) => [key, frame(key)])) as ImageFrameSources;
 const WITH_CDN: StorefrontImage = { url: 'https://cdn.test/ozgun.webp', crop: CROP_CENTER, frames: FRAMES };
 const WITHOUT_CDN: StorefrontImage = { url: 'https://pub.r2.dev/ozgun.webp', crop: CROP_CENTER, frames: null };
 

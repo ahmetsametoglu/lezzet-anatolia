@@ -108,10 +108,9 @@ export function CategoryCard({ category, circle = false }: CategoryCardProps) {
  * kartında da kullanılıyor). İkisi çelişmiyor: tek kaynaktan odak+zoom ile türeyen iki çerçeve —
  * `FramedImage`'in tüm varlık sebebi bu (envanter §0B). Kırpılmış ikinci bir kopya saklanmaz.
  *
- * ⚠ **Operatörün kırpma önizlemesi bu çerçeveyi HENÜZ göstermiyor:** `ImageFrame` listesi
- * (`packages/types`) koleksiyon için 16:9 önizliyor. Kapağı 16:9'a göre ayarlayan operatör, ana
- * sayfada üstten/alttan biraz daha dar bir bant görüyor. Ayrı bir şeridin dosyası olduğu için
- * dokunmadım; not `docs/talep`'e yazıldı.
+ * **Kart CDN'in geniş (2:1) çerçevesinden beslenir** (05.37 · 10.09): 16:7'ye en yakın adlı çerçeve
+ * o ve operatörün kırpma penceresi onu "vitrin kartı (web)" diye önizliyor. 2:1'den 16:7'ye kalan fark
+ * `cover` ile üstten ve alttan merkezden kesilir (her kenardan ~%6).
  *
  * ── GRADYAN TOKEN'DAN ────────────────────────────────────────────────────────
  * Tasarımın `rgba(52,59,65,.78→0)` gradyanı ham yazılmadı: `--color-ink` üzerinden `color-mix` ile
