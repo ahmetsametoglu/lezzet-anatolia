@@ -4,6 +4,7 @@ import {
   CART_LINK_LINE,
   LINK_BUTTON_TEXT,
   LINK_BUTTON_TITLE,
+  SUPPORT_LINK_LINE,
   cartLinkButton,
   linkTail,
   splitCartLink,
@@ -14,6 +15,8 @@ import {
 const URL = 'https://lezzetanatolie.com/fr/panier?link=ABCDEFGH1234';
 const SEPET: ChatLink = { url: URL, purpose: 'cart' };
 const HESAP: ChatLink = { url: 'https://lezzetanatolie.com/fr/compte?link=ABCDEFGH1234', purpose: 'account' };
+/** Talep bağlantısı (15.14) jetonsuz: sayfanın kendi adresi, oturum kapısı sayfada. */
+const TALEP: ChatLink = { url: 'https://lezzetanatolie.com/fr/assistance/nouvelle', purpose: 'support' };
 
 describe('sepet bağlantısının geri AYRILMASI — Messenger/IG düğmesi (08.09)', () => {
   it('withCartLink → splitCartLink gidiş-dönüş: gövde ve adres kayıpsız ayrılır', () => {
@@ -31,8 +34,8 @@ describe('sepet bağlantısının geri AYRILMASI — Messenger/IG düğmesi (08.
     expect(splitCartLink(`${CART_LINK_LINE}\n${URL}`)).toEqual({ body: '', link: SEPET });
   });
 
-  it('Messenger/IG düğme şablonu Meta sınırlarında: tek `web_url` düğmesi, başlık ≤ 20 karakter, iki amaç × üç dil', () => {
-    for (const link of [SEPET, HESAP]) {
+  it('Messenger/IG düğme şablonu Meta sınırlarında: tek `web_url` düğmesi, başlık ≤ 20 karakter, üç amaç × üç dil', () => {
+    for (const link of [SEPET, HESAP, TALEP]) {
       for (const dil of ['tr', 'fr', 'de'] as const) {
         for (const kanal of ['messenger', 'instagram'] as const) {
           const sablon = cartLinkButton(link, dil, kanal) as {
@@ -51,7 +54,7 @@ describe('sepet bağlantısının geri AYRILMASI — Messenger/IG düğmesi (08.
   });
 
   it('WhatsApp `cta_url` etkileşimli mesajı: gövde ≤ 1024, düğme yazısı ≤ 20 — pencere içinde şablonsuz', () => {
-    for (const link of [SEPET, HESAP]) {
+    for (const link of [SEPET, HESAP, TALEP]) {
       for (const dil of ['tr', 'fr', 'de'] as const) {
         const govde = cartLinkButton(link, dil, 'whatsapp') as {
           type: string;
@@ -85,6 +88,24 @@ describe('HESAP bağlantısı — aynı kuyruk, kendi cümlesi (15.16)', () => {
     for (const dil of ['tr', 'fr', 'de'] as const) {
       expect(LINK_BUTTON_TITLE.account[dil]).not.toBe(LINK_BUTTON_TITLE.cart[dil]);
       expect(LINK_BUTTON_TEXT.account[dil]).not.toBe(LINK_BUTTON_TEXT.cart[dil]);
+    }
+  });
+});
+
+describe('TALEP bağlantısı — jetonsuz, kendi cümlesi (15.14)', () => {
+  it('gidiş-dönüşte amaç cümleden okunur; düğme "Talep oluştur"', () => {
+    /* Şikâyette ajan talep açmaz, talep sayfasını verir (kullanıcı kararı 10.09). Kuyruk öteki iki amaçla
+       aynı yoldan gider: gönderim kapısı ayırır, Messenger/IG'de düğme, WhatsApp'ta cta_url olur. */
+    const govde = 'Yaşadığınız sorun için üzgünüz; talebinizi aşağıdan iletebilirsiniz.';
+    const metin = withCartLink(govde, TALEP);
+    expect(metin).toBe(`${govde}\n\n${SUPPORT_LINK_LINE}\n${TALEP.url}`);
+    expect(splitCartLink(metin)).toEqual({ body: govde, link: TALEP });
+    expect(LINK_BUTTON_TITLE.support.tr).toBe('Talep oluştur');
+  });
+
+  it('üç amacın düğme yazısı AYRI — müşteri talepte "Sepete git" ya da "Hesabı bağla" görmez', () => {
+    for (const dil of ['tr', 'fr', 'de'] as const) {
+      expect(new Set([LINK_BUTTON_TITLE.cart[dil], LINK_BUTTON_TITLE.account[dil], LINK_BUTTON_TITLE.support[dil]]).size).toBe(3);
     }
   });
 });

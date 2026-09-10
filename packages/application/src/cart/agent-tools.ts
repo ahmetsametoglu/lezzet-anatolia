@@ -11,7 +11,7 @@ import { getProductDetail } from '../catalog/product';
 import type { PlaceWarehouses } from '../catalog/storefront-types';
 import { cartGroupOf, cartPayableCents, entryOfItem, shippingGroupFee, type CartEntry, type CartLine, type CartView } from './cart-types';
 import { resolveChatPlace, yerNotu, type ChatPlace, type ChatPlaceMemory } from './chat-place';
-import { startCartLink } from './link';
+import { startCartLink, supportLinkUrl } from './link';
 import type { ChatLink } from './link-text';
 import { getCartView } from './read';
 
@@ -54,6 +54,10 @@ import { getCartView } from './read';
   `hesap_baglantisi` sepet aracı değil ama sepet bağlantısının kardeşi: aynı jeton kapısı, aynı kap
   (`onLink`), yalnız amacı ve vardığı sayfa farklı. Kimlik kapısı KAPALIYKEN verilir — kapıyı
   müşterinin kendi eliyle açmanın yolu bu; açık kapıda araç hiç yok (`accountLinkOffered`, `ai.ts`).
+
+  ── TALEP BAĞLANTISI DA (15.14 · 10.09) ────────────────────────────────────
+  `talep_baglantisi` jetonsuz üçüncü kardeş: şikâyette ajan talep açmaz, talep sayfasının adresini aynı
+  kaba koyar (`supportLinkUrl`, `link.ts`). Her sohbet turunda verilir — şikâyet kimliksiz sohbette de doğar.
 
   ── SEPETE YAZMADAN ÖNCE YER (kullanıcı kararı 10.09) ──────────────────────
   Ekleyen ve artıran araç posta kodu bilinmeden YAZMAZ; kod bir kez söylenir ve sohbette saklanır
@@ -357,6 +361,34 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
           };
         } catch (err) {
           logger.warn({ ...log, tool: 'sepet_baglantisi', err: String(err) }, 'sepet bağlantısı üretilemedi');
+          return { bilinmiyor: 'Bağlantı şu an üretilemedi.' };
+        }
+      },
+    }),
+
+    /*
+      TALEP BAĞLANTISI (15.14 · kullanıcı kararı 10.09) — şikâyette ajan talep AÇMAZ, talep açma
+      sayfasının bağlantısını verir: müşterinin hesabı var mı, hangi sipariş, hangi ürün — sohbet
+      bunları bilemez, sayfa bilir (giriş ister, siparişi ve kalemi seçtirir, fotoğraf alır). Bağlantı
+      jetonsuz; kuyruk ve düğme sepet/hesap bağlantısının kabından (`onLink`) gider. Her sohbet turunda
+      verilir — şikâyet kimliksiz sohbette de doğar.
+    */
+    talep_baglantisi: tool({
+      description:
+        'Müşteriye TALEP AÇMA sayfasının bağlantısını verir. Şikâyet (bozuk, eksik, yanlış ürün), iade ya da tazminat isteğinde ÇAĞIR — ' +
+        'talebi sen açamazsın; müşteri sayfada giriş yapıp siparişini ve ürünü seçer, sorunu yazar, fotoğraf ekler. Bağlantı cevabının sonuna otomatik eklenir; sen yazma.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        try {
+          const url = await supportLinkUrl(db, conversation.id);
+          if (!url) return { bilinmiyor: 'Bağlantı şu an üretilemedi — müşteriye sitemizdeki talep sayfasından yazabileceğini söyle.' };
+          input.onLink({ url, purpose: 'support' });
+          return {
+            hazir: 'Talep bağlantısı cevabının SONUNA otomatik eklenecek — sen bağlantıyı YAZMA.',
+            nasil: 'Müşteri bağlantıyı açar, giriş yapar (e-posta kodu, şifre yok), siparişini ve sorunlu ürünü seçip yazar; fotoğraf ekleyebilir. Talep ekibimize düşer, cevap orada verilir.',
+          };
+        } catch (err) {
+          logger.warn({ ...log, tool: 'talep_baglantisi', err: String(err) }, 'talep bağlantısı üretilemedi');
           return { bilinmiyor: 'Bağlantı şu an üretilemedi.' };
         }
       },

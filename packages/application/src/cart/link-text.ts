@@ -1,7 +1,7 @@
-import type { CartLink, CartLinkPurpose, ConversationSource, PreferredLanguage } from '@lezzet/types';
+import type { CartLinkPurpose, ConversationSource, PreferredLanguage } from '@lezzet/types';
 
 /**
- * Sohbet bağlantısının cevaba EKLENMESİ (15.21 · 15.16) — saf metin kuralı, DB'siz.
+ * Sohbet bağlantısının cevaba EKLENMESİ (15.21 · 15.16 · 15.14) — saf metin kuralı, DB'siz.
  *
  * Deterministik, `OPT_IN_QUESTION` ve `AI_DISCLOSURE` ile aynı gerekçe (`ticket/ai.ts`): modele
  * "bağlantıyı aynen yaz" demek bir ricadır — bir harfi kayan bağlantı müşteriyi boş sayfaya götürür
@@ -24,6 +24,11 @@ import type { CartLink, CartLinkPurpose, ConversationSource, PreferredLanguage }
  * + "Sepete git", `account` "Sohbetinizi hesabınıza bağlamak için" + "Hesabı bağla". Ayırıcı iki
  * cümleyi de tanır ve kuyruğun amacını CÜMLENİN KENDİSİNDEN okur — metinle birlikte ayrı bir işaret
  * taşınmıyor, çünkü taslak yolunda metin operatörün elinden geçer ve yan işaret yolda kaybolurdu.
+ *
+ * ── ÜÇÜNCÜ AMAÇ: TALEP (15.14 · kullanıcı kararı 10.09) ─────────────────────
+ * Şikâyette ajan talep AÇMAZ, talep sayfasının bağlantısını verir. Bu bağlantının JETONU YOK
+ * (`cart_link` satırı doğmaz): sayfa kendi oturum kapısını taşıyor ve talebi hesabıyla açan kişi
+ * zaten tanınıyor. Kuyruk, ayırıcı ve düğme aynı yoldan gider — yalnız cümle ve düğme yazısı amacın.
  */
 
 /** Bağlantının önündeki cümle — Türkçe, çünkü çeviri sonra (beyanla aynı kural). */
@@ -32,11 +37,20 @@ export const CART_LINK_LINE = 'Sepetiniz hazır — giriş yapıp onaylamak ve �
 /** Hesap bağlantısının cümlesi (15.16) — sepetsiz sohbeti hesaba bağlar; giriş e-posta koduyla, şifresiz. */
 export const ACCOUNT_LINK_LINE = 'Sohbetinizi hesabınıza bağlamak için giriş yapın — e-postanıza bir kod gelir, şifre gerekmez:';
 
+/** Talep bağlantısının cümlesi (15.14) — şikâyetin ve iadenin yeri talep sayfası; sipariş ve ürün orada seçilir. */
+export const SUPPORT_LINK_LINE = 'Talebinizi buradan iletebilirsiniz — giriş yapıp siparişinizi ve ürünü seçin, isterseniz fotoğraf ekleyin:';
+
+/**
+ * Sohbet bağlantısının amacı — `cart_link`in iki amacı (jetonlu) ve talep (jetonsuz, 15.14). Talep bir
+ * `cart_link` satırı değil; tip bu yüzden şemanın amacını GENİŞLETİR, ikinci kez yazmaz.
+ */
+export type ChatLinkPurpose = CartLinkPurpose | 'support';
+
 /** Amaca göre cümle — ekleyen de ayıran da buradan okur. */
-const LINK_LINE: Record<CartLinkPurpose, string> = { cart: CART_LINK_LINE, account: ACCOUNT_LINK_LINE };
+const LINK_LINE: Record<ChatLinkPurpose, string> = { cart: CART_LINK_LINE, account: ACCOUNT_LINK_LINE, support: SUPPORT_LINK_LINE };
 
 /** Cevaba eklenecek bağlantı — adresi ve amacı; amaç kuyruğun cümlesini ve düğmesini seçer. */
-export type ChatLink = Pick<CartLink, 'purpose'> & { url: string };
+export type ChatLink = { url: string; purpose: ChatLinkPurpose };
 
 /** Kuyruğun kendisi: cümle, altında adres. Ajanın cevabı, operatörün düğmesi ve defterin Türkçesi aynı biçimi yazar. */
 export function linkTail(link: ChatLink): string {
@@ -50,11 +64,11 @@ export function withCartLink(text: string, link: ChatLink | null): string {
 
 /**
  * `withCartLink`in tersi: kuyruktaki sabit cümle + adres varsa ayırır ve amacı cümleden okur; yoksa
- * metin olduğu gibi, bağlantı `null`. İki cümle de aranır, metnin SONUNA en yakın olan kazanır —
+ * metin olduğu gibi, bağlantı `null`. Bütün cümleler aranır, metnin SONUNA en yakın olan kazanır —
  * kuyruk her zaman sondadır.
  */
 export function splitCartLink(text: string): { body: string; link: ChatLink | null } {
-  const kuyruk = (Object.keys(LINK_LINE) as CartLinkPurpose[])
+  const kuyruk = (Object.keys(LINK_LINE) as ChatLinkPurpose[])
     .map((purpose) => ({ purpose, onek: `${LINK_LINE[purpose]}\n`, basi: text.lastIndexOf(`${LINK_LINE[purpose]}\n`) }))
     .filter((aday) => aday.basi >= 0)
     .sort((a, b) => b.basi - a.basi)[0];
@@ -69,7 +83,7 @@ export function splitCartLink(text: string): { body: string; link: ChatLink | nu
  * Düğme mesajının metni ve düğme yazısı — amaç başına, üç dilde ELLE (`LINK_CONFIRMATION` deseni):
  * çeviri modelinden geçmez, deterministik. Düğme yazısı Meta'da 20 karakterle sınırlı (test zorlar).
  */
-export const LINK_BUTTON_TEXT: Record<CartLinkPurpose, Record<PreferredLanguage, string>> = {
+export const LINK_BUTTON_TEXT: Record<ChatLinkPurpose, Record<PreferredLanguage, string>> = {
   cart: {
     tr: CART_LINK_LINE.replace(/:$/, '.'),
     fr: 'Votre panier est prêt — connectez-vous pour le confirmer et payer.',
@@ -80,17 +94,23 @@ export const LINK_BUTTON_TEXT: Record<CartLinkPurpose, Record<PreferredLanguage,
     fr: 'Connectez-vous pour relier cette conversation à votre compte — un code vous est envoyé par e-mail, sans mot de passe.',
     de: 'Melden Sie sich an, um diesen Chat mit Ihrem Konto zu verbinden — Sie erhalten einen Code per E-Mail, ohne Passwort.',
   },
+  support: {
+    tr: SUPPORT_LINK_LINE.replace(/:$/, '.'),
+    fr: 'Envoyez-nous votre demande ici — connectez-vous, choisissez votre commande et le produit, ajoutez une photo si vous le souhaitez.',
+    de: 'Senden Sie uns hier Ihre Anfrage — melden Sie sich an, wählen Sie Bestellung und Produkt und fügen Sie bei Bedarf ein Foto hinzu.',
+  },
 };
 
-export const LINK_BUTTON_TITLE: Record<CartLinkPurpose, Record<PreferredLanguage, string>> = {
+export const LINK_BUTTON_TITLE: Record<ChatLinkPurpose, Record<PreferredLanguage, string>> = {
   cart: { tr: 'Sepete git', fr: 'Voir le panier', de: 'Zum Warenkorb' },
   account: { tr: 'Hesabı bağla', fr: 'Relier mon compte', de: 'Konto verbinden' },
+  support: { tr: 'Talep oluştur', fr: 'Faire une demande', de: 'Anfrage senden' },
 };
 
 /**
  * Kanalın düğme gövdesi — tel katmanı `interactive` alanını olduğu gibi taşır (`cloud-api.ts`):
  * WhatsApp'ta `type: interactive` gövdesi, Messenger/IG'de `message.attachment`. Tek düğme: bağlantının
- * amacına göre sepete ya da hesaba.
+ * amacına göre sepete, hesaba ya da talep sayfasına.
  *
  * WhatsApp'ınki `cta_url` — 24 saatlik pencere içinde ŞABLONSUZ gider (kullanıcı kararı 08.09;
  * şablon yalnız pencere dışı, işletme-başlatan mesaj içindir). Adres her mesajda ayrı verildiği için

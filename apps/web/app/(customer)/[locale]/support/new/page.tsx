@@ -41,7 +41,12 @@ export default async function NewTicketPage({ params, searchParams }: NewTicketP
 
   const customerId = await currentCustomerId();
   // Segment tablosu yolu BAŞINDA bölü ile taşıyor; ikinci bir bölü eklenmez.
-  if (!customerId) redirect(`/${locale}${routing.pathnames['/login'][locale]}`);
+  if (!customerId) {
+    /* Girişten sonra BU forma dönülür (15.14): sohbette ajanın verdiği talep bağlantısını açan müşteri
+       giriş yapınca formu kaybetmesin. Siparişten gelindiyse sipariş de korunur. */
+    const buraya = `/${locale}${routing.pathnames['/support/new'][locale]}${orderId ? `?order=${encodeURIComponent(orderId)}` : ''}`;
+    redirect(`/${locale}${routing.pathnames['/login'][locale]}?next=${encodeURIComponent(buraya)}`);
+  }
 
   const [device, order, orders] = await Promise.all([
     detectDevice(),

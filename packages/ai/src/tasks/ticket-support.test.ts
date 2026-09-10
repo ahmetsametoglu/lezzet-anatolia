@@ -232,6 +232,9 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
     expect(ticketAgentTask.system).toContain('yalnız müşterinin SON TURU içindir');
     // Yere göre ayıklama (10.09): bu adrese gitmeyen ürün önerilmez, karusele girmez; adıyla sorulursa sebebi söylenir.
     expect(ticketAgentTask.system).toContain('"buAdreseGitmeyenler" verirse');
+    // Talep bağlantısı (15.14): şikâyette ajan talep açmaz, sayfanın bağlantısını verir; araç yoksa (talep kanalı) devir sürer.
+    expect(ticketAgentTask.system).toContain("talep_baglantisi'ni ÇAĞIR");
+    expect(ticketAgentTask.system).toContain('talep_baglantisi aracın varsa devretme');
   });
 
   it('BAŞLANGIÇ FİYATI tek fiyat gibi sunulamaz — ölçülmüş arızanın prompt karşılığı', () => {

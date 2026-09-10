@@ -159,9 +159,9 @@ afterAll(async () => {
 });
 
 describe('değişmez: kimlik ARGÜMAN değil, KAPANIŞTIR', () => {
-  it('altı aracın hiçbirinin girdisinde müşteri ya da sohbet kimliği YOK — hesap bağlantısı dahil', () => {
+  it('yedi aracın hiçbirinin girdisinde müşteri ya da sohbet kimliği YOK — hesap ve talep bağlantısı dahil', () => {
     const tools = araclar(messenger, () => {}, true);
-    expect(Object.keys(tools).sort()).toEqual(['hesap_baglantisi', 'sepet_adet', 'sepet_baglantisi', 'sepete_ekle', 'sepetim', 'sepetten_cikar']);
+    expect(Object.keys(tools).sort()).toEqual(['hesap_baglantisi', 'sepet_adet', 'sepet_baglantisi', 'sepete_ekle', 'sepetim', 'sepetten_cikar', 'talep_baglantisi']);
     for (const arac of Object.values(tools)) {
       const alanlar = Object.keys((arac.inputSchema as z.ZodObject<z.ZodRawShape>).shape ?? {});
       expect(alanlar.some((a) => /customer|conversation|Id$/i.test(a))).toBe(false);
@@ -262,6 +262,15 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
     const sonuc = await cagir(araclar(messenger, (link) => (alinan = link.url)), 'sepet_baglantisi');
     expect(sonuc).toHaveProperty('hazir');
     expect(alinan).toMatch(/\/fr\/panier\?link=[A-Z0-9]{12}$/);
+  });
+
+  it('TALEP bağlantısı jetonsuz talep açma sayfasıdır; kabı "support" amacıyla doldurur (15.14)', async () => {
+    /* Kullanıcı kararı (10.09): şikâyette ajan talep açmaz — hesabı var mı, hangi sipariş, hangi ürün,
+       sohbet bilemez; sayfa bilir. Adres sohbetin dilinde talep açma sayfası; jeton yok. */
+    let alinan: ChatLink | null = null;
+    const sonuc = await cagir(araclar(messenger, (link) => (alinan = link)), 'talep_baglantisi');
+    expect(sonuc).toHaveProperty('hazir');
+    expect(alinan).toEqual({ url: expect.stringMatching(/\/fr\/assistance\/nouvelle$/), purpose: 'support' });
   });
 });
 

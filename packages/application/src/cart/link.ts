@@ -92,6 +92,19 @@ function cartLinkUrl(token: string, locale: Locale, purpose: CartLinkPurpose): s
 }
 
 /**
+ * **Talep bağlantısı** (15.14 · kullanıcı kararı 10.09) — ajanın `talep_baglantisi` aracının sunucu
+ * yarısı: şikâyette ajan talep açmaz, talep açma sayfasını verir. JETON YOK: sayfa kendi oturum
+ * kapısını taşıyor (giriş yoksa girişe, girişten geri forma) ve talebi hesabıyla açan kişi zaten
+ * tanınıyor — sohbeti bir hesaba bağlamak bu bağlantının işi değil (o, hesap bağlantısı). Dil, sohbet
+ * bağlantılarının kuralı (`linkLocaleOf`).
+ */
+export async function supportLinkUrl(db: Db, conversationId: string): Promise<string | null> {
+  const conversation = await new ConversationService(db).getById(conversationId);
+  if (!conversation) return null;
+  return localizedUrl('/support/new', await linkLocaleOf(db, conversation));
+}
+
+/**
  * **Bağlantı üret** — ajanın `sepet_baglantisi` / `hesap_baglantisi` araçlarının ve operatörün iki
  * düğmesinin sunucu yarısı. Amaç verilmezse sepet (kapının ilk ve olağan işi).
  *
