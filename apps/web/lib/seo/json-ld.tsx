@@ -139,7 +139,7 @@ export function RecipeJsonLd({ recipe, url }: { recipe: StorefrontRecipeDetail; 
  * düzeltildi** (INPI/RNE): adres Strasbourg değil Lingolsheim, SIRET `…00018` değil `…00026` —
  * eskisi 01.09.2025'te kapanmış bir işletmeye aitti.
  *
- * `legalName` ile `name` AYRI ve bu bilinçli: ziyaretçi markayı arar ("Lezzet Anatolia"), yasal
+ * `legalName` ile `name` AYRI ve bu bilinçli: ziyaretçi markayı arar ("Lezzet Anatolie"), yasal
  * kayıt ise şirketin unvanını taşır ("QUALITE"). İkisini tek alana sıkıştırmak, ya arama sonucunda
  * tanınmayan bir ad göstermek ya da yapısal veride yanlış tüzel kişi beyan etmek olurdu.
  */

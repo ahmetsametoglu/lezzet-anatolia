@@ -86,7 +86,7 @@ const C = {
 } as const;
 
 interface OrderEmailFooter {
-  /** "Lezzet Anatolia · 12 Rue du Marché, 67000 Strasbourg, Fransa" */
+  /** "Lezzet Anatolie · 12 Rue du Marché, 67000 Strasbourg, Fransa" */
   address: string;
   /** "Bu e-posta LZA-2451 numaralı siparişinizle ilgili gönderilmiştir." */
   notice: string;

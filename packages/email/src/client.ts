@@ -18,7 +18,7 @@ let cachedClient: Resend | null | undefined;
 
 /** Gönderici: `RESEND_FROM` env varsa o, yoksa sabit marka fallback. */
 function resolveFrom(): string {
-  return process.env.RESEND_FROM || `${brand.name} <bonjour@lezzet-anatolia.fr>`;
+  return process.env.RESEND_FROM || `${brand.name} <bonjour@lezzetanatolie.com>`;
 }
 
 /** Lazy Resend client — `RESEND_API_KEY` yoksa null (sendEmail graceful atlar). */

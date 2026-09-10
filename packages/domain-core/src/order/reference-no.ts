@@ -52,7 +52,7 @@ export function readableCode(length: number = CODE_LENGTH, random: () => number 
 }
 
 export interface ReferenceNoOptions {
-  /** Marka öneki (varsayılan `LA` — Lezzet Anatolia). */
+  /** Marka öneki (varsayılan `LA` — Lezzet Anatolie). */
   prefix?: string;
   /** Siparişin yılı; iki hane kullanılır. */
   year: number;

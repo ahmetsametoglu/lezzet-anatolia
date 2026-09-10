@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { Button } from '@/components/customer/ui/button';
@@ -39,7 +40,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
           <Button variant="ghost" size="sm" onClick={onBack}>
             {t.back}
           </Button>
-          <img src="/logo.jpg" alt="Lezzet Anatolia" className="h-[46px] mix-blend-multiply" />
+          <img src="/logo.jpg" alt={brand.name} className="h-[46px] mix-blend-multiply" />
           <span className="w-11" />
         </div>
 

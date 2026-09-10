@@ -21,9 +21,9 @@ const DEFAULT_COUNTRY_CODE = '33';
 const GREETINGS: Record<MessageLocale, string> = { fr: 'Bonjour', de: 'Hallo', tr: 'Merhaba' };
 
 const TEMPLATES: Record<MessageLocale, (greeting: string) => string> = {
-  fr: (greeting) => `${greeting}, je suis en route avec votre commande Lezzet Anatolia. À tout de suite !`,
-  de: (greeting) => `${greeting}, ich bin mit Ihrer Lezzet-Anatolia-Bestellung unterwegs. Bis gleich!`,
-  tr: (greeting) => `${greeting}, Lezzet Anatolia siparişinizle yoldayım. Birazdan oradayım!`,
+  fr: (greeting) => `${greeting}, je suis en route avec votre commande Lezzet Anatolie. À tout de suite !`,
+  de: (greeting) => `${greeting}, ich bin mit Ihrer Lezzet-Anatolie-Bestellung unterwegs. Bis gleich!`,
+  tr: (greeting) => `${greeting}, Lezzet Anatolie siparişinizle yoldayım. Birazdan oradayım!`,
 };
 
 /** Müşterinin dilinde "yoldayım" metni. Ad boşsa selamlama adsız kurulur — "Merhaba ," yazılmaz. */

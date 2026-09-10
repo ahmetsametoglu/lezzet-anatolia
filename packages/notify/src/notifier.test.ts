@@ -36,7 +36,7 @@ const withEmail: NotifyRecipient = { name: 'Ayşe', email: 'ayse@example.test', 
 const withPhone: NotifyRecipient = { name: 'Ayşe', email: null, phone: '+33 6 12 34 56 78', locale: 'tr' };
 const unreachable: NotifyRecipient = { name: 'Ayşe', email: null, phone: null, locale: 'tr' };
 
-const drivers = [emailDriver({ brandName: 'Lezzet Anatolia', postalAddress: 'Strasbourg' }), waLinkDriver(), whatsappApiDriver()];
+const drivers = [emailDriver({ brandName: 'Lezzet Anatolie', postalAddress: 'Strasbourg' }), waLinkDriver(), whatsappApiDriver()];
 
 describe('sürücü seçimi — çağıran kanal bilmez', () => {
   it('e-postası olan müşteriye e-posta sürücüsü bakar', async () => {

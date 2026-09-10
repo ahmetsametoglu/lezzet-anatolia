@@ -33,7 +33,7 @@ const depo = {
   countryCode: 'FR',
   postalCode: '67000',
   city: 'Strasbourg',
-  name: 'Lezzet Anatolia',
+  name: 'Lezzet Anatolie',
   addressLine1: '12 rue du Marche',
   email: 'test@lezzet-anatolia.fr',
 };

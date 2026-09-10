@@ -19,7 +19,7 @@ const base: FeedbackInviteNotification = {
   notificationPreferencesUrl: 'https://example.test/tr/hesap/bildirim-tercihleri',
 };
 
-const props = { brandName: 'Lezzet Anatolia', postalAddress: 'Lezzet Anatolia · Strasbourg' };
+const props = { brandName: 'Lezzet Anatolie', postalAddress: 'Lezzet Anatolie · Strasbourg' };
 
 function html(data: Partial<FeedbackInviteNotification> = {}): Promise<string> {
   return render(FeedbackInviteEmail({ data: { ...base, ...data }, ...props }));

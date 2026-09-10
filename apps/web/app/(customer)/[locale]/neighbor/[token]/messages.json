@@ -1,7 +1,7 @@
 {
   "tr": {
     "meta": {
-      "title": "Komşu daveti — Lezzet Anatolia",
+      "title": "Komşu daveti — Lezzet Anatolie",
       "description": "Komşunuz sizi aynı gün teslimatına çağırıyor. Aynı sefere sipariş verin, birlikte teslim alın."
     },
     "ok": {
@@ -39,7 +39,7 @@
   },
   "fr": {
     "meta": {
-      "title": "Invitation voisin — Lezzet Anatolia",
+      "title": "Invitation voisin — Lezzet Anatolie",
       "description": "Votre voisin vous invite à la même tournée de livraison. Commandez pour le même jour et recevez ensemble."
     },
     "ok": {
@@ -77,7 +77,7 @@
   },
   "de": {
     "meta": {
-      "title": "Nachbarschafts-Einladung — Lezzet Anatolia",
+      "title": "Nachbarschafts-Einladung — Lezzet Anatolie",
       "description": "Ihre Nachbarin oder Ihr Nachbar lädt Sie zur selben Liefertour ein. Bestellen Sie für denselben Tag."
     },
     "ok": {

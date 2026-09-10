@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Space_Grotesk, IBM_Plex_Mono, Karla } from 'next/font/google';
+import { brand } from '@lezzet/brand';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { staffNotificationsChannelName } from '@lezzet/application';
 import { STAFF_ROLES } from '@lezzet/types';
@@ -27,7 +28,7 @@ const karla = Karla({ subsets: ['latin', 'latin-ext'], variable: '--font-karla',
 const fontVars = `${spaceGrotesk.variable} ${ibmPlexMono.variable} ${karla.variable}`;
 
 export const metadata: Metadata = {
-  title: 'Operasyon — Lezzet Anatolia',
+  title: `Operasyon — ${brand.name}`,
   // Personel yüzeyi arama motorunda ASLA görünmez. Meta etiket gövdeli yanıtları, middleware'in
   // `X-Robots-Tag` üstbilgisi gövdesiz/yönlendirme yanıtlarını kapatır — ikisi bir arada.
   robots: { index: false, follow: false, nocache: true },

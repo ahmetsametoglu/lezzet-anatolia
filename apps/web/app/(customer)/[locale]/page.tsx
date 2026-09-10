@@ -38,7 +38,7 @@ interface HomeProps {
  *
  * **Kendi başlığı ARTIK VAR.** Önce yalnız `alternates` dönüyordu ve künyesi *"başlık layout'tan
  * gelir"* diyordu — doğruydu ama layout'un verdiği şey çıplak marka adıydı: arama sonucunda
- * "Lezzet Anatolia" yazan, ne sattığını söylemeyen bir satır. Ana sayfa sitenin en çok aranan
+ * "Lezzet Anatolie" yazan, ne sattığını söylemeyen bir satır. Ana sayfa sitenin en çok aranan
  * sayfası ve başlığı NE SATTIĞIMIZI söylemeli.
  *
  * Metin `hero`dan TÜRETİLMEDİ, ayrı duruyor: kahraman başlığı bir tasarım cümlesi ("Anadolu'nun

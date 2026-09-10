@@ -11,9 +11,9 @@ import {
   type ChatLink,
 } from './link-text';
 
-const URL = 'https://www.lezzetanatolia.fr/fr/panier?link=ABCDEFGH1234';
+const URL = 'https://lezzetanatolie.com/fr/panier?link=ABCDEFGH1234';
 const SEPET: ChatLink = { url: URL, purpose: 'cart' };
-const HESAP: ChatLink = { url: 'https://www.lezzetanatolia.fr/fr/compte?link=ABCDEFGH1234', purpose: 'account' };
+const HESAP: ChatLink = { url: 'https://lezzetanatolie.com/fr/compte?link=ABCDEFGH1234', purpose: 'account' };
 
 describe('sepet bağlantısının geri AYRILMASI — Messenger/IG düğmesi (08.09)', () => {
   it('withCartLink → splitCartLink gidiş-dönüş: gövde ve adres kayıpsız ayrılır', () => {

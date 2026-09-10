@@ -1,3 +1,4 @@
+import { brand } from '@lezzet/brand';
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { Button } from '@/components/customer/ui/button';
@@ -19,7 +20,7 @@ export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice,
           <Button variant="ghost" size="sm" onClick={onBack}>
             {t.back}
           </Button>
-          <img src="/logo.jpg" alt="Lezzet Anatolia" className="h-[38px] mix-blend-multiply" />
+          <img src="/logo.jpg" alt={brand.name} className="h-[38px] mix-blend-multiply" />
           <span className="w-10" />
         </div>
         <div className="flex flex-col gap-4 px-6 pt-[22px] pb-10 text-center">
@@ -45,7 +46,7 @@ export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice,
 
       <form onSubmit={onSubmit} className="-mt-1 flex flex-col gap-[18px] px-6 pt-1 pb-10" noValidate>
         <div className="flex flex-col gap-2 text-center">
-          <img src="/logo.jpg" alt="Lezzet Anatolia" className="mx-auto h-11 mix-blend-multiply" />
+          <img src="/logo.jpg" alt={brand.name} className="mx-auto h-11 mix-blend-multiply" />
           <h1 className="font-serif text-page-title-sm text-ink">{t.title}</h1>
           <p className="font-sans text-body-sm leading-relaxed text-body">{subtitle}</p>
         </div>

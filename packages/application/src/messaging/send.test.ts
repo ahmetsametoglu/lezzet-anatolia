@@ -347,7 +347,7 @@ describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kull
   it('HESAP bağlantısı da düğmeye döner — cümle ve düğme yazısı amacın, adres aynen (15.16)', async () => {
     const konusma = await acikKonusma('messenger');
     const sender = kaydedenSender();
-    const hesapAdresi = 'https://www.lezzetanatolia.fr/fr/compte?link=ABCDEFGH1234';
+    const hesapAdresi = 'https://lezzetanatolie.com/fr/compte?link=ABCDEFGH1234';
     const sonuc = await sendOutboundMessage(db, sender, {
       conversationId: konusma.id,
       text: withCartLink('Siparişlerinizi görmek için sohbetinizi hesabınıza bağlayın.', { url: hesapAdresi, purpose: 'account' }),

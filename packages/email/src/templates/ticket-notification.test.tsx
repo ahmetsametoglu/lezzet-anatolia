@@ -41,7 +41,7 @@ const base: TicketNotification = {
   notificationPreferencesUrl: 'https://example.test/tr/tercihler',
 };
 
-const props = { brandName: 'Lezzet Anatolia', postalAddress: 'Lezzet Anatolia · Strasbourg' };
+const props = { brandName: 'Lezzet Anatolie', postalAddress: 'Lezzet Anatolie · Strasbourg' };
 
 const RENDERERS = {
   received: TicketReceivedEmail,

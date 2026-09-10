@@ -37,7 +37,7 @@ export type LocalizedCopy<T extends Record<Locale, unknown>> = T[Locale];
  * ve mailin gösterdiği adresle haritanın verdiği adresin farklı olması demekti.
  */
 export function siteOrigin(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.lezzetanatolia.fr';
+  return process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lezzetanatolie.com';
 }
 
 /** Dış dünyaya verilecek TAM adres (mail, WhatsApp, paylaşılan bağlantı) — dil öneki dâhil. */
