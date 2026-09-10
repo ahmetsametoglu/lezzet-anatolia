@@ -1,4 +1,5 @@
 import type { LanguageModelUsage } from 'ai';
+import type { AiModelPrices } from '@lezzet/types';
 import type { AiUsage } from './types';
 
 /** Sağlayıcının ölçümü → nötr ölçüm. Bildirilmeyen alan `null` kalır (bkz. `AiUsage` künyesi). */
@@ -24,11 +25,11 @@ export function addUsage(a: AiUsage, b: AiUsage): AiUsage {
   };
 }
 
-/** Milyon token başına birim fiyat. Para birimi çağıranın seçimidir (bizde EUR — `settings`). */
-export interface ModelRate {
-  inputPerMillion: number;
-  outputPerMillion: number;
-}
+/**
+ * Milyon jeton başına birim fiyat — tarife ayarının tek model satırı (`AiModelPricesSchema`). Para
+ * birimi USD: sağlayıcının faturası dolar (kullanıcı kararı 10.09, `settings.ai_model_prices_usd`).
+ */
+export type ModelRate = AiModelPrices[string];
 
 /**
  * Yaklaşık maliyet. **Fiyat tablosu bu pakette YOK ve bu bilinçli** — tarife çağırandan gelir

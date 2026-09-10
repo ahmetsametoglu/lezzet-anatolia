@@ -56,3 +56,15 @@ export const onRequestError: Instrumentation.onRequestError = async (err, reques
     // kendisi patlarsa (paket çözülemedi) diye.
   }
 };
+
+/**
+ * Süreç başı kurulum (15.27) — AI kullanım kaydedicisi `@lezzet/ai`nin kancasına takılır; web'deki her
+ * model koşusu (talep taslağı, çeviri önerisi, banka sütunları) `ai_usage`a düşer.
+ *
+ * **Yalnız NODE çalışma zamanında ve ayrı dosyadan:** kaydedici veritabanına yazar ve edge'de `node:`
+ * modülü yok (yukarıdaki künye). `NEXT_RUNTIME` derleme anında sabitlenir; edge derlemesinde dal düşer ve
+ * `instrumentation-node` o pakete hiç girmez — Next'in önerdiği biçim bu.
+ */
+export async function register(): Promise<void> {
+  if (process.env.NEXT_RUNTIME === 'nodejs') await import('./instrumentation-node');
+}

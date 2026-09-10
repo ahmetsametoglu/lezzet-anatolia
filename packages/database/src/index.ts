@@ -108,7 +108,8 @@ export {
 export { AssistantProposalService } from './services/assistant-proposal.service';
 export { DeliveryRunService, DeliveryRunCloseService, DeliveryRunCollectionService } from './services/delivery-run.service';
 export { TicketService, TicketQueueService, TicketMessageService, type TicketQueueFilter } from './services/ticket.service';
-export { ConversationService, MessageService, ConversationInboxService } from './services/conversation.service';
+export { ConversationService, MessageService, ConversationNoteService, ConversationInboxService } from './services/conversation.service';
+export { AiUsageService, AiUsageDailyService } from './services/ai-usage.service';
 export { ProductFeedbackService, ProductRatingService } from './services/product-feedback.service';
 export { PointsEntryService, PointsBalanceService } from './services/points.service';
 export { FeedbackRequestService, FeedbackProgressService, FeedbackDueOrderService } from './services/feedback-request.service';

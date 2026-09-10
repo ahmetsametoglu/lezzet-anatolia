@@ -132,8 +132,13 @@ create table public.conversation (
   -- (kapıya teslim · kargo · hiç) gidebildiği ancak onunla bilinir. Sohbette bir kez söylenir, burada
   -- saklanır — sonraki turlar aynı soruyu sormaz. Kimlik DEĞİL, teslimat yeri: kayıtlı adresi olan
   -- müşteride adres zaten var; bu kolon kimliksiz sohbetin (Messenger/IG) ve adresi olmayanın yeridir.
-  -- Yalnız gerçek, tek ülkeli kod yazılır (`cart/chat-place.ts`); biçim `@lezzet/helper`in beş hanesi.
+  -- Yalnız gerçek kod yazılır (`cart/chat-place.ts`); biçim `@lezzet/helper`in beş hanesi.
   postal_code text check (postal_code ~ '^[0-9]{5}$'),
+  -- Kodun ÜLKESİ (15.20 · kullanıcı kararı 10.09). 610 kod iki hizmet ülkesinde birden geçerli ve ülke
+  -- bilinmeden depo seçilemez: o kodda ajan müşteriye ülkeyi SORAR, cevap buraya yazılır. Tek ülkeli
+  -- kodda koddan türer ve yine yazılır — okuyan hep aynı iki alana bakar (web yer çerezinin `country`
+  -- alanıyla aynı kural: yer = kod + ülke). `null` = kod yok ya da ülke henüz sorulmadı.
+  postal_country country_code,
 
   -- 24 saatlik servis penceresinin bitişi. Kararı motor verir (`serviceWindowExpiry`), burası
   -- yalnız saklar — süreyi SQL'e de yazsaydık aynı kural iki dilde iki kopya olurdu.
@@ -171,7 +176,9 @@ create table public.conversation (
   -- beklemediği bir yerde kırılırdı. Kimin bağladığı kaybolabilir, neye dayanarak bağladığı hayır.
   constraint conversation_link_proof check ((linked_at is null) = (link_proof is null)),
   -- Bağ künyesi ancak BAĞ VARKEN yazılabilir: müşterisi olmayan bir konuşmanın "kim bağladı"sı olmaz.
-  constraint conversation_link_customer check (linked_at is null or customer_id is not null)
+  constraint conversation_link_customer check (linked_at is null or customer_id is not null),
+  -- Kodsuz ülke OLMAZ: ülke kodun ülkesidir, tek başına bir yer söylemez.
+  constraint conversation_postal_country check (postal_country is null or postal_code is not null)
 );
 
 alter table public.conversation enable row level security;
@@ -287,6 +294,32 @@ create index message_untranslated_idx on public.message (created_at) where trans
 -- claim'in atlandığı bir yolda aynı sağlayıcı mesajının deftere iki kez yazılmasını VERİDE keser.
 -- Kısmi: elle işlenen satırlar kimliksizdir ve null tekilliğe girmez.
 create unique index message_provider_message_key on public.message (provider_message_id) where provider_message_id is not null;
+
+-- ── Sohbetin İÇ NOTU (15.29 · kullanıcı kararı 10.09) ────────────────────────
+-- Müşteriye GİTMEYEN satır: operatör sohbet akışında okur. İlk yazanı ajanın devri ("AI devretti —
+-- sebep") — sebep eskiden yalnız backend stdout'una düşüyordu, operatör "AI neden bıraktı"yı
+-- ekranda göremiyordu ve bir yanlış devri teşhis etmek için karar yeniden üretilmek zorunda kaldı.
+--
+-- **`message` tablosuna YAZILMADI ve bu bilinçli:** o defter "kanaldan ne aktı"yı tutar — pencere
+-- damgaları (`record_message`), gelen kutusunun "cevap bekliyor" hesabı (son mesajın yönü), çeviri
+-- kuyruğu ve mobilin mesaj türü eşlemesi onu okur. Notu oraya koymak her okuyana "bu satır müşteriye
+-- gitmedi" istisnasını öğretmek olurdu; birini unutan yüzey notu gönderilmiş bir mesaj sayardı.
+create table public.conversation_note (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversation (id) on delete cascade,
+  -- Yazar enum'u mesajla ORTAK (`ticket_sender`), ama müşteri iç not yazamaz: müşterinin sözü mesajdır.
+  author ticket_sender not null,
+  body text not null,
+  created_at timestamptz not null default now(),
+  constraint conversation_note_author check (author <> 'customer'),
+  -- Boş not yok: ekranda boş bir satır, olmayan bir kaydı gösterirdi.
+  constraint conversation_note_body check (length(btrim(body)) > 0)
+);
+
+alter table public.conversation_note enable row level security;
+
+-- Tek okuma deseni: bir sohbetin notları, eskiden yeniye — ekran mesajlarla zaman sırasında birleştirir.
+create index conversation_note_conversation_idx on public.conversation_note (conversation_id, created_at);
 
 -- ── Talebin konuşma bağı ─────────────────────────────────────────────────────
 -- `ticket.conversation_id` 0026'da FK'siz kondu — işaret ettiği tablo henüz yoktu. Şimdi var.

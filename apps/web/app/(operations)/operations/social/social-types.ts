@@ -111,6 +111,22 @@ export interface MessageView {
   } | null;
 }
 
+/**
+ * Sohbetin İÇ NOTU (15.29) — müşteriye gitmedi; akışın içinde, olayın olduğu yerde okunur. İlk
+ * yazanı ajanın devri ("AI devretti — sebep").
+ */
+export interface NoteView {
+  id: string;
+  /** Personel ya da AI — müşteri iç not yazamaz (DB kısıtı). */
+  author: TicketSender;
+  text: string;
+  /** "22 Tem 14:30" — balonlarla aynı biçim; not akışta onların arasında durur. */
+  stamp: string;
+}
+
+/** Sohbet akışının bir satırı — mesaj balonu ya da iç not, zaman sırasıyla (15.29). */
+export type ThreadItemView = { kind: 'message'; message: MessageView } | { kind: 'note'; note: NoteView };
+
 export interface ConversationDetailView {
   id: string;
   /** Hangi kanal — başlık rozeti, pencere cümleleri ve sağ panelin dili buradan seçilir. */
@@ -132,12 +148,15 @@ export interface ConversationDetailView {
    */
   language: OutboundLanguage;
   /**
-   * Eskiden yeniye — okunan şey bir sohbet, ters sıralı sohbet okunmaz.
+   * Sohbet akışı — mesajlar ve iç notlar (15.29), eskiden yeniye: okunan şey bir sohbet, ters
+   * sıralı sohbet okunmaz.
    *
    * Sayfalama YOK ve bugün doğru: adım 1'de mesajlar elle işleniyor, bir avuç satır var. Ters
    * yönlü sayfalı okuma geldiğinde eklenir → BEKLEYEN(15.7); gerekçe `lib/messaging/read.ts`'te.
    */
-  messages: MessageView[];
+  thread: ThreadItemView[];
+  /** Başlıktaki "N mesaj" — iç notlar SAYILMAZ: müşteriyle yazışmanın parçası değiller. */
+  messageCount: number;
   /**
    * Müşteri bağlamı — ORTAK okuma (`lib/customer/context`), Talepler ekranı da aynısını kullanır.
    * Kimlik çözülememiş konuşmada `null`; sağ panel o zaman kanala göre ne yapılacağını söyler.

@@ -90,6 +90,9 @@ const ENTITIES = [
   // İletişim (modül 15) — konuşma zemini
   { doc: 'Conversation (konuşma) — sosyal mesajlaşma (WhatsApp · Messenger · Instagram)', part: 'iletisim-geribildirim', table: 'conversation', schema: 'conversation.schema.ts', zod: 'ConversationSchema' },
   { doc: 'Message (mesaj)', part: 'iletisim-geribildirim', table: 'message', schema: 'conversation.schema.ts', zod: 'MessageSchema' },
+  { doc: 'ConversationNote (sohbetin iç notu)', part: 'iletisim-geribildirim', table: 'conversation_note', schema: 'conversation.schema.ts', zod: 'ConversationNoteSchema' },
+  // AI kullanım defteri (15.27) — bütün AI koşularının jetonu ve maliyeti; okuyanı asistanın `ai_costs` aracı.
+  { doc: 'AiUsage (AI kullanım defteri)', part: 'asistan', table: 'ai_usage', schema: 'ai-usage.schema.ts', zod: 'AiUsageEntrySchema' },
   // İşletme ayarı (modül 02)
   { doc: 'Setting (işletme ayarı)', part: 'iletisim-geribildirim', table: 'settings', schema: 'setting.schema.ts', zod: 'SettingSchema' },
   // Operasyon ve gözlemleme (modül 06 · 18) — `error_log`/`system_health_snapshot` henüz kodlanmadı;

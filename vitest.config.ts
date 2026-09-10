@@ -101,6 +101,8 @@ const UYGULAMA_DBSIZ = [
   'packages/application/src/catalog/showcase.test.ts',
   // Ajanın ürün araçlarının yere göre ayıklaması (10.09) — hangi ürün bu adrese gider, gitmeyenin sebebi.
   'packages/application/src/ticket/product-reach.test.ts',
+  // AI kullanım satırı (15.27) — kayıttan satıra, tarifeden maliyete saf dönüşüm; yazım entegrasyonda.
+  'packages/application/src/ai/usage-row.test.ts',
 ];
 
 const WEB_LIB_DBSIZ = [

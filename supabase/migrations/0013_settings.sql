@@ -54,6 +54,12 @@ insert into public.settings (key, value, description) values
   -- AI — kullanıcı "varsayılan AI modunda açılsın" dedi. Yalnız YENİ sohbete uygulanır
   -- (`open_conversation` çakışmada dokunmaz); Ayarlar ve Sosyal Mesajlar ekranları aynı satırı yazar.
   ('conversation_default_handler', '"ai"',   'Yeni sohbetin yürütücüsü: human | hybrid | ai. Açık sohbetleri değiştirmez; Ayarlar ve Sosyal Mesajlar ekranından değiştirilir.'),
+  -- AI model tarifesi (15.27 · kullanıcı kararı 10.09) — milyon jeton başına DOLAR: sağlayıcının
+  -- faturası dolar. Kaynak Google fiyat sayfası, 07.09 (`docs/build/15-whatsapp.md` 15.27); flash'ta
+  -- ses girdisinin ayrı satırı yok, ilk faturada doğrulanacak. Kullanım defterinin (`ai_usage.cost_usd`)
+  -- tek girdisi; anahtar env'deki model adıdır (`AI_MODEL_CHEAP`/`AI_MODEL_STANDARD`) — model değişince
+  -- buraya satır eklenir, eklenmezse o modelin maliyeti BOŞ yazılır (sıfır değil).
+  ('ai_model_prices_usd',          '{"gemini-3.5-flash-lite": {"inputPerMillion": 0.30, "outputPerMillion": 2.50}, "gemini-3.5-flash": {"inputPerMillion": 1.50, "outputPerMillion": 9.00}}', 'AI model tarifesi — milyon jeton başına USD (girdi/çıktı). Kullanım defterinin maliyeti buradan hesaplanır; listede olmayan modelin maliyeti boş kalır.'),
   ('order_cutoff_time',            '"16:00"','Sipariş kesim saati. Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır.'),
   -- ── GÜNÜN EŞİK SAATLERİ (09.3 paneli, kullanıcı onayı 17.08) ────────────────
   -- Panelin "gün akışı" şeridi bu üç satırı okur; üstteki uyarı şeridi de günün EN YAKIN eşiğini

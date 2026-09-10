@@ -1,6 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { fakeAiModel } from '@lezzet/ai/testing';
-import { ConversationService, MessageService, TicketMessageService, TicketService, UserProfileService, serviceDb } from '@lezzet/database';
+import {
+  ConversationNoteService,
+  ConversationService,
+  MessageService,
+  TicketMessageService,
+  TicketService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import type { ConversationSource } from '@lezzet/types';
 import { fakeCloudApiConfig, fakeMeta } from '@lezzet/notify/testing';
@@ -323,6 +331,12 @@ describe('özerk sohbet motoru — cevap sağlayıcıya gider', () => {
     expect(giden[0]!.body.text).toContain('yetkilimiz');
     // Sebep MÜŞTERİYE yazılmaz: iç arıza müşterinin sorunu değildir, log'a ve kuyruğa gider.
     expect(giden[0]!.body.text).not.toContain('sebep bildirmedi');
+
+    /* SEBEP SOHBETİN İÇ NOTUNDA (15.29): müşteriye gitmeyen sebep operatörün akışında durur — teşhis için
+       log aranmaz. Yazarı AI; metin ajanın gerekçesiyle birebir. */
+    const notlar = await new ConversationNoteService(db).listByConversation(conversationId);
+    expect(notlar).toHaveLength(1);
+    expect(notlar[0]).toMatchObject({ author: 'ai', body: 'AI devretti — AI cevap veremedi — sebep bildirmedi.' });
   });
 
   it('PENCERE KAPALIYSA devredilir ve sağlayıcıya hiç GİDİLMEZ', async () => {
@@ -338,6 +352,8 @@ describe('özerk sohbet motoru — cevap sağlayıcıya gider', () => {
     /* Devir haberi de gidemez ve DENENMEZ: aynı reddi ikinci kez yemek, log'u iki kat gürültüyle
        doldurmaktan başka bir şey yapmazdı. Sağlayıcıya sıfır istek gitmeli. */
     expect(meta.calls).toHaveLength(0);
+    // Haber gidemese de iç not YAZILIR (15.29): not kanaldan geçmez, pencereye bağlı değildir.
+    expect((await new ConversationNoteService(db).listByConversation(conversationId))[0]?.body).toContain('gönderilemedi');
   });
 
   it('JETON YOKSA mod DEĞİŞMEZ — yapılandırma boşluğu veriyi bozmaz', async () => {

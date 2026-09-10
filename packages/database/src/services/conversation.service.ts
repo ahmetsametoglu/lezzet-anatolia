@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ConversationInboxRowSchema,
   ConversationInsertSchema,
+  ConversationNoteInsertSchema,
+  ConversationNoteSchema,
   ConversationSchema,
   ConversationUpdateSchema,
   MessageInsertSchema,
@@ -9,6 +11,8 @@ import {
   type Conversation,
   type ConversationInboxRow,
   type ConversationInsert,
+  type ConversationNote,
+  type ConversationNoteInsert,
   type ConversationSource,
   type ConversationUpdate,
   type Message,
@@ -438,6 +442,24 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
       { conversationId },
       { orderBy: 'createdAt', orderDirection: 'desc', limit, keysetAfter: cursor },
     );
+  }
+}
+
+/**
+ * Sohbetin iç notları (15.29) — **defter: yazılır, güncellenmez** (`MessageService` ile aynı sınır).
+ *
+ * Mesaj servisinden AYRI, çünkü not mesaj DEĞİL: pencereye, "cevap bekliyor" hesabına ve çeviri
+ * kuyruğuna girmez (tablo künyesi `0039`). Aynı sınıfta dursaydı mesaj okuyan bir yol notu da
+ * "müşteriyle yazışma" sanabilirdi.
+ */
+export class ConversationNoteService extends BaseDbService<ConversationNote, ConversationNoteInsert, never> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'conversation_note', ConversationNoteSchema, ConversationNoteInsertSchema, ConversationNoteSchema as never, false);
+  }
+
+  /** Bir sohbetin notları, eskiden yeniye — ekran mesajlarla zaman sırasında birleştirir. */
+  listByConversation(conversationId: string): Promise<ConversationNote[]> {
+    return this.getAll({ conversationId }, { orderBy: 'createdAt' });
   }
 }
 

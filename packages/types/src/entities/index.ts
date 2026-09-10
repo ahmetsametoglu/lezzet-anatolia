@@ -58,6 +58,8 @@ export * from './job-run.schema';
 export * from './webhook-event.schema';
 export * from './ticket.schema';
 export * from './conversation.schema';
+// AI kullanım defteri (15.27) — koşu başına jeton ve yaklaşık maliyet (USD).
+export * from './ai-usage.schema';
 export * from './product-feedback.schema';
 export * from './points.schema';
 export * from './feedback-request.schema';

@@ -1,5 +1,6 @@
 import type { LanguageModel } from 'ai';
 import type { z } from 'zod';
+import type { AiRunFailure } from '@lezzet/types';
 
 /**
  * `@lezzet/ai` sözleşmeleri — paket bir PORT'tur: model çağırır, tipli sonuç döner.
@@ -37,8 +38,11 @@ export type AiProviderName = 'anthropic' | 'google';
  * · `provider_error`  — ağ/kota/model hatası. GEÇİCİ olabilir; tekrar denenebilir.
  * · `invalid_output`  — model şemaya uymayan bir şey döndürdü. Tekrar denemek genelde işe yarar
  *   ama sınırlı: aynı prompt üçüncü kez de bozuksa sorun prompt'tadır.
+ *
+ * Kayda giren iki sebep (`provider_error`, `invalid_output`) tip paketinde TEK listede durur
+ * (`AiRunFailureEnum`) — kullanım defterinin kolonu da onu doğrular (15.27).
  */
-export type AiFailureReason = 'not_configured' | 'provider_error' | 'invalid_output';
+export type AiFailureReason = 'not_configured' | AiRunFailure;
 
 /**
  * Bir çağrının token ölçümü.

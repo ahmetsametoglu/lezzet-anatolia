@@ -101,7 +101,7 @@ const AD = (kisa: string) => `${kisa} ${stamp}`;
  * Yeri BİLİNEN sohbet — gerçek hafıza yerine kodu hazır tutan taklit (DB'ye yazmaz): araçların çoğu
  * yer şartından SONRAKİ davranışı sınıyor. Şartın kendisi ve gerçek hafıza `araclarHafizayla` ile.
  */
-const YER: ChatPlaceMemory = { known: () => SEPET_KODU, remember: async () => {} };
+const YER: ChatPlaceMemory = { known: () => SEPET_KODU, knownCountry: () => null, remember: async () => {} };
 
 function araclar(
   conversation: Conversation,

@@ -36,7 +36,7 @@ import {
   WINDOW_NOTE,
   WINDOW_TONE,
 } from './social-labels';
-import type { ConversationDetailView, InboxRowView, MessageView } from './social-types';
+import type { ConversationDetailView, InboxRowView, MessageView, NoteView } from './social-types';
 
 // Sosyal gelen kutusunun PANOLARI (15.5 · üç kanal 15.15) — sol kuyruk satırı, orta sohbet, sağ
 // müşteri bağlamı.
@@ -199,6 +199,32 @@ function Bubble({ message }: { message: MessageView }) {
   );
 }
 
+interface NoteLineProps {
+  note: NoteView;
+}
+
+/**
+ * Sohbetin İÇ NOTU (15.29) — balon DEĞİL: müşteriye gitmedi, akışta olayın olduğu yerde duran satır.
+ * Ortada ve kesikli çerçevede, çünkü iki yandan birine hizalansaydı bir tarafın mesajı sanılırdı. AI'ın
+ * notu mor (makine konuştu — `ui/tone.ts`), personelinki nötr. Künye "müşteri görmez" der: operatör notu
+ * müşteriye yazılmış bir cümle sanmasın.
+ */
+function NoteLine({ note }: NoteLineProps) {
+  const ai = note.author === 'ai';
+  return (
+    <div className="flex flex-col items-center gap-1 px-6">
+      <span className="font-ops-mono text-ops-micro text-ops-faint">{note.stamp} · iç not — müşteri görmez</span>
+      <p
+        className={`max-w-[78%] whitespace-pre-wrap rounded-ops-card border border-dashed px-3 py-1.5 text-center font-ops-body text-ops-xs ${
+          ai ? 'border-ops-violet-line bg-ops-violet-bg text-ops-violet' : 'border-ops-line bg-ops-card text-ops-muted'
+        }`}
+      >
+        {note.text}
+      </p>
+    </div>
+  );
+}
+
 /**
  * Medya gövdesi — fotoğraf görünür, ses çalınır, ötekiler indirilir.
  *
@@ -288,7 +314,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
             {/* Kanal adı alt satırda da yazar: başlık bir müşteri adı olabilir ve aynı kişinin iki
                 kanalda iki sohbeti olabilir — hangisine bakıldığı cümleyle söylenmeli. */}
             {SOURCE_LABELS[detail.source]} · {detail.context ? (detail.context.isCompany ? 'B2B' : 'B2C') : 'kimlik çözülmedi'} ·{' '}
-            {detail.messages.length} mesaj ·{' '}
+            {detail.messageCount} mesaj ·{' '}
             {/* Alt satır modu CÜMLEYLE de söyler (çizim: "AI ajanı yürütüyor / insan yürütüyor") —
                 anahtar seçimi, cümle durumu okur. */}
             {/* Üç mod da GERÇEK (ajan 15.8, anahtar 29.08). Bir tur boyunca burada "AI modunda ama
@@ -325,7 +351,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
         </Button>
       </div>
 
-      {detail.messages.length === 0 ? (
+      {detail.thread.length === 0 ? (
         <div className="flex min-h-0 flex-1 items-center justify-center">
           <EmptyState
             title="Bu konuşmada henüz mesaj yok"
@@ -334,9 +360,9 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
         </div>
       ) : (
         <MessageThread className="px-5 py-4">
-          {detail.messages.map((m) => (
-            <Bubble key={m.id} message={m} />
-          ))}
+          {detail.thread.map((item) =>
+            item.kind === 'message' ? <Bubble key={item.message.id} message={item.message} /> : <NoteLine key={item.note.id} note={item.note} />,
+          )}
         </MessageThread>
       )}
 

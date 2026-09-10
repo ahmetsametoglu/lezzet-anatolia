@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationInboxRow } from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
-import { previewOf, remainingLabel, toInboxRows, toMessageViews, toWindowView, WINDOW_SOON_MS } from './social-read';
+import { previewOf, remainingLabel, toInboxRows, toMessageViews, toThreadItems, toWindowView, WINDOW_SOON_MS } from './social-read';
 
 // 15.5/15.15 — okuma dönüşümlerinin ölçütleri. Üçü de birer KARAR ve karar sınanabilir olmalı:
 // pencerenin ne zaman "az kaldı"ya döndüğü, gövdesiz bir mesajın nasıl okunacağı, adsız bir
@@ -32,6 +32,8 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     language: null,
     // Müşteri sohbette posta kodu söylemedi (15.20, 10.09) — bu fikstür yeri sınamıyor, satırı tamamlıyor.
     postalCode: null,
+    // Kodun ülkesi (15.20 · 10.09) — kod yokken ülke de yok (DB kısıtı); satırı tamamlıyor.
+    postalCountry: null,
     windowExpiresAt: null,
     lastMessageAt: NOW.toISOString(),
     /* 21.289 · sözleşmeye eklendi: kuyruğun sıralama ekseni artık son GELEN mesaj (gerekçe
@@ -198,6 +200,32 @@ describe('toInboxRows', () => {
   it('sesli mesajın önizlemesi TRANSKRİPTTİR, "[görsel / dosya]" değil', () => {
     const rows = toInboxRows([inboxRow({ lastMessageKind: 'media', lastMessageText: null, lastMessageTranscript: 'Merhaba baklava istiyorum' })], NOW);
     expect(rows[0]?.preview).toBe('Merhaba baklava istiyorum');
+  });
+});
+
+describe('toThreadItems — iç not akışta, olayın olduğu yerde (15.29)', () => {
+  const not = (id: string, createdAt: string) => ({
+    id,
+    conversationId: '11111111-1111-4111-8111-111111111111',
+    author: 'ai' as const,
+    body: `AI devretti — ${id}`,
+    createdAt,
+  });
+
+  it('not iki mesajın ARASINA düşer; aynı anda yazılmışsa mesaj ÖNCE (not onun doğurduğu olayı anlatır)', () => {
+    const akis = toThreadItems(
+      [
+        message({ id: 'a', body: { text: 'ilk' }, createdAt: '2026-09-10T10:00:00.000Z' }),
+        message({ id: 'b', body: { text: 'son' }, createdAt: '2026-09-10T10:05:00.000Z' }),
+      ],
+      [not('n2', '2026-09-10T10:05:00.000Z'), not('n1', '2026-09-10T10:02:00.000Z')],
+    );
+    expect(akis.map((i) => (i.kind === 'message' ? i.message.id : i.note.id))).toEqual(['a', 'n1', 'b', 'n2']);
+  });
+
+  it('notun metni ve yazarı olduğu gibi taşınır — balona dönüşmez', () => {
+    const [satir] = toThreadItems([], [not('n1', '2026-09-10T10:02:00.000Z')]);
+    expect(satir).toMatchObject({ kind: 'note', note: { id: 'n1', author: 'ai', text: 'AI devretti — n1' } });
   });
 });
 

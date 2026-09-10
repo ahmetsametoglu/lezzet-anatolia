@@ -1,7 +1,7 @@
 import { resolveOutboundLanguage } from '@lezzet/application';
-import { ConversationService, MessageService, TicketService, serviceDb } from '@lezzet/database';
+import { ConversationNoteService, ConversationService, MessageService, TicketService, serviceDb } from '@lezzet/database';
 import type { OutboundLanguage } from '@lezzet/domain-core';
-import type { Conversation, Message, Ticket } from '@lezzet/types';
+import type { Conversation, ConversationNote, Message, Ticket } from '@lezzet/types';
 
 /**
  * Konuşma DETAYININ okuması (15.5) — sohbetin kendi verisi.
@@ -40,6 +40,8 @@ interface ConversationDetailData {
   conversation: Conversation;
   /** Eskiden yeniye — okunan şey bir sohbet. */
   messages: MessageWithMedia[];
+  /** Sohbetin iç notları (15.29) — müşteriye gitmeyen satırlar; ekran mesajlarla zaman sırasında birleştirir. */
+  notes: ConversationNote[];
   tickets: Ticket[];
   /**
    * Müşteriye hangi dilde yazılacağı ve dayanağı (15.28) — gönderim kapısıyla AYNI karardan
@@ -65,9 +67,10 @@ export async function readConversationDetail(conversationId: string): Promise<Co
   const conversation = await new ConversationService(db).getById(conversationId);
   if (!conversation) return null;
 
-  // Mesajlar ve talepler konuşmanın kendisine bağlı — müşteri çözülmese de okunurlar.
-  const [messages, tickets, language] = await Promise.all([
+  // Mesajlar, iç notlar ve talepler konuşmanın kendisine bağlı — müşteri çözülmese de okunurlar.
+  const [messages, notes, tickets, language] = await Promise.all([
     new MessageService(db).listByConversation(conversationId),
+    new ConversationNoteService(db).listByConversation(conversationId),
     new TicketService(db).listByConversation(conversationId),
     resolveOutboundLanguage(db, conversation),
   ]);
@@ -77,6 +80,7 @@ export async function readConversationDetail(conversationId: string): Promise<Co
   return {
     conversation,
     messages: messages.map((m) => ({ ...m, mediaUrl: m.mediaKey ? `${MEDIA_GATE}/${m.id}` : null })),
+    notes,
     tickets,
     language,
   };

@@ -3,14 +3,14 @@ import { tool, z, type ToolSet } from '@lezzet/ai';
 import { CartService, type CartOwner, type Db } from '@lezzet/database';
 import { formatPrice } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import type { Conversation } from '@lezzet/types';
+import type { Conversation, Country } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { getPackagesByIds, listStorefrontPackages } from '../catalog/packages';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
 import type { PlaceWarehouses } from '../catalog/storefront-types';
 import { cartGroupOf, cartPayableCents, entryOfItem, shippingGroupFee, type CartEntry, type CartLine, type CartView } from './cart-types';
-import { resolveChatPlace, yerNotu, type ChatPlace, type ChatPlaceMemory } from './chat-place';
+import { resolveChatPlace, ULKE_GIRDISI, yerNotu, type ChatPlace, type ChatPlaceMemory } from './chat-place';
 import { startCartLink, supportLinkUrl } from './link';
 import type { ChatLink } from './link-text';
 import { getCartView } from './read';
@@ -162,8 +162,8 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
 
   /* Yer dört kaynaktan, TEK sırayla (`chat-place.ts`): söylenen · sohbette saklanan · kayıtlı adres
      (yalnız izinliyse) · hiçbiri. Söylenen kod gerçekse sohbete yazılır — müşteri bir daha söylemez. */
-  const yer = (postaKodu: string | undefined): Promise<ChatPlace> =>
-    resolveChatPlace(db, { said: postaKodu, memory: input.place ?? null, addressCustomerId: input.addressCustomerId });
+  const yer = (postaKodu?: string, ulke?: Country): Promise<ChatPlace> =>
+    resolveChatPlace(db, { said: postaKodu, saidCountry: ulke, memory: input.place ?? null, addressCustomerId: input.addressCustomerId });
 
   /** Sepet görünümü bu yerin depolarıyla — özet, hazırlık ve "bu adrese gider mi" aynı hesaptan okunur. */
   const gorunum = (entries: CartEntry[], yerim: ChatPlace) =>
@@ -207,7 +207,7 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
     return { ozet: sepetOzeti(view, yerim), hazir };
   };
 
-  const ozet = async (postaKodu?: string) => (await durum(await yer(postaKodu))).ozet;
+  const ozet = async (postaKodu?: string, ulke?: Country) => (await durum(await yer(postaKodu, ulke))).ozet;
 
   /**
    * Seçilen kalem BU ADRESE gidebilir mi — sepete yazmadan önce, tek satırlık görünümle (10.09).
@@ -232,10 +232,11 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
         '"Sepetimde ne var", "toplam ne kadar", "sepetim hazır mı" sorularında MUTLAKA bunu çağır.',
       inputSchema: z.object({
         postaKodu: z.string().min(4).optional().describe('Müşteri SÖYLEDİYSE posta kodu — "bu adrese gider mi" ona göre okunur. Söylemediyse boş bırak.'),
+        ulke: ULKE_GIRDISI,
       }),
-      execute: async ({ postaKodu }) => {
+      execute: async ({ postaKodu, ulke }) => {
         try {
-          return await ozet(postaKodu);
+          return await ozet(postaKodu, ulke);
         } catch (err) {
           logger.warn({ ...log, tool: 'sepetim', err: String(err) }, 'sepet aracı okuyamadı');
           return { bilinmiyor: 'Sepet şu an okunamadı.' };
@@ -256,11 +257,12 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
           .min(4)
           .optional()
           .describe('Müşteri söylediyse posta kodu — bir kez söylenen kod saklanır; araç "sepeteYazilmadi" dönerse müşteriye sor ve bununla yeniden çağır.'),
+        ulke: ULKE_GIRDISI,
       }),
-      execute: async ({ urun, boy, adet, postaKodu }) => {
+      execute: async ({ urun, boy, adet, postaKodu, ulke }) => {
         try {
           // YER ÖNCE (10.09 · kullanıcı kararı): "bu adrese gider mi" bilinmeden sepet kurulmaz.
-          const yerim = await yer(postaKodu);
+          const yerim = await yer(postaKodu, ulke);
           const engel = yerEngeli(yerim);
           if (engel) return engel;
           const secim = await urunuCoz(db, { urun, boy }, yerim.place, input);
@@ -287,13 +289,14 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
         boy: z.string().min(1).optional().describe('Boy etiketi — aynı üründen iki boy varsa.'),
         adet: z.number().int().min(0).max(MAX_QTY).describe('Yeni adet — sepette olacak TOPLAM sayı; 0 kalemi çıkarır.'),
         postaKodu: z.string().min(4).optional().describe('Müşteri söylediyse posta kodu.'),
+        ulke: ULKE_GIRDISI,
       }),
-      execute: async ({ urun, boy, adet, postaKodu }) => {
+      execute: async ({ urun, boy, adet, postaKodu, ulke }) => {
         try {
           const bulunan = await satirBul(urun, boy);
           if ('sonuc' in bulunan) return bulunan.sonuc;
           const { line } = bulunan;
-          const yerim = await yer(postaKodu);
+          const yerim = await yer(postaKodu, ulke);
           // Azaltmak ya da çıkarmak yer istemez; ARTIRMAK sepet kurmaktır — sepete_ekle ile aynı şart.
           const engel = adet > line.qty ? yerEngeli(yerim) : null;
           if (engel) return engel;
@@ -321,7 +324,7 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
           if ('sonuc' in bulunan) return bulunan.sonuc;
           const { line } = bulunan;
           await carts.removeItemFor(owner, { variantId: line.variantId ?? null, bundleId: line.bundleId ?? null, stockId: line.stockId ?? null });
-          const son = await durum(await yer(undefined));
+          const son = await durum(await yer());
           await damgala(son.hazir);
           return { cikarildi: satirAdi(line), sepet: son.ozet };
         } catch (err) {

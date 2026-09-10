@@ -1,4 +1,5 @@
 import {
+  AiUsageDailyService,
   ErrorLogService,
   OrderService,
   ProductService,
@@ -118,6 +119,59 @@ export async function systemErrors(limit: number) {
       count: row.count,
       lastSeenAt: row.lastSeenAt,
     })),
+  };
+}
+
+/**
+ * AI harcaması (15.27) — son N günün `ai_usage_daily` özeti, DOLAR: görev×model kırılımı ("hangi özellik
+ * harcıyor") ve gün serisi ("artıyor mu"). Tarifesiz koşu AYRI sayılır ve tutara GİRMEZ — sıfır sayılsaydı
+ * harcama olduğundan az görünürdü; hiç tarifeli koşu yoksa tutar `null`dur (`CLAUDE §1`).
+ */
+export async function aiCosts(days: number) {
+  const clamped = Math.max(1, Math.min(90, Math.floor(days)));
+  const from = parisDaysAgo(clamped - 1);
+  const rows = await new AiUsageDailyService(serviceDb()).listSince(from);
+
+  const topla = (a: number | null, b: number | null) => (a === null && b === null ? null : (a ?? 0) + (b ?? 0));
+  // Dört hane yeter: tek koşu sentin çok altında, özet ise dolar düzeyinde okunur.
+  const usd = (n: number | null) => (n === null ? null : Math.round(n * 10_000) / 10_000);
+
+  type TaskRow = { task: string; modelId: string; calls: number; failedCalls: number; inputTokens: number | null; outputTokens: number | null; costUsd: number | null; unpricedCalls: number };
+  type DayRow = { day: string; calls: number; costUsd: number | null; unpricedCalls: number };
+  const byTask = new Map<string, TaskRow>();
+  const byDay = new Map<string, DayRow>();
+  for (const row of rows) {
+    const key = `${row.task}|${row.modelId}`;
+    const t = byTask.get(key) ?? { task: row.task, modelId: row.modelId, calls: 0, failedCalls: 0, inputTokens: null, outputTokens: null, costUsd: null, unpricedCalls: 0 };
+    t.calls += row.calls;
+    t.failedCalls += row.failedCalls;
+    t.inputTokens = topla(t.inputTokens, row.inputTokens);
+    t.outputTokens = topla(t.outputTokens, row.outputTokens);
+    t.costUsd = topla(t.costUsd, row.costUsd);
+    t.unpricedCalls += row.unpricedCalls;
+    byTask.set(key, t);
+
+    const d = byDay.get(row.day) ?? { day: row.day, calls: 0, costUsd: null, unpricedCalls: 0 };
+    d.calls += row.calls;
+    d.costUsd = topla(d.costUsd, row.costUsd);
+    d.unpricedCalls += row.unpricedCalls;
+    byDay.set(row.day, d);
+  }
+
+  const tasks = [...byTask.values()].sort((a, b) => (b.costUsd ?? 0) - (a.costUsd ?? 0));
+  return {
+    from,
+    to: parisToday(),
+    days: clamped,
+    currency: 'USD',
+    totals: {
+      calls: tasks.reduce((n, t) => n + t.calls, 0),
+      failedCalls: tasks.reduce((n, t) => n + t.failedCalls, 0),
+      costUsd: usd(tasks.reduce<number | null>((n, t) => topla(n, t.costUsd), null)),
+      unpricedCalls: tasks.reduce((n, t) => n + t.unpricedCalls, 0),
+    },
+    byTask: tasks.map((t) => ({ ...t, costUsd: usd(t.costUsd) })),
+    byDay: [...byDay.values()].sort((a, b) => (a.day < b.day ? 1 : -1)).map((d) => ({ ...d, costUsd: usd(d.costUsd) })),
   };
 }
 

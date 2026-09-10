@@ -253,6 +253,12 @@ export interface PurgeTargets {
    */
   conversationIds?: string[];
   /**
+   * AI kullanım satırları (15.27) — sohbete/talebe `set null` ile bağlı, yani hiçbir cascade onları
+   * toplamaz: maliyet kaydı sohbet silinse de kalsın diye (tablo künyesi `0056`). Kaydediciyi ve
+   * günlük özeti sınayan test kendi satırlarını bildirir.
+   */
+  aiUsageIds?: string[];
+  /**
    * Ölçüm noktaları (19.28) — sıcaklık kaydı bunlara `restrict` ile bağlı, yani kayıtlar önce
    * gider sonra nokta. Eskiden burada `temperatureLocations: string[]` vardı ve kayıtları serbest
    * metin konumdan siliyordu; nokta tanımlı bir satır olunca anahtar da kimliğe döndü.
@@ -342,6 +348,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     notificationIds,
     webhookEventIds,
     conversationIds,
+    aiUsageIds,
     storageAreaIds,
     vehicleIds,
     zoneNoticePostalCodes,
@@ -369,6 +376,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     notificationIds: clean(targets.notificationIds),
     webhookEventIds: clean(targets.webhookEventIds),
     conversationIds: clean(targets.conversationIds),
+    aiUsageIds: clean(targets.aiUsageIds),
     storageAreaIds: clean(targets.storageAreaIds),
     vehicleIds: clean(targets.vehicleIds),
     zoneNoticePostalCodes: clean(targets.zoneNoticePostalCodes),
@@ -560,6 +568,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     if (familyIds.length > 0) await mustDelete(db, 'product_family', (q) => q.in('id', familyIds));
     if (categoryIds.length > 0) await mustDelete(db, 'category', (q) => q.in('id', categoryIds));
     if (collectionIds.length > 0) await mustDelete(db, 'collection', (q) => q.in('id', collectionIds));
+    // AI kullanım satırları bağımsız (FK'leri `set null`) — sıra zorunlu değil, konuşmanın yanında toplanır.
+    if (aiUsageIds.length > 0) await mustDelete(db, 'ai_usage', (q) => q.in('id', aiUsageIds));
     // Konuşma PROFİLDEN ÖNCE: profile bağlı olanlar zaten cascade ile giderdi, ama kimliksiz olanlar
     // gitmez ve bu sıra ikisini tek yoldan toplar. Mesajları `cascade` ile gider.
     if (conversationIds.length > 0) await mustDelete(db, 'conversation', (q) => q.in('id', conversationIds));

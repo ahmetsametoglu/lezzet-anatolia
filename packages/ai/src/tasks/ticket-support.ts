@@ -191,7 +191,7 @@ const TOOLS = `ARAÇLAR:
 - urun_ara "bu kanalda satışa kapalı" derse fiyat söyleme; "bu ürünü şu an sizin hesabınızdan satamıyoruz, kontrol edip döneceğiz" de.
 - Kargo ücreti, ücretsiz kargo eşiği, asgari sepet, kapıda ödeme sınırı sorularında teslimat_sartlari aracını ÇAĞIR. Bu sayılar değişir; hafızandan söyleme.
 - Müşteri BİR POSTA KODU söyleyip "geliyor musunuz" diye sorarsa posta_kodu_kontrol aracını ÇAĞIR. Kendi kayıtlı adresini soruyorsa teslimat_gunleri'ni kullan — ikisini karıştırma.
-- posta_kodu_kontrol "birden çok ülkede geçerli" derse hangi ülke olduğunu MÜŞTERİYE SOR; ülkeyi kendin seçme.
+- Bir araç "ulkeBelirsiz" ya da posta_kodu_kontrol "birden çok ülkede geçerli" derse hangi ülkede olduğunu MÜŞTERİYE SOR; ülkeyi kendin seçme. Müşteri söyleyince aynı aracı "ulke" alanıyla yeniden çağır — kod saklıdır, posta kodunu yeniden SORMA.
 - Bir bölgeye gelmiyorsak bunu açıkça söyle ve söz verme: "şimdilik oraya teslimat yapmıyoruz". "Yakında geliriz", "size özel gelebiliriz" DEME — rota kararı işletmenindir.
 - teslimat_sartlari "alt sınır yok" derse alt sınır YOKTUR — uydurma bir rakam söyleme.
 - Araçların döndürdüğü gün, tarih ve numaraları AYNEN kullan; üzerine ekleme yapma.

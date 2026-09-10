@@ -153,3 +153,48 @@ asıl işi maskeler).
 - **Saklama 90 gün** (`purge_observability`) — iz bir TEŞHİS verisidir, iş kaydı değil
   (`OBSERVABILITY §1`). Sorduğu soru "bu anahtar ne yaptı"; üç ay geriye bakmak kötüye kullanımı
   görmeye fazlasıyla yeter, daha uzunu süresiz tutulan bir davranış geçmişi olurdu.
+
+---
+
+## AiUsage (AI kullanım defteri)
+
+Modele giden HER koşu bir satır (15.27 · kullanıcı kararı 10.09): hangi görev, hangi model, kaç jeton
+ve yazıldığı andaki tarifeyle yaklaşık kaç **dolar**. Asistanın değil bütün AI koşularının defteri —
+bu dosyada, çünkü okuyanı asistanın `ai_costs` aracı ve AI'ya dair veri kararları tek yerde dursun.
+
+<!-- alanlar:ai_usage -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `task` | text |  |  |
+| `model_id` | text |  |  |
+| `ok` | boolean |  |  |
+| `failure_reason` | text | • |  |
+| `input_tokens` | integer | • |  |
+| `output_tokens` | integer | • |  |
+| `cached_input_tokens` | integer | • |  |
+| `total_tokens` | integer | • |  |
+| `cost_usd` | numeric(12,6) | • |  |
+| `conversation_id` | uuid | • |  |
+| `ticket_id` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **YAZAN TEK KAPI koşucunun kancası** — `@lezzet/ai` `setAiUsageRecorder`; kaydedici
+  `@lezzet/application/ai/usage-recorder`, süreç başında web (`instrumentation-node.ts`) ve backend
+  (`index.ts`) takar. Çağıranlar (ajan, taslak, çeviri, ses, banka, B2B özeti, analitik) kayıt
+  YAZMAZ: on kopya, on birinci çağıranın unutacağı bir kural olurdu — unutulan koşu bedava görünürdü.
+- **`cost_usd` YAZIM ANINDA donar** — o anki tarifeyle (`settings.ai_model_prices_usd`) hesaplanır.
+  Okuma anında hesaplansaydı tarife değiştiği gün geçen ayın harcaması bugünün fiyatıyla yeniden
+  yazılırdı. Tarifesi olmayan model ya da ölçümsüz koşu `null` — bilinmiyor, sıfır değil.
+- **Para birimi DOLAR** (kullanıcı kararı 10.09) — sağlayıcının faturası dolar; euroya çevirmek
+  ikinci bir tahmin katmanı (kur) eklerdi.
+- **Başarısız koşu da yazılır** — şema ihlalinde model çalıştı ve jeton yaktı (hata ölçümü taşıyor).
+  `not_configured` yazılmaz: modele hiç gidilmedi. `ok` ile `failure_reason` ayrışamaz (kısıt).
+- **`conversation_id` / `ticket_id`** — `set null`: sohbet ya da talep silinse de harcama kaydı kalır.
+- **Özet `ai_usage_daily`** — Paris günü × görev × model; okuyan satır saymaz. `unpriced_calls`
+  maliyeti bilinmeyen koşuları sayar ve `cost_usd` toplamı onları İÇERMEZ.
+- **Saklama süresi YOK** — iş kaydıdır, teşhis değil (`OBSERVABILITY §1`); `purge_observability`
+  ona dokunmaz.

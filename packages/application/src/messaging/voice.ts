@@ -82,7 +82,7 @@ export async function transcribeConversationAudio(
       return null;
     }
 
-    const sonuc = await runTask(voiceTranscriptTask, { audio, mediaType: mediaMime });
+    const sonuc = await runTask(voiceTranscriptTask, { audio, mediaType: mediaMime }, { usageContext: { conversationId: ctx.conversationId } });
     if (!sonuc.ok) {
       // Yapılandırma eksikliği ile model arızası ayrı okunur; ikisinde de mesaj kaybolmaz.
       logger.warn(

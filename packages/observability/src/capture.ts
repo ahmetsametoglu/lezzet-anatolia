@@ -91,6 +91,12 @@ export const SOURCES = {
    */
   applicationOrder: 'application-order',
   /**
+   * AI kullanım kaydedicisi (15.27) — `packages/application/src/ai/usage-recorder.ts`. Web'de ve backend'de
+   * AYNI kaydedici koşuyor; kaydın düşmesi (DB kesintisi, bozuk satır) iki süreçte de aynı kovada görünmeli.
+   * Koşunun kendisi etkilenmez — bu kova "harcama kaydı eksik kaldı" der.
+   */
+  applicationAi: 'application-ai',
+  /**
    * Paylaşılan B2B akışı (`packages/application/src/b2b` + `customer/b2b.ts`) — resmî işletme
    * kaydı okuması, AB vergi numarası doğrulaması ve başvurunun yazımı (21.31). Aynı ayrım:
    * web'in Professionnels sayfası ile mobilin başvuru formu AYNI kapıları çağırıyor ve bu

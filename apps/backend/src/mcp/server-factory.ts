@@ -4,7 +4,7 @@ import { McpCallLogService, serviceDb } from '@lezzet/database';
 import { captureError, errorMessageOf, logger, scrubMessage, SOURCES } from '@lezzet/observability';
 import type { McpScope } from '@lezzet/types';
 import { scopeAllows, toolScope } from './guard';
-import { morningBriefing, salesSummary, systemErrors } from './tools';
+import { aiCosts, morningBriefing, salesSummary, systemErrors } from './tools';
 import { catalogHealth, catalogLookup, productDetail, soldOutWatch, stockWatch } from './tools-catalog';
 import { customerPulse, demandSignals, moneyOverview } from './tools-signals';
 import { deliveryMap, referenceData } from './tools-reference';
@@ -83,6 +83,16 @@ export const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: { limit: { type: 'number', description: 'Max rows, 1-50. Default 10.' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'ai_costs',
+    description:
+      'AI spend over the last N days, in US DOLLARS (the provider bills in USD — never present it as euros): totals, a per-task × model breakdown (which feature spends: the customer chat agent, drafts, translations, voice transcription…) and a per-day series. Cost is frozen at call time from the price table in settings; calls whose model has no price are counted in unpricedCalls and EXCLUDED from costUsd — never read them as free, say their cost is unknown. Failed calls are included: a rejected output still burned tokens.',
+    inputSchema: {
+      type: 'object',
+      properties: { days: { type: 'number', description: 'Window in days, 1-90. Default 30.' } },
       additionalProperties: false,
     },
   },
@@ -551,6 +561,7 @@ export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise
   morning_briefing: () => morningBriefing(),
   sales_summary: (a) => salesSummary(num(a.days, 7)),
   system_errors: (a) => systemErrors(num(a.limit, 10)),
+  ai_costs: (a) => aiCosts(num(a.days, 30)),
   catalog_health: (a) => catalogHealth(num(a.limit, 15)),
   stock_watch: (a) => stockWatch(num(a.days, 14)),
   catalog_lookup: (a) => catalogLookup(String(a.query ?? ''), num(a.limit, 10)),

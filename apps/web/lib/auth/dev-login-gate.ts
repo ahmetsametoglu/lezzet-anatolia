@@ -31,13 +31,13 @@ import 'server-only';
  */
 export const DEV_LOGIN_ACCOUNTS = [
   { label: 'Müşteri', email: 'claire.weber@example.fr', operations: false },
-  { label: 'Yönetim', email: 'yonetim@lezzetanatolia.fr', operations: true },
-  { label: 'Depo', email: 'depo@lezzetanatolia.fr', operations: true },
-  { label: 'Kurye', email: 'kurye@lezzetanatolia.fr', operations: true },
-  { label: 'Muhasebe', email: 'muhasebe@lezzetanatolia.fr', operations: true },
+  { label: 'Yönetim', email: 'yonetim@lezzetanatolie.com', operations: true },
+  { label: 'Depo', email: 'depo@lezzetanatolie.com', operations: true },
+  { label: 'Kurye', email: 'kurye@lezzetanatolie.com', operations: true },
+  { label: 'Muhasebe', email: 'muhasebe@lezzetanatolie.com', operations: true },
   /* Dört operasyon bölümünü de gören hesap (kullanıcı isteği 30.08) — liste mobille AYNI sırada ve
      aynı adreslerde kalmalı; biri değişip öteki kalırsa aynı düğme iki yüzeyde başka hesap açar. */
-  { label: 'Hepsi', email: 'hepsi@lezzetanatolia.fr', operations: true },
+  { label: 'Hepsi', email: 'hepsi@lezzetanatolie.com', operations: true },
 ] as const;
 
 /** Yerel sayılan host adları — port ayrılır, `[::1]` köşeli parantezle gelir. */

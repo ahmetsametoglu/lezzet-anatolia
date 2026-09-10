@@ -61,12 +61,12 @@ import { handOffInvitesToCustomer } from '@/lib/identity/invite-handoff';
 
   Kullanımı (production sunucusu 3001'de ayaktayken):
     http://localhost:3001/auth/dev-login                                  → yönetici
-    http://localhost:3001/auth/dev-login?email=depo@lezzetanatolia.fr     → depo
+    http://localhost:3001/auth/dev-login?email=depo@lezzetanatolie.com     → depo
     http://localhost:3001/auth/dev-login?next=/operations/products        → hedefi seç
 */
 
 /** Seed'in yöneticisi (`people.ts` → `yonetici`). Adres seed'le AYNI olmak zorunda. */
-const DEFAULT_EMAIL = 'yonetim@lezzetanatolia.fr';
+const DEFAULT_EMAIL = 'yonetim@lezzetanatolie.com';
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);

@@ -24,7 +24,7 @@ import { OPERATIONS_STORAGE_STATE } from './paths';
  * Kapı kapalıysa (env eksik) koşu ADLI hatayla düşer — sessizce oturumsuz devam edip dumanları
  * anlaşılmaz bir yetki hatasıyla kızartmaktansa, sebebi ilk satırda söylemek.
  */
-const OPERATIONS_EMAIL = 'yonetim@lezzetanatolia.fr';
+const OPERATIONS_EMAIL = 'yonetim@lezzetanatolie.com';
 
 setup('operasyon oturumu açılır ve saklanır', async ({ page }) => {
   const response = await page.goto(`/auth/dev-login?email=${encodeURIComponent(OPERATIONS_EMAIL)}&next=/operations`, {

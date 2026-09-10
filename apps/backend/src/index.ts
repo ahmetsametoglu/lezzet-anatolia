@@ -17,6 +17,9 @@ import './env';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import cron from 'node-cron';
+import { setAiUsageRecorder } from '@lezzet/ai';
+import { aiUsageRecorder } from '@lezzet/application/ai/usage-recorder';
+import { serviceDb } from '@lezzet/database';
 import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { requestLog, type AppEnv } from './http/request-log';
@@ -66,6 +69,13 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
   });
 });
+
+/*
+  AI KULLANIM KAYDI (15.27 · kullanıcı kararı 10.09): koşucunun kancasına kaydedici takılır — bu süreçteki
+  her model koşusu (destek ajanı ve çeviri cron'ları, analitik içgörü, webhook'taki ses çözümü) `ai_usage`a
+  düşer. Takılmasaydı bu süreçteki koşular bedava görünürdü (`CLAUDE §1`: ölçülemeyen değer sıfır değildir).
+*/
+setAiUsageRecorder(aiUsageRecorder(serviceDb()));
 
 const app = new Hono<AppEnv>();
 

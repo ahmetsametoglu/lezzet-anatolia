@@ -235,6 +235,8 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
     // Talep bağlantısı (15.14): şikâyette ajan talep açmaz, sayfanın bağlantısını verir; araç yoksa (talep kanalı) devir sürer.
     expect(ticketAgentTask.system).toContain("talep_baglantisi'ni ÇAĞIR");
     expect(ticketAgentTask.system).toContain('talep_baglantisi aracın varsa devretme');
+    // Ülke (15.20 · 10.09): iki ülkeli kodda ülke sorulur, cevap `ulke` alanıyla geçer; posta kodu yeniden sorulmaz.
+    expect(ticketAgentTask.system).toContain('aynı aracı "ulke" alanıyla yeniden çağır');
   });
 
   it('BAŞLANGIÇ FİYATI tek fiyat gibi sunulamaz — ölçülmüş arızanın prompt karşılığı', () => {

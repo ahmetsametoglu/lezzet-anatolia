@@ -80,7 +80,7 @@ import type { Depolar } from './warehouse';
 */
 
 /** Sahnenin kurye anahtarı — `people.ts`teki `kurye` satırı (Marc Lemoine, kapsamı {str, van}). */
-const KURYE_EPOSTA = 'kurye@lezzetanatolia.fr';
+const KURYE_EPOSTA = 'kurye@lezzetanatolie.com';
 
 /** Sahnenin müşterileri — `test-orders.ts`in açtığı deneme hesapları; ikinci bir küme açılmıyor. */
 const MUSTERI_EPOSTALARI = ['test1@example.fr', 'test2@example.fr', 'test3@example.fr', 'test4@example.fr'];

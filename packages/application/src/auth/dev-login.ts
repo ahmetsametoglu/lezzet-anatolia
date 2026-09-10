@@ -7,7 +7,7 @@ import { UserProfileService } from '@lezzet/database';
  *
  * ── ÖLÇÜLEN ARIZA ────────────────────────────────────────────────────────────
  * Cihaz turu sürerken `db:refresh` koştu. `auth.users` silindiği anda dev giriş düğmesi
- * `kurye@lezzetanatolia.fr` için `generateLink` çağırdı; o çağrı kayıtsız e-postada auth
+ * `kurye@lezzetanatolie.com` için `generateLink` çağırdı; o çağrı kayıtsız e-postada auth
  * kullanıcısını AÇAR, yani auth satırı **seed'den önce** doğdu. `0002` trigger'ı e-postayla profil
  * bulamayınca yeni profil açtı: **adsız, `roles = {admin}`, kapsamsız** (ölçüm 14:06:55). Ardından
  * `seedKisiler` o satırı "Marc Lemoine zaten var" diye benimsedi — kurye hiç doğmadı, ortada kurye

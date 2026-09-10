@@ -7,7 +7,7 @@ import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { readCustomerContext } from '@/lib/customer/context';
 import { readConversationDetail } from '@/lib/messaging/read';
 import { SocialClient } from './social-client';
-import { titleOf, toInboxRows, toMessageViews, toWindowView } from './social-read';
+import { titleOf, toInboxRows, toThreadItems, toWindowView } from './social-read';
 import { channelSource, parseSocialUrl } from './social-url';
 import type { ConversationDetailView, SocialData } from './social-types';
 
@@ -91,7 +91,9 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
     window: toWindowView(detail.conversation.windowExpiresAt, now),
     // Hedef dil okuma kapısından, gönderim kapısıyla aynı karar (15.28) — ekran hesaplamaz.
     language: detail.language,
-    messages: toMessageViews(detail.messages),
+    // Mesajlar + iç notlar tek akışta (15.29); başlıktaki sayı yalnız mesajları sayar.
+    thread: toThreadItems(detail.messages, detail.notes),
+    messageCount: detail.messages.length,
     context,
     tickets: detail.tickets.map((t) => ({
       id: t.id,

@@ -4,6 +4,8 @@
 export type { AiFailure, AiFailureReason, AiModel, AiProviderName, AiResult, AiSuccess, AiTask, AiTier, AiUsage } from './types';
 export { DEFAULT_PROVIDER, resolveModel } from './provider';
 export { runTask } from './run';
+// Kullanım kancası (15.27) — kaydediciyi süreç başında uygulama takar; paket DB bilmez (`usage-recorder.ts`).
+export { setAiUsageRecorder, type AiUsageContext, type AiUsageRecord, type AiUsageRecorder } from './usage-recorder';
 export { EMPTY_USAGE, addUsage, estimateCost, toAiUsage, type ModelRate } from './usage';
 export { TranslateOutputSchema, translateTask, type TranslateInput, type TranslateOutput } from './tasks/translate';
 export {

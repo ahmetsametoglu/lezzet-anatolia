@@ -222,7 +222,7 @@ const KISILER: SeedKisi[] = [
   //   yoktu: bypass auth'u atlıyordu). Bypass 19.08'de söküldü (`apps/web/lib/guard.ts` künyesi),
   //   o satır da onunla birlikte gitti. Geriye giriş YAPABİLEN tek admin kaldı — hem web hem mobil
   //   hızlı-giriş kapılarının yöneticisi bu.
-  { key: 'yonetici', name: 'Selin Kaya', email: 'yonetim@lezzetanatolia.fr', phone: '+33600000104', roles: ['admin'], preferredLanguage: 'tr' },
+  { key: 'yonetici', name: 'Selin Kaya', email: 'yonetim@lezzetanatolie.com', phone: '+33600000104', roles: ['admin'], preferredLanguage: 'tr' },
   // — Personel: operasyon rolleri. Sipariş geçişlerinin AKTÖRÜ ve kuryesi bunlar.
   // Depocu TEK depoya bağlı: ekranında depo seçici görmez, kendi deposunun kuyruğunu görür.
   // **Depocu TEK kapsamlı** (düzeltme 22.08, cihazda ölçüldü): 19.25 bir gün depocuya çift kapsam
@@ -234,8 +234,8 @@ const KISILER: SeedKisi[] = [
   // **Üçüncü deponun depocusu 01.09'da Colmar'dan Bordeaux'ya taşındı** (depo da taşındı —
   // `warehouse.ts` baş künyesi). Personelsiz bir depo, hazırlık ekranında kalıcı bir "kurulum
   // eksik" uyarısıdır; o uyarının hâli başka yerde deneniyor, burada gürültü olurdu.
-  { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
-  { key: 'depocuBordeaux', name: 'Claire Muller', email: 'depo.bordeaux@lezzetanatolia.fr', phone: '+33600000105', roles: ['warehouse'], depolar: ['bdx'], preferredLanguage: 'fr' },
+  { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolie.com', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
+  { key: 'depocuBordeaux', name: 'Claire Muller', email: 'depo.bordeaux@lezzetanatolie.com', phone: '+33600000105', roles: ['warehouse'], depolar: ['bdx'], preferredLanguage: 'fr' },
   // Kapsama ARAÇ da girdi (26.08 · 21.119): yerinde satışın depo çözümü kuryenin kapsamındaki tek
   // araçtır (01.09'dan beri açık beyanla — `?place=van`); araçsız kuryede satış ekranı hiç açılamaz
   // (ölçüldü: {str, colmar} kapsamı `400 warehouse_required` veriyordu).
@@ -259,16 +259,16 @@ const KISILER: SeedKisi[] = [
   // araç deposunu değil ("aidiyet değil adres"); yerinde satış kapısı (`salePlaceGuard`) araç
   // deposunu `vehicleWarehouseOf` ile SEFERDEN alıyor ve kapsama hiç sormuyor; `/van-stock`
   // `courierVanContext`ten okuyor. Kurye kapsamsız kalmıyor: `str` duruyor (DB kısıtı sağlanıyor).
-  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str'], preferredLanguage: 'fr' },
+  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolie.com', phone: '+33600000102', roles: ['courier'], depolar: ['str'], preferredLanguage: 'fr' },
   // Çoklu operasyon rolü olağandır (DOMAIN §2): depo + muhasebe aynı kişide olabilir.
   // Kapsamı İKİ depo: ekranda kapsamıyla sınırlı depo seçici görür — sistem onun yerine varsayılan
   // seçmez (C2). Tek depolu bir seed'de bu ekran hiç denenemezdi.
-  { key: 'muhasebe', name: 'Ayşe Demir', email: 'muhasebe@lezzetanatolia.fr', phone: '+33600000103', roles: ['accounting', 'warehouse'], depolar: ['str', 'kehl'], preferredLanguage: 'tr' },
+  { key: 'muhasebe', name: 'Ayşe Demir', email: 'muhasebe@lezzetanatolie.com', phone: '+33600000103', roles: ['accounting', 'warehouse'], depolar: ['str', 'kehl'], preferredLanguage: 'tr' },
   // — YALNIZ İKİNCİ DEPOYU gören personel. Depo kapsamı bir yetki sınırıdır ve o sınır ancak
   //   kapsamı DAR birisi varsa denenebilir: herkes ana depoyu (ya da ikisini birden) görüyorsa,
   //   kapsamı hiç uygulamayan bir sorgu da doğru cevap verir. Kehl'e ait kuyruğu, stoğu ve kabul
   //   bekleyen sevkiyatı bu kişi görmeli; Strasbourg'unkileri GÖRMEMELİ.
-  { key: 'depocuKehl', name: 'Jonas Weber', email: 'depo.kehl@lezzetanatolia.fr', phone: '+4978519901', roles: ['warehouse'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
+  { key: 'depocuKehl', name: 'Jonas Weber', email: 'depo.kehl@lezzetanatolie.com', phone: '+4978519901', roles: ['warehouse'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
   // — DÖRT BÖLÜMÜ DE GÖREN HESAP (kullanıcı isteği 30.08). Geliştirme ve tasarım denetimi içindir:
   //   sekme çubuğunun DÖRT sekmeli hâli, bölümler arası geçiş ve "hepsini gören kullanıcı" ancak
   //   böyle bir kişi varsa denenebilir — tek rollü hesaplarla çubuk hiç dolu görünmez (tek bölümlü
@@ -278,9 +278,9 @@ const KISILER: SeedKisi[] = [
   //   açılamıyor"~~ — bu gerekçe 21.249'la DÜŞTÜ ve satır 21.258'de kalktı: yerinde satış kapısı
   //   araç deposunu artık SEFERDEN çözüyor (`salePlaceGuard` → `vehicleWarehouseOf`), kapsamdan
   //   değil. Kapsamda araç tutmak ekranı açmıyor, yalnız depo seçicisine sahte bir seçenek koyuyordu.
-  { key: 'hepsi', name: 'Emre Yıldız', email: 'hepsi@lezzetanatolia.fr', phone: '+33600000106', roles: ['admin', 'warehouse', 'courier', 'accounting'], depolar: ['str'], preferredLanguage: 'tr' },
+  { key: 'hepsi', name: 'Emre Yıldız', email: 'hepsi@lezzetanatolie.com', phone: '+33600000106', roles: ['admin', 'warehouse', 'courier', 'accounting'], depolar: ['str'], preferredLanguage: 'tr' },
   // Sınır ötesi rotanın kuryesi — kapsamı da Kehl. Kurye kapsamsız olamaz (DB kısıtı).
-  { key: 'kuryeKehl', name: 'Stefan Bauer', email: 'kurye.kehl@lezzetanatolia.fr', phone: '+4978519902', roles: ['courier'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
+  { key: 'kuryeKehl', name: 'Stefan Bauer', email: 'kurye.kehl@lezzetanatolie.com', phone: '+4978519902', roles: ['courier'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
 ];
 
 
@@ -363,7 +363,7 @@ export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
  * ── ROLLERİ BOZMAZ ──────────────────────────────────────────────────────────
  * Satırı biz bağlamıyoruz, `0002` trigger'ı bağlıyor: yeni auth kullanıcısı e-postayla eşleşen ve
  * `auth_user_id`'si boş olan profili bulup kendine bağlar, rolüne DOKUNMAZ. Ölçüldü (11.08):
- * `kurye@lezzetanatolia.fr` bağlandıktan sonra `/me` `roles: ['courier']` döndü, `/courier/day`
+ * `kurye@lezzetanatolie.com` bağlandıktan sonra `/me` `roles: ['courier']` döndü, `/courier/day`
  * 200, `/warehouse/preparation` 403. Trigger'ın "ilk hesap admin olur" bootstrap'ı da tetiklenmez:
  * bu fonksiyon `seedKisiler`den SONRA koşar ve o an admin rollü profil zaten vardır.
  *

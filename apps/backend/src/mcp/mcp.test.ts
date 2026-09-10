@@ -167,7 +167,7 @@ describe('kapsam sözleşmesi', () => {
     }
     // Sözleşmenin sayısal hâli — yeni araç eklenince bu satır düşer ve kapsam ailesi bilinçli seçilir.
     expect(TOOLS.filter((t) => toolScope(t.name) === 'propose')).toHaveLength(11);
-    expect(TOOLS.filter((t) => toolScope(t.name) === 'read')).toHaveLength(14);
+    expect(TOOLS.filter((t) => toolScope(t.name) === 'read')).toHaveLength(15);
   });
 
   it('`propose` kapsamı `read`i KAPSAR; `read` öneriye yetmez', () => {

@@ -1,6 +1,7 @@
 import { runTask, ticketAgentTask, ticketDraftTask, type AiModel, type SupportContextInput } from '@lezzet/ai';
 import { brand } from '@lezzet/brand';
 import {
+  ConversationNoteService,
   ConversationService,
   MessageService,
   OrderItemService,
@@ -275,7 +276,7 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
     if (lastMessageAt && ticket.aiDraftGeneratedAt >= lastMessageAt) return { status: 'cached' };
   }
 
-  const result = await runTask(ticketDraftTask, context, await runOpts(db, ticket.customerId, opts));
+  const result = await runTask(ticketDraftTask, context, { ...(await runOpts(db, ticket.customerId, opts)), usageContext: { ticketId: ticket.id } });
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   /* Taslak HAM yazılır — sökme 06.09'da KALKTI, kendi künyesinin şartı gerçekleştiği için.
@@ -433,7 +434,7 @@ export async function generateConversationDraft(
   const result = await runTask(
     ticketDraftTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
-    await runOpts(db, conversation.customerId, opts, gate, { conversation, sink: cartLink }),
+    { ...(await runOpts(db, conversation.customerId, opts, gate, { conversation, sink: cartLink })), usageContext: { conversationId: conversation.id } },
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
@@ -592,7 +593,7 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   const result = await runTask(
     ticketAgentTask,
     alreadyDisclosed ? context : { ...context, greeting: true as const },
-    await runOpts(db, ticket.customerId, opts),
+    { ...(await runOpts(db, ticket.customerId, opts)), usageContext: { ticketId: ticket.id } },
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
@@ -739,6 +740,15 @@ async function autonomousConversationReply(
     }
     await conversations.setMode(conversation.id, 'human');
     logger.info({ context: 'application/conversation-ai', conversationId: conversation.id }, `özerk ajan insana devretti: ${reason}`);
+    /* SEBEP SOHBETİN İÇ NOTUNA (15.29 · kullanıcı kararı 10.09): operatör sohbeti açınca "AI neden
+       bıraktı"yı akışın içinde, devrin olduğu yerde okur — eskiden yalnız üstteki log satırındaydı ve
+       bir yanlış devri teşhis etmek için karar yeniden üretiliyordu. Zilden ÖNCE: tazelenen ekran notu da
+       görsün. Yazılamazsa devir YİNE olur — not bir iz, devrin şartı değil. */
+    await new ConversationNoteService(db)
+      .insert({ conversationId: conversation.id, author: 'ai', body: `AI devretti — ${reason}` })
+      .catch((err: unknown) =>
+        logger.warn({ context: 'application/conversation-ai', conversationId: conversation.id, err: String(err) }, 'devir notu yazılamadı'),
+      );
     // Zil şart: kuyruk hâlâ "AI yürütüyor" yazarsa kimse o sohbete bakmaz (16.8). Tekil zil de
     // çalınır (21.291): sohbeti AÇMIŞ operatörün ekranındaki mod çipi ve devir haberi tazelensin.
     await ringConversationsBell();
@@ -763,7 +773,7 @@ async function autonomousConversationReply(
       // Karşılamayı sistem veriyor (10.09): model selam vermez, kendini tanıtmaz — iki "Merhaba" gitmez.
       ...(alreadyDisclosed ? {} : { greeting: true as const }),
     },
-    await runOpts(db, conversation.customerId, opts, gate, { conversation, sink: cartLink }),
+    { ...(await runOpts(db, conversation.customerId, opts, gate, { conversation, sink: cartLink })), usageContext: { conversationId: conversation.id } },
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 

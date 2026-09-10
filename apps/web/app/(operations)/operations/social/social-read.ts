@@ -1,10 +1,10 @@
 import { resolveUserText, serviceWindowState, stripChatFormatting, translatableTextOf } from '@lezzet/domain-core';
-import type { ConversationInboxRow, TranslationBag } from '@lezzet/types';
+import type { ConversationInboxRow, ConversationNote, TranslationBag } from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
 import { agoShort, shortDateTime } from '@/components/operation/ui/format';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { MESSAGE_KIND_LABELS, TEMPLATE_CATEGORY_LABELS } from './social-labels';
-import type { InboxRowView, MessageView, WindowView } from './social-types';
+import type { InboxRowView, MessageView, ThreadItemView, WindowView } from './social-types';
 
 // Sosyal gelen kutusunun OKUMA DÖNÜŞÜMLERİ (15.5 · üç kanal 15.15) — saf fonksiyonlar, sunucu turu yok.
 //
@@ -181,4 +181,25 @@ export function toMessageViews(messages: readonly MessageWithMedia[]): MessageVi
       translation: shown.translation,
     };
   });
+}
+
+/**
+ * Mesajlar + iç notlar → TEK akış, zaman sırasıyla (15.29). Not balon değil, olayın olduğu yerde duran
+ * satırdır: "AI devretti" notu devrin anına — müşterinin son mesajıyla devir haberinin yanına — düşer.
+ * Ayrı bir liste olarak çizilseydi operatör sebebi, sohbetin neresinde olduğundan kopuk okurdu.
+ *
+ * Aynı anda yazılmış mesaj ile not arasında mesaj ÖNCE gelir: not, mesajın doğurduğu olayı anlatır.
+ */
+export function toThreadItems(messages: readonly MessageWithMedia[], notes: readonly ConversationNote[]): ThreadItemView[] {
+  const balonlar = toMessageViews(messages);
+  const akis = [
+    ...messages.map((m, i) => ({ at: Date.parse(m.createdAt), sira: 0, item: { kind: 'message' as const, message: balonlar[i]! } })),
+    ...notes.map((n) => ({
+      at: Date.parse(n.createdAt),
+      sira: 1,
+      item: { kind: 'note' as const, note: { id: n.id, author: n.author, text: n.body, stamp: shortDateTime(n.createdAt) } },
+    })),
+  ];
+  // `sort` kararlıdır (ES2019): aynı andaki iki mesajın kendi sırası da korunur.
+  return akis.sort((a, b) => a.at - b.at || a.sira - b.sira).map((satir) => satir.item);
 }

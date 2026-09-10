@@ -26,6 +26,10 @@ import type { PlaceWarehouses } from '../catalog/storefront-types';
  * Posta kodundan yer çözümü — **ülke sorulmadan** (19.8: ülke bir beyan değil, veriden türeyen
  * bir sonuçtur; 610 kod iki ülkede birden geçerli ve o hâlde motor `ambiguous` döner, tahmin etmez).
  *
+ * **`country` bir SEÇİMDİR, beyan değil** (15.20): iki ülkeli kodda müşterinin cevabı adayları tek
+ * ülkeye indirir — web çerezinin aynı kuralı (`read-place.ts` → `scoped`). Kod o ülkede geçerli
+ * değilse süzgeç boşalır ve çözüm doğal olarak `unknown`a düşer; seçim kodu başka bir ülkeye taşıyamaz.
+ *
  * Girdi kuralları web okumasıyla BİREBİR:
  * · Bölgeler AKTİFLİK SÜZGECİSİZ (19.16a): pasif bölgedeki kod da bizim kaydımızdır ve ülkesi
  *   ondan türer — süzülseydi kapalı bölgedeki müşteri "bu kodu tanımadık" cevabı alırdı, oysa
@@ -34,7 +38,7 @@ import type { PlaceWarehouses } from '../catalog/storefront-types';
  * · Kod NORMALİZE edilerek sorulur (boşluksuz, büyük harf) — referans tablosu öyle saklıyor;
  *   ham "67 000" sorgusu satırı bulamaz ve kod sessizce "tanınmadık" görünürdü.
  */
-export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: string): Promise<PostalCodeResolution> {
+export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: string, country?: Country): Promise<PostalCodeResolution> {
   const code = normalizePostalCode(postalCode);
   const [matches, zones, warehouses] = await Promise.all([
     new PostalCodePlaceService(db).findByPostalCode(code),
@@ -42,7 +46,8 @@ export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: 
     // TESİSLER — gerekçe `order/delivery.ts:readDeliveryInputs` künyesinde (`activeCountries`).
     new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
   ]);
-  return resolvePlaceByPostalCode(code, matches, zones, warehouses);
+  const scoped = country ? matches.filter((match) => match.country === country) : matches;
+  return resolvePlaceByPostalCode(code, scoped, zones, warehouses);
 }
 
 /**
@@ -74,9 +79,9 @@ export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: 
  * bilinmiyor". Okuma o hâlde depo-üstüne düşer ve "yok" ancak hiçbir depoda yoksa denir (C3).
  * Tahmin edilmez: yanlış depo, yanlış stok ve yanlış teslimat sözü demektir.
  */
-export async function resolvePlaceWarehouses(db: SupabaseClient, postalCode: string): Promise<PlaceWarehouses> {
+export async function resolvePlaceWarehouses(db: SupabaseClient, postalCode: string, country?: Country): Promise<PlaceWarehouses> {
   const [resolution, warehouses] = await Promise.all([
-    resolvePlaceForPostalCode(db, postalCode),
+    resolvePlaceForPostalCode(db, postalCode, country),
     // Yalnız `findShippingWarehouse`e gidiyor ve araç zaten `shipsOnline` olamaz — tesise indirmek
     // sonucu değiştirmez, listeyi niyetiyle uyumlu tutar.
     new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),

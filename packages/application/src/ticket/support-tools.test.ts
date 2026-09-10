@@ -45,6 +45,8 @@ const son2 = String(stamp).slice(-2);
 const ROTA_KODU = `006${son2}`;
 /** Hiçbir kayıtta (bizimkinde de referansta da) olmayan kod — `unknown` beklenir. */
 const YABANCI_KOD = `005${son2}`;
+/** Referans tablosunda iki hizmet ülkesinde (FR · DE) birden geçerli kod — 0033 verisi, seed değil. */
+const IKI_ULKELI_KOD = '01640';
 
 /** Bölgenin haftalık günü: Salı (ISO 2). Gün ADIYLA söylenmeli, sayıyla değil. */
 const ROTA_GUNU = 2;
@@ -266,10 +268,33 @@ describe('kimliksiz sohbet — set BOŞ değil, DAR (28.08 · CHANNELS §3b)', (
        (`cart/chat-place.ts`). Yazım hatası saklansaydı sohbet yanlış bir yere kilitlenir ve her cevap
        "oraya gitmiyoruz" derdi. Hafıza taklit: bu dosya aracın NE yazdırdığını sınar, yazımın kendisini değil. */
     const yazilan: string[] = [];
-    const hafiza = { known: () => null, remember: async (kod: string) => void yazilan.push(kod) };
+    const hafiza = { known: () => null, knownCountry: () => null, remember: async (kod: string) => void yazilan.push(kod) };
     await cagir(customerSupportTools(db, null, null, hafiza), 'posta_kodu_kontrol', { postaKodu: ROTA_KODU });
     await cagir(customerSupportTools(db, null, null, hafiza), 'posta_kodu_kontrol', { postaKodu: YABANCI_KOD });
     expect(yazilan).toEqual([ROTA_KODU]);
+  });
+
+  it('İKİ ÜLKELİ kodda ülke SORULUR, kod yine saklanır; ülke gelince çözüm tek ülkeye iner (15.20)', async () => {
+    /* Kod referans tablosunda iki hizmet ülkesinde birden geçerli (migration verisi, seed değil). Eskiden
+       saklanmıyordu ve sonraki tur posta kodunu YENİDEN soruyordu; artık kod saklanır, yalnız ülke sorulur. */
+    const yazilan: [string, string | undefined][] = [];
+    const hafiza = {
+      known: () => null,
+      knownCountry: () => null,
+      remember: async (kod: string, ulke?: string) => void yazilan.push([kod, ulke]),
+    };
+    const araclar = customerSupportTools(db, null, null, hafiza);
+    const soru = await cagir(araclar, 'posta_kodu_kontrol', { postaKodu: IKI_ULKELI_KOD });
+    expect(soru.bilinmiyor).toContain('birden çok ülkede');
+    // Seçenekler kodla birlikte: model müşterinin cevabını `ulke` alanına AYNEN geçebilsin.
+    expect(soru.adaylar).toEqual(expect.arrayContaining([expect.stringContaining('(FR)'), expect.stringContaining('(DE)')]));
+
+    const cevap = await cagir(araclar, 'posta_kodu_kontrol', { postaKodu: IKI_ULKELI_KOD, ulke: 'DE' });
+    expect(cevap.bilinmiyor).toBeUndefined();
+    expect(yazilan).toEqual([
+      [IKI_ULKELI_KOD, undefined],
+      [IKI_ULKELI_KOD, 'DE'],
+    ]);
   });
 
   it('kimliksizde ürün + fiyat okunur ve fiyat ZİYARETÇİ kapsamıdır', async () => {

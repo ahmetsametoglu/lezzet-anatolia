@@ -16,6 +16,7 @@ import {
   cropTrim,
   resolveLocalizedText,
   type Conversation,
+  type Country,
   type PreferredLanguage,
   type ProductAllergen,
 } from '@lezzet/types';
@@ -38,7 +39,7 @@ import {
 import { resolveOutboundLanguage } from '../messaging/translate';
 import type { StorefrontDeclaration } from '../catalog/storefront-types';
 import { resolvePlaceForPostalCode } from '../delivery/place';
-import { birincilAdres, resolveChatPlace, yerNotu, type ChatPlace, type ChatPlaceMemory } from '../cart/chat-place';
+import { birincilAdres, resolveChatPlace, ULKE_GIRDISI, yerNotu, type ChatPlace, type ChatPlaceMemory } from '../cart/chat-place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
 import { readPublicDeliveryTerms } from '../settings/public-terms';
 import { gitmemeSebebi, gitmeyenAlani, kargoYalniz, stokCumlesi, yereGider, yereGoreAyir } from './product-reach';
@@ -160,9 +161,14 @@ function gunAdi(isoGun: number): string {
  * gerçek kod sohbete yazılır (10.09) — müşteri bir daha söylemez. Depo çözülmediyse `place` depo-üstüdür;
  * ürünlerin yere göre ayıklanma kuralı `product-reach.ts`te.
  */
-async function yerVeGoruntuleyici(db: Db, customerId: string | null, postaKodu: string | undefined, memory: ChatPlaceMemory | null) {
+async function yerVeGoruntuleyici(
+  db: Db,
+  customerId: string | null,
+  soylenen: { postaKodu?: string; ulke?: Country },
+  memory: ChatPlaceMemory | null,
+) {
   const [yerim, viewer] = await Promise.all([
-    resolveChatPlace(db, { said: postaKodu, memory, addressCustomerId: customerId }),
+    resolveChatPlace(db, { said: soylenen.postaKodu, saidCountry: soylenen.ulke, memory, addressCustomerId: customerId }),
     pricingViewerOf(db, customerId),
   ]);
   return { yerim, viewer };
@@ -240,10 +246,11 @@ function productCardTools(db: Db, customerId: string | null, card: ProductCardHo
       inputSchema: z.object({
         kod: z.string().min(1).describe('urun_ara çıktısındaki "kod" alanı — aynen geç.'),
         postaKodu: z.string().min(4).optional().describe('Müşteri SÖYLEDİYSE posta kodu; söylemediyse boş bırak.'),
+        ulke: ULKE_GIRDISI,
       }),
-      execute: async ({ kod, postaKodu }) => {
+      execute: async ({ kod, postaKodu, ulke }) => {
         try {
-          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu, memory);
+          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, { postaKodu, ulke }, memory);
           const { language: dil } = await resolveOutboundLanguage(db, card.conversation);
           const okunan = await kartUrunu(db, kod, dil, yerim, viewer);
           // Bu adrese gitmeyen ürüne kart yok (10.09): düğmesine basan müşteri "gönderilemez" duyardı.
@@ -289,10 +296,11 @@ function productCardTools(db: Db, customerId: string | null, card: ProductCardHo
       inputSchema: z.object({
         kodlar: z.array(z.string().min(1)).min(CAROUSEL_CARD_RANGE.min).max(CAROUSEL_CARD_RANGE.max).describe('urun_ara çıktısındaki "kod" alanları — aynen geç, sırası kartların sırası.'),
         postaKodu: z.string().min(4).optional().describe('Müşteri SÖYLEDİYSE posta kodu; söylemediyse boş bırak.'),
+        ulke: ULKE_GIRDISI,
       }),
-      execute: async ({ kodlar, postaKodu }) => {
+      execute: async ({ kodlar, postaKodu, ulke }) => {
         try {
-          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu, memory);
+          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, { postaKodu, ulke }, memory);
           const { language: dil } = await resolveOutboundLanguage(db, card.conversation);
           const okunanlar = await Promise.all([...new Set(kodlar)].map((kod) => kartUrunu(db, kod, dil, yerim, viewer)));
 
@@ -508,8 +516,9 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
               'Kayıtlı adresi olan müşteride bile SÖYLENEN kod önceliklidir (başka adrese gönderiyor olabilir). ' +
               'Müşteri söylemediyse BOŞ bırak, uydurma.',
           ),
+        ulke: ULKE_GIRDISI,
       }),
-      execute: async ({ terim, postaKodu }) => {
+      execute: async ({ terim, postaKodu, ulke }) => {
         try {
           /*
             İKİ BAĞLAM ZORUNLU — katalog kapısının kendi kuralı: `place` (hangi depo) ve `viewer`
@@ -530,7 +539,7 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
             Yer BİLİNİYORSA liste yalnız o adrese gidebilenlerden kurulur; gidemeyenler sebebiyle ayrı
             alanda (10.09 · `product-reach.ts`).
           */
-          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu, memory);
+          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, { postaKodu, ulke }, memory);
           const { place, kod } = yerim;
 
           const ortak = {
@@ -751,8 +760,9 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
             'Posta kodu YA DA yerleşim adı — "67000", "75001", "Lingolsheim", "Kehl". ' +
               'Müşteri hangisini söylediyse AYNEN geç; ad verildiyse araç kodu kendisi bulur.',
           ),
+        ulke: ULKE_GIRDISI,
       }),
-      execute: async ({ postaKodu }) => {
+      execute: async ({ postaKodu, ulke }) => {
         try {
           /*
             ── YER ADI DA KABUL EDİLİR (07.09 · ölçülmüş arıza) ────────────────────────────────
@@ -793,9 +803,11 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
             Kimliğe dayalı sorunun aracı ayrı (`teslimat_gunleri`, girdisi boş): "benim adresim"
             sorusunu bu araca postalayan bir model, müşterinin adresini uydurmak zorunda kalırdı.
           */
-          const cozum = await resolvePlaceForPostalCode(db, postaKoduCozum);
-          // Müşterinin söylediği GERÇEK kod sohbete yazılır (10.09): bir daha sorulmaz, sepete o yerle yazılır.
-          if (cozum.kind !== 'unknown' && cozum.kind !== 'ambiguous') await memory?.remember(postaKoduCozum);
+          // Ülke söylendiyse süzgeçtir (15.20): iki ülkeli kodun cevabı çözümü tek ülkeye indirir.
+          const cozum = await resolvePlaceForPostalCode(db, postaKoduCozum, ulke);
+          /* Müşterinin söylediği GERÇEK kod sohbete yazılır (10.09): bir daha sorulmaz, sepete o yerle yazılır.
+             İki ülkeli kod da yazılır (ülkesiz) — sonraki tur yalnız ülkeyi sorar, kodu değil. */
+          if (cozum.kind !== 'unknown') await memory?.remember(postaKoduCozum, ulke);
           switch (cozum.kind) {
             case 'route':
               // En değerli cevap: rota günleri ÇÖZÜMLE BİRLİKTE geliyor, ikinci okuma gerekmiyor.
@@ -820,14 +832,20 @@ function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory 
                 not: 'Kod geçerli; bölgemiz henüz oraya ulaşmıyor. Müşteri isterse haber listesine yazılabilir (bunu operatör yapar).',
               };
             case 'ambiguous':
-              // Aynı kod iki hizmet ülkemizde birden geçerli — model UYDURMAZ, SORAR.
+              // Aynı kod iki hizmet ülkemizde birden geçerli — model UYDURMAZ, SORAR; cevap `ulke` ile geri gelir.
               return {
                 kod: postaKoduCozum,
-                bilinmiyor: 'Bu kod birden çok ülkede geçerli — hangi ülke olduğunu müşteriye SOR, tahmin etme.',
-                adaylar: cozum.candidates.map((c) => `${COUNTRY_LABELS[c.country]}${c.inRoute ? ' (rota bölgemizde)' : ''}`),
+                bilinmiyor:
+                  'Bu kod birden çok ülkede geçerli — hangi ülke olduğunu müşteriye SOR, tahmin etme; cevabı gelince bu aracı aynı kod ve `ulke` ile yeniden çağır. Kod saklandı, yeniden sorma.',
+                adaylar: cozum.candidates.map((c) => `${COUNTRY_LABELS[c.country]} (${c.country})${c.inRoute ? ' (rota bölgemizde)' : ''}`),
               };
             case 'unknown':
-              return { kod: postaKoduCozum, bilinmiyor: 'Böyle bir posta kodu bulunamadı — büyük olasılıkla yazım hatası. Müşteriden kodu teyit et.' };
+              return {
+                kod: postaKoduCozum,
+                bilinmiyor: ulke
+                  ? `Bu kod ${COUNTRY_LABELS[ulke]} için geçerli değil — müşteriden kodu ve ülkeyi teyit et.`
+                  : 'Böyle bir posta kodu bulunamadı — büyük olasılıkla yazım hatası. Müşteriden kodu teyit et.',
+              };
           }
         } catch (err) {
           logger.warn(

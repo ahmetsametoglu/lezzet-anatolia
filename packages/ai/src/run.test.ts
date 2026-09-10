@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runTask } from './run';
+import { setAiUsageRecorder, type AiUsageRecord } from './usage-recorder';
 import { translateTask } from './tasks/translate';
 import { failingAiModel, fakeAiModel } from './testing';
 import type { AiTask } from './types';
@@ -104,5 +105,64 @@ describe('AiTask sözleşmesi', () => {
     const res = await runTask(gorev, { n: 7 }, { model });
     expect(res.ok && res.data.kare).toBe(49);
     expect(JSON.stringify(model.doGenerateCalls[0]?.prompt)).toContain('Sayı: 7');
+  });
+});
+
+describe('kullanım kancası (15.27)', () => {
+  /* Kaydedici süreç başında takılır (web/backend); burada taklidi takılıyor ve her testten sonra
+     sökülüyor — kanca `globalThis`te, sökülmezse öteki dosyaların koşuları buraya yazardı. */
+  const kayitlar: AiUsageRecord[] = [];
+  beforeEach(() => {
+    kayitlar.length = 0;
+    delete process.env.AI_PROVIDER;
+    delete process.env.ANTHROPIC_API_KEY;
+    setAiUsageRecorder(async (kayit) => void kayitlar.push(kayit));
+  });
+  afterEach(() => setAiUsageRecorder(null));
+
+  it('başarılı koşu ölçümüyle ve iş bağlamıyla kaydedilir — görev ve GERÇEK model adıyla', async () => {
+    await runTask(
+      translateTask,
+      { text: 'x', kind: 'urun_yorumu' },
+      { model: fakeAiModel(CEVIRI, { inputTokens: 120, outputTokens: 40 }), modelId: 'gemini-test', usageContext: { conversationId: 'c1' } },
+    );
+    expect(kayitlar).toEqual([
+      {
+        task: 'translate.user-text',
+        modelId: 'gemini-test',
+        ok: true,
+        failureReason: null,
+        usage: { inputTokens: 120, outputTokens: 40, totalTokens: 160, cachedInputTokens: null },
+        context: { conversationId: 'c1' },
+      },
+    ]);
+  });
+
+  it('düşen koşu da kaydedilir, sebebiyle — ölçüm yoksa null (0 DEĞİL)', async () => {
+    await runTask(translateTask, { text: 'x', kind: 'urun_yorumu' }, { model: failingAiModel('500 upstream') });
+    expect(kayitlar).toHaveLength(1);
+    expect(kayitlar[0]).toMatchObject({ ok: false, failureReason: 'provider_error', context: {} });
+    expect(kayitlar[0]!.usage.inputTokens).toBeNull();
+  });
+
+  it('şemaya uymayan çıktı jeton YAKTI — ölçümü kayda geçer', async () => {
+    // Model yazdı, çıktı reddedildi: fatura yine kesilir. Ölçümsüz yazmak harcamayı gizlerdi.
+    const bozuk = JSON.stringify({ tr: 'Merhaba' });
+    await runTask(translateTask, { text: 'x', kind: 'urun_yorumu' }, { model: fakeAiModel(bozuk, { inputTokens: 50, outputTokens: 10 }) });
+    expect(kayitlar[0]).toMatchObject({ ok: false, failureReason: 'invalid_output' });
+    expect(kayitlar[0]!.usage).toMatchObject({ inputTokens: 50, outputTokens: 10 });
+  });
+
+  it('yapılandırma yoksa kayıt YOK — modele hiç gidilmedi', async () => {
+    await runTask(translateTask, { text: 'x', kind: 'urun_yorumu' });
+    expect(kayitlar).toHaveLength(0);
+  });
+
+  it('kaydedici düşse de koşu DÜŞMEZ — kayıt bir yan iş', async () => {
+    setAiUsageRecorder(async () => {
+      throw new Error('db kapalı');
+    });
+    const res = await runTask(translateTask, { text: 'x', kind: 'urun_yorumu' }, { model: fakeAiModel(CEVIRI) });
+    expect(res.ok).toBe(true);
   });
 });

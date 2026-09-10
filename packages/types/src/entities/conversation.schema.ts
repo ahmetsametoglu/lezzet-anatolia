@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   ConversationLinkProofEnum,
   ConversationSourceEnum,
+  CountryEnum,
   MessageDirectionEnum,
   MessageKindEnum,
   PreferredLanguageEnum,
@@ -115,9 +116,15 @@ export const ConversationSchema = z.object({
   /**
    * **Müşterinin SÖYLEDİĞİ posta kodu** (15.20 · kullanıcı kararı 10.09) — sohbette bir kez söylenir,
    * burada saklanır; ajanın araçları "bu adrese gider mi"yi buna göre okur ve sepete yer bilinmeden
-   * yazmaz (`cart/chat-place.ts`). Yalnız gerçek, tek ülkeli kod yazılır — yazım hatası saklanmaz.
+   * yazmaz (`cart/chat-place.ts`). Yalnız gerçek kod yazılır — yazım hatası saklanmaz.
    */
   postalCode: z.string().regex(/^\d{5}$/).nullable(),
+  /**
+   * **Kodun ÜLKESİ** (15.20 · kullanıcı kararı 10.09) — koddan türer; kod iki hizmet ülkesinde birden
+   * geçerliyse müşteriye SORULUR ve cevabı buraya yazılır. `null`: kod yok ya da ülke henüz sorulmadı —
+   * o hâlde depo seçilmez, ajan ülkeyi sorar. Kodsuz ülke olmaz (DB kısıtı).
+   */
+  postalCountry: CountryEnum.nullable(),
   /** Son hareketin anı — konuşmanın "ne zaman kımıldadı" damgası. `recordMessage` yazar. */
   lastMessageAt: z.string().nullable(),
   /**
@@ -266,6 +273,34 @@ export const MessageInsertSchema = z.object({
   translatedAt: z.string().nullish(),
 });
 export type MessageInsert = z.infer<typeof MessageInsertSchema>;
+
+/**
+ * **Sohbetin İÇ NOTU** (15.29 · kullanıcı kararı 10.09) — müşteriye GİTMEZ; operatör sohbet akışında
+ * okur. İlk yazanı ajanın devri: *"AI devretti — sebep"* (`ticket/ai.ts` → `handOff`).
+ *
+ * **Mesaj değil, ayrı defter** ve sebebi somut: `message` "kanaldan ne aktı"nın defteridir — pencere
+ * damgaları, gelen kutusunun "cevap bekliyor" hesabı, çeviri kuyruğu ve mobilin mesaj türü eşlemesi
+ * onu okur. Notu oraya yazmak her okuyana "bu satır müşteriye gitmedi" istisnasını öğretmek olurdu;
+ * birini unutan yüzey notu gönderilmiş bir mesaj sayardı. Ayrı tablo istisnayı tek yere indirir.
+ *
+ * Yazılır, güncellenmez — defter.
+ */
+export const ConversationNoteSchema = z.object({
+  id: z.string().uuid(),
+  conversationId: z.string().uuid(),
+  /** Personel ya da AI — müşteri iç not YAZAMAZ (DB kısıtı): müşterinin sözü mesajdır. */
+  author: TicketSenderEnum,
+  body: z.string().min(1),
+  createdAt: z.string(),
+});
+export type ConversationNote = z.infer<typeof ConversationNoteSchema>;
+
+export const ConversationNoteInsertSchema = z.object({
+  conversationId: z.string().uuid(),
+  author: TicketSenderEnum.exclude(['customer']),
+  body: z.string().trim().min(1),
+});
+export type ConversationNoteInsert = z.infer<typeof ConversationNoteInsertSchema>;
 
 /**
  * `conversation_inbox` görünümü (15.5) — gelen kutusunun okuduğu satır.

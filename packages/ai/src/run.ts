@@ -8,8 +8,9 @@ import {
   type ToolSet,
 } from 'ai';
 import { resolveModel } from './provider';
-import { toAiUsage } from './usage';
-import type { AiResult, AiTask } from './types';
+import { EMPTY_USAGE, addUsage, toAiUsage } from './usage';
+import { reportAiUsage, type AiUsageContext, type AiUsageRecord } from './usage-recorder';
+import type { AiResult, AiTask, AiUsage } from './types';
 
 /**
  * Bir görevi koşturur — paketin TEK giriş kapısı.
@@ -21,8 +22,8 @@ import type { AiResult, AiTask } from './types';
  *    onu görmezden gelmek zorunda kalmasın (`CLAUDE §1` "sessiz catch yok").
  * 2. **Çıktı yapısaldır.** `generateObject` şemayı modele dayatır ve doğrular; serbest metin
  *    ayrıştırmak (referans projedeki `parseJsonLoose`) tahmindir, tahmin de bir gün yanılır.
- * 3. **Loglamaz.** Ölçümü döndürür; kaydı çağıran tutar. Paketin logger'ı olsaydı ölçümün
- *    hangi işe ait olduğunu paket bilmek zorunda kalırdı.
+ * 3. **Loglamaz.** Ölçümü döndürür ve kullanım kancasına verir (`usage-recorder.ts`, 15.27); kaydı
+ *    uygulama tutar. Paketin logger'ı olsaydı ölçümün hangi işe ait olduğunu paket bilmek zorunda kalırdı.
  *
  * ── ARAÇLI KOŞU (16.9) ──────────────────────────────────────────────────────
  * `opts.tools` verilirse model **veriye kendisi bakabilir**: `generateObject` araç kabul etmediği
@@ -57,19 +58,6 @@ function toolFacts(steps: ReadonlyArray<{ content: ReadonlyArray<{ type: string 
   return { text: lines.join('\n'), names };
 }
 
-/** İki fazın ölçümü TEK satırda toplanır — maliyet çağrı başına değil, GÖREV başına okunur. */
-function sumUsage(a: Parameters<typeof toAiUsage>[0], b: Parameters<typeof toAiUsage>[0]): ReturnType<typeof toAiUsage> {
-  const x = toAiUsage(a);
-  const y = toAiUsage(b);
-  const topla = (p: number | null, q: number | null) => (p === null && q === null ? null : (p ?? 0) + (q ?? 0));
-  return {
-    inputTokens: topla(x.inputTokens, y.inputTokens),
-    outputTokens: topla(x.outputTokens, y.outputTokens),
-    totalTokens: topla(x.totalTokens, y.totalTokens),
-    cachedInputTokens: topla(x.cachedInputTokens, y.cachedInputTokens),
-  };
-}
-
 export async function runTask<TInput, TOutput>(
   task: AiTask<TInput, TOutput>,
   input: TInput,
@@ -83,6 +71,11 @@ export async function runTask<TInput, TOutput>(
      * bugünkü gibi kapalı girdiyle koşar: aracın olmadığı yerde modelin arayacağı bir şey de yoktur.
      */
     tools?: ToolSet;
+    /**
+     * Koşunun iş bağlamı (15.27) — kullanım kaydında hangi sohbete/talebe ait olduğu. Verilmezse kayıt
+     * yine düşer, bağlamsız: maliyet görevden okunur.
+     */
+    usageContext?: AiUsageContext;
   } = {},
 ): Promise<AiResult<TOutput>> {
   let model: LanguageModel;
@@ -121,6 +114,13 @@ export async function runTask<TInput, TOutput>(
     ...(opts.signal ? { abortSignal: opts.signal } : {}),
   };
 
+  /* KULLANIM KAYDI (15.27) — başarılı ya da değil, modele giden HER koşu. Yapılandırma yoksa (yukarıda
+     `not_configured`) modele hiç gidilmedi, kayıt da yok. Kanca takılı değilse hiçbir şey olmaz. */
+  const kaydet = (usage: AiUsage, failureReason: AiUsageRecord['failureReason']) =>
+    reportAiUsage({ task: task.id, modelId, ok: failureReason === null, failureReason, usage, context: opts.usageContext ?? {} });
+  // Araçlı koşuda birinci fazın harcaması ikinci faz düşse de YAPILDI — hata dalında kaybolmasın.
+  let ilkFaz: AiUsage | null = null;
+
   try {
     if (opts.tools) {
       // FAZ 1 — GERÇEKLERİ TOPLA. Şema DAYATILMAZ ve dayatılamaz: Google "araç çağrısı + JSON çıktı
@@ -133,6 +133,7 @@ export async function runTask<TInput, TOutput>(
         // Tavan görevin sözleşmesinden; yoksa 4 — bir arama, bir doğrulama, bir cevap için yeter.
         stopWhen: stepCountIs(task.maxSteps ?? 4),
       });
+      ilkFaz = toAiUsage(gather.usage);
       const facts = toolFacts(gather.steps);
 
       // FAZ 2 — ŞEMAYA BAĞLA. Araç sonuçları prompt'a EK olarak giriyor, yani ikinci çağrı
@@ -161,24 +162,34 @@ export async function runTask<TInput, TOutput>(
         ...gercekli,
         schema: task.output,
       });
+      // İki fazın ölçümü TEK satırda toplanır — maliyet çağrı başına değil, GÖREV başına okunur.
+      const usage = addUsage(ilkFaz, toAiUsage(res.usage));
+      kaydet(usage, null);
       return {
         ok: true,
         data: res.object as TOutput,
-        usage: sumUsage(gather.usage, res.usage),
+        usage,
         modelId,
         toolCalls: facts.names,
       };
     }
 
     const res = await generateObject({ ...ortak, schema: task.output });
-    return { ok: true, data: res.object as TOutput, usage: toAiUsage(res.usage), modelId, toolCalls: [] };
+    const usage = toAiUsage(res.usage);
+    kaydet(usage, null);
+    return { ok: true, data: res.object as TOutput, usage, modelId, toolCalls: [] };
   } catch (err) {
     // Şema ihlali ile ağ/kota hatasını ayırmak çağıranın DAVRANIŞINI değiştirir: birinde prompt
     // sorgulanır, ötekinde tekrar denenir. Tek 'hata' demek ikisini de teşhissiz bırakırdı.
     const sematik = NoObjectGeneratedError.isInstance(err) || TypeValidationError.isInstance(err);
+    const reason = sematik ? 'invalid_output' : 'provider_error';
+    /* Şema ihlalinde model ÇALIŞTI ve jeton yaktı — hata ölçümü taşıyor (`NoObjectGeneratedError.usage`).
+       Sağlayıcı hatasında ölçüm yok: alanlar `null` kalır, sıfır yazılmaz (`AiUsage` künyesi). */
+    const hataOlcumu = NoObjectGeneratedError.isInstance(err) ? toAiUsage(err.usage) : EMPTY_USAGE;
+    kaydet(ilkFaz ? addUsage(ilkFaz, hataOlcumu) : hataOlcumu, reason);
     return {
       ok: false,
-      reason: sematik ? 'invalid_output' : 'provider_error',
+      reason,
       // **Mesaj yalnız hatanın kendisidir** — girdi metni asla eklenmez: kullanıcı yorumu/talep
       // gövdesi log'a düşerdi (`CLAUDE §1` "log'a kimlik yazılır, içerik yazılmaz").
       message: `[${task.id}] ${err instanceof Error ? err.message : String(err)}`,

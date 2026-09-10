@@ -30,6 +30,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | `link_proof` | text | • |  |
 | `language` | preferred_language | • |  |
 | `postal_code` | text | • |  |
+| `postal_country` | country_code | • |  |
 | `window_expires_at` | timestamptz | • |  |
 | `last_message_at` | timestamptz | • |  |
 | `last_inbound_at` | timestamptz | • |  |
@@ -52,7 +53,8 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 - **`linked_by`** — bağı KURAN personel (15.19) — FK `set null`, yani kim bağladığı kaybolabilir
 - **`linked_at`** — bağın kurulduğu an; kanıtla BİRLİKTE dolar (kısıt)
 - **`link_proof`** — kanıtın TÜRÜ (`order_ref`,`email`,`phone` operatörün; `cart_link` sistemin — 15.22) — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan). `cart_link`: sohbette kurulan sepetin bağlantısını açıp giriş yapan kişi; kanıt operatörün değil sistemin doğruladığı jetondur (`cart_link` tablosu), `linked_by` bu yüzden boş. Hesap bağlantısı (`cart_link.purpose = account`, 15.16) da AYNI kanıtı yazar: giriş yöntemi (e-posta kodu ya da Google) hesabın doğrulamasıdır, bağın kanıtı sohbetteki jeton
-- **`postal_code`** — müşterinin SOHBETTE söylediği teslimat posta kodu (15.20 · kullanıcı kararı 10.09). Ajan sepete yazmadan önce yeri bilmek zorunda; kod bir kez söylenir, burada saklanır ve sonraki turlar sormaz. Yalnız gerçek, tek ülkeli kod yazılır (yazım hatası sohbeti yanlış yere kilitlemesin); biçim beş hane (`@lezzet/helper`). Kimlik değil YER: kayıtlı adresi olan müşteride adres zaten var — sıra söylenen · saklanan · kayıtlı adres (`cart/chat-place.ts`)
+- **`postal_code`** — müşterinin SOHBETTE söylediği teslimat posta kodu (15.20 · kullanıcı kararı 10.09). Ajan sepete yazmadan önce yeri bilmek zorunda; kod bir kez söylenir, burada saklanır ve sonraki turlar sormaz. Yalnız gerçek kod yazılır (yazım hatası sohbeti yanlış yere kilitlemesin); iki ülkeli kod da yazılır, ülkesi ayrıca sorulur (`postal_country`); biçim beş hane (`@lezzet/helper`). Kimlik değil YER: kayıtlı adresi olan müşteride adres zaten var — sıra söylenen · saklanan · kayıtlı adres (`cart/chat-place.ts`)
+- **`postal_country`** — kodun ÜLKESİ (15.20 · kullanıcı kararı 10.09). 610 kod iki hizmet ülkesinde birden geçerli ve ülke bilinmeden depo seçilemez: ajan müşteriye ülkeyi SORAR (araçların `ulke` girdisi), cevap buraya yazılır; tek ülkeli kodda koddan türer ve yine yazılır — okuyan hep aynı iki alana bakar. Ülke bir SEÇİMDİR, beyan değil: kodun geçerli olmadığı ülke yazılmaz (`resolvePlaceForPostalCode` süzgeci — web yer çerezinin `country` kuralının aynısı). Kodsuz ülke olmaz (kısıt `conversation_postal_country`); `null` = kod yok ya da ülke henüz sorulmadı
 - **`language`** — **müşteriyle KONUŞTUĞUMUZ dil** (15.28) — giden mesajın çevrileceği hedef. Enum (tr|fr|de), serbest ISO kodu DEĞİL: "müşteri hangi dilde yazdı"yı değil "biz ona hangi dilde yazarız"ı söyler; Boşnakça yazan müşteriye Boşnakça cevap üretemeyiz. Gelen mesajın tespit edilen dilinden öğrenilir, **son gelen kazanır**, üç dilden değilse dokunulmaz. `null` = müşteri henüz üç dilden birinde yazmadı → hedef yedek zincirden (profil tercihi → piyasa varsayılanı; karar motorda, `outboundLanguage`)
 - **`window_expires_at`** — 24s servis penceresi bitişi — süre üç kanalda aynı; EKONOMİSİ değil (ücret/şablon yalnız WhatsApp)
 
@@ -116,6 +118,29 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 **Kolon defterle BİRLİKTE doğdu, sonradan eklenmedi:** yazılırken atlanan bir boyut geriye dönük doldurulamaz. Kategorisiz geçen mesajlar için "geçen ay ne ödedik" hiçbir zaman cevaplanamazdı (`ticket.handled_by` ile aynı gerekçe). Şablon adına bakıp türetmek de çözüm değil: kategori Meta tarafında sonradan değişebilir ve o gün geçmiş faturamız bugünün sınıflandırmasıyla yeniden yazılırdı. Defter olanı yazar. Üç kural veride durur (0039): metin mesajı metinsiz olamaz, şablon adı ile tür ayrışamaz (adsız template / adlı serbest metin reddedilir), **gelen mesaj template olamaz** (template işletme-başlatandır; tersi mümkün olsaydı gelen bir mesaj pencere hesabında "biz gönderdik" gibi okunurdu).
 
 **`body` jsonb ve adım 1'de `payload` AÇIK** — kart/interaktif/medya yapısının şekli sağlayıcıya bağlı ve 15.9'da netleşecek. Bugün kapalı bir sözlük yazmak, henüz görmediğimiz bir yapıyı uydurmak olurdu; uydurulan sözlük gerçeği gördüğümüz gün sessizce yanlış olurdu. `text` her türde okunur (kartın başlığı da bir metindir) — gelen kutusu önizlemesi ve AI bağlamı onu okur.
+
+## ConversationNote (sohbetin iç notu)
+
+Müşteriye GİTMEYEN satır (15.29 · kullanıcı kararı 10.09): operatör sohbet akışında, olayın olduğu yerde okur. İlk yazanı ajanın devri — *"AI devretti — sebep"* (`ticket/ai.ts` → `handOff`). Sebep eskiden yalnız backend stdout'una düşüyordu; bir yanlış devri teşhis etmek için karar satırdan yeniden üretiliyordu.
+
+<!-- alanlar:conversation_note -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `conversation_id` | uuid |  |  |
+| `author` | ticket_sender |  |  |
+| `body` | text |  |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`author`** — personel ya da AI; müşteri iç not YAZAMAZ (kısıt `conversation_note_author`) — müşterinin sözü mesajdır
+- **`body`** — boş olamaz (kısıt `conversation_note_body`): boş satır, olmayan bir kaydı gösterirdi
+
+**`message` tablosuna YAZILMADI ve bu bilinçli.** `message` "kanaldan ne aktı"nın defteridir: pencere damgaları (`record_message`), gelen kutusunun "cevap bekliyor" hesabı (son mesajın yönü), çeviri kuyruğu ve mobilin mesaj türü eşlemesi onu okur. Notu yeni bir `message_kind` olarak oraya koymak her okuyana "bu satır müşteriye gitmedi" istisnasını öğretmek olurdu — birini unutan yüzey notu gönderilmiş bir mesaj sayar (mobilin tam tür eşlemesi ayrıca derlemede kırılırdı). Ayrı tablo istisnayı tek yere indirir. Ekran ikisini zaman sırasıyla tek akışta birleştirir (`toThreadItems`); aynı anda yazılmışlarsa mesaj önce — not, mesajın doğurduğu olayı anlatır.
+
+**Defterdir — yazılır, güncellenmez** (`Message` ile aynı gerekçe; servisin güncelleme tipi `never`). Sohbetle birlikte gider (`cascade`).
 
 ## WebhookEvent (dış olay kaydı)
 

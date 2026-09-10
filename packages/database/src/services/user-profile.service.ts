@@ -571,7 +571,7 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
    * Adı "müşteri arama"ydı ama süzgeci YOKTU: `user_profiles` müşteriyi ve personeli aynı tabloda
    * tutuyor (`0001`), yani seçici depocuyu, kuryeyi ve yöneticiyi de döndürüyordu. Ölçüldü
    * (tarayıcıda, elle sipariş girişi): *"Claire"* aramasının **İLK sonucu bir depo çalışanıydı**
-   * (`depo.colmar@lezzetanatolia.fr`) — operatör farkında olmadan personel adına sipariş
+   * (`depo.colmar@lezzetanatolie.com`) — operatör farkında olmadan personel adına sipariş
    * açabilirdi. Belirtisi yoktu: satır geçerli bir profil, sipariş geçerli bir sipariş.
    *
    * Yerinde satışın **anonim alıcısı** (`roles={system}`, 21.119) aynı deliği daha görünür kıldı:
