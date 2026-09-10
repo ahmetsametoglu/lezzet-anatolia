@@ -73,24 +73,31 @@ ORM bilinçli yok: doğrulama Zod'da, sorgu katmanı §6 taban sınıfta. Üçü
 ```
 proje/
 ├── apps/
-│   ├── web/          # Next.js — müşteri + admin + Server Action + gerektiğinde /api
-│   ├── backend/      # Hono + cron — dış webhook'lar (ödeme, WhatsApp inbound), zamanlı işler
-│   └── worker/       # (opsiyonel) uzun/yerel işler
+│   ├── web/          # Next.js 15 — müşteri + operasyon yüzeyleri, Server Action'lar, ödeme webhook'u (`app/api/webhooks/stripe`)
+│   ├── backend/      # Hono — zamanlı işler (`jobs/`), Meta + Sendcloud webhook'ları (`webhooks/`), MCP yönetici asistanı (`mcp/`)
+│   ├── mobile-api/   # Hono — native uygulamanın arka ucu (`/api/v1`)
+│   └── mobile/       # Expo 57 / React Native 0.86 — native uygulama (müşteri + operasyon)
 ├── packages/
-│   ├── types/            # Zod şemaları + domain tipler  ← TEK KAYNAK
-│   ├── database/         # BaseDbService + entity servisleri
-│   ├── domain-core/      # UI'sız domain motoru: sipariş durum makinesi, stok, fiyat, kanal (§8)
-│   ├── helper/           # tarih/para/format — bağımlılıksız saf fonksiyonlar
-│   ├── brand/            # marka sabitleri (ad, logo yolu, yasal metinler, renkler)
-│   ├── i18n/             # arayüz metinleri (tr/fr/de) + yerelleştirme yardımcıları
-│   ├── storage/          # dosya deposu istemcisi
-│   ├── email/            # mail istemcisi + default şablonlar (Auth OTP dahil TÜM mail buradan; Supabase mail yapısı kullanılmaz)
-│   ├── notify/           # soyut OUTBOUND bildirim katmanı (e-posta / wa.me / ileride WhatsApp API / push)
-│   ├── ai/               # sağlayıcı-agnostik AI: çeviri, WhatsApp sohbet, banka import şablonu, fatura→stok formu — çok amaçlı ajan
+│   ├── types/            # Zod şemaları + domain tipler  ← TEK KAYNAK (yalnız zod'a bağlı)
+│   ├── database/         # BaseDbService + entity servisleri (supabase-js, ORM yok)
+│   ├── domain-core/      # UI'sız, DB'siz domain motoru: durum makinesi, stok, fiyat, kanal (§8)
+│   ├── application/      # UYGULAMA katmanı: domain-core + database'i birleştiren, taşıma-bağımsız orkestrasyonlar (§4)
+│   ├── helper/           # saf fonksiyonlar (tarih/para/format/kimlik/slug) — tek iç bağımlılığı i18n
+│   ├── i18n/             # dil birimleri + ortak yerelleştirme sabitleri + URL yol tablosu (arayüz metni sayfanın messages.json'unda)
+│   ├── brand/            # marka sabitleri: ad, diller, iletişim, WhatsApp bağlantısı
+│   ├── design-tokens/    # tasarım token'ları — bugün fiilî kaynak web `globals.css`, parite testi ikisini birebir tutar
+│   ├── observability/    # gözlemleme: logger, captureError, maskeleme (OBSERVABILITY.md)
+│   ├── storage/          # Cloudflare R2 (S3-uyumlu) dosya deposu
+│   ├── email/            # mail istemcisi + şablonlar (Auth OTP dahil TÜM mail buradan; Supabase mail yapısı kullanılmaz)
+│   ├── notify/           # soyut OUTBOUND bildirim katmanı (e-posta / wa.me / WhatsApp API / push)
+│   ├── ai/               # sağlayıcı-agnostik AI portu: görev kaydı + tipli çağrı + token ölçümü (yalnız types bilir)
+│   ├── address-fr/       # Fransız ulusal adres servisi (BAN) istemcisi + adres satırı biçimi
+│   ├── sendcloud/        # Sendcloud API v3 istemcisi (resmî SDK yok, REST) + webhook
+│   ├── react-hooks/      # ortak React hook'ları (bugün tek dosya: `use-debounced-lookup`)
 │   ├── eslint-config/
 │   └── typescript-config/
-├── supabase/migrations/  # numaralı SQL, additive-only (WORKFLOW.md §2)
-├── scripts/              # deploy.sh, seed.ts
+├── supabase/migrations/  # numaralı SQL — greenfield evresinde doğrudan düzenlenir; ilk üretim dağıtımından sonra yalnız ileri doğru (WORKFLOW.md §2)
+├── scripts/              # seed, docs:check, test koşucusu + kilidi, dev:health, ui:shot … (deploy.sh henüz yok)
 └── docs/                 # bu klasör (ürün, domain, veri modeli, kararlar...)
 ```
 
@@ -101,28 +108,48 @@ packages:
   - "packages/*"
 ```
 
-`turbo.json` kritik satır `dependsOn: ["^build"]` — paketler uygulamalardan önce derlenir.
+`turbo.json`'daki `dependsOn: ["^build"]` paketlerde bir şey derlemez: hiçbir paketin `build` betiği yok (ölçüldü 10.09).
 
 Paketler kaynak dışa verir (`"exports": { ".": "./src/index.ts" }`), ara derleme yok. Node tarafı derleme gereken paket olursa `tsup` + `noExternal` dikkatiyle.
 
-**Genel blueprint'ten fark:** `domain-core` (opsiyonel değil, zorunlu), `i18n`, `notify` paketleri eklendi. `brand` renkleri de tutar (Tailwind token kaynağıyla hizalı).
+**Genel blueprint'ten fark:** `domain-core` (opsiyonel değil, zorunlu), `application` (birleştirme katmanı, §4), `i18n`, `notify`, `observability`, `design-tokens` ve dış servis paketleri (`address-fr`, `sendcloud`) eklendi. Renk token'ları `design-tokens`ta ve web `globals.css`'te — `brand`'de renk yok.
 
 ---
 
 ## 4. Değişmez kural: bağımlılık tek yönlü
 
+Oklar "tarafından kullanılır" yönündedir. Şema çekirdek zinciri gösterir; tam liste alttaki tabloda.
+
 ```
-types  →  database  →  apps
-  ↓          ↓
-helper    brand / i18n / storage / email / notify / domain-core
+types ─→ i18n ─→ helper ─┬─→ database ────┐
+  │                      └─→ domain-core ─┼─→ application ─→ uygulamalar
+  └─→ ai ─────────────────────────────────┘
 ```
+
+Paketlerin bugün bildiği iç paketler (`package.json`, ölçüldü 10.09):
+
+| Paket | Bildiği iç paketler |
+| --- | --- |
+| `types` | — (yalnız `zod`) |
+| `i18n` | `types` |
+| `helper` | `i18n` |
+| `database` | `types` · `helper` |
+| `domain-core` | `types` · `helper` |
+| `ai` | `types` |
+| `observability` | `types` · `database` |
+| `email` | `types` · `brand` · `i18n` · `domain-core` · `observability` |
+| `notify` | `types` · `brand` · `email` |
+| `application` | `types` · `helper` · `i18n` · `database` · `domain-core` · `ai` · `brand` · `email` · `notify` · `observability` · `storage` · `address-fr` · `sendcloud` |
+| `brand` · `storage` · `design-tokens` · `address-fr` · `sendcloud` · `react-hooks` | — |
 
 - `types` yalnız `zod`'a bağlı; hiçbir iç pakete değil.
 - `database` yalnız `types` + `helper` bilir.
 - `domain-core` `types` + `helper` bilir; uygulamayı bilmez.
+- `ai` yalnız `types` bilir — DB, logger, iş kuralı yok.
 - Uygulamalar paketleri bilir; paketler uygulamaları **asla** bilmez.
-- `domain-core` ↮ `database`: **birbirini bilmezler.** Motor saf kalsın (birim testi DB'siz koşsun), servis I/O'da kalsın diye; ikisini birleştiren yer uygulama katmanıdır (Server Action / RSC). Bkz. §13.
+- `domain-core` ↮ `database`: **birbirini bilmezler.** Motor saf kalsın (birim testi DB'siz koşsun), servis I/O'da kalsın diye. İkisini birleştiren yer UYGULAMA katmanıdır: birden çok yüzeyin (web · backend · mobile-api) çağırdığı akış `packages/application`'da, tek yüzeyin işi o uygulamanın Server Action'ında ya da Hono ucunda (ölçüt: `packages/application/src/index.ts`). Bkz. §13.
 - Döngü yasak; ortak parça `types` veya `helper`'a iner.
+- Kurallar `.dependency-cruiser.cjs`te tanımlı: `types-is-pure` · `database-scope` · `domain-core-scope` · `ai-scope` · `packages-not-to-apps` · `no-circular`.
 
 ---
 
