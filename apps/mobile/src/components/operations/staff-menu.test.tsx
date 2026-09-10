@@ -72,7 +72,7 @@ describe('OperationsStaffMenu · müşteri köprüsü', () => {
     await renderMenu();
 
     await fireEvent.press(screen.getByTestId('staff-avatar'));
-    await fireEvent.press(screen.getByTestId('staff-avatar-sheet-scrim', { includeHiddenElements: true }));
+    await fireEvent(screen.getByTestId('gorhom-self-dismiss'), 'touchEnd');
 
     await waitFor(() => expect(screen.queryByTestId('operations-staff-to-customer')).toBeNull());
     expect(mockReplace).not.toHaveBeenCalled();
