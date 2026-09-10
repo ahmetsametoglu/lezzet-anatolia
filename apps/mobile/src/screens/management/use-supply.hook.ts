@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { ApiFail } from '@/lib/api/client';
 import { createSupplyDraft, fetchSupplyGroups } from '@/lib/api/management';
 import type { SupplyGroup } from '@lezzet/types';
 
@@ -11,7 +12,11 @@ import type { SupplyGroup } from '@lezzet/types';
   cevabıdır — liste yeniden okunur ve grup kendiliğinden düşer.
 */
 
-type ListState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; groups: SupplyGroup[] };
+type ListState =
+  | { status: 'loading' }
+  /** Sebep taşınır (şikâyet kancasının aynı kararı); `null` = 200 ama boş gövde. */
+  | { status: 'error'; failure: ApiFail | null }
+  | { status: 'ready'; groups: SupplyGroup[] };
 
 /** Grup anahtarı — tedarikçisiz gruplar onaysızdır, anahtar yalnız eşlenmişlere gerekir. */
 export function supplyGroupKey(group: Pick<SupplyGroup, 'warehouseId' | 'supplierId'>): string {
@@ -45,7 +50,7 @@ export function useSupply(): UseSupplyResult {
     if (run !== generation.current) return;
     setState(
       result.error !== null || result.data === null
-        ? { status: 'error' }
+        ? { status: 'error', failure: result.error !== null ? result : null }
         : { status: 'ready', groups: result.data.groups },
     );
   }, []);

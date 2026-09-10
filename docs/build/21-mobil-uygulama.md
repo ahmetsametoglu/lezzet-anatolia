@@ -8753,6 +8753,13 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kendi etkisi, yani tasarımın istediği buzlu cam. Aynı görüntü 21.177'de bağlanmış olan depo
   hub'ında da var: gerileme değil, şeridin normal hâli.
 
+  **Eksik yarı commit'lendi (10.09).** Ekranlar hata dalında `operationsFailureText(state.failure)`
+  çağırıyordu ama üç kancanın (`use-supply` · `use-exceptions` · `use-management-hub`) hata durumunu
+  `failure` ile taşıyan hâli çalışma ağacında kalmıştı: HEAD'in mobil `typecheck`i dört hatayla kırıktı
+  (gün özeti · yönetim merkezi · sipariş istisnası · tedarik — temiz bir HEAD kopyasında `tsc` ile
+  ölçüldü). Kancalar commit'lendi; aynı değişiklikle yönetim merkezi odakta tazeleniyor (montajda bir
+  kez okuyordu: kapının sayısı içerisiyle ayrışıyor, ölü oturumu sağlıklı gösteriyordu).
+
 - [x] (21.179) **iOS'TA ADET ÇEKMECESİ AÇILMIYORDU — iki `Modal` aynı pencerede** (kullanıcı bulgusu 30.08)
   `touches:` `apps/mobile/src/components/scan/scan-sheet.tsx` ·
   `apps/mobile/src/screens/warehouse/{intake-screen.tsx,intake-scan.test.tsx}`

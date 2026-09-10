@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 
+import type { ApiFail } from '@/lib/api/client';
 import { fetchManagementHub } from '@/lib/api/management';
 import type { ManagementHub } from '@lezzet/types';
 
@@ -12,9 +14,28 @@ import type { ManagementHub } from '@lezzet/types';
   değil VERİ paylaşılıyor ve verinin tazesi uçta.
 
   Yarışın bekçisi sıra numarası (`use-sale.hook` künyesi): geç gelen eski cevap sessizce düşer.
+
+  ── ODAKTA TAZELENİR (06.09'da ölçülen arıza) ───────────────────────────────
+  Okuma MONTAJDA bir kez koşuyordu (`useEffect`) ve bir daha hiç bakmıyordu; kabuk yığınında hub
+  ekranı sökülmediği için sayılar saatlerce yerinde kalıyordu. İki sonucu vardı:
+
+  · **Kapı, içerisiyle ayrışıyordu.** Kutucuk "1 cevap bekleyen konuşma" derken gelen kutusu
+    ekranı (odakta tazelenen bir liste) çoktan başka bir sayıya bakmış oluyordu; operatör
+    sohbetleri cevaplayıp geri döndüğünde kapının rakamı hâlâ eski gündü.
+  · **Ölü bir oturumu SAĞLIKLI gösteriyordu.** Cihazda oturum ölünce her okuma `401` döner; hub
+    ise montaj anındaki dolu fotoğrafı çizmeye devam ettiği için arıza "yalnız sosyal gelen
+    kutusunda" gibi göründü ve teşhis yanlış yere gitti (rapor: "hub veriyle yükleniyor").
+
+  Kurye günü ve depo hub'ı aynı kararı çoktan vermişti (*"alt ekrandan dönen depocu az önce yazdığı
+  işin listeden düştüğünü GÖRMELİ"*); yönetim hub'ı bölümün tek aykırısıydı. Dönüşlerde iskelet
+  gösterilmez — kartlar yerinde kalır, sayı sessizce tazelenir.
 */
 
-type HubState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; hub: ManagementHub };
+type HubState =
+  | { status: 'loading' }
+  /** Düşen çağrının kendisi taşınır: sebep cümlesini ekran ondan kurar (`operationsFailureText`). */
+  | { status: 'error'; failure: ApiFail }
+  | { status: 'ready'; hub: ManagementHub };
 
 interface UseManagementHubResult {
   state: HubState;
@@ -29,6 +50,8 @@ export function useManagementHub(): UseManagementHubResult {
   const [state, setState] = useState<HubState>({ status: 'loading' });
   const [reloading, setReloading] = useState(false);
   const generation = useRef(0);
+  /** İlk yük iskeletle, sonraki odak dönüşleri sessiz — depo hub'ı/kurye günüyle aynı kural. */
+  const loaded = useRef(false);
 
   /*
     `silent` AŞAĞI ÇEKMENİN ŞARTIDIR (depo hub'ıyla aynı desen): çekme "ekran dursun, üstüne taze
@@ -40,12 +63,15 @@ export function useManagementHub(): UseManagementHubResult {
     if (options.silent !== true) setState({ status: 'loading' });
     const result = await fetchManagementHub();
     if (run !== generation.current) return;
-    setState(result.error !== null ? { status: 'error' } : { status: 'ready', hub: result.data });
+    loaded.current = true;
+    setState(result.error !== null ? { status: 'error', failure: result } : { status: 'ready', hub: result.data });
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load({ silent: loaded.current });
+    }, [load]),
+  );
 
   const refresh = useCallback(() => {
     setReloading(true);

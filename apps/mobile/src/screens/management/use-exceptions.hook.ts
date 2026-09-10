@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { ApiFail } from '@/lib/api/client';
 import { askException, fetchExceptions } from '@/lib/api/management';
 import type { ExceptionAskResponse, OrderException } from '@lezzet/types';
 
@@ -13,7 +14,8 @@ import type { ExceptionAskResponse, OrderException } from '@lezzet/types';
 
 type ExceptionsState =
   | { status: 'loading' }
-  | { status: 'error' }
+  /** Sebep taşınır (şikâyet kancasının aynı kararı); `null` = 200 ama boş gövde. */
+  | { status: 'error'; failure: ApiFail | null }
   | { status: 'ready'; exceptions: OrderException[] };
 
 type AskState = { status: 'sending' } | { status: ExceptionAskResponse['status'] };
@@ -39,7 +41,7 @@ export function useExceptions(): UseExceptionsResult {
     if (run !== generation.current) return;
     setState(
       result.error !== null || result.data === null
-        ? { status: 'error' }
+        ? { status: 'error', failure: result.error !== null ? result : null }
         : { status: 'ready', exceptions: result.data.exceptions },
     );
   }, []);
