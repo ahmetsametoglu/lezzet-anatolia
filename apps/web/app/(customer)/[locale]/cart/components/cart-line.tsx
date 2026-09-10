@@ -120,7 +120,9 @@ export function CartLineRow({ line, t, locale, compact = false, tone = 'default'
         src={line.image.url}
         alt={line.name}
         ratio={RATIO_SQUARE}
-        crop={line.image.crop} frames={line.image.frames}
+        crop={line.image.crop}
+        frames={line.image.frames}
+        sizes={compact ? '58px' : '72px'}
         className={blocked ? 'grayscale opacity-70' : undefined}
       />
     </div>

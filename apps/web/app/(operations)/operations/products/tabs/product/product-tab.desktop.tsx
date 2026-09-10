@@ -29,7 +29,7 @@ const COLUMNS: Column<ProductView>[] = withCells<ProductView>(PRODUCTS_COLUMN_TR
   // sütun, tarama düzenini görselin varlığına bağlardı.
   name: (r) => (
     <div className="flex min-w-0 items-center gap-2.5">
-      <Thumbnail src={r.imageUrl} alt="" size={36} />
+      <Thumbnail src={r.thumbUrl} alt="" size={36} />
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate font-ops-body text-ops-base font-semibold text-ops-ink">{resolveLocalizedText(r.name)}</span>
         <span className="font-ops-body text-ops-xs text-ops-muted">{r.categoryName}</span>

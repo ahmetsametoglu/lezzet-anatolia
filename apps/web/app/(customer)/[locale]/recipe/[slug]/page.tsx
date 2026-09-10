@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: RecipePageProps): Promise<Met
       params: { slug },
       title: recipe.name,
       description: recipe.description,
-      image: recipe.image.url,
+      image: recipe.image,
       type: 'article',
     }),
   };

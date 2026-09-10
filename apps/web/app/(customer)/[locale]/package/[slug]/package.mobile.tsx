@@ -31,7 +31,15 @@ export function PackageMobile({ t, locale, pack }: PackageViewProps) {
       <div className="relative">
         {/* Kahraman KARE (dokuzuncu tur, ürün galerisinin aynı kararı): native kahramanı telefon
             eninde ≈1:1; 3:2 dar ekranda kısa bant kalıyordu. Odak/zoom operatörün künyesinden. */}
-        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SQUARE} crop={pack.image.crop} frames={pack.image.frames} className="!rounded-none" />
+        <FramedImage
+          src={pack.image.url}
+          alt={pack.name}
+          ratio={RATIO_SQUARE}
+          crop={pack.image.crop}
+          frames={pack.image.frames}
+          sizes="100vw"
+          className="!rounded-none"
+        />
         <div className="absolute top-3 left-3 z-10">
           <BackButton label={t.backLabel} fallback="/packages" variant="photo" />
         </div>

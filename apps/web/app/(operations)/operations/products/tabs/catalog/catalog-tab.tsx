@@ -50,6 +50,8 @@ function catalogColumns(
             alt=""
             ratio={IMAGE_ROLES[role].ratio}
             crop={cropOf(r)}
+            frames={r.frames}
+            sizes="64px"
             placeholder={<ImageIcon size={14} />}
             className="!rounded-[7px] border border-ops-line-strong"
           />

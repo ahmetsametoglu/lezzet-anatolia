@@ -44,7 +44,7 @@ export function SavedList({ locale, compact = false }: { locale: Locale; compact
       {saved.lines.map((line) => (
         <div key={cartKey(line)} className="flex items-center gap-3 rounded-soft bg-sand-25 px-3 py-2.5">
           <div className="w-11 flex-none">
-            <FramedImage src={line.image.url} alt={line.name} ratio={RATIO_SQUARE} crop={line.image.crop} frames={line.image.frames} />
+            <FramedImage src={line.image.url} alt={line.name} ratio={RATIO_SQUARE} crop={line.image.crop} frames={line.image.frames} sizes="44px" />
           </div>
           <div className="flex flex-1 flex-col gap-0.5">
             <span className="font-sans text-note font-bold text-ink">{line.name}</span>

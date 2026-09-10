@@ -46,6 +46,9 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
           alt={hero?.alt ?? t.hero.imageAlt}
           ratio={RATIO_BAND}
           crop={hero?.crop}
+          frames={hero?.frames}
+          // Kahramanın sağ sütunu (1.1fr / 1fr): ~648 px, içerik 1360 px'te durur.
+          sizes="650px"
           className="!rounded-none"
         />
       </section>

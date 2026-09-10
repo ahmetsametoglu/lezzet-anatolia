@@ -36,7 +36,8 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
 
       {/* Tasarımın 1.1fr/1fr oranı: görsel biraz baskın, satın alma sütunu okunur genişlikte kalır. */}
       <section className="grid grid-cols-[1.1fr_1fr] items-start gap-12 px-12 pt-6 pb-10">
-        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SOURCE} crop={pack.image.crop} frames={pack.image.frames} />
+        {/* Sol sütun (1.1fr / 1fr): ~637 px, içerik 1360 px'te durur. */}
+        <FramedImage src={pack.image.url} alt={pack.name} ratio={RATIO_SOURCE} crop={pack.image.crop} frames={pack.image.frames} sizes="640px" />
 
         <div className="flex flex-col gap-4">
           {/* "6 kişilik" İSTEĞE BAĞLI: girilmemişse künye yalnız "Hazır Paket" olur, yerine başka

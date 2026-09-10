@@ -1,4 +1,4 @@
-import { CategorySchema, DEFAULT_CROP_FIELDS } from '@lezzet/types';
+import { CategorySchema, DEFAULT_CROP_FIELDS, imageDimensionsOf } from '@lezzet/types';
 import type { ImageMeta } from '@lezzet/types';
 
 /**
@@ -24,9 +24,10 @@ const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStar
 /**
  * Görselsiz künye — fixture satırları gerçek satırlarla AYNI şekli taşısın diye. Böylece okuma
  * katmanı "fixture mı, gerçek mi" ayrımı yapmaz; tek indirgeme her ikisine uyar. Odak/zoom
- * varsayılanı elle yazılmaz, `DEFAULT_CROP_FIELDS`'ten gelir (tek kaynak).
+ * varsayılanı elle yazılmaz, `DEFAULT_CROP_FIELDS`'ten gelir (tek kaynak); kaynak ölçüsü de öyle —
+ * `imageDimensionsOf(null)` iki alanı açıkça `null` yazar (05.37: ölçülmemiş = CDN kadrajı yok).
  */
-const NO_IMAGE_META: ImageMeta = { imageKey: null, imageAlt: null, imageUpdatedAt: null, ...DEFAULT_CROP_FIELDS };
+const NO_IMAGE_META: ImageMeta = { imageKey: null, imageAlt: null, imageUpdatedAt: null, ...DEFAULT_CROP_FIELDS, ...imageDimensionsOf(null) };
 
 export const FIXTURE_CATEGORIES = [
   { id: uuid(1), slug: 'borekler', name: { tr: 'Börekler', fr: 'Böreks', de: 'Böreks' } },

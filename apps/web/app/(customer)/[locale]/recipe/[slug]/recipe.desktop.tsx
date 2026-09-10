@@ -44,7 +44,8 @@ export function RecipeDesktop({ t, locale, recipe }: RecipeViewProps) {
 
       <div className="grid grid-cols-[1.1fr_1fr] items-start gap-9">
         <div className="flex flex-col gap-5.5">
-          <FramedImage src={recipe.image.url} alt={recipe.name} ratio={RATIO_SOURCE} crop={recipe.image.crop} frames={recipe.image.frames} />
+          {/* Sol sütun (1.1fr / 1fr): ~643 px, içerik 1360 px'te durur. */}
+          <FramedImage src={recipe.image.url} alt={recipe.name} ratio={RATIO_SOURCE} crop={recipe.image.crop} frames={recipe.image.frames} sizes="650px" />
 
           {/* Hazırlanış bölümü adım YOKSA hiç çizilmez: boş bir başlık, yazılmamış bir tarifi
               yazılmış gibi gösterir. Tarif yine okunur — malzeme kartı sağda duruyor. */}

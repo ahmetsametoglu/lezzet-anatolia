@@ -57,6 +57,9 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
           alt={hero?.alt ?? t.hero.imageAlt}
           ratio={RATIO_BAND}
           crop={hero?.crop}
+          frames={hero?.frames}
+          // İki sütunlu kahramanın görsel sütunu: ~593 px (içerik 1360 px'te durur).
+          sizes="600px"
           className="!rounded-[24px]"
         />
       </section>

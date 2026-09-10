@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
-import type { FeedbackVote } from '@lezzet/types';
+import { RATIO_SOURCE, type FeedbackVote } from '@lezzet/types';
 import type { FeedbackCard } from '@/lib/feedback/invite';
+import { FramedImage } from '@/components/media/framed-image';
 import { Button } from '@/components/customer/ui/button';
 import { errorText } from '@/lib/customer-error-text';
 import type { Messages } from '../feedback-types';
@@ -50,10 +50,21 @@ export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: V
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-col overflow-hidden rounded-[24px] bg-card shadow-lg">
         {/* Görsel oranı 3/2 (tasarım). Görselsiz üründe alan yine ayrılıyor: kart yüksekliği
-            karttan karta değişseydi akış her geçişte zıplardı. */}
-        <div className="relative aspect-3/2 w-full bg-sand-50">
-          {card.image.url && <Image src={card.image.url} alt="" fill sizes="(max-width: 768px) 100vw, 460px" className="object-cover" />}
-        </div>
+            karttan karta değişseydi akış her geçişte zıplardı.
+            `next/image` DEĞİL, `FramedImage` (05.37 · ölçüldü 10.09): `next/image` uzak adresi
+            Next'in kendi görsel ucundan geçiriyordu ve projede uzak kaynak izni tanımlı olmadığı için
+            o uç `400 "url" parameter is not allowed` dönüyordu — kart görseli hiç çizilmiyordu.
+            Kadrajı da artık operatörün odağından (CDN kesiyor); eskisi merkezden `cover`dı. Kart
+            masaüstünde 460, mobilde 390 px'lik sütunda (`feedback-client`). */}
+        <FramedImage
+          src={card.image.url}
+          alt=""
+          ratio={RATIO_SOURCE}
+          crop={card.image.crop}
+          frames={card.image.frames}
+          sizes={compact ? '100vw' : '460px'}
+          className="!rounded-none !bg-sand-50"
+        />
 
         <div className={`flex flex-col items-center gap-3 text-center ${compact ? 'px-5 pb-5 pt-4' : 'px-5 pb-5 pt-4'}`}>
           <span className={`font-serif ${compact ? 'text-h2-sm' : 'text-card-title'} text-ink`}>{card.name}</span>

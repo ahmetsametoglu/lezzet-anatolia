@@ -1,6 +1,6 @@
 import { ProductService, StockService, VariantBarcodeService } from '@lezzet/database';
 import { caseSizesByVariant } from './case-sizes';
-import { publicImageUrl } from '@lezzet/storage';
+import { thumbnailImageUrl } from '../catalog/map';
 import { resolveLocalizedText, type ProductDateType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
@@ -114,7 +114,7 @@ export async function searchVariantsForIntake(
           // ikinci bir okuma açılmadan.
           dateType: product.dateType,
           shelfLifeDays: product.shelfLifeDays,
-          imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
+          imageUrl: thumbnailImageUrl(product),
           qtyPerCode: null,
         })),
     ),

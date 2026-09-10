@@ -86,6 +86,8 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
           alt={context.illustration?.alt ?? ''}
           ratio={RATIO_ILLUSTRATION}
           crop={context.illustration?.crop}
+          frames={context.illustration?.frames}
+          sizes={compact ? '180px' : '260px'}
           className={compact ? '!rounded-[14px] !bg-cream-deep' : '!rounded-[16px] !bg-cream-deep'}
           placeholder={<span className="text-h1-sm">🧺</span>}
         />
@@ -129,7 +131,7 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
     >
       {!compact && (
         <div className="w-14 flex-none">
-          <FramedImage src={last.image.url} alt="" ratio={1} crop={last.image.crop} frames={last.image.frames} />
+          <FramedImage src={last.image.url} alt="" ratio={1} crop={last.image.crop} frames={last.image.frames} sizes="56px" />
         </div>
       )}
       <div className="flex flex-1 flex-col gap-1">

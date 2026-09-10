@@ -16,7 +16,7 @@ const item = (over: Partial<StorefrontRecipeItem> = {}): StorefrontRecipeItem =>
   productSlug: 'peynir',
   name: 'Ezine Beyaz Peynir',
   unitLabel: '350 g',
-  image: { url: null, crop: CROP_CENTER },
+  image: { url: null, crop: CROP_CENTER, frames: null },
   qty: 1,
   unitPriceCents: 640,
   lineTotalCents: 640,

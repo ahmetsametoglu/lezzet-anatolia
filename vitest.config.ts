@@ -92,6 +92,8 @@ const UYGULAMA_DBSIZ = [
   // Sepet bağlantısının cevaba eklenmesi (15.21) — saf metin kuralı; DB'siz olduğu için ayrı dosyada.
   'packages/application/src/cart/link-text.test.ts',
   'packages/application/src/catalog/campaign.test.ts',
+  // CDN çerçeve kaynakları ve küçük resim (05.37) — saf adres kurucular; env'i test kendisi kuruyor.
+  'packages/application/src/catalog/frame-sources.test.ts',
   // Ürün kartının kanal gövdeleri (08.09) — saf kurucu; Meta sınırları burada zorlanıyor.
   'packages/application/src/catalog/product-card.test.ts',
   // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi
@@ -133,6 +135,8 @@ const WEB_LIB_DBSIZ = [
   // Ne DB'ye ne R2'ye gider; modül `server-only` taşıyor ama koşucu onu boş modüle bağlıyor.
   'apps/web/lib/media/upload.test.ts',
   'apps/web/lib/order/order-id.test.ts',
+  // Paylaşım kartının görseli (05.37) — saf: künye alır, adres verir.
+  'apps/web/lib/seo/open-graph.test.ts',
   'apps/web/lib/storefront/featured.test.ts',
   'apps/web/lib/use-load-more.hook.test.ts',
   // Bağlam kapısı (27.08) — DB'siz ama §3i'nin STATİK İZİ bunu göremez: dosya `@lezzet/database`

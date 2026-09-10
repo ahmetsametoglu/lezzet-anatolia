@@ -70,7 +70,8 @@ export async function generateMetadata({ params, searchParams }: CatalogPageProp
             locale,
             title: head.name,
             description: head.description || null,
-            image: head.image.url,
+            image: head.image,
+            shareFrame: 'band',
           }),
         }
       : {}),

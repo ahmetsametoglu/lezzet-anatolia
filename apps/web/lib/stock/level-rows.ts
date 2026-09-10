@@ -1,6 +1,6 @@
 import { needsExpiryAttention } from '@lezzet/domain-core';
 import { resolveLocalizedText, type AvailableStock, type ProductStatus, type ProductStockRow } from '@lezzet/types';
-import { publicImageUrl } from '@lezzet/storage';
+import { thumbnailImageUrl } from '@lezzet/application';
 import type { BatchView } from '@/lib/stock/batch-types';
 import { titleOf } from '@/lib/catalog/title';
 
@@ -48,8 +48,9 @@ export interface StockLevelRow {
   /**
    * Ürünün görseli (22.30) — `null` = görsel yüklenmemiş, ekran yer tutucu çizer.
    *
-   * Adres SUNUCUDA kuruluyor (`publicImageUrl`, `R2_PUBLIC_BASE_URL` sunucu env'i) ve sürüm damgası
+   * Adres SUNUCUDA kuruluyor (`thumbnailImageUrl`, `R2_PUBLIC_BASE_URL` sunucu env'i) ve sürüm damgası
    * `imageUpdatedAt`ten geliyor: görsel değişince adres de değişir, tarayıcı bayat kopyayı göstermez.
+   * Küçük resim (05.37): CDN kare@200, operatörün kadrajıyla — satır 36 px, özgün dosya 1500–2000 px.
    */
   imageUrl: string | null;
   categoryName: string;
@@ -139,7 +140,7 @@ export function toLevelRows({ products, batches, available, categoryNames, wareh
         title: titleOf(productName, variantLabel),
         // Görsel ÜRÜNÜN, boyun değil: aynı ürünün iki boyu aynı fotoğrafı paylaşır ve boy başına
         // ayrı görsel diye bir kavram yok (22.30).
-        imageUrl: publicImageUrl(p.imageKey, p.imageUpdatedAt),
+        imageUrl: thumbnailImageUrl(p),
         categoryName: (p.categoryId && categoryNames.get(p.categoryId)) || '—',
         status: p.status,
         variantActive: v.isActive,

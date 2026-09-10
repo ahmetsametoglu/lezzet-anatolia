@@ -38,7 +38,9 @@ export function ContentCard({ t, item, compact = false }: ContentCardProps) {
         src={item.image.url}
         alt={item.name}
         ratio={1}
-        crop={item.image.crop} frames={item.image.frames}
+        crop={item.image.crop}
+        frames={item.image.frames}
+        sizes={compact ? '52px' : '64px'}
         className={compact ? 'size-13 flex-none' : 'size-16 flex-none'}
       />
       <div className="flex flex-col gap-0.5">

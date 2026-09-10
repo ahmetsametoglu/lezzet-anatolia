@@ -180,7 +180,7 @@ export function ProductPreview({ product, onEdit, families, onSelectProduct }: P
         <div className="flex flex-col gap-3.5 px-5 py-4">
           {/* Kimlik */}
           <div className="flex items-center gap-3">
-            <Thumbnail src={product.imageUrl} alt={resolveLocalizedText(product.name)} size={66} iconSize={24} />
+            <Thumbnail src={product.thumbUrl} alt={resolveLocalizedText(product.name)} size={66} iconSize={24} />
             <div className="flex min-w-0 flex-col gap-[3px]">
               <span className="font-ops-display text-ops-section font-semibold text-ops-ink">{resolveLocalizedText(product.name)}</span>
               <span className="font-ops-body text-ops-sm text-ops-muted">

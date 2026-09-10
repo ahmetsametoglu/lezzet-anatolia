@@ -2,7 +2,7 @@ import { percentOffCents, resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
 import { pricePerKg } from '@lezzet/helper';
 import { cdnImageUrl, publicImageUrl } from '@lezzet/storage';
-import { CROP_CENTER, cropOf, cropTrim, FRAME_RATIOS, IMAGE_WIDTHS, resolveLocalizedText, type FrameKey } from '@lezzet/types';
+import { CROP_CENTER, cropOf, cropTrim, FRAME_RATIOS, IMAGE_WIDTHS, resolveLocalizedText, type FrameKey, type ImageRender, type ImageWidth } from '@lezzet/types';
 import type {
   AvailableStockTotal,
   Category,
@@ -37,8 +37,23 @@ export function imageOf(row: ImageMeta): StorefrontImage {
 /** Görseli çözülemeyen satırın yer tutucusu — vitrin, sepet ve sipariş kapılarının ortak son çaresi. */
 export const EMPTY_IMAGE: StorefrontImage = { url: null, crop: CROP_CENTER, frames: null };
 
-/** `srcSet`te `src` olarak seçilen basamak — orta boy; tarayıcı `sizes`e göre zaten doğrusunu seçer. */
-const FRAME_SRC_WIDTH = 800;
+/**
+ * Çerçevenin TEK adresi (`src`) hangi basamaktan. `srcSet`i okuyan tarayıcı seçimde buna bakmaz
+ * (genişlik betimleyicili kümede `src` aday değildir); tek adres gereken yerler içindir — `srcset`
+ * okumayan istemci ve **paylaşım kartı** (Open Graph, `apps/web/lib/seo/open-graph.ts`). Sohbet kartı
+ * ve bant 1200: paylaşım kartının önerilen ölçüsü 1200×630 ve `RATIO_CHAT` zaten 1.91:1. Öteki
+ * çerçeveler orta boy.
+ */
+const FRAME_SRC_WIDTH: Record<FrameKey, ImageWidth> = { source: 800, square: 800, band: 1200, illustration: 800, chat: 1200 };
+
+/**
+ * Tek çerçevenin tek basamağı: kadraj (`cropTrim`) + ölçü. Çerçeve kümesi de küçük resim de BURADAN
+ * geçer — aynı çerçeve ve basamak her yerde aynı adresi üretir, Cloudflare onu tek dönüşüm sayar.
+ */
+function frameStepUrl(row: ImageRender, key: FrameKey, width: ImageWidth): string | null {
+  const trim = cropTrim({ width: row.imageWidth, height: row.imageHeight }, FRAME_RATIOS[key], cropOf(row));
+  return trim ? cdnImageUrl(row.imageKey, row.imageUpdatedAt, { width, trim, format: 'auto' }) : null;
+}
 
 /**
  * Çerçeve başına CDN kaynakları (05.37): operatörün odak+zoom kadrajı `cropTrim` ile dört kenar
@@ -48,21 +63,32 @@ const FRAME_SRC_WIDTH = 800;
  * `null`: CDN yok (r2.dev tabanı — orada dönüşüm yok) ya da kaynak ölçüsü bilinmiyor (`image_width`
  * boş; dolgu `pnpm images:dims`). İki hâlde de çağıran `url` + CSS yoluyla aynı kareyi çizer.
  */
-export function frameSourcesOf(row: ImageMeta): ImageFrameSources | null {
-  const crop = cropOf(row);
-  const dims = { width: row.imageWidth, height: row.imageHeight };
+export function frameSourcesOf(row: ImageRender): ImageFrameSources | null {
   const out: Partial<ImageFrameSources> = {};
   for (const key of Object.keys(FRAME_RATIOS) as FrameKey[]) {
-    const trim = cropTrim(dims, FRAME_RATIOS[key], crop);
-    if (!trim) return null;
-    const basamaklar = IMAGE_WIDTHS.map((width) => ({ width, url: cdnImageUrl(row.imageKey, row.imageUpdatedAt, { width, trim, format: 'auto' }) }));
+    const basamaklar = IMAGE_WIDTHS.map((width) => ({ width, url: frameStepUrl(row, key, width) }));
     if (basamaklar.some((b) => !b.url)) return null;
     out[key] = {
-      src: basamaklar.find((b) => b.width === FRAME_SRC_WIDTH)!.url!,
+      src: basamaklar.find((b) => b.width === FRAME_SRC_WIDTH[key])!.url!,
       srcSet: basamaklar.map((b) => `${b.url} ${b.width}w`).join(', '),
     };
   }
   return out as ImageFrameSources;
+}
+
+/**
+ * **Küçük resim** (05.37) — kare çerçevenin EN KÜÇÜK basamağı (200 px), operatörün odak+zoom
+ * kadrajıyla. Operasyon listelerinin 18–66 px kutuları ve native operasyon satırları (≤ 44 dp, @3x
+ * 132 px) için; ölçüldü 10.09: bu yerler 1500–2000 px'lik özgün dosyayı çekiyordu. Adres müşteri
+ * yüzeyinin kare@200 basamağıyla BİREBİR aynı — ayrı dönüşüm doğmaz, önbellek paylaşılır.
+ *
+ * CDN ya da kaynak ölçüsü yoksa özgün dosya (`publicImageUrl`): `frameSourcesOf`in `null` döndüğü
+ * koşulun AYNISI ve bu eşlik bilinçli. Küçük resim kadrajlıysa `frames` da doludur; `FramedImage` o
+ * hâlde `frames`i çizer, `src`e (bu adrese) bakmaz ve CSS kırpması ikinci kez uygulanmaz. Kadrajsızsa
+ * ikisi birden özgün dosyaya düşer ve CSS yolu aynı kareyi keser.
+ */
+export function thumbnailImageUrl(row: ImageRender): string | null {
+  return frameStepUrl(row, 'square', IMAGE_WIDTHS[0]) ?? publicImageUrl(row.imageKey, row.imageUpdatedAt);
 }
 
 /**

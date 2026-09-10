@@ -65,8 +65,10 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
      * **Paylaşım kartı** (08.1 · `lib/seo/open-graph.ts`). Ürün bağlantısı WhatsApp'ta dolaşan en
      * yaygın içerik ve bugüne dek GÖRSELSİZ çıkıyordu — kart yalnız çıplak adres gösteriyordu.
      *
-     * Görsel kaynağı JSON-LD ile AYNI (`product.image.url`, mutlak): iki yerde iki farklı görsel
-     * seçmek, arama sonucunda bir fotoğraf paylaşım kartında başkasını gösterirdi.
+     * Görsel JSON-LD ile AYNI FOTOĞRAF (`product.image`): iki yerde iki farklı görsel seçmek, arama
+     * sonucunda bir fotoğraf paylaşım kartında başkasını gösterirdi. Kadraj ayrışıyor ve bilinçli:
+     * kart operatörün "sohbet kartı" kadrajını alır (05.37, kapının künyesi), JSON-LD özgün dosyayı —
+     * arama motoru yüksek çözünürlüklü kaynağı ister, oranı kendisi seçer.
      *
      * `type` `product` DEĞİL `website` ve gerekçesi kapının künyesinde: `product` kartı fiyat/stok
      * beklentisi doğurur, o alanları doğru doldurmak bugün taşımadığımız bir söz.
@@ -77,7 +79,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
       params: { slug },
       title: product.name,
       description: product.description,
-      image: product.image.url,
+      image: product.image,
     }),
   };
 }

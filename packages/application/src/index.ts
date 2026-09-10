@@ -321,10 +321,12 @@ export { pricingViewerOf, VISITOR } from './catalog/pricing-viewer';
 export type { PricingViewer } from './catalog/pricing-viewer';
 export {
   EMPTY_PRODUCT_CONTEXT,
+  frameSourcesOf,
   imageOf,
   primaryVariantOf,
   sellingOf,
   stockStatusOf,
+  thumbnailImageUrl,
   toCategory,
   toProduct,
   toVariant,

@@ -1,6 +1,7 @@
 import { BundleService, CategoryService, CollectionService, ProductFamilyService, ProductService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { publicImageUrl } from '@lezzet/storage';
+import { frameSourcesOf, thumbnailImageUrl } from '@lezzet/application';
 import { ProductsClient } from './products-client';
 import { toBundleViews, toProductViews } from './products-read';
 import { parseProductsUrl, toProductFilters } from './products-url';
@@ -69,13 +70,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const categoryViews: CategoryView[] = categories.map((c) => ({
     ...c,
     count: byCategory.get(c.id) ?? 0,
+    // Özgün dosya düzenleme formunun; liste hücresi CDN çerçevesini çizer (05.37).
     imageUrl: publicImageUrl(c.imageKey, c.imageUpdatedAt),
+    frames: frameSourcesOf(c),
   }));
 
   const collectionViews: CollectionView[] = collectionRows.map((c) => ({
     ...c,
     count: c.productIds.length,
     imageUrl: publicImageUrl(c.imageKey, c.imageUpdatedAt),
+    frames: frameSourcesOf(c),
   }));
 
   const bundleViews = toBundleViews(bundleRows);
@@ -93,7 +97,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         // Kısıt doluyken etiketi zorunlu kılıyor, ama tip `nullable` — okuma tarafı boşu da
         // karşılayabilmeli (elle SQL'le yazılmış bir satır kısıtı atlamış olabilir).
         label: member.familyLabel ?? { tr: '', fr: '', de: '' },
-        imageUrl: publicImageUrl(member.imageKey, member.imageUpdatedAt),
+        // Yalnız küçük resim olarak çiziliyor (28–32 px) — CDN kare@200 (05.37).
+        imageUrl: thumbnailImageUrl(member),
         status: member.status,
       })),
     };

@@ -8,6 +8,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
+import { frameSourcesOf, thumbnailImageUrl, type ImageFrameSources } from '@lezzet/application';
 import { cropOf, CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
 import type {
   AssistantProposal,
@@ -48,9 +49,18 @@ export interface ProposalSubject {
   name: string;
   /** Alt satır: boy/kapsam gibi ayırt edici ek (`90g`, `Tatlı`). */
   detail: string | null;
+  /**
+   * Küçük resim (05.37 · `thumbnailImageUrl`): CDN varken operatörün kadrajıyla kesilmiş kare@200,
+   * yoksa özgün dosya. Künye boyunda (`Thumbnail`) doğrudan çizilir.
+   */
   imageUrl: string | null;
   /** `imageUrl`in kırpma künyesi; görsel yoksa merkez (okuyan taraf bir değer beklemesin diye). */
   crop: ImageCrop;
+  /**
+   * Bandın CDN çerçeveleri (05.37). `imageUrl` kadrajlıyken bu da DOLUDUR (ikisi aynı koşulla doğar)
+   * ve bant onu çizer — önceden kesilmiş küçük resme CSS kırpması ikinci kez uygulanmaz.
+   */
+  frames: ImageFrameSources | null;
   /**
    * Konunun ÇOĞUL görselleri — paket gibi birden çok üründen oluşan konularda kalemlerin
    * fotoğrafları (22.11).
@@ -118,6 +128,7 @@ async function recipeSubject(payload: RecipeDraftPayload): Promise<ProposalSubje
     detail: payload.serves ? resolveLocalizedText(payload.serves, 'tr') : null,
     imageUrl: null,
     crop: CROP_CENTER,
+    frames: null,
     images: await variantImages(variantIds),
     href: null,
   };
@@ -148,8 +159,9 @@ async function featuredSubject(payload: FeaturedFlagPayload): Promise<ProposalSu
     kind: payload.target === 'bundle' ? 'bundle' : payload.target,
     name: payload.name,
     detail: TARGET_LABEL[payload.target],
-    imageUrl: publicImageUrl(record.imageKey, record.imageUpdatedAt),
+    imageUrl: thumbnailImageUrl(record),
     crop: cropOf(record),
+    frames: frameSourcesOf(record),
     images: [],
     href: null,
   };
@@ -179,8 +191,9 @@ async function productSubject(productId: string): Promise<ProposalSubject | null
     kind: 'product',
     name,
     detail: null,
-    imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
+    imageUrl: thumbnailImageUrl(product),
     crop: cropOf(product),
+    frames: frameSourcesOf(product),
     images: [],
     // Derin bağ (16.08): ad aramasıyla "en yakın karşılık" yerine ürünün kendisi — liste ürüne
     // süzülü, düzenleme diyaloğu açık gelir.
@@ -213,7 +226,7 @@ async function variantImages(variantIds: string[]): Promise<SubjectImage[]> {
   return variantIds.flatMap((id) => {
     const product = byProduct.get(byVariant.get(id)?.productId ?? '');
     const url = product ? publicImageUrl(product.imageKey, product.imageUpdatedAt) : null;
-    return url && product ? [{ url, crop: cropOf(product) }] : [];
+    return url && product ? [{ url, crop: cropOf(product), frames: frameSourcesOf(product) }] : [];
   });
 }
 
@@ -250,6 +263,7 @@ async function supplySubject(payload: SupplyPayload, kind: 'purchase_order' | 's
     detail: payload.warehouseCode ?? null,
     imageUrl: null,
     crop: CROP_CENTER,
+    frames: null,
     images,
     href: null,
   };
@@ -284,6 +298,7 @@ async function bundleSubject(payload: BundleDraftPayload): Promise<ProposalSubje
       .join(' · '),
     imageUrl: null,
     crop: CROP_CENTER,
+    frames: null,
     images,
     // Paket henüz YOK — açılacak bir kaydı da yok. Bağlantı uygulandıktan sonra anlam kazanır.
     href: null,
@@ -309,6 +324,7 @@ function scopeSubject(payload: DiscountDraftPayload): ProposalSubject | null {
     detail: payload.scope === 'category' ? 'Kategori' : 'Koleksiyon',
     imageUrl: null,
     crop: CROP_CENTER,
+    frames: null,
     images: [],
     href: null,
   };
@@ -329,11 +345,12 @@ async function variantSubject(variantId: string): Promise<ProposalSubject | null
     name,
     detail: resolveLocalizedText(variant.label, 'tr') || null,
     // Sürüm damgası cache kırar (`05.11`): damgasız URL yeni yüklenen görseli bir yıl eski
-    // önbelleğin arkasında bırakırdı.
-    imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
+    // önbelleğin arkasında bırakırdı. Küçük resim de damgalı (05.37 · `thumbnailImageUrl`).
+    imageUrl: thumbnailImageUrl(product),
     // Odak/zoom operatörün ürün ekranında seçtiği değer — dar banda oturan fotoğraf merkezden değil,
-    // ürünün kendisinden kırpılıyor.
+    // ürünün kendisinden kırpılıyor. CDN varken bandı `frames` çizer, kesimi Cloudflare yapar.
     crop: cropOf(product),
+    frames: frameSourcesOf(product),
     // Tek ürünlü konuda çoğul görsel yok: `imageUrl` zaten "bu neye benziyor" cevabını veriyor.
     images: [],
     // Derin bağ (16.08): ürün diyaloğu artık `?productId=` ile açılıyor — ad aramasıyla "en yakın

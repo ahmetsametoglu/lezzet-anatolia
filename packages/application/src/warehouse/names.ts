@@ -1,6 +1,6 @@
 import { ProductService, ProductVariantService } from '@lezzet/database';
-import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText, type ProductDateType } from '@lezzet/types';
+import { thumbnailImageUrl } from '../catalog/map';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -84,7 +84,9 @@ export async function variantNames(
           // görünürdü ama depocuya kutuda olmayan bir tarihi arattırırdı.
           dateType: product?.dateType ?? 'DDM',
           shelfLifeDays: product?.shelfLifeDays ?? null,
-          imageUrl: publicImageUrl(product?.imageKey, product?.imageUpdatedAt),
+          // Yalnız küçük resim olarak çiziliyor: web stok geçmişi 40 px, native operasyon satırları
+          // ≤ 44 dp (@3x 132 px) — CDN kare@200, operatörün kadrajıyla (05.37).
+          imageUrl: product ? thumbnailImageUrl(product) : null,
         },
       ];
     }),

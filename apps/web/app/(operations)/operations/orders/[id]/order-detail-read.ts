@@ -28,7 +28,6 @@ import {
   type Stock,
   type Ticket,
 } from '@lezzet/types';
-import { publicImageUrl } from '@lezzet/storage';
 import {
   allowedDecisions,
   allowedTransitions,
@@ -47,7 +46,7 @@ import {
   skippedBetween,
   vatSplitOf,
 } from '@lezzet/domain-core';
-import { listOrderBoxes, readDeliveryProof, readOrderTracking } from '@lezzet/application';
+import { listOrderBoxes, readDeliveryProof, readOrderTracking, thumbnailImageUrl } from '@lezzet/application';
 import { toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
@@ -121,7 +120,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
   const variantImages = new Map(
     variants.map((v) => {
       const product = productsById.get(v.productId);
-      return [v.id, publicImageUrl(product?.imageKey ?? null, product?.imageUpdatedAt ?? null)];
+      // Kalem küçük resmi (24–44 px) — CDN kare@200 (05.37).
+      return [v.id, product ? thumbnailImageUrl(product) : null];
     }),
   );
   // Kalemden müşteri ürün sayfasına köprü (15.08, kullanıcı isteği) — slug da üründen gelir.

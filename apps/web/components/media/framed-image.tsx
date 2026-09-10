@@ -9,29 +9,38 @@ import type { ImageFrameSources } from '@lezzet/application';
  *
  * Kırpma matematiği: `object-position` odağı temel `cover` içinde konumlar; `transform: scale(zoom)` +
  * `transform-origin = odak` odağa yaklaşır. İkisi birlikte dikey/kare bir kaynaktan bile istenen yatay
- * bölgeyi verir — sunucuda görsel işleme gerekmez.
+ * bölgeyi verir. CDN türevi varsa (05.37) aynı kadrajı Cloudflare keser ve kutuya yakın ölçüde gönderir;
+ * CSS yolu o zaman yalnız yedektir.
  */
-interface FramedImageProps {
+interface FramedImageBase {
   src: string | null;
   alt: string;
   /** Çerçeve oranı (genişlik ÷ yükseklik). `circle` verilirse 1'e zorlanır. */
   ratio: number;
   /** Kırpma künyesi; verilmezse merkez + zoom yok. */
   crop?: ImageCrop;
-  /**
-   * CDN türevleri (05.37): varsa çerçeveye en yakın adlı kesitin `src`/`srcSet`i çizilir — görsel
-   * ZATEN kadrajlı ve ölçülü gelir, CSS odak/zoom uygulanmaz (uygulansaydı iki kez kesilirdi).
-   * Yoksa CSS yolu: aynı kare, tam boy dosyadan.
-   */
-  frames?: ImageFrameSources | null;
-  /** `sizes` — tarayıcı basamağı buna göre seçer; verilmezse görselin ekranın tamamı kadar olduğu varsayılır. */
-  sizes?: string;
   /** Tam yuvarlak maske (mobil kategori şeridi) — kırpma yine kare. */
   circle?: boolean;
   /** Görsel yokken gösterilecek içerik (baş harf, ikon…). Verilmezse boş zemin. */
   placeholder?: ReactNode;
   className?: string;
 }
+
+/**
+ * CDN türevleri ve `sizes` BİRLİKTE gelir; tip bunu zorlar, varsayılan yok.
+ *
+ * `frames` (05.37): çerçeveye en yakın adlı kesitin `src`/`srcSet`i çizilir — görsel ZATEN kadrajlı ve
+ * ölçülü gelir, CSS odak/zoom uygulanmaz (uygulansaydı iki kez kesilirdi). `null` ise CSS yolu: aynı
+ * kare, tam boy dosyadan.
+ *
+ * `sizes`: kutunun ekranda kaç CSS pikseli kapladığı — tarayıcı basamağı bununla ve piksel oranıyla
+ * seçer. **Zorunlu, çünkü varsayılanı sessizce en pahalısıdır** (ölçüldü 10.09): `sizes` yokken tarayıcı
+ * görselin ekranın tamamı kadar olduğunu varsayıyordu ve 56 px'lik malzeme küçük resmi de 301 px'lik
+ * ürün kartı da masaüstünde 1600, telefonda 1200 px'lik basamağı alıyordu. Değer çağıranın
+ * yerleşiminden gelir: sabit kutu px, akışkan ızgara vw.
+ */
+type FramedImageProps = FramedImageBase &
+  ({ frames?: undefined; sizes?: undefined } | { frames: ImageFrameSources | null | undefined; sizes: string });
 
 function framedImageStyle(crop: ImageCrop = CROP_CENTER): CSSProperties {
   return {
@@ -58,7 +67,7 @@ export function FramedImage({ src, alt, ratio, crop, frames, sizes, circle = fal
         .join(' ')}
     >
       {kesit ? (
-        <img src={kesit.src} srcSet={kesit.srcSet} sizes={sizes ?? '100vw'} alt={alt} style={framedImageStyle()} />
+        <img src={kesit.src} srcSet={kesit.srcSet} sizes={sizes} alt={alt} style={framedImageStyle()} />
       ) : src ? (
         <img src={src} alt={alt} style={framedImageStyle(crop)} />
       ) : (

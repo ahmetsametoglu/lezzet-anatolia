@@ -85,7 +85,7 @@ export function Gallery({ images, alt, compact = false, flush = false }: Gallery
         >
           {images.map((img, i) => (
             <div key={i} className="w-full flex-none snap-center">
-              <FramedImage src={img.url} alt={i === 0 ? alt : ''} ratio={ratio} crop={img.crop} className={frame} />
+              <FramedImage src={img.url} alt={i === 0 ? alt : ''} ratio={ratio} crop={img.crop} frames={img.frames} sizes="100vw" className={frame} />
             </div>
           ))}
         </div>
@@ -110,7 +110,9 @@ export function Gallery({ images, alt, compact = false, flush = false }: Gallery
 
   return (
     <div className="flex flex-col gap-3">
-      <FramedImage src={active.url} alt={alt} ratio={RATIO_SOURCE} crop={active.crop} className="!rounded-card" />
+      {/* Masaüstünde galeri iki eşit sütunun solunda: ~608 px; şerit dört sütun (~145 px). İçerik
+          1360 px'te durur (`SiteFrame`). */}
+      <FramedImage src={active.url} alt={alt} ratio={RATIO_SOURCE} crop={active.crop} frames={active.frames} sizes="610px" className="!rounded-card" />
       {images.length > 1 && (
         <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
           {thumbs.map((img, i) => (
@@ -125,7 +127,7 @@ export function Gallery({ images, alt, compact = false, flush = false }: Gallery
                 i === activeIndex ? 'border-2 border-olive' : 'border-2 border-transparent hover:border-sand-400',
               ].join(' ')}
             >
-              <FramedImage src={img.url} alt="" ratio={RATIO_SOURCE} crop={img.crop} />
+              <FramedImage src={img.url} alt="" ratio={RATIO_SOURCE} crop={img.crop} frames={img.frames} sizes="150px" />
             </button>
           ))}
           {hidden > 0 && (

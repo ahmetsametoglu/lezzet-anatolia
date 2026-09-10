@@ -69,6 +69,12 @@ const CARD_WIDTH: Record<CardSize, string> = {
   mobile: 'w-[84px] flex-none',
 };
 
+/**
+ * Görselin `sizes`i — kartın genişliği (iç boşluk düşülmedi: birkaç piksel fazlası basamağı
+ * değiştirmez). Genişlikle AYNI tabloda değil ama AYNI anahtarlarla; biri değişirse öteki yanında.
+ */
+const CARD_IMAGE_SIZES: Record<CardSize, string> = { wide: '140px', normal: '106px', crowded: '66px', mobile: '84px' };
+
 interface FamilyCardProps {
   member: StorefrontFamilyMember;
   size: CardSize;
@@ -98,7 +104,14 @@ function FamilyCard({ member, size, subLine }: FamilyCardProps) {
   );
 
   const image = (
-    <FramedImage src={member.image.url} alt={member.label} ratio={RATIO_SQUARE} crop={member.image.crop} frames={member.image.frames} />
+    <FramedImage
+      src={member.image.url}
+      alt={member.label}
+      ratio={RATIO_SQUARE}
+      crop={member.image.crop}
+      frames={member.image.frames}
+      sizes={CARD_IMAGE_SIZES[size]}
+    />
   );
 
   // Aktif kart TIKLANAMAZ (tasarım): bulunduğu sayfaya götüren bir bağlantı, tıklayanı hiçbir yere

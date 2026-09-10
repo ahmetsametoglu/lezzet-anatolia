@@ -36,8 +36,17 @@ import {
   type ProductFamilyUpdate,
   type ProductFamilyOrder,
   type ImageDimensions,
+  IMAGE_RENDER_FIELDS,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { camelToSnake } from '../utils/case-transformers';
+
+/**
+ * Görseli ÇİZMEK için gereken kolonlar (05.37) — `IMAGE_RENDER_FIELDS` maskesinden türer, elle
+ * yazılmaz. Dar okumalar (stok · fiyat · havuz) küçük resmi CDN kadrajıyla kuruyor ve kadraj yedi
+ * alanın hepsini ister; biri eksik kalırsa küçük resim sessizce özgün dosyaya düşer.
+ */
+const IMAGE_RENDER_COLUMNS = Object.keys(IMAGE_RENDER_FIELDS).map(camelToSnake).join(',');
 import { ilikeContains, ilikeTerm } from '../utils/filter-term';
 import { dbToApp } from '../utils/case-transformers';
 import { uniqueSlugForTable } from '../utils/slug';
@@ -410,8 +419,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
       // `sort_order` GÖRÜNÜM için değil, İMLEÇ için: sayfa ona göre sıralanıyor ve keyset imleci son
       // satırın bu değerinden kuruluyor (bkz. `pageOf`). Dar şema onu taşımaz — Zod düşürür, ham
       // satırda okunur. Select'ten çıkarsa ikinci sayfa istenemez ve `pageOf` bunu fırlatarak söyler.
-      select:
-        'id,sort_order,name,category_id,date_type,shelf_life_days,status,image_key,image_updated_at,variants:product_variant(id,label,is_active,min_stock_qty,sku)',
+      select: `id,sort_order,name,category_id,date_type,shelf_life_days,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,min_stock_qty,sku)`,
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
@@ -433,8 +441,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
       // Baştaki `sort_order` ÜRÜNÜN kendisininki — imleç ona dayanır (bkz. `listStockRows` notu).
       // Sondaki, gömülü seçimin içindeki ise BOYUN sıra numarası; ikisi ayrı alanlar. Eskiden yalnız
       // ikincisi vardı ve "sort_order geçiyor" diye bakan göz farkı görmüyordu — hata orada saklandı.
-      select:
-        'id,sort_order,name,category_id,vat_rate,target_margin_percent,target_margin_b2b_percent,auto_price,status,image_key,image_updated_at,variants:product_variant(id,label,is_active,sort_order)',
+      select: `id,sort_order,name,category_id,vat_rate,target_margin_percent,target_margin_b2b_percent,auto_price,status,${IMAGE_RENDER_COLUMNS},variants:product_variant(id,label,is_active,sort_order)`,
       orderBy: 'sortOrder',
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
       keysetAfter: opts.cursor,
@@ -482,7 +489,7 @@ export class ProductService extends BaseDbService<Product, ProductInsert, Produc
     // yalnız BULUNANLAR için okunur — katalogun tamamını çekmenin yerini bu alır.
     if (productIds && productIds.length === 0) return [];
     return this.getAllAs(ProductPoolSchema, productIds ? { id: [...productIds] } : undefined, {
-      select: 'id,name,image_key,image_updated_at,status,vat_rate,target_margin_percent,variants:product_variant(id,label,is_active)',
+      select: `id,name,${IMAGE_RENDER_COLUMNS},status,vat_rate,target_margin_percent,variants:product_variant(id,label,is_active)`,
       orderBy: 'sortOrder',
       limit,
     });

@@ -29,7 +29,7 @@ export function SimilarStrip({ products, locale }: SimilarStripProps) {
           href={{ pathname: '/product/[slug]', params: { slug: p.slug } }}
           className="w-[140px] flex-none cursor-pointer overflow-hidden rounded-soft border border-sand-200 bg-card"
         >
-          <FramedImage src={p.image.url} alt={p.name} ratio={RATIO_SOURCE} crop={p.image.crop} frames={p.image.frames} className="!rounded-none" />
+          <FramedImage src={p.image.url} alt={p.name} ratio={RATIO_SOURCE} crop={p.image.crop} frames={p.image.frames} sizes="140px" className="!rounded-none" />
           <div className="flex flex-col gap-1 p-2.5">
             <span className="font-sans text-micro font-bold text-ink">{p.name}</span>
             <Price cents={p.priceCents} wasCents={p.wasCents} locale={locale} size="sm" />

@@ -1,4 +1,5 @@
 import type { BundleListRow } from '@lezzet/types';
+import type { ImageFrameSources } from '@lezzet/application';
 
 /*
   PAKET FORMUNUN KENDİ GİRDİ TİPLERİ (22.18) — `products-types.ts`ten TAŞINDI, kopyalanmadı.
@@ -20,7 +21,10 @@ import type { BundleListRow } from '@lezzet/types';
  * `itemLabels` ham adlardan sayfada çözülür — dil yedek zinciri (TR→FR→DE) tek yerde kalsın.
  */
 export type BundleView = BundleListRow & {
+  /** Özgün dosya — paket formunun kırpma alanı bununla çalışır (düzenleme kaynağa bakar). */
   imageUrl: string | null;
+  /** Liste hücresinin CDN çerçeveleri (05.37); `null` = CDN yok, hücre `imageUrl` + CSS kırpmasıyla çizer. */
+  frames: ImageFrameSources | null;
   itemLabels: string[];
 };
 

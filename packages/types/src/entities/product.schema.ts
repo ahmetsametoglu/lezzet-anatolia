@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { dbNumeric, dbNumericNullable } from '../primitives/db-numeric';
 import { ChannelEnum } from '../primitives/enums.schema';
 import { LOCALIZED_TEXT_KEYS, LocalizedTextSchema, type LocalizedText } from '../primitives/localized-text.schema';
-import { ImageMetaInsertSchema, ImageMetaSchema } from '../primitives/image.schema';
+import { IMAGE_RENDER_FIELDS, ImageMetaInsertSchema, ImageMetaSchema } from '../primitives/image.schema';
 import { ProductVariantSchema } from './product-variant.schema';
 
 // Ürün — paylaşılan alanlar (satılabilir birim ProductVariant'ta). 0005 migration, DATA_MODEL.
@@ -366,8 +366,8 @@ export type ProductListingRow = z.infer<typeof ProductListingRowSchema>;
 export const ProductPoolSchema = ProductSchema.pick({
   id: true,
   name: true,
-  imageKey: true,
-  imageUpdatedAt: true,
+  // Görseli çizmek için gereken yedi alan (05.37): seçici listesi küçük resmi CDN kadrajıyla alır.
+  ...IMAGE_RENDER_FIELDS,
   status: true,
   vatRate: true,
   targetMarginPercent: true,
@@ -397,8 +397,8 @@ export const ProductStockRowSchema = ProductSchema.pick({
   dateType: true,
   shelfLifeDays: true,
   status: true,
-  imageKey: true,
-  imageUpdatedAt: true,
+  // Görsel künyesi 22.30'dan; kadraj ve ölçü 05.37'den — küçük resim CDN'den, operatörün karesiyle.
+  ...IMAGE_RENDER_FIELDS,
 }).extend({
   variants: z.array(
     ProductVariantSchema.pick({ id: true, label: true, isActive: true, minStockQty: true, sku: true }),
@@ -427,9 +427,9 @@ export const ProductPriceRowSchema = ProductSchema.pick({
   autoPrice: true,
   status: true,
   // Görsel künyesi (15.08): fiyat satırının başında ürün görseli var — operatör listeyi ürünle
-  // eşleştirerek okur. İki alan birlikte gelir: `imageUpdatedAt` önbellek kırıcıdır (publicImageUrl).
-  imageKey: true,
-  imageUpdatedAt: true,
+  // eşleştirerek okur. `imageUpdatedAt` önbellek kırıcıdır; kadraj ve ölçü (05.37) küçük resmin CDN
+  // adresini kurar (`thumbnailImageUrl`).
+  ...IMAGE_RENDER_FIELDS,
 }).extend({
   // `sortOrder` boyla gelir: fiyat tablosunda aynı ürünün boyları alt alta ve HER ZAMAN aynı sırada
   // durmalı. Gömülü seçim sırayı garanti etmez — iki yenilemede satırların yer değiştirdiği bir

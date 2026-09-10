@@ -82,6 +82,8 @@ function bundleColumns(
             alt=""
             ratio={IMAGE_ROLES.package.ratio}
             crop={cropOf(b)}
+            frames={b.frames}
+            sizes="76px"
             placeholder={<ImageIcon size={14} />}
             className="!rounded-[7px] border border-ops-line-strong"
           />

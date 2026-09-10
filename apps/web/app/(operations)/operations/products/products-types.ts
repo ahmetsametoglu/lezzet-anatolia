@@ -13,6 +13,7 @@ import type {
 } from '@lezzet/types';
 import { slugify } from '@lezzet/helper';
 import { LOCALES, type Locale } from '@lezzet/i18n';
+import type { ImageFrameSources } from '@lezzet/application';
 import type { ProductTab } from './products-paths';
 
 // Durum tipi ve türetimi `@lezzet/types`'ta (servis de aynı türetimi süzgeç olarak sorguya çeviriyor)
@@ -21,7 +22,8 @@ export { type ProductStatus } from '@lezzet/types';
 
 /** Ürün view-model — DB `Product`'ı türetir; yalnız türetilmiş/join alanlar eklenir. */
 export type ProductView = Product & {
-  imageUrl: string | null; // R2 public okuma URL'i, `?v=` sürüm damgalı (yoksa placeholder)
+  imageUrl: string | null; // R2 public okuma URL'i, `?v=` sürüm damgalı (yoksa placeholder) — ÖZGÜN dosya, düzenleme formu bununla
+  thumbUrl: string | null; // liste/önizleme küçük resmi — CDN kare@200, operatörün kadrajıyla (05.37 · `thumbnailImageUrl`)
   categoryName: string; // çözülmüş kategori adı ya da '—' (join)
   variants: ProductVariant[]; // ürünün varyantları
   collectionNames: string[]; // girdiği koleksiyon adları (join)
@@ -29,12 +31,13 @@ export type ProductView = Product & {
 
 // Kategori view-model — `count` bu kategorideki ürün sayısı; `imageUrl` görselin public okuma URL'i
 // (kategori görseli anasayfa şeridinde görünür: masaüstü web 3:2 kart, mobil webde daire).
-export type CategoryView = Category & { count: number; imageUrl: string | null };
+// `frames` liste hücresinin CDN çerçeveleri (05.37) — `imageUrl` düzenleme formunun özgün dosyası olarak kalır.
+export type CategoryView = Category & { count: number; imageUrl: string | null; frames: ImageFrameSources | null };
 // Koleksiyon = adı olan ürün listesi (DOMAIN §13) → üyelik id'leri view-model'in parçası (vitrin
 // sırasında); üyelik dialogu bunlarla ön-dolar. `count` bağımsız sayaç DEĞİL, productIds.length'ten
 // türer (RSC'de bir kez); katalog tablosunun ortak alanı olduğu için ayrıca taşınır. `imageUrl` kapak
 // görselinin public okuma URL'i (imageKey ham anahtar; URL `publicImageUrl` ile kurulur).
-export type CollectionView = Collection & { count: number; productIds: string[]; imageUrl: string | null };
+export type CollectionView = Collection & { count: number; productIds: string[]; imageUrl: string | null; frames: ImageFrameSources | null };
 
 /** Katalog satırı — kategori ve koleksiyon aynı alanları taşır; tek tablo/dialog bunu tüketir. */
 export type CatalogRow = CategoryView | CollectionView;

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CROP_CENTER, RATIO_SQUARE, type ImageCrop } from '@lezzet/types';
+import type { ImageFrameSources } from '@lezzet/application';
 import { FramedImage } from '@/components/media/framed-image';
 import { ImageIcon } from './icons';
 import { Thumbnail } from './thumbnail';
@@ -17,6 +18,8 @@ import { Thumbnail } from './thumbnail';
 export interface SubjectImage {
   url: string;
   crop: ImageCrop;
+  /** CDN çerçeveleri (05.37) — varsa deste karesi onları çizer; `null` = özgün `url` + CSS kırpması. */
+  frames: ImageFrameSources | null;
 }
 
 interface SubjectCardProps {
@@ -26,6 +29,12 @@ interface SubjectCardProps {
   href: string | null;
   /** `imageUrl`in odak + zoom künyesi; verilmezse merkez. Yalnız `fluid` bandında uygulanır. */
   crop?: ImageCrop;
+  /**
+   * Bandın CDN çerçeveleri (05.37). `imageUrl` önceden kesilmiş bir küçük resimse bunlar DA verilmeli:
+   * bant o hâlde çerçeveyi çizer ve `crop`u uygulamaz — kesilmiş kareyi ikinci kez kesmek zoom'u
+   * iki kez uygulardı. Künye boyu (`Thumbnail`) bunlara bakmaz.
+   */
+  frames?: ImageFrameSources | null;
   /**
    * **Görselin kenarı (px).** 44 = satır içi künye · 96 = öneri panelinin başı.
    *
@@ -120,6 +129,7 @@ export function SubjectCard({
   size = 44,
   fluid = false,
   images,
+  frames,
 }: SubjectCardProps) {
   // Büyük görselde ad SARILIR ve büyür; küçükte kırpılır. Eşik boyun kendisinden çıkıyor, ayrı bir
   // bayrak taşınmıyor — iki ayar aynı şeyin iki yüzü ve ayrı verilirse bir gün ayrışırlar.
@@ -145,6 +155,9 @@ export function SubjectCard({
               alt={name}
               ratio={RATIO_SQUARE}
               crop={crop}
+              frames={frames}
+              // Bant `MEDIA_H` (h-32 = 128 px) boyunda kare.
+              sizes="128px"
               // Tek fotoğrafta çerçeve YOK: bandın tamamı zaten o, çevresine çizgi çekmek onu
               // gereksiz bir kutuya hapsederdi (kullanıcı kararı 10.08).
               placeholder={<ImageIcon size={28} />}
@@ -237,6 +250,8 @@ function SubjectStack({ images, name }: { images: SubjectImage[]; name: string }
           alt={`${name} · ${i + 1}. kalem`}
           ratio={RATIO_SQUARE}
           crop={image.crop}
+          frames={image.frames}
+          sizes="128px"
           placeholder={<ImageIcon size={20} />}
           className={`h-full flex-none ${TILE_EDGE} ${i > 0 ? STACK_OVERLAP : ''}`}
         />

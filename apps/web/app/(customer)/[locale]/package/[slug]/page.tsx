@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: PackagePageProps): Promise<Me
       params: { slug },
       title: pack.name,
       description: pack.description,
-      image: pack.image.url,
+      image: pack.image,
     }),
   };
 }

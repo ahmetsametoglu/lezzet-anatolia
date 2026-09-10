@@ -50,7 +50,15 @@ export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps
             kalır ve tasarımın iki sütunlu dengesi bozulurdu.
             Alt metni operatör yazar; yazmamışsa BOŞ kalır ve bu doğru: kahraman burada bilgi değil
             süstür, uydurma bir cümle ekran okuyucuya gereksiz gürültü olurdu (`alt=""` = dekoratif). */}
-        <FramedImage src={hero?.url ?? null} alt={hero?.alt ?? ''} ratio={RATIO_SOURCE} crop={hero?.crop ?? CROP_CENTER} />
+        {/* İki sütunun biri: ~612 px (içerik 1360 px'te durur). */}
+        <FramedImage
+          src={hero?.url ?? null}
+          alt={hero?.alt ?? ''}
+          ratio={RATIO_SOURCE}
+          crop={hero?.crop ?? CROP_CENTER}
+          frames={hero?.frames}
+          sizes="620px"
+        />
       </section>
 
       <section className="flex flex-col gap-4 px-12 pb-11">

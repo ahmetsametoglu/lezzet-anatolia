@@ -388,7 +388,7 @@ export function SummaryCard({ t, locale, view, compact }: ConfirmationViewProps)
           <li key={line.id} className="flex items-center gap-3">
             {/* Görsel 44px kare: müşteri adı okumadan da ne aldığını tanır. */}
             <div className="w-11 flex-none">
-              <FramedImage src={line.image?.url ?? null} alt={line.name} ratio={RATIO_SQUARE} crop={line.image?.crop} frames={line.image?.frames} />
+              <FramedImage src={line.image?.url ?? null} alt={line.name} ratio={RATIO_SQUARE} crop={line.image?.crop} frames={line.image?.frames} sizes="44px" />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate font-sans text-note font-bold text-ink">{line.name}</span>

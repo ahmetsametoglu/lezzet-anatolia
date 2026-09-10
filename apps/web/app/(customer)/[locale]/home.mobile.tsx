@@ -28,7 +28,14 @@ export function HomeMobile({ t, locale, data, hero }: HomeViewProps) {
         </h1>
         {/* Aynı slot masaüstüyle paylaşılıyor (`site_image.home_hero`) — künyesi orada. Tek kaynak
             olması şart: iki dal ayrı okusaydı telefon ile masaüstü bir gün başka fotoğraf gösterirdi. */}
-        <FramedImage src={hero?.url ?? null} alt={hero?.alt ?? t.hero.imageAlt} ratio={RATIO_BAND} crop={hero?.crop} />
+        <FramedImage
+          src={hero?.url ?? null}
+          alt={hero?.alt ?? t.hero.imageAlt}
+          ratio={RATIO_BAND}
+          crop={hero?.crop}
+          frames={hero?.frames}
+          sizes="100vw"
+        />
         <Link href="/catalog" className={buttonClass({ compact: true, fullWidth: true })}>
           {t.hero.ctaCatalog}
         </Link>

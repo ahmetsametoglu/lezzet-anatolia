@@ -126,6 +126,7 @@ export function SubjectBox({ subject }: { subject: NonNullable<AssistantRowView[
         detail={subject.detail}
         imageUrl={subject.imageUrl}
         crop={subject.crop}
+        frames={subject.frames}
         images={subject.images}
         // Kartın kendisi zaten tıklanabilir; içeride ikinci bir bağlantı hem iç içe etkileşim olurdu
         // hem de "hangisine bastım" sorusunu doğururdu. İlgili ekrana giden yol diyalogda.

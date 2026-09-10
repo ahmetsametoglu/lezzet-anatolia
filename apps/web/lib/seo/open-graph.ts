@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { brand } from '@lezzet/brand';
 import { localizedPath, type AppRoute, type Locale } from '@lezzet/i18n';
+import type { StorefrontImage } from '@lezzet/application';
 
 /**
  * **Paylaşım kartı (Open Graph)** — `localeAlternates`'in kardeşi ve aynı disiplinde (08.1).
@@ -20,6 +21,14 @@ import { localizedPath, type AppRoute, type Locale } from '@lezzet/i18n';
  * ── ADRES YOL TABLOSUNDAN TÜRER ─────────────────────────────────────────────
  * `og:url` elle yazılsaydı segment kelimesi dile göre değiştiği için (`/recettes` · `/tarifler`)
  * bir dilde yanlış adrese işaret ederdi. `metadataBase` (layout) göreli adresi mutlaklaştırıyor.
+ *
+ * ── GÖRSEL CDN KADRAJINDAN (05.37) ──────────────────────────────────────────
+ * Kart görseli, operatörün kırpma penceresinde "sohbet kartı" diye önizlediği kare: çerçevenin tek
+ * adresi (`frames.chat.src`, 1200 px — önerilen kart ölçüsü 1200×630, oran zaten 1.91:1). Önceden
+ * tam boy özgün WebP gidiyordu; kare kaynakta kart üstten alttan rastgele kesiliyordu. Adres
+ * `format=auto` taşıyor ve bu tarayıcı-dışı istemcide de güvenli — ölçüldü 10.09: `Accept` başlığında
+ * yalnız joker taşıyan çekici `image/jpeg` aldı; WebP/AVIF yalnız onu açıkça kabul edene gidiyor.
+ * CDN yoksa (r2.dev tabanı ya da ölçüsüz kaynak) özgün adres.
  */
 interface OpenGraphInput {
   route: AppRoute;
@@ -29,8 +38,13 @@ interface OpenGraphInput {
   title: string;
   /** Yoksa alan yazılmaz; paylaşım aracı kendi özetini kurar. */
   description?: string | null;
-  /** MUTLAK görsel adresi (`publicImageUrl` üretir). `null` → alan hiç yazılmaz. */
-  image?: string | null;
+  /** Çözülmüş görsel künyesi (`imageOf`). Görsel yoksa (`null` ya da `url` boş) alan hiç yazılmaz. */
+  image?: StorefrontImage | null;
+  /**
+   * Kartın çerçevesi. Varsayılan `chat` (ürün · paket · tarif); koleksiyon kapağı `band` — o rolün
+   * kırpma penceresi 16:9'u "paylaşım kartı" diye önizliyor, sohbet çerçevesini göstermiyor.
+   */
+  shareFrame?: 'chat' | 'band';
   /**
    * Kart TÜRÜ. Varsayılan `website`; okunan içerik (tarif, yazı) `article` verir.
    *
@@ -42,7 +56,13 @@ interface OpenGraphInput {
   type?: 'website' | 'article';
 }
 
-export function openGraphOf({ route, locale, params = {}, title, description, image, type = 'website' }: OpenGraphInput): Metadata['openGraph'] {
+/** Paylaşım kartının görsel adresi — CDN çerçevesi varsa onun tek adresi, yoksa özgün dosya. */
+export function shareImageUrl(image: StorefrontImage | null | undefined, frame: 'chat' | 'band' = 'chat'): string | null {
+  return image?.frames?.[frame].src ?? image?.url ?? null;
+}
+
+export function openGraphOf({ route, locale, params = {}, title, description, image, shareFrame, type = 'website' }: OpenGraphInput): Metadata['openGraph'] {
+  const imageUrl = shareImageUrl(image, shareFrame);
   return {
     type,
     title,
@@ -50,6 +70,6 @@ export function openGraphOf({ route, locale, params = {}, title, description, im
     url: `/${locale}${localizedPath(route, locale, params)}`,
     siteName: brand.name,
     locale,
-    ...(image ? { images: [image] } : {}),
+    ...(imageUrl ? { images: [imageUrl] } : {}),
   };
 }

@@ -1,4 +1,5 @@
 import { publicImageUrl } from '@lezzet/storage';
+import { frameSourcesOf, thumbnailImageUrl } from '@lezzet/application';
 import { titleOf } from '@/lib/catalog/title';
 import { resolveLocalizedText, type BundleListRow, type ProductWithRelations } from '@lezzet/types';
 import type { BundleView, ProductView } from './products-types';
@@ -25,6 +26,7 @@ export function toBundleViews(rows: BundleListRow[]): BundleView[] {
   return rows.map((bundle) => ({
     ...bundle,
     imageUrl: publicImageUrl(bundle.imageKey, bundle.imageUpdatedAt),
+    frames: frameSourcesOf(bundle),
     // Ad çözümü BURADA: okuma fonksiyonu ham jsonb döndürüyor, dil yedek zinciri (TR→FR→DE) tek
     // yerde kalsın diye SQL'e kopyalanmadı. Sıra kalemin `sortOrder`'ı (fonksiyon öyle topluyor).
     itemLabels: bundle.itemNames.map(({ p, v }) => titleOf(resolveLocalizedText(p), v ? resolveLocalizedText(v) : '')),
@@ -40,6 +42,7 @@ export function toProductViews(rows: ProductWithRelations[], names: NameMaps): P
     return {
       ...product,
       imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
+      thumbUrl: thumbnailImageUrl(product),
       categoryName: product.categoryId ? (names.category.get(product.categoryId) ?? '—') : '—',
       collectionNames: collections.map((c) => names.collection.get(c.collectionId) ?? '').filter(Boolean),
     };

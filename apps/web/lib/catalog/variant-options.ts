@@ -1,6 +1,6 @@
 import 'server-only';
 import { PriceService, ProductService, ProductVariantService, StockService, type Db } from '@lezzet/database';
-import { publicImageUrl } from '@lezzet/storage';
+import { thumbnailImageUrl } from '@lezzet/application';
 import { resolveLocalizedText, type ProductPool } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
 import type { VariantOption } from '@/components/operation/form/bundle-form/types';
@@ -27,7 +27,8 @@ function toVariantOptions(
 ): VariantOption[] {
   return rows.flatMap((p) => {
     const productName = resolveLocalizedText(p.name);
-    const imageUrl = publicImageUrl(p.imageKey, p.imageUpdatedAt);
+    // Seçici ve kalem satırının küçük resmi (≤ 30 px) — CDN kare@200 (05.37).
+    const imageUrl = thumbnailImageUrl(p);
     // Ürün düzeyindeki engel varyantın hepsini kapsar; boy düzeyindeki yalnız o boyu.
     const productBlock = p.status === 'active' ? null : p.status === 'candidate' ? 'aday ürün' : 'pasif ürün';
     return p.variants.map((v) => {

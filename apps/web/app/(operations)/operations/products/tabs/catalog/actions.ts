@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
-import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
+import { getR2, r2Keys } from '@lezzet/storage';
+import { thumbnailImageUrl } from '@lezzet/application';
 import { pickCropFieldsPartial, resolveLocalizedText, type ImageCropFields, type LocalizedText } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { readImageDimensions, readImageUpload } from '@/lib/media/upload';
@@ -223,7 +224,8 @@ async function collectionOptions(opts: { ids?: string[]; term?: string }): Promi
   return ordered.map((p) => ({
     id: p.id,
     name: p.name,
-    imageUrl: publicImageUrl(p.imageKey, p.imageUpdatedAt),
+    // Yalnız küçük resim (seçici satırı 26–30 px) — CDN kare@200 (05.37).
+    imageUrl: thumbnailImageUrl(p),
     categoryName: p.categoryId ? (categories.get(p.categoryId) ?? '—') : '—',
   }));
 }

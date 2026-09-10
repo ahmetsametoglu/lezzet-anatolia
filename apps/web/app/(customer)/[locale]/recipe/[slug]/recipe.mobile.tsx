@@ -28,7 +28,15 @@ export function RecipeMobile({ t, locale, recipe }: RecipeViewProps) {
   return (
     <div className="flex flex-col">
       <div className="relative">
-        <FramedImage src={recipe.image.url} alt={recipe.name} ratio={RATIO_BAND} crop={recipe.image.crop} frames={recipe.image.frames} className="!rounded-none" />
+        <FramedImage
+          src={recipe.image.url}
+          alt={recipe.name}
+          ratio={RATIO_BAND}
+          crop={recipe.image.crop}
+          frames={recipe.image.frames}
+          sizes="100vw"
+          className="!rounded-none"
+        />
         {badge && (
           <span className="pointer-events-none absolute bottom-2.5 left-3 rounded-soft bg-cream/95 px-2.5 py-1.5 font-sans text-micro font-bold text-ink">
             {badge}

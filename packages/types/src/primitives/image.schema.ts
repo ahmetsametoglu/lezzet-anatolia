@@ -361,6 +361,26 @@ export type ImageMeta = z.infer<typeof ImageMetaSchema>;
 /** Insert tarafı: anahtar/odak/zoom/alt hepsi DB default'lu ya da nullable → opsiyonel. */
 export const ImageMetaInsertSchema = ImageMetaSchema.partial();
 
+/**
+ * **Görseli ÇİZMEK için gereken alanlar** (05.37) — dosya + sürüm damgası + kadraj (odak/zoom) +
+ * kaynak ölçüsü; alt metin hariç. CDN kadrajı bu yedisinden kurulur (`frameSourcesOf`,
+ * `thumbnailImageUrl`), yani görsel gösteren DAR bir okuma (stok · fiyat · havuz satırı) en az
+ * bunları taşımalı. Maske tek yerde: dar şemalar `.pick({ ..., ...IMAGE_RENDER_FIELDS })` ile alır,
+ * servisler kolon listesini ondan türetir — yedi alandan biri bir okumada unutulursa küçük resim
+ * sessizce özgün dosyaya düşer ve kimse fark etmez.
+ */
+export const IMAGE_RENDER_FIELDS = {
+  imageKey: true,
+  imageUpdatedAt: true,
+  imageFocalX: true,
+  imageFocalY: true,
+  imageZoom: true,
+  imageWidth: true,
+  imageHeight: true,
+} as const;
+export const ImageRenderSchema = ImageMetaSchema.pick(IMAGE_RENDER_FIELDS);
+export type ImageRender = z.infer<typeof ImageRenderSchema>;
+
 /** Kaynak ölçüsü — yükleme yolunun dosyayla birlikte taşıdığı çift (05.37). */
 export const ImageDimensionsSchema = ImageMetaSchema.pick({ imageWidth: true, imageHeight: true });
 export type ImageDimensions = z.infer<typeof ImageDimensionsSchema>;
