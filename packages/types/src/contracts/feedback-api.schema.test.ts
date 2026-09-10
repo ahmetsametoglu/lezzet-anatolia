@@ -31,7 +31,7 @@ function inviteBody() {
       {
         productId: 'c0ffee00-0000-4000-8000-000000000003',
         name: 'Su Böreği',
-        image: { url: null, crop: { x: 50, y: 50, zoom: 100 } },
+        image: { url: null, crop: { x: 50, y: 50, zoom: 100 }, frames: null },
         existing: null,
       },
     ],

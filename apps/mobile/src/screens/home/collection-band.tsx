@@ -1,3 +1,4 @@
+import type { CatalogImage } from '@lezzet/types';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -42,7 +43,11 @@ interface CollectionBandProps {
   discountLabel?: string;
   /** Listedeki sıra — ton ve yön bundan türer. */
   index: number;
-  photoUri: string | null;
+  /**
+   * Kesitin görseli — dairenin çapına yeten kare CDN türevi (21.303). Koleksiyon görseli 16:9
+   * yükleniyor ama burada DAİREDE görünüyor; kare türev operatörün odağıyla kesilmiş iner.
+   */
+  image: CatalogImage;
   onPress: () => void;
   testID?: string;
   /**
@@ -62,7 +67,7 @@ export function CollectionBand({
   countLabel,
   discountLabel,
   index,
-  photoUri,
+  image,
   onPress,
   testID,
   photoInOverlay = false,
@@ -118,7 +123,7 @@ export function CollectionBand({
       </View>
       {photoInOverlay ? null : (
         <View style={[styles.photo, mirrored ? styles.photoMirrored : styles.photoNormal]} pointerEvents="none">
-          <BandPhoto name={name} photoUri={photoUri} discountLabel={discountLabel} mirrored={mirrored} />
+          <BandPhoto name={name} image={image} discountLabel={discountLabel} mirrored={mirrored} />
         </View>
       )}
     </PressableSurface>
@@ -146,12 +151,12 @@ export function CollectionBand({
  */
 function BandPhoto({
   name,
-  photoUri,
+  image,
   discountLabel,
   mirrored,
 }: {
   name: string;
-  photoUri: string | null;
+  image: CatalogImage;
   discountLabel?: string;
   mirrored: boolean;
 }) {
@@ -164,7 +169,7 @@ function BandPhoto({
         // Şablon burada devasa bir harf çiziyor (`64px`); ölçekte en büyük mobil durak `h1-sm`.
         initialFontSize={theme.text['h1-sm']}
         initialStyle={styles.initial}
-        photoUri={photoUri}
+        image={image}
         style={styles.photoSurface}
       />
       {discountLabel === undefined ? null : (
@@ -184,9 +189,9 @@ function BandPhoto({
 export function CollectionPhotoOverlay({
   name,
   index,
-  photoUri,
+  image,
   discountLabel,
-}: Pick<CollectionBandProps, 'name' | 'index' | 'photoUri' | 'discountLabel'>) {
+}: Pick<CollectionBandProps, 'name' | 'index' | 'image' | 'discountLabel'>) {
   const mirrored = index % 2 === 1;
   return (
     <View
@@ -199,7 +204,7 @@ export function CollectionPhotoOverlay({
     >
       {/* Rozet DAİRENİN yanında yolculuk eder: vitrinde daireler bu üst katmanda çiziliyor, yani
           rozet bandın içinde kalsaydı dairesinden ayrı düşerdi (künyesi `BandPhoto`da). */}
-      <BandPhoto name={name} photoUri={photoUri} discountLabel={discountLabel} mirrored={mirrored} />
+      <BandPhoto name={name} image={image} discountLabel={discountLabel} mirrored={mirrored} />
     </View>
   );
 }

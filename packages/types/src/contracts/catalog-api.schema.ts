@@ -3,6 +3,7 @@ import { CategorySchema } from '../entities/category.schema';
 import { CollectionSchema } from '../entities/collection.schema';
 import { StockStatusEnum } from '../primitives/enums.schema';
 import { ImageCropSchema } from '../primitives/image.schema';
+import { ImageFrameSourcesSchema } from '../primitives/image-frames';
 import { ProductSchema } from '../entities/product.schema';
 import { ProductVariantSchema } from '../entities/product-variant.schema';
 import { StockSchema } from '../entities/stock.schema';
@@ -49,7 +50,18 @@ export const CatalogImageSchema = z.object({
   /** `null` = görsel yok ya da R2 taban adresi ayarsız; istemci yer tutucu çizer. */
   url: z.string().nullable(),
   crop: ImageCropSchema,
+  /**
+   * CDN türevleri (05.37 · 21.303) — çerçeve başına, operatörün odak+zoom kadrajıyla kesilmiş ve genişlik
+   * merdivenine ölçeklenmiş adresler. 09.09'dan beri sunucu (`imageOf`) üretiyordu ama bu şema onu
+   * SÜZÜYORDU: telefon her kutuya 1500–2000 px'lik özgün dosyayı indiriyor, operatörün odağını hiç
+   * görmüyordu (ölçüldü 10.09: vitrin 5,17 MB, aynı 17 görsel kutu ölçüsünde 310 KB).
+   *
+   * Seçim istemcide merkezi kapıdan (`frameUrlFor`): kutunun oranı çerçeveyi, boyu basamağı seçer.
+   * `null` = CDN yok ya da kaynak ölçüsü bilinmiyor — istemci `url`e düşer.
+   */
+  frames: ImageFrameSourcesSchema.nullable(),
 });
+export type CatalogImage = z.infer<typeof CatalogImageSchema>;
 
 /**
  * Kategori kartı. `name` DÜZ STRING: çok dilli metin SUNUCUDA çözülür (`resolveLocalizedText`),

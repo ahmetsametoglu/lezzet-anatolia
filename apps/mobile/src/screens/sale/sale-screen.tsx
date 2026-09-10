@@ -431,7 +431,7 @@ const ProductRow = memo(function ProductRow({ product, onOpen }: ProductRowProps
   return (
     <OperationsProductRow
       name={product.name}
-      photoUri={product.image.url}
+      image={product.image}
       size="md"
       meta={
         <Text style={styles.productMeta}>

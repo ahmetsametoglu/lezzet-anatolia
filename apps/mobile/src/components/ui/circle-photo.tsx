@@ -1,5 +1,8 @@
+import type { CatalogImage } from '@lezzet/types';
 import { Image, type StyleProp, Text, type TextStyle, View, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+
+import { CDN_IMAGE_HEADERS, FrameImage } from './frame-image';
 
 /*
   DAİRE FOTOĞRAF — kitin İÇ ilkeli; dışarıya `AvatarThumb` ve `ProductCircleCard` olarak çıkar.
@@ -17,6 +20,12 @@ interface CirclePhotoProps {
   initial: string;
   initialFontSize: number;
   photoUri?: string | null;
+  /**
+   * KATALOG görseli (21.303) — verilirse `photoUri`nin yerine geçer. Daire kare bir kutudur ve çapı
+   * (`size`) bilindiği için görsel ölçüm beklemeden, bu çapa yeten CDN basamağından istenir
+   * (`FrameImage`). `photoUri` hazır adresli görseller içindir: kişi avatarı, operasyonun küçük resmi.
+   */
+  image?: CatalogImage | null;
   /** Ekran okuyucu adı; verilmezse daire a11y ağacından çıkar (dekoratif). */
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
@@ -29,6 +38,7 @@ export function CirclePhoto({
   initial,
   initialFontSize,
   photoUri,
+  image,
   accessibilityLabel,
   style,
   initialStyle,
@@ -46,10 +56,12 @@ export function CirclePhoto({
       importantForAccessibility={isDecorative ? 'no-hide-descendants' : 'auto'}
       style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }, style]}
     >
-      {photoUri === undefined || photoUri === null ? (
+      {image != null && image.url !== null ? (
+        <FrameImage image={image} box={{ width: size, height: size }} style={styles.image} />
+      ) : photoUri === undefined || photoUri === null ? (
         <Text style={[styles.initial, { fontSize: initialFontSize }, initialStyle]}>{initial}</Text>
       ) : (
-        <Image source={{ uri: photoUri }} style={styles.image} accessibilityIgnoresInvertColors />
+        <Image source={{ uri: photoUri, headers: CDN_IMAGE_HEADERS }} style={styles.image} accessibilityIgnoresInvertColors />
       )}
     </View>
   );

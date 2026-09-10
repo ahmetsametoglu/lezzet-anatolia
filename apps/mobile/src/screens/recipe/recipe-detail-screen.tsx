@@ -4,12 +4,13 @@ import type { RecipeRow } from '@lezzet/types';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from '@/components/ui/back-button';
 import { CirclePhoto } from '@/components/ui/circle-photo';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FrameImage } from '@/components/ui/frame-image';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -83,7 +84,7 @@ function cartLineOf(row: RecipeRow & { priceCents: number }) {
     name: row.name,
     variantLabel: row.variantLabel,
     unitCents: row.priceCents,
-    photoUri: row.image.url,
+    image: row.image,
     discounted: row.wasCents !== undefined,
     soldOut: false,
   };
@@ -170,7 +171,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
               <Text style={styles.heroInitial}>{detail.name.slice(0, 1)}</Text>
             </View>
           ) : (
-            <Image source={{ uri: detail.image.url }} style={styles.heroImage} accessibilityIgnoresInvertColors />
+            <FrameImage image={detail.image} style={styles.heroImage} />
           )}
           {/* Skrim token gradyanının kendisi (photo-top: .28 → şeffaf %32 — v3:1185 birebir). */}
           <LinearGradient {...theme.gradient.photoTop} style={styles.heroScrim} pointerEvents="none" />
@@ -215,7 +216,7 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
                           size={customerMetrics.recipeRowPhoto}
                           initial={row.name.slice(0, 1)}
                           initialFontSize={theme.text['screen-title']}
-                          photoUri={row.image.url}
+                          image={row.image}
                         />
                         <View style={styles.rowText}>
                           <Text style={styles.rowName} numberOfLines={1}>

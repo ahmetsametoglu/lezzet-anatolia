@@ -1,3 +1,4 @@
+import type { CatalogImage } from '@lezzet/types';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { CirclePhoto } from '@/components/ui/circle-photo';
@@ -33,6 +34,8 @@ interface OperationsProductThumbProps {
   name: string;
   /** Ürün kapağı; `null`/yok = monogram çizilir. */
   photoUri?: string | null;
+  /** KATALOG görseli (21.303) — satış ekranının ürünü; kareye yeten CDN türevi, `photoUri`nin yerine geçer. */
+  image?: CatalogImage | null;
   /** `sm` kutu içeriği satırı (30) · `md` kontrol listesi satırı (`thumb`, 44). */
   size?: 'sm' | 'md';
   /** `neutral` kum zemin (varsayılan) · `olive` açık kutunun içi. */
@@ -43,6 +46,7 @@ interface OperationsProductThumbProps {
 export function OperationsProductThumb({
   name,
   photoUri,
+  image,
   size = 'sm',
   tone = 'neutral',
   testID,
@@ -56,6 +60,7 @@ export function OperationsProductThumb({
       /* Harf kareyle birlikte büyür: 30'luk karede 10, 48'likte 14 (tasarımın iki durağı). */
       initialFontSize={small ? operationsTheme.text['badge-sm'] : operationsTheme.text['body-sm']}
       photoUri={photoUri}
+      image={image}
       /* Kare DEKORATİFTİR: adı zaten satırın başlığı okuyor. `accessibilityLabel` verilseydi
          ekran okuyucu aynı ürün adını iki kez söylerdi (`Icon` künyesindeki aynı kural) —
          `CirclePhoto` etiketsiz çağrıldığında kendini a11y ağacından çıkarıyor. */

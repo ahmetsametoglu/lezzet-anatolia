@@ -3,12 +3,13 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PackageItem } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useState, useSyncExternalStore } from 'react';
-import { Image, ScrollView, Share, Text, View } from 'react-native';
+import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from '@/components/ui/back-button';
 import { BlurView } from 'expo-blur';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FrameImage } from '@/components/ui/frame-image';
 import { Icon } from '@/components/ui/icon';
 import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -183,12 +184,10 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
 
   /* Kahraman şeridi: ÖNCE paketin kendi kapağı, SONRA kalemlerin ana görselleri. Sıra kararın
      kendisidir — satılan şey pakettir, kalemler onun içeriği; kapağı araya karıştırmak paketi
-     kalemlerinden biri gibi gösterirdi. Adressiz kalem ELENİR (boş kare çizilmez); tekrarlanan
-     adresi galeri komponenti eler. Paket sözleşmesinde ayrı bir `gallery` alanı YOK — şerit
+     kalemlerinden biri gibi gösterirdi. Adressiz kalemi ve tekrarlanan adresi galeri komponenti
+     eler (boş kare çizilmez). Paket sözleşmesinde ayrı bir `gallery` alanı YOK — şerit
      kalemlerin kendi kapaklarından kurulur (`PackageDetailSchema.items[].image`). */
-  const heroPhotos = [detail.image, ...detail.items.map((item) => item.image)]
-    .map((image) => image.url)
-    .filter((url): url is string => url !== null);
+  const heroPhotos = [detail.image, ...detail.items.map((item) => item.image)];
 
   const addToCart = () => {
     addBundle(
@@ -203,7 +202,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
         // Sepet satırının içerik özeti — kalem adları orta noktayla (sepet fixture'ının dili).
         contentLabel: detail.items.map((item) => item.name).join(' · '),
         unitCents: detail.priceCents,
-        photoUri: detail.image.url,
+        image: detail.image,
       },
       quantity,
     );
@@ -219,7 +218,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
           {/* SOLAN GRUP yalnız galeri; rozet onun kardeşi ve tam opak (sapma 1). */}
           <View style={[styles.heroPhotos, heroFaded ? styles.heroFaded : undefined]}>
             <PhotoGallery
-              uris={heroPhotos}
+              images={heroPhotos}
               photoLabel={t.gallery.photo}
               fallback={
                 <View style={styles.heroFallback}>
@@ -279,7 +278,11 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
                     <Text style={styles.itemInitial}>{item.name.slice(0, 1)}</Text>
                   </View>
                 ) : (
-                  <Image source={{ uri: item.image.url }} style={styles.itemPhoto} accessibilityIgnoresInvertColors />
+                  <FrameImage
+                    image={item.image}
+                    box={{ width: customerMetrics.packageItemPhoto, height: customerMetrics.packageItemPhoto }}
+                    style={styles.itemPhoto}
+                  />
                 )}
                 <Text style={styles.itemLabel}>{itemLabel(item)}</Text>
                 <Text style={styles.itemQty}>{`×${item.qty}`}</Text>

@@ -80,7 +80,7 @@ function saleProduct(overrides: Partial<SaleCatalogProduct>): SaleCatalogProduct
     id: TEK_ID,
     slug: 'simit',
     name: 'Simit',
-    image: { url: null, crop: { x: 50, y: 50, zoom: 100 } },
+    image: { url: null, crop: { x: 50, y: 50, zoom: 100 }, frames: null },
     unitLabel: '1 adet',
     variantId: TEK_VARYANT,
     purchaseMode: 'quick',

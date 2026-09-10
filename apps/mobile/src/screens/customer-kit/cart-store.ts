@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { applyBestDiscount, meetsMinBasket } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
-import type { MeCartView, MeCartViewLine } from '@lezzet/types';
+import type { CatalogImage, MeCartView, MeCartViewLine } from '@lezzet/types';
 
 import {
   addCartItems,
@@ -71,7 +71,12 @@ export interface CartProductLine {
   /** Birim fiyat (cent). */
   unitCents: number;
   quantity: number;
-  photoUri: string | null;
+  /**
+   * Katalog görseli, katalogdaki hâliyle (21.303) — hazır bir adres DEĞİL: satır iki ayrı boyda
+   * çiziliyor (sepette 56'lık, ödemede küçük daire) ve her çizen kendi kutusuna yeten CDN türevini
+   * seçer. Depo yalnız bellekte yaşar; saklanan bir biçim olmadığı için taşınacak eski kayıt da yok.
+   */
+  image: CatalogImage;
   /** İndirimli fiyattan geliyor — sepette rozetle söylenir. */
   discounted: boolean;
   /** Sepete girdikten SONRA tükendi: teslim edilemez, kaldırılması istenir (v3:437). */
@@ -102,7 +107,8 @@ export interface CartBundleLine {
   contentLabel: string;
   unitCents: number;
   quantity: number;
-  photoUri: string | null;
+  /** Paketin kapağı — ürün satırının `image`ı ile aynı kural. */
+  image: CatalogImage;
 }
 
 /**
@@ -581,7 +587,7 @@ function refreshed(known: CartProductLine, line: MeCartViewLine): CartProductLin
     variantLabel: line.unitLabel === '' ? known.variantLabel : line.unitLabel,
     unitCents: line.unitPriceCents ?? known.unitCents,
     quantity: line.qty,
-    photoUri: line.image.url ?? known.photoUri,
+    image: line.image.url === null ? known.image : line.image,
     discounted: line.wasCents !== undefined,
     soldOut: line.blocked,
   };

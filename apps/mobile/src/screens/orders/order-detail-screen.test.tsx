@@ -206,7 +206,7 @@ describe('sipariş detayı · eksik karşılama', () => {
       id: 'line-1',
       name: 'Su Böreği',
       unitLabel: '2500 g',
-      image: { url: null, crop: CROP_CENTER },
+      image: { url: null, crop: CROP_CENTER, frames: null },
       bundle: null,
       qty: 2,
       billedQty: 1,

@@ -128,7 +128,7 @@ export function RecipesListScreen({ locale: forcedLocale }: RecipesListScreenPro
             <PhotoTile
               key={recipe.slug}
               height={customerMetrics.recipeListCardHeight}
-              photoUri={recipe.image.url}
+              image={recipe.image}
               initial={recipe.name.slice(0, 1)}
               /* `duration` hazır metindir ("35 dk" — 05.16, cümleyi cihaz kurmaz); `null` →
                  rozet çizilmez (girilmemiş süreye rozet uydurulmaz). */

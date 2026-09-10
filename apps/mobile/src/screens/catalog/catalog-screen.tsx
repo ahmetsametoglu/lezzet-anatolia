@@ -221,7 +221,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
     const placeNote = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark.label;
     return {
       name: product.name,
-      photoUri: product.image.url,
+      image: product.image,
       priceLabel: productPriceLabel(product.priceCents, product.variantCount, locale),
       soldOut: product.soldOut,
       soldOutLabel: t.card.soldOut,

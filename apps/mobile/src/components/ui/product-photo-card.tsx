@@ -1,7 +1,9 @@
+import type { CatalogImage } from '@lezzet/types';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { FrameImage } from './frame-image';
 import { PressableSurface } from './pressable-surface';
 import { Tag } from './tag';
 import { useAppLocale } from '../../lib/i18n/app-locale';
@@ -66,7 +68,8 @@ interface ProductPhotoCardProps {
    */
   priceLabel?: string;
   onPress: () => void;
-  photoUri?: string | null;
+  /** Ürün görseli — kartın kare kutusuna yeten CDN türevi (21.303, `FrameImage` kutuyu ölçer). */
+  image?: CatalogImage | null;
   soldOut?: boolean;
   /** "Tükendi" etiketi — tükendiyse ZORUNLU (rozet metinsiz çizilmez). */
   soldOutLabel?: string;
@@ -110,7 +113,7 @@ export function ProductPhotoCard({
   name,
   priceLabel,
   onPress,
-  photoUri,
+  image,
   soldOut = false,
   soldOutLabel,
   discountLabel,
@@ -158,9 +161,7 @@ export function ProductPhotoCard({
       {/* SOLAN GRUP — yalnız fotoğraf ve onun gradyanı. Katman `inset:0` olduğu için kartın
           kutusuyla aynı; altındaki bilgi öğeleri de bu yüzden aynı koordinatlarda kalıyor. */}
       <View style={[styles.photoLayer, faded ? styles.fadedPhoto : undefined]}>
-        {photoUri === undefined || photoUri === null ? null : (
-          <Image source={{ uri: photoUri }} style={styles.image} accessibilityIgnoresInvertColors />
-        )}
+        {image == null || image.url === null ? null : <FrameImage image={image} style={styles.image} />}
         <LinearGradient
           {...theme.gradient.photoBottom}
           style={styles.scrim}

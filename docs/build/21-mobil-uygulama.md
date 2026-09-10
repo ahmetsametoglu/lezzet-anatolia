@@ -14469,3 +14469,115 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Başlık artık depoyu söylüyor ("Eşlenmemiş grup · KEHL · 7 varyant"; kod çözülemezse "—"); cihazda üç
   başlık doğrulandı, iddia ekran testinde. Düzeltme yalnız mobil ekranda: yönetim ekranları yine
   **170/170**, `typecheck` 20/20, `lint` temiz; kök paketin 4511/4511'i mobil jest'i içermiyor.
+
+- [x] (21.303) **KATALOG GÖRSELLERİ CDN TÜREVİNDEN — native her kutuya kendi çerçevesini, boyuna yeten basamaktan istiyor; seçim web ile TEK kütüphanede** (kullanıcı istekleri 10.09: *"resmin kullanıldığı her yerde, kullanıldığı yere göre odak ve ölçeklendirme"* · *"her tasarım kendi en boy oranındaki görseli almaya çalışsın"* · *"mobil tarafının Cloudflare'e tam entegrasyonunu tamamla"* · *"merkezi bir kütüphane istiyorum, web ile code duplication oluşmasın"* · *"ayrı odak konusuna şu an gerek yok"*)
+  `touches:` `packages/types/src/primitives/image-frames.ts` · `packages/types/src/primitives/image-frames.test.ts` · `packages/types/src/primitives/index.ts` · `packages/types/src/contracts/catalog-api.schema.ts` · `packages/application/src/catalog/storefront-types.ts` · `apps/mobile-api/src/app.ts` · `apps/mobile-api/src/app.test.ts` · `apps/mobile/src/components/ui/frame-image.tsx` · `apps/mobile/src/components/ui/frame-image.test.tsx` · `apps/mobile/src/components/ui/circle-photo.tsx` · `apps/mobile/src/components/ui/photo-gallery.tsx` · `apps/mobile/src/screens/customer-kit/cart-store.ts` · `apps/mobile/src/screens/sale/use-sale.hook.ts` · kit bileşenleri (`AvatarThumb` · `ProductCircleCard` · `ProductPhotoCard` · `PhotoSurface` · `PhotoTile` · `CollectionBand` · `CartLineRow` · `OperationsProductThumb` · `OperationsProductRow`) · 15 ekran ve fikstürleri · kapanışta `packages/application/src/catalog/map.ts` · `apps/mobile/src/screens/warehouse/intake-screen.tsx`
+
+  **Durum (10.09) — TAMAM.** Native yarısı bu satırın ilk sahibinde yazıldı; kapanışını (iki oran, `srcSet`
+  bağlantısı, mal kabul küçük resmi, taze veriyle cihaz ölçümü) yönetim şeridi yaptı — aşağıda **KAPANIŞ**. Web yarısı
+  (05.37) CDN türevlerini `imageOf` ile zaten üretiyordu ama sözleşme `frames`i `parse` ile süzüyordu:
+  uygulama her yerde tam boy özgün dosyayı çiziyordu — 1500 px'lik dosya 48 dp'lik daireye.
+
+  ── MERKEZİ KÜTÜPHANE: WEB İLE TEK KAPI ─────────────────────────────────────
+
+  `packages/types/src/primitives/image-frames.ts` üç şeyin TEK tanımı:
+  · **Çerçeve kaynaklarının şekli** (`ImageFrameSourcesSchema`). Anahtarları `FRAME_RATIOS`ten
+    türüyor, elle yazılmış ikinci bir liste yok. `storefront-types` kendi elle yazdığı tipi bıraktı,
+    buradan türetiyor.
+  · **`srcSet` biçimi** (`srcSetOf`). Sunucunun `frameSourcesOf`u bugün hâlâ elle kuruyor; `map.ts`
+    web şeridinde açık olduğu için bağlantı onların — iki şeridin notlaşması: ikinci commit eden bağlar.
+  · **Seçim** (`frameUrlFor`). Kutunun ORANI en yakın çerçeveyi, kutu × yoğunluk ona YETEN en küçük
+    basamağı seçer (yoksa en büyüğünü). Yuvarlama hep yukarı — kullanıcının kuralı.
+
+  Web seçimi tarayıcıya bırakıyor (`srcset` + `sizes`); native bırakamıyor. RN `srcSet`te genişlik
+  betimleyicisini (`400w`) uyarıyla yok sayıyor (ölçüldü: RN 0.86 `Libraries/Image/ImageSourceUtils.js`).
+
+  ── NATIVE ──────────────────────────────────────────────────────────────────
+
+  · **Sözleşme:** `CatalogImageSchema.frames` — alan zorunlu, değeri `null` olabilir. Görseli üreten iki
+    kapı (`imageOf` · `EMPTY_IMAGE`) ikisi de yazıyor; sunucuda elle kurulan görsel nesnesi yok (tarandı).
+  · **`FrameImage`** — katalog görselinin native'deki tek çizim ilkeli. Kutu biliniyorsa (daire çapı)
+    ilk karede, bilinmiyorsa `onLayout` ile ölçüp ister. Ölçüm gelmeden adres İSTEMEZ: yanlış basamağı
+    indirmek, bir kare beklemekten pahalı. `frames: null` ise özgün dosya ve merkez kırpma (yedek yol).
+  · **Bütün katalog görselleri ona geçti.** Kit bileşenleri `photoUri` yerine `image` alıyor; düz
+    `<Image>` çizen dört ekran da geçti (tarif kahramanı · paket içerik satırı · keşif kartı · geri
+    bildirim). `photoUri` yalnız adresi hazır gelen görsellerde kaldı (operasyonun `thumbnailImageUrl`i).
+  · **Sepet deposu satırda hazır adres değil KATALOG görselini tutuyor.** Satır iki boyda çiziliyor
+    (sepette 56, ödemede 40 dp) ve adresi çizen yer seçiyor. Depo yalnız bellekte yaşıyor, taşınacak
+    eski kayıt yok. Yerinde satışın sepeti de aynı.
+  · **`Accept: image/webp`.** CDN `format=auto` başlıksız isteğe JPEG döndü. Ölçüldü (aynı kare türev,
+    200 · 400 · 800): JPEG 2.645 · 6.380 · 17.004 B, WebP 1.770 · 4.420 · 11.862 B — ~%30 küçük. AVIF
+    istenmiyor, Android'in çözücüsü (Fresco) açmıyor. Dönüşüm sayısı değişmez (`format=auto` tek dönüşüm).
+  · **Mobil API sıkıştırıyor** (`compress()`), çünkü `frames` cevapları büyüttü: vitrin 90.543 → 4.375 B
+    · kategoriler 30.891 → 1.491 B · ürünler (20) 113.472 → 5.355 B. Üç uçta bütün görsellerin türevi
+    dolu (17 · 6 · 20, `null` yok).
+
+  **Kimlik:** iş önce 21.301 diye yazılmıştı; yönetim şeridi o numarayı commit'ledi (`970059a7`) ve
+  21.302 de başka bir şeridin açık işinde. 21.303'e taşındı.
+
+  ── AÇIK KALAN ──────────────────────────────────────────────────────────────
+
+  **Kapandı (10.09).** Dört native kutunun oranı sunucuda yoktu: tarif rafı (220 × 280) ve keşif kartı
+  kareyi, tarif listesi (350 × 168) ve vitrin paket kartı (350 × 172) sohbet çerçevesini (1,91) alıp
+  farkı `cover` ile kesiyordu. Dikey 4:5 ve geniş 2:1 web şeridinden geldi (`bd1545c6`; düzenleme
+  önizlemesi native kutuları da gösteriyor) ve native DEĞİŞMEDEN seçti — ölçüm aşağıda, KAPANIŞ'ta.
+  Web'e öneri olarak giden 600 basamağı eklenmedi (`IMAGE_WIDTHS` 200 · 400 · 800 · 1200 · 1600):
+  vitrin daireleri (146 · 148 dp, @3x 438 · 444 px) 800'ü çekiyor. Merdiven web'in kararı; değişirse
+  native aynı kapıdan kendiliğinden uyar.
+
+  ── DOĞRULAMA ───────────────────────────────────────────────────────────────
+
+  **Cihaz turu (10.09) — iOS simülatöründe ölçüldü** (iPhone 17 Pro, @3x). Android telefon o saatte
+  bağlı değildi; ne USB'de ne mDNS'te görünüyordu. Simülatördeki geliştirme kurulumu 30.08'dendi ve
+  08.09'da gelen `expo-audio`yu taşımadığı için açılışta düşüyordu (`Cannot find native module
+  'ExpoAudio'`); yeniden derlendi. Kanıt uygulamanın KENDİ önbelleğinden okundu (`NSURLCache`,
+  `Cache.db`): hangi adres, hangi başlıkla istendi, ne geldi.
+  · **Özgün dosya isteği 0, CDN türevi 17.** Aynı uygulama 06.09'da limonlu kekin 1500 px'lik
+    özgününü r2.dev'den indiriyordu; bugün 146 dp'lik daire için kare türevin 800 basamağını istiyor
+    (@3x'te 438 px → yeten ilk basamak).
+  · **Seçim her kutuda kuralın söylediği:** daireler kare / 800 · tarif rafı (220 × 280) kare / 1200
+    (840 px gerekiyor) · vitrin paket kartı (350 × 172) sohbet çerçevesi / 1200, 4:3 kaynaktan 1,91'e
+    kadraj `trim`i kenar başına 0,151.
+  · **Biçim:** istek `Accept: image/webp,*/*` taşıyor, cevap `image/webp` 11.862 B (aynı basamak
+    JPEG'de 17.004 B, özgün dosya 36.166 B).
+  · **Uçtan uca kadraj:** limonlu kekin odağı veritabanında 25/25, zoom'u 200 yapıldı → uç aynı anda
+    `trim=0.125;0.375;0.375;0.125` döndü → vitrin aşağı çekilince uygulama o adresi indirdi ve daire
+    yakınlaşmış kesimi çizdi (önce/sonra ekran görüntüsüyle karşılaştırıldı). Değerler geri kondu
+    (50/50/100).
+  · Görseller ekranda doğru çiziliyor: koleksiyon daireleri, vitrin seçkisi, tarif rafı, paket kartları.
+
+  Mobil paketi 1502/1504 — iki düşüş `unistyles.test.ts`in italik font testleri (başka şeridin açık
+  notu). Bu turda düzelen: keşif testlerinin iki fikstürü görseli `frames`siz yazıyordu ve sözleşme
+  alanı zorunlu tuttuğu için hook `error`a düşüyordu — kıran taraf onardı. `FrameImage` 5 test (kutu
+  bilinirken ilk kare · ölçüm gelmeden adres yok · oranın çerçevesi · WebP başlığı · çağıranın
+  `onLayout`u). Birim projesi 194 dosya / 2170 test · lint temiz · knip bu işin dosyalarında temiz.
+
+  ── KAPANIŞ (10.09, yönetim şeridi) ─────────────────────────────────────────
+
+  Kullanıcı *"resim konusunun entegrasyonunun bittiğini, yeni yöntemin tam olarak kurulduğundan emin
+  olmanı istiyorum"* dedi. Ölçüm dört açık buldu, dördü kapandı:
+  · **Bayat işaret:** `frame-image.tsx` "4:5 / 2:1 sunucuda yok" diyordu; `bd1545c6` ikisini getirmişti.
+    İşaret kalktı, künye bugünü yazıyor. Merkezi kütüphaneye dört native kutunun seçimini kilitleyen iki
+    test eklendi: tarif rafı 220 × 280 ve keşif kartı ~366 × 429 (simülatör görüntüsünden) → dikey;
+    tarif listesi 350 × 168 ve paket kartı 350 × 172 → geniş.
+  · **`srcSet` iki yerde kuruluyordu:** sunucunun `frameSourcesOf`u metni elle yazıyordu; artık merkezi
+    `srcSetOf`u çağırıyor ("ikinci commit eden bağlar" notunun karşılığı).
+  · **Mal kabul arama satırı** ürün küçük resmini düz `<Image>` ile çiziyordu — CDN'den WebP istemiyor,
+    operasyonun öteki satırlarından ayrı bir kare çiziyordu. Kitin `OperationsProductThumb`una geçti (ölçü
+    aynı, 44); görsel yoksa yer tutucu çizilmemesi (kullanıcı kararı, satırın künyesi) korundu.
+  · **Veri:** dokuz görsel tablosunda kaynak ölçüsü eksik görsel yok — `db:refresh` sonrasında da. Tohum
+    ölçüyü en sonda yazıyor; yenileme sürerken ölçü geçici olarak boş görünür.
+
+  **Taze cihaz ölçümü** (iOS simülatörü, iPhone 17 Pro @3x, `db:refresh` sonrası temiz önbellek — kanıt
+  uygulamanın kendi `Cache.db`si): vitrin açılıp kaydırıldı → **17 CDN türevi, özgün dosya 0.** Paket
+  kartları geniş 2:1 / 1200 (4:3 kaynaktan alt-üst 0,1667; sohbet çerçevesi olsaydı 0,151) · tarif rafı
+  dikey 4:5 / 800 (yan 0,2 · 0,2344; dikey fotoğrafta alt-üst 0,0867 — rafın 672 px'ine yeten ilk
+  basamak) · kategori, koleksiyon ve ürün daireleri kare / 800. Tarif listesi geniş 2:1 / 1200 (0,1667 ·
+  0,1235 · 0,3347). CDN'e doğrudan sorulan türevler 200 + `cf-resized=internal=ok`; tarifin özgün dosyası
+  2,1 MB, raftaki 4:5/800 türevi 227 KB. Android'de (Oppo, USB) tarif listesi aynı kartlarla çiziliyor;
+  indirilen adres Android'de okunamıyor (iOS'taki gibi adres tutan bir önbellek yok). Ölçüm sırasında
+  başka birinin başlattığı yenileme koşarken iki kart birkaç dakika fotoğrafsız göründü; bitince çizildi.
+
+  Doğrulama: kök `typecheck` 20/20 · `lint` temiz · birim projesi 2181/2181 (merkezi kütüphane 13/13) ·
+  mobil paket 1503/1505 (iki düşüş `unistyles.test.ts`in italik yazı testleri — önceden de vardı, bu işle
+  ilgisiz) · `FrameImage` + mal kabul testleri 61/61 · kilitli kök paket **4529/4529**.

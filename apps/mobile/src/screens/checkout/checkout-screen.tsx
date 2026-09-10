@@ -416,12 +416,13 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
   // Küçük resimler de siparişin kendisini gösterir: kapsam dışı bir kalemin fotoğrafı, "bunlar
   // geliyor" diye okunurdu.
-  /* FOTOĞRAF DA GEÇİLİR (kullanıcı bulgusu 10.08): yuvarlaklar baş harf çiziyordu çünkü `photoUri`
+  /* FOTOĞRAF DA GEÇİLİR (kullanıcı bulgusu 10.08): yuvarlaklar baş harf çiziyordu çünkü fotoğraf
      hiç verilmiyordu — `AvatarThumb` onu zaten destekliyor. Baş harf yedek olarak kalır: fotoğrafı
-     olmayan ürün boş bir daire değil, adının ilk harfi olur. */
+     olmayan ürün boş bir daire değil, adının ilk harfi olur. Görsel katalogdaki hâliyle geçer;
+     daire kendi çapına yeten kare CDN türevini seçer (21.303). */
   const thumbs = [
-    ...cart.bundles.map((bundle) => ({ key: `bundle-${bundle.id}`, name: bundle.name, photoUri: bundle.photoUri })),
-    ...orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, photoUri: line.image.url })),
+    ...cart.bundles.map((bundle) => ({ key: `bundle-${bundle.id}`, name: bundle.name, image: bundle.image })),
+    ...orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, image: line.image })),
   ].slice(0, 4);
 
   /* YALNIZ EKSİK OLAN ALAN ÇİZİLİR — dolu olanı yeniden sormak, müşteriye zaten verdiği bilgiyi
@@ -654,7 +655,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                 key={thumb.key}
                 initial={thumb.name.slice(0, 1)}
                 accessibilityLabel={thumb.name}
-                photoUri={thumb.photoUri}
+                image={thumb.image}
                 size="sm"
                 stacked
               />

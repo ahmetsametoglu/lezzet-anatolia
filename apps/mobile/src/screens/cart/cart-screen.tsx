@@ -356,7 +356,7 @@ export function CartScreen() {
         subtitle={subtitle}
         totalLabel={line.lineTotalCents === null ? t.line.noPrice : formatPrice(line.lineTotalCents, locale)}
         quantity={line.qty}
-        photoUri={line.image.url}
+        image={line.image}
         tone={bundle ? 'bundle' : 'product'}
         eyebrow={bundle ? t.line.bundle : undefined}
         discountLabel={line.wasCents === undefined ? undefined : t.line.discounted}

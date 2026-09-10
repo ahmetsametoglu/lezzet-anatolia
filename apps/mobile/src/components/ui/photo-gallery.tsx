@@ -1,8 +1,11 @@
+import type { CatalogImage } from '@lezzet/types';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { FlatList, Image, View, useWindowDimensions } from 'react-native';
+import { FlatList, View, useWindowDimensions } from 'react-native';
 import type { LayoutChangeEvent, ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+
+import { FrameImage } from './frame-image';
 
 /*
   FOTOĞRAF GALERİSİ — kahraman görselin yerine geçen yatay şerit (ürün detayı · paket detayı).
@@ -62,13 +65,17 @@ function fillLabel(template: string, index: number, total: number): string {
   return template.replace('{n}', String(index)).replace('{total}', String(total));
 }
 
+/** Karoya giren görsel — adresi olan (adressiz görsel galeriye girmez). */
+type ShownPhoto = CatalogImage & { url: string };
+
 interface PhotoGalleryProps {
   /**
-   * Görsel adresleri, gösterim sırasında; İLK öğe kapaktır. Adressiz (`null`) görselleri çağıran
-   * ELER — boş karo çizilmez. Tekrarlanan adres burada elenir: aynı fotoğraf iki karo olsaydı
-   * kaydırma "takılmış" gibi görünürdü (ve karo anahtarı ikizlenirdi).
+   * Katalog görselleri, gösterim sırasında; İLK öğe kapaktır. Adressiz (`url: null`) görsel ve
+   * tekrarlanan adres BURADA elenir: boş karo çizilmez, aynı fotoğraf iki karo olsaydı kaydırma
+   * "takılmış" gibi görünürdü (ve karo anahtarı ikizlenirdi). Her karo kendi kutusuna oturan CDN
+   * türevini alır (21.303, `FrameImage`) — tam boy özgün dosyayı değil.
    */
-  uris: string[];
+  images: readonly CatalogImage[];
   /** Karo etiketi şablonu ("Ürün görseli {n} / {total}") — i18n çağıranda çözülür. */
   photoLabel: string;
   /** Hiç görsel yokken çizilen yer tutucu; ekranın kendi baş-harf karesi buraya geçer. */
@@ -76,12 +83,14 @@ interface PhotoGalleryProps {
   testID?: string;
 }
 
-export function PhotoGallery({ uris, photoLabel, fallback, testID }: PhotoGalleryProps) {
+export function PhotoGallery({ images, photoLabel, fallback, testID }: PhotoGalleryProps) {
   const { width: windowWidth } = useWindowDimensions();
   const [layoutWidth, setLayoutWidth] = useState<number | null>(null);
   const [active, setActive] = useState(0);
 
-  const photos = Array.from(new Set(uris));
+  const photos = images.filter(
+    (image, index): image is ShownPhoto => image.url !== null && images.findIndex((other) => other.url === image.url) === index,
+  );
   const width = layoutWidth ?? windowWidth;
 
   const measure = (event: LayoutChangeEvent) => {
@@ -97,14 +106,13 @@ export function PhotoGallery({ uris, photoLabel, fallback, testID }: PhotoGaller
     if (index !== active) setActive(index);
   };
 
-  const renderPhoto = ({ item, index }: ListRenderItemInfo<string>) => (
-    <Image
-      source={{ uri: item }}
+  const renderPhoto = ({ item, index }: ListRenderItemInfo<ShownPhoto>) => (
+    <FrameImage
+      image={item}
       style={[styles.slide, { width }]}
       accessible
       accessibilityRole="image"
       accessibilityLabel={fillLabel(photoLabel, index + 1, photos.length)}
-      accessibilityIgnoresInvertColors
     />
   );
 
@@ -118,7 +126,7 @@ export function PhotoGallery({ uris, photoLabel, fallback, testID }: PhotoGaller
 
   const single = photos[0];
   if (photos.length === 1 && single !== undefined) {
-    return <Image source={{ uri: single }} style={styles.fill} testID={testID} accessibilityIgnoresInvertColors />;
+    return <FrameImage image={single} style={styles.fill} testID={testID} />;
   }
 
   return (
@@ -128,7 +136,7 @@ export function PhotoGallery({ uris, photoLabel, fallback, testID }: PhotoGaller
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(uri) => uri}
+        keyExtractor={(image) => image.url}
         getItemLayout={(_data, index) => ({ length: width, offset: width * index, index })}
         onMomentumScrollEnd={settle}
         renderItem={renderPhoto}
@@ -142,8 +150,8 @@ export function PhotoGallery({ uris, photoLabel, fallback, testID }: PhotoGaller
         importantForAccessibility="no-hide-descendants"
         testID={testID === undefined ? undefined : `${testID}-dots`}
       >
-        {photos.map((uri, index) => (
-          <View key={uri} style={[styles.dot, index === active ? styles.dotActive : styles.dotIdle]} />
+        {photos.map((image, index) => (
+          <View key={image.url} style={[styles.dot, index === active ? styles.dotActive : styles.dotIdle]} />
         ))}
       </View>
     </View>

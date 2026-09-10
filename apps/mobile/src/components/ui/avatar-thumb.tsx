@@ -1,3 +1,4 @@
+import type { CatalogImage } from '@lezzet/types';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { CirclePhoto } from './circle-photo';
@@ -18,6 +19,8 @@ interface AvatarThumbProps {
   /** Ekran okuyucu adı — kişi/ürün adı; i18n üstte çözülür. */
   accessibilityLabel: string;
   photoUri?: string | null;
+  /** Ürün küçük resmi (21.303) — dairenin çapına yeten kare CDN türevi; `photoUri`nin yerine geçer. */
+  image?: CatalogImage | null;
   size?: 'sm' | 'md' | 'lg';
   tone?: 'sand' | 'olive';
   /** Yığın varyantı: soldaki komşunun üstüne biner ve krem halka alır. */
@@ -29,6 +32,7 @@ export function AvatarThumb({
   initial,
   accessibilityLabel,
   photoUri,
+  image,
   size = 'md',
   tone = 'sand',
   stacked = false,
@@ -44,6 +48,7 @@ export function AvatarThumb({
       initial={initial}
       initialFontSize={initialFontSize}
       photoUri={photoUri}
+      image={image}
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       style={[tone === 'olive' ? styles.olive : undefined, stacked ? styles.stacked : undefined]}

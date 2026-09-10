@@ -1,7 +1,10 @@
+import type { CatalogImage } from '@lezzet/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Image, type StyleProp, Text, View, type ViewStyle } from 'react-native';
+import { type StyleProp, Text, View, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+
+import { FrameImage } from '@/components/ui/frame-image';
 
 /*
   DİKDÖRTGEN FOTOĞRAF YÜZEYİ — kitin İÇ ilkeli; `CirclePhoto`nun (daire) dikdörtgen ikizi ve
@@ -22,7 +25,12 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 */
 
 interface PhotoSurfaceProps {
-  photoUri: string | null;
+  /**
+   * Katalog görseli (21.303). Yüzey kendi boyunu bilmez (künye) — `FrameImage` kutuyu ölçer ve oranına
+   * en yakın CDN çerçevesini, boyuna yeten basamaktan ister: 168'lik tarif kartı geniş, 280'lik raf
+   * kartı dikey türevi alır, ikisi de aynı yüzeyden.
+   */
+  image: CatalogImage;
   /** Fotoğraf yokken çizilen baş harf. */
   initial: string;
   /** Alt kenarı karartan geçiş — üstünde yazı duracaksa. */
@@ -34,17 +42,17 @@ interface PhotoSurfaceProps {
   testID?: string;
 }
 
-export function PhotoSurface({ photoUri, initial, scrim = false, style, children, testID }: PhotoSurfaceProps) {
+export function PhotoSurface({ image, initial, scrim = false, style, children, testID }: PhotoSurfaceProps) {
   const { theme } = useUnistyles();
 
   return (
     <View style={[styles.surface, style]} testID={testID}>
-      {photoUri === null ? (
+      {image.url === null ? (
         <View style={styles.placeholder}>
           <Text style={styles.initial}>{initial}</Text>
         </View>
       ) : (
-        <Image source={{ uri: photoUri }} style={styles.image} accessibilityIgnoresInvertColors />
+        <FrameImage image={image} style={styles.image} />
       )}
       {scrim ? <LinearGradient {...theme.gradient.photoBottom} style={styles.scrim} pointerEvents="none" /> : null}
       {children}

@@ -259,10 +259,8 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   const similar = detail.similar.filter((product) => product.priceCents !== null);
   /* Kahraman şeridi sözleşmenin GALERİSİNDEN kurulur (ilk öğe kapaktır — `CatalogProductDetail`
      künyesi); galeri hiç gelmediyse tek kapakla çizilir ve ekran bugünkü hâlini korur. Adressiz
-     görsel elenir: `url === null` "görsel yok / R2 tabanı ayarsız" demektir, boş bir karo değil. */
-  const heroPhotos = (detail.gallery.length > 0 ? detail.gallery : [detail.image])
-    .map((image) => image.url)
-    .filter((url): url is string => url !== null);
+     görseli galeri eler: `url === null` "görsel yok / R2 tabanı ayarsız" demektir, boş bir karo değil. */
+  const heroPhotos = detail.gallery.length > 0 ? detail.gallery : [detail.image];
 
   /* PAYLAŞIM ADRESİ TAŞIR, YALNIZ AD DEĞİL (08.45). Eskiden gövde `detail.name`di: karşı tarafa
      "Su Böreği" yazan, tıklanacak hiçbir şeyi olmayan bir mesaj gidiyordu — cihazda ölçüldü.
@@ -286,7 +284,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
         name: detail.name,
         variantLabel: variant.label,
         unitCents: price,
-        photoUri: detail.image.url,
+        image: detail.image,
         discounted,
         soldOut: false,
       },
@@ -309,7 +307,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
           {/* Şerit kahramanın YERİNE geçer, yerleşimini değiştirmez: degrade, düğmeler ve rozetler
               onun üstünde çizilmeye devam eder (kardeş sırası korundu). */}
           <PhotoGallery
-            uris={heroPhotos}
+            images={heroPhotos}
             photoLabel={t.gallery.photo}
             fallback={
               <View style={styles.heroFallback}>
@@ -413,7 +411,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                       size={customerMetrics.productFamilyPhoto}
                       initial={member.label.slice(0, 1)}
                       initialFontSize={theme.text.note}
-                      photoUri={member.image.url}
+                      image={member.image}
                     />
                     <View>
                       <Text style={styles.familyName}>{member.label}</Text>
@@ -544,7 +542,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                      yeri vitrin bandı oldu. Kural kitte; katalog ve vitrinle aynı. */
                   discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                   size="sm"
-                  photoUri={product.image.url}
+                  image={product.image}
                   initial={product.name.slice(0, 1)}
                   onPress={() => router.push(`/product/${product.slug}`)}
                   testID={`product-similar-${product.slug}`}

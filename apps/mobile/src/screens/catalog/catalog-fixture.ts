@@ -19,7 +19,7 @@ export function catalogProduct(index: number, overrides: Partial<CatalogProduct>
     id: uuid(index),
     slug: `urun-${index}`,
     name: `Ürün ${index}`,
-    image: { url: `https://cdn.test/${index}.jpg`, crop: CROP_CENTER },
+    image: { url: `https://cdn.test/${index}.jpg`, crop: CROP_CENTER, frames: null },
     unitLabel: '1 kg',
     variantId: uuid(1000 + index),
     variantCount: 1,
@@ -35,5 +35,5 @@ export function catalogProduct(index: number, overrides: Partial<CatalogProduct>
 }
 
 export function catalogCategory(index: number, slug: string, name: string): CatalogCategory {
-  return { id: uuid(500 + index), slug, name, image: { url: null, crop: CROP_CENTER } };
+  return { id: uuid(500 + index), slug, name, image: { url: null, crop: CROP_CENTER, frames: null } };
 }

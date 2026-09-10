@@ -42,13 +42,13 @@ export function productDetail(overrides: Partial<CatalogProductDetail> = {}): Ca
     name: 'El Açması Kol Böreği',
     description: 'El açması yufka, taş fırında günlük pişer; peynirli iç harcı Anadolu tulumuyla yoğrulur.',
     shippable: true,
-    image: { url: 'https://cdn.test/kol-boregi.jpg', crop: CROP_CENTER },
+    image: { url: 'https://cdn.test/kol-boregi.jpg', crop: CROP_CENTER, frames: null },
     gallery: [],
     category: {
       id: uuid(9),
       slug: 'borekler',
       name: 'Börekler',
-      image: { url: null, crop: CROP_CENTER },
+      image: { url: null, crop: CROP_CENTER, frames: null },
     },
     variants: [productVariant(1), productVariant(2)],
     /* Fiyatı olan EN UCUZ boy — burada 1. boy (890 vs 1780). Sunucu bu ölçütü kendisi uygular
@@ -79,8 +79,8 @@ export function productDetail(overrides: Partial<CatalogProductDetail> = {}): Ca
       ],
     },
     family: [
-      { slug: 'el-acmasi-kol-boregi', label: 'Peynirli', image: { url: null, crop: CROP_CENTER }, fromPriceCents: 890, isCurrent: true },
-      { slug: 'ispanakli-kol-boregi', label: 'Ispanaklı', image: { url: null, crop: CROP_CENTER }, fromPriceCents: 950, isCurrent: false },
+      { slug: 'el-acmasi-kol-boregi', label: 'Peynirli', image: { url: null, crop: CROP_CENTER, frames: null }, fromPriceCents: 890, isCurrent: true },
+      { slug: 'ispanakli-kol-boregi', label: 'Ispanaklı', image: { url: null, crop: CROP_CENTER, frames: null }, fromPriceCents: 950, isCurrent: false },
     ],
     similar: [catalogProduct(21, { slug: 'su-boregi', name: 'Su Böreği' }), catalogProduct(22, { slug: 'sigara-boregi', name: 'Sigara Böreği' })],
     ...overrides,

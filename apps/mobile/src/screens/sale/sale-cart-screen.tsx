@@ -80,7 +80,7 @@ export function SaleCartScreen() {
           <>
             {sale.lines.map((line) => (
               <View key={line.variantId} style={styles.cartRow} testID={`sale-cart-${line.variantId}`}>
-                <CirclePhoto size={44} initial={line.name.slice(0, 1)} initialFontSize={18} photoUri={line.imageUrl} />
+                <CirclePhoto size={44} initial={line.name.slice(0, 1)} initialFontSize={18} image={line.image} />
                 <View style={styles.cartInfo}>
                   <Text style={styles.cartName}>{line.name}</Text>
                   <Text style={styles.cartMeta}>

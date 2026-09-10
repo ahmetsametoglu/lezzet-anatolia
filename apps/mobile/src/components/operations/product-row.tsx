@@ -1,3 +1,4 @@
+import type { CatalogImage } from '@lezzet/types';
 import type { ReactNode } from 'react';
 import { type StyleProp, Text, View, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -51,6 +52,8 @@ interface OperationsProductRowProps {
    */
   titleMode?: 'name-first' | 'full-name';
   photoUri?: string | null;
+  /** KATALOG görseli (21.303) — verilirse `photoUri`nin yerine geçer (`OperationsProductThumb`). */
+  image?: CatalogImage | null;
   /** `sm` kutu içeriği (kare 30, başlık 12) · `md` kontrol listesi (kare 44, başlık 13). */
   size?: 'sm' | 'md';
   /** Karenin zemini — `olive` yalnız açık kutunun içinde. */
@@ -75,6 +78,7 @@ export function OperationsProductRow({
   name,
   variantLabel,
   photoUri,
+  image,
   size = 'sm',
   tone = 'neutral',
   titleMode = 'name-first',
@@ -87,7 +91,7 @@ export function OperationsProductRow({
 }: OperationsProductRowProps) {
   const body = (
     <>
-      <OperationsProductThumb name={name} photoUri={photoUri} size={size} tone={tone} />
+      <OperationsProductThumb name={name} photoUri={photoUri} image={image} size={size} tone={tone} />
       <View style={styles.center}>
         <Text style={size === 'sm' ? styles.title_sm : styles.title_md}>
           {name}

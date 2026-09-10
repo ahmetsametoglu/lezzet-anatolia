@@ -1,3 +1,4 @@
+import type { CatalogImage } from '@lezzet/types';
 import type { ReactNode } from 'react';
 import { type DimensionValue, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -35,7 +36,8 @@ interface PhotoTileProps {
   height: number;
   /** Sabit genişlik (yatay ray); verilmezse kart bulunduğu sütunu doldurur. */
   width?: DimensionValue;
-  photoUri: string | null;
+  /** Katalog görseli — kartın kutusuna oturan CDN türevi (21.303, `PhotoSurface`). */
+  image: CatalogImage;
   /** Fotoğraf yokken çizilen baş harf. */
   initial: string;
   /** Sol üst köşedeki rozet yuvası (tarif kartının süresi). */
@@ -58,7 +60,7 @@ interface PhotoTileProps {
 export function PhotoTile({
   height,
   width,
-  photoUri,
+  image,
   initial,
   topBadge,
   topRightBadge,
@@ -77,7 +79,7 @@ export function PhotoTile({
       testID={testID}
     >
       {/* SOLAN GRUP — yalnız fotoğraf ve skrimi; kartın kutusunu kaplar. */}
-      <PhotoSurface photoUri={photoUri} initial={initial} scrim style={[styles.photo, dimmed ? styles.faded : undefined]} />
+      <PhotoSurface image={image} initial={initial} scrim style={[styles.photo, dimmed ? styles.faded : undefined]} />
       {topBadge === undefined ? null : <View style={styles.topBadge}>{topBadge}</View>}
       {topRightBadge === undefined ? null : <View style={styles.topRightBadge}>{topRightBadge}</View>}
       <View style={styles.caption}>{children}</View>

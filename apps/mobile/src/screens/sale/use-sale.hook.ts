@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SaleCatalogProduct, SalePlace, SaleVariant } from '@lezzet/types';
+import type { CatalogImage, SaleCatalogProduct, SalePlace, SaleVariant } from '@lezzet/types';
 
 import { fetchSaleCatalog, fetchSaleVariants, scanSaleCode, sellOnSite } from '@/lib/api/sale';
 /* ÇEVRİMDIŞI SİNYALİ DEPONUNKİYLE AYNI (v3:20 istiyor: "Sepete ekleme kapalı" / "Satış yazma
@@ -51,8 +51,11 @@ export interface SaleCartLine {
   negotiatedCents: number | null;
   /** Çekmece açıldığı andaki kalan — gösterge (üst künye). */
   availableHere: number;
-  /** Ürün görseli (sepet satırı da yüzü gösterir) — boy görseli yok, ürününki kullanılır. */
-  imageUrl: string | null;
+  /**
+   * Ürün görseli (sepet satırı da yüzü gösterir) — boy görseli yok, ürününki kullanılır. Katalogdaki
+   * hâliyle taşınır: daire kendi çapına yeten kare CDN türevini seçer (21.303).
+   */
+  image: CatalogImage;
 }
 
 /** Çekmecenin konusu: kart + (çok boyluda) yüklenen boylar + seçim + adet + fiyat metni. */
@@ -79,7 +82,7 @@ export interface DraftSelection {
   listPriceCents: number;
   availableHere: number;
   name: string;
-  imageUrl: string | null;
+  image: CatalogImage;
 }
 
 /** Seçili boyun künyesi — tek boyluda karttan, çok boyluda yüklenen boydan. */
@@ -92,7 +95,7 @@ export function selectionOf(draft: SaleDraft): DraftSelection | null {
       listPriceCents: picked.priceCents,
       availableHere: picked.availableHere,
       name: picked.label.length === 0 ? draft.product.name : `${draft.product.name} · ${picked.label}`,
-      imageUrl: draft.product.image.url,
+      image: draft.product.image,
     };
   }
   if (draft.variants !== null) return null; // boylar hâlâ yolda ya da okunamadı
@@ -102,7 +105,7 @@ export function selectionOf(draft: SaleDraft): DraftSelection | null {
     listPriceCents: draft.product.priceCents,
     availableHere: draft.product.availableHere ?? 0,
     name: draft.product.name,
-    imageUrl: draft.product.image.url,
+    image: draft.product.image,
   };
 }
 
@@ -333,7 +336,7 @@ export function useSale(place: SalePlace) {
               listPriceCents: selection.listPriceCents,
               negotiatedCents: negotiated,
               availableHere: selection.availableHere,
-              imageUrl: selection.imageUrl,
+              image: selection.image,
             },
           ];
         }

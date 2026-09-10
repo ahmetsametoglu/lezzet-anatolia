@@ -14,7 +14,7 @@ function packageItem(index: number, overrides: Partial<PackageItem> = {}): Packa
     name: `Paket Ürünü ${index}`,
     unitLabel: `${index * 250} g`,
     qty: 1,
-    image: { url: null, crop: CROP_CENTER },
+    image: { url: null, crop: CROP_CENTER, frames: null },
     ...overrides,
   };
 }
@@ -37,7 +37,7 @@ export function packageDetail(overrides: Partial<PackageDetail> = {}): PackageDe
        vermez. */
     soldOut: false,
     route: 'local',
-    image: { url: 'https://cdn.test/bayram-sofrasi.jpg', crop: CROP_CENTER },
+    image: { url: 'https://cdn.test/bayram-sofrasi.jpg', crop: CROP_CENTER, frames: null },
     items: [
       packageItem(1, { slug: 'fistikli-baklava', name: 'Fıstıklı Baklava', unitLabel: '500 g' }),
       packageItem(2, { slug: 'su-boregi', name: 'Su Böreği', unitLabel: '1 kg' }),

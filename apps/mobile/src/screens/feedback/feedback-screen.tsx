@@ -2,13 +2,14 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, Linking, Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormScroll } from '@/components/ui/form-scroll';
+import { FrameImage } from '@/components/ui/frame-image';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -230,14 +231,14 @@ export function FeedbackScreen({ token }: FeedbackScreenProps) {
           /* ── Oy aşaması: fotoğraf + rozet + künye, iki oy düğmesi, alt not (v3:1014-1030) ── */
           <View testID="feedback-vote">
             <View style={styles.photo}>
-              {/* Kırpma künyesi (`image.crop`) bugün uygulanmıyor — ürün detayının kahramanıyla
-                  aynı durum: RN tarafında odak/zoom mekanizması kit işidir, ekran başına yazılmaz. */}
+              {/* Kadraj (operatörün odak + zoom'u) CDN türevinde UYGULANMIŞ gelir ve kutuya en yakın
+                  çerçeve seçilir (`FrameImage`, 21.303) — ekran başına yazılmaz. */}
               {card.image.url === null ? (
                 <View style={styles.photoFallback}>
                   <Text style={styles.photoInitial}>{card.name.slice(0, 1)}</Text>
                 </View>
               ) : (
-                <Image source={{ uri: card.image.url }} style={styles.photoImage} accessibilityIgnoresInvertColors />
+                <FrameImage image={card.image} style={styles.photoImage} />
               )}
               <LinearGradient {...theme.gradient.photoBottom} style={styles.photoScrim} pointerEvents="none" />
               {invite.orderReferenceNo === null ? null : (

@@ -130,7 +130,7 @@ export function PackagesListScreen({ locale: forcedLocale }: PackagesListScreenP
             bloğun tamamını kaplıyor. */}
         <View style={styles.photo}>
           <PhotoSurface
-            photoUri={pack.image.url}
+            image={pack.image}
             initial={pack.name.slice(0, 1)}
             scrim
             style={[styles.photoFill, faded ? styles.fadedPhoto : undefined]}

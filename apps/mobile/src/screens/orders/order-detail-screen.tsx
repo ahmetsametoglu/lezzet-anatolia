@@ -292,7 +292,7 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
                 <AvatarThumb
                   initial={line.name.slice(0, 1)}
                   accessibilityLabel={line.name}
-                  photoUri={line.image.url}
+                  image={line.image}
                   size={LINE_THUMB_SIZE}
                 />
                 <View style={styles.itemText}>

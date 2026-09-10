@@ -501,7 +501,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               initial={offer.name.slice(0, 1)}
               initialFontSize={theme.text['h2-sm']}
               initialStyle={styles.offerInitial}
-              photoUri={offer.image.url}
+              image={offer.image}
             />
             <View style={styles.offerText}>
               <Text style={styles.offerName}>{offer.name}</Text>
@@ -566,7 +566,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                      bantların ÜSTÜNDE çiziliyor (`photoInOverlay`) ve rozet dairenin köşesinde
                      duruyor — burada verilirse hiç çizilmezdi. */
                   index={index}
-                  photoUri={band.image.url}
+                  image={band.image}
                   onPress={() =>
                     /* Her iki tür de katalogu KENDİ süzgeciyle açar (21.64 — koleksiyon kesiti
                        eklenene kadar koleksiyon bandı kataloğun köküne gidiyordu ve müşteri
@@ -585,7 +585,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   key={`photo-${band.slug}`}
                   name={band.name}
                   index={index}
-                  photoUri={band.image.url}
+                  image={band.image}
                   /* Rozet DAİRENİN köşesinde (27.08 · kullanıcı isteği) ve daireler bu katmanda
                      çiziliyor — bandın kendi dalına verilen `discountLabel` vitrinde kullanılmaz. */
                   discountLabel={scopeBadgeOf(band.campaign, t.campaign, locale)}
@@ -627,7 +627,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                        kez inen indirimi ürünün üstüne yazmak, ürün başına vaat gibi okunuyordu —
                        yeri kesitin kendi kartı oldu (yukarıdaki koleksiyon bantları). */
                     discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
-                    photoUri={product.image.url}
+                    image={product.image}
                     stockMark={placeMark}
                     // Solma yalnız KAPALI kapıda (gerekçe: katalog ekranının aynı satırı).
                     dimmed={stockMark?.tone === 'blocked'}
@@ -675,7 +675,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   key={recipe.slug}
                   width={customerMetrics.recipeCardWidth}
                   height={customerMetrics.recipeCardHeight}
-                  photoUri={recipe.image.url}
+                  image={recipe.image}
                   initial={recipe.name.slice(0, 1)}
                   /* `duration` hazır metindir ("35 dk" — 05.16, cümleyi cihaz kurmaz); null →
                      rozet çizilmez (girilmemiş süreye rozet uydurulmaz). */
@@ -737,7 +737,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               <PhotoTile
                 key={pack.slug}
                 height={customerMetrics.packageCardHeight}
-                photoUri={pack.image.url}
+                image={pack.image}
                 initial={pack.name.slice(0, 1)}
                 dimmed={faded}
                 topBadge={

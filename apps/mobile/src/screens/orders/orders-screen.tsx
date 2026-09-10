@@ -201,7 +201,7 @@ export function OrdersScreen({ locale: forcedLocale }: OrdersScreenProps) {
                 key={`${thumb.name}-${index}`}
                 initial={thumb.name.slice(0, 1)}
                 accessibilityLabel={thumb.name}
-                photoUri={thumb.image.url}
+                image={thumb.image}
                 size="sm"
                 stacked
               />

@@ -27,7 +27,7 @@ export function feedbackCard(index: number, overrides: Partial<FeedbackCard> = {
   return {
     productId: uuid(2100 + index),
     name: names[index] ?? `Ürün ${index + 1}`,
-    image: { url: `https://cdn.test/feedback-${index}.jpg`, crop: CROP_CENTER },
+    image: { url: `https://cdn.test/feedback-${index}.jpg`, crop: CROP_CENTER, frames: null },
     existing: null,
     ...overrides,
   };

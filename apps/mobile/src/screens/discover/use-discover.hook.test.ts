@@ -55,7 +55,7 @@ const card = (index: number) => ({
   productId: productId(index),
   name: `Aday ${index}`,
   description: null,
-  image: { url: null, crop: CROP_CENTER },
+  image: { url: null, crop: CROP_CENTER, frames: null },
 });
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();

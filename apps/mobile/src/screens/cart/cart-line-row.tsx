@@ -1,3 +1,4 @@
+import type { CatalogImage } from '@lezzet/types';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -33,7 +34,8 @@ interface CartLineRowProps {
   /** Satır toplamı — biçimlenmiş. */
   totalLabel: string;
   quantity: number;
-  photoUri: string | null;
+  /** Satırın görseli — dairenin çapına yeten kare CDN türevi (21.303). */
+  image: CatalogImage;
   tone: 'product' | 'bundle';
   /** Paket satırının üstbaşlığı ("HAZIR PAKET"); ürün satırında verilmez. */
   eyebrow?: string;
@@ -71,7 +73,7 @@ export function CartLineRow({
   subtitle,
   totalLabel,
   quantity,
-  photoUri,
+  image,
   tone,
   eyebrow,
   discountLabel,
@@ -103,7 +105,7 @@ export function CartLineRow({
       <AvatarThumb
         initial={name.slice(0, 1)}
         accessibilityLabel={name}
-        photoUri={photoUri}
+        image={image}
         size="lg"
         testID={testID === undefined ? undefined : `${testID}-photo`}
       />

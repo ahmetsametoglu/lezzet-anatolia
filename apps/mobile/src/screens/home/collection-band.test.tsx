@@ -20,12 +20,15 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR
   orada ölçülüyor); burada sorulan soru "bant onu ekrana koyuyor mu".
 */
 
+/** Görselsiz kesit — rozetin konusu fotoğraf değil, fotoğraf yokken de dairenin köşesinde durmalı. */
+const NO_PHOTO = { url: null, crop: { x: 50, y: 50, zoom: 100 }, frames: null };
+
 const band = {
   name: 'Bayram Sofrası',
   subtitle: 'Bayram klasikleri',
   countLabel: '20 çeşit ›',
   index: 0,
-  photoUri: null,
+  image: NO_PHOTO,
   onPress: () => {},
 };
 
@@ -59,12 +62,12 @@ describe('CollectionBand — kesit rozeti', () => {
 */
 describe('CollectionPhotoOverlay — vitrinin üst katmanı', () => {
   it('rozeti dairesiyle birlikte taşır', async () => {
-    await render(<CollectionPhotoOverlay name="Bayram Sofrası" index={0} photoUri={null} discountLabel="−3,00 €" />);
+    await render(<CollectionPhotoOverlay name="Bayram Sofrası" index={0} image={NO_PHOTO} discountLabel="−3,00 €" />);
     expect(screen.getByText('−3,00 €')).toBeOnTheScreen();
   });
 
   it('kampanyasız kesitte sessizdir', async () => {
-    await render(<CollectionPhotoOverlay name="Bayram Sofrası" index={0} photoUri={null} />);
+    await render(<CollectionPhotoOverlay name="Bayram Sofrası" index={0} image={NO_PHOTO} />);
     expect(screen.queryByText('−3,00 €')).toBeNull();
   });
 });

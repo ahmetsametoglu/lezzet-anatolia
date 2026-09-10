@@ -21,7 +21,7 @@ export function recipeRow(index: number, overrides: Partial<RecipeRow> = {}): Re
     variantLabel: `${index * 500} g tepsi`,
     qty: 1,
     priceCents: 450 * index,
-    image: { url: null, crop: CROP_CENTER },
+    image: { url: null, crop: CROP_CENTER, frames: null },
     soldOut: false,
     ...overrides,
   };
@@ -35,7 +35,7 @@ export function recipeDetail(overrides: Partial<RecipeDetail> = {}): RecipeDetai
     description: 'El açması börek, mini pide ve su böreğiyle kalabalık bir pazar sofrası.',
     duration: '35 dk',
     serves: '4–5 kişilik',
-    image: { url: 'https://cdn.test/kahvalti.jpg', crop: CROP_CENTER },
+    image: { url: 'https://cdn.test/kahvalti.jpg', crop: CROP_CENTER, frames: null },
     rows: [
       recipeRow(1, { productSlug: 'el-acmasi-kol-boregi', name: 'El Açması Kol Böreği', priceCents: 890 }),
       // Tarif iki adet istiyor (veri modeli: toplam = Σ qty × fiyat) — barın toplamı bunu kanıtlar.

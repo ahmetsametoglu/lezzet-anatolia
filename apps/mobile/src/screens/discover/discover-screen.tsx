@@ -3,7 +3,7 @@ import type { DiscoverCard, FeedbackVote } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Image, ScrollView, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ScrollView, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -19,6 +19,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FrameImage } from '@/components/ui/frame-image';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -198,7 +199,7 @@ function CardPhoto({ card }: CardPhotoProps) {
       </View>
     );
   }
-  return <Image source={{ uri: card.image.url }} style={styles.photoImage} accessibilityIgnoresInvertColors />;
+  return <FrameImage image={card.image} style={styles.photoImage} />;
 }
 
 /**

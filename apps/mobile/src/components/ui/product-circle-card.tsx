@@ -1,3 +1,4 @@
+import type { CatalogImage } from '@lezzet/types';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -39,7 +40,8 @@ interface ProductCircleCardProps {
   onPress: () => void;
   /** `lg` vitrin rayı (146) · `sm` benzer ürünler rayı (96). */
   size?: 'sm' | 'lg';
-  photoUri?: string | null;
+  /** Ürün görseli — dairenin çapına yeten kare CDN türevi (21.303, `CirclePhoto`). */
+  image?: CatalogImage | null;
   /** Fotoğraf yoksa dairede görünecek baş harf. */
   initial?: string;
   soldOut?: boolean;
@@ -71,7 +73,7 @@ export function ProductCircleCard({
   priceLabel,
   onPress,
   size = 'lg',
-  photoUri,
+  image,
   initial,
   soldOut = false,
   soldOutLabel,
@@ -103,7 +105,7 @@ export function ProductCircleCard({
           size={diameter}
           initial={initial ?? name.slice(0, 1)}
           initialFontSize={initialFontSize}
-          photoUri={photoUri}
+          image={image}
           style={faded ? styles.soldOutPhoto : undefined}
         />
         {/* Durum rozeti TEK yuvadadır: tasarımda tükendi ve indirim aynı köşede duruyor ve bir
