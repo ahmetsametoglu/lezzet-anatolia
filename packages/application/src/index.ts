@@ -671,7 +671,9 @@ export type { MergeCustomersInput, MergeCustomersOutcome } from './customer/merg
 // durması (`zone_notice_unique_idx` — aynı kişi aynı yer için ikinci kez sayılmaz) iki yüzeyde
 // ayrı yazılsaydı biri bir gün ötekinden geride kalırdı. Yüzeye özgü olan dışarıda: web'in
 // çerezten okuduğu yer cevabı ve oturumdan çözdüğü kimlik parametre olarak geliyor.
-export { recordZoneNotice } from './delivery/notice';
+// `recordStockNotice` — "gelince haber ver" kaydı, terfi 21.306: native ürün detayı web'in
+// `variant_stock_notice` kaydını aynı kapıdan yazıyor; web eylemi köprü, benimsemesi web şeridinde.
+export { recordStockNotice, recordZoneNotice } from './delivery/notice';
 export type { ZoneNoticeInput, ZoneNoticeOutcome } from './delivery/notice';
 // ── Teslimat bölgeleri listesi — "araç nerelere gidiyor" (kullanıcı kararı 10.08) ──
 // Kaydın kardeşi: bant müşteriye "buraya gelmiyoruz" derken, bu okuma "peki nereye gidiyoruz"un

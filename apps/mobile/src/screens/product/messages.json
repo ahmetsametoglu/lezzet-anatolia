@@ -54,9 +54,16 @@
       "increase": "{name} adedini artır"
     },
     "soldOutBar": {
-      "text": "Tükendi — yakında yeniden gelecek",
+      "text": "Tükendi",
       "alert": "Stok gelince haber ver",
-      "alertOn": "✓ Haber verilecek"
+      "alertOn": "✓ Not aldık"
+    },
+    "stockNotice": {
+      "sheetTitle": "Gelince haber verelim",
+      "sheetIntro": "E-postanıza altı haneli bir kod göndeririz. Doğrulayınca hesabınız açılır ve bu ürünü bekleyenler arasına yazılırsınız.",
+      "recorded": "Not aldık — {code} için bu ürünü bekleyenler arasındasınız.",
+      "alreadyRecorded": "Bu ürünü {code} için zaten bekliyorsunuz.",
+      "emailRequired": "Hesabınızda e-posta adresi yok; kaydı alamadık."
     },
     "error": {
       "title": "Bağlantı kurulamadı",
@@ -130,9 +137,16 @@
       "increase": "Augmenter la quantité de {name}"
     },
     "soldOutBar": {
-      "text": "Épuisé — bientôt de retour",
+      "text": "Épuisé",
       "alert": "Me prévenir du retour",
-      "alertOn": "✓ Nous vous préviendrons"
+      "alertOn": "✓ C'est noté"
+    },
+    "stockNotice": {
+      "sheetTitle": "Être prévenu du retour",
+      "sheetIntro": "Nous envoyons un code à six chiffres à votre e-mail. Une fois vérifié, votre compte est créé et vous rejoignez les personnes qui attendent cet article.",
+      "recorded": "C'est noté — vous faites partie des personnes qui attendent cet article pour {code}.",
+      "alreadyRecorded": "Vous attendez déjà cet article pour {code}.",
+      "emailRequired": "Votre compte n'a pas d'adresse e-mail ; la demande n'a pas été enregistrée."
     },
     "error": {
       "title": "Connexion impossible",
@@ -206,9 +220,16 @@
       "increase": "Menge von {name} erhöhen"
     },
     "soldOutBar": {
-      "text": "Ausverkauft — bald wieder da",
+      "text": "Ausverkauft",
       "alert": "Bei Verfügbarkeit benachrichtigen",
-      "alertOn": "✓ Wir benachrichtigen Sie"
+      "alertOn": "✓ Notiert"
+    },
+    "stockNotice": {
+      "sheetTitle": "Benachrichtigung bei Verfügbarkeit",
+      "sheetIntro": "Wir senden einen sechsstelligen Code an Ihre E-Mail. Nach der Bestätigung wird Ihr Konto angelegt und Sie gehören zu denen, die diesen Artikel erwarten.",
+      "recorded": "Notiert — Sie gehören zu denen, die diesen Artikel für {code} erwarten.",
+      "alreadyRecorded": "Sie erwarten diesen Artikel bereits für {code}.",
+      "emailRequired": "Ihr Konto hat keine E-Mail-Adresse; die Anfrage wurde nicht erfasst."
     },
     "error": {
       "title": "Keine Verbindung",

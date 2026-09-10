@@ -14693,3 +14693,36 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · **Doğrulama:** mobilde büyük harfli "Anatolia" 0 · mobil paket 1538/1540 (iki düşüş
     `unistyles.test.ts`in italik yazı testleri, önceden var) · kök `typecheck` 20/20 · birim projesi
     2195/2195 · `lint` · `knip` temiz.
+
+- [x] (21.306) **"GELİNCE HABER VER" GERÇEK KAYDA BAĞLANDI — tükendi barı `variant_stock_notice`a yazıyor, "yakında yeniden gelecek" sözü kalktı; haberi gönderen yapı web'e not** (kullanıcı kararları 10.09: *"Stok gelince haber ver konusundaki açıkları giderelim"* · *"Yakında gelecek konusu da çok doğru bir ifade değil"* · *"arka tarafta tamamlandıysa haber gönderen yapıyı kurmak için web tarafına not düşelim"*)
+  `touches:` `packages/types/src/contracts/place-api.schema.ts` · `packages/application/src/delivery/notice.ts` · `packages/application/src/index.ts` · `packages/database/src/testing/cleanup.ts` · `apps/mobile-api/src/api/v1/stock-notices.ts` · `apps/mobile-api/src/api/v1/stock-notices.test.ts` · `apps/mobile-api/src/api/v1/router.ts` · `apps/mobile-api/src/api/v1/router.test.ts` · `apps/mobile/src/lib/api/stock-notices.ts` · `apps/mobile/src/screens/customer-kit/notice-sheet.tsx` · `apps/mobile/src/screens/customer-kit/place-notice-sheet.tsx` · `apps/mobile/src/screens/product/product-detail-screen.tsx` · `apps/mobile/src/screens/product/product-detail-screen.test.tsx` · `apps/mobile/src/screens/product/messages.json` · `design/KARARLAR.md`
+
+  **Durum (10.09) — TAMAM.**
+  · **Ölçülen açık:** native düğme yalnız ekrandaki bir bayrağı çeviriyordu, hiçbir şey yazmıyordu —
+    "✓" bir kaydın değil bir dokunuşun işaretiydi. Web aynı düğmeyi `variant_stock_notice`a yazıyor (19.12).
+  · **Kayıt artık gerçek:** `POST /api/v1/me/stock-notices` (Bearer'lı) → `recordStockNotice`
+    (`@lezzet/application`): kod biçimi → e-posta PROFİLDEN → yer motora yeniden sorulur → aynı boy +
+    yer + kişi ikinci kez `already`, satır açılmaz. Düğme yalnız ÇÖZÜLMÜŞ bir yerde çizilir — nereye
+    haber vereceğimizi bilmeden kayıt alınmaz.
+  · **Misafir aynı akışta hesaba döner:** "buraya da gelin" çekmecesinin mekaniği ortak `NoticeSheet`e
+    ayrıldı (kimlik → kayıt → sonuç); `place-notice-sheet` artık onun ince sarmalı. Misafir doğrulanmış
+    hesaba dönüşüp kaydını bırakır (10.08 kararı), girişli müşteri tek dokunuşla. İkinci çekmece yok.
+  · **Bar yalnız olguyu söyler:** *"Tükendi"* — tasarımdaki *"yakında yeniden gelecek"* kaldırıldı,
+    tedarik tarihi bilinmiyor (`design/KARARLAR.md`). Kayıttan sonra *"Not aldık — {kod} için bu ürünü
+    bekleyenler arasındasınız."*
+  · **Haberi GÖNDEREN yapı yok — ölçüldü:** `variant_stock_notice`ı okuyan hiçbir iş yok
+    (`zone-available` yalnız `zone_notice` okuyor). **Kullanıcı kararı 10.09:** *"müşteriyle iletişim
+    kanallarımızı aktif bir şekilde hazırladık zaten. Dolayısıyla stok gelince haber gönderme konusu
+    olmalı"* — gönderici yazılacak; yeri arka ucun iş dizini (`apps/backend/src/jobs/`, emsal
+    `zone-available`). Web şeridine giden not karara yükseltildi (`not-web-stok-bildirimi-gonderen-yok`):
+    gönderici, web eyleminin aynı kapıyı benimsemesi ve web'in *"Tükendi — yakında yeniden"* metni.
+    Ekran gönderici çalışana dek "not aldık" diyor; çalışınca metin "haber veririz"e döner.
+  · **Teardown:** `purgeTestData` bekleyiş kayıtlarını profil kimliğiyle, profilden ÖNCE siliyor —
+    `customer_id` `set null`; silinmeseydi tohum varyantına bırakılan test kaydı e-postasıyla yetim kalırdı.
+  · **Testler:** ürün detayı 5 test (*"ürün detayı — gelince haber ver"*: bar yalnız olgu · girişli
+    müşteride gerçek kayıt, gövdede e-posta yok · kayıt alınmazsa düğme geri gelir · misafire doğrulama
+    çekmecesi · yer bilinmiyorsa düğme yok) · uç 4 entegrasyon testi (`stock-notices.test.ts`: geçersiz
+    gövde · biçimsiz kod · `place_unknown` satır açmaz · kayıt + `already`) · korumalı uç listesi
+    (`router.test.ts`).
+  · **Doğrulama:** dokunulan dört ekran klasörü (ürün · checkout · hesap · müşteri kiti) 117/117, 15
+    dosya · kök `typecheck` 20/20 · `lint` temiz · `knip`in 4 bulgusu bu işin dosyalarında değil.

@@ -61,6 +61,8 @@ const KORUMALI: readonly string[] = [
   '/api/v1/me/discover',
   '/api/v1/me/tickets',
   '/api/v1/me/b2b',
+  // "Gelince haber ver" (21.306) — kayıt bir hesaba bağlanır; misafir önce çekmecede doğrulanır.
+  '/api/v1/me/stock-notices',
   '/api/v1/courier/day',
   '/api/v1/warehouse/intake',
   '/api/v1/social/conversations',

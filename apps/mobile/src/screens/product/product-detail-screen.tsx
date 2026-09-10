@@ -19,16 +19,21 @@ import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
+import { submitStockNotice } from '@/lib/api/stock-notices';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { upperIn } from '@/lib/i18n/locale';
+import placeMessages from '@/lib/places/messages.json';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
-import { toastInfo, toastSuccess } from '@/lib/toast/toast-store';
+import { toastError, toastInfo, toastSuccess } from '@/lib/toast/toast-store';
 import { cardBadgeOf } from '@/screens/customer-kit/campaign-label';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { NoticeSheet, type NoticeSheetCopy } from '@/screens/customer-kit/notice-sheet';
 import { fromPriceLabel, productPriceLabel } from '@/screens/customer-kit/price-label';
+import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
 import { emToDp } from '@/theme/parse';
 import messages from './messages.json';
 import { ProductSkeleton } from './product-skeleton';
@@ -52,9 +57,11 @@ import { useProduct } from './use-product.hook';
   3. **B2B adet çipleri (×5 ×10 ×20) ÇİZİLMEDİ**: şablon `b2bChip` bayrağına bağlıyor ve müşteri
      tipi bu etapta cihaza bağlanmadı (oturum → müşteri profili ucu ayrı iş). Tip geldiğinde bar
      altına şablondaki sıra eklenir.
-  4. **"Stok gelince haber ver" YEREL anahtar**: aboneliği yazacak uç yok (şablonda da yalnız
-     bayrak çeviriyor); giriş kapısı da müşteri profili bağlanınca gelir. UI tam, arka uç stub —
-     "statik ≠ işlevsiz" (CLAUDE §3).
+  4. **"Stok gelince haber ver" GERÇEK KAYIT (21.306)** — şablonda yalnız bir bayrak çeviriyordu
+     ve burada da 10.09'a kadar öyleydi: düğme "✓ Haber verilecek" diyor, hiçbir şey yazmıyordu.
+     Artık web'in `variant_stock_notice` kaydını aynı kapıdan bırakıyor (`POST /me/stock-notices`);
+     misafir bölge bandının çekmecesiyle hesabını doğrular. Ekran "not aldık" der, "haber
+     vereceğiz" DEMEZ: stok gelince haber gönderen iş henüz yok (kapının künyesi).
   5. **Paylaş, sistem paylaşım kağıdını açar** (şablon kendi sheet'ini çiziyor): RN'de bunun
      doğal karşılığı `Share.share`. Web ürün URL'i müşteri yüzeyine bağlanınca mesaja eklenir;
      bugün ürün adı paylaşılıyor.
@@ -155,7 +162,14 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
      `null` = henüz seçilmedi → ilk boy (şablon `vs[0]`). */
   const [variantId, setVariantId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [alertOn, setAlertOn] = useState(false);
+  /* "GELİNCE HABER VER" KAYDININ HÂLİ (21.306) — BOY başına: başka boya geçmek yeni bir sorudur.
+     `sending` düğmeyi kilitler (çift dokunuş iki kayıt denemesi olmasın); `ok`/`already` sunucunun
+     cevabıdır, yerel bir anahtar değil. */
+  const [stockNotice, setStockNotice] = useState<{ variantId: string; status: 'sending' | 'ok' | 'already' } | null>(null);
+  /* Misafir çekmecesi — bölge bandının aynı kararı: girişliye e-posta sorulmaz, misafir aynı akışta
+     doğrulanmış hesaba dönüşür (kullanıcı kararı 10.08). */
+  const stockSheet = useSheet();
+  const meState = useMe();
   /** Eklemenin ANINDAKİ kalem sayısı — sunucunun cevabını bu sayının değişmesinden anlıyoruz. */
   const [awaitingMinimumHint, setAwaitingMinimumHint] = useState<number | null>(null);
   const cart = useCart();
@@ -253,6 +267,57 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   /* Barın açıklama satırı tek yerde kurulur. Filigrandaki iki satırlık cümle barda TEK satıra
      iner: barın yüksekliği tasarımın kararıdır (v3:1228) ve bir cümle onu büyütmemeli. */
   const barNote = soldOut ? t.soldOutBar.text : placeMark === null ? null : placeMark.label.replace('\n', ' ');
+  /* KAYDIN YERİ — cihazın ÇÖZÜLMÜŞ cevabı (`country` + `postalCode`, yer çözümünün anahtarı). Yer
+     bilinmiyorsa (kod yok, cevap gelmedi ya da kod iki ülkeye düşüyor) düğme ÇİZİLMEZ: nereye haber
+     vereceğimizi bilmeden kayıt alınmaz (web'in aynı hükmü, `recordVariantStockNoticeAction`). */
+  const stockBody =
+    variant !== undefined && place?.kind === 'resolved'
+      ? { variantId: variant.id, country: place.place.country, postalCode: place.place.postalCode }
+      : null;
+  const stockStatus = stockNotice !== null && stockNotice.variantId === variant?.id ? stockNotice.status : null;
+  const placeCopy = placeMessages[locale].placeNotice;
+  /* Çekmecenin cümleleri: kimlik adımı ve hata hâlleri yer ailesinin sözlüğünden (aynı akış, aynı
+     söz), başlık · giriş · sonuçlar bu ekranın kendi kaydından. */
+  const stockCopy: NoticeSheetCopy | null =
+    stockBody === null
+      ? null
+      : {
+          ...placeCopy,
+          sheetTitle: t.stockNotice.sheetTitle,
+          sheetIntro: t.stockNotice.sheetIntro,
+          recorded: t.stockNotice.recorded.replace('{code}', stockBody.postalCode),
+          alreadyRecorded: t.stockNotice.alreadyRecorded.replace('{code}', stockBody.postalCode),
+          emailRequired: t.stockNotice.emailRequired,
+        };
+
+  /** Kaydı bırakır — girişlide tek dokunuş (e-posta gövdeye KONMAZ, sunucu profilden çözer), misafirde çekmece. */
+  const requestStockNotice = () => {
+    if (stockBody === null) return;
+    const me = meState.status === 'ready' ? meState.me : null;
+    if (me === null) {
+      stockSheet.open();
+      return;
+    }
+    setStockNotice({ variantId: stockBody.variantId, status: 'sending' });
+    void submitStockNotice(stockBody).then((result) => {
+      /* Dört hâlin dördü de SÖYLENİR. Kaydın alınmadığı hâllerde düğme geri gelir ki müşteri tekrar
+         deneyebilsin — kaydedilmemiş bir bekleyişi kaydedilmiş gibi göstermek sözü bozmak olurdu. */
+      if (result.error !== null) {
+        setStockNotice(null);
+        toastError(placeCopy.failed);
+        return;
+      }
+      if (result.data.status === 'place_unknown' || result.data.status === 'email_required') {
+        setStockNotice(null);
+        toastError(result.data.status === 'place_unknown' ? placeCopy.placeUnknown : t.stockNotice.emailRequired);
+        return;
+      }
+      setStockNotice({ variantId: stockBody.variantId, status: result.data.status });
+      toastSuccess(
+        (result.data.status === 'ok' ? t.stockNotice.recorded : t.stockNotice.alreadyRecorded).replace('{code}', stockBody.postalCode),
+      );
+    });
+  };
   const declaration = detail.declaration;
   /* Fiyatsız benzer kart çizilmez: kitin kartı fiyat etiketini zorunlu tutuyor (fiyatsız kart
      doğmasın diye) ve fiyatı olmayan ürün zaten satışa kapalı. */
@@ -562,18 +627,24 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
         {alertBar ? (
           <View style={styles.barRow}>
             <Text style={styles.soldOutText}>{barNote}</Text>
-            <PressableSurface
-              onPress={() => setAlertOn((current) => !current)}
-              feedback="scale-small"
-              selected={alertOn}
-              style={[styles.alertButton, alertOn ? styles.alertButtonOn : null]}
-              accessibilityLabel={alertOn ? t.soldOutBar.alertOn : t.soldOutBar.alert}
-              testID="product-stock-alert"
-            >
-              <Text style={[styles.alertText, alertOn ? styles.alertTextOn : null]}>
-                {alertOn ? t.soldOutBar.alertOn : t.soldOutBar.alert}
-              </Text>
-            </PressableSurface>
+            {stockStatus === 'ok' || stockStatus === 'already' ? (
+              /* Kayıt alındı: düğme KALKAR, yerine sonucun tek satırı geçer — alınmış bir kaydı
+                 ikinci kez isteten düğme "sayılmadım mı?" sorusunu doğururdu (bölge bandının kararı). */
+              <View style={[styles.alertButton, styles.alertButtonOn]} testID="product-stock-alert-recorded">
+                <Text style={[styles.alertText, styles.alertTextOn]}>{t.soldOutBar.alertOn}</Text>
+              </View>
+            ) : stockBody === null ? null : (
+              <PressableSurface
+                onPress={requestStockNotice}
+                feedback="scale-small"
+                disabled={stockStatus === 'sending'}
+                style={styles.alertButton}
+                accessibilityLabel={t.soldOutBar.alert}
+                testID="product-stock-alert"
+              >
+                <Text style={styles.alertText}>{t.soldOutBar.alert}</Text>
+              </PressableSurface>
+            )}
           </View>
         ) : placeMark !== null ? (
           /* KAPALI KAPI (`blocked`) — satın alma öğeleri hiç çizilmez, yerine TEK satır bilgi.
@@ -624,6 +695,19 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
           </View>
         )}
       </BlurView>
+
+      {/* Misafirin "gelince haber ver" çekmecesi — ilk açılışta kurulur, kapanınca sökülmez
+          (`use-sheet.hook` künyesi). Yer yoksa düğme de yok, çekmece de. */}
+      {stockSheet.mounted && stockBody !== null && stockCopy !== null ? (
+        <NoticeSheet
+          visible={stockSheet.visible}
+          copy={stockCopy}
+          submit={() => submitStockNotice(stockBody)}
+          onClose={stockSheet.close}
+          onRecorded={(status) => setStockNotice({ variantId: stockBody.variantId, status })}
+          testID="product-stock-notice"
+        />
+      ) : null}
 
       {/* Sepet FAB'ı — v3:602: sepet doluyken vitrin·katalog·ürün·paket dörtlüsünde; bu sayfada
           yapışkan barın ÜSTÜNDE durur (v3 `b:112px`). Boş sepette komponent kendini çizmez. */}

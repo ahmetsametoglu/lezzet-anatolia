@@ -1,4 +1,4 @@
-import { DeliveryZoneService, ZoneNoticeService, type Db } from '@lezzet/database';
+import { DeliveryZoneService, VariantStockNoticeService, ZoneNoticeService, type Db } from '@lezzet/database';
 import { notificationToken, type PostalCodeResolution } from '@lezzet/domain-core';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
@@ -136,6 +136,57 @@ export async function recordZoneNotice(db: Db, input: ZoneNoticeInput): Promise<
   if (input.countDemand) await countPostalCodeDemand(db, postalCode);
 
   return row ? 'ok' : 'already';
+}
+
+interface StockNoticeInput {
+  variantId: string;
+  /** Ham kod; normalize kapıda yapılır — bölge kaydının aynı kuralı. */
+  postalCode: string;
+  country: Country;
+  /** Girişli müşterinin profil adresi — ÇAĞIRAN sunucuda çözer; `null` = hesapta adres yok. */
+  email: string | null;
+  /** `user_profiles.id`; misafirde `null` (web köprüsü ziyaretçiye de açık). */
+  customerId: string | null;
+}
+
+/**
+ * "GELİNCE HABER VER" KAYDI — `variant_stock_notice` (19.12 · terfi 21.306).
+ *
+ * Kaynağı `apps/web/lib/delivery/notice-actions.ts` → `recordVariantStockNoticeAction`; web köprü
+ * olarak kalır, benimsemesi web şeridinin takvimidir (bölge kaydının 21.20 deseni). Terfinin sebebi
+ * native ürün detayının AYNI kaydı bırakması: kural ikinci kez yazılsaydı iki yüzey aynı bekleyişi
+ * farklı biçimde kaydederdi.
+ *
+ * ── SÖZ DEĞİL, KAYIT ─────────────────────────────────────────────────────────
+ * Stok gelince haber GÖNDEREN iş henüz YOK (`VariantStockNoticeService.listPending` künyesi: "bu
+ * turda çağıranı yok"). Ekran "not aldık" der, "haber vereceğiz" demez.
+ *
+ * ── WEB'DEN TEK FARK: YER DOĞRULANIR ─────────────────────────────────────────
+ * Web yeri kendi çerezinden okuyor, yani sistemin kendi cevabı; native yer ise cihazın gövdesinden
+ * geliyor ve sunucu onu motora yeniden sorar — bölge kaydının `resolvesToCountry` kapısının aynısı.
+ *
+ * Cevap hâlleri `ZoneNoticeOutcome`ın aynısı: iki kayıt aynı soruları soruyor (yer · adres · tekrar).
+ */
+export async function recordStockNotice(db: Db, input: StockNoticeInput): Promise<ZoneNoticeOutcome> {
+  const postalCode = normalizePostalCode(input.postalCode);
+  if (!isValidPostalCode(postalCode)) return 'postal_code_invalid';
+
+  const email = (input.email ?? '').trim().toLowerCase();
+  if (email.length === 0) return 'email_required';
+  if (!EMAIL_PATTERN.test(email)) return 'email_invalid';
+
+  const resolution = await resolvePlaceForPostalCode(db, postalCode);
+  if (!resolvesToCountry(resolution, input.country)) return 'place_unknown';
+
+  const notices = new VariantStockNoticeService(db);
+  // "Zaten var" SÖYLENİR: servis bekleyen kaydı sessizce geri veriyor (`record` künyesi) ve ekran
+  // ikinci dokunuşa "yeni kayıt aldık" dememeli. Haber verilmiş eski kayıt bekleyiş sayılmaz —
+  // `listPending` yalnız damgasızları okur, servisin kendi kuralıyla aynı.
+  const pending = await notices.listPending(input.variantId, input.country, postalCode);
+  if (pending.some((row) => row.email.toLowerCase() === email)) return 'already';
+
+  await notices.record({ variantId: input.variantId, country: input.country, postalCode, email, customerId: input.customerId });
+  return 'ok';
 }
 
 /**

@@ -1,5 +1,5 @@
 import { formatPrice } from '@lezzet/helper';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { resetCart, useCart } from '@/screens/customer-kit/cart-store';
@@ -17,6 +17,35 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR
 
 const mockRouter = { back: jest.fn(), push: jest.fn(), setParams: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
+
+/* KİMLİK ve YER testten kurulur (21.306): "gelince haber ver" yalnız ÇÖZÜLMÜŞ bir yerde çizilir ve
+   girişli/misafir iki ayrı yol izler. Adlar `mock` ile başlamak ZORUNDA (jest hoisting). */
+let mockMe: { status: 'ready'; me: { id: string; email: string } } | { status: 'guest'; me: null } = {
+  status: 'guest',
+  me: null,
+};
+jest.mock('@/screens/customer-kit/use-me.hook', () => ({
+  ...jest.requireActual<object>('@/screens/customer-kit/use-me.hook'),
+  useMe: () => ({ ...mockMe, refresh: () => undefined }),
+}));
+/* Cihazın posta kodu — `useSyncExternalStore` KARARLI bir anlık görüntü ister: nesne testte bir kez
+   kurulur, her okumada aynısı döner. `null` = onboarding'de kod verilmedi (öteki testlerin hâli). */
+let mockOnboarding: { postalCode: string } | null = null;
+jest.mock('@/lib/onboarding/onboarding-store', () => ({
+  ...jest.requireActual<object>('@/lib/onboarding/onboarding-store'),
+  subscribeOnboarding: () => () => undefined,
+  getOnboardingSnapshot: () => mockOnboarding,
+}));
+// Kayıt KORUNAN uçtan gider (`authorizedFetch` → Bearer): oturum sabit.
+jest.mock('@/lib/auth/supabase', () => ({
+  getSupabase: () => ({
+    auth: {
+      getSession: async () => ({ data: { session: { access_token: 'access-1' } } }),
+      refreshSession: async () => ({ data: { session: { access_token: 'access-1' } }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
+    },
+  }),
+}));
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
@@ -122,17 +151,6 @@ describe('ürün detayı', () => {
     expect(screen.getByTestId('product-noship')).toBeOnTheScreen();
   });
 
-  it('tükendi: bar stok anahtarına döner, anahtar basılınca söz verir', async () => {
-    const so = { stockStatus: 'out_of_stock' as const, soldOut: true };
-    await renderProduct(productDetail({ variants: [productVariant(1, so), productVariant(2, so)] }));
-
-    expect(screen.queryByTestId('product-add')).toBeNull();
-    const alert = screen.getByTestId('product-stock-alert');
-    expect(alert).toHaveTextContent('Stok gelince haber ver');
-    await fireEvent.press(alert);
-    expect(alert).toHaveTextContent('✓ Haber verilecek');
-  });
-
   it('404 "ürün bulunamadı" der — ağ arızası hâliyle karıştırılmaz', async () => {
     fetchMock.mockResolvedValue(fail(404, 'product_not_found'));
     await render(<ProductDetailScreen slug="olmayan-urun" />);
@@ -150,5 +168,105 @@ describe('ürün detayı', () => {
     await fireEvent.press(screen.getByTestId('product-error-action'));
 
     await waitFor(() => expect(screen.getByRole('header', { name: 'El Açması Kol Böreği' })).toBeOnTheScreen());
+  });
+});
+
+/*
+  "GELİNCE HABER VER" (21.306) — düğme artık GERÇEK bir kayıt bırakıyor (`POST /me/stock-notices`).
+  Eskiden yerel bir anahtardı: "✓ Haber verilecek" diyor, hiçbir şey yazmıyordu (ölçüldü 10.09).
+  Bar da yalnız olguyu söylüyor: "yakında yeniden gelecek" sözünün arkasında hiçbir veri yoktu.
+*/
+describe('ürün detayı — gelince haber ver', () => {
+  const PLACE = {
+    kind: 'resolved',
+    place: { country: 'FR', postalCode: '67000', placeName: 'Strasbourg', places: ['Strasbourg'], inRoute: true },
+  };
+  const SIGNED_IN = { status: 'ready' as const, me: { id: 'customer-1', email: 'ayse@example.com' } };
+
+  function soldOutDetail() {
+    const so = { stockStatus: 'out_of_stock' as const, soldOut: true };
+    return productDetail({ variants: [productVariant(1, so), productVariant(2, so)] });
+  }
+
+  /** Üç uç, tek mock: ürün · yer · kayıt. URL'e bakmayan bir mock üçüne aynı cevabı verirdi. */
+  function routeFetch(noticeBody: unknown = { status: 'ok' }) {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/places/by-postal-code')) return ok(PLACE);
+      if (url.includes('/me/stock-notices')) return ok(noticeBody);
+      return ok(soldOutDetail());
+    });
+  }
+
+  const noticeCall = () => fetchMock.mock.calls.find(([url]) => String(url).includes('/me/stock-notices'));
+
+  async function renderSoldOut() {
+    await render(<ProductDetailScreen slug="el-acmasi-kol-boregi" />);
+    await waitFor(() => expect(screen.queryByTestId('product-loading')).toBeNull());
+  }
+
+  beforeEach(() => {
+    mockOnboarding = { postalCode: '67000' };
+    mockMe = { status: 'guest', me: null };
+  });
+
+  afterEach(() => {
+    mockOnboarding = null;
+  });
+
+  it('bar yalnız OLGUYU söyler — "yakında yeniden gelecek" sözü yok', async () => {
+    routeFetch();
+    await renderSoldOut();
+
+    expect(screen.queryByTestId('product-add')).toBeNull();
+    const bar = within(screen.getByTestId('product-bar'));
+    expect(bar.getByText('Tükendi')).toBeOnTheScreen();
+    expect(bar.queryByText(/yakında/)).toBeNull();
+  });
+
+  it('girişli müşteri: tek dokunuşta GERÇEK kayıt — gövdede boy ve yer var, e-posta YOK', async () => {
+    mockMe = SIGNED_IN;
+    routeFetch({ status: 'ok' });
+    await renderSoldOut();
+
+    await fireEvent.press(await screen.findByTestId('product-stock-alert'));
+
+    expect(await screen.findByTestId('product-stock-alert-recorded')).toHaveTextContent('✓ Not aldık');
+    expect(JSON.parse(String(noticeCall()?.[1]?.body))).toEqual({
+      variantId: productVariant(1).id,
+      country: 'FR',
+      postalCode: '67000',
+    });
+  });
+
+  it('kayıt ALINMAZSA düğme geri gelir — alınmamış bekleyiş alınmış gibi gösterilmez', async () => {
+    mockMe = SIGNED_IN;
+    routeFetch({ status: 'place_unknown' });
+    await renderSoldOut();
+
+    await fireEvent.press(await screen.findByTestId('product-stock-alert'));
+
+    await waitFor(() => expect(noticeCall()).toBeDefined());
+    expect(await screen.findByTestId('product-stock-alert')).toBeOnTheScreen();
+    expect(screen.queryByTestId('product-stock-alert-recorded')).toBeNull();
+  });
+
+  it('misafir: kayıt yerine DOĞRULAMA çekmecesi açılır — ağa kayıt isteği gitmez', async () => {
+    routeFetch();
+    await renderSoldOut();
+
+    await fireEvent.press(await screen.findByTestId('product-stock-alert'));
+
+    expect(await screen.findByTestId('product-stock-notice-sheet')).toBeOnTheScreen();
+    expect(noticeCall()).toBeUndefined();
+  });
+
+  it('yer BİLİNMİYORSA düğme çizilmez — nereye haber vereceğimizi bilmeden kayıt alınmaz', async () => {
+    mockOnboarding = null;
+    routeFetch();
+    await renderSoldOut();
+
+    expect(screen.getByTestId('product-bar')).toBeOnTheScreen();
+    expect(screen.queryByTestId('product-stock-alert')).toBeNull();
   });
 });

@@ -20,6 +20,7 @@ import { packages } from './packages';
 import { payments } from './payments';
 import { deliveryTerms } from './delivery-terms';
 import { places } from './places';
+import { stockNotices } from './stock-notices';
 import { notifications, pushDevices } from './notifications';
 import { points, pointsRules } from './points';
 import { preferences } from './preferences';
@@ -232,6 +233,10 @@ v1.route('/me/tickets', tickets);
 // müşteri kaydının bir hâli (DOMAIN §10), yani sahibi olmak zorunda. Kural
 // `@lezzet/application/customer/b2b`de; okumaların açık yarısı yukarıda.
 v1.route('/me/b2b', b2b);
+
+// "Gelince haber ver" (21.306) — Bearer'ın ARKASINDA: misafir kaydı bırakmadan önce çekmecede
+// hesabını doğruluyor, e-posta profilden çözülür. Kural `@lezzet/application/delivery/notice`ta.
+v1.route('/me/stock-notices', stockNotices);
 
 /**
  * Personel bölümleri (21.10 · 21.11) — `bearerAuth`ın ARDINDA ve orada kalacaklar: katalogun aksine

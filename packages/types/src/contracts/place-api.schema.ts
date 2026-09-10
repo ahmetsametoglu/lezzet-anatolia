@@ -157,6 +157,28 @@ export const PlaceNoticeResultSchema = z.discriminatedUnion('status', [
 export type PlaceNoticeResult = z.infer<typeof PlaceNoticeResultSchema>;
 
 /**
+ * "GELİNCE HABER VER" KAYDI — bir boyun müşterinin yerine yeniden gelmesini bekleyiş
+ * (`variant_stock_notice`, 19.12 · native bağı 21.306).
+ *
+ * `PlaceNoticeBodySchema`in kardeşi ama ikisi AYRI sorular (`0023_notices.sql`): o "bölgenize
+ * gelmiyoruz" hâlinin kaydıdır, bu "bölgenize geliyoruz ama bu boy burada şu an yok" hâlinin.
+ *
+ * ── E-POSTA GÖVDEDE YOK ─────────────────────────────────────────────────────
+ * Uç Bearer'ın ARKASINDA (`/me/stock-notices`): misafir önce aynı çekmecede e-posta + kodla hesabını
+ * doğrular (bölge talebinin 10.08 akışı) ve adresi sunucu profilden çözer. Gövdeden adres kabul
+ * etmek, başkasının adına kayıt bırakmaya açık bir kapı olurdu.
+ *
+ * Yer cihazın cevabıdır (`country` + `postalCode`, yer çözümünün anahtarı); sunucu onu motora
+ * yeniden sorar — istemcinin yazdığı bir yer doğrulanmadan kayda geçmez.
+ *
+ * Cevap `PlaceNoticeResultSchema`dır: dört hâl birebir aynı (kayıt · zaten var · yer çözülemedi ·
+ * adres yok) ve ikinci bir birlik yazmak aynı sözleşmenin kopyası olurdu.
+ */
+export const StockNoticeBodySchema = PlaceNoticeBodySchema.pick({ postalCode: true, country: true }).extend({
+  variantId: z.string().uuid(),
+});
+
+/**
  * TESLİMAT BÖLGELERİ LİSTESİ — `GET /api/v1/places/zones` (kullanıcı kararı 10.08).
  *
  * ── NİYE VAR ─────────────────────────────────────────────────────────────────

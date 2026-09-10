@@ -2459,3 +2459,16 @@ düşüyor ve tedarikçiye gönderim adımı zaten web'de. Dipnotun asıl değer
 yüzeyde yok: öneri taslakta saklanmıyor, değişen kalem işaretlenmiyor. Web ve arka uç işi olarak
 `docs/architecture/BACKLOG.md §5`e yazıldı (taslak kalemine motorun önerisi, masada "öneri 18 → 24").
 Native dipnot bu yüzden elle düzeltmeyi anmıyor.
+
+
+## Tükendi barında "yakında yeniden gelecek" YAZILMAZ — tasarımda var, kaldırıldı (10.09)
+
+Tasarımın ürün detayı tükenen üründe *"Tükendi — yakında yeniden gelecek"* diyor (v3, üç yerde) ve
+native bar bunu koşulsuz basıyordu. Sistem bir ürünün yeniden geleceğini BİLMİYOR: ne tedarik
+siparişi ne gelen mal ne bir tarih bu cümleye bağlıydı. Kullanıcı kararı (10.09): *"yakında gelecek
+konusu da çok doğru bir ifade değil."* Bar artık yalnız olguyu söyler ("Tükendi") — 04.09'un
+"ekranda yalnız olgu" kararının aynısı; tasarım sadakati olguyu geçemez.
+
+Aynı turda "gelince haber ver" düğmesi gerçek kayda bağlandı (`variant_stock_notice`, 21.306) ve
+sonucu "✓ Not aldık" der — "haber verilecek" DEMEZ: stok gelince haberi gönderen iş henüz yok —
+kullanıcı kararıyla (10.09) yazılacak, web şeridine not düşüldü. Web'in katalog kartında aynı "yakında yeniden" cümlesi duruyor; aynı nota yazıldı.
