@@ -35,6 +35,16 @@ describe('kanal adı — modele SÖYLENİR çünkü müşteri onu görür', () =
   });
 });
 
+describe('karşılama SİSTEMDE (10.09) — iki "Merhaba" üst üste gitmez', () => {
+  it('beyanın ekleneceği turda modele "selam verme" denir; öteki turlarda satır HİÇ yok', () => {
+    /* Beyan artık selamla açılıyor ("Merhaba! Ben … yapay zekâ asistanıyım"). Model de ilk cevapta
+       selam verirse müşteri iki selam okur — karar uygulama katmanında, burada yalnız BAĞLAM. */
+    expect(ticketAgentTask.buildPrompt({ ...base, greeting: true })).toContain('KARŞILAMA SİSTEMDE');
+    expect(ticketAgentTask.buildPrompt(base)).not.toContain('KARŞILAMA SİSTEMDE');
+    expect(ticketAgentTask.system).toContain('"KARŞILAMA SİSTEMDE" satırı varsa selamı sistem veriyor');
+  });
+});
+
 describe('işletme künyesi — araç değil GİRDİ', () => {
   it('numara ve e-posta prompt’a girer', () => {
     // Değişmeyen bilgi için araç açmak her soruda bir tur ve jeton demekti (22.08 kararı).
@@ -207,14 +217,21 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
     expect(ticketAgentTask.system).toContain('Bu bir KAPANIŞTIR, devir değil');
     // Ürün kartı (08.09): görmek isteyen müşteriye fotoğraf + fiyat + düğme; düğme cevabı sorusuz sepete.
     expect(ticketAgentTask.system).toContain('urun_karti aracını ÇAĞIR');
-    expect(ticketAgentTask.system).toContain('"Sepete ekle — <boy>" yazarsa');
+    expect(ticketAgentTask.system).toContain('"Sepete ekle — <ürün> (<boy>)" yazarsa');
     // Karusel (09.09): çeşit sorusunda liste değil kaydırmalı kartlar; düğmesi "Ürün kartı — <kod>".
     expect(ticketAgentTask.system).toContain('urun_karuseli aracını ÇAĞIR');
     expect(ticketAgentTask.system).toContain('"Ürün kartı — <kod>" yazarsa');
     // Hesap bağlantısı (15.16): kimliksiz sohbette "siparişim nerede" devredilmez, bağlantıyla cevaplanır.
     expect(ticketAgentTask.system).toContain("hesap_baglantisi'ni ÇAĞIR");
     expect(ticketAgentTask.system).toContain('Hesap bilgisi sorusu için DEVRETME');
+    // İnsana geçiş YOLU var (Meta: "must have a way to chat with a human agent as needed"): ilk mesaj
+    // artık onu duyurmuyor (10.09), o yüzden müşteri isteyince devretmek talimatta açık bir kural.
+    expect(ticketAgentTask.system).toContain('Müşteri bir İNSANLA görüşmek istediğini söylüyor');
+    // Posta kodu (10.09): sepete yazan araç yer bilinmeden yazmaz; o turun TEK sorusu posta kodu.
+    expect(ticketAgentTask.system).toContain('"sepeteYazilmadi" döner — o zaman cevabının TEK sorusu posta kodu olsun');
     expect(ticketAgentTask.system).toContain('yalnız müşterinin SON TURU içindir');
+    // Yere göre ayıklama (10.09): bu adrese gitmeyen ürün önerilmez, karusele girmez; adıyla sorulursa sebebi söylenir.
+    expect(ticketAgentTask.system).toContain('"buAdreseGitmeyenler" verirse');
   });
 
   it('BAŞLANGIÇ FİYATI tek fiyat gibi sunulamaz — ölçülmüş arızanın prompt karşılığı', () => {

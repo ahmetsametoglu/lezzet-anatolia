@@ -127,6 +127,14 @@ create table public.conversation (
   -- biri değilse ("ok" → en, Boşnakça → bs) dokunulmaz; önceki bilgi kalır.
   language preferred_language,
 
+  -- ── Müşterinin SÖYLEDİĞİ posta kodu (15.20 · kullanıcı kararı 10.09) ─────────
+  -- Ajan sepete yazmadan önce yeri bilmek ZORUNDA: o adrese gidip gitmediğimiz ve hangi ürünün
+  -- (kapıya teslim · kargo · hiç) gidebildiği ancak onunla bilinir. Sohbette bir kez söylenir, burada
+  -- saklanır — sonraki turlar aynı soruyu sormaz. Kimlik DEĞİL, teslimat yeri: kayıtlı adresi olan
+  -- müşteride adres zaten var; bu kolon kimliksiz sohbetin (Messenger/IG) ve adresi olmayanın yeridir.
+  -- Yalnız gerçek, tek ülkeli kod yazılır (`cart/chat-place.ts`); biçim `@lezzet/helper`in beş hanesi.
+  postal_code text check (postal_code ~ '^[0-9]{5}$'),
+
   -- 24 saatlik servis penceresinin bitişi. Kararı motor verir (`serviceWindowExpiry`), burası
   -- yalnız saklar — süreyi SQL'e de yazsaydık aynı kural iki dilde iki kopya olurdu.
   window_expires_at timestamptz,

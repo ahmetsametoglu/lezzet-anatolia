@@ -148,10 +148,12 @@ describe('özerk cevap KENDİNİ TANITIR — beyan hukuki bir yükümlülük', (
 
     const yazisma = await ticketMessages.listByTicket(ticketId);
     const aiMesaji = yazisma.find((m) => m.sender === 'ai');
-    expect(aiMesaji?.body.startsWith('Bu cevabı otomatik asistanımız yazdı')).toBe(true);
-    // İkinci yükümlülük: müşteri İNSANA nasıl geçeceğini bilmeli (Meta: "a way to chat with a
-    // human agent as needed"). Devir kapısı sistemde vardı ama müşteri onu bilmiyordu.
-    expect(aiMesaji?.body).toContain('yetkiliye');
+    expect(aiMesaji?.body.startsWith('Merhaba! Ben ')).toBe(true);
+    // Beyanın özü: otomatik bir hizmet olduğu AÇIKÇA söyleniyor (Meta: "disclose that a person is
+    // interacting with an automated service"). İnsana geçiş yolu ilk mesajda duyurulmuyor (10.09,
+    // kullanıcı kararı) — yolun VAR olduğu talimatın devir kuralında sınanıyor (`ticket-support.test`).
+    expect(aiMesaji?.body).toContain('yapay zekâ asistanıyım');
+    expect(aiMesaji?.body).not.toContain('yetkiliye');
     // Modelin yazdığı metin de gövdede: beyan onun YERİNE geçmiyor, önüne ekleniyor.
     expect(aiMesaji?.body).toContain('Siparişiniz salı günü çıkıyor.');
   });
@@ -170,7 +172,7 @@ describe('özerk cevap KENDİNİ TANITIR — beyan hukuki bir yükümlülük', (
 
     const aiMesajlari = (await ticketMessages.listByTicket(ticketId)).filter((m) => m.sender === 'ai');
     expect(aiMesajlari).toHaveLength(2);
-    expect(aiMesajlari[1]!.body.startsWith('Bu cevabı otomatik asistanımız')).toBe(false);
+    expect(aiMesajlari[1]!.body).not.toContain('yapay zekâ asistanıyım');
   });
 
   it('mod `ai` DEĞİLSE ajan susar — `wrong_mode`', async () => {
@@ -286,7 +288,8 @@ describe('özerk sohbet motoru — cevap sağlayıcıya gider', () => {
     /* YAZAR — bu alan boş bırakılsaydı RPC gideni `admin` sayardı ve ekranın AI tonu ile kuyruğun
        AI süzgeci sessizce yanlış kümeyi gösterirdi. Sayı değil, KİMLİK sınanıyor. */
     expect(giden[0]!.author).toBe('ai');
-    expect(giden[0]!.body.text?.startsWith('Bu cevabı otomatik asistanımız yazdı')).toBe(true);
+    expect(giden[0]!.body.text?.startsWith('Merhaba! Ben ')).toBe(true);
+    expect(giden[0]!.body.text).toContain('yapay zekâ asistanıyım');
     expect(giden[0]!.body.text).toContain('Siparişiniz salı günü çıkıyor.');
   });
 
@@ -300,7 +303,7 @@ describe('özerk sohbet motoru — cevap sağlayıcıya gider', () => {
     const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
     expect(giden).toHaveLength(2);
     // Her cevaba beyan eklemek, cevabı okunmaz bir yasal metne çevirirdi.
-    expect(giden[1]!.body.text?.startsWith('Bu cevabı otomatik asistanımız yazdı')).toBe(false);
+    expect(giden[1]!.body.text).not.toContain('yapay zekâ asistanıyım');
   });
 
   it('cevap ÜRETİLEMEZSE insana devredilir VE müşteri bunu ÖĞRENİR', async () => {

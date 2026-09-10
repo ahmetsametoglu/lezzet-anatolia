@@ -1,15 +1,16 @@
 // `z` porttan geliyor — SDK tek zod örneği bekliyor (`support-tools.ts` künyesi).
 import { tool, z, type ToolSet } from '@lezzet/ai';
-import { AddressService, CartService, type CartOwner, type Db } from '@lezzet/database';
+import { CartService, type CartOwner, type Db } from '@lezzet/database';
 import { formatPrice } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import type { Address, Conversation } from '@lezzet/types';
+import type { Conversation } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { getPackagesByIds, listStorefrontPackages } from '../catalog/packages';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
-import { resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
-import { cartGroupOf, cartPayableCents, entryOfItem, shippingGroupFee, type CartLine, type CartView } from './cart-types';
+import type { PlaceWarehouses } from '../catalog/storefront-types';
+import { cartGroupOf, cartPayableCents, entryOfItem, shippingGroupFee, type CartEntry, type CartLine, type CartView } from './cart-types';
+import { resolveChatPlace, yerNotu, type ChatPlace, type ChatPlaceMemory } from './chat-place';
 import { startCartLink } from './link';
 import type { ChatLink } from './link-text';
 import { getCartView } from './read';
@@ -53,6 +54,11 @@ import { getCartView } from './read';
   `hesap_baglantisi` sepet aracı değil ama sepet bağlantısının kardeşi: aynı jeton kapısı, aynı kap
   (`onLink`), yalnız amacı ve vardığı sayfa farklı. Kimlik kapısı KAPALIYKEN verilir — kapıyı
   müşterinin kendi eliyle açmanın yolu bu; açık kapıda araç hiç yok (`accountLinkOffered`, `ai.ts`).
+
+  ── SEPETE YAZMADAN ÖNCE YER (kullanıcı kararı 10.09) ──────────────────────
+  Ekleyen ve artıran araç posta kodu bilinmeden YAZMAZ; kod bir kez söylenir ve sohbette saklanır
+  (`chat-place.ts`). Yer bilinince bu adrese gidemeyen kalem de eklenmez (soğuk zincir, rota dışı).
+  Canlı turda araç "posta kodunu sor" diyordu ve model başka bir soru sordu — rica kural değildir.
 */
 
 /** Tek soruda gösterilecek en fazla aday — `urun_ara`nın tavanıyla aynı ölçü. */
@@ -74,8 +80,17 @@ export interface CartAgentToolsInput {
    * kararı `accountLinkOffered` (`ai.ts`) verir. Verilmezse araç sette HİÇ yok.
    */
   accountLink?: boolean;
-  /** Sepete YAZILDI (ekle/adet/çıkar) — `ai.ts` bu turda bağlantıyı garantiler (`cartLinkIfDue`). */
-  onCartWrite?: () => void;
+  /**
+   * Sepete YAZILDI (ekle/adet/çıkar) — `ai.ts` bu turda bağlantıyı garantiler (`cartLinkIfDue`).
+   * `hazir`: sepet bu hâliyle SİPARİŞ VERİLEBİLİR mi (yer biliniyor, asgari sepet dolu, satın
+   * alınamayan ya da gönderilemeyen kalem yok); değilse "Sepetiniz hazır" kendiliğinden gitmez (10.09).
+   */
+  onCartWrite?: (hazir: boolean) => void;
+  /**
+   * Sohbetin teslimat yeri hafızası (10.09) — söylenen posta kodu saklanır, sonraki turlar bilir
+   * (`chat-place.ts`). Verilmezse yalnız bu turda söylenen kod ve kayıtlı adres okunur.
+   */
+  place?: ChatPlaceMemory | null;
 }
 
 /**
@@ -111,7 +126,8 @@ export async function cartLinkIfDue(
   /* İKİNCİ ÖLÇÜM (08.09, aynı tur): müşteri "sepete koy" dedi, ajan koydu; sonraki turda 👍 gelince
      ajan "afiyet olsun" deyip kapattı — bağlantı sözü de geçmedi, araç da çağrılmadı, müşteri siteye
      bağlantısız kaldı. Onay ve ödeme yalnız sitede (15.21); bağlantısız bir sepet yazımı çıkmaz sokak.
-     Kural: bu turda sepete YAZILDIYSA bağlantı gider, modelin sözünü beklemeden. */
+     Kural: bu turda sepete YAZILDIYSA bağlantı gider, modelin sözünü beklemeden — ama yalnız sepet
+     SİPARİŞ VERİLEBİLİRSE (10.09: çağıran `cartWritten`i yazım + hazırlık olarak geçer, `ai.ts`). */
   const promised = !!input.reply && /bağlant|\blink\b/i.test(input.reply);
   if (!promised && !input.cartWritten) return null;
   try {
@@ -134,19 +150,25 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
   /* SOHBETİN İZİ (15.23): müşteri sepetine yazan her araç sohbeti damgalar — sipariş sitede ödense de
      kaynağı bu sohbetin kanalı olur. Sohbet sepetinde (kimliksiz) damga gerekmez: satırın sahibi
      zaten sohbet, iz bağlantı devralınırken hedef sepete geçer (`link.ts`). */
-  const damgala = async (): Promise<void> => {
+  const damgala = async (hazir: boolean): Promise<void> => {
     // Yazan her araç buradan geçer: kabı "yazıldı" diye işaretlemek de bu tek noktanın işi (08.09).
-    input.onCartWrite?.();
+    input.onCartWrite?.(hazir);
     if (conversation.customerId) await carts.stampChat(owner, conversation.id);
   };
 
-  /* Yer üç kaynaktan, `urun_ara` ile aynı sırada: söylenen posta kodu · kayıtlı adres (yalnız
-     izinliyse) · hiçbiri (depo-üstü okuma, "sana gelir mi" cevaplanamaz). */
-  const yer = async (postaKodu: string | undefined) => {
-    const adres = input.addressCustomerId ? birincilAdres(await new AddressService(db).listByCustomer(input.addressCustomerId)) : null;
-    const kod = postaKodu?.trim() || adres?.postalCode || null;
-    return { place: kod ? await resolvePlaceWarehouses(db, kod) : UNRESOLVED_PLACE, kod };
-  };
+  /* Yer dört kaynaktan, TEK sırayla (`chat-place.ts`): söylenen · sohbette saklanan · kayıtlı adres
+     (yalnız izinliyse) · hiçbiri. Söylenen kod gerçekse sohbete yazılır — müşteri bir daha söylemez. */
+  const yer = (postaKodu: string | undefined): Promise<ChatPlace> =>
+    resolveChatPlace(db, { said: postaKodu, memory: input.place ?? null, addressCustomerId: input.addressCustomerId });
+
+  /** Sepet görünümü bu yerin depolarıyla — özet, hazırlık ve "bu adrese gider mi" aynı hesaptan okunur. */
+  const gorunum = (entries: CartEntry[], yerim: ChatPlace) =>
+    getCartView(db, 'tr', entries, {
+      customerId: input.pricingCustomerId,
+      warehouseId: yerim.place.warehouseId,
+      shippingWarehouseId: yerim.place.shippingWarehouseId,
+      bundles: (ids, locale, bundlePlace) => getPackagesByIds(db, ids, locale, bundlePlace),
+    });
 
   /**
    * Sepetteki satırı ADIYLA bulur (adet değiştirme ve çıkarma aynı soruyu soruyor — tek gövde).
@@ -166,17 +188,37 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
     return { line: daralt[0]! };
   };
 
-  const ozet = async (postaKodu?: string) => {
+  /**
+   * Sepetin son hâli — modele giden özet ve SİPARİŞE HAZIR mı. Hazır: yer biliniyor, asgari sepet
+   * dolu, satın alınamayan ya da bu adrese gönderilemeyen kalem yok. "Sepetiniz hazır" düğmesi yalnız
+   * bu hâlde kendiliğinden gider (10.09 · canlı turda 22,84 €'luk sepete, asgari 40 €'yken gitmişti).
+   */
+  const durum = async (yerim: ChatPlace): Promise<{ ozet: Record<string, unknown>; hazir: boolean }> => {
     const cart = await carts.getFor(owner);
-    if (cart.items.length === 0) return { sepetBos: 'Sepet BOŞ — henüz hiçbir ürün eklenmemiş. Bu bir erişim sorunu değil; sepeti okuyabildin, boş çıktı.' };
-    const { place, kod } = await yer(postaKodu);
-    const view = await getCartView(db, 'tr', cart.items.map(entryOfItem), {
-      customerId: input.pricingCustomerId,
-      warehouseId: place.warehouseId,
-      shippingWarehouseId: place.shippingWarehouseId,
-      bundles: (ids, locale, bundlePlace) => getPackagesByIds(db, ids, locale, bundlePlace),
-    });
-    return sepetOzeti(view, kod === null);
+    if (cart.items.length === 0) {
+      return { ozet: { sepetBos: 'Sepet BOŞ — henüz hiçbir ürün eklenmemiş. Bu bir erişim sorunu değil; sepeti okuyabildin, boş çıktı.' }, hazir: false };
+    }
+    const view = await gorunum(cart.items.map(entryOfItem), yerim);
+    const hazir = yerim.durum === 'biliniyor' && view.minBasketOk && view.lines.every((line) => !line.blocked && cartGroupOf(line) !== 'undeliverable');
+    return { ozet: sepetOzeti(view, yerim), hazir };
+  };
+
+  const ozet = async (postaKodu?: string) => (await durum(await yer(postaKodu))).ozet;
+
+  /**
+   * Seçilen kalem BU ADRESE gidebilir mi — sepete yazmadan önce, tek satırlık görünümle (10.09).
+   * Soğuk zincir ürünü rota dışındaki koda ne araçla ne kargoyla gider (`not_shippable_here`);
+   * sepete koyup sonra "gönderilemiyor" demek, müşteriye olmayan bir sepet kurdurmaktı.
+   */
+  const gonderilemez = async (secim: CozulmusSatir, yerim: ChatPlace): Promise<Record<string, unknown> | null> => {
+    const entry: CartEntry = secim.bundleId
+      ? { kind: 'bundle', bundleId: secim.bundleId, qty: 1 }
+      : { kind: 'variant', variantId: secim.variantId ?? '', qty: 1, stockId: null };
+    const [satir] = (await gorunum([entry], yerim)).lines;
+    if (!satir || cartGroupOf(satir) !== 'undeliverable') return null;
+    return {
+      gonderilemez: `${secim.urun} bu posta koduna (${yerim.kod}) gönderilemiyor — soğuk zincir ürünü, yalnız teslimat bölgemizde kapıya gider. Sepete EKLENMEDİ: müşteriye söyle ve kargoyla gidebilen bir alternatif öner.`,
+    };
   };
 
   return {
@@ -205,15 +247,26 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
         urun: z.string().min(2).describe('Ürün adı — müşterinin söylediği gibi, örn. "fıstıklı baklava".'),
         boy: z.string().min(1).optional().describe('Boy/gramaj etiketi — müşteri söylediyse ya da araç "boylar" listesi verdiyse, örn. "500 g".'),
         adet: z.number().int().positive().max(MAX_QTY).default(1).describe('Kaç adet — söylenmediyse 1.'),
-        postaKodu: z.string().min(4).optional().describe('Müşteri söylediyse posta kodu.'),
+        postaKodu: z
+          .string()
+          .min(4)
+          .optional()
+          .describe('Müşteri söylediyse posta kodu — bir kez söylenen kod saklanır; araç "sepeteYazilmadi" dönerse müşteriye sor ve bununla yeniden çağır.'),
       }),
       execute: async ({ urun, boy, adet, postaKodu }) => {
         try {
-          const secim = await urunuCoz(db, { urun, boy, postaKodu }, input);
+          // YER ÖNCE (10.09 · kullanıcı kararı): "bu adrese gider mi" bilinmeden sepet kurulmaz.
+          const yerim = await yer(postaKodu);
+          const engel = yerEngeli(yerim);
+          if (engel) return engel;
+          const secim = await urunuCoz(db, { urun, boy }, yerim.place, input);
           if ('sonuc' in secim) return secim.sonuc;
+          const gidemez = await gonderilemez(secim, yerim);
+          if (gidemez) return gidemez;
           await carts.addItemsFor(owner, [{ variantId: secim.variantId, bundleId: secim.bundleId, qty: adet, unitPrice: secim.priceCents / 100, stockId: null }]);
-          await damgala();
-          return { eklendi: { urun: secim.urun, boy: secim.boy, adet }, sepet: await ozet(postaKodu) };
+          const son = await durum(yerim);
+          await damgala(son.hazir);
+          return { eklendi: { urun: secim.urun, boy: secim.boy, adet }, sepet: son.ozet };
         } catch (err) {
           logger.warn({ ...log, tool: 'sepete_ekle', err: String(err) }, 'sepet aracı yazamadı');
           return { bilinmiyor: 'Sepete şu an eklenemedi.' };
@@ -229,15 +282,21 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
         urun: z.string().min(2).describe('Sepetteki ürünün adı.'),
         boy: z.string().min(1).optional().describe('Boy etiketi — aynı üründen iki boy varsa.'),
         adet: z.number().int().min(0).max(MAX_QTY).describe('Yeni adet — sepette olacak TOPLAM sayı; 0 kalemi çıkarır.'),
+        postaKodu: z.string().min(4).optional().describe('Müşteri söylediyse posta kodu.'),
       }),
-      execute: async ({ urun, boy, adet }) => {
+      execute: async ({ urun, boy, adet, postaKodu }) => {
         try {
           const bulunan = await satirBul(urun, boy);
           if ('sonuc' in bulunan) return bulunan.sonuc;
           const { line } = bulunan;
+          const yerim = await yer(postaKodu);
+          // Azaltmak ya da çıkarmak yer istemez; ARTIRMAK sepet kurmaktır — sepete_ekle ile aynı şart.
+          const engel = adet > line.qty ? yerEngeli(yerim) : null;
+          if (engel) return engel;
           await carts.setQtyFor(owner, { variantId: line.variantId ?? null, bundleId: line.bundleId ?? null, stockId: line.stockId ?? null }, adet);
-          await damgala();
-          return adet === 0 ? { cikarildi: satirAdi(line), sepet: await ozet() } : { guncellendi: { urun: satirAdi(line), adet }, sepet: await ozet() };
+          const son = await durum(yerim);
+          await damgala(son.hazir);
+          return adet === 0 ? { cikarildi: satirAdi(line), sepet: son.ozet } : { guncellendi: { urun: satirAdi(line), adet }, sepet: son.ozet };
         } catch (err) {
           logger.warn({ ...log, tool: 'sepet_adet', err: String(err) }, 'sepet aracı yazamadı');
           return { bilinmiyor: 'Adet şu an değiştirilemedi.' };
@@ -258,8 +317,9 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
           if ('sonuc' in bulunan) return bulunan.sonuc;
           const { line } = bulunan;
           await carts.removeItemFor(owner, { variantId: line.variantId ?? null, bundleId: line.bundleId ?? null, stockId: line.stockId ?? null });
-          await damgala();
-          return { cikarildi: satirAdi(line), sepet: await ozet() };
+          const son = await durum(await yer(undefined));
+          await damgala(son.hazir);
+          return { cikarildi: satirAdi(line), sepet: son.ozet };
         } catch (err) {
           logger.warn({ ...log, tool: 'sepetten_cikar', err: String(err) }, 'sepet aracı yazamadı');
           return { bilinmiyor: 'Sepetten şu an çıkarılamadı.' };
@@ -340,9 +400,14 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
   };
 }
 
-/** Varsayılan adres, yoksa ilk adres — `support-tools.ts` ile aynı ölçü. */
-function birincilAdres(adresler: Address[]): Address | null {
-  return adresler.find((a) => a.isDefault) ?? adresler[0] ?? null;
+/**
+ * Sepete YAZMADAN önce yer şartı (10.09 · kullanıcı kararı): "bu adrese gider mi" okunamıyorsa araç
+ * yazmaz ve modele ne soracağını söyler. Okuma araçları serbest — bilgi vermek yer istemez, sepet
+ * kurmak ister.
+ */
+function yerEngeli(yerim: ChatPlace): Record<string, string> | null {
+  if (yerim.durum === 'biliniyor') return null;
+  return { sepeteYazilmadi: 'Yer okunamadığı için sepete YAZILMADI — önce aşağıdakini çöz, sonra aynı aracı yeniden çağır.', ...yerNotu(yerim) };
 }
 
 const normalize = (s: string) => s.trim().toLocaleLowerCase('tr');
@@ -376,12 +441,12 @@ interface CozulmusSatir {
  */
 async function urunuCoz(
   db: Db,
-  girdi: { urun: string; boy?: string; postaKodu?: string },
+  girdi: { urun: string; boy?: string },
+  /** Yer çağıranda çözüldü (`chat-place.ts`) — ürün çözümü ikinci bir yer kararı vermez. */
+  place: PlaceWarehouses,
   input: CartAgentToolsInput,
 ): Promise<CozulmusSatir | { sonuc: Record<string, unknown> }> {
-  const adres = input.addressCustomerId ? birincilAdres(await new AddressService(db).listByCustomer(input.addressCustomerId)) : null;
-  const kod = girdi.postaKodu?.trim() || adres?.postalCode || null;
-  const [place, viewer] = await Promise.all([kod ? resolvePlaceWarehouses(db, kod) : Promise.resolve(UNRESOLVED_PLACE), pricingViewerOf(db, input.pricingCustomerId)]);
+  const viewer = await pricingViewerOf(db, input.pricingCustomerId);
   const ortak = { locale: 'tr' as const, place, viewer, includeUnsellable: true };
 
   const katalog = await getCatalogData(db, { ...ortak, query: { search: girdi.urun } });
@@ -435,9 +500,10 @@ async function paketiCoz(db: Db, ad: string): Promise<CozulmusSatir | { sonuc: R
  * (`shippingGroupFee` → `resolveShippingFee`), burası yalnız söyler. Adres bilinmiyorsa ücret de
  * bilinmez ama EŞİK bilinir ve söylenir: "şu tutardan sonra kargo bedava" satış cümlesidir.
  */
-function kargoCumlesi(view: CartView, yerBilinmiyor: boolean): string {
+function kargoCumlesi(view: CartView, yerim: ChatPlace): string {
   const esik = formatPrice(view.freeShippingCents, 'tr');
-  if (yerBilinmiyor) return `Kargo ücreti adres bilinince belli olur; kargo ürünleri ${esik} ve üzerindeyse kargo ÜCRETSİZ.`;
+  if (yerim.durum === 'hizmet-yok') return 'Bu posta koduna şu an ne kapıya teslim ne kargo var.';
+  if (yerim.durum !== 'biliniyor') return `Kargo ücreti adres bilinince belli olur; kargo ürünleri ${esik} ve üzerindeyse kargo ÜCRETSİZ.`;
   if (view.shippingSubtotalCents <= 0) return 'Sepettekiler kapıya teslim bölgesinde — kargo ücreti yok.';
   const ucret = shippingGroupFee(view);
   const kargoUrunleri = formatPrice(view.shippingSubtotalCents, 'tr');
@@ -450,17 +516,18 @@ function kargoCumlesi(view: CartView, yerBilinmiyor: boolean): string {
  * Sepet görünümünün modele söylenen hâli — cümleler AÇIK, bayrak değil: `false` bir alanı model
  * "önemsiz" sayıp atlayabilir, cümleyi atlayamaz (`urun_ara`nın kargo alanıyla aynı karar).
  */
-function sepetOzeti(view: CartView, yerBilinmiyor: boolean): Record<string, unknown> {
+function sepetOzeti(view: CartView, yerim: ChatPlace): Record<string, unknown> {
   const durum = (line: CartLine): string => {
     if (line.blocked) return 'SATIN ALINAMAZ — tükendi ya da bu kanalda satışa kapalı; sepetten çıkarılmalı';
-    if (yerBilinmiyor) return 'stokta';
+    if (yerim.durum === 'hizmet-yok') return 'BU POSTA KODUNA TESLİMAT YOK';
+    if (yerim.durum !== 'biliniyor') return 'stokta';
     const grup = cartGroupOf(line);
     if (grup === 'undeliverable') return 'BU ADRESE GÖNDERİLEMİYOR — soğuk zincir ürünü, bölge dışı; kapıya teslim bölgesinde değilse alınamaz';
     return grup === 'shipping' ? 'kargoyla gider' : 'kapıya teslim';
   };
   const indirim =
     view.discount.status === 'applied' || view.discount.status === 'automatic' ? formatPrice(view.discount.amountCents, 'tr') : null;
-  const kargo = kargoCumlesi(view, yerBilinmiyor);
+  const kargo = kargoCumlesi(view, yerim);
   const odenecek = cartPayableCents(view);
 
   return {
@@ -483,9 +550,7 @@ function sepetOzeti(view: CartView, yerBilinmiyor: boolean): Record<string, unkn
     ...(view.minBasketOk
       ? {}
       : { asgariSepet: `Asgari sepet ${formatPrice(view.minBasketCents, 'tr')} — ${formatPrice(view.missingForMinBasketCents, 'tr')} eksik; müşteri bu hâlde sipariş VEREMEZ, ürün eklemeli.` }),
-    ...(yerBilinmiyor
-      ? { yerBilinmiyor: 'Adres bilinmiyor — "bu adrese gider mi" okunmadı. Müşteriye posta kodunu SOR ve `postaKodu` ile yeniden çağır.' }
-      : {}),
+    ...yerNotu(yerim),
     not: 'Sepete eklemek sipariş DEĞİLDİR: onay, adres ve ödeme sitede yapılır (sepet_baglantisi).',
   };
 }

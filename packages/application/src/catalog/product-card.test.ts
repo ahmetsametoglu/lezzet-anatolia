@@ -86,6 +86,9 @@ describe('ürün kartı — kanal gövdeleri (08.09)', () => {
   it('gelen düğme cevabı: önek tanınırsa "Sepete ekle — <boy>" / "Ürün kartı — <kod>", tanınmazsa başlık olduğu gibi', () => {
     expect(buttonReplyText('sepete_ekle:v1', '1 kg')).toBe('Sepete ekle — 1 kg');
     expect(buttonReplyText('sepete_ekle:v1', null)).toBe('Sepete ekle');
+    // Webhook boy kimliğinden adı çözdüyse METİN O AD olur (10.09): tek boylu ürünün düğmesi "Sepete ekle"
+    // yazıyor ve ajana "Sepete ekle — Sepete ekle" gidiyordu — hangi ürün olduğu kayboluyordu.
+    expect(buttonReplyText('sepete_ekle:v1', 'Sepete ekle', 'Kara Orman Pastası (1 kg)')).toBe('Sepete ekle — Kara Orman Pastası (1 kg)');
     expect(buttonReplyText('urun_karti:fistikli-baklava', 'Boyları gör')).toBe('Ürün kartı — fistikli-baklava');
     expect(buttonReplyText('baska', 'Evet')).toBe('Evet');
     expect(buttonReplyText(null, 'Evet')).toBe('Evet');

@@ -5,7 +5,7 @@ import { hasNutrition, resolveLocalizedText } from '@lezzet/types';
 import type { LocalizedText, PreferredLanguage, ProductWithRelations } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { campaignsByProduct, readScopeCampaigns } from './campaign';
-import { EMPTY_PRODUCT_CONTEXT, imageOf, primaryVariantOf, toCategory, toProduct, toVariant } from './map';
+import { EMPTY_PRODUCT_CONTEXT, deliversHere, imageOf, primaryVariantOf, toCategory, toProduct, toVariant } from './map';
 import type { ProductContext } from './map';
 import { loadProductContext } from './product-context';
 import type { PricingViewer } from './pricing-viewer';
@@ -181,7 +181,7 @@ async function readSimilar(
   const buyable = candidates.filter((p) => {
     const view = views.get(p.id);
     if (view?.priceCents == null) return false;
-    return view.stockStatus !== 'elsewhere' && view.stockStatus !== 'out_of_stock';
+    return deliversHere(view.stockStatus);
   });
 
   // Hiçbiri kalmazsa bölüm HİÇ ÇİZİLMEZ (`product.desktop`: `similar.length > 0`) — alakasız bir

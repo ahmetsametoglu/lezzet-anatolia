@@ -1,9 +1,21 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { z, ToolSet } from '@lezzet/ai';
-import { BundleService, CartService, CategoryService, ConversationService, PriceService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import {
+  BundleService,
+  CartService,
+  CategoryService,
+  ConversationService,
+  DeliveryZoneService,
+  PriceService,
+  ProductService,
+  StockService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
+import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { Conversation } from '@lezzet/types';
 import { cartAgentTools, cartLinkIfDue } from './agent-tools';
+import { chatPlaceMemory, type ChatPlaceMemory } from './chat-place';
 import type { ChatLink } from './link-text';
 
 /**
@@ -20,15 +32,27 @@ import type { ChatLink } from './link-text';
  *   · Satışa kapalı ürün sepete girmez ve sebebi söylenir.
  *   · Kimliksiz sohbette sepet SOHBETE yazılır; müşterili sohbette müşterinin gerçek sepetine.
  *   · Bağlantı aracı kabı doldurur — model bağlantıyı yazmaz, `ai.ts` ekler.
+ *   · YER ŞARTI (10.09): sepete yazan araç posta kodu bilinmeden yazmaz; gerçek kod sohbete yazılır,
+ *     bu adrese gidemeyen kalem eklenmez.
  */
 const db = serviceDb();
 const stamp = Date.now();
+const son2 = String(stamp).slice(-2);
+/**
+ * Kendi rota bölgemizin kodu — `004` bandı: ne FR (01000'den) ne DE (01067'den) referansında var ve
+ * öteki dosyaların bantlarına (`005`–`009`) girmiyor; aynı anda koşan iki dosya birbirinin bölgesini çözmez.
+ */
+const SEPET_KODU = `004${son2}`;
+/** Hiçbir kayıtta olmayan kod — `unknown` beklenir; yazım hatasının yerine geçer. */
+const YOK_KODU = `003${son2}`;
+const gunSonra = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 const profileIds: string[] = [];
 const productIds: string[] = [];
 const conversationIds: string[] = [];
 const bundleIds: string[] = [];
 let categoryId = '';
+let warehouseId = '';
 let musteriId = '';
 let messenger: Conversation;
 let whatsapp: Conversation;
@@ -44,7 +68,12 @@ async function cagir(tools: ToolSet, ad: string, ham: unknown = {}): Promise<Rec
 
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 
-async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>): Promise<string> {
+/**
+ * Fiyatlı boylar test bölgesinin deposunda STOKLU açılır: yeri bilinen sohbette kalem ancak o depodan
+ * karşılanıyorsa "kapıya teslim"dir (`decideCartAgainstWarehouse`). `soguk`: kargoya verilemez ve
+ * stoksuz — bu adrese hiçbir yoldan gidemeyen kalem (`not_shippable_here`).
+ */
+async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>, opts: { soguk?: boolean } = {}): Promise<string> {
   const { product, variants } = await new ProductService(db).create({
     name: ucDil(`${ad} ${stamp}`),
     description: ucDil('Sepet aracı testi ürünü'),
@@ -52,22 +81,49 @@ async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>
     storageInstructions: ucDil('Serin yerde saklayın'),
     categoryId,
     status: 'active',
+    ...(opts.soguk ? { shippable: false } : {}),
     variants: boylar.map((b) => ({ label: { tr: b.label } })),
   });
   productIds.push(product.id);
   for (const [i, boy] of boylar.entries()) {
-    if (boy.b2c !== undefined) await new PriceService(db).insert({ variantId: variants[i]!.id, channel: 'b2c', amountCents: boy.b2c });
+    if (boy.b2c === undefined) continue;
+    await new PriceService(db).insert({ variantId: variants[i]!.id, channel: 'b2c', amountCents: boy.b2c });
+    if (!opts.soguk) {
+      await new StockService(db).insert({ warehouseId, variantId: variants[i]!.id, physicalQty: 20, expiryDate: gunSonra(60), purchasePriceCents: 100 });
+    }
   }
   return variants[0]!.id;
 }
 
 const AD = (kisa: string) => `${kisa} ${stamp}`;
 
-function araclar(conversation: Conversation, onLink: (link: ChatLink) => void = () => {}, accountLink = false): ToolSet {
-  return cartAgentTools(db, { conversation, pricingCustomerId: null, addressCustomerId: null, onLink, accountLink });
+/**
+ * Yeri BİLİNEN sohbet — gerçek hafıza yerine kodu hazır tutan taklit (DB'ye yazmaz): araçların çoğu
+ * yer şartından SONRAKİ davranışı sınıyor. Şartın kendisi ve gerçek hafıza `araclarHafizayla` ile.
+ */
+const YER: ChatPlaceMemory = { known: () => SEPET_KODU, remember: async () => {} };
+
+function araclar(
+  conversation: Conversation,
+  onLink: (link: ChatLink) => void = () => {},
+  accountLink = false,
+  onCartWrite?: (hazir: boolean) => void,
+): ToolSet {
+  return cartAgentTools(db, { conversation, pricingCustomerId: null, addressCustomerId: null, onLink, accountLink, place: YER, onCartWrite });
+}
+
+/** Yer hafızası ÇAĞIRANDAN: `null` (hiç yer yok) ya da gerçek `chatPlaceMemory` — şartı ve saklamayı sınar. */
+function araclarHafizayla(conversation: Conversation, place: ChatPlaceMemory | null): ToolSet {
+  return cartAgentTools(db, { conversation, pricingCustomerId: null, addressCustomerId: null, onLink: () => {}, place });
 }
 
 beforeAll(async () => {
+  // Rota bölgesi: depo + haftalık gün + kod (`support-tools.test.ts` deseni). Stok bu depoya yazılır.
+  warehouseId = (await createTestWarehouse(db, { label: 'SPT' })).id;
+  const zones = new DeliveryZoneService(db);
+  const bolge = await zones.insert({ name: `Sepet aracı bölgesi ${stamp}`, warehouseId, weekdays: [2] });
+  await zones.replacePostalCodes(bolge.id, [{ country: 'FR', postalCode: SEPET_KODU }]);
+
   categoryId = (await new CategoryService(db).create({ name: { tr: `Sepet aracı ${stamp}` } })).id;
   const fistikliVariantId = await urunAc('Fıstıklı Sarma', [{ label: '250 g', b2c: 457 }]);
   await urunAc('Cevizli Sarma', [{ label: '250 g', b2c: 399 }]);
@@ -84,6 +140,7 @@ beforeAll(async () => {
     { label: '1 kg', b2c: 1100 },
   ]);
   await urunAc('Kapalı Helva', [{ label: '1 kg' }]);
+  await urunAc('Soğuk Pasta', [{ label: '1 adet', b2c: 2258 }], { soguk: true });
 
   musteriId = (await new UserProfileService(db).insert({ name: `Sepet aracı müşterisi ${stamp}` })).id;
   profileIds.push(musteriId);
@@ -97,7 +154,8 @@ beforeAll(async () => {
 afterAll(async () => {
   // Paketler ÜRÜNDEN ÖNCE gider: kalemler varyanta `restrict` ile bağlı (`bundle.test.ts` dersi).
   for (const id of bundleIds) await new BundleService(db).delete(id);
-  await purgeTestData(db, { productIds, categoryIds: [categoryId], conversationIds, profileIds });
+  // Bölge depoyla, kodları bölgeyle gidiyor (`cleanup.ts`); stok ürünle.
+  await purgeTestData(db, { productIds, categoryIds: [categoryId], conversationIds, profileIds, warehouseIds: [warehouseId] });
 });
 
 describe('değişmez: kimlik ARGÜMAN değil, KAPANIŞTIR', () => {
@@ -121,8 +179,10 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
     expect(sonuc).toMatchObject({ eklendi: { urun: AD('Fıstıklı Sarma'), adet: 2 } });
     const sepet = sonuc.sepet as { kalemler: Array<{ birimFiyat: string; adet: number }>; toplam: string; kargo: string };
     /* Kargo ve ödenecek tutar AÇIK söylenir (08.09): ajan ürün toplamını söyleyip kargoyu susmuştu,
-       müşteri sitede farklı bir tutar gördü. Adres bilinmese de EŞİK söylenir (satış cümlesi). */
-    expect(sepet.kargo).toMatch(/ÜCRETSİZ/);
+       müşteri sitede farklı bir tutar gördü. Yer biliniyor ve kalem rota deposunda: kapıya teslim. */
+    expect(sepet.kargo).toMatch(/kapıya teslim/);
+    // Yeri BİLİNMEYEN okumada da eşik söylenir (satış cümlesi) — okumak yer istemez, yazmak ister.
+    expect((await cagir(araclarHafizayla(messenger, null), 'sepetim')).kargo).toMatch(/ÜCRETSİZ/);
     expect(sepet.toplam).toMatch(/ödeyeceği tutar/);
     expect(sepet.kalemler).toHaveLength(1);
     expect(sepet.kalemler[0]).toMatchObject({ adet: 2 });
@@ -248,5 +308,62 @@ describe('hesap bağlantısı (15.16) — yalnız verildiğinde var, kabı HESAP
     const sonuc = await cagir(araclar(bos, (link) => (alinan = link), true), 'hesap_baglantisi');
     expect(sonuc).toHaveProperty('hazir');
     expect(alinan).toMatchObject({ purpose: 'account', url: expect.stringMatching(/\/fr\/compte\?link=[A-Z0-9]{12}$/) });
+  });
+});
+
+describe('yer ŞARTI (10.09 · kullanıcı kararı) — posta kodu bilinmeden sepete yazılmaz', () => {
+  /* Canlı Messenger turunda ölçüldü: müşteri posta kodu söylemeden baklava ve yaş pasta istedi, ajan
+     ikisini de sepete koydu ve toplamı söyledi — o adrese gidip gitmediğimizi bilmeden. Araç "posta
+     kodunu sor" diyordu ama bu bir ricaydı; model başka bir soru sordu. Kural artık araçta. */
+  const sohbetAc = async (ek: string): Promise<Conversation> => {
+    const row = await new ConversationService(db).open({ source: 'messenger', externalRef: `psid-yer-${ek}-${stamp}` });
+    conversationIds.push(row.id);
+    return row;
+  };
+
+  it('yer bilinmezken ekleme YAZMAZ ve modele posta kodunu sordurur; sepet değişmez', async () => {
+    const sohbet = await sohbetAc('yok');
+    const sonuc = await cagir(araclarHafizayla(sohbet, null), 'sepete_ekle', { urun: AD('Fıstıklı Sarma') });
+    expect(sonuc).toHaveProperty('sepeteYazilmadi');
+    expect(sonuc).toHaveProperty('yerBilinmiyor');
+    expect((await new CartService(db).getFor({ conversationId: sohbet.id })).items).toHaveLength(0);
+  });
+
+  it('söylenen GERÇEK kod sohbete yazılır; sonraki tur kodu SORMADAN ekler', async () => {
+    const sohbet = await sohbetAc('var');
+    const ilk = await cagir(araclarHafizayla(sohbet, chatPlaceMemory(db, sohbet)), 'sepete_ekle', { urun: AD('Cevizli Sarma'), postaKodu: SEPET_KODU });
+    expect(ilk).toHaveProperty('eklendi');
+
+    const saklanan = await new ConversationService(db).getById(sohbet.id);
+    expect(saklanan?.postalCode).toBe(SEPET_KODU);
+    // Yeni tur: kod söylenmiyor, sohbetten okunuyor.
+    const ikinci = await cagir(araclarHafizayla(saklanan!, chatPlaceMemory(db, saklanan!)), 'sepete_ekle', { urun: AD('Cevizli Sarma') });
+    expect(ikinci).toHaveProperty('eklendi');
+  });
+
+  it('böyle bir kod YOKSA ne saklanır ne yazılır — yazım hatası sohbeti yanlış yere kilitlemez', async () => {
+    const sohbet = await sohbetAc('yanlis');
+    const sonuc = await cagir(araclarHafizayla(sohbet, chatPlaceMemory(db, sohbet)), 'sepete_ekle', { urun: AD('Cevizli Sarma'), postaKodu: YOK_KODU });
+    expect(sonuc).toHaveProperty('sepeteYazilmadi');
+    expect(sonuc).toHaveProperty('postaKoduGecersiz');
+    expect((await new ConversationService(db).getById(sohbet.id))?.postalCode).toBeNull();
+  });
+
+  it('bu adrese GİDEMEYEN kalem eklenmez ve sebebi söylenir — soğuk zincir, depoda yok', async () => {
+    const sohbet = await sohbetAc('soguk');
+    const sonuc = await cagir(araclar(sohbet), 'sepete_ekle', { urun: AD('Soğuk Pasta') });
+    expect(sonuc).toHaveProperty('gonderilemez');
+    expect((await new CartService(db).getFor({ conversationId: sohbet.id })).items).toHaveLength(0);
+  });
+
+  it('"sipariş verilebilir mi" ÖZETLE tutarlı — asgari sepet eksikse bağlantı kendiliğinden gitmez', async () => {
+    /* 16.05'te 22,84 €'luk sepete (asgari 40 €) "Sepetiniz hazır… ödemek için" düğmesi gitti. Hazırlık
+       özetin söylediğiyle aynı hesaptan: asgari sepet satırı varsa hazır DEĞİL. Eşik bir ayar olduğu
+       için iddia tutara değil TUTARLILIĞA yazıldı. */
+    const sohbet = await sohbetAc('hazir');
+    const hazirlar: boolean[] = [];
+    const sonuc = await cagir(araclar(sohbet, () => {}, false, (hazir) => hazirlar.push(hazir)), 'sepete_ekle', { urun: AD('Cevizli Sarma') });
+    const sepet = sonuc.sepet as Record<string, unknown>;
+    expect(hazirlar).toEqual([sepet.asgariSepet === undefined]);
   });
 });

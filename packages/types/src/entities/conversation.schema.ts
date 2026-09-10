@@ -112,6 +112,12 @@ export const ConversationSchema = z.object({
    * üç dilden birinde bir şey yazmadı (yalnız fotoğraf gönderdi, ya da "ok").
    */
   language: PreferredLanguageEnum.nullable(),
+  /**
+   * **Müşterinin SÖYLEDİĞİ posta kodu** (15.20 · kullanıcı kararı 10.09) — sohbette bir kez söylenir,
+   * burada saklanır; ajanın araçları "bu adrese gider mi"yi buna göre okur ve sepete yer bilinmeden
+   * yazmaz (`cart/chat-place.ts`). Yalnız gerçek, tek ülkeli kod yazılır — yazım hatası saklanmaz.
+   */
+  postalCode: z.string().regex(/^\d{5}$/).nullable(),
   /** Son hareketin anı — konuşmanın "ne zaman kımıldadı" damgası. `recordMessage` yazar. */
   lastMessageAt: z.string().nullable(),
   /**

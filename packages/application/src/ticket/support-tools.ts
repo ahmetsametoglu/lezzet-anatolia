@@ -15,11 +15,9 @@ import {
   cropOf,
   cropTrim,
   resolveLocalizedText,
-  type Address,
   type Conversation,
   type PreferredLanguage,
   type ProductAllergen,
-  type StockStatus,
 } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
@@ -39,9 +37,11 @@ import {
 } from '../catalog/product-card';
 import { resolveOutboundLanguage } from '../messaging/translate';
 import type { StorefrontDeclaration } from '../catalog/storefront-types';
-import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
+import { resolvePlaceForPostalCode } from '../delivery/place';
+import { birincilAdres, resolveChatPlace, yerNotu, type ChatPlace, type ChatPlaceMemory } from '../cart/chat-place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
 import { readPublicDeliveryTerms } from '../settings/public-terms';
+import { gitmemeSebebi, gitmeyenAlani, kargoYalniz, stokCumlesi, yereGider, yereGoreAyir } from './product-reach';
 
 /*
   DESTEK AJANININ ARAÇLARI (16.9) — modelin veriye KENDİSİ bakabildiği dar yüzey.
@@ -136,20 +136,6 @@ function beyanOf(d: StorefrontDeclaration): Record<string, unknown> {
   };
 }
 
-/**
- * Stok hâlinin modele söylenen karşılığı — DÖRT hâl, dört ayrı cümle (19.10).
- *
- * `Record` kilit: enum büyüdüğünde derleme durur. Cümleler bilerek KOŞULLU değil AÇIK — "elsewhere"
- * için "yok" demek yanlış olurdu (mal var, ama müşterinin deposunda değil) ve model o farkı ancak
- * kendisine söylenirse bilir.
- */
-const STOK_SOZLUGU: Record<StockStatus, string> = {
-  available: 'stokta — bu adrese teslim edilebilir',
-  shipping: 'stokta — bu adrese kargoyla gider',
-  elsewhere: 'başka depoda var; bu adrese bugün verilemiyor',
-  out_of_stock: 'tükendi',
-};
-
 /** Modelin gördüğü tarih biçimi — "18 Ağustos Salı". İki bilgi tek dizede: gün adı da lazım. */
 function tarihAdi(iso: string): string {
   const gun = new Intl.DateTimeFormat('tr-TR', { weekday: 'long' }).format(new Date(iso));
@@ -167,24 +153,19 @@ function gunAdi(isoGun: number): string {
   return new Intl.DateTimeFormat('tr-TR', { weekday: 'long' }).format(gun);
 }
 
-/** Varsayılan adres, yoksa ilk adres — müşterinin "benim adresim" dediği tek yer. */
-function birincilAdres(adresler: Address[]): Address | null {
-  return adresler.find((a) => a.isDefault) ?? adresler[0] ?? null;
-}
-
 /**
  * Katalog kapısının iki zorunlu bağlamı — `place` (hangi depo) ve `viewer` (hangi kanal/kademe) —
- * `urun_ara` ve `urun_karti` için TEK yerde (`urun_ara` künyesindeki "yer üç kaynaktan" kuralı).
- * `kod` çözülen posta kodudur; boşsa yer bilinmiyor ve `place` depo-üstüdür.
+ * `urun_ara`, `urun_karti` ve `urun_karuseli` için TEK yerde. Yer dört kaynaktan, sepet araçlarıyla
+ * AYNI sırayla (`cart/chat-place.ts`): söylenen · sohbette saklanan · kayıtlı adres · hiçbiri. Söylenen
+ * gerçek kod sohbete yazılır (10.09) — müşteri bir daha söylemez. Depo çözülmediyse `place` depo-üstüdür;
+ * ürünlerin yere göre ayıklanma kuralı `product-reach.ts`te.
  */
-async function yerVeGoruntuleyici(db: Db, customerId: string | null, postaKodu: string | undefined) {
-  const adres = customerId ? birincilAdres(await new AddressService(db).listByCustomer(customerId)) : null;
-  const kod = postaKodu?.trim() || adres?.postalCode || null;
-  const [place, viewer] = await Promise.all([
-    kod ? resolvePlaceWarehouses(db, kod) : Promise.resolve(UNRESOLVED_PLACE),
+async function yerVeGoruntuleyici(db: Db, customerId: string | null, postaKodu: string | undefined, memory: ChatPlaceMemory | null) {
+  const [yerim, viewer] = await Promise.all([
+    resolveChatPlace(db, { said: postaKodu, memory, addressCustomerId: customerId }),
     pricingViewerOf(db, customerId),
   ]);
-  return { place, viewer, kod };
+  return { yerim, viewer };
 }
 
 /**
@@ -223,8 +204,18 @@ export interface PendingProductCard {
  * Ayrım kanalda değil SORUDA: kimseye ait olmayan bilgi (katalog, fiyat listesi, teslimat şartları,
  * bir posta koduna gidip gitmediğimiz) kimlik istemez; müşterinin GEÇMİŞİ ister.
  */
-export function customerSupportTools(db: Db, customerId: string | null, card: ProductCardHook | null = null): ToolSet {
-  return { ...publicTools(db, customerId), ...(card ? productCardTools(db, customerId, card) : {}), ...(customerId ? identityTools(db, customerId) : {}) };
+export function customerSupportTools(
+  db: Db,
+  customerId: string | null,
+  card: ProductCardHook | null = null,
+  /** Sohbetin teslimat yeri hafızası (10.09) — yalnız sohbet turunda; talep yolunda (e-posta) yok. */
+  memory: ChatPlaceMemory | null = null,
+): ToolSet {
+  return {
+    ...publicTools(db, customerId, memory),
+    ...(card ? productCardTools(db, customerId, card, memory) : {}),
+    ...(customerId ? identityTools(db, customerId) : {}),
+  };
 }
 
 /**
@@ -239,7 +230,7 @@ const META_IMAGE_KEY = /\.(jpe?g|png)$/i;
 /** Kart görselinin uzun kenarı (px): telefonda tam genişlik, Meta 5 MB tavanının çok altında. */
 const CARD_IMAGE_WIDTH = 1200;
 
-function productCardTools(db: Db, customerId: string | null, card: ProductCardHook): ToolSet {
+function productCardTools(db: Db, customerId: string | null, card: ProductCardHook, memory: ChatPlaceMemory | null): ToolSet {
   return {
     urun_karti: tool({
       description:
@@ -252,9 +243,11 @@ function productCardTools(db: Db, customerId: string | null, card: ProductCardHo
       }),
       execute: async ({ kod, postaKodu }) => {
         try {
-          const { place, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu);
+          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu, memory);
           const { language: dil } = await resolveOutboundLanguage(db, card.conversation);
-          const okunan = await kartUrunu(db, kod, dil, place, viewer);
+          const okunan = await kartUrunu(db, kod, dil, yerim, viewer);
+          // Bu adrese gitmeyen ürüne kart yok (10.09): düğmesine basan müşteri "gönderilemez" duyardı.
+          if (okunan.durum === 'gidemez') return { gonderilemez: okunan.mesaj };
           if (okunan.durum !== 'ok') return { bilinmiyor: okunan.mesaj };
           const { detay, boylar, imageUrl } = okunan;
 
@@ -299,15 +292,16 @@ function productCardTools(db: Db, customerId: string | null, card: ProductCardHo
       }),
       execute: async ({ kodlar, postaKodu }) => {
         try {
-          const { place, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu);
+          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu, memory);
           const { language: dil } = await resolveOutboundLanguage(db, card.conversation);
-          const okunanlar = await Promise.all([...new Set(kodlar)].map((kod) => kartUrunu(db, kod, dil, place, viewer)));
+          const okunanlar = await Promise.all([...new Set(kodlar)].map((kod) => kartUrunu(db, kod, dil, yerim, viewer)));
 
           const kartlar = [];
           const disarida: string[] = [];
           for (const o of okunanlar) {
             if (o.durum !== 'ok' || !o.imageUrl) {
-              disarida.push(o.durum === 'ok' ? `${o.detay.name} (görselsiz)` : o.kod);
+              // Bu adrese gitmeyen ürün kart olmaz (10.09) — dışarıda kalır, sebebiyle.
+              disarida.push(o.durum === 'ok' ? `${o.detay.name} (görselsiz)` : o.durum === 'gidemez' ? `${o.ad} (bu adrese gönderilemiyor)` : o.kod);
               continue;
             }
             const tekBoy = o.boylar.length === 1;
@@ -343,11 +337,12 @@ function productCardTools(db: Db, customerId: string | null, card: ProductCardHo
 
 type KartUrunu =
   | { durum: 'ok'; kod: string; detay: NonNullable<Awaited<ReturnType<typeof getProductDetail>>>; boylar: { id: string; label: string; priceCents: number | null }[]; imageUrl: string | null }
-  | { durum: 'yok' | 'kapali'; kod: string; mesaj: string };
+  | { durum: 'yok' | 'kapali'; kod: string; mesaj: string }
+  | { durum: 'gidemez'; kod: string; ad: string; mesaj: string };
 
 /**
- * Kart ve karuselin ORTAK okuması: detay (müşteri dili, yer, görüntüleyici) + satılabilir boylar +
- * görsel adresi. Görsel CDN dönüşümüyle JPEG (09.09, 05.37): WhatsApp WebP'yi çıkartma sayıp reddeder,
+ * Kart ve karuselin ORTAK okuması: detay (müşteri dili, yer, görüntüleyici) + satılabilir ve BU ADRESE
+ * GİDEN boylar + görsel adresi. Görsel CDN dönüşümüyle JPEG (09.09, 05.37): WhatsApp WebP'yi çıkartma sayıp reddeder,
  * Cloudflare aynı kaynaktan `width=1200,format=jpeg` üretir (ölçüldü: 67 KB). Dönüşüm yoksa (r2.dev
  * tabanı) yalnız zaten JPEG/PNG olan görsel alınır.
  */
@@ -355,13 +350,27 @@ async function kartUrunu(
   db: Db,
   kod: string,
   dil: PreferredLanguage,
-  place: Parameters<typeof getProductDetail>[1]['place'],
+  yerim: ChatPlace,
   viewer: Parameters<typeof getProductDetail>[1]['viewer'],
 ): Promise<KartUrunu> {
-  const [detay, urun] = await Promise.all([getProductDetail(db, { locale: dil, slug: kod, place, viewer }), new ProductService(db).findBySlug(kod)]);
+  const [detay, urun] = await Promise.all([getProductDetail(db, { locale: dil, slug: kod, place: yerim.place, viewer }), new ProductService(db).findBySlug(kod)]);
   if (!detay) return { durum: 'yok', kod, mesaj: `"${kod}" kodlu ürün bulunamadı — urun_ara'daki "kod" alanını aynen geç.` };
-  const boylar = detay.variants.filter((v) => v.priceCents !== null);
-  if (boylar.length === 0) return { durum: 'kapali', kod, mesaj: 'bu ürün bu kanalda satışa kapalı — kart gönderilmedi.' };
+  const satilik = detay.variants.filter((v) => v.priceCents !== null);
+  if (satilik.length === 0) return { durum: 'kapali', kod, mesaj: 'bu ürün bu kanalda satışa kapalı — kart gönderilmedi.' };
+  /* YALNIZ BU ADRESE GİDEN BOYLAR (10.09): kart düğmesi sepete yazar ve gidemeyen boyun düğmesi müşteriyi
+     "gönderilemez" cevabına götürürdü. Yer bilinmiyorsa ayıklama yok (`product-reach.ts`). */
+  const boylar = satilik.filter((v) => yereGider(v.stockStatus, yerim));
+  if (boylar.length === 0) {
+    // Hiçbir boy gitmiyor — sebep ürün düzeyinde tek cümle, boyların en iyi hâlinden (başka depoda > tükendi).
+    const hal = satilik.some((v) => v.stockStatus === 'elsewhere') ? 'elsewhere' : 'out_of_stock';
+    const sebep = gitmemeSebebi({ stockStatus: hal, shippable: detay.shippable }, yerim);
+    return {
+      durum: 'gidemez',
+      kod,
+      ad: detay.name,
+      mesaj: `${detay.name} bu posta koduna (${yerim.kod}) gönderilemiyor — ${sebep}. Kart gönderilmedi: müşteriye söyle ve gidebilen bir alternatif öner.`,
+    };
+  }
   /* Kadraj (05.37): operatörün odak+zoom'u sohbet kartı çerçevesine (`RATIO_CHAT`) `trim` olarak gider —
      kırpma penceresindeki "sohbet kartı" önizlemesiyle aynı kare. Kaynak ölçüsü yoksa kesim yok, tam görsel. */
   const trim = urun ? cropTrim({ width: urun.imageWidth, height: urun.imageHeight }, RATIO_CHAT, cropOf(urun)) : null;
@@ -474,11 +483,12 @@ function identityTools(db: Db, customerId: string): ToolSet {
  * kendi kuralı (`!customerId → VISITOR`). Yani aynı araç iki modda çalışır ve ikisi de dürüsttür;
  * ikinci bir "ziyaretçi seti" yazmak aynı üç aracın ikinci kopyası olurdu.
  */
-function publicTools(db: Db, customerId: string | null): ToolSet {
+function publicTools(db: Db, customerId: string | null, memory: ChatPlaceMemory | null): ToolSet {
   return {
     urun_ara: tool({
       description:
         'Katalogda ürün arar ve müşterinin KENDİ fiyatıyla, KENDİ adresine göre satın alınabilirliğini söyler. ' +
+        'Adres biliniyorsa yalnız o adrese gidebilen ürünleri listeler; gidemeyenler sebebiyle "buAdreseGitmeyenler" alanındadır. ' +
         '"X var mı", "fiyatı ne", "kaça", "hangi boyları var" sorularında MUTLAKA bunu çağır. Tahmin etme.',
       inputSchema: z.object({
         terim: z
@@ -507,8 +517,8 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             stoğunu okutmak olurdu; kapı bu yüzden ikisini de zorunlu istiyor (`CatalogInput`
             künyesi) ve araç da uydurmuyor.
 
-            ── YER ÜÇ KAYNAKTAN, BU SIRAYLA (28.08 · `CHANNELS §3b`) ─────────────
-            (1) sohbette SÖYLENEN posta kodu · (2) müşterinin kayıtlı adresi · (3) hiçbiri.
+            ── YER DÖRT KAYNAKTAN, TEK SIRAYLA (28.08 · 10.09 · `cart/chat-place.ts`) ──────────
+            (1) sohbette SÖYLENEN posta kodu · (2) sohbette SAKLANAN · (3) müşterinin kayıtlı adresi · (4) hiçbiri.
             Söylenen kod öndedir ve bilerek: "annemin evine, 75001'e gelir mi" diyen müşteride
             kayıtlı adres YANLIŞ cevabı verirdi. Posta kodu KİMLİK DEĞİL — herkese açık bir soru
             (`posta_kodu_kontrol` künyesinin kurduğu gerekçe); o yüzden bu araç kimliksiz sohbette
@@ -517,8 +527,11 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             Yer hiç çözülemezse `place` DEPO-ÜSTÜ okunur (`UNRESOLVED_PLACE`): "hiç var mı" sorusu
             cevaplanabilir, "sana gelir mi" cevaplanamaz — ve model bunu bilsin diye cevapta ayrıca
             söyleniyor (`yerBilinmiyor`), üstelik çaresiyle: posta kodunu SOR ve yeniden çağır.
+            Yer BİLİNİYORSA liste yalnız o adrese gidebilenlerden kurulur; gidemeyenler sebebiyle ayrı
+            alanda (10.09 · `product-reach.ts`).
           */
-          const { place, viewer, kod } = await yerVeGoruntuleyici(db, customerId, postaKodu);
+          const { yerim, viewer } = await yerVeGoruntuleyici(db, customerId, postaKodu, memory);
+          const { place, kod } = yerim;
 
           const ortak = {
             // Operasyon dili Türkçe ve model Türkçe yazıyor; cevabın müşteri diline çevrilmesi
@@ -552,9 +565,25 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
           const normalize = (s: string) => s.trim().toLocaleLowerCase('tr');
           const kategori = isimAramasi.categories.find((c) => normalize(c.name) === normalize(terim)) ?? null;
 
-          const katalog = kategori
-            ? await getCatalogData(db, { ...ortak, query: { categorySlug: kategori.slug } })
-            : isimAramasi;
+          /*
+            ── KARGO BÖLGESİNDE KATEGORİ, KARGOYA UYGUNLARDAN KURULUR (10.09 · kullanıcı sorusu) ─────
+            Kapıya teslim bölgesi dışındaki müşteriye soğuk zincir ürünü hiçbir yoldan gitmez. Kategori
+            süzgeçsiz okunsaydı sayfa ve tavan onlarla dolar, kargoyla gidebilenler kesilen kısımda
+            kalabilirdi. Süzgeç sitenin "adresime gönderilebilir" çipinin kendisi (`onlyShippable`, SQL'de:
+            sayfalı okumada sonradan süzmek sonraki sayfaları yutardı). İsim aramasına UYGULANMAZ: adıyla
+            sorulan soğuk zincir ürünü "yok" değil, "bu adrese gitmiyor" diye söylenmeli. Kargoya uygun hiç
+            ürün çıkmazsa kategori süzgeçsiz okunur — aynı sebeple.
+          */
+          const kargoSuzgeci = kategori !== null && kargoYalniz(place);
+          const kategoriOku = (slug: string, onlyShippable: boolean) =>
+            getCatalogData(db, { ...ortak, query: { categorySlug: slug, ...(onlyShippable ? { onlyShippable } : {}) } });
+          let katalog = kategori ? await kategoriOku(kategori.slug, kargoSuzgeci) : isimAramasi;
+          const kargoyaSuzuldu = kargoSuzgeci && katalog.products.length > 0;
+          if (kategori && kargoSuzgeci && !kargoyaSuzuldu) katalog = await kategoriOku(kategori.slug, false);
+          if (katalog.products.length === 0) return { bilinmiyor: `"${terim}" için katalogda eşleşen ürün yok.` };
+
+          // Yer biliniyorsa gidemeyenler ayrılır: liste ve tavan gidebilenlere, gidemeyenler adıyla ayrı alana.
+          const { gidenler, gitmeyenler } = yereGoreAyir(katalog.products, yerim);
 
           /*
             FİYAT ALANI ADIYLA NE OLDUĞUNU SÖYLER (06.09 · ölçülmüş arıza).
@@ -570,13 +599,14 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             çok boyluda `enUcuzBoy`/`fiyatBaslangic`. Model hangisini okuduğunu adından bilir.
           */
           const tavan = kategori ? CATEGORY_HITS : PRODUCT_HITS;
-          const urunler = katalog.products.slice(0, tavan).map((p) => {
+          const urunler = gidenler.slice(0, tavan).map((p) => {
             const fiyat = p.priceCents === null ? 'bu kanalda satışa kapalı' : formatPrice(p.priceCents, 'tr');
             return {
               ad: p.name,
               // Ürün kartı aracının anahtarı (08.09): `urun_karti` bu kodu ister, adı değil.
               kod: p.slug,
-              durum: STOK_SOZLUGU[p.stockStatus],
+              // Yer bilinmiyorsa "bu adrese" denmez (10.09): stok depo-üstü okundu, hangi adres belli değil.
+              durum: stokCumlesi(p.stockStatus, yerim),
               /* KARGO UYGUNLUĞU AYRI BİR GERÇEK (07.09 · ölçülmüş arıza). `durum` "bu adrese gider
                  mi" sorusunu cevaplıyor; bu "kargoyla hiç gider mi". Ajan bu alan yokken *"tüm
                  ürünlerimiz kargo ile gönderime uygundur"* dedi ve sorgulanınca ısrar etti — oysa
@@ -591,8 +621,6 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             };
           });
 
-          if (urunler.length === 0) return { bilinmiyor: `"${terim}" için katalogda eşleşen ürün yok.` };
-
           /*
             EN İYİ EŞLEŞMENİN BOYLARI — sayı yetmez, LİSTE gerekir.
 
@@ -605,9 +633,10 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             sıralı. İkinci ürünün boyları gerekirse model onu adıyla yeniden aratır.
 
             Detay AYNI motordan okunuyor (`getProductDetail`, aynı `place`+`viewer`): ikinci bir
-            fiyat kuralı doğmuyor, yani listedeki fiyatla boy fiyatları ayrışamaz.
+            fiyat kuralı doğmuyor, yani listedeki fiyatla boy fiyatları ayrışamaz. Yer biliniyorsa
+            ilk eşleşme GİDEBİLENLERİN ilkidir (10.09): gidemeyen ürünün boyları satın alınamaz.
           */
-          const ilk = katalog.products[0];
+          const ilk = gidenler[0];
           /*
             DETAY ARTIK HER İLK EŞLEŞME İÇİN OKUNUYOR (07.09 · ölçülmüş yanlış devir): eskiden yalnız
             çok boylu üründe, boyları saymak için. Şimdi YASAL BEYAN da buradan geliyor — müşteri
@@ -649,10 +678,12 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             "bilmiyorum" derdi. O yüzden sayı burada CÜMLEYE giriyor — modelin "sadece/hepsi"
             diyebilmesini yapısal olarak zorlaştırıyor.
           */
-          const toplam = katalog.products.length;
-          const kirpildi = toplam > urunler.length;
+          /* Toplam SAYAÇTAN (`total`), sayfadan değil (10.09): sayfa 30 satırdır ve kalabalık kategoride
+             "toplam 30" yazıyordu. Gidemeyenler kırpma sayılmaz — onlar kendi alanında adıyla duruyor. */
+          const toplam = katalog.total;
+          const kirpildi = gidenler.length > urunler.length || toplam > katalog.products.length;
           const kirpmaNotu = kirpildi
-            ? ` Toplam ${toplam} ürünün ilk ${urunler.length}'i listelendi — bu liste TAM DEĞİL, "sadece bunlar var" DEME.`
+            ? ` Toplam ${toplam} ürünün ${urunler.length}'i listelendi — bu liste TAM DEĞİL, "sadece bunlar var" DEME.`
             : '';
 
           const kapsam = kategori
@@ -668,17 +699,35 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
                 mevcutKategoriler: isimAramasi.categories.map((c) => c.name),
               };
 
-          return kod
-            ? { urunler, ...boyAlani, ...beyanAlani, ...kapsam, yer: kod }
+          /* YER ALANI — hangi koda bakıldığı ve o kodun hâli. Kod var ama depo çözülmediyse (yazım hatası,
+             iki ülkeli kod, hizmet yok) hâlin cümlesi de gelir; sepet araçlarıyla aynı cümle (`yerNotu`). */
+          const yerAlani = kod
+            ? { yer: kod, ...yerNotu(yerim) }
             : {
-                urunler,
-                ...boyAlani,
-                ...beyanAlani,
-                ...kapsam,
                 yerBilinmiyor:
                   'Yer bilinmiyor — stok "hiç var mı" düzeyinde okundu, bir depoya göre değil. ' +
                   'Müşteriden POSTA KODU iste ve bu aracı postaKodu ile yeniden çağır.',
               };
+          const gitmeyen = gitmeyenAlani(gitmeyenler, tavan);
+          const kargoAlani = kargoyaSuzuldu
+            ? {
+                kargoBolgesi:
+                  'Bu posta kodu kargo bölgesinde (kapıya teslim yok): liste yalnız KARGOYA VERİLEBİLEN ürünlerden kuruldu; ' +
+                  'kargoya verilemeyen soğuk zincir ürünleri bu adrese gitmediği için listede yok.',
+              }
+            : {};
+
+          // Eşleşme VAR ama hiçbiri bu adrese gitmiyor: "katalogda yok" demek yanlış olurdu (10.09).
+          if (urunler.length === 0) {
+            return {
+              buAdreseGidenYok: `"${terim}" ile eşleşen ${gitmeyenler.length} ürünün hiçbiri bu posta koduna (${kod}) gönderilemiyor — "yok" DEME; var ama bu adrese gitmiyor.`,
+              ...gitmeyen,
+              ...kapsam,
+              ...kargoAlani,
+              ...yerAlani,
+            };
+          }
+          return { urunler, ...boyAlani, ...beyanAlani, ...kapsam, ...gitmeyen, ...kargoAlani, ...yerAlani };
         } catch (err) {
           logger.warn(
             { context: 'application/support-tools', tool: 'urun_ara', customerId, err: String(err) },
@@ -745,6 +794,8 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             sorusunu bu araca postalayan bir model, müşterinin adresini uydurmak zorunda kalırdı.
           */
           const cozum = await resolvePlaceForPostalCode(db, postaKoduCozum);
+          // Müşterinin söylediği GERÇEK kod sohbete yazılır (10.09): bir daha sorulmaz, sepete o yerle yazılır.
+          if (cozum.kind !== 'unknown' && cozum.kind !== 'ambiguous') await memory?.remember(postaKoduCozum);
           switch (cozum.kind) {
             case 'route':
               // En değerli cevap: rota günleri ÇÖZÜMLE BİRLİKTE geliyor, ikinci okuma gerekmiyor.

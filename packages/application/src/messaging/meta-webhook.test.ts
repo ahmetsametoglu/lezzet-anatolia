@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ConversationService, CustomerPhoneService, MessageService, UserProfileService, serviceDb } from '@lezzet/database';
+import { CategoryService, ConversationService, CustomerPhoneService, MessageService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { SERVICE_WINDOW_HOURS } from '@lezzet/domain-core';
 import type { Conversation, ConversationSource } from '@lezzet/types';
@@ -53,6 +53,8 @@ const IG_ACCOUNT = `TEST-IGACC-${stamp}`;
 const conversationIds: string[] = [];
 const profileIds: string[] = [];
 const webhookEventIds: string[] = [];
+const productIds: string[] = [];
+const categoryIds: string[] = [];
 
 /** Olay kimliği ÜRETİLİRKEN temizlik listesine yazılır: elle eklenen bir liste bir gün eksik kalır. */
 function eventId(prefix: string, n: number): string {
@@ -124,7 +126,7 @@ afterAll(async () => {
     const kanit = await phones.findActive(`+${telefon}`);
     if (kanit) profileIds.push(kanit.customerId);
   }
-  await purgeTestData(db, { conversationIds, profileIds, webhookEventIds });
+  await purgeTestData(db, { conversationIds, profileIds, webhookEventIds, productIds, categoryIds });
   if (jetonYedegi !== undefined) process.env.META_PAGE_ACCESS_TOKEN = jetonYedegi;
 });
 
@@ -494,6 +496,35 @@ describe('Messenger / Instagram — kişi hangi alanda?', () => {
     const konu = await konusma('messenger', FB_PERSON);
     const satir = (await messages.listByConversation(konu!.id)).filter((m) => m.kind === 'interactive');
     expect(satir.map((m) => m.body.text)).toContain('Sepete ekle — 500 g');
+  });
+
+  it('düğmenin boy kimliği GERÇEKSE metin ürünü ADIYLA taşır — "Sepete ekle — <ürün> (<boy>)" (10.09)', async () => {
+    /* Canlı Messenger turunda ölçüldü: karuselin tek boylu kartında düğme "Sepete ekle" yazıyordu ve
+       defterimize "Sepete ekle — Sepete ekle" düştü — ajan hangi pastanın seçildiğini bilemedi ve
+       müşteriye yeniden sordu. Ürün kimlikte vardı; artık veriden çözülüp metne yazılıyor. Ayrı kişi:
+       yukarıdaki iddialar FB_PERSON sohbetindeki satır SAYISINA bakıyor. */
+    const kisi = `TEST-PSID-KART-${stamp}`;
+    const categoryId = (await new CategoryService(db).create({ name: { tr: `Webhook kartı ${stamp}` } })).id;
+    categoryIds.push(categoryId);
+    const { product, variants } = await new ProductService(db).create({
+      name: { tr: `Kara Orman ${stamp}` },
+      categoryId,
+      variants: [{ label: { tr: '1 kg' } }],
+    });
+    productIds.push(product.id);
+
+    const anMs = Date.now() + 2;
+    const govde = messengerBody(
+      'page',
+      { sender: { id: kisi }, recipient: { id: PAGE_ACCOUNT }, postback: { title: 'Sepete ekle', payload: `sepete_ekle:${variants[0]!.id}` } },
+      anMs,
+    );
+    webhookEventIds.push(`messenger:${PAGE_ACCOUNT}:${kisi}:${anMs}:postback`);
+    expect(await handleMetaWebhook(govde)).toMatchObject({ written: 1 });
+
+    const konu = await konusma('messenger', kisi);
+    const satir = (await messages.listByConversation(konu!.id)).filter((m) => m.kind === 'interactive');
+    expect(satir.map((m) => m.body.text)).toEqual([`Sepete ekle — Kara Orman ${stamp} (1 kg)`]);
   });
 
   it('okundu/teslim zarfı defter olayı DEĞİLDİR — sayılır, geçilir', async () => {

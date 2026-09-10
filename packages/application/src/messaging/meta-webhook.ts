@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../customer/anchor';
-import { buttonReplyText } from '../catalog/product-card';
+import { buttonReplyText, CART_ADD_PREFIX } from '../catalog/product-card';
 import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationBell, ringConversationsBell } from '../realtime/bell';
 import { metaSenderFromEnv } from './meta-sender';
@@ -18,6 +18,7 @@ import { defaultConversationHandler } from './default-handler';
 import { findOrCreateCustomer } from '../customer/find-or-create';
 import { fetchMetaProfileName } from './meta-profile';
 import { runAutonomousConversationReply } from '../ticket/ai';
+import { displayName, variantNames } from '../warehouse/names';
 import type { TicketHandler } from '@lezzet/types';
 
 /**
@@ -362,7 +363,7 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally,
           // '+' önekiyle normalize edilir, external_ref sözleşmesi '+33…' (0039).
           const phone = normalizePhone(`+${message.from}`) ?? `+${message.from}`;
           const profileName = contacts.find((c) => c.wa_id === message.from)?.profile?.name?.trim() || null;
-          const { kind, text, payload } = waBodyOf(message);
+          const { kind, text, payload } = await waBodyOf(message);
 
           // ── ÖNCE BAĞLAMA JETONU, SONRA KİMLİK ÇÖZÜMÜ (04.10) ─────────────────────────────────
           // Sıra ZORUNLU: kimlik çözümü önce koşarsa tanımadığı numara için yeni bir taslak açar ve
@@ -609,19 +610,44 @@ function messengerStickerOf(attachments: unknown[] | undefined): string | null {
   return null;
 }
 
-function waBodyOf(message: WaMessage): { kind: MessageKind; text: string | null; payload: Record<string, unknown> | null } {
+/** Boy kimliğinin biçimi — bozuk kimlikle veri okunmaz (uuid kolonuna düz metin sorgusu hata verirdi). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Düğme cevabının METNİ — `sepete_ekle:<boy>` kimliğinde ürün adı ve boy veriden çözülür (10.09 ·
+ * canlı Messenger turunda ölçüldü): tek boylu ürünün kart düğmesi "Sepete ekle" yazıyor ve ajana
+ * "Sepete ekle — Sepete ekle" gidiyordu; hangi ürün olduğu kimlikte vardı, metinde yoktu. Ad depo
+ * ekranlarının okuduğu kapıdan (`variantNames` + `displayName`: "Ürün (boy)") — ikinci bir okuma
+ * yazılmadı. Çözülemezse (silinmiş boy) düğme başlığına düşer ve iz log'da; mesaj yine kaybolmaz.
+ */
+async function buttonChoiceText(id: string | null | undefined, title: string | null | undefined): Promise<string | null> {
+  const variantId = id?.startsWith(CART_ADD_PREFIX) ? id.slice(CART_ADD_PREFIX.length) : null;
+  if (!variantId || !UUID.test(variantId)) return buttonReplyText(id, title);
+  try {
+    const ad = (await variantNames(serviceDb(), [variantId])).get(variantId);
+    return buttonReplyText(id, title, ad ? displayName(ad) : null);
+  } catch (err) {
+    logger.warn(
+      { context: 'messaging/meta-webhook', variantId, err: err instanceof Error ? err.message : String(err) },
+      'düğmenin boyu çözülemedi — başlığıyla yazılıyor',
+    );
+    return buttonReplyText(id, title);
+  }
+}
+
+async function waBodyOf(message: WaMessage): Promise<{ kind: MessageKind; text: string | null; payload: Record<string, unknown> | null }> {
   if (message.type === 'text') return { kind: 'text', text: message.text?.body ?? '', payload: null };
   if (message.type === 'interactive') {
-    // Ürün kartının düğmesi (08.09): kimlik `sepete_ekle:` önekliyse metin "Sepete ekle — <boy>" olur
-    // ki ajan bağlamı okusun (`product-card.ts` künyesi); öteki düğmeler başlığıyla düşer.
+    // Ürün kartının düğmesi (08.09): kimlik `sepete_ekle:` önekliyse metin "Sepete ekle — <ürün (boy)>"
+    // olur ki ajan hangi kalemi eklediğini bilsin (`buttonChoiceText`); öteki düğmeler başlığıyla düşer.
     const secim = message.interactive?.button_reply ?? message.interactive?.list_reply;
-    return { kind: 'interactive', text: buttonReplyText(secim?.id, secim?.title), payload: { interactive: message.interactive ?? null } };
+    return { kind: 'interactive', text: await buttonChoiceText(secim?.id, secim?.title), payload: { interactive: message.interactive ?? null } };
   }
   /* KARUSEL DÜĞMESİ BURADAN DÜŞER (ölçüldü 09.09 canlı): karuselin hızlı cevabı `button_reply` değil,
      şablon düğmesinin biçimiyle `type: "button"` + `button.payload` (bizim kimlik) + `button.text`
      (başlık) gelir. Yalnız başlık yazılınca ajan "Boyları gör"ü gördü, hangi ürün olduğunu göremedi. */
   if (message.type === 'button') {
-    return { kind: 'interactive', text: buttonReplyText(message.button?.payload, message.button?.text), payload: { button: message.button ?? null } };
+    return { kind: 'interactive', text: await buttonChoiceText(message.button?.payload, message.button?.text), payload: { button: message.button ?? null } };
   }
   const media = message.type ? (message[message.type] as { caption?: string } | undefined) : undefined;
   return { kind: 'media', text: media?.caption?.trim() || null, payload: { type: message.type ?? 'unknown', body: media ?? null } };
@@ -762,8 +788,8 @@ async function ingestMessengerEntry(
           const conversation = await openSocialConversation(source, personId, accountRef, fetchImpl);
           await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
-            // Ürün kartının düğmesi (08.09): `sepete_ekle:` önekli payload "Sepete ekle — <boy>" metnine döner.
-            text: buttonReplyText(event.postback?.payload, event.postback?.title),
+            // Ürün kartının ve karuselin düğmesi: `sepete_ekle:<boy>` "Sepete ekle — <ürün (boy)>" metnine döner (10.09).
+            text: await buttonChoiceText(event.postback?.payload, event.postback?.title),
             kind: 'interactive',
             payload: { postback: event.postback ?? null },
             receivedAt: msTimestamp(event.timestamp),

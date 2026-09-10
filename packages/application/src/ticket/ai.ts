@@ -16,6 +16,7 @@ import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cartAgentTools, cartLinkIfDue } from '../cart/agent-tools';
+import { chatPlaceMemory } from '../cart/chat-place';
 import { withCartLink, type ChatLink } from '../cart/link-text';
 import { anchorGateOf, type AnchorGate } from '../customer/anchor';
 import { sendOutboundMessage, type MessageSender } from '../messaging/send';
@@ -66,20 +67,25 @@ async function runOpts(
   cart: { conversation: Conversation; sink: CartLinkSink } | null = null,
 ) {
   if (opts.model) return { model: opts.model };
+  /* Sohbetin teslimat yeri (10.09): iki araç seti AYNI hafızayı paylaşır — urun_ara'da söylenen posta
+     kodu aynı turda sepete_ekle'de de bilinir ve sohbete yazılır (`cart/chat-place.ts`). */
+  const place = cart ? chatPlaceMemory(db, cart.conversation) : null;
   const cartTools = (identity: string | null, gate: AnchorGate | null) =>
     cart
       ? cartAgentTools(db, {
           conversation: cart.conversation,
           pricingCustomerId: identity,
           addressCustomerId: identity,
+          place,
           accountLink: accountLinkOffered(cart.conversation, gate),
           onLink: (link) => {
             // Sepet bağlantısı hesap bağlantısını EZER (o da hesabı bağlar, üstelik sepete götürür);
             // tersi olmaz — aynı turda ikisi çağrılırsa sohbette tek düğme kalır ve o sepetinki.
             if (link.purpose === 'cart' || !cart.sink.link) cart.sink.link = link;
           },
-          onCartWrite: () => {
+          onCartWrite: (hazir) => {
             cart.sink.wrote = true;
+            cart.sink.ready = hazir;
           },
         })
       : {};
@@ -98,11 +104,11 @@ async function runOpts(
   // okumak aynı cevabı iki sorguya mal ederdi.
   // Ürün kartı kancası yalnız SOHBET turunda (kart kanala göre çizilir; e-posta talebinde kanal yok).
   const cardHook = cart ? { conversation: cart.conversation, onCard: (card: PendingProductCard) => cart.sink.cards.push(card) } : null;
-  if (!customerId) return { tools: { ...customerSupportTools(db, null, cardHook), ...cartTools(null, null) } };
+  if (!customerId) return { tools: { ...customerSupportTools(db, null, cardHook, place), ...cartTools(null, null) } };
   const gate = known ?? (await anchorGateOf(db, customerId));
   if (!gate.open) logger.info({ customerId, anchor: gate.state }, 'ai: kimlik kapısı kapalı — yalnız kamusal araçlar verildi');
   const identity = toolsIdentityOf(customerId, gate);
-  return { tools: { ...customerSupportTools(db, identity, cardHook), ...cartTools(identity, gate) } };
+  return { tools: { ...customerSupportTools(db, identity, cardHook, place), ...cartTools(identity, gate) } };
 }
 
 /**
@@ -114,6 +120,12 @@ interface CartLinkSink {
   /** Bu turda sepete yazıldı mı — yazıldıysa bağlantı modelin sözünü beklemeden eklenir (08.09). */
   wrote: boolean;
   /**
+   * Son yazımdan sonra sepet SİPARİŞ VERİLEBİLİR mi (10.09): yer biliniyor, asgari sepet dolu,
+   * satın alınamayan ya da gönderilemeyen kalem yok. Değilse yazım bağlantıyı kendiliğinden
+   * getirmez — canlı turda 22,84 €'luk sepete (asgari 40 €) "Sepetiniz hazır… ödemek için" gitmişti.
+   */
+  ready: boolean;
+  /**
    * Bu turda üretilen ÜRÜN KARTLARI (`urun_karti`, 08.09) — özerk yolda metin cevabından ÖNCE
    * gönderilir; taslak yolunda GÖNDERİLMEZ (operatör görmediği bir şeyi onaylamış olurdu), yalnız
    * loglanır. Kurucu ve gerekçe `catalog/product-card.ts`.
@@ -123,7 +135,7 @@ interface CartLinkSink {
 
 /** Sohbet turunun boş kabı — her tur yeni; kap sınıflar arasında paylaşılmaz. */
 function bosKap(): CartLinkSink {
-  return { link: null, wrote: false, cards: [] };
+  return { link: null, wrote: false, ready: false, cards: [] };
 }
 
 /**
@@ -430,7 +442,7 @@ export async function generateConversationDraft(
      Messenger/IG'de sökülür — orada çizilmiyor ve müşteri çıplak yıldız görürdü.
      Sepet bağlantısı da taslağa BURADA girer: operatör onu görür, isterse siler. */
   // Söz verilen bağlantı (08.09): model "bağlantı" deyip aracı çağırmadıysa sistem üretir (`cartLinkIfPromised`).
-  cartLink.link ??= await cartLinkIfDue(db, conversation, { reply: result.data.reply, cartWritten: cartLink.wrote });
+  cartLink.link ??= await cartLinkIfDue(db, conversation, { reply: result.data.reply, cartWritten: cartLink.wrote && cartLink.ready });
   if (cartLink.cards.length > 0) {
     // Taslak yolunda kart GÖNDERİLMEZ: operatör onaylamadığı bir şeyi göndermiş olurdu (`CartLinkSink.cards`).
     logger.info({ context: 'application/conversation-ai', conversationId: conversation.id, cards: cartLink.cards.length }, 'taslak yolunda ürün kartı gönderilmedi');
@@ -472,10 +484,18 @@ export async function generateConversationDraft(
  * modelin unutabileceği bir talimat, yükümlülük olamaz. Prompt'a yazılsaydı beyan sıcaklığa, bağlam
  * uzunluğuna ve modelin o günkü hâline bağlı kalırdı; burada deterministik.
  *
- * ── İKİNCİ CÜMLE SÜS DEĞİL, İKİNCİ YÜKÜMLÜLÜK ───────────────────────────────
- * Meta'nın kuralı beyanla bitmiyor: *"must have a way for users to chat with a human agent as
- * needed"*. Devir kapısı sistemde var (ajan `handoff` seçer, mod insana döner) ama MÜŞTERİ bunu
- * bilmiyordu — bileceği tek yer cevabın kendisi.
+ * ── KISA VE AJANDA TUTAN (kullanıcı kararı 10.09) ───────────────────────────
+ * Eski metin iki cümleydi ve ikincisi müşteriyi daha ilk mesajda insana yönlendiriyordu
+ * ("Dilediğiniz an bir yetkiliye bağlanmak isterseniz yazmanız yeterli"): müşteri "zaten robot"
+ * deyip hemen insana geçmesin. Beyan KALDI — zorunlu, ve "yapay zekâ asistanı" otomatik bir hizmet
+ * olduğunu açıkça söylüyor (Meta dokümanı, 10.09'da MCP'den okundu: *"disclose that a person is
+ * interacting with an automated service … at the beginning of any conversation"*). İnsana geçiş
+ * YOLU ise ilk mesajda duyurulmak zorunda değil, VAR olmak zorunda (*"must have a way for users to
+ * chat with a human agent as needed"*): müşteri isteyince ajan devreder (talimatın devir listesi)
+ * ve operatör Devral'la alır.
+ *
+ * Marka adı `@lezzet/brand`ten ve iyelik eki YOK ("X yapay zekâ asistanıyım"): ek markanın okunuşuna
+ * göre değişir, sabit bir ek adı değiştiğinde yanlış kalırdı.
  *
  * ── TÜRKÇE, ÇÜNKÜ ÇEVİRİ SONRA ──────────────────────────────────────────────
  * Cevap gövdesine EKLENİYOR ve gövdeyle birlikte `translateTicketMessageNow`den geçiyor: müşteri
@@ -484,8 +504,7 @@ export async function generateConversationDraft(
  *
  * 15.8'in özerk SOHBET motoru doğduğunda aynı cümleyi kullanır — kanal değişse de yükümlülük aynı.
  */
-const AI_DISCLOSURE =
-  'Bu cevabı otomatik asistanımız yazdı. Dilediğiniz an bir yetkiliye bağlanmak isterseniz yazmanız yeterli.';
+const AI_DISCLOSURE = `Merhaba! Ben ${brand.name} yapay zekâ asistanıyım; ürünler, fiyatlar ve siparişiniz için 7/24 buradayım.`;
 
 /**
  * **DEVİR HABERİ** (15.8) — ajan susarken müşteriye söylenen tek cümle.
@@ -557,7 +576,24 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   if (!context) return { status: 'skipped', reason: 'empty_thread' };
   if (context.messages[context.messages.length - 1]?.who !== 'customer') return { status: 'skipped', reason: 'nothing_to_answer' };
 
-  const result = await runTask(ticketAgentTask, context, await runOpts(db, ticket.customerId, opts));
+  /*
+    Beyan YAZIŞMANIN BAŞINDA ve uzun sessizlikten sonra tekrar — politikanın kendi üç anı: *"at the
+    beginning of any conversation or message thread, after a significant lapse of time, or when a
+    chat moves from human interaction to automated experience"*.
+
+    Ölçüt olarak PENCEREYİ (son N mesaj) kullanıyoruz, yazışmanın tamamını değil ve bu bilinçli: AI
+    otuz mesaj önce konuşmuşsa müşteri o beyanı çoktan unutmuştur — pencereden düşmesi tam olarak
+    "uzun aralık" demektir. Tamamına bakan bir ölçüt, bir kez beyan edip ömür boyu susmak olurdu.
+
+    Karar model ÇAĞRILMADAN verilir (10.09): beyan selamla açılıyor ve eklenecekse modele "selam
+    verme" denir (`greeting`) — iki "Merhaba" üst üste gitmesin.
+  */
+  const alreadyDisclosed = context.messages.some((message) => message.who === 'ai');
+  const result = await runTask(
+    ticketAgentTask,
+    alreadyDisclosed ? context : { ...context, greeting: true as const },
+    await runOpts(db, ticket.customerId, opts),
+  );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   // Cevap HAM gider — sökme 06.09'da kalktı (taslak yolunun aynı gerekçesi, künyesi orada).
@@ -573,16 +609,6 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
     return { status: 'handoff', reason };
   }
 
-  /*
-    Beyan YAZIŞMANIN BAŞINDA ve uzun sessizlikten sonra tekrar — politikanın kendi üç anı: *"at the
-    beginning of any conversation or message thread, after a significant lapse of time, or when a
-    chat moves from human interaction to automated experience"*.
-
-    Ölçüt olarak PENCEREYİ (son N mesaj) kullanıyoruz, yazışmanın tamamını değil ve bu bilinçli: AI
-    otuz mesaj önce konuşmuşsa müşteri o beyanı çoktan unutmuştur — pencereden düşmesi tam olarak
-    "uzun aralık" demektir. Tamamına bakan bir ölçüt, bir kez beyan edip ömür boyu susmak olurdu.
-  */
-  const alreadyDisclosed = context.messages.some((message) => message.who === 'ai');
   const written = await tickets.reply({
     ticketId: ticket.id,
     sender: 'ai',
@@ -731,7 +757,12 @@ async function autonomousConversationReply(
   const cartLink = bosKap();
   const result = await runTask(
     ticketAgentTask,
-    gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
+    {
+      ...context,
+      ...(gate?.ask ? { identity: { ask: gate.ask } } : {}),
+      // Karşılamayı sistem veriyor (10.09): model selam vermez, kendini tanıtmaz — iki "Merhaba" gitmez.
+      ...(alreadyDisclosed ? {} : { greeting: true as const }),
+    },
     await runOpts(db, conversation.customerId, opts, gate, { conversation, sink: cartLink }),
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
@@ -743,7 +774,7 @@ async function autonomousConversationReply(
   /* SÖZ VERİLEN BAĞLANTI (08.09, canlıda ölçüldü): model "aşağıdaki bağlantıdan…" yazıp aracı
      çağırmadı, kap boş kaldı, müşteri boş bir söz okudu. Sepet doluysa sistem bağlantıyı yine
      üretir — kural ve gerekçesi `cartLinkIfPromised`te; burası yalnız kabı doldurur. */
-  cartLink.link ??= await cartLinkIfDue(db, conversation, { reply: govdeMetni, cartWritten: cartLink.wrote });
+  cartLink.link ??= await cartLinkIfDue(db, conversation, { reply: govdeMetni, cartWritten: cartLink.wrote && cartLink.ready });
   const reply = govdeMetni ? withCartLink(govdeMetni, cartLink.link) : null;
   if (!reply) return handOff(result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.', true);
 

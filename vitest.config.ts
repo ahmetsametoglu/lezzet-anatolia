@@ -99,6 +99,8 @@ const UYGULAMA_DBSIZ = [
   // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi
   // edince testi de birlikte taşındı (27.08). Üç fonksiyon da saf: dizi girer, dizi çıkar.
   'packages/application/src/catalog/showcase.test.ts',
+  // Ajanın ürün araçlarının yere göre ayıklaması (10.09) — hangi ürün bu adrese gider, gitmeyenin sebebi.
+  'packages/application/src/ticket/product-reach.test.ts',
 ];
 
 const WEB_LIB_DBSIZ = [

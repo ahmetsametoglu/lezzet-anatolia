@@ -30,6 +30,8 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     linkProof: null,
     // Müşteriyle konuştuğumuz dil bilinmiyor (15.28): önizleme çeviriyi torbadan, hedefi motordan alır.
     language: null,
+    // Müşteri sohbette posta kodu söylemedi (15.20, 10.09) — bu fikstür yeri sınamıyor, satırı tamamlıyor.
+    postalCode: null,
     windowExpiresAt: null,
     lastMessageAt: NOW.toISOString(),
     /* 21.289 · sözleşmeye eklendi: kuyruğun sıralama ekseni artık son GELEN mesaj (gerekçe

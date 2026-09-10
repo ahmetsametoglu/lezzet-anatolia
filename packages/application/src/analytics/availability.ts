@@ -1,4 +1,5 @@
 import type { AnalyticsAvailability, CartLineRoute } from '@lezzet/types';
+import { deliversHere } from '../catalog/map';
 import type { StorefrontVariant } from '../catalog/storefront-types';
 
 /**
@@ -29,7 +30,7 @@ import type { StorefrontVariant } from '../catalog/storefront-types';
 export function availabilityOf(variants: readonly StorefrontVariant[]): AnalyticsAvailability {
   if (variants.every((v) => v.priceCents === null)) return 'closed';
   const sellable = variants.filter((v) => v.priceCents !== null);
-  if (sellable.some((v) => v.stockStatus === 'available' || v.stockStatus === 'shipping')) return 'sellable';
+  if (sellable.some((v) => deliversHere(v.stockStatus))) return 'sellable';
   if (sellable.some((v) => v.stockStatus === 'elsewhere')) return 'not_here';
   return 'sold_out';
 }

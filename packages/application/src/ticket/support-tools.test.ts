@@ -14,7 +14,7 @@ import {
 } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { generateReferenceNo } from '@lezzet/domain-core';
-import { customerSupportTools } from './support-tools';
+import { customerSupportTools, type PendingProductCard } from './support-tools';
 
 /**
  * DESTEK AJANININ ARAÇLARI (16.9 · test dalgası 15.18) — modelin veriye kendi baktığı dar yüzey.
@@ -51,8 +51,12 @@ const ROTA_GUNU = 2;
 
 const profileIds: string[] = [];
 const productIds: string[] = [];
+/** Ürün adı → katalog kodu (slug) — kart araçları kodla çağrılır, adla değil. */
+const sluglar: Record<string, string> = {};
 let categoryId = '';
 let warehouseId = '';
+/** İkinci depo: stoğu yalnız burada duran ürün rota müşterisine "başka depoda" görünür (10.09). */
+let digerDepoId = '';
 let musteriId = '';
 let adressizId = '';
 let b2bId = '';
@@ -102,8 +106,11 @@ async function adresYaz(customerId: string, postalCode: string): Promise<void> {
 
 const gunSonra = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
-/** Fiyatlı/fiyatsız, stoklu/stoksuz ürün — katalogda görünmesi için gereken en az şey. */
-async function urunAc(ad: string, opts: { b2c?: number; b2b?: number; stok?: boolean } = {}) {
+/**
+ * Fiyatlı/fiyatsız, stoklu/stoksuz ürün — katalogda görünmesi için gereken en az şey. `depo` stoğun
+ * yerini, `kargolanamaz` soğuk zinciri seçer (10.09 — yere göre ayıklama).
+ */
+async function urunAc(ad: string, opts: { b2c?: number; b2b?: number; stok?: boolean; depo?: string; kargolanamaz?: boolean } = {}) {
   // Yayın kısıtı (05.36) `active` ürünü üç dilde dolu görmek istiyor — metinler fikstürün konusu
   // değil ama kapının şartı (`product_publish_requires_all_locales`).
   const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
@@ -117,15 +124,17 @@ async function urunAc(ad: string, opts: { b2c?: number; b2b?: number; stok?: boo
     nutrition: { ...EMPTY_NUTRITION, energyKcal: 290, fatG: 12 },
     categoryId,
     status: 'active',
+    ...(opts.kargolanamaz ? { shippable: false } : {}),
     variants: [{ label: { tr: '1 kg' } }],
   });
   productIds.push(product.id);
+  sluglar[ad] = product.slug;
   const variantId = variants[0]!.id;
   if (opts.b2c !== undefined) await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: opts.b2c });
   if (opts.b2b !== undefined) await new PriceService(db).insert({ variantId, channel: 'b2b', amountCents: opts.b2b });
   if (opts.stok) {
     await new StockService(db).insert({
-      warehouseId,
+      warehouseId: opts.depo ?? warehouseId,
       variantId,
       physicalQty: 10,
       expiryDate: gunSonra(60),
@@ -137,6 +146,7 @@ async function urunAc(ad: string, opts: { b2c?: number; b2b?: number; stok?: boo
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'DST' })).id;
+  digerDepoId = (await createTestWarehouse(db, { label: 'DS2' })).id;
 
   // Rota bölgesi: `teslimat_gunleri` ve `posta_kodu_kontrol` aynı kayıttan cevap veriyor.
   const zones = new DeliveryZoneService(db);
@@ -155,8 +165,12 @@ beforeAll(async () => {
   const fistikliVariantId = await urunAc('Fistikli', { b2c: 457, b2b: 376, stok: true });
   // Fiyatsız ürün: bu kanalda SATIŞA KAPALI — "0,00 €" demek yanlış olurdu (DOMAIN §5).
   await urunAc('Kapali', {});
-  // Dolgu: tavanı (PRODUCT_HITS = 5) sınamak için toplam altı ürün aynı damgayı taşıyor.
+  // Dolgu: tavanı (PRODUCT_HITS = 5) sınamak için damgalı ürünler beşten fazla (toplam sekiz).
   for (const n of [1, 2, 3, 4]) await urunAc(`Dolgu${n}`, { b2c: 100 });
+  /* Yere göre ayıklama (10.09): stoğu yalnız öteki depoda duran ürün rota müşterisine "başka depoda"
+     görünür; soğuk zincir ürünü rota deposunda durunca kapıya gider — kargolanamamak rotada engel değil. */
+  await urunAc('Uzakta', { b2c: 300, stok: true, depo: digerDepoId });
+  await urunAc('Soguk', { b2c: 500, stok: true, kargolanamaz: true });
 
   // Sipariş: `siparislerim` aracının tek ölçülebilir değişmezi (TUTAR YOK) bir satır ister.
   const { order } = await new OrderService(db).create(
@@ -184,7 +198,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // Siparişi purge `profileIds`ten buluyor; bölge depoyla, kodları bölgeyle gidiyor (`cleanup.ts`).
-  await purgeTestData(db, { productIds, categoryIds: [categoryId], profileIds, warehouseIds: [warehouseId] });
+  await purgeTestData(db, { productIds, categoryIds: [categoryId], profileIds, warehouseIds: [warehouseId, digerDepoId] });
 });
 
 describe('değişmez: kimlik ARGÜMAN değil, KAPANIŞTIR', () => {
@@ -245,6 +259,17 @@ describe('kimliksiz sohbet — set BOŞ değil, DAR (28.08 · CHANNELS §3b)', (
     const sonuc = await cagir(customerSupportTools(db, null), 'posta_kodu_kontrol', { postaKodu: ROTA_KODU });
     expect(sonuc.teslimat).toContain('kapıya teslim');
     expect(sonuc.haftalikGunler).toBeDefined();
+  });
+
+  it('söylenen GERÇEK kod sohbetin hafızasına yazılır; tanınmayan kod yazılmaz (10.09)', async () => {
+    /* Müşteri posta kodunu bir kez söyler: sepete yazan araçlar sonraki turlarda onu bilir
+       (`cart/chat-place.ts`). Yazım hatası saklansaydı sohbet yanlış bir yere kilitlenir ve her cevap
+       "oraya gitmiyoruz" derdi. Hafıza taklit: bu dosya aracın NE yazdırdığını sınar, yazımın kendisini değil. */
+    const yazilan: string[] = [];
+    const hafiza = { known: () => null, remember: async (kod: string) => void yazilan.push(kod) };
+    await cagir(customerSupportTools(db, null, null, hafiza), 'posta_kodu_kontrol', { postaKodu: ROTA_KODU });
+    await cagir(customerSupportTools(db, null, null, hafiza), 'posta_kodu_kontrol', { postaKodu: YABANCI_KOD });
+    expect(yazilan).toEqual([ROTA_KODU]);
   });
 
   it('kimliksizde ürün + fiyat okunur ve fiyat ZİYARETÇİ kapsamıdır', async () => {
@@ -369,24 +394,98 @@ describe('urun_ara — fiyat MÜŞTERİNİN kendi fiyatıdır', () => {
     // Yabancı kod hiçbir bölgeye düşmüyor → depo çözülemez → stok depo-üstü okunur, ama araç
     // sustuğu için değil, o kod bize gitmediği için: ürün yine listeleniyor.
     expect(sonuc.urunler).toBeDefined();
+    // Referansta olmayan kod bir YAZIM HATASIDIR (10.09): model kodu müşteriye teyit ettirir, "gider" demez.
+    expect(sonuc.postaKoduGecersiz).toBeTruthy();
   });
 
   it('fiyatsız ürün "0,00 €" değil "bu kanalda satışa kapalı" der', async () => {
     // `null` fiyat bir sayı değil bir HÂL (DOMAIN §5); sıfıra düşürmek bedavaya satmayı vaat ederdi.
-    const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: `Kapali ${stamp}` });
+    // Yeri bilinmeyen müşteri (10.09): bilinen yerde stoksuz ürün listeden AYRILIR; fiyat cümlesi yer istemez.
+    const sonuc = await cagir(customerSupportTools(db, adressizId), 'urun_ara', { terim: `Kapali ${stamp}` });
     expect((sonuc.urunler as { fiyat: string }[])[0]!.fiyat).toBe('bu kanalda satışa kapalı');
   });
 
-  it('liste TAVANLI — altı eşleşme varken beş ürün döner', async () => {
+  it('liste TAVANLI — sekiz eşleşme varken beş ürün döner ve kırpma SÖYLENİR', async () => {
     // Araç cevabı prompt'a giriyor: sınırsız liste hem maliyeti hem modelin "hangisini söyleyeyim"
-    // belirsizliğini büyütürdü.
-    const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: String(stamp) });
+    // belirsizliğini büyütürdü. Yeri bilinmeyen müşteri: ayıklama yok, sekizi de aday (10.09).
+    const sonuc = await cagir(customerSupportTools(db, adressizId), 'urun_ara', { terim: String(stamp) });
     expect((sonuc.urunler as unknown[]).length).toBe(5);
+    // Toplam SAYAÇTAN (`total`), sayfadan değil — ve "tam liste değil" cümlesi modelin önünde.
+    expect(String(sonuc.kapsam)).toContain('Toplam 8 ürünün 5');
+    expect(String(sonuc.kapsam)).toContain('TAM DEĞİL');
   });
 
   it('stoksuz ürün "tükendi" der — dört stok hâli dört ayrı cümle', async () => {
+    // Bilinen yerde stoksuz ürün listeye girmez (10.09); "yok" da denmez — sebebiyle ayrı alanda.
     const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: `Dolgu1 ${stamp}` });
-    expect((sonuc.urunler as { durum: string }[])[0]!.durum).toBe('tükendi');
+    expect(sonuc.urunler).toBeUndefined();
+    expect((sonuc.buAdreseGitmeyenler as { urunler: string[] }).urunler[0]).toBe(`Dolgu1 ${stamp} — tükendi`);
+  });
+});
+
+describe('urun_ara — yer biliniyorsa yalnız o adrese GİDEN ürün önerilir (10.09)', () => {
+  it('gidebilen listelenir; gidemeyen listeye girmez, sayısı ve sebebi ayrı alanda', async () => {
+    /* Kullanıcı sorusu (10.09): "posta koduna gönderilebilen ürünleri bulabiliyor mu?" Liste her ürüne
+       "bu adrese gider mi" yazıyordu ama gidemeyenlerle doluydu ve tavan gidebilenleri kesebiliyordu. */
+    const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: String(stamp) });
+    const urunler = sonuc.urunler as { ad: string; durum: string }[];
+    expect(urunler.map((u) => u.ad).sort()).toEqual([`Fistikli ${stamp}`, `Soguk ${stamp}`]);
+    // Soğuk zincir ürünü rota deposunda duruyor: kapıya gider — kargolanamamak rotada engel değil.
+    for (const u of urunler) expect(u.durum).toBe('stokta — bu adrese teslim edilebilir');
+    const gitmeyen = sonuc.buAdreseGitmeyenler as { sayi: number; urunler: string[]; not: string };
+    // Kapalı + dört Dolgu (tükendi) + Uzakta (başka depoda) — hepsi bu dosyanın damgalı ürünleri.
+    expect(gitmeyen.sayi).toBe(6);
+    expect(gitmeyen.not).toContain('ÖNERME');
+  });
+
+  it('adıyla sorulan ürün bu adrese gitmiyorsa "yok" DENMEZ — var ama başka depoda', async () => {
+    const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: `Uzakta ${stamp}` });
+    expect(sonuc.bilinmiyor).toBeUndefined();
+    expect(String(sonuc.buAdreseGidenYok)).toContain('gönderilemiyor');
+    expect((sonuc.buAdreseGitmeyenler as { urunler: string[] }).urunler).toEqual([
+      `Uzakta ${stamp} — başka depoda var; bu adrese bugün verilemiyor`,
+    ]);
+  });
+
+  it('yer bilinmeden "bu adrese" DENMEZ ve hiçbir şey ayıklanmaz', async () => {
+    // Depo-üstü okuma: başka depodaki mal "stokta" — ama hangi adrese gideceği posta koduyla belli olur.
+    const sonuc = await cagir(customerSupportTools(db, adressizId), 'urun_ara', { terim: `Uzakta ${stamp}` });
+    expect((sonuc.urunler as { durum: string }[])[0]!.durum).toBe('stokta');
+    expect(sonuc.buAdreseGitmeyenler).toBeUndefined();
+  });
+});
+
+describe('kart ve karusel — bu adrese gitmeyen ürün kart OLMAZ (10.09)', () => {
+  /** Kart kancası — kimliksiz Messenger sohbeti; gönderilecek kartlar sayılır, kanala bir şey gitmez. */
+  function kartKancasi() {
+    const kartlar: PendingProductCard[] = [];
+    const hook = {
+      conversation: { source: 'messenger' as const, language: 'tr' as const, customerId: null },
+      onCard: (kart: PendingProductCard) => void kartlar.push(kart),
+    };
+    return { kartlar, hook };
+  }
+
+  it('gidemeyen ürüne kart gönderilmez ve sebebi modele söylenir; gidebilene gönderilir', async () => {
+    // Kart gidemeyen ürünü de gösteriyordu: düğmesine basan müşteri "gönderilemez" cevabı alırdı.
+    const { kartlar, hook } = kartKancasi();
+    const tools = customerSupportTools(db, null, hook);
+    const gitmeyen = await cagir(tools, 'urun_karti', { kod: sluglar.Uzakta, postaKodu: ROTA_KODU });
+    expect(String(gitmeyen.gonderilemez)).toContain('başka depoda');
+    expect(kartlar).toHaveLength(0);
+    const giden = await cagir(tools, 'urun_karti', { kod: sluglar.Fistikli, postaKodu: ROTA_KODU });
+    expect(giden.kart).toBeDefined();
+    expect(kartlar).toHaveLength(1);
+  });
+
+  it('karusel gidemeyen ürünü kart yapmaz, sebebiyle dışarıda bırakır', async () => {
+    const { hook } = kartKancasi();
+    const sonuc = await cagir(customerSupportTools(db, null, hook), 'urun_karuseli', {
+      kodlar: [sluglar.Fistikli, sluglar.Uzakta],
+      postaKodu: ROTA_KODU,
+    });
+    // Fikstürlerin görseli yok, karusel kurulamıyor — sınanan şey dışarıda kalanın SEBEBİ.
+    expect(sonuc.disarida).toContain(`Uzakta ${stamp} (bu adrese gönderilemiyor)`);
   });
 });
 

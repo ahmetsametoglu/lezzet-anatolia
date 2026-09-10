@@ -113,13 +113,18 @@ export function productCardInteractive(input: ProductCardInput): Record<string, 
 
 /**
  * Webhook'un gelen düğme cevabını metne çevirirken kullandığı kural — kimlik önekiyle tanınır:
- * `sepete_ekle:` → "Sepete ekle — <başlık>" · `urun_karti:<kod>` → "Ürün kartı — <kod>" (ajan kodu
+ * `sepete_ekle:<boy>` → "Sepete ekle — <seçim>" · `urun_karti:<kod>` → "Ürün kartı — <kod>" (ajan kodu
  * `urun_karti`ye geçer). Tanınmayan düğme başlığıyla düşer.
+ *
+ * `secim` webhook'un boy kimliğinden veriden çözdüğü "Ürün (boy)" adıdır (10.09 · canlı Messenger
+ * turunda ölçüldü): tek boylu ürünün kart düğmesi "Sepete ekle" yazıyordu ve ajana "Sepete ekle —
+ * Sepete ekle" gidiyordu — hangi ürün olduğu kimlikte vardı, metinde yoktu. Çözülemezse başlığa düşer.
  */
-export function buttonReplyText(id: string | null | undefined, title: string | null | undefined): string | null {
+export function buttonReplyText(id: string | null | undefined, title: string | null | undefined, secim: string | null = null): string | null {
   if (id?.startsWith(CARD_OPEN_PREFIX)) return `Ürün kartı — ${id.slice(CARD_OPEN_PREFIX.length)}`;
   if (!id?.startsWith(CART_ADD_PREFIX)) return title ?? null;
-  return title ? `Sepete ekle — ${title}` : 'Sepete ekle';
+  const ad = secim ?? title;
+  return ad ? `Sepete ekle — ${ad}` : 'Sepete ekle';
 }
 
 // ── KARUSEL — çeşit sorusunun cevabı, 2–10 kart tek mesajda (09.09, kullanıcı isteği) ─────────

@@ -29,6 +29,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | `linked_at` | timestamptz | • |  |
 | `link_proof` | text | • |  |
 | `language` | preferred_language | • |  |
+| `postal_code` | text | • |  |
 | `window_expires_at` | timestamptz | • |  |
 | `last_message_at` | timestamptz | • |  |
 | `last_inbound_at` | timestamptz | • |  |
@@ -51,6 +52,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 - **`linked_by`** — bağı KURAN personel (15.19) — FK `set null`, yani kim bağladığı kaybolabilir
 - **`linked_at`** — bağın kurulduğu an; kanıtla BİRLİKTE dolar (kısıt)
 - **`link_proof`** — kanıtın TÜRÜ (`order_ref`,`email`,`phone` operatörün; `cart_link` sistemin — 15.22) — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan). `cart_link`: sohbette kurulan sepetin bağlantısını açıp giriş yapan kişi; kanıt operatörün değil sistemin doğruladığı jetondur (`cart_link` tablosu), `linked_by` bu yüzden boş. Hesap bağlantısı (`cart_link.purpose = account`, 15.16) da AYNI kanıtı yazar: giriş yöntemi (e-posta kodu ya da Google) hesabın doğrulamasıdır, bağın kanıtı sohbetteki jeton
+- **`postal_code`** — müşterinin SOHBETTE söylediği teslimat posta kodu (15.20 · kullanıcı kararı 10.09). Ajan sepete yazmadan önce yeri bilmek zorunda; kod bir kez söylenir, burada saklanır ve sonraki turlar sormaz. Yalnız gerçek, tek ülkeli kod yazılır (yazım hatası sohbeti yanlış yere kilitlemesin); biçim beş hane (`@lezzet/helper`). Kimlik değil YER: kayıtlı adresi olan müşteride adres zaten var — sıra söylenen · saklanan · kayıtlı adres (`cart/chat-place.ts`)
 - **`language`** — **müşteriyle KONUŞTUĞUMUZ dil** (15.28) — giden mesajın çevrileceği hedef. Enum (tr|fr|de), serbest ISO kodu DEĞİL: "müşteri hangi dilde yazdı"yı değil "biz ona hangi dilde yazarız"ı söyler; Boşnakça yazan müşteriye Boşnakça cevap üretemeyiz. Gelen mesajın tespit edilen dilinden öğrenilir, **son gelen kazanır**, üç dilden değilse dokunulmaz. `null` = müşteri henüz üç dilden birinde yazmadı → hedef yedek zincirden (profil tercihi → piyasa varsayılanı; karar motorda, `outboundLanguage`)
 - **`window_expires_at`** — 24s servis penceresi bitişi — süre üç kanalda aynı; EKONOMİSİ değil (ücret/şablon yalnız WhatsApp)
 

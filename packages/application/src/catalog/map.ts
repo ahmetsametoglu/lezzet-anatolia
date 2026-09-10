@@ -227,6 +227,18 @@ export function stockStatusOf(
 }
 
 /**
+ * Bu hâl müşterinin YERİNE teslim edilebilir mi — yerel stok (`available`) ya da kargo (`shipping`).
+ * `elsewhere` bu adrese bugün gitmez (soğuk zincir ürünü kargo bölgesinde de böyle görünür),
+ * `out_of_stock` hiçbir yere. Yer bilinmiyorsa hâl depo-üstüdür ve cevap "hiç var mı"dır.
+ *
+ * Tek yerde (10.09): öneri şeridi (`product.ts`), görüntüleme defteri (`analytics/availability.ts`) ve
+ * ajanın ürün araçları (`ticket/product-reach.ts`) aynı soruyu soruyor — üç ayrı satırda yazılıydı.
+ */
+export function deliversHere(status: StockStatus): boolean {
+  return status === 'available' || status === 'shipping';
+}
+
+/**
  * Yan verisi olmayan ürün bağlamı — fiyatsız/stoksuz görünür, yani satışa kapalı ve tükendi.
  * Toplu okuma bir ürünü ıskalarsa buraya düşülür; her okuma dosyası kendi boşunu tanımlamasın.
  */
