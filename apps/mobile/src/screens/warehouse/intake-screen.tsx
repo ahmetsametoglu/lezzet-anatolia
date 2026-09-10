@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Text, View, type ScrollView } from 'react-native';
+import { Text, View, type ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 // Ömür kararı MOTORDAN: ekran kendi yüzdesini kurmaz — kabul kapısı da aynı motoru çağırıyor ve
 // ikisi ayrışsaydı ekran bir şey der, kayıt başkasını yazardı (`CLAUDE §1`).
@@ -22,6 +22,7 @@ import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
+import { OperationsProductThumb } from '@/components/operations/product-thumb';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
@@ -939,7 +940,9 @@ function VariantSearchSheet({ visible, onClose, onClosed, onDismissed, onPick }:
 
            ÖN İZLEME GÖRSELİ kullanıcının eklemesi (tasarımda yok): aynı ürünün 225 g ve 450 g
            boyları yan yana geldiğinde metin ayırt etmeye yetmiyor. Görsel YOKSA yer tutucu da
-           çizilmez — boş bir gri kare, ürünün fotoğrafı yok bilgisini vermez, sadece kirletir. */
+           çizilmez — boş bir gri kare, ürünün fotoğrafı yok bilgisini vermez, sadece kirletir.
+           Kare KİTTEN (`OperationsProductThumb`, 21.303): düz `<Image>` CDN'den WebP istemiyordu ve
+           operasyonun öteki satırlarından ayrı bir kare çiziyordu; ölçü aynı (44). */
         <OperationsSurface
           key={row.variantId}
           tone="card"
@@ -951,7 +954,7 @@ function VariantSearchSheet({ visible, onClose, onClosed, onDismissed, onPick }:
         >
           <View style={styles.searchRow}>
             {row.imageUrl === null ? null : (
-              <Image source={{ uri: row.imageUrl }} style={styles.searchThumb} accessibilityIgnoresInvertColors />
+              <OperationsProductThumb name={productLabel(row.productName, row.variantLabel)} photoUri={row.imageUrl} size="md" />
             )}
             <View style={styles.searchBody}>
               <Text style={styles.searchName} numberOfLines={1}>
@@ -2304,15 +2307,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.xl,
-  },
-  /* Görselin ölçüsü satırın iki metnini taşıyan yükseklik: daha büyüğü satırı bir KARTA çevirir
-     ve liste taranabilir olmaktan çıkar. Kare kırpma — ürün fotoğrafları 3:2 yükleniyor ve
-     kareye ortadan oturuyor (`Komponent Envanteri` oran künyesi). */
-  searchThumb: {
-    width: operationsTheme.size.thumb,
-    height: operationsTheme.size.thumb,
-    borderRadius: operationsTheme.radius.badge,
-    backgroundColor: operationsTheme.colors['sand-50'],
   },
   searchBody: { flex: 1, gap: operationsTheme.space['2xs'], minWidth: 0 },
   searchName: {
