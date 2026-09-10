@@ -62,7 +62,7 @@
   },
   "failure": {
     "connection": "Sunucuya ulaşılamadı — bağlantıyı kontrol edip yeniden deneyin.",
-    "session": "Oturum doğrulanmadı — hesap menüsünden çıkıp yeniden girin.",
+    "session": "Oturum şu an doğrulanamadı — biraz sonra yeniden deneyin.",
     "forbidden": "Bu ekran rolünüze kapalı — yetkiniz değişmiş olabilir.",
     "unexpected": "Sunucu beklenmedik bir cevap verdi — yeniden deneyin."
   },

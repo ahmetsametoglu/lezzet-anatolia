@@ -18,6 +18,11 @@ import { meFixture } from './me-fixture';
   dolduğunda da açık kalırdı); kök sebep kapının sağır olmasıydı. Aşağıdaki `onAuthStateChange`
   testi o sağırlığın geri gelmesini yakalar.
 
+  ── SON SORU KAZANIR (21.304) ───────────────────────────────────────────────
+  Oturum artık kapının kendi okuması sırasında da kapanabiliyor (`authorizedFetch` ölü oturumu
+  kapatıyor). Yarıda kalan eski okumanın devamı, yeni "oturum yok" kararını ezmemeli — ezerse
+  oturumsuz bir personele kabuk açılır. Sondan bir önceki test o yarışı kurar.
+
   ── `/me` TAKLİT `fetch`LE, KAPI GERÇEK ────────────────────────────────────
   Kapının kendisi taklit edilmiyor: rolden bölüme çeviren saf kural (`operationsSectionsOf`) ve
   hâl makinesi gerçek çalışıyor. Taklit edilen tek şey tel.
@@ -226,6 +231,34 @@ describe('operasyon kapısı', () => {
     });
 
     await waitFor(() => expect(result.current.status).toBe('denied'));
+  });
+
+  it('SON SORU KAZANIR — oturum okumanın ortasında kapanırsa eski okuma kapıyı yeniden AÇAMAZ (21.304)', async () => {
+    // Kapsam ucu yolda asılı: `/me` geçti, oturum tam o arada kapanıyor.
+    let releaseScope: (answer: unknown) => void = () => undefined;
+    mockFetchMe.mockResolvedValueOnce(ok(['warehouse']));
+    mockFetchStaffScope.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseScope = resolve;
+        }),
+    );
+    const { result } = await renderHook(() => useOperationsAccess());
+    await waitFor(() => expect(mockFetchStaffScope).toHaveBeenCalledTimes(1));
+
+    mockFetchMe.mockResolvedValue(fail(401, 'unauthorized'));
+    await act(async () => {
+      authListener?.();
+    });
+    await waitFor(() => expect(result.current.status).toBe('denied'));
+
+    // İlk okumanın geç gelen devamı: sıra numarası onu düşürmeseydi kapı "açık" derdi.
+    await act(async () => {
+      releaseScope(scopeOk());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.status).toBe('denied');
   });
 
   it('ekran sökülünce dinleyici BIRAKILIR — kapı arkada sorgu biriktirmez', async () => {

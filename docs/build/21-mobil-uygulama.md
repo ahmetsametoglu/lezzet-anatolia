@@ -14613,3 +14613,58 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: kök `typecheck` 20/20 · `lint` temiz · birim projesi 2181/2181 (merkezi kütüphane 13/13) ·
   mobil paket 1503/1505 (iki düşüş `unistyles.test.ts`in italik yazı testleri — önceden de vardı, bu işle
   ilgisiz) · `FrameImage` + mal kabul testleri 61/61 · kilitli kök paket **4529/4529**.
+
+- [x] (21.304) **SUNUCUNUN REDDETTİĞİ OTURUM CİHAZDA BIRAKILMIYOR — giriş ekranı sebebiyle açılıyor** (kullanıcı kararı 10.09: *"401 hatasını da giriş ekranına yönlendirebiliriz"*; tetik: `db:refresh` sonrası Oppo'da depo ana sayfası "İş listesi yüklenemedi — Bağlantı ya da sunucu sorunu", kargo devri "okunamadı")
+  `touches:` `apps/mobile/src/lib/auth/session-end.ts` · `apps/mobile/src/lib/auth/session-end.test.ts` · `apps/mobile/src/lib/auth/use-session-ended-login.hook.ts` · `apps/mobile/src/lib/auth/use-session-ended-login.hook.test.ts` · `apps/mobile/src/lib/auth/authorized-fetch.ts` · `apps/mobile/src/lib/auth/authorized-fetch.test.ts` · `apps/mobile/src/lib/auth/sign-out.ts` · `apps/mobile/src/lib/api/client.ts` · `apps/mobile/src/app/_layout.tsx` · `apps/mobile/src/app/(operations)/_layout.tsx` · `apps/mobile/src/app/login.tsx` · `apps/mobile/src/screens/login/login-notice.ts` · `apps/mobile/src/screens/login/login-screen.tsx` · `apps/mobile/src/screens/login/messages.json` · `apps/mobile/src/screens/operations/use-operations-access.hook.ts` · `apps/mobile/src/screens/operations/use-operations-access.hook.test.ts` · `apps/mobile/src/screens/operations/messages.json` · `apps/mobile/src/operations-session-rejected.test.tsx`
+
+  **Durum (10.09) — TAMAM.**
+
+  ── KÖK SEBEP (ölçüldü) ─────────────────────────────────────────────────────
+
+  · 17:27'deki `db:refresh` auth kullanıcılarını yeniden yarattı; telefondaki oturum öldü ama uygulama
+    onu 17:57'ye kadar taşıdı. GoTrue günlüğü (17:52:09): mobil API'nin `/user` sorusu 403
+    `user_not_found`, telefonun tazelemesi 400 `refresh_token_not_found` — ret kesindi ve uygulama onu
+    DUYMUŞTU.
+  · Oturumu kapatmayan supabase-js'in kendisi (auth-js 2.110.8, `_callRefreshToken`): tazeleme kesin
+    reddedilince erişim jetonunun SAATİNE bakıyor, dolmamışsa isteği "erken tazeleme" sayıp oturumu
+    koruyor; ret ayrıca 60 sn önbelleğe alınıyor. Sunucunun o jetonu az önce reddettiğini kütüphane
+    bilmiyor — ölü oturum jetonun kendi süresi dolana kadar (en çok 1 saat) cihazda kalıyordu.
+  · Yeniden üretildi (18:58 — telefonun `auth.sessions` satırı silindi, uzaktan iptalin aynısı):
+    `/user` 403 `session_not_found`, tazeleme 400; ekranlar "yüklenemedi", üstbaşlık dolu. 19:06:30'da
+    jeton dolunca kütüphane oturumu kapattı ve personel açıklamasız VİTRİNE düştü. Arıza yerele özgü
+    değil: canlıda iptal edilen ya da silinen her oturum aynı pencereyi açardı.
+
+  ── ÇÖZÜM ───────────────────────────────────────────────────────────────────
+
+  · `authorizedFetch`: sunucu 401 + auth sunucusu tazelemeye "oturum bitti" dedi
+    (`refresh_token_not_found` · `refresh_token_already_used` · `session_expired` · `user_banned` —
+    anlamları Supabase'in hata kodu belgesinden) → oturum kapatılır (`endRejectedSession`). 401 tek
+    başına kanıt değil: mobil API auth sunucusuna ulaşamadığında da 401 veriyor (`failureCauseOf`
+    künyesi); ağ hatası, 5xx, 429 oturumu KAPATMAZ.
+  · Kapanış gönüllü çıkışla ortak (`endDeviceSession`: yerel çıkış, depo, karttan yansıyan dil, seçili
+    adres). Push kaydını bırakma adımı yalnız gönüllü çıkışta — ölü kimlikle atılsa 401 alır ve aynı
+    kapanışı yeniden tetiklerdi.
+  · Kökteki kanca (`use-session-ended-login`) giriş ekranını sebep cümlesiyle ÜSTE açar (üç dil;
+    tr: *"Oturumunuz sona erdi — devam etmek için yeniden doğrulanın."*); yığın hazır değilken gelen
+    ret kaybolmaz, yığın hazır olunca açılır. Anahtar (`session_ended`) web ile ortak sözleşmeye
+    eklenmedi (`login-notice.ts` künyesi). Gönüllü çıkış bu kancayı tetiklemez; "çıkan vitrine"
+    kararı (21.97b) duruyor.
+  · İlk tasarım sebebi operasyon kapısında tutuyordu; uçtan uca test yakaladı: ret açılışta kökteki bir
+    istekten (push kaydı, sepet) gelince kapı henüz monte değildi ve kişi yine vitrine düştü. Karar
+    köke taşındı. Kapıda yalnız sıra numarası kaldı: oturum kapının kendi okuması sırasında kapanırsa
+    eski okumanın geç gelen devamı kabuğu yeniden açamaz.
+  · Operasyonun oturum cümlesi *"hesap menüsünden çıkıp yeniden girin"* diyordu; ölü oturumu artık
+    uygulama kapattığı için o cümleyi gören oturum ölü değil, o an doğrulanamamış — yeni cümle
+    *"Oturum şu an doğrulanamadı — biraz sonra yeniden deneyin."* (auth kesintisinde elle çıkmak
+    zararlı olurdu).
+
+  ── DOĞRULAMA ───────────────────────────────────────────────────────────────
+
+  · **Cihaz (Oppo CPH1907, 19:44):** telefonun oturum satırı silindi → 19:44:54'te `/user` 403,
+    tazeleme 400, yerel kapanışın `/logout`u 403 (yok sayılıyor) → 19:45:00'da giriş ekranı sebep
+    cümlesiyle açık (önce: 8 dakika "yüklenemedi", sonra açıklamasız vitrin). Depo girişiyle dönüldü.
+  · Testler: auth · operasyon · giriş klasörleri + iki kabuk testi + yeni uçtan uca test **143/143**
+    (18 dosya). Uçtan uca test gerçek rota ağacında iki yüzü kilitliyor: kesin ret → giriş ekranı ve
+    cümle, tek kapanış; auth kesintisi → personel kabukta kalır. Mobil paket 1526/1528 (iki düşüş
+    `unistyles.test.ts`in italik yazı testleri — bu işle ilgisiz, önceden var) · mobil `typecheck` ·
+    `lint` · `knip` temiz.

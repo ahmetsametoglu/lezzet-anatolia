@@ -76,10 +76,20 @@ export function useOperationsAccess(): OperationsAccess {
     };
   }, []);
 
+  /* SON SORU KAZANIR (21.304). Kapı kendi okumasının ORTASINDA da yeniden sorulabiliyor: `/me`
+     geçtikten sonra kapsam ucu ölü oturuma çarparsa oturum artık kapanıyor (`authorizedFetch`),
+     `SIGNED_OUT` ikinci bir okuma başlatıyor ve ilk okumanın geç gelen devamı ikincinin "oturum
+     yok" kararını "açık" diye ezerdi — oturumsuz bir personele kabuk açılırdı. Sıra numarası geç
+     gelen eski cevabı sessizce düşürür (yönetim hub'ının deseni). */
+  const generation = useRef(0);
+
   const load = useCallback(async () => {
+    const run = ++generation.current;
+    const stale = () => !alive.current || run !== generation.current;
+
     setState({ status: 'loading' });
     const result = await fetchMe();
-    if (!alive.current) return;
+    if (stale()) return;
 
     if (result.error !== null) {
       setState({ status: result.status === UNAUTHORIZED_STATUS ? 'denied' : 'error' });
@@ -101,7 +111,7 @@ export function useOperationsAccess(): OperationsAccess {
        ve seçici. Bir ad okunamadı diye depocuyu vitrine düşürmek, `error` dalının bütün
        gerekçesine ters olurdu. */
     const scope = await fetchStaffScope();
-    if (!alive.current) return;
+    if (stale()) return;
 
     const warehouses = scope.error === null ? scope.data.warehouses : [];
 
@@ -110,7 +120,7 @@ export function useOperationsAccess(): OperationsAccess {
        her isteği `403`e çevirirdi; kapı onu sessizce değil, seçimi düşürerek karşılar (ekran
        yeniden sorar). Seçim tele buradan sonra karışır — `warehouseFetch` onu senkron okur. */
     await loadWarehouseChoice(warehouses);
-    if (!alive.current) return;
+    if (stale()) return;
 
     setState({
       status: 'granted',

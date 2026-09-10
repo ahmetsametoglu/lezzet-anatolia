@@ -62,6 +62,9 @@ export type ApiResult<T> = ApiOk<T> | ApiFail;
  * 401'i "oturum öldü" diye YORUMLAMAZ, "oturum doğrulanmadı" der: uç, auth sunucusuna
  * ulaşamadığında da 401 üretir (ölçüldü: GoTrue `/user` 504 → mobile-api `unauthorized`). Sınıf
  * ne kadarını biliyorsa onu söyler; oturumu kendiliğinden kapatmak bu kadar bilgiyle yapılamaz.
+ * O karar 401'e değil auth sunucusunun TAZELEME cevabına bakar ve `authorizedFetch`te verilir
+ * (21.304 — `lib/auth/session-end`): ölü oturum artık kapanıyor, yani bu sınıfı taşıyan ekran ölü
+ * bir oturuma değil, o an doğrulanamamış bir oturuma bakıyor.
  */
 export type ApiFailureCause = 'connection' | 'session' | 'forbidden' | 'unexpected';
 

@@ -94,7 +94,8 @@ export default function OperationsLayout() {
 
   if (access.status === 'denied') {
     // Müşteri kabuğunun kökü. `Redirect` (yönlendirme etkisi değil): geçmişe kayıt düşmez, yani
-    // geri tuşu kullanıcıyı giremediği kapıya geri fırlatmaz.
+    // geri tuşu kullanıcıyı giremediği kapıya geri fırlatmaz. Oturumu SUNUCU reddettiyse giriş
+    // ekranı ayrıca kökten, sebebiyle açılır (21.304 — `lib/auth/use-session-ended-login`).
     return <Redirect href="/" />;
   }
 

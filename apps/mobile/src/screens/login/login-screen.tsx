@@ -24,6 +24,7 @@ import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
 import { publishMe } from '@/screens/customer-kit/use-me.hook';
 import { CodeField } from './code-field';
+import { SESSION_ENDED_NOTICE, type LoginNotice } from './login-notice';
 import { operationsHomeRoute } from './post-login-route';
 import messages from './messages.json';
 
@@ -62,11 +63,12 @@ interface LoginScreenProps {
   /** Doğrulama bitince çağrılır; varsayılanı geri dönmek (şablonun `finishLogin` davranışı). */
   onVerified?: () => void;
   /**
-   * OAuth dönüş rotasının bıraktığı adlı ret (`/auth/callback` → `?notice=`): Google akışı bu
-   * ekranın DIŞINDA düşer ve cümlesi yine bu ekranın sözlüğünden kurulur — anahtar taşınır,
-   * metin taşınmaz.
+   * Açılışta söylenecek sebep — anahtar taşınır, metin taşınmaz. İki kaynağı var: OAuth dönüş
+   * rotasının adlı reddi (`/auth/callback` → `?notice=`; Google akışı bu ekranın DIŞINDA düşer ve
+   * cümlesi yine buradan kurulur) ve reddedilen oturum (21.304 — oturumu sunucu reddetti, ekranı
+   * kökteki kanca açar).
    */
-  initialNotice?: AuthErrorKey;
+  initialNotice?: LoginNotice;
 }
 
 export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
@@ -80,10 +82,12 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
-  /** Seçim aşamasının bilgi/hata satırı (WhatsApp "yakında", Google arızası). */
-  const [notice, setNotice] = useState<string | null>(
-    initialNotice === undefined ? null : authErrorText(locale, initialNotice),
-  );
+  /** Seçim aşamasının bilgi/hata satırı (WhatsApp "yakında", Google arızası, açılış sebebi). */
+  const [notice, setNotice] = useState<string | null>(() => {
+    if (initialNotice === undefined) return null;
+    // Reddedilen oturumun cümlesi bu ekranın sözlüğünde; auth retleri ortak auth sözlüğünde.
+    return initialNotice === SESSION_ENDED_NOTICE ? t.sessionEnded : authErrorText(locale, initialNotice);
+  });
   /** İstek uçuştayken düğme kilidi — çift dokunuş iki kod isteği atmasın. */
   const [sending, setSending] = useState(false);
   /** 429'un bekleme süresi (sn) — sayaç sıfıra inene dek yeniden gönderme kilitli. */

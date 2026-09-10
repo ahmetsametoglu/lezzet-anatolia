@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { apiFetch, type ApiFetchInit, type ApiResult } from '../api/client';
+import { endRejectedSession, isDeadSessionAnswer } from './session-end';
 import { getSupabase } from './supabase';
 
 /**
@@ -13,6 +14,13 @@ const UNAUTHORIZED = 'unauthorized';
  * dener (autoRefresh sayacının uyuduğu aralıkta süresi dolan token'ın tek meşru kurtarışı).
  * Tazeleme de düşerse ilk 401 sonucu döner — girişe yönlendirme kabuk/ekran kararıdır, veri
  * katmanı karar vermez (02-mimari §4).
+ *
+ * ÖLÜ OTURUM CİHAZDA BIRAKILMAZ (21.304): tazelemeyi auth sunucusu KESİN reddettiyse (jeton yok,
+ * iptal edilmiş, oturumun süresi geçmiş, kullanıcı engelli) oturum kapatılır; sonuç yine ilk 401
+ * olarak döner. supabase-js bunu kendisi yapmıyor: erişim jetonunun saati dolmamışsa ölü oturumu
+ * koruyor — sunucunun o jetonu az önce reddettiğini yalnız bu fonksiyon biliyor (ölçüm ve gerekçe
+ * `session-end.ts` künyesinde). Kapatmak da yönlendirme değildir: oturum düşer, kabuk bunu kendi
+ * dinleyicisiyle duyar ve nereye gideceğine kendisi karar verir.
  */
 export async function authorizedFetch<TSchema extends z.ZodTypeAny>(
   path: string,
@@ -34,7 +42,10 @@ export async function authorizedFetch<TSchema extends z.ZodTypeAny>(
 
   const refreshed = await supabase.auth.refreshSession();
   const freshToken = refreshed.data.session?.access_token;
-  if (refreshed.error || !freshToken) return first;
+  if (refreshed.error || !freshToken) {
+    if (isDeadSessionAnswer(refreshed.error)) await endRejectedSession();
+    return first;
+  }
 
   return attempt(freshToken);
 }
