@@ -14402,3 +14402,70 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: `typecheck` (mobil · mobile-api · application) temiz — kökte kalan iki hata başka
   şeridin görsel işi (`frames` · `imageWidth`); `lint` temiz; yönetim ekranları **167/167** (5'i
   bu turda: taslak satırı dolu/sıfır · pencere açık/yok/kapalı).
+
+- [x] (21.302) **TEDARİK TASLAĞI: taslaktaki adet eşikten düşülüyor — mükerrer taslak kapandı; satırda ürün görseli** (kullanıcı kararları 10.09: *"mükerrer taslak riski unutmaktan daha tehlikeli"* · *"mobil depo başına kalabilir"* · *"web'in listesi de değişsin"* · *"ben ürünlerde genelde yanında resmini de istiyorum"*)
+  `touches:` `packages/database/src/services/{reorder.service.ts,supply.test.ts}` · `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/warehouse/supply.ts` · `apps/mobile-api/src/api/v1/management.test.ts` · `apps/mobile/src/screens/management/{supply-suggestion-screen.tsx,offer-supply-screens.test.tsx,messages.json}` · `docs/architecture/DOMAIN.md` · `design/{KARARLAR.md,pages/app-yonetim.md}`
+
+  **Durum (10.09) — TAMAM.** Kullanıcı Tedarik taslağı ekranının amacını ve işlevselliğini analiz
+  etmemizi istedi. Ekran eşik altına düşen ürünleri tedarikçiye göre toplayıp tek dokunuşla TASLAK
+  TS açıyor; sistem tedarikçiye bir şey göndermiyor. Analiz dört bulgu çıkardı — ikisi bu turda
+  kapandı, ikisi kullanıcıyla konuşuldu:
+
+  · **MÜKERRER TASLAK — kapandı.** Motor (`ReorderService.suggestions`) yoldakini eşikten düşüyor,
+    taslaktakini BİLEREK düşmüyordu (gerekçe: unutulmuş taslak eksiği kapatmış görünmesin). Bedeli:
+    onaydan sonra grup aynı "+N"lerle listede kalıyor, `createDraft` her basışta YENİ sipariş açıyor,
+    iki yüzeyde de engel yok; web satıra "N taslakta" yazıyordu, mobilin sözleşmesi o alanı hiç
+    taşımıyordu. Kullanıcı iki riski tarttı ve karar tersine döndü: **taslaktaki adet (hedefi bu
+    depo) de düşülüyor.** Taslağın karşıladığı satır düşer, kısmen karşılanan satırda öneri kalana
+    iner; aynı gruba ikinci onay artık `no_suggestion` döner. Motor ortak — **web'in listesi de
+    değişti** (kullanıcı onayıyla). Mobil satır "taslakta N"yi yazıyor (sözleşmeye `draftQty`).
+  · **Tek sipariş mi, depo başına mı — mobil depo başına KALDI** (kod değişmedi). Ölçüm: yönetici
+    depodan bağımsız (`admin`; depo kısıtı yalnız depocu/kuryede; uç bütün tesisleri okuyor). Yapı
+    iki biçime de izin veriyor (kalem başına `target_warehouse_id`), ama mal kabul formu kendi
+    künyesiyle "depo-üstü" — karışık hedefli siparişte depocu öteki deponun kalemlerini de görür.
+    Web'in "Tüm depolar" bağlamı bu karışık siparişi açabiliyor; denetime not düşüldü.
+  · **Transfer seçeneği ve tasarımın hız/kapak/imha ölçüleri — konuşuldu, yapılmadı.** İkisi aynı
+    temele dayanıyor: satış hızı motoru (DOMAIN §16 Faz 2, bugün yok; yerel veri sahte olduğundan
+    parametre de seçilemez). Yeri web masası; mobil yalnız sonucu gösterir. Kullanıcı kararı bekliyor.
+  · **Başlık:** "Tedarik Önerisi" → tasarımın adı "Tedarik Taslağı"; alt başlıktaki geliştirici
+    notu ("öneri listesi elle de açılır — bildirim tek kapı değil") gerçek bir tanımla değişti.
+  · **Satırda ürün görseli — tasarımda yok, kullanıcı isteğiyle eklendi.** Tasarım karşılaştırması
+    sorulurken kullanıcı ürünlerin yanında görselini istedi. Satır kitin ürün satırına geçti
+    (`OperationsSurface` kabuğu + `OperationsProductRow`: 44'lük kare · ad · ölçümler · sağda "+N");
+    eşlenmemiş grubun kalemleri de görselli, küçük kademede ve kartsız. Adres, ad okumasının ZATEN
+    taşıdığı küçük resim (`variantNames` → `imageUrl`) — ikinci sorgu yok. Sözleşmede `imageUrl`;
+    görselsiz üründe `null` ve kare monogram çizer. Karar `design/KARARLAR.md`'de.
+  · **Tasarım dipnotundaki "elle değiştirdiğiniz satır işaretli kalır" — mobilde YOK, konuşulacak.**
+    Mobil satırda adet düzeltme yok; taslak kalemini web masası düzeltiyor ve siliyor
+    (`updateDraftLineAction` · `removeDraftLineAction`). Tasarımdan gelen ve mobilde karşılığı olmayan
+    bir işlev — kullanıcının kuralı gereği önce konuşuluyor, kod yazılmadı.
+
+  Kural dört yere yazıldı: motor künyesi, DOMAIN §16 (eksik hesabında yoldaki VE taslaktaki düşülür
+  — daha önce hiç yazılı değildi), `design/KARARLAR.md` ve tasarım belgesi (`app-yonetim.md`).
+
+  **Kuralın görünür kıldığı bir test sızıntısı — kapandı.** İlk kök koşuda `supply.test.ts`in
+  "öneri açık siparişleri görür" bloğunun beş testi birden düştü; ikisi hiç dokunulmamış testti.
+  Hata metni teşhisi verdi (`supply.test.ts:282`, *"expected undefined to be defined"* — satır, test
+  daha taslak açmadan yoktu): dosyanın önceki bir testi (*"öneriden tek dokunuşla PO taslağı çıkar"*)
+  `createDraftFrom` ile HEDEF DEPOLU 24'lük bir taslak açıp silmiyordu. Kural eskiyken sızıntı
+  zararsızdı; taslak eşiğe sayılınca eksik baştan kapandı. Test artık kendi taslağını `finally`
+  içinde `mustDelete` ile temizliyor. Aynı koşunun öteki 15 düşüşü (`cart/link.test.ts` 12 ·
+  `cart/agent-tools.test.ts` 3) sepet bağlantısı şeridinin bekleyen işi — tedarik motoruyla bağı yok.
+
+  Doğrulama: kök `typecheck` **20/20** · `lint` temiz · `docs:check` temiz · yönetim ekranları
+  **170/170** (3'ü bu turda: "taslakta N" var/yok · görsel/monogram) · kilitli kök paket
+  **4511/4511** — son hâlin koşusu (görsel dahil); `supply.test.ts` ve mobil ucun `management.test.ts`i
+  yeşil (mükerrer onayın `no_suggestion` döndüğü uçtan uca iddia ve görsel alanı dahil); ilk koşudaki
+  15 sepet düşüşü bu koşuda yok. Görsel testi ilk yazılışında boşuna geçecekti: kare dekoratif
+  (ekran okuyucudan gizli), RNTL gizli öğeyi varsayılan olarak sorgulamıyor ve "harf yok" iddiaları
+  hiçbir şey ölçmeden geçiyordu — sorgu artık gizli öğelere de bakıyor, aynı kipte görselsiz satırın
+  harfi bulunuyor. **Cihaz turu (10.09, Oppo, USB) — yapıldı.** Kablosuz yol kapalıydı: bu oturumun
+  süreçlerinden yerel ağa paket çıkmıyor (aynı ping launchd'den telefona 66 ms'de gidiyor, buradan her
+  LAN adresine anında "No route to host"); VS Code'un Yerel Ağ izni açık göründüğü hâlde sürdü, hangi
+  kimliğe takıldığı açık. Tur kabloyla yapıldı: görseller eşlenmiş kalemde 44'lük, eşlenmemişte 30'luk
+  karede çiziliyor; görselsiz üründe monogram ("PA"); başlık, grup düğmeleri ve dipnotlar doğru.
+  **Turun bulduğu kusur — kapandı:** eşlenmemiş grup depo başına doğuyor ve üç blok aynı başlıkla
+  ("Eşlenmemiş grup · N varyant") alt alta duruyordu; aynı ürün iki blokta görünüp sebebi okunmuyordu.
+  Başlık artık depoyu söylüyor ("Eşlenmemiş grup · KEHL · 7 varyant"; kod çözülemezse "—"); cihazda üç
+  başlık doğrulandı, iddia ekran testinde. Düzeltme yalnız mobil ekranda: yönetim ekranları yine
+  **170/170**, `typecheck` 20/20, `lint` temiz; kök paketin 4511/4511'i mobil jest'i içermiyor.

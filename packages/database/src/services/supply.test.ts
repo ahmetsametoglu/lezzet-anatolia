@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { createTestWarehouse } from '../testing/warehouse';
-import { purgeTestData, purgeVariantStock } from '../testing/cleanup';
+import { mustDelete, purgeTestData, purgeVariantStock } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
 import { PurchaseOrderService } from './purchase-order.service';
@@ -234,8 +234,17 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
     const group = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
     const { order, items } = await reorder.createDraftFrom(group, 'Eşik altı otomatik taslak');
 
-    expect(order.supplierId).toBe(supplierId);
-    expect(items.find((i) => i.variantId === variantId)?.qty).toBe(24);
+    try {
+      expect(order.supplierId).toBe(supplierId);
+      expect(items.find((i) => i.variantId === variantId)?.qty).toBe(24);
+    } finally {
+      /* TASLAK TEMİZLENİR (21.302). `createDraftFrom` taslağa HEDEF DEPO yazıyor ve taslaktaki adet
+         artık eşiğe sayılıyor: bu 24'lük taslak geride kalsaydı dosyanın sonraki her testinde eksik
+         baştan kapalı görünür, "öneri açık siparişleri görür" bloğunun beş testi birden satırı hiç
+         bulamazdı (ölçüldü: kural değişince tam bu beşi düştü). Eskiden sızıntı zararsızdı, çünkü
+         taslak eşiğe girmiyordu. `finally` içinde: bir iddia düşse bile sızıntı zincirleme kırmasın. */
+      await mustDelete(db, 'purchase_order', (q) => q.eq('id', order.id));
+    }
   });
 
   it('tedarikçisi eşlenmemiş kalemlerden sipariş açılmaz (açıkça reddedilir)', async () => {
@@ -272,18 +281,40 @@ describe('"sipariş zamanı" önerisi (06.11)', () => {
       await stocks.insert({ variantId, warehouseId, physicalQty: 5, expiryDate: dayOffset(250) });
     });
 
-    it('taslak açılınca satır DÜŞMEZ ama "taslakta" olarak görünür — tedarikçi haberdar değil', async () => {
-      const önceki = (await öneriSatiri())?.draftQty ?? 0;
+    /*
+      TASLAK EŞİĞE SAYILIR (21.302, kullanıcı kararı 10.09). Bu test eskiden tam TERSİNİ çiviliyordu
+      ("taslak açılınca satır DÜŞMEZ") ve gerekçesi unutulmuş taslaktı. Kullanıcı iki riski tarttı:
+      *"mükerrer taslak riski unutmaktan daha tehlikeli — taslağı biz oluşturduğumuz için unutmayız."*
+      Satır düşmeseydi aynı gruba ikinci basış ikinci bir taslak açardı ve hiçbir yerde uyarı yoktu.
+    */
+    it('taslak açılınca satır DÜŞER — taslak eşiğe sayılır, aynı gruba ikinci taslak açılamaz', async () => {
+      expect(await öneriSatiri()).toBeDefined();
       const grup = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId)!;
       const { order } = await reorder.createDraftFrom(grup, 'Test');
       acilanlar.push(order.id);
 
+      // Eksik 15 (20 − 5), taslakta 24 → satır artık öneri değil; "tek dokunuş" tekrarlanamaz.
+      expect(await öneriSatiri()).toBeUndefined();
+    });
+
+    it('KISMİ taslakta öneri kalana iner ve satır "taslakta" adedini taşır', async () => {
+      const önceki = await öneriSatiri();
+      expect(önceki).toBeDefined();
+      // Eksiğin yalnız bir kısmını karşılayan elle taslak — öneriden gelmeyen, masada kurulmuş hâl.
+      const { order } = await orders.createDraft(
+        supplierId,
+        [{ variantId, qty: 6, unitPriceCents: null, targetWarehouseId: warehouseId }],
+        'Test',
+      );
+      acilanlar.push(order.id);
+
       const satir = await öneriSatiri();
-      // Taslak eşiğe GİRMEZ: açıp göndermeyi unuttuğumuz bir taslak eksiği "kapatmış" görünseydi
-      // raf sessizce boş kalırdı.
       expect(satir).toBeDefined();
-      expect((satir?.draftQty ?? 0) - önceki).toBe(24);
-      expect(satir?.incomingQty).toBe(0);
+      // FARK ölçülür (CLAUDE §4b): başka bir koşunun taslağı taban çizgisini oynatabilir.
+      expect(satir!.draftQty - önceki!.draftQty).toBe(6);
+      // Öneri satırın KENDİ sayılarından: eşik − stok − yolda − taslak, koli katına (12) yuvarlı.
+      const eksik = satir!.minStockQty - satir!.availableQty - satir!.incomingQty - satir!.draftQty;
+      expect(satir!.suggestedQty).toBe(Math.ceil(Math.max(1, eksik) / 12) * 12);
     });
 
     it('GÖNDERİLİNCE satır düşer — mal yolda, ikinci sipariş açılmamalı', async () => {

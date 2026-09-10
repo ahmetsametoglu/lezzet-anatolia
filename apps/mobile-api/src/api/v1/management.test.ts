@@ -269,6 +269,8 @@ describe('Y4 · tedarik önerisi', () => {
     expect(line!.minStockQty).toBe(10);
     // Öneri motorun sözü: eşiğe çıkaracak kadar (10−2=8); koli eşlemesi yok, yuvarlama değişmez.
     expect(line!.suggestedQty).toBe(8);
+    // Görsel alanı uçtan geçiyor (21.302); fikstür ürünü görselsiz → `null`, uydurma bir adres değil.
+    expect(line!.imageUrl).toBeNull();
 
     const draft = await envelopeData<SupplyDraftResponse>(
       await post(admin, 'supply/draft', { warehouseId, supplierId }),
@@ -288,11 +290,20 @@ describe('Y4 · tedarik önerisi', () => {
       .eq('purchase_order_id', draft.purchaseOrderId);
     expect(items?.length).toBeGreaterThanOrEqual(1);
     expect(items![0]).toMatchObject({ target_warehouse_id: warehouseId });
+
+    /* MÜKERRER TASLAK YOK (21.302): taslaktaki adet artık eşiğe sayılıyor — az önce açılan taslak
+       eksiği karşıladı, aynı grubu İKİNCİ kez onaylamak yeni bir taslak açmaz, "öneri kalmadı"
+       cevabı döner. Eskiden bu ikinci basış ikinci bir taslak TS açıyordu ve hiçbir yerde uyarı
+       yoktu (kullanıcı kararı 10.09: mükerrer taslak riski unutulmuş taslak riskinden büyük). */
+    const again = await envelopeData<SupplyDraftResponse>(
+      await post(admin, 'supply/draft', { warehouseId, supplierId }),
+    );
+    expect(again.status).toBe('no_suggestion');
   });
 
   it('öneri kalmadıysa onay hata değil CEVAP: no_suggestion', async () => {
-    // Taslak açıldı (üstteki test) → taslaktaki adet eşiğe sayılmaz ama öneri süzgeci yoldakini
-    // düşer... Burada iddia daha dar: OLMAYAN tedarikçiyle onay `no_suggestion` döner.
+    // Taslak açıldı (üstteki test) ve taslaktaki adet eşiğe sayıldığı için o grup zaten kapandı
+    // (21.302). Burada iddia daha dar: OLMAYAN tedarikçiyle onay `no_suggestion` döner.
     const draft = await envelopeData<SupplyDraftResponse>(
       await post(admin, 'supply/draft', { warehouseId, supplierId: '00000000-0000-4000-8000-00000000dead' }),
     );

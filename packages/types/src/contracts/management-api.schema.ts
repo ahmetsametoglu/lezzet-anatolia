@@ -322,11 +322,23 @@ export type SupplyElsewhere = z.infer<typeof SupplyElsewhereSchema>;
 export const SupplyLineSchema = z.object({
   variantId: z.string().uuid(),
   title: z.string(),
+  /**
+   * Ürünün küçük resmi (21.302, kullanıcı isteği 10.09: *"ürünlerde yanında resmini de istiyorum"*).
+   * Tasarımın tedarik satırında resim yok; gerekçe teklif adayınınkiyle aynı (`OfferCandidateSchema`
+   * `imageUrl`). `null` = ürünün görseli yok — ekran monogram çizer, uydurma görsel konmaz.
+   */
+  imageUrl: z.string().nullable(),
   availableQty: z.number().int(),
   minStockQty: z.number().int(),
-  /** Yoldaki düşülmüş, koli katına yuvarlı — motorun sözü (`ReorderService` künyesi). */
+  /** Yoldaki VE taslaktaki düşülmüş, koli katına yuvarlı — motorun sözü (`ReorderService` künyesi). */
   suggestedQty: z.number().int(),
   incomingQty: z.number().int().nonnegative(),
+  /**
+   * Bu depoya açılmış ama henüz GÖNDERİLMEMİŞ taslaklardaki adet (21.302) — öneriden ZATEN düşülmüş
+   * kısım. Satırda "taslakta N" diye yazılır: kısmen karşılanan satırda öneri neden küçüldü,
+   * operatör buradan okur. Web'in satırı aynı bilgiyi baştan beri taşıyor.
+   */
+  draftQty: z.number().int().nonnegative(),
   lastPurchaseCents: z.number().int().nullable(),
   elsewhere: z.array(SupplyElsewhereSchema),
 });

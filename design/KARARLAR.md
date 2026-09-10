@@ -2415,3 +2415,33 @@ kovaya koyar ve iade kapısını türden okuyamaz hâle getirirdi. Enum veriyi d
 **Aynı turda kapanan iki küçük fark:** talep listesinin fazladan **"kapandı"** süzgeci kalıyor
 (arşive erişim — tasarımda yok ama kullanıcı onayladı); satırda ek SAYISI ("2 görsel") yazılmıyor,
 yalnız var/yok — bu 07.09'da zaten verilmiş bir karar (`ComplaintRowSchema.hasAttachment` künyesi).
+
+
+## Tedarik önerisi — taslaktaki adet eşikten DÜŞÜLÜR (10.09)
+
+Öneri motoru (`ReorderService.suggestions`) yoldaki malı eşikten düşüyordu, taslaktakini bilerek
+düşmüyordu. Gerekçesi unutulmuş taslaktı: gönderilmeyen bir taslak eksiği "kapatmış" görünür, raf
+sessizce boş kalırdı. Bedeli ise **mükerrer taslaktı**: onaydan sonra grup aynı önerilerle listede
+kalıyor, `createDraft` her basışta YENİ sipariş açıyordu ve iki yüzeyde de engel yoktu.
+
+**Karar: taslaktaki adet de düşülür** (kullanıcı kararı 10.09, iki risk tartılarak: *"mükerrer
+taslak riski unutmaktan daha tehlikeli — taslağı biz oluşturduğumuz için unutmayız"*). Web'in ve
+mobilin listesi aynı motordan değişir: taslağın karşıladığı satır düşer, kısmen karşılanan satırda
+öneri kalana iner ve "taslakta N" yazılı kalır. Yeniden tartışılmaz.
+
+**Kapsam:** yalnız hedef deposu BU depo olan taslak kalemleri. Hedefsiz taslak kalemi yine hiçbir
+depoya sayılmaz (K6) — ayrı gösterilir.
+
+**Aynı konuşmanın öteki kararı:** mobil taslağı **depo başına** açmaya devam eder (tedarikçi ×
+depo). Web'in "Tüm depolar" bağlamı tek, karışık-hedefli bir taslak açabiliyor ve mal kabul formu
+kalemin hedef deposunu okumuyor — bu web şeridine not olarak iletildi.
+
+
+## Tedarik satırında ürün görseli — tasarımda YOK, eklendi (10.09)
+
+Tasarımın tedarik satırı (v3:31) ad + ölçüm + önerilen adet çiziyor; ürün resmi yok. Kullanıcı
+ürün listelerinde görseli istiyor (*"ben ürünlerde genelde yanında resmini de istiyorum"*, 10.09).
+Satır kitin ürün satırıyla (`OperationsProductRow`) kuruldu: solda 44'lük kare; görselsiz üründe
+monogram, uydurma resim konmaz. Eşlenmemiş grubun kalemleri de görselli, küçük kademede (30).
+Gerekçe teklif çekmecesininkiyle aynı (21.296): adlar birbirine benziyor, operatör kararı ürüne
+bakarak veriyor.

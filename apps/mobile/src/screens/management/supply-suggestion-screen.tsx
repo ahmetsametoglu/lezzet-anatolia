@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsProductRow } from '@/components/operations/product-row';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -147,14 +148,21 @@ export function SupplySuggestionScreen() {
   );
 }
 
-/** Kartın ölçüm satırı — son alış yoksa "—": bilinmeyen fiyat sıfır gibi okutulmaz. */
+/**
+ * Kartın ölçüm satırı — son alış yoksa "—": bilinmeyen fiyat sıfır gibi okutulmaz.
+ *
+ * "taslakta N" YALNIZ taslak varken eklenir (21.302): taslaktaki adet artık öneriden düşülüyor ve
+ * kısmen karşılanan satırda "+N" eksikten küçük görünür — sebebi satırın kendisinde yazmalı.
+ * Sıfırken yazılmaz: "taslakta 0" bir olgu değil, gürültüdür.
+ */
 function lineMeta(line: SupplyGroup['lines'][number]): string {
-  return fillCopy(t.supply.row, {
+  const base = fillCopy(t.supply.row, {
     current: String(line.availableQty),
     threshold: String(line.minStockQty),
     incoming: String(line.incomingQty),
     lastPurchase: line.lastPurchaseCents === null ? t.supply.noPurchase : money(line.lastPurchaseCents),
   });
+  return line.draftQty > 0 ? base + fillCopy(t.supply.rowDraft, { draft: String(line.draftQty) }) : base;
 }
 
 interface MappedGroupProps {
@@ -185,32 +193,40 @@ function MappedGroup({ group, supply }: MappedGroupProps) {
       </Text>
 
       {group.lines.map((line) => (
-        /* Kartın kabuğu kitten (`panel`): zemin · kenar · yarıçap · dolgu tek yerden. Satır
-           TIKLANIR DEĞİL — kalem bir bilgi, karar grubun sonundaki CTA'da. */
+        /* Kartın kabuğu kitten (`panel`): zemin · kenar · yarıçap · dolgu tek yerden. İç dizilim de
+           kitten (`OperationsProductRow`): solda ürün karesi, ortada ad + ölçümler, sağda öneri.
+           Satır TIKLANIR DEĞİL — kalem bir bilgi, karar grubun sonundaki CTA'da. */
         <OperationsSurface
           key={line.variantId}
           tone="panel"
           padding="md"
-          style={styles.line}
           testID={`management-supply-${line.variantId}`}
         >
-          <View style={styles.lineText}>
-            <Text style={styles.lineName}>{line.title}</Text>
-            <Text style={styles.lineMeta}>{lineMeta(line)}</Text>
-            {/* GEREKÇE EKRANDAN ÇIKTI (cihazda görüldü 30.08): satır "— transfer seçeneğinin ham
-                verisi" diye bitiyordu ve bu bir GELİŞTİRİCİ notudur; sekiz satırda tekrarlanınca
-                ekranı kendi kendini açıklayan bir belgeye çeviriyordu. Neden gösterildiği bu
-                künyede yazılı: elimizdeki tek "dikkat" sinyali bu ve bir uyarı değil BİLGİdir —
-                satın almadan önce transfer bakılabilir. */}
-            {line.elsewhere.length === 0 ? null : (
-              <Text style={styles.lineElsewhere}>
-                {fillCopy(t.supply.elsewhere, {
-                  where: line.elsewhere.map((spot) => `${spot.warehouseCode} ${spot.qty}`).join(' · '),
-                })}
-              </Text>
-            )}
-          </View>
-          <Text style={styles.lineSuggested}>{`+${line.suggestedQty}`}</Text>
+          <OperationsProductRow
+            name={line.title}
+            /* Görsel tasarımda YOK, kullanıcı isteğiyle geldi (10.09 — "ürünlerde yanında resmini de
+               istiyorum"); görselsiz üründe kare monogram çizer (`design/KARARLAR.md`). */
+            photoUri={line.imageUrl}
+            size="md"
+            meta={
+              <>
+                <Text style={styles.lineMeta}>{lineMeta(line)}</Text>
+                {/* GEREKÇE EKRANDAN ÇIKTI (cihazda görüldü 30.08): satır "— transfer seçeneğinin ham
+                    verisi" diye bitiyordu ve bu bir GELİŞTİRİCİ notudur; sekiz satırda tekrarlanınca
+                    ekranı kendi kendini açıklayan bir belgeye çeviriyordu. Neden gösterildiği bu
+                    künyede yazılı: elimizdeki tek "dikkat" sinyali bu ve bir uyarı değil BİLGİdir —
+                    satın almadan önce transfer bakılabilir. */}
+                {line.elsewhere.length === 0 ? null : (
+                  <Text style={styles.lineElsewhere}>
+                    {fillCopy(t.supply.elsewhere, {
+                      where: line.elsewhere.map((spot) => `${spot.warehouseCode} ${spot.qty}`).join(' · '),
+                    })}
+                  </Text>
+                )}
+              </>
+            }
+            right={<Text style={styles.lineSuggested}>{`+${line.suggestedQty}`}</Text>}
+          />
         </OperationsSurface>
       ))}
 
@@ -235,15 +251,28 @@ interface UnmappedGroupProps {
 function UnmappedGroup({ group }: UnmappedGroupProps) {
   return (
     <View style={styles.unmapped} testID="management-supply-unmapped">
-      <Text style={styles.unmappedTitle}>{fillCopy(t.supply.unmapped.title, { n: String(group.lines.length) })}</Text>
+      {/* Başlık DEPOYU söyler (cihazda görüldü 10.09): eşlenmemiş grup depo başına doğuyor ve üç blok
+          aynı başlıkla alt alta duruyordu — aynı ürün iki blokta görünüp sebebi okunmuyordu. Eşlenmiş
+          grubun künyesi zaten "tedarikçi · depo" diyor. Kod çözülemezse "—": görünür boşluk, uydurma değil. */}
+      <Text style={styles.unmappedTitle}>
+        {fillCopy(t.supply.unmapped.title, { warehouse: group.warehouseCode ?? '—', n: String(group.lines.length) })}
+      </Text>
       {group.lines.map((line) => (
-        <Text key={line.variantId} style={styles.unmappedLine}>
-          {fillCopy(t.supply.unmapped.line, {
-            name: line.title,
-            current: String(line.availableQty),
-            threshold: String(line.minStockQty),
-          })}
-        </Text>
+        /* Eşlenmemiş kalem de görselli ürün satırı (kitten), ama KÜÇÜK kademede ve kartsız: blok bir
+           sipariş listesi değil, kapalı kapının dökümü — önerilen adet de çizilmez. */
+        <OperationsProductRow
+          key={line.variantId}
+          name={line.title}
+          photoUri={line.imageUrl}
+          meta={
+            <Text style={styles.unmappedLine}>
+              {fillCopy(t.supply.unmapped.line, {
+                current: String(line.availableQty),
+                threshold: String(line.minStockQty),
+              })}
+            </Text>
+          }
+        />
       ))}
       <Text style={styles.unmappedBlocked}>{t.supply.unmapped.blocked}</Text>
     </View>
@@ -283,22 +312,8 @@ const styles = StyleSheet.create({
   },
 
   /* ── Kalem kartı (v3:31) ──────────────────────────────────────────────────── */
-  /* Kabuk kitte; burada kalan yalnız satırın kendi dizilimi (ad bloğu + sağdaki öneri adedi). */
-  line: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.xl,
-  },
-  lineText: {
-    flex: 1,
-    minWidth: 0,
-    gap: operationsTheme.space['2xs'],
-  },
-  lineName: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.ink,
-  },
+  /* Kabuk da dizilim de kitte (`OperationsSurface` + `OperationsProductRow`: kare · ad · sağ blok);
+     burada kalan yalnız satırın kendi yazıları — ölçüm satırı, başka depo sinyali, önerilen adet. */
   lineMeta: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,

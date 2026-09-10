@@ -46,9 +46,11 @@
 
 - **Model HAZIR (ölçüldü):** eşik iki katmanlı — varyantın varsayılan asgari stoğu + depo başına
   istisna; öneri satırı: mevcut · eşik · önerilen adet (**yoldaki mal düşülmüş, koli katına
-  yuvarlı**; taslaktakiler eşiğe SAYILMAZ ve ayrı gösterilir) · tedarikçi kodu (`null` = eşleme
+  yuvarlı**; **taslaktakiler de düşülür** — kullanıcı kararı 10.09: mükerrer taslak riski, unutulmuş
+  taslak riskinden büyük — ve satırda ayrıca gösterilir) · tedarikçi kodu (`null` = eşleme
   yok, satır yine listelenir) · son alış fiyatı · **"başka depoda var" sinyali** (sipariş yerine
-  transfer seçeneğinin ham verisi — yargısız).
+  transfer seçeneğinin ham verisi — yargısız) · **ürün görseli** (tasarımda yok — kullanıcı isteği
+  10.09; görselsiz üründe monogram).
 - **İş:** tedarikçi grubunu onayla → TASLAK tedarik siparişi (durum sözlüğü: taslak · gönderildi ·
   kısmen teslim alındı · teslim alındı · iptal; referans `TS-26-…` GÖNDERİMDE doğar). Tedarikçisi
   eşlenmemiş gruptan sipariş AÇILAMAZ (sistem reddeder — ekran bunu baştan söyler).

@@ -54,10 +54,13 @@ export async function listSupplyGroups(
     lines: group.lines.map((line) => ({
       variantId: line.variantId,
       title: displayName(names.get(line.variantId)),
+      // Ad okumasının zaten taşıdığı küçük resim — ikinci bir sorgu yok (depo ekranlarının deseni).
+      imageUrl: names.get(line.variantId)?.imageUrl ?? null,
       availableQty: line.availableQty,
       minStockQty: line.minStockQty,
       suggestedQty: line.suggestedQty,
       incomingQty: line.incomingQty,
+      draftQty: line.draftQty,
       lastPurchaseCents: line.lastPurchasePriceCents,
       elsewhere: elsewhereRows
         .filter(

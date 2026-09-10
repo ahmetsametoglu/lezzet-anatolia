@@ -306,11 +306,12 @@
     }
   },
   "supply": {
-    "title": "Tedarik Önerisi",
-    "caption": "öneri listesi elle de açılır — bildirim tek kapı değil",
+    "title": "Tedarik Taslağı",
+    "caption": "eşik altına düşen ürünler · tedarikçi ve depo başına",
     "loading": "Öneri listesi yükleniyor…",
     "group": "{supplier} · {warehouse}",
     "row": "stok {current} · eşik {threshold} · yolda {incoming} · son alış {lastPurchase}",
+    "rowDraft": " · taslakta {draft}",
     "noPurchase": "—",
     "elsewhere": "başka depoda var: {where}",
     "footnote": "Öneri eşiğin altındaki farktan türetilir: yoldaki miktar düşülür, kalan koli katına yuvarlanır.",
@@ -320,8 +321,8 @@
     "ctaStale": "Öneri güncel değilmiş — liste tazelendi",
     "note": "Sistem tedarikçiye bir şey göndermez — metni kurar, gönderim (WhatsApp/PDF) insanın. Referans TS-26-… gönderimde doğar.",
     "unmapped": {
-      "title": "Eşlenmemiş grup · {n} varyant",
-      "line": "{name} — mevcut {current} · eşik {threshold} · tedarikçi eşlemesi yok",
+      "title": "Eşlenmemiş grup · {warehouse} · {n} varyant",
+      "line": "mevcut {current} · eşik {threshold} · tedarikçi eşlemesi yok",
       "blocked": "Bu gruptan sipariş açılamaz — önce masada tedarikçi eşleyin."
     },
     "empty": {

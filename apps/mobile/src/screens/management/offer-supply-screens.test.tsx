@@ -108,21 +108,26 @@ function supplyGroups(): SupplyResponse {
           {
             variantId: VARIANT_1,
             title: 'Fıstıklı Baklava (1 kg)',
+            imageUrl: 'https://cdn.test/fistikli-baklava.jpg',
             availableQty: 6,
             minStockQty: 20,
             suggestedQty: 24,
             incomingQty: 0,
+            draftQty: 0,
             lastPurchaseCents: 2140,
             elsewhere: [{ warehouseCode: 'KEHL', qty: 14 }],
           },
           {
             // Son alışı bilinmeyen kalem — satırın "—" yolunu ölçmek için (sıfır gibi okutulmaz).
+            // Görseli de yok: kare monogram çizer, uydurma bir resim konmaz.
             variantId: VARIANT_3,
             title: 'Şöbiyet (500 g)',
+            imageUrl: null,
             availableQty: 3,
             minStockQty: 10,
             suggestedQty: 6,
             incomingQty: 12,
+            draftQty: 0,
             lastPurchaseCents: null,
             elsewhere: [],
           },
@@ -137,10 +142,12 @@ function supplyGroups(): SupplyResponse {
           {
             variantId: VARIANT_2,
             title: 'Acılı Ezme (250 g)',
+            imageUrl: 'https://cdn.test/acili-ezme.jpg',
             availableQty: 4,
             minStockQty: 12,
             suggestedQty: 8,
             incomingQty: 0,
+            draftQty: 0,
             lastPurchaseCents: null,
             elsewhere: [],
           },
@@ -387,6 +394,9 @@ describe('Y4 · tedarik önerisi', () => {
 
     expect(screen.getByTestId('management-supply-unmapped')).toBeOnTheScreen();
     expect(screen.getByText(t.supply.unmapped.blocked)).toBeOnTheScreen();
+    // Başlık depoyu söyler (cihazda görüldü 10.09): eşlenmemiş grup depo başına doğuyor; depo yazılmazsa
+    // aynı başlıklı bloklar alt alta durur ve aynı ürün iki kez görünür.
+    expect(screen.getByText('Eşlenmemiş grup · STR · 1 varyant')).toBeOnTheScreen();
     expect(screen.queryByTestId(`management-supply-cta-${WAREHOUSE}:unmapped`)).toBeNull();
   });
 
@@ -403,5 +413,53 @@ describe('Y4 · tedarik önerisi', () => {
 
     await waitFor(() => expect(screen.getByText(t.supply.ctaStale)).toBeOnTheScreen());
     expect(reads).toBeGreaterThanOrEqual(2);
+  });
+});
+
+/*
+  TASLAKTAKİ ADET SATIRDA (21.302). Taslaktaki adet artık öneriden düşülüyor; kısmen karşılanan
+  satırda "+N" eksikten küçük görünür ve sebebi satırın kendisinde yazmalı. Sıfırken yazılmaz:
+  "taslakta 0" bir olgu değil, gürültüdür.
+*/
+describe('Y4 · tedarik — taslaktaki adet satırda okunur (21.302)', () => {
+  it('taslakta adet varsa ölçüm satırı "taslakta N" ile biter', async () => {
+    const response = supplyGroups();
+    const [mapped] = response.groups;
+    mapped!.lines[0] = { ...mapped!.lines[0]!, draftQty: 6 };
+    fetchMock.mockResolvedValue(ok(response));
+
+    await renderScreen(<SupplySuggestionScreen />, 'management-supply-loading');
+
+    expect(screen.getByText(/taslakta 6/)).toBeOnTheScreen();
+  });
+
+  it('taslak YOKSA "taslakta" hiç yazılmaz', async () => {
+    fetchMock.mockResolvedValue(ok(supplyGroups()));
+
+    await renderScreen(<SupplySuggestionScreen />, 'management-supply-loading');
+
+    expect(screen.queryByText(/taslakta/)).toBeNull();
+  });
+});
+
+/*
+  ÜRÜN GÖRSELİ SATIRDA (21.302 · kullanıcı isteği 10.09). Tasarımın tedarik satırında resim yok;
+  kullanıcı ürünlerin yanında görselini istiyor. Kare, görsel varken RESMİ, yokken MONOGRAMI çizer —
+  iddia monogramdan okunuyor: görselli satırda harf yoksa satır resim yolundan geçmiştir.
+*/
+describe('Y4 · tedarik — satırda ürün görseli', () => {
+  it('görseli olan kalemde resim, olmayanda monogram — eşlenmemiş kalem dahil', async () => {
+    fetchMock.mockResolvedValue(ok(supplyGroups()));
+
+    await renderScreen(<SupplySuggestionScreen />, 'management-supply-loading');
+
+    // Kare DEKORATİF (ekran okuyucudan gizli — ad zaten satırın başlığında), bu yüzden sorgu gizli
+    // öğelerin içine de bakıyor; bakmasaydı alttaki "yok" iddiaları hiçbir şey ölçmeden geçerdi.
+    const hidden = { includeHiddenElements: true };
+    // Şöbiyet'in görseli yok: iki kelimenin baş harfi çizilir, uydurma bir resim konmaz.
+    expect(screen.getByText('ŞG', hidden)).toBeOnTheScreen();
+    // Baklava (eşlenmiş grup) ve Acılı Ezme (eşlenmemiş grup) görselli: harf çizilmez.
+    expect(screen.queryByText('FB', hidden)).toBeNull();
+    expect(screen.queryByText('AE', hidden)).toBeNull();
   });
 });

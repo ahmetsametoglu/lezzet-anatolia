@@ -20,11 +20,17 @@ export interface ReorderLine {
    */
   incomingQty: number;
   /**
-   * **Taslakta**: henüz gönderilmemiş siparişlerdeki adet.
+   * **Taslakta**: bu depoya açılmış, henüz gönderilmemiş siparişlerdeki adet — **eşikten DÜŞÜLÜR**
+   * (21.302, kullanıcı kararı 10.09).
    *
-   * `incomingQty` ile TOPLANMAZ ve eşiğe girmez: gönderilmiş sipariş bir bekleyiştir, taslak yalnız
-   * bizim kararımızdır ve tedarikçi ondan habersizdir. İkisini toplamak, açıp göndermeyi
-   * unuttuğumuz bir taslağın eksiği "kapatmış" görünmesi olurdu — sessizce boş raf.
+   * Eskiden düşülmüyordu ve gerekçesi yazılıydı: gönderilmiş sipariş bir bekleyiştir, taslak yalnız
+   * bizim kararımızdır; ikisini toplamak, göndermeyi unuttuğumuz bir taslağın eksiği "kapatmış"
+   * görünmesi olurdu. Bedeli ise MÜKERRER TASLAKTI: onaydan sonra grup aynı önerilerle listede
+   * kalıyor, `createDraft` her basışta yeni sipariş açıyordu ve hiçbir yüzeyde engel yoktu. Kullanıcı
+   * iki riski tarttı — *"mükerrer taslak riski unutmaktan daha tehlikeli; taslağı biz oluşturduğumuz
+   * için unutmayız"* — ve karar tersine döndü. Unutma riskinin karşılığı görünürlük: taslak web'in
+   * siparişler sekmesinde durur, satır da bu adedi "taslakta N" diye taşır. `incomingQty`den AYRI
+   * alan, çünkü ikisi ayrı şey söyler: biri tedarikçinin bildiği bekleyiş, öteki bizim kararımız.
    */
   draftQty: number;
   /**
@@ -104,10 +110,12 @@ export class ReorderService {
     const groups = new Map<string | null, ReorderGroup>();
     for (const row of below) {
       const incomingQty = incoming.get(row.variantId) ?? 0;
-      // Yoldaki mal eksiği KAPATIYORSA satır düşer. Süzgeç burada, SQL'de değil: `listBelowMinStock`
-      // aday kümesini veriyor (`available < min`) ve yolda olanı eklemek o kümeyi yalnız KÜÇÜLTÜR —
-      // eşiğin üstündeki bir varyant zaten aday değildi.
-      if (row.availableQty + incomingQty >= row.minStockQty) continue;
+      const draftQty = drafts.get(row.variantId) ?? 0;
+      // Yoldaki mal VE taslaktaki adet eksiği KAPATIYORSA satır düşer (taslak 21.302'den beri —
+      // gerekçe `draftQty` künyesinde). Süzgeç burada, SQL'de değil: `listBelowMinStock` aday
+      // kümesini veriyor (`available < min`) ve yolda/taslakta olanı eklemek o kümeyi yalnız
+      // KÜÇÜLTÜR — eşiğin üstündeki bir varyant zaten aday değildi.
+      if (row.availableQty + incomingQty + draftQty >= row.minStockQty) continue;
 
       const mapping = chosen.get(row.variantId) ?? null;
       const supplierId = mapping?.supplierId ?? null;
@@ -116,13 +124,17 @@ export class ReorderService {
         variantId: row.variantId,
         availableQty: row.availableQty,
         minStockQty: row.minStockQty,
-        // Eşiğe çıkaracak kadar — YOLDAKİ düşülerek; koli içi adet biliniyorsa yukarı yuvarlanır
-        // (koli bölünmez). Yoldakini düşmemek, gelen malın üstüne bir kez daha sipariş vermekti.
-        suggestedQty: roundToPack(row.minStockQty - row.availableQty - incomingQty, mapping?.packQty ?? null),
+        // Eşiğe çıkaracak kadar — YOLDAKİ ve TASLAKTAKİ düşülerek; koli içi adet biliniyorsa yukarı
+        // yuvarlanır (koli bölünmez). Yoldakini düşmemek gelen malın üstüne, taslaktakini düşmemek
+        // açılmış taslağın üstüne bir kez daha sipariş vermekti (mükerrer taslak, 21.302).
+        suggestedQty: roundToPack(
+          row.minStockQty - row.availableQty - incomingQty - draftQty,
+          mapping?.packQty ?? null,
+        ),
         supplierCode: mapping?.supplierCode ?? null,
         lastPurchasePriceCents: mapping?.lastPurchasePriceCents ?? null,
         incomingQty,
-        draftQty: drafts.get(row.variantId) ?? 0,
+        draftQty,
         unassignedQty: unassigned.get(row.variantId) ?? 0,
       });
       groups.set(supplierId, group);

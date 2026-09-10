@@ -694,7 +694,7 @@ Her varyant için tedarikçideki **sipariş kodu**, oradaki adı, koli içi adet
 
 ### Sipariş önerisi
 
-- **Faz 1 — eşik:** varyant başına asgari stok (`min_stock_qty`, isteğe bağlı); kullanılabilir stok altına düşen ürün admin'de **"sipariş zamanı"** listesine düşer. Liste tedarikçiye göre gruplanır → tek dokunuşla PO taslağına dönüşür.
+- **Faz 1 — eşik:** varyant başına asgari stok (`min_stock_qty`, isteğe bağlı); kullanılabilir stok altına düşen ürün admin'de **"sipariş zamanı"** listesine düşer. Liste tedarikçiye göre gruplanır → tek dokunuşla PO taslağına dönüşür. Eksik hesabında **yoldaki** (gönderilmiş) ve **taslaktaki** (bu depoya açılmış) adetler düşülür — gelen malın ya da açılmış taslağın üstüne ikinci bir sipariş açılmasın diye. Taslak 10.09'da eklendi: mükerrer taslak riski, unutulmuş taslak riskinden büyük sayıldı (`design/KARARLAR.md`).
 - **Faz 2 — akıllı öneri:** satış hızı + kalan stok + tedarik süresi + sezon (Kasım–Aralık) → "şu tarihte biter" tahmini; AI içgörü ailesine girer. Her iki halde de otomatik sipariş **yoktur**.
 
 ---
