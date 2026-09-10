@@ -69,14 +69,20 @@ interface DevAccount {
  * (`use-dev-auto-login.hook`). Tek sabit, iki tüketen: adres iki yere yazılsaydı biri değiştiği
  * gün düğme bir hesabı, otomatik giriş başkasını açardı ve fark sessiz kalırdı (CLAUDE §1).
  */
-export const DEV_ALL_SECTIONS_EMAIL = 'hepsi@lezzetanatolia.fr';
+export const DEV_ALL_SECTIONS_EMAIL = 'hepsi@lezzetanatolie.com';
 
+/*
+  ADRESLER `lezzetanatolie.com` (10.09 gece, cihazda ölçüldü): seed ve web listesi personeli bu alana
+  taşıdı (15.20), bu liste eski `lezzetanatolia.fr`de kaldı. "Yönetim" düğmesi kayıtsız adrese
+  bastı, `generateLink` o adrese YENİ bir hesap açtı ve trigger onu `{customer}` yaptı — personel
+  düğmesi müşteri yüzeyine düştü, hata vermeden.
+*/
 export const DEV_ACCOUNTS: readonly DevAccount[] = [
   { label: 'Müşteri', email: 'claire.weber@example.fr', operations: false },
-  { label: 'Yönetim', email: 'yonetim@lezzetanatolia.fr', operations: true },
-  { label: 'Depo', email: 'depo@lezzetanatolia.fr', operations: true },
-  { label: 'Kurye', email: 'kurye@lezzetanatolia.fr', operations: true },
-  { label: 'Muhasebe', email: 'muhasebe@lezzetanatolia.fr', operations: true },
+  { label: 'Yönetim', email: 'yonetim@lezzetanatolie.com', operations: true },
+  { label: 'Depo', email: 'depo@lezzetanatolie.com', operations: true },
+  { label: 'Kurye', email: 'kurye@lezzetanatolie.com', operations: true },
+  { label: 'Muhasebe', email: 'muhasebe@lezzetanatolie.com', operations: true },
   /* DÖRT BÖLÜMÜ DE GÖREN hesap (kullanıcı isteği 30.08): sekme çubuğunun dolu hâli ve bölümler
      arası geçiş ancak böyle bir kişiyle denenebilir — tek bölümlü kullanıcıda çubuk hiç çizilmez. */
   { label: 'Hepsi', email: DEV_ALL_SECTIONS_EMAIL, operations: true },

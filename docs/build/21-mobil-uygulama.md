@@ -1752,6 +1752,16 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `useFocusEffect`e bağlandı. Ölçüm o gün bir üçüncüsünü de gösterdi — kabukta ÇIKIŞ da yoktu;
   o da aynı menüye kondu.
 
+  **Durum 10.09 gece — düğmeler yine kayıtsız adrese basıyordu (kullanıcı bulgusu, cihazda).** Seed
+  ve web listesi personeli `lezzetanatolie.com`a taşıdı (936e7d8a · 15.20); mobil liste
+  (`apps/mobile/src/lib/auth/dev-login.ts`) `lezzetanatolia.fr`de kaldı. "Yönetim" düğmesi kayıtsız
+  adrese bastı, `generateLink` ona YENİ bir auth hesabı açtı ve trigger `{customer}` yaptı — personel
+  düğmesi müşteri yüzeyine düştü, hata vermeden (ölçüldü: `yonetim@lezzetanatolia.fr` 23:38'de
+  doğdu, rolü `{customer}`; Hesabım'da adsız bir müşteri hesabı göründü). Beş adres seed'e
+  eşitlendi, sıra webinkiyle aynı. Cihazda ölçüldü: "Yönetim" → `yonetim@lezzetanatolie.com` girişi
+  (23:44), ekran "Yönetim · Karar Kutusu". Mobil listeyi seed'e bağlayan bir denetim yok — kayma
+  tekrar ederse yine sessiz kalır.
+
 - [x] (21.33) **KLAVYE AÇIKKEN DÜĞMEYE İLK DOKUNUŞ YUTULUYORDU — geri bildirim yorumu sessizce
   kayboluyordu (cihazda ölçüldü 11.08).**
   `touches:` `apps/mobile/src/screens/{feedback/feedback-screen.tsx,professionals/professionals-screen.tsx,login/login-screen.tsx,catalog/catalog-screen.tsx,courier/{day-close-screen.tsx,delivery-screen.tsx},management/offer-approval-screen.tsx,warehouse/{courier-return-screen.tsx,transfer-screen.tsx}}`

@@ -18,7 +18,7 @@ jest.mock('./supabase', () => ({ getSupabase: () => ({ auth: { getSession: mockG
 const mockDevSignIn = jest.fn();
 jest.mock('./dev-login', () => ({
   devSignIn: (email: string) => mockDevSignIn(email),
-  DEV_ALL_SECTIONS_EMAIL: 'hepsi@lezzetanatolia.fr',
+  DEV_ALL_SECTIONS_EMAIL: 'hepsi@lezzetanatolie.com',
 }));
 
 import { useDevAutoLogin } from './use-dev-auto-login.hook';
@@ -42,7 +42,7 @@ describe('useDevAutoLogin', () => {
 
     renderHook(() => useDevAutoLogin());
 
-    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('hepsi@lezzetanatolia.fr'));
+    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('hepsi@lezzetanatolie.com'));
   });
 
   it('OTURUM VARSA dokunmaz — geliştiricinin seçtiği hesap ezilmez', async () => {
