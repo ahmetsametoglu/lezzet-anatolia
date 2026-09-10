@@ -126,6 +126,20 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - MLOR (girişte kabul eşiği) uyarısı
 - DLC yaklaşma uyarısı (parametrik eşik)
 - Depo ekranları (giriş, hazırlık listesi)
+- **Tedarik taslağında elle adet düzeltmesinin izi kalmıyor** *(ölçüldü 10.09, 21.302'nin cihaz
+  turunda; kullanıcı kararı aynı gün)*. Öneriden açılan taslağın kalemi motorun adediyle yazılıyor:
+  mobil onay yalnız depo + tedarikçi gönderiyor, sunucu öneriyi yeniden hesaplayıp `qty:
+  suggestedQty` yazıyor (`application/warehouse/supply.ts` → `ReorderService.createDraftFrom`).
+  Adet sonra web masasında değişebiliyor (`procurement/actions.ts` → `updateDraftLineAction`), ama
+  önerinin kendisi hiçbir yerde durmuyor — `purchase_order_item` yalnız `qty` · `unit_price` · kod
+  eşlemesi · hedef depo taşıyor — ve değişen kalem işaretlenmiyor: *"18 önerildi, 24 yazıldı"*
+  bilgisi kayboluyor. Native tasarımın dipnotu tam bunu vaat ediyor (*"Elle değiştirdiğiniz satır
+  işaretli kalır"*, `Operasyon Mobil v3.dc.html:3113`).
+  **Karar:** düzeltme web masasında kalır, native satıra adet alanı konmaz (`design/KARARLAR.md`).
+  Kaleme motorun önerisi de yazılır — elle eklenen kalemde boş kalır, çünkü önerisi yoktur — ve
+  web kalemi fark varsa *"öneri 18 → 24"* gösterir. Kazancı satış hızı motoruyla (`DOMAIN §16`
+  Faz 2) büyür: önerinin nerede elle düzeltildiği, motorun ayarını denetlemenin verisidir.
+  → arka uç (kolon + taslak yazımı) · operasyon şeridi (kalem satırı).
 
 ## 6. Sipariş
 

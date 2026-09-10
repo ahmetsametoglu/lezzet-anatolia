@@ -2445,3 +2445,17 @@ Satır kitin ürün satırıyla (`OperationsProductRow`) kuruldu: solda 44'lük 
 monogram, uydurma resim konmaz. Eşlenmemiş grubun kalemleri de görselli, küçük kademede (30).
 Gerekçe teklif çekmecesininkiyle aynı (21.296): adlar birbirine benziyor, operatör kararı ürüne
 bakarak veriyor.
+
+
+## Tedarik satırında elle adet düzeltmesi — native'de YOK, web masasında (10.09)
+
+Tasarımın dipnotu *"Elle değiştirdiğiniz satır işaretli kalır"* diyor (v3:3113), ama satır yalnız
+ad + ölçüm + önerilen adedi çiziyor; adet alanı da düzenleme düğmesi de yok. Native satır motorun
+adedini gösterir ve "Grubu onayla" taslağı o adetlerle açar. Farklı adet isteyen yönetici taslağı
+web masasında düzeltir — adet, birim fiyat ve kalem silme orada zaten var.
+
+**Karar (kullanıcı onayı 10.09): native satıra adet alanı konmaz.** Onaydan sonra satır listeden
+düşüyor ve tedarikçiye gönderim adımı zaten web'de. Dipnotun asıl değeri İŞARETTE ve o bugün hiçbir
+yüzeyde yok: öneri taslakta saklanmıyor, değişen kalem işaretlenmiyor. Web ve arka uç işi olarak
+`docs/architecture/BACKLOG.md §5`e yazıldı (taslak kalemine motorun önerisi, masada "öneri 18 → 24").
+Native dipnot bu yüzden elle düzeltmeyi anmıyor.
