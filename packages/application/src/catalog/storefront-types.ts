@@ -1,6 +1,6 @@
 import type { TextSegment } from '@lezzet/helper';
 import type { CartLineRoute } from '@lezzet/domain-core';
-import type { FrameKey, ImageCrop, KeysetCursor, Nutrition, ProductAllergen, PurchaseMode, StockStatus } from '@lezzet/types';
+import type { ImageCrop, ImageFrameSources, KeysetCursor, Nutrition, ProductAllergen, PurchaseMode, StockStatus } from '@lezzet/types';
 import type { ScopeCampaign } from './campaign';
 
 /**
@@ -73,12 +73,13 @@ export interface StorefrontImage {
   frames: ImageFrameSources | null;
 }
 
-/** Bir çerçevenin CDN kaynakları — `src` orta basamak, `srcSet` merdivenin tamamı. */
-export interface ImageFrameSource {
-  src: string;
-  srcSet: string;
-}
-export type ImageFrameSources = Record<FrameKey, ImageFrameSource>;
+/*
+  Çerçeve kaynaklarının ŞEKLİ `@lezzet/types`in Zod şemasıdır (`primitives/image-frames.ts`, 21.303):
+  native sözleşmesi (`CatalogImageSchema`) aynı şekli taşıyor ve burada elle yazılmış ikinci bir arayüz
+  şemayla bir gün ayrışırdı (CLAUDE §1 — tipler şemadan türer). Adlar buradan da ihraç ediliyor ki
+  `@lezzet/application` tüketicileri (web `FramedImage`) import yolunu değiştirmek zorunda kalmasın.
+*/
+export type { ImageFrameSource, ImageFrameSources } from '@lezzet/types';
 
 /** Kategori kartı — anasayfa şeridi ve katalog girişleri. */
 export interface StorefrontCategory {

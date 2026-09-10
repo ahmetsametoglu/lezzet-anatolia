@@ -2,7 +2,19 @@ import { percentOffCents, resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
 import { pricePerKg } from '@lezzet/helper';
 import { cdnImageUrl, publicImageUrl } from '@lezzet/storage';
-import { CROP_CENTER, cropOf, cropTrim, FRAME_RATIOS, IMAGE_WIDTHS, resolveLocalizedText, type FrameKey, type ImageRender, type ImageWidth } from '@lezzet/types';
+import {
+  CROP_CENTER,
+  cropOf,
+  cropTrim,
+  FRAME_RATIOS,
+  IMAGE_WIDTHS,
+  resolveLocalizedText,
+  srcSetOf,
+  type FrameKey,
+  type ImageRender,
+  type ImageWidth,
+  type SrcSetEntry,
+} from '@lezzet/types';
 import type {
   AvailableStockTotal,
   Category,
@@ -74,11 +86,17 @@ function frameStepUrl(row: ImageRender, key: FrameKey, width: ImageWidth): strin
 export function frameSourcesOf(row: ImageRender): ImageFrameSources | null {
   const out: Partial<ImageFrameSources> = {};
   for (const key of Object.keys(FRAME_RATIOS) as FrameKey[]) {
-    const basamaklar = IMAGE_WIDTHS.map((width) => ({ width, url: frameStepUrl(row, key, width) }));
-    if (basamaklar.some((b) => !b.url)) return null;
+    const basamaklar: SrcSetEntry[] = [];
+    for (const width of IMAGE_WIDTHS) {
+      const url = frameStepUrl(row, key, width);
+      if (!url) return null;
+      basamaklar.push({ width, url });
+    }
     out[key] = {
-      src: basamaklar.find((b) => b.width === FRAME_SRC_WIDTH[key])!.url!,
-      srcSet: basamaklar.map((b) => `${b.url} ${b.width}w`).join(', '),
+      src: basamaklar.find((b) => b.width === FRAME_SRC_WIDTH[key])!.url,
+      // Biçimin TEK tanımı merkezi kütüphanede (`srcSetOf`, 21.303): native `frameUrlFor` aynı metni geri
+      // açıyor — burada elle kurulsaydı iki uç bir gün farklı ayraç yazardı.
+      srcSet: srcSetOf(basamaklar),
     };
   }
   return out as ImageFrameSources;

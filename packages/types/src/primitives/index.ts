@@ -16,3 +16,4 @@ export * from './localized-text.schema';
 export * from './user-text.schema';
 export * from './pagination.schema';
 export * from './image.schema';
+export * from './image-frames';
