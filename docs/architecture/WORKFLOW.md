@@ -214,9 +214,13 @@ Varsayılan tek ajandır. Paralel çalışma **istenirse** şu üç kural bağla
 
 ### Testleri kim çalıştırır
 
-- Birim testi, tip kontrolü, derleme → ajan serbestçe çalıştırır
-- Canlı servis çağıran testler (ücretli API, dış sağlayıcı), tarayıcı akışları → ajan **hazırlar ve tarif eder**, çalıştırmayı kullanıcı yapar
-- Kullanıcının çalışan süreçlerini (geliştirme sunucusu vb.) **sormadan durdurma veya yeniden başlatma**
+Bu projede kimin neyi koşturduğu **CLAUDE.md §4** (derleme · dev sunucusu) ve **§4b**'de (birim ·
+entegrasyon · e2e · tam paket) yazılıdır; bağlayıcı olan oradaki metindir, burada tekrar edilmez.
+(10.09: bu bölümdeki eski kopya ikisiyle de çelişiyordu — "derleme serbest" dev açıkken yasaktı,
+e2e "kullanıcıda" değil denetimdeydi.)
+
+Oradan ayrı kalan tek kural: canlı servis çağıran testleri (ücretli API, dış sağlayıcı) ajan
+**hazırlar ve tarif eder**, çalıştırmayı kullanıcı yapar.
 
 ---
 
