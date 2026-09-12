@@ -183,8 +183,8 @@ export type LocalizedText = z.infer<typeof LocalizedText>;
 
 - Çevrilecek her metin alanı (`name`, `description`, kategori adı...) `LocalizedText`, DB'de `jsonb`.
 - En az bir dil dolu; üçü zorunlu değil.
-- Gösterim yedek zinciri **TR → FR → DE** (bkz. `SEO_I18N.md`); çözücü `i18n` veya `helper` paketinde saf fonksiyon.
-- Statik arayüz metinleri buraya girmez — `packages/i18n`'de.
+- Gösterim yedek zinciri **seçili dil → TR → FR → DE** (bkz. `SEO_I18N.md`); çözücü `resolveLocalizedText` — `packages/types/src/primitives/localized-text.schema.ts`, saf fonksiyon.
+- Statik arayüz metinleri buraya girmez — her sayfanın yanındaki `messages.json`'da; tipi `LocalizedCopy` (`@lezzet/i18n`).
 
 ---
 
@@ -434,24 +434,37 @@ Genel blueprint §10 ile aynı. Env'e yalnız sır + ortama göre değişen değ
 
 | Değer | Yeri |
 | --- | --- |
-| Marka adı, alan adı, logo yolu, yasal metinler, renkler | `packages/brand` |
-| Arayüz metinleri (tr/fr/de) | `packages/i18n` |
-| **Müşteri URL yol tablosu** (iç yol → dile göre segment) | `packages/i18n` (`PATHNAMES`) — apps/web next-intl'i, apps/backend giden bağlantıyı bununla kurar; iki kopya olsaydı biri eskir, mail 404'e düşerdi |
+| Marka adı, diller, iletişim bilgisi, WhatsApp bağlantısı | `packages/brand` |
+| Alan adı (site kökü) | `packages/i18n` — `siteOrigin()` (`NEXT_PUBLIC_SITE_URL`) |
+| Renkler | `packages/design-tokens` + web `globals.css` (parite testiyle birebir) |
+| Logo yolu | tek sabiti yok — web'de elle yazılı (`/logo.…`) |
+| Yasal metinler | sayfanın kendi dosyası: web `legal/*/content.json` + `legal-messages.json`, native `screens/legal/messages.json` |
+| Arayüz metinleri (tr/fr/de) | her sayfanın yanındaki `messages.json` (tipi `LocalizedCopy`, `@lezzet/i18n`); iki yüzeyin ortak bildirim cümleleri `packages/i18n/src/notification-copy.ts` |
+| **Müşteri URL yol tablosu** (iç yol → dile göre segment) | `packages/i18n/src/paths.ts` (`PATHNAMES`) — apps/web next-intl'i, apps/backend giden bağlantıyı, native uygulama derin bağlantıyı bununla kurar; iki kopya olsaydı biri eskir, mail 404'e düşerdi |
 | Fiziksel ölçüler, sabit oranlar, para dönüşümü (`toCents`/`fromCents`) | `packages/helper` |
-| **Görüntüleme biçimlemesi (para/tarih/sayı metni)** | **yüzey başına TEK dosya** — aşağı bak |
+| **Görüntüleme biçimlemesi (para/tarih/sayı metni)** | **ortak çekirdek `packages/helper` + yüzey başına TEK dosya** — aşağı bak |
 | İşletme ayarı (kullanıcı değiştirebilmeli): min sepet, kargo eşiği, DLC uyarı eşiği, KDV varsayılanı | Veritabanı — ayar tablosu + önbellekli çözücü |
 
-Marka adı/alan adı tek sabitten okunur, elle yazılmaz.
+Marka adı/alan adı tek sabitten okunur, elle yazılmaz. *(Ölçüldü 10.09: marka adı `brand` dışında
+27 dosyada elle yazılı — düzeltmesi marka adı işiyle birlikte, kullanıcı kararıyla en sonda.)*
 
-**Biçimleme yüzey başına tek dosyadır (karar 02.08 — denetim B6).** Kural eskiden "biçimleme →
-`packages/helper`" diyordu ama kod hiç öyle olmadı ve gerekçesi sağlam: iki yüzeyin ihtiyacı aynı
-değil. Müşteri yüzeyi **üç dilde** `Intl` ile biçimlendirir (ondalık ayracı, para simgesinin yeri,
-tarih sırası dile göre değişir); operasyon yüzeyi tek dilli (TR) ve sabit biçimlidir. Ortak bir
-fonksiyon ikisini de yarım karşılar, ve "locale parametresi geçilir" çözümü operasyonun her çağrısına
-taşıması gereksiz bir argüman ekler.
+**Biçimleme: ortak çekirdek `helper`da, yüzeye özgü olan yüzeyin TEK dosyasında (karar 02.08 —
+denetim B6; çekirdek 21.7'de terfi etti).** Müşteri yüzeyi **üç dilde** `Intl` ile biçimlendirir
+(ondalık ayracı, para simgesinin yeri, tarih sırası dile göre değişir); operasyon yüzeyi tek dilli
+(TR) ve sabit biçimlidir. Birden çok yüzeyin aynı biçimde istediği fonksiyonlar
+`packages/helper/src/format.ts`'e terfi etti — `formatPrice` · `formatCompactEuro` ·
+`formatShortDate` · `formatTime`; web, native uygulama ve backend MCP araçları buradan okur
+(`formatPrice` 21.7'de native uygulama ikinci tüketen olunca taşındı). Tek tüketenli kalanlar
+yüzeyin dosyasında durur.
 
-- Müşteri: `apps/web/lib/storefront/format.ts`
-- Operasyon: `apps/web/components/operation/ui/format.ts`
+- Ortak çekirdek: `packages/helper/src/format.ts`
+- Web müşteri: `apps/web/lib/storefront/format.ts` (çekirdeği içe alır)
+- Web operasyon: `apps/web/components/operation/ui/format.ts`
+- Native operasyon: `apps/mobile/src/lib/operations/money.ts` (para, çekirdekten) ·
+  `apps/mobile/src/lib/operations/stamp.ts` (tarih-saat damgası)
+- Native depo: `apps/mobile/src/screens/warehouse/warehouse-format.ts` (SKT tarihi)
+- Native müşteri: `apps/mobile/src/screens/orders/order-format.ts` — dosyanın kendi yazdığı
+  **kayıtlı borç**: web ailesinin kalanı (tarih/…) bilerek taşınmadı, bugün tek tüketenleri web.
 - **Giden mesaj (mail/WhatsApp): `packages/notify/src/format.ts`** — üçüncü yüzey (17.2'de eklendi).
   Ekran biçimlemesi `apps/web`'de yaşar; oysa giden mesajı İKİ uygulama kuruyor — istekten doğanı
   `apps/web`, saatten doğanı `apps/backend`. Zamanlı işin ekran katmanından biçimleyici çekmesi
@@ -459,10 +472,10 @@ taşıması gereksiz bir argüman ekler.
   mailde iki türlü çıkması demekti. Ekranla ölçüt de aynı değil: mail arşivde kalıp aylar sonra
   açılır, o yüzden tarih **yıl taşır** — ekranda yılsız tarih meşrudur.
 
-**Bu üç dosya DIŞINDA `toLocaleString`/`toFixed`/`Intl.NumberFormat` yazılmaz.** Sızıntının bedeli
+**Bu dosyalar DIŞINDA `toLocaleString`/`toFixed`/`Intl.NumberFormat` yazılmaz.** Sızıntının bedeli
 görünmez: aynı tutar iki ekranda iki farklı biçimde çıkar ve hangisinin doğru olduğu tartışılır.
-Taşıma (`packages/helper`'a almak) bilinçli olarak YAPILMADI — getirisi düşük, ihtiyaç kuralın
-netleşmesiydi.
+(10.09'a kadar bu paragraf "yalnız üç dosya" ve "`helper`'a taşıma yapılmadı" diyordu; çekirdek
+21.7'de taşınmıştı, native uygulamanın dosyaları listede yoktu.)
 
 ### Dosya deposu: iki kova, iki okuma yolu
 
@@ -471,9 +484,9 @@ görünmesi mi isteniyor, görünmemesi mi?*
 
 | | Public kova (`R2_BUCKET_NAME`) | Private kova (`R2_PRIVATE_BUCKET_NAME`) |
 | --- | --- | --- |
-| Ne durur | Katalog/koleksiyon/paket görselleri | Müşterinin yüklediği dosyalar: şikâyet fotoğrafı (16.2), ileride teslim onayı, B2B belgesi |
+| Ne durur | Katalog/koleksiyon/paket görselleri | Görünmemesi gereken dosyalar: müşterinin şikâyet fotoğrafı (16.2, `support/tickets/`), kurye teslim kanıtı (`delivery/proofs/`), kargo etiketi PDF'i (`shipping-labels/`), sohbet medyası (`conversationMedia`); ileride B2B belgesi (bugün anahtarı yok) |
 | Okuma | İmzasız, kalıcı adres (`publicImageUrl`) | Süreli imzalı adres (`privateReadUrl`, 15 dk) |
-| Yükleme | Sunucudan (`getR2().uploadFile`) | Tarayıcıdan doğrudan, imzalı adresle (`privateUploadUrl`, 10 dk) |
+| Yükleme | Sunucudan (`getR2().uploadFile`) | İstemciden doğrudan, imzalı adresle (`privateUploadUrl`, 10 dk — müşterinin tarayıcısı ya da native uygulaması, kurye cihazı; izni `packages/application` kapıları verir: `ticket/attachments.ts`, `courier/proof.ts`) ya da sunucudan (`getR2Private().uploadFile` — kargo etiketi, gelen mesaj medyası) |
 | Google görsün mü | **Evet** — amaç bu | **Hayır** — tam tersi |
 
 **Katalogda imza zararlıdır:** her render'da değişen adres tarayıcı/CDN cache'ini öldürür, paylaşım
@@ -491,11 +504,11 @@ gömmek, her yeni dosya türünde aynı kararı yeniden yazmak olurdu.
 
 ## 11. Yeni projede kurulum sırası
 
-1. `pnpm-workspace.yaml` + `turbo.json` + `packages/typescript-config` (strict) + Tailwind kurulumu + `packages/brand` (token kaynağı)
-2. `packages/types` — `LocalizedText` + ilk entity üçlü şeması
+1. `pnpm-workspace.yaml` + `turbo.json` + `packages/typescript-config` (strict) + Tailwind kurulumu + `packages/brand` (marka sabitleri) + `packages/design-tokens` (token kaynağı)
+2. `packages/types` — `LocalizedText` + yedek zinciri çözücüsü (`resolveLocalizedText`) + ilk entity üçlü şeması
 3. `packages/database` — `base.service.ts` + `case-transformers.ts` (jsonb'yi çevirmeyen dönüştürücü dikkatiyle)
 4. İlk migration + ilk entity servisi
-5. `packages/i18n` — arayüz metin iskeleti + yedek zinciri çözücü
+5. `packages/i18n` — dil birimleri + URL yol tablosu (`PATHNAMES`) + `LocalizedCopy` tipi (arayüz metni sayfanın `messages.json`'unda)
 6. `apps/web` — `lib/supabase`, `lib/guard.ts` (admin+warehouse+courier), `lib/error.ts`, i18n routing (`/tr` `/fr` `/de`)
 7. İlk sayfa: sunucu bileşeni + client (cihaz çatallanmalı) + `actions/`
 8. `components/ui` + `components/form` — ilk primitif çifti (Tailwind)
