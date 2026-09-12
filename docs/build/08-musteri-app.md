@@ -134,11 +134,13 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
     iki dakikalık cümle için ayrı eylem fazla makine. **(4) "Bağlı sohbetler" kartı:** kanal + tarih
     (`linkedAt`, yoksa açılış), salt okunur — ayırma kapısı 15.16'da bilerek yok, birleştirme kararıdır.
     Okuma `ConversationService.listByCustomer` (vardı, 15.5). Boş hâl yol tarifi, gizlenmiyor.
-    **Doğrulama:** kök typecheck 20/20, lint, birim 2135/2135, knip. ⚠ **Tarayıcı ölçümü YAPILAMADI:**
-    dev sunucusu sosyal şeridin izlenmeyen `chat-image.ts`inin `sharp` importu yüzünden her rotada 500
-    veriyor (not bırakıldı: `not-sosyal-dev-sunucusu-sharp-yuzunden-500.md`); ölçüm sohbeti ve iki jeton
-    yerel veride hazır (`psid-olcum-15-16`), sunucu düzelince koşulacak. Koda bekleyen işareti
-    KONMADI: eksik olan kod değil kanıt.
+    **Doğrulama:** kök typecheck 20/20, lint, birim 2135/2135, knip. **Tarayıcıda ölçüldü (09.09, dev
+    sunucusu; commit `0dace789`den sonra — o sırada sunucu başka şeridin `sharp` importuyla 500 veriyordu):**
+    Messenger sohbeti + iki jeton yerel veride kuruldu. *Oturumsuz:* `/fr/compte?link=…` →
+    `/fr/connexion?next=%2Ffr%2Fcompte&reason=baglanti`, cümle *"Pour relier votre conversation à votre
+    compte"* ekranda. *Oturumlu:* aynı bağlantı → `/fr/compte`, bildirim *"Votre conversation est reliée à ce
+    compte…"*, kartta **Messenger** satırı; veride `link_proof = cart_link`, `linked_at` dolu, jeton
+    tüketilmiş. Ölçüm kayıtları silindi.
     `touches: apps/web/app/auth/cart-link/route.ts, apps/web/lib/identity/{cart-link-landing,cart-link-landing.test,invite-cookie,invite-handoff}.ts, apps/web/lib/account/read.ts, apps/web/app/(customer)/[locale]/account/{page.tsx,account-types.ts,account-client.tsx,account.desktop.tsx,account.mobile.tsx,messages.json,components/linked-chats-card.tsx}, apps/web/app/(customer)/[locale]/login/messages.json, vitest.config.ts`
   - *Bitti:* tekrar sipariş güncel fiyatla sepet oluşturuyor; sipariş durumu sade dille görünüyor
 - [x] (08.6) **Talep grubu:** talep oluşturma (sipariş kalemi/tip/foto + genel "bize yaz" yönlendirmesi), talep listesi + yazışma (16'ya bağlanır)
