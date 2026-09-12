@@ -10307,13 +10307,13 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kurulabiliyor; adres kartına dokunmanın düzenleme karşılığı yok (kullanıcı bulgusu, web şeridi
   aktardı). Kullanıcının istediği yol: karta UZUN BASINCA düzenleme açılsın, keşfedilebilirlik için
   kartın bir köşesinde silik bir ipucu dursun (*"düzenlemek için uzun basınız"*).
-
   - **Durum (10.09) — yazıldı.** Checkout'un adres satırı uzun basınca hesap ekranının AYNI
     çekmecesini dolu açıyor; kısa dokunuş seçmeye devam ediyor. İpucu satırın sağ alt köşesinde
     (*"Düzenlemek için basılı tutun"*, üç dil) ve ekran okuyucuya ipucu olarak da gidiyor. Kitin
     satırına iki prop girdi (`apps/mobile/src/screens/customer-kit/option-row.tsx` → `onLongPress` ·
     `hint`); ikinci bir form yazılmadı. Tasarımda yok → `design/KARARLAR.md`. Test:
     `checkout-screen.test.tsx` (uzun basma "Adresi düzenle" çekmecesini açar · ipucu satırda).
+
 - [x] (21.216) **Dokunmatik geri bildirim KİTE bağlandı — "eylem titresin, gezinme sessiz"**
   (kullanıcı bulgusu 01.09 + kararı 02.09)
   - **Durum (02.09) — sözlük eksik değildi, BAĞLANMAMIŞTI.** `lib/haptics` beş niyeti iyi tarif
@@ -14735,6 +14735,9 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     Ekran gönderici çalışana dek "not aldık" diyor; çalışınca metin "haber veririz"e döner.
   · **Teardown:** `purgeTestData` bekleyiş kayıtlarını profil kimliğiyle, profilden ÖNCE siliyor —
     `customer_id` `set null`; silinmeseydi tohum varyantına bırakılan test kaydı e-postasıyla yetim kalırdı.
+    **Düzeltme (10.09):** ilk commit'te (`ce3ed402`) bu satırlar paylaşılan dosyanın geçici indeks
+    yamasıyla profil bloğunun DIŞINA, profiller silindikten sonraya düşmüştü — silme hiçbir satır
+    bulmuyordu ve hiçbir test bunu yakalamadı (testin kendi ürünü cascade'le gidiyor). Yerine taşındı.
   · **Testler:** ürün detayı 5 test (*"ürün detayı — gelince haber ver"*: bar yalnız olgu · girişli
     müşteride gerçek kayıt, gövdede e-posta yok · kayıt alınmazsa düğme geri gelir · misafire doğrulama
     çekmecesi · yer bilinmiyorsa düğme yok) · uç 4 entegrasyon testi (`stock-notices.test.ts`: geçersiz

@@ -582,6 +582,10 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // `author_id`si `set null` olur ve `ticket_message_author` kısıtı patlar ("admin mesajı
       // yazarsız olamaz"). Önce müşterilerin talepleri (mesajlar cascade), sonra profiller.
       await mustDelete(db, 'ticket', (q) => q.in('customer_id', profileIds));
+      // "Gelince haber ver" kayıtları PROFİLDEN ÖNCE (21.306): `customer_id` `set null`, yani profil
+      // gidince satır sahipsiz kalır ve hiçbir cascade toplamaz — bekleyen listesi test adresleriyle
+      // dolardı (bölge kaydının `zoneNoticePostalCodes` gerekçesinin aynısı).
+      await mustDelete(db, 'variant_stock_notice', (q) => q.in('customer_id', profileIds));
       await mustDelete(db, 'user_profiles', (q) => q.in('id', profileIds)); // adresleri CASCADE
     }
 
@@ -592,10 +596,6 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       for (const id of authUserIds) await db.auth.admin.deleteUser(id);
     }
   });
-      // "Gelince haber ver" kayıtları PROFİLDEN ÖNCE (21.306): `customer_id` `set null`, yani profil
-      // gidince satır sahipsiz kalır ve hiçbir cascade toplamaz — bekleyen listesi test adresleriyle
-      // dolardı (bölge kaydının `zoneNoticePostalCodes` gerekçesinin aynısı).
-      await mustDelete(db, 'variant_stock_notice', (q) => q.in('customer_id', profileIds));
 
   // 2+7) Para grafiği — hareket, sonra hesap. Hesap silmesi `restrict` ile korunuyor, yani
   //      hareketler durdukça hesap gitmez (denetim R1). Karşı hesap da sayılır: transfer TEK
