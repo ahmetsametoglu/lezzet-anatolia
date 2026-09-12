@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "L’appareil photo sert à scanner les codes des produits et des colis, et à joindre une photo à une demande d’assistance.",
+    "NSPhotoLibraryUsageDescription": "Vos photos ne sont utilisées que lorsque vous en choisissez une pour une demande d’assistance."
+  }
+}

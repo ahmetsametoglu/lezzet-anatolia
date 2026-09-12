@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Kamera ürün ve koli kodlarını okutmak ve destek talebine fotoğraf eklemek için kullanılır.",
+    "NSPhotoLibraryUsageDescription": "Fotoğraflarınız yalnız destek talebine eklemek için seçtiğinizde kullanılır."
+  }
+}

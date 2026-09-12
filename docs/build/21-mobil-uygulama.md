@@ -14788,3 +14788,31 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     doğrulanan kapıda soru yok · istek düşerse satış durmaz · düğmesiz tek satır · uzun basma).
   · **Doğrulama:** `21.306` ile aynı koşular — dokunulan dört ekran klasörü 117/117 · kök `typecheck`
     20/20 · `lint` temiz.
+
+- [x] (21.309) **TALEP AÇILIŞINDA FOTOĞRAF — native seçici, doğrudan R2'ye yükleme; yükleme kapısı web'den `@lezzet/application`a; sohbette ek YOK** (kullanıcı kararı 10.09: *"talep de sadece ilk başta yükleme olsun, mesajlaşma sırasında (chatten) gönderme olmasın"*)
+  `touches:` `packages/application/src/ticket/attachments.ts` · `packages/application/src/index.ts` · `packages/types/src/contracts/ticket-api.schema.ts` · `apps/web/lib/ticket/attachments.ts` · `apps/mobile-api/src/api/v1/tickets.ts` · `apps/mobile-api/src/api/v1/tickets.test.ts` · `apps/mobile-api/src/api/v1/router.test.ts` · `apps/mobile/package.json` · `apps/mobile/app.config.ts` · `apps/mobile/locales/tr.json` · `apps/mobile/locales/fr.json` · `apps/mobile/locales/de.json` · `apps/mobile/jest.setup.ts` · `apps/mobile/src/testing/expo-image-picker.mock.ts` · `apps/mobile/src/lib/api/tickets.ts` · `apps/mobile/src/screens/support/new-ticket-sheet.tsx` · `apps/mobile/src/screens/support/new-ticket-sheet.test.tsx` · `apps/mobile/src/screens/support/use-ticket-photos.hook.ts` · `apps/mobile/src/screens/support/messages.json` · `apps/mobile/src/screens/management/b2b-application-screen.tsx` · `knip.json` · `design/KARARLAR.md`
+
+  **Durum (10.09) — yazıldı; cihaz turu geliştirme istemcisinin yeniden derlenmesini bekliyor.**
+  · **Ölçülen açık:** native form *"✓ 1 fotoğraf eklendi"* diyordu ama yalnız bir bayrak çeviriyordu:
+    seçici yoktu, mobil sözleşme eki taşımıyordu, yükleme adresini üreten kapı web'in içindeydi
+    (`apps/web/lib`). Açılış kapısı (`openCustomerTicket`) eki ve sahipliğini zaten biliyordu.
+  · **Akış web'in aynısı:** imzalı adres (`POST /api/v1/me/tickets/uploads`, müşterinin taslak klasörü)
+    → `PUT` ile doğrudan R2'ye (`Authorization`sız, içerik türü kapıdan) → anahtar açılışta
+    `attachments`. Başkasının anahtarı `attachment_not_yours`. Yazışmada ek yok: `/:id/uploads` yazılmadı.
+  · **Kapı terfi etti:** `requestTicketUploadUrl` `@lezzet/application`da (dönüşe `contentType` eklendi);
+    web dosyası köprü, imzası değişmedi — web'e not (`not-web-talep-yukleme-kapisi-terfi`).
+  · **Ekran:** kamera + galeri (tasarım sayfası *"kameradan doğrudan"*), en çok motorun tavanı kadar
+    (`MAX_ATTACHMENTS_PER_MESSAGE`), küçük resim + kaldır, sayaç, yükleme sürerken Gönder kilitli;
+    hata cümleleri web'inkiyle birebir (`design/KARARLAR.md`). iOS'tan uyumlu temsil istenir (HEIC değil).
+  · **İzinler:** `expo-image-picker` (~57.0.16) + eklentisi; kamera metni iki işi de söylüyor ve iOS'ta
+    üç dilde (`apps/mobile/locales`), temel değer İngilizce; mikrofon izni istenmiyor. **Yerel modül:**
+    geliştirme istemcisi yeniden derlenmeden seçici açılmaz — cihazda henüz denenmedi.
+  · **Yan temizlik:** `knip.json` taklitleri girişe aldı (`expo-audio` taklidinin üç uyarısı da kalktı),
+    kullanılmayan `B2bCheck` tipi silindi — `knip` temiz.
+  · **Testler:** `new-ticket-sheet.test.tsx` 7 — çekmecenin ilk testi (yükleme · kamera reddi · depo reddi ·
+    tür reddi · kaldırma · yüklerken kilit · tavan) · uç 6 entegrasyon (`tickets.test.ts`: taslak klasörü ve
+    imza · biçimsiz gövde · tür · tavan · kendi anahtarı detayda görünür · başkasının anahtarı reddedilir) ·
+    korumalı uç listesi.
+  · **Doğrulama:** kök `typecheck` 20/20 · `lint` · `knip` temiz · mobil paket 1551/1553 (iki düşüş
+    `unistyles.test.ts`in yazı tipi testleri, önceden var) · tam paket 4577/4577 (`tickets` 17/17 · web
+    köprüsünün `attachments.test.ts`i 8/8).

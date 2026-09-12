@@ -2481,3 +2481,21 @@ keşfedilebilirlik için kartın köşesinde silik bir ipucu (*"Düzenlemek içi
 checkout satırı yalnız seçim çiziyor. Kısa dokunuş seçmeye devam eder; uzun basma hesap ekranının
 aynı adres çekmecesini DOLU açar — ikinci bir form yazılmadı. İpucu kitin satırına prop olarak girdi
 (`OptionRow hint`), yardımcı kademede (MB-46) ve ekran okuyucuya ipucu olarak gider.
+
+
+## Talep açılışında fotoğraf — tek kutu İKİ kaynağa bölündü, küçük resim + kaldır (10.09)
+
+v3 şablonunun yeni talep formunda tek kesikli kutu var (*"Fotoğraf ekle"*) ve yalnız bir bayrak
+çeviriyor (`photoT`); native form da 10.09'a kadar öyleydi. Gerçek akışta iki kaynak gerekiyor:
+tasarım sayfası *"fotoğraf ekleme mobilde kameradan doğrudan yapılabilmeli"* diyor
+(`design/pages/musteri-talep.md`), fotoğraf çoğu zaman da önceden çekilmiş. Kutu aynı görünümle
+İKİYE bölündü (*"Fotoğraf çek"* · *"Galeriden seç"*); seçilenler talep detayının ek fotoğrafıyla
+aynı boyda (`circleSm`) küçük resim olarak dizilir, köşedeki düğme kaldırır, altında *"2/5
+fotoğraf"* sayacı durur. Tavan (motorun `MAX_ATTACHMENTS_PER_MESSAGE`i) dolunca kaynaklar
+çizilmez. Yalnız AÇILIŞTA — yazışmada ek yok (kullanıcı kararı 10.09). Hata cümleleri web'inkiyle
+birebir (21.309).
+
+**Kamera izni metni değişti:** eskiden TEK Türkçe cümleydi (*"yalnız ürün ve koli kodlarını okutmak
+için"*, personel uygulaması gerekçesiyle); kamerayı artık müşteri de kullanıyor. Metin iki işi de
+söylüyor, iOS'ta üç dilde (`apps/mobile/locales/*.json`), temel değer İngilizce. Mikrofon izni hiç
+istenmiyor.

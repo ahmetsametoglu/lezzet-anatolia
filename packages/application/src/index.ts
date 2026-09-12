@@ -157,6 +157,9 @@ export { trackingUrlOf } from './order/carrier';
 export { getCustomerTicket, listCustomerTickets } from './ticket/read';
 export { openCustomerTicket, replyToCustomerTicket } from './ticket/write';
 export type { OpenCustomerTicketOutcome, ReplyToTicketOutcome, TicketEffects } from './ticket/write';
+// Talep fotoğrafının yükleme kapısı (terfi 21.309): web köprüsü + native `POST /me/tickets/uploads`.
+export { requestTicketUploadUrl } from './ticket/attachments';
+export type { TicketUploadOutcome } from './ticket/attachments';
 export type {
   CustomerTicketSummary,
   CustomerTicketView,

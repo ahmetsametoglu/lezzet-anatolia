@@ -60,6 +60,8 @@ const KORUMALI: readonly string[] = [
   '/api/v1/me/invite',
   '/api/v1/me/discover',
   '/api/v1/me/tickets',
+  // Talep fotoğrafının imzalı adresi (21.309) — anahtar müşterinin taslak klasörüne kurulur, kimlik şart.
+  '/api/v1/me/tickets/uploads',
   '/api/v1/me/b2b',
   // "Gelince haber ver" (21.306) — kayıt bir hesaba bağlanır; misafir önce çekmecede doğrulanır.
   '/api/v1/me/stock-notices',

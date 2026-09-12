@@ -46,6 +46,9 @@ jest.mock('@stripe/stripe-react-native', () => require('@stripe/stripe-react-nat
 /* SES (21.287) — `expo-audio` yerel bir modül ve paketin kendi mock'u yok; gerekçe ve sahtenin
    şekli `testing/expo-audio.mock.ts` künyesinde. */
 jest.mock('expo-audio', () => require('@/testing/expo-audio.mock'));
+/* GÖRSEL SEÇİCİ (21.309) — talep fotoğrafı; paketin kendi mock'u yok, gerekçe ve sahtenin şekli
+   `testing/expo-image-picker.mock.ts` künyesinde. */
+jest.mock('expo-image-picker', () => require('@/testing/expo-image-picker.mock'));
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /* KAMERA (Modül 23) — paketin hazır jest mock'u YOK (jest-expo da sahtelemiyor; ölçüldü:

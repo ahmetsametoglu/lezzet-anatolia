@@ -19,7 +19,6 @@ import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextField } from '@/components/ui/text-field';
 import { fillCopy, operationsCopy, operationsFailureText } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
-import type { B2bCheckResponse } from '@lezzet/types';
 import { managementCopy } from './copy';
 import { b2bAgeText, b2bFlagBg, b2bFlagTone, b2bSignalGlyph, b2bStatusTone } from './b2b-format';
 import { useB2bCheck } from './use-b2b-check.hook';
@@ -391,8 +390,6 @@ export function B2bApplicationScreen({ customerId }: { customerId: string }) {
     </View>
   );
 }
-
-export type B2bCheck = NonNullable<B2bCheckResponse['check']>;
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },

@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Die Kamera wird zum Scannen von Produkt- und Paketcodes und zum Anhängen eines Fotos an eine Supportanfrage verwendet.",
+    "NSPhotoLibraryUsageDescription": "Ihre Fotos werden nur verwendet, wenn Sie eines für eine Supportanfrage auswählen."
+  }
+}

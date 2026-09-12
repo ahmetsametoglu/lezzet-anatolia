@@ -6,9 +6,11 @@ import {
   listCustomerTickets,
   openCustomerTicket,
   replyToCustomerTicket,
+  requestTicketUploadUrl,
   type CustomerTicketView,
   type OpenCustomerTicketOutcome,
   type ReplyToTicketOutcome,
+  type TicketUploadOutcome,
 } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import {
@@ -19,8 +21,11 @@ import {
   TicketCreatedSchema,
   TicketOpenSchema,
   TicketReplySchema,
+  TicketUploadRequestSchema,
+  TicketUploadSchema,
   type TicketOpenError,
   type TicketReplyError,
+  type TicketUploadError,
 } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor, readJsonBody } from '../../lib/request';
@@ -135,11 +140,19 @@ const OPEN_ERRORS: Partial<Record<Exclude<OpenCustomerTicketOutcome['status'], '
   empty_body: 'empty_body',
   order_unavailable: 'order_unavailable',
   items_without_order: 'items_without_order',
+  attachment_not_yours: 'attachment_not_yours',
 };
 
 const REPLY_ERRORS: Partial<Record<Exclude<ReplyToTicketOutcome['status'], 'ok'>, TicketReplyError>> = {
   empty_body: 'empty_body',
   ticket_not_found: 'ticket_not_found',
+};
+
+/** Yükleme adresinin retleri; `not_found` bu uçta doğamaz (talep kimliği alınmıyor, künye). */
+const UPLOAD_ERRORS: Partial<Record<Extract<TicketUploadOutcome, { ok: false }>['reason'], TicketUploadError>> = {
+  unsupported_type: 'unsupported_type',
+  too_many: 'too_many',
+  storage_unavailable: 'storage_unavailable',
 };
 
 export const tickets = new Hono<CustomerEnv>();
@@ -218,10 +231,37 @@ tickets.post('/', async (c) => {
     body: body.data.body,
     order: body.data.orderReference ? { reference: body.data.orderReference } : null,
     orderItemIds: body.data.orderItemIds,
+    attachments: body.data.attachments,
   });
   if (outcome.status !== 'ok') return fail(c, OPEN_ERRORS[outcome.status] ?? 'invalid_body', 400);
 
   return ok(c, TicketCreatedSchema.parse({ id: outcome.ticket.id }));
+});
+
+/**
+ * Talep fotoğrafı için imzalı yükleme adresi (21.309) — YALNIZ AÇILIŞ TASLAĞI.
+ *
+ * Talep kimliği alınmaz: dosya müşterinin taslak klasörüne yazılır ve açılış onu `attachments`la
+ * iliştirir. Yazışmada ek YOK (kullanıcı kararı 10.09: *"mesajlaşma sırasında (chatten) gönderme
+ * olmasın"*) — bu yüzden `/:id/uploads` yazılmadı. Kural kapıda (`requestTicketUploadUrl`, web'in
+ * aynı kapısı); burası yalnız taşır. Dosya bu uçtan GEÇMEZ: istemci doğrudan R2'ye yükler.
+ *
+ * Depo yapılandırılmamışsa 503: istemci "yüklendi" sanıp talebi eksik açmasın diye adlı ret.
+ */
+tickets.post('/uploads', async (c) => {
+  const body = TicketUploadRequestSchema.safeParse(await readJsonBody(c));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await requestTicketUploadUrl(serviceDb(), {
+    customerId: c.get('customerId'),
+    filename: body.data.filename,
+    alreadyRequested: body.data.alreadyRequested,
+  });
+  if (!outcome.ok) {
+    return fail(c, UPLOAD_ERRORS[outcome.reason] ?? 'invalid_body', outcome.reason === 'storage_unavailable' ? 503 : 400);
+  }
+
+  return ok(c, TicketUploadSchema.parse({ key: outcome.key, uploadUrl: outcome.uploadUrl, contentType: outcome.contentType }));
 });
 
 /**

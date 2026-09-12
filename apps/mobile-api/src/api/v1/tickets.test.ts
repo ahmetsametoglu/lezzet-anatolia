@@ -147,3 +147,72 @@ describe('POST — açma ve mesaj', () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
+
+/*
+  TALEP FOTOĞRAFI (21.309) — imzalı adres + açılışta iliştirme. Adres GERÇEK private kovaya imzalanır
+  (web kapı testinin kuralı: "kova yoksa geç" kaçışı yok, izin verilmezse sebebiyle düşer); imzalamak
+  ağa çıkmaz. Dosyanın kendisi yüklenmez: yüklemeyi istemci doğrudan R2'ye yapıyor, uç onu hiç görmez.
+  `profileIds[0]` BENİM müşterimdir (kurulumun sırası).
+*/
+describe('POST /uploads — talep fotoğrafı (21.309)', () => {
+  const upload = (token: string, body: unknown) => req('/uploads', token, { method: 'POST', body: JSON.stringify(body) });
+
+  it('anahtar müşterinin TASLAK klasörüne kurulur; adres imzalı, içerik türü cevapta', async () => {
+    const data = await envelopeData<{ key: string; uploadUrl: string; contentType: string }>(
+      await upload(benimToken, { filename: 'kirik.jpg', alreadyRequested: 0 }),
+    );
+
+    // Anahtarı kapı kurar: istemciden gelen bir yol doğrulanmak zorunda kalmasın.
+    expect(data.key).toMatch(new RegExp(`^support/tickets/drafts/${profileIds[0]}/[^/]+\\.jpg$`));
+    expect(data.uploadUrl).toContain('X-Amz-Signature');
+    // İmza türü bağlıyor ve türü kapı söylüyor — istemci eşlemeyi ikinci kez yazmıyor.
+    expect(data.contentType).toBe('image/jpeg');
+  });
+
+  it('biçimsiz gövde 400 `invalid_body`', async () => {
+    const res = await upload(benimToken, { alreadyRequested: 0 });
+
+    expect(res.status).toBe(400);
+    expect(await envelopeError(res)).toBe('invalid_body');
+  });
+
+  it('görsel olmayan dosya 400 `unsupported_type` — private kova dosya paylaşım alanı değil', async () => {
+    const res = await upload(benimToken, { filename: 'fatura.pdf', alreadyRequested: 0 });
+
+    expect(res.status).toBe(400);
+    expect(await envelopeError(res)).toBe('unsupported_type');
+  });
+
+  it('tavan dolunca 400 `too_many`', async () => {
+    const res = await upload(benimToken, { filename: 'altinci.jpg', alreadyRequested: 5 });
+
+    expect(res.status).toBe(400);
+    expect(await envelopeError(res)).toBe('too_many');
+  });
+
+  it('açılış KENDİ taslak anahtarını iliştirir — detayda fotoğraf görünür', async () => {
+    const { key } = await envelopeData<{ key: string }>(await upload(benimToken, { filename: 'kanit.jpg', alreadyRequested: 0 }));
+
+    const created = await envelopeData<{ id: string }>(
+      await req('', benimToken, {
+        method: 'POST',
+        body: JSON.stringify({ type: 'other', body: `Fotoğraflı talep ${stamp}`, attachments: [key] }),
+      }),
+    );
+    const detail = await envelopeData<{ messages: { photos: string[] }[] }>(await req(`/${created.id}`, benimToken));
+
+    expect(detail.messages[0]!.photos).toHaveLength(1);
+  });
+
+  it('BAŞKASININ taslak anahtarı iliştirilemez — 400 `attachment_not_yours`', async () => {
+    const { key } = await envelopeData<{ key: string }>(await upload(otekiToken, { filename: 'baskasi.jpg', alreadyRequested: 0 }));
+
+    const res = await req('', benimToken, {
+      method: 'POST',
+      body: JSON.stringify({ type: 'other', body: `Araya giren ek ${stamp}`, attachments: [key] }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(await envelopeError(res)).toBe('attachment_not_yours');
+  });
+});

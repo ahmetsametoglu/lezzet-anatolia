@@ -90,9 +90,18 @@
         "error": "Kısa bir açıklama yazın."
       },
       "photo": {
-        "add": "Fotoğraf ekle",
-        "added": "✓ 1 fotoğraf eklendi",
-        "note": "Fotoğraf, özellikle hasarlı ürünlerde çözümü hızlandırır — zorunlu değil."
+        "camera": "Fotoğraf çek",
+        "library": "Galeriden seç",
+        "remove": "Fotoğrafı kaldır",
+        "uploading": "Fotoğraf yükleniyor",
+        "count": "{count}/{max} fotoğraf",
+        "note": "Fotoğraf, özellikle hasarlı ürünlerde çözümü hızlandırır — zorunlu değil.",
+        "errors": {
+          "unsupported": "Bu dosya türünü kabul edemiyoruz; fotoğraf gönderin.",
+          "limit": "Bir mesaja daha fazla fotoğraf ekleyemiyoruz.",
+          "unavailable": "Fotoğraf yüklenemedi. Mesajınızı fotoğrafsız da gönderebilirsiniz.",
+          "cameraDenied": "Kamera izni verilmedi. Ayarlardan izin verebilir ya da galeriden seçebilirsiniz."
+        }
       },
       "submit": "Gönder",
       "submitting": "Gönderiliyor…",
@@ -195,9 +204,18 @@
         "error": "Écrivez une courte description."
       },
       "photo": {
-        "add": "Ajouter une photo",
-        "added": "✓ 1 photo ajoutée",
-        "note": "Une photo accélère la résolution, surtout pour un produit abîmé — facultatif."
+        "camera": "Prendre une photo",
+        "library": "Choisir dans la galerie",
+        "remove": "Retirer la photo",
+        "uploading": "Envoi de la photo",
+        "count": "{count}/{max} photos",
+        "note": "Une photo accélère la résolution, surtout pour un produit abîmé — facultatif.",
+        "errors": {
+          "unsupported": "Ce type de fichier n'est pas accepté ; envoyez une photo.",
+          "limit": "Nous ne pouvons pas ajouter plus de photos à un message.",
+          "unavailable": "La photo n'a pas pu être envoyée. Vous pouvez envoyer votre message sans photo.",
+          "cameraDenied": "L'accès à l'appareil photo n'est pas autorisé. Vous pouvez l'activer dans les réglages ou choisir dans la galerie."
+        }
       },
       "submit": "Envoyer",
       "submitting": "Envoi…",
@@ -300,9 +318,18 @@
         "error": "Schreiben Sie eine kurze Beschreibung."
       },
       "photo": {
-        "add": "Foto hinzufügen",
-        "added": "✓ 1 Foto hinzugefügt",
-        "note": "Ein Foto beschleunigt die Lösung, besonders bei beschädigter Ware — optional."
+        "camera": "Foto aufnehmen",
+        "library": "Aus der Galerie wählen",
+        "remove": "Foto entfernen",
+        "uploading": "Foto wird hochgeladen",
+        "count": "{count}/{max} Fotos",
+        "note": "Ein Foto beschleunigt die Lösung, besonders bei beschädigter Ware — optional.",
+        "errors": {
+          "unsupported": "Diesen Dateityp können wir nicht annehmen; bitte ein Foto senden.",
+          "limit": "Mehr Fotos können wir einer Nachricht nicht hinzufügen.",
+          "unavailable": "Das Foto konnte nicht hochgeladen werden. Sie können Ihre Nachricht auch ohne Foto senden.",
+          "cameraDenied": "Kamerazugriff nicht erlaubt. Sie können ihn in den Einstellungen erlauben oder aus der Galerie wählen."
+        }
       },
       "submit": "Senden",
       "submitting": "Wird gesendet…",

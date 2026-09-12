@@ -1,11 +1,15 @@
 import type { z } from 'zod';
+import { fetch as expoFetch } from 'expo/fetch';
+import { File } from 'expo-file-system';
 import {
   MeTicketDetailSchema,
   MeTicketPageSchema,
   TicketCreatedSchema,
+  TicketUploadSchema,
   type MeTicketDetail,
   type MeTicketSummary,
   type TicketOpenSchema,
+  type TicketUpload,
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
@@ -34,7 +38,7 @@ export type TicketSummary = MeTicketSummary;
 export type TicketDetail = MeTicketDetail;
 /** Tek mesaj — baloncuğun okuduğu şekil. */
 export type TicketMessage = MeTicketDetail['messages'][number];
-/** Yeni talep gövdesi — `type` + anlatım + (varsa) sipariş numarası ve işaretli kalemler. */
+/** Yeni talep gövdesi — `type` + anlatım + (varsa) sipariş numarası, işaretli kalemler ve fotoğraflar. */
 export type TicketOpenInput = z.input<typeof TicketOpenSchema>;
 
 /** Sorgu dizesi — verilmemiş (`undefined`) parametre YAZILMAZ (sipariş istemcisinin kuralı). */
@@ -66,6 +70,43 @@ export function fetchTicket(id: string, locale: Locale): Promise<ApiResult<Ticke
 /** Yeni talep — cevabı yalnız kimliktir; ekran listeye döner ve liste odakta tazelenir. */
 export function createTicket(input: TicketOpenInput): Promise<ApiResult<z.infer<typeof TicketCreatedSchema>>> {
   return authorizedFetch('/api/v1/me/tickets', TicketCreatedSchema, { method: 'POST', body: input });
+}
+
+/**
+ * Talep fotoğrafı için imzalı yükleme adresi (21.309) — yalnız AÇILIŞ taslağı; yazışmada ek yok
+ * (kullanıcı kararı 10.09). `alreadyRequested` bu taslakta kaç fotoğrafın adresinin istendiği:
+ * tavanı kapı sayıyor, ekran yalnız sayıyı söylüyor.
+ */
+export function requestTicketUpload(filename: string, alreadyRequested: number): Promise<ApiResult<TicketUpload>> {
+  return authorizedFetch('/api/v1/me/tickets/uploads', TicketUploadSchema, {
+    method: 'POST',
+    body: { filename, alreadyRequested },
+  });
+}
+
+/**
+ * Fotoğrafı imzalı adrese YÜKLER — dosya sunucumuzdan geçmez, doğrudan R2'ye gider.
+ *
+ * `Authorization` GÖNDERİLMEZ: imza yetkinin kendisidir ve jetonu kovaya taşımak onu gereksiz bir
+ * yere yaymak olurdu (`lib/print/label-file.ts`in kargo etiketi deseni). İçerik türü KAPININ
+ * söylediğidir — imza onu bağlıyor, cihazın tahmini değil.
+ *
+ * Sonuç yalnız "gitti mi": düşen yüklemenin müşteriye söylenecek tek cümlesi var ("fotoğraf
+ * yüklenemedi") ve sebebi — kovanın cevabı, kopan ağ — müşterinin düzeltebileceği bir şey değil.
+ */
+export async function uploadTicketPhoto(upload: TicketUpload, uri: string): Promise<boolean> {
+  try {
+    const response = await expoFetch(upload.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': upload.contentType },
+      body: new File(uri),
+    });
+    return response.ok;
+  } catch {
+    // Ağ koptu ya da dosya okunamadı: ekran "yüklenemedi" der ve fotoğraf eklenmez, talep
+    // fotoğrafsız da gönderilebilir. Sessizlik bilinçli — sonuç müşteriye yine söyleniyor.
+    return false;
+  }
 }
 
 /**

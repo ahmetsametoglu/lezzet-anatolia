@@ -1,12 +1,14 @@
+import { MAX_ATTACHMENTS_PER_MESSAGE } from '@lezzet/domain-core';
 import type { LocalizedCopy, Locale } from '@lezzet/i18n';
 import { TicketTypeEnum, type TicketType } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Image, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Chip } from '@/components/ui/chip';
+import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -18,6 +20,7 @@ import { createTicket, type TicketOpenInput } from '@/lib/api/tickets';
 import { useOrders } from '@/screens/orders/use-orders.hook';
 import { OrderLinePicker } from './order-line-picker';
 import { OrderPicker } from './order-picker';
+import { useTicketPhotos, type TicketPhotoFailure } from './use-ticket-photos.hook';
 import messages from './messages.json';
 
 /*
@@ -50,10 +53,14 @@ import messages from './messages.json';
   3. **Konu çipleri ŞEMADAN türer** (`TicketTypeEnum.options`), elle yazılmaz; sıra şablonun sırası.
      Siparişsiz talepte konu SORULMAZ ve `other` gider (web'in ölçülmüş kararı): "Soru" bizim
      yapmadığımız bir iddiadır — gelen mesaj şikâyet de olabilir, operatör okuyup sınıflandırır.
-  4. **Fotoğraf ekleme DEMO** — şablonda da öyle (`photoT` yalnız bir bayrak çeviriyor). Gerçek
-     seçici yerel bir modül ister (`expo-image-picker`) ve talep açılış ucu bugün EK KABUL ETMİYOR
-     (sözleşme künyesi: "kabul edeceği bir anahtar üretecek uç yok"). İkisi de bu görevin kapsamı
-     dışında; ihtiyaç rapor edildi.
+  4. **Fotoğraf GERÇEK (21.309)** — şablonda bir bayrak çeviriyordu (`photoT`) ve 10.09'a kadar burada
+     da öyleydi: "✓ 1 fotoğraf eklendi" yazıyor, hiçbir şey yüklemiyordu. Şimdi kamera + galeri, en
+     çok motorun tavanı kadar (`MAX_ATTACHMENTS_PER_MESSAGE`), dosya doğrudan R2'ye; mekanik
+     `use-ticket-photos.hook.ts`te. Şablonun tek kutusu İKİ kutuya bölündü — tasarım sayfası
+     *"kameradan doğrudan"* diyor, fotoğraf çoğu zaman da önceden çekilmiş; seçilenler küçük resim
+     olarak dizilir ve her biri kaldırılabilir (`design/KARARLAR.md`). Yalnız AÇILIŞTA: yazışmada ek
+     yok (kullanıcı kararı 10.09). **Yükleme sürerken Gönder kilitli** — yarım kalan fotoğraf talebe
+     girmez, müşteri de "gitti" sanmaz.
   5. **Ucun adlı retleri müşteri cümlesine çevrilir** (şablonda hata hâli yok): sipariş bağlanamadı ·
      oturum kapandı · kalanı. Sessizce başarısız olan bir gönderim, gönderilmemiş bir talepten
      kötüdür.
@@ -101,10 +108,18 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
   const [orderItemIds, setOrderItemIds] = useState<string[]>([]);
   const [type, setType] = useState<TicketType | null>(null);
   const [body, setBody] = useState('');
-  const [photoAdded, setPhotoAdded] = useState(false);
   const [showError, setShowError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<SubmitError | null>(null);
+  const [photoError, setPhotoError] = useState<TicketPhotoFailure | null>(null);
+  const photos = useTicketPhotos({ onFailed: setPhotoError });
+  const uploading = photos.pending.length > 0;
+
+  const pickPhoto = (source: 'camera' | 'library') => {
+    // Yeni bir deneme eski reddi düşürür: kapanmış bir kapının uyarısı ekranda durmaz.
+    setPhotoError(null);
+    void photos.pick(source);
+  };
 
   const toggleLine = (id: string) =>
     setOrderItemIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
@@ -142,7 +157,7 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
   const resolvedType: TicketType = reference === null ? 'other' : (type ?? 'other');
 
   const submit = () => {
-    if (submitting) return;
+    if (submitting || uploading) return;
     if (body.trim().length === 0) {
       setShowError(true);
       return;
@@ -151,6 +166,7 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
     setSubmitError(null);
     setSubmitting(true);
 
+    const attachments = photos.photos.map((photo) => photo.key);
     /* Gövde SÖZLEŞMENİN girdi tipiyle yazılır (`z.input<TicketOpenSchema>`): alan adı değişirse
        ekran derlemede kırılır, çalışma zamanında 400 ile değil. */
     const payload: TicketOpenInput = {
@@ -160,6 +176,8 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
       // Kalem kimlikleri YALNIZ siparişli talepte gider: gövdesi tutarsız istek
       // (`items_without_order`) ucun reddidir ve buraya gelmemeli — kapı ekranda da duruyor.
       ...(reference === null || orderItemIds.length === 0 ? {} : { orderItemIds }),
+      // Fotoğraf yoksa alan hiç gitmez: boş bir dizi, var olmayan bir eki anlatmaya kalkardı.
+      ...(attachments.length === 0 ? {} : { attachments }),
     };
 
     void createTicket(payload).then((result) => {
@@ -281,15 +299,79 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
               testID="new-ticket-message"
             />
 
-            <PressableSurface
-              onPress={() => setPhotoAdded(!photoAdded)}
-              feedback="opacity"
-              style={styles.photoBox}
-              accessibilityLabel={photoAdded ? t.new.photo.added : t.new.photo.add}
-              testID="new-ticket-photo"
-            >
-              <Text style={styles.photoLabel}>{photoAdded ? t.new.photo.added : t.new.photo.add}</Text>
-            </PressableSurface>
+            {/* FOTOĞRAF (21.309 · künye §4) — önce eklenenler, sonra iki kaynak. */}
+            {photos.photos.length + photos.pending.length === 0 ? null : (
+              <View style={styles.photoRow} testID="new-ticket-photos">
+                {photos.photos.map((photo, index) => (
+                  <View key={photo.key} style={styles.thumbFrame}>
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={styles.thumb}
+                      accessibilityLabel={t.detail.photo}
+                      accessibilityIgnoresInvertColors
+                      testID={`new-ticket-photo-${index}`}
+                    />
+                    <PressableSurface
+                      onPress={() => photos.remove(photo.key)}
+                      feedback="opacity"
+                      style={styles.thumbRemove}
+                      accessibilityLabel={t.new.photo.remove}
+                      testID={`new-ticket-photo-remove-${index}`}
+                    >
+                      <Icon name="close" size={theme.size.inlineIcon} color={theme.colors.ink} />
+                    </PressableSurface>
+                  </View>
+                ))}
+                {photos.pending.map((item) => (
+                  <View
+                    key={item.id}
+                    style={styles.thumbFrame}
+                    accessible
+                    accessibilityLabel={t.new.photo.uploading}
+                    accessibilityState={{ busy: true }}
+                    testID="new-ticket-photo-pending"
+                  >
+                    <Image source={{ uri: item.uri }} style={styles.thumb} accessibilityIgnoresInvertColors />
+                    <ActivityIndicator style={styles.thumbSpinner} color={theme.colors.olive} />
+                  </View>
+                ))}
+              </View>
+            )}
+            {photos.photos.length === 0 ? null : (
+              <Text style={styles.note} testID="new-ticket-photo-count">
+                {t.new.photo.count
+                  .replace('{count}', String(photos.photos.length))
+                  .replace('{max}', String(MAX_ATTACHMENTS_PER_MESSAGE))}
+              </Text>
+            )}
+            {/* Tavan dolunca kaynaklar çizilmez; sayaç neden olduğunu zaten söylüyor. */}
+            {photos.remaining <= 0 ? null : (
+              <View style={styles.photoActions}>
+                <PressableSurface
+                  onPress={() => pickPhoto('camera')}
+                  feedback="opacity"
+                  disabled={submitting}
+                  style={styles.photoBox}
+                  accessibilityLabel={t.new.photo.camera}
+                  testID="new-ticket-photo-camera"
+                >
+                  <Text style={styles.photoLabel}>{t.new.photo.camera}</Text>
+                </PressableSurface>
+                <PressableSurface
+                  onPress={() => pickPhoto('library')}
+                  feedback="opacity"
+                  disabled={submitting}
+                  style={styles.photoBox}
+                  accessibilityLabel={t.new.photo.library}
+                  testID="new-ticket-photo-library"
+                >
+                  <Text style={styles.photoLabel}>{t.new.photo.library}</Text>
+                </PressableSurface>
+              </View>
+            )}
+            {photoError === null ? null : (
+              <Note description={t.new.photo.errors[photoError]} tone="error" testID="new-ticket-photo-error" />
+            )}
             <Text style={styles.note}>{t.new.photo.note}</Text>
 
             {submitError === null ? null : (
@@ -310,7 +392,7 @@ export function NewTicketSheet({ locale, orderReference, onClose, onCreated }: N
             <PrimaryButton
               label={submitting ? t.new.submitting : t.new.submit}
               onPress={submit}
-              disabled={submitting}
+              disabled={submitting || uploading}
               testID="new-ticket-submit"
             />
           </>
@@ -338,7 +420,48 @@ const styles = StyleSheet.create((theme) => ({
     flexWrap: 'wrap',
     gap: theme.space.md,
   },
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.space.md,
+  },
+  thumbFrame: {
+    width: theme.size.circleSm,
+    height: theme.size.circleSm,
+  },
+  thumb: {
+    // Ölçü talep detayının ek fotoğrafıyla AYNI (`ticket-detail-screen` · `circleSm`): müşteri
+    // gönderdiğini, talepte göreceği boyda görür; yeni sayı açılmadı.
+    width: theme.size.circleSm,
+    height: theme.size.circleSm,
+    borderRadius: theme.radius.control,
+    backgroundColor: theme.colors['sand-250'],
+  },
+  thumbSpinner: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  thumbRemove: {
+    // Rol kitteki "fotoğraf üstündeki düğme" (`iconButtonOnPhoto`) — ölçü de oradan.
+    position: 'absolute',
+    top: theme.space.xs,
+    right: theme.space.xs,
+    width: theme.size.iconButtonOnPhoto,
+    height: theme.size.iconButtonOnPhoto,
+    borderRadius: theme.radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.card,
+  },
+  photoActions: {
+    flexDirection: 'row',
+    gap: theme.space.md,
+  },
   photoBox: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: theme.border.base,
@@ -346,12 +469,13 @@ const styles = StyleSheet.create((theme) => ({
     borderColor: theme.colors['sand-500'],
     borderRadius: theme.radius.control,
     paddingVertical: theme.space.xl,
-    paddingHorizontal: theme.space['3xl'],
+    paddingHorizontal: theme.space.md,
   },
   photoLabel: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,
     color: theme.colors.olive,
+    textAlign: 'center',
   },
   note: {
     fontFamily: theme.font.body[400],

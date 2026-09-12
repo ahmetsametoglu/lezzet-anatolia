@@ -147,6 +147,12 @@ export const TicketOpenSchema = z.object({
   body: z.string().min(1),
   orderReference: z.string().min(1).nullish(),
   orderItemIds: z.array(z.string().uuid()).optional(),
+  /**
+   * Fotoğraf ekleri — `POST /me/tickets/uploads`un verdiği anahtarlar (21.309). Anahtar istemciden
+   * gelir ama biçimini yükleme kapısı kurar; açılış yalnız müşterinin KENDİ taslak klasöründen
+   * geleni kabul eder (`attachment_not_yours`). Tavan adres isteğinde sayılıyor (web'in aynı kuralı).
+   */
+  attachments: z.array(z.string().min(1)).optional(),
 });
 
 /**
@@ -172,9 +178,44 @@ export const TicketCreatedSchema = z.object({ id: z.string().uuid() });
  * `items_without_order` ayrı kalıyor çünkü ayrı cinsten: bir yetki sorusu değil, gövdenin kendi
  * içinde tutarsız olması (kalem işaretlenmiş ama sipariş yok) — yani istemci hatası ve görünmesi
  * gerekir (CLAUDE §0: belirtiyi susturan çözüm, arızayı gözden saklar).
+ *
+ * `attachment_not_yours` (21.309): iliştirilen anahtar müşterinin KENDİ taslak klasöründen gelmiyor.
+ * Anahtarı yükleme kapısı kurduğu için bu ancak kurcalanmış bir istekte doğar; ekran genel cümleyi
+ * söyler (web: `photo_unavailable`).
  */
-export const TicketOpenErrorEnum = z.enum(['empty_body', 'order_unavailable', 'items_without_order']);
+export const TicketOpenErrorEnum = z.enum(['empty_body', 'order_unavailable', 'items_without_order', 'attachment_not_yours']);
 export type TicketOpenError = z.infer<typeof TicketOpenErrorEnum>;
+
+/**
+ * `POST /api/v1/me/tickets/uploads` gövdesi — talep fotoğrafı için imzalı yükleme adresi (21.309).
+ *
+ * **Talep kimliği YOK:** native yalnız AÇILIŞTA fotoğraf alıyor (kullanıcı kararı 10.09 — sohbette ek
+ * yok). Dosya müşterinin taslak klasörüne yazılır, açılış anahtarı `attachments`la iliştirir.
+ *
+ * `alreadyRequested` bu taslak için kaç adres istendiği — tavan kontrolü. İstemciden gelmesi bilinçli
+ * (web'in aynı kararı): sayı henüz gönderilmemiş bir taslağa ait ve yalnız istemcide biliniyor;
+ * güvenlik sınırı sayı değil, açılıştaki ek sahipliği kontrolü.
+ */
+export const TicketUploadRequestSchema = z.object({
+  filename: z.string().trim().min(1).max(200),
+  alreadyRequested: z.number().int().min(0).default(0),
+});
+
+/**
+ * Yükleme adresi — dosya `uploadUrl`e `PUT` ile, `contentType` başlığıyla yüklenir (imza türü
+ * bağlıyor); `key` açılışta `attachments`a girer. Adres kısa ömürlüdür ve `Authorization` İSTEMEZ:
+ * imza yetkinin kendisidir.
+ */
+export const TicketUploadSchema = z.object({
+  key: z.string().min(1),
+  uploadUrl: z.string().url(),
+  contentType: z.string().min(1),
+});
+export type TicketUpload = z.infer<typeof TicketUploadSchema>;
+
+/** Yükleme adresinin adlı retleri — dosya türü · tavan · depo yapılandırılmamış (503). */
+export const TicketUploadErrorEnum = z.enum(['unsupported_type', 'too_many', 'storage_unavailable']);
+export type TicketUploadError = z.infer<typeof TicketUploadErrorEnum>;
 
 /**
  * `POST /api/v1/me/tickets/:id/messages` gövdesi — yazışmaya cevap.

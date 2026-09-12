@@ -73,6 +73,18 @@ function deepLinkPrefixes(): string[] {
 
 const deepLinkDomain = deepLinkHost(process.env.EXPO_PUBLIC_SITE_URL);
 
+/*
+  KAMERA İZNİ — TEK CÜMLE, İKİ EKLENTİ (21.309). Kamera artık iki iş görüyor: personelin kod
+  okutması (Modül 23) ve müşterinin talebe fotoğraf eklemesi. İki eklenti de iOS'ta AYNI anahtarı
+  yazıyor (`NSCameraUsageDescription`) ve sonuncusu kazanır — ayrı metinler, hangisinin göründüğünü
+  eklenti sırasına bırakırdı.
+
+  DİLE GÖRE METİN `locales/*.json`da; bu cümle yalnız desteklenmeyen dildeki cihazın gördüğü temel
+  değerdir, bu yüzden İngilizce. Eskiden TEK Türkçe cümleydi çünkü kamerayı yalnız personel
+  kullanıyordu; artık müşteri de görüyor.
+*/
+const CAMERA_PERMISSION = 'The camera is used to scan product and parcel codes and to attach a photo to a support request.';
+
 const config: ExpoConfig = {
   name: BRAND_NAME,
   slug: 'lezzet-anatolia',
@@ -89,8 +101,14 @@ const config: ExpoConfig = {
     otomatik yazamaz, 08.08'de ölçüldü). Değer PARAMETRİKTİR ve mağaza başvurusundan önce marka
     alan adıyla kesinleşmeli (ters alan adı kuralı); dev-client için tek şart var olması.
   */
+  /* İZİN METİNLERİ DİLE GÖRE (21.309) — iOS izin diyaloğu cihazın dilinde açılır. Dosyalar
+     `locales/{tr,fr,de}.json`; küme `LOCALES`tan türer, yani yeni bir dil dosyasız kalırsa prebuild
+     dosyayı bulamayıp söyler (sessizce İngilizce temel değere düşmez). */
+  locales: Object.fromEntries(LOCALES.map((locale) => [locale, `./locales/${locale}.json`])),
   ios: {
     bundleIdentifier: 'com.lezzetanatolia.app',
+    // Yerelleştirilmiş izin metinlerinin ön koşulu (Expo yerelleştirme belgesi).
+    infoPlist: { CFBundleAllowMixedLocalizations: true },
     /* Apple tarafında yol SÜZGECİ burada değil, `apple-app-site-association` dosyasındadır
        (`paths` alanı); uygulama yalnız ALAN ADINI beyan eder. Android'in tersi — orada süzgeç
        manifest'te durur (aşağıdaki `intentFilters`). */
@@ -235,11 +253,22 @@ const config: ExpoConfig = {
     ],
     'expo-secure-store',
     [
-      // Kamera YALNIZ kod okutmak için (Modül 23) ve izin metni bunu söylüyor — genel bir "kamera
-      // erişimi" cümlesi, mağaza incelemesinde de kullanıcı karşısında da fazlasını vaat ederdi.
-      // Metin İngilizce+Fransızca değil TEK cümle: operasyon uygulaması personel içindir.
+      // Kamera kod okutmak (Modül 23) ve talebe fotoğraf eklemek (21.309) için; metin ikisini de
+      // söylüyor — genel bir "kamera erişimi" cümlesi, mağaza incelemesinde de kullanıcı karşısında da
+      // fazlasını vaat ederdi. Cümlenin tek kaynağı ve dil dosyaları `CAMERA_PERMISSION` künyesinde.
       'expo-camera',
-      { cameraPermission: 'Kamera yalnız ürün ve koli kodlarını okutmak için kullanılır.' },
+      { cameraPermission: CAMERA_PERMISSION },
+    ],
+    [
+      // Talep fotoğrafı (21.309): galeri + kamera. Galeri metni yalnız iOS'ta sorulur (Android'in
+      // sistem seçicisi izin istemez). Uygulama ses kaydetmiyor: mikrofon izni istenmez ve Android'de
+      // `RECORD_AUDIO` kaldırılır — kullanılmayan izin, mağaza incelemesinde sorulan izindir.
+      'expo-image-picker',
+      {
+        photosPermission: 'Your photos are only used when you choose one for a support request.',
+        cameraPermission: CAMERA_PERMISSION,
+        microphonePermission: false,
+      },
     ],
     // Brother etiket yazıcısı (23.5 iğne deneyi → 23.7 basım): SDK ağ/BT üzerinden diyalogsuz
     // basar (karar §1.8 — sistem yazdırma diyaloğu depoda kabul edilemez, kullanıcı denedi).
