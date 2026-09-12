@@ -1829,7 +1829,40 @@ olmamalı.
 **ELENEN seçenek — "önce topla, sonra kâğıt otomatik çıksın":** kutu etiketi *"ne hazırlandı"*
 sorusunu zaten cevaplıyor; ikinci bir belge aynı gerçeğin ikinci nüshası olurdu (`CLAUDE §1`).
 
+## Web push AÇILDI — "uygulama önce" kuralı (10.09, kullanıcı kararı)
+
+Kullanıcı: *"bildirim konusu web müşteri için de olsun istiyorum. Ama hem web hem mobil uygulama
+kullanan bir de ikisine birden bildirim gitmesi istemediğim bir durum."* Cevap önerisine: *"Uygulama
+önce kuralı fizibil bir şekilde yapılabilirse, uygundur."* Fizibilite araştırıldı (10.09), yapılabiliyor.
+
+**Kural:** bir haber TEK cihaz bildirimine gider. Sıra: **native uygulama → tarayıcı → e-posta.**
+Uygulaması ETKİN olan müşteriye bildirim yalnız telefona gider — masaüstünde siteye baksa bile
+tarayıcıya gitmez. Uygulaması yoksa, uygulamada bildirimi kapatmışsa (`disabled_at`), çıkış yapmışsa
+(jeton silinir) ya da uygulaması etkin değilse tarayıcıya; o da yoksa e-postaya. BELGE sınıfında
+e-posta yine DAİMA gider; push ilavesi TEKTİR (etkin native varsa native, yoksa tarayıcı).
+
+**26.08'in engeli böyle kalktı:** sistemin "tarayıcı aboneliği ile uygulama jetonu aynı telefonda mı"
+diye bilmesine gerek kalmıyor — etkin native jeton varsa tarayıcı hiç denenmez.
+
+**"Etkin" = son 30 gün içinde açılmış** (`push_device.last_seen_at`; gün sayısı parametrik). Sebep
+ölçüldü: Apple, silinen uygulamanın jetonu için 410'u bilinçli olarak belirsiz gecikmeyle döndürüyor
+(Apple DTS, forum 793712: *"beginning the return of the 410 state is non-deterministic"*); Android'de
+FCM'nin kesin sınırı 270 gün hareketsizlik. Pencere olmasa silinmiş uygulamaya giden haber o süre boyunca
+ne tarayıcıya ne e-postaya düşerdi.
+
+**Elenen iki yol:** *"hepsine gönder, birinde okununca ötekini sil"* — Chrome/Edge görünmez bildirimi
+reddediyor, Safari görünmez bildirim gönderenin aboneliğini iptal ediyor; geri çekme mesajı
+gönderilemez. *"Son kullanılan cihaz kazanır"* — masaüstünde son işlemi yapıp kalkan müşteri haberi
+cebindeki telefonda göremez.
+
+**Platform gerçeği:** iPhone'da tarayıcı bildirimi yalnız ana ekrana eklenmiş sitede çalışır (iOS
+16.4+, manifest `display: standalone`, izin ancak bir düğmeye basınca istenir); Android Chrome'da ve
+masaüstü tarayıcılarda kurulum gerekmez. Uygulaması: 14.17.
+
 ## Müşteri yüzeyinde WEB PUSH YOK — bildirim kanalı üçlüsü kilitli (26.08, kullanıcı onayı)
+
+> **10.09'da DEĞİŞTİ:** web push açıldı — yeni kural bir üstteki bölümde. Bu bölümün HABER/BELGE
+> sınıf ayrımı aynen geçerli; "web push yok" hükmü ve çift-bildirim gerekçesi artık tarihtir.
 
 Bildirim modülünün kanal kararı: **mobil push → e-posta → (son çare, ücretli) WhatsApp şablonu.**
 Web tarayıcı push'u bu listede YOK ve eklenmeyecek; web'de "bildirim" = hesap sayfasındaki zil +
