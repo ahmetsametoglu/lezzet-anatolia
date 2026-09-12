@@ -276,7 +276,7 @@ function slugla(taban) {
 }
 
 async function cek(page) {
-  const res = await fetch(`${API}?per_page=100&page=${page}`, { headers: { 'User-Agent': 'lezzet-anatolia/catalog-build' } });
+  const res = await fetch(`${API}?per_page=100&page=${page}`, { headers: { 'User-Agent': 'lezzet-anatolie/catalog-build' } });
   if (!res.ok) throw new Error(`sayfa ${page}: HTTP ${res.status}`);
   return res.json();
 }
@@ -290,7 +290,7 @@ async function cek(page) {
  * ürün tarafındaki çözümlemenin genişletilmişi: birebir → önek soyulmuş → "ile başlayan".
  */
 async function kategoriGorselleri() {
-  const res = await fetch(`${API}/categories`, { headers: { 'User-Agent': 'lezzet-anatolia/catalog-build' } });
+  const res = await fetch(`${API}/categories`, { headers: { 'User-Agent': 'lezzet-anatolie/catalog-build' } });
   if (!res.ok) throw new Error(`kategori ucu: HTTP ${res.status}`);
   const gorsel = new Map();
   for (const c of await res.json()) {

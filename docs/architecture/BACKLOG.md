@@ -17,9 +17,10 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 > işaretler bu yüzden bayat olabilir. **İşaretlere DOKUNULMADI**, karar kullanıcınındır; ölçüm
 > maddelerin altına yazıldı ki bir sonraki okuyan sıfırdan aramasın.
 
-- [ ] Marka adı yazımı: "Anatolia" mı "Anatolie" mi → `packages/brand`
-  - *Kodda `packages/brand/src/index.ts` → `name: 'Lezzet Anatolia'` ve her yüzey oradan okuyor.
-    Yani "Anatolia" fiilen yürürlükte; soru, bunun karar mı yoksa yer tutucu mu olduğu.*
+- [x] Marka adı yazımı: **"Lezzet Anatolie"**, tek adres **lezzetanatolie.com** (kullanıcı kararı 08.09 · 10.09:
+  *"yanlış yazımlar her yerde düzeltilecek"*) → `packages/brand`
+  - *Kod `brand.name: 'Lezzet Anatolie'` (`7ac1c878`); uygulama kimliği `com.lezzetanatolie.app`. Logo GÖRSELİ
+    (`apps/web/public/logo.jpg`) hâlâ "Lezzet Anatolia" yazıyor — yeni dosya kullanıcıdan (alttaki madde).*
 - [ ] Ana logo seçimi + renk paleti → `packages/brand`, Tailwind token
 - [x] Gramaj varyantı: **varyant katmanı var** (satılabilir birim = varyant; varyantsız ürün tek varsayılan varyant)
 - [x] Satış birimi: **hepsi sabit paket** (adet). Alış toptan olabilir ama girişte pakete çevrilir (ör. 1kg → 10×100gr)

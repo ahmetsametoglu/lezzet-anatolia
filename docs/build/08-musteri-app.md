@@ -28,7 +28,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   - **Durum (03.08 — dördü de indi, satır kapandı):** `app/sitemap.ts` · `app/robots.ts` · `lib/seo/alternates.ts` (hreflang) · `lib/seo/json-ld.tsx` (schema.org).
     **Hepsi YOL TABLOSUNDAN türüyor** (`PATHNAMES` + `localizedPath`), elle yazılmıyor. Sebebi bu dosyalarda ortak: segment kelimeleri dile göre değişiyor (`/catalogue` · `/katalog`) ve elle yazılan bir liste, tabloya yeni bir rota eklendiğinde sessizce eskir. **Sessizce eskiyen bir hreflang, yanlış hreflang'dır** — arama motoruna "bunlar aynı sayfanın çevirileri" diyen bağ eksik kalınca üç dil birbirinin rakibi sayılır. Aynı kural `robots.ts`te de geçerli: kapatılan rota üç dilde birden kapanmalı, biri unutulursa o dilin sepeti indekse açık kalır.
     **`metadataBase` şart ve sessiz bir tuzak:** `hreflang`/`canonical` mutlak adres ister; olmadan Next göreli değerleri olduğu gibi basar, tarayıcı onları geçersiz sayıp yok sayar — **hata vermez, sadece bütün iş etkisiz kalır.** Layout'a kondu, köken `siteOrigin()` ile tek kaynaktan.
-    **Köken tek yerde:** `NEXT_PUBLIC_SITE_URL ?? 'https://www.lezzetanatolia.fr'` iki yerde duracaktı (mail bağı + harita); `@lezzet/i18n`'e `siteOrigin()` olarak çıkarıldı. İki varsayılan ayrıştığında mailin gösterdiği adres ile sayfanın kanonik adresi farklı olur ve arama motoru mailden gelen bağı ayrı bir sayfa sanardı.
+    **Köken tek yerde:** `NEXT_PUBLIC_SITE_URL ?? 'https://lezzetanatolie.com'` iki yerde duracaktı (mail bağı + harita); `@lezzet/i18n`'e `siteOrigin()` olarak çıkarıldı. İki varsayılan ayrıştığında mailin gösterdiği adres ile sayfanın kanonik adresi farklı olur ve arama motoru mailden gelen bağı ayrı bir sayfa sanardı.
     **Site haritası yalnız İNDEKSLENEBİLİRİ taşıyor** ve `robots.ts` gerisini kapatıyor: sepet, checkout, hesap, siparişler, talepler, giriş ve `/feedback/[token]`. Sonuncusu ayrıca güvenlik: taranan bir belirteç, kayıtlara düşen bir belirteçtir. Ürün süzgeci `listSellable`den geliyor — haritaya özel ikinci bir "aktif ürün" tanımı yazmak, aday ürünleri bir gün indekse açardı.
     **`lastModified` YAZILMIYOR:** elimizde sayfa başına güvenilir bir değişim tarihi yok (ürünün `updatedAt`i fiyat değişiminde de oynar, sayfa içeriği değişmese de). Uydurma tarih tarayıcıya yanlış bilgi vermektir; alanı hiç yazmamak dürüst olanı.
     **Katalogun süzgeçli hâli ayrı kanonik ALMIYOR:** "süzgeçli katalog" ayrı bir sayfa değil, aynı sayfanın görünümü — ayrı tutulsaydı yüzlerce neredeyse-aynı sayfa doğardı.
@@ -1284,7 +1284,7 @@ Müşterinin gördüğü tüm yüzey: katalogdan checkout'a, hesaptan talebe. **
   · paket: `/tr/paket/…` · `/fr/coffret/…` · `/de/paket/…`
 
   **Cihazda doğrulandı (21.08):** paylaşım penceresinde gövde tam olarak
-  `Peynirli Adana Böreği` + satır sonu + `https://www.lezzetanatolia.fr/tr/urun/peynirli-adana-boregi`;
+  `Peynirli Adana Böreği` + satır sonu + ürünün mutlak bağlantısı (`…/tr/urun/peynirli-adana-boregi`);
   pakette `Bayram Sofrası Paketi` + `…/tr/paket/bayram-sofrasi-paketi`. Ad da bırakıldı: bağlantı
   önizlemesi çıkmayan kutularda (SMS vb.) neyin paylaşıldığını yalnız o söylüyor.
 

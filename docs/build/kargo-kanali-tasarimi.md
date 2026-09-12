@@ -891,7 +891,7 @@ istemcinin bütün testleri yeşil görünen bir boşluğa düşer. Aşama D'nin
 > Kullanıcı bilgisi 28.08: fiziksel Android cihaz bağlı; kamera gerektiren akışlar alttaki
 > **rozet çiplerine** basılarak simüle ediliyor.
 
-**Ölçüldü 28.08:** cihaz bağlı (`adb` seri `5cf6c351`), `com.lezzetanatolia.app` ön planda.
+**Ölçüldü 28.08:** cihaz bağlı (`adb` seri `5cf6c351`), uygulama ön planda.
 
 - **Mekanizma:** `ScanSheet` `__DEV__` altında bir çip paneli çiziyor. Çipe basmak kameranın kodu
   okumasıyla **aynı yoldan** geçiyor (`onScan` + tekrar-okuma kilidi); tek fark kodun kaynağı.

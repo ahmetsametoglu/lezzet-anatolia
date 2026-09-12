@@ -6,7 +6,7 @@ Bu klasör **Claude Design'a verilecek** tasarım girdilerini içerir. Her sayfa
 
 ## Ürün ve kitle
 
-**Lezzet Anatolia** — Strasbourg merkezli donuk Türk gıdası satış sistemi. İki müşteri tipi: **B2C** (son tüketici; Türk diasporası + yerel Fransız/Alman müşteri) ve **B2B** (restoran/market; toptan fiyat, hacimli sipariş). Satış: web sitesi + WhatsApp; teslimat: kendi aracıyla rota içi kapı teslimi veya kargo.
+**Lezzet Anatolie** — Strasbourg merkezli donuk Türk gıdası satış sistemi. İki müşteri tipi: **B2C** (son tüketici; Türk diasporası + yerel Fransız/Alman müşteri) ve **B2B** (restoran/market; toptan fiyat, hacimli sipariş). Satış: web sitesi + WhatsApp; teslimat: kendi aracıyla rota içi kapı teslimi veya kargo.
 
 **Diller:** TR / FR / DE. Sayfa **her an tek dilde** görüntülenir — dil URL'den gelir, kullanıcı dil değiştirebilir. "Çok dilli" demek aynı ekranda birden çok dil demek **değildir**; tasarım tek dilli ekran tasarlar, ama metinler üç dilde de var olacağı için uzunluk farkına dayanıklı olmalıdır (Almanca uzun yazılır).
 

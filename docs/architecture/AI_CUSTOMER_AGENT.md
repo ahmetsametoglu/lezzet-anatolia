@@ -73,7 +73,7 @@ dürüst tek cümle ("sizi işletme sahibine aktarıyorum, bugün içinde döner
 devirdeyken ajan susar (15.13 aynen).
 
 **Şeffaflık (AB AI Act, 2026'da yürürlükte):** ajan insan taklidi YAPMAZ — konuşma başında kısa ve
-doğal bir beyan ("ben Lezzet Anatolia'nın dijital asistanıyım"). Bu hem yükümlülük hem güven.
+doğal bir beyan ("ben Lezzet Anatolie'nin dijital asistanıyım"). Bu hem yükümlülük hem güven.
 
 **Güven kademeleri (kalibrasyon):** K1 **gölge** — kısa bir dönem ajan cevabı taslak olarak düşer,
 patron tek tıkla gönderir (bugünkü 15.5 ekranı + 20.4 altyapısıyla bedavaya yakın); K2 **otonom +

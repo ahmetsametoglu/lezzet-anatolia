@@ -1,4 +1,4 @@
-# Lezzet Anatolia
+# Lezzet Anatolie
 
 Donuk Türk gıdası satış ve operasyon sistemi (Strasbourg; FR/DE; TR/FR/DE; B2B + B2C).
 

@@ -13,15 +13,15 @@
   - **Bulgu:** Operasyon sayfasında (`/operations/deliveries?tab=routes`) "Yeni Rota" tanımlanmaya çalışıldığında; rota adı girilip, teslim günleri ve posta kodları seçildikten sonra "Kaydet" butonuna basıldığında arayüzde şu hata mesajı beliriyor:
     > *"Bu rotanın hangi depodan çıkacağı belli değil — Depolar sayfasından depoyu seçip "Rota ekle" ile gelin."*
     Arayüz üzerinde (form ekranında) depo seçimi yapmaya izin veren herhangi bir kontrol/alan (dropdown vb.) bulunmamaktadır. Dolayısıyla kullanıcı bu sayfadayken rotayı kaydetmeyi başaramamaktadır.
-  - **Kök Neden:** [`routes-client.tsx`](file:///Users/ahmet/dev/lezzet-anatolia/apps/web/app/(operations)/operations/deliveries/routes-client.tsx#L129-L133) dosyasındaki kayıt mantığı, hedef depoyu sırasıyla şunlardan çözümlemeye çalışmaktadır:
+  - **Kök Neden:** [`routes-client.tsx`](../../apps/web/app/(operations)/operations/deliveries/routes-client.tsx#L129-L133) dosyasındaki kayıt mantığı, hedef depoyu sırasıyla şunlardan çözümlemeye çalışmaktadır:
     1. Seçili rotanın kendi deposu (`selected?.warehouseId`)
     2. URL parametresinden gelen depo ID'si (`warehouseId`)
     3. Sistemde yalnızca tek bir depo kayıtlıysa o depo (`data.warehouses.length === 1`)
     
-    Birden fazla deponun olduğu sistemde, kullanıcı doğrudan rotalar sekmesine girdiğinde (URL'de `depo` parametresi olmadan) yeni rota oluşturmak isterse yukarıdaki üç koşul da sağlanamamakta ve `targetWarehouse` bulunamadığı için hata fırlatılmaktadır. Ancak arayüzün masaüstü formu ([`routes.desktop.tsx`](file:///Users/ahmet/dev/lezzet-anatolia/apps/web/app/(operations)/operations/deliveries/routes.desktop.tsx)) üzerinde bir depo seçici bileşeni yer almamaktadır.
+    Birden fazla deponun olduğu sistemde, kullanıcı doğrudan rotalar sekmesine girdiğinde (URL'de `depo` parametresi olmadan) yeni rota oluşturmak isterse yukarıdaki üç koşul da sağlanamamakta ve `targetWarehouse` bulunamadığı için hata fırlatılmaktadır. Ancak arayüzün masaüstü formu ([`routes.desktop.tsx`](../../apps/web/app/(operations)/operations/deliveries/routes.desktop.tsx)) üzerinde bir depo seçici bileşeni yer almamaktadır.
   - **Çözüm Önerisi:** 
-    - [`routes.desktop.tsx`](file:///Users/ahmet/dev/lezzet-anatolia/apps/web/app/(operations)/operations/deliveries/routes.desktop.tsx) üzerindeki taslak formuna (örneğin "Rota adı" alanının hemen üstüne veya altına), sistemdeki depoların listelendiği (`data.warehouses`) bir depo seçim alanı (`FieldShell` + `Select`/`Dropdown` bileşeni) eklenmelidir.
-    - Taslak veri modeli (`Draft` interface'i) `warehouseId` değerini de tutacak şekilde güncellenmeli ve [`routes-client.tsx`](file:///Users/ahmet/dev/lezzet-anatolia/apps/web/app/(operations)/operations/deliveries/routes-client.tsx#L129) altındaki depo çözümleme sırasına dahil edilmelidir.
+    - [`routes.desktop.tsx`](../../apps/web/app/(operations)/operations/deliveries/routes.desktop.tsx) üzerindeki taslak formuna (örneğin "Rota adı" alanının hemen üstüne veya altına), sistemdeki depoların listelendiği (`data.warehouses`) bir depo seçim alanı (`FieldShell` + `Select`/`Dropdown` bileşeni) eklenmelidir.
+    - Taslak veri modeli (`Draft` interface'i) `warehouseId` değerini de tutacak şekilde güncellenmeli ve [`routes-client.tsx`](../../apps/web/app/(operations)/operations/deliveries/routes-client.tsx#L129) altındaki depo çözümleme sırasına dahil edilmelidir.
   - ✅ **YAZILDI (15.08)** — teşhisiniz birebir doğruydu, iki öneriniz de aynen uygulandı. Ayrıntı ve kalıcı kayıt: `docs/build/19-coklu-depo.md` → `(19.20)`. Üç ek karar: seçici **addan ÖNCE** (depo rotanın ülkesini belirliyor), Kaydet düğmesi depo seçilene kadar KAPALI (engel tıklamadan önce okunsun), pasif depo süzülmüyor **işaretleniyor**. Ekranda denenmedi.
 
 - [ ] **OB-08 · Sipariş tamamlandıktan sonra bile finansal bölümde "mal maliyeti tahmini" ve "kar sipariş kapandığında hesaplanır" uyarısı kalması**
@@ -44,7 +44,7 @@
     - Yanlışlıkla yapılan büyük alan seçimlerinin doğrudan kaydedilmemesi için, seçim tamamlandığında bir **onay diyaloğu (confirm modal)** açılmalıdır.
     - Bu diyalogda seçilen posta kodlarının sayısı ve listesi listelenmeli, *"Aşağıdaki X adet posta kodunu bu rotaya eklemek istiyor musunuz?"* şeklinde onay istenmelidir.
   - **Teknik Detay (Leaflet):**
-    - Harita bileşenindeki ([`zone-map-leaflet.tsx`](file:///Users/ahmet/dev/lezzet-anatolia/apps/web/components/operation/ui/zone-map-leaflet.tsx)) varsayılan `boxZoom` davranışı (`boxZoom: false` ile) devre dışı bırakılıp `mousedown`/`mousemove`/`mouseup` olayları Shift tuşu basılıyken dinlenerek `L.Rectangle` ile görsel bir seçim kutusu çizilmelidir.
+    - Harita bileşenindeki ([`zone-map-leaflet.tsx`](../../apps/web/components/operation/ui/zone-map-leaflet.tsx)) varsayılan `boxZoom` davranışı (`boxZoom: false` ile) devre dışı bırakılıp `mousedown`/`mousemove`/`mouseup` olayları Shift tuşu basılıyken dinlenerek `L.Rectangle` ile görsel bir seçim kutusu çizilmelidir.
     - Çizilen alanın `LatLngBounds` koordinatları içindeki noktalar süzülmeli ve form bileşenine toplu seçim olarak iletilmelidir.
 
 - [~] **OB-03 · Posta kodu arama kutusunda yerleşim/şehir adına göre arama yapılabilmesi**

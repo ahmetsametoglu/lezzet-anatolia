@@ -30,7 +30,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ownerAction } from './test-lock-owner.mjs';
 
-const LOCK = join(tmpdir(), 'lezzet-anatolia-test.lock');
+const LOCK = join(tmpdir(), 'lezzet-anatolie-test.lock');
 /** `--kind=ddl` ilk argüman olarak verilir; verilmezse iş bir test koşusudur. */
 const KIND_ARG = process.argv[2]?.startsWith('--kind=') ? process.argv[2].slice('--kind='.length) : null;
 const KIND = KIND_ARG ?? 'test';

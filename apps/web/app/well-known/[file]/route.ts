@@ -23,7 +23,7 @@ import { LOCALES, localizedPath } from '@lezzet/i18n';
  * bağlantısı geliştirme ortamında tarayıcıda açılır — akışın web yarısı zaten orada sınanıyor.
  */
 
-/** iOS: `TEAMID.com.lezzetanatolia.app`. Tek değer, çünkü tek uygulama var. */
+/** iOS: `TEAMID.com.lezzetanatolie.app`. Tek değer, çünkü tek uygulama var. */
 const IOS_APP_ID = process.env.MOBILE_IOS_APP_ID;
 /** Android paket adı — `app.config.ts` ile aynı olmalı; ilişkilendirme aksi hâlde kurulmaz. */
 const ANDROID_PACKAGE = process.env.MOBILE_ANDROID_PACKAGE;

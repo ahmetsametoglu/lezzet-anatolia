@@ -35,7 +35,7 @@ const depo = {
   city: 'Strasbourg',
   name: 'Lezzet Anatolie',
   addressLine1: '12 rue du Marche',
-  email: 'test@lezzet-anatolia.fr',
+  email: 'test@lezzetanatolie.com',
 };
 const koli = { weightG: 1200, lengthMm: 300, widthMm: 200, heightMm: 150 };
 

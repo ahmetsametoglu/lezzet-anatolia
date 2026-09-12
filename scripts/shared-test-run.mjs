@@ -26,7 +26,7 @@ import { join } from 'node:path';
 import { SUITE_KIND, ownerAction } from './test-lock-owner.mjs';
 
 const ROOT = join(import.meta.dirname, '..');
-const LOCK = join(tmpdir(), 'lezzet-anatolia-test.lock');
+const LOCK = join(tmpdir(), 'lezzet-anatolie-test.lock');
 const RESULTS = join(ROOT, '.test-results');
 const LATEST = join(RESULTS, 'latest.json');
 const LOG = join(RESULTS, 'run.log');

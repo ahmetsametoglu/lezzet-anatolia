@@ -51,7 +51,7 @@ Bu doküman işletmenin künyesini ve ürün kataloğunu tek yerde toplar. Katal
 >   yani "Strasbourg ve çevresi" teslimat anlatımı doğru kalır; ama **künye gerçek adresi yazmak
 >   zorunda** — mentions légales'te şehir yaklaşık olamaz.
 
-> **Not — marka adı:** Logolarda "Lezzet Anatolia", domain/Instagram'da "Lezzet Anatolie". Tek yazıma karar verilecek (`BACKLOG.md §0`). Bu dokümanda domain ile tutarlı olması için "Anatolie" kullanıldı. **Yasal künyede marka adı değil TİCARİ UNVAN yazılır** (`QUALITE`); marka adı "nom commercial" olarak ayrıca anılır.
+> **Not — marka adı:** doğru yazım **Lezzet Anatolie**, alan adı lezzetanatolie.com (kullanıcı kararı 08.09 · 10.09 — `BACKLOG.md §0`). Logo görselinde hâlâ "Lezzet Anatolia" yazıyor; yeni dosya bekleniyor. **Yasal künyede marka adı değil TİCARİ UNVAN yazılır** (`QUALITE`); marka adı "nom commercial" olarak ayrıca anılır.
 
 > **Güvenlik notu:** Hesap şifreleri bu dokümana bilinçli olarak konmadı. Şifreler dokümantasyonda tutulmaz; ayrı ve güvenli bir yerde saklanmalı. Paylaşılmış olan şifrelerin değiştirilmesi önerilir.
 

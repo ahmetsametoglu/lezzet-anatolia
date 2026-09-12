@@ -77,7 +77,7 @@ Sayfa yapılırken kimse unutmamıştı; sözleşmede yazmıyordu.
 
 ### Sekme başlığı
 
-`title.template` kök layout'ta (`%s · Lezzet Anatolia`) ve **tek kaynak** `lib/seo/title.ts`.
+`title.template` kök layout'ta (`%s · ${brand.name}` → `%s · Lezzet Anatolie`) ve **tek kaynak** `lib/seo/title.ts`.
 Sayfalar markayı elle eklemez; ekleseler aynı dizginin onlarca kopyası olurdu.
 
 ⚠ **Next şablonu KENDİ segmentine uygulamaz, yalnız ALT rotalara.** Ana sayfa layout'la aynı

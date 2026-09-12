@@ -1,4 +1,4 @@
-# CLAUDE.md — Lezzet Anatolia
+# CLAUDE.md — Lezzet Anatolie
 
 > Bağlayıcı kurallar. Her oturum yüklenir, varsayılan davranışı ezer. Detay `docs/`'ta; bu dosya
 > "her zaman aklımda olması gereken"ler + haritadır. **Kod ile doküman çelişirse KOD haklı.**
