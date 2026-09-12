@@ -1486,7 +1486,7 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   geçiyor (*"Site sahibi"*, *"Bu site … barındırılmaktadır"*, *"Bu sitedeki metinler … site
   sahibine aittir"*, *"bu site üzerinden yapılan tüm satışlar"*). Bunlar **olmayan bir yeri tarif
   etmiyor**, hizmetin adı olarak duruyor — ama uygulamada okununca yine de tuhaf. Değiştirmek
-  (*"site ve uygulama"* ya da *"Lezzet Anatolia hizmeti"*) bir HUKUK METNİ kararıdır ve web
+  (*"site ve uygulama"* ya da *"Lezzet Anatolie hizmeti"*) bir HUKUK METNİ kararıdır ve web
   nüshasını da ilgilendirir; tek başıma yazmadım.
 
 ### 17.08 cihaz turunda açılanlar (B bölümü — girişli müşteri)

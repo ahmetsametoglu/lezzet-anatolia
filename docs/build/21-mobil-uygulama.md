@@ -613,7 +613,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     birebir tekrarı; künye "Jest bunu göremez" diye uyarıyordu ve göremedi). Düzeltme cihazda
     ekran görüntüsüyle doğrulandı.
   **Bilinçli sınırlar (modül kapanışında açık kalanlar, sahipleriyle):** "kalanı gönder" karar
-  kaydı (model işi — web şeridiyle) · kurye uçlarında `effects` (BEKLEYEN(14.11) hattı) · YZ
+  kaydı (model işi — web şeridiyle) · kurye uçlarında `effects` (14.11 hattı — bağlandı: teslim ucu `mobileOrderEffects` geçiyor, `undelivered`in etki parametresi yok; ölçüldü 10.09) · YZ
   içgörü motoru (modül 20/22) · hub'ın parti/tedarik taramasının maliyeti büyüyen katalogda
   yeniden ölçülür (bugün tek okuma ~çeyrek saniye sınıfı, kabul).
 - [x] (21.13) **Push altyapısı:** cihaz token modeli + teslim hattı — web şeridiyle koordineli
@@ -626,6 +626,19 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   yükleme kapısına BAĞLAMAK.)*
   `touches: apps/mobile, apps/mobile-api, packages/database (token modeli — talep gerekebilir)`
 
+  **Durum (11.09) — 26.08 turunun ölçtüğü YAPILANDIRMA engeli kalktı; cihaz turu yapılmadı** (talep
+  `mobil-native-push-kurulumu`). · **Proje kimliği:** `app.config.ts` → `extra.eas.projectId`
+  (kullanıcının mevcut Expo projesi `@lezzet-anatolie/lezzet-anatolie`) — onsuz `getExpoPushTokenAsync`
+  `ERR_NOTIFICATIONS_NO_EXPERIENCE_ID` fırlatıyordu ve kayıt künyedeki gibi sessizce atlanıyordu.
+  · **Firebase:** `android.googleServicesFile` + `apps/mobile/google-services.json` (Firebase projesi
+  `lezzet-anatolie-67441`, paket `com.lezzetanatolie.app`; dosya açık tanımlayıcı taşır, GİZLİ olan FCM V1
+  anahtarı yalnız Expo'da). · **Etkinlik tazeliği:** kayıt artık uygulama ÖNE GELİNCE de, günde en çok bir
+  kez yenileniyor (`use-push-registration.hook.ts`, aralık parametrik `PUSH_REFRESH_INTERVAL_MS`). Sunucu
+  native cihazın etkinliğine `push_device.last_seen_at` ile bakıyor; ilk kare ve `SIGNED_IN` hiç
+  kapatılmayan uygulamada bir daha koşmadığı için cihaz 30 gün sonra "etkin değil" sayılırdı. Testi 6
+  (`use-push-registration.hook.test.ts`: ilk kare · giriş · aralık dolmadan öne geliş · dolunca · arka plan
+  · temizlik). · **YAPILMADI:** gerçek bir olayla bildirimin telefona düşmesi, dokununca açılan ekran ve
+  makbuz (`receipt_status`) ölçülmedi; iOS'ta APNs anahtarı henüz Expo'da değil.
   **Durum (26.08) — KAPANDI; uçtan uca tamamlama KULLANICI KARARIYLA web sorumlusunun elinden** ("mobil şerit dahil bu özelliği uçtan uca entegre et"). Üç katmanın üçü de yazıldı ve testli:
     **Katman 1-2 (kayıt + uygulama içi):** tablo/tek kapı/uç 14.12-14.13'te (defterde). Müşteri ekranı `screens/notifications/` (puan-geçmişi deseni birebir: keyset akış, beş hâl, iyimser okundu/gizle + düşerse GERİ ALMA — ekranda "okundu" duran ama sunucuda okunmamış satır, öteki cihazda rozeti yalancı çıkarırdı), cümle sözlüğü `notification-copy.ts` (üç dil; **bilinmeyen tür genel cümleye düşer** — küme sunucuda büyür, eski sürüm yeni türü boş satırla karşılamaz; zarfın `kind`'ı da bu yüzden düz dize, enum parse'ı ilk yeni türde bütün sayfayı düşürürdü). Vitrin zili gerçek rozete bağlandı (`use-notification-badge` — odak + kişinin kanalı; hata anında sayı SIFIRLANMAZ, son bilinen değerde kalır). Operasyon kabuğu fixture'dan uca geçti (`notification-map.ts` — kind→bölüm/nokta/başlık; fixture kendi künyesinin sözü gereği SİLİNDİ, süzme kuralı yerinde), hub rozetleri `unread` sayar, ekranı açmak "gördüm"dür.
     **Katman 3 (cihaz):** `expo-notifications ~57.0.9` (sürüm Expo'nun kendi eşleme dosyasından — tahmin değil) + config plugin. Kayıt her açılışta ve İZİN RAPORUYLA (`ensurePushRegistration`: kanal → izin → jeton → uç; Android 13 sırası v57 dokümanından). Çıkışta jeton silme `signOut`un İLK adımı — oturum kapandıktan sonra silme isteği atılamaz. Dokunuş yönlendirmesi `use-push-navigation`: sunucunun `data` yükü uygulama içi listeyle AYNI adres sözlüğünden (`notificationHref`) çözülür — iki eşleme olsaydı biri gün gelip başka yere götürürdü. Expo Go/projectId'siz ortamda jeton alınamaz ve bu KÜNYELİ sessizliktir: uygulama içi zil aynı satırları zaten taşıyor.
@@ -1214,10 +1227,11 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     fikstür kuran her `transitionOrder` çağrısı mail göndermeye kalkardı.
 
   Açık kalanlar:
-  · **`BEKLEYEN(14.11)` yerinde duruyor:** `/api/v1/courier/*` (`stops/:orderId/deliver`,
-    `undelivered`) hâlâ `effects` geçmiyor — mobil kuryenin teslim ettiği siparişte "teslim edildi"
-    maili gitmiyor ve sipariş puanı yazılmıyor. Engel kalktı; kalan iş aynı nesneyi o çağrılara da
-    geçirmek. Kurye ucu bu görevin kapsamı dışında bırakıldı (ayrı kapı, ayrı ölçüm).
+  · **Kurye uçlarının 14.11 işareti KAPANDI (ölçüldü 10.09):** `stops/:orderId/deliver` artık
+    `effects: mobileOrderEffects(db)` geçiyor (03.09, `apps/mobile-api/src/lib/order-effects.ts`);
+    `undelivered`in çağırdığı `markUndelivered` etki parametresi taşımıyor, bağlanacak bir şey yok.
+    Buradaki eski cümle *"hâlâ `effects` geçmiyor — teslim edildi maili gitmiyor"* diyordu; işaret
+    14.11 kapanırken asılı kalmasın diye tarihsel nota çevrildi (denetim talebi 10.09).
   · **Test borcu:** terfi edilen kapıların paket düzeyinde entegrasyon testi yazılmadı; web'in
     mevcut `apps/web/lib/order/{notify,notification-data}.test.ts` dosyaları köprü üzerinden aynı
     gövdeyi koşuyor (imza korundu, testler değişmedi). Mobil ucun `effects` geçtiğini doğrulayan
@@ -4770,6 +4784,11 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (`08.44`), sepetin açıklaması (`08.43`, tamam), paylaşımın gerçek adres taşıması (`08.45`),
   sonra uygulama içi bildirim listesi; **push en sonda.** Gerekçe: push'un açacağı bir varış
   noktası olmalı; bugün duyurulacak kampanyanın kendi yüzü bile yok.
+
+  **Durum (11.09) — yukarıdaki "BUGÜN HİÇ YOK — ölçüldü 19.08" bayat.** Altyapının üç katmanı 21.13'te
+  yazıldı (26.08); cihaz tarafının proje kimliği ve Firebase bağlaması 21.13'ün 11.09 notunda. Bu satırda
+  kalan: cihaz turu (Android'de gerçek olayla bildirim + makbuz, iOS'ta APNs anahtarı) ve satırın kendi
+  kapsamındaki kullanım işleri — operatöre gönderim ekranı, push pazarlama izni, sıklık sınırı.
 
 - [x] (21.89) **SEPET ONARIMI — donmuş görünüm · dokunma çakışması · paket toplama girmiyordu (20.08).**
   `touches: packages/database/src/services/cart.service.ts, packages/database/src/index.ts, apps/mobile-api/src/api/v1/cart.ts, apps/mobile/src/{lib/api/cart.ts,components/ui/{pressable-surface,text-action}.tsx,screens/{customer-kit/{cart-store.ts,quantity-stepper.tsx},cart/**,checkout/checkout-screen.tsx}}`
@@ -14709,6 +14728,19 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · **Doğrulama:** mobilde büyük harfli "Anatolia" 0 · mobil paket 1538/1540 (iki düşüş
     `unistyles.test.ts`in italik yazı testleri, önceden var) · kök `typecheck` 20/20 · birim projesi
     2195/2195 · `lint` · `knip` temiz.
+
+  **Durum (11.09) — "dışında kalanlar"ın kimlik maddesi kapandı: kimlikler de E ile.** `app.config.ts`:
+  paket/bundle `com.lezzetanatolie.app` · şema `lezzetanatolie://` · `slug: 'lezzet-anatolie'` (Expo
+  projesinin adı; EAS CLI ad uyuşmazsa her komutu durduruyor). Birlikte değişenler: maestro akışları
+  (`launch` · `dev-login` · `depo-kapi` · README), `scripts/ui-shot-mobile.mjs` (`SCHEME`, `BUNDLE_ID`),
+  cihaz turu belgesi, geri bildirim fikstürünün yorum adresi ve şemayı anan üç yorum — OAuth, 3DS ve
+  auth dönüşü şemayı koddan değil yapılandırmadan okuyor, elle yazılmış şema yoktu. Temiz prebuild
+  sonrası iki dev client sırayla yeniden derlendi ve kuruldu (iOS 0 hata, simülatöre kurulu · Android
+  `BUILD SUCCESSFUL`, Oppo'da açılıyor — ölçüldü 10.09 gece). Eski `com.lezzetanatolia.app` cihazlarda
+  AYRI bir uygulama olarak duruyor. Tohum e-postaları `936e7d8a` + `326f0dd0`te düzeldi. **Açık kalan:**
+  Supabase dönüş izin listesi (`supabase/config.toml:165`) hâlâ `lezzetanatolia://**` — web şeridi ekliyor
+  (talep `mobil-native-push-kurulumu`); eklenip Supabase yeniden başlatılana kadar cihazda Google
+  girişinin dönüşü reddedilir, geliştirme girişi etkilenmez. Logodaki yazı görsel dosyada.
 
 - [x] (21.306) **"GELİNCE HABER VER" GERÇEK KAYDA BAĞLANDI — tükendi barı `variant_stock_notice`a yazıyor, "yakında yeniden gelecek" sözü kalktı; haberi gönderen yapı web'e not** (kullanıcı kararları 10.09: *"Stok gelince haber ver konusundaki açıkları giderelim"* · *"Yakında gelecek konusu da çok doğru bir ifade değil"* · *"arka tarafta tamamlandıysa haber gönderen yapıyı kurmak için web tarafına not düşelim"*)
   `touches:` `packages/types/src/contracts/place-api.schema.ts` · `packages/application/src/delivery/notice.ts` · `packages/application/src/index.ts` · `packages/database/src/testing/cleanup.ts` · `apps/mobile-api/src/api/v1/stock-notices.ts` · `apps/mobile-api/src/api/v1/stock-notices.test.ts` · `apps/mobile-api/src/api/v1/router.ts` · `apps/mobile-api/src/api/v1/router.test.ts` · `apps/mobile/src/lib/api/stock-notices.ts` · `apps/mobile/src/screens/customer-kit/notice-sheet.tsx` · `apps/mobile/src/screens/customer-kit/place-notice-sheet.tsx` · `apps/mobile/src/screens/product/product-detail-screen.tsx` · `apps/mobile/src/screens/product/product-detail-screen.test.tsx` · `apps/mobile/src/screens/product/messages.json` · `design/KARARLAR.md`

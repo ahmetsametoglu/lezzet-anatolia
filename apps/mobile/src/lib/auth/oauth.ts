@@ -9,7 +9,7 @@ import { getSupabase } from './supabase';
 
   `expo-web-browser` YOK ve bilerek eklenmedi: paket yerel modül taşır, eklemek dev-client'ın
   YENİDEN DERLENMESİNİ ister (21.13 rebuild kümesinin sınırı). Onun yerine sistem tarayıcısı
-  (`Linking.openURL`) + şema dönüşü (`lezzetanatolia://auth/callback`) kullanılıyor: Supabase
+  (`Linking.openURL`) + şema dönüşü (`lezzetanatolie://auth/callback`) kullanılıyor: Supabase
   PKCE akışında dönüş yalnız tek kullanımlık `?code=` taşır, tarayıcıda oturum kalıntısı kalmaz.
   Rebuild günü gelince (kamera kümesiyle) `openAuthSessionAsync`e geçmek tek dosyalık iş.
 

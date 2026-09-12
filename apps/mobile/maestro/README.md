@@ -32,10 +32,10 @@ gelmez — akış "ekran bulunamadı" diye düşer ve sebep görünmez. Bu yüzd
 **derin bağlantıyla** açar:
 
 ```
-- openLink: lezzetanatolia://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+- openLink: lezzetanatolie://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
 ```
 
-Şema `app.config.ts`ten gelir (`scheme: 'lezzetanatolia'`); değişirse buradaki bağlantı da
+Şema `app.config.ts`ten gelir (`scheme: 'lezzetanatolie'`); değişirse buradaki bağlantı da
 değişmeli. Ortak açılış `common/launch.yaml`da tek yerde durur.
 
 ## Giriş

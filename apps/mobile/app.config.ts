@@ -87,26 +87,40 @@ const CAMERA_PERMISSION = 'The camera is used to scan product and parcel codes a
 
 const config: ExpoConfig = {
   name: BRAND_NAME,
-  slug: 'lezzet-anatolia',
+  /* KİMLİKLER E İLE (kullanıcı kararı 10.09: "projenin adı E ile bitiyor, her yerde düzeltilecek").
+     `slug` Expo projesinin adıdır (`@lezzet-anatolie/lezzet-anatolie`): EAS CLI kimliği verilmiş
+     projede adı karşılaştırıyor ve uyuşmazsa her komutu durduruyor (push talebinde ölçüldü). */
+  slug: 'lezzet-anatolie',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'lezzetanatolia',
+  /* Şema derin bağlantıların, OAuth dönüşünün (`Linking.createURL`) ve 3DS dönüşünün ortak adresi;
+     kodda yeniden yazılmaz, hepsi buradan okur. Değişince Supabase'in dönüş izin listesi
+     (`supabase/config.toml`) aynı pencerede güncellenir. */
+  scheme: 'lezzetanatolie',
   userInterfaceStyle: 'automatic',
   updates: {
     enabled: false,
   },
+  /* EAS proje kimliği — push jetonu (`getExpoPushTokenAsync`) onsuz alınamıyor
+     (`ERR_NOTIFICATIONS_NO_EXPERIENCE_ID`). Dinamik config'e `eas init` yazamıyor, elle eklendi. */
+  extra: {
+    eas: { projectId: '1dbe4333-98aa-469c-b443-02746596863f' },
+  },
   /*
-    PAKET KİMLİKLERİ — yerel dev-client derlemesi kimliksiz yapılamıyor (prebuild dinamik config'e
-    otomatik yazamaz, 08.08'de ölçüldü). Değer PARAMETRİKTİR ve mağaza başvurusundan önce marka
-    alan adıyla kesinleşmeli (ters alan adı kuralı); dev-client için tek şart var olması.
+    PAKET KİMLİKLERİ — marka alan adının ters yazımı (`lezzetanatolie.com` → `com.lezzetanatolie.app`).
+    KESİNLEŞTİ (10.09): Firebase Android uygulaması, FCM anahtarı ve Apple uygulama kimliği bu değerle
+    kayıtlı; `google-services.json` paketle eşleşmezse push hiç çalışmaz. Önceki değer
+    (`com.lezzetanatolia.app`) yanlış yazımdı ve yalnız dev-client'ın var olma şartı için konmuştu
+    (08.08). Kimlik değişince cihazdaki uygulama YENİ bir uygulamadır: native klasörler temiz
+    prebuild'le yeniden üretilir, dev-client yeniden kurulur.
   */
   /* İZİN METİNLERİ DİLE GÖRE (21.309) — iOS izin diyaloğu cihazın dilinde açılır. Dosyalar
      `locales/{tr,fr,de}.json`; küme `LOCALES`tan türer, yani yeni bir dil dosyasız kalırsa prebuild
      dosyayı bulamayıp söyler (sessizce İngilizce temel değere düşmez). */
   locales: Object.fromEntries(LOCALES.map((locale) => [locale, `./locales/${locale}.json`])),
   ios: {
-    bundleIdentifier: 'com.lezzetanatolia.app',
+    bundleIdentifier: 'com.lezzetanatolie.app',
     // Yerelleştirilmiş izin metinlerinin ön koşulu (Expo yerelleştirme belgesi).
     infoPlist: { CFBundleAllowMixedLocalizations: true },
     /* Apple tarafında yol SÜZGECİ burada değil, `apple-app-site-association` dosyasındadır
@@ -115,7 +129,10 @@ const config: ExpoConfig = {
     ...(deepLinkDomain ? { associatedDomains: [`applinks:${deepLinkDomain}`] } : {}),
   },
   android: {
-    package: 'com.lezzetanatolia.app',
+    package: 'com.lezzetanatolie.app',
+    /* Firebase istemci kimlikleri (FCM). Expo belgesine göre açık tanımlayıcılar taşır ve repoya
+       girebilir; GİZLİ olan FCM V1 hizmet hesabı anahtarı yalnız Expo'da durur. */
+    googleServicesFile: './google-services.json',
     /*
       İKON ZEMİNİ MARKA KREMİ VE TOKEN'DAN GELİYOR (25.08) — ham hex kalktı.
 

@@ -61,7 +61,7 @@ export function feedbackCompletion(overrides: Partial<FeedbackCompletion> = {}):
        olduğunu hiçbir test yakalayamazdı. Prim v3 maketinden (15), üstü kart+yorum payı. */
     invitePointsTotal: 40,
     balance: 255,
-    reviewUrl: 'https://g.page/lezzet-anatolia/review',
+    reviewUrl: 'https://g.page/lezzet-anatolie/review',
     reviewPlatform: 'Google',
     ...overrides,
   };

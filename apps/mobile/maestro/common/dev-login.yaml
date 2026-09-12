@@ -13,11 +13,11 @@
 # uçtan magic-link jetonu alınır, Supabase'te tüketilir. Web e2e'sinin kurulumuyla aynı içgüdü,
 # aynı hesap listesi. Yeni oturum eskisinin üstüne yazılır — ayrıca çıkış adımı gerekmez
 # (cihaz `pm clear`ı reddediyor, gerekçe `launch.yaml`da).
-appId: com.lezzetanatolia.app
+appId: com.lezzetanatolie.app
 ---
 - runFlow: launch.yaml
 
-- openLink: lezzetanatolia://login
+- openLink: lezzetanatolie://login
 
 # Düğme kimliği etiketin Türkçe küçük harfidir (`login-screen.tsx`): Depo → depo, Yönetim → yönetim.
 - extendedWaitUntil:

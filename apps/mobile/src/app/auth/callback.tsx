@@ -3,7 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { AuthCallbackScreen } from '@/screens/login/auth-callback-screen';
 
 /*
-  Rota İNCE (login kabuğunun deseni) — `lezzetanatolia://auth/callback?code=…` derin bağlantısı
+  Rota İNCE (login kabuğunun deseni) — `lezzetanatolie://auth/callback?code=…` derin bağlantısı
   buraya iner; parametreyi kabuk okur, kararları ekran verir (`auth-callback-screen` künyesi).
 */
 export default function AuthCallbackRoute() {

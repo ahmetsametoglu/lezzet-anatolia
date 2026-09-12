@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1053559849803",
+    "project_id": "lezzet-anatolie-67441",
+    "storage_bucket": "lezzet-anatolie-67441.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1053559849803:android:924ed9968233247fe01ece",
+        "android_client_info": {
+          "package_name": "com.lezzetanatolie.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAE6WD1Atpb1QP7UoroLLVqJZri1N6cnsk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -17,7 +17,7 @@ interface PaymentProviderProps {
 
 /**
  * 3-D Secure doğrulaması uygulamayı bir tarayıcı penceresine çıkarır ve geri dönüşü URL şemasıyla
- * yapar. Şema `app.config.ts`te tanımlı (`scheme: 'lezzetanatolia'`) ve BURADA YENİDEN YAZILMAZ —
+ * yapar. Şema `app.config.ts`te tanımlı (`scheme: 'lezzetanatolie'`) ve BURADA YENİDEN YAZILMAZ —
  * ikinci nüsha, bir gün şema değiştiğinde 3DS'in sessizce geri dönememesi demekti (müşteri
  * bankasında onaylar, uygulama hiç haberi olmadan beklemede kalır).
  *

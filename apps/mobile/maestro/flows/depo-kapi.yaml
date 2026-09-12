@@ -4,7 +4,7 @@
 # taşınıyor mu, kapı (`(operations)/_layout.tsx`) yetkiyi cihazda okuyabiliyor mu, ve hub
 # YÜKLENİYOR hâlinden DOLU hâle geçiyor mu. Komponent testi hub'ı hazır veriyle çizer;
 # burada veri uçtan (`/api/v1`) gelir ve gerçekten gelmezse akış düşer.
-appId: com.lezzetanatolia.app
+appId: com.lezzetanatolie.app
 name: Depo · kapı ve hub
 tags:
   - depo

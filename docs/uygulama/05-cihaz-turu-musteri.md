@@ -50,7 +50,7 @@ ilk açılış olur.
 >
 > · **`adb shell pm clear` BU CİHAZDA ÇALIŞMIYOR** (Oppo CPH1907): kabuk kullanıcısında
 >   `CLEAR_APP_USER_DATA` izni yok, komut `SecurityException` ile düşüyor. Yol şudur:
->   `adb shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.lezzetanatolia.app`
+>   `adb shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:com.lezzetanatolie.app`
 >   → *Saklama alanı kullanımı* → *Verileri temizle* → *Tamam*.
 > · **VERİ SİLME GELİŞTİRME DERLEMESİNİ DE SIFIRLIYOR.** Dev client'ın hatırladığı Metro adresi de
 >   siliniyor ve uygulama açılışta "Development Servers" ekranına düşüyor. Turdan önce

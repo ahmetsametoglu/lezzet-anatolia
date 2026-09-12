@@ -215,7 +215,7 @@ describe('FeedbackScreen', () => {
     expect(screen.queryByTestId('feedback-issue')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('feedback-review'));
-    expect(openURL).toHaveBeenCalledWith('https://g.page/lezzet-anatolia/review');
+    expect(openURL).toHaveBeenCalledWith('https://g.page/lezzet-anatolie/review');
     openURL.mockRestore();
   });
 

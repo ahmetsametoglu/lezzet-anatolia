@@ -38,8 +38,8 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-const SCHEME = 'lezzetanatolia';
-const BUNDLE_ID = 'com.lezzetanatolia.app';
+const SCHEME = 'lezzetanatolie';
+const BUNDLE_ID = 'com.lezzetanatolie.app';
 const METRO = process.env.UI_SHOT_METRO ?? 'http://localhost:8081';
 // Derin bağlantı sonrası yerleşme payı: navigasyon + veri çekimi. Parametrik (CLAUDE §4).
 const WAIT_MS = Number(process.env.UI_SHOT_WAIT_MS ?? 2000);
