@@ -106,7 +106,7 @@ function dayEndData(overrides: Partial<MoneyDayEnd> = {}): MoneyDayEnd {
         },
       ],
     },
-    unmatchedMovementCount: 0,
+    unexplainedMovementCount: 0,
     ...overrides,
   };
 }

@@ -231,13 +231,14 @@ function DayEndBody({ summary, header }: DayEndBodyProps) {
           `card-title` Lora, çünkü bu bir sayaç — bir satır değeri değil. */}
       <OperationsSurface tone="panel" padding="lg" style={styles.unmatched} testID="money-day-end-unmatched">
         <View style={styles.unmatchedRow}>
-          {/* SAYININ NE OLDUĞU ALTINDA (v3:24): "Eşleşmemiş hareket · 3" tek başına neyle
-              eşleşmediğini söylemiyordu — banka ekstresi. */}
+          {/* SAYININ NE OLDUĞU ALTINDA (v3:24): "İzah edilmemiş hareket · 3" tek başına neyin
+              eksik olduğunu söylemiyordu — bağ, belge ya da etiket (13.09; eskiden banka
+              mutabakat bayrağı sayılıyordu ve sistemin kendi yazdığı tahsilatlar da düşüyordu). */}
           <View style={styles.rowText}>
-            <Text style={styles.unmatchedLabel}>{t.dayEnd.unmatched.label}</Text>
-            <Text style={styles.rowHint}>{t.dayEnd.unmatched.hint}</Text>
+            <Text style={styles.unmatchedLabel}>{t.dayEnd.unexplained.label}</Text>
+            <Text style={styles.rowHint}>{t.dayEnd.unexplained.hint}</Text>
           </View>
-          <Text style={styles.unmatchedCount}>{String(summary.unmatchedMovementCount)}</Text>
+          <Text style={styles.unmatchedCount}>{String(summary.unexplainedMovementCount)}</Text>
         </View>
       </OperationsSurface>
 
