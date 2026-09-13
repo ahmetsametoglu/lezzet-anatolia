@@ -322,12 +322,14 @@ describe('eşleştirme hedefleri (12.13)', () => {
   });
 
   it('"ZATEN YAZMIŞTIM" — elle yazılan silinir, ekstre satırı bağlarını devralır (kullanıcı kararı 13.09)', async () => {
+    // Tutar bu dosyanın öteki fikstürlerinden AYRI (137,25): `beforeEach` yalnız hareketleri siler,
+    // önceki testin 120 €'luk belgesi yeniden AÇIK kalır ve aynı tutar + gün ile eş puanlı aday olurdu.
     const elle = await movements.insert({
-      accountId: bankAccount, direction: 'out', amountCents: 12_000, type: 'expense', tags: ['kira'], valueDate: dayOffset(-2), description: 'Eylül kirası',
+      accountId: bankAccount, direction: 'out', amountCents: 13_725, type: 'expense', tags: ['kira'], valueDate: dayOffset(-2), description: 'Eylül kirası',
     });
-    await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV SEPA LOYER', Montant: '-120,00', Solde: '0,00' }], 'zaten.csv');
+    await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV SEPA LOYER', Montant: '-137,25', Solde: '0,00' }], 'zaten.csv');
     // İkisi de bankada: aynı para iki kez.
-    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-24_000);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-27_450);
 
     const { rows, targets } = await matchQueue(bankAccount);
     expect(targets.provisional.map((m) => m.id)).toContain(elle.id);
@@ -339,7 +341,7 @@ describe('eşleştirme hedefleri (12.13)', () => {
     expect(satir).toMatchObject({ type: 'expense', tags: ['kira'], reconciled: true, explained: true, source: 'bank_import' });
     // İz künyede: hangi satır yutuldu, ne diyordu.
     expect(satir?.meta).toMatchObject({ absorbed: { movementId: elle.id, source: 'manual', description: 'Eylül kirası' } });
-    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-12_000);
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-13_725);
   });
 
   it('giren paranın adı SERMAYE konur; aynı satıra gider denemez', async () => {

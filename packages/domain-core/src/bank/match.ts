@@ -128,8 +128,15 @@ export function suggestMatches(
       return { kind: candidate.kind, id: candidate.id, score: Math.round(Math.min(1, score) * 100) / 100, reasons };
     })
     .filter((s): s is MatchSuggestion => s !== null && s.score >= MATCH_THRESHOLD)
-    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+    .sort((a, b) => b.score - a.score || KIND_PRIORITY[a.kind] - KIND_PRIORITY[b.kind] || a.id.localeCompare(b.id));
 }
+
+/**
+ * Eşit puanda hangi tür önde: o hesaba ZATEN yazılmış hareket en özgül kanıttır (operatör bunu tam bu
+ * hesap için yazdı), belge ondan sonra, mal kabul ve transfer ucu sonra, sipariş/iade en sonda.
+ * Rastgele kimliğe bırakılsaydı aynı kuyruk iki açılışta iki farklı öneri gösterirdi.
+ */
+const KIND_PRIORITY: Record<MatchKind, number> = { provisional: 0, document: 1, intake: 2, transfer: 3, order: 4, refund: 5 };
 
 /**
  * Öneri **tek başına** mı, yoksa yakın rakipleri mi var. İki aday birbirine yakınsa (aynı tutar,

@@ -54,6 +54,7 @@ export * from './money/movement';
 export * from './money/tag-slug';
 export * from './money/document-file';
 export * from './accounting/export';
+export * from './accounting/movement-export';
 export * from './accounting/line';
 export * from './accounting/profit';
 export * from './bank/column-mapping';

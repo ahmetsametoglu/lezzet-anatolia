@@ -393,7 +393,7 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
 ## 9. Ön muhasebe sınırı
 
 - Sistem **resmî muhasebe değildir**, e-fatura kesmez; **hiçbir resmî belge (fatura, avoir vb.) sistemde üretilmez** — müşteri faturasını muhasebe tarafından alır, sitede fatura indirme yoktur.
-- Yaptığı: dış muhasebe yazılımına gidecek veriyi temiz üretmek (export) ve o veriden iş rakamları çıkarmak.
+- Yaptığı: dış muhasebe yazılımına gidecek veriyi temiz üretmek (export: satış dosyası + dönemin **hareket dökümü** — her hareket hesabı, etiketi, belgesi ve karşı tarafıyla, 12.15) ve o veriden iş rakamları çıkarmak.
 - Resmî fatura numarası dış yazılımda üretilir; sistem bir **referans numarası** verir, sonradan gerçek fatura numarasıyla eşleştirilir.
 - Banka hareketleri Excel ile alınır, sipariş/alımlarla eşleştirilir (öneri + elle onay; tam otomatik değil).
 

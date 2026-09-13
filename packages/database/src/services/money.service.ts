@@ -363,6 +363,35 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     return OrderAmountsSchema.parse(rpcMoneyToCents(dbToApp(raw), ['amountCollected', 'amountRefunded']));
   }
 
+  /**
+   * Dönemin TÜM hareketleri, ham tablodan (transfer tek satır) — hareket dökümü (12.15). Sayfa sayfa
+   * çekilip birleştirilir: tek sorgu PostgREST'in satır tavanında (1000) sessizce keserdi ve dosya
+   * eksik çıkardı (`OrderSaleService.listPeriod` ile aynı gerekçe). İmleç dışarı sızmaz — bu okuma
+   * ekran için değil, TAM okuma için.
+   */
+  async listPeriod(from: string, to: string): Promise<MoneyMovement[]> {
+    const BATCH_SIZE = 500;
+    const all: MoneyMovement[] = [];
+    let cursor: KeysetCursor | undefined;
+    do {
+      const page = await this.getPage(
+        {},
+        {
+          orderBy: 'valueDate',
+          keysetAfter: cursor,
+          limit: BATCH_SIZE,
+          rangeFilters: [
+            { field: 'valueDate', operator: 'gte', value: from },
+            { field: 'valueDate', operator: 'lte', value: to },
+          ],
+        },
+      );
+      all.push(...page.rows);
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    return all;
+  }
+
   /** Tedarikçiye yapılan ödemeler — borç türetimi (Σ giriş − Σ ödeme, 12.3). */
   listBySupplier(supplierId: string): Promise<MoneyMovement[]> {
     return this.getAll({ supplierId }, { orderBy: 'valueDate' });
@@ -551,6 +580,11 @@ export class MoneyDocumentService extends BaseDbService<MoneyDocument, MoneyDocu
       keysetAfter: opts.cursor,
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
     });
+  }
+
+  /** Kimlik listesiyle belgeler — hareket dökümü (12.15) satırların belgelerini tek turda okur. */
+  listByIds(ids: readonly string[]): Promise<MoneyDocument[]> {
+    return this.getByIds([...ids]);
   }
 
   /** Bir mal kabulün belgeleri — alım faturası mal kabulün üstünde görünsün (12.3 bağı). */

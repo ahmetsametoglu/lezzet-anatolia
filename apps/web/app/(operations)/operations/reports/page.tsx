@@ -2,6 +2,7 @@ import { ProductService, ProductVariantService, serviceDb } from '@lezzet/databa
 import { toCents } from '@lezzet/helper';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { buildExport, pendingInvoices } from '@/lib/accounting/export';
+import { buildMovementExport } from '@/lib/accounting/movement-export';
 import { companyPnl, productProfits } from '@/lib/accounting/profit';
 import { guarded, requireAdmin, requireFinance } from '@/lib/guard';
 import { ReportsClient } from './reports-client';
@@ -42,13 +43,15 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const canSeeProfit = (await guarded(requireAdmin)).ok;
   const period = monthRange(urlState.ym);
 
-  const [profits, pnl, prevPnl, exportData, invoicePage] = await Promise.all([
+  const [profits, pnl, prevPnl, exportData, movementData, invoicePage] = await Promise.all([
     // Kâr okumaları YALNIZ yetkisi olana yapılır — yetkisiz kullanıcıya gösterilmeyecek bir sayıyı
     // hesaplamak hem boşuna iş, hem de bir gün bir sızıntının kaynağı.
     canSeeProfit ? productProfits(period) : [],
     canSeeProfit ? companyPnl(period) : null,
     canSeeProfit && urlState.cmp ? companyPnl(monthRange(previousMonth(urlState.ym))) : null,
     buildExport(period),
+    // Hareket dökümünün özeti (12.15): dosyaya girmeden "kaç hareket, kaçı izahsız" görünsün.
+    buildMovementExport(period),
     pendingInvoices({ limit: 30 }),
   ]);
 
@@ -99,6 +102,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         netCents: toCents(line.net),
         vatCents: toCents(line.vat),
       })),
+      movementCount: movementData.summary.movementCount,
+      unexplainedMovementCount: movementData.summary.unexplainedCount,
     },
     invoiceQueue: invoicePage.rows.map((sale) => ({
       orderId: sale.id,

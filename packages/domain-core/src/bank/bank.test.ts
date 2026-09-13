@@ -279,4 +279,13 @@ describe('eşleştirme önerisi', () => {
     // Elle yazılan tutar + gün ile öneri eşiğini geçer: "bunu zaten yazmıştım" hâli kaybolmaz.
     expect(suggestions[1]!.score).toBeGreaterThanOrEqual(0.6);
   });
+
+  it('EŞİT puanda tür sırası belirler: zaten yazılmış hareket belgenin önünde — rastgele kimlik değil', () => {
+    const belge = candidate({ kind: 'document', id: 'a-once', referenceNo: null, direction: 'out' });
+    const elle = candidate({ kind: 'provisional', id: 'z-sonra', referenceNo: null, direction: 'out' });
+    const suggestions = suggestMatches(row({ direction: 'out', label: 'PRLV' }), [belge, elle]);
+
+    expect(suggestions[0]!.score).toBe(suggestions[1]!.score);
+    expect(suggestions.map((s) => s.kind)).toEqual(['provisional', 'document']);
+  });
 });

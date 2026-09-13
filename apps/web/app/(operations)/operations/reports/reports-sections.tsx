@@ -6,7 +6,7 @@ import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { amount, money, num, percent, shortDate } from '@/components/operation/ui/format';
 import { Input } from '@/components/operation/form/input';
-import { generateExportAction, matchInvoiceAction } from './actions';
+import { generateExportAction, generateMovementExportAction, matchInvoiceAction } from './actions';
 import { COST_LABEL, NOTES } from './reports-labels';
 import type { ChannelCard, ExportView, InvoiceQueueRow, MetricView, PnlRow, VariantProfitRow } from './reports-types';
 import { monthLabel } from './reports-url';
@@ -216,15 +216,18 @@ export function ExportPanel({
   onChanged: () => void;
   stacked?: boolean;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<'sales' | 'movements' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /** Dosya İSTEMCİDE iniyor: sunucudan metin gelir, indirmeyi tarayıcı yapar (ayrı rota gerekmez). */
-  const download = async () => {
+  /**
+   * Dosya İSTEMCİDE iniyor: sunucudan metin gelir, indirmeyi tarayıcı yapar (ayrı rota gerekmez).
+   * İki dosya aynı yoldan: satış dosyası (12.7) ve hareket dökümü (12.15).
+   */
+  const download = async (kind: 'sales' | 'movements') => {
     setError(null);
-    setBusy(true);
-    const { data, error: actionError } = await generateExportAction(ym);
-    setBusy(false);
+    setBusy(kind);
+    const { data, error: actionError } = await (kind === 'sales' ? generateExportAction(ym) : generateMovementExportAction(ym));
+    setBusy(null);
     if (actionError || !data) {
       setError(actionError ?? 'Export üretilemedi.');
       return;
@@ -246,8 +249,31 @@ export function ExportPanel({
             {num(view.orderCount)} satış · {money(view.grossCents)} brüt · {money(view.vatCents)} KDV
           </span>
         </div>
-        <Button onClick={() => void download()} disabled={busy || view.orderCount === 0}>
-          {busy ? 'Üretiliyor…' : 'Export üret'}
+        <Button onClick={() => void download('sales')} disabled={busy !== null || view.orderCount === 0}>
+          {busy === 'sales' ? 'Üretiliyor…' : 'Satış dosyası'}
+        </Button>
+      </div>
+
+      {/* Hareket dökümü (12.15): satış dosyasının yanındaki ikinci dosya — alım, gider, maaş,
+          transfer, sermaye; her satır belgesi ve etiketiyle. İzahsız sayısı dosyaya girmeden görünür:
+          muhasebeciye eksik bilgiyle dosya göndermeden önce Para ekranında kapatılsın. */}
+      <div className={`flex gap-4 rounded-ops-card border border-ops-line bg-ops-surface p-4 ${stacked ? 'flex-col' : 'items-center'}`}>
+        <div className="flex flex-1 flex-col gap-0.5">
+          <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Hareket dökümü — {monthLabel(ym)}</span>
+          <span className="font-ops-body text-ops-xs text-ops-faint">
+            {num(view.movementCount)} hareket
+            {view.unexplainedMovementCount > 0 ? (
+              <>
+                {' · '}
+                <span className="text-ops-amber">{num(view.unexplainedMovementCount)} izahsız</span>
+              </>
+            ) : (
+              ' · hepsi izahlı'
+            )}
+          </span>
+        </div>
+        <Button variant="secondary" onClick={() => void download('movements')} disabled={busy !== null || view.movementCount === 0}>
+          {busy === 'movements' ? 'Üretiliyor…' : 'Hareket dökümü'}
         </Button>
       </div>
 

@@ -70,6 +70,9 @@ export interface ExportView {
   excludedGiftCount: number;
   excludedGiftGrossCents: number;
   byVatRate: { rate: number; netCents: number; vatCents: number }[];
+  /** Hareket dökümünün (12.15) dönemi: kaç hareket, kaçı izahsız — dosyaya girmeden görünsün. */
+  movementCount: number;
+  unexplainedMovementCount: number;
 }
 
 export interface ReportsData {
