@@ -1,7 +1,9 @@
+import type { MatchKind, MatchSuggestion } from '@lezzet/domain-core';
 import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance } from '@lezzet/types';
-import { money } from '@/components/operation/ui/format';
-import { ACCOUNT_TONE, DOCUMENT_KIND_LABEL, MOVEMENT_TYPE_LABEL } from './finance-labels';
-import type { AccountView, MatchCandidateView, MatchRowView, MovementRowView, OpenDocumentView } from './finance-types';
+import { dayMonth, money } from '@/components/operation/ui/format';
+import type { MatchTargets } from '@/lib/bank/reconcile';
+import { ACCOUNT_TONE, ACCOUNT_TYPE_LABEL, DOCUMENT_KIND_LABEL, MATCH_EFFECT, MOVEMENT_TYPE_LABEL, type MatchKindView } from './finance-labels';
+import type { AccountView, MatchCandidateView, MatchRowView, MatchTargetView, MovementRowView, OpenDocumentView } from './finance-types';
 
 // Para ekranının SAF indirgemeleri — servis satırı → görünüm satırı.
 //
@@ -147,18 +149,17 @@ export function toMovementRows(
 /**
  * Kuyruk satırının `matchQueue` dönüşünden görünüme indirgenmiş hâli.
  *
- * **Öneri yalnız `orderId` taşır** (`MatchSuggestion`: kimlik + puan + sebepler) — referans numarası,
- * açık tutar ve satış günü motorun ADAY nesnesinde kalır, cevabında değil. Ekran onları ayrı bir
- * okumadan alır (`OrderService.listByIds`, tek tur): motorun cevabını şişirmek yerine, gösterimin
- * ihtiyacını gösterim tarafı karşılıyor.
+ * **Öneri yalnız tür + kimlik taşır** (`MatchSuggestion`: kind, id, puan, sebepler) — referans,
+ * açık tutar ve tarih motorun ADAY nesnesinde kalır, cevabında değil. Ekran onları hedef
+ * listesinden alır (`toMatchTargets`): öneri ile hedef aynı `${kind}:${id}` anahtarıyla buluşur.
  */
 interface QueueInput {
   movement: Omit<AccountLedgerRow, 'ledgerAccountId' | 'signedAmountCents'> & { signedAmountCents?: number };
-  suggestions: readonly { orderId: string; score: number; reasons: readonly MatchReason[] }[];
+  suggestions: readonly { kind: MatchKind; id: string; score: number; reasons: readonly MatchReason[] }[];
   unambiguous: boolean;
 }
 
-type MatchReason = 'reference_in_label' | 'exact_amount' | 'close_amount' | 'same_day' | 'near_date' | 'customer_in_label';
+type MatchReason = MatchSuggestion['reasons'][number];
 
 /**
  * "Neden bu öneri" — motorun `reasons` dizisi operatörün diline çevrilir.
@@ -173,12 +174,12 @@ const REASON_LABEL: Record<MatchReason, string> = {
   close_amount: 'tutar yakın',
   same_day: 'aynı gün',
   near_date: 'tarih yakın',
-  customer_in_label: 'müşteri adı açıklamada',
+  name_in_label: 'ad açıklamada geçiyor',
 };
 
 const REASON_ORDER = [
   'reference_in_label',
-  'customer_in_label',
+  'name_in_label',
   'exact_amount',
   'close_amount',
   'same_day',
@@ -192,6 +193,96 @@ function reasonsOf(reasons: readonly MatchReason[]): string[] {
     .map((reason) => REASON_LABEL[reason]);
 }
 
+const targetKey = (kind: MatchKindView, id: string) => `${kind}:${id}`;
+/** Sipariş referansı okunamıyorsa kısaltılmış kimlik: UUID gösteren seçim penceresi okunamaz. */
+const orderName = (referenceNo: string | null, id: string) => `Sipariş ${referenceNo ?? `#${id.slice(0, 8)}`}`;
+
+/**
+ * Seçim penceresinin hedef listesi (12.13) — kapının listelerinden görünüme.
+ *
+ * Her hedef iki satır okunur (`title` / `detail`) ve kararı hazır taşır (`target`): pencere
+ * seçileni olduğu gibi action'a verir, kendi kimlik kurmaz. Yön hedefin üstünde durur; pencere
+ * satırın yönüne uymayanı hiç listelemez (giren paraya fatura ödemesi teklif edilmez).
+ */
+export function toMatchTargets(targets: MatchTargets, tagLabels: ReadonlyMap<string, string>): MatchTargetView[] {
+  const tagsOf = (tags: readonly string[]) => tags.map((tag) => tagLabels.get(tag) ?? tag).join(', ');
+  return [
+    ...targets.orders.map(
+      (order): MatchTargetView => ({
+        kind: 'order',
+        key: targetKey('order', order.id),
+        target: { kind: 'order', orderId: order.id },
+        title: orderName(order.referenceNo, order.id),
+        detail: `açık ${money(order.outstandingCents)} · satış ${dayMonth(order.saleDate)}`,
+        direction: 'in',
+      }),
+    ),
+    ...targets.refunds.map(
+      (order): MatchTargetView => ({
+        kind: 'refund',
+        key: targetKey('refund', order.id),
+        target: { kind: 'refund', orderId: order.id },
+        title: orderName(order.referenceNo, order.id),
+        detail: `net tahsilat ${money(order.netCollectedCents)} · satış ${dayMonth(order.saleDate)}`,
+        direction: 'out',
+      }),
+    ),
+    ...targets.documents.map(
+      (doc): MatchTargetView => ({
+        kind: 'document',
+        key: targetKey('document', doc.id),
+        target: { kind: 'document', documentId: doc.id },
+        title: `${DOCUMENT_KIND_LABEL[doc.kind]}${doc.number ? ` ${doc.number}` : ''} · ${doc.counterparty ?? '—'}`,
+        detail: `açık ${money(doc.balance.openAmountCents)} · ${dayMonth(doc.issuedOn)}${doc.tags.length ? ` · ${tagsOf(doc.tags)}` : ''}`,
+        direction: doc.direction,
+      }),
+    ),
+    ...targets.intakes.map(
+      (intake): MatchTargetView => ({
+        kind: 'intake',
+        key: targetKey('intake', intake.stockIntakeId),
+        target: { kind: 'intake', stockIntakeId: intake.stockIntakeId },
+        title: `Mal kabul ${dayMonth(intake.date)} · ${intake.supplierName ?? 'tedarikçisiz'}`,
+        detail: `açık ${money(intake.openAmountCents)} · toplam ${money(intake.amountCents)}`,
+        direction: 'out',
+      }),
+    ),
+    ...targets.transferLegs.map(
+      (leg): MatchTargetView => ({
+        kind: 'transfer',
+        key: targetKey('transfer', leg.id),
+        target: { kind: 'transfer', legId: leg.id },
+        // Ucun yönü gönderenin gözünden: uç `out` ise para o hesaptan BU hesaba geliyor.
+        title: leg.direction === 'out' ? `${leg.accountName} → bu hesap` : `bu hesap → ${leg.accountName}`,
+        detail: `${money(leg.amountCents)} · ${dayMonth(leg.valueDate)}${leg.description ? ` · ${leg.description}` : ''}`,
+        direction: leg.direction === 'out' ? 'in' : 'out',
+      }),
+    ),
+    ...targets.provisional.map(
+      (movement): MatchTargetView => ({
+        kind: 'provisional',
+        key: targetKey('provisional', movement.id),
+        target: { kind: 'provisional', movementId: movement.id },
+        title: movement.description?.trim() || MOVEMENT_TYPE_LABEL[movement.type],
+        detail: `${money(movement.amountCents)} · ${dayMonth(movement.valueDate)} · ${MOVEMENT_TYPE_LABEL[movement.type]}${
+          movement.tags.length ? ` · ${tagsOf(movement.tags)}` : ''
+        } · ${movement.source === 'system' ? 'sistem yazdı' : 'elle yazıldı'}`,
+        direction: movement.direction,
+      }),
+    ),
+    ...targets.accounts.map(
+      (account): MatchTargetView => ({
+        kind: 'transfer_to',
+        key: targetKey('transfer_to', account.id),
+        target: { kind: 'transfer_to', accountId: account.id },
+        title: account.name,
+        detail: ACCOUNT_TYPE_LABEL[account.type],
+        direction: null,
+      }),
+    ),
+  ];
+}
+
 /**
  * Eşleştirme kuyruğu — üç hâl, üç ayrı eylem (tezgâh sözleşmesi).
  *
@@ -199,10 +290,17 @@ function reasonsOf(reasons: readonly MatchReason[]): string[] {
  * zaten "iki aday yakın mı" sorusunun cevabıdır (`isUnambiguous`) ve ekran kendi eşiğini koysaydı
  * aynı satır için motorla ayrı düşerdi — motor "belirsiz" derken ekran "onayla" teklif ederdi.
  */
-export function toMatchRows(queue: readonly QueueInput[], orderRefs: ReadonlyMap<string, string>): MatchRowView[] {
+export function toMatchRows(queue: readonly QueueInput[], targets: readonly MatchTargetView[]): MatchRowView[] {
+  const targetOf = new Map(targets.map((target) => [target.key, target] as const));
   return queue.map((entry) => {
     const { movement, suggestions, unambiguous } = entry;
-    const best = suggestions[0];
+    // Hedef listesinde karşılığı olmayan öneri gösterilmez: kimliği olan ama adı olmayan bir aday
+    // onaylanamaz. (Kapı ikisini aynı turda kuruyor; ayrışırlarsa sebep kodda, ekranda değil.)
+    const candidates = suggestions.flatMap((suggestion): MatchCandidateView[] => {
+      const target = targetOf.get(targetKey(suggestion.kind, suggestion.id));
+      return target ? [{ ...target, score: suggestion.score, reasons: reasonsOf(suggestion.reasons) }] : [];
+    });
+    const best = candidates[0];
     const strength = !best ? 'none' : unambiguous ? 'strong' : 'ambiguous';
 
     return {
@@ -211,36 +309,17 @@ export function toMatchRows(queue: readonly QueueInput[], orderRefs: ReadonlyMap
       // Kuyruk tek hesabın kuyruğudur; işaret yönden türer (defter satırı gelmediyse de doğru olsun).
       signedAmountCents:
         movement.signedAmountCents ?? (movement.direction === 'out' ? -movement.amountCents : movement.amountCents),
+      direction: movement.direction,
       valueDate: movement.valueDate,
       strength,
-      sentence: sentenceOf(strength, best, orderRefs),
-      candidates: suggestions.map((suggestion) => toCandidate(suggestion, orderRefs)),
+      sentence: sentenceOf(strength, best),
+      candidates,
     };
   });
 }
 
-function toCandidate(suggestion: QueueInput['suggestions'][number], orderRefs: ReadonlyMap<string, string>): MatchCandidateView {
-  return {
-    orderId: suggestion.orderId,
-    // Referansı okunamayan sipariş kimliğiyle gösterilmez: operatöre UUID göstermek, seçim ekranını
-    // okunamaz kılardı. Kısaltılmış kimlik hiç olmazsa "hangisi" sorusunu ayırt eder.
-    referenceNo: orderRefs.get(suggestion.orderId) ?? `#${suggestion.orderId.slice(0, 8)}`,
-    score: suggestion.score,
-    reasons: reasonsOf(suggestion.reasons),
-  };
-}
-
-function sentenceOf(
-  strength: MatchRowView['strength'],
-  best: QueueInput['suggestions'][number] | undefined,
-  orderRefs: ReadonlyMap<string, string>,
-): string {
-  if (!best) return 'Eşleşen bulunamadı — tip/kategori seçip elle bağlayın.';
-  if (strength === 'strong') {
-    const reference = orderRefs.get(best.orderId);
-    return reference
-      ? `Sipariş ${reference} · açık tutarı kapatır ve siparişi "ödendi" yapar.`
-      : 'Tek güçlü aday var · onaylarsanız siparişin tahsilatı olur.';
-  }
-  return 'Birden çok sipariş bu satıra uyuyor — hangisi olduğunu siz seçin.';
+function sentenceOf(strength: MatchRowView['strength'], best: MatchCandidateView | undefined): string {
+  if (!best) return 'Eşleşen bulunamadı — "Elle bağla" ile hedefi seçin ya da satırın adını koyun.';
+  if (strength === 'strong') return `${best.title} · ${MATCH_EFFECT[best.kind]}.`;
+  return 'Birden çok hedef bu satıra uyuyor — hangisi olduğunu siz seçin.';
 }

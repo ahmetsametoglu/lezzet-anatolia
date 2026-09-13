@@ -13,6 +13,7 @@ import {
   NOTES,
   SUGGESTION_VIEW,
 } from './finance-labels';
+import type { ClassifyType } from '@/lib/bank/reconcile';
 import { ledgerRowKey } from './finance-types';
 import type { AccountView, LedgerView, MatchRowView, MovementRowView } from './finance-types';
 import { ALL_ACCOUNTS, FINANCE_PERIODS, PERIOD_LABEL, type FinanceUrlState } from './finance-url';
@@ -401,7 +402,7 @@ interface MatchQueueProps {
   tagOptions: Array<{ value: string; label: string }>;
   onApprove: (row: MatchRowView) => void;
   onPick: (row: MatchRowView) => void;
-  onClassify: (row: MatchRowView, tags: string[]) => void;
+  onClassify: (row: MatchRowView, type: ClassifyType, tags: string[]) => void;
   onDismiss: (row: MatchRowView) => void;
 }
 
@@ -457,10 +458,10 @@ function MatchCard({
 } & Pick<MatchQueueProps, 'tagOptions' | 'onApprove' | 'onPick' | 'onClassify' | 'onDismiss'>) {
   const view = SUGGESTION_VIEW[row.strength];
   const [classifying, setClassifying] = useState(false);
-  // Gider sınıflandırması yalnız para ÇIKIŞINDA anlamlı ve kapı da öyle diyor (`classifyAsExpense`
-  // `in` satırı reddediyor). Giren parada önerisi olmayan satırın cevabı gider değil — sermaye,
-  // banka iadesi ya da bilinmeyen olabilir; orada tek dürüst eylem "Atla".
-  const canClassify = row.strength === 'none' && row.signedAmountCents < 0;
+  // Hızlı gider çipleri yalnız para ÇIKIŞINDA (kapı da öyle diyor: gider çıkıştır). Giren paranın
+  // adı sermaye ya da bir hedef — o yol seçim penceresinden ("Elle bağla") geçer; artık hiçbir satır
+  // "Atla"ya mecbur değil (12.13).
+  const quickExpense = row.signedAmountCents < 0;
 
   return (
     <li className="flex flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-surface p-3.5">
@@ -475,17 +476,14 @@ function MatchCard({
         <Badge tone={view.tone} outline className="shrink-0">
           {view.label}
         </Badge>
-        <span className="font-ops-body text-ops-xs text-ops-muted">
-          {row.strength === 'none' && !canClassify
-            ? 'Eşleşen sipariş bulunamadı. Giren paranın sebebi gider olamaz — sermaye ya da banka iadesi olabilir; şimdilik kuyruktan düşürün.'
-            : row.sentence}
-        </span>
+        <span className="font-ops-body text-ops-xs text-ops-muted">{row.sentence}</span>
       </div>
 
-      {/* "Elle bağla" bir DİYALOG açmıyor, kartın içinde açılıyor: kuyruk seri onaylanan bir yüzey
-          ve her satır için pencere açıp kapatmak, on satırlık bir ekstreyi yirmi tıklamaya çevirirdi. */}
-      {/* Çipler SÖZLÜKTEN (13.09): tek dokunuş tek etiketle sınıflar — kuyruk seri geçilen bir yüzey,
-          ikinci etiket (ör. `ortak:ahmet`) hareket listesinden sonradan eklenir. */}
+      {/* Gider çipleri kartın İÇİNDE açılıyor: kuyruk seri onaylanan bir yüzey ve her satır için
+          pencere açıp kapatmak, on satırlık bir ekstreyi yirmi tıklamaya çevirirdi. Belgeye, mal
+          kabule, transfere ya da zaten yazılmış harekete bağlamak ise seçim penceresinin işi. */}
+      {/* Çipler SÖZLÜKTEN (13.09): tek dokunuş tek etiketle sınıflar — ikinci etiket
+          (ör. `ortak:ahmet`) hareket listesinden sonradan eklenir. */}
       {classifying ? (
         <div className="flex flex-col gap-1.5">
           <span className="font-ops-body text-ops-micro text-ops-faint">Bu çıkış hangi gider?</span>
@@ -498,7 +496,7 @@ function MatchCard({
                   key={option.value}
                   type="button"
                   disabled={busy}
-                  onClick={() => onClassify(row, [option.value])}
+                  onClick={() => onClassify(row, 'expense', [option.value])}
                   className="cursor-pointer rounded-ops-chip border border-ops-line px-2.5 py-1 font-ops-body text-ops-xs text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive-dark disabled:cursor-wait disabled:opacity-60"
                 >
                   {option.label}
@@ -510,37 +508,44 @@ function MatchCard({
       ) : null}
 
       <div className="flex gap-2">
-        {row.strength === 'none' && !canClassify ? null : (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              if (row.strength === 'strong') return onApprove(row);
-              if (canClassify) return setClassifying((open) => !open);
-              return onPick(row);
-            }}
-            className={`flex-1 cursor-pointer rounded-ops-btn px-3 py-2 font-ops-display text-ops-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${
-              row.strength === 'strong'
-                ? 'bg-ops-olive text-ops-on-olive hover:bg-ops-olive-dark'
-                : 'border border-ops-line-strong text-ops-ink hover:bg-ops-surface-sunken'
-            }`}
-          >
-            {view.action}
-          </button>
-        )}
-        {/* **"Düzelt" ÜÇ HÂLDE DE var** (çizimin kendi kararı) ve asıl işi güçlü adayda: öneri
-            güçlü ama yanlışsa tek çare "Atla" olurdu — o da satırı kuyruktan düşürüp doğru
-            eşleşmeyi de kaybettirirdi. Çoklu adayda birincil düğmeyle aynı pencereyi açar; ikisi
-            aynı soruyu soruyor. */}
         <button
           type="button"
           disabled={busy}
-          onClick={() => onPick(row)}
-          title="Adaylar arasından kendin seç"
-          className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-2 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:bg-ops-surface-sunken disabled:cursor-wait disabled:opacity-60"
+          onClick={() => (row.strength === 'strong' ? onApprove(row) : onPick(row))}
+          className={`flex-1 cursor-pointer rounded-ops-btn px-3 py-2 font-ops-display text-ops-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${
+            row.strength === 'strong'
+              ? 'bg-ops-olive text-ops-on-olive hover:bg-ops-olive-dark'
+              : 'border border-ops-line-strong text-ops-ink hover:bg-ops-surface-sunken'
+          }`}
         >
-          Düzelt
+          {view.action}
         </button>
+        {/* **"Düzelt"in asıl işi güçlü adayda:** öneri güçlü ama yanlışsa tek çare "Atla" olurdu —
+            o da satırı kuyruktan düşürüp doğru eşleşmeyi de kaybettirirdi. Çoklu adayda ve
+            önerisiz satırda birincil düğme zaten aynı pencereyi açıyor; düğme ikinci kez çizilmez. */}
+        {row.strength === 'strong' ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onPick(row)}
+            title="Hedefi kendin seç"
+            className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-2 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:bg-ops-surface-sunken disabled:cursor-wait disabled:opacity-60"
+          >
+            Düzelt
+          </button>
+        ) : null}
+        {quickExpense ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setClassifying((open) => !open)}
+            aria-expanded={classifying}
+            title="Bir kayda bağlanmayan çıkış: etiketiyle gider yaz"
+            className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-2 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:bg-ops-surface-sunken disabled:cursor-wait disabled:opacity-60"
+          >
+            Gider
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={busy}

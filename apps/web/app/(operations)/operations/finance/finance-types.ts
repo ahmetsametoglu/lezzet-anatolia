@@ -1,6 +1,7 @@
-import type { Account, AccountLedgerRow, MoneyDocument, MovementTag } from '@lezzet/types';
+import type { Account, AccountLedgerRow, MoneyDocument, MovementDirection, MovementTag } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
-import type { SuggestionStrength } from './finance-labels';
+import type { ClassifyType, MatchTarget } from '@/lib/bank/reconcile';
+import type { MatchKindView, SuggestionStrength } from './finance-labels';
 import type { FinanceUrlState } from './finance-url';
 
 // Para ekranının GÖRÜNÜM MODELİ. Kural (CLAUDE.md §1): view-model şemadan TÜRETİLİR —
@@ -68,26 +69,42 @@ export interface MatchRowView {
   /** Bankanın kendi yazdığı satır ("VIREMENT 8829 LEROY") — sadeleştirilmeden gösterilir. */
   bankLine: string;
   signedAmountCents: number;
+  /** Satırın yönü — seçim penceresi yalnız bu yöne uyan hedefleri listeler. */
+  direction: MovementDirection;
   valueDate: string;
   strength: SuggestionStrength;
-  /** Önerinin cümlesi — güçlü adayda ne yapacağını da söyler ("…→ 'ödendi' yapar"). */
+  /** Önerinin cümlesi — güçlü adayda ne yapacağını da söyler ("…belgeye bağlanır, açık kalanı düşer"). */
   sentence: string;
   /** Onaya gidecek adaylar; `strength === 'none'` iken boş. */
   candidates: MatchCandidateView[];
 }
 
-export interface MatchCandidateView {
-  orderId: string;
-  referenceNo: string;
+/**
+ * Eşleştirme HEDEFİ (12.13) — seçim penceresinin bir satırı: sipariş, açık belge, mal kabul,
+ * transfer ucu, başka hesap ya da o hesaba zaten yazılmış hareket.
+ *
+ * `target` kapının aldığı kararın kendisidir (`MatchTarget`), ekran onu olduğu gibi gönderir;
+ * `title`/`detail` operatörün okuduğu iki satır. Kimlik yerine ad: UUID gösteren bir seçim
+ * penceresi okunamaz.
+ */
+export interface MatchTargetView {
+  kind: MatchKindView;
+  /** `${kind}:${id}` — öneri ile hedef listesi aynı anahtarla buluşur. */
+  key: string;
+  target: MatchTarget;
+  title: string;
+  detail: string;
+  /** Hedefin kapattığı banka yönü; `null` = iki yöne de uyar (başka hesaba transfer). */
+  direction: MovementDirection | null;
+}
+
+export interface MatchCandidateView extends MatchTargetView {
   /** 0–1 arası puan (motorun kendi ölçüsü) — çoklu adayda hangisinin önde olduğunu gösterir. */
   score: number;
   /**
    * "Neden bu aday" — motorun `reasons` alanının insan diline çevrilmiş, en güçlü iki maddesi.
-   *
-   * Açık tutar ve satış günü BURADA YOK: motor onları aday nesnesinde kullanıp cevabında geri
-   * vermiyor. Ekranın onlara gerçekten ihtiyacı olsaydı ayrıca okunurdu; ama seçim ekranında
-   * ayırt edici olan şey tutar değil (adayların hepsi aynı tutara uyduğu için çoklu aday oldular)
-   * — ayıran şey tam olarak bu sebeplerdir.
+   * Seçim ekranında ayırt edici olan şey tutar değil (adayların hepsi aynı tutara uyduğu için
+   * çoklu aday oldular) — ayıran şey tam olarak bu sebeplerdir.
    */
   reasons: string[];
 }
@@ -132,6 +149,12 @@ export interface FinanceData {
   ledger: LedgerView;
   /** Eşleşme bekleyen banka satırları. Hesap seçili değilken boş (kuyruk hesaba bağlı). */
   queue: MatchRowView[];
+  /**
+   * Seçim penceresinin hedef listesi (12.13): açık belgeler, ödenmemiş kabuller, bekleyen transfer
+   * uçları, o hesaba zaten yazılmış hareketler, penceredeki satışlar, öteki hesaplar. Öneriler bu
+   * listenin puanlanmış alt kümesidir; elle seçim hepsini görür.
+   */
+  matchTargets: MatchTargetView[];
   /** Açık belgeler — ödenmemiş faturalar; doğal tavanlı (kapanan düşer), tek turda. */
   openDocuments: OpenDocumentView[];
   /** Belge formunun tedarikçi seçeneği; yalnız aktif tedarikçiler. */
@@ -177,8 +200,8 @@ export interface FinanceViewProps {
   onSaved: () => void;
   onApprove: (row: MatchRowView) => void;
   onPick: (row: MatchRowView) => void;
-  /** Banka satırını gider yapar — sözlükten etiket slug'larıyla (13.09; eskiden tek kategori). */
-  onClassify: (row: MatchRowView, tags: string[]) => void;
+  /** Banka satırının ADINI koyar — gider (çıkış) ya da sermaye (giriş), sözlükten etiketlerle (13.09). */
+  onClassify: (row: MatchRowView, type: ClassifyType, tags: string[]) => void;
   onDismiss: (row: MatchRowView) => void;
   /** Defter satırını etiketler — izah kuyruğunu kapatan yol (12.12). Hangi satır beklemede: `tagBusyId`. */
   onTag: (movementId: string, tags: string[]) => void;

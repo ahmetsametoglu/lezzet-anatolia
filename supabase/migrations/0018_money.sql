@@ -166,6 +166,19 @@ create table public.money_movement (
   -- mükerrer yazım her bakiyeyi ve her kâr raporunu yalancı yapardı.
   import_fingerprint text,
   bank_import_id uuid,
+  /*
+    KARŞI UÇ (12.13 · kullanıcı kararı 13.09) — "bu ekstre satırı, şu transferin öteki yakasıdır."
+
+    Transfer TEK satırdır ve görünüm onu karşı hesaba aynalar. Karşı hesap ekstreyle beslenen bir
+    bankaysa ekstre o yakayı bir kez daha getirir: kasadan yatırılan 600 € bankada hem ayna hem ekstre
+    satırı olarak durur ve iki kez sayılır. Ekstre satırı buradan transfer ucuna bağlanınca ayna SUSAR
+    (`account_movement`): iki gerçek satır kendi hesaplarında durur, hiçbiri aynalanmaz. Stripe
+    payout'unun banka tarafı da böyle kapanır (12.14).
+
+    Yalnız ekstre satırı taşır ve ancak transferse (kısıt aşağıda). Uç silinirse bağ düşer ve satır
+    kendi başına aynalanan bir transfer olarak kalır — para yine tek kez sayılır.
+  */
+  counterpart_movement_id uuid references public.money_movement (id) on delete set null,
   created_at timestamptz not null default now(),
   -- İZAH (13.09 · kullanıcı kararı): hareket şu dördünden biriyle açıklanır — bir işe bağ (sipariş,
   -- mal kabul, tedarikçi), bir belge, en az bir etiket, ya da transfer (karşı hesap). Hiçbiri yoksa
@@ -183,6 +196,11 @@ create table public.money_movement (
   constraint money_movement_transfer_shape check (
     (type = 'transfer' and counter_account_id is not null and counter_account_id <> account_id)
     or (type <> 'transfer' and counter_account_id is null)
+  ),
+  -- Karşı ucu yalnız EKSTRE satırı ve yalnız TRANSFER taşır (12.13): elle yazılan satırın karşısında
+  -- bir ekstre yoktur, transfer olmayan satırın "öteki yakası" olmaz.
+  constraint money_movement_counterpart_shape check (
+    counterpart_movement_id is null or (source = 'bank_import' and type = 'transfer')
   )
 );
 
@@ -217,6 +235,10 @@ create unique index money_movement_import_key on public.money_movement (account_
 -- `null`'lar tekil karşılaştırmada birbirine eşit sayılmaz, yani bu kısıta hiç takılmazlar.
 -- `on conflict (idempotency_key)` de böylece çıkarım inceliği olmadan hedefleyebiliyor.
 create unique index money_movement_idempotency_key on public.money_movement (idempotency_key);
+-- Transfer ucunun karşı satırı TEK olur (12.13): iki ekstre satırı aynı ucu sahiplenemez — ikisi de
+-- sahiplenseydi bir para iki ekstre satırında yaşardı.
+create unique index money_movement_counterpart_key on public.money_movement (counterpart_movement_id)
+  where counterpart_movement_id is not null;
 
 -- ── Defter satırı ────────────────────────────────────────────────────────────
 -- Bir hareket DOKUNDUĞU HER HESAPTA bir satır üretir: normal hareket bir, transfer iki. Bakiye de
@@ -234,11 +256,17 @@ select m.*,
   from public.money_movement m
 union all
 -- Transferin karşı ucu: para gönderenden çıkıp alana girer → işaret ters.
+--
+-- AYNA SUSAR (12.13) — karşı yaka ekstreden gelmişse. Ucu bir ekstre satırı sahiplenmişse
+-- (`counterpart_movement_id` ona bakıyor) ya da satırın kendisi bir ucun karşı satırıysa, iki
+-- gerçek satır kendi hesaplarında durur; aynalamak aynı parayı iki kez sayardı.
 select m.*,
        m.counter_account_id as ledger_account_id,
        case when m.direction = 'in' then -m.amount else m.amount end as signed_amount
   from public.money_movement m
- where m.counter_account_id is not null;
+ where m.counter_account_id is not null
+   and m.counterpart_movement_id is null
+   and not exists (select 1 from public.money_movement c where c.counterpart_movement_id = m.id);
 
 -- ── Bakiye ───────────────────────────────────────────────────────────────────
 -- Hiç hareketi olmayan hesap da listede görünür (0 bakiyeyle) — `left join`; aksi halde yeni açılan
@@ -292,6 +320,24 @@ select d.id                                                       as document_id
   from public.money_document d
   left join public.money_movement m on m.document_id = d.id
  group by d.id;
+
+-- ── Mal kabulün açık kalanı ──────────────────────────────────────────────────
+-- Tedarikçi borcu türetilir (12.3): kabulün tutarı − kabule bağlı alım ödemeleri. Banka eşleştirmesi
+-- (12.13) "bu çıkış hangi mal kabulün parası" sorusunu buradan yanıtlar. Faturası belge olarak
+-- girilmiş kabul (`money_document.stock_intake_id`) `has_document = true` taşır ve aday listesine
+-- belge üzerinden girer — aynı borcun iki aday olması operatörü ikilemde bırakırdı.
+create or replace view public.stock_intake_balance as
+select i.id                                                       as stock_intake_id,
+       i.supplier_id,
+       i.date,
+       i.total_amount                                             as amount,
+       coalesce(sum(case when m.direction = 'out' then m.amount else -m.amount end), 0)::numeric(12, 2) as paid,
+       (i.total_amount - coalesce(sum(case when m.direction = 'out' then m.amount else -m.amount end), 0))::numeric(12, 2)
+                                                                  as open_amount,
+       exists (select 1 from public.money_document d where d.stock_intake_id = i.id) as has_document
+  from public.stock_intake i
+  left join public.money_movement m on m.stock_intake_id = i.id and m.type = 'purchase'
+ group by i.id;
 
 alter table public.account enable row level security;
 alter table public.movement_tag enable row level security;
@@ -432,6 +478,87 @@ revoke execute on function public.record_order_movement(uuid, uuid, numeric, mov
 -- kimliğiyle değil. Kısmi indeks — künyeyi yalnız sağlayıcı üzerinden geçen ödemeler taşır.
 create index money_movement_provider_ref_idx on public.money_movement ((meta ->> 'providerRef'))
   where meta ? 'providerRef';
+
+-- ── Ekstre satırı, elle yazılmış hareketi yutar ──────────────────────────────
+-- 12.13 · kullanıcı kararı 13.09: banka hesabına ELLE de yazılır ("kira ödendi" o gün girilir) ve
+-- ekstre gelince aynı para bir kez daha düşer. İki satır tek satıra iner: EKSTRE SATIRI kalır (parmak
+-- izi mükerrer korumasının dayanağıdır — ekstre yeniden yüklense de satır tekrar girmez), elle
+-- yazılanın bağları ona geçer (tip, etiketler, belge, sipariş, mal kabul, tedarikçi, karşı hesap,
+-- yazım kimliği, künye) ve elle yazılan SİLİNİR. İzi ekstre satırının künyesinde durur
+-- (`meta.absorbed`: kimlik, kaynak, tutar, tarih, açıklama).
+--
+-- NEDEN RPC (STACK §13 (b)): silme + devralma bölünemez. Silinip devralınmasa bağlar kaybolur;
+-- devralınıp silinmese para iki kez sayılır. Tekil `idempotency_key` de ancak bu sırayla taşınır:
+-- önce eski satır düşer, sonra yenisi anahtarı alır.
+--
+-- Elle yazılanı başka bir bankanın ekstre satırı "karşı uç" diye sahiplenmişse (iki banka arası
+-- transfer) o bağ ekstre satırına taşınır — silme onu NULL'a düşürüp aynayı yeniden açardı.
+create or replace function public.absorb_provisional_movement(p_statement_id uuid, p_provisional_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  s public.money_movement%rowtype;
+  p public.money_movement%rowtype;
+begin
+  select * into s from public.money_movement where id = p_statement_id for update;
+  if not found then
+    raise exception 'absorb: ekstre satırı bulunamadı (%)', p_statement_id;
+  end if;
+  if s.source <> 'bank_import' then
+    raise exception 'absorb: yutan satır ekstreden gelmiyor (%)', p_statement_id;
+  end if;
+  if s.reconciled then
+    raise exception 'absorb: ekstre satırı zaten eşleştirilmiş (%)', p_statement_id;
+  end if;
+
+  select * into p from public.money_movement where id = p_provisional_id for update;
+  if not found then
+    raise exception 'absorb: elle yazılan hareket bulunamadı (%)', p_provisional_id;
+  end if;
+  if p.source = 'bank_import' then
+    raise exception 'absorb: ekstre satırı ekstre satırını yutamaz (%)', p_provisional_id;
+  end if;
+  if p.account_id <> s.account_id then
+    raise exception 'absorb: iki hareket aynı hesapta değil';
+  end if;
+  if p.direction <> s.direction then
+    raise exception 'absorb: iki hareketin yönü farklı';
+  end if;
+
+  -- Başka bir ekstre satırı elle yazılanı karşı uç diye sahiplenmişse bağ ekstre satırına geçer.
+  update public.money_movement
+     set counterpart_movement_id = p_statement_id
+   where counterpart_movement_id = p_provisional_id;
+
+  delete from public.money_movement where id = p_provisional_id;
+
+  update public.money_movement
+     set type = p.type,
+         tags = p.tags,
+         document_id = p.document_id,
+         counter_account_id = p.counter_account_id,
+         order_id = p.order_id,
+         stock_intake_id = p.stock_intake_id,
+         supplier_id = p.supplier_id,
+         idempotency_key = p.idempotency_key,
+         meta = coalesce(s.meta, '{}'::jsonb) || coalesce(p.meta, '{}'::jsonb)
+                || jsonb_build_object('absorbed', jsonb_build_object(
+                     'movementId', p.id, 'source', p.source, 'amount', p.amount, 'valueDate', p.value_date,
+                     'description', p.description, 'createdAt', p.created_at)),
+         reconciled = true
+   where id = p_statement_id;
+
+  -- Sipariş parasıysa cache kaynaktan yeniden kurulur: tutar farklıysa (ekstre haklıdır) toplam değişir.
+  if p.order_id is not null then
+    perform public.resync_order_amounts(p.order_id);
+  end if;
+end;
+$$;
+
+revoke execute on function public.absorb_provisional_movement(uuid, uuid) from public, anon, authenticated;
 
 
 -- ═══ MUHASEBE ═══

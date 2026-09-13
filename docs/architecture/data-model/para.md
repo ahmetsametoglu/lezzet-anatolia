@@ -54,6 +54,7 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 | `idempotency_key` | text | • |  |
 | `import_fingerprint` | text | • |  |
 | `bank_import_id` | uuid | • |  |
+| `counterpart_movement_id` | uuid | • |  |
 | `created_at` | timestamptz |  | `now()` |
 | `explained` | boolean |  | *üretilmiş* |
 <!-- /alanlar -->
@@ -68,7 +69,9 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 - **`source`** — `system` (13.09): webhook, kapıda tahsilat, hızlı satış, payout. Eskiden hepsi `manual` yazılıyor, Stripe tahsilatı elle girilmiş satırdan ayırt edilemiyordu.
 - **`meta`** — ek künye. Reklam giderinde `{campaign}` taşır: kampanya gideri ↔ ciro eşleşmesi (gerçek ROI) bu alandan çıkar; Stripe tahsilatında `{providerRef}`.
 - **`counter_account_id`** — transferde karşı hesap (nakit→banka, Stripe→banka payout, banka→ortak carisi).
+- **`counterpart_movement_id`** (12.13) — "bu ekstre satırı şu transferin öteki yakasıdır". Transfer tek satırdır ve karşı hesaba aynalanır; karşı hesap ekstreyle beslenen bir bankaysa ekstre o yakayı bir kez daha getirir (kasadan yatırılan 600 € bankada hem ayna hem ekstre satırı). Ekstre satırı buradan uca bağlanınca **ayna susar** (`account_movement`): iki gerçek satır kendi hesaplarında durur, hiçbiri aynalanmaz. Yalnız ekstre satırı taşır, yalnız transferde; bir ucu tek satır sahiplenir (tekil indeks). Uç silinirse bağ düşer ve satır kendi başına aynalanan bir transfer olarak kalır.
 - **`import_fingerprint`** — mükerrer koruması; aşağıdaki bölüme bak.
+- **Türetilmiş görünümler:** `account_movement` (defter satırı, aynalama), `account_balance`, `money_document_balance` (belgenin açık kalanı), `stock_intake_balance` (12.13: mal kabulün açık kalanı = kabul tutarı − kabule bağlı alım ödemeleri; faturası belge olarak girilmiş kabul `has_document` taşır ve borcu belgede görünür, iki kez değil).
 
 ### Mükerrer koruması (`import_fingerprint`)
 
@@ -77,6 +80,12 @@ Bankalar satır kimliği vermez, kimlik ÜRETİLİR: hesap + değer tarihi + tut
 Sıra şart: aynı gün çekilen iki ayrı 20 € gerçekten iki harekettir ve naif bir özet birini yutardı; dosya yeniden yüklendiğinde ise her satır kendi eşiyle çakışır ve hiçbiri tekrar yazılmaz.
 
 Tekil indeks kısmi DEĞİLDİR (`on conflict` kısmi indeksi hedefleyemez); NULL'lar tekil karşılaştırmada eşit sayılmadığı için elle girilen hareketler kısıta hiç takılmaz.
+
+### Ekstre satırının karşılığı (12.13 · kullanıcı kararı 13.09)
+
+Her banka satırının bir karşılığı olmalı. Kuyruk satıra şu hedefleri önerir ya da seçtirir: sipariş tahsilatı (giriş), müşteri iadesi (çıkış; puanlanmaz, listeden seçilir — iade borcu kalem ister), açık belge (belgenin yönü), mal kabul — tedarikçi borcu (çıkış, `stock_intake_balance`), transferin öteki yakası (`counterpart_movement_id`), başka hesaba transfer (uç yok; satırın kendisi transfer olur ve aynalanır), o hesaba **ekstreden önce elle ya da sistemce yazılmış hareket**, ve ad koyma (gider / sermaye, etiketle). Satır **yerinde güncellenir**, silinip yeniden yazılmaz: parmak izi mükerrer korumasının dayanağıdır.
+
+**Banka hesabına elle de yazılır; ekstre gelince ekstre satırı elle yazılanı yutar** (kullanıcı kararı 13.09, seçenek "elle de yazılır, sonra birleşir"): "kira ödendi" o gün elle girilir, ekstre gelince aynı para bir kez daha düşer ve operatör satırı "zaten yazılmış hareket"e bağlar. `absorb_provisional_movement` tek transaction'da elle yazılanın bağlarını (tip, etiketler, belge, sipariş, mal kabul, tedarikçi, karşı hesap, yazım kimliği, künye) ekstre satırına geçirir ve elle yazılanı **siler**; izi ekstre satırının `meta.absorbed` künyesinde durur (kimlik, kaynak, tutar, tarih, açıklama). Ekstre haklıdır: tutar farklıysa sipariş cache'i yeniden kurulur. Reddedilen seçenek "bankaya elle yazılmaz, ekstre getirir"di — bakiye ekstre yüklenene kadar eski kalırdı.
 
 ### Ortak cari hesabı (`account.type = partner`, 13.09)
 

@@ -17,6 +17,7 @@ import {
   MovementTagSchema,
   MovementTagUpdateSchema,
   OrderAmountsSchema,
+  StockIntakeBalanceSchema,
   DEFAULT_PAGE_SIZE,
   type Account,
   type AccountBalance,
@@ -38,6 +39,7 @@ import {
   type MovementType,
   type OrderAmounts,
   type Page,
+  type StockIntakeBalance,
 } from '@lezzet/types';
 import { fromCents, toCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
@@ -426,6 +428,52 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     return [...buckets.values()].sort((a, b) => b.totalCents - a.totalCents);
   }
 
+  /**
+   * Karşı ucu bekleyen transfer uçları (12.13): karşı hesabı bu banka olan ve henüz hiçbir ekstre
+   * satırının sahiplenmediği transferler — kasadan yatırma, Stripe payout'u, ortak carisinden
+   * dönüş. Ekstre bu hesabın satırını getirince adaylar bunlardır.
+   *
+   * İki okuma, ikisi de küçük: uçlar ve bu hesabın sahiplendiği uç kimlikleri. "Sahiplenilmemiş"
+   * süzgeci PostgREST'te alt sorgu isterdi; fark bellekte alınır.
+   */
+  async listTransferLegsAwaiting(counterAccountId: string): Promise<MoneyMovement[]> {
+    const [legs, claimed] = await Promise.all([
+      this.getAll({ type: 'transfer', counterAccountId }, { orderBy: 'valueDate', orderDirection: 'desc' }),
+      this.getAll({ accountId: counterAccountId }, { isNotNullFields: ['counterpartMovementId'] }),
+    ]);
+    const taken = new Set(claimed.map((row) => row.counterpartMovementId));
+    return legs.filter((leg) => !taken.has(leg.id));
+  }
+
+  /**
+   * Bu hesaba EKSTRE DIŞINDAN yazılmış hareketler (elle ya da sistem) — "bunu zaten yazmıştım"
+   * adayları (12.13 · kullanıcı kararı 13.09). Pencere çağıranındır: kuyruğun tarih aralığı.
+   */
+  listProvisional(accountId: string, from: string, to: string): Promise<MoneyMovement[]> {
+    return this.getAll(
+      { accountId, source: ['manual', 'system'] },
+      {
+        orderBy: 'valueDate',
+        orderDirection: 'desc',
+        rangeFilters: [
+          { field: 'valueDate', operator: 'gte', value: from },
+          { field: 'valueDate', operator: 'lte', value: to },
+        ],
+      },
+    );
+  }
+
+  /**
+   * Ekstre satırı elle yazılanı YUTAR — tek transaction (`absorb_provisional_movement`, 12.13):
+   * bağlar ekstre satırına geçer, elle yazılan silinir, izi künyede kalır. Dönüş satırın yeni hâli.
+   */
+  async absorbProvisional(statementId: string, provisionalId: string): Promise<MoneyMovement> {
+    await this.executeRpc('absorb_provisional_movement', { p_statement_id: statementId, p_provisional_id: provisionalId });
+    const row = await this.getById(statementId);
+    if (!row) throw new Error(`absorb: ekstre satırı yutmadan sonra okunamadı (${statementId})`);
+    return row;
+  }
+
   /** Banka ekstresiyle eşleşti işareti (12.4) — eşleşme kuyruğu bunu boşaltır. */
   markReconciled(id: string, reconciled = true): Promise<MoneyMovement> {
     return this.update({ id, reconciled });
@@ -529,5 +577,30 @@ export class MoneyDocumentService extends BaseDbService<MoneyDocument, MoneyDocu
       const balance = balanceOf.get(doc.id);
       return balance ? [{ ...doc, balance }] : [];
     });
+  }
+}
+
+/**
+ * **Mal kabulün açık kalanı** (`stock_intake_balance`, 12.13) — tedarikçi borcunun kabul başına
+ * türetimi: kabul tutarı − kabule bağlı alım ödemeleri. Görünüm salt okunurdur; kabul yazımı
+ * `StockIntakeService`ten (RPC), ödeme yazımı para kapısından geçer.
+ */
+export class StockIntakeBalanceService extends BaseDbService<StockIntakeBalance, never, never> {
+  /** Görünüm kolonları `amount` / `paid` / `open_amount` euro `numeric`; app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['amountCents', 'paidCents', 'openAmountCents'];
+
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'stock_intake_balance', StockIntakeBalanceSchema, StockIntakeBalanceSchema as never, StockIntakeBalanceSchema as never, false);
+  }
+
+  /**
+   * ÖDENMEMİŞ kabuller, BELGESİZ olanlar: belgeli kabulün borcu belgenin açık kalanında durur,
+   * burada ikinci kez aday olmaz. Doğal tavanlı (ödenen düşer), tek turda.
+   */
+  listOpen(): Promise<StockIntakeBalance[]> {
+    return this.getAll(
+      { hasDocument: false },
+      { orderBy: 'date', orderDirection: 'desc', rangeFilters: [{ field: 'openAmountCents', operator: 'gt', value: 0 }] },
+    );
   }
 }

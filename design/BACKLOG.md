@@ -485,6 +485,13 @@ sağ sütunda banka kuyruğunun üstüne "Açık belgeler" kart listesi (kuyruk 
 satırında "Etiketle" çip satırı ve ortak carisinde bakiye altı cümle. Çizim yapılırsa bakılacaklar:
 belge panelinin sağ sütundaki ağırlığı (kuyrukla yer paylaşıyor), belge kartında dosya ikonu,
 etiket çiplerinin ortak/gider ayrımını renkle söyleyip söylemeyeceği.
+**Eki (12.13):** eşleştirme kuyruğunun "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız sipariş
+adaylarını gösteriyordu; artık bir HEDEF SEÇİCİ — öneriler üstte, altında yöne uyan bütün hedefler
+bölüm bölüm (zaten yazılmış hareket · açık belge · mal kabul · transfer ucu · sipariş · iade · başka
+hesap), arama kutusu, en altta gider/sermaye etiket çipleri. Kartta çıkış satırına "Gider" düğmesi
+(çipler kartın içinde) eklendi. Çizim yapılırsa bakılacaklar: bölümlerin sekme mi liste mi olacağı,
+puanlı önerinin öbür hedeflerden nasıl ayrışacağı, "zaten yazılmış hareket" satırında silinecek
+kaydın uyarı tonu.
 
 **KARGO DÖNÜŞÜ — hiçbir yüzeyi yok, 05.09 (ölçüldü).** Müşteriye ulaşmayan bir kargo kolisi depoya
 geri döndüğünde onu karşılayan ekran YOK: ne mobilde ne web operasyonda. Boşluk kayıtsızdı; burada

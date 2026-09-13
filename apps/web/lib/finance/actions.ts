@@ -7,7 +7,7 @@ import { requireFinance } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { recordAdvertisingExpense, recordExpense, recordMovement, transfer } from '@/lib/money/movement';
-import { applyOrderMatch, classifyAsExpense, dismissRow } from '@/lib/bank/reconcile';
+import { applyMatch, classifyRow, dismissRow, type ClassifyType, type MatchTarget } from '@/lib/bank/reconcile';
 import { ADVERTISING_TAG, type DocumentKind, type MovementDirection as DocumentDirection } from '@lezzet/types';
 import {
   addMovementTag,
@@ -180,16 +180,18 @@ export async function recordTransferAction(input: TransferInput, proposalId?: st
 }
 
 /**
- * Banka satırını bir siparişin tahsilatı yapar — **operatörün onayıyla**.
+ * Banka satırını hedefin parası yapar — **operatörün onayıyla** (12.4 · 12.13): sipariş tahsilatı,
+ * müşteri iadesi, açık belge, mal kabul, transfer ucu, başka hesap ya da zaten yazılmış hareket.
  *
- * Kapının kendisi hiçbir şeyi kendiliğinden uygulamıyor (12.4: *"öneri + elle onay, tam otomatik
+ * Kapının kendisi hiçbir şeyi kendiliğinden uygulamıyor (*"öneri + elle onay, tam otomatik
  * değil"*); bu action o onayın taşıyıcısı. Yanlış eşleşmenin bedeli sessizdir: ödeyen müşteri
- * borçlu kalır, başka bir sipariş "ödendi" görünür ve kimse fark etmez.
+ * borçlu kalır, başka bir sipariş "ödendi" görünür ve kimse fark etmez. Hedefin yönü satıra
+ * uymuyorsa kapı reddeder; ekran zaten uymayanı listelemiyor, kapı son emniyet.
  */
-export async function applyMatchAction(movementId: string, orderId: string): Promise<ActionResult<{ ok: true }>> {
+export async function applyMatchAction(movementId: string, target: MatchTarget): Promise<ActionResult<{ ok: true }>> {
   try {
     await requireFinance();
-    const outcome = await applyOrderMatch(movementId, orderId);
+    const outcome = await applyMatch(movementId, target);
     if (outcome.status === 'invalid') return { data: null, error: RECONCILE_REASON[outcome.reason] };
 
     revalidatePath(FINANCE_PATH);
@@ -199,14 +201,20 @@ export async function applyMatchAction(movementId: string, orderId: string): Pro
   }
 }
 
-/** Satır bir giderdir — tipi ve etiketleri yazılır, kuyruktan düşer. Hareket SİLİNMEZ, adı konur. */
-export async function classifyExpenseAction(movementId: string, tags: string[]): Promise<ActionResult<{ ok: true }>> {
+/**
+ * Satırın ADI konur — gider (çıkış) ya da sermaye (giriş) — tipi ve etiketleri yazılır, kuyruktan
+ * düşer. Hareket SİLİNMEZ. Etiket şart: adı konmuş ama etiketsiz satır izah kuyruğunda kalırdı ve
+ * "sınıfladım" diyen operatör onu bir daha görürdü.
+ */
+export async function classifyRowAction(movementId: string, type: ClassifyType, tags: string[]): Promise<ActionResult<{ ok: true }>> {
   try {
     await requireFinance();
     const clean = tags.map((tag) => tag.trim()).filter((tag) => tag !== '');
-    if (clean.length === 0) return { data: null, error: 'Gidere en az bir etiket seçilmeli.' };
+    if (clean.length === 0 && type !== 'misc') {
+      return { data: null, error: type === 'expense' ? 'Gidere en az bir etiket seçilmeli.' : 'Sermaye girişine en az bir etiket seçilmeli (ör. sermaye, ortak).' };
+    }
 
-    const outcome = await classifyAsExpense(movementId, clean);
+    const outcome = await classifyRow(movementId, { type, tags: clean });
     if (outcome.status === 'invalid') return { data: null, error: RECONCILE_REASON[outcome.reason] };
 
     revalidatePath(FINANCE_PATH);

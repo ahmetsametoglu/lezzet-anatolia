@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heuristicColumnMapper } from './column-mapping';
 import { fingerprintRows } from './fingerprint';
-import { isUnambiguous, suggestOrderMatches, type MatchCandidate } from './match';
+import { isUnambiguous, suggestMatches, type MatchCandidate } from './match';
 import { parseAmountCents, parseBankRows, parseDate, type ParseProfile } from './parse';
 
 /**
@@ -203,7 +203,7 @@ describe('parmak izi — mükerrer koruması', () => {
 
 describe('eşleştirme önerisi', () => {
   const candidate = (over: Partial<MatchCandidate> = {}): MatchCandidate => ({
-    orderId: 'o1', referenceNo: 'LA-26-7K4M2P', outstandingCents: 4590, saleDate: '2026-07-13', ...over,
+    kind: 'order', id: 'o1', referenceNo: 'LA-26-7K4M2P', amountCents: 4590, date: '2026-07-13', direction: 'in', ...over,
   });
   // Eşleştirme CENT'te çalışır (02.9): ekstre satırı euro okunur ama `money_movement` cent döndürür,
   // motorun iki tarafı da aynı birimde karşılaştırması gerekir.
@@ -212,49 +212,71 @@ describe('eşleştirme önerisi', () => {
   });
 
   it('referans açıklamada geçiyorsa güçlü öneri çıkar', () => {
-    const [suggestion] = suggestOrderMatches(row(), [candidate()]);
-    expect(suggestion!.orderId).toBe('o1');
+    const [suggestion] = suggestMatches(row(), [candidate()]);
+    expect(suggestion).toMatchObject({ kind: 'order', id: 'o1' });
     expect(suggestion!.reasons).toContain('reference_in_label');
     expect(suggestion!.score).toBeGreaterThan(0.9);
   });
 
   it('referans yoksa tutar + tarih ile de öneri çıkar, ama daha zayıf', () => {
-    const [suggestion] = suggestOrderMatches(row({ label: 'VIREMENT RECU' }), [candidate()]);
+    const [suggestion] = suggestMatches(row({ label: 'VIREMENT RECU' }), [candidate()]);
     expect(suggestion!.reasons).toEqual(expect.arrayContaining(['exact_amount', 'same_day']));
     expect(suggestion!.score).toBeLessThan(0.9);
   });
 
-  it('PARA ÇIKIŞI sipariş tahsilatı olarak önerilmez', () => {
-    expect(suggestOrderMatches(row({ direction: 'out' }), [candidate()])).toEqual([]);
+  it('YÖN KAPISI: para çıkışına tahsilat, para girişine ödeme önerilmez (12.13)', () => {
+    // Çıkan para sipariş tahsilatı olamaz…
+    expect(suggestMatches(row({ direction: 'out' }), [candidate()])).toEqual([]);
+    // …giren para bir alım faturasının ödemesi olamaz — referansı geçse bile.
+    const fatura = candidate({ kind: 'document', id: 'd1', referenceNo: 'FA-2026-0912', direction: 'out' });
+    expect(suggestMatches(row({ label: 'VIR FA-2026-0912' }), [fatura])).toEqual([]);
+    expect(suggestMatches(row({ direction: 'out', label: 'PRLV FA-2026-0912' }), [fatura])).toHaveLength(1);
   });
 
   it('tamamı tahsil edilmiş sipariş candidate değildir (çağıran süzer) — açık bakiye 0 ise puan almaz', () => {
-    const suggestions = suggestOrderMatches(row({ label: 'VIREMENT RECU' }), [candidate({ outstandingCents: 0 })]);
+    const suggestions = suggestMatches(row({ label: 'VIREMENT RECU' }), [candidate({ amountCents: 0 })]);
     expect(suggestions).toEqual([]);
   });
 
   it('küçük fark tolere edilir — banka masrafı eşleşmeyi öldürmesin', () => {
-    const [suggestion] = suggestOrderMatches(row({ amountCents: 4560, label: 'VIREMENT' }), [candidate()]);
+    const [suggestion] = suggestMatches(row({ amountCents: 4560, label: 'VIREMENT' }), [candidate()]);
     expect(suggestion?.reasons).toContain('close_amount');
   });
 
   it('iki candidate birbirine yakınsa ÖNERİ TEK BAŞINA SAYILMAZ — otomatik onay teklif edilmez', () => {
-    const suggestions = suggestOrderMatches(row({ label: 'VIREMENT RECU' }), [
-      candidate({ orderId: 'o1' }),
-      candidate({ orderId: 'o2' }),
-    ]);
+    const suggestions = suggestMatches(row({ label: 'VIREMENT RECU' }), [candidate({ id: 'o1' }), candidate({ id: 'o2' })]);
 
     expect(suggestions).toHaveLength(2);
     expect(isUnambiguous(suggestions)).toBe(false);
   });
 
   it('tek güçlü candidate varsa net kabul edilir', () => {
-    expect(isUnambiguous(suggestOrderMatches(row(), [candidate()]))).toBe(true);
+    expect(isUnambiguous(suggestMatches(row(), [candidate()]))).toBe(true);
     expect(isUnambiguous([])).toBe(false);
   });
 
   it('uzak tarihli sipariş eşik altında kalır', () => {
-    const suggestions = suggestOrderMatches(row({ label: 'VIREMENT' }), [candidate({ saleDate: '2026-01-01' })]);
+    const suggestions = suggestMatches(row({ label: 'VIREMENT' }), [candidate({ date: '2026-01-01' })]);
     expect(suggestions).toEqual([]);
+  });
+
+  it('ad ipucu açıklamada geçince puan alır; iki harflik ipucu aranmaz', () => {
+    const kira = candidate({ kind: 'document', id: 'd1', referenceNo: null, amountCents: 145_000, direction: 'out', nameHints: ['SCI Rhin Immobilier'] });
+    const [suggestion] = suggestMatches(row({ direction: 'out', amountCents: 145_000, label: 'PRLV SEPA SCI RHIN IMMOBILIER LOYER' }), [kira]);
+    expect(suggestion!.reasons).toEqual(expect.arrayContaining(['exact_amount', 'same_day', 'name_in_label']));
+
+    const kisa = candidate({ kind: 'intake', id: 'i1', referenceNo: null, direction: 'out', nameHints: ['SA'] });
+    const [zayif] = suggestMatches(row({ direction: 'out', label: 'PRLV SANS NOM' }), [kisa]);
+    expect(zayif!.reasons).not.toContain('name_in_label');
+  });
+
+  it('türler aynı listede puanla sıralanır — referanslı belge, aynı günkü elle yazılanın önüne geçer', () => {
+    const elle = candidate({ kind: 'provisional', id: 'm1', referenceNo: null, direction: 'out', nameHints: ['Depo kirası'] });
+    const belge = candidate({ kind: 'document', id: 'd1', referenceNo: 'LOYER-2026-09', direction: 'out' });
+    const suggestions = suggestMatches(row({ direction: 'out', label: 'PRLV LOYER-2026-09' }), [elle, belge]);
+
+    expect(suggestions.map((s) => s.kind)).toEqual(['document', 'provisional']);
+    // Elle yazılan tutar + gün ile öneri eşiğini geçer: "bunu zaten yazmıştım" hâli kaybolmaz.
+    expect(suggestions[1]!.score).toBeGreaterThanOrEqual(0.6);
   });
 });

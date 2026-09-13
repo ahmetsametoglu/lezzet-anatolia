@@ -2,11 +2,11 @@ import { AccountService, MoneyMovementService, MovementTagService, OrderService,
 import { listOpenDocuments } from '@lezzet/application';
 import { DEFAULT_PAGE_SIZE, type AccountLedgerRow } from '@lezzet/types';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
-import { matchQueue } from '@/lib/bank/reconcile';
+import { EMPTY_MATCH_QUEUE, matchQueue } from '@/lib/bank/reconcile';
 import { guarded, requireFinance } from '@/lib/guard';
 import { FinanceClient } from './finance-client';
 import { NOTES } from './finance-labels';
-import { toAccountViews, toMatchRows, toMovementRows, toOpenDocumentViews, totalBalance } from './finance-read';
+import { toAccountViews, toMatchRows, toMatchTargets, toMovementRows, toOpenDocumentViews, totalBalance } from './finance-read';
 import type { FinanceData, LedgerView } from './finance-types';
 import { ALL_ACCOUNTS, parseFinanceUrl, periodRange, resolveAccount } from './finance-url';
 
@@ -74,7 +74,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
       // paylaşılmış bağlantılar kırılmasın diye; anlamı sayaçla aynı.
       unexplainedOnly: urlState.scope === 'unmatched' || undefined,
     }),
-    accountSelected ? matchQueue(urlState.acct) : [],
+    accountSelected ? matchQueue(urlState.acct) : EMPTY_MATCH_QUEUE,
     // Sayaç SÜZGEÇTEN BAĞIMSIZ ve hesap-üstü: rozet "toplam ne kadar iş bekliyor" diyor. Süzgece
     // bağlansaydı bir hesabı seçen operatör kuyruğun küçüldüğünü sanardı.
     movements.unexplainedCount(),
@@ -89,15 +89,11 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   const tagLabels = new Map(tags.map((tag) => [tag.slug, tag.label] as const));
   const tagOptions = tags.filter((tag) => tag.isActive).map((tag) => ({ value: tag.slug, label: tag.label }));
 
-  // Sipariş referansları TEK turda: defter satırlarının ve önerilerin bağlı olduğu siparişler bir
-  // kümede toplanıp bir kez okunuyor. Satır başına sorgu atsaydık elli satırlık bir sayfa elli
-  // sorgu ederdi — ve gösterdiği tek şey bir referans numarası olurdu.
-  const orderIds = [
-    ...new Set([
-      ...(ledgerPage?.rows ?? []).flatMap((row: AccountLedgerRow) => (row.orderId ? [row.orderId] : [])),
-      ...queue.flatMap((entry) => entry.suggestions.map((suggestion) => suggestion.orderId)),
-    ]),
-  ];
+  // Sipariş referansları TEK turda: defter satırlarının bağlı olduğu siparişler bir kümede toplanıp
+  // bir kez okunuyor. Satır başına sorgu atsaydık elli satırlık bir sayfa elli sorgu ederdi — ve
+  // gösterdiği tek şey bir referans numarası olurdu. (Kuyruğun hedefleri referansı zaten taşıyor:
+  // satış görünümünden geliyorlar.)
+  const orderIds = [...new Set((ledgerPage?.rows ?? []).flatMap((row: AccountLedgerRow) => (row.orderId ? [row.orderId] : [])))];
   const orders = orderIds.length > 0 ? await new OrderService(db).listByIds(orderIds) : [];
   const orderRefs = new Map(orders.flatMap((order) => (order.referenceNo ? [[order.id, order.referenceNo] as const] : [])));
 
@@ -110,11 +106,14 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     note: ledgerPage.rows.length > 0 ? null : NOTES.emptyLedger,
   };
 
+  // Hedef listesi önce, kuyruk sonra: öneri adını hedeften alır (aynı `kind:id` anahtarı).
+  const matchTargets = toMatchTargets(queue.targets, tagLabels);
   const data: FinanceData = {
     accounts: accountViews,
     totalCents: totalBalance(accountViews),
     ledger,
-    queue: toMatchRows(queue, orderRefs),
+    queue: toMatchRows(queue.rows, matchTargets),
+    matchTargets,
     unexplainedCount,
     tagOptions,
     openDocuments: toOpenDocumentViews(openDocuments),

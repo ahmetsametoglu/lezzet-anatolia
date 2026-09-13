@@ -129,6 +129,12 @@ export const MoneyMovementSchema = z.object({
    */
   idempotencyKey: z.string().nullable(),
   bankImportId: z.string().uuid().nullable(),
+  /**
+   * KARŞI UÇ (12.13) — bu ekstre satırı şu transferin öteki yakasıdır. Transfer tek satırdır ve
+   * karşı hesaba aynalanır; ekstre o yakayı bir kez daha getirince satır buradan uca bağlanır ve
+   * ayna susar (`account_movement`) — para iki kez sayılmaz. Yalnız ekstre satırı, yalnız transferde.
+   */
+  counterpartMovementId: z.string().uuid().nullable(),
   createdAt: z.string(),
 });
 export type MoneyMovement = z.infer<typeof MoneyMovementSchema>;
@@ -154,6 +160,7 @@ export const MoneyMovementInsertSchema = z.object({
   /** Yazımın kimliği (21.263) — künyesi varlık şemasında. Verilmezse yazım korumasızdır. */
   idempotencyKey: z.string().nullish(),
   bankImportId: z.string().uuid().nullish(),
+  counterpartMovementId: z.string().uuid().nullish(),
 });
 export type MoneyMovementInsert = z.infer<typeof MoneyMovementInsertSchema>;
 
@@ -270,6 +277,24 @@ export const MoneyDocumentBalanceSchema = z.object({
   openAmountCents: z.number().int(),
 });
 export type MoneyDocumentBalance = z.infer<typeof MoneyDocumentBalanceSchema>;
+
+/**
+ * `stock_intake_balance` görünümü — mal kabulün açık kalanı: kabul tutarı − kabule bağlı alım
+ * ödemeleri (12.3'ün türetimi, 12.13'ün "hangi mal kabulün parası" adayı). Faturası belge olarak
+ * girilen kabul `hasDocument` taşır; borcu belgenin açık kalanında görünür, burada ikinci kez değil.
+ */
+export const StockIntakeBalanceSchema = z.object({
+  stockIntakeId: z.string().uuid(),
+  supplierId: z.string().uuid().nullable(),
+  date: z.string(),
+  amountCents: z.number().int(),
+  /** Kabule bağlı `purchase` çıkışları eksi girişleri (tedarikçi iadesi) — **cent**. */
+  paidCents: z.number().int(),
+  /** `amount − paid`; eksi çıkabilir (fazla ödeme) ve gizlenmez. */
+  openAmountCents: z.number().int(),
+  hasDocument: z.boolean(),
+});
+export type StockIntakeBalance = z.infer<typeof StockIntakeBalanceSchema>;
 
 // ── Etiket sözlüğü (13.09) ───────────────────────────────────────────────────
 // Yönetilen liste: operatör ekler, yazım tek kalır; hareket ve belge yalnız buradaki slug'ı taşır.

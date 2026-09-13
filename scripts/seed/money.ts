@@ -247,6 +247,11 @@ export async function seedMoney(db: Db): Promise<void> {
  * Kuyruk siparişsiz **"öneri yok"** hâlinde duruyor ve bu eksik bir hâl değil, gerçek bir hâl:
  * banka masrafı, nakit çekimi ve tanımadığı bir havale hiçbir siparişe uymaz. Aday hâllerini
  * denemek isteyen önce bir sipariş oluşturur — ki artık sistemin doğru yolu da o.
+ *
+ * ── SİPARİŞ DIŞI ADAYLAR VAR (12.13) ────────────────────────────────────────
+ * Hedef kümesi genişledi: ekstrenin üç satırı `seedMoney`nin elle yazdığı gider, transfer ve açık
+ * belgeyle buluşuyor (satır listesinin künyesi). Bunlar uydurma tutar değil, aynı seed'in öteki
+ * ucunda gerçekten duran kayıtlar — "güçlü aday" hâli yalancı değil.
  */
 export async function seedBankQueue(db: Db): Promise<void> {
   // Koruma EKSİKTİ (08.08): buradaki her satır her koşuda yeniden yazılıyordu ve ikinci koşu
@@ -265,13 +270,23 @@ export async function seedBankQueue(db: Db): Promise<void> {
 
 async function seedBankImport(db: Db, accountId: string): Promise<void> {
   const frDate = (daysAgo: number) => gun(-daysAgo).split('-').reverse().join('/');
+  /*
+    Satırların üçü `seedMoney`nin yazdıklarıyla BULUŞUR ve kuyruğun 12.13 hedeflerini doğurur:
+    · URSSAF (−22. gün): aynı gün elle yazılmış kesinti gideri var → "zaten yazılmış hareket";
+    · VERSEMENT (−7. gün): kasa→Crédit Mutuel transferinin banka tarafı → "transferin öteki yakası";
+    · MULLER (−2. gün): açık muhasebeci faturası FA-2026-0912, referans açıklamada → "açık belge".
+    Geri kalanı önerisiz durur (nakit çekimi, masraf, tanınmayan havale) — gerçek bir ekstre de öyledir.
+  */
   const statement = [
-    { Date: frDate(9), 'Libellé': 'VIR SEPA DUPONT MARIE', Montant: '64,80', Solde: '12 470,30' },
-    { Date: frDate(7), 'Libellé': 'PRLV ORANGE FACTURE', Montant: '-39,99', Solde: '12 430,31' },
-    { Date: frDate(5), 'Libellé': 'VIR SEPA ANADOLU MARKT', Montant: '312,00', Solde: '12 742,31' },
-    { Date: frDate(3), 'Libellé': 'RETRAIT DAB REPUBLIQUE', Montant: '-50,00', Solde: '12 692,31' },
-    { Date: frDate(3), 'Libellé': 'RETRAIT DAB REPUBLIQUE', Montant: '-50,00', Solde: '12 642,31' },
-    { Date: frDate(1), 'Libellé': 'FRAIS TENUE DE COMPTE', Montant: '-4,50', Solde: '12 637,81' },
+    { Date: frDate(22), 'Libellé': 'PRLV SEPA URSSAF COTISATIONS', Montant: '-1180,00', Solde: '11 290,30' },
+    { Date: frDate(9), 'Libellé': 'VIR SEPA DUPONT MARIE', Montant: '64,80', Solde: '11 355,10' },
+    { Date: frDate(7), 'Libellé': 'VERSEMENT ESPECES GUICHET', Montant: '600,00', Solde: '11 955,10' },
+    { Date: frDate(7), 'Libellé': 'PRLV ORANGE FACTURE', Montant: '-39,99', Solde: '11 915,11' },
+    { Date: frDate(5), 'Libellé': 'VIR SEPA ANADOLU MARKT', Montant: '312,00', Solde: '12 227,11' },
+    { Date: frDate(3), 'Libellé': 'RETRAIT DAB REPUBLIQUE', Montant: '-50,00', Solde: '12 177,11' },
+    { Date: frDate(3), 'Libellé': 'RETRAIT DAB REPUBLIQUE', Montant: '-50,00', Solde: '12 127,11' },
+    { Date: frDate(2), 'Libellé': 'PRLV CABINET COMPTABLE MULLER FA-2026-0912', Montant: '-360,00', Solde: '11 767,11' },
+    { Date: frDate(1), 'Libellé': 'FRAIS TENUE DE COMPTE', Montant: '-4,50', Solde: '11 762,61' },
   ];
 
   const suggestion = heuristicColumnMapper(

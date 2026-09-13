@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, MoneyMovementService, OrderService, ProductService,
+  AccountService, CategoryService, MoneyDocumentService, MoneyMovementService, OrderService, ProductService,
   UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { failingAiModel } from '@lezzet/ai/testing';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from './import';
-import { applyOrderMatch, classifyAsExpense, dismissRow, matchQueue } from './reconcile';
+import { applyMatch, classifyRow, dismissRow, matchQueue } from './reconcile';
 
 /**
  * Banka import'u ve eşleştirme (12.4) — DB üstünde. Doğrulanan iki zor şey:
@@ -22,7 +22,10 @@ const orders = new OrderService(db);
 
 const stamp = Date.now();
 let bankAccount: string;
+/** Transfer hedefleri için ikinci hesap (12.13): kasadan yatırma, nakit çekimi. */
+let cashAccount: string;
 let customerId: string;
+const createdDocuments: string[] = [];
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
 let variantId: string;
@@ -37,6 +40,7 @@ const frDate = (n: number) => dayOffset(n).split('-').reverse().join('/');
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
   bankAccount = (await accounts.insert({ name: `Import bankası ${stamp}`, type: 'bank' })).id;
+  cashAccount = (await accounts.insert({ name: `Import kasası ${stamp}`, type: 'cash' })).id;
   const category = await new CategoryService(db).create({ name: { tr: `Import testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Lokum ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
@@ -47,7 +51,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('money_movement').delete().eq('account_id', bankAccount);
+  await db.from('money_movement').delete().in('account_id', [bankAccount, cashAccount]);
   await db.from('bank_import').delete().eq('account_id', bankAccount);
   await db.from('order').delete().eq('customer_id', customerId);
 });
@@ -60,7 +64,8 @@ afterAll(async () => {
     productIds: [productId],
     categoryIds: [categoryId],
     profileIds: createdProfiles,
-    accountIds: [bankAccount],
+    accountIds: [bankAccount, cashAccount],
+    documentIds: createdDocuments,
     warehouseIds: [warehouseId],
   });
 });
@@ -164,10 +169,10 @@ describe('eşleştirme kuyruğu', () => {
 
   it('import edilen satır kuyruğa düşer; sınıflandırılmamış olarak durur', async () => {
     await importStatement();
-    const queue = await matchQueue(bankAccount);
+    const { rows } = await matchQueue(bankAccount);
 
-    expect(queue).toHaveLength(4);
-    expect(queue.every((q) => q.movement.type === 'misc' && !q.movement.reconciled)).toBe(true);
+    expect(rows).toHaveLength(4);
+    expect(rows.every((q) => q.movement.type === 'misc' && !q.movement.reconciled)).toBe(true);
   });
 
   it('referans açıklamada geçiyorsa güçlü ve TEK öneri çıkar', async () => {
@@ -175,8 +180,8 @@ describe('eşleştirme kuyruğu', () => {
     const order = await unpaidSale(reference, 4590, 3);
     await importStatement([{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }], 'tek.csv');
 
-    const row = (await matchQueue(bankAccount))[0]!;
-    expect(row.suggestions[0]).toMatchObject({ orderId: order.id });
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+    expect(row.suggestions[0]).toMatchObject({ kind: 'order', id: order.id });
     expect(row.unambiguous).toBe(true);
   });
 
@@ -184,7 +189,7 @@ describe('eşleştirme kuyruğu', () => {
     await unpaidSale(`LA-26-X${stamp % 10000}`, 12_000, 2);
     await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV EDF', Montant: '-120,00', Solde: '0,00' }], 'gider.csv');
 
-    expect((await matchQueue(bankAccount))[0]!.suggestions).toEqual([]);
+    expect((await matchQueue(bankAccount)).rows[0]!.suggestions).toEqual([]);
   });
 
   it('onay uygulanınca para 12.2 kapısından geçer — İKİ KEZ sayılmaz', async () => {
@@ -193,14 +198,14 @@ describe('eşleştirme kuyruğu', () => {
     await importStatement([{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }], 'onay.csv');
     const balanceBefore = (await accounts.balance(bankAccount)).balanceCents;
 
-    const row = (await matchQueue(bankAccount))[0]!;
-    expect(await applyOrderMatch(row.movement.id, order.id)).toEqual({ status: 'ok', movementId: row.movement.id });
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+    expect(await applyMatch(row.movement.id, { kind: 'order', orderId: order.id })).toEqual({ status: 'ok', movementId: row.movement.id });
 
     // Sipariş tahsilatı yazıldı ve durumu türedi…
     expect(await orders.getById(order.id)).toMatchObject({ amountCollectedCents: 4590, paymentStatus: 'paid' });
     // …ama hesabın bakiyesi DEĞİŞMEDİ: import satırı yerini tahsilata bıraktı, para iki kez sayılmadı.
     expect((await accounts.balance(bankAccount)).balanceCents).toBe(balanceBefore);
-    expect(await matchQueue(bankAccount)).toEqual([]);
+    expect((await matchQueue(bankAccount)).rows).toEqual([]);
   });
 
   it('eşleşen satır YERİNDE güncellenir — ekstre yeniden yüklenirse para İKİ KEZ girmez', async () => {
@@ -209,8 +214,8 @@ describe('eşleştirme kuyruğu', () => {
     const rows = [{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }];
     await importStatement(rows, 'yeniden.csv');
 
-    const row = (await matchQueue(bankAccount))[0]!;
-    await applyOrderMatch(row.movement.id, order.id);
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+    await applyMatch(row.movement.id, { kind: 'order', orderId: order.id });
     const balanceAfterMatch = (await accounts.balance(bankAccount)).balanceCents;
 
     // Aynı dosya bir daha yüklenir: satırın parmak izi hâlâ yerinde olduğu için hiçbir şey girmez.
@@ -226,28 +231,158 @@ describe('eşleştirme kuyruğu', () => {
     const order = await unpaidSale(reference, 4590, 3);
     await importStatement([{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }], 'iki-kez.csv');
 
-    const row = (await matchQueue(bankAccount))[0]!;
-    await applyOrderMatch(row.movement.id, order.id);
-    expect(await applyOrderMatch(row.movement.id, order.id)).toEqual({ status: 'invalid', reason: 'already_reconciled' });
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+    await applyMatch(row.movement.id, { kind: 'order', orderId: order.id });
+    expect(await applyMatch(row.movement.id, { kind: 'order', orderId: order.id })).toEqual({ status: 'invalid', reason: 'already_reconciled' });
   });
 
   it('gider olarak sınıflanan satır kuyruktan düşer, hareket KALIR', async () => {
     await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV EDF', Montant: '-120,00', Solde: '0,00' }], 'kira.csv');
-    const row = (await matchQueue(bankAccount))[0]!;
+    const row = (await matchQueue(bankAccount)).rows[0]!;
 
-    expect(await classifyAsExpense(row.movement.id, ['kira'])).toMatchObject({ status: 'ok' });
+    expect(await classifyRow(row.movement.id, { type: 'expense', tags: ['kira'] })).toMatchObject({ status: 'ok' });
     // Etiket + `reconciled`: banka satırı hem izahlı hem ekstreyle mutabık.
     expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'expense', tags: ['kira'], reconciled: true, explained: true });
-    expect(await matchQueue(bankAccount)).toEqual([]);
+    expect((await matchQueue(bankAccount)).rows).toEqual([]);
   });
 
   it('"bağlanmıyor" denen satır da kuyruktan düşer ama parası kasada kalır', async () => {
     await importStatement([{ Date: frDate(-1), 'Libellé': 'FRAIS BANCAIRES', Montant: '-3,50', Solde: '0,00' }], 'masraf.csv');
-    const row = (await matchQueue(bankAccount))[0]!;
+    const row = (await matchQueue(bankAccount)).rows[0]!;
     const balance = (await accounts.balance(bankAccount)).balanceCents;
 
     expect(await dismissRow(row.movement.id)).toMatchObject({ status: 'ok' });
-    expect(await matchQueue(bankAccount)).toEqual([]);
+    expect((await matchQueue(bankAccount)).rows).toEqual([]);
     expect((await accounts.balance(bankAccount)).balanceCents).toBe(balance);
+  });
+});
+
+/*
+  HEDEF KÜMESİ (12.13 · kullanıcı kararı 13.09: "her banka hareketinin bir karşılığı olmalı").
+  Sınananlar kural katmanı: hangi hedef hangi yöne uyar, para hiçbir hedefte iki kez sayılmaz, elle
+  yazılan satır ekstre gelince tek satıra iner.
+*/
+describe('eşleştirme hedefleri (12.13)', () => {
+  it('AÇIK BELGEYE bağlanır — satır gider olur, belgenin açık kalanı düşer', async () => {
+    const documents = new MoneyDocumentService(db);
+    const belge = await documents.insert({
+      kind: 'invoice', number: `EDF-${stamp}`, issuedOn: dayOffset(-2), counterparty: 'EDF', direction: 'out', amountCents: 12_000, tags: ['kira'],
+    });
+    createdDocuments.push(belge.id);
+    await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV EDF FACTURE', Montant: '-120,00', Solde: '0,00' }], 'belge.csv');
+
+    const { rows, targets } = await matchQueue(bankAccount);
+    // Tutar birebir + aynı gün + karşı taraf açıklamada: tek güçlü aday, belge.
+    expect(rows[0]!.suggestions[0]).toMatchObject({ kind: 'document', id: belge.id });
+    expect(rows[0]!.unambiguous).toBe(true);
+    expect(targets.documents.some((d) => d.id === belge.id)).toBe(true);
+
+    expect(await applyMatch(rows[0]!.movement.id, { kind: 'document', documentId: belge.id })).toEqual({ status: 'ok', movementId: rows[0]!.movement.id });
+    // Belgenin etiketi ödemesine geçti; satır hem izahlı hem mutabık.
+    expect(await movements.getById(rows[0]!.movement.id)).toMatchObject({ type: 'expense', documentId: belge.id, tags: ['kira'], reconciled: true, explained: true });
+    // Belge kapandı: açık listeden düştü.
+    expect((await documents.listOpen()).some((d) => d.id === belge.id)).toBe(false);
+  });
+
+  it('giren para belgeye bağlanamaz — belgenin yönü satıra uymuyor', async () => {
+    const belge = await new MoneyDocumentService(db).insert({
+      kind: 'invoice', issuedOn: dayOffset(-1), counterparty: 'Yön testi', direction: 'out', amountCents: 5000,
+    });
+    createdDocuments.push(belge.id);
+    await importStatement([{ Date: frDate(-1), 'Libellé': 'VIR RECU', Montant: '50,00', Solde: '0,00' }], 'yon.csv');
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+
+    expect(row.suggestions).toEqual([]);
+    expect(await applyMatch(row.movement.id, { kind: 'document', documentId: belge.id })).toEqual({ status: 'invalid', reason: 'direction_mismatch' });
+  });
+
+  it('TRANSFERİN ÖTEKİ YAKASI — ayna susar, para iki kez sayılmaz', async () => {
+    // Kasadan bankaya 50 € yatırıldı, kasa tarafından elle yazıldı: banka görünümde +50 (ayna).
+    const leg = await movements.insert({
+      accountId: cashAccount, counterAccountId: bankAccount, direction: 'out', amountCents: 5000, type: 'transfer', valueDate: dayOffset(-1), description: 'Kasa fazlası',
+    });
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(5000);
+    // Ekstre aynı yatırmayı getirdi: ayna + ekstre satırı = aynı para iki kez.
+    await importStatement([{ Date: frDate(-1), 'Libellé': 'VERSEMENT ESPECES', Montant: '50,00', Solde: '0,00' }], 'yatirma.csv');
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(10_000);
+
+    const { rows, targets } = await matchQueue(bankAccount);
+    expect(targets.transferLegs.map((l) => l.id)).toContain(leg.id);
+    expect(rows[0]!.suggestions[0]).toMatchObject({ kind: 'transfer', id: leg.id });
+
+    expect(await applyMatch(rows[0]!.movement.id, { kind: 'transfer', legId: leg.id })).toMatchObject({ status: 'ok' });
+    // Banka +50, kasa −50: iki gerçek satır kendi hesabında, ayna yok.
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(5000);
+    expect((await accounts.balance(cashAccount)).balanceCents).toBe(-5000);
+    expect(await movements.getById(rows[0]!.movement.id)).toMatchObject({
+      type: 'transfer', counterAccountId: cashAccount, counterpartMovementId: leg.id, reconciled: true, explained: true,
+    });
+    // Uç artık bekleyen değil; ikinci bir ekstre satırı onu sahiplenemez.
+    expect(await movements.listTransferLegsAwaiting(bankAccount)).toEqual([]);
+  });
+
+  it('"ZATEN YAZMIŞTIM" — elle yazılan silinir, ekstre satırı bağlarını devralır (kullanıcı kararı 13.09)', async () => {
+    const elle = await movements.insert({
+      accountId: bankAccount, direction: 'out', amountCents: 12_000, type: 'expense', tags: ['kira'], valueDate: dayOffset(-2), description: 'Eylül kirası',
+    });
+    await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV SEPA LOYER', Montant: '-120,00', Solde: '0,00' }], 'zaten.csv');
+    // İkisi de bankada: aynı para iki kez.
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-24_000);
+
+    const { rows, targets } = await matchQueue(bankAccount);
+    expect(targets.provisional.map((m) => m.id)).toContain(elle.id);
+    expect(rows[0]!.suggestions[0]).toMatchObject({ kind: 'provisional', id: elle.id });
+
+    expect(await applyMatch(rows[0]!.movement.id, { kind: 'provisional', movementId: elle.id })).toMatchObject({ status: 'ok' });
+    expect(await movements.getById(elle.id)).toBeNull();
+    const satir = await movements.getById(rows[0]!.movement.id);
+    expect(satir).toMatchObject({ type: 'expense', tags: ['kira'], reconciled: true, explained: true, source: 'bank_import' });
+    // İz künyede: hangi satır yutuldu, ne diyordu.
+    expect(satir?.meta).toMatchObject({ absorbed: { movementId: elle.id, source: 'manual', description: 'Eylül kirası' } });
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-12_000);
+  });
+
+  it('giren paranın adı SERMAYE konur; aynı satıra gider denemez', async () => {
+    await importStatement([{ Date: frDate(-1), 'Libellé': 'APPORT ASSOCIE', Montant: '1000,00', Solde: '0,00' }], 'sermaye.csv');
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+
+    expect(await classifyRow(row.movement.id, { type: 'expense', tags: ['kira'] })).toEqual({ status: 'invalid', reason: 'direction_mismatch' });
+    expect(await classifyRow(row.movement.id, { type: 'capital', tags: ['sermaye'] })).toMatchObject({ status: 'ok' });
+    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'capital', tags: ['sermaye'], reconciled: true, explained: true });
+  });
+
+  it('UCU OLMAYAN transfer: satır karşı hesaba aynalanır (nakit çekimi)', async () => {
+    await importStatement([{ Date: frDate(-1), 'Libellé': 'RETRAIT DAB', Montant: '-20,00', Solde: '0,00' }], 'dab.csv');
+    const { rows, targets } = await matchQueue(bankAccount);
+    expect(targets.accounts.some((a) => a.id === cashAccount)).toBe(true);
+
+    expect(await applyMatch(rows[0]!.movement.id, { kind: 'transfer_to', accountId: bankAccount })).toEqual({ status: 'invalid', reason: 'same_account' });
+    expect(await applyMatch(rows[0]!.movement.id, { kind: 'transfer_to', accountId: cashAccount })).toMatchObject({ status: 'ok' });
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-2000);
+    expect((await accounts.balance(cashAccount)).balanceCents).toBe(2000);
+  });
+
+  it('İADE: çıkış satırı ödenmiş siparişe iade olarak bağlanır — liste puanlanmaz, seçilir', async () => {
+    const reference = `LA-26-${(stamp + 4) % 100000}`;
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', orderedTotalCents: 4590 }, [
+      { variantId, qty: 1, fulfilledQty: 1, unitPriceCents: 4590, vatRate: 5.5 },
+    ]);
+    await orders.update({ id: order.id, status: 'completed', referenceNo: reference });
+    await db.from('order_status_log').insert({
+      order_id: order.id, from_status: 'draft', to_status: 'completed', created_at: `${dayOffset(-3)}T10:00:00.000Z`,
+    });
+    await importStatement([{ Date: frDate(-3), 'Libellé': `VIR SEPA ${reference}`, Montant: '45,90', Solde: '100,00' }], 'iade-1.csv');
+    const tahsilat = (await matchQueue(bankAccount)).rows[0]!;
+    await applyMatch(tahsilat.movement.id, { kind: 'order', orderId: order.id });
+
+    await importStatement([{ Date: frDate(-1), 'Libellé': 'VIR REMBOURSEMENT CLIENT', Montant: '-45,90', Solde: '54,10' }], 'iade-2.csv');
+    const { rows, targets } = await matchQueue(bankAccount);
+    expect(rows).toHaveLength(1);
+    // İade puanlanmaz (kalem ister, gider satırını yanıltır) — listede durur, bilerek seçilir.
+    expect(rows[0]!.suggestions.some((s) => s.kind === 'refund')).toBe(false);
+    expect(targets.refunds.some((r) => r.id === order.id)).toBe(true);
+
+    expect(await applyMatch(rows[0]!.movement.id, { kind: 'refund', orderId: order.id })).toMatchObject({ status: 'ok' });
+    expect(await orders.getById(order.id)).toMatchObject({ amountRefundedCents: 4590, paymentStatus: 'refunded' });
   });
 });

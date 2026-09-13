@@ -112,6 +112,37 @@ export const SUGGESTION_VIEW = {
 export type SuggestionStrength = keyof typeof SUGGESTION_VIEW;
 
 /**
+ * Eşleştirme HEDEFİNİN türü (12.13 · kullanıcı kararı 13.09: "her banka hareketinin bir karşılığı
+ * olmalı") — seçim penceresinin bölüm başlıkları. `transfer_to` motorun türü değil, ekranın
+ * eklediği yol: ucu olmayan transfer ("bu para kasaya çekildi").
+ */
+export const MATCH_KIND_LABEL = {
+  order: 'Sipariş tahsilatı',
+  refund: 'Müşteri iadesi',
+  document: 'Açık belge',
+  intake: 'Mal kabul — tedarikçi borcu',
+  transfer: 'Transferin öteki yakası',
+  transfer_to: 'Başka hesaba transfer',
+  provisional: 'Zaten yazılmış hareket',
+} as const;
+
+export type MatchKindView = keyof typeof MATCH_KIND_LABEL;
+
+/**
+ * Onaylanınca NE OLUR — kartın cümlesi hedefin adını bununla tamamlar ("Fatura FA-… · belgeye
+ * bağlanır, açık kalanı düşer"). Operatör düğmeye basmadan sonucu okur; "onayla"nın sürprizi olmaz.
+ */
+export const MATCH_EFFECT: Record<MatchKindView, string> = {
+  order: 'siparişin tahsilatı olur, açık tutarı kapatır',
+  refund: 'siparişin iadesi olarak yazılır',
+  document: 'belgeye bağlanır, açık kalanı düşer',
+  intake: 'mal kabulün ödemesi olur, tedarikçi borcu düşer',
+  transfer: 'transferin karşı satırı olur — para iki kez sayılmaz',
+  transfer_to: 'karşı hesaba aynalanan bir transfer olur',
+  provisional: 'elle yazılan satırın yerine geçer — o satır silinir, bağları buraya taşınır',
+};
+
+/**
  * Ekranın "burada olmayan"ları — tasarım §6'nın yasakları, operatöre CÜMLEYLE söyleniyor.
  *
  * Düğmeyi gizleyip susmak yerine sebebini yazmak, aynı soruyu ikinci kez sormayı keser: "sipariş
@@ -198,9 +229,16 @@ export const TAG_REASON = {
   unknown_tag: 'Etiket sözlükte yok ya da pasif — önce Etiketler penceresinden ekleyin.',
 } as const;
 
-/** Eşleştirme kapısının reddi. Üçü de "geç kaldın" sınıfı: satır artık dokunulabilir değil. */
+/**
+ * Eşleştirme kapısının reddi. İlk üçü "geç kaldın" sınıfı (satır artık dokunulabilir değil);
+ * kalanlar hedefin satıra uymadığını söyler (12.13).
+ */
 export const RECONCILE_REASON = {
   already_reconciled: 'Bu satır zaten eşleştirilmiş — sayfayı tazeleyin.',
   not_bank_row: 'Bu satır banka dosyasından gelmiyor; eşleştirme kuyruğu yalnız ekstre satırları içindir.',
   not_found: 'Satır bulunamadı — başka bir oturumda değişmiş olabilir.',
+  direction_mismatch: 'Hedefin yönü satıra uymuyor — giren para iade ya da gider, çıkan para tahsilat ya da sermaye olamaz.',
+  target_not_found: 'Seçilen hedef bulunamadı ya da artık açık değil — sayfayı tazeleyin.',
+  target_taken: 'Bu transfer ucunu başka bir ekstre satırı zaten sahiplenmiş — sayfayı tazeleyin.',
+  same_account: 'Aynı hesabın içinde transfer olmaz — başka bir hesap seçin.',
 } as const;

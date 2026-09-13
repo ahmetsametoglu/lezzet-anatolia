@@ -88,6 +88,7 @@ export {
   MoneyDocumentService,
   MoneyMovementService,
   MovementTagService,
+  StockIntakeBalanceService,
   type CampaignSpend,
   type LedgerFilter,
   type PeriodTotal,

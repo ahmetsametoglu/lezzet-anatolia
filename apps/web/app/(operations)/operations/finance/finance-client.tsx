@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { applyMatchAction, classifyExpenseAction, dismissMatchAction, documentFileUrlAction, tagMovementAction } from '@/lib/finance/actions';
+import { applyMatchAction, classifyRowAction, dismissMatchAction, documentFileUrlAction, tagMovementAction } from '@/lib/finance/actions';
+import type { ClassifyType, MatchTarget } from '@/lib/bank/reconcile';
 import { MatchDialog } from './match-dialog';
 import { FinanceDesktop } from './finance.desktop';
 import { financeUrl, type FinanceUrlState } from './finance-url';
@@ -19,22 +20,16 @@ interface FinanceClientProps {
   data: FinanceData;
   urlState: FinanceUrlState;
   writableAccounts: FinanceData['accounts'];
-  /** Asistan önerisinden gelindiyse ön dolgu (22.5); `null` ise ekran hiç değişmez. */
 }
 
 export function FinanceClient({ data, urlState, writableAccounts }: FinanceClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
-  /**
-   * Öneriden gelindiyse elle hareket penceresi DOĞRUDAN açılır: operatör kuyruktan bu ekrana zaten
-   * "bu kaydı gözden geçir" diye geldi; ayrıca "+ Hareket"e bastırmak fazladan bir adım olurdu.
-   * Formun alamadığı iki tipte (`blocked`) pencere açılmaz — künye yolu söyler.
-   */
   const [dialog, setDialog] = useState<DialogKind>(null);
   /** Hangi kuyruk satırı işleniyor — iki kez tıklanmasın, ve hangisinin beklediği görünsün. */
   const [busyId, setBusyId] = useState<string | null>(null);
   const [queueError, setQueueError] = useState<string | null>(null);
-  /** Aday seçimi açık olan kuyruk satırı — "Seç" ve "Düzelt" aynı pencereyi açar. */
+  /** Hedef seçimi açık olan kuyruk satırı — "Seç", "Düzelt" ve "Elle bağla" aynı pencereyi açar. */
   const [picking, setPicking] = useState<MatchRowView | null>(null);
   /** "Ödemesini yaz" denen açık belge — elle hareket penceresi belgeyle dolu açılır (12.12). */
   const [payingDocument, setPayingDocument] = useState<OpenDocumentView | null>(null);
@@ -64,6 +59,11 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     }
     startNav(() => router.refresh());
   };
+
+  /** Kuyruk kararı — kart ve seçim penceresi aynı kapıya gider; hedefi ekran değil kapı yorumlar. */
+  const applyTarget = (row: MatchRowView, target: MatchTarget) => void runQueueAction(row, () => applyMatchAction(row.movementId, target));
+  const classify = (row: MatchRowView, type: ClassifyType, tags: string[]) =>
+    void runQueueAction(row, () => classifyRowAction(row.movementId, type, tags));
 
   /** Satırı etiketler; ret satır listesinin altındaki hata şeridine düşer (kuyruk hatasıyla aynı yer). */
   const onTag = async (movementId: string, tags: string[]) => {
@@ -113,13 +113,11 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     onClosePay: () => setPayingDocument(null),
     onOpenDocumentFile: (document: OpenDocumentView) => void onOpenDocumentFile(document),
     // Güçlü adayda tek tıkla onay: motorun "tek aday, belirsizlik yok" cevabı zaten burada
-    // (`strength === 'strong'`), ekran ikinci bir soru sormuyor.
-    onApprove: (row: MatchRowView) =>
-      void runQueueAction(row, () => applyMatchAction(row.movementId, row.candidates[0]!.orderId)),
-    // "Seç" ve "Düzelt" aynı pencereyi açar: ikisi de "bu satır hangi siparişin parası" diye sorar.
+    // (`strength === 'strong'`), ekran ikinci bir soru sormuyor. Karar adayın üstünde hazır.
+    onApprove: (row: MatchRowView) => applyTarget(row, row.candidates[0]!.target),
+    // "Seç", "Düzelt" ve "Elle bağla" aynı pencereyi açar: üçü de "bu satır neyin parası" diye sorar.
     onPick: (row: MatchRowView) => setPicking(row),
-    onClassify: (row: MatchRowView, tags: string[]) =>
-      void runQueueAction(row, () => classifyExpenseAction(row.movementId, tags)),
+    onClassify: classify,
     onDismiss: (row: MatchRowView) => void runQueueAction(row, () => dismissMatchAction(row.movementId)),
   };
 
@@ -129,12 +127,19 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
       {picking ? (
         <MatchDialog
           row={picking}
+          targets={data.matchTargets}
+          tagOptions={data.tagOptions}
           busy={busyId === picking.movementId}
           onClose={() => setPicking(null)}
-          onPick={(orderId) => {
+          onApply={(target) => {
             const row = picking;
             setPicking(null);
-            void runQueueAction(row, () => applyMatchAction(row.movementId, orderId));
+            applyTarget(row, target);
+          }}
+          onClassify={(type, tags) => {
+            const row = picking;
+            setPicking(null);
+            classify(row, type, tags);
           }}
         />
       ) : null}
