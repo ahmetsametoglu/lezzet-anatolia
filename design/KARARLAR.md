@@ -2532,3 +2532,45 @@ birebir (21.309).
 için"*, personel uygulaması gerekçesiyle); kamerayı artık müşteri de kullanıyor. Metin iki işi de
 söylüyor, iOS'ta üç dilde (`apps/mobile/locales/*.json`), temel değer İngilizce. Mikrofon izni hiç
 istenmiyor.
+
+
+## Yerin tek kaynağı — girişli müşteride SEÇİLİ ADRES; 09.08'in "sepet çerezden" kararı geri alındı (13.09)
+
+Kullanıcı ölçtü (11.09): sepet *"kapıya teslim, ücretsiz, kapıda ödeme"* derken ödeme ekranı aynı sepete
+*"bölge dışı, kargo"* diyordu. Sebep iki ayrı kaynaktı — sepet `lezzet.place.v2` çerezindeki posta
+kodundan (yalnız elle girilen kod; kayıtlı adresten hiç beslenmiyordu), ödeme ekranı seçili adresten.
+09.08'in gerekçesi *"adres seçilmeden önce en iyi bildiğimiz şey çerezdir"* kayıtlı adresi olan
+müşteri için geçersizdi: adres baştan biliniyordu. **Karar:** girişli ve adresli müşteride yer =
+**varsayılan adres** (`readPlaceContext` → `readDefaultAddress`); çerez yalnız ziyaretçide ve adressiz
+müşteride konuşur; girişsizken girilen kod, girişten sonra kayıtlı adrese yerini bırakır. Ölçülen altı
+sitenin hiçbiri yeri sepette ayrı bir kaynaktan okumuyor (REWE · Knuspr · Picard · Morgenmarkt ·
+Amazon · Picnic — 13.09 araştırması); hepsi bağlamı girişte kuruyor, başlıkta gösteriyor.
+
+
+## Kimlik ve adres SEPETTE; ödeme ekranında adres SALT OKUNUR (13.09)
+
+Kullanıcı kararı: *"Sonraki sayfaya geçmeden önce giriş yapmış ve bir adres seçmiş olmalı; hesap
+açılmadıysa adres girilecek bir yer hiç görünmemeli; ödeme ekranındaki giriş bölümü kaba, o hâliyle
+sepete alınmaz; adres değiştirme, ekleme, düzenleme sepette olsun, gerekirse hesaba yönlendirilsin."*
+Sepetin özet paneli iki hâlli bir kart taşır (`CartIdentity`: giriş bloğu / seçili adres); adres
+seçme, ekleme ve düzenleme sepette biter (`AddressPickerDialog`; silme ve fatura işareti hesap
+sayfasında — panel dar, bağ var). **Seçmek = varsayılan yapmak:** şemanın `isDefault` tanımı zaten
+*"checkout'un önceden seçtiği adres"*; ikinci bir "seçili adres" alanı aynı gerçeğin iki kaynağı olurdu.
+Ödeme ekranı adresi gösterir, değiştirmez; *"Adresi sepette değiştir"* bağı ŞART — ölçülen siteler
+bağlamı her sayfadan değiştirtiyor, bizim kural daha dar, çıkışı olmayan bir kısıt müşteriyi
+aramaya iterdi. Checkout'un "adım 0"ı (misafir e-posta kodu / Google) söküldü; girişsiz `/checkout`
+sepete döner. **OTP her zaman bir giriştir, ayrı misafir kimliği yoktur** (kullanıcı düzeltmesi 13.09).
+Tasarım paketinde sepet paneli çizili değil — kullanıcı kararıyla mevcut desende minimal yazıldı
+(özet kartının kabuğu `cardClass snug`, giriş sayfasının Google · ayraç · e-posta sırası); Claude
+Design'a erişim açılınca çizim istenir (`design/BACKLOG §4`).
+
+## Para: tür · cari · etiket satırın menüsünden seçilir, dokunuşta yazılır — Kaydet yok (13.09)
+
+Kullanıcı kararı: *"Muhasebeci programında gördüğünüz üzere etiketler bir popup menü ile seçiliyor…
+tıklandığı zaman doğrudan o etiket eklenebilsin. Kaydet butonuna gerek yok."* 12.12'nin satır içi
+"Etiketle → çipler → Kaydet" akışı kalktı. Defter satırında tür (tek), cari (tek) ve etiket (çok)
+kitin aranabilir menüleriyle (`Combobox` çip kipi · `MultiSelect`) seçilir ve seçim anında yazılır;
+gösterim iyimserdir, kapı reddederse eski hâle döner. Menüde olmayan etiket menünün kendisinden
+oluşturulur (`MultiSelect.onCreate`); tekil seçimin boşa dönüşü menünün başındaki "kaldır" satırıdır
+(`Combobox.onClear` — tetikleyicinin içine ✕ konamaz, düğmenin içinde düğme olur). Referans:
+`~/dev/muhasebeci` banka eşleştirme modülü (TagInput · TransactionNatureSelect).

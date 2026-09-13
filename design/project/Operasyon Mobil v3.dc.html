@@ -2590,7 +2590,7 @@
           <div style="display:flex;flex-direction:column;gap:4px">
             <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#5f7a2c">YÖNETİM · KARAR KUTUSU</span>
             <span style="font:600 27px/1.1 'Lora'">Bugün Ne Bekliyor</span>
-            <span style="font:400 12px 'Karla';color:#8a8270">5 karar · 2 tanesi gün içinde</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">karar bekleyenler · 2'si gün içinde</span>
           </div>
           <div onClick="{{ tg.kimlikSheet }}" style="width:40px;height:40px;border-radius:14px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:800 13px 'Karla';cursor:pointer;flex:none">SÖ</div>
         </div>
@@ -2622,13 +2622,20 @@
             </div>
           </div>
 
-          <sc-if value="{{ b2b.bekliyor }}" hint-placeholder-val="{{ true }}">
-            <div onClick="{{ go.b2bOnay }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+          <sc-if value="{{ b2b.kartVar }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ b2b.kartAc }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
               <span style="width:42px;height:42px;border-radius:14px;background:#e3ecd2;display:flex;align-items:center;justify-content:center;flex:none"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-5h6v5"/><path d="M9 10h.01M15 10h.01M9 13h.01M15 13h.01"/></svg></span>
               <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
-                <span style="font:700 15px 'Karla';color:#2f353a">Kurumsal hesap başvurusu</span>
-                <span style="font:400 12px/1.4 'Karla';color:#6d7261;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b2b.ad }} · {{ b2b.ulke }}</span>
-                <span style="font:700 11px 'Karla';color:{{ b2b.bayrak.fg }}">{{ b2b.bayrak.metin }}</span>
+                <sc-if value="{{ b2b.kartCoklu }}" hint-placeholder-val="{{ true }}">
+                  <span style="font:700 15px 'Karla';color:#2f353a">Kurumsal hesap başvuruları</span>
+                  <span style="font:400 12px/1.4 'Karla';color:#6d7261">{{ b2b.ozet }}</span>
+                  <span style="font:700 11px 'Karla';color:#8a8270">listeden seç · bayrak sırayı söyler</span>
+                </sc-if>
+                <sc-if value="{{ b2b.kartTek }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:700 15px 'Karla';color:#2f353a">Kurumsal hesap başvurusu</span>
+                  <span style="font:400 12px/1.4 'Karla';color:#6d7261;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b2b.tekAd }}</span>
+                  <span style="font:700 11px 'Karla';color:{{ b2b.tekBayrak.fg }}">{{ b2b.tekBayrak.metin }}</span>
+                </sc-if>
               </div>
               <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
             </div>
@@ -3112,10 +3119,51 @@
       </div>
     </sc-if>
 
+    <sc-if value="{{ is.b2bListe }}">
+      <div data-screen-label="Yönetim · B2B başvuru listesi" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.karar }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+            <span style="font:600 20px 'Lora'">Kurumsal başvurular</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">{{ b2b.listeAlt }}</span>
+          </div>
+        </div>
+        <div style="padding:0 20px 8px;display:flex;gap:7px">
+          <span onClick="{{ b2b.secBekliyor }}" style="font:700 12px 'Karla';color:{{ b2b.sekmeC.bek.fg }};background:{{ b2b.sekmeC.bek.bg }};border:1.5px solid {{ b2b.sekmeC.bek.bd }};border-radius:12px;padding:8px 12px;cursor:pointer">Bekliyor · {{ b2b.bekSayi }}</span>
+          <span onClick="{{ b2b.secKararli }}" style="font:700 12px 'Karla';color:{{ b2b.sekmeC.kar.fg }};background:{{ b2b.sekmeC.kar.bg }};border:1.5px solid {{ b2b.sekmeC.kar.bd }};border-radius:12px;padding:8px 12px;cursor:pointer">Karar verilmiş · {{ b2b.karSayi }}</span>
+        </div>
+        <div style="padding:10px 20px 24px;display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ b2b.liste }}" as="bl" hint-placeholder-count="3">
+            <div onClick="{{ bl.ac }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+              <span style="width:5px;align-self:stretch;border-radius:3px;background:{{ bl.c.nokta }};flex:none"></span>
+              <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font:700 14px 'Karla';color:#2f353a;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ bl.ad }}</span>
+                  <sc-if value="{{ bl.kararli }}" hint-placeholder-val="{{ false }}">
+                    <span style="background:{{ bl.rozet.bg }};color:{{ bl.rozet.fg }};font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 7px;flex:none;text-transform:uppercase">{{ bl.rozet.ad }}</span>
+                  </sc-if>
+                  <span style="background:{{ bl.c.bg }};color:{{ bl.c.fg }};font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 7px;flex:none;text-transform:uppercase">{{ bl.bayrak }}</span>
+                </div>
+                <span style="font:400 11.5px 'Karla';color:#8a8270">{{ bl.sehir }} · {{ bl.ulke }} · {{ bl.once }}</span>
+              </div>
+              <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ b2b.listeBos }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1.5px dashed #ddd6c4;background:#fbfaf4;border-radius:20px;padding:26px 22px;display:flex;flex-direction:column;gap:8px;align-items:center">
+              <span style="font:600 18px 'Lora';text-align:center">Bu sekmede başvuru yok</span>
+              <span style="font:400 12px/1.55 'Karla';color:#8a8270;text-align:center">Kuyruk kısa tutulur; yeni başvuru bildirimle gelir.</span>
+            </div>
+          </sc-if>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;margin-top:4px">Bayrak listede hesaplanır (dış servise gidilmez); sıra yaşa değil işe göredir — temiz olan on saniyede kapanır.</span>
+        </div>
+      </div>
+    </sc-if>
+
     <sc-if value="{{ is.b2bOnay }}">
       <div data-screen-label="Yönetim · B2B başvuru onayı" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
         <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
-          <div onClick="{{ go.karar }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div onClick="{{ b2b.geri }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
           <div style="display:flex;flex-direction:column;flex:1;min-width:0">
             <span style="font:600 20px 'Lora'">Kurumsal hesap</span>
             <span style="font:400 11.5px 'Karla';color:#8a8270">başvuru · {{ b2b.geldi }}</span>
@@ -3913,24 +3961,31 @@
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;baslangicEkran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;depoHub&quot;,&quot;toplama&quot;,&quot;toplamaDetay&quot;,&quot;maKabul&quot;,&quot;maDetay&quot;,&quot;maPlansiz&quot;,&quot;skt&quot;,&quot;sayim&quot;,&quot;transfer&quot;,&quot;transferKabul&quot;,&quot;kuryeDonus&quot;,&quot;satis&quot;,&quot;sonSatislar&quot;,&quot;kargoDevri&quot;,&quot;kuryeGun&quot;,&quot;seferBaslat&quot;,&quot;aracaYukle&quot;,&quot;serbestUrun&quot;,&quot;kuryeDurak&quot;,&quot;seferKapat&quot;,&quot;para&quot;,&quot;gunSonu&quot;,&quot;karar&quot;,&quot;sosyal&quot;,&quot;konusma&quot;,&quot;sikayet&quot;,&quot;gunOzeti&quot;,&quot;kampanya&quot;,&quot;tedarik&quot;,&quot;bildirim&quot;,&quot;b2bOnay&quot;,&quot;kapsam&quot;,&quot;yazicilar&quot;],&quot;default&quot;:&quot;depoHub&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;listeHali&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;boş&quot;,&quot;yükleniyor&quot;,&quot;hata&quot;],&quot;default&quot;:&quot;dolu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;yalniz depo&quot;,&quot;depo + para&quot;,&quot;dort rol&quot;],&quot;default&quot;:&quot;dort rol&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;b2bOrnek&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;temiz&quot;,&quot;dikkat&quot;,&quot;mukerrer&quot;],&quot;default&quot;:&quot;temiz&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;cevrimdisiMi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;kanitZorunlu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;vurguRengi&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#5f7a2c&quot;,&quot;#b05c2e&quot;,&quot;#2f353a&quot;,&quot;#7a5c8a&quot;],&quot;default&quot;:&quot;#5f7a2c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;}}">
-const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar','b2bOnay'];
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;baslangicEkran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;depoHub&quot;,&quot;toplama&quot;,&quot;toplamaDetay&quot;,&quot;maKabul&quot;,&quot;maDetay&quot;,&quot;maPlansiz&quot;,&quot;skt&quot;,&quot;sayim&quot;,&quot;transfer&quot;,&quot;transferKabul&quot;,&quot;kuryeDonus&quot;,&quot;satis&quot;,&quot;sonSatislar&quot;,&quot;kargoDevri&quot;,&quot;kuryeGun&quot;,&quot;seferBaslat&quot;,&quot;aracaYukle&quot;,&quot;serbestUrun&quot;,&quot;kuryeDurak&quot;,&quot;seferKapat&quot;,&quot;para&quot;,&quot;gunSonu&quot;,&quot;karar&quot;,&quot;sosyal&quot;,&quot;konusma&quot;,&quot;sikayet&quot;,&quot;gunOzeti&quot;,&quot;kampanya&quot;,&quot;tedarik&quot;,&quot;bildirim&quot;,&quot;b2bOnay&quot;,&quot;b2bListe&quot;,&quot;kapsam&quot;,&quot;yazicilar&quot;],&quot;default&quot;:&quot;depoHub&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;listeHali&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;boş&quot;,&quot;yükleniyor&quot;,&quot;hata&quot;],&quot;default&quot;:&quot;dolu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;yalniz depo&quot;,&quot;depo + para&quot;,&quot;dort rol&quot;],&quot;default&quot;:&quot;dort rol&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;b2bKuyruk&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;tek başvuru&quot;,&quot;üç başvuru&quot;,&quot;bekleyen yok&quot;],&quot;default&quot;:&quot;üç başvuru&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;cevrimdisiMi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;kanitZorunlu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;vurguRengi&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#5f7a2c&quot;,&quot;#b05c2e&quot;,&quot;#2f353a&quot;,&quot;#7a5c8a&quot;],&quot;default&quot;:&quot;#5f7a2c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;}}">
+const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar','b2bOnay','b2bListe'];
 // B2B başvuru örnekleri — masaüstü kontrol kartıyla aynı kaynak (readB2bCheck); üç yüzey aynı şeyi söyler.
 const B2B_ORNEK = {
-  temiz: { ad:'Restaurant Anatolie', unvan:'ANATOLIE SAS', ulke:'FR', kimlikEt:'SIRET', kimlik:'812 456 789 00012', kaynak:'resmî kayıttan', tel:'+33 3 88 12 44 70', adres:'8 Rue du Fossé, 67000 Strasbourg', geldi:'bugün 08:31 · web formu',
+  temiz: { ad:'Restaurant Anatolie', unvan:'ANATOLIE SAS', ulke:'FR', kimlikEt:'SIRET', kimlik:'812 456 789 00012', kaynak:'resmî kayıttan', tel:'+33 3 88 12 44 70', adres:'8 Rue du Fossé, 67000 Strasbourg', geldi:'bugün 05:31 · web formu', sehir:'Strasbourg', onceDk:180,
     bildirimAlt:'Strasbourg · FR · sinyaller temiz', bayrak:'temiz', bayrakMetin:'Sinyaller temiz — onaya engel görünmüyor.',
     ai:"2016'dan beri aktif restoran, rota içinde, faaliyet kodu uyumlu — risk işareti yok.",
     sinyaller:[ ['Resmî kayıt','Aktif','iyi'], ['Faaliyet kodu','56.10A · restoran, uyumlu','iyi'], ['Kuruluş','2016','iyi'], ['KDV (TVA)','Doğrulandı','iyi'], ['Adres–rota','Rota içi','iyi'] ], mukerrer:[] },
-  dikkat: { ad:'Bäckerei Wolff', unvan:'Bäckerei Wolff GmbH', ulke:'DE', kimlikEt:'USt-IdNr', kimlik:'DE 314 159 265', kaynak:'elle girilmiş', tel:'+49 78 51 90 21 4', adres:'Hauptstr. 12, 77694 Kehl', geldi:'bugün 08:31 · web formu',
+  dikkat: { ad:'Bäckerei Wolff', unvan:'Bäckerei Wolff GmbH', ulke:'DE', kimlikEt:'USt-IdNr', kimlik:'DE 314 159 265', kaynak:'elle girilmiş', tel:'+49 78 51 90 21 4', adres:'Hauptstr. 12, 77694 Kehl', geldi:'bugün 07:31 · web formu', sehir:'Kehl', onceDk:60,
     bildirimAlt:'Kehl · DE · dikkat', bayrak:'dikkat', bayrakMetin:'Dikkat — resmî kayıt sinyali yok, bilgiler elle girilmiş.',
     ai:null,
     sinyaller:[ ['Resmî kayıt','Sinyal yok (DE)','dikkat'], ['KDV (USt-IdNr)','Geçerli · VIES','iyi'], ['Faaliyet kodu','Elle: fırın','notr'], ['Kuruluş','Belirtilmemiş','dikkat'], ['Adres–rota','Rota içi','iyi'] ], mukerrer:[] },
-  mukerrer: { ad:'Snack Bosphore', unvan:'BOSPHORE SARL', ulke:'FR', kimlikEt:'SIRET', kimlik:'901 233 118 00019', kaynak:'resmî kayıttan', tel:'+33 3 88 62 07 31', adres:'2 Rue de la Gare, 67300 Schiltigheim', geldi:'bugün 08:31 · web formu',
+  mukerrer: { ad:'Snack Bosphore', unvan:'BOSPHORE SARL', ulke:'FR', kimlikEt:'SIRET', kimlik:'901 233 118 00019', kaynak:'resmî kayıttan', tel:'+33 3 88 62 07 31', adres:'2 Rue de la Gare, 67300 Schiltigheim', geldi:'bugün 08:09 · web formu', sehir:'Schiltigheim', onceDk:22,
     bildirimAlt:'Schiltigheim · FR · başka kayıtla eşleşme', bayrak:'dikkat', bayrakMetin:'Dikkat — telefon başka bir kayıtta da var.',
     ai:'Aktif işletme, rota içinde — ancak telefon mevcut bir müşteriyle eşleşiyor. Onaydan önce ilişkiyi çöz.',
     sinyaller:[ ['Resmî kayıt','Aktif','iyi'], ['Faaliyet kodu','56.10C · snack, uyumlu','iyi'], ['Kuruluş','2021','iyi'], ['KDV (TVA)','Doğrulandı','iyi'], ['Adres–rota','Rota içi','iyi'] ],
-    mukerrer:[ { ad:'Bosphore Kebab', alt:'B2C müşteri · 14 sipariş · Schiltigheim', es:'aynı telefon' } ] }
+    mukerrer:[ { ad:'Bosphore Kebab', alt:'B2C müşteri · 14 sipariş · Schiltigheim', es:'aynı telefon' } ] },
+  kleber: { ad:'Traiteur Kléber', unvan:'KLEBER TRAITEUR SARL', ulke:'FR', kimlikEt:'SIRET', kimlik:'745 210 664 00021', kaynak:'resmî kayıttan', tel:'+33 3 88 32 18 90', adres:'8 rue des Orfèvres, 67000 Strasbourg', geldi:'05.09 · web formu', sehir:'Strasbourg', onceDk:3000,
+    hal0:{ hal:'onayli', sebep:'', zaman:'05.09 14:12 · SÖ' }, bayrak:'temiz', bayrakMetin:'Sinyaller temiz — onaya engel görünmüyor.', ai:'Aktif traiteur, rota içinde, faaliyet kodu uyumlu — risk işareti yok.',
+    sinyaller:[ ['Resmî kayıt','Aktif','iyi'], ['Faaliyet kodu','56.21Z · traiteur, uyumlu','iyi'], ['Kuruluş','2012','iyi'], ['KDV (TVA)','Doğrulandı','iyi'], ['Adres–rota','Rota içi','iyi'] ], mukerrer:[] },
+  muller: { ad:'Kiosk Muller', unvan:'Kiosk Muller', ulke:'DE', kimlikEt:'USt-IdNr', kimlik:'DE 271 004 …', kaynak:'elle girilmiş', tel:'+49 78 51 44 10 2', adres:'', geldi:'04.09 · web formu', sehir:'Kehl', onceDk:4400,
+    hal0:{ hal:'red', sebep:'bilgiler eksik ya da tutarsız', zaman:'04.09 09:40 · SÖ' }, bayrak:'dikkat', bayrakMetin:'Dikkat — KDV numarası eksik, adres girilmemiş.', ai:null,
+    sinyaller:[ ['Resmî kayıt','Sinyal yok (DE)','dikkat'], ['KDV (USt-IdNr)','Eksik','dikkat'], ['Faaliyet kodu','Elle: kiosk','notr'], ['Kuruluş','Belirtilmemiş','dikkat'], ['Adres–rota','Adres yok','dikkat'] ], mukerrer:[] }
 };
+const B2B_KUYRUK = { 'tek başvuru':['temiz'], 'üç başvuru':['temiz','dikkat','mukerrer'], 'bekleyen yok':[] };
 const TOGGLES = ['kutuAcik','eksik','scanner','yabanci','etiket','kimlikSheet','boySheet','urunAraSheet','imzaOpen','imzaCizildi','ulasilamadi','kabulEtmedi','hasarNotu','sepetVar','maSatir','imzaAlindi','navSheet'];
 const GROUPS = {
   sebep: ['imha','hasar','kayip','fark'],
@@ -3948,8 +4003,8 @@ const CUBUK_EKRAN = ['depoHub','toplama','maKabul','skt','transfer','sonSatislar
 // Ekran numarası tek yerde durur; yeni ekran araya girerse harfle eklenir, sonrakiler kaymaz.
 // Serbest ürün 16'nın devamı olduğu için 16b — Durak 17, Seferi kapat 18, Yerinde satış 20 yerinde kalır.
 const NUMARA = { skt:'D3', sayim:'D4', dusum:'D4b', kuryeDonus:'13', kuryeGun:'14', aracSeferler:'14b', seferBaslat:'15', aracaYukle:'16', serbestUrun:'17', kuryeDurak:'18', seferKapat:'19', satis:'20' };
-const ADLAR = { depoHub:'Depo İşleri', toplama:'Toplama kuyruğu', toplamaDetay:'Sipariş toplama', maKabul:'Mal kabul', maDetay:'Kabul satırları', maPlansiz:'Siparişsiz kabul', skt:'Yakın-SKT turu', sayim:'Sayım', dusum:'Stok düşümü', transfer:'Transfer', transferKabul:'Transfer kabulü', kuryeDonus:'Kurye dönüşü', satis:'Yerinde satış', sonSatislar:'Son satışlar', sonSatis:'Satış fişi', kargoDevri:'Kargo devri', kuryeGun:'Günün Rotası', aracSeferler:'Araçtaki seferler', seferBaslat:'Sefer ve araç seçimi', aracaYukle:'Araca yükleme', serbestUrun:'Araca serbest ürün', kuryeDurak:'Durak', seferKapat:'Seferi kapat', para:'Tahsilat izleme', gunSonu:'Gün sonu', karar:'Karar kutusu', sosyal:'Sosyal gelen kutusu', konusma:'Konuşma', sikayet:'Talep detayı', talepler:'Talep ve şikâyetler', gunOzeti:'Gün özeti', kampanya:'Kampanya', tedarik:'Tedarik taslağı', b2bOnay:'Kurumsal hesap başvurusu', bildirim:'Bildirimler', kapsam:'Kapsam', yazicilar:'Yazıcılar' };
-const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kapsam','yazicilar'], kurye:['kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','eksikKarar','b2bOnay'], para:['para','gunSonu'] };
+const ADLAR = { depoHub:'Depo İşleri', toplama:'Toplama kuyruğu', toplamaDetay:'Sipariş toplama', maKabul:'Mal kabul', maDetay:'Kabul satırları', maPlansiz:'Siparişsiz kabul', skt:'Yakın-SKT turu', sayim:'Sayım', dusum:'Stok düşümü', transfer:'Transfer', transferKabul:'Transfer kabulü', kuryeDonus:'Kurye dönüşü', satis:'Yerinde satış', sonSatislar:'Son satışlar', sonSatis:'Satış fişi', kargoDevri:'Kargo devri', kuryeGun:'Günün Rotası', aracSeferler:'Araçtaki seferler', seferBaslat:'Sefer ve araç seçimi', aracaYukle:'Araca yükleme', serbestUrun:'Araca serbest ürün', kuryeDurak:'Durak', seferKapat:'Seferi kapat', para:'Tahsilat izleme', gunSonu:'Gün sonu', karar:'Karar kutusu', sosyal:'Sosyal gelen kutusu', konusma:'Konuşma', sikayet:'Talep detayı', talepler:'Talep ve şikâyetler', gunOzeti:'Gün özeti', kampanya:'Kampanya', tedarik:'Tedarik taslağı', b2bOnay:'Kurumsal hesap başvurusu', b2bListe:'Kurumsal başvurular', bildirim:'Bildirimler', kapsam:'Kapsam', yazicilar:'Yazıcılar' };
+const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kapsam','yazicilar'], kurye:['kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','eksikKarar','b2bOnay','b2bListe'], para:['para','gunSonu'] };
 
 // Kurye kendi deposunun dışını görmez: rota, araç ve serbest ürün listeleri depo künyesine göre süzülür.
 // Araç bir ara depodur: aynı anda birden çok seferin kutusunu taşır.
@@ -4059,7 +4114,7 @@ const SERBEST_KATALOG = [
 class Component extends DCLogic {
   state = {
     screen: null,
-    b2b: { hal:'bekliyor', sebep:'', zaman:'' },
+    b2b: { secili:'temiz', sekme:'bekliyor', kararlar:{} },
     t: { kutuAcik:false, eksik:false, scanner:false, yabanci:false, etiket:false, kimlikSheet:false, boySheet:false, urunAraSheet:false, imzaOpen:false, imzaCizildi:false, ulasilamadi:false, kabulEtmedi:false, hasarNotu:false, sepetVar:true, maSatir:true },
     sel: { sebep:null, yontem:'kart', tahsilat:null, kanal:'tum', durum:'tumu', mod:'hibrit', boy:null, akibet:null },
     adet: { k1:0, k2:0, ma1:0, sayim:0 },
@@ -4693,29 +4748,57 @@ class Component extends DCLogic {
         return res;
       })(this),
       b2b: (() => {
-        const o = B2B_ORNEK[this.props.b2bOrnek] || B2B_ORNEK.temiz;
+        const kuyruk = B2B_KUYRUK[this.props.b2bKuyruk] || B2B_KUYRUK['üç başvuru'];
+        const halOf = (k) => st.b2b.kararlar[k] || B2B_ORNEK[k].hal0 || { hal:'bekliyor', sebep:'', zaman:'' };
+        const tumu = kuyruk.concat(['kleber','muller']);
+        const bekleyen = tumu.filter(k => halOf(k).hal === 'bekliyor');
+        const kararli = tumu.filter(k => halOf(k).hal !== 'bekliyor');
+        const yas = (dk) => dk < 60 ? dk + ' dk önce' : dk < 1440 ? Math.round(dk / 60) + ' sa önce' : Math.round(dk / 1440) + ' gün önce';
         const TON = { iyi:{ fg:'#46601f', bg:'#e3ecd2', ik:'✓' }, notr:{ fg:'#6d7261', bg:'#e7e2d2', ik:'–' }, dikkat:{ fg:'#b05c2e', bg:'#f6e6d6', ik:'!' } };
-        const hal = st.b2b.hal;
-        const bayrak = hal === 'onayli' ? { bg:'#e3ecd2', bd:'#a9bf84', fg:'#46601f', nokta:'#5f7a2c', metin:'Onaylandı · ' + st.b2b.zaman + ' · toptan fiyat açık' }
-          : hal === 'red' ? { bg:'#f0ede3', bd:'#ddd6c4', fg:'#6d7261', nokta:'#8a8270', metin:'Reddedildi · ' + st.b2b.zaman + ' · ' + st.b2b.sebep }
-          : o.bayrak === 'temiz' ? { bg:'#e3ecd2', bd:'#a9bf84', fg:'#46601f', nokta:'#5f7a2c', metin:o.bayrakMetin }
-          : { bg:'#fdf8f3', bd:'#d9a97f', fg:'#b05c2e', nokta:'#b05c2e', metin:o.bayrakMetin };
-        const rozet = hal === 'onayli' ? { ad:'Onaylı', bg:'#5f7a2c', fg:'#f5f1e6' } : hal === 'red' ? { ad:'Reddedildi', bg:'#2f353a', fg:'#f5f1e6' } : { ad:'Bekliyor', bg:'#e7e2d2', fg:'#6d7261' };
+        const bayrakOf = (o, kr) => kr.hal === 'onayli' ? { bg:'#e3ecd2', bd:'#a9bf84', fg:'#46601f', nokta:'#5f7a2c', metin:'Onaylandı · ' + kr.zaman + ' · toptan fiyat açık', kisa:'Onaylı' }
+          : kr.hal === 'red' ? { bg:'#f0ede3', bd:'#ddd6c4', fg:'#6d7261', nokta:'#8a8270', metin:'Reddedildi · ' + kr.zaman + ' · ' + kr.sebep, kisa:'Reddedildi' }
+          : o.bayrak === 'temiz' ? { bg:'#e3ecd2', bd:'#a9bf84', fg:'#46601f', nokta:'#5f7a2c', metin:o.bayrakMetin, kisa:'Temiz' }
+          : o.mukerrer.length ? { bg:'#fdf8f3', bd:'#d9a97f', fg:'#b05c2e', nokta:'#b05c2e', metin:o.bayrakMetin, kisa:'Mükerrer' }
+          : { bg:'#fdf8f3', bd:'#d9a97f', fg:'#b05c2e', nokta:'#b05c2e', metin:o.bayrakMetin, kisa:'Dikkat' };
+        const rozetOf = (kr) => kr.hal === 'onayli' ? { ad:'Onaylı', bg:'#5f7a2c', fg:'#f5f1e6' } : kr.hal === 'red' ? { ad:'Reddedildi', bg:'#2f353a', fg:'#f5f1e6' } : { ad:'Bekliyor', bg:'#e7e2d2', fg:'#6d7261' };
+        const key = tumu.indexOf(st.b2b.secili) >= 0 ? st.b2b.secili : (bekleyen[0] || tumu[0]);
+        const o = B2B_ORNEK[key], kr = halOf(key);
+        const bayrak = bayrakOf(o, kr), rozet = rozetOf(kr);
         const retSecili = (st.chips.b2bRet || [])[0] || '';
         const simdi = () => { const d = new Date(); return 'bugün ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ' · SÖ'; };
+        const setB2b = (p) => this.setState(s => ({ b2b: Object.assign({}, s.b2b, p) }));
+        const kararYaz = (k, v) => this.setState(s => ({ b2b: Object.assign({}, s.b2b, { kararlar: Object.assign({}, s.b2b.kararlar, { [k]: v }) }), sheet:null }));
+        const enEski = bekleyen.length ? Math.max.apply(null, bekleyen.map(k => B2B_ORNEK[k].onceDk)) : 0;
+        const ozet = bekleyen.length + ' bekleyen başvuru · en eski ' + yas(enEski);
+        const listeGerek = bekleyen.length > 1;
+        const sekme = st.b2b.sekme;
+        const satirOf = (k) => { const oo = B2B_ORNEK[k], kk = halOf(k), bf = bayrakOf(oo, { hal:'bekliyor' }); return { ad:oo.ad, sehir:oo.sehir, ulke:oo.ulke, once:yas(oo.onceDk), bayrak:bf.kisa, c:{ fg:bf.fg, bg:bf.bg, nokta: kk.hal === 'bekliyor' ? bf.nokta : '#8a8270' }, kararli:kk.hal !== 'bekliyor', rozet:rozetOf(kk), ac: () => this.setState(s => ({ screen:'b2bOnay', b2b: Object.assign({}, s.b2b, { secili:k }) })) }; };
         return {
           ad:o.ad, unvan:o.unvan, unvanFarkli:o.unvan !== o.ad, ulke:o.ulke, kimlikEt:o.kimlikEt, kimlik:o.kimlik, kaynak:o.kaynak, tel:o.tel, adres:o.adres, adresVar:!!o.adres, geldi:o.geldi,
           bayrak, rozet,
           aiVar: !!o.ai, aiYok: !o.ai, ai:o.ai || '',
           sinyaller: o.sinyaller.map(s => ({ k:s[0], v:s[1], c:TON[s[2]] })),
           mukerrerVar: o.mukerrer.length > 0, mukerrer: o.mukerrer,
-          bekliyor: hal === 'bekliyor', kararli: hal !== 'bekliyor',
-          onayla: () => this.setState({ b2b:{ hal:'onayli', sebep:'', zaman:simdi() } }),
+          bekliyor: kr.hal === 'bekliyor', kararli: kr.hal !== 'bekliyor',
+          onayla: () => kararYaz(key, { hal:'onayli', sebep:'', zaman:simdi() }),
           retAc: () => openSheet('b2bRet'),
           retSecili, retHazir: !!retSecili,
           retBg: retSecili ? '#a44a3f' : '#c4bda9',
-          reddet: retSecili ? (() => this.setState({ b2b:{ hal:'red', sebep:retSecili, zaman:simdi() }, sheet:null })) : (() => {}),
-          geriAl: () => this.setState({ b2b:{ hal:'bekliyor', sebep:'', zaman:'' }, chips: Object.assign({}, st.chips, { b2bRet: [] }) })
+          reddet: retSecili ? (() => kararYaz(key, { hal:'red', sebep:retSecili, zaman:simdi() })) : (() => {}),
+          geriAl: () => this.setState(s => { const kl = Object.assign({}, s.b2b.kararlar); delete kl[key]; return { b2b: Object.assign({}, s.b2b, { kararlar: kl }), chips: Object.assign({}, s.chips, { b2bRet: [] }) }; }),
+          geri: () => this.setState({ screen: listeGerek ? 'b2bListe' : 'karar' }),
+          // hub kartı ve liste
+          kartVar: bekleyen.length > 0, kartCoklu: listeGerek, kartTek: bekleyen.length === 1,
+          ozet, tekAd: bekleyen.length === 1 ? B2B_ORNEK[bekleyen[0]].ad + ' · ' + B2B_ORNEK[bekleyen[0]].ulke : '',
+          tekBayrak: bekleyen.length === 1 ? bayrakOf(B2B_ORNEK[bekleyen[0]], halOf(bekleyen[0])) : bayrak,
+          kartAc: () => this.setState(listeGerek ? { screen:'b2bListe' } : { screen:'b2bOnay', b2b: Object.assign({}, st.b2b, { secili: bekleyen[0] }) }),
+          sekmeBekliyor: sekme === 'bekliyor', sekmeKararli: sekme !== 'bekliyor',
+          secBekliyor: () => setB2b({ sekme:'bekliyor' }), secKararli: () => setB2b({ sekme:'kararli' }),
+          sekmeC: { bek: sekme === 'bekliyor' ? { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' }, kar: sekme !== 'bekliyor' ? { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' } },
+          bekSayi: bekleyen.length, karSayi: kararli.length,
+          liste: (sekme === 'bekliyor' ? bekleyen : kararli).map(satirOf),
+          listeBos: (sekme === 'bekliyor' ? bekleyen : kararli).length === 0,
+          listeAlt: sekme === 'bekliyor' ? ozet : kararli.length + ' karar verilmiş · son 7 gün'
         };
       })(),
       sheetB2bRet: st.sheet === 'b2bRet',
@@ -5313,7 +5396,7 @@ class Component extends DCLogic {
           { gun:'bugün', bolum:'kurye', saat:'08:20', yeni:true, acil:false,
             baslik:'Rota atandı — 4 durak', alt:'SF-26-YRNWV9 · 7 kutu · 2 tahsilat', hedef:'Sefer künyesini aç →', ekran:'seferBaslat' },
           { gun:'bugün', bolum:'yönetim', saat:'08:31', yeni:true, acil:false,
-            baslik:'Kurumsal hesap başvurusu — ' + B2B_ORNEK[this.props.b2bOrnek || 'temiz'].ad, alt:B2B_ORNEK[this.props.b2bOrnek || 'temiz'].bildirimAlt, hedef:'Başvuruyu aç →', ekran:'b2bOnay' },
+            baslik:'Kurumsal hesap başvurusu — ' + B2B_ORNEK[(B2B_KUYRUK[this.props.b2bKuyruk] || B2B_KUYRUK['üç başvuru'])[0] || 'temiz'].ad, alt:B2B_ORNEK[(B2B_KUYRUK[this.props.b2bKuyruk] || B2B_KUYRUK['üç başvuru'])[0] || 'temiz'].bildirimAlt, hedef:'Başvuruyu aç →', ekran:'b2bOnay', b2bKey:(B2B_KUYRUK[this.props.b2bKuyruk] || B2B_KUYRUK['üç başvuru'])[0] || 'temiz' },
           { gun:'bugün', bolum:'yönetim', saat:'08:14', yeni:true, acil:true,
             baslik:'Eksik toplama — LA-26-9ERUNH', alt:'Mangolu Artisan Kek 1 adet eksik · karar bekliyor', hedef:'İstisna kararını ver →', ekran:'karar' },
           { gun:'bugün', bolum:'depo', saat:'08:10', yeni:false, acil:true,
@@ -5339,7 +5422,7 @@ class Component extends DCLogic {
           satirlar: suzulmus.filter(n => n.gun === g).map(n => ({
             bolum: n.bolum.toUpperCase(), saat: n.saat, baslik: n.baslik, alt: n.alt,
             hedef: n.hedef, yeni: n.yeni, yakinda: !!n.yakinda,
-            ac: () => this.setState({ screen: n.ekran }),
+            ac: () => this.setState(n.b2bKey ? { screen: n.ekran, b2b: Object.assign({}, st.b2b, { secili: n.b2bKey }) } : { screen: n.ekran }),
             c: {
               bg: n.acil ? '#fdf6f4' : '#fbfaf4',
               bd: n.acil ? '#e0b9b2' : '#ddd6c4',

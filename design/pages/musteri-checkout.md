@@ -2,12 +2,12 @@
 
 ## 1. Amaç ve kullanıcı
 
-Müşterinin kimliğini, adresini, teslimat gününü ve ödeme yolunu netleştirip siparişi kapattığı akış. Kullanıcı: B2C veya onaylı B2B müşteri; girişsiz gelen "misafir" burada hızlı doğrulamayla hesaba bağlanır (hesapsız sipariş yoktur ama müşteri bunu sürtünme olarak hissetmemeli).
+Müşterinin teslimat gününü ve ödeme yolunu netleştirip siparişi kapattığı akış. Kullanıcı: B2C veya onaylı B2B müşteri. **Kimlik ve adres SEPETTE çözülür** (kullanıcı kararı 13.09): buraya giriş yapılmış ve teslimat adresi seçilmiş gelinir; girişsiz açılan ödeme ekranı sepete döner. (Hesapsız sipariş yoktur; OTP bir giriştir, ayrı misafir kimliği yoktur.)
 
 ## 2. İçerik envanteri — ne var, neden
 
-- **Kimlik adımı (girişsiz gelenlere)** — Google ile devam veya e-posta + tek kullanımlık kod; şifre yok, profil formu yok. "Misafir hızı" hissi: birkaç saniyede doğrulan, devam et
-- **Teslimat adresi** — kayıtlı adreslerden seçim veya yeni adres; posta kodu teslimat şeklini belirler
+- **Kimlik satırı** — "… olarak devam ediyorsunuz · Siz değil misiniz?" (paylaşılan cihazda siparişin kime bağlandığı görünür)
+- **Teslimat adresi (salt okunur, 13.09)** — sepette seçilen adres gösterilir; değiştirmek isteyen "Adresi sepette değiştir" bağıyla sepete döner. Posta kodu teslimat şeklini belirler
 - **Teslimat şekli (adresten türetilir)** — adres bölge içindeyse: **kapıya teslim, ücretsiz**; teslimat günü bölgenin takviminden gelir — tek uygun gün varsa gösterilir (seçim yok), birden çoksa müşteri birini seçer. Bölge dışındaysa: **kargo** + kargo ücreti (eşik üstü ücretsiz)
 - **Sipariş kesim etkisi** — kesim saatinden sonra verilen sipariş bir sonraki teslimat gününe kalır; müşteriye yalnız **sonuç** gösterilir (uygun günler zaten buna göre hesaplanmıştır) — "kesim saati" kavramı anlatılmaz
 - **Kargoya uymayan ürün kısıtı** — sepette yalnız bölge içi teslim edilebilen ürün varsa kargo seçeneği sunulmaz; bölge dışı adres seçilirse sade açıklama ("bu ürünler yalnız teslimat bölgemizde")
@@ -24,8 +24,7 @@ Müşterinin kimliğini, adresini, teslimat gününü ve ödeme yolunu netleşti
 
 ## 3. Aksiyonlar
 
-- Hızlı doğrulama (Google / e-posta kodu)
-- Adres seçme / ekleme
+- Adresi sepette değiştirme (bağ — seçim, ekleme ve düzenleme sepette)
 - **Önerilen adresi kabul etme / kendi adresini koruma** (§4c)
 - Teslimat günü seçme (birden çok uygun gün varsa)
 - Ödeme yolu seçme → **siparişi onayla / öde** (ana aksiyon; online'da ödeme sayfasına gider)
@@ -33,7 +32,6 @@ Müşterinin kimliğini, adresini, teslimat gününü ve ödeme yolunu netleşti
 
 ## 4. Durumlar ve varyasyonlar
 
-- **Girişli / girişsiz başlangıç**
 - **Bölge içi / kargo**; tek teslimat günü / çoklu gün seçimi
 - **B2C / B2B**; B2B'de vade açık / kapalı / o an kullanılamaz
 - **Kapıda ödeme tavan altı / üstü**
@@ -103,8 +101,8 @@ müşteri geçerli bir yeni bina adresini hata sanar ve doğru yazdığı adresi
 
 ## 5. Akış bağlantıları
 
-Gelinen: sepet; giriş sayfasından dönüş.
-Gidilen: online ödeme sayfası → sipariş onay/teşekkür; sipariş detay; sepet (geri).
+Gelinen: sepet (giriş yapılmış, adres seçilmiş); giriş sayfasından dönüş.
+Gidilen: online ödeme sayfası → sipariş onay/teşekkür; sipariş detay; sepet (geri; adres değişikliği de oraya).
 Komşu davetinden gelen ziyaretçi: davet karşılaması → sepet/katalog → aynı checkout (davet belirteci
 çerezde taşınır; teslimat günü doğal olarak o sefere düşer).
 

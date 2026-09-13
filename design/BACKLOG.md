@@ -477,21 +477,35 @@ Müşteri evreninin 15 sayfasının hepsinde hem içerik envanteri hem görsel k
 Paketler istisnası dışında). Operasyon, depo ve kurye yüzeylerinin **sayfa** tasarımları da mevcut;
 onların kod tarafındaki açıkları kendi `docs/build` dosyalarında izlenir, burada tekrarlanmaz.
 
-**PARA — BELGE, ETİKET SÖZLÜĞÜ, SATIR İÇİ İZAH (12.12 · 13.09).** Üç kavram `Operasyon - Para`
-çiziminden SONRA doğdu (kullanıcı kararları 13.09: her hareket ya etiketli ya belgeli; ortak bir
-varlık değil etiket; fatura gelince borç doğar) ve çizimde karşılıkları yok. Kitin gramerinde
-yazıldılar: "+ Belge" diyaloğu (elle hareket penceresinin kalıbı), "Etiketler" sözlük penceresi,
-sağ sütunda banka kuyruğunun üstüne "Açık belgeler" kart listesi (kuyruk kartının kalıbı), defter
-satırında "Etiketle" çip satırı ve ortak carisinde bakiye altı cümle. Çizim yapılırsa bakılacaklar:
-belge panelinin sağ sütundaki ağırlığı (kuyrukla yer paylaşıyor), belge kartında dosya ikonu,
-etiket çiplerinin ortak/gider ayrımını renkle söyleyip söylemeyeceği.
-**Eki (12.13):** eşleştirme kuyruğunun "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız sipariş
-adaylarını gösteriyordu; artık bir HEDEF SEÇİCİ — öneriler üstte, altında yöne uyan bütün hedefler
-bölüm bölüm (zaten yazılmış hareket · açık belge · mal kabul · transfer ucu · sipariş · iade · başka
-hesap), arama kutusu, en altta gider/sermaye etiket çipleri. Kartta çıkış satırına "Gider" düğmesi
-(çipler kartın içinde) eklendi. Çizim yapılırsa bakılacaklar: bölümlerin sekme mi liste mi olacağı,
-puanlı önerinin öbür hedeflerden nasıl ayrışacağı, "zaten yazılmış hareket" satırında silinecek
-kaydın uyarı tonu.
+**SEPET PANELİ — KİMLİK/ADRES BLOĞU ve ADRES SEÇİCİ (13.09).** `Musteri - Sepet.dc.html` özet
+panelinde yalnız tutar satırları çiziyor; kullanıcı kararıyla (13.09) panelin üstüne iki hâlli bir
+kart girdi — girişsizde giriş bloğu (Google · e-posta kodu), girişlide seçili teslimat adresi
+(Değiştir · Düzenle · Adres ekle) — ve adres seçici pencere (`AddressPickerDialog`: kayıtlı adresler,
+yeni, düzenle, hesaba bağ). Claude Design'a erişim olmadığı için mevcut desende minimal yazıldı
+(özet kartının kabuğu, giriş sayfasının Google · ayraç · e-posta sırası, hesap sayfasının adres
+satırı). Ödeme ekranındaki adres adımı da artık salt okunur (seçili kart + "Adresi sepette
+değiştir") — çizim seçtiren ızgarayı gösteriyor. Çizim yapılırsa bakılacaklar: giriş bloğunun
+panelde kapladığı yükseklik (kod kutuları dar sütunda), adres kartının başlık kademesi, seçici
+penceresinde "Düzenle"nin satır içindeki yeri, mobil webde çekmece içinde çekmece (seçici → form).
+
+**PARA — BELGE, SÖZLÜK, SATIRIN ARAÇLARI (12.12 · 12.16 · 13.09).** Kavramlar `Operasyon - Para`
+çiziminden SONRA doğdu (kullanıcı kararları 13.09: her hareket türüyle, belgesiyle ya da bir işe
+bağıyla izahlı; ortağın kaydı ortak cari hesabı; fatura gelince borç doğar) ve çizimde karşılıkları
+yok. Kitin gramerinde yazıldılar: "+ Belge" diyaloğu (elle hareket penceresinin kalıbı; cari ·
+tedarikçi · tür · etiket menüleri), "Sözlük" penceresi (Türler · Cariler · Etiketler sekmeleri), sağ
+sütunda banka kuyruğunun üstüne "Açık belgeler" kart listesi (kuyruk kartının kalıbı), defter
+satırında tür · cari · etiket menüleri (muhasebeci deseni — `design/KARARLAR.md`), belge bağı çipi,
+"Eşleşmeyi geri al" ve ortak carisinde bakiye altı cümle. Çizim yapılırsa bakılacaklar: belge
+panelinin sağ sütundaki ağırlığı (kuyrukla yer paylaşıyor), belge kartında dosya ikonu, satır
+araçlarının yoğunluğu (12.17'de satır tıklanınca sağda ayrıntı paneli), tür ve etiket çiplerinin
+ayrışması (ikisi de olive).
+**Eki (12.13 · 12.16):** eşleştirme kuyruğunun "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız
+sipariş adaylarını gösteriyordu; artık bir HEDEF SEÇİCİ — öneriler üstte, altında yöne uyan bütün
+hedefler bölüm bölüm (zaten yazılmış hareket · açık belge · mal kabul · transfer ucu · sipariş · iade
+· cari · başka hesap), arama kutusu, en altta "Türünü koy" (yöne uyan türler). Kartta "Gider"
+düğmesinin yerini "Türünü koy" menüsü aldı. Çizim yapılırsa bakılacaklar: bölümlerin sekme mi liste
+mi olacağı, puanlı önerinin öbür hedeflerden nasıl ayrışacağı, "zaten yazılmış hareket" satırında
+silinecek kaydın uyarı tonu.
 **Eki (12.10):** çizimde yalnız "↑ Banka dosyası" düğmesi var, penceresi yok. Kitin diyalog
 gramerinde yazıldı: hesap + dosya seçimi, tutar geleneği (tek sütun / borç-alacak), sütun eşleme
 kutuları (düşük güvenli alan amber "kontrol edin" notuyla), ilk beş satırın okunuş önizlemesi,
