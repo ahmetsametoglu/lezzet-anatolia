@@ -10,10 +10,10 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 
 ## Ödeme
 
-- **Faz 1:** online kart ödemesi (sağlayıcı seçilecek — Stripe güçlü aday, FR/DE uyumlu) + kapıda ödeme (nakit/kart/çek, sistem içinde kaydedilir).
+- **Faz 1:** online kart ödemesi — **Stripe, karar verildi ve üretimde** (`STACK` §Ödeme; "aday" ifadesi eskidir) + kapıda ödeme (nakit/kart/çek, sistem içinde kaydedilir).
 - Kapıda kart için basit bir cihaz (ör. SumUp) kullanılabilir; sistem yalnızca sonucu kaydeder.
 - Ödeme sağlayıcı bir arayüz arkasında; kapıda ödeme zaten iç mantık.
-- Webhook (ödeme onayı) `apps/backend`'de.
+- Webhook (ödeme onayı) `apps/web/app/api/webhooks/stripe` — `apps/backend` yerine, gerekçesi `lib/order/stripe-webhook.ts` künyesinde (uygulama kapıları orada). **Stripe panosunda dinlenecek olaylar:** `payment_intent.succeeded` · `payment_intent.canceled` · `charge.refunded` · `payout.paid` (12.14: havuz → banka transferi ve ücretler). Muhasebe modeli (brüt tahsilat · ödeme başına ücret · payout transferi) `data-model/para.md`'de.
 
 ## Kargo
 

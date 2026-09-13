@@ -474,6 +474,18 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     return row;
   }
 
+  /**
+   * **Bir kez yazar** (12.14): `idempotencyKey` daha önce yazılmışsa `null` döner, ikinci satır
+   * doğmaz. Sistemin kendi yazdığı sipariş dışı satırlar için (Stripe ücreti, payout transferi):
+   * webhook aynı olayı tekrar gönderebilir, iki olay aynı ödemeyi anlatabilir — kararı veritabanı
+   * verir (`money_movement_idempotency_key`), "önce sorgula" değil. Anahtarsız çağrı ANLAMSIZ: o
+   * zaman her çağrı yazar ve `insert` ile aynı şeydir — burada reddedilir.
+   */
+  async insertOnce(row: MoneyMovementInsert & { idempotencyKey: string }): Promise<MoneyMovement | null> {
+    if (!row.idempotencyKey) throw new Error('insertOnce: yazım kimliği (idempotencyKey) boş olamaz');
+    return this.insertIgnoringConflict(row);
+  }
+
   /** Banka ekstresiyle eşleşti işareti (12.4) — eşleşme kuyruğu bunu boşaltır. */
   markReconciled(id: string, reconciled = true): Promise<MoneyMovement> {
     return this.update({ id, reconciled });

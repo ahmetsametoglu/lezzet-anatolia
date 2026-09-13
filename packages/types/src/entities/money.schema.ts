@@ -68,6 +68,13 @@ export type MovementType = z.infer<typeof MovementTypeEnum>;
 export const ADVERTISING_TAG = 'reklam';
 
 /**
+ * Stripe ücretinin etiketi (12.14) — webhook ödeme başına komisyonu ve ödeme dışı Stripe ücretlerini
+ * havuzdan bu etiketle düşer; kârlılık raporu komisyonu siparişin `paymentFee` alanından okur. Aynı
+ * gerekçe: sabit tek yerde, sözlükteki karşılığı `movement_tag.slug = 'stripe-ucreti'`.
+ */
+export const STRIPE_FEE_TAG = 'stripe-ucreti';
+
+/**
  * Hareketi kim yazdı (12.4 · 13.09): operatör elle (`manual`), banka dosyası (`bank_import`) ya da
  * sistemin kendisi (`system`: Stripe webhook'u, kapıda tahsilat, hızlı satış, payout). Üçüncüsü
  * olmadan Stripe tahsilatı elle girilmiş bir satırdan ayırt edilemiyordu.

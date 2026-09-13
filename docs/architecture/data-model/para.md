@@ -87,6 +87,10 @@ Her banka satırının bir karşılığı olmalı. Kuyruk satıra şu hedefleri 
 
 **Banka hesabına elle de yazılır; ekstre gelince ekstre satırı elle yazılanı yutar** (kullanıcı kararı 13.09, seçenek "elle de yazılır, sonra birleşir"): "kira ödendi" o gün elle girilir, ekstre gelince aynı para bir kez daha düşer ve operatör satırı "zaten yazılmış hareket"e bağlar. `absorb_provisional_movement` tek transaction'da elle yazılanın bağlarını (tip, etiketler, belge, sipariş, mal kabul, tedarikçi, karşı hesap, yazım kimliği, künye) ekstre satırına geçirir ve elle yazılanı **siler**; izi ekstre satırının `meta.absorbed` künyesinde durur (kimlik, kaynak, tutar, tarih, açıklama). Ekstre haklıdır: tutar farklıysa sipariş cache'i yeniden kurulur. Reddedilen seçenek "bankaya elle yazılmaz, ekstre getirir"di — bakiye ekstre yüklenene kadar eski kalırdı.
 
+### Stripe: brüt tahsilat · ücret · payout (12.14 · kullanıcı kararı 13.09)
+
+Stripe bir hesaptır ve üç satır tutar: **tahsilat brüt** (`order_payment`, künye `providerRef`), **ücret ödeme başına** (`expense` + `stripe-ucreti`, yazım kimliği `stripe-fee:<niyet>`; sipariş bağı künyede — `order_id` yazılsaydı siparişin tahsilat toplamı kayardı) ve **payout** (`transfer`, Stripe → banka, tutar payout'un NET'i, değer tarihi varış günü, yazım kimliği `stripe-payout:<payout>`, künyede toplamlar ve kalemler). Ödeme dışı Stripe ücretleri (`stripe_fee`) payout içeriğinden düşer. Banka hesabı `stripe_payout_account_id` ayarıdır. Yazım kimliği tekil olduğu için tekrar gelen olay ikinci satır doğurmaz (`insertOnce`). Ekstre payout'u getirince satır transferin karşı satırı olur (`counterpart_movement_id`).
+
 ### Ortak cari hesabı (`account.type = partner`, 13.09)
 
 Ortağın cebinden ödenen şirket gideri ve şirketin ortak adına yaptığı ödeme şirket hesaplarından geçmez; tutunacakları yer ortağın cari hesabıdır — yeni bir varlık değil, yeni bir hesap türü. Bakiye işareti anlatır: **eksi = şirket ortağa borçlu** (ortak cebinden ödedi), **artı = ortak şirkete borçlu** (şirket ortak adına ödedi; deftere banka→cari transferi yazılır). Sermaye koyma cari DEĞİLDİR: bankaya `capital` girer ve `ortak:<ad>` etiketini taşır.

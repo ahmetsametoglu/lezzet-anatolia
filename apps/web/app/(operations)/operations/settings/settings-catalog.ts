@@ -340,6 +340,17 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     // gerekiyorsa o, ikinci bir depo/tesis demektir ve cevabı depo ekseninde aranır.
     exceptionScopes: [],
   },
+  {
+    key: 'stripe_payout_account_id',
+    label: 'Stripe payout hesabı',
+    help: 'Stripe havuzundaki paranın aktarıldığı banka hesabı. Payout geldiğinde Stripe → bu hesap transferi kendiliğinden yazılır (12.14).',
+    group: 'payment',
+    kind: 'account',
+    // Fabrika değeri YOK (kapı önü kasasıyla aynı gerekçe): değer bir hesap kimliği, her kurulumda başka.
+    impact:
+      'Ayar boşken payout olayı İŞLENMEZ ve sağlayıcı yeniden dener; ayar girilince işlenir. Yanlış hesap seçilirse banka ekstresinin satırı transferin karşısını bulamaz ve para iki hesapta birden görünür.',
+    exceptionScopes: [],
+  },
 
   // ── Stok & tazelik ────────────────────────────────────────────────────────
   {

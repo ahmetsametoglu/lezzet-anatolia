@@ -48,6 +48,26 @@ function toVerifiedEvent(event: Stripe.Event): VerifiedEvent {
     };
   }
 
+  // Payout'un taşıyıcısı `Payout`tur (12.14): sipariş yok, niyet yok — net tutar ve varış günü var.
+  // Varış günü Unix saniyesi; hareketin değer tarihi o gündür, olayın geldiği an değil.
+  if (event.type === 'payout.paid') {
+    const payout = event.data.object as Stripe.Payout;
+    return {
+      id: event.id,
+      type: event.type,
+      orderId: null,
+      paymentIntentId: null,
+      amountTotalCents: null,
+      payout: {
+        id: payout.id,
+        amountCents: payout.amount,
+        arrivalDate: new Date(payout.arrival_date * 1000).toISOString().slice(0, 10),
+        currency: payout.currency,
+      },
+      raw: { type: event.type, payout: payout.id },
+    };
+  }
+
   const intent = event.data.object as Stripe.PaymentIntent;
 
   return {

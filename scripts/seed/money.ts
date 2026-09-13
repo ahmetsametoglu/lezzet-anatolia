@@ -209,6 +209,10 @@ export async function seedMoney(db: Db): Promise<void> {
   });
 
   // Kapı önü satışın nakdi hangi çekmeceye girer — kasiyer ekranı bunu ezebilir, ayar varsayılandır.
+  // Payout'un aktarıldığı banka (12.14): webhook Stripe → bu hesap transferini kendiliğinden yazar.
+  await new SettingsService(db).set('stripe_payout_account_id', hesapId.get('revolut')!, {
+    description: 'Stripe payout\'unun aktarıldığı banka hesabı (12.14).',
+  });
   await new SettingsService(db).set('door_cash_account_id', hesapId.get('kasa')!, {
     description: 'Kapı önü satış tahsilatının düştüğü hesap (12.2).',
   });
