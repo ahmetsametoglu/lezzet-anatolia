@@ -459,6 +459,9 @@ const ROUTE_LABELS: Record<Account['type'], string> = {
   provider: 'Karta geri',
   cash: 'Nakit',
   bank: 'Havaleyle',
+  // 13.09: iade ortağın carisinden de yazılabilir (ortak müşteriye elden ödediyse) — nadir, ama
+  // hesap türü kapalı küme ve harita tam olmak zorunda.
+  partner: 'Ortak carisinden',
 };
 
 /**

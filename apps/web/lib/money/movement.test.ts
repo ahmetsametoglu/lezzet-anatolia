@@ -30,10 +30,25 @@ afterAll(async () => {
 
 describe('elle hareket girişi', () => {
   it('geçerli gider yazılır', async () => {
-    const result = await recordMovement({ accountId: cashAccount, direction: 'out', amountCents: 12_000, type: 'expense', category: 'akaryakıt' });
+    const result = await recordMovement({ accountId: cashAccount, direction: 'out', amountCents: 12_000, type: 'expense', tags: ['akaryakit'] });
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
-    expect(result.movement.category).toBe('akaryakıt');
+    expect(result.movement.tags).toEqual(['akaryakit']);
+    // Etiketi olan hareket izahlıdır (13.09) — türetilmiş kolon, yazılmadan doğru.
+    expect(result.movement.explained).toBe(true);
+  });
+
+  it('sözlükte olmayan etiket veritabanında reddedilir — kural veride durur (13.09)', async () => {
+    await expect(
+      movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 1000, type: 'expense', tags: ['uydurma-etiket'] }),
+    ).rejects.toThrow(/tanınmayan etiket/);
+  });
+
+  it('bağı, belgesi ve etiketi olmayan hareket izah bekler; etiket gelince izahlı olur', async () => {
+    const created = await movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 700, type: 'misc' });
+    expect(created.explained).toBe(false);
+    const tagged = await movements.update({ id: created.id, tags: ['banka-masrafi'] });
+    expect(tagged.explained).toBe(true);
   });
 
   it('tipin yönüne uymayan hareket YAZILMADAN reddedilir', async () => {
@@ -108,8 +123,8 @@ describe('transfer', () => {
 describe('işaret kuralı: SQL görünümü ile motor aynı cevabı veriyor', () => {
   it('defterin her satırı motorun cevabıyla birebir aynı', async () => {
     // Dört şekil de kurulur: giriş · çıkış · transferin gönderen ucu · transferin alan ucu.
-    await movements.insert({ accountId: cashAccount, direction: 'in', amountCents: 4321, type: 'capital', category: 'işaret testi' });
-    await movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 1234, type: 'expense', category: 'işaret testi' });
+    await movements.insert({ accountId: cashAccount, direction: 'in', amountCents: 4321, type: 'capital', description: 'işaret testi' });
+    await movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 1234, type: 'expense', description: 'işaret testi' });
     const aktarim = await transfer({ fromAccountId: cashAccount, toAccountId: bankAccount, amountCents: 5000, description: 'işaret testi' });
     expect(aktarim.status).toBe('ok');
 

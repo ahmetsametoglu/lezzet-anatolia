@@ -31,10 +31,16 @@ export const ManualMovementSchema = z.object({
   /** **EURO** — kapıya `toCents` ile gider. */
   amount: z.number().positive().nullable(),
   direction: MovementDirectionEnum,
-  category: z.string(),
+  /** Sözlükten etiket slug'ları (13.09) — giderde en az bir tane; `reklam` seçilince kampanya sorulur. */
+  tags: z.array(z.string()),
   campaign: z.string(),
   valueDate: z.string(),
   description: z.string(),
+  /**
+   * Dayanak belge (12.12) — "Ödemesini yaz" ile açılan formda dolu gelir, elle girişte `null`.
+   * Form bunu DÜZENLETMEZ (belge seçici yok); belgeden gelen ödeme belgeye bağlı doğar.
+   */
+  documentId: z.string().nullable(),
 });
 export type ManualMovementForm = z.infer<typeof ManualMovementSchema>;
 
@@ -48,7 +54,7 @@ export type ManualMovementForm = z.infer<typeof ManualMovementSchema>;
 export function movementBlock(values: ManualMovementForm): string | null {
   if (!values.accountId) return 'Önce hesabı seçin.';
   if (!values.amount || values.amount <= 0) return 'Tutar sıfırdan büyük olmalı.';
-  if (values.type === 'expense' && !values.category.trim()) return 'Giderin kategorisi yazılmalı (kira, akaryakıt…).';
+  if (values.type === 'expense' && values.tags.length === 0) return 'Gidere en az bir etiket seçilmeli (kira, akaryakıt, maaş…).';
   return null;
 }
 
@@ -65,20 +71,18 @@ export const MANUAL_TYPE_VIEW: Record<ManualType, { label: string; hint: string 
 };
 
 /**
- * En sık girilen gider kategorileri — hızlı seçim çipleri.
+ * Etiket seçeneği — sözlüğün (`movement_tag`) formdaki hâli: `value` slug, `label` okunur ad.
  *
- * Kategori serbest METİNDİR (kalemler işletmeyle büyür, enum olsaydı her yeni kalem migration
- * isterdi) ve bu liste onu KISITLAMAZ, yalnız kısayol sunar. İki kazancı var: yazım farkını keser
- * ("Kira" ile "kira" iki ayrı kategori olurdu) ve **reklamın ham sabitini erişilebilir kılar** —
- * raporun süzdüğü değer `advertising`tir ve operatörden onu İngilizce yazması beklenemez.
+ * ── SABİT LİSTE KALKTI (13.09) ──────────────────────────────────────────────
+ * Burada beş "hızlı kategori" duruyordu ve serbest metni kısıtlamıyor, yalnız kısayol sunuyordu.
+ * Sınıflandırma artık ETİKETTİR ve sözlük veritabanında yönetiliyor (operatör ekler, yazım tek
+ * kalır); form listeyi çağırandan alır (`tagOptions`). Kod içinde sabit tutulsaydı operatörün
+ * eklediği etiket formda hiç görünmezdi.
  */
-export const QUICK_CATEGORIES = [
-  { value: 'kira', label: 'Kira' },
-  { value: 'akaryakıt', label: 'Akaryakıt' },
-  { value: 'maaş', label: 'Maaş' },
-  { value: 'ambalaj', label: 'Ambalaj' },
-  { value: 'advertising', label: 'Reklam' },
-] as const;
+export interface TagOption {
+  value: string;
+  label: string;
+}
 
 /** Elle girişin KAPSAMI — "burada olmayan"ı susarak değil cümleyle söylemek (gerekçe gövdede). */
 export const MANUAL_ENTRY_SCOPE =

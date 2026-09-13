@@ -132,7 +132,12 @@ export const MoneyDayEndSchema = z.object({
       ),
     })
     .nullable(),
-  /** Defterde eşleşmemiş (reconcile edilmemiş) hareket sayısı. */
-  unmatchedMovementCount: z.number().int().nonnegative(),
+  /**
+   * Defterde İZAH EDİLMEMİŞ hareket sayısı (13.09) — sipariş/mal kabul/tedarikçi bağı, belge,
+   * etiket ya da transferden hiçbiri olmayan satırlar. Eski adı `unmatchedMovementCount` idi ve
+   * banka mutabakat bayrağını sayıyordu; o bayrak yalnız ekstre satırında anlam taşır, sistemin
+   * kendi yazdığı her tahsilat "eşleşmemiş" görünüyordu.
+   */
+  unexplainedMovementCount: z.number().int().nonnegative(),
 });
 export type MoneyDayEnd = z.infer<typeof MoneyDayEndSchema>;

@@ -1,4 +1,4 @@
-import type { AccountType, MovementType } from '@lezzet/types';
+import type { AccountType, DocumentKind, MovementDirection, MovementType } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 
 // Para ekranının SÖZLÜĞÜ. Tasarımın §6 kuralı burada zorlanıyor ve tezgâh sözleşmesi onu aynen
@@ -62,6 +62,9 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   cash: 'Nakit kasa',
   bank: 'Banka',
   provider: 'Ödeme sağlayıcı',
+  /* 13.09: ortağın şirketle hesabı. Bakiye işareti anlatır — eksi "şirket ortağa borçlu", artı
+     "ortak şirkete borçlu" (şema künyesi). */
+  partner: 'Ortak cari',
 };
 
 /**
@@ -76,18 +79,21 @@ export const ACCOUNT_TONE: Record<AccountType, OpsTone> = {
   cash: 'olive',
   bank: 'blue',
   provider: 'slate',
+  // Ortak carisi nötr: para değil, bir KİŞİYLE hesap — hesap renklerinin hiçbirine ait değil.
+  partner: 'neutral',
 };
 
 /**
- * Eşleşme hâli — banka ekstresiyle mutabakat.
+ * İZAH hâli (13.09) — satırın ne olduğu biliniyor mu: bir bağ (sipariş, mal kabul, tedarikçi),
+ * bir belge, bir etiket ya da transfer.
  *
- * "Mutabık/mutabık değil" DEĞİL: mutabakat muhasebecinin kelimesi, ekranı kullanan her zaman
- * muhasebeci değil (`requireFinance` yöneticiyi de içeri alıyor). "Eşleşti" fiilen ne olduğunu
- * söylüyor — banka satırı ile kaydımız aynı olaya bağlandı.
+ * Nokta bir tur banka mutabakat bayrağını okuyordu ("eşleşti/eşleşmedi") ve o bayrak yalnız ekstre
+ * satırında anlam taşıdığı için sistemin kendi yazdığı her tahsilat "eşleşmedi" görünüyordu.
+ * "Mutabık" DEĞİL "izahlı": muhasebecinin sorusu budur — *bu satır ne?*
  */
-export const RECONCILE_LABEL = {
-  matched: 'eşleşti',
-  unmatched: 'eşleşmedi',
+export const EXPLAINED_LABEL = {
+  explained: 'izahlı',
+  unexplained: 'izah bekliyor',
 } as const;
 
 /**
@@ -117,7 +123,8 @@ export const NOTES = {
     'Sipariş tahsilatları buradan girilmez — online ödeme, kapıda tahsilat ve kurye gün kapanışı kendi akışlarından düşer. Elle giriş gider, transfer ve sermaye içindir.',
   emptyLedger:
     'Henüz hareket yok. İlk tahsilat, gider ya da banka dosyası girdiğinde liste burada dolmaya başlar.',
-  allMatched: 'Eşleşmemiş satır yok — her şey mutabık.',
+  allMatched: 'Eşleşme bekleyen banka satırı yok.',
+  noOpenDocuments: 'Açık belge yok — girilen her fatura ve bordronun ödemesi bağlanmış.',
   noBankFile:
     'Banka dosyası yüklenmedi. Dosyayı yükleyince satırlar buraya düşer; sistem eşleşme önerir, kararı siz verirsiniz.',
 } as const;
@@ -136,9 +143,8 @@ export const NO_ACCOUNTS =
 // `MANUAL_TYPE_VIEW` FORMUN yanına taşındı (`movement-form/schema`, 22.11) — tür seçicisini artık
 // iki yüzey çiziyor ve etiketin tek tanımı olmalı.
 
-// Hızlı gider kategorileri de FORMUN yanına taşındı (`movement-form/schema`): çipleri hem elle
-// hareket formu hem sınıflandırma satırı (`finance-sections`) çiziyor. Tanım tek, adres iki değil.
-export { QUICK_CATEGORIES } from '@/components/operation/form/movement-form/schema';
+// Hızlı gider kategorileri KALKTI (13.09): sınıflandırma sözlükten etiketle yapılıyor
+// (`movement_tag`), çipler veritabanından okunan `tagOptions` ile geliyor — kodda sabit liste yok.
 
 /**
  * Motorun reddi (`validateMovement`) → operatörün cümlesi.
@@ -156,6 +162,40 @@ export const INVALID_REASON = {
   counter_on_non_transfer: 'Karşı hesap yalnız transferde olur.',
   order_link_missing: 'Sipariş tahsilatı ve iadesi buradan girilmez — kendi akışından düşer.',
   supply_link_missing: 'Stok alımı bir mal kabule bağlanmalı — Tedarik ekranından girilir.',
+} as const;
+
+/** Belge türü — operatörün diliyle (12.12). `other` "sair" değil "bu beşten hiçbiri". */
+export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {
+  invoice: 'Fatura',
+  receipt: 'Fiş',
+  payslip: 'Bordro',
+  contract: 'Sözleşme',
+  statement: 'Dekont',
+  other: 'Diğer belge',
+};
+
+/** Belgenin yönü — "kime borçluyuz / kim bize borçlu" diliyle, `in/out` değil. */
+export const DOCUMENT_DIRECTION_LABEL: Record<MovementDirection, string> = {
+  out: 'Biz ödeyeceğiz',
+  in: 'Bize ödenecek',
+};
+
+/** Belge kapısının reddi → operatörün cümlesi. */
+export const DOCUMENT_REASON = {
+  unknown_tag: 'Etiket sözlükte yok — önce Etiketler penceresinden ekleyin.',
+  vat_over_amount: 'KDV tutarı belge toplamını aşamaz; toplam KDV dâhildir.',
+  not_found: 'Belge bulunamadı — başka bir oturumda silinmiş olabilir.',
+  wrong_key: 'Yüklenen dosya bu belgeye ait değil — yeniden yükleyin.',
+  unsupported_type: 'Yalnız PDF ve fotoğraf (JPG, PNG, WEBP, HEIC) yüklenebilir.',
+  storage_unavailable: 'Belge deposu bu ortamda tanımlı değil — belge kaydedildi, dosyası sonra yüklenebilir.',
+} as const;
+
+/** Etiket kapısının reddi → operatörün cümlesi. */
+export const TAG_REASON = {
+  bad_label: 'Etiket adı boş olamaz.',
+  exists: 'Bu etiket zaten sözlükte.',
+  not_found: 'Etiket bulunamadı — sayfayı tazeleyin.',
+  unknown_tag: 'Etiket sözlükte yok ya da pasif — önce Etiketler penceresinden ekleyin.',
 } as const;
 
 /** Eşleştirme kapısının reddi. Üçü de "geç kaldın" sınıfı: satır artık dokunulabilir değil. */

@@ -176,6 +176,8 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
       accountId,
       amountCents: input.collectedAmountCents ?? order.orderedTotalCents,
       description: 'Kapı önü satış',
+      // Sistemin yazdığı satır (13.09): kasiyer tutarı onaylar ama deftere yazan akışın kendisidir.
+      source: 'system',
     });
     paymentRecorded = collected.status === 'ok';
   }

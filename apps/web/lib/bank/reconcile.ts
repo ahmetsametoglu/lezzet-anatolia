@@ -124,15 +124,16 @@ export async function applyOrderMatch(movementId: string, orderId: string): Prom
 }
 
 /**
- * Satır bir giderdir (kira, akaryakıt…) — sipariş değil. Tipi ve kategorisi yazılır, kuyruktan
- * düşer. Hareket SİLİNMEZ: para zaten hesaptan çıkmıştır, yalnız adı konur.
+ * Satır bir giderdir (kira, akaryakıt…) — sipariş değil. Tipi ve ETİKETLERİ yazılır (13.09; eskiden
+ * tek serbest kategori), kuyruktan düşer. Hareket SİLİNMEZ: para zaten hesaptan çıkmıştır, yalnız
+ * adı konur. Etiketi sözlükte olmayan yazımı veritabanı reddeder (`check_tags_known`).
  */
-export async function classifyAsExpense(movementId: string, category: string): Promise<ReconcileOutcome> {
+export async function classifyAsExpense(movementId: string, tags: readonly string[]): Promise<ReconcileOutcome> {
   const found = await loadQueueRow(movementId);
   if ('status' in found) return found;
   if (found.direction !== 'out') return { status: 'invalid', reason: 'not_bank_row' };
 
-  await new MoneyMovementService(serviceDb()).update({ id: movementId, type: 'expense', category, reconciled: true });
+  await new MoneyMovementService(serviceDb()).update({ id: movementId, type: 'expense', tags: [...tags], reconciled: true });
   return { status: 'ok', movementId };
 }
 

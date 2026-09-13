@@ -1,11 +1,12 @@
-import { AccountService, MoneyMovementService, OrderService, serviceDb } from '@lezzet/database';
+import { AccountService, MoneyMovementService, MovementTagService, OrderService, SupplierService, serviceDb } from '@lezzet/database';
+import { listOpenDocuments } from '@lezzet/application';
 import { DEFAULT_PAGE_SIZE, type AccountLedgerRow } from '@lezzet/types';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { matchQueue } from '@/lib/bank/reconcile';
 import { guarded, requireFinance } from '@/lib/guard';
 import { FinanceClient } from './finance-client';
 import { NOTES } from './finance-labels';
-import { toAccountViews, toMatchRows, toMovementRows, totalBalance } from './finance-read';
+import { toAccountViews, toMatchRows, toMovementRows, toOpenDocumentViews, totalBalance } from './finance-read';
 import type { FinanceData, LedgerView } from './finance-types';
 import { ALL_ACCOUNTS, parseFinanceUrl, periodRange, resolveAccount } from './finance-url';
 
@@ -22,9 +23,12 @@ import { ALL_ACCOUNTS, parseFinanceUrl, periodRange, resolveAccount } from './fi
 // çıkıyor — para işletmeden çıkmadı.
 //
 // ── SAYAÇ SÜZGEÇTEN BAĞIMSIZ ────────────────────────────────────────────────
-// `unreconciledCount()` ham `money_movement`tan sayar, defter görünümünden değil: görünüm transferi
-// iki satır üretiyor ve eşleşmemiş bir transfer iki kez sayılırdı. Rozet "toplam ne kadar iş
-// bekliyor" diyor; süzgece bağlansaydı bir hesabı seçen operatör kuyruğun küçüldüğünü sanardı.
+// `unexplainedCount()` ham `money_movement`tan sayar, defter görünümünden değil: görünüm transferi
+// iki satır üretiyor ve bir hareket iki kez sayılırdı. Rozet "toplam ne kadar iş bekliyor" diyor;
+// süzgece bağlansaydı bir hesabı seçen operatör kuyruğun küçüldüğünü sanardı.
+//
+// Sayılan şey İZAH (13.09): bağı, belgesi, etiketi ya da karşı hesabı olmayan hareket. Eskiden banka
+// mutabakat bayrağı sayılıyordu ve sistemin kendi yazdığı her tahsilat "eşleşmemiş" görünüyordu.
 
 interface FinancePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -58,7 +62,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   // Defter HER HÂLDE okunur — `accountId` verilmezse defterin tamamı sayfalanır. Kuyruk ise hesaba
   // bağlı kalır ve bu doğal: banka dosyası bir hesaba yüklenir.
   const movements = new MoneyMovementService(db);
-  const [ledgerPage, queue, unmatchedCount] = await Promise.all([
+  const [ledgerPage, queue, unexplainedCount, tags, openDocuments, suppliers] = await Promise.all([
     movements.ledger({
       // Hesap bir DARALTMA: `all` iken alan hiç geçilmez, süzgeç de kurulmaz.
       accountId: accountSelected ? urlState.acct : undefined,
@@ -66,13 +70,24 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
       limit: DEFAULT_PAGE_SIZE,
       from: range?.from,
       to: range?.to,
-      unreconciledOnly: urlState.scope === 'unmatched' || undefined,
+      // Adresteki `scope=unmatched` artık İZAH kuyruğudur (13.09): parametre adı değişmedi,
+      // paylaşılmış bağlantılar kırılmasın diye; anlamı sayaçla aynı.
+      unexplainedOnly: urlState.scope === 'unmatched' || undefined,
     }),
     accountSelected ? matchQueue(urlState.acct) : [],
     // Sayaç SÜZGEÇTEN BAĞIMSIZ ve hesap-üstü: rozet "toplam ne kadar iş bekliyor" diyor. Süzgece
     // bağlansaydı bir hesabı seçen operatör kuyruğun küçüldüğünü sanardı.
-    movements.unreconciledCount(),
+    movements.unexplainedCount(),
+    // Etiket sözlüğü — çipler ve satır etiketleri buradan; yalnız aktifler yeni harekete sunulur,
+    // pasif etiketin adı yine okunabilsin diye adlar tam listeden kurulur.
+    new MovementTagService(db).list(),
+    // Açık belgeler (12.12) — doğal tavanlı: kapanan belge listeden düşer, tek turda.
+    listOpenDocuments(db),
+    // Belge formunun tedarikçi seçeneği; pasif tedarikçi yeni belgeye kapalı.
+    new SupplierService(db).list({ activeOnly: true }),
   ]);
+  const tagLabels = new Map(tags.map((tag) => [tag.slug, tag.label] as const));
+  const tagOptions = tags.filter((tag) => tag.isActive).map((tag) => ({ value: tag.slug, label: tag.label }));
 
   // Sipariş referansları TEK turda: defter satırlarının ve önerilerin bağlı olduğu siparişler bir
   // kümede toplanıp bir kez okunuyor. Satır başına sorgu atsaydık elli satırlık bir sayfa elli
@@ -90,7 +105,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
 
   const ledger: LedgerView = {
     state: ledgerPage.rows.length > 0 ? 'ready' : 'empty',
-    rows: toMovementRows(ledgerPage.rows, accountNames, orderRefs),
+    rows: toMovementRows(ledgerPage.rows, accountNames, orderRefs, tagLabels),
     nextCursor: ledgerPage.nextCursor ? JSON.stringify(ledgerPage.nextCursor) : null,
     note: ledgerPage.rows.length > 0 ? null : NOTES.emptyLedger,
   };
@@ -100,7 +115,11 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     totalCents: totalBalance(accountViews),
     ledger,
     queue: toMatchRows(queue, orderRefs),
-    unmatchedCount,
+    unexplainedCount,
+    tagOptions,
+    openDocuments: toOpenDocumentViews(openDocuments),
+    supplierOptions: suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name })),
+    tagList: tags.map((tag) => ({ slug: tag.slug, label: tag.label, isActive: tag.isActive })),
   };
 
   /**

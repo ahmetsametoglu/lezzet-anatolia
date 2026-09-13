@@ -1,7 +1,7 @@
 'use client';
 
 import { Controller, type Control, type UseFormSetValue } from 'react-hook-form';
-import { ADVERTISING_CATEGORY } from '@lezzet/types';
+import { ADVERTISING_TAG } from '@lezzet/types';
 import { DateField } from '@/components/operation/form/date-field';
 import { FormInput } from '@/components/operation/form/form-input';
 import { FormMoney } from '@/components/operation/form/money-input';
@@ -11,8 +11,8 @@ import {
   MANUAL_ENTRY_SCOPE,
   MANUAL_TYPES,
   MANUAL_TYPE_VIEW,
-  QUICK_CATEGORIES,
   type ManualMovementForm,
+  type TagOption,
 } from './schema';
 
 /**
@@ -30,14 +30,21 @@ import {
 interface MovementFormBodyProps {
   control: Control<ManualMovementForm>;
   setValue: UseFormSetValue<ManualMovementForm>;
-  /** Formun canlı değerleri — koşullu kutular (yön · kategori · kampanya) bunlara bakıyor. */
+  /** Formun canlı değerleri — koşullu kutular (yön · etiket · kampanya) bunlara bakıyor. */
   values: ManualMovementForm;
   accounts: Array<{ id: string; name: string }>;
+  /** Etiket sözlüğü (13.09) — çipler buradan; çağıran yalnız AKTİF etiketleri verir. */
+  tagOptions: readonly TagOption[];
   disabled?: boolean;
 }
 
-export function MovementFormBody({ control, setValue, values, accounts, disabled = false }: MovementFormBodyProps) {
-  const isAdvertising = values.type === 'expense' && values.category === ADVERTISING_CATEGORY;
+export function MovementFormBody({ control, setValue, values, accounts, tagOptions, disabled = false }: MovementFormBodyProps) {
+  const isAdvertising = values.type === 'expense' && values.tags.includes(ADVERTISING_TAG);
+  /** Çipe dokunuş etiketi ekler ya da çıkarır — çoklu seçim (`maas` + `ortak:ahmet`). */
+  const toggleTag = (slug: string) => {
+    const next = values.tags.includes(slug) ? values.tags.filter((tag) => tag !== slug) : [...values.tags, slug];
+    setValue('tags', next, { shouldValidate: true });
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -111,48 +118,46 @@ export function MovementFormBody({ control, setValue, values, accounts, disabled
         />
       ) : null}
 
-      {values.type === 'expense' ? (
-        <div className="flex flex-col gap-2">
-          <FormInput
-            control={control}
-            name="category"
-            label="Gider kategorisi"
-            required
-            labelAside="serbest metin"
-            placeholder="kira, akaryakıt, maaş…"
-            disabled={disabled}
-          />
-          {/* Hızlı seçim: kategori serbest metindir ama en sık yazılan beşini elle yazdırmak hem
-              yavaş hem de yazım farkı üretiyor. Reklam çipi ayrıca ÖNEMLİ: raporun süzdüğü değer
-              `advertising` sabitidir ve operatörün onu İngilizce yazması beklenemez. */}
+      {/* ETİKETLER (13.09) — sınıflandırmanın tek mekanizması, sözlükten çoklu seçim. Serbest metin
+          kutusu KALKTI: "Kira" ile "kira" iki kalem oluyordu ve ortak ayrımı (`ortak:ahmet`) gibi
+          ikinci bir eksen taşınamıyordu. Giderde en az bir etiket şart (`movementBlock`); sermaye
+          ve sınıflandırılmamışta isteğe bağlı — sermayede `ortak:<ad>` kimin koyduğunu söyler. */}
+      <div className="flex flex-col gap-1.5">
+        <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">
+          Etiketler{values.type === 'expense' ? '' : ' (isteğe bağlı)'}
+        </span>
+        {tagOptions.length === 0 ? (
+          <span className="font-ops-body text-ops-xs text-ops-faint">Sözlükte aktif etiket yok — önce Para ekranından etiket ekleyin.</span>
+        ) : (
           <div className="flex flex-wrap gap-1.5">
-            {QUICK_CATEGORIES.map((quick) => (
+            {tagOptions.map((option) => (
               <button
-                key={quick.value}
+                key={option.value}
                 type="button"
                 disabled={disabled}
-                onClick={() => setValue('category', quick.value, { shouldValidate: true })}
+                aria-pressed={values.tags.includes(option.value)}
+                onClick={() => toggleTag(option.value)}
                 className={`cursor-pointer rounded-ops-chip border px-2.5 py-1 font-ops-body text-ops-xs transition-colors disabled:cursor-not-allowed ${
-                  values.category === quick.value
+                  values.tags.includes(option.value)
                     ? 'border-ops-olive bg-ops-olive-bg text-ops-olive-dark'
                     : 'border-ops-line text-ops-muted hover:border-ops-line-strong hover:text-ops-ink'
                 }`}
               >
-                {quick.label}
+                {option.label}
               </button>
             ))}
           </div>
-        </div>
-      ) : null}
+        )}
+      </div>
 
-      {/* Kampanya etiketi YALNIZ reklam giderinde — analitiğin ROAS köprüsü budur (12.5). Zorunlu
-          DEĞİL: kampanyası bilinmeyen bir ajans faturası da girilebilmeli, yoksa operatör onu
-          `misc` yazar ve gider reklam toplamından tamamen düşer. */}
+      {/* Kampanya künyesi YALNIZ `reklam` etiketli giderde — analitiğin ROAS köprüsü budur (12.5).
+          Zorunlu DEĞİL: kampanyası bilinmeyen bir ajans faturası da girilebilmeli, yoksa operatör
+          onu `misc` yazar ve gider reklam toplamından tamamen düşer. */}
       {isAdvertising ? (
         <FormInput
           control={control}
           name="campaign"
-          label="Kampanya etiketi"
+          label="Kampanya künyesi"
           labelAside="boş bırakılabilir"
           placeholder="bayram-ig"
           disabled={disabled}

@@ -477,6 +477,15 @@ Müşteri evreninin 15 sayfasının hepsinde hem içerik envanteri hem görsel k
 Paketler istisnası dışında). Operasyon, depo ve kurye yüzeylerinin **sayfa** tasarımları da mevcut;
 onların kod tarafındaki açıkları kendi `docs/build` dosyalarında izlenir, burada tekrarlanmaz.
 
+**PARA — BELGE, ETİKET SÖZLÜĞÜ, SATIR İÇİ İZAH (12.12 · 13.09).** Üç kavram `Operasyon - Para`
+çiziminden SONRA doğdu (kullanıcı kararları 13.09: her hareket ya etiketli ya belgeli; ortak bir
+varlık değil etiket; fatura gelince borç doğar) ve çizimde karşılıkları yok. Kitin gramerinde
+yazıldılar: "+ Belge" diyaloğu (elle hareket penceresinin kalıbı), "Etiketler" sözlük penceresi,
+sağ sütunda banka kuyruğunun üstüne "Açık belgeler" kart listesi (kuyruk kartının kalıbı), defter
+satırında "Etiketle" çip satırı ve ortak carisinde bakiye altı cümle. Çizim yapılırsa bakılacaklar:
+belge panelinin sağ sütundaki ağırlığı (kuyrukla yer paylaşıyor), belge kartında dosya ikonu,
+etiket çiplerinin ortak/gider ayrımını renkle söyleyip söylemeyeceği.
+
 **KARGO DÖNÜŞÜ — hiçbir yüzeyi yok, 05.09 (ölçüldü).** Müşteriye ulaşmayan bir kargo kolisi depoya
 geri döndüğünde onu karşılayan ekran YOK: ne mobilde ne web operasyonda. Boşluk kayıtsızdı; burada
 açılıyor.

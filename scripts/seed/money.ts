@@ -1,4 +1,12 @@
-import { AccountService, BankImportProfileService, BankImportService, MoneyMovementService, SettingsService } from '@lezzet/database';
+import {
+  AccountService,
+  BankImportProfileService,
+  BankImportService,
+  MoneyDocumentService,
+  MoneyMovementService,
+  MovementTagService,
+  SettingsService,
+} from '@lezzet/database';
 import { fingerprintRows, heuristicColumnMapper, parseBankRows } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db } from './shared';
@@ -20,20 +28,35 @@ const HESAPLAR = [
   { key: 'stripe', name: 'Stripe', type: 'provider' as const, acilis: 1980 },
   // Kapanmış hesap: SİLİNMEZ, pasifleşir — geçmiş hareketleri ona bağlıdır.
   { key: 'eskiBanka', name: 'N26 (kapandı)', type: 'bank' as const, acilis: 0, isActive: false },
+  // ORTAK CARİ HESAPLARI (13.09): açılışı YOK — cari bir kasa değil, kişiyle hesaptır; bakiyesi
+  // yalnız ortak adına/ortağın cebinden yapılan hareketlerden doğar. Adlar uydurma (seed).
+  { key: 'ortakA', name: 'Ortak A cari', type: 'partner' as const, acilis: 0 },
+  { key: 'ortakB', name: 'Ortak B cari', type: 'partner' as const, acilis: 0 },
 ];
 
-/** Gider serisi — kategoriler işletmenin gerçek kalemleri; reklam gideri kampanya etiketli. */
-const GIDERLER: Array<{ hesap: string; amount: number; category: string; description: string; gunOnce: number; meta?: Record<string, unknown> }> = [
-  { hesap: 'cm', amount: 1450, category: 'kira', description: 'Depo kirası', gunOnce: 26 },
-  { hesap: 'cm', amount: 1450, category: 'kira', description: 'Depo kirası', gunOnce: 56 },
-  { hesap: 'cm', amount: 2900, category: 'maaş', description: 'Personel maaşları', gunOnce: 27 },
-  { hesap: 'kasa', amount: 96.4, category: 'akaryakıt', description: 'Rota yakıtı', gunOnce: 4 },
-  { hesap: 'kasa', amount: 88.2, category: 'akaryakıt', description: 'Rota yakıtı', gunOnce: 11 },
-  { hesap: 'revolut', amount: 340, category: 'ambalaj', description: 'Soğuk zincir kutu + jel', gunOnce: 18 },
-  { hesap: 'revolut', amount: 129.9, category: 'yazılım', description: 'SaaS abonelikleri', gunOnce: 9 },
-  // Reklam gideri KAMPANYA ETİKETLİ: analitik kampanyanın giderini ve cirosunu yan yana koyar (13).
-  { hesap: 'revolut', amount: 250, category: 'advertising', description: 'Meta — bayram kampanyası', gunOnce: 14, meta: { campaign: 'bayram-2026' } },
-  { hesap: 'revolut', amount: 180, category: 'advertising', description: 'Google — marka araması', gunOnce: 6, meta: { campaign: 'marka-arama' } },
+/** Ortak etiketleri — sözlüğe seed'de girer: adlar işletmenindir, migration'ın referans satırı değil. */
+const ORTAK_ETIKETLERI = [
+  { slug: 'ortak:a', label: 'Ortak A' },
+  { slug: 'ortak:b', label: 'Ortak B' },
+];
+
+/**
+ * Gider serisi — ETİKETLER sözlükteki slug'lar (13.09; eski serbest kategori kalktı); reklam gideri
+ * `reklam` etiketi + kampanya künyesi. `ortak:a` etiketli satır ortak ayrımını gösterir: gider
+ * şirketin, ama ortağa atfedilmiş.
+ */
+const GIDERLER: Array<{ hesap: string; amount: number; tags: string[]; description: string; gunOnce: number; meta?: Record<string, unknown> }> = [
+  { hesap: 'cm', amount: 1450, tags: ['kira'], description: 'Depo kirası', gunOnce: 26 },
+  { hesap: 'cm', amount: 1450, tags: ['kira'], description: 'Depo kirası', gunOnce: 56 },
+  { hesap: 'cm', amount: 2900, tags: ['maas'], description: 'Personel maaşları', gunOnce: 27 },
+  { hesap: 'cm', amount: 1180, tags: ['bordro-kesinti'], description: 'URSSAF — sosyal kesinti', gunOnce: 22 },
+  { hesap: 'kasa', amount: 96.4, tags: ['akaryakit'], description: 'Rota yakıtı', gunOnce: 4 },
+  { hesap: 'kasa', amount: 88.2, tags: ['akaryakit', 'ortak:a'], description: 'Rota yakıtı — Ortak A aracı', gunOnce: 11 },
+  { hesap: 'revolut', amount: 340, tags: ['ambalaj'], description: 'Soğuk zincir kutu + jel', gunOnce: 18 },
+  { hesap: 'revolut', amount: 129.9, tags: ['yazilim'], description: 'SaaS abonelikleri', gunOnce: 9 },
+  // Reklam gideri KAMPANYA KÜNYELİ: analitik kampanyanın giderini ve cirosunu yan yana koyar (13).
+  { hesap: 'revolut', amount: 250, tags: ['reklam'], description: 'Meta — bayram kampanyası', gunOnce: 14, meta: { campaign: 'bayram-2026' } },
+  { hesap: 'revolut', amount: 180, tags: ['reklam'], description: 'Google — marka araması', gunOnce: 6, meta: { campaign: 'marka-arama' } },
 ];
 
 // **`base` katmanında HİÇ KOŞMAZ** (kullanıcı kararı 16.08): hesap adları da açılış bakiyeleri de uydurma
@@ -48,38 +71,105 @@ export async function seedMoney(db: Db): Promise<void> {
   const movements = new MoneyMovementService(db);
   const hesapId = new Map<string, string>();
 
+  // Ortak etiketleri sözlüğe ÖNCE girer: hareket tanınmayan etiketle yazılamaz (`check_tags_known`).
+  const tagService = new MovementTagService(db);
+  for (const etiket of ORTAK_ETIKETLERI) await tagService.insert(etiket);
+
   for (const h of HESAPLAR) {
     const created = await accounts.insert({ name: h.name, type: h.type, isActive: h.isActive ?? true });
     hesapId.set(h.key, created.id);
-    // Açılış bakiyesi bir HAREKETTİR: bakiye kolonu yok, sayı hareketlerden çıkar.
+    // Açılış bakiyesi bir HAREKETTİR: bakiye kolonu yok, sayı hareketlerden çıkar. Etiketi `sermaye`
+    // — kim koyduğu bilinmeyen açılış, ortak ayrımına girmez; gerçek kurulumda `ortak:<ad>` eklenir.
     if (h.acilis > 0) {
       await movements.insert({
         accountId: created.id,
         direction: 'in',
         amountCents: toCents(h.acilis),
         type: 'capital',
+        tags: ['sermaye'],
         description: 'Açılış bakiyesi',
         valueDate: gun(-90),
-        reconciled: true,
       });
     }
     console.log(`  ✓ ${h.name} · ${h.type}${h.isActive === false ? ' · PASİF' : ''}`);
   }
 
+  // `reconciled` ARTIK YAZILMIYOR (13.09): bayrak yalnız banka satırında anlamlı; elle girilen
+  // giderin izahı etiketinden gelir (`explained` türetilmiş kolon).
   for (const g of GIDERLER) {
     await movements.insert({
       accountId: hesapId.get(g.hesap)!,
       direction: 'out',
       amountCents: toCents(g.amount),
       type: 'expense',
-      category: g.category,
+      tags: g.tags,
       description: g.description,
       meta: g.meta,
       valueDate: gun(-g.gunOnce),
-      // Eski satırlar banka ekstresiyle eşleşmiş, yenileri kuyrukta — eşleştirme ekranı boş kalmasın.
-      reconciled: g.gunOnce > 10,
     });
   }
+
+  /*
+    ORTAK CARİSİ İŞ BAŞINDA (13.09) — iki yön, iki hareket:
+    · Ortak A şirket giderini CEBİNDEN ödedi → gider, hesabı ortağın carisi → cari EKSİYE düşer
+      (şirket ortağa borçlu).
+    · Şirket, Ortak B'nin kişisel bir ödemesini bankadan yaptı → banka → cari TRANSFERİ → Ortak B
+      carisi ARTIYA çıkar (ortak şirkete borçlu). Fiziken para üçüncü kişiye gitti; muhasebede
+      ortağın hesabına yazılan bir çekiştir.
+  */
+  await movements.insert({
+    accountId: hesapId.get('ortakA')!,
+    direction: 'out',
+    amountCents: toCents(215.5),
+    type: 'expense',
+    tags: ['ambalaj', 'ortak:a'],
+    description: 'Koli bandı ve etiket — Ortak A kendi kartıyla ödedi',
+    valueDate: gun(-8),
+  });
+  await movements.insert({
+    accountId: hesapId.get('revolut')!,
+    counterAccountId: hesapId.get('ortakB')!,
+    direction: 'out',
+    amountCents: toCents(400),
+    type: 'transfer',
+    tags: ['ortak:b'],
+    description: 'Ortak B adına ödeme — cariye yazıldı',
+    valueDate: gun(-3),
+  });
+
+  /*
+    BELGELER (13.09) — biri kapanmış, biri açık:
+    · Kira faturası: belge + belgeye bağlı ödeme → açık kalanı 0.
+    · Muhasebeci faturası: belge var, ödeme yok → "ödenmemiş faturalar" listesinde durur.
+    Kira ödemesi yukarıda etiketiyle yazıldı; belgeye BAĞLAMAK için burada ayrı bir ödeme
+    yazılmıyor — ilk kira satırı bulunup belgeye bağlanıyor (ödeme iki kez sayılmasın).
+  */
+  const documents = new MoneyDocumentService(db);
+  const kiraFaturasi = await documents.insert({
+    kind: 'invoice',
+    number: 'LOYER-2026-09',
+    issuedOn: gun(-28),
+    counterparty: 'SCI Rhin Immobilier',
+    direction: 'out',
+    amountCents: toCents(1450),
+    vatAmountCents: 0,
+    tags: ['kira'],
+    note: 'Depo kirası — eylül',
+  });
+  // Defterden okunur (`ledger`): servis ham `getAll`ı dışarı vermiyor ve vermemeli — seed de bir çağırandır.
+  const kiraSayfasi = await movements.ledger({ accountId: hesapId.get('cm')!, type: 'expense', from: gun(-26), to: gun(-26), limit: 1 });
+  const kiraOdemesi = kiraSayfasi.rows[0];
+  if (kiraOdemesi) await movements.update({ id: kiraOdemesi.id, documentId: kiraFaturasi.id });
+  await documents.insert({
+    kind: 'invoice',
+    number: 'FA-2026-0912',
+    issuedOn: gun(-4),
+    counterparty: 'Cabinet Comptable Muller',
+    direction: 'out',
+    amountCents: toCents(360),
+    vatAmountCents: toCents(60),
+    note: 'Aylık muhasebe ücreti — ödenmedi',
+  });
 
   // Tedarikçiye ödeme: borç türetiminin (Σ giriş − Σ ödeme) diğer ucu. Alım bir mal kabule bağlı.
   const { data: girisler } = await db.from('stock_intake').select('id,supplier_id,total_amount').limit(2);
@@ -132,7 +222,7 @@ export async function seedMoney(db: Db): Promise<void> {
   const bakiyeler = await accounts.balances();
   const ozet = HESAPLAR.map((h) => `${h.name}: ${euro((bakiyeler.get(hesapId.get(h.key)!)?.balanceCents ?? 0) / 100)} €`).join(' · ');
   console.log(`  ✓ bakiye (türetilmiş) → ${ozet}`);
-  console.log(`✓ para: ${HESAPLAR.length} hesap · ${GIDERLER.length} gider · 2 transfer · tedarikçi ödemesi · banka import`);
+  console.log(`✓ para: ${HESAPLAR.length} hesap · ${GIDERLER.length + 1} gider · 3 transfer · tedarikçi ödemesi · 2 belge · ${ORTAK_ETIKETLERI.length} ortak etiketi`);
 }
 
 /**

@@ -58,7 +58,7 @@ describe('hesap', () => {
 describe('bakiye TÜRETİLİR (saklanmaz)', () => {
   it('giriş artırır, çıkış azaltır', async () => {
     await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 25_000, type: 'capital', description: 'Açılış' });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 9050, type: 'expense', category: 'kira' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 9050, type: 'expense', tags: ['kira'] });
 
     expect((await accounts.balance(cashAccount.id)).balanceCents).toBe(15_950);
     expect((await accounts.balance(cashAccount.id)).movementCount).toBe(2);
@@ -161,18 +161,25 @@ describe('ekstre ve dönem', () => {
     expect(giderler.rows.map((r) => r.amountCents)).not.toContain(900);
   });
 
-  it('eşleşmemiş SAYACI sayfadan değil defterden gelir — kuyruğu es geçmesin', async () => {
+  it('İZAH sayacı sayfadan değil defterden gelir — kuyruğu es geçmesin (13.09)', async () => {
     // Sayfa ilk N satırı taşır; ekran onu sayarsa "7" yerine "20+" yazar (sayaç olmayan bir sayaç).
     // Küresel sayıya bakılmıyor (`CLAUDE §4b`) — ölçüt kendi eklediğimizin FARKI.
-    const once = await movements.unreconciledCount();
-    await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 111, type: 'misc' });
-    const sonra = await movements.unreconciledCount();
+    const once = await movements.unexplainedCount();
+    // Bağsız, belgesiz, etiketsiz satır izah bekler; etiketli satır saymaz.
+    const izahsiz = await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 111, type: 'misc' });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 222, type: 'expense', tags: ['banka-masrafi'] });
+    const sonra = await movements.unexplainedCount();
     expect(sonra).toBe(once + 1);
 
     // Sayfa sınırından bağımsız: tek satırlık sayfa istesek bile sayaç değişmez.
-    const tekSatir = await movements.ledger({ accountId: cashAccount.id, unreconciledOnly: true, limit: 1 });
+    const tekSatir = await movements.ledger({ accountId: cashAccount.id, unexplainedOnly: true, limit: 1 });
     expect(tekSatir.rows).toHaveLength(1);
-    expect(await movements.unreconciledCount()).toBe(sonra);
+    expect(tekSatir.rows.every((row) => !row.explained)).toBe(true);
+    expect(await movements.unexplainedCount()).toBe(sonra);
+
+    // Etiket gelince satır kuyruktan düşer — türetilmiş kolon satırla birlikte değişir.
+    await movements.update({ id: izahsiz.id, tags: ['sermaye'] });
+    expect(await movements.unexplainedCount()).toBe(once);
   });
 
   it('dönem toplamları tip+yön kırılımında toplanır; dönem dışı satır girmez', async () => {
@@ -184,8 +191,8 @@ describe('ekstre ve dönem', () => {
     const expenseBefore = await oku('expense');
     const capitalBefore = await oku('capital');
 
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 90_000, type: 'expense', category: 'kira', valueDate: dayOffset(-3) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 12_040, type: 'expense', category: 'akaryakıt', valueDate: dayOffset(-2) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 90_000, type: 'expense', tags: ['kira'], valueDate: dayOffset(-3) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 12_040, type: 'expense', tags: ['akaryakit'], valueDate: dayOffset(-2) });
     await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 6000, type: 'capital', valueDate: dayOffset(-2) });
     // Dönem DIŞI — toplama girmemeli.
     await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 500_000, type: 'expense', valueDate: dayOffset(-90) });
@@ -225,7 +232,7 @@ describe('para hareketi — euro↔cent sınırı', () => {
       direction: 'out',
       amountCents: 1234,
       type: 'expense',
-      category: 'sınır testi',
+      description: 'sınır testi',
     });
     expect(movement.amountCents).toBe(1234);
 
@@ -241,7 +248,7 @@ describe('para hareketi — euro↔cent sınırı', () => {
   it('bakiye görünümü de cent döndürür — Σ defter satırı', async () => {
     const account = await openAccount('Sınır kasası');
     await movements.insert({ accountId: account.id, direction: 'in', amountCents: 10_050, type: 'capital' });
-    await movements.insert({ accountId: account.id, direction: 'out', amountCents: 2525, type: 'expense', category: 'test' });
+    await movements.insert({ accountId: account.id, direction: 'out', amountCents: 2525, type: 'expense', description: 'test' });
 
     expect((await accounts.balance(account.id)).balanceCents).toBe(7525);
     await purgeTestData(db, { accountIds: [account.id] });

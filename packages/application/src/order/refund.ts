@@ -420,6 +420,8 @@ async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOpt
     valueDate: opts.valueDate,
     description: opts.description ?? 'Sipariş iadesi',
     meta: refundMeta,
+    // Sistemin yazdığı satır (13.09): iade borcu motordan türedi, hareketi yazan bu zincirdir.
+    source: 'system',
   });
   if (after.status !== 'ok') {
     // Para SAĞLAYICIDAN ÇIKTI ama deftere geçmedi — sessiz kalınamaz. Hangi iade olduğunu ancak bu

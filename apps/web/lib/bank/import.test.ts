@@ -235,8 +235,9 @@ describe('eşleştirme kuyruğu', () => {
     await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV EDF', Montant: '-120,00', Solde: '0,00' }], 'kira.csv');
     const row = (await matchQueue(bankAccount))[0]!;
 
-    expect(await classifyAsExpense(row.movement.id, 'elektrik')).toMatchObject({ status: 'ok' });
-    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'expense', category: 'elektrik', reconciled: true });
+    expect(await classifyAsExpense(row.movement.id, ['kira'])).toMatchObject({ status: 'ok' });
+    // Etiket + `reconciled`: banka satırı hem izahlı hem ekstreyle mutabık.
+    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'expense', tags: ['kira'], reconciled: true, explained: true });
     expect(await matchQueue(bankAccount)).toEqual([]);
   });
 

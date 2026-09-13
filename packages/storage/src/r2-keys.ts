@@ -144,7 +144,28 @@ export const r2Keys = {
 
   deliveryProof: (orderId: string, photoToken: string, sourceFilename: string): string =>
     `delivery/proofs/${sanitize(orderId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
+
+  /**
+   * **Muhasebe belgesi** (12.12 · 13.09) — fatura, fiş, bordro PDF'i ya da fotoğrafı. Şikâyet
+   * fotoğrafıyla aynı aile: PRIVATE kova, public adresi YOK — belgede karşı tarafın adı, tutar ve
+   * çoğu zaman banka bilgisi yazar.
+   *
+   * Belge kimliğine göre klasörlenir ve deterministik: bir belgenin bir dosyası vardır, yeniden
+   * yüklenirse eskisinin üstüne yazılır (yetim obje kalmaz). Dosya adı uzantı dışında kullanılmaz.
+   */
+  financeDocument: (documentId: string, sourceFilename: string): string =>
+    `finance/documents/${sanitize(documentId)}/belge.${extOf(sourceFilename)}`,
 } as const;
+
+/**
+ * Belge anahtarının **hangi belgeye ait olduğu** — `ticketAttachmentScope` ile aynı gerekçe: imzalı
+ * okuma adresi yetkisi doğrulanmış bir belge üzerinden üretilir, ama anahtarın gerçekten O belgeye
+ * ait olduğu ayrıca kontrol edilmezse yetkisi olan biri private kovadaki başka bir anahtarı okutur.
+ */
+export function financeDocumentScope(key: string): string | null {
+  const m = /^finance\/documents\/([^/]+)\/[^/]+$/.exec(key);
+  return m ? m[1]! : null;
+}
 
 /**
  * Bir ek anahtarının **kime ait olduğu** — yetki kapısının sorduğu tek soru.

@@ -7,11 +7,10 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { FilterChip } from '@/components/operation/ui/filter-chip';
 import { amount, dayMonth, money, num } from '@/components/operation/ui/format';
 import {
+  EXPLAINED_LABEL,
   MOVEMENT_TYPE_CHIP,
   MOVEMENT_TYPE_ORDER,
   NOTES,
-  QUICK_CATEGORIES,
-  RECONCILE_LABEL,
   SUGGESTION_VIEW,
 } from './finance-labels';
 import { ledgerRowKey } from './finance-types';
@@ -32,6 +31,13 @@ function amountTone(cents: number, isRefund: boolean): string {
 /** "+476,00" · "−92,40" — işaret GÖRÜNÜR yazılır, renge bırakılmaz (renk körlüğü + tarama hızı). */
 function signedAmount(cents: number): string {
   return `${cents >= 0 ? '+' : '−'}${amount(Math.abs(cents))}`;
+}
+
+/** Ortak carisinin bakiye cümlesi — şema künyesi: eksi = şirket ortağa borçlu, artı = ortak şirkete borçlu. */
+function partnerBalanceCaption(cents: number): string {
+  if (cents < 0) return 'şirket ortağa borçlu';
+  if (cents > 0) return 'ortak şirkete borçlu';
+  return 'hesap denk';
 }
 
 // ── Hesap bakiyeleri şeridi ────────────────────────────────────────────────────────────────────
@@ -82,6 +88,11 @@ export function AccountStrip({ accounts, totalCents, stacked = false }: AccountS
           <span className="font-ops-mono text-ops-micro text-ops-faint">
             {account.movementCount > 0 ? `${num(account.movementCount)} hareket` : 'henüz hareket yok'}
           </span>
+          {/* ORTAK CARİSİNDE İŞARET CÜMLEYLE (12.12): eksi/artı bir kasada "para var/yok" derken
+              burada borcun YÖNÜNÜ söylüyor — sayıyı tek başına bırakmak operatörü tersten okutur. */}
+          {account.type === 'partner' ? (
+            <span className="font-ops-body text-ops-micro text-ops-muted">{partnerBalanceCaption(account.balanceCents)}</span>
+          ) : null}
         </div>
       ))}
 
@@ -111,13 +122,14 @@ function TotalCell({ accounts, totalCents, stacked = false }: AccountStripProps)
 interface FilterBarProps {
   accounts: AccountView[];
   urlState: FinanceUrlState;
-  unmatchedCount: number | null;
+  /** İzah edilmemiş hareket sayısı (13.09); `null` = sayaç kapısı yok. */
+  unexplainedCount: number | null;
   onChange: (next: Partial<FinanceUrlState>) => void;
   stacked?: boolean;
 }
 
 /**
- * Hesap · tip · dönem çipleri + eşleşmemiş sayacı.
+ * Hesap · tip · dönem çipleri + izah sayacı.
  *
  * **Hesap bir daraltmadır, bir eksen değil** — tasarımın tezgâh sözleşmesi bunu yazıyor ve bütün
  * ekranın kurgusu buna dayanıyor: "Tümü" varsayılan, kasa ile bankanın ayrı ekranı yok.
@@ -125,7 +137,8 @@ interface FilterBarProps {
  * Sayaç bir ROZET değil, kuyruğun KAPISI: tıklanınca aynı ölçütle süzülmüş listeye iner. Süs olarak
  * bırakılsaydı operatör gördüğü sayının kümesini açmak için ayrıca aramak zorunda kalırdı.
  */
-export function FilterBar({ accounts, urlState, unmatchedCount, onChange, stacked = false }: FilterBarProps) {
+export function FilterBar({ accounts, urlState, unexplainedCount, onChange, stacked = false }: FilterBarProps) {
+  // Adres parametresi `unmatched` kaldı (paylaşılmış bağlantılar kırılmasın), anlamı İZAH kuyruğu.
   const unmatchedActive = urlState.scope === 'unmatched';
 
   return (
@@ -175,16 +188,16 @@ export function FilterBar({ accounts, urlState, unmatchedCount, onChange, stacke
         onChange={(period) => onChange({ period })}
       />
 
-      {/* Sayaç `null` ise HİÇ BASILMAZ — "0 eşleşmemiş" yazmak, sayacı olmayan bir ekranda dolu bir
-          iş kuyruğunu "her şey mutabık" diye okuturdu (CLAUDE.md §1: ölçülemeyen değer sıfır değil). */}
-      {unmatchedCount === null ? null : (
+      {/* Sayaç `null` ise HİÇ BASILMAZ — "0 izahsız" yazmak, sayacı olmayan bir ekranda dolu bir
+          iş kuyruğunu "her şey izahlı" diye okuturdu (CLAUDE.md §1: ölçülemeyen değer sıfır değil). */}
+      {unexplainedCount === null ? null : (
         <Chip
           className="ml-auto"
           active={unmatchedActive}
-          tone={unmatchedCount > 0 ? 'amber' : 'olive'}
+          tone={unexplainedCount > 0 ? 'amber' : 'olive'}
           onClick={() => onChange({ scope: unmatchedActive ? ALL_ACCOUNTS : 'unmatched' })}
         >
-          {unmatchedCount > 0 ? `${num(unmatchedCount)} eşleşmemiş satır` : 'Her şey mutabık'}
+          {unexplainedCount > 0 ? `${num(unexplainedCount)} izah bekleyen hareket` : 'Her şey izahlı'}
         </Chip>
       )}
     </div>
@@ -199,9 +212,14 @@ const ROW_GRID = 'grid grid-cols-[62px_minmax(0,1fr)_100px_120px_14px] items-cen
 interface MovementListProps {
   ledger: LedgerView;
   stacked?: boolean;
+  /** Etiket sözlüğü — izah bekleyen satırın "Etiketle" çipleri (12.12). */
+  tagOptions?: Array<{ value: string; label: string }>;
+  /** Satırı etiketler; verilmezse satır salt okunur (telefon görünümü). */
+  onTag?: (movementId: string, tags: string[]) => void;
+  tagBusyId?: string | null;
 }
 
-export function MovementList({ ledger, stacked = false }: MovementListProps) {
+export function MovementList({ ledger, stacked = false, tagOptions = [], onTag, tagBusyId = null }: MovementListProps) {
   if (ledger.state !== 'ready') {
     return (
       <EmptyState
@@ -239,6 +257,12 @@ export function MovementList({ ledger, stacked = false }: MovementListProps) {
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="truncate font-ops-body text-ops-sm text-ops-ink">{row.title}</span>
               {row.ref ? <RefLine row={row} /> : null}
+              {/* İZAH BEKLEYEN SATIR SATIRDA KAPANIR (12.12): kuyruk için ayrı bir pencere yok —
+                  operatör satırı görür, etiketi seçer, satır izahlı olur. Yalnız etiketsiz ve
+                  bağsız satırda görünür; izahlı satırın etiketi tip hücresinde zaten okunuyor. */}
+              {!row.explained && onTag ? (
+                <TagInline tagOptions={tagOptions} busy={tagBusyId === row.id} onSave={(tags) => onTag(row.id, tags)} />
+              ) : null}
             </div>
             <span className={`text-right font-ops-mono text-ops-sm ${amountTone(row.signedAmountCents, row.type === 'order_refund')}`}>
               {signedAmount(row.signedAmountCents)}
@@ -247,7 +271,7 @@ export function MovementList({ ledger, stacked = false }: MovementListProps) {
               <span className="font-ops-body text-ops-xs text-ops-ink">{row.accountName}</span>
               <span className="font-ops-body text-ops-micro text-ops-faint">{row.typeLabel}</span>
             </div>
-            <MatchDot reconciled={row.reconciled} />
+            <MatchDot explained={row.explained} />
           </li>
         ))}
       </ul>
@@ -271,7 +295,7 @@ function MovementCard({ row }: { row: MovementRowView }) {
         <span>{row.accountName}</span>
         <span aria-hidden>·</span>
         <span className="min-w-0 truncate">{row.typeLabel}</span>
-        <MatchDot reconciled={row.reconciled} className="ml-auto shrink-0" />
+        <MatchDot explained={row.explained} className="ml-auto shrink-0" />
       </div>
       {row.ref ? <RefLine row={row} /> : null}
     </li>
@@ -284,19 +308,85 @@ function RefLine({ row }: { row: MovementRowView }) {
 }
 
 /**
- * Eşleşme noktası — `title` ile okunur hâli de var.
+ * Satır içi etiketleme (12.12): "Etiketle" → çoklu çip → "Kaydet". Kuyruk kartındaki tek dokunuşlu
+ * sınıflandırmadan farkı çoklu seçim: izah bekleyen satır çoğu zaman iki şey söyler ("maaş" ve
+ * "ortak:ahmet"), tek çiple kapatılsa ikincisi hiç yazılmazdı.
+ */
+function TagInline({
+  tagOptions,
+  busy,
+  onSave,
+}: {
+  tagOptions: Array<{ value: string; label: string }>;
+  busy: boolean;
+  onSave: (tags: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const toggle = (slug: string) => setSelected((prev) => (prev.includes(slug) ? prev.filter((tag) => tag !== slug) : [...prev, slug]));
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => setOpen(true)}
+        className="w-fit cursor-pointer font-ops-body text-ops-micro text-ops-amber-dark underline hover:text-ops-ink disabled:cursor-wait"
+      >
+        Etiketle
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+      {tagOptions.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          disabled={busy}
+          aria-pressed={selected.includes(option.value)}
+          onClick={() => toggle(option.value)}
+          className={`cursor-pointer rounded-ops-chip border px-2 py-0.5 font-ops-body text-ops-micro transition-colors disabled:cursor-wait ${
+            selected.includes(option.value)
+              ? 'border-ops-olive bg-ops-olive-bg text-ops-olive-dark'
+              : 'border-ops-line text-ops-muted hover:border-ops-line-strong hover:text-ops-ink'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+      <button
+        type="button"
+        disabled={busy || selected.length === 0}
+        onClick={() => onSave(selected)}
+        className="cursor-pointer rounded-ops-btn bg-ops-olive px-2.5 py-0.5 font-ops-display text-ops-micro font-semibold text-ops-on-olive transition-colors hover:bg-ops-olive-dark disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? '…' : 'Kaydet'}
+      </button>
+      <button type="button" onClick={() => setOpen(false)} className="cursor-pointer font-ops-body text-ops-micro text-ops-faint hover:text-ops-ink">
+        Vazgeç
+      </button>
+    </div>
+  );
+}
+
+/**
+ * İzah noktası (13.09) — `title` ile okunur hâli de var. Bir tur banka mutabakat bayrağını okuyordu
+ * ve sistemin kendi yazdığı her tahsilat amber görünüyordu; şimdi "bu satırın ne olduğu biliniyor
+ * mu" sorusunu okuyor (`explained`).
  *
  * Tek başına bir renk noktası ekran okuyucuya hiçbir şey söylemez ve renk körü kullanıcıda iki hâl
  * ayrışmaz; `title` + `aria-label` ikisini de kapatıyor.
  */
-function MatchDot({ reconciled, className = '' }: { reconciled: boolean; className?: string }) {
-  const label = reconciled ? RECONCILE_LABEL.matched : RECONCILE_LABEL.unmatched;
+function MatchDot({ explained, className = '' }: { explained: boolean; className?: string }) {
+  const label = explained ? EXPLAINED_LABEL.explained : EXPLAINED_LABEL.unexplained;
   return (
     <span
       title={label}
       aria-label={label}
       role="img"
-      className={`size-2 rounded-full ${reconciled ? 'bg-ops-olive' : 'bg-ops-amber'} ${className}`}
+      className={`size-2 rounded-full ${explained ? 'bg-ops-olive' : 'bg-ops-amber'} ${className}`}
     />
   );
 }
@@ -307,9 +397,11 @@ interface MatchQueueProps {
   rows: MatchRowView[];
   accountSelected: boolean;
   busyId: string | null;
+  /** Etiket sözlüğü (13.09) — "bu çıkış hangi gider" çipleri buradan, sabit listeden değil. */
+  tagOptions: Array<{ value: string; label: string }>;
   onApprove: (row: MatchRowView) => void;
   onPick: (row: MatchRowView) => void;
-  onClassify: (row: MatchRowView, category: string) => void;
+  onClassify: (row: MatchRowView, tags: string[]) => void;
   onDismiss: (row: MatchRowView) => void;
 }
 
@@ -320,7 +412,7 @@ interface MatchQueueProps {
  * eşleştirme de o hesabın satırları içindir. "Tümü" seçiliyken kuyruk yerine sebebi yazılıyor —
  * boş bir panel, kuyruğun boş olduğu anlamına gelirdi.
  */
-export function MatchQueue({ rows, accountSelected, busyId, onApprove, onPick, onClassify, onDismiss }: MatchQueueProps) {
+export function MatchQueue({ rows, accountSelected, busyId, tagOptions, onApprove, onPick, onClassify, onDismiss }: MatchQueueProps) {
   if (!accountSelected) {
     return (
       <EmptyState
@@ -340,6 +432,7 @@ export function MatchQueue({ rows, accountSelected, busyId, onApprove, onPick, o
           key={row.movementId}
           row={row}
           busy={busyId === row.movementId}
+          tagOptions={tagOptions}
           onApprove={onApprove}
           onPick={onPick}
           onClassify={onClassify}
@@ -353,6 +446,7 @@ export function MatchQueue({ rows, accountSelected, busyId, onApprove, onPick, o
 function MatchCard({
   row,
   busy,
+  tagOptions,
   onApprove,
   onPick,
   onClassify,
@@ -360,7 +454,7 @@ function MatchCard({
 }: {
   row: MatchRowView;
   busy: boolean;
-} & Pick<MatchQueueProps, 'onApprove' | 'onPick' | 'onClassify' | 'onDismiss'>) {
+} & Pick<MatchQueueProps, 'tagOptions' | 'onApprove' | 'onPick' | 'onClassify' | 'onDismiss'>) {
   const view = SUGGESTION_VIEW[row.strength];
   const [classifying, setClassifying] = useState(false);
   // Gider sınıflandırması yalnız para ÇIKIŞINDA anlamlı ve kapı da öyle diyor (`classifyAsExpense`
@@ -390,22 +484,28 @@ function MatchCard({
 
       {/* "Elle bağla" bir DİYALOG açmıyor, kartın içinde açılıyor: kuyruk seri onaylanan bir yüzey
           ve her satır için pencere açıp kapatmak, on satırlık bir ekstreyi yirmi tıklamaya çevirirdi. */}
+      {/* Çipler SÖZLÜKTEN (13.09): tek dokunuş tek etiketle sınıflar — kuyruk seri geçilen bir yüzey,
+          ikinci etiket (ör. `ortak:ahmet`) hareket listesinden sonradan eklenir. */}
       {classifying ? (
         <div className="flex flex-col gap-1.5">
           <span className="font-ops-body text-ops-micro text-ops-faint">Bu çıkış hangi gider?</span>
-          <div className="flex flex-wrap gap-1.5">
-            {QUICK_CATEGORIES.map((quick) => (
-              <button
-                key={quick.value}
-                type="button"
-                disabled={busy}
-                onClick={() => onClassify(row, quick.value)}
-                className="cursor-pointer rounded-ops-chip border border-ops-line px-2.5 py-1 font-ops-body text-ops-xs text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive-dark disabled:cursor-wait disabled:opacity-60"
-              >
-                {quick.label}
-              </button>
-            ))}
-          </div>
+          {tagOptions.length === 0 ? (
+            <span className="font-ops-body text-ops-xs text-ops-faint">Sözlükte aktif etiket yok — önce etiket ekleyin.</span>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {tagOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onClassify(row, [option.value])}
+                  className="cursor-pointer rounded-ops-chip border border-ops-line px-2.5 py-1 font-ops-body text-ops-xs text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive-dark disabled:cursor-wait disabled:opacity-60"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
 

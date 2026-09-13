@@ -146,6 +146,7 @@ async function reconcileRefund(event: VerifiedEvent, accountId: string | null): 
     amountCents: missingCents,
     description: 'Sağlayıcı panelinden iade — mutabakat',
     meta: { providerRef: event.paymentIntentId },
+    source: 'system',
   });
 
   return { status: 'ok', action: 'refunded' };
@@ -224,6 +225,8 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null): P
       accountId,
       amountCents: event.amountTotalCents,
       description: 'Stripe tahsilatı',
+      // Sistemin yazdığı satır (13.09): webhook'un tahsilatı, operatörün elle girdiği satırdan ayrışır.
+      source: 'system',
       // **Ödeme künyesi burada saklanır (07.11)** — iade bu referansın üzerinden döner. Tahsilat
       // anında yazılmazsa bir daha bulunamaz: sağlayıcıda niyeti sipariş kimliğinden aramak
       // (`search`) gecikmeli çalışır ve iade anında güvenilemez.

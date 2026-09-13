@@ -134,7 +134,7 @@ describe('şirket P&L', () => {
 
     // Genel gider: kira. Stok alımı: aynı dönemde 500 € — COGS'ta zaten sayıldığı için P&L'e
     // İKİNCİ KEZ girmemeli.
-    await movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 12_000, type: 'expense', category: 'kira' });
+    await movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 12_000, type: 'expense', tags: ['kira'] });
     const purchase = await movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 50_000, type: 'purchase', description: 'Mal alımı' });
     expect(purchase.amountCents).toBe(50_000); // alım gerçekten yazıldı — testin iddiası boşa düşmesin
 

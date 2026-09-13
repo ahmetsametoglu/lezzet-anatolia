@@ -5,6 +5,7 @@ import {
   DeliveryZoneService,
   DiscountService,
   MoneyMovementService,
+  MovementTagService,
   ProductService,
   PurchaseOrderService,
   RecipeService,
@@ -144,18 +145,38 @@ const applyStockIntake: Applier = async (db, raw) => {
 };
 
 /**
+ * Asistanın kategori kelimesi → sözlük etiketi (13.09). Slug ya da okunur ad eşleşirse tek etiket;
+ * eşleşmezse BOŞ — uydurulmuş etiket yazılmaz, hareket izah kuyruğuna düşer.
+ */
+async function tagsOfCategory(db: SupabaseClient, category: string | null | undefined): Promise<string[]> {
+  const word = category?.trim().toLocaleLowerCase('tr');
+  if (!word) return [];
+  const dictionary = await new MovementTagService(db).list({ activeOnly: true });
+  const hit = dictionary.find((tag) => tag.slug === word || tag.label.toLocaleLowerCase('tr') === word);
+  return hit ? [hit.slug] : [];
+}
+
+/**
  * Para hareketi — sipariş bağlı tipler (`order_payment`/`order_refund`) şemada YOK ve olmayacak:
  * onların tek meşru kaynağı siparişin kendi akışıdır (`recordForOrder`). Asistan elle bir tahsilat
  * yazabilseydi, sipariş bakiyesi iki ayrı yerden değişir ve mutabakat sessizce bozulurdu.
  */
 const applyMoneyMovement: Applier = async (db, raw) => {
   const payload = parseProposalPayload('money_movement', raw) as MoneyMovementPayload;
+  /*
+    KATEGORİ → ETİKET (13.09). Asistanın önerisi serbest bir kategori kelimesi taşıyor (modelin
+    cümlesi); defter ise SÖZLÜKTEN etiket istiyor ve tanımadığını reddediyor. Kelime sözlükte slug
+    ya da okunur ad olarak bulunursa etiket olur; bulunmazsa hareket ETİKETSİZ yazılır ve izah
+    kuyruğuna düşer — uydurulmuş bir etiketle "izahlı" görünmesindense, operatörün eliyle
+    sınıflanması doğrudur.
+  */
+  const tags = await tagsOfCategory(db, payload.category);
   const row = await new MoneyMovementService(db).insert({
     accountId: payload.accountId,
     direction: payload.direction,
     amountCents: payload.amountCents,
     type: payload.type,
-    category: payload.category,
+    tags,
     description: payload.description,
     supplierId: payload.supplierId,
     counterAccountId: payload.counterAccountId,

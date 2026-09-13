@@ -224,6 +224,8 @@ export async function confirmDoorDelivery(
     amountCents: input.collection.amountCents,
     description: 'Kapıda tahsilat',
     idempotencyKey: input.collection.idempotencyKey,
+    // Sistemin yazdığı satır (13.09): kurye kapıda onaylar, deftere yazan teslim akışıdır.
+    source: 'system',
   });
   if (paid.status !== 'ok') return { status: 'not_found' };
 

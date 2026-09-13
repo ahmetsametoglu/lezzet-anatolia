@@ -1105,7 +1105,10 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'bugün NAKİT tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cash') },
       { ad: 'bugün KART tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'card') },
       { ad: 'bugün ÇEK tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cheque') },
-      { ad: 'eşleşmemiş hareket', zorunlu: true, sayac: (db) => say(db, 'money_movement', (q) => q.eq('reconciled', false)) },
+      // İZAH sayacı (13.09): ekranın saydığı şey — bağı, belgesi, etiketi ya da karşı hesabı olmayan
+      // hareket. Eski `reconciled` sayımı banka mutabakat bayrağıydı ve sistemin yazdığı her
+      // tahsilatı da sayıyordu.
+      { ad: 'izah edilmemiş hareket', zorunlu: true, sayac: (db) => say(db, 'money_movement', (q) => q.eq('explained', false)) },
     ],
   },
   {

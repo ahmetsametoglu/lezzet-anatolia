@@ -305,8 +305,9 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
   // alanlarını taşırdı — hangisinin gerçek olduğu ancak `type` okunarak anlaşılırdı.
   money_movement: defineBody<MoneyMovementPayload, MoneyDraft>({
     parse: parseWith<MoneyMovementPayload>('money_movement'),
-    initial: (payload) => {
-      const manual = movementValuesFrom(payload);
+    initial: (payload, options) => {
+      // Sözlük seçeneklerden: asistanın kategori kelimesi ancak sözlükte varsa etiket olur (13.09).
+      const manual = movementValuesFrom(payload, options.tags);
       return manual ? { kind: 'manual', values: manual } : { kind: 'transfer', values: transferValuesFrom(payload) };
     },
     render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) =>
@@ -362,10 +363,11 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
             // EURO → CENT sınırda (`ManualMovementSchema` künyesi): kapı cent istiyor.
             amountCents: toCents(draft.values.amount ?? 0),
             direction: draft.values.direction,
-            category: draft.values.category,
+            tags: draft.values.tags,
             campaign: draft.values.campaign,
             valueDate: draft.values.valueDate,
             description: draft.values.description,
+            documentId: draft.values.documentId,
             proposalId,
           }),
     // Form dar ve tek sütun (finans diyaloğu 560 px için tasarlandı); yanına dilekçe sütunu geliyor.

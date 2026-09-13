@@ -1,7 +1,7 @@
 import { MoneyMovementService, OrderService } from '@lezzet/database';
 import { derivePaymentStatusForOrder, type PaymentDerivation } from '@lezzet/domain-core';
 import { revokeReferralOnUnpaidOrder, rewardReferralOnPaidOrder } from '../feedback/points';
-import type { Order, OrderItem, PaymentStatus } from '@lezzet/types';
+import type { MovementSource, Order, OrderItem, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -47,7 +47,11 @@ export interface OrderMovementInput {
   amountCents: number;
   valueDate?: string;
   description?: string | null;
-  source?: 'manual' | 'bank_import';
+  /**
+   * Kim yazdı (13.09): sistemin kendi akışları (webhook, kapıda tahsilat, hızlı satış) `system`
+   * geçer — operatörün elle girdiği satırdan ayrışsın diye. Verilmezse kolon varsayılanı `manual`.
+   */
+  source?: MovementSource;
   /**
    * Sağlayıcı künyesi (07.11) — tahsilatta `{ providerRef: 'pi_...' }` yazılır ve iade o referansın
    * üzerinden döner. Kapıda nakit/kart tahsilatında yoktur: dönülecek bir sağlayıcı da yoktur.

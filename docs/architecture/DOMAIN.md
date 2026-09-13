@@ -401,10 +401,12 @@ Sipariş kalem-kalem karşılanabilir (all-or-nothing değil). Eksik iki noktada
 
 Tüm finans tek mantıkla: **para bir hesapta durur, hareketlerle girer/çıkar.**
 
-- **Hesap:** paranın durduğu yer — Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Stripe. Kasa da banka gibi bir hesaptır; "online" ayrı havuz değil, **Stripe hesabıdır**. Nakit şirkette durabilir, bankaya yatırmak zorunlu değil.
+- **Hesap:** paranın durduğu yer — Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Stripe. Kasa da banka gibi bir hesaptır; "online" ayrı havuz değil, **Stripe hesabıdır**. Nakit şirkette durabilir, bankaya yatırmak zorunlu değil. **Ortak carisi de bir hesaptır** (13.09): ortağın cebinden ödenen şirket gideri ve şirketin ortak adına yaptığı ödeme orada tutulur; bakiye işareti borcun yönünü söyler.
 - **Para hareketi (tek tablo):** her giriş/çıkışın bir **hesabı** ve **tipi** var — sipariş ödemesi, gider, satın alma, transfer (hesaplar arası: nakit→banka, Stripe→banka payout), sermaye girişi, sair. Kasa hareketi ile banka hareketi **aynı şeydir**, yalnız hesabı farklı.
-- **Satın alma / gider:** giderler bu hareketlerin bir tipidir. **Stok alımı** olan gider ayrıca bir **stok girişi** (`StockIntake` → partiler + maliyet) oluşturur; diğer giderler (kira, akaryakıt, maaş) yalnız hareket + kategoridir.
-- **Reklam gideri kampanya etiketiyle girer:** `category=advertising` + `meta.campaign` — analitik, kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI Excel'e taşınmaz.
+- **Her hareket izah edilebilir** (kullanıcı kararı 13.09): ya bir işe bağlıdır (sipariş, mal kabul, tedarikçi), ya bir **belgeye** (fatura, fiş, bordro, sözleşme, dekont), ya **etiketlidir** (sözlükten, birden çok: `maas` + `ortak:ahmet`). Hiçbiri yoksa "izah edilmemiş" kuyruğundadır; kayıt engellenmez, kuyruk bir iş listesidir. Ortaklar arası hesap ayrı bir varlık değil, etiket + cari hesaptır.
+- **Belge para değildir:** fatura geldiğinde borç doğar, ödeme sonra bir hareket olarak gelir ve belgeye bağlanır; açık kalan hareketlerden türetilir. Stok alımının faturası mal kabule bağlanır ve ikinci bir borç doğurmaz.
+- **Satın alma / gider:** giderler bu hareketlerin bir tipidir. **Stok alımı** olan gider ayrıca bir **stok girişi** (`StockIntake` → partiler + maliyet) oluşturur; diğer giderler (kira, akaryakıt, maaş) hareket + etiket (+ belge)dir.
+- **Reklam gideri kampanya künyesiyle girer:** `reklam` etiketi + `meta.campaign` — analitik, kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI Excel'e taşınmaz.
 - **Banka import (AI):** AI ajanı banka dosyasından sütun şablonunu çıkarır (`BankImportProfile`), satırlar hesabın para hareketleri olarak girer, sonra sipariş/gider/transfer olarak eşleşir (öneri + elle onay).
 - **Türetilir:** şirket kârlılığı (gelir − gider) ve her hesabın bakiyesi bu hareketlerden. Sipariş tahsilatı (yukarıdaki online/kapıda/banka toplama noktaları) buraya bir hesaba giriş olarak düşer.
 - **(İleride, AI):** tedarikçi faturasından stok-giriş formunu AI hazır doldurabilir — faturalar ve form kurgulandıktan sonra ayrı ele alınır.

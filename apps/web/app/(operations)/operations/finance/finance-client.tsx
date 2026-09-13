@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { applyMatchAction, classifyExpenseAction, dismissMatchAction } from '@/lib/finance/actions';
+import { applyMatchAction, classifyExpenseAction, dismissMatchAction, documentFileUrlAction, tagMovementAction } from '@/lib/finance/actions';
 import { MatchDialog } from './match-dialog';
 import { FinanceDesktop } from './finance.desktop';
 import { financeUrl, type FinanceUrlState } from './finance-url';
-import type { DialogKind, FinanceData, MatchRowView } from './finance-types';
+import type { DialogKind, FinanceData, MatchRowView, OpenDocumentView } from './finance-types';
 
 // Para client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
 // mobil deneyim native uygulamada — `docs/uygulama`.
@@ -36,6 +36,10 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
   const [queueError, setQueueError] = useState<string | null>(null);
   /** Aday seçimi açık olan kuyruk satırı — "Seç" ve "Düzelt" aynı pencereyi açar. */
   const [picking, setPicking] = useState<MatchRowView | null>(null);
+  /** "Ödemesini yaz" denen açık belge — elle hareket penceresi belgeyle dolu açılır (12.12). */
+  const [payingDocument, setPayingDocument] = useState<OpenDocumentView | null>(null);
+  /** Satır içi etiketleme bekleyen hareket. */
+  const [tagBusyId, setTagBusyId] = useState<string | null>(null);
 
   // `replace` (push değil): süzgeç değiştirmek bir GEZİNME değil, aynı ekranın başka bir görünümü.
   // `push` olsaydı beş çip denemesinden sonra geri tuşu ekrandan çıkmak için beş kez basmak isterdi.
@@ -61,6 +65,32 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     startNav(() => router.refresh());
   };
 
+  /** Satırı etiketler; ret satır listesinin altındaki hata şeridine düşer (kuyruk hatasıyla aynı yer). */
+  const onTag = async (movementId: string, tags: string[]) => {
+    setQueueError(null);
+    setTagBusyId(movementId);
+    const { error } = await tagMovementAction(movementId, tags);
+    setTagBusyId(null);
+    if (error) {
+      setQueueError(error);
+      return;
+    }
+    startNav(() => router.refresh());
+  };
+
+  /** Belge dosyası: okuma adresi TIKLANINCA istenir (kısa ömürlü), yeni sekmede açılır. */
+  const onOpenDocumentFile = async (document: OpenDocumentView) => {
+    setQueueError(null);
+    setBusyId(document.id);
+    const { data: file, error } = await documentFileUrlAction(document.id);
+    setBusyId(null);
+    if (error || !file) {
+      setQueueError(error ?? 'Belge dosyası açılamadı.');
+      return;
+    }
+    window.open(file.url, '_blank', 'noopener');
+  };
+
   const view = {
     data,
     urlState,
@@ -72,15 +102,24 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     onFilter: go,
     onOpenDialog: setDialog,
     onCloseDialog: () => setDialog(null),
-    onSaved: refresh,
+    onSaved: () => {
+      setPayingDocument(null);
+      refresh();
+    },
+    onTag: (movementId: string, tags: string[]) => void onTag(movementId, tags),
+    tagBusyId,
+    payingDocument,
+    onPayDocument: setPayingDocument,
+    onClosePay: () => setPayingDocument(null),
+    onOpenDocumentFile: (document: OpenDocumentView) => void onOpenDocumentFile(document),
     // Güçlü adayda tek tıkla onay: motorun "tek aday, belirsizlik yok" cevabı zaten burada
     // (`strength === 'strong'`), ekran ikinci bir soru sormuyor.
     onApprove: (row: MatchRowView) =>
       void runQueueAction(row, () => applyMatchAction(row.movementId, row.candidates[0]!.orderId)),
     // "Seç" ve "Düzelt" aynı pencereyi açar: ikisi de "bu satır hangi siparişin parası" diye sorar.
     onPick: (row: MatchRowView) => setPicking(row),
-    onClassify: (row: MatchRowView, category: string) =>
-      void runQueueAction(row, () => classifyExpenseAction(row.movementId, category)),
+    onClassify: (row: MatchRowView, tags: string[]) =>
+      void runQueueAction(row, () => classifyExpenseAction(row.movementId, tags)),
     onDismiss: (row: MatchRowView) => void runQueueAction(row, () => dismissMatchAction(row.movementId)),
   };
 

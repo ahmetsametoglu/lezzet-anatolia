@@ -1,14 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  ADVERTISING_CATEGORY,
+  ADVERTISING_TAG,
   AccountSchema,
   AccountInsertSchema,
   AccountUpdateSchema,
   AccountBalanceSchema,
   AccountLedgerRowSchema,
+  MoneyDocumentBalanceSchema,
+  MoneyDocumentInsertSchema,
+  MoneyDocumentSchema,
+  MoneyDocumentUpdateSchema,
   MoneyMovementSchema,
   MoneyMovementInsertSchema,
   MoneyMovementUpdateSchema,
+  MovementTagInsertSchema,
+  MovementTagSchema,
+  MovementTagUpdateSchema,
   OrderAmountsSchema,
   DEFAULT_PAGE_SIZE,
   type Account,
@@ -17,9 +24,17 @@ import {
   type AccountLedgerRow,
   type AccountUpdate,
   type KeysetCursor,
+  type MoneyDocument,
+  type MoneyDocumentBalance,
+  type MoneyDocumentInsert,
+  type MoneyDocumentUpdate,
   type MoneyMovement,
   type MoneyMovementInsert,
   type MoneyMovementUpdate,
+  type MovementSource,
+  type MovementTag,
+  type MovementTagInsert,
+  type MovementTagUpdate,
   type MovementType,
   type OrderAmounts,
   type Page,
@@ -102,6 +117,7 @@ class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never>
         ledgerAccountId: opts.accountId,
         type: opts.type,
         ...(opts.unreconciledOnly ? { reconciled: false } : {}),
+        ...(opts.unexplainedOnly ? { explained: false } : {}),
       },
       {
         orderBy: 'valueDate',
@@ -114,21 +130,27 @@ class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never>
   }
 
   /**
-   * Eşleşmemiş satır SAYISI — süzgeçten bağımsız, hesap-üstü tek sayı.
+   * İZAH EDİLMEMİŞ hareket SAYISI — süzgeçten bağımsız, hesap-üstü tek sayı.
    *
    * **Sayfadan sayılamaz** ve talep bunu doğru tespit etmiş: sayfa ilk N satırı taşır, ekran onu
    * sayarsa listenin kuyruğunu es geçer ve "7" yerine "20+" gibi bir şey yazar — sayaç olmayan bir
    * sayaç. Tasarım bu rozeti bir İŞ KUYRUĞU ilan ediyor ve **sıfırken de basıyor** ("her şey
-   * mutabık" iyi haberdir), yani sayının doğru olması gerekiyor.
+   * izahlı" iyi haberdir), yani sayının doğru olması gerekiyor.
+   *
+   * ── `reconciled` DEĞİL `explained` (13.09) ────────────────────────────────
+   * Sayaç `reconciled = false`'u sayıyordu ve o bayrak yalnız banka satırında anlam taşıyor;
+   * sistemin kendi yazdığı her tahsilat, elle girilen her gider "eşleşmemiş" sayılıyordu (yerelde
+   * 28 satırın 5'i banka satırıydı). Doğru soru "bu satırın ne olduğu biliniyor mu" — cevabı
+   * türetilmiş `explained` kolonu veriyor.
    *
    * Ham `money_movement`'tan sayılıyor, `account_movement` görünümünden DEĞİL: görünüm transferi iki
-   * satır üretir ve eşleşmemiş bir transfer iki kez sayılırdı.
+   * satır üretir ve bir hareket iki kez sayılırdı.
    */
-  async unreconciledCount(): Promise<number> {
+  async unexplainedCount(): Promise<number> {
     const { count, error } = await this.supabase
       .from('money_movement')
       .select('id', { count: 'exact', head: true })
-      .eq('reconciled', false);
+      .eq('explained', false);
     if (error) throw error;
     return count ?? 0;
   }
@@ -148,7 +170,10 @@ export interface LedgerFilter {
   limit?: number;
   from?: string;
   to?: string;
+  /** Yalnız banka ekstresiyle eşleşmemiş satırlar — banka kuyruğunun süzgeci (yalnız `bank_import` satırında anlamlı). */
   unreconciledOnly?: boolean;
+  /** Yalnız İZAH edilmemiş hareketler (13.09) — ekranın "izah bekliyor" kapsamı. */
+  unexplainedOnly?: boolean;
 }
 
 /** Dönem toplamı — kâr ve nakit akışı raporlarının ham girdisi (12.6). */
@@ -209,9 +234,31 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     return this.ledgerView.page(opts);
   }
 
-  /** Eşleşmemiş satır sayısı — süzgeçten bağımsız iş kuyruğu rozeti (12.4). */
-  unreconciledCount(): Promise<number> {
-    return this.ledgerView.unreconciledCount();
+  /** İzah edilmemiş hareket sayısı — süzgeçten bağımsız iş kuyruğu rozeti (12.4 · 13.09). */
+  unexplainedCount(): Promise<number> {
+    return this.ledgerView.unexplainedCount();
+  }
+
+  /**
+   * İzah edilmemiş hareketler — kuyruğun kendisi (13.09). En yeni önce, keyset sayfalı: banka
+   * dosyası bir kerede yüzlerce satır düşürebilir.
+   *
+   * Ham tablodan okunur (defter görünümünden değil): kuyruk bir hareketi bir kez gösterir,
+   * transferin iki ayağını iki satır diye değil — transfer zaten izahlıdır.
+   */
+  listUnexplained(opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<MoneyMovement>> {
+    return this.getPage(
+      { explained: false },
+      { orderBy: 'valueDate', orderDirection: 'desc', keysetAfter: opts.cursor, limit: opts.limit ?? DEFAULT_PAGE_SIZE },
+    );
+  }
+
+  /**
+   * Bir belgeye bağlı hareketler — belge kartı "hangi ödemelerle kapandı" sorusunu buradan yanıtlar.
+   * Açık kalanın hesabı burada DEĞİL, `money_document_balance` görünümünde (tek yer).
+   */
+  listByDocument(documentId: string): Promise<MoneyMovement[]> {
+    return this.getAll({ documentId }, { orderBy: 'valueDate' });
   }
 
   /** Siparişin para hareketleri — tahsilat/iade toplamı (`amount_*` cache'inin kaynağı, 12.2). */
@@ -257,7 +304,8 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     type: 'order_payment' | 'order_refund';
     valueDate?: string;
     description?: string | null;
-    source?: 'manual' | 'bank_import';
+    /** Kim yazdı (13.09): sistemin kendi akışları `system` geçer; verilmezse kolon varsayılanı `manual`. */
+    source?: MovementSource;
     /** Sağlayıcı künyesi (07.11) — `{ providerRef: 'pi_...' }`. İade bu referansın üzerinden döner. */
     meta?: Record<string, unknown> | null;
     /**
@@ -346,19 +394,19 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   /**
    * **Kampanya başına reklam gideri** (12.5) — 13.2'nin ROI tablosu bunu cironun yanına koyar.
    *
-   * Süzgeç TİP değil KATEGORİDİR (`advertising`): reklam parası çoğu zaman `expense` olarak girer
-   * ama ajansa yapılan bir `misc` ödeme de reklam gideridir; tipe göre süzseydik ROI'nin gider
-   * tarafı olduğundan küçük, kampanya kârlı görünürdü.
+   * Süzgeç TİP değil ETİKETTİR (`reklam`, 13.09; eskiden `category = advertising`): reklam parası
+   * çoğu zaman `expense` olarak girer ama ajansa yapılan bir `misc` ödeme de reklam gideridir; tipe
+   * göre süzseydik ROI'nin gider tarafı olduğundan küçük, kampanya kârlı görünürdü.
    *
-   * **Etiketsiz satır atılmaz**, `campaign: null` kovasında toplanır: kampanyaların toplamı ile
-   * dönemin gerçek reklam gideri BİRBİRİNİ TUTMALIDIR. Etiketsizi düşürseydik rapor eksik gideri
+   * **Kampanya künyesiz satır atılmaz**, `campaign: null` kovasında toplanır: kampanyaların toplamı
+   * ile dönemin gerçek reklam gideri BİRBİRİNİ TUTMALIDIR. Künyesizi düşürseydik rapor eksik gideri
    * hiç göstermez, ROI kendiliğinden şişerdi.
    */
   async campaignSpend(from: string, to: string): Promise<CampaignSpend[]> {
     const { data, error } = await this.supabase
       .from('money_movement')
       .select('direction,amount,meta')
-      .eq('category', ADVERTISING_CATEGORY)
+      .contains('tags', [ADVERTISING_TAG])
       .gte('value_date', from)
       .lte('value_date', to);
     if (error) throw error;
@@ -394,5 +442,92 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   async insertImported(rows: MoneyMovementInsert[]): Promise<MoneyMovement[]> {
     if (rows.length === 0) return [];
     return this.bulkUpsertIgnoring(rows, 'account_id,import_fingerprint');
+  }
+}
+
+/**
+ * **Etiket sözlüğü** (13.09) — hareketin ve belgenin sınıflandırma kelimeleri. Yönetilen liste:
+ * operatör ekler, yazım tek kalır; veritabanı tanımadığı etiketi reddeder (`check_tags_known`).
+ *
+ * Anahtarı `slug`tır, `id` değil — temel servisin `update`/`getById`si `id` varsayar, o yüzden
+ * bu sınıf yalnız okuma ve ekleme için temel sınıfı kullanır; pasifleştirme kendi sorgusudur.
+ */
+export class MovementTagService extends BaseDbService<MovementTag, MovementTagInsert, MovementTagUpdate> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'movement_tag', MovementTagSchema, MovementTagInsertSchema, MovementTagUpdateSchema);
+  }
+
+  /** Sözlük — okunur ada göre. `activeOnly` yeni harekete sunulacak kümeyi verir; pasifler eski satırlarda kalır. */
+  list(opts: { activeOnly?: boolean } = {}): Promise<MovementTag[]> {
+    return this.getAll(opts.activeOnly ? { isActive: true } : undefined, { orderBy: 'label' });
+  }
+
+  /** Etiket SİLİNMEZ, pasifleşir: eski hareketler onu taşımaya devam eder (hesabın kapanmasıyla aynı). */
+  async setActive(slug: string, isActive: boolean): Promise<MovementTag> {
+    const { data, error } = await this.supabase.from('movement_tag').update({ is_active: isActive }).eq('slug', slug).select().single();
+    if (error) throw error;
+    return MovementTagSchema.parse(dbToApp(data));
+  }
+}
+
+/**
+ * **Belge servisi** (13.09) — fatura, fiş, bordro, sözleşme, dekont. Belge PARA DEĞİLDİR: borç
+ * doğurur, ödeme sonra bir hareket olarak gelir ve `documentId` ile bağlanır. Açık kalan
+ * SAKLANMAZ, `money_document_balance` görünümünden okunur (bakiye kararıyla aynı gerekçe).
+ */
+export class MoneyDocumentService extends BaseDbService<MoneyDocument, MoneyDocumentInsert, MoneyDocumentUpdate> {
+  /** Kolonlar `amount` ve `vat_amount` euro `numeric`; app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['amountCents', 'vatAmountCents'];
+
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'money_document', MoneyDocumentSchema, MoneyDocumentInsertSchema, MoneyDocumentUpdateSchema);
+  }
+
+  /** Belgeler — belge tarihine göre en yeni önce, keyset sayfalı (belge arşivi veriyle sınırsız büyür). */
+  page(opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<MoneyDocument>> {
+    return this.getPage(undefined, {
+      orderBy: 'issuedOn',
+      orderDirection: 'desc',
+      keysetAfter: opts.cursor,
+      limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+    });
+  }
+
+  /** Bir mal kabulün belgeleri — alım faturası mal kabulün üstünde görünsün (12.3 bağı). */
+  listByIntake(stockIntakeId: string): Promise<MoneyDocument[]> {
+    return this.getAll({ stockIntakeId }, { orderBy: 'issuedOn' });
+  }
+
+  /**
+   * Belgelerin açık kalanı — görünümden, tek turda. Dönen harita eksik anahtar bırakmaz: hiç
+   * ödemesi olmayan belge de bir satırdır (`left join`), açık kalanı tutarın kendisi.
+   */
+  async balances(documentIds: readonly string[]): Promise<Map<string, MoneyDocumentBalance>> {
+    if (documentIds.length === 0) return new Map();
+    const { data, error } = await this.supabase.from('money_document_balance').select('*').in('document_id', [...documentIds]);
+    if (error) throw error;
+    const rows = (data ?? []).map((row) =>
+      MoneyDocumentBalanceSchema.parse(rpcMoneyToCents(dbToApp(row), ['amount', 'settled', 'openAmount'])),
+    );
+    return new Map(rows.map((row) => [row.documentId, row]));
+  }
+
+  /**
+   * AÇIK belgeler — kapanmamış borç ve alacaklar ("ödenmemiş faturalar" listesi). Görünümden
+   * süzülür: açık kalanı sıfır olmayan her belge. Sınırsız büyümez (kapanan düşer), tek turda.
+   */
+  async listOpen(): Promise<Array<MoneyDocument & { balance: MoneyDocumentBalance }>> {
+    const { data, error } = await this.supabase.from('money_document_balance').select('*').neq('open_amount', 0);
+    if (error) throw error;
+    const balances = (data ?? []).map((row) =>
+      MoneyDocumentBalanceSchema.parse(rpcMoneyToCents(dbToApp(row), ['amount', 'settled', 'openAmount'])),
+    );
+    if (balances.length === 0) return [];
+    const docs = await this.getAll({ id: balances.map((b) => b.documentId) }, { orderBy: 'issuedOn' });
+    const balanceOf = new Map(balances.map((b) => [b.documentId, b]));
+    return docs.flatMap((doc) => {
+      const balance = balanceOf.get(doc.id);
+      return balance ? [{ ...doc, balance }] : [];
+    });
   }
 }

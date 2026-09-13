@@ -130,10 +130,12 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
 export async function readMoneyDayEnd(db: Db, input: { date?: string } = {}): Promise<MoneyDayEnd> {
   const date = input.date ?? isoDate(new Date());
 
-  const [movements, todayRuns, unmatchedMovementCount] = await Promise.all([
+  const [movements, todayRuns, unexplainedMovementCount] = await Promise.all([
     new MoneyMovementService(db).listOrderMoneyOfDay(date),
     new DeliveryRunService(db).listByDate(date),
-    new MoneyMovementService(db).unreconciledCount(),
+    // İZAH sayacı (13.09): "eşleşmemiş" değil — o bayrak yalnız banka satırında anlamlıydı ve
+    // sistemin kendi yazdığı her tahsilatı kuyrukta gösteriyordu (sözleşme künyesi).
+    new MoneyMovementService(db).unexplainedCount(),
   ]);
   const closes = await new DeliveryRunCloseService(db).listByRuns(todayRuns.map((run) => run.id));
 
@@ -183,6 +185,6 @@ export async function readMoneyDayEnd(db: Db, input: { date?: string } = {}): Pr
     courierHandoverCents: counted,
     // Kapanan sefer yoksa mutabakat sorusu HENÜZ SORULMADI — 0 "fark yok" derdi, o bir yalan.
     discrepancy: closes.length > 0 ? { expectedCents: expected, countedCents: counted, runs } : null,
-    unmatchedMovementCount,
+    unexplainedMovementCount,
   };
 }

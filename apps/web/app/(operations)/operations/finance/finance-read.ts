@@ -1,6 +1,7 @@
-import type { Account, AccountBalance, AccountLedgerRow } from '@lezzet/types';
-import { ACCOUNT_TONE, MOVEMENT_TYPE_LABEL } from './finance-labels';
-import type { AccountView, MatchCandidateView, MatchRowView, MovementRowView } from './finance-types';
+import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance } from '@lezzet/types';
+import { money } from '@/components/operation/ui/format';
+import { ACCOUNT_TONE, DOCUMENT_KIND_LABEL, MOVEMENT_TYPE_LABEL } from './finance-labels';
+import type { AccountView, MatchCandidateView, MatchRowView, MovementRowView, OpenDocumentView } from './finance-types';
 
 // Para ekranının SAF indirgemeleri — servis satırı → görünüm satırı.
 //
@@ -37,6 +38,32 @@ export function totalBalance(accounts: readonly AccountView[]): number {
 }
 
 /**
+ * Açık belge kartları (12.12). Açık kalan GÖRÜNÜMDEN gelir, burada hesaplanmaz; künye belge
+ * numarasıyla başlar, numarasız belgede türün adıyla (fiş, bordro).
+ */
+export function toOpenDocumentViews(documents: ReadonlyArray<MoneyDocument & { balance: MoneyDocumentBalance }>): OpenDocumentView[] {
+  return documents.map((doc) => {
+    const kindLabel = DOCUMENT_KIND_LABEL[doc.kind];
+    const head = doc.number ?? kindLabel;
+    const who = doc.counterparty ?? '—';
+    return {
+      id: doc.id,
+      kind: doc.kind,
+      number: doc.number,
+      issuedOn: doc.issuedOn,
+      counterparty: doc.counterparty,
+      direction: doc.direction,
+      tags: doc.tags,
+      kindLabel,
+      amountCents: doc.amountCents,
+      openAmountCents: doc.balance.openAmountCents,
+      hasFile: doc.fileKey !== null,
+      label: `${head} · ${who} · açık ${money(doc.balance.openAmountCents)}`,
+    };
+  });
+}
+
+/**
  * Hareketin NEYE bağlı olduğu — tek cümle + tonu.
  *
  * Sıra öncelik sırasıdır ve rastgele değil: bir satır hem tedarikçiye hem mal kabule bağlı olabilir,
@@ -70,21 +97,30 @@ function refOf(
   }
 
   if (row.source === 'bank_import' && !row.reconciled) return { ref: 'öneri bekliyor', refTone: 'amber' };
-  return { ref: row.category, refTone: 'neutral' };
+  // Bağsız ama belgeli satır (fatura, fiş, bordro): dayanağı var, bir bağ değil.
+  if (row.documentId) return { ref: 'belgeye bağlı', refTone: 'olive' };
+  // Yalnız etiketli satır: sınıflandırma tip hücresinde zaten okunuyor, burada tekrarlanmaz.
+  if (row.tags.length > 0) return { ref: null, refTone: 'neutral' };
+  // Hiçbiri yok: satır izah bekliyor (13.09) — bu bir bilgi değil, bir SORU.
+  return { ref: 'izah bekliyor', refTone: 'amber' };
 }
 
-/** "gider · akaryakıt" — kategori varsa tipin yanına, yoksa yalnız tip. */
-function typeLabelOf(row: AccountLedgerRow): string {
+/**
+ * "gider · Kira · Ortak A" — etiketlerin OKUNUR adları tipin yanına, etiket yoksa yalnız tip (13.09).
+ * Sözlükte adı okunamayan slug olduğu gibi yazılır: gizlemek, etiketi yok saymak olurdu.
+ */
+function typeLabelOf(row: AccountLedgerRow, tagLabels: ReadonlyMap<string, string>): string {
   const base = MOVEMENT_TYPE_LABEL[row.type];
-  // Reklam giderinin kategorisi `advertising` sabitidir ve etiketi zaten `ref`te kampanya olarak
-  // görünüyor; ham sabiti ikinci kez basmak iç terimi arayüze sızdırırdı (tasarım §6).
-  return row.category && row.category !== 'advertising' ? `${base} · ${row.category}` : base;
+  const labels = row.tags.map((slug) => tagLabels.get(slug) ?? slug);
+  return labels.length > 0 ? `${base} · ${labels.join(' · ')}` : base;
 }
 
 export function toMovementRows(
   rows: readonly AccountLedgerRow[],
   accountNames: ReadonlyMap<string, string>,
   orderRefs: ReadonlyMap<string, string>,
+  /** Etiket slug → okunur ad (sözlük); ekran ham slug basmasın diye. */
+  tagLabels: ReadonlyMap<string, string> = new Map(),
 ): MovementRowView[] {
   return rows.map((row) => {
     const { ref, refTone } = refOf(row, accountNames, orderRefs);
@@ -94,7 +130,8 @@ export function toMovementRows(
       ledgerAccountId: row.ledgerAccountId,
       valueDate: row.valueDate,
       type: row.type,
-      reconciled: row.reconciled,
+      explained: row.explained,
+      tags: row.tags,
       signedAmountCents: row.signedAmountCents,
       // Açıklamasız satır boş hücre bırakmaz: bankadan gelen satırın açıklaması hep vardır, elle
       // girilende boş kalabilir — o zaman okunacak tek şey tipin adıdır.
@@ -102,7 +139,7 @@ export function toMovementRows(
       ref,
       refTone,
       accountName: accountNames.get(row.ledgerAccountId) ?? '—',
-      typeLabel: typeLabelOf(row),
+      typeLabel: typeLabelOf(row, tagLabels),
     };
   });
 }

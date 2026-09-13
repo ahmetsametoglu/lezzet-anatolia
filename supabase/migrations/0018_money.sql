@@ -8,12 +8,23 @@
 -- saklanan bakiye bir gün kayar ve hangi hareketin kaydırdığı bulunamaz). Türetim tek yerde:
 -- `account_movement` görünümü.
 
-create type account_type as enum ('cash', 'bank', 'provider');
+-- `partner` (13.09 · kullanıcı kararı): ORTAK CARİ HESABI. Ortağın cebinden ödenen şirket gideri ile
+-- şirketin ortak adına yaptığı ödeme, şirket hesaplarından geçmediği için tutunacak bir hesap
+-- ister; yeni bir varlık değil, yeni bir hesap türü. Bakiye işareti anlatır: eksi = şirket ortağa
+-- borçlu, artı = ortak şirkete borçlu. Sermaye koyma cari değildir, bankaya `capital` olarak girer
+-- ve `ortak:<ad>` etiketini taşır.
+create type account_type as enum ('cash', 'bank', 'provider', 'partner');
 create type movement_direction as enum ('in', 'out');
 create type movement_type as enum (
   'order_payment', 'order_refund', 'purchase', 'expense', 'transfer', 'capital', 'misc'
 );
-create type movement_source as enum ('manual', 'bank_import');
+-- `system` (13.09): sistemin kendi yazdığı hareket — Stripe webhook'u, kurye kapıda tahsilat, hızlı
+-- satış, payout. Eskiden `manual` yazılıyordu ve Stripe tahsilatı operatörün elle girdiği bir
+-- satırdan ayırt edilemiyordu.
+create type movement_source as enum ('manual', 'bank_import', 'system');
+-- Belge türü (13.09): resmî muhasebe sorduğunda hareketin dayanağı. `statement` banka/sağlayıcı
+-- dekontu (payout dökümü), `other` kalan her şey — küme kapalıdır, "sair" bir kaçış kutusu değil.
+create type document_kind as enum ('invoice', 'receipt', 'payslip', 'contract', 'statement', 'other');
 
 create table public.account (
   id uuid primary key default gen_random_uuid(),
@@ -26,6 +37,72 @@ create table public.account (
 );
 create unique index account_name_key on public.account (lower(name));
 
+-- ── Etiket sözlüğü ──────────────────────────────────────────────────────────
+-- (13.09 · kullanıcı kararı) Hareketin ve belgenin SINIFLANDIRMASI tek mekanizmadır: etiket. Eski
+-- `category` kolonu (serbest metin, tek değer) kalktı — "Kira" ile "kira" iki kalem oluyordu ve
+-- ortak ayrımı gibi ikinci bir ekseni taşıyamıyordu. Bir hareket birden çok etiket taşır: `maas`
+-- + `ortak:ahmet` aynı hareketin iki gerçeğidir; ortaklar arası hesap bu etiketten çıkar.
+--
+-- Sözlük YÖNETİLEN bir listedir: operatör ekrandan yeni etiket ekler, yazım tek kalır; hareket
+-- yalnız sözlükteki etiketi taşıyabilir (aşağıdaki tetikleyici). Varsayılan satırlar referans
+-- veridir (0013/0028 deseni), seed değil — taze veritabanı da bilir.
+create table public.movement_tag (
+  -- ASCII slug: süzgeç ve URL'de olduğu gibi geçer; okunur ad `label`tadır.
+  slug text primary key check (slug ~ '^[a-z0-9][a-z0-9:-]*$'),
+  label text not null,
+  -- Pasif etiket yeni harekete verilmez, eski hareketlerde kalır (hesabın pasifleşmesiyle aynı).
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+insert into public.movement_tag (slug, label) values
+  ('maas', 'Maaş'),
+  ('bordro-kesinti', 'Bordro kesintisi'),
+  ('kira', 'Kira'),
+  ('akaryakit', 'Akaryakıt'),
+  ('ambalaj', 'Ambalaj'),
+  ('yazilim', 'Yazılım'),
+  ('reklam', 'Reklam'),
+  ('banka-masrafi', 'Banka masrafı'),
+  ('stripe-ucreti', 'Stripe ücreti'),
+  ('vergi', 'Vergi'),
+  ('sermaye', 'Sermaye');
+
+-- ── Belge ────────────────────────────────────────────────────────────────────
+-- (13.09) Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleşme, dekont.
+-- Belge PARA DEĞİLDİR: fatura geldiğinde para henüz çıkmamıştır ama BORÇ doğmuştur; ödeme sonra
+-- bir hareket olarak gelir ve `money_movement.document_id` ile belgeye bağlanır. Açık kalan
+-- SAKLANMAZ, `money_document_balance` görünümünden türetilir (bakiye kararıyla aynı gerekçe).
+--
+-- Satış faturaları BURADA DEĞİL: bizim kestiğimiz fatura numarası siparişin üstünde durur
+-- (`order.invoice_no`, 12.7). Stok alımının faturası mal kabule bağlanır (`stock_intake_id`) ve
+-- ikinci bir borç DOĞURMAZ — tedarikçi borcu mal kabulden türemeye devam eder (12.3).
+create table public.money_document (
+  id uuid primary key default gen_random_uuid(),
+  kind document_kind not null,
+  -- Belge numarası: faturada var, fiş ve bordroda olmayabilir.
+  number text,
+  issued_on date not null,
+  -- Karşı taraf: kiraya veren, çalışan, kurum… Tedarikçiyse `supplier_id` de dolar.
+  counterparty text,
+  supplier_id uuid references public.supplier (id) on delete set null,
+  stock_intake_id uuid references public.stock_intake (id) on delete set null,
+  -- Belgenin YÖNÜ hareketinkiyle aynı dilde: `out` = bizim ödeyeceğimiz (gelen fatura, bordro),
+  -- `in` = bize ödenecek (tedarikçi iadesi, ortağa kesilen dekont).
+  direction movement_direction not null,
+  amount numeric(12, 2) not null check (amount > 0),
+  -- KDV tutarı; belgede yoksa NULL — sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
+  vat_amount numeric(12, 2) check (vat_amount >= 0),
+  currency currency not null default 'EUR',
+  -- Dosyanın ÖZEL kovadaki anahtarı (`r2Keys.financeDocument`); yoksa belge yalnız künyedir.
+  file_key text,
+  tags text[] not null default '{}',
+  note text,
+  created_at timestamptz not null default now()
+);
+create index money_document_issued_idx on public.money_document (issued_on desc);
+create index money_document_supplier_idx on public.money_document (supplier_id) where supplier_id is not null;
+create index money_document_intake_idx on public.money_document (stock_intake_id) where stock_intake_id is not null;
+
 create table public.money_movement (
   id uuid primary key default gen_random_uuid(),
   -- Hesap silinemez (restrict): hareketi olan hesap yok edilirse para izi kopar.
@@ -35,11 +112,14 @@ create table public.money_movement (
   -- Sıfır tutarlı hareket bilgi taşımaz; YÖN ayrı alandır, işaret tutara gömülmez (raporda
   -- "− yazılmış giriş" gibi çift-anlamlı satır doğmasın).
   type movement_type not null,
-  -- Kategori SERBEST METİN, enum değil: gider kalemleri işletmeyle büyür (kira, akaryakıt, maaş,
-  -- advertising…); enum olsaydı her yeni kalem migration isterdi.
-  category text,
-  -- Ek etiket. Reklam giderinde `{"campaign": "..."}` — kampanya gideri ile cirosu yan yana
-  -- konabilsin diye (gerçek ROI, 12.5/13); Excel'e taşınmaz.
+  -- ETİKETLER (13.09) — sınıflandırmanın tek mekanizması; sözlükten (`movement_tag`), tetikleyici
+  -- tanımadığı etiketi reddeder. Birden çok olabilir: `maas` + `ortak:ahmet` aynı hareketin iki
+  -- gerçeğidir. Eski `category` kolonu kalktı; reklam artık `reklam` etiketi + `meta.campaign`.
+  tags text[] not null default '{}',
+  -- Dayanak belge (fatura, fiş, bordro…). Belge silinirse hareket kalır, bağ düşer.
+  document_id uuid references public.money_document (id) on delete set null,
+  -- Ek künye. Reklam giderinde `{"campaign": "..."}` — kampanya gideri ile cirosu yan yana
+  -- konabilsin diye (gerçek ROI, 12.5/13); Excel'e taşınmaz. Stripe tahsilatında `{"providerRef"}`.
   meta jsonb,
   -- TRANSFER TEK SATIRDIR. İki satır (çift kayıt) yazmak yerine karşı hesap burada tutulur; hareket
   -- karşı hesaba TERS işaretle yansır (`account_movement`). Sebebi: iki satır arasındaki bağ
@@ -53,7 +133,11 @@ create table public.money_movement (
   value_date date not null default current_date,
   description text,
   source movement_source not null default 'manual',
-  -- Banka ekstresiyle eşleşti mi (12.4). Elle girilen hareket eşleşmeyi bekler.
+  -- Banka ekstresiyle eşleşti mi (12.4). YALNIZ banka satırında anlamlıdır (`source = bank_import`):
+  -- elle ya da sistemce yazılan hareketin karşısında bir ekstre satırı henüz yoktur, bayrak orada
+  -- bir şey söylemez. Ekranın "izah edildi mi" sorusunun cevabı bu bayrak DEĞİL `explained`tir
+  -- (13.09) — ikisini tek noktada okumak, sistemin kendi yazdığı her tahsilatı "eşleşmedi" diye
+  -- gösteriyordu (yerelde 28 satırın 5'i banka satırıydı).
   reconciled boolean not null default false,
   /*
     YAZIMIN KİMLİĞİ (21.263 · kullanıcı kararı 04.09) — "bu isteği zaten yazdım mı?"
@@ -83,6 +167,15 @@ create table public.money_movement (
   import_fingerprint text,
   bank_import_id uuid,
   created_at timestamptz not null default now(),
+  -- İZAH (13.09 · kullanıcı kararı): hareket şu dördünden biriyle açıklanır — bir işe bağ (sipariş,
+  -- mal kabul, tedarikçi), bir belge, en az bir etiket, ya da transfer (karşı hesap). Hiçbiri yoksa
+  -- "izah edilmemiş" kuyruğuna düşer; kaydı ENGELLEMEZ (banka satırı ham gelir, sonra izah edilir).
+  -- Türetilir, elle yazılmaz: kural veride durur ve satırla birlikte değişir (`delivery_run_close.
+  -- reconciled` ile aynı desen).
+  explained boolean generated always as (
+    order_id is not null or stock_intake_id is not null or supplier_id is not null
+    or document_id is not null or counter_account_id is not null or cardinality(tags) > 0
+  ) stored,
 
   -- Transferin karşı ucu ZORUNLU ve kendisi olamaz; transfer olmayan harekette karşı hesap ANLAMSIZ.
   -- Veritabanı burada duruyor çünkü ihlali veri bozukluğudur: karşı ucu olmayan transfer, bakiyeyi
@@ -107,6 +200,12 @@ create index money_movement_period_idx on public.money_movement (value_date desc
 -- Eşleşme kuyruğu (12.4): eşleşmemiş satırlar azınlıktır → kısmi indeks.
 create index money_movement_unreconciled_idx on public.money_movement (account_id, value_date)
   where not reconciled;
+-- İzah kuyruğu (13.09): izah edilmemiş satır azınlıktır → kısmi indeks; sayaç da buradan sayar.
+create index money_movement_unexplained_idx on public.money_movement (value_date desc) where not explained;
+-- Etiket süzgeci (`tags @> '{reklam}'`: kampanya gideri; `tags @> '{ortak:ahmet}'`: ortak ayrımı).
+create index money_movement_tags_idx on public.money_movement using gin (tags);
+-- Belgenin ödemeleri — açık kalanı türeten görünüm buradan toplar.
+create index money_movement_document_idx on public.money_movement (document_id) where document_id is not null;
 -- Mükerrer koruması (12.4): aynı hesapta aynı banka satırı İKİ KEZ yazılamaz.
 -- KISMİ İNDEKS DEĞİL, bilerek: `on conflict` kısmi indeksi hedefleyemez ve import yazımı ona
 -- dayanıyor. Gereği de yok — NULL'lar tekil karşılaştırmada birbirine EŞİT SAYILMAZ, dolayısıyla
@@ -152,7 +251,51 @@ select a.id                                        as account_id,
   left join public.account_movement l on l.ledger_account_id = a.id
  group by a.id;
 
+-- ── Etiket sözlüğü tetikleyicisi ─────────────────────────────────────────────
+-- Dizi kolonuna FK yazılamaz; kural yine de VERİDE durur (CLAUDE §1): tanınmayan etiket reddedilir.
+-- Uygulama katmanı aynı soruyu önce sorar (okunur ret için); burası son savunmadır.
+create or replace function public.check_tags_known()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_unknown text;
+begin
+  select t into v_unknown
+    from unnest(new.tags) as t
+   where not exists (select 1 from public.movement_tag mt where mt.slug = t)
+   limit 1;
+  if v_unknown is not null then
+    raise exception 'tags: tanınmayan etiket (%) — önce sözlüğe ekleyin', v_unknown;
+  end if;
+  return new;
+end;
+$$;
+create trigger money_movement_tags_known
+  before insert or update of tags on public.money_movement
+  for each row execute function public.check_tags_known();
+create trigger money_document_tags_known
+  before insert or update of tags on public.money_document
+  for each row execute function public.check_tags_known();
+
+-- ── Belgenin açık kalanı ─────────────────────────────────────────────────────
+-- Fatura geldi, borç doğdu; ödeme(ler) belgeye bağlanınca kapanır. Kapanan tutar bağlı hareketlerin
+-- toplamıdır: belgeyle aynı yöndekiler kapatır, ters yöndekiler (iade, dekont) yeniden açar.
+-- `open_amount` eksiye düşebilir (fazla ödeme) ve bu gizlenmez — fazla ödeme de bir olgudur.
+create or replace view public.money_document_balance as
+select d.id                                                       as document_id,
+       d.amount,
+       coalesce(sum(case when m.direction = d.direction then m.amount else -m.amount end), 0)::numeric(12, 2) as settled,
+       (d.amount - coalesce(sum(case when m.direction = d.direction then m.amount else -m.amount end), 0))::numeric(12, 2)
+                                                                  as open_amount
+  from public.money_document d
+  left join public.money_movement m on m.document_id = d.id
+ group by d.id;
+
 alter table public.account enable row level security;
+alter table public.movement_tag enable row level security;
+alter table public.money_document enable row level security;
 alter table public.money_movement enable row level security;
 
 

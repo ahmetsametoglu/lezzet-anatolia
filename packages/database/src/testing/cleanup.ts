@@ -308,6 +308,16 @@ export interface PurgeTargets {
    */
   accountIds?: string[];
   /**
+   * Test belgeleri (12.12) — `money_movement.document_id` `set null`, yani belge hareketlerden
+   * bağımsız silinebilir; sıra yine hareketlerden sonra ki bağ boşa düşmesin.
+   */
+  documentIds?: string[];
+  /**
+   * Testin sözlüğe eklediği etiketler (12.12) — referans veri tablosu; testin kendi damgalı slug'ı
+   * dışında hiçbir satıra dokunulmaz. Hareketler silindikten SONRA: etiket taşıyan satır kalmasın.
+   */
+  tagSlugs?: string[];
+  /**
    * Ayar satırları — kimlikle, ANAHTARLA DEĞİL: anahtar kapsam satırlarını da taşır ve anahtarla
    * silen bir test, kendi damgalı bölge satırıyla birlikte işletmenin gerçek ayarını da götürürdü.
    * Buraya yalnız testin KENDİ AÇTIĞI (damgalı kapsam — ör. e2e fikstürünün bölge satırı) kimlik
@@ -356,6 +366,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     authUserIds,
     warehouseIds,
     accountIds,
+    documentIds,
+    tagSlugs,
     jobNames,
     settingIds,
     analyticsSessionKeys,
@@ -384,6 +396,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     authUserIds: clean(targets.authUserIds),
     warehouseIds: clean(targets.warehouseIds),
     accountIds: clean(targets.accountIds),
+    documentIds: clean(targets.documentIds),
+    tagSlugs: clean(targets.tagSlugs),
     jobNames: clean(targets.jobNames),
     settingIds: clean(targets.settingIds),
   };
@@ -616,6 +630,10 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       await mustDelete(db, 'bank_import_profile', (q) => q.in('account_id', accountIds));
       await mustDelete(db, 'account', (q) => q.in('id', accountIds));
     }
+    // Belge ve etiket hareketlerden SONRA (12.12): belge bağı `set null`, etiketin FK'si yok ama
+    // etiket taşıyan satır kalmışsa sözlük eksik kalır — sıra yine de doğru olsun.
+    if (documentIds.length > 0) await mustDelete(db, 'money_document', (q) => q.in('id', documentIds));
+    if (tagSlugs.length > 0) await mustDelete(db, 'movement_tag', (q) => q.in('slug', tagSlugs));
   });
 
   // 5) Bağımsız kayıtlar — hiçbirinin ötekiyle bağı yok, o yüzden hepsi tek grupta ve zincirden

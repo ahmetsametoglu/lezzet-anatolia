@@ -1,4 +1,4 @@
-import type { Account, AccountLedgerRow } from '@lezzet/types';
+import type { Account, AccountLedgerRow, MoneyDocument, MovementTag } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { SuggestionStrength } from './finance-labels';
 import type { FinanceUrlState } from './finance-url';
@@ -29,7 +29,7 @@ export type AccountView = Pick<Account, 'id' | 'name' | 'type' | 'isActive'> & {
  */
 export type MovementRowView = Pick<
   AccountLedgerRow,
-  'id' | 'ledgerAccountId' | 'valueDate' | 'type' | 'reconciled' | 'signedAmountCents'
+  'id' | 'ledgerAccountId' | 'valueDate' | 'type' | 'explained' | 'tags' | 'signedAmountCents'
 > & {
   /** Operatörün okuduğu cümle — açıklama yoksa tipin adı (boş hücre bırakmaktansa). */
   title: string;
@@ -41,7 +41,7 @@ export type MovementRowView = Pick<
   /** Bağın tonu: bir kayda gidiyorsa `olive`, cevap bekliyorsa `amber`, düz bilgiyse `neutral`. */
   refTone: OpsTone;
   accountName: string;
-  /** "gider · akaryakıt" — tip ve kategori tek hücrede, kategori varsa. */
+  /** "gider · Kira · Ortak A" — tip ve etiketlerin okunur adları tek hücrede, etiket varsa. */
   typeLabel: string;
 };
 
@@ -111,6 +111,20 @@ export interface LedgerView {
   note: string | null;
 }
 
+/**
+ * Açık belge kartı (12.12) — ödenmemiş fatura, bordro ya da bize ödenecek dekont.
+ *
+ * `openAmountCents` belgenin alanı DEĞİL, `money_document_balance` görünümünden gelir: açık kalan
+ * saklanmaz, bağlı hareketlerden türetilir. `label` "Ödemesini yaz" formunun üstünde okunan künye.
+ */
+export type OpenDocumentView = Pick<MoneyDocument, 'id' | 'kind' | 'number' | 'issuedOn' | 'counterparty' | 'direction' | 'tags'> & {
+  kindLabel: string;
+  amountCents: number;
+  openAmountCents: number;
+  hasFile: boolean;
+  label: string;
+};
+
 export interface FinanceData {
   accounts: AccountView[];
   /** Hesapların toplamı — şeridin sonundaki "Toplam" hücresi. */
@@ -118,17 +132,28 @@ export interface FinanceData {
   ledger: LedgerView;
   /** Eşleşme bekleyen banka satırları. Hesap seçili değilken boş (kuyruk hesaba bağlı). */
   queue: MatchRowView[];
+  /** Açık belgeler — ödenmemiş faturalar; doğal tavanlı (kapanan düşer), tek turda. */
+  openDocuments: OpenDocumentView[];
+  /** Belge formunun tedarikçi seçeneği; yalnız aktif tedarikçiler. */
+  supplierOptions: Array<{ value: string; label: string }>;
+  /** Sözlüğün TAMAMI (pasifler dâhil) — etiket penceresi pasifi de listeler ki geri açılabilsin. */
+  tagList: Array<Pick<MovementTag, 'slug' | 'label' | 'isActive'>>;
   /**
-   * Eşleşmemiş satır sayısı — `null` "sayaç kapısı yok" demek, sıfır değil.
+   * İzah edilmemiş hareket sayısı (13.09) — `null` "sayaç kapısı yok" demek, sıfır değil.
    *
-   * CLAUDE.md §1: **ölçülemeyen değer SIFIR değildir.** Sayacı olmayan bir ekranda "0 eşleşmemiş"
-   * yazmak, dolu bir iş kuyruğunu "her şey mutabık" diye okutur.
+   * CLAUDE.md §1: **ölçülemeyen değer SIFIR değildir.** Sayacı olmayan bir ekranda "0 izahsız"
+   * yazmak, dolu bir iş kuyruğunu "her şey izahlı" diye okutur.
    */
-  unmatchedCount: number | null;
+  unexplainedCount: number | null;
+  /**
+   * Etiket sözlüğü — sınıflandırma çipleri ve elle giriş formu buradan okur (13.09). Yalnız AKTİF
+   * etiketler: pasif etiket yeni harekete verilmez.
+   */
+  tagOptions: Array<{ value: string; label: string }>;
 }
 
-/** Açık diyalog — `null` hiçbiri. */
-export type DialogKind = 'movement' | 'transfer' | null;
+/** Açık diyalog — `null` hiçbiri. `document` belge girişi, `tags` etiket sözlüğü (12.12). */
+export type DialogKind = 'movement' | 'transfer' | 'document' | 'tags' | null;
 
 /**
  * İki cihaz görünümünün ORTAK sözleşmesi.
@@ -152,8 +177,18 @@ export interface FinanceViewProps {
   onSaved: () => void;
   onApprove: (row: MatchRowView) => void;
   onPick: (row: MatchRowView) => void;
-  onClassify: (row: MatchRowView, category: string) => void;
+  /** Banka satırını gider yapar — sözlükten etiket slug'larıyla (13.09; eskiden tek kategori). */
+  onClassify: (row: MatchRowView, tags: string[]) => void;
   onDismiss: (row: MatchRowView) => void;
+  /** Defter satırını etiketler — izah kuyruğunu kapatan yol (12.12). Hangi satır beklemede: `tagBusyId`. */
+  onTag: (movementId: string, tags: string[]) => void;
+  tagBusyId: string | null;
+  /** "Ödemesini yaz" — açık belge seçildi, elle hareket formu belgeyle dolu açılır. */
+  payingDocument: OpenDocumentView | null;
+  onPayDocument: (document: OpenDocumentView) => void;
+  onClosePay: () => void;
+  /** Belge dosyasını yeni sekmede açar — okuma adresi tıklanınca istenir, süresi kısa. */
+  onOpenDocumentFile: (document: OpenDocumentView) => void;
 }
 
 /**

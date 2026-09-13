@@ -72,7 +72,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 > `StockStatus`, `CartLineRoute`, `CouponRejection`) `packages/types/src/primitives/enums.schema.ts`ta
 > durur ve buraya girmez: bu bölüm VERİ modelini anlatıyor.
 
-- `account_type`: cash, bank, provider
+- `account_type`: cash, bank, provider, partner *(`partner` = ortak cari hesabı; bakiye işareti borcun yönünü söyler)*
 - `address_geo_precision`: housenumber, street, locality, municipality *(adres koordinatı hangi hassasiyette çözüldü)*
 - `address_geo_source`: ban, manual *(koordinat BAN'dan mı geldi, elle mi girildi)*
 - `analytics_availability`: sellable, sold_out, closed, not_here *(ölçüm anında ürün alınabilir miydi)*
@@ -95,6 +95,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `discount_scope`: cart, category, collection
 - `discount_trigger`: coupon, automatic
 - `discount_type`: percent, fixed
+- `document_kind`: invoice, receipt, payslip, contract, statement, other *(muhasebe belgesinin türü; `statement` banka/sağlayıcı dekontu)*
 - `error_log_level`: warning, error, fatal
 - `feedback_channel`: email, whatsapp
 - `feedback_context`: purchase, candidate
@@ -104,7 +105,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `message_direction`: inbound, outbound
 - `message_kind`: text, interactive, template, media
 - `movement_direction`: in, out
-- `movement_source`: manual, bank_import
+- `movement_source`: manual, bank_import, system *(`system` = webhook, kapıda tahsilat, hızlı satış, payout — sistemin kendi yazdığı satır)*
 - `movement_type`: order_payment, order_refund, purchase, expense, transfer, capital, misc
 - `order_cancel_reason`: payment_failed, superseded, out_of_stock, customer, staff
 - `order_source`: web, whatsapp, messenger, instagram, door, manual

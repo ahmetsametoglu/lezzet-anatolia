@@ -34,20 +34,29 @@ import type { ProposalSubject } from '@/lib/assistant/subject';
  * hâlin ikisi de kendi formuyla açılıyor.
  */
 
-/** Asistanın önerdiği hareket → formun açılış değerleri. Transfer ise `null` — o `TransferBody`nin. */
-export function movementValuesFrom(payload: MoneyMovementPayload): ManualMovementForm | null {
+/**
+ * Asistanın önerdiği hareket → formun açılış değerleri. Transfer ise `null` — o `TransferBody`nin.
+ *
+ * Kategori kelimesi SÖZLÜKLE eşleşirse etiket olur (slug ya da okunur ad); eşleşmezse form etiketsiz
+ * açılır ve operatör seçer — asistanın kelimesini uydurma bir etikete çevirmek defteri yanıltırdı.
+ */
+export function movementValuesFrom(payload: MoneyMovementPayload, tags: AssistantFormOptions['tags']): ManualMovementForm | null {
   if (!(MANUAL_TYPES as readonly string[]).includes(payload.type)) return null;
+  const word = payload.category?.trim().toLocaleLowerCase('tr') ?? '';
+  const hit = word === '' ? undefined : tags.find((tag) => tag.value === word || tag.label.toLocaleLowerCase('tr') === word);
   return {
     accountId: payload.accountId,
     type: payload.type as ManualMovementForm['type'],
     // Payload CENT taşıyor, form EURO — çevrim burada (`ManualMovementSchema` künyesi).
     amount: fromCents(payload.amountCents),
     direction: payload.direction,
-    category: payload.category ?? '',
+    tags: hit ? [hit.value] : [],
     campaign: '',
     // Değer tarihi yoksa BUGÜN: uydurma bir tarih defterde yanlış güne yazardı.
     valueDate: payload.valueDate || movementToday(),
     description: payload.description ?? '',
+    // Asistanın dilekçesi belge taşımıyor; belge bağı operatörün Para ekranındaki işidir.
+    documentId: null,
   };
 }
 
@@ -78,7 +87,14 @@ export function MoneyMovementBody({ payload, subject, options, meta, values, onC
   return (
     <div className="flex flex-wrap items-stretch gap-4">
       <div className="flex min-w-[24rem] flex-[2] basis-0 flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-subtle p-3">
-        <MovementFormBody control={form.control} setValue={form.setValue} values={live} accounts={options.accounts} disabled={disabled || readOnly} />
+        <MovementFormBody
+          control={form.control}
+          setValue={form.setValue}
+          values={live}
+          accounts={options.accounts}
+          tagOptions={options.tags}
+          disabled={disabled || readOnly}
+        />
       </div>
 
       <ProposalAside

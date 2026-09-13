@@ -1,6 +1,6 @@
 import { MoneyMovementService, serviceDb } from '@lezzet/database';
 import { validateMovement, type MovementCheck } from '@lezzet/domain-core';
-import { ADVERTISING_CATEGORY, type MoneyMovement, type MoneyMovementInsert } from '@lezzet/types';
+import { ADVERTISING_TAG, type MoneyMovement, type MoneyMovementInsert } from '@lezzet/types';
 
 /**
  * Para hareketi kapısı (12.1) — **uygulama katmanı orkestrasyonu**. DOMAIN §9.
@@ -63,14 +63,17 @@ export function recordSupplierPayment(input: {
 }
 
 /**
- * **Gider** (kira, akaryakıt, maaş, ambalaj…) — kategori SERBEST METİNDİR, enum değil: gider
- * kalemleri işletmeyle büyür, enum olsaydı her yeni kalem migration isterdi.
+ * **Gider** (kira, akaryakıt, maaş, ambalaj…) — sınıflandırma ETİKETLE (13.09): sözlükten bir ya da
+ * daha çok slug (`maas` + `ortak:ahmet`). Eski tek serbest kategori kalktı: "Kira" ile "kira" iki
+ * kalem oluyordu ve ortak ayrımı taşınamıyordu. Tanınmayan etiketi veritabanı reddeder.
  */
 export function recordExpense(input: {
   accountId: string;
   /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
   amountCents: number;
-  category: string;
+  tags: readonly string[];
+  /** Dayanak belge (fatura, fiş, bordro) — varsa ödeme belgeye bağlanır ve belgenin açık kalanı düşer. */
+  documentId?: string | null;
   meta?: Record<string, unknown> | null;
   valueDate?: string;
   description?: string | null;
@@ -80,7 +83,8 @@ export function recordExpense(input: {
     direction: 'out',
     amountCents: input.amountCents,
     type: 'expense',
-    category: input.category,
+    tags: [...input.tags],
+    documentId: input.documentId,
     meta: input.meta,
     valueDate: input.valueDate,
     description: input.description,
@@ -88,19 +92,22 @@ export function recordExpense(input: {
 }
 
 /**
- * **Reklam gideri** (12.5) — DOMAIN §350. Kampanya etiketiyle girer: `category=advertising` +
- * `meta.campaign`. Analitik (13.2) kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI
- * Excel'e taşınmaz.
+ * **Reklam gideri** (12.5) — DOMAIN §350. `reklam` etiketi + `meta.campaign` ile girer. Analitik
+ * (13.2) kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI Excel'e taşınmaz.
  *
- * Etiket **zorlanmaz, boşsa yazılmaz**: kampanyası bilinmeyen bir reklam ödemesi de girilebilmelidir
- * (ajans faturası aya yayılır, ekstre satırı sonra eşleşir). Reddetseydik operatör onu `misc`
- * yazardı ve gider reklam toplamından tamamen düşerdi. Etiketsiz satır rapordaki `null` kovasında
- * görünür — eksik bilgi, kayıp bilgiden iyidir.
+ * Kampanya künyesi **zorlanmaz, boşsa yazılmaz**: kampanyası bilinmeyen bir reklam ödemesi de
+ * girilebilmelidir (ajans faturası aya yayılır, ekstre satırı sonra eşleşir). Reddetseydik operatör
+ * onu `misc` yazardı ve gider reklam toplamından tamamen düşerdi. Künyesiz satır rapordaki `null`
+ * kovasında görünür — eksik bilgi, kayıp bilgiden iyidir.
  */
 export function recordAdvertisingExpense(input: {
   accountId: string;
   /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
   amountCents: number;
+  /** Ek etiketler (ör. `ortak:ahmet`); `reklam` burada garanti edilir, çağıran tekrar yazmak zorunda değil. */
+  tags?: readonly string[];
+  /** Ajans faturası girildiyse ödeme ona bağlanır (12.12). */
+  documentId?: string | null;
   campaign?: string | null;
   valueDate?: string;
   description?: string | null;
@@ -109,8 +116,9 @@ export function recordAdvertisingExpense(input: {
   return recordExpense({
     accountId: input.accountId,
     amountCents: input.amountCents,
-    category: ADVERTISING_CATEGORY,
-    // Boş etiket yazılmaz: `{campaign: ''}` raporda kendi kovasını açar, etiketsizden ayrı düşerdi.
+    tags: [ADVERTISING_TAG, ...(input.tags ?? []).filter((tag) => tag !== ADVERTISING_TAG)],
+    documentId: input.documentId,
+    // Boş künye yazılmaz: `{campaign: ''}` raporda kendi kovasını açar, künyesizden ayrı düşerdi.
     meta: campaign ? { campaign } : null,
     valueDate: input.valueDate,
     description: input.description ?? 'Reklam gideri',

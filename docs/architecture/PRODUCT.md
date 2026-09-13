@@ -30,8 +30,8 @@ Sistem, iki taraflı bir ortaklığın operasyonel omurgasıdır:
 
 ## Ne değil
 
-- Resmî muhasebe/e-fatura sistemi değildir — ön muhasebe yapar, resmî işi dış muhasebe yazılımına devreder.
-- Bordro, personel, resmî beyan işleri kapsam dışıdır.
+- Resmî muhasebe/e-fatura sistemi değildir — ön muhasebe yapar, resmî işi dış muhasebe yazılımına devreder. Ama **resmî muhasebe sorduğunda her hareket izah edilebilir** (kullanıcı kararı 13.09): hareket ya bir işe bağlıdır, ya belgeye (fatura, fiş, bordro), ya etiketlidir.
+- Bordro HESABI, personel yönetimi ve resmî beyan işleri kapsam dışıdır; maaş ve kesinti ödemesi etiketle izlenir, bordronun kendisi hesaplanmaz. Ortaklar arası hesap da bir varlık değil, etiket ve cari hesaptır.
 - Sistem tek başına müşteri getirmez; müşteri edinimini (reklam, saha) ölçer ve yönetir, ama trafiği yaratmak ortaklığın işidir.
 
 ## Cihaz ve deneyim

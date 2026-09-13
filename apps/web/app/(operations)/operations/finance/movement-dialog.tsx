@@ -28,13 +28,17 @@ const FORM_ID = 'manual-movement-form';
 
 interface MovementDialogProps {
   accounts: AccountView[];
+  /** Etiket sözlüğü (13.09) — gider çipleri buradan; yalnız aktif etiketler. */
+  tagOptions: Array<{ value: string; label: string }>;
   onClose: () => void;
   onSaved: () => void;
   /**
-   * Asistan önerisinden gelen ön dolgu (22.5). Alanlar DOLU açılır ama hiçbiri kilitli değil —
-   * onaydan önce düzeltilebilmesi bu devrin bütün sebebi.
+   * Ön dolgu — asistan önerisinden (22.5) ya da "Ödemesini yaz" denen açık belgeden (12.12). Alanlar
+   * DOLU açılır ama hiçbiri kilitli değil — onaydan önce düzeltilebilmesi bu devrin bütün sebebi.
    */
   initial?: ManualMovementForm | null;
+  /** Belgeden açıldıysa formun üstünde okunan künye: "FA-2026-0912 · Cabinet Muller · açık 360,00 €". */
+  documentLabel?: string | null;
   /** Öneri kimliği; verilirse kayıt kuyruk satırını da kapatır. */
   /**
    * Devir künyesi — pencerenin İÇİNDE durur, sayfada değil (22.5).
@@ -47,9 +51,11 @@ interface MovementDialogProps {
 
 export function MovementDialog({
   accounts,
+  tagOptions,
   onClose,
   onSaved,
   initial = null,
+  documentLabel = null,
 }: MovementDialogProps) {
   const [error, setError] = useState<string | null>(null);
 
@@ -62,10 +68,11 @@ export function MovementDialog({
           type: 'expense',
           amount: null,
           direction: 'out',
-          category: '',
+          tags: [],
           campaign: '',
           valueDate: movementToday(),
           description: '',
+          documentId: null,
         },
     mode: 'onChange',
   });
@@ -79,10 +86,11 @@ export function MovementDialog({
       // EURO → CENT sınırda (`ManualMovementSchema` künyesi): kapı cent istiyor.
       amountCents: toCents(values.amount ?? 0),
       direction: values.direction,
-      category: values.category,
+      tags: values.tags,
       campaign: values.campaign,
       valueDate: values.valueDate,
       description: values.description,
+      documentId: values.documentId,
       // Öneriden gelindiyse kuyruk satırı bu kayıtla kapanır (`withProposal`).
     });
     if (actionError) {
@@ -111,8 +119,21 @@ export function MovementDialog({
       }
     >
       <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-4">
+        {/* BELGEDEN GELİNDİYSE künye üstte (12.12): ödemenin hangi faturayı kapattığı formu
+            doldururken görünür olmalı; kaydedilince belgenin açık kalanı düşer. */}
+        {documentLabel ? (
+          <p className="rounded-ops-card border border-ops-olive-line bg-ops-olive-bg px-3.5 py-2.5 font-ops-body text-ops-xs text-ops-olive-dark">
+            Belge: {documentLabel}
+          </p>
+        ) : null}
         {/* Gövde ORTAK (22.18): asistan kuyruğu da aynı formu kendi içinde açıyor. */}
-        <MovementFormBody control={form.control} setValue={form.setValue} values={watched} accounts={accounts} />
+        <MovementFormBody
+          control={form.control}
+          setValue={form.setValue}
+          values={watched}
+          accounts={accounts}
+          tagOptions={tagOptions}
+        />
 
       </form>
     </Dialog>
