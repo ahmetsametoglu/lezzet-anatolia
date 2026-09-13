@@ -175,8 +175,8 @@ export interface FinanceData {
   tagOptions: Array<{ value: string; label: string }>;
 }
 
-/** Açık diyalog — `null` hiçbiri. `document` belge girişi, `tags` etiket sözlüğü (12.12). */
-export type DialogKind = 'movement' | 'transfer' | 'document' | 'tags' | null;
+/** Açık diyalog — `null` hiçbiri. `document` belge girişi, `tags` etiket sözlüğü (12.12), `bankImport` dosya yükleme (12.10). */
+export type DialogKind = 'movement' | 'transfer' | 'document' | 'tags' | 'bankImport' | null;
 
 /**
  * İki cihaz görünümünün ORTAK sözleşmesi.

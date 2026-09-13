@@ -242,3 +242,18 @@ export const RECONCILE_REASON = {
   target_taken: 'Bu transfer ucunu başka bir ekstre satırı zaten sahiplenmiş — sayfayı tazeleyin.',
   same_account: 'Aynı hesabın içinde transfer olmaz — başka bir hesap seçin.',
 } as const;
+
+/** Okunamayan ekstre satırının sebebi (12.10) — sayısı ve sebebi söylenir, dosya sessizce eksik alınmaz. */
+export const ROW_FAILURE_LABEL = {
+  bad_date: 'tarih okunamadı',
+  bad_amount: 'tutar okunamadı',
+  zero_amount: 'tutar sıfır',
+  missing_column: 'sütun eksik',
+} as const;
+
+/** Tarih düzeni — dosyanın gününü ayından ayıran kural; Fransız bankaları gün-ay-yıl yazar. */
+export const DATE_FORMAT_LABEL = {
+  dmy: 'Gün / ay / yıl (12/09/2026)',
+  ymd: 'Yıl-ay-gün (2026-09-12)',
+  mdy: 'Ay / gün / yıl (09/12/2026)',
+} as const;

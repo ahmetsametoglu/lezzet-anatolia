@@ -3,6 +3,7 @@
 import { Button } from '@/components/operation/ui/button';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { AccountSetup } from './account-setup';
+import { BankImportDialog } from './bank-import-dialog';
 import { DocumentDialog } from './document-dialog';
 import { DocumentsPanel } from './documents-panel';
 import { AccountStrip, FilterBar, MatchQueue, MovementList } from './finance-sections';
@@ -61,6 +62,10 @@ export function FinanceDesktop({
         </Button>
         <Button variant="secondary" size="sm" onClick={() => onOpenDialog('tags')}>
           Etiketler
+        </Button>
+        {/* Çizimin son düğmesi (12.10): dosya tarayıcıda okunur, satırlar hesabın hareketi olur, kuyruğa düşer. */}
+        <Button variant="secondary" size="sm" onClick={() => onOpenDialog('bankImport')} disabled={writableAccounts.length === 0}>
+          ↑ Banka dosyası
         </Button>
       </PageHeader>
 
@@ -151,6 +156,14 @@ export function FinanceDesktop({
         <DocumentDialog supplierOptions={data.supplierOptions} tagOptions={data.tagOptions} onClose={onCloseDialog} onSaved={onSaved} />
       ) : null}
       {dialog === 'tags' ? <TagDialog tags={data.tagList} onClose={onCloseDialog} onChanged={onSaved} /> : null}
+      {dialog === 'bankImport' ? (
+        <BankImportDialog
+          accounts={writableAccounts}
+          defaultAccountId={urlState.acct === ALL_ACCOUNTS ? null : urlState.acct}
+          onClose={onCloseDialog}
+          onSaved={onSaved}
+        />
+      ) : null}
     </div>
   );
 }

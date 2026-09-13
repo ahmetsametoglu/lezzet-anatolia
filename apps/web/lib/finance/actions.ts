@@ -1,13 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { AccountService, serviceDb } from '@lezzet/database';
-import type { AccountType, MovementDirection } from '@lezzet/types';
+import { AccountService, BankImportProfileService, serviceDb } from '@lezzet/database';
+import { parseBankRows, type MappingSuggestion, type ParseProfile, type RowParseFailure } from '@lezzet/domain-core';
+import type { AccountType, BankImportProfile, MovementDirection, RawBankRow } from '@lezzet/types';
 import { requireFinance } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { recordAdvertisingExpense, recordExpense, recordMovement, transfer } from '@/lib/money/movement';
 import { applyMatch, classifyRow, dismissRow, type ClassifyType, type MatchTarget } from '@/lib/bank/reconcile';
+import { analyzeFile, importBankRows, profileFor, saveProfile } from '@/lib/bank/import';
 import { ADVERTISING_TAG, type DocumentKind, type MovementDirection as DocumentDirection } from '@lezzet/types';
 import {
   addMovementTag,
@@ -399,6 +401,75 @@ export async function createAccountAction(input: {
     const account = await new AccountService(serviceDb()).insert({ name, type: input.type });
     revalidatePath(FINANCE_PATH);
     return { data: { accountId: account.id }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+// ── Banka dosyası (12.10) ─────────────────────────────────────────────────────
+
+/**
+ * Yükleme penceresinin ilk sorusu: bu hesabın kayıtlı şablonu bu dosyaya uyuyor mu, uymuyorsa
+ * dosya nasıl okunmalı? Satırlar TARAYICIDA çözülmüş gelir (dosya değil); sunucu yalnız sütunları
+ * tanır. Şablon "uyar" = eşlediği her başlık dosyada var — banka dışa aktarımını değiştirmişse
+ * şablon sessizce boş kolon okutmasın, yeni öneri sunulsun.
+ */
+export async function analyzeBankFileAction(
+  accountId: string,
+  rows: RawBankRow[],
+): Promise<ActionResult<{ profile: BankImportProfile | null; suggestion: MappingSuggestion | null }>> {
+  try {
+    await requireFinance();
+    if (rows.length === 0) return { data: null, error: 'Dosyada okunacak satır yok.' };
+
+    const headers = new Set(rows.flatMap((row) => Object.keys(row)));
+    const saved = await profileFor(accountId);
+    const mapped = saved
+      ? [saved.mapping.date, saved.mapping.label, saved.mapping.amount, saved.mapping.debit, saved.mapping.credit].filter((header): header is string => !!header)
+      : [];
+    if (saved && mapped.every((header) => headers.has(header))) return { data: { profile: saved, suggestion: null }, error: null };
+    return { data: { profile: null, suggestion: await analyzeFile(rows) }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+interface BankFileInput {
+  accountId: string;
+  fileName: string;
+  rows: RawBankRow[];
+  /** Kayıtlı şablon DEĞİŞMEDEN kullanılıyorsa kimliği; yoksa onaylanan eşleme yeni şablon olur. */
+  profileId: string | null;
+  profileName: string;
+  profile: ParseProfile;
+}
+
+/**
+ * Dosyayı hesaba yazar: şablon (kayıtlı ya da yeni) + satırlar → hareketler (`importBankRows`,
+ * mükerrer koruması veritabanında). Hiçbir satır okunamıyorsa yazım BAŞLAMAZ — boş bir yükleme
+ * kaydı, "yükledim" diyen operatörü yanıltırdı.
+ */
+export async function importBankFileAction(
+  input: BankFileInput,
+): Promise<ActionResult<{ inserted: number; duplicates: number; failures: RowParseFailure[] }>> {
+  try {
+    await requireFinance();
+    const { mapping, amountMode } = input.profile;
+    if (!mapping.date || !mapping.label || (amountMode === 'signed' ? !mapping.amount : !(mapping.debit && mapping.credit))) {
+      return { data: null, error: 'Tarih, açıklama ve tutar sütunları seçilmeli.' };
+    }
+    if (parseBankRows(input.rows, input.profile).rows.length === 0) {
+      return { data: null, error: 'Bu eşlemeyle hiçbir satır okunamıyor — sütunları kontrol edin.' };
+    }
+
+    const profile = input.profileId
+      ? await new BankImportProfileService(serviceDb()).getById(input.profileId)
+      : await saveProfile({ accountId: input.accountId, name: input.profileName.trim() || 'Banka dosyası', suggestion: input.profile });
+    if (!profile || profile.accountId !== input.accountId) return { data: null, error: 'Şablon bulunamadı — sayfayı tazeleyin.' };
+
+    const outcome = await importBankRows({ accountId: input.accountId, profile, fileName: input.fileName, rows: input.rows });
+    revalidatePath(FINANCE_PATH);
+    return { data: { inserted: outcome.inserted, duplicates: outcome.duplicates, failures: outcome.failures }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

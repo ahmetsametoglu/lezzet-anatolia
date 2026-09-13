@@ -492,6 +492,12 @@ hesap), arama kutusu, en altta gider/sermaye etiket çipleri. Kartta çıkış s
 (çipler kartın içinde) eklendi. Çizim yapılırsa bakılacaklar: bölümlerin sekme mi liste mi olacağı,
 puanlı önerinin öbür hedeflerden nasıl ayrışacağı, "zaten yazılmış hareket" satırında silinecek
 kaydın uyarı tonu.
+**Eki (12.10):** çizimde yalnız "↑ Banka dosyası" düğmesi var, penceresi yok. Kitin diyalog
+gramerinde yazıldı: hesap + dosya seçimi, tutar geleneği (tek sütun / borç-alacak), sütun eşleme
+kutuları (düşük güvenli alan amber "kontrol edin" notuyla), ilk beş satırın okunuş önizlemesi,
+sonuç sayfası (yazılan · mükerrer · okunamayan). Çizim yapılırsa bakılacaklar: eşleme kutularının
+iki sütunlu ızgarası mı yoksa dosyanın başlık satırı üstünde tıklamalı seçim mi, önizlemenin tablo
+mu liste mi olacağı.
 
 **KARGO DÖNÜŞÜ — hiçbir yüzeyi yok, 05.09 (ölçüldü).** Müşteriye ulaşmayan bir kargo kolisi depoya
 geri döndüğünde onu karşılayan ekran YOK: ne mobilde ne web operasyonda. Boşluk kayıtsızdı; burada
