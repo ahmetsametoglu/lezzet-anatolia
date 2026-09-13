@@ -9,11 +9,20 @@ import { toCents } from '@lezzet/helper';
 import { DocumentKindEnum, MovementDirectionEnum } from '@lezzet/types';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
+import { Combobox } from '@/components/operation/form/combobox';
 import { DateField } from '@/components/operation/form/date-field';
+import { FieldShell } from '@/components/operation/form/field-shell';
 import { FormInput } from '@/components/operation/form/form-input';
 import { FormMoney } from '@/components/operation/form/money-input';
 import { FormSelect } from '@/components/operation/form/form-select';
+import { MultiSelect } from '@/components/operation/form/multi-select';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
+import {
+  naturesForDirection,
+  type CounterpartyOption,
+  type NatureOption,
+  type TagOption,
+} from '@/components/operation/form/movement-form/schema';
 import { attachDocumentFileAction, createDocumentAction, requestDocumentUploadAction } from '@/lib/finance/actions';
 import { DOCUMENT_DIRECTION_LABEL, DOCUMENT_KIND_LABEL } from './finance-labels';
 
@@ -23,6 +32,12 @@ import { DOCUMENT_DIRECTION_LABEL, DOCUMENT_KIND_LABEL } from './finance-labels'
 
   Fatura geldiğinde para henüz çıkmamıştır ama borç doğmuştur — bu pencere borcu kaydeder; ödeme
   sonra "Ödemesini yaz" ile hareket olarak gelir ve belgeye bağlanır.
+
+  ── KARŞI TARAF: CARİ YA DA TEDARİKÇİ (13.09 · ikinci karar) ─────────────────
+  Karşı taraf bir tur serbest metindi ve aynı ev sahibi "SCI Rhin" / "SCI Rhin Immobilier" diye iki
+  kişi olabiliyordu. Artık sözlükten seçilir: kurum, hizmet veren, çalışan → CARİ; stok alımı →
+  TEDARİKÇİ. İkisi birden olmaz (şema kısıtı `money_document_party`); biri seçilince öteki boşalır.
+  Carinin varsayılan türü boş türe önerilir. Belgenin TÜRÜ ödemesine de geçer.
 
   ── DOSYA ÜÇ ADIMDA, BELGE ÖNCE ─────────────────────────────────────────────
   Belge kaydedilir → dosya için izin istenir → istemci dosyayı DOĞRUDAN özel kovaya koyar →
@@ -45,10 +60,13 @@ const DocumentFormSchema = z.object({
   kind: DocumentKindEnum,
   number: z.string(),
   issuedOn: z.string(),
-  counterparty: z.string(),
-  /** Boş dize = tedarikçi değil (kiraya veren, çalışan, kurum). */
+  /** Cari (13.09) — boş dize = cari değil. Tedarikçiyle birlikte seçilemez. */
+  counterpartyId: z.string(),
+  /** Boş dize = tedarikçi değil. */
   supplierId: z.string(),
   direction: MovementDirectionEnum,
+  /** Belgenin türü — boş dize = türsüz; ödemesi bağlanınca harekete de geçer. */
+  nature: z.string(),
   /** **EURO** — kapıya `toCents` ile gider (`ManualMovementSchema` ile aynı gerekçe). */
   amount: z.number().positive().nullable(),
   /** **EURO**; `null` = belgede KDV yazmıyor. */
@@ -63,18 +81,23 @@ function documentBlock(values: DocumentForm): string | null {
   if (!values.issuedOn) return 'Belgenin tarihi seçilmeli.';
   if (!values.amount || values.amount <= 0) return 'Belge tutarı sıfırdan büyük olmalı.';
   if (values.vatAmount !== null && values.vatAmount > values.amount) return 'KDV, belge toplamını aşamaz.';
-  if (!values.counterparty.trim() && !values.supplierId) return 'Karşı taraf yazılmalı ya da tedarikçi seçilmeli.';
+  if (!values.counterpartyId && !values.supplierId) return 'Karşı taraf seçilmeli — cari ya da tedarikçi.';
   return null;
 }
 
 interface DocumentDialogProps {
   supplierOptions: Array<{ value: string; label: string }>;
-  tagOptions: Array<{ value: string; label: string }>;
+  /** Tür, cari ve etiket sözlükleri (13.09) — yalnız aktifler. */
+  counterpartyOptions: CounterpartyOption[];
+  natureOptions: NatureOption[];
+  tagOptions: TagOption[];
+  /** Etiket menüsünün "oluştur" satırı — yeni etiketin anahtarını döner. */
+  onCreateTag: (label: string) => Promise<string | null>;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export function DocumentDialog({ supplierOptions, tagOptions, onClose, onSaved }: DocumentDialogProps) {
+export function DocumentDialog({ supplierOptions, counterpartyOptions, natureOptions, tagOptions, onCreateTag, onClose, onSaved }: DocumentDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -85,9 +108,10 @@ export function DocumentDialog({ supplierOptions, tagOptions, onClose, onSaved }
       kind: 'invoice',
       number: '',
       issuedOn: new Date().toISOString().slice(0, 10),
-      counterparty: '',
+      counterpartyId: '',
       supplierId: '',
       direction: 'out',
+      nature: '',
       amount: null,
       vatAmount: null,
       tags: [],
@@ -96,10 +120,23 @@ export function DocumentDialog({ supplierOptions, tagOptions, onClose, onSaved }
     mode: 'onChange',
   });
   const watched = useWatch({ control: form.control }) as DocumentForm;
+  const natures = naturesForDirection(natureOptions, watched.direction);
+  const set = (name: 'counterpartyId' | 'supplierId' | 'nature', value: string) => form.setValue(name, value, { shouldValidate: true });
 
-  const toggleTag = (slug: string) => {
-    const next = watched.tags.includes(slug) ? watched.tags.filter((tag) => tag !== slug) : [...watched.tags, slug];
-    form.setValue('tags', next, { shouldValidate: true });
+  /** Cari seçilince tedarikçi boşalır (karşı taraf tektir) ve carinin varsayılan türü BOŞ türe konur. */
+  const pickCounterparty = (id: string) => {
+    set('counterpartyId', id);
+    set('supplierId', '');
+    const preset = counterpartyOptions.find((option) => option.value === id)?.defaultNature;
+    if (!watched.nature && preset && natures.some((nature) => nature.value === preset)) set('nature', preset);
+  };
+  const pickSupplier = (id: string) => {
+    set('supplierId', id);
+    set('counterpartyId', '');
+  };
+  const createTag = async (label: string) => {
+    const slug = await onCreateTag(label);
+    if (slug && !watched.tags.includes(slug)) form.setValue('tags', [...watched.tags, slug], { shouldValidate: true });
   };
 
   const onSubmit = form.handleSubmit(async (values) => {
@@ -108,9 +145,10 @@ export function DocumentDialog({ supplierOptions, tagOptions, onClose, onSaved }
       kind: values.kind,
       number: values.number,
       issuedOn: values.issuedOn,
-      counterparty: values.counterparty,
+      counterpartyId: values.counterpartyId || null,
       supplierId: values.supplierId || null,
       direction: values.direction,
+      nature: values.nature || null,
       amountCents: toCents(values.amount ?? 0),
       vatAmountCents: values.vatAmount === null ? null : toCents(values.vatAmount),
       tags: values.tags,
@@ -186,7 +224,11 @@ export function DocumentDialog({ supplierOptions, tagOptions, onClose, onSaved }
                 <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">Yön</span>
                 <MultiToggle
                   value={field.value}
-                  onChange={field.onChange}
+                  onChange={(next) => {
+                    field.onChange(next);
+                    // Yön değişince uymayan tür boşalır — gider türü bize ödenecek belgeye konmaz.
+                    if (!naturesForDirection(natureOptions, next).some((nature) => nature.value === watched.nature)) set('nature', '');
+                  }}
                   label="Belgenin yönü"
                   options={MovementDirectionEnum.options.map((direction) => ({ key: direction, label: DOCUMENT_DIRECTION_LABEL[direction] }))}
                 />
@@ -196,43 +238,61 @@ export function DocumentDialog({ supplierOptions, tagOptions, onClose, onSaved }
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <FormInput control={form.control} name="counterparty" label="Karşı taraf" placeholder="SCI Rhin Immobilier · URSSAF · çalışan adı" />
-          <FormSelect
-            control={form.control}
-            name="supplierId"
-            label="Tedarikçi"
-            labelAside="stok alımıysa"
-            placeholder="Tedarikçi değil"
-            options={supplierOptions}
-          />
+          <FieldShell label="Cari" labelAside="kurum · hizmet veren · çalışan">
+            <Combobox
+              value={watched.counterpartyId}
+              onChange={pickCounterparty}
+              options={counterpartyOptions.map(({ value, label }) => ({ value, label }))}
+              placeholder="Cari seçin"
+              searchPlaceholder="Cari ara…"
+              emptyText="Cari yok — Sözlük penceresinden ekleyin"
+              onClear={() => set('counterpartyId', '')}
+              clearLabel="Cariyi kaldır"
+            />
+          </FieldShell>
+          <FieldShell label="Tedarikçi" labelAside="stok alımıysa">
+            <Combobox
+              value={watched.supplierId}
+              onChange={pickSupplier}
+              options={supplierOptions}
+              placeholder="Tedarikçi değil"
+              searchPlaceholder="Tedarikçi ara…"
+              emptyText="Aramaya uyan tedarikçi yok"
+              onClear={() => set('supplierId', '')}
+              clearLabel="Tedarikçiyi kaldır"
+            />
+          </FieldShell>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FieldShell label="Türü" labelAside="ödemesine de geçer">
+            <Combobox
+              value={watched.nature}
+              onChange={(nature) => set('nature', nature)}
+              options={natures.map(({ value, label }) => ({ value, label }))}
+              placeholder="Tür seçin"
+              searchPlaceholder="Tür ara…"
+              emptyText="Bu yöne uyan tür yok"
+              onClear={() => set('nature', '')}
+              clearLabel="Türü kaldır"
+            />
+          </FieldShell>
+          <FieldShell label="Etiketler" labelAside="isteğe bağlı">
+            <MultiSelect
+              options={tagOptions}
+              selected={watched.tags}
+              onChange={(next) => form.setValue('tags', next, { shouldValidate: true })}
+              addLabel="+ etiket"
+              searchPlaceholder="Etiket ara ya da yaz…"
+              emptyText="Etiket yok"
+              onCreate={(label) => void createTag(label)}
+            />
+          </FieldShell>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <FormMoney control={form.control} name="amount" label="Belge toplamı" labelAside="KDV dâhil" required placeholder="0,00" />
           <FormMoney control={form.control} name="vatAmount" label="KDV tutarı" labelAside="belgede yoksa boş" placeholder="0,00" />
-        </div>
-
-        {/* Etiket sözlükten, çoklu (13.09): belgenin etiketi ödemesine de geçer ("Ödemesini yaz"
-            formu bunlarla açılır) — aynı şeyi iki kez seçtirmemek için. */}
-        <div className="flex flex-col gap-1.5">
-          <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">Etiketler (isteğe bağlı)</span>
-          <div className="flex flex-wrap gap-1.5">
-            {tagOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={watched.tags.includes(option.value)}
-                onClick={() => toggleTag(option.value)}
-                className={`cursor-pointer rounded-ops-chip border px-2.5 py-1 font-ops-body text-ops-xs transition-colors ${
-                  watched.tags.includes(option.value)
-                    ? 'border-ops-olive bg-ops-olive-bg text-ops-olive-dark'
-                    : 'border-ops-line text-ops-muted hover:border-ops-line-strong hover:text-ops-ink'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <FormInput control={form.control} name="note" label="Not" placeholder="Eylül kirası · 3 taksitin ilki" />

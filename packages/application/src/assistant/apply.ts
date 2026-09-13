@@ -5,13 +5,14 @@ import {
   DeliveryZoneService,
   DiscountService,
   MoneyMovementService,
-  MovementTagService,
+  MovementNatureService,
   ProductService,
   PurchaseOrderService,
   RecipeService,
   StockIntakeService,
   StockService,
 } from '@lezzet/database';
+import { acceptsNature, classificationTypeOf } from '@lezzet/domain-core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   parseProposalPayload,
@@ -145,15 +146,16 @@ const applyStockIntake: Applier = async (db, raw) => {
 };
 
 /**
- * Asistanın kategori kelimesi → sözlük etiketi (13.09). Slug ya da okunur ad eşleşirse tek etiket;
- * eşleşmezse BOŞ — uydurulmuş etiket yazılmaz, hareket izah kuyruğuna düşer.
+ * Asistanın kategori kelimesi → sözlük TÜRÜ (13.09 · ikinci karar). Slug ya da okunur ad eşleşirse
+ * tür; eşleşmezse `null` — uydurulmuş bir tür yazılmaz, hareket izah kuyruğuna düşer. Yön de
+ * sorulur: gider türü giren paraya konmaz (tür kapısının kuralı), o zaman da `null`.
  */
-async function tagsOfCategory(db: SupabaseClient, category: string | null | undefined): Promise<string[]> {
+async function natureOfCategory(db: SupabaseClient, category: string | null | undefined, direction: 'in' | 'out'): Promise<string | null> {
   const word = category?.trim().toLocaleLowerCase('tr');
-  if (!word) return [];
-  const dictionary = await new MovementTagService(db).list({ activeOnly: true });
-  const hit = dictionary.find((tag) => tag.slug === word || tag.label.toLocaleLowerCase('tr') === word);
-  return hit ? [hit.slug] : [];
+  if (!word) return null;
+  const dictionary = await new MovementNatureService(db).list({ activeOnly: true });
+  const hit = dictionary.find((nature) => nature.slug === word || nature.label.toLocaleLowerCase('tr') === word);
+  return hit && (hit.direction === null || hit.direction === direction) ? hit.slug : null;
 }
 
 /**
@@ -164,19 +166,21 @@ async function tagsOfCategory(db: SupabaseClient, category: string | null | unde
 const applyMoneyMovement: Applier = async (db, raw) => {
   const payload = parseProposalPayload('money_movement', raw) as MoneyMovementPayload;
   /*
-    KATEGORİ → ETİKET (13.09). Asistanın önerisi serbest bir kategori kelimesi taşıyor (modelin
-    cümlesi); defter ise SÖZLÜKTEN etiket istiyor ve tanımadığını reddediyor. Kelime sözlükte slug
-    ya da okunur ad olarak bulunursa etiket olur; bulunmazsa hareket ETİKETSİZ yazılır ve izah
-    kuyruğuna düşer — uydurulmuş bir etiketle "izahlı" görünmesindense, operatörün eliyle
-    sınıflanması doğrudur.
+    KATEGORİ → TÜR (13.09 · ikinci karar). Asistanın önerisi serbest bir kategori kelimesi taşıyor
+    (modelin cümlesi); defter ise SÖZLÜKTEN tür istiyor. Kelime sözlükte slug ya da okunur ad olarak
+    bulunursa ve paranın yönüne uyuyorsa tür olur; bulunmazsa hareket TÜRSÜZ yazılır ve izah
+    kuyruğuna düşer — uydurulmuş bir türle "izahlı" görünmesindense, operatörün eliyle sınıflanması
+    doğrudur. Transfer tür almaz (onu karşı hesabı açıklar — motor: `acceptsNature`).
   */
-  const tags = await tagsOfCategory(db, payload.category);
+  const nature = acceptsNature(payload.type) ? await natureOfCategory(db, payload.category, payload.direction) : null;
   const row = await new MoneyMovementService(db).insert({
     accountId: payload.accountId,
     direction: payload.direction,
     amountCents: payload.amountCents,
-    type: payload.type,
-    tags,
+    // Türlü satırın kaba tipi TÜRDEN türer (motor: `classificationTypeOf`) — elle girişin ve satır
+    // seçicisinin kapısıyla aynı kural: türlü çıkış giderdir, sermaye girişi sermayedir.
+    type: nature ? classificationTypeOf(payload.direction, nature) : payload.type,
+    nature,
     description: payload.description,
     supplierId: payload.supplierId,
     counterAccountId: payload.counterAccountId,

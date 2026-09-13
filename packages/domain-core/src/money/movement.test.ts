@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expectedDirection, signedAmountCentsFor, validateMovement } from './movement';
+import { acceptsNature, classificationTypeOf, expectedDirection, signedAmountCentsFor, validateMovement } from './movement';
 
 /**
  * Para hareketi kuralları (12.1). Test edilen şey **anlam**: veri bozukluğunu DB engelliyor,
@@ -23,6 +23,22 @@ describe('tipten yön türetimi', () => {
     // "sınıflandırılamayan" demektir — ikisine de yön dayatmak yanlış reddetme üretirdi.
     expect(expectedDirection('transfer')).toBeNull();
     expect(expectedDirection('misc')).toBeNull();
+  });
+});
+
+describe('türden tip (13.09 · ikinci karar)', () => {
+  it('çıkışta her tür gider; girişte sermaye türü sermaye, öteki türler sınıflandırılmamış', () => {
+    expect(classificationTypeOf('out', 'kira')).toBe('expense');
+    expect(classificationTypeOf('in', 'sermaye')).toBe('capital');
+    expect(classificationTypeOf('in', 'faiz-geliri')).toBe('misc');
+  });
+
+  it('sipariş parası, stok alımı ve transfer tür almaz — onları bağları açıklar', () => {
+    expect(acceptsNature('expense') && acceptsNature('capital') && acceptsNature('misc')).toBe(true);
+    expect(acceptsNature('order_payment')).toBe(false);
+    expect(acceptsNature('order_refund')).toBe(false);
+    expect(acceptsNature('purchase')).toBe(false);
+    expect(acceptsNature('transfer')).toBe(false);
   });
 });
 

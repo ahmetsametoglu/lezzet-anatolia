@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { AccountService, MoneyMovementService, serviceDb } from '@lezzet/database';
+import { AccountService, MoneyMovementService, MovementTagService, serviceDb } from '@lezzet/database';
 import { signedAmountCentsFor } from '@lezzet/domain-core';
 import { purgeTestData } from '@lezzet/database/testing';
 import { recordMovement, transfer } from './movement';
@@ -14,6 +14,7 @@ const movements = new MoneyMovementService(db);
 
 const stamp = Date.now();
 const createdAccounts: string[] = [];
+const createdTags: string[] = [];
 let cashAccount: string;
 let bankAccount: string;
 
@@ -24,17 +25,17 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Hareket + hesap sırası `cleanup.ts`'te; burada tekrarlansaydı biri bir gün ötekinden ayrışırdı.
-  await purgeTestData(db, { accountIds: createdAccounts });
+  // Hareket + hesap + etiket sırası `cleanup.ts`'te; burada tekrarlansaydı biri bir gün ötekinden ayrışırdı.
+  await purgeTestData(db, { accountIds: createdAccounts, tagSlugs: createdTags });
 });
 
 describe('elle hareket girişi', () => {
   it('geçerli gider yazılır', async () => {
-    const result = await recordMovement({ accountId: cashAccount, direction: 'out', amountCents: 12_000, type: 'expense', tags: ['akaryakit'] });
+    const result = await recordMovement({ accountId: cashAccount, direction: 'out', amountCents: 12_000, type: 'expense', nature: 'akaryakit' });
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
-    expect(result.movement.tags).toEqual(['akaryakit']);
-    // Etiketi olan hareket izahlıdır (13.09) — türetilmiş kolon, yazılmadan doğru.
+    expect(result.movement.nature).toBe('akaryakit');
+    // Türü olan hareket izahlıdır (13.09) — tetikleyici kurar, yazılmadan doğru.
     expect(result.movement.explained).toBe(true);
   });
 
@@ -44,11 +45,30 @@ describe('elle hareket girişi', () => {
     ).rejects.toThrow(/tanınmayan etiket/);
   });
 
-  it('bağı, belgesi ve etiketi olmayan hareket izah bekler; etiket gelince izahlı olur', async () => {
+  it('TÜR KAPISI (13.09): gider türü giren paraya, tür transfere konmaz; bilinmeyen tür yazılmaz', async () => {
+    const before = (await accounts.balance(cashAccount)).movementCount;
+    expect(await recordMovement({ accountId: cashAccount, direction: 'in', amountCents: 1000, type: 'misc', nature: 'kira' })).toMatchObject({
+      status: 'invalid',
+      reason: 'nature_direction',
+    });
+    expect(
+      await recordMovement({ accountId: cashAccount, counterAccountId: bankAccount, direction: 'out', amountCents: 1000, type: 'transfer', nature: 'kira' }),
+    ).toMatchObject({ status: 'invalid', reason: 'nature_not_applicable' });
+    expect(await recordMovement({ accountId: cashAccount, direction: 'out', amountCents: 1000, type: 'expense', nature: 'uydurma-tur' })).toMatchObject({
+      status: 'invalid',
+      reason: 'unknown_nature',
+    });
+    expect((await accounts.balance(cashAccount)).movementCount).toBe(before); // tek satır bile yazılmadı
+  });
+
+  it('türü olmayan hareket izah bekler; ETİKET izah değildir, TÜR gelince izahlı olur (13.09)', async () => {
     const created = await movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 700, type: 'misc' });
     expect(created.explained).toBe(false);
-    const tagged = await movements.update({ id: created.id, tags: ['banka-masrafi'] });
-    expect(tagged.explained).toBe(true);
+
+    const etiket = await new MovementTagService(db).insert({ slug: `izah-${stamp}`, label: `İzah testi ${stamp}` });
+    createdTags.push(etiket.slug);
+    expect((await movements.update({ id: created.id, tags: [etiket.slug] })).explained).toBe(false);
+    expect((await movements.update({ id: created.id, nature: 'banka-masrafi' })).explained).toBe(true);
   });
 
   it('tipin yönüne uymayan hareket YAZILMADAN reddedilir', async () => {
@@ -102,7 +122,7 @@ describe('transfer', () => {
  *
  * İşaret kuralı (*"girişte artı, çıkışta eksi; transferin karşı ucunda ters"*) iki yerde birden
  * uygulanıyor ve ikisi de canlı:
- *   · SQL — `account_movement` görünümü (`0018_money.sql:99-111`). Bakiye ve hesap ekstresi buradan.
+ *   · SQL — `account_movement` görünümü (`0018_money.sql`). Bakiye ve hesap ekstresi buradan.
  *   · TypeScript — `signedAmountCentsFor` (`domain-core/money/movement.ts`). Form önizlemesi için.
  *
  * Veritabanı bizim motorumuzu çağıramaz (ayrı dil), yani nüsha KALDIRILAMAZ. Kaldırılamayan

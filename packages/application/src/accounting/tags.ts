@@ -1,37 +1,34 @@
 import { MoneyMovementService, MovementTagService } from '@lezzet/database';
-import { tagSlugOf } from '@lezzet/domain-core';
+import { dictionarySlugOf } from '@lezzet/domain-core';
 import type { MoneyMovement, MovementTag } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { unknownTagOf } from './document';
 
 /*
-  ETİKET SÖZLÜĞÜ VE İZAH KAPILARI (12.12 · kullanıcı kararları 13.09).
+  ETİKET KAPILARI (12.12 · 13.09 · ikinci karar).
 
-  Sınıflandırmanın tek mekanizması etikettir ve sözlük YÖNETİLİR: operatör ekler, yazım tek kalır.
-  Slug kuralı motorda (`tagSlugOf`); ortak etiketi `ortak:<ad>` ön ekiyle doğar — ortaklar arası
-  hesap ayrı bir varlık değil, bu etikettir.
+  Etiket SERBEST bir işarettir: işletmenin kendi gruplaması ("Ortak A aracı", "Bayram hazırlığı").
+  Sınıflandırma değildir — "bu para neyin parası" sorusunun cevabı TÜRDÜR (`natures.ts`) — ve bir
+  hareketi izahlı YAPMAZ. Sözlük yine yönetilir (yazım tek kalsın: "Kira" ile "kira" iki kalem
+  oluyordu) ama ekrandan tek dokunuşla büyür: etiket menüsündeki "yeni etiket" sözlüğe girer ve aynı
+  anda satıra konur.
 
-  "İzah edilmemiş" kuyruğunu kapatan yol da burada: bağı ve belgesi olmayan bir hareket etiket
-  alınca izahlı olur (`explained` türetilmiş kolon, satırla birlikte değişir).
+  Ortak etiketi (`ortak:<ad>`) KALKTI (13.09): ortağın kaydı cari hesabıdır, etiket değil.
 */
 
 export type TagOutcome =
   | { status: 'ok'; tag: MovementTag }
   | { status: 'invalid'; reason: 'bad_label' | 'exists' | 'not_found' };
 
-/**
- * Sözlüğe etiket ekler. `partner` işaretli ad `ortak:` ön ekiyle ve "Ortak …" okunur adıyla girer
- * — liste ortakları kendiliğinden gruplar, kimse ön eki elle yazmaz.
- */
-export async function addMovementTag(db: SupabaseClient, input: { label: string; partner?: boolean }): Promise<TagOutcome> {
-  const slug = tagSlugOf(input.label, { partner: input.partner });
+/** Sözlüğe etiket ekler — slug okunur addan (motor), aynı ad ikinci kez girmez. */
+export async function addMovementTag(db: SupabaseClient, input: { label: string }): Promise<TagOutcome> {
+  const slug = dictionarySlugOf(input.label);
   if (slug === null) return { status: 'invalid', reason: 'bad_label' };
 
   const service = new MovementTagService(db);
   if ((await service.list()).some((tag) => tag.slug === slug)) return { status: 'invalid', reason: 'exists' };
 
-  const label = input.partner ? `Ortak ${input.label.trim()}` : input.label.trim();
-  const tag = await service.insert({ slug, label });
+  const tag = await service.insert({ slug, label: input.label.trim() });
   return { status: 'ok', tag };
 }
 
@@ -47,9 +44,8 @@ export type TagMovementOutcome =
   | { status: 'invalid'; reason: 'unknown_tag' | 'not_found' };
 
 /**
- * Hareketin etiketlerini YAZAR (yerine koyar, eklemez): ekran çipleri açık/kapalı gösteriyor ve
- * gönderdiği liste operatörün gördüğü listenin kendisidir. Boş liste de geçerli — etiketi kaldırmak
- * bir karardır; hareket o zaman yeniden izah bekler (bağı ya da belgesi yoksa).
+ * Hareketin etiketlerini YAZAR (yerine koyar, eklemez): menü her dokunuşta listenin yeni hâlini
+ * gönderir. Boş liste de geçerli. Etiket izah değildir — bu kapı satırın izahını değiştirmez.
  */
 export async function tagMovement(db: SupabaseClient, input: { movementId: string; tags: readonly string[] }): Promise<TagMovementOutcome> {
   if ((await unknownTagOf(db, input.tags)) !== null) return { status: 'invalid', reason: 'unknown_tag' };

@@ -50,6 +50,11 @@ interface MultiSelectProps<T extends string> {
    * kuyruğu 22.14: seçilmemiş alan da görünür, ama düzenlenemez).
    */
   disabled?: boolean;
+  /**
+   * Verilirse aranan ad listede YOKSA menünün sonunda "oluştur" satırı çıkar (13.09 · muhasebeci
+   * deseni): sözlüğe yeni kayıt açmak için pencereden çıkılmaz. Kaydı çağıran açar ve seçime ekler.
+   */
+  onCreate?: (label: string) => void;
 }
 
 export function MultiSelect<T extends string>({
@@ -63,6 +68,7 @@ export function MultiSelect<T extends string>({
   loading = false,
   emptyText = 'Sonuç yok',
   disabled = false,
+  onCreate,
 }: MultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -78,6 +84,10 @@ export function MultiSelect<T extends string>({
   // Görselli seçenek varsa menü biraz genişler (uzun ürün adları için); alerjen gibi görselsiz
   // kullanımlarda ölçü aynı kalır.
   const withImages = options.some((o) => o.imageUrl !== undefined);
+  // Yazılan ad sözlükte AYNEN varsa oluşturma teklif edilmez — o ad zaten seçilebilir durumda.
+  const typed = query.trim();
+  const canCreate =
+    onCreate !== undefined && typed !== '' && !options.some((o) => o.label.toLocaleLowerCase('tr') === typed.toLocaleLowerCase('tr'));
 
   return (
     <div className="flex flex-wrap items-center gap-[7px]">
@@ -101,7 +111,7 @@ export function MultiSelect<T extends string>({
         selected.length === 0 ? (
           <span className="font-ops-body text-ops-sm text-ops-faint">—</span>
         ) : null
-      ) : remote || options.length > selected.length ? (
+      ) : remote || onCreate !== undefined || options.length > selected.length ? (
         <>
           <div ref={anchorRef} className="inline-flex">
             <Chip
@@ -142,6 +152,19 @@ export function MultiSelect<T extends string>({
                   </button>
                 ))
               )}
+              {canCreate ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCreate?.(typed);
+                    reset();
+                    setOpen(false);
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-2 border-t border-ops-line-soft px-[13px] py-2 text-left font-ops-body text-ops-sm font-medium text-ops-olive-dark hover:bg-ops-subtle"
+                >
+                  + “{typed}” oluştur
+                </button>
+              ) : null}
             </div>
           </AnchoredMenu>
         </>

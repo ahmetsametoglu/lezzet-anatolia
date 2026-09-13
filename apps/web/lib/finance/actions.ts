@@ -2,26 +2,48 @@
 
 import { revalidatePath } from 'next/cache';
 import { AccountService, BankImportProfileService, serviceDb } from '@lezzet/database';
-import { parseBankRows, type MappingSuggestion, type ParseProfile, type RowParseFailure } from '@lezzet/domain-core';
-import type { AccountType, BankImportProfile, MovementDirection, RawBankRow } from '@lezzet/types';
+import { dictionarySlugOf, parseBankRows, type MappingSuggestion, type ParseProfile, type RowParseFailure } from '@lezzet/domain-core';
+import {
+  ADVERTISING_NATURE,
+  type AccountType,
+  type BankImportProfile,
+  type CounterpartyKind,
+  type DocumentKind,
+  type MovementDirection,
+  type RawBankRow,
+} from '@lezzet/types';
 import { requireFinance } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { recordAdvertisingExpense, recordExpense, recordMovement, transfer } from '@/lib/money/movement';
-import { applyMatch, classifyRow, dismissRow, type ClassifyType, type MatchTarget } from '@/lib/bank/reconcile';
+import { applyMatch, dismissRow, unmatchRow, type MatchTarget } from '@/lib/bank/reconcile';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from '@/lib/bank/import';
-import { ADVERTISING_TAG, type DocumentKind, type MovementDirection as DocumentDirection } from '@lezzet/types';
 import {
+  addCounterparty,
+  addMovementNature,
   addMovementTag,
+  allocateToDocument,
   attachDocumentFile,
   createMoneyDocument,
   documentFileUrl,
+  removeAllocation,
   requestDocumentUploadUrl,
+  setMovementCounterparty,
+  setMovementNature,
   setMovementTagActive,
   tagMovement,
+  updateCounterparty,
+  updateMovementNature,
 } from '@lezzet/application';
-import { DOCUMENT_REASON, TAG_REASON } from '@/app/(operations)/operations/finance/finance-labels';
-import { INVALID_REASON, RECONCILE_REASON } from '@/app/(operations)/operations/finance/finance-labels';
+import {
+  ALLOCATION_REASON,
+  COUNTERPARTY_REASON,
+  DOCUMENT_REASON,
+  INVALID_REASON,
+  NATURE_REASON,
+  RECONCILE_REASON,
+  TAG_REASON,
+} from '@/app/(operations)/operations/finance/finance-labels';
 import { FINANCE_PATH } from '@/app/(operations)/operations/finance/finance-url';
 import type { ManualType } from '@/components/operation/form/movement-form/schema';
 
@@ -32,13 +54,18 @@ import type { ManualType } from '@/components/operation/form/movement-form/schem
 // ödemesi muhasebecinin de işidir; ekranın rayda beyan ettiği rol de bu (`ops-nav`: FINANCE). Tek
 // rollü `requireAdmin` konsaydı muhasebeci kendi ekranını açıp hiçbir şey yazamazdı.
 //
-// **İş kuralı burada YOK:** hangi hareketin geçerli olduğuna motor karar veriyor
-// (`domain-core/money.validateMovement`, kapının içinden çağrılıyor); action'ın işi guard, çeviri
-// ve tazeleme. Kuralı buraya da yazsaydık iki kopya bir gün ayrışırdı.
+// **İş kuralı burada YOK:** hangi hareketin geçerli olduğuna motor ve uygulama kapıları karar veriyor;
+// action'ın işi guard, çeviri ve tazeleme. Kuralı buraya da yazsaydık iki kopya bir gün ayrışırdı.
 
 /** Motorun reddini operatörün diline çevirir; bilinmeyen sebep ham bırakılmaz, genel cümleye düşer. */
 function invalidMessage(reason: string): string {
   return INVALID_REASON[reason as keyof typeof INVALID_REASON] ?? 'Bu hareket kaydedilemedi — alanları gözden geçirin.';
+}
+
+/** Sözlük değişince asistanın formu da yeni listeyi görsün (tür, etiket, cari aynı listeleri okur). */
+function revalidateMoney(): void {
+  revalidatePath(FINANCE_PATH);
+  revalidatePath('/operations/assistant');
 }
 
 interface ManualMovementInput {
@@ -48,13 +75,17 @@ interface ManualMovementInput {
   amountCents: number;
   /** Yalnız `misc` için anlamlı: sebebi bilinmeyen paranın yönü kullanıcıdan gelir. */
   direction: MovementDirection;
-  /** Sözlükten etiket slug'ları (13.09) — giderde en az bir tane; `reklam` varsa kampanya sorulur. */
+  /** TÜR (13.09) — "bu para neyin parası"; `reklam` ise kampanya sorulur. Boşsa hareket izah bekler. */
+  nature: string | null;
+  /** Kime ödendi / kimden geldi (13.09). */
+  counterpartyId: string | null;
+  /** Serbest etiketler. */
   tags: string[];
   /** Reklam giderinde kampanya künyesi (12.5) — analitiğin ROAS köprüsü. Boşsa yazılmaz. */
   campaign: string;
   valueDate: string;
   description: string;
-  /** Dayanak belge (12.12): açık belgeden "Ödemesini yaz" ile gelindiyse dolu; ödeme belgeye bağlı doğar. */
+  /** Dayanak belge (12.12): açık belgeden "Ödemesini yaz" ile gelindiyse dolu; ödeme belgeye bağlanır. */
   documentId?: string | null;
 }
 
@@ -66,9 +97,13 @@ interface ManualMovementInput {
  * akıştan, bir kez elden. Stok alımı da yok: o `purchase` tipi mal kabule bağlıdır, motor bağsız
  * olanı zaten reddediyor (`supply_link_missing`).
  *
- * **Reklam gideri ayrı kapıdan geçer** çünkü etiket sabiti tek yerde yaşamalı: `reklam` dizesini
- * burada elle yazsaydık, sabit değişince rapor hata vermeden boşalırdı (12.5'in künyesi: *"sessiz
- * sıfır, yanlış cevabın en kötüsü"*).
+ * **Reklam gideri ayrı kapıdan geçer** çünkü tür sabiti tek yerde yaşamalı: `reklam` dizesini burada
+ * elle yazsaydık, sabit değişince rapor hata vermeden boşalırdı (12.5'in künyesi: *"sessiz sıfır,
+ * yanlış cevabın en kötüsü"*).
+ *
+ * **Belgeden gelindiyse** ödeme yazıldıktan sonra belgeye bağlanır (13.09: bağ tutarıyla). Bağ
+ * düşerse hareket yine yazılmıştır ve cevap bunu SÖYLER — "olmadı" deseydik operatör tekrar girip
+ * parayı iki kez yazardı.
  */
 export async function recordManualMovementAction(
   input: ManualMovementInput & { proposalId?: string | null },
@@ -81,7 +116,8 @@ export async function recordManualMovementAction(
       amountCents: input.amountCents,
       valueDate: input.valueDate || undefined,
       description: input.description.trim() || null,
-      documentId: input.documentId ?? null,
+      counterpartyId: input.counterpartyId || null,
+      tags: input.tags.map((tag) => tag.trim()).filter((tag) => tag !== ''),
     };
 
     /**
@@ -91,27 +127,24 @@ export async function recordManualMovementAction(
      * sonucu: `invalid` hiçbir şey yazılmadı demek, ama `work()` sessizce dönseydi `withProposal`
      * satırı "uygulandı" diye damgalardı. Kuyruğun söyleyebileceği en kötü yalan bu olurdu.
      * Fırlatınca satır `failed`e park ediyor ve sebebi orada yazıyor.
-     *
-     * Elle giriş yolunda (öneri yok) davranış AYNI kalıyor: fırlatılan cümle dışarıdaki `catch`ten
-     * geçip aynı metinle dönüyor.
      */
     const outcome = await withProposal(
       input.proposalId,
       staff.profileId,
       async () => {
-        const tags = input.tags.map((tag) => tag.trim()).filter((tag) => tag !== '');
+        const nature = input.nature || null;
         const result =
-          input.type === 'expense' && tags.includes(ADVERTISING_TAG)
-            ? await recordAdvertisingExpense({ ...shared, tags, campaign: input.campaign })
+          input.type === 'expense' && nature === ADVERTISING_NATURE
+            ? await recordAdvertisingExpense({ ...shared, campaign: input.campaign })
             : input.type === 'expense'
-              ? await recordExpense({ ...shared, tags })
+              ? await recordExpense({ ...shared, nature })
               : await recordMovement({
                   ...shared,
                   type: input.type,
                   // Sermaye girişinin yönü sabit (`in`, motorun kuralı); `misc` serbest, çünkü banka
                   // "para girdi/çıktı" der, sebebini söylemez ve elle girilen karşılığı da öyledir.
                   direction: input.type === 'capital' ? 'in' : input.direction,
-                  tags,
+                  nature,
                 });
         if (result.status === 'invalid') throw new Error(invalidMessage(result.reason));
         return result;
@@ -119,8 +152,13 @@ export async function recordManualMovementAction(
       (result) => ({ moneyMovementId: result.movement.id }),
     );
 
-    revalidatePath(FINANCE_PATH);
-    revalidatePath('/operations/assistant');
+    revalidateMoney();
+    if (input.documentId) {
+      const allocated = await allocateToDocument(serviceDb(), { movementId: outcome.movement.id, documentId: input.documentId });
+      if (allocated.status === 'invalid') {
+        return { data: null, error: `Hareket kaydedildi ama belgeye bağlanamadı: ${ALLOCATION_REASON[allocated.reason]}` };
+      }
+    }
     return { data: { movementId: outcome.movement.id }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
@@ -150,11 +188,8 @@ export async function recordTransferAction(input: TransferInput, proposalId?: st
 
     /**
      * Öneriden gelindiyse kayıt ile kuyruk satırı BİRLİKTE koşar (22.22) — elle hareketin aynı
-     * deseni. Transfer bir tur kuyruğun DIŞINDA bırakılmıştı ("kendi kapısı var") ama kuyruk yine
-     * de boş bir form açıyordu: tutarsız, kaydedilemez ve dilekçeyi silinmiş gibi gösteren bir hâl.
-     *
-     * `invalid` FIRLATILIR, döndürülmez: hiçbir şey yazılmadı demektir ve sessizce dönseydi satır
-     * "uygulandı" damgası yerdi (`recordManualMovementAction` künyesi).
+     * deseni. `invalid` FIRLATILIR, döndürülmez: hiçbir şey yazılmadı demektir ve sessizce dönseydi
+     * satır "uygulandı" damgası yerdi (`recordManualMovementAction` künyesi).
      */
     const outcome = await withProposal(
       proposalId,
@@ -181,14 +216,16 @@ export async function recordTransferAction(input: TransferInput, proposalId?: st
   }
 }
 
+// ── Banka satırı: bağla · adını koy · geri al ─────────────────────────────────
+
 /**
  * Banka satırını hedefin parası yapar — **operatörün onayıyla** (12.4 · 12.13): sipariş tahsilatı,
- * müşteri iadesi, açık belge, mal kabul, transfer ucu, başka hesap ya da zaten yazılmış hareket.
+ * müşteri iadesi, açık belge (tutarıyla), mal kabul, transfer ucu, başka hesap, zaten yazılmış
+ * hareket ya da cari.
  *
  * Kapının kendisi hiçbir şeyi kendiliğinden uygulamıyor (*"öneri + elle onay, tam otomatik
- * değil"*); bu action o onayın taşıyıcısı. Yanlış eşleşmenin bedeli sessizdir: ödeyen müşteri
- * borçlu kalır, başka bir sipariş "ödendi" görünür ve kimse fark etmez. Hedefin yönü satıra
- * uymuyorsa kapı reddeder; ekran zaten uymayanı listelemiyor, kapı son emniyet.
+ * değil"*); bu action o onayın taşıyıcısı. Hedefin yönü satıra uymuyorsa kapı reddeder; ekran zaten
+ * uymayanı listelemiyor, kapı son emniyet.
  */
 export async function applyMatchAction(movementId: string, target: MatchTarget): Promise<ActionResult<{ ok: true }>> {
   try {
@@ -204,20 +241,29 @@ export async function applyMatchAction(movementId: string, target: MatchTarget):
 }
 
 /**
- * Satırın ADI konur — gider (çıkış) ya da sermaye (giriş) — tipi ve etiketleri yazılır, kuyruktan
- * düşer. Hareket SİLİNMEZ. Etiket şart: adı konmuş ama etiketsiz satır izah kuyruğunda kalırdı ve
- * "sınıfladım" diyen operatör onu bir daha görürdü.
+ * Hareketin TÜRÜNÜ koyar ya da kaldırır (`nature: null`) — satırdaki tür seçici, kuyruğun "Gider"
+ * menüsü ve seçim penceresinin "adını koy" bölümü (13.09 · ikinci karar). Banka satırında tür
+ * koymak satırı mutabık yapar; kaldırmak, başka açıklaması yoksa satırı kuyruğa döndürür.
  */
-export async function classifyRowAction(movementId: string, type: ClassifyType, tags: string[]): Promise<ActionResult<{ ok: true }>> {
+export async function setMovementNatureAction(movementId: string, nature: string | null): Promise<ActionResult<{ ok: true }>> {
   try {
     await requireFinance();
-    const clean = tags.map((tag) => tag.trim()).filter((tag) => tag !== '');
-    if (clean.length === 0 && type !== 'misc') {
-      return { data: null, error: type === 'expense' ? 'Gidere en az bir etiket seçilmeli.' : 'Sermaye girişine en az bir etiket seçilmeli (ör. sermaye, ortak).' };
-    }
+    const outcome = await setMovementNature(serviceDb(), { movementId, nature });
+    if (outcome.status === 'invalid') return { data: null, error: NATURE_REASON[outcome.reason] };
 
-    const outcome = await classifyRow(movementId, { type, tags: clean });
-    if (outcome.status === 'invalid') return { data: null, error: RECONCILE_REASON[outcome.reason] };
+    revalidatePath(FINANCE_PATH);
+    return { data: { ok: true }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Hareketin CARİSİNİ koyar ya da kaldırır; carinin varsayılan türü boş türe geçer (13.09). */
+export async function setMovementCounterpartyAction(movementId: string, counterpartyId: string | null): Promise<ActionResult<{ ok: true }>> {
+  try {
+    await requireFinance();
+    const outcome = await setMovementCounterparty(serviceDb(), { movementId, counterpartyId });
+    if (outcome.status === 'invalid') return { data: null, error: COUNTERPARTY_REASON[outcome.reason] };
 
     revalidatePath(FINANCE_PATH);
     return { data: { ok: true }, error: null };
@@ -245,15 +291,49 @@ export async function dismissMatchAction(movementId: string): Promise<ActionResu
   }
 }
 
+/**
+ * Ekstre satırının eşleşmesini GERİ ALIR (13.09 · kullanıcı bulgusu) — satır ekstreden geldiği hâle
+ * döner ve kuyruğa geri gelir; "zaten yazmıştım" birleşmesiyse elle yazılan satır geri kurulur.
+ */
+export async function unmatchRowAction(movementId: string): Promise<ActionResult<{ ok: true }>> {
+  try {
+    await requireFinance();
+    const outcome = await unmatchRow(movementId);
+    if (outcome.status === 'invalid') return { data: null, error: RECONCILE_REASON[outcome.reason] };
+
+    revalidatePath(FINANCE_PATH);
+    return { data: { ok: true }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Elle yazılmış hareketin belge bağını kaldırır — hareket ve belge kalır, belgenin açık kalanı geri gelir. */
+export async function removeAllocationAction(movementId: string, documentId: string): Promise<ActionResult<{ ok: true }>> {
+  try {
+    await requireFinance();
+    const outcome = await removeAllocation(serviceDb(), { movementId, documentId });
+    if (outcome.status === 'invalid') return { data: null, error: ALLOCATION_REASON[outcome.reason] };
+
+    revalidatePath(FINANCE_PATH);
+    return { data: { ok: true }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
 // ── Belge (12.12) ─────────────────────────────────────────────────────────────
 
 interface DocumentInput {
   kind: DocumentKind;
   number: string;
   issuedOn: string;
-  counterparty: string;
+  /** Karşı taraf (13.09): cari YA DA tedarikçi — ikisinden en çok biri. */
+  counterpartyId: string | null;
   supplierId: string | null;
-  direction: DocumentDirection;
+  direction: MovementDirection;
+  /** Belgenin türü — ödemesi bağlanınca harekete de geçer. */
+  nature: string | null;
   /** **Cent** (STACK §8) — KDV dâhil belge toplamı. */
   amountCents: number;
   /** **Cent**; `null` = belgede KDV yazmıyor (sıfır "KDV yok" demek olurdu). */
@@ -274,9 +354,10 @@ export async function createDocumentAction(input: DocumentInput): Promise<Action
       kind: input.kind,
       number: input.number.trim() || null,
       issuedOn: input.issuedOn,
-      counterparty: input.counterparty.trim() || null,
+      counterpartyId: input.counterpartyId || null,
       supplierId: input.supplierId || null,
       direction: input.direction,
+      nature: input.nature || null,
       amountCents: input.amountCents,
       vatAmountCents: input.vatAmountCents,
       tags: input.tags.map((tag) => tag.trim()).filter((tag) => tag !== ''),
@@ -332,17 +413,24 @@ export async function documentFileUrlAction(documentId: string): Promise<ActionR
   }
 }
 
-// ── Etiket sözlüğü + izah (12.12) ─────────────────────────────────────────────
+// ── Sözlük: tür · cari · etiket (13.09) ───────────────────────────────────────
 
-/** Sözlüğe etiket ekler; `partner` işaretlisi `ortak:<ad>` olur. */
-export async function addTagAction(input: { label: string; partner: boolean }): Promise<ActionResult<{ slug: string }>> {
+/**
+ * Sözlüğe etiket ekler. Aynı ad zaten varsa YENİSİ açılmaz, var olanın anahtarı döner: etiket
+ * menüsündeki "yeni etiket" operatörün yazdığını satıra koymak ister — ad sözlükte varsa istenen
+ * zaten o etikettir.
+ */
+export async function addTagAction(input: { label: string }): Promise<ActionResult<{ slug: string }>> {
   try {
     await requireFinance();
-    const outcome = await addMovementTag(serviceDb(), { label: input.label, partner: input.partner });
-    if (outcome.status === 'invalid') return { data: null, error: TAG_REASON[outcome.reason] };
+    const outcome = await addMovementTag(serviceDb(), { label: input.label });
+    if (outcome.status === 'invalid') {
+      const existing = outcome.reason === 'exists' ? dictionarySlugOf(input.label) : null;
+      if (existing) return { data: { slug: existing }, error: null };
+      return { data: null, error: TAG_REASON[outcome.reason] };
+    }
 
-    revalidatePath(FINANCE_PATH);
-    revalidatePath('/operations/assistant');
+    revalidateMoney();
     return { data: { slug: outcome.tag.slug }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
@@ -356,8 +444,7 @@ export async function setTagActiveAction(slug: string, isActive: boolean): Promi
     const outcome = await setMovementTagActive(serviceDb(), slug, isActive);
     if (outcome.status === 'invalid') return { data: null, error: TAG_REASON[outcome.reason] };
 
-    revalidatePath(FINANCE_PATH);
-    revalidatePath('/operations/assistant');
+    revalidateMoney();
     return { data: { ok: true }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
@@ -365,8 +452,8 @@ export async function setTagActiveAction(slug: string, isActive: boolean): Promi
 }
 
 /**
- * Hareketi etiketler — izah kuyruğunu kapatan yol: bağı ve belgesi olmayan satır etiket alınca
- * izahlı olur. Liste YERİNE KONUR (eklenmez): ekranın gösterdiği çipler operatörün gönderdiği liste.
+ * Hareketin etiketlerini yazar — menü her dokunuşta listenin yeni hâlini gönderir (Kaydet yok,
+ * kullanıcı isteği 13.09). Etiket izah değildir: satırın izahı değişmez.
  */
 export async function tagMovementAction(movementId: string, tags: string[]): Promise<ActionResult<{ ok: true }>> {
   try {
@@ -375,6 +462,80 @@ export async function tagMovementAction(movementId: string, tags: string[]): Pro
     if (outcome.status === 'invalid') return { data: null, error: TAG_REASON[outcome.reason] };
 
     revalidatePath(FINANCE_PATH);
+    return { data: { ok: true }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Sözlüğe tür ekler — ad, yön, isteğe bağlı hesap kodu. */
+export async function addNatureAction(input: {
+  label: string;
+  direction: MovementDirection | null;
+  accountCode: string;
+}): Promise<ActionResult<{ slug: string }>> {
+  try {
+    await requireFinance();
+    const outcome = await addMovementNature(serviceDb(), input);
+    if (outcome.status === 'invalid') return { data: null, error: NATURE_REASON[outcome.reason] };
+
+    revalidateMoney();
+    return { data: { slug: outcome.nature.slug }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Türün adı, yönü, hesap kodu ya da etkinliği — slug değişmez. */
+export async function updateNatureAction(
+  slug: string,
+  patch: { label?: string; direction?: MovementDirection | null; accountCode?: string | null; isActive?: boolean },
+): Promise<ActionResult<{ ok: true }>> {
+  try {
+    await requireFinance();
+    const outcome = await updateMovementNature(serviceDb(), slug, patch);
+    if (outcome.status === 'invalid') return { data: null, error: NATURE_REASON[outcome.reason] };
+
+    revalidateMoney();
+    return { data: { ok: true }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+interface CounterpartyInput {
+  name: string;
+  kind: CounterpartyKind;
+  keywords: string[];
+  defaultNature: string | null;
+  note: string;
+}
+
+/** Cari ekler — eşleşme kelimeleri ve varsayılan türüyle. */
+export async function addCounterpartyAction(input: CounterpartyInput): Promise<ActionResult<{ counterpartyId: string }>> {
+  try {
+    await requireFinance();
+    const outcome = await addCounterparty(serviceDb(), input);
+    if (outcome.status === 'invalid') return { data: null, error: COUNTERPARTY_REASON[outcome.reason] };
+
+    revalidateMoney();
+    return { data: { counterpartyId: outcome.counterparty.id }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Carinin alanları ya da etkinliği — silinmez, pasifleşir. */
+export async function updateCounterpartyAction(
+  id: string,
+  patch: Partial<CounterpartyInput> & { isActive?: boolean },
+): Promise<ActionResult<{ ok: true }>> {
+  try {
+    await requireFinance();
+    const outcome = await updateCounterparty(serviceDb(), id, patch);
+    if (outcome.status === 'invalid') return { data: null, error: COUNTERPARTY_REASON[outcome.reason] };
+
+    revalidateMoney();
     return { data: { ok: true }, error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
@@ -390,7 +551,7 @@ export async function tagMovementAction(movementId: string, tags: string[]): Pro
  */
 export async function createAccountAction(input: {
   name: string;
-  /** `partner` da buradan açılır (13.09): ortak cari hesabı, hesap ekranının kendi işi. */
+  /** `partner` da buradan açılır (13.09): ortak cari hesabı — ortağın tek kaydı. */
   type: AccountType;
 }): Promise<ActionResult<{ accountId: string }>> {
   try {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { MoneyMovement } from '@lezzet/types';
-import { buildMovementExport, buildMovementRow, type MovementExportInput } from './movement-export';
+import { buildMovementExport, buildMovementRow, type MovementExportDocument, type MovementExportInput } from './movement-export';
 
-// Hareket dökümü (12.15) — saf: satır kurma ve özet. Okuma katmanı web'in entegrasyon testinde.
+// Hareket dökümü (12.15 · 13.09) — saf: satır kurma ve özet. Okuma katmanı web'in entegrasyon testinde.
 
 const movement = (over: Partial<MoneyMovement> = {}): MoneyMovement => ({
   id: 'm1',
@@ -10,8 +10,9 @@ const movement = (over: Partial<MoneyMovement> = {}): MoneyMovement => ({
   direction: 'out',
   amountCents: 118_000,
   type: 'expense',
-  tags: ['bordro-kesinti'],
-  documentId: null,
+  nature: 'sosyal-guvenlik',
+  counterpartyId: null,
+  tags: [],
   meta: null,
   counterAccountId: null,
   orderId: null,
@@ -34,40 +35,63 @@ const input = (over: Partial<MovementExportInput> = {}): MovementExportInput => 
   movement: movement(),
   accountName: 'Crédit Mutuel',
   counterAccountName: null,
-  tagLabels: ['Bordro kesintisi'],
-  document: null,
+  natureLabel: 'Sosyal güvenlik',
+  accountCode: '645',
+  tagLabels: [],
+  documents: [],
   orderReference: null,
   supplierName: null,
+  counterpartyName: null,
+  ...over,
+});
+
+const document = (over: Partial<MovementExportDocument> = {}): MovementExportDocument => ({
+  kind: 'invoice',
+  number: 'LOYER-2026-09',
+  issuedOn: '2026-09-01',
+  counterpartyName: 'SCI Rhin Immobilier',
+  amountCents: 145_000,
+  vatAmountCents: 0,
   ...over,
 });
 
 describe('döküm satırı', () => {
-  it('çıkış eksi, giriş artı yazılır; etiketler okunur adla', () => {
-    expect(buildMovementRow(input())).toMatchObject({ amount: -1180, tags: 'Bordro kesintisi', account: 'Crédit Mutuel', counterparty: null });
+  it('çıkış eksi, giriş artı yazılır; tür okunur adıyla ve hesap koduyla, etiketler ayrı sütunda', () => {
+    expect(buildMovementRow(input({ tagLabels: ['Ortak A aracı'] }))).toMatchObject({
+      amount: -1180, nature: 'Sosyal güvenlik', accountCode: '645', tags: 'Ortak A aracı', account: 'Crédit Mutuel', counterparty: null,
+    });
     expect(buildMovementRow(input({ movement: movement({ direction: 'in', type: 'capital', amountCents: 500_000 }) })).amount).toBe(5000);
+    // Türü konmamış satırda kod UYDURULMAZ: iki sütun da boş.
+    expect(buildMovementRow(input({ natureLabel: null, accountCode: null }))).toMatchObject({ nature: null, accountCode: null });
   });
 
   it('belge varsa türü, numarası, tarihi, toplamı ve KDV\'si satıra gelir; karşı taraf belgeninki', () => {
-    const row = buildMovementRow(
-      input({
-        movement: movement({ amountCents: 70_000, tags: ['kira'] }),
-        tagLabels: ['Kira'],
-        supplierName: 'Yanlış tedarikçi',
-        document: { kind: 'invoice', number: 'LOYER-2026-09', issuedOn: '2026-09-01', counterparty: 'SCI Rhin Immobilier', amountCents: 145_000, vatAmountCents: 0 },
-      }),
-    );
+    const row = buildMovementRow(input({ movement: movement({ amountCents: 70_000 }), supplierName: 'Yanlış tedarikçi', documents: [document()] }));
     expect(row).toMatchObject({
       amount: -700, documentKind: 'invoice', documentNo: 'LOYER-2026-09', documentDate: '2026-09-01', documentTotal: 1450, documentVat: 0,
       counterparty: 'SCI Rhin Immobilier',
     });
   });
 
-  it('karşı taraf sırası: belge → tedarikçi → sipariş → karşı hesap', () => {
+  it('TEK HAVALE, İKİ FATURA (13.09): numaralar yan yana, toplamlar toplanır, tarih ilk belgenin', () => {
+    const row = buildMovementRow(
+      input({
+        documents: [
+          document({ number: 'FA-2', issuedOn: '2026-09-04', amountCents: 20_000, vatAmountCents: null }),
+          document({ number: 'FA-1', issuedOn: '2026-09-02', amountCents: 30_000, vatAmountCents: 5000 }),
+        ],
+      }),
+    );
+    expect(row).toMatchObject({ documentNo: 'FA-1; FA-2', documentDate: '2026-09-02', documentTotal: 500, documentVat: 50 });
+    // Hiçbir belgede KDV yazmıyorsa `null` kalır — sıfır "KDV yok" demek olurdu, o başka bir cümle.
+    expect(buildMovementRow(input({ documents: [document({ number: null, kind: 'receipt', vatAmountCents: null })] })).documentVat).toBeNull();
+  });
+
+  it('karşı taraf sırası: cari → belge → tedarikçi → sipariş → karşı hesap', () => {
+    expect(buildMovementRow(input({ counterpartyName: 'URSSAF', documents: [document()], supplierName: 'Anadolu Gıda' })).counterparty).toBe('URSSAF');
     expect(buildMovementRow(input({ supplierName: 'Anadolu Gıda', orderReference: 'LA-1' })).counterparty).toBe('Anadolu Gıda');
     expect(buildMovementRow(input({ orderReference: 'LA-26-7K4M2P', counterAccountName: 'Kasa' })).counterparty).toBe('Sipariş LA-26-7K4M2P');
     expect(buildMovementRow(input({ movement: movement({ type: 'transfer', counterAccountId: 'a2' }), counterAccountName: 'Kasa' })).counterparty).toBe('Kasa');
-    // Belgede KDV yazmıyorsa `null` kalır — sıfır "KDV yok" demek olurdu, o başka bir cümle.
-    expect(buildMovementRow(input({ document: { kind: 'receipt', number: null, issuedOn: '2026-09-02', counterparty: null, amountCents: 1000, vatAmountCents: null } })).documentVat).toBeNull();
   });
 });
 
@@ -76,11 +100,16 @@ describe('döküm özeti', () => {
     const data = buildMovementExport({ from: '2026-09-01', to: '2026-09-30' }, [
       // Aynı günde KAYIT sırası belirler: `c` sabah, `b` öğlen yazıldı.
       input({
-        movement: movement({ id: 'b', valueDate: '2026-09-10', direction: 'in', type: 'order_payment', amountCents: 4590, tags: [], explained: true, createdAt: '2026-09-10T12:00:00.000Z' }),
-        tagLabels: [],
+        movement: movement({ id: 'b', valueDate: '2026-09-10', direction: 'in', type: 'order_payment', nature: null, amountCents: 4590, explained: true, createdAt: '2026-09-10T12:00:00.000Z' }),
+        natureLabel: null,
+        accountCode: null,
       }),
       input({ movement: movement({ id: 'a', valueDate: '2026-09-05' }) }),
-      input({ movement: movement({ id: 'c', valueDate: '2026-09-10', type: 'misc', amountCents: 450, tags: [], explained: false, createdAt: '2026-09-10T09:00:00.000Z' }), tagLabels: [] }),
+      input({
+        movement: movement({ id: 'c', valueDate: '2026-09-10', type: 'misc', nature: null, amountCents: 450, explained: false, createdAt: '2026-09-10T09:00:00.000Z' }),
+        natureLabel: null,
+        accountCode: null,
+      }),
     ]);
 
     expect(data.rows.map((row) => row.movementId)).toEqual(['a', 'c', 'b']);

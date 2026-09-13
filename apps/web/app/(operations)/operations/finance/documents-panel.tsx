@@ -40,7 +40,7 @@ export function DocumentsPanel({ documents, busyId, onPay, onOpenFile }: Documen
               </Badge>
               <span className="min-w-0 truncate font-ops-body text-ops-sm text-ops-ink">
                 {doc.number ? <span className="font-ops-mono">{doc.number} · </span> : null}
-                {doc.counterparty ?? '—'}
+                {doc.partyName ?? '—'}
               </span>
             </div>
             {/* Açık kalan MONO ve vurgulu: kartın sorusu "ne kadar kaldı", "ne kadardı" değil. */}

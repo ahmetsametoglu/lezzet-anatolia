@@ -1,6 +1,7 @@
 import { MoneyMovementService, serviceDb } from '@lezzet/database';
-import { validateMovement, type MovementCheck } from '@lezzet/domain-core';
-import { ADVERTISING_TAG, type MoneyMovement, type MoneyMovementInsert } from '@lezzet/types';
+import { natureProblemOf } from '@lezzet/application';
+import { acceptsNature, classificationTypeOf, validateMovement, type MovementCheck } from '@lezzet/domain-core';
+import { ADVERTISING_NATURE, type MoneyMovement, type MoneyMovementInsert } from '@lezzet/types';
 
 /**
  * Para hareketi kapısı (12.1) — **uygulama katmanı orkestrasyonu**. DOMAIN §9.
@@ -10,16 +11,26 @@ import { ADVERTISING_TAG, type MoneyMovement, type MoneyMovementInsert } from '@
  *
  * İki ayrı "hayır" vardır ve karıştırılmaz:
  * - **`invalid`** — hareket ANLAMSIZ (tahsilat diyip parayı dışarı çıkarmak, siparişsiz sipariş
- *   ödemesi). Motorun cevabı; kullanıcıya sebebiyle gösterilir.
+ *   ödemesi, gider türünü giren paraya vermek). Motorun ya da tür kapısının cevabı; kullanıcıya
+ *   sebebiyle gösterilir.
  * - **veritabanı reddi** — veri BOZUK (karşı ucu olmayan transfer, sıfır tutar). Kısıt fırlatır;
  *   motor zaten önce yakalar, kısıt son emniyettir (başka bir yol satır yazmaya kalkarsa).
  */
 
-type MovementOutcome =
-  | { status: 'ok'; movement: MoneyMovement }
-  | { status: 'invalid'; reason: Extract<MovementCheck, { valid: false }>['reason'] };
+/** Motorun reddi + tür kapısının reddi (13.09) — ikisi de "hiçbir şey yazılmadı" demektir, sebebiyle. */
+export type MovementInvalidReason =
+  | Extract<MovementCheck, { valid: false }>['reason']
+  | 'unknown_nature'
+  | 'nature_direction'
+  | 'nature_not_applicable';
 
-/** Elle para hareketi girişi (kasa/banka ekranı). */
+type MovementOutcome = { status: 'ok'; movement: MoneyMovement } | { status: 'invalid'; reason: MovementInvalidReason };
+
+/**
+ * Elle para hareketi girişi (kasa/banka ekranı). Tür verildiyse (13.09) tür kapısından da geçer:
+ * sipariş parası, stok alımı ve transfer tür almaz; tür sözlükte, aktif ve paranın yönüne uygun
+ * olmalı.
+ */
 export async function recordMovement(input: MoneyMovementInsert): Promise<MovementOutcome> {
   const verdict = validateMovement({
     accountId: input.accountId,
@@ -33,7 +44,18 @@ export async function recordMovement(input: MoneyMovementInsert): Promise<Moveme
   });
   if (!verdict.valid) return { status: 'invalid', reason: verdict.reason };
 
-  return { status: 'ok', movement: await new MoneyMovementService(serviceDb()).insert(input) };
+  const db = serviceDb();
+  if (input.nature) {
+    if (!acceptsNature(input.type)) return { status: 'invalid', reason: 'nature_not_applicable' };
+    const problem = await natureProblemOf(db, input.nature, input.direction);
+    if (problem) return { status: 'invalid', reason: problem };
+    // Türlü satırın kaba tipi TÜRDEN türer (motor: `classificationTypeOf`) — satırdaki seçicinin
+    // kapısıyla aynı kural (`setMovementNature`): çıkışın türü gider, sermaye girişi sermaye, öteki
+    // giriş sınıflandırılmamış giriş. Form uyumsuz ikiliyi göstermiyor; kapı son emniyet.
+    const type = classificationTypeOf(input.direction, input.nature);
+    return { status: 'ok', movement: await new MoneyMovementService(db).insert({ ...input, type }) };
+  }
+  return { status: 'ok', movement: await new MoneyMovementService(db).insert(input) };
 }
 
 /**
@@ -63,17 +85,18 @@ export function recordSupplierPayment(input: {
 }
 
 /**
- * **Gider** (kira, akaryakıt, maaş, ambalaj…) — sınıflandırma ETİKETLE (13.09): sözlükten bir ya da
- * daha çok slug (`maas` + `ortak:ahmet`). Eski tek serbest kategori kalktı: "Kira" ile "kira" iki
- * kalem oluyordu ve ortak ayrımı taşınamıyordu. Tanınmayan etiketi veritabanı reddeder.
+ * **Gider** (kira, akaryakıt, maaş, ambalaj…) — sınıflandırma TÜRLE (13.09 · ikinci karar): tek tür,
+ * sözlükten. Etiket serbest işarettir, isteğe bağlı. Tür verilmezse gider yine yazılır ama izah
+ * bekler — "bu para neyin parası" sorusu açık kalır ve kuyrukta görünür.
  */
 export function recordExpense(input: {
   accountId: string;
   /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
   amountCents: number;
-  tags: readonly string[];
-  /** Dayanak belge (fatura, fiş, bordro) — varsa ödeme belgeye bağlanır ve belgenin açık kalanı düşer. */
-  documentId?: string | null;
+  nature: string | null;
+  /** Kime ödendi (13.09) — kurum, hizmet veren, çalışan. */
+  counterpartyId?: string | null;
+  tags?: readonly string[];
   meta?: Record<string, unknown> | null;
   valueDate?: string;
   description?: string | null;
@@ -83,8 +106,9 @@ export function recordExpense(input: {
     direction: 'out',
     amountCents: input.amountCents,
     type: 'expense',
-    tags: [...input.tags],
-    documentId: input.documentId,
+    nature: input.nature,
+    counterpartyId: input.counterpartyId,
+    tags: [...(input.tags ?? [])],
     meta: input.meta,
     valueDate: input.valueDate,
     description: input.description,
@@ -92,7 +116,7 @@ export function recordExpense(input: {
 }
 
 /**
- * **Reklam gideri** (12.5) — DOMAIN §350. `reklam` etiketi + `meta.campaign` ile girer. Analitik
+ * **Reklam gideri** (12.5) — DOMAIN §350. `reklam` TÜRÜ + `meta.campaign` ile girer (13.09). Analitik
  * (13.2) kampanyanın **cirosunu ve giderini yan yana** koyar; gerçek ROI Excel'e taşınmaz.
  *
  * Kampanya künyesi **zorlanmaz, boşsa yazılmaz**: kampanyası bilinmeyen bir reklam ödemesi de
@@ -104,10 +128,9 @@ export function recordAdvertisingExpense(input: {
   accountId: string;
   /** **Cent** (02.9 · STACK §8) — işaretsiz; yönü fonksiyonun kendisi belirler. */
   amountCents: number;
-  /** Ek etiketler (ör. `ortak:ahmet`); `reklam` burada garanti edilir, çağıran tekrar yazmak zorunda değil. */
+  counterpartyId?: string | null;
+  /** Serbest etiketler; tür burada garanti edilir (`reklam`), çağıran yazmak zorunda değil. */
   tags?: readonly string[];
-  /** Ajans faturası girildiyse ödeme ona bağlanır (12.12). */
-  documentId?: string | null;
   campaign?: string | null;
   valueDate?: string;
   description?: string | null;
@@ -116,8 +139,9 @@ export function recordAdvertisingExpense(input: {
   return recordExpense({
     accountId: input.accountId,
     amountCents: input.amountCents,
-    tags: [ADVERTISING_TAG, ...(input.tags ?? []).filter((tag) => tag !== ADVERTISING_TAG)],
-    documentId: input.documentId,
+    nature: ADVERTISING_NATURE,
+    counterpartyId: input.counterpartyId,
+    tags: input.tags,
     // Boş künye yazılmaz: `{campaign: ''}` raporda kendi kovasını açar, künyesizden ayrı düşerdi.
     meta: campaign ? { campaign } : null,
     valueDate: input.valueDate,

@@ -85,8 +85,11 @@ export { StockIntakeService, type ReceiveIntakeInput } from './services/stock-in
 export { ReorderService, type ReorderGroup, type ReorderLine } from './services/reorder.service';
 export {
   AccountService,
+  CounterpartyService,
+  MoneyAllocationService,
   MoneyDocumentService,
   MoneyMovementService,
+  MovementNatureService,
   MovementTagService,
   StockIntakeBalanceService,
   type CampaignSpend,

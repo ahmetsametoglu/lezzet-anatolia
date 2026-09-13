@@ -10,7 +10,9 @@ import {
   MANUAL_TYPES,
   ManualMovementSchema,
   movementToday,
+  natureAfterChange,
   type ManualMovementForm,
+  type ManualType,
 } from '@/components/operation/form/movement-form/schema';
 import { ProposalAside, type ProposalFact, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
 import { money } from '@/components/operation/ui/format';
@@ -37,20 +39,25 @@ import type { ProposalSubject } from '@/lib/assistant/subject';
 /**
  * Asistanın önerdiği hareket → formun açılış değerleri. Transfer ise `null` — o `TransferBody`nin.
  *
- * Kategori kelimesi SÖZLÜKLE eşleşirse etiket olur (slug ya da okunur ad); eşleşmezse form etiketsiz
- * açılır ve operatör seçer — asistanın kelimesini uydurma bir etikete çevirmek defteri yanıltırdı.
+ * Kategori kelimesi SÖZLÜKLE eşleşirse TÜR olur (slug ya da okunur ad, 13.09); eşleşmezse ya da
+ * hareketin türüne uymazsa form türsüz açılır ve operatör seçer — asistanın kelimesini uydurma bir
+ * türe çevirmek defteri yanıltırdı. Sermayenin tek türü kendiliğinden konur (`natureAfterChange`).
  */
-export function movementValuesFrom(payload: MoneyMovementPayload, tags: AssistantFormOptions['tags']): ManualMovementForm | null {
+export function movementValuesFrom(payload: MoneyMovementPayload, natures: AssistantFormOptions['natures']): ManualMovementForm | null {
   if (!(MANUAL_TYPES as readonly string[]).includes(payload.type)) return null;
+  const type = payload.type as ManualType;
   const word = payload.category?.trim().toLocaleLowerCase('tr') ?? '';
-  const hit = word === '' ? undefined : tags.find((tag) => tag.value === word || tag.label.toLocaleLowerCase('tr') === word);
+  const hit = word === '' ? undefined : natures.find((nature) => nature.value === word || nature.label.toLocaleLowerCase('tr') === word);
   return {
     accountId: payload.accountId,
-    type: payload.type as ManualMovementForm['type'],
+    type,
     // Payload CENT taşıyor, form EURO — çevrim burada (`ManualMovementSchema` künyesi).
     amount: fromCents(payload.amountCents),
     direction: payload.direction,
-    tags: hit ? [hit.value] : [],
+    nature: natureAfterChange(natures, type, payload.direction, hit?.value ?? ''),
+    // Asistanın dilekçesi cariyi adla taşıyor, kimlikle değil; seçimi operatör yapar.
+    counterpartyId: '',
+    tags: [],
     campaign: '',
     // Değer tarihi yoksa BUGÜN: uydurma bir tarih defterde yanlış güne yazardı.
     valueDate: payload.valueDate || movementToday(),
@@ -92,6 +99,8 @@ export function MoneyMovementBody({ payload, subject, options, meta, values, onC
           setValue={form.setValue}
           values={live}
           accounts={options.accounts}
+          natureOptions={options.natures}
+          counterpartyOptions={options.counterparties}
           tagOptions={options.tags}
           disabled={disabled || readOnly}
         />

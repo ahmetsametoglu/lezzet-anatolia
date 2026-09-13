@@ -1,11 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  ADVERTISING_TAG,
+  ADVERTISING_NATURE,
   AccountSchema,
   AccountInsertSchema,
   AccountUpdateSchema,
   AccountBalanceSchema,
   AccountLedgerRowSchema,
+  CounterpartyInsertSchema,
+  CounterpartySchema,
+  CounterpartyUpdateSchema,
+  MoneyAllocationInsertSchema,
+  MoneyAllocationSchema,
   MoneyDocumentBalanceSchema,
   MoneyDocumentInsertSchema,
   MoneyDocumentSchema,
@@ -13,6 +18,9 @@ import {
   MoneyMovementSchema,
   MoneyMovementInsertSchema,
   MoneyMovementUpdateSchema,
+  MovementNatureInsertSchema,
+  MovementNatureSchema,
+  MovementNatureUpdateSchema,
   MovementTagInsertSchema,
   MovementTagSchema,
   MovementTagUpdateSchema,
@@ -24,7 +32,12 @@ import {
   type AccountInsert,
   type AccountLedgerRow,
   type AccountUpdate,
+  type Counterparty,
+  type CounterpartyInsert,
+  type CounterpartyUpdate,
   type KeysetCursor,
+  type MoneyAllocation,
+  type MoneyAllocationInsert,
   type MoneyDocument,
   type MoneyDocumentBalance,
   type MoneyDocumentInsert,
@@ -32,6 +45,9 @@ import {
   type MoneyMovement,
   type MoneyMovementInsert,
   type MoneyMovementUpdate,
+  type MovementNature,
+  type MovementNatureInsert,
+  type MovementNatureUpdate,
   type MovementSource,
   type MovementTag,
   type MovementTagInsert,
@@ -255,14 +271,6 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     );
   }
 
-  /**
-   * Bir belgeye bağlı hareketler — belge kartı "hangi ödemelerle kapandı" sorusunu buradan yanıtlar.
-   * Açık kalanın hesabı burada DEĞİL, `money_document_balance` görünümünde (tek yer).
-   */
-  listByDocument(documentId: string): Promise<MoneyMovement[]> {
-    return this.getAll({ documentId }, { orderBy: 'valueDate' });
-  }
-
   /** Siparişin para hareketleri — tahsilat/iade toplamı (`amount_*` cache'inin kaynağı, 12.2). */
   listByOrder(orderId: string): Promise<MoneyMovement[]> {
     return this.getAll({ orderId }, { orderBy: 'valueDate' });
@@ -425,9 +433,9 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   /**
    * **Kampanya başına reklam gideri** (12.5) — 13.2'nin ROI tablosu bunu cironun yanına koyar.
    *
-   * Süzgeç TİP değil ETİKETTİR (`reklam`, 13.09; eskiden `category = advertising`): reklam parası
-   * çoğu zaman `expense` olarak girer ama ajansa yapılan bir `misc` ödeme de reklam gideridir; tipe
-   * göre süzseydik ROI'nin gider tarafı olduğundan küçük, kampanya kârlı görünürdü.
+   * Süzgeç TİP değil TÜRDÜR (`reklam`, 13.09 · ikinci karar; bir tur etiketti, daha önce `category`):
+   * reklam parası çoğu zaman `expense` olarak girer ama giren bir reklam kredisi `misc`tir ve o da
+   * reklam parasıdır; tipe göre süzseydik ROI'nin gider tarafı yanlış, kampanya kârlı görünürdü.
    *
    * **Kampanya künyesiz satır atılmaz**, `campaign: null` kovasında toplanır: kampanyaların toplamı
    * ile dönemin gerçek reklam gideri BİRBİRİNİ TUTMALIDIR. Künyesizi düşürseydik rapor eksik gideri
@@ -437,7 +445,7 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     const { data, error } = await this.supabase
       .from('money_movement')
       .select('direction,amount,meta')
-      .contains('tags', [ADVERTISING_TAG])
+      .eq('nature', ADVERTISING_NATURE)
       .gte('value_date', from)
       .lte('value_date', to);
     if (error) throw error;
@@ -504,6 +512,16 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
   }
 
   /**
+   * Ekstre satırının eşleşmesini GERİ ALIR (13.09 · ikinci karar) — tek transaction
+   * (`unmatch_bank_movement`): bağlar düşer, satır ekstreden geldiği hâle döner. "Zaten yazmıştım"
+   * birleşmesiyse elle yazılan satır künyesinden yeniden kurulur ve kimliği döner; yoksa `null`.
+   */
+  async unmatchBankMovement(id: string): Promise<string | null> {
+    const restored = await this.executeRpc<string | null>('unmatch_bank_movement', { p_movement_id: id });
+    return restored ?? null;
+  }
+
+  /**
    * **Bir kez yazar** (12.14): `idempotencyKey` daha önce yazılmışsa `null` döner, ikinci satır
    * doğmaz. Sistemin kendi yazdığı sipariş dışı satırlar için (Stripe ücreti, payout transferi):
    * webhook aynı olayı tekrar gönderebilir, iki olay aynı ödemeyi anlatabilir — kararı veritabanı
@@ -535,11 +553,12 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
 }
 
 /**
- * **Etiket sözlüğü** (13.09) — hareketin ve belgenin sınıflandırma kelimeleri. Yönetilen liste:
- * operatör ekler, yazım tek kalır; veritabanı tanımadığı etiketi reddeder (`check_tags_known`).
+ * **Etiket sözlüğü** (13.09 · ikinci karar) — SERBEST işaretler: işletmenin kendi gruplaması, izah
+ * sayılmaz. Yönetilen liste (yazım tek kalsın) ama ekrandan tek dokunuşla büyür; veritabanı
+ * tanımadığı etiketi reddeder (`check_tags_known`).
  *
- * Anahtarı `slug`tır, `id` değil — temel servisin `update`/`getById`si `id` varsayar, o yüzden
- * bu sınıf yalnız okuma ve ekleme için temel sınıfı kullanır; pasifleştirme kendi sorgusudur.
+ * Anahtarı `slug`tır, `id` değil — temel servisin `update`/`getById`si `id` varsayar; pasifleştirme
+ * anahtarla yazan taban yöntemiyle (`updateWhereIn`) yapılır, ham sorgu yazılmaz (STACK §6).
  */
 export class MovementTagService extends BaseDbService<MovementTag, MovementTagInsert, MovementTagUpdate> {
   constructor(supabase: SupabaseClient) {
@@ -553,15 +572,95 @@ export class MovementTagService extends BaseDbService<MovementTag, MovementTagIn
 
   /** Etiket SİLİNMEZ, pasifleşir: eski hareketler onu taşımaya devam eder (hesabın kapanmasıyla aynı). */
   async setActive(slug: string, isActive: boolean): Promise<MovementTag> {
-    const { data, error } = await this.supabase.from('movement_tag').update({ is_active: isActive }).eq('slug', slug).select().single();
-    if (error) throw error;
-    return MovementTagSchema.parse(dbToApp(data));
+    await this.updateWhereIn('slug', [slug], { isActive });
+    const row = await this.getOneBy({ slug });
+    if (!row) throw new Error(`[movement_tag] güncellenen etiket okunamadı (${slug})`);
+    return row;
+  }
+}
+
+/**
+ * **Tür sözlüğü** (13.09 · ikinci karar) — "bu para neyin parası": kira, maaş, sosyal güvenlik…
+ * Hareketin ve belgenin TEK sınıflandırması buradan (`nature`, FK); isteğe bağlı hesap planı kodu
+ * muhasebeci dökümüne gider. Anahtar `slug` (etiket sözlüğünün gerekçesi): düzenleme anahtarla
+ * yazan taban yöntemiyle yapılır. Tür SİLİNMEZ, pasifleşir.
+ */
+export class MovementNatureService extends BaseDbService<MovementNature, MovementNatureInsert, MovementNatureUpdate> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'movement_nature', MovementNatureSchema, MovementNatureInsertSchema, MovementNatureUpdateSchema);
+  }
+
+  /** Sözlük — okunur ada göre; doğal tavanlı (operatörün kurduğu küme), tek turda. */
+  list(opts: { activeOnly?: boolean } = {}): Promise<MovementNature[]> {
+    return this.getAll(opts.activeOnly ? { isActive: true } : undefined, { orderBy: 'label' });
+  }
+
+  /** Adı, yönü, kodu ve etkinliği yazar; slug DEĞİŞMEZ — hareketler ve belgeler onu taşıyor. */
+  async updateBySlug(
+    slug: string,
+    patch: Partial<Pick<MovementNature, 'label' | 'direction' | 'accountCode' | 'isActive'>>,
+  ): Promise<MovementNature> {
+    await this.updateWhereIn('slug', [slug], patch);
+    const row = await this.getOneBy({ slug });
+    if (!row) throw new Error(`[movement_nature] güncellenen tür okunamadı (${slug})`);
+    return row;
+  }
+}
+
+/**
+ * **Cari** (13.09 · ikinci karar) — kurum, hizmet veren, çalışan: paranın kime gittiği / kimden
+ * geldiği. Tedarikçi burada değil (stok modülünün `supplier`ı), ortak da değil (ortağın kaydı cari
+ * HESABIDIR). Silinmez, pasifleşir: geçmiş hareketleri ve belgeleri ona bağlıdır.
+ */
+export class CounterpartyService extends BaseDbService<Counterparty, CounterpartyInsert, CounterpartyUpdate> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'counterparty', CounterpartySchema, CounterpartyInsertSchema, CounterpartyUpdateSchema);
+  }
+
+  /** Cariler — ada göre; doğal tavanlı (işletmenin elle kurduğu liste), tek turda. */
+  list(opts: { activeOnly?: boolean } = {}): Promise<Counterparty[]> {
+    return this.getAll(opts.activeOnly ? { isActive: true } : undefined, { orderBy: 'name' });
+  }
+}
+
+/**
+ * **Belge bağı** (13.09 · ikinci karar) — hareket ↔ belge, TUTARIYLA. Bir havale birkaç faturayı,
+ * bir fatura birkaç ödemeyi kapatır. Bir hareketin bağları toplamı kendi tutarını aşamaz — kararı
+ * veritabanı verir (`check_allocation_within_movement`), "önce topla sonra yaz" değil; kapı yalnız
+ * okunur bir ret için önce sorar.
+ */
+export class MoneyAllocationService extends BaseDbService<MoneyAllocation, MoneyAllocationInsert, never> {
+  /** Kolon `amount` euro `numeric`; app tarafı cent (STACK §8). */
+  protected override readonly moneyFields = ['amountCents'];
+
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'money_allocation', MoneyAllocationSchema, MoneyAllocationInsertSchema, MoneyAllocationSchema as never);
+  }
+
+  /**
+   * Çok hareketin bağları tek turda — defter sayfası ve döküm "hangi belge" sorusunu buradan
+   * yanıtlar. Kimlikler öbeklenir: `in(...)` listesi URL'e gömülüyor (`listByOrders` gerekçesi).
+   */
+  async listByMovements(movementIds: readonly string[]): Promise<MoneyAllocation[]> {
+    const BATCH_SIZE = 200;
+    const all: MoneyAllocation[] = [];
+    for (let i = 0; i < movementIds.length; i += BATCH_SIZE) {
+      all.push(...(await this.getAll({ movementId: movementIds.slice(i, i + BATCH_SIZE) }, { orderBy: 'createdAt' })));
+    }
+    return all;
+  }
+
+  /** Bir bağı kaldırır — hareket ve belge kalır. Kaldırılacak bağ yoksa `false` (çağıran "bulunamadı" der). */
+  async remove(movementId: string, documentId: string): Promise<boolean> {
+    if (!(await this.getOneBy({ movementId, documentId }))) return false;
+    await this.deleteWhere({ movementId, documentId });
+    return true;
   }
 }
 
 /**
  * **Belge servisi** (13.09) — fatura, fiş, bordro, sözleşme, dekont. Belge PARA DEĞİLDİR: borç
- * doğurur, ödeme sonra bir hareket olarak gelir ve `documentId` ile bağlanır. Açık kalan
+ * doğurur, ödeme sonra bir hareket olarak gelir ve bir bağla (`money_allocation`) bağlanır. Açık kalan
  * SAKLANMAZ, `money_document_balance` görünümünden okunur (bakiye kararıyla aynı gerekçe).
  */
 export class MoneyDocumentService extends BaseDbService<MoneyDocument, MoneyDocumentInsert, MoneyDocumentUpdate> {

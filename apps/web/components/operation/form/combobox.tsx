@@ -62,6 +62,12 @@ interface ComboboxProps {
   label?: string;
   /** Dolu çipin rengi — `blue` bakış daraltması, `olive` karar (bkz. `TriggerTone`). */
   tone?: TriggerTone;
+  /**
+   * Verilirse ve bir değer seçiliyse menünün başında "seçimi kaldır" satırı çıkar (13.09): tekil
+   * seçimin boş hâline dönüş yolu. Tetikleyicinin içine ✕ konamaz — düğmenin içinde düğme olur.
+   */
+  onClear?: () => void;
+  clearLabel?: string;
 }
 
 export function Combobox({
@@ -79,6 +85,8 @@ export function Combobox({
   variant = 'field',
   label,
   tone,
+  onClear,
+  clearLabel = 'Seçimi kaldır',
 }: ComboboxProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -149,6 +157,18 @@ export function Combobox({
         </div>
 
         <div role="listbox" className="max-h-[264px] overflow-y-auto">
+          {onClear && value ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClear();
+                setOpen(false);
+              }}
+              className="flex w-full cursor-pointer items-center gap-2 border-b border-ops-line-soft px-[13px] py-2 text-left font-ops-body text-ops-sm text-ops-muted transition-colors hover:bg-ops-subtle hover:text-ops-ink"
+            >
+              ✕ {clearLabel}
+            </button>
+          ) : null}
           {loading && visible.length === 0 ? (
             <Note text="Aranıyor…" />
           ) : visible.length === 0 ? (

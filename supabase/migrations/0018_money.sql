@@ -11,8 +11,13 @@
 -- `partner` (13.09 · kullanıcı kararı): ORTAK CARİ HESABI. Ortağın cebinden ödenen şirket gideri ile
 -- şirketin ortak adına yaptığı ödeme, şirket hesaplarından geçmediği için tutunacak bir hesap
 -- ister; yeni bir varlık değil, yeni bir hesap türü. Bakiye işareti anlatır: eksi = şirket ortağa
--- borçlu, artı = ortak şirkete borçlu. Sermaye koyma cari değildir, bankaya `capital` olarak girer
--- ve `ortak:<ad>` etiketini taşır.
+-- borçlu, artı = ortak şirkete borçlu.
+--
+-- ORTAĞIN KAYDI BU HESAPTIR (13.09 · ikinci karar, muhasebeci karşılaştırması): ortakla şirket
+-- arasındaki her para — koyduğu, çektiği, cebinden ödediği, şirketin onun yerine ödediği — carisinden
+-- geçer; ayrı bir "ortak etiketi" yoktur (vardı ve aynı kişiyi iki yerde tutuyordu). Fransa'da ortağın
+-- sermaye artırımı DIŞINDA koyduğu para ortak cari hesabıdır (compte courant d'associé, 455): şirket
+-- onu ortağa borçludur. Sermaye artırımı statü değişikliği ister; bankaya `capital` + tür `sermaye`.
 create type account_type as enum ('cash', 'bank', 'provider', 'partner');
 create type movement_direction as enum ('in', 'out');
 create type movement_type as enum (
@@ -37,40 +42,87 @@ create table public.account (
 );
 create unique index account_name_key on public.account (lower(name));
 
--- ── Etiket sözlüğü ──────────────────────────────────────────────────────────
--- (13.09 · kullanıcı kararı) Hareketin ve belgenin SINIFLANDIRMASI tek mekanizmadır: etiket. Eski
--- `category` kolonu (serbest metin, tek değer) kalktı — "Kira" ile "kira" iki kalem oluyordu ve
--- ortak ayrımı gibi ikinci bir ekseni taşıyamıyordu. Bir hareket birden çok etiket taşır: `maas`
--- + `ortak:ahmet` aynı hareketin iki gerçeğidir; ortaklar arası hesap bu etiketten çıkar.
+-- ── Tür sözlüğü ─────────────────────────────────────────────────────────────
+-- (13.09 · ikinci karar, muhasebeci karşılaştırması) Hareketin SINIFLANDIRMASI TEK bir türdür:
+-- "bu para neyin parası" sorusunun cevabı — kira, maaş, sosyal güvenlik, banka masrafı. Bir tur
+-- sınıflandırma çoklu ETİKETLE yapılıyordu (`maas` + `ortak:ahmet`) ve iki şey kayboluyordu: çok
+-- etiketli satırda hangisinin tür olduğu yazmıyordu, muhasebeciye giden dökümde hesap kodu yoktu.
+-- Muhasebe programlarının kurduğu düzen budur (tek tür + serbest etiket); 12.12'de "kategori
+-- kalsın, etiket eklensin" şıkkı olarak sorulmuş, "iki alan, iki bakım" diye elenmişti — yanlıştı.
 --
--- Sözlük YÖNETİLEN bir listedir: operatör ekrandan yeni etiket ekler, yazım tek kalır; hareket
--- yalnız sözlükteki etiketi taşıyabilir (aşağıdaki tetikleyici). Varsayılan satırlar referans
--- veridir (0013/0028 deseni), seed değil — taze veritabanı da bilir.
+-- `direction`: türün hangi yöndeki parada anlamlı olduğu (`out` gider, `in` gelir; NULL iki yön) —
+-- ekran seçiciyi satırın yönüyle süzer, kapı ters yönlü türü reddeder.
+-- `account_code`: Fransız hesap planındaki (PCG) karşılığı, İSTEĞE BAĞLI. Yalnız karşılığı tek olan
+-- türde doludur (kira 613, maaş 641…); ambalaj ya da yazılım gibi işletmeye göre değişende boştur —
+-- uydurulmuş bir kod, muhasebecinin düzeltmesi gereken yanlış bir kayıttır. Varsayılan satırlar
+-- referans veridir (0013/0028 deseni), seed değil — taze veritabanı da bilir.
+create table public.movement_nature (
+  slug text primary key check (slug ~ '^[a-z0-9][a-z0-9-]*$'),
+  label text not null,
+  direction movement_direction,
+  account_code text check (account_code ~ '^[0-9]{2,8}$'),
+  -- Tür SİLİNMEZ, pasifleşir: eski hareketler onu taşımaya devam eder (hesabın kapanmasıyla aynı).
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+insert into public.movement_nature (slug, label, direction, account_code) values
+  ('kira', 'Kira', 'out', '613'),
+  ('maas', 'Maaş', 'out', '641'),
+  ('sosyal-guvenlik', 'Sosyal güvenlik', 'out', '645'),
+  ('vergi', 'Vergi', 'out', '635'),
+  ('akaryakit', 'Akaryakıt', 'out', '606'),
+  ('ambalaj', 'Ambalaj', 'out', null),
+  ('yazilim', 'Yazılım', 'out', null),
+  ('telefon-internet', 'Telefon ve internet', 'out', '626'),
+  ('sigorta', 'Sigorta', 'out', '616'),
+  ('muhasebe-ucreti', 'Muhasebe ücreti', 'out', '622'),
+  ('reklam', 'Reklam', 'out', '623'),
+  ('banka-masrafi', 'Banka masrafı', 'out', '627'),
+  ('stripe-ucreti', 'Stripe ücreti', 'out', '627'),
+  ('sermaye', 'Sermaye', 'in', '101');
+
+-- ── Etiket ───────────────────────────────────────────────────────────────────
+-- (13.09 · ikinci karar) SERBEST İŞARET, sınıflandırma değil: işletmenin kendi gruplaması ("Ortak A
+-- aracı", "Bayram hazırlığı"). İsteğe bağlıdır ve bir hareketi İZAHLI YAPMAZ — izah bir bağ ya da
+-- türdür. Birden çok olabilir. Sözlük yine yönetilir (yazım tek kalsın: "Kira" ile "kira" iki kalem
+-- oluyordu) ama ekrandan tek dokunuşla büyür; varsayılan satırı YOKTUR, sözlük işletmenindir.
 create table public.movement_tag (
   -- ASCII slug: süzgeç ve URL'de olduğu gibi geçer; okunur ad `label`tadır.
-  slug text primary key check (slug ~ '^[a-z0-9][a-z0-9:-]*$'),
+  slug text primary key check (slug ~ '^[a-z0-9][a-z0-9-]*$'),
   label text not null,
   -- Pasif etiket yeni harekete verilmez, eski hareketlerde kalır (hesabın pasifleşmesiyle aynı).
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
-insert into public.movement_tag (slug, label) values
-  ('maas', 'Maaş'),
-  ('bordro-kesinti', 'Bordro kesintisi'),
-  ('kira', 'Kira'),
-  ('akaryakit', 'Akaryakıt'),
-  ('ambalaj', 'Ambalaj'),
-  ('yazilim', 'Yazılım'),
-  ('reklam', 'Reklam'),
-  ('banka-masrafi', 'Banka masrafı'),
-  ('stripe-ucreti', 'Stripe ücreti'),
-  ('vergi', 'Vergi'),
-  ('sermaye', 'Sermaye');
+
+-- ── Cari ─────────────────────────────────────────────────────────────────────
+-- (13.09 · ikinci karar) Paranın KİME gittiği ya da KİMDEN geldiği: kurum (URSSAF, vergi dairesi),
+-- hizmet veren (muhasebeci, telefon, kiraya veren), çalışan. TEDARİKÇİ burada DEĞİL — o stok
+-- modülünün kaydıdır (`supplier`) ve ekranın seçicisi ikisini aynı listede gösterir; kopyası
+-- tutulsaydı aynı firma iki yerde iki adla yaşardı. ORTAK da burada değil: ortağın kaydı cari
+-- HESABIDIR (`account.type = partner`), para onun üstünden geçer.
+--
+-- `keywords`: banka satırında bu kelimelerden biri geçerse cari (ve varsayılan türü) önerilir —
+-- "PRLV SEPA URSSAF COTISATIONS" → URSSAF · Sosyal güvenlik. Muhasebe programlarının "eşleşme
+-- etiketi"; öneri yine öneridir, onayı insan verir.
+create type counterparty_kind as enum ('institution', 'service', 'employee', 'other');
+create table public.counterparty (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  kind counterparty_kind not null default 'other',
+  keywords text[] not null default '{}',
+  default_nature text references public.movement_nature (slug) on update cascade,
+  note text,
+  -- Cari SİLİNMEZ, pasifleşir: geçmiş hareketleri ve belgeleri ona bağlıdır.
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+create unique index counterparty_name_key on public.counterparty (lower(name));
 
 -- ── Belge ────────────────────────────────────────────────────────────────────
 -- (13.09) Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleşme, dekont.
 -- Belge PARA DEĞİLDİR: fatura geldiğinde para henüz çıkmamıştır ama BORÇ doğmuştur; ödeme sonra
--- bir hareket olarak gelir ve `money_movement.document_id` ile belgeye bağlanır. Açık kalan
+-- bir hareket olarak gelir ve bir BAĞLA (`money_allocation`, tutarıyla) belgeye bağlanır. Açık kalan
 -- SAKLANMAZ, `money_document_balance` görünümünden türetilir (bakiye kararıyla aynı gerekçe).
 --
 -- Satış faturaları BURADA DEĞİL: bizim kestiğimiz fatura numarası siparişin üstünde durur
@@ -82,24 +134,31 @@ create table public.money_document (
   -- Belge numarası: faturada var, fiş ve bordroda olmayabilir.
   number text,
   issued_on date not null,
-  -- Karşı taraf: kiraya veren, çalışan, kurum… Tedarikçiyse `supplier_id` de dolar.
-  counterparty text,
+  -- Karşı taraf (13.09 · ikinci karar): CARİ (kiraya veren, çalışan, kurum) ya da TEDARİKÇİ — ikisinden
+  -- en çok biri. Bir tur serbest metindi ve aynı kurum iki yazımla iki kişi oluyordu.
+  counterparty_id uuid references public.counterparty (id) on delete set null,
   supplier_id uuid references public.supplier (id) on delete set null,
   stock_intake_id uuid references public.stock_intake (id) on delete set null,
   -- Belgenin YÖNÜ hareketinkiyle aynı dilde: `out` = bizim ödeyeceğimiz (gelen fatura, bordro),
   -- `in` = bize ödenecek (tedarikçi iadesi, ortağa kesilen dekont).
   direction movement_direction not null,
+  -- Belgenin TÜRÜ (13.09): ödemesi bağlanınca harekete de geçer (hareketin türü boşsa).
+  nature text references public.movement_nature (slug) on update cascade,
   amount numeric(12, 2) not null check (amount > 0),
   -- KDV tutarı; belgede yoksa NULL — sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
   vat_amount numeric(12, 2) check (vat_amount >= 0),
   currency currency not null default 'EUR',
   -- Dosyanın ÖZEL kovadaki anahtarı (`r2Keys.financeDocument`); yoksa belge yalnız künyedir.
   file_key text,
+  -- Serbest etiketler (13.09) — sınıflandırma türdedir.
   tags text[] not null default '{}',
   note text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+
+  constraint money_document_party check (counterparty_id is null or supplier_id is null)
 );
 create index money_document_issued_idx on public.money_document (issued_on desc);
+create index money_document_counterparty_idx on public.money_document (counterparty_id) where counterparty_id is not null;
 create index money_document_supplier_idx on public.money_document (supplier_id) where supplier_id is not null;
 create index money_document_intake_idx on public.money_document (stock_intake_id) where stock_intake_id is not null;
 
@@ -112,12 +171,14 @@ create table public.money_movement (
   -- Sıfır tutarlı hareket bilgi taşımaz; YÖN ayrı alandır, işaret tutara gömülmez (raporda
   -- "− yazılmış giriş" gibi çift-anlamlı satır doğmasın).
   type movement_type not null,
-  -- ETİKETLER (13.09) — sınıflandırmanın tek mekanizması; sözlükten (`movement_tag`), tetikleyici
-  -- tanımadığı etiketi reddeder. Birden çok olabilir: `maas` + `ortak:ahmet` aynı hareketin iki
-  -- gerçeğidir. Eski `category` kolonu kalktı; reklam artık `reklam` etiketi + `meta.campaign`.
+  -- TÜR (13.09 · ikinci karar) — "bu para neyin parası", TEK: `movement_nature`. Sipariş parası, stok
+  -- alımı ve transferde boştur (bağın kendisi söyler). Reklam gideri `reklam` türü + `meta.campaign`.
+  nature text references public.movement_nature (slug) on update cascade,
+  -- CARİ (13.09) — paranın kime gittiği / kimden geldiği; tedarikçiyse `supplier_id` dolar, bu değil.
+  counterparty_id uuid references public.counterparty (id) on delete set null,
+  -- ETİKETLER — serbest işaret (`movement_tag`), birden çok; izah DEĞİLDİR. Tetikleyici sözlükte
+  -- olmayanı reddeder (yazım tek kalsın). Belge bağı burada değil: `money_allocation` (tutarıyla).
   tags text[] not null default '{}',
-  -- Dayanak belge (fatura, fiş, bordro…). Belge silinirse hareket kalır, bağ düşer.
-  document_id uuid references public.money_document (id) on delete set null,
   -- Ek künye. Reklam giderinde `{"campaign": "..."}` — kampanya gideri ile cirosu yan yana
   -- konabilsin diye (gerçek ROI, 12.5/13); Excel'e taşınmaz. Stripe tahsilatında `{"providerRef"}`.
   meta jsonb,
@@ -180,15 +241,16 @@ create table public.money_movement (
   */
   counterpart_movement_id uuid references public.money_movement (id) on delete set null,
   created_at timestamptz not null default now(),
-  -- İZAH (13.09 · kullanıcı kararı): hareket şu dördünden biriyle açıklanır — bir işe bağ (sipariş,
-  -- mal kabul, tedarikçi), bir belge, en az bir etiket, ya da transfer (karşı hesap). Hiçbiri yoksa
-  -- "izah edilmemiş" kuyruğuna düşer; kaydı ENGELLEMEZ (banka satırı ham gelir, sonra izah edilir).
-  -- Türetilir, elle yazılmaz: kural veride durur ve satırla birlikte değişir (`delivery_run_close.
-  -- reconciled` ile aynı desen).
-  explained boolean generated always as (
-    order_id is not null or stock_intake_id is not null or supplier_id is not null
-    or document_id is not null or counter_account_id is not null or cardinality(tags) > 0
-  ) stored,
+  -- İZAH (13.09 · kullanıcı kararı, ikinci karar): hareket şunlardan biriyle açıklanır — bir işe bağ
+  -- (sipariş, mal kabul, tedarikçi), transfer (karşı hesap), bir TÜR ya da en az bir BELGE BAĞI. Etiket
+  -- izah DEĞİLDİR (serbest işarettir). Hiçbiri yoksa "izah edilmemiş" kuyruğuna düşer; kaydı
+  -- ENGELLEMEZ (banka satırı ham gelir, sonra izah edilir).
+  --
+  -- Türetilir, elle yazılmaz — ama ÜRETİLMİŞ KOLON DEĞİL: belge bağı başka bir tabloda
+  -- (`money_allocation`) ve üretilmiş kolon başka tabloya bakamaz. Tetikleyici kurar: satır her
+  -- yazıldığında (`money_movement_explain`) ve bağ eklenip silindiğinde (`money_allocation_touch`) kural
+  -- baştan hesaplanır; uygulamanın gönderdiği değer EZİLİR. Kuralın tek yeri `money_movement_explain`.
+  explained boolean not null default false,
 
   -- Transferin karşı ucu ZORUNLU ve kendisi olamaz; transfer olmayan harekette karşı hesap ANLAMSIZ.
   -- Veritabanı burada duruyor çünkü ihlali veri bozukluğudur: karşı ucu olmayan transfer, bakiyeyi
@@ -201,7 +263,9 @@ create table public.money_movement (
   -- bir ekstre yoktur, transfer olmayan satırın "öteki yakası" olmaz.
   constraint money_movement_counterpart_shape check (
     counterpart_movement_id is null or (source = 'bank_import' and type = 'transfer')
-  )
+  ),
+  -- Karşı taraf TEK (13.09): tedarikçi ya da cari — ikisi birden aynı soruyu iki ayrı cevapla yanıtlardı.
+  constraint money_movement_party check (supplier_id is null or counterparty_id is null)
 );
 
 -- Hesap ekstresi: "bu hesapta ne oldu", en yeni önce (sonsuz kaydırma).
@@ -220,10 +284,12 @@ create index money_movement_unreconciled_idx on public.money_movement (account_i
   where not reconciled;
 -- İzah kuyruğu (13.09): izah edilmemiş satır azınlıktır → kısmi indeks; sayaç da buradan sayar.
 create index money_movement_unexplained_idx on public.money_movement (value_date desc) where not explained;
--- Etiket süzgeci (`tags @> '{reklam}'`: kampanya gideri; `tags @> '{ortak:ahmet}'`: ortak ayrımı).
+-- Tür süzgeci (13.09): kampanya gideri `nature = 'reklam'`, dökümün ve raporların tür kırılımı.
+create index money_movement_nature_idx on public.money_movement (nature, value_date desc) where nature is not null;
+-- Carinin hareketleri — "URSSAF'a bu yıl ne ödedik" sorusu buradan cevaplanır.
+create index money_movement_counterparty_idx on public.money_movement (counterparty_id) where counterparty_id is not null;
+-- Serbest etiket süzgeci (`tags @> '{ortak-a-araci}'`).
 create index money_movement_tags_idx on public.money_movement using gin (tags);
--- Belgenin ödemeleri — açık kalanı türeten görünüm buradan toplar.
-create index money_movement_document_idx on public.money_movement (document_id) where document_id is not null;
 -- Mükerrer koruması (12.4): aynı hesapta aynı banka satırı İKİ KEZ yazılamaz.
 -- KISMİ İNDEKS DEĞİL, bilerek: `on conflict` kısmi indeksi hedefleyemez ve import yazımı ona
 -- dayanıyor. Gereği de yok — NULL'lar tekil karşılaştırmada birbirine EŞİT SAYILMAZ, dolayısıyla
@@ -239,6 +305,89 @@ create unique index money_movement_idempotency_key on public.money_movement (ide
 -- sahiplenseydi bir para iki ekstre satırında yaşardı.
 create unique index money_movement_counterpart_key on public.money_movement (counterpart_movement_id)
   where counterpart_movement_id is not null;
+
+-- ── Belge bağı ───────────────────────────────────────────────────────────────
+-- (13.09 · ikinci karar, muhasebeci karşılaştırması) Hareket ↔ belge, TUTARIYLA. Bir tur hareketin
+-- tek bir `document_id`si vardı: tedarikçinin üç faturası tek havalede ödendiğinde o havale üç
+-- faturaya bağlanamıyordu. Bağ artık ayrı satırdır ve kendi tutarını taşır — bir havale birkaç
+-- faturayı, bir fatura birkaç ödemeyi kapatır. İki uçtan `cascade`: hareket ya da belge silinirse
+-- bağ gider, öteki kalır.
+create table public.money_allocation (
+  id uuid primary key default gen_random_uuid(),
+  movement_id uuid not null references public.money_movement (id) on delete cascade,
+  document_id uuid not null references public.money_document (id) on delete cascade,
+  amount numeric(12, 2) not null check (amount > 0),
+  created_at timestamptz not null default now(),
+  -- Aynı hareket aynı belgeye iki kez bağlanmaz: ikinci bağ, birincinin tutarını değiştirmek olurdu.
+  unique (movement_id, document_id)
+);
+-- Belgenin ödemeleri — açık kalanı türeten görünüm buradan toplar.
+create index money_allocation_document_idx on public.money_allocation (document_id);
+
+-- Bir hareketin bağları toplamı kendi tutarını AŞAMAZ: 100 €'luk havale 150 €'luk borç kapatamaz.
+-- Hareket satırı KİLİTLENİR — aynı anda iki bağ yazılırsa ikisi de "yer var" görmesin. Belgenin
+-- tarafı serbesttir: fazla ödeme bir olgudur, açık kalan eksiye düşer ve gizlenmez.
+create or replace function public.check_allocation_within_movement()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_amount numeric(12, 2);
+  v_allocated numeric(12, 2);
+begin
+  select amount into v_amount from public.money_movement where id = new.movement_id for update;
+  select coalesce(sum(amount), 0) into v_allocated
+    from public.money_allocation
+   where movement_id = new.movement_id and id <> new.id;
+  if v_allocated + new.amount > v_amount then
+    raise exception 'money_allocation: bağların toplamı hareketin tutarını aşamaz (% > %)', v_allocated + new.amount, v_amount;
+  end if;
+  return new;
+end;
+$$;
+create trigger money_allocation_within_movement
+  before insert or update of movement_id, amount on public.money_allocation
+  for each row execute function public.check_allocation_within_movement();
+
+-- İZAH kuralının TEK yeri (13.09 · ikinci karar) — `explained` kolonunun künyesi. Satır her
+-- yazıldığında baştan hesaplanır; uygulamanın gönderdiği değer ezilir.
+create or replace function public.money_movement_explain()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.explained := new.order_id is not null or new.stock_intake_id is not null or new.supplier_id is not null
+    or new.counter_account_id is not null or new.nature is not null
+    or exists (select 1 from public.money_allocation a where a.movement_id = new.id);
+  return new;
+end;
+$$;
+create trigger money_movement_explained
+  before insert or update on public.money_movement
+  for each row execute function public.money_movement_explain();
+
+-- Bağ eklenip silinince hareketin izahı yeniden kurulur: satıra "kendini yeniden yaz" denir ve
+-- yukarıdaki kural koşar — kural burada ikinci kez yazılmaz.
+create or replace function public.money_allocation_touch()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op in ('UPDATE', 'DELETE') then
+    update public.money_movement set explained = explained where id = old.movement_id;
+  end if;
+  if tg_op in ('INSERT', 'UPDATE') then
+    update public.money_movement set explained = explained where id = new.movement_id;
+  end if;
+  return null;
+end;
+$$;
+create trigger money_allocation_explains
+  after insert or update or delete on public.money_allocation
+  for each row execute function public.money_allocation_touch();
 
 -- ── Defter satırı ────────────────────────────────────────────────────────────
 -- Bir hareket DOKUNDUĞU HER HESAPTA bir satır üretir: normal hareket bir, transfer iki. Bakiye de
@@ -308,17 +457,19 @@ create trigger money_document_tags_known
   for each row execute function public.check_tags_known();
 
 -- ── Belgenin açık kalanı ─────────────────────────────────────────────────────
--- Fatura geldi, borç doğdu; ödeme(ler) belgeye bağlanınca kapanır. Kapanan tutar bağlı hareketlerin
--- toplamıdır: belgeyle aynı yöndekiler kapatır, ters yöndekiler (iade, dekont) yeniden açar.
--- `open_amount` eksiye düşebilir (fazla ödeme) ve bu gizlenmez — fazla ödeme de bir olgudur.
+-- Fatura geldi, borç doğdu; ödeme(ler) belgeye BAĞLANINCA kapanır. Kapanan tutar bağların toplamıdır
+-- (13.09 · ikinci karar: bağ tutarıyla, `money_allocation`): belgeyle aynı yöndeki hareketin bağı
+-- kapatır, ters yöndekinin bağı (iade, dekont) yeniden açar. `open_amount` eksiye düşebilir (fazla
+-- ödeme) ve bu gizlenmez — fazla ödeme de bir olgudur.
 create or replace view public.money_document_balance as
 select d.id                                                       as document_id,
        d.amount,
-       coalesce(sum(case when m.direction = d.direction then m.amount else -m.amount end), 0)::numeric(12, 2) as settled,
-       (d.amount - coalesce(sum(case when m.direction = d.direction then m.amount else -m.amount end), 0))::numeric(12, 2)
+       coalesce(sum(case when m.direction = d.direction then a.amount else -a.amount end), 0)::numeric(12, 2) as settled,
+       (d.amount - coalesce(sum(case when m.direction = d.direction then a.amount else -a.amount end), 0))::numeric(12, 2)
                                                                   as open_amount
   from public.money_document d
-  left join public.money_movement m on m.document_id = d.id
+  left join public.money_allocation a on a.document_id = d.id
+  left join public.money_movement m on m.id = a.movement_id
  group by d.id;
 
 -- ── Mal kabulün açık kalanı ──────────────────────────────────────────────────
@@ -340,9 +491,12 @@ select i.id                                                       as stock_intak
  group by i.id;
 
 alter table public.account enable row level security;
+alter table public.movement_nature enable row level security;
 alter table public.movement_tag enable row level security;
+alter table public.counterparty enable row level security;
 alter table public.money_document enable row level security;
 alter table public.money_movement enable row level security;
+alter table public.money_allocation enable row level security;
 
 
 -- ═══ SİPARİŞ PARASI ═══
@@ -483,16 +637,18 @@ create index money_movement_provider_ref_idx on public.money_movement ((meta ->>
 -- 12.13 · kullanıcı kararı 13.09: banka hesabına ELLE de yazılır ("kira ödendi" o gün girilir) ve
 -- ekstre gelince aynı para bir kez daha düşer. İki satır tek satıra iner: EKSTRE SATIRI kalır (parmak
 -- izi mükerrer korumasının dayanağıdır — ekstre yeniden yüklense de satır tekrar girmez), elle
--- yazılanın bağları ona geçer (tip, etiketler, belge, sipariş, mal kabul, tedarikçi, karşı hesap,
--- yazım kimliği, künye) ve elle yazılan SİLİNİR. İzi ekstre satırının künyesinde durur
--- (`meta.absorbed`: kimlik, kaynak, tutar, tarih, açıklama).
+-- yazılanın bağları ona geçer (tip, tür, cari, etiketler, belge bağları, sipariş, mal kabul, tedarikçi,
+-- karşı hesap, yazım kimliği, künye) ve elle yazılan SİLİNİR. İzi ekstre satırının künyesinde durur
+-- (`meta.absorbed`: kimlik, kaynak, tutar, tarih, açıklama) — geri alma (`unmatch_bank_movement`)
+-- elle yazılanı bu izden yeniden kurar.
 --
 -- NEDEN RPC (STACK §13 (b)): silme + devralma bölünemez. Silinip devralınmasa bağlar kaybolur;
 -- devralınıp silinmese para iki kez sayılır. Tekil `idempotency_key` de ancak bu sırayla taşınır:
 -- önce eski satır düşer, sonra yenisi anahtarı alır.
 --
 -- Elle yazılanı başka bir bankanın ekstre satırı "karşı uç" diye sahiplenmişse (iki banka arası
--- transfer) o bağ ekstre satırına taşınır — silme onu NULL'a düşürüp aynayı yeniden açardı.
+-- transfer) o bağ ekstre satırına taşınır — silme onu NULL'a düşürüp aynayı yeniden açardı. Belge
+-- bağları da taşınır; silme onları `cascade` ile götürürdü.
 create or replace function public.absorb_provisional_movement(p_statement_id uuid, p_provisional_id uuid)
 returns void
 language plpgsql
@@ -527,18 +683,28 @@ begin
   if p.direction <> s.direction then
     raise exception 'absorb: iki hareketin yönü farklı';
   end if;
+  -- Ekstre satırının KENDİ belge bağı varsa yutma yapılmaz (13.09): iki bağ kümesi tek satırda
+  -- birleşseydi toplamları tutarı aşabilirdi ve hangisinin doğru olduğu bilinemezdi.
+  if exists (select 1 from public.money_allocation a where a.movement_id = p_statement_id) then
+    raise exception 'absorb: ekstre satırının belge bağı var — önce onu kaldırın (%)', p_statement_id;
+  end if;
 
   -- Başka bir ekstre satırı elle yazılanı karşı uç diye sahiplenmişse bağ ekstre satırına geçer.
   update public.money_movement
      set counterpart_movement_id = p_statement_id
    where counterpart_movement_id = p_provisional_id;
+  -- Belge bağları ekstre satırına geçer (13.09) — silme onları `cascade` ile götürürdü.
+  update public.money_allocation
+     set movement_id = p_statement_id
+   where movement_id = p_provisional_id;
 
   delete from public.money_movement where id = p_provisional_id;
 
   update public.money_movement
      set type = p.type,
+         nature = p.nature,
+         counterparty_id = p.counterparty_id,
          tags = p.tags,
-         document_id = p.document_id,
          counter_account_id = p.counter_account_id,
          order_id = p.order_id,
          stock_intake_id = p.stock_intake_id,
@@ -559,6 +725,84 @@ end;
 $$;
 
 revoke execute on function public.absorb_provisional_movement(uuid, uuid) from public, anon, authenticated;
+
+-- ── Eşleşmeyi geri al ────────────────────────────────────────────────────────
+-- 13.09 · ikinci karar (kullanıcı bulgusu: "eşleştirmeyle ilgili düzenleme yapamıyorum"): bağlanan,
+-- sınıflanan ya da atlanan ekstre satırı ekstreden geldiği hâle döner — tip `misc`, tür, cari ve
+-- bağlar boş, belge bağları silinir, eşleşmemiş. Serbest etiketler kalır: onlar bir eşleşme değil.
+--
+-- "ZATEN YAZMIŞTIM" BİRLEŞMESİ GERİ ALINIRSA elle yazılan satır `meta.absorbed` izinden yeniden
+-- kurulur (tutar, tarih, açıklama, kaynak, kayıt anı) ve birleşmeyle gelen her şey ona döner: tip,
+-- tür, cari, etiketler, bağlar, yazım kimliği, künye, belge bağları, karşı uç sahiplikleri. Ekstre
+-- satırı ham hâline iner. Dönüş yeniden kurulan satırın kimliği (eski kimlik silinmişti); öteki
+-- hâlde `null`.
+--
+-- Satırı başka bir ekstre satırı "karşı uç" diye sahiplenmişse (satır transfer olarak eşleşmiş,
+-- öteki bankanın ekstresi onu uç diye almış) önce o geri alınır — yoksa öteki satır olmayan bir
+-- transferin ucuna bağlı kalırdı.
+--
+-- NEDEN RPC: silme/yeniden kurma + bağ taşıma bölünemez (absorb'un gerekçesi).
+create or replace function public.unmatch_bank_movement(p_movement_id uuid)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  s public.money_movement%rowtype;
+  v_absorbed jsonb;
+  v_restored uuid;
+begin
+  select * into s from public.money_movement where id = p_movement_id for update;
+  if not found then
+    raise exception 'unmatch: hareket bulunamadı (%)', p_movement_id;
+  end if;
+  if s.source <> 'bank_import' then
+    raise exception 'unmatch: yalnız ekstre satırının eşleşmesi geri alınır (%)', p_movement_id;
+  end if;
+  v_absorbed := s.meta -> 'absorbed';
+
+  if v_absorbed is null then
+    if exists (select 1 from public.money_movement c where c.counterpart_movement_id = s.id) then
+      raise exception 'unmatch: bu satırı başka bir ekstre satırı transferin öteki yakası olarak sahiplenmiş — önce onu geri alın';
+    end if;
+    delete from public.money_allocation where movement_id = s.id;
+    update public.money_movement
+       set type = 'misc', nature = null, counterparty_id = null, counter_account_id = null,
+           counterpart_movement_id = null, order_id = null, stock_intake_id = null, supplier_id = null,
+           reconciled = false
+     where id = s.id;
+  else
+    -- Önce ekstre satırı ham hâline iner: yazım kimliği tekildir ve yeniden kurulan satır onu alacak.
+    update public.money_movement
+       set type = 'misc', nature = null, counterparty_id = null, tags = '{}', counter_account_id = null,
+           counterpart_movement_id = null, order_id = null, stock_intake_id = null, supplier_id = null,
+           idempotency_key = null, meta = null, reconciled = false
+     where id = s.id;
+    insert into public.money_movement (
+      account_id, direction, amount, type, nature, counterparty_id, tags, meta, counter_account_id,
+      order_id, stock_intake_id, supplier_id, value_date, description, source, idempotency_key, created_at
+    ) values (
+      s.account_id, s.direction, (v_absorbed ->> 'amount')::numeric, s.type, s.nature, s.counterparty_id,
+      s.tags, nullif(s.meta - 'absorbed', '{}'::jsonb), s.counter_account_id, s.order_id,
+      s.stock_intake_id, s.supplier_id, (v_absorbed ->> 'valueDate')::date, v_absorbed ->> 'description',
+      (v_absorbed ->> 'source')::movement_source, s.idempotency_key,
+      coalesce((v_absorbed ->> 'createdAt')::timestamptz, now())
+    )
+    returning id into v_restored;
+    update public.money_allocation set movement_id = v_restored where movement_id = s.id;
+    update public.money_movement set counterpart_movement_id = v_restored where counterpart_movement_id = s.id;
+  end if;
+
+  -- Sipariş parasıysa cache kaynaktan yeniden kurulur (birleşme geri alındıysa sipariş yeni satırda).
+  if s.order_id is not null then
+    perform public.resync_order_amounts(s.order_id);
+  end if;
+  return v_restored;
+end;
+$$;
+
+revoke execute on function public.unmatch_bank_movement(uuid) from public, anon, authenticated;
 
 
 -- ═══ MUHASEBE ═══

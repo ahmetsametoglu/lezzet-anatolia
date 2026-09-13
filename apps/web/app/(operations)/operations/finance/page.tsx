@@ -1,12 +1,31 @@
-import { AccountService, MoneyMovementService, MovementTagService, OrderService, SupplierService, serviceDb } from '@lezzet/database';
+import {
+  AccountService,
+  CounterpartyService,
+  MoneyAllocationService,
+  MoneyDocumentService,
+  MoneyMovementService,
+  MovementNatureService,
+  MovementTagService,
+  OrderService,
+  SupplierService,
+  serviceDb,
+} from '@lezzet/database';
 import { listOpenDocuments } from '@lezzet/application';
-import { DEFAULT_PAGE_SIZE, type AccountLedgerRow } from '@lezzet/types';
+import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { EMPTY_MATCH_QUEUE, matchQueue } from '@/lib/bank/reconcile';
 import { guarded, requireFinance } from '@/lib/guard';
 import { FinanceClient } from './finance-client';
 import { NOTES } from './finance-labels';
-import { toAccountViews, toMatchRows, toMatchTargets, toMovementRows, toOpenDocumentViews, totalBalance } from './finance-read';
+import {
+  documentHead,
+  toAccountViews,
+  toMatchRows,
+  toMatchTargets,
+  toMovementRows,
+  toOpenDocumentViews,
+  totalBalance,
+} from './finance-read';
 import type { FinanceData, LedgerView } from './finance-types';
 import { ALL_ACCOUNTS, parseFinanceUrl, periodRange, resolveAccount } from './finance-url';
 
@@ -14,21 +33,19 @@ import { ALL_ACCOUNTS, parseFinanceUrl, periodRange, resolveAccount } from './fi
 // izlendiği yer — para bir hesapta durur, hareketlerle girer/çıkar.
 //
 // ── DEFTER HESAP-ÜSTÜ OKUNUR ────────────────────────────────────────────────
-// `ledger({ accountId? })` — hesap verilmezse defterin tamamı sayfalanır. Bir tur bu kapı yoktu ve
-// ekran "Tümü" hâlini boş listeymiş gibi göstermeyip ayrı bir durum (`blocked`) taşıyordu; kapı
-// gelince o hâl kendiliğinden ölü kaldı ve silindi.
-//
-// **Transferin İKİ satırı da gelir** ve bu doğru: hareket iki hesabı birden etkiliyor, birini
-// seçip ötekini gizlemek keyfî olurdu. İkisi birbirini götürdüğü için "Tümü"nün toplamı da doğru
-// çıkıyor — para işletmeden çıkmadı.
+// `ledger({ accountId? })` — hesap verilmezse defterin tamamı sayfalanır. **Transferin İKİ satırı da
+// gelir** ve bu doğru: hareket iki hesabı birden etkiliyor, birini seçip ötekini gizlemek keyfî
+// olurdu. İkisi birbirini götürdüğü için "Tümü"nün toplamı da doğru çıkıyor — para işletmeden çıkmadı.
 //
 // ── SAYAÇ SÜZGEÇTEN BAĞIMSIZ ────────────────────────────────────────────────
 // `unexplainedCount()` ham `money_movement`tan sayar, defter görünümünden değil: görünüm transferi
-// iki satır üretiyor ve bir hareket iki kez sayılırdı. Rozet "toplam ne kadar iş bekliyor" diyor;
-// süzgece bağlansaydı bir hesabı seçen operatör kuyruğun küçüldüğünü sanardı.
+// iki satır üretiyor ve bir hareket iki kez sayılırdı. Sayılan şey İZAH (13.09): bağı, belge bağı,
+// türü ya da karşı hesabı olmayan hareket.
 //
-// Sayılan şey İZAH (13.09): bağı, belgesi, etiketi ya da karşı hesabı olmayan hareket. Eskiden banka
-// mutabakat bayrağı sayılıyordu ve sistemin kendi yazdığı her tahsilat "eşleşmemiş" görünüyordu.
+// ── SÖZLÜKLER TEK TURDA (13.09 · ikinci karar) ──────────────────────────────
+// Tür, cari, etiket ve tedarikçi listeleri doğal tavanlı (operatörün kurduğu kümeler); satırların
+// adları ve seçicilerin seçenekleri aynı okumadan kurulur. Defter sayfasının belge bağları ve o
+// bağların belgeleri de kimlik listesiyle TEK turda okunur — satır başına sorgu atılmaz.
 
 interface FinancePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -62,7 +79,7 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   // Defter HER HÂLDE okunur — `accountId` verilmezse defterin tamamı sayfalanır. Kuyruk ise hesaba
   // bağlı kalır ve bu doğal: banka dosyası bir hesaba yüklenir.
   const movements = new MoneyMovementService(db);
-  const [ledgerPage, queue, unexplainedCount, tags, openDocuments, suppliers] = await Promise.all([
+  const [ledgerPage, queue, unexplainedCount, natures, tags, counterparties, openDocuments, suppliers] = await Promise.all([
     movements.ledger({
       // Hesap bir DARALTMA: `all` iken alan hiç geçilmez, süzgeç de kurulmaz.
       accountId: accountSelected ? urlState.acct : undefined,
@@ -70,44 +87,58 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
       limit: DEFAULT_PAGE_SIZE,
       from: range?.from,
       to: range?.to,
-      // Adresteki `scope=unmatched` artık İZAH kuyruğudur (13.09): parametre adı değişmedi,
-      // paylaşılmış bağlantılar kırılmasın diye; anlamı sayaçla aynı.
+      // Adresteki `scope=unmatched` İZAH kuyruğudur (13.09): parametre adı değişmedi, paylaşılmış
+      // bağlantılar kırılmasın diye; anlamı sayaçla aynı.
       unexplainedOnly: urlState.scope === 'unmatched' || undefined,
     }),
     accountSelected ? matchQueue(urlState.acct) : EMPTY_MATCH_QUEUE,
-    // Sayaç SÜZGEÇTEN BAĞIMSIZ ve hesap-üstü: rozet "toplam ne kadar iş bekliyor" diyor. Süzgece
-    // bağlansaydı bir hesabı seçen operatör kuyruğun küçüldüğünü sanardı.
+    // Sayaç SÜZGEÇTEN BAĞIMSIZ ve hesap-üstü: rozet "toplam ne kadar iş bekliyor" diyor.
     movements.unexplainedCount(),
-    // Etiket sözlüğü — çipler ve satır etiketleri buradan; yalnız aktifler yeni harekete sunulur,
-    // pasif etiketin adı yine okunabilsin diye adlar tam listeden kurulur.
+    // Sözlükler TAM (pasifler dâhil): pasif türün ya da carinin adı eski satırlarda yine okunmalı;
+    // seçicilere yalnız aktifler gider.
+    new MovementNatureService(db).list(),
     new MovementTagService(db).list(),
+    new CounterpartyService(db).list(),
     // Açık belgeler (12.12) — doğal tavanlı: kapanan belge listeden düşer, tek turda.
     listOpenDocuments(db),
-    // Belge formunun tedarikçi seçeneği; pasif tedarikçi yeni belgeye kapalı.
-    new SupplierService(db).list({ activeOnly: true }),
+    new SupplierService(db).list(),
   ]);
-  const tagLabels = new Map(tags.map((tag) => [tag.slug, tag.label] as const));
-  const tagOptions = tags.filter((tag) => tag.isActive).map((tag) => ({ value: tag.slug, label: tag.label }));
 
-  // Sipariş referansları TEK turda: defter satırlarının bağlı olduğu siparişler bir kümede toplanıp
-  // bir kez okunuyor. Satır başına sorgu atsaydık elli satırlık bir sayfa elli sorgu ederdi — ve
-  // gösterdiği tek şey bir referans numarası olurdu. (Kuyruğun hedefleri referansı zaten taşıyor:
-  // satış görünümünden geliyorlar.)
-  const orderIds = [...new Set((ledgerPage?.rows ?? []).flatMap((row: AccountLedgerRow) => (row.orderId ? [row.orderId] : [])))];
-  const orders = orderIds.length > 0 ? await new OrderService(db).listByIds(orderIds) : [];
+  // Defter sayfasının belge bağları ve siparişleri — kimlik listesiyle, tek turda.
+  const rowIds = [...new Set(ledgerPage.rows.map((row) => row.id))];
+  const orderIds = [...new Set(ledgerPage.rows.flatMap((row) => (row.orderId ? [row.orderId] : [])))];
+  const allocations = rowIds.length > 0 ? await new MoneyAllocationService(db).listByMovements(rowIds) : [];
+  const documentIds = [...new Set(allocations.map((allocation) => allocation.documentId))];
+  const [orders, allocatedDocuments] = await Promise.all([
+    orderIds.length > 0 ? new OrderService(db).listByIds(orderIds) : Promise.resolve([]),
+    documentIds.length > 0 ? new MoneyDocumentService(db).listByIds(documentIds) : Promise.resolve([]),
+  ]);
+
   const orderRefs = new Map(orders.flatMap((order) => (order.referenceNo ? [[order.id, order.referenceNo] as const] : [])));
-
   const accountNames = new Map(accountViews.map((account) => [account.id, account.name] as const));
+  const natureLabels = new Map(natures.map((nature) => [nature.slug, nature.label] as const));
+  // Cari ve tedarikçi kimlikleri ayrı tablolarda üretilmiş uuid'ler — tek haritada çakışmaz.
+  const partyNames = new Map([
+    ...counterparties.map((counterparty) => [counterparty.id, counterparty.name] as const),
+    ...suppliers.map((supplier) => [supplier.id, supplier.name] as const),
+  ]);
+  const documentLabel = new Map(allocatedDocuments.map((document) => [document.id, documentHead(document)] as const));
+  const documentsOf = new Map<string, Array<{ id: string; label: string }>>();
+  for (const allocation of allocations) {
+    const list = documentsOf.get(allocation.movementId) ?? [];
+    list.push({ id: allocation.documentId, label: documentLabel.get(allocation.documentId) ?? 'belge' });
+    documentsOf.set(allocation.movementId, list);
+  }
 
   const ledger: LedgerView = {
     state: ledgerPage.rows.length > 0 ? 'ready' : 'empty',
-    rows: toMovementRows(ledgerPage.rows, accountNames, orderRefs, tagLabels),
+    rows: toMovementRows(ledgerPage.rows, { accountNames, orderRefs, partyNames, natureLabels, documentsOf }),
     nextCursor: ledgerPage.nextCursor ? JSON.stringify(ledgerPage.nextCursor) : null,
     note: ledgerPage.rows.length > 0 ? null : NOTES.emptyLedger,
   };
 
   // Hedef listesi önce, kuyruk sonra: öneri adını hedeften alır (aynı `kind:id` anahtarı).
-  const matchTargets = toMatchTargets(queue.targets, tagLabels);
+  const matchTargets = toMatchTargets(queue.targets, natureLabels);
   const data: FinanceData = {
     accounts: accountViews,
     totalCents: totalBalance(accountViews),
@@ -115,18 +146,20 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     queue: toMatchRows(queue.rows, matchTargets),
     matchTargets,
     unexplainedCount,
-    tagOptions,
-    openDocuments: toOpenDocumentViews(openDocuments),
-    supplierOptions: suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name })),
-    tagList: tags.map((tag) => ({ slug: tag.slug, label: tag.label, isActive: tag.isActive })),
+    natureOptions: natures.filter((nature) => nature.isActive).map((nature) => ({ value: nature.slug, label: nature.label, direction: nature.direction })),
+    tagOptions: tags.filter((tag) => tag.isActive).map((tag) => ({ value: tag.slug, label: tag.label })),
+    counterpartyOptions: counterparties
+      .filter((counterparty) => counterparty.isActive)
+      .map((counterparty) => ({ value: counterparty.id, label: counterparty.name, defaultNature: counterparty.defaultNature })),
+    supplierOptions: suppliers.filter((supplier) => supplier.isActive).map((supplier) => ({ value: supplier.id, label: supplier.name })),
+    openDocuments: toOpenDocumentViews(openDocuments, partyNames),
+    dictionary: {
+      natures: natures.map(({ slug, label, direction, accountCode, isActive }) => ({ slug, label, direction, accountCode, isActive })),
+      counterparties: counterparties.map(({ id, name, kind, keywords, defaultNature, isActive }) => ({ id, name, kind, keywords, defaultNature, isActive })),
+      tags: tags.map(({ slug, label, isActive }) => ({ slug, label, isActive })),
+    },
   };
 
-  /**
-   * ── DEVİR YOLU SÖKÜLDÜ (22.24 · 26.08) ──────────────────────────────────
-   * Burada `?proposal=<id>` okunup elle hareket penceresi ön dolu açılırdı (22.5). Para önerisi
-   * 22.18'de kuyruğun İÇİNE taşındı; okuma o günden beri ölüydü (mod kontrolü her çağrıda `null`
-   * döndürüyordu) ama ekranın prop'ları duruyordu.
-   */
   return (
     <FinanceClient
       data={data}

@@ -58,7 +58,7 @@ describe('hesap', () => {
 describe('bakiye TÜRETİLİR (saklanmaz)', () => {
   it('giriş artırır, çıkış azaltır', async () => {
     await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 25_000, type: 'capital', description: 'Açılış' });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 9050, type: 'expense', tags: ['kira'] });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 9050, type: 'expense', nature: 'kira' });
 
     expect((await accounts.balance(cashAccount.id)).balanceCents).toBe(15_950);
     expect((await accounts.balance(cashAccount.id)).movementCount).toBe(2);
@@ -165,9 +165,9 @@ describe('ekstre ve dönem', () => {
     // Sayfa ilk N satırı taşır; ekran onu sayarsa "7" yerine "20+" yazar (sayaç olmayan bir sayaç).
     // Küresel sayıya bakılmıyor (`CLAUDE §4b`) — ölçüt kendi eklediğimizin FARKI.
     const once = await movements.unexplainedCount();
-    // Bağsız, belgesiz, etiketsiz satır izah bekler; etiketli satır saymaz.
+    // Bağsız, belgesiz, türsüz satır izah bekler; türlü satır saymaz (13.09 · etiket izah değildir).
     const izahsiz = await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 111, type: 'misc' });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 222, type: 'expense', tags: ['banka-masrafi'] });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 222, type: 'expense', nature: 'banka-masrafi' });
     const sonra = await movements.unexplainedCount();
     expect(sonra).toBe(once + 1);
 
@@ -177,8 +177,8 @@ describe('ekstre ve dönem', () => {
     expect(tekSatir.rows.every((row) => !row.explained)).toBe(true);
     expect(await movements.unexplainedCount()).toBe(sonra);
 
-    // Etiket gelince satır kuyruktan düşer — türetilmiş kolon satırla birlikte değişir.
-    await movements.update({ id: izahsiz.id, tags: ['sermaye'] });
+    // Tür gelince satır kuyruktan düşer — tetikleyicinin kolonu satırla birlikte değişir.
+    await movements.update({ id: izahsiz.id, nature: 'sermaye' });
     expect(await movements.unexplainedCount()).toBe(once);
   });
 
@@ -191,8 +191,8 @@ describe('ekstre ve dönem', () => {
     const expenseBefore = await oku('expense');
     const capitalBefore = await oku('capital');
 
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 90_000, type: 'expense', tags: ['kira'], valueDate: dayOffset(-3) });
-    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 12_040, type: 'expense', tags: ['akaryakit'], valueDate: dayOffset(-2) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 90_000, type: 'expense', nature: 'kira', valueDate: dayOffset(-3) });
+    await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 12_040, type: 'expense', nature: 'akaryakit', valueDate: dayOffset(-2) });
     await movements.insert({ accountId: cashAccount.id, direction: 'in', amountCents: 6000, type: 'capital', valueDate: dayOffset(-2) });
     // Dönem DIŞI — toplama girmemeli.
     await movements.insert({ accountId: cashAccount.id, direction: 'out', amountCents: 500_000, type: 'expense', valueDate: dayOffset(-90) });

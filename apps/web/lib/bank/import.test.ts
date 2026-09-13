@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, MoneyDocumentService, MoneyMovementService, OrderService, ProductService,
-  UserProfileService, serviceDb,
+  AccountService, CategoryService, CounterpartyService, MoneyAllocationService, MoneyDocumentService, MoneyMovementService, OrderService,
+  ProductService, UserProfileService, serviceDb,
 } from '@lezzet/database';
+import { setMovementNature } from '@lezzet/application';
 import { failingAiModel } from '@lezzet/ai/testing';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from './import';
-import { applyMatch, classifyRow, dismissRow, matchQueue } from './reconcile';
+import { applyMatch, dismissRow, matchQueue, unmatchRow } from './reconcile';
 
 /**
  * Banka import'u ve eşleştirme (12.4) — DB üstünde. Doğrulanan iki zor şey:
@@ -19,6 +20,7 @@ const db = serviceDb();
 const accounts = new AccountService(db);
 const movements = new MoneyMovementService(db);
 const orders = new OrderService(db);
+const allocations = new MoneyAllocationService(db);
 
 const stamp = Date.now();
 let bankAccount: string;
@@ -26,6 +28,7 @@ let bankAccount: string;
 let cashAccount: string;
 let customerId: string;
 const createdDocuments: string[] = [];
+const createdCounterparties: string[] = [];
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.
 let warehouseId: string;
 let variantId: string;
@@ -66,6 +69,7 @@ afterAll(async () => {
     profileIds: createdProfiles,
     accountIds: [bankAccount, cashAccount],
     documentIds: createdDocuments,
+    counterpartyIds: createdCounterparties,
     warehouseIds: [warehouseId],
   });
 });
@@ -236,13 +240,13 @@ describe('eşleştirme kuyruğu', () => {
     expect(await applyMatch(row.movement.id, { kind: 'order', orderId: order.id })).toEqual({ status: 'invalid', reason: 'already_reconciled' });
   });
 
-  it('gider olarak sınıflanan satır kuyruktan düşer, hareket KALIR', async () => {
+  it('TÜRÜ konan satır kuyruktan düşer, hareket KALIR (13.09: tür = sınıflandırma)', async () => {
     await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV EDF', Montant: '-120,00', Solde: '0,00' }], 'kira.csv');
     const row = (await matchQueue(bankAccount)).rows[0]!;
 
-    expect(await classifyRow(row.movement.id, { type: 'expense', tags: ['kira'] })).toMatchObject({ status: 'ok' });
-    // Etiket + `reconciled`: banka satırı hem izahlı hem ekstreyle mutabık.
-    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'expense', tags: ['kira'], reconciled: true, explained: true });
+    expect(await setMovementNature(db, { movementId: row.movement.id, nature: 'kira' })).toMatchObject({ status: 'ok' });
+    // Tür + `reconciled`: banka satırı hem izahlı hem ekstreyle mutabık; tip türden türedi.
+    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'expense', nature: 'kira', reconciled: true, explained: true });
     expect((await matchQueue(bankAccount)).rows).toEqual([]);
   });
 
@@ -263,31 +267,36 @@ describe('eşleştirme kuyruğu', () => {
   yazılan satır ekstre gelince tek satıra iner.
 */
 describe('eşleştirme hedefleri (12.13)', () => {
-  it('AÇIK BELGEYE bağlanır — satır gider olur, belgenin açık kalanı düşer', async () => {
+  it('AÇIK BELGEYE bağlanır — satır gider olur, belgenin türü ve carisi ona geçer, açık kalanı düşer', async () => {
+    // Carinin eşleşme kelimesi DAMGALI: cariler şirket geneli okunur, öteki dosyaların satırlarını tanımasın.
+    const cari = await new CounterpartyService(db).insert({ name: `Kiraya veren ${stamp}`, kind: 'service', keywords: [`KIRA${stamp}`] });
+    createdCounterparties.push(cari.id);
     const documents = new MoneyDocumentService(db);
     const belge = await documents.insert({
-      kind: 'invoice', number: `EDF-${stamp}`, issuedOn: dayOffset(-2), counterparty: 'EDF', direction: 'out', amountCents: 12_000, tags: ['kira'],
+      kind: 'invoice', number: `KIRA-${stamp}`, issuedOn: dayOffset(-2), counterpartyId: cari.id, direction: 'out', nature: 'kira', amountCents: 12_000,
     });
     createdDocuments.push(belge.id);
-    await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV EDF FACTURE', Montant: '-120,00', Solde: '0,00' }], 'belge.csv');
+    await importStatement([{ Date: frDate(-2), 'Libellé': `PRLV KIRA${stamp} FACTURE`, Montant: '-120,00', Solde: '0,00' }], 'belge.csv');
 
     const { rows, targets } = await matchQueue(bankAccount);
-    // Tutar birebir + aynı gün + karşı taraf açıklamada: tek güçlü aday, belge.
-    expect(rows[0]!.suggestions[0]).toMatchObject({ kind: 'document', id: belge.id });
+    // Tutar birebir + aynı gün + carinin kelimesi: belge açık ara önde; cari kendisi yedek öneri.
+    expect(rows[0]!.suggestions.map((s) => s.kind)).toEqual(['document', 'counterparty']);
+    expect(rows[0]!.suggestions[0]).toMatchObject({ id: belge.id });
     expect(rows[0]!.unambiguous).toBe(true);
     expect(targets.documents.some((d) => d.id === belge.id)).toBe(true);
 
     expect(await applyMatch(rows[0]!.movement.id, { kind: 'document', documentId: belge.id })).toEqual({ status: 'ok', movementId: rows[0]!.movement.id });
-    // Belgenin etiketi ödemesine geçti; satır hem izahlı hem mutabık.
-    expect(await movements.getById(rows[0]!.movement.id)).toMatchObject({ type: 'expense', documentId: belge.id, tags: ['kira'], reconciled: true, explained: true });
+    // Belgenin türü ve carisi ödemesine geçti; satır hem izahlı hem mutabık; bağ tutarıyla yazıldı.
+    expect(await movements.getById(rows[0]!.movement.id)).toMatchObject({
+      type: 'expense', nature: 'kira', counterpartyId: cari.id, reconciled: true, explained: true,
+    });
+    expect(await allocations.listByMovements([rows[0]!.movement.id])).toMatchObject([{ documentId: belge.id, amountCents: 12_000 }]);
     // Belge kapandı: açık listeden düştü.
     expect((await documents.listOpen()).some((d) => d.id === belge.id)).toBe(false);
   });
 
   it('giren para belgeye bağlanamaz — belgenin yönü satıra uymuyor', async () => {
-    const belge = await new MoneyDocumentService(db).insert({
-      kind: 'invoice', issuedOn: dayOffset(-1), counterparty: 'Yön testi', direction: 'out', amountCents: 5000,
-    });
+    const belge = await new MoneyDocumentService(db).insert({ kind: 'invoice', issuedOn: dayOffset(-1), direction: 'out', amountCents: 5000 });
     createdDocuments.push(belge.id);
     await importStatement([{ Date: frDate(-1), 'Libellé': 'VIR RECU', Montant: '50,00', Solde: '0,00' }], 'yon.csv');
     const row = (await matchQueue(bankAccount)).rows[0]!;
@@ -323,9 +332,9 @@ describe('eşleştirme hedefleri (12.13)', () => {
 
   it('"ZATEN YAZMIŞTIM" — elle yazılan silinir, ekstre satırı bağlarını devralır (kullanıcı kararı 13.09)', async () => {
     // Tutar bu dosyanın öteki fikstürlerinden AYRI (137,25): `beforeEach` yalnız hareketleri siler,
-    // önceki testin 120 €'luk belgesi yeniden AÇIK kalır ve aynı tutar + gün ile eş puanlı aday olurdu.
+    // önceki testlerin belgeleri AÇIK kalabilir ve aynı tutar + gün ile eş puanlı aday olurdu.
     const elle = await movements.insert({
-      accountId: bankAccount, direction: 'out', amountCents: 13_725, type: 'expense', tags: ['kira'], valueDate: dayOffset(-2), description: 'Eylül kirası',
+      accountId: bankAccount, direction: 'out', amountCents: 13_725, type: 'expense', nature: 'kira', valueDate: dayOffset(-2), description: 'Eylül kirası',
     });
     await importStatement([{ Date: frDate(-2), 'Libellé': 'PRLV SEPA LOYER', Montant: '-137,25', Solde: '0,00' }], 'zaten.csv');
     // İkisi de bankada: aynı para iki kez.
@@ -338,19 +347,19 @@ describe('eşleştirme hedefleri (12.13)', () => {
     expect(await applyMatch(rows[0]!.movement.id, { kind: 'provisional', movementId: elle.id })).toMatchObject({ status: 'ok' });
     expect(await movements.getById(elle.id)).toBeNull();
     const satir = await movements.getById(rows[0]!.movement.id);
-    expect(satir).toMatchObject({ type: 'expense', tags: ['kira'], reconciled: true, explained: true, source: 'bank_import' });
+    expect(satir).toMatchObject({ type: 'expense', nature: 'kira', reconciled: true, explained: true, source: 'bank_import' });
     // İz künyede: hangi satır yutuldu, ne diyordu.
     expect(satir?.meta).toMatchObject({ absorbed: { movementId: elle.id, source: 'manual', description: 'Eylül kirası' } });
     expect((await accounts.balance(bankAccount)).balanceCents).toBe(-13_725);
   });
 
-  it('giren paranın adı SERMAYE konur; aynı satıra gider denemez', async () => {
+  it('giren paranın türü SERMAYE konur; gider türü giren paraya konmaz', async () => {
     await importStatement([{ Date: frDate(-1), 'Libellé': 'APPORT ASSOCIE', Montant: '1000,00', Solde: '0,00' }], 'sermaye.csv');
     const row = (await matchQueue(bankAccount)).rows[0]!;
 
-    expect(await classifyRow(row.movement.id, { type: 'expense', tags: ['kira'] })).toEqual({ status: 'invalid', reason: 'direction_mismatch' });
-    expect(await classifyRow(row.movement.id, { type: 'capital', tags: ['sermaye'] })).toMatchObject({ status: 'ok' });
-    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'capital', tags: ['sermaye'], reconciled: true, explained: true });
+    expect(await setMovementNature(db, { movementId: row.movement.id, nature: 'kira' })).toEqual({ status: 'invalid', reason: 'nature_direction' });
+    expect(await setMovementNature(db, { movementId: row.movement.id, nature: 'sermaye' })).toMatchObject({ status: 'ok' });
+    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'capital', nature: 'sermaye', reconciled: true, explained: true });
   });
 
   it('UCU OLMAYAN transfer: satır karşı hesaba aynalanır (nakit çekimi)', async () => {
@@ -386,5 +395,84 @@ describe('eşleştirme hedefleri (12.13)', () => {
 
     expect(await applyMatch(rows[0]!.movement.id, { kind: 'refund', orderId: order.id })).toMatchObject({ status: 'ok' });
     expect(await orders.getById(order.id)).toMatchObject({ amountRefundedCents: 4590, paymentStatus: 'refunded' });
+  });
+});
+
+/*
+  İKİNCİ KARAR (13.09 · muhasebeci karşılaştırması): bağ TUTARIYLA, cari eşleşme kelimesiyle, ve
+  verilen her cevap geri alınabilir ("eşleştirmeyle ilgili düzenleme yapamıyorum" bulgusu).
+*/
+describe('bağ tutarıyla · cari · geri alma (13.09)', () => {
+  it('TEK HAVALE, İKİ FATURA: ilk bağdan sonra satır kalanıyla kuyrukta, ikinciyle kapanır', async () => {
+    const documents = new MoneyDocumentService(db);
+    const a = await documents.insert({ kind: 'invoice', number: `TOPLU-A-${stamp}`, issuedOn: dayOffset(-3), direction: 'out', amountCents: 7000 });
+    const b = await documents.insert({ kind: 'invoice', number: `TOPLU-B-${stamp}`, issuedOn: dayOffset(-3), direction: 'out', amountCents: 5300 });
+    createdDocuments.push(a.id, b.id);
+    await importStatement([{ Date: frDate(-1), 'Libellé': `VIR TOPLU ${stamp}`, Montant: '-123,00', Solde: '0,00' }], 'toplu.csv');
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+
+    expect(await applyMatch(row.movement.id, { kind: 'document', documentId: a.id })).toMatchObject({ status: 'ok' });
+    // 123 − 70 = 53: satır kuyrukta KALANIYLA durur, mutabık değil ama izahlı (bir bağı var).
+    const kalan = (await matchQueue(bankAccount)).rows.find((q) => q.movement.id === row.movement.id);
+    expect(kalan?.remainingCents).toBe(5300);
+    expect(await movements.getById(row.movement.id)).toMatchObject({ reconciled: false, explained: true });
+
+    expect(await applyMatch(row.movement.id, { kind: 'document', documentId: b.id })).toMatchObject({ status: 'ok' });
+    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'expense', reconciled: true, explained: true });
+    expect((await allocations.listByMovements([row.movement.id])).map((x) => x.amountCents).sort((x, y) => x - y)).toEqual([5300, 7000]);
+    const acik = await documents.listOpen();
+    expect(acik.some((d) => d.id === a.id || d.id === b.id)).toBe(false);
+  });
+
+  it('CARİ: eşleşme kelimesi satırı tanır; onaylanınca cari ve varsayılan türü satıra geçer', async () => {
+    const cari = await new CounterpartyService(db).insert({
+      name: `Banka masrafı ${stamp}`, kind: 'service', keywords: [`MASRAF${stamp}`], defaultNature: 'banka-masrafi',
+    });
+    createdCounterparties.push(cari.id);
+    await importStatement([{ Date: frDate(-1), 'Libellé': `FRAIS MASRAF${stamp}`, Montant: '-4,50', Solde: '0,00' }], 'cari.csv');
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+    expect(row.suggestions[0]).toMatchObject({ kind: 'counterparty', id: cari.id, reasons: ['keyword_in_label'] });
+
+    expect(await applyMatch(row.movement.id, { kind: 'counterparty', counterpartyId: cari.id })).toMatchObject({ status: 'ok' });
+    expect(await movements.getById(row.movement.id)).toMatchObject({
+      counterpartyId: cari.id, nature: 'banka-masrafi', type: 'expense', reconciled: true, explained: true,
+    });
+  });
+
+  it('GERİ AL: belgeye bağlanan satır ekstreden geldiği hâle döner, belge yeniden açılır', async () => {
+    const documents = new MoneyDocumentService(db);
+    const belge = await documents.insert({ kind: 'invoice', number: `GERI-${stamp}`, issuedOn: dayOffset(-2), direction: 'out', nature: 'kira', amountCents: 8800 });
+    createdDocuments.push(belge.id);
+    await importStatement([{ Date: frDate(-2), 'Libellé': `PRLV GERI-${stamp}`, Montant: '-88,00', Solde: '0,00' }], 'geri.csv');
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+    await applyMatch(row.movement.id, { kind: 'document', documentId: belge.id });
+    expect((await documents.listOpen()).some((d) => d.id === belge.id)).toBe(false);
+
+    expect(await unmatchRow(row.movement.id)).toEqual({ status: 'ok', movementId: row.movement.id });
+    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'misc', nature: null, reconciled: false, explained: false });
+    expect(await allocations.listByMovements([row.movement.id])).toEqual([]);
+    // Belge yeniden açık, satır yeniden kuyrukta — ve yine aynı belgeyi öneriyor.
+    expect((await documents.listOpen()).some((d) => d.id === belge.id)).toBe(true);
+    expect((await matchQueue(bankAccount)).rows[0]!.suggestions[0]).toMatchObject({ kind: 'document', id: belge.id });
+  });
+
+  it('GERİ AL "zaten yazmıştım": elle yazılan satır izinden yeniden kurulur, para yine iki satırda', async () => {
+    const elle = await movements.insert({
+      accountId: bankAccount, direction: 'out', amountCents: 21_310, type: 'expense', nature: 'kira', valueDate: dayOffset(-2), description: 'Ekim kirası',
+    });
+    await importStatement([{ Date: frDate(-2), 'Libellé': `PRLV SEPA EKIM ${stamp}`, Montant: '-213,10', Solde: '0,00' }], 'geri-zaten.csv');
+    const row = (await matchQueue(bankAccount)).rows[0]!;
+    await applyMatch(row.movement.id, { kind: 'provisional', movementId: elle.id });
+    expect(await movements.getById(elle.id)).toBeNull();
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-21_310);
+
+    expect(await unmatchRow(row.movement.id)).toMatchObject({ status: 'ok' });
+    const ledger = await movements.ledger({ accountId: bankAccount, limit: 20 });
+    expect(ledger.rows.find((r) => r.source === 'manual' && r.description === 'Ekim kirası')).toMatchObject({
+      amountCents: 21_310, type: 'expense', nature: 'kira', explained: true,
+    });
+    expect(await movements.getById(row.movement.id)).toMatchObject({ type: 'misc', nature: null, reconciled: false, meta: null });
+    // İki satır yine bankada — eşleştirme yeniden beklenir, para geçici olarak iki kez sayılır.
+    expect((await accounts.balance(bankAccount)).balanceCents).toBe(-42_620);
   });
 });

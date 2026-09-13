@@ -1,14 +1,22 @@
-import type { MatchKind, MatchSuggestion } from '@lezzet/domain-core';
-import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance } from '@lezzet/types';
+import { acceptsNature, type MatchKind, type MatchSuggestion } from '@lezzet/domain-core';
+import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance, MovementType } from '@lezzet/types';
 import { dayMonth, money } from '@/components/operation/ui/format';
 import type { MatchTargets } from '@/lib/bank/reconcile';
-import { ACCOUNT_TONE, ACCOUNT_TYPE_LABEL, DOCUMENT_KIND_LABEL, MATCH_EFFECT, MOVEMENT_TYPE_LABEL, type MatchKindView } from './finance-labels';
+import {
+  ACCOUNT_TONE,
+  ACCOUNT_TYPE_LABEL,
+  COUNTERPARTY_KIND_LABEL,
+  DOCUMENT_KIND_LABEL,
+  MATCH_EFFECT,
+  MOVEMENT_TYPE_LABEL,
+  type MatchKindView,
+} from './finance-labels';
 import type { AccountView, MatchCandidateView, MatchRowView, MatchTargetView, MovementRowView, OpenDocumentView } from './finance-types';
 
 // Para ekranının SAF indirgemeleri — servis satırı → görünüm satırı.
 //
 // Sunucu bileşeninden ayrı bir dosyada duruyorlar çünkü **saf oldukları için test edilebilirler**
-// (`finance-read.test.ts`): işaret, etiket ve bağ kuralları burada; okuma (`page.tsx`) yalnız
+// (`finance-read.test.ts`): işaret, bağ ve tür kuralları burada; okuma (`page.tsx`) yalnız
 // satırları getirip bunlara veriyor. Karışsalardı her iddia bir veritabanı ister, birim testi
 // entegrasyon testine dönerdi.
 
@@ -34,51 +42,90 @@ export function toAccountViews(accounts: readonly Account[], balances: ReadonlyM
   });
 }
 
-/** Şeridin sonundaki "Toplam" — hesapların bakiyeleri toplanır. */
+/** Şeridin "Toplam"ı — hesapların bakiyeleri toplanır. */
 export function totalBalance(accounts: readonly AccountView[]): number {
   return accounts.reduce((sum, account) => sum + account.balanceCents, 0);
+}
+
+/** Belgenin künyesi — numarası, numarasızsa türünün adı (fiş, bordro). */
+export function documentHead(doc: Pick<MoneyDocument, 'kind' | 'number'>): string {
+  return doc.number ?? DOCUMENT_KIND_LABEL[doc.kind];
+}
+
+/** Belgenin karşı tarafının adı — cari ya da tedarikçi (ikisi de kimlik, adlar tek haritada). */
+function partyOf(doc: Pick<MoneyDocument, 'counterpartyId' | 'supplierId'>, partyNames: ReadonlyMap<string, string>): string | null {
+  const id = doc.counterpartyId ?? doc.supplierId;
+  return id ? (partyNames.get(id) ?? null) : null;
 }
 
 /**
  * Açık belge kartları (12.12). Açık kalan GÖRÜNÜMDEN gelir, burada hesaplanmaz; künye belge
  * numarasıyla başlar, numarasız belgede türün adıyla (fiş, bordro).
  */
-export function toOpenDocumentViews(documents: ReadonlyArray<MoneyDocument & { balance: MoneyDocumentBalance }>): OpenDocumentView[] {
+export function toOpenDocumentViews(
+  documents: ReadonlyArray<MoneyDocument & { balance: MoneyDocumentBalance }>,
+  partyNames: ReadonlyMap<string, string>,
+): OpenDocumentView[] {
   return documents.map((doc) => {
-    const kindLabel = DOCUMENT_KIND_LABEL[doc.kind];
-    const head = doc.number ?? kindLabel;
-    const who = doc.counterparty ?? '—';
+    const partyName = partyOf(doc, partyNames);
     return {
       id: doc.id,
       kind: doc.kind,
       number: doc.number,
       issuedOn: doc.issuedOn,
-      counterparty: doc.counterparty,
       direction: doc.direction,
+      nature: doc.nature,
+      counterpartyId: doc.counterpartyId,
       tags: doc.tags,
-      kindLabel,
+      kindLabel: DOCUMENT_KIND_LABEL[doc.kind],
+      partyName,
       amountCents: doc.amountCents,
       openAmountCents: doc.balance.openAmountCents,
       hasFile: doc.fileKey !== null,
-      label: `${head} · ${who} · açık ${money(doc.balance.openAmountCents)}`,
+      label: `${documentHead(doc)} · ${partyName ?? '—'} · açık ${money(doc.balance.openAmountCents)}`,
     };
   });
 }
+
+/** Defter satırını adlandırmak için gereken sözlükler — hepsi tek turda okunmuş haritalar. */
+export interface MovementReadContext {
+  accountNames: ReadonlyMap<string, string>;
+  orderRefs: ReadonlyMap<string, string>;
+  /** Cari ve tedarikçi kimliği → adı (ikisi de uuid, tek haritada çakışmaz). */
+  partyNames: ReadonlyMap<string, string>;
+  /** Tür anahtarı → okunur adı — pasif türler dâhil. */
+  natureLabels: ReadonlyMap<string, string>;
+  /** Hareketin bağlı belgeleri (bağ tablosundan) — künyeyle. */
+  documentsOf: ReadonlyMap<string, Array<{ id: string; label: string }>>;
+}
+
+/**
+ * Tür almayan tiplerin izahı BAĞIDIR (motor: `acceptsNature`) — izahsızsa eksik olan o bağdır ve
+ * satırda tür menüsü yoktur. "Türünü seçin" demek, olmayan bir düğmeyi göstermek olurdu (ölçüldü
+ * 13.09: kapı önü satışın tahsilat satırları siparişsiz yazılıyor ve bu cümleyi taşıyordu).
+ */
+const MISSING_LINK: Partial<Record<MovementType, string>> = {
+  order_payment: 'siparişe bağlı değil',
+  order_refund: 'siparişe bağlı değil',
+  purchase: 'mal kabule bağlı değil',
+  transfer: 'karşı hesabı yok',
+};
 
 /**
  * Hareketin NEYE bağlı olduğu — tek cümle + tonu.
  *
  * Sıra öncelik sırasıdır ve rastgele değil: bir satır hem tedarikçiye hem mal kabule bağlı olabilir,
  * ve o zaman okunmak istenen şey **en somut olandır**. Kampanya en başta çünkü reklam giderinin tek
- * ayırt edici bilgisi odur (`meta.campaign`); tipi zaten "gider" yazıyor.
+ * ayırt edici bilgisi odur (`meta.campaign`).
  *
  * Eşleşmeyi bekleyen banka satırı `amber` döner — o bir bağ değil, bir SORU: "bu para neyin nesi".
- * Tasarımın kuyruk sayacı da aynı kümeyi sayıyor, yani satır ile rozet aynı ölçütten çıkıyor.
+ * Tür, cari ve belge bağı satırın kendi araçlarında okunur (13.09); burada tekrarlanmaz — kalan
+ * cümle satırın HÂLİDİR: ekstre satırı cevap bekliyor mu, satır izahsız mı.
  */
 function refOf(
   row: AccountLedgerRow,
-  accountNames: ReadonlyMap<string, string>,
-  orderRefs: ReadonlyMap<string, string>,
+  context: MovementReadContext,
+  documents: ReadonlyArray<{ id: string; label: string }>,
 ): { ref: string | null; refTone: MovementRowView['refTone'] } {
   const campaign = typeof row.meta?.campaign === 'string' ? row.meta.campaign : null;
   if (campaign) return { ref: `kampanya: ${campaign}`, refTone: 'olive' };
@@ -86,53 +133,54 @@ function refOf(
   if (row.orderId) {
     // Referans numarası okunabildiyse o yazılır: "siparişe bağlı" doğru ama HANGİ sipariş sorusunu
     // cevapsız bırakır ve operatörü satırdan çıkıp aramaya iter.
-    const reference = orderRefs.get(row.orderId);
+    const reference = context.orderRefs.get(row.orderId);
     return { ref: reference ? `sipariş ${reference}` : 'siparişe bağlı', refTone: 'olive' };
   }
   if (row.stockIntakeId) return { ref: 'mal kabule bağlı', refTone: 'olive' };
-  if (row.supplierId) return { ref: 'tedarikçi ödemesi', refTone: 'olive' };
+  if (row.supplierId) {
+    const supplier = context.partyNames.get(row.supplierId);
+    return { ref: supplier ? `tedarikçi: ${supplier}` : 'tedarikçi ödemesi', refTone: 'olive' };
+  }
 
   if (row.counterAccountId) {
     // Transferde okunmak istenen şey karşı taraftır; bu satırın kendi hesabı zaten sütunda yazıyor.
-    const counter = accountNames.get(row.counterAccountId);
+    const counter = context.accountNames.get(row.counterAccountId);
     return { ref: counter ? `karşı hesap: ${counter}` : 'transfer', refTone: 'neutral' };
   }
 
-  if (row.source === 'bank_import' && !row.reconciled) return { ref: 'öneri bekliyor', refTone: 'amber' };
-  // Bağsız ama belgeli satır (fatura, fiş, bordro): dayanağı var, bir bağ değil.
-  if (row.documentId) return { ref: 'belgeye bağlı', refTone: 'olive' };
-  // Yalnız etiketli satır: sınıflandırma tip hücresinde zaten okunuyor, burada tekrarlanmaz.
-  if (row.tags.length > 0) return { ref: null, refTone: 'neutral' };
-  // Hiçbiri yok: satır izah bekliyor (13.09) — bu bir bilgi değil, bir SORU.
-  return { ref: 'izah bekliyor', refTone: 'amber' };
+  if (row.source === 'bank_import' && !row.reconciled) {
+    // Kısmen bağlı satır: belgesi var ama kalan henüz karşılanmadı — kuyrukta kalanıyla durur (13.09).
+    if (documents.length > 0) return { ref: 'kısmen bağlı — kalanı eşleşme bekliyor', refTone: 'amber' };
+    // "Öneri bekliyor" DEĞİL (kullanıcı bulgusu 13.09: "öneride nasıl bulunacağımı anlayamadım"):
+    // cümle operatöre yapacağı işi söyler — satırın türünü koymak ya da onu bir kayda bağlamak.
+    return { ref: 'eşleşme bekliyor — türünü seçin ya da bağlayın', refTone: 'amber' };
+  }
+  // Hiçbiri yok: satır izah bekliyor (13.09) — bu bir bilgi değil, bir SORU. Cümle satırın
+  // araçlarına uyar: tür alan satıra tür, almayana eksik bağı söylenir.
+  if (!row.explained) {
+    const ref = acceptsNature(row.type)
+      ? 'izah bekliyor — türünü seçin ya da belgeye bağlayın'
+      : `izah bekliyor — ${MISSING_LINK[row.type] ?? 'bağı eksik'}`;
+    return { ref, refTone: 'amber' };
+  }
+  return { ref: null, refTone: 'neutral' };
 }
 
-/**
- * "gider · Kira · Ortak A" — etiketlerin OKUNUR adları tipin yanına, etiket yoksa yalnız tip (13.09).
- * Sözlükte adı okunamayan slug olduğu gibi yazılır: gizlemek, etiketi yok saymak olurdu.
- */
-function typeLabelOf(row: AccountLedgerRow, tagLabels: ReadonlyMap<string, string>): string {
-  const base = MOVEMENT_TYPE_LABEL[row.type];
-  const labels = row.tags.map((slug) => tagLabels.get(slug) ?? slug);
-  return labels.length > 0 ? `${base} · ${labels.join(' · ')}` : base;
-}
-
-export function toMovementRows(
-  rows: readonly AccountLedgerRow[],
-  accountNames: ReadonlyMap<string, string>,
-  orderRefs: ReadonlyMap<string, string>,
-  /** Etiket slug → okunur ad (sözlük); ekran ham slug basmasın diye. */
-  tagLabels: ReadonlyMap<string, string> = new Map(),
-): MovementRowView[] {
+export function toMovementRows(rows: readonly AccountLedgerRow[], context: MovementReadContext): MovementRowView[] {
   return rows.map((row) => {
-    const { ref, refTone } = refOf(row, accountNames, orderRefs);
+    const documents = context.documentsOf.get(row.id) ?? [];
+    const { ref, refTone } = refOf(row, context, documents);
+    const fromBank = row.source === 'bank_import';
     return {
       id: row.id,
       // Satırın hangi hesabın defterinde durduğu — kimliğin ikinci yarısı (`ledgerRowKey`).
       ledgerAccountId: row.ledgerAccountId,
       valueDate: row.valueDate,
       type: row.type,
+      direction: row.direction,
       explained: row.explained,
+      nature: row.nature,
+      counterpartyId: row.counterpartyId,
       tags: row.tags,
       signedAmountCents: row.signedAmountCents,
       // Açıklamasız satır boş hücre bırakmaz: bankadan gelen satırın açıklaması hep vardır, elle
@@ -140,8 +188,14 @@ export function toMovementRows(
       title: row.description?.trim() || MOVEMENT_TYPE_LABEL[row.type],
       ref,
       refTone,
-      accountName: accountNames.get(row.ledgerAccountId) ?? '—',
-      typeLabel: typeLabelOf(row, tagLabels),
+      accountName: context.accountNames.get(row.ledgerAccountId) ?? '—',
+      typeLabel: MOVEMENT_TYPE_LABEL[row.type],
+      canClassify: acceptsNature(row.type),
+      natureLabel: row.nature ? (context.natureLabels.get(row.nature) ?? row.nature) : null,
+      counterpartyName: row.counterpartyId ? (context.partyNames.get(row.counterpartyId) ?? null) : null,
+      documents,
+      fromBank,
+      canUnmatch: fromBank && (row.reconciled || documents.length > 0 || row.counterpartyId !== null),
     };
   });
 }
@@ -155,6 +209,7 @@ export function toMovementRows(
  */
 interface QueueInput {
   movement: Omit<AccountLedgerRow, 'ledgerAccountId' | 'signedAmountCents'> & { signedAmountCents?: number };
+  remainingCents: number;
   suggestions: readonly { kind: MatchKind; id: string; score: number; reasons: readonly MatchReason[] }[];
   unambiguous: boolean;
 }
@@ -166,10 +221,12 @@ type MatchReason = MatchSuggestion['reasons'][number];
  *
  * Motorun künyesi bu alanı açıkça bunun için koymuş (*"operatör 'neden bu?' diye sormasın"*) ve
  * gösterilmeseydi alan ölü kalırdı. Sıra önem sırası: referans eşleşmesi en güçlü kanıttır (banka
- * açıklamasında bizim numaramız geçiyor), tarih yakınlığı en zayıfı.
+ * açıklamasında bizim numaramız geçiyor), carinin eşleşme kelimesi ondan sonra (operatörün kendi
+ * kuralı), tarih yakınlığı en zayıfı.
  */
 const REASON_LABEL: Record<MatchReason, string> = {
   reference_in_label: 'referans açıklamada geçiyor',
+  keyword_in_label: 'eşleşme kelimesi geçiyor',
   exact_amount: 'tutar birebir',
   close_amount: 'tutar yakın',
   same_day: 'aynı gün',
@@ -179,6 +236,7 @@ const REASON_LABEL: Record<MatchReason, string> = {
 
 const REASON_ORDER = [
   'reference_in_label',
+  'keyword_in_label',
   'name_in_label',
   'exact_amount',
   'close_amount',
@@ -198,14 +256,14 @@ const targetKey = (kind: MatchKindView, id: string) => `${kind}:${id}`;
 const orderName = (referenceNo: string | null, id: string) => `Sipariş ${referenceNo ?? `#${id.slice(0, 8)}`}`;
 
 /**
- * Seçim penceresinin hedef listesi (12.13) — kapının listelerinden görünüme.
+ * Seçim penceresinin hedef listesi (12.13 · 13.09) — kapının listelerinden görünüme.
  *
  * Her hedef iki satır okunur (`title` / `detail`) ve kararı hazır taşır (`target`): pencere
  * seçileni olduğu gibi action'a verir, kendi kimlik kurmaz. Yön hedefin üstünde durur; pencere
  * satırın yönüne uymayanı hiç listelemez (giren paraya fatura ödemesi teklif edilmez).
  */
-export function toMatchTargets(targets: MatchTargets, tagLabels: ReadonlyMap<string, string>): MatchTargetView[] {
-  const tagsOf = (tags: readonly string[]) => tags.map((tag) => tagLabels.get(tag) ?? tag).join(', ');
+export function toMatchTargets(targets: MatchTargets, natureLabels: ReadonlyMap<string, string>): MatchTargetView[] {
+  const natureOf = (slug: string | null) => (slug ? (natureLabels.get(slug) ?? slug) : null);
   return [
     ...targets.orders.map(
       (order): MatchTargetView => ({
@@ -232,8 +290,8 @@ export function toMatchTargets(targets: MatchTargets, tagLabels: ReadonlyMap<str
         kind: 'document',
         key: targetKey('document', doc.id),
         target: { kind: 'document', documentId: doc.id },
-        title: `${DOCUMENT_KIND_LABEL[doc.kind]}${doc.number ? ` ${doc.number}` : ''} · ${doc.counterparty ?? '—'}`,
-        detail: `açık ${money(doc.balance.openAmountCents)} · ${dayMonth(doc.issuedOn)}${doc.tags.length ? ` · ${tagsOf(doc.tags)}` : ''}`,
+        title: `${DOCUMENT_KIND_LABEL[doc.kind]}${doc.number ? ` ${doc.number}` : ''} · ${doc.partyName ?? '—'}`,
+        detail: `açık ${money(doc.balance.openAmountCents)} · ${dayMonth(doc.issuedOn)}${doc.nature ? ` · ${natureOf(doc.nature)}` : ''}`,
         direction: doc.direction,
       }),
     ),
@@ -264,9 +322,9 @@ export function toMatchTargets(targets: MatchTargets, tagLabels: ReadonlyMap<str
         key: targetKey('provisional', movement.id),
         target: { kind: 'provisional', movementId: movement.id },
         title: movement.description?.trim() || MOVEMENT_TYPE_LABEL[movement.type],
-        detail: `${money(movement.amountCents)} · ${dayMonth(movement.valueDate)} · ${MOVEMENT_TYPE_LABEL[movement.type]}${
-          movement.tags.length ? ` · ${tagsOf(movement.tags)}` : ''
-        } · ${movement.source === 'system' ? 'sistem yazdı' : 'elle yazıldı'}`,
+        detail: `${money(movement.amountCents)} · ${dayMonth(movement.valueDate)} · ${natureOf(movement.nature) ?? MOVEMENT_TYPE_LABEL[movement.type]} · ${
+          movement.source === 'system' ? 'sistem yazdı' : 'elle yazıldı'
+        }`,
         direction: movement.direction,
       }),
     ),
@@ -277,6 +335,17 @@ export function toMatchTargets(targets: MatchTargets, tagLabels: ReadonlyMap<str
         target: { kind: 'transfer_to', accountId: account.id },
         title: account.name,
         detail: ACCOUNT_TYPE_LABEL[account.type],
+        direction: null,
+      }),
+    ),
+    // Cari (13.09): iki yöne de listelenir — varsayılan türü satırın yönüne uymuyorsa tür konmaz, cari yine yazılır.
+    ...targets.counterparties.map(
+      (counterparty): MatchTargetView => ({
+        kind: 'counterparty',
+        key: targetKey('counterparty', counterparty.id),
+        target: { kind: 'counterparty', counterpartyId: counterparty.id },
+        title: counterparty.name,
+        detail: `${COUNTERPARTY_KIND_LABEL[counterparty.kind]} · ${natureOf(counterparty.defaultNature) ?? 'türü sonra seçilir'}`,
         direction: null,
       }),
     ),
@@ -293,7 +362,7 @@ export function toMatchTargets(targets: MatchTargets, tagLabels: ReadonlyMap<str
 export function toMatchRows(queue: readonly QueueInput[], targets: readonly MatchTargetView[]): MatchRowView[] {
   const targetOf = new Map(targets.map((target) => [target.key, target] as const));
   return queue.map((entry) => {
-    const { movement, suggestions, unambiguous } = entry;
+    const { movement, suggestions, unambiguous, remainingCents } = entry;
     // Hedef listesinde karşılığı olmayan öneri gösterilmez: kimliği olan ama adı olmayan bir aday
     // onaylanamaz. (Kapı ikisini aynı turda kuruyor; ayrışırlarsa sebep kodda, ekranda değil.)
     const candidates = suggestions.flatMap((suggestion): MatchCandidateView[] => {
@@ -302,6 +371,7 @@ export function toMatchRows(queue: readonly QueueInput[], targets: readonly Matc
     });
     const best = candidates[0];
     const strength = !best ? 'none' : unambiguous ? 'strong' : 'ambiguous';
+    const partial = remainingCents < movement.amountCents;
 
     return {
       movementId: movement.id,
@@ -309,17 +379,18 @@ export function toMatchRows(queue: readonly QueueInput[], targets: readonly Matc
       // Kuyruk tek hesabın kuyruğudur; işaret yönden türer (defter satırı gelmediyse de doğru olsun).
       signedAmountCents:
         movement.signedAmountCents ?? (movement.direction === 'out' ? -movement.amountCents : movement.amountCents),
+      remainingCents,
       direction: movement.direction,
       valueDate: movement.valueDate,
       strength,
-      sentence: sentenceOf(strength, best),
+      sentence: `${partial ? `Kısmen bağlı — kalan ${money(remainingCents)}. ` : ''}${sentenceOf(strength, best)}`,
       candidates,
     };
   });
 }
 
 function sentenceOf(strength: MatchRowView['strength'], best: MatchCandidateView | undefined): string {
-  if (!best) return 'Eşleşen bulunamadı — "Elle bağla" ile hedefi seçin ya da satırın adını koyun.';
+  if (!best) return 'Eşleşen bulunamadı — "Elle bağla" ile hedefi seçin ya da satırın türünü koyun.';
   if (strength === 'strong') return `${best.title} · ${MATCH_EFFECT[best.kind]}.`;
   return 'Birden çok hedef bu satıra uyuyor — hangisi olduğunu siz seçin.';
 }

@@ -1,4 +1,4 @@
-import type { MovementDirection, MovementType } from '@lezzet/types';
+import { CAPITAL_NATURE, type MovementDirection, type MovementType } from '@lezzet/types';
 
 /**
  * Para hareketi kuralları (12.1) — DOMAIN §9. Saf: yazım BURADA YAPILMAZ, karar verilir.
@@ -25,6 +25,28 @@ export function expectedDirection(type: MovementType): MovementDirection | null 
     default:
       return null;
   }
+}
+
+/**
+ * TÜR ALABİLEN tipler (13.09 · ikinci karar) — gider, sermaye ve sınıflandırılmamış. Sipariş parası,
+ * stok alımı ve transfer tür almaz: onları bağları açıklar (sipariş, mal kabul, karşı hesap) ve bir
+ * tür, bağın söylediğiyle çelişebilecek ikinci bir cevap olurdu.
+ */
+const CLASSIFIABLE_TYPES: readonly MovementType[] = ['expense', 'capital', 'misc'];
+
+export function acceptsNature(type: MovementType): boolean {
+  return CLASSIFIABLE_TYPES.includes(type);
+}
+
+/**
+ * Tür seçilince hareketin KABA TİPİ (13.09 · ikinci karar). Tür sınıflandırmanın kendisidir ve tipi de
+ * söyler: sermaye türü girişte `capital`; öteki türler çıkışta `expense`, girişte `misc` ("sebebi
+ * belli giriş" — faiz, alınan iade, hibe; gelir türleri sözlükte açıldıkça). Tek yerde, çünkü kuyruk,
+ * satır seçicisi ve seçim penceresi aynı kararı veriyor.
+ */
+export function classificationTypeOf(direction: MovementDirection, nature: string): 'expense' | 'capital' | 'misc' {
+  if (direction === 'in') return nature === CAPITAL_NATURE ? 'capital' : 'misc';
+  return 'expense';
 }
 
 export type MovementCheck =

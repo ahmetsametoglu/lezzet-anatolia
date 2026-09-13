@@ -4,6 +4,8 @@ import {
   BundleService,
   CategoryService,
   CollectionService,
+  CounterpartyService,
+  MovementNatureService,
   MovementTagService,
   ProductService,
   ProductVariantService,
@@ -14,6 +16,7 @@ import {
 } from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText, type StorageAreaKind } from '@lezzet/types';
+import type { CounterpartyOption, NatureOption, TagOption } from '@/components/operation/form/movement-form/schema';
 import type { ProductFormSource } from '@/components/operation/form/product-form/schema';
 import type { VariantOption } from '@/components/operation/form/bundle-form/types';
 import { variantOptionsForVariants } from '@/lib/catalog/variant-options';
@@ -101,10 +104,14 @@ export interface AssistantFormOptions {
    */
   accounts: Array<{ id: string; name: string; balanceCents: number }>;
   /**
-   * Etiket sözlüğü (13.09) — elle hareket formunun etiket çipleri. Yalnız AKTİF etiketler: pasif
-   * etiket yeni harekete verilmez. Doğal tavanlı, operatörün kurduğu küme — tek turda.
+   * Tür sözlüğü (13.09 · ikinci karar) — elle hareket formunun tür seçicisi; yöne göre süzülsün diye
+   * yönünü de taşır. Yalnız AKTİF türler. Doğal tavanlı, operatörün kurduğu küme — tek turda.
    */
-  tags: Array<{ value: string; label: string }>;
+  natures: NatureOption[];
+  /** Cariler (13.09) — formun "karşı taraf" seçicisi; varsayılan türüyle. Yalnız AKTİF cariler. */
+  counterparties: CounterpartyOption[];
+  /** Serbest etiketler (13.09) — formun etiket menüsü. Yalnız AKTİF etiketler: pasifi yeni harekete verilmez. */
+  tags: TagOption[];
   /**
    * MAL KABUL formunun iki listesi (22.23) — hangi depoya girdiği ve kimden geldiği.
    *
@@ -150,7 +157,7 @@ export async function readAssistantFormOptions(
   const db = serviceDb();
   const wanted = [...new Set(productIds)];
   const accountService = new AccountService(db);
-  const [categories, collections, bundles, products, bundleVariants, accounts, balances, tags, warehouses, suppliers] =
+  const [categories, collections, bundles, products, bundleVariants, accounts, balances, natures, counterparties, tags, warehouses, suppliers] =
     await Promise.all([
     new CategoryService(db).list(),
     new CollectionService(db).list(),
@@ -161,6 +168,8 @@ export async function readAssistantFormOptions(
     variantOptionsForVariants(db, bundleVariantIds),
     accountService.list(),
     accountService.balances(),
+    new MovementNatureService(db).list({ activeOnly: true }),
+    new CounterpartyService(db).list({ activeOnly: true }),
     new MovementTagService(db).list({ activeOnly: true }),
     // Kabul yalnız AÇIK TESİSE yazılır; kapalı bir depo listede durursa operatör onu seçebilir ve
     // kimsenin bakmadığı bir rafa mal girer. Araç aynı cümlenin ikinci yarısı (02.09): o da bir
@@ -223,6 +232,8 @@ export async function readAssistantFormOptions(
     // ve `balances()` de onu taşımıyor. Sıfır yazmak burada doğru: defterde hareketi olmayan
     // hesabın bakiyesi gerçekten sıfırdır (`AccountService.balance` aynı cevabı veriyor).
     accounts: accounts.map((a) => ({ id: a.id, name: a.name, balanceCents: balances.get(a.id)?.balanceCents ?? 0 })),
+    natures: natures.map((nature) => ({ value: nature.slug, label: nature.label, direction: nature.direction })),
+    counterparties: counterparties.map((counterparty) => ({ value: counterparty.id, label: counterparty.name, defaultNature: counterparty.defaultNature })),
     tags: tags.map((tag) => ({ value: tag.slug, label: tag.label })),
     warehouses: warehouses.map((w) => ({ id: w.id, name: w.name })),
     suppliers: suppliers.map((s) => ({ id: s.id, name: s.name })),

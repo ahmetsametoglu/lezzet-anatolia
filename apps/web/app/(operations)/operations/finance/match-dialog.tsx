@@ -5,41 +5,43 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { amount, dayMonth, percent } from '@/components/operation/ui/format';
 import { SearchInput } from '@/components/operation/ui/search-input';
-import type { ClassifyType, MatchTarget } from '@/lib/bank/reconcile';
+import { naturesForDirection, type NatureOption } from '@/components/operation/form/movement-form/schema';
+import type { MatchTarget } from '@/lib/bank/reconcile';
 import { MATCH_EFFECT, MATCH_KIND_LABEL, type MatchKindView } from './finance-labels';
 import type { MatchCandidateView, MatchRowView, MatchTargetView } from './finance-types';
 
 // **Hedef seçimi** — kuyruğun "Seç" (çoklu aday), "Düzelt" (öneri yanlış) ve "Elle bağla"
-// (öneri yok) yolları. Üçü TEK pencere ve bu bilinçli: sordukları soru aynı — *"bu banka satırı
-// neyin parası"*. Ayrı pencereler yazsaydık hedef listesi, puan gösterimi ve onay çağrısı üç kez
-// yazılırdı ve bir gün ayrışırlardı.
+// (öneri yok) yolları, ve satırın kendi "Bağla…"sı. Hepsi TEK pencere ve bu bilinçli: sordukları
+// soru aynı — *"bu banka satırı neyin parası"*. Ayrı pencereler yazsaydık hedef listesi, puan
+// gösterimi ve onay çağrısı birkaç kez yazılırdı ve bir gün ayrışırlardı.
 //
 // ── HEDEF KÜMESİ (12.13 · kullanıcı kararı 13.09) ─────────────────────────────
 // Üstte motorun ÖNERİLERİ (puanlı, sebepli), altında satırın yönüne uyan BÜTÜN hedefler bölüm
 // bölüm: siparişler, açık belgeler, mal kabuller, transfer uçları, zaten yazılmış hareketler,
-// başka hesaplar. En altta satırın ADINI koyma: gider (etiketle) ya da sermaye. Hiçbir satır
-// "Atla"ya mecbur kalmıyor — "Bitti" ölçütü tam olarak buydu.
+// cariler, başka hesaplar. En altta satırın TÜRÜNÜ koyma (13.09 · ikinci karar): tek tür, satırın
+// yönüne uyanlar. Hiçbir satır "Atla"ya mecbur kalmıyor — "Bitti" ölçütü tam olarak buydu.
 //
-// Arama kutusu istemcide süzer: listeler doğal tavanlı (açık belge, bekleyen uç) ya da pencereyle
-// sınırlı (satış), yeniden okuma gerektirmez.
+// Arama kutusu istemcide süzer: listeler doğal tavanlı (açık belge, bekleyen uç, cari, tür) ya da
+// pencereyle sınırlı (satış), yeniden okuma gerektirmez.
 
 interface MatchDialogProps {
   row: MatchRowView;
   targets: MatchTargetView[];
-  tagOptions: Array<{ value: string; label: string }>;
+  /** Tür sözlüğü — yalnız aktif; pencere satırın yönüne uyanları gösterir. */
+  natureOptions: NatureOption[];
   busy: boolean;
   onApply: (target: MatchTarget) => void;
-  onClassify: (type: ClassifyType, tags: string[]) => void;
+  onClassify: (nature: string) => void;
   onClose: () => void;
 }
 
 /** Pencerenin bölüm sırası: en olası hedef önce, "başka hesaba transfer" en sonda (ucu olmayan yol). */
-const KIND_ORDER: readonly MatchKindView[] = ['provisional', 'document', 'intake', 'transfer', 'order', 'refund', 'transfer_to'];
+const KIND_ORDER: readonly MatchKindView[] = ['provisional', 'document', 'intake', 'transfer', 'order', 'refund', 'counterparty', 'transfer_to'];
 
-/** Seçim ya bir hedeftir ya bir ad — ikisi aynı anda olmaz. */
-type Choice = { mode: 'target'; target: MatchTargetView } | { mode: 'classify'; type: ClassifyType; tags: string[] };
+/** Seçim ya bir hedeftir ya bir tür — ikisi aynı anda olmaz. */
+type Choice = { mode: 'target'; target: MatchTargetView } | { mode: 'classify'; nature: NatureOption };
 
-export function MatchDialog({ row, targets, tagOptions, busy, onApply, onClassify, onClose }: MatchDialogProps) {
+export function MatchDialog({ row, targets, natureOptions, busy, onApply, onClassify, onClose }: MatchDialogProps) {
   const [query, setQuery] = useState('');
   const [choice, setChoice] = useState<Choice | null>(row.candidates[0] ? { mode: 'target', target: row.candidates[0] } : null);
 
@@ -60,39 +62,36 @@ export function MatchDialog({ row, targets, tagOptions, busy, onApply, onClassif
     })).filter((group) => group.items.length > 0);
   }, [targets, row.candidates, row.direction, needle]);
   const suggested = row.candidates.filter(matches);
+  const natures = naturesForDirection(natureOptions, row.direction).filter(
+    (nature) => needle === '' || nature.label.toLocaleLowerCase('tr').includes(needle),
+  );
+  // Kısmen bağlı satırın kalanı başlıkta okunur (13.09 · bağ tutarıyla): belge ancak kalan kadar kapanır.
+  const partial = row.remainingCents < Math.abs(row.signedAmountCents);
 
   const isSelected = (target: MatchTargetView) => choice?.mode === 'target' && choice.target.key === target.key;
-  const classifyType: ClassifyType = row.direction === 'out' ? 'expense' : 'capital';
-  const classifyTags = choice?.mode === 'classify' ? choice.tags : [];
-  const toggleClassifyTag = (slug: string) => {
-    const next = classifyTags.includes(slug) ? classifyTags.filter((tag) => tag !== slug) : [...classifyTags, slug];
-    setChoice(next.length > 0 ? { mode: 'classify', type: classifyType, tags: next } : null);
-  };
 
   const submit = () => {
     if (!choice) return;
     if (choice.mode === 'target') onApply(choice.target.target);
-    else onClassify(choice.type, choice.tags);
+    else onClassify(choice.nature.value);
   };
-  const submitLabel = !choice
-    ? 'Seçileni bağla'
-    : choice.mode === 'classify'
-      ? classifyType === 'expense'
-        ? 'Gider olarak yaz'
-        : 'Sermaye olarak yaz'
-      : 'Seçileni bağla';
+  const submitLabel = choice?.mode === 'classify' ? `${choice.nature.label} olarak yaz` : 'Seçileni bağla';
 
   return (
     <Dialog
       open
       onClose={onClose}
       title="Bu satır neyin parası?"
-      subtitle={`${row.bankLine} · ${amount(row.signedAmountCents)} · ${dayMonth(row.valueDate)}`}
+      subtitle={`${row.bankLine} · ${amount(row.signedAmountCents)}${partial ? ` · kalan ${amount(row.remainingCents)}` : ''} · ${dayMonth(row.valueDate)}`}
       maxWidth={640}
       footer={
         <div className="flex items-center justify-between gap-3">
           <span className="min-w-0 truncate font-ops-body text-ops-xs text-ops-faint">
-            {choice?.mode === 'target' ? `${MATCH_KIND_LABEL[choice.target.kind]} · ${MATCH_EFFECT[choice.target.kind]}` : null}
+            {choice?.mode === 'target'
+              ? `${MATCH_KIND_LABEL[choice.target.kind]} · ${MATCH_EFFECT[choice.target.kind]}`
+              : choice?.mode === 'classify'
+                ? 'türü konur · satır kuyruktan düşer'
+                : null}
           </span>
           <div className="flex shrink-0 items-center gap-2">
             <button
@@ -115,7 +114,7 @@ export function MatchDialog({ row, targets, tagOptions, busy, onApply, onClassif
       }
     >
       <div className="flex flex-col gap-4">
-        <SearchInput value={query} onChange={setQuery} placeholder="Sipariş no, belge no, karşı taraf, açıklama…" />
+        <SearchInput value={query} onChange={setQuery} placeholder="Sipariş no, belge no, cari, tür, açıklama…" />
 
         {suggested.length > 0 ? (
           <Section title="Öneriler" hint="motorun puanladığı hedefler">
@@ -135,34 +134,37 @@ export function MatchDialog({ row, targets, tagOptions, busy, onApply, onClassif
 
         {suggested.length === 0 && groups.length === 0 ? (
           <p className="font-ops-body text-ops-sm text-ops-muted">
-            {needle ? 'Aramaya uyan hedef yok.' : 'Bu satırın yönüne uyan açık hedef yok — aşağıdan adını koyun ya da kuyruktan düşürün.'}
+            {needle ? 'Aramaya uyan hedef yok.' : 'Bu satırın yönüne uyan açık hedef yok — aşağıdan türünü koyun ya da kuyruktan düşürün.'}
           </p>
         ) : null}
 
-        {/* ADINI KOY — bir kayda bağlanmayan satır: çıkışta gider (etiketle), girişte sermaye.
-            Etiket sözlükten ve birden çok olabilir (`maas` + `ortak:ahmet`). */}
+        {/* TÜRÜNÜ KOY (13.09 · ikinci karar) — bir kayda bağlanmayan satır TEK türle sınıflanır;
+            yalnız satırın yönüne uyan türler listelenir. Ekstre satırında tür koymak satırı
+            mutabık yapar; yanlışsa satırdaki "Eşleşmeyi geri al" ya da türü kaldırmak geri döndürür. */}
         <Section
-          title={classifyType === 'expense' ? 'Gider olarak yaz' : 'Sermaye girişi olarak yaz'}
-          hint={classifyType === 'expense' ? 'bir kayda bağlanmayan çıkış — etiketiyle' : 'ortağın koyduğu para — etiketiyle'}
+          title="Türünü koy"
+          hint={row.direction === 'out' ? 'bir kayda bağlanmayan çıkış — gider türüyle' : 'bir kayda bağlanmayan giriş — sermaye ya da gelir türüyle'}
         >
-          {tagOptions.length === 0 ? (
-            <span className="font-ops-body text-ops-xs text-ops-faint">Sözlükte aktif etiket yok — önce Etiketler penceresinden ekleyin.</span>
+          {natures.length === 0 ? (
+            <span className="font-ops-body text-ops-xs text-ops-faint">
+              {needle ? 'Aramaya uyan tür yok.' : 'Bu yöne uyan aktif tür yok — Sözlük penceresinden ekleyin.'}
+            </span>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {tagOptions.map((option) => {
-                const active = classifyTags.includes(option.value);
+              {natures.map((nature) => {
+                const active = choice?.mode === 'classify' && choice.nature.value === nature.value;
                 return (
                   <button
-                    key={option.value}
+                    key={nature.value}
                     type="button"
                     aria-pressed={active}
                     disabled={busy}
-                    onClick={() => toggleClassifyTag(option.value)}
+                    onClick={() => setChoice({ mode: 'classify', nature })}
                     className={`cursor-pointer rounded-ops-chip border px-2.5 py-1 font-ops-body text-ops-xs transition-colors disabled:cursor-wait disabled:opacity-60 ${
                       active ? 'border-ops-olive bg-ops-olive-bg text-ops-olive-dark' : 'border-ops-line text-ops-muted hover:border-ops-line-strong hover:text-ops-ink'
                     }`}
                   >
-                    {option.label}
+                    {nature.label}
                   </button>
                 );
               })}

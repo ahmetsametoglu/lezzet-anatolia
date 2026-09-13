@@ -7,8 +7,8 @@ import { recordAdvertisingExpense, recordExpense } from './movement';
  * Reklam gideri + kampanya kırılımı (12.5) — DOMAIN §350. 13.2'nin ROI tablosunun **gider sütunu**
  * budur; ciro sütunu analitikten gelir.
  *
- * Doğrulanan asıl şey toplama değil, **hiçbir reklam parasının rapordan düşmemesi**: etiketsiz satır
- * da, farklı tipteki reklam ödemesi de görünür. Rapor eksik gösterirse ROI sessizce şişer.
+ * Doğrulanan asıl şey toplama değil, **hiçbir reklam parasının rapordan düşmemesi**: künyesiz satır
+ * da, farklı tipteki reklam parası da görünür. Rapor eksik gösterirse ROI sessizce şişer.
  */
 const db = serviceDb();
 const accounts = new AccountService(db);
@@ -38,13 +38,13 @@ afterAll(async () => {
 /** Dönemdeki kampanya kırılımı — testin açtığı satırlar dışındakiler bu pencereye düşmez. */
 const rapor = () => movements.campaignSpend(PERIOD.from, PERIOD.to);
 
-describe('reklam gideri kampanya etiketiyle girer', () => {
-  it('kampanya künyesi `meta.campaign`e, `reklam` etiketi `tags`e yazılır', async () => {
+describe('reklam gideri kampanya künyesiyle girer', () => {
+  it('kampanya künyesi `meta.campaign`e, `reklam` TÜRÜ `nature`a yazılır (13.09)', async () => {
     const result = await recordAdvertisingExpense({ accountId: bankAccount, amountCents: 25_000, campaign: BAYRAM, valueDate: dayOffset(-190) });
 
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
-    expect(result.movement).toMatchObject({ type: 'expense', direction: 'out', tags: ['reklam'], meta: { campaign: BAYRAM } });
+    expect(result.movement).toMatchObject({ type: 'expense', direction: 'out', nature: 'reklam', meta: { campaign: BAYRAM } });
   });
 
   it('aynı kampanyanın birden çok ödemesi tek satırda toplanır', async () => {
@@ -68,7 +68,7 @@ describe('reklam gideri kampanya etiketiyle girer', () => {
 });
 
 describe('hiçbir reklam parası rapordan düşmez', () => {
-  it('etiketsiz reklam gideri ATILMAZ, `null` kovasında görünür', async () => {
+  it('künyesiz reklam gideri ATILMAZ, `null` kovasında görünür', async () => {
     await recordAdvertisingExpense({ accountId: bankAccount, amountCents: 20_000, campaign: BAYRAM, valueDate: dayOffset(-190) });
     await recordAdvertisingExpense({ accountId: bankAccount, amountCents: 7500, valueDate: dayOffset(-190) }); // ajans faturası, kampanyası belirsiz
 
@@ -79,36 +79,36 @@ describe('hiçbir reklam parası rapordan düşmez', () => {
     expect(satirlar.reduce((t, s) => t + s.totalCents, 0)).toBe(27_500);
   });
 
-  it('boş etiket kendi kovasını açmaz — etiketsizle aynı yere düşer', async () => {
+  it('boş künye kendi kovasını açmaz — künyesizle aynı yere düşer', async () => {
     await recordAdvertisingExpense({ accountId: bankAccount, amountCents: 4000, campaign: '   ', valueDate: dayOffset(-190) });
     await recordAdvertisingExpense({ accountId: bankAccount, amountCents: 6000, valueDate: dayOffset(-190) });
 
     expect(await rapor()).toEqual([{ campaign: null, totalCents: 10_000, count: 2 }]);
   });
 
-  it('süzgeç TİP değil ETİKET: `reklam` etiketli başka tipteki ödeme de sayılır', async () => {
+  it('süzgeç TİP değil TÜR: `reklam` türlü başka tipteki para da sayılır (13.09)', async () => {
     await recordAdvertisingExpense({ accountId: bankAccount, amountCents: 10_000, campaign: BAYRAM, valueDate: dayOffset(-190) });
-    // Ajansa yapılan sınıflandırılmamış ödeme — tipe göre süzseydik gider eksik, ROI şişkin çıkardı.
+    // Giren bir reklam kredisi `misc` — tipe göre süzseydik gider tarafı yanlış, ROI yanlış çıkardı.
     await movements.insert({
-      accountId: bankAccount, direction: 'out', amountCents: 5000, type: 'misc',
-      tags: ['reklam'], meta: { campaign: BAYRAM }, valueDate: dayOffset(-190),
+      accountId: bankAccount, direction: 'in', amountCents: 5000, type: 'misc',
+      nature: 'reklam', meta: { campaign: BAYRAM }, valueDate: dayOffset(-190),
     });
 
-    expect(await rapor()).toEqual([{ campaign: BAYRAM, totalCents: 15_000, count: 2 }]);
+    expect(await rapor()).toEqual([{ campaign: BAYRAM, totalCents: 5000, count: 2 }]);
   });
 
   it('geri gelen reklam parası gideri AZALTIR — iptal edilen reklam gider olarak kalmaz', async () => {
     await recordAdvertisingExpense({ accountId: bankAccount, amountCents: 30_000, campaign: BAYRAM, valueDate: dayOffset(-195) });
     await movements.insert({
       accountId: bankAccount, direction: 'in', amountCents: 12_000, type: 'misc',
-      tags: ['reklam'], meta: { campaign: BAYRAM }, description: 'Meta reklam kredisi', valueDate: dayOffset(-185),
+      nature: 'reklam', meta: { campaign: BAYRAM }, description: 'Meta reklam kredisi', valueDate: dayOffset(-185),
     });
 
     expect(await rapor()).toEqual([{ campaign: BAYRAM, totalCents: 18_000, count: 2 }]);
   });
 
   it('reklam DIŞI gider kampanya raporuna karışmaz', async () => {
-    await recordExpense({ accountId: bankAccount, amountCents: 145_000, tags: ['kira'], valueDate: dayOffset(-190) });
+    await recordExpense({ accountId: bankAccount, amountCents: 145_000, nature: 'kira', valueDate: dayOffset(-190) });
     expect(await rapor()).toEqual([]);
   });
 });

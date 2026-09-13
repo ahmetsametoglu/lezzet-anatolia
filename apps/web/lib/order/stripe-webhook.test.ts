@@ -273,7 +273,7 @@ describe('Stripe muhasebesi — ücret ve payout (12.14)', () => {
     const fees = await feeRows();
     expect(fees).toHaveLength(1);
     expect(fees[0]).toMatchObject({
-      amountCents: 61, tags: ['stripe-ucreti'], source: 'system', explained: true, orderId: null,
+      amountCents: 61, nature: 'stripe-ucreti', source: 'system', explained: true, orderId: null,
       idempotencyKey: `stripe-fee:${event.paymentIntentId}`,
     });
     expect(fees[0]!.meta).toMatchObject({ providerRef: event.paymentIntentId, orderId });

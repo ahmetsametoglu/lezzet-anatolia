@@ -706,17 +706,35 @@ export { checkoutBlockedAnalyticsReason } from './cart/cart-types';
 // Yönetim + Para bölümleri (21.12) — hub karar kutusu/gün özeti ve salt-okuma para özetleri.
 export { readManagementHub } from './management/hub';
 export { readMoneyDayEnd, readMoneyOverview } from './accounting/money';
-// Belge + etiket sözlüğü + izah kapıları (12.12 · 13.09) — Para ekranı köprüyle çağırır.
+// Belge + tür + cari + etiket + izah kapıları (12.12 · 13.09) — Para ekranı köprüyle çağırır.
 export {
+  allocateToDocument,
   attachDocumentFile,
   createMoneyDocument,
   documentFileUrl,
   listOpenDocuments,
+  removeAllocation,
   requestDocumentUploadUrl,
+  type AllocationOutcome,
   type DocumentOutcome,
   type DocumentUploadOutcome,
 } from './accounting/document';
 export { addMovementTag, setMovementTagActive, tagMovement, type TagMovementOutcome, type TagOutcome } from './accounting/tags';
+export {
+  addMovementNature,
+  natureProblemOf,
+  setMovementNature,
+  updateMovementNature,
+  type MovementNatureOutcome,
+  type NatureOutcome,
+} from './accounting/natures';
+export {
+  addCounterparty,
+  setMovementCounterparty,
+  updateCounterparty,
+  type CounterpartyOutcome,
+  type MovementCounterpartyOutcome,
+} from './accounting/counterparties';
 export { listOfferCandidates, openBatchOffer, type OpenBatchOfferOutcome } from './warehouse/offer';
 export { createSupplyDraft, listSupplyGroups } from './warehouse/supply';
 export { readFacilityVanSummary, type FacilityVanSummary, type VanLoadView } from './warehouse/van-summary';

@@ -1,11 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useOptimistic, useTransition } from 'react';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { FilterChip } from '@/components/operation/ui/filter-chip';
 import { amount, dayMonth, money, num } from '@/components/operation/ui/format';
+import { Combobox } from '@/components/operation/form/combobox';
+import { MultiSelect } from '@/components/operation/form/multi-select';
+import {
+  naturesForDirection,
+  type CounterpartyOption,
+  type NatureOption,
+  type TagOption,
+} from '@/components/operation/form/movement-form/schema';
 import {
   EXPLAINED_LABEL,
   MOVEMENT_TYPE_CHIP,
@@ -13,7 +21,6 @@ import {
   NOTES,
   SUGGESTION_VIEW,
 } from './finance-labels';
-import type { ClassifyType } from '@/lib/bank/reconcile';
 import { ledgerRowKey } from './finance-types';
 import type { AccountView, LedgerView, MatchRowView, MovementRowView } from './finance-types';
 import { ALL_ACCOUNTS, FINANCE_PERIODS, PERIOD_LABEL, type FinanceUrlState } from './finance-url';
@@ -158,7 +165,7 @@ export function FilterBar({ accounts, urlState, unexplainedCount, onChange, stac
 
       <span aria-hidden className="mx-1 h-4 w-px bg-ops-line" />
 
-      {/* Tür ve tarih ÇİP DEĞİL seçici: yedi tür ve dört aralık çip olarak basılsaydı bar iki satıra
+      {/* Tip ve tarih ÇİP DEĞİL seçici: yedi tip ve dört aralık çip olarak basılsaydı bar iki satıra
           taşar ve asıl daraltma olan hesap çipleri arasında kaybolurdu. Tasarımın "+ tür"/"+ tarih"
           kesikli hapları da zaten "buradan bir şey seçilecek" diyor, hepsini birden göstermiyor. */}
       {/* **Ham `<select>` DEĞİL, kitin `Select`i — `variant="chip"`** (CLAUDE.md §2: form kitini
@@ -167,12 +174,15 @@ export function FilterBar({ accounts, urlState, unexplainedCount, onChange, stac
           duruyordu) ve tarayıcının yerleştirdiği okun hizasını — ok çipin sağ kenarına yapışıyordu.
           Kitin çip kipi tam bu şerit için yazılmış; ikinci bir biçim icat etmeye gerek yoktu.
 
-          Tür süzgeci bir tur ekranda YOKTU (kapısı gelmemişti) — arka uç `LedgerFilter.type`'ı
-          açınca bağlandı; süzme sunucuda, yani liste kuyruğuyla birlikte daralıyor. */}
+          Tip süzgeci bir tur ekranda YOKTU (kapısı gelmemişti) — arka uç `LedgerFilter.type`'ı
+          açınca bağlandı; süzme sunucuda, yani liste kuyruğuyla birlikte daralıyor.
+
+          Çip "+ tip" diyor, çizimdeki "+ tür" DEĞİL (13.09): "tür" artık sözlükteki sınıflandırmanın
+          adı (kira, maaş…) ve satırın "+ tür" menüsü aynı ekranda; bu süzgeç kaba tipi süzer. */}
       <FilterChip
         value={urlState.type}
         emptyValue="all"
-        placeholder="+ tür"
+        placeholder="+ tip"
         options={MOVEMENT_TYPE_ORDER.map((type) => ({ value: type, label: MOVEMENT_TYPE_CHIP[type] }))}
         onChange={(type) => onChange({ type })}
       />
@@ -208,19 +218,38 @@ export function FilterBar({ accounts, urlState, unexplainedCount, onChange, stac
 // ── Hareket listesi ───────────────────────────────────────────────────────────────────────────
 
 /** Tablo şeridi — başlıklar ve hücreler AYNI diziyi okur, hiza elle tutulmaz. */
-const ROW_GRID = 'grid grid-cols-[62px_minmax(0,1fr)_100px_120px_14px] items-center gap-x-3';
+const ROW_GRID = 'grid grid-cols-[62px_minmax(0,1fr)_100px_120px_14px] items-start gap-x-3';
+
+/**
+ * Defter satırının düzenleme sözleşmesi (13.09 · kullanıcı bulgusu: "eşleştirmeyle ilgili düzenleme
+ * yapamıyorum") — tür, cari, etiket, belge bağı ve eşleşmeyi geri alma satırın üstünde.
+ */
+interface RowEditor {
+  natureOptions: NatureOption[];
+  counterpartyOptions: CounterpartyOption[];
+  tagOptions: TagOption[];
+  /** Bütün etiketlerin adı (pasifler dâhil) — satır pasif etiketi taşımaya devam eder. */
+  tagLabels: ReadonlyMap<string, string>;
+  /** Hesabın eşleştirme kuyruğu — satır kuyruktaysa "Bağla…" aynı seçim penceresini açar. */
+  queue: MatchRowView[];
+  busyId: string | null;
+  onSetNature: (movementId: string, nature: string | null) => Promise<boolean>;
+  onSetCounterparty: (movementId: string, counterpartyId: string | null) => Promise<boolean>;
+  onTag: (movementId: string, tags: string[]) => Promise<boolean>;
+  onCreateTag: (label: string) => Promise<string | null>;
+  onPick: (row: MatchRowView) => void;
+  onUnmatch: (movementId: string) => void;
+  onRemoveAllocation: (movementId: string, documentId: string) => void;
+}
 
 interface MovementListProps {
   ledger: LedgerView;
   stacked?: boolean;
-  /** Etiket sözlüğü — izah bekleyen satırın "Etiketle" çipleri (12.12). */
-  tagOptions?: Array<{ value: string; label: string }>;
-  /** Satırı etiketler; verilmezse satır salt okunur (telefon görünümü). */
-  onTag?: (movementId: string, tags: string[]) => void;
-  tagBusyId?: string | null;
+  /** Satırın düzenleme araçları (13.09); verilmezse satır salt okunur. */
+  editor?: RowEditor;
 }
 
-export function MovementList({ ledger, stacked = false, tagOptions = [], onTag, tagBusyId = null }: MovementListProps) {
+export function MovementList({ ledger, stacked = false, editor }: MovementListProps) {
   if (ledger.state !== 'ready') {
     return (
       <EmptyState
@@ -248,34 +277,171 @@ export function MovementList({ ledger, stacked = false, tagOptions = [], onTag, 
         <span>Tarih</span>
         <span>Açıklama</span>
         <span className="text-right">Tutar</span>
-        <span>Hesap · tür</span>
+        {/* "Tip", "tür" değil (13.09): tür artık sözlükteki sınıflandırmanın adı ve satırın
+            araçlarında okunuyor; bu sütun kaba tipi (gider · transfer · sipariş ödemesi) söyler. */}
+        <span>Hesap · tip</span>
         <span />
       </div>
       <ul className="min-h-0 flex-1 overflow-y-auto">
         {ledger.rows.map((row) => (
           <li key={ledgerRowKey(row)} className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2.5`}>
-            <span className="font-ops-mono text-ops-xs text-ops-faint">{dayMonth(row.valueDate)}</span>
+            <span className="pt-0.5 font-ops-mono text-ops-xs text-ops-faint">{dayMonth(row.valueDate)}</span>
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="truncate font-ops-body text-ops-sm text-ops-ink">{row.title}</span>
               {row.ref ? <RefLine row={row} /> : null}
-              {/* İZAH BEKLEYEN SATIR SATIRDA KAPANIR (12.12): kuyruk için ayrı bir pencere yok —
-                  operatör satırı görür, etiketi seçer, satır izahlı olur. Yalnız etiketsiz ve
-                  bağsız satırda görünür; izahlı satırın etiketi tip hücresinde zaten okunuyor. */}
-              {!row.explained && onTag ? (
-                <TagInline tagOptions={tagOptions} busy={tagBusyId === row.id} onSave={(tags) => onTag(row.id, tags)} />
-              ) : null}
+              {editor ? <RowTools row={row} editor={editor} /> : null}
             </div>
-            <span className={`text-right font-ops-mono text-ops-sm ${amountTone(row.signedAmountCents, row.type === 'order_refund')}`}>
+            <span className={`pt-0.5 text-right font-ops-mono text-ops-sm ${amountTone(row.signedAmountCents, row.type === 'order_refund')}`}>
               {signedAmount(row.signedAmountCents)}
             </span>
             <div className="flex flex-col gap-0.5">
               <span className="font-ops-body text-ops-xs text-ops-ink">{row.accountName}</span>
               <span className="font-ops-body text-ops-micro text-ops-faint">{row.typeLabel}</span>
             </div>
-            <MatchDot explained={row.explained} />
+            <MatchDot explained={row.explained} className="mt-1.5" />
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+interface RowToolsProps {
+  row: MovementRowView;
+  editor: RowEditor;
+}
+
+/**
+ * Satırın araçları (13.09 · muhasebeci deseni) — TÜR tek seçim, CARİ tek seçim, ETİKET çoklu;
+ * hepsi aranabilir açılır menüden ve DOKUNUŞTA yazılır, "Kaydet" yok (kullanıcı isteği). Menüde
+ * olmayan etiket menünün kendisinden oluşturulur.
+ *
+ * Gösterim İYİMSER (`useOptimistic`): seçim anında görünür; kapı reddederse eski hâle döner, kabul
+ * ederse sayfanın yeni verisi action'ın cevabıyla gelir (`revalidatePath`).
+ *
+ * Tür ve cari yalnız sınıflandırılabilen satırda (gider · sermaye · sınıflandırılmamış): sipariş
+ * parasını, stok alımını ve transferi bağları açıklar. Belge bağı elle yazılan satırda tek tek
+ * kaldırılır; ekstre satırında bağlar "Eşleşmeyi geri al" ile birlikte çözülür ve satır kuyruğa döner.
+ */
+function RowTools({ row, editor }: RowToolsProps) {
+  const [, startTransition] = useTransition();
+  const [nature, showNature] = useOptimistic(row.nature);
+  const [counterpartyId, showCounterparty] = useOptimistic(row.counterpartyId);
+  const [tags, showTags] = useOptimistic(row.tags);
+  const busy = editor.busyId === row.id;
+  const queued = editor.queue.find((entry) => entry.movementId === row.id);
+
+  const writeNature = (next: string | null) =>
+    startTransition(async () => {
+      showNature(next);
+      await editor.onSetNature(row.id, next);
+    });
+  const writeCounterparty = (next: string | null) =>
+    startTransition(async () => {
+      showCounterparty(next);
+      await editor.onSetCounterparty(row.id, next);
+    });
+  const writeTags = (next: string[]) =>
+    startTransition(async () => {
+      showTags(next);
+      await editor.onTag(row.id, next);
+    });
+  const createTag = async (label: string) => {
+    const slug = await editor.onCreateTag(label);
+    if (slug && !tags.includes(slug)) writeTags([...tags, slug]);
+  };
+
+  // Pasif etiket de adıyla okunur: seçenekler aktifler + satırın taşıdığı pasifler.
+  const activeTags = new Set(editor.tagOptions.map((option) => option.value));
+  const tagOptions = [
+    ...editor.tagOptions,
+    ...tags.filter((tag) => !activeTags.has(tag)).map((tag) => ({ value: tag, label: editor.tagLabels.get(tag) ?? tag })),
+  ];
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+      {row.canClassify ? (
+        <>
+          <Combobox
+            variant="chip"
+            tone="olive"
+            value={nature ?? ''}
+            // Pasif tür seçenekte yoktur; adı satırdan okunur — iyimser değer sunucununkiyle aynıyken.
+            selectedLabel={nature === row.nature ? (row.natureLabel ?? undefined) : undefined}
+            onChange={(next) => writeNature(next)}
+            options={naturesForDirection(editor.natureOptions, row.direction).map(({ value, label }) => ({ value, label }))}
+            placeholder="+ tür"
+            searchPlaceholder="Tür ara…"
+            emptyText="Bu yöne uyan tür yok — Sözlük penceresinden ekleyin"
+            onClear={() => writeNature(null)}
+            clearLabel="Türü kaldır"
+          />
+          <Combobox
+            variant="chip"
+            tone="olive"
+            value={counterpartyId ?? ''}
+            selectedLabel={counterpartyId === row.counterpartyId ? (row.counterpartyName ?? undefined) : undefined}
+            onChange={(next) => writeCounterparty(next)}
+            options={editor.counterpartyOptions.map(({ value, label }) => ({ value, label }))}
+            placeholder="+ cari"
+            searchPlaceholder="Cari ara…"
+            emptyText="Cari yok — Sözlük penceresinden ekleyin"
+            onClear={() => writeCounterparty(null)}
+            clearLabel="Cariyi kaldır"
+          />
+        </>
+      ) : null}
+      <MultiSelect
+        options={tagOptions}
+        selected={tags}
+        onChange={writeTags}
+        addLabel="+ etiket"
+        searchPlaceholder="Etiket ara ya da yaz…"
+        emptyText="Etiket yok"
+        onCreate={(label) => void createTag(label)}
+      />
+      {row.documents.map((document) => (
+        <span
+          key={document.id}
+          className="inline-flex items-center gap-1 rounded-ops-chip border border-ops-olive-line px-2 py-0.5 font-ops-body text-ops-micro text-ops-olive-dark"
+        >
+          belge {document.label}
+          {row.fromBank ? null : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => editor.onRemoveAllocation(row.id, document.id)}
+              title="Belge bağını kaldır — hareket ve belge kalır, belgenin açık kalanı geri gelir"
+              aria-label={`${document.label} bağını kaldır`}
+              className="cursor-pointer text-ops-faint transition-colors hover:text-ops-red disabled:cursor-wait"
+            >
+              ✕
+            </button>
+          )}
+        </span>
+      ))}
+      {/* Satır kuyruktaysa bağlama yolu satırın kendisinde de açık — kullanıcı "öneride nasıl
+          bulunacağımı anlayamadım" demişti (13.09): pencere kuyruk kartınınkiyle aynı. */}
+      {queued ? (
+        <button
+          type="button"
+          onClick={() => editor.onPick(queued)}
+          className="cursor-pointer font-ops-body text-ops-xs font-medium text-ops-amber-dark underline transition-colors hover:text-ops-ink"
+        >
+          Bağla…
+        </button>
+      ) : null}
+      {row.canUnmatch ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => editor.onUnmatch(row.id)}
+          title="Satır ekstreden geldiği hâle döner ve eşleştirme kuyruğuna geri gelir"
+          className="cursor-pointer font-ops-body text-ops-xs text-ops-muted underline transition-colors hover:text-ops-ink disabled:cursor-wait disabled:opacity-60"
+        >
+          {busy ? '…' : 'Eşleşmeyi geri al'}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -309,70 +475,6 @@ function RefLine({ row }: { row: MovementRowView }) {
 }
 
 /**
- * Satır içi etiketleme (12.12): "Etiketle" → çoklu çip → "Kaydet". Kuyruk kartındaki tek dokunuşlu
- * sınıflandırmadan farkı çoklu seçim: izah bekleyen satır çoğu zaman iki şey söyler ("maaş" ve
- * "ortak:ahmet"), tek çiple kapatılsa ikincisi hiç yazılmazdı.
- */
-function TagInline({
-  tagOptions,
-  busy,
-  onSave,
-}: {
-  tagOptions: Array<{ value: string; label: string }>;
-  busy: boolean;
-  onSave: (tags: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<string[]>([]);
-  const toggle = (slug: string) => setSelected((prev) => (prev.includes(slug) ? prev.filter((tag) => tag !== slug) : [...prev, slug]));
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => setOpen(true)}
-        className="w-fit cursor-pointer font-ops-body text-ops-micro text-ops-amber-dark underline hover:text-ops-ink disabled:cursor-wait"
-      >
-        Etiketle
-      </button>
-    );
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-      {tagOptions.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          disabled={busy}
-          aria-pressed={selected.includes(option.value)}
-          onClick={() => toggle(option.value)}
-          className={`cursor-pointer rounded-ops-chip border px-2 py-0.5 font-ops-body text-ops-micro transition-colors disabled:cursor-wait ${
-            selected.includes(option.value)
-              ? 'border-ops-olive bg-ops-olive-bg text-ops-olive-dark'
-              : 'border-ops-line text-ops-muted hover:border-ops-line-strong hover:text-ops-ink'
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-      <button
-        type="button"
-        disabled={busy || selected.length === 0}
-        onClick={() => onSave(selected)}
-        className="cursor-pointer rounded-ops-btn bg-ops-olive px-2.5 py-0.5 font-ops-display text-ops-micro font-semibold text-ops-on-olive transition-colors hover:bg-ops-olive-dark disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {busy ? '…' : 'Kaydet'}
-      </button>
-      <button type="button" onClick={() => setOpen(false)} className="cursor-pointer font-ops-body text-ops-micro text-ops-faint hover:text-ops-ink">
-        Vazgeç
-      </button>
-    </div>
-  );
-}
-
-/**
  * İzah noktası (13.09) — `title` ile okunur hâli de var. Bir tur banka mutabakat bayrağını okuyordu
  * ve sistemin kendi yazdığı her tahsilat amber görünüyordu; şimdi "bu satırın ne olduğu biliniyor
  * mu" sorusunu okuyor (`explained`).
@@ -398,11 +500,11 @@ interface MatchQueueProps {
   rows: MatchRowView[];
   accountSelected: boolean;
   busyId: string | null;
-  /** Etiket sözlüğü (13.09) — "bu çıkış hangi gider" çipleri buradan, sabit listeden değil. */
-  tagOptions: Array<{ value: string; label: string }>;
+  /** Tür sözlüğü (13.09) — kartın "Türünü koy" menüsü; yalnız aktif türler. */
+  natureOptions: NatureOption[];
   onApprove: (row: MatchRowView) => void;
   onPick: (row: MatchRowView) => void;
-  onClassify: (row: MatchRowView, type: ClassifyType, tags: string[]) => void;
+  onClassify: (row: MatchRowView, nature: string) => void;
   onDismiss: (row: MatchRowView) => void;
 }
 
@@ -413,7 +515,7 @@ interface MatchQueueProps {
  * eşleştirme de o hesabın satırları içindir. "Tümü" seçiliyken kuyruk yerine sebebi yazılıyor —
  * boş bir panel, kuyruğun boş olduğu anlamına gelirdi.
  */
-export function MatchQueue({ rows, accountSelected, busyId, tagOptions, onApprove, onPick, onClassify, onDismiss }: MatchQueueProps) {
+export function MatchQueue({ rows, accountSelected, busyId, natureOptions, onApprove, onPick, onClassify, onDismiss }: MatchQueueProps) {
   if (!accountSelected) {
     return (
       <EmptyState
@@ -433,7 +535,7 @@ export function MatchQueue({ rows, accountSelected, busyId, tagOptions, onApprov
           key={row.movementId}
           row={row}
           busy={busyId === row.movementId}
-          tagOptions={tagOptions}
+          natureOptions={natureOptions}
           onApprove={onApprove}
           onPick={onPick}
           onClassify={onClassify}
@@ -444,24 +546,13 @@ export function MatchQueue({ rows, accountSelected, busyId, tagOptions, onApprov
   );
 }
 
-function MatchCard({
-  row,
-  busy,
-  tagOptions,
-  onApprove,
-  onPick,
-  onClassify,
-  onDismiss,
-}: {
+interface MatchCardProps extends Pick<MatchQueueProps, 'natureOptions' | 'onApprove' | 'onPick' | 'onClassify' | 'onDismiss'> {
   row: MatchRowView;
   busy: boolean;
-} & Pick<MatchQueueProps, 'tagOptions' | 'onApprove' | 'onPick' | 'onClassify' | 'onDismiss'>) {
+}
+
+function MatchCard({ row, busy, natureOptions, onApprove, onPick, onClassify, onDismiss }: MatchCardProps) {
   const view = SUGGESTION_VIEW[row.strength];
-  const [classifying, setClassifying] = useState(false);
-  // Hızlı gider çipleri yalnız para ÇIKIŞINDA (kapı da öyle diyor: gider çıkıştır). Giren paranın
-  // adı sermaye ya da bir hedef — o yol seçim penceresinden ("Elle bağla") geçer; artık hiçbir satır
-  // "Atla"ya mecbur değil (12.13).
-  const quickExpense = row.signedAmountCents < 0;
 
   return (
     <li className="flex flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-surface p-3.5">
@@ -479,35 +570,7 @@ function MatchCard({
         <span className="font-ops-body text-ops-xs text-ops-muted">{row.sentence}</span>
       </div>
 
-      {/* Gider çipleri kartın İÇİNDE açılıyor: kuyruk seri onaylanan bir yüzey ve her satır için
-          pencere açıp kapatmak, on satırlık bir ekstreyi yirmi tıklamaya çevirirdi. Belgeye, mal
-          kabule, transfere ya da zaten yazılmış harekete bağlamak ise seçim penceresinin işi. */}
-      {/* Çipler SÖZLÜKTEN (13.09): tek dokunuş tek etiketle sınıflar — ikinci etiket
-          (ör. `ortak:ahmet`) hareket listesinden sonradan eklenir. */}
-      {classifying ? (
-        <div className="flex flex-col gap-1.5">
-          <span className="font-ops-body text-ops-micro text-ops-faint">Bu çıkış hangi gider?</span>
-          {tagOptions.length === 0 ? (
-            <span className="font-ops-body text-ops-xs text-ops-faint">Sözlükte aktif etiket yok — önce etiket ekleyin.</span>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {tagOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onClassify(row, 'expense', [option.value])}
-                  className="cursor-pointer rounded-ops-chip border border-ops-line px-2.5 py-1 font-ops-body text-ops-xs text-ops-muted transition-colors hover:border-ops-olive hover:text-ops-olive-dark disabled:cursor-wait disabled:opacity-60"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           disabled={busy}
@@ -534,18 +597,20 @@ function MatchCard({
             Düzelt
           </button>
         ) : null}
-        {quickExpense ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setClassifying((open) => !open)}
-            aria-expanded={classifying}
-            title="Bir kayda bağlanmayan çıkış: etiketiyle gider yaz"
-            className="cursor-pointer rounded-ops-btn border border-ops-line-strong px-3 py-2 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:bg-ops-surface-sunken disabled:cursor-wait disabled:opacity-60"
-          >
-            Gider
-          </button>
-        ) : null}
+        {/* TÜRÜNÜ KOY (13.09 · ikinci karar) — bir kayda bağlanmayan satır tek dokunuşla TEK türle
+            sınıflanır: çıkışta gider türü, girişte sermaye ya da gelir türü (satırın yönüne uyanlar).
+            Kuyruk seri onaylanan bir yüzey; her satır için pencere açmak on satırlık bir ekstreyi
+            yirmi tıklamaya çevirirdi. Belgeye, mal kabule, cariye bağlamak seçim penceresinin işi. */}
+        <Combobox
+          variant="chip"
+          value=""
+          onChange={(nature) => onClassify(row, nature)}
+          options={naturesForDirection(natureOptions, row.direction).map(({ value, label }) => ({ value, label }))}
+          placeholder="Türünü koy"
+          searchPlaceholder="Tür ara…"
+          emptyText="Bu yöne uyan tür yok — Sözlük penceresinden ekleyin"
+          disabled={busy}
+        />
         <button
           type="button"
           disabled={busy}

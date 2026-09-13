@@ -4,11 +4,11 @@ import { Button } from '@/components/operation/ui/button';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { AccountSetup } from './account-setup';
 import { BankImportDialog } from './bank-import-dialog';
+import { DictionaryDialog } from './dictionary-dialog';
 import { DocumentDialog } from './document-dialog';
 import { DocumentsPanel } from './documents-panel';
 import { AccountStrip, FilterBar, MatchQueue, MovementList } from './finance-sections';
 import { MovementDialog } from './movement-dialog';
-import { TagDialog } from './tag-dialog';
 import { TransferDialog } from './transfer-dialog';
 import { ALL_ACCOUNTS } from './finance-url';
 import type { FinanceViewProps } from './finance-types';
@@ -23,6 +23,10 @@ import type { FinanceViewProps } from './finance-types';
 // Açık belgeler üstte, banka eşleştirmesi altta. İkisi de "kapatılacak iş"tir: biri ödenmemiş
 // fatura, öteki sebebi konmamış ekstre satırı. Çizimde belge paneli YOK (kavram 13.09'da doğdu);
 // kitin kart gramerinde yazıldı — açık: `design/BACKLOG.md §4`.
+//
+// ── SÖZLÜK VE SATIRIN ARAÇLARI (13.09 · ikinci karar) ─────────────────────────
+// "Etiketler" penceresi "Sözlük" oldu: tür, cari ve etiket üç sekmede. Satırın araçları (tür · cari ·
+// etiket menüleri, belge bağı, eşleşmeyi geri al) hareket listesinin içinde, dokunuşta yazılır.
 
 export function FinanceDesktop({
   data,
@@ -39,14 +43,22 @@ export function FinanceDesktop({
   onPick,
   onClassify,
   onDismiss,
+  onSetNature,
+  onSetCounterparty,
   onTag,
-  tagBusyId,
+  onCreateTag,
+  onUnmatch,
+  onRemoveAllocation,
+  rowBusyId,
+  rowError,
   payingDocument,
   onPayDocument,
   onClosePay,
   onOpenDocumentFile,
 }: FinanceViewProps) {
   const hasAccounts = data.accounts.length > 0;
+  // Pasif etiket de adıyla okunur — satır eski etiketi taşımaya devam eder, ad sözlüğün tamamından.
+  const tagLabels = new Map(data.dictionary.tags.map((tag) => [tag.slug, tag.label] as const));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -60,8 +72,8 @@ export function FinanceDesktop({
         <Button variant="secondary" size="sm" onClick={() => onOpenDialog('document')}>
           + Belge
         </Button>
-        <Button variant="secondary" size="sm" onClick={() => onOpenDialog('tags')}>
-          Etiketler
+        <Button variant="secondary" size="sm" onClick={() => onOpenDialog('dictionary')}>
+          Sözlük
         </Button>
         {/* Çizimin son düğmesi (12.10): dosya tarayıcıda okunur, satırlar hesabın hareketi olur, kuyruğa düşer. */}
         <Button variant="secondary" size="sm" onClick={() => onOpenDialog('bankImport')} disabled={writableAccounts.length === 0}>
@@ -81,7 +93,27 @@ export function FinanceDesktop({
 
           <div className="grid min-h-0 flex-1 grid-cols-[1.65fr_1fr] overflow-hidden">
             <div className="flex min-h-0 flex-col border-r border-ops-line">
-              <MovementList ledger={data.ledger} tagOptions={data.tagOptions} onTag={onTag} tagBusyId={tagBusyId} />
+              {rowError ? (
+                <p className="border-b border-ops-red-line bg-ops-red-bg px-6 py-2.5 font-ops-body text-ops-xs text-ops-red">{rowError}</p>
+              ) : null}
+              <MovementList
+                ledger={data.ledger}
+                editor={{
+                  natureOptions: data.natureOptions,
+                  counterpartyOptions: data.counterpartyOptions,
+                  tagOptions: data.tagOptions,
+                  tagLabels,
+                  queue: data.queue,
+                  busyId: rowBusyId,
+                  onSetNature,
+                  onSetCounterparty,
+                  onTag,
+                  onCreateTag,
+                  onPick,
+                  onUnmatch,
+                  onRemoveAllocation,
+                }}
+              />
             </div>
 
             <div className="flex min-h-0 flex-col overflow-y-auto bg-ops-surface-sunken">
@@ -104,7 +136,7 @@ export function FinanceDesktop({
                 rows={data.queue}
                 accountSelected={urlState.acct !== ALL_ACCOUNTS}
                 busyId={busyId}
-                tagOptions={data.tagOptions}
+                natureOptions={data.natureOptions}
                 onApprove={onApprove}
                 onPick={onPick}
                 onClassify={onClassify}
@@ -120,17 +152,23 @@ export function FinanceDesktop({
       {dialog === 'movement' ? (
         <MovementDialog
           accounts={writableAccounts}
+          natureOptions={data.natureOptions}
+          counterpartyOptions={data.counterpartyOptions}
           tagOptions={data.tagOptions}
+          onCreateTag={onCreateTag}
           onClose={onCloseDialog}
           onSaved={onSaved}
         />
       ) : null}
-      {/* "Ödemesini yaz" — aynı elle hareket penceresi, belgeyle DOLU: tutar açık kalan, etiketler
-          belgenin, bağ hazır. Ayrı bir "ödeme" penceresi yazılmadı; ödeme bir harekettir. */}
+      {/* "Ödemesini yaz" — aynı elle hareket penceresi, belgeyle DOLU: tutar açık kalan; türü, carisi
+          ve etiketleri belgenin; bağ hazır. Ayrı bir "ödeme" penceresi yazılmadı; ödeme bir harekettir. */}
       {payingDocument ? (
         <MovementDialog
           accounts={writableAccounts}
+          natureOptions={data.natureOptions}
+          counterpartyOptions={data.counterpartyOptions}
           tagOptions={data.tagOptions}
+          onCreateTag={onCreateTag}
           onClose={onClosePay}
           onSaved={onSaved}
           documentLabel={payingDocument.label}
@@ -141,10 +179,14 @@ export function FinanceDesktop({
             type: payingDocument.direction === 'out' ? 'expense' : 'misc',
             amount: payingDocument.openAmountCents / 100,
             direction: payingDocument.direction,
+            nature: payingDocument.nature ?? '',
+            counterpartyId: payingDocument.counterpartyId ?? '',
             tags: [...payingDocument.tags],
             campaign: '',
             valueDate: new Date().toISOString().slice(0, 10),
-            description: `${payingDocument.kindLabel}${payingDocument.number ? ` ${payingDocument.number}` : ''} — ${payingDocument.counterparty ?? ''}`.trim(),
+            description: `${payingDocument.kindLabel}${payingDocument.number ? ` ${payingDocument.number}` : ''}${
+              payingDocument.partyName ? ` — ${payingDocument.partyName}` : ''
+            }`,
             documentId: payingDocument.id,
           }}
         />
@@ -153,9 +195,19 @@ export function FinanceDesktop({
         <TransferDialog accounts={writableAccounts} onClose={onCloseDialog} onSaved={onSaved} />
       ) : null}
       {dialog === 'document' ? (
-        <DocumentDialog supplierOptions={data.supplierOptions} tagOptions={data.tagOptions} onClose={onCloseDialog} onSaved={onSaved} />
+        <DocumentDialog
+          supplierOptions={data.supplierOptions}
+          counterpartyOptions={data.counterpartyOptions}
+          natureOptions={data.natureOptions}
+          tagOptions={data.tagOptions}
+          onCreateTag={onCreateTag}
+          onClose={onCloseDialog}
+          onSaved={onSaved}
+        />
       ) : null}
-      {dialog === 'tags' ? <TagDialog tags={data.tagList} onClose={onCloseDialog} onChanged={onSaved} /> : null}
+      {/* Sözlük penceresi yazımdan sonra KAPANMAZ: sözlük action'ları sayfayı aynı cevapta tazeliyor
+          (`revalidatePath`), liste yeni veriyle kendiliğinden çizilir. */}
+      {dialog === 'dictionary' ? <DictionaryDialog dictionary={data.dictionary} onClose={onCloseDialog} /> : null}
       {dialog === 'bankImport' ? (
         <BankImportDialog
           accounts={writableAccounts}

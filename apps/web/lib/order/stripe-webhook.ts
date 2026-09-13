@@ -9,7 +9,7 @@ import {
 } from '@lezzet/database';
 import { decideLatePayment, validateMovement } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
-import { STRIPE_FEE_TAG, type MoneyMovementInsert, type OrderItem } from '@lezzet/types';
+import { STRIPE_FEE_NATURE, type MoneyMovementInsert, type OrderItem } from '@lezzet/types';
 import { clearOrderedLines } from '../cart/settle';
 import { recordOrderPayment, recordOrderRefund } from '../money/order-payment';
 import { broadcastOrderChanged } from '../realtime/broadcast';
@@ -278,7 +278,7 @@ async function confirmPayment(event: VerifiedEvent, accountId: string | null, ef
 }
 
 /**
- * **Stripe ücreti** (12.14): havuzdan çıkan `stripe-ucreti` etiketli gider + siparişin `paymentFee`
+ * **Stripe ücreti** (12.14): havuzdan çıkan `stripe-ucreti` türlü gider + siparişin `paymentFee`
  * alanı. Yazım kimliği ödeme niyetidir — aynı ödemeyi anlatan ikinci olay ya da payout'un tamamlaması
  * ikinci satır doğurmaz (`insertOnce`). Sipariş alanı yalnız BOŞKEN dolar: onay anında yazılanı
  * payout'un tamamlaması ezmez. Sipariş bağı harekete YAZILMAZ (`order_id`): siparişin tahsilat
@@ -295,7 +295,7 @@ async function recordPaymentFee(
     direction: 'out',
     amountCents: input.fee.feeCents,
     type: 'expense',
-    tags: [STRIPE_FEE_TAG],
+    nature: STRIPE_FEE_NATURE,
     description: 'Stripe ücreti',
     meta: {
       providerRef: input.paymentIntentId,
@@ -383,7 +383,7 @@ async function recordPayout(event: VerifiedEvent, accountId: string | null, effe
         direction: 'out',
         amountCents: -item.amountCents,
         type: 'expense',
-        tags: [STRIPE_FEE_TAG],
+        nature: STRIPE_FEE_NATURE,
         description: 'Stripe ücreti — ödeme dışı',
         meta: { balanceTransactionId: item.id, payoutId: event.payout.id },
         valueDate: event.payout.arrivalDate,

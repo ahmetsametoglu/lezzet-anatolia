@@ -288,4 +288,28 @@ describe('eşleştirme önerisi', () => {
     expect(suggestions[0]!.score).toBe(suggestions[1]!.score);
     expect(suggestions.map((s) => s.kind)).toEqual(['provisional', 'document']);
   });
+
+  it('CARİ (13.09): eşleşme kelimesi açıklamada geçerse tutarsız, günsüz aday öneri olur; yalnız ad yetmez', () => {
+    const urssaf = candidate({ kind: 'counterparty', id: 'c1', referenceNo: null, amountCents: 0, date: null, direction: 'out', keywords: ['URSSAF'] });
+    // Satırın günü adayın hiçbir tarihine yakın değil — carinin kanıtı zamanda değil kelimede.
+    const [suggestion] = suggestMatches(row({ direction: 'out', amountCents: 118_000, label: 'PRLV SEPA URSSAF COTISATIONS', valueDate: '2026-12-01' }), [urssaf]);
+    expect(suggestion).toMatchObject({ kind: 'counterparty', id: 'c1', reasons: ['keyword_in_label'] });
+
+    // Aynı cari yalnız ADIYLA (kelimesiz): ad bir tahmin, tek başına eşiğin altında kalır.
+    const adli = candidate({ kind: 'counterparty', id: 'c2', referenceNo: null, amountCents: 0, date: null, direction: 'out', nameHints: ['URSSAF'] });
+    expect(suggestMatches(row({ direction: 'out', label: 'PRLV SEPA URSSAF' }), [adli])).toEqual([]);
+    // İki harflik kelime aranmaz.
+    const kisa = candidate({ kind: 'counterparty', id: 'c3', referenceNo: null, amountCents: 0, date: null, direction: 'out', keywords: ['EU'] });
+    expect(suggestMatches(row({ direction: 'out', label: 'PRLV AMAZON EU' }), [kisa])).toEqual([]);
+  });
+
+  it('yönü olmayan cari iki yöne de uyar; aynı carinin tutarı tutan belgesi varsa belge açık ara önde', () => {
+    const cari = candidate({ kind: 'counterparty', id: 'c1', referenceNo: null, amountCents: 0, date: null, direction: null, keywords: ['ORANGE'] });
+    expect(suggestMatches(row({ direction: 'in', label: 'VIR ORANGE REMBOURSEMENT' }), [cari])).toHaveLength(1);
+
+    const fatura = candidate({ kind: 'document', id: 'd1', referenceNo: null, amountCents: 3999, direction: 'out', keywords: ['ORANGE'] });
+    const sirali = suggestMatches(row({ direction: 'out', amountCents: 3999, label: 'PRLV ORANGE FACTURE' }), [cari, fatura]);
+    expect(sirali.map((s) => s.kind)).toEqual(['document', 'counterparty']);
+    expect(isUnambiguous(sirali)).toBe(true);
+  });
 });

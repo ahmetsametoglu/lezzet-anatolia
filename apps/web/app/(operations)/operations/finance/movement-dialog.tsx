@@ -10,7 +10,10 @@ import {
   ManualMovementSchema,
   movementBlock,
   movementToday,
+  type CounterpartyOption,
   type ManualMovementForm,
+  type NatureOption,
+  type TagOption,
 } from '@/components/operation/form/movement-form/schema';
 import { recordManualMovementAction } from '@/lib/finance/actions';
 import type { AccountView } from './finance-types';
@@ -28,30 +31,29 @@ const FORM_ID = 'manual-movement-form';
 
 interface MovementDialogProps {
   accounts: AccountView[];
-  /** Etiket sözlüğü (13.09) — gider çipleri buradan; yalnız aktif etiketler. */
-  tagOptions: Array<{ value: string; label: string }>;
+  /** Tür, cari ve etiket sözlükleri (13.09) — yalnız aktifler. */
+  natureOptions: NatureOption[];
+  counterpartyOptions: CounterpartyOption[];
+  tagOptions: TagOption[];
+  /** Etiket menüsünün "oluştur" satırı — yeni etiketin anahtarını döner. */
+  onCreateTag: (label: string) => Promise<string | null>;
   onClose: () => void;
   onSaved: () => void;
   /**
-   * Ön dolgu — asistan önerisinden (22.5) ya da "Ödemesini yaz" denen açık belgeden (12.12). Alanlar
-   * DOLU açılır ama hiçbiri kilitli değil — onaydan önce düzeltilebilmesi bu devrin bütün sebebi.
+   * Ön dolgu — "Ödemesini yaz" denen açık belgeden (12.12). Alanlar DOLU açılır ama hiçbiri kilitli
+   * değil — kaydetmeden önce düzeltilebilmesi bu yolun bütün sebebi.
    */
   initial?: ManualMovementForm | null;
   /** Belgeden açıldıysa formun üstünde okunan künye: "FA-2026-0912 · Cabinet Muller · açık 360,00 €". */
   documentLabel?: string | null;
-  /** Öneri kimliği; verilirse kayıt kuyruk satırını da kapatır. */
-  /**
-   * Devir künyesi — pencerenin İÇİNDE durur, sayfada değil (22.5).
-   *
-   * Bu pencere öneriden gelindiğinde kendiliğinden açılıyor ve örtüsü sayfayı kaplıyor: künye
-   * arkada kalsaydı operatör tutarın neden dolu geldiğini ancak pencereyi kapattıktan sonra
-   * görürdü — yani kararı verdikten sonra.
-   */
 }
 
 export function MovementDialog({
   accounts,
+  natureOptions,
+  counterpartyOptions,
   tagOptions,
+  onCreateTag,
   onClose,
   onSaved,
   initial = null,
@@ -68,6 +70,8 @@ export function MovementDialog({
           type: 'expense',
           amount: null,
           direction: 'out',
+          nature: '',
+          counterpartyId: '',
           tags: [],
           campaign: '',
           valueDate: movementToday(),
@@ -86,12 +90,14 @@ export function MovementDialog({
       // EURO → CENT sınırda (`ManualMovementSchema` künyesi): kapı cent istiyor.
       amountCents: toCents(values.amount ?? 0),
       direction: values.direction,
+      // Seçici "seçilmedi"yi boş dizeyle söyler; kapı `null` bekler.
+      nature: values.nature || null,
+      counterpartyId: values.counterpartyId || null,
       tags: values.tags,
       campaign: values.campaign,
       valueDate: values.valueDate,
       description: values.description,
       documentId: values.documentId,
-      // Öneriden gelindiyse kuyruk satırı bu kayıtla kapanır (`withProposal`).
     });
     if (actionError) {
       setError(actionError);
@@ -132,9 +138,11 @@ export function MovementDialog({
           setValue={form.setValue}
           values={watched}
           accounts={accounts}
+          natureOptions={natureOptions}
+          counterpartyOptions={counterpartyOptions}
           tagOptions={tagOptions}
+          onCreateTag={onCreateTag}
         />
-
       </form>
     </Dialog>
   );

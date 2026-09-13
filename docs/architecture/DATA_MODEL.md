@@ -88,6 +88,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `carrier`: colissimo, chronopost, dhl, ups, other
 - `channel`: b2b, b2c
 - `conversation_source`: whatsapp, messenger, instagram
+- `counterparty_kind`: institution, service, employee, other *(carinin türü — kurum, hizmet veren, çalışan, diğer; 13.09)*
 - `country_code`: FR, DE *(faaliyet ülkeleri)*
 - `currency`: EUR
 - `customer_type`: individual, company

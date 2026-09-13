@@ -12,27 +12,44 @@
  * yazılmış hareket. Motor hedefin türünün ne anlama geldiğini BİLMEZ; üç şeyi karşılaştırır —
  * referans açıklamada geçiyor mu, tutar tutuyor mu, tarih yakın mı — ve yönü uymayan adayı hiç
  * değerlendirmez. Adayı kuran (uygulama katmanı) türü ve yönü söyler.
+ *
+ * ── CARİ DE BİR ADAYDIR (13.09 · ikinci karar) ──────────────────────────────
+ * Ekstre satırı çoğu zaman bir faturaya değil bir KİŞİYE ya da kuruma aittir: "PRLV SEPA URSSAF" bir
+ * belge beklemez, URSSAF'ın kesintisidir. Carinin eşleşme kelimesi açıklamada geçiyorsa cari aday
+ * olur. Tutarı ve günü yoktur (bir cari tutar taşımaz), kanıtı yalnız kelimedir — ve kelime tek
+ * başına öneri eşiğini geçer: operatör onu kendisi "bu kelime bu caridir" diye yazdı.
  */
 
-export type MatchKind = 'order' | 'refund' | 'document' | 'intake' | 'transfer' | 'provisional';
+export type MatchKind = 'order' | 'refund' | 'document' | 'intake' | 'transfer' | 'provisional' | 'counterparty';
 
 export interface MatchCandidate {
   kind: MatchKind;
-  /** Hedefin kimliği: sipariş, belge, mal kabul, transfer ucu ya da elle yazılmış hareket. */
+  /** Hedefin kimliği: sipariş, belge, mal kabul, transfer ucu, elle yazılmış hareket ya da cari. */
   id: string;
   /** Bankanın açıklamasında geçebilecek referans (sipariş no, belge no). Yoksa `null`. */
   referenceNo: string | null;
   /**
    * Adayın kapatacağı tutar **cent**: siparişin açık bakiyesi, belgenin açık kalanı, transferin ya da
-   * elle yazılanın tutarı. Sıfır ya da eksi aday tutar puanı almaz (kapatacak bir şey yok).
+   * elle yazılanın tutarı. Sıfır ya da eksi aday tutar puanı almaz (kapatacak bir şey yok — cari).
    */
   amountCents: number;
-  /** Adayın günü: satış günü, belge tarihi, transferin/elle yazılanın değer tarihi. */
-  date: string;
-  /** Adayın kapattığı BANKA yönü: tahsilat `in`, ödeme `out`. Ters yöndeki satıra hiç önerilmez. */
-  direction: 'in' | 'out';
+  /**
+   * Adayın günü: satış günü, belge tarihi, transferin/elle yazılanın değer tarihi. `null` = günü
+   * yok (cari): tarih kapısı da tarih puanı da uygulanmaz.
+   */
+  date: string | null;
+  /**
+   * Adayın kapattığı BANKA yönü: tahsilat `in`, ödeme `out`. Ters yöndeki satıra hiç önerilmez.
+   * `null` = iki yöne de uyar (varsayılan türü olmayan cari).
+   */
+  direction: 'in' | 'out' | null;
   /** Açıklamada aranacak adlar (müşteri, karşı taraf, tedarikçi, elle yazılanın açıklaması). */
   nameHints?: readonly (string | null | undefined)[];
+  /**
+   * Eşleşme kelimeleri (13.09) — carinin "bu kelime geçerse benim" listesi. Ad ipucundan GÜÇLÜDÜR:
+   * ad bir tahmindir, kelime operatörün kendi kuralı.
+   */
+  keywords?: readonly string[];
 }
 
 export interface MatchSuggestion {
@@ -41,15 +58,20 @@ export interface MatchSuggestion {
   /** 0–1. Yüksek olması onayı kaldırmaz, yalnız sıraya koyar. */
   score: number;
   /** Neden önerildi — operatör "neden bu?" diye sormasın. */
-  reasons: Array<'reference_in_label' | 'exact_amount' | 'close_amount' | 'same_day' | 'near_date' | 'name_in_label'>;
+  reasons: Array<'reference_in_label' | 'exact_amount' | 'close_amount' | 'same_day' | 'near_date' | 'name_in_label' | 'keyword_in_label'>;
 }
 
 /** Tarih penceresi (gün): banka satırı satıştan sonra düşer, havale bazen günler sonra. */
 const WINDOW_DAYS = 10;
 /** Bu eşiğin altındaki öneri gösterilmez — zayıf öneri, operatörü yanlış onaya sürükler. */
 export const MATCH_THRESHOLD = 0.4;
-/** Bundan kısa bir ad ipucu aranmaz: "SA" gibi bir parça her açıklamada geçer. */
+/** Bundan kısa bir ad ipucu ya da kelime aranmaz: "SA" gibi bir parça her açıklamada geçer. */
 const MIN_HINT_LENGTH = 3;
+/**
+ * Eşleşme kelimesinin puanı — eşiğin HEMEN üstü: kelime tek başına öneri doğurur ama tutarı ve günü
+ * tutan bir belgeyi geçemez (belge aynı kelimeyi taşıyorsa üstüne tutar ve tarih puanı da ekler).
+ */
+const KEYWORD_SCORE = 0.45;
 
 function dayGapBetween(a: string, b: string): number {
   const ms = new Date(`${a}T00:00:00.000Z`).getTime() - new Date(`${b}T00:00:00.000Z`).getTime();
@@ -57,7 +79,15 @@ function dayGapBetween(a: string, b: string): number {
 }
 
 function normalize(s: string): string {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+/** Parçalardan biri (yeterince uzunsa) açıklamada geçiyor mu. */
+function mentions(haystack: string, needles: readonly (string | null | undefined)[] | undefined): boolean {
+  return (needles ?? []).some((needle) => {
+    const clean = needle ? normalize(needle.trim()) : '';
+    return clean.length >= MIN_HINT_LENGTH && haystack.includes(clean);
+  });
 }
 
 /**
@@ -80,18 +110,19 @@ export function suggestMatches(
 
   return candidates
     .map((candidate) => {
-      if (candidate.direction !== row.direction) return null;
+      if (candidate.direction !== null && candidate.direction !== row.direction) return null;
 
       const reasons: MatchSuggestion['reasons'] = [];
       let score = 0;
 
       const referenceMatched = !!candidate.referenceNo && haystack.includes(normalize(candidate.referenceNo));
-      const dayGap = dayGapBetween(row.valueDate, candidate.date);
+      const dayGap = candidate.date === null ? null : dayGapBetween(row.valueDate, candidate.date);
 
       // **Tarih kapısı:** referans geçmiyorsa pencere dışındaki aday hiç değerlendirilmez.
       // Yoksa altı ay önceki bir siparişle tutarı tutan her satır öneri olurdu — tutar tesadüfen
       // eşleşir, referans eşleşmez. Referans varsa zaman kısıtı kalkar: numara rastgeledir.
-      if (!referenceMatched && dayGap > WINDOW_DAYS) return null;
+      // Günü olmayan aday (cari) kapıya takılmaz: onun kanıtı zamanda değil kelimede.
+      if (!referenceMatched && dayGap !== null && dayGap > WINDOW_DAYS) return null;
 
       if (referenceMatched) {
         reasons.push('reference_in_label');
@@ -111,16 +142,17 @@ export function suggestMatches(
       if (dayGap === 0) {
         reasons.push('same_day');
         score += 0.2;
-      } else if (dayGap <= WINDOW_DAYS) {
+      } else if (dayGap !== null && dayGap <= WINDOW_DAYS) {
         reasons.push('near_date');
         score += 0.2 * (1 - dayGap / WINDOW_DAYS);
       }
 
-      const hintMatched = (candidate.nameHints ?? []).some((hint) => {
-        const needle = hint ? normalize(hint.trim()) : '';
-        return needle.length >= MIN_HINT_LENGTH && haystack.includes(needle);
-      });
-      if (hintMatched) {
+      if (mentions(haystack, candidate.keywords)) {
+        reasons.push('keyword_in_label');
+        score += KEYWORD_SCORE;
+      }
+
+      if (mentions(haystack, candidate.nameHints)) {
         reasons.push('name_in_label');
         score += 0.15;
       }
@@ -133,10 +165,11 @@ export function suggestMatches(
 
 /**
  * Eşit puanda hangi tür önde: o hesaba ZATEN yazılmış hareket en özgül kanıttır (operatör bunu tam bu
- * hesap için yazdı), belge ondan sonra, mal kabul ve transfer ucu sonra, sipariş/iade en sonda.
+ * hesap için yazdı), belge ondan sonra, mal kabul ve transfer ucu sonra, sipariş/iade sonra, cari en
+ * sonda (aynı carinin belgesi varsa o belge daha çok şey söyler: tutarı ve günü de tutar).
  * Rastgele kimliğe bırakılsaydı aynı kuyruk iki açılışta iki farklı öneri gösterirdi.
  */
-const KIND_PRIORITY: Record<MatchKind, number> = { provisional: 0, document: 1, intake: 2, transfer: 3, order: 4, refund: 5 };
+const KIND_PRIORITY: Record<MatchKind, number> = { provisional: 0, document: 1, intake: 2, transfer: 3, order: 4, refund: 5, counterparty: 6 };
 
 /**
  * Öneri **tek başına** mı, yoksa yakın rakipleri mi var. İki aday birbirine yakınsa (aynı tutar,

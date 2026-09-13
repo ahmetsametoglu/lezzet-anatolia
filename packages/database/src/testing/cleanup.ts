@@ -308,15 +308,22 @@ export interface PurgeTargets {
    */
   accountIds?: string[];
   /**
-   * Test belgeleri (12.12) — `money_movement.document_id` `set null`, yani belge hareketlerden
-   * bağımsız silinebilir; sıra yine hareketlerden sonra ki bağ boşa düşmesin.
+   * Test belgeleri (12.12) — belge bağı (`money_allocation`) iki uçtan `cascade`: belge silinince bağ
+   * gider, hareket kalır. Sıra yine hareketlerden sonra.
    */
   documentIds?: string[];
   /**
-   * Testin sözlüğe eklediği etiketler (12.12) — referans veri tablosu; testin kendi damgalı slug'ı
-   * dışında hiçbir satıra dokunulmaz. Hareketler silindikten SONRA: etiket taşıyan satır kalmasın.
+   * Testin sözlüğe eklediği etiketler (12.12) — testin kendi damgalı slug'ı dışında hiçbir satıra
+   * dokunulmaz. Hareketler silindikten SONRA: etiket taşıyan satır kalmasın.
    */
   tagSlugs?: string[];
+  /**
+   * Testin sözlüğe eklediği TÜRLER (13.09) — hareket, belge ve carinin varsayılanı türe FK ile bağlı
+   * (`no action`): onları taşıyan satır durdukça tür silinemez, bu yüzden hepsinden SONRA.
+   */
+  natureSlugs?: string[];
+  /** Testin açtığı cariler (13.09) — hareket ve belge bağı `set null`; hareketlerden sonra, türlerden önce. */
+  counterpartyIds?: string[];
   /**
    * Ayar satırları — kimlikle, ANAHTARLA DEĞİL: anahtar kapsam satırlarını da taşır ve anahtarla
    * silen bir test, kendi damgalı bölge satırıyla birlikte işletmenin gerçek ayarını da götürürdü.
@@ -368,6 +375,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     accountIds,
     documentIds,
     tagSlugs,
+    natureSlugs,
+    counterpartyIds,
     jobNames,
     settingIds,
     analyticsSessionKeys,
@@ -398,6 +407,8 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     accountIds: clean(targets.accountIds),
     documentIds: clean(targets.documentIds),
     tagSlugs: clean(targets.tagSlugs),
+    natureSlugs: clean(targets.natureSlugs),
+    counterpartyIds: clean(targets.counterpartyIds),
     jobNames: clean(targets.jobNames),
     settingIds: clean(targets.settingIds),
   };
@@ -630,10 +641,13 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       await mustDelete(db, 'bank_import_profile', (q) => q.in('account_id', accountIds));
       await mustDelete(db, 'account', (q) => q.in('id', accountIds));
     }
-    // Belge ve etiket hareketlerden SONRA (12.12): belge bağı `set null`, etiketin FK'si yok ama
-    // etiket taşıyan satır kalmışsa sözlük eksik kalır — sıra yine de doğru olsun.
+    // Belge, cari, etiket ve tür hareketlerden SONRA (12.12 · 13.09): belge bağı iki uçtan `cascade`,
+    // cari bağı `set null`, etiketin FK'si yok; tür ise FK'dir (`no action`) — onu taşıyan hareket,
+    // belge ya da carinin varsayılanı durdukça silinemez, bu yüzden EN SONDA.
     if (documentIds.length > 0) await mustDelete(db, 'money_document', (q) => q.in('id', documentIds));
+    if (counterpartyIds.length > 0) await mustDelete(db, 'counterparty', (q) => q.in('id', counterpartyIds));
     if (tagSlugs.length > 0) await mustDelete(db, 'movement_tag', (q) => q.in('slug', tagSlugs));
+    if (natureSlugs.length > 0) await mustDelete(db, 'movement_nature', (q) => q.in('slug', natureSlugs));
   });
 
   // 5) Bağımsız kayıtlar — hiçbirinin ötekiyle bağı yok, o yüzden hepsi tek grupta ve zincirden
