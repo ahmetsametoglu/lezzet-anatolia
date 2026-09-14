@@ -23,7 +23,7 @@ import type { ReactNode } from 'react';
  * `px-6` yazmak öngörülemez sonuç verir (birleştirme yardımcısı yok). Bu yüzden her eksen kapalı
  * bir liste; "kendi sınıfını geçir" kapısı bilerek açılmadı, o kapı sapmanın geri döndüğü kapıdır.
  */
-type CardPad = 'roomy' | 'snug' | 'tight';
+type CardPad = 'roomy' | 'snug' | 'tight' | 'side' | 'row';
 type CardCompactPad = 'md' | 'sm';
 type CardGap = 'xs' | 'sm' | 'md';
 
@@ -32,6 +32,11 @@ const PAD: Record<CardPad, string> = {
   snug: 'px-6 py-5.5',
   // Satır içi form taşıyan dar kart — v1 başlığının yer paneli (`padding:18px 20px`, 13.09).
   tight: 'px-5 py-4.5',
+  // v1 sepet sütununun adres kartı (`padding:20px 22px`, 14.09).
+  side: 'px-5.5 py-5',
+  // Tek satırlık kart — v1 sepetin kimlik kartı (`padding:15px 18px`, 14.09). Satır, kartın tek
+  // çocuğu olarak kurulur: kabuk `flex-col` kalır, yön sınıfları çakışmaz.
+  row: 'px-4.5 py-3.75',
 };
 const COMPACT_PAD: Record<CardCompactPad, string> = {
   md: 'px-4 py-4',

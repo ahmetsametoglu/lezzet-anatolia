@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { addressLineOf, MIN_QUERY_LENGTH } from '@lezzet/address-fr';
-import { CountryEnum, type Address, type AddressGeoPrecision, type Country } from '@lezzet/types';
+import { CountryEnum, type Address, type Country } from '@lezzet/types';
 import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { Button, focusRingClass } from '@/components/customer/ui/button';
@@ -12,7 +12,7 @@ import { Dialog } from '@/components/customer/ui/dialog';
 import { Icon } from '@/components/customer/ui/icons';
 import { SuggestionList } from '@/components/customer/ui/suggestion-list';
 import { FormInputField } from '@/components/customer/form/form-input-field';
-import { checkAddressAction, resolveGermanAddressAction } from '@/lib/address/lookup-actions';
+import { checkAddressAction, resolveGermanAddressAction, type CheckedPoint } from '@/lib/address/lookup-actions';
 import { useAddressSearch } from '@/lib/address/use-address-search.hook';
 import { useGermanAddressSearch } from '@/lib/address/use-german-address-search.hook';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
@@ -78,9 +78,10 @@ export interface NewAddressInput {
   /**
    * Seçilen önerinin ya da doğrulamanın KOORDİNATI (11.9 · 13.09) — bir BEYAN değil bir ADAYDIR:
    * sunucu onu makullük süzgecinden geçirir (`resolveAddressPoint`) ve posta kodu merkezinden çok
-   * uzaksa yazmaz. Süzgeçten düşerse satır tarama kuyruğuna girer.
+   * uzaksa yazmaz. Süzgeçten düşerse satır tarama kuyruğuna girer. Kaynağıyla gelir (BAN / Google —
+   * `CheckedPoint` künyesi): kaynaksız nokta `ban` sayılıyordu.
    */
-  point?: { lat: number; lng: number; precision: AddressGeoPrecision };
+  point?: CheckedPoint;
   makeDefault?: boolean;
   /**
    * "Fatura adresim yap" (kullanıcı kararı 08.09) — `makeDefault`ın ikizi, ayrı rol. Yalnız
@@ -213,7 +214,7 @@ interface Picked {
   postalCode: string;
   city: string;
   country: Country;
-  point: { lat: number; lng: number; precision: AddressGeoPrecision };
+  point: CheckedPoint;
 }
 
 interface ManualDraft {
@@ -291,7 +292,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
     const row = ban.suggestions.find((suggestion) => suggestion.id === id);
     if (!row) return;
     // Nokta SEÇİLEN satırdan: müşterinin gözüyle onayladığı kapı, ikinci bir çağrı gerekmez.
-    choose({ line1: addressLineOf(row), postalCode: row.postalCode, city: row.city, country: 'FR', point: { lat: row.latitude, lng: row.longitude, precision: row.kind } });
+    choose({ line1: addressLineOf(row), postalCode: row.postalCode, city: row.city, country: 'FR', point: { lat: row.latitude, lng: row.longitude, precision: row.kind, source: 'ban' } });
   };
 
   const pickGerman = async (placeId: string) => {
@@ -311,7 +312,8 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
       postalCode: resolved.postalCode,
       city: resolved.city,
       country: 'DE',
-      point: { lat: resolved.latitude, lng: resolved.longitude, precision: resolved.precision },
+      // Nokta Google'ın yer detayından: kaynak `google` — 30 gün kuralı bu etikete bakıyor.
+      point: { lat: resolved.latitude, lng: resolved.longitude, precision: resolved.precision, source: 'google' },
     });
   };
 

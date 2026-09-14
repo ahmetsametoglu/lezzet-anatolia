@@ -124,7 +124,10 @@
       "addressEmpty": "Nereye getirelim? Sipariş için bir teslimat adresi gerekir.",
       "addressAdd": "+ Adres ekle",
       "addressChange": "Değiştir",
-      "addressEdit": "Düzenle"
+      "addressEdit": "Düzenle",
+      "stripInRoute": "{place} — {date} kapınızda, ücretsiz",
+      "stripInRouteNoDate": "{place} — kapıya teslim, ücretsiz",
+      "stripShipping": "{place} — kargoyla gönderilir"
     },
     "gate": {
       "login": "Devam etmek için giriş yapın",
@@ -256,7 +259,10 @@
       "addressEmpty": "Où livrons-nous ? Une adresse de livraison est nécessaire pour commander.",
       "addressAdd": "+ Ajouter une adresse",
       "addressChange": "Changer",
-      "addressEdit": "Modifier"
+      "addressEdit": "Modifier",
+      "stripInRoute": "{place} — livré chez vous {date}, livraison offerte",
+      "stripInRouteNoDate": "{place} — livraison à domicile, offerte",
+      "stripShipping": "{place} — expédié par transporteur"
     },
     "gate": {
       "login": "Connectez-vous pour continuer",
@@ -388,7 +394,10 @@
       "addressEmpty": "Wohin liefern wir? Zum Bestellen ist eine Lieferadresse nötig.",
       "addressAdd": "+ Adresse hinzufügen",
       "addressChange": "Ändern",
-      "addressEdit": "Bearbeiten"
+      "addressEdit": "Bearbeiten",
+      "stripInRoute": "{place} — {date} an Ihrer Haustür, kostenlos",
+      "stripInRouteNoDate": "{place} — Lieferung an die Haustür, kostenlos",
+      "stripShipping": "{place} — Versand per Paket"
     },
     "gate": {
       "login": "Zum Fortfahren anmelden",

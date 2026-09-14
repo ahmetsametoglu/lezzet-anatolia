@@ -28,7 +28,8 @@ export type GeocodeOutcome =
       point: GeoPoint;
       /** Ölçümün inceliği — `municipality` bir kapıyı değil belediye merkezini gösterir. */
       precision: AddressGeoPrecision;
-      source: AddressGeoSource;
+      /** Noktayı veren SERVİS — `manual` bu yoldan gelmez: insanın koyduğu nokta bir servis cevabı değil. */
+      source: Extract<AddressGeoSource, 'ban' | 'google'>;
       /** Servisin eşleşme güveni (0..1) — eşiğin altındaysa çağıran `no_match` sayar. */
       score: number;
     }

@@ -163,15 +163,18 @@ export interface DeliveryPlace {
  * adresi olan müşteride artık **adres kazanır**: yer = varsayılan adres; çerez yalnız ziyaretçide
  * ve henüz adresi olmayan müşteride konuşur.
  *
- * Tarayıcıya İNEN alt küme: alıcı adı, telefon ve coğrafi alanlar taşınmaz — hap ve sepet paneli
- * yalnız "hangi adres, nerede" sorusunu cevaplıyor.
+ * Tarayıcıya İNEN alt küme: telefon ve coğrafi alanlar taşınmaz — hap ve sepet paneli "hangi adres,
+ * nerede, kime" sorusunu cevaplıyor. Alıcı 14.09'da katıldı (kullanıcı isteği): sepetin adres kartı
+ * alıcının adını gösteriyor ve liste gelene kadar seçili adresi bu özetten çiziyor — özette alıcı
+ * olmasa kart, liste gelince bir satır zıplardı.
  */
-export type PlaceAddress = Pick<Address, 'id' | 'label' | 'line1' | 'line2' | 'postalCode' | 'city' | 'country'>;
+export type PlaceAddress = Pick<Address, 'id' | 'label' | 'recipient' | 'line1' | 'line2' | 'postalCode' | 'city' | 'country'>;
 
 export function toPlaceAddress(address: Address): PlaceAddress {
   return {
     id: address.id,
     label: address.label,
+    recipient: address.recipient,
     line1: address.line1,
     line2: address.line2,
     postalCode: address.postalCode,

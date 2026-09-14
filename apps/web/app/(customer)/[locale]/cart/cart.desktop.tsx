@@ -62,6 +62,11 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
           </Link>
         </div>
 
+        {/* Yer değişimi bildirimi LİSTENİN ÜSTÜNDE, uyarıların ilki (kullanıcı isteği 14.09): değişen
+            şey kalemler ve bildirim onların üstünde okunur; aşağıdaki engel ve kısıt blokları çoğu
+            zaman onun sonucu. Önce sağ sütunda, özetin üstünde duruyordu. */}
+        <PlaceChangeCard t={t} locale={locale} />
+
         {/* Stok uyarısı BAL tonundadır, terracotta değil: müşteri hata yapmadı, dünya değişti.
             Kırmızı bir bant onu suçlu gösterir; asıl kırmızı, çıkarılacak satırın düğmesindedir. */}
         {view.hasBlocked && (
@@ -105,9 +110,6 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
         {/* KİM ve NEREYE — özetin en üstünde (kullanıcı kararı 13.09): ödemeye geçmenin iki ön
             şartı, tutardan önce okunur. Girişsizde giriş bloğu, girişlide seçili adres. */}
         <CartIdentity t={t} locale={locale} />
-        {/* Yer değişimi bildirimi ÖZETİN ÜSTÜNDE (tasarım: sağ sütunun kendi kartı): müşteri
-            önce neyin değiştiğini okur, sonra tutara bakar. */}
-        <PlaceChangeCard t={t} locale={locale} />
         <CartSummary view={view} t={t} locale={locale} grouped={grouped} />
         <CartCoupon t={t} locale={locale} />
       </div>

@@ -28,9 +28,15 @@ export interface AddressPointCandidate {
   lng: number;
   precision: AddressGeoPrecision;
   /**
-   * Noktayı KİM verdi (13.09): FR önerisi BAN, DE önerisi Google. Verilmezse `ban` — 13.09'a dek
-   * tek kaynak oydu ve öyle yazılıyordu. Kaynak yaşlanma kuralını belirliyor: Google noktası 30
-   * günden uzun saklanamaz (`geocode-scan`), BAN noktası süresiz.
+   * Noktayı KİM verdi (13.09): FR önerisi BAN, DE önerisi Google. Kaynak yaşlanma kuralını
+   * belirliyor: Google noktası 30 günden uzun saklanamaz (`geocode-scan`), BAN noktası süresiz.
+   *
+   * Verilmezse `ban` — ve bu varsayılan bir kez yanlış veri yazdı (14.09): web formu kaynağı hiç
+   * geçirmiyordu, Almanya'nın Google noktası `ban` diye kaydedildi ve 30 gün kuralının dışına düştü.
+   * Web artık kaynağı her yolda TİPLE zorunlu geçiriyor (`CheckedPoint`, `lookup-actions`).
+   * Alan yalnız mobil sözleşmesi için isteğe bağlı kalıyor: o sözleşme kaynak taşımıyor ve mobilin
+   * noktaları bugün yalnız BAN'dan geliyor (ölçüldü 14.09 — mobilde Google yolu yok), yani orada
+   * varsayılan doğru. Mobil Google'a açılırsa sözleşme `source` taşımalı; o gün bu alan zorunlu olur.
    */
   source?: Extract<AddressGeoSource, 'ban' | 'google'>;
 }

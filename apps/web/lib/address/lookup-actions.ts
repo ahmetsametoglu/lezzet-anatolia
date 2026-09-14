@@ -1,8 +1,15 @@
 'use server';
 
 import { getLocale } from 'next-intl/server';
-import { geocoder, resolveAddressSuggestion, suggestAddresses, type AddressResolveOutcome, type AddressSuggestOutcome } from '@lezzet/application';
-import type { AddressGeoPrecision, Country } from '@lezzet/types';
+import {
+  geocoder,
+  resolveAddressSuggestion,
+  suggestAddresses,
+  type AddressPointCandidate,
+  type AddressResolveOutcome,
+  type AddressSuggestOutcome,
+} from '@lezzet/application';
+import type { Country } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 
 /**
@@ -24,12 +31,16 @@ export type GermanSuggestion = Extract<AddressSuggestOutcome, { status: 'ok' }>[
 /** Seçilen önerinin açılmış hâli: sokak satırı, kod, şehir, nokta, incelik. */
 export type ResolvedGermanAddress = Extract<AddressResolveOutcome, { status: 'ok' }>['address'];
 
-/** Doğrulamanın cevabı — kapının noktası ve inceliği; kayda ADAY olarak gider. */
-export interface CheckedPoint {
-  lat: number;
-  lng: number;
-  precision: AddressGeoPrecision;
-}
+/**
+ * Doğrulanmış nokta — öneriden seçilen ya da elle girilip doğrulanan kapının noktası, inceliği ve
+ * KAYNAĞI (BAN / Google); kayda ADAY olarak gider.
+ *
+ * **Kaynak ZORUNLU (14.09):** noktanın kaynağı düştüğünde uygulama katmanı `ban` varsayıyordu ve
+ * Almanya'nın Google noktası `ban` diye yazılıyordu (ölçüldü: 90451 Nürnberg, `geo_source = ban`).
+ * Kaynak yaşlanma kuralını belirliyor — Google noktası 30 günden uzun saklanamaz (`geocode-scan`),
+ * yanlış etiketli nokta o kuralın dışına düşüyordu.
+ */
+export type CheckedPoint = Required<AddressPointCandidate>;
 
 export async function suggestGermanAddressesAction(input: { query: string; sessionToken: string }): Promise<GermanSuggestion[]> {
   if (!(await currentCustomerId())) return [];
@@ -52,5 +63,5 @@ export async function resolveGermanAddressAction(input: { placeId: string; sessi
 export async function checkAddressAction(input: { line1: string; postalCode: string; city: string; country: Country }): Promise<CheckedPoint | null> {
   if (!(await currentCustomerId())) return null;
   const outcome = await geocoder().locate(input);
-  return outcome.status === 'ok' ? { lat: outcome.point.lat, lng: outcome.point.lng, precision: outcome.precision } : null;
+  return outcome.status === 'ok' ? { lat: outcome.point.lat, lng: outcome.point.lng, precision: outcome.precision, source: outcome.source } : null;
 }
