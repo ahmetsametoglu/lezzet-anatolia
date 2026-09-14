@@ -2817,6 +2817,14 @@ tartışıldı (web/denetim · müşteri web · mobil adına); karar kullanıcı
   o ekranlarda geçerliliğini yitirir.
 - **Sıra:** native uygulama müşteri ve operasyon olarak ikiye ayrılıyor (başka bir ajanın işi). Web telefon
   görünümünün yol haritası bu ayrım bittikten sonra yazılır. İş: `08.58`.
-- **Açık soru (yol haritasında):** ikon. 14.09'daki "ikon deseni her yerde aynı" kararı ile bu karar yan yana:
-  native ikonlar her yerde mi (masaüstü dahil), v1 ikonları her yerde mi? Web'in 32 ikon adının 18'inin
-  native'de karşılığı yok (ortak ad 14).
+- **İkon (kullanıcı kararı, aynı gün):** telefonda (uygulama + web telefon görünümü) native çizimler; web
+  masaüstü v1 ikonlarında kalır. 14.09'daki "ikon deseni her yerde aynı" kararı böylece telefonla sınırlandı.
+  Web'in 32 ikon adının 18'inin native'de karşılığı yok (ortak ad 14); telefon görünümünde eşlenir, olmayan
+  çizim tasarımdan istenir.
+- **Ekran metinleri (kullanıcı kararı, aynı gün):** aynı müşteri ekranının metni ortak pakette durur (i18n,
+  ekran başına; `packages/i18n/src/notification-copy.ts` deseni) ve iki taraf okur; web'e özgü metin
+  (SEO, misafir hâlleri) web'de kalır. CLAUDE §2'nin "her sayfa kendi `messages.json`u" kuralı müşteri
+  ekranları için genişler. Gerekçe ölçüldü: aynı ekranın metni iki dosyada ayrışıyordu (sepet: native'in
+  78 metninin 30'u web'de birebir).
+- **Tasarım dosyası:** `design/project/01-musteri/Musteri Mobil.dc.html` (tek kaynak; eski adı
+  "Mobil - Musteri v3"). Yol haritası: `08.58`.
