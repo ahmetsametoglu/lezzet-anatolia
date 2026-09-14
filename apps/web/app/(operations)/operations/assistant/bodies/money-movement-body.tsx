@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { matchNature } from '@lezzet/domain-core';
 import { fromCents, toCents } from '@lezzet/helper';
 import type { MoneyMovementPayload } from '@lezzet/types';
 import { MovementFormBody } from '@/components/operation/form/movement-form/body';
@@ -39,24 +40,29 @@ import type { ProposalSubject } from '@/lib/assistant/subject';
 /**
  * Asistanın önerdiği hareket → formun açılış değerleri. Transfer ise `null` — o `TransferBody`nin.
  *
- * Kategori kelimesi SÖZLÜKLE eşleşirse TÜR olur (slug ya da okunur ad, 13.09); eşleşmezse ya da
- * hareketin türüne uymazsa form türsüz açılır ve operatör seçer — asistanın kelimesini uydurma bir
- * türe çevirmek defteri yanıltırdı. Sermayenin tek türü kendiliğinden konur (`natureAfterChange`).
+ * Tür dilekçede sözlük slug'ı (22.42) ve burada bir kez daha MOTORLA eşlenir (`matchNature`: sözlük
+ * öneri ile onay arasında değişmiş olabilir); eşleşmezse ya da hareketin türüne uymazsa form türsüz
+ * açılır ve operatör seçer — asistanın kelimesini uydurma bir türe çevirmek defteri yanıltırdı.
+ * Sermayenin tek türü kendiliğinden konur (`natureAfterChange`).
  */
 export function movementValuesFrom(payload: MoneyMovementPayload, natures: AssistantFormOptions['natures']): ManualMovementForm | null {
   if (!(MANUAL_TYPES as readonly string[]).includes(payload.type)) return null;
   const type = payload.type as ManualType;
-  const word = payload.category?.trim().toLocaleLowerCase('tr') ?? '';
-  const hit = word === '' ? undefined : natures.find((nature) => nature.value === word || nature.label.toLocaleLowerCase('tr') === word);
+  const hit = matchNature(
+    natures.map((nature) => ({ slug: nature.value, label: nature.label, direction: nature.direction })),
+    payload.nature,
+    payload.direction,
+  );
   return {
     accountId: payload.accountId,
     type,
     // Payload CENT taşıyor, form EURO — çevrim burada (`ManualMovementSchema` künyesi).
     amount: fromCents(payload.amountCents),
     direction: payload.direction,
-    nature: natureAfterChange(natures, type, payload.direction, hit?.value ?? ''),
-    // Asistanın dilekçesi cariyi adla taşıyor, kimlikle değil; seçimi operatör yapar.
-    counterpartyId: '',
+    nature: natureAfterChange(natures, type, payload.direction, hit?.slug ?? ''),
+    // Cari sunucuda tam adla çözüldüyse kimliği dolu gelir (22.42); çözülmediyse ad künyede durur
+    // ("Kime" satırı) ve seçimi operatör yapar.
+    counterpartyId: payload.counterpartyId ?? '',
     tags: [],
     campaign: '',
     // Değer tarihi yoksa BUGÜN: uydurma bir tarih defterde yanlış güne yazardı.
@@ -109,7 +115,7 @@ export function MoneyMovementBody({ payload, subject, options, meta, values, onC
       <ProposalAside
         subject={subject}
         fallbackTitle="Defter satırı"
-        facts={factsOf(payload, live, options.accounts)}
+        facts={factsOf(payload, live, options)}
         payload={payload}
         meta={meta}
       />
@@ -121,11 +127,12 @@ export function MoneyMovementBody({ payload, subject, options, meta, values, onC
  * Dilekçenin öne çıkan sayıları. Hesap ADI da burada: kararın yarısı "hangi hesaptan" sorusudur ve
  * form onu kimlikle değil adla gösteriyor — künye ikisinin aynı hesap olduğunu doğrulatıyor.
  */
-function factsOf(payload: MoneyMovementPayload, values: ManualMovementForm, accounts: AssistantFormOptions['accounts']): ProposalFact[] {
+function factsOf(payload: MoneyMovementPayload, values: ManualMovementForm, options: AssistantFormOptions): ProposalFact[] {
   // Hesabın ADI dilekçede yazılı ama formda seçili olan KİMLİK — karşılaştırma için ad gerekiyor.
   // Liste zaten kuyruk sayfasında okunmuştu (`AssistantFormOptions`), ikinci sorgu açılmıyor.
-  const nowAccount = accounts.find((a) => a.id === values.accountId)?.name ?? '—';
+  const nowAccount = options.accounts.find((a) => a.id === values.accountId)?.name ?? '—';
   const directionText = (d: 'in' | 'out') => (d === 'in' ? 'Hesaba girdi' : 'Hesaptan çıktı');
+  const natureLabel = (slug: string | null) => (slug ? (options.natures.find((n) => n.value === slug)?.label ?? slug) : '—');
   return [
     // **`money()` CENT ister** — dilekçe zaten cent taşıyor, form ise EURO (`ManualMovementSchema`
     // künyesi). Burada iki yanlış birden vardı: dilekçenin centi 100'e bölünüp euro geçiliyordu ve
@@ -134,5 +141,13 @@ function factsOf(payload: MoneyMovementPayload, values: ManualMovementForm, acco
     { label: 'Tutar', value: money(payload.amountCents), now: money(toCents(values.amount ?? 0)) },
     { label: 'Hesap', value: payload.accountName, now: nowAccount },
     { label: 'Yön', value: directionText(payload.direction), now: directionText(values.direction) },
+    // "Kime" ve "Tür" (22.42): dilekçe cariyi ve türü artık kimlikle taşıyor; operatör değiştirirse
+    // fark burada görünür, çözülmemiş cari adı da ("TotalEnergies → Total") burada okunur.
+    {
+      label: 'Kime',
+      value: payload.counterpartyName ?? '—',
+      now: options.counterparties.find((c) => c.value === values.counterpartyId)?.label ?? '—',
+    },
+    { label: 'Tür', value: natureLabel(payload.nature), now: natureLabel(values.nature || null) },
   ];
 }

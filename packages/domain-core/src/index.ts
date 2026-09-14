@@ -53,6 +53,7 @@ export * from './payment/credit';
 export * from './payment/payment-status';
 export * from './money/movement';
 export * from './money/dictionary-slug';
+export * from './money/pinpoint';
 export * from './money/document-file';
 export * from './accounting/export';
 export * from './accounting/movement-export';

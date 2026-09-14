@@ -4,7 +4,9 @@ import {
   BundleService,
   CategoryService,
   CollectionService,
+  CounterpartyService,
   DeliveryZoneService,
+  MovementNatureService,
   PostalCodeDemandService,
   PriceService,
   ProductService,
@@ -19,7 +21,17 @@ import {
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
-import { discountPercentOf, offerDecisionOf, rebalanceAllocations, suggestedOfferPriceCents } from '@lezzet/domain-core';
+import {
+  acceptsNature,
+  discountPercentOf,
+  hasSupplierIdentity,
+  matchNature,
+  offerDecisionOf,
+  pinpointCounterparty,
+  pinpointSupplier,
+  rebalanceAllocations,
+  suggestedOfferPriceCents,
+} from '@lezzet/domain-core';
 // Para biçimi TEK YERDEN (`formatPrice`): özet cümleleri operasyon yüzeyinde okunuyor ve elle
 // kurulan `(cents / 100).toFixed(2)` Türkçede yanlış ayraç veriyordu — "150.00 €" değil "150,00 €"
 // (kullanıcı tespiti 12.08, onay ekranının başlığında görüldü).
@@ -109,23 +121,45 @@ function linesArg(raw: unknown): Record<string, string> | null {
 }
 
 /**
- * Tedarikçiyi ADIYLA bulur — üç aracın ortak kapısı (`stock_intake` · `money_movement`).
+ * Tedarikçiyi FATURADAKİ KİMLİKLE bulur — iki aracın ortak kapısı (`stock_intake` · `purchase_order`).
  *
- * Kimlik yerine ad, çünkü uuid'yi veren bir okuma aracı YOK (`reference_data` yalnız ad listeler).
- * Ad verilmediyse hata değil `null` döner: tedarikçi ikisinde de isteğe bağlı — plansız alım ve
- * tedarikçisiz gider meşru hâllerdir. Bulunamayan ad ise HATADIR ve mevcutları yazar: sessizce
- * `null`a düşmek, modelin yazdığını sandığı bağı sessizce koparırdı.
+ * ── NOKTA ATIŞI (22.42 · kullanıcı kararı 14.09) ────────────────────────────
+ * Bir tur ad PARÇASIYLA aranıyordu (`includes`) ve bulunamayınca hata MEVCUT TEDARİKÇİLERİN HEPSİNİ
+ * yazıyordu; `reference_data` da listeyi zaten veriyordu. Kullanıcı ikisini de reddetti: *"yapay zekâ
+ * tüm tedarikçileri ben çekeyim, veya birkaç karakterle isimde arama yapayım — bunlar doğru değil;
+ * vergi numarası, telefon ya da tam ad faturanın üzerinde olur, nokta atışı arama yapması gerekir."*
+ * Kimlik artık üç anahtardan biri — vergi numarası · telefon · tam ad — ve eşitlik tamdır
+ * (`pinpointSupplier`). Bulunamayan kimlik HATADIR ama aday listesi DÖNMEZ: model faturaya bakar ya
+ * da yöneticiye sorar; tahminle ikinci bir deneme yapmaz.
+ *
+ * Kimlik verilmediyse hata değil `null`: tedarikçi ikisinde de isteğe bağlı — plansız alım meşrudur.
  */
 async function resolveSupplier(
   db: ReturnType<typeof serviceDb>,
-  raw: unknown,
+  args: Record<string, unknown>,
 ): Promise<{ supplier: { id: string; name: string } | null; error?: string }> {
-  const wanted = typeof raw === 'string' ? raw.trim() : '';
-  if (!wanted) return { supplier: null };
-  const suppliers = await new SupplierService(db).list({ activeOnly: true });
-  const match = suppliers.find((s) => s.name.toLowerCase().includes(wanted.toLowerCase()));
-  if (!match) return { supplier: null, error: `Tedarikçi bulunamadı: '${wanted}'. Mevcutlar: ${suppliers.map((s) => s.name).join(' · ')}` };
-  return { supplier: { id: match.id, name: match.name } };
+  const text = (key: string) => (typeof args[key] === 'string' ? (args[key] as string).trim() : null);
+  const identity = { vatNumber: text('supplierVatNumber'), phone: text('supplierPhone'), name: text('supplierName') };
+  if (!hasSupplierIdentity(identity)) return { supplier: null };
+  const outcome = pinpointSupplier(await new SupplierService(db).list({ activeOnly: true }), identity);
+  if (outcome.status === 'found') return { supplier: { id: outcome.record.id, name: outcome.record.name } };
+  const given = [
+    identity.vatNumber ? `vergi no '${identity.vatNumber}'` : null,
+    identity.phone ? `telefon '${identity.phone}'` : null,
+    identity.name ? `ad '${identity.name}'` : null,
+  ]
+    .filter((part) => part !== null)
+    .join(', ');
+  if (outcome.status === 'ambiguous') {
+    return {
+      supplier: null,
+      error: `Verilen kimlikler (${given}) birden çok tedarikçiye gidiyor — fatura ile kayıt çelişiyor. Yalnız vergi numarasıyla tekrar deneyin ya da yöneticiye sorun.`,
+    };
+  }
+  return {
+    supplier: null,
+    error: `Tedarikçi bulunamadı (${given}). Faturadaki vergi numarasını (TVA/SIRET), telefonu ya da tam unvanı OLDUĞU GİBİ verin; parça ad ya da tahminle aramayın. Belgede yoksa yöneticiye sorun.`,
+  };
 }
 
 /** Pozitif tam sayı argümanı; verilmediyse ya da anlamsızsa `null` ("sınır yok"). */
@@ -413,7 +447,7 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
   // aracından alamıyordu — yani "Anadolu Gıda'ya sipariş aç" isteği karşılanamıyor, araç her
   // seferinde en büyük gruba düşüyordu. Alan opsiyonel olduğu için arıza sessizdi: öneri kuruluyor
   // ama istenen tedarikçiye değil.
-  const { supplier: wantedSupplier, error: supplierError } = await resolveSupplier(db, args.supplierName);
+  const { supplier: wantedSupplier, error: supplierError } = await resolveSupplier(db, args);
   if (supplierError) return { error: supplierError };
   const group = wantedSupplier
     ? withSupplier.find((g) => g.supplierId === wantedSupplier.id)
@@ -792,15 +826,15 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   }
   if (problems.length > 0) return { error: `${problems.length} kalem sorunu — hepsini düzeltip tekrar gönderin:`, problems };
 
-  // ── TEDARİKÇİ ADLA BULUNUR (11.08 · denetim raporu, okuma yönü taraması) ──
+  // ── TEDARİKÇİ FATURADAKİ KİMLİKLE BULUNUR (11.08 adla · 22.42 nokta atışı, `resolveSupplier`) ──
   //
   // Önce `supplierId: uuid` isteniyordu ve o kimliği veren hiçbir okuma aracı yoktu — `reference_data`
-  // tedarikçileri yalnız adlarıyla listeliyor. Sonuç ÖLÇÜLDÜ: son turdaki iki mal kabulün ikisi de
+  // o gün tedarikçileri adlarıyla listeliyordu (22.42'de listeleme kalktı). Sonuç ÖLÇÜLDÜ: son turdaki iki mal kabulün ikisi de
   // tedarikçisiz yazılmıştı. Bedeli görünmez ve zincirleme: `receive_intake` son alış fiyatını
   // `where supplier_id = p_supplier_id` ile tazeliyor, yani tedarikçi boşken HİÇBİR satır
   // güncellenmiyor (0010_supply.sql:236). Fiyat tazelenmeyince `propose_purchase_order` da
   // "yaklaşık ne kadara mal olacak" sorusunu cevaplayamıyor — 22.12'de açılan alan hep boş kalırdı.
-  const { supplier, error: supplierError } = await resolveSupplier(db, args.supplierName);
+  const { supplier, error: supplierError } = await resolveSupplier(db, args);
   if (supplierError) return { error: supplierError };
 
   // ── AÇIK SİPARİŞ TEDARİKÇİDEN BULUNUR, MODEL UUID TAŞIMAZ ─────────────────
@@ -929,21 +963,49 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
     };
   }
 
-  // Tedarikçi burada da ADLA (11.08): uuid'yi veren okuma aracı yoktu ve ölçüldü — son turdaki iki
-  // gider de tedarikçisiz yazılmıştı. Bağ kurulmayınca ödeme kime yapıldığı serbest metinde kalır,
-  // tedarikçi bakiyesine düşmez.
-  const { supplier, error: supplierError } = await resolveSupplier(db, args.supplierName);
-  if (supplierError) return { error: supplierError };
+  // ── TÜR SÖZLÜKTEN, ÖNERİ ANINDA DOĞRULANIR (22.42) ──────────────────────
+  // Bir tur serbest `category` kelimesiydi ve sözlükle ancak onay ekranında karşılaştırılıyordu:
+  // eşleşmeyince hareket türsüz açılıyor, giderde kaydet düğmesi kilitleniyordu. Kelime artık
+  // burada sözlükle eşlenir (`matchNature`); tanınmayan kelime HATADIR — model `reference_data`
+  // türlerinden birini verir ya da alanı boş bırakır (o zaman türü operatör seçer).
+  const natureWord = typeof args.nature === 'string' && args.nature.trim() ? args.nature.trim() : null;
+  if (natureWord && !acceptsNature(type as MoneyMovementPayload['type'])) {
+    return { error: 'Transfer tür almaz — onu karşı hesap açıklar. nature alanını kaldırın.' };
+  }
+  const nature = natureWord
+    ? matchNature(await new MovementNatureService(db).list({ activeOnly: true }), natureWord, direction as MoneyMovementPayload['direction'])
+    : null;
+  if (natureWord && !nature) {
+    return {
+      error: `Tür sözlükte yok ya da bu yöne uymuyor: '${natureWord}'. reference_data.natures listesindeki slug ya da adı OLDUĞU GİBİ verin; emin değilseniz nature alanını boş bırakın, türü yönetici seçer.`,
+    };
+  }
+
+  // ── CARİ NOKTA ATIŞI (22.42 · kullanıcı kararı 14.09) ─────────────────────
+  // Kime ödendiği tam ad ya da eşleşme kelimesiyle bulunur (`pinpointCounterparty`); cari listesi
+  // hiçbir araçtan dönmez. Bulunamazsa öneri YİNE kurulur: ad kartta yazılı kalır, kimlik boş ve
+  // seçimi operatör yapar — fiş fotoğrafındaki "TotalEnergies" sözlükte yoksa bu bir hata değil,
+  // sözlüğe eklenecek yeni bir caridir. Tedarikçi bu tipte YOK (payload künyesi): mal bedeli mal
+  // kabule bağlıdır ve banka eşleştirmesinden yazılır.
+  const counterpartyText = typeof args.counterpartyName === 'string' && args.counterpartyName.trim() ? args.counterpartyName.trim() : null;
+  const counterpartyOutcome = counterpartyText
+    ? pinpointCounterparty(await new CounterpartyService(db).list({ activeOnly: true }), counterpartyText)
+    : ({ status: 'none' } as const);
+  if (counterpartyOutcome.status === 'ambiguous') {
+    return { error: `'${counterpartyText}' birden çok cariye gidiyor (${counterpartyOutcome.count}) — tam adı verin.` };
+  }
+  const counterparty = counterpartyOutcome.status === 'found' ? counterpartyOutcome.record : null;
   const payload: MoneyMovementPayload = {
     accountId: account.id,
     accountName: account.name,
     direction: direction as MoneyMovementPayload['direction'],
     amountCents,
     type: type as MoneyMovementPayload['type'],
-    category: typeof args.category === 'string' && args.category.trim() ? args.category.trim() : null,
+    nature: nature?.slug ?? null,
     description: typeof args.description === 'string' && args.description.trim() ? args.description.trim() : null,
-    supplierId: supplier?.id ?? null,
-    counterpartyName: supplier?.name ?? (typeof args.counterpartyName === 'string' ? args.counterpartyName : null),
+    counterpartyId: counterparty?.id ?? null,
+    // Bulunduysa KAYITTAKİ ad (dilekçe kanonik adı taşısın), bulunmadıysa modelin yazdığı.
+    counterpartyName: counterparty?.name ?? counterpartyText,
     counterAccountId: counterAccount?.id ?? null,
     // Hedef hesabın ADI da yazılıyor: kimlik tek başına okunamaz ve onay ekranı "Kasa → uuid" diye
     // bir transferi kimseye sunamaz. Liste zaten elde, ikinci sorgu açılmıyor.
@@ -953,12 +1015,19 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   const euro = formatPrice(amountCents, 'tr');
   // Transferin özeti YÖN cümlesidir ("Kasa → Banka"), gider/tahsilat değil: para şirketten
   // çıkmıyor, yer değiştiriyor. Aynı cümleyle anlatmak iki farklı işi tek görünüşe indirirdi.
-  if (payload.counterAccountName) {
-    return queue('money_movement', payload, `${account.name} → ${payload.counterAccountName}: ${euro} transfer`, args.reason);
-  }
-  const label = direction === 'out' ? 'gider' : 'tahsilat';
-  const who = payload.counterpartyName ? ` — ${payload.counterpartyName}` : '';
-  return queue('money_movement', payload, `${account.name}: ${euro} ${label}${who}`, args.reason);
+  const summary = payload.counterAccountName
+    ? `${account.name} → ${payload.counterAccountName}: ${euro} transfer`
+    : `${account.name}: ${euro} ${direction === 'out' ? 'gider' : 'tahsilat'}${payload.counterpartyName ? ` — ${payload.counterpartyName}` : ''}`;
+  const queued = await queue('money_movement', payload, summary, args.reason);
+  return {
+    ...queued,
+    ...(nature ? { nature: nature.label } : {}),
+    ...(counterpartyText && !counterparty
+      ? {
+          counterpartyNote: `Cari bulunamadı: '${counterpartyText}' — ad kartta duracak, kimliği yönetici seçer ya da Sözlük'ten açar. Tam adı ya da eşleşme kelimesini biliyorsanız onunla tekrar gönderin.`,
+        }
+      : {}),
+  };
 }
 
 /**

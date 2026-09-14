@@ -12,7 +12,7 @@ import {
   StockIntakeService,
   StockService,
 } from '@lezzet/database';
-import { acceptsNature, classificationTypeOf } from '@lezzet/domain-core';
+import { acceptsNature, classificationTypeOf, matchNature } from '@lezzet/domain-core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   parseProposalPayload,
@@ -146,19 +146,6 @@ const applyStockIntake: Applier = async (db, raw) => {
 };
 
 /**
- * Asistanın kategori kelimesi → sözlük TÜRÜ (13.09 · ikinci karar). Slug ya da okunur ad eşleşirse
- * tür; eşleşmezse `null` — uydurulmuş bir tür yazılmaz, hareket izah kuyruğuna düşer. Yön de
- * sorulur: gider türü giren paraya konmaz (tür kapısının kuralı), o zaman da `null`.
- */
-async function natureOfCategory(db: SupabaseClient, category: string | null | undefined, direction: 'in' | 'out'): Promise<string | null> {
-  const word = category?.trim().toLocaleLowerCase('tr');
-  if (!word) return null;
-  const dictionary = await new MovementNatureService(db).list({ activeOnly: true });
-  const hit = dictionary.find((nature) => nature.slug === word || nature.label.toLocaleLowerCase('tr') === word);
-  return hit && (hit.direction === null || hit.direction === direction) ? hit.slug : null;
-}
-
-/**
  * Para hareketi — sipariş bağlı tipler (`order_payment`/`order_refund`) şemada YOK ve olmayacak:
  * onların tek meşru kaynağı siparişin kendi akışıdır (`recordForOrder`). Asistan elle bir tahsilat
  * yazabilseydi, sipariş bakiyesi iki ayrı yerden değişir ve mutabakat sessizce bozulurdu.
@@ -166,13 +153,16 @@ async function natureOfCategory(db: SupabaseClient, category: string | null | un
 const applyMoneyMovement: Applier = async (db, raw) => {
   const payload = parseProposalPayload('money_movement', raw) as MoneyMovementPayload;
   /*
-    KATEGORİ → TÜR (13.09 · ikinci karar). Asistanın önerisi serbest bir kategori kelimesi taşıyor
-    (modelin cümlesi); defter ise SÖZLÜKTEN tür istiyor. Kelime sözlükte slug ya da okunur ad olarak
-    bulunursa ve paranın yönüne uyuyorsa tür olur; bulunmazsa hareket TÜRSÜZ yazılır ve izah
-    kuyruğuna düşer — uydurulmuş bir türle "izahlı" görünmesindense, operatörün eliyle sınıflanması
+    TÜR SÖZLÜKTEN (13.09 · ikinci karar; 22.42). Dilekçe sözlük slug'ı taşıyor — MCP aracı kelimeyi
+    öneri anında sözlükle eşledi (`matchNature`). Burada bir kez daha eşlenir, çünkü sözlük öneri ile
+    onay arasında değişmiş olabilir (tür pasifleşir): bulunmazsa hareket TÜRSÜZ yazılır ve izah
+    kuyruğuna düşer — uydurulmuş bir türle "izahlı" görünmesindense operatörün eliyle sınıflanması
     doğrudur. Transfer tür almaz (onu karşı hesabı açıklar — motor: `acceptsNature`).
   */
-  const nature = acceptsNature(payload.type) ? await natureOfCategory(db, payload.category, payload.direction) : null;
+  const nature =
+    acceptsNature(payload.type) && payload.nature
+      ? (matchNature(await new MovementNatureService(db).list({ activeOnly: true }), payload.nature, payload.direction)?.slug ?? null)
+      : null;
   const row = await new MoneyMovementService(db).insert({
     accountId: payload.accountId,
     direction: payload.direction,
@@ -182,7 +172,8 @@ const applyMoneyMovement: Applier = async (db, raw) => {
     type: nature ? classificationTypeOf(payload.direction, nature) : payload.type,
     nature,
     description: payload.description,
-    supplierId: payload.supplierId,
+    // Cari sunucuda tam adla çözülmüş kimlik (22.42, `pinpointCounterparty`); tedarikçi bu tipte yok.
+    counterpartyId: payload.counterpartyId,
     counterAccountId: payload.counterAccountId,
     ...(payload.valueDate ? { valueDate: payload.valueDate } : {}),
     source: 'manual',

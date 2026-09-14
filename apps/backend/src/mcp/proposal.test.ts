@@ -329,21 +329,21 @@ describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçe
     featured_flag: { id: 'name ile bulunur', currentlyFeaturedCount: 'vitrin sayımı — araç hesaplar' },
     purchase_order: {
       warehouseId: 'warehouseCode ile bulunur',
-      supplierId: 'supplierName ile bulunur',
+      supplierId: 'supplierName ile TAM eşitlikle bulunur (22.42 nokta atışı — parça ad yok, liste yok)',
       supplierName: 'tedarikçi kaydından — araç adı doğrulayıp yazar',
       lines: 'ADETLER MOTORDAN — eşik altı eksiği hesaplanır, model veremez',
     },
     bundle_draft: { items: 'kalem listesi araçta var; payların dağıtımı motorda' },
     stock_intake: {
       warehouseId: 'warehouseCode ile bulunur',
-      supplierId: 'supplierName ile bulunur',
+      supplierId: 'supplierVatNumber · supplierPhone · supplierName ile nokta atışı bulunur (22.42 — faturadaki kimlik, liste yok)',
       supplierName: 'tedarikçi kaydından — araç adı doğrulayıp yazar',
       purchaseOrderId: 'purchaseOrderRef ile bulunur; tek açık sipariş varsa kendiliğinden bağlanır',
     },
     money_movement: {
       accountId: 'accountName ile bulunur',
       counterAccountId: 'counterAccountName ile bulunur',
-      supplierId: 'supplierName ile bulunur',
+      counterpartyId: 'counterpartyName ile bulunur — tam ad ya da eşleşme kelimesi (22.42); bulunmazsa null, adı kart taşır',
     },
     zone_extend: { zoneId: 'zoneName ile bulunur' },
     product_create: {

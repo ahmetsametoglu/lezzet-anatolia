@@ -61,7 +61,9 @@ export const ID_TWIN: Record<string, readonly string[]> = {
   warehouseId: ['warehouseName', 'warehouseCode'],
   accountId: ['accountName'],
   counterAccountId: ['counterAccountName'],
-  supplierId: ['supplierName', 'counterpartyName'],
+  // Cari kimliği (22.42): dilekçe adı da taşır, kimlik ikizinin arkasında durur.
+  counterpartyId: ['counterpartyName'],
+  supplierId: ['supplierName'],
   zoneId: ['zoneName'],
 };
 
@@ -85,13 +87,16 @@ const FIELD_LABEL: Record<string, string> = {
   orderId: 'Sipariş kimliği',
   accountId: 'Hesap kimliği',
   counterAccountId: 'Hedef hesap kimliği',
+  counterpartyId: 'Cari kimliği',
   zoneId: 'Bölge kimliği',
   // ortak
   name: 'Ad',
   description: 'Açıklama',
   reason: 'Gerekçe',
   note: 'Not',
+  // `category` para dilekçesinde 22.42'de `nature` oldu; eski dilekçeler kuyrukta durduğu sürece etiket kalır.
   category: 'Kategori',
+  nature: 'Tür',
   categoryName: 'Kategori',
   scopeName: 'Kapsam',
   warehouseCode: 'Depo',

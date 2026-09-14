@@ -4,10 +4,10 @@ import {
   CategoryService,
   CollectionService,
   DeliveryZoneService,
+  MovementNatureService,
   PostalCodeDemandService,
   PostalCodePlaceService,
   SettingsService,
-  SupplierService,
   WarehouseService,
   ZoneNoticeService,
   serviceDb,
@@ -208,7 +208,9 @@ function nearestFarthest(origin: { lat: number; lng: number } | null, points: ({
 }
 
 /**
- * Kurulum referansı — öneri araçlarının ADLA seçtirdiği her şeyin listesi.
+ * Kurulum referansı — öneri araçlarının ADLA seçtirdiği kurulum kayıtlarının listesi; TEDARİKÇİ VE
+ * CARİ HARİÇ (22.42 · kullanıcı kararı 14.09: kritik kayıt toplu verilmez, faturadaki kimlikle
+ * nokta atışı bulunur — `tools-propose.resolveSupplier` künyesi).
  *
  * Tek araçta toplanmaları bilinçli: hepsi küçük ve veriyle büyümeyen kümeler (operatörün elle
  * kurduğu kayıtlar — `CLAUDE §1` sayfalama ölçütü). Ayrı ayrı araç olsalardı model dört çağrı
@@ -216,11 +218,13 @@ function nearestFarthest(origin: { lat: number; lng: number } | null, points: ({
  */
 export async function referenceData() {
   const db = serviceDb();
-  const [accounts, categories, collections, suppliers, bundles] = await Promise.all([
+  const [accounts, categories, collections, natures, bundles] = await Promise.all([
     new AccountService(db).list({ activeOnly: true }),
     new CategoryService(db).list({ activeOnly: true }),
     new CollectionService(db).list({ activeOnly: true }),
-    new SupplierService(db).list({ activeOnly: true }),
+    // Tür sözlüğü (22.42): `propose_money_movement.nature` buradaki slug ya da adı ister — 12.16'dan
+    // beri defterin tek sınıflandırması bu sözlük ve model onu hiçbir yerden göremiyordu.
+    new MovementNatureService(db).list({ activeOnly: true }),
     // Paketler de vitrine çıkarılabilen üç şeyden biri (11.08 · denetim raporu madde 12) ve hiçbir
     // okuma aracında listelenmiyordu: `propose_featured_flag`ın `bundle` hedefi bu yüzden
     // kullanılamıyordu — model paketin adını bile göremiyordu.
@@ -234,13 +238,17 @@ export async function referenceData() {
     accounts: accounts.map((a) => ({ name: a.name, type: a.type })),
     // ── ADLAR YAZMA ARAÇLARININ ANAHTARIDIR ────────────────────────────────
     // Buradaki her ad bir `propose_*` girdisine BİREBİR verilebilir (kategori → `categoryName`,
-    // hesap → `accountName`, tedarikçi → `supplierName`, vitrin hedefi → `name`). Kimlik
+    // hesap → `accountName`, tür → `nature`, vitrin hedefi → `name`). Kimlik
     // yazılmıyor ve bilerek: uuid modelin bağlamında yer kaplar, ezberlenemez ve bir kez yanlış
     // hatırlandığında panelde "(silinmiş kayıt)" diye çizilecek bir kalem doğurur. Çözüm sunucuda.
     categories: categories.map((c) => ({ name: resolveLocalizedText(c.name, 'tr'), isFeatured: c.isFeatured })),
     collections: collections.map((c) => ({ name: resolveLocalizedText(c.name, 'tr'), isFeatured: c.isFeatured })),
     bundles: bundles.map((b) => ({ name: resolveLocalizedText(b.name, 'tr'), isFeatured: b.isFeatured })),
-    suppliers: suppliers.map((s) => ({ name: s.name })),
+    // ── TEDARİKÇİ VE CARİ LİSTELENMEZ (22.42 · kullanıcı kararı 14.09) ──────
+    // Bir tur burada tedarikçi adları vardı. Kritik kayıt toplu verilmez: yazma araçları tedarikçiyi
+    // faturadaki kimlikle (vergi no · telefon · tam ad), cariyi tam adla ya da eşleşme kelimesiyle
+    // nokta atışı bulur; bulamayınca aday listesi de dönmez.
+    natures: natures.map((n) => ({ slug: n.slug, label: n.label, direction: n.direction })),
     /**
      * İş parametreleri — BEYAZ listeyle (künye yukarıda). `null` = ayar hiç girilmemiş, yani kod
      * kendi varsayılanını kullanıyor; sıfır YAZILMAZ.

@@ -70,7 +70,7 @@ export function MoneyCard({ payload }: { payload: MoneyMovementPayload }) {
       {payload.description ? <CardLead muted>{payload.description}</CardLead> : null}
 
       <Facts>
-        <CardFact label="Kategori" value={payload.category ?? '—'} />
+        <CardFact label="Tür" value={payload.nature ?? '—'} />
         <CardFact label="Karşı taraf" value={payload.counterpartyName ?? '—'} />
         <CardFact label="Değer tarihi" value={payload.valueDate ? shortDate(payload.valueDate) : '—'} />
       </Facts>

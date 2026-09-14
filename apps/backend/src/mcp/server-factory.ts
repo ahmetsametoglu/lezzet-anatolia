@@ -42,6 +42,7 @@ const INSTRUCTIONS = [
   'Two proposals need extra care when you present them. propose_zone_extend: applying it sends an irreversible notification to waiting customers — always tell the admin how many. propose_stock_intake: never invent an expiry date or lot number; if the document does not show it, ask.',
   'HOW THIS BUSINESS IS SHAPED — read every number through this. (1) There is NO default warehouse: stock, orders and delivery zones all belong to a specific warehouse, so "12 boxes in total" is never a fact you can act on — ask which warehouse. (2) A delivery zone IS a delivery route: it belongs to one warehouse, runs on fixed weekdays, and covers a set of postal codes. Extending a zone means adding a stop to a van that is already driving — so proximity to that zone\'s existing codes matters (delivery_map gives you the distance). (3) Prices have channels, and **every money field names its own VAT basis**: `…IncVat` means VAT-included (all b2c list, offer and suggested prices), `…ExVat` means VAT-excluded (purchase costs). Subtracting an ExVat figure from an IncVat one overstates margin by the whole VAT rate — divide by (1 + vatRate/100) first. If a field name carries neither suffix it is not money you should compare. (4) A product carries two independent axes: whether its legal declarations are complete, and whether it is on sale. You can help with the first; the second is never yours.',
   'All data you see is aggregate and identity-free by design: no customer names/contacts, no per-product purchase prices, no message content. Do not speculate about individuals.',
+  'SUPPLIERS AND COUNTERPARTIES ARE NEVER LISTED (owner decision 14.09): no tool returns them and you must not search them by name fragments. Identify a supplier by what the invoice prints — VAT number (TVA/SIRET), phone, or the exact full name — and a counterparty by its exact name or keyword. If a tool cannot find the record, ask the admin; never guess or retry with a fragment.',
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
   "Start-of-day habit: when the admin greets you or asks what's up, call morning_briefing first, and lead your answer with its `attention` list.",
   'Ground every proposal in a tool result. For a weekly route/zone proposal call delivery_map FIRST (it tells you which zones exist, which warehouse and weekdays they run on, and how far an uncovered code is from each) — demand_signals alone only tells you a code was asked for, not where it belongs. For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
@@ -156,7 +157,7 @@ export const TOOLS = [
   {
     name: 'reference_data',
     description:
-      'The names the propose_* tools make you type: cash/bank accounts, categories, collections and bundles (each with whether it is already on the showcase), suppliers, and the business settings you may need to reason with (minimum basket, free-shipping threshold, shipping fee, cash-on-delivery cap, order cut-off times, near-expiry thresholds and the default offer discount, reservation TTL, payment terms). Every name here can be typed straight into a propose_* tool — categoryName, accountName, supplierName, or the showcase target name — and the server resolves it to the record. Call this instead of guessing a name and learning it from an error. A setting that comes back null was never set — the code is using its own default, do not read it as zero.',
+      'The names the propose_* tools make you type: cash/bank accounts, categories, collections and bundles (each with whether it is already on the showcase), the movement-nature dictionary (natures: slug · label · direction — what an expense is for), and the business settings you may need to reason with (minimum basket, free-shipping threshold, shipping fee, cash-on-delivery cap, order cut-off times, near-expiry thresholds and the default offer discount, reservation TTL, payment terms). Every name here can be typed straight into a propose_* tool — categoryName, accountName, nature, or the showcase target name — and the server resolves it to the record. SUPPLIERS AND COUNTERPARTIES ARE NOT HERE and never will be: identify them by what the invoice prints (VAT number, phone, exact name). Call this instead of guessing a name and learning it from an error. A setting that comes back null was never set — the code is using its own default, do not read it as zero.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
@@ -264,7 +265,8 @@ export const TOOLS = [
         warehouseCode: { type: 'string', description: 'Warehouse code, e.g. "STR" (see morning_briefing.reorder).' },
         supplierName: {
           type: 'string',
-          description: 'Optional: restrict to one supplier, by name (see reference_data). Default is the largest group of shortfalls.',
+          description:
+            'Optional: restrict to one supplier, by its EXACT name as morning_briefing.reorder spells it (no fragments, no guessing). Default is the largest group of shortfalls.',
         },
         note: { type: 'string', description: 'Optional note carried onto the draft order.' },
       },
@@ -295,10 +297,16 @@ export const TOOLS = [
             required: ['variantId', 'qty', 'expiryDate'],
           },
         },
+        supplierVatNumber: {
+          type: 'string',
+          description:
+            "The supplier's VAT / SIRET number exactly as the invoice prints it — the most reliable key. Suppliers are never listed: give supplierVatNumber, supplierPhone or the exact supplierName, and if the tool cannot find the supplier, ask the admin (do not retry with fragments).",
+        },
+        supplierPhone: { type: 'string', description: "The supplier's phone number as printed on the invoice (any format)." },
         supplierName: {
           type: 'string',
           description:
-            "Who the goods came FROM, by name (see reference_data). Fill this in whenever the document names a supplier: without it the receipt cannot refresh that supplier's last purchase price, and the NEXT reorder proposal will have no idea what the goods cost.",
+            "The supplier's EXACT full name as printed on the invoice (case and accents do not matter, fragments do not match). Fill the supplier in whenever the document names one: without it the receipt cannot refresh that supplier's last purchase price, and the NEXT reorder proposal will have no idea what the goods cost.",
         },
         purchaseOrderRef: {
           type: 'string',
@@ -341,14 +349,17 @@ export const TOOLS = [
           type: 'string',
           description: "'expense' | 'transfer' | 'capital' | 'misc' — no 'purchase' (goods purchases go through propose_stock_intake).",
         },
-        category: { type: 'string', description: 'Free-text category, e.g. "tedarik".' },
-        description: { type: 'string' },
-        supplierName: {
+        nature: {
           type: 'string',
           description:
-            'When the money goes to a SUPPLIER, name them here (see reference_data) — that binds the payment to their account. Use counterpartyName instead for anyone we do not keep a supplier record for.',
+            "What the money is for, as a dictionary entry from reference_data.natures — slug or label, verbatim (e.g. 'kira', 'akaryakit', 'Muhasebe ücreti'). Not for transfers. Leave it out if no entry fits; the admin picks one on the approval screen. An unknown word is rejected, never guessed.",
         },
-        counterpartyName: { type: 'string', description: 'Who the money went to / came from, when there is no supplier record.' },
+        description: { type: 'string' },
+        counterpartyName: {
+          type: 'string',
+          description:
+            'Who the money went to / came from — the EXACT name as printed on the receipt or invoice. Matched against the counterparty dictionary by exact name or keyword; counterparties are never listed. If it is not found the proposal is still created and the admin picks or creates the counterparty. Supplier payments for goods never go through this tool (they are booked from the bank statement against the goods receipt).',
+        },
         valueDate: { type: 'string', description: 'YYYY-MM-DD; defaults to today.' },
         reason: { type: 'string' },
       },

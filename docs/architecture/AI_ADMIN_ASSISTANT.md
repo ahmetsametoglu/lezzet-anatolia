@@ -173,6 +173,11 @@ işlem asistan için yoktur. Kataloğa araç eklemek kullanıcı onayı gerektir
 - **Hassas ticari veri KAPALI:** tedarikçi alış fiyatları ve sözleşme koşulları, personel bilgileri,
   banka/kasa hareketlerinin ham dökümü, vergi kimlikleri. (Liste kodlama gününde gözden geçirilir;
   varsayılan kapalıdır — açmak karar ister, kapamak istemez.)
+- **Kritik kayıt LİSTELENMEZ, nokta atışı bulunur (kullanıcı kararı 14.09 · 22.42):** tedarikçi ve cari
+  hiçbir okuma aracından dönmez (`reference_data` tedarikçi satırını bıraktı); yazma araçları tedarikçiyi
+  faturadaki kimlikle (vergi numarası · telefon · tam ad), cariyi tam adla ya da eşleşme kelimesiyle TAM
+  eşitlikle bulur — parça ad yok, bulunamayınca aday listesi yok, model yöneticiye sorar. Kural her araç
+  içindir: *"kritik bilgileri nokta atışı talep edilirse vermek lazım."* Motor `domain-core/money/pinpoint.ts`.
 - **Kapalı veri OKUMA yönlüdür; GİRİŞ yönü kuyruktan açıktır** (09.08 netleştirmesi — fatura
   senaryosu): kullanıcının kendisinin modele verdiği bir belgeden (satın alma faturası) alış fiyatı
   içeren bir alım girişi taslağı kuyruğa YAZILABİLİR — bilgi zaten kullanıcının elindeydi, sızma

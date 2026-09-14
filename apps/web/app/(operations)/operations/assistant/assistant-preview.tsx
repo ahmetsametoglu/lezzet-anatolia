@@ -436,7 +436,7 @@ function MoneyPreview({ payload }: { payload: MoneyMovementPayload }) {
     },
     // Paranın gittiği hesap kararın YARISI: "Kasa → ?" diye bir transfer onaylanamaz.
     ...(payload.counterAccountName ? [{ k: 'Hedef hesap', v: payload.counterAccountName }] : []),
-    ...(payload.category ? [{ k: 'Kategori', v: payload.category }] : []),
+    ...(payload.nature ? [{ k: 'Tür', v: payload.nature }] : []),
     { k: 'Tutar', v: money(payload.amountCents), mono: true },
     ...(payload.counterpartyName ? [{ k: 'Karşı taraf', v: payload.counterpartyName }] : []),
     ...(payload.valueDate ? [{ k: 'Tarih', v: shortDate(payload.valueDate), mono: true }] : []),

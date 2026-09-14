@@ -236,18 +236,20 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
 
   liste.push({
     kind: 'money_movement',
-    summary: `Gider — ${c.tedarikciAd ?? 'tedarikçi'} faturası 486,20 €`,
-    reason: 'Banka kuyruğunda eşleşmemiş bir çıkış duruyor.',
+    summary: 'Gider — Cabinet Comptable Muller faturası 486,20 €',
+    reason: 'Muhasebecinin eylül faturası geldi; ödemesi kasadan yazılacak.',
     payload: {
       accountId: c.hesapId,
       accountName: c.hesapAd,
       direction: 'out',
       amountCents: 48_620,
       type: 'expense',
-      category: 'Hammadde',
-      description: 'Ağustos ikinci yarı sevkiyatı',
-      supplierId: c.tedarikciId,
-      counterpartyName: c.tedarikciAd,
+      // Tür sözlük slug'ı, cari adla (22.42). Tedarikçi bu tipte yok: mal bedeli mal kabulden geçer.
+      // Kimlik bilerek çözülmemiş — kuyruk formunun "cariyi operatör seçer" yolu seed'de görünsün.
+      nature: 'muhasebe-ucreti',
+      description: 'Eylül muhasebe ücreti',
+      counterpartyId: null,
+      counterpartyName: 'Cabinet Comptable Muller',
       counterAccountId: null,
       counterAccountName: null,
       valueDate: gun(-2),
@@ -266,9 +268,9 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
         direction: 'out',
         amountCents: 120_000,
         type: 'transfer',
-        category: null,
+        nature: null,
         description: 'Gün sonu kasa devri',
-        supplierId: null,
+        counterpartyId: null,
         counterpartyName: null,
         counterAccountId: c.karsiHesapId,
         counterAccountName: c.karsiHesapAd,

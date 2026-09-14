@@ -7,6 +7,7 @@ import { resetRateLimit } from './rate-limit';
 import { HANDLERS, TOOLS } from './server-factory';
 import { morningBriefing, salesSummary, systemErrors } from './tools';
 import { catalogHealth, soldOutWatch, stockWatch } from './tools-catalog';
+import { referenceData } from './tools-reference';
 import { customerPulse, demandSignals } from './tools-signals';
 
 /**
@@ -200,6 +201,21 @@ describe('araçlar — şekil + maskeleme (DB okur)', () => {
     const serialized = JSON.stringify(briefing);
     expect(serialized).not.toContain('lastPurchasePriceCents');
     expect(serialized).not.toContain('supplierCode');
+  });
+
+  /**
+   * KRİTİK KAYIT LİSTELENMEZ (22.42 · kullanıcı kararı 14.09): tedarikçi ve cari hiçbir okuma
+   * aracından dönmez; yazma araçları onları faturadaki kimlikle nokta atışı bulur. Tür sözlüğü ise
+   * kritik değil ve `propose_money_movement.nature`ın tek kaynağı — üç alanla, fazlası olmadan.
+   */
+  it('reference_data tedarikçi ve cari LİSTELEMEZ, tür sözlüğünü verir', async () => {
+    const reference = await referenceData();
+    expect('suppliers' in reference).toBe(false);
+    expect('counterparties' in reference).toBe(false);
+    expect(Array.isArray(reference.natures)).toBe(true);
+    for (const nature of reference.natures) {
+      expect(Object.keys(nature).sort()).toEqual(['direction', 'label', 'slug']);
+    }
   });
 
   it('sales_summary aralığı doğru kurar ve gün sayısını [1,90] aralığına kıstırır', async () => {

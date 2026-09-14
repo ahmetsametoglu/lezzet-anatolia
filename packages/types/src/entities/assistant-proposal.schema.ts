@@ -190,9 +190,22 @@ export const MoneyMovementPayloadSchema = z.object({
    * bekleyen kalemler patronun onay refleksini köreltir. Alım önerisi `stock_intake`ten geçer.
    */
   type: z.enum(['expense', 'transfer', 'capital', 'misc']),
-  category: z.string().nullable(),
+  /**
+   * TÜR — sözlük slug'ı (`movement_nature`), 22.42. Bir tur serbest `category` kelimesiydi; 12.16'dan
+   * beri defter sözlükten tür istiyor ve kelime sözlükte yoksa hareket türsüz açılıyor, giderde kaydet
+   * düğmesi kilitleniyordu. Araç artık kelimeyi öneri anında sözlükle doğruluyor (`matchNature`).
+   * `.default(null)`: alan sonradan adlandı; kuyrukta `category` taşıyan eski dilekçe türsüz açılır.
+   */
+  nature: z.string().nullable().default(null),
   description: z.string().nullable(),
-  supplierId: z.string().uuid().nullable(),
+  /**
+   * CARİ — kime ödendi / kimden geldi (22.42). Tedarikçi bu tipte YOK: mal bedeli mal kabule bağlı
+   * `purchase` satırıdır ve banka eşleştirmesinden yazılır (12.13); bir tur buradaki `supplierId`
+   * kuyruk formunda hiçbir kutuya düşmüyordu (formun girdisinde tedarikçi yok), bağ sessizce
+   * kayboluyordu. Kimlik sunucuda ADDAN çözülür — tam ad ya da eşleşme kelimesi, nokta atışı
+   * (`pinpointCounterparty`); çözülemezse `null` kalır, ad `counterpartyName`ta durur, seçimi operatör yapar.
+   */
+  counterpartyId: z.string().uuid().nullable().default(null),
   counterpartyName: z.string().nullable(),
   counterAccountId: z.string().uuid().nullable(),
   /**
