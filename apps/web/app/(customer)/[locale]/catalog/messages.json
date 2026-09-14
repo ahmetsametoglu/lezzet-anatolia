@@ -11,13 +11,13 @@
     "collectionTag": "Koleksiyon",
     "collectionExit": "Tüm kataloğa dön",
     "shippableAsk": "Adresinize ne gelebilir?",
-    "shippableAskShort": "Adresim?",
     "all": "Tümü",
     "count": "{n} ürün",
     "loadMore": "Daha fazla ürün",
     "loading": "Yükleniyor…",
     "onlyOffers": "% Yalnız indirimliler",
-    "onlyOffersShort": "% İndirimli",
+    "offersSwitch": "Sadece indirimliler",
+    "close": "Kapat",
     "sortLabel": "Sırala:",
     "sort": {
       "featured": "Öne çıkanlar",
@@ -38,7 +38,6 @@
       "soldOut": "Tükendi — yakında yeniden"
     },
     "onlyShippable": "Adresime gönderilebilir",
-    "onlyShippableShort": "Adresime",
     "searchPlaceholder": "Ürün ara…",
     "searchClear": "Aramayı temizle"
   },
@@ -54,13 +53,13 @@
     "collectionTag": "Collection",
     "collectionExit": "Retour au catalogue",
     "shippableAsk": "Que peut-on livrer chez vous ?",
-    "shippableAskShort": "Chez moi ?",
     "all": "Tout",
     "count": "{n} produits",
     "loadMore": "Voir plus de produits",
     "loading": "Chargement…",
     "onlyOffers": "% Uniquement les offres",
-    "onlyOffersShort": "% En promo",
+    "offersSwitch": "Uniquement les offres",
+    "close": "Fermer",
     "sortLabel": "Trier :",
     "sort": {
       "featured": "En vedette",
@@ -81,7 +80,6 @@
       "soldOut": "Épuisé — bientôt de retour"
     },
     "onlyShippable": "Livrable chez moi",
-    "onlyShippableShort": "Chez moi",
     "searchPlaceholder": "Rechercher un produit…",
     "searchClear": "Effacer la recherche"
   },
@@ -97,13 +95,13 @@
     "collectionTag": "Kollektion",
     "collectionExit": "Zurück zum Katalog",
     "shippableAsk": "Was können wir zu Ihnen liefern?",
-    "shippableAskShort": "Zu mir?",
     "all": "Alle",
     "count": "{n} Produkte",
     "loadMore": "Mehr Produkte",
     "loading": "Wird geladen…",
     "onlyOffers": "% Nur Angebote",
-    "onlyOffersShort": "% Im Angebot",
+    "offersSwitch": "Nur Angebote",
+    "close": "Schließen",
     "sortLabel": "Sortieren:",
     "sort": {
       "featured": "Empfohlen",
@@ -124,7 +122,6 @@
       "soldOut": "Ausverkauft — bald wieder da"
     },
     "onlyShippable": "An meine Adresse",
-    "onlyShippableShort": "Zu mir",
     "searchPlaceholder": "Produkt suchen…",
     "searchClear": "Suche löschen"
   }

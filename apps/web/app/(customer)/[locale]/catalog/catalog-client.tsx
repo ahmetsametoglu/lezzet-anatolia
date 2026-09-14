@@ -38,9 +38,11 @@ export function CatalogClient({ t, locale, data, active, placeMode, device, sear
   const [extraPages, setExtraPages] = useState<StorefrontProduct[]>([]);
   const [cursor, setCursor] = useState(data.nextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [tailFailed, setTailFailed] = useState(false);
   useEffect(() => {
     setExtraPages([]);
     setCursor(data.nextCursor);
+    setTailFailed(false);
   }, [data.products, data.nextCursor]);
 
   const products = [...data.products, ...extraPages];
@@ -48,12 +50,17 @@ export function CatalogClient({ t, locale, data, active, placeMode, device, sear
   const onLoadMore = () => {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
+    setTailFailed(false);
     // Süzgeç TEK TEK sayılmaz, olduğu gibi geçer: alan alan yazmak `onlyShippable`'ı bir kez
     // düşürmüştü ve sonraki sayfa süzgeçsiz geliyordu. Yayarak geçmek yeni süzgeci de taşır.
     void loadMoreCatalogAction(locale, { ...active, search }, cursor)
       .then(({ data: page, errorKey }) => {
-        // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
-        if (errorKey || !page) return;
+        // Liste olduğu yerde kalır; düşüş görünümlere SÖYLENİR (14.09): telefon görünümünün tetikleyicisi
+        // kendiliğinden yeniden denemez, listenin sonunda "Tekrar dene" çizer (native kuyruk kuralı).
+        if (errorKey || !page) {
+          setTailFailed(true);
+          return;
+        }
         setExtraPages((prev) => [...prev, ...page.products]);
         setCursor(page.nextCursor);
       })
@@ -76,11 +83,13 @@ export function CatalogClient({ t, locale, data, active, placeMode, device, sear
     if (sort !== 'featured') query.sort = sort;
     if (onlyOffers) query.offers = '1';
     if (onlyShippable) query.shippable = '1';
-    // Arama da bir süzgeçtir: kategoriye basmak yazılmış aramayı silmemeli.
-    if (search) query.q = search;
+    // Arama da bir süzgeçtir: kategoriye basmak yazılmış aramayı silmemeli. Yama aramayı değiştirebilir
+    // (telefonun yazdıkça arayan kutusu) ya da `null` ile düşürebilir.
+    const q = patch.search === null ? undefined : (patch.search ?? search);
+    if (q) query.q = q;
     return { pathname: '/catalog', query };
   };
 
-  const view = { t, locale, placeMode, data, products, hasMore: cursor !== null, loadingMore, onLoadMore, active, hrefFor, search };
+  const view = { t, locale, placeMode, data, products, hasMore: cursor !== null, loadingMore, tailFailed, onLoadMore, active, hrefFor, search };
   return resolved === 'mobile' ? <CatalogMobile {...view} /> : <CatalogDesktop {...view} />;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useState, type ComponentProps } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
@@ -93,6 +93,36 @@ function rememberNoted(postalCode: string): void {
   }
 }
 
+/**
+ * Bölge notunun tarayıcı hafızası — `[alındı mı, hatırla]`. Bu düğme ve telefon görünümünün bölge dışı
+ * bandı (`phone-kit/place-notice-band`, 14.09) AYNI kaydı okur: birinde not bırakan müşteri ötekinde daveti
+ * yeniden görmez (native'de aynı söz `place-notice-store`da).
+ *
+ * Hafıza EFEKTTE okunur, ilk çizimde değil: sunucu HTML'i düğmeyle gelir, `localStorage` ancak tarayıcıda
+ * okunabilir — ilk çizimde okumak hydration uyuşmazlığı doğururdu.
+ */
+export function useZoneNoticeNoted(postalCode: string): [noted: boolean, remember: () => void] {
+  const [noted, setNoted] = useState(false);
+  useEffect(() => {
+    const sync = () => setNoted(Boolean(notedCodes()[postalCode]));
+    sync();
+    // Aynı sekmedeki öteki kartlar (özel olay) + öteki sekmeler (`storage`) aynı anda döner.
+    window.addEventListener(NOTED_EVENT, sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener(NOTED_EVENT, sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, [postalCode]);
+  // Hafıza yalnız BAŞARIDA yazılır (çağıranın işi): reddedilen bir kayıt daveti susturursa müşteri hiç not
+  // bırakamadan "not aldık" okur.
+  const remember = useCallback(() => {
+    rememberNoted(postalCode);
+    setNoted(true);
+  }, [postalCode]);
+  return [noted, remember];
+}
+
 interface ZoneNoticeButtonProps {
   locale: Locale;
   /** Müşterinin cevabındaki posta kodu — kaydın anahtarı ve panelde geçen yer. */
@@ -110,20 +140,7 @@ interface ZoneNoticeButtonProps {
 export function ZoneNoticeButton({ locale, postalCode, emphasis = 'card', productHref }: ZoneNoticeButtonProps) {
   const t = messages[locale];
   const [open, setOpen] = useState(false);
-  // Hafıza EFEKTTE okunur, ilk çizimde değil: sunucu HTML'i düğmeyle gelir, `localStorage` ancak
-  // tarayıcıda okunabilir — ilk çizimde okumak hydration uyuşmazlığı doğururdu.
-  const [noted, setNoted] = useState(false);
-  useEffect(() => {
-    const sync = () => setNoted(Boolean(notedCodes()[postalCode]));
-    sync();
-    // Aynı sekmedeki öteki kartlar (özel olay) + öteki sekmeler (`storage`) aynı anda döner.
-    window.addEventListener(NOTED_EVENT, sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener(NOTED_EVENT, sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, [postalCode]);
+  const [noted, remember] = useZoneNoticeNoted(postalCode);
 
   const fill = (text: string) => text.replace('{code}', postalCode);
 
@@ -172,12 +189,8 @@ export function ZoneNoticeButton({ locale, postalCode, emphasis = 'card', produc
            */
           onSubmit={async (email) => {
             const result = await recordZoneNoticeAction(postalCode, email, locale);
-            // Hafıza yalnız BAŞARIDA yazılır: reddedilen bir kayıt düğmeyi susturursa müşteri
-            // hiç not bırakamadan "not aldık" okur.
-            if (!result.errorKey) {
-              rememberNoted(postalCode);
-              setNoted(true);
-            }
+            // Hafıza yalnız BAŞARIDA yazılır (kancanın künyesi).
+            if (!result.errorKey) remember();
             return result;
           }}
           onClose={() => setOpen(false)}
