@@ -1,4 +1,5 @@
-import { formatPrice } from '@lezzet/helper';
+// Kart rozeti ve fiyat etiketi iki yüzeyin ortak malı (14.09): web telefon görünümü de okur.
+import { cardBadgeOf, formatPrice, fromPriceLabel, productPriceLabel } from '@lezzet/helper';
 import type { TextSegment } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/types';
@@ -26,12 +27,10 @@ import placeMessages from '@/lib/places/messages.json';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { toastError, toastInfo, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
-import { cardBadgeOf } from '@/screens/customer-kit/campaign-label';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { NoticeSheet, type NoticeSheetCopy } from '@/screens/customer-kit/notice-sheet';
-import { fromPriceLabel, productPriceLabel } from '@/screens/customer-kit/price-label';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
@@ -481,7 +480,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                     <View>
                       <Text style={styles.familyName}>{member.label}</Text>
                       <Text style={styles.familyPrice}>
-                        {/* "…'dan" eki KİTTEN (`customer-kit/price-label`): aynı cümle katalog ve
+                        {/* "…'dan" eki ORTAK PAKETTEN (`@lezzet/helper` `price-label`): aynı cümle katalog ve
                             vitrin kartlarında da yazılıyor, iki yerde tanımlansaydı bir gün
                             ayrışırdı (CLAUDE §1). Fiyat yoksa satır boş kalır — sıfır yazılmaz. */}
                         {member.isCurrent ? t.family.current : (fromPriceLabel(member.fromPriceCents, locale) ?? '')}

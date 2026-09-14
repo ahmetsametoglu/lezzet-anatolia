@@ -1,5 +1,5 @@
-import { formatPrice } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
+import { formatPrice } from './format';
 
 /*
   KAMPANYANIN MÜŞTERİYE GÖRÜNEN CÜMLESİ — TEK TÜRETME, ÇOK EKRAN (08.44).
@@ -7,6 +7,12 @@ import type { Locale } from '@lezzet/i18n';
   Aynı kampanya vitrin bandında ve filtrelenmiş katalogda anılıyor; iki yerde ayrı yazılsaydı bir
   gün ayrışırlardı ve müşteri aynı kampanyayı iki farklı sayıyla okurdu (`discount-label` künyesinin
   aynı gerekçesi).
+
+  ── İKİ YÜZEYİN ORTAK MALI (14.09) ──────────────────────────────────────────
+  Native `screens/customer-kit/campaign-label.ts`te doğdu. Müşterinin telefon tasarımı native
+  uygulamada ve web'in telefon görünümünde AYNI olunca (kullanıcı kararı 14.09) web ikinci çağıran
+  oldu ve kural buraya taşındı; native dosya yalnız yönlendiriyor. Metin çağırandan gelir (ekranın
+  sözlüğü), bu dosya yalnız hangi cümlenin kurulacağını bilir.
 
   ── NE SÖYLER ───────────────────────────────────────────────────────────────
   Yüzde ve sabit tutar AYNI kalıba girmez ve girmemeli: *"−%15"* bir orandır, *"−3,00 €"* bir
@@ -56,9 +62,9 @@ export function campaignValueOf(campaign: CampaignView, t: CampaignCopy, locale:
 /**
  * KARTIN İNDİRİM ROZETİ — yalnız FIRSAT (kullanıcı kararı 27.08, 23.08'in düzeltmesi).
  *
- * ── NEDEN KİTTE, ÜÇ EKRANDA DEĞİL ───────────────────────────────────────────
+ * ── NEDEN TEK YERDE, ÜÇ EKRANDA DEĞİL ───────────────────────────────────────
  * Aynı rozet katalog ızgarasında, vitrin seçkisinde ve ürün detayının öneri şeridinde çiziliyor.
- * Karar üçe yazılsaydı dördüncü ekran geldiği gün biri unutulurdu — `price-label` kitinin aynı
+ * Karar üçe yazılsaydı dördüncü ekran geldiği gün biri unutulurdu — `price-label` kuralının aynı
  * gerekçesi.
  *
  * ── KAMPANYA ROZETİ ÜRÜN KARTINDAN KALKTI ───────────────────────────────────
@@ -69,8 +75,8 @@ export function campaignValueOf(campaign: CampaignView, t: CampaignCopy, locale:
  * · Dahası motor **tek kazanan** seçiyor: iki farklı kampanyalı ürün sepete girse yalnız biri
  *   uygulanır, öbürünün rozeti tutulmayan bir söz olur.
  * Kampanya bir ÜRÜNÜN değil bir KESİTİN özelliğidir (`matchesScope`: `category` | `collection`),
- * o yüzden yeri de kesitin kartıdır — vitrin bandı (`CollectionBand`). Kullanıcının 23.08'de
- * istediği yer de zaten orasıydı; rozet bir katman aşağıya, ürünlerin üstüne konmuştu.
+ * o yüzden yeri de kesitin kartıdır — vitrin bandı. Kullanıcının 23.08'de istediği yer de zaten
+ * orasıydı; rozet bir katman aşağıya, ürünlerin üstüne konmuştu.
  *
  * "Fırsat" ise KALIR: birim fiyatta gerçekten düşen, üstü çizili eski fiyatı olan kesin bir
  * indirimdir — sepete bağlı değildir, ürünün kendi fiyatıdır.
@@ -91,7 +97,7 @@ export function cardBadgeOf(product: { wasCents?: number }, t: { offer: string }
  *
  * ── EŞİKLİ KAMPANYA ROZETE GİRMEZ ───────────────────────────────────────────
  * *"60 € üzeri −%15"* bir rozete sığmaz; eşiği yutup yalnız *"−%15"* yazmak ise tutulmayan bir
- * söz vermektir. Eşikli kampanya bandın SAYAÇ SATIRINDA tam cümlesiyle kalır (`countWithCampaign`)
+ * söz vermektir. Eşikli kampanya bandın SAYAÇ SATIRINDA tam cümlesiyle kalır (`bandCountLabel`)
  * — orada yer var ve koşul söylenebiliyor. Kural burada, tek yerde: iki türetme de aynı ölçütü
  * okur, biri rozeti çizer öteki cümleyi kurar.
  */

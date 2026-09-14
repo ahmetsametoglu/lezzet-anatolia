@@ -5383,7 +5383,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · touches: `packages/application/src/catalog/{campaign,catalog,map,product,storefront-types}.ts`,
   `packages/types/src/contracts/catalog-api.schema.ts`, `packages/application/src/catalog/campaign-wire.ts`,
   `apps/mobile-api/src/api/v1/{catalog,home}.ts`, `packages/application/src/catalog/home.ts` (ikisi o gün mobil-api `lib/`teydi, 14.09'da pakete taşındı — 08.58),
-  `apps/mobile/src/screens/customer-kit/campaign-label.ts`,
+  `packages/helper/src/campaign-label.ts`,
   `apps/mobile/src/screens/{catalog,home,product}/**`
 
   **ŞİKÂYET ÖLÇÜLDÜ VE YARISI ÇÜRÜDÜ.** Kullanıcı *"kategori indirimlerini zaten katalog
@@ -5698,7 +5698,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `packages/application/src/analytics/availability.test.ts`,
   `packages/application/src/cart/cart-blocker.test.ts`,
   `packages/application/src/catalog/pricing-viewer.test.ts`,
-  `apps/mobile/src/screens/customer-kit/campaign-label.test.ts`,
+  `packages/helper/src/campaign-label.test.ts`,
   `apps/mobile/src/lib/places/place-name-memory.test.ts`,
   `apps/mobile/src/lib/places/place-name-memory.ts`,
   `packages/email/src/components/email-layout.test.tsx`, `vitest.config.ts`

@@ -32,15 +32,7 @@
     },
     "lastOrder": {
       "title": "Geçen siparişinizi tekrarlayın",
-      "body": "{reference} · {total} — tek dokunuşla sepete",
       "summary": "{reference} · {total}"
-    },
-    "flash": {
-      "eyebrow": "GÜNÜN FIRSATI · {time} KALDI",
-      "ended": "GÜNÜN FIRSATI · SÜRE DOLDU",
-      "add": "Sepete +",
-      "addLabel": "{name} ürününü sepete ekle",
-      "addedToast": "Sepete eklendi ✓"
     },
     "offers": {
       "discount": "−%{n}",
@@ -130,15 +122,7 @@
     },
     "lastOrder": {
       "title": "Recommandez votre dernière commande",
-      "body": "{reference} · {total} — au panier en un geste",
       "summary": "{reference} · {total}"
-    },
-    "flash": {
-      "eyebrow": "OFFRE DU JOUR · {time} RESTANT",
-      "ended": "OFFRE DU JOUR · TERMINÉE",
-      "add": "Au panier +",
-      "addLabel": "Ajouter {name} au panier",
-      "addedToast": "Ajouté au panier ✓"
     },
     "offers": {
       "discount": "−{n} %",
@@ -228,15 +212,7 @@
     },
     "lastOrder": {
       "title": "Letzte Bestellung wiederholen",
-      "body": "{reference} · {total} — mit einem Tipp in den Warenkorb",
       "summary": "{reference} · {total}"
-    },
-    "flash": {
-      "eyebrow": "ANGEBOT DES TAGES · NOCH {time}",
-      "ended": "ANGEBOT DES TAGES · BEENDET",
-      "add": "In den Korb +",
-      "addLabel": "{name} in den Warenkorb legen",
-      "addedToast": "Zum Warenkorb hinzugefügt ✓"
     },
     "offers": {
       "discount": "−{n} %",

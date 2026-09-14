@@ -1,22 +1,26 @@
-import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
-
-import messages from './price-label-messages.json';
+import messages from '@lezzet/i18n/customer/price-label';
+import { formatPrice } from './format';
 
 /*
-  KARTIN FİYAT ETİKETİ — TEK TÜRETME, DÖRT ÇAĞIRAN.
+  KARTIN FİYAT ETİKETİ — TEK TÜRETME, İKİ YÜZEY.
 
   Aynı ürün kartı vitrinde, katalogda, ürün detayının "benzer ürünler" şeridinde ve ailenin çeşit
   kartlarında çizilir. Etiketin iki kararı var ve ikisi de her yerde AYNI olmak zorunda; ayrı ayrı
   yazılsalardı bir gün ayrışırlardı (CLAUDE §1) — o gün müşteri aynı ürünü iki ekranda iki farklı
   fiyat cümlesiyle görürdü.
 
+  ── İKİ YÜZEYİN ORTAK MALI (14.09) ──────────────────────────────────────────
+  Native `screens/customer-kit/price-label.ts`te doğdu; web'in telefon görünümü native tasarımı
+  alınca (kullanıcı kararı 14.09) buraya taşındı, native dosya yalnız yönlendiriyor. Ekin metni
+  `@lezzet/i18n/customer/price-label`da.
+
   ── KARAR 1: ÇOK BOYLU ÜRÜNDE "…'dan" ───────────────────────────────────────
   Kartta yazan sayı, ürünün EN UCUZ fiyatlı boyunundur (`primaryVariantOf`, `08.10`). Tek boylu
   üründe o sayı ürünün fiyatıdır ve düz yazılır. Çok boylu üründe ise **başlangıç fiyatıdır** —
   ekini yazmamak, müşteriye tutamayacağımız bir söz vermektir: 4,11 € gördüğü üründe 35,95 €'luk
   bir boy da vardır. Ailenin çeşit kartları bu eki zaten kullanıyordu (`{price}'dan`); kural
-  buraya taşındı ki dört yüzeyin dördü de aynı cümleyi kursun.
+  buraya taşındı ki bütün yüzeyler aynı cümleyi kursun.
 
   Ölçüt BOY SAYISIDIR, fiyat aralığı değil: iki boyu aynı fiyata satılan üründe de "…'dan" doğru
   kalır (müşteri ikinci boyu seçtiğinde sayı değişmez, yani söz tutulur), oysa "fiyatlar farklıysa
@@ -27,11 +31,8 @@ import messages from './price-label-messages.json';
   yoksa ilk boya düşülür ve fiyat `null` kalır). Dönen değer `undefined`, yani kart fiyat çipini
   HİÇ çizmez. **Sıfır yazmak yasak** (CLAUDE §1: *"ölçülemeyen değer SIFIR değildir"*) — `?? 0`
   yazan bir çağıran müşteriye "0,00 €" gösterir, yani satılmayan bir ürünü bedava sanmasına yol
-  açar. Katalog ekranı bunu baştan doğru yapıyordu; vitrinin künyesi gerekçesini yazmıştı (uç
-  fiyatsızı süzer), ama detayın "benzer ürünler" şeridi o gerekçe OLMADAN aynı `?? 0`'ı taşıyordu
-  ve `readSimilar` fiyat süzgeci uygulamıyor (yalnız kategori + `status='active'`).
-  Ölçüldü 15.08: bugün fiyatsız dört ürünün dördü de `candidate`, yani yol henüz ekrana çıkmıyor —
-  düzeltme yaşayan bir arızayı değil, sessiz duran bir tuzağı kapatıyor.
+  açar. Ölçüldü 15.08: bugün fiyatsız dört ürünün dördü de `candidate`, yani yol henüz ekrana
+  çıkmıyor — kural yaşayan bir arızayı değil, sessiz duran bir tuzağı kapatıyor.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -41,11 +42,7 @@ type Messages = LocalizedCopy<typeof messages>;
  *
  * @param variantCount ürünün AKTİF boy sayısı; 1'den büyükse "…'dan" eki gelir.
  */
-export function productPriceLabel(
-  priceCents: number | null,
-  variantCount: number,
-  locale: Locale,
-): string | undefined {
+export function productPriceLabel(priceCents: number | null, variantCount: number, locale: Locale): string | undefined {
   if (priceCents === null) return undefined;
 
   return variantCount <= 1 ? formatPrice(priceCents, locale) : withFrom(priceCents, locale);

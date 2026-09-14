@@ -1,5 +1,6 @@
-import { formatPrice } from '@lezzet/helper';
+import { describe, expect, it } from 'vitest';
 import { campaignValueOf, cardBadgeOf, scopeBadgeOf, type CampaignView } from './campaign-label';
+import { formatPrice } from './format';
 
 /**
  * İNDİRİM ROZETLERİ VE KAMPANYA CÜMLESİ (21.100 · MB-22b · 27.08 katman düzeltmesi).
@@ -17,6 +18,9 @@ import { campaignValueOf, cardBadgeOf, scopeBadgeOf, type CampaignView } from '.
  *   4. **Değeri olmayan kampanya hiç konuşmaz.** *"%0 indirim"* diye bir şey yoktur.
  *
  * Dördü de `undefined`/yanlış metinle biter, hiçbiri hata vermez.
+ *
+ * Native `screens/customer-kit/campaign-label.test.ts`ti; kural iki yüzeyin ortak malı olunca
+ * (14.09) testi de birlikte taşındı — jest'ten vitest'e, iddialar aynı.
  */
 const t = {
   offer: 'Fırsat',
@@ -38,7 +42,7 @@ function campaign(over: Partial<CampaignView> = {}): CampaignView {
  * çivilemek, Node sürümüyle değişebilen bir ICU ayrıntısını sözleşme sanmak olurdu.
  *
  * Testin konusu zaten para biçimi DEĞİL, kalıbın kuruluşu: eşik söyleniyor mu, yüzde tutarı yeniyor
- * mu, hangi metin hangi yere giriyor. Biçimlemenin kendisi `@lezzet/helper`in kendi testinin işi.
+ * mu, hangi metin hangi yere giriyor. Biçimlemenin kendisi `format.test.ts`in işi.
  */
 const para = (cents: number, locale: 'tr' | 'fr' | 'de'): string => formatPrice(cents, locale);
 

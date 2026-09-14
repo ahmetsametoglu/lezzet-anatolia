@@ -1,6 +1,15 @@
-import { formatPrice } from '@lezzet/helper';
-import type { Locale, LocalizedCopy } from '@lezzet/i18n';
-import type { HomeBand } from '@lezzet/types';
+import {
+  bandCountLabel,
+  cardBadgeOf,
+  formatPrice,
+  greetingOf,
+  offerLimitOf,
+  productPriceLabel,
+  scopeBadgeOf,
+} from '@lezzet/helper';
+import type { LocalizedCopy } from '@lezzet/i18n';
+// Metin iki yüzeyin ORTAK malı (14.09): web'in telefon görünümü de bu sözlükten okur.
+import messages from '@lezzet/i18n/customer/home';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
@@ -24,13 +33,11 @@ import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
-import { productPriceLabel } from '@/screens/customer-kit/price-label';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useMe, useWholesale } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-import { campaignValueOf, cardBadgeOf, scopeBadgeOf } from '@/screens/customer-kit/campaign-label';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
 import {
@@ -40,7 +47,6 @@ import {
   subscribeHomeLayout,
 } from './home-layout-memory';
 import { HomeSkeleton } from './home-skeleton';
-import messages from './messages.json';
 import { useNotificationBadge } from '@/screens/notifications/use-notification-badge.hook';
 import { useHome } from './use-home.hook';
 import { useHomeOrders } from './use-home-orders.hook';
@@ -90,80 +96,9 @@ interface HomeScreenProps {
    yapmak, bir saatte bir değişen bir kelime için ödenecek bedel değil. En kötü hâl, ekran açık
    dururken selamlamanın bir sonraki etkileşime kadar geç dönmesidir. */
 
-/** Şablonun selamlama eşikleri: 11'den önce sabah, 18'den önce gündüz, sonrası akşam. */
-function greetingOf(t: Messages, hour: number, firstName: string | null): string {
-  if (firstName === null) return t.greeting.guest;
-  const part = hour < 11 ? t.greeting.morning : hour < 18 ? t.greeting.afternoon : t.greeting.evening;
-  return t.greeting.withName.replace('{greeting}', part).replace('{name}', firstName);
-}
-
-/**
- * **KAÇ TANE KALDIYSA O KADAR ACELE** — fırsat kartının sınır satırı (kullanıcı kararı 19.08).
- *
- * ── ÖNCEKİ HÂL BİR YALANDI ──────────────────────────────────────────────────
- * Satır sabitti ve her karta koşulsuz basılıyordu: *"STOKLA SINIRLI · YALNIZ BUGÜN"*. İkinci
- * yarısının arkasında hiçbir veri YOKTU — fırsat bir kampanya değil, **SKT'si yaklaşan bir
- * partiden doğuyor**; kimse seçmiyor ve `design/BACKLOG.md`nin kendi cümlesiyle *"süresi yoktur"*.
- * Sözleşmede bitiş anı diye bir alan da yok, yani ekran bilse bile yazamazdı. Kullanıcı cihazda
- * gördü ve sordu: *"Gerçekten sadece bugüne özel bir indirim mi yoksa bugün son günü mü?"* — ikisi
- * de değildi. Bu, 09.08'de tam bu sebeple kaldırılan "GÜNÜN FIRSATI · {süre} KALDI" bandının
- * hayatta kalan ikiziydi.
- *
- * ── GERÇEK SINIR GÜN DEĞİL, ADET ────────────────────────────────────────────
- * Teklif fiyatı PARTİYE bağlı: o partide kalandan fazlası normal fiyata taşar (DOMAIN §5). Sayı
- * zaten sözleşmede (`limitLabel`) ve ürün detayı onu doğru kullanıyordu; yalnız bu kart yok
- * sayıyordu. Artık iki ekran aynı gerçeği söylüyor.
- *
- * ── İKİ KADEME (kullanıcı kararı) ───────────────────────────────────────────
- * *"Belirli bir adetten fazla ise stoklarla sınırlı diyelim. Fakat belli bir adetin altındaysa
- * son üç adet de sinirli bir ifade kullanabiliriz."* — çok kalanda aciliyet uydurmak yanlış
- * olurdu, az kalanda ise sayıyı saklamak müşteriden bilgi gizlemek olur.
- *
- * **Sınır YOKSA satır HİÇ çizilmez:** `limitLabel === null` "adet sınırı yok" demektir ve o hâlde
- * söylenecek doğru bir cümle yoktur — sıfır değil, YOK (CLAUDE §1).
- */
-function offerLimitOf(limitLabel: string | null, t: Messages['offers']): string | null {
-  if (limitLabel === null) return null;
-  const left = Number(limitLabel);
-  /* Sayıya çevrilemeyen değer beklenmiyor (`map.ts` `String(quantityCap)` yazıyor) ama sessizce
-     `NaN` ile eşik karşılaştırmasına girmesin: bilinmeyen sayıda "son N adet" yazmak uydurma olur,
-     "stokla sınırlı" ise her hâlde doğru. */
-  if (!Number.isFinite(left)) return t.limited;
-  return left <= LAST_FEW_THRESHOLD ? t.lastFew.replace('{n}', String(left)) : t.limited;
-}
-
-/**
- * Bandın sayaç satırı — kampanya varsa aynı satıra girer (08.44).
- *
- * **Neden yeni bir satır değil:** bandın yüksekliği bir ölçü değil bir SÖZLEŞMEdir (MB-25) — üst
- * katman dairesi bantları `index * collectionBand` ile konumlandırıyor, boy değişirse daireler
- * kayar. 132 dp bütçesi zaten iki satırlık başlıkla dolu; üçüncü bir satır ilk taşan olurdu.
- * Sayaç satırı ise TEK satır ve kampanya oraya sığıyor.
- *
- * **Ve bu bilinçli olarak MÜTEVAZI bir çözüm (CLAUDE §3):** rozetin görsel kararı `.dc.html`de
- * yok; yeni bir çip icat etmek improvise etmek olurdu. Kampanya var olan satıra, var olan vurgu
- * renginde giriyor. Tasarım bir rozet çizerse buradaki türetme aynen kullanılır, yalnız yeri değişir.
- */
-function bandCountLabel(band: HomeBand, t: Messages, locale: Locale): string {
-  const count = String(band.productCount);
-  /* EŞİKSİZ KAMPANYA ARTIK ROZETTE (27.08 · `scopeBadgeOf`) — satırda tekrar edilmez, yoksa aynı
-     indirim aynı kartta iki kez yazardı. Satıra yalnız EŞİKLİ kampanya kalır, çünkü koşulunu
-     ("60 € üzeri") ancak tam cümle söyleyebilir ve rozete sığmaz. */
-  const campaign =
-    band.campaign === null || band.campaign.minBasketCents === null
-      ? null
-      : campaignValueOf(band.campaign, t.campaign, locale);
-  if (campaign === null) return t.collections.count.replace('{n}', count);
-  return t.collections.countWithCampaign.replace('{n}', count).replace('{campaign}', campaign);
-}
-
-/**
- * "Son birkaç adet" eşiği — **parametrik**, iş kuralı değil bir SUNUM kararı (CLAUDE §4: eşik
- * sorulmaz, makul varsayılan konur ve parametrik yapılır). 5'in altında sayıyı söylemek müşteriye
- * gerçek bir bilgi verir; üstünde "3 kaldı" demek de olmadığı için ölçüt burada duruyor.
- * Değiştirmek isteyen tek satırı değiştirir; iki kademe de aynı yerden okunur.
- */
-const LAST_FEW_THRESHOLD = 5;
+/* Selamlama, fırsat kartının sınır satırı ve bandın sayaç satırı `@lezzet/helper`ta (`home-copy.ts`,
+   14.09): web'in telefon görünümü de bu vitrini çiziyor ve üç cümle iki yüzeyin ortak malı oldu.
+   Künyeleri (19.08 "kaç tane kaldıysa o kadar acele" · 08.44 sayaç satırı · eşik 5) oraya taşındı. */
 
 export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const locale = useAppLocale();
@@ -348,7 +283,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
       <View style={styles.headerText}>
         <View style={styles.greetingRow}>
           <Text style={styles.greeting} accessibilityRole="header">
-            {greetingOf(t, new Date().getHours(), customer.firstName)} <Text style={styles.asterisk}>✺</Text>
+            {greetingOf(t.greeting, new Date().getHours(), customer.firstName)} <Text style={styles.asterisk}>✺</Text>
           </Text>
           {customer.points === null ? null : (
             <Tag
@@ -621,7 +556,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                     name={product.name}
                     /* Etiket kitin türetmesinden: çok boyluda "…'dan" eki, fiyat yoksa çip hiç
                        çizilmez. Buradaki eski `?? 0` gerekçeliydi (uç fiyatsızı süzer) ama artık
-                       gereksiz — kural tek yerde ve sıfıra düşmüyor (`customer-kit/price-label`). */
+                       gereksiz — kural tek yerde ve sıfıra düşmüyor (`@lezzet/helper` `price-label`). */
                     priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
                     /* Yalnız FIRSAT rozeti (27.08). Kapsam kampanyası buradan kalktı: sepete bir
                        kez inen indirimi ürünün üstüne yazmak, ürün başına vaat gibi okunuyordu —

@@ -16,7 +16,7 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR
   (`matchesScope`: kategori | koleksiyon).
 
   Bu dosya o katmanı çivileyen tek yer: rozet BANTTA çiziliyor mu, ve çizilmemesi gerekince
-  susuyor mu. Metnin kendisi kitin işi (`campaign-label.test.ts` — eşikli kampanyanın elenmesi
+  susuyor mu. Metnin kendisi ortak paketin işi (`@lezzet/helper` `campaign-label.test.ts` — eşikli kampanyanın elenmesi
   orada ölçülüyor); burada sorulan soru "bant onu ekrana koyuyor mu".
 */
 

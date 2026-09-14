@@ -1,5 +1,9 @@
 // @lezzet/helper — saf fonksiyonlar (tarih/para/format/kimlik/slug). Tek bağımlılık `@lezzet/i18n`
 // (o da sıfır bağımlılıklı dil birimi): para YAZIMI dile bağlı ve dil birliği tek kaynaktan gelmeli.
+// Müşterinin telefon ekranlarının cümle kurucuları — native uygulama ile web telefon görünümünün ortak
+// malı (14.09): kampanya rozeti ve cümlesi, kartın fiyat etiketi, vitrinin selamlaması ve sayaçları.
+// Metinleri `@lezzet/i18n/customer/*`da; burada yalnız hangi cümlenin hangi veriyle kurulacağı.
+export * from './campaign-label';
 export * from './csv';
 export * from './date';
 // Yerin saf kararları (`elsewhereReasonOf`) — web ve native uygulama aynı cümleyi kuruyor; ev
@@ -9,9 +13,11 @@ export * from './delivery';
 // kuralı; tutar prozanın içine gömülmez (gerekçe dosyanın künyesinde, 18.08).
 export * from './delivery-terms';
 export * from './format';
+export * from './home-copy';
 export * from './identity';
 export * from './money';
 export * from './postal-code';
 export * from './place-name';
+export * from './price-label';
 export * from './rich-text';
 export * from './slug';

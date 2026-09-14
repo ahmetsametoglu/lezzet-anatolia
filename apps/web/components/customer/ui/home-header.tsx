@@ -1,12 +1,11 @@
 'use client';
 
+import { greetingOf, type HomeCopy } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
+import messages from '@lezzet/i18n/customer/home';
 import { useAccount } from '@/components/customer/account/account-context';
 import { NotificationBell } from '@/components/customer/account/notification-bell';
 import { PlaceChip } from '@/components/customer/delivery/place-chip';
-import messages from './home-header-messages.json';
-
-type Copy = (typeof messages)['tr'];
 
 /**
  * Vitrinin başlığı — native vitrin başlığının (`apps/mobile/src/screens/home/home-screen.tsx`
@@ -14,13 +13,17 @@ type Copy = (typeof messages)['tr'];
  * Solda selamlama (saate göre, girişliyse adıyla) ve altında turuncu konum satırı — dokununca yer
  * çekmecesi açılır; sağda bildirim zili (yalnız girişliye: misafirin bildirimi yok).
  *
+ * METİN VE KURAL NATIVE'LE ORTAK (14.09): cümleler `@lezzet/i18n/customer/home`da, eşikler
+ * `@lezzet/helper` `greetingOf`ta — iki yüzey aynı selamlamayı kurar.
+ *
  * Saat PARİS saatinden: sunucu da tarayıcı da aynı cevabı üretsin (pazar FR + DE, tek saat dilimi).
  * Yerel saatle yazılsaydı sunucunun saat dilimi ile tarayıcınınki ayrışır ve hidrasyon uyarısı
  * doğardı; saat sınırına denk gelen tek karelik fark `suppressHydrationWarning` ile karşılanır.
  * Selamlama `h1` DEĞİL — vitrinin başlığı kahramanın cümlesi.
  *
- * BEKLEYEN(08.58): native bu satırda puan etiketini ve toptan rozetini de taşıyor. Toptancı bilgisi
- * artık kökte (`useWholesale`, 14.09); rozetin kendisi ve puan etiketi vitrin turunda (Faz 1) çizilecek.
+ * BEKLEYEN(08.58): native bu satırda onaylı toptancıya "TOPTAN" rozetini de çiziyor. Bilgi kökte
+ * (`useWholesale`, 14.09); rozet vitrin turunda (Faz 1) native kitin eğik rozetiyle çizilecek. Puan
+ * etiketi native'de de çizilmiyor (`/me` puan taşımıyor), web de çizmez.
  */
 interface HomeHeaderProps {
   locale: Locale;
@@ -29,16 +32,8 @@ interface HomeHeaderProps {
 /** Paris'te saat kaç — tarayıcının ve sunucunun saat diliminden bağımsız. */
 const PARIS_HOUR = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Europe/Paris' });
 
-/** Native'in `greetingOf`u: 11'e kadar sabah, 18'e kadar gün, sonrası akşam; misafire hoş geldin. */
-function greetingOf(t: Copy, firstName: string | null): string {
-  if (firstName === null) return t.greeting.guest;
-  const hour = Number(PARIS_HOUR.format(new Date()));
-  const part = hour < 11 ? t.greeting.morning : hour < 18 ? t.greeting.afternoon : t.greeting.evening;
-  return t.greeting.withName.replace('{greeting}', part).replace('{name}', firstName);
-}
-
 export function HomeHeader({ locale }: HomeHeaderProps) {
-  const t = messages[locale];
+  const t: HomeCopy = messages[locale];
   const account = useAccount();
   const firstName = account?.name.trim().split(/\s+/)[0] || null;
 
@@ -46,7 +41,8 @@ export function HomeHeader({ locale }: HomeHeaderProps) {
     <header className="flex items-start justify-between gap-3 px-[22px] pt-[26px]">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p suppressHydrationWarning className="font-serif text-page-title-sm leading-[1.15] text-ink">
-          {greetingOf(t, firstName)} <span className="text-terracotta">✺</span>
+          {greetingOf(t.greeting, Number(PARIS_HOUR.format(new Date())), firstName)}{' '}
+          <span className="text-terracotta">✺</span>
         </p>
         <PlaceChip locale={locale} line />
       </div>
