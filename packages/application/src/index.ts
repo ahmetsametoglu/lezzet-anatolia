@@ -694,6 +694,15 @@ export { listPublicDeliveryAreas } from './delivery/zones';
 export { readScopeCampaigns, EMPTY_SCOPE_CAMPAIGNS } from './catalog/campaign';
 export type { ScopeCampaign, ScopeCampaigns } from './catalog/campaign';
 
+// ── Telefon vitrini — terfi 14.09 (08.58) ───────────────────────────────────
+// Kaynağı `apps/mobile-api/src/lib/{home,ideas,campaign-wire}.ts`ti ve tek tüketeni native vitrindi.
+// Müşterinin telefon tasarımı iki yüzeyde aynı olunca (kullanıcı kararı 14.09) web telefon görünümü
+// ikinci tüketen oldu; ölçüt (en az iki yüzey) karşılandı — kopyalanmadı, taşındı.
+export { composeHomeBands, readHome } from './catalog/home';
+export { readPackageCards, readRecipeCards, RECIPE_LIST_LIMIT } from './catalog/ideas';
+export { toWireCampaign } from './catalog/campaign-wire';
+export { resolvedOrNull } from './catalog/resolved-text';
+
 /* Analitiğin İKİ YÜZEYE ortak tek parçası (24.08 · MB-63) — günlük oturum tuzu. Kapının kendisi
    ortak DEĞİL ve olmamalı: web'in düşürme kurallarının (prefetch · bot UA · rota kalıbı · UTM)
    native'de karşılığı yok, native'in kendi kapısı `apps/mobile-api/src/lib/analytics.ts`. */

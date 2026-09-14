@@ -344,7 +344,7 @@ Kataloğun veri ve iş katmanı: `Category / Collection / Product / ProductVaria
 - [x] (05.17) **Kategoriye kısa tanıtım metni — `tagline` (çok dilli, boş bırakılabilir)** *(denetim kaydı 08.08, kullanıcı onayı; kaynak: koleksiyon bütünlük notu + mobil vitrin tasarımı)* · `touches: supabase/migrations/0004_catalog_category_collection.sql, packages/types/src/entities/category.schema.ts, packages/database/src/services/category.service.ts, docs/architecture/data-model/katalog.md`
   - **Durum (25.08 — KAPANDI; açık kalan ÜÇÜNCÜ ayağı mobil şerit kapatmış.)** Satır `[~]` idi ve
     gerekçesi yazılıydı: *"`apps/mobile-api`'de `tagline` hiç geçmiyor"*. Bugün ölçüldü, artık geçiyor —
-    `apps/mobile-api/src/lib/home.ts` bant altyazısını `c.tagline`dan kuruyor, sözleşme alanı
+    vitrin okuması (o gün mobil-api `lib/home.ts`; 14.09'dan beri `packages/application/src/catalog/home.ts`) bant altyazısını `c.tagline`dan kuruyor, sözleşme alanı
     `packages/types/src/contracts/home-api.schema.ts`te künyeli, ve mobil kendi testinde çiviliyor
     (`home.test.ts`: *"bant altyazısının `tagline`dan (05.17) geldiği burada ölçülür"*). Web tarafında
     zaten yapılacak bir şey kalmamıştı.

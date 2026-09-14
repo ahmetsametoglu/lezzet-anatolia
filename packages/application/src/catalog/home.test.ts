@@ -12,6 +12,7 @@ import {
  * Bant karışımının SAF kural testleri — DB'siz (seçim `selectHomeBandSources`ta bilerek ayrı
  * duruyor). Rastgelelik parametre olduğu için kanıt deterministik: tohumlu üreteç aynı diziyi
  * verir, iddialar sayı değil DAVRANIŞ üstünedir (kim girer, sıra korunur mu, kaç tane).
+ * `apps/mobile-api/src/lib/home.test.ts`ti; okuma pakete terfi edince testi de taşındı (14.09).
  */
 
 /** Tohumlu LCG — testin rastgeleliği tekrarlanabilir olsun (`Rng` künyesinin gerekçesi). */
@@ -138,4 +139,3 @@ describe('selectHomeBandSources', () => {
     expect(chosen.collections).toEqual([]);
   });
 });
-

@@ -7,6 +7,7 @@ import {
   getProductDetail,
   listRecentDoorSales,
   sellOnSite,
+  toWireCampaign,
   vehicleWarehouseOf,
 } from '@lezzet/application';
 import {
@@ -23,7 +24,6 @@ import {
 import { captureError, SOURCES } from '@lezzet/observability';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor, readJsonBody } from '../../lib/request';
-import { toWireCampaign } from '../../lib/campaign-wire';
 
 import { requireStaffRole } from './auth';
 import { warehouseGuard, type WarehouseEnv } from './warehouse';

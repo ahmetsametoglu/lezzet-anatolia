@@ -1,10 +1,16 @@
 import { RecipeService } from '@lezzet/database';
-import { imageOf, readRecipeItems, type PlaceWarehouses, type PricingViewer, type RecipeItemReading } from '@lezzet/application';
+import {
+  imageOf,
+  readRecipeItems,
+  resolvedOrNull,
+  type PlaceWarehouses,
+  type PricingViewer,
+  type RecipeItemReading,
+} from '@lezzet/application';
 import { splitLines } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { PreferredLanguage, RecipeDetail, RecipeRow } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { resolvedOrNull } from './home';
 
 /**
  * Tarif detayının okuma KAPISI — `GET /api/v1/recipes/:slug`un veri tarafı (21.14, tasarım 21).

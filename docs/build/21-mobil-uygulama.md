@@ -5381,8 +5381,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.100) **KAMPANYA ARTIK KARTTA GÖRÜNÜYOR — cümlenin içinde kaybolmuyor (MB-22b)**
   · touches: `packages/application/src/catalog/{campaign,catalog,map,product,storefront-types}.ts`,
-  `packages/types/src/contracts/catalog-api.schema.ts`, `apps/mobile-api/src/lib/campaign-wire.ts`,
-  `apps/mobile-api/src/api/v1/{catalog,home}.ts`, `apps/mobile-api/src/lib/home.ts`,
+  `packages/types/src/contracts/catalog-api.schema.ts`, `packages/application/src/catalog/campaign-wire.ts`,
+  `apps/mobile-api/src/api/v1/{catalog,home}.ts`, `packages/application/src/catalog/home.ts` (ikisi o gün mobil-api `lib/`teydi, 14.09'da pakete taşındı — 08.58),
   `apps/mobile/src/screens/customer-kit/campaign-label.ts`,
   `apps/mobile/src/screens/{catalog,home,product}/**`
 

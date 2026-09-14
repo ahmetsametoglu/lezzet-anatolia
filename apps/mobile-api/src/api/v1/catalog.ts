@@ -6,6 +6,7 @@ import {
   getProductDetail,
   pricingViewerOf,
   toCategory,
+  toWireCampaign,
   resolvePlaceWarehouses,
   UNRESOLVED_PLACE,
   type PlaceWarehouses,
@@ -24,7 +25,6 @@ import {
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
-import { toWireCampaign } from '../../lib/campaign-wire';
 import { recordNativeEvent } from '../../lib/analytics';
 // İmleç kodlaması `lib/request.ts`te: sipariş listesi ikinci çağıran olunca oraya taşındı (21.18).
 import { decodeCursor, encodeCursor } from '../../lib/request';

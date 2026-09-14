@@ -29,10 +29,10 @@
  * `packages/application` `apps/web`e bakardı. `rotateDaily` 05.23'da izledi (künyesi aşağıda),
  * `pickRandom` ise webde KALDI — tek tüketeni hâlâ oradaki fırsat bandı.
  *
- * **Mobil bu yedeğe BİLEREK düşmüyor** (`apps/mobile-api/src/lib/home.ts` künyesi): v3 vitrininde
- * "hiç işaret yoksa bant da yoktur". İki yüzeyin farkı bir çelişki değil, iki ayrı tasarım kararı —
- * bu yüzden yedek davranış fonksiyonun İÇİNE gömülü kalıyor, çağıranın seçebildiği bir bayrak
- * değil: web onu istiyor, mobil hiç çağırmıyor.
+ * **Telefon vitrini bu yedeğe BİLEREK düşmüyor** (`home.ts` künyesi): v3 vitrininde "hiç işaret
+ * yoksa bant da yoktur". İki yüzeyin farkı bir çelişki değil, iki ayrı tasarım kararı — bu yüzden
+ * yedek davranış fonksiyonun İÇİNE gömülü kalıyor, çağıranın seçebildiği bir bayrak değil: web
+ * masaüstü onu istiyor, telefon vitrini hiç çağırmıyor.
  */
 export function pickFeatured<T extends { isFeatured: boolean }>(rows: readonly T[], limit?: number): T[] {
   const marked = rows.filter((row) => row.isFeatured);
@@ -84,10 +84,10 @@ function dayIndex(now: Date): number {
  * **Güne bağlı deterministik RASTGELELİK** — `rotateDaily`nin kardeşi (kullanıcı kararı 18.08).
  *
  * ── NEDEN AYRI BİR ŞEY GEREKTİ ───────────────────────────────────────────────
- * `rotateDaily` "havuzu sırayla döndür" der ve web ana sayfası bunu kullanıyor. Mobil vitrinin
+ * `rotateDaily` "havuzu sırayla döndür" der ve web ana sayfası bunu kullanıyor. Telefon vitrininin
  * kuralı ise BAŞKA ve daha zengin: 4 kategori + 2 koleksiyon, koleksiyonlar işaretliler arasından
  * seçilir, altısı birbirine rastgele konumlarda karışır ve her birinin fotoğrafı kendi havuzundan
- * gelir (`apps/mobile-api/src/lib/home.ts`). Bu kompozisyon bir ROTASYONLA ifade edilemez.
+ * gelir (`home.ts`). Bu kompozisyon bir ROTASYONLA ifade edilemez.
  *
  * O yüzden değişen şey kuralın kendisi değil, **rastgeleliğin kaynağı** olmalı: aynı seçim kodu
  * aynı gün içinde aynı sonucu versin, ertesi gün başkasını. Bu fonksiyon tam onu verir — çağıran

@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
+import { RECIPE_LIST_LIMIT, readRecipeCards } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { PreferredLanguageEnum, RecipeDetailSchema, RecipeListSchema } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
-import { RECIPE_LIST_LIMIT, readRecipeCards } from '../../lib/ideas';
 import { readRecipeDetail } from '../../lib/recipe';
 import { readPlace, readViewer } from './catalog';
 
@@ -27,7 +27,7 @@ export const recipes = new Hono<AppEnv>();
  * **SAYFALAMA YOK ve bu bilinçli** (CLAUDE §1): tarif kümesi operatörün elle kurduğu editoryal bir
  * seçkidir, veriyle büyümez → doğal tavanlı küme, tek turda çekilir. `limit`/`cursor` sorgusu da
  * yok: istemcinin büyütebileceği bir sınır, sınır değildir. Uçtaki `RECIPE_LIST_LIMIT` sayfalama
- * değil emniyet tavanıdır (gerekçesi `lib/ideas.ts` künyesinde).
+ * değil emniyet tavanıdır (gerekçesi `@lezzet/application` `catalog/ideas.ts` künyesinde).
  *
  * KİMLİK OKUNMAZ: kart içerik kartıdır, fiyat taşımaz — Bearer'ın kişiselleştireceği bir şey yok
  * (paket detayı ucunun aynı kısa devresi). Detay ucunun aksine `readViewer` çağrılmıyor: boşa bir

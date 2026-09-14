@@ -102,7 +102,7 @@ export type RecipeDetail = z.infer<typeof RecipeDetailSchema>;
  * ── KART İKİNCİ KEZ TANIMLANMADI ─────────────────────────────────────────────
  * Satır şeması `HomeRecipeSchema`ın KENDİSİDİR, daraltması ya da kopyası değil (CLAUDE §1 — tip
  * duplikasyonu da duplikasyondur): vitrin şeridindeki kart ile liste sayfasındaki kart AYNI kartlar
- * ve aynı okuma kapısından çıkıyorlar (`apps/mobile-api/src/lib/ideas.ts`). Ayrı bir
+ * ve aynı okuma kapısından çıkıyorlar (`packages/application/src/catalog/ideas.ts`). Ayrı bir
  * `RecipeCardSchema` açmak, iki şeklin bir gün sessizce ayrışmasına kapı bırakırdı. Adın "Home" ile
  * başlaması bir borçtur (kart artık iki yüzeyde): ad `HomeRecipe` kaldı çünkü onu ekran, fixture ve
  * uç birlikte okuyor — yeniden adlandırma ayrı bir iştir, kapsamı bu değil.

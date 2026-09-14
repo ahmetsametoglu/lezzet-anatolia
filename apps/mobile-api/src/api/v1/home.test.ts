@@ -12,7 +12,7 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 // Testin beklediği şekil ELLE YAZILMAZ, sözleşmeden gelir (`catalog.test.ts` emsali).
 import { HomeSchema, type Category, type Collection, type Home } from '@lezzet/types';
 import { app } from '../../app';
-import { composeHomeBands } from '../../lib/home';
+import { composeHomeBands } from '@lezzet/application';
 
 /**
  * Vitrin ucu uçtan uca — `app.request()` ile PORT AÇMADAN.

@@ -1,40 +1,40 @@
 import { CategoryService, CollectionService, ProductService } from '@lezzet/database';
-import {
-  dailyRng,
-  getCatalogData,
-  imageOf,
-  readScopeCampaigns,
-  readShowcase,
-  EMPTY_SCOPE_CAMPAIGNS,
-  type PlaceWarehouses,
-  type PricingViewer,
-  type ScopeCampaign,
-  type ScopeCampaigns,
-  type StorefrontProduct,
-} from '@lezzet/application';
-import { resolveLocalizedText } from '@lezzet/types';
+import { HomeSchema, resolveLocalizedText } from '@lezzet/types';
 import type {
   Category,
   Collection,
+  Home,
   HomeBand,
   HomeBandKind,
   ImageMeta,
   LocalizedText,
   PreferredLanguage,
 } from '@lezzet/types';
-import { toWireCampaign } from './campaign-wire';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { countDiscoverDeck } from '../feedback/discover';
+import { EMPTY_SCOPE_CAMPAIGNS, readScopeCampaigns, type ScopeCampaign, type ScopeCampaigns } from './campaign';
+import { toWireCampaign } from './campaign-wire';
+import { getCatalogData } from './catalog';
+import { dailyRng } from './featured';
+import { HOME_PACKAGE_LIMIT, HOME_RECIPE_LIMIT, readPackageCards, readRecipeCards } from './ideas';
+import { imageOf } from './map';
+import type { PricingViewer } from './pricing-viewer';
+import { resolvedOrNull } from './resolved-text';
+import { readShowcase } from './showcase';
+import type { PlaceWarehouses, StorefrontProduct } from './storefront-types';
 
 /**
- * Vitrin okuma KAPISI — `GET /api/v1/home`un veri tarafı (21.14 bağlanma etabı).
+ * TELEFON VİTRİNİNİN okuma kapısı — native `GET /api/v1/home`un ve web telefon görünümünün ORTAK
+ * veri tarafı (21.14 bağlanma etabında mobil uçta doğdu; 14.09'da pakete terfi etti — 08.58).
  *
- * BURADA duruyor, `@lezzet/application`da DEĞİL, çünkü paketin künyesi açık: oraya giren akışın
- * ölçütü **en az iki yüzeyin** çağırmasıdır; bu kompozisyonun (bant karışımı, tarif kart başlığı)
- * tek tüketeni mobil vitrin. Web'in ana sayfa orkestrasyonu (`apps/web/lib/storefront/home.ts`)
- * kendi yüzeyinde aynı gerekçeyle yaşıyor — o dosyanın application'a terfisi web şeridiyle defter
- * mutabakatı bekliyor, KOPYALANMADI: buradaki her bölüm ya application'ın mevcut kapısından geçer
- * (fırsatlar → `getCatalogData`) ya web'de hiç olmayan, kullanıcı kararıyla mobile verilmiş bir
- * kuraldır (bant karışımı — 08.08) ya da karar içermeyen içerik indirgemesidir (tarif kartı).
+ * PAKETE TERFİ: `apps/mobile-api/src/lib/home.ts`ti ve künyesi ölçütü açıkça koymuştu — pakete giren
+ * akış **en az iki yüzeyin** çağırdığı akıştır; o gün tek tüketen mobil vitrindi. Kullanıcı kararıyla
+ * (14.09) müşterinin telefon tasarımı native uygulamada ve web'in telefon görünümünde AYNI oldu; web
+ * telefon vitrini ikinci tüketen. Web MASAÜSTÜNÜN anasayfa bileşimi (`apps/web/lib/storefront/home.ts`)
+ * masaüstü v1 tasarımının bileşimidir ve kendi yüzeyinde kalıyor. Buradaki her bölüm ya paketin
+ * mevcut kapısından geçer (fırsatlar → `getCatalogData`, seçki → `readShowcase`) ya kullanıcı
+ * kararıyla telefona verilmiş bir kuraldır (bant karışımı — 08.08) ya da karar içermeyen içerik
+ * indirgemesidir (tarif kartı — `ideas.ts`).
  *
  * ── SABİT SINIRLAR, `limit` SORGUSU YOK ──────────────────────────────────────
  * Vitrin rayları editoryal seçkidir: sayfalanmaz ama sabit sınır taşır (CLAUDE §1). Sınırlar v3
@@ -44,15 +44,15 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 /**
  * Fırsat şeridi (kullanıcı kararı 09.08 — 2'den 10'a).
  *
- * v3 tasarımı iki kart çiziyordu ve sınır oradan gelmişti; ama şerit YATAY KAYDIRILABİLİR
- * (`home-screen.tsx` → `ScrollView horizontal`), yani ikiden fazlası bir yerleşim sorunu değil.
- * Kullanıcı bunu ölçerek gördü: katalogda 4 fırsat varken vitrin ikisini gösteriyordu.
+ * v3 tasarımı iki kart çiziyordu ve sınır oradan gelmişti; ama şerit YATAY KAYDIRILABİLİR, yani
+ * ikiden fazlası bir yerleşim sorunu değil. Kullanıcı bunu ölçerek gördü: katalogda 4 fırsat varken
+ * vitrin ikisini gösteriyordu.
  *
  * SINIRSIZ YAPILMADI ve gerekçesi veriye bağlı: fırsat, SKT'si yaklaşan bir partiden doğuyor —
- * yani sayısı katalogla değil, stoğun yaşıyla büyüyor ve bir gün onlarca olabilir. Vitrin
- * uygulamanın AÇILIŞ ekranı; oraya sınırsız bir dizi koymak, açılışta katalogdaki her indirimli
- * ürünü indirip çizmek demek. 10 bugünkü veriyi (4) rahat kapsıyor ve tavan olduğu görünür kalıyor.
- * Tek sayı; artırmak isteyen burayı değiştirir.
+ * yani sayısı katalogla değil, stoğun yaşıyla büyüyor ve bir gün onlarca olabilir. Vitrin açılış
+ * ekranı; oraya sınırsız bir dizi koymak, açılışta katalogdaki her indirimli ürünü indirip çizmek
+ * demek. 10 bugünkü veriyi (4) rahat kapsıyor ve tavan olduğu görünür kalıyor. Tek sayı; artırmak
+ * isteyen burayı değiştirir.
  */
 const HOME_OFFER_LIMIT = 10;
 /**
@@ -67,21 +67,18 @@ export const HOME_BAND_COLLECTION_COUNT = 2;
 const HOME_BAND_TOTAL = HOME_BAND_CATEGORY_COUNT + HOME_BAND_COLLECTION_COUNT;
 
 /**
- * Rastgelelik DIŞARIDAN gelir (emsal: web `rotateDaily`in `now` parametresi — "test günü
+ * Rastgelelik DIŞARIDAN gelir (emsal: `rotateDaily`in `now` parametresi — "test günü
  * sabitleyebilsin"). Testte tohumlu sayaç. Kuralın kendisi rastgele, KANITI deterministik olmalı.
  *
- * ── ÜRETİMDE ARTIK `Math.random` DEĞİL, `dailyRng()` (kullanıcı kararı 18.08) ─
- * KOMPOZİSYON DEĞİŞMEDİ: hâlâ 4 kategori + 2 koleksiyon, koleksiyonlar işaretliler arasından,
- * altısı birbirine rastgele konumlarda karışıyor, fotoğraflar kendi havuzundan geliyor. Değişen
- * TEK ŞEY rastgeleliğin kaynağı — artık gün numarasından türeyen deterministik bir üreteç
- * (`@lezzet/application`, `rotateDaily`nin kardeşi).
+ * ── ÜRETİMDE `Math.random` DEĞİL, `dailyRng()` (kullanıcı kararı 18.08) ─────
+ * Kompozisyon: 4 kategori + 2 koleksiyon, koleksiyonlar işaretliler arasından, altısı birbirine
+ * rastgele konumlarda karışıyor, fotoğraflar kendi havuzundan geliyor. Rastgeleliğin kaynağı gün
+ * numarasından türeyen deterministik bir üreteç (`featured.ts`, `rotateDaily`nin kardeşi).
  *
  * **Gerekçe cihazda ölçüldü (18.08):** her yenilemede koleksiyon sırası ve fotoğraflar
  * değişiyordu. `rotateDaily`nin künyesi bu hâli zaten üç maddede reddetmişti — *"sayfa
  * önbelleğini kırar · aynı müşteriye her yenilemede başka vitrin gösterir, vitrin değil kumar
- * olur · 'dün gördüğüm koleksiyon neydi' sorusunun cevabı kalmaz"* — ama o gerekçe web ana
- * sayfasında uygulanmış, mobilde uygulanmamıştı. **Aynı ürün kararı iki yüzeyde iki ayrı şekilde
- * yürüyordu** (CLAUDE §1); artık ikisi de günü tohum alıyor.
+ * olur · 'dün gördüğüm koleksiyon neydi' sorusunun cevabı kalmaz"*.
  *
  * Kural NEDEN `rotateDaily`ye çevrilmedi: o "havuzu sırayla döndür" der ve buradaki kompozisyonu
  * (dörde-iki + karıştırma + fotoğraf havuzu) ifade edemez. Değişmesi gereken kural değil, tohumdu.
@@ -134,15 +131,15 @@ export function interleaveAtRandom<T>(primary: readonly T[], secondary: readonly
 /**
  * Bant KAYNAKLARININ seçimi — saf karar, DB'siz (test edilebilir diye ayrı duruyor).
  *
- * Kural (kullanıcı kararı 08.08, web'den bilinçli sapma):
+ * Kural (kullanıcı kararı 08.08, web masaüstünden bilinçli sapma):
  *   koleksiyon → işaretlilerden (`isFeatured`) RASTGELE en çok 2; kendi aralarında `sortOrder`.
  *   kategori   → işaretlilerden `sortOrder` sırasıyla, toplam 6'ya TAMAMLAYACAK kadar (koleksiyon
  *                2'den azsa kategori 4'ten çok olabilir). Toplam 6'yı bulamazsa olduğu kadar —
  *                dolgu/uydurma yok.
  *
- * İşaret SEÇİMDİR, yedeği yoktur: hiç işaret yoksa bant da yoktur. (Web'in `pickFeatured`ı işaretsiz
- * havuzda "ilk N gerçek satır"a düşer — o kural web'de yaşıyor ve KOPYALANMADI; buradaki kural
- * kullanıcının mobile verdiği kuraldır ve işaretsiz veride boş döner.)
+ * İşaret SEÇİMDİR, yedeği yoktur: hiç işaret yoksa bant da yoktur. (Web masaüstünün `pickFeatured`ı
+ * işaretsiz havuzda "ilk N gerçek satır"a düşer — o kural masaüstünde yaşıyor ve KOPYALANMADI;
+ * buradaki kural kullanıcının telefona verdiği kuraldır ve işaretsiz veride boş döner.)
  */
 export function selectHomeBandSources<C extends { id: string; isFeatured: boolean }, K extends { id: string; isFeatured: boolean }>(
   categories: readonly C[],
@@ -184,17 +181,6 @@ interface HomeBandPools {
   categories: Category[];
   /** AKTİF koleksiyonlar + üye ürün kimlikleri (`listWithProductIds` — üyelik gömülü, N+1 yok). */
   collections: Array<Collection & { productIds: string[] }>;
-}
-
-/**
- * Çok dilli metni çözer; boş/boşluk `null` sayılır — altyazı ve rozet boşuna açılmasın.
- * Dışa verilir: paket ucu (`api/v1/packages.ts`) açıklamayı aynı kuralla indirger — ikinci tanım
- * açılmaz (`catalog.ts`teki `UNKNOWN_PLACE`/`readViewer` ihracının aynı deseni).
- */
-export function resolvedOrNull(value: LocalizedText | null, locale: PreferredLanguage): string | null {
-  if (!value) return null;
-  const text = resolveLocalizedText(value, locale).trim();
-  return text.length > 0 ? text : null;
 }
 
 function toBand(
@@ -266,8 +252,8 @@ export async function composeHomeBands(
   return interleaveAtRandom(categoryBands, collectionBands, rng);
 }
 
-/** Uçtan çağrılan hâli — havuzları küresel listeden kurar (2 okuma), kuralı kompozisyona bırakır. */
-export async function readHomeBands(db: SupabaseClient, locale: PreferredLanguage, rng: Rng = dailyRng()): Promise<HomeBand[]> {
+/** Havuzları küresel listeden kurar (2 okuma), kuralı kompozisyona bırakır. */
+async function readHomeBands(db: SupabaseClient, locale: PreferredLanguage, rng: Rng = dailyRng()): Promise<HomeBand[]> {
   const [categories, collections] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     new CollectionService(db).listWithProductIds({ activeOnly: true }),
@@ -281,23 +267,20 @@ function hasWonOffer(p: StorefrontProduct): p is StorefrontProduct & { wasCents:
 }
 
 /**
- * Fırsat kartları — application'ın MEVCUT kapısından (`getCatalogData` + `onlyOffers`): teklifli
- * ürünlerin bulunması, fiyatın motora çözdürülmesi ve kart indirgemesi web katalogunun okuduğu
- * kararların TAM AYNISI. Web ana sayfasının `readOffers`ı kopyalanmadı; buradaki tek iş sözleşme
- * daraltması — teklif normal fiyatı YENMEDİYSE `wasCents` doğmaz ve kart fırsat bandına giremez
- * (web `isOffer` süzgecinin teli; karar motorun, süzgeç sonucu okur).
+ * Fırsat kartları — paketin MEVCUT kapısından (`getCatalogData` + `onlyOffers`): teklifli ürünlerin
+ * bulunması, fiyatın motora çözdürülmesi ve kart indirgemesi katalogun okuduğu kararların TAM AYNISI.
+ * Buradaki tek iş sözleşme daraltması — teklif normal fiyatı YENMEDİYSE `wasCents` doğmaz ve kart
+ * fırsat bandına giremez (karar motorun, süzgeç sonucu okur).
  *
- * Bedeli bilinçli: kapı bu uçta kullanılmayan iki okuma da yapar (kategori listesi + süzgeç
- * sayacı). Kopyasız tek yol buydu; tur sayısı rapora ölçülü yazıldı, tek-okumaya indirme kararı
- * gecikme ölçümüyle birlikte verilecek (STACK "Okumada RPC eşiği").
+ * Bedeli bilinçli: kapı burada kullanılmayan iki okuma da yapar (kategori listesi + süzgeç sayacı).
+ * Kopyasız tek yol buydu; tek-okumaya indirme kararı gecikme ölçümüyle birlikte verilecek (STACK
+ * "Okumada RPC eşiği").
  *
- * ⚠ Yer bilinmezken (`warehouseId: null`) teklif TUTARI hiç okunmaz ve dizi BOŞ döner. Bu artık
- * "bekleyen terfi" değil bir HÂL: `readPlace` posta kodunu her istekte çözüyor (`catalog.ts`,
- * eski `BEKLEYEN(21.6)` 09.08'de kapandı), kodu göndermeyen istemci yeri bilinmeyen ziyaretçidir.
- * Üçüncü hâli karıştırma (`not-mobil-yer-sozlesmesi-uc-hal`): `(null, null)` "yer bilinmiyor"dur,
- * ROTA DIŞI değil — o `(null, kargoDeposu)`dur ve teklif tutarı orada da okunmaz.
+ * ⚠ Yer bilinmezken (`warehouseId: null`) teklif TUTARI hiç okunmaz ve dizi BOŞ döner. Bu bir HÂL:
+ * kodu göndermeyen istemci yeri bilinmeyen ziyaretçidir. `(null, null)` "yer bilinmiyor"dur, ROTA
+ * DIŞI değil — o `(null, kargoDeposu)`dur ve teklif tutarı orada da okunmaz.
  */
-export async function readHomeOffers(
+async function readHomeOffers(
   db: SupabaseClient,
   locale: PreferredLanguage,
   place: PlaceWarehouses,
@@ -308,26 +291,17 @@ export async function readHomeOffers(
 }
 
 /**
- * Vitrin seçkisi — **artık PAKETİN sinyalli okumasından** (terfi 27.08, kullanıcı kararı).
- *
- * ── ÖNCE NE VARDI ───────────────────────────────────────────────────────────
- * Bu fonksiyon kataloğun `sortOrder` sırasının ilk N'ini alıyordu; web'in sinyalli seçkisi
- * (`readShowcase` — görüntüleme + sepete ekleme + ayardan gelen pencere) mobile hiç terfi etmemişti
- * ve açık `BEKLEYEN(21.14)` olarak aylardır kayıtlıydı. Yani başlığı *"Bu haftanın seçkisi"* diyen
- * ray ne haftalık ne de seçilmişti — kullanıcı 27.08'de sordu, ölçüldü, kapatıldı.
- *
- * Kopyalamak seçenek değildi (CLAUDE §1): aynı ölçüt iki yerde yaşasaydı aynı müşteri iki yüzeyde
- * iki farklı "çok sevilen" listesi görürdü. Okuma `@lezzet/application`a taşındı, iki yüzey de onu
- * çağırıyor; ayrışan tek şey yüzeyin kendi kararları — SINIR (web 4 · native 6) ve FIRSAT ELEMESİ.
+ * Vitrin seçkisi — paketin sinyalli okumasından (`readShowcase`, terfi 27.08). Web masaüstü ile
+ * telefonun ayrıştığı tek şey yüzeyin kendi kararları: SINIR (masaüstü 4 · telefon 6) ve FIRSAT
+ * ELEMESİ.
  *
  * ── FIRSAT ÜRÜNÜ SEÇKİYE GİRMEZ (27.08 · kullanıcı bulgusu) ─────────────────
- * Kullanıcı vitrine baktı ve *"karttaki fırsat ürünlerinin aşağıda bir daha çıkması anlamlı mı"*
- * diye sordu. Ölçüm: seçkinin ilk İKİ kartı, sayfanın en üstündeki fırsat şeridinin AYNI iki
- * ürünüydü. Native vitrinde iki ray alt alta duruyor ve iki ayrı soru soruyor (*"bugün ne ucuz"* ·
- * *"ne öneriyorsunuz"*); aynı cevabı verirlerse ikinci ray bir seçki değil bir yankıdır. Eleme
- * kuralı da pakette (`excludeOffers`), çünkü ölçütü motorun kararıdır (`wasCents`).
+ * Seçkinin ilk iki kartı, sayfanın en üstündeki fırsat şeridinin AYNI iki ürünüydü. Telefon
+ * vitrininde iki ray alt alta duruyor ve iki ayrı soru soruyor (*"bugün ne ucuz"* · *"ne
+ * öneriyorsunuz"*); aynı cevabı verirlerse ikinci ray bir seçki değil bir yankıdır. Eleme kuralı
+ * pakette (`excludeOffers`), çünkü ölçütü motorun kararıdır (`wasCents`).
  */
-export async function readHomeFeatured(
+async function readHomeFeatured(
   db: SupabaseClient,
   locale: PreferredLanguage,
   place: PlaceWarehouses,
@@ -336,11 +310,48 @@ export async function readHomeFeatured(
   return readShowcase(db, locale, place, viewer, { limit: HOME_FEATURED_LIMIT, excludeOffers: true });
 }
 
-/*
- * TARİF ve PAKET KARTLARI ARTIK BURADA DEĞİL — `lib/ideas.ts`te (09.08).
+/**
+ * Telefon vitrininin TEK okuması — ana ekranın MÜŞTERİDEN BAĞIMSIZ bölümleri tek turda: bantlar ·
+ * fırsatlar · seçki · tarifler · paketler · keşif kart sayısı. Native vitrin ucu ile web telefon
+ * görünümü bunu çağırır; kimlikli bölümler (selamlama, puan, rozet, süren sipariş) kimlikli
+ * okumalardan gelir (kullanıcı kararı 08.08).
  *
- * Fikirler sekmesi (`GET /recipes` · `GET /packages`) aynı kartların İKİNCİ tüketenini doğurdu;
- * kartı vitrinin dosyasında bırakıp listeye ikinci bir indirgeme yazmak aynı kartın iki tanımı
- * olurdu (CLAUDE §1). Vitrin ucu artık o kapıyı kendi sınırlarıyla çağırıyor
- * (`readRecipeCards` / `readPackageCards`); sınır sabitleri de kartla birlikte taşındı.
+ * Bölümler birbirinden bağımsız okunur; biri ötekini bekletmez (ucun süresi en yavaş bölümün süresi).
+ *
+ * ── SÖZLEŞMENİN KİLİDİ ──────────────────────────────────────────────────────
+ * Gövde `HomeSchema` ile süzülür: fazla alan tele ya da sayfaya sızamaz, şekil uymadığı gün burada
+ * patlar. Kartın kampanya ROZETİ (23.08) kesit başlığıyla ve vitrin bandıyla AYNI çeviri kapısından.
+ * `offers` rayında kampanya doğmaz: her kartı bir fırsat kartıdır ve "Fırsat kampanyayı yener"
+ * kararı kaynakta uygulanıyor (`toProduct`) — ikinci bir dal yazılmadı.
  */
+export async function readHome(
+  db: SupabaseClient,
+  locale: PreferredLanguage,
+  place: PlaceWarehouses,
+  viewer: PricingViewer,
+): Promise<Home> {
+  const [bands, offers, featured, recipes, packages, discoverCards] = await Promise.all([
+    readHomeBands(db, locale),
+    readHomeOffers(db, locale, place, viewer),
+    readHomeFeatured(db, locale, place, viewer),
+    readRecipeCards(db, locale, HOME_RECIPE_LIMIT),
+    // Vitrin YALNIZ işaretli paketleri taşır — işaret bir seçimdir, yedeği yoktur (sözleşme künyesi).
+    // Yer BURAYA DA geçer (10.08): vitrindeki paket kartı ile Fikirler listesindeki kart AYNI karttır;
+    // birinin yeri bilip ötekinin bilmemesi aynı paketi iki ekranda farklı gösterirdi.
+    readPackageCards(db, locale, { featuredOnly: true, limit: HOME_PACKAGE_LIMIT, place }),
+    /* KEŞİF DAVETİNİN ŞARTI (MB-58b): kalan kart sayısı. Destenin KENDİSİ değil sayısı okunur ve
+       kural desteyi kuran fonksiyonun aynısından gelir (`countDiscoverDeck` künyesi) — iki ayrı
+       sayım bir gün ayrı düşer ve vitrin, açtığında boş çıkan bir tura davet ederdi. Bedeli
+       gecikmeye eklenmiyor: okuma demetin İÇİNDE koşuyor. */
+    countDiscoverDeck(db, viewer.customerId),
+  ]);
+
+  return HomeSchema.parse({
+    bands,
+    offers: offers.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale) ?? undefined })),
+    featured: featured.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale) ?? undefined })),
+    recipes,
+    packages,
+    discoverCards,
+  });
+}

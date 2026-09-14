@@ -1,14 +1,13 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
 import { serviceDb } from '@lezzet/database';
-import { bundleAvailabilityOf, getPackageDetail } from '@lezzet/application';
+import { bundleAvailabilityOf, getPackageDetail, readPackageCards } from '@lezzet/application';
 import { localizedUrl } from '@lezzet/i18n';
 import { PackageDetailSchema, PackageListSchema, PreferredLanguageEnum } from '@lezzet/types';
 import type { AppEnv } from '../../context';
 import { fail, ok } from '../../lib/respond';
 import { recordNativeEvent } from '../../lib/analytics';
 import { optionalCustomerId } from './auth';
-import { readPackageCards } from '../../lib/ideas';
 // Yer çözümü katalog ucunun kapısından (`readPlace`): posta kodu → depo eşlemesi TEK yerde durur.
 import { readPlace } from './catalog';
 
@@ -51,7 +50,7 @@ export const packages = new Hono<AppEnv>();
 /**
  * PAKET LİSTESİ — "Fikirler" sekmesinin paket bölümü (09.08 bilgi mimarisi kararı).
  *
- * **VİTRİNDEN FARKI SÜZGEÇTİR, KART DEĞİL** (ortak kapı `lib/ideas.ts`): vitrin yalnız İŞARETLİ
+ * **VİTRİNDEN FARKI SÜZGEÇTİR, KART DEĞİL** (ortak kapı `@lezzet/application` `catalog/ideas.ts`): vitrin yalnız İŞARETLİ
  * paketleri taşır (işaret bir seçimdir), bu liste ise yayındaki paketlerin TAMAMIDIR — sayfa
  * "hepsi" sorusunun cevabı, seçki değil.
  *

@@ -41,7 +41,7 @@ import type { Locale } from '@lezzet/i18n';
  * (`Musteri - Anasayfa.dc.html`, `hint-placeholder-count="2"`). Üçüncü kart ızgarayı taşırıyordu.
  *
  * **Terfide BİLEREK burada kaldı:** bu bir WEB ana sayfa ızgarası kararıdır, paket okumasının
- * kuralı değil. Native uygulamanın kendi sayısı var (`apps/mobile-api/src/lib/ideas.ts` — v3'te de
+ * kuralı değil. Telefon vitrininin kendi sayısı var (`packages/application/src/catalog/ideas.ts` — v3'te de
  * iki, ama başka bir tasarımdan) ve ikisini tek sabitte birleştirmek, bir yüzeyin ızgarasını
  * ötekine bağlamak olurdu.
  */

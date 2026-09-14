@@ -99,6 +99,9 @@ const UYGULAMA_DBSIZ = [
   // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi
   // edince testi de birlikte taşındı (27.08). Üç fonksiyon da saf: dizi girer, dizi çıkar.
   'packages/application/src/catalog/showcase.test.ts',
+  // Telefon vitrininin bant karışımı (08.08 kuralı) — `apps/mobile-api/src/lib/home.test.ts` idi,
+  // okuma pakete terfi edince testi de taşındı (14.09). Seçim, karıştırma, konum: dizi girer, dizi çıkar.
+  'packages/application/src/catalog/home.test.ts',
   // Ajanın ürün araçlarının yere göre ayıklaması (10.09) — hangi ürün bu adrese gider, gitmeyenin sebebi.
   'packages/application/src/ticket/product-reach.test.ts',
   // AI kullanım satırı (15.27) — kayıttan satıra, tarifeden maliyete saf dönüşüm; yazım entegrasyonda.
