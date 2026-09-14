@@ -275,7 +275,7 @@ export const TOOLS = [
   {
     name: 'propose_stock_intake',
     description:
-      'PROPOSE (does not apply): a goods-receipt (stock intake) built from an invoice/delivery note the ADMIN showed you. You read the document; this tool VERIFIES what you read — every variant must exist, the warehouse code must be valid, and every line needs an expiry date in YYYY-MM-DD. NEVER invent an expiry date or a lot number: if the document does not show it, ask the admin. Unit cost is optional and write-only (you cannot read purchase prices back).',
+      'PROPOSE (does not apply): a goods-receipt (stock intake) built from an invoice/delivery note the ADMIN showed you. You read the document; this tool VERIFIES what you read — every variant must exist, the warehouse code must be valid, and every line needs an expiry date in YYYY-MM-DD. NEVER invent an expiry date or a lot number: if the document does not show it, ask the admin. Unit cost is optional and VAT-EXCLUSIVE (the HT line price): it becomes the batch\'s purchase cost and you can read it back afterwards — stockBatchCostCents in catalog_lookup, purchasePriceCentsExVat in stock_watch.',
     inputSchema: {
       type: 'object',
       properties: {

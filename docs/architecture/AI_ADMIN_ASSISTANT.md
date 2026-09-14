@@ -176,8 +176,10 @@ işlem asistan için yoktur. Kataloğa araç eklemek kullanıcı onayı gerektir
 - **Kapalı veri OKUMA yönlüdür; GİRİŞ yönü kuyruktan açıktır** (09.08 netleştirmesi — fatura
   senaryosu): kullanıcının kendisinin modele verdiği bir belgeden (satın alma faturası) alış fiyatı
   içeren bir alım girişi taslağı kuyruğa YAZILABİLİR — bilgi zaten kullanıcının elindeydi, sızma
-  yönü tersine dönmüyor. Yazan araç **write-only'dir**: yazdığını geri okuyamaz; DB'deki alış
-  fiyatlarına açılan bir okuma kapısı bu yoldan doğmaz.
+  yönü tersine dönmüyor. Yazan araç **write-only'dir**: yazdığını geri döndürmez. ~~DB'deki alış
+  fiyatlarına açılan bir okuma kapısı bu yoldan doğmaz~~ (22.5 · 09.08: parti maliyeti `catalog_lookup` ve
+  `stock_watch`tan okunur — üstteki "MALİYET AÇILDI" maddesi; kapı yazan araçtan değil, okuma
+  araçlarından açıldı).
 - **Toplanmış görünüm ilkesi:** okuma araçları öncelikle var olan özet görünüm/RPC'lerden okur
   (`order_sale`, `analytics_daily*`, `bundle_list_rows`, sağlık özetleri). Ham tablo taraması araç
   kataloğuna girmez; bir sorunun özeti yoksa **önce görünüm açılır, sonra araç** (§9'un ikinci
@@ -190,7 +192,7 @@ işlem asistan için yoktur. Kataloğa araç eklemek kullanıcı onayı gerektir
 | Faz | Nitelik | Aday araçlar |
 | --- | --- | --- |
 | **A — salt okuma** ✅ *(22.1 · **dokuz araç** yazıldı, yerelde çalışıyor)* | kuyruk yok, maskeli özetler | `morning_briefing` (gün + `attention` listesi) · `sales_summary` · `system_errors` · `catalog_health` (eksik beyan/görsel + vitrin işaretleri) · `catalog_lookup` (**kimlik köprüsü** — addan `variantId`'ye + liste fiyatı + son alış maliyeti; 22.5) · `stock_watch` (ömrü dolan partiler, depo koduyla + `batchId`/`variantId` + fiyat/maliyet + motorun teklif kararı) · `sold_out_watch` · `demand_signals` (kapsanmayan posta kodu · sonuçsuz arama · ürün ilgisi) · `customer_pulse` (**yazışma-gözlem özeti** — kimliksiz ve içeriksiz sayım, §1 "Ne DEĞİL"; yönetim değil gözlem) · `ai_costs` (AI harcaması, USD — görev×model ve gün serisi; tarifesiz koşu tutara girmez — 15.27) |
-| **B1 — atomik öneriler** | kuyruk satırı (§5 biçim ①) | vitrin işareti önerisi · kampanya/indirim tanımı · tedarik siparişi (PO) açma — eşik-altı sinyalinden · **rota/bölge önerisi** (talep panosu `postal_code_demand` + sipariş yoğunluğundan "şu kodları bölgeye ekle / şu günü aç") · stok eşiği istisnası · **banka satırı eşleştirme önerisi** (12.4'ün AI portu zaten bunun için boş bekliyor) · **alım girişi / mal kabul taslağı** (kullanıcının verdiği faturadan — §6 write-only nüansı; depo/parti/son-tarih eksikse asistan sorar, uydurmaz) |
+| **B1 — atomik öneriler** | kuyruk satırı (§5 biçim ①) | vitrin işareti önerisi · kampanya/indirim tanımı · tedarik siparişi (PO) açma — eşik-altı sinyalinden · **rota/bölge önerisi** (talep panosu `postal_code_demand` + sipariş yoğunluğundan "şu kodları bölgeye ekle / şu günü aç") · stok eşiği istisnası · ~~banka satırı eşleştirme önerisi (12.4'ün AI portu zaten bunun için boş bekliyor)~~ (14.09: eşleştirme 12.13 ve 12.19'da kural motoruyla satırın içinde çözüldü, AI'sız — `domain-core/bank/match.ts`; 12.4'ün AI portu sütun eşlemesiydi ve 16.08'de doldu; asistan aracı ikinci bir motor olurdu) · **alım girişi / mal kabul taslağı** (kullanıcının verdiği faturadan — §6 write-only nüansı; depo/parti/son-tarih eksikse asistan sorar, uydurmaz) |
 | **B2 — taslak üretimler** | taslak-varlık deseni (§5 biçim ②) | **ürün detayının tamamlanması** (eksik-alan taraması → üç dilli açıklama + çeviri önerisi + görsel eşleme; **alerjen/saklama beyanı YALNIZ kaynaklı yazılır** — tedarikçi belgesi yoksa boş bırakır ve eksik raporuna yazar, gıdada uydurma tek yasak cevaptır) · **sofra tarifi taslağı** (üç dilli metin + varyant bağları; "üç dil dolmadan yayınlanamaz" kuralı VERİDE zaten duruyor) · dönemsel paket kurulumu (kalem + pay — `bundleBalance` motor doğrulamasından geçer) · koleksiyon kurgusu |
 | **C — medya + dışa dönük** | ayrı karar turu | ürün görseli OKUMA (R2 URL — yazma ayrı yetki, `packages/storage` iki kovalı model) · sosyal içerik taslağı · müşteriye giden her şey (ayrı sınıf, belki hiç) |
 
