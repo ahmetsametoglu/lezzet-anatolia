@@ -23,6 +23,11 @@ export type TriggerTone = 'olive' | 'blue';
 
 interface TriggerState {
   variant: TriggerVariant;
+  /**
+   * `field` biçiminin ölçüsü — `md` form alanı (36px), `sm` SATIR İÇİ düzenleme (32px, 14.09 · Para
+   * sözlüğü): `Input` `sm` ile aynı kutu (dolgu, köşe, yazı) — yan yana durduklarında hizalı.
+   */
+  size?: 'md' | 'sm';
   /** Menü açık — `field` biçiminde çerçeve olive'e döner. */
   open?: boolean;
   /** Bir değer seçili — `chip` biçiminde kesikli davetiye dolu hâle geçer. */
@@ -46,7 +51,13 @@ const CHIP_FILLED: Record<TriggerTone, string> = {
 // hizasında (`sm`) durur — ikisi de kendi dikey dolgusunu uydurmaz. Çipin `md`den küçük olması
 // bilinçli: süzgeç şeridi bir araç çubuğudur, kararın kendisi değil.
 const FIELD_BASE =
-  `flex w-full cursor-pointer items-center justify-between gap-3 rounded-ops-card border bg-ops-white px-[13px] font-ops-body text-ops-base font-medium outline-none transition-colors ${CONTROL_H.md}`;
+  'flex w-full cursor-pointer items-center justify-between border bg-ops-white font-ops-body font-medium outline-none transition-colors';
+
+/** Alan biçiminin iki ölçüsü — dolgu, köşe ve yazı `controlClass`ın `CONTROL_SIZE`ıyla aynı: girdiyle yan yana hizalı. */
+const FIELD_SIZE: Record<'md' | 'sm', string> = {
+  md: `gap-3 rounded-ops-card px-[13px] text-ops-base ${CONTROL_H.md}`,
+  sm: `gap-2 rounded-md px-2 text-ops-sm ${CONTROL_H.sm}`,
+};
 
 const CHIP_BASE =
   `flex cursor-pointer items-center gap-1.5 rounded-ops-chip border px-3 font-ops-body text-ops-sm font-medium outline-none transition-colors ${CONTROL_H.sm}`;
@@ -62,6 +73,7 @@ export const CHIP_MENU_WIDTH = 220;
 
 export function triggerClass({
   variant,
+  size = 'md',
   open = false,
   filled = false,
   disabled = false,
@@ -80,6 +92,7 @@ export function triggerClass({
         ]
       : [
           FIELD_BASE,
+          FIELD_SIZE[size],
           open ? 'border-[1.5px] border-ops-olive' : 'border border-ops-line-strong hover:border-ops-olive',
           filled ? 'text-ops-ink' : 'text-ops-faint',
         ];

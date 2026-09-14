@@ -31,6 +31,10 @@ interface SelectProps {
    * çiplerin yanında yabancı bir kutu bırakıyordu.
    */
   variant?: TriggerVariant;
+  /** `field` biçiminin ölçüsü — `sm` satır içi düzenleme (32px, `Input` `sm` ile aynı kutu). */
+  size?: 'md' | 'sm';
+  /** Erişilebilirlik adı — görünür etiketi olmayan kutu için (satır içi düzenleme); okunuşu "Türü: Kurum". */
+  ariaLabel?: string;
   /**
    * Kutu KİLİTLİ — tıklanmaz ve soluk çizilir (22.19, 12.08).
    *
@@ -41,7 +45,7 @@ interface SelectProps {
   disabled?: boolean;
 }
 
-export function Select({ value, onChange, options, placeholder = 'Seç', className, variant = 'field', disabled = false }: SelectProps) {
+export function Select({ value, onChange, options, placeholder = 'Seç', className, variant = 'field', size = 'md', ariaLabel, disabled = false }: SelectProps) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.value === value) ?? null;
@@ -53,8 +57,9 @@ export function Select({ value, onChange, options, placeholder = 'Seç', classNa
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={ariaLabel ? `${ariaLabel}: ${selected ? selected.label : placeholder}` : undefined}
         disabled={disabled}
-        className={[triggerClass({ variant, open, filled: selected !== null }), disabled ? 'cursor-not-allowed opacity-60' : '']
+        className={[triggerClass({ variant, size, open, filled: selected !== null }), disabled ? 'cursor-not-allowed opacity-60' : '']
           .filter(Boolean)
           .join(' ')}
       >

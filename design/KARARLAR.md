@@ -2602,3 +2602,19 @@ tasarım deseniyle benzer bir komponent"*. Kapanan kararlar:
   ifade ediyor… yüksekliği arttırmayalım"*): "şirket ortağa borçlu / ortak şirkete borçlu" cümlesi
   kalktı, bakiye işaretiyle renklenir — eksi (şirket borçlu) kırmızı, artı (ortak borçlu) olive. Kart
   bir satır kısaldı. Öteki hesaplarda bakiye mürekkep kalır: orada işaret borcun yönünü söylemez.
+
+## Para: sözlükte satır formun kendisidir — yerinde düzenleme (14.09)
+
+Kullanıcı: *"Düzenle butonuna bastığımız zaman inline edit gibi bir hava olması lazım. Bunun için de
+mevcut satır görünümü ile düzenleme formu birbiri ile uyumlu olması lazım."* Sözlük penceresinin
+tepesindeki ekleme/düzenleme kutusu kalktı (12.18):
+
+- **"Düzenle" satırı yerinde açar:** görünüm ile düzenleme AYNI ızgarayı paylaşır (`dictionary-rows.tsx`);
+  görünümdeki metin kutunun yazısıyla aynı içerlekte (`READ_INSET` = 1px çerçeve + `px-2`) — geçişte yazı
+  kaymaz, yalnız çerçeve belirir. Eylem sütunu sabit genişlikte: bağlantılar ile düğmeler aynı yeri kaplar.
+- **Kutular satır ölçüsünde:** 32px (`Input` / `Select` `sm`), etiketsiz — adı yer tutucu ve erişilebilirlik
+  adı söyler. Tür ve cari satırı iki satırlık ayna (kullanıcı seçimi; tek satır tablo pencereyi ~900px'e çıkarırdı).
+- **Yeni kayıt "+ Yeni …" satırından**, düzenlemeyle aynı bileşenle (kullanıcı seçimi; hep açık form kalktı).
+- **Enter kaydeder, Esc vazgeçer, ikinci Esc pencereyi kapatır.** Kit sözleşmesi: pencerenin içindeki bir
+  kontrol Esc'i `preventDefault` ile sahiplenir, `Dialog` sahiplenilmiş Esc'i yok sayar.
+- **Pencere sabit yükseklikte, sekmeler başlıkta** (ürün penceresinin deseni) — sekme değişince zıplamaz.

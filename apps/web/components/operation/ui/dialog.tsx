@@ -37,18 +37,26 @@ interface DialogProps {
   headerAside?: ReactNode;
   /** Panel genişliği (CSS max-width). Varsayılan 640px. */
   maxWidth?: number;
+  /**
+   * SABİT yükseklik (px; ekranın %86'sını aşmaz) — sekmeli pencerede gövde sekmeye göre zıplamasın
+   * (14.09 · Para sözlüğü: sekmeler 700 · 774 · 402px arasında gidip geliyordu). Verilmezse içerikten.
+   */
+  height?: number;
   children: ReactNode;
 }
 
-export function Dialog({ open, onClose, title, subtitle, footer, headerAside, maxWidth = 640, children }: DialogProps) {
+export function Dialog({ open, onClose, title, subtitle, footer, headerAside, maxWidth = 640, height, children }: DialogProps) {
   const tokenRef = useRef<object>({});
   useEffect(() => {
     if (!open) return;
     const token = tokenRef.current;
     dialogStack.push(token);
     const onKey = (e: KeyboardEvent) => {
-      // Yalnız yığının tepesindeki dialog Esc'e yanıt verir.
-      if (e.key === 'Escape' && dialogStack[dialogStack.length - 1] === token) onClose();
+      // Yalnız yığının tepesindeki dialog Esc'e yanıt verir. İçerideki bir kontrol Esc'i kendisi için
+      // kullandıysa (`preventDefault` — ör. Para sözlüğünde satır içi düzenlemeden vazgeçmek) pencere
+      // kapanmaz: React olayları da `document`ta işliyor (App Router kökü), yani kabarmayı kesmek bu
+      // dinleyiciyi DURDURMAZ — sahiplenme işareti tek güvenilir yol (ölçüldü 14.09).
+      if (e.key === 'Escape' && !e.defaultPrevented && dialogStack[dialogStack.length - 1] === token) onClose();
     };
     document.addEventListener('keydown', onKey);
     return () => {
@@ -64,7 +72,7 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAside, ma
     <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-ops-scrim p-6">
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth }}
+        style={{ maxWidth, height: height === undefined ? undefined : `min(${height}px, 86vh)` }}
         className="flex max-h-[86vh] w-full flex-col overflow-hidden rounded-ops-dialog border border-ops-line bg-ops-white text-ops-ink shadow-[0_24px_70px_rgba(20,22,18,0.4)]"
       >
         <div className="flex items-start gap-3 border-b border-ops-line px-6 py-[18px]">

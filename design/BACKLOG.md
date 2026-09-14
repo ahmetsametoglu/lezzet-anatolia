@@ -492,7 +492,7 @@ penceresinde "Düzenle"nin satır içindeki yeri, mobil webde çekmece içinde �
 çiziminden SONRA doğdu (kullanıcı kararları 13.09: her hareket türüyle, belgesiyle ya da bir işe
 bağıyla izahlı; ortağın kaydı ortak cari hesabı; fatura gelince borç doğar) ve çizimde karşılıkları
 yok. Kitin gramerinde yazıldılar: "+ Belge" diyaloğu (elle hareket penceresinin kalıbı; cari ·
-tedarikçi · tür · etiket menüleri), "Sözlük" penceresi (Türler · Cariler · Etiketler sekmeleri),
+tedarikçi · tür · etiket menüleri), "Sözlük" penceresi (sekmeler başlıkta; kayıt satırın içinde düzenlenir — 12.18),
 defter satırının orta hücresinde tür · cari · etiket menüleri (muhasebeci deseni — `design/KARARLAR.md`),
 "Eşleşmeyi geri al"; ortak carisinin bakiyesi işaretiyle renklenir (14.09 — cümle kalktı). Çizim
 yapılırsa bakılacaklar: belge kartında dosya ikonu, tür ve etiket çiplerinin ayrışması (ikisi de olive).
