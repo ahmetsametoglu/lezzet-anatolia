@@ -13,7 +13,8 @@ import { orderIdOrNull } from '@/lib/order/order-id';
 import { routing } from '@/i18n/routing';
 import { OrderWatch } from './components/order-watch';
 import { ConfirmationClient } from './confirmation-client';
-import type { ConfirmationView } from './confirmation-types';
+import { stripePaymentGateway } from '@/lib/stripe';
+import { paymentStateOf, type ConfirmationView } from './confirmation-types';
 import messages from './messages.json';
 // Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`, 08.20).
 import checkoutMessages from '../messages.json';
@@ -96,6 +97,20 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   const invite =
     placed && order.deliveryType === 'route' ? await tryOpenNeighborInvite(db, { orderId: order.id, customerId: profile.id }) : null;
 
+  /**
+   * "Ödemeniz onaylanıyor · bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru. Kapıda
+   * ödemede beklenen bir banka yok; havalede de öyle — orada beklenen müşterinin transferi.
+   */
+  const awaitingCard = !placed && !cancelled && order.paymentMethod === 'online';
+  /**
+   * Sağlayıcının söylediği (07.18) — yalnız ödemesi beklenen kart taslağında sorulur. Okuma YAN ETKİSİZ:
+   * sipariş burada ne onaylanır ne iptal edilir; o iş canlı bağın eylemiyle (`verifyPaymentAction`)
+   * açıkça yapılır — sayfanın çizimi bir karar anı değildir. Sorulamazsa `null` ve ekran bugünkü
+   * cümlede kalır; hata burada yutulmuyor sayılmaz çünkü canlı bağın eylemi aynı soruyu birkaç saniye
+   * sonra yeniden sorar ve orada iz bırakır.
+   */
+  const payment = awaitingCard && order.paymentRef ? await stripePaymentGateway()?.read(order.paymentRef).catch(() => null) : null;
+
   const view: ConfirmationView = {
     orderId: order.id,
     /* Kontenjan SUNUCUDA sayılıyor (08.55): ekran "kaç komşu daha" cümlesini kurabilsin ve davet
@@ -115,11 +130,8 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     // Damga HAM taşınır; "para iade edildi mi" kararını ekran tek bir yerden sorar
     // (`isRefundedCancellation`) — kuralı burada da kurmak aynı kararın ikinci kopyası olurdu.
     refundedAt: order.providerRefundedAt,
-    /**
-     * "Ödemeniz onaylanıyor · bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru. Kapıda
-     * ödemede beklenen bir banka yok; havalede de öyle — orada beklenen müşterinin transferi.
-     */
-    awaitingCard: !placed && !cancelled && order.paymentMethod === 'online',
+    awaitingCard,
+    paymentState: payment ? paymentStateOf(payment.status) : null,
     onRoute: order.deliveryType === 'route',
     deliveryDate: order.deliveryDate,
     onAccount: order.onAccount,

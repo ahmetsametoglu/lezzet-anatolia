@@ -2,13 +2,15 @@
 
 import { Link } from '@/i18n/navigation';
 import { useCart } from '@/components/customer/cart/cart-context';
-import { cartKey, splitByRoute } from '@/lib/cart/cart-types';import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
+import { cartKey, splitByRoute } from '@/lib/cart/cart-types';
+import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
 import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
 import { CartGroup } from './components/cart-group';
 import { CartSummary } from './components/cart-summary';
 import { CartIdentity } from './components/cart-identity';
 import { PlaceChangeCard } from './components/place-change-card';
+import { AwaitingPaymentNotice } from './components/awaiting-payment-notice';
 import { CartCoupon } from './components/cart-coupon';
 import { EmptyCart } from './components/empty-cart';
 import { CartUnreachable } from './components/cart-unreachable';
@@ -25,7 +27,7 @@ import type { CartViewProps } from './cart-types';
  * İlk okuma tamamlanmadan boş durum GÖSTERİLMEZ: sepette ürün varken bir an "sepetiniz boş" yazıp
  * sonra dolması, müşteriye sepetini kaybettiğini düşündürür.
  */
-export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
+export function CartDesktop({ t, locale, emptyContext, awaitingPayment }: CartViewProps) {
   const { view, ready, failed, addSkipped } = useCart();
   // İlk kare BOŞ bırakılmaz: iskelet gerçek yerleşimin ölçüsünü taşır, içerik gelince zıplama olmaz.
   if (!ready) return <CartSkeleton t={t} />;
@@ -60,7 +62,12 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
           </Link>
         </div>
 
-        {/* Yer değişimi bildirimi LİSTENİN ÜSTÜNDE, uyarıların ilki (kullanıcı isteği 14.09): değişen
+        {/* Ödemesi beklenen kart siparişi (07.18) — bantların İLKİ: sepet yalnız onayda boşalır, sonucu
+            gelmemiş ödemenin kalemleri hâlâ burada. Aşağıdaki bantlar yeniden ödemeye hazırlanan müşteriye
+            konuşuyor; önce öncekinin ne olduğunu bilmeli. */}
+        {awaitingPayment && <AwaitingPaymentNotice t={t} locale={locale} awaiting={awaitingPayment} />}
+
+        {/* Yer değişimi bildirimi LİSTENİN ÜSTÜNDE, kalem uyarılarının ilki (kullanıcı isteği 14.09): değişen
             şey kalemler ve bildirim onların üstünde okunur; aşağıdaki engel ve kısıt blokları çoğu
             zaman onun sonucu. Önce sağ sütunda, özetin üstünde duruyordu. */}
         <PlaceChangeCard t={t} locale={locale} />

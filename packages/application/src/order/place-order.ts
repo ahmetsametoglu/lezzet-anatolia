@@ -6,6 +6,7 @@ import type { CartBundlePort } from '../cart/read';
 import type { CartEntry } from '../cart/cart-types';
 import { createCheckoutDraft, type CheckoutDraftInput, type CheckoutDraftOutcome } from './checkout-draft';
 import { createCheckoutSession, type CheckoutSessionCreator } from './checkout-session';
+import type { PaymentGateway } from './payment-gateway';
 import { reserveOrderStock } from './reserve';
 import { transitionOrder } from './transition';
 import type { OrderEffects } from './effects';
@@ -148,6 +149,11 @@ export interface PlaceOrderInput {
    * gerekirdi — bu zincirin taşınmasının tek teknik kısıtı buydu.
    */
   createPaymentSession: CheckoutSessionCreator | null;
+  /**
+   * Sağlayıcıya soran port (07.18) — yeni deneme eski taslağı süpürürken eski ÖDEMEYİ de sağlayıcıda
+   * iptal etmek için. Verilmezse eski davranış: taslak kapanır, ödemesi sağlayıcıda açık kalır.
+   */
+  paymentGateway?: PaymentGateway | null;
   /** Durum geçişinin yan etkileri (müşteri haberi + sipariş puanı) — `transitionOrder`a geçer. */
   effects?: OrderEffects;
   /**
@@ -196,7 +202,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
   }
 
   // Önceki deneme(ler)den kalan açık taslak KAPATILIR — yenisini açmadan önce.
-  await supersedeOpenDrafts(db, input.customerId);
+  await supersedeOpenDrafts(db, input.customerId, input.paymentGateway ?? null);
 
   const draft = await createCheckoutDraft(db, {
     locale: input.locale,
@@ -350,16 +356,27 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
  * Kapsam bilerek geniş: yöntem değiştiren müşterinin (karttan kapıda ödemeye geçen) ardında da
  * taslak kalmamalı. Yalnız `draft` olanlara dokunulur — kesinleşmiş sipariş buraya hiç girmez.
  *
- * **Süpürülen taslağın ödeme niyeti iptal EDİLEMİYOR** (siparişte sağlayıcı kimliği saklanmıyor).
- * Onaylanmamış bir niyet kendiliğinden hiç tahsil etmez; yine de dar bir ihtimal için webhook
- * tarafında emniyet var: iptal edilmiş bir siparişe ödeme gelirse para iade edilir.
+ * **Süpürülen taslağın ödemesi de sağlayıcıda iptal edilir** (07.18 — kimliği artık siparişte,
+ * `payment_ref`). Önce edilemiyordu: onaylanmamış bir niyet kendiliğinden tahsil etmese de 3-D Secure
+ * penceresinden sonradan onaylanabiliyordu. Geçmiş ya da işlenen bir ödeme buraya hiç gelmez — çağıran
+ * yeni ödemeyi açmadan önce `openPaymentBefore`la sordu. Webhook'taki emniyet de yerinde: iptal edilmiş
+ * bir siparişe ödeme gelirse para iade edilir.
  */
-async function supersedeOpenDrafts(db: Db, customerId: string): Promise<void> {
+async function supersedeOpenDrafts(db: Db, customerId: string, gateway: PaymentGateway | null): Promise<void> {
   const orders = new OrderService(db);
   // Taslaklar en yenilerdir: sayfanın başı yeter, tüm geçmişi taramaya gerek yok.
   const recent = await orders.listByCustomer(customerId, { limit: 20 });
   for (const order of recent.rows) {
     if (order.status !== 'draft') continue;
+    // İptal düşerse iz bırakılır ve süpürme SÜRER: yeni deneme eski bir ödemenin arızası yüzünden
+    // durmamalı; ödeme sonradan geçerse yukarıdaki emniyet parayı iade eder.
+    if (gateway && order.paymentRef) {
+      try {
+        await gateway.cancel(order.paymentRef);
+      } catch (error) {
+        await captureError(error, { source: SOURCES.applicationOrder, context: { orderId: order.id, step: 'cancel_superseded_payment' } });
+      }
+    }
     // Sıra ÖNEMLİ: önce mal geri bırakılır, sonra sipariş kapanır. Tersi olsaydı iptal edilmiş bir
     // siparişin rezervasyonu ortada kalabilirdi.
     await releaseOrderStock(db, order.id);

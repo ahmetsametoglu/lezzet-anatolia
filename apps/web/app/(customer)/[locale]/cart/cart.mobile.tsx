@@ -10,6 +10,7 @@ import { CartGroup } from './components/cart-group';
 import { CartSummary } from './components/cart-summary';
 import { CartIdentity } from './components/cart-identity';
 import { PlaceChangeCard } from './components/place-change-card';
+import { AwaitingPaymentNotice } from './components/awaiting-payment-notice';
 import { CartCoupon } from './components/cart-coupon';
 import { CartCheckoutBar } from './components/cart-checkout-bar';
 import { EmptyCart } from './components/empty-cart';
@@ -29,7 +30,7 @@ import type { CartViewProps } from './cart-types';
  * Toplam ve tek aksiyon ekranın altındaki koyu çubukta sabit durur (`CartCheckoutBar`); tutar
  * dökümü akıştaki özet kartında kalır. Boş sepette çubuk HİÇ YOKTUR — sabitlenecek tutar yok.
  */
-export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
+export function CartMobile({ t, locale, emptyContext, awaitingPayment }: CartViewProps) {
   const { view, ready, failed, addSkipped } = useCart();
   // İlk kare BOŞ bırakılmaz: iskelet gerçek yerleşimin ölçüsünü taşır, içerik gelince zıplama olmaz.
   if (!ready) return <CartSkeleton t={t} compact />;
@@ -74,7 +75,9 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
             </div>
           )}
           <div className="flex flex-col gap-2.5 px-4 py-3.5">
-            {/* Yer değişimi bildirimi en üstte — masaüstünde de kalem listesinin üstünde (14.09). */}
+            {/* Ödemesi beklenen kart siparişi (07.18) — kalem uyarılarından önce, masaüstüyle aynı gerekçe. */}
+            {awaitingPayment && <AwaitingPaymentNotice t={t} locale={locale} awaiting={awaitingPayment} compact />}
+            {/* Yer değişimi bildirimi kalem uyarılarının ilki — masaüstünde de kalem listesinin üstünde (14.09). */}
             <PlaceChangeCard t={t} locale={locale} compact />
             {/* K32 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. Posta
                 kodu sepette sorulmaz: tek soru yeri başlıktaki hap (kullanıcı kararı 14.09). */}

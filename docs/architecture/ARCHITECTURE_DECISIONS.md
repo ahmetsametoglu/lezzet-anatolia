@@ -107,6 +107,13 @@ bakıyordu; ikinci tünel gereksizleşti (o gün üç kez tünel arızası yaşa
 `lib/money` + `lib/order/transition` + `lib/order/notify` üçlüsünü de pakete çıkarmak demek — ayrı
 bir iş ve para akışında acele edilecek bir yer değil. Yani sapma daralmıştır, kapanmamıştır.
 
+**Arka uç Stripe'a SORAR (14.09 · kullanıcı kararı — 07.18).** Ödeme olayı gelmediğinde taslağı
+netleştirecek bir zamanlayıcı gerekti ve zamanlayıcının evi arka uç (cron). Onay yolu bu iş sırasında
+pakete çıktı (`@lezzet/application/order/confirm-payment`): webhook, ödeme sayfası ve zamanlayıcı aynı
+kapıyı çağırıyor, para hareketi ödeme kimliğiyle bir kez yazılıyor. Arka uç anahtarı yalnız SORMAK için
+tutar — ödemenin durumu, iptali, iadesi (`PaymentGateway`, uyarlaması tek: `stripeGateway`). Ödeme açmak
+ve webhook web'de kalıyor; sapma bir kez daha daraldı, kapanmadı.
+
 ---
 
 ## Sapma 6 — Stripe kart alanı SAYFA İÇİNDE, ham renk orada meşru

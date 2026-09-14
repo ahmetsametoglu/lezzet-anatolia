@@ -1,7 +1,7 @@
 import { serviceDb } from '@lezzet/database';
 import { transitionOrder as transitionOrderFor, type OrderEffects, type TransitionOutcome } from '@lezzet/application';
 import type { OrderStatus } from '@lezzet/types';
-import { notifyOrderStatus } from './notify';
+import { notifyOrderException, notifyOrderStatus } from './notify';
 
 /**
  * Durum ilerletme kapısı (07.6) — **uygulama katmanı orkestrasyonu**.
@@ -23,6 +23,16 @@ import { notifyOrderStatus } from './notify';
  */
 export const webOrderEffects: OrderEffects = {
   notifyStatus: (orderId, status) => notifyOrderStatus(orderId, status),
+};
+
+/**
+ * Kart ödemesinin onay yolu (07.18 · `confirmOnlinePayment`) İKİ haberi de verebilir: onayda sipariş
+ * haberi, ödeme geldiğinde mal kalmadıysa iptal haberi. Webhook ve ödeme sayfasının "sağlayıcıya sor"
+ * eylemi aynı nesneyi geçirir — biri iptal haberini unutursa müşteri parasının neden döndüğünü öğrenemezdi.
+ */
+export const webPaymentEffects: OrderEffects = {
+  ...webOrderEffects,
+  notifyException: (orderId, event, opts) => notifyOrderException(orderId, event, opts),
 };
 
 interface TransitionInput {

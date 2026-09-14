@@ -34,7 +34,7 @@ draft → confirmed → preparing → ready → out_for_delivery → delivered �
 ```
 
 Ek geçişler:
-- `draft → cancelled` (terk edilen checkout / rezervasyon TTL'inin dolması — DOMAIN §4). *(Bu satır kodda ve testte doğduğu günden beri vardı ama bu listede YOKTU; denetim 26.08'de eklendi.)*
+- `draft → cancelled` (terk edilen checkout / rezervasyon TTL'inin dolması — DOMAIN §4; kart ödemesinde ödemenin gelmeyeceği sağlayıcıya sorularak netleşince — sebep `payment_failed`, 07.18). *(Bu satır kodda ve testte doğduğu günden beri vardı ama bu listede YOKTU; denetim 26.08'de eklendi.)*
 - `confirmed / preparing / ready → cancelled` (stok geri bırakılır — depo çıkışıysa depoya girişte)
 - `out_for_delivery → ready` (**ulaşılamadı** — yeniden teslim; mal ayrılmış kalır)
 - `out_for_delivery → returned` (**reddedildi** — mal depoya döner)
@@ -86,6 +86,8 @@ Bu yolda `confirmed/preparing/ready/out_for_delivery` durumlarına uğranmaz. Te
 | `→ returned` | Karara göre fiiliye geri ekle veya imha işaretle |
 
 > **Rezervasyon ne zaman yapılır — ödeme yöntemine bağlıdır** (`DOMAIN.md §4`): **online** ödemede stok **checkout başlarken** ayrılır (sipariş hâlâ `draft`, rezervasyon TTL'li) ve `confirmed` yalnız ödeme onayında olur — "önce ayır, sonra tahsil et" kuralı budur. **Kapıda / vadeli** ödemede rezervasyon `confirmed` geçişindedir. **Hızlı satışta** rezervasyon yoktur, fiiliden düşülür. Yani `confirmed` her zaman "stok şimdi ayrıldı" demek değildir; ayrılmış olabilir.
+
+> **Online ödemede `draft → confirmed`in İKİ tetikleyicisi, TEK kapısı var (07.18):** ödeme olayı (webhook) ya da sağlayıcıya sorulan durum (`reconcileDraftPayment` — ödeme sayfası, ödeme zamanlayıcısı `sweep_unpaid_drafts`, yeni ödeme açılmadan önce). İkisi de `confirmOnlinePayment`tan geçer; tahsilat hareketi ödeme kimliğiyle (`stripe-payment:<pi>`) bir kez yazılır — iki tetikleyici aynı ödemeyi iki kez sayamaz. Webhook gelmezse taslak süresiz beklemez: ödeme penceresi kapanınca zamanlayıcı sorar; ödeme geçtiyse onaylar, gelmeyecekse önce sağlayıcıdaki ödemeyi, sonra taslağı iptal eder.
 
 > **Rezervasyon serbest bırakma depoya çıpalıdır:** `cancelled`/`returned` stok etkisi mal **fiziksel olarak depoya geri girdiğinde** işler — kapıda değil. `out_for_delivery → ready` (ulaşılamadı) stoğu değiştirmez; mal ayrılmış kalır. Ayrıntı: `DOMAIN.md §4`.
 

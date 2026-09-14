@@ -106,6 +106,9 @@ const UYGULAMA_DBSIZ = [
   'packages/application/src/ticket/product-reach.test.ts',
   // AI kullanım satırı (15.27) — kayıttan satıra, tarifeden maliyete saf dönüşüm; yazım entegrasyonda.
   'packages/application/src/ai/usage-row.test.ts',
+  // Ödeme sağlayıcısı portunun uyarlaması (07.18) — sahte istemciyle: ağsız, DB'siz. Sınanan şey
+  // tanımadığı durumda karar VERMEMESİ ve tutarın alınan paradan okunması.
+  'packages/application/src/order/payment-gateway.test.ts',
 ];
 
 const WEB_LIB_DBSIZ = [

@@ -47,8 +47,8 @@ export function stripeSessionCreator(): CheckoutSessionCreator | null {
       // Kart yeterli: cüzdanlar (Apple/Google Pay) da kart yöntemidir, ayrı tip gerektirmez.
       // Otomatik yöntemler açık bırakılsaydı sepete uymayan (Klarna, taksit) seçenekler belirirdi.
       payment_method_types: ['card'],
-      // Siparişe geri dönüşün TEK yolu: webhook bu alanı okur. Ayrı eşleme tablosu tutmuyoruz —
-      // sağlayıcının taşıdığı kimlik, bizim kopyamızdan güvenilirdir.
+      // Webhook siparişi bu alandan bulur. Ters yön — siparişten ödemeye — 07.18'den beri siparişin
+      // `payment_ref` kolonunda: olay gelmezse sistem sağlayıcıya o kimlikle sorar.
       metadata: { order_id: params.orderId, reservation_expires_at: params.reservationExpiresAt },
     });
     return { id: intent.id, clientSecret: intent.client_secret };

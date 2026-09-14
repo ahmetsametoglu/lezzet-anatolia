@@ -1,5 +1,5 @@
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
-import type { CustomerOrderSummary } from '@/lib/order/customer-orders';
+import type { CustomerAwaitingPayment, CustomerOrderSummary } from '@/lib/order/customer-orders';
 import type { KeysetCursor } from '@lezzet/types';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -20,6 +20,11 @@ export interface OrdersViewProps {
   t: Messages;
   locale: Locale;
   orders: readonly CustomerOrderSummary[];
+  /**
+   * Ödemesi beklenen kart siparişi (07.18) — listenin üstünde ayrı satır, liste boşken de görünür:
+   * ödeme yapıp sonucunu bekleyen müşterinin "siparişim nerede" sorusunun cevabı burası.
+   */
+  awaitingPayment: CustomerAwaitingPayment | null;
   nextCursor: KeysetCursor | null;
   loadingMore: boolean;
   onLoadMore: () => void;

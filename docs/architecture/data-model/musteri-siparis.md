@@ -245,6 +245,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `status` | order_status |  | `'draft'` |
 | `cancel_reason` | order_cancel_reason | • |  |
 | `provider_refunded_at` | timestamptz | • |  |
+| `payment_ref` | text | • |  |
 | `payment_status` | payment_status |  | `'pending'` |
 | `payment_method` | payment_method | • |  |
 | `on_account` | boolean |  | `false` |
@@ -291,6 +292,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`status`** — bkz. `ORDER_LIFECYCLE.md`
 - **`provider_refunded_at`** — **Sağlayıcı ödemesi iade edildi mi** (07.14); `null` = edilmedi. `cancel_reason`dan AYRI çünkü ayrı sorular ve bir dalda ayrışıyorlar: sebep "neden iptal", bu "para çekilip geri verildi mi". `out_of_stock`ta çakışırlar; webhook'un birinci iade dalında (sipariş zaten `superseded`, ödeme geç geliyor) çakışmazlar — sebebi `out_of_stock`a çevirmek yalan, boş bırakmak ekrana "tahsilat yapılmadı" dedirtiyordu. **`settleRefund`'ın müşteri iade borcundan farklı:** orada mal eksik geldi, defterde hareket var; burada sipariş hiç doğmadı, para gelip geri gitti, defter net sıfır. Bayrak değil TARİH — "ekstremde görünmüyor" diyen müşteriye tarih söylenir
 - **`cancel_reason`** — **NEDEN iptal oldu** (07.14); `null` = iptal edilmedi. `superseded` → müşteri yeniden denedi, eski taslak kapandı; `out_of_stock` → mal kalmadı; `customer` · `staff` → iptali kim istedi. Kolon bir raporlama süsü değil: onay ekranı iptal edilen HER siparişte *"tahsilat yapılmadı"* diyordu ve kart yolunda bu yanlıştı
+- **`payment_ref`** — **sağlayıcıdaki ödeme kimliği** (07.18) — Stripe PaymentIntent (`pi_…`), ödeme açılırken yazılır; `null` = ödeme açılmadı (kapıda/vadeli ödeme, hızlı satış). Önce yalnız sağlayıcının künyesinde (`metadata.order_id`) duruyordu ve siparişe dönüşün tek yolu webhook'tu: olay gelmezse sistem "ödendi mi" diye soramıyor, taslak süresiz bekliyor, yeni denemede eski ödeme durdurulamıyordu. Kimlik bizde olunca ödeme sayfası ve 30 dk zamanlayıcısı sağlayıcıya sorar (`reconcileDraftPayment`). Kısmi unique: bir ödeme tek siparişe bağlanır
 - **`payment_status`** — ayrı eksen; **türetilir** (`amount_collected`−`amount_refunded` vs karşılanan tutar) — bkz. Kalıcı kararlar
 - **`payment_method`** — `bank_transfer` = havale (peşin veya vadeli tahsilat)
 - **`on_account`** — vadeli sipariş mi — yalnız `credit_enabled` müşteride true; peşin ödemesiz `confirmed` (bkz. `DOMAIN.md §7`)

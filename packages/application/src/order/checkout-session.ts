@@ -106,6 +106,14 @@ export async function createCheckoutSession(
     reservationExpiresAt: expiresAt,
   });
 
+  /*
+    ÖDEME KİMLİĞİ SİPARİŞE YAZILIR (07.18). Önce yalnız sağlayıcının künyesinde duruyordu ve siparişe
+    dönüşün tek yolu webhook'tu: olay gelmezse sistem "bu sipariş ödendi mi" diye soramıyor, taslak
+    süresiz "onaylanıyor"da kalıyor, müşteri yeniden ödeyince eski ödeme durdurulamıyordu. Kimlik
+    siparişte olunca ödeme sayfası ve zamanlayıcı sağlayıcıya sorar (`reconcileDraftPayment`).
+  */
+  await new OrderService(db).update({ id: order.id, paymentRef: intent.id });
+
   return { status: 'ok', paymentIntentId: intent.id, clientSecret: intent.clientSecret, expiresAt };
 }
 

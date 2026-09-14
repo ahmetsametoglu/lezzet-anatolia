@@ -24,6 +24,7 @@ const BASE_SALE: OrderSale = {
   // Tamamlanmış satışta iptal sebebi yoktur (07.14) — `null` "iptal edilmedi" demek.
   cancelReason: null,
   providerRefundedAt: null,
+  paymentRef: null,
   paymentStatus: 'paid',
   paymentMethod: 'card',
   onAccount: false,

@@ -87,6 +87,14 @@ create table public.order (
   -- Bayrak değil TARİH: "ne zaman iade edildi" destek konuşmasının ilk sorusudur ("ekstremde
   -- görünmüyor" diyen müşteriye tarih söylenir), ve boolean onu bir daha cevaplayamaz.
   provider_refunded_at timestamptz,
+  -- SAĞLAYICIDAKİ ÖDEME KİMLİĞİ (07.18) — Stripe PaymentIntent (`pi_…`); ödeme açılırken yazılır
+  -- (`createCheckoutSession`). Önce yalnız sağlayıcının künyesinde (`metadata.order_id`) duruyordu
+  -- ve siparişe dönüşün TEK yolu webhook'tu: olay gelmezse (tünel kapalı, uç yanlış yapılandırılmış)
+  -- sistem "bu sipariş ödendi mi" diye SORAMIYORDU — taslak süresiz "onaylanıyor"da kalıyor, müşteri
+  -- yeniden ödeyince eski ödeme durdurulamıyordu. Kimlik bizde olunca ödeme sayfası ve 30 dakikalık
+  -- zamanlayıcı sağlayıcıya sorar (`reconcileDraftPayment`), yeni denemede eski ödeme iptal edilir.
+  -- Kısmi unique: bir ödeme tek siparişe bağlanır.
+  payment_ref text,
   -- TÜRETİLİR (net tahsilat vs karşılanan tutar) — elle set edilmez, motor hesaplar (03.6).
   payment_status payment_status not null default 'pending',
   payment_method payment_method,
@@ -204,6 +212,7 @@ create table public.order (
 -- Referans müşteriye söylenen numaradır: iki siparişte aynı olamaz. Draft'ta null (kısmi indeks).
 create unique index order_reference_key on public.order (reference_no) where reference_no is not null;
 create unique index order_idempotency_key on public.order (idempotency_key) where idempotency_key is not null;
+create unique index order_payment_ref on public.order (payment_ref) where payment_ref is not null;
 -- Müşteri sipariş geçmişi (sonsuz kaydırma).
 create index order_customer_idx on public.order (customer_id, created_at desc);
 -- Operasyon kuyruğu: "bu depoda bugün hazırlanacaklar", "yolda olanlar". Baş kolon depo (DOMAIN §17):

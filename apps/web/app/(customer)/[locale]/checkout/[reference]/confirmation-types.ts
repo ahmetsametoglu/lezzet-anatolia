@@ -1,3 +1,4 @@
+import type { PaymentIntentStatus } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PaymentMethod } from '@lezzet/types';
@@ -70,6 +71,16 @@ export interface ConfirmationView {
   refundedAt: string | null;
   /** "Bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru; kapıda ödemede beklenen banka yok. */
   awaitingCard: boolean;
+  /**
+   * **Sağlayıcının söylediği** (07.18) — yalnız ödemesi beklenen kart taslağında dolu, yoksa `null`.
+   *
+   * Sipariş "taslak" derken ödemenin kendisi üç ayrı yerde olabilir ve ekran üçüne ayrı cümle kurar:
+   * `paid` para alındı, onay saniyeler içinde; `processing` banka işliyor; `incomplete` ödeme tamamlanmadı
+   * (kart reddi, 3-D Secure yarım) — müşteri boşuna beklemesin, yeniden denesin. Önce ekran yalnız
+   * veritabanına bakıyordu ve olay gelmeyince süresiz "onaylanıyor" diyordu. `null` = sorulamadı
+   * (anahtarsız ortam, sağlayıcı düştü): ekran bugünkü "onaylanıyor" cümlesinde kalır.
+   */
+  paymentState: 'paid' | 'processing' | 'incomplete' | null;
   onRoute: boolean;
   deliveryDate: string | null;
   onAccount: boolean;
@@ -143,4 +154,25 @@ export interface ConfirmationViewProps {
  */
 export function isRefundedCancellation(view: Pick<ConfirmationView, 'cancelled' | 'refundedAt'>): boolean {
   return view.cancelled && view.refundedAt !== null;
+}
+
+/**
+ * **Sağlayıcının durumundan ekranın hâli** (07.18) — saf; ekran üç hâle ayrı cümle kurar (`paymentState`
+ * künyesi). İptal edilmiş ödeme de "tamamlanmadı"dır: müşteri için ikisinin anlamı aynı — para çekilmedi,
+ * yeniden deneyebilir. Bu sayfaya ödeme adımından dönülür; `requires_action` burada 3-D Secure'un
+ * bitmediği demektir, "bekleniyor" değil.
+ */
+export function paymentStateOf(status: PaymentIntentStatus): NonNullable<ConfirmationView['paymentState']> {
+  switch (status) {
+    case 'succeeded':
+      return 'paid';
+    case 'processing':
+    case 'requires_capture':
+      return 'processing';
+    case 'requires_payment_method':
+    case 'requires_confirmation':
+    case 'requires_action':
+    case 'canceled':
+      return 'incomplete';
+  }
 }

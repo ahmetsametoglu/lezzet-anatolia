@@ -13,10 +13,10 @@
  *
  * Kanal adı siparişin kimliğidir (UUID): tahmin edilemez ve zaten mesaj taşımadığı için duyulması
  * da bir şey söylemez.
+ *
+ * **Adın kendisi ortak katmanda (07.18):** arka ucun ödeme zamanlayıcısı da aynı zili çalıyor.
  */
-export function orderChannelName(orderId: string): string {
-  return `order:${orderId}`;
-}
+export { orderChannelName } from '@lezzet/application/realtime/order-channel';
 
 // Olay adı BURADAN KALKTI (16.8): zili çalan taraf ortak modüle terfi edince aynı sabit iki yerde
 // yaşamaya başlamıştı — biri değişse zil sessizce çalmaz olurdu. Tek kaynak:

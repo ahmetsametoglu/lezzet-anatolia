@@ -67,7 +67,8 @@ describe('tarama · satıra yazılanlar', () => {
       }),
     });
 
-    expect(result).toEqual({ scanned: 1, located: 1, noMatch: 0, deferred: 0 });
+    // `expired` sonucun parçası (`486bbf6a`): `rows` verilen turda süresi dolan Google noktaları sorulmaz, hep 0.
+    expect(result).toEqual({ scanned: 1, located: 1, noMatch: 0, deferred: 0, expired: 0 });
 
     const [after] = await addresses.listByIds([row.id]);
     expect(Number(after!.lat)).toBeCloseTo(48.5839, 5);

@@ -24,7 +24,8 @@
     "@lezzet/types": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "hono": "^4.6.15",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "stripe": "^22.3.2"
   },
   "devDependencies": {
     "@lezzet/typescript-config": "workspace:*",

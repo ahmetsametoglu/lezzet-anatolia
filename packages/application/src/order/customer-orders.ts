@@ -77,9 +77,27 @@ export interface CustomerOrderSummary {
   moreCount: number;
 }
 
+/** Ödemesi beklenen kart siparişi — listenin üstündeki ayrı satır (07.18). */
+export interface CustomerAwaitingPayment {
+  /** Sayfanın kimliği: numara ancak onayla doğar, ödeme sayfası sipariş kimliğiyle açılır. */
+  orderId: string;
+  createdAt: string;
+  totalCents: number;
+  itemCount: number;
+}
+
 export interface CustomerOrderPage {
   orders: readonly CustomerOrderSummary[];
   nextCursor: KeysetCursor | null;
+  /**
+   * **Ödemesi beklenen kart siparişi** (07.18) — varsa yalnız İLK sayfada dolu.
+   *
+   * Taslaklar listede yok (künye aşağıda), ama ÖDEMESİ AÇILMIŞ taslak müşterinin yaptığı bir şeydir: ödedi
+   * ve sonucu bekliyor. Onu göstermemek "siparişim nerede" dedirtiyordu (kullanıcı bildirimi 14.09 — ödeme
+   * olayı gelmedi, sepet dolu kaldı, Siparişlerim boştu). **Liste satırı değil ayrı alan:** müşteri sipariş
+   * durumlarına yeni bir değer eklemek, aynı listeyi okuyan native uygulamanın eşlemesini kırardı.
+   */
+  awaitingPayment: CustomerAwaitingPayment | null;
 }
 
 export interface CustomerOrderListInput {
@@ -128,6 +146,13 @@ export async function listCustomerOrders(
   for (const order of page.rows) {
     const status = customerOrderStatus(order.status);
     if (!status) continue; // Taslak — müşterinin siparişi değil.
+    /*
+      Hiç KESİNLEŞMEMİŞ iptal de listede yok (07.18): süpürülen taslak ya da ödemesi gelmeyen taslak —
+      numarası doğmadı ve para hareket etmedi. Göstermek, verilmemiş bir siparişi "iptal edildi" diye
+      listelemekti; zamanlayıcı ödemesi gelmeyen taslakları kapattıkça bu satırlar çoğalacaktı. Parası
+      çekilip iade edilmiş olan KALIR (`providerRefundedAt`): müşterinin hesabında hareket var.
+    */
+    if (order.status === 'cancelled' && !order.referenceNo && !order.providerRefundedAt) continue;
 
     const own = itemsByOrder.get(order.id) ?? [];
     /*
@@ -160,7 +185,29 @@ export async function listCustomerOrders(
     });
   }
 
-  return { orders, nextCursor: page.nextCursor };
+  return {
+    orders,
+    nextCursor: page.nextCursor,
+    awaitingPayment: input.cursor ? null : await getCustomerAwaitingPayment(db, input.customerId, itemsByOrder),
+  };
+}
+
+/**
+ * **Ödemesi beklenen kart siparişi** (07.18) — Siparişlerim'in üst satırı ve sepetin bandı AYNI kapıdan
+ * okur: iki yüzeyin iki ayrı "bekleyen ödeme" tanımı, bir gün ayrışan iki cevap olurdu. Tanım veride:
+ * ödemesi açılmış (`paymentRef`) ve hâlâ taslak olan kart siparişi (`findOpenOnlineDraft`).
+ *
+ * `itemsByOrder`: listenin o sayfada zaten okuduğu kalemler — taslak oradaysa yeniden sorulmaz.
+ */
+export async function getCustomerAwaitingPayment(
+  db: SupabaseClient,
+  customerId: string,
+  itemsByOrder: ReadonlyMap<string, readonly OrderItem[]> = new Map(),
+): Promise<CustomerAwaitingPayment | null> {
+  const draft = await new OrderService(db).findOpenOnlineDraft(customerId);
+  if (!draft) return null;
+  const items = itemsByOrder.get(draft.id) ?? (await new OrderItemService(db).listByOrders([draft.id]));
+  return { orderId: draft.id, createdAt: draft.createdAt, totalCents: draft.orderedTotalCents, itemCount: items.length };
 }
 
 /**

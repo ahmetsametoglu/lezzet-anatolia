@@ -573,6 +573,40 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
+   * **Müşterinin ödemesi beklenen kart taslağı** (07.18) — en yenisi, yoksa `null`.
+   *
+   * Ödemesi açılmış (`paymentRef` dolu) ve henüz ne onaylanmış ne iptal edilmiş sipariştir. Sepet
+   * "bekleyen bir ödemeniz var" der, Siparişlerim onu "ödeme bekleniyor" satırıyla gösterir — müşteri
+   * sonucu görmeden yeniden ödeyip iki kez çekim yaşamasın. Ödemesi hiç açılamamış taslak (kimliği
+   * boş) beklenen bir ödeme değildir, bu yüzden süzgeçte.
+   */
+  async findOpenOnlineDraft(customerId: string): Promise<Order | null> {
+    const rows = await this.getAll(
+      { customerId, status: 'draft', paymentMethod: 'online' },
+      { isNotNullFields: ['paymentRef'], orderBy: 'createdAt', orderDirection: 'desc', limit: 1 },
+    );
+    return rows[0] ?? null;
+  }
+
+  /**
+   * **Ödemesi beklenen kart taslakları, verilen andan ÖNCE açılmış olanlar** (07.18) — ödeme
+   * zamanlayıcısının kuyruğu, en eskisi önce. Tavan sayfalama değil emniyet: kuyruk her dakika
+   * boşaltılır ve her satır sağlayıcıya bir soru demek; birikmiş bir kuyruk tek turda sağlayıcıyı boğmasın.
+   */
+  listOpenOnlineDraftsBefore(before: string, limit = 50): Promise<Order[]> {
+    return this.getAll(
+      { status: 'draft', paymentMethod: 'online' },
+      {
+        isNotNullFields: ['paymentRef'],
+        rangeFilters: [{ field: 'createdAt', operator: 'lt', value: before }],
+        orderBy: 'createdAt',
+        orderDirection: 'asc',
+        limit,
+      },
+    );
+  }
+
+  /**
    * **Bir komşu davetinden doğan siparişler** (17.10) — davetin kaç kez kullanıldığının TEK kaynağı.
    *
    * `neighbor_invite` satırında azalan bir sayaç yok: sipariş iptal olunca sayacın geri alınması

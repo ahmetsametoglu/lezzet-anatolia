@@ -137,8 +137,9 @@ export type { NeighborWelcome, OpenNeighborInviteOutcome, PendingNeighborAward, 
 // ── Müşteri sipariş okuması (08.5) — terfi 21.16 ────────────────────────────
 // Kaynağı `apps/web/lib/order/{customer-orders,customer-lines,carrier}.ts`tı; web köprü olarak
 // duruyor. Detay kapısı İKİ anahtarı da kabul eder (kimlik ⟷ referans) — gerekçe künyede.
-export { getCustomerOrderDetail, listCustomerOrders } from './order/customer-orders';
+export { getCustomerAwaitingPayment, getCustomerOrderDetail, listCustomerOrders } from './order/customer-orders';
 export type {
+  CustomerAwaitingPayment,
   CustomerOrderDetail,
   CustomerOrderDetailInput,
   CustomerOrderDetailLine,
@@ -636,6 +637,15 @@ export { createCheckoutSession } from './order/checkout-session';
 export type { CheckoutSessionCreator, CheckoutSessionInput, CheckoutSessionOutcome } from './order/checkout-session';
 export { transitionOrder } from './order/transition';
 export type { TransitionInput, TransitionOutcome } from './order/transition';
+// ── Kart ödemesinin onay yolu ve "sağlayıcıya sor" kapısı (07.18) ────────────────────────────
+// Webhook, ödeme sayfası ve arka ucun zamanlayıcısı AYNI onay yolunu çağırır; sağlayıcı istemcisi
+// yine pakete girmez — `stripeGateway` istemcinin kullandığımız yüzünü yapısal olarak uyarlar.
+export { confirmOnlinePayment, providerAccountId } from './order/confirm-payment';
+export type { ConfirmPaymentDeps, ConfirmPaymentInput, ConfirmPaymentOutcome } from './order/confirm-payment';
+export { openPaymentBefore, reconcileDraftPayment, sweepUnpaidDrafts } from './order/reconcile-payment';
+export type { OpenPayment, ReconcileOutcome } from './order/reconcile-payment';
+export { stripeGateway } from './order/payment-gateway';
+export type { PaymentGateway, PaymentSnapshot, StripeLike } from './order/payment-gateway';
 // ── Paket (bundle) çözümü — terfi 09.08 ─────────────────────────────────────
 // Kaynağı `apps/web/lib/storefront/packages.ts`tı ve `server-only` olduğu için `apps/mobile-api`
 // okuyamıyordu; web köprü olarak duruyor. Terfi tetiği ÖLÇÜLMÜŞ bir arızaydı: mobil sepette paket

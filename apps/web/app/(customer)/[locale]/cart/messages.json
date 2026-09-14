@@ -111,6 +111,11 @@
       "dismiss": "Anladım",
       "note": "Hiçbir kalem silinmedi. Fırsat fiyatı bir partiye bağlıdır ve yere göre değişebilir; liste fiyatı ise yere göre asla değişmez."
     },
+    "awaitingPayment": {
+      "title": "Kart ödemeniz henüz onaylanmadı",
+      "body": "{amount} tutarındaki ödemenin sonucu henüz bize ulaşmadı.",
+      "cta": "Ödemenin durumunu gör →"
+    },
     "identity": {
       "loginTitle": "Devam etmek için giriş yapın",
       "loginBody": "Şifre yok. Google ile devam edin ya da e-postanıza tek kullanımlık bir kod gönderelim.",
@@ -250,6 +255,11 @@
       "dismiss": "J'ai compris",
       "note": "Aucun article n'a été supprimé. Un prix promotionnel dépend d'un lot et peut varier selon le lieu ; le prix courant, lui, ne change jamais selon le lieu."
     },
+    "awaitingPayment": {
+      "title": "Votre paiement par carte n'est pas encore confirmé",
+      "body": "Le résultat de votre paiement de {amount} ne nous est pas encore parvenu.",
+      "cta": "Voir l'état du paiement →"
+    },
     "identity": {
       "loginTitle": "Connectez-vous pour continuer",
       "loginBody": "Pas de mot de passe. Continuez avec Google ou recevez un code à usage unique par e-mail.",
@@ -388,6 +398,11 @@
       "price": "{name} hat einen anderen Preis — {to} statt {from}",
       "dismiss": "Verstanden",
       "note": "Es wurde kein Artikel entfernt. Ein Aktionspreis hängt an einer Charge und kann sich mit dem Ort ändern; der Listenpreis ändert sich nie nach Ort."
+    },
+    "awaitingPayment": {
+      "title": "Ihre Kartenzahlung ist noch nicht bestätigt",
+      "body": "Das Ergebnis Ihrer Zahlung über {amount} liegt uns noch nicht vor.",
+      "cta": "Zahlungsstatus ansehen →"
     },
     "identity": {
       "loginTitle": "Zum Fortfahren anmelden",

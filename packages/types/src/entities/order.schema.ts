@@ -54,6 +54,15 @@ export const OrderSchema = z.object({
    * dolduruyor, yani kural tek.
    */
   providerRefundedAt: z.string().datetime({ offset: true }).nullable(),
+  /**
+   * Sağlayıcıdaki ödeme kimliği (07.18) — Stripe PaymentIntent (`pi_…`), ödeme açılırken yazılır.
+   * `null` = ödeme açılmadı (kapıda/vadeli ödeme, hızlı satış) ya da açılamadı.
+   *
+   * Önce yalnız sağlayıcının künyesinde duruyordu ve siparişe dönüşün tek yolu webhook'tu: olay
+   * gelmezse sistem "ödendi mi" diye soramıyordu. Ödeme sayfası ve zamanlayıcı artık bununla sorar
+   * (`reconcileDraftPayment`); yeni denemede eski ödeme bununla iptal edilir.
+   */
+  paymentRef: z.string().nullable(),
   paymentStatus: PaymentStatusEnum,
   paymentMethod: PaymentMethodEnum.nullable(),
   /** Vadeli mi — vade bir ödeme YÖNTEMİ değil, siparişin bayrağıdır (DOMAIN §7). */

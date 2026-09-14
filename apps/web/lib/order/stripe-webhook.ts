@@ -1,22 +1,12 @@
-import {
-  MoneyMovementService,
-  OrderService,
-  ReservationService,
-  SettingsService,
-  StockService,
-  WebhookEventService,
-  serviceDb,
-} from '@lezzet/database';
-import { decideLatePayment, validateMovement } from '@lezzet/domain-core';
+import { confirmOnlinePayment } from '@lezzet/application';
+import { MoneyMovementService, OrderService, ReservationService, SettingsService, WebhookEventService, serviceDb } from '@lezzet/database';
+import { validateMovement } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
-import { STRIPE_FEE_NATURE, type MoneyMovementInsert, type OrderItem } from '@lezzet/types';
-import { clearOrderedLines } from '../cart/settle';
-import { recordOrderPayment, recordOrderRefund } from '../money/order-payment';
-import { broadcastOrderChanged } from '../realtime/broadcast';
-import { stripeClient } from '../stripe';
-import { cancelOrder } from './refund';
+import { STRIPE_FEE_NATURE, type MoneyMovementInsert } from '@lezzet/types';
+import { recordOrderRefund } from '../money/order-payment';
+import { stripePaymentGateway } from '../stripe';
 import { stripeEffects, type PaymentFee, type PayoutItem, type StripeEffects } from './stripe-effects';
-import { transitionOrder } from './transition';
+import { webPaymentEffects } from './transition';
 
 /**
  * Stripe webhook işleyicisi (07.5) — **uygulama katmanı orkestrasyonu**. STACK §13, DOMAIN §4.
@@ -34,6 +24,10 @@ import { transitionOrder } from './transition';
  * yazılı; backend'e taşımak ya o mantığı ikinci kez yazmayı ya da kapıları pakete çıkarmayı
  * gerektirirdi. İkincisi doğru hamle ama bu işin kapsamı değil. Buradaki gövde ince: taşınmak
  * istendiğinde tek dosya taşınır.
+ *
+ * **Onay yolu 07.18'den beri ortak katmanda** (`confirmOnlinePayment`): webhook gelmediğinde ödeme
+ * sayfası ve zamanlayıcı sağlayıcıya sorup AYNI yoldan onaylıyor. Burada kalan, olayın kendisine ait
+ * olanlar: imza sonrası yönlendirme, ödeme ücreti, iade mutabakatı ve payout.
  */
 
 type WebhookOutcome =
@@ -179,102 +173,38 @@ async function releaseExpired(event: VerifiedEvent): Promise<WebhookOutcome> {
 }
 
 /**
- * Ödeme onayı. Önce **malın hâlâ bizde olup olmadığı** sorulur; para yazımı ondan sonra gelir.
- * Sıra tersse, iade edilecek bir siparişte tahsilat kaydı açık kalır.
+ * Ödeme onayı — **gövde ortak katmanda** (`confirmOnlinePayment`, 07.18): geç ödeme kararı, tahsilat,
+ * `confirmed` geçişi, sepet temizliği ve ekran zili orada. Ödeme sayfası ve zamanlayıcı da aynı yolu
+ * çağırıyor; tahsilat ödeme kimliğinden türeyen anahtarla yazıldığı için aynı ödeme iki kez işlenmez.
  */
 async function confirmPayment(event: VerifiedEvent, accountId: string | null, effects: StripeEffects): Promise<WebhookOutcome> {
   if (!event.orderId) return { status: 'not_found' };
 
   const db = serviceDb();
-  const found = await new OrderService(db).getWithItems(event.orderId);
-  if (!found) return { status: 'not_found' };
+  const outcome = await confirmOnlinePayment(
+    db,
+    { orderId: event.orderId, paymentIntentId: event.paymentIntentId, amountCents: event.amountTotalCents, accountId },
+    { gateway: stripePaymentGateway(), effects: webPaymentEffects },
+  );
+  if (outcome.status === 'not_found') return { status: 'not_found' };
 
-  const { order, items } = found;
-
-  /**
-   * Sipariş İPTAL EDİLMİŞSE para geri verilir ve iş burada biter.
-   *
-   * Dar ama gerçek bir ihtimal: müşteri kart reddi sonrası tekrar denerken önceki taslağı
-   * süpürülüyor (`supersedeOpenDrafts`) ve süpürülen taslağın ödeme niyeti iptal edilemiyor —
-   * siparişte sağlayıcı kimliği saklanmıyor. Onaylanmamış bir niyet kendiliğinden tahsil etmez,
-   * ama 3-D Secure penceresi açıkken sayfa yenilenirse o niyet sonradan onaylanabilir.
-   *
-   * Bu emniyet olmasaydı akış aşağıda `transitionOrder(cancelled → confirmed)`'a girip geçişi
-   * reddedilecek ve **para alınmış, siparişi olmayan** bir müşteri kalacaktı.
-   */
-  if (order.status === 'cancelled') {
-    await refundProviderPayment(event, order.id);
-    return { status: 'ok', action: 'refunded' };
-  }
-
-  const decision = await decideForOrder(db, order.id, order.warehouseId, items);
-
-  if (decision.action === 'refund') {
-    await refundAndCancel(event, order.id, accountId);
-    return { status: 'ok', action: 'refunded' };
-  }
-
-  if (decision.action === 'reserve_again') {
-    const reservations = new ReservationService(db);
-    for (const item of items) {
-      await reservations.reserve({
-        orderId: order.id,
-        variantId: item.variantId,
-        warehouseId: order.warehouseId,
-        qty: item.qty,
-        ttlMinutes: null,
-        stockId: item.stockId,
+  // ÜCRET ÖDEME BAŞINA (12.14 · kullanıcı kararı 13.09): brüt tahsilat havuza girdi, komisyon oradan
+  // çıkar ve siparişin kârlılığı onu görür. Öğrenilemezse tahsilat yine onaylanır — ücret payout
+  // geldiğinde içeriğinden tamamlanır (`recordPayout`); iz düşülür ki eksik görünsün. İade dalında
+  // tahsilat yazılmadığı için ücret de yazılmaz.
+  if (outcome.action !== 'refunded' && accountId && event.paymentIntentId) {
+    try {
+      const fee = await effects.feeOf(event.paymentIntentId);
+      if (fee) await recordPaymentFee(db, { orderId: event.orderId, accountId, paymentIntentId: event.paymentIntentId, fee });
+    } catch (error) {
+      await captureError(error, {
+        source: SOURCES.webhook,
+        context: { provider: 'stripe', eventId: event.id, type: event.type, orderId: event.orderId, step: 'payment_fee' },
       });
     }
   }
 
-  // Tahsilat: siparişin toplamı değil, Stripe'ın GERÇEKTEN aldığı tutar yazılır — ikisi ayrıldığında
-  // doğru olan paranın kendisidir (ödeme durumu zaten bundan türetilir, 12.2).
-  if (accountId && event.amountTotalCents != null) {
-    await recordOrderPayment({
-      orderId: order.id,
-      accountId,
-      amountCents: event.amountTotalCents,
-      description: 'Stripe tahsilatı',
-      // Sistemin yazdığı satır (13.09): webhook'un tahsilatı, operatörün elle girdiği satırdan ayrışır.
-      source: 'system',
-      // **Ödeme künyesi burada saklanır (07.11)** — iade bu referansın üzerinden döner. Tahsilat
-      // anında yazılmazsa bir daha bulunamaz: sağlayıcıda niyeti sipariş kimliğinden aramak
-      // (`search`) gecikmeli çalışır ve iade anında güvenilemez.
-      meta: event.paymentIntentId ? { providerRef: event.paymentIntentId } : null,
-    });
-
-    // ÜCRET ÖDEME BAŞINA (12.14 · kullanıcı kararı 13.09): brüt tahsilat havuza girdi, komisyon oradan
-    // çıkar ve siparişin kârlılığı onu görür. Öğrenilemezse tahsilat yine onaylanır — ücret payout
-    // geldiğinde içeriğinden tamamlanır (`recordPayout`); iz düşülür ki eksik görünsün.
-    if (event.paymentIntentId) {
-      try {
-        const fee = await effects.feeOf(event.paymentIntentId);
-        if (fee) await recordPaymentFee(db, { orderId: order.id, accountId, paymentIntentId: event.paymentIntentId, fee });
-      } catch (error) {
-        await captureError(error, {
-          source: SOURCES.webhook,
-          context: { provider: 'stripe', eventId: event.id, type: event.type, orderId: order.id, step: 'payment_fee' },
-        });
-      }
-    }
-  }
-
-  // Referans numarası ve `confirmed` geçişi burada doğar (07.6 kapısı; motor karar verir).
-  await transitionOrder({ orderId: order.id, to: 'confirmed' });
-
-  // Ödeme geçtiğine göre sepetten BU SİPARİŞİN kalemleri düşer. Kart yolunda temizliğin burada
-  // olması ŞART: taslak açılırken temizlenseydi ödemesi başarısız olan müşteri sepetini de
-  // kaybederdi — temizlik siparişin kesinleştiği ana bağlı, açıldığı ana değil. Kısmi olması da
-  // şart: sepet iki grup taşıyabiliyor ve ikinci sipariş isteğe bağlı (19.7).
-  await clearOrderedLines(order.customerId, order.id);
-
-  // Onay ekranı ZİLİ burada çalar: müşteri hâlâ "ödemeniz onaylanıyor" yazısına bakıyor olabilir ve
-  // bu çağrı onun tarayıcısından bağımsız geldi. Zil olmasaydı ekran ancak elle yenilenince doğruyu
-  // söylerdi (29.07 kullanıcı isteği).
-  await broadcastOrderChanged(order.id);
-
-  return { status: 'ok', action: decision.action === 'reserve_again' ? 'reserved_again' : 'confirmed' };
+  return { status: 'ok', action: outcome.action };
 }
 
 /**
@@ -412,76 +342,4 @@ function summarizePayout(items: readonly PayoutItem[]) {
     }
   }
   return totals;
-}
-
-/**
- * Geç ödeme kararı — kalem kalem. Motor tek kalem için karar verir; siparişin kararı **en kötü
- * kalemin kararıdır**: bir kalem bile bulunamıyorsa yarım sipariş göndermek yerine para iade edilir.
- */
-async function decideForOrder(
-  db: ReturnType<typeof serviceDb>,
-  orderId: string,
-  warehouseId: string,
-  items: readonly OrderItem[],
-): Promise<{ action: 'proceed' | 'reserve_again' | 'refund' }> {
-  const active = await new ReservationService(db).listActiveByOrder(orderId);
-  // Stok kontrolü SİPARİŞİN deposunda: ödeme geldiğinde malın hâlâ orada olup olmadığına bakılır,
-  // başka depodaki aynı ürün bu siparişi kurtarmaz (DOMAIN §17).
-  const availability = await new StockService(db).getAvailableMap(warehouseId, items.map((item) => item.variantId));
-
-  let worst: 'proceed' | 'reserve_again' | 'refund' = 'proceed';
-  for (const item of items) {
-    const stillActive = active.some((row) => row.variantId === item.variantId);
-    // `availableQty` = fiili − AKTİF rezervasyonlar. Süresi dolmuş kendi satırımız zaten sayılmaz,
-    // başkasının tuttuğu mal ise düşülmüştür — motorun sorduğu "şu an elde ne var" bu sayıdır.
-    // Bu yüzden ayrı rezervasyon listesi taşımaya gerek yok (ve varyant başına ek sorgu da yok).
-    const decision = decideLatePayment({
-      reservationStillActive: stillActive,
-      requestedQty: item.qty,
-      physicalQty: availability.get(item.variantId)?.availableQty ?? 0,
-      reservations: [],
-    });
-
-    if (decision.action === 'refund') return { action: 'refund' };
-    if (decision.action === 'reserve_again') worst = 'reserve_again';
-  }
-  return { action: worst };
-}
-
-/**
- * Stok kalmadı: para OTOMATİK iade edilir ve sipariş iptal olur (DOMAIN §4 — elle karar gerekmez).
- * Stripe iadesi önce yapılır: iade edilemeyen bir ödemede siparişi iptal etmek müşteriyi hem malsız
- * hem parasız bırakırdı.
- */
-/**
- * **Sağlayıcı ödemesini iade eder ve DAMGALAR** — iki iade dalının ortak ayağı (07.14).
- *
- * Damga `cancel_reason`dan ayrı bir kolonda çünkü iki dal iki farklı sebeple iade ediyor
- * (`out_of_stock` ve "zaten iptal edilmiş siparişe geç gelen ödeme") ama ekranın sorduğu soru
- * ikisinde de aynı: **para çekilip geri verildi mi.** Kural tek yerde olmasaydı biri damgalanır
- * öteki damgalanmazdı — ve damgalanmayan dalda ekran yine "tahsilat yapılmadı" derdi, ki müşteri
- * o sırada hesabında eksik parayı görüyor olurdu.
- *
- * Damga yazımı iadeden SONRA: önce yazsaydık, iadesi düşen bir ödeme "iade edildi" görünürdü —
- * ekranda müşteriye tutulmayan bir söz.
- */
-async function refundProviderPayment(event: VerifiedEvent, orderId: string): Promise<void> {
-  const stripe = stripeClient();
-  if (stripe && event.paymentIntentId) {
-    await stripe.refunds.create({ payment_intent: event.paymentIntentId });
-  }
-  await new OrderService(serviceDb()).update({ id: orderId, providerRefundedAt: new Date().toISOString() });
-}
-
-async function refundAndCancel(event: VerifiedEvent, orderId: string, accountId: string | null): Promise<void> {
-  await refundProviderPayment(event, orderId);
-
-  // Tahsilat hiç yazılmadığı için kasada iz bırakmayız; iptal kapısı rezervasyonu bırakır ve
-  // bildirimi gönderir. `refundAccountId` yalnız hareket yazılacaksa anlamlıdır.
-  // **Sebep `out_of_stock` ve müşteriye kurulan cümle buna bağlı** (07.14): bu dalda para GERÇEKTEN
-  // çekildi ve geri verildi. Onay ekranı sebep gelmeden "tahsilat yapılmadı" diyordu — üç yolun
-  // ikisinde doğru, burada yanlış. `paymentStatus` ayırmıyor, çünkü bu dalda tahsilat hiç yazılmıyor.
-  await cancelOrder(orderId, { refundAccountId: accountId, refundAmountCents: 0, reason: 'out_of_stock' });
-  // İptal de bir cevaptır: ekran "onaylanıyor"da asılı kalmaz, iadeyi öğrenir.
-  await broadcastOrderChanged(orderId);
 }

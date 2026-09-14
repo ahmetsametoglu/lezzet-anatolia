@@ -11,7 +11,7 @@ import { ReorderNotice } from './components/reorder-notice';
 // Liste `ReorderButton`ı KULLANMIYOR (meşgul durumu tüm satırlar için tek yerde), ama kelimeler
 // ortak — düğmeyle aynı kaynaktan okunuyor (08.20).
 import reorderCopy from './components/reorder-messages.json';
-import { summaryOf } from './orders.desktop';
+import { metaOf, summaryOf } from './orders.desktop';
 import type { OrdersViewProps } from './orders-types';
 
 /**
@@ -30,6 +30,7 @@ export function OrdersMobile({
   t,
   locale,
   orders,
+  awaitingPayment,
   nextCursor,
   loadingMore,
   onLoadMore,
@@ -38,11 +39,32 @@ export function OrdersMobile({
   notice,
   onDismissNotice,
 }: OrdersViewProps) {
+  // Ödemesi beklenen kart siparişi (07.18) — listenin başında, liste boşken de (masaüstüyle aynı kural).
+  // Kart kabuğu listeninki, tonu dikkat (bal); tek eylemi ödemenin sayfası.
+  const awaiting = awaitingPayment && (
+    <div className="flex flex-col gap-2 rounded-[16px] border border-honey-line bg-honey-bg p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate font-sans text-note font-bold leading-tight text-honey">{t.awaitingPayment.title}</span>
+        <span className="flex-none font-sans text-note font-bold leading-tight text-ink">{formatPrice(awaitingPayment.totalCents, locale)}</span>
+      </div>
+      <span className="font-sans text-micro leading-relaxed text-muted">
+        {[...metaOf(awaitingPayment, t, locale, true), t.awaitingPayment.note].join(' · ')}
+      </span>
+      <Link
+        href={{ pathname: '/checkout/[reference]', params: { reference: awaitingPayment.orderId } }}
+        className={buttonClass({ variant: 'primary', size: 'sm', compact: true, fullWidth: true })}
+      >
+        {t.awaitingPayment.cta}
+      </Link>
+    </div>
+  );
+
   if (orders.length === 0) {
     return (
       // Boş hâl KALAN ALANIN 4:6 noktasında (native kuralı, 16.08 — salt ortalama gözün üstünde
       // durur; footer'sız kısa sayfada üstte asılı buton altında krem bir deniz bırakıyordu).
       <div className="flex flex-1 flex-col px-4 py-8">
+        {awaiting}
         <span className="flex-[2]" aria-hidden="true" />
         <ListEmpty icon="box"title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
         <span className="flex-[3]" aria-hidden="true" />
@@ -52,6 +74,7 @@ export function OrdersMobile({
 
   return (
     <div className="flex flex-col gap-2.5 px-4 py-4">
+      {awaiting}
       {orders.map((order) => (
         <div key={order.id} className="flex flex-col gap-2">
           <div

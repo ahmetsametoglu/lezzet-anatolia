@@ -217,6 +217,13 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
       setBusy(false);
       return setError(rejectionMessage(t, data.reason, data.detail));
     }
+    // Önceki kart ödemesi geçti ya da işleniyor (07.18): yeni sipariş açılmadı — müşteri o siparişin
+    // sayfasına gider ve sonucu orada görür. Sepet tazelenir: ödeme geçtiyse kalemleri düşmüştür.
+    if (data.status === 'open_payment') {
+      router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
+      reloadCart();
+      return;
+    }
 
     /**
      * **Önce GİT, sonra sepeti tazele.** Ters sırada yapılıyordu ve ekran gözümüzün önünde
@@ -251,6 +258,12 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     });
     if (errorKey || !data) return { ok: false, error: errorText(t.errors, errorKey) };
     if (data.status === 'rejected') return { ok: false, error: rejectionMessage(t, data.reason, data.detail) };
+    // Kart formu yeni ödeme açmaz (07.18): önceki ödeme geçti ya da işleniyor, müşteri o siparişe gider.
+    if (data.status === 'open_payment') {
+      router.push({ pathname: '/checkout/[reference]', params: { reference: data.orderId } });
+      reloadCart();
+      return { ok: false, error: t.payment.openPayment };
+    }
     if (data.status !== 'payment_required') return { ok: false, error: t.payment.unavailable };
     return { ok: true, clientSecret: data.clientSecret, orderId: data.orderId };
   };

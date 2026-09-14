@@ -4,6 +4,8 @@ import { setRequestLocale } from 'next-intl/server';
 import { CART_LINK_PARAM } from '@lezzet/application/cart/link';
 import { detectDevice } from '@/lib/device';
 import { getEmptyCartContext } from '@/lib/cart/empty-cart';
+import { currentCustomerId } from '@/lib/guard';
+import { getAwaitingPayment } from '@/lib/order/customer-orders';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
@@ -45,7 +47,10 @@ export default async function CartPage({ params, searchParams }: CartPageProps) 
   void recordPageView('/cart');
 
   const t: Messages = messages[locale];
-  const [device, emptyContext] = await Promise.all([detectDevice(), getEmptyCartContext(locale)]);
+  const [device, emptyContext, customerId] = await Promise.all([detectDevice(), getEmptyCartContext(locale), currentCustomerId()]);
+  // Ödemesi beklenen kart siparişi (07.18) sepetin İÇERİĞİ değil, müşterinin durumu — o yüzden sunucuda
+  // okunabiliyor (yukarıdaki "veriyi RSC'de okumaz" kuralı sepetin kalemleri içindir).
+  const awaitingPayment = customerId ? await getAwaitingPayment(customerId) : null;
 
   return (
     // Huni sayfası ÇIPLAK kabukta (kullanıcı kararı 20.08, ikinci tur): önce detay katmanı
@@ -53,7 +58,7 @@ export default async function CartPage({ params, searchParams }: CartPageProps) 
     // karesi zaten logosuz TEK satır çiziyor ("← Devam et · Sepetim · 6 ürün"). O satırı sayfa
     // kurar (`cart.mobile`); çerçeve başlık da footer da çizmez.
     <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="none">
-      <CartClient t={t} locale={locale} device={device} emptyContext={emptyContext} />
+      <CartClient t={t} locale={locale} device={device} emptyContext={emptyContext} awaitingPayment={awaitingPayment} />
     </SiteFrame>
   );
 }

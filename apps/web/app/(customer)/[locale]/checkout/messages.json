@@ -59,6 +59,7 @@
       "consent": "Kampanya ve fırsatlardan e-posta ile haberdar olmak istiyorum",
       "consentOptional": "(isteğe bağlı)",
       "unavailable": "Online ödeme şu an açılamıyor. Kapıda ödemeyi seçebilir ya da biraz sonra tekrar deneyebilirsiniz.",
+      "openPayment": "Önceki ödemeniz alındı ya da bankada işleniyor — sizi o siparişin sayfasına götürüyoruz.",
       "transfer": "Havale ile öde",
       "transferBody": "Fatura ile hesabımıza",
       "onlineRequired": "Bu tutarda online ödeme gerekir."
@@ -186,6 +187,7 @@
       "consent": "Je souhaite recevoir les offres et nouveautés par e-mail",
       "consentOptional": "(facultatif)",
       "unavailable": "Le paiement en ligne est momentanément indisponible. Choisissez le paiement à la livraison ou réessayez dans un instant.",
+      "openPayment": "Votre paiement précédent a été reçu ou est en cours de traitement — nous vous emmenons vers cette commande.",
       "transfer": "Payer par virement",
       "transferBody": "Sur notre compte, avec facture",
       "onlineRequired": "À ce montant, le paiement en ligne est requis."
@@ -313,6 +315,7 @@
       "consent": "Ich möchte Angebote und Neuigkeiten per E-Mail erhalten",
       "consentOptional": "(optional)",
       "unavailable": "Online-Zahlung ist gerade nicht verfügbar. Wählen Sie Zahlung bei Lieferung oder versuchen Sie es gleich noch einmal.",
+      "openPayment": "Ihre vorherige Zahlung ist eingegangen oder wird bearbeitet — wir bringen Sie zu dieser Bestellung.",
       "transfer": "Per Überweisung",
       "transferBody": "Auf unser Konto, mit Rechnung",
       "onlineRequired": "In dieser Höhe ist Online-Zahlung erforderlich."

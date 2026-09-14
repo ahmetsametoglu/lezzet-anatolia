@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { stripeGateway, type PaymentGateway } from '@lezzet/application/order/payment-gateway';
 
 /**
  * Stripe istemcisi (07.4/07.5) — **tek kurulum yeri**.
@@ -14,6 +15,15 @@ export function stripeClient(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY;
   cached = key ? new Stripe(key) : null;
   return cached;
+}
+
+/**
+ * Sağlayıcıya soran port (07.18) — ödemenin durumu, iptali, iadesi. Uyarlama ortak katmanda
+ * (`stripeGateway` — arka uç da aynısını kullanıyor), burada yalnız istemci geçer; anahtarsız ortamda
+ * `null` ve çağıran "sorulamadı" der, "ödenmedi" demez.
+ */
+export function stripePaymentGateway(): PaymentGateway | null {
+  return stripeGateway(stripeClient());
 }
 
 /** Webhook imza sırrı — yoksa doğrulama YAPILAMAZ, istek reddedilir (STACK §13). */

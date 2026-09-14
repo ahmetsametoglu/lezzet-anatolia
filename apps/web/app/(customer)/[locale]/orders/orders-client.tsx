@@ -70,6 +70,8 @@ export function OrdersClient({ t, locale, first, device }: OrdersClientProps) {
     t,
     locale,
     orders,
+    // Yalnız ilk sayfada gelir ve orada kalır: "daha eski siparişler" onu yeniden sormaz.
+    awaitingPayment: first.awaitingPayment,
     nextCursor: cursor,
     loadingMore,
     onLoadMore,

@@ -1,6 +1,10 @@
 import 'server-only';
-import { getCustomerOrderDetail as orderDetailFor, listCustomerOrders as listOrdersFor } from '@lezzet/application';
-import type { CustomerOrderDetail, CustomerOrderPage } from '@lezzet/application';
+import {
+  getCustomerAwaitingPayment as awaitingPaymentFor,
+  getCustomerOrderDetail as orderDetailFor,
+  listCustomerOrders as listOrdersFor,
+} from '@lezzet/application';
+import type { CustomerAwaitingPayment, CustomerOrderDetail, CustomerOrderPage } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import type { Locale } from '@lezzet/i18n';
 import type { KeysetCursor } from '@lezzet/types';
@@ -28,6 +32,7 @@ import type { KeysetCursor } from '@lezzet/types';
  *   geçmiş sipariş dün tek satır bugün beş satır görünür (paket künyesi orada gerekçeli).
  */
 export type {
+  CustomerAwaitingPayment,
   CustomerOrderDetail,
   CustomerOrderDetailLine,
   CustomerOrderPage,
@@ -37,6 +42,14 @@ export type {
 /** "Siparişlerim" listesi — keyset sayfalama, taslaklar dışarıda. */
 export function listCustomerOrders(locale: Locale, customerId: string, cursor?: KeysetCursor): Promise<CustomerOrderPage> {
   return listOrdersFor(serviceDb(), { customerId, locale, cursor });
+}
+
+/**
+ * Ödemesi beklenen kart siparişi (07.18) — sepetin bandı. Siparişlerim onu liste sayfasıyla birlikte
+ * alıyor (`awaitingPayment`); iki yüzey aynı kapıyı okur.
+ */
+export function getAwaitingPayment(customerId: string): Promise<CustomerAwaitingPayment | null> {
+  return awaitingPaymentFor(serviceDb(), customerId);
 }
 
 /**

@@ -11,6 +11,12 @@
     "detailArrow": "Detay →",
     "loadMore": "Daha eski siparişler ↓",
     "loading": "Yükleniyor…",
+    "awaitingPayment": {
+      "title": "Ödemesi bekleniyor",
+      "note": "Kart ödemesinin sonucu henüz bize ulaşmadı.",
+      "cta": "Durumu gör",
+      "ctaArrow": "Durumu gör →"
+    },
     "status": {
       "received": "Alındı",
       "preparing": "Hazırlanıyor",
@@ -45,6 +51,12 @@
     "detailArrow": "Détail →",
     "loadMore": "Commandes plus anciennes ↓",
     "loading": "Chargement…",
+    "awaitingPayment": {
+      "title": "Paiement en attente",
+      "note": "Le résultat du paiement par carte ne nous est pas encore parvenu.",
+      "cta": "Voir l'état",
+      "ctaArrow": "Voir l'état →"
+    },
     "status": {
       "received": "Reçue",
       "preparing": "En préparation",
@@ -79,6 +91,12 @@
     "detailArrow": "Detail →",
     "loadMore": "Ältere Bestellungen ↓",
     "loading": "Wird geladen…",
+    "awaitingPayment": {
+      "title": "Zahlung ausstehend",
+      "note": "Das Ergebnis der Kartenzahlung liegt uns noch nicht vor.",
+      "cta": "Status ansehen",
+      "ctaArrow": "Status ansehen →"
+    },
     "status": {
       "received": "Eingegangen",
       "preparing": "In Vorbereitung",

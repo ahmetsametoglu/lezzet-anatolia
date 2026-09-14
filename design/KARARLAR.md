@@ -2906,3 +2906,21 @@ tartışıldı (web/denetim · müşteri web · mobil adına); karar kullanıcı
   78 metninin 30'u web'de birebir).
 - **Tasarım dosyası:** `design/project/01-musteri/Musteri Mobil.dc.html` (tek kaynak; eski adı
   "Mobil - Musteri v3"). Yol haritası: `08.58`.
+
+## Ödemesi bekleyen kart siparişi görünür — onay sayfası, Siparişlerim, sepet (14.09)
+
+Kullanıcı: *"Stripe'tan otuz dakika boyunca herhangi bir şekilde bize ödendi bilgisi gelmezse müşteri
+ne yapacak? Ne anlayacak?… Konu Stripe değil burada."* Ödeme olayı gelmeyince müşteri üç yerde de yanlış
+bir resim görüyordu: onay sayfası süresiz "onaylanıyor", sepet dolu, Siparişlerim boş (iş: `07.18`).
+
+- **Onay sayfası sonucu SORAR** (4 sn, sonra 20 sn arayla, 30 dakika): geçti · bankada işleniyor ·
+  tamamlanmadı (→ "yeniden dene"). "Onaylanınca e-posta göndereceğiz" sözü kalktı — ödemesi gelmeyen
+  taslağa gidecek e-posta henüz yok.
+- **Siparişlerim'de listenin üstünde "Ödemesi bekleniyor" satırı** — bal zemin + bal kenar (v1'in dikkat
+  dili); numarası olmadığı için tek eylemi ödemenin sayfası. Liste boşken de görünür. Hiç kesinleşmemiş
+  iptal (numara doğmadı, para hareket etmedi) listeden çıktı.
+- **Sepetin başında bal bant** ("Kart ödemeniz henüz onaylanmadı" + ödemenin sayfası): sepet yalnız
+  onayda boşalıyor, dolu sepet "hiç ödemedim" gibi okunuyordu.
+- **Checkout ikinci çekim açmaz:** önceki ödeme geçtiyse ya da bankada işleniyorsa müşteri o siparişin
+  sayfasına götürülür.
+- Tasarım paketinde bu hâllerin çizimi yok — işlev isteği; mevcut satır ve bant kabuğuyla yazıldı.

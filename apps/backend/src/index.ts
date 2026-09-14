@@ -41,6 +41,7 @@ import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedb
 import { SUPPORT_AI, supportAiJob } from './jobs/support-ai';
 import { TICKET_REPLY_MAIL, ticketReplyMailJob } from './jobs/ticket-reply-mail';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
+import { SWEEP_UNPAID_DRAFTS, sweepUnpaidDraftsJob } from './jobs/sweep-unpaid-drafts';
 import { SHIPMENT_WATCH, shipmentWatchJob } from './jobs/shipment-watch';
 import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
@@ -151,6 +152,12 @@ app.post('/webhooks/meta', metaWebhook);
 // süresi dolan stok en geç bir dakika içinde başkasına açılır.
 cron.schedule('* * * * *', () => {
   void runJob(SWEEP_RESERVATIONS, sweepReservations);
+});
+
+// Ödeme zamanlayıcısı (07.18) — dakikada bir: ödeme penceresi kapanmış kart taslaklarını Stripe'a sorar
+// ve netleştirir. Rezervasyon süpürücüsüyle aynı sıklık, AYRI iş: sağlayıcı düşerse stok temizliği durmasın.
+cron.schedule('* * * * *', () => {
+  void runJob(SWEEP_UNPAID_DRAFTS, sweepUnpaidDraftsJob);
 });
 
 // Geri bildirim daveti taraması (17.2) — günde bir, sabah 09:00 Paris.
