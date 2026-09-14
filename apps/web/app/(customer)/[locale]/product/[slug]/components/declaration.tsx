@@ -76,8 +76,11 @@ function DeclarationCard({ title, note, warn = false, compact = false, children 
   );
 }
 
-/** Alerjen listesini dile göre çözüp virgülle birleştirir — çapraz bulaşma cümlesi bundan kurulur. */
-function allergenNames(codes: ProductAllergen[], locale: Locale): string {
+/**
+ * Alerjen listesini dile göre çözüp virgülle birleştirir — çapraz bulaşma cümlesi bundan kurulur. Telefon
+ * görünümünün akordeonları da okur (14.09): alerjen satırı ve çapraz bulaşma cümlesi aynı adlarla yazılır.
+ */
+export function allergenNames(codes: ProductAllergen[], locale: Locale): string {
   return codes.map((c) => resolveLocalizedText(ALLERGEN_LABELS[c], locale)).join(', ');
 }
 
@@ -176,7 +179,7 @@ interface NutritionRow {
  * ondalık; TUZ ayrıksıdır — 1 g'ın altında iki ondalıkla yazılır ("0,10 g"), çünkü orada üçüncü
  * hane tüketicinin günlük alımını değerlendirmesini değiştirir.
  */
-function gram(value: number, locale: Locale, isSalt = false): string {
+export function gram(value: number, locale: Locale, isSalt = false): string {
   const digits = isSalt && value < 1 ? 2 : Number.isInteger(value) ? 0 : 1;
   return `${formatDecimal(value, locale, digits)} g`;
 }

@@ -33,7 +33,8 @@ type TabKey = keyof (typeof tabBarCopy)['tr']['tabs'];
  *   · eylemsiz bölüm sayfaları → ‹ + "HESABIM" + büyük başlık (`FunnelHeader`; native siparişler ·
  *     puan geçmişi · bildirimler)
  *   · başlığını kendisi kuran ekranlar → çerçeve çizmez: katalog, paketler (ikisi de sekme kökü),
- *     sepet ve checkout (`bare`), giriş, keşif, sipariş onayı
+ *     ürün detayı (fotoğraf ekranın tepesine taşar, ‹ ve paylaş üstünde yüzer — native), sepet ve
+ *     checkout (`bare`), giriş, keşif, sipariş onayı
  *   · geri kalanı → yapışkan `AppBar` (‹ · başlık · ekranın eylemi)
  *
  * ── SEKME ÇUBUĞU VE SEPET: NATIVE'İN MODELİ ─────────────────────────────────────────
@@ -82,7 +83,7 @@ const FAB_ON_DETAIL: readonly string[] = ['/product/[slug]', '/package/[slug]', 
 type HeaderKind = 'home' | 'title' | 'page' | 'bar' | 'none';
 
 /** Başlığını KENDİSİ kuran ekranlar — çerçeve bunlarda başlık çizmez. */
-const OWN_HEADER: readonly string[] = ['/catalog', '/packages', '/login', '/discover', '/checkout', '/checkout/[reference]'] satisfies Route[];
+const OWN_HEADER: readonly string[] = ['/catalog', '/packages', '/product/[slug]', '/login', '/discover', '/checkout', '/checkout/[reference]'] satisfies Route[];
 /** Eylemsiz bölüm sayfaları — native'in "sayfa başlığı" durağı. */
 const SECTION_PAGES: readonly string[] = ['/orders', '/account/points', '/account/notifications'] satisfies Route[];
 

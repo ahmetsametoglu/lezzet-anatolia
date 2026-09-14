@@ -44,7 +44,8 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 //        masaüstünün 14px'i olduğu için telefon görünümü ara kademeden okur (`customer.ts` künyesi).
 // 14.09 (4): +3 — native'in düğme etiketi (`button`: boyut · ağırlık) ve yükseklik gölgesi (`soft`);
 //        telefon kataloğunun hap düğmesi ve anahtar topuzu (`customer.ts` künyesi).
-const EXPECTED_LIGHT_COUNT = 201; // @theme bloğu, fontlar hariç (119 renk + 63 yazı + 9 yarıçap + 3 hareket + 7 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
+// 14.09 (5): +1 — ürün detayının sarkan fiyat rozetinin gölgesi (`price`).
+const EXPECTED_LIGHT_COUNT = 202; // @theme bloğu, fontlar hariç (119 renk + 63 yazı + 9 yarıçap + 3 hareket + 8 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));

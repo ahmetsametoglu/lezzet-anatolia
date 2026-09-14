@@ -23,13 +23,18 @@ interface BackButtonProps {
   label: string;
   /** Tarayıcı geçmişi boşken gidilecek yer. */
   fallback: PushHref;
+  /**
+   * `bar` — zeminsiz 44px (başlık çubukları). `photo` — native'in fotoğraf üstü biçimi (14.09, ürün detayının
+   * kahramanı): 42px `sand-50` daire, glif ikon kademesinde; basılınca küçülür.
+   */
+  variant?: 'bar' | 'photo';
 }
 
 /**
- * Zeminsiz yuvarlak ‹ — native `BackButton`ın `bar` biçimi (40 dp; burada envanterin 44px tabanı),
- * hover'da kum. Mobil webin bütün başlıkları bunu taşır: `AppBar`, `FunnelHeader` (14.09).
+ * Yuvarlak ‹ — native `BackButton`ın iki biçimi. `bar` (40 dp; burada envanterin 44px tabanı) hover'da kum;
+ * mobil webin başlıkları bunu taşır: `AppBar`, `FunnelHeader` (14.09).
  */
-export function BackButton({ label, fallback }: BackButtonProps) {
+export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps) {
   const router = useRouter();
   const goBack = () => {
     if (window.history.length > 1) router.back();
@@ -40,8 +45,12 @@ export function BackButton({ label, fallback }: BackButtonProps) {
       type="button"
       aria-label={label}
       onClick={goBack}
-      // 44px kutu (envanter tabanı); `-ml-2.5` glifi metin hizasına oturtur.
-      className="-ml-2.5 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full font-sans text-icon-sm font-bold text-ink transition-colors hover:bg-sand-200"
+      className={
+        variant === 'photo'
+          ? 'flex size-10.5 flex-none cursor-pointer items-center justify-center rounded-full bg-sand-50 font-sans text-icon leading-none text-ink transition-transform active:scale-[0.97]'
+          : // 44px kutu (envanter tabanı); `-ml-2.5` glifi metin hizasına oturtur.
+            '-ml-2.5 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full font-sans text-icon-sm font-bold text-ink transition-colors hover:bg-sand-200'
+      }
     >
       ‹
     </button>

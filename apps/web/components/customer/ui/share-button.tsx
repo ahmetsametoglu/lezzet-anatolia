@@ -1,6 +1,7 @@
 'use client';
 
 import { shareProductAction } from '@/lib/analytics/actions';
+import { MobileIcon } from './mobile-icon';
 
 /**
  * Paylaş düğmesi — İÇERİĞİN İÇİNDE durur, başlıkta değil (kullanıcı kararı 20.08, yedinci tur):
@@ -24,6 +25,11 @@ interface ShareButtonProps {
    * Konuyu bu yüzden çağıran söyler.
    */
   subject: ShareSubject;
+  /**
+   * `inline` — içerikteki düğme (adın yanında). `photo` — native ürün detayının kahramanındaki yüzen daire
+   * (14.09 telefon görünümü): 42px krem cam (`sand-50/96`), native'in paylaş ikonu. Davranış ikisinde aynı.
+   */
+  variant?: 'inline' | 'photo';
 }
 
 interface ShareSubject {
@@ -32,7 +38,7 @@ interface ShareSubject {
   productId?: string | null;
 }
 
-export function ShareButton({ label, subject }: ShareButtonProps) {
+export function ShareButton({ label, subject, variant = 'inline' }: ShareButtonProps) {
   const onShare = () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -52,6 +58,20 @@ export function ShareButton({ label, subject }: ShareButtonProps) {
       .then(() => void shareProductAction({ ...subject, method: 'copy' }))
       .catch(() => undefined);
   };
+
+  if (variant === 'photo') {
+    return (
+      <button
+        type="button"
+        onClick={onShare}
+        aria-label={label}
+        title={label}
+        className="flex size-10.5 flex-none cursor-pointer items-center justify-center rounded-full bg-sand-50/96 text-ink transition-transform active:scale-[0.97]"
+      >
+        <MobileIcon name="share" size={17} />
+      </button>
+    );
+  }
 
   return (
     // Görsel küçük, dokunma alanı 44px (steppers'la aynı desen: görünmez `after` katmanı).

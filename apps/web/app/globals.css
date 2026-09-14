@@ -215,6 +215,7 @@
   --shadow-hard: 3px 3px 0 #343b41; /* sert gölge — native v3'ün imzası; telefon görünümünün yüzen düğmesi (14.09) */
   --shadow-badge: 0 3px 8px rgba(21, 23, 15, 0.22); /* (telefon, 14.09) fotoğrafın ya da kartın üstünde yüzen rozet */
   --shadow-soft: 0 1px 3px rgba(58, 65, 71, 0.08); /* (telefon, 14.09) native'in yükseklik gölgesi — anahtar topuzu */
+  --shadow-price: 0 8px 20px rgba(52, 59, 65, 0.28); /* (telefon, 14.09) ürün detayının sarkan fiyat rozeti */
 
   /* ─────────────────────────────────────────────────────────────────────────
      Operasyon evreni — "Veri Masası" token'ları (admin + depo + kurye).

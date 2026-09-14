@@ -329,4 +329,7 @@ export const customerShadow = {
   /** (telefon, 14.09) Klasik yükseklik gölgesi (Token Kararlari #5, Mobil v2 ölçümü) — anahtar düğmesinin
       topuzu. Mürekkebi ESKİ #3a4147: karar metnindeki değer aynen, `ink`e çekilmesi ayrı görsel tur. */
   soft: '0 1px 3px rgba(58, 65, 71, 0.08)',
+  /** (telefon, 14.09) Ürün detayının SARKAN fiyat rozeti — native kahramanın `priceBadge` gölgesi (mürekkep %28,
+      20 bulanıklık, 8 aşağı). Native bileşende ham yazıyor; web ikizi token ister, değer oradan aynen alındı. */
+  price: '0 8px 20px rgba(52, 59, 65, 0.28)',
 } as const satisfies Record<string, string>;

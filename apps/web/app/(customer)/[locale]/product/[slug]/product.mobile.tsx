@@ -1,116 +1,178 @@
-import { Declaration } from './components/declaration';
-import { FamilyBlock } from './components/family-block';
-import { Gallery } from './components/gallery';
-import { PurchaseBar, VariantPicker } from './components/purchase-panel';
-import { Reviews } from './components/reviews';
-import { SimilarStrip } from './components/similar-strip';
-import { Link } from '@/i18n/navigation';
-import { buttonClass } from '@/components/customer/ui/button';
+import { cardBadgeOf, formatPrice, placeMarkOf, productPriceLabel } from '@lezzet/helper';
+import placeMessages from '@lezzet/i18n/customer/place';
+import productMessages from '@lezzet/i18n/customer/product';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
+import { PhotoGallery } from '@/components/customer/phone-kit/photo-gallery';
+import { ProductCircleCard } from '@/components/customer/phone-kit/product-circle-card';
+import { BackButton } from '@/components/customer/ui/back-button';
 import { ShareButton } from '@/components/customer/ui/share-button';
-import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
-import { Badge } from '@/components/customer/ui/badge';
-import { ColdChainMark, StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
+import { variantNameOf } from '@/lib/storefront/variant-name';
+import { PhoneDeclaration } from './components/phone-declaration';
+import { PhoneFamilyRail } from './components/phone-family-rail';
+import { PhonePurchaseBar } from './components/phone-purchase-bar';
+import { Reviews } from './components/reviews';
 import type { ProductViewProps } from './product-types';
 
 /**
- * Ürün detay — mobil düzeni (tasarım: `Musteri - Urun Detay.dc.html`, "Urun Detay Mobil").
+ * Ürün detay — TELEFON görünümü: native ürün detayının (`apps/mobile/src/screens/product/product-detail-screen.tsx`)
+ * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Sıra
+ * native'inki: kahraman (galeri · üst degrade · yüzen ‹ ve paylaş · durum rozeti · sarkan fiyat) → künye
+ * (kategori · ad · birim satırı · sınır ve kargo çipleri · çeşit rayı · boy çipleri · açıklama) → beyan
+ * akordeonları → değerlendirmeler → "bunları da sevebilirsiniz" → yapışkan satın alma barı. Metin ortak
+ * sözlükten (`@lezzet/i18n/customer/product`), kart cümleleri `@lezzet/helper`dan.
  *
- * Mobil bu sayfanın ASIL biçimi: sosyal medya ve WhatsApp trafiği doğrudan buraya düşer, sayfa tek
- * başına ilk izlenim olabilir (`musteri-urun-detay.md §7`).
+ * ── WEB'E ÖZGÜ KORUNANLAR ──────────────────────────────────────────────────
+ * · Çerçeve başlık çizmez (fotoğraf ekranın tepesine taşar — native); `h1` ürünün adı, yapısal veri ve paylaşım
+ *   kartı `page.tsx`te.
+ * · Değerlendirmeler web'in GERÇEK yorumları (`Reviews`): native sözleşme yorum taşımadığı için "yorum yok"
+ *   kutusu çiziyor (native sapma 1); web'de veri var, bölüm onu gösterir.
+ * · Beyan `<details>` ile — içerik kapalıyken de sayfada (INCO; `phone-declaration.tsx` künyesi).
+ * · Boy çipinin adı yapısal alanlardan (`variantNameOf`, kullanıcı kararı 19.08 — "adet mantıklıysa adet,
+ *   gramaj mantıklıysa gramaj"); native saklı etiketi yazıyor.
+ * · Sepete ekleme ve "haber ver" web'in kapılarından (`phone-purchase-bar.tsx` künyesi); paylaşım ölçülür.
  *
- * Geri yolu, ürünün adı ve sepet ÇERÇEVENİN üst barında (v1 mobil, 13.09); sekizinci turun
- * başlıksız görseli, fotoğraf üstündeki geri dairesi ve yüzen sepet düğmesi v1 ile kalktı. Görsel
- * barın altında kenardan kenara.
- *
- * Akış: galeri (kaydırmalı) → künye → boy seçimi → teslimat güvencesi → SATIN ALMA → beyan
- * akordeonları → yorumlar → benzer ürün şeridi. Sepete ekle artık sabit çubukta DEĞİL, akışın
- * karar bölgesinde: kararın malzemesi (boy, fiyat, teslimat) hemen üstünde duruyor.
+ * ── BİLİNÇLİ, GEÇİCİ FARK ─────────────────────────────────────────────────
+ * · Köşe (18 ↔ 20), `sand-300` ve `on-image-soft` tabanın değerinde (08.58 token maddesi).
  */
-export function ProductMobile({ t, locale, product, selected, onSelect, familyLabel, unavailable, reviews }: ProductViewProps) {
+export function ProductMobile({ t, locale, product, selected, onSelect, reviews }: ProductViewProps) {
+  const copy = productMessages[locale];
+  const { place } = useDeliveryPlace();
+  const price = selected?.priceCents ?? null;
+  const was = selected?.wasCents;
+  const soldOut = selected?.soldOut ?? true;
+  /* YERİN CEVABI kahramanın filigranında (native sapma 8): `info` (kargoyla gelir) elenir — o işaret ekranlardan
+     kalktı (kullanıcı kararı 10.08); fiyatsız ürün susar, "bu adrese gelmiyor" demek cevapsız soruya cevaptır. */
+  const mark = selected === null || price === null ? null : placeMarkOf(selected.stockStatus, place, placeMessages[locale]);
+  const placeMark = mark === null || mark.tone === 'info' ? null : mark;
+  // Fiyatsız benzer çizilmez: satışa kapalı ürün "bunları da sevebilirsiniz" rafında durmaz (native).
+  const similar = product.similar.filter((item) => item.priceCents !== null);
+  // Galeri hiç gelmediyse tek kapakla (native): ilk öğe zaten kapaktır.
+  const heroPhotos = product.gallery.length > 0 ? product.gallery : [product.image];
+  const categoryUpper = product.category?.name.toLocaleUpperCase(locale) ?? null;
+  const comparison = selected?.comparisonCents ?? null;
+  const metaLine = [
+    comparison === null ? null : copy.meta.perKg.replace('{price}', formatPrice(comparison, locale)),
+    copy.meta.vat,
+    was === undefined ? null : copy.meta.was.replace('{price}', formatPrice(was, locale)),
+  ]
+    .filter((part) => part !== null)
+    .join(' · ');
+
   return (
-    <div className="flex flex-col pb-6">
-      <Gallery images={product.gallery} alt={product.name} compact flush />
-
-      <section className="flex flex-col gap-3 px-4 pt-4">
-        <div className="flex flex-col gap-1.5">
-          {product.category && (
-            <span className="font-sans text-eyebrow-sm text-olive uppercase">{product.category.name}</span>
-          )}
-          {/* Paylaş adın YANINDA (kullanıcı kararı 20.08, yedinci tur) — düğme neyin yanındaysa
-              onu paylaşır; başlıkta bağlamsız duruyordu. */}
-          <div className="flex items-start justify-between gap-2">
-            <h1 className="font-serif text-page-title-sm text-ink">{product.name}</h1>
-            <ShareButton label={t.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
-          </div>
-          {/* Stok rozeti SEÇİLİ boyu anlatır — butonla çelişmemesi için. Tasarımda puan satırının
-              sağına yaslıdır; puan satırı bugün yok (17), rozet o satırın yerinde tek başına durur.
-              Rozet elle boyanıyordu ve tükendi hâlinde de YEŞİL çıkıyordu ("Tükendi" yazan yeşil bir
-              rozet); K5 tonu anlamdan seçiyor. Yere bağlı iki hâlde yerini yer işareti alır (19.7). */}
-          {/* Soğuk zincir işareti rozetin YANINDA — masaüstüyle aynı karar (16.08): ürünün künyesi,
-              teslimat kutusunun ayrıntısı değil. */}
-          <div className="flex flex-wrap items-center gap-2">
-            {selected &&
-              (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
-                <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
-              ) : (
-                <StockMark status={selected.stockStatus} locale={locale} size="lg" />
-              ))}
-            {product.coldChain && <ColdChainMark label={t.assurance.coldChainShort} />}
-          </div>
-        </div>
-
-        {product.description && <p className="font-sans text-body-sm leading-relaxed text-body">{product.description}</p>}
-
-        {/* Çeşit bloğu boy seçicinin ÜSTÜNDE — masaüstüyle aynı karar sırası (`§1b`). Mobilde de
-            sabit çubuğun üstünde, akışın içinde kalır: sabitlense ekranın yarısını yerdi. */}
-        <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} compact />
-
-        {selected && (
-          <VariantPicker t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} familyLabel={familyLabel} compact />
+    <div className="flex min-h-dvh flex-col bg-cream">
+      {/* Kahraman içeriğin ÜSTÜNE çizilir (`z-10`) — fiyat rozeti alt komşuya sarkıyor (native `zIndex`). */}
+      <div className="relative z-10 h-[400px] flex-none">
+        <PhotoGallery images={heroPhotos} alt={product.name} photoLabel={copy.gallery.photo} initial={product.name.slice(0, 1)} />
+        <span aria-hidden className="pointer-events-none absolute inset-0 bg-linear-to-b from-scrim-soft to-ink-deep/0 to-30%" />
+        {/* Yer filigranı galerinin KARDEŞİ, çocuğu değil: kaydırmayla kaymaz, dokunuşu yutmaz (native 10.08). */}
+        {placeMark !== null && (
+          <span className="pointer-events-none absolute inset-0 grid place-items-center bg-scrim px-4 text-center">
+            <span className="line-clamp-3 font-sans text-body leading-[1.6] font-bold whitespace-pre-line text-on-image">{placeMark.label}</span>
+          </span>
         )}
-
-        {/* Kargo kısıtı sepete eklemeden ÖNCE görünür (`musteri-urun-detay.md §2`). Mobilde etiketler
-            kısalır — tasarım dar ekranda üç güvenceyi tek satırda tutuyor. */}
-        <DeliveryLine
-          locale={locale}
-          shippable={product.shippable}
-          status={selected?.stockStatus}
-          fallback={{ ...t.assurance, doorstep: t.assurance.doorstepShort }}
-          blockedActions={
-            selected?.stockStatus === 'elsewhere' ? (
-              <StockNoticeButton variantId={selected.id} productName={product.name} locale={locale} emphasis="panel" />
-            ) : (
-              <Link
-                href={{ pathname: '/catalog', query: { shippable: '1' } }}
-                className={buttonClass({ size: 'xs', className: '!text-micro' })}
-              >
-                {t.assurance.seeShippable}
-              </Link>
-            )
-          }
-          compact
-        />
-
-        {/* Satın alma AKIŞTA, karar bölgesinin sonunda (sekizinci tur): boy seçimi ve teslimat
-            güvencesinin hemen altı — sabit çubuk söküldü, alt köşe yüzen sepet düğmesinin. */}
-        {selected && <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} flow />}
-      </section>
-
-      <div className="px-4 pt-4">
-        <Declaration t={t} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} compact />
+        {/* Düğmeler üst güvenli alanın 8px altında (native 08.08: saate binmesin). */}
+        <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+8px)] flex justify-between">
+          <BackButton variant="photo" label={copy.back} fallback="/catalog" />
+          <ShareButton variant="photo" label={copy.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
+        </div>
+        {soldOut ? (
+          <span className="absolute bottom-3 left-2.5 -rotate-4 rounded-badge bg-ink px-2 py-1 font-sans text-note font-bold text-sand-50">{copy.badge.soldOut}</span>
+        ) : was !== undefined ? (
+          <span className="absolute bottom-3 left-2.5 -rotate-4 rounded-badge bg-sand-50 px-2 py-1 font-sans text-note font-bold text-terracotta">
+            {copy.badge.discount}
+          </span>
+        ) : null}
+        {price !== null && (
+          <span className="absolute right-3 -bottom-5.5 rotate-3 rounded-control bg-terracotta px-3 py-2 font-serif text-card-title text-card shadow-price">
+            {formatPrice(price, locale)}
+          </span>
+        )}
       </div>
 
-      <div className="px-4 pt-5">
+      <div className="flex flex-col gap-2 px-3.5 pt-3.5 pb-1.5">
+        {categoryUpper !== null && <span className="font-sans text-eyebrow-xs text-terracotta">{categoryUpper}</span>}
+        <h1 className="font-serif text-h1-sm text-ink">{product.name}</h1>
+        <p className="font-sans text-micro text-muted">{metaLine}</p>
+        {selected?.limitLabel && (
+          <span className="self-start rounded-badge bg-terracotta-bg px-2 py-0.5 font-sans text-micro font-semibold text-terracotta">
+            {copy.limit.replace('{n}', selected.limitLabel)}
+          </span>
+        )}
+        {!product.shippable && (
+          <span className="self-start rounded-badge bg-olive-bg px-2 py-1 font-sans text-micro font-semibold text-olive-dark">{copy.noShip}</span>
+        )}
+
+        {product.family.length > 0 && categoryUpper !== null && (
+          <PhoneFamilyRail members={product.family} eyebrow={copy.family.browse.replace('{name}', categoryUpper)} currentLabel={copy.family.current} locale={locale} />
+        )}
+
+        {/* Boy çipleri yalnız ÇOK boylu üründe: tek boyda seçilecek bir şey yok. */}
+        {product.variants.length > 1 && selected !== null && (
+          <div className="flex flex-wrap gap-2">
+            {product.variants.map((option) => {
+              const chosen = option.id === selected.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => onSelect(option.id)}
+                  aria-pressed={chosen}
+                  className={[
+                    'flex cursor-pointer flex-col gap-0.5 rounded-control border-[1.5px] px-4 py-2.5 text-left transition-[scale,border-color] active:scale-[0.97]',
+                    chosen ? 'border-ink bg-sand-150' : 'border-sand-400 hover:border-ink',
+                  ].join(' ')}
+                >
+                  <span className="font-sans text-note font-bold text-ink">{variantNameOf(option, t.size, locale)}</span>
+                  <span className="font-sans text-micro font-semibold text-olive-dark">
+                    {option.priceCents === null ? '—' : formatPrice(option.priceCents, locale)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {product.description && <p className="font-sans text-body-sm leading-[1.6] text-body">{product.description}</p>}
+      </div>
+
+      <PhoneDeclaration copy={copy} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} />
+
+      <div className="px-3 pt-2.5">
         <Reviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} compact />
       </div>
 
-      {product.similar.length > 0 && (
-        <section className="flex flex-col gap-2.5 px-4 pt-5">
-          <h2 className="font-serif text-h2-sm text-ink">{t.similar}</h2>
-          <SimilarStrip products={product.similar} locale={locale} />
+      {similar.length > 0 && (
+        <section className="flex flex-col gap-2 pt-2.5">
+          <h2 className="mx-3 font-serif text-card-title-sm text-ink">{copy.related}</h2>
+          <div className="flex gap-2.5 overflow-x-auto px-3 pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {similar.map((item) => (
+              <ProductCircleCard
+                key={item.id}
+                size="sm"
+                href={{ pathname: '/product/[slug]', params: { slug: item.slug } }}
+                name={item.name}
+                priceLabel={productPriceLabel(item.priceCents, item.variantCount, locale)}
+                discountLabel={cardBadgeOf(item, { offer: copy.card.offer })}
+                image={item.image}
+              />
+            ))}
+          </div>
         </section>
       )}
 
+      {/* Yapışkan barın payı (native `productBarSpace` 108). */}
+      <div aria-hidden className="h-27 flex-none" />
+
+      {/* Bar boy değişince yeniden kurulur: adet ve "haber ver" kaydı boya aittir. */}
+      <PhonePurchaseBar
+        key={selected?.id ?? 'none'}
+        copy={copy}
+        locale={locale}
+        productName={product.name}
+        variant={selected}
+        placeMark={placeMark}
+        postalCode={place?.postalCode ?? null}
+      />
     </div>
   );
 }

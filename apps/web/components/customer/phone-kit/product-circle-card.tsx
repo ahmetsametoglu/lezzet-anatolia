@@ -5,7 +5,8 @@ import { CirclePhoto } from './circle-photo';
 import { Tag } from './tag';
 
 /*
-  YUVARLAK ÜRÜN KARTI — native `ProductCircleCard`ın web ikizi (vitrin rayı, 146'lık çap · 14.09).
+  YUVARLAK ÜRÜN KARTI — native `ProductCircleCard`ın web ikizi (14.09). İki çap, native'in: `lg` 146 (vitrin
+  rayı) · `sm` 120 (ürün detayının "bunları da sevebilirsiniz" rayı — native `circleSm`).
 
   · Fiyat çipi dairenin sağ alt köşesinden taşan eğik rozettir; fiyat BİLİNMİYORSA çip hiç çizilmez
     (sıfır yazılmaz — `productPriceLabel` künyesi).
@@ -26,17 +27,31 @@ interface ProductCircleCardProps {
   mark?: string;
   /** Bu adrese hiç gitmeyen ürün — daire solar. */
   dimmed?: boolean;
+  size?: 'lg' | 'sm';
 }
 
-export function ProductCircleCard({ href, name, priceLabel, image, discountLabel, mark, dimmed = false }: ProductCircleCardProps) {
+/** Çap ve baş harf kademesi boya göre — native `circleLg`/`circleSm` ile `h1-sm`/`h2-sm`. */
+const SIZE = {
+  lg: { diameter: 146, box: 'w-[146px]', circle: 'size-[146px]', initial: 'text-h1-sm text-muted' },
+  sm: { diameter: 120, box: 'w-[120px]', circle: 'size-[120px]', initial: 'text-h2-sm text-muted' },
+} as const;
+
+export function ProductCircleCard({ href, name, priceLabel, image, discountLabel, mark, dimmed = false, size = 'lg' }: ProductCircleCardProps) {
+  const box = SIZE[size];
   return (
     <Link
       href={href}
       aria-label={[name, priceLabel, mark].filter(Boolean).join(' · ')}
-      className="flex w-[146px] flex-none cursor-pointer flex-col items-center gap-1.5 transition-transform hover:opacity-90 active:scale-[0.97]"
+      className={`flex ${box.box} flex-none cursor-pointer flex-col items-center gap-1.5 transition-transform hover:opacity-90 active:scale-[0.97]`}
     >
-      <span className="relative block size-[146px]">
-        <CirclePhoto image={image} initial={name.slice(0, 1)} size={146} className={dimmed ? 'opacity-45' : undefined} />
+      <span className={`relative block ${box.circle}`}>
+        <CirclePhoto
+          image={image}
+          initial={name.slice(0, 1)}
+          size={box.diameter}
+          initialClassName={box.initial}
+          className={dimmed ? 'opacity-45' : undefined}
+        />
         {discountLabel !== undefined && (
           <span className="absolute top-2.5 left-0">
             <Tag label={discountLabel} tone="cream" rotate={-7} shadow shape="pill" />

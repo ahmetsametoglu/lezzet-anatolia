@@ -1,7 +1,8 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
-import { formatPrice, formatWeight } from '@/lib/storefront/format';
+import { formatPrice } from '@/lib/storefront/format';
+import { variantNameOf } from '@/lib/storefront/variant-name';
 import type { StorefrontVariant } from '@lezzet/application';
 import { Badge } from '@/components/customer/ui/badge';
 import { Price } from '@/components/customer/ui/price';
@@ -53,7 +54,8 @@ import type { Messages } from '../product-types';
 /** Adet tavanı: teklifte partide kalan miktar, aksi halde makul bir üst sınır (B2B hacmi sığar). */
 const MAX_QTY = 99;
 
-const capOf = (v: StorefrontVariant) => (v.limitLabel ? Number(v.limitLabel) : MAX_QTY);
+/** Boyun adet tavanı — telefon görünümünün yapışkan barı da okur (14.09): iki görünüm aynı tavanda durur. */
+export const capOf = (v: StorefrontVariant) => (v.limitLabel ? Number(v.limitLabel) : MAX_QTY);
 
 interface VariantPickerProps {
   t: Messages;
@@ -72,38 +74,8 @@ interface VariantPickerProps {
   compact?: boolean;
 }
 
-/**
- * Boyun MÜŞTERİYE GÖRÜNEN adı — yapısal alanlardan türer, saklı etiketten DEĞİL (kullanıcı kararı 19.08).
- *
- * *"Kullanıcı varyant isminde adet mantıklıysa adet görmeli, gramaj mantıklıysa gramaj. Zaten
- * toplam gramajı da adedi de bir yere yazıyoruz; etiketin tekrar etmesine gerek yok."*
- *
- * Saklı `label` kaynağın kendi dizgisidir (`4x105g`) ve kutunun üstünde öyle yazar — mal kabulde,
- * sayımda, tedarikçiyle konuşurken doğru olan o. Ama vitrinde müşterinin sorusu başka: **kaç tane
- * alıyorum.** Türetim iki alandan yapılıyor, ikisi de zaten dolu:
- *   · `piecesCount > 1` → "4 adet · 420 g"  (adet önde, ağırlık yanında)
- *   · yoksa             → "135 g"           (tek parça; adet yazmak bilgi eklemez)
- *
- * Gramaj kaybolmuyor: çoklu pakette ikinci sıraya geçiyor, çünkü 420 g tek başına 4 simidi mi bir
- * kocaman simidi mi anlattığını söylemiyordu.
- */
-function boyAdi(
-  v: { piecesCount: number | null; portionKind: 'item' | 'slice' | null; netWeightG: number | null; label: string },
-  t: Messages,
-  locale: Locale,
-): string {
-  const agirlik = v.netWeightG !== null ? formatWeight(v.netWeightG, locale) : null;
-  if (v.piecesCount !== null && v.piecesCount > 1) {
-    const n = String(v.piecesCount);
-    // KELİME porsiyon TÜRÜNDEN gelir: 4'lü simit paketi "4 adet", 12 dilimlik cheesecake "12 dilim".
-    // İkisine de "adet" yazmak müşteriye 12 cheesecake aldığını söylerdi (künye `portion_kind`, 0005).
-    const dilim = v.portionKind === 'slice';
-    const tek = (dilim ? t.size.slices : t.size.pieces).replace('{n}', n);
-    const cift = (dilim ? t.size.slicesOf : t.size.piecesOf).replace('{n}', n);
-    return agirlik ? cift.replace('{weight}', agirlik) : tek;
-  }
-  return agirlik ?? v.label;
-}
+// Boyun müşteriye görünen adı (kullanıcı kararı 19.08) `lib/storefront/variant-name.ts`te — telefon görünümünün
+// boy çipleri de aynı kuralı okuyor (14.09).
 
 /**
  * K22 · Boy seçimi. Fiyatın nerede gösterildiği varyant SAYISINA bağlıdır ve bu tasarımın kararıdır:
@@ -116,7 +88,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
   const multi = variants.length > 1;
 
   /** "500 g · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
-  const unitLine = [boyAdi(selected, t, locale), selected.comparisonCents !== null ? `${formatPrice(selected.comparisonCents, locale)}/kg` : null]
+  const unitLine = [variantNameOf(selected, t.size, locale), selected.comparisonCents !== null ? `${formatPrice(selected.comparisonCents, locale)}/kg` : null]
     .filter(Boolean)
     .join(' · ');
 
@@ -151,7 +123,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   v.soldOut ? 'opacity-55' : '',
                 ].join(' ')}
               >
-                <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body'].join(' ')}>{boyAdi(v, t, locale)}</span>
+                <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body'].join(' ')}>{variantNameOf(v, t.size, locale)}</span>
                 {/* Fırsat rozeti FİYATIN YANINDA (tasarım): hangi boyun indirimli olduğu ancak o
                     boyun fiyatının yanında görünür — kartların altındaki ortak satır bunu söyleyemez. */}
                 <span className="flex flex-wrap items-center gap-2">
