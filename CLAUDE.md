@@ -125,6 +125,19 @@
     21.08: prod için **108 MB** yazdı, gerçek dev **548 MB**'daydı). Belirtisi yoktu çünkü araç yine
     bir sayı basıyordu — yanlış sürecin sayısını; eşik pratikte hiç tetiklenemezdi (donmuş kopya
     derleme biriktirmez) ve `--apply` tetikleseydi 3001'i kapatırdı.
+- **HER COMMIT'TEN ÖNCE 3001 DERLENİR (kullanıcı kararı 14.09).** Kullanıcı işi 3001'de görüyor; kopya
+  bayatsa gördüğü şey bir önceki hâldir (yaşandı 14.09: sepetin dikkat tonu ağaçta vardı, 3001 birkaç
+  commit gerideydi ve kart beyaz göründü). 3001 ana ağaçtan değil **`/tmp/lezzet-prod` worktree'sinden**
+  koşar — ağaçtaki başka şeridin yarım işi derlemeyi düşürmesin (üstteki `pnpm prod:web` onu güncellemez).
+  Sıra: commit'e girecek ağaç (geçici indeksin `write-tree`i → `commit-tree`) orada `checkout --detach`
+  edilir → `pnpm install --offline --frozen-lockfile` → `pnpm --filter @lezzet/web run build:prod` →
+  3001'i dinleyen süreç durdurulur, aynı dizinden `nohup pnpm --filter @lezzet/web run start:prod` ile
+  başlatılır (günlük `.test-results/prod-server.log`) → sayfanın cevap verdiği görülür. **Derleme
+  kırılırsa commit yok** — `next build` tip denetiminin görmediğini de yakalar. Kopya TEK: başlamadan
+  süren bir `next build` var mı bak (`pgrep -f 'next build'`), varsa bitmesini bekle. Kural 3001'i
+  yeniden başlatma iznidir; dev (3000) yine kullanıcının. `/tmp` makine açılışında silinir: `git worktree
+  prune` → `git worktree add --detach /tmp/lezzet-prod <aday>` → `.env` ve `apps/web/.env.local`
+  kopyalanır (içerik basılmaz).
 
 ## 4b. Test disiplini (paylaşılan veritabanı — her ajan için bağlayıcı)
 > Üç ajan **tek çalışma ağacını ve tek yerel Supabase'i** paylaşıyor. Kural bundan doğdu: eşzamanlı iki
