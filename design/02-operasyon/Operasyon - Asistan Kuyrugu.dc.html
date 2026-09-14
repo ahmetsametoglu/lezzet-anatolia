@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1440px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Asistan Onay Kuyruğu · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Asistan hazırlar, patron uygular. Onay yalnız bu ekrandan verilir; liste ve karar çerçevesi her tipte aynıdır, değişen tek şey önizleme bloğudur.</span>
+    </div>
+
+    <div data-screen-label="Asistan Kuyruğu Web" style="width:100%;max-width:1440px;box-sizing:border-box;height:760px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="asistan" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+            <span style="font:600 22px 'Space Grotesk'">Asistan Onay Kuyruğu</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">{{ headerSub }}</span>
+          </div>
+          <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+              <span onClick="{{ t.select }}" style="font:600 12px 'Space Grotesk';padding:7px 13px;border-radius:6px;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }}">{{ t.label }}</span>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:326px 1fr;flex:1;min-height:0;overflow:hidden">
+          <!-- KUYRUK -->
+          <div style="border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0;overflow-y:auto">
+            <sc-if value="{{ queueEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:38px 24px;display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+                <span style="font:600 14px 'Space Grotesk';color:#6a7065">Bekleyen öneri yok</span>
+                <span style="font:400 12px/1.6 'Karla';color:#8b9086">Asistan çalışmıyor demek değil — sorulmadı demek. Bir şey hazırlaması için asistana yazın.</span>
+              </div>
+            </sc-if>
+            <sc-for list="{{ queue }}" as="q" hint-placeholder-count="5">
+              <div onClick="{{ q.select }}" style="padding:12px 16px;border-bottom:1px solid #f0f1ec;display:flex;flex-direction:column;gap:6px;cursor:pointer;background:{{ q.rowBg }};border-left:3px solid {{ q.edge }}">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:{{ q.tFg }};background:{{ q.tBg }};border-radius:6px;padding:3px 8px;flex:none">{{ q.tip }}</span>
+                  <sc-if value="{{ q.showFresh }}"><span style="font:600 9.5px 'Space Grotesk';color:{{ q.freshFg }};background:{{ q.freshBg }};border-radius:6px;padding:3px 8px;flex:none">{{ q.freshLabel }}</span></sc-if>
+                  <span style="font:400 11px 'Karla';color:#8b9086;margin-left:auto;flex:none">{{ q.ago }}</span>
+                </div>
+                <span style="font:500 13px/1.45 'Karla';color:#22251f">{{ q.summary }}</span>
+                <sc-if value="{{ q.hasAmount }}" hint-placeholder-val="{{ true }}"><span style="font:600 12px 'IBM Plex Mono';color:#3a3f37">{{ q.amount }}</span></sc-if>
+                <sc-if value="{{ q.hasStatus }}"><span style="font:500 11px 'Karla';color:{{ q.statusFg }}">{{ q.status }}</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- KARAR ÇERÇEVESİ -->
+          <div style="display:flex;flex-direction:column;background:#f8f9f5;min-height:0;overflow-y:auto">
+            <div style="padding:18px 24px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:flex-start;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:{{ card.tFg }};background:{{ card.tBg }};border-radius:6px;padding:3px 8px">{{ card.tip }}</span>
+                    <span style="font:400 11.5px 'Karla';color:#8b9086">{{ card.meta }}</span>
+                  </div>
+                  <span style="font:600 19px/1.35 'Space Grotesk';color:#22251f">{{ card.summary }}</span>
+                </div>
+                <sc-if value="{{ card.hasAmount }}" hint-placeholder-val="{{ true }}">
+                  <span style="font:600 17px 'IBM Plex Mono';color:#22251f;flex:none">{{ card.amount }}</span>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ card.hasReason }}" hint-placeholder-val="{{ true }}">
+                <div style="background:#eef4e2;border:1px solid #cdd8b6;border-left:3px solid #5f7a2c;border-radius:9px;padding:11px 14px;display:flex;flex-direction:column;gap:3px">
+                  <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Neden bu öneri</span>
+                  <span style="font:400 13px/1.5 'Karla';color:#3a3f37">{{ card.reason }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ card.noReason }}" hint-placeholder-val="{{ false }}">
+                <div style="background:transparent;border:1.5px dashed #cfd2c8;border-radius:9px;padding:11px 14px;display:flex;flex-direction:column;gap:3px">
+                  <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#a7ac9f">Neden bu öneri</span>
+                  <span style="font:400 13px/1.5 'Karla';color:#8b9086">Asistan bir sinyal yazmadı. Onaylayabilirsiniz, ama neye dayandığını göremiyorsunuz.</span>
+                </div>
+              </sc-if>
+
+              <!-- ÖNİZLEME: tipe göre değişen tek bölüm -->
+              <div style="background:#fff;border:1px solid #e2e3dd;border-radius:10px;display:flex;flex-direction:column;overflow:hidden">
+                <div style="padding:9px 14px;border-bottom:1px solid #f0f1ec;background:#f3f4f0;display:flex;align-items:center;gap:8px">
+                  <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#6a7065">Önizleme — uygulanınca oluşacak kayıt</span>
+                  <span style="font:400 11px 'Karla';color:#a7ac9f;margin-left:auto">{{ card.previewNote }}</span>
+                </div>
+
+                <sc-if value="{{ isPaket }}" hint-placeholder-val="{{ true }}">
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;gap:14px;align-items:center;background:#f8f9f5;border:1px solid #e6e7e1;border-radius:10px;padding:12px 14px">
+                      <div style="width:78px;height:78px;flex:none;border:1.5px dashed #cfd2c8;border-radius:9px;display:grid;place-items:center;text-align:center;font:400 9.5px/1.3 'Karla';color:#a7ac9f;padding:6px">görsel yok<br>pasif doğar</div>
+                      <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                        <span style="font:400 10px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Müşterinin göreceği kart</span>
+                        <span style="font:600 16px 'Space Grotesk';color:#22251f">{{ pv.paketAd }}</span>
+                        <span style="font:400 12px/1.5 'Karla';color:#6a7065">{{ pv.paketDesc }}</span>
+                      </div>
+                      <span style="font:600 20px 'IBM Plex Mono';color:#22251f;flex:none">{{ pv.paketFiyat }}</span>
+                    </div>
+                    <div style="border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
+                      <div style="display:grid;grid-template-columns:1fr 96px 62px 92px;background:#f3f4f0;border-bottom:1px solid #e6e7e1;padding:7px 12px;font:600 10px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">
+                        <span>Ürün</span><span>Boy</span><span style="text-align:right">Adet</span><span style="text-align:right">Atanan pay</span>
+                      </div>
+                      <sc-for list="{{ pv.kalemler }}" as="k" hint-placeholder-count="4">
+                        <div style="display:grid;grid-template-columns:1fr 96px 62px 92px;padding:8px 12px;border-bottom:1px solid #f0f1ec;font:400 12.5px 'Karla';color:#22251f">
+                          <span>{{ k.ad }}</span><span style="color:#6a7065">{{ k.boy }}</span><span style="text-align:right;font-family:'IBM Plex Mono'">{{ k.adet }}</span><span style="text-align:right;font-family:'IBM Plex Mono'">{{ k.pay }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                      <span style="font:600 11.5px 'Space Grotesk';color:{{ pv.mutFg }};background:{{ pv.mutBg }};border:1px solid {{ pv.mutBd }};border-radius:8px;padding:7px 11px">{{ pv.mutabakat }}</span>
+                      <span style="font:400 11.5px 'Karla';color:#6a7065">{{ pv.ayriAyri }}</span>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ isStok }}">
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;font:400 12px 'Karla';color:#6a7065">
+                      <span>Hedef depo: <strong style="color:#22251f;font-weight:600">{{ pv.depo }}</strong></span>
+                      <span>Belge no: <strong style="color:#22251f;font-weight:600;font-family:'IBM Plex Mono'">{{ pv.belge }}</strong></span>
+                    </div>
+                    <div style="border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
+                      <div style="display:grid;grid-template-columns:1fr 92px 58px 104px 96px;background:#f3f4f0;border-bottom:1px solid #e6e7e1;padding:7px 12px;font:600 10px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">
+                        <span>Ürün</span><span>Boy</span><span style="text-align:right">Adet</span><span style="text-align:right">SKT</span><span style="text-align:right">Lot</span>
+                      </div>
+                      <sc-for list="{{ pv.partiler }}" as="p" hint-placeholder-count="3">
+                        <div style="display:grid;grid-template-columns:1fr 92px 58px 104px 96px;padding:8px 12px;border-bottom:1px solid #f0f1ec;background:{{ p.bg }};font:400 12.5px 'Karla';color:#22251f">
+                          <span>{{ p.ad }}</span><span style="color:#6a7065">{{ p.boy }}</span><span style="text-align:right;font-family:'IBM Plex Mono'">{{ p.adet }}</span><span style="text-align:right;font-family:'IBM Plex Mono';color:{{ p.sktFg }};font-weight:{{ p.sktW }}">{{ p.skt }}</span><span style="text-align:right;font-family:'IBM Plex Mono';color:#6a7065">{{ p.lot }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="background:#fbe9e7;border:1px solid #e2c4c0;border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:9px">
+                      <span style="color:#a5443c;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path></svg></span>
+                      <span style="font:500 11.5px/1.5 'Karla';color:#8a3a33">{{ pv.sktUyari }}</span>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ isPara }}">
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+                    <span style="font:400 11px 'Karla';color:#8b9086">Muhasebe satırının kendisi — uygulanınca aynen bu satır yazılır.</span>
+                    <div style="border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
+                      <sc-for list="{{ pv.satir }}" as="s" hint-placeholder-count="6">
+                        <div style="display:grid;grid-template-columns:150px 1fr;border-bottom:1px solid #f0f1ec;padding:9px 13px;gap:12px">
+                          <span style="font:600 10.5px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8b9086">{{ s.k }}</span>
+                          <span style="font:500 12.5px 'Karla';color:{{ s.fg }};font-family:{{ s.ff }}">{{ s.v }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ isBolge }}">
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;font:400 12px 'Karla';color:#6a7065">
+                      <span>Hedef bölge: <strong style="color:#22251f;font-weight:600">{{ pv.bolge }}</strong></span>
+                      <span>Teslim günü: <strong style="color:#22251f;font-weight:600">{{ pv.gun }}</strong></span>
+                    </div>
+                    <div style="border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
+                      <div style="display:grid;grid-template-columns:110px 1fr 92px 118px;background:#f3f4f0;border-bottom:1px solid #e6e7e1;padding:7px 12px;font:600 10px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">
+                        <span>Posta kodu</span><span>Yerleşim</span><span style="text-align:right">Talep</span><span style="text-align:right">Haber bekleyen</span>
+                      </div>
+                      <sc-for list="{{ pv.kodlar }}" as="k" hint-placeholder-count="3">
+                        <div style="display:grid;grid-template-columns:110px 1fr 92px 118px;padding:8px 12px;border-bottom:1px solid #f0f1ec;font:400 12.5px 'Karla';color:#22251f">
+                          <span style="font-family:'IBM Plex Mono'">{{ k.kod }}</span><span style="color:#6a7065">{{ k.yer }}</span><span style="text-align:right;font-family:'IBM Plex Mono'">{{ k.talep }}</span><span style="text-align:right;font-family:'IBM Plex Mono'">{{ k.bekleyen }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-left:3px solid #c98a2e;border-radius:9px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
+                      <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#9a6416">Geri alınamaz dış etki</span>
+                      <span style="font:500 12px/1.55 'Karla';color:#8a6410">{{ pv.disEtki }}</span>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ isUrun }}">
+                  <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
+                    <span style="font:400 11px 'Karla';color:#8b9086">Alan bazında fark — boş alanlara asistanın yazdıkları. Alerjen ve saklama asistan tarafından doldurulmaz.</span>
+                    <div style="border:1px solid #e6e7e1;border-radius:9px;overflow:hidden">
+                      <div style="display:grid;grid-template-columns:118px 1fr 1fr 1fr;background:#f3f4f0;border-bottom:1px solid #e6e7e1;padding:7px 12px;font:600 10px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">
+                        <span>Alan</span><span>TR</span><span>FR</span><span>DE</span>
+                      </div>
+                      <sc-for list="{{ pv.alanlar }}" as="a" hint-placeholder-count="4">
+                        <div style="display:grid;grid-template-columns:118px 1fr 1fr 1fr;padding:8px 12px;border-bottom:1px solid #f0f1ec;gap:10px;background:{{ a.bg }}">
+                          <span style="font:600 11.5px 'Space Grotesk';color:{{ a.kFg }}">{{ a.k }}</span>
+                          <span style="font:400 12px/1.45 'Karla';color:{{ a.fg }}">{{ a.tr }}</span>
+                          <span style="font:400 12px/1.45 'Karla';color:{{ a.fg }}">{{ a.fr }}</span>
+                          <span style="font:400 12px/1.45 'Karla';color:{{ a.fg }}">{{ a.de }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="background:#fbe9e7;border:1px solid #e2c4c0;border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:9px">
+                      <span style="font:500 11.5px/1.5 'Karla';color:#8a3a33;flex:1">{{ pv.eksikUyari }}</span>
+                      <span style="font:600 11.5px 'Space Grotesk';color:#a5443c;flex:none">Ürünü aç →</span>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+
+              <div style="display:flex;align-items:flex-start;gap:9px;background:#eef0ea;border:1px solid #e0e2da;border-radius:9px;padding:10px 13px">
+                <span style="color:#6a7065;flex:none;margin-top:1px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></span>
+                <div style="display:flex;flex-direction:column;gap:2px">
+                  <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">{{ card.impactLabel }}</span>
+                  <span style="font:400 12.5px/1.55 'Karla';color:#3a3f37">{{ card.impact }}</span>
+                </div>
+              </div>
+
+              <div style="border:1px solid #e6e7e1;border-radius:9px;background:#fff;overflow:hidden">
+                <div onClick="{{ toggleTech }}" style="padding:9px 13px;display:flex;align-items:center;gap:9px;cursor:pointer">
+                  <span style="font:600 11px 'Space Grotesk';color:#6a7065">{{ techCaret }} Teknik döküm</span>
+                  <span style="font:400 11px 'Karla';color:#a7ac9f">payload · hedef tablolar · öneri kimliği</span>
+                </div>
+                <sc-if value="{{ techOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="border-top:1px solid #f0f1ec;padding:11px 13px;display:flex;flex-direction:column;gap:8px;background:#f8f9f5">
+                    <span style="font:400 11px 'Karla';color:#8b9086">Hedef tablolar: <span style="font-family:'IBM Plex Mono';color:#3a3f37">{{ card.tables }}</span> · öneri: <span style="font-family:'IBM Plex Mono';color:#3a3f37">{{ card.id }}</span></span>
+                    <pre style="margin:0;font:400 11px/1.6 'IBM Plex Mono';color:#3a3f37;white-space:pre-wrap;word-break:break-word">{{ card.payload }}</pre>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+
+            <sc-if value="{{ card.live }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:auto;position:sticky;bottom:0;background:#f8f9f5;border-top:1px solid #e6e7e1;padding:14px 24px;display:flex;align-items:center;gap:10px">
+                <span style="font:400 11px/1.5 'Karla';color:#8b9086;flex:1">{{ card.footNote }}</span>
+                <span onClick="{{ openSonra }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;background:#fff;border-radius:8px;padding:10px 16px;cursor:pointer">Sonra bak</span>
+                <span onClick="{{ openRet }}" style="font:600 13px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:8px;padding:10px 18px;cursor:pointer">Reddet</span>
+                <span onClick="{{ openUygula }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:{{ card.ctaBg }};border-radius:8px;padding:10px 22px;cursor:pointer">{{ card.ctaLabel }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ card.readOnly }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:auto;position:sticky;bottom:0;background:{{ card.durumBg }};border-top:1px solid {{ card.durumBd }};padding:14px 24px;display:flex;align-items:flex-start;gap:14px">
+                <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <span style="font:600 11px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#fbfbf9;background:{{ card.durumFg }};border-radius:6px;padding:4px 9px">{{ card.durum }}</span>
+                    <span style="font:500 11.5px 'Karla';color:{{ card.durumFg }}">{{ card.kararKim }}</span>
+                  </div>
+                  <span style="font:400 12px/1.55 'Karla';color:#3a3f37">{{ card.kararNot }}</span>
+                </div>
+                <sc-if value="{{ card.hasBridge }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;background:#fff;border-radius:8px;padding:10px 16px;cursor:pointer;flex:none">{{ card.bridge }}</span>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:620px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+    <span style="font:700 14px 'Space Grotesk';color:#3a4147">Kurallar</span>
+    <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+      <li>Onay yalnız bu ekrandan verilir — asistanın kendi yüzeyinde onay aracı yoktur.</li>
+      <li>Toplu <strong>ret</strong> var, toplu <strong>uygula</strong> yok: her uygulama ayrı karardır.</li>
+      <li>Ham JSON ana yüzey değildir; önizleme işlemin sonucunu gösterir, JSON teknik dökümde durur.</li>
+      <li>Motor reddederse öneri <strong>"uygulanamadı"</strong> olur ve sebebi ekranda yazar — "reddedildi"den ayrı hâldir.</li>
+      <li>Süresi dolan öneri kuyruktan düşer, "süresi geçti" görünümünde kalır. Reddedilen silinmez, geçmişe düşer.</li>
+      <li>Mobil yok — operasyon yüzeyi yalnız masaüstü.</li>
+    </ul>
+  </div>
+
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:440px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:600 18px 'Space Grotesk'">{{ modalTitle }}</span>
+          <span style="font:400 13px/1.6 'Karla';color:#3a3f37">{{ modalBody }}</span>
+          <sc-if value="{{ modalHasNote }}" hint-placeholder-val="{{ true }}">
+            <span style="font:500 11.5px/1.5 'Karla';color:{{ modalNoteFg }};background:{{ modalNoteBg }};border:1px solid {{ modalNoteBd }};border-radius:8px;padding:10px 12px">{{ modalNote }}</span>
+          </sc-if>
+          <sc-if value="{{ modalIsRet }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #d9dbd2;border-radius:8px;padding:10px 12px;background:#fff;font:400 12.5px 'Karla';color:#9aa094">Ret notu (isteğe bağlı) — "neden reddettik" sorusunun cevabı burada kalır…</div>
+          </sc-if>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5">
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">Vazgeç</span>
+          <span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:{{ modalBtn }};border-radius:8px;padding:10px 20px;cursor:pointer">{{ modalCta }}</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;teknikAcik&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Görünüm&quot;}}">
+class Component extends DCLogic {
+  state = { tab:'bekleyen', sel:0, tech:null, modalOpen:false, modalKind:'uygula' };
+
+  items() {
+    const T = {
+      paket:  ['Paket',   '#4a6121','#eef4e2'],
+      stok:   ['Stok',    '#3a6b8a','#e6eef3'],
+      para:   ['Para',    '#5a4a8a','#ece8f5'],
+      bolge:  ['Bölge',   '#9a6416','#fdf1e3'],
+      urun:   ['Ürün',    '#6a7065','#eef0ea'],
+    };
+    return [
+      { kind:'paket', id:'ONR-26-4K21', ago:'2 saat önce', fresh:'ok', amount:'89,00 €',
+        summary:'6 kalemlik "Kış Sofrası" paketi, 89 €',
+        meta:'asistan · 22 Şubat 09:14',
+        reason:'Son 30 günde bu altı ürün 41 siparişte birlikte alındı; hazır paket olarak sepet ortalamasını 12 € yukarı taşıyor.',
+        impact:'Katalogda yeni bir paket oluşur; müşteri vitrininde görünmez (pasif doğar). Yayına almak ayrı karardır.',
+        previewNote:'katalog · paket kartı',
+        tables:'packages, package_items', footNote:'Uygulanınca paket pasif doğar — vitrine almak ayrı karar.',
+        payload:'{\n  "name": "Kış Sofrası",\n  "price": 89.00,\n  "active": false,\n  "items": [\n    { "variantId": "a3f21…", "qty": 1, "share": 24.90 },\n    { "variantId": "77c04…", "qty": 2, "share": 19.80 }\n  ]\n}',
+        pv:{ paketAd:'Kış Sofrası', paketDesc:'Soğuk günler için: çorbalık, börek, tatlı ve yanında ne varsa.', paketFiyat:'89,00 €',
+          kalemler:[
+            { ad:'El Açması Su Böreği', boy:'1 kg', adet:'1', pay:'24,90 €' },
+            { ad:'Fıstıklı Baklava', boy:'500 g', adet:'1', pay:'19,80 €' },
+            { ad:'Ezine Beyaz Peynir', boy:'350 g', adet:'2', pay:'12,80 €' },
+            { ad:'Kuru Mantı', boy:'500 g', adet:'1', pay:'9,60 €' },
+            { ad:'Antep Fıstığı', boy:'200 g', adet:'1', pay:'13,90 €' },
+            { ad:'Zeytinli Açma', boy:'6\u2019lı', adet:'1', pay:'8,00 €' },
+          ],
+          mutabakat:'Paylar toplamı 89,00 € — paket fiyatını tutuyor', mutFg:'#4a6121', mutBg:'#eef4e2', mutBd:'#cdd8b6',
+          ayriAyri:'Ayrı ayrı alınsa 104,20 € · %14,6 avantaj' } },
+
+      { kind:'stok', id:'ONR-26-4K19', ago:'3 saat önce', fresh:'soon', amount:'',
+        summary:'D1 deposuna 3 parti stok girişi — irsaliye 2026/0418',
+        meta:'asistan · 22 Şubat 08:02 · tazeliği bugün doluyor',
+        reason:'Dün akşam gelen irsaliye fotoğrafı okundu; kalemler bekleyen tedarik siparişiyle eşleşiyor.',
+        impact:'Partiler stoğa girer ve satılabilir hâle gelir; SKT alanları bu tabloyla sabitlenir.',
+        previewNote:'stok · parti tablosu',
+        tables:'stock_batches, stock_movements', footNote:'Dünkü stoğa göre kurulmuş öneri — tazeliği bugün doluyor.',
+        payload:'{\n  "warehouseId": "D1",\n  "docNo": "2026/0418",\n  "batches": [\n    { "variantId": "b12c…", "qty": 24, "expiry": "2026-03-02", "lot": "L-2261" }\n  ]\n}',
+        pv:{ depo:'D1 · Merkez soğuk oda', belge:'2026/0418',
+          partiler:[
+            { ad:'El Açması Su Böreği', boy:'1 kg', adet:'24', skt:'02.03.2026', lot:'L-2261', risk:true },
+            { ad:'Ezine Beyaz Peynir', boy:'350 g', adet:'40', skt:'18.04.2026', lot:'L-2262', risk:false },
+            { ad:'Fıstıklı Baklava', boy:'500 g', adet:'18', skt:'11.03.2026', lot:'L-2263', risk:false },
+          ],
+          sktUyari:'İlk parti 8 gün içinde son kullanma tarihine giriyor — girişten hemen sonra yakın-SKT kuyruğuna düşer.' } },
+
+      { kind:'bolge', id:'ONR-26-4K17', ago:'5 saat önce', fresh:'ok', amount:'',
+        summary:'Teslimat bölgesine 3 posta kodu ekle — Illkirch güneyi',
+        meta:'asistan · 22 Şubat 06:40 · dış etkili',
+        reason:'Bu üç kod son 60 günde 47 kez soruldu; üçü de mevcut cumartesi rotasının 6 km yakınında.',
+        impact:'Kodlar bölgeye eklenir, adres girişinde teslimat açılır ve haber bekleyen 34 müşteriye bildirim gider.',
+        previewNote:'bölge · posta kodu listesi',
+        tables:'delivery_zones, zone_postcodes, notifications', footNote:'Bu öneri müşteriye bildirim gönderir — geri alınamaz.',
+        payload:'{\n  "zoneId": "Z-STG-S",\n  "add": ["67400", "67540", "67115"],\n  "notifyWaitlist": true\n}',
+        pv:{ bolge:'Strasbourg Güney (Z-STG-S)', gun:'Cumartesi',
+          kodlar:[
+            { kod:'67400', yer:'Illkirch-Graffenstaden', talep:'23', bekleyen:'18' },
+            { kod:'67540', yer:'Ostwald', talep:'15', bekleyen:'11' },
+            { kod:'67115', yer:'Plobsheim', talep:'9', bekleyen:'5' },
+          ],
+          disEtki:'Uygulanınca haber bekleyen 34 müşteriye "bölgeniz açıldı" bildirimi gider. Bildirim geri alınamaz; bölgeyi kapatsanız bile mesaj gitmiş olur.' } },
+
+      { kind:'para', id:'ONR-26-4K12', ago:'yarım saat önce', fresh:'ok', amount:'340,00 €',
+        summary:'Tedarikçi ödemesi — Baklavacı Hüseyin, 340 €',
+        meta:'asistan · 22 Şubat 10:41',
+        reason:null,
+        impact:'Kasa hesabından 340 € gider yazılır ve tedarikçi bakiyesinden düşer. Muhasebe kaydı geri alınmaz, ters kayıtla düzeltilir.',
+        previewNote:'para · muhasebe satırı',
+        tables:'cash_entries', footNote:'Para kaydı ters kayıtla düzeltilir — silinmez.',
+        payload:'{\n  "accountId": "kasa-eur",\n  "type": "expense",\n  "category": "tedarik",\n  "amount": 340.00,\n  "counterparty": "SUP-014"\n}',
+        pv:{ satir:[
+            { k:'Hesap', v:'Kasa · EUR', ff:'Karla', fg:'#22251f' },
+            { k:'Tür', v:'Gider', ff:'Karla', fg:'#a5443c' },
+            { k:'Kategori', v:'Tedarik ödemesi', ff:'Karla', fg:'#22251f' },
+            { k:'Tutar', v:'340,00 €', ff:'IBM Plex Mono', fg:'#22251f' },
+            { k:'Karşı taraf', v:'Baklavacı Hüseyin (SUP-014)', ff:'Karla', fg:'#22251f' },
+            { k:'Tarih', v:'22.02.2026', ff:'IBM Plex Mono', fg:'#22251f' },
+            { k:'Bağlı belge', v:'TS-26-0311 · tedarik siparişi', ff:'Karla', fg:'#3a6b8a' },
+          ] } },
+
+      { kind:'urun', id:'ONR-26-4K08', ago:'1 gün önce', fresh:'ok', amount:'',
+        summary:'"Kuru Mantı" ürününün boş alanları dolduruldu — 3 dil',
+        meta:'asistan · 21 Şubat 15:22',
+        reason:'Ürün 9 gündür taslakta; açıklama ve pişirme alanları boş olduğu için yayına alınamıyordu.',
+        impact:'Ürün kaydı güncellenir ama taslakta kalır — alerjen ve saklama alanları boş olduğu sürece yayına alınamaz.',
+        previewNote:'ürün · alan farkı',
+        tables:'products, product_translations', footNote:'Eksik alanlar dolmadan ürün yayına alınamaz.',
+        payload:'{\n  "productId": "PRD-0142",\n  "fields": { "description": {"tr": "…", "fr": "…", "de": "…"} },\n  "status": "draft"\n}',
+        pv:{ alanlar:[
+            { k:'Açıklama', tr:'El açması hamurdan, elde kesilmiş kuru mantı.', fr:'Mantı sec découpé à la main.', de:'Handgeschnittene getrocknete Mantı.', ok:true },
+            { k:'Pişirme', tr:'Kaynar tuzlu suda 12 dakika.', fr:'12 min à l\u2019eau bouillante salée.', de:'12 Minuten in Salzwasser.', ok:true },
+            { k:'Alerjen', tr:'— boş', fr:'— boş', de:'— boş', ok:false },
+            { k:'Saklama', tr:'— boş', fr:'— boş', de:'— boş', ok:false },
+          ],
+          eksikUyari:'Alerjen ve saklama alanlarını asistan doldurmaz — bu iki alan insan sorumluluğundadır ve boş kaldıkları sürece ürün taslakta kalır.' } },
+    ].map(it => ({ ...it, tip:T[it.kind][0], tFg:T[it.kind][1], tBg:T[it.kind][2] }));
+  }
+
+  gecmis() {
+    const T = { paket:['Paket','#4a6121','#eef4e2'], stok:['Stok','#3a6b8a','#e6eef3'], para:['Para','#5a4a8a','#ece8f5'] };
+    return [
+      { kind:'paket', id:'ONR-26-3J77', ago:'dün 17:02', amount:'32,90 €', fresh:'ok',
+        summary:'"Kahvaltı Keyfi" paketi, 32,90 €', meta:'asistan · 21 Şubat 16:48',
+        reason:'Kahvaltılık üç ürün son 30 günde 28 siparişte birlikte alındı.',
+        impact:'Katalogda paket oluştu; vitrine alınması ayrı karardı.',
+        previewNote:'katalog · paket kartı', tables:'packages, package_items',
+        payload:'{\n  "name": "Kahvaltı Keyfi",\n  "price": 32.90,\n  "active": false\n}',
+        status:'Uygulandı · Selim A.', statusFg:'#4a6121',
+        karar:{ durum:'Uygulandı', fg:'#4a6121', bg:'#eef4e2', bd:'#cdd8b6',
+          kim:'Selim A. · 21 Şubat 17:02', not:'Motor kabul etti; paket pasif olarak oluştu.',
+          hasBridge:true, bridge:'Paketi aç →' },
+        pv:{ paketAd:'Kahvaltı Keyfi', paketDesc:'Hafta sonu kahvaltısı için peynir, açma ve sigara böreği.', paketFiyat:'32,90 €',
+          kalemler:[
+            { ad:'Ezine Beyaz Peynir', boy:'350 g', adet:'1', pay:'6,40 €' },
+            { ad:'Zeytinli Açma', boy:'6\u2019lı', adet:'2', pay:'11,20 €' },
+            { ad:'Sigara Böreği', boy:'24\u2019lü', adet:'1', pay:'15,30 €' },
+          ],
+          mutabakat:'Paylar toplamı 32,90 € — paket fiyatını tutuyor', mutFg:'#4a6121', mutBg:'#eef4e2', mutBd:'#cdd8b6',
+          ayriAyri:'Ayrı ayrı alınsa 38,60 € · %14,8 avantaj' } },
+
+      { kind:'stok', id:'ONR-26-3J71', ago:'dün 11:35', amount:'', fresh:'ok',
+        summary:'D2 deposuna 2 parti giriş — irsaliye 2026/0402', meta:'asistan · 21 Şubat 10:58',
+        reason:'İrsaliye fotoğrafı okundu; kalemler bekleyen tedarik siparişiyle eşleşti.',
+        impact:'Partiler stoğa girecekti; motor kaydı yazmadan reddetti.',
+        previewNote:'stok · parti tablosu', tables:'stock_batches, stock_movements',
+        payload:'{\n  "warehouseId": "D2",\n  "docNo": "2026/0402",\n  "batches": [\n    { "lot": "L-2244", "qty": 12 }\n  ]\n}',
+        status:'Uygulanamadı · motor reddetti', statusFg:'#a5443c',
+        karar:{ durum:'Uygulanamadı', fg:'#a5443c', bg:'#fbe9e7', bd:'#e2c4c0',
+          kim:'Selim A. uyguladı · 21 Şubat 11:35 — motor yazmayı reddetti',
+          not:'Motor sebebi: L-2244 lot numarası D2 deposunda mevcut bir partiyle çakışıyor. Bu, patronun kararı değil sistemin cevabıdır; lot düzeltilip yeniden önerilebilir.',
+          hasBridge:false, bridge:'' },
+        pv:{ depo:'D2 · Illkirch soğuk oda', belge:'2026/0402',
+          partiler:[
+            { ad:'Kuru Mantı', boy:'500 g', adet:'12', skt:'20.08.2026', lot:'L-2244', risk:true },
+            { ad:'Antep Fıstığı', boy:'200 g', adet:'30', skt:'02.12.2026', lot:'L-2245', risk:false },
+          ],
+          sktUyari:'Çakışan lot satırı işaretli — aynı numara D2\u2019de zaten açık bir partide kullanılıyor.' } },
+
+      { kind:'para', id:'ONR-26-3J54', ago:'20 Şubat', amount:'128,00 €', fresh:'ok',
+        summary:'Nakit tahsilat kaydı, 128 €', meta:'asistan · 20 Şubat 19:12',
+        reason:null,
+        impact:'Kasa hesabına 128 € tahsilat yazılacaktı.',
+        previewNote:'para · muhasebe satırı', tables:'cash_entries',
+        payload:'{\n  "accountId": "kasa-eur",\n  "type": "income",\n  "amount": 128.00\n}',
+        status:'Reddedildi · ret notu var', statusFg:'#8b9086',
+        karar:{ durum:'Reddedildi', fg:'#6a7065', bg:'#eef0ea', bd:'#e0e2da',
+          kim:'Selim A. · 20 Şubat 19:40',
+          not:'Ret notu: "Kurye gün kapanışından zaten düştü — ikinci kez yazılırsa kasa şişer."',
+          hasBridge:false, bridge:'' },
+        pv:{ satir:[
+            { k:'Hesap', v:'Kasa · EUR', ff:'Karla', fg:'#22251f' },
+            { k:'Tür', v:'Tahsilat', ff:'Karla', fg:'#4a6121' },
+            { k:'Kategori', v:'Kapıda satış', ff:'Karla', fg:'#22251f' },
+            { k:'Tutar', v:'128,00 €', ff:'IBM Plex Mono', fg:'#22251f' },
+            { k:'Karşı taraf', v:'Kurye · Murat K.', ff:'Karla', fg:'#22251f' },
+            { k:'Tarih', v:'20.02.2026', ff:'IBM Plex Mono', fg:'#22251f' },
+          ] } },
+    ].map(it => ({ ...it, readOnly:true, tip:T[it.kind][0], tFg:T[it.kind][1], tBg:T[it.kind][2] }));
+  }
+
+  gecmisSel() {
+    return [
+      { kind:'urun', readOnly:true, tip:'Ürün', tFg:'#6a7065', tBg:'#eef0ea', id:'ONR-26-3H12',
+        ago:'19 Şubat', amount:'', fresh:'gone',
+        summary:'"Künefe" ürününe FR ve DE açıklaması', meta:'asistan · 19 Şubat 09:30',
+        reason:'Ürün üç dilde dolmadığı için yayına alınamıyordu.',
+        impact:'Uygulansaydı ürün çevirileri güncellenecekti.',
+        previewNote:'ürün · alan farkı', tables:'products, product_translations',
+        payload:'{\n  "productId": "PRD-0098",\n  "status": "expired"\n}',
+        status:'Kuyruktan düştü — tazeliği doldu', statusFg:'#8b9086',
+        karar:{ durum:'Süresi geçti', fg:'#8b9086', bg:'#eef0ea', bd:'#e0e2da',
+          kim:'karar verilmedi · 19 Şubat 09:30\u2019da hazırlandı, 20 Şubat\u2019ta düştü',
+          not:'Dayandığı ürün kaydı bu arada elle düzenlendi; öneri artık güncel değil. Gerekiyorsa asistandan yeniden istenir.',
+          hasBridge:false, bridge:'' },
+        pv:{ alanlar:[
+            { k:'Açıklama FR', tr:'Künefe · kadayıf + peynir', fr:'Künefe au fromage, sirop chaud.', de:'— boş', ok:true },
+            { k:'Açıklama DE', tr:'Künefe · kadayıf + peynir', fr:'—', de:'Künefe mit Käse und Sirup.', ok:true },
+            { k:'Alerjen', tr:'— boş', fr:'— boş', de:'— boş', ok:false },
+            { k:'Saklama', tr:'— boş', fr:'— boş', de:'— boş', ok:false },
+          ],
+          eksikUyari:'Alerjen ve saklama alanları hâlâ boş — asistan bu iki alanı doldurmaz.' } },
+    ];
+  }
+
+  renderVals() {
+    const S = this.state;
+    const tab = S.tab;
+    const tabs = [ {k:'bekleyen',l:'Bekleyen'}, {k:'gecti',l:'Süresi geçti'}, {k:'gecmis',l:'Karar geçmişi'} ].map(t => ({
+      label:t.l, select: () => this.setState({ tab:t.k, sel:0 }),
+      bg: tab===t.k?'#fff':'transparent', fg: tab===t.k?'#22251f':'#6a7065' }));
+
+    const bekleyen = this.items();
+    const rows = tab==='bekleyen' ? bekleyen : (tab==='gecmis' ? this.gecmis() : this.gecmisSel());
+    const sel = Math.min(S.sel, Math.max(0, rows.length-1));
+
+    const FR = { ok:null, soon:['Tazeliği doluyor','#9a6416','#fdf1e3'], gone:['Süresi geçti','#8b9086','#eef0ea'] };
+    const queue = rows.map((r,i) => {
+      const on = i===sel;
+      const f = FR[r.fresh || 'ok'];
+      return { tip:r.tip, tFg:r.tFg, tBg:r.tBg, summary:r.summary, ago:r.ago,
+        hasAmount: !!r.amount, amount:r.amount,
+        showFresh: !!f, freshLabel: f?f[0]:'', freshFg: f?f[1]:'', freshBg: f?f[2]:'',
+        hasStatus: !!r.status, status:r.status||'', statusFg:r.statusFg||'#8b9086',
+        edge: on ? r.tFg : 'transparent', rowBg: on ? '#f3f4f0' : 'transparent',
+        select: () => this.setState({ sel:i }) };
+    });
+
+    const cur = rows[sel] || bekleyen[0];
+    const dis = cur.kind==='bolge' && !cur.readOnly;
+    const kr = cur.karar || {};
+    const card = {
+      tip:cur.tip, tFg:cur.tFg, tBg:cur.tBg, meta:cur.meta, summary:cur.summary,
+      hasAmount: !!cur.amount, amount:cur.amount,
+      hasReason: !!cur.reason, noReason: !cur.reason, reason:cur.reason || '',
+      impact:cur.impact, previewNote:cur.previewNote, tables:cur.tables, id:cur.id,
+      payload:cur.payload, footNote:cur.footNote || '',
+      ctaLabel: dis ? 'Uygula ve bildirimi gönder' : 'Uygula',
+      ctaBg: dis ? '#9a6416' : '#5f7a2c',
+      live: !cur.readOnly, readOnly: !!cur.readOnly,
+      impactLabel: cur.readOnly ? 'Ne olacaktı' : 'Uygulanınca ne olur',
+      durum:kr.durum || '', durumFg:kr.fg || '', durumBg:kr.bg || '', durumBd:kr.bd || '',
+      kararKim:kr.kim || '', kararNot:kr.not || '', hasBridge: !!kr.hasBridge, bridge:kr.bridge || '',
+    };
+
+    const mk = S.modalKind;
+    const cfg = mk==='uygula'
+      ? { title:'Öneriyi uygula', body:`${cur.summary} — işlem normal servis yolundan koşar.`,
+          note: dis ? 'Bu öneri haber bekleyen 34 müşteriye bildirim gönderir. Bildirim geri alınamaz.' : 'Motor reddederse öneri "uygulanamadı" hâline geçer ve sebebi ekranda yazar.',
+          noteFg: dis?'#8a6410':'#5a4a8a', noteBg: dis?'#fdf1e3':'#ece8f5', noteBd: dis?'#ecd9b4':'#d8d0ec',
+          cta: dis ? 'Uygula ve gönder' : 'Uygula', btn: dis ? '#9a6416' : '#5f7a2c', ret:false }
+      : mk==='ret'
+      ? { title:'Öneriyi reddet', body:`${cur.summary} reddedilecek. Öneri silinmez; ret notuyla geçmişe düşer.`,
+          note:'"Bunu neden reddetmişiz" sorusunun cevabı bu nottur — kısa bir cümle bile yeter.',
+          noteFg:'#6a7065', noteBg:'#eef0ea', noteBd:'#e0e2da', cta:'Reddet', btn:'#a5443c', ret:true }
+      : { title:'Sonra bak', body:`${cur.summary} kuyrukta kalır; tazeliği dolarsa kendiliğinden "süresi geçti" görünümüne düşer.`,
+          note:'', noteFg:'', noteBg:'', noteBd:'', cta:'Kuyrukta bırak', btn:'#5f7a2c', ret:false };
+
+    const pv = cur.pv;
+    const out = {
+      headerSub: `${bekleyen.length} bekleyen öneri · en eski 1 gün önce · en yenisi yarım saat önce`,
+      tabs, queue, queueEmpty: rows.length === 0, card, pv,
+      isPaket: cur.kind==='paket', isStok: cur.kind==='stok', isPara: cur.kind==='para',
+      isBolge: cur.kind==='bolge', isUrun: cur.kind==='urun',
+      techOpen: S.tech === null ? !!this.props.teknikAcik : S.tech,
+      toggleTech: () => this.setState(s => ({ tech: !(s.tech === null ? !!this.props.teknikAcik : s.tech) })),
+      modalOpen:S.modalOpen, modalTitle:cfg.title, modalBody:cfg.body,
+      modalHasNote: !!cfg.note, modalNote:cfg.note, modalNoteFg:cfg.noteFg, modalNoteBg:cfg.noteBg, modalNoteBd:cfg.noteBd,
+      modalIsRet:cfg.ret, modalCta:cfg.cta, modalBtn:cfg.btn,
+      openUygula: () => this.setState({ modalOpen:true, modalKind:'uygula' }),
+      openRet: () => this.setState({ modalOpen:true, modalKind:'ret' }),
+      openSonra: () => this.setState({ modalOpen:true, modalKind:'sonra' }),
+      closeModal: () => this.setState({ modalOpen:false }), stop:(e)=>e.stopPropagation(),
+    };
+    out.techCaret = out.techOpen ? '▾' : '▸';
+    if (cur.kind==='stok') {
+      out.pv = { ...pv, partiler: pv.partiler.map(p => ({ ...p,
+        bg: p.risk ? '#fdf6f5' : 'transparent', sktFg: p.risk ? '#a5443c' : '#22251f', sktW: p.risk ? '600' : '400' })) };
+    }
+    if (cur.kind==='urun') {
+      out.pv = { ...pv, alanlar: pv.alanlar.map(a => ({ ...a,
+        bg: a.ok ? 'transparent' : '#fdf6f5', kFg: a.ok ? '#6a7065' : '#a5443c', fg: a.ok ? '#22251f' : '#a5443c' })) };
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

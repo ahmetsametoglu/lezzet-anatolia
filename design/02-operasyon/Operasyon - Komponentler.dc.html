@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;justify-content:center">
+  <div style="width:100%;max-width:1180px;display:flex;flex-direction:column;gap:0">
+
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:28px">
+      <span style="font:700 26px 'Space Grotesk';color:#22251f">Komponent Kütüphanesi — Admin</span>
+      <span style="font:400 14px/1.6 'Karla';color:#6a7065">Veri Masası dili · admin tarafındaki tüm formların ve tabloların yapı taşları. Space Grotesk başlık/etiket, IBM Plex Mono rakam/fiyat, Karla gövde. Olive vurgu · amber uyarı · kırmızı hata.</span>
+    </div>
+
+    <!-- BUTONLAR -->
+    <div style="border-top:1px solid #cfcabb;padding:26px 0;display:grid;grid-template-columns:180px 1fr;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 15px 'Space Grotesk';color:#22251f">Butonlar</span>
+        <span style="font:400 12px/1.5 'Karla';color:#8b9086">Birincil karar tek olur; ikincil ve hayalet destekler.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+          <span style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#22251f;border-radius:8px;padding:10px 18px" style-hover="background:#000">Birincil koyu</span>
+          <span style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 18px" style-hover="background:#4a6121">Birincil olive</span>
+          <span style="font:600 13px 'Space Grotesk';color:#3a3f37;background:#fbfbf9;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px" style-hover="background:#f1f2ee">İkincil</span>
+          <span style="font:600 13px 'Space Grotesk';color:#5f7a2c;border-radius:8px;padding:10px 14px" style-hover="background:#eef4e2">Hayalet</span>
+          <span style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#a5443c;border-radius:8px;padding:10px 18px" style-hover="background:#8a3a33">Tehlike</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+          <span style="font:600 11.5px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:7px;padding:7px 13px">Küçük</span>
+          <span style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 18px">Orta</span>
+          <span style="font:600 15px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:9px;padding:13px 24px">Büyük</span>
+          <span style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 16px;display:inline-flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>İkonlu</span>
+          <span style="font:600 13px 'Space Grotesk';color:#9aa094;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:10px 18px">Pasif</span>
+          <span style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:#5f7a2c;border-radius:8px;padding:10px 18px;display:inline-flex;align-items:center;gap:8px;opacity:.85"><span style="width:13px;height:13px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;display:inline-block;animation:sp .7s linear infinite"></span>Yükleniyor</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROZETLER -->
+    <div style="border-top:1px solid #cfcabb;padding:26px 0;display:grid;grid-template-columns:180px 1fr;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 15px 'Space Grotesk';color:#22251f">Rozetler</span>
+        <span style="font:400 12px/1.5 'Karla';color:#8b9086">Durum tonu + sayaç. Renk anlam taşır, süs değil.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:9px;align-items:center">
+          <span style="font:600 11.5px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:7px;padding:4px 11px;display:inline-flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#5f7a2c"></span>Aktif</span>
+          <span style="font:600 11.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:7px;padding:4px 11px;display:inline-flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#c98a2e"></span>Beklemede</span>
+          <span style="font:600 11.5px 'Space Grotesk';color:#a5443c;background:#fbe9e7;border-radius:7px;padding:4px 11px;display:inline-flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#c2571f"></span>Gecikmiş</span>
+          <span style="font:600 11.5px 'Space Grotesk';color:#3a6b8a;background:#e6eef3;border-radius:7px;padding:4px 11px;display:inline-flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#3a6b8a"></span>Bilgi</span>
+          <span style="font:600 11.5px 'Space Grotesk';color:#6a7065;background:#eef0ea;border-radius:7px;padding:4px 11px">Nötr</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:9px;align-items:center">
+          <span style="font:600 11px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:13px;padding:5px 12px">Filtre çipi</span>
+          <span style="font:600 11px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:13px;padding:5px 12px">Seçili çip</span>
+          <span style="font:500 11px 'Karla';color:#6a7065;border:1px dashed #d2d4cb;border-radius:13px;padding:5px 12px">+ ekle</span>
+          <span style="font:500 10.5px 'IBM Plex Mono';color:#9a6416;background:#fdf1e3;border-radius:9px;padding:1px 8px">7</span>
+          <span style="font:500 10.5px 'IBM Plex Mono';color:#5c6157;background:#e4e6de;border-radius:9px;padding:1px 8px">24</span>
+          <span style="font:600 10px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:6px;padding:2px 8px">B2B</span>
+          <span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:6px;padding:2px 8px">B2C</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- METİN / FİYAT / SAYI -->
+    <div style="border-top:1px solid #cfcabb;padding:26px 0;display:grid;grid-template-columns:180px 1fr;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 15px 'Space Grotesk';color:#22251f">Metin · fiyat · sayı</span>
+        <span style="font:400 12px/1.5 'Karla';color:#8b9086">Etiket üstte, yardım/hata altta. Rakam ve fiyat mono.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Metin</span>
+          <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';color:#22251f;background:#fff">Fıstıklı Baklava</div>
+          <span style="font:400 11px 'Karla';color:#9aa094">Kısa açıklama metni</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Odaklı</span>
+          <div style="border:1.5px solid #5f7a2c;border-radius:9px;padding:10.5px 13px;font:500 13.5px 'Karla';color:#22251f;background:#fff;box-shadow:0 0 0 3px rgba(95,122,44,.12)">yazılıyor<span style="border-left:1.5px solid #5f7a2c;margin-left:1px"></span></div>
+          <span style="font:400 11px 'Karla';color:#9aa094">Aktif alan</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Hatalı</span>
+          <div style="border:1.5px solid #c2571f;border-radius:9px;padding:10.5px 13px;font:500 13.5px 'Karla';color:#22251f;background:#fff">baklava</div>
+          <span style="font:400 11px 'Karla';color:#a5443c">Bu slug zaten kullanımda</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">İkon önekli</span>
+          <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:400 13px 'Karla';color:#9aa094;background:#fff;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>Ara…</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Fiyat</span>
+          <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 14px 'IBM Plex Mono';color:#22251f;background:#fff;display:flex;justify-content:space-between"><span>18,00</span><span style="color:#9aa094">€</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Sayı (stepper)</span>
+          <div style="display:flex;border:1px solid #d9dbd2;border-radius:9px;overflow:hidden;background:#fff">
+            <span style="padding:11px 14px;font:500 16px 'Space Grotesk';color:#6a7065;background:#f4f5f1;border-right:1px solid #e6e7e1">−</span>
+            <span style="flex:1;text-align:center;padding:11px 0;font:500 14px 'IBM Plex Mono';color:#22251f">12</span>
+            <span style="padding:11px 14px;font:500 16px 'Space Grotesk';color:#6a7065;background:#f4f5f1;border-left:1px solid #e6e7e1">+</span>
+          </div>
+        </div>
+        <div style="grid-column:span 3;display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Çok satırlı (textarea)</span>
+          <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:400 13px/1.6 'Karla';color:#22251f;background:#fff;min-height:56px">Antep fıstığından, ince yufkayla açılmış geleneksel baklava. Günlük taze hazırlanır.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SELECT + GELİŞMİŞ SELECT -->
+    <div style="border-top:1px solid #cfcabb;padding:26px 0;display:grid;grid-template-columns:180px 1fr;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 15px 'Space Grotesk';color:#22251f">Select &amp; combobox</span>
+        <span style="font:400 12px/1.5 'Karla';color:#8b9086">Basit select; aranabilir/çoklu ve görsel item'lı gelişmiş varyant.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Basit select — kapalı</span>
+          <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';color:#22251f;background:#fff;display:flex;justify-content:space-between;align-items:center">Baklava<span style="color:#9aa094">▾</span></div>
+          <span style="font:500 11.5px 'Karla';color:#6a7065;margin-top:8px">Basit select — açık</span>
+          <div style="border:1.5px solid #5f7a2c;border-radius:9px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(20,22,18,.12)">
+            <div style="padding:11px 13px;font:500 13.5px 'Karla';color:#22251f;display:flex;justify-content:space-between;border-bottom:1px solid #eef0ea">Baklava<span style="color:#5f7a2c">▴</span></div>
+            <div style="padding:10px 13px;font:500 13px 'Karla';color:#22251f;background:#eef4e2;display:flex;justify-content:space-between">Baklava<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+            <div style="padding:10px 13px;font:500 13px 'Karla';color:#3a3f37">Şerbetli</div>
+            <div style="padding:10px 13px;font:500 13px 'Karla';color:#3a3f37">Börek</div>
+            <div style="padding:10px 13px;font:500 13px 'Karla';color:#3a3f37">Kurabiye</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Gelişmiş — aranabilir, görsel item'lı</span>
+          <div style="border:1.5px solid #5f7a2c;border-radius:9px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(20,22,18,.12)">
+            <div style="padding:10px 13px;border-bottom:1px solid #eef0ea;display:flex;align-items:center;gap:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="font:400 13px 'Karla';color:#22251f">bakl</span></div>
+            <sc-for list="{{ comboItems }}" as="c" hint-placeholder-count="3">
+              <div style="padding:9px 13px;display:flex;align-items:center;gap:10px;background:{{ c.bg }}">
+                <div style="width:34px;height:34px;border-radius:7px;background:#e9eae4;border:1px solid #e0e2da;flex:none;display:grid;place-items:center;color:#b3b7ac"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.6"></circle><path d="m21 15-5-5L5 21"></path></svg></div>
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                  <span style="font:600 13px 'Karla';color:#22251f">{{ c.name }}</span>
+                  <span style="font:400 11px 'Karla';color:#8b9086">{{ c.meta }}</span>
+                </div>
+                <span style="font:500 11.5px 'IBM Plex Mono';color:#6a7065">{{ c.price }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <span style="font:500 11.5px 'Karla';color:#6a7065;margin-top:8px">Çoklu seçim — chip'li</span>
+          <div style="border:1px solid #d9dbd2;border-radius:9px;padding:9px 11px;background:#fff;display:flex;flex-wrap:wrap;gap:7px;align-items:center">
+            <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;background:#eef4e2;border:1px solid #cdd8b6;border-radius:13px;padding:5px 10px">Gluten ✕</span>
+            <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;background:#eef4e2;border:1px solid #cdd8b6;border-radius:13px;padding:5px 10px">Süt ✕</span>
+            <span style="font:600 12px 'Space Grotesk';color:#5f7a2c;background:#eef4e2;border:1px solid #cdd8b6;border-radius:13px;padding:5px 10px">Yemişler ✕</span>
+            <span style="font:400 12.5px 'Karla';color:#9aa094">ekle…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TARİH + TARİH ARALIĞI -->
+    <div style="border-top:1px solid #cfcabb;padding:26px 0;display:grid;grid-template-columns:180px 1fr;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 15px 'Space Grotesk';color:#22251f">Tarih &amp; tarih aralığı</span>
+        <span style="font:400 12px/1.5 'Karla';color:#8b9086">Tekil tarih takvimi; rapor/analitik için önayarlı çift-ay aralık.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:start">
+        <!-- tekil takvim -->
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Tarih seç</span>
+          <div style="border:1px solid #d9dbd2;border-radius:9px;padding:11px 13px;font:500 13.5px 'Karla';color:#22251f;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:14px">24 Tem 2026<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18M8 2v4M16 2v4"></path></svg></div>
+          <div style="border:1px solid #e6e7e1;border-radius:11px;background:#fff;padding:13px;box-shadow:0 8px 24px rgba(20,22,18,.1);width:236px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <span style="color:#9aa094;font:500 15px 'Space Grotesk'">‹</span>
+              <span style="font:600 13px 'Space Grotesk';color:#22251f">Temmuz 2026</span>
+              <span style="color:#9aa094;font:500 15px 'Space Grotesk'">›</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+              <sc-for list="{{ dow }}" as="d" hint-placeholder-count="7"><span style="text-align:center;font:500 9.5px 'Space Grotesk';color:#a7ac9f;padding:3px 0">{{ d }}</span></sc-for>
+              <sc-for list="{{ calSingle }}" as="c" hint-placeholder-count="35"><span style="text-align:center;font:500 11.5px 'IBM Plex Mono';color:{{ c.fg }};background:{{ c.bg }};border-radius:6px;padding:5px 0">{{ c.n }}</span></sc-for>
+            </div>
+          </div>
+        </div>
+        <!-- aralık -->
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 11.5px 'Karla';color:#6a7065">Tarih aralığı — önayarlı</span>
+          <div style="border:1px solid #e6e7e1;border-radius:11px;background:#fff;box-shadow:0 8px 24px rgba(20,22,18,.1);display:flex;flex-wrap:wrap;overflow:hidden;max-width:100%">
+            <div style="border-right:1px solid #eef0ea;padding:12px 10px;display:flex;flex-direction:column;gap:3px;background:#f8f9f5">
+              <span style="font:600 12px 'Space Grotesk';color:#fff;background:#5f7a2c;border-radius:7px;padding:7px 12px">Son 30 gün</span>
+              <span style="font:500 12px 'Karla';color:#3a3f37;padding:7px 12px">Bugün</span>
+              <span style="font:500 12px 'Karla';color:#3a3f37;padding:7px 12px">Son 7 gün</span>
+              <span style="font:500 12px 'Karla';color:#3a3f37;padding:7px 12px">Bu ay</span>
+              <span style="font:500 12px 'Karla';color:#3a3f37;padding:7px 12px">Geçen ay</span>
+              <span style="font:500 12px 'Karla';color:#3a3f37;padding:7px 12px">Özel…</span>
+            </div>
+            <div style="padding:13px;display:flex;gap:18px;flex-wrap:wrap">
+              <sc-for list="{{ ranges }}" as="mo" hint-placeholder-count="2">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="text-align:center;font:600 13px 'Space Grotesk';color:#22251f">{{ mo.title }}</span>
+                  <div style="display:grid;grid-template-columns:repeat(7,22px);gap:2px">
+                    <sc-for list="{{ dow }}" as="d" hint-placeholder-count="7"><span style="text-align:center;font:500 9px 'Space Grotesk';color:#a7ac9f;padding:2px 0">{{ d }}</span></sc-for>
+                    <sc-for list="{{ mo.days }}" as="c" hint-placeholder-count="35"><span style="text-align:center;font:500 11px 'IBM Plex Mono';color:{{ c.fg }};background:{{ c.bg }};border-radius:{{ c.rad }};padding:4px 0">{{ c.n }}</span></sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <span style="font:400 11px 'Karla';color:#9aa094">Seçili: 26 Haz – 24 Tem · önceki döneme göre kıyas otomatik</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOGGLE / CHECKBOX / RADIO -->
+    <div style="border-top:1px solid #cfcabb;padding:26px 0 8px;display:grid;grid-template-columns:180px 1fr;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font:600 15px 'Space Grotesk';color:#22251f">Seçim kontrolleri</span>
+        <span style="font:400 12px/1.5 'Karla';color:#8b9086">Toggle (aç/kapa), checkbox (çoklu), radio (tekil), segment.</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;height:24px;border-radius:12px;background:#5f7a2c;position:relative"><span style="position:absolute;top:2px;left:20px;width:20px;height:20px;border-radius:50%;background:#fff"></span></span><span style="font:500 13px 'Karla';color:#22251f">Açık</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;height:24px;border-radius:12px;background:#cfd2c9;position:relative"><span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff"></span></span><span style="font:500 13px 'Karla';color:#6a7065">Kapalı</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;border-radius:6px;background:#5f7a2c;display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span><span style="font:500 13px 'Karla';color:#22251f">İşaretli</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;border-radius:6px;border:1.5px solid #cfd2c9;background:#fff"></span><span style="font:500 13px 'Karla';color:#6a7065">Boş</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #5f7a2c;display:grid;place-items:center"><span style="width:9px;height:9px;border-radius:50%;background:#5f7a2c"></span></span><span style="font:500 13px 'Karla';color:#22251f">Seçili</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:20px;border-radius:50%;border:2px solid #cfd2c9;background:#fff"></span><span style="font:500 13px 'Karla';color:#6a7065">Boş</span></div>
+        </div>
+        <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px;align-self:flex-start">
+          <span style="font:600 12.5px 'Space Grotesk';color:#22251f;background:#fff;border-radius:6px;padding:8px 15px">Ticaret</span>
+          <span style="font:600 12.5px 'Space Grotesk';color:#6a7065;padding:8px 15px">Trafik</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const comboItems = [
+      { name:'Fıstıklı Baklava 1kg', meta:'Baklava · 2 varyant', price:'18,00 €', bg:'#eef4e2' },
+      { name:'Cevizli Baklava 1kg', meta:'Baklava · 2 varyant', price:'15,00 €', bg:'#fff' },
+      { name:'Midye Baklava 750g', meta:'Baklava · 1 varyant', price:'22,00 €', bg:'#fff' },
+    ];
+    const dow = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'];
+
+    // tekil temmuz 2026: 1 Tem = Çarşamba (index 2). offset 2.
+    const single = [];
+    for (let i=0;i<2;i++) single.push({ n:'', fg:'transparent', bg:'transparent' });
+    for (let d=1; d<=31; d++) {
+      const sel = d===24;
+      single.push({ n:String(d), fg: sel?'#fff':'#3a3f37', bg: sel?'#5f7a2c':'transparent' });
+    }
+    const calSingle = single;
+
+    // aralık: Haziran (26-30 seçili) + Temmuz (1-24 seçili)
+    const mkMonth = (title, firstDow, days, selFrom, selTo) => {
+      const cells = [];
+      for (let i=0;i<firstDow;i++) cells.push({ n:'', fg:'transparent', bg:'transparent', rad:'6px' });
+      for (let d=1; d<=days; d++) {
+        const inR = d>=selFrom && d<=selTo;
+        const edgeStart = d===selFrom, edgeEnd = d===selTo;
+        cells.push({
+          n:String(d),
+          fg: (edgeStart||edgeEnd) ? '#fff' : (inR ? '#4a6121' : '#3a3f37'),
+          bg: (edgeStart||edgeEnd) ? '#5f7a2c' : (inR ? '#eef4e2' : 'transparent'),
+          rad: edgeStart ? '6px 0 0 6px' : (edgeEnd ? '0 6px 6px 0' : '6px'),
+        });
+      }
+      return { title, days: cells };
+    };
+    // Haziran 2026: 1 Haz = Pazartesi (0). Temmuz: 1 Tem = Çarşamba (2).
+    const ranges = [
+      mkMonth('Haziran 2026', 0, 30, 26, 30),
+      mkMonth('Temmuz 2026', 2, 31, 1, 24),
+    ];
+
+    return { comboItems, dow, calSingle, ranges };
+  }
+}
+</script>
+</body>
+</html>

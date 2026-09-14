@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Karla',sans-serif; }
+  a { color:#4a6121; text-decoration:none; }
+  a:hover { color:#3b4d1a; }
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+
+<doc-page lang="tr" size="a4" margin="16mm">
+
+  <div slot="header" style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #22251f;padding-bottom:6px;font-family:'Karla',sans-serif">
+    <span style="font:600 13px 'Space Grotesk';color:#22251f">Lezzet Anatolia</span>
+    <span style="font:400 12.5px 'Karla';color:#4a4f45;flex:1">Sipariş — Baklavacı Usta</span>
+    <span style="font:600 13px 'IBM Plex Mono';color:#22251f">TS-042</span>
+  </div>
+
+  <h1 style="margin:0 0 6px;font:600 32px 'Space Grotesk';color:#22251f;letter-spacing:-.01em">Sipariş TS-042</h1>
+  <p style="margin:0 0 20px;font:400 16px/1.6 'Karla';color:#4a4f45">Baklavacı Usta'ya · 9 Nisan 2026 · toplam 5 kalem</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:2px solid #22251f;border-bottom:1px solid #d4d7ce;padding:14px 0 15px;margin-bottom:20px">
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <span style="font:600 11.5px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#6a7065">Sipariş eden</span>
+      <span style="font:600 17px 'Space Grotesk';color:#22251f">Lezzet Anatolia</span>
+      <span style="font:400 15px/1.55 'Karla';color:#22251f">14 Rue de la Course · 67000 Strasbourg</span>
+      <span style="font:400 15px/1.55 'Karla';color:#4a4f45">+33 3 88 00 00 00 · satinalma@lezzetanatolia.fr</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <span style="font:600 11.5px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#6a7065">Teslim adresi</span>
+      <span style="font:600 17px 'Space Grotesk';color:#22251f">Strasbourg deposu</span>
+      <span style="font:400 15px/1.55 'Karla';color:#22251f">14 Rue de la Course · 67000 Strasbourg<br>Kabul saatleri: 07:00 – 12:00</span>
+    </div>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr>
+        <th style="text-align:left;font:600 11.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#6a7065;padding:0 10px 8px 0;border-bottom:1.5px solid #22251f;width:120px">Ürün kodunuz</th>
+        <th style="text-align:left;font:600 11.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#6a7065;padding:0 10px 8px;border-bottom:1.5px solid #22251f">Ürün</th>
+        <th style="text-align:right;font:600 11.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#6a7065;padding:0 0 8px 10px;border-bottom:1.5px solid #22251f;width:150px">Miktar</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:14px 10px 14px 0;border-bottom:1px solid #e2e3dd;font:600 16px 'IBM Plex Mono';color:#22251f;vertical-align:top">BK-700</td>
+        <td style="padding:14px 10px;border-bottom:1px solid #e2e3dd;font:400 16px 'Karla';color:#22251f;vertical-align:top">Fıstıklı baklava, 700 g kutu</td>
+        <td style="padding:14px 0 14px 10px;border-bottom:1px solid #e2e3dd;text-align:right;vertical-align:top"><span style="font:600 17px 'IBM Plex Mono';color:#22251f">4 koli</span><br><span style="font:400 13.5px 'Karla';color:#4a4f45">(10 kutu / koli · 40 kutu)</span></td>
+      </tr>
+      <tr>
+        <td style="padding:14px 10px 14px 0;border-bottom:1px solid #e2e3dd;font:600 16px 'IBM Plex Mono';color:#22251f;vertical-align:top">SB-500</td>
+        <td style="padding:14px 10px;border-bottom:1px solid #e2e3dd;font:400 16px 'Karla';color:#22251f;vertical-align:top">Şöbiyet, 500 g kutu</td>
+        <td style="padding:14px 0 14px 10px;border-bottom:1px solid #e2e3dd;text-align:right;vertical-align:top"><span style="font:600 17px 'IBM Plex Mono';color:#22251f">2 koli</span><br><span style="font:400 13.5px 'Karla';color:#4a4f45">(10 kutu / koli · 20 kutu)</span></td>
+      </tr>
+      <tr>
+        <td style="padding:14px 10px 14px 0;border-bottom:1px solid #e2e3dd;font:600 16px 'IBM Plex Mono';color:#22251f;vertical-align:top">CV-1000</td>
+        <td style="padding:14px 10px;border-bottom:1px solid #e2e3dd;font:400 16px 'Karla';color:#22251f;vertical-align:top">Cevizli baklava, 1 kg tepsi</td>
+        <td style="padding:14px 0 14px 10px;border-bottom:1px solid #e2e3dd;text-align:right;vertical-align:top"><span style="font:600 17px 'IBM Plex Mono';color:#22251f">12 tepsi</span></td>
+      </tr>
+      <tr>
+        <td style="padding:14px 10px 14px 0;border-bottom:1px solid #e2e3dd;font:600 16px 'IBM Plex Mono';color:#22251f;vertical-align:top">KD-500</td>
+        <td style="padding:14px 10px;border-bottom:1px solid #e2e3dd;font:400 16px 'Karla';color:#22251f;vertical-align:top">Kadayıf, 500 g kutu</td>
+        <td style="padding:14px 0 14px 10px;border-bottom:1px solid #e2e3dd;text-align:right;vertical-align:top"><span style="font:600 17px 'IBM Plex Mono';color:#22251f">8 kutu</span></td>
+      </tr>
+      <tr>
+        <td style="padding:14px 10px 14px 0;border-bottom:1px solid #e2e3dd;font:600 16px 'IBM Plex Mono';color:#22251f;vertical-align:top">AF-250</td>
+        <td style="padding:14px 10px;border-bottom:1px solid #e2e3dd;font:400 16px 'Karla';color:#22251f;vertical-align:top">Antep fıstığı, 250 g paket</td>
+        <td style="padding:14px 0 14px 10px;border-bottom:1px solid #e2e3dd;text-align:right;vertical-align:top"><span style="font:600 17px 'IBM Plex Mono';color:#22251f">2 koli</span><br><span style="font:400 13.5px 'Karla';color:#4a4f45">(12 paket / koli · 24 paket)</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="border:2px solid #22251f;border-radius:4px;padding:14px 16px;margin:20px 0;display:flex;flex-direction:column;gap:4px">
+    <span style="font:600 12px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#6a7065">Not</span>
+    <span style="font:400 16px/1.6 'Karla';color:#22251f">Salı sabahı teslim edilmesini rica ederiz. Son tarihi 3 aydan yakın parti göndermeyin; koli etiketinde lot numarası okunur olsun.</span>
+  </div>
+
+  <p style="margin:0;font:400 14px/1.65 'Karla';color:#4a4f45">Mal geldiğinde bu numarayla karşılanır — irsaliyenize <strong>TS-042</strong> yazmanız kabulü hızlandırır. Eksik ya da fazla gelen kalem kabulde işaretlenir, sipariş kapanmaz; kalanını sonra gönderebilirsiniz.</p>
+
+  <div slot="footer" style="display:flex;align-items:baseline;gap:12px;border-top:1px solid #d4d7ce;padding-top:6px;font-family:'Karla',sans-serif">
+    <span style="font:500 12px 'IBM Plex Mono';color:#4a4f45;flex:1">TS-042 · 09.04.2026</span>
+    <span style="font:400 12px 'Karla';color:#6a7065">Sorularınız için: +33 3 88 00 00 00</span>
+  </div>
+
+</doc-page>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const go = () => document.querySelectorAll('doc-page').forEach(d => d._measure && d._measure());
+    go();
+    [60, 250, 700].forEach(t => setTimeout(go, t));
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(go);
+    if (typeof ResizeObserver === 'function') {
+      this._ro = new ResizeObserver(go);
+      document.querySelectorAll('doc-page > [slot="header"], doc-page > [slot="footer"]').forEach(el => this._ro.observe(el));
+    }
+  }
+  componentWillUnmount() { if (this._ro) this._ro.disconnect(); }
+  renderVals() { return {}; }
+}
+</script>
+
+</body>
+</html>

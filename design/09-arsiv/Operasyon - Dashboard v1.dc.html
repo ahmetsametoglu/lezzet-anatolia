@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:16px">
+
+  <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+    <span style="font:700 20px 'Space Grotesk';color:#22251f">Panel — günün genel bakışı</span>
+    <span style="font:400 13.5px 'Karla';color:#6a7065">Veri Masası dili · karar tetikler, analiz etmez. Sakin/Yoğun günü üstten değiştirebilirsiniz.</span>
+  </div>
+
+  <div data-screen-label="Panel" style="width:100%;max-width:1360px;box-sizing:border-box;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+
+    <dc-import name="AdminSidebar" active="panel" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+      <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:1px;margin-right:auto">
+          <span style="font:600 22px 'Space Grotesk'">Bugün · Perşembe 24 Temmuz</span>
+          <span style="font:400 12px 'Karla';color:#8b9086">Tüm depolar · karar tetikler, analiz etmez · derin analiz Raporlar &amp; Analitik'te</span>
+        </div>
+        <div style="display:flex;background:#eef0ea;border:1px solid #e0e2da;border-radius:8px;padding:2px">
+          <span onClick="{{ setBusy }}" style="font:600 12.5px 'Space Grotesk';padding:8px 15px;border-radius:6px;cursor:pointer;background:{{ busyBg }};color:{{ busyFg }}">Yoğun gün</span>
+          <span onClick="{{ setCalm }}" style="font:600 12.5px 'Space Grotesk';padding:8px 15px;border-radius:6px;cursor:pointer;background:{{ calmBg }};color:{{ calmFg }}">Sakin gün</span>
+        </div>
+      </div>
+
+      <!-- KRİTİK GÖSTERGELER -->
+      <div style="padding:16px 24px;border-bottom:1px solid #eef0ea;display:grid;grid-template-columns:repeat(4,1fr);background:#f8f9f5">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div style="padding:2px 20px;border-right:1px solid #e4e6de;display:flex;flex-direction:column;gap:4px">
+            <span style="font:500 11px 'Space Grotesk';letter-spacing:.08em;text-transform:uppercase;color:#6a7065">{{ k.label }}</span>
+            <span style="font:500 27px 'IBM Plex Mono';color:#22251f;letter-spacing:-.02em">{{ k.value }}</span>
+            <span style="font:500 11.5px 'IBM Plex Mono';color:{{ k.dfg }}">{{ k.delta }}</span>
+            <sc-if value="{{ k.split }}" hint-placeholder-val="{{ false }}">
+              <span style="font:400 10.5px 'IBM Plex Mono';color:#8b9086">{{ k.split }}</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="padding:22px 24px;display:grid;grid-template-columns:1.25fr 1fr;gap:22px">
+
+        <!-- BEKLEYEN İŞLER -->
+        <div style="display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font:600 16px 'Space Grotesk'">Bekleyen işler</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">{{ queueMeta }}</span>
+          </div>
+
+          <sc-if value="{{ busy }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <sc-for list="{{ queue }}" as="q" hint-placeholder-count="6">
+                <a style="border:1px solid {{ q.bd }};border-left:3px solid {{ q.edge }};border-radius:10px;padding:13px 16px;display:flex;align-items:center;gap:14px;background:{{ q.bg }};text-decoration:none">
+                  <span style="width:34px;height:34px;border-radius:9px;background:{{ q.numBg }};color:{{ q.numFg }};font:600 16px 'IBM Plex Mono';display:grid;place-items:center;flex:none">{{ q.count }}</span>
+                  <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                    <span style="font:600 14px 'Space Grotesk';color:#22251f">{{ q.title }}</span>
+                    <span style="font:400 12.5px 'Karla';color:#6a7065">{{ q.detail }}</span>
+                  </div>
+                  <span style="font:600 12px 'Space Grotesk';color:{{ q.ctaFg }};display:flex;align-items:center;gap:5px;flex:none">{{ q.cta }}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+                </a>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ calm }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #cdd8b6;background:#f2f6ea;border-radius:12px;padding:34px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+              <span style="width:52px;height:52px;border-radius:50%;background:#e0ebcc;color:#4a6121;display:grid;place-items:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+              <span style="font:600 16px 'Space Grotesk';color:#22251f">Bekleyen iş yok — masası temiz</span>
+              <span style="font:400 13px/1.6 'Karla';color:#6a7065;max-width:340px">Onay, talep, gecikmiş vade ve tarihli parti kuyruğu boş. Bugün karar bekleyen bir şey yok; gün akışını Siparişler'den izleyebilirsiniz.</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- BUGÜNÜN TESLİMATLARI -->
+        <div style="display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font:600 16px 'Space Grotesk'">Bugünün teslimatları</span>
+            <span style="font:400 12px 'Karla';color:#8b9086">14:00 rota · 8 durak · 3 depo</span>
+          </div>
+          <div style="border:1px solid #e6e7e1;border-radius:10px;overflow:hidden">
+            <div style="padding:11px 16px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;display:flex;justify-content:space-between">
+              <span style="font:500 12px 'Karla';color:#6a7065">Kurye: Murat · Rota A <span style="font:500 10px 'IBM Plex Mono';color:#3a6b8a;background:#e6eef3;border:1px solid #bcd0e0;border-radius:5px;padding:1px 5px;margin-left:4px">STR</span></span>
+              <span style="font:500 12px 'IBM Plex Mono';color:#4a6121">3 / 8 teslim</span>
+            </div>
+            <sc-for list="{{ today }}" as="t" hint-placeholder-count="6">
+              <div style="padding:10px 16px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:12px">
+                <span style="font:500 11px 'IBM Plex Mono';color:#8b9086;width:20px">{{ t.seq }}</span>
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                  <span style="font:500 13px 'Karla';color:#22251f">{{ t.name }}</span>
+                  <span style="font:400 11px 'Karla';color:#8b9086">{{ t.meta }}</span>
+                </div>
+                <span style="font:600 10.5px 'Space Grotesk';color:{{ t.stFg }};background:{{ t.stBg }};border-radius:7px;padding:3px 9px;flex:none">{{ t.status }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="border:1px solid #ecd9b4;background:#fdf7ec;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:11px">
+            <span style="color:#9a6416;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span>
+            <span style="font:500 12.5px/1.5 'Karla';color:#8a6410;flex:1">Dünkü kurye kapanışında <strong>−10,00 € fark</strong> kaydedildi — Para'da mutabakat bekliyor.</span>
+            <span style="font:600 12px 'Space Grotesk';color:#9a6416;flex:none">Para →</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div style="width:100%;max-width:1360px;box-sizing:border-box;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 30px;display:flex;flex-direction:column;gap:8px">
+    <span style="font:700 15px 'Space Grotesk';color:#3a4147">Tezgâh sözleşmesi (kodlayan ajan için)</span>
+    <ul style="margin:0;padding-left:20px;font:400 13.5px/1.75 'Karla';color:#6a7065">
+      <li><strong>Karar tetikler, iş bitirmez</strong> → her bekleyen-iş satırı sayısıyla gelir ve <em>var olan</em> bir karar ekranına götürür (başvuru→B2B Onay, talep→Talepler, parti→Stok, limit aşan→Sipariş detay). Form/karar bu ekranda değil hedefte.</li>
+      <li><strong>Sakin gün birinci sınıf</strong> → boş kuyruk "temiz masa" olarak olumlu gösterilir; boşluk gibi durmaz. Yoğun günde acil olan (gecikmiş vade, tarihli parti) tonuyla ayrışır.</li>
+      <li><strong>Fark aynı gün görünür</strong> → uyuşmayan kurye kapanışı ertelenmeden panelde belirir; Para mutabakatına köprü verir.</li>
+      <li><strong>Rol duvarı</strong> → yalnız admin; ciro/marj/vade depo ve kuryeye taşınmaz. Müşteriye giden metin buradan üretilmez.</li>
+    </ul>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { busy: true };
+  renderVals() {
+    const busy = this.state.busy;
+    const seg = on => on ? ['#fff','#22251f'] : ['transparent','#6a7065'];
+    const [busyBg,busyFg] = seg(busy); const [calmBg,calmFg] = seg(!busy);
+
+    const pos='#4a6121', warn='#9a6416', neg='#b0561f';
+    const kpis = busy ? [
+      { label:'Bugünkü sipariş', value:'24', delta:'↑ 6 dün' , dfg:pos, split:'STR 12 · COL 7 · KEHL 5' },
+      { label:'Bugünkü ciro', value:'3.842 €', delta:'↑ %8', dfg:pos, split:'STR 1.980 · COL 1.104 · KEHL 758' },
+      { label:'Bekleyen tahsilat', value:'1.118 €', delta:'kapıda 504 € · vade 614 €', dfg:warn },
+      { label:'Marj-altı satış', value:'2 ürün', delta:'incele →', dfg:neg },
+    ] : [
+      { label:'Bugünkü sipariş', value:'9', delta:'↓ 15 dün', dfg:'#8b9086', split:'STR 5 · COL 3 · KEHL 1' },
+      { label:'Bugünkü ciro', value:'1.284 €', delta:'sakin', dfg:'#8b9086', split:'STR 690 · COL 402 · KEHL 192' },
+      { label:'Bekleyen tahsilat', value:'0 €', delta:'hepsi tahsil edildi', dfg:pos },
+      { label:'Marj-altı satış', value:'0', delta:'temiz', dfg:pos },
+    ];
+
+    const q = (count,title,detail,cta,tone) => {
+      const T = { red:['#e2c4c0','#c2571f','#fdf7f6','#fbe9e7','#a5443c','#a5443c'],
+                  amber:['#ecd9b4','#c98a2e','#fdfaf3','#fdf1e3','#9a6416','#9a6416'],
+                  neutral:['#e2e3dd','#5f7a2c','#fbfbf9','#eef4e2','#4a6121','#4a6121'] }[tone];
+      return { count,title,detail,cta, bd:T[0], edge:T[1], bg:T[2], numBg:T[3], numFg:T[4], ctaFg:T[5] };
+    };
+    const queue = [
+      q('1','Gecikmiş vadeli sipariş','Café Marceau · #2451 · vade 12 Tem geçti (312 €)','Tahsilat →','red'),
+      q('1','Uyuşan kurye kapanışı','Dün Murat · beklenen ile fark −10 €','Para →','amber'),
+      q('4','Yaklaşan tarihli parti','Raf ömrü eşik altı · COL 2 · STR 1 · KEHL 1 — eşik depo bazlı','Stok →','amber'),
+      q('2','B2B başvurusu','Self-servis kayıt · onay bekliyor','B2B Onay →','neutral'),
+      q('1','Limit aşan vadeli sipariş','Traiteur Yıldız · limit üstü, onay gerek','Sipariş →','neutral'),
+      q('3','Açık talep','Cevap bekleyen müşteri talebi/şikâyeti','Talepler →','neutral'),
+    ];
+    const queueMeta = busy ? '6 kalem · 2 acil' : 'kuyruk boş';
+
+    const chip = (s) => ({
+      teslim:['#4a6121','#eef4e2'], yolda:['#5a4a8a','#ece8f5'],
+      hazir:['#9a6416','#fdf1e3'], bekliyor:['#6a7065','#eef0ea'], sorun:['#a5443c','#fbe9e7']
+    }[s]);
+    const mk=(seq,name,meta,status,sKey)=>{const [stFg,stBg]=chip(sKey);return {seq,name,meta,status,stFg,stBg};};
+    const today = [
+      mk('1','Ayşe Kaya','2 paket · B2C','Teslim','teslim'),
+      mk('2','Café Marceau','4 koli · B2B','Teslim','teslim'),
+      mk('3','M. Leroy','1 paket · kapıda 24,50 €','Yolda','yolda'),
+      mk('4','Restaurant Anatolie','6 koli · kapıda 466 €','Sıradaki','hazir'),
+      mk('5','B. Meunier','3 paket · kapıda 38,50 €','Bekliyor','bekliyor'),
+      mk('6','Épicerie du Port','2 koli · B2B','Bekliyor','bekliyor'),
+    ];
+
+    return {
+      busy, calm: !busy, busyBg, busyFg, calmBg, calmFg,
+      setBusy: () => this.setState({busy:true}), setCalm: () => this.setState({busy:false}),
+      kpis, queue, queueMeta, today,
+    };
+  }
+}
+</script>
+</body>
+</html>

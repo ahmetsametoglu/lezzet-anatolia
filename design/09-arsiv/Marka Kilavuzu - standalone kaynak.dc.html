@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#5f7a2c">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#5f7a2c"/>
+    <rect x="380" y="180" width="440" height="440" rx="28" fill="#faf6ec"/>
+    <rect x="440" y="250" width="220" height="22" rx="11" fill="#343b41"/>
+    <rect x="440" y="308" width="320" height="14" rx="7" fill="#d8cfb6"/>
+    <rect x="440" y="346" width="280" height="14" rx="7" fill="#d8cfb6"/>
+    <rect x="440" y="420" width="72" height="72" rx="14" fill="#5f7a2c"/>
+    <rect x="532" y="420" width="72" height="72" rx="14" fill="#343b41"/>
+    <rect x="624" y="420" width="72" height="72" rx="14" fill="#b05c2e"/>
+    <rect x="716" y="420" width="44" height="72" rx="14" fill="#d99a2b"/>
+    <rect x="440" y="536" width="180" height="14" rx="7" fill="#d8cfb6"/>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  table { border-collapse:collapse; width:100%; }
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+
+<doc-page lang="tr" size="a4" margin="16mm">
+
+  <div slot="header" style="display:flex;align-items:baseline;gap:12px;border-bottom:1px solid #343b41;padding-bottom:6px">
+    <span style="font:600 13px 'Lora';color:#343b41">Lezzet Anatolie</span>
+    <span style="font:400 12px 'Karla';color:#6d7261;flex:1">Marka kılavuzu — Canva'ya girilecek bilgiler</span>
+    <span style="font:600 11px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">v1.0</span>
+  </div>
+
+  <div slot="footer" style="display:flex;gap:10px;border-top:1px solid #e0d8c2;padding-top:5px;font:400 11px 'Karla';color:#8a8270">
+    <span style="flex:1">Kaynak: müşteri tarafı uygulama tokenları (Komponent Envanteri — Müşteri) · lezzetanatolie.com</span>
+    <span>25 Ağustos 2026</span>
+  </div>
+
+  <h1 style="margin:0 0 6px;font:600 34px/1.15 'Lora';color:#343b41">Marka kılavuzu</h1>
+  <p style="margin:0 0 8px;font:400 15.5px/1.7 'Karla';color:#4a4f44;text-wrap:pretty">Bu belge, Canva'da yeni logo ve sosyal medya görselleri üretirken markanın sabitlerini tek yerde tutar. Renkler, tipografi ve oranlar uydurulmadı: müşteri tarafındaki web ve mobil uygulamanın onaylı token setinden alındı. Canva'da bir <strong>Brand Kit</strong> açıp §3 ve §4'teki değerleri birebir gir; sonra §8'deki komut bloklarını sırayla kullan.</p>
+  <p style="margin:0 0 22px;font:400 14px/1.65 'Karla';color:#6d7261">Yeni logo yönü: <strong>tamamen yeni sembol</strong>, mevcut renk ve font sistemine bağlı kalarak. Mevcut logonun neyi bırakacağı §5'te.</p>
+
+  <h2 style="margin:0 0 10px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§1 · Marka künyesi</h2>
+  <div style="display:grid;grid-template-columns:150px 1fr;gap:7px 18px;font:400 14px/1.55 'Karla';color:#343b41;margin:0 0 12px">
+    <span style="color:#8a8270">Ad</span><span><strong>Lezzet Anatolie</strong> — iki kelime, ikisi de büyük harfle başlar, kısaltma kullanılmaz</span>
+    <span style="color:#8a8270">Alan adı</span><span>lezzetanatolie.com <span style="color:#8a8270">(logo içinde yazılmaz, künye satırında yazılır)</span></span>
+    <span style="color:#8a8270">Ticari unvan</span><span>QUALITE — Société par actions simplifiée (tek ortaklı) · <span style="color:#8a8270">yalnız yasal alanlarda kullanılır, bkz. 1.2</span></span>
+    <span style="color:#8a8270">Sicil</span><span>RCS Strasbourg 907 496 640 · EUID FR6752.907496640 · sermaye 500 € · tescil 25/11/2021</span>
+    <span style="color:#8a8270">Yetkili</span><span>Bilgin Yiğit (Président)</span>
+    <span style="color:#8a8270">Yasal merkez</span><span>46 Rue des Prés, 67380 Lingolsheim · Fransa <span style="color:#8a8270">(Strasbourg Eurométropole)</span></span>
+    <span style="color:#8a8270">İletişim</span><span>info@lezzetanatolie.com · +33 6 16 99 06 81 <span style="color:#8a8270">(görsellerde bu biçimde yazılır)</span></span>
+    <span style="color:#8a8270">Sosyal hesaplar</span><span>Instagram <strong>@lezzetanatolie</strong> · Facebook sayfası <span style="color:#8a8270">(profile.php?id=61593650668892 — kalıcı kullanıcı adı alınmalı)</span></span>
+    <span style="color:#8a8270">Hizmet alanı</span><span>Strasbourg ve çevresinde kapıya teslim · Fransa geneline soğuk zincir kargo</span>
+    <span style="color:#8a8270">Ne satıyor</span><span>El emeğiyle hazırlanan Türk mutfağı ürünleri: börek, sarma, tatlı, baklava, hazır sofra paketleri</span>
+    <span style="color:#8a8270">Kanallar</span><span>Web mağazası · mobil uygulama · WhatsApp sipariş · B2B (Professionnels)</span>
+    <span style="color:#8a8270">Ayırt edici</span><span>Soğuk zincir teslimat, el yapımı üretim, tek merkezden bölge teslimatı</span>
+  </div>
+  <div style="break-inside:avoid;background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:12px 16px;margin:0 0 22px">
+    <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#8a6b2a">Canva'ya girmeden önce netleşmesi gerekenler</span>
+    <p style="margin:6px 0 0;font:400 13.5px/1.6 'Karla';color:#4a4f44">Varsa mağaza/teslim adresi (yasal merkezden farklıysa) · Facebook sayfası için kalıcı kullanıcı adı · varsa slogan · sabit hashtag seti · TVA numarası (fatura ve B2B teklifleri için). Bunlar gelmeden kartvizit ve etiket basıma gönderilmemeli; sonradan eklenirse kompozisyon bozulur.</p>
+  </div>
+
+  <h3 style="margin:0 0 8px;font:600 16px 'Lora';color:#343b41">1.2 · Marka adı ile şirket adının ilişkisi</h3>
+  <p style="margin:0 0 12px;font:400 14px/1.7 'Karla';color:#4a4f44;text-wrap:pretty">Şirketin ticari unvanı <strong>QUALITE</strong>, markanın adı <strong>Lezzet Anatolie</strong>. Müşterinin gördüğü her yerde marka adı geçer; şirket adı yalnız yasal zorunluluk olan alanlarda, küçük punto ile yer alır. İkisi hiçbir zaman yan yana eşit ağırlıkta kullanılmaz.</p>
+  <div style="break-inside:avoid;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 14px">
+    <div style="border:1px solid #d7e3bd;background:#eef2e2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#4a6121">Lezzet Anatolie</span>
+      <p style="margin:6px 0 0;font:400 13px/1.6 'Karla';color:#343b41">Logo · profil ve sayfa adları · kapak ve tüm sosyal görseller · ambalaj ve etiketin ön yüzü · broşür, menü, araç, vitrin · e-posta imzası · uygulama ve web başlığı · kurye ve WhatsApp mesajları.</p>
+    </div>
+    <div style="border:1px solid #ece5d2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#8a8270">QUALITE SAS</span>
+      <p style="margin:6px 0 0;font:400 13px/1.6 'Karla';color:#4a4f44">Mentions légales · CGV · gizlilik metni · fatura ve irsaliye · ödeme sayfasındaki satıcı adı · etiketin zorunlu bilgi alanı · sözleşme ve B2B teklifleri · site altındaki tek satır künye.</p>
+    </div>
+  </div>
+  <div style="break-inside:avoid;border:1px solid #e0d8c2;background:#faf6ec;border-radius:12px;padding:12px 15px;margin:0 0 14px">
+    <span style="font:700 12px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#8a8270">Zorunlu alanlarda kullanılacak kalıp</span>
+    <p style="margin:6px 0 0;font:400 13px/1.7 'Karla';color:#343b41">Etiket ve künye: <strong>Lezzet Anatolie</strong> — marque de QUALITE SAS · 46 Rue des Prés, 67380 Lingolsheim · RCS Strasbourg 907 496 640<br>Fatura başlığı: QUALITE SAS <span style="color:#8a8270">(altına küçük punto)</span> exploitant la marque Lezzet Anatolie</p>
+  </div>
+  <div style="break-inside:avoid;border-left:3px solid #b05c2e;padding:2px 0 2px 14px;margin:0 0 16px">
+    <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#b05c2e">Yazım — tek doğru biçim</span>
+    <p style="margin:5px 0 0;font:400 13.5px/1.6 'Karla';color:#343b41">Marka adı <strong>Lezzet Anatolie</strong> olarak yazılır: iki kelime, aralarında boşluk, ikisi de büyük harfle başlar. Alan adı, e-posta ve kullanıcı adları da aynı yazımı taşır (lezzetanatolie.com · @lezzetanatolie), yani ad ile adres birbirini tutar. <strong>Anatolia</strong> yazımı kullanılmaz; bugünkü yeşil logoda ve uygulama ekranlarında geçen "Anatolia" yazımı yanlıştır — yeni logo <strong>Anatolie</strong> ile çizilir, uygulama metinleri de bu turda düzeltilir. Instagram'daki boşluksuz "LezzetAnatolie" görünen adı da düzeltilir.</p>
+  </div>
+
+  <h3 style="margin:0 0 8px;font:600 16px 'Lora';color:#343b41">1.3 · Sosyal hesapların bugünkü durumu</h3>
+  <p style="margin:0 0 10px;font:400 14px/1.65 'Karla';color:#4a4f44">İki hesap da yeni: gönderi yok, Facebook'ta kapak ve profil resmi hiç yok, Instagram'da eski kırmızı-yeşil logo kullanılmış. Görselleri üretmeden önce aşağıdaki alanlar düzeltilir.</p>
+  <table style="margin:0 0 14px">
+    <thead>
+      <tr>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0;width:96px">Alan</th>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0">Bugün</th>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 0 5px 0">Olması gereken</th>
+      </tr>
+    </thead>
+    <tbody>
+      <sc-for list="{{ hesaplar }}" as="h" hint-placeholder-count="7">
+        <tr>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:700 12.5px/1.4 'Karla';color:#343b41">{{ h.alan }}</td>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:400 12.5px/1.45 'Karla';color:#b05c2e">{{ h.bugun }}</td>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 0;font:400 12.5px/1.45 'Karla';color:#4a4f44">{{ h.olmali }}</td>
+        </tr>
+      </sc-for>
+    </tbody>
+  </table>
+  <div style="break-inside:avoid;border:1px solid #e0d8c2;background:#faf6ec;border-radius:12px;padding:12px 15px;margin:0 0 22px">
+    <span style="font:700 12px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#8a8270">Hesap açıklaması — olduğu gibi kullanılabilir</span>
+    <p style="margin:6px 0 4px;font:400 13px/1.65 'Karla';color:#343b41"><strong>Instagram (150 karakter sınırı):</strong> El emeğiyle Anadolu lezzetleri · Börek, sarma, tatlı · Strasbourg ve çevresine kapıya teslim, Fransa'ya soğuk zincir kargo</p>
+    <p style="margin:0;font:400 13px/1.65 'Karla';color:#343b41"><strong>Facebook — Hakkında:</strong> Lezzet Anatolie, el emeğiyle hazırlanan Türk mutfağı ürünlerini Strasbourg ve çevresinde kapınıza, Fransa genelinde soğuk zincir kargoyla getirir. Börek, sarma, tatlı ve hazır sofra paketleri. <span style="color:#6d7261">Produits turcs faits main, livrés à Strasbourg et partout en France en chaîne du froid.</span></p>
+  </div>
+
+  <h2 style="margin:0 0 10px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§2 · Konumlandırma ve marka sesi</h2>
+  <p style="margin:0 0 14px;font:400 14.5px/1.7 'Karla';color:#4a4f44;text-wrap:pretty">Seçilen ses: <strong>zanaatkâr, seçkin ürün</strong>. Uygulamanın onaylı görsel yönü ise "Aile Sofrası" — sıcak krem zemin, yumuşak köşeler. İkisini birleştiren ortak zemin <strong>el emeği</strong>: sosyal medyada üretimin ciddiyeti (kim, nasıl, hangi malzemeyle) öne çıkar; uygulamada sofranın sıcaklığı devam eder. Pratik kural: sosyal görselde <strong>bir ürün, bir cümle, bol boşluk</strong>; kalabalık kolaj ve indirim yığını yok.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 16px">
+    <div style="break-inside:avoid;border:1px solid #d7e3bd;background:#eef2e2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#4a6121">Böyle konuşur</span>
+      <p style="margin:6px 0 0;font:400 13.5px/1.65 'Karla';color:#343b41">Sabah açılan yufka, aynı gün pişer.<br>Otuz altı kat, hepsi elde açıldı.<br>Soğuk zincir bozulmadan kapınızda.<br>Antep fıstığı, tek kaynak, tek harman.</p>
+    </div>
+    <div style="break-inside:avoid;border:1px solid #e8c9b3;background:#f9ede2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#b05c2e">Böyle konuşmaz</span>
+      <p style="margin:6px 0 0;font:400 13.5px/1.65 'Karla';color:#343b41">Kaçırmayın!! Süper fırsat 🔥🔥<br>Damaklarda unutulmaz bir şölen<br>En iyisi, bir numara, rakipsiz<br>ÜÇ AL İKİ ÖDE — SON GÜN!</p>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0;margin:0 0 10px">
+    <span style="font:700 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270;margin-bottom:8px">Kitleye göre ne söylenir</span>
+    <sc-for list="{{ kitleler }}" as="k" hint-placeholder-count="5">
+      <div style="break-inside:avoid;display:grid;grid-template-columns:190px 1fr;gap:16px;border-top:1px solid #ece5d2;padding:8px 0">
+        <span style="font:700 13.5px/1.45 'Karla';color:#343b41">{{ k.ad }}</span>
+        <span style="font:400 13.5px/1.55 'Karla';color:#4a4f44">{{ k.mesaj }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <p style="margin:0 0 22px;font:400 13.5px/1.65 'Karla';color:#6d7261;border-top:1px solid #ece5d2;padding-top:10px"><strong>Dil:</strong> gönderi metinleri Türkçe ağırlıklı. Fransız yerel kitleye giden görsellerde tek satır Fransızca alt başlık eklenir (ürün adı + <em>fait main</em> / <em>livraison en chaîne du froid</em>). Ürün adları Türkçe kalır, açıklaması çevrilir: "Su böreği — <em>feuilleté au fromage</em>".</p>
+
+  <h2 style="margin:0 0 8px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§3 · Renkler</h2>
+  <p style="margin:0 0 12px;font:400 14px/1.65 'Karla';color:#4a4f44">Canva'da Brand Kit &gt; Colors altında dört grup aç ve isimleriyle gir. Bunların dışında renk kullanılmaz.</p>
+  <sc-for list="{{ renkGruplari }}" as="g" hint-placeholder-count="4">
+    <div style="break-inside:avoid;margin:0 0 14px">
+      <span style="font:700 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270">{{ g.grup }}</span>
+      <table style="margin-top:7px">
+        <thead>
+          <tr>
+            <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0;width:52px"> </th>
+            <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0">Ad</th>
+            <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0;width:78px">HEX</th>
+            <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 0 5px 0">Nerede kullanılır</th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{ g.renkler }}" as="r" hint-placeholder-count="4">
+            <tr>
+              <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0"><span style="display:block;height:20px;border-radius:5px;background:{{ r.hex }};border:1px solid rgba(0,0,0,.12)"></span></td>
+              <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:700 13px 'Karla';color:#343b41">{{ r.ad }}</td>
+              <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:400 12.5px 'Karla';color:#6d7261">{{ r.hex }}</td>
+              <td style="border-bottom:1px solid #f0e9d6;padding:6px 0;font:400 12.5px/1.45 'Karla';color:#4a4f44">{{ r.kullanim }}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+  </sc-for>
+  <div style="break-inside:avoid;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:4px 0 22px">
+    <div style="border:1px solid #ece5d2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#343b41">Denge</span>
+      <p style="margin:6px 0 0;font:400 13.5px/1.6 'Karla';color:#4a4f44">Bir görselde kabaca <strong>%60 krem zemin · %30 antrasit + zeytin · %10 aksan</strong>. Aksan renkler (terracotta, bal, altın) yalnız fiyat, indirim, rozet ve yıldız için; zemin olarak kullanılmaz. Bir görselde en fazla <strong>iki</strong> zemin rengi.</p>
+    </div>
+    <div style="border:1px solid #e8c9b3;background:#f9ede2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#b05c2e">Yasak</span>
+      <p style="margin:6px 0 0;font:400 13.5px/1.6 'Karla';color:#343b41">Saf siyah (#000) ve saf beyaz zemin · parlak kırmızı indirim etiketi · renkli gradyan arka plan · altın parlaklık efekti · neon yeşil · sistem dışı yeşil tonu. Metin gölgesi yerine fotoğraf üstünde koyu skrim kullanılır.</p>
+    </div>
+  </div>
+
+  <h2 style="margin:0 0 8px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§4 · Tipografi</h2>
+  <p style="margin:0 0 12px;font:400 14px/1.65 'Karla';color:#4a4f44">İki font, ikisi de Canva'da mevcut. Üçüncü font eklenmez, el yazısı font kullanılmaz.</p>
+  <div style="break-inside:avoid;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 14px">
+    <div style="border:1px solid #ece5d2;border-radius:12px;padding:14px 17px">
+      <span style="display:block;font:600 27px 'Lora';color:#343b41">Lora</span>
+      <span style="display:block;font:400 12.5px 'Karla';color:#8a8270;margin-top:2px">Başlık fontu · ağırlık 400 ve 600 · italik vurgu serbest</span>
+      <p style="margin:9px 0 0;font:400 13px/1.6 'Karla';color:#4a4f44">Başlıklar, ürün adları, alıntılar. Büyük harfle uzun başlık yazılmaz. Harf aralığı değiştirilmez. Bulunamazsa: Source Serif 4, sonra Georgia.</p>
+    </div>
+    <div style="border:1px solid #ece5d2;border-radius:12px;padding:14px 17px">
+      <span style="display:block;font:700 24px 'Karla';color:#343b41">Karla</span>
+      <span style="display:block;font:400 12.5px 'Karla';color:#8a8270;margin-top:2px">Metin ve arayüz fontu · 400 · 600 · 700</span>
+      <p style="margin:9px 0 0;font:400 13px/1.6 'Karla';color:#4a4f44">Gövde metni, etiket, buton, fiyat, künye. Üstbaşlık: 600, büyük harf, harf aralığı .12em. Bulunamazsa: Work Sans, sonra system-ui.</p>
+    </div>
+  </div>
+  <table style="margin:0 0 22px">
+    <thead>
+      <tr>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0">Rol</th>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0">Font</th>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0">Sosyal görselde (1080 genişlik)</th>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 0 5px 0">Baskıda</th>
+      </tr>
+    </thead>
+    <tbody>
+      <sc-for list="{{ tipoOlcek }}" as="t" hint-placeholder-count="6">
+        <tr>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:700 13px 'Karla';color:#343b41">{{ t.rol }}</td>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:400 12.5px 'Karla';color:#4a4f44">{{ t.font }}</td>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:400 12.5px 'Karla';color:#4a4f44">{{ t.sosyal }}</td>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 0;font:400 12.5px 'Karla';color:#4a4f44">{{ t.baski }}</td>
+        </tr>
+      </sc-for>
+    </tbody>
+  </table>
+
+  <h2 style="margin:0 0 8px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§5 · Logo</h2>
+  <p style="margin:0 0 14px;font:400 14.5px/1.7 'Karla';color:#4a4f44;text-wrap:pretty">Karar: sembol tamamen yeniden çizilir, renk ve font sistemi korunur. Elde bugün yalnız JPEG var; yeni logo <strong>vektör</strong> (SVG/PDF) olarak çıkmalı, aksi halde vitrin folyosu ve ambalajda kullanılamaz.</p>
+  <div style="break-inside:avoid;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 16px">
+    <div style="border:1px solid #d7e3bd;background:#eef2e2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#4a6121">Kalır</span>
+      <p style="margin:6px 0 0;font:400 13.5px/1.6 'Karla';color:#343b41">Zeytin yeşili + antrasit ikilisi · krem zemin · sakin, ağırbaşlı duruş · "Lezzet Anatolie" adının iki kelime olarak okunması (doğru yazım: Anatolie).</p>
+    </div>
+    <div style="border:1px solid #e8c9b3;background:#f9ede2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#b05c2e">Gider</span>
+      <p style="margin:6px 0 0;font:400 13.5px/1.6 'Karla';color:#343b41">Kloş servis kapağı (her restoranda var, ayırt etmiyor) · eğimli el yazısı wordmark · logonun içine yazılmış web adresi · dekoratif yaprak dizisi · alt taraftaki dalga. <strong>Instagram'daki kırmızı-yeşil sürüm de kullanımdan kalkar</strong> — kırmızı renk sisteminde yok.</p>
+    </div>
+  </div>
+  <span style="display:block;font:700 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;color:#8a8270;margin:0 0 8px">Üç aday yön — Canva'da üçünü de dene, sonra tek yönde ilerle</span>
+  <sc-for list="{{ logoAdaylari }}" as="a" hint-placeholder-count="3">
+    <div style="break-inside:avoid;display:grid;grid-template-columns:120px 1fr;gap:16px;border-top:1px solid #ece5d2;padding:9px 0">
+      <span style="font:700 13.5px/1.45 'Karla';color:#5f7a2c">{{ a.ad }}</span>
+      <span style="font:400 13.5px/1.6 'Karla';color:#4a4f44">{{ a.tarif }}</span>
+    </div>
+  </sc-for>
+  <div style="break-inside:avoid;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0 22px">
+    <div style="border:1px solid #ece5d2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#343b41">Zorunlu türevler</span>
+      <p style="margin:6px 0 0;font:400 13px/1.6 'Karla';color:#4a4f44">Yatay kilit (amblem + yazı yan yana) · dikey kilit (amblem üstte) · yalnız amblem (kare/daire kullanım) · tek renk antrasit · tek renk krem (koyu zemin ve fotoğraf üstü) · favicon 32×32.</p>
+    </div>
+    <div style="border:1px solid #ece5d2;border-radius:12px;padding:13px 16px">
+      <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#343b41">Ölçü ve nefes payı</span>
+      <p style="margin:6px 0 0;font:400 13px/1.6 'Karla';color:#4a4f44">Boşluk = amblem yüksekliğinin yarısı, içine hiçbir şey girmez. En küçük kullanım: dijitalde 120px genişlik, baskıda 24mm; yalnız amblem 24px'in altına inmez. Küçük boyutta wordmark kullanılmaz.</p>
+    </div>
+  </div>
+  <div style="break-inside:avoid;border-left:3px solid #b05c2e;padding:2px 0 2px 14px;margin:0 0 22px">
+    <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#b05c2e">Logoya yapılmayacaklar</span>
+    <p style="margin:5px 0 0;font:400 13.5px/1.6 'Karla';color:#343b41">Gölge veya dış çizgi eklemek · döndürmek, eğmek, oranını bozmak · sistem dışı renge boyamak · kalabalık fotoğrafın üstüne skrimsiz koymak · içine slogan veya telefon yazmak · efektli çerçeveye almak.</p>
+  </div>
+
+  <h2 style="margin:0 0 8px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§6 · Varlık ölçüleri</h2>
+  <p style="margin:0 0 12px;font:400 14px/1.65 'Karla';color:#4a4f44">Canva'da her varlık için ölçüyü elle gir; hazır şablon ölçüleri güncel olmayabilir. "Güvenli alan" kırpılmayacak bölgedir — logo ve yazı yalnız oraya girer.</p>
+  <table style="margin:0 0 12px">
+    <thead>
+      <tr>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0">Varlık</th>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0;width:110px">Ölçü</th>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 8px 5px 0">Güvenli alan</th>
+        <th style="text-align:left;font:700 11.5px 'Karla';letter-spacing:.05em;text-transform:uppercase;color:#8a8270;border-bottom:1px solid #343b41;padding:0 0 5px 0">Üstünde ne yazar</th>
+      </tr>
+    </thead>
+    <tbody>
+      <sc-for list="{{ varliklar }}" as="v" hint-placeholder-count="11">
+        <tr>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:700 12.5px/1.4 'Karla';color:#343b41">{{ v.ad }}</td>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:400 12.5px/1.4 'Karla';color:#4a4f44">{{ v.olcu }}</td>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 8px 6px 0;font:400 12px/1.45 'Karla';color:#4a4f44">{{ v.guvenli }}</td>
+          <td style="border-bottom:1px solid #f0e9d6;padding:6px 0;font:400 12px/1.45 'Karla';color:#4a4f44">{{ v.icerik }}</td>
+        </tr>
+      </sc-for>
+    </tbody>
+  </table>
+  <p style="margin:0 0 22px;font:400 13px/1.6 'Karla';color:#6d7261">Baskı işlerinde (etiket, broşür, folyo) çıktı <strong>CMYK</strong> ve 300 dpi; taşma payı 3mm. Zeytin yeşilinin baskı karşılığı matbaayla teyit edilir — ekranda gördüğün yeşil kâğıtta daha koyu çıkar.</p>
+
+  <sc-if value="{{ gosterFotoYonu }}" hint-placeholder-val="{{ true }}">
+    <h2 style="margin:0 0 8px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§7 · Fotoğraf yönü</h2>
+    <p style="margin:0 0 12px;font:400 14px/1.65 'Karla';color:#4a4f44">Uygulamada fotoğraf üç orandan biriyle kullanılıyor: kart <strong>3:2</strong>, liste satırı <strong>1:1</strong>, hero <strong>16:9</strong>. Sosyal görsellerde de bu üç oran dışına çıkılmaz (story hariç).</p>
+    <div style="break-inside:avoid;display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:0 0 22px">
+      <div style="border:1px solid #d7e3bd;background:#eef2e2;border-radius:12px;padding:13px 16px">
+        <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#4a6121">Aranan kare</span>
+        <p style="margin:6px 0 0;font:400 13.5px/1.6 'Karla';color:#343b41">Yandan gelen doğal gün ışığı · koyu ahşap ya da mat taş tezgâh · krem keten örtü · buğu, kırıntı, un izi gibi gerçek üretim izleri · yakın kadraj, tek ürün · yufka açan, tepsi taşıyan insan eli · sade beyaz porselen ya da bakır tepsi.</p>
+      </div>
+      <div style="border:1px solid #e8c9b3;background:#f9ede2;border-radius:12px;padding:13px 16px">
+        <span style="font:700 12.5px 'Karla';letter-spacing:.06em;text-transform:uppercase;color:#b05c2e">Kaçınılan kare</span>
+        <p style="margin:6px 0 0;font:400 13.5px/1.6 'Karla';color:#343b41">Parlak stüdyo ışığı ve sert gölge · plastik ambalaj, streç, tek kullanımlık kap · aşırı doygun renk ve HDR · mavi/soğuk ışık · tabak kenarına damlatılmış sos süsü · kalabalık masa kolajı · stok fotoğraf hissi veren gülen model.</p>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ gosterPromptlar }}" hint-placeholder-val="{{ true }}">
+    <h2 style="margin:0 0 8px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§8 · Canva komutları</h2>
+    <p style="margin:0 0 14px;font:400 14px/1.65 'Karla';color:#4a4f44">Her blok olduğu gibi kopyalanıp Canva'nın üretim alanına yapıştırılabilir. Renkleri ve fontları komutun içinde tekrar yazıyoruz, çünkü Brand Kit her zaman otomatik uygulanmıyor. Üretilen her görsel §3–§6 kurallarına göre elle kontrol edilir.</p>
+    <sc-for list="{{ promptlar }}" as="p" hint-placeholder-count="8">
+      <div style="break-inside:avoid;border:1px solid #e0d8c2;border-radius:12px;padding:12px 15px;margin:0 0 11px;background:#faf6ec">
+        <span style="display:block;font:700 13px 'Karla';color:#343b41;margin-bottom:5px">{{ p.ad }} <span style="font:400 11.5px 'Karla';color:#8a8270">{{ p.olcu }}</span></span>
+        <span style="display:block;font:400 12.5px/1.6 'Karla';color:#4a4f44">{{ p.metin }}</span>
+      </div>
+    </sc-for>
+    <p style="margin:8px 0 22px;font:400 13px/1.6 'Karla';color:#6d7261">Türkçe komutlar zayıf sonuç verirse aynı metni İngilizceye çevirip hex kodlarını ve font adlarını aynen bırak — kritik olan renk ve font adları, dil değil.</p>
+  </sc-if>
+
+  <sc-if value="{{ gosterKontrolListesi }}" hint-placeholder-val="{{ true }}">
+    <h2 style="margin:0 0 10px;font:600 21px 'Lora';color:#343b41;border-bottom:2px solid #343b41;padding-bottom:6px">§9 · Yayına almadan önce kontrol</h2>
+    <sc-for list="{{ kontrol }}" as="c" hint-placeholder-count="9">
+      <div style="break-inside:avoid;display:flex;gap:10px;border-bottom:1px solid #f0e9d6;padding:7px 0;align-items:flex-start">
+        <span style="width:13px;height:13px;border:1.5px solid #b3ab97;border-radius:3px;flex:none;margin-top:2px"></span>
+        <span style="font:400 13.5px/1.5 'Karla';color:#343b41">{{ c }}</span>
+      </div>
+    </sc-for>
+  </sc-if>
+
+</doc-page>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;gosterFotoYonu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Bölümler&quot;},&quot;gosterPromptlar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Bölümler&quot;},&quot;gosterKontrolListesi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Bölümler&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      gosterFotoYonu: this.props.gosterFotoYonu ?? true,
+      gosterPromptlar: this.props.gosterPromptlar ?? true,
+      gosterKontrolListesi: this.props.gosterKontrolListesi ?? true,
+
+      hesaplar: [
+        { alan:'Facebook sayfa adı', bugun:'Lezzet Anatolie', olmali:'Doğru — değişmez' },
+        { alan:'Facebook adresi', bugun:'profile.php?id=61593650668892', olmali:'facebook.com/lezzetanatolie — kalıcı kullanıcı adı alınır' },
+        { alan:'Facebook kategorisi', bugun:'Bakkal', olmali:'Traiteur (birincil) + Épicerie fine · "Bakkal" ürünü anlatmıyor' },
+        { alan:'Instagram görünen ad', bugun:'LezzetAnatolie (boşluksuz)', olmali:'Lezzet Anatolie — boşlukla; arama bu alandan çalışır' },
+        { alan:'Instagram kategorisi', bugun:'Produit/service', olmali:'Traiteur ya da Produit alimentaire' },
+        { alan:'Profil resmi', bugun:'FB: yok · IG: kırmızı-yeşil eski logo', olmali:'Yeni amblem, §3 renkleriyle — iki hesapta aynı dosya' },
+        { alan:'Kapak', bugun:'FB: yok', olmali:'1640×624 kapak (§8 komutu)' },
+        { alan:'Bağlantı', bugun:'—', olmali:'lezzetanatolie.com · WhatsApp sipariş bağlantısı (+33 6 16 99 06 81)' },
+        { alan:'İletişim butonu', bugun:'—', olmali:'FB: e-posta info@lezzetanatolie.com + WhatsApp · IG: e-posta + telefon' },
+        { alan:'İçerik', bugun:'0 gönderi', olmali:'Açılışta 6 gönderi hazır olmalı: 3 ürün, 1 üretim, 1 teslimat, 1 tanıtım' },
+      ],
+
+      kitleler: [
+        { ad:'Strasbourg ve çevresindeki Türk aileler', mesaj:'Bugün pişti, bugün kapında. Sipariş saati ve teslim günü net yazılır; ürün adı Türkçe.' },
+        { ad:'Alsace\'taki Fransız müşteriler', mesaj:'Ürünün ne olduğu tek satırda anlatılır (malzeme + pişirme). Türkçe ad korunur, altına Fransızca açıklama düşer.' },
+        { ad:'Fransa geneli diaspora (kargo)', mesaj:'Soğuk zincir ve paketleme öne çıkar: kaç derecede gitti, kaç günde vardı, nasıl saklanır.' },
+        { ad:'B2B — restoran, bakkal, kafe', mesaj:'Sabit tedarik, koli adedi, haftalık teslim günü, fiyat listesi. Kampanya dili yok, çalışma dili var.' },
+        { ad:'Kurumsal ve etkinlik', mesaj:'Tepsi ve paket ölçüleri, kişi sayısı, önceden sipariş süresi. Görselde bütün tepsi, tek porsiyon değil.' },
+      ],
+
+      renkGruplari: [
+        { grup:'1 · Ana renkler', renkler:[
+          { ad:'Zeytin', hex:'#5f7a2c', kullanim:'birincil buton, bağlantı, marka yeşili — logonun yeşili budur' },
+          { ad:'Zeytin koyu', hex:'#4a6121', kullanim:'başlık üstü vurgu, basılı/hover hâli, koyu yeşil bant' },
+          { ad:'Antrasit', hex:'#343b41', kullanim:'başlık ve gövde metni, koyu blok zemini, alt bant' },
+        ] },
+        { grup:'2 · Zeminler', renkler:[
+          { ad:'Krem', hex:'#faf6ec', kullanim:'ana zemin — görsellerin varsayılan arka planı' },
+          { ad:'Kum', hex:'#f0e9d6', kullanim:'ikinci zemin, ayrılan şerit, alıntı bloğu' },
+          { ad:'Kart beyazı', hex:'#ffffff', kullanim:'kart, fiyat etiketi, ürün kutusu' },
+          { ad:'Çerçeve kumu', hex:'#d8cfb6', kullanim:'ince çerçeve, ayraç çizgisi' },
+        ] },
+        { grup:'3 · Aksanlar (az kullanılır)', renkler:[
+          { ad:'Terracotta', hex:'#b05c2e', kullanim:'fırsat, indirim, kampanya rozeti — tek vurgu rengi' },
+          { ad:'Bal', hex:'#8a6b2a', kullanim:'bekleyen/süreç bilgisi, tatlı kategorisi vurgusu' },
+          { ad:'Altın yıldız', hex:'#d99a2b', kullanim:'yıldız, puan, "müşteri favorisi" işareti' },
+          { ad:'Açık yaprak', hex:'#a9c46b', kullanim:'koyu zemin üstünde yeşil vurgu, küçük çip' },
+        ] },
+        { grup:'4 · Metin katmanları', renkler:[
+          { ad:'İkincil metin', hex:'#6d7261', kullanim:'açıklama satırı, alt başlık' },
+          { ad:'Pasif metin', hex:'#8a8270', kullanim:'etiket, künye, tarih' },
+          { ad:'Fotoğraf üstü metin', hex:'#f5f1e6', kullanim:'koyu skrim üstünde başlık — beyaz yerine bu kullanılır' },
+        ] },
+      ],
+
+      tipoOlcek: [
+        { rol:'Ana başlık', font:'Lora 600', sosyal:'92–120px', baski:'34–44pt' },
+        { rol:'Alt başlık', font:'Lora 400 italik', sosyal:'52–64px', baski:'18–22pt' },
+        { rol:'Üstbaşlık (kategori)', font:'Karla 600, büyük harf, .12em', sosyal:'26–30px', baski:'9–10pt' },
+        { rol:'Gövde metni', font:'Karla 400', sosyal:'34–40px', baski:'10–12pt' },
+        { rol:'Fiyat / rozet', font:'Karla 700', sosyal:'44–56px', baski:'12–16pt' },
+        { rol:'Künye satırı', font:'Karla 400', sosyal:'24–28px (en küçük)', baski:'8–9pt' },
+      ],
+
+      logoAdaylari: [
+        { ad:'A · Monogram', tarif:'Antrasit çizgiden kurulu "LA" monogramı; harflerin birleşimi tek zeytin yaprağı ya da yufka kıvrımı okutur. Kare ve daire kullanımda en güvenli yön — profil resmi ve favicon buradan çıkar.' },
+        { ad:'B · Dal', tarif:'Tek, sade zeytin dalı (üç yaprak, süs yok) + iki satır wordmark: LEZZET üstte, ANATOLIE altta, Lora 600 harf aralıklı. Sakin ve seçkin; küçük boyutta dal amblem olarak yalnız kullanılabilir.' },
+        { ad:'C · Mühür', tarif:'Yuvarlak mühür/damga: dış çemberde "EL YAPIMI · STRASBOURG", ortada tek motif (bakır tepsi, buğday başı ya da tek kilim geçmesi). Ambalaj etiketi ve stickerda güçlü; yatay kullanımda yanına wordmark gerekir.' },
+      ],
+
+      varliklar: [
+        { ad:'Facebook kapak', olcu:'1640×624 px', guvenli:'ortadaki 1090×430 — mobilde kenarlar kırpılır', icerik:'tek satır konum + teslimat sözü; logo kapağa değil, profile' },
+        { ad:'Profil resmi (FB/IG)', olcu:'1080×1080 px', guvenli:'daire içi; kenarlardan %20 boşluk', icerik:'yalnız amblem, krem ya da zeytin zemin — wordmark okunmaz' },
+        { ad:'Instagram gönderi', olcu:'1080×1350 px (4:5)', guvenli:'kenarlardan 80px', icerik:'bir ürün, bir başlık, bir künye satırı' },
+        { ad:'Instagram story / Reels kapak', olcu:'1080×1920 px', guvenli:'üstte 250px, altta 320px boş', icerik:'kısa başlık + tek çağrı; metin ortada kalır' },
+        { ad:'WhatsApp Business profili', olcu:'640×640 px', guvenli:'daire içi', icerik:'profil resminin aynısı' },
+        { ad:'Google İşletme', olcu:'kapak 1024×576 · logo 720×720', guvenli:'kapakta ortadaki %80', icerik:'dükkân/tezgâh fotoğrafı; kapakta yazı yok' },
+        { ad:'E-posta imzası', olcu:'600 px genişlik (@2x çıkar)', guvenli:'—', icerik:'yatay logo 48px yükseklik + ad, unvan, telefon, alan adı' },
+        { ad:'Ambalaj etiketi', olcu:'90×60 mm · yuvarlak 60 mm', guvenli:'kenardan 4 mm, taşma 3 mm', icerik:'amblem + ürün adı + içerik/alerjen alanı + son tüketim kutusu' },
+        { ad:'Sticker (kapatma bandı)', olcu:'50×50 mm', guvenli:'kenardan 3 mm', icerik:'yalnız amblem ya da "el yapımı" mührü' },
+        { ad:'Broşür / menü', olcu:'A5 148×210 mm · A4 katlı', guvenli:'kenardan 10 mm, taşma 3 mm', icerik:'kategori listesi + fiyat + QR + teslimat bölgesi' },
+        { ad:'Araç / vitrin folyosu', olcu:'ölçü yerinde alınır', guvenli:'kapı ve cam kenarından 100 mm', icerik:'wordmark + kategori + telefon; amblem en az 300 mm' },
+      ],
+
+      promptlar: [
+        { ad:'Logo — A yönü (monogram)', olcu:'vektör, 1000×1000',
+          metin:'Türk yemek markası "Lezzet Anatolie" için minimal monogram logo. "L" ve "A" harfleri tek sürekli çizgiyle birleşiyor, birleşim noktası tek zeytin yaprağı okutuyor. Renkler: antrasit #343b41 çizgi, zeytin yeşili #5f7a2c yaprak, krem #faf6ec zemin. Düz vektör, gradyan yok, gölge yok, çerçeve yok. Yazı için Lora 600. Kare kullanıma uygun, 24 px küçültüldüğünde okunur.' },
+        { ad:'Logo — B yönü (zeytin dalı)', olcu:'vektör, 1600×900',
+          metin:'Sade zeytin dalı amblemi ve iki satır wordmark: üstte LEZZET, altta ANATOLIE, Lora 600, harf aralığı geniş, büyük harf. Dal yalnız üç yaprak, süs yok, simetrik değil. Zeytin yeşili #5f7a2c dal, antrasit #343b41 yazı, krem #faf6ec zemin. Düz vektör, tek renk baskıya uygun. Kloş servis kapağı, şef şapkası, çatal-kaşık, dalga çizgisi kullanma.' },
+        { ad:'Logo — C yönü (mühür)', olcu:'vektör, 1000×1000',
+          metin:'Yuvarlak mühür logo: dış çemberde büyük harflerle "EL YAPIMI · STRASBOURG" yazısı Karla 600, ortada tek geometrik Anadolu kilim motifi. Antrasit #343b41 çizgi, zeytin yeşili #5f7a2c dolgu, krem #faf6ec zemin. İnce hatlar değil kalın hatlar; eskitme dokusu yok, gerçekçi mühür efekti yok. Sticker olarak 50 mm basılacak.' },
+        { ad:'Facebook kapak', olcu:'1640×624',
+          metin:'Krem #faf6ec zeminli geniş kapak. Solda Lora 600 antrasit #343b41 başlık: "Anadolu\'nun lezzeti, kapınızda". Altında Karla 400 #6d7261 tek satır: "Strasbourg ve çevresine kapıya teslim · Fransa geneline soğuk zincir kargo". Sağda ahşap tezgâhta el yapımı börek fotoğrafı, doğal yan ışık, buğulu. Tüm yazı ortadaki 1090×430 alan içinde. Gradyan, ikon kalabalığı, indirim etiketi yok.' },
+        { ad:'Profil resmi', olcu:'1080×1080',
+          metin:'Kare profil resmi: zeytin yeşili #5f7a2c düz zemin ortasında krem #faf6ec renkli amblem, kenarlardan %20 boşluk. Yalnız amblem, yazı yok. Daire kırpımda kesilmeyecek şekilde ortalanmış. Gölge, çerçeve, doku yok.' },
+        { ad:'Instagram gönderi şablonu', olcu:'1080×1350',
+          metin:'Dikey 4:5 gönderi şablonu. Üstte 3:2 oranında ürün fotoğrafı, alt kısımda krem #faf6ec zemin. Fotoğraf altında Karla 600 büyük harf üstbaşlık #5f7a2c (kategori), Lora 600 antrasit #343b41 ürün adı, Karla 400 #6d7261 tek satır açıklama, en altta ince künye satırı: lezzetanatolie.com. Sağ üstte terracotta #b05c2e küçük yuvarlak rozet alanı (boş bırak). Bol boşluk, tek ürün, kolaj yok.' },
+        { ad:'Story şablonu', olcu:'1080×1920',
+          metin:'Dikey story şablonu: tam ekran ürün fotoğrafı, alt yarıda antrasit #343b41 %70 opaklıkta yumuşak skrim. Skrim üstünde krem #f5f1e6 renginde Lora 600 başlık ve Karla 400 tek satır. Üst 250 px ve alt 320 px tamamen boş kalsın. Buton, ok, emoji, çerçeve yok.' },
+        { ad:'Ambalaj etiketi', olcu:'90×60 mm, CMYK 300 dpi',
+          metin:'Dikdörtgen ürün etiketi, köşeler 4 mm yuvarlatılmış, krem #faf6ec zemin, kenarda 0,5 pt zeytin #5f7a2c çerçeve. Sol üstte amblem, ortada Lora 600 antrasit ürün adı, altında Karla 400 içerik ve alerjen alanı, sağ altta "son tüketim" için boş kutu. 3 mm taşma payı bırak, yazılar kenardan en az 4 mm içeride.' },
+        { ad:'Broşür / menü', olcu:'A5 148×210 mm',
+          metin:'A5 tek yüz menü: üstte krem #faf6ec zemin, antrasit #343b41 Lora 600 başlık ve altında ince zeytin çizgi. Gövdede iki kolon kategori listesi, ürün adı Karla 600, fiyat Karla 700 sağa hizalı, ayraçlar 0,5 pt #d8cfb6. Alt bantta antrasit zemin üstünde krem yazı: teslimat bölgesi, telefon, alan adı, QR alanı. Fotoğraf en fazla bir tane, üstte, 16:9.' },
+        { ad:'E-posta imzası', olcu:'600×160 px',
+          metin:'Yatay e-posta imzası: solda 48 px yükseklikte yatay logo, sağda dikey ayraç çizgi #d8cfb6, yanında Karla 600 antrasit #343b41 ad ve unvan, Karla 400 #6d7261 satırları: +33 6 16 99 06 81 · info@lezzetanatolie.com · lezzetanatolie.com · 46 Rue des Prés, 67380 Lingolsheim. Beyaz zemin, ikon yok, sosyal medya butonu yok.' },
+      ],
+
+      kontrol: [
+        'Renkler yalnız §3 listesinden mi? Örnekleyip hex kodunu kontrol et.',
+        'Font Lora + Karla mı, üçüncü font sızmış mı?',
+        'Logonun etrafındaki boşluk amblem yüksekliğinin yarısı kadar mı?',
+        'Metin en küçük boyda 24 px (sosyal) / 8 pt (baskı) üstünde mi?',
+        'Yazılar güvenli alanın içinde mi? Facebook kapağını telefonda da aç.',
+        'Fotoğrafta plastik ambalaj, parlak stüdyo ışığı, mavi ton var mı?',
+        'Ürün adı Türkçe yazıldı mı, Fransızca açıklama gerekiyor mu?',
+        'Fiyat ve kampanya yazısı yalnız terracotta ile mi vurgulanmış?',
+        'Baskı işi CMYK, 300 dpi ve 3 mm taşma paylı mı?',
+        'Marka adı "Lezzet Anatolie" olarak mı yazılmış (Anatolia değil) — şirket adı QUALITE yalnız yasal alanda mı kaldı?',
+        'Künye satırında adres, sicil ve marka-şirket kalıbı doğru yazıldı mı?',
+        'Dosya adı ve ölçüsü doğru mu, vektör (SVG/PDF) çıktısı alındı mı?',
+      ],
+    };
+  }
+}
+
+</script>
+</body>
+</html>

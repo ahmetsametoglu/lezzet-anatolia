@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400..700&family=Karla:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; display:flex; justify-content:center; padding:36px 16px; }
+  a { color:#5f7a2c; text-decoration:none; } a:hover { color:#46601f; }
+  input { font-family:'Karla',sans-serif; }
+  @keyframes acil { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes donus { to { transform:rotate(360deg); } }
+  ::-webkit-scrollbar { width:0; }
+</style>
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect width="200" height="200" fill="#5f7a2c"/>
+    <rect x="66" y="44" width="68" height="112" rx="13" fill="#f2f0e8"/>
+    <rect x="88" y="58" width="24" height="24" rx="7" fill="#5f7a2c"/>
+    <rect x="78" y="96" width="44" height="14" rx="7" fill="#fff"/>
+    <rect x="78" y="118" width="44" height="14" rx="7" fill="#2f353a"/>
+  </svg>
+</template>
+</helmet>
+
+<div style="display:flex;flex-direction:column;gap:18px;align-items:center">
+
+  <div data-screen-label="Operasyon Giris" style="width:390px;height:844px;background:#f2f0e8;border-radius:30px;overflow:hidden;box-shadow:0 10px 46px rgba(47,53,58,.18);color:#2f353a;display:flex;flex-direction:column;position:relative">
+
+    <sc-if value="{{ cevrimdisi }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:none;background:#a44a3f;padding:9px 16px;display:flex;align-items:center;gap:9px;z-index:6">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="M3 3l18 18"/><path d="M5 12.5a10 10 0 0 1 4-2.8M12 5a12 12 0 0 1 7 2.9"/><path d="M12 19h.01"/></svg>
+        <span style="font:700 11.5px 'Karla';color:#fff;flex:1">Bağlantı yok — giriş için ağ gerekiyor</span>
+      </div>
+    </sc-if>
+
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:20px 26px;display:flex;flex-direction:column;justify-content:center;gap:18px">
+
+      <div style="flex:none;display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 0 10px">
+        <img src="../00-marka/logo-isaret.png" alt="Lezzet Anatolie" style="height:152px;width:auto;display:block">
+        <span style="font:800 10px 'Karla';letter-spacing:.24em;color:#8a8270">OPERASYON</span>
+      </div>
+
+
+      <sc-if value="{{ is.giris }}" hint-placeholder-val="{{ true }}">
+        <span style="font:600 29px/1.15 'Lora';color:#2f353a">Çalışma hesabınla gir</span>
+
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid {{ ep.bd }};border-radius:15px;padding:0 16px;height:52px">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9a917c" stroke-width="1.9" stroke-linecap="round" style="flex:none"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>
+            <input value="{{ ep.v }}" onChange="{{ ep.set }}" placeholder="ad.soyad@lezzetanatolie.com" style="border:none;outline:none;background:transparent;font:400 14.5px 'Karla';color:#2f353a;flex:1;min-width:0">
+          </div>
+          <sc-if value="{{ ep.kapiMetni }}" hint-placeholder-val="{{ true }}">
+            <span style="font:400 11.5px 'Karla';color:#8a8270;padding:0 2px">{{ ep.kapiMetni }}</span>
+          </sc-if>
+          <span onClick="{{ act.kodGonder }}" style="height:52px;border-radius:17px;background:{{ ep.btnBg }};color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer;transition:transform .12s" style-active="transform:scale(.99)">{{ ep.btnYazi }}</span>
+
+          <sc-if value="{{ ep.uyari }}" hint-placeholder-val="{{ false }}">
+            <div style="animation:acil .2s ease;background:#fdf8f3;border:1px solid #e2c4b0;border-radius:14px;padding:11px 14px;font:600 12px/1.5 'Karla';color:#a44a3f">{{ ep.uyari }}</div>
+          </sc-if>
+
+          <sc-if value="{{ kod.acik }}" hint-placeholder-val="{{ false }}">
+            <div style="animation:acil .24s ease;display:flex;flex-direction:column;gap:10px;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:15px">
+              <span style="font:400 12px/1.45 'Karla';color:#8a8270">Altı haneli kodu gönderdik — 10 dakika geçerli.</span>
+              <div style="display:flex;gap:7px">
+                <sc-for list="{{ kod.haneler }}" as="h" hint-placeholder-count="6">
+                  <span style="flex:1;height:54px;background:#fff;border:2px solid {{ h.bd }};border-radius:13px;display:flex;align-items:center;justify-content:center;font:600 21px 'Lora';color:#2f353a">{{ h.v }}</span>
+                </sc-for>
+              </div>
+              <sc-if value="{{ kod.hata }}" hint-placeholder-val="{{ false }}">
+                <span style="font:600 12px/1.45 'Karla';color:#a44a3f">{{ kod.hata }}</span>
+              </sc-if>
+              <span onClick="{{ act.tekrar }}" style="font:700 12px 'Karla';color:{{ kod.tekrarFg }};cursor:pointer;white-space:nowrap">{{ kod.tekrarYazi }}</span>
+              <div style="display:flex;align-items:center;gap:6px;padding-top:2px;border-top:1px dashed #e7e2d2">
+                <span style="font:700 9px 'Karla';letter-spacing:.14em;color:#b3ab97;flex:none">DEMO</span>
+                <sc-for list="{{ kod.tuslar }}" as="t" hint-placeholder-count="3">
+                  <span onClick="{{ t.bas }}" style="font:700 10px 'Karla';color:#6d7261;border:1px dashed #cfc8b4;border-radius:10px;padding:6px 9px;cursor:pointer;white-space:nowrap">{{ t.n }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+          <span style="flex:1;height:1px;background:#ddd6c4"></span>
+          <span style="font:700 10px 'Karla';letter-spacing:.16em;color:#a49f8f">YA DA</span>
+          <span style="flex:1;height:1px;background:#ddd6c4"></span>
+        </div>
+
+        <div onClick="{{ act.google }}" style="background:#fff;border:1.5px solid #ddd6c4;border-radius:18px;height:56px;display:flex;align-items:center;justify-content:center;gap:11px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+          <svg width="19" height="19" viewBox="0 0 48 48" style="flex:none"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C37.905 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+          <span style="font:700 14px 'Karla';color:#2f353a">Google ile gir</span>
+        </div>
+
+      </sc-if>
+
+      <sc-if value="{{ is.yetkiYok }}">
+        <div style="animation:acil .24s ease;display:flex;flex-direction:column;gap:14px">
+          <span style="width:40px;height:40px;border-radius:13px;background:#f6e0d3;display:flex;align-items:center;justify-content:center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a44a3f" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="11" rx="2.4"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </span>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <span style="font:600 25px/1.2 'Lora';color:#2f353a">Bu hesap operasyona tanımlı değil</span>
+            <span style="font:400 12.5px/1.6 'Karla';color:#6d7261;text-wrap:pretty">{{ yetki.mail }} doğrulandı, ancak bu adrese bağlı bir rol yok. Yetkiyi depo sorumlusu ya da yönetici açar.</span>
+          </div>
+          <span style="background:#5f7a2c;color:#f5f1e6;font:700 13.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer">Yetki talebi gönder</span>
+          <span onClick="{{ act.cikis }}" style="font:700 12.5px 'Karla';color:#5f7a2c;cursor:pointer;align-self:center">Başka hesapla gir</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ is.hazir }}">
+        <div style="animation:acil .24s ease;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:46px;height:46px;border-radius:15px;background:#5f7a2c;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:800 15px 'Karla';flex:none">DA</span>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="font:600 20px 'Lora';color:#2f353a">Deniz Arslan</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ yetki.mail }}</span>
+            </div>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:15px;display:flex;flex-direction:column;gap:9px">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">ROLÜN</span>
+            <div style="display:flex;gap:7px;flex-wrap:wrap">
+              <span style="font:700 11.5px 'Karla';color:#46601f;background:#eef4e2;border:1px solid #d8e4bf;border-radius:11px;padding:5px 11px">depo</span>
+              <span style="font:700 11.5px 'Karla';color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:11px;padding:5px 11px">sayım</span>
+            </div>
+            <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Kapsam: Strasbourg Merkez.</span>
+          </div>
+          <a href="./Operasyon Mobil.dc.html" style="background:#2f353a;border-radius:16px;height:56px;display:flex;align-items:center;justify-content:center;text-decoration:none">
+            <span style="font:700 14.5px 'Karla';color:#f5f1e6">Depo işlerine gir →</span>
+          </a>
+          <span onClick="{{ act.cikis }}" style="font:700 12px 'Karla';color:#8a8270;cursor:pointer;align-self:center">Bu hesaptan çık</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="flex:none;display:flex;align-items:center;justify-content:center;gap:14px;padding:0 26px 26px">
+      <span style="font:700 11.5px 'Karla';color:#8a8270;cursor:pointer">Yardım</span>
+      <span style="width:1px;height:11px;background:#ddd6c4"></span>
+      <span style="font:700 11.5px 'Karla';color:#8a8270;cursor:pointer">Erişimim yok</span>
+    </div>
+
+    <sc-if value="{{ yukleniyor }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:#f2f0e8f2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;animation:fadeIn .2s ease;z-index:9">
+        <span style="width:34px;height:34px;border-radius:50%;border:3px solid #5f7a2c;border-top-color:transparent;animation:donus .9s linear infinite"></span>
+        <span style="font:700 13px 'Karla';color:#5f7a2c">{{ yukYazi }}</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="width:390px;display:flex;flex-wrap:wrap;gap:7px;justify-content:center">
+    <sc-for list="{{ durumlar }}" as="d" hint-placeholder-count="4">
+      <span onClick="{{ d.git }}" style="font:700 11px 'Karla';color:{{ d.fg }};background:{{ d.bg }};border:1px solid {{ d.bd }};border-radius:12px;padding:7px 12px;cursor:pointer">{{ d.n }}</span>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:940}}">
+class Component extends DCLogic {
+  state = { ad:'giris', mail:'', kodAcik:false, kod:'', kodHata:'', epUyari:'', yuk:null, sayac:24, cevrimdisi:false };
+
+  componentDidMount(){ this.t=setInterval(()=>{ if(this.state.kodAcik&&this.state.sayac>0) this.setState(s=>({sayac:s.sayac-1})); },1000); }
+  componentWillUnmount(){ clearInterval(this.t); }
+
+  bekle(yazi,sonra){ this.setState({yuk:yazi}); setTimeout(()=>{ this.setState({yuk:null}); sonra(); },800); }
+
+  googleGir(){
+    if(this.state.cevrimdisi) return;
+    this.bekle('Google hesabı doğrulanıyor',()=>this.setState({mail:'deniz.arslan@lezzetanatolie.com',ad:'hazir'}));
+  }
+  kodGonder(){
+    if(this.state.cevrimdisi||!(this.state.mail||'').trim()) return;
+    const m=(this.state.mail||'').trim();
+    if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(m)) return this.setState({epUyari:'Geçerli bir e-posta adresi gir.'});
+    this.bekle('Kod gönderiliyor',()=>this.setState({kodAcik:true,kod:'',sayac:24,kodHata:'',epUyari:''}));
+  }
+  basKod(n){
+    const k=(this.state.kod+n).slice(0,6);
+    this.setState({kod:k,kodHata:''});
+    if(k.length===6){
+      if(k==='000000') return this.setState({kodHata:'Kod hatalı ya da süresi geçmiş. Yeni kod isteyebilirsin.',kod:''});
+      this.bekle('Doğrulanıyor',()=>this.setState({ad:/^9/.test(k)?'yetkiYok':'hazir'}));
+    }
+  }
+  yaz(v){ this.setState({kod:''}); setTimeout(()=>v.split('').forEach((d,i)=>setTimeout(()=>this.basKod(d),i*60)),30); }
+
+  renderVals(){
+    const s=this.state, V={};
+    const mail=(s.mail||'').trim()||'deniz.arslan@lezzetanatolie.com';
+    const dolu=!!(s.mail||'').trim();
+    V.is={giris:s.ad==='giris',yetkiYok:s.ad==='yetkiYok',hazir:s.ad==='hazir'};
+    V.cevrimdisi=s.cevrimdisi;
+    V.yukleniyor=!!s.yuk; V.yukYazi=s.yuk||'';
+
+    V.act={
+      google:()=>this.googleGir(),
+      kodGonder:()=>this.kodGonder(),
+      tekrar:()=>{ if(s.sayac<=0) this.setState({sayac:24,kod:'',kodHata:''}); },
+      cikis:()=>this.setState({ad:'giris',mail:'',kodAcik:false,kod:'',kodHata:'',epUyari:''}),
+    };
+
+    V.ep={v:s.mail,set:e=>this.setState({mail:e.target.value,epUyari:'',kodAcik:false,kod:''}),
+      uyari:s.epUyari||null,bd:s.epUyari?'#d9a97f':(dolu?'#5f7a2c':'#ddd6c4'),
+      btnBg:dolu?'#5f7a2c':'#c4bda9',
+      btnYazi:s.kodAcik?'Kodu yeniden gönder':'Kod gönder',
+      kapiMetni:(!dolu&&!s.kodAcik)?'Kodu göndermek için kayıtlı e-posta adresini yaz.':null};
+
+    V.kod={acik:s.kodAcik,hata:s.kodHata||null,
+      haneler:[0,1,2,3,4,5].map(i=>({v:s.kod[i]||'',bd:s.kod.length===i?'#5f7a2c':(s.kod[i]?'#ddd6c4':'#e7e2d2')})),
+      tuslar:[{n:'418203',v:'418203'},{n:'hatalı',v:'000000'},{n:'yetkisiz',v:'900112'}].map(t=>({n:t.n,bas:()=>this.yaz(t.v)})),
+      tekrarYazi:s.sayac>0?('Kodu tekrar gönder · 0:'+String(s.sayac).padStart(2,'0')):'Kodu tekrar gönder',
+      tekrarFg:s.sayac>0?'#a49f8f':'#5f7a2c'};
+
+    V.yetki={mail};
+
+    V.durumlar=[['giris','giriş'],['yetkiYok','yetki yok'],['hazir','giriş başarılı']]
+      .map(([k,n])=>{const a=s.ad===k;return {n,fg:a?'#f5f1e6':'#6d7261',bg:a?'#2f353a':'#fbfaf4',bd:a?'#2f353a':'#ddd6c4',git:()=>this.setState({ad:k,kodHata:'',epUyari:''})};})
+      .concat([{n:s.cevrimdisi?'· çevrimdışı açık':'· çevrimdışı dene',fg:s.cevrimdisi?'#fff':'#a44a3f',bg:s.cevrimdisi?'#a44a3f':'#fdf8f3',bd:'#e2c4b0',git:()=>this.setState(st=>({cevrimdisi:!st.cevrimdisi}))}]);
+    return V;
+  }
+}
+</script>
+</body>
+</html>

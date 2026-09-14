@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Depolar — Hizmet alanı (harita)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; color:#22251f; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+  .wrap { padding:40px; display:flex; flex-direction:column; gap:14px; }
+  .frame { width:1360px; height:760px; background:#fbfbf9; border:1px solid #e2e3dd; border-radius:8px; overflow:hidden; display:flex; flex-direction:column; }
+  .tiles { filter:saturate(.32) brightness(1.06) contrast(.94); }
+  .leaflet-container { background:#eef0ea; font-family:'Karla',sans-serif; }
+  .leaflet-control-attribution { font:400 10px 'Karla'; background:rgba(251,251,249,.86); }
+  .lbl { background:none; border:none; box-shadow:none; font:500 10.5px 'IBM Plex Mono'; color:#4a4f45; text-shadow:0 0 3px #fbfbf9,0 0 3px #fbfbf9,0 0 3px #fbfbf9; }
+  .leaflet-popup-content-wrapper { border-radius:9px; box-shadow:0 10px 30px rgba(34,39,43,.22); }
+  .leaflet-popup-content { margin:12px 14px; font:400 12px/1.6 'Karla'; }
+  .pop-t { font:600 13px 'Space Grotesk'; display:block; margin-bottom:3px; }
+  .kod { display:flex; align-items:center; gap:9px; padding:7px 10px; background:#fff; border:1px solid #e6e7e1; border-radius:8px; }
+  .kod b { font:600 12.5px 'IBM Plex Mono'; }
+  .kod span { font:400 11.5px 'Karla'; color:#6a7065; flex:1; min-width:0; }
+  .kod i { font:600 11px 'Space Grotesk'; color:#a5443c; font-style:normal; cursor:pointer; }
+  .chip { font:600 11.5px 'Space Grotesk'; border-radius:14px; padding:5px 11px; }
+  .btn { font:600 12.5px 'Space Grotesk'; border-radius:8px; padding:10px 16px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display:flex;align-items:baseline;gap:14px;width:1360px">
+    <span style="font:700 20px 'Space Grotesk'">Depolar › Strasbourg › Hizmet alanı — bölge kurulumu haritadan</span>
+    <span style="font:400 13.5px 'Karla';color:#6a7065">Kod listesi haritanın sonucudur. Serbest metin girişi yok: haritada olmayan kod sisteme girilemez.</span>
+  </div>
+
+  <div class="frame">
+    <div style="padding:14px 22px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span style="font:500 12px 'Karla';color:#8b9086">Depolar / <span style="color:#22251f;font-weight:600">Strasbourg (STR)</span> / Hizmet alanı</span>
+      <span style="width:1px;height:18px;background:#dfe1d9"></span>
+      <span style="font:600 16px 'Space Grotesk'">Bölge: Strasbourg Merkez</span>
+      <span class="chip" style="color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6">Aktif</span>
+      <span style="flex:1"></span>
+      <span class="btn" style="color:#4a4f45;background:#fff;border:1px solid #d9dbd2">Bölgeyi pasifleştir</span>
+      <span class="btn" style="color:#fbfbf9;background:#5f7a2c">Kaydet</span>
+    </div>
+
+    <div style="flex:1;min-height:0;display:flex">
+      <div style="flex:1;min-width:0;position:relative">
+        <div id="map" style="position:absolute;inset:0"></div>
+        <div style="position:absolute;left:14px;top:14px;z-index:500;background:rgba(251,251,249,.94);border:1px solid #e2e3dd;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:7px;box-shadow:0 6px 20px rgba(34,39,43,.12)">
+          <span style="font:600 10.5px 'Space Grotesk';letter-spacing:.07em;text-transform:uppercase;color:#8b9086">Kod hâlleri</span>
+          <span style="display:flex;align-items:center;gap:8px;font:400 11.5px 'Karla';color:#4a4f45"><span style="width:12px;height:12px;border-radius:50%;background:#5f7a2c;border:2px solid #fbfbf9;box-shadow:0 0 0 1px #5f7a2c"></span>bu bölgenin kodu</span>
+          <span style="display:flex;align-items:center;gap:8px;font:400 11.5px 'Karla';color:#4a4f45"><span style="width:12px;height:12px;border-radius:50%;background:#8ea3b5;border:2px solid #fbfbf9;box-shadow:0 0 0 1px #6e8598"></span>başka bölgede tanımlı</span>
+          <span style="display:flex;align-items:center;gap:8px;font:400 11.5px 'Karla';color:#4a4f45"><span style="width:12px;height:12px;border-radius:50%;background:#fbfbf9;box-shadow:0 0 0 1.5px #a7ac9f"></span>boşta</span>
+          <span style="font:400 10.5px/1.5 'Karla';color:#8b9086;max-width:190px;border-top:1px solid #eceee8;padding-top:6px">Noktaya tıkla → ekle / çıkar. Karar "bu yol üstünde mi" olduğu için taban harita yol ağını gösterir.</span>
+        </div>
+        <div id="hint" style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:500;background:#22251f;color:#f4f5f2;border-radius:8px;padding:9px 14px;font:500 12px 'Karla';box-shadow:0 8px 24px rgba(20,22,18,.3);opacity:0;transition:opacity .18s"></div>
+      </div>
+
+      <div style="width:340px;flex:none;border-left:1px solid #e6e7e1;background:#f8f9f5;display:flex;flex-direction:column;min-height:0">
+        <div style="padding:14px 16px;border-bottom:1px solid #e6e7e1;display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">Bölge adı</span>
+            <div style="border:1px solid #d9dbd2;background:#fff;border-radius:8px;padding:10px 12px;font:500 13px 'Karla'">Strasbourg Merkez</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">Teslim günleri</span>
+            <div style="display:flex;gap:5px">
+              <span class="chip" style="color:#fbfbf9;background:#5f7a2c;padding:5px 9px">Sal</span>
+              <span class="chip" style="color:#6a7065;background:#fff;border:1px solid #d9dbd2;padding:5px 9px">Çar</span>
+              <span class="chip" style="color:#fbfbf9;background:#5f7a2c;padding:5px 9px">Per</span>
+              <span class="chip" style="color:#6a7065;background:#fff;border:1px solid #d9dbd2;padding:5px 9px">Cum</span>
+              <span class="chip" style="color:#fbfbf9;background:#5f7a2c;padding:5px 9px">Cmt</span>
+            </div>
+            <span style="font:400 10.5px/1.5 'Karla';color:#8b9086">Gün bölgenin özelliğidir — posta kodu doğrudan depoya bağlansaydı gün kaybolurdu: depo → bölge → kodlar.</span>
+          </div>
+        </div>
+
+        <div style="padding:11px 16px 7px;display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font:500 10.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#8b9086">Bu bölgenin kodları</span>
+          <span id="count" style="font:500 11.5px 'IBM Plex Mono';color:#6a7065">0</span>
+        </div>
+        <div id="list" style="flex:1;min-height:0;overflow-y:auto;padding:0 12px 12px;display:flex;flex-direction:column;gap:6px"></div>
+
+        <div style="border-top:1px solid #e6e7e1;padding:12px 16px;display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font:600 12.5px 'Space Grotesk'">Strasbourg'un toplamı</span>
+            <span id="total" style="font:500 12px 'IBM Plex Mono';color:#4a6121">— posta kodu</span>
+          </div>
+          <span style="font:400 11px/1.6 'Karla';color:#8b9086">Bu deponun iki bölgesinin birleşimi. Operatörün asıl sorusu budur: "bu adres hangi depodan çıkar?" — bölge o sorunun arasındaki katmandır.</span>
+          <span style="font:400 11px/1.6 'Karla';color:#9a6416">Bir kodu çıkarmak o adresleri rota dışına düşürür ve kargo yoluna geçirir.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="width:1360px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div style="background:#fff;border:1.5px dashed #b9b4a4;border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:7px">
+      <span style="font:700 13.5px 'Space Grotesk';color:#3a4147">Görsel karar — taban harita sakin, işaretler önde</span>
+      <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+        <li>Taban doygunluğu düşürülür (yol ağı okunur kalır, renk yarışmaz); kod noktaları paletin zeytin/mavi/nötr üçlüsüyle ayrışır.</li>
+        <li>Etiket yakınlaşınca gelir — uzakta nokta yoğunluğu, yakında kod + yerleşim adı.</li>
+        <li>Poligon sınırı yok (v1 kararı): nokta + ad, yol koridoru seçimi için yeterli.</li>
+        <li>Hizmet verilmeyen ülkenin kodları hiç basılmaz.</li>
+      </ul>
+    </div>
+    <div style="background:#fff;border:1.5px dashed #b9b4a4;border-radius:12px;padding:16px 20px;display:flex;flex-direction:column;gap:7px">
+      <span style="font:700 13.5px 'Space Grotesk';color:#3a4147">Uygulama notu</span>
+      <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+        <li>Üründe <strong>MapLibre GL + OpenFreeMap vektör karoları</strong> kullanılacak (bağlayıcı teknik karar, 02.08) — binlerce nokta GPU'da tek katman olarak çizilir. Bu tasarım karesi davranışı ve stili gösterir; karo kaynağı ayrı bir kurulum işidir.</li>
+        <li>Ön koşul: <code style="font:500 11.5px 'IBM Plex Mono'">postal_code_place</code> tablosuna kod başına merkez nokta (enlem/boylam) eklenmeli — gelmeden harita kod basamaz.</li>
+        <li>Bölge kurulumu masaüstü işidir; telefonda harita görüntülenir ama koridor seçimi masada yapılır.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+const KODLAR = [
+  { k:'67000', n:'Strasbourg', ll:[48.5839,7.7455], s:'in' },
+  { k:'67100', n:'Strasbourg Sud', ll:[48.5525,7.7530], s:'in' },
+  { k:'67200', n:'Strasbourg Ouest', ll:[48.5900,7.7050], s:'in' },
+  { k:'67300', n:'Schiltigheim', ll:[48.6060,7.7480], s:'in' },
+  { k:'67800', n:'Bischheim', ll:[48.6180,7.7530], s:'in' },
+  { k:'67201', n:'Eckbolsheim', ll:[48.5820,7.6800], s:'in' },
+  { k:'67540', n:'Ostwald', ll:[48.5430,7.7130], s:'in' },
+  { k:'67400', n:'Illkirch-Graffenstaden', ll:[48.5290,7.7180], s:'other', by:'Sud hattı · Colmar (COL)' },
+  { k:'67114', n:'Eschau', ll:[48.4880,7.7180], s:'other', by:'Sud hattı · Colmar (COL)' },
+  { k:'67150', n:'Erstein', ll:[48.4200,7.6650], s:'other', by:'Sud hattı · Colmar (COL)' },
+  { k:'77694', n:'Kehl', ll:[48.5730,7.8150], s:'other', by:'Ortenau · Kehl (KEHL)' },
+  { k:'67550', n:'Vendenheim', ll:[48.6650,7.7160], s:'free' },
+  { k:'67207', n:'Niederhausbergen', ll:[48.6300,7.7050], s:'free' },
+  { k:'67450', n:'Mundolsheim', ll:[48.6480,7.7150], s:'free' },
+  { k:'67116', n:'Reichstett', ll:[48.6470,7.7530], s:'free' },
+  { k:'67610', n:'La Wantzenau', ll:[48.6620,7.8300], s:'free' },
+  { k:'67810', n:'Holtzheim', ll:[48.5560,7.6390], s:'free' },
+  { k:'67960', n:'Entzheim', ll:[48.5350,7.6390], s:'free' },
+  { k:'67120', n:'Molsheim', ll:[48.5400,7.4930], s:'free' },
+];
+const OTHER_REGION_TOTAL = 5; // STR'nin ikinci bölgesi (Kuzey hattı) — toplamda sayılır
+
+const map = L.map('map', { zoomControl:false, attributionControl:true }).setView([48.578, 7.735], 11);
+L.control.zoom({ position:'topright' }).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'© OpenStreetMap contributors', maxZoom:18, className:'tiles'
+}).addTo(map);
+
+const STYLE = {
+  in:    { radius:8,  color:'#5f7a2c', weight:2.5, fillColor:'#5f7a2c', fillOpacity:1 },
+  other: { radius:7,  color:'#6e8598', weight:2,   fillColor:'#8ea3b5', fillOpacity:1 },
+  free:  { radius:6.5,color:'#a7ac9f', weight:2,   fillColor:'#fbfbf9', fillOpacity:1 },
+};
+const hint = document.getElementById('hint');
+let hintTimer;
+function say(msg) {
+  hint.textContent = msg; hint.style.opacity = '1';
+  clearTimeout(hintTimer); hintTimer = setTimeout(() => hint.style.opacity = '0', 2600);
+}
+
+const markers = new Map();
+KODLAR.forEach(d => {
+  const m = L.circleMarker(d.ll, STYLE[d.s]).addTo(map);
+  m.bindTooltip(d.k + ' · ' + d.n, { permanent:false, direction:'right', offset:[9,0], className:'lbl' });
+  m.on('click', () => {
+    if (d.s === 'other') {
+      m.bindPopup(
+        '<span class="pop-t">' + d.k + ' · ' + d.n + '</span>' +
+        'Bu kod <strong>' + d.by + '</strong> bölgesinde tanımlı. Bir posta kodu yalnız tek bölgede olabilir — eklenemez.' +
+        '<br><a href="#" style="font-weight:600">Kodu bu bölgeye taşı →</a>'
+      ).openPopup();
+      return;
+    }
+    d.s = d.s === 'in' ? 'free' : 'in';
+    m.setStyle(STYLE[d.s]);
+    say(d.s === 'in' ? d.k + ' ' + d.n + ' bölgeye eklendi' : d.k + ' ' + d.n + ' bölgeden çıkarıldı — bu adresler kargo yoluna geçer');
+    render();
+  });
+  markers.set(d.k, m);
+});
+
+// Etiket yakınlaşınca gelir: uzakta nokta yoğunluğu, z13'ten sonra kod + yerleşim adı.
+let labelsOn = false;
+function syncLabels() {
+  const on = map.getZoom() >= 13;
+  if (on === labelsOn) return;
+  labelsOn = on;
+  KODLAR.forEach(d => {
+    const m = markers.get(d.k);
+    m.unbindTooltip();
+    m.bindTooltip(d.k + ' · ' + d.n, { permanent:on, direction:'right', offset:[9,0], className:'lbl' });
+  });
+}
+map.on('zoomend', syncLabels);
+syncLabels();
+
+const list = document.getElementById('list');
+function render() {
+  const inn = KODLAR.filter(d => d.s === 'in');
+  list.innerHTML = '';
+  inn.forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'kod';
+    row.innerHTML = '<b>' + d.k + '</b><span>' + d.n + '</span><i>çıkar</i>';
+    row.querySelector('i').onclick = () => {
+      d.s = 'free'; markers.get(d.k).setStyle(STYLE.free);
+      say(d.k + ' ' + d.n + ' bölgeden çıkarıldı — bu adresler kargo yoluna geçer');
+      render();
+    };
+    row.onmouseenter = () => markers.get(d.k).setStyle({ ...STYLE.in, radius:11 });
+    row.onmouseleave = () => markers.get(d.k).setStyle(STYLE.in);
+    list.appendChild(row);
+  });
+  if (!inn.length) {
+    const e = document.createElement('div');
+    e.style.cssText = "border:1px dashed #d2d4cb;border-radius:8px;padding:14px;text-align:center;font:400 11.5px/1.6 'Karla';color:#8b9086";
+    e.textContent = 'Bölgede henüz kod yok — haritadan bir yerleşim seçin. Bölgesiz depo yalnız kargo çıkışıysa normaldir.';
+    list.appendChild(e);
+  }
+  document.getElementById('count').textContent = inn.length + ' kod';
+  document.getElementById('total').textContent = (inn.length + OTHER_REGION_TOTAL) + ' posta kodu · 2 bölge';
+}
+render();
+</script>
+</body>
+</html>
