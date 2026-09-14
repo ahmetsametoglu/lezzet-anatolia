@@ -55,8 +55,12 @@ type OperationsAccess =
       warehouses: StaffWarehouse[];
       resolvedWarehouseId: string | null;
     }
-  /** Oturum yok (401) — kapı giriş ekranına yönlendirir. */
-  | { status: 'signed_out' }
+  /**
+   * Oturum yok (401) — kapı giriş ekranına yönlendirir. `stillCurrent`: bu karar hâlâ SON okumanın mı.
+   * Karardan sonra yeni bir okuma başladıysa (oturum olayı) `false` döner ve kapı eski kararla yönlendirmez
+   * (cihazda ölçüldü 14.09 — `(operations)/_layout.tsx` künyesi).
+   */
+  | { status: 'signed_out'; stillCurrent: () => boolean }
   /** Oturum var, personel bölümü yok — kapı "yetki yok" der ve çıkış sunar. */
   | { status: 'forbidden' }
   /** Rol bilgisi okunamadı; yetki hakkında hiçbir şey İDDİA EDİLMİYOR. */
@@ -96,7 +100,11 @@ export function useOperationsAccess(): OperationsAccess {
     if (stale()) return;
 
     if (result.error !== null) {
-      setState({ status: result.status === UNAUTHORIZED_STATUS ? 'signed_out' : 'error' });
+      setState(
+        result.status === UNAUTHORIZED_STATUS
+          ? { status: 'signed_out', stillCurrent: () => run === generation.current }
+          : { status: 'error' },
+      );
       return;
     }
 

@@ -308,3 +308,20 @@ describe('hızlı doğrulama', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1); // yalnız kod İSTEĞİ; doğrulama çağrısı yok
   });
 });
+
+describe('geri oku — alt ekransa var, değilse yok (kullanıcı kuralı 14.09)', () => {
+  it('varsayılan: geri oku çizilir ve ekranı kapatır — müşteri girişi vitrinin alt ekranıdır', async () => {
+    await render(<LoginScreen {...ROUTES} />);
+
+    await fireEvent.press(screen.getByTestId('login-back'));
+
+    expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  it('closable={false}: KÖK girişte ok hiç çizilmez — operasyon uygulamasının girişi', async () => {
+    await render(<LoginScreen {...ROUTES} closable={false} />);
+
+    expect(screen.queryByTestId('login-back')).toBeNull();
+    expect(screen.getByTestId('login-scroll')).toBeOnTheScreen();
+  });
+});

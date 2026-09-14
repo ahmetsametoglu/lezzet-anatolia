@@ -80,9 +80,23 @@ interface LoginScreenProps {
   privacyHref?: Href;
   /** Geliştirme düğmelerinin süzgeci (yalnız `__DEV__`): hangi uygulamanın hesapları. Verilmezse liste tamdır. */
   devAccounts?: 'customer' | 'operations';
+  /**
+   * Altında dönülecek bir ekran var mı — kullanıcı kuralı (14.09): alt ekransa geri düğmesi olur, değilse
+   * olmaz. Varsayılan `true`: müşteri uygulamasında giriş vitrinin alt ekranıdır ve geri oku oraya kapanır.
+   * Operasyon uygulamasında giriş KÖK ekrandır — oturumsuzken arkasında açılabilecek bir yer yok, ok
+   * dokununca yine girişe dönüyordu (cihazda görüldü 14.09).
+   */
+  closable?: boolean;
 }
 
-export function LoginScreen({ onVerified, initialNotice, landingFor, privacyHref, devAccounts }: LoginScreenProps) {
+export function LoginScreen({
+  onVerified,
+  initialNotice,
+  landingFor,
+  privacyHref,
+  devAccounts,
+  closable = true,
+}: LoginScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
@@ -258,7 +272,7 @@ export function LoginScreen({ onVerified, initialNotice, landingFor, privacyHref
   return (
     <View style={styles.screen}>
       <View style={styles.topBar}>
-        <BackButton onPress={closeLogin} accessibilityLabel={t.back} testID="login-back" />
+        {closable ? <BackButton onPress={closeLogin} accessibilityLabel={t.back} testID="login-back" /> : null}
       </View>
       <FormScroll contentContainerStyle={styles.content} testID="login-scroll">
         {/* Logo yükseklikten ölçülür (şablon: 52). Varlık ŞEFFAF PNG: kaynak jpg beyaz zeminliydi

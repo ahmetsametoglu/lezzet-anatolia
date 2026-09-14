@@ -54,10 +54,16 @@ export default function OperationsLayout() {
      `lib/auth/use-session-ended-login`) → `<Redirect>`in ertelenmiş `replace`i en üstteki sebepli girişi
      sebepsiz bir kopyayla değiştirdi; kişi neden çıkarıldığını göremedi. Yönlendirme bu yüzden kapının
      kendi commit'inde koşar ve CANLI yola bakar: giriş açıksa dokunmaz. `replace`: geçmişe kayıt düşmez,
-     geri tuşu girişten kapıya dönmez. */
+     geri tuşu girişten kapıya dönmez.
+     BAYAT KARARLA YÖNLENDİRİLMEZ (cihazda ölçüldü 14.09): oturumsuz soğuk açılışta kapı `signed_out` çizdi,
+     otomatik giriş hemen ardından oturumu kurdu ve `SIGNED_IN` yeni okumayı başlattı — ama bu etki ondan SONRA
+     koştu (probe: 91275 `SIGNED_IN` · 91303 `kapı → /login`); kapı söküldü, yeni okumanın 200'ü düştü ve
+     personel oturum açıkken girişte kaldı. Karar artık kendi okumasının sıra numarasını taşıyor
+     (`stillCurrent`): yeni okuma başladıysa eski karar yönlendirmez, yeni okumanın cevabı beklenir. Ters sıra
+     (oturum kapı yönlendirdikten SONRA açılır) girişin işi (`use-leave-login-on-sign-in.hook.ts`). */
   useEffect(() => {
-    if (signedOut && pathname !== '/login') router.replace('/login');
-  }, [signedOut, pathname, router]);
+    if (access.status === 'signed_out' && access.stillCurrent() && pathname !== '/login') router.replace('/login');
+  }, [access, pathname, router]);
 
   if (access.status === 'loading') {
     return (

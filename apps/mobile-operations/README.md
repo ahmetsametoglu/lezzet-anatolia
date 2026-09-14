@@ -13,6 +13,12 @@ pnpm mobile:device                        # cihaz tünelleri (8081 · 3002 · 54
 pnpm mobile-operations:e2e                # Maestro akışları (maestro/README.md)
 ```
 
+## Ortam değişkenleri
+
+`cp .env.example .env` ile başla — dört anahtar: API ve Supabase adresleri, anon anahtar, otomatik geliştirme
+girişi. Okuyan tek yer kitin env kapısı (`packages/mobile-kit/src/lib/env.ts`); eksik anahtar açılışta gürültülü
+hata verir. Site adresi ve Stripe anahtarları müşteri uygulamasınındır, burada yok.
+
 ## Kimlikler
 
 - Ad "Lezzet Operasyonu" · slug `lezzet-operasyonu` · paket `com.lezzetanatolie.operasyon` · şema `lezzetoperasyonu`.

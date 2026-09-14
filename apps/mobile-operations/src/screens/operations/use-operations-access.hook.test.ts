@@ -261,6 +261,25 @@ describe('operasyon kapısı', () => {
     expect(result.current.status).toBe('signed_out');
   });
 
+  it('ESKİ "oturum yok" kararı yeni okuma başlayınca GEÇERSİZLEŞİR — kapı bayat kararla girişe atmaz (14.09)', async () => {
+    /* Cihazda ölçülen yarış: kapı `signed_out` çizdi, otomatik giriş oturumu kurdu, `SIGNED_IN` yeni okumayı
+       başlattı — ama eski karara bağlı yönlendirme ondan SONRA koştu ve personel oturum açıkken girişte
+       kaldı. Karar kendi okumasının sıra numarasını taşıyor; kapı yönlendirmeden önce onu soruyor. */
+    mockFetchMe.mockResolvedValueOnce(fail(401, 'unauthorized'));
+    const result = await openGate();
+    const decision = result.current;
+    if (decision.status !== 'signed_out') throw new Error(`kapı signed_out bekleniyordu: ${decision.status}`);
+    expect(decision.stillCurrent()).toBe(true);
+
+    let answerMe: (value: ReturnType<typeof ok>) => void = () => {};
+    mockFetchMe.mockReturnValueOnce(new Promise((resolve) => (answerMe = resolve)));
+    await act(async () => authListener?.());
+
+    expect(decision.stillCurrent()).toBe(false);
+    await act(async () => answerMe(ok(['courier'])));
+    await waitFor(() => expect(result.current.status).toBe('granted'));
+  });
+
   it('ekran sökülünce dinleyici BIRAKILIR — kapı arkada sorgu biriktirmez', async () => {
     mockFetchMe.mockResolvedValue(ok(['courier']));
     const { result, unmount } = await renderHook(() => useOperationsAccess());

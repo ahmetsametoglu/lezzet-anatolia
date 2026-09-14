@@ -15019,6 +15019,41 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · **Doğrulama:** typecheck kit · müşteri · operasyon · jest kit 240/240, müşteri 430/430 (dört öz-test kite geçti),
     operasyon 946/946 (yedi yeni tarama).
 
+  **Durum (14.09, yedinci) — cihaz turu (Oppo CPH1907, kablosuz ADB): iki uygulama derlendi, kuruldu ve açıldı; ayrımın getirdiği arıza bulundu ve kapandı.**
+  · **Operasyon:** dev-client (Gradle 8 dk 41 sn, arm64) — giriş, dört bölüm (Depo · Kurye · Yönetim · Para), toplama
+    kuyruğu, okutma çekmecesi (kamera izni; çekmece açıkken `dumpsys media.camera`: "Device 0 is open", istemci
+    `com.lezzetanatolie.operasyon`), personel menüsü (müşteri köprüsü yok) ve çıkış çalışıyor.
+  · **Arıza: otomatik giriş oturumu kuruyor, ekran girişte kalıyordu** (denetim kaydında `login` var, ekran girişte). Geçici
+    kayıt satırlarıyla iki sıra ölçüldü: (1) kapı girişe geçip söküldükten SONRA oturum açılıyor, dinleyen kalmıyordu;
+    (2) kapı `signed_out` çizdi, `SIGNED_IN` yeni okumayı başlattı ama eski karara bağlı yönlendirme ondan SONRA koştu
+    (91275 `SIGNED_IN` · 91303 `kapı → /login`) ve yeni okumanın 200'ü sökülen kapıda düştü. İlk düzeltme (otomatik
+    girişin ardından kökten `replace('/')`) yalnız (1)'i karşılıyordu; denetim yükü altındaki açılışta (2) yaşandı, geri
+    alındı. Çare iki parça: kapının kararı kendi okumasının sıra numarasını taşıyor
+    (`apps/mobile-operations/src/screens/operations/use-operations-access.hook.ts`, `stillCurrent`) ve giriş rotası yalnız
+    `SIGNED_IN`de kapıya dönüyor (`apps/mobile-operations/src/screens/login/use-leave-login-on-sign-in.hook.ts`). Açılış
+    olayı bilerek dinlenmiyor: API'nin reddettiği ama auth sunucusuna ulaşılamadığı için cihazda korunan oturumda kapı ile
+    giriş arasında döngü kurulurdu. Cihazda üç oturumsuz soğuk açılışın üçünde de ilk bölüm açıldı (biri denetim yükü
+    altında).
+  · **Giriş ekranında geri oku** kitte seçenek oldu (`closable`, varsayılan açık); operasyonda kapalı — giriş kök ekran,
+    altında dönülecek ekran yok (kullanıcı kuralı 14.09: alt ekransa geri düğmesi olur, değilse olmaz). Müşteri girişi
+    vitrinin alt ekranı; ok orada kalıyor.
+  · **Ortam:** operasyonun `.env.example`ı yoktu, kitin env kapısı üç anahtar istediği için uygulama açılışta düşerdi —
+    `apps/mobile-operations/.env.example` ve README'de ortam bölümü; müşteri örneğindeki iki eski yol kite çevrildi.
+  · **Müşteri:** dev-client yeniden derlendi (Gradle 13 dk 8 sn; kamera, yazıcı ve ses modülleri yok) ve kuruldu; tanıtım,
+    vitrin ve Hesap sekmesi açıldı, dökümde operasyon izi yok.
+  · **Açık:** operasyon girişinin tasarımı — başlık ve metin müşteriye hitap ediyor; tasarım gelene dek ortak metin
+    (kullanıcı kararı 14.09). Dış kayıtlar kullanıcıda (Expo projesi, Firebase, Apple, ikon).
+  · **Ayrım dışı gözlemler:** bir açılışta kapı 32 sn bekledi — kapsam isteği sunucuda 31 sn asılı kalıp 401 döndü, token
+    yenilemesiyle geçti; aynı saniyelerde `/me` 0,5–0,8 sn (sebep ölçülemedi: mobil API günlüğü terminalde). Dev-client'ın
+    yüzen Tools düğmesi sağ altta Para sekmesinin ve okut düğmesinin üstünde duruyor.
+  · **Doğrulama:** typecheck kit · müşteri · jest kit 242/242, müşteri 430/430, operasyon 948/949 · `lint` (üç paket) ·
+    `knip` · `boundaries` temiz. Operasyonun tek düşüşü ve iki tip hatası (`notice-block.test.tsx`) başka şeridin
+    commit'lenmemiş token değişikliğinden (`customerAppColors.error` tabana taşınıyor; not dosyası açıldı), HEAD'de yok.
+    Kilitli kök paket 4754/4754.
+    Altıncı durumun kalan denetimleri: `lint` · `knip` · `boundaries` · `docs:check` temiz; kilitli kök paket 3961/4730 —
+    542 düşüş başka şeridin commit'lenmemiş sipariş şemasından (`paymentRef`, yerel veritabanında sütun yok), 4'ü aynı
+    şemaya giden satış ucu, 1'i bilinen adres testi.
+
 - [x] (21.311) **PUSH JETONU HANGİ UYGULAMANIN — `push_device.app` ('customer' | 'operations')** (21.310'dan ayrıldı 14.09; kullanıcı kararı: arka-uç kısmına bu şerit dokunur)
   `touches:` `supabase/migrations/0050_push_device.sql` · `packages/types/src/entities/push-device.schema.ts` · `packages/database/src/services/push-device.service.ts` · `packages/application/src/notification/devices.ts` · `packages/application/src/notification/dispatch.ts` · `apps/mobile-api/src/api/v1/notifications.ts` · iki uygulamanın kayıt kapısı
   Gerekçe: iki uygulama aynı hesaba jeton yazınca müşteri bildirimi operasyon uygulamasına da düşerdi. Jeton

@@ -3,10 +3,10 @@ import type { UserRole } from '@lezzet/types';
 /*
   OPERASYON BÖLÜMLERİ — rolden yüzeye giden SAF kural (21.9).
 
-  Karar `docs/uygulama/02 §4` (kullanıcı kararı 07.08): TEK uygulama, rol-bazlı yüzey. Oturumsuz
-  kullanım müşteri gezinmesidir; operasyon hakkı `/me`nin `roles` alanından okunur. ROL DEĞİŞTİRME
-  ANAHTARI YOKTUR — kullanıcı hangi şapkaları taşıyorsa hepsini aynı anda görür, "şu an kurye
-  gibiyim" diye bir kip yok.
+  Karar `docs/uygulama/02 §4` (kullanıcı kararı 07.08): rol-bazlı yüzey. 14.09'dan beri operasyon AYRI
+  uygulama (21.310) — oturumsuz açılış giriş ekranıdır; bölüm hakkı `/me`nin `roles` alanından okunur.
+  ROL DEĞİŞTİRME ANAHTARI YOKTUR — kullanıcı hangi şapkaları taşıyorsa hepsini aynı anda görür, "şu an
+  kurye gibiyim" diye bir kip yok.
 
   DOSYA SAF: React yok, ağ yok, tema yok. Ekran testinden bağımsız birim testi olması bunun içindir
   — süzme kuralı arayüzün değil, yüzeyin kuralıdır ve bir gün ekran değişse de aynı kalır.
