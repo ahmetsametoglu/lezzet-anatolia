@@ -131,6 +131,14 @@ export function weekdayName(iso: string | null | undefined): string {
   return d.toLocaleDateString('tr-TR', { weekday: 'long', timeZone: 'UTC' });
 }
 
+/** "Eylül 2026" — AY BAŞLIĞI (12.23, Para belgeleri): yıl hep yazılır, çünkü ay adı yıllar arasında tekrarlar. UTC. */
+export function monthYear(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
 /** "22 Tem 14:30" — hareket kayıtlarında saat de gerekir (aynı gün iki kayıt ayırt edilsin). */
 export function shortDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';

@@ -226,17 +226,18 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
 }
 
 /**
- * Defteri GÜNLERE böler (12.22 · kullanıcı seçimi "günlere göre gruplu") — sayfa değer gününe göre
- * azalan gelir (`AccountLedgerService.page`), ardışık aynı gün tek grup olur ve sıra korunur. Eklenen
- * sayfanın ilk günü öncekinin son günüyse aynı gruba katılır: başlık ikinci kez çizilmez.
+ * Listeyi ARDIŞIK anahtara göre gruplar (12.22 · 12.23) — hareketler günlere (`valueDate`), belgeler aylara
+ * (`issuedOn`) bölünür. İki sayfa da o tarihe göre azalan gelir (`AccountLedgerService.page` ·
+ * `MoneyDocumentService.page`): ardışık aynı anahtar tek grup olur, sıra korunur. Eklenen sayfanın ilk
+ * satırı öncekinin son grubundansa ona katılır — başlık ikinci kez çizilmez.
  */
-export function groupByDay<T extends Pick<MovementRowView, 'valueDate'>>(rows: readonly T[]): Array<{ day: string; rows: T[] }> {
-  const groups: Array<{ day: string; rows: T[] }> = [];
+export function groupConsecutive<T>(rows: readonly T[], keyOf: (row: T) => string): Array<{ key: string; rows: T[] }> {
+  const groups: Array<{ key: string; rows: T[] }> = [];
   for (const row of rows) {
-    const day = row.valueDate.slice(0, 10);
+    const key = keyOf(row);
     const last = groups[groups.length - 1];
-    if (last?.day === day) last.rows.push(row);
-    else groups.push({ day, rows: [row] });
+    if (last?.key === key) last.rows.push(row);
+    else groups.push({ key, rows: [row] });
   }
   return groups;
 }

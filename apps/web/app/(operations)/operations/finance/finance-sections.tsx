@@ -18,8 +18,9 @@ import { naturesForDirection } from '@/components/operation/form/movement-form/s
 import { ACCOUNT_GROUP_LABEL, EXPLAINED_LABEL, MOVEMENT_SOURCE_LABEL, MOVEMENT_TYPE_CHIP, MOVEMENT_TYPE_ORDER, NOTES } from './finance-labels';
 import { ledgerRowKey } from './finance-types';
 import type { AccountView, DialogKind, MovementRowView, RowEditor } from './finance-types';
-import { groupByDay } from './finance-read';
+import { groupConsecutive } from './finance-read';
 import { ALL_ACCOUNTS, type FinanceUrlState } from './finance-url';
+import { GroupHeading, ROW_EDGE } from './list-parts';
 import { MovementTypeIcon } from './movement-type-icon';
 import { MovementMatchCell, type RowMatcher } from './row-actions';
 import { useRowWrites } from './use-row-writes.hook';
@@ -295,13 +296,6 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
 // başlığına dönüştü, tutar en sağa geçti ve satırın en büyük yazısı oldu; izah noktası sol kenara.
 const ROW_GRID = 'grid grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,180px)_132px] items-center gap-x-3';
 
-/**
- * İzah bekleyen satırın SOL KENARI (12.22) — sağ uçtaki 8px nokta yerine: kuyruğu tararken göz satırın
- * başına bakar. İçe gölge, kenarlık değil: kenarlık yazıyı 3px iterdi, izahlı satırlarla hiza bozulurdu.
- * Renk tek başına söylemez: alt satırda "izah bekliyor — …" cümlesi, ekran okuyucuya gizli yazı var.
- */
-const UNEXPLAINED_EDGE = 'shadow-[inset_3px_0_0_0_var(--color-ops-amber)]';
-
 interface MovementListProps {
   rows: MovementRowView[];
   /** Boşken basılacak cümle — "hiç yok" ile "bu süzgeçte yok" ayrı cümlelerdir. */
@@ -332,24 +326,20 @@ export function MovementList({ rows, note, editor, matcher, hasMore, loadingMore
         <span className="text-right">Tutar</span>
       </div>
       <ul aria-label="Hareketler" className="min-h-0 flex-1 overflow-y-auto">
-        {groupByDay(rows).map((group) => {
-          const date = dayMonthLong(group.day, group.day.slice(0, 4) !== newestYear);
-          const weekday = weekdayName(group.day);
+        {groupConsecutive(rows, (row) => row.valueDate.slice(0, 10)).map((group) => {
+          const date = dayMonthLong(group.key, group.key.slice(0, 4) !== newestYear);
+          const weekday = weekdayName(group.key);
           return (
-            // GÜN (12.22): başlık kendi grubunun içinde yapışkan — kaydırırken üstte kalır, sıradaki günün
-            // başlığı gelince onu iter. Gün toplamı YAZILMAZ: sayfa ortasında bölünen günün toplamı eksik olurdu.
-            <li key={group.day}>
-              <h3 className="sticky top-0 z-[1] flex items-baseline gap-2 border-b border-ops-line bg-ops-surface-sunken px-6 py-1.5">
-                <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{date}</span>
-                <span className="font-ops-body text-ops-xs text-ops-muted">{weekday}</span>
-              </h3>
+            // GÜN (12.22): başlık yapışkan ve toplamsız — bkz. `GroupHeading`.
+            <li key={group.key}>
+              <GroupHeading title={date} detail={weekday} />
               <ul aria-label={`${date} ${weekday}`}>
                 {group.rows.map((row) => (
                   // SATIR SEÇİLMEZ (12.21): her iş satırın kendi kontrolünde. Görsel sıra bilginin önemine göre
                   // (12.22): tutar en büyük ve sağ kenarda, açıklama gövde boyunda, kontroller sakin.
                   <li
                     key={ledgerRowKey(row)}
-                    className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2 transition-colors hover:bg-ops-subtle ${row.explained ? '' : UNEXPLAINED_EDGE}`}
+                    className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2 transition-colors hover:bg-ops-subtle ${row.explained ? '' : ROW_EDGE.amber}`}
                   >
                     <div className="flex min-w-0 flex-col gap-0.5">
                       {/* Kesilen açıklamanın tamamı fareyle üstüne gelince okunur. */}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ageMinutesOf, dayMonthLong, weekdayName } from './format';
+import { ageMinutesOf, dayMonthLong, monthYear, weekdayName } from './format';
 
 // Yaş hesabı üç ekranın (talepler · sistem · asistan kuyruğu) ortak girdisi; sınaması burada, tek
 // yerde. Önceden iki ayrı tanım vardı ve BOZUK damgada ayrışıyorlardı — bu dosyanın asıl işi o
@@ -33,8 +33,14 @@ describe('gün başlığı', () => {
     expect(weekdayName('2026-09-11')).toBe('Cuma');
   });
 
+  it('ay başlığı yılıyla (12.23)', () => {
+    expect(monthYear('2026-09-01')).toBe('Eylül 2026');
+    expect(monthYear('2025-12-31')).toBe('Aralık 2025');
+  });
+
   it('okunamayan tarih "—" — boş başlık ya da "Invalid Date" basılmaz', () => {
     expect(dayMonthLong('bozuk-tarih')).toBe('—');
     expect(weekdayName(null)).toBe('—');
+    expect(monthYear('bozuk-tarih')).toBe('—');
   });
 });

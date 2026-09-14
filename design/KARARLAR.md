@@ -2720,6 +2720,20 @@ gelecek zaten."* Karar (kullanıcı seçimi "günlere göre gruplu", 12.22):
   ekle belge, Banka dosyası yükle yükleme, Sözlük kapalı kitap (Tarifler'in açık kitabı değil — menü öğesi
   başka modülün simgesini taşımasın); belge satırının ⋯ menüsünde "Ödemesini yaz" € ve "Belgeyi aç" belge.
 
+## Para: belge satırı da bilginin önemine göre — aylara göre gruplu, belge tutarı en büyük (14.09)
+
+Kullanıcı: *"Aynı çalışmayı belgeler tablosu için de yapmanı istiyorum."* Karar (kullanıcı seçimleri
+"aylara göre" · "belge tutarı, altında açık kalan", 12.23):
+
+- **Aylara göre gruplu, günlere değil:** fatura, kira, telefon aylık gelir; günlere bölünse neredeyse her
+  belge kendi başlığını alırdı (yerelde 3 belge, 3 ayrı gün). Ay başlığı yapışkan ve toplamsız ("Eylül
+  2026" — ay adı yıllar arasında tekrarladığı için yıl hep yazılır); belgenin günü alt satırın başında.
+- **Tutar ile açık kalan tek sütunda:** üstte belge tutarı (17px, kalın, mono — belgeyi tanıtan ve hep aynı
+  kalan değer), altında renkli hâl: "açık 360,00" amber · "kapandı" yeşil · "fazla ödendi …" kırmızı. Açık
+  kalanı büyük yazmak kapanmış belgede sütuna yazı koyar, rakamların hizalı taranması bozulurdu.
+- **Açık belgenin solunda amber, fazla ödenmişin solunda kırmızı çizgi;** sağ uçtaki nokta kalktı. Grup
+  başlığı ve kenar hareket listesiyle ortak.
+
 ## Başlık ve yer paneli v1'in BİREBİR aynısı — önce ülke (13.09, kullanıcı kararı)
 
 Kullanıcı: *"Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."*

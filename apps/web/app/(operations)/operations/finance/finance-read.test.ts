@@ -1,7 +1,7 @@
 import type { AccountLedgerRow } from '@lezzet/types';
 import { describe, expect, it } from 'vitest';
 import type { MatchTarget } from '@/lib/bank/reconcile';
-import { groupByDay, toMovementRows, type MovementReadContext } from './finance-read';
+import { groupConsecutive, toMovementRows, type MovementReadContext } from './finance-read';
 
 /**
  * Defter satırının görünümü (12.21 · sağ panel kalktı): BAĞ "Karşılığı" sütununa (`link`), İPUCU
@@ -78,24 +78,34 @@ describe('toMovementRows — bağ ve ipucu', () => {
   });
 });
 
-describe('groupByDay — defterin gün başlıkları (12.22)', () => {
-  const at = (id: string, valueDate: string) => ({ id, valueDate });
+describe('groupConsecutive — listenin grup başlıkları (12.22 · 12.23)', () => {
+  const at = (id: string, date: string) => ({ id, date });
+  const day = (row: { date: string }) => row.date.slice(0, 10);
+  const month = (row: { date: string }) => row.date.slice(0, 7);
 
-  it('ardışık aynı gün tek grup, sıra korunur', () => {
-    const groups = groupByDay([at('a', '2026-09-14'), at('b', '2026-09-14'), at('c', '2026-09-11')]);
-    expect(groups.map((group) => [group.day, group.rows.map((row) => row.id)])).toEqual([
+  it('hareketler: ardışık aynı gün tek grup, sıra korunur', () => {
+    const groups = groupConsecutive([at('a', '2026-09-14'), at('b', '2026-09-14'), at('c', '2026-09-11')], day);
+    expect(groups.map((group) => [group.key, group.rows.map((row) => row.id)])).toEqual([
       ['2026-09-14', ['a', 'b']],
       ['2026-09-11', ['c']],
     ]);
   });
 
-  it('eklenen sayfanın ilk günü öncekinin son günüyse aynı gruba katılır', () => {
-    const firstPage = [at('a', '2026-09-14'), at('b', '2026-09-11')];
-    const nextPage = [at('c', '2026-09-11'), at('d', '2026-09-10')];
-    expect(groupByDay([...firstPage, ...nextPage]).map((group) => group.rows.length)).toEqual([1, 2, 1]);
+  it('belgeler: aynı ayın günleri tek grupta', () => {
+    const groups = groupConsecutive([at('a', '2026-09-09'), at('b', '2026-09-04'), at('c', '2026-08-16')], month);
+    expect(groups.map((group) => [group.key, group.rows.length])).toEqual([
+      ['2026-09', 2],
+      ['2026-08', 1],
+    ]);
   });
 
-  it('boş defter boş liste', () => {
-    expect(groupByDay([])).toEqual([]);
+  it('eklenen sayfanın ilk satırı öncekinin son grubundansa ona katılır', () => {
+    const firstPage = [at('a', '2026-09-14'), at('b', '2026-09-11')];
+    const nextPage = [at('c', '2026-09-11'), at('d', '2026-09-10')];
+    expect(groupConsecutive([...firstPage, ...nextPage], day).map((group) => group.rows.length)).toEqual([1, 2, 1]);
+  });
+
+  it('boş liste boş grup', () => {
+    expect(groupConsecutive([], day)).toEqual([]);
   });
 });

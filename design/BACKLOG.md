@@ -502,12 +502,13 @@ solda, kapalılar en sonda, taşarsa yatay kayar); süzgeç satırında "Hareket
 "+ tip", tarih aralığı çipi, izah rozeti ve başlıktaki beş düğmenin yerine "Eylemler" menüsü; ~~satır
 tıklanınca sağ sütunda hareketin ya da belgenin ayrıntı paneli~~ (12.21: panel kalktı — satırın işi satırda:
 hareketin "Karşılığı" hapı ve ✓'si, belgenin ödeme hapı ve ⋯ menüsü); defter günlere göre gruplu, tutar satırın
-en büyük yazısı ve sağ kenarda, izah bekleyen satırın solunda amber çizgi, eylem menülerinde ikon (12.22);
+en büyük yazısı ve sağ kenarda, izah bekleyen satırın solunda amber çizgi, eylem menülerinde ikon (12.22); belgeler aylara göre gruplu, belge tutarı büyük ve altında
+renkli açık kalan, açık belgenin solunda amber çizgi (12.23);
 eşleştirme penceresinin yerine tetikleyiciye bağlı seçici menü. Çizim yapılırsa bakılacaklar:
 hareket tipi ikonları (12.20) ve eylem menülerinin ikonları (12.22), şeridin grup başlıkları ve kapalı hesabın sönüklüğü, orta hücrenin dar bütçesinde kesilen adların
 okunurluğu (tür önce, cari iki kat hızlı daralır), "Karşılığı" sütununun hâlleri (öneri · kısmen
-bağlı · eşleşti · düz bağ) ve ✓'nin yeri, gün başlığının ve tutarın boyu (12.22), seçici menüde önerinin hedef listesinden ayrışması, belge
-satırının açık kalan sütunu.
+bağlı · eşleşti · düz bağ) ve ✓'nin yeri, gün ve ay başlığının, tutarın boyu (12.22 · 12.23), seçici menüde önerinin hedef listesinden ayrışması, belge
+satırında tutarın altındaki hâl (12.23).
 **Eki (12.13 · 12.16):** eşleştirme kuyruğunun (12.19'da kalktı — seçici 12.21'den beri satırın "Karşılığı" hapında) "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız
 sipariş adaylarını gösteriyordu; artık bir HEDEF SEÇİCİ (12.17'den beri pencere değil, tetikleyiciye bağlı menü) — öneriler üstte, altında yöne uyan bütün
 hedefler bölüm bölüm (zaten yazılmış hareket · açık belge · mal kabul · transfer ucu · sipariş · iade

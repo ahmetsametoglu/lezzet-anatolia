@@ -2,10 +2,12 @@
 
 import { Badge } from '@/components/operation/ui/badge';
 import { EmptyState } from '@/components/operation/ui/empty-state';
-import { dayMonth, money } from '@/components/operation/ui/format';
+import { amount, dayMonth, money, monthYear } from '@/components/operation/ui/format';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { DOCUMENT_DIRECTION_LABEL, DOCUMENT_STATE_LABEL, NOTES } from './finance-labels';
+import { groupConsecutive } from './finance-read';
 import type { DocumentRowView } from './finance-types';
+import { GroupHeading, ROW_EDGE } from './list-parts';
 import { DocumentActionsCell, type DocumentRowActions } from './row-actions';
 
 /*
@@ -17,9 +19,15 @@ import { DocumentActionsCell, type DocumentRowActions } from './row-actions';
 
   12.21 (sağ panel kalktı): belgenin işi SATIRINDA — ödeme hapı (bağlı ödemeler, kaldırma, adaylar) ve
   ⋯ menüsü ("Ödemesini yaz", "Belgeyi aç"); panelin KDV'si satırın ikinci satırında.
+
+  12.23 (kullanıcı isteği: "aynı çalışmayı belgeler tablosu için de yap" · seçimler: "aylara göre",
+  "belge tutarı, altında açık kalan"): liste aylara göre gruplu — fatura, kira, telefon aylık gelir,
+  günlere bölünse neredeyse her belge kendi başlığını alırdı; belgenin günü alt satırın başında. Tutar ile
+  açık kalan tek sütunda: üstte belge tutarı (satırın en büyük yazısı, sağ kenarda), altında renkli hâl.
+  Açık belgenin solunda amber, fazla ödenmişin solunda kırmızı çizgi; sağ uçtaki nokta kalktı.
 */
 
-const DOC_GRID = 'grid grid-cols-[56px_minmax(0,1.5fr)_minmax(0,1fr)_100px_112px_minmax(0,220px)_10px] items-center gap-x-3';
+const DOC_GRID = 'grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,240px)_140px] items-center gap-x-3';
 
 type DocumentState = keyof typeof DOCUMENT_STATE_LABEL;
 
@@ -35,11 +43,17 @@ const STATE_TEXT: Record<DocumentState, string> = {
   overpaid: 'text-ops-red',
 };
 
-const STATE_DOT: Record<DocumentState, string> = {
-  open: 'bg-ops-amber',
-  settled: 'bg-ops-olive',
-  overpaid: 'bg-ops-red',
+/** İş bekleyen belgenin sol kenarı — açık amber, fazla ödenmiş kırmızı; kapanmış belge sessiz. */
+const STATE_EDGE: Record<DocumentState, string> = {
+  open: ROW_EDGE.amber,
+  settled: '',
+  overpaid: ROW_EDGE.red,
 };
+
+/** Tutarın altındaki hâl: "açık 360,00" · "kapandı" · "fazla ödendi 12,00" — kalan varsa rakamıyla. */
+function stateLine(document: DocumentRowView, state: DocumentState): string {
+  return state === 'settled' ? DOCUMENT_STATE_LABEL.settled : `${DOCUMENT_STATE_LABEL[state]} ${amount(Math.abs(document.openAmountCents))}`;
+}
 
 interface DocumentListProps {
   rows: DocumentRowView[];
@@ -61,46 +75,54 @@ export function DocumentList({ rows, note, tagLabels, actions, hasMore, loadingM
       <div
         className={`${DOC_GRID} border-b border-ops-line px-6 py-2.5 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-faint`}
       >
-        <span>Tarih</span>
         <span>Belge</span>
         <span>Tür · etiket</span>
-        <span className="text-right">Tutar</span>
-        <span className="text-right">Açık kalan</span>
         <span className="text-right">Ödeme</span>
-        <span />
+        <span className="text-right">Tutar</span>
       </div>
       <ul aria-label="Belgeler" className="min-h-0 flex-1 overflow-y-auto">
-        {rows.map((document) => {
-          const state = stateOf(document);
-          const classes = [document.natureLabel, ...document.tags.map((tag) => tagLabels.get(tag) ?? tag)].filter(Boolean).join(' · ');
-          const heading = `${document.number ? `${document.number} · ` : ''}${document.partyName ?? '—'}`;
+        {groupConsecutive(rows, (document) => document.issuedOn.slice(0, 7)).map((group) => {
+          const month = monthYear(`${group.key}-01`);
           return (
-            <li key={document.id} className={`${DOC_GRID} border-b border-ops-line-soft px-6 py-2 transition-colors hover:bg-ops-subtle`}>
-              <span className="font-ops-mono text-ops-xs text-ops-faint">{dayMonth(document.issuedOn)}</span>
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <Badge tone={document.direction === 'out' ? 'amber' : 'olive'} outline className="shrink-0">
-                    {document.kindLabel}
-                  </Badge>
-                  <span title={heading} className="min-w-0 truncate font-ops-body text-ops-sm text-ops-ink">
-                    {document.number ? <span className="font-ops-mono">{document.number} · </span> : null}
-                    {document.partyName ?? '—'}
-                  </span>
-                </span>
-                {/* KDV belgede yoksa yazılmaz: sıfır "KDV yok" demek olurdu, "bilinmiyor" değil (CLAUDE §1). */}
-                <span className="truncate font-ops-body text-ops-micro text-ops-faint">
-                  {DOCUMENT_DIRECTION_LABEL[document.direction]}
-                  {document.vatAmountCents === null ? '' : ` · KDV ${money(document.vatAmountCents)}`}
-                  {document.note ? ` · ${document.note}` : ''}
-                </span>
-              </div>
-              <span className="truncate font-ops-body text-ops-xs text-ops-muted">{classes || '—'}</span>
-              <span className="text-right font-ops-mono text-ops-sm text-ops-ink">{money(document.amountCents)}</span>
-              <span className={`text-right font-ops-mono text-ops-sm ${STATE_TEXT[state]}`}>
-                {state === 'settled' ? DOCUMENT_STATE_LABEL.settled : money(document.openAmountCents)}
-              </span>
-              <DocumentActionsCell document={document} actions={actions} />
-              <span title={DOCUMENT_STATE_LABEL[state]} aria-label={DOCUMENT_STATE_LABEL[state]} role="img" className={`size-2 rounded-full ${STATE_DOT[state]}`} />
+            // AY (12.23): başlık yapışkan ve toplamsız — bkz. `GroupHeading`.
+            <li key={group.key}>
+              <GroupHeading title={month} />
+              <ul aria-label={month}>
+                {group.rows.map((document) => {
+                  const state = stateOf(document);
+                  const classes = [document.natureLabel, ...document.tags.map((tag) => tagLabels.get(tag) ?? tag)].filter(Boolean).join(' · ');
+                  const heading = `${document.number ? `${document.number} · ` : ''}${document.partyName ?? '—'}`;
+                  return (
+                    <li key={document.id} className={`${DOC_GRID} border-b border-ops-line-soft px-6 py-2 transition-colors hover:bg-ops-subtle ${STATE_EDGE[state]}`}>
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <Badge tone={document.direction === 'out' ? 'amber' : 'olive'} outline className="shrink-0">
+                            {document.kindLabel}
+                          </Badge>
+                          <span title={heading} className="min-w-0 truncate font-ops-body text-ops-base text-ops-ink">
+                            {document.number ? <span className="font-ops-mono">{document.number} · </span> : null}
+                            {document.partyName ?? '—'}
+                          </span>
+                        </span>
+                        {/* Günü alt satırın başında — ay başlıkta. KDV belgede yoksa yazılmaz: sıfır "KDV yok" demek
+                            olurdu, "bilinmiyor" değil (CLAUDE §1). */}
+                        <span className="truncate font-ops-body text-ops-micro text-ops-faint">
+                          {dayMonth(document.issuedOn)} · {DOCUMENT_DIRECTION_LABEL[document.direction]}
+                          {document.vatAmountCents === null ? '' : ` · KDV ${money(document.vatAmountCents)}`}
+                          {document.note ? ` · ${document.note}` : ''}
+                        </span>
+                      </div>
+                      <span className="truncate font-ops-body text-ops-xs text-ops-muted">{classes || '—'}</span>
+                      <DocumentActionsCell document={document} actions={actions} />
+                      {/* TUTAR (12.23): belge tutarı satırın en büyük yazısı, sağ kenarda; altında renkli hâl. */}
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="whitespace-nowrap font-ops-mono text-ops-lead font-semibold text-ops-ink">{amount(document.amountCents)}</span>
+                        <span className={`whitespace-nowrap font-ops-mono text-ops-xs ${STATE_TEXT[state]}`}>{stateLine(document, state)}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             </li>
           );
         })}
