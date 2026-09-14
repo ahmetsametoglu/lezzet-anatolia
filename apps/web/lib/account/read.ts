@@ -86,6 +86,11 @@ export interface AccountView {
      * ikisi sessizce 404'e düşerdi). `null` = kod üretilemedi; blok hiç çizilmez.
      */
     inviteUrl: string | null;
+    /**
+     * Davet kodu — telefon görünümünün davet kartı native'deki gibi kodu gösterir (telefonda okunur, söylenir);
+     * paylaşılan şey yine bağlantıdır (`inviteUrl`). İkisi puan kartının aynı okumasından gelir (14.09).
+     */
+    referralCode: string | null;
     /** Davet ödülünün puan değeri — `neighborPoints` ile aynı kural: `null` ise söz verilmez. */
     referralPoints: number | null;
   } | null;
@@ -199,6 +204,7 @@ async function readPointsAndCoupons(
       pendingNeighborAwards: card.pendingNeighborAwards,
       neighborPoints: card.earnWays.find((way) => way.key === 'neighbor')?.points ?? null,
       inviteUrl: card.inviteUrl,
+      referralCode: card.referralCode,
       referralPoints: card.earnWays.find((way) => way.key === 'referral')?.points ?? null,
     },
     view.coupons,

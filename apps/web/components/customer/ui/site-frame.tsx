@@ -53,7 +53,8 @@ const SHELL = 'mx-auto w-full max-w-[1360px]';
  * Dizi burada, `messages.json`da değil: metin dile göre değişir ama HANGİ sayfaların olduğu ve
  * hangi sırayla durdukları dile göre değişmez. Sözlüğe gömülseydi bir dilde bir satır eksik
  * kalabilir ve o dilin ziyaretçisi sayfayı hiç göremezdi. Mobil webde aynı liste hesap ekranının
- * en altında (`SiteLinks`) — footer'ı olmayan kabuğun yasal yolu.
+ * en altında (`account/components/legal-directory.tsx`, native'in bilgi kartı) — footer'ı olmayan
+ * kabuğun yasal yolu.
  */
 export const LEGAL_LINKS = [
   { key: 'terms', href: '/legal/terms' },

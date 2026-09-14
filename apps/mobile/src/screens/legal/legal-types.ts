@@ -1,17 +1,18 @@
 import type { LocalizedCopy } from '@lezzet/i18n';
 // DEĞER bağı: tip `typeof messages`ten türüyor, ama `isLegalPageKey` sözlüğü ÇALIŞMA ZAMANINDA da
 // yokluyor — `import type` yeterli olmazdı.
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/legal';
 
 /*
   BİLGİ SAYFALARININ tip modülü (view DEĞİL) — beş sayfanın ORTAK sözleşmesi.
 
-  Metnin kendisi `messages.json`'da ve oraya ELLE yazılmadı: web'in `legal` klasöründeki beş
-  `content.json` dosyasından üretildi (üç dil, beş sayfa, ~82 KB;
-  `apps/web/app/(customer)/[locale]/legal`). Aynı cümlelerin iki yüzeyde iki kopyası bugün ZORUNLU — hukuk metinleri için
-  paylaşılan bir içerik paketi yok ve `packages/*` bu şeridin yazma alanı değil; terfi ihtiyacı
-  raporlandı. Kopyanın kendisi elle taşınmadığı için ilk günün sapma riski yok, ama metin
-  güncellendiğinde İKİ yerin birlikte güncellenmesi gerekir.
+  Metnin kendisi ortak sözlükte (`packages/i18n/src/customer/legal.json`, 14.09 — web'in telefon
+  hesap ekranı "bilgi ve koşullar" kartının başlığını ve sayfa adlarını oradan okuyor) ve oraya ELLE
+  yazılmadı: web'in `legal` klasöründeki beş `content.json` dosyasından üretildi (üç dil, beş sayfa,
+  ~82 KB; `apps/web/app/(customer)/[locale]/legal`). Belge metninin iki yüzeyde iki kopyası bugün
+  duruyor — web'in belge sayfaları hâlâ kendi `content.json`larını okuyor. Kopyanın kendisi elle
+  taşınmadığı için ilk günün sapma riski yok, ama metin güncellendiğinde İKİ yerin birlikte
+  güncellenmesi gerekir.
 */
 
 export type Messages = LocalizedCopy<typeof messages>;

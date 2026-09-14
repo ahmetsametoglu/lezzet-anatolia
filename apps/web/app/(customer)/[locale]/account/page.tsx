@@ -2,18 +2,19 @@ import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { CART_LINK_PARAM, type Locale } from '@lezzet/i18n';
+import legalMessages from '@lezzet/i18n/customer/legal';
 import { readChatLinkNotice } from '@/lib/identity/invite-cookie';
 import { CART_LINK_TO_ACCOUNT, parseChatLinkNotice } from '@/lib/identity/cart-link-landing';
 import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getAccountView } from '@/lib/account/read';
-import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { LEGAL_LINKS, SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { SignOutLink } from '@/components/customer/account/sign-out-link';
 import { AccountClient } from './account-client';
 import { AccountGuest } from './components/account-guest';
-import type { Messages } from './account-types';
+import type { LegalDirectoryView, Messages } from './account-types';
 import messages from './messages.json';
 
 /**
@@ -21,9 +22,9 @@ import messages from './messages.json';
  * bakılamıyordu.
  *
  * **Girişsiz ziyaretçi 404 GÖRMEZ.** Sayfanın kendisi bir sır değil; müşterinin eksiği kimlik. 404
- * "böyle bir sayfa yok" der ve yanlıştır. Masaüstünde girişe yönlenir; mobil webde misafir kartını
- * görür (v1 "Hesabınıza girin", 13.09) — sekme çubuğundaki "Hesabım" herkese açık ve yasal
- * bağlantılarla dil seçiminin mobildeki tek yeri bu ekran (`SiteLinks`).
+ * "böyle bir sayfa yok" der ve yanlıştır. Masaüstünde girişe yönlenir; mobil webde misafir hâlini
+ * görür (native hesabın misafir hâli, 14.09) — sekme çubuğundaki "Hesabım" herkese açık ve telefon
+ * görünümünde yasal sayfalarla dil seçiminin tek yeri bu ekran (`LegalDirectory` · `LanguageCard`).
  *
  * Kanal (B2C/B2B) SAKLANMAZ, şirket künyesinden türer: B2C'de şirket bölümü, B2B'de puan/kupon
  * bölümü DOM'da hiç yoktur (tasarımın kuralı) — gri gösterilmez, hiç doğmaz.
@@ -50,12 +51,19 @@ export default async function AccountPage({ params, searchParams }: AccountPageP
   void recordPageView('/account');
 
   const t: Messages = messages[locale];
+  // Telefonun "bilgi ve koşullar" kartı — başlık ve beş sayfa adı ortak bilgi sözlüğünden, SUNUCUDA: sözlük belge
+  // metinlerini de taşıyor, istemciye yalnız bu altı cümle gider (`LegalDirectory` künyesi).
+  const legalCopy = legalMessages[locale];
+  const legal: LegalDirectoryView = {
+    title: legalCopy.directoryTitle,
+    links: LEGAL_LINKS.map((link) => ({ href: link.href, label: legalCopy.pages[link.key].title })),
+  };
   const [device, customerId, rawNotice] = await Promise.all([detectDevice(), currentCustomerId(), readChatLinkNotice()]);
   if (!customerId) {
     if (device === 'mobile') {
       return (
         <SiteFrame device={device} locale={locale} accountChrome={{ nav: 'account', title: t.title }}>
-          <AccountGuest t={t} locale={locale as Locale} />
+          <AccountGuest locale={locale as Locale} legal={legal} />
         </SiteFrame>
       );
     }
@@ -68,7 +76,7 @@ export default async function AccountPage({ params, searchParams }: AccountPageP
 
   return (
     <SiteFrame device={device} locale={locale} accountChrome={{ nav: 'account', title: t.title, right: <SignOutLink locale={locale as Locale} /> }}>
-      <AccountClient t={t} locale={locale} account={account} device={device} chatNotice={parseChatLinkNotice(rawNotice)} />
+      <AccountClient t={t} locale={locale} account={account} device={device} chatNotice={parseChatLinkNotice(rawNotice)} legal={legal} />
     </SiteFrame>
   );
 }

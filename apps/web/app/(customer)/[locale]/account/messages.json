@@ -1,9 +1,6 @@
 {
   "tr": {
     "title": "Hesabım",
-    "guestTitle": "Hesabınıza girin",
-    "guestBody": "Siparişlerinizi takip etmek, adres kaydetmek ve puan kazanmak için doğrulanın. Şifre gerekmez.",
-    "guestCta": "Doğrulan",
     "edit": "Düzenle",
     "profileTitle": "Profil",
     "name": "Ad",
@@ -134,9 +131,6 @@
   },
   "fr": {
     "title": "Mon compte",
-    "guestTitle": "Accédez à votre compte",
-    "guestBody": "Vérifiez-vous pour suivre vos commandes, enregistrer vos adresses et gagner des points. Aucun mot de passe.",
-    "guestCta": "Se vérifier",
     "edit": "Modifier",
     "profileTitle": "Profil",
     "name": "Nom",
@@ -267,9 +261,6 @@
   },
   "de": {
     "title": "Mein Konto",
-    "guestTitle": "Zu Ihrem Konto",
-    "guestBody": "Bestätigen Sie sich, um Bestellungen zu verfolgen, Adressen zu speichern und Punkte zu sammeln. Kein Passwort nötig.",
-    "guestCta": "Bestätigen",
     "edit": "Bearbeiten",
     "profileTitle": "Profil",
     "name": "Name",

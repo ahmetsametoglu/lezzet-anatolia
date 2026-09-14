@@ -5,7 +5,7 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import type { AccountView } from '@/lib/account/read';
 import type { ChatLinkNotice } from '@/lib/identity/cart-link-landing';
-import type { Messages } from './account-types';
+import type { LegalDirectoryView, Messages } from './account-types';
 import { AccountDesktop } from './account.desktop';
 import { AccountMobile } from './account.mobile';
 
@@ -19,9 +19,11 @@ interface AccountClientProps {
   account: AccountView;
   device: Device;
   chatNotice: ChatLinkNotice | null;
+  /** Telefon görünümünün bilgi ve koşullar kartı — sunucuda kurulur (`page.tsx`). */
+  legal: LegalDirectoryView;
 }
 
-export function AccountClient({ t, locale, account, device, chatNotice }: AccountClientProps) {
-  const view = { t, locale, account, chatNotice };
+export function AccountClient({ t, locale, account, device, chatNotice, legal }: AccountClientProps) {
+  const view = { t, locale, account, chatNotice, legal };
   return useDevice(device) === 'mobile' ? <AccountMobile {...view} /> : <AccountDesktop {...view} />;
 }

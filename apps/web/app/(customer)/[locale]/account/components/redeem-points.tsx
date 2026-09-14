@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
@@ -34,9 +34,14 @@ interface RedeemPointsProps {
   redeem: { minimumPoints: number; valueCents: number };
   enough: boolean;
   compact?: boolean;
+  /**
+   * Tetikleyiciyi çağıran çizer — telefon görünümü native'in birincil düğmesini kullanır (açık kum puan kartı); verilmezse
+   * koyu kartın hapı. Onay diyaloğu İKİ hâlde de aynı: geri alınamaz işin kapısı tek.
+   */
+  renderTrigger?: (open: () => void) => ReactNode;
 }
 
-export function RedeemPoints({ t, locale, redeem, enough, compact = false }: RedeemPointsProps) {
+export function RedeemPoints({ t, locale, redeem, enough, compact = false, renderTrigger }: RedeemPointsProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -54,23 +59,27 @@ export function RedeemPoints({ t, locale, redeem, enough, compact = false }: Red
 
   return (
     <>
-      <button
-        type="button"
-        disabled={!enough}
-        onClick={() => setOpen(true)}
-        className={[
-          'rounded-pill font-sans font-bold transition-colors',
-          compact ? 'px-3.5 py-2 text-micro' : 'px-4 py-2.5 text-note',
-          // Koyu kartın İÇİNDE duruyor: aktif hâli tasarımın açık zeytini, pasif hâli aynı kartın
-          // saydam katmanı. Yüzeyin `Button` kiti burada kullanılmıyor çünkü o krem/beyaz zemin
-          // için kurulmuş — koyu kart üstünde kendi kontrastını taşımıyor.
-          enough
-            ? 'cursor-pointer bg-olive-light text-ink hover:bg-cream'
-            : 'cursor-not-allowed bg-cream/10 text-cream/45',
-        ].join(' ')}
-      >
-        {t.pointsRedeem}
-      </button>
+      {renderTrigger ? (
+        renderTrigger(() => setOpen(true))
+      ) : (
+        <button
+          type="button"
+          disabled={!enough}
+          onClick={() => setOpen(true)}
+          className={[
+            'rounded-pill font-sans font-bold transition-colors',
+            compact ? 'px-3.5 py-2 text-micro' : 'px-4 py-2.5 text-note',
+            // Koyu kartın İÇİNDE duruyor: aktif hâli tasarımın açık zeytini, pasif hâli aynı kartın
+            // saydam katmanı. Yüzeyin `Button` kiti burada kullanılmıyor çünkü o krem/beyaz zemin
+            // için kurulmuş — koyu kart üstünde kendi kontrastını taşımıyor.
+            enough
+              ? 'cursor-pointer bg-olive-light text-ink hover:bg-cream'
+              : 'cursor-not-allowed bg-cream/10 text-cream/45',
+          ].join(' ')}
+        >
+          {t.pointsRedeem}
+        </button>
+      )}
 
       {/* Diyalog `compact` ALMAZ — karar `design/BACKLOG`ta yazılı (03.08): envanterin mobil
           dokunma kademesi (52/48) sayfa düzeyindeki eylemler için; diyalog sınırlanmış bir

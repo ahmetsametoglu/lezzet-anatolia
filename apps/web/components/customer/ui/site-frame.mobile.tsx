@@ -48,9 +48,10 @@ type TabKey = keyof (typeof tabBarCopy)['tr']['tabs'];
  * detayı) — sekme köklerinde çubuğun 20px üstünde, detayda alttan 112px (native ölçüleri).
  *
  * ── YASAL BAĞLANTILAR VE DİL ────────────────────────────────────────────────────────
- * Mobilde footer yok. Yasal sayfalar ve dil seçimi hesap ekranının en altında (kullanıcı kararı
- * 13.09, `account/components/site-links.tsx`): hesap bir sekme kökü, her kökten tek dokunuş — misafir
- * de görür.
+ * Mobilde footer yok. Yasal sayfalar hesap ekranının en altında, native'in "bilgi ve koşullar" kartı
+ * (`account/components/legal-directory.tsx`, 14.09 — v1'in ince bağlantı satırının yerine); dil seçimi
+ * hesabın dil kartında (`account/components/language-card.tsx`). Hesap bir sekme kökü, her kökten tek
+ * dokunuş — misafir de görür.
  *
  * ── ZEMİN VE ÇENTİK ─────────────────────────────────────────────────────────────────
  * Zemin native'in ekran yüzeyi (`sand-50`). Yatay tutuşta çentik payı kökte (`viewport-fit=cover`,

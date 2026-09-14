@@ -440,7 +440,7 @@ Genel blueprint §10 ile aynı. Env'e yalnız sır + ortama göre değişen değ
 | Alan adı (site kökü) | `packages/i18n` — `siteOrigin()` (`NEXT_PUBLIC_SITE_URL`) |
 | Renkler | `packages/design-tokens` + web `globals.css` (parite testiyle birebir) |
 | Logo yolu | tek sabiti yok — web'de elle yazılı (`/logo.…`) |
-| Yasal metinler | sayfanın kendi dosyası: web `legal/*/content.json` + `legal-messages.json`, native `screens/legal/messages.json` |
+| Yasal metinler | sayfanın kendi dosyası: web `legal/*/content.json` + `legal-messages.json`; native ortak sözlükten `packages/i18n/src/customer/legal.json` (14.09 — web'in telefon hesap ekranı bilgi kartının başlığını ve sayfa adlarını da oradan okur) |
 | Arayüz metinleri (tr/fr/de) | her sayfanın yanındaki `messages.json` (tipi `LocalizedCopy`, `@lezzet/i18n`); iki yüzeyin ortak bildirim cümleleri `packages/i18n/src/notification-copy.ts` |
 | **Müşteri URL yol tablosu** (iç yol → dile göre segment) | `packages/i18n/src/paths.ts` (`PATHNAMES`) — apps/web next-intl'i, apps/backend giden bağlantıyı, native uygulama derin bağlantıyı bununla kurar; iki kopya olsaydı biri eskir, mail 404'e düşerdi |
 | Fiziksel ölçüler, sabit oranlar, para dönüşümü (`toCents`/`fromCents`) | `packages/helper` |

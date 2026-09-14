@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react-native';
 
 import type { MeAddress } from '@/lib/api/addresses';
 import { AddressCard } from './address-card';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/account';
 
 /*
   KARTIN DÜZEN KURALI — üçüncü eylem satıra sığmaz.

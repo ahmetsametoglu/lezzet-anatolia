@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { errorText } from '@/lib/customer-error-text';
 import { signOutAction } from '@/lib/auth/actions';
 import { deleteAccountAction } from '../actions';
@@ -40,9 +41,14 @@ import type { Messages } from '../account-types';
  */
 interface DeleteAccountProps {
   t: Messages;
+  /**
+   * Telefon görünümü — tetikleyici native'in terracotta METİN eylemi (`TextAction`; native veri kartının son satırı).
+   * Diyalog iki hâlde de aynı: ne gittiği ve ne kaldığı ayrı ayrı yazılı.
+   */
+  compact?: boolean;
 }
 
-export function DeleteAccount({ t }: DeleteAccountProps) {
+export function DeleteAccount({ t, compact = false }: DeleteAccountProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -68,9 +74,15 @@ export function DeleteAccount({ t }: DeleteAccountProps) {
       {/* Ton terracotta, dolgulu DEĞİL: bu bir birincil eylem değil — hesap sayfasının işi hesabı
           yönetmek, silmek onun en uç ucu. Dolgulu kırmızı bir düğme, sayfanın en güçlü çağrısı
           olurdu ve müşteriyi silmeye davet ederdi. */}
-      <Button variant="ghost" size="sm" className="!px-0 !text-terracotta-bright hover:!text-terracotta" onClick={() => setOpen(true)}>
-        {t.deleteAccount.action}
-      </Button>
+      {compact ? (
+        <span className="self-start">
+          <TextAction label={t.deleteAccount.action} tone="terracotta" onClick={() => setOpen(true)} />
+        </span>
+      ) : (
+        <Button variant="ghost" size="sm" className="!px-0 !text-terracotta-bright hover:!text-terracotta" onClick={() => setOpen(true)}>
+          {t.deleteAccount.action}
+        </Button>
+      )}
 
       {open && (
         <Dialog title={t.deleteAccount.title} closeLabel={t.deleteAccount.cancel} onClose={() => setOpen(false)} maxWidth={460}>

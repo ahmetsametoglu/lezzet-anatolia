@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { NavRow } from '@/screens/customer-kit/nav-row';
 import type { Messages } from './legal-types';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/legal';
 
 /*
   BİLGİ SAYFALARININ KAPISI — beş belgenin tek listesi.

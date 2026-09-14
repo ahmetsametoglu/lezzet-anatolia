@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 
 import { resetPlaceNotices } from '@/lib/places/place-notice-store';
 import { AccountScreen } from './account-screen';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/account';
 
 /*
   HESAP EKRANI TESTİ — bu turda EKLENEN şey ekranın ÇIKIŞLARIDIR (21.14 ikinci dilim): profil

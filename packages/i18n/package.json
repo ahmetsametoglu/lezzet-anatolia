@@ -18,7 +18,9 @@
     "./customer/recipes": "./src/customer/recipes.json",
     "./customer/recipe-detail": "./src/customer/recipe-detail.json",
     "./customer/cart": "./src/customer/cart.json",
-    "./customer/checkout": "./src/customer/checkout.json"
+    "./customer/checkout": "./src/customer/checkout.json",
+    "./customer/account": "./src/customer/account.json",
+    "./customer/legal": "./src/customer/legal.json"
   },
   "types": "./src/index.ts",
   "scripts": {

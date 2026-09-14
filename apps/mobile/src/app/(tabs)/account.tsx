@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { AccountScreen } from '@/screens/account/account-screen';
 import { accountData } from '@/screens/account/account-fixture';
-import messages from '@/screens/account/messages.json';
+import messages from '@lezzet/i18n/customer/account';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 
 /*

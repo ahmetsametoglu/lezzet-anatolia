@@ -5,11 +5,15 @@ import type { Locale } from '@lezzet/i18n';
 import type { Address } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { AddressForm, toAddressFields, toFormInput, type AddressDefaults } from '@/components/customer/delivery/address-form';
+import { Note } from '@/components/customer/phone-kit/note';
+import { SettingsCard, SettingsDivider } from '@/components/customer/phone-kit/settings-card';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
+import { addressLine } from '@/lib/address/address-line';
 import { errorText } from '@/lib/customer-error-text';
 import { addAddressAction, deleteAddressAction, setBillingAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead } from './account-cards';
-import type { Messages } from '../account-types';
+import type { AccountCopy, Messages } from '../account-types';
 
 /**
  * Adresler kartı — ekle · düzenle · varsayılan yap · sil.
@@ -25,6 +29,13 @@ import type { Messages } from '../account-types';
  * **Varsayılan adres silinirse en yeni adres varsayılan olur** — kararı sunucu verir
  * (`deleteAddressAction`), ekran onu bilmez. Boşta bırakmak teslimat yeri göstergesini sessizce
  * kaybettirirdi.
+ *
+ * **Telefon görünümü native'in adres kartını çizer** (14.09, `phoneCopy` verilince): kum kartın
+ * içinde satırlar kesikli ayraçla ayrılır; etiket · rol rozetleri · adres satırı · metin eylemleri.
+ * Eylemler native'in kısa adlarıyla ve native'in kuralıyla dizilir: en çok iki eylem satırın
+ * sağında, üç ve fazlası metnin ALTINDA sağa yaslı şeritte (native 09.09 ölçümü: üçüncü eylem adres
+ * satırını kelime ortasından bölüyordu). Silme web'in eki — native'de adres silinmiyor; onayı yine
+ * satırın içinde.
  */
 interface AddressesCardProps {
   t: Messages;
@@ -43,9 +54,17 @@ interface AddressesCardProps {
    * kart hesabın türünü bilmez. Native hesap ekranıyla aynı kural (`address-card.tsx`).
    */
   billing: boolean;
+  /**
+   * Telefon görünümünün adres metni (ortak sözlüğün `addresses` bloğu) — verilince kart native adres
+   * kartı olarak çizilir. Form yine `AddressForm` (telefonda çekmecede açılır, `compact`).
+   */
+  phoneCopy?: AccountCopy['addresses'];
 }
 
-export function AddressesCard({ t, locale, addresses, defaults, compact, billing }: AddressesCardProps) {
+/** Rol rozeti — native `defaultBadge`/`billingBadge`: 10'luk yazı, 600, harf aralığı yok, rozet köşe. */
+const BADGE = 'rounded-badge px-2 py-0.5 font-sans text-eyebrow-xs font-semibold tracking-normal';
+
+export function AddressesCard({ t, locale, addresses, defaults, compact, billing, phoneCopy }: AddressesCardProps) {
   /** Tek seferde tek form: ekleme ile düzenleme aynı yerde açılır, ikisi birden açık kalamaz. */
   const [editing, setEditing] = useState<'new' | string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -64,6 +83,125 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
     setEditing(null);
     setConfirmDelete(null);
   };
+
+  const editForm = (address: Address) => (
+    <AddressForm
+      key={address.id}
+      locale={locale}
+      // Mobil webde form ÇEKMECEDE açılır (21.08) — karar formun kendisinde, künyesi orada.
+      compact={compact}
+      initial={toFormInput(address)}
+      billingChoice={billing}
+      onCancel={() => setEditing(null)}
+      onSave={async (input) => {
+        await run(async () => {
+          const result = await updateAddressAction(address.id, toAddressFields(input), input.point);
+          // Varsayılan işareti AYRI eylemdir: tek satırı güncellemek yetmiyor, öbürlerinin
+          // bayrağı düşmek zorunda (tek varsayılan kuralı).
+          if (!result.errorKey && input.makeDefault && !address.isDefault) await setDefaultAddressAction(address.id);
+          // Fatura işareti de aynı sınıftan (08.09): kutu yalnız İŞARETLEMEyi ister — kutuyu
+          // boşaltmak işareti kaldırmaz, çünkü "fatura adresi yok" ayrı bir beyandır ve başka
+          // bir adresi seçmek eskisini zaten düşürür.
+          if (!result.errorKey && input.makeBilling && !address.isBilling) await setBillingAddressAction(address.id);
+          return result;
+        });
+      }}
+    />
+  );
+
+  const newForm = (
+    <AddressForm
+      locale={locale}
+      compact={compact}
+      defaults={defaults}
+      billingChoice={billing}
+      onCancel={() => setEditing(null)}
+      onSave={async (input) => {
+        // `isBilling` gövdeyle gitmez, kapı ekledikten sonra kendi yolundan işaretler (künyesi).
+        await run(() => addAddressAction({ ...toAddressFields(input), isDefault: input.makeDefault, isBilling: input.makeBilling }, input.point));
+      }}
+    />
+  );
+
+  if (phoneCopy) {
+    // Metin eyleminin pasif hâli yok: bir yazma sürerken ikinci basış kesilir.
+    const act = (task: () => Promise<{ errorKey: string | null }>) => {
+      if (!busy) void run(task);
+    };
+    const add = <TextAction label={phoneCopy.add} onClick={() => setEditing('new')} />;
+    return (
+      <SettingsCard title={phoneCopy.title}>
+        {/* Rolün ne işe yaradığı — adres yokken çizilmez: olmayan bir rozetin açıklaması gürültüdür (native). */}
+        {addresses.length > 0 && <p className="font-sans text-helper text-muted">{phoneCopy.note}</p>}
+        {addresses.map((address, index) => {
+          const title = address.label || address.city;
+          const actions = [
+            address.isDefault ? null : (
+              <TextAction
+                key="default"
+                label={phoneCopy.makeDefault}
+                ariaLabel={phoneCopy.makeDefaultLabel.replace('{label}', title)}
+                onClick={() => act(() => setDefaultAddressAction(address.id))}
+              />
+            ),
+            billing && !address.isBilling ? (
+              <TextAction
+                key="billing"
+                label={phoneCopy.makeBilling}
+                ariaLabel={phoneCopy.makeBillingLabel.replace('{label}', title)}
+                onClick={() => act(() => setBillingAddressAction(address.id))}
+              />
+            ) : null,
+            <TextAction key="edit" label={phoneCopy.edit} ariaLabel={phoneCopy.editLabel.replace('{label}', title)} onClick={() => setEditing(address.id)} />,
+            <TextAction key="delete" label={t.addressDelete} tone="terracotta" onClick={() => setConfirmDelete(address.id)} />,
+          ].filter((action) => action !== null);
+          const confirming = confirmDelete === address.id;
+          const inline = actions.length <= 2 && !confirming;
+          const row = (
+            <div className={inline ? 'flex items-center gap-2.5' : 'flex flex-col gap-2'}>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-sans text-note font-bold text-ink">{title}</span>
+                  {address.isDefault && <span className={`${BADGE} bg-olive-bg text-olive-dark`}>{phoneCopy.default}</span>}
+                  {/* İki rol AYRI rozet ve ayrı tonda: bir adres ikisi birden olabilir (native'in kuralı). */}
+                  {billing && address.isBilling && <span className={`${BADGE} bg-sand-300 text-ink`}>{phoneCopy.billing}</span>}
+                </div>
+                <span className="font-sans text-body-sm text-muted">{addressLine(address)}</span>
+              </div>
+              {confirming ? (
+                /* Onay SATIRIN İÇİNDE: ayrı bir pencere, sıradan bir işi olduğundan ağır gösterirdi. */
+                <div className="flex flex-wrap items-center justify-end gap-3.5">
+                  <span className="font-sans text-note font-semibold text-terracotta">{t.addressDeleteConfirm}</span>
+                  <TextAction label={t.addressDeleteYes} tone="terracotta" onClick={() => act(() => deleteAddressAction(address.id))} />
+                  <TextAction label={t.cancel} onClick={() => setConfirmDelete(null)} />
+                </div>
+              ) : (
+                /* Eylemler BÖLÜNMEZ (native'de `flex:none`): sığmayan eylem metninin ortasından kırılmaz, bütün
+                   olarak alt satıra iner — silme web'in eki ve dar ekranda üç eylem tek şeride sığmıyordu (görüldü 14.09). */
+                <div
+                  className={[
+                    '[&>*]:whitespace-nowrap',
+                    inline ? 'flex flex-none items-center gap-2.5' : 'flex flex-wrap items-center justify-end gap-x-3.5 gap-y-2',
+                  ].join(' ')}
+                >
+                  {actions}
+                </div>
+              )}
+            </div>
+          );
+          return (
+            <div key={address.id}>
+              {index === 0 ? row : <SettingsDivider>{row}</SettingsDivider>}
+              {editing === address.id && editForm(address)}
+            </div>
+          );
+        })}
+        {error && <Note tone="terracotta" description={error} />}
+        {addresses.length > 0 ? <SettingsDivider>{add}</SettingsDivider> : <span className="self-start">{add}</span>}
+        {editing === 'new' && newForm}
+      </SettingsCard>
+    );
+  }
 
   return (
     <Card compact={compact}>
@@ -88,28 +226,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
 
       {addresses.map((address) =>
         editing === address.id ? (
-          <AddressForm
-            key={address.id}
-            locale={locale}
-            // Mobil webde form ÇEKMECEDE açılır (21.08) — karar formun kendisinde, künyesi orada.
-            compact={compact}
-            initial={toFormInput(address)}
-            billingChoice={billing}
-            onCancel={() => setEditing(null)}
-            onSave={async (input) => {
-              await run(async () => {
-                const result = await updateAddressAction(address.id, toAddressFields(input), input.point);
-                // Varsayılan işareti AYRI eylemdir: tek satırı güncellemek yetmiyor, öbürlerinin
-                // bayrağı düşmek zorunda (tek varsayılan kuralı).
-                if (!result.errorKey && input.makeDefault && !address.isDefault) await setDefaultAddressAction(address.id);
-                // Fatura işareti de aynı sınıftan (08.09): kutu yalnız İŞARETLEMEyi ister — kutuyu
-                // boşaltmak işareti kaldırmaz, çünkü "fatura adresi yok" ayrı bir beyandır ve başka
-                // bir adresi seçmek eskisini zaten düşürür.
-                if (!result.errorKey && input.makeBilling && !address.isBilling) await setBillingAddressAction(address.id);
-                return result;
-              });
-            }}
-          />
+          editForm(address)
         ) : (
           <div
             key={address.id}
@@ -181,19 +298,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
         ),
       )}
 
-      {editing === 'new' && (
-        <AddressForm
-          locale={locale}
-          compact={compact}
-          defaults={defaults}
-          billingChoice={billing}
-          onCancel={() => setEditing(null)}
-          onSave={async (input) => {
-            // `isBilling` gövdeyle gitmez, kapı ekledikten sonra kendi yolundan işaretler (künyesi).
-            await run(() => addAddressAction({ ...toAddressFields(input), isDefault: input.makeDefault, isBilling: input.makeBilling }, input.point));
-          }}
-        />
-      )}
+      {editing === 'new' && newForm}
 
       {error && <span className="font-sans text-note font-semibold text-terracotta">{error}</span>}
     </Card>

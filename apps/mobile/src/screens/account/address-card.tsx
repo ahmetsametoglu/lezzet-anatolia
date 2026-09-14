@@ -6,7 +6,7 @@ import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { MeAddress } from '@/lib/api/addresses';
 import { addressLine, addressTitle } from '@/screens/customer-kit/address-format';
 // Yalnız METİN BLOĞUNUN TİPİ için: komponent sözlüğü okumaz, çağıran geçirir.
-import type accountMessages from './messages.json';
+import type accountMessages from '@lezzet/i18n/customer/account';
 
 /*
   ADRES KARTI — "etiket · rol rozeti · adres satırı · rol eylemi · Düzenle" (v3:859-866).
@@ -19,7 +19,7 @@ import type accountMessages from './messages.json';
   "teslimat adresi" rozeti kendini tekrar ederdi.
   Veri artık SÖZLEŞMEDEN (`MeAddress`, 21.15) — fixture tipi kalktı; kart, uçların döndürdüğünü çizer.
 
-  METİNLER TEK BLOK HÂLİNDE GEÇER (`copy`): çağıran sözlüğün (`account/messages.json`) `addresses`
+  METİNLER TEK BLOK HÂLİNDE GEÇER (`copy`): çağıran sözlüğün (`@lezzet/i18n/customer/account`) `addresses`
   bölümünü okuyor; beş ayrı metin prop'u yerine bloğun kendisi geçince yeni bir metin eklendiğinde
   imza değişmez. Tip de o bloktan TÜRER, elle yazılmaz.
 

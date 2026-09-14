@@ -1,23 +1,23 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { PreferredLanguage } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { errorText } from '@/lib/customer-error-text';
-import { useRouter } from '@/i18n/navigation';
 import type { AccountView } from '@/lib/account/read';
-import { setPreferredLanguageAction } from '@/lib/identity/language-actions';
 import { startWhatsappLinkAction, updateProfileAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead, Row } from './account-cards';
+import { useLanguageChoice } from './use-language-choice.hook';
 import type { Messages } from '../account-types';
 
 /**
  * Profil kartı — **satır içi düzenleme** (tasarım: "alan girişe dönüşür + Kaydet/Vazgeç; sayfa
  * değişmez"). Ayrı bir sayfa ya da modal DEĞİL: değiştirilecek şey üç alan, onları başka bir yere
- * taşımak bağlamı da taşımak olurdu.
+ * taşımak bağlamı da taşımak olurdu. (Telefon görünümü native'in kartını çizer ve formu çekmecede
+ * açar — form aynı bileşen, `ProfileEditForm`.)
  *
  * **E-posta okunur, düzenlenmez.** Kimliğin anahtarı: `user_profiles` benzersiz indeksi ve
  * `auth.users` bağı ondan geçiyor. Değiştirmek hesabı taşımaktır — doğrulama ve birleştirme
@@ -62,24 +62,8 @@ const LANGUAGE_LABEL: Record<PreferredLanguage, string> = { tr: 'Türkçe', fr: 
  * geçiyor — üç tarayıcıda üç farklı ok çizilmesin.
  */
 function LanguagePill({ locale, value, compact }: { locale: Locale; value: PreferredLanguage; compact: boolean }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-
-  /**
-   * **Gösterilen değer AKTİF SAYFA DİLİDİR, karttaki değer değil** (30.07 · kullanıcı fark etti).
-   *
-   * Önce kart okunuyordu ve ekran kendi kendiyle çelişiyordu: sayfa Türkçe, hap "Français". Oysa
-   * karar "dil TEKTİR" — sitenin dili ile bildirimlerin dili aynı şey. İkisinin ayrı görünebildiği
-   * bir ekran, o kararı ekranda bozuyordu.
-   *
-   * Kart farklıysa (kayıt anındaki tohum `fr`, müşteri hiç seçim yapmamış) **sessizce hizalanır**:
-   * ekranda "Türkçe" yazıp maili Fransızca göndermek, gösterdiğimiz şeyi uygulamamak olurdu.
-   * Bu, "yalnız bağlantıya girmek yazmaz" kuralının istisnasıdır ve dar tutuluyor — burası
-   * müşterinin KENDİ ayar sayfası, gelip geçilen bir içerik sayfası değil.
-   */
-  useEffect(() => {
-    if (value !== locale) void setPreferredLanguageAction(locale);
-  }, [value, locale]);
+  // Gösterilen değer AKTİF SAYFA DİLİDİR, kart farklıysa sessizce hizalanır — gerekçesi hook'un künyesinde.
+  const { choose, pending } = useLanguageChoice(locale, value);
 
   return (
     <span className="relative inline-flex items-center">
@@ -87,13 +71,7 @@ function LanguagePill({ locale, value, compact }: { locale: Locale; value: Prefe
         value={locale}
         disabled={pending}
         aria-label={LANGUAGE_LABEL[locale]}
-        onChange={(e) => {
-          const next = e.target.value as PreferredLanguage;
-          if (next === locale) return;
-          // Karta yaz + sayfayı o dile götür. İkisi AYNI eylemin iki yüzü; ayrı düşünülemezler.
-          void setPreferredLanguageAction(next);
-          if (next !== locale) startTransition(() => router.replace('/account', { locale: next }));
-        }}
+        onChange={(e) => choose(e.target.value as PreferredLanguage)}
         className={[
           'cursor-pointer appearance-none rounded-pill border-[1.5px] border-sand-400 bg-card font-sans font-bold text-ink transition-colors hover:border-olive disabled:cursor-progress',
           compact ? 'py-1 pr-7 pl-3 text-micro' : 'py-1.5 pr-8 pl-3.5 text-note',
@@ -128,7 +106,7 @@ function LanguagePill({ locale, value, compact }: { locale: Locale; value: Prefe
  * takılabiliyor ve `wa.me` uygulamaya devrediliyor; kullanıcı hareketiyle tetiklenen bir bağlantı
  * her iki yüzeyde de aynı davranıyor.
  */
-function WhatsappLinkButton({ t }: { t: Messages }) {
+function WhatsappLinkButton({ t, align }: { t: Messages; align: 'start' | 'end' }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,7 +120,7 @@ function WhatsappLinkButton({ t }: { t: Messages }) {
   };
 
   return (
-    <span className="inline-flex flex-col items-end gap-0.5 text-right">
+    <span className={['inline-flex flex-col gap-0.5', align === 'end' ? 'items-end text-right' : 'items-start'].join(' ')}>
       <button
         type="button"
         disabled={busy}
@@ -156,21 +134,56 @@ function WhatsappLinkButton({ t }: { t: Messages }) {
   );
 }
 
-export function ProfileCard({ t, locale, profile, whatsappNumbers, compact }: ProfileCardProps) {
-  const [editing, setEditing] = useState(false);
+/**
+ * WhatsApp satırı — doğrulanmış numaralar ya da bağlama düğmesi. Masaüstü kartın satırı ve telefonun profil çekmecesi
+ * (native'de bu blok yok; web'e özgü kimlik bağı, 04.10) aynı içeriği çizer.
+ */
+interface WhatsappRowProps {
+  t: Messages;
+  numbers: string[];
+  /**
+   * Çekmece düzeni — etiket üstte, içerik altında (formdaki e-posta bloğunun düzeni). Dar çekmecede etiket ↔ değer
+   * satırı değeri sağdan kırpıyordu: "Rattacher m…" (görüldü 14.09).
+   */
+  stacked?: boolean;
+}
+
+export function WhatsappRow({ t, numbers, stacked = false }: WhatsappRowProps) {
+  const verified = numbers.length > 0 && (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="truncate">{numbers.join(' · ')}</span>
+      <span className="flex-none font-sans text-micro font-semibold text-olive">{t.whatsappVerified}</span>
+    </span>
+  );
+  if (stacked) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="font-sans text-micro text-muted">{t.whatsappLabel}</span>
+        {verified ? <span className="font-sans text-body-sm font-bold text-ink">{verified}</span> : <WhatsappLinkButton t={t} align="start" />}
+      </div>
+    );
+  }
+  return <Row label={t.whatsappLabel} value={verified || <WhatsappLinkButton t={t} align="end" />} />;
+}
+
+/**
+ * Profil düzenleme formu — masaüstünde kartın yerinde, telefonda çekmecede açılır (14.09).
+ *
+ * Her açılışta YENİDEN KURULUR ve durumu sunucudaki değerle doğar: bir önceki vazgeçilen düzenlemenin
+ * artığı kalırsa müşteri kaydetmediği bir şeyi kaydetmiş sanır.
+ */
+interface ProfileEditFormProps {
+  t: Messages;
+  profile: AccountView['profile'];
+  /** Kayıttan ya da vazgeçişten sonra — kart okuma hâline döner, telefonda çekmece kapanır. */
+  onDone: () => void;
+}
+
+export function ProfileEditForm({ t, profile, onDone }: ProfileEditFormProps) {
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const open = () => {
-    // Form her açılışta SUNUCUDAKİ değerle kurulur: bir önceki vazgeçilen düzenlemenin artığı
-    // kalırsa müşteri kaydetmediği bir şeyi kaydetmiş sanır.
-    setName(profile.name);
-    setPhone(profile.phone ?? '');
-    setError(null);
-    setEditing(true);
-  };
 
   const save = async () => {
     setBusy(true);
@@ -180,8 +193,56 @@ export function ProfileCard({ t, locale, profile, whatsappNumbers, compact }: Pr
     // Cümle EKRANDA kurulur (denetim H1/H2): sunucu anahtar döner, sözlük burada. Bilinmeyen bir
     // anahtar gelirse jenerik cümleye düşeriz — ekran asla boş kalmaz.
     if (errorKey) return setError(errorText(t.errors, errorKey));
-    setEditing(false);
+    onDone();
   };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <FormInputField label={t.name} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+      {/* Alanın NE İŞE YARADIĞI altında yazılı (04.10). Etiket bir tur "Telefon (WhatsApp)" idi
+          ve müşteriye tutamayacağımız bir söz veriyordu — burada yazılan numara WhatsApp kimliği
+          kurmuyor, adres formuna öneri olarak gidiyor. Alanın gerekçesini söylemek, onu
+          kaldırmaktan iyi: gerçekten bir işi var ve o iş her adres eklemede görünüyor. */}
+      <div className="flex flex-col gap-1">
+        <FormInputField
+          label={t.phoneWhatsapp}
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="+33 6 12 34 56 78"
+        />
+        <span className="font-sans text-micro leading-relaxed text-muted">{t.phoneHint}</span>
+      </div>
+
+      {/* E-posta neden düzenlenemiyor, ORADA yazılı: pasif bir alan bırakıp sebebi söylememek
+          müşteriyi kendi hatasını arar hâlde bırakır. */}
+      <div className="flex flex-col gap-1">
+        <span className="font-sans text-micro text-muted">{t.email}</span>
+        <span className="font-sans text-body-sm font-bold text-ink">{profile.email ?? '—'}</span>
+        <span className="font-sans text-micro leading-relaxed text-muted">{t.emailLocked}</span>
+      </div>
+
+      {/* Dil BURADA YOK: kendi denetimi var ve düzenleme kipini beklemiyor (yukarıya bak).
+          İki yerde birden olması, hangisinin geçerli olduğunu sordururdu. */}
+
+      {error && <span className="font-sans text-note font-semibold text-terracotta">{error}</span>}
+
+      <div className="flex items-center gap-2">
+        <Button size="sm" disabled={busy || !name.trim()} onClick={() => void save()}>
+          {busy ? t.saving : t.save}
+        </Button>
+        <Button variant="ghost" size="sm" disabled={busy} onClick={onDone}>
+          {t.cancel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function ProfileCard({ t, locale, profile, whatsappNumbers, compact }: ProfileCardProps) {
+  const [editing, setEditing] = useState(false);
 
   if (!editing) {
     return (
@@ -190,7 +251,7 @@ export function ProfileCard({ t, locale, profile, whatsappNumbers, compact }: Pr
           title={t.profileTitle}
           compact={compact}
           action={
-            <button type="button" onClick={open} className="flex-none cursor-pointer font-sans text-note font-bold text-olive hover:text-olive-dark">
+            <button type="button" onClick={() => setEditing(true)} className="flex-none cursor-pointer font-sans text-note font-bold text-olive hover:text-olive-dark">
               {t.edit}
             </button>
           }
@@ -206,19 +267,7 @@ export function ProfileCard({ t, locale, profile, whatsappNumbers, compact }: Pr
             Tek satıra sıkıştırmak, kuryenin çalacağı numara ile bizi tanıdığımız numarayı aynı şey
             sanmaya yol açıyordu. Ayrıldılar. */}
         <Row label={t.phone} value={profile.phone ?? t.noPhone} />
-        <Row
-          label={t.whatsappLabel}
-          value={
-            whatsappNumbers.length > 0 ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="truncate">{whatsappNumbers.join(' · ')}</span>
-                <span className="flex-none font-sans text-micro font-semibold text-olive">{t.whatsappVerified}</span>
-              </span>
-            ) : (
-              <WhatsappLinkButton t={t} />
-            )
-          }
-        />
+        <WhatsappRow t={t} numbers={whatsappNumbers} />
         {/* Dil DÜZENLEME KİPİNİN ARKASINDA DEĞİL: tasarımda satır "Türkçe ▾" — kendi başına bir
             açılır liste ve etkileşim sözleşmesi "anında etkili" diyor. Bir süre "Düzenle"nin
             ardına konmuştu; üç alanın ikisi için doğru olan kip, bu biri için fazladan iki tıklama
@@ -231,47 +280,7 @@ export function ProfileCard({ t, locale, profile, whatsappNumbers, compact }: Pr
   return (
     <Card compact={compact}>
       <CardHead title={t.profileTitle} compact={compact} />
-      <div className="flex flex-col gap-3">
-        <FormInputField label={t.name} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-        {/* Alanın NE İŞE YARADIĞI altında yazılı (04.10). Etiket bir tur "Telefon (WhatsApp)" idi
-            ve müşteriye tutamayacağımız bir söz veriyordu — burada yazılan numara WhatsApp kimliği
-            kurmuyor, adres formuna öneri olarak gidiyor. Alanın gerekçesini söylemek, onu
-            kaldırmaktan iyi: gerçekten bir işi var ve o iş her adres eklemede görünüyor. */}
-        <div className="flex flex-col gap-1">
-          <FormInputField
-            label={t.phoneWhatsapp}
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+33 6 12 34 56 78"
-          />
-          <span className="font-sans text-micro leading-relaxed text-muted">{t.phoneHint}</span>
-        </div>
-
-        {/* E-posta neden düzenlenemiyor, ORADA yazılı: pasif bir alan bırakıp sebebi söylememek
-            müşteriyi kendi hatasını arar hâlde bırakır. */}
-        <div className="flex flex-col gap-1">
-          <span className="font-sans text-micro text-muted">{t.email}</span>
-          <span className="font-sans text-body-sm font-bold text-ink">{profile.email ?? '—'}</span>
-          <span className="font-sans text-micro leading-relaxed text-muted">{t.emailLocked}</span>
-        </div>
-
-        {/* Dil BURADA YOK: kendi denetimi var ve düzenleme kipini beklemiyor (yukarıya bak).
-            İki yerde birden olması, hangisinin geçerli olduğunu sordururdu. */}
-
-        {error && <span className="font-sans text-note font-semibold text-terracotta">{error}</span>}
-
-        <div className="flex items-center gap-2">
-          <Button size="sm" disabled={busy || !name.trim()} onClick={() => void save()}>
-            {busy ? t.saving : t.save}
-          </Button>
-          <Button variant="ghost" size="sm" disabled={busy} onClick={() => setEditing(false)}>
-            {t.cancel}
-          </Button>
-        </div>
-      </div>
+      <ProfileEditForm t={t} profile={profile} onDone={() => setEditing(false)} />
     </Card>
   );
 }

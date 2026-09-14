@@ -1,36 +1,35 @@
 import type { Locale } from '@lezzet/i18n';
-import { Link } from '@/i18n/navigation';
-import { focusRingClass } from '@/components/customer/ui/button';
-import type { Messages } from '../account-types';
-import { SiteLinks } from './site-links';
+import accountMessages from '@lezzet/i18n/customer/account';
+import { EmptyState } from '@/components/customer/phone-kit/empty-state';
+import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
+import type { LegalDirectoryView } from '../account-types';
+import { LanguageCard } from './language-card';
+import { LegalDirectory } from './legal-directory';
 
 /**
- * Misafirin hesap ekranı — MOBİL WEB (v1 "Mobil · Hesap", `hs.misafir` kartı, 13.09).
- *
- * Sekme çubuğundaki "Hesabım" herkese açık; misafir girişe fırlatılmaz, buraya düşer: tek kart
- * ("Hesabınıza girin" + doğrulan düğmesi) ve altında dil + yasal bağlantılar — v1 mobilin footer'ı
- * olmadığı için misafirin o sayfalara tek yolu burası (`SiteLinks` künyesi). Masaüstünde misafir
- * hâlâ girişe yönleniyor (`page.tsx`).
+ * Misafirin hesap ekranı — telefon görünümü, native hesabın misafir hâli (14.09): boş durum (hesap ikonu · karşılama ·
+ * tek cümle · "hızlı doğrulama" hap düğmesi) ve altında bilgi ve koşullar (native'in misafir duvarının altındaki
+ * bilgi kapısı). Araya web'e özgü dil kartı girer: native'de dil cihazdan gelir, web'de adresin kendisidir ve telefon
+ * görünümünde footer yok. Masaüstünde misafir hâlâ girişe yönleniyor (`page.tsx`).
  */
 interface AccountGuestProps {
-  t: Messages;
   locale: Locale;
+  legal: LegalDirectoryView;
 }
 
-export function AccountGuest({ t, locale }: AccountGuestProps) {
+export function AccountGuest({ locale, legal }: AccountGuestProps) {
+  const copy = accountMessages[locale];
   return (
-    <div className="flex flex-col gap-3.5 px-[18px] pt-4 pb-[26px]">
-      <div className="flex flex-col gap-2.5 rounded-card border border-sand-200 bg-card p-[22px]">
-        <h1 className="font-serif text-[22px] font-semibold text-ink">{t.guestTitle}</h1>
-        <p className="font-sans text-note leading-[1.6] text-body">{t.guestBody}</p>
-        <Link
-          href="/login"
-          className={`cursor-pointer rounded-[24px] bg-olive py-[13px] text-center font-sans text-body-sm leading-tight font-bold text-white transition-colors hover:bg-olive-dark ${focusRingClass}`}
-        >
-          {t.guestCta}
-        </Link>
-      </div>
-      <SiteLinks locale={locale} />
+    <div className="flex flex-col gap-3.5 px-4.5 pb-5">
+      <EmptyState
+        icon={<MobileIcon name="account" size={80} className="text-sand-600" />}
+        title={copy.guest.title}
+        description={copy.guest.body}
+        action={<PrimaryButton href="/login" label={copy.guest.cta} />}
+      />
+      <LanguageCard copy={copy.language} locale={locale} stored={locale} />
+      <LegalDirectory directory={legal} />
     </div>
   );
 }

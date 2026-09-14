@@ -17,7 +17,7 @@ import {
   type LegalSectionCopy,
   type Messages,
 } from './legal-types';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/legal';
 
 /*
   BİLGİ SAYFALARI (v3 `vStatic`) — TEK ekran, beş belge: teslimat & iade · SSS · gizlilik · satış

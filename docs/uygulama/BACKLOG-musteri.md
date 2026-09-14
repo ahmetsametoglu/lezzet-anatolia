@@ -2128,7 +2128,7 @@ sıfırlanması — kapanışın da dayanağıdır; MB-13 yeniden açılırsa ö
   Kullanıcı ölçütü: gereksiz beyan bizi karşılığı olmayan bir taahhüdün altına sokar. Ölçüm gerçekten
   kurulduğunda paragrafı **bu kalemi yazan** ekler ve **kurduğu mekanizmayı** anlatır — bugünkü
   metni geri yapıştırmaz; sözü verilen yöntem ile kurulacak yöntem aynı olmayabilir.
-  Yeri: `apps/mobile/src/screens/legal/messages.json` → `pages.privacy.sections[6]`
+  Yeri: `packages/i18n/src/customer/legal.json` (14.09'a kadar `apps/mobile/src/screens/legal/messages.json`) → `pages.privacy.sections[6]`
   (*"Cihazınızda saklananlar"*), üç dilde. **Web nüshası ayrı** ve orada ölçüm gerçekten var —
   web metnine dokunulmadı.
 

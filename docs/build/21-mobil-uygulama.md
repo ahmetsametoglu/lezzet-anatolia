@@ -4634,7 +4634,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
 - [x] (21.86) **YASAL METİN ARTIK UYGULAMAYI ANLATIYOR — ve gizlilik metni olmayan bir mekanizmayı
   tarif ediyormuş (MB-77, 19.08)**
-  → `touches: apps/mobile/src/screens/legal/messages.json, docs/uygulama/BACKLOG-musteri.md`
+  → touches: ~~`apps/mobile/src/screens/legal/messages.json`~~ (14.09 → `packages/i18n/src/customer/legal.json`, ortak sözlük), `docs/uygulama/BACKLOG-musteri.md`
 
   A17 turunda üç cümle görülmüştü; sözlüğün tamamı taranınca **sekiz yer** çıktı ve ağırlık merkezi
   başka yerdeymiş.
@@ -4910,7 +4910,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   → `host:port`, sonra `adb connect`. Eşleşme kayıtlı olduğu için yeniden `adb pair` gerekmiyor.
 
 - [x] (21.91) **SUNUCUYA ULAŞILAMAYINCA EKRAN SUSUYORDU — vitrin ve hesap konuşmaya başladı (20.08).**
-  `touches: apps/mobile/src/components/ui/offline-notice.tsx, apps/mobile/src/screens/home/home-screen.tsx, apps/mobile/src/screens/home/messages.json, apps/mobile/src/app/(tabs)/account.tsx, apps/mobile/src/screens/account/messages.json`
+  `touches: apps/mobile/src/components/ui/offline-notice.tsx, apps/mobile/src/screens/home/home-screen.tsx, apps/mobile/src/screens/home/messages.json, apps/mobile/src/app/(tabs)/account.tsx` · ~~`apps/mobile/src/screens/account/messages.json`~~ (14.09 → `packages/i18n/src/customer/account.json`, ortak sözlük)
 
   **Ölçüm (cihaz, mobil API kapalı, soğuk açılış):** dört sekme gezildi.
   · Katalog ✓ *"Bağlantı kurulamadı… Tekrar dene"* · Paketler ✓ aynı kalıp
@@ -5636,7 +5636,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `packages/application/src/analytics/{salt,availability}.ts`,
   `packages/application/src/cart/cart-types.ts`, `packages/application/src/catalog/pricing-viewer.ts`,
   `apps/web/lib/analytics/{record,session-key}.ts`,
-  `apps/mobile/src/screens/legal/messages.json`
+  ~~`apps/mobile/src/screens/legal/messages.json`~~ (14.09 → `packages/i18n/src/customer/legal.json`, ortak sözlük)
 
   **ARIZA "eksik özellik" değil, EKRANDA YAZAN BİR YALANDI.** `analytics_daily_*` satırları "toplam"
   başlığıyla gösteriliyordu ama içinde yalnız web vardı: `apps/mobile*` içinde tek ölçüm çağrısı
@@ -5679,7 +5679,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   yapmadığımız bir işlemi beyan ediyor ve yöntem sözü veriyordu). Yeni paragraf **kurulan
   mekanizmayı** anlatıyor, eski metni geri yapıştırmıyor: cihaza hiçbir şey yazılmadığı, reklam
   kimliği kullanılmadığı, kaydın yanında kimlik durmadığı ve anahtarın ertesi gün geri
-  hesaplanamadığı. Üç dilde, `legal/messages.json` → `privacy.sections[6]`.
+  hesaplanamadığı. Üç dilde, `legal/messages.json` (14.09'dan beri `packages/i18n/src/customer/legal.json`) → `privacy.sections[6]`.
 
   **İKİ BACKEND TESTİ DÜŞTÜ VE SEBEBİ BENDİM** (web şeridi `db:refresh` sonrası bildirdi):
   `analytics-rollup.test.ts` + `analytics-insight.test.ts` ham `insert` ile fikstür yazıyor, yani
@@ -6267,7 +6267,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **786/786** · `@lezzet/design-tokens` birim **30/30** · mobil + web + tokens typecheck temiz · lint temiz.
 
 - [x] (21.117) **`phone_taken` ÖLÜ METNİ SÖKÜLDÜ — sözlük artık olmayan bir kuralı anlatmıyor (04.10 artığı)**
-  · touches: `apps/mobile/src/screens/{profile-setup,account}/messages.json` · ~~`apps/mobile/src/screens/checkout/messages.json`~~ (14.09 → `packages/i18n/src/customer/checkout.json`, ortak sözlük), aynı üç ekranın künyeleri
+  · touches: `apps/mobile/src/screens/profile-setup/messages.json` · ~~`apps/mobile/src/screens/checkout/messages.json`~~ (14.09 → `packages/i18n/src/customer/checkout.json`, ortak sözlük) · ~~`apps/mobile/src/screens/account/messages.json`~~ (14.09 → `packages/i18n/src/customer/account.json`, ortak sözlük), aynı üç ekranın künyeleri
 
   Web şeridi `04.10`'da kimlik anahtarını taşıdı: `user_profiles.phone` artık **iletişim
   numarasıdır**, kimlik `customer_phone`da (migration 0049). Tekil indeks (`user_profiles_phone_key`)
@@ -14784,7 +14784,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     dosya · kök `typecheck` 20/20 · `lint` temiz · `knip`in 4 bulgusu bu işin dosyalarında değil.
 
 - [x] (21.307) **HESAP EKRANINDA "BURAYA TESLİMAT AÇILSIN" GERÇEK KAYIT — `zone_notice`a yazıyor; kampanya izni artık sessizce açılmıyor** (kullanıcı bulgusu 10.09: *"web tarafındaki rota haritasında müşterinin talebi görünüyordu. Yani teslimat açılsın isteği adet olarak görünüyordu"* — ölçünce haritadaki sayı `zone_notice` kayıtlarından geliyor; hesap ekranının düğmesi o tabloya hiç yazmıyordu)
-  `touches:` `apps/mobile/src/screens/account/account-screen.tsx` · `apps/mobile/src/screens/account/account-screen.test.tsx` · `apps/mobile/src/screens/account/messages.json`
+  `touches:` `apps/mobile/src/screens/account/account-screen.tsx` · `apps/mobile/src/screens/account/account-screen.test.tsx` · ~~`apps/mobile/src/screens/account/messages.json`~~ (14.09 → `packages/i18n/src/customer/account.json`, ortak sözlük)
 
   **Durum (10.09) — TAMAM.**
   · **Ölçülen açık:** düğmenin künyesi "tablo YOK" diyordu ve tek etkisi e-posta kampanya iznini

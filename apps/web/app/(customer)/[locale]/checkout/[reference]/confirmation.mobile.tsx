@@ -9,7 +9,7 @@ import { Icon } from '@/components/customer/ui/icons';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import type { CheckoutCopy } from '../checkout-types';
 import { awaitingCopy } from './components/confirmation-sections';
-import { useInviteShare } from './components/use-invite-share.hook';
+import { useShareLink } from '@/lib/use-share-link.hook';
 import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewProps, type Messages } from './confirmation-types';
 
 /**
@@ -24,7 +24,7 @@ import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewPro
  *   dene" çıkışıyla çizilir. İşaretin rengi hâli söyler — zeytin oldu · bal bekleniyor · terracotta olmadı (masaüstü
  *   bandının üç tonu, aynı kural). Native'de bu hâller yok: native ödeme kartının sonucunu ekrana gelmeden karşılıyor.
  * · Komşu davetinin metni web'in sözlüğünden: native başlığı emojiyle yazıyor, web'in müşteri ekranlarında emoji yok
- *   (08.59, ikon seti). Paylaşım masaüstüyle aynı kapıdan (`useInviteShare`).
+ *   (08.59, ikon seti). Paylaşım masaüstüyle aynı kapıdan (`useShareLink`).
  *
  * ── BİLİNÇLİ FARKLAR ───────────────────────────────────────────────────────
  * Masaüstünün zaman çizgisi, kalem listesi, adres kartı ve yardım şeridi telefonda yok — native'de karşılığı yok;
@@ -121,7 +121,7 @@ interface NeighborInviteProps {
  * Kontenjan söylenir; dolduysa paylaşım sunulmaz — ölü bir bağlantı iki tarafı da boşa uğraştırır (08.55).
  */
 function NeighborInvite({ t, invite }: NeighborInviteProps) {
-  const { share, copied } = useInviteShare();
+  const { share, copied } = useShareLink();
   const full = invite.remainingUses === 0;
   return (
     <div className="flex w-full flex-col items-center gap-2 rounded-card bg-olive-bg px-4.5 py-3.5">

@@ -7,6 +7,8 @@ import { formatPrice } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { Note } from '@/components/customer/phone-kit/note';
+import { ToggleSwitch } from '@/components/customer/phone-kit/toggle-switch';
 import type { AccountView } from '@/lib/account/read';
 import { cancelZoneNoticeAction } from '../actions';
 import type { Messages } from '../account-types';
@@ -62,6 +64,8 @@ export function ConsentSwitch({
   onLabel,
   offLabel,
   onToggle,
+  compact = false,
+  failedText,
 }: {
   label: string;
   /**
@@ -82,6 +86,13 @@ export function ConsentSwitch({
    * değiştirmek, ikinci bir anahtar yazmak ise duplikasyon olurdu (CLAUDE §1).
    */
   onToggle: (next: boolean) => Promise<{ errorKey: string | null }>;
+  /**
+   * Telefon görünümü — native hesabın kampanya satırı (etiket `control` · 600, native anahtar 50×30,
+   * 12 dikey dolgu, ikon yok). Yazma düşerse halka yerine satırın ALTINDA `failedText` söylenir
+   * (native'in notu).
+   */
+  compact?: boolean;
+  failedText?: string;
 }) {
   const [value, setValue] = useState(on);
   const [busy, setBusy] = useState(false);
@@ -102,6 +113,25 @@ export function ConsentSwitch({
       setFailed(true);
     }
   };
+
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3 py-3">
+          <span className="font-sans text-control font-semibold text-ink">{label}</span>
+          {/* Native anahtarın pasif hâli yok: yazma sürerken ikinci basış kesilir, iyimser değer yerinde kalır. */}
+          <ToggleSwitch
+            checked={value}
+            label={label}
+            onChange={() => {
+              if (!busy) void toggle();
+            }}
+          />
+        </div>
+        {failed && failedText !== undefined && <Note tone="terracotta" description={failedText} />}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between gap-3">

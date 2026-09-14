@@ -42,7 +42,7 @@ import { AddressCard } from './address-card';
 import { AccountAddressesSkeleton, AccountPointsSkeleton } from './account-skeleton';
 import { accountData, type AccountData } from './account-fixture';
 import { usePoints } from './use-points.hook';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/account';
 
 /*
   HESABIM (v3 `vHesap`) — profil, profesyonel künye, puanlar, referans kodu, menü, adresler,

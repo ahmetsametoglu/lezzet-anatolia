@@ -11,7 +11,7 @@ import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewProps, type Messages } from '../confirmation-types';
-import { useInviteShare } from './use-invite-share.hook';
+import { useShareLink } from '@/lib/use-share-link.hook';
 
 /**
  * Sipariş alındı ekranının blokları (tasarım: `Musteri - Checkout.dc.html` · "Sipariş Alındı").
@@ -348,8 +348,8 @@ export function HelpBand({
  * gidiyor ve uygulama sırasını işletim sistemi bizden iyi biliyor (`ShareButton` künyesi).
  */
 export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, 't' | 'compact' | 'view'>) {
-  // Paylaşım kapısı telefonun şeridiyle ORTAK (`useInviteShare`); kanca koşulsuz — erken dönüşten önce çağrılır.
-  const { share, copied } = useInviteShare();
+  // Paylaşım kapısı telefonun şeridiyle ORTAK (`useShareLink`); kanca koşulsuz — erken dönüşten önce çağrılır.
+  const { share, copied } = useShareLink();
   const invite = view.neighborInvite;
   if (!invite) return null;
   const { url } = invite;
