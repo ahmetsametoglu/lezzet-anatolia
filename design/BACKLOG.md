@@ -499,14 +499,16 @@ yapılırsa bakılacaklar: belge kartında dosya ikonu, tür ve etiket çiplerin
 **Eki (12.17 · ekranın düzeni):** çizimin tek listeli tezgâhı kullanıcı istekleriyle yeniden dizildi
 ve yeni düzenin çizimde karşılığı yok: bakiye şeridi türe göre gruplu ve kartı süzgeç (Toplam en
 solda, kapalılar en sonda, taşarsa yatay kayar); süzgeç satırında "Hareketler | Belgeler" sekmesi,
-"+ tip", tarih aralığı çipi, izah rozeti ve başlıktaki beş düğmenin yerine "Eylemler" menüsü; satır
-tıklanınca sağ sütunda hareketin ya da belgenin ayrıntı paneli (seçim yokken izah özeti — 12.19);
+"+ tip", tarih aralığı çipi, izah rozeti ve başlıktaki beş düğmenin yerine "Eylemler" menüsü; ~~satır
+tıklanınca sağ sütunda hareketin ya da belgenin ayrıntı paneli~~ (12.21: panel kalktı — satırın işi satırda:
+hareketin "Karşılığı" hapı ve ✓'si, belgenin ödeme hapı ve ⋯ menüsü); defter günlere göre gruplu, tutar satırın
+en büyük yazısı ve sağ kenarda, izah bekleyen satırın solunda amber çizgi, eylem menülerinde ikon (12.22);
 eşleştirme penceresinin yerine tetikleyiciye bağlı seçici menü. Çizim yapılırsa bakılacaklar:
-hareket tipi ikonları (12.20), şeridin grup başlıkları ve kapalı hesabın sönüklüğü, orta hücrenin dar bütçesinde kesilen adların
-okunurluğu (tür önce, cari iki kat hızlı daralır), ayrıntı panelinin bölümleri (Karşılığı ·
-Sınıflandırma · Etiketler · Ödemeler), seçici menüde önerinin hedef listesinden ayrışması, belge
+hareket tipi ikonları (12.20) ve eylem menülerinin ikonları (12.22), şeridin grup başlıkları ve kapalı hesabın sönüklüğü, orta hücrenin dar bütçesinde kesilen adların
+okunurluğu (tür önce, cari iki kat hızlı daralır), "Karşılığı" sütununun hâlleri (öneri · kısmen
+bağlı · eşleşti · düz bağ) ve ✓'nin yeri, gün başlığının ve tutarın boyu (12.22), seçici menüde önerinin hedef listesinden ayrışması, belge
 satırının açık kalan sütunu.
-**Eki (12.13 · 12.16):** eşleştirme kuyruğunun (12.19'da kalktı — seçici hareket panelinde) "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız
+**Eki (12.13 · 12.16):** eşleştirme kuyruğunun (12.19'da kalktı — seçici 12.21'den beri satırın "Karşılığı" hapında) "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız
 sipariş adaylarını gösteriyordu; artık bir HEDEF SEÇİCİ (12.17'den beri pencere değil, tetikleyiciye bağlı menü) — öneriler üstte, altında yöne uyan bütün
 hedefler bölüm bölüm (zaten yazılmış hareket · açık belge · mal kabul · transfer ucu · sipariş · iade
 · cari · başka hesap), arama kutusu, en altta "Türünü koy" (yöne uyan türler). ~~Kartta "Gider"

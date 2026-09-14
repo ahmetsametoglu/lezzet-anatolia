@@ -226,6 +226,22 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
 }
 
 /**
+ * Defteri GÜNLERE böler (12.22 · kullanıcı seçimi "günlere göre gruplu") — sayfa değer gününe göre
+ * azalan gelir (`AccountLedgerService.page`), ardışık aynı gün tek grup olur ve sıra korunur. Eklenen
+ * sayfanın ilk günü öncekinin son günüyse aynı gruba katılır: başlık ikinci kez çizilmez.
+ */
+export function groupByDay<T extends Pick<MovementRowView, 'valueDate'>>(rows: readonly T[]): Array<{ day: string; rows: T[] }> {
+  const groups: Array<{ day: string; rows: T[] }> = [];
+  for (const row of rows) {
+    const day = row.valueDate.slice(0, 10);
+    const last = groups[groups.length - 1];
+    if (last?.day === day) last.rows.push(row);
+    else groups.push({ day, rows: [row] });
+  }
+  return groups;
+}
+
+/**
  * Kuyruk satırının `matchQueue` dönüşünden görünüme indirgenmiş hâli.
  *
  * **Öneri yalnız tür + kimlik taşır** (`MatchSuggestion`: kind, id, puan, sebepler) — referans,

@@ -2,7 +2,7 @@
 
 import { ActionMenu } from '@/components/operation/ui/action-menu';
 import { Chip } from '@/components/operation/ui/chip';
-import { CheckIcon } from '@/components/operation/ui/icons';
+import { CheckIcon, DocumentIcon, NavIcon } from '@/components/operation/ui/icons';
 import type { MatchTarget } from '@/lib/bank/reconcile';
 import { documentPaymentsAction, matchOptionsAction } from '@/lib/finance/actions';
 import { SUGGESTION_VIEW } from './finance-labels';
@@ -126,9 +126,9 @@ export function DocumentActionsCell({ document, actions }: DocumentActionsCellPr
   // Seyrek eylemler ⋯ menüsünde: ödeme yalnız açık kalan varken, dosya yalnız yüklüyse (panelin kuralı).
   const items = [
     ...(document.openAmountCents > 0
-      ? [{ key: 'pay', label: document.direction === 'out' ? 'Ödemesini yaz' : 'Tahsilatını yaz', hint: 'elle hareket penceresi belgeyle dolu açılır', onSelect: () => actions.onPay(document) }]
+      ? [{ key: 'pay', icon: <NavIcon name="para" />, label: document.direction === 'out' ? 'Ödemesini yaz' : 'Tahsilatını yaz', hint: 'elle hareket penceresi belgeyle dolu açılır', onSelect: () => actions.onPay(document) }]
       : []),
-    ...(document.hasFile ? [{ key: 'file', label: 'Belgeyi aç', hint: 'dosya yeni sekmede açılır', onSelect: () => actions.onOpenFile(document) }] : []),
+    ...(document.hasFile ? [{ key: 'file', icon: <DocumentIcon />, label: 'Belgeyi aç', hint: 'dosya yeni sekmede açılır', onSelect: () => actions.onOpenFile(document) }] : []),
   ];
 
   return (

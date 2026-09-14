@@ -1,7 +1,7 @@
 import type { AccountLedgerRow } from '@lezzet/types';
 import { describe, expect, it } from 'vitest';
 import type { MatchTarget } from '@/lib/bank/reconcile';
-import { toMovementRows, type MovementReadContext } from './finance-read';
+import { groupByDay, toMovementRows, type MovementReadContext } from './finance-read';
 
 /**
  * Defter satırının görünümü (12.21 · sağ panel kalktı): BAĞ "Karşılığı" sütununa (`link`), İPUCU
@@ -75,5 +75,27 @@ describe('toMovementRows — bağ ve ipucu', () => {
     expect(read({ source: 'bank_import', reconciled: true })).toMatchObject({ canUnmatch: true });
     expect(read({ source: 'bank_import', counterpartyId: 'cp-1' })).toMatchObject({ canUnmatch: true });
     expect(read({ source: 'manual', reconciled: true })).toMatchObject({ canUnmatch: false });
+  });
+});
+
+describe('groupByDay — defterin gün başlıkları (12.22)', () => {
+  const at = (id: string, valueDate: string) => ({ id, valueDate });
+
+  it('ardışık aynı gün tek grup, sıra korunur', () => {
+    const groups = groupByDay([at('a', '2026-09-14'), at('b', '2026-09-14'), at('c', '2026-09-11')]);
+    expect(groups.map((group) => [group.day, group.rows.map((row) => row.id)])).toEqual([
+      ['2026-09-14', ['a', 'b']],
+      ['2026-09-11', ['c']],
+    ]);
+  });
+
+  it('eklenen sayfanın ilk günü öncekinin son günüyse aynı gruba katılır', () => {
+    const firstPage = [at('a', '2026-09-14'), at('b', '2026-09-11')];
+    const nextPage = [at('c', '2026-09-11'), at('d', '2026-09-10')];
+    expect(groupByDay([...firstPage, ...nextPage]).map((group) => group.rows.length)).toEqual([1, 2, 1]);
+  });
+
+  it('boş defter boş liste', () => {
+    expect(groupByDay([])).toEqual([]);
   });
 });

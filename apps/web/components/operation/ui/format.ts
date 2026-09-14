@@ -111,6 +111,26 @@ export function dayMonth(iso: string | null | undefined): string {
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 }
 
+/**
+ * "14 Eylül" · "31 Aralık 2025" — GÜN BAŞLIĞI (12.22, Para defteri): uzun ay adı, yıl yalnız istenince.
+ * Yılı ÇAĞIRAN seçer (ör. listenin en yeni gününün yılından farklıysa) — burada saati okuyup "bu yıl mı"
+ * demek, yılbaşı gecesi sunucunun çizdiğiyle tarayıcınınkini ayırırdı. `shortDate` ile aynı UTC kuralı.
+ */
+export function dayMonthLong(iso: string | null | undefined, withYear = false): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: withYear ? 'numeric' : undefined, timeZone: 'UTC' });
+}
+
+/** "Pazartesi" — günün adı, gün başlığının ikinci yarısı. Aynı UTC kuralı. */
+export function weekdayName(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('tr-TR', { weekday: 'long', timeZone: 'UTC' });
+}
+
 /** "22 Tem 14:30" — hareket kayıtlarında saat de gerekir (aynı gün iki kayıt ayırt edilsin). */
 export function shortDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';

@@ -8,7 +8,8 @@ import { Chip } from '@/components/operation/ui/chip';
 import { DateRangeFilterChip } from '@/components/operation/ui/date-range-filter-chip';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { FilterChip } from '@/components/operation/ui/filter-chip';
-import { amount, dayMonth, money, num } from '@/components/operation/ui/format';
+import { BookIcon, DocumentIcon, NavIcon, TransferIcon, UploadIcon } from '@/components/operation/ui/icons';
+import { amount, dayMonthLong, money, num, weekdayName } from '@/components/operation/ui/format';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { Combobox } from '@/components/operation/form/combobox';
@@ -17,6 +18,7 @@ import { naturesForDirection } from '@/components/operation/form/movement-form/s
 import { ACCOUNT_GROUP_LABEL, EXPLAINED_LABEL, MOVEMENT_SOURCE_LABEL, MOVEMENT_TYPE_CHIP, MOVEMENT_TYPE_ORDER, NOTES } from './finance-labels';
 import { ledgerRowKey } from './finance-types';
 import type { AccountView, DialogKind, MovementRowView, RowEditor } from './finance-types';
+import { groupByDay } from './finance-read';
 import { ALL_ACCOUNTS, type FinanceUrlState } from './finance-url';
 import { MovementTypeIcon } from './movement-type-icon';
 import { MovementMatchCell, type RowMatcher } from './row-actions';
@@ -249,6 +251,7 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
             items={[
               {
                 key: 'movement',
+                icon: <NavIcon name="para" />,
                 label: 'Hareket ekle',
                 hint: writableAccountCount > 0 ? 'gider, sermaye ya da henüz sınıflandırılmamış para' : 'önce açık bir hesap gerekir',
                 disabled: writableAccountCount === 0,
@@ -256,20 +259,22 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
               },
               {
                 key: 'transfer',
+                icon: <TransferIcon />,
                 label: 'Transfer',
                 hint: writableAccountCount >= 2 ? 'hesaptan hesaba — kasadan bankaya, Stripe payout' : 'en az iki açık hesap gerekir',
                 disabled: writableAccountCount < 2,
                 onSelect: () => onOpenDialog('transfer'),
               },
-              { key: 'document', label: 'Belge ekle', hint: 'fatura, fiş, bordro — borç burada doğar, ödeme sonra bağlanır', onSelect: () => onOpenDialog('document') },
+              { key: 'document', icon: <DocumentIcon />, label: 'Belge ekle', hint: 'fatura, fiş, bordro — borç burada doğar, ödeme sonra bağlanır', onSelect: () => onOpenDialog('document') },
               {
                 key: 'bankImport',
+                icon: <UploadIcon />,
                 label: 'Banka dosyası yükle',
-                hint: writableAccountCount > 0 ? 'ekstre satırları eşleştirme kuyruğuna düşer' : 'önce açık bir hesap gerekir',
+                hint: writableAccountCount > 0 ? 'ekstre satırları listeye izah bekleyen olarak düşer' : 'önce açık bir hesap gerekir',
                 disabled: writableAccountCount === 0,
                 onSelect: () => onOpenDialog('bankImport'),
               },
-              { key: 'dictionary', label: 'Sözlük', hint: 'tür · cari · etiket', onSelect: () => onOpenDialog('dictionary') },
+              { key: 'dictionary', icon: <BookIcon />, label: 'Sözlük', hint: 'tür · cari · etiket', onSelect: () => onOpenDialog('dictionary') },
             ]}
           />
         </>
@@ -284,9 +289,18 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
  * Tablo şeridi — başlıklar ve hücreler AYNI diziyi okur, hiza elle tutulmaz. Orta sütun (12.17):
  * tür · cari · etiket — kullanıcı "etiketleri ortadaki boş alana koy, satır yüksekliği artmasın" dedi.
  */
-// 12.21: sağ sütun kalktı, liste tam genişlik — "Karşılığı" sütunu geldi, orta hücre ~250px'e genişledi;
-// hesap · tip sütunu kaynağı da taşıyor ("sipariş ödemesi · sistem" 130px'te kesiliyordu, ölçüldü).
-const ROW_GRID = 'grid grid-cols-[56px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1fr)_96px_minmax(0,180px)_10px] items-center gap-x-3';
+// 12.21: sağ sütun kalktı, liste tam genişlik — "Karşılığı" sütunu geldi; hesap · tip sütunu kaynağı da
+// taşıyor ("sipariş ödemesi · sistem" 130px'te kesiliyordu, ölçüldü).
+// 12.22 (kullanıcı isteği: "en önemli şey tutar, sonra tarih — tutar çok küçük"): tarih sütunu gün
+// başlığına dönüştü, tutar en sağa geçti ve satırın en büyük yazısı oldu; izah noktası sol kenara.
+const ROW_GRID = 'grid grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,180px)_132px] items-center gap-x-3';
+
+/**
+ * İzah bekleyen satırın SOL KENARI (12.22) — sağ uçtaki 8px nokta yerine: kuyruğu tararken göz satırın
+ * başına bakar. İçe gölge, kenarlık değil: kenarlık yazıyı 3px iterdi, izahlı satırlarla hiza bozulurdu.
+ * Renk tek başına söylemez: alt satırda "izah bekliyor — …" cümlesi, ekran okuyucuya gizli yazı var.
+ */
+const UNEXPLAINED_EDGE = 'shadow-[inset_3px_0_0_0_var(--color-ops-amber)]';
 
 interface MovementListProps {
   rows: MovementRowView[];
@@ -302,56 +316,77 @@ interface MovementListProps {
 
 export function MovementList({ rows, note, editor, matcher, hasMore, loadingMore, onLoadMore }: MovementListProps) {
   if (rows.length === 0) return <EmptyState title="Hareket yok" description={note ?? NOTES.emptyLedger} />;
+  // Yıl yalnız en yeni günün yılından farklı başlıkta yazılır — saat okunmaz (bkz. `dayMonthLong`).
+  const newestYear = rows[0]?.valueDate.slice(0, 4);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div
         className={`${ROW_GRID} border-b border-ops-line px-6 py-2.5 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-faint`}
       >
-        <span>Tarih</span>
         <span>Açıklama</span>
         <span>Tür · cari · etiket</span>
         <span>Karşılığı</span>
-        <span className="text-right">Tutar</span>
         {/* "Tip", "tür" değil (13.09): bu sütun kaba tipi (gider · transfer · sipariş ödemesi) söyler. */}
         <span>Hesap · tip</span>
-        <span />
+        <span className="text-right">Tutar</span>
       </div>
       <ul aria-label="Hareketler" className="min-h-0 flex-1 overflow-y-auto">
-        {rows.map((row) => (
-          // SATIR SEÇİLMEZ (12.21 · sağ panel kalktı): her iş satırın kendi kontrolünde — tür · cari ·
-          // etiket orta hücrede, bağ ve öneri "Karşılığı" sütununda.
-          <li key={ledgerRowKey(row)} className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2 transition-colors hover:bg-ops-subtle`}>
-            <span className="font-ops-mono text-ops-xs text-ops-faint">{dayMonth(row.valueDate)}</span>
-            <div className="flex min-w-0 flex-col gap-0.5">
-              {/* Kesilen açıklamanın tamamı fareyle üstüne gelince — panel onu tam yazıyordu. */}
-              <span title={row.title} className="truncate font-ops-body text-ops-sm text-ops-ink">
-                {row.title}
-              </span>
-              {row.ref ? <RefLine row={row} /> : null}
-            </div>
-            <RowCell row={row} editor={editor} />
-            {/* Hücre HER satırda durur: bağı olmayan satırda boş kalır — yoksa ızgarada tutar bir sütun sola
-                kayıyordu (ölçüldü: bağsız 12 satırda "Karşılığı" sütununda tutar okunuyordu). */}
-            <div className="flex min-w-0 items-center">
-              <MovementMatchCell row={row} matcher={matcher} />
-            </div>
-            <span className={`text-right font-ops-mono text-ops-sm ${amountTone(row.signedAmountCents, row.type === 'order_refund')}`}>
-              {signedAmount(row.signedAmountCents)}
-            </span>
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate font-ops-body text-ops-xs text-ops-ink">{row.accountName}</span>
-              {/* Kaynak (ekstre · elle · sistem) tipin yanında — panelin künyesindeydi (12.21). */}
-              <span className="flex min-w-0 items-center gap-1 font-ops-body text-ops-micro text-ops-faint">
-                <MovementTypeIcon type={row.type} size={12} />
-                <span title={`${row.typeLabel} · ${MOVEMENT_SOURCE_LABEL[row.source]}`} className="truncate">
-                  {row.typeLabel} · {MOVEMENT_SOURCE_LABEL[row.source]}
-                </span>
-              </span>
-            </div>
-            <MatchDot explained={row.explained} />
-          </li>
-        ))}
+        {groupByDay(rows).map((group) => {
+          const date = dayMonthLong(group.day, group.day.slice(0, 4) !== newestYear);
+          const weekday = weekdayName(group.day);
+          return (
+            // GÜN (12.22): başlık kendi grubunun içinde yapışkan — kaydırırken üstte kalır, sıradaki günün
+            // başlığı gelince onu iter. Gün toplamı YAZILMAZ: sayfa ortasında bölünen günün toplamı eksik olurdu.
+            <li key={group.day}>
+              <h3 className="sticky top-0 z-[1] flex items-baseline gap-2 border-b border-ops-line bg-ops-surface-sunken px-6 py-1.5">
+                <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{date}</span>
+                <span className="font-ops-body text-ops-xs text-ops-muted">{weekday}</span>
+              </h3>
+              <ul aria-label={`${date} ${weekday}`}>
+                {group.rows.map((row) => (
+                  // SATIR SEÇİLMEZ (12.21): her iş satırın kendi kontrolünde. Görsel sıra bilginin önemine göre
+                  // (12.22): tutar en büyük ve sağ kenarda, açıklama gövde boyunda, kontroller sakin.
+                  <li
+                    key={ledgerRowKey(row)}
+                    className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2 transition-colors hover:bg-ops-subtle ${row.explained ? '' : UNEXPLAINED_EDGE}`}
+                  >
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      {/* Kesilen açıklamanın tamamı fareyle üstüne gelince okunur. */}
+                      <span title={row.title} className="truncate font-ops-body text-ops-base text-ops-ink">
+                        {row.title}
+                      </span>
+                      {row.ref ? <RefLine row={row} /> : null}
+                      {row.explained ? null : <span className="sr-only">{EXPLAINED_LABEL.unexplained}</span>}
+                    </div>
+                    <RowCell row={row} editor={editor} />
+                    {/* Hücre HER satırda durur: bağı olmayan satırda boş kalır — yoksa ızgarada sütunlar bir sola
+                        kayıyordu (ölçüldü 12.21: bağsız 12 satırda "Karşılığı" sütununda tutar okunuyordu). */}
+                    <div className="flex min-w-0 items-center">
+                      <MovementMatchCell row={row} matcher={matcher} />
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="truncate font-ops-body text-ops-xs text-ops-ink">{row.accountName}</span>
+                      {/* Kaynak (ekstre · elle · sistem) tipin yanında — panelin künyesindeydi (12.21). */}
+                      <span className="flex min-w-0 items-center gap-1 font-ops-body text-ops-micro text-ops-faint">
+                        <MovementTypeIcon type={row.type} size={12} />
+                        <span title={`${row.typeLabel} · ${MOVEMENT_SOURCE_LABEL[row.source]}`} className="truncate">
+                          {row.typeLabel} · {MOVEMENT_SOURCE_LABEL[row.source]}
+                        </span>
+                      </span>
+                    </div>
+                    {/* TUTAR satırın en büyük yazısı, sağ kenarda (12.22): rakamlar alt alta hizalı taranır. */}
+                    <span
+                      className={`whitespace-nowrap text-right font-ops-mono text-ops-lead font-semibold ${amountTone(row.signedAmountCents, row.type === 'order_refund')}`}
+                    >
+                      {signedAmount(row.signedAmountCents)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        })}
         {/* Gözcü listenin İÇİNDE: kaydırma kabı bu `ul` — dışında dursaydı hep görünür sayılır ve
             sayfalar kendiliğinden art arda çekilirdi. */}
         <li className="list-none">
@@ -375,7 +410,7 @@ interface RowCellProps {
  *
  * GENİŞLİK BÜTÇESİ: hücre dar (1440 pikselde 177px idi; 12.21'de sağ panel kalkınca ~260px) ve hiçbir kontrol ondan DÜŞMEZ. Tür/cari taşıyan
  * satırda etiket alanı daralmaz ama sınırlıdır (tek çip, adı kesik); tür ve cari kalanı paylaşıp
- * adlarını keser (tam ad sağdaki ayrıntıda). Taşımayan satırda hücrenin tamamı etiketindir. Cari İKİ kat hızlı daralır: satırın izahı türdür, cari çoğu kez açıklamada
+ * adlarını keser (tam ad menüde). Taşımayan satırda hücrenin tamamı etiketindir. Cari İKİ kat hızlı daralır: satırın izahı türdür, cari çoğu kez açıklamada
  * zaten yazılı. Tür/cari taşıyan satırda etiket daveti "+" (üçüncü bir "+ x" yazısı yer yiyordu).
  * Ölçüldü 13.09: uzun cari adı ("Cabinet Comptable Muller") etiket düğmesini hücrenin dışına itiyordu
  * ve o satırda etiket eklenemiyordu; ilk düzeltmede de tür 41px'e ("Mu…") düşüyordu.
@@ -438,24 +473,4 @@ function RowCell({ row, editor }: RowCellProps) {
 function RefLine({ row }: { row: MovementRowView }) {
   const tone = row.refTone === 'olive' ? 'text-ops-olive-dark' : row.refTone === 'amber' ? 'text-ops-amber-dark' : 'text-ops-faint';
   return <span className={`truncate font-ops-body text-ops-micro ${tone}`}>{row.ref}</span>;
-}
-
-/**
- * İzah noktası (13.09) — `title` ile okunur hâli de var. Bir tur banka mutabakat bayrağını okuyordu
- * ve sistemin kendi yazdığı her tahsilat amber görünüyordu; şimdi "bu satırın ne olduğu biliniyor
- * mu" sorusunu okuyor (`explained`).
- *
- * Tek başına bir renk noktası ekran okuyucuya hiçbir şey söylemez ve renk körü kullanıcıda iki hâl
- * ayrışmaz; `title` + `aria-label` ikisini de kapatıyor.
- */
-function MatchDot({ explained, className = '' }: { explained: boolean; className?: string }) {
-  const label = explained ? EXPLAINED_LABEL.explained : EXPLAINED_LABEL.unexplained;
-  return (
-    <span
-      title={label}
-      aria-label={label}
-      role="img"
-      className={`size-2 rounded-full ${explained ? 'bg-ops-olive' : 'bg-ops-amber'} ${className}`}
-    />
-  );
 }

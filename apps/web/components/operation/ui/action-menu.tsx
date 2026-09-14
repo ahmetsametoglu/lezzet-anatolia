@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { AnchoredMenu } from './anchored-menu';
 import { Button } from './button';
 import { Chip } from './chip';
@@ -17,7 +17,11 @@ import { ChevronDownIcon, MoreIcon } from './icons';
  */
 interface ActionMenuProps {
   label: string;
-  items: Array<{ key: string; label: string; hint?: string; disabled?: boolean; onSelect: () => void }>;
+  /**
+   * `icon` (12.22) — adın solunda: menü taranırken göz önce ikona bakar. Eylem bir hareket tipine
+   * karşılık geliyorsa tipin ikonu kullanılır (Transfer ↔ transfer tipi); ikonsuz öğe hizayı bozmaz.
+   */
+  items: Array<{ key: string; label: string; hint?: string; icon?: ReactNode; disabled?: boolean; onSelect: () => void }>;
   /**
    * SATIR İÇİ (12.21 · Para'nın belge satırı): tetikleyici küçük "⋯" çipi, `label` onun adı olur
    * (`aria-label` + `title`). Tablo satırında yazılı bir düğme satırı şişirirdi.
@@ -44,7 +48,7 @@ export function ActionMenu({ label, items, compact = false, className }: ActionM
           </span>
         </Button>
       )}
-      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={260}>
+      <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={288}>
         <div role="menu" className="flex flex-col py-1">
           {items.map((item) => (
             <button
@@ -56,10 +60,13 @@ export function ActionMenu({ label, items, compact = false, className }: ActionM
                 setOpen(false);
                 item.onSelect();
               }}
-              className="flex w-full cursor-pointer flex-col gap-0.5 px-[13px] py-2 text-left transition-colors hover:bg-ops-subtle disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+              className="flex w-full cursor-pointer items-start gap-2.5 px-[13px] py-2 text-left transition-colors hover:bg-ops-subtle disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
             >
-              <span className="font-ops-body text-ops-sm text-ops-strong">{item.label}</span>
-              {item.hint ? <span className="font-ops-body text-ops-xs text-ops-faint">{item.hint}</span> : null}
+              {item.icon ? <span className="mt-0.5 flex-none text-ops-muted">{item.icon}</span> : null}
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-ops-body text-ops-sm text-ops-strong">{item.label}</span>
+                {item.hint ? <span className="font-ops-body text-ops-xs text-ops-faint">{item.hint}</span> : null}
+              </span>
             </button>
           ))}
         </div>

@@ -2657,6 +2657,8 @@ tek panel", 12.19):
   işaretliyordu — her hareket izahlı olmalı, o kapı kaldırıldı.
 - **Seçim yokken sağda izah özeti:** izah bekleyen sayısı, listedeki güçlü öneri sayısı, "Sıradakini aç".
   Hesap seçmek şart değil (kuyruk hesaba bağlıydı).
+- **14.09 — 12.21 ile değişti:** panel kalktı; onay satırın "Karşılığı" hapında ve ✓'sinde, "karar →
+  sıradaki", "Atla →" ve izah özeti kalktı (aşağıdaki karar).
 
 ## Para: hareket tipinin ikonu · sözlükte tek satır tür (14.09)
 
@@ -2667,11 +2669,56 @@ kaydet ve iptal butonları da ikon olabilir."* (12.20):
 - **Tip ikonları:** sipariş ödemesi = koli, iade = geri ok, stok alımı = sepet, gider = fiş, transfer =
   iki yönlü ok, sermaye = €, sınıflandırılmamış = soru işareti. Var olan çizim yeniden kullanılır (kenar
   menünün sipariş · satın alma · para ikonları); ikon listenin tip sütununda, "+ tip" süzgecinde ve
-  panelin künyesinde — tipin adının önünde, yerine değil.
+  ~~panelin künyesinde~~ (12.21: panel kalktı) — tipin adının önünde, yerine değil.
 - **Tür satırı tek satır:** ad · yön (açılır seçici — üçlü düğme satırı iki satıra bölüyordu) · hesap
   kodu · eylemler. Cari iki satırlık ayna kalır (dört alan tek satıra sığmıyor).
 - **Satır içi düzenlemenin kararları ikon düğme:** ✓ kaydet, ✕ vazgeç — adları ve kısayolları (Enter ·
   Esc) `aria-label` + `title`da. Kitin `Button`ına `icon` seçeneği (kare, 32/36px — yanındaki kutuyla hizalı).
+
+## Para: sağ panel kalktı — satırın işi satırda (14.09)
+
+Kullanıcı: *"Şimdi operasyon tablosundaki sağ taraftaki panel anlamını büyük yitirdi. Bence bunu oradan
+kaldıralım. O panelden yapılıp da tablo üzerinde bir işlem varsa bunu da tespit edip tablodan
+yapılabilecek şekilde bir güncelleme yapalım."* Karar (kullanıcı seçimi "'Karşılığı' sütununda hap", 12.21):
+
+- **Sağ sütun kalktı, liste tam genişlik; satır seçilmez.** Panelin her işi satırın kendi kontrolüne
+  geldi — tür · cari · etiket zaten orta hücredeydi (13.09).
+- **"Karşılığı" sütunu:** eşleşme bekleyen ekstre satırında hap önerinin kendisidir ("öneri: …"; güçlü
+  aday olive, çoklu aday amber, önerisiz "Eşleştir"); güçlü öneride yanında ✓ — tek dokunuşla onay. Hapın
+  menüsü panelin seçicisidir (öneriler + bölüm bölüm hedefler, arama). Eşleşmiş ekstre satırında hap bağı
+  söyler; menüsünde bağlı belgeler ve "Eşleşmeyi geri al". Elle yazılan satırda "Belgeye bağla" /
+  "bağlı x / y" (bağ menüden kaldırılır). Öteki satırlarda bağ düz yazı (sipariş · mal kabul · tedarikçi ·
+  karşı hesap); açıklamanın altında yalnız ipucu kalır (kampanya ya da izah sorusu).
+- **Belge satırı:** ödeme hapı ("Ödeme bağla" / "ödenen x / y" — bağlı ödemeler, kaldırma, adaylar
+  menüde) ve ⋯ menüsü ("Ödemesini yaz" / "Tahsilatını yaz", "Belgeyi aç"); panelin KDV'si satırın ikinci
+  satırında.
+- **Menüler verisini açılınca okur:** sayfa her satırın adaylarını önceden okumaz (50 satır 50 tur
+  ederdi); yazımdan sonra açılan menü bayat kalmaz.
+- **Kalkanlar:** "karar → sıradaki satır açılır" ve "Atla →" (12.19) — seçim olmayınca anlamları kalmadı;
+  iş kuyruğu "izah bekleyen" süzgecidir. İzah özeti de kalktı (sayaç süzgeç satırında). Panelin künyesindeki
+  kaynak ("ekstre · elle · sistem") tip hücresine taşındı; kesilen açıklamanın tamamı fareyle üstüne
+  gelince okunur.
+
+## Para: hareket satırı bilginin önemine göre — günlere göre gruplu, tutar en büyük (14.09)
+
+Kullanıcı: *"Biz çalışırken zaten tasarımdan farklı bir yerde çalışıyoruz artık. Şimdi bu para da para
+hareketlerinde en önemli şey tutar. Sonra belki tarih ama tutar çok küçük… her satırı bilgilerin önemine
+göre göze çarpacak şekilde"* · *"Burası için de uygun ikonları ekleyebilirsin. Bir kısmı tip ikonlarından
+gelecek zaten."* Karar (kullanıcı seçimi "günlere göre gruplu", 12.22):
+
+- **Önem sırası:** tutar → tarih → açıklama → hesap → izah durumu → kontroller. Önceki satırda tutar
+  açıklamayla aynı boydaydı (14px), tarih en sönük öğeydi, en çok göze çarpan şey dolu etiket çipiydi —
+  eylemler olgulardan yüksek sesle konuşuyordu.
+- **Tarih gün başlığı:** her güne bir kez, kaydırırken üstte kalan başlık ("14 Eylül Pazartesi"; yıl yalnız
+  en yeni günün yılından farklıysa). Satırdan tarih sütunu kalktı. Gün toplamı yazılmaz — sayfalı listede
+  bölünen günün toplamı eksik olurdu.
+- **Tutar satırın en büyük yazısı** (17px, kalın, mono), sağ kenarda — rakamlar alt alta hizalı taranır.
+  Açıklama gövde boyunda (15px).
+- **İzah bekleyen satırın solunda amber çizgi;** sağ uçtaki nokta kalktı. Hücredeki etiket çipi dolu değil,
+  çerçeveli.
+- **Eylem menülerinde ikon:** Hareket ekle € (Para'nın simgesi), Transfer transfer tipinin ikonu, Belge
+  ekle belge, Banka dosyası yükle yükleme, Sözlük kapalı kitap (Tarifler'in açık kitabı değil — menü öğesi
+  başka modülün simgesini taşımasın); belge satırının ⋯ menüsünde "Ödemesini yaz" € ve "Belgeyi aç" belge.
 
 ## Başlık ve yer paneli v1'in BİREBİR aynısı — önce ülke (13.09, kullanıcı kararı)
 

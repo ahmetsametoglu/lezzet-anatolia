@@ -448,3 +448,37 @@ export function MoreIcon({ size = 16 }: { size?: number }) {
     </Svg>
   );
 }
+
+/** Belge — köşesi kıvrık sayfa (12.22): fatura, fiş, bordro, sözleşme; "Belge ekle" · "Belgeyi aç". */
+export function DocumentIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6M9 17h4" />
+    </Svg>
+  );
+}
+
+/** Yükleme — tepsiden yukarı ok (12.22): dosya yükleme eylemi ("Banka dosyası yükle"). */
+export function UploadIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+      <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5" />
+    </Svg>
+  );
+}
+
+/**
+ * Kapalı kitap (12.22): Para'nın "Sözlük"ü (tür · cari · etiket). Tarifler'in AÇIK kitabı alınmadı —
+ * bir menü öğesi başka bir modülün simgesini taşırsa oraya gidiyormuş gibi okunur.
+ */
+export function BookIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <path d="M5 19V5a2 2 0 0 1 2-2h12v14H7a2 2 0 0 0-2 2 2 2 0 0 0 2 2h12v-4" />
+      <path d="M9 7h6" />
+    </Svg>
+  );
+}

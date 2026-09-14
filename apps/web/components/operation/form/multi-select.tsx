@@ -69,6 +69,8 @@ interface MultiSelectProps<T extends string> {
    * Hücrede çip dar ve adı kesilir: dokunuş KALDIRMAZ, menüyü açar — kaldırma menüdeki işaretten (kip
    * kendiliğinden `checkable`). Kesilmiş bir çipin tek dokunuşla silinmesi yoğun bir tabloda kaza
    * demekti. Ekleme çipi yalnız hiç seçim yokken durur; seçim varken çipin kendisi menüdür.
+   * Hücrede seçili çip ÇERÇEVELİDİR, dolu değil (12.22): dolu çip Para satırının en baskın öğesiydi ve
+   * tutarın önüne geçiyordu — satırda olgu kontrolden yüksek sesle konuşmalı.
    */
   size?: 'sm' | 'cell';
   /** En çok kaç seçili çip çizilir; kalanı "+N" çipinde sayılır ve dokunuş menüyü açar. */
@@ -130,7 +132,7 @@ export function MultiSelect<T extends string>({
         : shown.map((v) => {
             const o = optionOf(v);
             return (
-              <Chip key={v} active size={size} onClick={disabled ? undefined : cell ? openMenu : () => onChange(selected.filter((x) => x !== v))}>
+              <Chip key={v} active={!cell} size={size} onClick={disabled ? undefined : cell ? openMenu : () => onChange(selected.filter((x) => x !== v))}>
                 {o?.imageUrl !== undefined ? <Thumbnail src={o.imageUrl} alt="" size={18} iconSize={10} className="!rounded-[5px]" /> : null}
                 {cell ? (
                   <span className="min-w-0 truncate">{o?.label ?? v}</span>
