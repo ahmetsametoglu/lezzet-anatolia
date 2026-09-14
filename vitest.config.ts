@@ -112,6 +112,8 @@ const UYGULAMA_DBSIZ = [
 ];
 
 const WEB_LIB_DBSIZ = [
+  // Adresin tek satırı (14.09) — saf: alanlar girer, satır çıkar; sepetin künyesi ve ödemenin adres kartı okur.
+  'apps/web/lib/address/address-line.test.ts',
   // Kapı numarası var mı (14.09) — saf: dize girer, evet/hayır çıkar; öneri kutusunun iki cümlesi buna bakar.
   'apps/web/lib/address/house-number.test.ts',
   'apps/web/lib/analytics/route-pattern.test.ts',

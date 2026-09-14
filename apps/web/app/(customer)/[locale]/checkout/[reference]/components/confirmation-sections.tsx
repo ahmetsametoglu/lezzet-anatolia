@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { whatsappHref } from '@lezzet/brand';
 import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
@@ -11,6 +11,7 @@ import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewProps, type Messages } from '../confirmation-types';
+import { useInviteShare } from './use-invite-share.hook';
 
 /**
  * Sipariş alındı ekranının blokları (tasarım: `Musteri - Checkout.dc.html` · "Sipariş Alındı").
@@ -28,7 +29,7 @@ import { isRefundedCancellation, type ConfirmationView, type ConfirmationViewPro
  * Önce tek cümle vardı ("onaylanıyor") ve olay gelmeyince kartı reddedilmiş müşteri de parası alınmış
  * müşteri de onu okuyordu. Sorulamadıysa (`null`) bugünkü cümle kalır.
  */
-function awaitingCopy(t: Messages, state: ConfirmationView['paymentState']): { title: string; body: string } {
+export function awaitingCopy(t: Messages, state: ConfirmationView['paymentState']): { title: string; body: string } {
   switch (state) {
     case 'paid':
       return { title: t.paid, body: t.paidBody };
@@ -347,7 +348,8 @@ export function HelpBand({
  * gidiyor ve uygulama sırasını işletim sistemi bizden iyi biliyor (`ShareButton` künyesi).
  */
 export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, 't' | 'compact' | 'view'>) {
-  const [copied, setCopied] = useState(false);
+  // Paylaşım kapısı telefonun şeridiyle ORTAK (`useInviteShare`); kanca koşulsuz — erken dönüşten önce çağrılır.
+  const { share, copied } = useInviteShare();
   const invite = view.neighborInvite;
   if (!invite) return null;
   const { url } = invite;
@@ -357,21 +359,6 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
   const limitText = (full ? t.neighbor.full : t.neighbor.remaining)
     .replace('{n}', String(invite.remainingUses))
     .replace('{max}', String(invite.maxUses));
-
-  const share = async () => {
-    if (navigator.share) {
-      // İptal hata değildir: vazgeçen müşteriye uyarı çıkmamalı.
-      await navigator.share({ url }).catch(() => undefined);
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  };
 
   return (
     <div className={['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ')}>
@@ -389,7 +376,7 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
           burada bloğun TEK işlevi paylaşmak; düğmesiz bir davet şeridi hiçbir şey yapmaz.
           DOLUYSA çizilmez: ölü bir bağlantıyı paylaştırmak iki tarafı da boşa uğraştırır. */}
       {full ? null : (
-        <Button variant="secondary" size="sm" className="flex-none" onClick={() => void share()}>
+        <Button variant="secondary" size="sm" className="flex-none" onClick={() => void share(url)}>
           {copied ? t.neighbor.copied : t.neighbor.cta}
         </Button>
       )}
