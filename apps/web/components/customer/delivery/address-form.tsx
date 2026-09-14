@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { addressLineOf, MIN_QUERY_LENGTH } from '@lezzet/address-fr';
 import { CountryEnum, type Address, type Country } from '@lezzet/types';
 import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
@@ -11,6 +11,7 @@ import { ChoiceChip } from '@/components/customer/ui/choice-chip';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { Icon } from '@/components/customer/ui/icons';
 import { SuggestionList } from '@/components/customer/ui/suggestion-list';
+import { useDismiss } from '@/components/customer/ui/use-dismiss.hook';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { checkAddressAction, resolveGermanAddressAction, type CheckedPoint } from '@/lib/address/lookup-actions';
 import { useAddressSearch } from '@/lib/address/use-address-search.hook';
@@ -267,6 +268,21 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   const notFound = searchOn && manual === null && term.length >= MIN_QUERY_LENGTH && found.term === term && found.suggestions.length === 0 && !throttled;
 
   /**
+   * ── ÖNERİLER MENÜ OLARAK AÇILIR (masaüstü · kullanıcı isteği 14.09) ──────────────────────────
+   * Liste akışta dururken pencere her harfte uzayıp kısalıyordu; artık arama kutusunun altında formun
+   * ÜSTÜNE açılıyor (`SuggestionList floating`). Yazınca ve alana basınca açılır; dışarı basınca,
+   * Escape'le ya da odak kutudan çıkınca kapanır — Tab'la örtülen alana geçen müşterinin önünde menü
+   * kalmasın. Mobil web çekmecesinde liste akışta kalır (tasarım kaynağı native uygulama, 08.58).
+   */
+  const floating = !compact;
+  const [menuOpen, setMenuOpen] = useState(true);
+  const searchBox = useRef<HTMLDivElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const listShown = searchOn && (!floating || menuOpen);
+  const menuVisible = floating && listShown && found.suggestions.length > 0;
+  useDismiss(searchBox, menuVisible, () => setMenuOpen(false));
+
+  /**
    * Teslimat cevabı yerin ORTAK çözümünden (`resolvePlaceAction` — hapın da sorduğu motor), ama YALNIZ
    * SORULUR: seçim sitenin yerini değiştirmez. Yer adres KAYDEDİLİNCE değişir ("Adresi kaydet ve seç");
    * vazgeçen müşterinin yeri yerinde kalır.
@@ -362,6 +378,37 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
 
   const pin = <Icon name="pin" size={16} />;
 
+  const suggestionLists = (
+    <>
+      {listShown && country === 'FR' && (
+        <SuggestionList
+          items={ban.suggestions.map((row) => ({
+            id: row.id,
+            title: addressLineOf(row),
+            subtitle: `${row.postalCode} ${row.city}`,
+            badge: <ChannelBadge postalCode={row.postalCode} locale={locale} />,
+          }))}
+          onSelect={pickFrench}
+          label={t.suggestLabel}
+          icon={pin}
+          footnote={t.suggestCredit}
+          floating={floating}
+        />
+      )}
+      {listShown && country === 'DE' && (
+        <SuggestionList
+          items={google.suggestions.map((row) => ({ id: row.placeId, title: row.main, subtitle: row.secondary ?? undefined }))}
+          onSelect={(id) => void pickGerman(id)}
+          label={t.suggestLabel}
+          icon={pin}
+          // Google önerisi haritasız gösterildiğinde logo ZORUNLU (Places kullanım koşulları).
+          footnote={<img src="/attribution/google-maps.svg" alt="Google Maps" width={78} height={14} className="block" />}
+          floating={floating}
+        />
+      )}
+    </>
+  );
+
   const saveButton = (
     <Button disabled={!complete || busy} fullWidth={compact} onClick={() => void save()}>
       {defaultChoice ? t.save : t.saveAndSelect}
@@ -399,15 +446,35 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           ))}
         </div>
 
-        <div className="flex flex-col gap-2">
+        {/* Arama kutusu — menü bu kutuya göre konumlanır; alan ve menü aynı kutuda, Tab alandan satırlara geçer. */}
+        <div
+          ref={searchBox}
+          className="relative flex flex-col gap-2"
+          onKeyDown={(e) => {
+            // Menü açıkken Escape YALNIZ menüyü kapatır. Pencere Escape'i belgede dinliyor ve React'in kökü de
+            // belgede: `stopPropagation` aynı düğümdeki pencere dinleyicisini durdurmaz, bütün pencere kapanırdı.
+            if (!menuVisible || e.key !== 'Escape') return;
+            e.stopPropagation();
+            e.nativeEvent.stopImmediatePropagation();
+            setMenuOpen(false);
+            searchInput.current?.focus();
+          }}
+          onBlur={(e) => {
+            if (floating && !e.currentTarget.contains(e.relatedTarget as Node | null)) setMenuOpen(false);
+          }}
+        >
           <FormInputField
             label={t.searchLabel}
             value={query}
+            inputRef={searchInput}
             onChange={(e) => {
               setQuery(e.target.value);
               setPicked(null);
               setAnswer(null);
+              setMenuOpen(true);
             }}
+            // Kapanan menü alana basınca geri gelir; odağın alana dönmesi açmaz (Escape odağı buraya getirir).
+            onClick={() => setMenuOpen(true)}
             placeholder={country === 'DE' ? t.searchPlaceholderDE : t.searchPlaceholderFR}
             icon={<Icon name="search" size={18} />}
             /* Tarayıcının kayıtlı adres önerisi SOKAK satırını doldursun (kullanıcı bulgusu 14.09): `off`u
@@ -418,34 +485,13 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           {searchOn && term.length > 0 && term.length < MIN_QUERY_LENGTH && (
             <span className="font-sans text-field-label font-normal text-muted">{t.searchHint.replace('{n}', String(MIN_QUERY_LENGTH))}</span>
           )}
+          {floating && suggestionLists}
         </div>
 
-        {searchOn && country === 'FR' && (
-          <SuggestionList
-            items={ban.suggestions.map((row) => ({
-              id: row.id,
-              title: addressLineOf(row),
-              subtitle: `${row.postalCode} ${row.city}`,
-              badge: <ChannelBadge postalCode={row.postalCode} locale={locale} />,
-            }))}
-            onSelect={pickFrench}
-            label={t.suggestLabel}
-            icon={pin}
-            footnote={t.suggestCredit}
-          />
-        )}
+        {/* Mobil webde liste akışta, kutunun ALTINDA — önceki yerleşimin aynısı. */}
+        {!floating && suggestionLists}
         {/* Kota doldu (429): tek satır söylenir ve BİTER — elle giriş açık; bir hata değil, kırmızı değil. */}
         {searchOn && throttled && <span className="font-sans text-note leading-relaxed text-body">{t.suggestBusy}</span>}
-        {searchOn && country === 'DE' && (
-          <SuggestionList
-            items={google.suggestions.map((row) => ({ id: row.placeId, title: row.main, subtitle: row.secondary ?? undefined }))}
-            onSelect={(id) => void pickGerman(id)}
-            label={t.suggestLabel}
-            icon={pin}
-            // Google önerisi haritasız gösterildiğinde logo ZORUNLU (Places kullanım koşulları).
-            footnote={<img src="/attribution/google-maps.svg" alt="Google Maps" width={78} height={14} className="block" />}
-          />
-        )}
 
         {notFound && (
           <div className="flex flex-col gap-2.25 rounded-2xl border border-honey-line bg-honey-bg px-4.5 py-4">

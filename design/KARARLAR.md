@@ -2821,6 +2821,12 @@ hesap sözlüğündeki kopya (`addressForm`) kalktı.
   penceresi (krem, 22px köşe, açıklama satırı, ✕ ikonu — bütün ortalanmış pencereler), `DeliveryStrip`
   ve `ChannelBadge` (yer paneli, yer penceresi ve adres penceresi ortak). Google önerisinin altında
   zorunlu "Google Maps" logosu (`public/attribution/google-maps.svg`).
+- **Öneri listesi MENÜ olarak açılır — v1'den bilinçli sapma (14.09, kullanıcı isteği):** *"…bu liste
+  diyaloğun yüksekliğini arttırıyor. Bunun bu şekilde olmaması lazım. Açılan kısım bir popup menü gibi
+  açılmalı. Ve diyalog formunun üzerinde gerçekleşmeli."* v1 listeyi pencerenin akışında çiziyor;
+  masaüstünde artık arama alanının altında formun ÜSTÜNE açılıyor (`SuggestionList` · `floating`, kitin
+  menü gölgesi), satırlar v1'in aynı, kaynak künyesi menünün içinde. Dışarı basınca, Escape'le (pencere
+  açık kalır) ya da odak arama kutusundan çıkınca kapanır. Mobil web çekmecesi akıştaki listeyle kaldı.
 
 ## Posta kodu yalnız başlıktaki haptan sorulur — ülkesiyle (14.09, kullanıcı kararı)
 
