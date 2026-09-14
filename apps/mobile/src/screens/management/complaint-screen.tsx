@@ -8,7 +8,7 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsPartyAvatar } from '@/components/operations/party-avatar';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { ChatLayout } from '@/components/ui/chat-layout';
+import { ChatLayout } from '@lezzet/mobile-kit/src/components/ui/chat-layout';
 import { ChatText } from '@/components/ui/chat-text';
 import { PhotoViewer } from '@/components/ui/photo-viewer';
 import { PressableSurface } from '@/components/ui/pressable-surface';

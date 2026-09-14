@@ -1,13 +1,9 @@
-// Babel — Metro (uygulama) ve jest-expo (test) aynı config'i okur.
-// `.cjs` uzantısı bilinçli: paket ESM değil, kök ESLint flat config de `**/*.cjs`'i denetlemez.
-module.exports = function (api) {
-  api.cache(true);
-  return {
-    presets: ['babel-preset-expo'],
-    plugins: [
-      // Unistyles 3 plugin'i yalnız `root` altındaki dosyaları işler; test ortamında
-      // (NODE_ENV=test) kendini otomatik kapatır — unistyl.es/v3/start/testing.
-      ['react-native-unistyles/plugin', { root: 'src' }],
-    ],
-  };
-};
+// Babel — tarif kitte tek yerde (`@lezzet/mobile-kit/babel.cjs`, 21.310): native uygulamalar ve
+// kitin kendi testleri aynı ayarı okur; Unistyles seçeneklerinin gerekçesi orada.
+//
+// SARMALAYICI FONKSİYON BİLİNÇLİ — `module.exports = require(…)` diye sadeleştirmeyin. knip, yalnız
+// bir paketi yeniden dışa aktaran ayar dosyasını HİÇ YÜKLEMİYOR (`isExternalReExportsOnly`); preset'i
+// göremeyince `babel-preset-expo`yu "kullanılmayan bağımlılık" diye raporluyordu (ölçüldü 14.09).
+const mobileBabelConfig = require('@lezzet/mobile-kit/babel.cjs');
+
+module.exports = (api) => mobileBabelConfig(api);

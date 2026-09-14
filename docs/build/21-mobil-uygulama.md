@@ -10543,7 +10543,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   failed to insert view … The specified child already has a parent` (31.08, CPH1907; üç turda tekrar
   üretilmiş). Başlıkta "yalnız DURAK ekranı" yazıyordu; 03.09'da dört ekranda ve iki cihazda ölçüldü,
   ekrana değil DOKUNUŞA bağlı. Şüphe ekranın üç örtüsündeydi (iki çekmece + `ScanSheet`) — yanlış çıktı.
-  `touches:` `apps/mobile/src/lib/interaction/defer-press.ts` · `apps/mobile/src/components/ui/pressable-surface.tsx` · `apps/mobile/jest.setup.ts`
+  `touches:` `packages/mobile-kit/src/lib/interaction/defer-press.ts` · `apps/mobile/src/components/ui/pressable-surface.tsx` · `apps/mobile/jest.setup.ts`
   - ~~**BEKLEYEN(21.219):** 01.09'daki `@gorhom/bottom-sheet` göçü RN `Modal`ını tamamen kaldırdı
     ve yığın izi tam oraya işaret ediyordu; arıza göç ile kapanmış OLABİLİR.~~ Göç KAPATMADI
     (03.09 ölçümü) ve çekmecelerle ilgisi yoktu — işaret cevaplandığı için üstü çizildi.
@@ -11558,7 +11558,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kullanıcıya kaldı, akış çiple bayt bayt aynı yoldan geçiyor (`scan-sheet` künyesi).
 
 - [ ] (21.245) **Dokunma ertelemesi geçicidir — RN/screens kök düzeltmesi gelince sökülür** (21.219'un kalanı)
-  `touches:` `apps/mobile/src/lib/interaction/defer-press.ts` · `apps/mobile/src/components/ui/pressable-surface.tsx`
+  `touches:` `packages/mobile-kit/src/lib/interaction/defer-press.ts` · `apps/mobile/src/components/ui/pressable-surface.tsx`
 
   21.219'da ölçülen çökmenin kökü bizde değil: Fabric ekran kaldırılırken geri dönüştürülen görünümü
   eski ebeveynine bağlı buluyor (react-native-screens **#3249** `endRemovalTransition` bozuk ·
@@ -14848,3 +14848,57 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · **Doğrulama:** kök `typecheck` 20/20 · `lint` · `knip` temiz · mobil paket 1551/1553 (iki düşüş
     `unistyles.test.ts`in yazı tipi testleri, önceden var) · tam paket 4577/4577 (`tickets` 17/17 · web
     köprüsünün `attachments.test.ts`i 8/8).
+
+- [~] (21.310) **NATIVE UYGULAMA İKİYE BÖLÜNÜYOR — müşteri `apps/mobile-customer` + operasyon `apps/mobile-operations` ("Lezzet Operasyonu"); ortak çekirdek `packages/mobile-kit`** (kullanıcı kararları 14.09: *"mevcut mobil uygulamanın ikiye parçalanması … Operasyon uygulamasının adı lezzet-operasyonu olacak"* · *"Klasör yapısı bize projelerin tipi ve ne ile ilgili olduğu hakkında fikir vermeli"* · ortak kod ayrı pakette · taşıma sınırlı betik + kanıtla, önce iki dosyalık pilot · push jetonuna uygulama sütunu → 21.311)
+  `touches:` `apps/mobile` (→ `apps/mobile-customer`) · `apps/mobile-operations` (yeni) · `packages/mobile-kit` (yeni) · `packages/brand` (ekleme) · kök `package.json` · `pnpm-lock.yaml` · `knip.json` · `.dependency-cruiser.cjs` · `scripts/docs-check.mjs` · `docs/build/{05,08,15,21,23}` (yol düzeltmesi) · `docs/uygulama/README.md` · `docs/uygulama/02-mimari-ve-sinirlar.md` · `docs/architecture/STACK.md` · `CLAUDE.md` · `.claude/agents/expo-ajani.md`
+
+  **Plan (onaylı, 14.09):** `packages/mobile-kit` iki uygulamanın ortak çekirdeği — tema, UI kiti, API
+  istemcisi, oturum, push, dil, test sahteleri. Uygulama onu derin yolla okur (`@lezzet/mobile-kit/src/…`),
+  kit içi importlar göreli, kit uygulamaya bağlanamaz. Dilimler, her biri ayrı commit ve onayla:
+  (0) `apps/mobile` → `apps/mobile-customer` · (1) pilot · (2) ortak çekirdek kite · (3) operasyon uygulaması
+  (kimlik `com.lezzetanatolie.operasyon`, şema `lezzetoperasyonu`, Expo projesi `lezzet-operasyonu`) ·
+  (4) müşteri uygulamasının operasyon artıklarından temizlenmesi · (5) push sütunu (21.311) · (6) doküman/araç.
+
+  **Durum (14.09) — pilot dilimi yazıldı; devamı kullanıcı onayını bekliyor (kararlaştırılan kapı).**
+  · **Kit kuruldu:** Babel (`packages/mobile-kit/babel.cjs`), Jest (`packages/mobile-kit/jest-base.cjs`) ve
+    TypeScript (`packages/mobile-kit/tsconfig.base.json`) tarifleri tek kaynak; uygulama okur, kopyalamaz.
+    Unistyles eklentisine `autoProcessPaths: ['mobile-kit/src']` eklendi: eklenti kök `src` dışındaki bir
+    dosyayı yalnız `react-native-unistyles` import ediyorsa işliyor (eklentinin kaynağı okundu).
+  · **Taşınan iki modül:** `packages/mobile-kit/src/components/ui/chat-layout.tsx` (+2 test) ve
+    `packages/mobile-kit/src/lib/interaction/defer-press.ts`; beş tüketen satırı yerel betikle yeniden
+    yazıldı (`.test-results/native-split/move.mjs`, repoya girmez: kuru koşu → uygulama, indekse dokunmaz,
+    kapalı olmayan plana hata verir). Planda adı geçen `lib/base64` bırakıldı: üretimde tüketeni YOK, yalnız
+    kendi testi okuyor. `components/ui/skeleton` da bırakıldı: temaya bağlı, tema kite geçmeden kitin tip
+    denetiminden geçemez.
+  · **Tek kopya ölçüldü:** kitin 15 bağımlılığı uygulamayla AYNI depo klasörüne bağlı. Android dışa
+    aktarımında `react` · `react-native` · `react-native-unistyles` · `expo-constants` birer kopya; kit
+    dosyaları gerçek yoldan paketlendi ve Unistyles kit bileşenini işledi (`ScrollView` ·
+    `KeyboardAvoidingView` → `react-native-unistyles/components/native/*`). Kalıcı bekçi:
+    `apps/mobile/src/lib/kit-dependency-guard.test.ts` → `packages/mobile-kit/src/testing/dependency-guard.ts`
+    (yazılı aralığı değil, bağın gittiği yeri karşılaştırır).
+  · **Kilit dosyası yan etkisi ölçüldü ve giderildi:** kitin `expo-constants` aralığı yeni içe aktarıcı
+    olarak 57.0.14'e çözüldü ve pnpm uygulamanın Expo CLI kopyasını da o bağlama taşıdı → kitte TAM sürüm
+    (57.0.9). Beş Expo aracının `@expo/image-utils` · `@expo/require-utils` yama yükselmesi HEAD değerine
+    döndü; `pnpm install --frozen-lockfile` kabul etti. Kilit farkı yalnız ekleme.
+  · **Kırılan ve düzeltilen:** `apps/mobile/src/lib/keyboard-scroll-guard.test.ts` kap dosyasını sabit yolla
+    okuyordu (ENOENT) → modül çözümü. Aynı sınıf sonraki dilimlerde: `animated-style-guard`,
+    `app-config-guard` ve `head-bleed` testleri de kaynağı yolla okuyor.
+  · **Denetim araçları:** `knip`, yalnız bir paketi yeniden dışa aktaran ayar dosyasını yüklemiyor
+    (`isExternalReExportsOnly`) → uygulamanın Babel ayarı gerekçeli ince sarmalayıcı. `knip.json`da kite
+    Babel eklentisi + `expo-constants` muafiyeti (kit kodu onu henüz import etmiyor). `.dependency-cruiser.cjs`
+    yetim kuralından kiti çıkardı: tüketeni olan uygulamalar o koşuda taranmıyor, ölü dosyayı `knip` görüyor.
+  · **Doğrulama:** kit `typecheck` + jest 11/11 · uygulama `typecheck` · uygulama jest 1556/1558 (iki düşüş
+    `unistyles.test.ts`in yazı tipi testleri, önceden var — 21.309 notu) · kök `typecheck` 22/22 · `lint`
+    (dokunulan dosyalar) · `knip` bizde temiz (web'in `cart-fab.tsx` bulgusu başka şeridin) · `boundaries`
+    bizde temiz (web'in `site-frame` döngüsü başka şeridin) · `scripts/boundaries.test.ts` 30/30 · Android dışa
+    aktarımı (dev) başarılı. İlk tam Jest koşusunda dört kabuk testi 15 sn sınırını aştı: Babel ayarı değişince
+    dönüşüm önbelleği soğuktu; tek başlarına ve sıcak önbellekle tam pakette geçtiler.
+  · **Açık:** yeniden adlandırma çalışan Metro durunca (Metro bugün `apps/mobile`dan koşuyor) · ortak
+    çekirdeğin kalanı · operasyon uygulaması · müşteri temizliği · push sütunu (21.311) · doküman/araç.
+
+- [ ] (21.311) **PUSH JETONU HANGİ UYGULAMANIN — `push_device.app` ('customer' | 'operations')** (21.310'dan ayrıldı 14.09; kullanıcı kararı: arka-uç kısmına bu şerit dokunur)
+  `touches:` `supabase/migrations/0050_push_device.sql` · `packages/types/src/entities/push-device.schema.ts` · `packages/database/src/services/push-device.service.ts` · `packages/application/src/notification/devices.ts` · `packages/application/src/notification/dispatch.ts` · `apps/mobile-api/src/api/v1/notifications.ts` · iki uygulamanın kayıt kapısı
+  Gerekçe: iki uygulama aynı hesaba jeton yazınca müşteri bildirimi operasyon uygulamasına da düşerdi. Jeton
+  toplayan tek yer müşteri gönderimi (`dispatch.ts`) — yalnız `app='customer'` jetonları alır. Kayıt ucu
+  `app` alanını taşır; RPC `register_push_device` bir parametre kazanır. `db:refresh` kullanıcının kararı.
+  Web şeridinin 14.17'si aynı dosyaya `platform='web'` ekleyecek: web aboneliği `app='customer'`.

@@ -74,4 +74,4 @@ jest.mock('@/components/scan/camera-availability', () => ({ hasCameraNativeModul
    çıplak bırakılınca `fireEvent.press` sonrası eşzamanlı bekleyen 251 test kırılıyordu (ölçüldü);
    sahteyle 1276/1276 geçiyor. Sahtelenebilir bir yüzey olsun diye modül ayrı yazıldı — çıplak bir
    `requestAnimationFrame` çağrısı burada tutulamazdı. */
-jest.mock('@/lib/interaction/defer-press', () => ({ deferPress: (handler: () => void) => handler() }));
+jest.mock('@lezzet/mobile-kit/src/lib/interaction/defer-press', () => ({ deferPress: (handler: () => void) => handler() }));

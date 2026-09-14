@@ -31,7 +31,7 @@ import { StyleSheet } from 'react-native-unistyles';
   görünür kıldı: *"bizim çekmecemiz bir komponent değil mi? tek komponent olunca tek yaklaşım
   sergilemesi gerekmez mi?"* — çekmece için cevap evetti, yazışma için değildi. Artık öyle.
 
-  Kural kapta durunca ekranlar onu unutamaz; `lib/keyboard-scroll-guard.test.ts` de kabı tanıyor.
+  Kural kapta durunca ekranlar onu unutamaz; uygulamanın `src/lib/keyboard-scroll-guard.test.ts` bekçisi de kabı tanıyor.
 
   ── LİSTE ESNER, ÇUBUK ESNEMEZ (iOS ölçümü 16.08, simülatörde kare ile) ─────
   Klavye açılınca kaçınma kabın altına klavye kadar dolgu koyuyor. Kaydırıcı `flex: 1` almazsa

@@ -1,11 +1,8 @@
 {
-  "extends": "expo/tsconfig.base",
+  // Ortak tarif kitte (`@lezzet/mobile-kit/tsconfig.base.json`, 21.310): `strict` ve test tipleri
+  // native uygulamalarda tek kaynaktan. Burada yalnız bu uygulamanın takma adı ve kapsamı.
+  "extends": "@lezzet/mobile-kit/tsconfig.base.json",
   "compilerOptions": {
-    "strict": true,
-    // TS 6 `@types`'ı otomatik dahil etmiyor; jest globalleri (describe/it/expect) açıkça bildirilir.
-    // `node`: app.config bekçisi (`app-config-guard.test.ts`) dosya okur — testler zaten node
-    // ortamında koşuyor; RN kodu node API'si çağırırsa Metro'da yine kırılır, tsc'ye güvenilmez.
-    "types": ["jest", "node"],
     "paths": {
       "@/*": ["./src/*"]
     }

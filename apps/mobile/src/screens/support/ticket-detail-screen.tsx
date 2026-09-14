@@ -9,7 +9,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
-import { ChatLayout } from '@/components/ui/chat-layout';
+import { ChatLayout } from '@lezzet/mobile-kit/src/components/ui/chat-layout';
 import { ChatText } from '@/components/ui/chat-text';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';

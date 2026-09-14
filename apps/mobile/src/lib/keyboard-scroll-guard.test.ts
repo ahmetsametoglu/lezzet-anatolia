@@ -171,10 +171,14 @@ describe('klavye koruması — girdisi olan kaydırıcı ham olamaz', () => {
     expect(SAFE_CONTAINERS).toEqual(['FormScroll', 'BottomSheet', 'ChatLayout']);
     /* Korumanın İKİNCİ yarısı (MB-01) üçünde de yazılı olmalı: kaçınma alanı klavyenin üstüne
        taşır ama düğmeye ilk dokunuş yine yutulabilir — biri olmadan öteki yarım kalır. */
-    for (const file of ['form-scroll.tsx', 'chat-layout.tsx']) {
-      expect(readFileSync(path.join(screensRoot, 'components/ui', file), 'utf8')).toContain(
-        'keyboardShouldPersistTaps="handled"',
-      );
+    /* Kapların yeri MODÜL ÇÖZÜMÜYLE bulunur (21.310): `ChatLayout` ortak çekirdeğe
+       (`@lezzet/mobile-kit`) taşındı ve sabit yolla okunan dosya ENOENT'e düşüyordu — ölçüldü 14.09:
+       kural bozulmamıştı, bekçi dosyanın yerini kaybetmişti. */
+    for (const file of [
+      path.join(screensRoot, 'components/ui/form-scroll.tsx'),
+      require.resolve('@lezzet/mobile-kit/src/components/ui/chat-layout'),
+    ]) {
+      expect(readFileSync(file, 'utf8')).toContain('keyboardShouldPersistTaps="handled"');
     }
     /* ÇEKMECEDE KAÇINMA ARTIK KÜTÜPHANENİN (01.09): gövde `@gorhom/bottom-sheet`e geçti ve
        `KeyboardAvoidingView` yerine `keyboardBehavior` + `android_keyboardInputMode` kullanıyor —

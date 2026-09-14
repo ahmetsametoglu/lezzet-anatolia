@@ -1,0 +1,6 @@
+{
+  // Kitin kendi derlemesi. `@/` takma adı BURADA YOK: kit içi importlar göreli (README "Kurallar").
+  "extends": "./tsconfig.base.json",
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}

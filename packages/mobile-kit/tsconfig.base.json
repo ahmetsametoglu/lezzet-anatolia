@@ -1,0 +1,11 @@
+{
+  // ORTAK TypeScript tarifi (21.310) — iki native uygulama `extends` ile okur, kit de kendisi.
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    // TS 6 `@types`'ı otomatik dahil etmiyor; jest globalleri (describe/it/expect) açıkça bildirilir.
+    // `node`: bazı testler dosya okur (ör. uygulamanın `app-config-guard` bekçisi) — testler zaten
+    // node ortamında koşuyor; RN kodu node API'si çağırırsa Metro'da yine kırılır, tsc'ye güvenilmez.
+    "types": ["jest", "node"]
+  }
+}

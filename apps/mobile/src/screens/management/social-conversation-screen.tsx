@@ -17,7 +17,7 @@ import { ConversationHandlerEnum, type ConversationHandler } from '@lezzet/types
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { AudioPlayer } from '@/components/ui/audio-player';
-import { ChatLayout } from '@/components/ui/chat-layout';
+import { ChatLayout } from '@lezzet/mobile-kit/src/components/ui/chat-layout';
 import { Icon } from '@/components/ui/icon';
 import { PhotoViewer } from '@/components/ui/photo-viewer';
 import { PressableSurface } from '@/components/ui/pressable-surface';

@@ -3,7 +3,7 @@ import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { hapticCommit, hapticSelect } from '@/lib/haptics/haptics';
-import { deferPress } from '@/lib/interaction/defer-press';
+import { deferPress } from '@lezzet/mobile-kit/src/lib/interaction/defer-press';
 
 /*
   Basılı geri bildirimin TEK kaynağı. Web'de her etkileşimli öğe `cursor-pointer` + hover

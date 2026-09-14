@@ -1,0 +1,33 @@
+{
+  "name": "@lezzet/mobile-kit",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "clean": "rm -rf .turbo node_modules"
+  },
+  "peerDependencies": {
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-unistyles": "^3.3.0"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^14",
+    "@types/jest": "29.5.14",
+    "@types/node": "^22",
+    "@types/react": "~19.2.2",
+    "babel-preset-expo": "~57.0.0",
+    "expo": "~57.0.11",
+    "expo-constants": "57.0.9",
+    "jest": "~29.7.0",
+    "jest-expo": "~57.0.3",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-nitro-modules": "^0.36.5",
+    "react-native-unistyles": "^3.3.0",
+    "test-renderer": "^1.0.0",
+    "typescript": "~6.0.3"
+  }
+}

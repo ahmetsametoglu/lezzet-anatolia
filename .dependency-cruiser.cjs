@@ -75,7 +75,11 @@ module.exports = {
       comment: 'Bağlantısız modül (config/kabuk dosyaları hariç).',
       from: {
         orphan: true,
-        pathNot: ['\\.d\\.ts$', 'src/index\\.ts$', 'config\\.(ts|js|mjs|cjs)$'],
+        // `packages/mobile-kit` HARİÇ (21.310): kitin tüketeni native uygulamalar ve onlar bu koşuda
+        // cruise EDİLMİYOR — uygulamadan kullanılan her kit modülü burada "yetim" görünürdü (ölçüldü
+        // 14.09: ilk taşınan `defer-press.ts`). Yalan söyleyen uyarı okunmaz; kitin ölü dosyasını
+        // `knip` görür, çünkü uygulamanın derin importunu (`@lezzet/mobile-kit/src/…`) izler.
+        pathNot: ['\\.d\\.ts$', 'src/index\\.ts$', 'config\\.(ts|js|mjs|cjs)$', '^packages/mobile-kit/'],
       },
       to: {},
     },
