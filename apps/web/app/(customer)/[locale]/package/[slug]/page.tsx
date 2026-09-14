@@ -76,8 +76,6 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
       locale={locale}
       activeNav="packages"
       footer="slim"
-      /* Mobil üst barın başlığı paketin adı; ‹ geçmiş boşsa paketlere döner (v1 mobil, 13.09). */
-      detail={{ title: pack.name, fallback: '/packages' }}
     >
       <PackageClient t={t} locale={locale} pack={pack} device={device} />
     </SiteFrame>

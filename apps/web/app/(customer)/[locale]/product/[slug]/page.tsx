@@ -132,8 +132,6 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       locale={locale}
       activeNav="catalog"
       footer="slim"
-      /* Mobil üst barın başlığı ürünün adı; ‹ geçmiş boşsa kataloğa döner (v1 mobil, 13.09). */
-      detail={{ title: product.name, fallback: '/catalog' }}
     >
       {/* Yapısal veri (08.1): arama sonucunda fiyat, stok ve puanın görünmesini sağlar. Puan
           YALNIZ gerçekten varsa yazılıyor — `average` null ise (hiç beyan yok) blok hiç doğmuyor,

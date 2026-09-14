@@ -12,7 +12,8 @@ import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
-import messages from './messages.json';
+// Metin ortak pakette (14.09): web'in telefon tarif listesi aynı sözlüğü okur.
+import messages from '@lezzet/i18n/customer/recipes';
 import { RecipesListSkeleton } from './recipes-list-skeleton';
 import { useRecipesList } from './use-recipes-list.hook';
 

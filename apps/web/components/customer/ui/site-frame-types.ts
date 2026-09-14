@@ -37,14 +37,8 @@ export interface SiteFrameProps {
    * uygulamanın başlık sistemi (14.09, `site-frame.mobile.tsx`). Masaüstünde fark YOKTUR.
    */
   mobileChrome?: 'default' | 'bare';
-  /**
-   * Detay sayfasının (ürün · paket · tarif) MOBİL üst bar künyesi: başlık metni ve tarayıcı geçmişi
-   * boşken ‹'nin gideceği üst sayfa. Masaüstünde kullanılmaz.
-   */
-  detail?: {
-    title: string;
-    fallback: ComponentProps<typeof BackButton>['fallback'];
-  };
+  /* `detail` (detay sayfasının mobil üst bar künyesi) 14.09'da kalktı: ürün, paket ve tarif detayı telefonda
+     başlığını kendisi kuruyor (native'in ekranları) — çerçeve bu rotalarda başlık çizmiyor, künyeyi okuyan kalmadı. */
   /**
    * Footer katmanı — YALNIZ MASAÜSTÜ (kullanıcı kararı 20.08 — sayfa TÜRÜNE bağlı):
    *   `full` → giriş kapıları: ana sayfa, Professionnels, yasal/statik sayfalar.

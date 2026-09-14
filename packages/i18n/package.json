@@ -14,7 +14,9 @@
     "./customer/place": "./src/customer/place.json",
     "./customer/product": "./src/customer/product.json",
     "./customer/packages": "./src/customer/packages.json",
-    "./customer/package-detail": "./src/customer/package-detail.json"
+    "./customer/package-detail": "./src/customer/package-detail.json",
+    "./customer/recipes": "./src/customer/recipes.json",
+    "./customer/recipe-detail": "./src/customer/recipe-detail.json"
   },
   "types": "./src/index.ts",
   "scripts": {

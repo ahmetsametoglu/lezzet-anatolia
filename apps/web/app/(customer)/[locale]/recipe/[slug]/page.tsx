@@ -27,8 +27,8 @@ interface RecipePageProps {
  * Tarif detay sayfası (08.24) — "Sofradan Fikirler"in okunan yüzü.
  *
  * **Birincil senaryo arama motoru ve paylaşılan bağlantı:** ziyaretçi buraya siteyi hiç görmeden
- * düşebilir ("mıhlama nasıl yapılır"). Bu yüzden mobilde detay çerçevesi kullanılıyor — ekranın
- * üstü ziyaretçiyi tariflere döndürmeye ayrılıyor (paket detayı emsali).
+ * düşebilir ("mıhlama nasıl yapılır"). Bu yüzden telefonda ‹ hep fotoğrafın üstünde durur ve geçmiş
+ * boşsa tariflere döner (paket detayı emsali; `recipe.mobile.tsx`).
  *
  * **Paylaş düğmesi YOK ve bu bilinçli:** tasarımın mobil başlığında çizili değil, ayrıca `share`
  * konusu ölçüm defterinin tanıdığı iki türle sınırlı (`product` · `bundle`). Tarif için üçüncü bir
@@ -95,8 +95,6 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
       locale={locale}
       activeNav="recipes"
       footer="slim"
-      /* Mobil üst barın başlığı tarifin adı; ‹ geçmiş boşsa tariflere döner (v1 mobil, 13.09). */
-      detail={{ title: recipe.name, fallback: '/recipes' }}
     >
       <RecipeJsonLd recipe={recipe} url={localizedUrl('/recipe/[slug]', locale, { slug })} />
       <RecipeClient t={t} locale={locale} recipe={recipe} device={device} />

@@ -1,4 +1,4 @@
-import { formatPrice } from '@lezzet/helper';
+import { formatPrice, recipeRowMetaOf } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { RecipeRow } from '@lezzet/types';
 import { BlurView } from 'expo-blur';
@@ -20,7 +20,8 @@ import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addProduct, addProducts, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-import messages from './messages.json';
+// Metin ortak pakette (14.09): web'in telefon tarif detayı aynı sözlüğü okur.
+import messages from '@lezzet/i18n/customer/recipe-detail';
 import { RecipeSkeleton } from './recipe-skeleton';
 import { useRecipe } from './use-recipe.hook';
 
@@ -88,19 +89,6 @@ function cartLineOf(row: RecipeRow & { priceCents: number }) {
     discounted: row.wasCents !== undefined,
     soldOut: false,
   };
-}
-
-/**
- * Satırın alt metni — v3: "{boy} · {fiyat}" (v3:1192). `qty` öneki sapma 1; boşluklu parçalar
- * eksik veride sessizce düşer (tek boylu ürünün boş etiketi, fiyatsız satır).
- */
-function rowMeta(row: RecipeRow, locale: 'tr' | 'fr' | 'de'): string {
-  const label = [row.qty > 1 ? `${row.qty} ×` : null, row.variantLabel.length > 0 ? row.variantLabel : null]
-    .filter((part): part is string => part !== null)
-    .join(' ');
-  return [label.length > 0 ? label : null, row.priceCents === null ? null : formatPrice(row.priceCents, locale)]
-    .filter((part): part is string => part !== null)
-    .join(' · ');
 }
 
 interface RecipeDetailScreenProps {
@@ -223,7 +211,8 @@ export function RecipeDetailScreen({ slug }: RecipeDetailScreenProps) {
                             {row.name}
                           </Text>
                           <Text style={styles.rowMeta} numberOfLines={1}>
-                            {rowMeta(row, locale)}
+                            {/* "{adet} × {boy} · {fiyat}" — web'in telefon görünümüyle ortak kurucu (14.09). */}
+                            {recipeRowMetaOf({ qty: row.qty, label: row.variantLabel, priceCents: row.priceCents }, locale)}
                           </Text>
                         </View>
                       </PressableSurface>

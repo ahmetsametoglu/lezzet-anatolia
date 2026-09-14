@@ -33,9 +33,9 @@ type TabKey = keyof (typeof tabBarCopy)['tr']['tabs'];
  *   · eylemsiz bölüm sayfaları → ‹ + "HESABIM" + büyük başlık (`FunnelHeader`; native siparişler ·
  *     puan geçmişi · bildirimler)
  *   · başlığını kendisi kuran ekranlar → çerçeve çizmez: katalog, paketler (ikisi de sekme kökü),
- *     ürün detayı (fotoğraf ekranın tepesine taşar, ‹ ve paylaş üstünde yüzer — native), paket
- *     detayı (‹ · "Hazır Paket" · paylaş çubuğu ekranın kendisinde — native), sepet ve checkout
- *     (`bare`), giriş, keşif, sipariş onayı
+ *     tarifler (yığın ekranı: ‹ + başlık sayfanın içinde — native), ürün ve tarif detayı (fotoğraf
+ *     ekranın tepesine taşar, ‹ üstünde yüzer — native), paket detayı (‹ · "Hazır Paket" · paylaş
+ *     çubuğu ekranın kendisinde — native), sepet ve checkout (`bare`), giriş, keşif, sipariş onayı
  *   · geri kalanı → yapışkan `AppBar` (‹ · başlık · ekranın eylemi)
  *
  * ── SEKME ÇUBUĞU VE SEPET: NATIVE'İN MODELİ ─────────────────────────────────────────
@@ -56,7 +56,7 @@ type TabKey = keyof (typeof tabBarCopy)['tr']['tabs'];
  * Zemin native'in ekran yüzeyi (`sand-50`). Yatay tutuşta çentik payı kökte (`viewport-fit=cover`,
  * müşteri yerleşimi); dikey tutuşta yan paylar 0'dır.
  */
-type SiteFrameMobileProps = Pick<SiteFrameProps, 'locale' | 'mobileChrome' | 'detail' | 'accountChrome' | 'fill' | 'children'>;
+type SiteFrameMobileProps = Pick<SiteFrameProps, 'locale' | 'mobileChrome' | 'accountChrome' | 'fill' | 'children'>;
 
 interface Tab {
   key: TabKey;
@@ -84,7 +84,18 @@ const FAB_ON_DETAIL: readonly string[] = ['/product/[slug]', '/package/[slug]', 
 type HeaderKind = 'home' | 'title' | 'page' | 'bar' | 'none';
 
 /** Başlığını KENDİSİ kuran ekranlar — çerçeve bunlarda başlık çizmez. */
-const OWN_HEADER: readonly string[] = ['/catalog', '/packages', '/product/[slug]', '/package/[slug]', '/login', '/discover', '/checkout', '/checkout/[reference]'] satisfies Route[];
+const OWN_HEADER: readonly string[] = [
+  '/catalog',
+  '/packages',
+  '/recipes',
+  '/product/[slug]',
+  '/package/[slug]',
+  '/recipe/[slug]',
+  '/login',
+  '/discover',
+  '/checkout',
+  '/checkout/[reference]',
+] satisfies Route[];
 /** Eylemsiz bölüm sayfaları — native'in "sayfa başlığı" durağı. */
 const SECTION_PAGES: readonly string[] = ['/orders', '/account/points', '/account/notifications'] satisfies Route[];
 
@@ -96,9 +107,8 @@ function headerOf(route: string, mobileChrome: SiteFrameProps['mobileChrome']): 
   return 'bar';
 }
 
-/** Başlık metni — sayfa vermediğinde (detay ve hesap alanı veriyor). */
+/** Başlık metni — sayfa vermediğinde (hesap alanı veriyor). */
 const TITLES: Partial<Record<Route, (t: Copy) => string>> = {
-  '/recipes': (t) => t.nav.recipes,
   '/cart': (t) => t.cart,
   '/orders': (t) => t.accountNav.orders,
   '/support': (t) => t.accountNav.support,
@@ -111,14 +121,14 @@ function titleOf(route: string, t: Copy): string {
   return TITLES[route as Route]?.(t) ?? '';
 }
 
-export function SiteFrameMobile({ locale, mobileChrome, detail, accountChrome, fill, children }: SiteFrameMobileProps) {
+export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, children }: SiteFrameMobileProps) {
   const t = messages[locale];
   const route: string = usePathname();
   const wholesale = useWholesale();
   const kind = headerOf(route, mobileChrome);
-  const title = detail?.title ?? accountChrome?.title ?? titleOf(route, t);
+  const title = accountChrome?.title ?? titleOf(route, t);
   // Geçmiş boşken ‹'nin gideceği üst sayfa (`BackButton` sözleşmesi) — derin bağlantıyla gelen de döner.
-  const fallback = detail?.fallback ?? accountChrome?.back?.href ?? '/';
+  const fallback = accountChrome?.back?.href ?? '/';
 
   return (
     <div

@@ -21,5 +21,7 @@ export * from './package';
 export * from './postal-code';
 export * from './place-name';
 export * from './price-label';
+// Tarif satırının alt metni — native tarif detayı ile web telefon görünümünün ortak cümlesi (14.09).
+export * from './recipe';
 export * from './rich-text';
 export * from './slug';
