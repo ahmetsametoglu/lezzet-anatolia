@@ -20,7 +20,8 @@
     "./customer/cart": "./src/customer/cart.json",
     "./customer/checkout": "./src/customer/checkout.json",
     "./customer/account": "./src/customer/account.json",
-    "./customer/legal": "./src/customer/legal.json"
+    "./customer/legal": "./src/customer/legal.json",
+    "./customer/orders": "./src/customer/orders.json"
   },
   "types": "./src/index.ts",
   "scripts": {

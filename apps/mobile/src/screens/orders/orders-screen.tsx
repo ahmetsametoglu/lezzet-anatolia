@@ -18,7 +18,7 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { formatOrderDate } from './order-format';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/orders';
 import { OrdersSkeleton } from './orders-skeleton';
 import { useOrders } from './use-orders.hook';
 

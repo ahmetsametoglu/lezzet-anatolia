@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 
 import { CROP_CENTER, type MeOrderDetail } from '@lezzet/types';
 import { OrderDetailScreen } from './order-detail-screen';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/orders';
 
 /*
   SİPARİŞ DETAYI — YORUM TEŞVİKİ (27.08 · kullanıcı kararı).

@@ -22,7 +22,7 @@ import { DeliveryMap } from './delivery-map';
 import { OrderDetailSkeleton } from './order-detail-skeleton';
 import { formatDeliveryDate, formatStamp } from './order-format';
 import { OrderTimeline } from './order-timeline';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/orders';
 import { useOrder } from './use-order.hook';
 
 /*
