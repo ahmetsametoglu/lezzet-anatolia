@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import type { Me } from '@/lib/api/me';
+import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
 import messages from '@/lib/places/messages.json';
-import authErrors from '@/lib/auth/error-messages.json';
-import { meFixture } from '@/screens/operations/me-fixture';
+import authErrors from '@lezzet/mobile-kit/src/lib/auth/error-messages.json';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { PlaceNoticeSheet } from './place-notice-sheet';
 
 /*
@@ -20,7 +20,7 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR
 /* Oturum DURUMLUDUR: doğrulama öncesi yok, `setSession`dan sonra var — kayıt çağrısının Bearer
    ile gittiği ancak böyle ölçülebilir. Ad `mock` ile başlamak ZORUNDA (jest hoisting). */
 let mockSession: { access_token: string } | null = null;
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

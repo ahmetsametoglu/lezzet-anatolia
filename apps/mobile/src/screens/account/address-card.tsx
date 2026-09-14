@@ -2,7 +2,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { TextAction } from '@/components/ui/text-action';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { MeAddress } from '@/lib/api/addresses';
 import { addressLine, addressTitle } from '@/screens/customer-kit/address-format';
 // Yalnız METİN BLOĞUNUN TİPİ için: komponent sözlüğü okumaz, çağıran geçirir.

@@ -14,8 +14,8 @@ import {
   type ConversationHandler,
 } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import { queryString, type ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import { queryString, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   `/api/v1/social/*` — operasyonun sosyal gelen kutusu (15.15 mobil ayağı): üç Meta kanalı

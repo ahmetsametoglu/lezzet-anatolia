@@ -3,7 +3,7 @@ import { StyleSheet, useUnistyles, type UnistylesThemes } from 'react-native-uni
 
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
-import { PressableSurface } from './pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 
 /*
   İKİNCİL DÜĞME — çerçeveli, dolgusuz. Dört ton:

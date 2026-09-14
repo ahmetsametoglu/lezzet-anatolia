@@ -1,8 +1,8 @@
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { customerMetrics } from './customer-metrics';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 
 /*
   AÇMA/KAPAMA ANAHTARI (v3:882) — hesap ekranındaki kampanya iletişimi tercihleri.

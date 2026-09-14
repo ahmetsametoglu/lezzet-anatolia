@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { LOCALES } from '@lezzet/i18n';
 
-import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
+import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
   ONBOARDING DEPOSU — ilk açılış akışının cihazda kalan izi: gösterildi mi (`done`), hangi dil

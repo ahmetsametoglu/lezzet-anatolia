@@ -9,8 +9,8 @@ import {
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { authorizedFetch, maybeAuthorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { authorizedFetch, maybeAuthorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   KEŞİF TURU İSTEMCİSİ (21.19) — üç kapı: desteyi oku · oyu yaz · girişsiz turu hesaba bağla.

@@ -1,7 +1,7 @@
 import { customerColors, operationsAppColors } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { appMetrics } from '../../theme/metrics';
+import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 import { NotificationBell } from './notification-bell';
 
 describe('NotificationBell', () => {

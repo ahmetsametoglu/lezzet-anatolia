@@ -2,8 +2,8 @@ import type { z } from 'zod';
 import { MeOrderDetailSchema, MeOrderPageSchema } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import { queryString, type ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import { queryString, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   `/api/v1/me/orders` — "Siparişlerim" listesi + sipariş detayı (21.18).

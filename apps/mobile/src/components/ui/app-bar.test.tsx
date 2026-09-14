@@ -2,7 +2,7 @@ import { customerAppColors, customerAppText, customerColors } from '@lezzet/desi
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
-import { customerStops } from '../../theme/unistyles';
+import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { AppBar } from './app-bar';
 
 // Beklenenler PAKETTEN türetilir; `customerStops` temanın uyguladığı çevirinin aynısıdır

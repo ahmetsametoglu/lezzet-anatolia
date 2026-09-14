@@ -6,16 +6,16 @@ import type { SaleRecord } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
-import { FormScroll } from '@/components/ui/form-scroll';
+import { FormScroll } from '@lezzet/mobile-kit/src/components/ui/form-scroll';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
-import { TextAction } from '@/components/ui/text-action';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { fetchRecentSales } from '@/lib/api/sale';
 import { captionOf } from '@/lib/operations/caption';
 import { money } from '@/lib/operations/money';
 import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
 import { useOperationsWorkplace } from '@/screens/operations/sections-context';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { useSalePlace } from './sale-context';
 import { saleCopy } from './copy';
 

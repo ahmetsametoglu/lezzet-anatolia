@@ -5,11 +5,11 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { Icon } from '@/components/ui/icon';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
 import { stampFullOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { saleCopy } from './copy';
 import { useSaleContext } from './sale-context';
 

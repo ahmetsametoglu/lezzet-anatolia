@@ -2,9 +2,9 @@ import type { LocalizedCopy, Locale } from '@lezzet/i18n';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TextAction } from '@/components/ui/text-action';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { Note } from '@/components/ui/note';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { useOrder } from '@/screens/orders/use-order.hook';

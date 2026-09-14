@@ -1,7 +1,7 @@
 import { staffNotificationBrief, type StaffNotificationTone } from '@lezzet/i18n';
 import type { AppNotificationKind } from '@lezzet/types';
 
-import type { NotificationRow } from '@/lib/api/notifications';
+import type { NotificationRow } from '@lezzet/mobile-kit/src/lib/api/notifications';
 import type { OperationsSection } from '@/lib/operations/sections';
 
 /*

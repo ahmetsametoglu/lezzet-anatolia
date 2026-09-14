@@ -5,20 +5,20 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CATALOG_SORTS, type CatalogProduct, type CatalogSort } from '@lezzet/types';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { Chip } from '@/components/ui/chip';
-import { pullRefreshColors } from '@/components/ui/pull-refresh';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
+import { Chip } from '@lezzet/mobile-kit/src/components/ui/chip';
+import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import type { IconName } from '@/components/ui/icon-paths';
-import { LoadingState } from '@/components/ui/loading-state';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { campaignValueOf, cardBadgeOf } from '@/screens/customer-kit/campaign-label';
-import { upperIn } from '@/lib/i18n/locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
@@ -27,7 +27,7 @@ import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 // Bant KİTE taşındı (10.08): paketler sekmesi ikinci çağıranı oldu (komponentin kendi künyesi).
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { productPriceLabel } from '@/screens/customer-kit/price-label';
-import { emToDp } from '@/theme/parse';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { CatalogSkeleton } from './catalog-skeleton';
 import { useCatalog } from './use-catalog.hook';
 import messages from './messages.json';

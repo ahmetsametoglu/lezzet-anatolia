@@ -8,11 +8,11 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { TextAction } from '@/components/ui/text-action';
-import { TextField } from '@/components/ui/text-field';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { createAddress, deleteAddress, updateAddress, type AddressWrite, type MeAddress } from '@/lib/api/addresses';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { toastSuccess } from '@/lib/toast/toast-store';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { AddressFields } from './address-fields';
 import messages from './address-sheet-messages.json';
 

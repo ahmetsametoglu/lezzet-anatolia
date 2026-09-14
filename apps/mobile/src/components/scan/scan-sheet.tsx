@@ -6,9 +6,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import type * as ExpoCamera from 'expo-camera';
 import { hasCameraNativeModule } from './camera-availability';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { hapticCommit } from '@/lib/haptics/haptics';
-import { operationsTheme } from '@/theme/unistyles';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { hapticCommit } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { DEV_SCAN_POOL } from './dev-scan-pool';
 
 /*

@@ -13,7 +13,7 @@ import {
   submitDoorDelivery,
   submitUndelivered,
 } from '@/lib/api/courier';
-import { toastError, toastSuccess } from '@/lib/toast/toast-store';
+import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { newRequestKey } from '@/lib/request-key';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';

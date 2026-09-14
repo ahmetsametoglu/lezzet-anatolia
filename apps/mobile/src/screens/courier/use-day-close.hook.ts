@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DayCloseDraftContract } from '@lezzet/types';
 
 import { fetchDayCloseDraft, submitDayClose } from '@/lib/api/courier';
-import { toastError, toastInfo, toastSuccess } from '@/lib/toast/toast-store';
+import { toastError, toastInfo, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 import { centsToAmountText, money, parseAmountToCents, signedMoney } from './courier-format';

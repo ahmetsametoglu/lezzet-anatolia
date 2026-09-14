@@ -4,12 +4,12 @@ import { View } from 'react-native';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
-import { LoadingState } from '@/components/ui/loading-state';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { OperationsShellScrollProvider } from '@/lib/operations/shell-scroll';
 import { operationsCopy } from '@/screens/operations/copy';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { useOperationsAccess } from '@/screens/operations/use-operations-access.hook';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   OPERASYON KABUĞUNUN KAPISI — uygulamanın İKİNCİ navigasyon ağacının kökü.

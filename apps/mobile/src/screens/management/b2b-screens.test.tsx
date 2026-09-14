@@ -22,7 +22,7 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

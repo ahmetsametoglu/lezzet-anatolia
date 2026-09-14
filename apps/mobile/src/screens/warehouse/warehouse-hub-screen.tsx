@@ -10,7 +10,7 @@ import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { OperationsSurface } from '@/components/operations/surface';
 import { Icon } from '@/components/ui/icon';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsSectionRoute } from '@/screens/login/post-login-route';
 import { chooseWarehouse } from '@/lib/operations/warehouse-choice';
@@ -22,8 +22,8 @@ import {
   useWarehouseOptions,
 } from '@/screens/operations/sections-context';
 import { useOperationsNotificationBadge } from '@/screens/operations/use-notification-badge.hook';
-import { emToDp } from '@/theme/parse';
-import { operationsTheme } from '@/theme/unistyles';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { orderPickingQueue } from './warehouse-format';
 import type { BoxPrinterContract, PreparationOrderContract } from '@lezzet/types';

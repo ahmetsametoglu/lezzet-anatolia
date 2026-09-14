@@ -2,8 +2,8 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { Icon } from '@/components/ui/icon';
 import type { IconName } from '@/components/ui/icon-paths';
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { operationsTheme } from '@/theme/unistyles';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   İKON DÜĞMESİ — operasyon mobil v3'ün EN ÇOK TEKRAR EDEN kontrolü.

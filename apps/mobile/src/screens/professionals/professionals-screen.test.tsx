@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import { lightTheme } from '@/theme/unistyles';
+import { lightTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { ProfessionalsScreen } from './professionals-screen';
 import messages from './messages.json';
 
@@ -19,7 +19,7 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR
    ağa HİÇ çıkmaz ve mock'a da ulaşmaz. Oturum mock'lanır ki 401 kararını SUNUCU versin — misafir
    hâlini de o cevapla kuruyoruz (hesap ekranı testinin deseni). */
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

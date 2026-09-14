@@ -31,8 +31,8 @@ import messages from './messages.json';
   TOAST KÖKTE ÇİZİLİR (`app/_layout`), bu test ekranı tek başına render ediyor — yani `ToastHost`
   ağaçta yok ve mesaj DEPODAN okunur. Ölçülen şey zaten host değil, kuryeye ne söylendiği.
 */
-jest.mock('@/lib/toast/toast-store', () => {
-  const actual = jest.requireActual('@/lib/toast/toast-store');
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => {
+  const actual = jest.requireActual('@lezzet/mobile-kit/src/lib/toast/toast-store');
   /* ÜÇ FİİL DE YAKALANIR (01.09): sonuç bildirimleri sayfa şeridinden toast'a taşındı, yani
      reddin sebebi de artık bu kanaldan geçiyor. Yalnız `toastSuccess` gözlenseydi olumsuz
      cevapların ekranda göründüğünü sınayan testler sessizce körelirdi. */
@@ -58,7 +58,7 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

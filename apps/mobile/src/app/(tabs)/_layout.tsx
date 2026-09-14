@@ -3,8 +3,8 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { BottomTabBar, type BottomTabItem } from '@/components/ui/bottom-tab-bar';
 import type { IconName } from '@/components/ui/icon-paths';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { useWholesale } from '@/screens/customer-kit/use-me.hook';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { useWholesale } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useStaffLanding } from '@/screens/operations/use-staff-landing.hook';
 // `typeof messages` için DEĞER bağı gerek (Messages tipi JSON'dan türer) — `import type` olmaz.
 import messages from './messages.json';

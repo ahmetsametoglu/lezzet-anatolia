@@ -3,9 +3,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { ResolvedBatchContract } from '@lezzet/types';
 
 import { OperationsSurface } from '@/components/operations/surface';
-import { TextAction } from '@/components/ui/text-action';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { fillCopy } from '@/screens/operations/copy';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { shortDate } from './warehouse-format';
 

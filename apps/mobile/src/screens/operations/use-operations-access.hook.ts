@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { StaffWarehouse } from '@lezzet/types';
 
-import { fetchMe } from '@/lib/api/me';
+import { fetchMe } from '@lezzet/mobile-kit/src/lib/api/me';
 import { fetchStaffScope } from '@/lib/api/operations';
-import { getSupabase } from '@/lib/auth/supabase';
+import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 import { operationsSectionsOf, type OperationsSection } from '@/lib/operations/sections';
 import { loadWarehouseChoice } from '@/lib/operations/warehouse-choice';
 

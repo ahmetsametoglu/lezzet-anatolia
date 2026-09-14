@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
-import { renderShell } from '@/testing/render-shell';
+import { renderShell } from '@lezzet/mobile-kit/src/testing/render-shell';
 
 /*
   HESAP ROTALARININ SMOKE TESTİ — düzenleme sayfası `(tabs)/account.tsx`in YANINA değil, `app/`
@@ -23,12 +23,12 @@ jest.mock('@/lib/onboarding/onboarding-store');
   Bayrak `mock` önekli çünkü `jest.mock` fabrikası yalnız bu önekli değişkenleri görebiliyor.
 */
 let mockMePending = false;
-jest.mock('@/lib/api/me', () => {
-  const actual = jest.requireActual('@/lib/api/me');
+jest.mock('@lezzet/mobile-kit/src/lib/api/me', () => {
+  const actual = jest.requireActual('@lezzet/mobile-kit/src/lib/api/me');
   return { ...actual, fetchMe: () => (mockMePending ? new Promise(() => undefined) : actual.fetchMe()) };
 });
 
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: null } }),

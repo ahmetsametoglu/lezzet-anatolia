@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { DEVICE_STORE_KEYS, deviceStore } from '@/lib/storage/device-store';
+import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
   VİTRİN YERLEŞİM İZİ — son BAŞARILI vitrin yüklemesinde hangi bölümlerin kaç elemanla

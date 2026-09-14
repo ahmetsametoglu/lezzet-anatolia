@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import {
   clampDay,
   dayRange,

@@ -1,10 +1,10 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { TextAction } from './text-action';
-import { useAppLocale } from '../../lib/i18n/app-locale';
-import { upperIn } from '../../lib/i18n/locale';
-import { emToDp } from '../../theme/parse';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 
 /*
   BÖLÜM BAŞLIĞI — v3'te ~16 kullanım, üç kademeli kullanım: yalnız üstbaşlık ⟷ üstbaşlık +

@@ -7,12 +7,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, Keyboard, Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { FormScroll } from '@/components/ui/form-scroll';
+import { FormScroll } from '@lezzet/mobile-kit/src/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { setAppLocale, useAppLocale } from '@/lib/i18n/app-locale';
+import { setAppLocale, useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 /* YER NOTLARI ORTAK SÖZLÜKTEN (18.08 · MB-74'ün KÖKÜ): dört hâl cümlesi burada da yazılıydı ve
    `lib/places` ile birebir aynıydı — biri hariç. Bölge dışı cümlesi zamanla ayrışmış, onboarding
@@ -20,13 +20,13 @@ import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
    olmuştu. İki kopya varken hangisinin doğru olduğunu kimse göremez; kopya kaldırıldı. */
 import placeMessages from '@/lib/places/messages.json';
 import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
-import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@/lib/settings/font-scale';
-import { toastSuccess } from '@/lib/toast/toast-store';
+import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@lezzet/mobile-kit/src/lib/settings/font-scale';
+import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
-import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { PointsEarnList } from '@/screens/customer-kit/points-earn-list';
 import { usePointsRules } from '@/screens/customer-kit/use-points-rules.hook';
-import { emToDp } from '@/theme/parse';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { StepDots } from './step-dots';
 import messages from './messages.json';
 
@@ -306,7 +306,7 @@ export function OnboardingScreen() {
           // Statik varlık Metro'da `require` ile yüklenir (login ekranındaki hükümle aynı):
           // kural TS import disiplinine bakıyor, varlık yolunu bilmiyor.
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('../../../assets/images/logo.png')}
+          source={require('@lezzet/mobile-kit/assets/images/logo.png')}
           style={styles.logo}
           accessibilityLabel={brand.name}
         />

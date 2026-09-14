@@ -10,10 +10,10 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { processColor } from 'react-native';
 
 import { ProductPhotoCard } from './product-photo-card';
-import { appMetrics } from '../../theme/metrics';
-import { parseLinearGradient } from '../../theme/gradient';
-import { emToDp, mapTokens } from '../../theme/parse';
-import { customerStops } from '../../theme/unistyles';
+import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
+import { parseLinearGradient } from '@lezzet/mobile-kit/src/theme/gradient';
+import { emToDp, mapTokens } from '@lezzet/mobile-kit/src/theme/parse';
+import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   Testin işi iki şey: (1) kartın davranışı — durum rozetinin tek yuvası, tükendinin önceliği,

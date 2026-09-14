@@ -3,10 +3,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { ResolvedBatchContract } from '@lezzet/types';
 
 import { OperationsSurface } from '@/components/operations/surface';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
-import { emToDp } from '@/theme/parse';
-import { operationsTheme } from '@/theme/unistyles';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { warehouseCopy } from './copy';
 import type { AdjustmentRecord } from './use-adjustment.hook';
 

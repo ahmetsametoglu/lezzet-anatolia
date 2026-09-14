@@ -1,7 +1,7 @@
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PressableSurface } from './pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 
 /*
   ÖNERİ LİSTESİ — bir metin alanının ALTINDA açılan, dokunulunca alanı dolduran kısa liste.

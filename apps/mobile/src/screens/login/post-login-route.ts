@@ -1,7 +1,7 @@
 import type { Href } from 'expo-router';
 
 import { operationsSectionsOf, type OperationsSection } from '@/lib/operations/sections';
-import type { Me } from '@/lib/api/me';
+import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
 
 /*
   GİRİŞTEN SONRA NEREYE — iki yüzeyin ayrıldığı tek nokta (21.32).

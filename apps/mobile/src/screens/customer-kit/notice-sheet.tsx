@@ -4,12 +4,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { PlaceNoticeResult } from '@lezzet/types';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { LoadingState } from '@/components/ui/loading-state';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import type { ApiResult } from '@/lib/api/client';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import type placeMessages from '@/lib/places/messages.json';
 import { OtpSignInFields } from './otp-sign-in-fields';
 import { useOtpSignIn } from './use-otp-sign-in.hook';

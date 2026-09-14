@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import { meFixture } from './me-fixture';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 
 /*
   OPERASYON KAPISI (21.97) — kabuğun hangi hâli çizeceğini söyleyen karar.
@@ -29,7 +29,7 @@ import { meFixture } from './me-fixture';
 */
 
 const mockFetchMe = jest.fn();
-jest.mock('@/lib/api/me', () => ({ fetchMe: () => mockFetchMe() }));
+jest.mock('@lezzet/mobile-kit/src/lib/api/me', () => ({ fetchMe: () => mockFetchMe() }));
 
 /**
  * Depo kapsamı ucu (30.08) — kapının İKİNCİ okuması. Taklit edilen yine yalnız TEL: hangi cevabın
@@ -52,7 +52,7 @@ jest.mock('expo-secure-store', () => ({
  */
 let authListener: (() => void) | null = null;
 const mockUnsubscribe = jest.fn();
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       onAuthStateChange: (cb: () => void) => {

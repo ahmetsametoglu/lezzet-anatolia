@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 
 /*
   TARİF DETAY SKELETON'I — ilk yükte sayfanın YERİNİ TUTAR. Ürün detay skeleton'ının

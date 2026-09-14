@@ -1,8 +1,8 @@
 import { customerAppText, customerColors, customerText } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { emToDp } from '../../theme/parse';
-import { customerStops } from '../../theme/unistyles';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { SectionHeader } from './section-header';
 
 // Beklenenler PAKETTEN türetilir; çeviri de temanın kullandığı çevirinin aynısı (px→dp + kademe).

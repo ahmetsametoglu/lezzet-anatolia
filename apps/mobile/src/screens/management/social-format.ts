@@ -1,4 +1,4 @@
-import { upperIn } from '@/lib/i18n/locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { stripChatFormatting } from '@lezzet/domain-core';
 import type { MessageKind } from '@lezzet/types';
 

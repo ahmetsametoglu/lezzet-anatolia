@@ -3,7 +3,7 @@ import type { PlaceNoticeBodySchema } from '@lezzet/types';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { submitPlaceNotice } from '@/lib/api/places';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import messages from '@/lib/places/messages.json';
 import { NoticeSheet } from './notice-sheet';
 

@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { upperIn } from '@/lib/i18n/locale';
-import { operationsTheme } from '@/theme/unistyles';
-import { emToDp } from '@/theme/parse';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import type { OperationsSection } from '@/lib/operations/sections';
 
 /*

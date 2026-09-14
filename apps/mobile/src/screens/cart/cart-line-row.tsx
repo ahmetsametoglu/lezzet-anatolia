@@ -3,9 +3,9 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
-import { TextAction } from '@/components/ui/text-action';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { upperIn } from '@/lib/i18n/locale';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { QuantityStepper } from '@/screens/customer-kit/quantity-stepper';
 
 /*

@@ -22,7 +22,7 @@ const mockBack = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: () => mockBack(), push: jest.fn() }) }));
 
 // Çekmece kimliği kitin ortak durumundan okuyor (`useMe`); oturumsuz hâl döner, ağa çıkılmaz.
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: null } }),

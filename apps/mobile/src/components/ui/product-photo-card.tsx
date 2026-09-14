@@ -3,12 +3,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { FrameImage } from './frame-image';
-import { PressableSurface } from './pressable-surface';
+import { FrameImage } from '@lezzet/mobile-kit/src/components/ui/frame-image';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { Tag } from './tag';
-import { useAppLocale } from '../../lib/i18n/app-locale';
-import { upperIn } from '../../lib/i18n/locale';
-import { emToDp } from '../../theme/parse';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 
 /*
   KARE ÜRÜN KARTI — KATALOG IZGARASI (v3 `catProds`, iki sütun). Kullanıcı kararı 07.08: katalog

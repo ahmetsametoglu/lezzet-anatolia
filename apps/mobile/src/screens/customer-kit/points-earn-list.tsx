@@ -5,9 +5,9 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '@/components/ui/icon';
-import { TextAction } from '@/components/ui/text-action';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { PointsRules } from '@/lib/api/points';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { CustomerIcon } from './customer-icon';
 import messages from './points-earn-messages.json';
 import { formatCompactEuro } from '@lezzet/helper';

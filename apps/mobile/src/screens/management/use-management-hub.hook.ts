@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 
-import type { ApiFail } from '@/lib/api/client';
+import type { ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 import { fetchManagementHub } from '@/lib/api/management';
 import type { ManagementHub } from '@lezzet/types';
 

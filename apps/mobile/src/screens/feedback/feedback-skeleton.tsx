@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 
 /*
   GERİ BİLDİRİM SKELETON'I — davet uçtan gelirken OY AŞAMASININ yerini tutar (tarif ve paket

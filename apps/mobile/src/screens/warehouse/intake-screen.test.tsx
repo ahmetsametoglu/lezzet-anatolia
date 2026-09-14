@@ -21,7 +21,7 @@ const mockPush = jest.fn();
 const mockToast = jest.fn();
 /** Başarılı kabul ekranı KAPATIR — geri dönüşü ölçmek için ayrı casus. */
 const mockBack = jest.fn();
-jest.mock('@/lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
   toastError: (m: string) => mockToast(m),
   toastInfo: (m: string) => mockToast(m),
@@ -35,7 +35,7 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

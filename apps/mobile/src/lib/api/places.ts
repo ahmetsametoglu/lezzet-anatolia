@@ -12,8 +12,8 @@ import {
   type PlaceOption,
 } from '@lezzet/types';
 
-import { maybeAuthorizedFetch } from '../auth/authorized-fetch';
-import { apiFetch, type ApiResult } from './client';
+import { maybeAuthorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   `/api/v1/places/*` — yer uçları.

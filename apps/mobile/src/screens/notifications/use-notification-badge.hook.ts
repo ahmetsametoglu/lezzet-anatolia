@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { BELL_EVENT, notificationsChannelName } from '@lezzet/types';
 
-import { fetchNotificationBadge } from '@/lib/api/notifications';
-import { getSupabase } from '@/lib/auth/supabase';
+import { fetchNotificationBadge } from '@lezzet/mobile-kit/src/lib/api/notifications';
+import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 
 /*
   VİTRİN ZİLİNİN ROZETİ — sayı gerçek uçtan (`/me/notifications/badge`), liste çekilmeden.

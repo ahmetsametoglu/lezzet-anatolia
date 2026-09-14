@@ -10,11 +10,11 @@ import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { warehouseCopy } from './copy';
 import type { NearExpiryBatchContract } from '@lezzet/types';
 

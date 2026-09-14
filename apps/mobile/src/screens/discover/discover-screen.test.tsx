@@ -26,7 +26,7 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), push: jes
    (ölçüldü: ekran tr, blok fr). Geri bildirim ekranının testi de aynı mock'u kuruyor. */
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: () => Promise.resolve({ data: { session: { access_token: 'test-token' } } }),

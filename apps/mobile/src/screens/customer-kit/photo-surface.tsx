@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { type StyleProp, Text, View, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { FrameImage } from '@/components/ui/frame-image';
+import { FrameImage } from '@lezzet/mobile-kit/src/components/ui/frame-image';
 
 /*
   DİKDÖRTGEN FOTOĞRAF YÜZEYİ — kitin İÇ ilkeli; `CirclePhoto`nun (daire) dikdörtgen ikizi ve

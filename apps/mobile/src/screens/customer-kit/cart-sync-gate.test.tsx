@@ -21,7 +21,7 @@ import { renderHook } from '@testing-library/react-native';
 
 const mockOnAuthStateChange = jest.fn();
 const mockUnsubscribe = jest.fn();
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       onAuthStateChange: (...args: unknown[]) => {
@@ -32,7 +32,7 @@ jest.mock('@/lib/auth/supabase', () => ({
   }),
 }));
 
-jest.mock('@/lib/i18n/app-locale', () => ({ useAppLocale: () => 'fr' }));
+jest.mock('@lezzet/mobile-kit/src/lib/i18n/app-locale', () => ({ useAppLocale: () => 'fr' }));
 
 /* Anlık görüntü SABİT nesnedir: `useSyncExternalStore` referans eşitliğine bakar ve her çağrıda
    yeni bir nesne döndüren bir mock sonsuz render döngüsü açar (ölçüldü — "Maximum update depth"). */

@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import type { ComplaintRow, TicketType } from '@lezzet/types';
 
-import type { ApiFail } from '@/lib/api/client';
+import type { ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 import { fetchComplaints } from '@/lib/api/management';
 
 /*

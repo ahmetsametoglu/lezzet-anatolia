@@ -3,18 +3,18 @@ import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import type { NotificationRow } from '@/lib/api/notifications';
-import { BackButton } from '@/components/ui/back-button';
+import type { NotificationRow } from '@lezzet/mobile-kit/src/lib/api/notifications';
+import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
-import { LoadingState } from '@/components/ui/loading-state';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { pullRefreshColors } from '@/components/ui/pull-refresh';
+import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { upperIn } from '@/lib/i18n/locale';
-import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
+import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 // Damga `formatStamp`ten (gün + uzun ay + SAAT, yılsız): akış bir arşiv değil, yakın zamanın
 // sırası — aynı güne düşen onlarca satırı yalnız saat ayırır. `formatOrderDate` yıl yazıp saati
 // atıyordu ve cihazda otuz satır birden "27 août 2026" diyordu (ölçüldü 27.08); web aynı ekranda

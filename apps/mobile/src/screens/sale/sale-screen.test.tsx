@@ -6,8 +6,8 @@ import { SaleCartScreen } from './sale-cart-screen';
 import { SaleHistoryScreen } from './sale-history-screen';
 import { SaleReceiptScreen } from './sale-receipt-screen';
 import { SaleProvider } from './sale-context';
-import { ToastHost } from '@/components/ui/toast-host';
-import { resetToast } from '@/lib/toast/toast-store';
+import { ToastHost } from '@lezzet/mobile-kit/src/components/ui/toast-host';
+import { resetToast } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { resetWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 import { chooseWarehouse, resetWarehouseChoice } from '@/lib/operations/warehouse-choice';
@@ -32,7 +32,7 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),
@@ -47,7 +47,7 @@ jest.mock('@/lib/auth/supabase', () => ({
   `PressableSurface` sahtesi ürün kartı çizimlerini sayar; iddia "dokunuştan sonra sayaç 0".
 */
 const mockRowRenders = { count: 0 };
-jest.mock('@/components/ui/pressable-surface', () => {
+jest.mock('@lezzet/mobile-kit/src/components/ui/pressable-surface', () => {
   const React = jest.requireActual('react');
   const { Pressable } = jest.requireActual('react-native');
   return {

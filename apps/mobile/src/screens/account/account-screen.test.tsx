@@ -15,7 +15,7 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR
 // Profil KAYDETME gerçek istemci yolundan geçer (updateMe → authorizedFetch → Bearer): oturum ve
 // tel mock'lanır; öteki testler bu yola hiç girmez.
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),
@@ -67,7 +67,7 @@ jest.mock('@/lib/api/addresses', () => ({
 /* Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı
    bırakmasın (login testinin deseni). */
 const mockToast = jest.fn();
-jest.mock('@/lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
   toastError: (m: string) => mockToast(m),
   toastInfo: (m: string) => mockToast(m),

@@ -7,7 +7,7 @@ import { fetchSaleCatalog, fetchSaleVariants, scanSaleCode, sellOnSite } from '@
    (`warehouseGuard`), yani hattın açık olup olmadığı sorusu birebir aynı soru. İki ayrı sinyal,
    bir gün birbirinden ayrılır ve iki ekran aynı hat için iki farklı şey söylerdi (CLAUDE §1). */
 import { trackWarehouse } from '@/screens/warehouse/warehouse-status';
-import { toastError, toastWarning } from '@/lib/toast/toast-store';
+import { toastError, toastWarning } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { centsToAmountText, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
 import { saleCopy } from './copy';

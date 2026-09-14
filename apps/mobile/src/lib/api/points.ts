@@ -7,8 +7,8 @@ import {
   PointsRulesSchema,
 } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import { apiFetch, type ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   `/api/v1/me/points` — puan cüzdanı (21.17): bakiye + çevirme eşiği + kullanılabilir kuponlar.

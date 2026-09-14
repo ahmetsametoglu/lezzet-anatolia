@@ -20,7 +20,7 @@ const mockFetch = jest.fn();
 const mockMarkAll = jest.fn();
 const mockMarkOne = jest.fn();
 
-jest.mock('@/lib/api/notifications', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/api/notifications', () => ({
   fetchNotifications: (...args: unknown[]) => mockFetch(...args),
   markAllNotificationsRead: (...args: unknown[]) => mockMarkAll(...args),
   markNotificationRead: (...args: unknown[]) => mockMarkOne(...args),

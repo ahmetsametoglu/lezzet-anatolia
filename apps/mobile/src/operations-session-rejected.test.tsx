@@ -2,9 +2,9 @@ import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js';
 import { act, waitFor } from '@testing-library/react-native';
 import { screen } from 'expo-router/testing-library';
 
-import { renderShell } from '@/testing/render-shell';
+import { renderShell } from '@lezzet/mobile-kit/src/testing/render-shell';
 
-import { meFixture } from '@/screens/operations/me-fixture';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 
 /*
   SUNUCUNUN REDDETTİĞİ OTURUM, GERÇEK ROTA AĞACINDA (21.304) — zincirin tamamı GERÇEK: kök düzen
@@ -51,7 +51,7 @@ const mockRefreshSession = jest.fn(async () => {
   const { AuthSessionMissingError } = jest.requireActual('@supabase/supabase-js');
   return { data: { session: null }, error: mockSession === null ? new AuthSessionMissingError() : mockRefreshError };
 });
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

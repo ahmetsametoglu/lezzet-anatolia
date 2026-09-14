@@ -35,6 +35,11 @@ import path from 'node:path';
 
 const mobileSrc = path.resolve(__dirname, '..');
 
+/* KİT DE TARANIR (21.310): paylaşılan bileşenler ortak çekirdekte; kit dosyası raporda `kit/…`. */
+const kitSrc = path.join(path.dirname(require.resolve('@lezzet/mobile-kit/package.json')), 'src');
+const label = (file: string): string =>
+  file.startsWith(kitSrc) ? `kit/${path.relative(kitSrc, file)}` : path.relative(mobileSrc, file);
+
 function sourceFiles(dir: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir)) {
@@ -64,14 +69,14 @@ function violationsIn(file: string, source: string): string[] {
     const styleRefs = match[1]!.match(/\bstyles\.[A-Za-z0-9_$]+|\bstyles\[/g) ?? [];
     if (styleRefs.length > 1) {
       const line = source.slice(0, match.index).split('\n').length;
-      found.push(`${path.relative(mobileSrc, file)}:${line} → ${styleRefs.length} unistyles stili`);
+      found.push(`${label(file)}:${line} → ${styleRefs.length} unistyles stili`);
     }
   }
   return found;
 }
 
 function violations(): string[] {
-  return sourceFiles(mobileSrc).flatMap((file) => {
+  return [...sourceFiles(mobileSrc), ...sourceFiles(kitSrc)].flatMap((file) => {
     const source = readFileSync(file, 'utf8');
     return usesReactNativeAnimated(source) ? violationsIn(file, source) : [];
   });

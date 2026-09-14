@@ -7,8 +7,8 @@ import {
   type MeAddressSchema,
 } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   `/api/v1/me/addresses` — hesap ekranının adres bölümü + v3 `shAddr` çekmecesi (21.15).

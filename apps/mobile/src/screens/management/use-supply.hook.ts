@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ApiFail } from '@/lib/api/client';
+import type { ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 import { createSupplyDraft, fetchSupplyGroups } from '@/lib/api/management';
 import type { SupplyGroup } from '@lezzet/types';
 

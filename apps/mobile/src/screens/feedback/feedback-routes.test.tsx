@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react-native';
 
-import { renderShell } from '@/testing/render-shell';
+import { renderShell } from '@lezzet/mobile-kit/src/testing/render-shell';
 import { feedbackInvite } from './feedback-fixture';
 
 /*

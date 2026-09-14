@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   LİSTE YÜKLENİYOR — Operasyon Mobil v3'ün ilk-yük kalıbı (ölçüldü 30.08; toplama kuyruğu ·

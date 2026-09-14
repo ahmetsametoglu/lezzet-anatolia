@@ -1,4 +1,4 @@
-import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
+import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
   KABUL EDİLMİŞ DAVET KODU — web'in davet çerezinin (`apps/web/lib/identity/invite-cookie.ts`)

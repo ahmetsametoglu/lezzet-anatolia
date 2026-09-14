@@ -1,4 +1,4 @@
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { OperationsKeypadPanel } from './keypad-panel';
 
 /*

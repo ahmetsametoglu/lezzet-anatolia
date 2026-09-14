@@ -1768,7 +1768,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
   **Durum 10.09 gece — düğmeler yine kayıtsız adrese basıyordu (kullanıcı bulgusu, cihazda).** Seed
   ve web listesi personeli `lezzetanatolie.com`a taşıdı (936e7d8a · 15.20); mobil liste
-  (`apps/mobile/src/lib/auth/dev-login.ts`) `lezzetanatolia.fr`de kaldı. "Yönetim" düğmesi kayıtsız
+  (`packages/mobile-kit/src/lib/auth/dev-login.ts`) `lezzetanatolia.fr`de kaldı. "Yönetim" düğmesi kayıtsız
   adrese bastı, `generateLink` ona YENİ bir auth hesabı açtı ve trigger `{customer}` yaptı — personel
   düğmesi müşteri yüzeyine düştü, hata vermeden (ölçüldü: `yonetim@lezzetanatolia.fr` 23:38'de
   doğdu, rolü `{customer}`; Hesabım'da adsız bir müşteri hesabı göründü). Beş adres seed'e
@@ -1947,7 +1947,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   hiçbir yere yazılmıyor. Aynı defterde bildirildi.
 
 - [x] (21.36) **KLAVYE ÜÇ AÇIK KAPATTI + ONBOARDING'DE YAZI BOYUTU GERÇEKTEN İŞLİYOR (11.08).**
-  `touches:` `apps/mobile/src/components/ui/form-scroll.tsx` (YENİ) ·
+  `touches:` `packages/mobile-kit/src/components/ui/form-scroll.tsx` (YENİ) ·
   `apps/mobile/src/screens/{login/login-screen.tsx,feedback/feedback-screen.tsx,onboarding/onboarding-screen.tsx}`
   *(`professionals/professionals-screen.tsx`in kaydırıcı takası `(21.35)` commit'ine bindi —
   aynı dosyada iki şeridin işi vardı, koordinasyon defterinde anlaşıldı.)*
@@ -2156,7 +2156,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
 - [x] (21.41) **ÇEKMECE YUKARIDAN TAŞIYORDU — müşterinin yazdığı kutu ekranın dışına kaçıyordu
   (kullanıcı bulgusu 11.08, cihazda ölçüldü).**
-  `touches:` `apps/mobile/src/components/ui/bottom-sheet.tsx` ·
+  `touches:` `packages/mobile-kit/src/components/ui/bottom-sheet.tsx` ·
   `apps/mobile/src/components/ui/suggestion-list.tsx` ·
   `apps/mobile/src/screens/support/new-ticket-sheet.tsx`
 
@@ -2242,7 +2242,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `apps/mobile/app.config.ts` · `apps/mobile/.env.example` ·
   `apps/mobile/src/app/{+native-intent.tsx,invite/[code].tsx}` ·
   `apps/mobile/src/screens/invite/*` · `apps/mobile/src/lib/invite/*` ·
-  `apps/mobile/src/lib/{auth/otp.ts,storage/device-store.ts}` ·
+  `packages/mobile-kit/src/lib/{auth/otp.ts,storage/device-store.ts}` ·
   `apps/mobile/src/screens/account/{account-screen.tsx,messages.json,use-points.hook.ts}`
 
   **BAĞLAM:** zincirin sunucu yarısını web şeridi kurdu (17.9 — karşılama sayfası, `/invite/[code]`
@@ -2301,7 +2301,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 - [x] (21.44) **DAVET BAĞI GİRİŞ YÖNTEMİNİ ARTIK BİLMİYOR — Google ile kaydolan davetli sessizce
   bağsız kalıyordu.**
   `touches:` `apps/mobile-api/src/api/v1/{invite.ts,router.ts,auth-otp.ts}` ·
-  `apps/mobile/src/lib/invite/invite-api.ts` · `apps/mobile/src/lib/auth/{otp.ts,oauth.ts}`
+  `apps/mobile/src/lib/invite/invite-api.ts` · `packages/mobile-kit/src/lib/auth/{otp.ts,oauth.ts}`
 
   **ÖLÇÜLMÜŞ BOŞLUK.** `(21.43)`te davet kodu `/auth/otp/verify` gövdesine konmuştu ve gerekçesi
   o gün doğruydu — "müşteri kartının doğduğu tek yer burası". **Ama o cümle yalnız OTP için
@@ -2340,7 +2340,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `apps/mobile-api/src/api/v1/{invite.ts,router.ts,checkout.ts}` ·
   `apps/mobile/app.config.ts` · `apps/mobile/src/app/{+native-intent.tsx,neighbor/[token].tsx,checkout/confirmed.tsx}` ·
   `apps/mobile/src/screens/neighbor/*` · `apps/mobile/src/screens/checkout/*` ·
-  `apps/mobile/src/lib/invite/*` · `apps/mobile/src/lib/storage/device-store.ts`
+  `apps/mobile/src/lib/invite/*` · `packages/mobile-kit/src/lib/storage/device-store.ts`
 
   **BAĞLAM:** sunucu yarısı web şeridinde (17.10 + 12.08 düzeltmesi). Bu satır cihaz ucu; ikisi
   birlikte davetin İKİNCİ türünü — kullanıcının *"sefer daveti"* dediği şeyi — çalışır hâle
@@ -2606,7 +2606,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   Ölçümler `docs/uygulama/BACKLOG-musteri.md` ve turun kapsam defterinde.
 
 - [x] (21.49) **HESABINI SİLME NATIVE'E GELDİ — ve dört backlog kalemi aynı turda kapandı**
-  (14.08). `touches: apps/mobile-api/src/api/v1/router.ts, apps/mobile/src/lib/api/me.ts,
+  (14.08). `touches: apps/mobile-api/src/api/v1/router.ts, packages/mobile-kit/src/lib/api/me.ts,
   apps/mobile/src/screens/account/{account-screen.tsx,messages.json},
   apps/mobile/src/screens/checkout/{checkout-screen.tsx,order-confirmed-screen.tsx,messages.json},
   apps/mobile/src/app/checkout/confirmed.tsx,
@@ -3386,7 +3386,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   duruyor). Silinmedi — kullanıcının kararı bekleniyor. `BEKLEYEN(21.61)`.
 
 - [x] (21.62) **BOŞ HÂLLER ORTALANDI, İKON BÜYÜDÜ, HEADER KURALI YAZIYA GEÇTİ (kullanıcı turu 16.08)**
-  `touches:` `apps/mobile/src/components/ui/empty-state.tsx` · `apps/mobile/src/theme/metrics.ts` ·
+  `touches:` `apps/mobile/src/components/ui/empty-state.tsx` · `packages/mobile-kit/src/theme/metrics.ts` ·
   `apps/mobile/src/screens/{orders,points-history,cart,invite,neighbor,catalog,packages-list,recipes-list,professionals,delivery-zones,home,support}/**` ·
   `design/KARARLAR.md`
 
@@ -3445,7 +3445,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **`.dc` dosyası bu turun sonucunu taşımıyor** — tasarım turunda güncellenmeli, kayıt `KARARLAR`da.
 
 - [x] (21.63) **YAPIŞKAN DİL KAYDI — cihaz Türkçe, uygulama Fransızca (kullanıcı bulgusu 16.08)**
-  `touches:` `apps/mobile/src/lib/i18n/app-locale.ts` · `apps/mobile/src/lib/auth/sign-out.ts`
+  `touches:` `packages/mobile-kit/src/lib/i18n/app-locale.ts` · `packages/mobile-kit/src/lib/auth/sign-out.ts`
 
   Kullanıcı sordu: *"Fiziksel cihazın dili uygulama ilk açıldığında otomatik seçiliyor mu? Şu an
   Fransızca fakat neden Fransızca bilmiyorum — besleme dosyasında mı varsayılan Fransızca?"*
@@ -3561,7 +3561,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   aday sayısına bağlı değil.
 
 - [x] (21.66) **TİTREŞİM (haptik) — niyet sözlüğü, tek kapı, kritik anlar (kullanıcı isteği 16.08)**
-  `touches:` `apps/mobile/src/lib/haptics/**` · `apps/mobile/src/lib/toast/toast-store.ts` ·
+  `touches:` `apps/mobile/src/lib/haptics/**` · `packages/mobile-kit/src/lib/toast/toast-store.ts` ·
   `apps/mobile/src/screens/**` (toast çağrı yerleri + checkout · discover · account · otp kancası) ·
   `apps/mobile/package.json`
 
@@ -4001,7 +4001,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   üretilebilir — **yığın test koşarken cihazda giriş yapılamıyor.**
 
 - [x] (21.74) **BÜYÜK HARF DİLİN KURALIYLA — 17 ekran sabit Türkçe yerelle büyütüyordu (17.08)**
-  → MB-71 kapandı. `touches: apps/mobile/src/lib/i18n/locale.ts,
+  → MB-71 kapandı. `touches: packages/mobile-kit/src/lib/i18n/locale.ts,
   apps/mobile/src/screens/{home,catalog,product,checkout,orders,packages-list,account,points-history,customer-kit}/*`
 
   **Bulgu cihazdan geldi:** `(21.73)`ün Almanca doğrulama turunda başlıkta **`MEİN KONTO`** görüldü.
@@ -4136,7 +4136,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 - [x] (21.77) **MÜŞTERİ YÜZEYİ BİR KADEME BÜYÜK OKUYOR — ve yazı ölçeği baştan sona denetlendi
   (kullanıcı isteği 18.08)**
   → `touches: apps/mobile/src/theme/{parse,unistyles,unistyles.test}.ts,
-  apps/mobile/src/lib/settings/font-scale.ts, apps/mobile/src/components/ui/*,
+  packages/mobile-kit/src/lib/settings/font-scale.ts, apps/mobile/src/components/ui/*,
   apps/mobile/src/screens/{product,package,recipe}/*`
 
   İstek üç parçaydı: (1) tüm fontlar merkeze bağlı olsun, (2) rolüne uygun token kullanılsın,
@@ -5113,7 +5113,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   görünmüyor. Düzeltme `pnpm prod:web` ile doğrulandı (derleme geçti).
 
 - [x] (21.95) **DEV GİRİŞ DÜĞMESİ MÜŞTERİ AÇMIYORDU + ARAMA ÇEKİRDEĞİNİN NÜSHASI SÖKÜLDÜ**
-  `touches:` `apps/mobile/src/lib/auth/dev-login.ts` · `apps/mobile-api/src/api/v1/dev-login.ts` · `apps/mobile/src/screens/customer-kit/{use-address-search,use-postal-suggest}.hook.ts` · `apps/mobile/package.json`
+  `touches:` `packages/mobile-kit/src/lib/auth/dev-login.ts` · `apps/mobile-api/src/api/v1/dev-login.ts` · `apps/mobile/src/screens/customer-kit/{use-address-search,use-postal-suggest}.hook.ts` · `apps/mobile/package.json`
 
   **Durum (21.08):** iki denetim notu işlendi ve silindi (`docs/talep/not-mobil-dev-giris-...`,
   `not-mobil-gecikmeli-arama-cekirdegi-...`).
@@ -5258,7 +5258,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   tasarlanmış davranış — doğru çalıştı.
 
 - [x] (21.98) **DÜŞEN KİMLİK OKUMASI KENDİ BAŞINA TOPARLANMIYORDU — müşteri, oturumu yerli yerindeyken uygulamayı çıkış yapmış gibi görüyordu**
-  `touches:` `apps/mobile/src/screens/customer-kit/use-me.hook.ts`
+  `touches:` `packages/mobile-kit/src/lib/me/use-me.hook.ts`
 
   **Kaynak:** `BEKLEYEN(21.91)`'in ikinci işareti (20.08). Ölçüm işaretin YARISINI çürüttü, öteki
   yarısını doğruladı ve sebebi başka bir yerde buldu.
@@ -5572,7 +5572,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.101) **VİTRİN BAŞLIĞI YER ADINI ARTIK HATIRLIYOR — çıplak posta kodu karesi kapandı (MB-80)**
   · touches: `apps/mobile/src/lib/places/place-name-memory.ts`,
-  `apps/mobile/src/lib/storage/device-store.ts`, `apps/mobile/src/screens/home/home-screen.tsx`
+  `packages/mobile-kit/src/lib/storage/device-store.ts`, `apps/mobile/src/screens/home/home-screen.tsx`
 
   **KAYIT "ÜRETİLEMEDİ, TEORİ" DİYORDU — ÖLÇÜLDÜ, DETERMİNİSTİKMİŞ.** Kullanıcı 11.08'de bir kez
   başlıkta *"67000 STRASBOURG"* yerine yalnız *"67000"* görmüş, sebep bulunamamıştı. Kod tek satırda
@@ -5753,7 +5753,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · touches: `apps/mobile/src/screens/operations/use-operations-access.hook.test.ts`,
   `apps/mobile/src/screens/operations/use-staff-landing.hook.test.ts`,
   `apps/mobile/src/screens/operations/use-staff-landing.hook.ts`,
-  `apps/mobile/src/screens/customer-kit/use-me.hook.test.ts`
+  `packages/mobile-kit/src/lib/me/use-me.hook.test.ts`
 
   **DALGA 2'NİN İLK DİLİMİ** (`docs/build/test-dalgasi.md`): plan bu şeride `21.9x` kabuk/kurye/davet
   kapsamını veriyor. Seçim ölçütü planın kendi ölçütü — kapsama yüzdesi değil **sessiz bozulma
@@ -6568,7 +6568,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   zincir ürününü "non livrable" griledi ve katalog bölge bandını çizdi.
 
 - [x] (21.121) **CİHAZ TURU İKİ ARIZA ÖLÇTÜ — ikisi de KAPANDI (Fabric çökmesi · unistyles nüksü)**
-  · touches: `apps/mobile/src/components/ui/bottom-sheet.tsx`, `apps/mobile/src/components/operations/staff-menu.tsx`
+  · touches: `packages/mobile-kit/src/components/ui/bottom-sheet.tsx`, `apps/mobile/src/components/operations/staff-menu.tsx`
 
   **1 · Fabric çökmesi (personel→müşteri geçişi) — KÖK KANITLANDI ve KAPANDI (26.08 akşamı).**
   Belirti: avatar menüsünden "Müşteri uygulamasına geç" → `IllegalStateException: addViewAt —
@@ -7110,7 +7110,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 - [x] (21.136) **DEPO HUB v3 — düz liste üç katmana ayrıldı** (Operasyon Mobil v3:35-174)
   `touches:` `apps/mobile/src/screens/warehouse/{warehouse-hub-screen.tsx,messages.json}` ·
   `apps/mobile/src/components/operations/section-header.tsx` ·
-  `apps/mobile/src/components/ui/{icon.tsx,icon-paths.ts}` · `apps/mobile/src/theme/metrics.ts` ·
+  `apps/mobile/src/components/ui/{icon.tsx,icon-paths.ts}` · `packages/mobile-kit/src/theme/metrics.ts` ·
   `packages/design-tokens/src/operations-app.ts`
 
   **Durum (30.08).** v3 geçişinin ilk ekranı. v2 sekiz işi eşit ağırlıkta satırlara diziyordu;
@@ -7213,7 +7213,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.139) **MAL KABUL BEKLEYEN LİSTESİ v3 — künye listeyi anlatıyor, plansız kabul sona indi** (v3:509-587)
   `touches:` `apps/mobile/src/screens/warehouse/{intake-screen.tsx,messages.json,intake-screen.test.tsx}` ·
-  `apps/mobile/src/theme/metrics.ts`
+  `packages/mobile-kit/src/theme/metrics.ts`
 
   **Durum (30.08).** Başlık künyesi kategoriyi değil LİSTEYİ anlatıyor ("2 bekleyen sevkiyat ·
   11 kalem"); sayı listeden çıkıyor, ikinci bir özet ucu istemiyor (hub'ın aynı kuralı). Liste
@@ -7677,7 +7677,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.157) **YÖNETİM + BİLDİRİMLER + ORTAK ZEMİN v3'e geçti** (v3:2122-2560, 00-ortak)
   `touches:` `apps/mobile/src/screens/management/*` · `apps/mobile/src/screens/operations/notifications-screen.tsx` ·
-  `apps/mobile/src/components/{operations,ui}/*` · `apps/mobile/src/theme/metrics.ts` · `packages/design-tokens/src/operations-app.ts`
+  `apps/mobile/src/components/{operations,ui}/*` · `packages/mobile-kit/src/theme/metrics.ts` · `packages/design-tokens/src/operations-app.ts`
 
   **Durum (30.08).** Dört alt şeritle paralel yürütüldü (kullanıcı isteği); orkestrasyon, tasarım
   karşılaştırması ve cihaz turu ana şeritte.
@@ -7710,7 +7710,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   çakışma satırıyla (`label: 'Para'` · `section: 'money'`) ölçülüyor.
 
 - [x] (21.158) **YEREL ADRESİN HOST'U CİHAZA SORULUYOR — iOS fiziksel cihazda veri gelmiyordu**
-  `touches:` `apps/mobile/src/lib/env.ts` · `apps/mobile/src/lib/env.test.ts` ·
+  `touches:` `packages/mobile-kit/src/lib/env.ts` · `packages/mobile-kit/src/lib/env.test.ts` ·
   `apps/mobile/.env.example`
 
   **Durum (30.08).** iOS fiziksel cihazda ürünler gelmiyor, "bağlantı yok" deniyordu — oysa API,
@@ -7766,7 +7766,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [~] (21.160) **DEPO MODÜLÜ v3 DENETİMİ — tek elden, ekran ekran** (kullanıcı kararı 30.08)
   `touches:` `apps/mobile/src/screens/warehouse/*` · `apps/mobile/src/lib/operations/sections.ts` ·
-  `apps/mobile/src/components/ui/form-scroll.tsx` · `apps/mobile/src/theme/metrics.ts`
+  `packages/mobile-kit/src/components/ui/form-scroll.tsx` · `packages/mobile-kit/src/theme/metrics.ts`
 
   **Durum (30.08).** Kullanıcı cihazda birçok ekranın tasarımdan farklı olduğunu söyledi; ölçtüm,
   haklıydı. Yöntem değişti: tasarım artık düz metne indirgenmiyor, **resme** çevriliyor
@@ -7810,8 +7810,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [~] (21.161) **OPERASYON KONTROL KİTİ — ölçüm tasarımdan, komponent tek yerden** (kullanıcı kararı 30.08)
   `touches:` `apps/mobile/src/components/operations/{surface,icon-button,sticky-bar}.tsx` ·
-  `apps/mobile/src/components/ui/{primary-button,secondary-button,text-field}.tsx` ·
-  `packages/design-tokens/src/operations-app.ts` · `apps/mobile/src/theme/metrics.ts` ·
+  `apps/mobile/src/components/ui/{primary-button,secondary-button}.tsx` · `packages/mobile-kit/src/components/ui/text-field.tsx` ·
+  `packages/design-tokens/src/operations-app.ts` · `packages/mobile-kit/src/theme/metrics.ts` ·
   `packages/types/src/contracts/warehouse-api.schema.ts` ·
   `packages/application/src/warehouse/variant-search.ts` · `apps/mobile-api/src/api/v1/warehouse.ts` ·
   `apps/mobile/src/screens/warehouse/{warehouse-hub,intake}-screen.tsx`
@@ -8141,7 +8141,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.167) **TONLU KARTIN ZEMİNİ — eşik kuralının ölçmediği eksen** (kullanıcı bulgusu 30.08)
   `touches:` `packages/design-tokens/src/{operations-app.ts,operations-app.test.ts}` ·
-  `apps/mobile/src/theme/unistyles.test.ts` · `apps/mobile/src/screens/money/*`
+  `packages/mobile-kit/src/theme/unistyles.test.ts` · `apps/mobile/src/screens/money/*`
 
   **Durum (30.08).** Kullanıcı cihazda: *"kartın arka tonunda biraz kırmızılık var, tasarımda…
   kuryenin üstündeki kartın içinde kırmızı dolgu var gibi ama cihazda göremiyorum."*
@@ -8390,7 +8390,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 - [x] (21.173) **ADET ÇEKMECESİ — soru "kaç paket" değil "KAÇ KOLİ"** (kullanıcı bulgusu 30.08 · v3 `sheetAdet`)
   `touches:` `apps/mobile/src/components/operations/{quantity-sheet,stepper-group,dashed-frame}.tsx` ·
   `apps/mobile/src/components/operations/quantity-value.ts` ·
-  `apps/mobile/src/components/ui/bottom-sheet.tsx` ·
+  `packages/mobile-kit/src/components/ui/bottom-sheet.tsx` ·
   `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,messages.json}` ·
   `packages/types/src/contracts/warehouse-api.schema.ts` ·
   `packages/application/src/warehouse/{intake,scan,variant-search}.ts` · `scripts/seed/barcode.ts`
@@ -8725,7 +8725,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 - [x] (21.178) **KALAN EKRANLAR KABUĞA BAĞLANDI — yapışkan başlık artık her ekranda** (30.08 · kullanıcı isteği 06.09)
   `touches:` `apps/mobile/src/components/operations/screen-scroll.tsx` ·
   `apps/mobile/src/components/operations/micro-header.tsx` ·
-  `apps/mobile/src/components/ui/form-scroll.tsx` · `knip.json` ·
+  `packages/mobile-kit/src/components/ui/form-scroll.tsx` · `knip.json` ·
   depo 8 (`printer-setup-screen.tsx` · `handover-screen.tsx` · `near-expiry-screen.tsx` ·
   `transfer-screen.tsx` · `intake-screen.tsx` · `preparation-screen.tsx` · `stock-count-screen.tsx` ·
   `write-off-screen.tsx` · `courier-return-screen.tsx`) · kurye 6 (`courier-day-screen.tsx` ·
@@ -8820,7 +8820,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.180) **DURAK EKRANI KİTE DÖNDÜ — çekmece, düğmeler, adım kartları** (v3:17 + `00-ortak:477` · kullanıcı bulguları 30.08)
   `touches:` `apps/mobile/src/components/ui/{primary-button.tsx,secondary-button.tsx}` ·
-  `apps/mobile/src/theme/metrics.ts` · `apps/mobile/src/screens/courier/{delivery-screen.tsx,messages.json}`
+  `packages/mobile-kit/src/theme/metrics.ts` · `apps/mobile/src/screens/courier/{delivery-screen.tsx,messages.json}`
 
   **Durum (30.08).** Kullanıcı cihazda durak ekranını tasarımla yan yana koydu: *"buradaki
   komponentlerin hiçbiri ortak komponent değil… butonların yüksekliği, inputun tipi, bunların
@@ -9056,7 +9056,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   benim commit'siz değişikliklerimden değil (dört dosya HEAD'e döndürüldü, çökme sürdü).
 
   ### Eski kayıt — plansız ekrandan geri dönüşte, BİR KEZ (gözlem 30.08)
-  `touches:` `apps/mobile/src/screens/warehouse/intake-screen.tsx` · `apps/mobile/src/components/ui/bottom-sheet.tsx`
+  `touches:` `apps/mobile/src/screens/warehouse/intake-screen.tsx` · `packages/mobile-kit/src/components/ui/bottom-sheet.tsx`
 
   **Gözlem.** Android UI turunda (21.182) şu yolda uygulama çöktü: plansız kabulde ürün eklendi →
   geri → mal kabul listesi → siparişli sevkiyata girildi. Hata:
@@ -10543,7 +10543,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   failed to insert view … The specified child already has a parent` (31.08, CPH1907; üç turda tekrar
   üretilmiş). Başlıkta "yalnız DURAK ekranı" yazıyordu; 03.09'da dört ekranda ve iki cihazda ölçüldü,
   ekrana değil DOKUNUŞA bağlı. Şüphe ekranın üç örtüsündeydi (iki çekmece + `ScanSheet`) — yanlış çıktı.
-  `touches:` `packages/mobile-kit/src/lib/interaction/defer-press.ts` · `apps/mobile/src/components/ui/pressable-surface.tsx` · `apps/mobile/jest.setup.ts`
+  `touches:` `packages/mobile-kit/src/lib/interaction/defer-press.ts` · `packages/mobile-kit/src/components/ui/pressable-surface.tsx` · `apps/mobile/jest.setup.ts`
   - ~~**BEKLEYEN(21.219):** 01.09'daki `@gorhom/bottom-sheet` göçü RN `Modal`ını tamamen kaldırdı
     ve yığın izi tam oraya işaret ediyordu; arıza göç ile kapanmış OLABİLİR.~~ Göç KAPATMADI
     (03.09 ölçümü) ve çekmecelerle ilgisi yoktu — işaret cevaplandığı için üstü çizildi.
@@ -11053,7 +11053,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.231) **RAKAMA BASINCA NE AÇILIR — koli soran yerde çekmece, sormayan yerde CANLI tuş takımı; sil tuşu değerin sağında; çekmece içi boşluk örtüye düşmüyor; koli boyları sayım ve transfere; kaydırıcı söküldü** (kullanıcı kararları 02.09, Oppo'da ölçüldü)
   `touches:` `apps/mobile/src/components/operations/{keypad-panel.tsx,keypad-panel.test.tsx,amount-keypad.tsx,quantity-sheet.tsx,scan-qty-sheet.tsx,scan-qty-sheet.test.tsx,stepper-group.tsx}` ·
-  `apps/mobile/src/components/ui/bottom-sheet.tsx` ·
+  `packages/mobile-kit/src/components/ui/bottom-sheet.tsx` ·
   `apps/mobile/src/screens/warehouse/{write-off-screen.tsx,intake-screen.tsx,preparation-screen.tsx,near-expiry-screen.tsx,stock-count-screen.tsx,transfer-screen.tsx,messages.json}` ·
   `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/application/src/warehouse/{case-sizes.ts,adjustment.ts,transfer.ts,intake.ts,variant-search.ts}`
 
@@ -11100,7 +11100,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   yok) — bunlar birim testte çivili. Tam paket sonucu commit notunda.
 
 - [x] (21.232) **MAL KABUL KARTI AKORDEON — tek kart açık, kapalı kart özetini rozetlerinde taşır; okutulan satır ekrana getiriliyor; çekmece içi aralık geri geldi** (kullanıcı kararları 03.09, Oppo'da ölçüldü)
-  `touches:` `apps/mobile/src/components/ui/{bottom-sheet.tsx,form-scroll.tsx}` ·
+  `touches:` `packages/mobile-kit/src/components/ui/{bottom-sheet.tsx,form-scroll.tsx}` ·
   `apps/mobile/src/screens/warehouse/{intake-screen.tsx,intake-screen.test.tsx,intake-scan.test.tsx,messages.json}`
 
   **Çekmece içi ARALIK, 21.231'in yan etkisiydi** (kullanıcı bulgusu: *"sebep çekmecesinin
@@ -11439,7 +11439,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   tekerleğe bağlantıdan gidilir. Tam paket sonucu commit notunda. Cihazda ölçüldü (Oppo).
 
 - [x] (21.241) **STOK DÜŞÜMÜNÜN KENDİ İKONU — hub'da sayımla aynı şekli gösteriyordu; sayacın ORTA hedefi ± düğmelerinden dar kalmıştı** (kullanıcı bulguları 03.09, Oppo'da ölçüldü)
-  `touches:` `apps/mobile/src/components/ui/icon-paths.ts` · `apps/mobile/src/theme/metrics.ts` · `apps/mobile/src/components/operations/stepper-group.tsx` · `apps/mobile/src/screens/warehouse/warehouse-hub-screen.tsx`
+  `touches:` `apps/mobile/src/components/ui/icon-paths.ts` · `packages/mobile-kit/src/theme/metrics.ts` · `apps/mobile/src/components/operations/stepper-group.tsx` · `apps/mobile/src/screens/warehouse/warehouse-hub-screen.tsx`
 
   **1 · İKON.** D4b 02.09'da açılırken sayımın liste ikonunu (`stock-count`, üç çizgi) ödünç
   almıştı; hub'da iki kutucuk aynı şekli gösteriyordu, ayıran tek şey renkti. Tasarımın kendi ikonu
@@ -11459,7 +11459,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   satırında orta hedef ± ikilisinden geniş, "sebep seç" alanı daraldı.
 
 - [x] (21.242) **D4/D4b SEÇİCİ BAŞTAN: liste SAYFA SAYFA · dolap FİLTRE · okutma FAB'da · çipler yatayda · partinin yeri KARTTA (sayımda düzeltilir, düşümde salt okunur) · cihazın geri tuşu bir adım geri atar** (kullanıcı kararları 03.09)
-  `touches:` `packages/database/src/services/stock.service.ts` · `packages/application/src/warehouse/{adjustment.ts,adjustment.test.ts}` · `packages/types/src/contracts/warehouse-api.schema.ts` · `apps/mobile-api/src/api/v1/{warehouse.ts,warehouse.test.ts}` · `apps/mobile/src/lib/api/warehouse.ts` · `apps/mobile/src/components/ui/form-scroll.tsx` · `apps/mobile/src/screens/warehouse/{use-batch-subject.hook.ts,use-subject-back.hook.ts,batch-picker.tsx,batch-context-card.tsx,stock-count-screen.tsx,write-off-screen.tsx,messages.json,*.test.tsx}`
+  `touches:` `packages/database/src/services/stock.service.ts` · `packages/application/src/warehouse/{adjustment.ts,adjustment.test.ts}` · `packages/types/src/contracts/warehouse-api.schema.ts` · `apps/mobile-api/src/api/v1/{warehouse.ts,warehouse.test.ts}` · `apps/mobile/src/lib/api/warehouse.ts` · `packages/mobile-kit/src/components/ui/form-scroll.tsx` · `apps/mobile/src/screens/warehouse/{use-batch-subject.hook.ts,use-subject-back.hook.ts,batch-picker.tsx,batch-context-card.tsx,stock-count-screen.tsx,write-off-screen.tsx,messages.json,*.test.tsx}`
 
   Altı bulgu tek turda; hepsi aynı iki ekranın (D4 sayım · D4b düşüm) seçici ve kart yüzeyi.
 
@@ -11558,7 +11558,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kullanıcıya kaldı, akış çiple bayt bayt aynı yoldan geçiyor (`scan-sheet` künyesi).
 
 - [ ] (21.245) **Dokunma ertelemesi geçicidir — RN/screens kök düzeltmesi gelince sökülür** (21.219'un kalanı)
-  `touches:` `packages/mobile-kit/src/lib/interaction/defer-press.ts` · `apps/mobile/src/components/ui/pressable-surface.tsx`
+  `touches:` `packages/mobile-kit/src/lib/interaction/defer-press.ts` · `packages/mobile-kit/src/components/ui/pressable-surface.tsx`
 
   21.219'da ölçülen çökmenin kökü bizde değil: Fabric ekran kaldırılırken geri dönüştürülen görünümü
   eski ebeveynine bağlı buluyor (react-native-screens **#3249** `endRemovalTransition` bozuk ·
@@ -11819,7 +11819,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   turu YAPILAMADI: Oppo kablosuz ADB'den düştü (mDNS'te görünmüyor) — kullanıcı bakacak.
 
 - [x] (21.252) **D5 LİSTE TASARIMIN KARTINA ÇEKİLDİ — ikon karesi, "GELDİ" rozeti, düz kalemler, yoldakinde rota + durum + tahmini gün, kapananda rota adla, liste tarihleri yılsız** (kullanıcı bulgusu 04.09)
-  `touches:` `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,transfer-screen.test.tsx,messages.json,warehouse-format.ts,warehouse-format.test.ts}` · `apps/mobile/src/theme/metrics.ts` · `design/pages/app-depo.md` · `design/KARARLAR.md`
+  `touches:` `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,transfer-screen.test.tsx,messages.json,warehouse-format.ts,warehouse-format.test.ts}` · `packages/mobile-kit/src/theme/metrics.ts` · `design/pages/app-depo.md` · `design/KARARLAR.md`
 
   **Bulgu (kullanıcı 04.09, tasarımın liste görüntüsüyle yan yana).** Gelen kartta ikon karesi ve
   "GELDİ" rozeti yoktu, chevron ve "N kalem · tarih" satırı fazlaydı, kalemler kum kutudaydı, "kabule
@@ -12344,7 +12344,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   yazmaktansa gürültüyle kırılmak seçildi.
 
 - [x] (21.264) **BİLDİRİM EKRANI v3'ün GÜNCEL çizimine geçti VE kitlenin iki kez sorulması bitti — bölüm artık kapı değil etiket; sunucu rozeti, imleç, hedef satırı, gün grupları** (kullanıcı kararı 05.09: *"tasarımı çok beğendim, bunu realize etmek istiyorum"*)
-  `touches: apps/mobile/src/screens/operations/*, apps/mobile/src/lib/operations/{sections,stamp}.ts, apps/mobile/src/lib/api/notifications.ts, apps/mobile/src/components/operations/{choice-chip,notification-bell}.tsx, apps/mobile/src/theme/fonts.ts, packages/design-tokens/src/operations-app.ts, packages/i18n/src/notification-copy.ts, packages/application/src/notification/read.ts, packages/database/src/services/app-notification.service.ts, packages/database/src/testing/cleanup.ts, apps/mobile-api/src/api/v1/notifications.ts, apps/web/components/operation/ui/notification-*, scripts/seed/notifications.ts`
+  `touches: apps/mobile/src/screens/operations/*, apps/mobile/src/lib/operations/{sections,stamp}.ts, packages/mobile-kit/src/lib/api/notifications.ts, apps/mobile/src/components/operations/{choice-chip,notification-bell}.tsx, packages/mobile-kit/src/theme/fonts.ts, packages/design-tokens/src/operations-app.ts, packages/i18n/src/notification-copy.ts, packages/application/src/notification/read.ts, packages/database/src/services/app-notification.service.ts, packages/database/src/testing/cleanup.ts, apps/mobile-api/src/api/v1/notifications.ts, apps/web/components/operation/ui/notification-*, scripts/seed/notifications.ts`
 
   **Durum (05.09).** Ekran 30.08'de v3'e geçirilmişti ama kaynak dosyanın O GÜNKÜ hâline göre:
   bildirim bloğu 31.08'de baştan yazıldı ve ekran o güncellemeyi hiç görmedi. Aradaki fark iki örnek
@@ -13206,7 +13206,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   — kargo/web, iki notla kayıtlı).
 
 - [x] (21.279) **SOHBET BİÇİMLENDİRMESİ MOBİLDE ÇİZİLİYOR — üç yüzey birden** (kullanıcı kararı 06.09; sosyal şeridiyle ortak iş)
-  `touches:` `apps/mobile/src/components/ui/{chat-text.tsx,chat-text.test.tsx,icon-paths.ts}` · `apps/mobile/src/theme/fonts.ts` · `apps/mobile/src/screens/management/{chat-bubble.tsx,complaint-screen.tsx}` · `apps/mobile/src/screens/support/ticket-detail-screen.tsx`
+  `touches:` `packages/mobile-kit/src/components/ui/{chat-text.tsx,chat-text.test.tsx}` · `apps/mobile/src/components/ui/icon-paths.ts` · `packages/mobile-kit/src/theme/fonts.ts` · `apps/mobile/src/screens/management/{chat-bubble.tsx,complaint-screen.tsx}` · `apps/mobile/src/screens/support/ticket-detail-screen.tsx`
 
   Kullanıcı WhatsApp biçimlendirmesinin **talep ekranlarında da** çizilmesini, hem web hem mobilde,
   hem müşteri hem operasyonda istedi. İş **iki şerit arasında bölüşüldü**
@@ -13242,7 +13242,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   çiziliyor.
 
 - [x] (21.280) **AÇILAN ÇEKMECE KLAVYEYİ KAPATIR — ve yazışmanın altındaki iki kalıntı kalktı** (kullanıcı bulgusu 07.09)
-  `touches:` `apps/mobile/src/components/ui/{bottom-sheet.tsx,bottom-sheet.test.tsx}` · `apps/mobile/src/screens/management/{complaint-screen.tsx,messages.json}`
+  `touches:` `packages/mobile-kit/src/components/ui/{bottom-sheet.tsx,bottom-sheet.test.tsx}` · `apps/mobile/src/screens/management/{complaint-screen.tsx,messages.json}`
 
   **1 · KLAVYE — kitte, çünkü arıza 33 çağıranın hepsinde var.** Cevap kutusuna dokunulup klavye
   açıkken aksiyon çekmecesi açılınca klavye yerinde kalıyordu: çekmecenin alt payı (`keyboardPad`,
@@ -13279,7 +13279,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 
 - [x] (21.281) **TALEP LİSTESİ AÇILDI — operatör "6 açık" görüp 1'ini açabiliyordu** (kullanıcı kararı 07.09)
-  `touches:` `packages/database/src/services/ticket.service.ts` · `packages/application/src/ticket/{ticket-types.ts,staff-read.ts,staff-read.test.ts}` · `packages/application/src/management/complaint.ts` · `packages/application/src/index.ts` · `packages/types/src/contracts/management-api.schema.ts` · `apps/mobile-api/src/api/v1/{management.ts,management.test.ts}` · `apps/mobile/src/lib/api/{client.ts,management.ts,social.ts,sale.ts,checkout.ts,orders.ts}` · `apps/mobile/src/components/operations/status-badge.tsx` · `apps/mobile/src/screens/management/{complaints-screen.tsx,complaints-screen.test.tsx,use-complaints.hook.ts,messages.json,management-hub-screen.tsx,social-format.ts,social-format.test.ts}` · `packages/design-tokens/src/operations-app.ts` · `supabase/migrations/0026_ticket.sql` · `packages/types/src/entities/ticket.schema.ts` · `apps/mobile/src/app/(operations)/complaints.tsx` · `apps/web/app/(operations)/operations/tickets/tickets-read.test.ts`
+  `touches:` `packages/database/src/services/ticket.service.ts` · `packages/application/src/ticket/{ticket-types.ts,staff-read.ts,staff-read.test.ts}` · `packages/application/src/management/complaint.ts` · `packages/application/src/index.ts` · `packages/types/src/contracts/management-api.schema.ts` · `apps/mobile-api/src/api/v1/{management.ts,management.test.ts}` · `packages/mobile-kit/src/lib/api/client.ts` · `apps/mobile/src/lib/api/{management.ts,social.ts,sale.ts,checkout.ts,orders.ts}` · `apps/mobile/src/components/operations/status-badge.tsx` · `apps/mobile/src/screens/management/{complaints-screen.tsx,complaints-screen.test.tsx,use-complaints.hook.ts,messages.json,management-hub-screen.tsx,social-format.ts,social-format.test.ts}` · `packages/design-tokens/src/operations-app.ts` · `supabase/migrations/0026_ticket.sql` · `packages/types/src/entities/ticket.schema.ts` · `apps/mobile/src/app/(operations)/complaints.tsx` · `apps/web/app/(operations)/operations/tickets/tickets-read.test.ts`
 
   **NİÇİN AÇILDI.** Ölçüldü: mobilde bir talebe ulaşmanın TEK yolu hub'ın karar kartıydı ve o da
   kuyruğun BAŞINDAKİ talebi açıyordu. Kartın dipnotu *"6 açık talep"* yazarken altıncısına
@@ -13418,7 +13418,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   köprünün sessizce geri gelmesini gerçekten yakalıyor.
 
 - [x] (21.283) **KARAR KUTUSU v3'ÜN YENİ ÇİZİMİNE GEÇTİ — üstbaşlık bağırmıyor, ikon tanıtıyor** (tasarım güncellendi 07.09 · kullanıcı isteği)
-  `touches:` `design/derived/operasyon-mobil-v3/*` (türetildi) · `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/management/hub.ts` · `apps/mobile/src/components/ui/icon-paths.ts` · `apps/mobile/src/theme/metrics.ts` · `apps/mobile/src/screens/management/{management-hub-screen.tsx,management-hub-screen.test.tsx,day-summary-screen.test.tsx,messages.json}`
+  `touches:` `design/derived/operasyon-mobil-v3/*` (türetildi) · `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/management/hub.ts` · `apps/mobile/src/components/ui/icon-paths.ts` · `packages/mobile-kit/src/theme/metrics.ts` · `apps/mobile/src/screens/management/{management-hub-screen.tsx,management-hub-screen.test.tsx,day-summary-screen.test.tsx,messages.json}`
 
   Tasarım bugün güncellendi; `pnpm design:split` ile türetilenler tazelendi (36 → **37 ekran**;
   `36-b2bOnay` yeni, bildirim 37'ye kaydı). Yerel kopya 31.08'den kalmaydı — CLAUDE §3'ün
@@ -14108,7 +14108,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   artık makinede duruyor.
 
 - [x] (21.296) **YAKIN-SKT TEKLİFİ: LİSTE + ÇEKMECE — tasarımla bizim ekranın ÜÇÜNCÜ yolu** (kullanıcı kararı 08.09: *"kart kart listenin görülmesi ve buradan teklif vermek daha pratik… kartın üzerinde bir buton olsa, teklif ver dediğimiz anda bir çekmece açılsa"*)
-  `touches:` `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/warehouse/offer.ts` · `apps/mobile/src/components/ui/chip.tsx` · `apps/mobile/src/screens/management/{offer-approval-screen.tsx,use-offer-approval.hook.ts,offer-supply-screens.test.tsx,messages.json}`
+  `touches:` `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/warehouse/offer.ts` · `packages/mobile-kit/src/components/ui/chip.tsx` · `apps/mobile/src/screens/management/{offer-approval-screen.tsx,use-offer-approval.hook.ts,offer-supply-screens.test.tsx,messages.json}`
 
   **Durum (08.09) — TAMAM.** Kullanıcı iki yüzeyi karşılaştırmamızı istedi: tasarımın kampanya
   ekranı (`v3:3050`) TEK partinin detayı, bizimki 49 kartlık liste. Ölçüm ikisinin de yarım
@@ -14538,7 +14538,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **170/170**, `typecheck` 20/20, `lint` temiz; kök paketin 4511/4511'i mobil jest'i içermiyor.
 
 - [x] (21.303) **KATALOG GÖRSELLERİ CDN TÜREVİNDEN — native her kutuya kendi çerçevesini, boyuna yeten basamaktan istiyor; seçim web ile TEK kütüphanede** (kullanıcı istekleri 10.09: *"resmin kullanıldığı her yerde, kullanıldığı yere göre odak ve ölçeklendirme"* · *"her tasarım kendi en boy oranındaki görseli almaya çalışsın"* · *"mobil tarafının Cloudflare'e tam entegrasyonunu tamamla"* · *"merkezi bir kütüphane istiyorum, web ile code duplication oluşmasın"* · *"ayrı odak konusuna şu an gerek yok"*)
-  `touches:` `packages/types/src/primitives/image-frames.ts` · `packages/types/src/primitives/image-frames.test.ts` · `packages/types/src/primitives/index.ts` · `packages/types/src/contracts/catalog-api.schema.ts` · `packages/application/src/catalog/storefront-types.ts` · `apps/mobile-api/src/app.ts` · `apps/mobile-api/src/app.test.ts` · `apps/mobile/src/components/ui/frame-image.tsx` · `apps/mobile/src/components/ui/frame-image.test.tsx` · `apps/mobile/src/components/ui/circle-photo.tsx` · `apps/mobile/src/components/ui/photo-gallery.tsx` · `apps/mobile/src/screens/customer-kit/cart-store.ts` · `apps/mobile/src/screens/sale/use-sale.hook.ts` · kit bileşenleri (`AvatarThumb` · `ProductCircleCard` · `ProductPhotoCard` · `PhotoSurface` · `PhotoTile` · `CollectionBand` · `CartLineRow` · `OperationsProductThumb` · `OperationsProductRow`) · 15 ekran ve fikstürleri · kapanışta `packages/application/src/catalog/map.ts` · `apps/mobile/src/screens/warehouse/intake-screen.tsx`
+  `touches:` `packages/types/src/primitives/image-frames.ts` · `packages/types/src/primitives/image-frames.test.ts` · `packages/types/src/primitives/index.ts` · `packages/types/src/contracts/catalog-api.schema.ts` · `packages/application/src/catalog/storefront-types.ts` · `apps/mobile-api/src/app.ts` · `apps/mobile-api/src/app.test.ts` · `packages/mobile-kit/src/components/ui/frame-image.tsx` · `packages/mobile-kit/src/components/ui/frame-image.test.tsx` · `packages/mobile-kit/src/components/ui/circle-photo.tsx` · `apps/mobile/src/components/ui/photo-gallery.tsx` · `apps/mobile/src/screens/customer-kit/cart-store.ts` · `apps/mobile/src/screens/sale/use-sale.hook.ts` · kit bileşenleri (`AvatarThumb` · `ProductCircleCard` · `ProductPhotoCard` · `PhotoSurface` · `PhotoTile` · `CollectionBand` · `CartLineRow` · `OperationsProductThumb` · `OperationsProductRow`) · 15 ekran ve fikstürleri · kapanışta `packages/application/src/catalog/map.ts` · `apps/mobile/src/screens/warehouse/intake-screen.tsx`
 
   **Durum (10.09) — TAMAM.** Native yarısı bu satırın ilk sahibinde yazıldı; kapanışını (iki oran, `srcSet`
   bağlantısı, mal kabul küçük resmi, taze veriyle cihaz ölçümü) yönetim şeridi yaptı — aşağıda **KAPANIŞ**. Web yarısı
@@ -14650,7 +14650,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ilgisiz) · `FrameImage` + mal kabul testleri 61/61 · kilitli kök paket **4529/4529**.
 
 - [x] (21.304) **SUNUCUNUN REDDETTİĞİ OTURUM CİHAZDA BIRAKILMIYOR — giriş ekranı sebebiyle açılıyor** (kullanıcı kararı 10.09: *"401 hatasını da giriş ekranına yönlendirebiliriz"*; tetik: `db:refresh` sonrası Oppo'da depo ana sayfası "İş listesi yüklenemedi — Bağlantı ya da sunucu sorunu", kargo devri "okunamadı")
-  `touches:` `apps/mobile/src/lib/auth/session-end.ts` · `apps/mobile/src/lib/auth/session-end.test.ts` · `apps/mobile/src/lib/auth/use-session-ended-login.hook.ts` · `apps/mobile/src/lib/auth/use-session-ended-login.hook.test.ts` · `apps/mobile/src/lib/auth/authorized-fetch.ts` · `apps/mobile/src/lib/auth/authorized-fetch.test.ts` · `apps/mobile/src/lib/auth/sign-out.ts` · `apps/mobile/src/lib/api/client.ts` · `apps/mobile/src/app/_layout.tsx` · `apps/mobile/src/app/(operations)/_layout.tsx` · `apps/mobile/src/app/login.tsx` · `apps/mobile/src/screens/login/login-notice.ts` · `apps/mobile/src/screens/login/login-screen.tsx` · `apps/mobile/src/screens/login/messages.json` · `apps/mobile/src/screens/operations/use-operations-access.hook.ts` · `apps/mobile/src/screens/operations/use-operations-access.hook.test.ts` · `apps/mobile/src/screens/operations/messages.json` · `apps/mobile/src/operations-session-rejected.test.tsx`
+  `touches:` `packages/mobile-kit/src/lib/auth/session-end.ts` · `packages/mobile-kit/src/lib/auth/session-end.test.ts` · `packages/mobile-kit/src/lib/auth/use-session-ended-login.hook.ts` · `packages/mobile-kit/src/lib/auth/use-session-ended-login.hook.test.ts` · `packages/mobile-kit/src/lib/auth/authorized-fetch.ts` · `packages/mobile-kit/src/lib/auth/authorized-fetch.test.ts` · `packages/mobile-kit/src/lib/auth/sign-out.ts` · `packages/mobile-kit/src/lib/api/client.ts` · `apps/mobile/src/app/_layout.tsx` · `apps/mobile/src/app/(operations)/_layout.tsx` · `apps/mobile/src/app/login.tsx` · `packages/mobile-kit/src/screens/login/login-notice.ts` · `apps/mobile/src/screens/login/login-screen.tsx` · `packages/mobile-kit/src/screens/login/messages.json` · `apps/mobile/src/screens/operations/use-operations-access.hook.ts` · `apps/mobile/src/screens/operations/use-operations-access.hook.test.ts` · `apps/mobile/src/screens/operations/messages.json` · `apps/mobile/src/operations-session-rejected.test.tsx`
 
   **Durum (10.09) — TAMAM.**
 
@@ -14705,7 +14705,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     `lint` · `knip` temiz.
 
 - [x] (21.305) **MARKA ADI "LEZZET ANATOLIE" — mobilde 13 dosyadaki "Anatolia" düzeldi; tek başına ad `@lezzet/brand`dan okunuyor** (kullanıcı kararı 10.09: *"Projemizin adı A ile değil, e ile bitiyor"*; sosyal şeridinin notu `not-mobil-marka-adi-anatolie`; web ve ortak paketler `7ac1c878`te düzelmişti)
-  `touches:` `apps/mobile/app.config.ts` · `apps/mobile/README.md` · `apps/mobile/src/components/scan/scan-sheet.tsx` · `apps/mobile/src/components/screen-placeholder.test.tsx` · `apps/mobile/src/screens/login/login-screen.tsx` · `apps/mobile/src/screens/onboarding/onboarding-screen.tsx` · `apps/mobile/src/screens/profile-setup/profile-setup-screen.tsx` · `apps/mobile/src/screens/support/ticket-detail-screen.tsx` · `apps/mobile/src/screens/{account,checkout,invite,legal,login,onboarding,profile-setup,support}/messages.json` · `packages/brand/src/name.ts` · `packages/brand/src/index.ts` · `packages/brand/package.json`
+  `touches:` `apps/mobile/app.config.ts` · `apps/mobile/README.md` · `apps/mobile/src/components/scan/scan-sheet.tsx` · ~~`apps/mobile/src/components/screen-placeholder.test.tsx`~~ (21.310: ölü kod, silindi) · `apps/mobile/src/screens/login/login-screen.tsx` · `apps/mobile/src/screens/onboarding/onboarding-screen.tsx` · `apps/mobile/src/screens/profile-setup/profile-setup-screen.tsx` · `apps/mobile/src/screens/support/ticket-detail-screen.tsx` · `apps/mobile/src/screens/{account,checkout,invite,legal,login,onboarding,profile-setup,support}/messages.json` · `packages/brand/src/name.ts` · `packages/brand/src/index.ts` · `packages/brand/package.json`
 
   **Durum (10.09) — TAMAM.**
   · **Tek başına ad artık kopya değil:** giriş, onboarding ve künye ekranlarının logo etiketi (`t.brand`) ile
@@ -14895,6 +14895,54 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     dönüşüm önbelleği soğuktu; tek başlarına ve sıcak önbellekle tam pakette geçtiler.
   · **Açık:** yeniden adlandırma çalışan Metro durunca (Metro bugün `apps/mobile`dan koşuyor) · ortak
     çekirdeğin kalanı · operasyon uygulaması · müşteri temizliği · push sütunu (21.311) · doküman/araç.
+
+  **Durum (14.09, ikinci) — pilot commit'lendi (`7001742e`); ortak çekirdeğin bağları kesildi, taşıma ikon işini bekliyor.**
+  · **Kesilen dört bağ** (kit uygulamaya bağlanamaz): oturum sonu → temizlik kaydı (`registerSessionCleanup`;
+    müşterinin adres deposu kendini kaydediyor) · kod ve Google girişi → giriş sonrası işler kaydı
+    (`packages/mobile-kit/src/lib/auth/sign-in-effects.ts`; müşteri kökü davet bağlamasını kaydediyor, operasyon
+    uygulamasına davet kodu girmiyor) · push dokunuşu → sözlük parametresi · giriş ve OAuth dönüş ekranları →
+    iniş yeri, ev ve gizlilik adresi uygulamadan (`landingFor` · `homeRoute` · `privacyHref`). Davranış
+    değişmedi: müşteri rotaları bugünkü kuralı aynen veriyor.
+  · **Ölü kod silindi:** `lib/base64` (teslim kanıtı yüklemesi için yazılmıştı, `expo-file-system` gelince
+    tüketeni kalmadı) ve `components/screen-placeholder` (21.2 iskeletinin yer tutucusu). İkisini yalnız kendi
+    testleri okuyordu; knip testi tüketen saydığı için görmüyordu, grafik analizi buldu.
+  · **Taşıma planı hazır, uygulanmadı:** 95 taşıma (34 test), kuru koşu 320 dosyada 931 import satırı, 0 hata.
+    Onboarding deposu müşteride kalıyor: operasyondan tek erişimi kabuk testinin sahtesiydi.
+  · **Bekleyen: ikon verisi başka şeritte taşınıyor** (`@lezzet/brand/icons`, commit'lenmedi; not
+    `not-mobil-musteri-ortak-paketler`, cevap yazıldı). Kit çizicileri alacak, veri pakette kalacak; çağıranlar
+    doğrudan pakete çevrilecek ve `icon-paths.ts` yönlendiricisi silinecek. Taşıma o commit'ten SONRA: kit
+    dosyaları o paketi okuyacak ve paket HEAD'de yokken commit derlenmez.
+  · **Doğrulama (bağlar):** uygulama `typecheck` · etkilenen 21 test dosyası 130/130.
+
+  **Durum (14.09, üçüncü) — ortak çekirdeğin 83 dosyası kite taşındı; ikon çizicisine bağlı 12 dosya ikon commit'ini bekliyor.**
+  · **Taşınan:** tema (`packages/mobile-kit/src/theme/unistyles.ts`), 13 UI bileşeni, API istemcisi, oturum katmanı
+    (`packages/mobile-kit/src/lib/auth/session-end.ts` ve kardeşleri), push, dil, cihaz deposu, bildirim, test
+    yardımcıları (`packages/mobile-kit/src/testing/render-shell.ts`), OAuth dönüş ekranı. Girişin kullandığı müşteri
+    dosyaları anlamlı yere geçti: `packages/mobile-kit/src/lib/me/use-me.hook.ts`,
+    `packages/mobile-kit/src/components/customer/customer-metrics.ts`, logo `packages/mobile-kit/assets/images/logo.png`.
+    Betik 319 dosyada 805 import satırını yazdı (kuru koşu → uygulama, 0 hata).
+  · **Bekleyen 12 dosya** (ikon çizicisine dolaylı bağlı): `Icon` + `icon-paths` yönlendiricisi, `CustomerIcon`, iki
+    düğme, sekme çubuğu, giriş ekranı ve testleri. Kit veriyi değil çiziciyi alacak; ikon verisinin
+    `@lezzet/brand/icons` commit'inden sonra.
+  · **Jest kurulumu ikiye bölündü:** ortak kısım (Unistyles + tema, hareket, çekmece, dokunma ertelemesi)
+    `packages/mobile-kit/jest.setup.ts`te ve `jest-base.cjs` ile her tüketende İLK koşuyor; uygulamada yalnız ödeme ·
+    ses · görsel seçici · kamera sahteleri.
+  · **Kit manifesti importlardan türetildi:** 4 çalışma alanı · 17 eş · 32 geliştirme bağımlılığı; geliştirme sürümleri
+    uygulamanın kilitli sürümleri ve 32'nin 32'si uygulamayla aynı depo klasörüne bağlı. Kurulum Expo araçlarının yama
+    sürümünü ve `@react-native/metro-config`in geçişli eş listesini yine kaydırdı; HEAD'de olup değişen altı kayıt HEAD
+    hâline döndü, dondurulmuş kurulum kabul etti. Kilit farkı: kit kaydı + eklemeler.
+  · **Bekçiler kiti de tarıyor:** `apps/mobile/src/lib/keyboard-scroll-guard.test.ts` ve
+    `apps/mobile/src/lib/animated-style-guard.test.ts` kit kaynağını paket çözümüyle buluyor; kapların üçü kitte.
+  · **Betiğin kaçırdığı bir satır:** `jest.requireActual<object>(…)` tür parametresi yüzünden yeniden yazılmamıştı; Jest
+    yakaladı (derleyici `jest.mock` yollarını görmez). Tür parametreli yedi çağrı tarandı, kırık olan tekti; kalıp
+    düzeltildi.
+  · **Doküman yolları:** 59 anma araçla, 3 kısaltma elle; `05-katalog.md`de bir yol (başka şeridin dokümanı, yalnız yol).
+  · **Doğrulama:** uygulama `typecheck` · jest 134/134 dosya, 1403/1403 · kit `typecheck` · jest 183/185 (iki düşüş
+    `unistyles.test.ts`in yazı tipi testleri: tema dosyasıyla kite geçti, önceden var) · `lint` · `knip` ve
+    `boundaries` bizde temiz · kök `typecheck` 22/22 · `docs:check` · Android dışa aktarımı: kitten 54 dosya
+    paketlendi; react, react-native, unistyles, reanimated, gesture-handler, bottom-sheet, expo-router, bildirim, güvenli
+    depo, supabase, zod birer kopya; Unistyles'ı içe aktarmayan kit bileşeninde de (`frame-image`) RN `Image` izlenen
+    bileşene çevrildi.
 
 - [ ] (21.311) **PUSH JETONU HANGİ UYGULAMANIN — `push_device.app` ('customer' | 'operations')** (21.310'dan ayrıldı 14.09; kullanıcı kararı: arka-uç kısmına bu şerit dokunur)
   `touches:` `supabase/migrations/0050_push_device.sql` · `packages/types/src/entities/push-device.schema.ts` · `packages/database/src/services/push-device.service.ts` · `packages/application/src/notification/devices.ts` · `packages/application/src/notification/dispatch.ts` · `apps/mobile-api/src/api/v1/notifications.ts` · iki uygulamanın kayıt kapısı

@@ -2,8 +2,8 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { Icon } from '@/components/ui/icon';
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { operationsTheme } from '@/theme/unistyles';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   BİLDİRİM DÜĞMESİ — bölüm köklerinin sağ üst köşesi. 40 dp nötr KUTUCUK + zil ikonu + köşede

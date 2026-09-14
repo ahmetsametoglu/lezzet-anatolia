@@ -23,7 +23,7 @@ import { resetWarehouseStatus } from './warehouse-status';
   basılan METNİ ölçüyor.
 */
 const mockToast = jest.fn<void, [string]>();
-jest.mock('@/lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
   toastError: (m: string) => mockToast(m),
   toastInfo: (m: string) => mockToast(m),
@@ -43,7 +43,7 @@ jest.mock('expo-router', () => {
 });
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

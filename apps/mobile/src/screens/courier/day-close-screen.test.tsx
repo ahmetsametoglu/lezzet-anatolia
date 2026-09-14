@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { ToastHost } from '@/components/ui/toast-host';
-import { resetToast } from '@/lib/toast/toast-store';
+import { ToastHost } from '@lezzet/mobile-kit/src/components/ui/toast-host';
+import { resetToast } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 
 /*
   SAYIM ARTIK TUŞ TAKIMIYLA YAZILIYOR (v3 · `00-ortak`, 30.08). Alan bir `TextInput` değil, tuş
@@ -37,7 +37,7 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

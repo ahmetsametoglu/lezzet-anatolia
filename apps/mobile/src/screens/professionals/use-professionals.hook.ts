@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { splitVatNumber, type B2bApplicationField, type B2bApplicationInput, type B2bCompanyFacts } from '@lezzet/domain-core';
 import type { Locale } from '@lezzet/i18n';
 
-import { CLIENT_ERROR } from '@/lib/api/client';
+import { CLIENT_ERROR } from '@lezzet/mobile-kit/src/lib/api/client';
 import {
   checkB2bVatNumber,
   fetchB2bApplicant,

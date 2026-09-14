@@ -3,11 +3,11 @@ import { isValidEmail } from '@lezzet/helper';
 import type { AuthErrorKey } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { fetchMe } from '@/lib/api/me';
-import { authErrorText } from '@/lib/auth/error-text';
-import { hapticError } from '@/lib/haptics/haptics';
-import { requestOtp, verifyOtp } from '@/lib/auth/otp';
-import { publishMe } from './use-me.hook';
+import { fetchMe } from '@lezzet/mobile-kit/src/lib/api/me';
+import { authErrorText } from '@lezzet/mobile-kit/src/lib/auth/error-text';
+import { hapticError } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
+import { requestOtp, verifyOtp } from '@lezzet/mobile-kit/src/lib/auth/otp';
+import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 
 /*
   AKIŞ İÇİ KİMLİK ADIMI — e-posta → altı haneli kod → oturum. Bir akışın ORTASINDA hesap açan

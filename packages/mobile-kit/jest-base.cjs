@@ -1,5 +1,5 @@
 // JEST ORTAK TABANI — iki native uygulama ve kitin kendi testleri aynı tabanı okur (21.310).
-// Her tüketen yalnız kendi `setupFiles`ını ekler.
+// Her tüketen yalnız kendi `setupFiles`ını SONA ekler (taban ortak kurulumu taşıyor).
 //
 // jest-expo — Expo'nun resmî birim/komponent test hattı (docs.expo.dev/develop/unit-testing).
 // Monorepo'nun Vitest koşucusuna KARIŞMAZ: bu paketler DB'siz saf Jest'tir (CLAUDE §4b kapsamı dışı).
@@ -7,8 +7,13 @@
 // transformIgnorePatterns preset'i EZER — o yüzden jest-expo 57'nin pnpm-uyumlu kalıbı burada
 // @lezzet workspace paketleri eklenerek aynen yazılıdır (sessiz bir ignore, testte
 // "unexpected token" olarak patlar).
+const path = require('node:path');
+
 module.exports = {
   preset: 'jest-expo',
+  // ORTAK KURULUM her tüketende İLK koşar (tema kaydı, hareket, çekmece, dokunma ertelemesi); tüketen
+  // kendi dosyasını sona ekler. Mutlak yol: Node bu dosyayı gerçek yolundan yükler, `__dirname` kitin kökü.
+  setupFiles: [path.join(__dirname, 'jest.setup.ts')],
   // Jest'in 5000 ms varsayılanı Node birim testine göre ölçülmüş; ağır bir RN EKRANININ ilk
   // render'ına yetmiyor. Ölçüldü 23.08: `picking-box.test.tsx`in ilk testi boş makinede 344 ms,
   // ötekiler 5–26 ms — yani test yavaş DEĞİL. Ama 87 test süreci soğuk önbellekle koşarken

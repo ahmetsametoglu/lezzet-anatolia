@@ -1,7 +1,7 @@
 import type { CatalogImage } from '@lezzet/types';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { CirclePhoto } from './circle-photo';
+import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
 
 /*
   AVATAR — 7 ekranda: profil, sipariş kalem küçük resmi, checkout özeti, talep yazışması.

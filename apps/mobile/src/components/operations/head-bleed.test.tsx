@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Text, View } from 'react-native';
 
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { OperationsHeadBleed } from './head-bleed';
 
 /*

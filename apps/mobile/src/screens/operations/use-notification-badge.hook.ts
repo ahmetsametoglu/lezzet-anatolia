@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 
-import { fetchNotificationBadge } from '@/lib/api/notifications';
+import { fetchNotificationBadge } from '@lezzet/mobile-kit/src/lib/api/notifications';
 
 /*
   HUB ZİLİNİN SAYISI (05.09) — üç bölüm kökü (depo · kurye · yönetim) bunu okur.

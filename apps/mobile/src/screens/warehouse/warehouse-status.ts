@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import { CLIENT_ERROR, type ApiResult } from '@/lib/api/client';
+import { CLIENT_ERROR, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   DEPO BÖLÜMÜNÜN İKİ ORTAK GERÇEĞİ — "hangi depo" ve "hat açık mı".

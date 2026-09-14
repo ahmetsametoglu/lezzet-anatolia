@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
 import { recordVisit } from '@/lib/api/points';
-import { getSupabase } from '@/lib/auth/supabase';
+import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 
 /*
   GÜNLÜK GİRİŞ PUANI — native yarısı (MB-50 · kullanıcı kararı 11.08, açık ölçüldü 12.08).

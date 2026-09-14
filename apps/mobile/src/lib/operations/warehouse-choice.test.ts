@@ -34,7 +34,7 @@ jest.mock('expo-secure-store', () => ({
   },
 }));
 
-import { DEVICE_STORE_KEYS } from '../storage/device-store';
+import { DEVICE_STORE_KEYS } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 import {
   chooseWarehouse,
   chosenWarehouseId,

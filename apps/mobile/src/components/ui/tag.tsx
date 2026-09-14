@@ -1,8 +1,8 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PressableSurface } from './pressable-surface';
-import { emToDp } from '../../theme/parse';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 
 /*
   EĞİK ROZET — v3'ün en çok yinelenen öğesi (~18 kullanım): fiyat çipi · "Tükendi" · "İNDİRİM" ·

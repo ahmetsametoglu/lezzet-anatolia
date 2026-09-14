@@ -8,10 +8,10 @@ import {
   type B2bApplicationKind,
 } from '@lezzet/domain-core';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { TextField } from '@/components/ui/text-field';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { AddressFields } from '@/screens/customer-kit/address-fields';
 import addressMessages from '@/screens/customer-kit/address-sheet-messages.json';
 import type { Messages } from './professionals-types';

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { findNetworkPrinters, printNeedleTest, type PrinterChannel } from '@/lib/print/brother';
 import { hasPrinterNativeModule } from '@/lib/print/printer-availability';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   İĞNE DENEYİ PANELİ (23.5) — GELİŞTİRME ARACI, ürün ekranı değil: `__DEV__` + native modül

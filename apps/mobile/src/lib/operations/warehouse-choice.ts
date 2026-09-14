@@ -1,7 +1,7 @@
 import type { StaffWarehouse } from '@lezzet/types';
 import { useSyncExternalStore } from 'react';
 
-import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
+import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
   ÇALIŞILAN DEPONUN SEÇİMİ — CİHAZIN BİLGİSİ (kullanıcı bulgusu 30.08).

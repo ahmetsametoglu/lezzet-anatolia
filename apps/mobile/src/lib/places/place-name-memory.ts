@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
 
-import { DEVICE_STORE_KEYS, deviceStore } from '@/lib/storage/device-store';
+import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
   POSTA KODUNUN ÇÖZÜLMÜŞ YER ADI — cihaz-yerel bellek (MB-80, 23.08).

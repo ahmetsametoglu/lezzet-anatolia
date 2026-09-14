@@ -4,7 +4,7 @@ import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-au
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from './icon';
-import { PressableSurface } from './pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 
 /*
   SES ÇALAR — uygulamanın İÇİNDE (kullanıcı kararı 07.09: *"Sesli mesaj uygulama içerisinde

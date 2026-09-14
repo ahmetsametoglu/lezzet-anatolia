@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { BoxPrinterContract, PrinterPurpose } from '@lezzet/types';
 
-import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
+import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
   YAZICI SEÇİMİ — CİHAZIN BİLGİSİ (kullanıcı kararı 29.08).

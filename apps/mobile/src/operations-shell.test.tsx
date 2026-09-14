@@ -1,9 +1,9 @@
 import { fireEvent } from '@testing-library/react-native';
 import { screen } from 'expo-router/testing-library';
 
-import { renderShell } from '@/testing/render-shell';
+import { renderShell } from '@lezzet/mobile-kit/src/testing/render-shell';
 
-import { meFixture } from '@/screens/operations/me-fixture';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 
 /*
   OPERASYON KABUĞU SMOKE TESTİ — rota dosyaları GERÇEK (`./src/app` diskten taranır), yani kapı +
@@ -29,7 +29,7 @@ jest.mock('@/lib/onboarding/onboarding-store');
 // `mock` öneki ZORUNLU: `jest.mock` fabrikası dosyanın en üstüne kaldırılıyor ve Babel yalnız bu
 // önekli değişkenlere kapanış izni veriyor (katalog testinin künyesi).
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

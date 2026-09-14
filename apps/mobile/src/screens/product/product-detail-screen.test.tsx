@@ -24,8 +24,8 @@ let mockMe: { status: 'ready'; me: { id: string; email: string } } | { status: '
   status: 'guest',
   me: null,
 };
-jest.mock('@/screens/customer-kit/use-me.hook', () => ({
-  ...jest.requireActual<object>('@/screens/customer-kit/use-me.hook'),
+jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({
+  ...jest.requireActual<object>('@lezzet/mobile-kit/src/lib/me/use-me.hook'),
   useMe: () => ({ ...mockMe, refresh: () => undefined }),
 }));
 /* Cihazın posta kodu — `useSyncExternalStore` KARARLI bir anlık görüntü ister: nesne testte bir kez
@@ -37,7 +37,7 @@ jest.mock('@/lib/onboarding/onboarding-store', () => ({
   getOnboardingSnapshot: () => mockOnboarding,
 }));
 // Kayıt KORUNAN uçtan gider (`authorizedFetch` → Bearer): oturum sabit.
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: { access_token: 'access-1' } } }),

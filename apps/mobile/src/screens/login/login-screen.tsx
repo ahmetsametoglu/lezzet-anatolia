@@ -1,33 +1,32 @@
 import { brand } from '@lezzet/brand';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { AuthErrorKey } from '@lezzet/types';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { BackButton } from '@/components/ui/back-button';
-import { FormScroll } from '@/components/ui/form-scroll';
+import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
+import { FormScroll } from '@lezzet/mobile-kit/src/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
-import { LoadingState } from '@/components/ui/loading-state';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { TextAction } from '@/components/ui/text-action';
-import { TextField } from '@/components/ui/text-field';
-import { DEV_ACCOUNTS, devSignIn } from '@/lib/auth/dev-login';
-import { authErrorText } from '@/lib/auth/error-text';
-import { signInWithGoogle } from '@/lib/auth/oauth';
-import { requestOtp, verifyOtp } from '@/lib/auth/otp';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { fetchMe } from '@/lib/api/me';
-import { toastSuccess } from '@/lib/toast/toast-store';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
+import { DEV_ACCOUNTS, devSignIn } from '@lezzet/mobile-kit/src/lib/auth/dev-login';
+import { authErrorText } from '@lezzet/mobile-kit/src/lib/auth/error-text';
+import { signInWithGoogle } from '@lezzet/mobile-kit/src/lib/auth/oauth';
+import { requestOtp, verifyOtp } from '@lezzet/mobile-kit/src/lib/auth/otp';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { fetchMe, type Me } from '@lezzet/mobile-kit/src/lib/api/me';
+import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
-import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
-import { publishMe } from '@/screens/customer-kit/use-me.hook';
-import { CodeField } from './code-field';
-import { SESSION_ENDED_NOTICE, type LoginNotice } from './login-notice';
-import { operationsHomeRoute } from './post-login-route';
-import messages from './messages.json';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
+import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
+import { CodeField } from '@lezzet/mobile-kit/src/screens/login/code-field';
+import { SESSION_ENDED_NOTICE, type LoginNotice } from '@lezzet/mobile-kit/src/screens/login/login-notice';
+import messages from '@lezzet/mobile-kit/src/screens/login/messages.json';
 
 /*
   HIZLI DOĞRULAMA (v3 `vLogin`, v3:757-796) — şifresiz giriş: üç yol (Google · WhatsApp · e-posta),
@@ -70,9 +69,17 @@ interface LoginScreenProps {
    * kökteki kanca açar).
    */
   initialNotice?: LoginNotice;
+  /**
+   * Girişten sonra hesabın İNDİĞİ yer — karar UYGULAMANIN (21.310): ekran ortak çekirdekte ve
+   * uygulamanın rota ağacını bilmez. `null` = ekran kapanır, kişi geldiği yere döner. Müşteri
+   * uygulaması bugün personeli operasyon kabuğuna yollar (`post-login-route`, 21.32).
+   */
+  landingFor: (me: Me) => Href | null;
+  /** Gizlilik metninin adresi (rota uygulamanın). Verilmezse cümle bağlantısız çizilir. */
+  privacyHref?: Href;
 }
 
-export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
+export function LoginScreen({ onVerified, initialNotice, landingFor, privacyHref }: LoginScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
@@ -141,17 +148,17 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
       .then((result) => {
         if (result.error !== null) return closeLogin();
         publishMe(result.data);
-        /* PERSONEL MÜŞTERİ SEKMESİNE DÖNMEZ (21.32): rolü olan kişi doğrudan operasyon kabuğuna
-           gider — webin tek `/connexion` modelinin karşılığı. */
-        const operationsRoute = operationsHomeRoute(result.data);
-        if (operationsRoute !== null) return router.replace(operationsRoute);
+        /* İNİŞ YERİNİ UYGULAMA SÖYLER (21.310). Müşteri uygulamasında personel müşteri sekmesine
+           dönmez, doğrudan operasyon kabuğuna gider (21.32 — webin tek `/connexion` modelinin karşılığı). */
+        const landing = landingFor(result.data);
+        if (landing !== null) return router.replace(landing);
         closeLogin();
       })
       /* SESSİZ CATCH DEĞİL, AÇIK ÇARE (CLAUDE §1): okuma beklenmedik biçimde patlarsa müşteri
          doğrulanmış hâlde giriş ekranında ASILI kalırdı — künye sorusu yardımcı, giriş ise asıl
          iştir. Okunamayan profil "künyesi eksik" demek de değildir; ekran normal kapanır. */
       .catch(() => closeLogin());
-  }, [stage, onVerified, router, closeLogin, t.verifiedToast]);
+  }, [stage, onVerified, router, closeLogin, t.verifiedToast, landingFor]);
 
   /**
    * Bekleme cezası TEK kaynaktan söylenir: saniye sayacı yalnız DÜĞME etiketinde işler
@@ -256,7 +263,7 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
           // Statik varlık Metro'da `require` ile yüklenir (Expo png için modül tipi bildirmiyor,
           // `import` derlenmez) — kural TS import disiplinine bakıyor, varlık yolunu bilmiyor.
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('../../../assets/images/logo.png')}
+          source={require('@lezzet/mobile-kit/assets/images/logo.png')}
           style={styles.logo}
           accessibilityLabel={brand.name}
         />
@@ -367,14 +374,18 @@ export function LoginScreen({ onVerified, initialNotice }: LoginScreenProps) {
         {/* Gizlilik bağlantısı CÜMLENİN İÇİNDE (v3 birebir — sapma 3'ün notu). */}
         <Text style={styles.legal}>
           {t.legalPrefix}
-          <Text
-            style={styles.legalLink}
-            onPress={() => router.push({ pathname: '/legal/[page]', params: { page: 'privacy' } })}
-            accessibilityRole="link"
-            testID="login-privacy"
-          >
-            {t.privacyInline}
-          </Text>
+          {privacyHref === undefined ? (
+            t.privacyInline
+          ) : (
+            <Text
+              style={styles.legalLink}
+              onPress={() => router.push(privacyHref)}
+              accessibilityRole="link"
+              testID="login-privacy"
+            >
+              {t.privacyInline}
+            </Text>
+          )}
           {t.legalSuffix}
         </Text>
 

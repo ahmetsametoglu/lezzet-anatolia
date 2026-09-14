@@ -3,7 +3,7 @@ import { StyleSheet as RNStyleSheet, View, type LayoutChangeEvent } from 'react-
 import Svg, { Rect } from 'react-native-svg';
 
 import { DASH_PATTERN } from './dashed-rule';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   KESİKLİ ÇERÇEVE — "burada bir şey yok ama olabilir" diyen kutunun kenarı: "+ Siparişsiz mal

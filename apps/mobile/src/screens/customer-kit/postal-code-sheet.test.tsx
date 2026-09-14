@@ -18,14 +18,14 @@ const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: (href: unknown) => mockPush(href) }) }));
 
 // Toast deposu gerçek zamanlayıcı açıyor — mock, koşu sonunda asılı tanıtıcı bırakmasın.
-jest.mock('@/lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: jest.fn(),
   toastError: jest.fn(),
   toastInfo: jest.fn(),
 }));
 
 // Misafir yeter: sınanan şey öneri listesi, `useMe` yalnız bir cümleyi açıp kapatıyor.
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: null } }),

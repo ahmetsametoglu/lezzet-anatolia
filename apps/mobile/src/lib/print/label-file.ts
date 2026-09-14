@@ -1,7 +1,7 @@
 import { File, Paths } from 'expo-file-system';
 
-import { env } from '../env';
-import { getSupabase } from '../auth/supabase';
+import { env } from '@lezzet/mobile-kit/src/lib/env';
+import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 
 /**
  * Etiket PNG'sinin indiricisi (23.7) — `GET /warehouse/boxes/:id/label.png` BINARY döner (zarf

@@ -28,7 +28,7 @@ import { resetWarehouseStatus } from './warehouse-status';
 jest.mock('expo-router', () => ({ useRouter: () => ({ back: jest.fn(), navigate: jest.fn() }), useFocusEffect: () => undefined }));
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),
@@ -39,7 +39,7 @@ jest.mock('@/lib/auth/supabase', () => ({
 
 /** Cihaz deposu native — bellek içi sahte; okuma/yazma yolu gerçek kodda koşuyor. */
 const mockStore = new Map<string, string>();
-jest.mock('@/lib/storage/device-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/storage/device-store', () => ({
   DEVICE_STORE_KEYS: { printerChoice: 'lezzet.printer.choice' },
   deviceStore: {
     getItem: async (key: string) => mockStore.get(key) ?? null,

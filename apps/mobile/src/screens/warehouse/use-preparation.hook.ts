@@ -27,7 +27,7 @@ import {
   sealOrderBox,
   unsealOrderBox,
 } from '@/lib/api/warehouse';
-import { CLIENT_ERROR } from '@/lib/api/client';
+import { CLIENT_ERROR } from '@lezzet/mobile-kit/src/lib/api/client';
 import { printLabel, printLabelPdf } from '@/lib/print/brother';
 import { downloadLabelPng, downloadShippingLabelPdf } from '@/lib/print/label-file';
 import { readPrinterChoice, resolvePrinter } from '@/lib/print/printer-choice';

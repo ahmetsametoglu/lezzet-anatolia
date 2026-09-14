@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import type { Me } from '@/lib/api/me';
+import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
 import messages from '@/lib/places/messages.json';
 import { rememberPlaceNotice, resetPlaceNotices } from '@/lib/places/place-notice-store';
-import { meFixture } from '@/screens/operations/me-fixture';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { PlaceNoticeBand } from './place-notice-band';
 
 /*
@@ -31,7 +31,7 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: (href: unknown) => m
 const mockToast = jest.fn();
 /* Üç fiil de AYNI casusa düşer: bu dosyanın testleri "hangi cümle basıldı"yı ölçüyor, tipini
    değil — ayırmak assert'leri tipe bağımlı kılar, oysa sınanan şey metnin kendisi. */
-jest.mock('@/lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
   toastError: (m: string) => mockToast(m),
   toastInfo: (m: string) => mockToast(m),
@@ -40,7 +40,7 @@ jest.mock('@/lib/toast/toast-store', () => ({
 /* Oturum DURUMLUDUR: `null` misafir, dolu ise girişli. İki dal ("çekmece açılır" ⟷ "toast basılır")
    bu bayrakla ayrılıyor — `useMe` gerçek kancadır, taklit edilmedi. */
 let mockSession: { access_token: string } | null = null;
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

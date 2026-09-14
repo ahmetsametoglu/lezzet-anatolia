@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { ChatText } from '@/components/ui/chat-text';
-import { operationsTheme } from '@/theme/unistyles';
+import { ChatText } from '@lezzet/mobile-kit/src/components/ui/chat-text';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   YÖNETİMİN MESAJ BALONCUĞU — iki yazışma ekranının ORTAK anatomisi (kullanıcı kararı 30.08, N10).

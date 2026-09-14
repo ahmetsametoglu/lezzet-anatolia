@@ -6,7 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { StyleSheet } from 'react-native-unistyles';
 
 import { Icon } from './icon';
-import { PressableSurface } from './pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 
 /*
   TAM EKRAN FOTOĞRAF GÖRÜNTÜLEYİCİ — uygulamanın İÇİNDE (kullanıcı kararı 07.09).

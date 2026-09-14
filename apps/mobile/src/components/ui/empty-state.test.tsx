@@ -4,7 +4,7 @@ import { Text } from 'react-native';
 
 import { EmptyState } from './empty-state';
 import { PrimaryButton } from './primary-button';
-import { customerStops } from '../../theme/unistyles';
+import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 // Çeviri temanın kullandığının aynısı: px→dp + müşteri yüzeyinin bir kademesi (18.08).
 const baseText = customerStops(customerText);

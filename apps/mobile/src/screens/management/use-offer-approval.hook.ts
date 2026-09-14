@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ApiFail } from '@/lib/api/client';
+import type { ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 import { fetchOfferCandidates, openOffers } from '@/lib/api/management';
 import { centsToAmountText, parseAmountToCents } from '@/lib/operations/money';
 import type { OfferCandidate, OfferOpenResult } from '@lezzet/types';

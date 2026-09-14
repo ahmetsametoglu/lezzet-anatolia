@@ -2,8 +2,8 @@ import type { z } from 'zod';
 import { MeCartViewSchema, type CartViewBodySchema, type MeCartItemWriteSchema, type MeCartView } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import { apiFetch, type ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   SEPET UÇLARI — `/api/v1/me/cart` (girişli) + `/api/v1/cart/view` (misafir).

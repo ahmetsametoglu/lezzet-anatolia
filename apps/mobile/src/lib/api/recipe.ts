@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import { RecipeDetailSchema, RecipeListSchema } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { apiFetch, type ApiResult } from './client';
+import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   TARİF OKUMASI — `/api/v1/recipes/:slug`.

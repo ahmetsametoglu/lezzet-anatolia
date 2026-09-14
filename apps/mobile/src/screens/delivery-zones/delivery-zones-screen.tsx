@@ -6,13 +6,13 @@ import { joinCountries } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { AppBar } from '@/components/ui/app-bar';
-import { BackButton } from '@/components/ui/back-button';
+import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Note } from '@/components/ui/note';
 import { SectionHeader } from '@/components/ui/section-header';
-import { TextAction } from '@/components/ui/text-action';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';

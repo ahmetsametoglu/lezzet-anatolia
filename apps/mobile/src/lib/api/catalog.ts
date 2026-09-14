@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import { CatalogCategoryListSchema, CatalogPageSchema, CatalogProductDetailSchema, type CatalogSort } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { apiFetch, type ApiResult } from './client';
+import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   KATALOG OKUMALARI — `/api/v1/categories` + `/api/v1/products`.

@@ -1,10 +1,10 @@
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
-import { PressableSurface } from './pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 
 /*
   BİRİNCİL DÜĞME — v3'te ~22 (müşteri) + ~23 (operasyon) kullanım. İki biçim:

@@ -46,9 +46,9 @@ import {
   type WarehouseReturnRequest,
 } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
 import { withWarehouseChoice } from '../operations/warehouse-choice';
-import type { ApiFetchInit, ApiResult } from './client';
+import type { ApiFetchInit, ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /**
  * **Bu dosyanın TEK çağrı kapısı** — korunan çağrının üstüne deponun seçimini ekler.

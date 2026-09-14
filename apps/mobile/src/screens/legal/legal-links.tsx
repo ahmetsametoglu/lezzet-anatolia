@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { NavRow } from '@/screens/customer-kit/nav-row';
 import type { Messages } from './legal-types';
 import messages from './messages.json';

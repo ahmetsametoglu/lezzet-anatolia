@@ -17,21 +17,21 @@ import Animated, {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
-import { BackButton } from '@/components/ui/back-button';
+import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { FrameImage } from '@/components/ui/frame-image';
+import { FrameImage } from '@lezzet/mobile-kit/src/components/ui/frame-image';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { upperIn } from '@/lib/i18n/locale';
-import { hapticCommit, hapticSelect } from '@/lib/haptics/haptics';
-import { toastInfo } from '@/lib/toast/toast-store';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
+import { hapticCommit, hapticSelect } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
+import { toastInfo } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { PointsAward, PointsSpark } from '@/screens/customer-kit/points-award';
 import { HeartIcon } from '@/screens/feedback/feedback-icons';
-import { emToDp, withAlpha } from '@/theme/parse';
+import { emToDp, withAlpha } from '@lezzet/mobile-kit/src/theme/parse';
 import messages from './messages.json';
 import { useDiscover } from './use-discover.hook';
 

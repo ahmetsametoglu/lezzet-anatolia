@@ -20,7 +20,7 @@ import {
   loadCourierBox,
   startCourierDay,
 } from '@/lib/api/courier';
-import { toastError, toastSuccess, toastWarning } from '@/lib/toast/toast-store';
+import { toastError, toastSuccess, toastWarning } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 

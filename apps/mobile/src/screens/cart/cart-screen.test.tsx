@@ -41,7 +41,7 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, back: jest
 /* Posta kodu çekmecesi (bant içindeki "Posta kodunu değiştir") kitin kanonik dosyasıdır ve oturumu
    okur; ekran testinin oturum altyapısına bağlanmaması için supabase kapısı sahteleniyor —
    `checkout-screen.test`in aynı deseni. Sepetin kendi davranışı oturumdan bağımsız. */
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: null } }),

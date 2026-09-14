@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import type { Me } from '@/lib/api/me';
-import { meFixture } from '@/screens/operations/me-fixture';
+import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { LoginScreen } from './login-screen';
 
 /*
@@ -22,7 +22,7 @@ const mockSetSession = jest.fn(async () => ({ error: null }));
 /* `getSession` de gerekli: doğrulama bitince ekran KÜNYEYİ okuyor (`fetchMe` → yetkili istek) ve
    o yol oturum jetonunu buradan alıyor. Eksik bırakılırsa test gerçek akışı değil, mock'un
    patlamasını ölçer. */
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       setSession: mockSetSession,
@@ -32,10 +32,10 @@ jest.mock('@/lib/auth/supabase', () => ({
 }));
 
 const mockGoogle = jest.fn(async (): Promise<{ error: string | null }> => ({ error: null }));
-jest.mock('@/lib/auth/oauth', () => ({ signInWithGoogle: () => mockGoogle() }));
+jest.mock('@lezzet/mobile-kit/src/lib/auth/oauth', () => ({ signInWithGoogle: () => mockGoogle() }));
 
 const mockDevSignIn = jest.fn(async (_email: string): Promise<{ error: string | null }> => ({ error: null }));
-jest.mock('@/lib/auth/dev-login', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/dev-login', () => ({
   DEV_ACCOUNTS: [
     { label: 'Müşteri', email: 'musteri@test.fr', operations: false },
     { label: 'Kurye', email: 'kurye@test.fr', operations: true },
@@ -45,11 +45,18 @@ jest.mock('@/lib/auth/dev-login', () => ({
 
 // Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı bırakmasın.
 const mockToast = jest.fn();
-jest.mock('@/lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
   toastError: (m: string) => mockToast(m),
   toastInfo: (m: string) => mockToast(m),
 }));
+
+/* Ekran iniş yerini uygulamadan alır (21.310). Test, müşteri uygulamasının kararının ŞEKLİNİ taklit
+   eder — personel operasyona, müşteri geldiği yere; kuralın kendisi uygulamanın testinde
+   (`post-login-route.test.ts`). */
+const ROUTES = {
+  landingFor: (me: Me) => (me.roles.some((role) => role !== 'customer') ? ('/courier' as const) : null),
+};
 
 /** Üç yollu seçim aşamasından e-posta yoluna iner — akış testlerinin ortak girişi. */
 async function toEmailStage() {
@@ -97,7 +104,7 @@ beforeEach(() => {
 
 describe('hızlı doğrulama', () => {
   it('seçim aşaması ÜÇ yolu çizer; WhatsApp bilgi verir, oturum kurmaz', async () => {
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
 
     expect(screen.getByTestId('login-google')).toBeOnTheScreen();
     expect(screen.getByTestId('login-whatsapp')).toBeOnTheScreen();
@@ -109,7 +116,7 @@ describe('hızlı doğrulama', () => {
   });
 
   it('Google yolu tarayıcıyı AÇAR ve ekranda bekleme kurmaz — devamı /auth/callback rotasının', async () => {
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
 
     await fireEvent.press(screen.getByTestId('login-google'));
 
@@ -122,7 +129,7 @@ describe('hızlı doğrulama', () => {
 
   it('Google arızasında seçim aşamasında sebep söylenir', async () => {
     mockGoogle.mockResolvedValueOnce({ error: 'google_unavailable' });
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
 
     await fireEvent.press(screen.getByTestId('login-google'));
 
@@ -133,14 +140,14 @@ describe('hızlı doğrulama', () => {
   });
 
   it('OAuth dönüş rotasının bıraktığı adlı ret açılışta söylenir (initialNotice)', async () => {
-    await render(<LoginScreen initialNotice="oauth_failed" />);
+    await render(<LoginScreen {...ROUTES} initialNotice="oauth_failed" />);
 
     expect(screen.getByTestId('login-notice')).toBeOnTheScreen();
   });
 
   it('dev test düğmeleri GERÇEK giriş akışını çağırır; başarı done akışına biner (toast + kapanış)', async () => {
     fetchMock.mockResolvedValue(meReply());
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
 
     await fireEvent.press(screen.getByTestId('login-dev-müşteri'));
     await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('musteri@test.fr'));
@@ -150,7 +157,7 @@ describe('hızlı doğrulama', () => {
 
   it('dev operasyon düğmesi KENDİ hesabıyla çağırır; ret seçim aşamasında söylenir', async () => {
     mockDevSignIn.mockResolvedValueOnce({ error: 'dev_session_failed' });
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
 
     await fireEvent.press(screen.getByTestId('login-dev-kurye'));
 
@@ -164,7 +171,7 @@ describe('hızlı doğrulama', () => {
      "operasyona giremiyorum" diye ortaya çıkardı (kullanıcı bulgusu 11.08). */
   it('PERSONEL girişi operasyon kabuğuna yönlenir, hesap sekmesine dönmez', async () => {
     fetchMock.mockResolvedValue(reply(200, { data: meFixture(['courier']), error: null }));
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
 
     await fireEvent.press(screen.getByTestId('login-dev-kurye'));
 
@@ -174,7 +181,7 @@ describe('hızlı doğrulama', () => {
 
   it('MÜŞTERİ girişi operasyona GİTMEZ — bölümü olmayan rol geldiği ekrana döner', async () => {
     fetchMock.mockResolvedValue(meReply());
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
 
     await fireEvent.press(screen.getByTestId('login-dev-müşteri'));
 
@@ -183,7 +190,7 @@ describe('hızlı doğrulama', () => {
   });
 
   it('geçersiz e-posta UCA GİTMEDEN yakalanır', async () => {
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'yanlış-adres');
@@ -195,7 +202,7 @@ describe('hızlı doğrulama', () => {
 
   it('kod isteği başarılıysa kod aşamasına geçer', async () => {
     fetchMock.mockResolvedValue(reply(200, { data: true, error: null }));
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -211,7 +218,7 @@ describe('hızlı doğrulama', () => {
       headers: { get: (h: string) => (h.toLowerCase() === 'retry-after' ? '42' : null) },
       json: async () => ({ data: null, error: 'cooldown' }),
     } as unknown as Response);
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -229,7 +236,7 @@ describe('hızlı doğrulama', () => {
   it('yanlış kod: hata söylenir, alan temizlenir, akış kod aşamasında kalır', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
     fetchMock.mockResolvedValueOnce(reply(401, { data: null, error: 'invalid_code' }));
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -248,7 +255,7 @@ describe('hızlı doğrulama', () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
     // Künyesi TAM müşteri: kapı açılmaz, ekran normal kapanır.
     fetchMock.mockResolvedValueOnce(meReply());
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -274,7 +281,7 @@ describe('hızlı doğrulama', () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
     fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
     fetchMock.mockResolvedValueOnce(meReply({ phone: null }));
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -289,7 +296,7 @@ describe('hızlı doğrulama', () => {
 
   it('biçimsiz kod (6 haneden az) UCA HİÇ gitmez', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
-    await render(<LoginScreen />);
+    await render(<LoginScreen {...ROUTES} />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');

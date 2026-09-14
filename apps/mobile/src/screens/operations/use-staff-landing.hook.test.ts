@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 
-import { meFixture } from './me-fixture';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 
 /*
   AÇILIŞTA ROL KARARI (21.97) — "kurye uygulamayı kapatıp açınca rotasını kaybediyor"un düzeltmesi.
@@ -37,7 +37,7 @@ jest.mock('expo-router', () => ({
 }));
 
 const mockUseMe = jest.fn();
-jest.mock('@/screens/customer-kit/use-me.hook', () => ({ useMe: () => mockUseMe() }));
+jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({ useMe: () => mockUseMe() }));
 
 import { markStaffLandingDone, resetStaffLanding, useStaffLanding } from './use-staff-landing.hook';
 

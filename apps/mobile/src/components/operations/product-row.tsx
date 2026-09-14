@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import { type StyleProp, Text, View, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { operationsTheme } from '@/theme/unistyles';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { OperationsProductThumb } from './product-thumb';
 
 /*

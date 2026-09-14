@@ -1,4 +1,4 @@
-import { failureCauseOf, type ApiFail } from '@/lib/api/client';
+import { failureCauseOf, type ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 
 import messages from './messages.json';
 

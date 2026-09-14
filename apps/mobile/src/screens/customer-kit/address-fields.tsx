@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { Note } from '@/components/ui/note';
 import { SuggestionList } from '@/components/ui/suggestion-list';
-import { TextField } from '@/components/ui/text-field';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import type { PlaceOption } from '@/lib/api/places';
 import { useAddressSearch } from './use-address-search.hook';
 import { usePostalSuggest } from './use-postal-suggest.hook';

@@ -5,13 +5,13 @@ import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
-import { BackButton } from '@/components/ui/back-button';
+import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LoadingState } from '@/components/ui/loading-state';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { claimPendingInvite } from '@/lib/invite/invite-api';
 import { rememberNeighborInvite } from '@/lib/invite/invite-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';

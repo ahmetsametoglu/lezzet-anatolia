@@ -2,8 +2,8 @@ import type { CatalogImage } from '@lezzet/types';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { CirclePhoto } from './circle-photo';
-import { PressableSurface } from './pressable-surface';
+import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import type { StockMarkView } from './stock-mark';
 import { Tag } from './tag';
 

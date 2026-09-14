@@ -6,17 +6,17 @@ import { Fragment, useEffect, useState, useSyncExternalStore } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { BackButton } from '@/components/ui/back-button';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Note } from '@/components/ui/note';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { SectionHeader } from '@/components/ui/section-header';
-import { TextAction } from '@/components/ui/text-action';
-import { TextField } from '@/components/ui/text-field';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import {
   applyCoupon,
@@ -39,7 +39,7 @@ import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/ad
 import { selectDeliveryAddress, useSelectedDeliveryAddress } from '@/screens/customer-kit/delivery-address-store';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
-import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { CartLineRow } from './cart-line-row';
 import { CartSkeleton } from './cart-skeleton';

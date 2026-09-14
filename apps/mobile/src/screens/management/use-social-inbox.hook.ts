@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { BELL_EVENT, type ConversationHandler, type ConversationSource } from '@lezzet/types';
 
-import { getSupabase } from '@/lib/auth/supabase';
-import type { ApiFail } from '@/lib/api/client';
+import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
+import type { ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 import { fetchSocialInbox, type SocialRow } from '@/lib/api/social';
 
 /*

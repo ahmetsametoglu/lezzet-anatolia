@@ -1,9 +1,9 @@
 import { Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { emToDp } from '@/theme/parse';
-import { operationsTheme } from '@/theme/unistyles';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   ADET KUTUSU — adet girilen satırın SAĞ ucu (v3:05 mal kabul satırı; kullanıcı kararı 04.09, 21.254).

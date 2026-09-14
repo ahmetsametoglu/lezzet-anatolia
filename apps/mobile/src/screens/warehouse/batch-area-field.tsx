@@ -3,9 +3,9 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsSurface } from '@/components/operations/surface';
 import { Icon } from '@/components/ui/icon';
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { emToDp } from '@/theme/parse';
-import { operationsTheme } from '@/theme/unistyles';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { warehouseCopy } from './copy';
 
 /*

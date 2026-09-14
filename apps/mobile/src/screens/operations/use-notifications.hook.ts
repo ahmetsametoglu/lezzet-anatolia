@@ -6,7 +6,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationsPage,
-} from '@/lib/api/notifications';
+} from '@lezzet/mobile-kit/src/lib/api/notifications';
 import { toOperationsNotification, type OperationsNotification } from './notification-map';
 
 /*

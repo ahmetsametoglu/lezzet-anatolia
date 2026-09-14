@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
-import { toastInfo } from '@/lib/toast/toast-store';
-import { hapticError, hapticSuccess, hapticWarning } from './haptics';
+import { toastInfo } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
+import { hapticError, hapticSuccess, hapticWarning } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
 
 /*
   OPERASYONUN SONUÇ BİLDİRİMİ — durum + titreşim TEK yerde.

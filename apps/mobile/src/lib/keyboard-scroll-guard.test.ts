@@ -43,6 +43,13 @@ import path from 'node:path';
 
 const screensRoot = path.resolve(__dirname, '..');
 
+/* KİT DE TARANIR (21.310): kapların üçü ve paylaşılan bileşenler ortak çekirdekte. Kökü paket
+   çözümüyle bulunur; kit dosyası raporda `kit/…` diye görünür. */
+const kitSrc = path.join(path.dirname(require.resolve('@lezzet/mobile-kit/package.json')), 'src');
+const scanned = (): string[] => [...sourceFiles(screensRoot), ...sourceFiles(kitSrc)];
+const label = (file: string): string =>
+  file.startsWith(kitSrc) ? `kit/${path.relative(kitSrc, file)}` : path.relative(screensRoot, file);
+
 /** Metin alanı olan bileşenler — RN'in kendi girdisi + kitin sarmalayıcıları. */
 const INPUT_TAGS = ['TextInput', 'TextField', 'CodeField'];
 
@@ -106,14 +113,14 @@ function bodyOf(source: string, tag: string, start: number): string {
 /** `dosya:satır` — ihlalin adresi; künye değil ADRES verilir ki okuyan doğrudan gitsin. */
 function violations(): string[] {
   const found: string[] = [];
-  for (const file of sourceFiles(screensRoot)) {
+  for (const file of scanned()) {
     const source = readFileSync(file, 'utf8');
     for (const start of openingsOf(source, 'ScrollView')) {
       const body = bodyOf(source, 'ScrollView', start);
       const inputs = INPUT_TAGS.filter((tag) => openingsOf(body, tag).length > 0);
       if (inputs.length === 0) continue;
       const line = source.slice(0, start).split('\n').length;
-      found.push(`${path.relative(screensRoot, file)}:${line} → ${inputs.join(', ')}`);
+      found.push(`${label(file)}:${line} → ${inputs.join(', ')}`);
     }
   }
   return found;
@@ -131,7 +138,7 @@ function violations(): string[] {
  */
 function stickyComposerViolations(): string[] {
   const found: string[] = [];
-  for (const file of sourceFiles(screensRoot)) {
+  for (const file of scanned()) {
     const source = readFileSync(file, 'utf8');
     if (openingsOf(source, 'ScrollView').length === 0) continue;
     const inputs = INPUT_TAGS.filter((tag) => openingsOf(source, tag).length > 0);
@@ -143,7 +150,7 @@ function stickyComposerViolations(): string[] {
     if (insideAny) continue;
     const guarded = ['KeyboardAvoidingView', ...SAFE_CONTAINERS].some((tag) => openingsOf(source, tag).length > 0);
     if (guarded) continue;
-    found.push(`${path.relative(screensRoot, file)} → ${inputs.join(', ')} (yapışkan çubuk, kaçınma yok)`);
+    found.push(`${label(file)} → ${inputs.join(', ')} (yapışkan çubuk, kaçınma yok)`);
   }
   return found;
 }
@@ -171,20 +178,16 @@ describe('klavye koruması — girdisi olan kaydırıcı ham olamaz', () => {
     expect(SAFE_CONTAINERS).toEqual(['FormScroll', 'BottomSheet', 'ChatLayout']);
     /* Korumanın İKİNCİ yarısı (MB-01) üçünde de yazılı olmalı: kaçınma alanı klavyenin üstüne
        taşır ama düğmeye ilk dokunuş yine yutulabilir — biri olmadan öteki yarım kalır. */
-    /* Kapların yeri MODÜL ÇÖZÜMÜYLE bulunur (21.310): `ChatLayout` ortak çekirdeğe
-       (`@lezzet/mobile-kit`) taşındı ve sabit yolla okunan dosya ENOENT'e düşüyordu — ölçüldü 14.09:
-       kural bozulmamıştı, bekçi dosyanın yerini kaybetmişti. */
-    for (const file of [
-      path.join(screensRoot, 'components/ui/form-scroll.tsx'),
-      require.resolve('@lezzet/mobile-kit/src/components/ui/chat-layout'),
-    ]) {
-      expect(readFileSync(file, 'utf8')).toContain('keyboardShouldPersistTaps="handled"');
+    /* Kapların üçü de ortak çekirdekte (21.310); yol kitin kökünden kurulur. Sabit uygulama yolu
+       ENOENT'e düşmüştü (ölçüldü 14.09): kural bozulmamıştı, bekçi dosyanın yerini kaybetmişti. */
+    for (const file of ['components/ui/form-scroll.tsx', 'components/ui/chat-layout.tsx']) {
+      expect(readFileSync(path.join(kitSrc, file), 'utf8')).toContain('keyboardShouldPersistTaps="handled"');
     }
     /* ÇEKMECEDE KAÇINMA ARTIK KÜTÜPHANENİN (01.09): gövde `@gorhom/bottom-sheet`e geçti ve
        `KeyboardAvoidingView` yerine `keyboardBehavior` + `android_keyboardInputMode` kullanıyor —
        kaçınmayı panelin kendi konumundan yürütüyor. Ölçülen şey değişmedi, ADI değişti: kapta
        klavye koruması YAZILI olmalı. */
-    expect(readFileSync(path.join(screensRoot, 'components/ui/bottom-sheet.tsx'), 'utf8')).toContain(
+    expect(readFileSync(path.join(kitSrc, 'components/ui/bottom-sheet.tsx'), 'utf8')).toContain(
       'keyboardBehavior',
     );
   });
@@ -194,10 +197,10 @@ describe('klavye koruması — girdisi olan kaydırıcı ham olamaz', () => {
      böyleydi). Kural "yasak" değil "kitte" — dördüncü bir yerleşim gerekiyorsa dördüncü bir KAP
      yazılır, koruma ekrana kopyalanmaz. */
   it('hiçbir EKRAN kaçınmayı elle kurmaz — kalıp kitin kaplarında', () => {
-    const rogue = sourceFiles(screensRoot)
-      .filter((file) => !path.relative(screensRoot, file).startsWith('components/ui/'))
+    const rogue = scanned()
+      .filter((file) => !/^(kit\/)?components\/ui\//.test(label(file)))
       .filter((file) => openingsOf(readFileSync(file, 'utf8'), 'KeyboardAvoidingView').length > 0)
-      .map((file) => path.relative(screensRoot, file));
+      .map(label);
     expect(rogue).toEqual([]);
   });
 });

@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { CourierDayResponse, CourierRunDetail, StartCourierDayResponse } from '@lezzet/types';
 
-import { ToastHost } from '@/components/ui/toast-host';
-import { resetToast } from '@/lib/toast/toast-store';
+import { ToastHost } from '@lezzet/mobile-kit/src/components/ui/toast-host';
+import { resetToast } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { courierDay, courierDayRun, courierStop } from './courier-fixture';
 import { CourierVanRunsScreen } from './van-runs-screen';
@@ -35,7 +35,7 @@ jest.mock('expo-router', () => {
 });
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

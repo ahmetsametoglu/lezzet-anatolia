@@ -6,8 +6,8 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { SummaryPanel } from '@/screens/customer-kit/summary-panel';
 import messages from './messages.json';
 import { useOrderNeighborInvite } from './use-neighbor-invite.hook';

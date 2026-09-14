@@ -1,7 +1,7 @@
 import { customerAppColors, customerAppRadius } from '@lezzet/design-tokens';
 import { render, screen } from '@testing-library/react-native';
 
-import { appMetrics } from '../../theme/metrics';
+import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 import { Skeleton } from './skeleton';
 
 describe('Skeleton', () => {

@@ -12,8 +12,8 @@ import { ScanSheet } from '@/components/scan/scan-sheet';
 import { Icon } from '@/components/ui/icon';
 import { fetchPendingHandover, handOverBox } from '@/lib/api/warehouse';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
-import { emToDp } from '@/theme/parse';
-import { operationsTheme } from '@/theme/unistyles';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { trackWarehouse, useWarehouseStatus } from './warehouse-status';
 

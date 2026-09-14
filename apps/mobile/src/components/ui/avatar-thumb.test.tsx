@@ -1,7 +1,7 @@
 import { customerAppColors, customerColors } from '@lezzet/design-tokens';
 import { render, screen } from '@testing-library/react-native';
 
-import { appMetrics } from '../../theme/metrics';
+import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 import { AvatarThumb } from './avatar-thumb';
 
 describe('AvatarThumb', () => {

@@ -9,8 +9,8 @@ import {
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import { apiFetch, type ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   B2B BAŞVURUSU (21.31) — dört kapı: resmî kayıt oku · vergi numarası doğrula · durumu oku ·

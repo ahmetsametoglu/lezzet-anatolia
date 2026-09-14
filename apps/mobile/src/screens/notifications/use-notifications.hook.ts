@@ -7,8 +7,8 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationRow,
-} from '@/lib/api/notifications';
-import { getSupabase } from '@/lib/auth/supabase';
+} from '@lezzet/mobile-kit/src/lib/api/notifications';
+import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 
 /*
   BİLDİRİM AKIŞI — puan geçmişi hook'unun sayfalama deseni birebir (`use-points-history`), üstüne

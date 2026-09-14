@@ -23,7 +23,7 @@ jest.mock('expo-router', () => ({
 }));
 
 // signOut supabase'e uzanır; bu testin konusu değil.
-jest.mock('@/lib/auth/sign-out', () => ({ signOut: jest.fn() }));
+jest.mock('@lezzet/mobile-kit/src/lib/auth/sign-out', () => ({ signOut: jest.fn() }));
 
 async function renderMenu(warehouses: StaffWarehouse[] = []) {
   await render(

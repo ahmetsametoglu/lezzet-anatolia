@@ -1,4 +1,4 @@
-import type { Me } from '@/lib/api/me';
+import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
 
 /*
   PROFİL BOŞLUKLARI — "bu hesabın künyesi eksik mi" sorusunun TEK cevabı; iki ekranın ortak ölçütü

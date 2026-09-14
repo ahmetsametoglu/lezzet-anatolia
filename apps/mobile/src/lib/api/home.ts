@@ -2,8 +2,8 @@ import type { z } from 'zod';
 import { HomeSchema } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { maybeAuthorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { maybeAuthorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   VİTRİN OKUMASI — `/api/v1/home`. Üç bölüm TEK turda gelir (bantlar · fırsatlar · tarifler);

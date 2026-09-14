@@ -1,8 +1,8 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { upperIn } from '@/lib/i18n/locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 
 /*
   TUTAR ÖZETİ — sepet (v3:464), checkout (v3:544) ve sipariş onayı/detayı (v3:617, 744) aynı

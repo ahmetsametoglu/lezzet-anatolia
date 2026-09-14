@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { approveB2bApplication, fetchB2bCheck, fetchB2bSummary, rejectB2bApplication } from '@/lib/api/management';
-import type { ApiFail } from '@/lib/api/client';
+import type { ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 import type { B2bCheckResponse, B2bDecisionResponse } from '@lezzet/types';
 
 /** Kararın sonrasındaki hâl — sözleşmeden türüyor, elle yazılmıyor (CLAUDE §1). */

@@ -3,7 +3,7 @@ import type { CatalogCategory, CatalogCollection, CatalogPage, CatalogProduct, C
 import type { Locale } from '@lezzet/i18n';
 
 import { fetchCategories, fetchProducts } from '@/lib/api/catalog';
-import { appMetrics } from '@/theme/metrics';
+import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 
 /*
   KATALOG VERİSİ — kategori rayı (tek tur) + keyset sayfalı ürün listesi + ARAMA ve SIRALAMA.

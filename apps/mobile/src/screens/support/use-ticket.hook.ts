@@ -3,7 +3,7 @@ import type { Locale } from '@lezzet/i18n';
 import { BELL_EVENT, ticketChannelName } from '@lezzet/types';
 
 import { fetchTicket, replyToTicket, type TicketDetail } from '@/lib/api/tickets';
-import { getSupabase } from '@/lib/auth/supabase';
+import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 
 /*
   TALEP DETAY VERİSİ — sipariş detay hook'unun (`use-order.hook.ts`) deseni, üstüne YAZMA yarısı.

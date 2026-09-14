@@ -5,7 +5,7 @@ import { FlatList, View, useWindowDimensions } from 'react-native';
 import type { LayoutChangeEvent, ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { FrameImage } from './frame-image';
+import { FrameImage } from '@lezzet/mobile-kit/src/components/ui/frame-image';
 
 /*
   FOTOĞRAF GALERİSİ — kahraman görselin yerine geçen yatay şerit (ürün detayı · paket detayı).

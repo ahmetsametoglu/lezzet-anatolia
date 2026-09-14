@@ -6,13 +6,13 @@ import type { PlaceNoticeBodySchema } from '@lezzet/types';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { Note } from '@/components/ui/note';
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { TextAction } from '@/components/ui/text-action';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { submitPlaceNotice } from '@/lib/api/places';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { upperIn } from '@/lib/i18n/locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
-import { toastError, toastSuccess } from '@/lib/toast/toast-store';
+import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 // Metin YER AİLESİNİN yanında (`place-view.ts` künyesinin kendi kuralı): bandı iki liste birden
 // çiziyor (katalog · paketler) ve cümle tek nüsha durmalı.
 import messages from '@/lib/places/messages.json';
@@ -21,7 +21,7 @@ import { shippableChipLabel } from '@/lib/places/place-view';
 import { PlaceNoticeSheet } from './place-notice-sheet';
 import { ToggleSwitch } from './toggle-switch';
 import { PostalCodeSheet } from './postal-code-sheet';
-import { useMe } from './use-me.hook';
+import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from './use-sheet.hook';
 
 /*

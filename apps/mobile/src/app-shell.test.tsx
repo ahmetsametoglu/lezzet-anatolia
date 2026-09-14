@@ -1,7 +1,7 @@
 import { screen } from 'expo-router/testing-library';
 import { fireEvent } from '@testing-library/react-native';
 
-import { renderShell } from '@/testing/render-shell';
+import { renderShell } from '@lezzet/mobile-kit/src/testing/render-shell';
 
 /*
   KABUK SMOKE TESTİ — komponent testlerinden farkı: rota dosyaları GERÇEK (`./src/app` diskten
@@ -28,7 +28,7 @@ jest.mock('@/lib/onboarding/onboarding-store');
 
 // Vitrin artık oturumu dinliyor (`useMe`, 21.14c); bu ortamda Supabase env'i yok — istemci
 // mock'lanır, oturumsuz hâl döner ("oturumsuz kullanım = müşteri"). Kabuk testinin konusu sekmeler.
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: null } }),

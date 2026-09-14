@@ -9,9 +9,9 @@ import {
   SaleVariantsResponseSchema,
 } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
 import { withWarehouseChoice } from '../operations/warehouse-choice';
-import { queryString, type ApiFetchInit, type ApiResult } from './client';
+import { queryString, type ApiFetchInit, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /**
  * **Bu dosyanın TEK çağrı kapısı** — ve satış yerini adrese yazan yer.

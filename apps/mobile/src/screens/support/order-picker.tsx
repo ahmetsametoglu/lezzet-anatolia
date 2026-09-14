@@ -2,12 +2,12 @@ import type { LocalizedCopy, Locale } from '@lezzet/i18n';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { LoadingState } from '@/components/ui/loading-state';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TextAction } from '@/components/ui/text-action';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { formatOrderDate } from '@/screens/orders/order-format';
 import type { UseOrdersResult } from '@/screens/orders/use-orders.hook';
 // Sözlük burada YALNIZ tip için okunuyor (metni ekran veriyor): çalışma zamanında ikinci bir JSON

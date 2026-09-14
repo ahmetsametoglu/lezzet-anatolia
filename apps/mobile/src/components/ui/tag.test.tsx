@@ -8,8 +8,8 @@ import {
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Tag } from './tag';
-import { emToDp } from '../../theme/parse';
-import { customerStops } from '../../theme/unistyles';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 // Beklenenler PAKETTEN türetilir; `customerStops` temanın uyguladığı çevirinin aynısıdır
 // (px→dp + bir kademe), böylece test ham değer taşımaz.

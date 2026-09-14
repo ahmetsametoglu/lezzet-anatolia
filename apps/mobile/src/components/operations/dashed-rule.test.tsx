@@ -1,7 +1,7 @@
 import { processColor } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { OperationsDashedRule } from './dashed-rule';
 
 /*

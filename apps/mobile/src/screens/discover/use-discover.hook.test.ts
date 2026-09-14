@@ -21,7 +21,7 @@ import { useDiscover } from './use-discover.hook';
 
 /* Oturum kapısı taklit (`account-screen.test` deseni): keşif uçları `maybeAuthorizedFetch`ten
    geçiyor ve o da yerel Supabase istemcisini kuruyor — testte ne yerel köprü var ne env. */
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: () => Promise.resolve({ data: { session: { access_token: 'test-token' } } }),

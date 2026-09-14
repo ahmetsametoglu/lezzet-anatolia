@@ -1,7 +1,7 @@
 import { MoneyDayEndSchema, MoneyOverviewSchema, type MoneyDayEnd, type MoneyOverview } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   PARA UÇLARI — `/api/v1/money/*` (21.12 · M1/M2). SALT OKUMA: bu dosyada POST yoktur ve olmayacak —

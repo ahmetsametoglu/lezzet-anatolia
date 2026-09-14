@@ -21,7 +21,7 @@ import { resetWarehouseStatus } from './warehouse-status';
 /* Toast KÖKTE çiziliyor; burada taklit edilmesinin sebebi basılanı ölçmek değil, BASILMADIĞINI
    ölçebilmek: tarama çekmecesi açıkken cümle toast'a gitmemeli (07.09 · aşağıdaki test). */
 const mockToast = jest.fn<void, [string]>();
-jest.mock('@/lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
   toastWarning: (m: string) => mockToast(m),
   toastError: (m: string) => mockToast(m),

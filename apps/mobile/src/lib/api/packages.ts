@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import { PackageDetailSchema, PackageListSchema } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { apiFetch, type ApiResult } from './client';
+import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   PAKET OKUMASI — `/api/v1/packages/:slug`. Sayfanın TAMAMI tek turda (içerik satırları dahil);

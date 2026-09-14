@@ -1,5 +1,5 @@
 import { DiscoverScreen } from '@/screens/discover/discover-screen';
-import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 
 /*
   KEŞİF ROTASI — vitrinin kesikli davet kutusu ve hesap kartının "puan kazanma yolları" satırı

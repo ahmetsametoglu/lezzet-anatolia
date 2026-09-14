@@ -36,8 +36,8 @@ import {
   type TicketType,
 } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import { queryString, type ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import { queryString, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   YÖNETİM UÇLARI — `/api/v1/management/*` (21.12).

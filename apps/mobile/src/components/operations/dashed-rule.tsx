@@ -1,6 +1,6 @@
 import Svg, { Line } from 'react-native-svg';
 
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   KESİKLİ AYRAÇ — kartın İÇİNDEKİ satırları ayıran hat (hesap bakiyeleri, gün sonu dökümü, sefer

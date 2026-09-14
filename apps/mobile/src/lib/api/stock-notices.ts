@@ -1,8 +1,8 @@
 import type { z } from 'zod';
 import { PlaceNoticeResultSchema, type PlaceNoticeResult, type StockNoticeBodySchema } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   `POST /api/v1/me/stock-notices` — "gelince haber ver" kaydı (21.306).

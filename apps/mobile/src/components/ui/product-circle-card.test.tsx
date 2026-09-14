@@ -1,7 +1,7 @@
 import { customerColors } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
-import { appMetrics } from '../../theme/metrics';
+import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 import { ProductCircleCard } from './product-circle-card';
 
 describe('ProductCircleCard', () => {

@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { BottomSheet } from '../ui/bottom-sheet';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { PrimaryButton } from '../ui/primary-button';
 import { SecondaryButton } from '../ui/secondary-button';
-import { operationsTheme } from '../../theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   GERİ ALINAMAZ EYLEMİN ONAYI — v3'ün "kayıt (2/2)" çekmecesi (31.08).

@@ -1,6 +1,6 @@
 import type { B2bQueueRow } from '@lezzet/types';
 import type { OperationsStatusTone } from '@/components/operations/status-badge';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { fillCopy } from '@/screens/operations/copy';
 import { managementCopy } from './copy';
 

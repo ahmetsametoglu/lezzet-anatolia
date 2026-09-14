@@ -3,15 +3,15 @@ import { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { TextAction } from '@/components/ui/text-action';
-import { signOut } from '@/lib/auth/sign-out';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { signOut } from '@lezzet/mobile-kit/src/lib/auth/sign-out';
 import { clearWarehouseChoice } from '@/lib/operations/warehouse-choice';
 import { operationsCopy } from '@/screens/operations/copy';
 import { useOperationsIdentity, useWarehouseOptions } from '@/screens/operations/sections-context';
 import { markStaffLandingDone } from '@/screens/operations/use-staff-landing.hook';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   KİMLİK DÜĞMESİ + OTURUM MENÜSÜ (21.97) — kabuğun sağ üst köşesi, zilin komşusu.

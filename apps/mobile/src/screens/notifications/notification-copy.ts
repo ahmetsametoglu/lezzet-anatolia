@@ -1,4 +1,4 @@
-import type { NotificationRow } from '@/lib/api/notifications';
+import type { NotificationRow } from '@lezzet/mobile-kit/src/lib/api/notifications';
 
 /*
   BİLDİRİM CÜMLESİ EKRANDA KURULUR (14.12 kararı) — satır metin taşımaz: `kind` bir ANAHTAR,

@@ -14,10 +14,10 @@ import {
   type CartLineRef,
   type CartViewQuery,
 } from '@/lib/api/cart';
-import type { ApiResult } from '@/lib/api/client';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
-import { getSupabase } from '@/lib/auth/supabase';
+import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 
 /*
   SEPET — NİYET CİHAZDA, GÖRÜNÜM SUNUCUDA.

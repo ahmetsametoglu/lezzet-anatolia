@@ -1,7 +1,7 @@
 import { usePathname, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
-import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { operationsHomeRoute } from '@/screens/login/post-login-route';
 
 /*

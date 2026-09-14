@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { type DimensionValue, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PhotoSurface } from './photo-surface';
 
 /*

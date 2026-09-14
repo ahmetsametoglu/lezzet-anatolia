@@ -1,8 +1,8 @@
 import { Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { emToDp } from '../../theme/parse';
-import { operationsTheme } from '../../theme/unistyles';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   DURUM ROZETİ — düz, DOLGULU, dokunulamaz (v3 · 31.08).

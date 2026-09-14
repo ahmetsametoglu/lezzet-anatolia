@@ -5,11 +5,11 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { OfflineNotice } from '@/components/ui/offline-notice';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { AccountScreen } from '@/screens/account/account-screen';
 import { accountData } from '@/screens/account/account-fixture';
 import messages from '@/screens/account/messages.json';
-import { useMe } from '@/screens/customer-kit/use-me.hook';
+import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { operationsHomeRoute } from '@/screens/login/post-login-route';
 
 /*

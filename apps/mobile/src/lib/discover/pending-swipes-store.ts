@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
+import { DEVICE_STORE_KEYS, deviceStore } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 
 /*
   BEKLEYEN KAYDIRMALAR DEPOSU — girişsizken yapılan oyların cihazda kalan izi. Web'in tarayıcı

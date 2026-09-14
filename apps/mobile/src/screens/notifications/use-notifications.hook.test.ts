@@ -16,7 +16,7 @@ const mockApi = {
   markAllNotificationsRead: jest.fn(),
   dismissNotification: jest.fn(),
 };
-jest.mock('@/lib/api/notifications', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/api/notifications', () => ({
   fetchNotifications: (...a: unknown[]) => mockApi.fetchNotifications(...a),
   markNotificationRead: (...a: unknown[]) => mockApi.markNotificationRead(...a),
   markAllNotificationsRead: (...a: unknown[]) => mockApi.markAllNotificationsRead(...a),

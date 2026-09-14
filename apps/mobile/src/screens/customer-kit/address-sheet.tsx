@@ -1,9 +1,9 @@
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRef, useState } from 'react';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import type { MeAddress } from '@/lib/api/addresses';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { AddressForm } from './address-form';
 import messages from './address-sheet-messages.json';
 

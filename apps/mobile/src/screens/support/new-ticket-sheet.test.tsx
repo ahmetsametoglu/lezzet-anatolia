@@ -18,7 +18,7 @@ jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
 /* Oturum hazır: çekmece girişli müşteride açılır. Ad `mock` ile başlamak ZORUNDA (jest hoisting). */
 const mockSession = { access_token: 'access-1' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

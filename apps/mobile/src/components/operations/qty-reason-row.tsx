@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { operationsTheme } from '@/theme/unistyles';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { OperationsStepperGroup } from './stepper-group';
 
 /*

@@ -11,7 +11,7 @@ import type {
 import { EMPTY_BREAKDOWN, setCaseCount, type QuantityBreakdown } from '@/components/operations/quantity-value';
 import { fetchIntakeForm, fetchPendingIntakes, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
-import { toastSuccess } from '@/lib/toast/toast-store';
+import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
 import { parseDate, productLabel } from './warehouse-format';

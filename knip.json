@@ -34,15 +34,14 @@
     },
     "apps/mobile": {
       "entry": [
-        "src/testing/gorhom-bottom-sheet.mock.tsx",
         "src/testing/expo-audio.mock.ts",
         "src/testing/expo-image-picker.mock.ts"
       ]
     },
     "packages/mobile-kit": {
       "babel": true,
-      "ignoreDependencies": [
-        "expo-constants"
+      "entry": [
+        "src/testing/gorhom-bottom-sheet.mock.tsx"
       ]
     }
   },

@@ -2,7 +2,7 @@ import { fireEvent, render, renderHook, screen, waitFor } from '@testing-library
 import { customerColors } from '@lezzet/design-tokens';
 import type { CourierDayResponse } from '@lezzet/types';
 
-import { useToastMessage } from '@/lib/toast/toast-store';
+import { useToastMessage } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { CourierLoadScreen } from './load-screen';
 import { courierDay, courierStop, dayCloseDraft } from './courier-fixture';
 
@@ -27,7 +27,7 @@ jest.mock('expo-router', () => {
 });
 
 const mockSession = { access_token: 'test-token' };
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

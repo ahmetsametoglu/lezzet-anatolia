@@ -2,12 +2,12 @@ import type { CatalogImage } from '@lezzet/types';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { CirclePhoto } from '@/components/ui/circle-photo';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { Tag } from '@/components/ui/tag';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { upperIn } from '@/lib/i18n/locale';
-import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 
 /*
   KOLEKSİYON BANDI (v3:105) — vitrinin kenardan kenara uzanan renkli şeridi. Üç şey birden yapar:

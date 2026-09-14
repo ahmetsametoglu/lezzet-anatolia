@@ -5,8 +5,8 @@ import { Animated, StyleSheet, Text, View, type TextStyle, type ViewStyle } from
 import { useOperationsShellScroll } from '@/lib/operations/shell-scroll';
 import { UnistylesRuntime } from 'react-native-unistyles';
 
-import { emToDp } from '@/theme/parse';
-import { operationsTheme } from '@/theme/unistyles';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   YAPIŞKAN MİKRO BAŞLIK (Komponent Envanteri M1b) — sayfa kaydırılınca tepede kalan ince şerit.

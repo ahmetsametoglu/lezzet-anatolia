@@ -14,16 +14,16 @@ import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { toastError, toastSuccess } from '@/lib/toast/toast-store';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { fetchVanStock, scanToVan, searchVanCandidates, setVanQty as setVanQtyRequest } from '@/lib/api/courier';
-import type { ApiResult } from '@/lib/api/client';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 import { newRequestKey } from '@/lib/request-key';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { courierCopy } from './copy';
 
 /*

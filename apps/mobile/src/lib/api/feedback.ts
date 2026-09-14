@@ -10,7 +10,7 @@ import {
 } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
-import { apiFetch, type ApiResult } from './client';
+import { apiFetch, type ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   GERİ BİLDİRİM DAVETİ — `/api/v1/feedback/:token` (17.2 · v3 tasarım 17, vFb).

@@ -5,21 +5,21 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Image, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { LoadingState } from '@/components/ui/loading-state';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { TextAction } from '@/components/ui/text-action';
-import { TextField } from '@/components/ui/text-field';
-import { updateMe } from '@/lib/api/me';
-import { useAppLocale } from '@/lib/i18n/app-locale';
-import { toastSuccess } from '@/lib/toast/toast-store';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
+import { updateMe } from '@lezzet/mobile-kit/src/lib/api/me';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { AddressForm, addressDefaultsOf } from '@/screens/customer-kit/address-form';
-import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
-import { publishMe, useMe } from '@/screens/customer-kit/use-me.hook';
+import { publishMe, useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { StepDots } from '@/screens/onboarding/step-dots';
-import { emToDp } from '@/theme/parse';
+import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-gaps';
 import messages from './messages.json';
 
@@ -224,7 +224,7 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
         <Image
           // Statik varlık Metro'da `require` ile yüklenir (onboarding ekranındaki hükümle aynı).
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('../../../assets/images/logo.png')}
+          source={require('@lezzet/mobile-kit/assets/images/logo.png')}
           style={styles.logo}
           accessibilityLabel={brand.name}
         />

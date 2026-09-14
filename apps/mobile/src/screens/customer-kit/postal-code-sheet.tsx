@@ -4,18 +4,18 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SuggestionList } from '@/components/ui/suggestion-list';
-import { TextAction } from '@/components/ui/text-action';
-import { TextField } from '@/components/ui/text-field';
-import { useAppLocale } from '@/lib/i18n/app-locale';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 import messages from '@/lib/places/messages.json';
 import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
-import { toastSuccess } from '@/lib/toast/toast-store';
-import { useMe } from './use-me.hook';
+import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
+import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { usePostalSuggest } from './use-postal-suggest.hook';
 
 /*

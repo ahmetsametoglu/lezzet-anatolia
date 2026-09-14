@@ -1,7 +1,7 @@
 import { StaffScopeSchema, type StaffScope } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   OPERASYON KABUĞUNUN UCU — `/api/v1/operations/*` (30.08).

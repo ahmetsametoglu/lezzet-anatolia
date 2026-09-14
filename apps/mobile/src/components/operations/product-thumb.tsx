@@ -1,8 +1,8 @@
 import type { CatalogImage } from '@lezzet/types';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { CirclePhoto } from '@/components/ui/circle-photo';
-import { operationsTheme } from '@/theme/unistyles';
+import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { monogramOf } from './monogram';
 
 /*

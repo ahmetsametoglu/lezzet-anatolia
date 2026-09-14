@@ -1,8 +1,8 @@
 import { Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { operationsTheme } from '@/theme/unistyles';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   TEK SEÇİMLİK ÇİP — Operasyon Mobil v2'nin iki yerde AYNI iskeletle çizdiği öğe:

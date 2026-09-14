@@ -39,7 +39,7 @@ jest.mock('@/screens/customer-kit/cart-store', () => ({
    ölçütü (`isPhoneMissing`) `undefined.trim()` ile patlıyordu — fikstürün sözleşmeden sapmasıydı,
    ölçütün kusuru değil. Dolu veriliyor ki bu dosyanın konusu (gelemeyen kalemler) iletişim
    bölümüyle karışmasın; bölümün kendi testi ayrı. */
-jest.mock('@/screens/customer-kit/use-me.hook', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({
   publishMe: () => undefined,
   useMe: () => ({
     status: 'ready',
@@ -53,7 +53,7 @@ jest.mock('@/screens/customer-kit/use-me.hook', () => ({
    'Failed')"). Kapı burada sahtelendi — bu dosyanın ölçtüğü şey ödeme değil, siparişin kapsamı. */
 jest.mock('@/lib/payment/payment-sheet', () => ({ presentPayment: async () => ({ status: 'canceled' }) }));
 
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: { access_token: 'access-1' } } }),

@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { PressableSurface } from '@/components/ui/pressable-surface';
-import { TextAction } from '@/components/ui/text-action';
+import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { fillCopy } from '@/screens/operations/copy';
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { dateDigitsDelete, dateDigitsFrom, dateDigitsPress, dateFromDigits, dateMask, DATE_DIGITS, isPastDate } from './date-keypad-value';
 import { OperationsKeyGrid, OperationsKeypadDelete } from './key-grid';
 

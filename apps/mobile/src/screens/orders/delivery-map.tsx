@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import Svg, { Circle, G, Path } from 'react-native-svg';
 
-import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 
 /*
   CANLI TAKİP HARİTASI (v3:702) — kurye yoldayken sipariş detayının başında duran şerit.

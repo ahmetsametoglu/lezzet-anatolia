@@ -22,8 +22,8 @@ import {
   StartCourierDayResponseSchema,
 } from '@lezzet/types';
 
-import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { authorizedFetch } from '@lezzet/mobile-kit/src/lib/auth/authorized-fetch';
+import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 
 /*
   KURYE UÇLARI — `/api/v1/courier/*` (21.10).

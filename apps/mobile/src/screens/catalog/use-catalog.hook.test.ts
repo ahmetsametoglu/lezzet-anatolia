@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { catalogCategory, catalogProduct } from './catalog-fixture';
 import { useCatalog } from './use-catalog.hook';
-import { appMetrics } from '@/theme/metrics';
+import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 
 /*
   GERÇEK AĞ YOK: `fetch` sarmalanıp taklit ediliyor, ama zarf istemcisi (`apiFetch`) ve Zod

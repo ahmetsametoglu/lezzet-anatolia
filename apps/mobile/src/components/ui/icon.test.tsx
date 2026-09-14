@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react-native';
 
 import { Icon } from './icon';
 import { ICON_PATHS } from './icon-paths';
-import { appMetrics } from '../../theme/metrics';
+import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
 
 /*
   Testin işi üç şey: (1) geometri TASARIMDAN geliyor mu (sözlük ile çizim ayrışmasın),

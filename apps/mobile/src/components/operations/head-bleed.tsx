@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { operationsTheme } from '@/theme/unistyles';
+import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*
   BAŞLIK SIZDIRMASI — gövdenin dolgusunu başlığın üstünden geri alan sarmalayıcı.

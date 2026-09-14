@@ -40,7 +40,7 @@ const mockSession = { access_token: 'test-token' };
 const mockRemoveChannel = jest.fn();
 const mockSubscribe = jest.fn(() => ({ topic: 'test' }));
 const mockOnBroadcast = jest.fn();
-jest.mock('@/lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       getSession: async () => ({ data: { session: mockSession } }),

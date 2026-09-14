@@ -1,5 +1,5 @@
 // Kök layout. Unistyles tema kaydı uygulama girişinde BİR KEZ yüklenir (yan etkili import).
-import '@/theme/unistyles';
+import '@lezzet/mobile-kit/src/theme/unistyles';
 
 import { loadAsync } from 'expo-font';
 import { Stack, useSegments } from 'expo-router';
@@ -9,19 +9,22 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { ToastHost } from '@/components/ui/toast-host';
-import { useDevAutoLogin } from '@/lib/auth/use-dev-auto-login.hook';
-import { useSessionEndedLogin } from '@/lib/auth/use-session-ended-login.hook';
-import { initAppLocale } from '@/lib/i18n/app-locale';
+import { ToastHost } from '@lezzet/mobile-kit/src/components/ui/toast-host';
+import { registerSignInEffect } from '@lezzet/mobile-kit/src/lib/auth/sign-in-effects';
+import { useDevAutoLogin } from '@lezzet/mobile-kit/src/lib/auth/use-dev-auto-login.hook';
+import { useSessionEndedLogin } from '@lezzet/mobile-kit/src/lib/auth/use-session-ended-login.hook';
+import { initAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { claimPendingInvite } from '@/lib/invite/invite-api';
 import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
 import { PaymentProvider } from '@/lib/payment/payment-provider';
 import { useVisitPoints } from '@/lib/points/use-visit-points.hook';
-import { usePushNavigation } from '@/lib/push/use-push-navigation.hook';
-import { usePushRegistration } from '@/lib/push/use-push-registration.hook';
-import { applyFontScale, readFontScale } from '@/lib/settings/font-scale';
-import { ensureFreshInstall } from '@/lib/storage/device-store';
+import { usePushNavigation } from '@lezzet/mobile-kit/src/lib/push/use-push-navigation.hook';
+import { usePushRegistration } from '@lezzet/mobile-kit/src/lib/push/use-push-registration.hook';
+import { applyFontScale, readFontScale } from '@lezzet/mobile-kit/src/lib/settings/font-scale';
+import { ensureFreshInstall } from '@lezzet/mobile-kit/src/lib/storage/device-store';
 import { useCartSync } from '@/screens/customer-kit/cart-store';
-import { appFontAssets } from '@/theme/fonts';
+import { notificationHref } from '@/screens/notifications/notification-copy';
+import { appFontAssets } from '@lezzet/mobile-kit/src/theme/fonts';
 
 /*
   Kök yığın: sekme kabuğu (`(tabs)`) + onun ÜSTÜNE açılan ekranlar (bugün ürün detayı). Tasarımda
@@ -49,6 +52,13 @@ import { appFontAssets } from '@/theme/fonts';
  * arızayı sessizce geri getirirdi (`cart-store.ts` künyesi).
  */
 const CARTLESS_TREES = new Set(['(operations)', 'feedback', 'invite']);
+
+/* GİRİŞ SONRASI İŞ — bekleyen davetin bağlanması (21.310). Kod ve Google girişi oturumu kurduktan
+   sonra kayıtlı işleri koşar; kapı ortak çekirdekte ve davet modülünü tanımaz. Kayıt KÖKTE ve modül
+   yüklenirken yapılır: bekleyen davet cihaz deposunda durur ve uygulama hangi ekrandan açılırsa
+   açılsın ilk girişte bağlanmalı (gerekçe `lib/auth/sign-in-effects` künyesinde). */
+registerSignInEffect(claimPendingInvite);
+
 export default function RootLayout() {
   const { theme } = useUnistyles();
 
@@ -126,8 +136,8 @@ export default function RootLayout() {
   useVisitPoints();
   // Push kaydı da kökte ve aynı gerekçeyle (hook künyesi): bir ekrana bağlanamaz.
   usePushRegistration();
-  // Bildirime dokunuş → doğru ekran (uygulama içi listeyle AYNI adres sözlüğü — hook künyesi).
-  usePushNavigation();
+  // Bildirime dokunuş → doğru ekran: adres, uygulama içi listeyle AYNI sözlükten (hook künyesi).
+  usePushNavigation(notificationHref);
 
   /* SUNUCU SEPETİNİN KAPISI KÖKE TAŞINDI (ölçüldü 28.08, fiziksel Android).
      Önce sekme kabuğundaydı ve gerekçesi şuydu: "kabuk müşteri ağacının altındaki her yığın

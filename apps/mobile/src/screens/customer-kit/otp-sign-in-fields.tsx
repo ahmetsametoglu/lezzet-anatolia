@@ -1,11 +1,11 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { LoadingState } from '@/components/ui/loading-state';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { TextAction } from '@/components/ui/text-action';
-import { TextField } from '@/components/ui/text-field';
-import { CodeField } from '@/screens/login/code-field';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
+import { CodeField } from '@lezzet/mobile-kit/src/screens/login/code-field';
 import type { useOtpSignIn } from './use-otp-sign-in.hook';
 
 /*

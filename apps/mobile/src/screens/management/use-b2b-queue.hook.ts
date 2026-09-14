@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { fetchB2bQueue } from '@/lib/api/management';
-import type { ApiFail } from '@/lib/api/client';
+import type { ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 import type { B2bQueueRow } from '@lezzet/types';
 
 /*
