@@ -3,7 +3,7 @@ import { CATALOG_SORTS } from '@lezzet/types';
 
 import { CatalogScreen } from './catalog-screen';
 import { catalogCategory, catalogProduct } from './catalog-fixture';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/catalog';
 
 /*
   EKRAN TESTİ — durumların hepsi (iskelet · veri · boş · hata) ve çip süzgeci. Hook TAKLİT

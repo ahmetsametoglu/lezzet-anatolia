@@ -13,9 +13,9 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
-// Metin YER AİLESİNİN yanında (`place-view.ts` künyesinin kendi kuralı): bandı iki liste birden
-// çiziyor (katalog · paketler) ve cümle tek nüsha durmalı.
-import messages from '@/lib/places/messages.json';
+// Metin YER AİLESİNİN ortak sözlüğünde (14.09 — web'in telefon görünümü de aynı bandı çiziyor): bandı
+// iki liste birden çiziyor (katalog · paketler) ve cümle tek nüsha durmalı.
+import messages from '@lezzet/i18n/customer/place';
 import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-notice-store';
 import { shippableChipLabel } from '@/lib/places/place-view';
 import { PlaceNoticeSheet } from './place-notice-sheet';

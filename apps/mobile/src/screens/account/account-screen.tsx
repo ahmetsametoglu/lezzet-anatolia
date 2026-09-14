@@ -27,7 +27,7 @@ import { hapticCommit, hapticError } from '@lezzet/mobile-kit/src/lib/haptics/ha
 import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { setAppLocale, useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import placeMessages from '@/lib/places/messages.json';
+import placeMessages from '@lezzet/i18n/customer/place';
 import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-notice-store';
 import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { addressDefaultsOf } from '@/screens/customer-kit/address-form';

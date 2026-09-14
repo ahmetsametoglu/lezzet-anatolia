@@ -17,8 +17,9 @@ import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-butt
 import { ProductPhotoCard } from '@/components/ui/product-photo-card';
 // Fiyat yazımı paylaşılan tek kaynaktan (terfi 21.7) — RN'de para biçimi yeniden yazılmaz (02-mimari §3.4).
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-// Kampanya rozeti/cümlesi ve fiyat etiketi iki yüzeyin ortak malı (14.09): web telefon görünümü de okur.
-import { campaignValueOf, cardBadgeOf, productPriceLabel } from '@lezzet/helper';
+// Kampanya rozeti/cümlesi, fiyat etiketi ve kartın yer notu iki yüzeyin ortak malı (14.09): web telefon
+// görünümü de okur.
+import { campaignValueOf, cardBadgeOf, cardPlaceNoteOf, productPriceLabel } from '@lezzet/helper';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
@@ -30,7 +31,8 @@ import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { CatalogSkeleton } from './catalog-skeleton';
 import { useCatalog } from './use-catalog.hook';
-import messages from './messages.json';
+// Ekranın metni iki yüzeyin ortak malı (14.09): web telefon kataloğu da aynı sözlüğü okur.
+import messages from '@lezzet/i18n/customer/catalog';
 
 /*
   KATALOG EKRANI (v3 `vCatalog`) — arama + süzgeç + kategori rayı + iki sütun kare kart ızgarası +
@@ -216,9 +218,9 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
        neredeyse tamamı o işareti taşıyordu — her kartta yazan bir bilgi, bilgi olmaktan çıkar.
        Cümle listenin başındaki banda (`PlaceNoticeBand`) taşındı, TEK yere. Kartta kalan not,
        GÖNDEREMEDİĞİMİZ ya da bölgede olmayan ürününkidir: `info` tonu (kargo) elenir, `blocked`
-       ve `pending` kalır. Eleme burada yapılır çünkü `stockMarkOf` vitrinin daire kartını da
-       besliyor ve o ekran bu şeridin alanı değil (terfi ihtiyacı raporlandı). */
-    const placeNote = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark.label;
+       ve `pending` kalır. Eleme ORTAK kurucuda (`cardPlaceNoteOf`, `@lezzet/helper` — 14.09): burada
+       raporlanan terfi ihtiyacı, web'in telefon görünümü ikinci çağıran olunca karşılandı. */
+    const { note: placeNote, dimmed } = cardPlaceNoteOf(stockMark);
     return {
       name: product.name,
       image: product.image,
@@ -234,7 +236,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
          alma değil bir bilgi. `shipping` ve rota içi `elsewhere` SOLMAZ — ikisinde de ürün
          gelebiliyor (biri kargoyla, öteki stok girince) ve soldurmak müşteriyi olmayan bir
          kapıdan çevirirdi. */
-      dimmed: stockMark?.tone === 'blocked',
+      dimmed,
       /* Çeşit satırı yalnız ÇOK boylu üründe (şablon: `p.vs.length>1 ? p.vs.length+' seçenek' : null`).
          Sayı sözleşmeden (`variantCount`), CÜMLE cihazdan: "N seçenek" bir i18n şablonudur ve dile
          göre çekim alır — API biçimli metin göndermez. "1 seçenek" yazılmaz: olmayan bir seçim

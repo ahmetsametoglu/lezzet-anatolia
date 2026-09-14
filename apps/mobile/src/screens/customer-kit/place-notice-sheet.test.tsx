@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
-import messages from '@/lib/places/messages.json';
+import messages from '@lezzet/i18n/customer/place';
 import authErrors from '@lezzet/mobile-kit/src/lib/auth/error-messages.json';
 import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { PlaceNoticeSheet } from './place-notice-sheet';

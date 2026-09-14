@@ -4,7 +4,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { submitPlaceNotice } from '@/lib/api/places';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import messages from '@/lib/places/messages.json';
+import messages from '@lezzet/i18n/customer/place';
 import { NoticeSheet } from './notice-sheet';
 
 /*

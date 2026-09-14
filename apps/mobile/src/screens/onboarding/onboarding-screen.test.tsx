@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
 import { setAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import placeMessages from '@/lib/places/messages.json';
+import placeMessages from '@lezzet/i18n/customer/place';
 import { OnboardingScreen } from './onboarding-screen';
 
 /*

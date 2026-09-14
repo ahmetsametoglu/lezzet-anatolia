@@ -2097,7 +2097,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   (kullanıcı kararı 11.08, dört dokunuş).**
   `touches:` `apps/mobile/src/screens/customer-kit/place-notice-band.tsx` ·
   `apps/mobile/src/screens/customer-kit/place-notice-band-filter.test.tsx` (YENİ) ·
-  `apps/mobile/src/screens/catalog/catalog-screen.tsx` · `apps/mobile/src/lib/places/messages.json`
+  `apps/mobile/src/screens/catalog/catalog-screen.tsx` · `packages/i18n/src/customer/place.json`
 
   **1 · "Adresime gönderilebilir" süzgeci "Sırala & filtrele" SAYFASINDAN ÇIKTI.** Kullanıcının
   gerekçesi: *"zaten bu ancak teslimat noktalarımızın dışında çıkan bir filtreleme özelliği, bu
@@ -6545,7 +6545,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ekran "1 açık" sefer gösterirken 4b bağ kurmadı — seed bugünün seferine bile `returned_at`
   yazıyor, iki "açık" tanımı ayrışmış; karar ve alan web'in.
 - [x] (21.120) **YER ÇEKMECESİNE KOD ÖNERİSİ — weble ayrışma kapandı (kullanıcı kararı 26.08)**
-  · touches: `apps/mobile/src/screens/customer-kit/postal-code-sheet.tsx`, `apps/mobile/src/lib/places/messages.json`
+  · touches: `apps/mobile/src/screens/customer-kit/postal-code-sheet.tsx`, `packages/i18n/src/customer/place.json`
 
   Denetimin 25.08 kaydı: başlıktaki yer çekmecesi ("67000 STRASBOURG ▾") mobilde öneri listesizdi —
   müşteri beş haneyi eksiksiz yazmak zorundaydı, webde "672" sekiz aday getiriyordu. Kullanıcı

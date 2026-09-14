@@ -1,3 +1,6 @@
+import type { LocalizedCopy } from '@lezzet/i18n';
+import type placeMessages from '@lezzet/i18n/customer/place';
+
 /**
  * `elsewhere` hâlinin ALT SEBEBİ (09.08 · kullanıcı kararı) — **aynı stok hâli, iki farklı gerçek.**
  *
@@ -34,4 +37,47 @@ export type ElsewhereReason = 'stock' | 'out_of_route';
  */
 export function elsewhereReasonOf(place: { inRoute: boolean } | null): ElsewhereReason {
   return place && !place.inRoute ? 'out_of_route' : 'stock';
+}
+
+/** Yer işaretinin cümleleri — ortak sözlükten türer (`@lezzet/i18n/customer/place`), elle yazılmaz. */
+export type PlaceMarkCopy = Pick<LocalizedCopy<typeof placeMessages>, 'shipMark' | 'awayMark' | 'lineBlocked'>;
+
+/** İşaretin tonu — native kitin `StockMark` sözlüğü: kargo (bilgi) · bekleyen bölge · kapalı kapı. */
+export type PlaceMarkTone = 'info' | 'pending' | 'blocked';
+
+export interface PlaceMark {
+  label: string;
+  tone: PlaceMarkTone;
+}
+
+/**
+ * **Kalemin YER işareti** — dört stok hâlinin üçünde cümle, birinde sessizlik (21.20 · terfi 14.09).
+ *   `shipping`     → "Kargoyla gelir" (bilgi).
+ *   `elsewhere`    → rota dışında "bu adrese teslim edemiyoruz" (kapalı kapı); rota içinde ya da yer
+ *                    bilinmiyorken "bölgenizde şu an yok" (bekleyen) — ayrımı `elsewhereReasonOf` verir.
+ *   `available` · `out_of_stock` → işaret YOK: iyi haber sessizdir, "Tükendi" kartın kendi rozetidir.
+ *
+ * Native'de doğdu (`apps/mobile/src/lib/places/place-view.ts` → `stockMarkOf`); web'in telefon görünümü
+ * ikinci çağıran olunca kural buraya taşındı — iki yüzey aynı kartı aynı cümleyle çiziyor. `status` bir
+ * `StockStatus`tur (`@lezzet/types`); bu paket ona bağlı değil, bakılan iki değer adıyla yazılı. `null` =
+ * hâl bilinmiyor, işaret yok.
+ */
+export function placeMarkOf(status: string | null, place: { inRoute: boolean } | null, t: PlaceMarkCopy): PlaceMark | null {
+  if (status === 'shipping') return { label: t.shipMark, tone: 'info' };
+  if (status !== 'elsewhere') return null;
+  return elsewhereReasonOf(place) === 'out_of_route' ? { label: t.lineBlocked, tone: 'blocked' } : { label: t.awayMark, tone: 'pending' };
+}
+
+/**
+ * **Kartın yer notu** — işaretin KARTTA söylenen kısmı (kullanıcı kararı 10.08).
+ *
+ * "Kargoyla gelir" kartta YAZILMAZ: rota dışı müşterinin kartlarının neredeyse tamamı onu taşırdı ve her
+ * kartta yazan bilgi bilgi olmaktan çıkar — cümle listenin başındaki bantta, tek yerde. Kalan iki not
+ * konuşur; kapalı kapı kartı ayrıca SOLDURUR, bekleyen bölge soldurmaz (ürün gelebilir, soldurmak müşteriyi
+ * olmayan bir kapıdan çevirirdi). Native katalog kartı, vitrin dairesi ve web'in telefon kartları aynı
+ * elemeyi okur (native katalogun "terfi ihtiyacı" künyesi, 14.09).
+ */
+export function cardPlaceNoteOf(mark: PlaceMark | null): { note: string | undefined; dimmed: boolean } {
+  if (mark === null || mark.tone === 'info') return { note: undefined, dimmed: false };
+  return { note: mark.label, dimmed: mark.tone === 'blocked' };
 }

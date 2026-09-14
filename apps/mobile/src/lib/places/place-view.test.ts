@@ -3,7 +3,7 @@ import type { PlaceResolution } from '@lezzet/types';
 // Cihaz dili SABİTLENİR: metin iddiaları makinenin diline bağlanmasın (kit testlerinin deseni).
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
 
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/place';
 import { packageStockStatus, placeModeOf, shippableChipVisible, stockMarkOf } from './place-view';
 
 /*

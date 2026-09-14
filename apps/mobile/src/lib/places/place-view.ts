@@ -1,23 +1,22 @@
-import { elsewhereReasonOf } from '@lezzet/helper';
+import { placeMarkOf } from '@lezzet/helper';
 import type { CartLineRoute, StockStatus } from '@lezzet/types';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import messages from '@lezzet/i18n/customer/place';
 
 import type { PlaceResolution } from '@/lib/api/places';
 // Ton sözlüğü KİTİN (`info`/`pending`/`blocked`) — buradaki iş alan hâlini o sözlüğe çevirmek.
 import type { StockMarkView } from '@/components/ui/stock-mark';
-import messages from './messages.json';
 
 /*
   YERİN EKRANDAKİ DİLİ (21.20) — çözülmüş yer + stok hâli → müşterinin okuyacağı CÜMLE.
 
-  METİN BURADA, EKRANDA DEĞİL: aynı üç cümle katalog ızgarasında ve vitrin rayında görünüyor; iki
-  `messages.json`a kopyalansaydı biri değişince öteki eskirdi (CLAUDE §1). Web de aynı deseni
-  kuruyor — yer ailesinin ortak metni yer ailesinin yanında durur
-  (`apps/web/components/customer/delivery/place-messages.json`).
+  METİN ORTAK PAKETTE (14.09): yer ailesinin sözlüğü `@lezzet/i18n/customer/place` — native'in bütün yer
+  ekranları ve web'in telefon görünümü aynı dosyayı okur (müşterinin telefon tasarımı iki yüzeyde aynı,
+  kullanıcı kararı 14.09). Önce bu klasörde `messages.json`du; aynı cümleler iki yüzeyde ayrı yazılsaydı
+  biri değişince öteki eskirdi (CLAUDE §1).
 
-  KARAR BURADA DEĞİL, `@lezzet/helper`TA: `elsewhere` hâlinin iki alt sebebi (kalem mi bekleniyor,
-  bölge mi) tek nüsha olarak orada yaşıyor ve web ile native uygulama aynı fonksiyondan okuyor.
-  Buradaki iş yalnız o kararı cümleye ve rozet tonuna çevirmek.
+  KURAL DA `@lezzet/helper`TA: `elsewhere` hâlinin iki alt sebebi (`elsewhereReasonOf`) ve cümlenin seçimi
+  (`placeMarkOf`) tek nüsha orada. Buradaki iş native'in yer nesnesini (`PlaceResolution`) o kurala çevirmek.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -118,12 +117,9 @@ export function packageStockStatus(pack: { soldOut: boolean; route: CartLineRout
 }
 
 export function stockMarkOf(status: StockStatus, place: PlaceResolution | null, locale: Locale): StockMarkView | null {
-  const t: Messages = messages[locale];
-  if (status === 'shipping') return { label: t.shipMark, tone: 'info' };
-  if (status !== 'elsewhere') return null;
-  // Rota dışı mı kalem mi — kararı `@lezzet/helper` verir, ekran vermez. Çözülmemiş yer `null`
-  // gider ve kural "yer bilinmiyorsa kalem" der: "gönderemiyoruz" demek için rota dışında
+  // Cümleyi ORTAK kurucu seçer (`placeMarkOf`); burada yalnız native'in yer nesnesi çözülür. Çözülmemiş
+  // yer `null` gider ve kural "yer bilinmiyorsa kalem" der: "gönderemiyoruz" demek için rota dışında
   // olduğunu BİLMEK gerekir.
-  const reason = elsewhereReasonOf(place?.kind === 'resolved' ? place.place : null);
-  return reason === 'out_of_route' ? { label: t.lineBlocked, tone: 'blocked' } : { label: t.awayMark, tone: 'pending' };
+  const t: Messages = messages[locale];
+  return placeMarkOf(status, place?.kind === 'resolved' ? place.place : null, t);
 }

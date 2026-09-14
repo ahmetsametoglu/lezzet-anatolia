@@ -1,19 +1,19 @@
 import {
   bandCountLabel,
   cardBadgeOf,
-  elsewhereReasonOf,
+  cardPlaceNoteOf,
   formatPrice,
   offerDiscountLabel,
   offerLimitOf,
+  placeMarkOf,
   productPriceLabel,
   scopeBadgeOf,
   type HomeCopy,
 } from '@lezzet/helper';
 import homeMessages from '@lezzet/i18n/customer/home';
-import type { StockStatus } from '@lezzet/types';
+import placeMessages from '@lezzet/i18n/customer/place';
 import { useAccount, useWholesale } from '@/components/customer/account/account-context';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
-import placeMessages from '@/components/customer/delivery/place-messages.json';
 import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
 import { CollectionBand } from '@/components/customer/phone-kit/collection-band';
 import { DashedInvite } from '@/components/customer/phone-kit/dashed-invite';
@@ -23,7 +23,6 @@ import { SectionHeader } from '@/components/customer/phone-kit/section-header';
 import { Tag } from '@/components/customer/phone-kit/tag';
 import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { stockStatusOfRoute } from '@/components/customer/ui/package-card';
-import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { Link } from '@/i18n/navigation';
 import type { HomeMobileProps } from './home-types';
 
@@ -42,33 +41,21 @@ import type { HomeMobileProps } from './home-types';
  * · Aşağı çekerek yenileme, iskelet ve bağlantı hatası ekranı native'e özgü: sayfa sunucuda çözülür,
  *   okuma düşerse sitenin hata sınırı devreye girer.
  *
- * ── BİLİNÇLİ, GEÇİCİ FARKLAR ───────────────────────────────────────────────
+ * ── BİLİNÇLİ, GEÇİCİ FARK ─────────────────────────────────────────────────
  * · Köşe (18 ↔ 20) ve birkaç ton native'den bir tık ayrık: aynı adı masaüstü başka değerle kullanıyor;
  *   masaüstü yeni ada geçince taban native'e çekilir (08.58 token maddesi).
- * · Yer işaretinin cümlesi web'in yer sözlüğünden; native'inki bir tık farklı ("teslim edemiyoruz" ↔
- *   "gönderemiyoruz").
- *   BEKLEYEN(08.58): katalog turunda yer işareti iki yüzeyde tek sözlüğe iner.
+ *
+ * Kartın yer işareti native'le TEK kaynaktan (14.09, katalog turu): cümle `@lezzet/i18n/customer/place`,
+ * kural `placeMarkOf` + `cardPlaceNoteOf` (`@lezzet/helper`) — "kargoyla gelir" kartta yazılmaz, kapalı
+ * kapı soldurur.
  */
 
 /** Yatay ray — native `ScrollView horizontal`ın karşılığı; üstteki nefes rozetlerin taşması için. */
 const RAIL = 'flex overflow-x-auto px-5.5 pt-2.5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
-type PlaceCopy = (typeof placeMessages)['tr'];
-
-/**
- * Kartın YER işareti — yalnız KAPALI kapı (rota dışı soğuk zincir) ve BEKLEYEN bölge konuşur; "kargoyla
- * gelir" kartta yazılmaz (native 10.08: rota dışında neredeyse her kart taşırdı). Karar ortak
- * `elsewhereReasonOf`ta, burada yalnız cümlesi; kapalı kapı ayrıca daireyi soldurur.
- */
-function placeMarkOf(status: StockStatus | null, place: DeliveryPlace | null, t: PlaceCopy): { label: string; blocked: boolean } | null {
-  if (status !== 'elsewhere') return null;
-  const blocked = elsewhereReasonOf(place) === 'out_of_route';
-  return { label: blocked ? t.lineBlocked : t.awayMark, blocked };
-}
-
 export function HomeMobile({ t, locale, data }: HomeMobileProps) {
   const copy: HomeCopy = homeMessages[locale];
-  const placeCopy: PlaceCopy = placeMessages[locale];
+  const placeCopy = placeMessages[locale];
   const signedIn = useAccount() !== null;
   const wholesale = useWholesale();
   const { place } = useDeliveryPlace();
@@ -178,7 +165,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
           </div>
           <div className={`${RAIL} gap-4.5`}>
             {home.featured.map((product) => {
-              const mark = placeMarkOf(product.stockStatus, place, placeCopy);
+              const { note, dimmed } = cardPlaceNoteOf(placeMarkOf(product.stockStatus, place, placeCopy));
               return (
                 <ProductCircleCard
                   key={product.slug}
@@ -187,8 +174,8 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
                   priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
                   discountLabel={cardBadgeOf(product, { offer: copy.card.offer })}
                   image={product.image}
-                  mark={mark?.label}
-                  dimmed={mark?.blocked ?? false}
+                  mark={note}
+                  dimmed={dimmed}
                 />
               );
             })}
@@ -266,8 +253,8 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
           <div className="flex flex-col gap-3 px-5.5">
             {home.packages.map((pack) => {
               // Paketin yer ekseni web'in paket kartıyla AYNI eşlemeden (`stockStatusOfRoute`).
-              const mark = placeMarkOf(stockStatusOfRoute(pack.route), place, placeCopy);
-              const note = pack.soldOut ? undefined : mark?.label;
+              const mark = cardPlaceNoteOf(placeMarkOf(stockStatusOfRoute(pack.route), place, placeCopy));
+              const note = pack.soldOut ? undefined : mark.note;
               return (
                 <PhotoTile
                   key={pack.slug}
@@ -278,7 +265,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
                   className="h-[172px] w-full"
                   ratio={2}
                   sizes="100vw"
-                  dimmed={pack.soldOut || (mark?.blocked ?? false)}
+                  dimmed={pack.soldOut || mark.dimmed}
                   topBadge={
                     pack.soldOut ? (
                       <span className="block rounded-badge bg-scrim-72 px-2.5 py-1 font-sans text-badge-sm font-bold tracking-(--text-badge--letter-spacing) text-sand-50 uppercase">

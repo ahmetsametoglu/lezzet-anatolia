@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react-native';
 
-import messages from '@/lib/places/messages.json';
+import messages from '@lezzet/i18n/customer/place';
 import { PlaceNoticeBand } from './place-notice-band';
 
 /*

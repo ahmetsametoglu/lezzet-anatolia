@@ -23,7 +23,7 @@ import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { submitStockNotice } from '@/lib/api/stock-notices';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import placeMessages from '@/lib/places/messages.json';
+import placeMessages from '@lezzet/i18n/customer/place';
 import { stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
 import { toastError, toastInfo, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';

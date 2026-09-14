@@ -9,7 +9,9 @@
     "./paths": "./src/paths.ts",
     "./customer/tab-bar": "./src/customer/tab-bar.json",
     "./customer/home": "./src/customer/home.json",
-    "./customer/price-label": "./src/customer/price-label.json"
+    "./customer/price-label": "./src/customer/price-label.json",
+    "./customer/catalog": "./src/customer/catalog.json",
+    "./customer/place": "./src/customer/place.json"
   },
   "types": "./src/index.ts",
   "scripts": {

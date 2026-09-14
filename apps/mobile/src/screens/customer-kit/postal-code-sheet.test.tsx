@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import messages from '@/lib/places/messages.json';
+import messages from '@lezzet/i18n/customer/place';
 import { PostalCodeSheet } from './postal-code-sheet';
 
 /*

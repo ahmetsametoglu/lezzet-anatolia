@@ -1,0 +1,70 @@
+import { describe, expect, it } from 'vitest';
+import placeMessages from '@lezzet/i18n/customer/place';
+import { cardPlaceNoteOf, elsewhereReasonOf, placeMarkOf } from './delivery';
+
+/*
+  YER İŞARETİ — "bu ürün BANA nasıl gelir" sorusunun cevabı; native katalog, vitrin ve web telefon görünümü
+  aynı kuralı okur (terfi 14.09). Native'in `place-view.test.ts`i aynı iddiaları kendi yer nesnesiyle
+  sürdürüyor; buradaki iki çivi kuralın KENDİSİ:
+    · bilmemek "gönderemiyoruz" değildir — yer bilinmiyorsa not GEÇİCİDİR;
+    · "kargoyla gelir" kartta yazılmaz — kartın notu yalnız kapalı kapı ve bekleyen bölgedir.
+*/
+
+const tr = placeMessages.tr;
+const inRoute = { inRoute: true };
+const outOfRoute = { inRoute: false };
+
+describe('elsewhereReasonOf', () => {
+  it('rota dışı → bölge · rota içi ya da yer yok → kalem', () => {
+    expect(elsewhereReasonOf(outOfRoute)).toBe('out_of_route');
+    expect(elsewhereReasonOf(inRoute)).toBe('stock');
+    expect(elsewhereReasonOf(null)).toBe('stock');
+  });
+});
+
+describe('placeMarkOf', () => {
+  it('kargo hâli bilgi tonunda — rota ne olursa olsun', () => {
+    expect(placeMarkOf('shipping', outOfRoute, tr)).toEqual({ label: tr.shipMark, tone: 'info' });
+    expect(placeMarkOf('shipping', null, tr)).toEqual({ label: tr.shipMark, tone: 'info' });
+  });
+
+  it('satılabilir, tükenmiş ve bilinmeyen hâl SESSİZ', () => {
+    expect(placeMarkOf('available', outOfRoute, tr)).toBeNull();
+    expect(placeMarkOf('out_of_stock', outOfRoute, tr)).toBeNull();
+    expect(placeMarkOf(null, outOfRoute, tr)).toBeNull();
+  });
+
+  it('rota DIŞINDA başka yerdeki ürün → kapalı kapı', () => {
+    expect(placeMarkOf('elsewhere', outOfRoute, tr)).toEqual({ label: tr.lineBlocked, tone: 'blocked' });
+  });
+
+  it('rota İÇİNDE başka yerdeki ürün → bekleyen bölge', () => {
+    expect(placeMarkOf('elsewhere', inRoute, tr)).toEqual({ label: tr.awayMark, tone: 'pending' });
+  });
+
+  it('YER BİLİNMİYORSA bekleyen — kalıcı ret için rota dışında olduğunu BİLMEK gerekir', () => {
+    expect(placeMarkOf('elsewhere', null, tr)).toEqual({ label: tr.awayMark, tone: 'pending' });
+  });
+
+  it('cümle müşterinin dilinde', () => {
+    expect(placeMarkOf('elsewhere', outOfRoute, placeMessages.fr)?.label).toBe(placeMessages.fr.lineBlocked);
+  });
+});
+
+describe('cardPlaceNoteOf', () => {
+  it('"kargoyla gelir" kartta YAZILMAZ ve soldurmaz', () => {
+    expect(cardPlaceNoteOf(placeMarkOf('shipping', outOfRoute, tr))).toEqual({ note: undefined, dimmed: false });
+  });
+
+  it('kapalı kapı yazar VE soldurur', () => {
+    expect(cardPlaceNoteOf(placeMarkOf('elsewhere', outOfRoute, tr))).toEqual({ note: tr.lineBlocked, dimmed: true });
+  });
+
+  it('bekleyen bölge yazar ama soldurmaz — ürün gelebilir', () => {
+    expect(cardPlaceNoteOf(placeMarkOf('elsewhere', inRoute, tr))).toEqual({ note: tr.awayMark, dimmed: false });
+  });
+
+  it('işaret yoksa not da yok', () => {
+    expect(cardPlaceNoteOf(null)).toEqual({ note: undefined, dimmed: false });
+  });
+});

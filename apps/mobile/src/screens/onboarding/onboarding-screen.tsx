@@ -18,7 +18,7 @@ import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
    `lib/places` ile birebir aynıydı — biri hariç. Bölge dışı cümlesi zamanla ayrışmış, onboarding
    *"soğuk zincir korumalı kargoyla ulaştırırız"* diyerek kargoya veremediğimiz bir şeyi vaat eder
    olmuştu. İki kopya varken hangisinin doğru olduğunu kimse göremez; kopya kaldırıldı. */
-import placeMessages from '@/lib/places/messages.json';
+import placeMessages from '@lezzet/i18n/customer/place';
 import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@lezzet/mobile-kit/src/lib/settings/font-scale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';

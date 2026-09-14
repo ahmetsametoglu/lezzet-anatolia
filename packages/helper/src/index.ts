@@ -6,8 +6,8 @@
 export * from './campaign-label';
 export * from './csv';
 export * from './date';
-// Yerin saf kararları (`elsewhereReasonOf`) — web ve native uygulama aynı cümleyi kuruyor; ev
-// gerekçesi dosyanın kendi künyesinde (21.20).
+// Yerin saf kararları (`elsewhereReasonOf`) ve kartın yer işareti (`placeMarkOf` · `cardPlaceNoteOf`,
+// 14.09) — web ve native uygulama aynı cümleyi kuruyor; ev gerekçesi dosyanın kendi künyesinde (21.20).
 export * from './delivery';
 // İlan edilen teslimat tutarlarının cümleye dönüşmesi — yasal sayfaların iki yüzeydeki ortak
 // kuralı; tutar prozanın içine gömülmez (gerekçe dosyanın künyesinde, 18.08).

@@ -12,7 +12,7 @@ import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
-import messages from '@/lib/places/messages.json';
+import messages from '@lezzet/i18n/customer/place';
 import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
@@ -29,7 +29,7 @@ import { usePostalSuggest } from './use-postal-suggest.hook';
   (katalog · paketler) ve teslimat bölgeleri sayfası. Aynı soruyu soran ikinci bir çekmece
   YAZILMADI (CLAUDE §1); taşınırken üç şey içeri alındı ki çağıranlar aynı davranışı üç kez
   kurmasın:
-    · METİN — sözlük yer ailesinin yanında (`lib/places/messages.json`), `copy` prop'u kalktı.
+    · METİN — sözlük yer ailesinin ortak dosyasında (`@lezzet/i18n/customer/place`, 14.09), `copy` prop'u kalktı.
       Prop kalsaydı her çağıran kendi kopyasını taşırdı ve cümleler bir gün ayrışırdı.
     · KAYIT — kaydeden de burasıdır (`saveOnboarding` + onay toast'ı). Kaydı çağırana bırakmak,
       "kaydettikten sonra ne olur" sorusunu üç ekranda üç kez cevaplatırdı.

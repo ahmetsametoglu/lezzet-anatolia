@@ -10,7 +10,7 @@ import { Note } from '@/components/ui/note';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import type placeMessages from '@/lib/places/messages.json';
+import type placeMessages from '@lezzet/i18n/customer/place';
 import { OtpSignInFields } from './otp-sign-in-fields';
 import { useOtpSignIn } from './use-otp-sign-in.hook';
 
