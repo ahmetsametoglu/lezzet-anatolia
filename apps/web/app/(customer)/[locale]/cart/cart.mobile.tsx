@@ -1,117 +1,405 @@
 'use client';
 
-import { FunnelHeader } from '@/components/customer/ui/funnel-header';
+import { Fragment, useCallback, useState } from 'react';
+import type { Locale } from '@lezzet/i18n';
+import cartMessages from '@lezzet/i18n/customer/cart';
+import { resolveLocalizedText } from '@lezzet/types';
+import { EmptyState } from '@/components/customer/phone-kit/empty-state';
+import { Note } from '@/components/customer/phone-kit/note';
+import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
+import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
+import { SectionHeader } from '@/components/customer/phone-kit/section-header';
+import { StickyBar } from '@/components/customer/phone-kit/sticky-bar';
+import { SummaryPanel, type SummaryRow } from '@/components/customer/phone-kit/summary-panel';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { useCart } from '@/components/customer/cart/cart-context';
-import { cartKey, splitByRoute } from '@/lib/cart/cart-types';
-import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
 import { SavedList } from '@/components/customer/delivery/saved-list';
-import { CartLineRow } from './components/cart-line';
-import { CartGroup } from './components/cart-group';
-import { CartSummary } from './components/cart-summary';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
+import placeMessages from '@/components/customer/delivery/place-messages.json';
+import { FormInputField } from '@/components/customer/form/form-input-field';
+import { BackButton } from '@/components/customer/ui/back-button';
+import { Dialog } from '@/components/customer/ui/dialog';
+import { MobileCustomerIcon } from '@/components/customer/ui/mobile-icon';
+import { summaryCopy } from '@/components/customer/ui/summary-row';
+import { Link } from '@/i18n/navigation';
+import { cartKey, cartPayableCents, shippingGroupFee, type CartLine } from '@/lib/cart/cart-types';
+import { discountLabel } from '@/lib/cart/discount-label';
+import { formatPrice } from '@/lib/storefront/format';
 import { CartIdentity } from './components/cart-identity';
-import { PlaceChangeCard } from './components/place-change-card';
-import { AwaitingPaymentNotice } from './components/awaiting-payment-notice';
-import { CartCoupon } from './components/cart-coupon';
-import { CartCheckoutBar } from './components/cart-checkout-bar';
-import { EmptyCart } from './components/empty-cart';
-import { CartUnreachable } from './components/cart-unreachable';
-import { CartSkeleton } from './components/cart-skeleton';
-import type { CartViewProps } from './cart-types';
+import { useCheckoutGate } from './components/cart-summary';
+import { placeChangeText } from './components/place-change-card';
+import { PhoneCartLine } from './components/phone-cart-line';
+import { PhoneCartRowsSkeleton } from './components/phone-cart-skeleton';
+import type { CartCopy, CartViewProps } from './cart-types';
 
 /**
- * Sepet — mobil düzeni (tasarım: `Musteri - Sepet.dc.html`, "Sepet Mobil" + "Bos Sepet Mobil").
+ * Sepet — TELEFON görünümü: native sepet ekranının (`apps/mobile/src/screens/cart/cart-screen.tsx`) web ikizi
+ * (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Metin ortak sözlükten
+ * (`@lezzet/i18n/customer/cart`), satır `PhoneCartLine`.
  *
- * Üst satır ÜÇ PARÇADIR: geri · başlık · kalem sayısı. Uygulama hissiyatının taşıyıcısı bu satır —
- * masaüstündeki gibi alt alta dizilseydi ekranın üçte biri başlığa giderdi. Satır boş sepette de
- * KALIR (masaüstünde kalkar): mobilde geri dönüş yolu ekranın üstündedir, kahramanın içinde değil.
- * Geri bağlantısının metni bağlama göre değişir — dolu sepette "devam et" (alışverişe), boş sepette
- * doğrudan "katalog" (gidilecek yeri adıyla söyler).
+ * Sıra native'in sırası: başlık satırı (‹ · Sepet · adet) → teslimat adresi künyesi → bu adrese gelemeyenlerin TEK
+ * uyarısı → satırlar (grup başlıkları yalnız birden çok grup doluyken; bölünmüş sepette grubun künyesi kendi
+ * kalemlerinin ardında, kargo grubunun ayrı sipariş düğmesiyle) → ücretsiz kargo · bölünme notları → kupon (uygulanmış
+ * satır ya da davet; kod alttan açılan çekmecede) → elinin altındaki indirim → tutar özeti → engeller → "Alışverişe
+ * devam et" → yapışkan "Siparişi tamamla" barı. Engelin kısa sebebi düğmenin ÜSTÜNDE (native 16.08: sebep dipte
+ * kalınca kilitli düğme neden kilitli olduğunu söylemiyordu); uzun açıklama akıştaki kutuda.
  *
- * Toplam ve tek aksiyon ekranın altındaki koyu çubukta sabit durur (`CartCheckoutBar`); tutar
- * dökümü akıştaki özet kartında kalır. Boş sepette çubuk HİÇ YOKTUR — sabitlenecek tutar yok.
+ * ── WEB'E ÖZGÜ ─────────────────────────────────────────────────────────────
+ * · Kimlik ve adres SEPETTE çözülür (13.09): misafire adres künyesinin yerinde giriş bloğu (`CartIdentity`); barın
+ *   kilidi sepetin engelinden SONRA kimlik/adres kapısını da okur (`useCheckoutGate`) — kargo grubunun düğmesi de.
+ * · Ödemesi beklenen kart siparişi (07.18), yer değişimi (19.7) ve tekrar siparişin eksik gelen kalemleri uyarıların
+ *   ilki; sonraya kaydedilenler (K33) satırların ardında — native'de bu dört hâl yok.
+ * · Tutar ÖDENECEK tutardır (`cartPayableCents`, 19.08): sepetin tamamı kargodaysa kargo ücreti özetin kendi satırında.
+ * · Sepet tarayıcıda çözülür: ilk karede başlık gerçek, satırların yerinde iskelet — rota iskeletiyle (`loading.tsx`)
+ *   aynı parça, geçişte yerleşim kaymaz. Okuma düşerse boş sepet çizilmez: kalemler duruyor, "tekrar dene".
+ * · Boş sepet native'in boş hâli (ikon · başlık · cümle · "Kataloğa göz at"); masaüstünün öneri blokları telefonda yok.
  */
-export function CartMobile({ t, locale, emptyContext, awaitingPayment }: CartViewProps) {
-  const { view, ready, failed, addSkipped } = useCart();
-  // İlk kare BOŞ bırakılmaz: iskelet gerçek yerleşimin ölçüsünü taşır, içerik gelince zıplama olmaz.
-  if (!ready) return <CartSkeleton t={t} compact />;
 
-  // Okuma DÜŞTÜYSE boş ekran çizilmez: sepet boş değil, ulaşılamıyor (`CartUnreachable`).
-  if (failed) return <CartUnreachable t={t} compact />;
+/** Ürünler üstte, paketler altta — grup İÇİ sıra (native `productsFirst`, kullanıcı kararı 28.08); `sort` kararlı. */
+function productsFirst(lines: readonly CartLine[]): CartLine[] {
+  return [...lines].sort((a, b) => Number(a.kind === 'bundle') - Number(b.kind === 'bundle'));
+}
 
-  // Tekrar siparişten sonra satırlar henüz dönmemişken boş ekran çizilmez: üst satır "3 ürün"
-  // derken ortanın "Sepetiniz şu an boş" demesi ekranı kendisiyle çeliştiriyordu (29.07 denetimi).
-  if (view.lines.length === 0 && view.itemCount > 0) return <CartSkeleton t={t} compact />;
+const sumOf = (lines: readonly CartLine[]): number => lines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
 
-  const empty = view.lines.length === 0;
-  const groups = splitByRoute(view.lines);
-  const grouped = groups.route.length > 0 && groups.shipping.length > 0;
+/** Barın düğmesi — 52 · kontrol köşe · sert gölge; solda eylem, sağda tutar hapı (native `checkoutButton`). */
+const CHECKOUT = 'flex h-13 w-full items-center justify-between rounded-control pr-2 pl-5 font-sans text-step-sm text-card shadow-hard';
+
+/** Grubun künyesi — satırların kartından ayrı, kum kutu (native `groupCard`). */
+const GROUP_CARD = 'flex flex-col gap-1.5 rounded-card border-[1.5px] border-sand-300 bg-sand-100 p-4';
+
+export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
+  const copy = cartMessages[locale];
+  const { view, ready, failed, reload, applyCoupon, clearCoupon, addSkipped, placeChange, dismissPlaceChange } = useCart();
+  const { address, place, setPanelOpen } = useDeliveryPlace();
+  const gate = useCheckoutGate(t);
+  const [couponOpen, setCouponOpen] = useState(false);
+  // Kapanış SABİT bir işlev: `Dialog` odak ve kaydırma kilidini ona bağlı kuruyor; her karede yeni işlev kurulumu tazelerdi.
+  const closeCoupon = useCallback(() => setCouponOpen(false), []);
+
+  const header = (
+    <header className="flex items-center gap-2 px-4 pt-1.5">
+      <BackButton label={copy.back} fallback="/catalog" />
+      <h1 className="min-w-0 flex-1 font-serif text-screen-title text-ink">{copy.title}</h1>
+      {ready && !failed && (
+        <span className="font-sans text-note font-semibold text-muted">
+          {view.itemCount === 1 ? t.countOne : copy.count.replace('{n}', String(view.itemCount))}
+        </span>
+      )}
+    </header>
+  );
+
+  if (failed) {
+    return (
+      <div className="flex flex-col pt-2.5">
+        {header}
+        <div className="px-4.5 pt-4.5">
+          <Note tone="terracotta" description={copy.unresolved.failed} action={<TextAction label={t.unreachable.retry} onClick={reload} />} />
+        </div>
+      </div>
+    );
+  }
+
+  // İlk okuma sürüyor ya da tekrar siparişin satırları henüz dönmedi (başlıktaki sayı "3" derken orta "boş" demesin).
+  if (!ready || (view.lines.length === 0 && view.itemCount > 0)) {
+    return (
+      <div className="flex flex-col pt-2.5">
+        {header}
+        <div className="px-4.5 pt-4.5">
+          <PhoneCartRowsSkeleton label={copy.unresolved.loading} />
+        </div>
+      </div>
+    );
+  }
+
+  if (view.lines.length === 0) {
+    return (
+      <div className="flex min-h-dvh flex-col pt-2.5">
+        {header}
+        <EmptyState
+          fill
+          icon={<MobileCustomerIcon name="cart" size={80} className="text-sand-600" />}
+          title={copy.empty.title}
+          description={copy.empty.body}
+          action={<PrimaryButton label={copy.empty.cta} href="/catalog" />}
+        />
+      </div>
+    );
+  }
+
+  // Grubu SÖZLEŞME söyler (`line.group`), ekran türetmez: kapıya teslim · kargo · bu adrese gelemeyen.
+  const localLines = productsFirst(view.lines.filter((line) => line.group === 'local'));
+  const shippingLines = productsFirst(view.lines.filter((line) => line.group === 'shipping'));
+  const undeliverableLines = productsFirst(view.lines.filter((line) => line.group === 'undeliverable'));
+  const groups = [
+    { key: 'local', eyebrow: copy.group.local, lines: localLines },
+    { key: 'shipping', eyebrow: copy.group.shipping, lines: shippingLines },
+    { key: 'undeliverable', eyebrow: copy.group.undeliverable, lines: undeliverableLines },
+  ].filter((group) => group.lines.length > 0);
+  // İKİ SİPARİŞ yalnız gerçekten iki sipariş doğacaksa: gelemeyen kalem bir sipariş açmaz, sepette bekler.
+  const split = localLines.length > 0 && shippingLines.length > 0;
+  const localItemsCents = sumOf(localLines);
+  const shippingItemsCents = sumOf(shippingLines);
+  // Kargo ücreti ve eşiğe kalan motordan: istemci eşik aritmetiği yapmaz.
+  const fee = shippingGroupFee(view);
+  const placeLabel = address?.postalCode ?? place?.postalCode ?? '';
+
+  const discount = view.discount;
+  // İndirim tutarı türetilir, yeniden hesaplanmaz — kararın sahibi motor.
+  const discountCents = view.subtotalCents - view.totalCents;
+  const rejected = discount.status === 'rejected' ? discount : null;
+  const rejectionText =
+    rejected === null
+      ? null
+      : rejected.reason === 'outranked'
+        ? copy.coupon.rejected.outranked.replace('{amount}', formatPrice(rejected.appliedInsteadCents, locale))
+        : copy.coupon.rejected[rejected.reason];
+
+  const reach = view.reachableDiscount;
+  const reachableNote =
+    reach === null
+      ? null
+      : (reach.label === null ? copy.summary.reachableAnon : copy.summary.reachable.replace('{label}', resolveLocalizedText(reach.label, locale)))
+          .replace('{missing}', formatPrice(reach.missingCents, locale))
+          .replace('{amount}', formatPrice(reach.projectedCents, locale));
+
+  const summaryRows: SummaryRow[] = [
+    { key: 'subtotal', label: copy.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
+    ...(discountCents > 0
+      ? [{ key: 'discount', label: discountLabel(discount, summaryCopy(locale), locale), value: `−${formatPrice(discountCents, locale)}`, tone: 'olive' as const }]
+      : []),
+    // Sepetin tamamı kargodaysa tek sipariş doğar ve ücreti BELLİ — saklamak müşteriyi kasada sürprizle karşılardı.
+    ...(view.shippingOnly
+      ? [{ key: 'shipping', label: t.group.shippingRow, value: fee.feeCents > 0 ? formatPrice(fee.feeCents, locale) : t.group.free }]
+      : []),
+    // Gelemeyen kalem toplamda DURUR ama siparişe girmez: kapsam belirsiz kalmasın diye ayrı satır (native 10.08).
+    ...(view.undeliverableSubtotalCents > 0
+      ? [{ key: 'undeliverable', label: copy.summary.undeliverable, value: formatPrice(view.undeliverableSubtotalCents, locale) }]
+      : []),
+  ];
+  const summaryNote = [
+    copy.summary.note,
+    view.undeliverableSubtotalCents > 0 ? copy.summary.undeliverableNote : null,
+    discountCents > 0 ? copy.summary.singleRule : null,
+    // İki gruplu sepette indirim iki siparişe dağılacak: burada tek sayı "bunu ödeyeceksiniz" diye okunmasın.
+    split && discountCents > 0 ? t.group.discountSplit : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' ');
+
+  // Sıra anlamlı: satılamayan kalem asgari sepetten ÖNCE (kalem çıkınca tutar da değişir), kimlik/adres kapısı en son.
+  const barBlockText = view.hasBlocked
+    ? copy.barBlock.blocked
+    : !view.minBasketOk
+      ? copy.barBlock.minimum.replace('{missing}', formatPrice(view.missingForMinBasketCents, locale))
+      : gate;
+  // Bölünmüş sepette bar ROTA siparişinin tutarını yazar: düğme o siparişi açıyor.
+  const barTotal = split ? localItemsCents : cartPayableCents(view);
+  const barInner = (
+    <>
+      <span>{copy.checkout}</span>
+      <span className="rounded-badge bg-scrim-soft px-3.5 py-2.5">{formatPrice(barTotal, locale)}</span>
+    </>
+  );
+
+  const shippingBreakdown = [
+    fee.feeCents > 0
+      ? copy.group.shippingFee.replace('{items}', formatPrice(shippingItemsCents, locale)).replace('{fee}', formatPrice(fee.feeCents, locale))
+      : copy.group.shippingFeeFree.replace('{items}', formatPrice(shippingItemsCents, locale)),
+    fee.remainingForFreeCents > 0 ? copy.group.shippingRemaining.replace('{amount}', formatPrice(fee.remainingForFreeCents, locale)) : null,
+    copy.group.shippingPayment,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
+
+  // Ücretsiz kargo eşiği YALNIZ kargo grubu varken anlamlı; bölünmüş sepette aynı bilgi grubun kendi kutusunda.
+  const freeShippingNote =
+    view.freeShippingCents === 0 || shippingLines.length === 0 || split ? null : fee.remainingForFreeCents > 0 ? (
+      <Note tone="warm" description={copy.freeShipping.remaining.replace('{amount}', formatPrice(fee.remainingForFreeCents, locale))} />
+    ) : (
+      <Note tone="olive" description={copy.freeShipping.reached} />
+    );
 
   return (
-    <div className={['flex flex-col pt-2', empty ? '' : 'pb-28'].join(' ')}>
-      {/* Huninin ORTAK başlığı (`FunnelHeader` künyesi): SARMALAYICISIZ — yapışkan bar ancak uzun
-          kök konteynerin doğrudan çocuğuyken sayfa boyunca yapışır (künyedeki ders). Eyebrow
-          yerinde sayaç; tekil ayrı anahtar (FR/DE'de "1 produits/Produkte" dil hatasıydı). */}
-      <FunnelHeader
-        backLabel={t.backLabel}
-        fallback="/catalog"
-        eyebrow={view.itemCount === 1 ? t.countOne : t.count.replace('{n}', String(view.itemCount))}
-        title={t.title}
-      />
+    <div className="flex flex-col pt-2.5 pb-36">
+      {header}
 
-      {empty ? (
-        <EmptyCart t={t} locale={locale} context={emptyContext} compact />
-      ) : (
-        <>
-          {/* Bal tonu: müşteri hata yapmadı, stok değişti (masaüstüyle aynı gerekçe). */}
-          {view.hasBlocked && (
-            <div className="mx-4 rounded-soft border border-honey-line bg-honey-bg px-3.5 py-2.5 font-sans text-note font-semibold text-honey">
-              {t.blockedNotice}
-            </div>
-          )}
-          {/* Tekrar siparişin eksik geldiği sepette söylenir — masaüstüyle aynı gerekçe. */}
-          {addSkipped !== null && (
-            <div className="mx-4 rounded-soft border border-honey-line bg-honey-bg px-3.5 py-2.5 font-sans text-note font-semibold text-honey">
-              {t.empty.skipped.replace('{n}', String(addSkipped))}
-            </div>
-          )}
-          <div className="flex flex-col gap-2.5 px-4 py-3.5">
-            {/* Ödemesi beklenen kart siparişi (07.18) — kalem uyarılarından önce, masaüstüyle aynı gerekçe. */}
-            {awaitingPayment && <AwaitingPaymentNotice t={t} locale={locale} awaiting={awaitingPayment} compact />}
-            {/* Yer değişimi bildirimi kalem uyarılarının ilki — masaüstünde de kalem listesinin üstünde (14.09). */}
-            <PlaceChangeCard t={t} locale={locale} compact />
-            {/* K32 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. Posta
-                kodu sepette sorulmaz: tek soru yeri başlıktaki hap (kullanıcı kararı 14.09). */}
-            <PlaceRestriction
-              locale={locale}
-              lines={view.lines}
-              minBasketCents={view.minBasketCents}
-              freeShippingCents={view.freeShippingCents}
-              compact
-            />
-            {/* Masaüstüyle aynı ayrım, aynı bileşen — mobilde yalnız daha dar çizilir. */}
-            {grouped ? (
-              <>
-                <CartGroup kind="route" lines={groups.route} view={view} t={t} locale={locale} compact />
-                <CartGroup kind="shipping" lines={groups.shipping} view={view} t={t} locale={locale} compact />
-              </>
-            ) : (
-              view.lines.map((line) => <CartLineRow key={cartKey(line)} line={line} t={t} locale={locale} compact />)
-            )}
-            {/* K33 · Sonraya kaydedilenler; boşken hiç çizilmez. */}
-            <SavedList locale={locale} compact />
-            {/* KİM ve NEREYE — özetin üstünde, masaüstündeki sağ sütunla aynı sıra (13.09). */}
-            <CartIdentity t={t} locale={locale} compact />
-            {/* Mobilde kupon özetin ÜSTÜNDE (tasarım): indirim uygulanınca özet zaten onun sonucunu
-                gösteriyor — sonucu sebebinden önce okutmak sırayı tersine çevirirdi. */}
-            <CartCoupon t={t} locale={locale} />
-            <CartSummary view={view} t={t} locale={locale} compact grouped={grouped} />
+      <div className="flex flex-col gap-3 px-4.5 pt-4.5">
+        {awaitingPayment && (
+          <Note
+            tone="warm"
+            title={t.awaitingPayment.title}
+            description={t.awaitingPayment.body.replace('{amount}', formatPrice(awaitingPayment.totalCents, locale))}
+            action={<TextAction label={t.awaitingPayment.cta} href={{ pathname: '/checkout/[reference]', params: { reference: awaitingPayment.orderId } }} />}
+          />
+        )}
+        {/* Sessiz daralma yok: yer değişince her kalemin yeni hâli tek tek söylenir, hiçbir kalem silinmez. */}
+        {placeChange !== null && placeChange.length > 0 && (
+          <Note
+            tone="warm"
+            title={t.placeChange.title.replace('{n}', String(placeChange.length))}
+            description={t.placeChange.note}
+            action={<TextAction label={t.placeChange.dismiss} onClick={dismissPlaceChange} />}
+          >
+            <ul className="flex flex-col gap-1 pb-1">
+              {placeChange.map((change, index) => (
+                <li key={`${change.kind}:${index}`} className="font-sans text-note leading-[1.6]">
+                  {placeChangeText(change, t, locale)}
+                </li>
+              ))}
+            </ul>
+          </Note>
+        )}
+        {addSkipped !== null && <Note tone="warm" description={t.empty.skipped.replace('{n}', String(addSkipped))} />}
+
+        <CartIdentity t={t} locale={locale} compact />
+
+        {/* Gelemeyen kalemlerin TEK uyarısı satırların üstünde; ton `warm` — hata değil, adresin gerçeği. Adres varken
+            çıkış künyedeki "Değiştir"; adres yokken kutunun kendi çıkışı posta kodu çekmecesi. "Kaldırın" yazılmaz. */}
+        {undeliverableLines.length > 0 && (
+          <Note
+            tone="warm"
+            title={copy.undeliverable.title.replace('{place}', placeLabel)}
+            description={copy.undeliverable.body.replace('{place}', placeLabel)}
+            action={address ? undefined : <TextAction label={copy.undeliverable.change} onClick={() => setPanelOpen(true)} />}
+          />
+        )}
+
+        <div className="flex flex-col gap-2.5">
+          {groups.map((group) => (
+            <Fragment key={group.key}>
+              {groups.length > 1 && <SectionHeader eyebrow={group.eyebrow} />}
+              {group.lines.map((line) => (
+                <PhoneCartLine key={cartKey(line)} line={line} copy={copy} t={t} locale={locale} />
+              ))}
+              {split && group.key === 'local' && (
+                <div className={GROUP_CARD}>
+                  <span className="font-sans text-body font-semibold text-ink">{copy.group.routeTotal.replace('{amount}', formatPrice(localItemsCents, locale))}</span>
+                  <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.group.routeNote}</span>
+                </div>
+              )}
+              {/* Kargo grubunun KENDİ eylemi — ikinci ve isteğe bağlı sipariş. Asgari sepet bu gruba işlemez;
+                  satılamayan kalem ve kimlik/adres kapısı işler. */}
+              {split && group.key === 'shipping' && (
+                <div className={GROUP_CARD}>
+                  <span className="font-sans text-body font-semibold text-ink">
+                    {copy.group.shippingTotal.replace('{amount}', formatPrice(shippingItemsCents + fee.feeCents, locale))}
+                  </span>
+                  <span className="font-sans text-body-sm leading-[1.6] text-muted">{shippingBreakdown}</span>
+                  <SecondaryButton label={copy.group.shippingCta} href={{ pathname: '/checkout', query: { group: 'shipping' } }} disabled={view.hasBlocked || gate !== null} />
+                </div>
+              )}
+            </Fragment>
+          ))}
+        </div>
+
+        <SavedList locale={locale} compact />
+
+        {freeShippingNote}
+        {split && <Note tone="warm" description={copy.group.split} />}
+
+        {discount.status === 'applied' ? (
+          <div className="flex items-center gap-2.5 rounded-control bg-sand-150 px-3.5 py-3">
+            <MobileCustomerIcon name="coupon" size={17} className="flex-none text-olive-dark" />
+            <span className="min-w-0 flex-1 font-sans text-note font-bold text-olive-dark">{copy.coupon.applied.replace('{code}', discount.code)}</span>
+            <TextAction label={copy.coupon.remove} onClick={clearCoupon} ariaLabel={copy.coupon.removeLabel} />
           </div>
-          {/* Alt çubuk YALNIZ kapıya grubunu taşır (tasarım): asıl akış odur, kargo grubu kendi
-              kartında kendi eylemiyle durur. Tek çubukta iki tutar toplanmaz — toplandığında
-              müşteri tek bir ödemeyle her ikisini de aldığını sanırdı. */}
-          <CartCheckoutBar view={view} t={t} locale={locale} lines={grouped ? groups.route : view.lines} />
-        </>
-      )}
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCouponOpen(true)}
+            className="flex cursor-pointer items-center gap-2.5 rounded-card bg-sand-250 px-4 py-3.5 text-left transition-[scale,background-color] hover:bg-sand-300 active:scale-[0.98]"
+          >
+            <MobileCustomerIcon name="coupon" size={17} className="flex-none text-terracotta" />
+            <span className="min-w-0 flex-1 font-sans text-note font-bold text-ink">{copy.coupon.add}</span>
+            <span aria-hidden className="font-sans text-icon-sm leading-none text-sand-600">
+              ›
+            </span>
+          </button>
+        )}
+        {rejectionText !== null && <Note tone="terracotta" description={rejectionText} />}
+        {/* Sunucu yalnız KAZANILABİLİR olanı gönderir — boş vaat yerine sessizlik. */}
+        {reachableNote !== null && <Note tone="olive" description={reachableNote} />}
+
+        <SummaryPanel rows={summaryRows} totalLabel={copy.summary.total} totalValue={formatPrice(cartPayableCents(view), locale)} note={summaryNote} />
+
+        {view.hasBlocked && <Note tone="error" description={copy.blocked} />}
+        {/* Dipteki kutu EŞİĞİ ve ne yapılacağını söyler; eksik tutar barda (native 18.08 — aynı sayı iki kez okunmasın). */}
+        {!view.minBasketOk && <Note tone="terracotta" description={copy.minimum.replace('{minimum}', formatPrice(view.minBasketCents, locale))} />}
+
+        <div className="flex justify-center pt-1">
+          <TextAction label={copy.continue} href="/catalog" />
+        </div>
+      </div>
+
+      <StickyBar spacing="cart">
+        {barBlockText !== null && <p className="pb-2.5 text-center font-sans text-note font-semibold text-terracotta">{barBlockText}</p>}
+        {barBlockText !== null ? (
+          <button type="button" disabled className={`${CHECKOUT} cursor-not-allowed bg-disabled-fill`}>
+            {barInner}
+          </button>
+        ) : (
+          // Sepetin tamamı kargodaysa açılacak taslak da KARGO taslağıdır (19.15).
+          <Link
+            href={view.shippingOnly ? { pathname: '/checkout', query: { group: 'shipping' } } : '/checkout'}
+            className={`${CHECKOUT} cursor-pointer bg-olive transition-[translate,box-shadow,background-color] hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none`}
+          >
+            {barInner}
+          </Link>
+        )}
+      </StickyBar>
+
+      {couponOpen && <CouponSheet copy={copy} locale={locale} onApply={applyCoupon} onClose={closeCoupon} />}
     </div>
+  );
+}
+
+interface CouponSheetProps {
+  copy: CartCopy;
+  locale: Locale;
+  onApply: (code: string) => void;
+  onClose: () => void;
+}
+
+/**
+ * Kupon kodu çekmecesi — native kupon yüzeninin (kitin `BottomSheet`i + alan + birincil düğme) web ikizi. Durum
+ * çekmecenin KENDİSİNDE: yazarken sepet yeniden çizilmez. Ret sunucudan gelir ve sepette yazar (native'in kararı —
+ * doğrulama bir ağ turu, çekmeceyi cevabı beklerken açık tutmak müşteriyi boş formun başında bekletirdi); alanın kendi
+ * hata satırının tek işi boş kodu göndermemek.
+ */
+function CouponSheet({ copy, locale, onApply, onClose }: CouponSheetProps) {
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = () => {
+    // Kod bir KİMLİKTİR, dilin harf kuralına tabi değil: `toLocaleUpperCase('tr')` "i"yi "İ" yapar, kod bulunamazdı.
+    const code = value.trim().toUpperCase();
+    if (code === '') {
+      setError(copy.coupon.empty);
+      return;
+    }
+    onApply(code);
+    onClose();
+  };
+
+  return (
+    <Dialog placement="sheet" title={copy.coupon.sheetTitle} closeLabel={placeMessages[locale].close} onClose={onClose}>
+      <FormInputField
+        label={copy.coupon.field}
+        hideLabel
+        value={value}
+        placeholder={copy.coupon.placeholder}
+        autoCapitalize="characters"
+        autoComplete="off"
+        error={error ?? undefined}
+        onChange={(e) => {
+          setValue(e.target.value);
+          // Yazmaya başlayınca hata düşer: eski bir ret yeni kodun üstünde durmasın.
+          setError(null);
+        }}
+        onKeyDown={(e) => e.key === 'Enter' && submit()}
+      />
+      <PrimaryButton label={copy.coupon.apply} onClick={submit} shape="block" />
+    </Dialog>
   );
 }

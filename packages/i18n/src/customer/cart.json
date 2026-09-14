@@ -113,7 +113,7 @@
       "cta": "Parcourir le catalogue"
     },
     "line": {
-      "bundle": "Panier prêt",
+      "bundle": "Coffret prêt",
       "unknown": "Produit retiré de la vente",
       "unit": "{variant} · {price}",
       "discounted": "Prix remisé",

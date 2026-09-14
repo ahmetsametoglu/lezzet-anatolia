@@ -39,7 +39,8 @@ interface PlaceChangeCardProps {
   compact?: boolean;
 }
 
-function lineText(change: CartLineChange, t: Messages, locale: Locale): string {
+/** Değişimin cümlesi — masaüstü kartı ve telefonun yer değişimi kutusu (`cart.mobile`) aynı cümleyi kurar. */
+export function placeChangeText(change: CartLineChange, t: Messages, locale: Locale): string {
   const c = t.placeChange;
   switch (change.kind) {
     case 'to_shipping':
@@ -80,7 +81,7 @@ export function PlaceChangeCard({ t, locale, compact = false }: PlaceChangeCardP
           // ve liste zaten tek seferlik bir anlık görüntü — yeniden sıralanmıyor.
           <li key={`${change.kind}:${index}`} className="flex items-start gap-2 font-sans text-note leading-relaxed text-body">
             {icon && <Icon name={icon} size={14} className={['mt-0.75 flex-none', compact ? 'text-muted' : 'text-honey'].join(' ')} />}
-            <span>{lineText(change, t, locale)}</span>
+            <span>{placeChangeText(change, t, locale)}</span>
           </li>
         );
       })}

@@ -43,7 +43,7 @@ import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { CartLineRow } from './cart-line-row';
 import { CartSkeleton } from './cart-skeleton';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/cart';
 
 /*
   SEPET (v3 `vCart`) — satırlar, kupon, tutar özeti ve yapışkan "siparişi tamamla" barı.

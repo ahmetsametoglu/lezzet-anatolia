@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import { isValidEmail } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
+import cartMessages from '@lezzet/i18n/customer/cart';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Button, focusRingClass } from '@/components/customer/ui/button';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { cardClass } from '@/components/customer/ui/card';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { RadioMark } from '@/components/customer/form/radio-mark';
@@ -43,9 +45,11 @@ import type { Messages } from '../cart-types';
  *   (baş harfli yuvarlak · ad · e-posta · "Hesabım") ve adres kartı — kayıtlı adresler seçim kartı
  *   olarak (seçmek = varsayılan yapmak), "+ Yeni adres", altta teslim şeridi. Düzenleme ve silme
  *   hesap sayfasında; v1 sepette "Değiştir · Düzenle" çizmiyor.
- * · Girişli, MOBİL WEB → seçili teslimat adresi + Değiştir · Düzenle; adres yoksa "+ Adres ekle"
- *   (`AddressPickerDialog`). Telefon görünümünün tasarım kaynağı native uygulama (08.58, 14.09) —
- *   o çizimi mobil web şeridi kurar, bu tur ona dokunmadı.
+ * · Girişli, MOBİL WEB → native sepetin teslimat adresi KÜNYESİ (08.58, 14.09): kutu değil, sepetin başında
+ *   duran bir durum bildirimi — terracotta üstbaşlık · tek satır adres · not · "Değiştir" (adres penceresi, ekran
+ *   terk edilmez); adres yoksa aynı yerde "+ Adres ekle". Metin ortak sepet sözlüğünden (`@lezzet/i18n/customer/cart`).
+ *   Misafirin giriş bloğu telefonda native sepetin grup kutusunun kabuğunda (kum zemin, kum çerçeve): native'de sepet
+ *   girişsiz açılmıyor, bloğun karşılığı yok.
  *
  * ── GİRİŞ BLOĞU ÖDEME EKRANININ ESKİ BLOĞU DEĞİL ────────────────────────────
  * Oradaki "adım 0" kartı 480 px'lik ortalanmış bir sütundu ve kullanıcı sepet için onu kaba buldu.
@@ -65,7 +69,7 @@ interface CartIdentityProps {
 export function CartIdentity({ t, locale, compact = false }: CartIdentityProps) {
   const account = useAccount();
   if (!account) return <CartLogin t={t} locale={locale} compact={compact} />;
-  return compact ? <CartAddress t={t} locale={locale} compact /> : <CartAccountDesktop t={t} locale={locale} account={account} />;
+  return compact ? <CartAddress t={t} locale={locale} /> : <CartAccountDesktop t={t} locale={locale} account={account} />;
 }
 
 function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
@@ -127,9 +131,15 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
   };
 
   // Masaüstünde DİKKAT TONU (kullanıcı isteği 14.09): ödemeye geçmenin ilk şartı bu kart, eksik adım
-  // sepetin geri kalanından ayrışsın. Mobil webin çizimi native uygulamadan (08.58) — ona dokunulmadı.
+  // sepetin geri kalanından ayrışsın. Telefonda native sepetin grup kutusunun kabuğu (dosya künyesi).
   return (
-    <div className={cardClass({ compact, pad: 'snug', compactPad: 'sm', gap: compact ? 'xs' : 'md', tone: compact ? 'plain' : 'attention' })}>
+    <div
+      className={
+        compact
+          ? 'flex flex-col gap-2.5 rounded-card border-[1.5px] border-sand-300 bg-sand-100 p-4'
+          : cardClass({ pad: 'snug', gap: 'md', tone: 'attention' })
+      }
+    >
       <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{c.loginTitle}</span>
       <p className="font-sans text-note leading-relaxed text-body">{c.loginBody}</p>
 
@@ -178,50 +188,36 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
   );
 }
 
-/** Mobil web çizimi — seçili adres + Değiştir · Düzenle (dosya künyesi). */
-function CartAddress({ t, locale, compact }: Required<CartIdentityProps>) {
+/**
+ * Telefon görünümü — native sepetin teslimat adresi künyesi (`cart-screen.tsx` `place`, dosya künyesi). Künye sepetin
+ * NEYE göre değerlendirildiğini söyler; adresi değiştirmek sepeti terk ettirmez (native 10.08 kullanıcı bulgusu). Adres
+ * tek satır (native `addressLine`: sokak · posta kodu şehir); düzenleme hesap sayfasında — native künye onu çizmiyor.
+ */
+function CartAddress({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
+  const copy = cartMessages[locale].address;
   const c = t.identity;
   const { address } = useDeliveryPlace();
-  const [open, setOpen] = useState<'list' | 'new' | 'edit' | null>(null);
+  const [open, setOpen] = useState<'list' | 'new' | null>(null);
 
   return (
-    <div className={cardClass({ compact, pad: 'snug', compactPad: 'sm', gap: compact ? 'xs' : 'md' })}>
-      <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{c.addressTitle}</span>
-
+    <div className="flex flex-col items-start gap-0.5 px-4 pb-2.5">
+      <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{copy.eyebrow}</span>
       {address ? (
         <>
-          <div className="flex flex-col gap-0.5">
-            <span className="font-sans text-body-sm font-bold text-ink">{address.label || address.city}</span>
-            <span className="font-sans text-note leading-relaxed text-body">
-              {address.line1}
-              {address.line2 && `, ${address.line2}`}
-            </span>
-            <span className="font-sans text-note leading-relaxed text-body">
-              {address.postalCode} {address.city}
-            </span>
-          </div>
-          <span className="font-sans text-micro text-muted">{c.addressBody}</span>
-          {/* İki metin bağı, düğme değil: panel dar, eylemler ikincil — asıl eylem aşağıdaki
-              "Ödemeye geç". Hesap sayfasının adres satırıyla aynı dil. */}
-          <div className="flex flex-wrap items-center gap-3 font-sans text-note font-semibold">
-            <button type="button" onClick={() => setOpen('list')} className="cursor-pointer text-olive underline hover:text-olive-dark">
-              {c.addressChange}
-            </button>
-            <button type="button" onClick={() => setOpen('edit')} className="cursor-pointer text-muted underline hover:text-olive">
-              {c.addressEdit}
-            </button>
-          </div>
+          <span className="font-sans text-body font-semibold text-ink">
+            {address.line2 ? `${address.line1}, ${address.line2}` : address.line1}, {address.postalCode} {address.city}
+          </span>
+          <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.note}</span>
+          <TextAction label={copy.change} onClick={() => setOpen('list')} />
         </>
       ) : (
         <>
-          <p className="font-sans text-note leading-relaxed text-body">{c.addressEmpty}</p>
-          <Button variant="secondary" size="sm" compact={compact} onClick={() => setOpen('new')}>
-            {c.addressAdd}
-          </Button>
+          <span className="font-sans text-body-sm leading-[1.6] text-muted">{c.addressEmpty}</span>
+          <TextAction label={c.addressAdd} onClick={() => setOpen('new')} />
         </>
       )}
 
-      {open && <AddressPickerDialog locale={locale} compact={compact} initialMode={open} onClose={() => setOpen(null)} />}
+      {open && <AddressPickerDialog locale={locale} compact initialMode={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }

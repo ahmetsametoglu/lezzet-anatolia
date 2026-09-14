@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react-native
 import type { CartState } from '@/screens/customer-kit/cart-store';
 import { CartScreen } from './cart-screen';
 import { cartView, cartViewBundleLine, cartViewLine } from './cart-view-fixture';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/cart';
 
 /*
   SEPETİN ÜÇ GRUBU — ölçülmüş bir arızanın testi (10.08, cihazda görüldü).

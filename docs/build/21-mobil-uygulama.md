@@ -2207,7 +2207,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
 - [x] (21.42) **SEPET VE ADRESTE İKİ ÇELİŞKİ KAPANDI — biri cümlenin tabanını söylemesi, öteki
   uydurma bir genellemenin kaldırılması (kullanıcı kararları 11.08).**
-  `touches:` `apps/mobile/src/screens/cart/messages.json` ·
+  `touches:` ~~`apps/mobile/src/screens/cart/messages.json`~~ (14.09 → `packages/i18n/src/customer/cart.json`, ortak sözlük) ·
   `apps/mobile/src/screens/customer-kit/address-form.tsx` ·
   `apps/mobile/src/screens/customer-kit/address-sheet-messages.json`
 
@@ -3625,7 +3625,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   - Temiz prebuild sonrası ilk Android derlemesi **1 sa 11 dk**; iOS simülatör derlemesi 0 hata.
 
 - [x] (21.67) **ASGARİ SEPET UYARISI KARARIN VERİLDİĞİ YERDE (kullanıcı bulgusu 16.08)**
-  `touches:` `apps/mobile/src/screens/cart/cart-screen.tsx` · `apps/mobile/src/screens/cart/messages.json` ·
+  `touches:` `apps/mobile/src/screens/cart/cart-screen.tsx` · ~~`apps/mobile/src/screens/cart/messages.json`~~ (14.09 → `packages/i18n/src/customer/cart.json`, ortak sözlük) ·
   `apps/mobile/src/screens/product/product-detail-screen.tsx` · `packages/i18n/src/customer/product.json`
 
   Kullanıcı: *"Sepet hazırken müşteriyi asgari sepet için uyarmıyoruz, ödemeye kalkınca
@@ -6768,7 +6768,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (cihaz turu bulgusu 28.08, uçtan ölçüldü)
   `touches:` `packages/database/src/services/cart.service.ts` ·
   `packages/database/src/services/cart.test.ts` ·
-  `apps/mobile/src/screens/cart/cart-screen.tsx` · `apps/mobile/src/screens/cart/messages.json`
+  `apps/mobile/src/screens/cart/cart-screen.tsx` · ~~`apps/mobile/src/screens/cart/messages.json`~~ (14.09 → `packages/i18n/src/customer/cart.json`, ortak sözlük)
 
   **Ölçüm.** Uydurma bir varyant kimliği (`00000000-0000-4000-8000-000000000001`) `POST
   /me/cart/items` ile **200** aldı; sepete adsız (`name: ""`), fiyatsız (`unitPriceCents: null`)
