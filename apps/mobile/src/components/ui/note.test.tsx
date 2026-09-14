@@ -33,11 +33,12 @@ describe('Note', () => {
     expect(screen.getByRole('alert')).toBeOnTheScreen();
   });
 
-  it('sıcak ton uygulamanın yeni kum kademesini kullanır ve çerçevesizdir', async () => {
+  it('sıcak ton kum skalasının ara kademesini kullanır ve çerçevesizdir', async () => {
     await render(<Note description="Puanınız: 240" tone="warm" testID="note" />);
 
     expect(screen.getByTestId('note')).toHaveStyle({
-      backgroundColor: customerAppColors['sand-150'],
+      // `sand-150` telefon görünümüyle tabana çıktı (14.09) — değer aynı, kaynak taban.
+      backgroundColor: customerColors['sand-150'],
       borderColor: 'transparent',
     });
   });

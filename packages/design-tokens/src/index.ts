@@ -17,6 +17,7 @@ export {
   customerHoney,
   customerClosed,
   customerInteraction,
+  customerScrim,
   customerColors,
   customerText,
   customerRadius,
@@ -25,9 +26,7 @@ export {
 } from './customer';
 export {
   customerAppOverrides,
-  customerAppSand,
   customerAppError,
-  customerAppScrim,
   customerAppCreamGlass,
   customerAppAccent,
   customerAppBrand,

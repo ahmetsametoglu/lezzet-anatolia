@@ -1,4 +1,4 @@
-import { customerAppRadius, customerColors, customerRadius } from '@lezzet/design-tokens';
+import { customerColors, customerRadius } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { Chip } from './chip';
@@ -38,9 +38,10 @@ describe('Chip', () => {
     });
   });
 
-  it('iki yarıçap kademesi: kontrol (uygulama seti) ⟷ yumuşak (taban)', async () => {
+  it('iki yarıçap kademesi: kontrol (resmî set) ⟷ yumuşak (web v1)', async () => {
+    // İkisi de artık tabanda: `control` telefon görünümüyle oraya çıktı (14.09).
     await render(<Chip label="×5" onPress={jest.fn()} testID="a" />);
-    expect(screen.getByTestId('a')).toHaveStyle({ borderRadius: Number.parseFloat(customerAppRadius.control) });
+    expect(screen.getByTestId('a')).toHaveStyle({ borderRadius: Number.parseFloat(customerRadius.control) });
 
     await render(<Chip label="×10" onPress={jest.fn()} shape="soft" testID="b" />);
     expect(screen.getByTestId('b')).toHaveStyle({ borderRadius: Number.parseFloat(customerRadius.soft) });

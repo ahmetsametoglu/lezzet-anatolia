@@ -44,14 +44,15 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
     expect(lightTheme.radius.pill).toBe(Number.parseFloat(customerAppRadius.pill));
   });
 
-  it('uygulamaya-yeni aileleri ekler (hata · örtü · marka · kum kademeleri)', () => {
+  it('uygulamaya-yeni aileleri ekler (hata · marka), tabana çıkanları tabandan okur (örtü · kum · yarıçap)', () => {
     expect(lightTheme.colors.error).toBe(customerAppColors.error);
-    expect(lightTheme.colors.scrim).toBe(customerAppColors.scrim);
-    expect(lightTheme.colors['sand-150']).toBe(customerAppColors['sand-150']);
-    expect(lightTheme.colors['sand-250']).toBe(customerAppColors['sand-250']);
     expect(lightTheme.colors['brand-google']).toBe(customerAppColors['brand-google']);
-    expect(lightTheme.radius.badge).toBe(Number.parseFloat(customerAppRadius.badge));
-    expect(lightTheme.radius.control).toBe(Number.parseFloat(customerAppRadius.control));
+    // Telefon görünümüyle tabana çıkanlar (14.09): değer aynı, kaynak taban.
+    expect(lightTheme.colors.scrim).toBe(customerColors.scrim);
+    expect(lightTheme.colors['sand-150']).toBe(customerColors['sand-150']);
+    expect(lightTheme.colors['sand-250']).toBe(customerColors['sand-250']);
+    expect(lightTheme.radius.badge).toBe(Number.parseFloat(customerRadius.badge));
+    expect(lightTheme.radius.control).toBe(Number.parseFloat(customerRadius.control));
   });
 
   it('üstbaşlığın ÜÇ alt-anahtarı da uygulamadan gelir (yarım ezme yok)', () => {
@@ -63,7 +64,7 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
   });
 
   it('px kademeleri sayıya (dp) çevrilir, em harf aralığı olduğu gibi kalır', () => {
-    expect(lightTheme.text['screen-title']).toBe(stop(customerAppText['screen-title']));
+    expect(lightTheme.text['screen-title']).toBe(stop(customerText['screen-title']));
     expect(lightTheme.text['h1--line-height']).toBe(Number(customerText['h1--line-height']));
     expect(lightTheme.text.button).toBe(stop(customerAppText.button));
     expect(lightTheme.text['button--font-weight']).toBe(700);
@@ -78,10 +79,10 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
   it('krem cam ailesi ve tükendi örtüsü temaya geçer (Token Kararlari #17, #18)', () => {
     expect(lightTheme.colors['cream-glass']).toBe(customerAppColors['cream-glass']);
     expect(lightTheme.colors['cream-glass-soft']).toBe(customerAppColors['cream-glass-soft']);
-    expect(lightTheme.colors['scrim-72']).toBe(customerAppColors['scrim-72']);
-    // "TAKİP" çipinin ikilisi de envanterde (#19) — çip varyantı henüz yok, token var.
+    expect(lightTheme.colors['scrim-72']).toBe(customerColors['scrim-72']);
+    // "TAKİP" çipinin ikilisi de envanterde (#19): zemin uygulamada, metin (telefon, 14.09) tabanda.
     expect(lightTheme.colors['accent-leaf']).toBe(customerAppColors['accent-leaf']);
-    expect(lightTheme.colors['ink-deep']).toBe(customerAppColors['ink-deep']);
+    expect(lightTheme.colors['ink-deep']).toBe(customerColors['ink-deep']);
   });
 
   it('fotoğraf-üstü ROL ikilisi uygulamada aynı aileden okunur (#14 + #15)', () => {
@@ -162,10 +163,11 @@ describe('Operasyon teması ↔ üç katman kompozisyonu', () => {
   });
 
   it('ALT katmanlar sağlam kalır: müşteri uygulamasının kendi durakları da okunur', () => {
-    // Tasarımın kullandığı üç değer YALNIZ `customer-app.ts`te yaşıyor — alt evren kanıtı.
+    // Tasarımın kullandığı değerler müşteri katmanlarında yaşıyor — alt evren kanıtı.
     expect(operationsTheme.colors.error).toBe(customerAppColors.error);
     expect(operationsTheme.colors['disabled-fill']).toBe(customerAppColors['disabled-fill']);
-    expect(operationsTheme.colors['sand-150']).toBe(customerAppColors['sand-150']);
+    // `sand-150` telefon görünümüyle tabana çıktı (14.09); operasyon onu yine alt katmandan alır.
+    expect(operationsTheme.colors['sand-150']).toBe(customerColors['sand-150']);
     /* `error-bg` bu listeden ÇIKTI (30.08): operasyon mobil onu kendi ölçtüğü değerle eziyor
        (#fdf6f4) — v3'ün tonlu kartı çok açık bir zemin ister, müşteri setinin #f4e3e0'ı burada
        dolu bir uyarı bandı gibi duruyordu. Alt evren iddiası bozulmadı, bir istisnası oldu ve

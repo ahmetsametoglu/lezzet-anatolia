@@ -25,6 +25,15 @@
   AD KURALI: buraya eklenen anahtar uygulama katmanlarında (`customer-app.ts`, `operations-app.ts`)
   BOŞ bir ad olmalı — aynı ad kompozisyonda uygulamanın tonuyla sessizce ezilir. 14.09: web v1'in
   `ink-deep` ve `sand-250`i bu yüzden `ink-hover` ve `sand-275` oldu (uygulamada ikisi de başka ton).
+
+  ── TELEFON GÖRÜNÜMÜ TOKEN'I TABANA ÇIKARIR (kullanıcı kararı 14.09) ──────────────────────
+  Müşterinin telefon tasarımı native uygulamada ve web'in telefon görünümünde AYNI oldu. Web telefon
+  görünümünün kullandığı uygulama token'ı buraya çıkar ve `customer-app.ts`ten silinir; uygulama
+  teması kompozisyonla AYNI değeri almaya devam eder — değer değişmez, yalnız evi değişir. Çıkanlar
+  künyelerinde "(telefon, 14.09)" diye işaretli. Tabanda aynı adı BAŞKA değerle taşıyan fark
+  token'ları (`sand-300` · `olive-line` · `on-image-soft` · `card` · `pill` · `eyebrow` …) bu yoldan
+  çıkamaz: çıksalar masaüstü görünür biçimde değişirdi. Onlar masaüstü şeridiyle birlikte ele alınır
+  (`docs/build/08-musteri-app.md` 08.58, Faz 0 madde 3).
 */
 
 /* ── §0.1 Yüzey ve mürekkep ──────────────────────────────────────────────────
@@ -33,6 +42,9 @@
 export const customerSurface = {
   ink: '#343b41', // başlık, koyu blok zemini, birincil metin
   'ink-hover': '#2b3238', // koyu hapın üzerine gelinmiş hâli (v1 sepet hapı)
+  /* (telefon, 14.09) Örtü mürekkebinin KATI hâli (rgb 21,23,15) — Token Kararlari #19. `ink` yerine
+     seçildi çünkü açık yeşil zeminde #343b41 mavimsi duruyor. */
+  'ink-deep': '#15170f', // "TAKİP" çipinin metni
   body: '#6d7261', // gövde açıklaması, kart alt satırı
   muted: '#8a8270', // etiket, yardımcı satır, placeholder
   card: '#ffffff', // kart, dialog, girdi zemini
@@ -49,7 +61,13 @@ export const customerSand = {
   'sand-25': '#faf6ec', // sayfa zemini
   'sand-50': '#f3efe2', // ara zemin, gömülü panel, hover
   'sand-100': '#f0e9d6', // vurgulu bölüm, iç ayraç
+  /* (telefon, 14.09) Token Kararlari #2'nin iki ara kademesi: krem zeminde "seçili" ve "kart"
+     yüzeyleri 100 ile 300 arasında iki ayrı sıcaklık istiyor. */
+  'sand-150': '#efdfc2', // seçili kart, özet paneli, bildirim zili zemini
   'sand-200': '#ece5d2', // standart çerçeve, kart kenarı
+  /* Kararın "sand-100" diye adlandırdığı ton — o ad zaten #f0e9d6'nındı; resmî ad `sand-250`
+     (skalada 200 ile 300 arasında boş bir ad, kullanıcı onayı 07.08). */
+  'sand-250': '#ece3c8', // kart zemini, katalog dairesi
   'sand-275': '#e6dfcd', // başlık ve yer paneli alt çizgisi (v1)
   'sand-300': '#e0d8c2', // girdi kenarı, 2. çerçeve
   'sand-400': '#d8cfb6', // belirgin çerçeve
@@ -112,6 +130,20 @@ export const customerInteraction = {
   'hero-mid': '#6f7d3f',
 } as const satisfies Record<string, string>;
 
+/* ── Örtü (scrim) — Token Kararlari #5 · (telefon, 14.09) ────────────────────
+   Yüzen katmanın ve fotoğraf üstü yazının arkasındaki koyu örtü: tek mürekkep (`ink-deep`in
+   kendisi), dört yoğunluk. Opaklık ham yazılmaz, kademe adı kullanılır — "biraz daha koyu olsun"
+   kararı tek yerden verilir. Operasyonun `ops-scrim`'inden AYRI: o temayla döner, bu dönmez.
+   `.72` `.82`ye YUVARLANMAZ (Token Kararlari #18): `.82` metin koruma gradyanının ucudur ve işi
+   fotoğrafı OKUNUR kılmak, `.72`nin işi fotoğrafı SOLDURMAK; aynı değere çekilseler "bu ürün
+   alınamaz" bilgisi görsel olarak kaybolurdu. */
+export const customerScrim = {
+  'scrim-soft': 'rgba(21, 23, 15, 0.28)', // fotoğrafın üst kenarı, fotoğrafsız bant dairesi
+  scrim: 'rgba(21, 23, 15, 0.45)', // sayfa örtüsü, yer işaretinin filigranı
+  'scrim-72': 'rgba(21, 23, 15, 0.72)', // tükendi/pasif rozetinin zemini
+  'scrim-heavy': 'rgba(21, 23, 15, 0.82)', // fotoğrafın alt kenarı, üstünde başlık okunur
+} as const satisfies Record<string, string>;
+
 /* Müşteri renklerinin tam kümesi — CSS dosya sırasıyla (`--color-` öneki). */
 export const customerColors = {
   ...customerSurface,
@@ -121,6 +153,7 @@ export const customerColors = {
   ...customerHoney,
   ...customerClosed,
   ...customerInteraction,
+  ...customerScrim,
 } as const satisfies Record<string, string>;
 
 /* ── §0.4b Tipografi ölçeği (`--text-` öneki · aynı envanter bölümü) ─────────
@@ -201,18 +234,39 @@ export const customerText = {
   'eyebrow-sm': '11px',
   'eyebrow-sm--font-weight': '600',
   'eyebrow-sm--letter-spacing': '0.1em',
+
+  /* ROZET kademesi — Token Kararlari #16 · (telefon, 14.09). Native v3'ün en çok yinelenen öğesinin
+     (fiyat çipi · TÜKENDİ · İNDİRİM · TOPTAN · TAKİP) kendi kademesi; önce üç ayrı kademeden
+     devşiriliyordu ve biri değiştiği gün rozet sessizce bozulurdu. Aralık `.06em`: rozet tek
+     kelimedir, üstbaşlığın geniş aralığında harfler dağılıyordu. Küçük rozet yalnız ÖLÇÜ farkıdır —
+     ağırlık ve aralık `badge`inkinden okunur, ikinci kez yazılmaz. */
+  badge: '12.5px',
+  'badge--font-weight': '700',
+  'badge--letter-spacing': '0.06em',
+  'badge-sm': '10px',
+  /* (telefon, 14.09) Yardımcı satır — sayaç, "KDV dahil" gibi ikinci sesli bilgi. `note` (13) ile
+     `micro` (11,5) arasında kendi durağı: dar ekranda 13'te gövdeyle karışıyor, 11,5'te okunmuyor. */
+  helper: '12px',
+  /* (telefon, 14.09) Uygulama ekran başlığı ve paket fiyat çipi (Lora 600). Yukarıdaki "başlık
+     kademelerinde ara değerler yuvarlanır" kuralının BİLİNÇLİ istisnası: Token Kararlari #6'nın açık
+     hükmü "17 resmîdir, 18'e yuvarlama yok" — telefon başlık çubuğu 17'de tek satıra sığıyor. */
+  'screen-title': '17px',
+  'screen-title--font-weight': '600',
 } as const satisfies Record<string, string>;
 
 /* ── §0.4c Köşe yarıçapları (`--radius-` öneki · aynı envanter bölümü) ───────
    Envanter: kart 18 · küçük kart 14-16 · buton/hap tam yuvarlak (radius ≥ 22px).
    Mobil mutabakatının RESMÎ SETİ (Token Kararlari #7: rozet 12 · buton/girdi 16 · kart 20 ·
-   hap 22) web'i ÇEKMEZ — o set `customer-app.ts`te yaşar. Buradaki üç kademe globals.css'in
-   ikizidir; `soft: 14` kararın "mevcut kademeler bu sete yuvarlanacak" hükmünün bekleyen
-   tarafıdır (ayrı görsel tur; toplu değişim regresyon riski taşıdığı için o turda yapılacak). */
+   hap 22): tabanda BOŞ olan iki kademesi (rozet · kontrol) telefon görünümüyle buraya çıktı
+   (14.09); aynı adı başka değerle taşıyan ikisi (kart · hap) `customer-app.ts`te kalır — onlar
+   masaüstünü de değiştirir. `soft: 14` kararın "mevcut kademeler bu sete yuvarlanacak" hükmünün
+   bekleyen tarafıdır (ayrı görsel tur; toplu değişim regresyon riski taşıdığı için o turda yapılacak). */
 export const customerRadius = {
   card: '18px', // kart, panel, yüzen sayfa
   soft: '14px', // BEKLEYEN(BACKLOG §5): resmî sette yok; görsel turda 12 ya da 16'ya yuvarlanacak
   pill: '26px', // hap düğme, çip, sayaç
+  badge: '12px', // (telefon, 14.09) rozet, küçük etiket
+  control: '16px', // (telefon, 14.09) buton, girdi, fırsat kartı
 } as const satisfies Record<string, string>;
 
 /* ── v1 hareketleri (`--animate-` öneki · 13.09) ─────────────────────────────
@@ -226,8 +280,8 @@ export const customerMotion = {
 
 /* ── Yüzen yüzey gölgeleri (`--shadow-` öneki · 13.09) ───────────────────────
    Web v1'in bildirim hapı, açılır menüsü, ortalanmış penceresi ve mobil çekmecesi. Mobil
-   uygulamanın gölge ailesi ayrı (`customerAppShadow`: soft · hard · badge); `hard` İKİ yüzeyin
-   ortak gölgesi (14.09) — tek tanım burada, uygulama ailesi onu buradan okur. */
+   uygulamanın gölge ailesi ayrı (`customerAppShadow`: soft · hard · badge); `hard` ile `badge` İKİ
+   yüzeyin ortak gölgesi (14.09) — tanım burada, uygulama ailesi onları buradan okur. */
 /**
  * Sert gölgenin KAYMA MİKTARI (px) — gölge dizgesi bundan türer, sayı ikinci kez yazılmaz.
  * Uygulama tarafı aynı ölçüyü `customerAppShadowOffset` adıyla dışarı verir (basılı durumun
@@ -243,4 +297,8 @@ export const customerShadow = {
   /** Native v3'ün imzası: kaydırılmış, bulanıklığı olmayan mürekkep gölge. Telefon görünümü native
       tasarımı aldığı için (kullanıcı kararı 14.09) web'e de gerekti — yüzen sepet düğmesi. */
   hard: `${customerShadowOffset}px ${customerShadowOffset}px 0 ${customerSurface.ink}`,
+  /** (telefon, 14.09) Rozetin KENDİ gölgesi — Token Kararlari #16'nın tek durağı. Rozet fotoğrafın
+      ya da kartın üstünde yüzer; mürekkebi örtününki, çünkü `ink` fotoğrafın üstünde mavimsi gri
+      kirli duruyordu. */
+  badge: '0 3px 8px rgba(21, 23, 15, 0.22)',
 } as const satisfies Record<string, string>;

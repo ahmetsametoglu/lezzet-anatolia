@@ -1,9 +1,9 @@
 import {
-  customerAppColors,
-  customerAppRadius,
   customerAppShadow,
   customerAppText,
   customerColors,
+  customerRadius,
+  customerText,
 } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
@@ -12,8 +12,9 @@ import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 // Beklenenler PAKETTEN türetilir; `customerStops` temanın uyguladığı çevirinin aynısıdır
-// (px→dp + bir kademe), böylece test ham değer taşımaz.
-const appText = customerStops(customerAppText);
+// (px→dp + bir kademe), böylece test ham değer taşımaz. Birleşim temanınkiyle aynı: rozet kademesi
+// telefon görünümüyle tabana çıktı (14.09) ve uygulama dosyası artık yalnız kendi duraklarını taşıyor.
+const appText = customerStops({ ...customerText, ...customerAppText });
 
 describe('Tag', () => {
   it('etiketi gösterir ve dokunulamayan rozette düğme rolü ÜRETMEZ', async () => {
@@ -38,15 +39,15 @@ describe('Tag', () => {
 
     expect(screen.getByTestId('tag')).toHaveStyle({
       backgroundColor: customerColors.ink,
-      borderRadius: Number.parseFloat(customerAppRadius.badge),
+      borderRadius: Number.parseFloat(customerRadius.badge),
     });
     expect(screen.getByText('TOPTAN')).toHaveStyle({ color: customerColors['sand-50'] });
   });
 
-  it('sand tonu uygulamanın YENİ kum kademesini kullanır', async () => {
+  it('sand tonu kum skalasının ara kademesini kullanır', async () => {
     await render(<Tag label="✦ 240" tone="sand" testID="tag" />);
 
-    expect(screen.getByTestId('tag')).toHaveStyle({ backgroundColor: customerAppColors['sand-150'] });
+    expect(screen.getByTestId('tag')).toHaveStyle({ backgroundColor: customerColors['sand-150'] });
   });
 
   it('gölge istendiğinde ROZET gölgesini aynen uygular (Token Kararlari #16)', async () => {

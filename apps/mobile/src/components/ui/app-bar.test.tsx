@@ -1,4 +1,4 @@
-import { customerAppColors, customerAppText, customerColors } from '@lezzet/design-tokens';
+import { customerAppColors, customerAppText, customerColors, customerText } from '@lezzet/design-tokens';
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
@@ -6,8 +6,9 @@ import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { AppBar } from './app-bar';
 
 // Beklenenler PAKETTEN türetilir; `customerStops` temanın uyguladığı çevirinin aynısıdır
-// (px→dp + bir kademe), böylece test ham değer taşımaz.
-const appText = customerStops(customerAppText);
+// (px→dp + bir kademe), böylece test ham değer taşımaz. Birleşim temanınkiyle aynı: ekran başlığı
+// kademesi telefon görünümüyle tabana çıktı (14.09).
+const appText = customerStops({ ...customerText, ...customerAppText });
 
 describe('AppBar', () => {
   it('başlığı header rolüyle duyurur', async () => {
@@ -23,7 +24,7 @@ describe('AppBar', () => {
     expect(screen.getByText('+ Yeni')).toBeOnTheScreen();
   });
 
-  it('başlık kademesi UYGULAMA token’ından (17px Lora 600), alt çizgi mürekkepten gelir', async () => {
+  it('başlık kademesi native ekran başlığından (17px Lora 600), alt çizgi mürekkepten gelir', async () => {
     await render(<AppBar title="Keşif" testID="bar" />);
 
     expect(screen.getByRole('header')).toHaveStyle({

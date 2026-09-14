@@ -111,7 +111,7 @@ describe('ProductPhotoCard', () => {
     await render(<ProductPhotoCard name="Kekik" priceLabel="4 €" onPress={jest.fn()} soldOut soldOutLabel="Tükendi" />);
 
     expect(screen.getByText('TÜKENDI').parent).toHaveStyle({
-      backgroundColor: customerAppColors['scrim-72'],
+      backgroundColor: customerColors['scrim-72'],
     });
   });
 

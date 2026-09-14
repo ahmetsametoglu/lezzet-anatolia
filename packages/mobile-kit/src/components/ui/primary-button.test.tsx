@@ -1,4 +1,4 @@
-import { customerAppColors, customerAppRadius, customerAppShadow, customerColors } from '@lezzet/design-tokens';
+import { customerAppColors, customerAppRadius, customerAppShadow, customerColors, customerRadius } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { PrimaryButton } from './primary-button';
@@ -29,7 +29,7 @@ describe('PrimaryButton', () => {
 
     expect(screen.getByTestId('btn')).toHaveStyle({
       backgroundColor: customerColors.olive,
-      borderRadius: Number.parseFloat(customerAppRadius.control),
+      borderRadius: Number.parseFloat(customerRadius.control),
       boxShadow: customerAppShadow.hard,
     });
   });

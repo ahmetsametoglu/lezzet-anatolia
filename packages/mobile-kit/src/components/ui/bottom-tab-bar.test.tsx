@@ -120,7 +120,7 @@ describe('BottomTabBar · operasyon tonu', () => {
     await render(<BottomTabBar items={operationsItems} tone="operations" />);
 
     expect(screen.getByText('Kurye')).toHaveStyle({
-      fontSize: Number.parseFloat(customerAppText['badge-sm']),
+      fontSize: Number.parseFloat(customerText['badge-sm']),
     });
     expect(screen.getByText('Kurye')).not.toHaveStyle({
       fontSize: Number.parseFloat(operationsAppText.meta),

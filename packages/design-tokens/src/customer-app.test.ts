@@ -21,7 +21,7 @@ import {
   customerAppShadow,
   customerAppText,
 } from './customer-app';
-import { customerColors, customerRadius, customerSurface, customerText } from './customer';
+import { customerColors, customerRadius, customerShadow, customerSurface, customerText } from './customer';
 
 /** Uygulama temasının kurduğu birleşimin ta kendisi — tüketici (Unistyles) da böyle kurar. */
 const composedColors = { ...customerColors, ...customerAppColors };
@@ -81,7 +81,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
 
   it('ortak anahtarlar tabandan gelir — ezme yalnız beyan edilen adlara dokunur', () => {
     expect(composedColors.ink).toBe(customerSurface.ink);
-    expect(composedColors['sand-100']).toBe('#f0e9d6'); // uygulamada sand-150/250 var, 100 tabandan
+    expect(composedColors['sand-100']).toBe('#f0e9d6'); // 150/250 ara kademeleri de artık tabanda
     expect(composedColors['terracotta-bright']).toBe('#c25e3a');
     expect(composedText.h1).toBe('52px');
     expect(composedText['eyebrow-sm']).toBe('11px'); // web'in mobil forku — uygulama dokunmaz
@@ -89,30 +89,36 @@ describe('customer-app ↔ customer kompozisyonu', () => {
   });
 
   it('uygulamaya-YENİ anahtarlar tabanda yok, birleşimde var', () => {
-    for (const key of [
-      'sand-150',
-      'sand-250',
-      'error',
-      'error-bg',
-      'scrim',
-      'scrim-72',
-      'cream-glass',
-      'cream-glass-soft',
-      'accent-leaf',
-      'ink-deep',
-      'brand-google',
-    ]) {
+    for (const key of ['error', 'error-bg', 'cream-glass', 'cream-glass-soft', 'accent-leaf', 'brand-google']) {
       expect(customerColors, `${key} tabanda olmamalı`).not.toHaveProperty(key);
       expect(composedColors, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
-    for (const key of ['screen-title', 'sheet-title', 'helper', 'button', 'badge', 'badge-sm']) {
+    for (const key of ['sheet-title', 'button']) {
       expect(customerText, `${key} tabanda olmamalı`).not.toHaveProperty(key);
       expect(composedText, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
-    for (const key of ['badge', 'control']) {
-      expect(customerRadius, `${key} tabanda olmamalı`).not.toHaveProperty(key);
-      expect(composedRadius, `${key} birleşimde olmalı`).toHaveProperty(key);
+  });
+
+  it('TABANA ÇIKAN telefon token’ları (14.09): uygulamada yok, birleşimde tabanın değeriyle var', () => {
+    /* Telefon görünümü native tasarımı aldı; kullandığı token web'e girebilsin diye tabana taşındı.
+       Taşıma bir DEĞER değişikliği değil: uygulama teması aynı sayıyı almaya devam etmeli — bu test
+       hem "taşındı" (uygulamada kopyası kalmadı) hem "kaybolmadı" (birleşimde var) der. */
+    for (const key of ['sand-150', 'sand-250', 'ink-deep', 'scrim-soft', 'scrim', 'scrim-72', 'scrim-heavy']) {
+      expect(customerAppColors, `${key} uygulamada kopya kalmamalı`).not.toHaveProperty(key);
+      expect(composedColors[key as keyof typeof composedColors]).toBe(customerColors[key as keyof typeof customerColors]);
     }
+    for (const key of ['badge', 'badge--font-weight', 'badge--letter-spacing', 'badge-sm', 'helper', 'screen-title']) {
+      expect(customerAppText, `${key} uygulamada kopya kalmamalı`).not.toHaveProperty(key);
+      expect(composedText[key as keyof typeof composedText]).toBe(customerText[key as keyof typeof customerText]);
+    }
+    for (const key of ['badge', 'control']) {
+      expect(customerAppRadius, `${key} uygulamada kopya kalmamalı`).not.toHaveProperty(key);
+      expect(composedRadius[key as keyof typeof composedRadius]).toBe(customerRadius[key as keyof typeof customerRadius]);
+    }
+    expect(customerColors['sand-150']).toBe('#efdfc2');
+    expect(customerColors['ink-deep']).toBe('#15170f');
+    expect(customerRadius.badge).toBe('12px');
+    expect(customerRadius.control).toBe('16px');
   });
 
   it('rozet kademesi TEK kaynaktan: küçük boy yalnız ÖLÇÜ farkıdır', () => {
@@ -126,7 +132,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     expect(composedText).not.toHaveProperty('badge-sm--letter-spacing');
   });
 
-  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 42 yeni', () => {
+  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 26 yeni', () => {
     expect(sharedKeys(customerColors, customerAppColors)).toHaveLength(6);
     expect(sharedKeys(customerRadius, customerAppRadius)).toHaveLength(2);
     // Tipografide tek çakışma üstbaşlığın üç alt-anahtarıdır; dördüncü bir çakışma bilinçsizdir.
@@ -146,8 +152,11 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     /* 42 → `error-line` 30.08'de eklendi: HATA ailesinin üçüncü katmanı. Künye onu "gerçek bir
        ihtiyaç doğunca" diye ertelemişti; ihtiyaç paylaşılan kitte doğdu (`SecondaryButton`ın
        `error` tonu iki yüzeyde birden yaşıyor ve yalnız operasyonda var olan bir durak stil
-       fabrikasında çözülemiyordu — cihazda ölçüldü). */
-    expect(appTotal).toBe(50); // 8 fark + 42 uygulamaya-yeni
+       fabrikasında çözülemiyordu — cihazda ölçüldü).
+       50 → 34 (14.09): telefon görünümünün kullandığı 16 token tabana çıktı (7 renk · 7 yazı ·
+       2 yarıçap). Gölgelerin `hard` ve `badge`i sayıda KALIR: uygulama teması gölge ailesini bu
+       nesneden okuduğu için tabandaki tanım burada yeniden dışa veriliyor. */
+    expect(appTotal).toBe(34); // 8 fark + 26 uygulamaya-yeni
   });
 
   it('birleşim tabanı BÜYÜTÜR, küçültmez — hiçbir taban anahtarı kaybolmaz', () => {
@@ -157,8 +166,10 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     );
   });
 
-  it('`hard` gölgesi tabandaki mürekkepten TÜRER — ikinci kez yazılmamıştır', () => {
+  it('`hard` ve `badge` gölgeleri TABANDAN okunur — ikinci kez yazılmamıştır', () => {
+    expect(customerAppShadow.hard).toBe(customerShadow.hard);
     expect(customerAppShadow.hard).toContain(customerSurface.ink);
+    expect(customerAppShadow.badge).toBe(customerShadow.badge);
   });
 
   it('gradyanlarda şeffaf durak `transparent` değil `rgba(…, 0)`', () => {
