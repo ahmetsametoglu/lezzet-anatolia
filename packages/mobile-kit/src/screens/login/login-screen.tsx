@@ -71,19 +71,24 @@ interface LoginScreenProps {
   initialNotice?: LoginNotice;
   /**
    * Girişten sonra hesabın İNDİĞİ yer — karar UYGULAMANIN (21.310): ekran ortak çekirdekte ve
-   * uygulamanın rota ağacını bilmez. `null` = ekran kapanır, kişi geldiği yere döner. Müşteri
-   * uygulaması bugün personeli operasyon kabuğuna yollar (`post-login-route`, 21.32).
+   * uygulamanın rota ağacını bilmez. Verilmezse ya da `null` dönerse ekran kapanır, kişi geldiği
+   * yere döner (müşteri uygulaması); operasyon uygulaması personeli ilk bölümüne yollar
+   * (`post-login-route`, 21.32).
    */
-  landingFor: (me: Me) => Href | null;
+  landingFor?: (me: Me) => Href | null;
   /** Gizlilik metninin adresi (rota uygulamanın). Verilmezse cümle bağlantısız çizilir. */
   privacyHref?: Href;
+  /** Geliştirme düğmelerinin süzgeci (yalnız `__DEV__`): hangi uygulamanın hesapları. Verilmezse liste tamdır. */
+  devAccounts?: 'customer' | 'operations';
 }
 
-export function LoginScreen({ onVerified, initialNotice, landingFor, privacyHref }: LoginScreenProps) {
+export function LoginScreen({ onVerified, initialNotice, landingFor, privacyHref, devAccounts }: LoginScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
+  const devButtons =
+    devAccounts === undefined ? DEV_ACCOUNTS : DEV_ACCOUNTS.filter((account) => account.operations === (devAccounts === 'operations'));
 
   const [stage, setStage] = useState<LoginStage>('choose');
   const [email, setEmail] = useState('');
@@ -150,7 +155,7 @@ export function LoginScreen({ onVerified, initialNotice, landingFor, privacyHref
         publishMe(result.data);
         /* İNİŞ YERİNİ UYGULAMA SÖYLER (21.310). Müşteri uygulamasında personel müşteri sekmesine
            dönmez, doğrudan operasyon kabuğuna gider (21.32 — webin tek `/connexion` modelinin karşılığı). */
-        const landing = landingFor(result.data);
+        const landing = landingFor?.(result.data) ?? null;
         if (landing !== null) return router.replace(landing);
         closeLogin();
       })
@@ -393,10 +398,12 @@ export function LoginScreen({ onVerified, initialNotice, landingFor, privacyHref
             OTP/Google turunu atlayan ama Supabase doğrulamasından geçen GERÇEK oturum
             (`lib/auth/dev-login` künyesi). Metin sabit Türkçe: müşteri bu satırı hiç görmez.
             ROL BAŞINA BİR DÜĞME (21.32): rol → bölüm eşlemesi birebir olduğu için tek düğme
-            bölümlerin yalnız birini açardı; hangi hesabın hangi rolü taşıdığı listede. */}
+            bölümlerin yalnız birini açardı; hangi hesabın hangi rolü taşıdığı listede. Liste UYGULAMA
+            BAŞINA süzülür (21.310): müşteri uygulaması müşteri hesabını, operasyon uygulaması personeli
+            gösterir. */}
         {__DEV__ ? (
           <View style={styles.devRow}>
-            {DEV_ACCOUNTS.map((account) => (
+            {devButtons.map((account) => (
               <TextAction
                 key={account.email}
                 label={account.label}

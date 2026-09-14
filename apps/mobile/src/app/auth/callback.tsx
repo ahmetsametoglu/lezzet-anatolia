@@ -1,7 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 
 import { AuthCallbackScreen } from '@lezzet/mobile-kit/src/screens/login/auth-callback-screen';
-import { operationsHomeRoute } from '@/screens/login/post-login-route';
 
 /*
   Rota İNCE (login kabuğunun deseni) — `lezzetanatolie://auth/callback?code=…` derin bağlantısı
@@ -12,7 +11,6 @@ export default function AuthCallbackRoute() {
   return (
     <AuthCallbackScreen
       code={typeof code === 'string' && code.length > 0 ? code : null}
-      landingFor={operationsHomeRoute}
       homeRoute="/account"
     />
   );

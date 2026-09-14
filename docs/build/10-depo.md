@@ -91,7 +91,7 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
       üstünde iri harflerle yazılı olduğu için okunmazsa depocu elle arayabilir — okunmayan bir QR
       çıkmaz sokak olmamalı.
     - ✅ **KARŞI UCU DA YAZILDI (mobil D1, aynı gün — kullanıcı kararı: "ben yazayım")** · touches:
-      `apps/mobile/src/screens/warehouse/{preparation-screen.tsx,use-preparation.hook.ts,messages.json,preparation-screen.test.tsx}`
+      `apps/mobile-operations/src/screens/warehouse/{preparation-screen.tsx,use-preparation.hook.ts,messages.json,preparation-screen.test.tsx}`
       - Kuyruğun ÜSTÜNDE *"📄 Hazırlık kâğıdını okut"* düğmesi (dolu zeminli, `controlLg` — eldivenli
         parmakla basılacak birincil eylem). Altta olsaydı önce göz taraması yaptırırdı ve kâğıdın
         kazandırdığı adım geri alınırdı. **Liste yine duruyor:** kâğıt bir kolaylık, tek yol değil.

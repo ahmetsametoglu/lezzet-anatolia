@@ -18,6 +18,11 @@ import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
 
   UYGULAMA `UnistylesRuntime.updateTheme` ile ve HER ZAMAN BAZDAN çarparak yapılır (temanın
   içindeki güncel değerden değil) — art arda seçimlerde çarpan birikmez.
+
+  KNIP GİRİŞİ (21.310): modül iki temayı birden ölçekler ve kitte durur, ama bugün onu yalnız müşteri
+  uygulaması okuyor. knip 5.88.1 derin importla tüketilen çalışma alanı dosyasını dosya düzeyinde tek
+  tüketiciden sayıyor: iki uygulama varken dosyayı "kullanılmıyor" diye gösterdi, operasyon çalışma alanı
+  dışlanınca bayrak kalktı (ölçüldü 14.09). Bu yüzden `knip.json`da kitin girişleri arasında yazılı.
 */
 
 /** Depo anahtarı — ham dizge burada YAZILMAZ, `lezzet.*` ailesinin sahibinden gelir. */

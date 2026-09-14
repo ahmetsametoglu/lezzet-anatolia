@@ -56,15 +56,6 @@ describe('onboarding kapısı', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('operasyon yüzeyi kapının dışındadır — personel akışa zorlanmaz', async () => {
-    mockSnapshot = null;
-    mockSegments = ['(operations)', 'picking'];
-    const { result } = await renderHook(() => useOnboardingGate());
-
-    expect(result.current).toBe(true);
-    expect(mockReplace).not.toHaveBeenCalled();
-  });
-
   it('onboarding rotasının kendisi yeniden yönlendirilmez (döngü yok)', async () => {
     mockSnapshot = null;
     mockSegments = ['onboarding'];

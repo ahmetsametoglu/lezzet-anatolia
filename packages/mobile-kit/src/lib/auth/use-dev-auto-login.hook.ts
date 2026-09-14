@@ -1,16 +1,19 @@
 import { useEffect } from 'react';
 
-import { DEV_ALL_SECTIONS_EMAIL, devSignIn } from './dev-login';
+import { devSignIn } from './dev-login';
 import { getSupabase } from './supabase';
 
 /*
-  OTOMATİK DEV GİRİŞİ (kullanıcı isteği 30.08) — geliştirirken uygulama müşteri vitrinine
-  düşmesin, dört bölümü de gören personelle OPERASYONA düşsün.
+  OTOMATİK DEV GİRİŞİ (kullanıcı isteği 30.08) — geliştirirken oturum ölünce uygulama kendini
+  oturumsuz bulmasın. HESAP UYGULAMANIN (21.310): kök hangi hesapla girileceğini verir — müşteri
+  uygulaması seed'in müşterisiyle (`DEV_CUSTOMER_EMAIL`), operasyon uygulaması dört bölümü de gören
+  personelle (`DEV_ALL_SECTIONS_EMAIL`). Tek uygulama iki yüzeyi taşırken hesap burada sabitti ve
+  personeli operasyona açılış kuralı taşıyordu.
 
   ── ÖLÇÜLEN ARIZA, VE ŞİKÂYETTEN FARKLI ÇIKTI ──────────────────────────────
   Belirti *"uygulama kendini yeniliyor ve sürekli müşteri tarafına düşüyor"* diye bildirildi.
   Cihazda ölçüldü (30.08, CPH1907): oturum VARKEN tazeleme müşteriye düşürmüyor — personel
-  operasyonda kalıyor, çünkü açılış kararı zaten veriliyor (`use-staff-landing.hook`, 21.97).
+  operasyonda kalıyordu, çünkü açılış kararı zaten veriliyordu (o günkü açılış kancası, 21.97).
   Düşüşün sebebi hot reload değil, OTURUMUN ÖLMESİ: token SecureStore'da kalıcı ama `db:refresh`
   auth kullanıcılarını yeniden yaratıyor ve eldeki oturum geçersizleşiyor. Geliştirme günü
   boyunca veritabanı defalarca tazelendiği için bu sık yaşanıyor.
@@ -20,15 +23,14 @@ import { getSupabase } from './supabase';
   daha ucuz ve daha dürüst: oturum kurulunca gerisini var olan kural hallediyor.
 
   ── NİÇİN KÖKTE, LOGIN EKRANINDA DEĞİL ─────────────────────────────────────
-  Oturumsuz açılışta uygulama müşteri kabuğunda başlar (02-mimari §4: oturumsuz kullanım müşteri
+  Müşteri uygulamasında oturumsuz açılış vitrindir (02-mimari §4: oturumsuz kullanım müşteri
   gezinmesidir, uygulama giriş kapısıyla açılmaz). Yani login ekranı KENDİLİĞİNDEN açılmıyor;
-  oraya konan bir otomatik giriş hiç ateşlenmezdi. Kök, "bir ekrana bağlanamayan yan etki"lerin
-  yeri (`useVisitPoints` · `usePushRegistration` ile aynı sınıf).
+  oraya konan bir otomatik giriş hiç ateşlenmezdi. Kök, iki uygulamada da "bir ekrana bağlanamayan
+  yan etki"lerin yeri (`usePushRegistration` ile aynı sınıf).
 
   ── KAPI DEĞİL, YAN ETKİ ───────────────────────────────────────────────────
   Açılışı BEKLETMEZ: uygulama normal çizilir, giriş arka planda kurulur, oturum gelince açılış
-  kararı kendi yolunda koşar. Kapı olsaydı şebekesiz cihazda uygulama hiç açılmazdı — aynı
-  gerekçe `use-staff-landing` künyesinde de yazılı.
+  kararı kendi yolunda koşar. Kapı olsaydı şebekesiz cihazda uygulama hiç açılmazdı.
 
   ── ÜÇ KAPI: ÜRETİME SIZAMAZ, SEÇİMİ EZMEZ, KAPATILABİLİR ──────────────────
   1. `__DEV__` — üretim derlemesinde bu dosyanın gövdesi hiç koşmaz.
@@ -61,7 +63,8 @@ import { getSupabase } from './supabase';
   (`dev-login.ts` künyesi). Yutulan bir arıza yok — görünür hâle düşülüyor.
 */
 
-export function useDevAutoLogin(): void {
+/** `email`: bu uygulamanın geliştirme hesabı (`dev-login.ts`teki sabitlerden biri). */
+export function useDevAutoLogin(email: string): void {
   useEffect(() => {
     if (!__DEV__) return;
     if (process.env.EXPO_PUBLIC_DEV_AUTOLOGIN === 'off') return;
@@ -74,7 +77,7 @@ export function useDevAutoLogin(): void {
     void (async () => {
       const { data } = await getSupabase().auth.getSession();
       if (data.session !== null) return; // oturum yerinde — seçim kimin olursa olsun ezilmez
-      await devSignIn(DEV_ALL_SECTIONS_EMAIL);
+      await devSignIn(email);
     })();
-  }, []);
+  }, [email]);
 }

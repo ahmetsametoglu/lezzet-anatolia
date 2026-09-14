@@ -1,0 +1,12 @@
+{
+  // Ortak tarif kitte (`@lezzet/mobile-kit/tsconfig.base.json`, 21.310): `strict` ve test tipleri
+  // native uygulamalarda tek kaynaktan. Burada yalnız bu uygulamanın takma adı ve kapsamı.
+  "extends": "@lezzet/mobile-kit/tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

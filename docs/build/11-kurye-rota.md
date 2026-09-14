@@ -170,7 +170,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     denetimi kalkarsa kırmızı — mutabakat fotoğrafı geçmişe dönük değişmez).
 
 - [x] (11.8) **Navigasyon devri:** durak kartından cihazın navigasyon uygulamasına geçiş — rota kurar, yer kartı açmaz
-  `touches: packages/domain-core/src/delivery/navigation.ts, apps/web/app/(operations)/operations/deliveries/deliveries-sections.tsx, apps/mobile/src/screens/courier/delivery-screen.tsx`
+  `touches: packages/domain-core/src/delivery/navigation.ts, apps/web/app/(operations)/operations/deliveries/deliveries-sections.tsx, apps/mobile-operations/src/screens/courier/delivery-screen.tsx`
   - **Durum (31.08) — MOTOR + WEB YAZILDI, mobil şeritte bekliyor** (`docs/talep/mobil-navigasyon-koprusu.md`).
   - **Arıza neydi:** iki yüzeyde de URL elle yazılıydı ve ikisi de `maps/search/?api=1&query=` idi — o
     adres bir **yer kartı** açar, yolculuğu BAŞLATMAZ. Kurye ekranda ikinci kez "Yol tarifi"ne basmak

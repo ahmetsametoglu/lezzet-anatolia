@@ -17,8 +17,8 @@ import { onSessionRejected } from './session-end';
   İlk yazım kapıdaydı ve uçtan uca test onu yakaladı: ret, uygulama açılırken kökteki isteklerden
   (push kaydı, sepet) de gelebiliyor ve o anda kapı henüz monte değil — sebep kimseye ulaşmadan
   personel vitrine düşüyordu. Ret uygulamanın HER yerinden gelebilir; hepsini duyan tek yer, hepsinin
-  üstündeki köktür. Gönüllü çıkış bu kancayı TETİKLEMEZ (ret yayınlamıyor) — kapının "çıkan vitrine"
-  kararı (21.97b) aynen duruyor.
+  üstündeki köktür. Gönüllü çıkış bu kancayı TETİKLEMEZ (ret yayınlamıyor): müşteri uygulamasında çıkan
+  kişi vitrinde kalır, operasyon uygulamasında kapı onu girişe yönlendirir (21.310).
 
   ── NİÇİN BEKLETİLEN BİR NİYET ─────────────────────────────────────────────
   Açılışta kök yığın, kapılar (font, dil, onboarding) açılmadan ÇİZİLMİYOR ve yığın yokken gezinmek
@@ -27,8 +27,9 @@ import { onSessionRejected } from './session-end';
 
   ── NİÇİN `push` ───────────────────────────────────────────────────────────
   Giriş, kişinin bulunduğu ekranın ÜSTÜNE açılır: yeniden doğrulanan müşteri kaldığı yere döner,
-  vazgeçen geri tuşuyla misafir olarak sürer. Operasyonda kapının "/" yönlendirmesi (`Redirect`)
-  yalnız odaktaki ekranda koşar; hangisi önce koşarsa koşsun kişi girişte, sebebiyle karşılanır.
+  vazgeçen geri tuşuyla misafir olarak sürer. Operasyon uygulamasında kapı da oturumsuzluğu duyup girişe
+  yönlendirir, ama giriş zaten açıksa dokunmaz (`(operations)/_layout.tsx` — ölçülen yarış orada yazılı):
+  hangisi önce koşarsa koşsun kişi girişte, sebebiyle karşılanır.
 */
 export function useSessionEndedLogin(): void {
   const router = useRouter();

@@ -111,8 +111,8 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
 - [x] (23.4) **Kamera taraması (mobil):** `expo-camera` beyanlı girer; tek `onScan` bileşeni
   (`apps/mobile/src/components/scan/`); mal kabul entegrasyonu — tara → satır bul (koli kodunda
   çarpan kadar öner) → tanınmayan kodda "bu kod hangi ürün?" → `learnCode` · touches:
-  `apps/mobile/src/components/scan/scan-sheet.tsx`, `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,messages.json}`,
-  `apps/mobile/src/lib/api/warehouse.ts`, `apps/mobile/app.config.ts`, `apps/mobile/jest.setup.ts`
+  `apps/mobile-operations/src/components/scan/scan-sheet.tsx`, `apps/mobile-operations/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,messages.json}`,
+  `apps/mobile-operations/src/lib/api/warehouse.ts`, `apps/mobile/app.config.ts`, `apps/mobile/jest.setup.ts`
   - *Bitti:* gerçek cihazda koli okutulup satırın bulunduğu ve tanınmayan kodun öğretildiği görüldü
   - **Durum (22.08) — YAZILDI, cihaz ölçümü bekliyor.** `expo-camera ~57.0.4` girdi (beyan modül
     dosyasında; app.config'e izin metniyle eklendi — "yalnız kod okutmak için"). `ScanSheet` tek
@@ -229,7 +229,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   etiket tasarımıyla) · yazıcı ayarı `settings` warehouse kapsamı (`label_printer_*`) + Depolar
   ekranına ayar bölümü · basım kutu kapanışında, sistem diyaloğu olmadan · touches:
   `packages/application/src/warehouse/boxes.ts`, `packages/types/src/contracts/warehouse-api.schema.ts`,
-  `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile/src/screens/warehouse/{use-preparation.hook.ts,preparation-screen.tsx}`
+  `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile-operations/src/screens/warehouse/{use-preparation.hook.ts,preparation-screen.tsx}`
   - **Durum (22.08) — İÇERİK YARISI YAZILDI.** `boxLabelPayload`: 4×6 etiketin içeriği sunucudan
     (karar §1.9 — tek şablon, tek yerde test): kutu kodu (QR) · N/M · referans · koliye yazılacak
     ad (10.9 kuralı) · rota/gün (kargoda kulvar) · tahsilatın YÖNTEMİ · döküm. **Tutar alanı yok
@@ -265,7 +265,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   `packages/application/src/courier/{load.ts,day.ts,delivery.ts,proof.ts}`,
   `packages/types/src/{entities/courier.schema.ts,contracts/courier-api.schema.ts}`,
   `apps/mobile-api/src/api/v1/courier.ts`, `apps/mobile/src/screens/courier/*`,
-  `apps/mobile/src/components/scan/scan-sheet.tsx`
+  `apps/mobile-operations/src/components/scan/scan-sheet.tsx`
   - *Bitti:* çok kutulu sipariş son kutu okutulmadan yolda sayılmadı; kodsuz teslim `boxes_missing`
     ile reddedildi; kapanan teslimin kanıtında okutulan kodlar göründü — entegrasyonda ölçüldü.
   - **Durum (22.08) — YAZILDI.** `POST /courier/boxes/load`: kutu → sipariş → kurye damgası zinciri
@@ -315,7 +315,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     öteki `checkout-shipping-order.test.ts` teardown'ında `delivery_zone` silme zaman aşımı.
     İkisi de tek başına koşulunca GEÇTİ (15/15 ve 5/5).
   - **Bugünkü hâl ölçüldü (22.08):** `packages/application/src/warehouse/scan.ts` ve
-    `apps/mobile/src/components/scan/scan-sheet.tsx` TESTLİ; `variant-barcode.service.ts` ve
+    `apps/mobile-operations/src/components/scan/scan-sheet.tsx` TESTLİ; `variant-barcode.service.ts` ve
     `dev-scan-pool.ts` testsiz.
   - ⚠️ **ENVANTER DÜZELTMESİ (23.08):** ~~Barkod biçim doğrulaması (EAN-13/EAN-8 sağlama basamağı) — geçersiz basamak REDDEDİLMELİ~~ → **YANLIŞ ÖNERİYDİ.** Şema biçimi BİLEREK zorlamıyor ve gerekçesi künyede yazılı: *"iç etiketler ve QR'lar da taranabilir; 'geçersiz biçim' reddi gerçek bir kolinin kabulünü durdururdu."* Test, olmayan bir davranışı istemiş olurdu. Yerine **kararın kendisi** çivilendi: EAN olmayan iç etiket kabul EDİLMELİ — biri bir gün "iyilik olsun diye" doğrulama eklerse depoda gerçek koli reddedilmeye başlar ve sebebi aylarca anlaşılmaz.
   - ⏳ **YAZILDI — KOŞULMADI (23.08):** `packages/database/src/services/variant-barcode.test.ts`, 7 iddia. Typecheck + lint yeşil; koşmak denetmenin işi (`CLAUDE §4b`).
@@ -333,7 +333,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   "10 koli geldi" gerçeği adet artırılarak söylenir, satıra ONAYLA yazılır. · touches:
   ~~`apps/mobile/src/components/operations/qty-slider.tsx`~~ (kaydırıcı 02.09'da söküldü — kullanıcı
   kararı, 21.231: adet her yerde kitin sayacı; koli çarpanı öğrenme adımı da ona geçti),
-  `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`,
+  `apps/mobile-operations/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`,
   `packages/types/src/contracts/warehouse-api.schema.ts`, `packages/application/src/warehouse/{scan.ts,names.ts}`
   - **Durum (24.08) — YAZILDI ve CİHAZDA ÖLÇÜLDÜ; tek açık kalem sürükleme jestinin turu.**
     Kâğıttan okutulan koli kodu (ITF-14) çekmeceyi 24 adetle açtı; "1 koli" dökümü, beklenen
@@ -353,7 +353,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     akışına 7 (davranış değişti: onaysız ekleme kalktı). Toplama okutması BİLEREK sessiz kaldı —
     çekmecenin oraya da gelip gelmeyeceği ayrı karar (tempo ödünleşmesi), kullanıcıya soruldu.
 - [x] (23.12) **Öğrenme çekmecesine tür + çarpan** — tanınmayan kod öğretilirken "tekil mi koli
-  mi, koliyse kaç adet?" sorulur. · touches: `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`
+  mi, koliyse kaç adet?" sorulur. · touches: `apps/mobile-operations/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`
   - *Bitti:* öğrenme iki adımlı (ürün → bu kod neyi sayıyor); koli seçilip çarpan verilince kod
     ÇARPANIYLA yazılıyor ve satıra o kadar ekleniyor. Jest +3.
   - **Durum (24.08) — YAZILDI.** Açık şuydu: kapı `kind`/`qtyPerCode` alıyordu ama ekran
@@ -368,8 +368,8 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     tahminimiz değil.
 - [x] (23.13) **Plansız kabul: ürün araması + satır açma** — PO'suz gelen mal. · touches:
   `packages/application/src/warehouse/variant-search.ts`, `packages/types/src/contracts/warehouse-api.schema.ts`,
-  `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile/src/lib/api/warehouse.ts`,
-  `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-screen.test.tsx,messages.json}`
+  `apps/mobile-api/src/api/v1/warehouse.ts`, `apps/mobile-operations/src/lib/api/warehouse.ts`,
+  `apps/mobile-operations/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-screen.test.tsx,messages.json}`
   - *Bitti:* bekleyen sevkiyat listesinden "Siparişsiz mal geldi" ile girilir; ürün aramayla ya da
     okutmayla satır açılır, kabul `POST /intake/receive` ile yazılır (kapı 21.11'den beri hazırdı).
   - **Durum (24.08) — YAZILDI, kapı gerçek veriyle ölçüldü.** Arama `searchVariantsForIntake`:
@@ -389,7 +389,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   Kodlar SABİT, bağlandıkları ürün ROLLE seçilir; set bir kez basılır, her `db:refresh` sonrası yine
   çalışır. · touches: `scripts/seed/test-labels.ts`, `scripts/labels-test.ts`,
   `scripts/seed/{barcode.ts,orders.ts}`, `scripts/seed.ts`,
-  `apps/mobile/src/components/scan/dev-scan-pool.ts`, `packages/application/src/warehouse/label-svg.ts`
+  `apps/mobile-operations/src/components/scan/dev-scan-pool.ts`, `packages/application/src/warehouse/label-svg.ts`
   - *Bitti:* `pnpm labels:test` altı etiketi üretiyor, seed kodları gerçek kayıtlara bağlıyor ve
     bağların doğruluğu DB'de ölçüldü (toplama → açık kutulu siparişin kalemi · yabancı → hiçbir
     kabulde/siparişte yok · kutu QR → kapalı kutu · tanınmayan → hiçbir yere yazılmamış).

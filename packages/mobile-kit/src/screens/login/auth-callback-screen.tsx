@@ -26,8 +26,8 @@ import messages from './messages.json';
 interface AuthCallbackScreenProps {
   /** Derin bağlantının `?code=` parametresi; yoksa akış bozuk demektir (elle açılmış URL). */
   code: string | null;
-  /** Girişten sonra hesabın indiği yer — `LoginScreen`in aynı sözleşmesi (21.310). */
-  landingFor: (me: Me) => Href | null;
+  /** Girişten sonra hesabın indiği yer — `LoginScreen`in aynı sözleşmesi (21.310); verilmezse `homeRoute`. */
+  landingFor?: (me: Me) => Href | null;
   /** İniş yeri söylenmeyen hesabın evi — müşteri uygulamasında hesap sekmesi. */
   homeRoute: Href;
 }
@@ -58,9 +58,9 @@ export function AuthCallbackScreen({ code, landingFor, homeRoute }: AuthCallback
       if (me !== null && me.error === null) publishMe(me.data);
       toastSuccess(t.verifiedToast);
       /* İNİŞ YERİ OTP girişiyle AYNI karardan: iki ekran da uygulamanın verdiği `landingFor`u sorar
-         (21.310; müşteri uygulamasında personel operasyon kabuğuna gider — 21.32). Kural kopyalansaydı
+         (21.310; operasyon uygulamasında personel ilk bölümüne gider — 21.32). Kural kopyalansaydı
          "Google ile girince neden operasyona gitmiyor" diye aranan bir fark doğardı. */
-      const landing = me !== null && me.error === null ? landingFor(me.data) : null;
+      const landing = me !== null && me.error === null ? (landingFor?.(me.data) ?? null) : null;
       if (landing !== null) {
         router.replace(landing);
         return;

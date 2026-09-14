@@ -18,10 +18,12 @@ jest.mock('./supabase', () => ({ getSupabase: () => ({ auth: { getSession: mockG
 const mockDevSignIn = jest.fn();
 jest.mock('./dev-login', () => ({
   devSignIn: (email: string) => mockDevSignIn(email),
-  DEV_ALL_SECTIONS_EMAIL: 'hepsi@lezzetanatolie.com',
 }));
 
 import { useDevAutoLogin } from './use-dev-auto-login.hook';
+
+/** Hesap uygulamanın verdiği değerdir (21.310) — kanca kendi sabitini bilmez. */
+const APP_ACCOUNT = 'uygulama@lezzetanatolie.com';
 
 const withoutSession = (): void => {
   mockGetSession.mockResolvedValue({ data: { session: null } });
@@ -37,18 +39,18 @@ beforeEach(() => {
 });
 
 describe('useDevAutoLogin', () => {
-  it('oturum yoksa dört bölümü de gören hesapla giriş yapar', async () => {
+  it('oturum yoksa UYGULAMANIN verdiği hesapla giriş yapar', async () => {
     withoutSession();
 
-    renderHook(() => useDevAutoLogin());
+    renderHook(() => useDevAutoLogin(APP_ACCOUNT));
 
-    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('hepsi@lezzetanatolie.com'));
+    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith(APP_ACCOUNT));
   });
 
   it('OTURUM VARSA dokunmaz — geliştiricinin seçtiği hesap ezilmez', async () => {
     mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } });
 
-    renderHook(() => useDevAutoLogin());
+    renderHook(() => useDevAutoLogin(APP_ACCOUNT));
 
     await waitFor(() => expect(mockGetSession).toHaveBeenCalled());
     expect(mockDevSignIn).not.toHaveBeenCalled();
@@ -58,7 +60,7 @@ describe('useDevAutoLogin', () => {
     process.env.EXPO_PUBLIC_DEV_AUTOLOGIN = 'off';
     withoutSession();
 
-    renderHook(() => useDevAutoLogin());
+    renderHook(() => useDevAutoLogin(APP_ACCOUNT));
 
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(mockDevSignIn).not.toHaveBeenCalled();
@@ -68,7 +70,7 @@ describe('useDevAutoLogin', () => {
     delete process.env.EXPO_PUBLIC_SUPABASE_URL;
     withoutSession();
 
-    renderHook(() => useDevAutoLogin());
+    renderHook(() => useDevAutoLogin(APP_ACCOUNT));
 
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(mockDevSignIn).not.toHaveBeenCalled();

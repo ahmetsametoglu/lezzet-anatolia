@@ -74,16 +74,15 @@ function deepLinkPrefixes(): string[] {
 const deepLinkDomain = deepLinkHost(process.env.EXPO_PUBLIC_SITE_URL);
 
 /*
-  KAMERA İZNİ — TEK CÜMLE, İKİ EKLENTİ (21.309). Kamera artık iki iş görüyor: personelin kod
-  okutması (Modül 23) ve müşterinin talebe fotoğraf eklemesi. İki eklenti de iOS'ta AYNI anahtarı
-  yazıyor (`NSCameraUsageDescription`) ve sonuncusu kazanır — ayrı metinler, hangisinin göründüğünü
-  eklenti sırasına bırakırdı.
+  KAMERA İZNİ — yalnız talebe fotoğraf eklemek (21.309). Kod okutma operasyon uygulamasına geçti
+  (21.310) ve `expo-camera` eklentisi onunla gitti; kamerayı bu uygulamada yalnız görsel seçici açar.
+  Cümle iOS'ta `NSCameraUsageDescription` anahtarına yazılır ve kullanılmayan bir iş vaat etmemeli —
+  mağaza incelemesinde de kullanıcı karşısında da.
 
   DİLE GÖRE METİN `locales/*.json`da; bu cümle yalnız desteklenmeyen dildeki cihazın gördüğü temel
-  değerdir, bu yüzden İngilizce. Eskiden TEK Türkçe cümleydi çünkü kamerayı yalnız personel
-  kullanıyordu; artık müşteri de görüyor.
+  değerdir, bu yüzden İngilizce.
 */
-const CAMERA_PERMISSION = 'The camera is used to scan product and parcel codes and to attach a photo to a support request.';
+const CAMERA_PERMISSION = 'The camera is used to attach a photo to a support request.';
 
 const config: ExpoConfig = {
   name: BRAND_NAME,
@@ -270,13 +269,6 @@ const config: ExpoConfig = {
     ],
     'expo-secure-store',
     [
-      // Kamera kod okutmak (Modül 23) ve talebe fotoğraf eklemek (21.309) için; metin ikisini de
-      // söylüyor — genel bir "kamera erişimi" cümlesi, mağaza incelemesinde de kullanıcı karşısında da
-      // fazlasını vaat ederdi. Cümlenin tek kaynağı ve dil dosyaları `CAMERA_PERMISSION` künyesinde.
-      'expo-camera',
-      { cameraPermission: CAMERA_PERMISSION },
-    ],
-    [
       // Talep fotoğrafı (21.309): galeri + kamera. Galeri metni yalnız iOS'ta sorulur (Android'in
       // sistem seçicisi izin istemez). Uygulama ses kaydetmiyor: mikrofon izni istenmez ve Android'de
       // `RECORD_AUDIO` kaldırılır — kullanılmayan izin, mağaza incelemesinde sorulan izindir.
@@ -287,9 +279,6 @@ const config: ExpoConfig = {
         microphonePermission: false,
       },
     ],
-    // Brother etiket yazıcısı (23.5 iğne deneyi → 23.7 basım): SDK ağ/BT üzerinden diyalogsuz
-    // basar (karar §1.8 — sistem yazdırma diyaloğu depoda kabul edilemez, kullanıcı denedi).
-    'expo-brother-printer-sdk',
     [
       '@stripe/stripe-react-native',
       {

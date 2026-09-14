@@ -1,6 +1,6 @@
 // ORTAK JEST KURULUMU (21.310) — kitin kendi testleri ve native uygulamalar bu dosyayı `setupFiles`in
-// BAŞINDA okur (`jest-base.cjs`). Uygulamaya özgü yerel modül sahteleri (ödeme, ses, görsel seçici,
-// kamera) uygulamanın kendi `jest.setup.ts`inde ve bundan SONRA koşar.
+// BAŞINDA okur (`jest-base.cjs`). Uygulamaya özgü yerel modül sahteleri (müşteride ödeme ve görsel seçici,
+// operasyonda ses ve kamera) uygulamanın kendi `jest.setup.ts`inde ve bundan SONRA koşar.
 
 // Unistyles Jest mock'ları + tema kaydı (unistyl.es/v3/start/testing).
 // Mock'lar ekran/pixel-ratio VERMEZ: komponent testleri davranış + erişilebilirlik assert eder,

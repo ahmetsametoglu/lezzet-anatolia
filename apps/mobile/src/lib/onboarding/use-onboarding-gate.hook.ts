@@ -9,14 +9,12 @@ import { getOnboardingSnapshot, subscribeOnboarding } from './onboarding-store';
   koşabilsin.
 
   KARAR: bayrak okunana dek "hazır değil" (kök layout splash'ta bekler, font kapısıyla aynı
-  desen); kayıt yoksa ve kullanıcı MÜŞTERİ yüzeyindeyse `/onboarding`e replace.
+  desen); kayıt yoksa `/onboarding`e replace.
 
-  OPERASYON YÜZEYİ KAPININ DIŞINDA: kapı yalnız müşteri girişini ilgilendirir. Kabuğun
-  oturum/rol ayrımı ROTA GRUBUYLA kurulu — personel operasyona `(operations)` ağacından girer ve
-  o ağacın KENDİ kapısı var (`(operations)/_layout.tsx` `/me` okur, yetkisizi müşteri köküne
-  yollar). Burada ikinci bir `/me` okuması o kapının kopyası olurdu; segment süzgeci aynı ayrımı
-  ağa çıkmadan verir. Personel `/` açarsa bu, mimarinin kendi tanımıyla "müşteri gezinmesi"dir
-  (02-mimari §4) ve ilk açılışta onboarding'i o da görür — atlanabilir, zorlamaz.
+  OPERASYON AYRI UYGULAMA (21.310): tek uygulama iki yüzeyi taşırken personel ağacı bu kapının
+  segment süzgeciyle dışarıda tutuluyordu; o ağaç artık operasyon uygulamasında, süzgeç kalktı.
+  Personel bu uygulamayı açarsa müşteri gibi gezer ve ilk açılışta onboarding'i o da görür —
+  atlanabilir, zorlamaz.
 
   YÖNLENDİRME EFEKTLE (`router.replace`), `<Redirect>` İLE DEĞİL: kök layout'ta `Stack`in yerine
   `Redirect` dönmek navigatörü hiç kurmamak demek. Bedeli teoride tek karelik bir vitrin
@@ -46,10 +44,9 @@ export function useOnboardingGate(): boolean {
   const needsRedirect =
     ready &&
     !done &&
-    // İlk kareler segmentsiz gelebilir; hedef belli olmadan yönlendirmek operasyon derin
-    // bağlantısını da onboarding'e kaçırırdı — segment oturana dek beklenir (efekt yeniden koşar).
+    // İlk kareler segmentsiz gelebilir; hedef belli olmadan yönlendirmek bir derin bağlantıyı
+    // onboarding'e kaçırırdı — segment oturana dek beklenir (efekt yeniden koşar).
     surface !== undefined &&
-    surface !== '(operations)' &&
     surface !== 'onboarding';
 
   useEffect(() => {

@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Die Kamera wird zum Scannen von Produkt- und Paketcodes verwendet."
+  }
+}

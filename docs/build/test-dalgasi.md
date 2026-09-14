@@ -157,10 +157,10 @@ TEKRARLANMIYOR (`CLAUDE §1`: aynı gerçek iki yere yazılırsa ikisi de güven
 ### 6.2 · 23 — barkod (yeni görev satırı açılacak: `23.10`)
 
 Bugünkü hâl ölçüldü: `packages/application/src/warehouse/scan.ts` ve
-`apps/mobile/src/components/scan/scan-sheet.tsx` **testli**; ikisi testsiz.
+`apps/mobile-operations/src/components/scan/scan-sheet.tsx` **testli**; ikisi testsiz.
 
 **Saf (birim — şerit koşar):**
-- `apps/mobile/src/components/scan/dev-scan-pool.ts` — dev simülasyon havuzu: kod üretimi, havuzun
+- `apps/mobile-operations/src/components/scan/dev-scan-pool.ts` — dev simülasyon havuzu: kod üretimi, havuzun
   tükenmesi, üretim modunda devre dışı kalması. (Testi olmayan bir dev aracı, bir gün üretimde
   açık kalır.)
 - Barkod biçim doğrulaması (EAN-13/EAN-8 sağlama basamağı) — `packages/types` şemasında nerede

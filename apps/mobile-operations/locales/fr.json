@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "L’appareil photo sert à scanner les codes des produits et des colis."
+  }
+}

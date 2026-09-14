@@ -5,7 +5,6 @@ import { BottomTabBar, type BottomTabItem } from '@lezzet/mobile-kit/src/compone
 import type { IconName } from '@lezzet/brand/icons';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { useWholesale } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
-import { useStaffLanding } from '@/screens/operations/use-staff-landing.hook';
 // `typeof messages` için DEĞER bağı gerek (Messages tipi JSON'dan türer) — `import type` olmaz.
 import messages from '@lezzet/i18n/customer/tab-bar';
 
@@ -77,13 +76,6 @@ export default function TabsLayout() {
      doğrudan açıldıklarında bu kabuk hiç monte olmuyor. Gerekçenin tamamı `app/_layout.tsx`te.
      Buraya YENİDEN EKLENMEZ: kök zaten bu ağacı da kapsıyor, ikinci çağrı aynı turu iki kez
      saydırır. */
-
-  /* AÇILIŞTA ROL KARARI (21.97) — personel bu kabukta karşılanır ve operasyona taşınır. Kararın
-     tamamı ve gerekçeleri hook'ta; burada olmasının sebebi `/me` aboneliğinin (`useWholesale`)
-     zaten burada kurulu olması: ikinci bir uçuş doğmuyor. Kökte takılsaydı ziyaretçiye açık
-     yollar (davet · geri bildirim — kimlik token'ın KENDİSİDİR) oturum altyapısına bağlanırdı;
-     o ders `use-me.hook` künyesinde ölçümüyle yazılı. */
-  useStaffLanding();
 
   return (
     <Tabs

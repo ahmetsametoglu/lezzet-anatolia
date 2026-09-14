@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Kamera ürün ve koli kodlarını okutmak için kullanılır."
+  }
+}

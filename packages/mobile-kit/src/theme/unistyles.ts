@@ -176,9 +176,10 @@ declare module 'react-native-unistyles' {
 StyleSheet.configure({
   themes: appThemes,
   settings: {
-    /* AÇILIŞ MÜŞTERİ TEMASIYLA: "oturumsuz kullanım = müşteri gezinmesi" (02-mimari §4, kullanıcı
-       kararı 07.08) — uygulama giriş kapısıyla değil vitrinle açılır. Operasyon teması, operasyon
-       kabuğu bağlandığında `UnistylesRuntime.setTheme` ile devralır (`(operations)/_layout.tsx`).
+    /* AÇILIŞ TEMASI MÜŞTERİNİN — kit tek kayıtla iki uygulamaya hizmet eder (21.310). Operasyon
+       uygulaması kökünde, ilk kareden ÖNCE `UnistylesRuntime.setTheme('operations')` çağırır
+       (`apps/mobile-operations/src/app/_layout.tsx`); tek uygulama iki yüzeyi taşırken bu geçiş
+       operasyon kabuğunun kapısında, odağa bağlı bir dikişti.
        `adaptiveThemes` AÇILMADI: iki tema aydınlık/karanlık çifti değil, iki AYRI YÜZEY. */
     initialTheme: 'light',
   },

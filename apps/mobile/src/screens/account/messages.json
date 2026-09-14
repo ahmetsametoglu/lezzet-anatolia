@@ -132,7 +132,6 @@
       "deleting": "Siliniyor…",
       "failed": "Hesabınız silinemedi — yeniden deneyin."
     },
-    "staffBridge": "Personel ekranlarına geç",
     "logout": "Çıkış yap"
   },
   "fr": {
@@ -268,7 +267,6 @@
       "deleting": "Suppression…",
       "failed": "La suppression a échoué — veuillez réessayer."
     },
-    "staffBridge": "Accéder aux écrans du personnel",
     "logout": "Se déconnecter"
   },
   "de": {
@@ -404,7 +402,6 @@
       "deleting": "Wird gelöscht…",
       "failed": "Ihr Konto konnte nicht gelöscht werden — bitte erneut versuchen."
     },
-    "staffBridge": "Zu den Mitarbeiterbildschirmen",
     "logout": "Abmelden"
   }
 }

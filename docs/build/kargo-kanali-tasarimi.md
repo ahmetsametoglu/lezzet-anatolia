@@ -296,7 +296,7 @@ kaçırır (referans bunu 13 migration sonra öğrendi).
 > Kullanıcı şartı 28.08: *"kargo satın alındığı zaman sistemin etiketi alıp otomatik olarak
 > elimizdeki 4×6 inç etiket yazıcısına göndermesi gerekiyor."*
 
-**Ölçüm (28.08):** basım bugün YALNIZ telefondan geçiyor — `apps/mobile/src/lib/print/brother.ts`
+**Ölçüm (28.08):** basım bugün YALNIZ telefondan geçiyor — `apps/mobile-operations/src/lib/print/brother.ts`
 → `printLabel(fileUri, printer)`, Brother SDK. Web yalnız yazıcı ayarını GÖSTERİYOR
 (`operations/warehouses/page.tsx:155`); basan bir kapısı yok.
 

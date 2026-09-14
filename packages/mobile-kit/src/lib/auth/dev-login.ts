@@ -71,6 +71,9 @@ interface DevAccount {
  */
 export const DEV_ALL_SECTIONS_EMAIL = 'hepsi@lezzetanatolie.com';
 
+/** Müşteri uygulamasının otomatik girişi (21.310) — seed'in müşteri hesabı; düğme listesi de bunu okur. */
+export const DEV_CUSTOMER_EMAIL = 'claire.weber@example.fr';
+
 /*
   ADRESLER `lezzetanatolie.com` (10.09 gece, cihazda ölçüldü): seed ve web listesi personeli bu alana
   taşıdı (15.20), bu liste eski `lezzetanatolia.fr`de kaldı. "Yönetim" düğmesi kayıtsız adrese
@@ -78,7 +81,7 @@ export const DEV_ALL_SECTIONS_EMAIL = 'hepsi@lezzetanatolie.com';
   düğmesi müşteri yüzeyine düştü, hata vermeden.
 */
 export const DEV_ACCOUNTS: readonly DevAccount[] = [
-  { label: 'Müşteri', email: 'claire.weber@example.fr', operations: false },
+  { label: 'Müşteri', email: DEV_CUSTOMER_EMAIL, operations: false },
   { label: 'Yönetim', email: 'yonetim@lezzetanatolie.com', operations: true },
   { label: 'Depo', email: 'depo@lezzetanatolie.com', operations: true },
   { label: 'Kurye', email: 'kurye@lezzetanatolie.com', operations: true },

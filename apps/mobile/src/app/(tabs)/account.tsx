@@ -10,7 +10,6 @@ import { AccountScreen } from '@/screens/account/account-screen';
 import { accountData } from '@/screens/account/account-fixture';
 import messages from '@/screens/account/messages.json';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
-import { operationsHomeRoute } from '@/screens/login/post-login-route';
 
 /*
   Rota dosyası İNCE (katalogla aynı gerekçe) — ekranın parçaları `src/screens/account/`ta.
@@ -87,10 +86,6 @@ export default function AccountRoute() {
       /* Aşağı çekildiğinde kimliği TAZELEYEN kapı (21.29c): ekran `/me`yi kendi okumuyor, bu satır
          okuyor — tazeleme de burada. Puan ve adresleri ekran kendi tazeliyor. */
       onRefreshIdentity={meState.refresh}
-      /* PERSONEL KÖPRÜSÜ (21.97) — karar burada, çünkü `/me` burada okunuyor ve kural girişin
-         okuduğu kuralın ta kendisi (`operationsHomeRoute`). Müşteride `null` döner ve ekranda
-         satır hiç doğmaz. */
-      staffRoute={operationsHomeRoute(me)}
       /* FATURA ADRESİ ROLÜNÜN KAPISI (09.09) — `data.company` DEĞİL: o künyenin okuma ucu yok ve
          aşağıda sabit `null` geçiyor, yani rol o kapının arkasında hiç görünmüyordu. Sorulan soru
          yalnız "bu hesap şirket mi" ve cevabı `/me` zaten taşıyor; `type: 'company'` B2B onayında

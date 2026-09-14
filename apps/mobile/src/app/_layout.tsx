@@ -11,6 +11,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { ToastHost } from '@lezzet/mobile-kit/src/components/ui/toast-host';
 import { registerSignInEffect } from '@lezzet/mobile-kit/src/lib/auth/sign-in-effects';
+import { DEV_CUSTOMER_EMAIL } from '@lezzet/mobile-kit/src/lib/auth/dev-login';
 import { useDevAutoLogin } from '@lezzet/mobile-kit/src/lib/auth/use-dev-auto-login.hook';
 import { useSessionEndedLogin } from '@lezzet/mobile-kit/src/lib/auth/use-session-ended-login.hook';
 import { initAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
@@ -41,9 +42,8 @@ import { appFontAssets } from '@lezzet/mobile-kit/src/theme/fonts';
 */
 
 /**
- * SEPETİ OLMAYAN ÜÇ AĞAÇ — kök yığından geçen ama alışverişle ilgisi olmayan yollar.
+ * SEPETİ OLMAYAN İKİ AĞAÇ — kök yığından geçen ama alışverişle ilgisi olmayan yollar.
  *
- * · `(operations)` — personel kabuğu; personelin sepeti yok.
  * · `feedback` · `invite` — kimlik TOKEN'ın kendisidir, ziyaretçi oturumsuz gelir (e-postadaki
  *   link). Burada sepet turu açmak, oturumu olmayan birini oturum altyapısına bağlardı.
  *
@@ -51,7 +51,7 @@ import { appFontAssets } from '@lezzet/mobile-kit/src/theme/fonts';
  * kendiliğinden AÇIK gelir. Ters kurgu, kapıyı takmayı unutan her yeni ekranda 28.08'de ölçülen
  * arızayı sessizce geri getirirdi (`cart-store.ts` künyesi).
  */
-const CARTLESS_TREES = new Set(['(operations)', 'feedback', 'invite']);
+const CARTLESS_TREES = new Set(['feedback', 'invite']);
 
 /* GİRİŞ SONRASI İŞ — bekleyen davetin bağlanması (21.310). Kod ve Google girişi oturumu kurduktan
    sonra kayıtlı işleri koşar; kapı ortak çekirdekte ve davet modülünü tanımaz. Kayıt KÖKTE ve modül
@@ -121,9 +121,9 @@ export default function RootLayout() {
   }, []);
 
   /* OTOMATİK DEV GİRİŞİ (kullanıcı isteği 30.08) — yalnız `__DEV__`, yalnız OTURUMSUZ hâlde:
-     dört bölümü de gören personelle giriş kurulur, operasyona inişi var olan kural yapar
-     (`use-staff-landing`). Üretimde gövdesi hiç koşmaz; gerekçe ve kapatma anahtarı künyede. */
-  useDevAutoLogin();
+     seed'in müşteri hesabıyla giriş kurulur (21.310 — personel operasyon uygulamasında).
+     Üretimde gövdesi hiç koşmaz; gerekçe ve kapatma anahtarı künyede. */
+  useDevAutoLogin(DEV_CUSTOMER_EMAIL);
 
   /* REDDEDİLEN OTURUM → GİRİŞ (21.304 — kullanıcı kararı 10.09): sunucu jetonu, auth sunucusu da
      tazelemeyi kesin reddettiğinde oturum kapanır (`authorizedFetch`) ve giriş ekranı sebebiyle
@@ -175,11 +175,10 @@ export default function RootLayout() {
       {/* HAREKET KÖKÜ (09.08) — `react-native-gesture-handler`ın hareketleri yalnız bu kökün
           ALTINDA çalışır; Android'de dokunuşları buradan dağıtır. Tek kopya, kökte: her ekranın
           kendi kökünü kurması, iki ayrı hareket ağacı demek olurdu. */}
-      {/* `app-root`: uygulamanın ÇİZİLDİĞİNİ söyleyen tek kanca (30.08). Uçtan uca akışlar
-          (`maestro/common/launch.yaml`) açılışı burada bekler — iki kabuğun (müşteri sekmeleri
-          ↔ operasyon sekmeleri) ortak hiçbir kancası yoktu ve akış "hangisini bekleyeyim"
-          sorusunu çözemiyordu. Personel oturumu açılışta doğrudan operasyona taşındığı için
-          müşteri sekme çubuğunu beklemek de yanlış cevaptı. */}
+      {/* `app-root`: uygulamanın ÇİZİLDİĞİNİ söyleyen tek kanca (30.08). Uçtan uca akışlar açılışı
+          burada bekler; operasyon uygulamasının kökü de aynı kancayı taşır (21.310). Tek uygulama
+          iki kabuğu taşırken ortak bir kanca yoktu ve akış "hangisini bekleyeyim" sorusunu
+          çözemiyordu. */}
       <GestureHandlerRootView style={styles.root} testID="app-root">
         {/* ÇEKMECE PORTALI (01.09) — `BottomSheetModal` kendi katmanını buraya asar.
 
