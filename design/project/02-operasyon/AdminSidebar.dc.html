@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+</helmet>
+
+<div style="width:214px;height:100%;box-sizing:border-box;background:#f3f4f0;border-right:1px solid #e6e7e1;padding:16px 0;display:flex;flex-direction:column;font-family:'Karla',sans-serif;overflow-y:auto">
+  <div style="padding:2px 15px 12px;display:flex;align-items:center;gap:10px">
+    <span style="width:30px;height:30px;border-radius:8px;background:#22251f;color:#a9c46b;font:700 15px 'Space Grotesk';display:grid;place-items:center">L</span>
+    <div style="display:flex;flex-direction:column">
+      <span style="font:600 15px 'Space Grotesk';color:#22251f;line-height:1.15">Lezzet</span>
+      <span style="font:500 9px 'Space Grotesk';letter-spacing:.2em;color:#8b9086">OPERASYON</span>
+    </div>
+  </div>
+  <sc-if value="{{ depoPicker }}" hint-placeholder-val="{{ true }}">
+    <div style="margin:0 15px 10px;display:flex;flex-direction:column;gap:5px">
+      <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.15em;text-transform:uppercase;color:#a7ac9f">Depo bağlamı</span>
+      <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #d9dbd2;border-radius:8px;padding:7px 9px;cursor:pointer">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 21V9l9-5 9 5v12"></path><path d="M3 21h18"></path><path d="M9 21v-6h6v6"></path></svg>
+        <div style="display:flex;flex-direction:column;flex:1;min-width:0;gap:1px">
+          <span style="font:600 12.5px 'Space Grotesk';color:#22251f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ depoLabel }}</span>
+          <span style="font:400 10px 'Karla';color:#8b9086">{{ depoSub }}</span>
+        </div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ depoFixed }}" hint-placeholder-val="{{ false }}">
+    <div style="margin:0 15px 10px;display:flex;align-items:center;gap:8px;padding:2px 1px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b9086" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 21V9l9-5 9 5v12"></path><path d="M3 21h18"></path><path d="M9 21v-6h6v6"></path></svg>
+      <span style="font:500 11.5px 'Karla';color:#6a7065">{{ depoLabel }}</span>
+    </div>
+  </sc-if>
+  <div style="margin:0 15px 8px;display:flex;align-items:center;gap:8px;background:#e9eae4;border:1px solid #e0e2da;border-radius:8px;padding:7px 10px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9aa094" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+    <span style="font:400 12px 'Karla';color:#9aa094;flex:1">Ara…</span>
+    <span style="font:500 10px 'IBM Plex Mono';color:#b3b7ac;border:1px solid #d9dbd2;border-radius:4px;padding:0 4px">⌘K</span>
+  </div>
+
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="5">
+    <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.15em;text-transform:uppercase;color:#a7ac9f;padding:13px 16px 5px">{{ sec.label }}</span>
+    <sc-for list="{{ sec.items }}" as="it" hint-placeholder-count="3">
+      <a href="{{ it.href }}" style="display:flex;align-items:center;gap:11px;padding:7px 15px;border-left:2px solid {{ it.edge }};background:{{ it.bg }};color:{{ it.iconColor }};text-decoration:none;cursor:pointer">
+        {{ it.icon }}
+        <span style="font-family:'Space Grotesk';font-size:13px;font-weight:{{ it.weight }};color:{{ it.labelFg }};flex:1">{{ it.label }}</span>
+        <sc-if value="{{ it.badge }}" hint-placeholder-val="{{ false }}">
+          <span style="font:500 10.5px 'IBM Plex Mono';color:{{ it.badgeFg }};background:{{ it.badgeBg }};border-radius:9px;padding:1px 7px">{{ it.badge }}</span>
+        </sc-if>
+      </a>
+    </sc-for>
+  </sc-for>
+
+  <a href="../Harita.dc.html" style="margin:14px 15px 0;font:500 11px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#a7ac9f;text-decoration:none">↩ Ekran haritası</a>
+  <div style="margin-top:auto;padding:12px 15px 0;margin-left:15px;margin-right:15px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px">
+    <span style="width:30px;height:30px;border-radius:8px;background:#5f7a2c;color:#fff;font:600 12px 'Space Grotesk';display:grid;place-items:center">SA</span>
+    <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+      <span style="font:600 12.5px 'Space Grotesk';color:#22251f">Selim A.</span>
+      <span style="font:400 10.5px 'Karla';color:#8b9086">Yönetici</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:214,&quot;height&quot;:720},&quot;active&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;panel&quot;,&quot;options&quot;:[&quot;panel&quot;,&quot;siparisler&quot;,&quot;rotalar&quot;,&quot;asistan&quot;,&quot;urunler&quot;,&quot;tarifler&quot;,&quot;fiyatlar&quot;,&quot;stok&quot;,&quot;satinalma&quot;,&quot;transfer&quot;,&quot;para&quot;,&quot;raporlar&quot;,&quot;analitik&quot;,&quot;musteriler&quot;,&quot;b2b&quot;,&quot;talepler&quot;,&quot;geribildirim&quot;,&quot;whatsapp&quot;,&quot;depolar&quot;,&quot;ayarlar&quot;,&quot;sistem&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;depoMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;all&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;scoped&quot;,&quot;fixed&quot;,&quot;none&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;},&quot;depo&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Tüm depolar&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Depo ekseni&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active || 'panel';
+    const E = React.createElement;
+    const svg = (...ch) => E('svg', { width:16, height:16, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.9, strokeLinecap:'round', strokeLinejoin:'round', style:{flex:'none'} }, ...ch);
+    const P = (d,i) => E('path', { d, key:'p'+i }); const C = (cx,cy,r,i) => E('circle', { cx, cy, r, key:'c'+i });
+    const R = (x,y,w,h,rx,i) => E('rect', { x, y, width:w, height:h, rx, key:'r'+i });
+    const icons = {
+      panel: svg(R(3,3,7,7,1.5,1),R(14,3,7,7,1.5,2),R(3,14,7,7,1.5,3),R(14,14,7,7,1.5,4)),
+      siparisler: svg(P('M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8',1),P('M3.3 7 12 12l8.7-5',2),P('M12 22V12',3)),
+      rotalar: svg(C(6,19,2.4,1),C(18,5,2.4,2),P('M8 19h6a4 4 0 0 0 0-8H9a4 4 0 0 1 0-8h1',3)),
+      urunler: svg(P('M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10z',1),C(7,7,1.3,2)),
+      tarifler: svg(P('M4 19.5A2.5 2.5 0 0 1 6.5 17H20',1),P('M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',2)),
+      fiyatlar: svg(P('M19 5 5 19',1),C(6.5,6.5,2.5,2),C(17.5,17.5,2.5,3)),
+      stok: svg(P('m12 2 9 5-9 5-9-5z',1),P('m3 12 9 5 9-5',2),P('m3 17 9 5 9-5',3)),
+      satinalma: svg(C(9,20,1,1),C(18,20,1,2),P('M1 2h3l2.4 12.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.6L23 5H5',3)),
+      para: svg(P('M18 7a6 6 0 1 0 0 10',1),P('M4 11h9',2),P('M4 15h7',3)),
+      raporlar: svg(P('M3 3v18h18',1),P('M8 17v-5',2),P('M13 17V8',3),P('M18 17v-9',4)),
+      analitik: svg(P('M3 12h4l3-8 4 16 3-8h4',1)),
+      musteriler: svg(C(12,8,4,1),P('M4 21v-1a6 6 0 0 1 12 0v1',2)),
+      b2b: svg(R(4,2,16,20,1.5,1),P('M9 22v-4h6v4',2),P('M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01',3)),
+      talepler: svg(P('M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z',1)),
+      asistan: svg(P('M12 3v3',1),R(4,6,16,12,3,2),C(9,12,1,3),C(15,12,1,4),P('M9 16h6',5)),
+      geribildirim: svg(P('M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z',1)),
+      whatsapp: svg(P('M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z',1)),
+      ayarlar: svg(C(12,12,3,1),P('M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1',2)),
+      sistem: svg(R(2,4,20,13,2,1),P('M6 10.5h3l1.6-3.2 2.2 6.4 1.4-3.2H18',2),P('M8 21h8',3),P('M12 17v4',4)),
+      transfer: svg(P('M4 8h13l-3.5-3.5',1),P('M20 16H7l3.5 3.5',2)),
+      depolar: svg(P('M3 21V9l9-5 9 5v12',1),P('M3 21h18',2),P('M9 21v-6h6v6',3)),
+    };
+    const raw = [
+      { label:'Günlük', items:[
+        { key:'panel', label:'Panel' },
+        { key:'siparisler', label:'Siparişler', badge:'6', tone:'n' },
+        { key:'rotalar', label:'Rotalar' },
+        { key:'asistan', label:'Asistan Kuyruğu', badge:'5', tone:'a' },
+      ]},
+      { label:'Katalog', items:[
+        { key:'urunler', label:'Ürünler' },
+        { key:'tarifler', label:'Tarifler' },
+        { key:'fiyatlar', label:'Fiyatlar' },
+        { key:'stok', label:'Stok' },
+        { key:'satinalma', label:'Satın Alma' },
+        { key:'transfer', label:'Transfer', badge:'3', tone:'n' },
+      ]},
+      { label:'Para & analiz', items:[
+        { key:'para', label:'Para', badge:'7', tone:'a' },
+        { key:'raporlar', label:'Raporlar' },
+        { key:'analitik', label:'Analitik' },
+      ]},
+      { label:'İlişki', items:[
+        { key:'musteriler', label:'Müşteriler' },
+        { key:'b2b', label:'B2B Onay', badge:'2', tone:'a' },
+        { key:'talepler', label:'Talepler', badge:'3', tone:'a' },
+        { key:'geribildirim', label:'Geri Bildirim' },
+        { key:'whatsapp', label:'WhatsApp', badge:'5', tone:'a' },
+      ]},
+      { label:'Sistem', items:[
+        { key:'depolar', label:'Depolar' },
+        { key:'ayarlar', label:'Ayarlar' },
+        { key:'sistem', label:'Sistem' },
+      ]},
+    ];
+    const files = {
+      panel:'Operasyon - Dashboard', siparisler:'Operasyon - Siparisler', rotalar:'Operasyon - Rotalar',
+      urunler:'Operasyon - Urunler', tarifler:'Operasyon - Tarifler', fiyatlar:'Operasyon - Fiyatlar', stok:'Operasyon - Stok',
+      satinalma:'Operasyon - Satin Alma', transfer:'Operasyon - Transfer', para:'Operasyon - Para',
+      raporlar:'Operasyon - Raporlar', analitik:'Operasyon - Analitik', musteriler:'Operasyon - Musteriler',
+      asistan:'Operasyon - Asistan Kuyrugu', b2b:'Operasyon - B2B Onay', talepler:'Operasyon - Talepler', geribildirim:'Operasyon - Geri Bildirim',
+      whatsapp:'Operasyon - WhatsApp', depolar:'Operasyon - Depolar', ayarlar:'Operasyon - Ayarlar',
+      sistem:'Operasyon - Sistem',
+    };
+    const sections = raw.map(sec => ({
+      label: sec.label,
+      items: sec.items.map(it => {
+        const on = it.key === active;
+        const href = files[it.key] ? encodeURI('./' + files[it.key] + '.dc.html') : null;
+        const tone = it.tone === 'a'
+          ? { badgeFg:'#9a6416', badgeBg:'#fdf1e3' }
+          : { badgeFg:'#5c6157', badgeBg:'#e4e6de' };
+        return {
+          label: it.label,
+          href,
+          icon: icons[it.key],
+          badge: it.badge || null,
+          badgeFg: tone.badgeFg, badgeBg: tone.badgeBg,
+          edge: on ? '#5f7a2c' : 'transparent',
+          bg: on ? '#e9ede0' : 'transparent',
+          iconColor: on ? '#4a6121' : '#9aa094',
+          labelFg: on ? '#22251f' : '#5c6157',
+          weight: on ? 600 : 500,
+        };
+      }),
+    }));
+    // Depo bağlamı: kimlik/ortam düzeyi kontrol (rol gibi) — sayfadan sayfaya taşınır.
+    // mode: 'all' (depo-üstü rol) · 'scoped' (çok kapsamlı personel) · 'fixed' (tek kapsam, kontrol değil bilgi) · 'none' (tek aktif depo kurulumu)
+    const mode = this.props.depoMode || 'all';
+    const depo = this.props.depo || 'Tüm depolar';
+    const subs = { all:'3 aktif depo · STR · COL · KEHL', scoped:'kapsamım · 2 depo', fixed:'', none:'' };
+    return {
+      sections,
+      depoPicker: mode === 'all' || mode === 'scoped',
+      depoFixed: mode === 'fixed',
+      depoLabel: mode === 'fixed' ? (this.props.depo || 'Strasbourg deposu') : depo,
+      depoSub: subs[mode] || '',
+    };
+  }
+}
+</script>
+</body>
+</html>

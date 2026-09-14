@@ -46,8 +46,14 @@ docs/uygulama/07-operasyon-fonksiyonel-kontrol-listesi.md
 # Dosya adı kalıbı `v3-gorsel-*.md` defterlerini YAKALAMAZ (onlar repoda kalır).
 docs/uygulama/v3-gorsel/
 
-# Claude Design'ın çalışma klasörü (kullanıcı kararı 31.08) — dışa aktarılmış HTML'ler, yüklenen
-# ürün görselleri ve ekran görüntüsü setleri. KAYNAK Claude Design'da duruyor; buradaki kopya her
-# tasarım turunda baştan doğuyor ve depoya megabaytlarca üretilmiş dosya taşıyordu.
+# Claude Design'ın çalışma klasörü — KAYNAKLAR REPODA, gürültü dışarıda (kullanıcı kararı 14.09; 31.08'in
+# "klasörün tamamı dışarıda" kararını daraltır). İzlenenler: numaralı kaynak klasörleri (01–07),
+# `Harita.dc.html`, README/CLAUDE.md, çalışma zamanı `.js`leri ve `assets/`. Tasarım farkı araçları önceki
+# sürümü HEAD'den okur. Dışarıda kalanlar üretilmiş ya da yüklenmiş dosyalar: ürün görselleri (`uploads/`,
+# 18 MB), ekran görüntüsü setleri (`screenshots/`, 17 MB), tek dosyaya gömülü çıktılar (`08-export/`) ve
+# eski sürümler (`09-arsiv/`, geçmişi git'te).
 # `design/derived/` ve `design/*.md` REPODA KALIR — implementin okuduğu karar metinleri onlar.
-design/project/
+design/project/uploads/
+design/project/screenshots/
+design/project/08-export/
+design/project/09-arsiv/

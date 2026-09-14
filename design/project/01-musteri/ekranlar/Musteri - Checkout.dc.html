@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#e9e6df; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-wrap:wrap;gap:56px;padding:48px;align-items:flex-start">
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:1360px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Checkout · Web (girişli B2C, bölge içi, çoklu gün)</span>
+    <div data-screen-label="Checkout Web" style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <a href="./Musteri%20-%20Anasayfa.dc.html" style="display:inline-flex;line-height:0"><img src="../../assets/logo.jpg" style="height:52px;mix-blend-mode:multiply" alt="Lezzet Anatolia"></a>
+        <span style="font:600 22px 'Lora';color:#343b41">Siparişi tamamla</span>
+        <a href="./Musteri%20-%20Sepet.dc.html" style="color:inherit;text-decoration:none;margin-left:auto;font:700 14px 'Karla';color:#5f7a2c">← Sepete dön</a>
+      </div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:40px;padding:36px 48px 48px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 26px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:30px;height:30px;border-radius:15px;background:#5f7a2c;color:#fff;font:700 15px 'Karla';display:grid;place-items:center">1</span>
+              <span style="font:600 19px 'Lora';color:#343b41">Teslimat adresi</span>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <div style="border:2px solid #5f7a2c;background:#eef2e2;border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:240px">
+                <span style="font:700 14px 'Karla';color:#3a4147">Ev · varsayılan</span>
+                <span style="font:400 13px/1.5 'Karla';color:#6d7261">12 Rue des Orfèvres<br>67000 Strasbourg</span>
+              </div>
+              <div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:240px">
+                <span style="font:700 14px 'Karla';color:#3a4147">İş</span>
+                <span style="font:400 13px/1.5 'Karla';color:#6d7261">4 Avenue de la Paix<br>67000 Strasbourg</span>
+              </div>
+              <div style="border:1.5px dashed #cdc4a8;border-radius:14px;padding:14px 18px;display:grid;place-items:center;min-width:140px;font:700 14px 'Karla';color:#5f7a2c">+ Yeni adres</div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 26px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:30px;height:30px;border-radius:15px;background:#5f7a2c;color:#fff;font:700 15px 'Karla';display:grid;place-items:center">2</span>
+              <span style="font:600 19px 'Lora';color:#343b41">Teslimat günü</span>
+              <span style="font:600 13px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:12px;padding:3px 10px">Kapıya teslim · ücretsiz</span>
+            </div>
+            <span style="font:400 14px 'Karla';color:#6d7261">Adresiniz teslimat bölgemizde — aracımız kapınıza getirir.</span>
+            <div style="display:flex;gap:12px">
+              <div style="border:2px solid #5f7a2c;background:#eef2e2;border-radius:14px;padding:12px 20px;display:flex;flex-direction:column;gap:2px;align-items:center">
+                <span style="font:700 15px 'Karla';color:#3a4147">Perşembe</span><span style="font:400 13px 'Karla';color:#6d7261">24 Temmuz</span>
+              </div>
+              <div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:14px;padding:12px 20px;display:flex;flex-direction:column;gap:2px;align-items:center">
+                <span style="font:700 15px 'Karla';color:#3a4147">Salı</span><span style="font:400 13px 'Karla';color:#6d7261">29 Temmuz</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 26px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:30px;height:30px;border-radius:15px;background:#5f7a2c;color:#fff;font:700 15px 'Karla';display:grid;place-items:center">3</span>
+              <span style="font:600 19px 'Lora';color:#343b41">Ödeme</span>
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <div style="border:2px solid #5f7a2c;background:#eef2e2;border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:220px">
+                <span style="font:700 14px 'Karla';color:#3a4147">💳 Online öde</span>
+                <span style="font:400 13px 'Karla';color:#6d7261">Kart ile güvenli ödeme sayfasında</span>
+              </div>
+              <div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:3px;min-width:220px">
+                <span style="font:700 14px 'Karla';color:#3a4147">🚪 Kapıda öde</span>
+                <span style="font:400 13px 'Karla';color:#6d7261">Nakit, kart veya çek</span>
+              </div>
+            </div>
+            <label style="display:flex;gap:10px;align-items:flex-start;font:400 14px/1.5 'Karla';color:#6d7261">
+              <span style="width:20px;height:20px;border:2px solid #d8cfb6;border-radius:6px;background:#fff;flex:none;margin-top:1px"></span>
+              Kampanya ve fırsatlardan e-posta/WhatsApp ile haberdar olmak istiyorum <span style="color:#8a8270">(isteğe bağlı)</span>
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;position:sticky;top:20px">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:600 20px 'Lora';color:#343b41">Sipariş özeti</span>
+            <div style="display:flex;flex-direction:column;gap:6px;font:400 14px 'Karla';color:#3a3f35">
+              <div style="display:flex;justify-content:space-between"><span>Fıstıklı Baklava × 2</span><span style="font-weight:700">33,80 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span>Ispanaklı Gözleme × 5</span><span style="font-weight:700">29,50 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span>Bayram Sofrası (paket)</span><span style="font-weight:700">49,90 €</span></div>
+              <div style="display:flex;justify-content:space-between;color:#5f7a2c"><span>İndirim</span><span style="font-weight:700">−10,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span>Teslimat</span><span style="font-weight:700;color:#5f7a2c">Ücretsiz</span></div>
+              <div style="border-top:1px solid #ece5d2;padding-top:10px;display:flex;justify-content:space-between;font:700 18px 'Karla';color:#343b41"><span>Genel toplam</span><span>103,20 €</span></div>
+              <span style="font:400 12px 'Karla';color:#8a8270">Fiyatlara KDV dahildir.</span>
+            </div>
+            <span style="background:#5f7a2c;color:#fff;font:700 16px 'Karla';padding:15px;border-radius:28px;text-align:center">Siparişi onayla</span>
+            <span style="font:400 12px/1.5 'Karla';color:#8a8270;text-align:center">Onaylayarak <span style="color:#5f7a2c">satış koşullarını</span> kabul etmiş olursunuz.</span>
+          </div>
+          <div style="background:#f0e9d6;border-radius:14px;padding:12px 16px;font:400 13px/1.6 'Karla';color:#6d7261">❄ Siparişiniz soğuk zincir bozulmadan, Perşembe günü kapınıza gelir.</div>
+        </div>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="width:560px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Yer ekseni · adres kazanır — seçilen adres şeritteki koddan farklı</span>
+        <div style="background:#fff;border:1px solid #e0d8c2;border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+          <span style="font:600 18px 'Lora';color:#343b41">Sipariş <strong>68000 Colmar</strong> adresine göre hazırlandı</span>
+          <span style="font:400 13px/1.6 'Karla';color:#6d7261">Sitede <strong>67000</strong> seçiliydi, seçtiğiniz adres 68000. Sepeti bu adrese göre yeniden değerlendirdik — sürpriz ödemeden sonra değil, <strong>burada</strong> yaşansın diye:</span>
+          <div style="display:flex;flex-direction:column;gap:6px;background:#faf6ec;border-radius:12px;padding:12px 14px">
+            <span style="font:400 13px/1.5 'Karla';color:#6d7261">🚚 2 kalem yine kapıya teslim — gün <strong>Perşembe</strong> yerine <strong>Cumartesi</strong></span>
+            <span style="font:400 13px/1.5 'Karla';color:#6d7261">📦 <strong>Antep Fıstığı</strong> bu adrese kargoyla gider — ayrı sipariş olarak sepette bekliyor</span>
+            <span style="font:400 13px/1.5 'Karla';color:#8a6b2a"><strong>İçli Köfte</strong> bu bölgede şu an yok — sonraya kaydedildi</span>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 20px;border-radius:24px">Bu adresle devam et</span>
+            <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13.5px 'Karla';padding:10px 18px;border-radius:24px">Başka adres seç</span>
+          </div>
+        </div>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Adres, şerit/hap ile çelişirse <strong>adres kazanır</strong> — sipariş her zaman gerçek teslimat yerine göre çözülür. "Sepette gördüm, ödemede kayboldu" sürprizi checkout'un <strong>içinde</strong>, açık mesajla yaşanır; sonrasında değil. Ret değil bilgi bloklarıdır; kırmızı kullanılmaz.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:11px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Kargo checkout'u — ikinci sipariş</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Kargolu ürünler · 2 kalem</span>
+        <div style="background:#f0e9d6;border:1px solid #e0d8c2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between;font:400 13.5px 'Karla';color:#3a3f35"><span>Ara toplam</span><span style="font-weight:700">39,70 €</span></div>
+          <div style="display:flex;justify-content:space-between;font:400 13.5px 'Karla';color:#3a3f35"><span>📦 Kargo</span><span style="font-weight:700">6,90 €</span></div>
+          <span style="font:400 12px/1.5 'Karla';color:#6d7261">50 € üzeri ücretsiz — eşik <strong>bu siparişin</strong> tutarından hesaplanır.</span>
+        </div>
+        <div style="border:2px solid #5f7a2c;background:#eef2e2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px">
+          <span style="font:700 13.5px 'Karla';color:#3a4147">Online öde</span>
+          <span style="font:400 12px 'Karla';color:#6d7261">Kart · tek seçenek</span>
+        </div>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Aynı checkout akışı, kargo karakteriyle: <strong>gün kartları yok</strong> ("2-3 iş günü"), kapıda ödeme hiç listelenmez, minimum sepet kuralı rota siparişinden bağımsızdır. Rota siparişi bu akıştan etkilenmez — iki ödeme birleştirilmez.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Girişsiz gelen — hızlı doğrulama adımı (adım 0)</span>
+        <span style="font:600 18px 'Lora';color:#343b41">Siparişinizi tamamlamak için doğrulanın</span>
+        <span style="font:400 13px 'Karla';color:#6d7261">Birkaç saniye sürer; şifre yok.</span>
+        <span style="background:#fff;border:1.5px solid #d8cfb6;font:700 14px 'Karla';color:#3a4147;padding:12px;border-radius:24px;text-align:center">🇬 Google ile devam et</span>
+        <span style="background:#fff;border:1.5px solid #d8cfb6;font:700 14px 'Karla';color:#3a4147;padding:12px;border-radius:24px;text-align:center">✉ E-posta ile devam et</span>
+        <span style="font:400 12px 'Karla';color:#8a8270;text-align:center">Doğrulama sonrası kaldığınız yere dönersiniz.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Tek uygun gün (seçim yok)</span>
+        <div style="display:flex;align-items:center;gap:12px"><span style="font:600 17px 'Lora';color:#343b41">Teslimat günü</span><span style="font:600 12px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:11px;padding:2px 9px">Kapıya teslim · ücretsiz</span></div>
+        <div style="background:#eef2e2;border-radius:12px;padding:12px 16px;font:600 14px 'Karla';color:#3a4147">📅 Perşembe, 24 Temmuz günü kapınızda</div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Tek gün varsa kart hiç gösterilmez; sonuç düz cümledir. Kesim saati kavramı anlatılmaz — uygun günler zaten hesaplı gelir.</span>
+      </div>
+      <div style="width:560px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:14px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Adım 1 · "+ Yeni adres" seçildi — adres formu</span>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <span style="font:600 12.5px 'Karla';color:#6d7261">Adres başlığı</span>
+            <div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">Ev</div>
+          </div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <span style="font:600 12.5px 'Karla';color:#6d7261">Alıcı adı</span>
+            <div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">Ayşe Yılmaz</div>
+          </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <span style="font:600 12.5px 'Karla';color:#6d7261">Sokak ve numara</span>
+            <div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">12 Rue des Orfèvres</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <span style="font:600 12.5px 'Karla';color:#6d7261">Kapı / kat / zil notu <span style="font-weight:400;color:#8a8270">(isteğe bağlı)</span></span>
+            <div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#b3ab97;min-height:48px;box-sizing:border-box">3. kat, zil: Yılmaz</div>
+          </div>
+          <div style="display:flex;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:6px;width:150px">
+              <span style="font:600 12.5px 'Karla';color:#6d7261">Posta kodu</span>
+              <div style="background:#fff;border:2px solid #5f7a2c;border-radius:14px;padding:12px 16px;font:700 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">67000</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <span style="font:600 12.5px 'Karla';color:#6d7261">Şehir</span>
+            <div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">Strasbourg</div>
+          </div>
+          </div>
+          <div style="background:#eef2e2;border:1px solid #cddbb0;border-radius:12px;padding:11px 14px;font:600 13px/1.6 'Karla';color:#4a6121">📍 Teslimat bölgemizde — kapıya teslim ücretsiz, en yakın gün <strong>Perşembe, 24 Temmuz</strong>.</div>
+          <div style="display:flex;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <span style="font:600 12.5px 'Karla';color:#6d7261">Telefon</span>
+            <div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">+33 6 12 34 56 78</div>
+          </div>
+            <div style="display:flex;flex-direction:column;gap:6px;width:170px">
+              <span style="font:600 12.5px 'Karla';color:#6d7261">Ülke</span>
+              <div style="background:#f6f2e6;border:1.5px solid #e0d8c2;border-radius:14px;padding:13px 16px;font:400 15px/20px 'Karla';color:#8a8270;min-height:48px;box-sizing:border-box">Fransa</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;min-height:44px">
+            <span style="width:22px;height:22px;border-radius:6px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:grid;place-items:center;flex:none">✓</span>
+            <span style="font:400 14px 'Karla';color:#3a4147">Bu adresi varsayılan yap</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;border-top:1px solid #f0ead8;padding-top:14px">
+            <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:14px 26px;border-radius:26px;min-height:48px;box-sizing:border-box">Adresi kaydet ve devam et</span>
+            <span style="border:1.5px solid #d8cfb6;color:#3a4147;font:700 14px 'Karla';padding:12px 22px;border-radius:26px;min-height:44px;box-sizing:border-box">Vazgeç</span>
+          </div>
+        </div>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Posta kodu yazıldığı anda cevap verir: bölge içiyse yeşil satır (gün + ücretsiz), bölge dışıysa nötr "kargo" satırı — sepette gönderilemeyen kalem varsa onun altında K32 teslimat kısıtı bloğu açılır. Doğrulama alan alan, kaydetmeye basınca değil.</span>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Alan yükseklikleri K34'ten gelir: metin alanı 48px (mobil 52), birincil buton 48 (mobil 52), ikincil 44. Zorunlu alanlar yıldızla değil, isteğe bağlı olanlar "(isteğe bağlı)" ile işaretlenir.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Adres formu · hata ve bölge dışı hali</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 12.5px 'Karla';color:#6d7261">Posta kodu</span>
+          <div style="background:#fff;border:2px solid #c25e3a;border-radius:14px;padding:12px 16px;font:700 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">6700</div>
+          <span style="font:600 12.5px 'Karla';color:#c25e3a">5 haneli bir posta kodu girin.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 12.5px 'Karla';color:#6d7261">Posta kodu</span>
+          <div style="background:#fff;border:1.5px solid #d8cfb6;border-radius:14px;padding:12px 16px;font:700 15px/20px 'Karla';color:#3a4147;min-height:48px;box-sizing:border-box">75011</div>
+          <div style="background:#f0e9d6;border-radius:12px;padding:10px 13px;font:600 12.5px/1.6 'Karla';color:#6d7261">📦 Bölgemiz dışında — kargoyla gönderiyoruz (6,90 €, 2-3 iş günü).</div>
+        </div>
+        <span style="font:400 12.5px/1.6 'Karla';color:#8a8270">Bölge dışı bir hata değildir; nötr krem satır kullanılır. Kırmızı yalnız biçim hatasında (eksik hane, geçersiz telefon) görünür.</span>
+      </div>
+      <div style="width:520px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:22px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Adım 1'de bölge dışı adres seçildi · sepette 2 bölge içi kalem</span>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 18px 'Lora';color:#343b41">2 kalem bu adrese gönderilemiyor</span>
+          <span style="font:400 13px/1.6 'Karla';color:#6d7261">Fıstıklı Baklava ve Ispanaklı Gözleme soğuk zincirle taşınıyor; 75011 Paris teslimat bölgemizin dışında. Sepetin kalanı kargoyla gidiyor.</span>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px;border-radius:24px;text-align:center">Bu 2 kalemi sonraya kaydet, kalanını kargoyla sipariş et</span>
+            <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 13.5px 'Karla';padding:10px;border-radius:24px;text-align:center">Bölge içi bir adres seç (kayıtlı: 12 Rue des Orfèvres)</span>
+            <span style="font:700 13px 'Karla';color:#5f7a2c;text-align:center;text-decoration:underline">Bölgeye gelince haber ver</span>
+          </div>
+        </div>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Sepetteki blokla <strong>aynı bileşen</strong>: aynı sıra, aynı dil, aynı üç çıkış. Müşteri sepete geri gönderilmez — çözüm checkout içinde biter, adım 2 çözüm verilene kadar sadece bekler (kilit ya da hata değil).</span>
+        <span style="font:400 12.5px/1.7 'Karla';color:#8a8270">Sepette çözüldüyse bu blok checkout'ta hiç görünmez; buraya gelen sepet zaten temizdir. Blok yalnız müşteri burada adresi değiştirirse doğar.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Bölge dışı adres — kargo</span>
+        <div style="display:flex;justify-content:space-between;font:400 14px 'Karla';color:#3a3f35"><span>📦 Kargo ile teslimat</span><span style="font-weight:700">6,90 €</span></div>
+        <span style="font:400 13px 'Karla';color:#6d7261">2-3 iş gününde, kargoya uygun ürünlerle. 80 € üzeri ücretsiz. Soğuk zincir gerektiren ürünler kargoya verilemez.</span>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:10px 14px;font:600 12.5px/1.6 'Karla';color:#8a6b2a">Sepetinizdeki "Yaprak Sarma" bu adrese gönderilemiyor — aşağıdaki blokta üç çıkış sunulur, adım kilitlenmez.</div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Ödemede yalnız "Online öde" görünür (kargoda kapıda ödeme hiç listelenmez).</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">B2B — vade açık</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:12px;padding:11px 14px;font:700 13.5px 'Karla';color:#3a4147">💳 Online öde</div>
+          <div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:12px;padding:11px 14px;font:700 13.5px 'Karla';color:#3a4147">🏦 Havale ile öde</div>
+          <div style="border:2px solid #5f7a2c;background:#eef2e2;border-radius:12px;padding:11px 14px;display:flex;flex-direction:column;gap:2px"><span style="font:700 13.5px 'Karla';color:#3a4147">📋 Hesaba — vadeli</span><span style="font:400 12px 'Karla';color:#6d7261">Ödemeyi anlaşılan vadede yaparsınız</span></div>
+        </div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Vade kapalıysa üçüncü kart hiç var olmaz (gri/kilitli bile değil). Kapıda ödeme tavan üstü tutarda da aynı kural: yalnız geçerli yollar listelenir + tek cümle: "Bu tutarda online ödeme gerekir."</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Ödeme dönüşü — başarılı / yarım kalan</span>
+        <div style="background:#eef2e2;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center">
+          <span style="font-size:26px">✓</span>
+          <span style="font:600 17px 'Lora';color:#343b41">Siparişiniz alındı</span>
+          <span style="font:400 12.5px 'Karla';color:#6d7261">LZA-2451 · Perşembe kapınızda · e-posta gönderildi</span>
+          <span style="font:700 12.5px 'Karla';color:#5f7a2c">Sipariş detayına git →</span>
+        </div>
+        <div style="background:#fbeee8;border:1px solid #e8c9b3;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center">
+          <span style="font:600 15px 'Karla';color:#c25e3a">Ödeme tamamlanmadı</span>
+          <span style="font:400 12.5px 'Karla';color:#6d7261">Sipariş oluşmadı; sepetiniz duruyor. Dilediğinizde yeniden deneyin.</span>
+          <a href="./Musteri%20-%20Sepet.dc.html" style="color:inherit;text-decoration:none;font:700 12.5px 'Karla';color:#5f7a2c">Sepete dön →</a>
+        </div>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Onay anında stok yetersizliği</span>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:12px 14px;font:600 13px/1.6 'Karla';color:#8a6b2a">"İçli Köfte" için istediğiniz adet şu an ayrılamadı. Sepette adedi güncelleyin, sonra tekrar onaylayın.</div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Ödeme başlatılmaz; müşteri sepete döner. "Rezervasyon" dili yok.</span>
+      </div>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li><strong>Adım zinciri</strong> → (0: girişsizse hızlı doğrulama) → adres → gün → ödeme → onay; tek sayfada dikey bölümler, tamamlanan adım seçili haliyle kalır (akordeon daraltma yok — az adım, tam görünürlük).</li>
+        <li><strong>+ Yeni adres</strong> → kayıtlı adres listesinin altında satır içi form açılır (ayrı sayfa/modal değil); kaydedilince liste yenilenir, yeni adres seçili gelir ve akış adım 2'ye kendiliğinden iner. "Varsayılan yap" işaretliyse hesaptaki varsayılan da güncellenir.</li>
+        <li><strong>Adres seçimi</strong> → posta kodu teslimat şeklini belirler: bölge içi = kapıya teslim (ücretsiz, gün kartları); bölge dışı = kargo (ücret + eşik). Sepette soğuk zincir kalemi varken bölge dışı adres seçilirse teslimat kısıtı bloğu (sepetteki bileşenin aynısı) açılır: sonraya kaydet / adres değiştir / haber ver. Kargo yolu hiç mümkün değilse yöntem seçici render edilmez, tek satır "Kapıya teslim" kalır. Adım 2'nin içeriği adrese göre yeniden kurulur.</li>
+        <li><strong>Ödeme kartları</strong> → yalnız bağlamda geçerli olanlar render edilir; geçersiz yol DOM'da hiç yoktur. Kural sonuçları tek sade cümleyle verilir.</li>
+        <li><strong>Adres ↔ yer çelişkisi</strong> → adresin posta kodu şeritteki koddan farklıysa sipariş <strong>adresin yerine</strong> göre çözülür ve sepet o an yeniden değerlendirilir; sonuç checkout'un içinde açıkça bildirilir. Kalem silinmez, sonraya kaydedilir.</li>
+        <li><strong>Kargo checkout'u</strong> → sepetteki kargo grubundan açılan <strong>ayrı bir sipariştir</strong>: kendi kargo ücreti/eşiği, yalnız online peşin, gün kartı yok. Rota siparişiyle tek ödemeye birleştirilmez.</li>
+        <li><strong>Siparişi onayla</strong> → online yolda dış ödeme sayfasına gider; dönüşte başarılı/başarısız net sonuç ekranı. Kapıda/havale/vadelide doğrudan onay ekranı.</li>
+        <li><strong>Pazarlama kutusu</strong> → daima işaretsiz başlar; durumu siparişi hiçbir biçimde etkilemez.</li>
+        <li>Alman B2B (geçerli vergi no) → toplamlar otomatik KDV'siz gelir; arayüzde ek açıklama/etiket yok, yalnız doğru rakam.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Checkout · Mobil (açılmış tam akış)</span>
+    <div data-screen-label="Checkout Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e6dfcd">
+        <span style="font:700 14px 'Karla';color:#5f7a2c">← Sepet</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Siparişi tamamla</span>
+        <span style="font:400 12px 'Karla';color:#8a8270">103,20 €</span>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:26px;border-radius:13px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:grid;place-items:center">1</span><span style="font:600 16px 'Lora';color:#343b41">Teslimat adresi</span></div>
+          <div style="border:2px solid #5f7a2c;background:#eef2e2;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 13.5px 'Karla';color:#3a4147">Ev · varsayılan</span>
+            <span style="font:400 12.5px/1.5 'Karla';color:#6d7261">12 Rue des Orfèvres, 67000 Strasbourg</span>
+          </div>
+          <span style="font:700 13px 'Karla';color:#5f7a2c">Değiştir / yeni adres +</span>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:26px;border-radius:13px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:grid;place-items:center">2</span><span style="font:600 16px 'Lora';color:#343b41">Teslimat günü</span></div>
+          <span style="font:600 12px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:11px;padding:3px 9px;width:max-content">Kapıya teslim · ücretsiz</span>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;border:2px solid #5f7a2c;background:#eef2e2;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center"><span style="font:700 14px 'Karla';color:#3a4147">Perşembe</span><span style="font:400 12px 'Karla';color:#6d7261">24 Tem</span></div>
+            <div style="flex:1;border:1.5px solid #d8cfb6;background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center"><span style="font:700 14px 'Karla';color:#3a4147">Salı</span><span style="font:400 12px 'Karla';color:#6d7261">29 Tem</span></div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:26px;border-radius:13px;background:#5f7a2c;color:#fff;font:700 13px 'Karla';display:grid;place-items:center">3</span><span style="font:600 16px 'Lora';color:#343b41">Ödeme</span></div>
+          <div style="border:2px solid #5f7a2c;background:#eef2e2;border-radius:12px;padding:12px 14px;font:700 13.5px 'Karla';color:#3a4147">💳 Online öde</div>
+          <div style="border:1.5px solid #d8cfb6;background:#fff;border-radius:12px;padding:12px 14px;font:700 13.5px 'Karla';color:#3a4147">🚪 Kapıda öde <span style="font:400 12px 'Karla';color:#8a8270">— nakit, kart, çek</span></div>
+          <label style="display:flex;gap:9px;align-items:flex-start;font:400 12.5px/1.5 'Karla';color:#6d7261">
+            <span style="width:18px;height:18px;border:2px solid #d8cfb6;border-radius:5px;background:#fff;flex:none"></span>
+            Kampanyalardan haberdar olmak istiyorum (isteğe bağlı)
+          </label>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;font:400 13px 'Karla';color:#3a3f35">
+          <span style="font:600 15px 'Lora';color:#343b41">Özet</span>
+          <div style="display:flex;justify-content:space-between"><span>3 kalem</span><span style="font-weight:700">113,20 €</span></div>
+          <div style="display:flex;justify-content:space-between;color:#5f7a2c"><span>İndirim</span><span style="font-weight:700">−10,00 €</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Teslimat</span><span style="font-weight:700;color:#5f7a2c">Ücretsiz</span></div>
+          <div style="border-top:1px solid #ece5d2;padding-top:7px;display:flex;justify-content:space-between;font:700 15px 'Karla';color:#343b41"><span>Genel toplam</span><span>103,20 €</span></div>
+        </div>
+        <div style="background:#f0e9d6;border-radius:12px;padding:10px 14px;font:400 12px/1.5 'Karla';color:#6d7261">❄ Soğuk zincir bozulmadan Perşembe kapınızda.</div>
+      </div>
+      <div style="margin:0 12px 12px;background:#5f7a2c;border-radius:20px;padding:15px;text-align:center">
+        <span style="font:700 15px 'Karla';color:#fff">Siparişi onayla — 103,20 €</span>
+      </div>
+      <span style="font:400 11px/1.5 'Karla';color:#8a8270;text-align:center;display:block;padding:0 24px 16px">Onaylayarak <span style="color:#5f7a2c">satış koşullarını</span> kabul etmiş olursunuz.</span>
+    </div>
+    <span style="font:400 13px 'Karla';color:#8a8270;max-width:390px">Not: onay butonu alta sabitlenir. Girişsiz müşteri bu ekrandan önce hızlı doğrulama adımını görür (soldaki "adım 0" kartı) ve doğrulama sonrası tam buraya döner.</span>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:1360px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Sipariş Alındı · Web (online ödeme dönüşü, bölge içi)</span>
+    <div data-screen-label="Siparis Onay Web" style="width:1360px;background:#faf6ec;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15);color:#3a3f35">
+      <div style="display:flex;align-items:center;gap:36px;padding:18px 48px;border-bottom:1px solid #e6dfcd">
+        <a href="./Musteri%20-%20Anasayfa.dc.html" style="display:inline-flex;line-height:0"><img src="../../assets/logo.jpg" style="height:52px;mix-blend-mode:multiply" alt="Lezzet Anatolia"></a>
+        <nav style="display:flex;gap:28px;font:600 15px 'Karla';color:#3a4147"><a href="./Musteri%20-%20Katalog.dc.html" style="color:inherit;text-decoration:none;">Katalog</a><a href="./Musteri%20-%20Paketler.dc.html" style="color:inherit;text-decoration:none;">Paketler</a><a href="./Musteri%20-%20Kesif.dc.html" style="color:inherit;text-decoration:none;">Keşif</a><a href="./Musteri%20-%20Professionnels.dc.html" style="color:inherit;text-decoration:none;">Professionnels</a></nav>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:18px">
+          <span style="font:600 14px 'Karla';color:#8a8270">Ayşe ▾</span>
+          <div style="position:relative;font-size:22px">🧺</div>
+        </div>
+      </div>
+
+      <div style="padding:44px 48px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;background:#eef2e2;border-bottom:1px solid #dfe6cb">
+        <span style="width:58px;height:58px;border-radius:29px;background:#5f7a2c;color:#fff;font-size:28px;display:grid;place-items:center">✓</span>
+        <h1 style="margin:0;font:600 36px 'Lora';color:#343b41">Siparişiniz alındı, Ayşe</h1>
+        <span style="font:400 15.5px/1.6 'Karla';color:#5b6350;max-width:620px">Onay e-postasını <strong style="font-weight:700">ayse.demir@ornek.fr</strong> adresine gönderdik. Hazırlığa başladığımızda haber vereceğiz.</span>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:4px">
+          <span style="background:#fff;border:1px solid #d8cfb6;border-radius:20px;padding:8px 16px;font:700 14px 'Karla';color:#3a4147">Sipariş no · LZA-2451</span>
+          <span style="background:#fff;border:1px solid #d8cfb6;border-radius:20px;padding:8px 16px;font:600 14px 'Karla';color:#6d7261">22 Temmuz, 14:38</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:40px;padding:36px 48px 44px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+            <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 26px;display:flex;flex-direction:column;gap:10px">
+              <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Teslimat</span>
+              <span style="font:600 19px 'Lora';color:#343b41">Perşembe, 24 Temmuz</span>
+              <span style="font:600 13px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:12px;padding:3px 10px;width:max-content">Kapıya teslim · ücretsiz</span>
+              <span style="font:400 14px/1.6 'Karla';color:#6d7261">Ev · 12 Rue des Orfèvres<br>67000 Strasbourg</span>
+              <span style="font:400 13px/1.6 'Karla';color:#8a8270;border-top:1px solid #f0ead8;padding-top:9px">❄ Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca saat aralığını bildiririz.</span>
+            </div>
+            <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 26px;display:flex;flex-direction:column;gap:10px">
+              <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Ödeme</span>
+              <span style="font:600 19px 'Lora';color:#343b41">Ödendi · 103,20 €</span>
+              <span style="font:600 13px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:12px;padding:3px 10px;width:max-content">💳 Online ödeme</span>
+              <span style="font:400 14px/1.6 'Karla';color:#6d7261">Kart ile · **** 4417<br>Fatura e-postanıza eklendi.</span>
+              <span style="font:700 13.5px 'Karla';color:#5f7a2c;border-top:1px solid #f0ead8;padding-top:9px">Faturayı indir (PDF) ↓</span>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 26px;display:flex;flex-direction:column;gap:14px">
+            <span style="font:600 19px 'Lora';color:#343b41">Sırada ne var</span>
+            <div style="display:flex;align-items:flex-start;gap:0">
+              <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:7px;background:#5f7a2c;flex:none"></span><div style="height:2px;background:#5f7a2c;flex:1"></div></div>
+                <span style="font:700 14px 'Karla';color:#3a4147">Sipariş alındı</span>
+                <span style="font:400 12.5px/1.5 'Karla';color:#8a8270">Bugün 14:38</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:7px;border:2px solid #cdc4a8;background:#fff;flex:none"></span><div style="height:2px;background:#e6dfcd;flex:1"></div></div>
+                <span style="font:700 14px 'Karla';color:#8a8270">Hazırlanıyor</span>
+                <span style="font:400 12.5px/1.5 'Karla';color:#8a8270">Çarşamba mutfakta</span>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:7px;border:2px solid #cdc4a8;background:#fff;flex:none"></span><div style="height:2px;background:#e6dfcd;flex:1"></div></div>
+                <span style="font:700 14px 'Karla';color:#8a8270">Yolda</span>
+                <span style="font:400 12.5px/1.5 'Karla';color:#8a8270">Perşembe sabah</span>
+              </div>
+              <div style="flex:0 0 auto;display:flex;flex-direction:column;gap:7px;min-width:120px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:7px;border:2px solid #cdc4a8;background:#fff;flex:none"></span></div>
+                <span style="font:700 14px 'Karla';color:#8a8270">Teslim edildi</span>
+                <span style="font:400 12.5px/1.5 'Karla';color:#8a8270">Perşembe</span>
+              </div>
+            </div>
+            <span style="font:400 13px/1.6 'Karla';color:#8a8270;border-top:1px solid #f0ead8;padding-top:11px">Değişiklik veya iptal için Çarşamba akşamına kadar bize yazabilirsiniz — sipariş hazırlığa girdikten sonra kalemler kilitlenir.</span>
+          </div>
+
+          <div style="background:#f0e9d6;border-radius:16px;padding:20px 26px;display:flex;align-items:center;gap:20px">
+            <span style="font-size:26px">💬</span>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1">
+              <span style="font:700 15px 'Karla';color:#3a4147">Bir sorunuz mu var?</span>
+              <span style="font:400 13.5px 'Karla';color:#6d7261">Sipariş numaranızla WhatsApp'tan yazın, aynı gün dönüyoruz.</span>
+            </div>
+            <span style="border:2px solid #5f7a2c;color:#5f7a2c;font:700 14px 'Karla';padding:11px 22px;border-radius:24px">WhatsApp'tan yaz</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px;position:sticky;top:20px">
+          <div style="background:#fff;border:1px solid #ece5d2;border-radius:18px;padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:600 20px 'Lora';color:#343b41">Sipariş özeti</span>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;gap:12px;align-items:center">
+                <span style="width:44px;height:44px;border-radius:10px;background:#f0ead8;flex:none"></span>
+                <div style="display:flex;flex-direction:column;flex:1"><span style="font:700 13.5px 'Karla';color:#3a4147">Fıstıklı Baklava</span><span style="font:400 12px 'Karla';color:#8a8270">700 g tepsi × 2</span></div>
+                <span style="font:700 14px 'Karla';color:#343b41">33,80 €</span>
+              </div>
+              <div style="display:flex;gap:12px;align-items:center">
+                <span style="width:44px;height:44px;border-radius:10px;background:#f0ead8;flex:none"></span>
+                <div style="display:flex;flex-direction:column;flex:1"><span style="font:700 13.5px 'Karla';color:#3a4147">Ispanaklı Gözleme</span><span style="font:400 12px 'Karla';color:#8a8270">4 adet × 5</span></div>
+                <span style="font:700 14px 'Karla';color:#343b41">29,50 €</span>
+              </div>
+              <div style="display:flex;gap:12px;align-items:center">
+                <span style="width:44px;height:44px;border-radius:10px;background:#f0ead8;flex:none"></span>
+                <div style="display:flex;flex-direction:column;flex:1"><span style="font:700 13.5px 'Karla';color:#3a4147">Bayram Sofrası</span><span style="font:400 12px 'Karla';color:#8a8270">Paket · 8 ürün</span></div>
+                <span style="font:700 14px 'Karla';color:#343b41">49,90 €</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;font:400 14px 'Karla';color:#3a3f35;border-top:1px solid #ece5d2;padding-top:10px">
+              <div style="display:flex;justify-content:space-between;color:#5f7a2c"><span>İndirim — HOSGELDIN10</span><span style="font-weight:700">−10,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span>Teslimat</span><span style="font-weight:700;color:#5f7a2c">Ücretsiz</span></div>
+              <div style="border-top:1px solid #ece5d2;padding-top:10px;display:flex;justify-content:space-between;font:700 18px 'Karla';color:#343b41"><span>Genel toplam</span><span>103,20 €</span></div>
+              <span style="font:400 12px 'Karla';color:#8a8270">Fiyatlara KDV dahildir.</span>
+            </div>
+            <span style="background:#5f7a2c;color:#fff;font:700 16px 'Karla';padding:15px;border-radius:28px;text-align:center">Siparişi takip et</span>
+            <span style="border:2px solid #d8cfb6;color:#3a4147;font:700 15px 'Karla';padding:13px;border-radius:28px;text-align:center">Alışverişe devam et</span>
+          </div>
+        </div>
+      </div>
+      <div style="background:#343b41;color:#c9cdc2;padding:28px 48px;display:flex;justify-content:space-between;font:400 14px 'Karla'">
+        <span style="font:600 17px 'Lora';color:#f3efe2">Lezzet Anatolia</span>
+        <div style="display:flex;gap:28px"><span>Hakkımızda</span><span>SSS</span><span>Professionnels</span><span>TR · FR · DE</span></div>
+      </div>
+    </div>
+
+    <span style="font:600 15px 'Karla';color:#3a4147;margin-top:12px">Durumlar — onay ekranı yalnız üst bloğu ve ödeme kartını değiştirir</span>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Kapıda ödeme</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Ödeme · kapıda 103,20 €</span>
+        <div style="background:#fdf3e0;border:1px solid #ecd9b4;border-radius:12px;padding:11px 14px;font:600 13px/1.6 'Karla';color:#8a6b2a">Teslimat sırasında nakit, kart veya çek ile ödeyeceksiniz. Kuryede kart okuyucu var.</div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">"Faturayı indir" yerine "Fatura teslimde verilir" yazar; kart bilgisi satırı hiç yok.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Kargolu sipariş</span>
+        <span style="font:600 17px 'Lora';color:#343b41">2-3 iş gününde kargoda</span>
+        <span style="font:600 13px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:12px;padding:3px 10px;width:max-content">📦 Kargo · 6,90 €</span>
+        <span style="font:400 13px/1.6 'Karla';color:#6d7261">Kargoya verildiğinde takip numarasını e-posta ve WhatsApp ile göndeririz.</span>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Gün ve "kapıya teslim" dili kullanılmaz; "Sırada ne var" adımları: alındı → hazırlanıyor → kargoya verildi → teslim edildi.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">B2B — vadeli / havale</span>
+        <span style="font:600 17px 'Lora';color:#343b41">Ödeme · hesaba işlendi</span>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:12px;padding:11px 14px;display:flex;flex-direction:column;gap:3px">
+          <span style="font:700 13.5px 'Karla';color:#3a4147">Vade: 21 Ağustos</span>
+          <span style="font:400 12.5px 'Karla';color:#6d7261">Fatura ve hesap ekstresi Hesabım › Faturalar altında</span>
+        </div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Havalede aynı ekranda IBAN + açıklama alanına yazılacak sipariş no gösterilir.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Girişsiz müşteri — hesap teklifi</span>
+        <div style="background:#eef2e2;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:6px">
+          <span style="font:700 14px 'Karla';color:#3a4147">Siparişinizi takip etmek daha kolay olsun mu?</span>
+          <span style="font:400 12.5px/1.5 'Karla';color:#6d7261">Bu e-posta ile şifre belirleyin; adresleriniz ve siparişleriniz kayıtlı kalır.</span>
+          <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:10px;border-radius:20px;text-align:center">Şifre belirle</span>
+        </div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Reddedilebilir; sipariş her hâlükârda e-postadaki takip bağlantısıyla izlenir.</span>
+      </div>
+      <div style="width:340px;background:#faf6ec;border-radius:16px;box-shadow:0 4px 20px rgba(58,65,71,.1);padding:20px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Sayfa yenilenirse / bağlantı tekrar açılırsa</span>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:12px;padding:11px 14px;font:400 13px/1.6 'Karla';color:#6d7261">Aynı ekran görünür, kutlama bloğu sadeleşir: "LZA-2451 · Perşembe teslim" + takip butonu.</div>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">Onay ekranı kalıcı adrestir (siparişin kendi sayfası) — tek kullanımlık ara ekran değildir.</span>
+      </div>
+    </div>
+
+    <div style="width:1360px;background:#fff;border:1.5px dashed #cdc4a8;border-radius:16px;padding:24px 32px;display:flex;flex-direction:column;gap:10px">
+      <span style="font:700 16px 'Karla';color:#3a4147">Etkileşim sözleşmesi — onay ekranı (kodlayan ajan için)</span>
+      <ul style="margin:0;padding-left:20px;font:400 14px/1.8 'Karla';color:#6d7261">
+        <li><strong>Giriş noktası</strong> → online yolda dış ödeme dönüşü başarılıysa, diğer yollarda "Siparişi onayla" hemen sonrası. Sepet aynı anda boşalır; geri tuşu checkout'a değil bu ekrana düşer.</li>
+        <li><strong>Kalıcı sayfa</strong> → sipariş kendi adresinde yaşar (LZA-2451); yenileme, e-postadaki bağlantı ve "Siparişlerim" aynı ekrana gelir. İkinci kez açılışta kutlama bloğu sadeleşir.</li>
+        <li><strong>Ödeme kartı</strong> → yola göre içerik: online = ödendi + fatura indir; kapıda = teslimde ödenecek tutar; havale = IBAN + açıklamaya yazılacak sipariş no; vadeli = vade tarihi.</li>
+        <li><strong>Teslimat kartı</strong> → bölge içi = gün + "kapıya teslim"; bölge dışı = "2-3 iş günü" + takip numarası vaadi. İki dil karıştırılmaz.</li>
+        <li><strong>Değişiklik penceresi</strong> → hazırlık başlamadan önce açık; başladığında cümle "Siparişiniz hazırlanıyor, kalemler kilitlendi" olur ve WhatsApp kutusu kalır.</li>
+        <li><strong>Girişsiz</strong> → şifre belirleme teklifi yalnız burada bir kez; kapatılırsa tekrar gösterilmez.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <span style="font:600 16px 'Karla';color:#3a4147">Müşteri — Sipariş Alındı · Mobil</span>
+    <div data-screen-label="Siparis Onay Mobil" style="width:390px;background:#faf6ec;border-radius:28px;overflow:hidden;box-shadow:0 8px 40px rgba(58,65,71,.15)">
+      <div style="background:#eef2e2;padding:30px 20px 24px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;border-bottom:1px solid #dfe6cb">
+        <span style="width:46px;height:46px;border-radius:23px;background:#5f7a2c;color:#fff;font-size:22px;display:grid;place-items:center">✓</span>
+        <span style="font:600 24px 'Lora';color:#343b41">Siparişiniz alındı</span>
+        <span style="font:400 13px/1.6 'Karla';color:#5b6350">Onay e-postası ayse.demir@ornek.fr adresine gönderildi.</span>
+        <span style="background:#fff;border:1px solid #d8cfb6;border-radius:18px;padding:7px 14px;font:700 13px 'Karla';color:#3a4147;margin-top:2px">LZA-2451 · 22 Tem 14:38</span>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 11.5px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Teslimat</span>
+          <span style="font:600 17px 'Lora';color:#343b41">Perşembe, 24 Temmuz</span>
+          <span style="font:600 12px 'Karla';color:#5f7a2c;background:#eef2e2;border-radius:11px;padding:3px 9px;width:max-content">Kapıya teslim · ücretsiz</span>
+          <span style="font:400 12.5px/1.6 'Karla';color:#6d7261">Ev · 12 Rue des Orfèvres, 67000 Strasbourg</span>
+          <span style="font:400 12px/1.6 'Karla';color:#8a8270;border-top:1px solid #f0ead8;padding-top:8px">❄ Kurye yola çıkınca saat aralığını bildiririz.</span>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 11.5px 'Karla';letter-spacing:.08em;text-transform:uppercase;color:#8a8270">Ödeme</span>
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 17px 'Lora';color:#343b41">Ödendi</span><span style="font:700 16px 'Karla';color:#343b41">103,20 €</span></div>
+          <span style="font:400 12.5px 'Karla';color:#6d7261">💳 Kart ile · **** 4417</span>
+          <span style="font:700 12.5px 'Karla';color:#5f7a2c;border-top:1px solid #f0ead8;padding-top:8px">Faturayı indir (PDF) ↓</span>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 16px 'Lora';color:#343b41">Sırada ne var</span>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;gap:10px;align-items:center"><span style="width:12px;height:12px;border-radius:6px;background:#5f7a2c;flex:none"></span><span style="font:700 13px 'Karla';color:#3a4147;flex:1">Sipariş alındı</span><span style="font:400 12px 'Karla';color:#8a8270">14:38</span></div>
+            <div style="display:flex;gap:10px;align-items:center"><span style="width:12px;height:12px;border-radius:6px;border:2px solid #cdc4a8;flex:none"></span><span style="font:600 13px 'Karla';color:#8a8270;flex:1">Hazırlanıyor</span><span style="font:400 12px 'Karla';color:#8a8270">Çar</span></div>
+            <div style="display:flex;gap:10px;align-items:center"><span style="width:12px;height:12px;border-radius:6px;border:2px solid #cdc4a8;flex:none"></span><span style="font:600 13px 'Karla';color:#8a8270;flex:1">Yolda</span><span style="font:400 12px 'Karla';color:#8a8270">Per sabah</span></div>
+            <div style="display:flex;gap:10px;align-items:center"><span style="width:12px;height:12px;border-radius:6px;border:2px solid #cdc4a8;flex:none"></span><span style="font:600 13px 'Karla';color:#8a8270;flex:1">Teslim edildi</span><span style="font:400 12px 'Karla';color:#8a8270">Per</span></div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #ece5d2;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px;font:400 13px 'Karla';color:#3a3f35">
+          <span style="font:600 16px 'Lora';color:#343b41">Özet · 3 kalem</span>
+          <div style="display:flex;justify-content:space-between"><span>Fıstıklı Baklava × 2</span><span style="font-weight:700">33,80 €</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Ispanaklı Gözleme × 5</span><span style="font-weight:700">29,50 €</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Bayram Sofrası (paket)</span><span style="font-weight:700">49,90 €</span></div>
+          <div style="display:flex;justify-content:space-between;color:#5f7a2c"><span>İndirim</span><span style="font-weight:700">−10,00 €</span></div>
+          <div style="display:flex;justify-content:space-between"><span>Teslimat</span><span style="font-weight:700;color:#5f7a2c">Ücretsiz</span></div>
+          <div style="border-top:1px solid #ece5d2;padding-top:8px;display:flex;justify-content:space-between;font:700 15px 'Karla';color:#343b41"><span>Genel toplam</span><span>103,20 €</span></div>
+        </div>
+        <div style="background:#f0e9d6;border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:20px">💬</span>
+          <span style="font:400 12.5px/1.5 'Karla';color:#6d7261;flex:1">Sorunuz mu var? Sipariş no ile WhatsApp'tan yazın.</span>
+        </div>
+      </div>
+      <div style="margin:0 12px 12px;display:flex;flex-direction:column;gap:9px">
+        <span style="background:#5f7a2c;color:#fff;font:700 15px 'Karla';padding:15px;border-radius:20px;text-align:center">Siparişi takip et</span>
+        <span style="border:2px solid #d8cfb6;color:#3a4147;font:700 14px 'Karla';padding:12px;border-radius:20px;text-align:center">Alışverişe devam et</span>
+      </div>
+    </div>
+    <span style="font:400 13px 'Karla';color:#8a8270;max-width:390px">Not: mobilde kutlama bloğu ekranın üstünde sabit değil — kaydırmayla geçilir; iki buton alt bloğa sabitlenmez, sayfanın sonundadır.</span>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>
