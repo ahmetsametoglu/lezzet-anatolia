@@ -63,7 +63,7 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   bank: 'Banka',
   provider: 'Ödeme sağlayıcı',
   /* 13.09: ortağın şirketle hesabı — ortağın TEK kaydı. Bakiye işareti anlatır: eksi "şirket ortağa
-     borçlu", artı "ortak şirkete borçlu" (şema künyesi). */
+     borçlu", artı "ortak şirkete borçlu" (şema künyesi); ekranda cümleyle değil renkle (14.09). */
   partner: 'Ortak cari',
 };
 

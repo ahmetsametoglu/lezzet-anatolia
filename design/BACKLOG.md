@@ -494,8 +494,8 @@ bağıyla izahlı; ortağın kaydı ortak cari hesabı; fatura gelince borç do�
 yok. Kitin gramerinde yazıldılar: "+ Belge" diyaloğu (elle hareket penceresinin kalıbı; cari ·
 tedarikçi · tür · etiket menüleri), "Sözlük" penceresi (Türler · Cariler · Etiketler sekmeleri),
 defter satırının orta hücresinde tür · cari · etiket menüleri (muhasebeci deseni — `design/KARARLAR.md`),
-"Eşleşmeyi geri al" ve ortak carisinde bakiye altı cümle. Çizim yapılırsa bakılacaklar: belge
-kartında dosya ikonu, tür ve etiket çiplerinin ayrışması (ikisi de olive).
+"Eşleşmeyi geri al"; ortak carisinin bakiyesi işaretiyle renklenir (14.09 — cümle kalktı). Çizim
+yapılırsa bakılacaklar: belge kartında dosya ikonu, tür ve etiket çiplerinin ayrışması (ikisi de olive).
 **Eki (12.17 · ekranın düzeni):** çizimin tek listeli tezgâhı kullanıcı istekleriyle yeniden dizildi
 ve yeni düzenin çizimde karşılığı yok: bakiye şeridi türe göre gruplu ve kartı süzgeç (Toplam en
 solda, kapalılar en sonda, taşarsa yatay kayar); süzgeç satırında "Hareketler | Belgeler" sekmesi,

@@ -2598,3 +2598,7 @@ tasarım deseniyle benzer bir komponent"*. Kapanan kararlar:
   daralır, tür/cari taşıyan satırda etiket daveti "+" ("Etiket ekle" adıyla). Ölçüldü: 1440 pikselde
   hücre 177px; uzun cari adı etiket düğmesini hücrenin dışına itiyordu.
 - Kaba tip süzgecinin adı **"+ tip"** (12.16'dan): satırın "+ tür" menüsüyle aynı adı taşıyordu.
+- **Ortak carisinin kartında cümle yok, renk var** (kullanıcı isteği 14.09: *"artı eksi zaten bunu
+  ifade ediyor… yüksekliği arttırmayalım"*): "şirket ortağa borçlu / ortak şirkete borçlu" cümlesi
+  kalktı, bakiye işaretiyle renklenir — eksi (şirket borçlu) kırmızı, artı (ortak borçlu) olive. Kart
+  bir satır kısaldı. Öteki hesaplarda bakiye mürekkep kalır: orada işaret borcun yönünü söylemez.

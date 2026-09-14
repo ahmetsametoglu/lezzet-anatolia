@@ -37,11 +37,15 @@ export function signedAmount(cents: number): string {
   return `${cents >= 0 ? '+' : '−'}${amount(Math.abs(cents))}`;
 }
 
-/** Ortak carisinin bakiye cümlesi — şema künyesi: eksi = şirket ortağa borçlu, artı = ortak şirkete borçlu. */
-function partnerBalanceCaption(cents: number): string {
-  if (cents < 0) return 'şirket ortağa borçlu';
-  if (cents > 0) return 'ortak şirkete borçlu';
-  return 'hesap denk';
+/**
+ * Ortak carisinin bakiye RENGİ — şema künyesi: eksi = şirket ortağa borçlu (kırmızı), artı = ortak
+ * şirkete borçlu (olive). 14.09'da cümlenin yerini aldı (kullanıcı isteği: "artı eksi zaten bunu ifade
+ * ediyor"; kart bir satır kısaldı). Öteki hesapta işaret borcun yönünü söylemez, bakiye mürekkep kalır.
+ */
+function partnerBalanceTone(cents: number): string {
+  if (cents < 0) return 'text-ops-red';
+  if (cents > 0) return 'text-ops-olive-dark';
+  return 'text-ops-ink';
 }
 
 // ── Bakiye şeridi = hesap süzgeci (12.17) ─────────────────────────────────────────────────────
@@ -139,9 +143,9 @@ function AccountTile({ account, active, dimmed = false, onSelect }: AccountTileP
       }
       balanceCents={account.balanceCents}
       caption={account.movementCount > 0 ? `${num(account.movementCount)} hareket` : 'henüz hareket yok'}
-      // ORTAK CARİSİNDE İŞARET CÜMLEYLE (12.12): eksi/artı bir kasada "para var/yok" derken burada
-      // borcun YÖNÜNÜ söylüyor — sayıyı tek başına bırakmak operatörü tersten okutur.
-      subCaption={account.type === 'partner' ? partnerBalanceCaption(account.balanceCents) : null}
+      // ORTAK CARİSİNDE İŞARET RENKLE (12.12'de cümleydi, 14.09 renk): eksi/artı bir kasada "para
+      // var/yok" derken burada borcun YÖNÜNÜ söylüyor — renk o yönü sayının kendisinde okutur.
+      balanceTone={account.type === 'partner' ? partnerBalanceTone(account.balanceCents) : undefined}
       active={active}
       dimmed={dimmed}
       onClick={() => onSelect(account.id)}
@@ -153,13 +157,14 @@ interface AccountCardProps {
   name: ReactNode;
   balanceCents: number;
   caption: string;
-  subCaption?: string | null;
+  /** Bakiyenin rengi (sınıf) — varsayılan mürekkep; ortak carisinde işarete göre (`partnerBalanceTone`). */
+  balanceTone?: string;
   active: boolean;
   dimmed?: boolean;
   onClick: () => void;
 }
 
-function AccountCard({ name, balanceCents, caption, subCaption = null, active, dimmed = false, onClick }: AccountCardProps) {
+function AccountCard({ name, balanceCents, caption, balanceTone = 'text-ops-ink', active, dimmed = false, onClick }: AccountCardProps) {
   return (
     <button
       type="button"
@@ -172,9 +177,8 @@ function AccountCard({ name, balanceCents, caption, subCaption = null, active, d
       <span className="flex min-h-[20px] min-w-0 items-center">{name}</span>
       {/* Tutar SARMAZ: binlik ayracı geldikten sonra dar kartta "12.931,53 €" ikiye bölünüyordu — para
           sayısının ortasından kırılması, okuyanı bir an için başka bir sayıya baktırır. */}
-      <span className="whitespace-nowrap font-ops-mono text-ops-title tracking-tight text-ops-ink">{money(balanceCents)}</span>
+      <span className={`whitespace-nowrap font-ops-mono text-ops-title tracking-tight ${balanceTone}`}>{money(balanceCents)}</span>
       <span className="font-ops-mono text-ops-micro text-ops-faint">{caption}</span>
-      {subCaption ? <span className="font-ops-body text-ops-micro text-ops-muted">{subCaption}</span> : null}
     </button>
   );
 }
