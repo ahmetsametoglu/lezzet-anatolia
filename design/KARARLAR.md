@@ -1558,6 +1558,10 @@ Düğme yalnız gerçek çıkmazda kalıyor (yer rota dışında VE ürün kargo
 > sistemiyle ekran türüne göre seçiliyor (bu dosyanın "MÜŞTERİ MOBİL — ÜÇ HEADER" kaydı, 16.08) —
 > vitrinde selamlama + konum + zil, hesapta yalnız başlık, eylemsiz bölüm sayfalarında `FunnelHeader`,
 > geri kalanında yapışkan `AppBar`. Alt sekme çubuğu Mobil v1'deki gibi kaldı.
+>
+> **14.09 (ikinci karar) — kaynak native uygulama.** Müşterinin mobil tasarımı uygulamada ve web telefon
+> görünümünde aynı; referans native uygulama. Mobil v1'in telefon kareleri (sekme çubuğundaki Sepet sekmesi
+> dahil) düştü. Bkz. "MÜŞTERİ MOBİL TASARIMIN KAYNAĞI NATIVE UYGULAMA" (14.09).
 
 **Kullanıcı incelemesi ekran görüntüleriyle geldi** ("sepette hâlâ menü var, gereksiz… header
 zıplıyor… soğuk zincir yazısının sürekli görünmesi buna sebep oluyor") ve tasarım↔kod turunun
@@ -2727,3 +2731,31 @@ hesap sözlüğündeki kopya (`addressForm`) kalktı.
   penceresi (krem, 22px köşe, açıklama satırı, ✕ ikonu — bütün ortalanmış pencereler), `DeliveryStrip`
   ve `ChannelBadge` (yer paneli, yer penceresi ve adres penceresi ortak). Google önerisinin altında
   zorunlu "Google Maps" logosu (`public/attribution/google-maps.svg`).
+
+## MÜŞTERİ MOBİL TASARIMIN KAYNAĞI NATIVE UYGULAMA — uygulama ve web telefon görünümü aynı (14.09, kullanıcı kararı)
+
+Kullanıcı: *"Gezinme ve navigasyon anlamında mobil uygulama müşteriye daha çok telefondan kullanım tecrübesi
+veriyor; mobil uygulama tasarımı daha önce yapılmış olmasına rağmen daha kullanışlı."* Konu üç görüşle
+tartışıldı (web/denetim · müşteri web · mobil adına); karar kullanıcının.
+
+- **Tek tasarım:** müşterinin mobil tasarımı native uygulamada ve web'in telefon görünümünde (`*.mobile.tsx`)
+  AYNI. Referans **mevcut native uygulama** (v3 + uygulanmış hâli): gezinme (sekmeler Vitrin · Katalog ·
+  Paketler|Siparişler · Hesap, yüzen sepet düğmesi, sekme çubuğunun yığın ekranlarında gizlenmesi, üç duraklı
+  başlık) ve görünüş oradan gelir.
+- **`Musteri Mobil v1.dc.html` telefon kareleri düştü.** `Musteri Web v1.dc.html` masaüstünün kaynağı kalır.
+  v1'in "daha yeni" olması ölçülmüş kullanışlılık değildi; gerçek dünyadan tek veri kullanıcının kendisi.
+- **Web'e özgü durumlar korunur** (kullanıcının örneği: arama motoru optimizasyonu). Native tasarımında
+  karşılığı olmayan web hâlleri:
+  - Google'ın okuduğu metin: mobil görünüm Googlebot'a gidiyor (`apps/web/lib/device.ts`);
+  - yer sorusu: misafir ya da yer bilinmiyor → yer çekmecesi (native onboarding'de soruyor);
+  - ödeme: sayfaya gömülü form (native'de PaymentSheet);
+  - misafir hesap ekranı ve dil/yasal satırı (13.09);
+  - geri: tarayıcı geçmişi ve geçmişsiz giriş.
+- **Bilinçli bedel:** mobil görünümün içe aldığı 140 parçanın 124'ü masaüstüyle ortaktı. Native'e çekilen
+  ekranlarda telefon parçaları ayrılır; hesap ekranının "masaüstüyle aynı parçalar, yalnız `compact`" kararı
+  o ekranlarda geçerliliğini yitirir.
+- **Sıra:** native uygulama müşteri ve operasyon olarak ikiye ayrılıyor (başka bir ajanın işi). Web telefon
+  görünümünün yol haritası bu ayrım bittikten sonra yazılır. İş: `08.58`.
+- **Açık soru (yol haritasında):** ikon. 14.09'daki "ikon deseni her yerde aynı" kararı ile bu karar yan yana:
+  native ikonlar her yerde mi (masaüstü dahil), v1 ikonları her yerde mi? Web'in 32 ikon adının 18'inin
+  native'de karşılığı yok (ortak ad 14).
