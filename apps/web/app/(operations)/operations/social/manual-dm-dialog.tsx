@@ -9,7 +9,7 @@ import { toDay } from '@/components/operation/form/calendar-math';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { InputField, Textarea } from '@/components/operation/form/input';
 import { openManualDmAction, recordFollowUpInboundAction } from './actions';
-import { SOURCE_LABELS } from './social-labels';
+import { SOURCE_LABELS } from '@/components/operation/ui/conversation-source';
 
 /**
  * **Gelen DM'i işle** (15.1'in yüzey yarısı · üç kanal 15.15) — iki kapı, tek pencere:

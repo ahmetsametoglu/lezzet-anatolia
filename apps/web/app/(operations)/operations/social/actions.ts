@@ -55,17 +55,18 @@ function refresh(): void {
 }
 
 /**
- * Kuyruğun SONRAKİ sayfası. Süzgeç ADRESTEN okunur, istemciden gelen bir nesneden değil: devam eden
+ * Kuyruğun SONRAKİ sayfası — imleç `null` ise İLKİ: yüzen mesaj penceresi (15.32) listesini buradan okur
+ * (sayfanın kendi ilk sayfası sunucuda okunur). Süzgeç ADRESTEN okunur, istemciden gelen bir nesneden değil: devam eden
  * sayfa ilk sayfayla aynı ölçüte uymalı ve o ölçüt tek yerde (`social-url`) tanımlı — kanal çipi de
  * dahil.
  */
-export async function loadMoreConversationsAction(search: string, cursor: KeysetCursor): Promise<ActionResult<Page<InboxRowView>>> {
+export async function loadMoreConversationsAction(search: string, cursor: KeysetCursor | null): Promise<ActionResult<Page<InboxRowView>>> {
   try {
     await requireAdmin();
     const urlState = parseSocialUrl(Object.fromEntries(new URLSearchParams(search)));
     const page = await new ConversationInboxService(serviceDb()).list(
       { awaitingReply: urlState.f === 'awaiting' ? true : undefined, source: channelSource(urlState.ch) },
-      cursor,
+      cursor ?? undefined,
       DEFAULT_PAGE_SIZE,
     );
     return { data: { rows: toInboxRows(page.rows, new Date()), nextCursor: page.nextCursor }, error: null };

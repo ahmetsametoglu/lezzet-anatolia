@@ -2972,3 +2972,21 @@ kampanya izni · tek eylem ("Talep (şikâyet) aç"); "Sipariş oluştur" konuş
   pencerede; sepet ve hesap bağlantısı yalnız pencere açıkken (kapalıyken gönderim zaten reddediliyordu).
 - **Talepler çiziminde sağ panel yok;** pano 08.08'den beri bilinçli ek (iade kararı müşterinin öteki
   siparişleriyle verilir) ve aynı iskelete çekildi: ad + rozet · son siparişler.
+
+## Operasyon web'inde yüzen mesaj penceresi + müşterinin sohbet kanalları (14.09, kullanıcı isteği)
+
+Kullanıcı isteği (14.09, iki mesaj): operasyon web'inde yüzen bir düğme, basınca küçük bir WhatsApp ekranı
+gibi pencere (sohbet listesi, dokununca sohbetin içi); müşterinin bizimle hangi kanallardan ve en son
+hangisinden yazıştığı iletişim gereken her yerde görünsün, basınca o sohbet pencerede açılsın. Çizimde pencere
+yok; ek çizim istenmedi (`15.32`).
+
+- **Pencere yeni çizim değil, iki çizimin arasında geçiş:** liste satırı ve sohbet alanı (balon, not, cevap
+  kutusu) sohbet sayfasının kendi parçaları. Mod anahtarı, taslak ve müşteri bağlamı tam ekranda kalır
+  ("Tam ekran →").
+- **Kanal düğmeleri, tasarımdaki tek "WhatsApp" düğmesinin yerinde:** her kanal bir düğme — marka noktası +
+  ad + "son · 2 saat" (en son yazdığı) / "5 gün" / "yazmadı". Sipariş önizlemesi, sipariş detayı, müşteri
+  kartı, Talepler'in sağ paneli. "Ara" (telefon) duruyor.
+- **wa.me yok (kullanıcı kuralı 14.09):** operasyon müşteriye yalnız uygulamanın içinden yazar; sipariş
+  ekranlarındaki wa.me düğmesi söküldü.
+- **Yalnız yönetici:** sohbet sayfasının kapısı neyse pencereninki de o — başka rolde ne düğme ne kanal
+  düğmeleri çizilir.

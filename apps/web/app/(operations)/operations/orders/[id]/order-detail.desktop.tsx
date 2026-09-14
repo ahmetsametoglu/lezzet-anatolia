@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { whatsAppChatLink } from '@lezzet/domain-core';
 import { Badge } from '@/components/operation/ui/badge';
 import { Timeline } from '@/components/operation/ui/timeline';
-import { WhatsAppIcon } from '@/components/operation/ui/icons';
+import { CustomerChannels } from '@/components/operation/ui/customer-channels';
 import { money, percent, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { DOOR_CHECK_NOTE } from '@/components/operation/ui/labels';
 import { statusLabel, statusTone } from '../orders-labels';
@@ -52,7 +51,6 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
   // Geçiş şeridi KAPALI başlar (tasarım): birincil geçiş üst barda, gerisi istendiğinde açılır.
   const [nextOpen, setNextOpen] = useState(false);
   const primary = order.allowedNext[0] ?? null;
-  const chatUrl = whatsAppChatLink(order.customer.phone);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -76,18 +74,12 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
           </span>
         </div>
 
-        {/* Ulaşma — metin YOK, yalnız sohbeti açar: ne yazılacağı operatörün kararı (tasarım). */}
-        {chatUrl ? (
-          <a
-            href={chatUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex flex-none cursor-pointer items-center gap-1.5 rounded-ops-btn border border-ops-line-strong px-3 py-2 font-ops-mono text-ops-xs text-ops-strong transition-colors hover:border-ops-olive"
-          >
-            <WhatsAppIcon size={13} />
-            WhatsApp
-          </a>
-        ) : null}
+        {/* Ulaşma — metin YOK, yalnız sohbeti açar: ne yazılacağı operatörün kararı (tasarım). Sohbet
+            UYGULAMANIN İÇİNDE, yüzen pencerede açılır (15.32 · kullanıcı kuralı 14.09): müşterinin yazıştığı
+            her kanal bir düğme, en son yazdığı işaretli. `wa.me` bağlantısı operatörü kendi telefonuna
+            gönderiyordu. */}
+        <CustomerChannels customerId={order.customer.id} size="md" />
+
         {order.customer.phone ? (
           <a
             href={`tel:${order.customer.phone}`}

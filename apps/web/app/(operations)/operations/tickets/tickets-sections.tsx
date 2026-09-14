@@ -11,6 +11,7 @@ import {
   ContextOrders,
   ContextPane,
 } from '@/components/operation/ui/customer-context-pane';
+import { CustomerChannels } from '@/components/operation/ui/customer-channels';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { bubbleClass, MessageRow, SectionLabel } from '@/components/operation/ui/message-thread';
 import { EDGE_CLASS, QueueRow as SharedQueueRow } from '@/components/operation/ui/queue-pane';
@@ -647,6 +648,9 @@ export function TicketContextPane({ context, customerName }: TicketContextPanePr
         context={context}
         href={customersUrl({ q: context.email ?? context.phone ?? context.name, type: 'all', scope: 'all', mc: 'any' })}
       />
+      {/* Sohbet kanalları (15.32): talebin cevabı talep akışında kalır; kanal düğmesi müşteriye WhatsApp,
+          Messenger ya da Instagram'dan — en son yazdığı yerden — yüzen pencerede ulaşmak içindir. */}
+      <CustomerChannels customerId={context.customerId} />
       <ContextOrders context={context} />
     </ContextPane>
   );

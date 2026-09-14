@@ -10,23 +10,9 @@ import type { WindowView } from './social-types';
 // asıl gerekçesi ise "birden çok yüzey aynı adı okusun"dur ve o gerekçe henüz doğmadı. Mesaj türünü
 // gösteren ikinci bir yüzey çıktığında (native uygulama izleme ekranı) haritalar enum'un yanına
 // taşınır — o gün mekanik bir taşıma olsun diye burada tek parça duruyorlar.
-
-/** Kanal adı — rozet ve süzgeç çipinin metni. Marka adları çevrilmez. */
-export const SOURCE_LABELS: Record<ConversationSource, string> = {
-  whatsapp: 'WhatsApp',
-  messenger: 'Messenger',
-  instagram: 'Instagram',
-};
-
-/**
- * Kuyruk satırının seçili kenarı — kanal MARKA rengiyle: kuyruk artık üç kanalın kuyruğu ve satırın
- * hangi kanaldan geldiği ilk bakışta okunmalı. Renkler token'dan (CLAUDE §3), ham hex yok.
- */
-export const SOURCE_EDGE: Record<ConversationSource, string> = {
-  whatsapp: 'border-l-brand-whatsapp',
-  messenger: 'border-l-brand-messenger',
-  instagram: 'border-l-brand-instagram',
-};
+//
+// **Kanal adı ve marka rengi (`SOURCE_*`) 15.32'de ortak kite taşındı** (`ui/conversation-source`):
+// müşterinin kanal düğmesi — sipariş, müşteri kartı ve talep ekranlarında — ikinci tüketici oldu.
 
 /**
  * Mesaj türü → metinsiz balonun okunacak hâli.

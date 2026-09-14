@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { Space_Grotesk, IBM_Plex_Mono, Karla } from 'next/font/google';
 import { brand } from '@lezzet/brand';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { staffNotificationsChannelName } from '@lezzet/application';
+import { conversationsChannelName, staffNotificationsChannelName } from '@lezzet/application';
 import { STAFF_ROLES } from '@lezzet/types';
 import { AuthError, requireStaff } from '@/lib/guard';
 import { readWarehouseContext } from '@/lib/warehouse/context';
@@ -18,6 +18,7 @@ import { OpsShellProvider } from '@/components/operation/ui/ops-shell';
 import { buttonClass } from '@/components/operation/ui/button';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { AlertIcon } from '@/components/operation/ui/icons';
+import { SocialMessengerProvider } from './social/messenger/social-messenger';
 
 // Operasyon evreni ("Veri Masası") fontları. latin-ext → Türkçe (ş ğ ı) doğru gösterilir.
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin', 'latin-ext'], variable: '--font-space-grotesk', display: 'swap' });
@@ -72,6 +73,8 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
   // okunamadığı içindi. Bypass 19.08'de söküldü (`lib/guard.ts` künyesi); o düşüş bugün yalnız
   // gerçek bir yetki hatasını yönetici gibi gösterirdi.
   const roles = STAFF_ROLES.filter((r) => allRoles.includes(r));
+  // Yüzen mesaj penceresi (15.32) yalnız yöneticide: sohbet sayfasının kapısı `requireAdmin`.
+  const isAdmin = roles.includes('admin');
 
   // Depo bağlamı BURADA okunur: sidebar'da durur ve sayfadan sayfaya taşınır — kimlik düzeyinde bir
   // tercih (19.5). Sayfalar aynı isteğin içinde tekrar sorduğunda `cache()` sayesinde bedava, ve
@@ -105,7 +108,12 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
           <div data-print="hide" className="contents">
             <AdminSidebar roles={roles} />
           </div>
-          <main className="flex min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">{children}</main>
+          {/* YÜZEN MESAJ PENCERESİ (15.32) — her ekrandan müşteriye UYGULAMANIN İÇİNDEN yazılır (kullanıcı
+              kuralı 14.09: wa.me yok). Sağlayıcı sayfayı sarar ki "Mesaj yaz" düğmeleri pencereyi açabilsin;
+              kuyruk zilinin adı sunucu sırrından türer ve buradan iner (bildirim zilinin aynı yolu). */}
+          <SocialMessengerProvider enabled={isAdmin} inboxChannel={isAdmin ? conversationsChannelName() : null}>
+            <main className="flex min-w-0 flex-1 flex-col overflow-hidden print:overflow-visible">{children}</main>
+          </SocialMessengerProvider>
         </OpsShellProvider>
       </div>
     </RootShell>

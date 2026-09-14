@@ -7,6 +7,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { InlineMetric } from '@/components/operation/ui/inline-metric';
 import { Metric } from '@/components/operation/ui/metric';
+import { CustomerChannels } from '@/components/operation/ui/customer-channels';
 import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { money, percent, shortDate } from '@/components/operation/ui/format';
 import { B2B_STATUS_VIEW, GDPR_NOTES, paymentTone, statusHint, statusOf, typeTone } from '../customers-labels';
@@ -126,6 +127,9 @@ export function CustomerPreview({
                   tıpatıp aynı görünürdü (ikisi de adsız) ve operatör silinmişi düzenlemeye kalkardı. */}
               {row.anonymizedAt ? <Badge tone="red">{GDPR_NOTES.anonymized}</Badge> : null}
             </div>
+            {/* Sohbet kanalları (15.32) — hangi kanallardan yazdı, en son hangisinden; basınca sohbet
+                yüzen pencerede açılır. Silinmiş kayıtta yok: kişisel alanları boşaltılmış birine yazılmaz. */}
+            {row.anonymizedAt ? null : <CustomerChannels customerId={row.id} className="mt-1.5" />}
           </div>
         </div>
 

@@ -1,11 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-// Alt yol BİLEREK: barrel `@lezzet/application` sunucu kapılarının tamamını (ve `node:crypto`
-// kullanan `bell.ts`i) çekerdi — bu dosya tarayıcıda koşuyor.
-import { BELL_EVENT } from '@lezzet/application/realtime/bell-event';
-import { createClient } from '@/lib/supabase/client';
+import { useBell } from './use-bell.hook';
 
 /**
  * Operasyon ekranının CANLI BAĞI (16.8). Çizdiği bir şey yok — tek işi **zili duyunca sayfayı
@@ -24,38 +20,15 @@ import { createClient } from '@/lib/supabase/client';
  *
  * ── SEKME GÖRÜNMEZKEN YENİLEME YOK ──────────────────────────────────────────
  * Arka plandaki sekme de zili duyar; her mesajda bir sunucu turu atması boşuna yüktür ve operatör
- * o an bakmıyor. Kaçırılan zil kaybolmuyor: sekmeye dönüldüğünde `visibilitychange` bir kez
- * yeniliyor — yani gecikme var, kayıp yok.
+ * o an bakmıyor. Kaçırılan zil kaybolmuyor: sekmeye dönüldüğünde bir kez yeniliyor — yani gecikme
+ * var, kayıp yok. Kural ortak kancada (`useBell`, 15.32): bildirim zili ve mesaj penceresi de onu kullanıyor.
  */
-export function LiveRefresh({ channel }: { channel: string }) {
+interface LiveRefreshProps {
+  channel: string;
+}
+
+export function LiveRefresh({ channel }: LiveRefreshProps) {
   const router = useRouter();
-
-  useEffect(() => {
-    let missedWhileHidden = false;
-
-    const refresh = () => {
-      if (document.visibilityState === 'hidden') {
-        missedWhileHidden = true;
-        return;
-      }
-      router.refresh();
-    };
-
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible' || !missedWhileHidden) return;
-      missedWhileHidden = false;
-      router.refresh();
-    };
-
-    const supabase = createClient();
-    const live = supabase.channel(channel).on('broadcast', { event: BELL_EVENT }, refresh).subscribe();
-    document.addEventListener('visibilitychange', onVisible);
-
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      void supabase.removeChannel(live);
-    };
-  }, [channel, router]);
-
+  useBell(channel, () => router.refresh());
   return null;
 }

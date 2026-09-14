@@ -399,6 +399,24 @@ export function XIcon({ size = 16 }: { size?: number }) {
   );
 }
 
+/** Sohbet balonu — yüzen mesaj penceresinin düğmesi (15.32): üç kanalın ortak işareti, tek bir marka değil. */
+export function ChatIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <path d="M21 12a8.5 8.5 0 0 1-12.4 7.6L3 21l1.4-5.6A8.5 8.5 0 1 1 21 12Z" />
+    </Svg>
+  );
+}
+
+/** Geri ok — pencerenin sohbetten listeye dönüşü. */
+export function ArrowLeftIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={2.2}>
+      <path d="M19 12H5M12 19l-7-7 7-7" />
+    </Svg>
+  );
+}
+
 /** Geri ok — iade (Para: hareket tipi). */
 export function UndoIcon({ size = 16 }: { size?: number }) {
   return (

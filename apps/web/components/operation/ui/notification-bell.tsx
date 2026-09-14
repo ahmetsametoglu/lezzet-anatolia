@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { BELL_EVENT } from '@lezzet/types';
-import { createClient } from '@/lib/supabase/client';
 import { staffNotificationsFeedAction, staffMarkAllNotificationsReadAction } from '@/lib/notifications/actions';
 import { AnchoredMenu } from './anchored-menu';
 import { CONTROL_SQUARE } from './control';
@@ -11,6 +9,7 @@ import { BellIcon } from './icons';
 import { agoShort } from './format';
 import { Skeleton } from './skeleton';
 import { toOpsNotificationRow, type OpsNotificationRow } from './notification-rows';
+import { useBell } from './use-bell.hook';
 
 /*
   OPERASYON ZİLİ (14.15) — başlık barının kabuk bloğunda durur; `document_undeliverable` gibi
@@ -54,31 +53,11 @@ export function NotificationBell({ channel }: NotificationBellProps) {
     });
   }, []);
 
+  // İlk ölçüm açılışta; sonrası zilden — gizli sekme tur atmaz, dönüşte bir kez sorar (`useBell`).
   useEffect(() => {
     fetchFeed();
-
-    let missedWhileHidden = false;
-    const onBell = () => {
-      if (document.visibilityState === 'hidden') {
-        missedWhileHidden = true;
-        return;
-      }
-      fetchFeed();
-    };
-    const onVisible = () => {
-      if (document.visibilityState !== 'visible' || !missedWhileHidden) return;
-      missedWhileHidden = false;
-      fetchFeed();
-    };
-
-    const supabase = createClient();
-    const live = supabase.channel(channel).on('broadcast', { event: BELL_EVENT }, onBell).subscribe();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisible);
-      void supabase.removeChannel(live);
-    };
-  }, [channel, fetchFeed]);
+  }, [fetchFeed]);
+  useBell(channel, fetchFeed);
 
   const toggle = () => {
     const acilis = !open;

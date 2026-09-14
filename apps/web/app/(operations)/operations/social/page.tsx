@@ -1,15 +1,14 @@
-import { anchorOf, conversationChannelName, conversationsChannelName, defaultConversationHandler } from '@lezzet/application';
+import { conversationChannelName, conversationsChannelName, defaultConversationHandler } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
-import { DEFAULT_PAGE_SIZE, TICKET_STATUS_LABELS } from '@lezzet/types';
+import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { LiveRefresh } from '@/components/operation/ui/live-refresh';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
-import { readCustomerContext } from '@/lib/customer/context';
-import { readConversationDetail } from '@/lib/messaging/read';
 import { SocialClient } from './social-client';
-import { consentStateOf, titleOf, toInboxRows, toThreadItems, toWindowView } from './social-read';
+import { readConversationDetailView } from './social-detail';
+import { toInboxRows } from './social-read';
 import { channelSource, parseSocialUrl } from './social-url';
-import type { ConversationDetailView, SocialData } from './social-types';
+import type { SocialData } from './social-types';
 
 // Sosyal gelen kutusu (15.5 · üç kanal 15.15) — WhatsApp + Messenger + Instagram DM tek kuyrukta;
 // sohbet ve müşteri bağlamı aynı ekranda.
@@ -70,47 +69,12 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
    * "önce bir şey seç" adımı dayatırdı ve kuyruk zaten cevap bekleyeni öne alan sırada geliyor.
    */
   const selectedId = urlState.c || (page.rows[0]?.id ?? '');
-  const detail = selectedId ? await readConversationDetail(selectedId) : null;
-
-  // Müşteri bağlamı ORTAK okumadan (`lib/customer/context`) — Talepler ekranı da aynısını okuyor.
-  // Konuşmanın kendi okumasına gömülseydi iki ekran aynı soruyu iki biçimde cevaplardı.
-  const context = detail?.conversation.customerId ? await readCustomerContext(detail.conversation.customerId) : null;
-  // Çapa MÜŞTERİNİN künyesi, konuşmanın değil (04.10) — kimliksiz sohbette sorulacak bir şey yok.
-  const anchor = detail?.conversation.customerId ? await anchorOf(serviceDb(), detail.conversation.customerId) : null;
-
   // Tek an, tüm pencereler: kuyruk rozetleri ve sohbet altlığı aynı `now`'a göre hesaplanır — ikisi
   // ayrı okunsaydı aynı konuşma listede "2 dk" derken altlıkta "kapalı" diyebilirdi.
   const now = new Date();
 
-  const detailView: ConversationDetailView | null = detail && {
-    id: detail.conversation.id,
-    source: detail.conversation.source,
-    title: context?.name.trim() || titleOf({ profileName: detail.conversation.profileName, externalRef: detail.conversation.externalRef }),
-    externalRef: detail.conversation.externalRef,
-    profileName: detail.conversation.profileName,
-    window: toWindowView(detail.conversation.windowExpiresAt, now),
-    // Hedef dil okuma kapısından, gönderim kapısıyla aynı karar (15.28) — ekran hesaplamaz.
-    language: detail.language,
-    // Mesajlar + iç notlar tek akışta (15.29); başlıktaki sayı yalnız mesajları sayar.
-    thread: toThreadItems(detail.messages, detail.notes),
-    messageCount: detail.messages.length,
-    context,
-    tickets: detail.tickets.map((t) => ({
-      id: t.id,
-      subject: t.subject?.trim() || 'Başlıksız talep',
-      statusLabel: TICKET_STATUS_LABELS[t.status],
-    })),
-    handledBy: detail.conversation.handledBy,
-    aiDraft: detail.conversation.aiDraftReply,
-    // Kampanya izni ÜÇ hâlli (14.09) — "sorulmadı" ile "reddetti" ayrı; kaynağı kanala göre ayrı.
-    consent: consentStateOf({
-      source: detail.conversation.source,
-      customerConsent: context?.whatsappConsent ?? null,
-      optIn: detail.conversation.optIn,
-      optInAskedAt: detail.conversation.optInAskedAt,
-    }),
-    anchor,
-  };
+  // Detayın görünümü ORTAK okumadan (`social-detail`) — yüzen mesaj penceresi (15.32) aynısını okuyor.
+  const detailView = selectedId ? await readConversationDetailView(selectedId, now) : null;
 
   const data: SocialData = {
     rows: toInboxRows(page.rows, now),

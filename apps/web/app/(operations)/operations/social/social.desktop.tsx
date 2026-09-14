@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/operation/ui/page-header';
 import { FilterBar, QueuePane } from '@/components/operation/ui/queue-pane';
 import { ConversationPane, DetailPlaceholder, InboxEmpty, InboxRow, SocialContextPane } from './social-sections';
 import { SOCIAL_CHANNELS, SOCIAL_FILTERS, SOCIAL_FILTER_LABELS } from './social-url';
-import { SOURCE_LABELS } from './social-labels';
+import { SOURCE_LABELS } from '@/components/operation/ui/conversation-source';
 import type { SocialViewProps } from './social-types';
 
 /**

@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { AlertIcon, WhatsAppIcon } from '@/components/operation/ui/icons';
 import { bubbleClass, MessageRow, MessageThread, SectionLabel } from '@/components/operation/ui/message-thread';
 import { QueueRow } from '@/components/operation/ui/queue-pane';
+import { SOURCE_EDGE, SOURCE_LABELS } from '@/components/operation/ui/conversation-source';
 import { ChatText } from '@/components/text/chat-text';
 import { Textarea } from '@/components/operation/form/input';
 import { ORDERS_PATH } from '../orders/orders-url';
@@ -32,8 +33,6 @@ import {
   LANGUAGE_LABELS,
   languageLabel,
   OUTBOUND_LABEL,
-  SOURCE_EDGE,
-  SOURCE_LABELS,
   WINDOW_NOTE,
   WINDOW_TONE,
 } from './social-labels';
@@ -134,7 +133,7 @@ export function DetailPlaceholder() {
  * dayanağı mesajın ANI. Saati göstermeyen bir defterde "pencere neden kapalı" sorusunun cevabı
  * ekranda hiç görünmezdi. Ayrı satır AÇILMIYOR — çizimin zaten var olan künye satırına yazılıyor.
  */
-function Bubble({ message }: { message: MessageView }) {
+export function Bubble({ message }: { message: MessageView }) {
   const mine = message.direction === 'outbound';
   // AI'ın KENDİ gönderdiği mesaj ayrı tonda (16.08): müşteri farkı görmez ama operatör görmeli —
   // "bunu kim söyledi" sorusu sonradan da cevaplanabilmeli (talep yazışmasıyla aynı kural).
@@ -210,7 +209,7 @@ interface NoteLineProps {
  * notu mor (makine konuştu — `ui/tone.ts`), personelinki nötr. Künye "müşteri görmez" der: operatör notu
  * müşteriye yazılmış bir cümle sanmasın.
  */
-function NoteLine({ note }: NoteLineProps) {
+export function NoteLine({ note }: NoteLineProps) {
   const ai = note.author === 'ai';
   return (
     <div className="flex flex-col items-center gap-1 px-6">
@@ -470,7 +469,7 @@ interface ReplyBoxProps {
  * **GELEN mesaj burada işlenmez** — o iş "Gelen mesaj işle" penceresinin, çünkü gelen mesaj
  * pencereyi AÇAN olaydır ve alınma anını ister.
  */
-function ReplyBox({ source, window: win, language, busy, error, prefill, onSendReply }: ReplyBoxProps) {
+export function ReplyBox({ source, window: win, language, busy, error, prefill, onSendReply }: ReplyBoxProps) {
   const [text, setText] = useState('');
 
   /*

@@ -8,7 +8,7 @@ import { Combobox } from '@/components/operation/form/combobox';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import type { CustomerOption } from '@/lib/customer-options';
 import { linkConversationCustomerAction, searchSocialCustomersAction } from './actions';
-import { SOURCE_LABELS } from './social-labels';
+import { SOURCE_LABELS } from '@/components/operation/ui/conversation-source';
 
 /**
  * **Sohbeti müşteriye bağla** (15.16) — kimliksiz sosyal konuşmanın kimlik kapısı.

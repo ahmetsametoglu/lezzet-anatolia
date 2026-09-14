@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { whatsAppChatLink } from '@lezzet/domain-core';
 import { Badge } from '@/components/operation/ui/badge';
 import { Metric } from '@/components/operation/ui/metric';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
-import { WhatsAppIcon } from '@/components/operation/ui/icons';
+import { CustomerChannels } from '@/components/operation/ui/customer-channels';
 import { money, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { contentText, deliveryText, paymentText, paymentToneClass, statusLabel, statusTone } from './orders-labels';
 import { loadOrderPeekAction } from './actions';
@@ -63,7 +62,6 @@ function SelectedOrder({ row }: { row: OrderRow }) {
   }, [row.id]);
 
   const phone = peek?.customer.phone ?? null;
-  const chatUrl = whatsAppChatLink(phone);
 
   return (
     <aside className="flex min-h-0 flex-col overflow-y-auto bg-ops-card">
@@ -95,19 +93,11 @@ function SelectedOrder({ row }: { row: OrderRow }) {
             {shortDateTime(row.createdAt)} · {row.source}
           </span>
 
-          {/* Ulaşma — metin YOK, yalnız sohbeti açar: ne yazılacağı operatörün kararı. */}
-          <div className="ml-auto flex items-center gap-2">
-            {chatUrl ? (
-              <a
-                href={chatUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex cursor-pointer items-center gap-1.5 rounded-ops-btn border border-ops-line-strong px-3 py-1.5 font-ops-mono text-ops-xs text-ops-strong transition-colors hover:border-ops-olive"
-              >
-                <WhatsAppIcon size={13} />
-                WhatsApp
-              </a>
-            ) : null}
+          {/* Ulaşma — metin YOK, yalnız sohbeti açar: ne yazılacağı operatörün kararı. Sohbet UYGULAMANIN
+              İÇİNDE, yüzen pencerede açılır (15.32 · kullanıcı kuralı 14.09): müşterinin yazıştığı her kanal
+              bir düğme, en son yazdığı işaretli. `wa.me` bağlantısı operatörü kendi telefonuna gönderiyordu. */}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {peek ? <CustomerChannels customerId={peek.customer.id} className="justify-end" /> : null}
             {phone ? (
               <a
                 href={`tel:${phone}`}
