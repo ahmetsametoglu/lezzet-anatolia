@@ -155,4 +155,17 @@ describe('diffCartByPlace — sessiz daralma yok', () => {
     const fresh = line({ route: 'shipping' });
     expect(diffCartByPlace(viewOf([before]), viewOf([before, fresh]))).toEqual([]);
   });
+
+  it('karşılanamayan adrese geçişte kalem "gönderilemiyor" diye bildirilir (14.09)', () => {
+    // Ölçülen hâl: seçili adres 90451 Nürnberg — ne rota ne kargo; bant hiç çıkmıyordu.
+    const before = line({ route: 'local', name: 'Baklava' });
+    const after = { ...before, route: null };
+    expect(diffCartByPlace(viewOf([before]), viewOf([after]), { noDelivery: true })).toEqual([{ kind: 'no_delivery', name: 'Baklava' }]);
+  });
+
+  it('yer BİLİNMEZ hâle düştüyse "gönderemiyoruz" denmez — karşılanamama çağıranın bilgisi', () => {
+    const before = line({ route: 'shipping', name: 'Mantı' });
+    const after = { ...before, route: null };
+    expect(diffCartByPlace(viewOf([before]), viewOf([after]))).toEqual([]);
+  });
 });

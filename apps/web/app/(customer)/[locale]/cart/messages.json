@@ -23,6 +23,7 @@
     "reachable": "{missing} daha eklerseniz {label} devreye giriyor: {amount} indirim.",
     "reachableAnon": "{missing} daha eklerseniz {amount} indirim devreye giriyor.",
     "subtotal": "Ara toplam",
+    "deliveryRow": "Teslimat",
     "vatShort": "KDV dahil",
     "checkout": "Ödemeye geç",
     "checkoutBlocked": "Devam etmek için tükenen kalemi çıkarın",
@@ -101,8 +102,9 @@
     },
     "placeChange": {
       "title": "Yeni yerinize göre {n} kalem değişti",
-      "toShipping": "{name} artık kargo grubunda",
+      "toShipping": "{name} artık kargoyla gidiyor",
       "toRoute": "{name} kapıya teslime geçti",
+      "noDelivery": "{name} bu adrese şu an gönderilemiyor",
       "unavailable": "{name} yeni yerinizde şu an alınamıyor",
       "reduced": "{name} — sepette {qty} adet, bu yere en fazla {max} adet getirebiliyoruz",
       "price": "{name} fiyatı değişti — {from} yerine {to}",
@@ -127,11 +129,13 @@
       "addressEdit": "Düzenle",
       "stripInRoute": "{place} — {date} kapınızda, ücretsiz",
       "stripInRouteNoDate": "{place} — kapıya teslim, ücretsiz",
-      "stripShipping": "{place} — kargoyla gönderilir"
+      "stripShipping": "{place} — kargoyla gönderiyoruz",
+      "stripUnreachable": "{place} — buraya şu an gönderemiyoruz"
     },
     "gate": {
       "login": "Devam etmek için giriş yapın",
-      "address": "Devam etmek için bir teslimat adresi seçin"
+      "address": "Devam etmek için bir teslimat adresi seçin",
+      "unreachable": "Bu adrese şu an gönderemiyoruz — başka bir teslimat adresi seçin"
     }
   },
   "fr": {
@@ -158,6 +162,7 @@
     "reachable": "Ajoutez {missing} et {label} s'applique : {amount} de remise.",
     "reachableAnon": "Ajoutez {missing} et vous obtenez {amount} de remise.",
     "subtotal": "Sous-total",
+    "deliveryRow": "Livraison à domicile",
     "vatShort": "TTC",
     "checkout": "Passer à la commande",
     "checkoutBlocked": "Retirez l'article épuisé pour continuer",
@@ -238,6 +243,7 @@
       "title": "{n} article(s) ont changé avec votre nouveau lieu",
       "toShipping": "{name} passe en envoi colis",
       "toRoute": "{name} passe en livraison à domicile",
+      "noDelivery": "{name} ne peut pas être livré à cette adresse pour le moment",
       "unavailable": "{name} n'est pas disponible à votre nouveau lieu pour le moment",
       "reduced": "{name} — {qty} au panier, nous pouvons en apporter {max} au maximum à ce lieu",
       "price": "{name} a changé de prix — {to} au lieu de {from}",
@@ -262,11 +268,13 @@
       "addressEdit": "Modifier",
       "stripInRoute": "{place} — livré chez vous {date}, livraison offerte",
       "stripInRouteNoDate": "{place} — livraison à domicile, offerte",
-      "stripShipping": "{place} — expédié par transporteur"
+      "stripShipping": "{place} — expédié par transporteur",
+      "stripUnreachable": "{place} — livraison impossible à cette adresse pour le moment"
     },
     "gate": {
       "login": "Connectez-vous pour continuer",
-      "address": "Choisissez une adresse de livraison pour continuer"
+      "address": "Choisissez une adresse de livraison pour continuer",
+      "unreachable": "Nous ne livrons pas cette adresse pour le moment — choisissez une autre adresse de livraison"
     }
   },
   "de": {
@@ -293,6 +301,7 @@
     "reachable": "Noch {missing} und {label} greift: {amount} Rabatt.",
     "reachableAnon": "Noch {missing} und Sie erhalten {amount} Rabatt.",
     "subtotal": "Zwischensumme",
+    "deliveryRow": "Lieferung an die Tür",
     "vatShort": "inkl. MwSt.",
     "checkout": "Zur Kasse",
     "checkoutBlocked": "Entfernen Sie den ausverkauften Artikel, um fortzufahren",
@@ -373,6 +382,7 @@
       "title": "{n} Artikel haben sich mit Ihrem neuen Ort geändert",
       "toShipping": "{name} geht jetzt als Paket",
       "toRoute": "{name} wird jetzt an die Tür geliefert",
+      "noDelivery": "{name} kann derzeit nicht an diese Adresse geliefert werden",
       "unavailable": "{name} ist an Ihrem neuen Ort derzeit nicht erhältlich",
       "reduced": "{name} — {qty} im Warenkorb, an diesen Ort können wir höchstens {max} bringen",
       "price": "{name} hat einen anderen Preis — {to} statt {from}",
@@ -397,11 +407,13 @@
       "addressEdit": "Bearbeiten",
       "stripInRoute": "{place} — {date} an Ihrer Haustür, kostenlos",
       "stripInRouteNoDate": "{place} — Lieferung an die Haustür, kostenlos",
-      "stripShipping": "{place} — Versand per Paket"
+      "stripShipping": "{place} — Versand per Paket",
+      "stripUnreachable": "{place} — derzeit keine Lieferung an diese Adresse"
     },
     "gate": {
       "login": "Zum Fortfahren anmelden",
-      "address": "Wählen Sie zum Fortfahren eine Lieferadresse"
+      "address": "Wählen Sie zum Fortfahren eine Lieferadresse",
+      "unreachable": "An diese Adresse liefern wir derzeit nicht — wählen Sie eine andere Lieferadresse"
     }
   }
 }

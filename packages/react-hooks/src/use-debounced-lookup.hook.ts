@@ -17,8 +17,8 @@ import { useEffect, useRef, useState } from 'react';
   Adres formunda bugün İKİ alan yazarken öneri istiyor: sokak (Fransız devletinin adres servisi,
   BAN) ve posta kodu (kendi `postal_code_place` referansımız — 21.28). İkisi de aynı üç kararı
   vermek zorunda ve ikisi de yanlış verirse aynı arızayı doğuruyor. Web'de üçüncü bir tüketici
-  daha var: başlıktaki yer hapının kod araması (`place-dialog`) — o kendi elle yazılmış
-  gecikmesini taşıyordu ve önbelleği hiç yoktu.
+  daha var: yer sorusunun kod araması (bugün `place-lookup`; o gün ayrı posta kodu penceresi
+  `place-dialog`, 14.09'da kalktı) — kendi elle yazılmış gecikmesini taşıyordu ve önbelleği hiç yoktu.
 
   Çekirdek KAYNAK BİLMEZ: nereye sorulacağı `lookup`ın işi. Bu yüzden BAN'ın kota (429) hâli de,
   kod ucunun boş listesi de çağıranın kendi tipiyle taşınır — çekirdek yalnız NE ZAMAN sorulacağına

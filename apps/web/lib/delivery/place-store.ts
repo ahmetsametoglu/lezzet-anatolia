@@ -29,23 +29,6 @@ const KEY = 'lezzet.place.v2';
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 /**
- * Sorunun ATLANDIĞI da bir cevaptır: şerit ikinci kez sormasın (tasarım: "şimdi değil").
- *
- * Atlama KAPSAMLIDIR çünkü iki farklı soru var. Anasayfadaki davet gezinmenin başında sorulur ve
- * atlanması makuldür ("daha bakıyorum"). Sepetteki soru ise SOMUT bir sonuca bağlıdır: sepette
- * yalnız kendi aracımızla gidebilen ürün var ve nereye gideceğini bilmiyoruz. İlkini geçmek
- * ikincisini de susturmamalı — geçilen soru başka bir soruydu.
- *
- * Bunlar `localStorage`'da KALIYOR: sunucunun onları bilmesine gerek yok (hiçbir RSC kararını
- * değiştirmiyorlar) ve her isteğe takılmalarının bir karşılığı olmazdı.
- */
-type SkipScope = 'home' | 'cart';
-const SKIP_KEY: Record<SkipScope, string> = {
-  home: 'lezzet.place.skipped.v1',
-  cart: 'lezzet.place.skipped.cart.v1',
-};
-
-/**
  * Çerez İSTEMCİDE OKUNMAZ (13.09): ilk kareyi sunucu veriyor (`readPlaceSnapshot` → layout →
  * `PlaceProvider`). Eski `readPlaceAnswer` burada durup çerezi okuyor ve `resolvePlaceAction`ı bir
  * kez daha çağırıyordu — 19.7'nin (b) gecikmesi tam olarak buydu. Yazma yolu kalıyor: cevabı
@@ -62,17 +45,6 @@ export function writePlaceAnswer(answer: PlaceAnswer | null): void {
     : `${base}; path=/; max-age=0; samesite=lax`;
 }
 
-export function readSkipped(scope: SkipScope): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(SKIP_KEY[scope]) === '1';
-}
-
-export function writeSkipped(scope: SkipScope): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(SKIP_KEY[scope], '1');
-  } catch {
-    // Depo kapalı (gizli sekme) — soru o oturumda yeniden sorulabilir, ekran çökmez.
-  }
-}
+// "Şimdi değil" işaretleri (`readSkipped` · `writeSkipped`) 14.09'da kalktı: sordukları iki şerit
+// (anasayfa ve sepet) söküldü, posta kodu yalnız başlıktaki haptan soruluyor (kullanıcı kararı).
 

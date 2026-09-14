@@ -1,6 +1,5 @@
 import { RATIO_BAND } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
-import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
 import { buttonClass } from '@/components/customer/ui/button';
 import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
 import { CategoryCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
@@ -38,9 +37,6 @@ export function HomeMobile({ t, locale, data, hero }: HomeViewProps) {
         <Link href="/catalog" className={buttonClass({ compact: true, fullWidth: true })}>
           {t.hero.ctaCatalog}
         </Link>
-        {/* K31 · Mobilde şerit kahramanın içinde kalır: ayrı bir bölüm açmak dar ekranda kategorileri
-            katlamanın altına itiyordu. Metinler tek sütuna sarar, düğme tam genişliğe iner. */}
-        <PlacePrompt locale={locale} />
       </section>
 
       {/* Kategoriler — yatay şerit, daire maskeli */}

@@ -71,7 +71,6 @@ export function CatalogMobile({ t, locale, placeMode, data, products, hasMore, l
         {/* Üç hâl masaüstüyle AYNI kuralda (08.27) — dar ekranın kısa metniyle. */}
         <ShippableChip
           mode={placeMode}
-          locale={locale}
           label={t.onlyShippableShort}
           askLabel={t.shippableAskShort}
           href={hrefFor({ onlyShippable: !active.onlyShippable })}

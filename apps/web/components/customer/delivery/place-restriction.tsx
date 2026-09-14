@@ -9,9 +9,7 @@ import { cartKey, type CartLine, type CartRef } from '@/lib/cart/cart-types';
 import { formatPrice } from '@/lib/storefront/format';
 import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { AddressPickerDialog } from './address-picker';
-import { useDeliveryPlace } from './place-context';
-import { PlaceDialog } from './place-dialog';
-import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
+import { useDeliveryPlace } from './place-context';import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
 import type { CustomerResult } from '@/lib/customer-error';
 import { NoticeDialog } from './notice-dialog';
 import { ZoneNoticeButton } from './zone-notice-button';
@@ -101,7 +99,7 @@ async function recordVariantNotices(lines: CartLine[], email: string): Promise<C
 
 export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCents, compact = false, place: override, onChangePlace }: PlaceRestrictionProps) {
   const t = messages[locale];
-  const { place: chipPlace, address } = useDeliveryPlace();
+  const { place: chipPlace, address, setPanelOpen } = useDeliveryPlace();
   const { saveForLater } = useCart();
   const [placeOpen, setPlaceOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
@@ -201,7 +199,14 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
             {t.splitCta}
           </Button>
         )}
-        <Button variant="outlineOlive" size="sm" compact={compact} onClick={onChangePlace ?? (() => setPlaceOpen(true))}>
+        {/* Adresi olan müşteri adres seçiciye, ziyaretçi başlıktaki yer sorusuna gider (posta kodu
+            tek yerden sorulur — kullanıcı kararı 14.09). */}
+        <Button
+          variant="outlineOlive"
+          size="sm"
+          compact={compact}
+          onClick={onChangePlace ?? (() => (address ? setPlaceOpen(true) : setPanelOpen(true)))}
+        >
           {onChangePlace ? t.changeAddressCta : t.changeCta}
         </Button>
         {/* Rota içindeyken bölge notu ANLAMSIZ — müşteri zaten bölgede. Söz kalem kalem verilir ve
@@ -219,12 +224,7 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
         )}
       </div>
 
-      {placeOpen &&
-        (address ? (
-          <AddressPickerDialog locale={locale} compact={compact} onClose={() => setPlaceOpen(false)} />
-        ) : (
-          <PlaceDialog locale={locale} onClose={() => setPlaceOpen(false)} />
-        ))}
+      {placeOpen && <AddressPickerDialog locale={locale} compact={compact} onClose={() => setPlaceOpen(false)} />}
       {noticeOpen && (
         <NoticeDialog
           locale={locale}

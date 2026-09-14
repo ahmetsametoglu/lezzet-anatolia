@@ -5,20 +5,21 @@ import type { ChangeEvent, KeyboardEvent } from 'react';
 import type { Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { usePostalSuggest } from '@/lib/address/use-postal-suggest.hook';
-import { isValidPostalCode, type DeliveryPlace, type PlaceLookup, type PlaceOption } from '@/lib/delivery/place-types';
-import { formatDeliveryDate } from '@/lib/storefront/format';
-import { DeliveryStrip } from './delivery-strip';
+import { isValidPostalCode, type DeliveryPlace, type PlaceLookup } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
 
 type Copy = (typeof messages)['tr'];
 
 /**
- * Yer sorusunun MANTIĞI — kod ya da yer adı girişi, öneri, çözüm hâlleri. İki kabuk kullanır:
- * mobil webdeki pencere (`PlaceDialog`: ad araması, öneri, dört hâlin blokları) ve masaüstü
- * başlığının yer paneli (`PlacePanel`, v1: önce ülke, sonra kod; öneri yok, tek satırlık sorun).
- * Mantık tek yerde, kabuklar yalnız çizer — panel bir ara kendi gönderme mantığını yazmıştı
- * (13.09 kopya bulgusu).
+ * Yer sorusunun MANTIĞI — kod ya da yer adı girişi, öneri, çözüm hâlleri. Kabuğu başlıktaki yer
+ * sorusu: masaüstünde panel (`PlacePanel`, v1: önce ülke, sonra kod; öneri yok, tek satırlık sorun),
+ * mobil webde çekmece (`PlaceSheet`) — ikisi de `use-place-answer.hook` üstünden. Mantık tek yerde,
+ * kabuklar yalnız çizer — panel bir ara kendi gönderme mantığını yazmıştı (13.09 kopya bulgusu).
+ *
+ * **Ayrı posta kodu penceresi (`PlaceDialog`) 14.09'da kalktı** (kullanıcı kararı): posta kodu yalnız
+ * başlıktaki haptan sorulur; ürün, paket, katalog ve sepetteki düğmeler o soruyu açar. Pencere ülkeyi
+ * önden sormuyordu ve girişli müşteriye de kod soruyordu.
  *
  * ## Öneri listesi (19.7 · kullanıcı kararı 02.08)
  *
@@ -50,9 +51,6 @@ type Copy = (typeof messages)['tr'];
  * sıra ilerler, kilit hemen açılır ve eski sorunun cevabı ekrana yazılmaz; düşen istek genel arıza
  * cümlesine döner.
  */
-
-/** Satırda kaç yerleşim adı yazılır, gerisi "+N" olur (tasarım kararı — veri biçim dayatmaz). */
-const NAMES_SHOWN = 2;
 
 interface PlaceLookupOptions {
   /** Müşterinin seçtiği ülke — verilirse kod o ülkeye bağlanır (masaüstü paneli, v1 · 13.09). */
@@ -177,7 +175,7 @@ export function usePlaceLookup(locale: Locale, { country: chosen, suggest = true
   return { place, value, submit, pick, reset, lookup, invalid, failed, busy, suggest, suggestions, inputProps };
 }
 
-export type PlaceLookupState = ReturnType<typeof usePlaceLookup>;
+type PlaceLookupState = ReturnType<typeof usePlaceLookup>;
 
 /**
  * Girişin TEK SATIRLIK sorunu — biçim, arıza ya da çözülemeyen hâl; yoksa `null`. Panel yalnız bunu
@@ -195,146 +193,4 @@ export function lookupMessage(state: PlaceLookupState, t: Copy): string | null {
   if (state.lookup?.kind === 'unresolved') return state.lookup.reason === 'no_shipping_warehouse' ? t.unresolvedShipTitle : t.unresolvedZoneTitle;
   if (state.lookup?.kind === 'ambiguous') return t.ambiguousTitle;
   return null;
-}
-
-interface PlaceLookupResultsProps {
-  state: PlaceLookupState;
-  locale: Locale;
-}
-
-/**
- * Girişin altındaki her şey (mobil webdeki pencere): biçim/arıza cümlesi, öneriler, dört hâlin
- * bloğu, temizleme, sonuç ve kapıya teslim ettiğimiz yerler.
- *
- * **Gönderince kapanmaz (28.07 düzeltmesi):** cevap gösterilir, kapatma müşterinin kararıdır. Önce
- * kapanıyordu ve sorunun bütün amacını boşa çıkarıyordu — müşteri cevabı okumadan ekran kayboluyordu.
- * Masaüstü panelinde bu kural 13.09'da kalktı: v1 "Göster"de paneli kapatıp bildirim çıkarıyor ve
- * cevap hapta okunuyor (`PlacePanel` künyesi).
- *
- * **Gittiğimiz yerler listesi** "benimki neden yok" sorusunu cevaplıyor ve bölgenin gerçekten var
- * olduğunu gösteriyor — onsuz "kargo" cevabı bir çıkmaz gibi okunuyordu. v1'de yok; masaüstü
- * panelinden 13.09'da kalktı, pencerede duruyor.
- */
-export function PlaceLookupResults({ state, locale }: PlaceLookupResultsProps) {
-  const t = messages[locale];
-  const { zones } = useDeliveryPlace();
-  const { place, lookup, invalid, failed, value, suggestions, pick, reset } = state;
-
-  return (
-    <>
-      {/* Biçim ve arıza tek satır; cümle seçimi `lookupMessage`ta (panel de aynısını yazar). */}
-      {(invalid || failed) && <span className="font-sans text-note font-semibold text-terracotta">{lookupMessage(state, t)}</span>}
-
-      {suggestions.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <span className="font-sans text-note font-bold text-ink">{t.suggestTitle}</span>
-          {suggestions.map((s) => (
-            <PlaceRow key={`${s.country}:${s.postalCode}`} code={s.postalCode} country={s.country} places={s.places} inRoute={s.inRoute} t={t} onPick={pick} />
-          ))}
-        </div>
-      )}
-
-      {/* ── Belirsiz: ülke müşterinin cevabı ──────────────────────────────────── */}
-      {lookup?.kind === 'ambiguous' && (
-        <div className="flex flex-col gap-1.5 rounded-soft bg-honey-bg px-4 py-3">
-          <span className="font-sans text-note font-bold text-honey">{t.ambiguousTitle}</span>
-          <span className="font-sans text-note leading-relaxed text-body">{t.ambiguousBody}</span>
-          <div className="mt-1 flex flex-col gap-1.5">
-            {lookup.options.map((o: PlaceOption) => (
-              <PlaceRow key={o.country} code={value} country={o.country} places={o.places} inRoute={o.inRoute} t={t} onPick={pick} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Bulunamadı: müşterinin yazım hatası ya da hizmet dışı bir yer ──────── */}
-      {lookup?.kind === 'unknown' && (
-        <div className="flex flex-col gap-1 rounded-xl bg-cream px-3.5 py-3">
-          <span className="font-sans text-note font-bold text-ink">{t.unknownTitle}</span>
-          <span className="font-sans text-note leading-relaxed text-body">{t.unknownBody}</span>
-        </div>
-      )}
-
-      {/* ── Çözülemedi: BİZİM eksiğimiz, müşterinin değil ──────────────────────── */}
-      {lookup?.kind === 'unresolved' && (
-        <div className="flex flex-col gap-1 rounded-xl bg-cream px-3.5 py-3">
-          <span className="font-sans text-note font-bold text-ink">
-            {lookup.reason === 'no_shipping_warehouse' ? t.unresolvedShipTitle : t.unresolvedZoneTitle}
-          </span>
-          <span className="font-sans text-note leading-relaxed text-body">
-            {lookup.reason === 'no_shipping_warehouse' ? t.unresolvedShipBody : t.unresolvedZoneBody}
-          </span>
-        </div>
-      )}
-
-      {/* Temizleme, ait olduğu GİRDİNİN altında: en altta dururken hangi alanı boşalttığı belirsiz
-          kalıyordu ve kapanış eyleminin yanına düşüp yanlışlıkla basılmaya açıktı. */}
-      {place && (
-        <button type="button" onClick={reset} className="w-max cursor-pointer font-sans text-note font-semibold text-muted underline hover:text-terracotta">
-          {t.clear}
-        </button>
-      )}
-
-      {/* Sonuç: yer çözülmüşse ne anlama geldiği tek cümleyle. Kargo hâli bir HATA gibi yazılmaz —
-          kargo da bizim teslimat yolumuz, yalnız soğuk zincir dışarıda kalıyor.
-          Biçim v1'in teslim şeridi (adres penceresindeki "Adres doğrulandı" kutusunun alt satırı): krem
-          zemin, kanal ikonu, cümle. */}
-      {place && !lookup && !invalid && !failed && (
-        <DeliveryStrip inRoute={place.inRoute}>
-          <span>{place.inRoute ? t.resultInRoute : t.resultShipping}</span>
-          {place.inRoute && place.nextDate && <span className="text-olive-dark">{t.nextDate.replace('{date}', formatDeliveryDate(place.nextDate, locale))}</span>}
-        </DeliveryStrip>
-      )}
-
-      {zones.length > 0 && (
-        <div className="flex flex-col gap-1.5 border-t border-sand-300 pt-3">
-          <span className="font-sans text-note font-bold text-ink">{t.zonesTitle}</span>
-          {zones.map((zone) => (
-            <span key={zone.name} className="font-sans text-micro leading-relaxed text-muted">
-              <span className="font-semibold text-body">{zone.name}</span> · {zone.postalCodes.join(' · ')}
-            </span>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-/**
- * Seçilebilir yer satırı — **öneri listesi ve belirsizlik seçicisi AYNI satırı kullanır.** İkisi de
- * aynı soruyu soruyor ("hangisi sizinki") ve aynı üç bilgiyi taşıyor: kod, yerleşimler, ülke.
- *
- * **Rota işareti bir sıralama ipucudur, bir seçim değil:** kapıya teslim ettiğimiz yeri öne alıp
- * işaretliyoruz ama müşterinin yerine seçmiyoruz — iki adayın farkı KDV oranıdır (19.8).
- */
-interface PlaceRowProps {
-  code: string;
-  country: Country;
-  places: string[];
-  inRoute: boolean;
-  t: Copy;
-  onPick: (code: string, country: Country) => void;
-}
-
-function PlaceRow({ code, country, places, inRoute, t, onPick }: PlaceRowProps) {
-  const shown = places.slice(0, NAMES_SHOWN).join(', ');
-  const rest = places.length - NAMES_SHOWN;
-  return (
-    <button
-      type="button"
-      onClick={() => onPick(code, country)}
-      className="flex cursor-pointer flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-soft border border-sand-200 bg-card px-3.5 py-2 text-left transition-colors hover:border-olive"
-    >
-      <span className="font-sans text-body-sm font-bold text-ink">{code}</span>
-      {shown && (
-        <span className="font-sans text-note text-body">
-          {shown}
-          {rest > 0 && <span className="text-muted"> {t.suggestMore.replace('{n}', String(rest))}</span>}
-        </span>
-      )}
-      {/* Ülke her satırda yazılı: aynı kod iki ülkede geçerli olabiliyor (kullanıcı kararı 02.08). */}
-      <span className="font-sans text-micro font-semibold text-muted">{country === 'FR' ? t.countryFR : t.countryDE}</span>
-      {inRoute && <span className="ml-auto font-sans text-micro font-semibold text-olive-dark">{t.suggestRoute}</span>}
-    </button>
-  );
 }

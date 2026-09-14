@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { buttonClass } from '@/components/customer/ui/button';
-import { PlaceDialog } from './place-dialog';
+import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
 
 /**
@@ -29,8 +28,10 @@ import messages from './place-messages.json';
  * ── TASARIMDAN SAPMA (kayıt: `design/BACKLOG §3`) ────────────────────────────
  * Tasarımın soğuk zincir kartı aynı hâli çiziyor ama altına *"davet zorunlu değildir, KİLİT
  * değildir: atlanabilir"* yazıyor. Kullanıcı kararıyla burada yumuşak bir kilide dönüştü. Ayrıca
- * tasarım satır içi bir posta kodu alanı çiziyor; burada sitenin kanonik panelini (`PlaceDialog`)
- * açıyoruz — üçüncü bir posta kodu girdisi yazmak aynı doğrulamayı üç yerde bakıma bırakırdı.
+ * tasarım satır içi bir posta kodu alanı çiziyor; burada sitenin tek yer sorusunu açıyoruz —
+ * başlıktaki hap (masaüstünde panel, mobil webde çekmece; kullanıcı kararı 14.09). Girişli müşteriye
+ * orada adresleri çıkar, ziyaretçiye ülke ve kod. Üçüncü bir posta kodu girdisi yazmak aynı
+ * doğrulamayı üç yerde bakıma bırakırdı.
  */
 // `onDark` prop'u SÖKÜLDÜ (sekizinci tur 20.08): tek kullanıcısı mobilin sabit koyu satın alma
 // çubuğuydu ve çubuk akışa indi — kapı artık her yerde açık zeminde duruyor.
@@ -40,27 +41,23 @@ interface PlaceGateProps {
 
 export function PlaceGate({ locale }: PlaceGateProps) {
   const t = messages[locale];
-  const [open, setOpen] = useState(false);
+  const { setPanelOpen } = useDeliveryPlace();
 
   return (
-    <>
-      <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={buttonClass({
-            variant: 'primary',
-            size: 'lg',
-            fullWidth: true,
-            className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap',
-          })}
-        >
-          {t.gateCta}
-        </button>
-        <span className="font-sans text-micro leading-relaxed text-muted">{t.gateHint}</span>
-      </div>
-
-      {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
-    </>
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setPanelOpen(true)}
+        className={buttonClass({
+          variant: 'primary',
+          size: 'lg',
+          fullWidth: true,
+          className: 'border-2 border-transparent !px-4 !py-3 leading-tight whitespace-nowrap',
+        })}
+      >
+        {t.gateCta}
+      </button>
+      <span className="font-sans text-micro leading-relaxed text-muted">{t.gateHint}</span>
+    </div>
   );
 }

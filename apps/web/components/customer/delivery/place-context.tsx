@@ -6,8 +6,8 @@ import type { Address, Country } from '@lezzet/types';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
 import { saveMyAddressAction, selectMyAddressAction, type SaveAddressInput } from '@/lib/address/actions';
-import { readSkipped, writePlaceAnswer, writeSkipped } from '@/lib/delivery/place-store';
-import type { DeliveryPlace, DeliveryZoneSummary, PlaceAddress, PlaceLookup, PlaceSnapshot } from '@/lib/delivery/place-types';
+import { writePlaceAnswer } from '@/lib/delivery/place-store';
+import type { DeliveryPlace, DeliveryZoneSummary, PlaceAddress, PlaceLookup, PlaceSnapshot, PlaceUnresolved } from '@/lib/delivery/place-types';
 
 /**
  * Teslimat yeri bağlamı — "nereye getirelim" cevabının TEK sahibi.
@@ -36,9 +36,17 @@ interface PlaceContextValue {
   /** Seçili teslimat adresi — yalnız girişli ve adresli müşteride; yerin kaynağı o zaman budur. */
   address: PlaceAddress | null;
   /**
-   * Tarayıcıdaki ilk okuma (atlama işaretleri, `localStorage`) bitti mi — "şimdi değil" denmiş bir
-   * soruyu bir an gösterip saklamamak için soru şeritleri bekler. Yerin KENDİSİ bunu beklemez:
-   * o sunucudan ilk kareyle geliyor.
+   * Seçili adres NEDEN yer vermiyor (14.09) — `place` null ve `address` doluyken dolar: kod tanınıyor
+   * ama ne rota ne kargo karşılıyor. `no_shipping_warehouse` bizim ayar eksiğimiz (ülkenin kargo
+   * çıkış deposu yok), `ambiguous_zone` veri çakışması. Sepet bunu söyler — teslim şeridi, satır notu,
+   * pasif "Ödemeye geç"; önce sessizdi ve müşteri ret cümlesini ancak siparişi onaylarken görüyordu.
+   */
+  unresolved: PlaceUnresolved | null;
+  /**
+   * İstemcide ilk kare tamamlandı mı — sunucuyla aynı çizilip sonra açılan parçalar (satın alma
+   * kapısı, sepet okuması) bunu bekler. Eskiden "şimdi değil" işaretlerini (`localStorage`) de
+   * bekliyordu; işaretler, sordukları şeritlerle birlikte 14.09'da kalktı. Yerin KENDİSİ bunu
+   * beklemez: o sunucudan ilk kareyle geliyor.
    */
   ready: boolean;
   /**
@@ -61,12 +69,6 @@ interface PlaceContextValue {
   selectAddress: (addressId: string) => Promise<boolean>;
   /** Adres ekler ya da düzenler; kaydedilen adres seçiliyse yer ona göre yeniden kurulur. */
   saveAddress: (input: SaveAddressInput) => Promise<{ ok: true; address: Address } | { ok: false; errorKey: string | null }>;
-  /**
-   * Soru atlandı mı — şerit ikinci kez sormaz (tasarım: "şimdi değil"). KAPSAMLIDIR: anasayfadaki
-   * davet ile sepetteki somut soru aynı şey değil, birini geçmek öbürünü susturmamalı.
-   */
-  skipped: (scope: 'home' | 'cart') => boolean;
-  skip: (scope: 'home' | 'cart') => void;
   /**
    * Kapıya teslim ettiğimiz yerler — **sayfa açılırken sunucuda okunmuş** hâlde gelir
    * (`layout` → `getDeliveryZones`), burada bekletilir.
@@ -100,31 +102,29 @@ interface PlaceProviderProps {
   /** Yerin sunucudaki ilk karesi (`readPlaceSnapshot`) — adres ya da çerezden çözülmüş. */
   initialPlace: DeliveryPlace | null;
   initialAddress: PlaceAddress | null;
+  /** Adres karşılanamıyorsa sebebi (`readPlaceSnapshot`) — sepet onu söyler. */
+  initialUnresolved: PlaceUnresolved | null;
 }
 
-export function PlaceProvider({ children, zones, initialPlace, initialAddress }: PlaceProviderProps) {
+export function PlaceProvider({ children, zones, initialPlace, initialAddress, initialUnresolved }: PlaceProviderProps) {
   const router = useRouter();
   const [place, setPlace] = useState<DeliveryPlace | null>(initialPlace);
   const [address, setAddress] = useState<PlaceAddress | null>(initialAddress);
+  const [unresolved, setUnresolved] = useState<PlaceUnresolved | null>(initialUnresolved);
   const [ready, setReady] = useState(false);
-  const [skipped, setSkipped] = useState<Record<'home' | 'cart', boolean>>({ home: false, cart: false });
   /** Yeri değiştiren kaç istek havada — sayı, bayrak değil: iki istek üst üste binebilir. */
   const [inflight, setInflight] = useState(0);
   const [refreshing, startRefresh] = useTransition();
 
-  useEffect(() => {
-    // Atlama işaretleri yalnız tarayıcıda (`localStorage`); ilk kare onlar okunmadan çizilmez —
-    // şerit önce belirip sonra kaybolmasın.
-    setSkipped({ home: readSkipped('home'), cart: readSkipped('cart') });
-    setReady(true);
-  }, []);
+  useEffect(() => setReady(true), []);
 
   // Sunucu yeni bir kare verdiyse (yenileme, gezinme) state ona uyar: kaynak sunucudur, istemci
   // kopyası yalnız ara kareleri taşır.
   useEffect(() => {
     setPlace(initialPlace);
     setAddress(initialAddress);
-  }, [initialPlace, initialAddress]);
+    setUnresolved(initialUnresolved);
+  }, [initialPlace, initialAddress, initialUnresolved]);
 
   /**
    * Sunucu tarafını tazeler — GEÇİŞ (`transition`) içinde: tazeleme bitene dek `refreshing` açık
@@ -147,8 +147,7 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress }:
     (snapshot: PlaceSnapshot) => {
       setPlace(snapshot.place);
       setAddress(snapshot.address);
-      // Adres seçildiyse her iki soru da cevaplanmıştır; atlama işaretleri düşer.
-      setSkipped({ home: false, cart: false });
+      setUnresolved(snapshot.unresolved);
       // Sunucuyu da tazele: katalog kartlarının işaretleri ve sepetin grupları RSC'de yeni yere
       // göre yeniden çizilsin (19.7'deki `setPostalCode` gerekçesinin aynısı).
       refresh();
@@ -173,8 +172,7 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress }:
         setPlace(data.place);
         // Saklanan tek şey CEVAP: çözümü (bölge, gün, depo) her istekte sunucu yeniden üretir.
         writePlaceAnswer({ country: data.place.country, postalCode: data.place.postalCode });
-        // Kod girildiyse her iki soru da cevaplanmıştır; atlama işaretleri düşer.
-        setSkipped({ home: false, cart: false });
+        setUnresolved(null);
         // ── SUNUCUYU DA TAZELE (19.7) ───────────────────────────────────────────
         // Çerezi İSTEMCİ yazıyor (`document.cookie`); o an ekranda duran RSC çıktısı hâlâ eski yerle
         // (çoğu zaman depo-üstü) çizilmiş. Tazeleme olmadan hap doluyor ama katalog kartlarındaki
@@ -219,6 +217,7 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress }:
     () => ({
       place,
       address,
+      unresolved,
       ready,
       updating,
       panelOpen,
@@ -226,6 +225,7 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress }:
       setPostalCode,
       clear: () => {
         setPlace(null);
+        setUnresolved(null);
         writePlaceAnswer(null);
         // Temizleme de bir cevap değişimidir: okumalar depo-üstüne dönmeli, yoksa ekranda yerin
         // silindiği ama işaretlerin hâlâ o yeri anlattığı bir ara hâl kalır.
@@ -234,13 +234,8 @@ export function PlaceProvider({ children, zones, initialPlace, initialAddress }:
       selectAddress,
       saveAddress,
       zones,
-      skipped: (scope) => skipped[scope],
-      skip: (scope) => {
-        setSkipped((prev) => ({ ...prev, [scope]: true }));
-        writeSkipped(scope);
-      },
     }),
-    [place, address, ready, updating, panelOpen, refresh, setPostalCode, selectAddress, saveAddress, skipped, zones],
+    [place, address, unresolved, ready, updating, panelOpen, refresh, setPostalCode, selectAddress, saveAddress, zones],
   );
 
   return <PlaceContext.Provider value={value}>{children}</PlaceContext.Provider>;

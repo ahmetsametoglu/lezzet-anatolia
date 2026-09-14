@@ -3,7 +3,6 @@
 import { FunnelHeader } from '@/components/customer/ui/funnel-header';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { cartKey, splitByRoute } from '@/lib/cart/cart-types';
-import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
 import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
 import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
@@ -75,12 +74,10 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
             </div>
           )}
           <div className="flex flex-col gap-2.5 px-4 py-3.5">
-            {/* Yer değişimi bildirimi en üstte: masaüstünde sağ sütunun kendi kartı, mobilde
-                sütun yok — değişimin sebebi olan yer sorusu da hemen altında duruyor. */}
+            {/* Yer değişimi bildirimi en üstte — masaüstünde de kalem listesinin üstünde (14.09). */}
             <PlaceChangeCard t={t} locale={locale} compact />
-            {/* K32 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. */}
-            {/* Yer bilinmiyorsa soru, biliniyorsa kısıt — ikisi birbirini dışlar. */}
-            <PlacePrompt locale={locale} scope="cart" />
+            {/* K32 · Teslimat kısıtı satırların ÜSTÜNDE — masaüstüyle aynı sıra, aynı bileşen. Posta
+                kodu sepette sorulmaz: tek soru yeri başlıktaki hap (kullanıcı kararı 14.09). */}
             <PlaceRestriction
               locale={locale}
               lines={view.lines}

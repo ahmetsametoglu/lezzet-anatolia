@@ -232,7 +232,7 @@ export function PurchaseBar({ t, locale, selected, routeOnly = false, flow = fal
    * Yer sorulmadan satın alma eylemi çizilmez — ama YALNIZ rota-only üründe.
    *
    * Kargolanabilen ürün Fransa'nın her yerine gidiyor; orada kodu sormanın bu aşamada bir sonucu
-   * yok ve karşılıksız bir soru olurdu (`place-prompt`in sepetteki koşuluyla aynı gerekçe).
+   * yok ve karşılıksız bir soru olurdu.
    *
    * `ready` beklenir: ilk karede yer henüz okunmamışken kapıyı göstermek, kodu zaten kayıtlı olan
    * müşteriye bir an "önce posta kodu" demek olurdu.

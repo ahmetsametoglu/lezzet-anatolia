@@ -66,9 +66,12 @@ export function checkoutBlockReason(view: CartView, t: Messages, locale: Locale)
  */
 export function useCheckoutGate(t: Messages): string | null {
   const account = useAccount();
-  const { address } = useDeliveryPlace();
+  const { address, unresolved } = useDeliveryPlace();
   if (!account) return t.gate.login;
   if (!address) return t.gate.address;
+  // Seçili adres karşılanamıyor (14.09): ödeme ekranı onu siparişin onayında reddediyordu — müşteri
+  // bütün adımları geçip "teslimat noktası belirlenemedi" okuyordu. Kapı burada, sebebiyle.
+  if (unresolved) return t.gate.unreachable;
   return null;
 }
 
@@ -91,8 +94,12 @@ export function useCheckoutGate(t: Messages): string | null {
  * söylediğinde cevap netleşecek.
  */
 function FreeShippingProgress({ view, t, locale }: { view: CartView; t: Messages; locale: Locale }) {
+  const { unresolved } = useDeliveryPlace();
   if (view.freeShippingCents <= 0) return null;
   if (view.lines.some((l) => l.route !== null)) return null;
+  // Yol "bilinmiyor" değil "yok": adres karşılanamıyor (14.09). Çubuk "kargo için X € ekleyin"
+  // diyordu — o adrese kargo çıkmıyor.
+  if (unresolved) return null;
 
   const reached = view.subtotalCents >= view.freeShippingCents;
   const percent = reached ? 100 : Math.round((view.subtotalCents / view.freeShippingCents) * 100);
@@ -147,6 +154,9 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
    * burada geçerli değil — sayıyı saklamak müşteriyi kasada sürprizle karşılamak olurdu.
    */
   const fee = view.shippingOnly ? shippingGroupFee(view) : null;
+  /* Sepetin tamamı kapıya gidiyorsa teslimatın bedeli de BELLİ: ücretsiz (v1 özeti "Teslimat ·
+     Ücretsiz" yazıyor). Karışık sepette her grup kendi bloğunda konuşur; yol bilinmiyorken söz yok. */
+  const routeOnly = !grouped && view.lines.length > 0 && view.lines.every((l) => l.route === 'local');
   // Toplam ORTAK fonksiyondan (19.08): aynı sayıyı alt çubuk da basıyor ve ikisi bir dönem
   // ayrışmıştı — kart indirimli, çubuk indirimsiz. `fee` burada ayrıca duruyor çünkü kart ücreti
   // KENDİ SATIRINDA da yazıyor; çubuk yalnız toplamı taşıyor.
@@ -213,6 +223,13 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
             ) : (
               <span className="font-bold text-olive">{t.group.free}</span>
             )}
+          </div>
+        )}
+
+        {routeOnly && (
+          <div className="flex items-center justify-between font-sans text-body-sm">
+            <span className="text-body">{t.deliveryRow}</span>
+            <span className="font-bold text-olive">{t.group.free}</span>
           </div>
         )}
 

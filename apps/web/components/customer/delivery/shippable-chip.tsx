@@ -1,13 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import type { Locale } from '@lezzet/i18n';
 import { FilterChip } from '@/components/customer/ui/filter-controls';
 import { Icon } from '@/components/customer/ui/icons';
 import type { CatalogHref } from '@/app/(customer)/[locale]/catalog/catalog-types';
 import { shippableChipOf } from '@/lib/delivery/place-filter';
 import type { PlaceMode } from '@/lib/delivery/read-place';
-import { PlaceDialog } from './place-dialog';
+import { useDeliveryPlace } from './place-context';
 
 /**
  * **"Adresime gönderilebilir" çipi** — üç hâli tek yerde (08.27; kullanıcı bulgusu 08.08).
@@ -16,7 +14,8 @@ import { PlaceDialog } from './place-dialog';
  * soruyor, o hâlde cevabı da adrese bağlı olmalı. Burada yalnız o kararın ÇİZİMİ var.
  *
  * ── `ask` — posta kodu yok ──────────────────────────────────────────────────
- * Çip süzgeç değil, **davet** olur: tıklayınca yer paneli açılır. Eskiden burada sessizce
+ * Çip süzgeç değil, **davet** olur: tıklayınca BAŞLIKTAKİ yer sorusu açılır (masaüstünde panel,
+ * mobil webde çekmece — yer tek yerden sorulur, kullanıcı kararı 14.09). Eskiden burada sessizce
  * "kargolanabilir mi" süzgeci koşuyordu ve kullanıcının gördüğü hâl buydu — kod girilmemişken çip
  * duruyor, tıklanıyor, hiçbir şey değişmiyordu. Çipi tümden gizlemek de yanlış olurdu: müşteriye
  * adresini sormanın en doğal yeri, adres hakkında soru soran denetimin kendisi.
@@ -33,7 +32,6 @@ import { PlaceDialog } from './place-dialog';
  */
 interface ShippableChipProps {
   mode: PlaceMode;
-  locale: Locale;
   label: string;
   /** Yer sorulacağı hâlde çipin metni — "adresinizi girin" gibi bir davet (çağıranın sözlüğünden). */
   askLabel: string;
@@ -42,28 +40,25 @@ interface ShippableChipProps {
   compact?: boolean;
 }
 
-export function ShippableChip({ mode, locale, label, askLabel, href, active, compact = false }: ShippableChipProps) {
-  const [open, setOpen] = useState(false);
+export function ShippableChip({ mode, label, askLabel, href, active, compact = false }: ShippableChipProps) {
+  const { setPanelOpen } = useDeliveryPlace();
   const kind = shippableChipOf(mode);
 
   if (kind === 'hidden') return null;
 
   if (kind === 'ask') {
     return (
-      <>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={[
-            'inline-flex cursor-pointer items-center gap-1.5 rounded-pill border-[1.5px] border-dashed border-sand-400 bg-card font-sans font-bold text-muted transition-colors hover:border-olive hover:text-olive',
-            compact ? 'px-3 py-1.5 text-micro' : 'px-4 py-2 text-note',
-          ].join(' ')}
-        >
-          <Icon name="pin" size={compact ? 12 : 14} />
-          {askLabel}
-        </button>
-        {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
-      </>
+      <button
+        type="button"
+        onClick={() => setPanelOpen(true)}
+        className={[
+          'inline-flex cursor-pointer items-center gap-1.5 rounded-pill border-[1.5px] border-dashed border-sand-400 bg-card font-sans font-bold text-muted transition-colors hover:border-olive hover:text-olive',
+          compact ? 'px-3 py-1.5 text-micro' : 'px-4 py-2 text-note',
+        ].join(' ')}
+      >
+        <Icon name="pin" size={compact ? 12 : 14} />
+        {askLabel}
+      </button>
     );
   }
 

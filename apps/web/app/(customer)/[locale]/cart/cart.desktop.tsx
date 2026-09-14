@@ -2,9 +2,7 @@
 
 import { Link } from '@/i18n/navigation';
 import { useCart } from '@/components/customer/cart/cart-context';
-import { cartKey, splitByRoute } from '@/lib/cart/cart-types';
-import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
-import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
+import { cartKey, splitByRoute } from '@/lib/cart/cart-types';import { PlaceRestriction } from '@/components/customer/delivery/place-restriction';
 import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
 import { CartGroup } from './components/cart-group';
@@ -84,11 +82,9 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
         )}
 
         {/* K32 · Teslimat kısıtı — satırların ÜSTÜNDE: hangi kalemlerin etkilendiğini ve çıkışı,
-            müşteri listeyi gezmeden görmeli. Kısıt yoksa (ya da yer bilinmiyorsa) hiç çizilmez. */}
-        {/* Yer BİLİNMİYORSA soru burada sorulur, biliniyorsa kısıt bloğu konuşur — ikisi birbirini
-            dışlar. Sepet, checkout'tan önceki son duraktır: soruyu buraya koymamak, mekanizmayı
-            kurup duvarı yine checkout'ta bırakmak olurdu. */}
-        <PlacePrompt locale={locale} scope="cart" />
+            müşteri listeyi gezmeden görmeli. Kısıt yoksa (ya da yer bilinmiyorsa) hiç çizilmez.
+            Posta kodu burada SORULMAZ (kullanıcı kararı 14.09): tek soru yeri başlıktaki hap —
+            girişsiz müşteri sepette zaten giriş bloğunu görüyor, girişten sonra yer adresinden gelir. */}
         <PlaceRestriction locale={locale} lines={view.lines} minBasketCents={view.minBasketCents} freeShippingCents={view.freeShippingCents} />
 
         {/* Sepet iki yola bölündüyse her grup kendi başlığı, toplamı ve eylemiyle durur; tek yol

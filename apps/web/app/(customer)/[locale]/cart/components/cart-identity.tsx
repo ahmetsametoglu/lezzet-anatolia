@@ -274,7 +274,7 @@ interface AddressChoiceProps {
 function AddressChoice({ t, locale }: AddressChoiceProps) {
   const c = t.identity;
   const am = addressMessages[locale];
-  const { place } = useDeliveryPlace();
+  const { place, unresolved } = useDeliveryPlace();
   const { addresses, failed, busy, current, choose } = useMyAddresses();
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -341,6 +341,13 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
       {current && place && (
         <DeliveryStrip inRoute={place.inRoute} tone="deep">
           <span>{stripText(c, locale, current, place)}</span>
+        </DeliveryStrip>
+      )}
+      {/* Adres karşılanamıyorsa şerit bunu SÖYLER (14.09): önce hiç çizilmiyordu, sepet susuyordu ve
+          müşteri ret cümlesini ancak siparişi onaylarken görüyordu (ölçüldü: 90451 Nürnberg). */}
+      {current && !place && unresolved && (
+        <DeliveryStrip inRoute={false} unreachable tone="deep">
+          <span>{c.stripUnreachable.replace('{place}', `${current.postalCode} ${current.city}`)}</span>
         </DeliveryStrip>
       )}
       {error && (

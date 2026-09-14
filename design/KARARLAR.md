@@ -370,8 +370,8 @@ yalnız posta kodudur, şehir değil — çok yerleşimli koddaki tehlike o yüz
   aynı kalır ya düşer, asla artmaz. Fiyatı saklamak müşteriyi ürünle ilgilenip ilgilenmeyeceğine
   karar veremez hâle getirirdi; sorun sayıda değil, düğmenin verdiği sözdeydi.
   **Panel tasarımdakinden farklı:** tasarım satır içi bir posta kodu alanı çiziyor, biz sitenin
-  kanonik panelini (`PlaceDialog`) açıyoruz — üçüncü bir posta kodu girdisi aynı doğrulamayı üç
-  yerde bakıma bırakırdı.
+  tek yer sorusunu açıyoruz (14.09'dan beri başlıktaki hap; önce `PlaceDialog`) — üçüncü bir posta
+  kodu girdisi aynı doğrulamayı üç yerde bakıma bırakırdı.
 
 - **SEPETİN İKİ GRUBU — üç küçük sapma (02.08, `build/19` 19.7).** Tasarımın "tek sepet, iki grup,
   iki checkout" bölümü birebir uygulandı; üç yerde ayrıldık ve üçünün de sebebi aynı aileden:
@@ -2792,6 +2792,25 @@ hesap sözlüğündeki kopya (`addressForm`) kalktı.
   penceresi (krem, 22px köşe, açıklama satırı, ✕ ikonu — bütün ortalanmış pencereler), `DeliveryStrip`
   ve `ChannelBadge` (yer paneli, yer penceresi ve adres penceresi ortak). Google önerisinin altında
   zorunlu "Google Maps" logosu (`public/attribution/google-maps.svg`).
+
+## Posta kodu yalnız başlıktaki haptan sorulur — ülkesiyle (14.09, kullanıcı kararı)
+
+Kullanıcı: *"Posta kodunun yanında ülkesini de sormamız gerekiyor… giriş yapmış bir kullanıcıya posta
+kodu sormuyoruz, adresi zaten giriyor… gereksiz posta kodu soran bölümleri kaldırabiliriz."*
+
+- **Tek soru yeri başlıktaki hap:** masaüstünde panel, mobil webde çekmece. Ziyaretçiye önce ülke,
+  sonra posta kodu; girişli müşteriye kayıtlı adresleri (girişli müşterinin yeri adresinden gelir).
+- **Kalktı:** anasayfanın "Nereye gönderelim?" şeridi ve sepetin posta kodu şeridi (K31, `PlacePrompt`)
+  "şimdi değil" işaretleriyle birlikte; ayrı posta kodu penceresi (`PlaceDialog`). Şerit ülke
+  sormuyordu ve girişli müşteriye de çıkıyordu: seçili adres karşılanamayınca (90451 Nürnberg) kod
+  soruyor, yazılan kod hiçbir şey değiştirmiyordu. v1'de anasayfa şeridi yok.
+- **Yer düğmeleri başlıktaki soruyu açar:** ürün ve paket detayındaki "yeri değiştir/seç", satın alma
+  kutusunun yer kapısı, katalogdaki "adresime gönderilebilir" çipi. Sepetin kısıt bloğu adresi olana
+  adres seçiciyi açmaya devam eder. Panel açılınca sayfa tepeye kayar — panel yapışkan başlığın
+  dışında, sayfa akışında duruyor.
+- **Karşılanamayan adres sepette söylenir:** adres kartının teslim şeridi ("… buraya şu an
+  gönderemiyoruz"), kalem satırları ve adres değişim bandı; ücretsiz kargo çubuğu çizilmez, "Ödemeye
+  geç" sebebiyle pasif. Önce sepet susuyor, ret siparişin onayında geliyordu.
 
 ## MÜŞTERİ MOBİL TASARIMIN KAYNAĞI NATIVE UYGULAMA — uygulama ve web telefon görünümü aynı (14.09, kullanıcı kararı)
 

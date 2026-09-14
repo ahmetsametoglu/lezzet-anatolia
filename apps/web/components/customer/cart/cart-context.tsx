@@ -145,7 +145,15 @@ interface CartProviderProps {
 export function CartProvider({ locale, children }: CartProviderProps) {
   // Yer sağlayıcısı BU sağlayıcıyı sarıyor (`(customer)/layout`), yani buradan okunabilir —
   // tersi mümkün değildi ve olması da gerekmiyor: sepet yeri izler, yer sepeti değil.
-  const { place, ready: placeReady } = useDeliveryPlace();
+  const { place, ready: placeReady, unresolved } = useDeliveryPlace();
+  /**
+   * Yer karşılanamıyor mu — yer değişiminin farkında `no_delivery` kararı için (14.09). `ref`, çünkü
+   * farkı okuma DÖNÜNCE hesaplanıyor ve o an geçerli olan değer lazım; okumayı yeniden kurmamalı.
+   */
+  const unresolvedNow = useRef(unresolved);
+  useEffect(() => {
+    unresolvedNow.current = unresolved;
+  }, [unresolved]);
   const [entries, setEntries] = useState<CartEntry[]>([]);
   const [savedEntries, setSavedEntries] = useState<CartEntry[]>([]);
   const [view, setView] = useState<CartView>(EMPTY_CART);
@@ -333,7 +341,7 @@ export function CartProvider({ locale, children }: CartProviderProps) {
         // biri yeni yer bağlamıyla çözülmüş. Fark boşsa kart hiç çizilmez — "hiçbir şey değişmedi"
         // demek için bir kutu açmak, olmayan bir olayı haber yapmaktır.
         if (compareTo.current) {
-          const changes = diffCartByPlace(compareTo.current, data.view);
+          const changes = diffCartByPlace(compareTo.current, data.view, { noDelivery: unresolvedNow.current !== null });
           compareTo.current = null;
           setPlaceChange(changes.length > 0 ? changes : null);
         }

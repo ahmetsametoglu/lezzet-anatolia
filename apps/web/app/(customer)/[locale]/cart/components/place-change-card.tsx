@@ -48,6 +48,8 @@ function lineText(change: CartLineChange, t: Messages, locale: Locale): string {
       return c.toRoute.replace('{name}', change.name);
     case 'unavailable':
       return c.unavailable.replace('{name}', change.name);
+    case 'no_delivery':
+      return c.noDelivery.replace('{name}', change.name);
     case 'reduced':
       return c.reduced
         .replace('{name}', change.name)
@@ -62,7 +64,7 @@ function lineText(change: CartLineChange, t: Messages, locale: Locale): string {
 }
 
 /** Değişimin simgesi — yol değişimi teslim şeklini, adet sınırı dikkati çizer (14.09: emoji yerine). */
-const KIND_ICON: Partial<Record<CartLineChange['kind'], IconName>> = { to_shipping: 'box', to_route: 'truck', reduced: 'warning' };
+const KIND_ICON: Partial<Record<CartLineChange['kind'], IconName>> = { to_shipping: 'box', to_route: 'truck', reduced: 'warning', no_delivery: 'warning' };
 
 export function PlaceChangeCard({ t, locale, compact = false }: PlaceChangeCardProps) {
   const { placeChange, dismissPlaceChange } = useCart();

@@ -174,7 +174,8 @@ export const readPlaceSnapshot = cache(async (): Promise<PlaceSnapshot> => {
   const { answer, resolution, address } = await readPlaceContext();
   const placeAddress = address ? toPlaceAddress(address) : null;
   if (!answer || !resolution || (resolution.kind !== 'route' && resolution.kind !== 'shipping')) {
-    return { place: null, address: placeAddress };
+    // Karşılanamayan yerin SEBEBİ taşınır (14.09): sepet "buraya gönderemiyoruz" diyebilsin.
+    return { place: null, address: placeAddress, unresolved: resolution?.kind === 'unresolved' ? resolution.reason : null };
   }
   const [{ zones }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
   const place = await describePlace(
@@ -183,7 +184,7 @@ export const readPlaceSnapshot = cache(async (): Promise<PlaceSnapshot> => {
     zones,
     matches,
   );
-  return { place, address: placeAddress };
+  return { place, address: placeAddress, unresolved: null };
 });
 
 /**

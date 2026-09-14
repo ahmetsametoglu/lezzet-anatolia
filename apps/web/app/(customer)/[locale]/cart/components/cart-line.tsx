@@ -11,6 +11,7 @@ import { QtyStepper } from '@/components/customer/ui/qty-stepper';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import placeMessages from '@/components/customer/delivery/place-messages.json';
 import type { CartLine as Line, CartRef } from '@/lib/cart/cart-types';
 import type { Messages } from '../cart-types';
@@ -53,6 +54,7 @@ interface CartLineProps {
 
 export function CartLineRow({ line, t, locale, compact = false, tone = 'default' }: CartLineProps) {
   const { setQty } = useCart();
+  const { unresolved } = useDeliveryPlace();
   const pt = placeMessages[locale];
   // Satırın kimliği türüne göre doğar: pakette paketin kendisi, varyantta varyant + parti.
   const key: CartRef =
@@ -230,14 +232,28 @@ export function CartLineRow({ line, t, locale, compact = false, tone = 'default'
    * cevap veriyordu: rota İÇİNDEKİ müşterinin kendi deposunda bulunmayan soğuk zincir ürünü
    * "kapıya getiriyoruz" diye işaretleniyordu — getiremediğimiz hâlde (19.11 verisi bunu ölçüyor).
    *
-   * `null` = yol bilinmiyor ve satır SESSİZ kalır. İki sebebi var: yer sorulmamış olabilir (kime
-   * gönderileceğini bilmeden konuşmak uydurma olurdu — soruyu üstteki şerit soruyor) ya da satır
-   * bir PAKET olabilir: paket bölünmez, yolu checkout'ta bütünü üzerinden çözülür.
+   * `null` = yol bilinmiyor — ve satır yine KONUŞUR (kullanıcı isteği 14.09: teslim şekli her satırda).
+   * Adres karşılanamıyorsa "bu adrese şu an gönderemiyoruz" (bal); yer hiç bilinmiyorsa (ziyaretçi)
+   * cevabın yere göre belli olacağını söyler — hangi yolla geleceğini uydurmadan. Önce sessizdi:
+   * seçili adres karşılanamayan bir koddayken (ölçüldü: 90451 Nürnberg) satırlar teslim hakkında
+   * hiçbir şey söylemiyordu. Paketin yolu da artık bütünü için geliyor (19.22), `null` onun hâli değil.
    *
-   * `unavailable` burada hiç görünmez: o satır zaten `blocked` ve engelli yerleşime düşüyor.
+   * `unavailable` burada hiç görünmez: o satır zaten `blocked` ve engelli yerleşime düşüyor; yolu
+   * bilinmeyen engelli satır (kaynağı kaybolmuş kalem) da öyle.
    */
   const deliveryNote =
-    line.route === null || line.route === 'unavailable' ? null : (
+    line.route === 'unavailable' || (line.route === null && line.blocked) ? null : line.route === null ? (
+      <span
+        className={[
+          'inline-flex items-center gap-1.5 font-sans font-semibold',
+          compact ? 'text-micro' : 'text-note',
+          unresolved ? 'text-honey' : 'text-muted',
+        ].join(' ')}
+      >
+        <Icon name={unresolved ? 'warning' : 'pin'} size={compact ? 12 : 14} />
+        {unresolved ? pt.lineUnreachable : pt.lineUnknown}
+      </span>
+    ) : (
       <span
         className={[
           'inline-flex items-center gap-1.5 font-sans font-semibold',

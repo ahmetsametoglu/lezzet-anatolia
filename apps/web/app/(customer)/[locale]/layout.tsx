@@ -111,7 +111,12 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
           {account && <VisitPing />}
           {/* Bildirim de kökte (v1 `bildir`): kim çıkarırsa çıkarsın tek hap, aynı yerde. */}
           <ToastProvider device={device}>
-            <PlaceProvider zones={zones} initialPlace={placeSnapshot.place} initialAddress={placeSnapshot.address}>
+            <PlaceProvider
+              zones={zones}
+              initialPlace={placeSnapshot.place}
+              initialAddress={placeSnapshot.address}
+              initialUnresolved={placeSnapshot.unresolved}
+            >
               <CartProvider locale={locale}>{children}</CartProvider>
             </PlaceProvider>
           </ToastProvider>

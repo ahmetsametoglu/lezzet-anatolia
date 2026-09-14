@@ -1,12 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import { elsewhereReasonOf } from '@/lib/delivery/place-types';
 import type { StockStatus } from '@lezzet/types';
 import { useDeliveryPlace } from './place-context';
-import { PlaceDialog } from './place-dialog';
 import { Icon } from '@/components/customer/ui/icons';
 import messages from './place-messages.json';
 
@@ -70,11 +68,15 @@ interface DeliveryLineProps {
 
 export function DeliveryLine({ locale, shippable, status, fallback, blockedActions, compact = false }: DeliveryLineProps) {
   const t = messages[locale];
-  const { place, ready } = useDeliveryPlace();
-  const [open, setOpen] = useState(false);
+  const { place, ready, setPanelOpen } = useDeliveryPlace();
 
   /**
-   * "Teslimat yerini değiştir" bağlantısı METNİN AKIŞINDA durur, sağ kenara itilmez.
+   * "Teslimat yerini değiştir" bağlantısı BAŞLIKTAKİ yer sorusunu açar (masaüstünde panel, mobil
+   * webde çekmece): yer TEK yerden sorulur (kullanıcı kararı 14.09) — girişli müşteriye adresleri,
+   * ziyaretçiye ülke ve posta kodu. Önce kendi posta kodu penceresini açıyordu ve girişli müşteriye
+   * de kod soruyordu; yazılan kod yeri değiştirmiyordu, çünkü girişli müşterinin yeri adresidir.
+   *
+   * Bağlantı METNİN AKIŞINDA durur, sağ kenara itilmez.
    *
    * Önce `ml-auto` ile sağa yaslanıyordu; şerit sarınca bağlantı tek başına ikinci satıra düşüyor ve
    * orada da sağa yapışıyordu — hangi cümleye ait olduğu belirsiz, boşlukta duran bir bağ (29.07
@@ -83,7 +85,7 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
   const change = (
     <button
       type="button"
-      onClick={() => setOpen(true)}
+      onClick={() => setPanelOpen(true)}
       className="cursor-pointer font-sans font-semibold text-olive underline hover:text-olive-dark"
     >
       {place ? t.changePlace : t.setPlace}
@@ -116,9 +118,7 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
             </span>
           )}
           <span>{change}</span>
-        </div>
-        {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
-      </>
+        </div>      </>
     );
   }
 
@@ -162,9 +162,7 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
         {/* Ayırt edici cümle KUTUNUN DIŞINDA ve soluk: kutunun içinde dururken uyarının kendisiyle
             aynı ağırlıkta okunuyor ve "bölgenizde yok" mesajını uzatıyordu. Burası bir dipnot —
             "tükendi değil" ile "kargo grubu ayrı ödenir" ikisi de okunması iyi ama şart olmayan şeyler. */}
-        <span className="font-sans text-micro leading-relaxed text-muted">{away ? t.awayNote : t.shipNote}</span>
-        {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
-      </>
+        <span className="font-sans text-micro leading-relaxed text-muted">{away ? t.awayNote : t.shipNote}</span>      </>
     );
   }
 
@@ -232,8 +230,6 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
             <span>{change}</span>
           </>
         )}
-      </div>
-      {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
-    </>
+      </div>    </>
   );
 }

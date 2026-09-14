@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
@@ -49,6 +49,16 @@ export function PlacePanel({ locale }: PlacePanelProps) {
   // "+ Yeni adres ekle" paneli KAPATIP pencereyi açar (v1 `yerYeniAdres`). Pencere panelin içinde
   // dursaydı panel kapanınca onunla birlikte sökülürdü — durumu burada, panelin dışında.
   const [adding, setAdding] = useState(false);
+
+  /* Panel açılınca sayfanın TEPESİNE gidilir: panel yapışkan başlığın DIŞINDA, sayfa akışında
+     duruyor. Yer sorusu artık ürün, paket ve katalogdaki düğmelerden de açılıyor (kullanıcı kararı
+     14.09 — posta kodu tek yerden sorulur); sayfanın ortasından açılan panel ekranın dışında kalırdı.
+     Başlıktaki hapa aşağıdayken basılınca da aynısı oluyordu. */
+  useEffect(() => {
+    if (!panelOpen || window.scrollY === 0) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  }, [panelOpen]);
 
   return (
     <>

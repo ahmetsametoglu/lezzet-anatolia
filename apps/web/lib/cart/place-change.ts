@@ -31,14 +31,25 @@ export type CartLineChange =
    */
   | { kind: 'reduced'; name: string; qty: number; availableHere: number }
   /** Fiyat değişti — teklif partisi yere bağlıdır ve yeni yerde geçerli olmayabilir (DOMAIN §5). */
-  | { kind: 'price'; name: string; fromCents: number; toCents: number };
+  | { kind: 'price'; name: string; fromCents: number; toCents: number }
+  /**
+   * Yeni adrese HİÇBİR yoldan gönderilemiyor (14.09): adres karşılanamıyor (ülkenin kargo çıkış deposu
+   * yok ya da kod iki bölgede) ve kalemin yolu bilinmez hâle düştü. Kalem SİLİNMEZ; başka adres
+   * seçilince yeniden yoluna oturur. Önce bu geçiş hiç söylenmiyordu — bant çıkmıyor, satırlar susuyordu.
+   */
+  | { kind: 'no_delivery'; name: string };
 
 /** Kalem artık bu yerde alınamıyor mu — motorun iki olumsuz yolu. */
 function unreachable(line: CartLine): boolean {
   return line.route === 'not_shippable_here' || line.route === 'unavailable';
 }
 
-export function diffCartByPlace(before: CartView, after: CartView): CartLineChange[] {
+/**
+ * `noDelivery`: yeni yer KARŞILANAMIYOR mu (yer bağlamının `unresolved`ı). Yolun `null`a düşmesi iki
+ * şey olabilir — yer karşılanamıyor ya da yer hiç bilinmiyor — ve görünüm ikisini ayırt edemez;
+ * ayrımı bilen çağırandır. Bilinmeyen yere "gönderemiyoruz" demek uydurma olurdu.
+ */
+export function diffCartByPlace(before: CartView, after: CartView, options: { noDelivery?: boolean } = {}): CartLineChange[] {
   const previous = new Map(before.lines.map((line) => [cartKey(line), line]));
   const changes: CartLineChange[] = [];
 
@@ -46,6 +57,11 @@ export function diffCartByPlace(before: CartView, after: CartView): CartLineChan
     const was = previous.get(cartKey(line));
     // Yeni eklenmiş satırın "değişimi" yok: kıyaslanacak bir önceki hâli yok.
     if (!was) continue;
+
+    if (options.noDelivery && line.route === null && was.route !== null) {
+      changes.push({ kind: 'no_delivery', name: line.name });
+      continue;
+    }
 
     // ÖNCE yol, sonra fiyat. Bir kalem ikisini birden yaşayabilir (kargoya düşen teklif kalemi
     // fiyatını da kaybeder) ve o zaman önemli olan yolun kendisidir: fiyat farkı, yol değişiminin

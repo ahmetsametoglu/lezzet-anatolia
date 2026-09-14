@@ -89,7 +89,6 @@ export function CatalogDesktop({ t, locale, placeMode, data, products, hasMore, 
               içinde hiç çizilmez (süzecek şey yok); yalnız bölge dışında gerçek bir süzgeçtir. */}
           <ShippableChip
             mode={placeMode}
-            locale={locale}
             label={t.onlyShippable}
             askLabel={t.shippableAsk}
             href={hrefFor({ onlyShippable: !active.onlyShippable })}

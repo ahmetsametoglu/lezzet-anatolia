@@ -1,7 +1,5 @@
 import { RATIO_BAND } from '@lezzet/types';
-import { FramedImage } from '@/components/media/framed-image';
-import { PlacePrompt } from '@/components/customer/delivery/place-prompt';
-import { buttonClass } from '@/components/customer/ui/button';
+import { FramedImage } from '@/components/media/framed-image';import { buttonClass } from '@/components/customer/ui/button';
 import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
 import { CategoryCard, CollectionCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
 import { RecipeTeaserCard } from '@/components/customer/ui/recipe-card';
@@ -24,8 +22,10 @@ import { limitText, type HomeViewProps } from './home-types';
 export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
   return (
     <div className="flex flex-col">
-      {/* Kahraman */}
-      <section className="grid grid-cols-[1.05fr_1fr] items-center gap-12 px-12 pt-14 pb-10">
+      {/* Kahraman — alt boşluk 72px: altındaki posta kodu şeridi kalktı (kullanıcı kararı 14.09 — posta
+          kodu yalnız başlıktaki haptan sorulur); şeridin sarmalayıcısının 32px'i buraya eklendi ki
+          kategorilere mesafe değişmesin. */}
+      <section className="grid grid-cols-[1.05fr_1fr] items-center gap-12 px-12 pt-14 pb-18">
         <div className="flex flex-col gap-5">
           <span className="font-sans text-eyebrow text-olive uppercase">{t.hero.eyebrow}</span>
           <h1 className="font-serif text-h1 text-ink">
@@ -63,12 +63,6 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
           className="!rounded-[24px]"
         />
       </section>
-
-      {/* K31 · Posta kodu sorma şeridi — kahramanın HEMEN ALTINDA (tasarım). Yer biliniyorsa ya da
-          "şimdi değil" denmişse kendini hiç çizmez; kesmez, kilitlemez. */}
-      <div className="px-12 pb-8">
-        <PlacePrompt locale={locale} />
-      </div>
 
       {/* Kategoriler */}
       <section className="flex flex-col gap-4 px-12 pt-2 pb-12">

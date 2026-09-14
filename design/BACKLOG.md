@@ -159,7 +159,7 @@ değişecek yer parantezde.
   sınıflarının çoğunu ezmek, kiti kullanmak değil adını kullanmak olurdu.
 
 - **HAP GİRDİNİN KENAR TONU: `sand-300` mü `sand-400` mü? (02.08, denetim K2).**
-  Üç hap girdi (`place-prompt` · `place-dialog` · `notice-dialog`) artık tek kaynaktan geliyor
+  Hap girdiler (`notice-dialog`; `place-prompt` ve `place-dialog` 14.09'da kalktı) tek kaynaktan geliyor
   (`components/customer/form/pill-input.ts`) ve **`sand-300`** kullanıyor. Ama yüzeydeki öteki hap
   KONTROLLER `sand-400`: `Button.secondary`, `load-more`, `sort-select`, hesaptaki dil hapı.
   İki okuma var ve hangisinin doğru olduğunu kod söyleyemez: *(a)* girdi ile kontrol bilinçli olarak

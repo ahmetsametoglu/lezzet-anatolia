@@ -188,13 +188,23 @@ export function toPlaceAddress(address: Address): PlaceAddress {
  * dönüşü. İkisi aynı şekli taşır ki istemci "adres değişti, yer ne oldu" sorusunu ayrı bir turla
  * sormasın: yazan eylem cevabı zaten biliyor.
  *
- * `place` null iken `address` dolu olabilir: adresin kodu çözülemiyordur (tanınmayan kod). O hâlde
- * adres yine seçilidir — sipariş ona gider — ama vitrin depo-üstü okur.
+ * `place` null iken `address` dolu olabilir: adresin kodu çözülemiyordur (tanınmayan kod ya da
+ * karşılanamayan yer). O hâlde adres yine seçilidir — sipariş ona gider — ama vitrin depo-üstü okur.
+ * Karşılanamıyorsa sebebi `unresolved`ta (14.09): sepet onu müşteriye söyler.
  */
 export interface PlaceSnapshot {
   place: DeliveryPlace | null;
   address: PlaceAddress | null;
+  unresolved: PlaceUnresolved | null;
 }
+
+/**
+ * Yerin KARŞILANAMAMA sebebi — motorun `unresolved` cevabından türer (`PlaceLookup`): kod tanınıyor
+ * ama ne rota ne kargo karşılıyor. `no_shipping_warehouse` bizim ayar eksiğimiz (ülkenin kargo çıkış
+ * deposu yok), `ambiguous_zone` veri çakışması (kod iki bölgede). İkisi de müşteriye "bölge
+ * dışısınız" dedirtmez.
+ */
+export type PlaceUnresolved = Extract<PlaceLookup, { kind: 'unresolved' }>['reason'];
 
 /**
  * Kapıya teslim edilen bir bölgenin ekranda görünen künyesi.
