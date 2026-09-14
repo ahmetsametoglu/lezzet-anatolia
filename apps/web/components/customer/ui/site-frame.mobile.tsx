@@ -12,7 +12,7 @@ import { BackButton } from './back-button';
 import { FunnelHeader } from './funnel-header';
 import { HomeHeader } from './home-header';
 import { MobileIcon } from './mobile-icon';
-import type { SiteFrameProps } from './site-frame';
+import type { SiteFrameProps } from './site-frame-types';
 import messages from './site-frame-messages.json';
 
 type Copy = (typeof messages)['tr'];
