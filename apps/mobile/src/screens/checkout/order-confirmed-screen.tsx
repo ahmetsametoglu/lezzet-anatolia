@@ -4,8 +4,8 @@ import { useRouter } from 'expo-router';
 import { ScrollView, Share, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { PrimaryButton } from '@/components/ui/primary-button';
-import { SecondaryButton } from '@/components/ui/secondary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
+import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { SummaryPanel } from '@/screens/customer-kit/summary-panel';

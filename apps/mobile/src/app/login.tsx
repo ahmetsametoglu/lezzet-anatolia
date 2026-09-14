@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 
 import { LoginNoticeSchema } from '@lezzet/mobile-kit/src/screens/login/login-notice';
-import { LoginScreen } from '@/screens/login/login-screen';
+import { LoginScreen } from '@lezzet/mobile-kit/src/screens/login/login-screen';
 import { operationsHomeRoute } from '@/screens/login/post-login-route';
 
 /*

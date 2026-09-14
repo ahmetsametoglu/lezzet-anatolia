@@ -6,14 +6,14 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import messages from './messages.json';
 import { groupPointsHistory, type PointsHistoryGroup } from './points-history-group';
 import { usePoints } from '@/screens/account/use-points.hook';

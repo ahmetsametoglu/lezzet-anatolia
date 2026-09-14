@@ -18,7 +18,7 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { AudioPlayer } from '@/components/ui/audio-player';
 import { ChatLayout } from '@lezzet/mobile-kit/src/components/ui/chat-layout';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PhotoViewer } from '@/components/ui/photo-viewer';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { ChatText } from '@lezzet/mobile-kit/src/components/ui/chat-text';

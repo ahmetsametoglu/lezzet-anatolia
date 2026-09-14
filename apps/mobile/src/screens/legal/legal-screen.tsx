@@ -6,7 +6,7 @@ import { deliveryTermsLines } from '@lezzet/helper';
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { useDeliveryTerms } from '@/screens/customer-kit/use-delivery-terms.hook';

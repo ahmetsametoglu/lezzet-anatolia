@@ -7,7 +7,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import type { ApiResult } from '@lezzet/mobile-kit/src/lib/api/client';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import type placeMessages from '@/lib/places/messages.json';

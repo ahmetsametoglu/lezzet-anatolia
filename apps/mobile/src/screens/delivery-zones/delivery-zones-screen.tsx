@@ -14,7 +14,7 @@ import { SectionHeader } from '@/components/ui/section-header';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
-import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useDeliveryTerms } from '@/screens/customer-kit/use-delivery-terms.hook';
 import { useSheet } from '@/screens/customer-kit/use-sheet.hook';

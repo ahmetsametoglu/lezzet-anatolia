@@ -9,7 +9,7 @@ import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { fetchPendingHandover, handOverBox } from '@/lib/api/warehouse';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';

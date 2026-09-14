@@ -8,9 +8,9 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 
 import { EmptyState } from '@/components/ui/empty-state';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';

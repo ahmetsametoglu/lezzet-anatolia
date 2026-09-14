@@ -11,8 +11,8 @@ import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { PrimaryButton } from '@/components/ui/primary-button';
-import { SecondaryButton } from '@/components/ui/secondary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
+import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { SectionHeader } from '@/components/ui/section-header';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
@@ -30,7 +30,7 @@ import {
   setPurchasePlace,
   useCart,
 } from '@/screens/customer-kit/cart-store';
-import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { addressLine } from '@/screens/customer-kit/address-format';
 import { AddressPickerSheet } from '@/screens/customer-kit/address-picker-sheet';

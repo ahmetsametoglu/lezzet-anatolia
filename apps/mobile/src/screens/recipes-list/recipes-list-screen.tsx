@@ -6,8 +6,8 @@ import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-ref
 
 import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Icon } from '@/components/ui/icon';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';

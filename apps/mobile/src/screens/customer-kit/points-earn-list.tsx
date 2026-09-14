@@ -4,11 +4,11 @@ import type { ReactElement } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { PointsRules } from '@/lib/api/points';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import { CustomerIcon } from './customer-icon';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import messages from './points-earn-messages.json';
 import { formatCompactEuro } from '@lezzet/helper';
 

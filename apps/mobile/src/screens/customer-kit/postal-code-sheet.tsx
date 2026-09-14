@@ -5,7 +5,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SuggestionList } from '@/components/ui/suggestion-list';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';

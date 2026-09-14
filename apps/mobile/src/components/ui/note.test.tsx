@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { Note } from './note';
-import { PrimaryButton } from './primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 
 describe('Note', () => {
   it('açıklamayı gösterir, başlık isteğe bağlıdır', async () => {

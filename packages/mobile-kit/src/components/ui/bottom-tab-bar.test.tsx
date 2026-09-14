@@ -9,8 +9,8 @@ import {
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { BottomTabBar, type BottomTabItem } from './bottom-tab-bar';
-import { appMetrics } from '@lezzet/mobile-kit/src/theme/metrics';
-import { customerStops } from '@lezzet/mobile-kit/src/theme/unistyles';
+import { appMetrics } from '../../theme/metrics';
+import { customerStops } from '../../theme/unistyles';
 
 // Çeviri temanın kullandığının aynısı: px→dp + müşteri yüzeyinin bir kademesi (18.08).
 const appText = customerStops({ ...customerText, ...customerAppText });

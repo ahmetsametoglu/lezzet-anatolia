@@ -8,12 +8,12 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { Chip } from '@lezzet/mobile-kit/src/components/ui/chip';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { PrimaryButton } from '@/components/ui/primary-button';
-import { SecondaryButton } from '@/components/ui/secondary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
+import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { createTicket, type TicketOpenInput } from '@/lib/api/tickets';

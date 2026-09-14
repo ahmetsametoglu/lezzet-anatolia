@@ -6,7 +6,7 @@ import { useUnistyles } from 'react-native-unistyles';
   (Kalp bu ekranda ARTIK YOK: sonuç sayfasının işareti puan yıldızına döndü ve o kitte yaşıyor —
   `customer-kit/points-award.tsx`. Geometri burada duruyor çünkü tek tüketicisi kaldı: keşif
   turunun beğeni sayacı. Sözlükler yazıya açıldığı gün ikisi de oraya terfi eder.)
-  İkisi de ikon sözlüklerinde YOK (`components/ui/icon-paths.ts` + `customer-kit/customer-icon.tsx`)
+  İkisi de ikon sözlüklerinde YOK (`@lezzet/brand/icons` — `ICON_PATHS` + `CUSTOMER_ICON_PATHS`)
   ve bu etapta iki dosya da YAZIYA KAPALI — o yüzden `CustomerIcon`un kendi gerekçesiyle ekranın
   yanında duruyorlar: sözlük yazıya açıldığı gün geometriler oraya terfi eder, bu dosya silinir
   (ihtiyaç raporlandı). Çizim davranışı kitin kurallarıdır: renk çağırandan (ham hex yok), ikon

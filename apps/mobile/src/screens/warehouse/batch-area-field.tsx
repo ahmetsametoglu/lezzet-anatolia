@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsSurface } from '@/components/operations/surface';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';

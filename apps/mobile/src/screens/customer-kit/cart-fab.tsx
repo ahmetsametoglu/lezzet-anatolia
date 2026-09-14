@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { CustomerIcon } from './customer-icon';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 
 /*
   YÜZEN SEPET DÜĞMESİ (v3:1302) — sepet bir SEKME DEĞİL; vitrinden ve katalogdan ona bu düğmeyle

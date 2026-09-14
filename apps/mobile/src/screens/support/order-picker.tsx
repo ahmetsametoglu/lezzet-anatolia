@@ -5,7 +5,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { SecondaryButton } from '@/components/ui/secondary-button';
+import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { formatOrderDate } from '@/screens/orders/order-format';

@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { SecondaryButton } from '@/components/ui/secondary-button';
+import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import type { LegalQuestionCopy, Messages } from './legal-types';

@@ -3,8 +3,8 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
-import { PrimaryButton } from '../ui/primary-button';
-import { SecondaryButton } from '../ui/secondary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
+import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
 /*

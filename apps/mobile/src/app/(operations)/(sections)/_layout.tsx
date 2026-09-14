@@ -1,8 +1,8 @@
 import { Tabs } from 'expo-router';
 
 import { OperationsTabBarSlide } from '@/components/operations/tab-bar-slide';
-import { BottomTabBar } from '@/components/ui/bottom-tab-bar';
-import type { IconName } from '@/components/ui/icon-paths';
+import { BottomTabBar } from '@lezzet/mobile-kit/src/components/ui/bottom-tab-bar';
+import type { IconName } from '@lezzet/brand/icons';
 import { OPERATIONS_SECTIONS, showsSectionTabs, type OperationsSection } from '@/lib/operations/sections';
 import { operationsCopy } from '@/screens/operations/copy';
 import { useOperationsSections } from '@/screens/operations/sections-context';

@@ -14,10 +14,10 @@ import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onb
 import { BlurView } from 'expo-blur';
 import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
 import { submitStockNotice } from '@/lib/api/stock-notices';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';

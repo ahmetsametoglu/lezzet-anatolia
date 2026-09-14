@@ -11,7 +11,7 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsSurface } from '@/components/operations/surface';
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { fetchPrinters, registerPrinter } from '@/lib/api/warehouse';
 import { findNetworkPrinters, printLabel, type PrinterChannel } from '@/lib/print/brother';

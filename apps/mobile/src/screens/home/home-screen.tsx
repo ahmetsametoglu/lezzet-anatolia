@@ -8,7 +8,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 
 import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { OfflineNotice } from '@/components/ui/offline-notice';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { ProductCircleCard } from '@/components/ui/product-circle-card';
@@ -22,7 +22,7 @@ import { rememberPlaceName, useRememberedPlaceName } from '@/lib/places/place-na
 import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
-import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { productPriceLabel } from '@/screens/customer-kit/price-label';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';

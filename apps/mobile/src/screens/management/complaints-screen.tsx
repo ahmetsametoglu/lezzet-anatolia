@@ -10,7 +10,7 @@ import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStatusBadge, type OperationsStatusTone } from '@/components/operations/status-badge';
 import { OperationsSurface } from '@/components/operations/surface';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 import { agoOf } from '@/lib/operations/stamp';

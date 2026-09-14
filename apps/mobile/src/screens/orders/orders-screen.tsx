@@ -8,10 +8,10 @@ import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-ref
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { OrderSummary } from '@/lib/api/orders';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';

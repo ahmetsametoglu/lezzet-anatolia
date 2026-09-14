@@ -15,7 +15,7 @@ import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsHeadBleed } from '@/components/operations/head-bleed';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@lezzet/mobile-kit/src/components/ui/form-scroll';
-import { Icon } from '@/components/ui/icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';

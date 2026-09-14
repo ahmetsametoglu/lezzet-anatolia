@@ -1,8 +1,8 @@
 import { useUnistyles } from 'react-native-unistyles';
 
 import { EmptyState } from './empty-state';
-import { Icon } from './icon';
-import { PrimaryButton } from './primary-button';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 
 /*
   SUNUCUYA ULAŞILAMADI — tek görünüm, tek yerde.

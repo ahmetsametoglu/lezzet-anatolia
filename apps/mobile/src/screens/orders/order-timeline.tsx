@@ -2,8 +2,8 @@ import type { OrderMilestone, OrderTimelineStep } from '@lezzet/types';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { Icon } from '@/components/ui/icon';
-import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 
 /*
   SİPARİŞ ZAMAN ÇİZGİSİ (v3:719) — dört durak: alındı → hazırlandı → yolda → teslim edildi.

@@ -6,7 +6,7 @@ import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { Note } from '@/components/ui/note';
-import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { useOrder } from '@/screens/orders/use-order.hook';
 // Sözlük burada YALNIZ tip için okunuyor (metni ekran veriyor): çalışma zamanında ikinci bir JSON
 // kopyası taşınmasın diye tip-yalnız import.

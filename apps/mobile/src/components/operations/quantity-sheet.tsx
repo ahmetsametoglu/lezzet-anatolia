@@ -4,8 +4,8 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { PrimaryButton } from '@/components/ui/primary-button';
-import { SecondaryButton } from '@/components/ui/secondary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
+import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-button';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { OperationsKeypadPanel } from './keypad-panel';

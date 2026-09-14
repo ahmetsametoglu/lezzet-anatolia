@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
-import { PrimaryButton } from '@/components/ui/primary-button';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { OperationsKeypadPanel } from './keypad-panel';
 import { OperationsStepperGroup } from './stepper-group';

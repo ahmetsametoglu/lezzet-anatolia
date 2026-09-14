@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native-unistyles';
 
-import { Icon } from '@/components/ui/icon';
-import type { IconName } from '@/components/ui/icon-paths';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
+import type { IconName } from '@lezzet/brand/icons';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 
