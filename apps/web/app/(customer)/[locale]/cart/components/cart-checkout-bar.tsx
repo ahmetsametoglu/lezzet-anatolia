@@ -5,7 +5,7 @@ import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { cartPayableCents, type CartView } from '@/lib/cart/cart-types';
 import type { Messages } from '../cart-types';
-import { checkoutBlockReason } from './cart-summary';
+import { checkoutBlockReason, useCheckoutGate } from './cart-summary';
 
 /**
  * Mobil alt toplam çubuğu (tasarım: "alt toplam çubuğu ekrana sabitlenir").
@@ -42,7 +42,9 @@ interface CartCheckoutBarProps {
 }
 
 export function CartCheckoutBar({ view, t, locale, lines }: CartCheckoutBarProps) {
-  const reason = checkoutBlockReason(view, t, locale);
+  // Sepetin engeli önce, kimlik/adres kapısı sonra — özet kartıyla aynı sıra, aynı kanca (13.09).
+  const gate = useCheckoutGate(t);
+  const reason = checkoutBlockReason(view, t, locale) ?? gate;
   const blocked = reason !== null;
   const totalCents = cartPayableCents(view);
   /**

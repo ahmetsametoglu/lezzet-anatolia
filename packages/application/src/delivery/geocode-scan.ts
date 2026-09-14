@@ -28,9 +28,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AddressService } from '@lezzet/database';
-import type { Address } from '@lezzet/types';
+import type { Address, AddressGeoPrecision, AddressGeoSource } from '@lezzet/types';
 import { captureError, SOURCES } from '@lezzet/observability';
-import { geocoder as defaultGeocoder } from './geocode-provider';
+import { geocoder as defaultGeocoder, geocoderScanAllowed } from './geocode-provider';
 import type { Geocoder, GeocodeOutcome } from './geocode-port';
 
 /** Bir turda kaç satır — küçük tutuluyor: tur sık koşuyor ve servisi dövmemek gerekiyor. */
@@ -38,18 +38,32 @@ const BATCH = 20;
 /** Kaç CEVAPLI ret'ten sonra satır kuyruktan düşer. */
 const MAX_ATTEMPTS = 3;
 
+/**
+ * **Google noktasının ömrü** (13.09) — Google Maps Platform politikası: koordinat en fazla 30 gün
+ * saklanır, süresiz saklanabilen tek şey `placeId`. Kullanıcı düzeltmesi (02.09) kısıtın bize
+ * dokunmadığını söylüyor — koordinatın gerçek ömrü sipariş↔teslimat penceresi kadar. Yine de
+ * satırda 30 günden eski bir Google noktası DURAMAZ; tarama işi her turda önce onları düşürür.
+ * Düşen satır sipariş anında yeniden çözülür (`checkAddress`), taramada DEĞİL (`geocoderScanAllowed`).
+ */
+export const GOOGLE_GEO_MAX_AGE_DAYS = 30;
+
 /** Taramanın bir satır için verdiği karar — yazılacak alanlar + hangi kovaya sayıldığı. */
 export interface GeoScanDecision {
   patch: {
     lat?: number;
     lng?: number;
-    geoPrecision?: 'housenumber' | 'street' | 'locality' | 'municipality';
-    geoSource?: 'ban' | 'manual';
+    geoPrecision?: AddressGeoPrecision;
+    geoSource?: AddressGeoSource;
     geoAt?: string;
     geoCheckedAt: string;
     geoAttempts?: number;
   };
   bucket: 'located' | 'noMatch' | 'deferred';
+}
+
+/** Bu andan `GOOGLE_GEO_MAX_AGE_DAYS` geriye — daha eski `geo_at` taşıyan Google noktası yaşlanmıştır. */
+export function staleGoogleGeoBefore(now: Date): string {
+  return new Date(now.getTime() - GOOGLE_GEO_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
 
 /**
@@ -94,8 +108,22 @@ export interface GeocodeScanResult {
   located: number;
   /** Servis "eşleşme yok" dedi — sayaç arttı. */
   noMatch: number;
-  /** Geçici arıza ya da desteklenmeyen ülke — sayaç ARTMADI, satır kuyrukta kaldı. */
+  /** Geçici arıza, desteklenmeyen ülke ya da taramaya kapalı ülke — sayaç ARTMADI, satır kuyrukta kaldı. */
   deferred: number;
+  /** 30 günü dolmuş Google noktası düşürüldü (politika). */
+  expired: number;
+}
+
+/**
+ * Yaşlanmış Google noktalarını düşürür — beş alan birlikte boşalır (`address_geo_meta`); sayaç
+ * ve `geo_alt_label` korunur: nokta yaşlandı diye adres hakkında bildiğimiz şey değişmedi.
+ */
+async function expireGoogleGeo(addresses: AddressService, now: Date, limit: number): Promise<number> {
+  const stale = await addresses.listStaleGeo({ source: 'google', before: staleGoogleGeoBefore(now), limit });
+  for (const address of stale) {
+    await addresses.update({ id: address.id, lat: null, lng: null, geoPrecision: null, geoSource: null, geoAt: null, geoCheckedAt: now.toISOString() });
+  }
+  return stale.length;
 }
 
 export async function geocodeAddressesScan(
@@ -117,12 +145,22 @@ export async function geocodeAddressesScan(
   const geocoder = options.geocoder ?? defaultGeocoder();
   const limit = options.limit ?? BATCH;
 
+  // Yaşlanma ÖNCE: testler kendi kümesini verirken (rows) bu adım koşmaz — o testin sorusu değil.
+  const expired = options.rows ? 0 : await expireGoogleGeo(addresses, new Date(), limit);
+
   const queue = options.rows ?? (await addresses.listMissingGeo({ limit, maxAttempts: MAX_ATTEMPTS }));
-  const result: GeocodeScanResult = { scanned: queue.length, located: 0, noMatch: 0, deferred: 0 };
+  const result: GeocodeScanResult = { scanned: queue.length, located: 0, noMatch: 0, deferred: 0, expired };
 
   for (const address of queue) {
     const now = new Date().toISOString();
     try {
+      // Taramaya KAPALI ülke (DE — ücretli, 30 gün ömürlü): ağa çıkılmaz, damga ilerler, satır
+      // kuyrukta kalır; sipariş anında çözülür. Sayaç tüketilmez — cevaplı bir ret değil.
+      if (!geocoderScanAllowed(address.country)) {
+        await addresses.update({ id: address.id, geoCheckedAt: now });
+        result.deferred += 1;
+        continue;
+      }
       const outcome = await geocoder.locate({
         line1: address.line1,
         postalCode: address.postalCode,

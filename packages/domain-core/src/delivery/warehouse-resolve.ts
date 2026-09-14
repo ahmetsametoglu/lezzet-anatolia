@@ -181,7 +181,8 @@ export type PostalCodeResolution =
   | { kind: 'unknown' };
 
 /**
- * Posta kodundan yer çözümü — **ülke sorulmadan** (19.8).
+ * Posta kodundan yer çözümü — ülke **sorulmadan** türetilir (19.8) ya da müşterinin seçtiği ülkeye
+ * bağlanır (`chosenCountry`, v1 yer paneli 13.09).
  *
  * `matches` referans tablosundan gelir (`postal_code_place`): kodun geçerli olduğu ülkeler ve
  * gösterilecek yer adları. Çağıran satırları getirir, karar burada verilir.
@@ -203,6 +204,14 @@ export function resolvePlaceByPostalCode(
   matches: readonly PostalCodeMatch[],
   zones: readonly ZoneWithWarehouse[],
   warehouses: readonly WarehouseCandidate[],
+  /**
+   * Müşterinin SEÇTİĞİ ülke — v1 yer panelinde önce ülke, sonra kod sorulur (13.09). Verilirse kod
+   * o ülkeye BAĞLANIR: aday yalnız o ülkenin satırıdır, kod orada yoksa `unknown`. Seçim serbest
+   * bir beyan değildir — (ülke, kod) çifti referansta ya da kendi bölge tablomuzda bulunmalı,
+   * çünkü KDV oranı ve teslimat yolu ona bağlı (`DOMAIN §5`). Belirsizlik seçicisinin cevabı da
+   * bu kapıdan geçer.
+   */
+  chosenCountry?: Country,
 ): PostalCodeResolution {
   // ── KENDİ BÖLGE TABLOMUZ HİZMET ALANIMIZ İÇİN OTORİTEDİR (19.16a) ──────────
   // İlk sürüm doğrudan `matches.length === 0 → unknown` diyordu ve `zones`'a hiç bakmıyordu. Sonuç
@@ -229,7 +238,9 @@ export function resolvePlaceByPostalCode(
   // kaydımızdan gelen ülke, referansta hiç yoksa da ayakta kalır.
   const merged = new Map(own);
   for (const m of matches) merged.set(m.country, m);
-  const all = [...merged.values()];
+  // Seçilen ülke adayları SÜZER, sıralamaz: kod o ülkede yoksa aday kalmaz ve cevap `unknown` olur —
+  // başka bir ülkeye sessizce çözmek müşterinin vermediği bir KDV kararını vermek olurdu.
+  const all = [...merged.values()].filter((m) => !chosenCountry || m.country === chosenCountry);
 
   // Ne kendi kaydımızda ne referansta — büyük olasılıkla yazım hatası.
   if (all.length === 0) return { kind: 'unknown' };

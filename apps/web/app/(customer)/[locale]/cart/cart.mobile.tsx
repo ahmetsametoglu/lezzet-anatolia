@@ -9,6 +9,7 @@ import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
 import { CartGroup } from './components/cart-group';
 import { CartSummary } from './components/cart-summary';
+import { CartIdentity } from './components/cart-identity';
 import { PlaceChangeCard } from './components/place-change-card';
 import { CartCoupon } from './components/cart-coupon';
 import { CartCheckoutBar } from './components/cart-checkout-bar';
@@ -98,6 +99,8 @@ export function CartMobile({ t, locale, emptyContext }: CartViewProps) {
             )}
             {/* K33 · Sonraya kaydedilenler; boşken hiç çizilmez. */}
             <SavedList locale={locale} compact />
+            {/* KİM ve NEREYE — özetin üstünde, masaüstündeki sağ sütunla aynı sıra (13.09). */}
+            <CartIdentity t={t} locale={locale} compact />
             {/* Mobilde kupon özetin ÜSTÜNDE (tasarım): indirim uygulanınca özet zaten onun sonucunu
                 gösteriyor — sonucu sebebinden önce okutmak sırayı tersine çevirirdi. */}
             <CartCoupon t={t} locale={locale} />

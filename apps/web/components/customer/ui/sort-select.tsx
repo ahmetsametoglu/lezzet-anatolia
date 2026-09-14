@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState, type ComponentProps } from 'react';
+import { useRef, useState, type ComponentProps } from 'react';
 import { Link } from '@/i18n/navigation';
+import { useDismiss } from './use-dismiss.hook';
 
 /**
  * K18 · Sıralama Seçici — tasarımdaki tek açılır düğme ("Sırala: Öne çıkanlar ▾").
  *
  * Client bileşen olmak ZORUNDA: `details/summary` ile denendi ama o öğe yalnız kendi başlığına
  * tıklanınca kapanır — menü açıkken sayfanın boşluğuna basmak onu kapatmaz ve kullanıcı menüyü
- * "üstüne yapışmış" bulur. Dışarı tıklama ve Escape gerçek dinleyici ister.
+ * "üstüne yapışmış" bulur. Dışarı tıklama ve Escape gerçek dinleyici ister (`useDismiss`, kitte ortak).
  *
  * Seçeneklerin kendisi yine `<Link>`: sıralama sunucuda çözülür, seçim URL'de yaşar. `scroll={false}`
  * — süzgeç değiştirmek sayfayı başa fırlatmamalı; kullanıcı listenin ortasındaysa orada kalır.
@@ -35,23 +36,7 @@ interface SortSelectProps {
 export function SortSelect({ label, currentLabel, options, compact = false }: SortSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: MouseEvent | TouchEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    // `pointerdown` — tıklama tamamlanmadan kapanır, seçenek linki yine de çalışır (o menünün İÇİNDE).
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open]);
+  useDismiss(ref, open, () => setOpen(false));
 
   return (
     <div ref={ref} className="relative">

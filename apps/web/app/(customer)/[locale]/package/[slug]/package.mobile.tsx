@@ -1,7 +1,6 @@
 import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Badge } from '@/components/customer/ui/badge';
-import { BackButton } from '@/components/customer/ui/back-button';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
@@ -17,9 +16,8 @@ import type { PackageViewProps } from './package-types';
 /**
  * Paket detay — mobil düzen (tasarım: `Musteri - Paket Detay.dc.html`, "Paket Detay Mobil").
  *
- * BAŞLIK YOK, görsel tepeye yaslı ve kenardan kenara (kullanıcı kararı 20.08, sekizinci tur —
- * ürün detayıyla AYNI desen): geri düğmesi fotoğrafın sol üstünde krem daire, sepete giden yol
- * çerçevenin sağ alttaki yüzen düğmesi (`CartFab`). Satın alma sabit çubukta DEĞİL, akışın karar
+ * Geri yolu, paketin adı ve sepet ÇERÇEVENİN üst barında (v1 mobil, 13.09 — ürün detayıyla aynı);
+ * fotoğraf üstündeki geri dairesi ve yüzen sepet düğmesi v1 ile kalktı. Satın alma akışın karar
  * bölgesinde — iki detay sayfası aynı jesti aynı yerde konuşur.
  */
 export function PackageMobile({ t, locale, pack }: PackageViewProps) {
@@ -27,23 +25,18 @@ export function PackageMobile({ t, locale, pack }: PackageViewProps) {
   // iki farklı hâl söyleyemez.
   const stockStatus = stockStatusOfRoute(pack.route);
   return (
-    <div className="flex flex-col gap-3 pb-16">
-      <div className="relative">
-        {/* Kahraman KARE (dokuzuncu tur, ürün galerisinin aynı kararı): native kahramanı telefon
-            eninde ≈1:1; 3:2 dar ekranda kısa bant kalıyordu. Odak/zoom operatörün künyesinden. */}
-        <FramedImage
-          src={pack.image.url}
-          alt={pack.name}
-          ratio={RATIO_SQUARE}
-          crop={pack.image.crop}
-          frames={pack.image.frames}
-          sizes="100vw"
-          className="!rounded-none"
-        />
-        <div className="absolute top-3 left-3 z-10">
-          <BackButton label={t.backLabel} fallback="/packages" variant="photo" />
-        </div>
-      </div>
+    <div className="flex flex-col gap-3 pb-6">
+      {/* Kahraman KARE (dokuzuncu tur, ürün galerisinin aynı kararı): native kahramanı telefon
+          eninde ≈1:1; 3:2 dar ekranda kısa bant kalıyordu. Odak/zoom operatörün künyesinden. */}
+      <FramedImage
+        src={pack.image.url}
+        alt={pack.name}
+        ratio={RATIO_SQUARE}
+        crop={pack.image.crop}
+        frames={pack.image.frames}
+        sizes="100vw"
+        className="!rounded-none"
+      />
 
       <div className="flex flex-col gap-2.5 px-4">
         <span className="font-sans text-eyebrow-sm text-olive uppercase">

@@ -8,10 +8,10 @@
     "share": "Paylaş",
     "addToCart": "Paketi sepete ekle",
     "assurance": {
-      "coldChain": "❄ Soğuk zincirle gelir",
-      "doorstep": "🚚 Bölge içi kapıya teslim",
-      "shippable": "📦 Kargoya uygun",
-      "inRouteOnly": "🚚 Bu paket yalnız Strasbourg & bölge içi kapıya teslim edilir — kargoya verilemez."
+      "coldChain": "Soğuk zincirle gelir",
+      "doorstep": "Bölge içi kapıya teslim",
+      "shippable": "Kargoya uygun",
+      "inRouteOnly": "Bu paket yalnız Strasbourg & bölge içi kapıya teslim edilir — kargoya verilemez."
     },
     "facts": {
       "weight": "Toplam net ağırlık",
@@ -30,8 +30,8 @@
       "qtyPlain": "{n} adet",
       "link": "Ürün bilgisi →",
       "linkShort": "Bilgi →",
-      "legal": "⚠ Yasal beyan ürün başına yapılır: her kalemin içindekiler, alerjen ve besin değeri bilgisi kendi ürün sayfasındadır — yukarıdaki kartlardan ulaşabilirsiniz. Paketin toplu alerjen listesi ve tüketim süresi satın alma alanında özetlenmiştir.",
-      "legalShort": "⚠ Tam içindekiler ve yasal beyan her ürünün kendi sayfasında. Paketin toplu alerjen listesi yukarıda."
+      "legal": "Yasal beyan ürün başına yapılır: her kalemin içindekiler, alerjen ve besin değeri bilgisi kendi ürün sayfasındadır — yukarıdaki kartlardan ulaşabilirsiniz. Paketin toplu alerjen listesi ve tüketim süresi satın alma alanında özetlenmiştir.",
+      "legalShort": "Tam içindekiler ve yasal beyan her ürünün kendi sayfasında. Paketin toplu alerjen listesi yukarıda."
     },
     "seeShippablePackages": "Kargolanabilir paketleri gör",
     "backLabel": "Geri"
@@ -45,10 +45,10 @@
     "share": "Partager",
     "addToCart": "Ajouter le coffret",
     "assurance": {
-      "coldChain": "❄ Livré en chaîne du froid",
-      "doorstep": "🚚 Livraison à domicile en zone",
-      "shippable": "📦 Expédiable",
-      "inRouteOnly": "🚚 Ce coffret est livré uniquement à Strasbourg et sa région — il ne peut pas être expédié."
+      "coldChain": "Livré en chaîne du froid",
+      "doorstep": "Livraison à domicile en zone",
+      "shippable": "Expédiable",
+      "inRouteOnly": "Ce coffret est livré uniquement à Strasbourg et sa région — il ne peut pas être expédié."
     },
     "facts": {
       "weight": "Poids net total",
@@ -67,8 +67,8 @@
       "qtyPlain": "{n} unité(s)",
       "link": "Fiche produit →",
       "linkShort": "Fiche →",
-      "legal": "⚠ La déclaration légale se fait par produit : ingrédients, allergènes et valeurs nutritionnelles figurent sur chaque fiche produit — accessibles depuis les cartes ci-dessus. La liste groupée des allergènes et la durée de consommation sont résumées dans la zone d'achat.",
-      "legalShort": "⚠ Ingrédients complets et déclaration légale sur la fiche de chaque produit. La liste groupée des allergènes est ci-dessus."
+      "legal": "La déclaration légale se fait par produit : ingrédients, allergènes et valeurs nutritionnelles figurent sur chaque fiche produit — accessibles depuis les cartes ci-dessus. La liste groupée des allergènes et la durée de consommation sont résumées dans la zone d'achat.",
+      "legalShort": "Ingrédients complets et déclaration légale sur la fiche de chaque produit. La liste groupée des allergènes est ci-dessus."
     },
     "seeShippablePackages": "Voir les coffrets expédiables",
     "backLabel": "Retour"
@@ -82,10 +82,10 @@
     "share": "Teilen",
     "addToCart": "Paket in den Warenkorb",
     "assurance": {
-      "coldChain": "❄ Kommt gekühlt",
-      "doorstep": "🚚 Lieferung bis an die Tür im Gebiet",
-      "shippable": "📦 Versandfähig",
-      "inRouteOnly": "🚚 Dieses Paket wird nur in Straßburg und Umgebung geliefert — Versand ist nicht möglich."
+      "coldChain": "Kommt gekühlt",
+      "doorstep": "Lieferung bis an die Tür im Gebiet",
+      "shippable": "Versandfähig",
+      "inRouteOnly": "Dieses Paket wird nur in Straßburg und Umgebung geliefert — Versand ist nicht möglich."
     },
     "facts": {
       "weight": "Gesamtnettogewicht",
@@ -104,8 +104,8 @@
       "qtyPlain": "{n} Stück",
       "link": "Produktangaben →",
       "linkShort": "Angaben →",
-      "legal": "⚠ Die gesetzliche Kennzeichnung erfolgt je Produkt: Zutaten, Allergene und Nährwerte stehen auf der jeweiligen Produktseite — erreichbar über die Karten oben. Die gebündelte Allergenliste und die Verzehrdauer sind im Kaufbereich zusammengefasst.",
-      "legalShort": "⚠ Vollständige Zutaten und gesetzliche Kennzeichnung auf der Seite jedes Produkts. Die gebündelte Allergenliste steht oben."
+      "legal": "Die gesetzliche Kennzeichnung erfolgt je Produkt: Zutaten, Allergene und Nährwerte stehen auf der jeweiligen Produktseite — erreichbar über die Karten oben. Die gebündelte Allergenliste und die Verzehrdauer sind im Kaufbereich zusammengefasst.",
+      "legalShort": "Vollständige Zutaten und gesetzliche Kennzeichnung auf der Seite jedes Produkts. Die gebündelte Allergenliste steht oben."
     },
     "seeShippablePackages": "Versandfähige Pakete ansehen",
     "backLabel": "Zurück"

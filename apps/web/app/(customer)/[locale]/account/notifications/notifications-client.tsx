@@ -7,7 +7,8 @@ import { BELL_EVENT, type MeNotification } from '@lezzet/types';
 import { createClient } from '@/lib/supabase/client';
 import { Link } from '@/i18n/navigation';
 import { LoadMore } from '@/components/customer/ui/load-more';
-import { NOTIFICATIONS_CHANGED_EVENT } from '@/components/customer/account/notification-bell';
+import { Icon } from '@/components/customer/ui/icons';
+import { NOTIFICATIONS_CHANGED_EVENT } from '@/components/customer/account/use-unread-notifications.hook';
 import { loadNotificationsAction, markNotificationReadAction, markAllNotificationsReadAction, dismissNotificationAction } from './actions';
 import { notificationTarget } from './notification-target';
 import type { Messages, NotificationsFeedPage } from './notifications-types';
@@ -200,12 +201,13 @@ export function NotificationsClient({ t, locale, first, channel }: Notifications
             const visual = notificationVisual(row);
             const inner = (
               <>
-                {/* İkon dairesi: türün yüzü — renk ailesi durum haplarıyla aynı anlamda. */}
+                {/* İkon dairesi: türün yüzü — renk ailesi durum haplarıyla aynı anlamda. Çizim ikon
+                    setinden (`symbol`), emoji değil (14.09); rengi tonun yazı rengi. */}
                 <span
                   aria-hidden
-                  className={['flex h-9 w-9 flex-none items-center justify-center rounded-full text-icon-sm', TONE_BG[visual.tone]].join(' ')}
+                  className={['flex h-9 w-9 flex-none items-center justify-center rounded-full', TONE_BG[visual.tone], TONE_TEXT[visual.tone]].join(' ')}
                 >
-                  {visual.icon}
+                  <Icon name={visual.symbol} size={17} />
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className="flex items-center gap-2">

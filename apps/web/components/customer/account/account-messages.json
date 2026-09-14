@@ -1,13 +1,13 @@
 {
   "tr": {
-    "signIn": "Giriş",
+    "signIn": "Giriş yap",
     "signOut": "Çıkış yap",
     "myAccount": "Hesabım",
     "account": "Hesap",
     "notifications": "Bildirimler"
   },
   "fr": {
-    "signIn": "Connexion",
+    "signIn": "Se connecter",
     "signOut": "Se déconnecter",
     "myAccount": "Mon compte",
     "account": "Compte",

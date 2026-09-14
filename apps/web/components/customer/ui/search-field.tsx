@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { iconHitClass } from './button';
+import { Icon } from './icons';
 
 /**
  * K4 · Arama Alanı — site başlığındaki ürün araması.
@@ -51,7 +52,7 @@ export function SearchField({ placeholder, clearLabel, fullWidth = false, defaul
         fullWidth ? 'w-full px-4 py-2.25' : 'w-[288px] px-4.5 py-2.25',
       ].join(' ')}
     >
-      <span aria-hidden>🔍</span>
+      <Icon name="search" size={16} strokeWidth={2.1} className="text-muted" />
       <input
         type="search"
         value={value}
@@ -72,7 +73,7 @@ export function SearchField({ placeholder, clearLabel, fullWidth = false, defaul
           }}
           className={`${iconHitClass} -my-2 text-sand-600 hover:text-ink`}
         >
-          ✕
+          <Icon name="close" size={14} />
         </button>
       )}
     </form>

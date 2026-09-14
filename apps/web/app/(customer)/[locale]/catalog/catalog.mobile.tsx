@@ -9,7 +9,6 @@ import { ShippableChip } from '@/components/customer/delivery/shippable-chip';
 import { campaignNote } from '@/lib/storefront/campaign-note';
 import { Link } from '@/i18n/navigation';
 import type { CatalogViewProps } from './catalog-types';
-import { CartBar } from '@/components/customer/cart/cart-bar';
 
 /**
  * Katalog — mobil düzeni (tasarım: `Musteri - Katalog.dc.html`, "Katalog Mobil").
@@ -20,14 +19,19 @@ import { CartBar } from '@/components/customer/cart/cart-bar';
 export function CatalogMobile({ t, locale, placeMode, data, products, hasMore, loadingMore, onLoadMore, active, hrefFor, search }: CatalogViewProps) {
   const note = campaignNote(data.campaign, t.campaign, locale);
   return (
-    <div className="flex flex-col pb-24">
+    <div className="flex flex-col">
       <section className="flex flex-col gap-3 px-4 pt-5 pb-3">
         {/* Koleksiyon görünümü — masaüstüyle AYNI sözleşme, dar ekranın yerleşimiyle (08.26):
             üst etiket, başlık, çıkış bağlantısı alta iner (yan yana sığmaz), açıklama altında. */}
         {data.activeCollection && (
           <span className="font-sans text-micro font-semibold uppercase tracking-wider text-olive">{t.collectionTag}</span>
         )}
-        <h1 className="font-serif text-page-title-sm text-ink">{data.activeCollection?.name ?? data.activeCategory?.name ?? t.title}</h1>
+        {/* Ürün sayısı başlığın SAĞINDA (kullanıcı isteği 14.09): süzgeç satırında dururken dar
+            ekranda iki satıra sarıyor ("87 / ürün") ve çipleri sağa itiyordu. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="min-w-0 font-serif text-page-title-sm text-ink">{data.activeCollection?.name ?? data.activeCategory?.name ?? t.title}</h1>
+          <span className="flex-none font-sans text-note text-muted">{t.count.replace('{n}', String(data.total))}</span>
+        </div>
         {data.activeCollection ? (
           <>
             {data.activeCollection.description && (
@@ -61,12 +65,9 @@ export function CatalogMobile({ t, locale, placeMode, data, products, hasMore, l
         </div>
       )}
 
-      {/* Sonuç sayısı + süzgeç + sıralama TEK SATIR (tasarım). İki satıra bölmek dar ekranda
-          ürünleri katlama aşağı iter; mobilde dikey yer en kıt kaynaktır. Bölünmesinin sebebi
-          uzun etiketti — çare yerleşimi değiştirmek değil, mobilin kendi kısa metnini kullanmaktı. */}
-      <div className="flex items-center gap-2 px-4 pb-3">
-        <span className="font-sans text-note text-muted">{t.count.replace('{n}', String(data.total))}</span>
-        <span className="flex-1" />
+      {/* Süzgeç + sıralama TEK SATIR ve SOLA yaslı (kullanıcı isteği 14.09 — sayı başlığa çıktı).
+          Mobilin kısa metinleriyle 390px'e sığıyor; daha uzun bir dilde alt satıra sarar, kesilmez. */}
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
         {/* Üç hâl masaüstüyle AYNI kuralda (08.27) — dar ekranın kısa metniyle. */}
         <ShippableChip
           mode={placeMode}
@@ -88,7 +89,7 @@ export function CatalogMobile({ t, locale, placeMode, data, products, hasMore, l
 
       {products.length === 0 ? (
         <div className="px-4 pb-8">
-          <EmptyState title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} icon="🔍" />
+          <EmptyState title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} icon="search" />
         </div>
       ) : (
         <section className="grid grid-cols-2 gap-3 px-4 pt-1 pb-8">
@@ -101,9 +102,6 @@ export function CatalogMobile({ t, locale, placeMode, data, products, hasMore, l
       <div className="px-4">
         <LoadMore hasMore={hasMore} loading={loadingMore} onLoadMore={onLoadMore} label={t.loadMore} loadingLabel={t.loading} />
       </div>
-
-      {/* K21 — listeden ekleme yapıldıkça toplam burada canlı güncellenir. */}
-      <CartBar locale={locale} />
     </div>
   );
 }

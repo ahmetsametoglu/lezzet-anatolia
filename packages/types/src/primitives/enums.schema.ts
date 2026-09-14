@@ -654,8 +654,12 @@ export type DoorCheck = z.infer<typeof DoorCheckEnum>;
 export const AddressGeoPrecisionEnum = z.enum(['housenumber', 'street', 'locality', 'municipality']);
 export type AddressGeoPrecision = z.infer<typeof AddressGeoPrecisionEnum>;
 
-/** Koordinatı kim koydu: adres servisi mi, insan mı. Yeni sağlayıcı takıldığında buraya bir değer eklenir. */
-export const AddressGeoSourceEnum = z.enum(['ban', 'manual']);
+/**
+ * Koordinatı kim koydu: Fransız adres servisi (BAN), Google (Almanya — 13.09) ya da insan.
+ * Kaynak yaşlanma kuralını belirler: `google` noktası 30 günden uzun saklanmaz (Google politikası),
+ * `ban` süresiz (Licence Ouverte) — `geocode-scan` künyesi.
+ */
+export const AddressGeoSourceEnum = z.enum(['ban', 'google', 'manual']);
 export type AddressGeoSource = z.infer<typeof AddressGeoSourceEnum>;
 
 /**

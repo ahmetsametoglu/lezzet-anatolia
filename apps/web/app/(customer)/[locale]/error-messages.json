@@ -12,8 +12,8 @@
       "title": "Mutfakta küçük bir aksilik oldu",
       "description": "Sorun bizde, sizde değil. Birkaç saniye sonra yeniden denerseniz büyük olasılıkla yolunda gidecek.",
       "retryCta": "Yeniden dene",
-      "cart": "🧺 Sepetiniz olduğu gibi duruyor",
-      "orders": "✓ Verdiğiniz siparişler etkilenmedi"
+      "cart": "Sepetiniz olduğu gibi duruyor",
+      "orders": "Verdiğiniz siparişler etkilenmedi"
     }
   },
   "fr": {
@@ -29,8 +29,8 @@
       "title": "Un petit contretemps en cuisine",
       "description": "Le problème vient de nous, pas de vous. Réessayez dans quelques secondes, tout devrait rentrer dans l'ordre.",
       "retryCta": "Réessayer",
-      "cart": "🧺 Votre panier est intact",
-      "orders": "✓ Vos commandes ne sont pas affectées"
+      "cart": "Votre panier est intact",
+      "orders": "Vos commandes ne sont pas affectées"
     }
   },
   "de": {
@@ -46,8 +46,8 @@
       "title": "Ein kleines Missgeschick in der Küche",
       "description": "Das Problem liegt bei uns, nicht bei Ihnen. Versuchen Sie es in ein paar Sekunden erneut, meist läuft dann alles wieder rund.",
       "retryCta": "Erneut versuchen",
-      "cart": "🧺 Ihr Warenkorb bleibt unverändert",
-      "orders": "✓ Ihre Bestellungen sind nicht betroffen"
+      "cart": "Ihr Warenkorb bleibt unverändert",
+      "orders": "Ihre Bestellungen sind nicht betroffen"
     }
   }
 }

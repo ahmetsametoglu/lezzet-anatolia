@@ -1,4 +1,4 @@
-import type { Country } from '@lezzet/types';
+import type { Address, Country } from '@lezzet/types';
 
 /**
  * Teslimat yeri (K30-K33) — müşterinin "nereye getirelim" cevabı.
@@ -152,6 +152,45 @@ export interface DeliveryPlace {
    * lng ya birlikte var ya birlikte yok). O zaman öneri ipuçsuz istenir — bugünkü davranış.
    */
   point: { lat: number; lng: number } | null;
+}
+
+/**
+ * **Seçili teslimat adresi** — girişli müşteride yerin KAYNAĞI (kullanıcı kararı 13.09).
+ *
+ * Sepet ile ödeme ekranı bir dönem yeri iki ayrı yerden okuyordu: sepet çerezdeki posta kodundan,
+ * ödeme ekranı seçili adresten. Aynı müşteri aynı sepette "kapıya teslim ücretsiz" okuyup ödeme
+ * ekranında "bölge dışı, kargo" görüyordu (ölçüldü 11.09: çerez 67000, adres 67380). Kayıtlı
+ * adresi olan müşteride artık **adres kazanır**: yer = varsayılan adres; çerez yalnız ziyaretçide
+ * ve henüz adresi olmayan müşteride konuşur.
+ *
+ * Tarayıcıya İNEN alt küme: alıcı adı, telefon ve coğrafi alanlar taşınmaz — hap ve sepet paneli
+ * yalnız "hangi adres, nerede" sorusunu cevaplıyor.
+ */
+export type PlaceAddress = Pick<Address, 'id' | 'label' | 'line1' | 'line2' | 'postalCode' | 'city' | 'country'>;
+
+export function toPlaceAddress(address: Address): PlaceAddress {
+  return {
+    id: address.id,
+    label: address.label,
+    line1: address.line1,
+    line2: address.line2,
+    postalCode: address.postalCode,
+    city: address.city,
+    country: address.country,
+  };
+}
+
+/**
+ * Yerin sunucudan inen anlık görüntüsü — `PlaceProvider`ın ilk karesi ve adres yazan her eylemin
+ * dönüşü. İkisi aynı şekli taşır ki istemci "adres değişti, yer ne oldu" sorusunu ayrı bir turla
+ * sormasın: yazan eylem cevabı zaten biliyor.
+ *
+ * `place` null iken `address` dolu olabilir: adresin kodu çözülemiyordur (tanınmayan kod). O hâlde
+ * adres yine seçilidir — sipariş ona gider — ama vitrin depo-üstü okur.
+ */
+export interface PlaceSnapshot {
+  place: DeliveryPlace | null;
+  address: PlaceAddress | null;
 }
 
 /**

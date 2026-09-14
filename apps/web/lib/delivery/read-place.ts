@@ -1,10 +1,13 @@
 import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { PostalCodePlaceService, serviceDb } from '@lezzet/database';
+import { AddressService, PostalCodePlaceService, serviceDb } from '@lezzet/database';
 import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
+import type { Address } from '@lezzet/types';
+import { currentCustomerId } from '@/lib/guard';
+import { describePlace } from './describe-place';
 import { readDeliveryInputs } from './inputs';
-import type { PlaceAnswer } from './place-types';
+import { toPlaceAddress, type PlaceAnswer, type PlaceSnapshot } from './place-types';
 
 /**
  * Yerin SUNUCU tarafı (19.9) — RSC'lerin "hangi deponun stoğunu okuyacağım" sorusu.
@@ -30,6 +33,11 @@ interface PlaceContext {
   answer: PlaceAnswer | null;
   resolution: PostalCodeResolution | null;
   /**
+   * Girişli müşterinin VARSAYILAN adresi — yerin kaynağı olduğunda dolu (kullanıcı kararı 13.09).
+   * Ziyaretçide ve adressiz müşteride `null`: o hâlde `answer` çerezden gelir.
+   */
+  address: Address | null;
+  /**
    * Okumaların kullanacağı depo — **null "yer bilinmiyor" demektir** ve bu normaldir (K1: posta
    * kodu zorunlu değil). Null'da okuma depo-üstüne düşer ve orada "var" bir vaat DEĞİL, "yok"un
    * dayanağıdır (C3).
@@ -47,7 +55,7 @@ interface PlaceContext {
   shippingWarehouseId: string | null;
 }
 
-const EMPTY: PlaceContext = { answer: null, resolution: null, warehouseId: null, shippingWarehouseId: null };
+const EMPTY: PlaceContext = { answer: null, resolution: null, warehouseId: null, shippingWarehouseId: null, address: null };
 
 /**
  * Posta kodunun ülke adayları — istek başına bir kez (aynı kod birden çok bileşen tarafından
@@ -59,11 +67,33 @@ const getPostalMatches = cache(async (postalCode: string) =>
 );
 
 /**
- * İstek başına yer bağlamı. Çerez yoksa ya da çözülemiyorsa **yer bilinmiyor** sayılır — hata
- * fırlatılmaz: yerin bilinmemesi bir arıza değil, cevaplanmamış bir sorudur (`place-types`).
+ * Girişli müşterinin varsayılan adresi — istek başına bir kez.
+ *
+ * ── ADRES KAZANIR (kullanıcı kararı 13.09) ───────────────────────────────────
+ * `place-store.ts`in künyesi bunu ta 19.9'dan beri vaat ediyordu (*"girişli müşteride sunucu —
+ * varsayılan adresin posta kodu okunur"*) ama yapan kod yoktu: çerez yalnız elle girilen kodla
+ * yazılıyor, kayıtlı adresten hiç beslenmiyordu. Sonuç ölçüldü (11.09): çerezde 67000 (rota),
+ * varsayılan adres 67380 (bölge dışı) — sepet "kapıya teslim ücretsiz", ödeme ekranı "kargo".
+ *
+ * Kayıtlı adresi olan müşteri için "adres seçilmeden önce en iyi bildiğimiz şey çerezdir"
+ * gerekçesi (09.08) geçersiz: adresi zaten biliyoruz. Çerez yalnız ziyaretçide ve adressiz
+ * müşteride konuşur; adres gelince susar.
+ */
+const readDefaultAddress = cache(async (): Promise<Address | null> => {
+  const customerId = await currentCustomerId();
+  if (!customerId) return null;
+  const rows = await new AddressService(serviceDb()).listByCustomer(customerId);
+  return rows.find((row) => row.isDefault) ?? null;
+});
+
+/**
+ * İstek başına yer bağlamı. Ne adres ne çerez varsa, ya da kod çözülemiyorsa **yer bilinmiyor**
+ * sayılır — hata fırlatılmaz: yerin bilinmemesi bir arıza değil, cevaplanmamış bir sorudur
+ * (`place-types`).
  */
 const readPlaceContext = cache(async (): Promise<PlaceContext> => {
-  const answer = await readPlaceAnswerFromCookie();
+  const address = await readDefaultAddress();
+  const answer = address ? { country: address.country, postalCode: address.postalCode } : await readPlaceAnswerFromCookie();
   if (!answer) return EMPTY;
 
   const [{ zones, warehouses }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
@@ -78,6 +108,7 @@ const readPlaceContext = cache(async (): Promise<PlaceContext> => {
   return {
     answer,
     resolution,
+    address,
     /**
      * **YALNIZ ROTA DEPOSU** (09.08 · kullanıcı bildirimi, denetim+müşteri şeridi ölçtü).
      *
@@ -121,13 +152,39 @@ export async function readPlaceWarehouses(): Promise<{ warehouseId: string | nul
 }
 
 /**
- * Müşterinin CEVABI — çerezden, çözülmeden (19.12).
+ * Müşterinin CEVABI — çözülmeden (19.12): girişli ve adresli müşteride varsayılan adresin kodu,
+ * ötekilerde çerez (bağlamın kendi sırası).
  *
  * Yalnız yerin kendisini isteyen çağıranlar için: "gelince haber ver" kaydı hangi yere ait olduğunu
  * bilmek zorunda ama depoyu bilmesine gerek yok — söz müşterinin adresi hakkındadır, bizim iç
  * coğrafyamız hakkında değil.
  */
-export const readPlaceAnswer = cache(readPlaceAnswerFromCookie);
+export const readPlaceAnswer = cache(async (): Promise<PlaceAnswer | null> => (await readPlaceContext()).answer);
+
+/**
+ * **Yerin ilk karesi** — layout bunu okur ve `PlaceProvider`a başlangıç değeri olarak indirir;
+ * adres yazan eylemler de aynı şekli döner (`PlaceSnapshot` künyesi).
+ *
+ * 19.7'nin (b) açığı buydu: istemci çerezi okuyup `resolvePlaceAction`ı yeniden çağırıyor, hap ilk
+ * karede boş kalıyordu. Sunucu yeri zaten her istekte çözüyor (`readPlaceContext`); tarifini de
+ * vermesi ikinci turu ortadan kaldırıyor. Tarif SAYIMSIZ (`describePlace` künyesi) — sayfa açılışı
+ * bir niyet değildir, talep sayacına yazılmaz.
+ */
+export const readPlaceSnapshot = cache(async (): Promise<PlaceSnapshot> => {
+  const { answer, resolution, address } = await readPlaceContext();
+  const placeAddress = address ? toPlaceAddress(address) : null;
+  if (!answer || !resolution || (resolution.kind !== 'route' && resolution.kind !== 'shipping')) {
+    return { place: null, address: placeAddress };
+  }
+  const [{ zones }, matches] = await Promise.all([readDeliveryInputs(), getPostalMatches(answer.postalCode)]);
+  const place = await describePlace(
+    answer.postalCode,
+    { country: resolution.country, placeName: resolution.placeName, places: resolution.places },
+    zones,
+    matches,
+  );
+  return { place, address: placeAddress };
+});
 
 /**
  * **Ayar kapsamının yer ekseni** (07.15) — ülke + bölge + depo, tek okumadan.
@@ -154,10 +211,12 @@ export const readPlaceAnswer = cache(readPlaceAnswerFromCookie);
  *   `lib/order/checkout-draft.ts` (ADRESTEN; `zoneId` kargo siparişinde null)
  *   `app/(customer)/…/checkout/actions.ts` (ADRESTEN — müşteri şeridi yazdı)
  *
- * **Sepet çerezten, checkout adresten çözüyor ve bu bir kusur DEĞİL, bilginin sırası:** adres
- * seçilmeden önce en iyi bildiğimiz şey çerezdir. İkisi farklı bölge verirse fark checkout'ta
- * görünür; müşteri şeridinin kararı (09.08) farkı önden uyarıyla anlatmak değil, GERÇEKLEŞTİĞİ
- * yerde açıkça söylemek — daha dürüst ve daha az gürültülü.
+ * ── 09.08 KARARI GERİ ALINDI (kullanıcı kararı 13.09) ─────────────────────────
+ * Burada *"sepet çerezten, checkout adresten çözüyor ve bu bir kusur değil, bilginin sırası"*
+ * yazıyordu. Kayıtlı adresi olan müşteri için sıra diye bir şey yoktu — adres baştan biliniyordu
+ * ve sepet ona bakmıyordu. Artık üç çağıran da AYNI kaynağı okuyor: girişli ve adresli müşteride
+ * varsayılan adres, ötekilerde çerez (`readDefaultAddress` künyesi). Ödeme ekranı adresi
+ * DEĞİŞTİRMEZ, sepette seçileni gösterir; fark diye bir şey kalmadı.
  */
 export async function readPlaceScope(): Promise<{
   country: string | null;

@@ -4,7 +4,10 @@ import type { PlaceAnswer } from './place-types';
  * Teslimat yerinin tarayıcı deposu — **çerez** (19.9).
  *
  * Sepetin deseninin aynısı (`cart-store`): ziyaretçide tarayıcı, girişli müşteride sunucu — orada
- * varsayılan adresin posta kodu okunur ve bu depo onu yalnız yansıtır. Ayrım arayüze sızmaz.
+ * varsayılan adres okunur (`read-place` → `readDefaultAddress`, 13.09) ve adres varken bu çerez
+ * SUNUCUDA OKUNMAZ; yazılmaz da (`setPostalCode` adres varken yeri değiştirmez). Bu künye 19.9'dan
+ * 13.09'a dek bunu vaat edip yapmıyordu — ölçüldü: çerez 67000, adres 67380, iki ekran iki cevap.
+ * Ayrım arayüze sızmaz.
  *
  * ── NEDEN `localStorage` DEĞİL ARTIK ─────────────────────────────────────────
  * Eskiden `localStorage`'daydı ve gerekçesi doğruydu: "her isteğe takılmasının gereği yok". Ama
@@ -42,22 +45,12 @@ const SKIP_KEY: Record<SkipScope, string> = {
   cart: 'lezzet.place.skipped.cart.v1',
 };
 
-export function readPlaceAnswer(): PlaceAnswer | null {
-  if (typeof document === 'undefined') return null;
-  const raw = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith(`${KEY}=`))
-    ?.slice(KEY.length + 1);
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(decodeURIComponent(raw));
-    return isAnswer(parsed) ? parsed : null;
-  } catch {
-    // Bozuk/elle düzenlenmiş çerez — yer bilinmiyor sayılır ve soru yeniden sorulur.
-    return null;
-  }
-}
-
+/**
+ * Çerez İSTEMCİDE OKUNMAZ (13.09): ilk kareyi sunucu veriyor (`readPlaceSnapshot` → layout →
+ * `PlaceProvider`). Eski `readPlaceAnswer` burada durup çerezi okuyor ve `resolvePlaceAction`ı bir
+ * kez daha çağırıyordu — 19.7'nin (b) gecikmesi tam olarak buydu. Yazma yolu kalıyor: cevabı
+ * istemci yazar, sunucu her istekte okur.
+ */
 export function writePlaceAnswer(answer: PlaceAnswer | null): void {
   if (typeof document === 'undefined') return;
   // `SameSite=Lax`: yer bir tercih, üçüncü taraf bağlamında taşınmasının gereği yok.
@@ -83,10 +76,3 @@ export function writeSkipped(scope: SkipScope): void {
   }
 }
 
-function isAnswer(value: unknown): value is PlaceAnswer {
-  if (typeof value !== 'object' || value === null) return false;
-  const row = value as Record<string, unknown>;
-  // `country` zorunlu (19.8): kodun tek başına anlamı yok — 610 kod iki ülkede birden geçerli ve
-  // ülke KDV'yi belirliyor. Ülkesiz eski kayıt burada düşer, soru yeniden sorulur.
-  return typeof row.postalCode === 'string' && typeof row.country === 'string';
-}

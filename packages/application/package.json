@@ -15,6 +15,7 @@
   "dependencies": {
     "@expo-google-fonts/karla": "^0.4.2",
     "@lezzet/address-fr": "workspace:*",
+    "@lezzet/address-google": "workspace:*",
     "@lezzet/ai": "workspace:*",
     "@lezzet/brand": "workspace:*",
     "@lezzet/database": "workspace:*",

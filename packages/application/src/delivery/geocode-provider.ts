@@ -1,14 +1,18 @@
 /**
  * Coğrafi kodlama fabrikası (11.9) — portu gerçek sağlayıcıya bağlayan tek yer.
  *
- * ── FR: MEVCUT İSTEMCİ, YENİ BAĞIMLILIK YOK ─────────────────────────────────
- * `packages/address-fr` zaten yazılı, anahtarsız ve ücretsiz (BAN / Géoplateforme, Etalab 2.0) —
- * müşterinin adres önerisi kutusu onu kullanıyor. Yeni npm paketi girmediği için `STACK §2` beyanı
- * gerekmedi.
+ * ── İKİ ÜLKE, İKİ SAĞLAYICI, TEK PORT (13.09) ───────────────────────────────
+ * · **FR → BAN** (`packages/address-fr`): anahtarsız, ücretsiz, koordinatı süresiz saklanabilir
+ *   (Licence Ouverte). Yeni npm paketi girmediği için `STACK §2` beyanı gerekmedi.
+ * · **DE → Google Address Validation** (`packages/address-google`; karar 02.09 `INTEGRATIONS.md`,
+ *   bağlandı 13.09): tek çağrı geçerliliği, neyin düzeltildiğini, düzeltilmiş adresi VE noktayı
+ *   veriyor. Anahtar yoksa ülke "desteklenmiyor" sayılır — adlı yokluk, sessiz bir eksik değil.
+ * Çağıran hiç değişmedi: `checkAddress` ve tarama aynı `Geocoder`ı görüyor.
  *
- * **`postcode` burada SERT SÜZGEÇ olarak veriliyor.** Otomatik tamamlamada bilerek verilmiyor
- * (müşteri hediye/iş adresi ararken başka şehri yazıyor olabilir — `ban-client` künyesi); burada
- * posta kodunu ZATEN BİLİYORUZ ve başka kodda çıkan sonuç aradığımız cevap değildir.
+ * ── BAN: `postcode` SERT SÜZGEÇ ─────────────────────────────────────────────
+ * Otomatik tamamlamada bilerek verilmiyor (müşteri hediye/iş adresi ararken başka şehri yazıyor
+ * olabilir — `ban-client` künyesi); burada posta kodunu ZATEN BİLİYORUZ ve başka kodda çıkan sonuç
+ * aradığımız cevap değildir.
  *
  * ⚠ **AMA BU KISIT AYNI ZAMANDA BİR KÖRLÜK — ve künyenin eski hâli onu "doğru" diye savunuyordu.**
  * Kullanıcı ölçtü (01.09): `192c Rue du Maréchal Foch` yalnız **67380 Lingolsheim**'de var
@@ -24,14 +28,25 @@
  * ile "kapı VAR ama başka kodda" (yazım hatası — düzeltme teklifi).
  *
  * Servisin `score`u artık KULLANILIYOR: `addressVerdict` düzeltme teklifini 0,8 eşiğine bağlıyor —
- * 0,973 ile 0,717 arasındaki fark aradığımız sinyalin ta kendisiydi. (Bir süre alınıp atılıyordu;
- * `elsewhere` ile birlikte devreye girdi.)
+ * 0,973 ile 0,717 arasındaki fark aradığımız sinyalin ta kendisiydi.
  *
  * **`kind` süzgeci verilmiyor:** `housenumber` dayatmak, kapı numarası bilinmeyen adreste "eşleşme
  * yok" derdi. Kaba eşleşme atılmıyor — kaba OLDUĞU söyleniyor (`precision`).
+ *
+ * ── GOOGLE: AYNI İKİ SORU, TEK ÇAĞRI ────────────────────────────────────────
+ * Gövde sokak satırı + kod + şehir taşır; Google kodu DEĞİŞTİRDİYSE (`replacedPostalCode`) kapı
+ * istenen kodda yoktur → `no_match`, ve `elsewhere` AYNI cevabın düzelttiği adresi tek aday olarak
+ * taşır — ikinci kez ağa çıkılmaz. BAN'ın kısıtsız ikinci araması burada KULLANILMAZ: Google metin
+ * araması değil bileşen doğrulaması yapar, bağlamı atınca rastgele bir kapı seçiyor (ölçüldü 13.09,
+ * gerçek anahtarla: yalnız "Hauptstraße 1" → 84544 Aschau am Inn; müşteri 77694 Kehl'deydi). Skor
+ * servisin bayraklarından türer (aşağıda): BAN'ın 0..1'ine karşılık gelen bir ölçek, ki
+ * `addressVerdict`in 0,8 eşiği iki kaynakta da aynı anlama gelsin.
  */
 
 import { searchAddresses } from '@lezzet/address-fr';
+import { validateAddress, type AddressValidation } from '@lezzet/address-google';
+import type { Country } from '@lezzet/types';
+import { googleMapsApiKey, traceGoogleFailure } from './google-maps';
 import type { Geocoder, GeocodeElsewhere, GeocodeOutcome, GeocodeQuery } from './geocode-port';
 
 /**
@@ -39,6 +54,13 @@ import type { Geocoder, GeocodeElsewhere, GeocodeOutcome, GeocodeQuery } from '.
  * 0..1 ve 0,4'ün altı pratikte "adresi bulamadım ama elimdeki en yakın satır bu" demek.
  */
 const MIN_SCORE = 0.4;
+
+/**
+ * Kısıtsız aramada kaç aday. Küçük ve bilinçli: karar yalnız EN İYİ kapıyı ve onun rakibini
+ * kullanıyor (`addressVerdict`), uzun liste ne kararı değiştirir ne ekrana çıkar. Ölçülen vakada
+ * doğru cevap zaten ilk sıradaydı; rakip kontrolü için birkaç satır yeter.
+ */
+const ELSEWHERE_LIMIT = 5;
 
 /** BAN'a bakan kodlayıcı. Anahtarsız çalıştığı için her zaman var — yokluk yalnız ülke ekseninde. */
 function banGeocoder(): Geocoder {
@@ -106,24 +128,110 @@ function banGeocoder(): Geocoder {
 }
 
 /**
- * Kısıtsız aramada kaç aday. Küçük ve bilinçli: karar yalnız EN İYİ kapıyı ve onun rakibini
- * kullanıyor (`addressVerdict`), uzun liste ne kararı değiştirir ne ekrana çıkar. Ölçülen vakada
- * doğru cevap zaten ilk sıradaydı; rakip kontrolü için birkaç satır yeter.
+ * Google'ın bayrakları → BAN ölçeğinde bir skor. Servis sayı vermiyor, üç bayrak veriyor; eşik
+ * (`OFFER_MIN_SCORE` 0,8) iki kaynakta aynı anlama gelmeli: **kapı düzeyinde ve tam doğrulanmış**
+ * adres teklif edilebilir, doğrulanmamış bileşeni olan da (yeni bina, tuhaf numara) eşiğin hemen
+ * üstünde kalır — Google kodu DEĞİŞTİRMİŞSE bu bilinçli bir düzeltmedir, tahmin değil. Sokak
+ * düzeyi eşiğin altında: teklif edilmez, yalnız "kapı doğrulanamadı" der (`addressVerdict`).
  */
-const ELSEWHERE_LIMIT = 5;
+function scoreOf(validation: AddressValidation): number {
+  if (validation.precision === 'housenumber') return validation.complete && !validation.unconfirmed ? 0.95 : 0.85;
+  if (validation.precision === 'street') return 0.6;
+  return 0.2;
+}
+
+/** Google Address Validation'a bakan kodlayıcı — yalnız anahtar varken kurulur. */
+function googleGeocoder(apiKey: string): Geocoder {
+  /* İki soru, TEK çağrı: Google yanlış kodu kendisi düzeltir, yani `elsewhere`in cevabı `locate`in
+     cevabının içinde. Aynı sorgu için ücretli uca ikinci kez çıkılmaz — son sorgunun cevabı
+     tutulur (`checkAddress` ikisini aynı kodlayıcıyla arka arkaya soruyor). */
+  let last: { key: string; lookup: ReturnType<typeof validateAddress> } | null = null;
+  const validate = (query: GeocodeQuery): ReturnType<typeof validateAddress> => {
+    const key = [query.country, query.line1, query.postalCode, query.city].join('\n');
+    if (last?.key === key) return last.lookup;
+    const lookup = validateAddress({ apiKey, country: query.country, line1: query.line1, postalCode: query.postalCode, city: query.city }).then((result) =>
+      traceGoogleFailure('address_validation', result),
+    );
+    last = { key, lookup };
+    return lookup;
+  };
+
+  return {
+    async locate(query: GeocodeQuery): Promise<GeocodeOutcome> {
+      const lookup = await validate(query);
+      if (lookup.status === 'rate_limited') return lookup;
+      // `denied`/`rejected` geçici DEĞİL ama çağıran için aynı: kapı susar (FAIL-OPEN). Adları
+      // burada kaybolur, iz kaybolmaz — `traceGoogleFailure` yukarıda bıraktı.
+      if (lookup.status !== 'ok') return { status: lookup.status === 'invalid_response' ? 'invalid_response' : 'unavailable' };
+
+      const v = lookup.validation;
+      // Nokta yoksa cevap yok: bu kapının varlık sebebi koordinat.
+      if (v.latitude === null || v.longitude === null) return { status: 'no_match' };
+      // Kodu Google DEĞİŞTİRDİYSE kapı istenen kodda yoktur — BAN'ın pinli sorgusunun "bulamadı"sı.
+      // Doğrusunu `elsewhere` taşır; burada söylemek iki hâli tek kutuya sıkıştırırdı.
+      if (v.replacedPostalCode) return { status: 'no_match' };
+      const score = scoreOf(v);
+      if (score < MIN_SCORE) return { status: 'no_match' };
+
+      return { status: 'ok', point: { lat: v.latitude, lng: v.longitude }, precision: v.precision, source: 'google', score };
+    },
+
+    /**
+     * "Kapı BAŞKA kodda mı" — `locate`in AYNI sorusu, aynı cevabı. BAN'dan farklı ve bilerek: BAN
+     * bir metin aramasıdır ve yanlış kod doğru cevabın skorunu düşürür, o yüzden orada kod ve şehir
+     * atılır; Google bileşen düzeyinde doğrular ve yanlış kodu sokak + şehirden DÜZELTİR. Bağlamı
+     * atmak onu kör ediyor — ölçüldü 13.09: yalnız "Hauptstraße 1" soruldu, Google 84544 Aschau am
+     * Inn'i seçti; müşteri 77694 Kehl'deydi (Almanya'da binlerce Hauptstraße var).
+     */
+    async elsewhere(query: GeocodeQuery): Promise<GeocodeElsewhere> {
+      const lookup = await validate(query);
+      if (lookup.status !== 'ok') return { status: 'unavailable' };
+
+      const v = lookup.validation;
+      // Adaylık için kod ve şehir şart: teklif yapılandırılmış alan yazar, etiket ayrıştırılamaz.
+      if (v.postalCode === null || v.city === null || v.formattedAddress === null) return { status: 'ok', candidates: [] };
+      return {
+        status: 'ok',
+        candidates: [{ label: v.formattedAddress, postalCode: v.postalCode, city: v.city, precision: v.precision, score: scoreOf(v) }],
+      };
+    },
+  };
+}
 
 /**
- * Ülkeye bakan kodlayıcı — bugün yalnız FR.
+ * Ülkeye bakan kodlayıcı — FR her zaman (BAN), DE anahtar varsa (Google).
  *
- * Almanya için sağlayıcı **yok ve uydurulmuyor** (ADR-002 sınır ötesi rotaya izin veriyor, yani bu
- * gerçek bir boşluk): `unsupported_country` döner, nokta `null` kalır, tarama o satırları kuyrukta
- * tüketmez. İkinci kaynak takıldığı gün yalnız BU dosya değişir — çağıran hiç değişmez.
+ * Ülkeyi SORGUDAN okur, çağırandan değil: aynı tarama bir turda iki ülkenin satırını görebiliyor.
+ * Anahtarsız Almanya `unsupported_country` döner: nokta `null` kalır, tarama o satırları kuyrukta
+ * tüketmez, sipariş anındaki doğrulama SUSAR (`checkAddress` künyesi).
  */
 export function geocoder(): Geocoder {
-  return banGeocoder();
+  const ban = banGeocoder();
+  const key = googleMapsApiKey();
+  const google = key === null ? null : googleGeocoder(key);
+  const pick = (country: Country): Geocoder | null => (country === 'FR' ? ban : google);
+
+  return {
+    locate: (query) => pick(query.country)?.locate(query) ?? Promise.resolve({ status: 'unsupported_country' }),
+    elsewhere: (query) => pick(query.country)?.elsewhere(query) ?? Promise.resolve({ status: 'unsupported_country' }),
+  };
 }
 
 /** O ülke için koordinat çözümü açık mı — ekran "Almanya adresleri çözülemiyor" diyebilsin. */
 export function geocoderConfigured(country: string): boolean {
+  if (country === 'FR') return true;
+  return country === 'DE' && googleMapsApiKey() !== null;
+}
+
+/**
+ * Tarama işi bu ülkenin satırlarını KENDİLİĞİNDEN çözsün mü (13.09).
+ *
+ * FR evet: BAN ücretsiz ve koordinat süresiz saklanabilir — bir kez çözülen satır bir daha
+ * sorulmaz. DE HAYIR: Google ücretli (5.000/ay sonrası) ve koordinatı 30 günden uzun saklanamaz;
+ * her Alman adresini ayda bir yeniden çözmek, hiç sipariş vermeyecek adresler için de para
+ * ödemek olurdu. Alman adresi **sipariş anında** çözülür (`checkAddress`) — koordinatın gerçek
+ * ömrü sipariş↔teslimat penceresi kadar (kullanıcı düzeltmesi 02.09) ve o pencere 30 günün içinde.
+ */
+export function geocoderScanAllowed(country: string): boolean {
   return country === 'FR';
 }

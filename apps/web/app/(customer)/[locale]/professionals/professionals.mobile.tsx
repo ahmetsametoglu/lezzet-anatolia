@@ -1,5 +1,6 @@
 import { buttonClass } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
+import { Icon } from '@/components/customer/ui/icons';
 import { ApplicationForm } from './components/application-form';
 import { StatusNote } from './components/status-note';
 import type { ProfessionalsViewProps } from './professionals-types';
@@ -24,7 +25,10 @@ export function ProfessionalsMobile({ t, status, rejection, signedIn, defaults, 
           {/* Mobilde dört değil ÜÇ fayda: tasarım dar ekranda listeyi kısaltıyor ve dördüncüsü
               (WhatsApp) zaten hemen altındaki düğmenin kendisi. */}
           {t.hero.benefits.slice(0, 3).map((benefit) => (
-            <li key={benefit}>✓ {benefit}</li>
+            <li key={benefit} className="flex items-start gap-2">
+              <Icon name="check" size={15} className="mt-0.75 flex-none text-olive-light" />
+              {benefit}
+            </li>
           ))}
         </ul>
         <a href="#application" className={buttonClass({ variant: 'primaryOnDark', fullWidth: true, className: '!rounded-pill' })}>
@@ -44,9 +48,10 @@ export function ProfessionalsMobile({ t, status, rejection, signedIn, defaults, 
           href={whatsappHref}
           target="_blank"
           rel="noopener noreferrer"
-          className="cursor-pointer rounded-pill bg-olive-bg px-4 py-3 text-center font-sans text-body-sm font-bold text-olive transition-opacity hover:opacity-75"
+          className="flex cursor-pointer items-center justify-center gap-2 rounded-pill bg-olive-bg px-4 py-3 text-center font-sans text-body-sm font-bold text-olive transition-opacity hover:opacity-75"
         >
-          💬 {t.aside.whatsapp.replace('{phone}', whatsappNumber)}
+          <Icon name="chat" size={16} />
+          {t.aside.whatsapp.replace('{phone}', whatsappNumber)}
         </a>
 
         <p className="rounded-soft bg-cream-deep px-4 py-3.5 font-sans text-note leading-relaxed text-body">

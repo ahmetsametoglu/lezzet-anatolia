@@ -5,9 +5,9 @@
     "heroBody": "Bayram, kahvaltı ya da kalabalık bir akşam — hazırladığımız paketler tek fiyata gelir, içeriği bellidir. Seçmekle uğraşmadan tam bir sofra.",
     "subtitle": "Tek fiyata kurulmuş sofralar — içeriği belli, seçmekle uğraşmak yok.",
     "promise": {
-      "coldChain": "❄ Soğuk zincir",
-      "shippable": "📦 Kargoya uygun paketler",
-      "onePrice": "🎁 Tek fiyat"
+      "coldChain": "Soğuk zincir",
+      "shippable": "Kargoya uygun paketler",
+      "onePrice": "Tek fiyat"
     },
     "listTitle": "Satıştaki paketler",
     "listNote": "Her paket bütün olarak satılır; içeriği sabittir.",
@@ -15,8 +15,8 @@
     "items": "{n} ürün",
     "weight": "Toplam {weight}",
     "inStock": "● Stokta",
-    "shippable": "📦 Kargoya uygun",
-    "inRouteOnly": "🚚 Yalnız bölge içi",
+    "shippable": "Kargoya uygun",
+    "inRouteOnly": "Yalnız bölge içi",
     "soldOut": "Tükendi — yakında yeniden",
     "cta": "Paketi incele",
     "more": "Daha fazla paket",
@@ -38,9 +38,9 @@
     "heroBody": "Une fête, un petit-déjeuner ou un dîner nombreux — nos coffrets arrivent à prix unique, contenu connu. Une table complète, sans avoir à choisir.",
     "subtitle": "Des tables composées à prix unique — contenu connu, aucun choix à faire.",
     "promise": {
-      "coldChain": "❄ Chaîne du froid",
-      "shippable": "📦 Coffrets expédiables",
-      "onePrice": "🎁 Prix unique"
+      "coldChain": "Chaîne du froid",
+      "shippable": "Coffrets expédiables",
+      "onePrice": "Prix unique"
     },
     "listTitle": "Coffrets en vente",
     "listNote": "Chaque coffret est vendu tel quel ; son contenu est fixe.",
@@ -48,8 +48,8 @@
     "items": "{n} produits",
     "weight": "Total {weight}",
     "inStock": "● En stock",
-    "shippable": "📦 Expédiable",
-    "inRouteOnly": "🚚 Livraison en zone uniquement",
+    "shippable": "Expédiable",
+    "inRouteOnly": "Livraison en zone uniquement",
     "soldOut": "Épuisé — bientôt de retour",
     "cta": "Voir le coffret",
     "more": "Plus de coffrets",
@@ -71,9 +71,9 @@
     "heroBody": "Ob Fest, Frühstück oder ein Abend mit vielen Gästen — unsere Pakete kommen zum Festpreis, der Inhalt steht fest. Ein voller Tisch, ganz ohne Auswählen.",
     "subtitle": "Zusammengestellte Tafeln zum Festpreis — Inhalt bekannt, keine Auswahl nötig.",
     "promise": {
-      "coldChain": "❄ Kühlkette",
-      "shippable": "📦 Versandfähige Pakete",
-      "onePrice": "🎁 Festpreis"
+      "coldChain": "Kühlkette",
+      "shippable": "Versandfähige Pakete",
+      "onePrice": "Festpreis"
     },
     "listTitle": "Pakete im Verkauf",
     "listNote": "Jedes Paket wird als Ganzes verkauft; sein Inhalt ist fest.",
@@ -81,8 +81,8 @@
     "items": "{n} Produkte",
     "weight": "Gesamt {weight}",
     "inStock": "● Auf Lager",
-    "shippable": "📦 Versandfähig",
-    "inRouteOnly": "🚚 Nur im Liefergebiet",
+    "shippable": "Versandfähig",
+    "inRouteOnly": "Nur im Liefergebiet",
     "soldOut": "Ausverkauft — bald wieder",
     "cta": "Paket ansehen",
     "more": "Weitere Pakete",

@@ -25,7 +25,7 @@
       "cta": "Kataloğa göz at"
     },
     "reorderResult": {
-      "added": "{count} kalem sepete eklendi ✓",
+      "added": "{count} kalem sepete eklendi",
       "skipped": "{count} kalem eklenemedi: {names}.",
       "none": "Bu siparişteki ürünlerin hiçbiri şu an satışta değil.",
       "goToCart": "Sepete git",
@@ -59,7 +59,7 @@
       "cta": "Voir le catalogue"
     },
     "reorderResult": {
-      "added": "{count} articles ajoutés au panier ✓",
+      "added": "{count} articles ajoutés au panier",
       "skipped": "{count} articles non ajoutés : {names}.",
       "none": "Aucun produit de cette commande n'est disponible actuellement.",
       "goToCart": "Aller au panier",
@@ -93,7 +93,7 @@
       "cta": "Katalog ansehen"
     },
     "reorderResult": {
-      "added": "{count} Artikel in den Warenkorb gelegt ✓",
+      "added": "{count} Artikel in den Warenkorb gelegt",
       "skipped": "{count} Artikel nicht hinzugefügt: {names}.",
       "none": "Derzeit ist keines der Produkte dieser Bestellung verfügbar.",
       "goToCart": "Zum Warenkorb",

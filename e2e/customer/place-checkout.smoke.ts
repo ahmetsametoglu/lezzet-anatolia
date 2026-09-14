@@ -38,7 +38,7 @@ test.describe('kademe 2 · yer seçimi → sepet → checkout sınırı (ziyaret
     await expect(page.getByRole('button', { name: new RegExp(IN_ZONE_CODE + '|Strasbourg', 'i') }).first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test('yerli ziyaretçi sepetle checkout sayfasına ulaşır; akış kimlik sınırında durur', async ({ page }) => {
+  test('yerli ziyaretçi ödeme sayfasından SEPETE çevrilir; giriş bloğu sepette görünür', async ({ page }) => {
     test.slow();
 
     // Yer seç (üstteki senaryonun kısa tekrarı — testler birbirine yaslanmaz, her biri kendi
@@ -56,11 +56,11 @@ test.describe('kademe 2 · yer seçimi → sepet → checkout sınırı (ziyaret
     await expect(addToCart).toBeEnabled();
     await addToCart.click();
 
-    // Checkout SINIRA dek: sayfa açılır ve KİMLİK ADIMI (misafir OTP — "kod gönder") görünür.
-    // Sınırın kanıtı adımın kendisidir; tutar/özet doğrulaması OTP kapısı inince Parti 3b'nin işi.
+    // Kimlik SEPETTE sorulur (13.09): girişsiz müşteri ödeme sayfasına giremez, sepete çevrilir ve
+    // sepetin özet panelinde giriş bloğu ("kod gönder") durur. Sınırın kanıtı yönlendirme + blok.
     const response = await page.goto('/fr/commande', NAV);
     expect(response?.ok()).toBeTruthy();
-    await expect(page.getByRole('heading', { name: /commande/i }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /envoyer le code/i }).first()).toBeVisible();
+    await expect(page).toHaveURL(/\/fr\/panier/);
+    await expect(page.getByRole('button', { name: /envoyer le code/i }).first()).toBeVisible({ timeout: 15_000 });
   });
 });

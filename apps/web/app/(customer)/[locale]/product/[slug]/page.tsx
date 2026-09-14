@@ -131,10 +131,9 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       device={device}
       locale={locale}
       activeNav="catalog"
-      mobileChrome="detail"
       footer="slim"
-      /* `detail` prop'u YOK (sekizinci tur): bu sayfada başlık çizilmez — görsel tepeye yaslı,
-         geri düğmesi fotoğrafın üstünde (`product.mobile`), sepet çerçevenin `CartFab`ında. */
+      /* Mobil üst barın başlığı ürünün adı; ‹ geçmiş boşsa kataloğa döner (v1 mobil, 13.09). */
+      detail={{ title: product.name, fallback: '/catalog' }}
     >
       {/* Yapısal veri (08.1): arama sonucunda fiyat, stok ve puanın görünmesini sağlar. Puan
           YALNIZ gerçekten varsa yazılıyor — `average` null ise (hiç beyan yok) blok hiç doğmuyor,

@@ -5,6 +5,8 @@ import { resolveLocalizedText } from '@lezzet/types';
 import { buttonClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
 import { summaryCopy } from '@/components/customer/ui/summary-row';
+import { useAccount } from '@/components/customer/account/account-context';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { cartBlockReason, cartPayableCents, shippingGroupFee, type CartView } from '@/lib/cart/cart-types';
@@ -50,6 +52,24 @@ export function checkoutBlockReason(view: CartView, t: Messages, locale: Locale)
     case null:
       return null;
   }
+}
+
+/**
+ * **Ödemeye geçmenin KAPISI** (kullanıcı kararı 13.09): giriş yapılmış ve bir teslimat adresi
+ * seçilmiş olmalı. Sepetin kendi engelleriyle (`checkoutBlockReason`) AYNI biçimde okunur — düğme
+ * pasifleşir, sebebi yazılır — ama sebep sepetin içeriği değil, müşterinin hâli.
+ *
+ * Tek kanca, üç düğme: özet kartı, mobil alt çubuk ve bölünmüş sepetin grup eylemleri. Üçü ayrı
+ * yazsaydı biri kapıyı unutur ve ödeme ekranı sepete geri yollardı — müşteri neden geri geldiğini
+ * anlamazdı. Kapı bir NEZAKET: ödeme sayfası girişsizi zaten sepete çeviriyor, adressizi de
+ * kendi engeliyle durduruyor (`checkoutBlocker` → `address_missing`).
+ */
+export function useCheckoutGate(t: Messages): string | null {
+  const account = useAccount();
+  const { address } = useDeliveryPlace();
+  if (!account) return t.gate.login;
+  if (!address) return t.gate.address;
+  return null;
 }
 
 /**
@@ -111,7 +131,10 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
   // ekranda elle yazılıyordu ve üçünün ayrışması hiçbir hata vermeden düğmelerin bir kısmını
   // açık bırakırdı. Kilit yine de bir NEZAKET: sunucu güvenliği ekranın kilidine dayanmaz,
   // checkout aynı iki koşulu kendisi de kontrol ediyor.
-  const reason = checkoutBlockReason(view, t, locale);
+  // Sepetin engeli önce, kimlik/adres kapısı sonra: tükenen kalem varken "giriş yapın" demek,
+  // müşteriyi giriş yaptıktan sonra ikinci bir duvara çarptırırdı.
+  const gate = useCheckoutGate(t);
+  const reason = checkoutBlockReason(view, t, locale) ?? gate;
   const blocked = reason !== null;
   // Özetin ORTAK sözcükleri (08.20): toplam · KDV notu · indirim ailesi. Sepetin kendi sözlüğünde
   // kopyaları duruyordu ve Almancada checkout'takinden farklıydı ("Gesamt" ≠ "Gesamtsumme").
@@ -217,6 +240,13 @@ export function CartSummary({ view, t, locale, compact = false, grouped = false 
         <div className="rounded-soft border border-honey-line bg-honey-bg px-3.5 py-2.5 font-sans text-note font-semibold text-honey">
           {checkoutBlockReason(view, t, locale)}
         </div>
+      )}
+
+      {/* Kapının cümlesi düğmenin ÜSTÜNDE ve bal tonunda: müşteri hata yapmadı, bir adım eksik —
+          ve o adım hemen üstteki kartta (`CartIdentity`). Sepet engeli varken çizilmez: o
+          hâlde düğmenin altındaki kırmızı satır zaten konuşuyor. */}
+      {!compact && !grouped && gate !== null && checkoutBlockReason(view, t, locale) === null && (
+        <div className="rounded-soft border border-honey-line bg-honey-bg px-3.5 py-2.5 font-sans text-note font-semibold text-honey">{gate}</div>
       )}
 
       {!compact && !grouped && (

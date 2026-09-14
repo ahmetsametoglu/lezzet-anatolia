@@ -20,6 +20,8 @@ export {
   customerColors,
   customerText,
   customerRadius,
+  customerMotion,
+  customerShadow,
 } from './customer';
 export {
   customerAppOverrides,

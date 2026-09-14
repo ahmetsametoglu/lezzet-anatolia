@@ -294,8 +294,18 @@ export function CartProvider({ locale, children }: CartProviderProps) {
      */
     const code = coupon ?? readCoupon();
     if (code !== coupon) setCoupon(code);
-    setEntries(guest);
-    setSavedEntries(guestSaved);
+    /**
+     * Niyet tarayıcı deposundan YALNIZ sepet tarayıcıda yaşarken kurulur. Sunucudaki sepette depo
+     * bilerek boştur (aşağıda boşaltılıyor); ondan kurmak niyeti okuma dönene dek `[]` yapıyordu ve
+     * görünüm niyetten süzüldüğü için (`viewWithEntries`) bütün satırlar düşüyordu: yer ya da kupon
+     * değişince koşan her okumada sepet sayfası bir an "sepetiniz boş"a dönüp yeniden kuruluyor,
+     * içindeki durum da gidiyordu — sepette açılan adres penceresi adres kaydedilemeden kapanıyordu
+     * (yaşandı 14.09). Okuma dönünce niyet sunucunun onayladığıyla değişir.
+     */
+    if (!serverCart.current) {
+      setEntries(guest);
+      setSavedEntries(guestSaved);
+    }
     setFailed(false);
     // Yeniden okuma, düşen yazmanın haberini de kapatır: şerit "tekrar dene" diyor ve denenen bu.
     setWriteFailed(false);

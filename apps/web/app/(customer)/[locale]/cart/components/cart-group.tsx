@@ -3,11 +3,12 @@
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { cartKey, shippingGroupFee, type CartLine, type CartView } from '@/lib/cart/cart-types';
 import { CartLineRow } from './cart-line';
-import { checkoutBlockReason } from './cart-summary';
+import { checkoutBlockReason, useCheckoutGate } from './cart-summary';
 import type { Messages } from '../cart-types';
 
 /**
@@ -60,7 +61,8 @@ export function CartGroup({ kind, lines, view, t, locale, compact = false }: Car
       {/* Başlık + saç teli çizgi: grubu komşusundan ayırır ama bir kutu kurmaz — kalemler kendi
           kartlarında kalsın, ikinci bir çerçeve sepeti kutu içinde kutu yapardı. */}
       <div className="flex items-center gap-3">
-        <span className={['font-sans font-bold', compact ? 'text-micro' : 'text-note', shipping ? 'text-muted' : 'text-olive-dark'].join(' ')}>
+        <span className={['inline-flex items-center gap-1.5 font-sans font-bold', compact ? 'text-micro' : 'text-note', shipping ? 'text-muted' : 'text-olive-dark'].join(' ')}>
+          <Icon name={shipping ? 'box' : 'truck'} size={compact ? 13 : 15} />
           {title}
         </span>
         <span className="h-px flex-1 bg-sand-200" />
@@ -94,7 +96,9 @@ interface RouteActionProps {
  * checkout'ta yeniden kontrol ediliyor, buradaki kilit müşteriyi boşuna bir adım ilerletmemek için.
  */
 function RouteAction({ view, t, locale, compact, totalCents }: RouteActionProps) {
-  const reason = checkoutBlockReason(view, t, locale);
+  // Kimlik/adres kapısı sepetin engelinden SONRA — özet kartıyla aynı sıra, aynı kanca (13.09).
+  const gate = useCheckoutGate(t);
+  const reason = checkoutBlockReason(view, t, locale) ?? gate;
   const blocked = reason !== null;
 
   return (
@@ -152,7 +156,11 @@ interface ShippingActionProps {
  */
 function ShippingAction({ view, t, locale, compact, itemsCents, totalCents, feeCents, remainingCents }: ShippingActionProps) {
   const g = t.group;
-  const blocked = view.hasBlocked;
+  // Kargo siparişi de kimlik ve adres ister: kapı burada da geçerli (13.09). Tükenen kalem
+  // sepetin tamamını durdurur, kapı ondan sonra okunur.
+  const gate = useCheckoutGate(t);
+  const reason = view.hasBlocked ? t.checkoutBlocked : gate;
+  const blocked = reason !== null;
 
   const breakdown = [
     feeCents > 0
@@ -185,7 +193,7 @@ function ShippingAction({ view, t, locale, compact, itemsCents, totalCents, feeC
           <button
             type="button"
             disabled
-            title={t.checkoutBlocked}
+            title={reason ?? undefined}
             className={buttonClass({ variant: 'outlineOlive', size: 'md', compact, fullWidth: compact, className: 'disabled:cursor-not-allowed' })}
           >
             {compact ? g.shippingCtaShort : g.shippingCta}

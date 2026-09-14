@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { errorText } from '@/lib/customer-error-text';
 import { submitReviewAction } from '../actions';
 import type { Messages } from '../product-types';
@@ -55,11 +56,11 @@ export function ReviewForm({ t, productId, onDone, onCancel }: ReviewFormProps) 
               aria-label={`${n} / 5`}
               aria-pressed={rating !== null && n <= rating}
               className={[
-                'cursor-pointer text-icon-sm leading-none transition-colors',
+                'cursor-pointer transition-colors',
                 rating !== null && n <= rating ? 'text-honey' : 'text-sand-400 hover:text-honey',
               ].join(' ')}
             >
-              ★
+              <Icon name="star" size={20} />
             </button>
           ))}
         </div>

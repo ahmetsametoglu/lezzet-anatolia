@@ -54,6 +54,10 @@ export type GeocodeOutcome =
  * pinleyerek sorar (istenen davranış — başka kodda çıkan sonuç onun aradığı cevap değil), bu ise
  * pini KALDIRIR. Aynı çağrıya sıkıştırılsaydı her adres için iki tur atılırdı; oysa kapı istenen
  * kodda bulunduğunda ikinci soruya hiç gerek yok (bugünkü veride yirmi adresin biri).
+ *
+ * **Google'da (13.09) ikinci tur YOK:** doğrulama yanlış kodu bağlamdan kendisi düzeltir, yani bu
+ * sorunun cevabı `locate`in cevabının içindedir; adaptör aynı cevabı ikinci kez okur
+ * (`geocode-provider` künyesi). Pini kaldırmak orada körlüğü açmıyor — bağlamı atıp kör ediyor.
  */
 export type GeocodeElsewhere =
   | { status: 'ok'; candidates: AddressCandidate[] }
@@ -64,7 +68,8 @@ export type GeocodeElsewhere =
 export interface Geocoder {
   locate(query: GeocodeQuery): Promise<GeocodeOutcome>;
   /**
-   * Aynı adres satırı, posta kodu PİNLENMEDEN. Yalnız `locate` kapıyı doğrulayamadığında çağrılır.
+   * Aynı adres, posta kodu PİNLENMEDEN (BAN) ya da servisin düzelttiği hâliyle (Google). Yalnız
+   * `locate` kapıyı doğrulayamadığında çağrılır.
    *
    * Kısıtın kendisi doğru ama aynı zamanda bir KÖRLÜK (`geocode-provider` künyesi, ölçüldü 01.09):
    * kodu pinlediğimiz sürece adresin başka kodda olduğunu öğrenmenin yolu yok.

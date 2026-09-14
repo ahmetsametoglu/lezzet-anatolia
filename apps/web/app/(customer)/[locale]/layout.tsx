@@ -10,10 +10,13 @@ import { routing } from '@/i18n/routing';
 import { RootShell } from '@/components/root-shell';
 import { CartProvider } from '@/components/customer/cart/cart-context';
 import { PlaceProvider } from '@/components/customer/delivery/place-context';
+import { ToastProvider } from '@/components/customer/ui/toast';
 import { AccountProvider } from '@/components/customer/account/account-context';
 import { VisitPing } from '@/components/customer/account/visit-ping';
 import { getDeliveryZones } from '@/lib/delivery/read';
+import { readPlaceSnapshot } from '@/lib/delivery/read-place';
 import { currentCustomer } from '@/lib/guard';
+import { detectDevice } from '@/lib/device';
 import { TITLE_TEMPLATE } from '@/lib/seo/title';
 import layoutMessages from './layout-messages.json';
 
@@ -82,11 +85,13 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
   // Teslimat bölgeleri BURADA, sunucuda okunur ve bağlama başlangıç verisi olarak iner: panel
   // açıldığında liste zaten elinde olur, istemciden ikinci bir tur atılmaz. Okuma önbellekli ve
   // etiketli (`lib/delivery/read.ts`) — her sayfa render'ında sorgu gitmez.
-  const zones = await getDeliveryZones();
   // Oturum künyesi de KÖKTE okunur ve bağlama iner: başlıktaki hesap girişi bir istemci bileşeni
   // (`SiteFrame` hata sayfasında da kullanılıyor, orası `'use client'`) ve kendi başına sunucuya
   // soramaz. Her sayfada ayrı bir tur atmak yerine burada tek sorgu.
-  const account = await currentCustomer();
+  // Yerin İLK KARESİ de burada (13.09): adres ya da çerezden çözülmüş hâliyle iner; istemci artık
+  // çerezi okuyup yeniden çözmüyor (`PlaceProvider` künyesi).
+  // Cihaz ipucu bildirimin yeri için: mobil webde hap sekme çubuğunun üstünde durur (`ToastProvider`).
+  const [zones, account, placeSnapshot, device] = await Promise.all([getDeliveryZones(), currentCustomer(), readPlaceSnapshot(), detectDevice()]);
 
   return (
     <RootShell lang={locale} surface="customer" className={`${lora.variable} ${karla.variable}`}>
@@ -104,9 +109,12 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
               boşuna sunucu turu atılmaz. Yazma burada DEĞİL istemci efektinde olur — render yan
               etkisizdir ve buraya bir defter yazımı koymak her prefetch'te tetiklenirdi. */}
           {account && <VisitPing />}
-          <PlaceProvider zones={zones}>
-            <CartProvider locale={locale}>{children}</CartProvider>
-          </PlaceProvider>
+          {/* Bildirim de kökte (v1 `bildir`): kim çıkarırsa çıkarsın tek hap, aynı yerde. */}
+          <ToastProvider device={device}>
+            <PlaceProvider zones={zones} initialPlace={placeSnapshot.place} initialAddress={placeSnapshot.address}>
+              <CartProvider locale={locale}>{children}</CartProvider>
+            </PlaceProvider>
+          </ToastProvider>
         </AccountProvider>
       </NextIntlClientProvider>
     </RootShell>

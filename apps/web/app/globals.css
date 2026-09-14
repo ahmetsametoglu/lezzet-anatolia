@@ -27,6 +27,7 @@
      TEK MÜREKKEP kararı (envanter §0.5): #3a4147 · #3a3f35 · #333a3e · #4a5257 ·
      #3c4448 · #454d54 → hepsi `ink`. Ayrı bir `slate` token'ı YOK. */
   --color-ink: #343b41; /* başlık, koyu blok zemini, birincil metin */
+  --color-ink-hover: #2b3238; /* koyu hapın üzerine gelinmiş hâli (v1 sepet hapı). Ad native'in ink-deep'inden ayrı — o başka ton, başka rol */
   --color-body: #6d7261; /* gövde açıklaması, kart alt satırı */
   --color-muted: #8a8270; /* etiket, yardımcı satır, placeholder */
   --color-card: #ffffff; /* kart, dialog, girdi zemini */
@@ -42,6 +43,7 @@
   --color-sand-50: #f3efe2; /* ara zemin, gömülü panel, hover */
   --color-sand-100: #f0e9d6; /* vurgulu bölüm, iç ayraç */
   --color-sand-200: #ece5d2; /* standart çerçeve, kart kenarı */
+  --color-sand-275: #e6dfcd; /* başlık ve yer paneli alt çizgisi (v1). sand-250 native'in kart zemini (#ece3c8) — ad çakışmasın */
   --color-sand-300: #e0d8c2; /* girdi kenarı, 2. çerçeve */
   --color-sand-400: #d8cfb6; /* belirgin çerçeve */
   --color-sand-500: #cdc4a8; /* kesikli çerçeve, boş durum */
@@ -54,6 +56,7 @@
   --color-olive-dark: #4a6121; /* kutu başlığı, hover, basılı */
   --color-olive-bg: #eef2e2; /* yeşil bant, olumlu rozet */
   --color-olive-line: #d7e3bd; /* kutu ve seçili kart çerçevesi */
+  --color-olive-edge: #cddbb0; /* yer hapının çerçevesi (v1 başlık) */
   --color-olive-light: #a9c46b; /* koyu blok üstünde vurgu, ikon */
 
   /* Terracotta: fırsat/indirim — ve (bugünkü karar) hata/iptal. Ayrı koyu katman
@@ -170,6 +173,16 @@
   --radius-card: 18px;
   --radius-soft: 14px;
   --radius-pill: 26px;
+
+  /* ── v1 hareketleri ve yüzen yüzey gölgeleri (13.09) — kareleri (`@keyframes`) bu bloğun DIŞINDA,
+     `@theme` kapanışının hemen ardında: parite testi bloğu iç içe parantezsiz okur ── */
+  --animate-fade-in: fade-in 0.2s ease; /* yer paneli açılışı */
+  --animate-pop: pop 0.24s ease; /* bildirim hapı */
+  --animate-sheet-in: sheet-in 0.22s ease; /* mobil çekmecenin alttan girişi (Mobil v1 `sheetIn`) */
+  --shadow-toast: 0 10px 30px rgb(47 53 58 / 0.3); /* bildirim hapının gölgesi */
+  --shadow-menu: 0 14px 34px rgb(58 65 71 / 0.2); /* açılır menü (v1 hesap menüsü) */
+  --shadow-dialog: 0 24px 64px rgb(47 53 58 / 0.36); /* ortalanmış pencere (v1 masaüstü adres penceresi) */
+  --shadow-sheet: 0 -12px 40px rgb(47 53 58 / 0.28); /* mobil çekmecenin gölgesi (Mobil v1) */
 
   /* ─────────────────────────────────────────────────────────────────────────
      Operasyon evreni — "Veri Masası" token'ları (admin + depo + kurye).
@@ -361,6 +374,40 @@
   --radius-ops-dialog: 14px;
   --radius-ops-chip: 14px;
   --radius-ops-btn: 8px;
+}
+
+/* v1 hareketlerinin kareleri (13.09) — `--animate-*` token'ları bunlara bağlı. `@theme`in DIŞINDA
+   durur: parite testi (`packages/design-tokens/src/parity.test.ts`) bloğu iç içe parantezsiz okur;
+   kareler içeride iken okuma ilk `}`de bitiyor, ardındaki bütün token'lar "yok" görünüyordu (13.09
+   akşamı dört test kırmızı). Tailwind v4 üst düzey `@keyframes`i olduğu gibi basar. */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
 }
 
 /* Sayfa varsayılanı — müşteri evreni zemini + gövde fontu */

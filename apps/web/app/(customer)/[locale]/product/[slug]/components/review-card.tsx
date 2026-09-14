@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { TranslationNote } from '@/components/customer/ui/translation-note';
+import { Icon } from '@/components/customer/ui/icons';
 import type { PublishedReview } from '@/lib/feedback/product-feedback';
 import { formatShortDate } from '@/lib/storefront/format';
 
@@ -100,9 +101,10 @@ export function ReviewCard({ review, locale, verifiedLabel, translation, boxed =
 export function Stars({ value, small = false }: { value: number; small?: boolean }) {
   const full = Math.round(value);
   return (
-    <span aria-label={`${value} / 5`} className={['tracking-[2px] text-honey', small ? 'text-note' : 'text-body'].join(' ')}>
-      {'★'.repeat(full)}
-      <span className="text-sand-400">{'★'.repeat(5 - full)}</span>
+    <span aria-label={`${value} / 5`} className="inline-flex items-center gap-0.5">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <Icon key={i} name="star" size={small ? 13 : 16} className={i < full ? 'text-honey' : 'text-sand-400'} />
+      ))}
     </span>
   );
 }

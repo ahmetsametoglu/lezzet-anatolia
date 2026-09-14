@@ -2,6 +2,7 @@
 
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
+import { Icon, type IconName } from '@/components/customer/ui/icons';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CartLineChange } from '@/lib/cart/place-change';
@@ -53,6 +54,9 @@ function lineText(change: CartLineChange, t: Messages, locale: Locale): string {
   }
 }
 
+/** Değişimin simgesi — yol değişimi teslim şeklini, adet sınırı dikkati çizer (14.09: emoji yerine). */
+const KIND_ICON: Partial<Record<CartLineChange['kind'], IconName>> = { to_shipping: 'box', to_route: 'truck', reduced: 'warning' };
+
 export function PlaceChangeCard({ t, locale, compact = false }: PlaceChangeCardProps) {
   const { placeChange, dismissPlaceChange } = useCart();
   if (!placeChange || placeChange.length === 0) return null;
@@ -69,13 +73,17 @@ export function PlaceChangeCard({ t, locale, compact = false }: PlaceChangeCardP
       </span>
 
       <ul className="flex flex-col gap-1.5">
-        {placeChange.map((change, index) => (
-          // Anahtar sırayla kurulur: aynı ürün adı iki kez geçebilir (aynı varyantın iki partisi)
-          // ve liste zaten tek seferlik bir anlık görüntü — yeniden sıralanmıyor.
-          <li key={`${change.kind}:${index}`} className="font-sans text-note leading-relaxed text-body">
-            {lineText(change, t, locale)}
-          </li>
-        ))}
+        {placeChange.map((change, index) => {
+          const icon = KIND_ICON[change.kind];
+          return (
+            // Anahtar sırayla kurulur: aynı ürün adı iki kez geçebilir (aynı varyantın iki partisi)
+            // ve liste zaten tek seferlik bir anlık görüntü — yeniden sıralanmıyor.
+            <li key={`${change.kind}:${index}`} className="flex items-start gap-2 font-sans text-note leading-relaxed text-body">
+              {icon && <Icon name={icon} size={14} className="mt-0.75 flex-none text-muted" />}
+              <span>{lineText(change, t, locale)}</span>
+            </li>
+          );
+        })}
       </ul>
 
       <span className="font-sans text-micro leading-relaxed text-muted">{t.placeChange.note}</span>

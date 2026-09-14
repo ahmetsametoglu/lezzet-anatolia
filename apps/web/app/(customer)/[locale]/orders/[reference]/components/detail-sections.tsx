@@ -3,6 +3,7 @@
 import type { OrderTimelineStep } from '@lezzet/domain-core';
 import { formatDeliveryDate, formatOrderDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { statusPillClass } from '@/components/customer/ui/badge';
 import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
@@ -90,8 +91,8 @@ export function TimelineCard({ t, locale, order }: Pick<DetailViewProps, 't' | '
 function Bead({ state }: { state: OrderTimelineStep['state'] }) {
   if (state === 'pending') return <span className="size-[22px] flex-none rounded-full border-2 border-sand-300" />;
   return (
-    <span className="grid size-[22px] flex-none place-items-center rounded-full bg-olive font-sans text-micro font-bold text-card">
-      {state === 'done' ? '✓' : '●'}
+    <span className="grid size-[22px] flex-none place-items-center rounded-full bg-olive text-card">
+      {state === 'done' ? <Icon name="check" size={13} strokeWidth={2.4} /> : <span className="size-2 rounded-full bg-card" />}
     </span>
   );
 }
@@ -309,6 +310,7 @@ function TrackingButton({ t, shipment }: { t: DetailViewProps['t']; shipment: Cu
       className={buttonClass({ variant: 'primary', compact: true, fullWidth: true, className: 'mt-3' })}
     >
       {t.trackingCta}
+      <Icon name="share" size={14} />
     </a>
   );
 }
@@ -484,7 +486,11 @@ export function TimelineStrip({ t, order }: Pick<DetailViewProps, 't' | 'order'>
             step.state === 'current' ? 'font-bold' : '',
           ].join(' ')}
         >
-          <span aria-hidden="true">{step.state === 'done' ? '✓' : step.state === 'current' ? '●' : '○'}</span>
+          {step.state === 'done' ? (
+            <Icon name="check" size={13} strokeWidth={2.4} />
+          ) : (
+            <span aria-hidden="true" className={['size-2.5 rounded-full', step.state === 'current' ? 'bg-current' : 'border-[1.5px] border-current'].join(' ')} />
+          )}
           {t.milestone[step.milestone]}
         </span>
       ))}

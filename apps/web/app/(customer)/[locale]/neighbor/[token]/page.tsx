@@ -92,7 +92,7 @@ function NeighborFace({ device, locale, token, welcome, t }: NeighborFaceProps) 
       return (
         <MessageScreen
           device={device}
-          emoji="🚚"
+          icon="truck"
           eyebrow={t.ok.eyebrow}
           // İsimsiz davet de düzgün bir cümle kurar ("Komşunuz sizi … çağırıyor"): WhatsApp'tan
           // açılmış bir kayıtta yalnız telefon olabilir ve boş yer tutucu cümleyi bozardı.
@@ -119,7 +119,7 @@ function NeighborFace({ device, locale, token, welcome, t }: NeighborFaceProps) 
       return (
         <MessageScreen
           device={device}
-          emoji="🔗"
+          icon="share"
           eyebrow={t.self.eyebrow}
           title={t.self.title}
           description={t.self.description}
@@ -134,7 +134,7 @@ function NeighborFace({ device, locale, token, welcome, t }: NeighborFaceProps) 
       return (
         <MessageScreen
           device={device}
-          emoji="🕔"
+          icon="timer"
           eyebrow={t.runClosed.eyebrow}
           title={t.runClosed.title.replace('{date}', formatDeliveryDate(welcome.deliveryDate, locale))}
           description={t.runClosed.description}
@@ -145,7 +145,7 @@ function NeighborFace({ device, locale, token, welcome, t }: NeighborFaceProps) 
       return (
         <MessageScreen
           device={device}
-          emoji="👥"
+          icon="user"
           eyebrow={t.full.eyebrow}
           title={t.full.title}
           description={t.full.description.replace('{date}', formatDeliveryDate(welcome.deliveryDate, locale))}
@@ -156,7 +156,7 @@ function NeighborFace({ device, locale, token, welcome, t }: NeighborFaceProps) 
       return (
         <MessageScreen
           device={device}
-          emoji="🧭"
+          icon="search"
           eyebrow={t.unknown.eyebrow}
           title={t.unknown.title}
           description={t.unknown.description}

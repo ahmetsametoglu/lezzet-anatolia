@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { useRouter } from '@/i18n/navigation';
 import { reorderAction } from '../actions';
@@ -54,6 +55,8 @@ export function ReorderButton({ locale, orderId, fullWidth }: ReorderButtonProps
 
   return (
     <Button variant="outlineOlive" size="sm" fullWidth={fullWidth} disabled={busy} onClick={onClick} className={fullWidth ? '' : 'flex-none'}>
+      {/* v1: "Tekrar sipariş"in önünde `refresh` ikonu (14.09: sözlükteki ↻ yerine). */}
+      {!busy && <Icon name="refresh" size={14} />}
       {busy ? t.reordering : t.reorder}
     </Button>
   );

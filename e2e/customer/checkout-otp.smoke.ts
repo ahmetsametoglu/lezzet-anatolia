@@ -30,8 +30,8 @@ test.afterAll(async () => {
   await fixture?.cleanup();
 });
 
-test.describe('kademe 2 · misafir OTP doğrulaması (checkout kimlik adımı)', () => {
-  test('misafir e-postasını doğrular ve sipariş akışı kimlik sınırını GEÇER', async ({ page }) => {
+test.describe('kademe 2 · misafir OTP doğrulaması (sepetteki kimlik bloğu)', () => {
+  test('misafir e-postasını sepette doğrular ve sipariş akışı kimlik sınırını GEÇER', async ({ page }) => {
     test.slow();
 
     // Yer + ürün + sepet (Parti 3 yolculuğunun kısa hâli — checkout sepetsiz açılmaz).
@@ -53,8 +53,9 @@ test.describe('kademe 2 · misafir OTP doğrulaması (checkout kimlik adımı)',
       await expect(stepper).toBeVisible({ timeout: 2_500 });
     }).toPass({ timeout: 30_000 });
 
-    // Kimlik adımı: damgalı e-posta → kod gönder (Resend'e gitmez, kod sabit).
-    await page.goto('/fr/commande', NAV);
+    // Kimlik SEPETTE (13.09): özet panelindeki giriş bloğu — damgalı e-posta → kod gönder
+    // (Resend'e gitmez, kod sabit). Ödeme sayfası girişsizi zaten sepete çeviriyor.
+    await page.goto('/fr/panier', NAV);
     const emailBox = page.getByRole('textbox', { name: /e-mail|adresse e-mail/i }).first();
     await expect(emailBox).toBeVisible({ timeout: 15_000 });
     // Giriş TEKRARLI (hidrasyon yarışı — mobilde ölçüldü): erken fill state'e işlenmeyebiliyor,
@@ -76,13 +77,12 @@ test.describe('kademe 2 · misafir OTP doğrulaması (checkout kimlik adımı)',
     const confirm = page.getByRole('button', { name: /vérif|valid|confirm/i }).first();
     if (await confirm.isVisible().catch(() => false)) await confirm.click();
 
-    // SINIRIN GEÇİLDİĞİNİN KANITI: kilitli adımlar açılmaya başlar — "S'ouvre après la
-    // vérification" üç adımda birden yazıyordu (adres · gün · ödeme), doğrulamayla azalır;
-    // ve adres bölümü artık salt-başlık değil (içinde en az bir girdi/aksiyon belirir).
-    await expect(page.getByText(/S'ouvre après la vérification/)).not.toHaveCount(3, { timeout: 25_000 });
+    // SINIRIN GEÇİLDİĞİNİN KANITI: giriş bloğunun yerini ADRES bloğu alır — yeni müşterinin kaydı
+    // yok, blok "adres ekle" der. Sayfa tazelenir (oturum çereze düştü, layout künyeyi indirdi).
+    await expect(page.getByRole('button', { name: /ajouter une adresse/i }).first()).toBeVisible({ timeout: 25_000 });
     await expect(page.getByText(/Adresse de livraison/).first()).toBeVisible();
 
-    // Burada DURULUR: adres/teslim/ödeme ve taslak sipariş sonraki partinin işi — bu senaryonun
+    // Burada DURULUR: adres/teslim/ödeme ve taslak sipariş kardeş dumanın işi — bu senaryonun
     // iddiası kimlik kapısının GERÇEK akışla (sabit kod, gerçek hash/trigger) aşılabildiğidir.
   });
 });

@@ -4,12 +4,10 @@ import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from
 import { BackButton } from './back-button';
 
 /**
- * Hamburgersiz mobil sayfaların ORTAK başlığı (kullanıcı kararı 20.08, dördüncü→yedinci tur):
- * `‹` ikon → (eyebrow) → büyük serif başlık. Önce sepet+checkout için doğdu (*"birden fazla çeşit
- * header yapısı olmaz"*); yedinci turda kapsam BÜTÜN hamburgersiz sayfalara genişledi — detay
- * (ürün/paket/tarif) ve hesap alanı da aynı yapıyı kullanır. Üç ayrı geri düğmesi biçimi, tek
- * sayfada logo, tek katmanda yapışkanlık kalmıştı; artık tek dil. Sayfa kendi yapısını kurmaz,
- * bunu çağırır — huni sayfaları doğrudan, detay/hesap `SiteFrame` üzerinden.
+ * Huni sayfalarının (sepet · checkout) mobil başlığı (kullanıcı kararı 20.08): `‹` ikon →
+ * (eyebrow) → büyük serif başlık. Yedinci turda detay ve hesap alanı da bunu kullanıyordu; Mobil v1
+ * (13.09) onları çerçevenin üst barına taşıdı (`site-frame.mobile.tsx`). Sepet ve checkout kendi v1
+ * turlarında aynı yere geçecek.
  *
  * ── YAPIŞKAN KİMLİK (beşinci tur) ───────────────────────────────────────────
  * *"Sticky olan kısım sayfanın ne sayfası olduğunu anlatan kısım olmalı."* iOS'un büyük-başlık
@@ -18,11 +16,6 @@ import { BackButton } from './back-button';
  * kuralının ölçütü), ama adı ancak büyük başlık görünmezken taşır: ikisi aynı anda görünse aynı
  * kelime ekranda iki kez dururdu. Gözlemci `IntersectionObserver` — kaydırma dinleyicisi değil:
  * her karede koşmaz, yalnız eşik geçişinde tetiklenir.
- *
- * Ürün/paket detayı bu bileşeni KULLANMAZ (sekizinci tur, 20.08): orada hiç başlık yok — görsel
- * tepeye yaslı, geri düğmesi fotoğrafın üstünde (`BackButton photo`), sepet sağ alttaki `CartFab`.
- * Yedinci turun `watchId` (içerik h1'ini gözleme) yeteneği bu kararla söküldü — tek kullanıcısı
- * o iki sayfaydı.
  *
  * Checkout'un çip şeridi (altıncı tur) barın ALTINA yapışır: kendi başına ikinci bir kimlik
  * katmanı değil, barın uzantısıdır — `top` değeri BAR_HEIGHT'tır ve orada yinelenir

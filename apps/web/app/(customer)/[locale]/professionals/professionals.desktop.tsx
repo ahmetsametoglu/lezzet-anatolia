@@ -2,6 +2,7 @@ import { RATIO_BAND } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
+import { Icon } from '@/components/customer/ui/icons';
 import { ApplicationForm } from './components/application-form';
 import { StatusNote } from './components/status-note';
 import type { ProfessionalsViewProps } from './professionals-types';
@@ -23,7 +24,10 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
           <h1 className="font-serif text-h1-sm leading-tight">{t.hero.title}</h1>
           <ul className="flex flex-col gap-2.5 font-sans text-body leading-relaxed text-on-image-soft">
             {t.hero.benefits.map((benefit) => (
-              <li key={benefit}>✓ {benefit}</li>
+              <li key={benefit} className="flex items-start gap-2">
+                <Icon name="check" size={16} className="mt-1 flex-none text-olive-light" />
+                {benefit}
+              </li>
             ))}
           </ul>
           <div className="flex items-center gap-3.5">
@@ -34,9 +38,10 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="cursor-pointer font-sans text-body-sm font-bold text-olive-light transition-opacity hover:opacity-75"
+              className="inline-flex cursor-pointer items-center gap-1.5 font-sans text-body-sm font-bold text-olive-light transition-opacity hover:opacity-75"
             >
-              💬 {t.hero.whatsapp}
+              <Icon name="chat" size={16} />
+              {t.hero.whatsapp}
             </a>
           </div>
         </div>
@@ -83,9 +88,10 @@ export function ProfessionalsDesktop({ t, status, rejection, signedIn, defaults,
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="cursor-pointer rounded-pill bg-olive-bg px-4 py-3 text-center font-sans text-body-sm font-bold text-olive transition-opacity hover:opacity-75"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-pill bg-olive-bg px-4 py-3 text-center font-sans text-body-sm font-bold text-olive transition-opacity hover:opacity-75"
             >
-              💬 {t.aside.whatsapp.replace('{phone}', whatsappNumber)}
+              <Icon name="chat" size={16} />
+              {t.aside.whatsapp.replace('{phone}', whatsappNumber)}
             </a>
           </Card>
           {/* Fiyat sözü: toptan liste onaysız GÖRÜNMEZ ve bu cümle tam da onu söylüyor — tasarımın

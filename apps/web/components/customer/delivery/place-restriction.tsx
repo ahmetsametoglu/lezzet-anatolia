@@ -8,6 +8,7 @@ import { useCart } from '@/components/customer/cart/cart-context';
 import { cartKey, type CartLine, type CartRef } from '@/lib/cart/cart-types';
 import { formatPrice } from '@/lib/storefront/format';
 import type { DeliveryPlace } from '@/lib/delivery/place-types';
+import { AddressPickerDialog } from './address-picker';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
 import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
@@ -52,9 +53,9 @@ interface PlaceRestrictionProps {
    */
   place?: DeliveryPlace | null;
   /**
-   * "Yeri değiştir" çıkışının davranışı. Verilmezse posta kodu paneli açılır (sepetin hâli).
-   * Checkout'ta yer bir kodla değil ADRESLE değişir — orada bu çıkış adres adımına götürür,
-   * yoksa müşteri kodu değiştirir ama seçili adresi olduğu yerde kalırdı.
+   * "Yeri değiştir" çıkışının davranışı. Verilmezse sitenin kendi seçicisi açılır: adresli müşteride
+   * ADRES seçici, ötekilerde posta kodu paneli (13.09 — yer o müşteride kodla değil adresle değişir).
+   * Ödeme ekranı yeri DEĞİŞTİRMEZ; orada bu çıkış sepete götürür.
    */
   onChangePlace?: () => void;
 }
@@ -100,7 +101,7 @@ async function recordVariantNotices(lines: CartLine[], email: string): Promise<C
 
 export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCents, compact = false, place: override, onChangePlace }: PlaceRestrictionProps) {
   const t = messages[locale];
-  const { place: chipPlace } = useDeliveryPlace();
+  const { place: chipPlace, address } = useDeliveryPlace();
   const { saveForLater } = useCart();
   const [placeOpen, setPlaceOpen] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
@@ -218,7 +219,12 @@ export function PlaceRestriction({ locale, lines, minBasketCents, freeShippingCe
         )}
       </div>
 
-      {placeOpen && <PlaceDialog locale={locale} onClose={() => setPlaceOpen(false)} />}
+      {placeOpen &&
+        (address ? (
+          <AddressPickerDialog locale={locale} compact={compact} onClose={() => setPlaceOpen(false)} />
+        ) : (
+          <PlaceDialog locale={locale} onClose={() => setPlaceOpen(false)} />
+        ))}
       {noticeOpen && (
         <NoticeDialog
           locale={locale}

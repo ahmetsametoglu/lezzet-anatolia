@@ -33,7 +33,10 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 // 15.08 (2): +1 `ops-surface-sunken` — 10+ kullanımı olan token tanımsızdı, envantere alındı.
 // 18.08: +4 açık / +2 karanlık (`ops-band*`) — panel şeridi kendi ailesini aldı; koyu blokta
 //        yalnız zemin ve çizgi var, mürekkep/ikincil metin açık temadaki değerini koruyor.
-const EXPECTED_LIGHT_COUNT = 167; // @theme bloğu, fontlar hariç (109 renk + 51 yazı + 7 yarıçap) — +2: messenger/instagram marka (15.15)
+// 14.09: +10 — web v1 (13.09): 3 renk (`ink-hover`, `sand-275`, `olive-edge`), 3 hareket
+//        (`animate-*`), 4 gölge (`shadow-*`). İki renk adı native'in `ink-deep`/`sand-250`inden
+//        bilerek ayrı: aynı ad kompozisyonda uygulamanın başka tonuyla ezilirdi (`customer-app.ts`).
+const EXPECTED_LIGHT_COUNT = 177; // @theme bloğu, fontlar hariç (112 renk + 51 yazı + 7 yarıçap + 3 hareket + 4 gölge) — +2: messenger/instagram marka (15.15)
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));
@@ -56,7 +59,11 @@ function parseCustomProperties(blockBody: string): Record<string, string> {
   return out;
 }
 
-/** `@theme { … }` ve karanlık-mod bloklarını ayıklar. Bloklar iç içe seçici içermez → `[^}]` yeter. */
+/**
+ * `@theme { … }` ve karanlık-mod bloklarını ayıklar. Bloklar iç içe seçici içermez → `[^}]` yeter.
+ * Bu yüzden `@keyframes` `@theme`in içine YAZILMAZ (globals.css'te kareler üst düzeyde): içeride
+ * iken okuma ilk `}`de bitiyor, ardındaki bütün token'lar "yok" görünüyordu (13.09).
+ */
 function readGlobalsCss(): { light: Record<string, string>; dark: Record<string, string> } {
   const css = stripComments(readFileSync(cssPath, 'utf8'));
 

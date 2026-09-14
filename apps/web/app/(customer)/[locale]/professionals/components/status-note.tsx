@@ -1,5 +1,6 @@
 import type { B2bApplicationStatus } from '@lezzet/domain-core';
 import { TranslationNote } from '@/components/customer/ui/translation-note';
+import { Icon, type IconName } from '@/components/customer/ui/icons';
 import type { Messages } from '../professionals-types';
 
 /**
@@ -56,11 +57,12 @@ const TONE: Record<Exclude<B2bApplicationStatus, 'none'>, string> = {
   rejected: 'bg-closed-bg text-closed',
 };
 
-const MARK: Record<Exclude<B2bApplicationStatus, 'none'>, string> = {
-  pending: '⏳',
-  approved: '✓',
+/** Hâlin simgesi — ikon setinden (14.09: emoji yerine). */
+const MARK: Record<Exclude<B2bApplicationStatus, 'none'>, IconName | null> = {
+  pending: 'timer',
+  approved: 'check',
   // Reddedilen hâlde işaret YOK: ✕ ya da ⚠ suçlayıcı okunur, boş bırakmak cümleyi cümle bırakır.
-  rejected: '',
+  rejected: null,
 };
 
 export function StatusNote({ t, status, rejection, compact = false }: StatusNoteProps) {
@@ -79,7 +81,10 @@ export function StatusNote({ t, status, rejection, compact = false }: StatusNote
         TONE[status],
       ].join(' ')}
     >
-      <p className="font-semibold">{mark ? `${mark} ${t.status[status]}` : t.status[status]}</p>
+      <p className="flex items-center gap-1.5 font-semibold">
+        {mark && <Icon name={mark} size={15} className="flex-none" />}
+        {t.status[status]}
+      </p>
 
       {reason && (
         <>

@@ -7,4 +7,6 @@ import { routing } from './routing';
 // gitmek için kullanır (ana sayfaya atmaz).
 // `useRouter` arama kutusu içindir: form gönderimi kataloğa YÖNLENDİRİR, hedef yol dile göre
 // çevrilir (`/catalog` → `/fr/catalogue`). Ham `<form action>` bunu yapamaz, yol dilden bağımsız değil.
-export const { Link, getPathname, usePathname, useRouter } = createNavigation(routing);
+// `redirect` sunucu bileşeni içindir: hedef yol dile göre çevrilir (`/cart` → `/fr/panier`) —
+// ödeme sayfası girişsiz müşteriyi sepete böyle çevirir (13.09).
+export const { Link, getPathname, redirect, usePathname, useRouter } = createNavigation(routing);

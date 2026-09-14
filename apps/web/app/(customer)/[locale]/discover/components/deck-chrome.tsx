@@ -1,6 +1,7 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
+import { Icon } from '@/components/customer/ui/icons';
 import type { Messages } from '../discover-types';
 
 /**
@@ -14,8 +15,9 @@ import type { Messages } from '../discover-types';
 /** Kapat — her an çıkılır (tasarım: "✕ Kapat"). Çıkış KATALOĞA: keşif bir sayfa değil bir turdur. */
 export function CloseLink({ t }: { t: Messages }) {
   return (
-    <Link href="/catalog" className="cursor-pointer font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark">
-      ✕ {t.close}
+    <Link href="/catalog" className="inline-flex cursor-pointer items-center gap-1.5 font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark">
+      <Icon name="close" size={14} />
+      {t.close}
     </Link>
   );
 }
@@ -82,16 +84,10 @@ export function VoteButton({
         like
           ? 'bg-olive hover:bg-olive-dark'
           : 'border-2 border-sand-400 bg-card hover:border-olive',
-        like
-          ? compact
-            ? 'size-19 text-[30px]'
-            : 'size-18 text-icon'
-          : compact
-            ? 'size-16 text-icon'
-            : 'size-15 text-icon-sm',
+        like ? (compact ? 'size-19 text-white' : 'size-18 text-white') : compact ? 'size-16 text-ink' : 'size-15 text-ink',
       ].join(' ')}
     >
-      {like ? '👍' : '👎'}
+      <Icon name={like ? 'thumbUp' : 'thumbDown'} size={like ? (compact ? 30 : 28) : compact ? 24 : 22} />
     </button>
   );
 }

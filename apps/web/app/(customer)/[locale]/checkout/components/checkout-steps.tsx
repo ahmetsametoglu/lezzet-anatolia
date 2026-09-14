@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import type { PaymentMethod } from '@lezzet/types';
-import { Link } from '@/i18n/navigation';
+import { Link, useRouter } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
+import { Icon } from '@/components/customer/ui/icons';
 import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { PlaceRestriction, restrictedLines } from '@/components/customer/delivery/place-restriction';
 import { signOutAction } from '@/lib/auth/actions';
 import { Skeleton } from '@/components/customer/ui/skeleton';
-import { AddressForm, toFormInput } from '@/components/customer/delivery/address-form';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
@@ -21,59 +21,22 @@ import { checkoutBlocker, type CheckoutViewProps } from '../checkout-types';
  * ekran dosyası yalnız onları farklı düzenlerde sıralar.
  */
 
-export function StepShell({ id, step, title, hint, compact, muted, children }: { id?: string; step: string; title: string; hint?: string; compact?: boolean; muted?: boolean; children: React.ReactNode }) {
+export function StepShell({ step, title, compact, children }: { step: string; title: string; compact?: boolean; children: React.ReactNode }) {
   return (
     <section
-      id={id}
       // Tasarım künyesi: `bg #fff · 1px kum-200 kenar · radius 18 · ped 22/26 · gap 14`.
-      className={[
-        'flex flex-col gap-3.5 rounded-card border bg-card',
-        muted ? 'border-sand-100' : 'border-sand-200',
-        compact ? 'px-4 py-4' : 'px-6.5 py-5.5',
-      ].join(' ')}
+      className={['flex flex-col gap-3.5 rounded-card border border-sand-200 bg-card', compact ? 'px-4 py-4' : 'px-6.5 py-5.5'].join(' ')}
     >
       <div className="flex items-center gap-3">
         {/* Tasarım: 30×30 daire, 700 15px. Küçüğü (28/13) başlığın yanında cılız kalıyordu. */}
-        <span
-          className={[
-            'flex size-[30px] flex-none items-center justify-center rounded-full font-sans text-body font-bold',
-            muted ? 'bg-sand-200 text-muted' : 'bg-olive text-white',
-          ].join(' ')}
-        >
-          {step}
-        </span>
+        <span className="flex size-[30px] flex-none items-center justify-center rounded-full bg-olive font-sans text-body font-bold text-white">{step}</span>
         {/* Tasarım: 600 19px Lora — `card-title-sm` (18) en yakın durak, yeni token açılmadı. */}
-        <span className={['font-serif text-card-title-sm', muted ? 'text-muted' : 'text-ink'].join(' ')}>{title}</span>
-        {/* Künye: adımın MALİYETİNİ önden söyler ("giriş · güvenlik · 30 saniye"). Ne kadar
-            süreceğini bilmediği bir adıma giren müşteri, o adımı bir engel gibi okur. */}
-        {hint && !compact && <span className="ml-auto font-sans text-micro text-muted">{hint}</span>}
+        <span className="font-serif text-card-title-sm text-ink">{title}</span>
       </div>
-      {hint && compact && <span className="-mt-2 font-sans text-micro text-muted">{hint}</span>}
       {children}
     </section>
   );
 }
-
-/**
- * Henüz sırası gelmemiş adım — BAŞLIĞIYLA çizilir, içeriğiyle değil.
- *
- * Tasarımın "tek sayfada dikey bölümler, akordeon daraltma yok — az adım, tam görünürlük" kuralı
- * bunu gerektiriyor: müşteri daha ilk adımdayken kaç adım kaldığını görmeli. Bu adımları hiç
- * çizmemek, doğrulama ekranını bir GİRİŞ DUVARI gibi gösterirdi — tasarımın tam kaçındığı şey.
- */
-export function LockedStep({ step, title, hint, compact }: { step: string; title: string; hint: string; compact?: boolean }) {
-  return (
-    <StepShell step={step} title={title} compact={compact} muted>
-      <span className="font-sans text-note text-muted">{hint}</span>
-    </StepShell>
-  );
-}
-
-/**
- * Adres adımının çıpası — kısıt bloğunun "bölge içi bir adres seç" çıkışı buraya götürür.
- * Müşteri sepete geri GÖNDERİLMEZ, çözüm checkout içinde biter (tasarım).
- */
-const ADDRESS_STEP_ID = 'checkout-address-step';
 
 /** Seçilebilir kart — adres, gün ve ödeme yöntemi aynı görsel dili konuşur (tasarım). */
 function ChoiceCard({
@@ -139,8 +102,9 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
 
   return (
     <div className={['flex flex-wrap items-center gap-x-3 gap-y-1 rounded-soft bg-olive-bg px-4', compact ? 'py-2' : 'py-2.5'].join(' ')}>
-      <span className="font-sans text-note text-olive-dark">
-        ✓ {t.verify.accountAs.replace('{email}', email)}
+      <span className="inline-flex items-center gap-1.5 font-sans text-note text-olive-dark">
+        <Icon name="check" size={14} className="flex-none" />
+        {t.verify.accountAs.replace('{email}', email)}
       </span>
       {/* Tek tıkla çıkış YOK: sipariş ortasında yanlışlıkla basan müşteri oturumunu kaybetmesin.
           Ayrı bir pencere de açılmaz — soru satırın kendi içinde sorulur (sade & sezgisel). */}
@@ -168,118 +132,46 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
 }
 
 /**
- * Adres adımı — seçim + ekleme + **düzenleme**.
+ * Adres adımı — **SALT OKUNUR** (kullanıcı kararı 13.09).
  *
- * Düzenleme bir süre YOKTU ve bu bir çıkmazdı (kullanıcı bildirimi, 01.08): kaydedilen adres bir
- * daha açılamıyordu, yazım hatası yapan müşterinin tek yolu ikinci bir adres eklemekti — kurye için
- * iki benzer kayıt, müşteri için "hangisi doğruydu". Hesap sayfasında düzenleme zaten vardı; eksik
- * olan checkout'un kendi kapısı ve bu ekrandı.
+ * Seçim, ekleme ve düzenleme SEPETTE (`CartIdentity` → `AddressPickerDialog`); burası sepette
+ * seçilen adresi gösterir ve değiştirmek isteyeni sepete yollar. Ölçülen sitelerin hepsi bağlamı
+ * her sayfadan değiştirtiyor; bizim kural daha dar (tek yerden değiştir) — bu yüzden çıkış
+ * bağlantısı ŞART: yanlış adresi ödeme adımında fark eden müşteri nereye gideceğini aramamalı.
  *
- * **Düzenle bağlantısı SEÇİLİ adresin altında, her kartın içinde değil.** İki sebep: (a) kart bir
- * `<button>`, içine ikinci bir düğme konamaz (geçersiz HTML, klavye erişimi de bozulur); (b) burada
- * önemli olan siparişin GİDECEĞİ adres — düzeltilmeye değer olan o. Başka bir adresi düzeltmek
- * isteyen önce onu seçer, ki seçim zaten bu siparişe özel ve zararsız.
- *
- * Tasarımda karşılığı yok (`design/BACKLOG §3`): çizim adresi yalnız seçtiriyor.
+ * Eski hâl (seçim + form burada) 01.08–13.09 arasında yaşadı; iki ekranın iki ayrı adresle
+ * konuşmasının kaynağı oydu.
  */
-export function AddressStep({ t, locale, snapshot, state, compact, selectedAddress, addressDefaults, onSelectAddress, onAddAddress, onUpdateAddress }: CheckoutViewProps) {
-  /** Tek seferde tek form: ekleme ile düzenleme aynı yerde açılır, ikisi birden açık kalamaz. */
-  const [editing, setEditing] = useState<'new' | string | null>(null);
-  const adding = editing === 'new';
-  // Form kimliğin KENDİSİNDEN doldurulur, "seçili olan"dan değil: bugün ikisi hep aynı (düzenleme
-  // yolu yalnız seçili adreste açılıyor) ama o bir yerleşim tercihi — yarın kartların içine bir
-  // düzenle düğmesi konursa bu satırın sessizce yanlış adresi açması gerekmemeli.
-  const editTarget = adding ? null : (snapshot.addresses.find((a) => a.id === editing) ?? null);
-
+export function AddressStep({ t, compact, selectedAddress }: CheckoutViewProps) {
   return (
-    <StepShell id={ADDRESS_STEP_ID} step={t.address.step} title={t.address.title} compact={compact}>
-      {snapshot.addresses.length === 0 && !adding && (
-        <p className="font-sans text-note leading-relaxed text-body">{t.address.empty}</p>
-      )}
-
-      {/* Düzenleme açıkken kart ızgarası GİZLENİR: aynı adres hem kart hem form olarak dururken
-          hangisinin güncel olduğu belirsiz kalıyor ve adım gereksiz uzuyor. Eklemede ızgara kalır —
-          orada form yeni bir kayıt, mevcutları örtmesi için bir sebep yok. */}
-      {editTarget ? (
-        <AddressForm
-          copy={t.address.form}
-          locale={locale}
-          // Mobil webde form ÇEKMECEDE açılır (21.08) — karar formun kendisinde, künyesi orada.
-          compact={compact}
-          initial={toFormInput(editTarget)}
-          onCancel={() => setEditing(null)}
-          onSave={async (input) => {
-            await onUpdateAddress(editTarget.id, input);
-            setEditing(null);
-          }}
-        />
+    <StepShell step={t.address.step} title={t.address.title} compact={compact}>
+      {selectedAddress ? (
+        // Seçili kartın dili: `2px zeytin + zeytin-zemin` (tasarımın seçili adres kartı) — ama bir
+        // `<button>` değil, çünkü burada seçilecek bir şey yok.
+        <div className="flex w-max max-w-full flex-col gap-[3px] rounded-soft border-2 border-olive bg-olive-bg px-[18px] py-3.5">
+          <span className="font-sans text-body-sm font-bold text-ink">{selectedAddress.label ?? selectedAddress.city}</span>
+          <span className="font-sans text-note leading-relaxed text-body">
+            {selectedAddress.line1}
+            {selectedAddress.line2 && `, ${selectedAddress.line2}`}
+          </span>
+          <span className="font-sans text-note leading-relaxed text-body">
+            {selectedAddress.postalCode} {selectedAddress.city}
+          </span>
+        </div>
       ) : (
-        <>
-          <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2.5'}>
-            {snapshot.addresses.map((address) => (
-              <ChoiceCard key={address.id} selected={state.addressId === address.id} onClick={() => onSelectAddress(address.id)}>
-                <span className="font-sans text-body-sm font-bold text-ink">
-                  {address.label ?? address.city}
-                  {address.isDefault && <span className="font-semibold text-muted"> · {t.address.default}</span>}
-                </span>
-                <span className="font-sans text-note leading-relaxed text-body">{address.line1}</span>
-                <span className="font-sans text-note leading-relaxed text-body">
-                  {address.postalCode} {address.city}
-                </span>
-              </ChoiceCard>
-            ))}
-          </div>
-
-          {adding ? (
-            /* `defaults` YALNIZ burada: bu dal YENİ adres. Düzenleme dalı `initial` alıyor ve
-               oraya varsayılan geçmek, kayıtlı alıcının üstüne hesabın adını yazardı. */
-            <AddressForm copy={t.address.form} locale={locale} compact={compact} defaults={addressDefaults} onCancel={() => setEditing(null)} onSave={async (input) => { await onAddAddress(input); setEditing(null); }} />
-          ) : (
-            <>
-              {selectedAddress && (
-                <button
-                  type="button"
-                  onClick={() => setEditing(selectedAddress.id)}
-                  className="w-max cursor-pointer font-sans text-note font-semibold text-olive underline hover:text-olive-dark"
-                >
-                  {t.address.edit}
-                </button>
-              )}
-              {/* Tasarımda KESİKLİ ÇERÇEVELİ KART — adres kartlarının yanında onlarla aynı ızgarada
-                  durur. Metin bağlantısı yapmak onu ızgaradan çıkarıyor ve "yeni adres" bir kart
-                  eklemek değil de sayfadan ayrılmak gibi okunuyordu. */}
-              <button
-                type="button"
-                onClick={() => setEditing('new')}
-                className="grid w-max cursor-pointer place-items-center rounded-soft border-[1.5px] border-dashed border-sand-500 px-[18px] py-3.5 font-sans text-body-sm font-bold text-olive transition-colors hover:border-olive hover:bg-olive-bg"
-              >
-                {t.address.add}
-              </button>
-            </>
-          )}
-        </>
+        // Buraya adressiz gelinmez (sepet kapısı) — derin bağlantıyla gelen için cümle + çıkış.
+        <p className="font-sans text-note leading-relaxed text-body">{t.address.missing}</p>
       )}
+      <Link href="/cart" className="w-max cursor-pointer font-sans text-note font-semibold text-olive underline hover:text-olive-dark">
+        {selectedAddress ? t.address.changeInCart : t.address.missingCta}
+      </Link>
     </StepShell>
   );
 }
 
-/**
- * **K35 · Adres Formu** — K34 alanlarının bileşimi, yeni bir bileşen değil.
- *
- * Alan sırası envanterde SABİT: başlık · alıcı adı · sokak ve numara · kapı/kat/zil (isteğe bağlı) ·
- * posta kodu + şehir · telefon · ülke (sabit) · varsayılan yap.
- *
- * **Alanlar İKİŞER durur**, hepsi tam genişlik değil (tasarım): başlık | alıcı adı · posta kodu (dar) |
- * şehir · telefon | ülke (dar). Kısa değerleri tam genişliğe yaymak göze her satırda uzun bir tarama
- * yaptırıyor ve formu olduğundan uzun gösteriyordu.
- *
- * **Zorunluluk yıldızla değil, isteğe bağlı olan işaretlenerek** anlatılır (K34) — ve tasarımda
- * "(isteğe bağlı)" YALNIZ kapı/kat/zil satırındadır. Telefon zorunludur çünkü kapıya teslimde kurye
- * onu arar; adres başlığı da zorunludur, listedeki kartın adı odur.
- */
-
 export function DeliveryStep(props: CheckoutViewProps) {
   const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, cart, selectedAddress } = props;
+  const router = useRouter();
   const delivery = snapshot.delivery;
   const payment = snapshot.payment;
   if (!delivery) return null;
@@ -325,8 +217,9 @@ export function DeliveryStep(props: CheckoutViewProps) {
           gösteriyordu — oysa burada bir sorun yok, bir künye var. */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="w-max rounded-[12px] bg-olive-bg px-2.5 py-[3px] font-sans text-note font-semibold text-olive">
-            {inRoute ? t.delivery.route : `📦 ${t.delivery.shipping}`}
+          <span className="inline-flex w-max items-center gap-1.5 rounded-[12px] bg-olive-bg px-2.5 py-[3px] font-sans text-note font-semibold text-olive">
+            <Icon name={inRoute ? 'truck' : 'box'} size={13} />
+            {inRoute ? t.delivery.route : t.delivery.shipping}
           </span>
           {/* Ücret rozetin yanında: teslimat türünü okuyan müşteri bedelini aynı anda görmeli —
               özete kadar aşağı inip bulmak sürpriz hissi verirdi. */}
@@ -344,8 +237,8 @@ export function DeliveryStep(props: CheckoutViewProps) {
       </div>
 
       {/* Teslimat kısıtı — sepettekiyle AYNI bileşen (tasarım): aynı sıra, aynı dil, aynı üç çıkış.
-          Müşteri sepete geri GÖNDERİLMEZ, çözüm burada biter. Adım kilitlenmez, sadece bekler.
-          Sepette çözülmüşse blok hiç doğmaz; yalnız müşteri burada adresi değiştirirse görünür. */}
+          Sepet ve ödeme ekranı aynı adresi okuduğu için (13.09) sepette çözülmüş kısıt burada
+          yeniden doğmaz; blok yalnız derin bağlantıyla gelen ya da sepeti atlayan müşteride görünür. */}
       <PlaceRestriction
         locale={locale}
         lines={cart.lines}
@@ -353,8 +246,8 @@ export function DeliveryStep(props: CheckoutViewProps) {
         freeShippingCents={cart.freeShippingCents}
         compact={compact}
         place={addressPlace}
-        // Checkout'ta yer bir KODLA değil adresle değişir: çıkış adres adımına götürür.
-        onChangePlace={() => document.getElementById(ADDRESS_STEP_ID)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+        // Adres SEPETTE değişir (13.09): çıkış sepete götürür, burada bir seçici açmaz.
+        onChangePlace={() => router.push('/cart')}
       />
       {/* Sunucu "gönderilemez" diyor ama blok çizilmediyse (ör. kalem aynı zamanda tükendiği için
           bloğun kapsamı dışında) müşteri sebepsiz kalmasın — cümle YEDEK olarak durur. */}
@@ -374,9 +267,9 @@ export function DeliveryStep(props: CheckoutViewProps) {
         delivery.neighborInvites.map((invite) => (
           <p
             key={invite.inviteId}
-            className="rounded-soft bg-olive-bg px-4 py-3 font-sans text-note leading-relaxed font-semibold text-olive-dark"
+            className="flex items-start gap-2 rounded-soft bg-olive-bg px-4 py-3 font-sans text-note leading-relaxed font-semibold text-olive-dark"
           >
-            🚚{' '}
+            <Icon name="truck" size={15} className="mt-0.5 flex-none" />
             {t.delivery.neighborInvite
               .replace('{name}', invite.inviterName)
               .replace('{date}', formatDeliveryDate(invite.deliveryDate, locale))}
@@ -396,7 +289,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
         ) : (
           // Tek gün varsa seçim SUNULMAZ, gösterilir — seçeneksiz bir seçim ekranı sahte karardır.
           <span className="font-sans text-note font-semibold text-olive-dark">
-            📅 {t.delivery.single.replace('{date}', formatDeliveryDate(delivery.availableDates[0] ?? '', locale))}
+            {t.delivery.single.replace('{date}', formatDeliveryDate(delivery.availableDates[0] ?? '', locale))}
           </span>
         )
       )}
@@ -476,7 +369,12 @@ export function DeliveryStep(props: CheckoutViewProps) {
           )}
         </div>
       )}
-      {!inRoute && <span className="font-sans text-note font-semibold text-body">📦 {t.delivery.shippingDays}</span>}
+      {!inRoute && (
+        <span className="inline-flex items-center gap-1.5 font-sans text-note font-semibold text-body">
+          <Icon name="box" size={14} />
+          {t.delivery.shippingDays}
+        </span>
+      )}
     </StepShell>
   );
 }

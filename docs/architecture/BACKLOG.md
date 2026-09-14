@@ -170,6 +170,14 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - Kurye teslimat ekranı
 - Kurye gün kapanışı + kasa mutabakatı
 - `wa.me` deep-link "yola çıktık" mesajı
+- **ARAŞTIRILACAK (kullanıcı notu 13.09, şimdi değil): rota dışına soğuk zincir EKSPRES kargo.** 13.09
+  araştırmasında bizim iş modelimizin iki ikizi "gönderilemez" ürün grubunu yapısal olarak yok etmiş:
+  Morgenmarkt (Berlin'de kendi rotası + Almanya geneli) et ve soğuk ürünü *"Deutschlandweit per DPD
+  Express in 24h"* soğuk zincir paketiyle gönderiyor — bölgeler arasında yalnız yöntem ve ücret
+  değişiyor; La Grande Épicerie ise iki dükkâna bölmüş (Île-de-France aynı gün uygulamada, ulusal
+  Colissimo sitede). Tek dükkânda karışık sepet ("bunlar kargoya giremez") gösteren ölçülen site yok.
+  İş kararı: soğuk zincir ekspres bir taşıyıcı (maliyet, ambalaj, yaz ayları) "gönderilemez" grubunu
+  ve onun doğurduğu müşteri karışıklığını kaldırır mı — kullanıcı gündeme aldığında ölçülür.
 - **Kuryenin telefonunda harita + akıllı rota** *(kullanıcı notu 17.08 — barkod/kutu konuşmasının yan
   kararı)*: üç ayrı iş, birbirine bağlanmasın.
   ~~**(a) Durak SIRASI — bugünün önceliği**~~ **KAPANDI (31.08 · `11.9`):** sıra kuş uçuşu kapalı tur

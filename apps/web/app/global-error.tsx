@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { reportClientErrorAction } from '@/lib/observability/report-client-error';
+import { Icon } from '@/components/customer/ui/icons';
 
 /**
  * Kök son-çare hatası — yalnız kök layout'un KENDİSİ patlarsa devreye girer (nadir). Kök layout
@@ -40,7 +41,10 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             textAlign: 'center',
           }}
         >
-          <span style={{ fontSize: 42 }}>🍳</span>
+          {/* Çizgi ikon — globals yüklü değil, renk satır içi (sayfanın kendi düğme rengi). */}
+          <span style={{ display: 'flex', color: '#5f7a2c' }}>
+            <Icon name="warning" size={42} />
+          </span>
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600 }}>Beklenmeyen bir hata oluştu</h1>
           <p style={{ margin: 0, maxWidth: 460, fontSize: 15, lineHeight: 1.6, color: '#6d7261' }}>
             Sorun bizde, sizde değil. Birkaç saniye sonra yeniden deneyin.

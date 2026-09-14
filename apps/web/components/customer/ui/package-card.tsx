@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation';
 import { formatPrice, formatWeight } from '@/lib/storefront/format';
 import type { StorefrontPackage } from '@/lib/storefront/storefront-types';
 import { buttonClass } from './button';
+import { Icon } from './icons';
 
 /**
  * K28 · Paket Liste Kartı — Paketler sayfasının tek yapı taşı (tasarım: `Musteri - Paketler.dc.html`).
@@ -165,10 +166,11 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
                     // zone uniquement") dar kartta çipten uzun ve nowrap ile kartın
                     // `overflow-hidden` kenarında KIRPILIYORDU — yarım kelime, yanlış bilgi.
                     // Sarmak çirkin değil, kesilmek yanlış.
-                    'rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold',
+                    'inline-flex items-center gap-1 rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold',
                     pack.inRouteOnly ? 'border border-honey-line bg-honey-bg text-honey' : 'bg-olive-bg text-olive-dark',
                   ].join(' ')}
                 >
+                  <Icon name={pack.inRouteOnly ? 'truck' : 'box'} size={12} className="flex-none" />
                   {pack.inRouteOnly ? labels.inRouteOnly : labels.shippable}
                 </span>
               )}
@@ -253,10 +255,11 @@ function WidePackageCard({ pack, locale, labels }: Omit<PackageListCardProps, 'c
           ) : (
             <span
               className={[
-                'rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold whitespace-nowrap',
+                'inline-flex items-center gap-1 rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold whitespace-nowrap',
                 pack.inRouteOnly ? 'border border-honey-line bg-honey-bg text-honey' : 'bg-olive-bg text-olive-dark',
               ].join(' ')}
             >
+              <Icon name={pack.inRouteOnly ? 'truck' : 'box'} size={12} className="flex-none" />
               {pack.inRouteOnly ? labels.inRouteOnly : labels.shippable}
             </span>
           )}

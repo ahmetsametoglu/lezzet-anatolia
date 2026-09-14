@@ -169,6 +169,35 @@ describe('posta kodundan ülke TÜRETİLİR, sorulmaz', () => {
 });
 
 /**
+ * Seçilen ülke kodu BAĞLAR (v1 yer paneli, 13.09): önce ülke, sonra kod sorulur. Seçim serbest bir
+ * beyan değil — kod o ülkede yoksa cevap "tanımadık"; başka bir ülkeye sessizce çözülmez, çünkü
+ * ülke KDV oranını belirler.
+ */
+describe('seçilen ülke kodu BAĞLAR', () => {
+  const FR_67000: PostalCodeMatch = { country: 'FR', places: ['Strasbourg'] };
+  const DE_67000: PostalCodeMatch = { country: 'DE', places: ['Ludwigshafen'] };
+
+  it('iki hizmet ülkesinde geçerli kod seçilen ülkede çözülür — soru çıkmaz', () => {
+    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR, KEHL], 'FR');
+    expect(sonuc).toMatchObject({ kind: 'route', country: 'FR', placeName: 'Strasbourg' });
+  });
+
+  it('kod seçilen ülkede yoksa TANINMAZ — öteki ülkeye düşmez', () => {
+    expect(resolvePlaceByPostalCode('67000', [FR_67000], [zone()], [STR, KEHL], 'DE')).toEqual({ kind: 'unknown' });
+  });
+
+  it('kendi bölge kaydımız da seçilen ülkeye göre süzülür', () => {
+    // Referansta yok, yalnız FR bölgemizde var: DE seçilince aday kalmaz.
+    expect(resolvePlaceByPostalCode('67000', [], [zone()], [STR, KEHL], 'DE')).toEqual({ kind: 'unknown' });
+  });
+
+  it('seçilen ülkede kod geçerli ama gönderim yoksa "tanımadık" DEĞİL — çözülemedi', () => {
+    const sonuc = resolvePlaceByPostalCode('67000', [FR_67000, DE_67000], [zone()], [STR], 'DE');
+    expect(sonuc).toEqual({ kind: 'unresolved', reason: 'no_shipping_warehouse', country: 'DE' });
+  });
+});
+
+/**
  * Kendi bölge tablomuz hizmet alanımız için OTORİTEDİR (19.16a).
  *
  * İlk sürüm `matches.length === 0 → unknown` diyor ve `zones`'a hiç bakmıyordu. Sonuç bir

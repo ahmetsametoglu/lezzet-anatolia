@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { TicketType } from '@lezzet/types';
 import { Button, buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { FormTextareaField } from '@/components/customer/form/form-textarea-field';
 import { Link, useRouter } from '@/i18n/navigation';
 import type { Device } from '@/lib/device';
@@ -75,7 +76,7 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
   if (sentTicketId) {
     return (
       <div className={`flex flex-col items-center gap-2.5 text-center ${column}`}>
-        <span className="text-[32px] leading-none">✓</span>
+        <Icon name="check" size={32} className="text-olive" />
         <span className="font-serif text-card-title-sm leading-tight font-semibold text-ink">{t.new.sentTitle}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.new.sentBody}</span>
         <Link
@@ -228,7 +229,7 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
                   ].join(' ')}
                   aria-hidden="true"
                 >
-                  {marked ? '✓' : ''}
+                  {marked && <Icon name="check" size={12} strokeWidth={2.6} />}
                 </span>
                 <span className="flex-1 truncate font-sans text-note font-bold leading-tight text-ink">{line.name}</span>
                 <span className="flex-none font-sans text-micro text-muted">
@@ -263,9 +264,9 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
             type="button"
             onClick={() => fileInput.current?.click()}
             aria-label={t.new.addPhoto}
-            className="grid size-19 cursor-pointer place-items-center rounded-[12px] border-[1.5px] border-dashed border-sand-500 bg-card font-sans text-icon text-muted transition-colors hover:border-olive"
+            className="grid size-19 cursor-pointer place-items-center rounded-[12px] border-[1.5px] border-dashed border-sand-500 bg-card text-muted transition-colors hover:border-olive"
           >
-            📷
+            <Icon name="camera" size={24} />
           </button>
           {photo.attachments.map((key, index) => (
             <button
@@ -275,7 +276,10 @@ export function NewTicketForm({ t, locale, device, order, orders }: NewTicketFor
               aria-label={t.reply.removePhoto}
               className="grid size-19 cursor-pointer place-items-center rounded-[12px] border border-sand-200 bg-cream-deep font-sans text-micro text-muted transition-colors hover:border-terracotta-line"
             >
-              {`${t.new.photo} ${index + 1} ✕`}
+              <span className="inline-flex items-center gap-1">
+                {`${t.new.photo} ${index + 1}`}
+                <Icon name="close" size={11} />
+              </span>
             </button>
           ))}
         </div>

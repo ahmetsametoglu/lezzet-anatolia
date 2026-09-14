@@ -1,6 +1,6 @@
 import 'server-only';
 import { AddressService, serviceDb } from '@lezzet/database';
-import type { AddressInsert } from '@lezzet/types';
+import type { Address, AddressInsert } from '@lezzet/types';
 import { resolveAddressPoint, setBillingCustomerAddress, type AddressPointCandidate } from '@lezzet/application';
 
 /**
@@ -31,7 +31,7 @@ export async function addAddress(
    * `input` üzerinden sızmaması da bu yüzden önemli — süzgeci atlayan ikinci bir yol olurdu.
    */
   point?: AddressPointCandidate | null,
-): Promise<void> {
+): Promise<Address> {
   const db = serviceDb();
   const geo = await resolveAddressPoint(db, { candidate: point, postalCode: input.postalCode });
   /* FATURA İŞARETİ gövdeyle YAZILMAZ, eklemeden SONRA kendi yolundan (08.09): kısmi tekil indeks
@@ -42,7 +42,8 @@ export async function addAddress(
   const addresses = new AddressService(db);
   // İlk adresi varsayılan yapma kuralı SERVİSTE (`addForCustomer`) — burada tekrarlanmaz.
   const created = await addresses.addForCustomer({ ...fields, ...geo, customerId });
-  if (isBilling) await addresses.setBilling(created.id);
+  // Dönen satır YAZILANDIR: fatura işareti sonradan işleniyor, sepet paneli o bayrağı okumuyor.
+  return isBilling ? await addresses.setBilling(created.id) : created;
 }
 
 export async function updateAddress(
@@ -50,7 +51,7 @@ export async function updateAddress(
   addressId: string,
   patch: Omit<AddressInsert, 'customerId'>,
   point?: AddressPointCandidate | null,
-): Promise<void> {
+): Promise<Address> {
   /**
    * **`isDefault` bu yoldan DEĞİŞMEZ ve burada AYIKLANIR.** Varsayılan seçimi kendi eylemidir
    * (`setDefaultAddress`), çünkü tek satırı işaretlemek yetmiyor — öbürlerinin bayrağı düşmek
@@ -84,7 +85,7 @@ export async function updateAddress(
     },
     next: { line1, postalCode, city },
   });
-  await new AddressService(db).update({ id: addressId, label, recipient, line1, line2, postalCode, city, phone, country, ...geo });
+  return new AddressService(db).update({ id: addressId, label, recipient, line1, line2, postalCode, city, phone, country, ...geo });
 }
 
 export async function setDefaultAddress(customerId: string, addressId: string): Promise<void> {

@@ -4,6 +4,7 @@ import { Badge } from '@/components/customer/ui/badge';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { StockMark } from '@/components/customer/delivery/stock-mark';
 import { stockStatusOfRoute } from '@/components/customer/ui/package-card';
@@ -111,7 +112,8 @@ export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
 
         {/* Yasal not KALDIRILAMAZ: beyanın ürün başına yapıldığını söyleyen tek cümle bu — paket
             sayfasındaki özet künye, tam beyanın yerine geçmez (INCO). */}
-        <p className="rounded-soft border border-sand-100 bg-card px-5 py-3.5 font-sans text-note leading-relaxed text-body">
+        <p className="flex items-start gap-2.5 rounded-soft border border-sand-100 bg-card px-5 py-3.5 font-sans text-note leading-relaxed text-body">
+          <Icon name="warning" size={15} className="mt-0.75 flex-none text-honey" />
           {t.contents.legal}
         </p>
       </section>

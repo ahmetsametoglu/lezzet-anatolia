@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { canAccessWarehouse, isStaff, warehouseScope, type WarehouseScope } from '@lezzet/domain-core';
 import type { UserProfile, UserRole } from '@lezzet/types';
@@ -85,14 +86,20 @@ export interface StaffUser extends AuthUser {
   E2E de artık oradan giriyor (`e2e/setup/operations-auth.setup.ts` → `storageState`).
 */
 
-/** Oturumdaki kullanıcı (yoksa null). */
-export async function getSessionUser(): Promise<AuthUser | null> {
+/**
+ * Oturumdaki kullanıcı (yoksa null).
+ *
+ * **İstek başına bir kez** (`cache`): `getUser` oturumu Auth sunucusunda doğrular, yani her çağrı
+ * bir ağ turu. Layout künyeyi okuyor, yer bağlamı varsayılan adresi okuyor, eylemler kimliği
+ * çözüyor — aynı istekte üç ayrı tur atılıyordu. Cevap istek boyunca değişmez.
+ */
+export const getSessionUser = cache(async (): Promise<AuthUser | null> => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user ? { id: user.id, email: user.email ?? null } : null;
-}
+});
 
 /**
  * Oturumdaki kişinin **müşteri kimliği** (`user_profiles.id`); oturum ya da profil yoksa null.

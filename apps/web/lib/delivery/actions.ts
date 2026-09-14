@@ -2,12 +2,12 @@
 
 import { suggestPlaces } from '@lezzet/application';
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, serviceDb } from '@lezzet/database';
-import { findZoneForPostalCode, placeLabel, resolvePlaceByPostalCode } from '@lezzet/domain-core';
+import { placeLabel, resolvePlaceByPostalCode } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { Country, PlaceOption } from '@lezzet/types';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
-import { resolveDelivery } from '@/lib/order/delivery';
 import { recordEvent } from '@/lib/analytics/record';
+import { describePlace } from './describe-place';
 import { isValidPostalCode, normalizePostalCode, type PlaceLookup } from './place-types';
 
 /**
@@ -37,11 +37,13 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
       new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
     ]);
 
-    // ── ÜLKE SORULMAZ, TÜRETİLİR (19.8) ──────────────────────────────────────
+    // ── ÜLKE YA TÜRETİLİR YA SEÇİLENE BAĞLANIR (19.8 · v1 13.09) ─────────────────
     // Eskiden burada `country: 'FR'` sabiti vardı. O sabit iki şeyi birden varsayıyordu: tek ülkede
     // hizmet verdiğimizi ve müşterinin Fransa'da olduğunu. İkincisi bir varsayım olarak kalamaz —
-    // ülke KDV oranını belirler (`DOMAIN §5`).
-    const lookup = resolvePlaceByPostalCode(postalCode, matches, zones, warehouses);
+    // ülke KDV oranını belirler (`DOMAIN §5`). Ülke verilmezse koddan türer; verilirse (masaüstü yer
+    // paneli önce ülkeyi sorar, pencerenin belirsizlik seçicisi ve öneri satırı da ülkeyi taşır) kod
+    // o ülkeye bağlanır, orada yoksa `unknown` döner — kural motorda (`resolvePlaceByPostalCode`).
+    const lookup = resolvePlaceByPostalCode(postalCode, matches, zones, warehouses, chosenCountry);
 
     // ── DÖRT HÂL EKRANA VERİ OLARAK GİDER (19.16b) ────────────────────────────
     // Önceki sürüm bu hâllerde `throw` ediyordu ve `ActionResult` hepsini tek bir `error: string`e
@@ -57,20 +59,12 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
 
     if (lookup.kind === 'ambiguous') {
       /**
-       * Müşterinin ÜLKE CEVABI (19.7) — belirsizlik seçicisinden ya da öneri listesinden gelir.
-       *
-       * Ülke normalde SORULMAZ, koddan türer (19.8). Tek istisna bu: kod iki hizmet ülkemizde
-       * birden geçerliyse türetecek bir şey yoktur, cevap müşterinindir. Seçim burada uygulanıyor,
-       * motorda değil — motor "bu kod hangi ülkelere düşüyor" sorusunun cevabıdır; hangi adayın
-       * seçildiği bir KULLANICI kararı ve motorun bilmesi gereken bir şey değil.
-       *
-       * Gelen ülke adaylar arasında yoksa sessizce yok sayılır ve seçici yeniden çizilir: uydurma
-       * bir ülkeyle çözmek, müşterinin vermediği kararı vermek olurdu (KDV oranı buna bağlı).
+       * Belirsizlik yalnız ülke VERİLMEDİĞİNDE çıkar (19.7): kod iki hizmet ülkemizde birden
+       * geçerliyse türetecek bir şey yoktur, cevap müşterinindir. Seçici adayları çizer; seçim
+       * `chosenCountry` olarak geri gelir ve motor kodu o ülkeye bağlar. Seçim 13.09'a kadar burada
+       * uygulanıyordu; masaüstü panelinin "önce ülke" sorusu (v1) aynı kuralı her kod için istedi
+       * ve kural motora taşındı — ülke verilmişse motor bu dala hiç düşmez.
        */
-      const picked = chosenCountry ? lookup.candidates.find((c) => c.country === chosenCountry) : undefined;
-      if (picked) {
-        return await finishResolved(postalCode, { country: picked.country, placeName: placeLabel(picked.places), places: picked.places }, zones, matches);
-      }
       // Kayıt tutulur ama HATA değil: müşterinin cevaplayabileceği meşru bir soru. Yine de iz
       // bırakıyoruz — hangi kodların gerçekten sorulduğunu bilmek veri kalitesinin ölçüsü.
       return {
@@ -109,31 +103,21 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
 }
 
 /**
- * Çözülmüş yerin son hâli — **iki giriş, tek yol.** Kimlik ya motorun tek adayından gelir ya
- * müşterinin belirsizlik seçiminden; ötesi (teslimat yolu, bölge adı, en yakın gün, talep sayacı)
- * ikisinde de aynı kapılardan çıkar. İki yerde yazılsaydı biri değiştiğinde öteki eskirdi.
+ * Çözülmüş yerin son hâli. Kimlik motorun tek adayından gelir — ülke seçilmişse o ülkenin adayı
+ * (13.09'dan beri belirsizlik seçimi de bu yoldan); ötesi (teslimat yolu, bölge adı, en yakın gün)
+ * aynı kapıdan çıkar (`describePlace` — layout'un ilk karesiyle ORTAK, gerekçesi orada).
+ *
+ * Burada kalan şey NİYETİN sayımı: talep sayacı ve huni olayı. Tarif sunucunun her render'ında
+ * koşabilir, sayım yalnız müşteri sorduğunda koşmalı (19.7'nin ✅ kararı: ölçüm niyeti kaydeder,
+ * tuş vuruşunu ya da sayfa açılışını değil).
  */
 async function finishResolved(
   postalCode: string,
   identity: { country: Country; placeName: string | null; places: readonly string[] },
   zones: Awaited<ReturnType<DeliveryZoneService['listWithCodes']>>,
-  /**
-   * Kodun referans satırları — noktayı buradan okuyoruz (08.41). Satırlar çağıranda ZATEN
-   * okunmuş durumda (`findByPostalCode`), yani ikinci bir sorgu yok. Ülkeye göre seçiliyor:
-   * 610 kod iki ülkede birden geçerli ve iki ülkenin noktası aynı yer değil.
-   */
+  /** Kodun referans satırları — çağıranda ZATEN okunmuş (`findByPostalCode`), ikinci sorgu yok. */
   matches: readonly { country: Country; lat: number | null; lng: number | null }[],
 ): Promise<CustomerResult<PlaceLookup>> {
-  const row = matches.find((m) => m.country === identity.country);
-  const point = row?.lat != null && row.lng != null ? { lat: row.lat, lng: row.lng } : null;
-  const delivery = await resolveDelivery({ postalCode, country: identity.country });
-
-  // Bölge adı yalnız rota içinde bilinir. Motor aday tipini döndürür (ad taşımaz — karar için
-  // gereksiz); adı kendi listemizden okuruz.
-  const matched = findZoneForPostalCode({ country: identity.country, postalCode }, zones);
-  const zone = matched ? zones.find((z) => z.id === matched.id) : undefined;
-  const inRoute = delivery.deliveryType === 'route';
-
   // Talep sayacı sonucu BEKLETMEZ ve hata verirse akışı kesmez: müşterinin sorusuna cevap
   // vermek asıl iş, sayaç yan üründür. Sayamamak yüzünden ekranın boş kalması saçma olurdu.
   void recordDemand(postalCode);
@@ -144,25 +128,7 @@ async function finishResolved(
   // depo granülünde); iki kayıt aynı niyetten çıkar ama aynı şeyi saymaz.
   void recordEvent({ type: 'place_resolved', resolved: true });
 
-  return {
-    data: {
-      kind: 'resolved',
-      place: {
-        postalCode,
-        country: identity.country,
-        // Rota dışında da dolu: "75011 Paris · kargo" artık yazılabiliyor (19.8). Çok yerleşimli
-        // kodda `null` kalır ve ekran `places`'ten kendi etiketini kurar (19.17); kendi bölge
-        // tablomuzda olan kodda da null — orada bölge adı zaten daha bilgilendirici.
-        placeName: identity.placeName,
-        places: [...identity.places],
-        zoneName: inRoute ? (zone?.name ?? null) : null,
-        inRoute,
-        nextDate: delivery.availableDates[0] ?? null,
-        point,
-      },
-    },
-    errorKey: null,
-  };
+  return { data: { kind: 'resolved', place: await describePlace(postalCode, identity, zones, matches) }, errorKey: null };
 }
 
 /**

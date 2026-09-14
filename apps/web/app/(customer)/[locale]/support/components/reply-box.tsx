@@ -5,6 +5,7 @@ import type { KeyboardEvent } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { CustomerTicketView } from '@/lib/ticket/ticket-types';
 import { errorText } from '@/lib/customer-error-text';
+import { Icon } from '@/components/customer/ui/icons';
 import { replyToTicketAction } from '../actions';
 import { useTicketPhoto } from '../use-ticket-photo.hook';
 import type { Messages } from '../support-types';
@@ -86,8 +87,8 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
               aria-label={t.reply.removePhoto}
               className="flex cursor-pointer items-center gap-2 rounded-soft border border-sand-200 bg-cream-deep px-3 py-1.5 font-sans text-micro text-muted hover:border-terracotta-line"
             >
-              <span aria-hidden="true">📷</span>
-              <span aria-hidden="true">✕</span>
+              <Icon name="camera" size={14} />
+              <Icon name="close" size={12} />
             </button>
           ))}
         </div>
@@ -112,9 +113,9 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
           type="button"
           onClick={() => fileInput.current?.click()}
           aria-label={t.reply.photo}
-          className="cursor-pointer font-sans text-icon-sm text-muted transition-colors hover:text-olive"
+          className="flex cursor-pointer items-center text-muted transition-colors hover:text-olive"
         >
-          📷
+          <Icon name="camera" size={20} />
         </button>
 
         <button

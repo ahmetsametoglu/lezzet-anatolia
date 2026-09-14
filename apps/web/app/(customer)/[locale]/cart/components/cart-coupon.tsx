@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Button, iconHitClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CouponFailure } from '@/lib/cart/cart-types';
@@ -71,13 +72,14 @@ export function CartCoupon({ t, locale }: CartCouponProps) {
               type="button"
               onClick={clearCoupon}
               aria-label={t.coupon.remove}
-              className={`${iconHitClass} -my-2 font-normal hover:text-terracotta`}
+              className={`${iconHitClass} -my-2 hover:text-terracotta`}
             >
-              ✕
+              <Icon name="close" size={14} />
             </button>
           </span>
           {applied && (
-            <span className="flex-none rounded-pill border-[1.5px] border-sand-400 px-4 py-2 font-sans text-body-sm font-bold text-muted">
+            <span className="inline-flex flex-none items-center gap-1.5 rounded-pill border-[1.5px] border-sand-400 px-4 py-2 font-sans text-body-sm font-bold text-muted">
+              <Icon name="check" size={14} />
               {t.coupon.applied}
             </span>
           )}

@@ -103,16 +103,22 @@ interface ButtonClassOptions {
   className?: string;
 }
 
+/**
+ * Odak halkası — envanter §0.4: 2px zeytin outline, 3px offset; ayrı renk taşımaz. Kit düğmesi
+ * olmayan tıklanabilir öğeler de (başlıktaki yer hapı, sepet hapı, avatar) bunu kullanır: yazılmayınca
+ * tarayıcının kendi mavi halkası çiziliyordu (13.09, kullanıcının ekran görüntüsü — yer hapı).
+ */
+export const focusRingClass = 'outline-none focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-olive';
+
 export function buttonClass({ variant = 'primary', size = 'md', compact = false, fullWidth, className }: ButtonClassOptions = {}): string {
   // Ghost sabit yükseklik almaz (yalnız metin) — mobil kademesi de yoktur.
   const padded = (compact && COMPACT_PADDED_SIZE[size]) || PADDED_SIZE[size];
   return [
-    // Odak halkası envanter §0.4: 2px zeytin outline, 3px offset — ayrı renk taşımaz.
     // `leading-tight`: tip token'ları satır yüksekliği taşımıyor, kontrol o zaman gövde metninin
     // 1.5 aralığını miras alıp çizilenden ~4 px uzuyor (tasarım md butonu 46 px, biz 50,5 idik).
     // Aynı tuzak adet seçicide ve girdilerde de yaşandı — kontrolün satır aralığı kutunun sorunudur.
     'inline-flex cursor-pointer items-center justify-center gap-2 font-sans font-bold leading-tight transition-colors disabled:cursor-not-allowed',
-    'outline-none focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-olive',
+    focusRingClass,
     VARIANT[variant],
     variant === 'ghost' ? GHOST_SIZE[size] : padded,
     fullWidth ? 'w-full' : '',

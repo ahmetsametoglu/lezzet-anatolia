@@ -6,6 +6,7 @@ import { RATIO_SQUARE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
+import { Icon } from '@/components/customer/ui/icons';
 import { SummaryRow, summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
@@ -47,7 +48,7 @@ export function CelebrationBand({ t, locale, view, compact }: ConfirmationViewPr
           ].join(' ')}
           aria-hidden="true"
         >
-          {view.cancelled ? '!' : view.placed ? '✓' : '⏳'}
+          <Icon name={view.cancelled ? 'close' : view.placed ? 'check' : 'timer'} size={compact ? 22 : 28} strokeWidth={2.2} />
         </span>
 
         {/* `leading-tight`: tip token'larımız yalnız punto taşıyor, satır yüksekliğini preflight'ın
@@ -113,7 +114,10 @@ export function DeliveryCard({ t, shared, locale, view, compact }: ConfirmationV
       <span className={['font-serif leading-tight text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>
         {day ?? shared.delivery.shipping}
       </span>
-      <Chip>{view.onRoute ? shared.delivery.route : `📦 ${shared.delivery.shipping}`}</Chip>
+      <Chip>
+        <Icon name={view.onRoute ? 'truck' : 'box'} size={13} />
+        {view.onRoute ? shared.delivery.route : shared.delivery.shipping}
+      </Chip>
       {view.address && (
         <span className="font-sans text-body-sm leading-relaxed text-body">
           {view.address.label ? `${view.address.label} · ` : ''}
@@ -123,7 +127,12 @@ export function DeliveryCard({ t, shared, locale, view, compact }: ConfirmationV
           {view.address.postalCode} {view.address.city}
         </span>
       )}
-      <Footnote>{view.onRoute ? t.delivery.coldChain : t.delivery.shippingNote}</Footnote>
+      <Footnote>
+        <span className="flex items-start gap-2">
+          <Icon name={view.onRoute ? 'snowflake' : 'box'} size={14} className="mt-0.75 flex-none" />
+          {view.onRoute ? t.delivery.coldChain : t.delivery.shippingNote}
+        </span>
+      </Footnote>
     </Card>
   );
 }
@@ -244,9 +253,7 @@ export function HelpBand({
 
   const content = (
     <>
-      <span className="text-icon" aria-hidden="true">
-        💬
-      </span>
+      <Icon name="chat" size={24} className="flex-none text-olive" />
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-sans text-body-sm font-bold text-ink">{t.help.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.help.body}</span>
@@ -345,9 +352,7 @@ export function NeighborBand({ t, compact, view }: Pick<ConfirmationViewProps, '
 
   return (
     <div className={['flex items-center gap-4 rounded-card bg-cream-deep', compact ? 'px-4 py-3.5' : 'px-6.5 py-5'].join(' ')}>
-      <span className="text-icon" aria-hidden="true">
-        🚚
-      </span>
+      <Icon name="truck" size={24} className="flex-none text-olive" />
       <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-sans text-body-sm font-bold text-ink">{t.neighbor.title}</span>
         <span className="font-sans text-note leading-relaxed text-body">{t.neighbor.body}</span>
@@ -474,7 +479,7 @@ function Eyebrow({ children }: { children: ReactNode }) {
 
 /** Durum hapı — teslimat yolu / ödeme aracı. Renk hep zeytin: ikisi de olumlu bir olgu bildirir. */
 function Chip({ children }: { children: ReactNode }) {
-  return <span className="w-max rounded-soft bg-olive-bg px-2.5 py-0.5 font-sans text-note font-semibold text-olive">{children}</span>;
+  return <span className="inline-flex w-max items-center gap-1.5 rounded-soft bg-olive-bg px-2.5 py-0.5 font-sans text-note font-semibold text-olive">{children}</span>;
 }
 
 /** Kartın alt notu — üstünde ince ayraçla; ana bilgiyle karışmasın diye ayrı bir kademe. */

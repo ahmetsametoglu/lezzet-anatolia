@@ -11,12 +11,12 @@
     "limit": "En fazla {n} adet",
     "closed": "Bu ürün şu an satışa kapalı",
     "assurance": {
-      "coldChain": "❄ Soğuk zincirle gelir",
-      "doorstep": "🚚 Bölge içi kapıya teslim",
-      "shippable": "📦 Kargoya uygun",
-      "notShippable": "🚚 Yalnız Strasbourg & bölge içi kapıya teslim — bu ürün kargoya verilemez.",
-      "coldChainShort": "❄ Soğuk zincir",
-      "doorstepShort": "🚚 Kapıya teslim",
+      "coldChain": "Soğuk zincirle gelir",
+      "doorstep": "Bölge içi kapıya teslim",
+      "shippable": "Kargoya uygun",
+      "notShippable": "Yalnız Strasbourg & bölge içi kapıya teslim — bu ürün kargoya verilemez.",
+      "coldChainShort": "Soğuk zincir",
+      "doorstepShort": "Kapıya teslim",
       "seeShippable": "Kargolanabilir benzerleri gör"
     },
     "declaration": {
@@ -62,9 +62,9 @@
       "panelEmpty": "Bu üründe henüz yazılı yorum yok.",
       "filters": {
         "all": "Tümü ({count})",
-        "five": "5★ ({count})",
-        "four": "4★ ({count})",
-        "low": "3★ ve altı ({count})"
+        "five": "5{star} ({count})",
+        "four": "4{star} ({count})",
+        "low": "3{star} ve altı ({count})"
       },
       "translation": {
         "badge": "otomatik çevrildi",
@@ -120,12 +120,12 @@
     "limit": "{n} maximum",
     "closed": "Ce produit n'est pas en vente actuellement",
     "assurance": {
-      "coldChain": "❄ Livré en chaîne du froid",
-      "doorstep": "🚚 Livraison à domicile dans la zone",
-      "shippable": "📦 Expédiable",
-      "notShippable": "🚚 Uniquement livraison à domicile à Strasbourg & environs — ce produit ne peut pas être expédié.",
-      "coldChainShort": "❄ Chaîne du froid",
-      "doorstepShort": "🚚 Livraison à domicile",
+      "coldChain": "Livré en chaîne du froid",
+      "doorstep": "Livraison à domicile dans la zone",
+      "shippable": "Expédiable",
+      "notShippable": "Uniquement livraison à domicile à Strasbourg & environs — ce produit ne peut pas être expédié.",
+      "coldChainShort": "Chaîne du froid",
+      "doorstepShort": "Livraison à domicile",
       "seeShippable": "Voir des produits expédiables"
     },
     "declaration": {
@@ -171,9 +171,9 @@
       "panelEmpty": "Aucun avis écrit pour ce produit pour l'instant.",
       "filters": {
         "all": "Tous ({count})",
-        "five": "5★ ({count})",
-        "four": "4★ ({count})",
-        "low": "3★ et moins ({count})"
+        "five": "5{star} ({count})",
+        "four": "4{star} ({count})",
+        "low": "3{star} et moins ({count})"
       },
       "translation": {
         "badge": "traduit automatiquement",
@@ -229,12 +229,12 @@
     "limit": "Maximal {n} Stück",
     "closed": "Dieses Produkt ist derzeit nicht im Verkauf",
     "assurance": {
-      "coldChain": "❄ Lieferung in der Kühlkette",
-      "doorstep": "🚚 Lieferung an die Haustür im Liefergebiet",
-      "shippable": "📦 Versandfähig",
-      "notShippable": "🚚 Nur Lieferung an die Haustür in Straßburg & Umgebung — dieses Produkt kann nicht versandt werden.",
-      "coldChainShort": "❄ Kühlkette",
-      "doorstepShort": "🚚 Lieferung an die Haustür",
+      "coldChain": "Lieferung in der Kühlkette",
+      "doorstep": "Lieferung an die Haustür im Liefergebiet",
+      "shippable": "Versandfähig",
+      "notShippable": "Nur Lieferung an die Haustür in Straßburg & Umgebung — dieses Produkt kann nicht versandt werden.",
+      "coldChainShort": "Kühlkette",
+      "doorstepShort": "Lieferung an die Haustür",
       "seeShippable": "Versandfähige Alternativen"
     },
     "declaration": {
@@ -280,9 +280,9 @@
       "panelEmpty": "Für dieses Produkt gibt es noch keine geschriebenen Bewertungen.",
       "filters": {
         "all": "Alle ({count})",
-        "five": "5★ ({count})",
-        "four": "4★ ({count})",
-        "low": "3★ und weniger ({count})"
+        "five": "5{star} ({count})",
+        "four": "4{star} ({count})",
+        "low": "3{star} und weniger ({count})"
       },
       "translation": {
         "badge": "automatisch übersetzt",

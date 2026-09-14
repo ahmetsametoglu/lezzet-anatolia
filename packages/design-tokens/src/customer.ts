@@ -1,8 +1,8 @@
 /*
   MÜŞTERİ evreni token'ları — kaynak: design/project/Komponent Envanteri - Musteri.dc.html §0.
   Bu modül `apps/web/app/globals.css` `@theme` bloğunun TEK-KAYNAK karşılığıdır (21.3):
-  isimler ve değerler CSS ile birebir — anahtar, custom property adının aile öneki
-  (`--color-` / `--text-` / `--radius-`) atılmış hâlidir ve kayıpsız geri üretilir
+  isimler ve değerler CSS ile birebir — anahtar, custom property adının aile öneki (`--color-` /
+  `--text-` / `--radius-` / `--animate-` / `--shadow-`) atılmış hâlidir ve kayıpsız geri üretilir
   (`render-theme-css.ts`). Değerler bilerek CSS'te yazıldığı gibi STRING tutulur;
   birim/parse dönüşümü tüketicinin (Unistyles teması vb.) işidir, kaynağın değil.
 
@@ -22,6 +22,9 @@
   `customer-app.ts`te YAŞAR ve oradan kompozisyonla birleşir — `-app` sonekli melez adlar
   İPTAL edildi. Sonuç: mobil mutabakatı bu dosyayı hiç değiştirmez, dolayısıyla web'e görsel
   tur faturası çıkmaz; parite de istisnasız iki yönlü kalır (`parity.test.ts`).
+  AD KURALI: buraya eklenen anahtar uygulama katmanlarında (`customer-app.ts`, `operations-app.ts`)
+  BOŞ bir ad olmalı — aynı ad kompozisyonda uygulamanın tonuyla sessizce ezilir. 14.09: web v1'in
+  `ink-deep` ve `sand-250`i bu yüzden `ink-hover` ve `sand-275` oldu (uygulamada ikisi de başka ton).
 */
 
 /* ── §0.1 Yüzey ve mürekkep ──────────────────────────────────────────────────
@@ -29,6 +32,7 @@
    #3c4448 · #454d54 → hepsi `ink`. Ayrı bir `slate` token'ı YOK. */
 export const customerSurface = {
   ink: '#343b41', // başlık, koyu blok zemini, birincil metin
+  'ink-hover': '#2b3238', // koyu hapın üzerine gelinmiş hâli (v1 sepet hapı)
   body: '#6d7261', // gövde açıklaması, kart alt satırı
   muted: '#8a8270', // etiket, yardımcı satır, placeholder
   card: '#ffffff', // kart, dialog, girdi zemini
@@ -46,6 +50,7 @@ export const customerSand = {
   'sand-50': '#f3efe2', // ara zemin, gömülü panel, hover
   'sand-100': '#f0e9d6', // vurgulu bölüm, iç ayraç
   'sand-200': '#ece5d2', // standart çerçeve, kart kenarı
+  'sand-275': '#e6dfcd', // başlık ve yer paneli alt çizgisi (v1)
   'sand-300': '#e0d8c2', // girdi kenarı, 2. çerçeve
   'sand-400': '#d8cfb6', // belirgin çerçeve
   'sand-500': '#cdc4a8', // kesikli çerçeve, boş durum
@@ -60,6 +65,7 @@ export const customerOlive = {
   'olive-dark': '#4a6121', // kutu başlığı, hover, basılı
   'olive-bg': '#eef2e2', // yeşil bant, olumlu rozet
   'olive-line': '#d7e3bd', // kutu ve seçili kart çerçevesi
+  'olive-edge': '#cddbb0', // yer hapının çerçevesi (v1 başlık)
   'olive-light': '#a9c46b', // koyu blok üstünde vurgu, ikon
 } as const satisfies Record<string, string>;
 
@@ -207,4 +213,23 @@ export const customerRadius = {
   card: '18px', // kart, panel, yüzen sayfa
   soft: '14px', // BEKLEYEN(BACKLOG §5): resmî sette yok; görsel turda 12 ya da 16'ya yuvarlanacak
   pill: '26px', // hap düğme, çip, sayaç
+} as const satisfies Record<string, string>;
+
+/* ── v1 hareketleri (`--animate-` öneki · 13.09) ─────────────────────────────
+   Web v1'in `fadeIn` / `pop` / `sheetIn` kareleri. Değer CSS `animation` kısaltmasıdır; kare
+   adları globals.css'teki üst düzey `@keyframes` bloklarına bağlı (bloklar `@theme`in dışında). */
+export const customerMotion = {
+  'fade-in': 'fade-in 0.2s ease', // yer paneli açılışı
+  pop: 'pop 0.24s ease', // bildirim hapı
+  'sheet-in': 'sheet-in 0.22s ease', // mobil çekmecenin alttan girişi (Mobil v1 `sheetIn`)
+} as const satisfies Record<string, string>;
+
+/* ── Yüzen yüzey gölgeleri (`--shadow-` öneki · 13.09) ───────────────────────
+   Web v1'in bildirim hapı, açılır menüsü, ortalanmış penceresi ve mobil çekmecesi. Mobil
+   uygulamanın gölge ailesi AYRIDIR (`customerAppShadow`: soft · hard · badge) — adlar çakışmaz. */
+export const customerShadow = {
+  toast: '0 10px 30px rgb(47 53 58 / 0.3)', // bildirim hapının gölgesi
+  menu: '0 14px 34px rgb(58 65 71 / 0.2)', // açılır menü (v1 hesap menüsü)
+  dialog: '0 24px 64px rgb(47 53 58 / 0.36)', // ortalanmış pencere (v1 masaüstü adres penceresi)
+  sheet: '0 -12px 40px rgb(47 53 58 / 0.28)', // mobil çekmecenin gölgesi (Mobil v1)
 } as const satisfies Record<string, string>;

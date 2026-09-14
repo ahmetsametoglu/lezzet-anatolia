@@ -2,6 +2,7 @@ import { Link } from '@/i18n/navigation';
 import type { AccountViewProps } from './account-types';
 import { statusPillClass } from '@/components/customer/ui/badge';
 import { Card } from '@/components/customer/ui/card';
+import { Icon } from '@/components/customer/ui/icons';
 import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { setConsentAction } from './actions';
 import { AddressesCard } from './components/addresses-card';
@@ -35,7 +36,14 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
               <CardHead
                 title={t.companyTitle}
                 compact={compact}
-                action={<span className={statusPillClass('sm', 'bg-olive-bg text-olive')}>{t.companyApproved}</span>}
+                action={
+                  <span className={statusPillClass('sm', 'bg-olive-bg text-olive')}>
+                    <span className="inline-flex items-center gap-1">
+                      <Icon name="check" size={12} />
+                      {t.companyApproved}
+                    </span>
+                  </span>
+                }
               />
               <Row label={t.companyLegalName} value={account.company.legalName} />
               {account.company.siret && <Row label={t.companySiret} value={account.company.siret} />}
@@ -57,8 +65,22 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
             {/* `bind` — kapanış DEĞİL: bu dosya sunucu bileşeni ve istemciye ancak bir server
                 action geçebilir. Yerinde yazılmış bir ok fonksiyonu sıradan bir fonksiyondur ve
                 serileştirilemez; `bind` üretilen şeyi yine server action olarak bırakır. */}
-            <ConsentSwitch label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} onToggle={setConsentAction.bind(null, 'email')} />
-            <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} onToggle={setConsentAction.bind(null, 'whatsapp')} />
+            <ConsentSwitch
+              label={t.consentEmail}
+              icon={<Icon name="mail" size={17} />}
+              on={account.consent.email}
+              onLabel={t.consentOn}
+              offLabel={t.consentOff}
+              onToggle={setConsentAction.bind(null, 'email')}
+            />
+            <ConsentSwitch
+              label={t.consentWhatsapp}
+              icon={<Icon name="chat" size={17} />}
+              on={account.consent.whatsapp}
+              onLabel={t.consentOn}
+              offLabel={t.consentOff}
+              onToggle={setConsentAction.bind(null, 'whatsapp')}
+            />
             <span className="font-sans text-micro leading-relaxed text-muted">{t.consentNote}</span>
           </Card>
 
@@ -105,11 +127,17 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
           <Card compact={compact}>
             <CardHead title={t.linksTitle} compact={compact} />
             <Link href="/orders" className="flex items-center justify-between gap-3 border-b border-sand-100 pb-2.5 font-sans text-body-sm font-bold text-ink transition-colors hover:text-olive">
-              <span>{t.linkOrders}</span>
+              <span className="flex items-center gap-1.75">
+                <Icon name="box" size={16} />
+                {t.linkOrders}
+              </span>
               <span className="text-olive">→</span>
             </Link>
             <Link href="/support" className="flex items-center justify-between gap-3 font-sans text-body-sm font-bold text-ink transition-colors hover:text-olive">
-              <span>{t.linkSupport}</span>
+              <span className="flex items-center gap-1.75">
+                <Icon name="chat" size={16} />
+                {t.linkSupport}
+              </span>
               <span className="text-olive">→</span>
             </Link>
           </Card>

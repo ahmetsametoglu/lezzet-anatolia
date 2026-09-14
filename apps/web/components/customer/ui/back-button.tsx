@@ -23,15 +23,13 @@ interface BackButtonProps {
   label: string;
   /** Tarayıcı geçmişi boşken gidilecek yer. */
   fallback: PushHref;
-  /**
-   * Düğmenin durduğu yüzey (native `BackButton`ın aynı ayrımı, sekizinci tur 20.08):
-   * `bar` zeminsizdir (başlık satırı, hover'da kum), `photo` krem dolguludur — fotoğrafın
-   * üstünde zeminsiz bir glif okunmaz; dolgu okunurluk içindir (native: `sand-50` daire).
-   */
-  variant?: 'bar' | 'photo';
 }
 
-export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps) {
+/**
+ * Zeminsiz yuvarlak ‹ — native `BackButton`ın `bar` biçimi (40 dp; burada envanterin 44px tabanı),
+ * hover'da kum. Mobil webin bütün başlıkları bunu taşır: `AppBar`, `FunnelHeader` (14.09).
+ */
+export function BackButton({ label, fallback }: BackButtonProps) {
   const router = useRouter();
   const goBack = () => {
     if (window.history.length > 1) router.back();
@@ -42,12 +40,8 @@ export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps
       type="button"
       aria-label={label}
       onClick={goBack}
-      // 44px kutu (envanter tabanı); bar'da `-ml-2.5` glifi metin hizasına oturtur (mobil menünün
-      // deseni) — photo'da hiza derdi yok, dolgu ve gölge kenarından ölçülür.
-      className={[
-        'flex size-11 flex-none cursor-pointer items-center justify-center rounded-full font-sans text-icon-sm font-bold text-ink transition-colors',
-        variant === 'photo' ? 'bg-sand-50/90 backdrop-blur hover:bg-sand-50' : '-ml-2.5 hover:bg-sand-200',
-      ].join(' ')}
+      // 44px kutu (envanter tabanı); `-ml-2.5` glifi metin hizasına oturtur.
+      className="-ml-2.5 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full font-sans text-icon-sm font-bold text-ink transition-colors hover:bg-sand-200"
     >
       ‹
     </button>

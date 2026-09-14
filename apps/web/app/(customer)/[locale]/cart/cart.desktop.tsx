@@ -9,6 +9,7 @@ import { SavedList } from '@/components/customer/delivery/saved-list';
 import { CartLineRow } from './components/cart-line';
 import { CartGroup } from './components/cart-group';
 import { CartSummary } from './components/cart-summary';
+import { CartIdentity } from './components/cart-identity';
 import { PlaceChangeCard } from './components/place-change-card';
 import { CartCoupon } from './components/cart-coupon';
 import { EmptyCart } from './components/empty-cart';
@@ -101,6 +102,9 @@ export function CartDesktop({ t, locale, emptyContext }: CartViewProps) {
       </div>
 
       <div className="sticky top-5 flex flex-col gap-3.5">
+        {/* KİM ve NEREYE — özetin en üstünde (kullanıcı kararı 13.09): ödemeye geçmenin iki ön
+            şartı, tutardan önce okunur. Girişsizde giriş bloğu, girişlide seçili adres. */}
+        <CartIdentity t={t} locale={locale} />
         {/* Yer değişimi bildirimi ÖZETİN ÜSTÜNDE (tasarım: sağ sütunun kendi kartı): müşteri
             önce neyin değiştiğini okur, sonra tutara bakar. */}
         <PlaceChangeCard t={t} locale={locale} />

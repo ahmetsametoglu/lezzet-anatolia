@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { pillInputClass } from '@/components/customer/form/pill-input';
 import type { LegalQuestion } from './legal-types';
 
@@ -53,7 +54,7 @@ export function LegalFaq({ questions, t, compact = false }: LegalFaqProps) {
           `/catalog`a yönlendiriyor. Buradaki arama bir gezinme değil canlı bir süzme — aynı ada
           sahip iki farklı davranış. Kitin hap girdisi (`pillInputClass`) doğru zemin. */}
       <label className={`flex items-center gap-2 ${pillInputClass(compact ? 'w-full py-2.5' : 'w-[340px] py-2.5')}`}>
-        <span aria-hidden="true" className="flex-none text-body-sm">🔍</span>
+        <Icon name="search" size={16} strokeWidth={2.1} className="text-muted" />
         <input
           type="search"
           value={query}

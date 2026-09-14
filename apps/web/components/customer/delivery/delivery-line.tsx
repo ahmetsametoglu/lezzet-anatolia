@@ -7,6 +7,7 @@ import { elsewhereReasonOf } from '@/lib/delivery/place-types';
 import type { StockStatus } from '@lezzet/types';
 import { useDeliveryPlace } from './place-context';
 import { PlaceDialog } from './place-dialog';
+import { Icon } from '@/components/customer/ui/icons';
 import messages from './place-messages.json';
 
 /**
@@ -99,11 +100,20 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
         <div className={[...box, 'bg-sand-100'].join(' ')}>
           {shippable ? (
             <>
-              <span>{fallback.doorstep}</span>
-              <span>{fallback.shippable}</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name="truck" size={compact ? 13 : 15} />
+                {fallback.doorstep}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name="box" size={compact ? 13 : 15} />
+                {fallback.shippable}
+              </span>
             </>
           ) : (
-            <span>{fallback.notShippable}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="truck" size={compact ? 13 : 15} />
+              {fallback.notShippable}
+            </span>
           )}
           <span>{change}</span>
         </div>
@@ -137,7 +147,12 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
 
               `compact` hâlde (liste/sepet satırı) rozet YOKTUR, o yüzden başlık orada duruyor:
               tekrar eden şey başlığın kendisi değil, ikisinin yan yana gelmesiydi. */}
-          {compact && <span className="font-bold">{away ? t.awayMark : t.shipMark}</span>}
+          {compact && (
+            <span className="inline-flex items-center gap-1.5 font-bold">
+              {!away && <Icon name="box" size={13} />}
+              {away ? t.awayMark : t.shipMark}
+            </span>
+          )}
           <span className="leading-relaxed">{(away ? t.awayBody : t.shipBody).replace('{code}', place.postalCode)}</span>
           {blockedActions}
           {/* Yer değiştirme çıkışı YALNIZ engelli hâlde: kargoyla gelen üründe engellenmiş bir şey
@@ -194,7 +209,10 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
            * teslimat kutusunun değil, ürünün künyesidir.
            */
           <>
-            <span>{shippable ? t.lineInRoute : t.routeOnlyLine}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="truck" size={compact ? 13 : 15} />
+              {shippable ? t.lineInRoute : t.routeOnlyLine}
+            </span>
             {place.nextDate && (
               <span className="font-semibold text-olive-dark">
                 {t.nextDate.replace('{date}', formatDeliveryDate(place.nextDate, locale))}
@@ -206,7 +224,10 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
           <>
             {/* Kargo dalı METOT değil KAPSAM söyler: müşterinin bu aşamada sorduğu şey "nasıl
                 gelecek" değil, "gelebilir mi". Yöntem checkout'ta zaten adresten çıkacak. */}
-            <span className="font-semibold text-olive-dark">📍 {place.postalCode}</span>
+            <span className="inline-flex items-center gap-1.5 font-semibold text-olive-dark">
+              <Icon name="pin" size={compact ? 13 : 15} />
+              {place.postalCode}
+            </span>
             <span>{t.canShipHere}</span>
             <span>{change}</span>
           </>

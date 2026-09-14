@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { pillInputClass } from '@/components/customer/form/pill-input';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { useAccount } from '@/components/customer/account/account-context';
 import { isValidPostalCode } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
@@ -25,6 +26,10 @@ import messages from './place-messages.json';
  * Fransa'nın her yerine gidiyor, sormak karşılıksız bir soru olurdu.
  *
  * Yer zaten biliniyorsa ya da o bağlamda "şimdi değil" denmişse şerit HİÇ çizilmez.
+ *
+ * **Sepette girişli müşteriye sorulmaz (13.09):** onun sorusu posta kodu değil ADRES ve onu sepet
+ * paneli soruyor (`CartIdentity`). Aynı sepette iki soru — "kodunuz ne" ve "adresiniz ne" — aynı
+ * cevabı iki türlü istemek olurdu.
  */
 interface PlacePromptProps {
   locale: Locale;
@@ -36,12 +41,13 @@ export function PlacePrompt({ locale, scope = 'home' }: PlacePromptProps) {
   const t = messages[locale];
   const { place, ready, skipped, setPostalCode, skip } = useDeliveryPlace();
   const { view } = useCart();
+  const account = useAccount();
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
 
   const restricted = view.lines.filter((l) => !l.shippable && !l.blocked).length;
   if (!ready || place || skipped(scope)) return null;
-  if (scope === 'cart' && restricted === 0) return null;
+  if (scope === 'cart' && (restricted === 0 || account !== null)) return null;
 
   const submit = async () => {
     if (!isValidPostalCode(value)) return;

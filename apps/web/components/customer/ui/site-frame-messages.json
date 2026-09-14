@@ -1,10 +1,14 @@
 {
   "tr": {
     "announcement": {
-      "cold": "❄ Soğuk zincirle teslim",
+      "cold": "Soğuk zincirle teslim",
       "local": "Strasbourg & çevresinde kapıya teslim",
-      "shipping": "Kargoya uygun ürünler Fransa geneline",
-      "mobile": "❄ Soğuk zincirle kapıya teslim"
+      "shipping": "Fransa geneline kargo"
+    },
+    "cartPill": {
+      "items": "{n} ürün · {total}",
+      "itemsOne": "{n} ürün · {total}",
+      "empty": "Sepet boş"
     },
     "nav": {
       "home": "Ana sayfa",
@@ -38,15 +42,23 @@
       "backToCatalog": "← Kataloğa dön"
     },
     "menu": "Menü",
-    "close": "Kapat",
-    "back": "Geri"
+    "back": "Geri",
+    "tabs": {
+      "home": "Vitrin",
+      "cart": "Sepet"
+    },
+    "info": "Bilgi"
   },
   "fr": {
     "announcement": {
-      "cold": "❄ Livraison en chaîne du froid",
+      "cold": "Livraison en chaîne du froid",
       "local": "Livraison à domicile à Strasbourg et alentours",
-      "shipping": "Produits expédiables dans toute la France",
-      "mobile": "❄ Livraison à domicile en chaîne du froid"
+      "shipping": "Expédition dans toute la France"
+    },
+    "cartPill": {
+      "items": "{n} produits · {total}",
+      "itemsOne": "{n} produit · {total}",
+      "empty": "Panier vide"
     },
     "nav": {
       "home": "Accueil",
@@ -80,15 +92,23 @@
       "backToCatalog": "← Retour au catalogue"
     },
     "menu": "Menu",
-    "close": "Fermer",
-    "back": "Retour"
+    "back": "Retour",
+    "tabs": {
+      "home": "Accueil",
+      "cart": "Panier"
+    },
+    "info": "Informations"
   },
   "de": {
     "announcement": {
-      "cold": "❄ Lieferung in der Kühlkette",
+      "cold": "Lieferung in der Kühlkette",
       "local": "Hauslieferung in Straßburg und Umgebung",
-      "shipping": "Versandfähige Produkte in ganz Frankreich",
-      "mobile": "❄ Hauslieferung in der Kühlkette"
+      "shipping": "Versand in ganz Frankreich"
+    },
+    "cartPill": {
+      "items": "{n} Artikel · {total}",
+      "itemsOne": "{n} Artikel · {total}",
+      "empty": "Warenkorb leer"
     },
     "nav": {
       "home": "Startseite",
@@ -122,7 +142,11 @@
       "backToCatalog": "← Zurück zum Katalog"
     },
     "menu": "Menü",
-    "close": "Schließen",
-    "back": "Zurück"
+    "back": "Zurück",
+    "tabs": {
+      "home": "Start",
+      "cart": "Warenkorb"
+    },
+    "info": "Informationen"
   }
 }

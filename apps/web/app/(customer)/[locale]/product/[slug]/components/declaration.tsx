@@ -4,6 +4,7 @@ import { ALLERGEN_LABELS, resolveLocalizedText } from '@lezzet/types';
 import type { Nutrition, ProductAllergen } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { formatDecimal } from '@/lib/storefront/format';
+import { Icon } from '@/components/customer/ui/icons';
 import type { StorefrontDeclaration } from '@lezzet/application';
 import type { Messages } from '../product-types';
 
@@ -49,7 +50,7 @@ function DeclarationCard({ title, note, warn = false, compact = false, children 
     <>
       <span className="flex items-baseline gap-2">
         <h2 className={['font-serif text-ink', compact ? 'text-body font-bold' : 'text-card-title'].join(' ')}>{title}</h2>
-        {warn && <span className="font-sans text-note text-terracotta">⚠</span>}
+        {warn && <Icon name="warning" size={16} className="self-center text-terracotta" />}
       </span>
       {note && <span className="font-sans text-note text-muted">{note}</span>}
     </>
@@ -109,8 +110,9 @@ export function Declaration({ t, locale, declaration, netWeightG, compact = fals
           {allergens.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {allergens.map((a) => (
-                <span key={a} className="w-max rounded-soft bg-terracotta-bg px-3.5 py-1.5 font-sans text-note font-bold text-terracotta">
-                  ⚠ {resolveLocalizedText(ALLERGEN_LABELS[a], locale)}
+                <span key={a} className="inline-flex w-max items-center gap-1.5 rounded-soft bg-terracotta-bg px-3.5 py-1.5 font-sans text-note font-bold text-terracotta">
+                  <Icon name="warning" size={13} />
+                  {resolveLocalizedText(ALLERGEN_LABELS[a], locale)}
                 </span>
               ))}
             </div>

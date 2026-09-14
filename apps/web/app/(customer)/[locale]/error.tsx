@@ -8,6 +8,7 @@ import { useDevice } from '@/lib/use-device.hook';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { MessageScreen } from '@/components/customer/ui/message-screen';
+import { Icon } from '@/components/customer/ui/icons';
 import { reportClientErrorAction } from '@/lib/observability/report-client-error';
 import errorMessages from './error-messages.json';
 
@@ -49,7 +50,7 @@ export default function CustomerError({ error, reset }: { error: Error & { diges
     <SiteFrame device={device} locale={locale}>
       <MessageScreen
         device={device}
-        emoji="🍳"
+        icon="warning"
         eyebrow={t.eyebrow}
         title={t.title}
         description={t.description}
@@ -71,8 +72,14 @@ export default function CustomerError({ error, reset }: { error: Error & { diges
             device === 'mobile' ? 'flex-col text-left' : 'items-center',
           ].join(' ')}
         >
-          <span>{t.cart}</span>
-          <span>{t.orders}</span>
+          <span className="flex items-center gap-2">
+            <Icon name="basket" size={16} className="flex-none text-olive" />
+            {t.cart}
+          </span>
+          <span className="flex items-center gap-2">
+            <Icon name="check" size={16} className="flex-none text-olive" />
+            {t.orders}
+          </span>
         </div>
       </MessageScreen>
     </SiteFrame>

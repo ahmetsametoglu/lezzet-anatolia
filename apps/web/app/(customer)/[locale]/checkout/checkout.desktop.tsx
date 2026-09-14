@@ -1,9 +1,9 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
-import { AccountLine, AddressStep, DeliveryStep, LockedStep, OrderSummary, PaymentStep } from './components/checkout-steps';
+import { Icon } from '@/components/customer/ui/icons';
+import { AccountLine, AddressStep, DeliveryStep, OrderSummary, PaymentStep } from './components/checkout-steps';
 import { CheckoutProgress } from './components/checkout-progress';
-import { GuestVerify } from './components/guest-verify';
 import { CheckoutStepsSkeleton } from './components/checkout-skeleton';
 import { ShippingOrderNote } from './components/shipping-order-note';
 import type { CheckoutViewProps } from './checkout-types';
@@ -11,13 +11,13 @@ import type { CheckoutViewProps } from './checkout-types';
 /**
  * Checkout · masaüstü.
  *
- * **Sıra: ne alıyorum → kim olduğum → nereye → ne zaman → nasıl ödüyorum.** İlk bölüm sepetin
- * kendisi (desen: `~/dev/petitcigogne`); doğrulanmamış müşteride sol sütun boş kalmıyor ve ekran
- * giriş duvarı gibi okunmuyor. Üstte yapışkan şerit yolun tamamını gösterir.
+ * **Sıra: kim olduğum → nereye (salt okunur) → ne zaman → nasıl ödüyorum.** Kimlik ve adres
+ * SEPETTE çözülüyor (13.09); buraya gelen müşteri girişli ve adresli — sayfa girişsizi sepete
+ * çeviriyor. Üstte yapışkan şerit yolun tamamını gösterir.
  *
- * Özet YAPIŞKAN: müşteri adres ve gün seçerken toplamın gözden kaybolmaması gerekiyor — ödeme
- * kararı tutara bakarak veriliyor. Adımlar tek sütunda ve HEPSİ görünür: akordeon yapmak,
- * müşteriye kendi verdiği kararı görmek için geri tıklatmak olurdu (tasarım sözleşmesi).
+ * Özet YAPIŞKAN: müşteri gün seçerken toplamın gözden kaybolmaması gerekiyor — ödeme kararı tutara
+ * bakarak veriliyor. Adımlar tek sütunda ve HEPSİ görünür: akordeon yapmak, müşteriye kendi verdiği
+ * kararı görmek için geri tıklatmak olurdu (tasarım sözleşmesi).
  */
 export function CheckoutDesktop(props: CheckoutViewProps) {
   const { t } = props;
@@ -35,7 +35,10 @@ export function CheckoutDesktop(props: CheckoutViewProps) {
           {props.shippingOrder ? t.shippingEyebrow : t.eyebrow}
         </span>
         <div className="ml-auto flex items-center gap-5">
-          <span className="font-sans text-micro font-semibold text-body">🔒 {t.secure}</span>
+          <span className="inline-flex items-center gap-1.5 font-sans text-micro font-semibold text-body">
+            <Icon name="lock" size={13} />
+            {t.secure}
+          </span>
           <Link href="/cart" className="cursor-pointer font-sans text-body-sm font-bold text-olive hover:text-olive-dark">
             {t.backToCart}
           </Link>
@@ -48,32 +51,18 @@ export function CheckoutDesktop(props: CheckoutViewProps) {
         <div className="flex min-w-0 flex-col gap-4">
           <ShippingOrderNote {...props} />
           <CheckoutProgress {...props} />
-
-          {/* Adım 0 yalnız girişsizken. Sonraki adımlar SİLİNMEZ, başlıklarıyla durur: müşteri kaç
-              adım kaldığını ilk bakışta görmeli (tasarım: "az adım, tam görünürlük"). */}
-          {props.authenticated ? (
+          <AccountLine t={t} email={props.customerEmail} compact={props.compact} />
+          {/* Adım verisi istemcide çözülüyor: bitmeden adımlar çizilmez. Önce hiç çizilmiyordu
+              (sayfa yarım görünüyordu) ve adres adımı veri gelmeden "kayıtlı adresiniz yok"
+              diyordu — henüz bilinmeyen, üstelik yanlış olabilen bir hüküm. */}
+          {props.snapshotReady ? (
             <>
-              <AccountLine t={t} email={props.customerEmail} compact={props.compact} />
-              {/* Adım verisi istemcide çözülüyor: bitmeden adımlar çizilmez. Önce hiç çizilmiyordu
-                  (sayfa yarım görünüyordu) ve adres adımı veri gelmeden "kayıtlı adresiniz yok"
-                  diyordu — henüz bilinmeyen, üstelik yanlış olabilen bir hüküm. */}
-              {props.snapshotReady ? (
-                <>
-                  <AddressStep {...props} />
-                  <DeliveryStep {...props} />
-                  <PaymentStep {...props} />
-                </>
-              ) : (
-                <CheckoutStepsSkeleton t={t} compact={props.compact} />
-              )}
+              <AddressStep {...props} />
+              <DeliveryStep {...props} />
+              <PaymentStep {...props} />
             </>
           ) : (
-            <>
-              <GuestVerify t={t} locale={props.locale} compact={props.compact} onVerified={props.onVerified} />
-              <LockedStep step={t.address.step} title={t.address.title} hint={t.verify.locked} />
-              <LockedStep step={t.delivery.step} title={t.delivery.title} hint={t.verify.locked} />
-              <LockedStep step={t.payment.step} title={t.payment.title} hint={t.verify.locked} />
-            </>
+            <CheckoutStepsSkeleton t={t} compact={props.compact} />
           )}
         </div>
 

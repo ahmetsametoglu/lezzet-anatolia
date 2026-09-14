@@ -3,6 +3,7 @@
 import { Link } from '@/i18n/navigation';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { ListEmpty } from '@/components/customer/ui/list-empty';
+import { Icon } from '@/components/customer/ui/icons';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { formatPrice } from '@/lib/storefront/format';
 import { OrderStatusBadge } from './components/order-status-badge';
@@ -43,7 +44,7 @@ export function OrdersMobile({
       // durur; footer'sız kısa sayfada üstte asılı buton altında krem bir deniz bırakıyordu).
       <div className="flex flex-1 flex-col px-4 py-8">
         <span className="flex-[2]" aria-hidden="true" />
-        <ListEmpty icon="📦" title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
+        <ListEmpty icon="box"title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
         <span className="flex-[3]" aria-hidden="true" />
       </div>
     );
@@ -77,6 +78,7 @@ export function OrdersMobile({
                 disabled={busyOrderId !== null}
                 onClick={() => onReorder(order.id)}
               >
+                {busyOrderId !== order.id && <Icon name="refresh" size={14} />}
                 {busyOrderId === order.id ? reorderCopy[locale].reordering : reorderCopy[locale].reorder}
               </Button>
               <Link

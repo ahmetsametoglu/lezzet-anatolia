@@ -75,10 +75,9 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
       device={device}
       locale={locale}
       activeNav="packages"
-      mobileChrome="detail"
       footer="slim"
-      /* `detail` prop'u YOK (sekizinci tur): başlık çizilmez — görsel tepeye yaslı, geri düğmesi
-         fotoğrafın üstünde (`package.mobile`), sepet çerçevenin `CartFab`ında. */
+      /* Mobil üst barın başlığı paketin adı; ‹ geçmiş boşsa paketlere döner (v1 mobil, 13.09). */
+      detail={{ title: pack.name, fallback: '/packages' }}
     >
       <PackageClient t={t} locale={locale} pack={pack} device={device} />
     </SiteFrame>

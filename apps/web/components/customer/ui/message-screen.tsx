@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Icon, type IconName } from './icons';
 
 /**
  * Müşteri "durum ekranı" gövdesi — simge + üst etiket + Lora başlık + açıklama + aksiyonlar.
@@ -16,8 +17,11 @@ import type { ReactNode } from 'react';
  */
 interface MessageScreenProps {
   device: 'mobile' | 'desktop';
-  /** Emoji simge (müşteri evreni dekoratif emoji kullanır; operasyon çizgi SVG). */
-  emoji: string;
+  /**
+   * Ekranın simgesi — ikon setinden (14.09). Müşteri evreni bir süre dekoratif emoji kullandı; v1 ile
+   * ikon dili tek oldu (kullanıcı kararı: "ikon tasarım desenimiz her yerde aynı olmalı").
+   */
+  icon: IconName;
   /** Küçük büyük-harf üst etiket ("404 · Sayfa bulunamadı"). */
   eyebrow: string;
   title: string;
@@ -28,7 +32,7 @@ interface MessageScreenProps {
   children?: ReactNode;
 }
 
-export function MessageScreen({ device, emoji, eyebrow, title, description, actions, children }: MessageScreenProps) {
+export function MessageScreen({ device, icon, eyebrow, title, description, actions, children }: MessageScreenProps) {
   const isMobile = device === 'mobile';
   return (
     <div
@@ -37,11 +41,8 @@ export function MessageScreen({ device, emoji, eyebrow, title, description, acti
         isMobile ? 'px-6 py-12' : 'px-12 py-20',
       ].join(' ')}
     >
-      {/* Emoji bir TİPOGRAFİ kademesi değil dekoratif bir ikondur; ölçekte karşılığı aramak yanlış
-          soruydu (`design/BACKLOG §2`). Ham `[42px]` yerine iki standart Tailwind kademesi: mobilde
-          36, masaüstünde 48. Dekoratif bir öğede 6px büyüme görsel bir bozulma değil, ham değerin
-          kalması ise envanterin dışında kalan bir ölçüyü kalıcılaştırırdı. */}
-      <span className={isMobile ? 'text-4xl' : 'text-5xl'}>{emoji}</span>
+      {/* Ölçü emojinin iki kademesinden kaldı (mobil 36, masaüstü 48); renk markanın zeytini. */}
+      <Icon name={icon} size={isMobile ? 36 : 48} className="text-olive" />
       <div className="flex flex-col items-center gap-2.5">
         <span className="font-sans text-eyebrow uppercase text-muted">{eyebrow}</span>
         {/* Başlık ölçeğe bağlandı: `text-page-title` (38/26) ile buradaki ham 40/27 AYNI ROLÜ

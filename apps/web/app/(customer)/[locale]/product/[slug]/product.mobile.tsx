@@ -6,7 +6,6 @@ import { Reviews } from './components/reviews';
 import { SimilarStrip } from './components/similar-strip';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
-import { BackButton } from '@/components/customer/ui/back-button';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { Badge } from '@/components/customer/ui/badge';
@@ -19,11 +18,9 @@ import type { ProductViewProps } from './product-types';
  * Mobil bu sayfanın ASIL biçimi: sosyal medya ve WhatsApp trafiği doğrudan buraya düşer, sayfa tek
  * başına ilk izlenim olabilir (`musteri-urun-detay.md §7`).
  *
- * BAŞLIK YOK (kullanıcı kararı 20.08, sekizinci tur): görsel ekranın tepesine yaslı ve kenardan
- * kenara — kart değil, sayfanın kendisi (native ürün ekranının kahraman deseni). Geri düğmesi
- * fotoğrafın sol üstünde krem daire (`BackButton photo`); sepete giden yol çerçevenin sağ alttaki
- * yüzen düğmesi (`CartFab`). Üst bar + boş krem şerit "kötü bir boşluk" bırakıyordu (kullanıcı
- * görüntüyle gösterdi).
+ * Geri yolu, ürünün adı ve sepet ÇERÇEVENİN üst barında (v1 mobil, 13.09); sekizinci turun
+ * başlıksız görseli, fotoğraf üstündeki geri dairesi ve yüzen sepet düğmesi v1 ile kalktı. Görsel
+ * barın altında kenardan kenara.
  *
  * Akış: galeri (kaydırmalı) → künye → boy seçimi → teslimat güvencesi → SATIN ALMA → beyan
  * akordeonları → yorumlar → benzer ürün şeridi. Sepete ekle artık sabit çubukta DEĞİL, akışın
@@ -31,14 +28,8 @@ import type { ProductViewProps } from './product-types';
  */
 export function ProductMobile({ t, locale, product, selected, onSelect, familyLabel, unavailable, reviews }: ProductViewProps) {
   return (
-    // Alt boşluk yüzen sepet düğmesi için: daire son bölümün metnini örtmesin.
-    <div className="flex flex-col pb-16">
-      <div className="relative">
-        <Gallery images={product.gallery} alt={product.name} compact flush />
-        <div className="absolute top-3 left-3 z-10">
-          <BackButton label={t.backLabel} fallback="/catalog" variant="photo" />
-        </div>
-      </div>
+    <div className="flex flex-col pb-6">
+      <Gallery images={product.gallery} alt={product.name} compact flush />
 
       <section className="flex flex-col gap-3 px-4 pt-4">
         <div className="flex flex-col gap-1.5">

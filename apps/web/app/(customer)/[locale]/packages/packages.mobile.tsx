@@ -1,7 +1,6 @@
 'use client';
 
 import { PackageListCard } from '@/components/customer/ui/package-card';
-import { CartBar } from '@/components/customer/cart/cart-bar';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Link } from '@/i18n/navigation';
 import type { PackagesViewProps } from './packages-types';
@@ -17,11 +16,11 @@ import type { PackagesViewProps } from './packages-types';
  */
 export function PackagesMobile({ t, locale, packages }: PackagesViewProps) {
   return (
-    <div className="flex flex-col pb-24">
-      <div className="flex flex-col gap-1.5 px-4 pt-5 pb-3">
-        <h1 className="font-serif text-page-title-sm text-ink">{t.title}</h1>
-        <p className="font-sans text-note leading-relaxed text-body">{t.subtitle}</p>
-      </div>
+    <div className="flex flex-col">
+      {/* Başlık çerçevenin çubuğunda ("Paketler", 14.09); burada görünür ikinci bir kopyası olmaz.
+          `h1` arama motoru ve ekran okuyucu için yerinde kalır. */}
+      <h1 className="sr-only">{t.title}</h1>
+      <p className="px-4 pt-4 pb-3 font-sans text-note leading-relaxed text-body">{t.subtitle}</p>
 
       {packages.length === 0 ? (
         <div className="mx-4 mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-sand-500 px-5 py-8 text-center">
@@ -49,8 +48,6 @@ export function PackagesMobile({ t, locale, packages }: PackagesViewProps) {
           </Link>
         </div>
       )}
-
-      <CartBar locale={locale} />
     </div>
   );
 }

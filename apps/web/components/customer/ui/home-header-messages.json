@@ -1,0 +1,29 @@
+{
+  "tr": {
+    "greeting": {
+      "morning": "Günaydın",
+      "afternoon": "Merhaba",
+      "evening": "İyi akşamlar",
+      "guest": "Hoş geldiniz",
+      "withName": "{greeting}, {name}"
+    }
+  },
+  "fr": {
+    "greeting": {
+      "morning": "Bonjour",
+      "afternoon": "Bonjour",
+      "evening": "Bonsoir",
+      "guest": "Bienvenue",
+      "withName": "{greeting}, {name}"
+    }
+  },
+  "de": {
+    "greeting": {
+      "morning": "Guten Morgen",
+      "afternoon": "Hallo",
+      "evening": "Guten Abend",
+      "guest": "Willkommen",
+      "withName": "{greeting}, {name}"
+    }
+  }
+}

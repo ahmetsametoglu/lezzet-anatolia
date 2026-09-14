@@ -20,13 +20,19 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PostalCodePlaceService } from '@lezzet/database';
 import { plausiblePoint } from '@lezzet/domain-core';
-import type { AddressGeoPrecision, AddressGeoWrite } from '@lezzet/types';
+import type { AddressGeoPrecision, AddressGeoSource, AddressGeoWrite } from '@lezzet/types';
 
 /** İstemcinin taşıdığı aday nokta — öneriden gelir, formdan elle girilmez. */
 export interface AddressPointCandidate {
   lat: number;
   lng: number;
   precision: AddressGeoPrecision;
+  /**
+   * Noktayı KİM verdi (13.09): FR önerisi BAN, DE önerisi Google. Verilmezse `ban` — 13.09'a dek
+   * tek kaynak oydu ve öyle yazılıyordu. Kaynak yaşlanma kuralını belirliyor: Google noktası 30
+   * günden uzun saklanamaz (`geocode-scan`), BAN noktası süresiz.
+   */
+  source?: Extract<AddressGeoSource, 'ban' | 'google'>;
 }
 
 /** Koordinatı olmayan (ya da düşürülen) adresin künyesi — tarama kuyruğunun girişi. */
@@ -76,7 +82,7 @@ export async function resolveAddressPoint(
         lat: candidate.lat,
         lng: candidate.lng,
         geoPrecision: candidate.precision,
-        geoSource: 'ban',
+        geoSource: candidate.source ?? 'ban',
         geoAt: new Date().toISOString(),
         geoCheckedAt: new Date().toISOString(),
         geoAttempts: 0,

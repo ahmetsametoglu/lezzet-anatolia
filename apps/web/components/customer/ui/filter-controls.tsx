@@ -1,6 +1,7 @@
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps } from 'react';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from './button';
+import { Icon, type IconName } from './icons';
 
 /**
  * §4 · Katalog süzgeç parçaları — K17 Filtre Çipi · K20 Boş Durum. (K18 Sıralama ayrı dosyada:
@@ -39,22 +40,24 @@ interface FilterChipProps {
   size?: ChipSize;
   /** Mobil ölçü. */
   compact?: boolean;
+  /** Etiketin önündeki simge — ikon setinden (yer süzgeci iğne taşır; v1, 14.09: emoji yerine). */
+  icon?: IconName;
+}
+
+/**
+ * Çipin rengi — ANLAMINA ve seçiliğine göre (K17). Süzgeç çipi (bağlantı, aşağıda) ile seçim çipi
+ * (düğme, `ChoiceChip` — v1 adres penceresinin ülke ve "Bu adres ne?" seçimleri) aynı tabloyu okur:
+ * v1'in `cip()`i ile nötr süzgeç çipi zaten aynı renkler (zeytin dolu · beyaz + kum-400 çerçeve).
+ */
+export function chipToneClass(tone: NonNullable<FilterChipProps['tone']>, active: boolean): string {
+  if (tone === 'offer') return active ? 'border-terracotta bg-terracotta text-white' : 'border-terracotta-line bg-terracotta-bg text-terracotta hover:border-terracotta';
+  if (tone === 'place') return active ? 'border-olive bg-olive text-white' : 'border-olive-line bg-olive-bg text-olive-dark hover:border-olive';
+  return active ? 'border-olive bg-olive text-white' : 'border-sand-400 bg-card text-ink hover:border-olive';
 }
 
 /** K17 · Filtre Çipi — kategori seçimi ve indirim süzgeci. */
-export function FilterChip({ label, href, active = false, tone = 'neutral', size = 'chip', compact = false }: FilterChipProps) {
-  const style =
-    tone === 'offer'
-      ? active
-        ? 'border-terracotta bg-terracotta text-white'
-        : 'border-terracotta-line bg-terracotta-bg text-terracotta hover:border-terracotta'
-      : tone === 'place'
-        ? active
-          ? 'border-olive bg-olive text-white'
-          : 'border-olive-line bg-olive-bg text-olive-dark hover:border-olive'
-        : active
-          ? 'border-olive bg-olive text-white'
-          : 'border-sand-400 bg-card text-ink hover:border-olive';
+export function FilterChip({ label, href, active = false, tone = 'neutral', size = 'chip', compact = false, icon }: FilterChipProps) {
+  const style = chipToneClass(tone, active);
   return (
     <Link
       href={href}
@@ -64,11 +67,12 @@ export function FilterChip({ label, href, active = false, tone = 'neutral', size
       // ("Şerbetli Tatlılar") çipin içinde iki satıra bölünüyor, o çip diğerlerinden yüksek kalıyor
       // ve şeridin hizası bozuluyor (yaşandı, 28.07).
       className={[
-        'flex-none cursor-pointer rounded-pill border-[1.5px] font-sans whitespace-nowrap transition-colors',
+        'inline-flex flex-none cursor-pointer items-center gap-1.5 rounded-pill border-[1.5px] font-sans whitespace-nowrap transition-colors',
         compact ? SIZE[size].compact : SIZE[size].wide,
         style,
       ].join(' ')}
     >
+      {icon && <Icon name={icon} size={compact ? 12 : 14} />}
       {label}
     </Link>
   );
@@ -78,7 +82,8 @@ interface EmptyStateProps {
   title: string;
   body: string;
   action?: { label: string; href: ChipHref };
-  icon?: ReactNode;
+  /** Kutunun simgesi — ikon setinden (14.09: emoji yerine çizgi ikon). */
+  icon?: IconName;
 }
 
 /**
@@ -89,7 +94,7 @@ interface EmptyStateProps {
 export function EmptyState({ title, body, action, icon }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-card border-[1.5px] border-dashed border-sand-500 px-8 py-14 text-center">
-      {icon && <span className="text-h2">{icon}</span>}
+      {icon && <Icon name={icon} size={30} className="text-olive" />}
       <span className="font-serif text-card-title text-ink">{title}</span>
       <span className="max-w-md font-sans text-body text-muted">{body}</span>
       {/* Düğme `buttonClass`tan gelir. Elle yazılmış hâli ODAK HALKASINI kaybetmişti ve sabit

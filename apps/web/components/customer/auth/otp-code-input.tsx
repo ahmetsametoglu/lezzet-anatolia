@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 
 const CODE_LENGTH = 6;
 
@@ -28,7 +29,7 @@ const LABELS: Record<
 > = {
   tr: {
     verifying: 'Doğrulanıyor…',
-    success: '✓ Doğrulandı',
+    success: 'Doğrulandı',
     resendPrompt: 'Kod gelmedi mi?',
     resend: 'Yeniden gönder',
     resending: 'Gönderiliyor…',
@@ -37,7 +38,7 @@ const LABELS: Record<
   },
   fr: {
     verifying: 'Vérification…',
-    success: '✓ Vérifié',
+    success: 'Vérifié',
     resendPrompt: 'Pas reçu ?',
     resend: 'Renvoyer le code',
     resending: 'Envoi…',
@@ -46,7 +47,7 @@ const LABELS: Record<
   },
   de: {
     verifying: 'Wird geprüft…',
-    success: '✓ Bestätigt',
+    success: 'Bestätigt',
     resendPrompt: 'Keinen Code erhalten?',
     resend: 'Erneut senden',
     resending: 'Wird gesendet…',
@@ -217,7 +218,12 @@ export function OtpCodeInput({ email, locale, initialCooldownSec = 45, onVerify,
       <div className="min-h-5 text-center" aria-live="polite">
         {feedback.kind === 'verifying' && <span className="font-sans text-note text-muted">{t.verifying}</span>}
         {feedback.kind === 'error' && <span className="font-sans text-note font-semibold text-terracotta-bright">{feedback.message}</span>}
-        {feedback.kind === 'success' && <span className="font-sans text-note font-semibold text-olive">{t.success}</span>}
+        {feedback.kind === 'success' && (
+          <span className="inline-flex items-center gap-1.5 font-sans text-note font-semibold text-olive">
+            <Icon name="check" size={14} />
+            {t.success}
+          </span>
+        )}
       </div>
 
       {!isSuccess && (

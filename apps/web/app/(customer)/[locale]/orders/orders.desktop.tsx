@@ -3,6 +3,7 @@
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
 import { ListEmpty } from '@/components/customer/ui/list-empty';
+import { Icon } from '@/components/customer/ui/icons';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import type { CustomerOrderSummary } from '@/lib/order/customer-orders';
@@ -78,6 +79,7 @@ export function OrdersDesktop({
               onClick={() => onReorder(order.id)}
               className="flex-none"
             >
+              {busyOrderId !== order.id && <Icon name="refresh" size={14} />}
               {busyOrderId === order.id ? reorderCopy[locale].reordering : reorderCopy[locale].reorder}
             </Button>
 
@@ -112,7 +114,7 @@ function EmptyOrders({ t }: { t: OrdersViewProps['t'] }) {
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-12 py-10">
       <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
       <div className="mx-auto w-[340px] rounded-[16px] bg-cream p-6">
-        <ListEmpty icon="📦" title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
+        <ListEmpty icon="box"title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
       </div>
     </div>
   );

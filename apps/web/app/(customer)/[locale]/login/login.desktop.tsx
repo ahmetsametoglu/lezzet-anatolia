@@ -2,6 +2,7 @@ import { brand } from '@lezzet/brand';
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { Button } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { GoogleIcon, WhatsAppIcon } from '@/components/customer/auth/provider-icons';
 import type { LoginViewProps } from './login-types';
 
@@ -19,8 +20,9 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
       {/* SOL: hero — pencerenin sol panelini kaplar (tasarım 468/1120 ≈ %42) */}
       <div className="relative w-[42%] max-w-[560px] flex-none" style={{ background: HERO_BG }}>
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,rgba(52,59,65,.42) 0%,rgba(52,59,65,0) 34%,rgba(52,59,65,.72) 100%)' }} />
-        <span className="absolute left-[26px] top-[26px] rounded-pill bg-cream/90 px-3.5 py-1.5 font-sans text-micro font-semibold uppercase tracking-wider text-olive">
-          ❄ {t.heroPill}
+        <span className="absolute left-[26px] top-[26px] inline-flex items-center gap-1.5 rounded-pill bg-cream/90 px-3.5 py-1.5 font-sans text-micro font-semibold uppercase tracking-wider text-olive">
+          <Icon name="snowflake" size={13} />
+          {t.heroPill}
         </span>
         <div className="absolute inset-x-[34px] bottom-[34px] flex flex-col gap-2.5">
           {stage.kind === 'email' ? (

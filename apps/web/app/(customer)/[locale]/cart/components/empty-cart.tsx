@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { RATIO_ILLUSTRATION } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button, buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { FilterChip } from '@/components/customer/ui/filter-controls';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { SectionHeading } from '@/components/customer/ui/section';
@@ -89,7 +90,7 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
           frames={context.illustration?.frames}
           sizes={compact ? '180px' : '260px'}
           className={compact ? '!rounded-[14px] !bg-cream-deep' : '!rounded-[16px] !bg-cream-deep'}
-          placeholder={<span className="text-h1-sm">🧺</span>}
+          placeholder={<Icon name="basket" size={compact ? 40 : 56} className="text-sand-500" />}
         />
       </div>
 
@@ -116,7 +117,10 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
         {/* Teslimat vaadi: satış cümlesi değil, KARAR bilgisi — "sipariş verirsem nasıl gelir".
             Masaüstünde düğmelerin altında ince bir ayraçla, mobilde ekranın sonunda kendi kutusunda. */}
         {!compact && (
-          <span className="mt-1.5 border-t border-sand-200 pt-3 font-sans text-note leading-relaxed text-muted">{t.empty.delivery}</span>
+          <span className="mt-1.5 flex items-start gap-2 border-t border-sand-200 pt-3 font-sans text-note leading-relaxed text-muted">
+            <Icon name="snowflake" size={14} className="mt-0.75" />
+            {t.empty.delivery}
+          </span>
         )}
       </div>
     </div>
@@ -215,7 +219,10 @@ export function EmptyCart({ t, locale, context, compact = false }: EmptyCartProp
 
       {compact && (
         <div className="px-4 pb-6">
-          <div className="rounded-soft bg-cream-deep px-4 py-3 font-sans text-micro leading-relaxed text-body">{t.empty.delivery}</div>
+          <div className="flex items-start gap-2 rounded-soft bg-cream-deep px-4 py-3 font-sans text-micro leading-relaxed text-body">
+            <Icon name="snowflake" size={13} className="mt-0.5" />
+            {t.empty.delivery}
+          </div>
         </div>
       )}
     </div>

@@ -89,8 +89,8 @@ test.describe('kademe 2 · adresin kapısı doğrulanıyor', () => {
       await expect(stepper).toBeVisible({ timeout: 2_500 });
     }).toPass({ timeout: 30_000 });
 
-    // ── Kimlik: misafir OTP
-    await page.goto('/fr/commande', NAV);
+    // ── Kimlik: misafir OTP, SEPETTE (13.09)
+    await page.goto('/fr/panier', NAV);
 
     /* OTP bloğu kardeş dumandan BİREBİR — kendi basitleştirmem düştü (ölçüldü): alan dolduruluyor
        ama hidrasyon bitmeden düğme `disabled` kalıyor, ve kod kutusu tek `textbox` değil rakam
@@ -109,10 +109,9 @@ test.describe('kademe 2 · adresin kapısı doğrulanıyor', () => {
     await page.keyboard.type(OTP_TEST_CODE, { delay: 40 });
     const confirm = page.getByRole('button', { name: /vérif|valid|confirm/i }).first();
     if (await confirm.isVisible().catch(() => false)) await confirm.click();
-    await expect(page.getByText(/S'ouvre après la vérification/)).not.toHaveCount(3, { timeout: 25_000 });
 
-    // ── Adres: GERÇEK sokak + DAMGALI kod. Kapı o kodda yok, başka kodda var — teklifin kurulumu.
-    await page.getByRole('button', { name: /nouvelle adresse/i }).click();
+    // ── Adres, SEPETTE: GERÇEK sokak + DAMGALI kod. Kapı o kodda yok, başka kodda var — teklifin kurulumu.
+    await page.getByRole('button', { name: /ajouter une adresse/i }).first().click({ timeout: 25_000 });
     await page.getByLabel(/titre de l/i).fill(`E2E kapı ${product.stamp}`);
     await page.getByLabel(/nom du destinataire/i).fill('E2E Musteri');
     await page.getByLabel(/rue et numéro/i).fill(LINE1);
@@ -122,9 +121,12 @@ test.describe('kademe 2 · adresin kapısı doğrulanıyor', () => {
     const saveAddress = page.getByRole('button', { name: /enregistrer l.adresse/i });
     await expect(saveAddress).toBeEnabled();
     await saveAddress.click();
-    await expect(page.getByRole('button', { name: new RegExp(`E2E kapı ${product.stamp}`) })).toBeVisible({
-      timeout: 20_000,
-    });
+    await expect(page.getByText(new RegExp(`E2E kapı ${product.stamp}`)).first()).toBeVisible({ timeout: 20_000 });
+
+    // ── Ödeme sayfasına: adres sepette seçildi, kapı açık.
+    await page.getByRole('link', { name: /passer à la commande/i }).first().click();
+    await page.waitForURL(/\/fr\/commande/, NAV);
+    await expect(page.getByText(new RegExp(`E2E kapı ${product.stamp}`)).first()).toBeVisible({ timeout: 20_000 });
 
     // ── Gün + ödeme: onay düğmesinin AÇILMASI için gerekli asgari yol (kardeş dumanın aynısı).
     const daySection = page.locator('section').filter({ hasText: 'Jour de livraison' });

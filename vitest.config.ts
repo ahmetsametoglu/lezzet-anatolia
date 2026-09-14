@@ -197,6 +197,12 @@ export default defineConfig({
             // Adres ayrıştırma saf: tek bağımlılığı zod, DB istemcisi hiç kurulmuyor.
             'packages/address-fr/src/**/*.test.ts?(x)',
             /*
+              Google adres istemcisi (13.09) — saf: `fetch` taklit edilir, test AĞA ÇIKMAZ. Paket
+              doğduğu gün bu satır YAZILMADI ve testleri hiçbir projede koşmadı (ölçüldü 13.09,
+              `mask.test.ts` tuzağının aynısı).
+            */
+            'packages/address-google/src/**/*.test.ts?(x)',
+            /*
               Gecikmeli arama çekirdeği — DB'siz ama React'e bağlı, ve bu ayrım burada ÖNEMLİ.
               Liste bir "çalışma ortamı" vaadi değil, "bu dosyalar KOŞSUN" listesidir: iki paket
               23.08'e kadar HİÇBİR projede değildi, yani oraya yazılacak bir test sessizce hiç

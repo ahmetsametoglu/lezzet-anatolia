@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { RATIO_SQUARE } from '@lezzet/types';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
+import { Icon } from '@/components/customer/ui/icons';
 import { FramedImage } from '@/components/media/framed-image';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
@@ -121,8 +122,8 @@ function FamilyCard({ member, size, subLine }: FamilyCardProps) {
       <div aria-current="true" className={box}>
         {image}
         {/* Rozet kartın dışına taşar; şeridin üst pedi (`pt-2.5`) onu kırpılmaktan korur. */}
-        <span className="absolute -top-2 -right-2 grid size-5.5 place-items-center rounded-full bg-olive font-sans text-micro font-bold text-on-image">
-          ✓
+        <span className="absolute -top-2 -right-2 grid size-5.5 place-items-center rounded-full bg-olive text-on-image">
+          <Icon name="check" size={12} strokeWidth={2.6} />
         </span>
         {label}
       </div>

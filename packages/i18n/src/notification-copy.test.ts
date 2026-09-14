@@ -45,6 +45,8 @@ describe('notificationVisual', () => {
     for (const kind of KNOWN) {
       const visual = notificationVisual({ kind, payload: { approved: true } });
       expect(visual.icon.length).toBeGreaterThan(0);
+      // Web çizgi setinin adı da her türde var (14.09): emoji native'in, ad web'in çizimi.
+      expect(visual.symbol.length).toBeGreaterThan(0);
       expect(['positive', 'attention', 'issue', 'neutral']).toContain(visual.tone);
       for (const locale of ['tr', 'fr', 'de'] as const) expect(visual.label(locale).length).toBeGreaterThan(1);
     }
@@ -57,6 +59,7 @@ describe('notificationVisual', () => {
     expect(notificationVisual({ kind: 'b2b_application_result', payload: { approved: false } }).tone).toBe('attention');
     const bilinmeyen = notificationVisual({ kind: 'yarin_gelecek_tur', payload: {} });
     expect(bilinmeyen.icon).toBe('🔔');
+    expect(bilinmeyen.symbol).toBe('bell');
     expect(bilinmeyen.label('tr')).toBe('Bildirim');
   });
 });

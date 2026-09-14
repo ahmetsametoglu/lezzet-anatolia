@@ -4,6 +4,7 @@ import { SearchField } from '@/components/customer/ui/search-field';
 import { SortSelect } from '@/components/customer/ui/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
+import { Icon } from '@/components/customer/ui/icons';
 import { ShippableChip } from '@/components/customer/delivery/shippable-chip';
 import { campaignNote } from '@/lib/storefront/campaign-note';
 import { Link } from '@/i18n/navigation';
@@ -44,8 +45,9 @@ export function CatalogDesktop({ t, locale, placeMode, data, products, hasMore, 
           {data.activeCollection ? (
             // Çıkış yolu ARAMANIN yerinde: koleksiyon görünümündeyken müşterinin ilk ihtiyacı
             // "buradan nasıl çıkarım", arama değil. Süzgeci temizler, ötekilere dokunmaz.
-            <Link href={hrefFor({ collection: null })} className="cursor-pointer font-sans text-note font-bold text-olive hover:text-olive-dark">
+            <Link href={hrefFor({ collection: null })} className="inline-flex cursor-pointer items-center gap-1.5 font-sans text-note font-bold text-olive hover:text-olive-dark">
               {t.collectionExit}
+              <Icon name="close" size={13} />
             </Link>
           ) : (
             <SearchField placeholder={t.searchPlaceholder} clearLabel={t.searchClear} defaultValue={search} />
@@ -104,7 +106,7 @@ export function CatalogDesktop({ t, locale, placeMode, data, products, hasMore, 
 
       {products.length === 0 ? (
         <div className="px-12 pb-12">
-          <EmptyState title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} icon="🔍" />
+          <EmptyState title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} icon="search" />
         </div>
       ) : (
         <section className="grid grid-cols-4 gap-[18px] px-12 pt-1 pb-12">

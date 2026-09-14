@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { FilterChip } from '@/components/customer/ui/filter-controls';
+import { Icon } from '@/components/customer/ui/icons';
 import type { CatalogHref } from '@/app/(customer)/[locale]/catalog/catalog-types';
 import { shippableChipOf } from '@/lib/delivery/place-filter';
 import type { PlaceMode } from '@/lib/delivery/read-place';
@@ -54,16 +55,17 @@ export function ShippableChip({ mode, locale, label, askLabel, href, active, com
           type="button"
           onClick={() => setOpen(true)}
           className={[
-            'cursor-pointer rounded-pill border-[1.5px] border-dashed border-sand-400 bg-card font-sans font-bold text-muted transition-colors hover:border-olive hover:text-olive',
+            'inline-flex cursor-pointer items-center gap-1.5 rounded-pill border-[1.5px] border-dashed border-sand-400 bg-card font-sans font-bold text-muted transition-colors hover:border-olive hover:text-olive',
             compact ? 'px-3 py-1.5 text-micro' : 'px-4 py-2 text-note',
           ].join(' ')}
         >
-          📍 {askLabel}
+          <Icon name="pin" size={compact ? 12 : 14} />
+          {askLabel}
         </button>
         {open && <PlaceDialog locale={locale} onClose={() => setOpen(false)} />}
       </>
     );
   }
 
-  return <FilterChip label={label} href={href} active={active} tone="place" size="control" compact={compact} />;
+  return <FilterChip label={label} href={href} active={active} tone="place" size="control" compact={compact} icon="pin" />;
 }

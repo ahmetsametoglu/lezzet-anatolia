@@ -6,6 +6,7 @@ import type { Locale } from '@lezzet/i18n';
 import { FramedImage } from '@/components/media/framed-image';
 import { Badge } from '@/components/customer/ui/badge';
 import { Button } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { QtyStepper } from '@/components/customer/ui/qty-stepper';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
@@ -239,11 +240,12 @@ export function CartLineRow({ line, t, locale, compact = false, tone = 'default'
     line.route === null || line.route === 'unavailable' ? null : (
       <span
         className={[
-          'font-sans font-semibold',
+          'inline-flex items-center gap-1.5 font-sans font-semibold',
           compact ? 'text-micro' : 'text-note',
           line.route === 'local' ? 'text-olive-dark' : line.route === 'shipping' ? 'text-muted' : 'text-honey',
         ].join(' ')}
       >
+        <Icon name={line.route === 'local' ? 'truck' : line.route === 'shipping' ? 'box' : 'snowflake'} size={compact ? 12 : 14} />
         {line.route === 'local' ? pt.lineInRoute : line.route === 'shipping' ? pt.lineShipping : pt.lineBlocked}
       </span>
     );
@@ -331,10 +333,10 @@ export function CartLineRow({ line, t, locale, compact = false, tone = 'default'
       className={[
         'cursor-pointer font-sans text-sand-600 transition-colors hover:text-terracotta',
         'disabled:cursor-not-allowed disabled:opacity-40',
-        compact ? 'text-body' : 'text-icon-sm',
+        'flex items-center',
       ].join(' ')}
     >
-      🗑
+      <Icon name="trash" size={compact ? 16 : 18} />
     </button>
   );
 

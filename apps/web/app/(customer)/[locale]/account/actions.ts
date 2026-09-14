@@ -178,8 +178,9 @@ export async function deleteAddressAction(addressId: string): Promise<CustomerRe
   return guarded((customerId) => deleteAddress(customerId, addressId));
 }
 
-/** Guard + `{data,error}` + tazeleme — dört adres eyleminde birebir aynı, tek yerde. */
-async function guarded(task: (customerId: string) => Promise<void>): Promise<CustomerResult<true>> {
+/** Guard + `{data,error}` + tazeleme — dört adres eyleminde birebir aynı, tek yerde. Dönen satır
+ *  burada KULLANILMAZ: sayfa sunucuda yeniden okunuyor (`revalidateAccount`), ikinci kopya tutulmaz. */
+async function guarded(task: (customerId: string) => Promise<unknown>): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');

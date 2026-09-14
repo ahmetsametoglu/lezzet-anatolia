@@ -257,12 +257,12 @@ export {
   (`sendOutboundMessage`) yaşıyor ki ikinci bir çağıran doğmasın.
 */
 export { resolveOutboundLanguage, saveMessageTranslation } from './messaging/translate';
+// Yeni sohbetin varsayılan yürütücüsü (15.30): elle DM açan web kapısı okur, sosyal ekran yazar.
+export { defaultConversationHandler, setDefaultConversationHandler } from './messaging/default-handler';
 export type { MessageTranslationPatch } from './messaging/translate';
 export type { RecordMessageInput } from './messaging/record';
 export type { LinkProof, LinkOutcome } from './messaging/link';
 export type { ConversationOptInOutcome } from './messaging/opt-in';
-// Yeni sohbetin varsayılan yürütücüsü (15.30): elle DM açan web kapısı okur, sosyal ekran yazar.
-export { defaultConversationHandler, setDefaultConversationHandler } from './messaging/default-handler';
 
 // ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────
 // Sipariş zilinin terfi etmiş hâli: müşteri mobilden yazınca operasyon ekranının kendiliğinden
@@ -365,6 +365,10 @@ export { acceptCourierReturn, readCourierReturn } from './courier/return';
 export { ensureStopOrder, type StopOrderOutcome } from './courier/stop-order';
 export { geocodeAddressesScan, type GeocodeScanResult } from './delivery/geocode-scan';
 export { geocoder, geocoderConfigured } from './delivery/geocode-provider';
+// Almanya adres önerisi — Google Places, sunucudan (13.09). FR önerisi tarayıcıdan BAN'a gider.
+export { resolveAddressSuggestion, suggestAddresses } from './delivery/address-suggest';
+export type { AddressResolveOutcome, AddressSuggestOutcome } from './delivery/address-suggest';
+export { googleMapsConfigured } from './delivery/google-maps';
 export { resolveAddressPoint, type AddressPointCandidate } from './delivery/geo-address';
 export { checkAddress, type AddressCheckOutcome } from './delivery/address-check';
 export { checkAddressForCustomer } from './customer/addresses';

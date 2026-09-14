@@ -1,18 +1,12 @@
 'use server';
 
-import { AddressService, serviceDb } from '@lezzet/database';
+import { serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
 import { checkoutBlockedAnalyticsReason, placeOrder, readCheckoutSnapshot, type CheckoutSnapshot, type PlaceOrderRejection } from '@lezzet/application';
-import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
+import type { PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
-import { updateAddress } from '@/lib/account/addresses';
-import {
-  checkAddressForCustomer,
-  resolveAddressPoint,
-  type AddressCheckOutcome,
-  type AddressPointCandidate,
-} from '@lezzet/application';
+import { checkAddressForCustomer, type AddressCheckOutcome } from '@lezzet/application';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CartEntry } from '@/lib/cart/cart-types';
@@ -27,10 +21,10 @@ import { routing } from '@/i18n/routing';
 /**
  * Checkout server action'ları (08.13).
  *
- * **Müşteri kimliği TEK yerde çözülür** — burada, oturumdan. Girişli müşteride de misafirde de
- * aynı yol: misafir "adım 0"da e-posta koduyla doğrulanınca giriş akışının kendisi (04) auth
- * kullanıcısını açıp oturumu kuruyor, yani doğrulamadan sonra ortada misafir kalmıyor. DOMAIN §10
- * "hesapsız sipariş yoktur" kuralının karşılığı budur: ayrı bir misafir kimliği taşımıyoruz.
+ * **Müşteri kimliği TEK yerde çözülür** — burada, oturumdan. Giriş SEPETTE yapılır (13.09,
+ * `CartIdentity`): e-posta kodu ya da Google giriş akışının kendisi (04) auth kullanıcısını açıp
+ * oturumu kuruyor. DOMAIN §10 "hesapsız sipariş yoktur" kuralının karşılığı budur: ayrı bir misafir
+ * kimliği taşımıyoruz. Adres de sepette seçilir; buradaki tek adres eylemi doğrulama (11.11).
  *
  * **İstemci hiçbir tutar göndermez.** Sepet niyeti (`entries`) ve seçimler (adres, gün, yöntem)
  * gelir; fiyat, kargo ücreti, indirim ve toplam her turda sunucuda yeniden çözülür.
@@ -111,42 +105,6 @@ export async function loadCheckoutAction(
 }
 
 /**
- * Var olan adresi düzenle — **checkout'tan çıkmadan.**
- *
- * Ekran adresi kaydettikten sonra onu bir daha düzenleyemiyordu: kartlar yalnız SEÇİLİYORDU
- * (kullanıcı bildirimi, 01.08). Yazım hatası yapan müşterinin tek çıkışı ikinci bir adres açmaktı;
- * o da kurye için iki benzer kayıt, müşteri için "hangisi doğruydu" demek. Hesap sayfasında
- * düzenleme zaten vardı — eksik olan checkout'un kendi kapısıydı.
- *
- * **Sahiplik doğrulanır ve kapıda:** `addressId` istemciden geliyor. `updateAddress` sahipliği
- * kendi içinde sınıyor (`lib/account/addresses` → `ownedAddress`), yani başkasının adresi
- * güncellenemez. Kapı ayrıca `isDefault`i patch'ten ayıklar — varsayılan seçimi kendi işidir.
- *
- * Varsayılan bayrağı AYRI parametre, patch'in içinde değil: tek satırı işaretlemek yetmiyor,
- * öbürlerinin bayrağı düşmek zorunda. Tek turda gidiyor çünkü ikinci bir çağrı, kaydeden ama
- * varsayılanı yazamayan bir ara hâl bırakabilirdi.
- */
-export async function updateCheckoutAddressAction(
-  addressId: string,
-  patch: Omit<AddressInsert, 'customerId'>,
-  makeDefault: boolean,
-  /* Seçilen önerinin koordinatı (11.9) — bir aday; kapı süzgeçten geçirir ve adres alanları
-     değişmişse eski noktayı düşürür. */
-  point?: AddressPointCandidate | null,
-): Promise<CustomerResult<true>> {
-  try {
-    const customerId = await currentCustomerId();
-    if (!customerId) throw new CustomerError('session_expired');
-    await updateAddress(customerId, addressId, patch, point);
-    // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
-    if (makeDefault) await new AddressService(serviceDb()).setDefault(addressId);
-    return { data: true, errorKey: null };
-  } catch (err) {
-    return { data: null, errorKey: customerErrorKey(err) };
-  }
-}
-
-/**
  * **Seçilen adresin kapısı gerçekten var mı** (11.11) — SİPARİŞ ANINDA sorulur.
  *
  * ── NEDEN BURADA, ADRES KAYDEDİLİRKEN DEĞİL ─────────────────────────────────
@@ -171,43 +129,6 @@ export async function checkCheckoutAddressAction(addressId: string): Promise<Cus
        Kuralı iki yerde yazmak, birinin bir gün unutması ve orada başkasının adresi hakkında bilgi
        sızması demekti. */
     return { data: await checkAddressForCustomer(serviceDb(), { customerId, addressId }), errorKey: null };
-  } catch (err) {
-    return { data: null, errorKey: customerErrorKey(err) };
-  }
-}
-
-/**
- * Yeni adres — checkout'tan çıkmadan. Adres MÜŞTERİYE bağlanır, kimlik oturumdan gelir.
- *
- * **Kendi girdi tipi YOK ve olmamalı** (denetim bulgusu M3, 02.08). Burada `CheckoutAddressInput`
- * diye formunkinin alan alan kopyası bir arayüz duruyordu — üstelik `NewAddressInput`'ın künyesi
- * tam bu senaryoyu anlatıyor: *"iki kopya olsaydı biri yeni bir alan öğrenip öteki öğrenmezdi;
- * `recipient` ile `phone`ın bir kez sessizce düşmesi (28.07) tam olarak bu sınıftandı."* Aynı risk
- * aynı alanda ikinci kez kurulmuştu.
- *
- * Şimdi ikisi de `updateCheckoutAddressAction` ile AYNI şekli alıyor: dönüşümü form kendi yanındaki
- * `toAddressFields` ile yapar (hesap sayfası da öyle yapıyor), kapı yalnız yazar. Yan kazanç:
- * eskiden buradaki elle yayma `country`yi hiç geçmiyordu — kolonun `default 'FR'`i kurtarıyordu,
- * yani ikinci ülke açıldığı gün sessizce yanlış olacaktı.
- */
-export async function addCheckoutAddressAction(
-  fields: Omit<AddressInsert, 'customerId'>,
-  makeDefault: boolean,
-  /* Seçilen önerinin koordinatı (11.9) — aday; kapı süzgeçten geçirir. */
-  point?: AddressPointCandidate | null,
-): Promise<CustomerResult<Address>> {
-  try {
-    const customerId = await currentCustomerId();
-    if (!customerId) throw new CustomerError('session_expired');
-    const db = serviceDb();
-    // Nokta TEK KAPIDAN geçer (`resolveAddressPoint`): istemcinin sayısı bir aday, makullük süzgeci
-    // onu posta kodu merkeziyle kıyaslar ve uzaksa yazmaz (11.9).
-    const geo = await resolveAddressPoint(db, { candidate: point, postalCode: fields.postalCode });
-    const addresses = new AddressService(db);
-    const created = await addresses.addForCustomer({ ...fields, ...geo, customerId });
-    // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
-    if (makeDefault) await addresses.setDefault(created.id);
-    return { data: created, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

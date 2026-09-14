@@ -474,6 +474,8 @@ yalnız posta kodudur, şehir değil — çok yerleşimli koddaki tehlike o yüz
   konuşulur, Strasbourg'daki Türk müşteri `tr` seçer.
   **Bağlı istek:** ülkesiz çözüm kapısı henüz yok — `matchZones` ülkeyi zorunlu istiyor, çağıran
   `'FR'` sabitini yazıyor. Talep `docs/build/yer-ekseni-arka-uc-talebi.md §1`'de.
+  **13.09 — v1 ile KALDIRILDI:** masaüstü yer panelinde önce ülke (FR ▾ / DE), sonra kod sorulur;
+  seçilen ülke kodu motorda bağlar. Bkz. "Başlık ve yer paneli v1'in BİREBİR aynısı" (13.09).
 
 - **UYDURULAN TİP JETONU — sessizce yanlış punto (30.07, kullanıcı ekran görüntüsüyle yakaladı).**
   Sipariş ekranlarında `text-h3` ve `text-h4` yazmışım; **ikisi de `globals.css`'te YOK.** Tailwind
@@ -1540,6 +1542,22 @@ Düğme yalnız gerçek çıkmazda kalıyor (yer rota dışında VE ürün kargo
 
 
 ### MOBİL WEB KABUĞU — İKİ KATMANLI HEADER + ÜÇ KATMANLI FOOTER (20.08, kullanıcı kararları)
+
+> **Mobil v1 ile kaldırıldı (13.09).** `Musteri Mobil v1.dc.html` kabuğu baştan kurdu ve bu bölümün
+> mobil kabuk kararlarının yerine geçti (`site-frame.mobile.tsx`): iki katmanlı header (☰ menü + logo
+> / `FunnelHeader`), mobil menü paneli, "duyuru şeridi yalnız ana sayfada", mobilde üç footer
+> katmanı, yedinci turun detay/hesap `FunnelHeader`ı ve sekizinci turun başlıksız detayı (fotoğraf
+> üstündeki geri dairesi + yüzen sepet düğmesi) KALKTI. Yerine: tek biçim üst bar (‹ · başlık · koyu
+> sepet düğmesi) + yeşil yer satırı + dört sekmeli alt çubuk; footer yok — yasal bağlantılar ve dil
+> hesap ekranının en altında (kullanıcı kararı 13.09). Geçerliliğini koruyanlar: huninin (sepet ·
+> checkout) `FunnelHeader`ı kendi v1 turlarına kadar, adet seçici, dar kartın fiyat/eylem satırları,
+> checkout adım şeridi. İş: `08.58`.
+>
+> **14.09 — başlık native'in sistemine geçti (kullanıcı kararı).** Mobil v1'in tek biçim üst barı,
+> koyu sepet düğmesi ve yeşil yer satırı da kalktı: mobil webin başlığı native uygulamanın "üç durak"
+> sistemiyle ekran türüne göre seçiliyor (bu dosyanın "MÜŞTERİ MOBİL — ÜÇ HEADER" kaydı, 16.08) —
+> vitrinde selamlama + konum + zil, hesapta yalnız başlık, eylemsiz bölüm sayfalarında `FunnelHeader`,
+> geri kalanında yapışkan `AppBar`. Alt sekme çubuğu Mobil v1'deki gibi kaldı.
 
 **Kullanıcı incelemesi ekran görüntüleriyle geldi** ("sepette hâlâ menü var, gereksiz… header
 zıplıyor… soğuk zincir yazısının sürekli görünmesi buna sebep oluyor") ve tasarım↔kod turunun
@@ -2650,3 +2668,62 @@ kaydet ve iptal butonları da ikon olabilir."* (12.20):
   kodu · eylemler. Cari iki satırlık ayna kalır (dört alan tek satıra sığmıyor).
 - **Satır içi düzenlemenin kararları ikon düğme:** ✓ kaydet, ✕ vazgeç — adları ve kısayolları (Enter ·
   Esc) `aria-label` + `title`da. Kitin `Button`ına `icon` seçeneği (kare, 32/36px — yanındaki kutuyla hizalı).
+
+## Başlık ve yer paneli v1'in BİREBİR aynısı — önce ülke (13.09, kullanıcı kararı)
+
+Kullanıcı: *"Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."*
+v1 (`Musteri Web v1.dc.html`) aşağıdaki eski kararlardan SONRA çizildi ve onların yerine geçti:
+
+- **Yer hapı her durumda yeşil ve teslim şeklini yazar** ("67000 Strasbourg · kapıya teslim" /
+  "· kargoyla"). 28.07'nin "hap yalnız yeri söyler, teslim şekli renkte" kararı masaüstünde kalktı;
+  mobil webin dar hapında sürüyor (v1 mobil çizmiyor). Tek veri farkı: bölge dışındaki kodda da yer
+  adı yazılır — taslak yalnız "Strasbourg"u biliyor, biz adı referanstan biliyoruz.
+- **Panelde önce ÜLKE (FR ▾ / DE), sonra posta kodu.** K38'in (01.08) "ülke alan değil, türeyen
+  sonuç" kararı kalktı; aynı gün adres için verilen "önce ülke" kararıyla aynı çizgi. Seçim serbest
+  bir beyan değil: (ülke, kod) çifti referansta ya da kendi bölge tablomuzda yoksa cevap "Posta kodu
+  bulunamadı" — seçilen ülke adayları motorda süzer (`resolvePlaceByPostalCode`). KDV riski böyle kapanıyor.
+- **"Göster" paneli kapatır ve bildirim çıkarır** ("Teslimat yeri güncellendi — kargoyla"); cevap
+  hapta okunur. 28.07'nin "gönderince kapanmaz" düzeltmesi masaüstü panelinde kalktı. v1'in
+  çizmediği tek hâl sorun: panel açık kalır, alan kırmızı çerçeve alır, kartta tek satır belirir
+  ("Posta kodu bulunamadı" — kullanıcı düzeltmesi; önce "Bu posta kodunu tanımadık"). Satır kartı
+  genişletmez: genişletince kart panele sığmayıp alt satıra kayıyordu (kullanıcı ölçtü).
+- **Masaüstü panelinde ad araması, öneri listesi, sonuç şeridi, "Yeri temizle" ve bölge listesi
+  yok** — v1'de yoklar. Mobil webdeki pencerede duruyorlar (08.41 ad araması dahil).
+- **Bildirim** v1'in `bildir`inden; sepetin haber şeridiyle TEK kabuk (`NewsStrip`,
+  `components/customer/ui/toast.tsx` — `cart-strip` kalktı). Panel sayfa değişince kapanır (v1 `go()`).
+- **"Birebir" görseldir, parçalar kitten** (kullanıcı düzeltmesi 13.09): ülke kitin seçim alanı
+  (`FormSelectField`, kite yeni — yerel `<select>` DEĞİL, kitin açılır listesi: tarayıcının menüsü
+  biçimlenmiyordu, kullanıcı düzeltti; menü yüzeyi hesap menüsüyle ortak `menu.ts`, kapanma
+  sözleşmesi `useDismiss`), posta kodu `FormInputField`; ikisi kitin `inline` çiziminde (v1
+  panelinin küçük künyeli krem alanı). Kart `cardClass` (`tight` ped), rozet `Badge`, mantık
+  pencereyle ortak (`usePlaceLookup`, `useMyAddresses`). Kalan görsel fark: kart kenarı `sand-200`
+  (kitin kart kenarı; v1 bu kartta `sand-300` kullanmış — v1'in 35 beyaz kartının 32'si `sand-200`)
+  ve rozetin yeşil çerçevesi (`olive-line` #d7e3bd; v1 yeşil çerçevelerin 15'inde #cddbb0 — token
+  kararı v1 adımlarının sonunda).
+- **Panel GİRİŞE göre ayrılır** (v1 `yerPanelAdres: girisli`): girişli müşteri — adresi olmasa da —
+  kart ızgarasını ve "+ Yeni adres ekle"yi görür; kod formu yalnız ziyaretçiye.
+
+## Adres penceresi v1'in BİREBİR aynısı — önce ülke, öneri, doğrulama (13.09, kullanıcı kararı)
+
+Kullanıcı: *"Google ile adres doğrulama entegre edilmiş olması gerekiyor… yeni adres ekleme formunu
+olabildiğince tasarımda bire bir yapmaya çalışalım. Ve adres doğrulama olayını da konuya dahil
+edelim."* `AddressForm` v1 penceresinin gövdesine döndü; adres penceresi, hesap sayfası ve mobil
+çekmece aynı gövdeyi kullanıyor. Metin artık formun kendi sözlüğünde (`address-messages.json`) —
+hesap sözlüğündeki kopya (`addressForm`) kalktı.
+
+- **Akış v1'in sırasıyla:** ülke (Fransa | Almanya) → tek arama → öneri listesi (FR BAN, tarayıcıdan;
+  DE Google Places, sunucudan — `lib/address/lookup-actions.ts`) → seçilince "Adres doğrulandı" ve
+  teslim şeridi; öneri çıkmazsa "Bu adresi kayıtlarda bulamadık" → elle giriş kartı → "Bu adres ne?"
+  (Ev · İş · Diğer + ad) → kapı / daire no → "Adresi kaydet ve seç" → bildirim.
+- **Doğrulama iki yoldan:** öneriden seçilen adres kaynağında doğrulanmış ve noktasıyla gelir; elle
+  girilen adres kaydetmeden önce tarama işinin kapısından geçer (`geocoder().locate`: FR BAN, DE
+  Google Address Validation). Bulunamazsa yine kaydedilir, noktasını tarama arar (defter reddetmez, 10.08).
+- **Veri farkları:** alıcı adı ve telefon VAR (zorunlu, 22.08 — hesabın künyesiyle dolu açılır);
+  "Kuryeye not" YOK (kolonu yok); Almanya önerisinde teslim rozeti yok (Google satırı posta kodunu ayrı
+  vermiyor — cevap doğrulama kutusunda); ipucu "en az 3 karakter" (v1 "iki" diyor, iki kapının gerçek
+  eşiği 3); düzenlemede kayıtlı satır elle giriş kartında açılır (doğrulandığını o an bilmiyoruz).
+- **Kit:** `ChoiceChip` (renk `FilterChip` ile ortak tablo), `FormInputField.icon`, v1 görünümlü
+  `SuggestionList` (tek kart, ayraçlı satır, ikon + rozet), `Dialog`'un ortalanmış hâli v1 masaüstü
+  penceresi (krem, 22px köşe, açıklama satırı, ✕ ikonu — bütün ortalanmış pencereler), `DeliveryStrip`
+  ve `ChannelBadge` (yer paneli, yer penceresi ve adres penceresi ortak). Google önerisinin altında
+  zorunlu "Google Maps" logosu (`public/attribution/google-maps.svg`).

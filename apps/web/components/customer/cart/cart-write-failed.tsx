@@ -1,7 +1,7 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
-import { CartStrip } from './cart-strip';
+import { NewsStrip } from '@/components/customer/ui/toast';
 import messages from './cart-messages.json';
 
 /**
@@ -31,12 +31,12 @@ export function CartWriteFailed({ locale, open, onRetry, onClose }: CartWriteFai
   if (!open) return null;
 
   return (
-    <CartStrip
+    <NewsStrip
       message={t.writeFailed}
       action={{ label: t.retry, onClick: onRetry }}
-      onClose={onClose}
-      dismissLabel={t.dismiss}
+      dismiss={{ label: t.dismiss, onClick: onClose }}
       live="assertive"
+      placement="top"
     />
   );
 }

@@ -99,7 +99,7 @@ function InviteFace({ device, locale, code, welcome, t }: InviteFaceProps) {
       return (
         <MessageScreen
           device={device}
-          emoji="🎁"
+          icon="sparkle"
           eyebrow={t.ok.eyebrow}
           // Ad boş olabilir (WhatsApp'tan açılmış kayıtta yalnız telefon vardır): o hâlde davet
           // İSİMSİZ ama düzgün bir cümleyle çizilir ("Bir tanıdığınız sizi… davet etti"). Boş yer
@@ -118,7 +118,7 @@ function InviteFace({ device, locale, code, welcome, t }: InviteFaceProps) {
       return (
         <MessageScreen
           device={device}
-          emoji="🔗"
+          icon="share"
           eyebrow={t.self.eyebrow}
           title={t.self.title}
           description={t.self.description}
@@ -129,7 +129,7 @@ function InviteFace({ device, locale, code, welcome, t }: InviteFaceProps) {
       return (
         <MessageScreen
           device={device}
-          emoji="👋"
+          icon="user"
           eyebrow={t.alreadyCustomer.eyebrow}
           title={t.alreadyCustomer.title}
           description={t.alreadyCustomer.description}
@@ -145,7 +145,7 @@ function InviteFace({ device, locale, code, welcome, t }: InviteFaceProps) {
       return (
         <MessageScreen
           device={device}
-          emoji="🧭"
+          icon="search"
           eyebrow={t.unknown.eyebrow}
           title={t.unknown.title}
           description={t.unknown.description}

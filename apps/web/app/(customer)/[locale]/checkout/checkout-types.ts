@@ -2,12 +2,6 @@ import type { AddressCheckOutcome } from '@lezzet/application';
 import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { CartView } from '@/lib/cart/cart-types';
-/**
- * Adres girdisinin şekli ORTAK forma aittir (`components/customer/delivery/address-form`) — checkout
- * ile hesap sayfası aynı formu kullanıyor. Tip de orada yaşar; burada yalnız yeniden dışa açılır,
- * iki tanım bir gün ayrışırdı (CLAUDE.md §1).
- */
-import type { AddressDefaults, NewAddressInput } from '@/components/customer/delivery/address-form';
 import type { CheckoutSnapshot } from './actions';
 import type messages from './messages.json';
 
@@ -27,6 +21,7 @@ interface StepProps {
 
 /** Ekranın tuttuğu tüm seçim durumu — tek nesne, çünkü üçü birbirini etkiliyor. */
 export interface CheckoutState {
+  /** Sepette seçilen adres — burada değişmez, okunur (13.09). */
   addressId: string | null;
   deliveryDate: string | null;
   /**
@@ -44,8 +39,6 @@ export interface CheckoutViewProps extends StepProps {
   cart: CartView;
   snapshot: CheckoutSnapshot;
   state: CheckoutState;
-  /** Doğrulanmış oturum var mı — yoksa "adım 0" çizilir, sonrakiler soluk başlıklarıyla bekler. */
-  authenticated: boolean;
   /**
    * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7). Ekran bunu SÖYLEMEK zorunda: iki
    * checkout birbirinin tıpatıp aynısı görünürse müşteri hangisini verdiğini bilemez ve "kapıya
@@ -55,17 +48,8 @@ export interface CheckoutViewProps extends StepProps {
   shippingOrder: boolean;
   /** Girişli müşterinin e-postası — kimlik satırı ("… olarak devam ediyorsunuz") bunu yazar. */
   customerEmail: string;
-  /**
-   * YENİ adres formunun ön-dolu açılacağı künye (kullanıcı kararı 22.08) — hesabın adı ve numarası.
-   * `undefined` = kimlik okunamadı; alanlar boş açılır ve müşteriden istenir.
-   *
-   * Kuralı ekran KURMAZ, `addressDefaultsOf` üretir: hesap sayfası da aynı kaynaktan besleniyor ve
-   * iki yerde elle yazılsaydı biri bir gün telefonu ham E.164 geçirirdi.
-   */
-  addressDefaults: AddressDefaults | undefined;
   busy: boolean;
   error: string | null;
-  onSelectAddress: (id: string) => void;
   onSelectDate: (date: string) => void;
   /**
    * Kargo servisi seçimi (07.12) — seçim SUNUCUYA gider ve anlık görüntü yeniden çözülür, çünkü
@@ -92,15 +76,10 @@ export interface CheckoutViewProps extends StepProps {
    * hüküm verdiriyordu.
    */
   snapshotReady: boolean;
-  onAddAddress: (input: NewAddressInput) => Promise<void>;
-  /** Var olan adresi düzenle — checkout'tan çıkmadan (kullanıcı bildirimi, 01.08). */
-  onUpdateAddress: (addressId: string, input: NewAddressInput) => Promise<void>;
   onConfirm: () => void;
-  /** Adım 0 doğrulandı — sayfa tazelenir, adımlar açılır. */
-  onVerified: () => void;
   /** Kart ödemesi seçiliyse ekranın ödeme bloğuna yerleştireceği düğüm; değilse null. */
   paymentSlot: React.ReactNode;
-  /** Seçili adresin künyesi — özetteki soğuk zincir cümlesi ve fatura bilgisi için. */
+  /** Seçili adresin künyesi — adres adımı, özetteki soğuk zincir cümlesi ve fatura bilgisi için. */
   selectedAddress: Address | null;
   /**
    * Adres doğrulamasının sonucu (11.11) — `null` = söylenecek bir şey yok. Yalnız MÜŞTERİYE
@@ -112,9 +91,6 @@ export interface CheckoutViewProps extends StepProps {
   /** Teklif reddedildi — bir vazgeçiş değil BEYAN; kayıttaki öneri etiketi silinmez. */
   onDismissAddressNotice: () => void;
 }
-
-
-export type { NewAddressInput };
 
 /**
  * Siparişin verilememe SEBEBİ — sepettekinin checkout karşılığı (`lib/cart` → `cartBlockReason`).

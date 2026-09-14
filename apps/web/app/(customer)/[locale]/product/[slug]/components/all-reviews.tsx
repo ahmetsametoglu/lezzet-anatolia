@@ -8,6 +8,20 @@ import { Dialog } from '@/components/customer/ui/dialog';
 import type { Messages } from '../product-types';
 import { loadMoreReviewsAction } from '../actions';
 import { ReviewCard } from './review-card';
+import { Icon } from '@/components/customer/ui/icons';
+
+/** Süzgeç etiketindeki `{star}` yer tutucusu yıldız ikonuna döner (14.09: sözlükteki ★ yerine). */
+function withStar(label: string) {
+  const [head, tail] = label.split('{star}');
+  if (tail === undefined) return label;
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {head}
+      <Icon name="star" size={11} />
+      {tail}
+    </span>
+  );
+}
 
 /**
  * **Tüm yorumlar paneli** (08.11 · tasarım `Musteri - Urun Detay.dc.html` → `Tum Yorumlar
@@ -127,7 +141,10 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
           const max = Math.max(...breakdown, 0);
           return (
             <div key={star} className="flex items-center gap-2.5">
-              <span className="w-6 flex-none font-sans text-micro text-body">{star}★</span>
+              <span className="flex w-6 flex-none items-center gap-0.5 font-sans text-micro text-body">
+                {star}
+                <Icon name="star" size={10} className="text-honey" />
+              </span>
               <span className="block h-2 flex-1 overflow-hidden rounded-pill bg-sand-100">
                 <span className="block h-2 rounded-pill bg-honey" style={{ width: max > 0 ? `${(count / max) * 100}%` : '0%' }} />
               </span>
@@ -150,7 +167,7 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
               filter === f.key ? 'border-olive bg-olive text-cream' : 'border-sand-300 bg-card text-ink hover:border-olive',
             ].join(' ')}
           >
-            {t.reviews.filters[f.key].replace('{count}', String(countOf(f.key)))}
+            {withStar(t.reviews.filters[f.key].replace('{count}', String(countOf(f.key))))}
           </button>
         ))}
       </div>

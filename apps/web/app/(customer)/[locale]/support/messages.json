@@ -32,7 +32,7 @@
       "photo": "Fotoğraf ekle",
       "removePhoto": "Fotoğrafı kaldır"
     },
-    "refunded": "↩ {amount} iade edildi — sipariş detayında da görünür",
+    "refunded": "{amount} iade edildi — sipariş detayında da görünür",
     "reopenNote": "Sorun devam ediyorsa yazışmaya mesaj yazmanız yeterli — talep kendiliğinden yeniden açılır.",
     "loadMore": "Daha eski talepler ↓",
     "loading": "Yükleniyor…",
@@ -108,7 +108,7 @@
       "photo": "Ajouter une photo",
       "removePhoto": "Retirer la photo"
     },
-    "refunded": "↩ {amount} remboursés — visible aussi dans le détail de la commande",
+    "refunded": "{amount} remboursés — visible aussi dans le détail de la commande",
     "reopenNote": "Si le problème persiste, il suffit d'écrire un message — la demande se rouvre d'elle-même.",
     "loadMore": "Demandes plus anciennes ↓",
     "loading": "Chargement…",
@@ -184,7 +184,7 @@
       "photo": "Foto hinzufügen",
       "removePhoto": "Foto entfernen"
     },
-    "refunded": "↩ {amount} erstattet — auch in den Bestelldetails sichtbar",
+    "refunded": "{amount} erstattet — auch in den Bestelldetails sichtbar",
     "reopenNote": "Falls das Problem weiterbesteht, schreiben Sie einfach eine Nachricht — die Anfrage wird von selbst wieder geöffnet.",
     "loadMore": "Ältere Anfragen ↓",
     "loading": "Wird geladen…",

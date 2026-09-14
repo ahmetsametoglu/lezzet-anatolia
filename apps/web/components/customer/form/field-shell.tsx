@@ -3,6 +3,17 @@
 import type { ReactNode } from 'react';
 
 /**
+ * Alanın çizimi (13.09):
+ *   `form`   — K34 · Form Alanı: 48px gövde, beyaz zemin, üstte 12,5px etiket. Formların alanı.
+ *   `inline` — v1 başlığının yer panelindeki satır içi alan: büyük harfli küçük künye (11px, 0.1em),
+ *              krem zemin, 12px köşe, 14px kalın metin, 42px gövde; yanındaki düğmeyle aynı satırda
+ *              durur. Hap girdiden (`pill-input`) ayrı çizim: etiket kabuğu var, köşe hap değil.
+ *   `sheet`  — Mobil v1'in yer çekmecesindeki aynı alan: künye ve kutu `inline` ile aynı, zemin
+ *              BEYAZ, metin 13,5px — çekmecenin zemini krem, alan ondan ayrılmalı.
+ */
+export type FieldVariant = 'form' | 'inline' | 'sheet';
+
+/**
  * Form alanlarının ortak iskeleti = **K34 · Form Alanı** (envanter): etiket → kontrol → yardım/hata.
  * Tüm `*Field` primitifleri (input/textarea/select) bunu sarar → etiket/hata markup'ı tek kaynak.
  * `hideLabel` etiketi görsel gizler (sr-only) — placeholder-yalnız tasarımlar için (ör. login).
@@ -21,10 +32,12 @@ interface FieldShellProps {
   optionalLabel?: string;
   labelAside?: ReactNode;
   error?: string;
+  /** Çizim — künyenin biçimi buna bağlı (`FieldVariant`). */
+  variant?: FieldVariant;
   children: ReactNode;
 }
 
-export function FieldShell({ fieldId, label, hideLabel, optional, optionalLabel, labelAside, error, children }: FieldShellProps) {
+export function FieldShell({ fieldId, label, hideLabel, optional, optionalLabel, labelAside, error, variant = 'form', children }: FieldShellProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <label
@@ -32,7 +45,13 @@ export function FieldShell({ fieldId, label, hideLabel, optional, optionalLabel,
         // K34: etiket 12,5px/600, gövde renginde. Girdiden bir punto küçük — etiket künye, girdi içerik.
         // Ölçü artık token (`text-field-label`); ham `text-[12.5px]` yazmak envanter §0.4'ün ölçü
         // kuralını çiğniyordu (renk kuralının ölçü karşılığı: kademe yoksa kodlanmaz, eklenir).
-        className={hideLabel ? 'sr-only' : 'flex items-center justify-between font-sans text-field-label text-body'}
+        className={
+          hideLabel
+            ? 'sr-only'
+            : variant === 'inline' || variant === 'sheet'
+              ? 'flex items-center justify-between font-sans text-eyebrow-sm font-bold text-muted uppercase'
+              : 'flex items-center justify-between font-sans text-field-label text-body'
+        }
       >
         <span>
           {label}
@@ -59,6 +78,13 @@ export function FieldShell({ fieldId, label, hideLabel, optional, optionalLabel,
 export function errorIdFor(fieldId: string, error?: string): string | undefined {
   return error ? `${fieldId}-error` : undefined;
 }
+
+/** Çizime göre değişen gövde: yükseklik, köşe, zemin, punto (gerisi iki çizimde ortak). */
+const CONTROL: Record<FieldVariant, string> = {
+  form: 'h-12 rounded-soft bg-card text-body',
+  inline: 'h-10.5 rounded-xl bg-cream text-body-sm font-semibold',
+  sheet: 'h-10.5 rounded-xl bg-card text-control font-semibold',
+};
 
 /**
  * Input/textarea/select ortak görünümü (Lezzet token'ları). `invalid` çerçeveyi kırmızıya çeker.
@@ -97,13 +123,19 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
  *
  * **Mobil 52px KALAN İŞ:** primitif cihazı bilmiyor ve `md:` akışkan responsive yasak (ADR Sapma 3).
  * 48px zaten erişilebilirlik tabanının (44px) üstünde; `size` desteği ayrı iş → `design/BACKLOG`.
+ *
+ * `inline` çizimi (v1 yer paneli) yalnız gövdeyi değiştirir — kenar, odak, hata ve salt-okunur hâl
+ * iki çizimde aynı (`CONTROL`).
  */
-export function controlClass(invalid?: boolean, extra?: string): string {
+export function controlClass(invalid?: boolean, extra?: string, variant: FieldVariant = 'form'): string {
   return [
-    'h-12 w-full rounded-soft border-[1.5px] bg-card px-4 font-sans text-body leading-tight text-ink outline-none transition-colors placeholder:text-sand-600',
+    'w-full border-[1.5px] px-4 font-sans leading-tight text-ink outline-none transition-colors placeholder:text-sand-600',
+    CONTROL[variant],
     'focus:border-olive focus:ring-[0.5px] focus:ring-inset focus:ring-olive disabled:cursor-not-allowed disabled:opacity-60',
     // Salt-okunur (ülke gibi sabit değerler): krem zemin + soluk kenar ve metin — K34'ün beşinci hâli.
-    'read-only:bg-sand-50 read-only:border-sand-300 read-only:text-muted',
+    // YALNIZ metin kontrollerine: tarayıcı düzenlenemeyen HER öğeyi `:read-only` sayar, düğme dahil —
+    // seçim alanının tetiği (bir düğme) bu yüzden soluk çiziliyordu (13.09, kullanıcının ekran görüntüsü).
+    '[&:read-only:not(button)]:bg-sand-50 [&:read-only:not(button)]:border-sand-300 [&:read-only:not(button)]:text-muted',
     invalid ? 'border-terracotta-bright ring-[0.5px] ring-inset ring-terracotta-bright' : 'border-sand-400',
     extra,
   ]

@@ -8,6 +8,7 @@ import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import { Link } from '@/i18n/navigation';
 import { Button, buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { errorText } from '@/lib/customer-error-text';
 import { formatOrderDate } from '@/lib/storefront/format';
 import type { FeedbackCompletion, FeedbackInviteView } from '@/lib/feedback/invite';
@@ -210,7 +211,7 @@ function Welcome({ t, locale, invite, compact, onStart }: { t: Messages; locale:
 function AlreadyDone({ t, compact }: { t: Messages; compact: boolean }) {
   return (
     <div className="flex flex-col items-center gap-3 py-8 text-center">
-      <span className="text-[28px] leading-none">✓</span>
+      <Icon name="check" size={28} className="text-olive" />
       <span className={`font-serif ${compact ? 'text-h2-sm' : 'text-card-title'} text-ink`}>{t.alreadyTitle}</span>
       <span className="font-sans text-note leading-relaxed text-body">{t.alreadyBody}</span>
       <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 font-sans text-note font-bold text-olive">

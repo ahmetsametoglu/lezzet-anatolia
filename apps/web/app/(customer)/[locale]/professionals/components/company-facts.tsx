@@ -1,3 +1,4 @@
+import { Icon } from '@/components/customer/ui/icons';
 import type { Messages } from '../professionals-types';
 
 /**
@@ -31,7 +32,10 @@ export function CompanyFacts({ t, legalName, addressLine, activityCode, compact 
 
   return (
     <div className={`flex flex-col gap-1.5 rounded-soft bg-olive-bg ${compact ? 'px-3.5 py-3' : 'px-4.5 py-3.5'}`}>
-      <span className="font-sans text-note font-bold text-olive">✓ {t.form.found}</span>
+      <span className="inline-flex items-center gap-1.5 font-sans text-note font-bold text-olive">
+        <Icon name="check" size={14} />
+        {t.form.found}
+      </span>
       {rows.map((row) => (
         <div key={row.label} className="flex justify-between gap-3 font-sans text-note">
           <span className="flex-none text-muted">{row.label}</span>

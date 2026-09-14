@@ -4,6 +4,7 @@ import { useEffect, useState, type ComponentProps } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { recordZoneNoticeAction } from '@/lib/delivery/notice-actions';
 import { NoticeDialog } from './notice-dialog';
 import messages from './restriction-messages.json';
@@ -136,7 +137,12 @@ export function ZoneNoticeButton({ locale, postalCode, emphasis = 'card', produc
         </Link>
       );
     }
-    return <span className="font-sans text-note leading-relaxed text-olive-dark">✓ {t.noticeSaved}</span>;
+    return (
+      <span className="inline-flex items-start gap-1.5 font-sans text-note leading-relaxed text-olive-dark">
+        <Icon name="check" size={14} className="mt-0.75 flex-none" />
+        {t.noticeSaved}
+      </span>
+    );
   }
 
   return (

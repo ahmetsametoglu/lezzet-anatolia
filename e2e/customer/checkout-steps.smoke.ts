@@ -94,8 +94,8 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
       await expect(stepper).toBeVisible({ timeout: 2_500 });
     }).toPass({ timeout: 30_000 });
 
-    // ── Kimlik: misafir OTP (3b dumanının deseni — orada gerekçeli, burada tekrarlanmaz).
-    await page.goto('/fr/commande', NAV);
+    // ── Kimlik: misafir OTP, SEPETTE (13.09 — 3b dumanının deseni; orada gerekçeli, burada tekrarlanmaz).
+    await page.goto('/fr/panier', NAV);
     const emailBox = page.getByRole('textbox', { name: /e-mail|adresse e-mail/i }).first();
     await expect(emailBox).toBeVisible({ timeout: 15_000 });
     const sendCode = page.getByRole('button', { name: /envoyer le code/i }).first();
@@ -110,10 +110,10 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
     await page.keyboard.type(OTP_TEST_CODE, { delay: 40 });
     const confirm = page.getByRole('button', { name: /vérif|valid|confirm/i }).first();
     if (await confirm.isVisible().catch(() => false)) await confirm.click();
-    await expect(page.getByText(/S'ouvre après la vérification/)).not.toHaveCount(3, { timeout: 25_000 });
 
-    // ── ADIM 1 · Adres: yeni misafirde kayıt yok — form açılır, damgalı adres yazılır.
-    await page.getByRole('button', { name: /nouvelle adresse/i }).click();
+    // ── Adres, SEPETTE: yeni misafirde kayıt yok — panel "adres ekle" der, form pencerede açılır,
+    //    damgalı adres yazılır. Kaydetmek = seçmek (sepetten eklenen adres teslimat adresi olur).
+    await page.getByRole('button', { name: /ajouter une adresse/i }).first().click({ timeout: 25_000 });
     await page.getByLabel(/titre de l/i).fill(`E2E adresi ${product.stamp}`);
     await page.getByLabel(/nom du destinataire/i).fill('E2E Musteri');
     await page.getByLabel(/rue et numéro/i).fill('1 rue du Test');
@@ -127,10 +127,14 @@ test.describe('kademe 2 · checkout adımları: adres → gün → kapıda ödem
     await expect(saveAddress).toBeEnabled();
     await saveAddress.click();
 
-    // Kayıt kartlaşır ve OTOMATİK seçilir (checkout-client: yeni eklenen adres seçime geçer).
-    const addressCard = page.getByRole('button', { name: new RegExp(`E2E adresi ${product.stamp}`) });
-    await expect(addressCard).toBeVisible({ timeout: 20_000 });
-    await expect(addressCard).toHaveAttribute('aria-pressed', 'true');
+    // Panel seçili adresi gösterir; "ödemeye geç" artık açıktır (kimlik + adres kapısı geçildi).
+    await expect(page.getByText(new RegExp(`E2E adresi ${product.stamp}`)).first()).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('link', { name: /passer à la commande/i }).first().click();
+    await page.waitForURL(/\/fr\/commande/, NAV);
+
+    // ── ADIM 1 · Adres SALT OKUNUR: sepette seçilen adres kartta, değiştirme bağı sepete götürür.
+    await expect(page.getByText(new RegExp(`E2E adresi ${product.stamp}`)).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('link', { name: /dans le panier/i }).first()).toBeVisible();
 
     // ── ADIM 2 · Gün: adres bölge İÇİNDE — rozet rota teslimatını söyler.
     const daySection = page.locator('section').filter({ hasText: 'Jour de livraison' });

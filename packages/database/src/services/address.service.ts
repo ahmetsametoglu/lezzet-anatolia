@@ -73,4 +73,15 @@ export class AddressService extends BaseDbService<Address, AddressInsert, Addres
       limit: input.limit,
     });
   }
+
+  /**
+   * **Yaşlanmış Google noktaları** (13.09) — Google koordinatı 30 günden uzun saklanamaz; tarama
+   * işi bunları düşürür. Karar vermez, satır getirir: kaynak ve `geoAt` eşiği çağırandan gelir.
+   */
+  listStaleGeo(input: { source: Address['geoSource']; before: string; limit: number }): Promise<Address[]> {
+    return this.getAll(
+      { geoSource: input.source },
+      { rangeFilters: [{ field: 'geoAt', operator: 'lt', value: input.before }], orderBy: 'geoAt', limit: input.limit },
+    );
+  }
 }

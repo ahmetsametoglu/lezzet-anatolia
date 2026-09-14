@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment } from 'react';
+import { Icon } from '@/components/customer/ui/icons';
 import type { CheckoutViewProps } from '../checkout-types';
 
 /**
@@ -14,19 +15,18 @@ import type { CheckoutViewProps } from '../checkout-types';
  * kullanıcı görüntüsüyle). İkisi de şeridin işi değildi: tutar özet kartında ve onay düğmesinde,
  * sayaç özetin kalem listesinde zaten var.
  *
- * **Sepet daima ✓** çünkü buraya sepetten geliniyor; müşterinin ilk gördüğü şey tamamlanmış bir
- * adım oluyor. Kalanlar: doğrulama (yalnız girişsizken) · adres · teslimat · ödeme.
+ * **Sepet daima ✓** çünkü buraya sepetten geliniyor ve kimlik ile adres artık ORADA çözülüyor
+ * (13.09) — "doğrulama" adımı şeritten düştü. Kalanlar: adres (salt okunur) · teslimat · ödeme.
  *
  * Tıklanabilir DEĞİL: adımlar sırayla açılıyor ve geriye dönmek diye bir şey yok — tamamlanan adım
  * ekranda açık kalıyor (tasarım: "akordeon daraltma yok"). Süs değil, konum bildirimi.
  */
-export function CheckoutProgress({ t, snapshot, state, authenticated, compact }: CheckoutViewProps) {
+export function CheckoutProgress({ t, snapshot, state, compact }: CheckoutViewProps) {
   // Bulunulan adım DURUMDAN türetilir, ayrı bir sayaçtan değil: iki kaynak olsaydı ekran bir yerde
   // "adres" derken öbür yerde ödeme kartlarını açık gösterebilirdi.
-  const current = !authenticated ? 0 : !state.addressId ? 1 : !state.deliveryDate && snapshot.delivery?.requiresDateChoice ? 2 : 3;
+  const current = !state.addressId ? 1 : !state.deliveryDate && snapshot.delivery?.requiresDateChoice ? 2 : 3;
 
   const steps = [
-    ...(!authenticated ? [{ label: t.progress.verify, index: 0 }] : []),
     { label: t.progress.address, index: 1 },
     { label: t.progress.delivery, index: 2 },
     { label: t.progress.payment, index: 3 },
@@ -76,7 +76,7 @@ function Crumb({ label, status }: { label: string; status: 'done' | 'current' | 
       ].join(' ')}
       aria-current={status === 'current' ? 'step' : undefined}
     >
-      {status === 'done' && <span aria-hidden>✓</span>}
+      {status === 'done' && <Icon name="check" size={12} />}
       {label}
     </span>
   );

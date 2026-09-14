@@ -12,6 +12,7 @@ import {
   type B2bCompanyFacts,
 } from '@lezzet/domain-core';
 import { Button, buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { Link } from '@/i18n/navigation';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { AddressFields } from '@/components/customer/delivery/address-fields';
@@ -226,8 +227,9 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
 
       {/* İki yol — tasarımın iki hapı. `radiogroup` çünkü seçim birbirini dışlıyor. */}
       <div className="flex gap-2" role="radiogroup" aria-label={t.form.title}>
-        <KindTab label={t.form.tabSiret} flag="🇫🇷" active={isSiret} onSelect={() => switchKind('siret')} />
-        <KindTab label={t.form.tabVat} flag="🇩🇪" active={!isSiret} onSelect={() => switchKind('eu_vat')} />
+        {/* Bayrak YOK (14.09 — ikon dili tek): ülke sekmenin metninde zaten yazılı ("Fransız şirketi"). */}
+        <KindTab label={t.form.tabSiret} active={isSiret} onSelect={() => switchKind('siret')} />
+        <KindTab label={t.form.tabVat} active={!isSiret} onSelect={() => switchKind('eu_vat')} />
       </div>
 
       {isSiret ? (
@@ -359,7 +361,7 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
 }
 
 /** Yol seçici hap — dolu hâl zeytin, boş hâl kum çerçeve (tasarım). */
-function KindTab({ label, flag, active, onSelect }: { label: string; flag: string; active: boolean; onSelect: () => void }) {
+function KindTab({ label, active, onSelect }: { label: string; active: boolean; onSelect: () => void }) {
   return (
     <button
       type="button"
@@ -371,7 +373,7 @@ function KindTab({ label, flag, active, onSelect }: { label: string; flag: strin
         active ? 'bg-olive text-white' : 'border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive',
       ].join(' ')}
     >
-      {flag} {label}
+      {label}
     </button>
   );
 }
@@ -386,7 +388,14 @@ function KindTab({ label, flag, active, onSelect }: { label: string; flag: strin
 function VatSignal({ t, checking, valid }: { t: Messages; checking: boolean; valid: boolean | null | undefined }) {
   if (checking) return <span className="text-muted">{t.form.vatChecking}</span>;
   if (valid === undefined) return null;
-  if (valid === true) return <span className="font-semibold text-olive">✓ {t.form.vatValid}</span>;
+  if (valid === true) {
+    return (
+      <span className="inline-flex items-center gap-1 font-semibold text-olive">
+        <Icon name="check" size={13} />
+        {t.form.vatValid}
+      </span>
+    );
+  }
   if (valid === false) return <span className="font-semibold text-terracotta-bright">{t.form.vatInvalid}</span>;
   return <span className="text-honey">{t.form.vatUnknown}</span>;
 }
@@ -396,7 +405,7 @@ function SentCard({ t, compact }: { t: Messages; compact: boolean }) {
   return (
     <div className="flex flex-col items-center gap-2.5 text-center">
       <span className="font-sans text-eyebrow-sm uppercase text-muted">{t.sent.eyebrow}</span>
-      <span className="text-[30px]">📨</span>
+      <Icon name="mail" size={30} className="text-olive" />
       <h2 className={`font-serif ${compact ? 'text-card-title-sm' : 'text-card-title'} text-ink`}>{t.sent.title}</h2>
       <p className="font-sans text-body-sm leading-relaxed text-body">{t.sent.body}</p>
       {/* Çıkış yolu KATALOG, hesap değil: onay gelene kadar yapılabilecek şey alışverişe devam

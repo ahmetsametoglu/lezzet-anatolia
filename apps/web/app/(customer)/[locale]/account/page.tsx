@@ -12,6 +12,7 @@ import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { SignOutLink } from '@/components/customer/account/sign-out-link';
 import { AccountClient } from './account-client';
+import { AccountGuest } from './components/account-guest';
 import type { Messages } from './account-types';
 import messages from './messages.json';
 
@@ -19,8 +20,10 @@ import messages from './messages.json';
  * Hesabım (08.5) — müşteri döngüsünün kapanmayan ucuydu: sipariş veriliyor, sonra siparişe
  * bakılamıyordu.
  *
- * **Girişsiz ziyaretçi 404 GÖRMEZ, girişe yönlenir.** Sayfanın kendisi bir sır değil; müşterinin
- * eksiği kimlik. 404 "böyle bir sayfa yok" der ve yanlıştır.
+ * **Girişsiz ziyaretçi 404 GÖRMEZ.** Sayfanın kendisi bir sır değil; müşterinin eksiği kimlik. 404
+ * "böyle bir sayfa yok" der ve yanlıştır. Masaüstünde girişe yönlenir; mobil webde misafir kartını
+ * görür (v1 "Hesabınıza girin", 13.09) — sekme çubuğundaki "Hesabım" herkese açık ve yasal
+ * bağlantılarla dil seçiminin mobildeki tek yeri bu ekran (`SiteLinks`).
  *
  * Kanal (B2C/B2B) SAKLANMAZ, şirket künyesinden türer: B2C'de şirket bölümü, B2B'de puan/kupon
  * bölümü DOM'da hiç yoktur (tasarımın kuralı) — gri gösterilmez, hiç doğmaz.
@@ -48,8 +51,17 @@ export default async function AccountPage({ params, searchParams }: AccountPageP
 
   const t: Messages = messages[locale];
   const [device, customerId, rawNotice] = await Promise.all([detectDevice(), currentCustomerId(), readChatLinkNotice()]);
-  // Segment tablosu yolu BAŞINDA bölü ile taşıyor (`/giris`); ikinci bir bölü eklenmez.
-  if (!customerId) redirect(`/${locale}${LOGIN_SEGMENT[locale]}`);
+  if (!customerId) {
+    if (device === 'mobile') {
+      return (
+        <SiteFrame device={device} locale={locale} accountChrome={{ nav: 'account', title: t.title }}>
+          <AccountGuest t={t} locale={locale as Locale} />
+        </SiteFrame>
+      );
+    }
+    // Segment tablosu yolu BAŞINDA bölü ile taşıyor (`/giris`); ikinci bir bölü eklenmez.
+    redirect(`/${locale}${LOGIN_SEGMENT[locale]}`);
+  }
 
   const account = await getAccountView(locale as Locale, customerId);
   if (!account) notFound();

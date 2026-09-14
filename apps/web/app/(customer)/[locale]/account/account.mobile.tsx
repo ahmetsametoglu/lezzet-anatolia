@@ -2,6 +2,7 @@ import { Link } from '@/i18n/navigation';
 import type { AccountViewProps } from './account-types';
 import { statusPillClass } from '@/components/customer/ui/badge';
 import { Card } from '@/components/customer/ui/card';
+import { Icon } from '@/components/customer/ui/icons';
 import { CardHead, ConsentSwitch, InviteCard, PointsCard, Row, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { setConsentAction } from './actions';
 import { AddressesCard } from './components/addresses-card';
@@ -10,6 +11,8 @@ import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
 import { CouponsCard } from './components/coupons-card';
 import { DeleteAccount } from './components/delete-account';
 import { ProfileCard } from './components/profile-card';
+import { SiteLinks } from './components/site-links';
+import { SignOutLink } from '@/components/customer/account/sign-out-link';
 
 /**
  * Hesabım — mobil (tasarım: "Hesap Mobil").
@@ -25,9 +28,8 @@ export function AccountMobile({ t, locale, account, chatNotice }: AccountViewPro
   const compact = true;
   return (
     <div className="flex flex-col gap-3 px-4 py-4">
-      {/* Sayfa başlığı YOK: mobilde `accountChrome` zaten "Hesabım"ı başlık satırında taşıyor —
-          h1 buradayken ekranda iki kez alt alta yazılıyordu (kullanıcı bulgusu 20.08). Tasarım tek
-          satır çiziyor: "Hesabım … Çıkış". Masaüstünde başlık sekmelerde, orada h1 sorunu yok. */}
+      {/* Sayfa başlığı YOK: mobilde "Hesabım" çerçevenin üst barında — h1 buradayken ekranda iki
+          kez alt alta yazılıyordu (kullanıcı bulgusu 20.08). Masaüstünde başlık sekmelerde. */}
       {/* Sohbet bağlantısının sonucu (15.16): girişten hemen sonra, en üstte, bir kez. */}
       {chatNotice && <ChatLinkNoticeBanner t={t} notice={chatNotice} />}
 
@@ -67,7 +69,14 @@ export function AccountMobile({ t, locale, account, chatNotice }: AccountViewPro
           <CardHead
             title={t.companyTitle}
             compact={compact}
-            action={<span className={statusPillClass('sm', 'bg-olive-bg text-olive')}>{t.companyApproved}</span>}
+            action={
+              <span className={statusPillClass('sm', 'bg-olive-bg text-olive')}>
+                <span className="inline-flex items-center gap-1">
+                  <Icon name="check" size={12} />
+                  {t.companyApproved}
+                </span>
+              </span>
+            }
           />
           <Row label={t.companyLegalName} value={account.company.legalName} />
           {account.company.siret && <Row label={t.companySiret} value={account.company.siret} />}
@@ -93,8 +102,22 @@ export function AccountMobile({ t, locale, account, chatNotice }: AccountViewPro
         <CardHead title={t.consentTitle} compact={compact} />
         {/* `bind` gerekçesi masaüstü ikizinde yazılı: sunucu bileşeninden istemciye ancak server
             action geçer, yerinde yazılmış ok fonksiyonu geçmez. */}
-        <ConsentSwitch label={t.consentEmail} on={account.consent.email} onLabel={t.consentOn} offLabel={t.consentOff} onToggle={setConsentAction.bind(null, 'email')} />
-        <ConsentSwitch label={t.consentWhatsapp} on={account.consent.whatsapp} onLabel={t.consentOn} offLabel={t.consentOff} onToggle={setConsentAction.bind(null, 'whatsapp')} />
+        <ConsentSwitch
+          label={t.consentEmail}
+          icon={<Icon name="mail" size={16} />}
+          on={account.consent.email}
+          onLabel={t.consentOn}
+          offLabel={t.consentOff}
+          onToggle={setConsentAction.bind(null, 'email')}
+        />
+        <ConsentSwitch
+          label={t.consentWhatsapp}
+          icon={<Icon name="chat" size={16} />}
+          on={account.consent.whatsapp}
+          onLabel={t.consentOn}
+          offLabel={t.consentOff}
+          onToggle={setConsentAction.bind(null, 'whatsapp')}
+        />
       </Card>
 
       {/* Veri notu mobilde KART DEĞİL, sayfanın altındaki ince satır (tasarım). Gizlilik bağı
@@ -107,6 +130,12 @@ export function AccountMobile({ t, locale, account, chatNotice }: AccountViewPro
       <span className="px-1">
         <DeleteAccount t={t} />
       </span>
+
+      {/* Çıkış hesabın EN ALTINDA (v1 mobil): mobil üst barın sağ ucu yalnız sepetin — ekranın
+          öğesi başlığa çıkmaz. */}
+      <SignOutLink locale={locale} variant="button" />
+      {/* Dil + yasal bağlantılar (kullanıcı kararı 13.09) — v1 mobil footer çizmiyor. */}
+      <SiteLinks locale={locale} />
     </div>
   );
 }

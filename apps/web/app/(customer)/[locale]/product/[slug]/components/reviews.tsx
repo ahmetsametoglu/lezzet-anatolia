@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { formatDecimal } from '@/lib/storefront/format';
+import { Icon } from '@/components/customer/ui/icons';
 import type { Messages, ReviewsData } from '../product-types';
 import { ReviewForm } from './review-form';
 import { AllReviews } from './all-reviews';
@@ -103,7 +104,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
 
       {score.average === null ? (
         <div className="flex flex-col items-center gap-1.5 rounded-soft border border-dashed border-sand-400 px-6 py-6 text-center">
-          <span className="text-icon">☆</span>
+          <Icon name="star" size={24} className="text-sand-400" />
           <span className="font-sans text-body font-bold text-ink">{t.reviews.emptyTitle}</span>
           <span className="font-sans text-note text-muted">{t.reviews.emptyBody}</span>
         </div>

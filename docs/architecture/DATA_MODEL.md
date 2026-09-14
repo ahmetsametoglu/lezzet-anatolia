@@ -74,7 +74,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 
 - `account_type`: cash, bank, provider, partner *(`partner` = ortak cari hesabı; bakiye işareti borcun yönünü söyler)*
 - `address_geo_precision`: housenumber, street, locality, municipality *(adres koordinatı hangi hassasiyette çözüldü)*
-- `address_geo_source`: ban, manual *(koordinat BAN'dan mı geldi, elle mi girildi)*
+- `address_geo_source`: ban, google, manual *(koordinat BAN'dan mı, Google'dan mı geldi, elle mi girildi — `google` 30 günden uzun saklanmaz, 13.09)*
 - `analytics_availability`: sellable, sold_out, closed, not_here *(ölçüm anında ürün alınabilir miydi)*
 - `analytics_blocked_reason`: min_basket, split, place_change, coupon_invalid, out_of_stock, payment_failed, not_shippable, date_unavailable *(sepet/checkout neden kapandı)*
 - `analytics_device`: mobile, desktop

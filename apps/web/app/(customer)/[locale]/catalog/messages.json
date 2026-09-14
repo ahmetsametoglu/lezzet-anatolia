@@ -9,7 +9,7 @@
       "withMinimum": "{minimum} üzeri {value}"
     },
     "collectionTag": "Koleksiyon",
-    "collectionExit": "Tüm kataloğa dön ✕",
+    "collectionExit": "Tüm kataloğa dön",
     "shippableAsk": "Adresinize ne gelebilir?",
     "shippableAskShort": "Adresim?",
     "all": "Tümü",
@@ -37,8 +37,8 @@
       "offer": "Fırsat",
       "soldOut": "Tükendi — yakında yeniden"
     },
-    "onlyShippable": "📍 Adresime gönderilebilir",
-    "onlyShippableShort": "📍 Adresime",
+    "onlyShippable": "Adresime gönderilebilir",
+    "onlyShippableShort": "Adresime",
     "searchPlaceholder": "Ürün ara…",
     "searchClear": "Aramayı temizle"
   },
@@ -52,7 +52,7 @@
       "withMinimum": "dès {minimum} : {value}"
     },
     "collectionTag": "Collection",
-    "collectionExit": "Retour au catalogue ✕",
+    "collectionExit": "Retour au catalogue",
     "shippableAsk": "Que peut-on livrer chez vous ?",
     "shippableAskShort": "Chez moi ?",
     "all": "Tout",
@@ -80,8 +80,8 @@
       "offer": "Offre",
       "soldOut": "Épuisé — bientôt de retour"
     },
-    "onlyShippable": "📍 Livrable chez moi",
-    "onlyShippableShort": "📍 Chez moi",
+    "onlyShippable": "Livrable chez moi",
+    "onlyShippableShort": "Chez moi",
     "searchPlaceholder": "Rechercher un produit…",
     "searchClear": "Effacer la recherche"
   },
@@ -95,7 +95,7 @@
       "withMinimum": "ab {minimum}: {value}"
     },
     "collectionTag": "Kollektion",
-    "collectionExit": "Zurück zum Katalog ✕",
+    "collectionExit": "Zurück zum Katalog",
     "shippableAsk": "Was können wir zu Ihnen liefern?",
     "shippableAskShort": "Zu mir?",
     "all": "Alle",
@@ -123,8 +123,8 @@
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
     },
-    "onlyShippable": "📍 An meine Adresse",
-    "onlyShippableShort": "📍 Zu mir",
+    "onlyShippable": "An meine Adresse",
+    "onlyShippableShort": "Zu mir",
     "searchPlaceholder": "Produkt suchen…",
     "searchClear": "Suche löschen"
   }

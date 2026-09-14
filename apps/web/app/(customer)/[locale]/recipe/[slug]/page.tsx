@@ -94,11 +94,9 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
       device={device}
       locale={locale}
       activeNav="recipes"
-      mobileChrome="detail"
       footer="slim"
-      /* Tarifin mobil düzeninde başka h1 yok (ad yalnız görsel alt metnindeydi) — hero'yu
-         FunnelHeader kurar: terracotta eyebrow + tarif adı, fotoğrafın üstünde. */
-      detail={{ title: recipe.name, eyebrow: t.eyebrow, fallback: '/recipes' }}
+      /* Mobil üst barın başlığı tarifin adı; ‹ geçmiş boşsa tariflere döner (v1 mobil, 13.09). */
+      detail={{ title: recipe.name, fallback: '/recipes' }}
     >
       <RecipeJsonLd recipe={recipe} url={localizedUrl('/recipe/[slug]', locale, { slug })} />
       <RecipeClient t={t} locale={locale} recipe={recipe} device={device} />

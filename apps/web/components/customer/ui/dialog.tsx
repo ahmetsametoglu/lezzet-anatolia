@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import { iconHitClass } from './button';
+import { Icon } from './icons';
 
 /**
  * Açık panellerin yığını. Esc yalnız EN ÜSTTEKİNİ kapatır — iç içe panel doğduğu gün tek tuş iki
@@ -33,6 +34,8 @@ const FOCUSABLE =
 interface DialogProps {
   /** Başlık — `aria-label` olarak da kullanılır. */
   title: string;
+  /** Başlığın altındaki tek cümle — v1 mobil çekmecelerinin ikinci satırı. Verilmezse çizilmez. */
+  description?: string;
   /** Kapatma düğmesinin erişilebilir adı; komponent metin taşımaz, çerçeveden gelir (i18n). */
   closeLabel: string;
   onClose: () => void;
@@ -49,6 +52,10 @@ interface DialogProps {
    *
    * **Kararı ÇAĞIRAN verir, kabuk cihazı sormaz** (`CLAUDE §2` cihaz forku): mobil web forku
    * `sheet` geçer, masaüstü hiç geçmez. `md:` ile akışkan bir dönüşüm YOK.
+   *
+   * **Görünüşü v1 mobilin çekmecesi (13.09, yer ve adres çekmeceleri):** krem zemin, 24px üst köşe,
+   * 20px serif başlık + tek cümle açıklama, çizgi ✕; alttan kayarak girer. 21.08'in tutamağı v1'de
+   * çizilmediği için kalktı.
    */
   placement?: 'center' | 'sheet';
   /**
@@ -64,7 +71,7 @@ interface DialogProps {
   children: ReactNode;
 }
 
-export function Dialog({ title, closeLabel, onClose, maxWidth = 420, placement = 'center', footer, children }: DialogProps) {
+export function Dialog({ title, description, closeLabel, onClose, maxWidth = 420, placement = 'center', footer, children }: DialogProps) {
   const sheet = placement === 'sheet';
   const panelRef = useRef<HTMLDivElement>(null);
   const tokenRef = useRef<object>({});
@@ -108,7 +115,7 @@ export function Dialog({ title, closeLabel, onClose, maxWidth = 420, placement =
 
   return (
     <div
-      className={`fixed inset-0 z-40 flex bg-ink/40 ${sheet ? 'items-end justify-center' : 'items-center justify-center px-4'}`}
+      className={`fixed inset-0 z-40 flex animate-fade-in bg-ink/40 motion-reduce:animate-none ${sheet ? 'items-end justify-center' : 'items-center justify-center px-4'}`}
       onClick={onClose}
     >
       <div
@@ -122,32 +129,37 @@ export function Dialog({ title, closeLabel, onClose, maxWidth = 420, placement =
            uygulanırsa çekmece dar kalır — mobilde tam da kaçındığımız sıkışma. */
         style={sheet ? undefined : { maxWidth }}
         className={[
-          'flex w-full flex-col bg-card outline-none',
+          'flex w-full flex-col outline-none',
           /* ── İKİ ANATOMİ, TEK SÖZLEŞME ───────────────────────────────────────────────────────
              Ortalanmış kutuda PANELİN KENDİSİ kayar (bugünkü davranış, dokunulmadı).
              Çekmecede başlık SABİT, yalnız gövde kayar — ölçüldü (21.08): tek gövde kaydırmasıyla
              başlık içerikle birlikte yukarı kayıp üstten kırpılıyordu. Çekmecenin başlığı onun
              "neredeyim" işaretidir; kaybolursa müşteri uzun bir formun ortasında bağlamsız kalır. */
-          sheet ? 'max-h-[92vh] overflow-hidden rounded-t-card pt-3' : 'max-h-[85vh] gap-3.5 overflow-y-auto rounded-card px-6 py-5.5',
+          sheet
+            ? 'max-h-[88vh] animate-sheet-in overflow-hidden rounded-t-3xl bg-cream shadow-sheet motion-reduce:animate-none'
+            : // Ortalanmış kutu v1 masaüstü penceresi (13.09, adres penceresi): krem zemin, kum-275 kenar,
+              // 22px köşe, 26/30/28 ped, 16px aralık, gölge; başlık 24px serif, altında 13,5px cümle.
+              'max-h-[86vh] gap-4 overflow-y-auto rounded-[22px] border border-sand-275 bg-cream px-7.5 pt-6.5 pb-7 shadow-dialog',
         ].join(' ')}
       >
-        {/* Tutamak: çekmecenin "aşağı doğru kapanır" olduğunu söyleyen görsel işaret. Sürükleme
-            YOK — vaat edilmeyen bir jest, çalışmadığında kırık hissettirir; kapatma ✕ ile ve
-            örtüye dokunarak (kabuğun sözleşmesi). */}
-        {sheet && <span aria-hidden className="mx-auto mb-2.5 h-1 w-10 flex-none rounded-full bg-sand-200" />}
-        <div className={`flex items-start justify-between gap-3 ${sheet ? 'flex-none px-5 pb-3' : ''}`}>
-          <span className="font-serif text-card-title-sm text-ink">{title}</span>
+        {/* Kapatma ✕ ile ve örtüye dokunarak (kabuğun sözleşmesi). Çekmecede sürükleme YOK — vaat
+            edilmeyen bir jest, çalışmadığında kırık hissettirir. */}
+        <div className={`flex items-start justify-between gap-3 ${sheet ? 'flex-none px-[18px] pt-[18px] pb-[13px]' : ''}`}>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className={['font-serif text-ink', sheet ? 'text-h2-sm' : 'text-card-title'].join(' ')}>{title}</span>
+            {description && <span className={['font-sans font-normal leading-[1.6] text-body', sheet ? 'text-field-label' : 'text-control'].join(' ')}>{description}</span>}
+          </div>
           <button
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
             className={`${iconHitClass} -my-2.5 -mr-2.5 font-sans text-note text-muted hover:text-ink`}
           >
-            ✕
+            <Icon name="close" size={sheet ? 16 : 18} />
           </button>
         </div>
-        {sheet ? <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-5 pb-4">{children}</div> : children}
-        {sheet && footer && <div className="flex-none border-t border-sand-100 px-5 pt-3.5 pb-5">{footer}</div>}
+        {sheet ? <div className="flex min-h-0 flex-1 flex-col gap-[13px] overflow-y-auto px-[18px] pb-[22px]">{children}</div> : children}
+        {sheet && footer && <div className="flex-none border-t border-sand-100 px-[18px] pt-3.5 pb-5">{footer}</div>}
       </div>
     </div>
   );

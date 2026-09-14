@@ -3,6 +3,7 @@
 import { useState, type ComponentProps } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import { Badge } from '@/components/customer/ui/badge';
+import { Icon, type IconName } from '@/components/customer/ui/icons';
 import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
 import { elsewhereReasonOf } from '@/lib/delivery/place-types';
 import type { StockStatus } from '@lezzet/types';
@@ -59,7 +60,8 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
 
   // Büyük hâl Badge'e ölçü eklemez, kendi bandını çizer: rozet ailesi kısa etiketler için
   // (envanter K5), buradaki ise tek cümlelik bir uyarı bandı — tonlar aynı aileden (honey · kum).
-  const band = (tone: 'blocked' | 'ship', text: string) =>
+  // Simge işaretin anlamını taşır (14.09: emoji yerine ikon seti) — kargo `box`, soğuk zincir `snowflake`.
+  const band = (tone: 'blocked' | 'ship', text: string, icon?: IconName) =>
     size === 'lg' ? (
       <span
         className={[
@@ -67,21 +69,24 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
           // farklı boyda oldukları için biri rozet, öteki etiket gibi okunuyordu (ölçüldü: dikey
           // dolgu 8px'e 2px, yazı bir kademe büyük). Ortada buluştular — bu kutu küçüldü, öteki
           // büyüdü. **Değiştirirken ikisi birlikte değişir**, yoksa fark geri gelir.
-          'inline-flex w-fit items-center rounded-soft border px-2.5 py-1 font-sans text-note font-semibold leading-snug',
+          'inline-flex w-fit items-center gap-1.5 rounded-soft border px-2.5 py-1 font-sans text-note font-semibold leading-snug',
           tone === 'blocked' ? 'border-honey-line bg-honey-bg text-honey' : 'border-sand-300 bg-closed-bg text-closed',
         ].join(' ')}
       >
+        {icon && <Icon name={icon} size={14} className="flex-none" />}
         {text}
       </span>
     ) : (
       <Badge tone={tone === 'blocked' ? 'pending' : 'closed'} variant="outline">
+        {icon && <Icon name={icon} size={12} />}
         {text}
       </Badge>
     );
 
-  if (status === 'shipping') return band('ship', t.shipMark);
+  if (status === 'shipping') return band('ship', t.shipMark, 'box');
   if (status === 'elsewhere') {
-    return band('blocked', elsewhereReasonOf(place) === 'out_of_route' ? t.lineBlocked : t.awayMark);
+    const outOfRoute = elsewhereReasonOf(place) === 'out_of_route';
+    return band('blocked', outOfRoute ? t.lineBlocked : t.awayMark, outOfRoute ? 'snowflake' : undefined);
   }
   return null;
 }
@@ -103,7 +108,8 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
 export function ColdChainMark({ label }: { label: string }) {
   return (
     // Ölçü yer işaretiyle ORTAK — gerekçesi orada (`band`), ikisi birlikte değişir.
-    <span className="w-max rounded-soft border border-sand-300 bg-sand-100 px-2.5 py-1 font-sans text-note font-semibold text-muted">
+    <span className="inline-flex w-max items-center gap-1.5 rounded-soft border border-sand-300 bg-sand-100 px-2.5 py-1 font-sans text-note font-semibold text-muted">
+      <Icon name="snowflake" size={14} />
       {label}
     </span>
   );

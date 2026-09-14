@@ -18,7 +18,7 @@ interface EmptyTicketsProps {
 export function EmptyTickets({ t }: EmptyTicketsProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-4 py-10">
-      <ListEmpty compact icon="💬" title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/support/new' }} />
+      <ListEmpty compact icon="chat"title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/support/new' }} />
     </div>
   );
 }

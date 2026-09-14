@@ -38,14 +38,14 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
   kaydetme yoluna binen bir çağrı kotayı tüm müşterilere ortak yapardı ve akşam saatinde bir 429
   herkese birden çarpardı. Çözüm taramalı bir cron (`geocode_addresses`, on dakikada bir) + müşteri
   öneriyi seçtiğinde zaten cevapta gelen koordinatın taşınması.
-- **Almanya için sağlayıcı YOK ve uydurulmuyor** (BAN yalnız Fransa'ya bakar). Port
-  `unsupported_country` döner, nokta `null` kalır ve o satırlar tarama kuyruğunda sayaç TÜKETMEZ —
-  ikinci bir kaynak takıldığı gün çözülsünler diye. Bugün DE adreslerinin noktası beslemede kod
-  merkezi olarak duruyor ve kademesi dürüstçe `municipality` yazıyor: kapı değil, yerleşimin ortası.
+- **Almanya → Google** (`packages/address-google`, bağlandı 13.09 — aşağıdaki bölüm). Anahtar
+  yokken port `unsupported_country` döner, nokta `null` kalır ve o satırlar tarama kuyruğunda sayaç
+  TÜKETMEZ. Anahtarsız DE adresinin noktası beslemede kod merkezi olarak duruyor ve kademesi
+  dürüstçe `municipality` yazıyor: kapı değil, yerleşimin ortası.
 - **Anahtarsızlık ADLI:** `geocoderConfigured(country)` — ekran "Almanya adresleri için konum çözümü
-  kapalı" diyebilir; sessiz bir eksik olmaz.
-- Port `packages/application/src/delivery/geocode-port.ts`, fabrika `geocode-provider.ts` (env'i
-  yalnız orada okur). Hiçbir yol fırlatmaz; her başarısızlık adlandırılmış bir sonuçtur.
+  kapalı" diyebilir; sessiz bir eksik olmaz. Env'i tek yer okur (`delivery/google-maps.ts`).
+- Port `packages/application/src/delivery/geocode-port.ts`, fabrika `geocode-provider.ts`. Hiçbir
+  yol fırlatmaz; her başarısızlık adlandırılmış bir sonuçtur.
 
 ### Kapının VARLIĞI ayrı bir sorudur — adres doğrulama (11.11)
 
@@ -60,33 +60,53 @@ adlı SOKAĞI dönüyor (0,717), kısıtsız sorulduğunda 67380 Lingolsheim'dek
 Arada 7,2 km. Karar `domain-core/delivery/address-verdict`, kapı
 `application/delivery/address-check`.
 
-### Genişleme yolu: Google Address Validation — SEÇİLDİ, henüz BAĞLI DEĞİL
+### Almanya: Google Maps Platform — BAĞLANDI (13.09; karar 02.09)
 
-BAN yalnız Fransa'ya bakar. Almanya ve ötesi açıldığında (`07.17`, bugün **dondurulmuş**) sağlayıcı
-**Google Address Validation** olacak. Gerekçe: tek çağrı dördünü birden veriyor — geçerlilik
-(`verdict.addressComplete`), neyin düzeltildiği (`hasReplacedComponents`), düzeltilmiş adresin
-kendisi **ve `geocode.location` (enlem/boylam)**. Sonuncusu olmasa ikinci bir çağrı gerekirdi;
-`geocodeGranularity` bizim `precision` alanımızın karşılığıdır.
+BAN yalnız Fransa'ya bakar. Almanya için iki kapı, tek anahtar (`GOOGLE_MAPS_API_KEY`, yalnız
+`delivery/google-maps.ts` okur), paket **`@lezzet/address-google`** (kendi paketimiz, yalnız `zod`;
+fırlatmaz, her başarısızlık adlı — BAN paketiyle aynı disiplin):
 
-**Bağlanmadan önce okunması gereken üç kısıt:**
+- **Adres önerisi — Places API (New)** `places:autocomplete` + `places/{id}` (alan maskesi
+  `addressComponents,formattedAddress,location`, Essentials kademesi). **Sunucudan** çağrılır
+  (`application/delivery/address-suggest.ts` → web eylemi): BAN'ın "tarayıcıdan, IP kotası" gerekçesi
+  burada tersine döner — kota projeye bağlı, anahtar gizli. `includedRegionCodes: ['DE']` — "önce
+  ülke" kararının servise yansıması; `sessionToken` istemcide üretilir (yazmaya başlarken bir UUID),
+  seçimle biter: oturum olarak fiyatlanır (oturum kullanımı ücretsiz; tek tek istekler 10.000/ay
+  sonrası ücretli — fiyat sayfası 10.09). FR önerisi buradan GEÇMEZ (`unsupported_country`).
+- **Adres doğrulama — Address Validation** `v1:validateAddress`: tek çağrı geçerliliği
+  (`addressComplete`), neyin düzeltildiğini (`replaced`), düzeltilmiş adresin kendisini VE
+  `geocode.location`ı veriyor; `validationGranularity` bizim `precision`a çevrilir (`PREMISE`/
+  `SUB_PREMISE` → `housenumber`, `ROUTE`/`BLOCK`/`PREMISE_PROXIMITY` → `street`). `geocoder()`
+  ülkeyi SORGUDAN okur: FR → BAN, DE → Google. Aynı iki soru, TEK çağrı: gövde sokak satırı + kod +
+  şehir taşır (dil alanı YOK — üst düzey `languageCode` isteği 400 ile düşürüyor, ölçüldü 13.09);
+  Google kodu DEĞİŞTİRDİYSE kapı istenen kodda yoktur (`no_match`) ve `elsewhere` aynı cevabın
+  düzeltilmiş adresini tek aday olarak taşır. BAN'daki "kısıtsız ikinci arama" Google'da
+  KULLANILMAZ: bağlamsız soru rastgele kapı seçiyor (ölçüldü 13.09: yalnız "Hauptstraße 1" →
+  84544 Aschau am Inn; müşteri 77694 Kehl'deydi). Skor servisin bayraklarından
+  (kapı + tam → 0,95 · kapı + doğrulanmamış bileşen → 0,85 · sokak → 0,6), ki `addressVerdict`in
+  0,8 eşiği iki kaynakta aynı anlama gelsin. 5.000/ay ücretsiz, sonra 17 $/1000.
 
-- ⚠ **Koordinat en fazla 30 GÜN saklanabilir.** Süresiz saklanabilen tek alan `placeId`. Bize
-  dokunmuyor çünkü koordinatın gerçek ömrü sipariş↔teslimat penceresi kadar (kullanıcı düzeltmesi
-  02.09) — ama **şema bunu bilmiyor**: bugün `address.lat/lng` süresiz duruyor ve BAN kaynaklıysa
-  bu doğru (Licence Ouverte). Google kaynaklı satır geldiği gün kaynağa göre bir yaşlanma kuralı
-  gerekir; `geo_source` alanı bu ayrımı zaten taşıyor.
-- ⚠ **"Google Maps" atfı zorunlu ve gizlenemez** — sonucun gösterildiği yerde, yani düzeltme
-  teklifinin çıktığı checkout ekranında. Tasarım kararı doğurur.
-- ⚠ **FAIL-OPEN zorunlu.** Doğrulama sipariş anında koştuğu için servisin düştüğü an checkout
-  DURMAMALI: sipariş geçer, adres "doğrulanamadı" işaretlenir, sevkiyat ve kurye uyarılır. BAN
-  yolunda bu kural zaten uygulanıyor ve testli.
+**Üç kısıt ve karşılıkları:**
 
-**Maliyet:** sipariş başına ~0,5–2 cent, ücretsiz kotanın içinde kalması muhtemel. **Fransa'da çoğu
-sipariş SIFIR** — BAN önerisinden kapı düzeyinde seçilmiş adres zaten doğrulanmıştır ve Google'a hiç
-gidilmez. Google yalnız DE/diğer ve elle yazılmış FR adresleri için çağrılır.
+- **Koordinat en fazla 30 GÜN** (süresiz saklanabilen tek alan `placeId`). `geo_source = 'google'`
+  satırları tarama işi her turda önce düşürür (`geocode-scan` → `expireGoogleGeo`, `listStaleGeo`);
+  düşen satır **sipariş anında** yeniden çözülür (`checkAddress`), taramada DEĞİL:
+  `geocoderScanAllowed('DE')` yanlış — ücretli ve 30 gün ömürlü bir kaynakla hiç sipariş vermeyecek
+  adresleri ayda bir çözmek para yakmak olurdu. Koordinatın gerçek ömrü sipariş↔teslimat penceresi
+  (kullanıcı düzeltmesi 02.09). BAN noktası süresiz (Licence Ouverte) — kaynak ayrımı `geo_source`ta.
+- **Google Maps logosu** (harita yokken, 16–19 dp; dar yerde "Google Maps" metni) Places
+  içeriğinin gösterildiği yerde: DE öneri listesi ve DE adresinin düzeltme teklifi. Resmî varlık
+  Google'ın atıf paketinden (`apps/web/public/`); çizen yüzeyin işi.
+- **FAIL-OPEN.** Doğrulama sipariş anında koştuğu için servisin düştüğü an checkout DURMAZ:
+  `checkAddress` `unknown` döner ve susar. Geçici OLMAYAN iki arıza ayrı adla gelir — 401/403
+  `denied` (anahtar/kısıt/fatura), öteki 4xx `rejected` (isteğimiz sözleşmeye uymuyor) — ve uygulama
+  katmanı (`traceGoogleFailure`) `captureError` ile iz bırakır: kapı sessiz düşünce kimse fark
+  etmez, log söyler. Ölçüldü 13.09: ikisi de (anahtar kısıtındaki 403 ve gövdedeki fazla alanın
+  400'ü) önceki hâlde `unavailable`a karışıyor ve hiçbir yere yazılmıyordu.
 
-**Anahtar bugün YOK** (ölçüldü 02.09: env'de Google OAuth ve Gemini var, Maps yok). Adaptör
-`routeMatrixProvider` deseniyle yazılacak: anahtar yokken **adlı yokluk** döner, geldiği gün açılır.
+**Fransa'da çoğu sipariş SIFIR maliyet** — BAN önerisinden kapı düzeyinde seçilmiş adres zaten
+doğrulanmış ve koordinatı süresiz; Google yalnız DE adresleri için çağrılır (FR'de elle yazılmış
+adres de BAN'a sorulur). **Kapsam yine FR+DE:** `07.17` (AB'nin tamamı) dondurulmuş kalıyor.
 
 ### Kargo sağlayıcısı bu işi YAPAMAZ — ölçüldü, ve nedeni yapısal
 

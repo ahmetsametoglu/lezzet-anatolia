@@ -5,7 +5,6 @@ import { buttonClass } from '@/components/customer/ui/button';
 import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
 import { CategoryCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
-import { CartBar } from '@/components/customer/cart/cart-bar';
 import { Link } from '@/i18n/navigation';
 import { limitText, type HomeViewProps } from './home-types';
 
@@ -20,7 +19,7 @@ import { limitText, type HomeViewProps } from './home-types';
  */
 export function HomeMobile({ t, locale, data, hero }: HomeViewProps) {
   return (
-    <div className="flex flex-col pb-24">
+    <div className="flex flex-col">
       {/* Kahraman */}
       <section className="flex flex-col gap-3.5 px-4 py-5">
         <h1 className="font-serif text-h1-sm text-ink">
@@ -93,9 +92,6 @@ export function HomeMobile({ t, locale, data, hero }: HomeViewProps) {
         {/* Bkz. masaüstü karşılığı: B2B çağrısı ana sayfaya dönüyordu, artık sayfası var (08.7). */}
         <InviteBand title={t.pro.title} body={t.pro.body} cta={{ label: t.pro.cta, href: '/professionals' }} compact />
       </div>
-
-      {/* K21 — gezinirken sepetin durumu ekranın altında kalır (sepet boşken hiç çizilmez). */}
-      <CartBar locale={locale} />
     </div>
   );
 }

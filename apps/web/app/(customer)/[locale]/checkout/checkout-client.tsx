@@ -10,6 +10,7 @@ import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
 import { useCart } from '@/components/customer/cart/cart-context';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { entryOf, splitByRoute } from '@/lib/cart/cart-types';
 import { clientStripe } from '@/lib/stripe-client';
 import { errorText } from '@/lib/customer-error-text';
@@ -17,29 +18,21 @@ import { PaymentSection } from './components/payment-element';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
-import { addressDefaultsOf, toAddressFields } from '@/components/customer/delivery/address-form';
-import {
-  addCheckoutAddressAction,
-  checkCheckoutAddressAction,
-  confirmCheckoutAction,
-  loadCheckoutAction,
-  updateCheckoutAddressAction,
-  type CheckoutSnapshot,
-} from './actions';
-import { checkoutBlocker, type CheckoutState, type CheckoutViewProps, type Messages, type NewAddressInput } from './checkout-types';
+import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction, type CheckoutSnapshot } from './actions';
+import { checkoutBlocker, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
 
 /**
  * Checkout'un karar merkezi (08.13) — durum ve sunucu turları burada, yerleşim iki ekran dosyasında.
  *
- * **Adres değişince her şey yeniden çözülür.** Teslimat türü, uygun günler, kargo ücreti, açık
- * ödeme yöntemleri ve toplam — hepsi adresin cevabı. Bunları istemcide türetmek, sunucunun
- * kuralıyla ekranın kuralının ayrışabildiği ikinci bir kaynak yaratırdı.
+ * **Adres SEPETTE seçilir, burada yalnız okunur** (kullanıcı kararı 13.09): anlık görüntü seçili
+ * (varsayılan) adresle çözülür; teslimat türü, uygun günler, kargo ücreti, açık ödeme yöntemleri ve
+ * toplam hepsi onun cevabı. Adresi değiştirmek isteyen sepete döner — iki ekranın iki ayrı adresle
+ * konuşması (ölçüldü 11.09: sepet "kapıya teslim", ödeme "kargo") böyle bitti.
  */
 interface CheckoutClientProps {
   t: Messages;
   locale: Locale;
   device: Device;
-  authenticated: boolean;
   /**
    * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7 · `?group=shipping`).
    *
@@ -48,7 +41,8 @@ interface CheckoutClientProps {
    * içindeki müşteride ekran "kapıya teslim" derken taslak kargo siparişi açardı.
    */
   shippingOrder: boolean;
-  customer: { name: string; email: string; phone: string | null } | null;
+  /** Girişli müşterinin künyesi — sayfa girişsizi sepete çevirdiği için hep dolu. */
+  customer: { name: string; email: string; phone: string | null };
 }
 
 const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, shipping: null, payment: null, summary: null };
@@ -58,7 +52,7 @@ function newAttemptKey(): string {
   return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `k${Date.now()}${Math.random().toString(36).slice(2)}`;
 }
 
-export function CheckoutClient({ t, locale, device, authenticated, shippingOrder, customer }: CheckoutClientProps) {
+export function CheckoutClient({ t, locale, device, shippingOrder, customer }: CheckoutClientProps) {
   /**
    * Cihaz İSTEMCİDE doğrulanır (03.08 · denetim bulgusu) — sunucunun UA tahmini bir başlangıç
    * değeri, son söz değil. Bu dosya yüzeydeki 13 istemciden **tek**i olarak `device` prop'unu
@@ -68,6 +62,9 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
   const resolved = useDevice(device);
   const router = useRouter();
   const { view, ready: cartReady, failed: cartFailed, reload: reloadCart, coupon } = useCart();
+  // Seçili adres SİTENİN yer bağlamından: sepetin seçtiği adres burada da aynı kaynaktan okunur
+  // ve düzeltme teklifi (`onAcceptAddressFix`) aynı bağlam üstünden yazılır — yer de onunla tazelenir.
+  const { address: selectedPlaceAddress, saveAddress } = useDeliveryPlace();
   const [snapshot, setSnapshot] = useState<CheckoutSnapshot>(EMPTY);
   const [state, setState] = useState<CheckoutState>({
     addressId: null,
@@ -98,10 +95,9 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     return (shippingOrder ? groups.shipping : groups.route).map(entryOf);
   }, [view.lines, shippingOrder]);
   /**
-   * Anlık görüntü okumasının SIRA BİLETİ. Sepet bağlamında zaten vardı, burada yoktu: hızlıca A
-   * sonra B adresine tıklayan müşteride yanıtlar ters sırada dönerse geç gelen ESKİ cevap yeniyi
-   * eziyordu — ekran B'yi seçmişken A'ya geri atlıyor, kargo ücreti ve teslimat günleri o adresin
-   * oluyordu (29.07 denetimi). Kilit yerine bilet: arayüz açık kalır, sonuncu okuma kazanır.
+   * Anlık görüntü okumasının SIRA BİLETİ. Sepet bağlamında zaten vardı, burada yoktu: art arda iki
+   * okuma ters sırada dönerse geç gelen ESKİ cevap yeniyi eziyordu (29.07 denetimi). Kilit yerine
+   * bilet: arayüz açık kalır, sonuncu okuma kazanır.
    */
   const seq = useRef(0);
   /**
@@ -113,7 +109,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
    */
   const attemptKey = useRef(newAttemptKey());
 
-  /** Adım verisini tazeler. Seçili adres değiştikçe ve sepet değiştikçe koşar. */
+  /** Adım verisini tazeler. Seçili adres (sepetten) ve sepet değiştikçe koşar. */
   const refresh = useCallback(
     async (addressId: string | null, shippingOptionCode: string | null = null) => {
       const ticket = ++seq.current;
@@ -128,6 +124,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
       }
       setSnapshot(data);
       setState((prev) => {
+        // Adres SEPETTEKİ seçimdir: kapı `addressId` verilmezse varsayılanı seçer (aynı kural).
         const selected = data.addresses.find((a) => a.id === (addressId ?? prev.addressId)) ?? data.addresses.find((a) => a.isDefault) ?? data.addresses[0];
         // Gün SEÇİMİ korunmaz: adres değişince eski gün başka bölgenin günü olabilir. Tek gün
         // varsa seçim sunulmadığı için o gün doğrudan yazılır — ekran boş seçimle kilitlenmesin.
@@ -153,12 +150,12 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     [t, locale, cartEntries, coupon, shippingOrder],
   );
 
+  // Sepette seçilen adres değişince (başka sekme, hap) anlık görüntü onunla yeniden çözülür;
+  // sepet değiştiğinde de: başka sekmede kalem çıkarılmış olabilir ve toplam ile kargo ücreti ona bağlı.
+  const selectedAddressId = selectedPlaceAddress?.id ?? null;
   useEffect(() => {
-    if (!authenticated) return;
-    void refresh(null);
-    // Sepet değiştiğinde de tazelenmeli: başka sekmede kalem çıkarılmış olabilir ve toplam
-    // ile kargo ücreti ona bağlı.
-  }, [authenticated, refresh]);
+    void refresh(selectedAddressId);
+  }, [refresh, selectedAddressId]);
 
   const selectedAddress = snapshot.addresses.find((a) => a.id === state.addressId) ?? null;
 
@@ -263,7 +260,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
   // olduktan sonra kullanılıyor. Sipariş kimliği sonuna Stripe onayı verilirken eklenir.
   const returnUrlBase = typeof window === 'undefined' ? '' : `${window.location.origin}/${locale}/checkout`;
   const paymentSlot =
-    state.paymentMethod === 'online' && snapshot.payment && selectedAddress && customer ? (
+    state.paymentMethod === 'online' && snapshot.payment && selectedAddress ? (
       stripe ? (
         <PaymentSection
           stripe={stripe}
@@ -311,20 +308,12 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     snapshotReady,
     snapshot,
     state,
-    authenticated,
     shippingOrder,
-    customerEmail: customer?.email ?? '',
-    addressDefaults: addressDefaultsOf(customer),
+    customerEmail: customer.email,
     busy,
     error,
     selectedAddress,
     paymentSlot,
-    onSelectAddress: (id) => {
-      // Adres değişti: önceki doğrulama artık BU adresin cevabı değil.
-      checkedFor.current = null;
-      setAddressNotice(null);
-      void refresh(id);
-    },
     addressNotice,
     /**
      * **Teklif kabul edildi** — hem siparişin adresi hem KAYIT düzelir (kullanıcı kararı 02.09).
@@ -332,13 +321,16 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
      *
      * Değişen YALNIZ kod ve şehir: `wrong_postal_code`ın tanımı zaten bu — sokak ve numara aynı,
      * kapı başka kodda. Satırın geri kalanına (alıcı, telefon, etiket) dokunmuyoruz.
+     *
+     * Yazım yer BAĞLAMINDAN geçer (`saveAddress`): kod değişince site genelindeki yer de değişir
+     * (bölge, kargo ücreti, gün) — bağlam yeni kareyi benimseyip sunucuyu tazeler.
      */
     onAcceptAddressFix: async () => {
       if (!selectedAddress || addressNotice?.status !== 'wrong_postal_code') return;
       setBusy(true);
-      const { errorKey } = await updateCheckoutAddressAction(
-        selectedAddress.id,
-        {
+      const result = await saveAddress({
+        id: selectedAddress.id,
+        fields: {
           label: selectedAddress.label,
           recipient: selectedAddress.recipient,
           line1: selectedAddress.line1,
@@ -346,11 +338,12 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
           postalCode: addressNotice.postalCode,
           city: addressNotice.city,
           phone: selectedAddress.phone,
+          country: selectedAddress.country,
         },
-        false,
-      );
+        makeDefault: false,
+      });
       setBusy(false);
-      if (errorKey) return setError(errorText(t.errors, errorKey));
+      if (!result.ok) return setError(errorText(t.errors, result.errorKey));
       /* Adres değişti → kapı noktayı ve öneriyi düşürdü → yeniden sorulacak. Ve `refresh` şart:
          kod değişimi BÖLGEYİ, kargo ücretini ve teslim gününü de oynatabilir. */
       checkedFor.current = null;
@@ -369,22 +362,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     },
     onSelectPayment: (method, onAccount) => setState((prev) => ({ ...prev, paymentMethod: method, onAccount })),
     onToggleConsent: (value) => setState((prev) => ({ ...prev, marketingConsent: value })),
-    onAddAddress: async (input: NewAddressInput) => {
-      const { data } = await addCheckoutAddressAction(toAddressFields(input), input.makeDefault ?? false, input.point);
-      if (data) await refresh(data.id);
-    },
-    /**
-     * Adres düzenleme sonrası TAZELEME ŞART, yalnız listeyi güncellemek yetmez: posta kodu
-     * değişmişse teslimat yolu, günleri ve kargo ücreti de değişmiştir — anlık görüntü sunucudan
-     * yeniden çözülmeli. `refresh` zaten bileti (`seq`) yönetiyor, yarış açılmıyor.
-     */
-    onUpdateAddress: async (addressId: string, input: NewAddressInput) => {
-      const { data } = await updateCheckoutAddressAction(addressId, toAddressFields(input), input.makeDefault ?? false, input.point);
-      if (data) await refresh(addressId);
-    },
     onConfirm: () => void confirm(),
-    // Doğrulama bittiğinde sayfa tazelenir: oturum sunucuda çözülüyor, adımlar oradan açılıyor.
-    onVerified: () => router.refresh(),
   };
 
   return resolved === 'mobile' ? <CheckoutMobile {...props} /> : <CheckoutDesktop {...props} />;

@@ -70,14 +70,14 @@ interface LegalNoticeBandProps {
 /**
  * Çıkış bandı — *"statik sayfa çıkmaz sokak olmamalı"* (içerik envanteri §2).
  *
- * Buraya belirli bir soruyla gelen ziyaretçi cevabı bulamadığında gidecek bir yer görmeli. Emoji
- * müşteri evreninin işareti (operasyon çizgi SVG kullanır); metin ile bağlar tek cümlede akıyor,
+ * Buraya belirli bir soruyla gelen ziyaretçi cevabı bulamadığında gidecek bir yer görmeli. Başta
+ * emoji yok (14.09 — ikon dili tek, 💡 kalktı); metin ile bağlar tek cümlede akıyor,
  * ayrı bir düğme değil — bant bir çağrı değil, bir hatırlatma.
  */
 export function LegalNoticeBand({ notice, compact = false }: LegalNoticeBandProps) {
   return (
     <div className={`rounded-card bg-olive-bg ${compact ? 'px-3.5 py-3' : 'px-5 py-4'} font-sans ${compact ? 'text-body-sm' : 'text-body'} leading-relaxed text-ink`}>
-      <span>💡 {notice.text} </span>
+      <span>{notice.text} </span>
       {notice.links.map((link, index) => (
         <span key={link.label}>
           {index > 0 && <span className="text-body"> · </span>}

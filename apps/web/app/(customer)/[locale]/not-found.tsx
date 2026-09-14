@@ -32,7 +32,7 @@ export default async function CustomerNotFound() {
     <SiteFrame device={device} locale={locale}>
       <MessageScreen
         device={device}
-        emoji="🍽"
+        icon="serving"
         eyebrow={t.notFound.eyebrow}
         title={t.notFound.title}
         description={t.notFound.description}

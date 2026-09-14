@@ -5,6 +5,7 @@ import { RATIO_SOURCE, type FeedbackVote } from '@lezzet/types';
 import type { FeedbackCard } from '@/lib/feedback/invite';
 import { FramedImage } from '@/components/media/framed-image';
 import { Button } from '@/components/customer/ui/button';
+import { Icon, type IconName } from '@/components/customer/ui/icons';
 import { errorText } from '@/lib/customer-error-text';
 import type { Messages } from '../feedback-types';
 
@@ -70,8 +71,8 @@ export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: V
           <span className={`font-serif ${compact ? 'text-h2-sm' : 'text-card-title'} text-ink`}>{card.name}</span>
 
           <div className="flex gap-4">
-            <VoteButton emoji="👎" label={t.disliked} active={vote === 'dislike'} onClick={() => onVote('dislike')} compact={compact} />
-            <VoteButton emoji="👍" label={t.liked} active={vote === 'like'} onClick={() => onVote('like')} compact={compact} />
+            <VoteButton icon="thumbDown"label={t.disliked} active={vote === 'dislike'} onClick={() => onVote('dislike')} compact={compact} />
+            <VoteButton icon="thumbUp"label={t.liked} active={vote === 'like'} onClick={() => onVote('like')} compact={compact} />
           </div>
 
           {!open && (
@@ -123,17 +124,17 @@ export function VoteCard({ t, card, vote, onVote, onReview, compact = false }: V
  * İkisi de envanterin 44px dokunma tabanının çok üstünde; bu ekranın tek elle ve hızlı
  * tamamlanması isteniyor (tasarım §7), hedef bilerek büyük.
  */
-function VoteButton({ emoji, label, active, onClick, compact }: { emoji: string; label: string; active: boolean; onClick: () => void; compact: boolean }) {
+function VoteButton({ icon, label, active, onClick, compact }: { icon: IconName; label: string; active: boolean; onClick: () => void; compact: boolean }) {
   return (
     <button type="button" onClick={onClick} className="flex cursor-pointer flex-col items-center gap-1">
       <span
         className={[
-          'grid place-items-center rounded-full text-[24px] transition-colors',
+          'grid place-items-center rounded-full transition-colors',
           compact ? 'size-16' : 'size-[58px]',
-          active ? 'bg-olive' : 'border-2 border-sand-400 bg-card hover:border-olive',
+          active ? 'bg-olive text-white' : 'border-2 border-sand-400 bg-card text-ink hover:border-olive',
         ].join(' ')}
       >
-        {emoji}
+        <Icon name={icon} size={24} />
       </span>
       <span className={`font-sans text-micro font-semibold ${active ? 'text-olive' : 'text-muted'}`}>{label}</span>
     </button>
@@ -156,9 +157,9 @@ function StarRow({ value, onChange }: { value: number | null; onChange: (n: numb
           type="button"
           aria-label={String(star)}
           onClick={() => onChange(star)}
-          className={`cursor-pointer text-[18px] leading-none transition-colors ${value !== null && star <= value ? 'text-honey' : 'text-sand-400'}`}
+          className={`cursor-pointer transition-colors ${value !== null && star <= value ? 'text-honey' : 'text-sand-400'}`}
         >
-          ★
+          <Icon name="star" size={18} />
         </button>
       ))}
     </div>

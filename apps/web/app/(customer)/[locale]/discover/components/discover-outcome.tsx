@@ -1,6 +1,7 @@
 'use client';
 
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { Link } from '@/i18n/navigation';
 import type { Messages } from '../discover-types';
 
@@ -34,7 +35,7 @@ export function DiscoverOutcome({ t, signedIn, earned, earnedMoney, emptyDeck, c
 
   return (
     <div className={`flex flex-col items-center gap-3.5 text-center ${compact ? 'px-7 py-10' : 'px-12 py-14'}`}>
-      <span className="text-[44px]">{emptyDeck ? '🌱' : '🎉'}</span>
+      <Icon name={emptyDeck ? 'timer' : 'sparkle'} size={44} className="text-olive" />
       <h1 className={`font-serif ${compact ? 'text-card-title' : 'text-h2'} text-ink`}>{copy.title}</h1>
 
       {/* Puan rozeti YALNIZ girişli ve kazanılmışsa: girişsize burada rozet göstermek, alamadığı

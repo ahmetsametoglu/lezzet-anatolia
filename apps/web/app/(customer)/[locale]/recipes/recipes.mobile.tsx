@@ -14,12 +14,9 @@ import type { RecipesViewProps } from './recipes-types';
 export function RecipesMobile({ t, locale, recipes }: RecipesViewProps) {
   return (
     <div className="flex flex-col gap-3.5 px-4 pt-2.5 pb-5">
-      <div className="flex flex-col gap-1">
-        <span className="font-sans text-eyebrow-sm text-olive uppercase">{t.eyebrow}</span>
-        {/* Mobilde YALNIZ başlık: tasarım paragrafı çizmiyor. Dar ekranda üç satırlık bir giriş,
-            ilk kartı katlamanın altına itiyor — sayfanın işi tarifleri göstermek. */}
-        <h1 className="font-serif text-page-title-sm text-ink">{t.heroTitle}</h1>
-      </div>
+      {/* Başlık çerçevenin çubuğunda ("Tarifler", 14.09); görünür ikinci bir başlık kurulmaz. `h1`
+          arama motoru ve ekran okuyucu için yerinde kalır. */}
+      <h1 className="sr-only">{t.heroTitle}</h1>
 
       {recipes.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-sand-500 px-5 py-8 text-center">

@@ -15,7 +15,13 @@
   tarafında üretilecek bir karşılıkları YOKTUR (kullanıcı kararı 07.08 — ayrım dosyayla).
   Buraya eklenirlerse `globals.css` mobil kararlarla büyümeye başlar; tam da kaçınılan şey.
 */
-import { customerColors, customerRadius, customerText } from './customer';
+import {
+  customerColors,
+  customerMotion,
+  customerRadius,
+  customerShadow,
+  customerText,
+} from './customer';
 import {
   operationsColors,
   operationsDarkColors,
@@ -25,21 +31,25 @@ import {
 
 /* Token ailesi → CSS custom property öneki. Anahtar + önek = tam CSS adı; adlandırma
    kayıpsız geri üretilir (`--color-` + `ink` → `--color-ink`).
-   Üç önek yeter: CSS ikizinde `--shadow-`/`--gradient-` ailesi YOK — gölge ve fotoğraf
-   gradyanı yalnız mobil uygulamanındır (`customer-app.ts`) ve bu üretim onları basmaz. */
+   `--animate-` ve `--shadow-` web v1'le geldi (13.09 — panel, bildirim ve çekmece hareketi,
+   yüzen yüzey gölgeleri). Mobil uygulamanın gölge ve fotoğraf gradyanı aileleri AYRI kalır
+   (`customer-app.ts`; adlar çakışmaz) ve bu üretim onları basmaz. */
 type TokenGroup = readonly [
-  prefix: '--color-' | '--text-' | '--radius-',
+  prefix: '--color-' | '--text-' | '--radius-' | '--animate-' | '--shadow-',
   tokens: Record<string, string>,
 ];
 
 /* AÇIK tema (`@theme`) grupları — globals.css dosya sırasıyla: müşteri renkleri → müşteri
-   tipografi → müşteri yarıçap → operasyon tipografi → operasyon renkleri → operasyon yarıçap.
+   tipografi → müşteri yarıçap → müşteri hareket → müşteri gölge → operasyon tipografi →
+   operasyon renkleri → operasyon yarıçap.
    (CSS'te operasyon YAZI ölçeği renklerden ÖNCE gelir; sıra korunur ki üretilen çıktı
    gerçek dosyayla satır satır karşılaştırılabilsin.) */
 const lightGroups: readonly TokenGroup[] = [
   ['--color-', customerColors],
   ['--text-', customerText],
   ['--radius-', customerRadius],
+  ['--animate-', customerMotion],
+  ['--shadow-', customerShadow],
   ['--text-', operationsText],
   ['--color-', operationsColors],
   ['--radius-', operationsRadius],

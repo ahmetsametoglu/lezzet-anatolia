@@ -512,6 +512,19 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
+  packages/address-google:
+    dependencies:
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@lezzet/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/ai:
     dependencies:
       '@ai-sdk/anthropic':
@@ -548,6 +561,9 @@ importers:
       '@lezzet/address-fr':
         specifier: workspace:*
         version: link:../address-fr
+      '@lezzet/address-google':
+        specifier: workspace:*
+        version: link:../address-google
       '@lezzet/ai':
         specifier: workspace:*
         version: link:../ai
@@ -9665,7 +9681,9 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.86.2': {}
 

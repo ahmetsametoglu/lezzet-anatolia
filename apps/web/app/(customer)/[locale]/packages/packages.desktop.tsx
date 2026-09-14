@@ -6,6 +6,7 @@ import { CROP_CENTER } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { PackageListCard } from '@/components/customer/ui/package-card';
 import { Button, buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { Link } from '@/i18n/navigation';
 import type { PackagesViewProps } from './packages-types';
 
@@ -40,8 +41,14 @@ export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps
           <h1 className="font-serif text-page-title text-ink">{t.heroTitle}</h1>
           <p className="max-w-[520px] font-sans text-lead text-body">{t.heroBody}</p>
           <div className="flex w-max gap-5 rounded-soft bg-sand-100 px-4.5 py-3.5 font-sans text-note text-body">
-            <span>{t.promise.coldChain}</span>
-            <span>{t.promise.shippable}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="snowflake" size={14} />
+              {t.promise.coldChain}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="box" size={14} />
+              {t.promise.shippable}
+            </span>
             <span>{t.promise.onePrice}</span>
           </div>
         </div>
@@ -70,7 +77,7 @@ export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps
         {packages.length === 0 ? (
           // Boş durum: kesikli çerçeveli TEK kutu (tasarım). Kahraman ve alt bant yerinde kalır.
           <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-sand-500 px-8 py-10 text-center">
-            <span className="text-icon">🎁</span>
+            <Icon name="box" size={32} className="text-olive" />
             <span className="font-sans text-body font-bold text-ink">{t.empty.title}</span>
             <span className="max-w-[420px] font-sans text-note text-muted">{t.empty.body}</span>
             <Link href="/catalog" className={buttonClass({ size: 'sm', className: 'mt-1' })}>

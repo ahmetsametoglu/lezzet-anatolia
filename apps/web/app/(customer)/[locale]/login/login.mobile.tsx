@@ -2,6 +2,7 @@ import { brand } from '@lezzet/brand';
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { Button } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { GoogleIcon, WhatsAppIcon } from '@/components/customer/auth/provider-icons';
 import type { LoginViewProps } from './login-types';
 
@@ -40,7 +41,10 @@ export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice,
           <button type="button" onClick={onBack} className="cursor-pointer font-sans text-body-sm font-bold text-on-image">
             {t.back}
           </button>
-          <span className="rounded-2xl bg-cream/90 px-3 py-1 font-sans text-micro font-semibold uppercase tracking-wider text-olive">❄ {t.heroPillShort}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-2xl bg-cream/90 px-3 py-1 font-sans text-micro font-semibold uppercase tracking-wider text-olive">
+            <Icon name="snowflake" size={12} />
+            {t.heroPillShort}
+          </span>
         </div>
       </div>
 

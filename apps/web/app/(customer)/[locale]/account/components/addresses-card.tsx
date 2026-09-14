@@ -55,7 +55,8 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
   const run = async (task: () => Promise<{ errorKey: string | null }>) => {
     setBusy(true);
     setError(null);
-    const { errorKey } = await task();
+    // Çağrı dönmezse (sunucuya ulaşılamadı) genel cümleye düşer ve kart kilitli kalmaz (14.09).
+    const { errorKey } = await task().catch(() => ({ errorKey: 'unexpected' }));
     setBusy(false);
     // Cümle EKRANDA kurulur (denetim H1/H2): sunucu anahtar döner, sözlük burada. Bilinmeyen bir
     // anahtar jenerik cümleye düşer — ekran asla boş kalmaz, ham mesaj da asla görünmez.
@@ -89,7 +90,6 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
         editing === address.id ? (
           <AddressForm
             key={address.id}
-            copy={t.addressForm}
             locale={locale}
             // Mobil webde form ÇEKMECEDE açılır (21.08) — karar formun kendisinde, künyesi orada.
             compact={compact}
@@ -183,7 +183,6 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
 
       {editing === 'new' && (
         <AddressForm
-          copy={t.addressForm}
           locale={locale}
           compact={compact}
           defaults={defaults}

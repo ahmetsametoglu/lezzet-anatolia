@@ -386,9 +386,10 @@ create index user_profiles_draft_idx on public.user_profiles (created_at desc) w
 -- Kademeler BAN'ın kendi dört değerinin AYNASI (`packages/address-fr` `BanResultTypeSchema`):
 -- yeniden adlandırmak bir eşleme tablosu ve o tablonun bir gün ayrışması demekti.
 create type public.address_geo_precision as enum ('housenumber', 'street', 'locality', 'municipality');
--- Bugün iki kaynak: servis çözdü ya da insan koydu. Almanya sağlayıcısı takıldığı gün buraya bir
--- değer eklenir — çağıran hiç değişmez.
-create type public.address_geo_source as enum ('ban', 'manual');
+-- Üç kaynak: Fransız adres servisi (BAN), Google (Almanya — 13.09, Address Validation / Places) ve
+-- insan. Kaynak yaşlanma kuralını belirler: `google` noktası 30 günden uzun saklanmaz (Google
+-- politikası; `geocode-scan` düşürür), `ban` süresiz (Licence Ouverte).
+create type public.address_geo_source as enum ('ban', 'google', 'manual');
 
 -- `customer_id` = "müşteri rolüyle davranan profil". Kolon adı ticari bağlamda okunur kalsın diye
 -- domain dilinde tutulur; işaret ettiği yer tek kimlik tablosudur.

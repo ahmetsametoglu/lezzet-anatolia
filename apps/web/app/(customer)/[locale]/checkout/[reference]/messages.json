@@ -13,16 +13,16 @@
     "retry": "Ödemeyi tekrar dene",
     "delivery": {
       "title": "Teslimat",
-      "coldChain": "❄ Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca saat aralığını bildiririz.",
-      "shippingNote": "📦 Kargoya verildiğinde takip numarasını e-posta ile göndeririz."
+      "coldChain": "Soğuk zincir bozulmadan kapınıza gelir. Kurye yola çıkınca saat aralığını bildiririz.",
+      "shippingNote": "Kargoya verildiğinde takip numarasını e-posta ile göndeririz."
     },
     "payment": {
       "paid": "Ödendi · {amount}",
       "due": "Kapıda ödenecek · {amount}",
       "onAccount": "Hesaba yazıldı · {amount}",
-      "online": "💳 Online ödeme",
-      "cod": "🚪 Kapıda ödeme",
-      "credit": "🧾 Vadeli",
+      "online": "Online ödeme",
+      "cod": "Kapıda ödeme",
+      "credit": "Vadeli",
       "deliveryNoteBody": "Kutuda ne olduğunu kalem kalem gösteren özet, sipariş hazırlandıktan sonra e-postanıza gelir ve kutunun içinde de bulunur. Resmî fatura değildir.",
       "card": "Kart ile",
       "deliveryNote": "Teslimat özetini indir (PDF) ↓",
@@ -75,16 +75,16 @@
     "retry": "Réessayer le paiement",
     "delivery": {
       "title": "Livraison",
-      "coldChain": "❄ Livraison sans rupture de la chaîne du froid. Nous vous indiquerons le créneau au départ du livreur.",
-      "shippingNote": "📦 Nous vous enverrons le numéro de suivi dès l'expédition."
+      "coldChain": "Livraison sans rupture de la chaîne du froid. Nous vous indiquerons le créneau au départ du livreur.",
+      "shippingNote": "Nous vous enverrons le numéro de suivi dès l'expédition."
     },
     "payment": {
       "paid": "Payé · {amount}",
       "due": "À payer à la livraison · {amount}",
       "onAccount": "Porté au compte · {amount}",
-      "online": "💳 Paiement en ligne",
-      "cod": "🚪 Paiement à la livraison",
-      "credit": "🧾 Différé",
+      "online": "Paiement en ligne",
+      "cod": "Paiement à la livraison",
+      "credit": "Différé",
       "deliveryNoteBody": "Le récapitulatif, article par article, de ce que contient le colis vous est envoyé par e-mail après la préparation ; il se trouve aussi dans le colis. Ce n'est pas une facture.",
       "card": "Par carte",
       "deliveryNote": "Télécharger le récapitulatif de livraison (PDF) ↓",
@@ -137,16 +137,16 @@
     "retry": "Zahlung erneut versuchen",
     "delivery": {
       "title": "Lieferung",
-      "coldChain": "❄ Ohne Unterbrechung der Kühlkette bis zu Ihrer Tür. Das Zeitfenster nennen wir, sobald der Fahrer losfährt.",
-      "shippingNote": "📦 Die Sendungsnummer senden wir Ihnen beim Versand."
+      "coldChain": "Ohne Unterbrechung der Kühlkette bis zu Ihrer Tür. Das Zeitfenster nennen wir, sobald der Fahrer losfährt.",
+      "shippingNote": "Die Sendungsnummer senden wir Ihnen beim Versand."
     },
     "payment": {
       "paid": "Bezahlt · {amount}",
       "due": "Bei Lieferung zu zahlen · {amount}",
       "onAccount": "Auf Rechnung · {amount}",
-      "online": "💳 Online-Zahlung",
-      "cod": "🚪 Zahlung bei Lieferung",
-      "credit": "🧾 Zahlungsziel",
+      "online": "Online-Zahlung",
+      "cod": "Zahlung bei Lieferung",
+      "credit": "Zahlungsziel",
       "deliveryNoteBody": "Die Übersicht, Artikel für Artikel, über den Inhalt des Pakets senden wir nach der Vorbereitung per E-Mail; sie liegt auch im Paket. Es ist keine Rechnung.",
       "card": "Mit Karte",
       "deliveryNote": "Lieferübersicht herunterladen (PDF) ↓",

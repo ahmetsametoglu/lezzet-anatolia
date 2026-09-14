@@ -5,6 +5,7 @@ import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
 import { formatPrice } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { useCart } from '@/components/customer/cart/cart-context';
 import type { AccountView } from '@/lib/account/read';
 import { cancelZoneNoticeAction } from '../actions';
@@ -56,12 +57,19 @@ export function Row({ label, value }: { label: string; value: ReactNode }) {
  */
 export function ConsentSwitch({
   label,
+  icon,
   on,
   onLabel,
   offLabel,
   onToggle,
 }: {
   label: string;
+  /**
+   * Kanalın ikonu — ikon setinden, boyutu çağıran verir (v1: e-posta `mail`, WhatsApp `chat`;
+   * masaüstü 17, mobil 16). Önce etiketin başında emoji vardı (✉ 💬); v1 ikonları çizgi setiyle
+   * çiziyor ve emoji yanındaki çizgi ikonların arasında bozuk görünüyordu (14.09).
+   */
+  icon?: ReactNode;
   on: boolean;
   onLabel: string;
   offLabel: string;
@@ -97,7 +105,8 @@ export function ConsentSwitch({
 
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="font-sans text-body-sm text-ink">
+      <span className="flex items-center gap-2.5 font-sans text-body-sm text-ink">
+        {icon}
         {label}
         <span className="sr-only"> — {value ? onLabel : offLabel}</span>
       </span>
@@ -270,7 +279,14 @@ export function InviteCard({ t, points, compact }: { t: Messages; points: NonNul
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate rounded-soft border border-sand-200 bg-cream px-3 py-2 font-sans text-note text-muted">{url}</span>
         <button type="button" onClick={copy} className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none whitespace-nowrap' })}>
-          {copied ? t.inviteCopied : t.inviteCopy}
+          {copied ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="check" size={14} />
+              {t.inviteCopied}
+            </span>
+          ) : (
+            t.inviteCopy
+          )}
         </button>
       </div>
     </section>

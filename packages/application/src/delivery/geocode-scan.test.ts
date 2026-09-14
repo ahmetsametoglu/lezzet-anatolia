@@ -2,10 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import type { Address } from '@lezzet/types';
 
-import { geocodeAddressesScan, nextGeoState } from './geocode-scan';
+import { geocodeAddressesScan, nextGeoState, staleGoogleGeoBefore } from './geocode-scan';
 import { fakeGeocoder } from './geocode.testkit';
 
 const NOW = '2026-08-31T10:00:00.000Z';
+
+describe('staleGoogleGeoBefore', () => {
+  it('30 gün geriye bakar — Google politikasının tavanı (13.09)', () => {
+    expect(staleGoogleGeoBefore(new Date(NOW))).toBe('2026-08-01T10:00:00.000Z');
+  });
+});
 
 describe('nextGeoState', () => {
   it('çözülen adresin noktası ve künyesi birlikte yazılır', () => {
@@ -151,6 +157,16 @@ describe('geocodeAddressesScan — sorulan adres', () => {
     expect(JSON.stringify(fake.calls[0])).not.toContain('+33612345678');
   });
 
+  it('ALMAN satırı taramada SORULMAZ — ücretli ve 30 gün ömürlü kaynak sipariş anına saklanır (13.09)', async () => {
+    /* `geocoderScanAllowed('DE')` yanlış: satır damgalanır, kuyrukta kalır, ağa çıkılmaz. Bu satır
+       düşerse her Alman adresi ayda bir Google'a gider — hiç sipariş vermeyecek adresler için de. */
+    const fake = fakeGeocoder({ status: 'unavailable' });
+    const alman = adres({ id: '00000000-0000-4000-8000-000000000003', line1: 'Hauptstraße 12', postalCode: '77694', city: 'Kehl', country: 'DE' });
+    const sonuç = await geocodeAddressesScan(fakeDb(), { geocoder: fake, rows: [alman, adres()] });
+
+    expect(fake.calls.map((c) => c.country)).toEqual(['FR']);
+    expect(sonuç.deferred).toBeGreaterThanOrEqual(1);
+  });
 });
 
 /** Yazma tarafını yutan en küçük sahte istemci — testin ölçtüğü şey yazma DEĞİL, karar ve sorgu. */

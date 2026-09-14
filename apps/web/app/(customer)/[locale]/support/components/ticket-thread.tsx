@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
 import { TranslationNote } from '@/components/customer/ui/translation-note';
+import { Icon } from '@/components/customer/ui/icons';
 import { ChatText } from '@/components/text/chat-text';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CustomerTicketView, TicketMessageView } from '@/lib/ticket/ticket-types';
@@ -44,7 +45,8 @@ export function TicketThread({ t, locale, ticket, wide = false }: TicketThreadPr
       ))}
 
       {ticket.returnOutcome && ticket.returnOutcome.refundedCents > 0 && (
-        <div className="rounded-[12px] bg-olive-bg px-3.5 py-2.5 text-center font-sans text-note leading-relaxed font-semibold text-olive">
+        <div className="flex items-center justify-center gap-2 rounded-[12px] bg-olive-bg px-3.5 py-2.5 text-center font-sans text-note leading-relaxed font-semibold text-olive">
+          <Icon name="undo" size={15} className="flex-none" />
           {t.refunded.replace('{amount}', formatPrice(ticket.returnOutcome.refundedCents, locale))}
         </div>
       )}

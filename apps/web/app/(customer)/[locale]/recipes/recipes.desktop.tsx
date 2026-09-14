@@ -1,5 +1,6 @@
 import { RecipeListCard } from '@/components/customer/ui/recipe-card';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import { Link } from '@/i18n/navigation';
 import type { RecipesViewProps } from './recipes-types';
 
@@ -30,7 +31,7 @@ export function RecipesDesktop({ t, locale, recipes }: RecipesViewProps) {
         {recipes.length === 0 ? (
           // Boş durum: kesikli çerçeveli tek kutu — sayfanın sözü (yukarısı) yerinde kalır.
           <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-sand-500 px-8 py-10 text-center">
-            <span className="text-icon">🍲</span>
+            <Icon name="serving" size={32} className="text-olive" />
             <span className="font-sans text-body font-bold text-ink">{t.empty.title}</span>
             <span className="max-w-[420px] font-sans text-note text-muted">{t.empty.body}</span>
             <Link href="/catalog" className={buttonClass({ size: 'sm', className: 'mt-1' })}>

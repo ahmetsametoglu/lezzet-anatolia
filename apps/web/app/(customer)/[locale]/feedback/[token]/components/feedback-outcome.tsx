@@ -2,6 +2,7 @@
 
 import { Link } from '@/i18n/navigation';
 import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 import type { FeedbackCompletion } from '@/lib/feedback/invite';
 import type { Messages } from '../feedback-types';
 
@@ -33,7 +34,7 @@ export function FeedbackOutcome({ t, completion, customerName, compact = false }
 
   return (
     <div className="flex flex-col items-center gap-3.5 text-center">
-      <span className={compact ? 'text-[40px] leading-none' : 'text-[36px] leading-none'}>🙏</span>
+      <Icon name="sparkle" size={compact ? 40 : 36} className="text-olive" />
 
       <span className={`font-serif ${compact ? 'text-h2-sm' : 'text-card-title'} text-ink`}>
         {unhappy ? t.doneTitleUnhappy : customerName ? t.doneTitle.replace('{name}', customerName) : t.doneTitleNoName}
@@ -69,6 +70,7 @@ export function FeedbackOutcome({ t, completion, customerName, compact = false }
             className={buttonClass({ variant: 'outlineOlive', size: 'sm', compact, fullWidth: true })}
           >
             {t.reviewInviteCta.replace('{platform}', completion.reviewPlatform ?? '')}
+            <Icon name="share" size={14} />
           </a>
         </div>
       )}

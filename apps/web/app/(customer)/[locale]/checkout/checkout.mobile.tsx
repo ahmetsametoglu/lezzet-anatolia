@@ -1,9 +1,9 @@
 'use client';
 
 import { FunnelHeader } from '@/components/customer/ui/funnel-header';
-import { AccountLine, AddressStep, DeliveryStep, LockedStep, OrderSummary, PaymentStep } from './components/checkout-steps';
+import { Icon } from '@/components/customer/ui/icons';
+import { AccountLine, AddressStep, DeliveryStep, OrderSummary, PaymentStep } from './components/checkout-steps';
 import { CheckoutProgress } from './components/checkout-progress';
-import { GuestVerify } from './components/guest-verify';
 import { CheckoutStepsSkeleton } from './components/checkout-skeleton';
 import { ShippingOrderNote } from './components/shipping-order-note';
 import type { CheckoutViewProps } from './checkout-types';
@@ -14,6 +14,8 @@ import type { CheckoutViewProps } from './checkout-types';
  * Özet SONA gelir, yapışkan değil: dar ekranda kalıcı bir özet paneli, üzerinde karar verilen
  * adımın yerini yerdi. Yerine üstteki **şerit** yapışkan olur — tutarı ve kalan adımları taşır,
  * tek satır yer kaplar (desen: `~/dev/petitcigogne`).
+ *
+ * Kimlik ve adres SEPETTE çözülür (13.09); buraya girişsiz gelinmez (sayfa sepete çevirir).
  */
 export function CheckoutMobile(props: CheckoutViewProps) {
   const { t } = props;
@@ -31,42 +33,31 @@ export function CheckoutMobile(props: CheckoutViewProps) {
       />
 
       <div className="flex flex-col gap-3.5 px-4 pt-3.5">
-      {/* Şerit sarmalayıcının İLK çocuğu: başlığın hemen altında akar, kaydırınca kimlik barının
-          altına yapışır (altıncı tur). Sarmalayıcı sayfa sonuna kadar uzadığı için yapışma da
-          sayfa boyu sürer — künyedeki kapsama dersi burada kendiliğinden sağlanıyor. */}
-      <CheckoutProgress {...props} />
-      <ShippingOrderNote {...props} />
+        {/* Şerit sarmalayıcının İLK çocuğu: başlığın hemen altında akar, kaydırınca kimlik barının
+            altına yapışır (altıncı tur). Sarmalayıcı sayfa sonuna kadar uzadığı için yapışma da
+            sayfa boyu sürer — künyedeki kapsama dersi burada kendiliğinden sağlanıyor. */}
+        <CheckoutProgress {...props} />
+        <ShippingOrderNote {...props} />
+        <AccountLine t={t} email={props.customerEmail} compact={props.compact} />
+        {/* Adım verisi istemcide çözülüyor: bitmeden adımlar çizilmez (masaüstüyle aynı gerekçe). */}
+        {props.snapshotReady ? (
+          <>
+            <AddressStep {...props} />
+            <DeliveryStep {...props} />
+            <PaymentStep {...props} />
+          </>
+        ) : (
+          <CheckoutStepsSkeleton t={t} compact={props.compact} />
+        )}
 
-      {props.authenticated ? (
-        <>
-          <AccountLine t={t} email={props.customerEmail} compact={props.compact} />
-          {/* Adım verisi istemcide çözülüyor: bitmeden adımlar çizilmez. Önce hiç çizilmiyordu
-              (sayfa yarım görünüyordu) ve adres adımı veri gelmeden "kayıtlı adresiniz yok"
-              diyordu — henüz bilinmeyen, üstelik yanlış olabilen bir hüküm. */}
-          {props.snapshotReady ? (
-            <>
-              <AddressStep {...props} />
-              <DeliveryStep {...props} />
-              <PaymentStep {...props} />
-            </>
-          ) : (
-            <CheckoutStepsSkeleton t={t} compact={props.compact} />
-          )}
-        </>
-      ) : (
-        <>
-          <GuestVerify t={t} locale={props.locale} compact={props.compact} onVerified={props.onVerified} />
-          <LockedStep step={t.address.step} title={t.address.title} hint={t.verify.locked} compact />
-          <LockedStep step={t.delivery.step} title={t.delivery.title} hint={t.verify.locked} compact />
-          <LockedStep step={t.payment.step} title={t.payment.title} hint={t.verify.locked} compact />
-        </>
-      )}
+        <OrderSummary {...props} />
 
-      <OrderSummary {...props} />
-
-      {/* Güven satırı en altta: mobilde başlık zaten dar, ve kart alanına gelen müşteri sayfanın
-          sonuna inmiş oluyor — cümle tam orada işe yarıyor. */}
-      <span className="text-center font-sans text-micro font-semibold text-muted">🔒 {t.secure}</span>
+        {/* Güven satırı en altta: mobilde başlık zaten dar, ve kart alanına gelen müşteri sayfanın
+            sonuna inmiş oluyor — cümle tam orada işe yarıyor. */}
+        <span className="flex items-center justify-center gap-1.5 font-sans text-micro font-semibold text-muted">
+          <Icon name="lock" size={13} />
+          {t.secure}
+        </span>
       </div>
     </div>
   );

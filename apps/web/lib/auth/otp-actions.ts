@@ -14,8 +14,8 @@ import type { AuthErrorKey } from './errors';
  * **E-posta OTP kapıları — ÜÇ sayfanın paylaştığı oturum açma yolu** (denetim D1, 03.08).
  *
  * Bu dosya `login/actions.ts` idi ve orada durması bir süre doğruydu: tek tüketicisi giriş
- * sayfasıydı. Sonra checkout'un misafir doğrulaması (`guest-verify`) ve Professionnels başvurusu
- * da aynı iki fonksiyonu çağırmaya başladı — üç sayfa, biri sahibi. `CLAUDE.md §2`'nin kuralı
+ * sayfasıydı. Sonra sepetin giriş bloğu (`cart-identity` — 13.09'a dek checkout'un "adım 0"ıydı) ve
+ * Professionnels başvurusu da aynı iki fonksiyonu çağırmaya başladı — üç sayfa, biri sahibi. `CLAUDE.md §2`'nin kuralı
  * tam olarak bunu ayırıyor: *"server action'lar sayfa klasöründe kolokasyon; paylaşılan yardımcı
  * `lib/`"*. Kardeş sayfadan import artık `docs:check` §3e ile de yasak.
  *

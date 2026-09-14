@@ -42,9 +42,14 @@ interface AddressSearchState {
   suggestions: AddressSuggestion[];
   /** Servis kotayı kapattı — ekran kısa bir satır gösterir, alan yazmaya açık kalır. */
   throttled: boolean;
+  /**
+   * Bu cevap HANGİ sorgunun (kırpılmış) — ekran "cevap geldi mi" sorusunu bununla sorar (13.09): yazarken
+   * önceki sorgunun boş listesi "bulamadık" diye okunmasın. Boş hâlde `''`.
+   */
+  term: string;
 }
 
-const EMPTY: AddressSearchState = { suggestions: [], throttled: false };
+const EMPTY: AddressSearchState = { suggestions: [], throttled: false, term: '' };
 
 /**
  * Sorgu metni → öneriler. Modül düzeyinde: form kapanıp açılınca da yaşar (aynı oturum).
@@ -74,13 +79,13 @@ async function lookup(term: string, near: NearPoint | undefined): Promise<Lookup
   );
   switch (found.status) {
     case 'ok':
-      return { value: { suggestions: found.suggestions, throttled: false }, cache: true };
+      return { value: { suggestions: found.suggestions, throttled: false, term }, cache: true };
     case 'rate_limited':
-      return { value: { suggestions: [], throttled: true }, cache: false };
+      return { value: { suggestions: [], throttled: true, term }, cache: false };
     case 'unavailable':
     case 'invalid_response':
     case 'too_short':
-      return { value: EMPTY, cache: false };
+      return { value: { ...EMPTY, term }, cache: false };
   }
 }
 

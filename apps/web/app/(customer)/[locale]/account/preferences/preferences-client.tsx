@@ -6,6 +6,7 @@ import type { NotificationPreferencesView } from '@lezzet/application';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
 import { Card } from '@/components/customer/ui/card';
+import { Icon } from '@/components/customer/ui/icons';
 import { CardHead, ConsentSwitch } from '../components/account-cards';
 import { cancelZoneNoticesAction, setCampaignConsentAction, setKindConsentAction } from './actions';
 import type { Messages } from './preferences-types';
@@ -79,6 +80,7 @@ export function PreferencesClient({ t, locale, view, token }: PreferencesClientP
             <CardHead title={t.campaignTitle} compact={false} />
             <ConsentSwitch
               label={t.campaignEmail}
+              icon={<Icon name="mail" size={17} />}
               on={view.marketing.email}
               onLabel={t.on}
               offLabel={t.off}
@@ -86,6 +88,7 @@ export function PreferencesClient({ t, locale, view, token }: PreferencesClientP
             />
             <ConsentSwitch
               label={t.campaignWhatsapp}
+              icon={<Icon name="chat" size={17} />}
               on={view.marketing.whatsapp}
               onLabel={t.on}
               offLabel={t.off}

@@ -5,6 +5,7 @@ import { UserProfileService, serviceDb } from '@lezzet/database';
 import { detectDevice } from '@/lib/device';
 import { getSessionUser } from '@/lib/guard';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
+import { redirect } from '@/i18n/navigation';
 import { routing } from '@/i18n/routing';
 import { recordEvent } from '@/lib/analytics/record';
 import { CheckoutClient } from './checkout-client';
@@ -31,11 +32,14 @@ interface CheckoutPageProps {
  * Checkout sayfası (08.13).
  *
  * Sepet gibi, veriyi RSC'de OKUMAZ: sepetin kaynağı oturuma göre değişiyor ve ziyaretçininki
- * tarayıcıda yaşıyor. Sunucu burada yalnız **kimliği** çözer — girişli mi değil mi, ve girişliyse
- * fatura künyesi (Stripe'a elle geçecek ad/e-posta). Geri kalanı istemci action'larla çözer.
+ * tarayıcıda yaşıyor. Sunucu burada yalnız **kimliği** çözer ve fatura künyesini (Stripe'a elle
+ * geçecek ad/e-posta) verir. Geri kalanı istemci action'larla çözer.
  *
- * Kimliğin sunucuda çözülmesi şart: "girişli miyim" sorusunu istemciye sordurmak, adım 0'ı
- * atlatmanın en kolay yolu olurdu.
+ * ── GİRİŞSİZ MÜŞTERİ SEPETE DÖNER (kullanıcı kararı 13.09) ───────────────────
+ * Kimlik ve adres SEPETTE sorulur (`CartIdentity`); ödeme ekranı ikisini de hazır bulur. Eskiden
+ * burada bir "adım 0" vardı (misafir e-posta kodu / Google) — kimliksiz gelen artık o adımı
+ * sepette görür. Kimliğin sunucuda çözülmesi yine şart: "girişli miyim" sorusunu istemciye
+ * sordurmak, kapıyı atlatmanın en kolay yolu olurdu.
  */
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const [{ locale }, { group }] = await Promise.all([params, searchParams]);
@@ -45,6 +49,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   const t: Messages = messages[locale];
   const [device, user] = await Promise.all([detectDevice(), getSessionUser()]);
   const profile = user ? await new UserProfileService(serviceDb()).findByAuthUserId(user.id) : null;
+  if (!profile) return redirect({ href: '/cart', locale });
 
   /**
    * Huninin dördüncü adımı (08.9). **`loadCheckoutAction`'dan DEĞİL sayfadan atılıyor:** o eylem
@@ -63,8 +68,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
         locale={locale}
         device={device}
         shippingOrder={group === 'shipping'}
-        authenticated={profile !== null}
-        customer={profile ? { name: profile.name, email: profile.email ?? user?.email ?? '', phone: profile.phone } : null}
+        customer={{ name: profile.name, email: profile.email ?? user?.email ?? '', phone: profile.phone }}
       />
     </SiteFrame>
   );

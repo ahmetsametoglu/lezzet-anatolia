@@ -151,8 +151,11 @@ export function notificationSentence(row: { kind: string; payload: Record<string
   her türün İKONU, TONU ve kısa TÜR ETİKETİ var. Eşleme cümlelerle AYNI kaynakta durur (dört yüzey
   — web/mobil × müşteri akışı/rozet — tek anlamdan çizer; iki kopya ilk yeni türde ayrışırdı).
 
-  · İkon EMOJİ: müşteri yüzeyinin yerleşik ikon dili (🧺 sepet, 🔔 zil) ve iki platformda da
-    ek varlıksız çizilir. Operasyon yüzeyi emoji KULLANMAZ (SVG dili) — o taraf `staffNotificationBrief`.
+  · İkon İKİ BİÇİMDE (14.09): `symbol` ÇİZGİ SETİNİN adı — web müşteri yüzeyi v1 ile emojiyi bıraktı,
+    ikonları kendi setinden çiziyor (`components/customer/ui/icons.tsx`; kullanıcı kararı: "ikon
+    tasarım desenimiz her yerde aynı olmalı"). `icon` EMOJİ — native uygulama bugün onu çiziyor; o
+    şerit `symbol`a geçince bu alan düşer. Anlam tek yerde: iki biçim aynı satırda yazılır, ayrışamaz.
+    Operasyon yüzeyi emoji KULLANMAZ (SVG dili) — o taraf `staffNotificationBrief`.
   · Ton SEMANTİKTİR, renk değil: `positive` (yolunda) · `attention` (bekleyen/eksik) · `issue`
     (iptal/sorun) · `neutral` (bilgi). Web bunu kendi token ailesine (olive/honey/terracotta/kum),
     mobil kendi temasına çevirir — CLAUDE §3: token adı taşınır, hex taşınmaz.
@@ -161,8 +164,18 @@ export function notificationSentence(row: { kind: string; payload: Record<string
 
 export type NotificationVisualTone = 'positive' | 'attention' | 'issue' | 'neutral';
 
+/**
+ * Bildirim türünün çizgi ikonu — web müşteri setinin (`IconName`) ADLARI. Paket o tipi bilemez
+ * (bağımlılık ters yöne dönerdi); küme burada dar tutulur ve web tarafında `IconName`e atanabilir
+ * olması derleyiciyle sınanır: sette olmayan bir ad yazılırsa web derlenmez.
+ */
+export type NotificationSymbol = 'check' | 'truck' | 'box' | 'close' | 'warning' | 'undo' | 'chat' | 'star' | 'pin' | 'building' | 'bell';
+
 export interface NotificationVisual {
+  /** Emoji — native uygulamanın bugünkü çizimi (künye). */
   icon: string;
+  /** Çizgi ikonun adı — web müşteri yüzeyi bununla çizer. */
+  symbol: NotificationSymbol;
   tone: NotificationVisualTone;
   label: (locale: Locale) => string;
 }
@@ -170,17 +183,18 @@ export interface NotificationVisual {
 const etiket = (phrases: Record<Locale, string>) => (locale: Locale) => phrases[locale];
 
 const VISUAL: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => NotificationVisual>> = {
-  order_confirmed: () => ({ icon: '✅', tone: 'positive', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
-  order_out_for_delivery: () => ({ icon: '🚚', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
-  order_delivered: () => ({ icon: '📦', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
-  order_cancelled: () => ({ icon: '✖️', tone: 'issue', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
-  order_shortfall: () => ({ icon: '⚠️', tone: 'attention', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
-  order_refunded: () => ({ icon: '💶', tone: 'attention', label: etiket({ tr: 'İade', fr: 'Remboursement', de: 'Erstattung' }) }),
-  ticket_replied: () => ({ icon: '💬', tone: 'neutral', label: etiket({ tr: 'Talep', fr: 'Demande', de: 'Anfrage' }) }),
-  ticket_status_changed: () => ({ icon: '💬', tone: 'neutral', label: etiket({ tr: 'Talep', fr: 'Demande', de: 'Anfrage' }) }),
-  feedback_invite: () => ({ icon: '⭐', tone: 'attention', label: etiket({ tr: 'Değerlendirme', fr: 'Avis', de: 'Bewertung' }) }),
-  zone_available: () => ({ icon: '📍', tone: 'positive', label: etiket({ tr: 'Bölge', fr: 'Zone', de: 'Gebiet' }) }),
+  order_confirmed: () => ({ symbol: 'check', icon: '✅', tone: 'positive', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
+  order_out_for_delivery: () => ({ symbol: 'truck', icon: '🚚', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
+  order_delivered: () => ({ symbol: 'box', icon: '📦', tone: 'positive', label: etiket({ tr: 'Teslimat', fr: 'Livraison', de: 'Lieferung' }) }),
+  order_cancelled: () => ({ symbol: 'close', icon: '✖️', tone: 'issue', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
+  order_shortfall: () => ({ symbol: 'warning', icon: '⚠️', tone: 'attention', label: etiket({ tr: 'Sipariş', fr: 'Commande', de: 'Bestellung' }) }),
+  order_refunded: () => ({ symbol: 'undo', icon: '💶', tone: 'attention', label: etiket({ tr: 'İade', fr: 'Remboursement', de: 'Erstattung' }) }),
+  ticket_replied: () => ({ symbol: 'chat', icon: '💬', tone: 'neutral', label: etiket({ tr: 'Talep', fr: 'Demande', de: 'Anfrage' }) }),
+  ticket_status_changed: () => ({ symbol: 'chat', icon: '💬', tone: 'neutral', label: etiket({ tr: 'Talep', fr: 'Demande', de: 'Anfrage' }) }),
+  feedback_invite: () => ({ symbol: 'star', icon: '⭐', tone: 'attention', label: etiket({ tr: 'Değerlendirme', fr: 'Avis', de: 'Bewertung' }) }),
+  zone_available: () => ({ symbol: 'pin', icon: '📍', tone: 'positive', label: etiket({ tr: 'Bölge', fr: 'Zone', de: 'Gebiet' }) }),
   b2b_application_result: (p) => ({
+    symbol: 'building',
     icon: '🏢',
     // Onay yolunda "yolunda", diğer sonuçta "bak" — cümle sözlüğünün aynı ayrımı.
     tone: p.approved === true ? 'positive' : 'attention',
@@ -190,6 +204,7 @@ const VISUAL: Partial<Record<AppNotificationKind, (payload: Record<string, unkno
 
 /** Bilinmeyen tür görselsiz kalmaz: zil ikonu + nötr ton (genel cümlenin görsel eşi). */
 const VISUAL_FALLBACK: NotificationVisual = {
+  symbol: 'bell',
   icon: '🔔',
   tone: 'neutral',
   label: etiket({ tr: 'Bildirim', fr: 'Notification', de: 'Mitteilung' }),

@@ -40,9 +40,13 @@ async function ekle(city: string): Promise<string> {
   // Alıcı + telefon 22.08'den beri ZORUNLU (kullanıcı kararı): adres kaydının kendisi "burada kim
   // teslim alır" sorusunun cevabı. Fikstür de o asgariyi taşımalı, yoksa test gerçek yazma yolunun
   // giremeyeceği bir satırı kurar.
-  await addAddress(customerId, { recipient: 'Ayşe Yılmaz', phone: '+33612345678', line1: `${city} sokak`, postalCode: '67000', city });
+  const created = await addAddress(customerId, { recipient: 'Ayşe Yılmaz', phone: '+33612345678', line1: `${city} sokak`, postalCode: '67000', city });
+  // Kapı YAZILAN satırı döner (13.09): sepet paneli kaydettiği adresi ikinci bir listeleme
+  // yapmadan seçiyor. Liste yine okunur — dönen satırın listedekiyle aynı olduğu da böyle kanıtlanır.
   const list = await addresses.listByCustomer(customerId);
-  return list.find((a) => a.city === city)!.id;
+  const row = list.find((a) => a.city === city)!;
+  expect(created.id).toBe(row.id);
+  return row.id;
 }
 
 describe('adres yazma kapısı', () => {
