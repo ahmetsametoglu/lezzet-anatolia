@@ -15047,9 +15047,10 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     yenilemesiyle geçti; aynı saniyelerde `/me` 0,5–0,8 sn (sebep ölçülemedi: mobil API günlüğü terminalde). Dev-client'ın
     yüzen Tools düğmesi sağ altta Para sekmesinin ve okut düğmesinin üstünde duruyor.
   · **Doğrulama:** typecheck kit · müşteri · jest kit 242/242, müşteri 430/430, operasyon 948/949 · `lint` (üç paket) ·
-    `knip` · `boundaries` temiz. Operasyonun tek düşüşü ve iki tip hatası (`notice-block.test.tsx`) başka şeridin
-    commit'lenmemiş token değişikliğinden (`customerAppColors.error` tabana taşınıyor; not dosyası açıldı), HEAD'de yok.
-    Kilitli kök paket 4754/4754.
+    `knip` · `boundaries` temiz. Operasyonun tek düşüşü ve iki tip hatası (`notice-block.test.tsx`) başka şeridin token
+    değişikliğinden: `customerAppColors.error` tabana taşındı (a176aee0) ve bu commit'ten beş dakika önce HEAD'e girdi —
+    denetim koştuğunda henüz ağaçtaydı, commit'in tek başına doğrulaması gösterdi. Testin beklentisi `customerColors.error`a
+    çevrildi (düzeltme commit'i; bileşen rengi temadan okuyor, değer aynı). Kilitli kök paket 4754/4754.
     Altıncı durumun kalan denetimleri: `lint` · `knip` · `boundaries` · `docs:check` temiz; kilitli kök paket 3961/4730 —
     542 düşüş başka şeridin commit'lenmemiş sipariş şemasından (`paymentRef`, yerel veritabanında sütun yok), 4'ü aynı
     şemaya giden satış ucu, 1'i bilinen adres testi.
