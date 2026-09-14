@@ -74,9 +74,17 @@ async function lookup(term: string, near: NearPoint | undefined): Promise<Lookup
   /* Alan adları BİLEREK çevriliyor: bizim tarafımızda nokta `lat`/`lng` (kolon adlarının aynısı),
      BAN kapısında `latitude`/`longitude`. Paket kendi sözcüklerini kullanıyor ve öyle kalmalı —
      `@lezzet/address-fr` künyesi: servisin alan adları o sisteme ait, bizim tipimize dayatılmaz. */
-  const found = await searchAddresses(
-    near === undefined ? { query: term } : { query: term, near: { latitude: near.lat, longitude: near.lng } },
-  );
+  /* YALNIZ KAPI DÜZEYİ (kullanıcı kararı 14.09 — "biz kapı düzeyinde teslimat yapmak zorundayız"): sokak,
+     mevki ve belediye önerisi seçilince form "Adres doğrulandı" diyordu, oysa ödeme ekranı, sevkiyat ve
+     kurye aynı adrese "kapı doğrulanmadı" diyordu. Ölçüldü (14.09, servise sorularak): numarasız sokak ve
+     yalnız posta kodu 0 sonuç; "192c rue du Maréchal Foch" yalnız gerçek kapıyı (67380 Lingolsheim)
+     döndürüyor. Numarası servis kaydında olmayan kapı (yeni yapı) elle giriş yolundan girilir. Native'in
+     çağrısı henüz süzgeçsiz — mobil şeride not bırakıldı (`docs/talep`). */
+  const found = await searchAddresses({
+    query: term,
+    kind: 'housenumber',
+    ...(near === undefined ? {} : { near: { latitude: near.lat, longitude: near.lng } }),
+  });
   switch (found.status) {
     case 'ok':
       return { value: { suggestions: found.suggestions, throttled: false, term }, cache: true };

@@ -2593,7 +2593,9 @@ olmayan adres kartı `honey-bg` zemin + `honey-line` kenarla çizilir (kart kabu
 `tone: 'attention'` ekseni); koşul "Ödemeye geç" kapısının şartlarıyla aynı. Ton v1'in kendi dikkat
 dili: v1 talep detayındaki "bekliyor" kartı aynı zemin ve kenarla, kart köşesiyle (18px) çizili.
 Karşılanamayan adreste kart düz kalır, uyarıyı içindeki şerit söyler. Mobil webin kartları native
-uygulamanın çiziminden gelir (`08.58`), değişmedi.
+uygulamanın çiziminden gelir (`08.58`), değişmedi. **Seçilecek adres yoksa kartın TAMAMI "+ Yeni
+adres"tir** (aynı gün, kullanıcı isteği: köşedeki yeşil bağ bal zeminde zor görülüyordu) — karta
+basmak adres penceresini açar, üzerine gelince kenar koyulaşır.
 
 ## Para: tür · cari · etiket satırın menüsünden seçilir, dokunuşta yazılır — Kaydet yok (13.09)
 

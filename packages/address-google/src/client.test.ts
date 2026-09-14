@@ -48,7 +48,8 @@ describe('otomatik tamamlama', () => {
     expect(sonUrl).toBe('https://places.googleapis.com/v1/places:autocomplete');
     expect(başlık('x-goog-api-key')).toBe('anahtar');
     expect(gövde()).toMatchObject({ input: 'Hauptstr 12', includedRegionCodes: ['DE'], sessionToken: 'oturum-1', languageCode: 'de' });
-    expect(gövde().includedPrimaryTypes).toEqual(['street_address', 'premise', 'subpremise', 'route']);
+    // Sokak (`route`) YOK — öneri yalnız kapı düzeyinde (kullanıcı kararı 14.09).
+    expect(gövde().includedPrimaryTypes).toEqual(['street_address', 'premise', 'subpremise']);
     expect(sonuç).toEqual({
       status: 'ok',
       suggestions: [{ placeId: 'p1', label: 'Hauptstraße 12, 77694 Kehl', main: 'Hauptstraße 12', secondary: '77694 Kehl' }],

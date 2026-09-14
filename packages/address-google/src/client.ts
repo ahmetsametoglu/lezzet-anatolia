@@ -52,10 +52,11 @@ const DEFAULT_RETRY_AFTER_MS = 5000;
 const BIAS_RADIUS_METERS = 30_000;
 
 /**
- * Adres türleri — kafe, dükkân gibi yerler değil, KAPILAR istensin. Beş tavanı Google'ın;
- * dördü adresin kendisi: kapı · bina · daire · sokak.
+ * Adres türleri — kafe, dükkân gibi yerler değil, KAPILAR istensin: kapı · bina · daire. Sokak (`route`)
+ * 14.09'da çıktı: öneri yalnız kapı düzeyinde (kullanıcı kararı — *"biz kapı düzeyinde bir teslimat
+ * yapmak zorundayız"*; Fransa'da BAN `type=housenumber`). Beş tavanı Google'ın.
  */
-const ADDRESS_TYPES = ['street_address', 'premise', 'subpremise', 'route'];
+const ADDRESS_TYPES = ['street_address', 'premise', 'subpremise'];
 
 export type GoogleFailure =
   | { status: 'rate_limited'; retryAfterMs: number }

@@ -18,7 +18,7 @@
       "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın."
     },
     "form": {
-      "searchLabel": "Sokak, numara ya da posta kodu",
+      "searchLabel": "Sokak ve kapı numarası",
       "searchPlaceholderFR": "ör. 12 Rue des Orfèvres",
       "searchPlaceholderDE": "ör. Hauptstraße 12",
       "searchHint": "Öneriler için en az {n} karakter yazın.",
@@ -26,6 +26,8 @@
       "suggestCredit": "Adresler: Base Adresse Nationale (Etalab 2.0)",
       "suggestBusy": "Adres önerileri şu an yoğun — biraz sonra tekrar deneyin. Adresi elle de yazabilirsiniz.",
       "notFoundTitle": "Bu adresi kayıtlarda bulamadık",
+      "needDoorTitle": "Kapı numarasını da yazın",
+      "needDoorBody": "Adresleri kapı numarasıyla birlikte öneriyoruz — kapıya teslim ediyoruz. Kapı numarası olmayan bir adresi elle girebilirsiniz.",
       "notFoundBody": "Yazımı kontrol edin ya da adresi elle girin. Doğrulanmamış adreslerde teslimat gecikebilir; kuryemiz sizi arayabilir.",
       "manualOpen": "Adresi elle gireyim →",
       "manualTitle": "Adresi elle girin",
@@ -71,7 +73,7 @@
       "session_expired": "Votre session semble expirée. Reconnectez-vous."
     },
     "form": {
-      "searchLabel": "Rue, numéro ou code postal",
+      "searchLabel": "Rue et numéro",
       "searchPlaceholderFR": "ex. 12 Rue des Orfèvres",
       "searchPlaceholderDE": "ex. Hauptstraße 12",
       "searchHint": "Saisissez au moins {n} caractères pour voir les suggestions.",
@@ -79,6 +81,8 @@
       "suggestCredit": "Adresses : Base Adresse Nationale (Licence Ouverte Etalab 2.0)",
       "suggestBusy": "Les suggestions d'adresses sont momentanément saturées — réessayez dans un instant. Vous pouvez aussi saisir l'adresse manuellement.",
       "notFoundTitle": "Adresse introuvable dans la base",
+      "needDoorTitle": "Ajoutez le numéro",
+      "needDoorBody": "Nous proposons les adresses avec leur numéro — nous livrons jusqu'à la porte. Une adresse sans numéro peut être saisie manuellement.",
       "notFoundBody": "Vérifiez la saisie ou entrez l'adresse manuellement. Pour une adresse non vérifiée, la livraison peut prendre du retard ; notre livreur pourra vous appeler.",
       "manualOpen": "Saisir l'adresse manuellement →",
       "manualTitle": "Saisissez l'adresse",
@@ -124,7 +128,7 @@
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden."
     },
     "form": {
-      "searchLabel": "Straße, Hausnummer oder Postleitzahl",
+      "searchLabel": "Straße und Hausnummer",
       "searchPlaceholderFR": "z. B. 12 Rue des Orfèvres",
       "searchPlaceholderDE": "z. B. Hauptstraße 12",
       "searchHint": "Für Vorschläge mindestens {n} Zeichen eingeben.",
@@ -132,6 +136,8 @@
       "suggestCredit": "Adressen: Base Adresse Nationale (Etalab 2.0)",
       "suggestBusy": "Adressvorschläge sind gerade ausgelastet — versuchen Sie es gleich noch einmal. Sie können die Adresse auch manuell eingeben.",
       "notFoundTitle": "Diese Adresse haben wir nicht gefunden",
+      "needDoorTitle": "Bitte mit Hausnummer",
+      "needDoorBody": "Wir schlagen Adressen mit Hausnummer vor — wir liefern bis an die Tür. Eine Adresse ohne Hausnummer können Sie manuell eingeben.",
       "notFoundBody": "Prüfen Sie die Schreibweise oder geben Sie die Adresse manuell ein. Bei nicht geprüften Adressen kann sich die Lieferung verzögern; unser Fahrer ruft Sie gegebenenfalls an.",
       "manualOpen": "Adresse manuell eingeben →",
       "manualTitle": "Adresse manuell eingeben",

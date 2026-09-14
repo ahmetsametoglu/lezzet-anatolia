@@ -14,6 +14,7 @@ import { SuggestionList } from '@/components/customer/ui/suggestion-list';
 import { useDismiss } from '@/components/customer/ui/use-dismiss.hook';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { checkAddressAction, resolveGermanAddressAction, type CheckedPoint } from '@/lib/address/lookup-actions';
+import { hasHouseNumber } from '@/lib/address/house-number';
 import { useAddressSearch } from '@/lib/address/use-address-search.hook';
 import { useGermanAddressSearch } from '@/lib/address/use-german-address-search.hook';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
@@ -266,6 +267,12 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   const throttled = country === 'FR' && ban.throttled;
   // "Bulamadık" yalnız cevap BU sorgu için geldiyse — yoksa yazarken kutu yanıp sönerdi.
   const notFound = searchOn && manual === null && term.length >= MIN_QUERY_LENGTH && found.term === term && found.suggestions.length === 0 && !throttled;
+  /**
+   * Yazılanda KAPI NUMARASI yok (posta kodu çıkarılınca rakam kalmıyor). Öneriler yalnız kapı düzeyinde
+   * (kullanıcı kararı 14.09) ve numarasız sokak 0 sonuç veriyor: "bulamadık" demek var olan bir sokağı
+   * yok saymak olurdu — kutu "kapı numarasını da yazın" der. Elle giriş yolu ikisinde de açık.
+   */
+  const lacksDoor = !hasHouseNumber(term);
 
   /**
    * ── ÖNERİLER MENÜ OLARAK AÇILIR (masaüstü · kullanıcı isteği 14.09) ──────────────────────────
@@ -392,7 +399,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           label={t.suggestLabel}
           icon={pin}
           footnote={t.suggestCredit}
-          floating={floating}
+          anchorRef={floating ? searchBox : undefined}
         />
       )}
       {listShown && country === 'DE' && (
@@ -403,7 +410,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           icon={pin}
           // Google önerisi haritasız gösterildiğinde logo ZORUNLU (Places kullanım koşulları).
           footnote={<img src="/attribution/google-maps.svg" alt="Google Maps" width={78} height={14} className="block" />}
-          floating={floating}
+          anchorRef={floating ? searchBox : undefined}
         />
       )}
     </>
@@ -446,10 +453,11 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           ))}
         </div>
 
-        {/* Arama kutusu — menü bu kutuya göre konumlanır; alan ve menü aynı kutuda, Tab alandan satırlara geçer. */}
+        {/* Arama kutusu — menü bu kutunun altına açılır (ekrana sabit, yeri kutudan ölçülür). Menü DOM'da kutunun
+            İÇİNDE: Tab alandan satırlara geçer ve "dışarı basınca kapan" kutuyu kapsar. */}
         <div
           ref={searchBox}
-          className="relative flex flex-col gap-2"
+          className="flex flex-col gap-2"
           onKeyDown={(e) => {
             // Menü açıkken Escape YALNIZ menüyü kapatır. Pencere Escape'i belgede dinliyor ve React'in kökü de
             // belgede: `stopPropagation` aynı düğümdeki pencere dinleyicisini durdurmaz, bütün pencere kapanırdı.
@@ -497,9 +505,9 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           <div className="flex flex-col gap-2.25 rounded-2xl border border-honey-line bg-honey-bg px-4.5 py-4">
             <span className="flex items-center gap-2 font-sans text-control text-honey">
               <Icon name="warning" size={15} className="flex-none" />
-              {t.notFoundTitle}
+              {lacksDoor ? t.needDoorTitle : t.notFoundTitle}
             </span>
-            <span className="font-sans text-note leading-[1.6] text-body">{t.notFoundBody}</span>
+            <span className="font-sans text-note leading-[1.6] text-body">{lacksDoor ? t.needDoorBody : t.notFoundBody}</span>
             <button
               type="button"
               onClick={() => setManual({ line1: term, postalCode: '', city: '' })}

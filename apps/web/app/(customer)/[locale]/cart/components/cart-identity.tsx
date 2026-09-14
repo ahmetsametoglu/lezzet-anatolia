@@ -290,6 +290,36 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
     if (!(await choose(id))) setError(errorText(am.errors, null));
   };
 
+  const dialog = adding && <AddressPickerDialog locale={locale} initialMode="new" onClose={() => setAdding(false)} />;
+
+  // Seçilecek adres YOKSA kartın TAMAMI "+ Yeni adres"tir (kullanıcı isteği 14.09): köşedeki yeşil bağ
+  // bal zeminde gözden kaçabiliyordu. Tek düğme — bağ burada yalnız görsel etiket, iç içe düğme yok;
+  // pencere kartın DIŞINDA çizilir (düğmenin içinde etkileşimli içerik olamaz).
+  if (rows.length === 0) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className={cardClass({
+            pad: 'side',
+            gap: 'sm',
+            tone: 'attention',
+            className: `group w-full cursor-pointer text-left transition-colors hover:border-honey ${focusRingClass}`,
+          })}
+        >
+          <span className="flex items-baseline justify-between gap-3">
+            <span className="font-serif text-card-title-sm text-ink">{c.addressTitle}</span>
+            <span className="flex-none font-sans text-note font-bold text-olive transition-colors group-hover:text-olive-dark">{am.add}</span>
+          </span>
+          {failed && <span className="font-sans text-note font-semibold text-terracotta">{am.failed}</span>}
+          {addresses !== null && <span className="font-sans text-note leading-relaxed text-body">{c.addressEmpty}</span>}
+        </button>
+        {dialog}
+      </>
+    );
+  }
+
   // Seçili adres yoksa DİKKAT TONU (kullanıcı isteği 14.09) — koşul "Ödemeye geç" kapısının adres
   // şartıyla aynı (`useCheckoutGate`). Seçili adres sunucudan hazır geldiği için kart ilk karede doğru
   // tonda açılır. Karşılanamayan adreste kart düz kalır: uyarıyı kartın içindeki şerit söylüyor.
@@ -309,7 +339,6 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
       </div>
 
       {failed && <span className="font-sans text-note font-semibold text-terracotta">{am.failed}</span>}
-      {addresses !== null && addresses.length === 0 && <p className="font-sans text-note leading-relaxed text-body">{c.addressEmpty}</p>}
 
       {rows.map((row) => {
         const selected = row.id === current?.id;
@@ -361,7 +390,7 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
         </span>
       )}
 
-      {adding && <AddressPickerDialog locale={locale} initialMode="new" onClose={() => setAdding(false)} />}
+      {dialog}
     </div>
   );
 }

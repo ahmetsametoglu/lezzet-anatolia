@@ -109,6 +109,8 @@ const UYGULAMA_DBSIZ = [
 ];
 
 const WEB_LIB_DBSIZ = [
+  // Kapı numarası var mı (14.09) — saf: dize girer, evet/hayır çıkar; öneri kutusunun iki cümlesi buna bakar.
+  'apps/web/lib/address/house-number.test.ts',
   'apps/web/lib/analytics/route-pattern.test.ts',
   'apps/web/lib/analytics/session-key.test.ts',
   'apps/web/lib/analytics/utm.test.ts',
