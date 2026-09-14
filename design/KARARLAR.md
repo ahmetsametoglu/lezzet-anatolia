@@ -2635,3 +2635,18 @@ tek panel", 12.19):
   işaretliyordu — her hareket izahlı olmalı, o kapı kaldırıldı.
 - **Seçim yokken sağda izah özeti:** izah bekleyen sayısı, listedeki güçlü öneri sayısı, "Sıradakini aç".
   Hesap seçmek şart değil (kuyruk hesaba bağlıydı).
+
+## Para: hareket tipinin ikonu · sözlükte tek satır tür (14.09)
+
+Kullanıcı: *"Banka hareket tipleri için birer ikon belirle ve bu ikonu ilgili yerlerde kullan"* ·
+*"Bu formu tek satırda kurgulamak mümkün. Aşağıdaki buton yerine bir selectbox koyabilirsin. Ayrıca
+kaydet ve iptal butonları da ikon olabilir."* (12.20):
+
+- **Tip ikonları:** sipariş ödemesi = koli, iade = geri ok, stok alımı = sepet, gider = fiş, transfer =
+  iki yönlü ok, sermaye = €, sınıflandırılmamış = soru işareti. Var olan çizim yeniden kullanılır (kenar
+  menünün sipariş · satın alma · para ikonları); ikon listenin tip sütununda, "+ tip" süzgecinde ve
+  panelin künyesinde — tipin adının önünde, yerine değil.
+- **Tür satırı tek satır:** ad · yön (açılır seçici — üçlü düğme satırı iki satıra bölüyordu) · hesap
+  kodu · eylemler. Cari iki satırlık ayna kalır (dört alan tek satıra sığmıyor).
+- **Satır içi düzenlemenin kararları ikon düğme:** ✓ kaydet, ✕ vazgeç — adları ve kısayolları (Enter ·
+  Esc) `aria-label` + `title`da. Kitin `Button`ına `icon` seçeneği (kare, 32/36px — yanındaki kutuyla hizalı).

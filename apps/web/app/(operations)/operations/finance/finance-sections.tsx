@@ -19,6 +19,7 @@ import { ACCOUNT_GROUP_LABEL, EXPLAINED_LABEL, MOVEMENT_TYPE_CHIP, MOVEMENT_TYPE
 import { ledgerRowKey } from './finance-types';
 import type { AccountView, DialogKind, MovementRowView, RowEditor } from './finance-types';
 import { ALL_ACCOUNTS, type FinanceUrlState } from './finance-url';
+import { MovementTypeIcon } from './movement-type-icon';
 import { useRowWrites } from './use-row-writes.hook';
 
 // Para ekranının blokları (12.17 düzeni): bakiye şeridi (hesap süzgeci) · sekme ve süzgeç bandı ·
@@ -222,7 +223,8 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
               value={urlState.type}
               emptyValue="all"
               placeholder="+ tip"
-              options={MOVEMENT_TYPE_ORDER.map((type) => ({ value: type, label: MOVEMENT_TYPE_CHIP[type] }))}
+              options={MOVEMENT_TYPE_ORDER.map((type) => ({ value: type, label: MOVEMENT_TYPE_CHIP[type], icon: <MovementTypeIcon type={type} size={14} /> }))}
+              menuWidth={210}
               onChange={(type) => onChange({ type })}
             />
           ) : (
@@ -353,7 +355,10 @@ export function MovementList({ rows, note, editor, selectedKey, onSelect, hasMor
               </span>
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate font-ops-body text-ops-xs text-ops-ink">{row.accountName}</span>
-                <span className="truncate font-ops-body text-ops-micro text-ops-faint">{row.typeLabel}</span>
+                <span className="flex min-w-0 items-center gap-1 font-ops-body text-ops-micro text-ops-faint">
+                  <MovementTypeIcon type={row.type} size={12} />
+                  <span className="truncate">{row.typeLabel}</span>
+                </span>
               </div>
               <MatchDot explained={row.explained} />
             </li>

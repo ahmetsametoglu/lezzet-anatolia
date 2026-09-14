@@ -36,19 +36,28 @@ const SIZE: Record<ControlSize, string> = {
   sm: `${CONTROL_H.sm} px-3 text-ops-sm`,
 };
 
+// İKON DÜĞME (14.09 · Para sözlüğünde Kaydet ✓ / Vazgeç ✕): kare, yazısız — adı çağıranın `aria-label`
+// ve `title`ında. Yükseklik aynı aileden: yanındaki kutuyla hizalı durur.
+const ICON_SIZE: Record<ControlSize, string> = {
+  md: `${CONTROL_H.md} w-9`,
+  sm: `${CONTROL_H.sm} w-8`,
+};
+
 interface ButtonClassOptions {
   variant?: ButtonVariant;
   size?: ControlSize;
+  /** Kare, yazısız ikon düğmesi — adı çağıranın `aria-label`/`title`ında. */
+  icon?: boolean;
   fullWidth?: boolean;
   className?: string;
 }
 
 // Buton-olmayan öğelere (Link/span) aynı görünümü vermek için (ör. hata sayfası "Panele dön" linki).
-export function buttonClass({ variant = 'primary', size = 'md', fullWidth, className }: ButtonClassOptions = {}): string {
+export function buttonClass({ variant = 'primary', size = 'md', icon = false, fullWidth, className }: ButtonClassOptions = {}): string {
   return [
     'inline-flex cursor-pointer items-center justify-center gap-2 rounded-ops-btn font-ops-display font-semibold outline-none transition-colors disabled:cursor-not-allowed',
     VARIANT[variant],
-    SIZE[size],
+    icon ? ICON_SIZE[size] : SIZE[size],
     fullWidth ? 'w-full' : '',
     className,
   ]
@@ -59,9 +68,11 @@ export function buttonClass({ variant = 'primary', size = 'md', fullWidth, class
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ControlSize;
+  /** Kare, yazısız ikon düğmesi — `aria-label` ve `title` ver. */
+  icon?: boolean;
   fullWidth?: boolean;
 }
 
-export function Button({ variant, size, fullWidth, className, type = 'button', ...rest }: ButtonProps) {
-  return <button type={type} className={buttonClass({ variant, size, fullWidth, className })} {...rest} />;
+export function Button({ variant, size, icon, fullWidth, className, type = 'button', ...rest }: ButtonProps) {
+  return <button type={type} className={buttonClass({ variant, size, icon, fullWidth, className })} {...rest} />;
 }

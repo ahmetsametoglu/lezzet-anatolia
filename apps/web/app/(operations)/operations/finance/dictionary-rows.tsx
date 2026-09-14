@@ -1,5 +1,6 @@
 import type { KeyboardEvent, ReactNode } from 'react';
 import { Button } from '@/components/operation/ui/button';
+import { CheckIcon, XIcon } from '@/components/operation/ui/icons';
 
 // Sözlük penceresinin SATIR parçaları (12.18) — görünüm ve yerinde düzenleme aynı ızgarayı paylaşır;
 // gerekçe `dictionary-dialog.tsx` künyesinde ("SATIR FORMUN KENDİSİDİR").
@@ -11,12 +12,11 @@ import { Button } from '@/components/operation/ui/button';
  */
 const READ_INSET = 'px-[9px]';
 /**
- * Satır ızgarası. Eylem sütunu SABİT (150px): görünümde bağlantılar, düzenlemede düğmeler aynı yeri
- * kaplar — genişliği içerikten gelseydi öteki sütunlar geçişte sağa sola kayardı.
+ * Tek alanlı satırın ızgarası (etiket): ad · eylemler. Eylem sütunu SABİT (130px): görünümde
+ * bağlantılar, düzenlemede ikon düğmeler aynı yeri kaplar — genişliği içerikten gelseydi öteki
+ * sütunlar geçişte kayardı. Tür ve cari kendi şablonunu verir (`columns`).
  */
-const TWO_COLUMNS = 'grid-cols-[minmax(0,1fr)_150px]';
-/** Cari: ad/kelimeler · türü/varsayılan tür · eylemler. */
-const THREE_COLUMNS = 'grid-cols-[minmax(0,1fr)_190px_150px]';
+const ONE_FIELD_COLUMNS = 'grid-cols-[minmax(0,1fr)_130px]';
 
 // ── Satır parçaları ────────────────────────────────────────────────────────────
 
@@ -49,50 +49,53 @@ export function DictionaryList({ children }: DictionaryListProps) {
   return <ul className="flex flex-col divide-y divide-ops-line-soft overflow-hidden rounded-ops-card border border-ops-line">{children}</ul>;
 }
 
-/** Satırın hücreleri — görünüm ve düzenleme AYNI yerlere koyar (bkz. `RowCells`). */
+/**
+ * Satırın hücreleri — görünüm ve düzenleme AYNI yerlere koyar. Hücreler ızgaraya SIRAYLA akar: ilk
+ * satırın alanları (`first` · `aside` · `extra`) ve eylem sütunu, ardından ikinci satır (`second` ·
+ * `asideSecond`); şablonun (`columns`) sütun sayısı ilk satırın hücre sayısına eşittir.
+ */
 interface RowCells {
   first: ReactNode;
-  /** Üç sütunlu ızgarada ortadaki sütunun üst hücresi (cari: türü). */
+  /** İlk satırın ikinci alanı (tür: yön · cari: türü). */
   aside?: ReactNode;
-  /** İkinci satır (tür: yön · kod; cari: eşleşme kelimeleri). */
+  /** İlk satırın üçüncü alanı (tür: hesap kodu). */
+  extra?: ReactNode;
+  /** İkinci satırın ilk hücresi (cari: eşleşme kelimeleri). */
   second?: ReactNode;
-  /** Üç sütunlu ızgarada ortadaki sütunun alt hücresi (cari: varsayılan tür). */
+  /** İkinci satırın ikinci hücresi (cari: varsayılan tür). */
   asideSecond?: ReactNode;
   actions: ReactNode;
 }
 
-interface RowGridProps {
-  cells: RowCells;
-  three: boolean;
-}
-
-/** Hücreleri ızgaraya AÇIK konumla yerleştirir — sıra, görünüm ile düzenleme arasında şaşmaz. */
-function RowGrid({ cells, three }: RowGridProps) {
+function RowGrid({ first, aside, extra, second, asideSecond, actions }: RowCells) {
   return (
     <>
-      <div className="col-start-1 row-start-1 min-w-0">{cells.first}</div>
-      {three ? <div className="col-start-2 row-start-1 min-w-0">{cells.aside}</div> : null}
-      <div className={`${three ? 'col-start-3' : 'col-start-2'} row-start-1 flex items-center justify-end gap-2`}>{cells.actions}</div>
-      {cells.second ? <div className="col-start-1 row-start-2 min-w-0">{cells.second}</div> : null}
-      {three && cells.asideSecond ? <div className="col-start-2 row-start-2 min-w-0">{cells.asideSecond}</div> : null}
+      <div className="min-w-0">{first}</div>
+      {aside !== undefined ? <div className="min-w-0">{aside}</div> : null}
+      {extra !== undefined ? <div className="min-w-0">{extra}</div> : null}
+      <div className="flex items-center justify-end gap-2">{actions}</div>
+      {second !== undefined ? <div className="min-w-0">{second}</div> : null}
+      {asideSecond !== undefined ? <div className="min-w-0">{asideSecond}</div> : null}
     </>
   );
 }
 
 interface ViewRowProps extends RowCells {
-  three?: boolean;
+  /** Izgara şablonu — varsayılan tek alanlı satır (etiket). */
+  columns?: string;
 }
 
-export function ViewRow({ three = false, ...cells }: ViewRowProps) {
+export function ViewRow({ columns = ONE_FIELD_COLUMNS, ...cells }: ViewRowProps) {
   return (
-    <li className={`grid items-center gap-x-3 gap-y-0.5 px-3 py-2 ${three ? THREE_COLUMNS : TWO_COLUMNS}`}>
-      <RowGrid cells={cells} three={three} />
+    <li className={`grid items-center gap-x-3 gap-y-0.5 px-3 py-2 ${columns}`}>
+      <RowGrid {...cells} />
     </li>
   );
 }
 
 interface EditRowProps extends Omit<RowCells, 'actions'> {
-  three?: boolean;
+  /** Izgara şablonu — görünüm satırıyla AYNI olmalı (geçişte sütunlar kaymasın). */
+  columns?: string;
   isNew: boolean;
   busy: boolean;
   disabled: boolean;
@@ -101,7 +104,7 @@ interface EditRowProps extends Omit<RowCells, 'actions'> {
   onCancel: () => void;
 }
 
-export function EditRow({ three = false, isNew, busy, disabled, error, onSubmit, onCancel, ...cells }: EditRowProps) {
+export function EditRow({ columns = ONE_FIELD_COLUMNS, isNew, busy, disabled, error, onSubmit, onCancel, ...cells }: EditRowProps) {
   const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
     if (event.key !== 'Escape') return;
     // Açık bir seçici menüsü Esc'i kendisi için ister (kutunun `aria-expanded`ı) — önce o kapanır.
@@ -112,11 +115,12 @@ export function EditRow({ three = false, isNew, busy, disabled, error, onSubmit,
     event.preventDefault();
     onCancel();
   };
+  const submitLabel = isNew ? 'Ekle (Enter)' : 'Kaydet (Enter)';
 
   return (
     <li className="bg-ops-olive-bg px-3 py-2.5">
       <form
-        className={`grid items-center gap-x-3 gap-y-2 ${three ? THREE_COLUMNS : TWO_COLUMNS}`}
+        className={`grid items-center gap-x-3 gap-y-2 ${columns}`}
         onKeyDown={onKeyDown}
         onSubmit={(event) => {
           event.preventDefault();
@@ -124,20 +128,19 @@ export function EditRow({ three = false, isNew, busy, disabled, error, onSubmit,
         }}
       >
         <RowGrid
-          three={three}
-          cells={{
-            ...cells,
-            actions: (
-              <>
-                <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-                  Vazgeç
-                </Button>
-                <Button type="submit" size="sm" disabled={disabled}>
-                  {busy ? 'Kaydediliyor…' : isNew ? 'Ekle' : 'Kaydet'}
-                </Button>
-              </>
-            ),
-          }}
+          {...cells}
+          actions={
+            <>
+              {/* İKON DÜĞMELER (kullanıcı isteği 14.09): satır içi düzenlemenin iki kararı yazısız — adları
+                  `aria-label` + `title`da, kısayollarıyla (Enter · Esc). */}
+              <Button type="button" variant="secondary" size="sm" icon aria-label="Vazgeç (Esc)" title="Vazgeç (Esc)" onClick={onCancel}>
+                <XIcon size={16} />
+              </Button>
+              <Button type="submit" size="sm" icon aria-label={submitLabel} title={submitLabel} disabled={disabled}>
+                {busy ? <span aria-hidden>…</span> : <CheckIcon size={16} />}
+              </Button>
+            </>
+          }
         />
         {error ? (
           <p role="alert" className={`col-span-full font-ops-body text-ops-xs text-ops-red ${READ_INSET}`}>
@@ -185,15 +188,17 @@ export function EmptyRow({ text }: EmptyRowProps) {
 
 interface ReadTextProps {
   active: boolean;
-  /** Yan sütunun metni (cari: türü) — adın tonundan bir kademe sönük. */
+  /** Yan sütunun metni (tür: yön · cari: türü) — adın tonundan bir kademe sönük. */
   secondary?: boolean;
+  /** Kod gibi eşit aralıklı okunan değer (tür: hesap kodu) — kutusuyla aynı yazı. */
+  mono?: boolean;
   children: ReactNode;
 }
 
 /** Görünümün ana satırındaki metin — kutunun yazısıyla aynı içerlek ve ölçüde (`READ_INSET`, `text-ops-sm`). */
-export function ReadText({ active, secondary = false, children }: ReadTextProps) {
+export function ReadText({ active, secondary = false, mono = false, children }: ReadTextProps) {
   const tone = !active ? 'text-ops-faint line-through' : secondary ? 'text-ops-body' : 'text-ops-ink';
-  return <span className={`block truncate font-ops-body text-ops-sm ${READ_INSET} ${tone}`}>{children}</span>;
+  return <span className={`block truncate ${mono ? 'font-ops-mono' : 'font-ops-body'} text-ops-sm ${READ_INSET} ${tone}`}>{children}</span>;
 }
 
 interface ReadDetailProps {

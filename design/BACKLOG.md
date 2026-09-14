@@ -492,7 +492,7 @@ penceresinde "Düzenle"nin satır içindeki yeri, mobil webde çekmece içinde �
 çiziminden SONRA doğdu (kullanıcı kararları 13.09: her hareket türüyle, belgesiyle ya da bir işe
 bağıyla izahlı; ortağın kaydı ortak cari hesabı; fatura gelince borç doğar) ve çizimde karşılıkları
 yok. Kitin gramerinde yazıldılar: "+ Belge" diyaloğu (elle hareket penceresinin kalıbı; cari ·
-tedarikçi · tür · etiket menüleri), "Sözlük" penceresi (sekmeler başlıkta; kayıt satırın içinde düzenlenir — 12.18),
+tedarikçi · tür · etiket menüleri), "Sözlük" penceresi (sekmeler başlıkta; kayıt satırın içinde düzenlenir — 12.18; tür satırı tek satır, kararlar ikon düğme — 12.20),
 defter satırının orta hücresinde tür · cari · etiket menüleri (muhasebeci deseni — `design/KARARLAR.md`),
 "Eşleşmeyi geri al"; ortak carisinin bakiyesi işaretiyle renklenir (14.09 — cümle kalktı). Çizim
 yapılırsa bakılacaklar: belge kartında dosya ikonu, tür ve etiket çiplerinin ayrışması (ikisi de olive).
@@ -502,7 +502,7 @@ solda, kapalılar en sonda, taşarsa yatay kayar); süzgeç satırında "Hareket
 "+ tip", tarih aralığı çipi, izah rozeti ve başlıktaki beş düğmenin yerine "Eylemler" menüsü; satır
 tıklanınca sağ sütunda hareketin ya da belgenin ayrıntı paneli (seçim yokken izah özeti — 12.19);
 eşleştirme penceresinin yerine tetikleyiciye bağlı seçici menü. Çizim yapılırsa bakılacaklar:
-şeridin grup başlıkları ve kapalı hesabın sönüklüğü, orta hücrenin dar bütçesinde kesilen adların
+hareket tipi ikonları (12.20), şeridin grup başlıkları ve kapalı hesabın sönüklüğü, orta hücrenin dar bütçesinde kesilen adların
 okunurluğu (tür önce, cari iki kat hızlı daralır), ayrıntı panelinin bölümleri (Karşılığı ·
 Sınıflandırma · Etiketler · Ödemeler), seçici menüde önerinin hedef listesinden ayrışması, belge
 satırının açık kalan sütunu.

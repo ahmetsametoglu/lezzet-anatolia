@@ -15,6 +15,7 @@ import { EXPLAINED_LABEL, MOVEMENT_SOURCE_LABEL, SUGGESTION_VIEW } from './finan
 import { amountTone, signedAmount } from './finance-sections';
 import type { MatchOptionsView, MovementRowView, RowEditor } from './finance-types';
 import { MovementMatchSelector } from './match-selector';
+import { MovementTypeIcon } from './movement-type-icon';
 import { useRowWrites } from './use-row-writes.hook';
 
 /*
@@ -85,7 +86,12 @@ export function MovementDetail({ row, editor, version, busy, onClose, onApplyTar
           <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">Hareket</span>
           <span className="font-ops-body text-ops-base text-ops-ink [overflow-wrap:anywhere]">{row.title}</span>
           <span className="font-ops-body text-ops-xs text-ops-faint">
-            {dayMonth(row.valueDate)} · {row.accountName} · {row.typeLabel} · {MOVEMENT_SOURCE_LABEL[row.source]}
+            {dayMonth(row.valueDate)} · {row.accountName} ·{' '}
+            <span className="inline-flex items-center gap-1 align-middle">
+              <MovementTypeIcon type={row.type} size={12} />
+              {row.typeLabel}
+            </span>{' '}
+            · {MOVEMENT_SOURCE_LABEL[row.source]}
           </span>
         </div>
         <div className="flex flex-none flex-col items-end gap-1">

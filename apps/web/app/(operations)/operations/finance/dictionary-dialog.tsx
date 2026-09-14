@@ -5,7 +5,6 @@ import { CounterpartyKindEnum, type CounterpartyKind } from '@lezzet/types';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { UnderlineTabs } from '@/components/operation/ui/underline-tabs';
 import { Input } from '@/components/operation/form/input';
-import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { Select } from '@/components/operation/form/select';
 import {
   addCounterpartyAction,
@@ -44,6 +43,9 @@ import type { DictionaryView } from './finance-types';
   listenin başındaki "+ Yeni …" satırından, AYNI düzenleyiciyle açılır. Enter kaydeder, Esc vazgeçer
   (pencere açık kalır; ikinci Esc kapatır). Aynı anda tek satır düzenlenir, o sürerken öteki
   satırların eylemleri kilitli: yarım kalan bir düzenleme sessizce başka bir satıra geçmesin.
+
+  Tür satırı TEK satırdır — yön bir seçici (kullanıcı isteği 14.09: "bu formu tek satırda kurgulamak
+  mümkün"); kararın iki düğmesi ikondur (✓ kaydet · ✕ vazgeç), adları `title`da.
 */
 
 type DictionaryTab = 'natures' | 'counterparties' | 'tags';
@@ -62,6 +64,13 @@ interface RunError {
 const NATURE_DIRECTIONS = ['out', 'in', 'both'] as const satisfies readonly NatureDirectionKey[];
 /** Yeni kaydın düzenleme anahtarı — kayıtların anahtarlarıyla (slug · kimlik) çakışmaz. */
 const NEW = 'new';
+/**
+ * Satır şablonları (12.18 · 14.09). TÜR TEK SATIR (kullanıcı isteği: "bu formu tek satırda kurgulamak
+ * mümkün; aşağıdaki buton yerine bir selectbox"): ad · yön · hesap kodu · eylemler. Cari iki satırlık
+ * ayna: ad · türü / eşleşme kelimeleri · varsayılan tür. Eylem sütunu satır parçalarıyla aynı (130px).
+ */
+const NATURE_COLUMNS = 'grid-cols-[minmax(0,1fr)_170px_96px_130px]';
+const COUNTERPARTY_COLUMNS = 'grid-cols-[minmax(0,1fr)_190px_130px]';
 
 /** "URSSAF, DGFIP" → iki kelime; virgül ayırır, boşluklu ifade tek kelimedir ("CABINET MULLER"). */
 function keywordsOf(text: string): string[] {
@@ -162,6 +171,7 @@ function NaturesTab({ natures, busy, error, run }: NaturesTabProps) {
   const editor = (key: string) => (
     <EditRow
       key={key}
+      columns={NATURE_COLUMNS}
       isNew={key === NEW}
       busy={busy === key}
       disabled={busy !== null || label.trim() === ''}
@@ -175,29 +185,27 @@ function NaturesTab({ natures, busy, error, run }: NaturesTabProps) {
           aria-label="Tür adı"
           value={label}
           onChange={(event) => setLabel(event.target.value)}
-          placeholder="Tür adı — Sigorta · Kırtasiye · Faiz geliri"
+          placeholder="Tür adı — ör. Sigorta"
         />
       }
-      second={
-        <div className="flex min-w-0 items-center gap-2">
-          <MultiToggle
-            size="sm"
-            value={direction}
-            onChange={setDirection}
-            label="Türün yönü"
-            options={NATURE_DIRECTIONS.map((key) => ({ key, label: NATURE_DIRECTION_LABEL[key] }))}
-          />
-          <Input
-            inputSize="sm"
-            mono
-            fullWidth={false}
-            className="w-[120px]"
-            aria-label="Hesap kodu (PCG)"
-            value={accountCode}
-            onChange={(event) => setAccountCode(event.target.value)}
-            placeholder="Hesap kodu"
-          />
-        </div>
+      aside={
+        <Select
+          size="sm"
+          ariaLabel="Türün yönü"
+          value={direction}
+          onChange={(next) => setDirection(next as NatureDirectionKey)}
+          options={NATURE_DIRECTIONS.map((value) => ({ value, label: NATURE_DIRECTION_LABEL[value] }))}
+        />
+      }
+      extra={
+        <Input
+          inputSize="sm"
+          mono
+          aria-label="Hesap kodu (PCG)"
+          value={accountCode}
+          onChange={(event) => setAccountCode(event.target.value)}
+          placeholder="Hesap kodu"
+        />
       }
     />
   );
@@ -216,12 +224,17 @@ function NaturesTab({ natures, busy, error, run }: NaturesTabProps) {
           ) : (
             <ViewRow
               key={nature.slug}
+              columns={NATURE_COLUMNS}
               first={<ReadText active={nature.isActive}>{nature.label}</ReadText>}
-              second={
-                <ReadDetail>
+              aside={
+                <ReadText active={nature.isActive} secondary>
                   {NATURE_DIRECTION_LABEL[nature.direction ?? 'both']}
-                  {nature.accountCode ? ` · hesap ${nature.accountCode}` : ''}
-                </ReadDetail>
+                </ReadText>
+              }
+              extra={
+                <ReadText active={nature.isActive} secondary mono>
+                  {nature.accountCode ?? ''}
+                </ReadText>
               }
               actions={
                 <RowActions
@@ -281,7 +294,7 @@ function CounterpartiesTab({ counterparties, natures, busy, error, run }: Counte
   const editor = (key: string) => (
     <EditRow
       key={key}
-      three
+      columns={COUNTERPARTY_COLUMNS}
       isNew={key === NEW}
       busy={busy === key}
       disabled={busy !== null || name.trim() === ''}
@@ -349,7 +362,7 @@ function CounterpartiesTab({ counterparties, natures, busy, error, run }: Counte
           ) : (
             <ViewRow
               key={counterparty.id}
-              three
+              columns={COUNTERPARTY_COLUMNS}
               first={<ReadText active={counterparty.isActive}>{counterparty.name}</ReadText>}
               aside={
                 <ReadText active={counterparty.isActive} secondary>

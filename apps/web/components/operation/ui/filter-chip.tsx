@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { AnchoredMenu } from './anchored-menu';
 import { Chip } from './chip';
 
@@ -32,8 +32,11 @@ interface FilterChipProps<T extends string> {
   emptyValue: T;
   /** Kapalıyken yazan davet: "+ durum", "+ tür", "+ tarih". */
   placeholder: string;
-  /** Seçilebilir değerler — `emptyValue` buraya KONMAZ. */
-  options: ReadonlyArray<{ value: T; label: string }>;
+  /**
+   * Seçilebilir değerler — `emptyValue` buraya KONMAZ. `icon` verilirse menüde ve dolu çipte adın önünde
+   * durur (14.09 · Para'nın hareket tipi süzgeci).
+   */
+  options: ReadonlyArray<{ value: T; label: string; icon?: ReactNode }>;
   onChange: (value: T) => void;
   /** Menü genişliği (px) — seçenek adları uzunsa çipten geniş olmalı. */
   menuWidth?: number;
@@ -58,7 +61,14 @@ export function FilterChip<T extends string>({
       <Chip active onClick={() => onChange(emptyValue)} className={className}>
         {/* Etiket bulunamazsa ham değer BASILMAZ, davet geri gelir: bilinmeyen bir süzgeç değeri
             (eskimiş bağlantı) operatöre anlamsız bir dize göstermemeli. */}
-        {active ? `${active.label} ✕` : placeholder}
+        {active ? (
+          <>
+            {active.icon}
+            {`${active.label} ✕`}
+          </>
+        ) : (
+          placeholder
+        )}
       </Chip>
     );
   }
@@ -75,7 +85,9 @@ export function FilterChip<T extends string>({
         open={open}
         onClose={() => setOpen(false)}
         width={menuWidth}
-        className="flex max-h-64 flex-col overflow-y-auto"
+        // 320px: Para'nın yedi hareket tipi (ikonlu, 294px) kaydırmadan sığsın (14.09 — 256px'te yedincisi
+        // görünmüyordu); daha uzun listeler yine kayar.
+        className="flex max-h-80 flex-col overflow-y-auto"
       >
         {options.map((option) => (
           <button
@@ -85,8 +97,9 @@ export function FilterChip<T extends string>({
               onChange(option.value);
               setOpen(false);
             }}
-            className="cursor-pointer px-[13px] py-2.5 text-left font-ops-body text-ops-base text-ops-strong transition-colors hover:bg-ops-subtle"
+            className="flex cursor-pointer items-center gap-2 px-[13px] py-2.5 text-left font-ops-body text-ops-base text-ops-strong transition-colors hover:bg-ops-subtle"
           >
+            {option.icon ? <span className="flex flex-none text-ops-muted">{option.icon}</span> : null}
             {option.label}
           </button>
         ))}

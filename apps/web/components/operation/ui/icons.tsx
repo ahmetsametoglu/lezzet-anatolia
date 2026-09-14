@@ -173,9 +173,12 @@ const NAV_PATHS: Record<NavIconName, ReactNode> = {
   ),
 };
 
-/** Sidebar navigasyon ikonu (16px). */
-export function NavIcon({ name }: { name: NavIconName }) {
-  return <Svg>{NAV_PATHS[name]}</Svg>;
+/**
+ * Sidebar navigasyon ikonu (16px). Aynı çizim başka yerde boyutuyla okunur — Para'nın hareket tipi
+ * ikonları siparişin kolisini, satın almanın sepetini ve paranın € işaretini buradan alır (14.09).
+ */
+export function NavIcon({ name, size = 16 }: { name: NavIconName; size?: number }) {
+  return <Svg size={size}>{NAV_PATHS[name]}</Svg>;
 }
 
 /** Depo (tesis) — bağlam seçicisinde ve satırdaki depo işaretinde. */
@@ -384,5 +387,55 @@ export function WhatsAppIcon({ size = 14 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="stroke-brand-whatsapp" strokeWidth={2} aria-hidden>
       <path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.5A8.4 8.4 0 1 1 21 11.5Z" />
     </svg>
+  );
+}
+
+/** Kapat / vazgeç — ikon düğmede (satır içi düzenlemenin "Vazgeç"i). "✕" glifi satır yüksekliğine göre kayıyordu. */
+export function XIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={2.2}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </Svg>
+  );
+}
+
+/** Geri ok — iade (Para: hareket tipi). */
+export function UndoIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+    </Svg>
+  );
+}
+
+/** Fiş — gider (Para: hareket tipi). */
+export function ReceiptIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+      <path d="M9 8h6M9 12h6" />
+    </Svg>
+  );
+}
+
+/** İki yönlü ok — transfer (Para: hareket tipi; hesaptan hesaba). */
+export function TransferIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <path d="M4 8h14l-4-4" />
+      <path d="M20 16H6l4 4" />
+    </Svg>
+  );
+}
+
+/** Soru işaretli daire — sınıflandırılmamış (Para: hareket tipi; "bu para neyin nesi"). */
+export function QuestionIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .9-1 1.6v.3" />
+      <path d="M12 16.8h.01" />
+    </Svg>
   );
 }
