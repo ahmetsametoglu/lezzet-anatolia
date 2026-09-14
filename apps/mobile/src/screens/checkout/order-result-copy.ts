@@ -5,7 +5,7 @@ import type { CheckoutOrderResult } from '@lezzet/types';
 import type { PaymentSheetOutcome } from '@/lib/payment/payment-sheet';
 import { formatDeliveryDate } from '@/screens/orders/order-format';
 // Yalnız METİN BLOĞUNUN TİPİ için: bu modül sözlüğü okumaz, çağıran geçirir (`address-card` deseni).
-import type messages from './messages.json';
+import type messages from '@lezzet/i18n/customer/checkout';
 
 /*
   RETLERİN CÜMLESİ — sunucunun ADLI cevabı ekranın diline burada çevrilir.

@@ -5,7 +5,7 @@ import type { CartState } from '@/screens/customer-kit/cart-store';
 import { cartView, cartViewLine } from '@/screens/cart/cart-view-fixture';
 import sheetMessages from '@/screens/customer-kit/address-sheet-messages.json';
 import { CheckoutScreen } from './checkout-screen';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/checkout';
 
 /*
   "SİPARİŞİ TAMAMLA" — GELEMEYEN KALEM ENGEL DEĞİL, KAPSAM SORUSU (kullanıcı kararı 10.08).

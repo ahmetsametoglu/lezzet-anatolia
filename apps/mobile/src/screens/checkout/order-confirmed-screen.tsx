@@ -9,7 +9,7 @@ import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { SummaryPanel } from '@/screens/customer-kit/summary-panel';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/checkout';
 import { useOrderNeighborInvite } from './use-neighbor-invite.hook';
 
 /*

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react-native';
 
 import { OrderConfirmedScreen } from './order-confirmed-screen';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/checkout';
 
 /*
   SİPARİŞ ALINDI — NUMARANIN İKİ HÂLİ (27.08 · eski `BEKLEYEN(21.14)`).

@@ -11,6 +11,8 @@ import { Link } from '@/i18n/navigation';
 
   Eylem iki türlü, biri verilir: `onClick` (sayfadaki bir iş) ya da `href` (başka sayfaya gider — `<a>` olarak
   çizilir ki tarayıcı ve arama motoru onu bağ olarak okusun; native'de ikisi de `onPress`).
+  KAPALI hâl native'in çözümü: dolgu `disabled-fill`, metin `disabled-text`, gölge ve basış geri bildirimi YOK (ödeme
+  ekranının onayı engel varken). Kapalı düğme bağ olarak çizilmez — tıklanamayan bir `<a>` olmaz.
   Öteki tonlar (mürekkep · hata), ikonlu ve ipuçlu hâl ilk çağıranlarıyla gelir.
 */
 
@@ -22,19 +24,35 @@ interface PrimaryButtonProps {
   /** Başka sayfaya giden eylem. */
   href?: ComponentProps<typeof Link>['href'];
   shape?: 'pill' | 'block';
+  disabled?: boolean;
 }
 
 const SHAPE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
-  pill: 'inline-flex h-11.5 flex-none rounded-pill active:scale-[0.97]',
-  block: 'flex h-13 w-full rounded-control shadow-hard active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
+  pill: 'inline-flex h-11.5 flex-none rounded-pill',
+  block: 'flex h-13 w-full rounded-control',
 };
 
-export function PrimaryButton({ label, onClick, href, shape = 'pill' }: PrimaryButtonProps) {
+/** Açık hâlin dolgusu ve basış geri bildirimi — gölgeli yüzey kayar, gölgesiz yüzey küçülür. */
+const LIVE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
+  pill: 'cursor-pointer bg-olive text-on-image hover:bg-olive-dark active:scale-[0.97]',
+  block:
+    'cursor-pointer bg-olive text-on-image shadow-hard hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
+};
+
+export function PrimaryButton({ label, onClick, href, shape = 'pill', disabled = false }: PrimaryButtonProps) {
   const className = [
-    'cursor-pointer items-center justify-center bg-olive px-6.5 font-sans text-button text-on-image transition-[scale,translate,box-shadow,background-color] hover:bg-olive-dark',
+    'items-center justify-center px-6.5 font-sans text-button transition-[scale,translate,box-shadow,background-color]',
     SHAPE[shape],
+    disabled ? 'cursor-not-allowed bg-disabled-fill text-disabled-text' : LIVE[shape],
   ].join(' ');
 
+  if (disabled) {
+    return (
+      <button type="button" disabled className={className}>
+        {label}
+      </button>
+    );
+  }
   if (href !== undefined) {
     return (
       <Link href={href} className={className}>

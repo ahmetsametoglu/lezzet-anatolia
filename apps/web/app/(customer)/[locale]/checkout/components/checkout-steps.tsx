@@ -101,8 +101,14 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
   };
 
   return (
-    <div className={['flex flex-wrap items-center gap-x-3 gap-y-1 rounded-soft bg-olive-bg px-4', compact ? 'py-2' : 'py-2.5'].join(' ')}>
-      <span className="inline-flex items-center gap-1.5 font-sans text-note text-olive-dark">
+    <div
+      className={[
+        'flex flex-wrap items-center gap-x-3 gap-y-1',
+        // Telefonda native ödeme ekranının hesap şeridi (kum kutu, kontrol köşe, mürekkep yazı); masaüstünde zeytin künye.
+        compact ? 'rounded-control bg-sand-150 px-3.5 py-3' : 'rounded-soft bg-olive-bg px-4 py-2.5',
+      ].join(' ')}
+    >
+      <span className={['inline-flex items-center gap-1.5 font-sans text-note', compact ? 'font-semibold text-ink' : 'text-olive-dark'].join(' ')}>
         <Icon name="check" size={14} className="flex-none" />
         {t.verify.accountAs.replace('{email}', email)}
       </span>

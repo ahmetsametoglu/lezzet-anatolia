@@ -41,7 +41,7 @@ import { newOrderKey } from './order-key';
 import { deliveryLabelOf, paymentFailureMessage, rejectionMessage } from './order-result-copy';
 import { CheckoutSkeleton } from './checkout-skeleton';
 import { useCheckout } from './use-checkout.hook';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/checkout';
 
 /*
   SİPARİŞİ TAMAMLA (v3 `vCheckout`) — adres · teslimat ve günü · ödeme yolu · özet · onay.

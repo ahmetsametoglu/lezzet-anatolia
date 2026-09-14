@@ -6267,7 +6267,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **786/786** · `@lezzet/design-tokens` birim **30/30** · mobil + web + tokens typecheck temiz · lint temiz.
 
 - [x] (21.117) **`phone_taken` ÖLÜ METNİ SÖKÜLDÜ — sözlük artık olmayan bir kuralı anlatmıyor (04.10 artığı)**
-  · touches: `apps/mobile/src/screens/{profile-setup,checkout,account}/messages.json`, aynı üç ekranın künyeleri
+  · touches: `apps/mobile/src/screens/{profile-setup,account}/messages.json` · ~~`apps/mobile/src/screens/checkout/messages.json`~~ (14.09 → `packages/i18n/src/customer/checkout.json`, ortak sözlük), aynı üç ekranın künyeleri
 
   Web şeridi `04.10`'da kimlik anahtarını taşıdı: `user_profiles.phone` artık **iletişim
   numarasıdır**, kimlik `customer_phone`da (migration 0049). Tekil indeks (`user_profiles_phone_key`)
@@ -14803,7 +14803,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     20/20 · `lint` temiz.
 
 - [x] (21.308) **ADRES DÜZELTME TEKLİFİ NATIVE CHECKOUT'TA — "Siparişi onayla"da bir kez sorulur, kabul kodu + şehri düzeltir; adres satırına uzun basma düzenler** (kullanıcı kararları 10.09: *"Adres formunda adres düzeltme teklifi yapalım"* · *"Üzerine uzun süre basıldığı zaman adres düzenleme açılıyor olması lazım"*; web şeridinin talebi `mobil-adres-dogrulanabilirligi` — `11.11`in native müşteri yarısı; `21.215` bu turla kapandı)
-  `touches:` `apps/mobile/src/lib/api/addresses.ts` · `apps/mobile/src/screens/checkout/checkout-screen.tsx` · `apps/mobile/src/screens/checkout/checkout-screen.test.tsx` · `apps/mobile/src/screens/checkout/messages.json` · `apps/mobile/src/screens/customer-kit/option-row.tsx` · `docs/build/11-kurye-rota.md` · `design/KARARLAR.md`
+  `touches:` `apps/mobile/src/lib/api/addresses.ts` · `apps/mobile/src/screens/checkout/checkout-screen.tsx` · `apps/mobile/src/screens/checkout/checkout-screen.test.tsx` · ~~`apps/mobile/src/screens/checkout/messages.json`~~ (14.09 → `packages/i18n/src/customer/checkout.json`, ortak sözlük) · `apps/mobile/src/screens/customer-kit/option-row.tsx` · `docs/build/11-kurye-rota.md` · `design/KARARLAR.md`
 
   **Durum (10.09) — TAMAM.**
   · **Akış web'in birebir aynısı** (talebin §④'ü · `design/pages/musteri-checkout.md` §4c): "Siparişi

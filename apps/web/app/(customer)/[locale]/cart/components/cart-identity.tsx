@@ -22,6 +22,7 @@ import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { useMyAddresses } from '@/components/customer/delivery/use-my-addresses.hook';
 import addressMessages from '@/components/customer/delivery/address-messages.json';
 import placeMessages from '@/components/customer/delivery/place-messages.json';
+import { addressLine } from '@/lib/address/address-line';
 import { createClient } from '@/lib/supabase/client';
 import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
 import { sendEmailOtp, verifyEmailOtp } from '@/lib/auth/otp-actions';
@@ -204,9 +205,7 @@ function CartAddress({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
       <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{copy.eyebrow}</span>
       {address ? (
         <>
-          <span className="font-sans text-body font-semibold text-ink">
-            {address.line2 ? `${address.line1}, ${address.line2}` : address.line1}, {address.postalCode} {address.city}
-          </span>
+          <span className="font-sans text-body font-semibold text-ink">{addressLine(address)}</span>
           <span className="font-sans text-body-sm leading-[1.6] text-muted">{copy.note}</span>
           <TextAction label={copy.change} onClick={() => setOpen('list')} />
         </>

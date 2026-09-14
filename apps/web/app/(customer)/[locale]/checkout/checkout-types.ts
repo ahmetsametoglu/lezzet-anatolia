@@ -1,12 +1,17 @@
 import type { AddressCheckOutcome } from '@lezzet/application';
 import type { Address, PaymentMethod } from '@lezzet/types';
-import type { Locale } from '@lezzet/i18n';
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+// Ortak ödeme sözlüğü — native ödeme ekranıyla AYNI metin (CLAUDE §2 istisnası, 14.09).
+import type checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { isSplitCart, type CartView } from '@/lib/cart/cart-types';
 import type { CheckoutSnapshot } from './actions';
 import type messages from './messages.json';
 
 /** Sayfa metinleri — şekli JSON'un kendisinden TÜRER, elle interface yazılmaz (CLAUDE.md §2). */
 export type Messages = (typeof messages)['tr'];
+
+/** Telefon görünümünün metni — `@lezzet/i18n/customer/checkout` (web'e özgü cümleler `Messages`ta kalır). */
+export type CheckoutCopy = LocalizedCopy<typeof checkoutMessages>;
 
 /**
  * Üç adımın ortak sözleşmesi. Masaüstü ve mobil AYNI blokları çizer, yalnız yerleşim ayrışır
