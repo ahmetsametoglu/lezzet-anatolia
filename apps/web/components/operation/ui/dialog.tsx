@@ -159,7 +159,9 @@ export function DialogFooter({
           {blockedReason}
         </span>
       ) : null}
-      <Button variant="secondary" onClick={onCancel} disabled={submitting}>
+      {/* Düğmeler KÜÇÜLMEZ ve bölünmez; yer darsa kısalan engel cümlesidir (12.24 · ölçüldü: uzun cümlede
+          "Hareketi kaydet" iki satıra bölünüyordu). */}
+      <Button variant="secondary" onClick={onCancel} disabled={submitting} className="shrink-0 whitespace-nowrap">
         {cancelLabel}
       </Button>
       <Button
@@ -168,6 +170,7 @@ export function DialogFooter({
         form={formId}
         disabled={submitting || Boolean(blockedReason)}
         title={blockedReason ?? undefined}
+        className="shrink-0 whitespace-nowrap"
       >
         {submitting ? 'Kaydediliyor…' : submitLabel}
       </Button>

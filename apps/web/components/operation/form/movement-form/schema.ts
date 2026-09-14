@@ -134,6 +134,26 @@ export function natureAfterChange(options: readonly NatureOption[], type: Manual
   return '';
 }
 
-/** Elle girişin KAPSAMI — "burada olmayan"ı susarak değil cümleyle söylemek (gerekçe gövdede). */
-export const MANUAL_ENTRY_SCOPE =
-  'Sipariş tahsilatları buradan girilmez — online ödeme, kapıda tahsilat ve kurye gün kapanışı kendi akışlarından düşer. Elle giriş gider, transfer ve sermaye içindir.';
+/**
+ * Hareket türü değişince formun yeni hâli (12.24) — yön tipin SONUCUDUR, ayrı bir soru değil: gider
+ * çıkış, sermaye giriştir (motorun kuralı); yalnız `misc` serbest kalır, çünkü banka "para girdi/çıktı"
+ * der, sebebini söylemez. Tür yeni türe ve yöne göre yeniden süzülür (`natureAfterChange`). Tür seçici
+ * iki yerde duruyor — gövdenin kendi seçicisi (asistan kuyruğu) ve Para penceresinin dört kipli seçicisi —
+ * ve ikisi aynı kuralı buradan okur; ayrı yazılsalardı bir gün biri yönü öteki türü unuturdu.
+ */
+export function typePatch(
+  options: readonly NatureOption[],
+  values: Pick<ManualMovementForm, 'direction' | 'nature'>,
+  type: ManualType,
+): Pick<ManualMovementForm, 'type' | 'direction' | 'nature'> {
+  const direction = type === 'expense' ? 'out' : type === 'capital' ? 'in' : values.direction;
+  return { type, direction, nature: natureAfterChange(options, type, direction, values.nature) };
+}
+
+/**
+ * Elle girişin KAPSAMI — "burada olmayan"ı susarak değil cümleyle söylemek: sipariş tahsilatını neden
+ * giremediğini bilmeyen operatör onu "sınıflandırılmadı" diye girer ve sipariş ile para kaydı sessizce
+ * ayrışır. 12.24'ten beri Para penceresinin alt başlığında tek satır; gövdedeki gri kutu kalktı (üç
+ * satır yer tutuyordu ve "transfer" diyordu, transfer ise ayrı bir penceredeydi).
+ */
+export const MANUAL_ENTRY_SCOPE = 'Sipariş tahsilatları burada girilmez — online ödeme, kapıda tahsilat ve kurye gün kapanışı kendi akışlarından düşer.';

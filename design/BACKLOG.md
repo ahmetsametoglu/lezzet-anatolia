@@ -503,7 +503,7 @@ solda, kapalılar en sonda, taşarsa yatay kayar); süzgeç satırında "Hareket
 tıklanınca sağ sütunda hareketin ya da belgenin ayrıntı paneli~~ (12.21: panel kalktı — satırın işi satırda:
 hareketin "Karşılığı" hapı ve ✓'si, belgenin ödeme hapı ve ⋯ menüsü); defter günlere göre gruplu, tutar satırın
 en büyük yazısı ve sağ kenarda, izah bekleyen satırın solunda amber çizgi, eylem menülerinde ikon (12.22); belgeler aylara göre gruplu, belge tutarı büyük ve altında
-renkli açık kalan, açık belgenin solunda amber çizgi (12.23);
+renkli açık kalan, açık belgenin solunda amber çizgi (12.23); elle hareket ve transfer tek pencerede — dört kip, sabit yuvalar (12.24);
 eşleştirme penceresinin yerine tetikleyiciye bağlı seçici menü. Çizim yapılırsa bakılacaklar:
 hareket tipi ikonları (12.20) ve eylem menülerinin ikonları (12.22), şeridin grup başlıkları ve kapalı hesabın sönüklüğü, orta hücrenin dar bütçesinde kesilen adların
 okunurluğu (tür önce, cari iki kat hızlı daralır), "Karşılığı" sütununun hâlleri (öneri · kısmen

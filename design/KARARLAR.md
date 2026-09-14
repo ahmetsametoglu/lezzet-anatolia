@@ -2743,6 +2743,26 @@ Kullanıcı: *"Aynı çalışmayı belgeler tablosu için de yapmanı istiyorum.
 - **Açık belgenin solunda amber, fazla ödenmişin solunda kırmızı çizgi;** sağ uçtaki nokta kalktı. Grup
   başlığı ve kenar hareket listesiyle ortak.
 
+## Para: tek hareket penceresi — dört kip, sabit yuvalar (14.09)
+
+Kullanıcı: *"Bu üç resim de aynı diyalog içerisinde… Farklı formlar ve farklı yerleşimler söz konusu.
+İnput'ların yerleşimleri kötü, gereksiz boş alanlar var. Ayrıca yukarıda transferden bahsediyor fakat
+transfer başka bir form. Bence transferi de doğrudan bu diyaloğun içinde yapabiliriz."* Karar (kullanıcı
+seçimi "sabit yuvalar", 12.24):
+
+- **Tek pencere, dört kip:** Gider · Sermaye · Transfer · Sınıflandırılmadı. Ayrı transfer penceresi
+  kalktı; "Eylemler → Transfer" aynı pencereyi transfer kipinde açar. Belgeden açılan "Ödemesini yaz"da
+  ve tek açık hesapta Transfer kipi çizilmez.
+- **Sabit yuvalar:** satır 1 hesap (transferde "Nereden") · tutar; satır 2 tür (sınıflandırılmamışta
+  "Para ne yaptı", transferde "Nereye") · karşı taraf (transferde kayıttan sonraki bakiyeler); satır 3
+  değer tarihi · açıklama; satır 4 etiketler (yanında gerektiğinde kampanya künyesi). Kip değişince hiçbir
+  kutu yer değiştirmez, yazılan tutar, gün ve açıklama taşınır; pencerenin yüksekliği sabit.
+- **Ayrı pencerenin eski gerekçesi karşılandı:** "tek pencerede 'para ne yaptı' sorusu transferde anlamsız
+  kalır, hesap kutusu ikiye bölünür" — transfer kipinde yön hiç sorulmaz, "Nereden" hesabın yuvasındadır.
+  Gövdeler yine ayrı (şema ve kaydeden kapı ayrı); asistan kuyruğu aynı gövdeleri aynı yuvalarla açar.
+- **Kapsam kutusu kalktı:** "sipariş tahsilatları burada girilmez" alt başlıkta tek satır; kutu üç satır
+  yer tutuyor ve transferden söz ediyordu, transfer ise ayrı penceredeydi.
+
 ## Başlık ve yer paneli v1'in BİREBİR aynısı — önce ülke (13.09, kullanıcı kararı)
 
 Kullanıcı: *"Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."*

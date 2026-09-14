@@ -11,7 +11,6 @@ import type { FinanceViewProps, RowEditor } from './finance-types';
 import { ALL_ACCOUNTS } from './finance-url';
 import { MovementDialog } from './movement-dialog';
 import type { DocumentRowActions, RowMatcher } from './row-actions';
-import { TransferDialog } from './transfer-dialog';
 
 // Para — MASAÜSTÜ (12.17 düzeni, kullanıcı istekleri 13.09 · 12.21):
 //   başlık · bakiye şeridi (= hesap süzgeci; Toplam en solda, gruplu, kapananlar sonda, yatay kayar)
@@ -117,7 +116,8 @@ export function FinanceDesktop({
         <AccountSetup onCreated={onSaved} />
       )}
 
-      {dialog === 'movement' ? (
+      {/* Elle hareket ve transfer TEK pencerede (12.24); "Eylemler → Transfer" onu transfer kipinde açar. */}
+      {dialog === 'movement' || dialog === 'transfer' ? (
         <MovementDialog
           accounts={writableAccounts}
           natureOptions={data.natureOptions}
@@ -126,6 +126,7 @@ export function FinanceDesktop({
           onCreateTag={onCreateTag}
           onClose={onCloseDialog}
           onSaved={onSaved}
+          initialMode={dialog === 'transfer' ? 'transfer' : undefined}
         />
       ) : null}
       {/* "Ödemesini yaz" — aynı elle hareket penceresi, belgeyle DOLU: tutar açık kalan; türü, carisi
@@ -159,7 +160,6 @@ export function FinanceDesktop({
           }}
         />
       ) : null}
-      {dialog === 'transfer' ? <TransferDialog accounts={writableAccounts} onClose={onCloseDialog} onSaved={onSaved} /> : null}
       {dialog === 'document' ? (
         <DocumentDialog
           supplierOptions={data.supplierOptions}

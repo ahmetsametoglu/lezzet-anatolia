@@ -18,7 +18,8 @@ import type { ProposalSubject } from '@/lib/assistant/subject';
  * ── NEDEN AYRI BİR GÖVDE ────────────────────────────────────────────────────
  * `money_movement` tipinin iki hâli var ve ikisi farklı SORU soruyor: elle girişte tek hesap + bir
  * yön, transferde iki hesap ve yön yok. Tek forma sıkıştırmak "para ne yaptı" sorusunu transferde
- * anlamsız bırakırdı (`transfer-dialog` künyesinin kararı, korunuyor).
+ * anlamsız bırakırdı. Para ekranında iki gövde 12.24'ten beri TEK pencerede (kip seçicisinde Transfer),
+ * ama gövdeler yine ayrı: şema ve kaydeden kapı ayrı; ikisi aynı sabit yuvaları kullanır (`MONEY_FORM_GRID`).
  *
  * ── NEDEN ARTIK KUYRUKTA ────────────────────────────────────────────────────
  * Transfer bir tur DIŞARIDA bırakılmıştı: gövde formu açmıyor, karar devre çıkıyordu. Ama ekranda

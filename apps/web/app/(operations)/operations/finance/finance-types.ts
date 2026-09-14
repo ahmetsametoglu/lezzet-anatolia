@@ -286,7 +286,8 @@ export interface FinanceData {
 
 /**
  * Açık diyalog — `null` hiçbiri. `document` belge girişi, `dictionary` tür · cari · etiket sözlüğü
- * (13.09), `bankImport` dosya yükleme (12.10).
+ * (13.09), `bankImport` dosya yükleme (12.10). `movement` ile `transfer` AYNI pencere — ikincisi onu
+ * transfer kipinde açar (12.24).
  */
 export type DialogKind = 'movement' | 'transfer' | 'document' | 'dictionary' | 'bankImport' | null;
 
