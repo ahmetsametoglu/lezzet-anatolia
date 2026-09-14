@@ -1,30 +1,36 @@
 'use client';
 
+import ordersMessages from '@lezzet/i18n/customer/orders';
 import { Link } from '@/i18n/navigation';
-import { Button, buttonClass } from '@/components/customer/ui/button';
-import { ListEmpty } from '@/components/customer/ui/list-empty';
-import { Icon } from '@/components/customer/ui/icons';
-import { LoadMore } from '@/components/customer/ui/load-more';
-import { formatPrice } from '@/lib/storefront/format';
-import { OrderStatusBadge } from './components/order-status-badge';
+import { EmptyState } from '@/components/customer/phone-kit/empty-state';
+import { LoadingState } from '@/components/customer/phone-kit/loading-state';
+import { OrderStatusTag } from '@/components/customer/phone-kit/order-status-tag';
+import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
+import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
+import { DASHED_TOP } from '@/components/customer/phone-kit/settings-card';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
+import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
+import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
+import { useLoadMore } from '@/lib/use-load-more.hook';
 import { ReorderNotice } from './components/reorder-notice';
-// Liste `ReorderButton`ı KULLANMIYOR (meşgul durumu tüm satırlar için tek yerde), ama kelimeler
-// ortak — düğmeyle aynı kaynaktan okunuyor (08.20).
+// Tekrar sipariş düğmesinin kelimeleri masaüstüyle ortak (08.20).
 import reorderCopy from './components/reorder-messages.json';
-import { metaOf, summaryOf } from './orders.desktop';
+import { metaOf } from './orders.desktop';
 import type { OrdersViewProps } from './orders-types';
 
 /**
- * Siparişlerim — mobil (tasarım: "Siparisler Mobil"). Masaüstünün dar hâli DEĞİL, yapıca farklı:
- * satır şerit olmaktan çıkıp **kart** oluyor ve aksiyonlar alta, yan yana iki tam genişlik düğmeye
- * iniyor. Tasarımın notu bunu açıkça istiyor — B2B rutini tek elle yürüyor, "↻ Tekrar sipariş"
- * kartın en erişilebilir aksiyonu olmalı.
+ * Siparişlerim — telefon görünümü, native "Siparişlerim" ekranının (`apps/mobile/src/screens/orders/orders-screen.tsx`)
+ * web ikizi (14.09 · 08.58 Faz 1). Başlık çerçevede (‹ · HESABIM · büyük başlık, native'in yığın ekranı başlığı); gövde
+ * native'in kartı: kum zemin · numara + künye (tarih · kalem) · eğik durum rozeti · küçük resim yığını ve "+N" · kesikli
+ * ayraç · tutar ve "Detay ›". Kartın tamamı detaya gider (native'de de tek dokunma hedefi). Metin ortak sipariş
+ * sözlüğünden (`@lezzet/i18n/customer/orders`).
  *
- * Tutar da özet satırının içine giriyor ("22 Tem 2026 · 3 kalem · 103,20 €"): dar ekranda ayrı bir
- * tutar sütunu, adı kırpardı.
+ * Kuyruk native'in üç hâli: yükleniyor · devamı gelmedi (tekrar dene) · hepsi gösterildi. Sona yaklaşınca kendiliğinden
+ * yükler (`useLoadMore`); otomatik tur sınırı dolunca web'in "daha eski siparişler" düğmesi çıkar.
  *
- * Özet metni masaüstüyle AYNI fonksiyondan geliyor (`summaryOf`) — iki kopya, bir gün ayrışan iki
- * cümle demekti. Farklılaşan tek şey `compact` (kısa ay adı).
+ * Web'e özgü korunanlar: ödemesi beklenen kart siparişi (07.18, listenin başında, liste boşken de) · tekrar sipariş
+ * (native'de ucu yok, web'de var — kartın alt satırında metin eylemi; sonucu kartın altında açılır).
  */
 export function OrdersMobile({
   t,
@@ -34,96 +40,118 @@ export function OrdersMobile({
   nextCursor,
   loadingMore,
   onLoadMore,
+  tailFailed,
   busyOrderId,
   onReorder,
   notice,
   onDismissNotice,
 }: OrdersViewProps) {
-  // Ödemesi beklenen kart siparişi (07.18) — listenin başında, liste boşken de (masaüstüyle aynı kural).
-  // Kart kabuğu listeninki, tonu dikkat (bal); tek eylemi ödemenin sayfası.
+  const copy = ordersMessages[locale];
+  // Kuyruk düştüyse otomatik yol kapanır: aynı düşen sayfa art arda istenmesin, söz "tekrar dene"ye geçer.
+  const { ref, autoActive, loadMore } = useLoadMore({ hasMore: nextCursor !== null && !tailFailed, loading: loadingMore, onLoadMore });
+
+  // Ödemesi beklenen kart siparişi (07.18) — dikkat tonu (bal), tek eylemi ödemenin sayfası.
   const awaiting = awaitingPayment && (
-    <div className="flex flex-col gap-2 rounded-[16px] border border-honey-line bg-honey-bg p-3.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-sans text-note font-bold leading-tight text-honey">{t.awaitingPayment.title}</span>
-        <span className="flex-none font-sans text-note font-bold leading-tight text-ink">{formatPrice(awaitingPayment.totalCents, locale)}</span>
+    <section className="flex flex-col gap-2.5 rounded-card border border-honey-line bg-honey-bg px-4 py-3.5">
+      <div className="flex items-center justify-between gap-2.5">
+        <span className="min-w-0 truncate font-sans text-body-sm font-bold text-honey">{t.awaitingPayment.title}</span>
+        <span className="flex-none font-sans text-step-sm text-ink">{formatPrice(awaitingPayment.totalCents, locale)}</span>
       </div>
-      <span className="font-sans text-micro leading-relaxed text-muted">
+      <p className="font-sans text-helper leading-[1.6] text-muted">
         {[...metaOf(awaitingPayment, t, locale, true), t.awaitingPayment.note].join(' · ')}
-      </span>
-      <Link
+      </p>
+      <PrimaryButton
+        shape="block"
+        label={t.awaitingPayment.cta}
         href={{ pathname: '/checkout/[reference]', params: { reference: awaitingPayment.orderId } }}
-        className={buttonClass({ variant: 'primary', size: 'sm', compact: true, fullWidth: true })}
-      >
-        {t.awaitingPayment.cta}
-      </Link>
-    </div>
+      />
+    </section>
   );
 
   if (orders.length === 0) {
     return (
-      // Boş hâl KALAN ALANIN 4:6 noktasında (native kuralı, 16.08 — salt ortalama gözün üstünde
-      // durur; footer'sız kısa sayfada üstte asılı buton altında krem bir deniz bırakıyordu).
-      <div className="flex flex-1 flex-col px-4 py-8">
+      <div className="flex flex-1 flex-col gap-3 px-4.5 pb-5">
         {awaiting}
-        <span className="flex-[2]" aria-hidden="true" />
-        <ListEmpty icon="box"title={t.empty.title} body={t.empty.body} action={{ label: t.empty.cta, href: '/catalog' }} />
-        <span className="flex-[3]" aria-hidden="true" />
+        <EmptyState
+          fill
+          icon={<MobileIcon name="orders" size={80} className="text-sand-600" />}
+          title={copy.empty.title}
+          description={copy.empty.body}
+          action={<PrimaryButton href="/catalog" label={copy.empty.cta} />}
+        />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2.5 px-4 py-4">
+    <div className="flex flex-col gap-3 px-4.5 pb-5">
       {awaiting}
-      {orders.map((order) => (
-        <div key={order.id} className="flex flex-col gap-2">
-          <div
-            className={[
-              'flex flex-col gap-2 rounded-[16px] bg-card p-3.5',
-              order.active ? 'border-[1.5px] border-olive' : 'border border-sand-200',
-            ].join(' ')}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-sans text-note font-bold leading-tight text-ink">{order.referenceNo ?? '—'}</span>
-              <OrderStatusBadge t={t} status={order.status} compact />
-            </div>
+      {orders.map((order) => {
+        const reference = order.referenceNo ?? '—';
+        return (
+          <div key={order.id} className="flex flex-col gap-2">
+            <article className="relative flex flex-col gap-2.5 rounded-card bg-sand-250 px-4 py-3.5 transition-opacity active:opacity-80">
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  {/* Kartın tamamı bu bağın dokunma alanı (`after` katmanı); ekran okuyucuya tek satır gider. */}
+                  <Link
+                    href={{ pathname: '/orders/[reference]', params: { reference: order.id } }}
+                    aria-label={copy.row.open.replace('{reference}', reference)}
+                    className="cursor-pointer font-sans text-body-sm font-bold text-ink after:absolute after:inset-0 after:rounded-card after:content-['']"
+                  >
+                    {reference}
+                  </Link>
+                  <span className="font-sans text-helper text-muted">
+                    {copy.row.meta.replace('{date}', formatOrderDate(order.createdAt, locale, true)).replace('{count}', String(order.itemCount))}
+                  </span>
+                </div>
+                <OrderStatusTag status={order.status} label={copy.status[order.status]} />
+              </div>
 
-            <span className="font-sans text-micro leading-relaxed text-muted">
-              {summaryOf(order, t, locale, true)} · {formatPrice(order.totalCents, locale)}
-            </span>
+              {order.thumbs.length > 0 && (
+                <ThumbStack
+                  items={order.thumbs.map((thumb, index) => ({ key: `${thumb.name}-${index}`, name: thumb.name, image: thumb.image }))}
+                  more={order.moreCount > 0 ? copy.row.more.replace('{n}', String(order.moreCount)) : undefined}
+                />
+              )}
 
-            <div className="flex gap-2">
-              <Button
-                variant="outlineOlive"
-                size="sm"
-                compact
-                fullWidth
-                disabled={busyOrderId !== null}
-                onClick={() => onReorder(order.id)}
-              >
-                {busyOrderId !== order.id && <Icon name="refresh" size={14} />}
-                {busyOrderId === order.id ? reorderCopy[locale].reordering : reorderCopy[locale].reorder}
-              </Button>
-              <Link
-                href={{ pathname: '/orders/[reference]', params: { reference: order.id } }}
-                className={buttonClass({ variant: order.active ? 'primary' : 'outlineOlive', size: 'sm', compact: true, fullWidth: true })}
-              >
-                {t.detail}
-              </Link>
-            </div>
+              <div className={`flex items-center justify-between gap-2.5 pt-2.5 ${DASHED_TOP}`}>
+                <span className="font-sans text-step-sm text-ink">{formatPrice(order.totalCents, locale)}</span>
+                <div className="flex items-center gap-3.5">
+                  {/* Tekrar sipariş web'e özgü; kartın bağının ÜSTÜNDE durur (`z-10`), bağın katmanı onu yutmasın. */}
+                  <span className="relative z-10">
+                    <TextAction
+                      label={busyOrderId === order.id ? reorderCopy[locale].reordering : reorderCopy[locale].reorder}
+                      onClick={() => onReorder(order.id)}
+                    />
+                  </span>
+                  {/* Kart zaten basılabilir; bu yazı düğme değil, nereye gidileceğini söyleyen işaret (native). */}
+                  <span aria-hidden className="font-sans text-control text-terracotta">
+                    {copy.row.detail}
+                  </span>
+                </div>
+              </div>
+            </article>
+
+            {notice?.orderId === order.id && <ReorderNotice t={t} notice={notice} onDismiss={onDismissNotice} compact />}
           </div>
+        );
+      })}
 
-          {notice?.orderId === order.id && <ReorderNotice t={t} notice={notice} onDismiss={onDismissNotice} compact />}
+      {nextCursor === null ? (
+        <p className="pt-2.5 text-center font-sans text-body-sm text-muted">{copy.list.end}</p>
+      ) : (
+        // Nöbetçi her hâlde yerinde kalır: gözlemci bir kez kurulur (`useLoadMore` künyesi).
+        <div ref={ref} className="flex justify-center pt-2.5">
+          {loadingMore ? (
+            <LoadingState label={copy.list.loading} />
+          ) : tailFailed ? (
+            <PrimaryButton label={copy.list.tailRetry} onClick={loadMore} />
+          ) : autoActive ? null : (
+            <SecondaryButton label={t.loadMore} shape="pill" onClick={loadMore} />
+          )}
         </div>
-      ))}
-
-      <LoadMore
-        hasMore={nextCursor !== null}
-        loading={loadingMore}
-        onLoadMore={onLoadMore}
-        label={t.loadMore}
-        loadingLabel={t.loading}
-      />
+      )}
     </div>
   );
 }

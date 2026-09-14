@@ -3,7 +3,7 @@
 import type { PaymentMethod } from '@lezzet/types';
 import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { Chip } from '@/components/customer/phone-kit/chip';
-import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
+import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
 import { Note } from '@/components/customer/phone-kit/note';
 import { OptionRow } from '@/components/customer/phone-kit/option-row';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
@@ -48,8 +48,7 @@ import { checkoutBlocker, type CheckoutCopy, type CheckoutViewProps } from './ch
  * · Masaüstünün ilerleme şeridi telefonda yok — native'de karşılığı yok.
  */
 
-/** Kahraman satırının küçük resimleri — native `AvatarThumb` `sm` + `stacked` (40'lık daire, en fazla dört). */
-const THUMB_SIZE = 40;
+/** Kahraman satırının küçük resimleri — en fazla dört; yığın kitte (`ThumbStack`, native `AvatarThumb` `stacked`). */
 const THUMB_LIMIT = 4;
 
 /** Ödeme satırı — native `payOpts()`; havale iki kez geçebilir (peşin ⟷ vadeli), yöntem anahtar olamaz. */
@@ -185,21 +184,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
       <div className="flex flex-col gap-4 px-4.5 pt-4.5">
         <div className="flex items-center gap-3">
           <h1 className="min-w-0 flex-1 font-serif text-page-title-sm leading-[1.15] text-ink">{copy.hero}</h1>
-          {thumbs.length > 0 && (
-            <div className="flex flex-none pl-2.5">
-              {thumbs.map((line) => (
-                <CirclePhoto
-                  key={cartKey(line)}
-                  image={line.image}
-                  initial={line.name.slice(0, 1)}
-                  size={THUMB_SIZE}
-                  // Yığın: her daire 10 sola kayar ve sayfa zemininde halka taşır (native `stacked`).
-                  className="-ml-2.5 rounded-full border-[2.5px] border-sand-50"
-                  initialClassName="text-card-title-sm text-muted"
-                />
-              ))}
-            </div>
-          )}
+          {thumbs.length > 0 && <ThumbStack items={thumbs.map((line) => ({ key: cartKey(line), name: line.name, image: line.image }))} />}
         </div>
 
         <ShippingOrderNote {...props} />

@@ -28,6 +28,11 @@ export interface OrdersViewProps {
   nextCursor: KeysetCursor | null;
   loadingMore: boolean;
   onLoadMore: () => void;
+  /**
+   * Devam sayfası gelmedi — satırlar yerinde kalır, telefon görünümü kuyrukta "tekrar dene" çizer (native'in ayrımı:
+   * "hiç veri yok" ≠ "devamı gelmedi"). Masaüstü okumuyor; düğmesi zaten her hâlde duruyor.
+   */
+  tailFailed: boolean;
   /** Hangi siparişin tekrar sipariş isteği uçuyor (düğme o satırda beklemeye geçer). */
   busyOrderId: string | null;
   onReorder: (orderId: string) => void;

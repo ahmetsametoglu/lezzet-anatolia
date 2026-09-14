@@ -33,6 +33,7 @@ export function OrdersClient({ t, locale, first, device }: OrdersClientProps) {
   const [extra, setExtra] = useState<CustomerOrderSummary[]>([]);
   const [cursor, setCursor] = useState(first.nextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [tailFailed, setTailFailed] = useState(false);
   const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
   const [notice, setNotice] = useState<ReorderNotice | null>(null);
 
@@ -41,10 +42,15 @@ export function OrdersClient({ t, locale, first, device }: OrdersClientProps) {
   const onLoadMore = () => {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
+    setTailFailed(false);
     void loadMoreOrdersAction(locale, cursor)
       .then(({ data: page, errorKey }) => {
-        // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
-        if (errorKey || !page) return;
+        // Hata listeyi düşürmez: satırlar yerinde kalır, kuyruk yeniden denenebilir (sunucu = gerçek). Telefon
+        // görünümü bunu "devamı gelmedi — tekrar dene" diye söyler (native'in ayrımı).
+        if (errorKey || !page) {
+          setTailFailed(true);
+          return;
+        }
         setExtra((prev) => [...prev, ...page.orders]);
         setCursor(page.nextCursor);
       })
@@ -75,6 +81,7 @@ export function OrdersClient({ t, locale, first, device }: OrdersClientProps) {
     nextCursor: cursor,
     loadingMore,
     onLoadMore,
+    tailFailed,
     busyOrderId,
     onReorder,
     notice,
