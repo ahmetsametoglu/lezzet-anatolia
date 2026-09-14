@@ -3626,7 +3626,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
 - [x] (21.67) **ASGARİ SEPET UYARISI KARARIN VERİLDİĞİ YERDE (kullanıcı bulgusu 16.08)**
   `touches:` `apps/mobile/src/screens/cart/cart-screen.tsx` · `apps/mobile/src/screens/cart/messages.json` ·
-  `apps/mobile/src/screens/product/product-detail-screen.tsx` · `apps/mobile/src/screens/product/messages.json`
+  `apps/mobile/src/screens/product/product-detail-screen.tsx` · `packages/i18n/src/customer/product.json`
 
   Kullanıcı: *"Sepet hazırken müşteriyi asgari sepet için uyarmıyoruz, ödemeye kalkınca
   uyarıyoruz."* **Ölçüm bunu KISMEN çürüttü ve asıl kusuru gösterdi** (cihazda, OPPO CPH1907):
@@ -14748,7 +14748,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   girişinin dönüşü reddedilir, geliştirme girişi etkilenmez. Logodaki yazı görsel dosyada.
 
 - [x] (21.306) **"GELİNCE HABER VER" GERÇEK KAYDA BAĞLANDI — tükendi barı `variant_stock_notice`a yazıyor, "yakında yeniden gelecek" sözü kalktı; haberi gönderen yapı web'e not** (kullanıcı kararları 10.09: *"Stok gelince haber ver konusundaki açıkları giderelim"* · *"Yakında gelecek konusu da çok doğru bir ifade değil"* · *"arka tarafta tamamlandıysa haber gönderen yapıyı kurmak için web tarafına not düşelim"*)
-  `touches:` `packages/types/src/contracts/place-api.schema.ts` · `packages/application/src/delivery/notice.ts` · `packages/application/src/index.ts` · `packages/database/src/testing/cleanup.ts` · `apps/mobile-api/src/api/v1/stock-notices.ts` · `apps/mobile-api/src/api/v1/stock-notices.test.ts` · `apps/mobile-api/src/api/v1/router.ts` · `apps/mobile-api/src/api/v1/router.test.ts` · `apps/mobile/src/lib/api/stock-notices.ts` · `apps/mobile/src/screens/customer-kit/notice-sheet.tsx` · `apps/mobile/src/screens/customer-kit/place-notice-sheet.tsx` · `apps/mobile/src/screens/product/product-detail-screen.tsx` · `apps/mobile/src/screens/product/product-detail-screen.test.tsx` · `apps/mobile/src/screens/product/messages.json` · `design/KARARLAR.md`
+  `touches:` `packages/types/src/contracts/place-api.schema.ts` · `packages/application/src/delivery/notice.ts` · `packages/application/src/index.ts` · `packages/database/src/testing/cleanup.ts` · `apps/mobile-api/src/api/v1/stock-notices.ts` · `apps/mobile-api/src/api/v1/stock-notices.test.ts` · `apps/mobile-api/src/api/v1/router.ts` · `apps/mobile-api/src/api/v1/router.test.ts` · `apps/mobile/src/lib/api/stock-notices.ts` · `apps/mobile/src/screens/customer-kit/notice-sheet.tsx` · `apps/mobile/src/screens/customer-kit/place-notice-sheet.tsx` · `apps/mobile/src/screens/product/product-detail-screen.tsx` · `apps/mobile/src/screens/product/product-detail-screen.test.tsx` · `packages/i18n/src/customer/product.json` · `design/KARARLAR.md`
 
   **Durum (10.09) — TAMAM.**
   · **Ölçülen açık:** native düğme yalnız ekrandaki bir bayrağı çeviriyordu, hiçbir şey yazmıyordu —

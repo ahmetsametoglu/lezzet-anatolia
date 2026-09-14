@@ -34,7 +34,8 @@ import { NoticeSheet, type NoticeSheetCopy } from '@/screens/customer-kit/notice
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-import messages from './messages.json';
+// Ekranın metni iki yüzeyin ortak malı (14.09): web'in telefon ürün sayfası da aynı sözlüğü okur.
+import messages from '@lezzet/i18n/customer/product';
 import { ProductSkeleton } from './product-skeleton';
 import { useProduct } from './use-product.hook';
 
