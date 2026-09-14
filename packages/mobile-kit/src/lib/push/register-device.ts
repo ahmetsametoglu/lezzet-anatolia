@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import type { PushApp } from '@lezzet/types';
 
 import { registerPushDevice, removePushDevice } from '../api/notifications';
 import { deviceStore, DEVICE_STORE_KEYS } from '../storage/device-store';
@@ -24,8 +25,11 @@ import { pushNative } from './native-module';
   (aynı satırların öteki kanalı) çalışmaya devam eder.
 */
 
-/** İzin isteme + jeton alma + sunucuya yazma. Oturum AÇIKKEN çağrılır (hook karar verir). */
-export async function ensurePushRegistration(): Promise<void> {
+/**
+ * İzin isteme + jeton alma + sunucuya yazma. Oturum AÇIKKEN çağrılır (hook karar verir). `app`: jetonun
+ * geldiği native uygulama (21.311) — sunucu müşteri gönderiminde yalnız `customer` jetonlarını okur.
+ */
+export async function ensurePushRegistration(app: PushApp): Promise<void> {
   if (Platform.OS !== 'ios' && Platform.OS !== 'android') return;
 
   // Modül binary'de yoksa kayıt hiç denenmez — kapı `pushNative` (künyesi orada): statik import
@@ -48,7 +52,7 @@ export async function ensurePushRegistration(): Promise<void> {
     const enabled = permission.granted;
 
     const token = (await Notifications.getExpoPushTokenAsync()).data;
-    const result = await registerPushDevice({ token, platform: Platform.OS, enabled });
+    const result = await registerPushDevice({ token, platform: Platform.OS, app, enabled });
     if (result.error === null) {
       // Çıkışta silinebilsin diye saklanır — jeton kalırsa önceki hesabın bildirimi sonrakine düşer.
       await deviceStore.setItem(DEVICE_STORE_KEYS.pushToken, token);

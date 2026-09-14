@@ -16,6 +16,11 @@ create table public.push_device (
   -- 'ios' | 'android' — 'web' BİLEREK yok (KARARLAR 26.08: müşteri yüzeyinde web push yapılmıyor;
   -- gün gelir açılırsa değer eklemek yeter). Kısıt veride: yanlış platform sessizce yazılamaz.
   platform text not null check (platform in ('ios', 'android')),
+  -- HANGİ UYGULAMANIN jetonu (21.311): müşteri ve operasyon iki ayrı native uygulama. Aynı kişi ikisini
+  -- de kurabilir ve her kurulumun jetonu ayrıdır; kolon olmasaydı müşteri bildirimi personelin
+  -- operasyon uygulamasına da düşerdi. Varsayılan YOK: hangi uygulamadan geldiğini söylemeyen kayıt
+  -- yazılamaz (sessiz yanlış sınıflama, kolonun hiç olmamasından kötüdür).
+  app text not null check (app in ('customer', 'operations')),
   -- Uygulamanın OS bildirim İZNİ raporu (kurgu incelemesi 10. bulgu): izin kapatıldığında jeton
   -- CANLI kalır ve Expo "gönderdim" der ama kullanıcı hiçbir şey görmez — sessiz kara delik.
   -- Uygulama her açılışta izni raporlar; kapalıysa sürücü bu cihazı YETENEKSİZ sayar ve sıra
@@ -39,6 +44,8 @@ comment on table public.push_device is
   'değiştirir (logout devri — önceki hesabın bildirimi sonrakine düşmesin). Kişisel veri: 0037 siler.';
 comment on column public.push_device.disabled_at is
   'OS bildirim izni kapalı (uygulamanın açılış raporu). Dolu ise sürücü cihazı yeteneksiz sayar.';
+comment on column public.push_device.app is
+  'Jetonun geldiği native uygulama (21.311): customer · operations. Müşteri gönderimi yalnız customer jetonlarını okur.';
 
 -- ─── Kayıt/tazeleme — SAHİP DEVRİ tek deyimde ────────────────────────────────
 -- Aile telefonunda A çıkar B girer: B'nin kaydı aynı jetonu getirir. "Önce sil sonra yaz" iki
@@ -50,6 +57,7 @@ create or replace function public.register_push_device(
   p_profile_id uuid,
   p_token text,
   p_platform text,
+  p_app text,
   p_enabled boolean
 )
 returns setof public.push_device
@@ -57,18 +65,19 @@ language sql
 security definer
 set search_path = public
 as $$
-  insert into public.push_device (profile_id, token, platform, disabled_at)
-  values (p_profile_id, p_token, p_platform, case when p_enabled then null else now() end)
+  insert into public.push_device (profile_id, token, platform, app, disabled_at)
+  values (p_profile_id, p_token, p_platform, p_app, case when p_enabled then null else now() end)
   on conflict (token) do update
     set profile_id  = excluded.profile_id,
         platform    = excluded.platform,
+        app         = excluded.app,
         disabled_at = excluded.disabled_at,
         last_seen_at = now()
   returning *;
 $$;
 
-revoke all on function public.register_push_device(uuid, text, text, boolean) from public, anon, authenticated;
-grant execute on function public.register_push_device(uuid, text, text, boolean) to service_role;
+revoke all on function public.register_push_device(uuid, text, text, text, boolean) from public, anon, authenticated;
+grant execute on function public.register_push_device(uuid, text, text, text, boolean) to service_role;
 
-comment on function public.register_push_device(uuid, text, text, boolean) is
+comment on function public.register_push_device(uuid, text, text, text, boolean) is
   'Jeton kaydı/tazelemesi (14.14) — çakışmada SAHİBİ DEVREDER (son giren kazanır: cihaz onun elinde).';

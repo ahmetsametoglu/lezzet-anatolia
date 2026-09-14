@@ -222,9 +222,11 @@ describe('müşteri kapısı', () => {
 describe('jeton doldurma (14.16)', () => {
   it('kayıtlı cihazın jetonu SÜRÜCÜYE ulaşır — beş çağıranın hiçbiri jeton bilmez', async () => {
     const id = await musteri('Cihazlı', `bild-cihaz-${stamp}@ornek.test`);
-    await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}]`, platform: 'android', enabled: true });
+    await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}]`, platform: 'android', app: 'customer', enabled: true });
     // İzni kapalı ikinci cihaz LİSTEYE HİÇ GİRMEMELİ (süzgeç serviste, kapıda değil).
-    await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}-kapali]`, platform: 'ios', enabled: false });
+    await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}-kapali]`, platform: 'ios', app: 'customer', enabled: false });
+    // Aynı kişinin OPERASYON uygulamasındaki jetonu müşteri bildirimini ALMAZ (21.311).
+    await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}-operasyon]`, platform: 'android', app: 'operations', enabled: true });
 
     const goren: string[][] = [];
     const casus: NotifyDriver = {
@@ -241,7 +243,7 @@ describe('jeton doldurma (14.16)', () => {
       { notifier: createNotifier([casus]) },
     );
 
-    expect(goren[0]).toEqual([`ExponentPushToken[disp-${stamp}]`]); // kapalı cihaz görünmedi
+    expect(goren[0]).toEqual([`ExponentPushToken[disp-${stamp}]`]); // kapalı cihaz da operasyon jetonu da görünmedi
   });
 });
 

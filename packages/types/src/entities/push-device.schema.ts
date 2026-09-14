@@ -16,12 +16,21 @@ import { z } from 'zod';
 export const PushPlatformEnum = z.enum(['ios', 'android']);
 export type PushPlatform = z.infer<typeof PushPlatformEnum>;
 
+/**
+ * Jetonun geldiği native uygulama (21.311) — müşteri ve operasyon ayrı uygulamalar; aynı kişinin iki
+ * kurulumu iki ayrı jetondur. Müşteri gönderimi yalnız `customer` jetonlarını okur.
+ */
+export const PushAppEnum = z.enum(['customer', 'operations']);
+export type PushApp = z.infer<typeof PushAppEnum>;
+
 export const PushDeviceSchema = z.object({
   id: z.string().uuid(),
   /** Sahip — müşteri de personel de (operasyon kabuğu da push alacak; ad bu yüzden `profileId`). */
   profileId: z.string().uuid(),
   token: z.string(),
   platform: PushPlatformEnum,
+  /** Jetonun geldiği uygulama (21.311); varsayılanı yok — kayıt uygulamasını söylemek zorunda. */
+  app: PushAppEnum,
   /** OS bildirim izni kapalı (uygulamanın açılış raporu) — dolu ise sürücü cihazı yeteneksiz sayar. */
   disabledAt: z.string().datetime({ offset: true }).nullable(),
   /** Bakım damgası ("bu kayıt bayat mı") — karşılaştırılan bir ölçüt değil. */
@@ -31,7 +40,7 @@ export const PushDeviceSchema = z.object({
 export type PushDevice = z.infer<typeof PushDeviceSchema>;
 
 /** Yazım tek kapıdan (RPC `register_push_device`) — elle insert yolu bilerek dar. */
-export const PushDeviceInsertSchema = PushDeviceSchema.pick({ profileId: true, token: true, platform: true });
+export const PushDeviceInsertSchema = PushDeviceSchema.pick({ profileId: true, token: true, platform: true, app: true });
 export type PushDeviceInsert = z.infer<typeof PushDeviceInsertSchema>;
 
 /** Güncellenebilen tek şey izin/bakım hâli — kimlik ve jeton değişmez (devir RPC'nin işi). */

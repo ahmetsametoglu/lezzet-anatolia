@@ -14944,9 +14944,32 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     depo, supabase, zod birer kopya; Unistyles'ı içe aktarmayan kit bileşeninde de (`frame-image`) RN `Image` izlenen
     bileşene çevrildi.
 
-- [ ] (21.311) **PUSH JETONU HANGİ UYGULAMANIN — `push_device.app` ('customer' | 'operations')** (21.310'dan ayrıldı 14.09; kullanıcı kararı: arka-uç kısmına bu şerit dokunur)
+- [x] (21.311) **PUSH JETONU HANGİ UYGULAMANIN — `push_device.app` ('customer' | 'operations')** (21.310'dan ayrıldı 14.09; kullanıcı kararı: arka-uç kısmına bu şerit dokunur)
   `touches:` `supabase/migrations/0050_push_device.sql` · `packages/types/src/entities/push-device.schema.ts` · `packages/database/src/services/push-device.service.ts` · `packages/application/src/notification/devices.ts` · `packages/application/src/notification/dispatch.ts` · `apps/mobile-api/src/api/v1/notifications.ts` · iki uygulamanın kayıt kapısı
   Gerekçe: iki uygulama aynı hesaba jeton yazınca müşteri bildirimi operasyon uygulamasına da düşerdi. Jeton
   toplayan tek yer müşteri gönderimi (`dispatch.ts`) — yalnız `app='customer'` jetonları alır. Kayıt ucu
   `app` alanını taşır; RPC `register_push_device` bir parametre kazanır. `db:refresh` kullanıcının kararı.
   Web şeridinin 14.17'si aynı dosyaya `platform='web'` ekleyecek: web aboneliği `app='customer'`.
+
+  **Durum (14.09) — TAMAM; `db:refresh` sonrası kilitli kök pakette push testleri geçti.**
+  · `0050_push_device.sql`: `app` kolonu (`customer` · `operations`, varsayılansız, kısıt veride); kayıt RPC'si
+    `p_app` alıyor ve çakışmada uygulamayı da devrediyor. Tip `PushAppEnum`
+    (`packages/types/src/entities/push-device.schema.ts`); servis ve kapı uygulama istiyor; müşteri gönderimi
+    yalnız `customer` jetonlarını okuyor (`packages/application/src/notification/dispatch.ts`).
+  · Uç `POST /api/v1/me/push-devices` gövdede `app` istiyor, eksikse 400. Kit kaydı uygulamayı parametre alıyor
+    (`packages/mobile-kit/src/lib/push/use-push-registration.hook.ts`); müşteri kökü `customer` veriyor, operasyon
+    uygulaması kurulunca `operations` verecek.
+  · Testler: gönderim testi aynı kişinin operasyon jetonunun müşteri bildirimini ALMADIĞINI iddia ediyor; uç testine
+    iki uygulamanın süzgeci ve uygulamasız kaydın reddi eklendi; makbuz ve kanca testleri güncellendi.
+  · Veri modeli: `app` satırı türetildi (`pnpm docs:sync`), karar maddesi `data-model/iletisim-geribildirim.md`de.
+  · Web'e haber: push kurulum talebinin (`mobil-native-push-kurulumu`) cevabına yazıldı — kayıt ucu değişti,
+    tarayıcı aboneliği `app='customer'`.
+  · Hazırlık ayrı çalışma kopyasında yapıldı; ana ağaca `db:refresh` penceresinde yazıldı: çalışan sunucular yeni
+    kolonu ancak tazelemeden sonra bulur.
+  · **Doğrulama (DB'siz):** kök `typecheck` 22/22 · birim 2276/2276 · kit jest 184/186 (iki düşüş önceden var) ·
+    uygulama jest 1403/1403 · `lint` · `docs:check`.
+  · **Doğrulama (tam paket, refresh sonrası):** kilitli kök paket 4682/4684. Refresh öncesi koşuda sütun ve kayıt
+    fonksiyonu eksikti; o koşuda düşen 15 push, gönderim ve bildirim zinciri testinin hepsi geçti. Kalan iki düşüş
+    bu işin dışında: `geocode-scan.write.test.ts` (`expired` alanı 486bbf6a ile geldi, test güncellenmedi; arka-uca
+    not açık) ve `cart-route.test.ts` (refresh öncesi koşuda geçmişti; iki koşu arasında paketlerde kaynak dosya
+    değişmedi).

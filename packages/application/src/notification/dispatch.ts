@@ -112,7 +112,8 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
     meta.inApp && input.customerId
       ? {
           ...input.recipient,
-          pushTokens: await listSendablePushTokens(db, input.customerId),
+          // Müşteri bildirimi yalnız MÜŞTERİ uygulamasının jetonlarına gider (21.311).
+          pushTokens: await listSendablePushTokens(db, input.customerId, 'customer'),
           // Dokunuşun adresi — bildirime basan kullanıcı doğru ekrana insin (sürücü künyesi).
           pushData: {
             kind: input.event,

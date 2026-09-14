@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
+import type { PushApp } from '@lezzet/types';
 
 import { getSupabase } from '../auth/supabase';
 import { ensurePushRegistration } from './register-device';
@@ -30,12 +31,13 @@ import { ensurePushRegistration } from './register-device';
 /** Öne gelişte kaydı tazeleme aralığı — parametrik (CLAUDE §4); talep "günde bir yeter" diyor. */
 export const PUSH_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-export function usePushRegistration(): void {
+/** `app`: jetonun geldiği native uygulama (21.311) — her uygulama kökü kendi adını verir. */
+export function usePushRegistration(app: PushApp): void {
   useEffect(() => {
     let lastAttemptAt = 0;
     const attempt = () => {
       lastAttemptAt = Date.now();
-      void ensurePushRegistration();
+      void ensurePushRegistration(app);
     };
     attempt();
 
@@ -60,5 +62,5 @@ export function usePushRegistration(): void {
       // Nesnenin KENDİSİ tutuluyor, metodu değil: `unsubscribe` `this`e bağlı olabilir.
       authSubscription?.unsubscribe();
     };
-  }, []);
+  }, [app]);
 }

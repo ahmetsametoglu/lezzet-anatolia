@@ -8,8 +8,8 @@ import { AppState, type AppStateStatus } from 'react-native';
   "etkin değil" saydırırdı (`push_device.last_seen_at`).
 */
 
-const mockEnsure = jest.fn(async () => undefined);
-jest.mock('./register-device', () => ({ ensurePushRegistration: () => mockEnsure() }));
+const mockEnsure = jest.fn(async (_app: string) => undefined);
+jest.mock('./register-device', () => ({ ensurePushRegistration: (app: string) => mockEnsure(app) }));
 
 let mockAuthListener: ((event: string) => void) | null = null;
 const mockUnsubscribe = jest.fn();
@@ -57,13 +57,13 @@ async function comeToForeground(afterMs: number) {
 
 describe('usePushRegistration', () => {
   it('ilk karede kaydolur', async () => {
-    await renderHook(() => usePushRegistration());
+    await renderHook(() => usePushRegistration('customer'));
 
     expect(mockEnsure).toHaveBeenCalledTimes(1);
   });
 
   it('öne gelişte, son denemeden bu yana aralık dolmadıysa yeniden kaydolmaz', async () => {
-    await renderHook(() => usePushRegistration());
+    await renderHook(() => usePushRegistration('customer'));
 
     await comeToForeground(PUSH_REFRESH_INTERVAL_MS - 1);
 
@@ -71,7 +71,7 @@ describe('usePushRegistration', () => {
   });
 
   it('öne gelişte aralık dolduysa yeniden kaydolur — `last_seen_at` tazelenir', async () => {
-    await renderHook(() => usePushRegistration());
+    await renderHook(() => usePushRegistration('customer'));
 
     await comeToForeground(PUSH_REFRESH_INTERVAL_MS);
     expect(mockEnsure).toHaveBeenCalledTimes(2);
@@ -82,7 +82,7 @@ describe('usePushRegistration', () => {
   });
 
   it('arka plana geçiş kaydı tetiklemez', async () => {
-    await renderHook(() => usePushRegistration());
+    await renderHook(() => usePushRegistration('customer'));
 
     now += PUSH_REFRESH_INTERVAL_MS;
     await act(async () => {
@@ -93,7 +93,7 @@ describe('usePushRegistration', () => {
   });
 
   it('oturum açılınca kaydolur ve sayaç sıfırlanır; öteki olaylar tetiklemez', async () => {
-    await renderHook(() => usePushRegistration());
+    await renderHook(() => usePushRegistration('customer'));
 
     now += PUSH_REFRESH_INTERVAL_MS - 1000;
     await act(async () => {
@@ -108,7 +108,7 @@ describe('usePushRegistration', () => {
   });
 
   it('sökülünce iki dinleyici de bırakılır', async () => {
-    const { unmount } = await renderHook(() => usePushRegistration());
+    const { unmount } = await renderHook(() => usePushRegistration('customer'));
 
     await act(async () => {
       await unmount();
@@ -116,5 +116,11 @@ describe('usePushRegistration', () => {
 
     expect(removeAppState).toHaveBeenCalled();
     expect(mockUnsubscribe).toHaveBeenCalled();
+  });
+
+  it('jetonun geldiği uygulamayı kayda taşır (21.311)', async () => {
+    await renderHook(() => usePushRegistration('operations'));
+
+    expect(mockEnsure).toHaveBeenCalledWith('operations');
   });
 });

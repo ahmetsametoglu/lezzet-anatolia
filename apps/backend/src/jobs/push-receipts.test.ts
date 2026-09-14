@@ -34,7 +34,7 @@ async function teslim(n: number, opts: { ticket: string; token?: string } = { ti
   const profile = await profiles.insert({ name: `Makbuz ${stamp} ${n}` });
   profileIds.push(profile.id);
   const token = opts.token ?? `ExponentPushToken[makbuz-${stamp}-${n}]`;
-  await devices.register({ profileId: profile.id, token, platform: 'android', enabled: true });
+  await devices.register({ profileId: profile.id, token, platform: 'android', app: 'customer', enabled: true });
   const row = await notifications.record({ profileId: profile.id, kind: 'ticket_replied', dedupeKey: `test-makbuz:${stamp}:${n}` });
   const delivery = await deliveries.insert({
     notificationId: row!.id,

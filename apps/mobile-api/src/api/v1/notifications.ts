@@ -11,7 +11,7 @@ import {
   unregisterPushDevice,
 } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { DEFAULT_PAGE_SIZE, MeNotificationBadgeSchema, MeNotificationsPageSchema, PushPlatformEnum } from '@lezzet/types';
+import { DEFAULT_PAGE_SIZE, MeNotificationBadgeSchema, MeNotificationsPageSchema, PushAppEnum, PushPlatformEnum } from '@lezzet/types';
 import { decodeCursor, encodeCursor } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
@@ -149,6 +149,8 @@ notifications.post('/:id/dismiss', async (c) => {
 const RegisterDeviceSchema = z.object({
   token: z.string().min(10).max(200),
   platform: PushPlatformEnum,
+  /** Jetonun geldiği native uygulama (21.311) — müşteri gönderimi yalnız `customer` jetonlarını okur. */
+  app: PushAppEnum,
   /** OS bildirim izni — uygulama her açılışta raporlar; kapalıysa cihaz gönderilebilir sayılmaz. */
   enabled: z.boolean(),
 });

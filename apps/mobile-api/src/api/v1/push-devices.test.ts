@@ -57,45 +57,58 @@ afterAll(async () => {
 describe('kayıt ve sahip devri', () => {
   it('aynı cihazı ikinci hesap kaydedince SAHİP DEĞİŞİR — önceki hesap sağırlaşır', async () => {
     const t = jeton(1);
-    expect((await app.request('/api/v1/me/push-devices', post(aToken, { token: t, platform: 'android', enabled: true }))).status).toBe(200);
-    expect(await listSendablePushTokens(db, aId)).toContain(t);
+    expect((await app.request('/api/v1/me/push-devices', post(aToken, { token: t, platform: 'android', app: 'customer', enabled: true }))).status).toBe(200);
+    expect(await listSendablePushTokens(db, aId, 'customer')).toContain(t);
 
     // A çıkış yapmadı (jeton silinmedi) — B aynı cihazdan giriş yapıp kaydoldu.
-    expect((await app.request('/api/v1/me/push-devices', post(bToken, { token: t, platform: 'android', enabled: true }))).status).toBe(200);
+    expect((await app.request('/api/v1/me/push-devices', post(bToken, { token: t, platform: 'android', app: 'customer', enabled: true }))).status).toBe(200);
 
-    expect(await listSendablePushTokens(db, bId)).toContain(t); // cihaz artık B'nin kulağı
-    expect(await listSendablePushTokens(db, aId)).not.toContain(t); // A'ya artık BU cihazdan ulaşılmaz
+    expect(await listSendablePushTokens(db, bId, 'customer')).toContain(t); // cihaz artık B'nin kulağı
+    expect(await listSendablePushTokens(db, aId, 'customer')).not.toContain(t); // A'ya artık BU cihazdan ulaşılmaz
   });
 
   it('izni KAPALI raporlanan cihaz gönderilebilir listesinden düşer — sessiz kara delik kapanır', async () => {
     const t = jeton(2);
-    await app.request('/api/v1/me/push-devices', post(aToken, { token: t, platform: 'ios', enabled: true }));
-    expect(await listSendablePushTokens(db, aId)).toContain(t);
+    await app.request('/api/v1/me/push-devices', post(aToken, { token: t, platform: 'ios', app: 'customer', enabled: true }));
+    expect(await listSendablePushTokens(db, aId, 'customer')).toContain(t);
 
     // Uygulama açılışı izni kapalı raporladı (aynı uç — kayıt ve rapor tek kapı).
-    await app.request('/api/v1/me/push-devices', post(aToken, { token: t, platform: 'ios', enabled: false }));
-    expect(await listSendablePushTokens(db, aId)).not.toContain(t);
+    await app.request('/api/v1/me/push-devices', post(aToken, { token: t, platform: 'ios', app: 'customer', enabled: false }));
+    expect(await listSendablePushTokens(db, aId, 'customer')).not.toContain(t);
     // Kayıt SİLİNMEDİ: izin geri açılınca aynı kapıdan geri gelir.
     expect(await devices.findByToken(t)).not.toBeNull();
+  });
+
+  /* HANGİ UYGULAMA (21.311): aynı kişinin müşteri ve operasyon uygulamasındaki jetonları ayrı süzülür —
+     müşteri bildirimi personelin operasyon uygulamasına düşmez. */
+  it('iki uygulamanın jetonu ayrı süzülür — müşteri listesi operasyon jetonunu içermez', async () => {
+    const musteriJetonu = jeton(4);
+    const operasyonJetonu = jeton(5);
+    await app.request('/api/v1/me/push-devices', post(aToken, { token: musteriJetonu, platform: 'android', app: 'customer', enabled: true }));
+    await app.request('/api/v1/me/push-devices', post(aToken, { token: operasyonJetonu, platform: 'android', app: 'operations', enabled: true }));
+
+    expect(await listSendablePushTokens(db, aId, 'customer')).toContain(musteriJetonu);
+    expect(await listSendablePushTokens(db, aId, 'customer')).not.toContain(operasyonJetonu);
+    expect(await listSendablePushTokens(db, aId, 'operations')).toEqual([operasyonJetonu]);
   });
 });
 
 describe('çıkış', () => {
   it('çıkış kendi jetonunu siler; DEVROLMUŞ cihazın gecikmiş çıkışı yeni sahibi sökemez', async () => {
     const t = jeton(3);
-    await app.request('/api/v1/me/push-devices', post(aToken, { token: t, platform: 'android', enabled: true }));
+    await app.request('/api/v1/me/push-devices', post(aToken, { token: t, platform: 'android', app: 'customer', enabled: true }));
     // Cihaz B'ye devroldu (A çıkışı unutmuştu)...
-    await app.request('/api/v1/me/push-devices', post(bToken, { token: t, platform: 'android', enabled: true }));
+    await app.request('/api/v1/me/push-devices', post(bToken, { token: t, platform: 'android', app: 'customer', enabled: true }));
 
     // ...A'nın gecikmiş çıkışı geldi: kendi kaydı yok, B'ninkine DOKUNAMAZ.
     const gecikmis = await app.request('/api/v1/me/push-devices/remove', post(aToken, { token: t }));
     expect(((await gecikmis.json()) as { data: { removed: boolean } }).data.removed).toBe(false);
-    expect(await listSendablePushTokens(db, bId)).toContain(t); // B hâlâ duyuyor
+    expect(await listSendablePushTokens(db, bId, 'customer')).toContain(t); // B hâlâ duyuyor
 
     // B'nin kendi çıkışı ise siler.
     const kendi = await app.request('/api/v1/me/push-devices/remove', post(bToken, { token: t }));
     expect(((await kendi.json()) as { data: { removed: boolean } }).data.removed).toBe(true);
-    expect(await listSendablePushTokens(db, bId)).not.toContain(t);
+    expect(await listSendablePushTokens(db, bId, 'customer')).not.toContain(t);
   });
 });
 
@@ -105,5 +118,9 @@ describe('zarf ve kapı', () => {
     const res = await app.request('/api/v1/me/push-devices', post(aToken, { token: 'kisa', platform: 'windows' }));
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe('invalid_body');
+
+    // Uygulamasını söylemeyen kayıt yazılmaz (21.311) — varsayılan yok.
+    const appsiz = await app.request('/api/v1/me/push-devices', post(aToken, { token: jeton(6), platform: 'android', enabled: true }));
+    expect(appsiz.status).toBe(400);
   });
 });

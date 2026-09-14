@@ -3,6 +3,7 @@ import {
   PushDeviceInsertSchema,
   PushDeviceSchema,
   PushDeviceUpdateSchema,
+  type PushApp,
   type PushDevice,
   type PushDeviceInsert,
   type PushDeviceUpdate,
@@ -24,11 +25,12 @@ export class PushDeviceService extends BaseDbService<PushDevice, PushDeviceInser
    * jeton fiziksel cihazı temsil eder ve cihaz şu an son girenin elindedir. "Önce sil sonra yaz"
    * iki deyimdi ve arada düşen süreç jetonu sahipsiz bırakırdı; RPC kısıtın üstünde atomik.
    */
-  async register(input: { profileId: string; token: string; platform: PushPlatform; enabled: boolean }): Promise<PushDevice> {
+  async register(input: { profileId: string; token: string; platform: PushPlatform; app: PushApp; enabled: boolean }): Promise<PushDevice> {
     const rows = await this.executeRpc<unknown[]>('register_push_device', {
       p_profile_id: input.profileId,
       p_token: input.token,
       p_platform: input.platform,
+      p_app: input.app,
       p_enabled: input.enabled,
     });
     const row = this.parseRows(rows ?? [])[0];
@@ -70,10 +72,11 @@ export class PushDeviceService extends BaseDbService<PushDevice, PushDeviceInser
   }
 
   /**
-   * Kişinin GÖNDERİLEBİLİR cihazları — izni kapalı olanlar dışarıda (sürücünün tek okuması).
-   * İzni kapalı cihaza "gönderdim" demek sessiz kara deliktir: Expo kabul eder, kimse görmez.
+   * Kişinin bir uygulamadaki GÖNDERİLEBİLİR cihazları — izni kapalı olanlar dışarıda (sürücünün tek
+   * okuması). İzni kapalı cihaza "gönderdim" demek sessiz kara deliktir: Expo kabul eder, kimse görmez.
+   * Uygulama süzgeci (21.311): müşteri bildirimi personelin operasyon uygulamasına düşmez.
    */
-  listSendable(profileId: string): Promise<PushDevice[]> {
-    return this.getAll({ profileId }, { isNullFields: ['disabled_at'], orderBy: 'lastSeenAt', orderDirection: 'desc' });
+  listSendable(profileId: string, app: PushApp): Promise<PushDevice[]> {
+    return this.getAll({ profileId, app }, { isNullFields: ['disabled_at'], orderBy: 'lastSeenAt', orderDirection: 'desc' });
   }
 }

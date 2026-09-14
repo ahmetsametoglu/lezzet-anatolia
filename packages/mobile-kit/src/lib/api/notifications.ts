@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MeNotificationBadgeSchema, MeNotificationsPageSchema } from '@lezzet/types';
+import { MeNotificationBadgeSchema, MeNotificationsPageSchema, type PushApp } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
 import type { ApiResult } from './client';
@@ -75,7 +75,7 @@ export function dismissNotification(id: string): Promise<ApiResult<z.infer<typeo
 
 const RemovedSchema = z.object({ removed: z.boolean() });
 
-export function registerPushDevice(input: { token: string; platform: 'ios' | 'android'; enabled: boolean }): Promise<ApiResult<z.infer<typeof DoneSchema>>> {
+export function registerPushDevice(input: { token: string; platform: 'ios' | 'android'; app: PushApp; enabled: boolean }): Promise<ApiResult<z.infer<typeof DoneSchema>>> {
   return authorizedFetch('/api/v1/me/push-devices', DoneSchema, { method: 'POST', body: JSON.stringify(input), headers: { 'content-type': 'application/json' } });
 }
 

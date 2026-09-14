@@ -134,8 +134,9 @@ export default function RootLayout() {
   /* GÜNLÜK GİRİŞ PUANI (MB-50) — bir KAPI DEĞİL, sessiz bir yan etki: ilk karede ve uygulama her
      öne geldiğinde tetiklenir, sonucu beklenmez. Kökte olmasının gerekçesi hook'un künyesinde. */
   useVisitPoints();
-  // Push kaydı da kökte ve aynı gerekçeyle (hook künyesi): bir ekrana bağlanamaz.
-  usePushRegistration();
+  // Push kaydı da kökte ve aynı gerekçeyle (hook künyesi): bir ekrana bağlanamaz. Jeton MÜŞTERİ
+  // uygulamasının (21.311) — sunucu müşteri bildirimini yalnız bu jetonlara gönderir.
+  usePushRegistration('customer');
   // Bildirime dokunuş → doğru ekran: adres, uygulama içi listeyle AYNI sözlükten (hook künyesi).
   usePushNavigation(notificationHref);
 

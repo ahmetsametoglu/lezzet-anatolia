@@ -238,6 +238,7 @@ Push'un tek DB ayağı (14.14, migration 0050): "bu kişiye hangi cihazlardan ul
 | `profile_id` | uuid |  |  |
 | `token` | text |  |  |
 | `platform` | text |  |  |
+| `app` | text |  |  |
 | `disabled_at` | timestamptz | • |  |
 | `last_seen_at` | timestamptz |  | `now()` |
 | `created_at` | timestamptz |  | `now()` |
@@ -248,6 +249,7 @@ Push'un tek DB ayağı (14.14, migration 0050): "bu kişiye hangi cihazlardan ul
 - **`profile_id`** — sahip — müşteri de personel de (operasyon kabuğu da push alacak; ad bu yüzden `customer_id` değil); **cascade**
 - **`token`** — **unique, TABLO GENELİ** — cihaz başına tek sahip. Kayıt RPC'si (`register_push_device`) çakışmada SAHİBİ DEVREDER: son giren kazanır, cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile telefonunda önceki hesabın bildirimi sonrakine düşerdi
 - **`platform`** — `ios` · `android` — `web` BİLEREK yok (KARARLAR 26.08: müşteri yüzeyinde web push yapılmıyor); kısıt veride
+- **`app`** — `customer` · `operations` — jetonun geldiği native uygulama (21.311). Aynı kişi iki uygulamayı da kurabilir ve her kurulumun jetonu ayrıdır; müşteri gönderimi yalnız `customer` jetonlarını okur, yoksa müşteri bildirimi personelin operasyon uygulamasına da düşerdi. Varsayılan yok: uygulamasını söylemeyen kayıt yazılamaz
 - **`disabled_at`** — OS bildirim İZNİ kapalı (uygulamanın açılış raporu) — dolu ise sürücü cihazı yeteneksiz sayar ve sıra maile düşer. İzin karası: kapalı cihaza "gönderdim" demek sessiz kara deliktir
 - **`last_seen_at`** — bakım damgası ("kayıt bayat mı") — karşılaştırılan bir ölçüt değil
 

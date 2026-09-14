@@ -1,5 +1,5 @@
 import { PushDeviceService } from '@lezzet/database';
-import type { PushPlatform } from '@lezzet/types';
+import type { PushApp, PushPlatform } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
@@ -22,7 +22,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  */
 export async function registerPushDevice(
   db: SupabaseClient,
-  input: { profileId: string; token: string; platform: PushPlatform; enabled: boolean },
+  input: { profileId: string; token: string; platform: PushPlatform; app: PushApp; enabled: boolean },
 ): Promise<void> {
   await new PushDeviceService(db).register(input);
 }
@@ -37,7 +37,11 @@ export function unregisterPushDevice(db: SupabaseClient, input: { profileId: str
   return new PushDeviceService(db).removeOwned(input.token, input.profileId);
 }
 
-/** Gönderilebilir jetonlar — 14.16 sürücüsünün tek okuması (izni kapalı cihaz DIŞARIDA). */
-export async function listSendablePushTokens(db: SupabaseClient, profileId: string): Promise<string[]> {
-  return (await new PushDeviceService(db).listSendable(profileId)).map((device) => device.token);
+/**
+ * Bir uygulamanın gönderilebilir jetonları — 14.16 sürücüsünün tek okuması (izni kapalı cihaz
+ * DIŞARIDA). Uygulama ZORUNLU (21.311): müşteri gönderimi `customer` ister; aynı kişinin operasyon
+ * uygulamasındaki jetonu o bildirimi almaz.
+ */
+export async function listSendablePushTokens(db: SupabaseClient, profileId: string, app: PushApp): Promise<string[]> {
+  return (await new PushDeviceService(db).listSendable(profileId, app)).map((device) => device.token);
 }
