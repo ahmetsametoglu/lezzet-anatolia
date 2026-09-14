@@ -1,9 +1,8 @@
 import {
-  allowedTransitions,
   derivePaymentStatusForOrder,
   dueDateOf,
   isOverdue,
-  needsDedicatedGate,
+  officeTransitions,
   openAmountCents,
 } from '@lezzet/domain-core';
 import type { Order, OrderItem, UserProfile } from '@lezzet/types';
@@ -14,7 +13,7 @@ import type { OrderCounts } from '@lezzet/database';
  * Sipariş satırının kurulumu (09.7) — **saf dönüşüm**: DB satırları girer, ekranın göreceği
  * view-model çıkar. Okuma `page.tsx`'te, karar motorda; burası ikisini birleştirir.
  *
- * Kararların hiçbiri burada VERİLMEZ: izinli geçişler `allowedTransitions`'tan, vade gecikmesi
+ * Kararların hiçbiri burada VERİLMEZ: sunulacak geçişler `officeTransitions`'tan, vade gecikmesi
  * `isOverdue`'dan, tahsil edilecek tutar `derivePaymentStatusForOrder`'dan gelir — üçü de checkout
  * freninin ve durum makinesinin kullandığı tanımların ta kendisi.
  */
@@ -88,11 +87,11 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
     },
     isGift: order.isGiftOrder,
     createdAt: order.createdAt,
-    // Detay şeridiyle AYNI süzgeç (denetim 26.08): düz durum yazımından geçemeyen geçiş burada da
-    // "ilerlenebilir" diye sunulmaz. Bugün bu alanı çizen bir liste ekranı yok; süzgeç yine de
-    // burada, çünkü ayrı bırakılan iki liste bir gün ayrışır ve ikincisini kullanan ekran aynı
-    // arızayı sıfırdan doğurur — ilkinde düzeltilmiş olması onu korumaz.
-    allowedNext: allowedTransitions(order.status).filter((to) => !needsDedicatedGate(order.status, to)),
+    // Detay şeridiyle AYNI süzgeç, aynı fonksiyondan (`officeTransitions` — kapı 26.08, sahiplik
+    // 09.29): düz kapıdan geçemeyen ya da anı sahanın olan geçiş burada da "ilerlenebilir" diye
+    // sunulmaz. Bugün bu alanı çizen bir liste ekranı yok; süzgeç yine de burada, çünkü ayrı
+    // bırakılan iki liste bir gün ayrışır ve ikincisini kullanan ekran aynı arızayı sıfırdan doğurur.
+    allowedNext: officeTransitions(order.status),
     // Bir sipariş TEK depodan çıkar (DOMAIN §17) — bu yüzden satırda tek bir kod durur, liste değil.
     // Ad bilinmiyorsa (silinmiş değil, yalnız haritaya girmemiş bir kimlik) uydurma yapılmaz.
     warehouse: warehouse ? { code: warehouse.code, name: warehouse.name } : null,

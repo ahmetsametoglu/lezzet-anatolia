@@ -151,6 +151,43 @@ export function needsDedicatedGate(from: OrderStatus, to: OrderStatus): boolean 
 }
 
 /**
+ * **Bu geçişin anı KİMİN** — sahanın mı, ofisin mi, sistemin mi (09.29 · kullanıcı notları 11.09:
+ * "sipariş durumu kontrolsüz geçiyor", "web operasyonda sipariş durum geçişleri kısıtlanmalı").
+ *
+ * `gateFor` "hangi kapıdan" sorusunu cevaplar, bu fonksiyon "kimin anı" sorusunu; ikisi ayrı
+ * sorulardır. `ready → out_for_delivery` düz kapıdan geçer ama anı kuryenindir — mal araca yüklenir.
+ * Operasyonun sipariş detayı düz kapıdan geçen HER geçişi düğme yapıyordu. 12.09'da ölçülen sonucu:
+ * web'den "hazırlandı" denen siparişte kutu mühürlenmediği ve eksik beyan edilmediği için karşılanan
+ * adet sıfır kaldı, ödenmiş sipariş tam tutarlık iade borcu taşıdı; aynı zincirin sonundaki
+ * "iade → tamamlandı" iade adımını hiç çalıştırmadı.
+ *
+ * - **Saha:** hazırlık (`preparing`, `ready` — depo uygulaması, kutu ve eksik beyanıyla), araca
+ *   yükleme (`out_for_delivery` — kurye; kargoda taşıyıcı takibi), kapıdaki üç sonuç (teslim ·
+ *   ulaşılamadı · reddedildi) ve yerinde satış. Bu akışların kendi kapıları stoğu, kutuyu ve parayı
+ *   birlikte yazar; web'deki ekranları 07.09'da söküldü.
+ * - **Ofis:** iptal (kendi kapısından, "Kararlar" bloğu), teslimden sonra iade süreci (müşteri
+ *   şikâyeti) ve kapanış (`→ completed` — nasıl kapanacağı 07.16'da bekliyor, o gelene kadar ofiste).
+ * - **Sistem:** taslağın öteki iki çıkışı — onay (ödeme ya da sipariş verme akışı) ve terk edilen
+ *   sepetin süpürülmesi.
+ */
+export type TransitionOwner = 'field' | 'office' | 'system';
+
+export function transitionOwner(from: OrderStatus, to: OrderStatus): TransitionOwner {
+  if (from === 'draft') return to === 'completed' ? 'field' : 'system';
+  if (to === 'cancelled' || to === 'completed' || (from === 'delivered' && to === 'returned')) return 'office';
+  return 'field';
+}
+
+/**
+ * **Operasyon ekranının sunabileceği geçişler:** izinli, düz kapıdan geçen ve anı ofisin olan.
+ * Sipariş detayının şeridi de liste satırı da süzgeci buradan okur — ayrı yazılsalar bir gün
+ * ayrışırlar (26.08'in dersi). İptal burada YOK: ofisindir ama kendi kapısından geçer.
+ */
+export function officeTransitions(from: OrderStatus): OrderStatus[] {
+  return allowedTransitions(from).filter((to) => !needsDedicatedGate(from, to) && transitionOwner(from, to) === 'office');
+}
+
+/**
  * `reference_no` bu geçişte üretilir mi — kural: **ilk kalıcı durum** (`confirmed`, hızlı satışta
  * `completed`). Numara rastgeledir ve hacim sızdırmaz (DATA_MODEL Kalıcı kararlar).
  */

@@ -131,7 +131,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             </button>
           ))}
           <span className="ml-auto font-ops-body text-ops-xs text-ops-muted">
-            İzinsiz geçiş listelenmez — geri alma zaman çizelgesinden yapılır.
+            Hazırlık, yola çıkış ve kapıdaki sonuç sahadan yazılır.
           </span>
         </div>
       ) : null}

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { OrderService, serviceDb } from '@lezzet/database';
-import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
+import { canTransition, derivePaymentStatusForOrder, needsDedicatedGate, transitionOwner, type TransitionOwner } from '@lezzet/domain-core';
 import {
   DEFAULT_PAGE_SIZE,
   ORDER_STATUS_LABELS,
@@ -253,10 +253,10 @@ function refundNotice(reason: RefundBlockReason | undefined): string | null {
  *     dosyasında sınanıyor; bu ekran onu çağırmadığı için o testlerin hiçbiri buraya bakmıyordu.
  *     Bulgunun kökü buydu: her parça test edilmişti, aradaki dikiş edilmemişti.
  *
- * Ekran zaten yalnız izinli VE düz kapıdan geçebilen geçişleri sunuyor (`order-detail-read`);
- * buradaki kontrol ikinci kattır — eski bir sekmeden gelen istek, ekranın sunmadığı bir geçişi
- * yazmasın. Karar tek yerde (motor + `transitionOrder`), burada yalnız operatöre söylenecek cümle
- * seçiliyor.
+ * Ekran zaten yalnız ofisin geçişlerini sunuyor (`officeTransitions` — izinli, düz kapıdan geçen,
+ * anı ofisin olan; `order-detail-read`); buradaki kontrol ikinci kattır — eski bir sekmeden gelen
+ * istek, ekranın sunmadığı bir geçişi yazmasın. Karar tek yerde (motor + `transitionOrder`), burada
+ * yalnız operatöre söylenecek cümle seçiliyor.
  *
  * **Müşteri haberi artık BU ekrandan da gider** ve bu bilinçli: `webOrderEffects` geçiyor. Aynı
  * geçiş teslimat ekranından yapıldığında (`deliveries/[orderId]/actions.ts`) haber zaten
@@ -271,6 +271,14 @@ export async function advanceOrderStatusAction(
 ): Promise<ActionResult<{ status: OrderStatus }>> {
   try {
     const actor = await requireAdmin();
+
+    // SAHİPLİK (09.29): kurallara uyan ve düz kapıdan geçen ama anı sahanın ya da sistemin olan
+    // geçiş burada durur. Kurallara aykırı ya da başka kapıdan geçen istek kapıya gider — sebebini
+    // orası söyler, cümlesini aşağıdaki `gecisReddiCumlesi` seçer.
+    const owner = transitionOwner(from, to);
+    if (owner !== 'office' && canTransition(from, to).allowed && !needsDedicatedGate(from, to)) {
+      throw new Error(sahiplikReddiCumlesi(owner));
+    }
 
     // `from` = ekranın gördüğü durum: iyimser kilit onunla kurulur, yoksa bayat bir sekmeden gelen
     // istek operatörün beklediğinden başka bir durumdan ilerleyebilirdi.
@@ -300,8 +308,19 @@ function gecisReddiCumlesi(reason: 'same_status' | 'terminal' | 'not_allowed' | 
   if (reason === 'same_status') return 'Sipariş zaten bu durumda.';
   if (reason === 'not_allowed') return 'Bu geçiş izinli değil.';
   return gate === 'deliver_order'
-    ? 'Teslim işareti bu ekrandan verilmez — teslimat ekranından işaretleyin (stok düşümü orada yazılıyor).'
+    ? 'Teslim bu ekrandan verilmez — kurye uygulamasından işaretlenir (stok düşümü ve kapıdaki tahsilat orada yazılıyor).'
     : gate === 'quick_sale'
       ? 'Kapı önü satışı hızlı satış ekranından kapatılır.'
       : 'İptal bu düğmeden yapılmaz — aşağıdaki "Siparişi iptal et" kararını kullanın (ayrılmış mal ve para iadesi orada işlenir).';
+}
+
+/**
+ * Anı sahanın ya da sistemin olan geçişin reddi (09.29) — "yapılamaz" değil "başka yerde yazılır":
+ * cümle, o anı hangi uygulamanın yazdığını söyler. Web'deki saha ekranları 07.09'da söküldü; bu
+ * geçişlerin yazıldığı yer depo ve kurye uygulamaları, kargoda taşıyıcının takibi.
+ */
+function sahiplikReddiCumlesi(owner: Exclude<TransitionOwner, 'office'>): string {
+  return owner === 'field'
+    ? 'Bu adım sahadan yazılır: hazırlık depo uygulamasında (kutu ve eksik beyanıyla), yola çıkış ve kapıdaki sonuç kurye uygulamasında — kargoda taşıyıcının takibinden.'
+    : 'Bu adımı sistem yazar: onay ödeme ya da sipariş verme akışından gelir, terk edilen sepet kendiliğinden süpürülür.';
 }

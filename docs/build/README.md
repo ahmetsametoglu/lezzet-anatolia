@@ -42,7 +42,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | sürüyor | 14/15 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/18 (+3 kısmi) |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 53/59 (+6 kısmi) |
-| 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 14/28 (+14 kısmi) |
+| 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 15/29 (+14 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | tamam | 9/9 |
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 8/11 (+1 kısmi) |
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 24/25 |

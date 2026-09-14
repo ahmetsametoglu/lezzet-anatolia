@@ -59,6 +59,20 @@ Kararın tek yeri motordur: `gateFor(from, to)` (`domain-core/order/status-machi
 
 > **Neden yazılı bir kural oldu:** operasyon sipariş detayının "İzinli geçişler" şeridi geçişleri süzmeden düğmeye çeviriyordu. Şeritten iptal edilen siparişin **ayrılmış malı serbest kalmıyor**, şeritten teslim edilenin **fiili stoğu hiç düşmüyordu**. Kapıda/vadeli siparişte rezervasyonun TTL'i olmadığı için süpürücü de o satırı görmüyordu; `cancelled` terminal olduğu için doğru kapı da kapanıyor, hasar geri alınamıyordu. Hiçbir test görmemişti çünkü her test kendi kapısını tek başına sınıyordu — kapıların **aynı odaya açtığını** soran test yoktu (`packages/application/src/order/refund.test.ts`, "kapı denkliği").
 
+## Geçişi KİM yazar — saha, ofis, sistem (14.09 · 09.29)
+
+İzinli olmak ve doğru kapıdan geçmek de yetmez: geçişin **anı kimin**? Kapı "hangi RPC" sorusunu cevaplar, bu soru "hangi uygulama, hangi insan" sorusudur. Karar yine motorda: `transitionOwner(from, to)`; operasyon ekranının sunabileceği küme `officeTransitions(from)` — izinli, düz kapıdan geçen ve anı ofisin olan.
+
+| Sahip | Geçişler | Nereden yazılır |
+| --- | --- | --- |
+| **Saha** | `→ preparing` · `→ ready` · `→ out_for_delivery` · `out_for_delivery → delivered / ready / returned` · `draft → completed` | depo uygulaması (kutu açma, mühürleme, eksik beyanı) · kurye uygulaması (yükleme, kapıdaki üç sonuç, sefer kapanışı) · kargoda taşıyıcı takibi · yerinde satış |
+| **Ofis** | `confirmed / preparing / ready → cancelled` (kendi kapısı) · `delivered → returned` · `delivered / returned → completed` | operasyon sipariş detayı — iptal "Kararlar" bloğundan, iade süreci ve kapanış şeritten |
+| **Sistem** | `draft → confirmed` · `draft → cancelled` | ödeme ve sipariş verme akışı · terk edilen sepetin süpürücüsü |
+
+Kapanışın (`→ completed`) nasıl olacağı ayrı bir karardır (07.16); o gelene kadar ofiste ve düz kapıda kalır. Sevkiyat masasının askıda kalan durak yolu (`out_for_delivery → ready`, teslim günü geçmiş ve sonuçlanmamış durak) bir kapı kaydı değil sevkiyat kaydıdır ve kendi kuralıyla yazılır (`deliveries/dispatch-actions.ts`).
+
+> **Neden yazılı bir kural oldu (kullanıcı notları 11.09, ölçüm 12.09):** saha akışlarının web ekranları 07.09'da söküldü ama sipariş detayının şeridi süzülmedi — düz kapıdan geçen her geçiş düğme olarak kaldı. Web'den "hazırlandı" denen siparişte kutu mühürlenmediği ve eksik beyan edilmediği için karşılanan adet sıfır kaldı; ödenmiş sipariş tam tutarlık iade borcu taşıdı. Aynı zincirin sonundaki "iade → tamamlandı" iade adımını hiç çalıştırmadı.
+
 ## Hızlı satış yolu
 
 Kapı önü satışı için ara adımlar **atlanabilir**:

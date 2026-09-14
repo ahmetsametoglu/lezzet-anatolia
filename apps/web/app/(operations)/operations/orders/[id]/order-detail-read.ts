@@ -30,7 +30,6 @@ import {
 } from '@lezzet/types';
 import {
   allowedDecisions,
-  allowedTransitions,
   creditPosition,
   derivePaymentStatusForOrder,
   dueDateOf,
@@ -41,7 +40,7 @@ import {
   isOverdue,
   isTerminal,
   isZeroRated,
-  needsDedicatedGate,
+  officeTransitions,
   orderContribution,
   skippedBetween,
   vatSplitOf,
@@ -68,7 +67,7 @@ import type {
  *
  * Tasarımın sözü: "türetilmiş alan yazılmaz". Burada da hiçbir kural YENİDEN yazılmaz — ödeme
  * durumu ve kalan tutar `derivePaymentStatusForOrder`'dan, vade `isOverdue`/`creditPosition`'dan,
- * izinli geçişler `allowedTransitions`'tan, atlanan adımlar `skippedBetween`'den gelir.
+ * sunulacak geçişler `officeTransitions`'tan, atlanan adımlar `skippedBetween`'den gelir.
  *
  * Okuma satır sayısıyla ÇARPMAZ: sipariş + kalemleri + o kalemlerin boy/ürün adları + paket adları
  * + partileri + geçiş kaydı + para hareketleri + talepler. Hepsi kimlik kümesi üzerinden tek turda.
@@ -272,15 +271,18 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
     timeline: timelineOf(logs, new Map(actors.map((a) => [a.id, a.name])), tickets, order.status),
     /*
-      Şerit YALNIZ düz kapıdan yazılabilen geçişleri sunar (denetim 26.08). Süzgeçsiz hâli
-      `cancelled` ve `delivered` düğmelerini de çiziyordu ve ikisi de düz duruma yazılıyordu:
-      iptal edilen siparişin ayrılmış malı serbest kalmıyor, teslim edilenin fiili stoğu hiç
-      düşmüyordu. Yetenek KAYBOLMUYOR, doğru kapıya taşınıyor — iptal aşağıdaki "Kararlar"
-      bloğunda (`allowedDecisions` zaten aynı durumlarda `cancel` veriyor), teslim işareti
-      teslimat ekranında. Eylem tarafında ikinci bir kat daha var: eski bir sekmeden gelen
-      istek de reddedilir.
+      Şerit YALNIZ ofisin geçişlerini sunar (`officeTransitions`): izinli, düz kapıdan geçen ve
+      anı ofisin olan. İki süzgeç üst üste:
+        · KAPI (denetim 26.08) — süzgeçsiz hâli `cancelled` ve `delivered` düğmelerini de çiziyordu
+          ve ikisi de düz duruma yazılıyordu: iptal edilen siparişin ayrılmış malı serbest
+          kalmıyor, teslim edilenin fiili stoğu hiç düşmüyordu. İptal aşağıdaki "Kararlar"
+          bloğunda (`allowedDecisions` aynı durumlarda `cancel` veriyor).
+        · SAHİPLİK (09.29) — hazırlık, yola çıkış ve kapıdaki sonuç sahadan yazılır; web'den
+          "hazırlandı" denen siparişte kutu ve eksik beyanı olmadığı için karşılanan adet sıfır
+          kalıyordu (12.09 ölçümü). Kalan: teslimden sonra iade süreci ve kapanış.
+      Eylem tarafında ikinci bir kat daha var: eski bir sekmeden gelen istek de reddedilir.
     */
-    allowedNext: allowedTransitions(order.status).filter((to) => !needsDedicatedGate(order.status, to)),
+    allowedNext: officeTransitions(order.status),
     decisions: [...allowedDecisions(order.status)],
     refundRoutes: allowedDecisions(order.status).includes('refund') ? refundRoutesOf(accounts, movements) : [],
 

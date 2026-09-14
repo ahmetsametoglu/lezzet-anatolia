@@ -28,7 +28,19 @@ describe('isFulfillmentSettled', () => {
   });
 });
 import type { OrderStatus } from '@lezzet/types';
-import { MAIN_PATH, allowedTransitions, canTransition, gateFor, isTerminal, needsDedicatedGate, producesReferenceNo, skippedBetween, stockEffectOf } from './status-machine';
+import {
+  MAIN_PATH,
+  allowedTransitions,
+  canTransition,
+  gateFor,
+  isTerminal,
+  needsDedicatedGate,
+  officeTransitions,
+  producesReferenceNo,
+  skippedBetween,
+  stockEffectOf,
+  transitionOwner,
+} from './status-machine';
 
 describe('tam yol', () => {
   it('draft → confirmed → preparing → ready → out_for_delivery → delivered → completed', () => {
@@ -131,6 +143,14 @@ describe('stok etkisi', () => {
   });
 });
 
+/**
+ * Motorun izinli geçişlerinin TAMAMI. İki bekçi (kapı · sahiplik) sınıflamayı elle yazılmış bir
+ * listeden değil bundan yapar: tabloya eklenen yeni geçiş ikisine de kendiliğinden düşer.
+ */
+const tumGecisler: [OrderStatus, OrderStatus][] = (
+  ['draft', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'returned', 'completed', 'cancelled'] as OrderStatus[]
+).flatMap((from) => allowedTransitions(from).map((to) => [from, to] as [OrderStatus, OrderStatus]));
+
 describe('kendi kapısını isteyen geçişler (denetim 26.08)', () => {
   /*
     İddia KURALDAN yazılıyor: "stok yazımı geçişin KENDİSİYLE aynı transaction'da olan geçiş, düz
@@ -144,10 +164,6 @@ describe('kendi kapısını isteyen geçişler (denetim 26.08)', () => {
     ZORUNDA kalır.
   */
   const KAPI_ISTEYEN = new Set(['draft→completed', 'draft→cancelled', 'confirmed→cancelled', 'preparing→cancelled', 'ready→cancelled', 'out_for_delivery→delivered']);
-
-  const tumGecisler: [OrderStatus, OrderStatus][] = (
-    ['draft', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'returned', 'completed', 'cancelled'] as OrderStatus[]
-  ).flatMap((from) => allowedTransitions(from).map((to) => [from, to] as [OrderStatus, OrderStatus]));
 
   it('her izinli geçiş sınıflandırılmıştır — yeni geçiş cevapsız kalamaz', () => {
     const olculen = tumGecisler.filter(([from, to]) => needsDedicatedGate(from, to)).map(([from, to]) => `${from}→${to}`);
@@ -230,5 +246,60 @@ describe('skippedBetween', () => {
   it('ana hat kaynak listesiyle tutarlı', () => {
     expect(MAIN_PATH).not.toContain('draft');
     expect(MAIN_PATH).not.toContain('cancelled');
+  });
+});
+
+describe('geçişin anı kimin — saha, ofis, sistem (09.29)', () => {
+  /*
+    Kapı bekçisiyle aynı ilke: izinli geçişlerin TAMAMI sınıflandırılıyor ve üç küme de burada elle
+    duruyor. Tabloya yeni bir geçiş eklenip hiçbir kümeye yazılmazsa test düşer; ekleyen kişi "bu
+    anı kim yaşıyor" sorusunu yanıtlamak ZORUNDA kalır. Cevapsız kalan geçiş operasyon şeridine
+    sessizce düğme olarak düşerdi — 12.09'da ölçülen arızanın kaynağı buydu.
+  */
+  const SAHA = new Set([
+    'draft→completed',
+    'confirmed→preparing',
+    'confirmed→ready',
+    'confirmed→out_for_delivery',
+    'preparing→ready',
+    'preparing→out_for_delivery',
+    'ready→out_for_delivery',
+    'out_for_delivery→delivered',
+    'out_for_delivery→ready',
+    'out_for_delivery→returned',
+  ]);
+  const OFIS = new Set(['confirmed→cancelled', 'preparing→cancelled', 'ready→cancelled', 'delivered→completed', 'delivered→returned', 'returned→completed']);
+  const SISTEM = new Set(['draft→confirmed', 'draft→cancelled']);
+
+  it('her izinli geçiş sınıflandırılmıştır — yeni geçiş cevapsız kalamaz', () => {
+    for (const [from, to] of tumGecisler) {
+      const key = `${from}→${to}`;
+      const beklenen = SAHA.has(key) ? 'field' : OFIS.has(key) ? 'office' : SISTEM.has(key) ? 'system' : null;
+      expect(beklenen, `${key} hiçbir kümede yok`).not.toBeNull();
+      expect(transitionOwner(from, to), key).toBe(beklenen);
+    }
+    expect(SAHA.size + OFIS.size + SISTEM.size).toBe(tumGecisler.length);
+  });
+
+  it('hazırlık, yola çıkış ve kapıdaki sonuç operasyon ekranında hiç sunulmaz', () => {
+    for (const status of ['confirmed', 'preparing', 'ready', 'out_for_delivery'] as const) {
+      expect(officeTransitions(status), status).toEqual([]);
+    }
+  });
+
+  it('teslimden sonrası ofisindir: iade süreci ve kapanış', () => {
+    expect(officeTransitions('delivered')).toEqual(['completed', 'returned']);
+    expect(officeTransitions('returned')).toEqual(['completed']);
+  });
+
+  it('iptal ofisindir ama şeritte yoktur — kendi kapısından geçer', () => {
+    expect(transitionOwner('ready', 'cancelled')).toBe('office');
+    expect(officeTransitions('ready')).not.toContain('cancelled');
+  });
+
+  it('taslakta ve kapanmış kayıtta sunulacak geçiş yoktur', () => {
+    for (const status of ['draft', 'completed', 'cancelled'] as const) {
+      expect(officeTransitions(status), status).toEqual([]);
+    }
   });
 });
