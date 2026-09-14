@@ -12,6 +12,7 @@ import {
 import type { AnchorSnapshot } from '@lezzet/application';
 import type { OutboundLanguage } from '@lezzet/domain-core';
 import type { CustomerContextData } from '@/lib/customer/context';
+import type { ConsentState } from '@/components/operation/ui/customer-context-pane';
 import type { SocialChannelKey, SocialFilterKey, SocialUrlState } from './social-url';
 
 // Sosyal gelen kutusunun GÖRÜNÜM tipleri (15.5 · üç kanal 15.15).
@@ -169,10 +170,10 @@ export interface ConversationDetailView {
   /** Hibrit modun bekleyen AI taslağı — kesikli kartın metni; `null` = taslak yok. */
   aiDraft: string | null;
   /**
-   * Ticari mesaj izni (DOMAIN §11) — sohbette verilmiş/reddedilmiş izin. Operatör bunu KAYDEDER,
-   * kendisi karar vermez: müşteri sohbette ne dediyse o yazılır (15.12).
+   * Kampanya izninin panodaki ÜÇ hâli (DOMAIN §11 · 14.09) — kararı `consentStateOf` verir: WhatsApp'ta
+   * müşteri kaydı, Messenger/IG'de sohbetin kendi kaydı. Operatör bunu KAYDEDER, karar vermez (15.12).
    */
-  optIn: boolean;
+  consent: ConsentState;
   /**
    * **Kimlik çapası** (04.10 · DOMAIN §10) — "bu numaranın GEÇMİŞİ kimin" sorusunun cevabı.
    *
@@ -335,10 +336,8 @@ export interface SocialViewProps {
   onLinkCustomer: () => void;
   /** Sohbette verilen izni KAYDET (15.12) — operatör karar vermez, müşterinin dediğini yazar. */
   onOptIn: (granted: boolean) => void;
-  /** Kimlik çapası (04.10) — kod adrese gider, cevap sohbetten döner. */
-  onStartEmailAnchor: (email: string) => void;
-  /** E-posta istemeyene 6 haneli kod ver; kod sohbete YAZILIR, ekrana değil. */
-  onIssueSecurityCode: () => void;
+  /** Kimlik çapası penceresini aç (04.10) — e-posta kodu ya da 6 haneli kod orada seçilir. */
+  onOpenAnchor: () => void;
   /** Sepet bağlantısını sohbete gönder (15.21) — ajanın aracının insan eli; müşteri sitede tamamlar. */
   onSendCartLink: () => void;
   /** Hesap bağlantısını sohbete gönder (15.16) — müşteri e-postasıyla giriş yapar, sohbet kendi hesabına bağlanır. */

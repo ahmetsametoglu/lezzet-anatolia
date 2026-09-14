@@ -7,7 +7,6 @@ import { AiDraftCard, handlerOptions } from '@/components/operation/ui/ai-handli
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import {
-  ContextConsent,
   ContextIdentity,
   ContextOrders,
   ContextPane,
@@ -608,8 +607,13 @@ function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTrigg
 
 // ── Müşteri bağlamı panosu ───────────────────────────────────────────────────
 
+interface TicketContextPaneProps {
+  context: CustomerContextData | null;
+  customerName: string;
+}
+
 /**
- * Talep detayının SAĞ SÜTUNU — "bu kişi kim, bizden ne aldı, neye izin verdi".
+ * Talep detayının SAĞ SÜTUNU — "bu kişi kim, bizden ne aldı".
  *
  * **Bu ekranda bir tur boyunca HİÇ YOKTU** ve eksikliği kullanıcı fark etti (08.08): talep detayı
  * müşterinin adını ve kaçıncı talebi olduğunu söylüyordu ama BAŞKA siparişlerini göstermiyordu —
@@ -619,17 +623,18 @@ function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTrigg
  *
  * Talebin KENDİ siparişi burada DEĞİL: o, gövdedeki `OrderCard`'dır ve kalemleriyle birlikte
  * şikâyetin zeminidir. Buradaki liste "öteki alışverişleri" — ikisi ayrı soru.
+ *
+ * **Kampanya izni 14.09'da kalktı** (kullanıcı isteği: işlevi olmayan bilgi kalkar): talep bir şikâyet
+ * işi ve pazarlama izni bu ekranda hiçbir kararı etkilemiyordu.
  */
-export function TicketContextPane({ context, customerName }: { context: CustomerContextData | null; customerName: string }) {
+export function TicketContextPane({ context, customerName }: TicketContextPaneProps) {
   if (!context) {
     return (
       <ContextPane>
         <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{customerName}</span>
         {/* Bağlam okunamadıysa SUSMUYORUZ: boş bir pano "bu müşterinin siparişi yok" diye okunurdu
             ve iade kararı o yanlış okumaya dayanabilirdi (CLAUDE §1: ölçülemeyen değer sıfır değil). */}
-        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
-          Müşteri bağlamı okunamadı — sipariş geçmişi ve izin bilgisi bu talepte gösterilemiyor.
-        </span>
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">Sipariş geçmişi okunamadı.</span>
       </ContextPane>
     );
   }
@@ -643,9 +648,6 @@ export function TicketContextPane({ context, customerName }: { context: Customer
         href={customersUrl({ q: context.email ?? context.phone ?? context.name, type: 'all', scope: 'all', mc: 'any' })}
       />
       <ContextOrders context={context} />
-      {/* Kanal E-POSTA: talep yazışması müşteriye e-posta ile gidiyor (16.4), yani bu ekranda anlamlı
-          olan izin odur. WhatsApp ekranında aynı pano `whatsapp` kanalını okuyor. */}
-      <ContextConsent context={context} channel="email" />
     </ContextPane>
   );
 }

@@ -7,7 +7,7 @@ import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { readCustomerContext } from '@/lib/customer/context';
 import { readConversationDetail } from '@/lib/messaging/read';
 import { SocialClient } from './social-client';
-import { titleOf, toInboxRows, toThreadItems, toWindowView } from './social-read';
+import { consentStateOf, titleOf, toInboxRows, toThreadItems, toWindowView } from './social-read';
 import { channelSource, parseSocialUrl } from './social-url';
 import type { ConversationDetailView, SocialData } from './social-types';
 
@@ -28,8 +28,8 @@ import type { ConversationDetailView, SocialData } from './social-types';
 // bağlanıyor; istemcide tutulan bir seçim o bağlantıyı imkânsız kılardı.
 //
 // ── ÇİZİMİN ÇİZİP DE BUGÜN YAZILMAYANLARI ────────────────────────────────────
-// **"Sipariş oluştur" düğmesi YOK:** köprü 15.4, hedefi ise elle sipariş girişi (09.8) ve o ekran
-// yazılmadı. Rayın kendi dersi burada da geçerli — var olmayan yere götüren düğme konmaz.
+// **"Sipariş oluştur" BAŞLIKTA** (15.4 köprüsü): 14.09'da sağ panelin dibinden çizimin yerine taşındı
+// — panelin dibinde ilk ekranda görünmüyordu.
 // **"Kalıp mesaj" düğmesi YOK:** onaylı şablon da gönderim sürücüsü de 15.11'in işi. Pencere
 // kapalıyken UYARI yine de gösteriliyor, çünkü uyarı ölçülmüş bir gerçek; eylem ise henüz yok.
 // (AI rozeti + mod anahtarı + hibrit taslak 16.08'de geldi: mod bir VERİ ve `conversation.handled_by`
@@ -102,7 +102,13 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
     })),
     handledBy: detail.conversation.handledBy,
     aiDraft: detail.conversation.aiDraftReply,
-    optIn: detail.conversation.optIn,
+    // Kampanya izni ÜÇ hâlli (14.09) — "sorulmadı" ile "reddetti" ayrı; kaynağı kanala göre ayrı.
+    consent: consentStateOf({
+      source: detail.conversation.source,
+      customerConsent: context?.whatsappConsent ?? null,
+      optIn: detail.conversation.optIn,
+      optInAskedAt: detail.conversation.optInAskedAt,
+    }),
     anchor,
   };
 

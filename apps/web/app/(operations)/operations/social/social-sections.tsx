@@ -7,7 +7,7 @@ import type { TicketHandler } from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
 import { AiDraftCard, handlerOptions } from '@/components/operation/ui/ai-handling';
 import { Badge } from '@/components/operation/ui/badge';
-import { Button } from '@/components/operation/ui/button';
+import { Button, buttonClass } from '@/components/operation/ui/button';
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import {
   ContextConsent,
@@ -15,6 +15,7 @@ import {
   ContextNotice,
   ContextOrders,
   ContextPane,
+  type ConsentState,
 } from '@/components/operation/ui/customer-context-pane';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { AlertIcon, WhatsAppIcon } from '@/components/operation/ui/icons';
@@ -305,10 +306,12 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-ops-gray-25">
-      {/* Başlık barı ÇİZİMİN yeri: mod anahtarı + (AI'daysa) Devral (16.08). "Sipariş oluştur"
-          hâlâ yok (köprü 15.4) — var olmayan yere götüren düğme konmaz. */}
-      <div className="flex flex-none items-center gap-3 border-b border-ops-line bg-ops-card px-5 py-3">
-        <div className="flex min-w-0 flex-1 flex-col">
+      {/* Başlık barı ÇİZİMİN yeri: mod anahtarı + (AI'daysa) Devral (16.08) + Sipariş oluştur (köprü 15.4;
+          14.09'da sağ panelin dibinden buraya — çizim onu başlıkta çiziyor).
+          SARAR (14.09, ölçüldü): 1440 px'te sohbet sütunu ~660 px ve denetimler başlığı kelime kelime alt
+          alta itiyordu ("Re…"). Başlık 200 px'in altına inmez; sığmayan denetimler ikinci satıra, sağa yaslı. */}
+      <div className="flex flex-none flex-wrap items-center justify-end gap-3 border-b border-ops-line bg-ops-card px-5 py-3">
+        <div className="flex min-w-[200px] flex-1 flex-col">
           <span className="truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{detail.title}</span>
           <span className="font-ops-body text-ops-xs text-ops-muted">
             {/* Kanal adı alt satırda da yazar: başlık bir müşteri adı olabilir ve aynı kişinin iki
@@ -349,6 +352,18 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
         <Button variant="secondary" size="sm" className="flex-none whitespace-nowrap" onClick={onIncoming}>
           Gelen mesaj işle
         </Button>
+        {/* SİPARİŞ KÖPRÜSÜ (15.4) — YALNIZ kimlik çözülmüşken: köprü müşteri önseçili girişi açar,
+            kimliksiz sohbette müşteri seçimi boş gelirdi. Bağ tek parametre taşıyor; KAYNAĞI sunucu
+            konuşmadan çözüyor (`orderSourceOfConversation`) — kanalı adrese yazdırmak raporlardaki
+            dağılımı elle düzenlenebilir kılardı. */}
+        {detail.context ? (
+          <Link
+            href={`${ORDERS_PATH}/new?conversation=${detail.id}`}
+            className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none whitespace-nowrap' })}
+          >
+            Sipariş oluştur
+          </Link>
+        ) : null}
       </div>
 
       {detail.thread.length === 0 ? (
@@ -525,46 +540,17 @@ function ReplyBox({ source, window: win, language, busy, error, prefill, onSendR
 // SAĞ — müşteri bağlamı (ORTAK pano + bu ekrana özel bloklar)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Sohbette verilen iznin KAYDI (15.12) — iki düğme, tek gerçek.
- *
- * **Operatör karar vermiyor, müşterinin dediğini yazıyor** ve arayüz bunu söylemek zorunda: "İzin
- * ver" yazan bir düğme, izni operatörün verdiğini ima ederdi ve GDPR'da izni veren müşteridir.
- * Bu yüzden etiketler "Müşteri izin verdi" / "Müşteri reddetti".
- *
- * Seçili olan düğme SÖNÜK ve tıklanamaz: aynı değeri ikinci kez yazmak yeni bir damga atardı ve
- * kayıt "az önce yeniden izin verdi" gibi okunurdu — izin bir kanıttır, damgası olayın anıdır.
- */
-function OptInRecorder({
-  source,
-  optIn,
-  busy,
-  onOptIn,
-}: {
-  source: ConversationDetailView['source'];
-  optIn: boolean;
-  busy: boolean;
-  onOptIn: (granted: boolean) => void;
-}) {
-  return (
-    <div className="flex flex-col items-start gap-1.5">
-      <SectionLabel>Sohbette verilen izin</SectionLabel>
-      <div className="flex gap-1.5">
-        <Button variant={optIn ? 'primary' : 'secondary'} size="sm" disabled={busy || optIn} onClick={() => onOptIn(true)}>
-          Müşteri izin verdi
-        </Button>
-        <Button variant={optIn ? 'secondary' : 'primary'} size="sm" disabled={busy || !optIn} onClick={() => onOptIn(false)}>
-          Müşteri reddetti
-        </Button>
-      </div>
-      <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-        {source === 'whatsapp'
-          ? 'Kayıt müşteri kartına da işlenir (kampanya izni · kaynak: whatsapp).'
-          : `${SOURCE_LABELS[source]} izni bu sohbete yazılır, müşteri kartına İŞLENMEZ — kampanya izni kanalı henüz yalnız WhatsApp ve e-posta taşıyor.`}
-      </span>
-    </div>
-  );
-}
+/*
+  ÇİZİMİN İSKELETİ (14.09 · kullanıcı isteği: "işlevi olmayan bilgi ve butonları kaldıralım, orijinal
+  tasarıma uygun hâle getirelim"). Çizim: ad + rozet · son siparişler · kampanya izni · tek eylem.
+
+  Kalkanlar: açıklama paragrafları (pano bir kılavuz değil), telefon/anahtar satırı (çizimde yok, işi
+  yok), boş liste cümleleri, "Müşterilerde ara" (bağla penceresi zaten arıyor).
+
+  İŞLEVİ OLAN ama çizimde yeri olmayanlar çizimin diline indi: izin kaydı rozetin menüsünde, kimlik
+  çapası tek satır + pencere (`AnchorDialog`), sepet/hesap bağlantısı YALNIZ pencere açıkken (kapalıyken
+  gönderim kapısı reddeder — düğme işlevsizdi), sipariş köprüsü başlıkta.
+*/
 
 /**
  * **Kimlik çapası** (04.10 · DOMAIN §10) — "bu numaranın GEÇMİŞİ kimin" sorusunun kapısı.
@@ -610,86 +596,94 @@ function PendingChallenge({ challenge }: { challenge: AnchorSnapshot['challenge'
   );
 }
 
-function AnchorPane({
-  anchor,
-  busy,
-  onStartEmail,
-  onIssueCode,
-}: {
-  anchor: AnchorSnapshot | null;
+interface AnchorRowProps {
+  anchor: AnchorSnapshot;
   busy: boolean;
-  onStartEmail: (email: string) => void;
-  onIssueCode: () => void;
-}) {
-  const [email, setEmail] = useState('');
-  if (!anchor) return null;
+  onOpen: () => void;
+}
 
-  if (anchor.state !== 'none') {
-    return (
-      <div className="flex flex-col items-start gap-1">
-        <SectionLabel>Kimlik çapası</SectionLabel>
-        <span className="font-ops-body text-ops-sm font-semibold text-ops-olive">
-          {anchor.state === 'email' ? 'E-posta bağlı ✓' : 'Güvenlik kodu verildi ✓'}
-        </span>
-        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-          Dönüşünde kimliği bu çapadan teyit edilir. İkinci bir çapa kurulmaz.
-        </span>
-        <PendingChallenge challenge={anchor.challenge} />
-      </div>
-    );
-  }
+/**
+ * Kimlik çapasının panodaki TEK SATIRI (14.09): durum rozeti + kurma bağı. E-posta kutusu, 6 haneli kod
+ * ve gerekçesi pencerede (`AnchorDialog`) — kararın verildiği yer orası; panonun her açılışında
+ * okunacak bir kılavuz değil. Çapası olana ikinci çapa sunulmaz, bağ o hâlde hiç çizilmez.
+ */
+function AnchorRow({ anchor, busy, onOpen }: AnchorRowProps) {
+  const kurulu = anchor.state !== 'none';
+  const rozet: { label: string; tone: 'olive' | 'amber' | 'slate' } = kurulu
+    ? { label: anchor.state === 'email' ? 'E-posta bağlı' : 'Kod verildi', tone: 'olive' }
+    : anchor.hasPendingEmail
+      ? { label: 'Cevap bekleniyor', tone: 'amber' }
+      : { label: 'Kurulmadı', tone: 'slate' };
 
   return (
     <div className="flex flex-col items-start gap-1.5">
       <SectionLabel>Kimlik çapası</SectionLabel>
-      {anchor.hasPendingEmail ? (
-        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-          Kod gönderildi — müşteri onu <strong>bu sohbete</strong> yazınca bağlanacak. Cevap gelmezse yeniden gönderebilirsiniz.
-        </span>
-      ) : null}
-      <div className="flex w-full gap-1.5">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="musteri@ornek.fr"
-          className="min-w-0 flex-1 rounded-ops border border-ops-line bg-ops-surface px-2 py-1 font-ops-body text-ops-sm text-ops-ink placeholder:text-ops-muted"
-        />
-        <Button size="sm" disabled={busy || email.trim().length < 3} onClick={() => onStartEmail(email.trim())}>
-          {anchor.hasPendingEmail ? 'Yeniden gönder' : 'Kod gönder'}
-        </Button>
+      <div className="flex items-center gap-2">
+        <Badge tone={rozet.tone}>{rozet.label}</Badge>
+        {kurulu ? null : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onOpen}
+            className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {anchor.hasPendingEmail ? 'Yeniden gönder →' : 'Kur →'}
+          </button>
+        )}
       </div>
-      <Button variant="secondary" size="sm" disabled={busy} onClick={onIssueCode}>
-        E-posta istemiyor — 6 haneli kod ver
-      </Button>
-      <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-        Kod E-POSTAYA gider, cevap buradan döner — kanıtın gücü iki kanalın birden doğrulanmasından
-        gelir. Kod telefonda okunmaz, bu ekrandan doğrulanmaz.
-      </span>
+      {kurulu ? <PendingChallenge challenge={anchor.challenge} /> : null}
+    </div>
+  );
+}
+
+interface LinkedTicketsProps {
+  tickets: ConversationDetailView['tickets'];
+}
+
+/** Bu sohbetten açılmış talepler — köprü iki yönlü. Boşken HİÇ çizilmez (14.09): "açılmadı" cümlesi bir iş yaptırmıyordu. */
+function LinkedTickets({ tickets }: LinkedTicketsProps) {
+  if (tickets.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <SectionLabel>Bağlı talepler</SectionLabel>
+      {tickets.map((t) => (
+        <Link
+          key={t.id}
+          href={`${TICKETS_PATH}?t=${t.id}`}
+          className="flex cursor-pointer flex-col rounded-ops-card border border-ops-line bg-ops-card px-2.5 py-2 hover:border-ops-line-strong"
+        >
+          <span className="truncate font-ops-body text-ops-xs text-ops-ink">{t.subject}</span>
+          <span className="font-ops-body text-ops-micro text-ops-muted">{t.statusLabel}</span>
+        </Link>
+      ))}
     </div>
   );
 }
 
 interface SocialContextPaneProps {
   context: CustomerContextData | null;
-  /** Sipariş köprüsünün taşıdığı kimlik (15.4) — kaynağı sunucu bundan çözer. */
-  conversationId: string;
   /** Konuşmanın dış anahtarı — WhatsApp'ta okunaklı telefon, Messenger/IG'de opak PSID/IGSID. */
   externalRef: string;
   source: ConversationDetailView['source'];
   profileName: string | null;
   tickets: ConversationDetailView['tickets'];
+  /** Kampanya izninin üç hâli (`consentStateOf`) — rozet ve kayıt menüsü buradan. */
+  consent: ConsentState;
+  /** Kimlik çapası (04.10) — kimliksiz sohbette `null`, satır hiç çizilmez. */
+  anchor: AnchorSnapshot | null;
+  /**
+   * Sohbete mesaj gidebiliyor mu (pencere açık). Bağlantı düğmeleri SOHBETE mesaj gönderir ve pencere
+   * kapalıyken gönderim kapısı reddeder — o hâlde düğme işlevsizdir ve çizilmez (14.09).
+   */
+  canMessage: boolean;
+  busy: boolean;
   onNewTicket: () => void;
   /** Kimliksiz sohbeti müşteriye bağlama penceresini açar (15.16). */
   onLinkCustomer: () => void;
-  /** Sohbette verilen ticari mesaj izninin kaydı (15.12) — operatör müşterinin dediğini yazar. */
-  optIn: boolean;
-  busy: boolean;
+  /** Sohbette verilen izni KAYDET (15.12) — operatör karar vermez, müşterinin dediğini yazar. */
   onOptIn: (granted: boolean) => void;
-  /** Kimlik çapası (04.10) — kimliksiz sohbette `null`, blok hiç çizilmez. */
-  anchor: AnchorSnapshot | null;
-  onStartEmailAnchor: (email: string) => void;
-  onIssueSecurityCode: () => void;
+  /** Kimlik çapası penceresini açar (04.10). */
+  onOpenAnchor: () => void;
   /** Sepet bağlantısı (15.21) — sohbeti personel yürütürken müşteriyi sepete taşıyan tek yol. */
   onSendCartLink: () => void;
   /** Hesap bağlantısı (15.16) — müşteri e-postasıyla giriş yapar, sohbet kendi hesabına bağlanır. */
@@ -698,21 +692,20 @@ interface SocialContextPaneProps {
 
 export function SocialContextPane({
   context,
-  conversationId,
   externalRef,
   source,
   profileName,
   tickets,
+  consent,
+  anchor,
+  canMessage,
+  busy,
   onNewTicket,
   onLinkCustomer,
-  optIn,
-  anchor,
-  onStartEmailAnchor,
-  onIssueSecurityCode,
+  onOptIn,
+  onOpenAnchor,
   onSendCartLink,
   onSendAccountLink,
-  busy,
-  onOptIn,
 }: SocialContextPaneProps) {
   const whatsapp = source === 'whatsapp';
   // Müşteri araması kanala göre ANLAMLI anahtarla yapılır: WhatsApp'ta numara kimlik anahtarıdır ve
@@ -722,38 +715,35 @@ export function SocialContextPane({
   if (!context) {
     return (
       <ContextPane>
-        {/* WhatsApp'ta anahtar (telefon) gösterilir — operatörün telefonunda aradığı şey. PSID/IGSID
-            GÖSTERİLMEZ: operatöre hiçbir şey söylemez, profil adı söyler. */}
-        <span className="font-ops-mono text-ops-sm text-ops-ink">{whatsapp ? externalRef : (profileName ?? 'İsimsiz profil')}</span>
-        {/* Kimliksiz konuşma bir ARIZA DEĞİL, tasarımın bir hâli — Messenger/IG'de üstelik VARSAYILAN
-            hâl: PSID/IGSID telefon taşımaz, kimlik ancak müşteri kendini tanıtınca kurulur (bağlama
-            eylemi 15.16). WhatsApp'ta ise telefon/e-posta çakışmasında konuşma bilerek bağlanmadan
-            açılır — yanlış hesaba bağlanmış bir sohbet, bağlanmamış bir sohbetten pahalıdır. */}
-        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
-          {whatsapp
-            ? 'Bu numara bir müşteriye bağlanmadı. Sipariş geçmişi ve izin bilgisi ancak kimlik çözülünce görünür.'
-            : `${SOURCE_LABELS[source]} kimliği telefon taşımaz — müşteri kendini tanıttığında kayıt Müşteriler ekranından birleştirilir.`}
-        </span>
-        {/* BAĞLAMA kapısı (15.16) — kimliğin kurulduğu tek yer. Messenger/IG'de bu ekranın en
-            önemli düğmesi: o kanallarda kimlik başka hiçbir yoldan çözülemez. Aramanın ÜSTÜNDE
-            duruyor çünkü sıra öyle işliyor — operatör önce arar, bulunca bağlar. */}
-        <Button variant="secondary" onClick={onLinkCustomer}>
-          Müşteriye bağla
-        </Button>
-        {/* MÜŞTERİNİN KENDİ BAĞLADIĞI YOL (15.16 · kullanıcı tasarımı 08.09) — operatör kaydı aramak
-            zorunda kalmaz: bağlantı sohbete gider, müşteri e-postasıyla giriş yapınca sohbet onun
-            hesabına bağlanır (`cart_link`, amaç `account`). "Müşteriye bağla"nın yanında, çünkü ikisi
-            aynı soruyu iki yoldan cevaplıyor. Çizimde yok; sepet düğmesinin deseni izlendi (07.09 izni). */}
-        <Button variant="secondary" size="sm" disabled={busy} onClick={onSendAccountLink}>
-          Hesap bağlantısı gönder
-        </Button>
-        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-          Müşteri bağlantıyı açıp e-postasıyla giriş yapar; sohbet kendi hesabına bağlanır. Bağlantı 7 gün geçerli.
-        </span>
-        {(whatsapp || profileName) ? (
-          <Link href={searchHref} className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive hover:underline">
-            Müşterilerde ara →
-          </Link>
+        <div className="flex flex-col items-start gap-1.5">
+          {/* WhatsApp'ta anahtar (telefon) gösterilir — operatörün tanıdığı şey. PSID/IGSID GÖSTERİLMEZ:
+              operatöre hiçbir şey söylemez, profil adı söyler. */}
+          <span className="font-ops-display text-ops-base font-semibold text-ops-ink">
+            {whatsapp ? externalRef : (profileName ?? 'İsimsiz profil')}
+          </span>
+          <Badge tone="amber">Kimlik yok</Badge>
+        </div>
+        {/* Kimliksiz sohbet bir ARIZA DEĞİL — Messenger/IG'de varsayılan hâl (PSID/IGSID telefon taşımaz);
+            WhatsApp'ta telefon/e-posta çakışmasında bilerek bağlanmadan açılır. Kimliğin kurulduğu TEK yer
+            bağla penceresi (15.16) ve arama da onun içinde — ayrı "Müşterilerde ara" bağı bu yüzden kalktı. */}
+        <ContextNotice>
+          <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
+            {whatsapp ? 'Numara bir müşteriye bağlanmadı.' : 'Sohbet bir müşteriye bağlı değil.'}
+          </span>
+          <button
+            type="button"
+            onClick={onLinkCustomer}
+            className="cursor-pointer self-start font-ops-display text-ops-xs font-semibold text-ops-amber hover:underline"
+          >
+            Müşteriye bağla →
+          </button>
+        </ContextNotice>
+        {/* MÜŞTERİNİN KENDİ BAĞLADIĞI YOL (15.16) — bağlantı sohbete gider, müşteri e-postasıyla giriş
+            yapınca sohbet onun hesabına bağlanır. Sohbete mesajdır: yalnız pencere açıkken bir iş yapar. */}
+        {canMessage ? (
+          <Button variant="secondary" size="sm" disabled={busy} onClick={onSendAccountLink}>
+            Hesap bağlantısı gönder
+          </Button>
         ) : null}
       </ContextPane>
     );
@@ -762,94 +752,48 @@ export function SocialContextPane({
   return (
     <ContextPane>
       {/* WhatsApp'ta ad müşteri ekranına NUMARAYLA gider (kimliğin anahtarı numara; aynı adlı iki
-          müşteri varsa ad araması ikisini birden getirirdi). Messenger/IG'de numara yok — ikincil
-          satır sağlayıcı profil adıdır. */}
-      <ContextIdentity context={context} href={searchHref} secondary={whatsapp ? externalRef : (profileName ?? SOURCE_LABELS[source])} />
+          müşteri varsa ad araması ikisini birden getirirdi). */}
+      <ContextIdentity context={context} href={searchHref} />
 
+      {/* Taslak kayıt — çizimin uyarısı. Birleştirme MÜŞTERİLER ekranının işi (09.10): bağ oraya aramayla
+          gider, burada ikinci bir birleştirme kapısı çizilmez. */}
       {context.isDraft ? (
         <ContextNotice>
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
-            {whatsapp
-              ? 'Numara kayıtlı bir müşteriyle eşleşmedi — WhatsApp’tan otomatik açılmış taslak kayıt.'
-              : 'Sohbetten otomatik açılmış taslak kayıt — kimlik doğrulanmış bir girişten geçmedi.'}
+            {whatsapp ? 'Numara kayıtlı müşteriyle eşleşmedi — taslak kayıt.' : 'Sohbetten açılmış taslak kayıt.'}
           </span>
-          {/* Birleştirme MÜŞTERİLER ekranının işi (09.10) ve orada gerçekten var; burada yalnız o
-              ekrana gidiliyor. Kendi birleştirme düğmemizi çizmek, aynı kararı iki yerde
-              yaşatmak olurdu. */}
           <Link href={searchHref} className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-amber hover:underline">
-            Müşterilerde ara ve birleştir →
+            Müşteriye bağla →
           </Link>
         </ContextNotice>
       ) : null}
 
       <ContextOrders context={context} />
-      {/* Pazarlama izni kanal bazlı (DOMAIN §11) ve bugün müşteri kaydında yalnız whatsapp/email
-          anahtarları var — Messenger/IG izni, Meta tarafında ayrı bir opt-in mekanizmasıyla gelecek
-          (Marketing Messages); o gün blok kanala göre genişler. Yanlış kanalın iznini göstermek,
-          olmayan bir izne güvendirmek olurdu. */}
-      {whatsapp ? <ContextConsent context={context} channel="whatsapp" /> : null}
 
-      {/* İzin KAYDI (15.12) — operatör karar vermez, müşterinin sohbette dediğini yazar. Üç kanalda
-          da var: `conversation.opt_in` kanal-nötr. Müşteri kaydına yazım yalnız WhatsApp'ta olur
-          (izin şeması bugün email+whatsapp taşıyor) ve fark aşağıda operatöre SÖYLENİR — yoksa
-          Messenger'da izni işaretleyen operatör onun kampanya listesine girdiğini sanırdı. */}
-      <OptInRecorder source={source} optIn={optIn} busy={busy} onOptIn={onOptIn} />
-      <AnchorPane anchor={anchor} busy={busy} onStartEmail={onStartEmailAnchor} onIssueCode={onIssueSecurityCode} />
+      {/* Kampanya izni — çizimin rozeti; rozete basınca müşterinin sohbette verdiği cevap kaydedilir
+          (15.12). Kaydın nereye yazıldığı menüde söylenir: WhatsApp'ta müşteri kartına da işlenir,
+          Messenger/IG'de yalnız bu sohbete (izin şeması bugün email + whatsapp taşıyor). */}
+      <ContextConsent
+        state={consent}
+        onRecord={onOptIn}
+        busy={busy}
+        recordHint={whatsapp ? 'Müşteri kartına da işlenir.' : `Yalnız bu ${SOURCE_LABELS[source]} sohbetine yazılır.`}
+      />
 
-      {/* SEPET BAĞLANTISI (15.21 · kullanıcı kararı 07.09) — ajanın `sepet_baglantisi` aracının
-          insan eli. Sohbeti personel yürütürken ajan araçları çalışmaz; müşteriyi sepete taşımanın
-          tek yolu bu düğme. Aynı jeton kapısı, aynı cümle — ajanın gönderdiğiyle ayrışamaz. Kimliksiz
-          sohbette (Messenger/IG) bağlantı bir de kimlik köprüsüdür: giriş yapan kişi sohbete bağlanır.
-          Çizimde yok; kullanıcı 07.09'da bu panele eklenmesine izin verdi. */}
-      <div className="flex flex-col items-start gap-1.5">
-        <SectionLabel>Sepet</SectionLabel>
+      {anchor ? <AnchorRow anchor={anchor} busy={busy} onOpen={onOpenAnchor} /> : null}
+
+      <LinkedTickets tickets={tickets} />
+
+      {/* SEPET BAĞLANTISI (15.21 · kullanıcı izni 07.09) — ajanın `sepet_baglantisi` aracının insan eli.
+          Sohbete mesaj gönderir: pencere kapalıyken gönderim kapısı reddeder, düğme o hâlde çizilmez. */}
+      {canMessage ? (
         <Button variant="secondary" size="sm" disabled={busy} onClick={onSendCartLink}>
           Sepet bağlantısı gönder
         </Button>
-        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-          Müşteri bağlantıyı açıp giriş yapar; sepetini sitede onaylar ve öder. Onay, adres ve ödeme
-          sohbette değil, orada. Bağlantı 7 gün geçerli; yenisi eskisini geçersizler.
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <SectionLabel>Bağlı talepler</SectionLabel>
-        {tickets.length === 0 ? (
-          <span className="font-ops-body text-ops-xs text-ops-faint">Bu sohbetten talep açılmadı.</span>
-        ) : (
-          tickets.map((t) => (
-            <Link
-              key={t.id}
-              href={`${TICKETS_PATH}?t=${t.id}`}
-              className="flex cursor-pointer flex-col rounded-ops-card border border-ops-line bg-ops-card px-2.5 py-2 hover:border-ops-line-strong"
-            >
-              <span className="truncate font-ops-body text-ops-xs text-ops-ink">{t.subject}</span>
-              <span className="font-ops-body text-ops-micro text-ops-muted">{t.statusLabel}</span>
-            </Link>
-          ))
-        )}
-        <Button variant="danger" size="sm" onClick={onNewTicket}>
-          Talep (şikâyet) aç
-        </Button>
-      </div>
-
-      {/* SİPARİŞ KÖPRÜSÜ (15.4) — sohbette anlaşılan siparişi operatör masada yazar.
-          YALNIZ kimlik çözülmüşken çizilir: köprü kimliksiz sohbette de açılır ama müşteri seçimi
-          boş gelir, yani düğme "önseçili giriş" sözünü tutamazdı. Kimliksiz sohbette operatörün
-          ilk işi zaten yukarıdaki "Müşteriye bağla" (15.16).
-          Bağ tek parametre taşıyor: KAYNAĞI sunucu konuşmadan çözüyor (`orderSourceOfConversation`)
-          — kanalı adres çubuğuna yazdırmak, raporlardaki dağılımı elle düzenlenebilir kılardı. */}
-      {context ? (
-        <div className="flex flex-col gap-1.5">
-          <SectionLabel>Sipariş</SectionLabel>
-          <Link
-            href={`${ORDERS_PATH}/new?conversation=${conversationId}`}
-            className="cursor-pointer rounded-ops-card border border-ops-line bg-ops-card px-2.5 py-2 text-center font-ops-body text-ops-xs text-ops-ink hover:border-ops-line-strong"
-          >
-            Bu sohbetten sipariş oluştur
-          </Link>
-        </div>
       ) : null}
+      <Button variant="danger" size="sm" onClick={onNewTicket}>
+        Talep (şikâyet) aç
+      </Button>
     </ContextPane>
   );
 }

@@ -1,6 +1,7 @@
 import { resolveUserText, serviceWindowState, stripChatFormatting, translatableTextOf } from '@lezzet/domain-core';
-import type { ConversationInboxRow, ConversationNote, TranslationBag } from '@lezzet/types';
+import type { ConversationInboxRow, ConversationNote, ConversationSource, TranslationBag } from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
+import type { ConsentState } from '@/components/operation/ui/customer-context-pane';
 import { agoShort, shortDateTime } from '@/components/operation/ui/format';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { MESSAGE_KIND_LABELS, TEMPLATE_CATEGORY_LABELS } from './social-labels';
@@ -50,6 +51,31 @@ export function toWindowView(windowExpiresAt: string | null, now: Date): WindowV
     chip: remainingLabel(state.msRemaining),
     tone: state.msRemaining <= WINDOW_SOON_MS ? 'soon' : 'open',
   };
+}
+
+/**
+ * **Kampanya izninin panodaki hâli** (15.12 · 14.09) — üç hâlli ve KAYNAĞI kanala göre ayrı.
+ *
+ * WhatsApp'ta müşteri kaydının izni konuşur: sohbette verilen izin oraya da yazılıyor, hesap
+ * sayfasından verilen de orada. Kayıt boşsa (bağ sonradan kurulmuş) sohbetin kaydına düşülür.
+ * Messenger/Instagram'da müşteri kaydının o kanal için kutusu yok — izin sohbetin kendisinde
+ * (`opt_in` + sorulma damgası).
+ *
+ * **"Sorulmadı" ile "reddetti" ayrı.** 14.09'a kadar pano izni "Sorulmadı" gösterirken aynı sohbette
+ * "Müşteri reddetti" düğmesini SEÇİLİ çiziyordu: kayıt yalnız `opt_in`in evet/hayırını okuyordu ve
+ * sorulmamış bir izin, verilmiş bir ret gibi görünüyordu.
+ */
+export function consentStateOf(input: {
+  source: ConversationSource;
+  customerConsent: { granted: boolean } | null;
+  optIn: boolean;
+  optInAskedAt: string | null;
+}): ConsentState {
+  if (input.source === 'whatsapp' && input.customerConsent) {
+    return input.customerConsent.granted ? 'granted' : 'refused';
+  }
+  if (input.optIn) return 'granted';
+  return input.optInAskedAt ? 'refused' : 'unasked';
 }
 
 /**

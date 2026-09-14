@@ -48,8 +48,7 @@ export function SocialDesktop({
   onNewTicket,
   onLinkCustomer,
   onOptIn,
-  onStartEmailAnchor,
-  onIssueSecurityCode,
+  onOpenAnchor,
   onSendCartLink,
   onSendAccountLink,
 }: SocialViewProps) {
@@ -121,21 +120,21 @@ export function SocialDesktop({
             />
             <SocialContextPane
               context={data.detail.context}
-              conversationId={data.detail.id}
               externalRef={data.detail.externalRef}
               source={data.detail.source}
               profileName={data.detail.profileName}
               tickets={data.detail.tickets}
+              consent={data.detail.consent}
+              anchor={data.detail.anchor}
+              // Cevap kutusuyla AYNI ölçüt: kutu yalnız pencere açıkken çizilir, sohbete giden bağlantılar da.
+              canMessage={data.detail.window.state === 'open'}
+              busy={busy}
               onNewTicket={onNewTicket}
               onLinkCustomer={onLinkCustomer}
-              optIn={data.detail.optIn}
-              anchor={data.detail.anchor}
-              onStartEmailAnchor={onStartEmailAnchor}
-              onIssueSecurityCode={onIssueSecurityCode}
+              onOptIn={onOptIn}
+              onOpenAnchor={onOpenAnchor}
               onSendCartLink={onSendCartLink}
               onSendAccountLink={onSendAccountLink}
-              busy={busy}
-              onOptIn={onOptIn}
             />
           </>
         ) : (

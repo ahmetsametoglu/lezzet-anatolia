@@ -6,16 +6,15 @@ import type { TicketHandler } from '@lezzet/types';
 import {
   consumeConversationDraftAction,
   loadMoreConversationsAction,
-  issueSecurityCodeAction,
   recordConversationOptInAction,
   sendCartLinkAction,
   sendAccountLinkAction,
-  startEmailAnchorAction,
   sendOutboundAction,
   setConversationModeAction,
   setDefaultConversationModeAction,
   suggestConversationDraftAction,
 } from './actions';
+import { AnchorDialog } from './anchor-dialog';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
 import { LinkCustomerDialog } from './link-customer-dialog';
 import { ManualDmDialog } from './manual-dm-dialog';
@@ -76,6 +75,8 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
   const [dmMode, setDmMode] = useState<'new' | 'follow' | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  // Kimlik çapası penceresi (04.10 · 14.09) — panoda yalnız durum satırı; kutu ve gerekçe pencerede.
+  const [anchorOpen, setAnchorOpen] = useState(false);
 
   const detail = data.detail;
 
@@ -151,16 +152,11 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
       if (detail) void run(() => recordConversationOptInAction({ conversationId: detail.id, granted }));
     },
     /**
-     * Kimlik çapası (04.10) — aynı yazma sarmalı. Kod bu ekrandan GEÇMİYOR: e-posta çapasında
-     * müşterinin posta kutusuna gidiyor, güvenlik kodunda doğrudan sohbete yazılıyor. Operatörün
-     * ekranında bir sır durmuyor.
+     * Kimlik çapası (04.10) — pencere kendi kapısını çağırır ve hatasını kendisi gösterir (bağla
+     * penceresinin deseni). Kod bu ekrandan GEÇMİYOR: e-posta çapasında müşterinin posta kutusuna,
+     * güvenlik kodunda doğrudan sohbete gidiyor.
      */
-    onStartEmailAnchor: (email: string) => {
-      if (detail) void run(() => startEmailAnchorAction({ conversationId: detail.id, email }));
-    },
-    onIssueSecurityCode: () => {
-      if (detail) void run(() => issueSecurityCodeAction(detail.id));
-    },
+    onOpenAnchor: () => setAnchorOpen(true),
     /** Sepet bağlantısı (15.21) — aynı yazma sarmalı; bağlantı sohbete gider, ekrana değil. */
     onSendCartLink: () => {
       if (detail) void run(() => sendCartLinkAction(detail.id));
@@ -206,6 +202,21 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
           onLinked={() => {
             setLinkOpen(false);
             // Bağ kurulunca sağ panel müşteri kartına döner: sipariş geçmişi ve izin sunucudan gelir.
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {/* Çapa MÜŞTERİNİN künyesi (04.10) — kimliği çözülmüş sohbette açılır; kurulu çapaya ikinci çapa
+          kurulmadığı için satır o hâlde pencereyi hiç açmaz. */}
+      {anchorOpen && detail?.context && detail.anchor ? (
+        <AnchorDialog
+          conversationId={detail.id}
+          customerName={detail.context.name}
+          hasPendingEmail={detail.anchor.hasPendingEmail}
+          onClose={() => setAnchorOpen(false)}
+          onDone={() => {
+            setAnchorOpen(false);
             router.refresh();
           }}
         />

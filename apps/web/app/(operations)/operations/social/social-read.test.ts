@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationInboxRow } from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
-import { previewOf, remainingLabel, toInboxRows, toMessageViews, toThreadItems, toWindowView, WINDOW_SOON_MS } from './social-read';
+import {
+  consentStateOf,
+  previewOf,
+  remainingLabel,
+  toInboxRows,
+  toMessageViews,
+  toThreadItems,
+  toWindowView,
+  WINDOW_SOON_MS,
+} from './social-read';
 
 // 15.5/15.15 — okuma dönüşümlerinin ölçütleri. Üçü de birer KARAR ve karar sınanabilir olmalı:
 // pencerenin ne zaman "az kaldı"ya döndüğü, gövdesiz bir mesajın nasıl okunacağı, adsız bir
@@ -325,5 +334,33 @@ describe('toMessageViews — çeviri', () => {
 
   it('dili tespit edilmemiş mesaj olduğu gibi okunur — çeviri uydurulmaz', () => {
     expect(toMessageViews([message({ body: { text: 'Bonjour' } })])[0]).toMatchObject({ text: 'Bonjour', translation: null });
+  });
+});
+
+describe('consentStateOf — kampanya izninin üç hâli (15.12 · 14.09)', () => {
+  const asked = NOW.toISOString();
+
+  it('WhatsApp: müşteri kaydı konuşur — verdi / reddetti', () => {
+    expect(consentStateOf({ source: 'whatsapp', customerConsent: { granted: true }, optIn: false, optInAskedAt: null })).toBe('granted');
+    expect(consentStateOf({ source: 'whatsapp', customerConsent: { granted: false }, optIn: false, optInAskedAt: null })).toBe('refused');
+  });
+
+  it('WhatsApp: müşteri kaydı boşsa sohbetin kaydına düşer (bağ sonradan kurulmuş)', () => {
+    expect(consentStateOf({ source: 'whatsapp', customerConsent: null, optIn: true, optInAskedAt: asked })).toBe('granted');
+    expect(consentStateOf({ source: 'whatsapp', customerConsent: null, optIn: false, optInAskedAt: null })).toBe('unasked');
+  });
+
+  it('Messenger/Instagram: SORULMAMIŞ izin ret değildir — 14.09 arızası', () => {
+    // Pano "Sorulmadı" derken aynı sohbette "Müşteri reddetti" seçili görünüyordu: kayıt yalnız
+    // `opt_in`in evet/hayırını okuyordu ve sorulmamış izin verilmiş bir ret gibi çiziliyordu.
+    expect(consentStateOf({ source: 'messenger', customerConsent: null, optIn: false, optInAskedAt: null })).toBe('unasked');
+    expect(consentStateOf({ source: 'instagram', customerConsent: null, optIn: false, optInAskedAt: asked })).toBe('refused');
+    expect(consentStateOf({ source: 'messenger', customerConsent: null, optIn: true, optInAskedAt: asked })).toBe('granted');
+  });
+
+  it("Messenger/IG'de müşteri kaydının izni KULLANILMAZ — o kutu WhatsApp'ın", () => {
+    // İzin şeması bugün email + whatsapp taşıyor; WhatsApp iznini Messenger rozetine yazmak, olmayan
+    // bir izne güvendirmek olurdu.
+    expect(consentStateOf({ source: 'messenger', customerConsent: { granted: true }, optIn: false, optInAskedAt: null })).toBe('unasked');
   });
 });

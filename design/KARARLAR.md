@@ -2956,3 +2956,19 @@ Sapmalar ve gerekçeleri:
 - **Ölçek dışı ölçüler en yakın durağa bağlandı** (kod kutusu 54 → 52, başlık 29 → 30, 14,5 → 15, köşeler
   13/15/17/18 → 14/16/16/20); temada durağı olmayan iki değer yerinde kaldı (56'lık Google düğmesi, 152'lik logo).
   Kilit karosu için yeni token açıldı (`error-mark-bg` — gerekçe token dosyasında).
+
+## Sosyal Mesajlar ve Talepler'in sağ paneli çizimin iskeletinde (14.09, kullanıcı isteği)
+
+Kullanıcı: *"Hem talepler hem de sosyal mesajlarda mesaj yazma kısmının sağ tarafındaki bölümü fonksiyonel
+bir hale getirelim. Bir işlevi olmayan bilgi ve butonları kaldıralım. Orijinal tasarıma uygun bir hale
+getirelim."* Çizim (`Operasyon - WhatsApp.dc.html`, "Müşteri bağlamı"): ad + rozet · son siparişler ·
+kampanya izni · tek eylem ("Talep (şikâyet) aç"); "Sipariş oluştur" konuşmanın başlığında (`15.31`).
+
+- **Kalktı:** açıklama paragrafları, ad altındaki telefon/anahtar satırı, boş liste cümleleri, kimliksiz
+  sohbette "Müşterilerde ara" (bağla penceresi zaten arıyor), Talepler'de kampanya izni (şikâyet işinde
+  bir kararı etkilemiyor).
+- **Çizimin diline indi:** izin kaydı kampanya izni rozetinin menüsü ("Müşteri izin verdi / reddetti";
+  kaydın nereye yazıldığı menünün altında); kimlik çapası rozet + "Kur →", e-posta kutusu ve 6 haneli kod
+  pencerede; sepet ve hesap bağlantısı yalnız pencere açıkken (kapalıyken gönderim zaten reddediliyordu).
+- **Talepler çiziminde sağ panel yok;** pano 08.08'den beri bilinçli ek (iade kararı müşterinin öteki
+  siparişleriyle verilir) ve aynı iskelete çekildi: ad + rozet · son siparişler.
