@@ -159,6 +159,8 @@
   --text-field-label--font-weight: 600;
   --text-control: 13.5px; /* süzgeç ve sıralama düğmesi (K17 küçük · K18) */
   --text-control--font-weight: 700;
+  --text-button: 14.5px; /* (telefon, 14.09) native birincil düğmenin etiketi — hap ve blok */
+  --text-button--font-weight: 700;
   /* Adet seçicinin −/+ imleri. Kendi kademeleri: rakam gövde ölçeğinden (14/13) gelir ama imler bir
      tık büyüktür — dokunma hedefi rakamdan geniş olmalı. Sepet tasarımından geldi (web 16 · mobil 15). */
   --text-step: 16px;
@@ -212,6 +214,7 @@
   --shadow-sheet: 0 -12px 40px rgb(47 53 58 / 0.28); /* mobil çekmecenin gölgesi (Mobil v1) */
   --shadow-hard: 3px 3px 0 #343b41; /* sert gölge — native v3'ün imzası; telefon görünümünün yüzen düğmesi (14.09) */
   --shadow-badge: 0 3px 8px rgba(21, 23, 15, 0.22); /* (telefon, 14.09) fotoğrafın ya da kartın üstünde yüzen rozet */
+  --shadow-soft: 0 1px 3px rgba(58, 65, 71, 0.08); /* (telefon, 14.09) native'in yükseklik gölgesi — anahtar topuzu */
 
   /* ─────────────────────────────────────────────────────────────────────────
      Operasyon evreni — "Veri Masası" token'ları (admin + depo + kurye).
@@ -469,6 +472,7 @@ body {
   --text-chip: 15px;
   --text-field-label: 13.5px;
   --text-control: 14.5px;
+  --text-button: 15.5px;
   --text-step: 17px;
   --text-step-sm: 16px;
   --text-icon: 23px;

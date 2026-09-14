@@ -42,7 +42,9 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 //        `badge-sm`, `helper`, `screen-title`) · 2 yarıçap (`badge`, `control`) · 1 gölge (`badge`).
 // 14.09 (3): +3 — native'in üstbaşlığı (`eyebrow-xs`: boyut · ağırlık · aralık); taban `eyebrow`
 //        masaüstünün 14px'i olduğu için telefon görünümü ara kademeden okur (`customer.ts` künyesi).
-const EXPECTED_LIGHT_COUNT = 198; // @theme bloğu, fontlar hariç (119 renk + 61 yazı + 9 yarıçap + 3 hareket + 6 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
+// 14.09 (4): +3 — native'in düğme etiketi (`button`: boyut · ağırlık) ve yükseklik gölgesi (`soft`);
+//        telefon kataloğunun hap düğmesi ve anahtar topuzu (`customer.ts` künyesi).
+const EXPECTED_LIGHT_COUNT = 201; // @theme bloğu, fontlar hariç (119 renk + 63 yazı + 9 yarıçap + 3 hareket + 7 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));
@@ -149,8 +151,8 @@ describe('renderThemeCss', () => {
   eksik kalamaz — yeni bir yazı kademesi tabana girdiği gün telefon bloğuna da girmek zorunda.
 */
 describe('telefon görünümünün yazı ölçeği', () => {
-  /** `customerText`in BOYUT anahtarları (alt anahtarlar hariç) — 14.09 sayımı. */
-  const EXPECTED_PHONE_COUNT = 27;
+  /** `customerText`in BOYUT anahtarları (alt anahtarlar hariç) — 14.09 sayımı (+1 `button`, katalog turu). */
+  const EXPECTED_PHONE_COUNT = 28;
 
   it("globals.css'teki blok modülün türettiği haritaya birebir eşit", () => {
     const css = stripComments(readFileSync(cssPath, 'utf8'));

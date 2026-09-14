@@ -67,7 +67,7 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
   it('px kademeleri sayıya (dp) çevrilir, em harf aralığı olduğu gibi kalır', () => {
     expect(lightTheme.text['screen-title']).toBe(stop(customerText['screen-title']));
     expect(lightTheme.text['h1--line-height']).toBe(Number(customerText['h1--line-height']));
-    expect(lightTheme.text.button).toBe(stop(customerAppText.button));
+    expect(lightTheme.text.button).toBe(stop(customerText.button));
     expect(lightTheme.text['button--font-weight']).toBe(700);
   });
 

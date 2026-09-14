@@ -215,6 +215,11 @@ export const customerText = {
   'field-label--font-weight': '600',
   control: '13.5px', // süzgeç ve sıralama düğmesi (K17 küçük · K18)
   'control--font-weight': '700',
+  /* (telefon, 14.09) DÜĞME ETİKETİ — native birincil düğmenin kademesi (hap ve blok). `chip` (14) ve
+     `control` (13,5) ile birleştirilMEdi: dokunma hedefinin etiketi çipten kalın durmalı ve kontrol
+     kademelerinde yuvarlama yok. Telefon görünümü native düğmeyi çizdiği için uygulamadan tabana çıktı. */
+  button: '14.5px',
+  'button--font-weight': '700',
   /* Adet seçicinin −/+ imleri. Kendi kademeleri: rakam gövde ölçeğinden (14/13) gelir ama imler bir
      tık büyüktür — dokunma hedefi rakamdan geniş olmalı. Sepet tasarımından geldi (web 16 · mobil 15). */
   step: '16px',
@@ -321,4 +326,7 @@ export const customerShadow = {
       ya da kartın üstünde yüzer; mürekkebi örtününki, çünkü `ink` fotoğrafın üstünde mavimsi gri
       kirli duruyordu. */
   badge: '0 3px 8px rgba(21, 23, 15, 0.22)',
+  /** (telefon, 14.09) Klasik yükseklik gölgesi (Token Kararlari #5, Mobil v2 ölçümü) — anahtar düğmesinin
+      topuzu. Mürekkebi ESKİ #3a4147: karar metnindeki değer aynen, `ink`e çekilmesi ayrı görsel tur. */
+  soft: '0 1px 3px rgba(58, 65, 71, 0.08)',
 } as const satisfies Record<string, string>;

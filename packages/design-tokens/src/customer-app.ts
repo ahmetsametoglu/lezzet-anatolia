@@ -148,20 +148,15 @@ export const customerAppColors = {
    Tabandaki ölçek olduğu gibi geçerlidir; burada yalnız uygulamanın kendi durakları var.
    `--line-height` / `--font-weight` / `--letter-spacing` sonekleri Tailwind v4'ün kademe
    alt-özellikleridir; taban dosyayla aynı yazım korunur ki iki taraf aynı dille okunsun.
-   Ekran başlığı (`screen-title` 17), yardımcı satır (`helper` 12) ve ROZET kademesi (`badge` ·
-   `badge-sm`, #16) telefon görünümüyle tabana çıktı (14.09) — künyeleri `customer.ts`te. */
+   Ekran başlığı (`screen-title` 17), yardımcı satır (`helper` 12), ROZET kademesi (`badge` ·
+   `badge-sm`, #16) ve düğme etiketi (`button` 14,5) telefon görünümüyle tabana çıktı (14.09) —
+   künyeleri `customer.ts`te. */
 export const customerAppText = {
   /* Yüzen sayfanın (bottom sheet) başlığı — Lora 600. Ekran başlığından (`screen-title` 17, taban)
      bir kademe yüksek çünkü sheet açıkken ekranın kendisi arka plana düşer. Kararın hükmü aynı:
      başlık kademeleri burada yuvarlanMAZ. */
   'sheet-title': '19px', // yüzen sayfa başlığı (Lora 600)
   'sheet-title--font-weight': '600',
-
-  /* Düğme etiketi — tabanın `chip` (14) ve `control` (13.5) kademeleriyle birleştirilMEdi:
-     dokunma hedefinin etiketi çipten kalın durmalı, yarım piksel burada da komşu öğeyle hizayı
-     belirliyor (kontrol kademelerinde yuvarlama yok kuralı). */
-  button: '14.5px',
-  'button--font-weight': '700',
 
   /* ÜSTBAŞLIK — bu dosyanın TEK bilinçli ad çakışması, üç alt-anahtarıyla birlikte.
      Ad `eyebrow-app` iken sadeleşti: dosya zaten uygulama alanı, sonek aynı bilgiyi ikinci kez
@@ -202,9 +197,9 @@ export const customerAppRadius = {
      Değeri tabandaki `ink`ten TÜRETİLİR, ikinci kez yazılmaz: mürekkep değişirse gölge de
      değişir. Basılı durumda öğe `translate(2px,2px)` ile bu gölgeyi yutar (karar #8).
    · `badge` — rozetin kendi gölgesi (#16).
-   `hard` ile `badge`in TANIMI tabanda (14.09): telefon görünümü de aynı gölgeleri çiziyor ve iki
-   yazım bir gün ayrışırdı. Uygulama teması gölge ailesini doğrudan BU nesneden okuduğu için
-   ikisi burada yeniden dışa verilir — değer tek kaynaktan gelir. */
+   Üçünün de TANIMI tabanda (14.09): telefon görünümü de aynı gölgeleri çiziyor ve iki yazım bir gün
+   ayrışırdı. Uygulama teması gölge ailesini doğrudan BU nesneden okuduğu için üçü burada yeniden
+   dışa verilir — değer tek kaynaktan gelir. */
 /**
  * Sert gölgenin KAYMA MİKTARI (px) — gölge dizgesi bundan türer, sayı ikinci kez yazılmaz.
  * Ayrıca bir ölçü olarak dışarı verilir: gölge kutunun DIŞINA taşar, dolayısıyla onu çizen öğenin
@@ -214,7 +209,7 @@ export const customerAppRadius = {
 export const customerAppShadowOffset = customerShadowOffset;
 
 export const customerAppShadow = {
-  soft: '0 1px 3px rgba(58, 65, 71, 0.08)',
+  soft: customerShadow.soft,
   hard: customerShadow.hard,
   badge: customerShadow.badge,
 } as const satisfies Record<string, string>;

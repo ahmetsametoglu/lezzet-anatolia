@@ -93,7 +93,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
       expect(customerColors, `${key} tabanda olmamalı`).not.toHaveProperty(key);
       expect(composedColors, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
-    for (const key of ['sheet-title', 'button']) {
+    for (const key of ['sheet-title']) {
       expect(customerText, `${key} tabanda olmamalı`).not.toHaveProperty(key);
       expect(composedText, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
@@ -107,7 +107,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
       expect(customerAppColors, `${key} uygulamada kopya kalmamalı`).not.toHaveProperty(key);
       expect(composedColors[key as keyof typeof composedColors]).toBe(customerColors[key as keyof typeof customerColors]);
     }
-    for (const key of ['badge', 'badge--font-weight', 'badge--letter-spacing', 'badge-sm', 'helper', 'screen-title']) {
+    for (const key of ['badge', 'badge--font-weight', 'badge--letter-spacing', 'badge-sm', 'helper', 'screen-title', 'button', 'button--font-weight']) {
       expect(customerAppText, `${key} uygulamada kopya kalmamalı`).not.toHaveProperty(key);
       expect(composedText[key as keyof typeof composedText]).toBe(customerText[key as keyof typeof customerText]);
     }
@@ -132,7 +132,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     expect(composedText).not.toHaveProperty('badge-sm--letter-spacing');
   });
 
-  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 26 yeni', () => {
+  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 24 yeni', () => {
     expect(sharedKeys(customerColors, customerAppColors)).toHaveLength(6);
     expect(sharedKeys(customerRadius, customerAppRadius)).toHaveLength(2);
     // Tipografide tek çakışma üstbaşlığın üç alt-anahtarıdır; dördüncü bir çakışma bilinçsizdir.
@@ -155,8 +155,10 @@ describe('customer-app ↔ customer kompozisyonu', () => {
        fabrikasında çözülemiyordu — cihazda ölçüldü).
        50 → 34 (14.09): telefon görünümünün kullandığı 16 token tabana çıktı (7 renk · 7 yazı ·
        2 yarıçap). Gölgelerin `hard` ve `badge`i sayıda KALIR: uygulama teması gölge ailesini bu
-       nesneden okuduğu için tabandaki tanım burada yeniden dışa veriliyor. */
-    expect(appTotal).toBe(34); // 8 fark + 26 uygulamaya-yeni
+       nesneden okuduğu için tabandaki tanım burada yeniden dışa veriliyor.
+       34 → 32 (14.09, katalog turu): düğme etiketi (`button` + ağırlık) tabana çıktı; gölgenin
+       `soft`u da tabana çıktı ama sayıda kalır (aynı gerekçe). */
+    expect(appTotal).toBe(32); // 8 fark + 24 uygulamaya-yeni
   });
 
   it('birleşim tabanı BÜYÜTÜR, küçültmez — hiçbir taban anahtarı kaybolmaz', () => {
@@ -166,7 +168,8 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     );
   });
 
-  it('`hard` ve `badge` gölgeleri TABANDAN okunur — ikinci kez yazılmamıştır', () => {
+  it('`soft`, `hard` ve `badge` gölgeleri TABANDAN okunur — ikinci kez yazılmamıştır', () => {
+    expect(customerAppShadow.soft).toBe(customerShadow.soft);
     expect(customerAppShadow.hard).toBe(customerShadow.hard);
     expect(customerAppShadow.hard).toContain(customerSurface.ink);
     expect(customerAppShadow.badge).toBe(customerShadow.badge);
