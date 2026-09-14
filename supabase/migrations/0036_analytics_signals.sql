@@ -419,7 +419,7 @@ comment on function public.analytics_search_signals(date, date, integer, boolean
 -- gitmiş bir satış ne kampanyanın getirisi ne dönemin cirosudur).
 -- İKİ TUTAR DA TAŞINIR (01.09 ad ayrımı): `ordered_total` sipariş edilen, `revenue_total`
 -- gerçekleşen ciro. Bugünkü raporların hepsi SİPARİŞ EDİLENİ okuyor — o tur yalnız adlandırmaydı,
--- davranış bilerek değişmedi. Ciroya geçiş kararı ölçümüyle ayrı gelecek (BEKLEYEN(13.2)); kolon
+-- davranış bilerek değişmedi. Ciroya geçiş kararı ölçümüyle ayrı gelecek (BEKLEYEN(12.25)); kolon
 -- şimdiden burada duruyor ki geçiş tek kelimelik olsun, view'ı yeniden yazmak gerekmesin.
 create or replace view public.analytics_order_base as
   select o.id, o.customer_id, o.channel, o.ordered_total, o.revenue_total, o.created_at, o.address_snapshot

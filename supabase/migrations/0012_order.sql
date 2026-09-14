@@ -501,7 +501,7 @@ revoke execute on function public.transition_order_status(uuid, order_status, or
 -- İPTAL EDİLEN sipariş ciroya GİRMEZ (`order_counts`'un `base`'i yalnız `draft`'ı dışlar): vazgeçilen
 -- bir sipariş müşterinin bize kazandırdığı para değildir. İade (`returned`) girer — o satış oldu ve
 -- geri döndü, ciro tarihi onu içerir.
--- BEKLEYEN(12.2): sütun adı `revenue` ama taban `ordered_total` — yani SİPARİŞ EDİLEN. 01.09'daki
+-- BEKLEYEN(12.25): sütun adı `revenue` ama taban `ordered_total` — yani SİPARİŞ EDİLEN. 01.09'daki
 -- ad ayrımında davranış bilerek DEĞİŞTİRİLMEDİ (o tur yalnız adlandırmaydı); `revenue_total`a
 -- geçmek müşteri kartındaki sayıyı oynatır ve iade edilmiş siparişin katkısını sıfırlar — üstteki
 -- künyenin "iade girer" kuralıyla çelişir. Karar ölçümüyle ayrı gelecek.
@@ -563,7 +563,7 @@ stable
 as $$
   with base as (
     -- Taban SİPARİŞ EDİLEN (`ordered_total`): sayaçlar "bugün ne kadarlık iş var" diyor, "ne kadarı
-    -- gitti" demiyor. Ciroya geçiş ayrı bir karar (BEKLEYEN(12.2), 01.09 ad ayrımı).
+    -- gitti" demiyor. Ciroya geçiş ayrı bir karar (BEKLEYEN(12.25), 01.09 ad ayrımı).
     select o.status, o.ordered_total as total, o.amount_collected, o.amount_refunded, o.payment_method,
            o.on_account, o.payment_status
     from public.order o
