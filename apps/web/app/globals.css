@@ -446,6 +446,42 @@ body {
   font-family: var(--font-sans);
 }
 
+/* TELEFON GÖRÜNÜMÜNÜN YAZI ÖLÇEĞİ (kullanıcı kararı 14.09) — müşteri yazı kademeleri native'deki gibi
+   bir adım (1px) büyük okunur. Yeni token DEĞİL: tabandaki kademeler telefon çerçevesinin kökünde
+   (`site-frame.mobile.tsx` → `data-type-scale="phone"`) yeniden tanımlanır; çekmeceler de çerçevenin
+   içinde çizildiği için değişkeni devralır. Değerler `@lezzet/design-tokens`ten TÜRER
+   (`customerPhoneTextStepPx` → `flattenPhoneTextTokens`) ve parite testi bloğu iki yönlü kilitler.
+   Yalnız BOYUT: satır yüksekliği, ağırlık ve harf aralığı oranlardır, adımdan etkilenmez. */
+[data-type-scale='phone'] {
+  --text-h1: 53px;
+  --text-h1-sm: 31px;
+  --text-page-title: 39px;
+  --text-page-title-sm: 27px;
+  --text-h2: 29px;
+  --text-h2-sm: 21px;
+  --text-card-title: 25px;
+  --text-card-title-sm: 19px;
+  --text-lead: 19px;
+  --text-body: 16px;
+  --text-body-sm: 15px;
+  --text-note: 14px;
+  --text-micro: 12.5px;
+  --text-chip: 15px;
+  --text-field-label: 13.5px;
+  --text-control: 14.5px;
+  --text-step: 17px;
+  --text-step-sm: 16px;
+  --text-icon: 23px;
+  --text-icon-sm: 21px;
+  --text-eyebrow: 15px;
+  --text-eyebrow-sm: 12px;
+  --text-eyebrow-xs: 11px;
+  --text-badge: 13.5px;
+  --text-badge-sm: 11px;
+  --text-helper: 13px;
+  --text-screen-title: 18px;
+}
+
 /* Operasyon gövdesi kendi zeminini taşır — token'lar tema ile değiştiği için koyu modda
    otomatik döner (kabuk `h-screen` olsa da lastik-bant kaydırmada altı görünür). */
 [data-surface='operations'] body {

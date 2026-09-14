@@ -262,6 +262,18 @@ export const customerText = {
   'screen-title--font-weight': '600',
 } as const satisfies Record<string, string>;
 
+/**
+ * TELEFON GÖRÜNÜMÜNÜN YAZI ADIMI (px) — müşterinin telefon ekranları her yazı kademesini bu kadar
+ * büyük okur. Native'de 18.08'den beri böyle (kullanıcı kararı: müşteri yüzeyi bir kademe büyük okur);
+ * web'in telefon görünümü native tasarımı alınca aynı adım ona da verildi (kullanıcı kararı 14.09).
+ *
+ * SABİT EKLEME, çarpan değil: kademeler arasındaki yarım piksel farklar karar taşıyor (kontrol 13,5 ↔
+ * gövde 14) ve sabit ekleme onları birebir korur. Web'de `globals.css`in telefon ölçeği bloğu bundan
+ * türer (`flattenPhoneTextTokens`, parite testi kilitler); native temanın adımı (`CUSTOMER_TEXT_STEP_UP`)
+ * bu sayıyla eşit tutulur (mobile-kit tema testi).
+ */
+export const customerPhoneTextStepPx = 1;
+
 /* ── §0.4c Köşe yarıçapları (`--radius-` öneki · aynı envanter bölümü) ───────
    Envanter: kart 18 · küçük kart 14-16 · buton/hap tam yuvarlak (radius ≥ 22px).
    Mobil mutabakatının RESMÎ SETİ (Token Kararlari #7: rozet 12 · buton/girdi 16 · kart 20 ·

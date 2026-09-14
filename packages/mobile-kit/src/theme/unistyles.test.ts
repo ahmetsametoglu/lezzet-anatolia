@@ -5,6 +5,7 @@ import {
   customerAppShadow,
   customerAppText,
   customerColors,
+  customerPhoneTextStepPx,
   customerRadius,
   customerText,
   operationsAppColors,
@@ -68,6 +69,13 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
     expect(lightTheme.text['h1--line-height']).toBe(Number(customerText['h1--line-height']));
     expect(lightTheme.text.button).toBe(stop(customerAppText.button));
     expect(lightTheme.text['button--font-weight']).toBe(700);
+  });
+
+  it('müşteri yazı adımı web telefon görünümüyle AYNI sayı (14.09)', () => {
+    /* Web'in telefon görünümü native tasarımı aldı ve aynı adımı token paketinden okuyor
+       (`customerPhoneTextStepPx`). İki sayı ayrışırsa aynı ekran iki yüzeyde farklı boyda yazı çizer;
+       tema adımı paketin sabitine bağlanana kadar eşitliği bu satır tutar. */
+    expect(CUSTOMER_TEXT_STEP_UP).toBe(customerPhoneTextStepPx);
   });
 
   it('gölge token dizgesini AYNEN taşır (RN boxShadow CSS söz dizimini kabul eder)', () => {

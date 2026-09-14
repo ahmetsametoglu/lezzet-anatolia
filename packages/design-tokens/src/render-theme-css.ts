@@ -14,10 +14,15 @@
   `customer-app.ts` DE BİLEREK YOK: mobil uygulamanın token'ları CSS'in ikizi değildir, web
   tarafında üretilecek bir karşılıkları YOKTUR (kullanıcı kararı 07.08 — ayrım dosyayla).
   Buraya eklenirlerse `globals.css` mobil kararlarla büyümeye başlar; tam da kaçınılan şey.
+
+  TELEFON ÖLÇEĞİ BLOĞU (14.09): müşterinin yazı kademeleri telefon görünümünde bir adım büyük
+  (`customerPhoneTextStepPx`). O blok YENİ token açmaz — tabandaki kademelerden TÜRER ve telefon
+  çerçevesinin kökünde (`[data-type-scale='phone']`) aynı değişkenleri yeniden tanımlar.
 */
 import {
   customerColors,
   customerMotion,
+  customerPhoneTextStepPx,
   customerRadius,
   customerShadow,
   customerText,
@@ -81,6 +86,21 @@ export function flattenDarkTokens(): Record<string, string> {
   return flatten([['--color-', operationsDarkColors]]);
 }
 
+/**
+ * TELEFON GÖRÜNÜMÜNÜN YAZI ÖLÇEĞİ (14.09) — müşterinin yazı kademeleri `customerPhoneTextStepPx`
+ * kadar büyük. Yalnız BOYUT anahtarları: satır yüksekliği · ağırlık · harf aralığı alt anahtarları
+ * (`--` sonekliler) oranlardır ve adımdan etkilenmez — native temanın `customerStops`u da yalnız boyut
+ * durağına ekler. Operasyon kademeleri de bu bloğa girmez: büyütme müşteri yüzeyinin kararıdır.
+ */
+export function flattenPhoneTextTokens(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(customerText)) {
+    if (key.includes('--')) continue;
+    out[`--text-${key}`] = `${Number.parseFloat(value) + customerPhoneTextStepPx}px`;
+  }
+  return out;
+}
+
 function renderBlock(tokens: Record<string, string>): string {
   return Object.entries(tokens)
     .map(([name, value]) => `  ${name}: ${value};`)
@@ -89,7 +109,8 @@ function renderBlock(tokens: Record<string, string>): string {
 
 /**
  * globals.css'in token bölümünün üretilmiş karşılığını döndürür: `@theme` bloğu (fontlar hariç)
- * + operasyon karanlık-mod bloğu. Saf ve deterministik — girdisi yalnız modül sabitleri.
+ * + operasyon karanlık-mod bloğu + telefon görünümünün yazı ölçeği bloğu. Saf ve deterministik —
+ * girdisi yalnız modül sabitleri.
  */
 export function renderThemeCss(): string {
   return [
@@ -101,6 +122,10 @@ export function renderThemeCss(): string {
     '  color-scheme: dark;',
     '',
     renderBlock(flattenDarkTokens()),
+    '}',
+    '',
+    "[data-type-scale='phone'] {",
+    renderBlock(flattenPhoneTextTokens()),
     '}',
     '',
   ].join('\n');

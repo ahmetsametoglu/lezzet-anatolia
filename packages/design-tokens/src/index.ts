@@ -20,6 +20,7 @@ export {
   customerScrim,
   customerColors,
   customerText,
+  customerPhoneTextStepPx,
   customerRadius,
   customerMotion,
   customerShadow,

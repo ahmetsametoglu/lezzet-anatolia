@@ -17,7 +17,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { flattenDarkTokens, flattenThemeTokens, renderThemeCss } from './render-theme-css';
+import { customerPhoneTextStepPx, customerText } from './customer';
+import { flattenDarkTokens, flattenPhoneTextTokens, flattenThemeTokens, renderThemeCss } from './render-theme-css';
 
 /* BİLİNÇLİ İSTİSNALAR — modüle taşınMAyan token'lar. Fontlar next/font'un çalışma zamanında
    ürettiği `var(--font-…)` değişkenlerine bağlıdır; sabit olarak taşınamazlar (customer.ts /
@@ -138,5 +139,37 @@ describe('renderThemeCss', () => {
 
   it('deterministik: iki çağrı bayt-bayt aynı', () => {
     expect(renderThemeCss()).toBe(renderThemeCss());
+  });
+});
+
+/*
+  TELEFON GÖRÜNÜMÜNÜN YAZI ÖLÇEĞİ (kullanıcı kararı 14.09) — `globals.css`in `[data-type-scale='phone']`
+  bloğu yeni token açmaz, tabanın yazı kademelerinden TÜRER (her boyut + `customerPhoneTextStepPx`).
+  Kilit iki yönlü: blokta modülün türetmediği bir değer duramaz, modülün türettiği bir kademe blokta
+  eksik kalamaz — yeni bir yazı kademesi tabana girdiği gün telefon bloğuna da girmek zorunda.
+*/
+describe('telefon görünümünün yazı ölçeği', () => {
+  /** `customerText`in BOYUT anahtarları (alt anahtarlar hariç) — 14.09 sayımı. */
+  const EXPECTED_PHONE_COUNT = 27;
+
+  it("globals.css'teki blok modülün türettiği haritaya birebir eşit", () => {
+    const css = stripComments(readFileSync(cssPath, 'utf8'));
+    const block = css.match(/\[data-type-scale='phone'\]\s*\{([^}]*)\}/)?.[1];
+    expect(block, "globals.css içinde [data-type-scale='phone'] bloğu bulunamadı").toBeDefined();
+    expect(parseCustomProperties(block ?? '')).toEqual(flattenPhoneTextTokens());
+  });
+
+  it('her boyut durağı tabanın bir adım üstü; alt anahtarlar (satır · ağırlık · aralık) bloğa girmez', () => {
+    const phone = flattenPhoneTextTokens();
+    expect(Object.keys(phone)).toHaveLength(EXPECTED_PHONE_COUNT);
+    expect(phone['--text-body-sm']).toBe(`${Number.parseFloat(customerText['body-sm']) + customerPhoneTextStepPx}px`);
+    // Yarım piksel kademeler korunur — sabit ekleme aralıkları bozmaz (11,5 → 12,5).
+    expect(phone['--text-micro']).toBe(`${Number.parseFloat(customerText.micro) + customerPhoneTextStepPx}px`);
+    expect(Object.keys(phone).filter((name) => name.slice('--text-'.length).includes('--'))).toEqual([]);
+  });
+
+  it('üretilen CSS de bloğu taşır — aynı parser, aynı harita', () => {
+    const block = renderThemeCss().match(/\[data-type-scale='phone'\]\s*\{([^}]*)\}/)?.[1];
+    expect(parseCustomProperties(block ?? '')).toEqual(flattenPhoneTextTokens());
   });
 });

@@ -21,23 +21,23 @@
     }
   },
   "fr": {
-    "eyebrow": "Paniers prêts",
+    "eyebrow": "Coffrets",
     "title": "Nous dressons la table, vous n'avez qu'à inviter",
-    "body": "Une fête, un petit-déjeuner ou un grand dîner — nos paniers arrivent à prix unique, contenu annoncé.",
+    "body": "Une fête, un petit-déjeuner ou un grand dîner — nos coffrets arrivent à prix unique, contenu annoncé.",
     "meta": "{n} produits · PRIX UNIQUE",
-    "cta": "Voir le panier ›",
-    "open": "Ouvrir le panier {name}",
+    "cta": "Voir le coffret ›",
+    "open": "Ouvrir le coffret {name}",
     "card": {
       "soldOut": "Épuisé"
     },
     "error": {
       "title": "Connexion impossible",
-      "body": "Nous n'avons pas pu charger les paniers. Vérifiez votre connexion et réessayez.",
+      "body": "Nous n'avons pas pu charger les coffrets. Vérifiez votre connexion et réessayez.",
       "retry": "Réessayer"
     },
     "empty": {
-      "title": "Aucun panier pour le moment",
-      "body": "De nouveaux paniers se préparent. En attendant, composez votre table depuis le catalogue.",
+      "title": "Aucun coffret pour le moment",
+      "body": "De nouveaux coffrets se préparent. En attendant, composez votre table depuis le catalogue.",
       "cta": "Parcourir le catalogue"
     }
   },

@@ -120,6 +120,9 @@ export function SiteFrameMobile({ locale, mobileChrome, detail, accountChrome, f
 
   return (
     <div
+      // Telefon yazı ölçeği (14.09): müşteri yazı kademeleri native'deki gibi bir adım büyük okunur;
+      // değişkenler `globals.css`te bu öznitelikle yeniden tanımlanıyor (kaynak: design-tokens).
+      data-type-scale="phone"
       className={[
         'flex flex-col bg-sand-50 pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink',
         fill ? 'h-dvh overflow-hidden' : 'min-h-dvh',

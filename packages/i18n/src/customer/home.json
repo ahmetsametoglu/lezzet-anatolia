@@ -154,8 +154,8 @@
       "moreLabel": "Voir toutes les recettes"
     },
     "packages": {
-      "eyebrow": "Paniers prêts",
-      "badge": "PANIER PRÊT · {n} produits",
+      "eyebrow": "Coffrets",
+      "badge": "COFFRET · {n} produits",
       "soldOut": "Épuisé"
     },
     "discover": {
