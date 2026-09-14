@@ -7,7 +7,7 @@ import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { StockMark } from '@/components/customer/delivery/stock-mark';
-import { stockStatusOfRoute } from '@/components/customer/ui/package-card';
+import { packageRouteStatusOf } from '@lezzet/helper';
 import { formatPrice } from '@/lib/storefront/format';
 import { ContentCard } from './components/content-card';
 import { PackageFacts } from './components/package-facts';
@@ -23,9 +23,9 @@ import type { PackageViewProps } from './package-types';
  * eklemeden ÖNCE görünür (`musteri-paket-detay.md §2`).
  */
 export function PackageDesktop({ t, locale, pack }: PackageViewProps) {
-  // Yol → stok dili eşlemesi KARTLA AYNI kaynaktan (19.22 ekran ucu): kart ile detay aynı pakete
-  // iki farklı hâl söyleyemez.
-  const stockStatus = stockStatusOfRoute(pack.route);
+  // Yol → stok dili eşlemesi KARTLA AYNI kaynaktan (19.22 ekran ucu; kural 14.09'dan beri native ile ortak,
+  // `packageRouteStatusOf`): kart ile detay aynı pakete iki farklı hâl söyleyemez.
+  const stockStatus = packageRouteStatusOf(pack.route);
   return (
     <div className="flex flex-col">
       <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-muted">

@@ -12,7 +12,9 @@
     "./customer/price-label": "./src/customer/price-label.json",
     "./customer/catalog": "./src/customer/catalog.json",
     "./customer/place": "./src/customer/place.json",
-    "./customer/product": "./src/customer/product.json"
+    "./customer/product": "./src/customer/product.json",
+    "./customer/packages": "./src/customer/packages.json",
+    "./customer/package-detail": "./src/customer/package-detail.json"
   },
   "types": "./src/index.ts",
   "scripts": {

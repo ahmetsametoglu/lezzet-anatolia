@@ -1,4 +1,4 @@
-import { customerAppColors, customerAppRadius, customerColors } from '@lezzet/design-tokens';
+import { customerAppRadius, customerColors } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
@@ -45,7 +45,7 @@ describe('TextField', () => {
     );
 
     expect(screen.getByTestId('f')).toHaveStyle({ borderColor: customerColors['terracotta-line'] });
-    expect(screen.getByText('Kod geçersiz')).toHaveStyle({ color: customerAppColors.error });
+    expect(screen.getByText('Kod geçersiz')).toHaveStyle({ color: customerColors.error });
     expect(screen.getByLabelText('Kupon').props.accessibilityHint).toBe('Kod geçersiz');
   });
 

@@ -1,4 +1,4 @@
-import { customerAppColors, customerColors } from '@lezzet/design-tokens';
+import { customerColors } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
@@ -25,11 +25,12 @@ describe('Note', () => {
     expect(screen.getByTestId('note')).toHaveStyle({ backgroundColor: customerColors['terracotta-bg'] });
   });
 
-  it('hata tonu UYGULAMANIN kendi hata ailesini kullanır ve alert rolüyle duyurulur', async () => {
+  it('hata tonu hata ailesini kullanır ve alert rolüyle duyurulur', async () => {
     await render(<Note title="Ödeme alınamadı" description="Kartınız reddedildi" tone="error" testID="note" />);
 
-    expect(screen.getByTestId('note')).toHaveStyle({ backgroundColor: customerAppColors['error-bg'] });
-    expect(screen.getByText('Kartınız reddedildi')).toHaveStyle({ color: customerAppColors.error });
+    // Hata ailesinin metni ve zemini telefon görünümüyle tabana çıktı (14.09) — değer aynı, kaynak taban.
+    expect(screen.getByTestId('note')).toHaveStyle({ backgroundColor: customerColors['error-bg'] });
+    expect(screen.getByText('Kartınız reddedildi')).toHaveStyle({ color: customerColors.error });
     expect(screen.getByRole('alert')).toBeOnTheScreen();
   });
 

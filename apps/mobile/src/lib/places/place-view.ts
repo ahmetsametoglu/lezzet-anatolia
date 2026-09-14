@@ -1,4 +1,4 @@
-import { placeMarkOf } from '@lezzet/helper';
+import { packageRouteStatusOf, placeMarkOf } from '@lezzet/helper';
 import type { CartLineRoute, StockStatus } from '@lezzet/types';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import messages from '@lezzet/i18n/customer/place';
@@ -111,9 +111,9 @@ export function shippableChipLabel(locale: Locale): string {
  */
 export function packageStockStatus(pack: { soldOut: boolean; route: CartLineRoute | null }): StockStatus {
   if (pack.soldOut) return 'out_of_stock';
-  if (pack.route === 'shipping') return 'shipping';
-  if (pack.route === 'not_shippable_here' || pack.route === 'unavailable') return 'elsewhere';
-  return 'available';
+  // Yol → hâl eşlemesi ORTAK kuralda (`@lezzet/helper` `packageRouteStatusOf`, 14.09): web'in paket kartları ve
+  // telefon görünümü aynı eşlemeyi okur. Yerelden gelen ya da yeri bilinmeyen paket `available`.
+  return packageRouteStatusOf(pack.route) ?? 'available';
 }
 
 export function stockMarkOf(status: StockStatus, place: PlaceResolution | null, locale: Locale): StockMarkView | null {

@@ -42,11 +42,11 @@
     }
   },
   "fr": {
-    "header": "Panier prêt",
+    "header": "Coffret prêt",
     "back": "Retour",
     "addedToast": "Coffret ajouté au panier ✓",
     "share": "Partager",
-    "priceSuffix": "prix du panier complet · TVA incluse",
+    "priceSuffix": "prix du coffret complet · TVA incluse",
     "gallery": {
       "photo": "Photo du coffret {n} / {total}"
     },
@@ -55,15 +55,15 @@
       "soldOut": "Épuisé"
     },
     "soldOutBar": {
-      "text": "Ce panier est épuisé pour le moment."
+      "text": "Ce coffret est épuisé pour le moment."
     },
     "contents": {
-      "title": "Que contient ce panier ?",
+      "title": "Que contient ce coffret ?",
       "open": "Voir le produit {name}",
-      "note": "Pour les ingrédients et les allergènes, consultez la page de chaque produit. Le panier s'ajoute en entier ; son contenu ne peut pas être modifié."
+      "note": "Pour les ingrédients et les allergènes, consultez la page de chaque produit. Le coffret s'ajoute en entier ; son contenu ne peut pas être modifié."
     },
     "cta": {
-      "add": "Ajouter le panier"
+      "add": "Ajouter le coffret"
     },
     "stepper": {
       "decrease": "Réduire la quantité de {name}",
@@ -75,8 +75,8 @@
       "retry": "Réessayer"
     },
     "notFound": {
-      "title": "Panier introuvable",
-      "body": "Ce panier n'est peut-être plus en vente, ou le lien a expiré.",
+      "title": "Coffret introuvable",
+      "body": "Ce coffret n'est peut-être plus en vente, ou le lien a expiré.",
       "back": "Revenir"
     },
     "cart": {

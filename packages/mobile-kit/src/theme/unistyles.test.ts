@@ -45,10 +45,11 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
     expect(lightTheme.radius.pill).toBe(Number.parseFloat(customerAppRadius.pill));
   });
 
-  it('uygulamaya-yeni aileleri ekler (hata · marka), tabana çıkanları tabandan okur (örtü · kum · yarıçap)', () => {
-    expect(lightTheme.colors.error).toBe(customerAppColors.error);
+  it('uygulamaya-yeni aileleri ekler (hata çerçevesi · marka), tabana çıkanları tabandan okur (hata · örtü · kum · yarıçap)', () => {
+    expect(lightTheme.colors['error-line']).toBe(customerAppColors['error-line']);
     expect(lightTheme.colors['brand-google']).toBe(customerAppColors['brand-google']);
     // Telefon görünümüyle tabana çıkanlar (14.09): değer aynı, kaynak taban.
+    expect(lightTheme.colors.error).toBe(customerColors.error);
     expect(lightTheme.colors.scrim).toBe(customerColors.scrim);
     expect(lightTheme.colors['sand-150']).toBe(customerColors['sand-150']);
     expect(lightTheme.colors['sand-250']).toBe(customerColors['sand-250']);
@@ -182,15 +183,15 @@ describe('Operasyon teması ↔ üç katman kompozisyonu', () => {
 
   it('ALT katmanlar sağlam kalır: müşteri uygulamasının kendi durakları da okunur', () => {
     // Tasarımın kullandığı değerler müşteri katmanlarında yaşıyor — alt evren kanıtı.
-    expect(operationsTheme.colors.error).toBe(customerAppColors.error);
+    // `error` (ve aşağıdaki `sand-150`) telefon görünümüyle tabana çıktı (14.09); operasyon onları yine alt katmandan alır.
+    expect(operationsTheme.colors.error).toBe(customerColors.error);
     expect(operationsTheme.colors['disabled-fill']).toBe(customerAppColors['disabled-fill']);
-    // `sand-150` telefon görünümüyle tabana çıktı (14.09); operasyon onu yine alt katmandan alır.
     expect(operationsTheme.colors['sand-150']).toBe(customerColors['sand-150']);
     /* `error-bg` bu listeden ÇIKTI (30.08): operasyon mobil onu kendi ölçtüğü değerle eziyor
        (#fdf6f4) — v3'ün tonlu kartı çok açık bir zemin ister, müşteri setinin #f4e3e0'ı burada
        dolu bir uyarı bandı gibi duruyordu. Alt evren iddiası bozulmadı, bir istisnası oldu ve
        gerekçesi `operations-app.ts`in `error-bg` künyesinde. */
-    expect(operationsTheme.colors['error-bg']).not.toBe(customerAppColors['error-bg']);
+    expect(operationsTheme.colors['error-bg']).not.toBe(customerColors['error-bg']);
     expect(operationsTheme.colors['error-bg']).toBe('#fdf6f4');
     // Taban da yerinde: mürekkep, zeytin, kum skalası birebir müşteri evreninden.
     expect(operationsTheme.colors.ink).toBe(customerColors.ink);

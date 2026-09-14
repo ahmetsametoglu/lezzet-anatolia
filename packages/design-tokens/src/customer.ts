@@ -88,9 +88,10 @@ export const customerOlive = {
 } as const satisfies Record<string, string>;
 
 /* Terracotta: fırsat/indirim. Ayrı koyu katman yok; anlam ayrımı ton farkıyla kurulur.
-   `terracotta-bright` bugün web ekranlarında hata metni için de kullanılıyor; mobil uygulama
-   hata için kendi ailesini taşır (`customerAppError`, `customer-app.ts`). Web'in hataya ayrı
-   bir ton verip vermeyeceği web şeridinin görsel kararıdır — buradan zorlanmaz. */
+   `terracotta-bright` bugün web masaüstü ekranlarında hata metni için de kullanılıyor; mobil uygulama
+   ve web'in telefon görünümü hata için kendi ailesini taşır (`customerError` aşağıda — metin ve zemin;
+   çerçevesi `customerAppError`, `customer-app.ts`). Masaüstünün hatada o aileyi alıp almayacağı web
+   şeridinin görsel kararıdır — buradan zorlanmaz. */
 export const customerTerracotta = {
   terracotta: '#b05c2e', // fırsat/indirim vurgusu, eski fiyat üstü
   'terracotta-bg': '#f9ede2', // fırsat kutusu, indirim rozeti
@@ -111,6 +112,15 @@ export const customerClosed = {
   closed: '#6d7261', // kapanmış durum etiketi (= body)
   'closed-bg': '#f0e9d6', // kapanmış rozet arkası (= sand-100)
   'closed-line': '#c9cdc2', // pasif çerçeve (= neutral-400)
+} as const satisfies Record<string, string>;
+
+/* Hata — (telefon, 14.09) Token Kararlari #3'ün metin ve zemin katmanı. Terracotta'ya katılmadı: terracotta
+   fırsat/indirim demek; aynı ailede iki zıt anlam rozet renginin bilgi değerini sıfırlar. Telefon görünümü
+   native'in "bu adrese gitmiyor" işaretini çiziyor (`StockMark` `blocked`). Üçüncü katman (`error-line`)
+   yalnız uygulamanın — paylaşılan kitin kurye düğmesi (`customerAppError`). */
+export const customerError = {
+  error: '#a44a3f', // hata metni, "bu adrese gitmiyor" işareti
+  'error-bg': '#f4e3e0', // hata kutusu, işaretin zemini
 } as const satisfies Record<string, string>;
 
 /* ── §0.4a Etkileşim durumları ───────────────────────────────────────────────
@@ -152,6 +162,7 @@ export const customerColors = {
   ...customerTerracotta,
   ...customerHoney,
   ...customerClosed,
+  ...customerError,
   ...customerInteraction,
   ...customerScrim,
 } as const satisfies Record<string, string>;

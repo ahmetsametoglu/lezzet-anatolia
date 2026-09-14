@@ -16,6 +16,7 @@ export {
   customerTerracotta,
   customerHoney,
   customerClosed,
+  customerError,
   customerInteraction,
   customerScrim,
   customerColors,

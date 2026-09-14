@@ -5,6 +5,7 @@ import {
   formatPrice,
   offerDiscountLabel,
   offerLimitOf,
+  packageRouteStatusOf,
   placeMarkOf,
   productPriceLabel,
   scopeBadgeOf,
@@ -22,7 +23,6 @@ import { ProductCircleCard } from '@/components/customer/phone-kit/product-circl
 import { SectionHeader } from '@/components/customer/phone-kit/section-header';
 import { Tag } from '@/components/customer/phone-kit/tag';
 import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-icon';
-import { stockStatusOfRoute } from '@/components/customer/ui/package-card';
 import { Link } from '@/i18n/navigation';
 import type { HomeMobileProps } from './home-types';
 
@@ -252,8 +252,8 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
           <p className="px-5.5 font-sans text-eyebrow-xs text-terracotta uppercase">{copy.packages.eyebrow}</p>
           <div className="flex flex-col gap-3 px-5.5">
             {home.packages.map((pack) => {
-              // Paketin yer ekseni web'in paket kartıyla AYNI eşlemeden (`stockStatusOfRoute`).
-              const mark = cardPlaceNoteOf(placeMarkOf(stockStatusOfRoute(pack.route), place, placeCopy));
+              // Paketin yer ekseni paket kartlarıyla AYNI eşlemeden (`packageRouteStatusOf`, native ile ortak).
+              const mark = cardPlaceNoteOf(placeMarkOf(packageRouteStatusOf(pack.route), place, placeCopy));
               const note = pack.soldOut ? undefined : mark.note;
               return (
                 <PhotoTile

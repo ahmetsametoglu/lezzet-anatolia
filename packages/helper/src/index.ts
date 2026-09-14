@@ -16,6 +16,8 @@ export * from './format';
 export * from './home-copy';
 export * from './identity';
 export * from './money';
+// Hazır paketin iki yüzeyde ortak kuralları — yolun stok diline çevrilmesi ve detayın adet tavanı (14.09).
+export * from './package';
 export * from './postal-code';
 export * from './place-name';
 export * from './price-label';

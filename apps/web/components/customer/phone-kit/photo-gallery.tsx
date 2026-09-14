@@ -1,13 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { RATIO_SQUARE, type CatalogImage } from '@lezzet/types';
+import type { CatalogImage } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 
 /*
   FOTOĞRAF GALERİSİ — native `PhotoGallery`nin (`apps/mobile/src/components/ui/photo-gallery.tsx`) web telefon
-  ikizi (14.09): ürün detayının kahramanı. Kutuyu çağıran verir (tam genişlik × 400); galeri onu doldurur,
-  degrade · yüzen düğmeler · rozetler çağıranda kalır ve şeridin üstünde çizilir.
+  ikizi (14.09): ürün ve paket detayının kahramanı. Kutuyu çağıran verir (ürün tam genişlik × 400, paket 16:10);
+  galeri onu doldurur, degrade · yüzen düğmeler · rozetler çağıranda kalır ve şeridin üstünde çizilir.
 
   · Üç hâl native'inki: hiç görsel yok → kum zeminde baş harf · tek görsel → düz görsel, şerit ve gösterge
     YOK (tek noktalı gösterge bilgi taşımaz) · çok görsel → yatay kaydırma (sayfa sınırına oturur,
@@ -16,22 +16,25 @@ import { FramedImage } from '@/components/media/framed-image';
   · Noktalar native'in dili (onboarding `ob.dots`): etkin 24 · sönük 8 · yükseklik 5; etkin terracotta,
     sönük fotoğraf üstü krem cam (`sand-50/90` — native `cream-glass-soft`). Sıra dekoratif, karo kendi
     sırasını söylüyor.
-  · Kesit kare (`RATIO_SQUARE`): kutu telefon eninde ≈1:1 (390 × 400).
+  · Kesit çağırandan (`ratio`): CDN'den kutunun oranına en yakın çerçeve istenir — ürün kahramanı telefon
+    eninde ≈1:1 (390 × 400, kare), paket kahramanı 16:10 (3:2 çerçeve).
 */
 
 type ShownPhoto = CatalogImage & { url: string };
 
 interface PhotoGalleryProps {
   images: readonly CatalogImage[];
-  /** İlk karonun metni — arama motoru ve ekran okuyucu için ürünün adı. */
+  /** İlk karonun metni — arama motoru ve ekran okuyucu için ürünün ya da paketin adı. */
   alt: string;
   /** Öteki karoların etiketi ("Ürün görseli {n} / {total}") — çağıranın sözlüğünden. */
   photoLabel: string;
   /** Görsel yokken kum zeminde çizilen baş harf. */
   initial: string;
+  /** Kutunun oranı (genişlik ÷ yükseklik) — CDN çerçevesi bununla seçilir. */
+  ratio: number;
 }
 
-export function PhotoGallery({ images, alt, photoLabel, initial }: PhotoGalleryProps) {
+export function PhotoGallery({ images, alt, photoLabel, initial, ratio }: PhotoGalleryProps) {
   const track = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const photos = images.filter(
@@ -52,7 +55,7 @@ export function PhotoGallery({ images, alt, photoLabel, initial }: PhotoGalleryP
     <FramedImage
       src={photo.url}
       alt={labelOf(index)}
-      ratio={RATIO_SQUARE}
+      ratio={ratio}
       crop={photo.crop}
       frames={photo.frames}
       sizes="100vw"

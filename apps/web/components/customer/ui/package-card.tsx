@@ -1,4 +1,5 @@
-import { RATIO_SOURCE, type StockStatus } from '@lezzet/types';
+import { packageRouteStatusOf } from '@lezzet/helper';
+import { RATIO_SOURCE } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { FramedImage } from '@/components/media/framed-image';
 import { StockMark } from '@/components/customer/delivery/stock-mark';
@@ -50,32 +51,12 @@ interface PackageListCardProps {
   wide?: boolean;
 }
 
-/**
- * **Paketin YOLU → ürün kartının stok dili** (19.22 ekran ucu, arka-uç talebi 09.08).
- *
- * `CartLineRoute` ile `StockStatus` iki ayrı enum ama aynı dört soruyu soruyor; eşleyip `StockMark`
- * kullanmak, paket için ikinci bir cümle ailesi yazmaktan iyidir — müşteri aynı bilgiyi ürün
- * kartında ve paket kartında farklı kelimelerle okumamalı (`CLAUDE §1`).
- *
- * `null` = **yer bilinmiyor**, işaret çizilmez. `local` de işaretsiz: "adresine geliyor" varsayılan
- * hâldir, her karta yazmak gürültü olurdu (ürün kartının `available` kararının aynısı).
- *
- * `unavailable` da `elsewhere`dir (düzeltme 21.08 — eski not "o hâlde `soldOut` zaten devrede"
- * diyordu ve HER ZAMAN doğru değildi): takımın kalemleri iki depoya dağılmışsa her kalem ağda
- * VARDIR (`soldOut` false) ama hiçbir havuz tam takım veremez — kart yeşil "Stokta" basıp
- * alınamayan bir paketi alınabilir gösteriyordu. Bu, ürünün "bölgenizde şu an yok" hâlinin
- * paketteki karşılığıdır; `soldOut` gerçek tükenmişlikte yine önce gelir (çizim sırası öyle),
- * iki çip aynı anda basılmaz. Detay sayfaları da AYNI eşlemeyi kullanır (tek kaynak).
- */
-export function stockStatusOfRoute(route: StorefrontPackage['route']): StockStatus | null {
-  if (route === 'shipping') return 'shipping';
-  if (route === 'not_shippable_here' || route === 'unavailable') return 'elsewhere';
-  return null;
-}
-
 export function PackageListCard({ pack, locale, labels, compact = false, wide = false }: PackageListCardProps) {
   if (wide) return <WidePackageCard pack={pack} locale={locale} labels={labels} />;
-  const stockStatus = stockStatusOfRoute(pack.route);
+  // Paketin YOLU → ürün kartının stok dili: ortak kural (`@lezzet/helper` `packageRouteStatusOf`, gerekçesi
+  // orada) — detay sayfaları ve native uygulama aynı eşlemeyi okur. `null` = yer bilinmiyor ya da yerelden
+  // geliyor, işaret çizilmez.
+  const stockStatus = packageRouteStatusOf(pack.route);
   return (
     <Link
       href={{ pathname: '/package/[slug]', params: { slug: pack.slug } }}
@@ -209,7 +190,7 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
 
 /** Tek paket kaldığında kullanılan yatay kart — ızgaranın tek elemanlı hâli yerine (tasarım). */
 function WidePackageCard({ pack, locale, labels }: Omit<PackageListCardProps, 'compact' | 'wide'>) {
-  const stockStatus = stockStatusOfRoute(pack.route);
+  const stockStatus = packageRouteStatusOf(pack.route);
   // Künye tek satırda birleşir; hesaplanamayan parça sessizce düşer, ayraç ondan sonra kurulur.
   const meta = [
     pack.serves !== null ? labels.serves.replace('{n}', String(pack.serves)) : null,

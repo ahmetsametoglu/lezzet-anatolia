@@ -89,7 +89,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
   });
 
   it('uygulamaya-YENİ anahtarlar tabanda yok, birleşimde var', () => {
-    for (const key of ['error', 'error-bg', 'cream-glass', 'cream-glass-soft', 'accent-leaf', 'brand-google']) {
+    for (const key of ['error-line', 'cream-glass', 'cream-glass-soft', 'accent-leaf', 'brand-google']) {
       expect(customerColors, `${key} tabanda olmamalı`).not.toHaveProperty(key);
       expect(composedColors, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
@@ -103,7 +103,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     /* Telefon görünümü native tasarımı aldı; kullandığı token web'e girebilsin diye tabana taşındı.
        Taşıma bir DEĞER değişikliği değil: uygulama teması aynı sayıyı almaya devam etmeli — bu test
        hem "taşındı" (uygulamada kopyası kalmadı) hem "kaybolmadı" (birleşimde var) der. */
-    for (const key of ['sand-150', 'sand-250', 'ink-deep', 'scrim-soft', 'scrim', 'scrim-72', 'scrim-heavy']) {
+    for (const key of ['sand-150', 'sand-250', 'ink-deep', 'scrim-soft', 'scrim', 'scrim-72', 'scrim-heavy', 'error', 'error-bg']) {
       expect(customerAppColors, `${key} uygulamada kopya kalmamalı`).not.toHaveProperty(key);
       expect(composedColors[key as keyof typeof composedColors]).toBe(customerColors[key as keyof typeof customerColors]);
     }
@@ -132,7 +132,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     expect(composedText).not.toHaveProperty('badge-sm--letter-spacing');
   });
 
-  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 24 yeni', () => {
+  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 22 yeni', () => {
     expect(sharedKeys(customerColors, customerAppColors)).toHaveLength(6);
     expect(sharedKeys(customerRadius, customerAppRadius)).toHaveLength(2);
     // Tipografide tek çakışma üstbaşlığın üç alt-anahtarıdır; dördüncü bir çakışma bilinçsizdir.
@@ -157,8 +157,10 @@ describe('customer-app ↔ customer kompozisyonu', () => {
        2 yarıçap). Gölgelerin `hard` ve `badge`i sayıda KALIR: uygulama teması gölge ailesini bu
        nesneden okuduğu için tabandaki tanım burada yeniden dışa veriliyor.
        34 → 32 (14.09, katalog turu): düğme etiketi (`button` + ağırlık) tabana çıktı; gölgenin
-       `soft`u da tabana çıktı ama sayıda kalır (aynı gerekçe). */
-    expect(appTotal).toBe(32); // 8 fark + 24 uygulamaya-yeni
+       `soft`u da tabana çıktı ama sayıda kalır (aynı gerekçe).
+       32 → 30 (14.09, paketler turu): hata ailesinin metni ve zemini (`error` · `error-bg`) tabana çıktı —
+       web telefon görünümünün "bu adrese gitmiyor" işareti; çerçevesi (`error-line`) burada kalır. */
+    expect(appTotal).toBe(30); // 8 fark + 22 uygulamaya-yeni
   });
 
   it('birleşim tabanı BÜYÜTÜR, küçültmez — hiçbir taban anahtarı kaybolmaz', () => {

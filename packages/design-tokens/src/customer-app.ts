@@ -25,10 +25,11 @@
   İKİ TÜR TOKEN var, ikisi de burada:
     (1) FARK (8) — tabanla AYNI adı taşıyan, uygulamada başka değerde olan token. Web değeri
         `customer.ts`te dokunulmadan durur; kompozisyonda uygulama değeri kazanır.
-    (2) UYGULAMAYA-YENİ — tabanda hiç olmayan token: hata ailesi · krem cam · vurgu yaprağı ·
-        gölge · fotoğraf gradyanı · bulanıklık · marka renkleri · uygulama tipografi kademeleri.
-        Örtü ailesi, kum ara kademeleri, derin mürekkep, rozet/yardımcı/ekran başlığı kademeleri ve
-        yarıçap setinin iki boş kademesi 14.09'da tabana çıktı (yukarıdaki kural).
+    (2) UYGULAMAYA-YENİ — tabanda hiç olmayan token: hata ailesinin çerçevesi · krem cam · vurgu
+        yaprağı · gölge · fotoğraf gradyanı · bulanıklık · marka renkleri · uygulama tipografi kademeleri.
+        Örtü ailesi, kum ara kademeleri, derin mürekkep, rozet/yardımcı/ekran başlığı kademeleri,
+        yarıçap setinin iki boş kademesi ve hata ailesinin metni ile zemini 14.09'da tabana çıktı
+        (yukarıdaki kural).
   Kaynak: `design/project/Mobil - Token Kararlari.md` (24 karar; 14–24 ikinci tur) +
   `Mobil - Musteri v3.dc.html`.
 
@@ -76,10 +77,12 @@ export const customerAppOverrides = {
    (ölçüldü 30.08). Kenarlık için terracotta kullanmak da olmazdı: o amber bir çizgi, bu pembe bir
    çizgi ve ikisi ayrı şey söylüyor.
 
-   Değer operasyon setinin `error-line`ıyla AYNI: aile iki yüzeyde tek renkte konuşur. */
+   Değer operasyon setinin `error-line`ıyla AYNI: aile iki yüzeyde tek renkte konuşur.
+
+   METİN VE ZEMİN TABANA ÇIKTI (telefon, 14.09): web telefon görünümü native'in "bu adrese gitmiyor"
+   işaretini çiziyor (`StockMark` `blocked`) — `error` · `error-bg` artık `customer.ts` `customerError`da,
+   uygulama teması ikisini kompozisyonla aynı değerde alıyor. Burada kalan çerçeve katmanı yalnız kitin. */
 export const customerAppError = {
-  error: '#a44a3f', // hata metni, iptal/başarısız etiketi
-  'error-bg': '#f4e3e0', // hata kutusu, başarısız ödeme zemini
   'error-line': '#e0b9b2', // hata kutusu/düğmesi çerçevesi (kurye "Kabul etmedi")
 } as const satisfies Record<string, string>;
 
@@ -134,7 +137,7 @@ export const customerAppBrand = {
   'brand-mastercard-alt': '#f79e1b',
 } as const satisfies Record<string, string>;
 
-/* Uygulamaya-özgü renklerin tam kümesi (19): 6 fark + 13 yeni. Tabanla birleştirilerek
+/* Uygulamaya-özgü renklerin tam kümesi (17): 6 fark + 11 yeni. Tabanla birleştirilerek
    kullanılır — `{ ...customerColors, ...customerAppColors }`. */
 export const customerAppColors = {
   ...customerAppOverrides,

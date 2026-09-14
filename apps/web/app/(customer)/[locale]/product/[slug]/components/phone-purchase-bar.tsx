@@ -12,6 +12,7 @@ import { NoticeDialog } from '@/components/customer/delivery/notice-dialog';
 import webPlaceMessages from '@/components/customer/delivery/place-messages.json';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { QuantityStepper } from '@/components/customer/phone-kit/quantity-stepper';
+import { StickyBar } from '@/components/customer/phone-kit/sticky-bar';
 import { useToast } from '@/components/customer/ui/toast';
 import { recordVariantStockNoticeAction } from '@/lib/delivery/notice-actions';
 import { capOf } from './purchase-panel';
@@ -49,9 +50,6 @@ interface PhonePurchaseBarProps {
   postalCode: string | null;
 }
 
-/** Barın kabuğu — native `bar`. */
-const SHELL =
-  'fixed inset-x-0 bottom-0 z-30 border-t-[1.5px] border-ink bg-sand-50/96 px-3 pt-2.5 pb-[max(14px,env(safe-area-inset-bottom))] backdrop-blur-sm';
 /** Sebep satırı — native `soldOutText`. */
 const NOTE = 'min-w-0 flex-1 font-sans text-note leading-[1.4] font-semibold text-muted';
 /** "Haber ver" hapı — native `alertButton` (zeytin dolgu, zeytin çizgisi, hap köşe). */
@@ -154,7 +152,7 @@ export function PhonePurchaseBar({ copy, locale, productName, variant, placeMark
   const web = webPlaceMessages[locale];
   return (
     <>
-      <div className={SHELL}>{content}</div>
+      <StickyBar>{content}</StickyBar>
       {asking && postalCode !== null && (
         <NoticeDialog
           locale={locale}

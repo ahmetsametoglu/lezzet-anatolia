@@ -1,56 +1,53 @@
 'use client';
 
-import { PackageListCard } from '@/components/customer/ui/package-card';
-import { buttonClass } from '@/components/customer/ui/button';
-import { Link } from '@/i18n/navigation';
+import packagesMessages from '@lezzet/i18n/customer/packages';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
+import { EmptyState } from '@/components/customer/phone-kit/empty-state';
+import { PlaceNoticeBand } from '@/components/customer/phone-kit/place-notice-band';
+import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
+import { PhonePackageCard } from './components/phone-package-card';
 import type { PackagesViewProps } from './packages-types';
 
 /**
- * Paketler — mobil düzeni (tasarım: `Musteri - Paketler.dc.html`, "Paketler Mobil").
+ * Paketler — TELEFON görünümü: native paket listesinin (`apps/mobile/src/screens/packages-list/packages-list-screen.tsx`)
+ * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Sekme kökü:
+ * geri yolu yok, başlık sayfanın içinde (üstbaşlık · serif başlık · soluk cümle); altında bölge dışı bandı, sonra
+ * tam genişlikte kartlar. Metin ortak sözlükten (`@lezzet/i18n/customer/packages`), kartın yer notu ortak
+ * kurallardan (`@lezzet/helper`).
  *
- * Kartlar İKİ SÜTUN: "iki paketi yan yana tartmak birincil senaryo" (tasarım). Tek sütun kıyası
- * bozardı — paket seçimi karşılaştırmalı bir karardır.
- *
- * Mobilde "daha fazla" düğmesi yok, hepsi basılır: küme zaten sınırlı ve tasarım burada sonsuz
- * kaydırma istiyor — düğmesiz akış onun en sade karşılığı.
+ * ── WEB'E ÖZGÜ ─────────────────────────────────────────────────────────────
+ * · `h1` sayfanın başlığı; sekme başlığı ve `hreflang` `page.tsx`te (web sözlüğünden).
+ * · Liste sunucuda okunur: native'in yükleme iskeleti, hata kutusu ve aşağı çekerek yenilemesinin burada karşılığı
+ *   yok — sayfa verisiyle birlikte gelir.
  */
-export function PackagesMobile({ t, locale, packages }: PackagesViewProps) {
+export function PackagesMobile({ locale, packages }: PackagesViewProps) {
+  const copy = packagesMessages[locale];
+  const { place } = useDeliveryPlace();
+  // Bant kataloğunkiyle aynı koşulda (yer biliniyor VE rota dışı): bu sekmeye alt çubuktan doğrudan gelinir,
+  // katalogdan geçmeyen müşteri adresinin gerçeğini burada okur (native).
+  const noticePlace = place !== null && !place.inRoute ? place : null;
+
   return (
-    <div className="flex flex-col">
-      {/* Paketler native'de bir SEKME KÖKÜ: geri yolu yok, başlık sayfanın içinde (native
-          `packages-list-screen` başlığı — serif sayfa başlığı + soluk açıklama, 16/4 nefes). Çerçeve
-          başlık çizmez (14.09). Metin şimdilik sayfanın kendi sözlüğünden; native'in üst başlığı ve
-          cümlesi ortak metin paketiyle Faz 1'in paketler turunda gelir. `h1` arama motorunun okuduğu. */}
-      <header className="flex flex-col gap-1 px-[18px] pt-4 pb-3">
-        <h1 className="font-serif text-page-title-sm leading-[1.15] text-ink">{t.title}</h1>
-        <p className="font-sans text-note leading-relaxed text-muted">{t.subtitle}</p>
+    <div className="flex flex-col gap-4 px-4.5 pb-5">
+      <header className="flex flex-col gap-1 pt-4 pb-1">
+        <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{copy.eyebrow}</span>
+        <h1 className="font-serif text-page-title-sm leading-[1.15] text-ink">{copy.title}</h1>
+        <p className="font-sans text-note leading-[1.6] text-muted">{copy.body}</p>
       </header>
 
+      {noticePlace !== null && <PlaceNoticeBand locale={locale} postalCode={noticePlace.postalCode} placeName={noticePlace.placeName} />}
+
       {packages.length === 0 ? (
-        <div className="mx-4 mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-sand-500 px-5 py-8 text-center">
-          <span className="text-icon">🎁</span>
-          <span className="font-sans text-note font-bold text-ink">{t.empty.title}</span>
-          <span className="font-sans text-micro text-muted">{t.empty.body}</span>
-          <Link href="/catalog" className={buttonClass({ size: 'sm', compact: true, className: 'mt-1' })}>
-            {t.empty.cta}
-          </Link>
+        // Boş hâl kesikli çerçeveli kutunun içinde (native): sayfanın gövdesi değil, listenin yeri.
+        <div className="rounded-card border-[1.5px] border-dashed border-sand-400">
+          <EmptyState
+            title={copy.empty.title}
+            description={copy.empty.body}
+            action={<PrimaryButton label={copy.empty.cta} href="/catalog" />}
+          />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 px-4 pb-5">
-          {packages.map((pack) => (
-            <PackageListCard key={pack.id} pack={pack} locale={locale} labels={t} compact />
-          ))}
-        </div>
-      )}
-
-      {/* Katalog çıkışı mobilde ızgaranın ALTINDA tek düğme (tasarım): masaüstündeki iki sütunlu
-          bant dar ekranda üç satıra yayılıp sayfayı uzatıyor, verdiği tek yön ise aynı. */}
-      {packages.length > 0 && (
-        <div className="px-4 pb-6">
-          <Link href="/catalog" className={buttonClass({ variant: 'outlineOlive', size: 'md', compact: true, fullWidth: true })}>
-            {t.catalogBand.cta}
-          </Link>
-        </div>
+        packages.map((pack) => <PhonePackageCard key={pack.id} pack={pack} copy={copy} locale={locale} place={place} />)
       )}
     </div>
   );

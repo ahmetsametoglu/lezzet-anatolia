@@ -1,6 +1,7 @@
 import { cardBadgeOf, formatPrice, placeMarkOf, productPriceLabel } from '@lezzet/helper';
 import placeMessages from '@lezzet/i18n/customer/place';
 import productMessages from '@lezzet/i18n/customer/product';
+import { RATIO_SQUARE } from '@lezzet/types';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { PhotoGallery } from '@/components/customer/phone-kit/photo-gallery';
 import { ProductCircleCard } from '@/components/customer/phone-kit/product-circle-card';
@@ -62,7 +63,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
     <div className="flex min-h-dvh flex-col bg-cream">
       {/* Kahraman içeriğin ÜSTÜNE çizilir (`z-10`) — fiyat rozeti alt komşuya sarkıyor (native `zIndex`). */}
       <div className="relative z-10 h-[400px] flex-none">
-        <PhotoGallery images={heroPhotos} alt={product.name} photoLabel={copy.gallery.photo} initial={product.name.slice(0, 1)} />
+        <PhotoGallery images={heroPhotos} alt={product.name} photoLabel={copy.gallery.photo} initial={product.name.slice(0, 1)} ratio={RATIO_SQUARE} />
         <span aria-hidden className="pointer-events-none absolute inset-0 bg-linear-to-b from-scrim-soft to-ink-deep/0 to-30%" />
         {/* Yer filigranı galerinin KARDEŞİ, çocuğu değil: kaydırmayla kaymaz, dokunuşu yutmaz (native 10.08). */}
         {placeMark !== null && (

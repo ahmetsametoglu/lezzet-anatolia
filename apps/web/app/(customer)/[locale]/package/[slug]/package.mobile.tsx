@@ -1,110 +1,121 @@
-import { RATIO_SQUARE } from '@lezzet/types';
+import { formatPrice, packageRouteStatusOf, placeMarkOf } from '@lezzet/helper';
+import packageDetailMessages from '@lezzet/i18n/customer/package-detail';
+import placeMessages from '@lezzet/i18n/customer/place';
+import { RATIO_SOURCE } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
-import { Badge } from '@/components/customer/ui/badge';
+import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
+import { PhotoGallery } from '@/components/customer/phone-kit/photo-gallery';
+import { StockMark } from '@/components/customer/phone-kit/stock-mark';
+import { BackButton } from '@/components/customer/ui/back-button';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { Link } from '@/i18n/navigation';
-import { buttonClass } from '@/components/customer/ui/button';
-import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
-import { StockMark } from '@/components/customer/delivery/stock-mark';
-import { stockStatusOfRoute } from '@/components/customer/ui/package-card';
-import { formatPrice } from '@/lib/storefront/format';
-import { ContentCard } from './components/content-card';
-import { PackageFacts } from './components/package-facts';
-import { PurchaseBox } from './components/purchase-box';
+import { PhonePackageBar } from './components/phone-package-bar';
 import type { PackageViewProps } from './package-types';
 
 /**
- * Paket detay — mobil düzen (tasarım: `Musteri - Paket Detay.dc.html`, "Paket Detay Mobil").
+ * Paket detay — TELEFON görünümü: native paket detayının (`apps/mobile/src/screens/package/package-detail-screen.tsx`)
+ * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Sıra
+ * native'inki: başlık çubuğu (‹ · "Hazır Paket" · paylaş) → 16:10 galeri (önce paketin kapağı, sonra kalemlerin
+ * görselleri; tükendi rozeti) → künye (ad · fiyat + ek · kargo kısıtı · yer işareti · açıklama) → "Pakette neler
+ * var?" satırları (her satır ürün detayına) → not → yapışkan bar. Metin ortak sözlükten
+ * (`@lezzet/i18n/customer/package-detail`), yer işareti ortak kurallardan (`@lezzet/helper`).
  *
- * Geri yolu, paketin adı ve sepet ÇERÇEVENİN üst barında (v1 mobil, 13.09 — ürün detayıyla aynı);
- * fotoğraf üstündeki geri dairesi ve yüzen sepet düğmesi v1 ile kalktı. Satın alma akışın karar
- * bölgesinde — iki detay sayfası aynı jesti aynı yerde konuşur.
+ * ── WEB'E ÖZGÜ KORUNANLAR ──────────────────────────────────────────────────
+ * · `h1` paketin adı; paylaşım kartı ve `hreflang` `page.tsx`te. Paylaşım ölçülür (`bundle` konusu — paket bir ürün
+ *   değil, ölçüm bir kaleme yazılmaz).
+ * · Çerçeve bu rotada başlık çizmez; başlık çubuğu sayfanın (native'de de ekranın kendisinde). Web'de çubuk
+ *   YAPIŞKAN ve içerik altından akar, bu yüzden zemini tasarımın krem camı (`sand-50/96` + bulanıklık — web'in
+ *   `AppBar`ıyla aynı yüzey); native'de çubuk kaydırma alanının dışında durduğu için camın bir işi yok.
+ * · Sepete ekleme web'in sepetine (`phone-package-bar.tsx` künyesi).
+ *
+ * ── NATIVE'İN KARARLARI (aynen) ────────────────────────────────────────────
+ * · Solma yalnız galeriye: tükendi ya da bu adrese gitmeyen paket. Yazı katmanı tam opak kalır.
+ * · "Kargoyla gelir" burada yazılmaz: kargo kısıtı kendi çipiyle konuşuyor, rota dışı cümlesi listelerin bandında.
+ *   Tükenmiş pakette yer işareti de yok — hiçbir yerde yokken "bu adrese gelmez" cevapsız soruya cevaptır.
+ * · Satır etiketi ad + boy etiketinden kurulur ("Fıstıklı Baklava · 500 g"); tek boylu üründe ayraç uydurulmaz.
+ *   Fiyat kırılımı yok: paket tek fiyattır.
  */
-export function PackageMobile({ t, locale, pack }: PackageViewProps) {
-  // Yol → stok dili eşlemesi KARTLA AYNI kaynaktan (19.22 ekran ucu): kart ile detay aynı pakete
-  // iki farklı hâl söyleyemez.
-  const stockStatus = stockStatusOfRoute(pack.route);
+export function PackageMobile({ locale, pack }: PackageViewProps) {
+  const copy = packageDetailMessages[locale];
+  const { place } = useDeliveryPlace();
+  const mark = pack.soldOut ? null : placeMarkOf(packageRouteStatusOf(pack.route), place, placeMessages[locale]);
+  const placeMark = mark === null || mark.tone === 'info' ? null : mark;
+  const heroFaded = pack.soldOut || placeMark?.tone === 'blocked';
+  // Kapak önce, kalemler sonra: satılan şey paket, kalemler içeriği. Adressiz ve tekrarlanan görseli galeri eler.
+  const heroPhotos = [pack.image, ...pack.items.map((item) => item.image)];
+
   return (
-    <div className="flex flex-col gap-3 pb-6">
-      {/* Kahraman KARE (dokuzuncu tur, ürün galerisinin aynı kararı): native kahramanı telefon
-          eninde ≈1:1; 3:2 dar ekranda kısa bant kalıyordu. Odak/zoom operatörün künyesinden. */}
-      <FramedImage
-        src={pack.image.url}
-        alt={pack.name}
-        ratio={RATIO_SQUARE}
-        crop={pack.image.crop}
-        frames={pack.image.frames}
-        sizes="100vw"
-        className="!rounded-none"
-      />
+    <div className="flex min-h-dvh flex-col bg-cream">
+      <header className="sticky top-0 z-20 flex items-center gap-2.5 border-b-[1.5px] border-ink bg-sand-50/96 px-3.5 py-2 backdrop-blur-sm">
+        <BackButton label={copy.back} fallback="/packages" />
+        <span className="min-w-0 flex-1 truncate font-serif text-screen-title text-ink">{copy.header}</span>
+        <ShareButton variant="bar" label={copy.share} subject={{ subjectType: 'bundle', subjectId: pack.id }} />
+      </header>
 
-      <div className="flex flex-col gap-2.5 px-4">
-        <span className="font-sans text-eyebrow-sm text-olive uppercase">
-          {t.eyebrow}
-          {pack.serves !== null && ` · ${t.serves.replace('{n}', String(pack.serves))}`}
-        </span>
-        {/* Paylaş adın yanında — ürün detayıyla aynı desen. Paket bir ürün DEĞİL: `productId`
-            yok, çünkü paket birden çok ürünü tek fiyata sunuyor — birini seçip ona yazmak
-            ölçümü o ürüne haksızca yüklerdi. */}
-        <div className="flex items-start justify-between gap-2">
-          <h1 className="font-serif text-page-title-sm text-ink">{pack.name}</h1>
-          <ShareButton label={t.share} subject={{ subjectType: 'bundle', subjectId: pack.id }} />
+      <div className="relative aspect-16/10 flex-none">
+        <div className={['size-full', heroFaded ? 'opacity-45' : ''].filter(Boolean).join(' ')}>
+          <PhotoGallery images={heroPhotos} alt={pack.name} photoLabel={copy.gallery.photo} initial={pack.name.slice(0, 1)} ratio={RATIO_SOURCE} />
         </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span className={['font-sans text-card-title font-bold', pack.soldOut ? 'text-muted' : 'text-ink'].join(' ')}>
-            {formatPrice(pack.priceCents, locale)}
+        {pack.soldOut && (
+          <span className="absolute top-3 left-3 rounded-badge bg-ink px-2.5 py-1 font-sans text-badge-sm font-bold tracking-(--text-badge--letter-spacing) text-sand-50 uppercase">
+            {copy.badge.soldOut}
           </span>
-          {/* Rozet yalan söylemez (ürün detayının 19.7 kuralı): yol yere bağlı bir şey söylüyorsa
-              yeşil "Stokta" yerine yer işareti basılır. Tükendi (C3, evrensel) yine önce gelir. */}
-          {pack.soldOut ? (
-            <Badge tone="closed" variant="plain">
-              {t.soldOut}
-            </Badge>
-          ) : stockStatus ? (
-            <StockMark status={stockStatus} locale={locale} size="lg" />
-          ) : (
-            <Badge tone="positive" variant="plain">
-              {t.inStock}
-            </Badge>
-          )}
-        </div>
-
-        {pack.description && <p className="font-sans text-note leading-relaxed text-body">{pack.description}</p>}
-
-        {/* Paket kargoya çıkamıyorsa kısıt YERE göre konuşur: bölge içindeki müşteriye
-            "gönderemiyoruz" demek yanlış olurdu — onun için bu bir kısıt değil. Yol biliniyorsa
-            (`status`) kutu rota tahmini yerine yere bağlı gerçeği söyler (ürün detayı deseni). */}
-        <DeliveryLine
-          locale={locale}
-          shippable={!pack.inRouteOnly}
-          status={stockStatus ?? undefined}
-          fallback={{ ...t.assurance, notShippable: t.assurance.inRouteOnly }}
-          blockedActions={
-            <Link href="/packages" className={buttonClass({ size: "xs", className: '!text-micro' })}>
-              {t.seeShippablePackages}
-            </Link>
-          }
-          compact
-        />
-
-        <PackageFacts t={t} locale={locale} pack={pack} compact />
-
-        {/* Satın alma AKIŞTA (sekizinci tur): karar bölgesinin sonu — fiyat, teslimat ve künyenin
-            hemen altı. Sabit koyu çubuk söküldü, alt köşe yüzen sepet düğmesinin. */}
-        <PurchaseBox t={t} locale={locale} bundleId={pack.id} soldOut={pack.soldOut} routeOnly={pack.inRouteOnly} flow />
+        )}
       </div>
 
-      <div className="flex flex-col gap-2.5 px-4">
-        <h2 className="font-serif text-h2-sm text-ink">{t.contents.title}</h2>
-        {pack.items.map((item) => (
-          <ContentCard key={item.variantId} t={t} item={item} compact />
-        ))}
-        <p className="rounded-soft border border-sand-100 bg-card px-3.5 py-3 font-sans text-micro leading-relaxed text-body">
-          {t.contents.legalShort}
+      <div className="flex flex-col gap-2.5 px-4.5 py-4">
+        <h1 className="font-serif text-h1-sm text-ink">{pack.name}</h1>
+        <p className="font-sans text-card-title font-bold text-ink">
+          {formatPrice(pack.priceCents, locale)} <span className="text-helper font-normal text-muted">{copy.priceSuffix}</span>
         </p>
+        {pack.inRouteOnly && (
+          <span className="self-start rounded-badge bg-olive-bg px-2 py-1 font-sans text-micro font-semibold text-olive-dark">{copy.noShip}</span>
+        )}
+        {placeMark !== null && <StockMark label={placeMark.label} tone={placeMark.tone} />}
+        {pack.description && <p className="font-sans text-body-sm leading-[1.6] text-body">{pack.description}</p>}
+
+        <h2 className="mt-1.5 font-serif text-screen-title text-ink">{copy.contents.title}</h2>
+        <ul className="flex flex-col gap-2">
+          {pack.items.map((item) => (
+            <li key={item.variantId}>
+              {/* Satır ürün detayına gider: alerjen ve içindekiler her kalemin kendi sayfasında (yasal beyan). */}
+              <Link
+                href={{ pathname: '/product/[slug]', params: { slug: item.slug } }}
+                aria-label={copy.contents.open.replace('{name}', item.name)}
+                className="flex cursor-pointer items-center gap-3 rounded-card bg-sand-250 px-3 py-2.5 transition-opacity hover:opacity-80 active:opacity-70"
+              >
+                {item.image.url === null ? (
+                  <span aria-hidden className="grid size-11.5 flex-none place-items-center rounded-badge bg-sand-300 font-sans text-note font-bold text-muted">
+                    {item.name.slice(0, 1)}
+                  </span>
+                ) : (
+                  <FramedImage
+                    src={item.image.url}
+                    alt=""
+                    ratio={1}
+                    crop={item.image.crop}
+                    frames={item.image.frames}
+                    sizes="46px"
+                    className="size-11.5 flex-none !rounded-badge"
+                  />
+                )}
+                <span className="min-w-0 flex-1 font-sans text-note font-bold text-ink">
+                  {item.unitLabel ? `${item.name} · ${item.unitLabel}` : item.name}
+                </span>
+                <span className="font-sans text-helper font-bold text-muted">{`×${item.qty}`}</span>
+                <span aria-hidden className="font-sans text-body text-sand-600">
+                  ›
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <p className="font-sans text-body-sm leading-[1.5] text-muted">{copy.contents.note}</p>
       </div>
 
+      {/* Yapışkan barın payı (native `productBarSpace` 108). */}
+      <div aria-hidden className="h-27 flex-none" />
+      <PhonePackageBar copy={copy} locale={locale} pack={pack} />
     </div>
   );
 }

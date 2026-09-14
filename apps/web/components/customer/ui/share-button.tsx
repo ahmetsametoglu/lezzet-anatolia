@@ -26,10 +26,11 @@ interface ShareButtonProps {
    */
   subject: ShareSubject;
   /**
-   * `inline` — içerikteki düğme (adın yanında). `photo` — native ürün detayının kahramanındaki yüzen daire
-   * (14.09 telefon görünümü): 42px krem cam (`sand-50/96`), native'in paylaş ikonu. Davranış ikisinde aynı.
+   * `inline` — içerikteki düğme (adın yanında). Telefon görünümünün iki biçimi native'in paylaş ikonunu taşır
+   * (14.09): `photo` — ürün detayının kahramanında yüzen 42px krem cam daire (`sand-50/96`); `bar` — paket
+   * detayının başlık çubuğunda zeminsiz 44px daire (geri düğmesinin `bar` biçiminin aynası). Davranış hepsinde aynı.
    */
-  variant?: 'inline' | 'photo';
+  variant?: 'inline' | 'photo' | 'bar';
 }
 
 interface ShareSubject {
@@ -58,6 +59,21 @@ export function ShareButton({ label, subject, variant = 'inline' }: ShareButtonP
       .then(() => void shareProductAction({ ...subject, method: 'copy' }))
       .catch(() => undefined);
   };
+
+  if (variant === 'bar') {
+    return (
+      // 44px kutu (envanter tabanı); `-mr-2.5` ikonu çubuğun sağ kenar hizasına oturtur — geri düğmesinin aynası.
+      <button
+        type="button"
+        onClick={onShare}
+        aria-label={label}
+        title={label}
+        className="-mr-2.5 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full text-ink transition-colors hover:bg-sand-200"
+      >
+        <MobileIcon name="share" size={17} />
+      </button>
+    );
+  }
 
   if (variant === 'photo') {
     return (

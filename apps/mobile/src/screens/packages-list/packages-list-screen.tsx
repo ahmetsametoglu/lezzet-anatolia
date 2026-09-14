@@ -21,7 +21,8 @@ import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/cust
 import { PhotoSurface } from '@/screens/customer-kit/photo-surface';
 import { PlaceNoticeBand } from '@/screens/customer-kit/place-notice-band';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-import messages from './messages.json';
+// Metin ortak pakette (14.09): web'in telefon paket listesi aynı sözlüğü okur.
+import messages from '@lezzet/i18n/customer/packages';
 import { PackagesListSkeleton } from './packages-list-skeleton';
 import { usePackagesList } from './use-packages-list.hook';
 

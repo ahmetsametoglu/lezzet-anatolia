@@ -19,8 +19,9 @@ describe('StockMark', () => {
   it('`blocked` HATA çiftini taşır — "bu adrese gitmiyor" kapalı bir kapıdır', async () => {
     await render(<StockMark label="Bu adrese gönderemiyoruz" tone="blocked" testID="mark" />);
 
-    expect(screen.getByTestId('mark')).toHaveStyle({ backgroundColor: customerAppColors['error-bg'] });
-    expect(screen.getByText('Bu adrese gönderemiyoruz')).toHaveStyle({ color: customerAppColors.error });
+    // Hata ailesinin metni ve zemini telefon görünümüyle tabana çıktı (14.09) — değer aynı, kaynak taban.
+    expect(screen.getByTestId('mark')).toHaveStyle({ backgroundColor: customerColors['error-bg'] });
+    expect(screen.getByText('Bu adrese gönderemiyoruz')).toHaveStyle({ color: customerColors.error });
   });
 
   it('`pending` BEKLEME çiftini taşır — iyi haber rengine KATILMAZ', async () => {

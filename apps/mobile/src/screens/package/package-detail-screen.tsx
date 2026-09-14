@@ -1,4 +1,4 @@
-import { formatPrice } from '@lezzet/helper';
+import { formatPrice, PACKAGE_QUANTITY_MAX } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PackageItem } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -25,7 +25,8 @@ import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addBundle, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-import messages from './messages.json';
+// Metin ortak pakette (14.09): web'in telefon paket detayı aynı sözlüğü okur.
+import messages from '@lezzet/i18n/customer/package-detail';
 import { PackageSkeleton } from './package-skeleton';
 import { usePackage } from './use-package.hook';
 
@@ -75,9 +76,6 @@ type Messages = LocalizedCopy<typeof messages>;
   dosyanın künyesi zaten "terfi ihtiyacı raporlandı" diyordu; terfiyi zorunlu kılan skeleton oldu —
   aynı ölçüye o da ihtiyaç duyunca ekran dosyasından import etmek dairesel bağımlılık olurdu.
 */
-
-/** Adet tavanı — şablonun kendi kuralı (v3:1887 `Math.min(20, …)`); parametrik sabit. */
-const MAX_QUANTITY = 20;
 
 /** `{name}` gibi tekil yer tutucuları doldurur — sayfanın tüm şablonları tek anahtarlı. */
 function fill(template: string, key: string, value: string): string {
@@ -325,7 +323,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
               {quantity}
             </Text>
             <PressableSurface
-              onPress={() => setQuantity((current) => Math.min(MAX_QUANTITY, current + 1))}
+              onPress={() => setQuantity((current) => Math.min(PACKAGE_QUANTITY_MAX, current + 1))}
               feedback="opacity"
               compact
               style={styles.stepButton}

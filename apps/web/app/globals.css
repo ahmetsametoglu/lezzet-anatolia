@@ -80,6 +80,10 @@
   --color-closed-bg: #f0e9d6; /* kapanmış rozet arkası (= sand-100) */
   --color-closed-line: #c9cdc2; /* pasif çerçeve (= neutral-400) */
 
+  /* Hata — (telefon, 14.09) metin ve zemin; terracotta'ya katılmadı (o fırsat/indirim demek) */
+  --color-error: #a44a3f; /* hata metni, "bu adrese gitmiyor" işareti */
+  --color-error-bg: #f4e3e0; /* hata kutusu, işaretin zemini */
+
   /* ── §0.4a Etkileşim durumları ────────────────────────────────────────────
      Odak halkası ayrı renk taşımaz: 2px zeytin outline, 3px offset.
      NOT — envanterin §0.4'ü ÜÇ konuyu birden taşıyor (etkileşim durumları · tipografi ölçeği ·
