@@ -110,7 +110,7 @@ const EMPTY_TARGETS: MatchTargets = {
   accounts: [],
   counterparties: [],
 };
-/** Hesap seçili değilken kuyruk: boş satır, boş hedef — sayfa ikisini aynı biçimde okur. */
+/** Boş kuyruk — önerisi okunacak satır yokken (boş satır, boş hedef). */
 export const EMPTY_MATCH_QUEUE: MatchQueue = { rows: [], targets: EMPTY_TARGETS };
 
 const addDays = (iso: string, n: number) => new Date(new Date(`${iso}T00:00:00.000Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10);
@@ -124,18 +124,61 @@ const addDays = (iso: string, n: number) => new Date(new Date(`${iso}T00:00:00.0
  * atsaydık 200 satırlık bir ekstre 200 sorgu ederdi.
  */
 export async function matchQueue(accountId: string, opts: { limit?: number } = {}): Promise<MatchQueue> {
-  const db = serviceDb();
-  const ledgerPage = await new MoneyMovementService(db).ledger({ accountId, unreconciledOnly: true, limit: opts.limit ?? 50 });
-  const bankRows = ledgerPage.rows.filter((r) => r.source === 'bank_import');
-  if (bankRows.length === 0) return { rows: [], targets: EMPTY_TARGETS };
+  const ledgerPage = await new MoneyMovementService(serviceDb()).ledger({ accountId, unreconciledOnly: true, limit: opts.limit ?? 50 });
+  return suggestionsForMovements(ledgerPage.rows.filter((r) => r.source === 'bank_import').map((r) => r.id));
+}
 
-  const dates = bankRows.map((r) => r.valueDate).sort();
-  const [{ targets, candidates }, allocations] = await Promise.all([
-    loadTargets(accountId, addDays(dates[0]!, -CANDIDATE_WINDOW_DAYS), addDays(dates[dates.length - 1]!, 3)),
-    new MoneyAllocationService(db).listByMovements(bankRows.map((row) => row.id)),
-  ]);
-  const rows = bankRows.map((movement): QueueRow => ({ movement, ...suggestionsFor(movement, candidates, allocations) }));
-  return { rows, targets };
+/**
+ * Verilen hareketlerin önerileri (12.19 · tek liste + tek panel): defter listesinin ikinci satırı
+ * ("öneri: Fatura FA-2026-0912") sayfadaki ekstre satırları için buradan okunur. Yalnız MUTABIK
+ * OLMAYAN ekstre satırı sayılır — öteki satırın izahı bağı ya da türüdür, önerisi olmaz.
+ *
+ * Adaylar HESAP BAŞINA tek turda (kuyrukla aynı gerekçe: satır başına sorgu 50 satırda 50 tur ederdi);
+ * her hesabın penceresi o hesabın satırlarının tarihlerinden kurulur. Sıra girdinin sırasıdır.
+ */
+export async function suggestionsForMovements(movementIds: readonly string[]): Promise<MatchQueue> {
+  if (movementIds.length === 0) return EMPTY_MATCH_QUEUE;
+  const db = serviceDb();
+  const movements = (await new MoneyMovementService(db).listByIds(movementIds)).filter(
+    (movement) => movement.source === 'bank_import' && !movement.reconciled,
+  );
+  if (movements.length === 0) return EMPTY_MATCH_QUEUE;
+
+  const allocations = await new MoneyAllocationService(db).listByMovements(movements.map((movement) => movement.id));
+  const byAccount = new Map<string, MoneyMovement[]>();
+  for (const movement of movements) byAccount.set(movement.accountId, [...(byAccount.get(movement.accountId) ?? []), movement]);
+  const groups = await Promise.all(
+    [...byAccount].map(async ([accountId, rows]) => {
+      const dates = rows.map((row) => row.valueDate).sort();
+      const { targets, candidates } = await loadTargets(accountId, addDays(dates[0]!, -CANDIDATE_WINDOW_DAYS), addDays(dates[dates.length - 1]!, 3));
+      return { targets, rows: rows.map((movement): QueueRow => ({ movement, ...suggestionsFor(movement, candidates, allocations) })) };
+    }),
+  );
+  const order = new Map(movementIds.map((id, index) => [id, index] as const));
+  return {
+    rows: groups.flatMap((group) => group.rows).sort((a, b) => (order.get(a.movement.id) ?? 0) - (order.get(b.movement.id) ?? 0)),
+    targets: mergeTargets(groups.map((group) => group.targets)),
+  };
+}
+
+/**
+ * Hesap gruplarının hedef listeleri tek listede. Açık belgeler, kabuller ve cariler hesaptan bağımsız
+ * (her grupta aynı) — ilk grubunki; satışlar pencereye, öteki hesaplar hesaba göre değişir — kimlikle
+ * birleşir; transfer uçları ve elle yazılanlar hesabın kendisinindir — art arda.
+ */
+function mergeTargets(all: readonly MatchTargets[]): MatchTargets {
+  const unique = <T extends { id: string }>(lists: readonly T[][]): T[] => [...new Map(lists.flat().map((item) => [item.id, item] as const)).values()];
+  const first = all[0] ?? EMPTY_TARGETS;
+  return {
+    orders: unique(all.map((targets) => targets.orders)),
+    refunds: unique(all.map((targets) => targets.refunds)),
+    documents: first.documents,
+    intakes: first.intakes,
+    transferLegs: all.flatMap((targets) => targets.transferLegs),
+    provisional: all.flatMap((targets) => targets.provisional),
+    accounts: unique(all.map((targets) => targets.accounts)),
+    counterparties: first.counterparties,
+  };
 }
 
 /**
@@ -493,18 +536,6 @@ async function applyDocument(movement: MoneyMovement, documentId: string): Promi
   }
   await new MoneyMovementService(db).update(patch);
   return { status: 'ok', movementId: movement.id };
-}
-
-/**
- * "Bu satır bir şeye bağlanmıyor" — kuyruktan düşer ama hareket kalır: bakiyede duran parayı kuyruğu
- * temizlemek için silmek, kasayı kaydırmak olurdu. İzah kuyruğunda durmaya devam eder (türü yok).
- */
-export async function dismissRow(movementId: string): Promise<ReconcileOutcome> {
-  const found = await loadQueueRow(movementId);
-  if ('status' in found) return found;
-
-  await new MoneyMovementService(serviceDb()).markReconciled(movementId);
-  return { status: 'ok', movementId };
 }
 
 /**

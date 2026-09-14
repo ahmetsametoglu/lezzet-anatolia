@@ -500,17 +500,17 @@ yapılırsa bakılacaklar: belge kartında dosya ikonu, tür ve etiket çiplerin
 ve yeni düzenin çizimde karşılığı yok: bakiye şeridi türe göre gruplu ve kartı süzgeç (Toplam en
 solda, kapalılar en sonda, taşarsa yatay kayar); süzgeç satırında "Hareketler | Belgeler" sekmesi,
 "+ tip", tarih aralığı çipi, izah rozeti ve başlıktaki beş düğmenin yerine "Eylemler" menüsü; satır
-tıklanınca sağ sütunda hareketin ya da belgenin ayrıntı paneli (seçim yokken banka kuyruğu);
+tıklanınca sağ sütunda hareketin ya da belgenin ayrıntı paneli (seçim yokken izah özeti — 12.19);
 eşleştirme penceresinin yerine tetikleyiciye bağlı seçici menü. Çizim yapılırsa bakılacaklar:
 şeridin grup başlıkları ve kapalı hesabın sönüklüğü, orta hücrenin dar bütçesinde kesilen adların
 okunurluğu (tür önce, cari iki kat hızlı daralır), ayrıntı panelinin bölümleri (Karşılığı ·
 Sınıflandırma · Etiketler · Ödemeler), seçici menüde önerinin hedef listesinden ayrışması, belge
 satırının açık kalan sütunu.
-**Eki (12.13 · 12.16):** eşleştirme kuyruğunun "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız
+**Eki (12.13 · 12.16):** eşleştirme kuyruğunun (12.19'da kalktı — seçici hareket panelinde) "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız
 sipariş adaylarını gösteriyordu; artık bir HEDEF SEÇİCİ (12.17'den beri pencere değil, tetikleyiciye bağlı menü) — öneriler üstte, altında yöne uyan bütün
 hedefler bölüm bölüm (zaten yazılmış hareket · açık belge · mal kabul · transfer ucu · sipariş · iade
-· cari · başka hesap), arama kutusu, en altta "Türünü koy" (yöne uyan türler). Kartta "Gider"
-düğmesinin yerini "Türünü koy" menüsü aldı. Çizim yapılırsa bakılacaklar: bölümlerin sekme mi liste
+· cari · başka hesap), arama kutusu, en altta "Türünü koy" (yöne uyan türler). ~~Kartta "Gider"
+düğmesinin yerini "Türünü koy" menüsü aldı~~ (12.19: kart kalktı). Çizim yapılırsa bakılacaklar: bölümlerin sekme mi liste
 mi olacağı, puanlı önerinin öbür hedeflerden nasıl ayrışacağı, "zaten yazılmış hareket" satırında
 silinecek kaydın uyarı tonu.
 **Eki (12.10):** çizimde yalnız "↑ Banka dosyası" düğmesi var, penceresi yok. Kitin diyalog

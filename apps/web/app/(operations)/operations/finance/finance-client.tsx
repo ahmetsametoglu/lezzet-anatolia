@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   addTagAction,
   applyMatchAction,
-  dismissMatchAction,
   documentFileUrlAction,
   documentRowAction,
   ledgerRowsAction,
@@ -18,10 +17,10 @@ import {
   tagMovementAction,
   unmatchRowAction,
 } from '@/lib/finance/actions';
-import type { MatchTarget } from '@/lib/bank/reconcile';
 import { FinanceDesktop } from './finance.desktop';
 import { financeUrl, type FinanceUrlState } from './finance-url';
-import type { DialogKind, DocumentRowView, FinanceData, FinanceSelection, FinanceViewProps, MatchRowView, MovementRowView } from './finance-types';
+import { nextUnexplainedKey } from './finance-read';
+import { ledgerRowKey, type DialogKind, type DocumentRowView, type FinanceData, type FinanceSelection, type FinanceViewProps, type MovementRowView } from './finance-types';
 
 // Para client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
 // mobil deneyim native uygulamada — `docs/uygulama`.
@@ -43,9 +42,8 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
   const router = useRouter();
   const [navPending, startNav] = useTransition();
   const [dialog, setDialog] = useState<DialogKind>(null);
-  /** Hangi kuyruk satırı ya da belge işleniyor — iki kez tıklanmasın, hangisinin beklediği görünsün. */
+  /** Hangi belge işleniyor (dosyası açılıyor) — iki kez tıklanmasın, hangisinin beklediği görünsün. */
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [queueError, setQueueError] = useState<string | null>(null);
   /** "Ödemesini yaz" denen belge — elle hareket penceresi belgeyle dolu açılır (12.12). */
   const [payingDocument, setPayingDocument] = useState<DocumentRowView | null>(null);
   /** Yapısal yazım bekleyen satır (bağ, hedef, geri alma). */
@@ -123,24 +121,6 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     if (documentId) void refreshDocument(documentId);
   };
 
-  const runQueueAction = async (row: MatchRowView, run: () => Promise<ActionOutcome>) => {
-    setQueueError(null);
-    setBusyId(row.movementId);
-    const { error } = await run();
-    setBusyId(null);
-    if (error) {
-      setQueueError(error);
-      return;
-    }
-    startNav(() => router.refresh());
-    afterWrite(row.movementId);
-  };
-
-  /** Kuyruk kararı — kart ve seçici aynı kapıya gider; hedefi ekran değil kapı yorumlar. */
-  const applyTarget = (row: MatchRowView, target: MatchTarget) => void runQueueAction(row, () => applyMatchAction(row.movementId, target));
-  /** Kuyruk satırının TÜRÜNÜ koyar (13.09) — kartın menüsünden. */
-  const classify = (row: MatchRowView, nature: string) => void runQueueAction(row, () => setMovementNatureAction(row.movementId, nature));
-
   /**
    * Satırın tür · cari · etiket yazımı (13.09 · Kaydet yok). Sayfa verisi action'ın `revalidatePath`iyle
    * aynı cevapta tazelenir; satırın iyimser gösterimi o cevaba kadar sürer. Ret satırların üstündeki
@@ -170,6 +150,25 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     startNav(() => router.refresh());
     afterWrite(movementId, documentId);
     return true;
+  };
+
+  /**
+   * KARAR SONRASI SIRADAKİ (12.19 · tek liste + tek panel): panelde onaylanan satırın ardından listedeki
+   * sıradaki izah bekleyen satır açılır — kuyruk kartlarının "onayla, sıradakine geç" akışı panelde
+   * sürer. Yalnız kararın satırı hâlâ seçiliyse: belge panelinden bağlanan ödeme paneli değiştirmez,
+   * operatör bu arada başka satıra geçtiyse onun seçimi ezilmez.
+   */
+  const decide = async (movementId: string, run: () => Promise<ActionOutcome>, documentId: string | null = null): Promise<boolean> => {
+    const ok = await runRowAction(movementId, run, documentId);
+    if (ok) {
+      setSelection((current) => {
+        if (current?.kind !== 'movement') return current;
+        if (movementRows.find((row) => ledgerRowKey(row) === current.key)?.id !== movementId) return current;
+        const next = nextUnexplainedKey(movementRows, current.key);
+        return next ? { kind: 'movement', key: next } : null;
+      });
+    }
+    return ok;
   };
 
   /** Menüden yeni etiket — sözlüğe girer, anahtarı döner (ad zaten varsa var olanınki). */
@@ -222,7 +221,6 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     navPending,
     dialog,
     busyId,
-    queueError,
     onFilter: go,
     onOpenDialog: setDialog,
     onCloseDialog: () => setDialog(null),
@@ -231,20 +229,14 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
       setDetailVersion((version) => version + 1);
       refresh();
     },
-    // Güçlü adayda tek tıkla onay: motorun "tek aday, belirsizlik yok" cevabı zaten burada
-    // (`strength === 'strong'`), ekran ikinci bir soru sormuyor. Karar adayın üstünde hazır.
-    onApprove: (row) => applyTarget(row, row.candidates[0]!.target),
-    onQueueApply: applyTarget,
-    onClassify: classify,
-    onDismiss: (row) => void runQueueAction(row, () => dismissMatchAction(row.movementId)),
     onSetNature: (movementId, nature) => writeRow(movementId, () => setMovementNatureAction(movementId, nature)),
     onSetCounterparty: (movementId, counterpartyId) => writeRow(movementId, () => setMovementCounterpartyAction(movementId, counterpartyId)),
     onTag: (movementId, tags) => writeRow(movementId, () => tagMovementAction(movementId, tags)),
     onCreateTag: createTag,
     onUnmatch: (movementId) => void runRowAction(movementId, () => unmatchRowAction(movementId)),
     onRemoveAllocation: (movementId, documentId) => void runRowAction(movementId, () => removeAllocationAction(movementId, documentId), documentId),
-    onApplyTarget: (movementId, target) => runRowAction(movementId, () => applyMatchAction(movementId, target)),
-    onLinkDocument: (movementId, documentId) => runRowAction(movementId, () => linkDocumentAction(movementId, documentId), documentId),
+    onApplyTarget: (movementId, target) => decide(movementId, () => applyMatchAction(movementId, target)),
+    onLinkDocument: (movementId, documentId) => decide(movementId, () => linkDocumentAction(movementId, documentId), documentId),
     rowBusyId,
     rowError,
     movementRows,

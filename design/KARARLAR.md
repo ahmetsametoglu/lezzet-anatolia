@@ -2618,3 +2618,20 @@ tepesindeki ekleme/düzenleme kutusu kalktı (12.18):
 - **Enter kaydeder, Esc vazgeçer, ikinci Esc pencereyi kapatır.** Kit sözleşmesi: pencerenin içindeki bir
   kontrol Esc'i `preventDefault` ile sahiplenir, `Dialog` sahiplenilmiş Esc'i yok sayar.
 - **Pencere sabit yükseklikte, sekmeler başlıkta** (ürün penceresinin deseni) — sekme değişince zıplamaz.
+
+## Para: banka satırının izahı tek listede ve tek panelde — kuyruk kartları kalktı (14.09)
+
+Kullanıcı: *"Bu ekranın solu ve sağı birbirinden kopuk. Sağ taraftaki kısım tam olarak ne yapmaya
+çalışıyor anlayamıyorum"* — kuyruk kartının yeşil "Onayla" düğmesi de kitin deseninde değildi (ölçüldü:
+kontrast açık temada 3,18, koyu temada 1,62; 38px, kitte 36/32). Karar (kullanıcı seçimi "tek liste +
+tek panel", 12.19):
+
+- **Kuyruk kartları kalktı.** Aynı ekstre satırı solda satır, sağda kart olarak iki ayrı arayüzle
+  duruyordu, panelde üçüncüsü vardı. İş kuyruğu listenin kendisidir: "izah bekleyen" rozeti listeyi süzer.
+- **Öneri satırda:** mutabık olmayan ekstre satırının ikinci satırı "öneri: …" okur (güçlü aday olive,
+  çoklu aday amber); onay satırın panelinde, kitin düğmesiyle.
+- **Karar → sıradaki:** panelde onaylanan ya da bağlanan satırın ardından sıradaki izah bekleyen satır
+  kendiliğinden açılır; "Atla →" satıra bir şey yazmadan geçer. Eski "Atla" satırı izahsız "mutabık"
+  işaretliyordu — her hareket izahlı olmalı, o kapı kaldırıldı.
+- **Seçim yokken sağda izah özeti:** izah bekleyen sayısı, listedeki güçlü öneri sayısı, "Sıradakini aç".
+  Hesap seçmek şart değil (kuyruk hesaba bağlıydı).

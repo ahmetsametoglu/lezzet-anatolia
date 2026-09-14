@@ -1,5 +1,6 @@
 'use client';
 
+import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { AccountSetup } from './account-setup';
 import { BankImportDialog } from './bank-import-dialog';
@@ -7,7 +8,8 @@ import { DictionaryDialog } from './dictionary-dialog';
 import { DocumentDetail } from './document-detail';
 import { DocumentDialog } from './document-dialog';
 import { DocumentList } from './documents-list';
-import { AccountStrip, FinanceToolbar, MatchQueue, MovementList } from './finance-sections';
+import { nextUnexplainedKey } from './finance-read';
+import { AccountStrip, ExplainSummary, FinanceToolbar, MovementList } from './finance-sections';
 import { ledgerRowKey, type FinanceViewProps, type RowEditor } from './finance-types';
 import { ALL_ACCOUNTS } from './finance-url';
 import { MovementDetail } from './movement-detail';
@@ -29,15 +31,10 @@ export function FinanceDesktop({
   writableAccounts,
   dialog,
   busyId,
-  queueError,
   onFilter,
   onOpenDialog,
   onCloseDialog,
   onSaved,
-  onApprove,
-  onQueueApply,
-  onClassify,
-  onDismiss,
   onSetNature,
   onSetCounterparty,
   onTag,
@@ -78,6 +75,9 @@ export function FinanceDesktop({
   // Seçim KİMLİKLE tutulur; kayıt taze listeden türetilir (kopya tutulsaydı yazım yansımazdı).
   const selectedMovement = selection?.kind === 'movement' ? (movementRows.find((row) => ledgerRowKey(row) === selection.key) ?? null) : null;
   const selectedDocument = selection?.kind === 'document' ? (documentRows.find((document) => document.id === selection.id) ?? null) : null;
+  // Sıradaki izah bekleyen satır (12.19) — panelin "Atla"sı ve özetin "Sıradakini aç"ı aynı kuraldan.
+  const nextKey = nextUnexplainedKey(movementRows, selectedMovement ? ledgerRowKey(selectedMovement) : null);
+  const openNext = nextKey ? () => onSelect({ kind: 'movement', key: nextKey }) : undefined;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -138,6 +138,7 @@ export function FinanceDesktop({
                   onLinkDocument={onLinkDocument}
                   onRemoveAllocation={onRemoveAllocation}
                   onUnmatch={onUnmatch}
+                  onNext={openNext}
                 />
               ) : selectedDocument ? (
                 <DocumentDetail
@@ -152,27 +153,17 @@ export function FinanceDesktop({
                   onLinkDocument={onLinkDocument}
                   onRemoveAllocation={onRemoveAllocation}
                 />
+              ) : onDocuments ? (
+                <EmptyState title="Belge seçin" description="Belgeye dokununca toplamı, açık kalanı ve ödemeleri burada açılır." />
               ) : (
-                <>
-                  <div className="flex flex-col gap-0.5 border-b border-ops-line px-5 py-3">
-                    <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">Banka satırı eşleştirme</span>
-                    <span className="font-ops-body text-ops-xs text-ops-faint">sistem önerir, siz onaylarsınız · satıra dokununca ayrıntısı burada açılır</span>
-                  </div>
-                  {queueError ? (
-                    <p className="border-b border-ops-red-line bg-ops-red-bg px-5 py-2.5 font-ops-body text-ops-xs text-ops-red">{queueError}</p>
-                  ) : null}
-                  <MatchQueue
-                    rows={data.queue}
-                    accountSelected={urlState.acct !== ALL_ACCOUNTS}
-                    busyId={busyId}
-                    natureOptions={data.natureOptions}
-                    targets={data.matchTargets}
-                    onApprove={onApprove}
-                    onApplyTarget={onQueueApply}
-                    onClassify={onClassify}
-                    onDismiss={onDismiss}
-                  />
-                </>
+                <ExplainSummary
+                  unexplainedCount={data.unexplainedCount}
+                  strongCount={movementRows.filter((row) => row.suggestion === 'strong').length}
+                  canOpenNext={nextKey !== null}
+                  filtered={urlState.scope === 'unmatched'}
+                  onOpenNext={() => openNext?.()}
+                  onShowUnexplained={() => onFilter({ scope: 'unmatched' })}
+                />
               )}
             </div>
           </div>

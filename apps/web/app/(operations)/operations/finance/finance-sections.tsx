@@ -1,8 +1,9 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { AccountType } from '@lezzet/types';
 import { ActionMenu } from '@/components/operation/ui/action-menu';
+import { Button } from '@/components/operation/ui/button';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { DateRangeFilterChip } from '@/components/operation/ui/date-range-filter-chip';
@@ -13,17 +14,15 @@ import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { Combobox } from '@/components/operation/form/combobox';
 import { MultiSelect } from '@/components/operation/form/multi-select';
-import { naturesForDirection, type NatureOption } from '@/components/operation/form/movement-form/schema';
-import type { MatchTarget } from '@/lib/bank/reconcile';
-import { ACCOUNT_GROUP_LABEL, EXPLAINED_LABEL, MOVEMENT_TYPE_CHIP, MOVEMENT_TYPE_ORDER, NOTES, SUGGESTION_VIEW } from './finance-labels';
+import { naturesForDirection } from '@/components/operation/form/movement-form/schema';
+import { ACCOUNT_GROUP_LABEL, EXPLAINED_LABEL, MOVEMENT_TYPE_CHIP, MOVEMENT_TYPE_ORDER, NOTES } from './finance-labels';
 import { ledgerRowKey } from './finance-types';
-import type { AccountView, DialogKind, MatchOptionsView, MatchRowView, MatchTargetView, MovementRowView, RowEditor } from './finance-types';
+import type { AccountView, DialogKind, MovementRowView, RowEditor } from './finance-types';
 import { ALL_ACCOUNTS, type FinanceUrlState } from './finance-url';
-import { MovementMatchSelector } from './match-selector';
 import { useRowWrites } from './use-row-writes.hook';
 
 // Para ekranının blokları (12.17 düzeni): bakiye şeridi (hesap süzgeci) · sekme ve süzgeç bandı ·
-// hareket listesi · banka eşleştirme kuyruğu. Operasyon web'i masaüstü-yalnız (06.08) — telefon
+// hareket listesi · izah özeti (12.19: kuyruk kartları kalktı, öneri satırda, onay panelde). Operasyon web'i masaüstü-yalnız (06.08) — telefon
 // kartı ve `stacked` kipi söküldü; personelin mobil deneyimi native uygulamada.
 
 /** İşaretli tutarın rengi — giriş olive, çıkış nötr, iade kırmızı. */
@@ -298,6 +297,13 @@ interface MovementListProps {
 }
 
 export function MovementList({ rows, note, editor, selectedKey, onSelect, hasMore, loadingMore, onLoadMore }: MovementListProps) {
+  // Seçilen satır GÖRÜNÜR kalır (12.19): panel karardan sonra sıradakine geçince ya da "Sıradakini aç"
+  // denince açılan satır listenin alt kenarında yarım kalıyordu — operatör neyin açıldığını görmüyordu.
+  const selectedRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [selectedKey]);
+
   if (rows.length === 0) return <EmptyState title="Hareket yok" description={note ?? NOTES.emptyLedger} />;
 
   return (
@@ -322,6 +328,7 @@ export function MovementList({ rows, note, editor, selectedKey, onSelect, hasMor
             // şey olmuyor") — sağ sütunda hareketin ayrıntısı açılır: karşılığı, belgesi, geri alma.
             <li
               key={key}
+              ref={selected ? selectedRef : undefined}
               tabIndex={0}
               aria-selected={selected}
               onClick={() => onSelect(row)}
@@ -466,145 +473,71 @@ function MatchDot({ explained, className = '' }: { explained: boolean; className
   );
 }
 
-// ── Banka eşleştirme kuyruğu ──────────────────────────────────────────────────────────────────
-
-interface MatchQueueProps {
-  rows: MatchRowView[];
-  accountSelected: boolean;
-  busyId: string | null;
-  /** Tür sözlüğü (13.09) — kartın "Türünü koy" menüsü; yalnız aktif türler. */
-  natureOptions: NatureOption[];
-  /** Sayfanın hedef listesi — kartın seçicisi onu okur, ikinci bir sunucu turu açılmaz. */
-  targets: MatchTargetView[];
-  onApprove: (row: MatchRowView) => void;
-  onApplyTarget: (row: MatchRowView, target: MatchTarget) => void;
-  onClassify: (row: MatchRowView, nature: string) => void;
-  onDismiss: (row: MatchRowView) => void;
+interface ExplainSummaryProps {
+  /** Hesap-üstü izahsız hareket sayısı — `null` sayaç kapısı yok demek ("bilinmiyor"), sıfır değil. */
+  unexplainedCount: number | null;
+  /** Yüklü satırlardaki güçlü öneri sayısı — onaya hazır iş. */
+  strongCount: number;
+  /** Listede açılabilecek izah bekleyen satır var mı. */
+  canOpenNext: boolean;
+  /** Liste zaten izah bekleyenlere süzülü mü. */
+  filtered: boolean;
+  onOpenNext: () => void;
+  onShowUnexplained: () => void;
 }
 
 /**
- * "Sistem önerir, siz onaylarsınız" — üç hâl, üç ayrı eylem.
- *
- * Kuyruk HESABA bağlıdır (`matchQueue(accountId)`) ve bu doğal: banka dosyası bir hesaba yüklenir,
- * eşleştirme de o hesabın satırları içindir. "Tümü" seçiliyken kuyruk yerine sebebi yazılıyor —
- * boş bir panel, kuyruğun boş olduğu anlamına gelirdi. Tek satırın eşleştirmesi ise hesap seçmeden
- * de yapılır: satıra dokununca sağ panelde (12.17).
+ * Sağ sütun, satır seçili değilken (12.19 · kullanıcı kararı "tek liste + tek panel"). Banka
+ * eşleştirme kuyruğunun kartları kalktı: aynı satırlar solda ve sağda iki ayrı arayüzle duruyordu,
+ * kart soldaki satırı bilmiyordu (kullanıcı: "ekranın solu ve sağı birbirinden kopuk"). İş kuyruğu
+ * artık listenin kendisi (izah bekleyen süzgeci); öneri satırın ikinci satırında, onay satırın
+ * panelinde. Burada yalnız ne kadar iş kaldığı ve sıradakine giden kapı durur.
  */
-export function MatchQueue({ rows, accountSelected, busyId, natureOptions, targets, onApprove, onApplyTarget, onClassify, onDismiss }: MatchQueueProps) {
-  if (!accountSelected) {
-    return (
-      <EmptyState
-        title="Eşleştirme için hesap seçin"
-        description="Banka dosyası bir hesaba yüklenir; kuyruk da o hesabın satırlarını gösterir. Yukarıdan bir hesap kartı seçin — ya da bir satıra dokunup onu burada tek başına eşleştirin."
-      />
-    );
-  }
-  if (rows.length === 0) {
-    return <EmptyState title="Kuyruk boş" description={NOTES.allMatched} />;
-  }
-
+export function ExplainSummary({ unexplainedCount, strongCount, canOpenNext, filtered, onOpenNext, onShowUnexplained }: ExplainSummaryProps) {
   return (
-    <ul className="flex flex-col gap-3 overflow-y-auto p-4">
-      {rows.map((row) => (
-        <MatchCard
-          key={row.movementId}
-          row={row}
-          busy={busyId === row.movementId}
-          natureOptions={natureOptions}
-          targets={targets}
-          onApprove={onApprove}
-          onApplyTarget={onApplyTarget}
-          onClassify={onClassify}
-          onDismiss={onDismiss}
-        />
-      ))}
-    </ul>
+    <section aria-label="İzah özeti" className="flex flex-col gap-4 px-5 py-5">
+      <div className="flex flex-col gap-0.5">
+        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">İzah bekleyen hareketler</span>
+        <span className="font-ops-body text-ops-xs text-ops-faint">sistem önerir, siz onaylarsınız · satıra dokununca ayrıntısı burada açılır</span>
+      </div>
+      <dl className="grid grid-cols-2 gap-2">
+        <SummaryFigure label="izah bekleyen" value={unexplainedCount === null ? '—' : num(unexplainedCount)} />
+        <SummaryFigure label="bu listede güçlü öneri" value={num(strongCount)} />
+      </dl>
+      {unexplainedCount === 0 ? (
+        <p className="font-ops-body text-ops-sm text-ops-olive-dark">Her hareket izahlı.</p>
+      ) : canOpenNext ? (
+        <div className="flex flex-col items-start gap-1.5">
+          <Button size="sm" onClick={onOpenNext}>
+            Sıradakini aç
+          </Button>
+          <span className="font-ops-body text-ops-xs text-ops-faint">
+            Onayladıkça sıradaki satır kendiliğinden açılır; "Atla" satıra bir şey yazmadan geçer.
+          </span>
+        </div>
+      ) : filtered ? (
+        <p className="font-ops-body text-ops-sm text-ops-muted">Bu süzgeçte izah bekleyen satır yok.</p>
+      ) : (
+        <div className="flex">
+          <Button variant="secondary" size="sm" onClick={onShowUnexplained}>
+            İzah bekleyenleri listele
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
-interface MatchCardProps extends Pick<MatchQueueProps, 'natureOptions' | 'targets' | 'onApprove' | 'onApplyTarget' | 'onClassify' | 'onDismiss'> {
-  row: MatchRowView;
-  busy: boolean;
+interface SummaryFigureProps {
+  label: string;
+  value: string;
 }
 
-const CARD_BUTTON =
-  'cursor-pointer rounded-ops-btn border px-3 py-2 font-ops-display text-ops-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60';
-
-function MatchCard({ row, busy, natureOptions, targets, onApprove, onApplyTarget, onClassify, onDismiss }: MatchCardProps) {
-  const view = SUGGESTION_VIEW[row.strength];
-  // Kartın seçicisi sayfanın hedef listesini okur — kuyruk onu zaten kurdu, ikinci tur yok.
-  const options: MatchOptionsView = { row, targets, bankRow: true };
-  const selector = (label: string, triggerClassName: string, className?: string) => (
-    <MovementMatchSelector
-      amountCents={Math.abs(row.signedAmountCents)}
-      remainingCents={row.remainingCents}
-      linkedDocuments={[]}
-      removable={false}
-      options={options}
-      onApplyTarget={(target) => onApplyTarget(row, target)}
-      triggerLabel={label}
-      triggerClassName={triggerClassName}
-      className={className}
-      disabled={busy}
-    />
-  );
-
+function SummaryFigure({ label, value }: SummaryFigureProps) {
   return (
-    <li className="flex flex-col gap-2.5 rounded-ops-card border border-ops-line bg-ops-surface p-3.5">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="min-w-0 font-ops-body text-ops-sm text-ops-ink">{row.bankLine}</span>
-        <span className={`shrink-0 font-ops-mono text-ops-base ${amountTone(row.signedAmountCents, false)}`}>
-          {signedAmount(row.signedAmountCents)}
-        </span>
-      </div>
-
-      <div className="flex items-start gap-2 rounded-sm bg-ops-surface-sunken px-2.5 py-2">
-        <Badge tone={view.tone} outline className="shrink-0">
-          {view.label}
-        </Badge>
-        <span className="font-ops-body text-ops-xs text-ops-muted">{row.sentence}</span>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {row.strength === 'strong' ? (
-          <>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onApprove(row)}
-              className={`flex-1 ${CARD_BUTTON} border-ops-olive bg-ops-olive text-ops-on-olive hover:bg-ops-olive-dark`}
-            >
-              {view.action}
-            </button>
-            {/* **"Düzelt"in asıl işi güçlü adayda:** öneri güçlü ama yanlışsa tek çare "Atla" olurdu —
-                o da satırı kuyruktan düşürüp doğru eşleşmeyi de kaybettirirdi. */}
-            {selector('Düzelt', `${CARD_BUTTON} border-ops-line-strong text-ops-muted hover:bg-ops-surface-sunken`)}
-          </>
-        ) : (
-          selector(view.action, `w-full ${CARD_BUTTON} border-ops-line-strong text-ops-ink hover:bg-ops-surface-sunken`, 'flex-1')
-        )}
-        {/* TÜRÜNÜ KOY (13.09 · ikinci karar) — bir kayda bağlanmayan satır tek dokunuşla TEK türle
-            sınıflanır: çıkışta gider türü, girişte sermaye ya da gelir türü (satırın yönüne uyanlar). */}
-        <Combobox
-          variant="chip"
-          value=""
-          onChange={(nature) => onClassify(row, nature)}
-          options={naturesForDirection(natureOptions, row.direction).map(({ value, label }) => ({ value, label }))}
-          placeholder="Türünü koy"
-          searchPlaceholder="Tür ara…"
-          emptyText="Bu yöne uyan tür yok — Sözlük penceresinden ekleyin"
-          disabled={busy}
-        />
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => onDismiss(row)}
-          title="Kuyruktan düşür — hareket silinmez, yalnız eşleştirme beklemez"
-          className={`${CARD_BUTTON} border-ops-line text-ops-muted hover:bg-ops-surface-sunken`}
-        >
-          Atla
-        </button>
-      </div>
-    </li>
+    <div className="flex flex-col gap-0.5 rounded-ops-card border border-ops-line bg-ops-card px-3 py-2.5">
+      <dd className="font-ops-mono text-ops-title text-ops-ink">{value}</dd>
+      <dt className="font-ops-body text-ops-micro text-ops-faint">{label}</dt>
+    </div>
   );
 }

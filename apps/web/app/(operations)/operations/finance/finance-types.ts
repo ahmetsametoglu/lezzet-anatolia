@@ -76,6 +76,11 @@ export type MovementRowView = Pick<
   fromBank: boolean;
   /** Ekstre satırının cevabı geri alınabilir mi: mutabık, belgeye bağlı ya da carisi konmuş. */
   canUnmatch: boolean;
+  /**
+   * Mutabık olmayan ekstre satırının önerisinin GÜCÜ (12.19) — listenin ikinci satırı ve sağdaki
+   * özetin "güçlü öneri" sayısı bundan; öteki satırlarda `null`.
+   */
+  suggestion: MatchRowView['strength'] | null;
 };
 
 /**
@@ -251,14 +256,6 @@ export interface FinanceData {
   ledger: LedgerView | null;
   /** Belgeler sekmesinin ilk sayfası (12.17); Hareketler sekmesindeyken `null`. */
   documents: DocumentListView | null;
-  /** Eşleşme bekleyen banka satırları. Hesap seçili değilken boş (kuyruk hesaba bağlı). */
-  queue: MatchRowView[];
-  /**
-   * Seçim penceresinin hedef listesi (12.13): açık belgeler, ödenmemiş kabuller, bekleyen transfer
-   * uçları, o hesaba zaten yazılmış hareketler, penceredeki satışlar, öteki hesaplar, cariler.
-   * Öneriler bu listenin puanlanmış alt kümesidir; elle seçim hepsini görür.
-   */
-  matchTargets: MatchTargetView[];
   /** Açık belge sayısı — Belgeler sekmesinin rozeti: ödenmemiş fatura bir iştir. */
   openDocumentCount: number;
   /** Belge formunun tedarikçi seçeneği; yalnız aktif tedarikçiler. */
@@ -320,18 +317,10 @@ export interface FinanceViewProps {
   navPending: boolean;
   dialog: DialogKind;
   busyId: string | null;
-  queueError: string | null;
   onFilter: (next: Partial<FinanceUrlState>) => void;
   onOpenDialog: (kind: DialogKind) => void;
   onCloseDialog: () => void;
   onSaved: () => void;
-  onApprove: (row: MatchRowView) => void;
-  /** Kuyruk kartının seçicisinden hedef — kuyruğun kapısı; ret kuyruğun şeridinde okunur. */
-  onQueueApply: (row: MatchRowView, target: MatchTarget) => void;
-  /** Banka satırının TÜRÜNÜ koyar (13.09) — kuyruk kartının "Türünü koy" menüsünden, tek dokunuş. */
-  onClassify: (row: MatchRowView, nature: string) => void;
-  onDismiss: (row: MatchRowView) => void;
-
   // ── Satırın düzenlemesi (13.09 · 12.17) — söz `false` dönerse kapı reddetti, sebep şeritte ──
   onSetNature: (movementId: string, nature: string | null) => Promise<boolean>;
   onSetCounterparty: (movementId: string, counterpartyId: string | null) => Promise<boolean>;
@@ -343,13 +332,13 @@ export interface FinanceViewProps {
   onUnmatch: (movementId: string) => void;
   /** Elle yazılmış satırın belge bağını kaldırır. */
   onRemoveAllocation: (movementId: string, documentId: string) => void;
-  /** Sağ panelin seçicisinden hedef — eşleşme bekleyen ekstre satırı kuyruğun kapısına gider. */
+  /** Sağ panelin kararı (seçici ya da öneri onayı) — ardından sıradaki izah bekleyen satır açılır (12.19). */
   onApplyTarget: (movementId: string, target: MatchTarget) => Promise<boolean>;
   /** Hareket ↔ belge bağı — hareket panelinin "Bağla"sı ve belge panelinin "Ödeme bağla"sı. */
   onLinkDocument: (movementId: string, documentId: string) => Promise<boolean>;
   /** Hangi satır beklemede (geri alma, bağ kaldırma) — iki kez tıklanmasın. */
   rowBusyId: string | null;
-  /** Satırın ya da panelin son reddi — listenin üstünde okunur (kuyruğun hatası sağ sütunda). */
+  /** Satırın ya da panelin son reddi — listenin üstünde okunur. */
   rowError: string | null;
 
   // ── Listeler: ilk sayfa sunucudan, devamı action ile eklenir (12.17) ──

@@ -21,6 +21,7 @@ import type {
   MatchTargetView,
   MovementRowView,
 } from './finance-types';
+import { ledgerRowKey } from './finance-types';
 
 // Para ekranının SAF indirgemeleri — servis satırı → görünüm satırı.
 //
@@ -111,6 +112,14 @@ export interface MovementReadContext {
   natureLabels: ReadonlyMap<string, string>;
   /** Hareketin bağlı belgeleri (bağ tablosundan) — künyesi ve bağın tutarıyla. */
   documentsOf: ReadonlyMap<string, Array<{ id: string; label: string; amountCents: number }>>;
+  /** Mutabık olmayan ekstre satırlarının önerisi (12.19) — hareket kimliğiyle; yoksa cümle eski hâlinde. */
+  suggestions?: ReadonlyMap<string, RowSuggestion>;
+}
+
+/** Ekstre satırının önerisi (12.19) — gücü ve en iyi adayın adı (adsız aday gösterilmez). */
+export interface RowSuggestion {
+  strength: MatchRowView['strength'];
+  title: string | null;
 }
 
 /**
@@ -165,6 +174,13 @@ function refOf(
   if (row.source === 'bank_import' && !row.reconciled) {
     // Kısmen bağlı satır: belgesi var ama kalan henüz karşılanmadı — kuyrukta kalanıyla durur (13.09).
     if (documents.length > 0) return { ref: 'kısmen bağlı — kalanı eşleşme bekliyor', refTone: 'amber' };
+    // ÖNERİ SATIRDA (12.19 · tek liste + tek panel): kuyruk kartları kalktı, motorun cevabı satırın
+    // kendisinde okunur — onayı satırın panelinde. Güçlü aday olive (onaya hazır), çoklu aday amber.
+    const suggestion = context.suggestions?.get(row.id);
+    if (suggestion?.title) {
+      const many = suggestion.strength === 'ambiguous' ? ' · birden çok aday' : '';
+      return { ref: `öneri: ${suggestion.title}${many}`, refTone: suggestion.strength === 'strong' ? 'olive' : 'amber' };
+    }
     // "Öneri bekliyor" DEĞİL (kullanıcı bulgusu 13.09: "öneride nasıl bulunacağımı anlayamadım"):
     // cümle operatöre yapacağı işi söyler — satırın türünü koymak ya da onu bir kayda bağlamak.
     return { ref: 'eşleşme bekliyor — türünü seçin ya da bağlayın', refTone: 'amber' };
@@ -214,6 +230,7 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
       documents,
       remainingCents: row.amountCents - documents.reduce((sum, document) => sum + document.amountCents, 0),
       fromBank,
+      suggestion: context.suggestions?.get(row.id)?.strength ?? null,
       canUnmatch: fromBank && (row.reconciled || documents.length > 0 || row.counterpartyId !== null),
     };
   });
@@ -451,4 +468,16 @@ export function toDocumentPaymentsView(options: DocumentPaymentOptions, accountN
       reasons: reasonsOf(candidate.reasons),
     })),
   };
+}
+
+/**
+ * Sıradaki izah bekleyen satırın anahtarı (12.19) — panelde karar verilince ona geçilir, "Atla" ve
+ * "Sıradakini aç" onu açar. Şimdiki satırdan SONRA aranır, bulunmazsa baştan; şimdiki satır sayılmaz
+ * (yazımdan hemen sonra liste henüz tazelenmemiş olabilir — aynı satırı yeniden açmasın).
+ */
+export function nextUnexplainedKey(rows: readonly MovementRowView[], currentKey: string | null): string | null {
+  const at = currentKey === null ? -1 : rows.findIndex((row) => ledgerRowKey(row) === currentKey);
+  const order = at === -1 ? rows : [...rows.slice(at + 1), ...rows.slice(0, at)];
+  const next = order.find((row) => !row.explained && ledgerRowKey(row) !== currentKey);
+  return next ? ledgerRowKey(next) : null;
 }

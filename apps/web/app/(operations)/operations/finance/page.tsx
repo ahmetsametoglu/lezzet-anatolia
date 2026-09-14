@@ -1,13 +1,12 @@
 import { MoneyMovementService, serviceDb } from '@lezzet/database';
 import { listOpenDocuments } from '@lezzet/application';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
-import { EMPTY_MATCH_QUEUE, matchQueue } from '@/lib/bank/reconcile';
 import { guarded, requireFinance } from '@/lib/guard';
 import { FinanceClient } from './finance-client';
 import { namesOf, readDictionaries, readDocumentsPage, readLedgerPage, withResolvedAccount } from './finance-data';
-import { toAccountViews, toMatchRows, toMatchTargets, totalBalance } from './finance-read';
+import { toAccountViews, totalBalance } from './finance-read';
 import type { FinanceData } from './finance-types';
-import { ALL_ACCOUNTS, parseFinanceUrl } from './finance-url';
+import { parseFinanceUrl } from './finance-url';
 
 // Para (12) — **yönetici VEYA muhasebeci** (`requireFinance`). Tasarım §1: paranın tek mantıkla
 // izlendiği yer — para bir hesapta durur, hareketlerle girer/çıkar.
@@ -15,6 +14,10 @@ import { ALL_ACCOUNTS, parseFinanceUrl } from './finance-url';
 // ── İKİ LİSTE, YALNIZ GÖRÜNEN OKUNUR (12.17) ─────────────────────────────────
 // "Hareketler | Belgeler" sekmesi adreste; görünmeyen sekmenin listesi okunmaz. İlk sayfa burada,
 // devamı "devamını yükle" action'larıyla — ikisi de aynı okumayı çağırır (`finance-data.ts`).
+//
+// ── KUYRUK YOK, ÖNERİ SATIRDA (12.19) ──────────────────────────────────────
+// Banka eşleştirme kuyruğunun kartları kalktı (kullanıcı kararı "tek liste + tek panel"): mutabık
+// olmayan ekstre satırının önerisi satırın kendisiyle okunur (`finance-data.ts`), onay satırın panelinde.
 //
 // ── SAYAÇ SÜZGEÇTEN BAĞIMSIZ ────────────────────────────────────────────────
 // `unexplainedCount()` ham `money_movement`tan sayar, defter görünümünden değil: görünüm transferi
@@ -47,27 +50,21 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   const accountViews = toAccountViews(dictionaries.accounts, dictionaries.balances);
   const onDocuments = urlState.tab === 'documents';
 
-  const [ledger, documents, queue, unexplainedCount, openDocuments] = await Promise.all([
+  const [ledger, documents, unexplainedCount, openDocuments] = await Promise.all([
     onDocuments ? Promise.resolve(null) : readLedgerPage(db, urlState, names),
     onDocuments ? readDocumentsPage(db, urlState, names) : Promise.resolve(null),
-    // Kuyruk hesaba bağlı ve bu doğal: banka dosyası bir hesaba yüklenir.
-    urlState.acct !== ALL_ACCOUNTS ? matchQueue(urlState.acct) : EMPTY_MATCH_QUEUE,
     // Sayaç SÜZGEÇTEN BAĞIMSIZ ve hesap-üstü: rozet "toplam ne kadar iş bekliyor" diyor.
     new MoneyMovementService(db).unexplainedCount(),
     // Açık belgeler doğal tavanlı (kapanan düşer) — sekmenin rozeti için tek turda.
     listOpenDocuments(db),
   ]);
 
-  // Hedef listesi önce, kuyruk sonra: öneri adını hedeften alır (aynı `kind:id` anahtarı).
-  const matchTargets = toMatchTargets(queue.targets, names.natureLabels);
   const { natures, tags, counterparties, suppliers } = dictionaries;
   const data: FinanceData = {
     accounts: accountViews,
     totalCents: totalBalance(accountViews),
     ledger,
     documents,
-    queue: toMatchRows(queue.rows, matchTargets),
-    matchTargets,
     openDocumentCount: openDocuments.length,
     unexplainedCount,
     natureOptions: natures.filter((nature) => nature.isActive).map((nature) => ({ value: nature.slug, label: nature.label, direction: nature.direction })),

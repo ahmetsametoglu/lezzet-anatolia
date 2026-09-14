@@ -7,7 +7,7 @@ import { setMovementNature } from '@lezzet/application';
 import { failingAiModel } from '@lezzet/ai/testing';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from './import';
-import { applyMatch, dismissRow, documentPaymentOptions, linkDocument, matchOptions, matchQueue, unmatchRow } from './reconcile';
+import { applyMatch, documentPaymentOptions, linkDocument, matchOptions, matchQueue, suggestionsForMovements, unmatchRow } from './reconcile';
 
 /**
  * Banka import'u ve eşleştirme (12.4) — DB üstünde. Doğrulanan iki zor şey:
@@ -250,15 +250,6 @@ describe('eşleştirme kuyruğu', () => {
     expect((await matchQueue(bankAccount)).rows).toEqual([]);
   });
 
-  it('"bağlanmıyor" denen satır da kuyruktan düşer ama parası kasada kalır', async () => {
-    await importStatement([{ Date: frDate(-1), 'Libellé': 'FRAIS BANCAIRES', Montant: '-3,50', Solde: '0,00' }], 'masraf.csv');
-    const row = (await matchQueue(bankAccount)).rows[0]!;
-    const balance = (await accounts.balance(bankAccount)).balanceCents;
-
-    expect(await dismissRow(row.movement.id)).toMatchObject({ status: 'ok' });
-    expect((await matchQueue(bankAccount)).rows).toEqual([]);
-    expect((await accounts.balance(bankAccount)).balanceCents).toBe(balance);
-  });
 });
 
 /*
@@ -548,5 +539,33 @@ describe('ayrıntı paneli: seçenekler · bağla · ödeme adayları (12.17)', 
     const baska = await documents.insert({ kind: 'invoice', number: `ODEME-B-${stamp}`, issuedOn: dayOffset(-3), direction: 'out', amountCents: 1000 });
     createdDocuments.push(baska.id);
     expect((await documentPaymentOptions(baska.id))!.candidates.some((c) => c.movement.id === cikis.id)).toBe(false);
+  });
+});
+
+describe('satırın önerisi listede (12.19 · tek liste + tek panel)', () => {
+  it('ÖNERİ: yalnız mutabık olmayan ekstre satırı sayılır, sıra girdinin sırası; eşleşen satır düşer', async () => {
+    const documents = new MoneyDocumentService(db);
+    const belge = await documents.insert({ kind: 'invoice', number: `LISTE-${stamp}`, issuedOn: dayOffset(-2), direction: 'out', amountCents: 7700 });
+    createdDocuments.push(belge.id);
+    await importStatement([
+      { Date: frDate(-1), 'Libellé': `PRLV LISTE-${stamp}`, Montant: '-77,00', Solde: '0,00' },
+      { Date: frDate(-1), 'Libellé': `VIR INCONNU ${stamp}`, Montant: '12,00', Solde: '12,00' },
+    ], 'liste.csv');
+    const queue = (await matchQueue(bankAccount)).rows;
+    const withRef = queue.find((r) => r.movement.description?.includes('LISTE'))!.movement;
+    const unknown = queue.find((r) => r.movement.description?.includes('INCONNU'))!.movement;
+    const elle = await movements.insert({
+      accountId: cashAccount, direction: 'out', amountCents: 500, type: 'expense', nature: 'kira', valueDate: dayOffset(-1), description: `Elle LISTE-${stamp}`,
+    });
+
+    const result = await suggestionsForMovements([unknown.id, elle.id, withRef.id]);
+    // Elle yazılan satırın önerisi olmaz; kalan iki ekstre satırı verildiği sırada.
+    expect(result.rows.map((row) => row.movement.id)).toEqual([unknown.id, withRef.id]);
+    expect(result.rows[1]!.suggestions[0]).toMatchObject({ kind: 'document', id: belge.id });
+    expect(result.targets.documents.some((document) => document.id === belge.id)).toBe(true);
+
+    // Eşleşen (mutabık) satırın önerisi okunmaz — liste onu artık izahlı gösterir.
+    await applyMatch(withRef.id, { kind: 'document', documentId: belge.id });
+    expect((await suggestionsForMovements([withRef.id])).rows).toEqual([]);
   });
 });

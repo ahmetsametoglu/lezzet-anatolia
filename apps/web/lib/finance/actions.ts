@@ -17,7 +17,7 @@ import { requireFinance } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { recordAdvertisingExpense, recordExpense, recordMovement, transfer } from '@/lib/money/movement';
-import { applyMatch, dismissRow, documentPaymentOptions, linkDocument, matchOptions, unmatchRow, type MatchTarget } from '@/lib/bank/reconcile';
+import { applyMatch, documentPaymentOptions, linkDocument, matchOptions, unmatchRow, type MatchTarget } from '@/lib/bank/reconcile';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from '@/lib/bank/import';
 import {
   addCounterparty,
@@ -283,25 +283,6 @@ export async function setMovementCounterpartyAction(movementId: string, counterp
     await requireFinance();
     const outcome = await setMovementCounterparty(serviceDb(), { movementId, counterpartyId });
     if (outcome.status === 'invalid') return { data: null, error: COUNTERPARTY_REASON[outcome.reason] };
-
-    revalidatePath(FINANCE_PATH);
-    return { data: { ok: true }, error: null };
-  } catch (error) {
-    return { data: null, error: getErrorMessage(error) };
-  }
-}
-
-/**
- * "Bu satır bir şeye bağlanmıyor" — kuyruktan düşer, hareket kalır.
- *
- * Kapının künyesi sebebini yazıyor: bakiyede duran parayı kuyruğu temizlemek için silmek, kasayı
- * kaydırmak olurdu. Ekran da bu yüzden "Atla" diyor, "Sil" demiyor.
- */
-export async function dismissMatchAction(movementId: string): Promise<ActionResult<{ ok: true }>> {
-  try {
-    await requireFinance();
-    const outcome = await dismissRow(movementId);
-    if (outcome.status === 'invalid') return { data: null, error: RECONCILE_REASON[outcome.reason] };
 
     revalidatePath(FINANCE_PATH);
     return { data: { ok: true }, error: null };

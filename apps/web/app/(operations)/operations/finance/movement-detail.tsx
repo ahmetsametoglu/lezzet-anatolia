@@ -39,9 +39,11 @@ interface MovementDetailProps {
   onLinkDocument: (movementId: string, documentId: string) => Promise<boolean>;
   onRemoveAllocation: (movementId: string, documentId: string) => void;
   onUnmatch: (movementId: string) => void;
+  /** Sıradaki izah bekleyen satır (12.19) — "Atla"; verilmezse sırada satır yok. */
+  onNext?: () => void;
 }
 
-export function MovementDetail({ row, editor, version, busy, onClose, onApplyTarget, onLinkDocument, onRemoveAllocation, onUnmatch }: MovementDetailProps) {
+export function MovementDetail({ row, editor, version, busy, onClose, onApplyTarget, onLinkDocument, onRemoveAllocation, onUnmatch, onNext }: MovementDetailProps) {
   const writes = useRowWrites(row, editor);
   // Bağlanabilir mi: eşleşme bekleyen ekstre satırı her hedefe; tür alan elle satır ve stok alımı belgeye.
   const linkable = row.fromBank ? !row.reconciled : row.canClassify || row.type === 'purchase';
@@ -102,7 +104,8 @@ export function MovementDetail({ row, editor, version, busy, onClose, onApplyTar
           title="Karşılığı"
           hint={row.fromBank ? 'ekstre satırının cevabı — sipariş, belge, transfer, cari ya da tür' : 'belge bağı — fatura, fiş, bordro'}
         >
-          {row.ref ? <p className="font-ops-body text-ops-xs text-ops-muted">{row.ref}</p> : null}
+          {/* Öneri kutusu varken satırın "öneri: …" cümlesi yeniden yazılmaz — aynı bilgi iki kez (12.19). */}
+          {row.ref && !(suggestion && view) ? <p className="font-ops-body text-ops-xs text-ops-muted">{row.ref}</p> : null}
           {suggestion && view ? (
             <div className="flex items-start gap-2 rounded-sm bg-ops-card px-2.5 py-2">
               <Badge tone={view.tone} outline className="shrink-0">
@@ -156,12 +159,19 @@ export function MovementDetail({ row, editor, version, busy, onClose, onApplyTar
                 ✓ Öneriyi onayla
               </Button>
             ) : null}
+            {/* ATLA (12.19): satıra bir şey YAZMAZ, sıradaki izah bekleyene geçer. Kuyruğun eski "Atla"sı
+                satırı izahsız "mutabık" işaretliyordu — her hareket izahlı olmalı, o kapı kalktı. */}
+            {!row.explained && onNext ? (
+              <Button variant="secondary" size="sm" onClick={onNext} title="Sıradaki izah bekleyen harekete geç — bu satıra bir şey yazılmaz">
+                Atla →
+              </Button>
+            ) : null}
             {row.canUnmatch ? (
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => onUnmatch(row.id)}
-                title="Satır ekstreden geldiği hâle döner ve eşleştirme kuyruğuna geri gelir"
+                title="Satır ekstreden geldiği hâle döner ve yeniden izah bekler"
                 className="cursor-pointer font-ops-body text-ops-xs text-ops-muted underline transition-colors hover:text-ops-ink disabled:cursor-wait disabled:opacity-60"
               >
                 {busy ? '…' : 'Eşleşmeyi geri al'}

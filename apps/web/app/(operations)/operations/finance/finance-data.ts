@@ -21,8 +21,9 @@ import {
   type Supplier,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { EMPTY_MATCH_QUEUE, suggestionsForMovements } from '@/lib/bank/reconcile';
 import { NOTES } from './finance-labels';
-import { documentHead, toDocumentRows, toMovementRows, type MovementReadContext } from './finance-read';
+import { documentHead, toDocumentRows, toMatchRows, toMatchTargets, toMovementRows, type MovementReadContext } from './finance-read';
 import type { AccountLedgerRow } from '@lezzet/types';
 import type { DocumentListView, DocumentRowView, LedgerView, MovementRowView } from './finance-types';
 import { ALL_ACCOUNTS, resolveAccount, type FinanceUrlState } from './finance-url';
@@ -141,9 +142,12 @@ async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedger
   const orderIds = [...new Set(ledgerRows.flatMap((row) => (row.orderId ? [row.orderId] : [])))];
   const allocations = rowIds.length > 0 ? await new MoneyAllocationService(db).listByMovements(rowIds) : [];
   const documentIds = [...new Set(allocations.map((allocation) => allocation.documentId))];
-  const [orders, documents] = await Promise.all([
+  // Mutabık olmayan ekstre satırlarının önerisi (12.19): satırın ikinci satırı "öneri: …" okur.
+  const pending = [...new Set(ledgerRows.filter((row) => row.source === 'bank_import' && !row.reconciled).map((row) => row.id))];
+  const [orders, documents, queue] = await Promise.all([
     orderIds.length > 0 ? new OrderService(db).listByIds(orderIds) : Promise.resolve([]),
     documentIds.length > 0 ? new MoneyDocumentService(db).listByIds(documentIds) : Promise.resolve([]),
+    pending.length > 0 ? suggestionsForMovements(pending) : Promise.resolve(EMPTY_MATCH_QUEUE),
   ]);
 
   const orderRefs = new Map(orders.flatMap((order) => (order.referenceNo ? [[order.id, order.referenceNo] as const] : [])));
@@ -154,7 +158,12 @@ async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedger
     list.push({ id: allocation.documentId, label: documentLabel.get(allocation.documentId) ?? 'belge', amountCents: allocation.amountCents });
     documentsOf.set(allocation.movementId, list);
   }
-  return toMovementRows(ledgerRows, { ...names, orderRefs, documentsOf });
+  const suggestions = new Map(
+    toMatchRows(queue.rows, toMatchTargets(queue.targets, names.natureLabels)).map(
+      (entry) => [entry.movementId, { strength: entry.strength, title: entry.candidates[0]?.title ?? null }] as const,
+    ),
+  );
+  return toMovementRows(ledgerRows, { ...names, orderRefs, documentsOf, suggestions });
 }
 
 /** Tek belgenin satırı (12.17) — "devamını yükle" ile gelmiş belge bağ yazımından sonra tazelenir. */
