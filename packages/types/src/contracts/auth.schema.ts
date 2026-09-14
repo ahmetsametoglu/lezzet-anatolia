@@ -7,12 +7,15 @@ import { z } from 'zod';
  * `@lezzet/application/auth`'ta, taşıma sarmalayıcıları uygulamalarda yaşar.
  */
 
+/** Kodun hane sayısı — şemanın ve iki giriş ekranının kod alanının TEK kaynağı (21.312). */
+export const OTP_CODE_LENGTH = 6;
+
 /**
  * 6 haneli tek kullanımlık kod — üretim kuralı `EmailVerificationService`te (kripto-güvenli,
  * sıfır dolgulu), burası tüketici tarafının doğrulama süzgeci: uzunluğu ya da biçimi tutmayan
  * bir giriş RPC'ye (ve deneme sayacına) hiç ulaşmadan çevrilir.
  */
-export const OtpCodeSchema = z.string().regex(/^\d{6}$/);
+export const OtpCodeSchema = z.string().regex(new RegExp(`^\\d{${OTP_CODE_LENGTH}}$`));
 export type OtpCode = z.infer<typeof OtpCodeSchema>;
 
 /**
@@ -56,3 +59,11 @@ export const AuthErrorKeyEnum = z.enum([
   'oauth_failed',
 ]);
 export type AuthErrorKey = z.infer<typeof AuthErrorKeyEnum>;
+
+/**
+ * Google dönüşünün kayıt kapısı (21.312) — `POST /api/v1/auth/oauth/check`. Tek başarı cevabı `kept`: hesap
+ * yerinde kaldı. Bu girişte doğan ve personel olmayan hesap sunucuda silinir; uç o zaman 403 `not_registered`
+ * döner (hata zarfı, bu şemanın dışında).
+ */
+export const OAuthCheckResponseSchema = z.literal('kept');
+export type OAuthCheckResponse = z.infer<typeof OAuthCheckResponseSchema>;

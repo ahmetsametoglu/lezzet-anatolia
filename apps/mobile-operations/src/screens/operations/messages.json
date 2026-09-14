@@ -60,8 +60,10 @@
       "retry": "Tekrar dene"
     },
     "forbidden": {
-      "title": "Bu hesabın operasyon yetkisi yok",
-      "body": "Operasyon uygulamasına personel hesabıyla girilir; başka bir hesapla girmek için oturumu kapatın."
+      "title": "Bu hesap operasyona tanımlı değil",
+      "body": "{email} doğrulandı, ancak bu adrese bağlı bir rol yok. Yetkiyi depo sorumlusu ya da yönetici açar.",
+      "bodyNoEmail": "Hesabın doğrulandı, ancak bağlı bir rol yok. Yetkiyi depo sorumlusu ya da yönetici açar.",
+      "switch": "Başka hesapla gir"
     }
   },
   "failure": {

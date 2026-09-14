@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { NoRoleNotice } from '@/components/operations/no-role-notice';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { signOut } from '@lezzet/mobile-kit/src/lib/auth/sign-out';
@@ -27,7 +28,7 @@ import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
     "girdim sandım" hissi verir)
   · oturum yok (401) → GİRİŞ ekranına yönlendirme. Tek uygulama iki yüzeyi taşırken oturumsuz kişi
     müşteri kabuğuna dönüyordu (02-mimari §4); bu uygulamanın müşteri yüzeyi yok.
-  · oturum var, bölüm yok → "bu hesabın operasyon yetkisi yok" + çıkış. Sessiz bir yönlendirme,
+  · oturum var, bölüm yok → girişin "yetki yok" bloğu + başka hesaba geçiş (21.312). Sessiz bir yönlendirme,
     müşteri hesabıyla giren kişiye neden içeri alınmadığını hiç söylemezdi; çıkış da başka hesapla
     girmenin tek yolu.
   · okunamadı → hata bloğu + tekrar dene. "Yetkin yok" DEMİYORUZ, çünkü bilmiyoruz (CLAUDE §1).
@@ -93,16 +94,10 @@ export default function OperationsLayout() {
   if (access.status === 'forbidden') {
     return (
       <View style={styles.gate}>
-        {/* Kitin "hata" dili: kişi bir engelle karşılaştı. Düğme çıkış ve metni menününkiyle aynı sözlük
-            anahtarı; sonucu beklenmez — oturum düşünce kapı `signed_out`a döner ve giriş ekranı açılır
+        {/* Girişin "yetki yok" bloğunun AYNISI (21.312 — tasarım): rolsüz hesap iki kapıda aynı cümleyi görür.
+            Geçiş çıkıştır ve sonucu beklenmez — oturum düşünce kapı `signed_out`a döner ve giriş ekranı açılır
             (`use-operations-access` dinleyicisi). */}
-        <OperationsNoticeBlock
-          variant="error"
-          title={t.gate.forbidden.title}
-          description={t.gate.forbidden.body}
-          retry={{ label: t.staff.signOut, onPress: () => void signOut() }}
-          testID="operations-gate-forbidden"
-        />
+        <NoRoleNotice email={access.userEmail} onSwitchAccount={() => void signOut()} testID="operations-gate-forbidden" />
       </View>
     );
   }

@@ -212,7 +212,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(fade).toContain(', 0)');
   });
 
-  it('fark/yeni dağılımı sabit: 4 fark + 17 yeni', () => {
+  it('fark/yeni dağılımı sabit: 4 fark + 18 yeni', () => {
     expect(sharedKeys(baseColors, operationsAppColors)).toHaveLength(3);
     // `button` 30.08'de farka döndü: operasyon düğmeleri müşterininkinden bir punto küçük.
     expect(sharedKeys(baseText, operationsAppText)).toHaveLength(1);
@@ -247,8 +247,10 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
        v3:29 bu tek istisnayı taşıyor; özetin kapsamadığı bir sayfa çıkınca özet güncellenir,
        ölçüm yok sayılmaz. `fab`/`glow`dan ayrı çünkü onlar "sayfanın ÜSTÜNDE duruyorum" der
        (%24-26, gözle görünür); bu ise akışın İÇİNDEKİ bir kartın bir gömlek öne çıkması ve tek
-       başına taşıyıcı DEĞİL — kartı asıl ayıran kırmızı çerçevesi ile beyaz zemini. */
-    expect(total).toBe(29);
+       başına taşıyıcı DEĞİL — kartı asıl ayıran kırmızı çerçevesi ile beyaz zemini.
+       14.09'da bir durak daha: `error-mark-bg` — operasyon girişinin kilit karosu (21.312; en yakın iki durak kanal
+       dengesinde başka aileden, gerekçesi `operations-app.ts`te). */
+    expect(total).toBe(30);
   });
 
   it('birleşim taban katmanlarını BÜYÜTÜR, küçültmez', () => {

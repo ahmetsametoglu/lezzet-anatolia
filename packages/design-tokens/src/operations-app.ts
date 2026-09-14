@@ -134,6 +134,13 @@ export const operationsAppSurface = {
      arasında bölüm değil "eski satır" gibi okunuyordu. `error-bg`in kendi künyesindeki istisna
      gerekçesinin aynısı. */
   'courier-bg': '#e2e4e0',
+  /* HATA İŞARETİNİN KAROSU — girişin "bu hesap operasyona tanımlı değil" bloğundaki kilidin zemini (giriş
+     tasarımı 14.09, 21.312). Rolün taban karşılığı `error-bg`di ("işaretin zemini", #f4e3e0) ama o ad
+     operasyonda kart zemini için açıldı (#fdf6f4 — `operationsAppOverrides` künyesi); o tonda 40'lık karo
+     kremde kaybolur. En yakın durak `cream-deep` Δ−6/9/3, ama kanal dengesinde başka aile: R−G = +7 (sarı
+     krem), karonun R−G'si +22 (terracotta'ya kayık) — `courier-bg`in gerekçesinin aynısı. `terracotta-bg`
+     Δ3/13/15, eşiğin üstünde. */
+  'error-mark-bg': '#f6e0d3',
   /* Koyu (`ink`) CTA'nın İÇİNDEKİ saydam blok — "3 açık" sayacının arkası. Rengi yok, ışığı var:
      zemin ne olursa olsun onu bir tık açar. Ham `rgba()` kodun içine dağılmasın diye token
      (CLAUDE §3). Web operasyonunun `ops-alarm-inset`i (.10) ile aynı fikir, ayrı bağlam. */

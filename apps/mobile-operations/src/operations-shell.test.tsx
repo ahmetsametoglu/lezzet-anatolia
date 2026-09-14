@@ -78,7 +78,7 @@ describe('operasyon kabuğu — kapı', () => {
     expect(await screen.findByTestId('operations-gate-forbidden')).toBeOnTheScreen();
     expect(screen.queryByTestId('operations-section-courier')).toBeNull();
     // Başka hesapla girmenin tek yolu kapıda sunulur.
-    expect(screen.getByTestId('operations-gate-forbidden-retry')).toBeOnTheScreen();
+    expect(screen.getByTestId('operations-gate-forbidden-switch')).toBeOnTheScreen();
   });
 
   it('oturum yoksa (401) GİRİŞ ekranı açılır — operasyon uygulaması giriş kapısıyla açılır', async () => {

@@ -51,13 +51,6 @@ jest.mock('../../lib/toast/toast-store', () => ({
   toastInfo: (m: string) => mockToast(m),
 }));
 
-/* Ekran iniş yerini uygulamadan alır (21.310). Test, müşteri uygulamasının kararının ŞEKLİNİ taklit
-   eder — personel operasyona, müşteri geldiği yere; kuralın kendisi uygulamanın testinde
-   (`post-login-route.test.ts`). */
-const ROUTES = {
-  landingFor: (me: Me) => (me.roles.some((role) => role !== 'customer') ? ('/courier' as const) : null),
-};
-
 /** Üç yollu seçim aşamasından e-posta yoluna iner — akış testlerinin ortak girişi. */
 async function toEmailStage() {
   await fireEvent.press(screen.getByTestId('login-email'));
@@ -104,7 +97,7 @@ beforeEach(() => {
 
 describe('hızlı doğrulama', () => {
   it('seçim aşaması ÜÇ yolu çizer; WhatsApp bilgi verir, oturum kurmaz', async () => {
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
 
     expect(screen.getByTestId('login-google')).toBeOnTheScreen();
     expect(screen.getByTestId('login-whatsapp')).toBeOnTheScreen();
@@ -116,7 +109,7 @@ describe('hızlı doğrulama', () => {
   });
 
   it('Google yolu tarayıcıyı AÇAR ve ekranda bekleme kurmaz — devamı /auth/callback rotasının', async () => {
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
 
     await fireEvent.press(screen.getByTestId('login-google'));
 
@@ -129,7 +122,7 @@ describe('hızlı doğrulama', () => {
 
   it('Google arızasında seçim aşamasında sebep söylenir', async () => {
     mockGoogle.mockResolvedValueOnce({ error: 'google_unavailable' });
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
 
     await fireEvent.press(screen.getByTestId('login-google'));
 
@@ -140,14 +133,14 @@ describe('hızlı doğrulama', () => {
   });
 
   it('OAuth dönüş rotasının bıraktığı adlı ret açılışta söylenir (initialNotice)', async () => {
-    await render(<LoginScreen {...ROUTES} initialNotice="oauth_failed" />);
+    await render(<LoginScreen initialNotice="oauth_failed" />);
 
     expect(screen.getByTestId('login-notice')).toBeOnTheScreen();
   });
 
   it('dev test düğmeleri GERÇEK giriş akışını çağırır; başarı done akışına biner (toast + kapanış)', async () => {
     fetchMock.mockResolvedValue(meReply());
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
 
     await fireEvent.press(screen.getByTestId('login-dev-müşteri'));
     await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('musteri@test.fr'));
@@ -155,42 +148,22 @@ describe('hızlı doğrulama', () => {
     expect(mockToast).toHaveBeenCalled();
   });
 
-  it('dev operasyon düğmesi KENDİ hesabıyla çağırır; ret seçim aşamasında söylenir', async () => {
+  /* Kit girişi MÜŞTERİNİN (21.312): personelin dev düğmeleri operasyon uygulamasının kendi girişinde. Ret de
+     seçim aşamasında söylenir, ekran kapanmaz. */
+  it('dev düğmeleri yalnız müşteri hesapları; düğmenin reddi seçim aşamasında söylenir', async () => {
     mockDevSignIn.mockResolvedValueOnce({ error: 'dev_session_failed' });
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
 
-    await fireEvent.press(screen.getByTestId('login-dev-kurye'));
+    expect(screen.queryByTestId('login-dev-kurye')).toBeNull();
+    await fireEvent.press(screen.getByTestId('login-dev-müşteri'));
 
-    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('kurye@test.fr'));
+    await waitFor(() => expect(mockDevSignIn).toHaveBeenCalledWith('musteri@test.fr'));
     await waitFor(() => expect(screen.getByTestId('login-notice')).toBeOnTheScreen());
     expect(mockRouter.back).not.toHaveBeenCalled();
   });
 
-  /* 21.32'nin ASIL İDDİASI: personel müşteri sekmesine DÖNMEZ. Bu test olmadan yönlendirme sessizce
-     kaybolabilirdi — `router.back()` de "giriş başarılı" gibi görünür ve arıza ancak cihazda,
-     "operasyona giremiyorum" diye ortaya çıkardı (kullanıcı bulgusu 11.08). */
-  it('PERSONEL girişi operasyon kabuğuna yönlenir, hesap sekmesine dönmez', async () => {
-    fetchMock.mockResolvedValue(reply(200, { data: meFixture(['courier']), error: null }));
-    await render(<LoginScreen {...ROUTES} />);
-
-    await fireEvent.press(screen.getByTestId('login-dev-kurye'));
-
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/courier'));
-    expect(mockRouter.back).not.toHaveBeenCalled();
-  });
-
-  it('MÜŞTERİ girişi operasyona GİTMEZ — bölümü olmayan rol geldiği ekrana döner', async () => {
-    fetchMock.mockResolvedValue(meReply());
-    await render(<LoginScreen {...ROUTES} />);
-
-    await fireEvent.press(screen.getByTestId('login-dev-müşteri'));
-
-    await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
-    expect(mockRouter.replace).not.toHaveBeenCalled();
-  });
-
   it('geçersiz e-posta UCA GİTMEDEN yakalanır', async () => {
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'yanlış-adres');
@@ -202,7 +175,7 @@ describe('hızlı doğrulama', () => {
 
   it('kod isteği başarılıysa kod aşamasına geçer', async () => {
     fetchMock.mockResolvedValue(reply(200, { data: true, error: null }));
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -218,7 +191,7 @@ describe('hızlı doğrulama', () => {
       headers: { get: (h: string) => (h.toLowerCase() === 'retry-after' ? '42' : null) },
       json: async () => ({ data: null, error: 'cooldown' }),
     } as unknown as Response);
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -236,7 +209,7 @@ describe('hızlı doğrulama', () => {
   it('yanlış kod: hata söylenir, alan temizlenir, akış kod aşamasında kalır', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
     fetchMock.mockResolvedValueOnce(reply(401, { data: null, error: 'invalid_code' }));
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -255,7 +228,7 @@ describe('hızlı doğrulama', () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
     // Künyesi TAM müşteri: kapı açılmaz, ekran normal kapanır.
     fetchMock.mockResolvedValueOnce(meReply());
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -281,7 +254,7 @@ describe('hızlı doğrulama', () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
     fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
     fetchMock.mockResolvedValueOnce(meReply({ phone: null }));
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -296,7 +269,7 @@ describe('hızlı doğrulama', () => {
 
   it('biçimsiz kod (6 haneden az) UCA HİÇ gitmez', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
-    await render(<LoginScreen {...ROUTES} />);
+    await render(<LoginScreen />);
     await toEmailStage();
 
     await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
@@ -309,19 +282,12 @@ describe('hızlı doğrulama', () => {
   });
 });
 
-describe('geri oku — alt ekransa var, değilse yok (kullanıcı kuralı 14.09)', () => {
-  it('varsayılan: geri oku çizilir ve ekranı kapatır — müşteri girişi vitrinin alt ekranıdır', async () => {
-    await render(<LoginScreen {...ROUTES} />);
+describe('geri oku (kullanıcı kuralı 14.09 — alt ekransa var)', () => {
+  it('müşteri girişi vitrinin alt ekranıdır: geri oku çizilir ve ekranı kapatır', async () => {
+    await render(<LoginScreen />);
 
     await fireEvent.press(screen.getByTestId('login-back'));
 
     expect(mockRouter.back).toHaveBeenCalled();
-  });
-
-  it('closable={false}: KÖK girişte ok hiç çizilmez — operasyon uygulamasının girişi', async () => {
-    await render(<LoginScreen {...ROUTES} closable={false} />);
-
-    expect(screen.queryByTestId('login-back')).toBeNull();
-    expect(screen.getByTestId('login-scroll')).toBeOnTheScreen();
   });
 });

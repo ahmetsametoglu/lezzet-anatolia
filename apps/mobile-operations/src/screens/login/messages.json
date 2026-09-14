@@ -1,0 +1,39 @@
+{
+  "eyebrow": "OPERASYON",
+  "title": "Çalışma hesabınla gir",
+  "email": {
+    "label": "E-posta adresi",
+    "placeholder": "ad.soyad@lezzetanatolie.com",
+    "hint": "Kodu göndermek için kayıtlı e-posta adresini yaz."
+  },
+  "send": "Kod gönder",
+  "code": {
+    "sent": "Altı haneli kodu gönderdik — 15 dakika geçerli.",
+    "label": "Altı haneli kod",
+    "resend": "Kodu tekrar gönder",
+    "resendIn": "Kodu tekrar gönder · {time}",
+    "change": "E-postayı değiştir"
+  },
+  "or": "YA DA",
+  "google": "Google ile gir",
+  "busy": {
+    "sending": "Kod gönderiliyor",
+    "verifying": "Doğrulanıyor",
+    "google": "Google hesabı doğrulanıyor"
+  },
+  "offline": "Bağlantı yok — giriş için ağ gerekiyor",
+
+  "errors": {
+    "invalidEmail": "Geçerli bir e-posta adresi gir.",
+    "notRegistered": "Bu e-posta sistemde kayıtlı değil. Hesabı depo sorumlusu ya da yönetici açar.",
+    "sendFailed": "Kod gönderilemedi — biraz sonra yeniden dene.",
+    "rateLimit": "Çok sık denedin — biraz sonra yeniden dene.",
+    "cooldown": "Yeni kod için biraz bekle.",
+    "codeRejected": "Kod hatalı ya da süresi geçmiş. Yeni kod isteyebilirsin.",
+    "codeLocked": "Çok fazla yanlış deneme — yeni kod iste.",
+    "noActiveCode": "Bekleyen kod yok — yeni kod iste.",
+    "googleUnavailable": "Google ile giriş şu an kullanılamıyor — e-postayla dene.",
+    "oauthFailed": "Google girişi tamamlanamadı — e-postayla dene.",
+    "sessionEnded": "Oturumun sona erdi — devam etmek için yeniden gir."
+  }
+}

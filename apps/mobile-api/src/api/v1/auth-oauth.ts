@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { rejectFreshOAuthAccount } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
+import type { OAuthCheckResponse } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
 
@@ -18,7 +19,7 @@ export const authOauth = new Hono<V1Env>();
 // 200 {data:'kept'} · 403 not_registered (hesap bu girişte doğmuştu, silindi) · 502 check_failed
 authOauth.post('/check', async (c) => {
   const result = await rejectFreshOAuthAccount(serviceDb(), c.get('authUser').id);
-  if (result.status === 'kept') return ok(c, 'kept' as const);
+  if (result.status === 'kept') return ok(c, 'kept' satisfies OAuthCheckResponse);
   if (result.status === 'rejected') return fail(c, 'not_registered', 403);
   return fail(c, 'check_failed', 502);
 });

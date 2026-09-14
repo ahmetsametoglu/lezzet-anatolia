@@ -104,7 +104,7 @@ describe('sunucunun reddettiği oturum (21.304)', () => {
 
     await waitFor(() => expect(app).toHavePathname('/login'));
     expect(await screen.findByTestId('login-notice')).toHaveTextContent(
-      'Oturumunuz sona erdi — devam etmek için yeniden doğrulanın.',
+      'Oturumun sona erdi — devam etmek için yeniden gir.',
     );
     // Tek kapanış: aynı anda düşen istekler aynı kapanışı paylaştı, ikinci `SIGNED_OUT` doğmadı.
     expect(mockSignOut).toHaveBeenCalledTimes(1);

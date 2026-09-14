@@ -1,41 +1,24 @@
-import { operationsHomeRoute } from './post-login-route';
+import { OPERATIONS_SECTIONS } from '@/lib/operations/sections';
+
+import { operationsSectionRoute } from './post-login-route';
 
 /*
-  GİRİŞTEN SONRAKİ ADRES (21.32) — ekransız, ağsız birim testi.
-
-  Kapının kendisi iki ekran testinde de doğrulanıyor (OTP + OAuth); burada sınanan şey KARARIN
-  kendisi: hangi rol nereye açılır, çok rollüde hangisi kazanır, müşteri neden hiçbir yere gitmez.
-  Ayrı durmasının sebebi, kuralın ekranlardan uzun yaşayacak olması — yeni bir personel rolü
-  eklendiği gün kırılması gereken yer burasıdır.
+  BÖLÜMÜN ADRESİ (21.32 · 21.312) — ekransız, ağsız birim testi. Hangi rolün hangi bölümü açtığı ve çok rollüde
+  hangisinin kazandığı `lib/operations/sections.test.ts`te; burada sınanan adres sözleşmesi: bölüm adları
+  `(operations)/(sections)` altındaki rotaların adıdır ve biri değiştiği gün kırılması gereken yer burası.
 */
 
-describe('operationsHomeRoute', () => {
-  it('müşteri operasyona GİTMEZ — bölümü yok', () => {
-    expect(operationsHomeRoute({ roles: ['customer'] })).toBeNull();
-  });
-
-  it('rolsüz profil de gitmez (boş dizi bir yetki değildir)', () => {
-    expect(operationsHomeRoute({ roles: [] })).toBeNull();
-  });
-
+describe('operationsSectionRoute', () => {
   it.each([
-    ['courier', '/courier'],
     ['warehouse', '/warehouse'],
-    ['admin', '/management'],
-    ['accounting', '/money'],
-  ] as const)('%s rolü %s bölümüne açılır', (role, route) => {
-    expect(operationsHomeRoute({ roles: [role] })).toBe(route);
+    ['courier', '/courier'],
+    ['management', '/management'],
+    ['money', '/money'],
+  ] as const)('%s bölümü %s adresinde açılır', (section, route) => {
+    expect(operationsSectionRoute(section)).toBe(route);
   });
 
-  /* KRİTİK: sıra TASARIMIN sırasıdır, `roles` dizisininki değil. Sunucu aynı kişinin rollerini
-     başka sırayla döndürdüğü gün açılış bölümü DEĞİŞMEMELİ — aksi hâlde personel her girişte
-     başka bir ekranda uyanırdı ve sebebi hiçbir yerde görünmezdi. */
-  it('çok rollü personel HER İKİ sıralamada da aynı bölüme iner', () => {
-    expect(operationsHomeRoute({ roles: ['accounting', 'warehouse'] })).toBe('/warehouse');
-    expect(operationsHomeRoute({ roles: ['warehouse', 'accounting'] })).toBe('/warehouse');
-  });
-
-  it('müşteri rolü personelin yanında TAŞINABİLİR ve kararı bozmaz', () => {
-    expect(operationsHomeRoute({ roles: ['customer', 'courier'] })).toBe('/courier');
+  it('her bölümün adresi tabloda — yeni bölüm eklenince burası da genişlemeli', () => {
+    expect(OPERATIONS_SECTIONS.map(operationsSectionRoute)).toEqual(['/warehouse', '/courier', '/management', '/money']);
   });
 });

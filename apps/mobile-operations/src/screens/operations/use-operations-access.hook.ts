@@ -61,8 +61,11 @@ type OperationsAccess =
    * (cihazda ölçüldü 14.09 — `(operations)/_layout.tsx` künyesi).
    */
   | { status: 'signed_out'; stillCurrent: () => boolean }
-  /** Oturum var, personel bölümü yok — kapı "yetki yok" der ve çıkış sunar. */
-  | { status: 'forbidden' }
+  /**
+   * Oturum var, personel bölümü yok — kapı girişin "yetki yok" bloğunu çizer (21.312) ve başka hesaba geçişi
+   * sunar. E-posta cümlenin öznesidir ("… doğrulandı, ancak bu adrese bağlı bir rol yok").
+   */
+  | { status: 'forbidden'; userEmail: string | null }
   /** Rol bilgisi okunamadı; yetki hakkında hiçbir şey İDDİA EDİLMİYOR. */
   | { status: 'error'; retry: () => void };
 
@@ -110,7 +113,7 @@ export function useOperationsAccess(): OperationsAccess {
 
     const sections = operationsSectionsOf(result.data.roles);
     if (sections.length === 0) {
-      setState({ status: 'forbidden' });
+      setState({ status: 'forbidden', userEmail: result.data.email });
       return;
     }
 

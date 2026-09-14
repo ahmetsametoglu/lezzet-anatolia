@@ -2924,3 +2924,35 @@ bir resim görüyordu: onay sayfası süresiz "onaylanıyor", sepet dolu, Sipari
 - **Checkout ikinci çekim açmaz:** önceki ödeme geçtiyse ya da bankada işleniyorsa müşteri o siparişin
   sayfasına götürülür.
 - Tasarım paketinde bu hâllerin çizimi yok — işlev isteği; mevcut satır ve bant kabuğuyla yazıldı.
+
+## Operasyon girişi tasarımında — bilinçli sapmalar (14.09, kullanıcı kararları)
+
+`design/02-operasyon/Operasyon Mobil - Giris.dc.html` uygulandı (21.312: giriş ve yetki yok tek ekranda; doğrulanan
+personel doğrudan bölümüne girer).
+Sapmalar ve gerekçeleri:
+
+- **"Yardım · Erişimim yok" alt satırı çizilmedi** (kullanıcı kararı 14.09): tasarımda düz metin, işlevi
+  çizilmemiş; "ne yapsınlar" sorusunun cevabı "ikisi de çizilmesin".
+- **Kod adımı adresin YERİNE açılır** (kullanıcı kararı 14.09 — tasarımda alt alta): panel açılınca e-posta alanı
+  ve "Kod gönder" kalkar; panel adresi tek satırda söyler, "E-postayı değiştir" adrese döndürür (adres korunur,
+  alan odağı alır). İki adım tek yuvada, yuva ikisinin büyüğü kadar — Google düğmesi adımlar arasında yerinden
+  oynamaz. Kullanıcının sözü: *"kod girileceği bölüm geldiği zaman buton ve mail input'unun olmasına gerek yok …
+  yüksekliği öyle bir ayarla ki aşağıdaki Google butonu oynamasın."*
+- **"Yetki talebi gönder" düğmesi çizilmedi** (kullanıcı kararı 14.09: *"yetki talebi gönder diye bir şey
+  olmayacak; eğer kullanıcı sistemde kayıtlı değilse giriş yapamayacak"*). "Yetki yok" hâlinin tek eylemi
+  "Başka hesapla gir"; kayıtsız e-postaya kod gitmez, Google'da o girişte doğan hesap silinir.
+- **Yeniden gönderme sayacı yalnız 429'da kurulur:** tasarımın 24 sn'lik sayacı demo değeri. Sunucunun bekleme
+  süresi 60 sn ve istemciye yalnız ret cevabında söyleniyor; sabit bir sayaç, sunucu hâlâ reddederken
+  "gönderebilirsin" derdi.
+- **Kodun ömrü "15 dakika"** (tasarım 10 diyor): ekrana olgu yazılır, değer sunucuda (`TTL_MINUTES`).
+- **Google işareti tek renk "G"** (`brand-google`) — müşteri girişinin emsali; tasarımın çok renkli logosu ham
+  hex isterdi.
+- **Bağlantı bandı son isteğe bağlı:** cihazın ağ durumunu sürekli izleyen bir kaynak yok (`netinfo`
+  bağımlılıklarda değil, eklemek dev-client derlemesi ister). Bant "az önceki deneme ağa ulaşamadı" olgusunu
+  söyler, sonraki denemede kalkar.
+- **"Hazır" hâli çizilmedi — doğrulanan personel doğrudan ilk bölümüne girer** (kullanıcı kararı 14.09: *"neden
+  doğrudan giriş yapmıyor kullanıcı"*). Hesap, rol ve kapsam kabuğun başlığında ve hesap menüsünde zaten görünüyor;
+  ara ekran her girişe bir dokunuş ekliyordu. Rolsüz hesapta "yetki yok" kalır — girecek bir yer yok.
+- **Ölçek dışı ölçüler en yakın durağa bağlandı** (kod kutusu 54 → 52, başlık 29 → 30, 14,5 → 15, köşeler
+  13/15/17/18 → 14/16/16/20); temada durağı olmayan iki değer yerinde kaldı (56'lık Google düğmesi, 152'lik logo).
+  Kilit karosu için yeni token açıldı (`error-mark-bg` — gerekçe token dosyasında).

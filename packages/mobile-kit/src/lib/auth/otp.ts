@@ -7,7 +7,7 @@ import {
   type PreferredLanguage,
 } from '@lezzet/types';
 import { z } from 'zod';
-import { apiFetch } from '../api/client';
+import { apiFetch, failureCauseOf, type ApiFail } from '../api/client';
 import { runSignInEffects } from './sign-in-effects';
 import { getSupabase } from './supabase';
 
@@ -19,11 +19,14 @@ import { getSupabase } from './supabase';
 
 /**
  * Auth sonucu — hata anahtarı `AuthErrorKeyEnum`'dan TİPLİDİR; 429'da bekleme süresi taşınır.
+ * `offline`: istek ağa HİÇ çıkamadı (`failureCauseOf` → `connection`). Anahtar yine `send_failed` — müşteri
+ * hâlleri kümesine istemci ayrıntısı sızmaz (`toAuthErrorKey`); bayrak operasyon girişinin "Bağlantı yok"
+ * bandını besler (21.312).
  * Bilerek İHRAÇ EDİLMİYOR: bugün tüketeni yok (knip ölü ihracı yakalar — mobile-api `Me` emsali);
  * ekranlar gelince ihraç açılır ya da tüketen `ReturnType` ile türetir.
  */
-type OtpResult<T, E extends string = AuthErrorKey> =
-  { data: T; error: null; retryAfterSec: null } | { data: null; error: E; retryAfterSec: number | null };
+type OtpFailure<E extends string> = { data: null; error: E; retryAfterSec: number | null; offline: boolean };
+type OtpResult<T, E extends string = AuthErrorKey> = { data: T; error: null; retryAfterSec: null } | OtpFailure<E>;
 
 /**
  * **Yalnız kayıtlı hesap** (21.312) — operasyon girişinin kuralı: sistemde hesabı olmayan e-postaya kod
@@ -36,7 +39,7 @@ type OtpResult<T, E extends string = AuthErrorKey> =
  * Tip BAYRAĞA bağlı (aşırı yükleme): bayraksız çağrının hata kümesi değişmez — müşteri girişi bu anahtarı hiç
  * görmez ve ekranına ölü bir dal yazılmaz.
  */
-const NOT_REGISTERED = 'not_registered';
+export const NOT_REGISTERED = 'not_registered';
 
 /** Operasyon girişinin bayrağı — yalnız sistemde hesabı olan e-posta. Müşteri akışı hiç vermez. */
 interface RegisteredOnly {
@@ -63,6 +66,16 @@ function toAuthErrorKey(error: string): AuthErrorKey | typeof NOT_REGISTERED {
   return parsed.success ? parsed.data : 'send_failed';
 }
 
+/** Düşen çağrının sonucu — iki uç aynı biçimi döndürür; `offline` sebep sınıfından okunur, tahmin edilmez. */
+function toOtpFailure(result: ApiFail): OtpFailure<RegisteredOnlyError> {
+  return {
+    data: null,
+    error: toAuthErrorKey(result.error),
+    retryAfterSec: result.retryAfterSec,
+    offline: failureCauseOf(result) === 'connection',
+  };
+}
+
 const VerifyResponseSchema = z.object({ session: AuthSessionSchema });
 
 /** Kod isteği. 429'da (`rate_limit`/`cooldown`) `retryAfterSec` doludur — geri sayımı ekran kurar. */
@@ -82,7 +95,7 @@ export async function requestOtp(
     body: { email, locale, ...registeredOnlyOf(options) },
   });
   if (result.error !== null) {
-    return { data: null, error: toAuthErrorKey(result.error), retryAfterSec: result.retryAfterSec };
+    return toOtpFailure(result);
   }
   return { data: true, error: null, retryAfterSec: null };
 }
@@ -113,7 +126,7 @@ export async function verifyOtp(
   options?: RegisteredOnly,
 ): Promise<OtpResult<AuthSession, RegisteredOnlyError>> {
   if (!OtpCodeSchema.safeParse(code).success) {
-    return { data: null, error: 'invalid_code', retryAfterSec: null };
+    return { data: null, error: 'invalid_code', retryAfterSec: null, offline: false };
   }
 
   const result = await apiFetch('/api/v1/auth/otp/verify', VerifyResponseSchema, {
@@ -121,7 +134,7 @@ export async function verifyOtp(
     body: { email, code, locale, ...registeredOnlyOf(options) },
   });
   if (result.error !== null) {
-    return { data: null, error: toAuthErrorKey(result.error), retryAfterSec: result.retryAfterSec };
+    return toOtpFailure(result);
   }
 
   const { session } = result.data;
@@ -131,7 +144,7 @@ export async function verifyOtp(
   });
   if (error) {
     // Kod doğruydu ama cihaz oturumu kurulamadı — sunucunun aynı hâl için seçtiği anahtar (502 send_failed).
-    return { data: null, error: 'send_failed', retryAfterSec: null };
+    return { data: null, error: 'send_failed', retryAfterSec: null, offline: false };
   }
 
   // Oturum KURULDU: uygulamanın giriş sonrası işleri koşar (müşteride bekleyen davet bağlanır).

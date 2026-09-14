@@ -113,11 +113,19 @@ describe('requestOtp', () => {
     expect(result).toMatchObject({ data: null, error: 'cooldown', retryAfterSec: 58 });
   });
 
-  it('enum dışı hata (ağ dahil) müşteri diline send_failed olarak indirgenir', async () => {
+  it('enum dışı hata (ağ dahil) müşteri diline send_failed olarak indirgenir; ağ arızası offline taşır', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
 
     const result = await requestOtp('musteri@example.com', 'tr');
 
-    expect(result).toMatchObject({ data: null, error: 'send_failed' });
+    expect(result).toMatchObject({ data: null, error: 'send_failed', offline: true });
+  });
+
+  it('sunucunun cevabı ağ arızası DEĞİLDİR — offline yalnız isteğin hiç çıkamadığı hâl (21.312)', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse({ data: null, error: 'send_failed' }, { status: 502 }));
+
+    const result = await requestOtp('musteri@example.com', 'tr');
+
+    expect(result).toMatchObject({ data: null, error: 'send_failed', offline: false });
   });
 });

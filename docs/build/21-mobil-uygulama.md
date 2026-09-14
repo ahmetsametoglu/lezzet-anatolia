@@ -15041,8 +15041,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     `apps/mobile-operations/.env.example` ve README'de ortam bölümü; müşteri örneğindeki iki eski yol kite çevrildi.
   · **Müşteri:** dev-client yeniden derlendi (Gradle 13 dk 8 sn; kamera, yazıcı ve ses modülleri yok) ve kuruldu; tanıtım,
     vitrin ve Hesap sekmesi açıldı, dökümde operasyon izi yok.
-  · **Açık:** operasyon girişinin tasarımı — başlık ve metin müşteriye hitap ediyor; tasarım gelene dek ortak metin
-    (kullanıcı kararı 14.09). Dış kayıtlar kullanıcıda (Expo projesi, Firebase, Apple, ikon).
+  · **Açık:** ~~operasyon girişinin tasarımı~~ — tasarım 14.09'da geldi, 21.312'de uygulandı. Dış kayıtlar kullanıcıda
+    (Expo projesi, Firebase, Apple, ikon).
   · **Ayrım dışı gözlemler:** bir açılışta kapı 32 sn bekledi — kapsam isteği sunucuda 31 sn asılı kalıp 401 döndü, token
     yenilemesiyle geçti; aynı saniyelerde `/me` 0,5–0,8 sn (sebep ölçülemedi: mobil API günlüğü terminalde). Dev-client'ın
     yüzen Tools düğmesi sağ altta Para sekmesinin ve okut düğmesinin üstünde duruyor.
@@ -15086,10 +15086,11 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     değişmedi).
 
 - [~] (21.312) **OPERASYON GİRİŞİ TASARIMINDA — sistemde kayıtlı olmayan giremez; kod ve Google aynı kurala bağlı** (tasarım 14.09: 02-operasyon / Operasyon Mobil - Giris; kullanıcı kararları 14.09)
-  `touches:` `packages/application/src/auth/otp.ts` · `packages/application/src/auth/oauth-account.ts` · `packages/application/src/index.ts` · `apps/mobile-api/src/api/v1/auth-otp.ts` · `apps/mobile-api/src/api/v1/auth-oauth.ts` · `apps/mobile-api/src/api/v1/router.ts` · `packages/mobile-kit/src/lib/auth/otp.ts` · operasyon uygulamasının giriş ve OAuth dönüş rotaları (ikinci dilim)
+  `touches:` `packages/application/src/auth/otp.ts` · `packages/application/src/auth/oauth-account.ts` · `packages/application/src/index.ts` · `apps/mobile-api/src/api/v1/auth-otp.ts` · `apps/mobile-api/src/api/v1/auth-oauth.ts` · `apps/mobile-api/src/api/v1/router.ts` · `packages/mobile-kit/src/lib/auth/otp.ts` · ikinci dilim: `apps/mobile-operations/src/screens/login/` · `apps/mobile-operations/src/app/login.tsx` · `apps/mobile-operations/src/app/auth/callback.tsx` · `apps/mobile-operations/src/components/operations/no-role-notice.tsx` · `apps/mobile-operations/src/lib/api/oauth-check.ts` · `packages/mobile-kit/src/screens/login/` · `packages/types/src/contracts/auth.schema.ts` · `packages/design-tokens/src/operations-app.ts` · `design/KARARLAR.md`
 
   Kullanıcı kararları (14.09): *"yetki talebi gönder diye bir şey olmayacak; eğer kullanıcı sistemde kayıtlı
-  değilse giriş yapamayacak"* · Google kalır, kayıtsız hesap reddedilir · adreste kapı ve kurye notu için ayrı alan
+  değilse giriş yapamayacak"* · Google kalır, kayıtsız hesap reddedilir · girişin altındaki "Yardım · Erişimim yok"
+  çizilmez · doğrulanan personel doğrudan bölümüne girer ("hazır" ekranı yok) · adreste kapı ve kurye notu için ayrı alan
   açılmaz, web'in çözümü izlenir (kapı ikinci satırda, kurye notu yok) — o iş müşteri sepet-ödeme-adres biriminde.
 
   **Durum (14.09, birinci) — arka uç ve kit hattı: kayıtlı olmayana kod gitmez, Google'da doğan hesap silinir.**
@@ -15111,3 +15112,37 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     mobile-api · kit · `knip` · `boundaries` · kit jest 245/245 · kilitli tam paket 4777/4777. Yeni testler: kayıtsız
     e-postaya kod isteği 403; doğru kodla doğrulama da 403 ve profil doğmuyor; Google'da doğan müşteri hesabı 403,
     auth kaydı silindi, profil sahipsiz; personel 200 `kept`; oturumsuz 401.
+
+  **Durum (14.09, ikinci) — ekran tasarımında: giriş ve yetki yok tek ekranda, personel doğrudan bölümüne.**
+  · **Giriş:** `apps/mobile-operations/src/screens/login/operations-login-screen.tsx` (+ `components/`), durum
+    makinesi `use-operations-login.hook.ts`. Adres adımı → kod adımı AYNI YUVADA (kullanıcı kararı 14.09: kod
+    açılınca e-posta alanı ve düğme kalkar, "E-postayı değiştir" adrese döndürür; yuva iki adımın büyüğü kadar,
+    Google yerinden oynamaz). Altı kutulu kod tek alandan (yazısı saydam — yapıştırma ve cihazın kod önerisi
+    bölünmez; saydamlığı 0 olan alan Android erişilebilirlik ağacından düşüyordu, cihazda ölçüldü). "YA DA",
+    Google; iş sürerken örtü, istek ağa hiç çıkamazsa üstte bağlantı bandı (kit OTP sonucu artık `offline`
+    taşıyor). Kod isteği ve doğrulama `registeredOnly` ile; kayıtsız e-postanın reddi uyarı kutusunda.
+  · **Doğrudan giriş** (kullanıcı kararı 14.09 — tasarımın "hazır" hâli çizilmedi): doğrulanan personel ilk bölümüne
+    girer; karar kapının kuralıyla (`operationsSectionsOf`un ilk bölümü). **Yetki yok:** kayıtlı ama rolsüz hesap —
+    oturum cihazda bırakılmaz, "Başka hesapla gir" girişe döner. Aynı blok kabuğun kapısında
+    (`apps/mobile-operations/src/components/operations/no-role-notice.tsx`).
+  · **Google:** değişimi artık giriş ekranı yapar — dönüş rotası kodu devreder, ekran kayıt kapısını sorar
+    (`apps/mobile-operations/src/lib/api/oauth-check.ts`; cevap sözleşmede, `OAuthCheckResponseSchema`). Ret → yerel
+    oturum yetkili çağrı yapmadan kapanır ve uyarı söylenir.
+  · **Girişten çıkma dinleyicisi** yalnız dışarıdan açılan oturum için (dev düğmesi, otomatik giriş); ekranın kendi
+    akışı yönlendirmeyi kendisi yapar. Maestro akışları değişmedi.
+  · **Kit:** giriş ekranından `landingFor` · `closable` · `devAccounts`, dönüş ekranından `landingFor` söküldü —
+    tüketenleri kalmadı, kit girişi artık yalnız müşterinin. Kod uzunluğu tek kaynakta (`OTP_CODE_LENGTH`,
+    `packages/types/src/contracts/auth.schema.ts`). Kilit karosu için token: `error-mark-bg`
+    (`packages/design-tokens/src/operations-app.ts`).
+  · **Bilinçli sapmalar** `design/KARARLAR.md`de ("Operasyon girişi tasarımında"): alt satır ve talep düğmesi
+    çizilmedi, "hazır" hâli yok (doğrudan giriş), kod adımı adresin yerine açılır, sayaç yalnız 429'da, kodun ömrü
+    15 dk, Google işareti tek renk,
+    bant son isteğe bağlı.
+  · **Açık:** Google'ın cihaz turu — Supabase dönüş listesinde `lezzetoperasyonu://**` yok (21.310'un kayıtlı
+    açığı, dönüş rotasının künyesinde).
+  · **Doğrulama:** typecheck types · mobile-api · kit · operasyon · müşteri · `lint` kit · operasyon · müşteri ·
+    mobile-api · types · design-tokens · `knip` · jest operasyon giriş + kabuk 34/34, kit giriş + OTP 27/27 · kilitli
+    tam paket 4798/4798 (kilit karosu tokenı sayım testinde bilinçli olarak 29 → 30). Cihaz (Oppo, USB): kayıtsız
+    e-posta → uyarı kutusu; kod adımı adresin yerine açıldı ve başlık–Google aralığı dört anda sabit kaldı (567 px:
+    boş · dolu · kod · geri dönüş, adres korundu); personel kodla doğrudan depo bölümüne girdi; müşteri hesabı →
+    "yetki yok", "Başka hesapla gir" girişe döndü; klavye kod tamamlanınca kapanıyor.

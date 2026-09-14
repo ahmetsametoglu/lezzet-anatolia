@@ -12,9 +12,8 @@ import { LoginScreen } from '@lezzet/mobile-kit/src/screens/login/login-screen';
   `lib/auth/use-session-ended-login`). Değer URL'den geldiği için süzülür (`LoginNoticeSchema`) —
   tanınmayan anahtar ekrana inmez.
 
-  Gizlilik adresi ve geliştirme düğmelerinin süzgeci BURADAN verilir (21.310): ekran ortak çekirdekte
-  ve rota ağacını bilmez. İniş yeri (`landingFor`) verilmez — giriş kişiyi geldiği yere döndürür;
-  personeli ilk bölümüne yollayan kural operasyon uygulamasının.
+  Gizlilik adresi BURADAN verilir (21.310): ekran ortak çekirdekte ve rota ağacını bilmez. Giriş kişiyi
+  geldiği yere döndürür; personelin girişi operasyon uygulamasının kendi ekranı (21.312).
 */
 
 const PRIVACY_HREF = { pathname: '/legal/[page]', params: { page: 'privacy' } } as const;
@@ -22,11 +21,5 @@ const PRIVACY_HREF = { pathname: '/legal/[page]', params: { page: 'privacy' } } 
 export default function LoginRoute() {
   const { notice } = useLocalSearchParams<{ notice?: string }>();
   const parsed = LoginNoticeSchema.safeParse(notice);
-  return (
-    <LoginScreen
-      initialNotice={parsed.success ? parsed.data : undefined}
-      privacyHref={PRIVACY_HREF}
-      devAccounts="customer"
-    />
-  );
+  return <LoginScreen initialNotice={parsed.success ? parsed.data : undefined} privacyHref={PRIVACY_HREF} />;
 }

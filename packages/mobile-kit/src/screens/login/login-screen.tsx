@@ -1,6 +1,6 @@
 import { brand } from '@lezzet/brand';
 import type { LocalizedCopy } from '@lezzet/i18n';
-import type { AuthErrorKey } from '@lezzet/types';
+import { OTP_CODE_LENGTH, type AuthErrorKey } from '@lezzet/types';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Text, View } from 'react-native';
@@ -19,7 +19,7 @@ import { authErrorText } from '../../lib/auth/error-text';
 import { signInWithGoogle } from '../../lib/auth/oauth';
 import { requestOtp, verifyOtp } from '../../lib/auth/otp';
 import { useAppLocale } from '../../lib/i18n/app-locale';
-import { fetchMe, type Me } from '../../lib/api/me';
+import { fetchMe } from '../../lib/api/me';
 import { toastSuccess } from '../../lib/toast/toast-store';
 import { CustomerIcon } from '../../components/customer/customer-icon';
 import { customerMetrics } from '../../components/customer/customer-metrics';
@@ -33,6 +33,8 @@ import messages from './messages.json';
   e-posta yolunda tek kullanımlık kod. GERÇEK AKIŞ (21.14c): kod isteği/doğrulaması telden
   (`lib/auth/otp`), Google sistem tarayıcısı + şema dönüşüyle (`lib/auth/oauth` — PKCE); başarıda
   oturum cihaza yazılır. Hata METNİ ekran sözlüğünden, TÜRÜ sözleşmeden (`AuthErrorKey`).
+  Müşteri uygulamasının girişidir: operasyon uygulaması kendi ekranını taşıyor (21.312 — kayıtlı olmayan
+  giremez, "hazır" ve "yetki yok" hâlleri).
 
   ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────
   1. **WhatsApp düğmesi BİLGİ VERİR** (web `login-client` ile aynı karar): sağlayıcı kurulmadı
@@ -50,8 +52,6 @@ type Messages = LocalizedCopy<typeof messages>;
 /** Ekranın durumu — şablonun `lg.mNull` / `emailShown` / `sent` / `busy` bayraklarının adı konmuş hâli. */
 type LoginStage = 'choose' | 'email' | 'code' | 'verifying' | 'done';
 
-/** Kod uzunluğu tasarımdan (altı hane). */
-const CODE_LENGTH = 6;
 
 /** Logonun kaynak oranı (1244×602) — yükseklik şablondan (52), genişlik orandan türer. */
 const LOGO_ASPECT = 1244 / 602;
@@ -69,40 +69,17 @@ interface LoginScreenProps {
    * kökteki kanca açar).
    */
   initialNotice?: LoginNotice;
-  /**
-   * Girişten sonra hesabın İNDİĞİ yer — karar UYGULAMANIN (21.310): ekran ortak çekirdekte ve
-   * uygulamanın rota ağacını bilmez. Verilmezse ya da `null` dönerse ekran kapanır, kişi geldiği
-   * yere döner (müşteri uygulaması); operasyon uygulaması personeli ilk bölümüne yollar
-   * (`post-login-route`, 21.32).
-   */
-  landingFor?: (me: Me) => Href | null;
   /** Gizlilik metninin adresi (rota uygulamanın). Verilmezse cümle bağlantısız çizilir. */
   privacyHref?: Href;
-  /** Geliştirme düğmelerinin süzgeci (yalnız `__DEV__`): hangi uygulamanın hesapları. Verilmezse liste tamdır. */
-  devAccounts?: 'customer' | 'operations';
-  /**
-   * Altında dönülecek bir ekran var mı — kullanıcı kuralı (14.09): alt ekransa geri düğmesi olur, değilse
-   * olmaz. Varsayılan `true`: müşteri uygulamasında giriş vitrinin alt ekranıdır ve geri oku oraya kapanır.
-   * Operasyon uygulamasında giriş KÖK ekrandır — oturumsuzken arkasında açılabilecek bir yer yok, ok
-   * dokununca yine girişe dönüyordu (cihazda görüldü 14.09).
-   */
-  closable?: boolean;
 }
 
-export function LoginScreen({
-  onVerified,
-  initialNotice,
-  landingFor,
-  privacyHref,
-  devAccounts,
-  closable = true,
-}: LoginScreenProps) {
+export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
-  const devButtons =
-    devAccounts === undefined ? DEV_ACCOUNTS : DEV_ACCOUNTS.filter((account) => account.operations === (devAccounts === 'operations'));
+  /* Geliştirme düğmeleri yalnız müşteri hesapları (21.312): personelinkiler operasyon uygulamasının girişinde. */
+  const devButtons = DEV_ACCOUNTS.filter((account) => !account.operations);
 
   const [stage, setStage] = useState<LoginStage>('choose');
   const [email, setEmail] = useState('');
@@ -167,17 +144,13 @@ export function LoginScreen({
       .then((result) => {
         if (result.error !== null) return closeLogin();
         publishMe(result.data);
-        /* İNİŞ YERİNİ UYGULAMA SÖYLER (21.310). Müşteri uygulamasında personel müşteri sekmesine
-           dönmez, doğrudan operasyon kabuğuna gider (21.32 — webin tek `/connexion` modelinin karşılığı). */
-        const landing = landingFor?.(result.data) ?? null;
-        if (landing !== null) return router.replace(landing);
         closeLogin();
       })
       /* SESSİZ CATCH DEĞİL, AÇIK ÇARE (CLAUDE §1): okuma beklenmedik biçimde patlarsa müşteri
          doğrulanmış hâlde giriş ekranında ASILI kalırdı — künye sorusu yardımcı, giriş ise asıl
          iştir. Okunamayan profil "künyesi eksik" demek de değildir; ekran normal kapanır. */
       .catch(() => closeLogin());
-  }, [stage, onVerified, router, closeLogin, t.verifiedToast, landingFor]);
+  }, [stage, onVerified, closeLogin, t.verifiedToast]);
 
   /**
    * Bekleme cezası TEK kaynaktan söylenir: saniye sayacı yalnız DÜĞME etiketinde işler
@@ -251,10 +224,10 @@ export function LoginScreen({
 
   const onCodeChange = (value: string) => {
     // Yalnız rakam ve en çok altı hane: alan biçimi kendi zorlar, kullanıcı hata mesajı görmez.
-    const digits = value.replace(/\D/g, '').slice(0, CODE_LENGTH);
+    const digits = value.replace(/\D/g, '').slice(0, OTP_CODE_LENGTH);
     setCode(digits);
     setCodeError(null);
-    if (digits.length !== CODE_LENGTH) return;
+    if (digits.length !== OTP_CODE_LENGTH) return;
 
     setStage('verifying');
     void verifyOtp(email.trim(), digits, locale).then((result) => {
@@ -272,7 +245,7 @@ export function LoginScreen({
   return (
     <View style={styles.screen}>
       <View style={styles.topBar}>
-        {closable ? <BackButton onPress={closeLogin} accessibilityLabel={t.back} testID="login-back" /> : null}
+        <BackButton onPress={closeLogin} accessibilityLabel={t.back} testID="login-back" />
       </View>
       <FormScroll contentContainerStyle={styles.content} testID="login-scroll">
         {/* Logo yükseklikten ölçülür (şablon: 52). Varlık ŞEFFAF PNG: kaynak jpg beyaz zeminliydi
@@ -411,10 +384,8 @@ export function LoginScreen({
         {/* GELİŞTİRME GİRİŞLERİ (kullanıcı isteği 09.08) — yalnız dev derlemesinde çizilir;
             OTP/Google turunu atlayan ama Supabase doğrulamasından geçen GERÇEK oturum
             (`lib/auth/dev-login` künyesi). Metin sabit Türkçe: müşteri bu satırı hiç görmez.
-            ROL BAŞINA BİR DÜĞME (21.32): rol → bölüm eşlemesi birebir olduğu için tek düğme
-            bölümlerin yalnız birini açardı; hangi hesabın hangi rolü taşıdığı listede. Liste UYGULAMA
-            BAŞINA süzülür (21.310): müşteri uygulaması müşteri hesabını, operasyon uygulaması personeli
-            gösterir. */}
+            Yalnız müşteri hesapları (21.312): personelin rol başına düğmeleri operasyon uygulamasının
+            kendi girişinde. */}
         {__DEV__ ? (
           <View style={styles.devRow}>
             {devButtons.map((account) => (
@@ -422,7 +393,6 @@ export function LoginScreen({
                 key={account.email}
                 label={account.label}
                 onPress={() => startDevSignIn(account.email)}
-                tone={account.operations ? 'terracotta' : undefined}
                 testID={`login-dev-${account.label.toLocaleLowerCase('tr')}`}
               />
             ))}

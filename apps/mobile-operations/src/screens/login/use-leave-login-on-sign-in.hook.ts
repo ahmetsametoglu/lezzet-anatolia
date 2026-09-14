@@ -16,16 +16,21 @@ import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
   giriş kapıya atardı — döngü. Ters sıra (oturum kapı yönlendirmeden ÖNCE açılır) kapının işidir:
   `signed_out` kararı `stillCurrent` taşır (`use-operations-access.hook.ts`).
 
-  Giriş ekranının kendi akışı (kod) da `SIGNED_IN` doğurur; iki yönlendirme de ilk bölümde biter.
+  EKRANIN KENDİ AKIŞI KARIŞMAZ (21.312): kod doğrulaması ve Google dönüşü de `SIGNED_IN` doğurur, ama sonucu
+  ekran kendisi gösterir — "hazır" ya da "yetki yok". Dinleyici o akış sürerken susar (`ownFlow`); dışarıdan
+  açılan oturum (dev düğmesi, otomatik giriş) yine kapıya gider ve Maestro akışları bölümü bekler.
 */
 
-/** Girişteyken yeni oturum açılırsa kapıya (`/`) döner — `replace`: geçmişte giriş ekranı kalmaz. */
-export function useLeaveLoginOnSignIn(): void {
+/**
+ * Girişteyken DIŞARIDAN yeni oturum açılırsa kapıya (`/`) döner — `replace`: geçmişte giriş ekranı kalmaz.
+ * `ownFlow` bir ref: dinleyici onu olay anında okur, bayrak değişince abonelik yeniden kurulmaz.
+ */
+export function useLeaveLoginOnSignIn(ownFlow: { readonly current: boolean }): void {
   const router = useRouter();
   useEffect(() => {
     const { data } = getSupabase().auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN') router.replace('/');
+      if (event === 'SIGNED_IN' && !ownFlow.current) router.replace('/');
     });
     return () => data.subscription.unsubscribe();
-  }, [router]);
+  }, [router, ownFlow]);
 }

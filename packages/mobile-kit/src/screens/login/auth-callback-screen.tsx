@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { LoadingState } from '../../components/ui/loading-state';
-import { fetchMe, type Me } from '../../lib/api/me';
+import { fetchMe } from '../../lib/api/me';
 import { exchangeOAuthCode } from '../../lib/auth/oauth';
 import { useAppLocale } from '../../lib/i18n/app-locale';
 import { toastSuccess } from '../../lib/toast/toast-store';
@@ -21,18 +21,18 @@ import messages from './messages.json';
   ekrana dönmesin (tek kullanımlık kod
   taşıyan bir URL'in geçmişte işi yok). Retler login'e adlı `notice` parametresiyle döner;
   cümleyi login ekranı kendi sözlüğünden kurar.
+  Müşteri uygulamasının dönüşüdür: operasyon uygulamasında değişimi giriş ekranı yapar (21.312 — kayıt kapısı
+  ve "hazır" hâli orada; `apps/mobile-operations/src/screens/login/oauth-handoff.ts`).
 */
 
 interface AuthCallbackScreenProps {
   /** Derin bağlantının `?code=` parametresi; yoksa akış bozuk demektir (elle açılmış URL). */
   code: string | null;
-  /** Girişten sonra hesabın indiği yer — `LoginScreen`in aynı sözleşmesi (21.310); verilmezse `homeRoute`. */
-  landingFor?: (me: Me) => Href | null;
-  /** İniş yeri söylenmeyen hesabın evi — müşteri uygulamasında hesap sekmesi. */
+  /** Girişten sonra dönülen ev — müşteri uygulamasında hesap sekmesi. */
   homeRoute: Href;
 }
 
-export function AuthCallbackScreen({ code, landingFor, homeRoute }: AuthCallbackScreenProps) {
+export function AuthCallbackScreen({ code, homeRoute }: AuthCallbackScreenProps) {
   const locale = useAppLocale();
   const t = messages[locale];
   const router = useRouter();
@@ -57,21 +57,14 @@ export function AuthCallbackScreen({ code, landingFor, homeRoute }: AuthCallback
       const me = await fetchMe().catch(() => null);
       if (me !== null && me.error === null) publishMe(me.data);
       toastSuccess(t.verifiedToast);
-      /* İNİŞ YERİ OTP girişiyle AYNI karardan: iki ekran da uygulamanın verdiği `landingFor`u sorar
-         (21.310; operasyon uygulamasında personel ilk bölümüne gider — 21.32). Kural kopyalansaydı
-         "Google ile girince neden operasyona gitmiyor" diye aranan bir fark doğardı. */
-      const landing = me !== null && me.error === null ? (landingFor?.(me.data) ?? null) : null;
-      if (landing !== null) {
-        router.replace(landing);
-        return;
-      }
+
       /* GİRİŞTE KÜNYE SORULMAZ (kullanıcı kararı 15.08) — burada `/profile-setup`e bir yönlendirme
          vardı, OTP kapısındakiyle birlikte kaldırıldı. Ad ve telefon artık ilk siparişte, gerekçesi
          yazılı olarak isteniyor. İki kapı yine AYNI davranışta: kural kopyalanmadığı gibi kaldırma
          da tek elden yapıldı. */
       router.replace(homeRoute);
     });
-  }, [code, router, t.verifiedToast, landingFor, homeRoute]);
+  }, [code, router, t.verifiedToast, homeRoute]);
 
   return (
     <View style={styles.screen}>

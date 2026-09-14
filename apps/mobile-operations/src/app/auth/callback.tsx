@@ -1,20 +1,24 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
-import { AuthCallbackScreen } from '@lezzet/mobile-kit/src/screens/login/auth-callback-screen';
-import { operationsHomeRoute } from '@/screens/login/post-login-route';
+import { handOffOAuthCode } from '@/screens/login/oauth-handoff';
 
 /*
-  OAUTH DÖNÜŞÜ — `lezzetoperasyonu://auth/callback?code=…` buraya iner (müşteri uygulamasının ince rotasıyla
-  aynı desen). Personel ilk bölümüne, bölümü olmayan hesap köke gider ve kapı "yetki yok" der.
+  OAUTH DÖNÜŞÜ — `lezzetoperasyonu://auth/callback?code=…` buraya iner. Değişimi GİRİŞ EKRANI yapar (21.312):
+  tasarım Google doğrulamasını girişin üstünde çiziyor ve sonucu orada gösteriyor (gerekçe `oauth-handoff.ts`).
+  Rota yalnız kodu devreder ve girişe döner: tarayıcıdan dönüşte giriş yığında alttadır (`back`); uygulama
+  tarayıcıdayken kapandıysa dönüş soğuk açılıştır ve giriş yeniden kurulur (`replace`).
   BEKLEYEN(21.310): Supabase dönüş izin listesine `lezzetoperasyonu://**` (`supabase/config.toml`).
 */
 export default function AuthCallbackRoute() {
   const { code } = useLocalSearchParams<{ code?: string }>();
-  return (
-    <AuthCallbackScreen
-      code={typeof code === 'string' && code.length > 0 ? code : null}
-      landingFor={operationsHomeRoute}
-      homeRoute="/"
-    />
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    handOffOAuthCode(typeof code === 'string' && code.length > 0 ? code : null);
+    if (router.canGoBack()) router.back();
+    else router.replace('/login');
+  }, [code, router]);
+
+  return null;
 }
