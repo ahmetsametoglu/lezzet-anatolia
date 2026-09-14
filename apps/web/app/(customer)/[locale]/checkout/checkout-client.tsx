@@ -19,7 +19,7 @@ import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
 import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction, type CheckoutSnapshot } from './actions';
-import { checkoutBlocker, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
+import { checkoutBlocker, isSeparateOrder, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
 
 /**
  * Checkout'un karar merkezi (08.13) — durum ve sunucu turları burada, yerleşim iki ekran dosyasında.
@@ -308,7 +308,8 @@ export function CheckoutClient({ t, locale, device, shippingOrder, customer }: C
     snapshotReady,
     snapshot,
     state,
-    shippingOrder,
+    // Ekrana giden "ayrı sipariş mi" SEPETTEN türer, bayraktan değil (`isSeparateOrder` künyesi).
+    separateOrder: isSeparateOrder(shippingOrder, view),
     customerEmail: customer.email,
     busy,
     error,

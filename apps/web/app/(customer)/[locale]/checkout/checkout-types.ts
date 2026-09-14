@@ -1,7 +1,7 @@
 import type { AddressCheckOutcome } from '@lezzet/application';
 import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import type { CartView } from '@/lib/cart/cart-types';
+import { isSplitCart, type CartView } from '@/lib/cart/cart-types';
 import type { CheckoutSnapshot } from './actions';
 import type messages from './messages.json';
 
@@ -40,12 +40,13 @@ export interface CheckoutViewProps extends StepProps {
   snapshot: CheckoutSnapshot;
   state: CheckoutState;
   /**
-   * Sepetin KARGO grubundan açılan ikinci sipariş mi (19.7). Ekran bunu SÖYLEMEK zorunda: iki
-   * checkout birbirinin tıpatıp aynısı görünürse müşteri hangisini verdiğini bilemez ve "kapıya
-   * giden kalemlerim nerede" diye sorar. Cevap sepette bekliyor olmaları — ama söylenmezse
-   * kaybolmuş gibi okunur.
+   * Bu sipariş sepetin bir PARÇASI mı — kargo grubundan açıldı VE kapıya giden kalemler sepette
+   * kalıyor (19.7 · `isSeparateOrder`). Ekran bunu SÖYLEMEK zorunda: iki checkout birbirinin
+   * tıpatıp aynısı görünürse müşteri hangisini verdiğini bilemez ve "kapıya giden kalemlerim
+   * nerede" diye sorar. Yalnız kargo kalemi taşıyan sepette ise söylenecek bir şey yok — orada
+   * "ayrı sipariş" demek yalan olur.
    */
-  shippingOrder: boolean;
+  separateOrder: boolean;
   /** Girişli müşterinin e-postası — kimlik satırı ("… olarak devam ediyorsunuz") bunu yazar. */
   customerEmail: string;
   busy: boolean;
@@ -128,4 +129,17 @@ export function checkoutBlocker(input: {
   if (input.snapshot.delivery?.blocked || input.cartHasBlocked) return 'undeliverable_line';
   if (!input.snapshot.payment.minBasketOk) return 'min_basket';
   return null;
+}
+
+/**
+ * "AYRI sipariş" bandının ve başlığının tek koşulu (19.7): kargo checkout'u açık VE sepet bölünmüş.
+ *
+ * **`shippingOrder` tek başına yetmiyor:** sepet yalnız kargo kalemi taşırken de kargo checkout'unu
+ * açıyor (`shippingOnly` → `?group=shipping`), çünkü siparişin türü ve ücreti o bayraktan geliyor.
+ * Bayrağa bakan bant o sepette "kapıya giden kalemleriniz sepette bekliyor" diyordu — sepette
+ * kapıya giden kalem yokken (kullanıcı ölçtü 14.09: "Ev · 67380 · kargoyla", her kalem kargoda).
+ * Bayrak kalemleri ve fiyatı belirlemeye devam ediyor; ekrana söyleneni sepetin kendisi belirliyor.
+ */
+export function isSeparateOrder(shippingOrder: boolean, cart: Pick<CartView, 'lines'>): boolean {
+  return shippingOrder && isSplitCart(cart);
 }

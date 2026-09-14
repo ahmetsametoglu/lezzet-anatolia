@@ -24,11 +24,11 @@ export function CheckoutMobile(props: CheckoutViewProps) {
     // Kökte YATAY PED YOK: yapışkan kimlik barı sayfa boyu yapışabilsin diye başlık kökün
     // doğrudan çocuğu (`FunnelHeader` künyesi); içerik kendi pedli sarmalayıcısında.
     <div className="flex w-full flex-col pt-2 pb-5">
-      {/* Huninin ORTAK başlığı — kargo siparişinde eyebrow kendini söyler. */}
+      {/* Huninin ORTAK başlığı — sepetin bir parçası olan kargo siparişinde eyebrow kendini söyler. */}
       <FunnelHeader
         backLabel={t.backLabel}
         fallback="/cart"
-        eyebrow={props.shippingOrder ? t.shippingEyebrow : t.eyebrow}
+        eyebrow={props.separateOrder ? t.shippingEyebrow : t.eyebrow}
         title={t.title}
       />
 

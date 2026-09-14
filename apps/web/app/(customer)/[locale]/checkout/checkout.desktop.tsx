@@ -29,10 +29,10 @@ export function CheckoutDesktop(props: CheckoutViewProps) {
           asıl ağırlık adımlarda olmalı. "← Sepete dön" sağa yaslı (tasarım: `margin-left:auto`). */}
       <div className="flex flex-wrap items-center gap-x-9 gap-y-2 border-b border-sand-200 px-12 py-4.5">
         <h1 className="font-serif text-card-title text-ink">{t.title}</h1>
-        {/* Kargo siparişinde üst satır KENDİNİ SÖYLER: iki checkout birbirinin aynısı görünürse
-            müşteri hangisini verdiğini bilemez. */}
+        {/* Sepetin bir PARÇASI olan kargo siparişinde üst satır KENDİNİ SÖYLER: iki checkout
+            birbirinin aynısı görünürse müşteri hangisini verdiğini bilemez. */}
         <span className="font-sans text-micro font-semibold tracking-wide text-muted uppercase">
-          {props.shippingOrder ? t.shippingEyebrow : t.eyebrow}
+          {props.separateOrder ? t.shippingEyebrow : t.eyebrow}
         </span>
         <div className="ml-auto flex items-center gap-5">
           <span className="inline-flex items-center gap-1.5 font-sans text-micro font-semibold text-body">
