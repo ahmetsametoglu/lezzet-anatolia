@@ -108,8 +108,13 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
     expect(lightTheme.font.body[lightTheme.text['button--font-weight']]).toBe('Karla_700Bold');
     expect(Object.keys(appFontAssets).sort()).toEqual([
       'Karla_400Regular',
+      /* İtalik kesitler — sohbet biçimlendirmesi için açıldı (21.279, kullanıcı kararı 06.09): ajanın
+         `_italik_` işareti WhatsApp'ın grameri, tasarımın değil. Yalnız gövdenin 400'ü ve kalın-italik
+         birleşimi için 700 (`fonts.ts` künyesi). */
+      'Karla_400Regular_Italic',
       'Karla_600SemiBold',
       'Karla_700Bold',
+      'Karla_700Bold_Italic',
       /* 800 — bildirim ekranının gün başlığı ve bölüm rozeti için açıldı (kullanıcı kararı 05.09).
          Sahte kalınla üretilemez: ağırlık aile ADININ içinde ve stile `fontWeight` yazmak iki
          platformda da sistem fontuna düşürüyor (`fonts.ts` künyesi, cihaz kanıtı 09.08). */
@@ -119,9 +124,14 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
     ]);
   });
 
-  it('İTALİK ve kullanılmayan ağırlıklar YÜKLENMEZ (paket boyu + açılış süresi)', () => {
-    // Karar 24'ün açık hükmü: yalnız Lora 400·600 ve Karla 400·600·700.
-    expect(Object.keys(appFontAssets).some((name) => name.includes('Italic'))).toBe(false);
+  it('italik YALNIZ sohbetin iki kesiti; kullanılmayan ağırlıklar YÜKLENMEZ (paket boyu + açılış süresi)', () => {
+    /* Karar 24'ün hükmü (yalnız Lora 400·600 ve Karla 400·600·700) iki bilinçli ekle duruyor: Karla 800
+       (05.09) ve sohbet biçimlendirmesinin italiği (06.09, 21.279). İtalik başka bir ağırlığa ya da
+       başlık ailesine yayılırsa burası kırılır. */
+    expect(Object.keys(appFontAssets).filter((name) => name.includes('Italic')).sort()).toEqual([
+      'Karla_400Regular_Italic',
+      'Karla_700Bold_Italic',
+    ]);
     expect(appFontAssets).not.toHaveProperty('Lora_700Bold');
   });
 

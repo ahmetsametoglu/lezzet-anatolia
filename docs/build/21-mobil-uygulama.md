@@ -13241,6 +13241,11 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   çizili ("bugün 14:00") ve madde listesi — işaret kendi sütununda, madde içindeki kalın da
   çiziliyor.
 
+  **Durum (14.09) — tema testi karara eşlendi.** İtalikler yüklenirken kitin tema testi güncellenmemişti; "italik
+  yüklenmez" iddiası iki testte 07.09'dan beri düşüyordu (depo şeridinin notu açıktı). Test artık italiği yalnız bu
+  iki kesitle sınırlıyor (`packages/mobile-kit/src/theme/unistyles.test.ts`): 600/800 italik ya da başlık ailesinin
+  italiği eklenirse kırılır. 21.310'un bekçi commit'iyle gitti.
+
 - [x] (21.280) **AÇILAN ÇEKMECE KLAVYEYİ KAPATIR — ve yazışmanın altındaki iki kalıntı kalktı** (kullanıcı bulgusu 07.09)
   `touches:` `packages/mobile-kit/src/components/ui/{bottom-sheet.tsx,bottom-sheet.test.tsx}` · `apps/mobile-operations/src/screens/management/{complaint-screen.tsx,messages.json}`
 
@@ -15001,6 +15006,18 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     görsel seçici yok; iki pakette de react, react-native, unistyles, reanimated, svg, expo-router, çekmece ve bildirim
     birer kopya · kilitli kök paket 4723/4724 (tek düşüş `geocode-scan.write.test.ts`: başka şeridin açık notu,
     13.09'dan beri).
+
+  **Durum (14.09, altıncı) — bekçiler kitte: klavye, animasyon ve app.config kuralları iki uygulamanın ve kitin kaynağını tarıyor; kit paketi yeşil.**
+  · **Taşınan:** üç bekçinin kuralı ve gerekçesi kitte, kök başına tarayan yardımcılar olarak
+    (`packages/mobile-kit/src/testing/guards/keyboard-scroll.ts`, `packages/mobile-kit/src/testing/guards/animated-style.ts`,
+    `packages/mobile-kit/src/testing/guards/app-config.ts`; ortak dosya gezgini
+    `packages/mobile-kit/src/testing/guards/source-files.ts`). Öz-testler ve kapların koruma denetimi kitin kendi
+    testinde; kitin kaynağı da aynı kurallarla taranıyor. İki uygulamada üç satırlık çağrılar
+    (`apps/mobile-operations/src/lib/keyboard-scroll-guard.test.ts` ve kardeşleri). Beşinci durumdaki açık kapandı:
+    operasyon kaynağı artık üç bekçinin kapsamında.
+  · **Tema testi italik kararına eşlendi** (21.279'un durum notu): kit paketi 07.09'dan beri iki düşüşle kırmızıydı.
+  · **Doğrulama:** typecheck kit · müşteri · operasyon · jest kit 240/240, müşteri 430/430 (dört öz-test kite geçti),
+    operasyon 946/946 (yedi yeni tarama).
 
 - [x] (21.311) **PUSH JETONU HANGİ UYGULAMANIN — `push_device.app` ('customer' | 'operations')** (21.310'dan ayrıldı 14.09; kullanıcı kararı: arka-uç kısmına bu şerit dokunur)
   `touches:` `supabase/migrations/0050_push_device.sql` · `packages/types/src/entities/push-device.schema.ts` · `packages/database/src/services/push-device.service.ts` · `packages/application/src/notification/devices.ts` · `packages/application/src/notification/dispatch.ts` · `apps/mobile-api/src/api/v1/notifications.ts` · iki uygulamanın kayıt kapısı
