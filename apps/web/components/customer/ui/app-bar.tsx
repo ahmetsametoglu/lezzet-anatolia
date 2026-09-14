@@ -7,8 +7,10 @@ import type { ReactNode } from 'react';
  * sekme çubuğunda.
  *
  * Native'in ölçüleriyle: krem cam (%96 krem + 8px bulanıklık), altında 1,5px MÜREKKEP çizgi, 8/14
- * dolgu, 10 aralık, 17px serif başlık. Yapışkan — native'in üç durak kuralında "kaydırırken
- * erişilebilir kalması gereken" geri yolu ve eylem elin altında kalır (`design/KARARLAR.md` 16.08).
+ * dolgu, 10 aralık, ekran başlığı kademesinde serif başlık (`screen-title` — telefon ölçeğiyle native
+ * gibi bir adım büyük; 14.09'a kadar ham 17px yazıyordu ve adımı almıyordu, kullanıcı bulgusu). Yapışkan —
+ * native'in üç durak kuralında "kaydırırken erişilebilir kalması gereken" geri yolu ve eylem elin
+ * altında kalır (`design/KARARLAR.md` 16.08).
  */
 interface AppBarProps {
   title: string;

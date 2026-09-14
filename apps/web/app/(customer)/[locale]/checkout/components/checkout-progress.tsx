@@ -43,9 +43,10 @@ export function CheckoutProgress({ t, snapshot, state, compact }: CheckoutViewPr
         // altına sabitlenir (iOS'un büyük başlık altına pinlenen segment deseni). `top` değeri barın
         // yüksekliğidir (`funnel-header.tsx` BAR_HEIGHT=52) — Tailwind sınıfı çalışma anında
         // kurulamadığı için sayı burada YİNELENİR; bar boyu değişirse ikisi birlikte değişmeli.
-        // z-10 barın (z-20) altında kalır; zemin barla aynı (cream/95 + blur) ki tek parça okunsun.
+        // z-10 barın (z-20) altında kalır; zemin barla aynı (`sand-50/96` krem cam + blur — 14.09'da barla
+        // birlikte `cream/95`ten döndü, sayfanın zemini `sand-50`) ki tek parça okunsun.
         // Masaüstünde kart hâli duruyor ve yapışkan değil — orada FunnelHeader yok.
-        compact ? 'sticky top-[52px] z-10 -mx-4 bg-cream/95 px-4 py-1.5 backdrop-blur' : 'rounded-card border border-sand-200 bg-sand-25 px-5 py-3',
+        compact ? 'sticky top-[52px] z-10 -mx-4 bg-sand-50/96 px-4 py-1.5 backdrop-blur-sm' : 'rounded-card border border-sand-200 bg-sand-25 px-5 py-3',
       ].join(' ')}
       role="navigation"
       aria-label={t.title}

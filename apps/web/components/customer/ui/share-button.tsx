@@ -62,13 +62,14 @@ export function ShareButton({ label, subject, variant = 'inline' }: ShareButtonP
 
   if (variant === 'bar') {
     return (
-      // 44px kutu (envanter tabanı); `-mr-2.5` ikonu çubuğun sağ kenar hizasına oturtur — geri düğmesinin aynası.
+      // Native'in 40'lık dairesi (`iconButton`); dokunma alanı görünmez `after` katmanıyla 44 (envanter tabanı) —
+      // geri düğmesinin `bar` biçiminin aynası.
       <button
         type="button"
         onClick={onShare}
         aria-label={label}
         title={label}
-        className="-mr-2.5 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full text-ink transition-colors hover:bg-sand-200"
+        className="relative flex size-10 flex-none cursor-pointer items-center justify-center rounded-full text-ink transition-colors after:absolute after:-inset-0.5 after:content-[''] hover:bg-sand-200 active:bg-sand-200"
       >
         <MobileIcon name="share" size={17} />
       </button>

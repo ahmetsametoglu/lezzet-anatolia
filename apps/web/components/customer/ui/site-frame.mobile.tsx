@@ -131,8 +131,9 @@ export function SiteFrameMobile({ locale, mobileChrome, detail, accountChrome, f
       ].join(' ')}
     >
       {kind === 'home' && <HomeHeader locale={locale} />}
-      {/* Native hesap: yalnız başlık, 24px serif — sekme kökü, geri yolu yok. */}
-      {kind === 'title' && <h1 className="px-[18px] pt-5 font-serif text-card-title text-ink">{title}</h1>}
+      {/* Native hesap: yalnız başlık, 24px serif — sekme kökü, geri yolu yok. Üst pay tasarımın 16'sı (sayfa
+          dolgusu 10 + başlığın 6'sı); yan pay native'in sayfa dolgusu (18). */}
+      {kind === 'title' && <h1 className="px-4.5 pt-4 font-serif text-card-title text-ink">{title}</h1>}
       {kind === 'page' && <FunnelHeader backLabel={t.back} fallback={fallback} eyebrow={t.accountNav.account} title={title} />}
       {kind === 'bar' && <AppBar title={title} left={<BackButton label={t.back} fallback={fallback} />} right={accountChrome?.right} />}
 

@@ -24,15 +24,19 @@ interface BackButtonProps {
   /** Tarayıcı geçmişi boşken gidilecek yer. */
   fallback: PushHref;
   /**
-   * `bar` — zeminsiz 44px (başlık çubukları). `photo` — native'in fotoğraf üstü biçimi (14.09, ürün detayının
-   * kahramanı): 42px `sand-50` daire, glif ikon kademesinde; basılınca küçülür.
+   * `bar` — başlık çubuklarının zeminsiz 40px dairesi (dokunma alanı 44). `photo` — native'in fotoğraf üstü biçimi
+   * (14.09, ürün detayının kahramanı): 42px `sand-50` daire; basılınca küçülür.
    */
   variant?: 'bar' | 'photo';
 }
 
 /**
- * Yuvarlak ‹ — native `BackButton`ın iki biçimi. `bar` (40 dp; burada envanterin 44px tabanı) hover'da kum;
- * mobil webin başlıkları bunu taşır: `AppBar`, `FunnelHeader` (14.09).
+ * Yuvarlak ‹ — native `BackButton`ın (`packages/mobile-kit/src/components/ui/back-button.tsx`) iki biçimi. Glif ikon
+ * kademesinde ve normal ağırlıkta (native `text.icon`, 400); `bar`ın dairesi native'in 40'ı (`iconButton`), üstünde ve
+ * basılıyken kum. Dokunma alanı görünmez `after` katmanıyla envanterin 44 tabanına tamamlanır; konum çağıranın
+ * dolgusundan gelir, negatif pay yok (native'deki gibi). 14.09'a kadar 44'lük kutu, −10 pay ve 20px KALIN glif vardı —
+ * native'inkinden küçük ve ağır duruyordu (kullanıcı bulgusu). Mobil webin başlıkları bunu taşır: `AppBar`,
+ * `FunnelHeader`, paket detayının çubuğu.
  */
 export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps) {
   const router = useRouter();
@@ -48,8 +52,7 @@ export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps
       className={
         variant === 'photo'
           ? 'flex size-10.5 flex-none cursor-pointer items-center justify-center rounded-full bg-sand-50 font-sans text-icon leading-none text-ink transition-transform active:scale-[0.97]'
-          : // 44px kutu (envanter tabanı); `-ml-2.5` glifi metin hizasına oturtur.
-            '-ml-2.5 flex size-11 flex-none cursor-pointer items-center justify-center rounded-full font-sans text-icon-sm font-bold text-ink transition-colors hover:bg-sand-200'
+          : "relative flex size-10 flex-none cursor-pointer items-center justify-center rounded-full font-sans text-icon leading-none text-ink transition-colors after:absolute after:-inset-0.5 after:content-[''] hover:bg-sand-200 active:bg-sand-200"
       }
     >
       ‹

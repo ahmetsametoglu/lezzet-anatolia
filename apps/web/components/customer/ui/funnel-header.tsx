@@ -6,8 +6,8 @@ import { BackButton } from './back-button';
 /**
  * Huni sayfalarının (sepet · checkout) mobil başlığı (kullanıcı kararı 20.08): `‹` ikon →
  * (eyebrow) → büyük serif başlık. Yedinci turda detay ve hesap alanı da bunu kullanıyordu; Mobil v1
- * (13.09) onları çerçevenin üst barına taşıdı (`site-frame.mobile.tsx`). Sepet ve checkout kendi v1
- * turlarında aynı yere geçecek.
+ * (13.09) onları çerçevenin üst barına taşıdı (`site-frame.mobile.tsx`). Bugün çerçeve eylemsiz bölüm
+ * sayfalarında da (siparişlerim · puan geçmişi · bildirimler) bunu çiziyor — native'in "sayfa başlığı" durağı.
  *
  * ── YAPIŞKAN KİMLİK (beşinci tur) ───────────────────────────────────────────
  * *"Sticky olan kısım sayfanın ne sayfası olduğunu anlatan kısım olmalı."* iOS'un büyük-başlık
@@ -19,11 +19,16 @@ import { BackButton } from './back-button';
  *
  * Checkout'un çip şeridi (altıncı tur) barın ALTINA yapışır: kendi başına ikinci bir kimlik
  * katmanı değil, barın uzantısıdır — `top` değeri BAR_HEIGHT'tır ve orada yinelenir
- * (`checkout-progress.tsx`), bar boyu değişirse ikisi birlikte değişmeli.
+ * (`checkout-progress.tsx`), bar boyu değişirse ikisi birlikte değişmeli. Zemin de ikisinde aynı.
  *
- * Eyebrow TERRACOTTA (yedinci tur, kullanıcı isteği "kurumsal renk dokunuşu"): native uygulamanın
- * "sayfa başlığı" durağı birebir böyle (`KARARLAR.md` "üç header" 16.08 — terracotta eyebrow +
- * mürekkep serif başlık); harf aralığı token'da gömülü, elle yazılmaz.
+ * ── NATIVE'İN ÖLÇÜLERİ (14.09 · kullanıcı bulgusu "başlıklar kötü") ─────────
+ * Değerler native siparişler ekranının başlığından (`apps/mobile/src/screens/orders/orders-screen.tsx`):
+ * üstbaşlık native'in kademesi (`eyebrow-xs` — 10 · 700 · .18em, terracotta; harf aralığı token'a gömülü),
+ * başlık sayfa başlığı kademesi (`page-title-sm`). `‹` sayfa dolgusuna taşar ki glifi başlığın sol kenarıyla
+ * hizalansın (native `backRow` −16). Yapışkan satırın zemini sayfanınki (`sand-50`) krem camda; kompakt ad
+ * başlık çubuğunun kademesinde (`screen-title`). Satırın boyu değişmedi: 6 + 40 + 6 = 52 (BAR_HEIGHT).
+ * Önceki hâl: üstbaşlık web'in eski mobil kademesi (`eyebrow-sm` 11 · 600 · .1em), başlık 30'luk `h1-sm`,
+ * satır zemini `cream/95` — sayfanın üstünde açık bir şerit gibi duruyordu.
  */
 interface FunnelHeaderProps {
   /** Geri ikonunun ekran okuyucu adı ("Geri" / "Retour" / "Zurück"). */
@@ -61,12 +66,15 @@ export function FunnelHeader({ backLabel, fallback, eyebrow, title, right }: Fun
     // ölçüldü). Fragment döner ki bar uzun kök konteynerin DOĞRUDAN çocuğu olsun; yatay pedi
     // iki parça da kendi taşır.
     <>
-      <div className="sticky top-0 z-20 flex items-center gap-1.5 bg-cream/95 px-4 py-1 backdrop-blur">
-        <BackButton label={backLabel} fallback={fallback} />
+      <div className="sticky top-0 z-20 flex items-center gap-1.5 bg-sand-50/96 px-4 py-1.5 backdrop-blur-sm">
+        {/* Daire sayfa dolgusuna taşar: glif başlığın sol kenarıyla hizalı (native `backRow` −16). */}
+        <span className="-ml-4 flex flex-none">
+          <BackButton label={backLabel} fallback={fallback} />
+        </span>
         <span
           aria-hidden={!collapsed}
           className={[
-            'min-w-0 flex-1 truncate font-serif text-card-title-sm text-ink transition-opacity duration-150',
+            'min-w-0 flex-1 truncate font-serif text-screen-title text-ink transition-opacity duration-150',
             collapsed ? 'opacity-100' : 'opacity-0',
           ].join(' ')}
         >
@@ -75,8 +83,8 @@ export function FunnelHeader({ backLabel, fallback, eyebrow, title, right }: Fun
         {right && <div className="flex flex-none items-center gap-3.5">{right}</div>}
       </div>
       <div className="flex flex-col gap-1 px-4 pt-1">
-        {eyebrow && <span className="font-sans text-eyebrow-sm text-terracotta uppercase">{eyebrow}</span>}
-        <h1 ref={heroRef} className="font-serif text-h1-sm text-ink">
+        {eyebrow && <span className="font-sans text-eyebrow-xs text-terracotta uppercase">{eyebrow}</span>}
+        <h1 ref={heroRef} className="font-serif text-page-title-sm text-ink">
           {title}
         </h1>
       </div>
