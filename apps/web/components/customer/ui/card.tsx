@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /**
- * Kart kabuğu — beyaz zemin, kum-200 kenar, `radius 18` (denetim bulgusu M2, 02.08).
+ * Kart kabuğu — beyaz zemin, kum-200 kenar (dikkat tonu `tone` ile), `radius 18` (denetim bulgusu M2, 02.08).
  *
  * Dört yerde elle kurulmuştu: checkout özeti, hesap kartları, sipariş onayı ve **onların iskeleti**.
  * Sonuncusu sorunun neden görsel bir titizlik meselesi olmadığını gösteriyor — `SkeletonCard`
@@ -26,6 +26,7 @@ import type { ReactNode } from 'react';
 type CardPad = 'roomy' | 'snug' | 'tight' | 'side' | 'row';
 type CardCompactPad = 'md' | 'sm';
 type CardGap = 'xs' | 'sm' | 'md';
+type CardTone = 'plain' | 'attention';
 
 const PAD: Record<CardPad, string> = {
   roomy: 'px-6.5 py-5.5',
@@ -43,6 +44,16 @@ const COMPACT_PAD: Record<CardCompactPad, string> = {
   sm: 'p-3.5',
 };
 const GAP: Record<CardGap, string> = { xs: 'gap-2', sm: 'gap-2.5', md: 'gap-3' };
+/**
+ * Ton — zemin ve kenar TEK eksende (14.09). `attention`: müşterinin bir sonraki adımı bu kartta
+ * bekliyor (sepette giriş yapılmadı ya da teslimat adresi seçilmedi — kullanıcı isteği); yüzeyin
+ * dikkat tonu, liste üstü uyarı bandıyla aynı aile (`honey-bg` · `honey-line`). Zemin sınıfını
+ * `className` ile üste yazmak yukarıdaki sıra sorununa düşerdi; bu yüzden o da kapalı bir liste.
+ */
+const TONE: Record<CardTone, string> = {
+  plain: 'border-sand-200 bg-card',
+  attention: 'border-honey-line bg-honey-bg',
+};
 
 interface CardClassOptions {
   /** Mobil yerleşim (cihaz forku — `md:` yok). */
@@ -50,6 +61,8 @@ interface CardClassOptions {
   pad?: CardPad;
   compactPad?: CardCompactPad;
   gap?: CardGap;
+  /** Zemin ve kenar — varsayılan düz; `attention` eksik adımın kartı (yukarıdaki not). */
+  tone?: CardTone;
   className?: string;
 }
 
@@ -59,10 +72,12 @@ export function cardClass({
   pad = 'roomy',
   compactPad = 'md',
   gap = 'md',
+  tone = 'plain',
   className,
 }: CardClassOptions = {}): string {
   return [
-    'flex flex-col rounded-card border border-sand-200 bg-card',
+    'flex flex-col rounded-card border',
+    TONE[tone],
     GAP[gap],
     compact ? COMPACT_PAD[compactPad] : PAD[pad],
     className,

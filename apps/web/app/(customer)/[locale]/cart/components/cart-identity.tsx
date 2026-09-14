@@ -126,8 +126,10 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
     router.refresh();
   };
 
+  // Masaüstünde DİKKAT TONU (kullanıcı isteği 14.09): ödemeye geçmenin ilk şartı bu kart, eksik adım
+  // sepetin geri kalanından ayrışsın. Mobil webin çizimi native uygulamadan (08.58) — ona dokunulmadı.
   return (
-    <div className={cardClass({ compact, pad: 'snug', compactPad: 'sm', gap: compact ? 'xs' : 'md' })}>
+    <div className={cardClass({ compact, pad: 'snug', compactPad: 'sm', gap: compact ? 'xs' : 'md', tone: compact ? 'plain' : 'attention' })}>
       <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{c.loginTitle}</span>
       <p className="font-sans text-note leading-relaxed text-body">{c.loginBody}</p>
 
@@ -288,8 +290,11 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
     if (!(await choose(id))) setError(errorText(am.errors, null));
   };
 
+  // Seçili adres yoksa DİKKAT TONU (kullanıcı isteği 14.09) — koşul "Ödemeye geç" kapısının adres
+  // şartıyla aynı (`useCheckoutGate`). Seçili adres sunucudan hazır geldiği için kart ilk karede doğru
+  // tonda açılır. Karşılanamayan adreste kart düz kalır: uyarıyı kartın içindeki şerit söylüyor.
   return (
-    <div className={cardClass({ pad: 'side', gap: 'sm' })}>
+    <div className={cardClass({ pad: 'side', gap: 'sm', tone: current ? 'plain' : 'attention' })}>
       <div className="flex items-baseline justify-between gap-3">
         <span className="font-serif text-card-title-sm text-ink">{c.addressTitle}</span>
         <button

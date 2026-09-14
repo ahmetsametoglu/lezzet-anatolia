@@ -2586,6 +2586,15 @@ Tasarım paketinde sepet paneli çizili değil — kullanıcı kararıyla mevcut
 (özet kartının kabuğu `cardClass snug`, giriş sayfasının Google · ayraç · e-posta sırası); Claude
 Design'a erişim açılınca çizim istenir (`design/BACKLOG §4`).
 
+**Eksik adımın kartı DİKKAT TONUNDA (14.09, kullanıcı isteği):** *"Eğer hesap doğrulanmadıysa bir
+adres girilmediyse ilgili kartları bu bizim uçuk sarı bir tonumuz var. Dikkat çekmek için
+kullandığımız. O renkte yapsak daha iyi olacak galiba."* Masaüstünde giriş kartı ve seçili adresi
+olmayan adres kartı `honey-bg` zemin + `honey-line` kenarla çizilir (kart kabuğunun
+`tone: 'attention'` ekseni); koşul "Ödemeye geç" kapısının şartlarıyla aynı. Ton v1'in kendi dikkat
+dili: v1 talep detayındaki "bekliyor" kartı aynı zemin ve kenarla, kart köşesiyle (18px) çizili.
+Karşılanamayan adreste kart düz kalır, uyarıyı içindeki şerit söyler. Mobil webin kartları native
+uygulamanın çiziminden gelir (`08.58`), değişmedi.
+
 ## Para: tür · cari · etiket satırın menüsünden seçilir, dokunuşta yazılır — Kaydet yok (13.09)
 
 Kullanıcı kararı: *"Muhasebeci programında gördüğünüz üzere etiketler bir popup menü ile seçiliyor…
