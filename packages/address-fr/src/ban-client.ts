@@ -1,5 +1,6 @@
 import { toSuggestion, type AddressKind, type AddressSuggestion } from './address';
 import { BanCollectionSchema } from './ban.schema';
+import { houseNumberFirst } from './query';
 
 /*
   FRANSA ADRES SERVİSİ (BAN) İSTEMCİSİ — devletin coğrafi kodlama hizmeti.
@@ -115,6 +116,17 @@ export async function searchAddresses(input: AddressSearchInput): Promise<Addres
   const query = input.query.trim();
   if (query.length < MIN_QUERY_LENGTH) return { status: 'too_short' };
 
+  const found = await read(searchUrl(input, query), input.timeoutMs, input.signal);
+  /* NUMARA SONDA YAZILDIYSA İKİNCİ SORU (14.09): servis kapı numarasını yalnız sokak adından ÖNCE
+     tanıyor (ölçüm `query.ts` künyesinde). Yalnız BOŞ cevapta sorulur: ilk soru bir şey bulduysa sıra
+     zaten doğrudur, sonunda sayı taşıyan bir sokak adı ("Avenue du 8 Mai 1945") da ilk soruda bozulmaz. */
+  if (found.status !== 'ok' || found.suggestions.length > 0) return found;
+  const reordered = houseNumberFirst(query);
+  return reordered === null ? found : read(searchUrl(input, reordered), input.timeoutMs, input.signal);
+}
+
+/** Arama adresi — iki soru da aynı süzgeçlerle gider, yalnız metin değişir. */
+function searchUrl(input: AddressSearchInput, query: string): string {
   const params = new URLSearchParams({
     q: query,
     index: 'address',
@@ -129,8 +141,7 @@ export async function searchAddresses(input: AddressSearchInput): Promise<Addres
     params.set('lat', String(input.near.latitude));
     params.set('lon', String(input.near.longitude));
   }
-
-  return read(`${BASE_URL}/search?${params.toString()}`, input.timeoutMs, input.signal);
+  return `${BASE_URL}/search?${params.toString()}`;
 }
 
 /**

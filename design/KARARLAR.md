@@ -2845,6 +2845,11 @@ Maréchal Foch" yalnız gerçek kapıyı (67380 Lingolsheim) döndürüyor.
   yazın" der; alan etiketi "Sokak ve kapı numarası".
 - **Elle giriş açık kalır:** numarası servis kaydında olmayan kapı (yeni yapı, bazı `bis/ter`) elle
   girilir; defter reddetmez (10.08), ödeme ekranı "kapı doğrulanamadı" deyip devam ettirir.
+- **Numara sonda yazılırsa servise bir kez daha sorulur (aynı gün, kullanıcı onayı):** BAN kapıyı
+  yalnız numara sokak adından ÖNCE gelirse buluyor — ölçüldü: "rue du Maréchal Foch 192c" 0,
+  "192c rue du Maréchal Foch" gerçek kapı. Almanca ve Türkçe alışkanlıkta numara sonda. Boş cevapta
+  sondaki numara başa alınıp ikinci soru sorulur (`@lezzet/address-fr` · `houseNumberFirst`); alanda
+  yazılan aynen kalır. Kural paketin arama işlevinde: native aynı işlevi çağırıyor.
 - **Native uygulamanın önerisi henüz süzgeçsiz** — mobil şeride not bırakıldı.
 
 ## Posta kodu yalnız başlıktaki haptan sorulur — ülkesiyle (14.09, kullanıcı kararı)
