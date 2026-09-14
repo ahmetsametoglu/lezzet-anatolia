@@ -178,6 +178,9 @@
   --text-eyebrow-sm: 11px;
   --text-eyebrow-sm--font-weight: 600;
   --text-eyebrow-sm--letter-spacing: 0.1em;
+  --text-eyebrow-xs: 10px; /* (telefon, 14.09) native'in üstbaşlığı; masaüstü `eyebrow`u yeni ada geçince taban `eyebrow` bu değeri alır */
+  --text-eyebrow-xs--font-weight: 700;
+  --text-eyebrow-xs--letter-spacing: 0.18em;
 
   /* (telefon, 14.09) Native'in rozet kademesi (Token Kararlari #16): küçük rozet yalnız ölçü farkı,
      ağırlık ve aralık `badge`inkinden okunur. Yardımcı satır 12 ve ekran başlığı 17 de native

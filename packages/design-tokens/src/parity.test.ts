@@ -39,7 +39,9 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 // 14.09 (2): +17 — telefon görünümünün kullandığı uygulama token'ları tabana çıktı (`customer.ts`
 //        künyesi): 7 renk (`ink-deep`, `sand-150`, `sand-250`, dört örtü) · 7 yazı (rozet kademesi,
 //        `badge-sm`, `helper`, `screen-title`) · 2 yarıçap (`badge`, `control`) · 1 gölge (`badge`).
-const EXPECTED_LIGHT_COUNT = 195; // @theme bloğu, fontlar hariç (119 renk + 58 yazı + 9 yarıçap + 3 hareket + 6 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
+// 14.09 (3): +3 — native'in üstbaşlığı (`eyebrow-xs`: boyut · ağırlık · aralık); taban `eyebrow`
+//        masaüstünün 14px'i olduğu için telefon görünümü ara kademeden okur (`customer.ts` künyesi).
+const EXPECTED_LIGHT_COUNT = 198; // @theme bloğu, fontlar hariç (119 renk + 61 yazı + 9 yarıçap + 3 hareket + 6 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));

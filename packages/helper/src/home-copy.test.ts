@@ -1,7 +1,7 @@
 import homeMessages from '@lezzet/i18n/customer/home';
 import { describe, expect, it } from 'vitest';
 import { formatPrice } from './format';
-import { bandCountLabel, greetingOf, LAST_FEW_THRESHOLD, offerLimitOf } from './home-copy';
+import { bandCountLabel, greetingOf, LAST_FEW_THRESHOLD, offerDiscountLabel, offerLimitOf } from './home-copy';
 
 /*
   Vitrin cümlelerinin kuralları — native vitrinden taşındılar (14.09) ve iki yüzey onları okuyor.
@@ -9,6 +9,14 @@ import { bandCountLabel, greetingOf, LAST_FEW_THRESHOLD, offerLimitOf } from './
   düşüldüğünü sınar.
 */
 const tr = homeMessages.tr;
+
+describe('offerDiscountLabel', () => {
+  it('oran kartın iki fiyatından türer ve tam sayıya yuvarlanır', () => {
+    // 0,77 → %23 (kayan nokta 23,000000000000004 verir; yuvarlama onu yutmalı) · 0,666 → %33.
+    expect(offerDiscountLabel(770, 1000, tr.offers)).toBe(tr.offers.discount.replace('{n}', '23'));
+    expect(offerDiscountLabel(666, 1000, tr.offers)).toBe(tr.offers.discount.replace('{n}', '33'));
+  });
+});
 
 describe('greetingOf', () => {
   it('ad yoksa hitap yoktur — misafire saat sorulmaz', () => {

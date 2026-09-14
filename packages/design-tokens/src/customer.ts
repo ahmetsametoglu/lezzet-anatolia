@@ -234,6 +234,14 @@ export const customerText = {
   'eyebrow-sm': '11px',
   'eyebrow-sm--font-weight': '600',
   'eyebrow-sm--letter-spacing': '0.1em',
+  /* (telefon, 14.09) NATIVE'İN ÜSTBAŞLIĞI — 10px · 700 · .18em: telefonda üstbaşlık başlıkla aynı
+     sütunda durur ve ondan ancak harf aralığıyla ayrışır. Adı `eyebrow` olmalıydı ama o ad tabanda
+     masaüstünün 14px'i; telefon görünümü bu kademeyi okur ve uygulamanın `eyebrow` farkı değerlerini
+     BURADAN alır (iki yazım bir gün ayrışırdı).
+     BEKLEYEN(08.58): masaüstü `eyebrow` kullanımları yeni ada geçince taban `eyebrow` bu değerleri alır ve bu ara kademe kalkar. */
+  'eyebrow-xs': '10px',
+  'eyebrow-xs--font-weight': '700',
+  'eyebrow-xs--letter-spacing': '0.18em',
 
   /* ROZET kademesi — Token Kararlari #16 · (telefon, 14.09). Native v3'ün en çok yinelenen öğesinin
      (fiyat çipi · TÜKENDİ · İNDİRİM · TOPTAN · TAKİP) kendi kademesi; önce üç ayrı kademeden

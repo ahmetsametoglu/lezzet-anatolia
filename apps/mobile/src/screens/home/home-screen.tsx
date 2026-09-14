@@ -3,6 +3,7 @@ import {
   cardBadgeOf,
   formatPrice,
   greetingOf,
+  offerDiscountLabel,
   offerLimitOf,
   productPriceLabel,
   scopeBadgeOf,
@@ -422,10 +423,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
           >
             <View style={styles.offerBadge}>
               <Tag
-                label={t.offers.discount.replace(
-                  '{n}',
-                  String(Math.round((1 - (offer.priceCents ?? 0) / offer.wasCents) * 100)),
-                )}
+                // Oran iki yüzeyin ortak kurucusundan (14.09); `?? 0` tip daraltması (uç fiyatsızı süzer).
+                label={offerDiscountLabel(offer.priceCents ?? 0, offer.wasCents, t.offers)}
                 rotate={-7}
                 shadow
               />

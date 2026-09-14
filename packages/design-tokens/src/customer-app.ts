@@ -36,7 +36,7 @@
   dönüşümü tüketicinin (Unistyles teması) işidir, kaynağın değil — `customer.ts` başlığındaki
   kuralın aynısı. Karanlık mod YOK: müşteri vitrini tek temalıdır, uygulama da öyle.
 */
-import { customerShadow, customerShadowOffset } from './customer';
+import { customerShadow, customerShadowOffset, customerText } from './customer';
 
 /* ── (1) FARK RENKLERİ — tabanın aynı adlı anahtarını EZER ───────────────────
    Token Kararlari #3'te ölçülen uygulama değerleri. Küçük ayak izi kuralı gereği web değeri
@@ -172,9 +172,12 @@ export const customerAppText = {
      ayrışır. Kompozisyonda `eyebrow`in ÜÇ alt-anahtarı da (boyut · ağırlık · aralık) buradan
      kazanır; yarım ezme yok, yani karışık bir kademe doğmaz. `eyebrow-sm` tabandan gelmeye
      devam eder ama uygulamada kullanılmaz — web'in kendi mobil forkudur. */
-  eyebrow: '10px',
-  'eyebrow--font-weight': '700',
-  'eyebrow--letter-spacing': '0.18em',
+  /* Değerler tabanın telefon kademesinden (`eyebrow-xs`, 14.09): web telefon görünümü aynı üstbaşlığı
+     çiziyor ve iki yazım bir gün ayrışırdı. Ad burada `eyebrow` kalır — uygulamanın bütün ekranları
+     onu okuyor; tabanda `eyebrow` masaüstünün 14px'i olduğu sürece bu FARK yaşar. */
+  eyebrow: customerText['eyebrow-xs'],
+  'eyebrow--font-weight': customerText['eyebrow-xs--font-weight'],
+  'eyebrow--letter-spacing': customerText['eyebrow-xs--letter-spacing'],
 } as const satisfies Record<string, string>;
 
 /* ── KÖŞE YARIÇAPLARI — Token Kararlari #7'nin RESMÎ SETİ ────────────────────

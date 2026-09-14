@@ -71,6 +71,15 @@ export function offerLimitOf(limitLabel: string | null, t: HomeCopy['offers']): 
 }
 
 /**
+ * Fırsat kartının indirim rozeti ("−%23") — oran kartın KENDİ iki fiyatından türer: teklif fiyatı ve
+ * üstü çizili normal fiyat; tam sayıya yuvarlanır. İki yüzeyin rozeti aynı sayıyı söylesin diye burada.
+ * Fiyatsız ürün fırsat rayına giremez (uç süzer); çağıranın `?? 0`ı tip daraltmasıdır.
+ */
+export function offerDiscountLabel(priceCents: number, wasCents: number, t: HomeCopy['offers']): string {
+  return t.discount.replace('{n}', String(Math.round((1 - priceCents / wasCents) * 100)));
+}
+
+/**
  * Koleksiyon bandının sayaç satırı — kampanya varsa aynı satıra girer (08.44).
  *
  * **Neden yeni bir satır değil:** bandın yüksekliği bir ölçü değil bir SÖZLEŞMEdir (MB-25) —

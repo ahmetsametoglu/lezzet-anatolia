@@ -1,4 +1,5 @@
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import type { PhoneHome } from '@/lib/storefront/home-view';
 import type { StorefrontHome } from '@/lib/storefront/storefront-types';
 import type { SitePageImage } from '@/lib/storefront/site-image';
 // `typeof messages` için değer bağı gerek (Messages tipi JSON'dan türetilir) — bu yüzden `import type` değil.
@@ -11,8 +12,8 @@ import messages from './messages.json';
 export type Messages = LocalizedCopy<typeof messages>;
 
 /**
- * Masaüstü ve mobil sunum varyantlarının paylaştığı sözleşme. Anasayfa durumsuzdur: veri sunucuda
- * çözülür, varyantlar yalnız DÜZENİ değiştirir (Sapma 3 — çatallanma client sınırında).
+ * Masaüstü anasayfasının sözleşmesi. Anasayfa durumsuzdur: veri sunucuda çözülür, görünüm yalnız
+ * DÜZENİ kurar (Sapma 3 — çatallanma client sınırında).
  */
 export interface HomeViewProps {
   t: Messages;
@@ -28,6 +29,17 @@ export interface HomeViewProps {
    * `null` = operatör henüz yüklemedi → `FramedImage` yer tutucusunu çizer, sayfa kırılmaz.
    */
   hero: SitePageImage | null;
+}
+
+/**
+ * Telefon vitrininin sözleşmesi (14.09) — veri native vitrinin okumasından (`readHome`) ve iki kimlikli
+ * okumadan (`home-view.ts`); metnin çoğu ortak sözlükte (`@lezzet/i18n/customer/home`), sayfanın kendi
+ * sözlüğünden yalnız arama motorunun okuduğu başlık gelir.
+ */
+export interface HomeMobileProps {
+  t: Messages;
+  locale: Locale;
+  data: PhoneHome;
 }
 
 /** "En fazla {n} adet" şablonunu doldurur — sayı yerleşimi tek yerde, iki varyantta tekrarlanmaz. */

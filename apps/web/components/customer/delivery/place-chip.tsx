@@ -1,6 +1,7 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
+import homeMessages from '@lezzet/i18n/customer/home';
 import { focusRingClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { Skeleton } from '@/components/customer/ui/skeleton';
@@ -64,13 +65,31 @@ export function PlaceChip({ locale, line = false }: PlaceChipProps) {
   if (line) {
     // Satır ilk kareden çizilir (yer sunucudan geliyor); yer DEĞİŞİRKEN iskelet — hapın kuralı
     // (kullanıcı isteği 13.09): eski yeri göstermek cevabın alınmadığı izlenimini veriyordu.
+    // CÜMLE NATIVE'LE ORTAK (14.09, `@lezzet/i18n/customer/home`): yer yoksa "bölgenizi seçin ▾", yer
+    // biliniyorsa "{kod} {ŞEHİR} ▾" — şehir native'deki gibi dilin kuralıyla büyük harf. Girişli ve
+    // adresli müşteride adres göstermek web'e özgü karar (13.09) ve aynen kalır.
+    const header = homeMessages[locale].header;
+    const postal = address
+      ? `${address.label || address.city} · ${address.postalCode}`
+      : place
+        ? placeLabel
+          ? `${place.postalCode} ${placeLabel.toLocaleUpperCase(locale)}`
+          : place.postalCode
+        : null;
     return (
       <button
         type="button"
         onClick={() => setPanelOpen(true)}
+        aria-label={postal === null ? header.locationEmptyLabel : header.locationLabel.replace('{postal}', postal)}
         className={`w-max max-w-full cursor-pointer truncate text-left font-sans text-micro leading-normal font-bold tracking-[0.08em] text-terracotta transition-colors hover:text-terracotta-bright ${focusRingClass}`}
       >
-        {updating ? <Skeleton className="inline-block h-3 w-32 rounded-full align-middle" /> : `${label} ▾`}
+        {updating ? (
+          <Skeleton className="inline-block h-3 w-32 rounded-full align-middle" />
+        ) : postal === null ? (
+          header.locationEmpty
+        ) : (
+          header.location.replace('{postal}', postal)
+        )}
       </button>
     );
   }

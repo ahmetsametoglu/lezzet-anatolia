@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
-import { readPlaceWarehouses } from '@/lib/delivery/read-place';
-import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { localizedUrl, type Locale } from '@lezzet/i18n';
 import { localeAlternates } from '@/lib/seo/alternates';
@@ -12,8 +10,7 @@ import { titleWithBrand } from '@/lib/seo/title';
 import { LocalBusinessJsonLd } from '@/lib/seo/json-ld';
 import { getSessionUser } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
-import { getHomeData } from '@/lib/storefront/home';
-import { readSiteImage } from '@/lib/storefront/site-image';
+import { loadHomeView } from '@/lib/storefront/home-view';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
@@ -32,6 +29,9 @@ interface HomeProps {
  * çağrılmaz. Kapının arkasındaki kaynaklar değişse de bu sayfa değişmez; kaynakların bugünkü hâli
  * kapının kendi künyesinde yaşar (`storefront-types.ts`), burada tekrarlanmaz — iki yerde tutulan
  * bir durum listesinin biri mutlaka eskir (denetim M-Y2: burada tam olarak o olmuştu).
+ *
+ * **İKİ YÜZ, İKİ BİLEŞİM (14.09):** telefon görünümü native vitrini aldı; sayfa cihaz ipucuna göre
+ * yalnız o yüzün verisini okur (`home-view.ts` künyesi).
  */
 /**
  * Ana sayfanın başlığı, açıklaması, `hreflang`ı ve paylaşım kartı (08.1).
@@ -76,20 +76,16 @@ export default async function Home({ params, searchParams }: HomeProps) {
   }
 
   const t: Messages = messages[locale];
-  const [data, hero, device] = await Promise.all([
-    getHomeData(locale, await readPlaceWarehouses(), await readPricingViewer()),
-    // Kahraman görseli katalogla AYNI turda okunuyor (`Promise.all`) — ayrı beklenseydi sayfa bir
-    // tur daha uzardı ve ikisi arasında hiçbir bağımlılık yok.
-    readSiteImage('home_hero', locale as Locale),
-    detectDevice(),
-  ]);
+  // Cihaz ipucu önce: hangi yüzün okunacağını o söyler (istek başlığından, G/Ç yok).
+  const device = await detectDevice();
+  const view = await loadHomeView(locale as Locale, device);
 
   return (
     <SiteFrame device={device} locale={locale} activeNav="home">
       {/* İşletme künyesi YALNIZ ana sayfada (08.1): `LocalBusiness` sitenin tamamını tanıtır, her
           sayfada tekrarlamak aynı beyanı çoğaltmak olurdu. */}
       <LocalBusinessJsonLd url={localizedUrl('/', locale as Locale)} />
-      <HomeClient t={t} locale={locale as Locale} data={data} hero={hero} device={device} />
+      <HomeClient t={t} locale={locale as Locale} view={view} />
     </SiteFrame>
   );
 }
