@@ -9,6 +9,7 @@ import {
   SupplierService,
   serviceDb,
 } from '@lezzet/database';
+import { matchSupplierItem, supplierItemKeyOf } from '@lezzet/domain-core';
 import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
 import { requireAdmin, requireFinance } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -145,10 +146,20 @@ export async function saveSupplierProductAction(input: {
 }): Promise<ActionResult> {
   try {
     await requireFinance();
-    const code = input.supplierCode.trim();
-    if (!code) throw new Error('Tedarikçideki sipariş kodu gerekli.');
+    // ── KOD YOKSA AD ANAHTAR OLUR (06.16 · kullanıcı kararı 14.09) ──────────
+    // Anahtarı motor türetir (`supplierItemKeyOf`); ikisi de boşsa kalem tanınamaz. Aynı anahtar ya da
+    // aynı ad bu tedarikçide başka varyanta bağlıysa veritabanı zaten reddeder (tekil indeks) — önce
+    // okunur bir cümleyle söylenir, PG mesajı operatöre gitmez.
+    const code = supplierItemKeyOf(input.supplierCode, input.nameAtSupplier);
+    if (!code) throw new Error('Tedarikçideki kod ya da tedarikçinin ürün adı gerekli — ikisinden biri kalemin anahtarıdır.');
+    const service = new SupplierProductService(serviceDb());
+    const clash = matchSupplierItem(await service.listBySupplier(input.supplierId), { code, name: input.nameAtSupplier });
+    if (clash.status === 'found' && clash.record.variantId !== input.variantId) {
+      throw new Error(`'${code}' anahtarı ya da bu ad bu tedarikçide başka bir ürüne bağlı — önce o eşlemeyi düzeltin.`);
+    }
+    if (clash.status === 'ambiguous') throw new Error(`'${code}' anahtarı bu tedarikçide birden çok eşlemeye gidiyor — önce onları düzeltin.`);
 
-    await new SupplierProductService(serviceDb()).setMapping({
+    await service.setMapping({
       supplierId: input.supplierId,
       variantId: input.variantId,
       supplierCode: code,

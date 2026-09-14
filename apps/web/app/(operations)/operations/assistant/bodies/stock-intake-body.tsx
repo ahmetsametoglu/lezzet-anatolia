@@ -40,7 +40,9 @@ export function intakeValuesFrom(payload: StockIntakePayload): IntakeFormValues 
     // tarih koymuyoruz: kabulün günü stok yaşını ve dönem mutabakatını belirliyor.
     date: payload.date ?? '',
     lines: payload.lines.map((line) => ({
-      ...emptyIntakeLine(line.variantId, line.productName),
+      // Tedarikçinin yazdığı ad başlıkta (22.43): patron "Druivenmelasse 650gr → Üzüm Pekmezi 650 g"
+      // eşlemesini onaylamadan önce görsün — onay, eşlemenin de onayıdır.
+      ...emptyIntakeLine(line.variantId, line.supplierItemName ? `${line.productName} · tedarikçide: ${line.supplierItemName}` : line.productName),
       qty: line.qty,
       expiryDate: line.expiryDate,
       lotNumber: line.lotNumber ?? '',
@@ -95,9 +97,12 @@ function factsOf(payload: StockIntakePayload, values: IntakeFormValues): Proposa
   const counted = values.lines.filter((line) => line.qty !== null && line.qty > 0);
   const proposedUnits = payload.lines.reduce((sum, line) => sum + line.qty, 0);
   const nowUnits = counted.reduce((sum, line) => sum + (line.qty ?? 0), 0);
+  const mappingProposals = payload.lines.filter((line) => line.mappingProposed).length;
   return [
     { label: 'Kalem', value: String(payload.lines.length), now: String(counted.length) },
     { label: 'Toplam adet', value: num(proposedUnits), now: num(nowUnits) },
+    // Eşleme önerisi (22.43) — türetilmiş künye, hep durur: onay bu kalemlerin tedarikçi eşlemesini de yazar.
+    ...(mappingProposals > 0 ? [{ label: 'Eşleme önerisi', value: `${mappingProposals} kalem · onayda kaydedilir` }] : []),
     // Belgenin kendi toplamı SAPMA GÖSTERMEZ — form onu değiştirmiyor; türetilmiş bir künye satırı
     // olarak hep duruyor ki mutabakat sayısı kararın yanında kalsın.
     ...(payload.totalAmountCents === null ? [] : [{ label: 'Belgede yazan', value: money(payload.totalAmountCents) }]),

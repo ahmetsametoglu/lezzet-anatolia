@@ -215,8 +215,8 @@ Tedarik siparişi **tedarikçinin diliyle** yazılabilsin diye: bizim varyantım
 
 **Kararlar**
 
-- **`supplier_code`** — tedarikçinin ürün/sipariş kodu
-- **`name_at_supplier`** — üründeki adı (farklıysa)
+- **`supplier_code`** — kalemin ANAHTARI (06.16 · kullanıcı kararı 14.09): tedarikçinin kodu; kod yoksa tedarikçinin yazdığı adın sözlük slug'ı ("Druivenmelasse 650gr" → `druivenmelasse-650gr`, motor `supplierItemKeyOf`). Tedarikçi başına tekildir (`supplier_product_code_key`, `lower`); faturadaki kalem bu anahtarla nokta atışı bulunur, parça ad aranmaz
+- **`name_at_supplier`** — tedarikçinin yazdığı ad, olduğu gibi (anahtar ondan türese de kendisi burada durur; eşleme adın slug'ıyla da bulunur)
 - **`pack_qty`** — koli içi adet (sipariş koliyle verilirse çeviri)
 - **`last_purchase_price`** — son alış (girişte otomatik güncellenir) — "geçen sefer kaçtı". Uygulamadaki adı `lastPurchasePriceCents`, birimi **cent** (`STACK §8`)
 - **`is_preferred`** — varsayılan tedarikçi işareti; **tekildir** — ikinci kaynak tercihli yapılınca ilki düşer

@@ -26,11 +26,13 @@ import {
   discountPercentOf,
   hasSupplierIdentity,
   matchNature,
+  matchSupplierItem,
   offerDecisionOf,
   pinpointCounterparty,
   pinpointSupplier,
   rebalanceAllocations,
   suggestedOfferPriceCents,
+  supplierItemKeyOf,
 } from '@lezzet/domain-core';
 // Para biçimi TEK YERDEN (`formatPrice`): özet cümleleri operasyon yüzeyinde okunuyor ve elle
 // kurulan `(cents / 100).toFixed(2)` Türkçede yanlış ayraç veriyordu — "150.00 €" değil "150,00 €"
@@ -763,6 +765,15 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
   return queue('product_create', payload, summary, args.reason);
 }
 
+/** Fatura kalemi → varyant: eşlemeden mi geldi, öneri mi, sorun mu (22.43). */
+interface ResolvedIntakeLine {
+  variantId: string;
+  key: string | null;
+  name: string | null;
+  proposed: boolean;
+  problem: string | null;
+}
+
 /**
  * Mal kabul önerisi — **patronun verdiği faturadan**. Görseli MODEL okur (istemci yeteneği),
  * araç okunanı DOĞRULAR: her varyant gerçekten var mı, depo kodu geçerli mi, SKT yazılmış mı.
@@ -784,8 +795,64 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   );
   if (!warehouse) return { error: `Depo bulunamadı: ${warehouseCode}` };
 
-  const variantIds = rawLines.map((l) => String(l.variantId ?? '')).filter(isUuid);
-  const variants = await new ProductVariantService(db).listByIds(variantIds);
+  // ── TEDARİKÇİ FATURADAKİ KİMLİKLE BULUNUR (11.08 adla · 22.42 nokta atışı, `resolveSupplier`) ──
+  //
+  // Önce `supplierId: uuid` isteniyordu ve o kimliği veren hiçbir okuma aracı yoktu — `reference_data`
+  // o gün tedarikçileri adlarıyla listeliyordu (22.42'de listeleme kalktı). Sonuç ÖLÇÜLDÜ: son turdaki
+  // iki mal kabulün ikisi de tedarikçisiz yazılmıştı. Bedeli görünmez ve zincirleme: `receive_intake`
+  // son alış fiyatını `where supplier_id = p_supplier_id` ile tazeliyor, yani tedarikçi boşken HİÇBİR
+  // satır güncellenmiyor (0010_supply.sql:236). Fiyat tazelenmeyince `propose_purchase_order` da
+  // "yaklaşık ne kadara mal olacak" sorusunu cevaplayamıyor — 22.12'de açılan alan hep boş kalırdı.
+  //
+  // Tedarikçi KALEMLERDEN ÖNCE çözülür (22.43): kalemler onun eşlemesinden geçiyor.
+  const { supplier, error: supplierError } = await resolveSupplier(db, args);
+  if (supplierError) return { error: supplierError };
+
+  // ── KALEM TEDARİKÇİNİN ADIYLA ÇÖZÜLÜR (22.43 · kullanıcı kararı 14.09) ────
+  // Fatura kalemi tedarikçinin diliyle yazılıdır ("Druivenmelasse 650gr"); bizim varyantımıza bağ
+  // tedarikçi eşlemesidir (`supplier_product`). Anahtar kod, kod yoksa adın slug'ı — motor
+  // `supplierItemKeyOf`; eşitlik tamdır (`matchSupplierItem`), parça ad yok. Eşleme yoksa model
+  // katalogda bulduğu varyantı adla BİRLİKTE gönderir: kalem "eşleme önerisi" olarak işaretlenir,
+  // onayda eşleme kaydedilir ve sonraki fatura tam eşleşir. Model tek başına uydurmaz: adsız kalem
+  // için variantId zaten şart; adlı ama eşlemesiz kalem için variantId yoksa cevap "eşleme yok".
+  const mappings = supplier ? await new SupplierProductService(db).listBySupplier(supplier.id) : [];
+  const resolved: ResolvedIntakeLine[] = rawLines.map((raw, i) => {
+    const givenId = typeof raw.variantId === 'string' ? raw.variantId.trim() : '';
+    const item = {
+      code: typeof raw.supplierItemCode === 'string' && raw.supplierItemCode.trim() ? raw.supplierItemCode.trim() : null,
+      name: typeof raw.supplierItemName === 'string' && raw.supplierItemName.trim() ? raw.supplierItemName.trim() : null,
+    };
+    const key = supplierItemKeyOf(item.code, item.name);
+    const label = item.name ?? item.code ?? '';
+    const base: ResolvedIntakeLine = { variantId: givenId, key, name: item.name, proposed: false, problem: null };
+    if (!key) {
+      return givenId ? base : { ...base, problem: `lines[${i}]: variantId ya da tedarikçinin kalem adı/kodu (supplierItemName · supplierItemCode) gerekli.` };
+    }
+    if (!supplier) {
+      return givenId
+        ? base
+        : { ...base, problem: `lines[${i}]: '${label}' tedarikçi verilmeden çözülemez — supplierVatNumber / supplierPhone / supplierName verin ya da variantId gönderin.` };
+    }
+    const match = matchSupplierItem(mappings, item);
+    if (match.status === 'found') {
+      if (givenId && givenId !== match.record.variantId) {
+        return { ...base, problem: `lines[${i}]: '${label}' eşlemede başka bir varyanta bağlı — eşleme doğruysa variantId göndermeyin, yanlışsa yönetici eşlemeyi düzeltsin.` };
+      }
+      return { ...base, variantId: match.record.variantId };
+    }
+    if (match.status === 'ambiguous') {
+      return { ...base, problem: `lines[${i}]: '${label}' bu tedarikçide birden çok eşlemeye gidiyor (${match.count}) — kodla gönderin ya da yöneticiye sorun.` };
+    }
+    if (!givenId) {
+      return {
+        ...base,
+        problem: `lines[${i}]: '${label}' için eşleme yok. Ürünü catalog_lookup ile bulup variantId'yi bu adla BİRLİKTE gönderin — onayda eşleme kaydedilir. Bulamazsanız yöneticiye sorun, uydurmayın.`,
+      };
+    }
+    return { ...base, proposed: true };
+  });
+
+  const variants = await new ProductVariantService(db).listByIds(resolved.map((line) => line.variantId).filter(isUuid));
   const byId = new Map(variants.map((v) => [v.id, v]));
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   const productById = new Map(products.map((p) => [p.id, p]));
@@ -797,15 +864,16 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   const lines: StockIntakePayload['lines'] = [];
   const problems: string[] = [];
   for (const [i, raw] of rawLines.entries()) {
-    const rawId = String(raw.variantId ?? '');
-    const variant = byId.get(rawId);
+    const line = resolved[i]!;
+    if (line.problem) problems.push(line.problem);
+    const variant = byId.get(line.variantId);
     const qty = Number(raw.qty);
     const expiryDate = String(raw.expiryDate ?? '').trim();
 
-    if (!isUuid(rawId)) {
-      problems.push(`lines[${i}]: variantId UUID biçiminde değil (gelen: "${rawId || '(boş)'}") — katalogdaki kimliği olduğu gibi kullanın.`);
-    } else if (!variant) {
-      problems.push(`lines[${i}]: varyant bulunamadı (${rawId}) — katalogdan doğru kimliği bulun.`);
+    if (!line.problem && !isUuid(line.variantId)) {
+      problems.push(`lines[${i}]: variantId UUID biçiminde değil (gelen: "${line.variantId || '(boş)'}") — katalogdaki kimliği olduğu gibi kullanın.`);
+    } else if (!line.problem && !variant) {
+      problems.push(`lines[${i}]: varyant bulunamadı (${line.variantId}) — katalogdan doğru kimliği bulun.`);
     }
     if (!Number.isInteger(qty) || qty <= 0) problems.push(`lines[${i}]: qty pozitif tam sayı olmalı (gelen: ${String(raw.qty)}).`);
     // SKT UYDURULMAZ: faturada/etikette yoksa asistan patrona sorar. Tarihsiz parti gıdada kör noktadır.
@@ -822,20 +890,12 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
       expiryDate,
       lotNumber: typeof raw.lotNumber === 'string' && raw.lotNumber.trim() ? raw.lotNumber.trim() : null,
       unitCostCents: Number.isInteger(raw.unitCostCents) ? (raw.unitCostCents as number) : null,
+      supplierItemKey: line.key,
+      supplierItemName: line.name,
+      mappingProposed: line.proposed,
     });
   }
   if (problems.length > 0) return { error: `${problems.length} kalem sorunu — hepsini düzeltip tekrar gönderin:`, problems };
-
-  // ── TEDARİKÇİ FATURADAKİ KİMLİKLE BULUNUR (11.08 adla · 22.42 nokta atışı, `resolveSupplier`) ──
-  //
-  // Önce `supplierId: uuid` isteniyordu ve o kimliği veren hiçbir okuma aracı yoktu — `reference_data`
-  // o gün tedarikçileri adlarıyla listeliyordu (22.42'de listeleme kalktı). Sonuç ÖLÇÜLDÜ: son turdaki iki mal kabulün ikisi de
-  // tedarikçisiz yazılmıştı. Bedeli görünmez ve zincirleme: `receive_intake` son alış fiyatını
-  // `where supplier_id = p_supplier_id` ile tazeliyor, yani tedarikçi boşken HİÇBİR satır
-  // güncellenmiyor (0010_supply.sql:236). Fiyat tazelenmeyince `propose_purchase_order` da
-  // "yaklaşık ne kadara mal olacak" sorusunu cevaplayamıyor — 22.12'de açılan alan hep boş kalırdı.
-  const { supplier, error: supplierError } = await resolveSupplier(db, args);
-  if (supplierError) return { error: supplierError };
 
   // ── AÇIK SİPARİŞ TEDARİKÇİDEN BULUNUR, MODEL UUID TAŞIMAZ ─────────────────
   //
@@ -881,8 +941,18 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   const linesTotal = lines.reduce((sum, line) => sum + (line.unitCostCents ?? 0) * line.qty, 0);
   const anyCost = lines.some((line) => line.unitCostCents !== null);
   const gap = payload.totalAmountCents !== null && anyCost ? payload.totalAmountCents - linesTotal : null;
+  const mappedFromSupplier = lines.filter((line) => line.supplierItemKey && !line.mappingProposed).length;
+  const mappingProposals = lines.filter((line) => line.mappingProposed).length;
   return {
     ...queued,
+    // Eşleme sayıları (22.43): model kaç kalemin tedarikçi eşlemesinden geldiğini, kaçının onayda
+    // eşleme olarak kaydedileceğini görsün — "hepsini ben buldum" sanmasın.
+    ...(mappedFromSupplier > 0 ? { mappedFromSupplier } : {}),
+    ...(mappingProposals > 0
+      ? {
+          mappingNote: `${mappingProposals} kalemin tedarikçi eşlemesi yoktu; yönetici girişi onaylayınca eşleme bu adlarla kaydedilir ve sonraki fatura kendiliğinden eşleşir.`,
+        }
+      : {}),
     ...(payload.date ? {} : { dateNote: 'Belge tarihi verilmedi — kabul BUGÜNE yazılacak. Fatura dünküyse date alanını doldurun.' }),
     // Tedarikçi bağı: kurulmadıysa SESSİZ KALINMAZ. Bedeli görünmez ve zincirleme — son alış fiyatı
     // tazelenmez, sonraki tedarik siparişi tahmini tutar veremez.

@@ -39,7 +39,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | tamam | 12/12 |
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 12/13 (+1 kısmi) |
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 37/38 (+1 kısmi) |
-| 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | sürüyor | 14/15 |
+| 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | sürüyor | 15/16 |
 | 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/18 (+3 kısmi) |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 53/59 (+6 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 15/29 (+14 kısmi) |
@@ -55,7 +55,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 27/31 (+4 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 3/4 (+1 kısmi) |
 | 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 296/312 (+8 kısmi) |
-| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 33/42 (+9 kısmi) |
+| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 34/43 (+9 kısmi) |
 | 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | tamam | 14/14 |
 <!-- durum:son -->
 

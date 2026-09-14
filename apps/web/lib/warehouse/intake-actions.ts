@@ -8,7 +8,7 @@ import {
   type IntakeFormRow,
   type PurchaseIntakeLine,
 } from '@lezzet/application';
-import { ProductService, SupplierService, serviceDb } from '@lezzet/database';
+import { ProductService, SupplierProductService, SupplierService, serviceDb } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import { titleOf } from '@/lib/catalog/title';
@@ -206,6 +206,12 @@ export async function receiveIntakeFromProposalAction(input: {
   /** Belgenin tarihi — boşsa kapı BUGÜNE yazar (`StockIntakeService.receive`). */
   date: string | null;
   lines: PurchaseIntakeLine[];
+  /**
+   * EŞLEME ÖNERİLERİ (22.43): asistan eşlemesi olmayan kalemi katalogdan bulup tedarikçinin adıyla
+   * birlikte gönderdi; girişin onayı eşlemenin de onayıdır. Anahtar motorun türettiği kod
+   * (`supplierItemKeyOf`), ad olduğu gibi.
+   */
+  mappings?: Array<{ variantId: string; supplierCode: string; nameAtSupplier: string | null }>;
   proposalId: string;
 }): Promise<ActionResult<ReceiveOutcome>> {
   try {
@@ -240,6 +246,34 @@ export async function receiveIntakeFromProposalAction(input: {
     // Stok ekranı da tazelenir: kabul edilen mal aynı anda satılabilir hâle geliyor.
     revalidatePath('/operations/stock');
     revalidatePath('/operations/assistant');
+
+    // ── EŞLEME ÖNERİSİ ONAYLA KAYDA GEÇER (22.43) ─────────────────────────
+    // Yalnız GERÇEKTEN kabul edilen satırlar (adet girilmiş) ve tedarikçi hâlâ seçiliyken. Eşleme
+    // yazılamazsa giriş geri alınmaz — kabul olmuş bir gerçek, eşleme sonraki faturanın kolaylığı;
+    // cevap bunu SÖYLER (`recordManualMovementAction`ın belge bağı deseni), operatör elle eşler.
+    const failedMappings: string[] = [];
+    if (input.supplierId && input.mappings?.length) {
+      const received = new Set(input.lines.filter((line) => line.qty > 0).map((line) => line.variantId));
+      const mappingService = new SupplierProductService(serviceDb());
+      for (const mapping of input.mappings.filter((candidate) => received.has(candidate.variantId))) {
+        try {
+          await mappingService.setMapping({
+            supplierId: input.supplierId,
+            variantId: mapping.variantId,
+            supplierCode: mapping.supplierCode,
+            nameAtSupplier: mapping.nameAtSupplier,
+          });
+        } catch (err) {
+          failedMappings.push(`${mapping.nameAtSupplier ?? mapping.supplierCode}: ${getErrorMessage(err)}`);
+        }
+      }
+    }
+    if (failedMappings.length > 0) {
+      return {
+        data: null,
+        error: `Giriş kaydedildi ama ${failedMappings.length} tedarikçi eşlemesi yazılamadı — Tedarik ekranından elle eşleyin: ${failedMappings.join(' · ')}`,
+      };
+    }
 
     return {
       data: {

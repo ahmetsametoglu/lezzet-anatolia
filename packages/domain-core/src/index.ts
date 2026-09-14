@@ -32,6 +32,7 @@ export * from './stock/document-no';
 export * from './stock/transfer';
 export * from './stock/purchase-summary';
 export * from './stock/history';
+export * from './stock/supplier-item-key';
 export * from './delivery/delivery-days';
 export * from './delivery/distance';
 export * from './delivery/warehouse-resolve';

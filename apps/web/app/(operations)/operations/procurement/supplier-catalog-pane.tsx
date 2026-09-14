@@ -227,10 +227,12 @@ function MappingForm({
       </FieldShell>
 
       <div className="grid grid-cols-[1fr_1fr_90px] gap-2.5">
-        <FieldShell label="Onun kodu" required>
+        {/* Kod isteğe bağlı (06.16): kodu olmayan kalemde anahtar tedarikçinin yazdığı addan türer,
+            kapı türetir. İkisi de boşsa kapı reddeder — form ikinci bir kural yazmaz. */}
+        <FieldShell label="Onun kodu" labelAside="yoksa adı anahtar olur">
           <Input mono value={code} onChange={(e) => setCode(e.target.value)} placeholder="GZT-1001" />
         </FieldShell>
-        <FieldShell label="Onun ürün adı" labelAside="listede görünür">
+        <FieldShell label="Onun ürün adı" labelAside="faturada yazdığı gibi">
           <Input
             value={nameAtSupplier}
             onChange={(e) => setNameAtSupplier(e.target.value)}

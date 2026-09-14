@@ -643,9 +643,14 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
       />
     ),
     blocked: (values) => intakeBlock(values),
-    submit: (_payload, values, proposalId) =>
+    submit: (payload, values, proposalId) =>
       receiveIntakeFromProposalAction({
         warehouseId: values.warehouseId,
+        // Eşleme önerileri (22.43): dilekçede işaretli kalemler, giriş onaylanınca tedarikçi
+        // eşlemesine bu anahtar ve adla yazılır — sonraki fatura kendiliğinden eşleşir.
+        mappings: payload.lines
+          .filter((line) => line.mappingProposed && line.supplierItemKey)
+          .map((line) => ({ variantId: line.variantId, supplierCode: line.supplierItemKey as string, nameAtSupplier: line.supplierItemName })),
         // Tedarikçi seçilmemiş olabilir — plansız/küçük alım meşru bir hâl ve `null` onu söylüyor.
         supplierId: values.supplierId || null,
         note: values.documentNo.trim() || null,

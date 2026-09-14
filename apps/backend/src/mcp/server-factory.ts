@@ -277,7 +277,7 @@ export const TOOLS = [
   {
     name: 'propose_stock_intake',
     description:
-      'PROPOSE (does not apply): a goods-receipt (stock intake) built from an invoice/delivery note the ADMIN showed you. You read the document; this tool VERIFIES what you read — every variant must exist, the warehouse code must be valid, and every line needs an expiry date in YYYY-MM-DD. NEVER invent an expiry date or a lot number: if the document does not show it, ask the admin. Unit cost is optional and VAT-EXCLUSIVE (the HT line price): it becomes the batch\'s purchase cost and you can read it back afterwards — stockBatchCostCents in catalog_lookup, purchasePriceCentsExVat in stock_watch.',
+      'PROPOSE (does not apply): a goods-receipt (stock intake) built from an invoice/delivery note the ADMIN showed you. You read the document; this tool VERIFIES what you read — every variant must exist, the warehouse code must be valid, and every line needs an expiry date in YYYY-MM-DD. NEVER invent an expiry date or a lot number: if the document does not show it, ask the admin. Unit cost is optional and VAT-EXCLUSIVE (the HT line price): it becomes the batch\'s purchase cost and you can read it back afterwards — stockBatchCostCents in catalog_lookup, purchasePriceCentsExVat in stock_watch. LINES ARE MATCHED THROUGH THE SUPPLIER\'S ITEM MAPPING: give each line the supplier\'s item name or code EXACTLY as printed (supplierItemName / supplierItemCode) and the server finds our variant; for an item the supplier has never delivered before, find the product with catalog_lookup and send variantId TOGETHER WITH supplierItemName — the mapping is saved when the admin approves, and the next invoice matches by itself.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -288,13 +288,23 @@ export const TOOLS = [
           items: {
             type: 'object',
             properties: {
-              variantId: { type: 'string', description: 'Variant uuid (look it up in the catalog first).' },
+              supplierItemName: {
+                type: 'string',
+                description:
+                  "The supplier's item name EXACTLY as printed on the invoice line, in its own language (e.g. 'Druivenmelasse 650gr') — matched exactly against the supplier's item mapping; never translated, shortened or guessed.",
+              },
+              supplierItemCode: { type: 'string', description: "The supplier's article code as printed on the invoice line, if it has one." },
+              variantId: {
+                type: 'string',
+                description:
+                  'Our variant uuid (catalog_lookup). Needed only when the line carries no supplier item name/code, or when the supplier has no mapping for that item yet — then send it TOGETHER WITH supplierItemName and the mapping is saved on approval.',
+              },
               qty: { type: 'number', description: 'Positive integer.' },
               expiryDate: { type: 'string', description: 'YYYY-MM-DD — from the document/label. Never guessed.' },
               lotNumber: { type: 'string', description: 'Lot/batch number if printed.' },
-              unitCostCents: { type: 'number', description: 'Purchase cost per unit in cents, if the invoice shows it.' },
+              unitCostCents: { type: 'number', description: 'Purchase cost per unit in cents (VAT-exclusive), if the invoice shows it.' },
             },
-            required: ['variantId', 'qty', 'expiryDate'],
+            required: ['qty', 'expiryDate'],
           },
         },
         supplierVatNumber: {

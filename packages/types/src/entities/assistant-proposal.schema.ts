@@ -169,6 +169,15 @@ export const StockIntakePayloadSchema = z.object({
         expiryDate: z.string().min(8),
         lotNumber: z.string().nullable(),
         unitCostCents: z.number().int().nonnegative().nullable(),
+        /**
+         * TEDARİKÇİNİN KALEMİ (22.43 · kullanıcı kararı 14.09): faturadaki ad ya da kod — anahtarı motor
+         * türetir (`supplierItemKeyOf`), varyantı tedarikçinin eşlemesi verir. `mappingProposed`: eşleme
+         * yoktu, varyantı asistan katalogdan buldu; onayda eşleme bu anahtarla kaydedilir ve sonraki
+         * fatura tam eşleşir. `.default`: eski dilekçeler.
+         */
+        supplierItemKey: z.string().nullable().default(null),
+        supplierItemName: z.string().nullable().default(null),
+        mappingProposed: z.boolean().default(false),
       }),
     )
     .min(1),

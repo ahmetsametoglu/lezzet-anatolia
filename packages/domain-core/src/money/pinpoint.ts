@@ -47,7 +47,8 @@ export function nameKeyOf(value: string | null | undefined): string | null {
   return value ? dictionarySlugOf(value) : null;
 }
 
-function outcomeOf<T extends { id: string }>(hits: readonly T[]): PinpointOutcome<T> {
+/** Eşleşen kayıtlardan sonuç: kimliğe göre tekilleştirilir — aynı kayıt iki anahtardan da gelmiş olabilir. */
+export function pinpointOutcomeOf<T extends { id: string }>(hits: readonly T[]): PinpointOutcome<T> {
   const distinct = [...new Map(hits.map((hit) => [hit.id, hit] as const)).values()];
   if (distinct.length === 1) return { status: 'found', record: distinct[0]! };
   if (distinct.length === 0) return { status: 'none' };
@@ -78,7 +79,7 @@ export function pinpointSupplier<T extends { id: string; name: string; vatNumber
     if (phone && phoneKeyOf(supplierPhone) === phone) hits.push(supplier);
     if (name && nameKeyOf(supplier.name) === name) hits.push(supplier);
   }
-  return outcomeOf(hits);
+  return pinpointOutcomeOf(hits);
 }
 
 /**
@@ -93,7 +94,7 @@ export function pinpointCounterparty<T extends { id: string; name: string; keywo
   const wanted = nameKeyOf(name);
   if (!wanted) return { status: 'none' };
   const hits = counterparties.filter((c) => nameKeyOf(c.name) === wanted || c.keywords.some((keyword) => nameKeyOf(keyword) === wanted));
-  return outcomeOf(hits);
+  return pinpointOutcomeOf(hits);
 }
 
 /**

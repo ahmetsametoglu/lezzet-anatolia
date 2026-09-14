@@ -31,6 +31,11 @@ create table public.supplier_product (
 
 -- Aynı varyant aynı tedarikçide iki kez tanımlanmasın (kod değişirse satır güncellenir).
 create unique index supplier_product_key on public.supplier_product (supplier_id, variant_id);
+-- Kalem anahtarı tedarikçi başına TEKİLDİR (06.16 · kullanıcı kararı 14.09): aynı kod iki varyanta
+-- gidemez, yoksa faturadan çözüm belirsiz kalır. Kod yoksa anahtar tedarikçideki adın slug'ıdır
+-- (motor: `supplierItemKeyOf`) — yazım kuralı motorda, tekillik veride. `lower`: büyük-küçük harf
+-- farkı ikinci bir kayıt doğurmasın.
+create unique index supplier_product_code_key on public.supplier_product (supplier_id, lower(supplier_code));
 -- "Bu varyantı kimden alıyorum" — alternatif kaynak listesi.
 create index supplier_product_variant_idx on public.supplier_product (variant_id);
 
