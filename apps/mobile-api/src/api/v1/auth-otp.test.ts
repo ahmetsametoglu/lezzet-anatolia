@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { app } from '../../app';
+import { envelopeError } from '../../lib/testing';
 
 /**
  * `/api/v1/auth/otp/*` uçtan uca — `app.request()` ile PORT AÇMADAN. ALTIN yol: request →
@@ -68,6 +69,40 @@ describe('POST /api/v1/auth/otp — altın yol', () => {
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({ data: null, error: 'cooldown' });
     expect(Number(res.headers.get('retry-after'))).toBeGreaterThan(0);
+  });
+});
+
+describe('POST /api/v1/auth/otp — yalnız kayıtlı hesap (21.312, operasyon girişi)', () => {
+  /* Doğrulama yolu için AYRI bir sabit kod: `token_hash` global tekil ve dosyanın kodu tabloda duruyor
+     (künye başta). Kayıtsız adres ilk istekte bayraksız kod alır, sonra bayrakla doğrulamaya gelir. */
+  const strangerEmail = `otp-mapi-kayitsiz-${Date.now()}@example.com`;
+  const STRANGER_CODE = String(100000 + ((Date.now() + 4321) % 900000));
+
+  afterAll(async () => {
+    await purgeTestData(serviceDb(), { verificationEmails: [strangerEmail] });
+  });
+
+  it('hesabı olmayan e-postaya KOD GİTMEZ — 403 not_registered', async () => {
+    const res = await app.request('/api/v1/auth/otp/request', json({ email: strangerEmail, locale: 'tr', registeredOnly: true }));
+    expect(res.status).toBe(403);
+    expect(await envelopeError(res)).toBe('not_registered');
+  });
+
+  it('doğru kod da HESAP AÇMAZ — 403 not_registered, profil doğmaz', async () => {
+    process.env.OTP_TEST_CODE = STRANGER_CODE;
+    try {
+      const requested = await app.request('/api/v1/auth/otp/request', json({ email: strangerEmail, locale: 'tr' }));
+      expect(requested.status).toBe(200);
+      const res = await app.request(
+        '/api/v1/auth/otp/verify',
+        json({ email: strangerEmail, code: STRANGER_CODE, locale: 'tr', registeredOnly: true }),
+      );
+      expect(res.status).toBe(403);
+      expect(await envelopeError(res)).toBe('not_registered');
+    } finally {
+      process.env.OTP_TEST_CODE = TEST_CODE;
+    }
+    expect(await new UserProfileService(serviceDb()).findByEmail(strangerEmail)).toBeNull();
   });
 });
 

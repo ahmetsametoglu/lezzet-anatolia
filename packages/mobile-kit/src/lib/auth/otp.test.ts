@@ -73,6 +73,37 @@ describe('verifyOtp', () => {
   });
 });
 
+describe('yalnız kayıtlı hesap — operasyon girişi (21.312)', () => {
+  /** İlk isteğin gövdesi — `apiFetch` gövdeyi JSON'a çevirip gönderir. */
+  const sentBody = (): unknown => JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+
+  it('bayrak gövdeye girer ve sunucunun reddi tipli not_registered döner', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse({ data: null, error: 'not_registered' }, { status: 403 }));
+
+    const result = await requestOtp('yok@example.test', 'tr', { registeredOnly: true });
+
+    expect(result.error).toBe('not_registered');
+    expect(sentBody()).toMatchObject({ email: 'yok@example.test', registeredOnly: true });
+  });
+
+  it('bayrak verilmezse gövdede HİÇ yok — müşteri girişinin isteği değişmez', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse({ data: true, error: null }));
+
+    await requestOtp('musteri@example.test', 'fr');
+
+    expect(sentBody()).not.toHaveProperty('registeredOnly');
+  });
+
+  it('doğrulama da bayrağı taşır — hesap yoksa sunucu hesap açmaz, ret tipli döner', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse({ data: null, error: 'not_registered' }, { status: 403 }));
+
+    const result = await verifyOtp('yok@example.test', '123456', 'tr', { registeredOnly: true });
+
+    expect(result.error).toBe('not_registered');
+    expect(sentBody()).toMatchObject({ registeredOnly: true });
+  });
+});
+
 describe('requestOtp', () => {
   it('cooldown cevabında Retry-After süresini sonuca taşır', async () => {
     fetchMock.mockResolvedValueOnce(fakeResponse({ data: null, error: 'cooldown' }, { status: 429, headers: { 'retry-after': '58' } }));

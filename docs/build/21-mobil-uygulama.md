@@ -15084,3 +15084,30 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     bu işin dışında: `geocode-scan.write.test.ts` (`expired` alanı 486bbf6a ile geldi, test güncellenmedi; arka-uca
     not açık) ve `cart-route.test.ts` (refresh öncesi koşuda geçmişti; iki koşu arasında paketlerde kaynak dosya
     değişmedi).
+
+- [~] (21.312) **OPERASYON GİRİŞİ TASARIMINDA — sistemde kayıtlı olmayan giremez; kod ve Google aynı kurala bağlı** (tasarım 14.09: 02-operasyon / Operasyon Mobil - Giris; kullanıcı kararları 14.09)
+  `touches:` `packages/application/src/auth/otp.ts` · `packages/application/src/auth/oauth-account.ts` · `packages/application/src/index.ts` · `apps/mobile-api/src/api/v1/auth-otp.ts` · `apps/mobile-api/src/api/v1/auth-oauth.ts` · `apps/mobile-api/src/api/v1/router.ts` · `packages/mobile-kit/src/lib/auth/otp.ts` · operasyon uygulamasının giriş ve OAuth dönüş rotaları (ikinci dilim)
+
+  Kullanıcı kararları (14.09): *"yetki talebi gönder diye bir şey olmayacak; eğer kullanıcı sistemde kayıtlı
+  değilse giriş yapamayacak"* · Google kalır, kayıtsız hesap reddedilir · adreste kapı ve kurye notu için ayrı alan
+  açılmaz, web'in çözümü izlenir (kapı ikinci satırda, kurye notu yok) — o iş müşteri sepet-ödeme-adres biriminde.
+
+  **Durum (14.09, birinci) — arka uç ve kit hattı: kayıtlı olmayana kod gitmez, Google'da doğan hesap silinir.**
+  · **Kod:** `requestOtpCode` ve `verifyOtpCode` `registeredOnly` alıyor (`packages/application/src/auth/otp.ts`):
+    hesabı (profil + auth kaydı) olmayan e-postaya kod satırı ve mail YOK, doğrulama hesap açan adıma gelmez.
+    Siparişten doğan misafir profili kayıtlı sayılmaz. Uç 403 `not_registered`
+    (`apps/mobile-api/src/api/v1/auth-otp.ts`). Sonucun TİPİ de bayrağa bağlı (aşırı yükleme): bayrak vermeyen
+    web bu hâli görmez — küme düz genişlediğinde web'in `errorKey`i iki yerde kırıldı (ölçüldü: iki TS2322).
+  · **Google:** Supabase yeni Google hesabını girişin kendisinde yaratıyor; operasyon uygulaması dönüşten hemen sonra
+    kayıt kapısını soracak (`apps/mobile-api/src/api/v1/auth-oauth.ts`, oturum ister, `bearerAuth`tan sonra bağlı).
+    Hesap bu girişte doğduysa (açılış ile son giriş arası ≤ 10 sn — şimdiye göre DEĞİL: dakikalar önce müşteri
+    uygulamasında kaydolan silinmez) ve personel değilse yalnız auth kaydı silinir
+    (`packages/application/src/auth/oauth-account.ts`). Profil silmeye kapalı; bağ `on delete set null` olduğundan
+    tetiğin açtığı ya da bağladığı misafir profili sahipsiz kalır, siparişler yerinde durur.
+  · **Kit:** `requestOtp` ve `verifyOtp` bayrağı alıyor; hata tipi bayrağa bağlı (aşırı yükleme) — müşteri girişinin
+    hata kümesi değişmedi, ekranına ölü dal yazılmadı. `not_registered` ortak `AuthErrorKeyEnum`e girmedi: web
+    sözlüğü o kümeye bağlı (`session_ended` emsali).
+  · **Doğrulama:** typecheck application · mobile-api · kit · operasyon · müşteri · web · `lint` application ·
+    mobile-api · kit · `knip` · `boundaries` · kit jest 245/245 · kilitli tam paket 4777/4777. Yeni testler: kayıtsız
+    e-postaya kod isteği 403; doğru kodla doğrulama da 403 ve profil doğmuyor; Google'da doğan müşteri hesabı 403,
+    auth kaydı silindi, profil sahipsiz; personel 200 `kept`; oturumsuz 401.

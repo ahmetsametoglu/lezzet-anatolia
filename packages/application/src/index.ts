@@ -8,6 +8,7 @@
 // çağıracağı) bir orkestrasyon olması. Tek yüzeyin işi kendi uygulamasında kalır.
 export { requestOtpCode, tryAttachReferral, verifyOtpCode } from './auth/otp';
 export type { RequestOtpCodeResult, VerifyOtpCodeResult } from './auth/otp';
+export { rejectFreshOAuthAccount } from './auth/oauth-account';
 // Hızlı giriş kapılarının ortak ön şartı (26.08 bulgusu): kurulmamış veritabanına hesap açılmaz —
 // açılış kuralı onu yönetici yapardı. Buraya konmasının ölçütü aynı: iki yüzey aynı kararı veriyor.
 export { DEV_LOGIN_UNSEEDED_DATABASE, devLoginRefusal, devLoginRefusalOf } from './auth/dev-login';

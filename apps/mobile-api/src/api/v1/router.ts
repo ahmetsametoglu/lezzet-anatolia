@@ -4,6 +4,7 @@ import { serviceDb, UserProfileService } from '@lezzet/database';
 import { MeSchema, MeUpdateSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { addresses } from './addresses';
+import { authOauth } from './auth-oauth';
 import { authOtp } from './auth-otp';
 import { b2b, b2bPublic } from './b2b';
 import { cart } from './cart';
@@ -100,6 +101,10 @@ v1.route('/', invite);
 v1.route('/', pointsRules);
 
 v1.use('*', bearerAuth);
+
+// Google dönüşünün kayıt kapısı (21.312) — OTURUM İSTER (soru "bu hesap kayıtlı mıydı"), bu yüzden
+// `bearerAuth`tan SONRA; operasyon girişi Google'dan hemen sonra sorar, bu girişte doğan hesap silinir.
+v1.route('/auth/oauth', authOauth);
 
 /**
  * Kimliği doğrulanmış kullanıcının profili. Auth kullanıcısı → `user_profiles` satırı; okuma

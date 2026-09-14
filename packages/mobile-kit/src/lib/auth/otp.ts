@@ -22,7 +22,33 @@ import { getSupabase } from './supabase';
  * Bilerek İHRAÇ EDİLMİYOR: bugün tüketeni yok (knip ölü ihracı yakalar — mobile-api `Me` emsali);
  * ekranlar gelince ihraç açılır ya da tüketen `ReturnType` ile türetir.
  */
-type OtpResult<T> = { data: T; error: null; retryAfterSec: null } | { data: null; error: AuthErrorKey; retryAfterSec: number | null };
+type OtpResult<T, E extends string = AuthErrorKey> =
+  { data: T; error: null; retryAfterSec: null } | { data: null; error: E; retryAfterSec: number | null };
+
+/**
+ * **Yalnız kayıtlı hesap** (21.312) — operasyon girişinin kuralı: sistemde hesabı olmayan e-postaya kod
+ * GİTMEZ, doğrulama hesap AÇMAZ (kullanıcı kararı 14.09: *"kullanıcı sistemde kayıtlı değilse giriş
+ * yapamayacak"*). Sunucunun reddi `not_registered`tir.
+ *
+ * Anahtar ortak `AuthErrorKeyEnum`e GİRMEDİ: web sözlüğü `Record<AuthErrorKey, …>` ve webde bu anahtarı
+ * üreten yol yok (`login-notice.ts`teki `session_ended` emsali). Cümleyi operasyon ekranı kurar.
+ *
+ * Tip BAYRAĞA bağlı (aşırı yükleme): bayraksız çağrının hata kümesi değişmez — müşteri girişi bu anahtarı hiç
+ * görmez ve ekranına ölü bir dal yazılmaz.
+ */
+const NOT_REGISTERED = 'not_registered';
+
+/** Operasyon girişinin bayrağı — yalnız sistemde hesabı olan e-posta. Müşteri akışı hiç vermez. */
+interface RegisteredOnly {
+  registeredOnly: true;
+}
+
+/** Operasyon girişinin hata kümesi: müşteri anahtarları + `not_registered`. */
+type RegisteredOnlyError = AuthErrorKey | typeof NOT_REGISTERED;
+
+/** Bayrak YALNIZ verildiğinde gövdeye girer — müşteri girişinin gövdesi değişmez. */
+const registeredOnlyOf = (options?: RegisteredOnly): { registeredOnly?: true } =>
+  options?.registeredOnly === true ? { registeredOnly: true } : {};
 
 /**
  * Telin/istemcinin serbest hata dizgesini tipli anahtara indirger. Enum dışı her şey (ağ yok,
@@ -30,7 +56,9 @@ type OtpResult<T> = { data: T; error: null; retryAfterSec: null } | { data: null
  * ama oturum kurulamadı" hâline seçtiği anahtarla aynı (auth-otp.ts 502 kararı): müşteri hâlleri
  * kümesine istemci-içi ayrıntı sızdırılmaz, ayrıntıyla ne yapılacağı log altyapısının işi olacak.
  */
-function toAuthErrorKey(error: string): AuthErrorKey {
+function toAuthErrorKey(error: string): AuthErrorKey | typeof NOT_REGISTERED {
+  // Tek istisna operasyon girişinin reddi — müşteri hâli değil, ekranın ayrı bir cümlesi var (21.312).
+  if (error === NOT_REGISTERED) return NOT_REGISTERED;
   const parsed = AuthErrorKeyEnum.safeParse(error);
   return parsed.success ? parsed.data : 'send_failed';
 }
@@ -38,10 +66,20 @@ function toAuthErrorKey(error: string): AuthErrorKey {
 const VerifyResponseSchema = z.object({ session: AuthSessionSchema });
 
 /** Kod isteği. 429'da (`rate_limit`/`cooldown`) `retryAfterSec` doludur — geri sayımı ekran kurar. */
-export async function requestOtp(email: string, locale: PreferredLanguage): Promise<OtpResult<true>> {
+export async function requestOtp(email: string, locale: PreferredLanguage): Promise<OtpResult<true>>;
+export async function requestOtp(
+  email: string,
+  locale: PreferredLanguage,
+  options: RegisteredOnly,
+): Promise<OtpResult<true, RegisteredOnlyError>>;
+export async function requestOtp(
+  email: string,
+  locale: PreferredLanguage,
+  options?: RegisteredOnly,
+): Promise<OtpResult<true, RegisteredOnlyError>> {
   const result = await apiFetch('/api/v1/auth/otp/request', z.literal(true), {
     method: 'POST',
-    body: { email, locale },
+    body: { email, locale, ...registeredOnlyOf(options) },
   });
   if (result.error !== null) {
     return { data: null, error: toAuthErrorKey(result.error), retryAfterSec: result.retryAfterSec };
@@ -61,12 +99,27 @@ export async function requestOtp(email: string, locale: PreferredLanguage): Prom
  * doğrudan değil, giriş sonrası işler kaydından (`sign-in-effects`) ulaşılıyor: bu dosya ortak
  * çekirdekte ve davet müşteri uygulamasının işi.
  */
-export async function verifyOtp(email: string, code: string, locale: PreferredLanguage): Promise<OtpResult<AuthSession>> {
+export async function verifyOtp(email: string, code: string, locale: PreferredLanguage): Promise<OtpResult<AuthSession>>;
+export async function verifyOtp(
+  email: string,
+  code: string,
+  locale: PreferredLanguage,
+  options: RegisteredOnly,
+): Promise<OtpResult<AuthSession, RegisteredOnlyError>>;
+export async function verifyOtp(
+  email: string,
+  code: string,
+  locale: PreferredLanguage,
+  options?: RegisteredOnly,
+): Promise<OtpResult<AuthSession, RegisteredOnlyError>> {
   if (!OtpCodeSchema.safeParse(code).success) {
     return { data: null, error: 'invalid_code', retryAfterSec: null };
   }
 
-  const result = await apiFetch('/api/v1/auth/otp/verify', VerifyResponseSchema, { method: 'POST', body: { email, code, locale } });
+  const result = await apiFetch('/api/v1/auth/otp/verify', VerifyResponseSchema, {
+    method: 'POST',
+    body: { email, code, locale, ...registeredOnlyOf(options) },
+  });
   if (result.error !== null) {
     return { data: null, error: toAuthErrorKey(result.error), retryAfterSec: result.retryAfterSec };
   }

@@ -24,7 +24,8 @@ import { attachReferralOnLogin } from '../customer/referral';
  * karşılığı henüz yok ve `packages/observability` bu şeridin yazı alanı dışında; terfi talepte
  * (21.1 raporundan beri). Terfi olunca bu sabit `SOURCES.applicationAuth`a döner.
  */
-const AUTH_OTP_SOURCE = 'application-auth';
+/** Giriş akışlarının hata kaynağı — kod (bu dosya) ve OAuth hesap kapısı (`oauth-account.ts`) ortak. */
+export const AUTH_SOURCE = 'application-auth';
 
 /**
  * **Deterministik dev kodu** (00.9 Parti 3b · `docs/talep/musteri-otp-test-kapisi.md`) — kapının
@@ -79,11 +80,34 @@ function toValidEmail(raw: string): string | null {
   return email && isValidEmail(email) ? email : null;
 }
 
+/**
+ * **Sistemde hesabı var mı** (21.312) — profil VE ona bağlı auth kaydı. Yalnız profil yetmez: siparişten
+ * doğan misafir profilinin hesabı yoktur ve operasyon girişi onu "kayıtlı" saymaz (kullanıcı kararı 14.09:
+ * *"kullanıcı sistemde kayıtlı değilse giriş yapamayacak"*).
+ */
+async function hasAccount(admin: SupabaseClient, email: string): Promise<boolean> {
+  const profile = await new UserProfileService(admin).findByEmail(email);
+  return Boolean(profile?.authUserId);
+}
+
 export type RequestOtpCodeResult =
   | { status: 'ok' }
   | { status: 'invalid_email' }
   | { status: 'rate_limit' | 'cooldown'; retryAfterSec: number }
   | { status: 'send_failed' };
+
+/**
+ * Operasyon girişinin (21.312) ek sonucu — tipi BAYRAĞA bağlı (aşırı yüklemeler): bayrak vermeyen yüzey (web,
+ * müşteri uygulaması) bu hâli hiç görmez. Görseydi web kırılırdı: `errorKey`i doğrudan bu durumdan kuruyor ve
+ * sözlüğü ortak `AuthErrorKeyEnum`e bağlı, o kümede bu anahtar yok (14.09 ölçüldü: iki TS2322).
+ */
+type NotRegistered = { status: 'not_registered' };
+
+interface RequestOtpInput {
+  email: string;
+  locale: PreferredLanguage;
+  registeredOnly?: boolean;
+}
 
 /**
  * Tek kullanımlık kod üretir ve postalar. Kod bizimdir (Supabase auth OTP'si DEĞİL): hash'i
@@ -92,13 +116,19 @@ export type RequestOtpCodeResult =
  *
  * @param admin service-role istemci — çağıran enjekte eder (`serviceDb()`).
  * @param input.locale mailin dili; hata cümlesinin değil (cümleyi ekran kurar).
+ * @param input.registeredOnly operasyon girişi (21.312): yalnız sistemde hesabı olan e-posta — yoksa
+ *   `not_registered`, ne kod satırı ne mail.
  */
 export async function requestOtpCode(
   admin: SupabaseClient,
-  input: { email: string; locale: PreferredLanguage },
-): Promise<RequestOtpCodeResult> {
+  input: RequestOtpInput & { registeredOnly?: false },
+): Promise<RequestOtpCodeResult>;
+export async function requestOtpCode(admin: SupabaseClient, input: RequestOtpInput): Promise<RequestOtpCodeResult | NotRegistered>;
+export async function requestOtpCode(admin: SupabaseClient, input: RequestOtpInput): Promise<RequestOtpCodeResult | NotRegistered> {
   const email = toValidEmail(input.email);
   if (!email) return { status: 'invalid_email' };
+  // Oran sınırından ÖNCE: kaydı olmayan adres bekleme hakkı da yakmasın, `email_verifications`a satır da düşmesin.
+  if (input.registeredOnly && !(await hasAccount(admin, email))) return { status: 'not_registered' };
 
   const service = new EmailVerificationService(admin);
   const testCode = devOtpCode();
@@ -119,7 +149,7 @@ export async function requestOtpCode(
     // (müşteri henüz oturum açmadı), o yüzden adres MASKELİ yazılır: hangi kayıt olduğunu
     // söyler, kim olduğunu söylemez (OBSERVABILITY §5, kullanıcı kararı 03.08).
     await captureError(new Error(`OTP maili gönderilemedi: ${mail.error}`), {
-      source: AUTH_OTP_SOURCE,
+      source: AUTH_SOURCE,
       context: { flow: 'auth/requestOtpCode', email: maskEmail(email) },
     });
     return { status: 'send_failed' };
@@ -130,6 +160,20 @@ export async function requestOtpCode(
 export type VerifyOtpCodeResult =
   | { status: 'ok'; hashedToken: string; userId: string; knownBefore: boolean }
   | { status: 'invalid_email' | 'invalid_code' | 'code_expired' | 'code_locked' | 'no_active_code' | 'send_failed' };
+
+interface VerifyOtpInput {
+  email: string;
+  code: string;
+  locale: PreferredLanguage;
+  /**
+   * Davet bağlantısından taşınan kod (17.9). Yüzey nereden getirdiğini kendi bilir: web'de
+   * çerez, mobilde derin bağlantı. Geçersiz/kendine ait/geç kalmış kod kaydı DURDURMAZ —
+   * `linkReferrer` sessizce reddeder ve giriş normal tamamlanır.
+   */
+  referralCode?: string | null;
+  /** Operasyon girişi (21.312): hesap yoksa AÇILMAZ — kod doğru olsa da `not_registered`. */
+  registeredOnly?: boolean;
+}
 
 /**
  * Kodu doğrular, Supabase auth köprüsünü kurar, yeni müşterinin dilini tohumlar.
@@ -159,18 +203,10 @@ export type VerifyOtpCodeResult =
  */
 export async function verifyOtpCode(
   admin: SupabaseClient,
-  input: {
-    email: string;
-    code: string;
-    locale: PreferredLanguage;
-    /**
-     * Davet bağlantısından taşınan kod (17.9). Yüzey nereden getirdiğini kendi bilir: web'de
-     * çerez, mobilde derin bağlantı. Geçersiz/kendine ait/geç kalmış kod kaydı DURDURMAZ —
-     * `linkReferrer` sessizce reddeder ve giriş normal tamamlanır.
-     */
-    referralCode?: string | null;
-  },
-): Promise<VerifyOtpCodeResult> {
+  input: VerifyOtpInput & { registeredOnly?: false },
+): Promise<VerifyOtpCodeResult>;
+export async function verifyOtpCode(admin: SupabaseClient, input: VerifyOtpInput): Promise<VerifyOtpCodeResult | NotRegistered>;
+export async function verifyOtpCode(admin: SupabaseClient, input: VerifyOtpInput): Promise<VerifyOtpCodeResult | NotRegistered> {
   const email = toValidEmail(input.email);
   if (!email) return { status: 'invalid_email' };
 
@@ -190,13 +226,17 @@ export async function verifyOtpCode(
   }
 
   const profiles = new UserProfileService(admin);
-  const knownBefore = Boolean(await profiles.findByEmail(email));
+  const known = await profiles.findByEmail(email);
+  const knownBefore = Boolean(known);
+  // Hesap açan adım (`generateLink`) bayrak açıkken hesabı olmayana HİÇ gelmez — iki kapılı emniyet:
+  // istek zaten reddetmişti; arada hesap silinmişse de burada durur (21.312).
+  if (input.registeredOnly && !known?.authUserId) return { status: 'not_registered' };
 
   const { data: link, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
   if (linkErr || !link.properties?.hashed_token || !link.user) {
     // `linkErr` null olabilir: bağlantı geldi ama jeton/kullanıcı eksik olan hâl de buraya düşer.
     await captureError(new Error(`generateLink başarısız: ${linkErr?.message ?? 'jeton ya da kullanıcı boş'}`), {
-      source: AUTH_OTP_SOURCE,
+      source: AUTH_SOURCE,
       context: { flow: 'auth/verifyOtpCode', email: maskEmail(email) },
     });
     return { status: 'send_failed' };

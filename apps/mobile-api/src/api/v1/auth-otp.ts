@@ -15,7 +15,12 @@ import { fail, ok } from '../../lib/respond';
  * `locale` gövdede geliyor çünkü mobilde `getLocale()` yok — mailin ve dil tohumunun dili
  * cihazın seçtiği dildir.
  */
-const RequestBodySchema = z.object({ email: z.string().min(1), locale: PreferredLanguageEnum });
+/** `registeredOnly`: operasyon girişi (21.312) — yalnız sistemde hesabı olan e-posta; müşteri akışı göndermez. */
+const RequestBodySchema = z.object({
+  email: z.string().min(1),
+  locale: PreferredLanguageEnum,
+  registeredOnly: z.boolean().optional(),
+});
 /*
   DAVET KODU BU GÖVDEDE DEĞİL (21.44'te kaldırıldı, 21.43'te eklenmişti). Gerekçe ölçülmüş bir
   boşluk: kodu buraya koymak onu YALNIZ e-posta yoluna bağlıyordu ve Google akışı bu uçtan hiç
@@ -23,7 +28,12 @@ const RequestBodySchema = z.object({ email: z.string().min(1), locale: Preferred
   sonra tek bir kapıya uğruyor (`POST /me/invite/claim`, künyesi `invite.ts`te) ve iki mekanizma
   bırakmak, yarın doğacak üçüncü giriş yolunun hangisini çağıracağını belirsiz bırakırdı.
 */
-const VerifyBodySchema = z.object({ email: z.string().min(1), code: OtpCodeSchema, locale: PreferredLanguageEnum });
+const VerifyBodySchema = z.object({
+  email: z.string().min(1),
+  code: OtpCodeSchema,
+  locale: PreferredLanguageEnum,
+  registeredOnly: z.boolean().optional(),
+});
 
 /**
  * Gövde `safeParse`ten düşünce anahtar seçimi: `code` biçimsizse `invalid_code` (kullanıcının
@@ -39,7 +49,7 @@ function bodyFailKey(error: z.ZodError): { key: 'invalid_code' | 'invalid_email'
 
 export const authOtp = new Hono<AppEnv>();
 
-// 200 {data:true} · 400 invalid_email · 429 rate_limit/cooldown (+Retry-After) · 502 send_failed
+// 200 {data:true} · 400 invalid_email · 403 not_registered · 429 rate_limit/cooldown (+Retry-After) · 502 send_failed
 authOtp.post('/request', async (c) => {
   const body = RequestBodySchema.safeParse(await c.req.json().catch(() => null));
   if (!body.success) {
@@ -53,6 +63,8 @@ authOtp.post('/request', async (c) => {
       return ok(c, true);
     case 'invalid_email':
       return fail(c, 'invalid_email', 400);
+    case 'not_registered':
+      return fail(c, 'not_registered', 403);
     case 'rate_limit':
     case 'cooldown':
       // Bekleme süresi ZARFI bozmadan başlıkta taşınır — `{data,error}` şekli her uçta aynı kalır.
@@ -63,7 +75,7 @@ authOtp.post('/request', async (c) => {
   }
 });
 
-// 200 {data:{session}} · 401 invalid_code/code_expired/code_locked/no_active_code · 400/502
+// 200 {data:{session}} · 401 invalid_code/code_expired/code_locked/no_active_code · 403 not_registered · 400/502
 authOtp.post('/verify', async (c) => {
   const body = VerifyBodySchema.safeParse(await c.req.json().catch(() => null));
   if (!body.success) {
@@ -75,6 +87,7 @@ authOtp.post('/verify', async (c) => {
   if (result.status !== 'ok') {
     if (result.status === 'invalid_email') return fail(c, 'invalid_email', 400);
     if (result.status === 'send_failed') return fail(c, 'send_failed', 502);
+    if (result.status === 'not_registered') return fail(c, 'not_registered', 403);
     return fail(c, result.status, 401);
   }
 
