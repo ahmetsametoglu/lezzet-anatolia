@@ -141,6 +141,7 @@ export function MovementFormBody({
                 }}
                 options={MANUAL_TYPES.map((type) => ({ key: type, label: MANUAL_TYPE_VIEW[type].label }))}
                 label="Hareket türü"
+                className="w-full"
               />
               <span className="font-ops-body text-ops-xs text-ops-faint">{MANUAL_TYPE_VIEW[field.value].hint}</span>
             </div>
@@ -180,6 +181,9 @@ export function MovementFormBody({
                     { key: 'out', label: 'Çıktı' },
                   ]}
                   label="Paranın yönü"
+                  // Yuvayı DOLDURUR (12.24 eki): yanındaki kutularla aynı genişlik; içerik kadar kalınca
+                  // hücrenin sağı boş görünüyordu (kullanıcı bildirimi).
+                  className="w-full"
                 />
               </FieldShell>
             )}

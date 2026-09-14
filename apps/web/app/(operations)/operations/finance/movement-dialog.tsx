@@ -199,7 +199,15 @@ export function MovementDialog({
           </p>
         ) : null}
         <div className="flex flex-col gap-1.5">
-          <MultiToggle value={mode} onChange={switchMode} options={modes.map((entry) => ({ key: entry, label: ENTRY_MODE_VIEW[entry].label }))} label="Hareketin kipi" />
+          {/* Seçici pencerenin genişliğini DOLDURUR (`w-full`, 12.24 eki · kullanıcı bildirimi: rayın sağında
+              boş alan kalıyordu); düğmeler fazlayı paylaşır, hap seçili düğmeyi ölçerek izler. */}
+          <MultiToggle
+            value={mode}
+            onChange={switchMode}
+            options={modes.map((entry) => ({ key: entry, label: ENTRY_MODE_VIEW[entry].label }))}
+            label="Hareketin kipi"
+            className="w-full"
+          />
           <span className="font-ops-body text-ops-xs text-ops-faint">{ENTRY_MODE_VIEW[mode].hint}</span>
         </div>
         {/* Gövdeler ORTAK (22.18 · 22.22): asistan kuyruğu da aynı formları açıyor; yuvaları aynı (12.24). */}
