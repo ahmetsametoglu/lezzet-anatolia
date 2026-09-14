@@ -1,0 +1,1413 @@
+{
+  "_not": "ÜRETİLİR, elle yazılmaz — `pnpm images:manifest` (yerel veritabanından). Anahtar → sürüm (image_updated_at) + ölçü. Seed künyedeki görseli depoda aynı içerikle bulursa yüklemez ve bu değerleri yazar: okuma adresi tazelemeler arasında değişmez, CDN dönüşüm kotası yanmaz. Gerekçe: scripts/seed/image-manifest.ts.",
+  "catalog/bundles/baklava-ikilisi.jpg": {
+    "imageUpdatedAt": "2026-09-14T13:00:28.385+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/bundles/bayram-sofrasi-paketi.jpg": {
+    "imageUpdatedAt": "2026-09-14T13:00:26.584+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/bundles/fistik-sevenler.jpg": {
+    "imageUpdatedAt": "2026-09-14T13:00:27.225+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/bundles/maras-dondurma-seti.jpg": {
+    "imageUpdatedAt": "2026-09-14T13:00:27.635+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/anadolu-mutfagi-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:49.635+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/anadolu-mutfagi-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:49.876+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/anadolu-mutfagi-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:50.125+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/anadolu-mutfagi-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:50.374+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/anadolu-mutfagi.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:49.403+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/dondurma-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:48.052+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/dondurma-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:48.312+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/dondurma-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:48.604+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/dondurma-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:48.911+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/dondurma.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:47.803+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/firin-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:42.344+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/firin-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:42.693+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/firin-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:43.156+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/firin-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:43.404+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/firin.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:42.126+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/pasta-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:45.275+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/pasta-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:45.529+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/pasta-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:45.841+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/pasta-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:46.094+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/pasta.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:45.058+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tatli-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:43.961+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tatli-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:44.197+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tatli-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:44.486+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tatli-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:44.793+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tatli.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:43.626+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tavuk-urunleri-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:46.721+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tavuk-urunleri-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:47.063+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tavuk-urunleri-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:47.339+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tavuk-urunleri-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:47.578+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/categories/tavuk-urunleri.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:46.378+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/collections/bayram-sofrasi.webp": {
+    "imageUpdatedAt": "2026-09-14T12:59:26.086+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/collections/cay-saati.webp": {
+    "imageUpdatedAt": "2026-09-14T12:59:26.898+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/collections/l-amour-de-paris.webp": {
+    "imageUpdatedAt": "2026-09-14T12:59:27.32+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/collections/yeni-gelenler.webp": {
+    "imageUpdatedAt": "2026-09-14T12:59:26.5+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/adana-borek-with-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/artisan-lemon-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/artisan-lemon-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/artisan-mango-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/artisan-mango-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/artisan-pistachio-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/artisan-pistachio-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/artisan-strawberry-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/artisan-strawberry-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/assorted-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/assorted-baklava-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/assorted-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-pistachio-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-pistachio-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-pistachio-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-pistachio-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-pistachio-6.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-pistachio.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-walnut-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-walnut-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-walnut-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-walnut-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/baklava-with-walnut.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/black-forest-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/black-forest-whole-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/blueberry-peach-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/carrot-slice-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/carrot-slice-baklava-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/carrot-slice-baklava-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/carrot-slice-baklava-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/carrot-slice-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/carrot-tarator.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-calzone.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-filled-pastry-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-filled-pastry-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-filled-pastry.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-pastry-su-borek-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-pastry-su-borek-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-pastry-su-borek-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-pastry-su-borek-5.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-pastry-su-borek-6.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-pastry-su-borek.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-rolls-handmade-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cheese-rolls-handmade.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/chicken-tender-fillet.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/chocolate-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/chocolate-baklava-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/chocolate-baklava-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/chocolate-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/chocolate-cake-cup.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/chocolate-souffle-lava-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cold-baklava-with-pistachio-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cold-baklava-with-pistachio.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cold-baklava-with-walnut-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cold-baklava-with-walnut-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/cold-baklava-with-walnut.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/crispy-chicken-burger-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/crispy-chicken-burger.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/crispy-chicken-nugget-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/crispy-chicken-nugget.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/crispy-chicken-wings.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/crispy-spicy-chicken-wings.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/crispy-spicy-tender-fillet.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/crispy-tender-fillet.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/dark-chocolate-profiterol-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/dark-chocolate-profiterol-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/dark-chocolate-profiterol-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/dark-chocolate-profiterol-whole-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/dark-chocolate-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/dark-chocolate-whole-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/doner-lavash.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/dough-leaves-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/dough-leaves.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/e-shaped-borek-with-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/e-shaped-borek-with-meat.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/e-shaped-borek-with-potato.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/e-shaped-borek-with-spinach-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/eggplant-with-yogurt.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/gobit-bread-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/gobit-bread.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/homemade-style-walnut-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/homemade-style-walnut-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/hummus.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/italian-tiramisu-cup.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/izmir-boyoz.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/kumru-bagel.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/kunefe-bulk.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/kunefe-including-syrup-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/kunefe-including-syrup.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/lahmacun-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/lahmacun.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/latte-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/latte-whole-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/lemon-cheesecake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/lemon-cheesecake-slice-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/lemon-cheesecake-slice.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/lemon-cheesecake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/lotus-caramel-cake-with-nutella-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/lotus-caramel-cake-with-nutella.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-cocoa-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-cocoa.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-pistachio-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-pistachio.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-plain-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-plain-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-plain.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-slice-cocoa-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-slice-cocoa.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-slice-lemon-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-slice-plain-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-slice-plain.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-trio-mix-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/maras-ice-cream-trio-mix.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-pide-with-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-pide-with-cheese-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-pide-with-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-pide-with-spinach-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-pide-with-spinach-cheese-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-pide-with-spinach-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-roll-borek-with-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-roll-borek-with-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-roll-borek-with-spinach-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mini-roll-borek-with-spinach-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mussel-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mussel-baklava-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mussel-baklava-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/mussel-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/olive-filled-pastry.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pista-leaves-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pista-leaves-bulk.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pista-leaves.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-cake-cup.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-cream-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-kadaifi-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-kadaifi-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-kadaifi-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-kadaifi.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-rolls-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-rolls-baklava-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-rolls-baklava-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/pistachio-rolls-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/plain-pastry-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/plain-pastry-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/plain-pastry.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/potato-filled-pastry.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/rainbow-velvet-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/rainbow-velvet-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/raspberry-cheesecake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/raspberry-cheesecake-slice-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/raspberry-cheesecake-slice.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/raspberry-cheesecake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/red-velvet-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/red-velvet-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/red-velvet-cup.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/red-velvet-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/red-velvet-whole-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/saksuka.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/san-sebastian-cheesecake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/san-sebastian-cheesecake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/savoury-bun-acma-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/savoury-bun-acma.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/savoury-bun-with-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/savoury-bun.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/sobiyet-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/sobiyet-baklava-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/sobiyet-baklava-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/sobiyet-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-antep-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-antep-baklava-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-antep-baklava-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-antep-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-pistachio-garden-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-pistachio-garden-whole-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-square-baklava-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-square-baklava-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-square-baklava-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/special-square-baklava.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spicy-chicken-tender-fillet.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spicy-chicken-wings.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spicy-turkish-tomato-dip.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-pie-borek-with-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-pie-borek-with-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-pie-borek-with-potato-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-pie-borek-with-spinach-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-pie-borek-with-spinach-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-rose-borek-with-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-rose-borek-with-cheese-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-rose-borek-with-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-rose-borek-with-meat.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-rose-borek-with-potato.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-rose-borek-with-spinach-cheese-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-rose-borek-with-spinach-cheese-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/spiral-rose-borek-with-spinach-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/stick-borek-with-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/stick-borek-with-meat.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/stick-borek-with-potato.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/stick-borek-with-spinach-cheese.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/stuffed-vine-leaves-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/stuffed-vine-leaves.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/sweet-turkish-bagel-simit-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/sweet-turkish-bagel-simit.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tiramisu-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tiramisu-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tiramisu-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tiramisu-whole-cake.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tiramisu.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/toffee-caramel-cake-cup.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tres-leches-caramel-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tres-leches-caramel-cup.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tres-leches-caramel.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tres-leches-raspberry-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tres-leches-raspberry.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tulumba-dessert-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tulumba-dessert-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/tulumba-dessert-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-bagel-simit-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-bagel-simit.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-fermented-bagel-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-fermented-bagel.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-ravioli-with-meat-manti.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-ring-churros-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-ring-churros-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-ring-churros-4.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/turkish-ring-churros.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegan-cig-kofte.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegan-falafel-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegan-falafel.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegan-kibbeh-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegan-kibbeh.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegan-raw-meatballs-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegan-raw-meatballs-3.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegan-raw-meatballs.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/vegetable-calzone.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/wreathing-kunefe-bulk.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/wreathing-kunefe-including-syrup-2.webp": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/products/wreathing-kunefe-including-syrup.png": {
+    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "catalog/recipes/bayram-tabagi.jpeg": {
+    "imageUpdatedAt": null,
+    "imageWidth": 1542,
+    "imageHeight": 1024
+  },
+  "catalog/recipes/citir-pazar-kahvaltisi.jpg": {
+    "imageUpdatedAt": null,
+    "imageWidth": 1312,
+    "imageHeight": 1984
+  },
+  "catalog/recipes/cocuklara-citir-tabak.jpg": {
+    "imageUpdatedAt": null,
+    "imageWidth": 873,
+    "imageHeight": 624
+  },
+  "catalog/recipes/dondurmali-baklava-tabagi.jpg": {
+    "imageUpdatedAt": null,
+    "imageWidth": 1920,
+    "imageHeight": 1440
+  },
+  "catalog/recipes/kunefe-sofrasi.jpg": {
+    "imageUpdatedAt": null,
+    "imageWidth": 1920,
+    "imageHeight": 1440
+  },
+  "catalog/recipes/mezeli-aksam-sofrasi.jpg": {
+    "imageUpdatedAt": null,
+    "imageWidth": 1920,
+    "imageHeight": 1440
+  },
+  "site/home-hero.jpg": {
+    "imageUpdatedAt": "2026-09-14T12:59:31.642+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  },
+  "site/professionals-hero.jpg": {
+    "imageUpdatedAt": "2026-09-14T12:59:32.007+00:00",
+    "imageWidth": null,
+    "imageHeight": null
+  }
+}

@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { ProductService, type createServiceRoleClient } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
 import { resolveLocalizedText, type ProductStatus } from '@lezzet/types';
+import { kunyeGecerli, kunyeOku, type KunyeSatiri } from './image-manifest';
 
 /**
  * Seed bölümlerinin ortak zemini: istemci tipi, guard, tarih/para yardımcıları, görsel yükleme ve
@@ -10,12 +12,6 @@ import { resolveLocalizedText, type ProductStatus } from '@lezzet/types';
  */
 
 export type Db = ReturnType<typeof createServiceRoleClient>;
-
-/**
- * Görsel sürüm damgası — seed bu koşuşta yüklüyor. Public okuma URL'i `?v=<damga>` ile kurulur
- * (05.11); damgasız kayıtta yeni dosya CDN'in eski kopyasının arkasında kalırdı.
- */
-export const NOW = new Date().toISOString();
 
 /** Bölüm guard'ı — tablo doluysa atlanır; seed'i tekrar çalıştırmak güvenli kalsın. */
 export async function tabloDolu(db: Db, table: string): Promise<boolean> {
@@ -39,20 +35,76 @@ export const euro = (v: number) => Math.round(v * 100) / 100;
 */
 
 /**
- * DEPO İÇİNDEKİ bir dosyayı R2'ye yükler — yol repo köküne göre verilir.
+ * ── SEED GÖRSELİ: YÜKLEME + SÜRÜM (05.37 · 14.09) ────────────────────────────────────────────────
+ *
+ * Seed eskiden her koşuda bütün görselleri yeniden yüklüyor ve sürüm damgasını "şimdi" yazıyordu.
+ * Damga okuma adresinin parçası (`?v=`, 05.11) ve CDN her yeni adresi yeni bir dönüşüm sayıyor: her
+ * `db:refresh` sitenin bütün görsel adreslerini değiştiriyordu (ölçüldü 14.09 — ücretsiz dönüşüm kotası
+ * bitti). Artık görsel künyesine bakılıyor (`image-manifest.ts`): künyede olan ve depoda AYNI içerikle
+ * duran dosya yüklenmez, sürümü ve ölçüsü künyeden gelir.
+ *
+ * Yardımcılar anahtarı sürüm ve ölçüyle TEK değer olarak döndürür; çağıran onu satırın yazımına yayar
+ * (`...gorsel`) — anahtarı sürümsüz yazmak mümkün olmaz. Servislerin `setImageKey`/`add`/`put` yolu
+ * bu yüzden kullanılmıyor: o yol damgayı "şimdi" yazar.
+ */
+type SeedGorsel = KunyeSatiri & { imageKey: string };
+
+type R2 = NonNullable<ReturnType<typeof getR2>>;
+
+let kunye: Map<string, KunyeSatiri> | undefined;
+const sayac = { kunyeden: 0, yuklenen: [] as string[] };
+
+/** Görsel künyesi (`data/image-manifest.json`) — koşu başına bir kez okunur. */
+function gorselKunyesi(): Map<string, KunyeSatiri> {
+  if (!kunye) {
+    const yol = join(process.cwd(), 'scripts/seed/data/image-manifest.json');
+    if (existsSync(yol)) {
+      kunye = kunyeOku(JSON.parse(readFileSync(yol, 'utf8')) as Record<string, unknown>);
+    } else {
+      // Künyesiz seed yine çalışır, ama her görseli yükleyip damgalar — kotayı bitiren eski davranış.
+      console.warn('  ⚠ görsel künyesi yok (scripts/seed/data/image-manifest.json) — her görsel yüklenecek');
+      kunye = new Map();
+    }
+  }
+  return kunye;
+}
+
+/** İçerik tipi UZANTIDAN: kaynak webp veriyor; hepsini `image/jpeg` diye yüklemek CDN'i ve dönüşümleri yanıltır. */
+function icerikTipi(ad: string): string {
+  const uzanti = (ad.split('.').pop() || '').toLowerCase();
+  return uzanti === 'png' ? 'image/png' : uzanti === 'webp' ? 'image/webp' : 'image/jpeg';
+}
+
+/**
+ * Dosyayı depoya koyar, satıra yazılacak künyeyi döndürür. Künye geçerliyse (`kunyeGecerli`) YÜKLEME
+ * YOK: sürüm ve ölçü künyeden gelir, adres bir önceki tazelemedekiyle aynı kalır. Değilse yüklenir —
+ * sürüm "şimdi" (yeni dosya yeni adres; önbellek eskisini tutamaz), ölçü bilinmez ve seed sonunda
+ * listelenir (`gorselOzeti`).
+ */
+async function depoyaKoy(r2: R2, key: string, bytes: Buffer, tip: string): Promise<SeedGorsel> {
+  const kayit = gorselKunyesi().get(key);
+  const md5 = createHash('md5').update(bytes).digest('hex');
+  if (kunyeGecerli(kayit, kayit ? await r2.fileEtag(key) : null, md5)) {
+    sayac.kunyeden += 1;
+    return { imageKey: key, ...kayit };
+  }
+  await r2.uploadFile(key, bytes, tip);
+  sayac.yuklenen.push(key);
+  return { imageKey: key, imageUpdatedAt: new Date().toISOString(), imageWidth: null, imageHeight: null };
+}
+
+/**
+ * DEPO İÇİNDEKİ bir dosyayı R2'ye koyar — yol repo köküne göre verilir.
  *
  * İhtiyaç sayfa görsellerinden doğdu (09.16): ana sayfanın kahramanı bugün
  * `apps/web/public/hero-sofra.jpg`'de geçici olarak duruyor ve slot tablosuna taşınırken kaynak o
  * dosyanın kendisi.
  */
-export async function uploadImageFromPath(relPath: string, key: string): Promise<string | null> {
+export async function uploadImageFromPath(relPath: string, key: string): Promise<SeedGorsel | null> {
   const r2 = getR2();
   if (!r2) return null;
   try {
-    const bytes = readFileSync(join(process.cwd(), relPath));
-    const uzanti = (relPath.split('.').pop() || '').toLowerCase();
-    await r2.uploadFile(key, bytes, uzanti === 'png' ? 'image/png' : uzanti === 'webp' ? 'image/webp' : 'image/jpeg');
-    return key;
+    return await depoyaKoy(r2, key, readFileSync(join(process.cwd(), relPath)), icerikTipi(relPath));
   } catch (err) {
     console.warn(`  ⚠ görsel atlandı (${relPath}): ${(err as Error).message}`);
     return null;
@@ -60,7 +112,7 @@ export async function uploadImageFromPath(relPath: string, key: string): Promise
 }
 
 /**
- * UZAKTAKİ görseli indirir ve R2'ye yükler (Lezza kataloğu — 05, kullanıcı kararı 04.08).
+ * UZAKTAKİ görseli indirir ve R2'ye koyar (Lezza kataloğu — 05, kullanıcı kararı 04.08).
  *
  * **İndirilen dosya `temp/lezza-cache/` altında ÖNBELLEKLENİR** ve sebebi ölçülebilir: katalogda
  * 141 ürün × 2 görsel var; her `db:refresh` bunları yeniden indirseydi seed'e üç yüz ağ turu
@@ -69,7 +121,7 @@ export async function uploadImageFromPath(relPath: string, key: string): Promise
  * **R2 ayarsızsa `null`** — `uploadImage` ile aynı davranış: kayıt görselsiz oluşur, seed durmaz.
  * İnternet yoksa da aynı: önbellekte varsa oradan okunur, yoksa o ürün görselsiz kalır.
  */
-export async function uploadImageFromUrl(url: string, key: string): Promise<string | null> {
+export async function uploadImageFromUrl(url: string, key: string): Promise<SeedGorsel | null> {
   const r2 = getR2();
   if (!r2) return null;
   const dosya = join(process.cwd(), 'temp', 'lezza-cache', url.split('/').pop() || 'image');
@@ -84,16 +136,24 @@ export async function uploadImageFromUrl(url: string, key: string): Promise<stri
       mkdirSync(dirname(dosya), { recursive: true });
       writeFileSync(dosya, bytes);
     }
-    // İçerik tipi UZANTIDAN: kaynak webp veriyor ve hepsini `image/jpeg` diye yüklemek tarayıcıyı
-    // yanıltmasa da CDN'i ve ileride yapılacak dönüşümleri yanıltır.
-    const uzanti = (url.split('.').pop() || '').toLowerCase();
-    const tip = uzanti === 'png' ? 'image/png' : uzanti === 'webp' ? 'image/webp' : 'image/jpeg';
-    await r2.uploadFile(key, bytes, tip);
-    return key;
+    return await depoyaKoy(r2, key, bytes, icerikTipi(url));
   } catch (err) {
     console.warn(`  ⚠ uzak görsel atlandı (${url.split('/').pop()}): ${(err as Error).message}`);
     return null;
   }
+}
+
+/**
+ * Seed sonu görsel özeti. Künye dışında yüklenen dosya yeni sürümle ve ölçüsüz yazıldı: bir sonraki
+ * tazelemede adresi yine değişir. Kalıcı olması için ölçü dolgusu ve künye tazelemesi gerekir — ikisi
+ * de ELLE, çünkü ölçü sorusu CDN dönüşüm kotasından yer.
+ */
+export function gorselOzeti(): void {
+  console.log(`✓ görsel: ${sayac.kunyeden} künyeden (yükleme yok) · ${sayac.yuklenen.length} yüklendi`);
+  if (sayac.yuklenen.length === 0) return;
+  for (const key of sayac.yuklenen.slice(0, 10)) console.log(`  · ${key}`);
+  if (sayac.yuklenen.length > 10) console.log(`  · … ${sayac.yuklenen.length - 10} tane daha`);
+  console.log('  ⚠ künye dışı görsel var — kotada yer varken `pnpm images:dims`, ardından `pnpm images:manifest`');
 }
 
 export { r2Keys };

@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { resolvePrefixedKey } from './r2-key-prefix';
 
@@ -74,6 +74,24 @@ class R2Service {
   /** Nesneyi siler. */
   async deleteFile(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.resolveKey(key) }));
+  }
+
+  /**
+   * Nesnenin ETag'i — HEAD isteği, gövde inmez; nesne yoksa `null`.
+   *
+   * Tek parça yüklemede (`uploadFile`) ETag içeriğin MD5'idir: dosyanın özetini elinde tutan çağıran
+   * "aynısı zaten depoda mı" sorusunu dosyayı indirmeden cevaplar. İlk tüketen seed (14.09): her
+   * `db:refresh` bütün görselleri yeniden yükleyip sürüm damgasını yeniliyordu (`scripts/seed/image-manifest.ts`).
+   */
+  async fileEtag(key: string): Promise<string | null> {
+    try {
+      const head = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.resolveKey(key) }));
+      return head.ETag?.replace(/"/g, '') ?? null;
+    } catch (err) {
+      // Yalnız "nesne yok" yutulur: yetki ya da ağ hatası "yok" diye okunsaydı çağıran boşuna yüklerdi.
+      if ((err as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) return null;
+      throw err;
+    }
   }
 
   /**

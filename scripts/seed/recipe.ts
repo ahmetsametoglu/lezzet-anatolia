@@ -296,8 +296,9 @@ export async function seedRecipes(db: Db): Promise<void> {
     const gorsel = r.image ? gorseller[r.image] : undefined;
     if (r.image && !gorsel) console.log(`  ⚠ "${r.image}" künyede yok — tarif görselsiz kaldı`);
     if (gorsel) {
-      const key = await uploadImageFromUrl(gorsel.url, r2Keys.recipeImage(olusan.slug, gorsel.dosya));
-      if (key) await recipes.update({ id: olusan.id, imageKey: key });
+      // Sürüm ve ölçü görselle birlikte (künyeden — `shared.ts`).
+      const kapak = await uploadImageFromUrl(gorsel.url, r2Keys.recipeImage(olusan.slug, gorsel.dosya));
+      if (kapak) await recipes.update({ id: olusan.id, ...kapak });
     }
     sira += 1;
   }

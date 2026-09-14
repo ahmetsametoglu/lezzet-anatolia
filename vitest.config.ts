@@ -258,6 +258,8 @@ export default defineConfig({
               seed testi kendi satırını ister.
             */
             'scripts/seed/packing.test.ts',
+            // Görsel künyesi (14.09) — saf: JSON girer, künye çıkar. R2 ve DB istemcisi yok.
+            'scripts/seed/image-manifest.test.ts',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
             // `apps/web/lib` entegrasyon köküdür ama içindeki bu 19 dosya DB'ye vurmuyor (K8-1).

@@ -240,8 +240,9 @@ export async function seedCollections(db: Db, katman: Katman): Promise<void> {
     const kapakUrl = c.kapak ? gorselUrl.get(c.kapak) : null;
     if (c.kapak && !kapakUrl) console.log(`  ⚠ ${c.slug} — kapak "${c.kapak}" katalogda yok; koleksiyon kapaksız kaldı`);
     if (kapakUrl) {
-      const key = await uploadImageFromUrl(kapakUrl, r2Keys.collectionImage(created.slug, c.kapak ?? 'cover.webp'));
-      if (key) await collections.setImageKey(created.id, key);
+      // Sürüm ve ölçü görselle birlikte (künyeden — `shared.ts`); `setImageKey` damgayı "şimdi" yazardı.
+      const gorsel = await uploadImageFromUrl(kapakUrl, r2Keys.collectionImage(created.slug, c.kapak ?? 'cover.webp'));
+      if (gorsel) await collections.update({ id: created.id, ...gorsel });
     }
     console.log(`  ✓ ${resolveLocalizedText(created.name)} · ${productIds.length} ürün · vitrin havuzunda · /${created.slug}`);
   }
@@ -468,8 +469,8 @@ export async function seedBundles(db: Db): Promise<void> {
     const kapakGorsel = b.image ? fiksturler[b.image] : undefined;
     if (b.image && !kapakGorsel) console.warn(`  ⚠ "${b.image}" görsel künyesinde yok — paket kapaksız kaldı`);
     if (kapakGorsel) {
-      const key = await uploadImageFromUrl(kapakGorsel.url, r2Keys.bundleImage(bundle.slug, kapakGorsel.dosya));
-      if (key) await bundles.setImageKey(bundle.id, key);
+      const gorsel = await uploadImageFromUrl(kapakGorsel.url, r2Keys.bundleImage(bundle.slug, kapakGorsel.dosya));
+      if (gorsel) await bundles.update({ id: bundle.id, ...gorsel });
     }
 
     // "Tutuyor mu" kararı MOTORUN (`bundleBalance`) — seed kendi ölçütünü uydurmaz.

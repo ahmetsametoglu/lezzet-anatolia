@@ -94,8 +94,8 @@ export async function seedSiteImages(db: Db): Promise<void> {
     const dosyaAdi = s.kaynak.split('/').pop() || 'hero.jpg';
     // Yükleme İKİ sebeple `null` döner (R2 ayarsız · kaynak okunamadı) ve slot BOŞ kalır — seed
     // durmaz (kardeşleriyle aynı davranış).
-    const key = await uploadImageFromPath(s.kaynak, r2Keys.siteImage(s.slot, dosyaAdi));
-    if (!key) {
+    const gorsel = await uploadImageFromPath(s.kaynak, r2Keys.siteImage(s.slot, dosyaAdi));
+    if (!gorsel) {
       // **Sebep AYRILARAK yazılır** ve bu bir üslup tercihi değil: mesaj eskiden koşulsuz "R2 yok"
       // diyordu, oysa gerçek sebep silinmiş kaynak dosyaydı. Yanlış teşhis koyan bir uyarı hiç
       // uyarmamaktan pahalıdır — bu satır iki ajanı birden yanılttı (09.08) ve arıza R2 ayarında
@@ -104,7 +104,8 @@ export async function seedSiteImages(db: Db): Promise<void> {
       console.log(`  ⚠ ${s.slot} — ${sebep}; slot boş bırakıldı`);
       continue;
     }
-    await images.put(s.slot, key);
+    // `put`un yaptığı upsert, damgası hariç: `put` sürümü "şimdi" yazar, sürüm künyeden gelmeli (`shared.ts`).
+    await images.upsert({ slot: s.slot, ...gorsel }, 'slot');
     yazilan += 1;
     console.log(`  ✓ ${s.slot} — ${s.not}`);
   }

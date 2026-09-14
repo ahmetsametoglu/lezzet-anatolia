@@ -5,7 +5,7 @@ import type { CategoryImageService, CategoryService, ProductFamilyService, Produ
 import { PRODUCT_GALLERY_MAX, hasAllLocales } from '@lezzet/types';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus, ProductStorageType } from '@lezzet/types';
 import { ambalajAlanlari, olcuHali } from './packing';
-import { NOW, r2Keys, uploadImageFromUrl } from './shared';
+import { r2Keys, uploadImageFromUrl } from './shared';
 import { teklifSkulari } from './supplier-prices';
 import { enAz, type Katman } from './tier';
 
@@ -674,19 +674,26 @@ export async function seedLezzaProducts(
 
     // Beş fotoğraf: ilki kapak (`image_key`), kalan dördü havuz (`category_image` — kart kareyi
     // güne göre oradan seçer). Yükleme başarısızsa (R2 ayarsız) o kare atlanır, seed durmaz.
+    // Sürüm ve ölçü görselle birlikte yazılır (künyeden — `shared.ts`). Havuz sırası servisin `add`i
+    // gibi: yazılan kareler 0'dan ardışık.
+    let havuzSirasi = 0;
     for (const [n, dosya] of (KATEGORI_GORSELLERI[c.key] ?? []).entries()) {
       const url = gorselUrl.get(dosya);
       if (!url) {
         console.log(`  ⚠ ${c.key} — "${dosya}" katalogda yok; kare atlandı`);
         continue;
       }
-      const key = await uploadImageFromUrl(
+      const gorsel = await uploadImageFromUrl(
         url,
         n === 0 ? r2Keys.categoryImage(created.slug, dosya) : r2Keys.categoryGalleryImage(created.slug, `${n + 1}`, dosya),
       );
-      if (!key) continue;
-      if (n === 0) await categories.setImageKey(created.id, key);
-      else await categoryImages.add(created.id, key);
+      if (!gorsel) continue;
+      if (n === 0) {
+        await categories.update({ id: created.id, ...gorsel });
+      } else {
+        await categoryImages.insert({ categoryId: created.id, sortOrder: havuzSirasi, ...gorsel });
+        havuzSirasi += 1;
+      }
     }
   }
 
@@ -836,7 +843,7 @@ export async function seedLezzaProducts(
 
     // Kapak GERÇEK görselden; R2 ayarsızsa null döner ve kayıt görselsiz oluşur (graceful).
     const kapakUrl = kapaksiz ? null : p.imageUrls[0];
-    const imageKey = kapakUrl ? await uploadImageFromUrl(kapakUrl, r2Keys.productImage(p.slug, kapakUrl.split('/').pop() || 'cover.webp')) : null;
+    const kapak = kapakUrl ? await uploadImageFromUrl(kapakUrl, r2Keys.productImage(p.slug, kapakUrl.split('/').pop() || 'cover.webp')) : null;
 
     // ── YAYINA HAZIR MI (05.36) ─────────────────────────────────────────────────────────────────
     // Ölçüt `hasAllLocales` — `has_all_locales(jsonb)` kısıtının TS karşılığı, elle yeniden
@@ -853,8 +860,8 @@ export async function seedLezzaProducts(
       name,
       description: aciklama,
       categoryId: catId.get(p.category ?? '') ?? null,
-      imageKey,
-      imageUpdatedAt: imageKey ? NOW : null,
+      // Anahtar + sürüm + ölçü birlikte (künyeden — `shared.ts`); kapaksız üründe alanlar yazılmaz.
+      ...kapak,
       allergens: beyanEksik ? [] : alerjenler,
       // İz: nadir alerjenler buradan dolaşır (künyesi `NADIR_IZLER`'de). Ürünün ZATEN içerdiği bir
       // alerjen ize yazılmaz — "içerir" demişken "bulunabilir" demek, aynı şeyi iki kez ve daha
@@ -970,9 +977,9 @@ export async function seedLezzaProducts(
     // Sabit `@lezzet/types`'tan geliyor, burada yeniden yazılmıyor: ikinci bir sayı, bir gün
     // formunkinden ayrılırdı.
     for (const [n, url] of p.imageUrls.slice(1, 1 + PRODUCT_GALLERY_MAX).entries()) {
-      const key = await uploadImageFromUrl(url, r2Keys.productImage(`${p.slug}-${n + 2}`, url.split('/').pop() || 'g.webp'));
-      if (!key) continue;
-      await images.insert({ productId: product.id, imageKey: key, sortOrder: n, imageUpdatedAt: NOW, imageFocalX: 50, imageFocalY: 50, imageZoom: 100 });
+      const gorsel = await uploadImageFromUrl(url, r2Keys.productImage(`${p.slug}-${n + 2}`, url.split('/').pop() || 'g.webp'));
+      if (!gorsel) continue;
+      await images.insert({ productId: product.id, sortOrder: n, ...gorsel, imageFocalX: 50, imageFocalY: 50, imageZoom: 100 });
       photos += 1;
     }
     urunIdBySlug.set(p.slug, product.id);

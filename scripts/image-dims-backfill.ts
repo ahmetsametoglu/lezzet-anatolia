@@ -7,10 +7,14 @@
  * bulur, ölçüyü CDN'den sorar (`/cdn-cgi/image/format=json/…` görselin en-boyunu döndürür — sunucuda
  * görsel çözücü YOK, bilinçli) ve yazar. Tekrar koşmak güvenli: yalnız boş satırlara dokunur.
  *
- * Seed de aynı fonksiyonu çağırır (`scripts/seed/shared.ts`): tazelenen veritabanı ölçüsüz doğmaz.
+ * **Seed bunu ÇAĞIRMAZ (14.09).** Eskiden her tazelemede iki kez çağırıyordu; sürüm damgası da her
+ * tazelemede yenilendiği için her ölçü sorusu CDN'de YENİ bir dönüşümdü — ücretsiz kotayı bitiren iki
+ * kaynaktan biri buydu. Her soru bir dönüşüm: kotada yer varken elle koşulur, ardından
+ * `pnpm images:manifest` ölçüyü görsel künyesine sabitler ve seed onu bir daha sormaz.
  */
 import { serviceDb } from '@lezzet/database';
 import { cdnImageUrl } from '@lezzet/storage';
+import { IMAGE_TABLES } from './seed/image-manifest';
 
 const load = (process as { loadEnvFile?: (path: string) => void }).loadEnvFile;
 try {
@@ -18,9 +22,6 @@ try {
 } catch {
   // Ortamdan gelmiş olabilir; eksikse `serviceDb` adıyla söyler.
 }
-
-/** Görsel taşıyan tablolar — kolon adları hepsinde aynı (`ImageMetaSchema`). */
-const TABLES = ['category', 'category_image', 'collection', 'product', 'product_image', 'bundle', 'recipe', 'site_image'] as const;
 
 interface Row {
   id: string;
@@ -37,11 +38,11 @@ async function olc(key: string, version: string | null): Promise<{ width: number
   return meta.width && meta.height ? { width: meta.width, height: meta.height } : null;
 }
 
-export async function backfillImageDimensions(): Promise<{ written: number; skipped: number }> {
+async function backfillImageDimensions(): Promise<{ written: number; skipped: number }> {
   const db = serviceDb();
   let written = 0;
   let skipped = 0;
-  for (const table of TABLES) {
+  for (const table of IMAGE_TABLES) {
     const { data, error } = await db.from(table).select('id,image_key,image_updated_at').is('image_width', null).not('image_key', 'is', null);
     if (error) throw new Error(`${table}: ${error.message}`);
     for (const row of (data ?? []) as Row[]) {
@@ -58,13 +59,11 @@ export async function backfillImageDimensions(): Promise<{ written: number; skip
   return { written, skipped };
 }
 
-if (process.argv[1]?.endsWith('image-dims-backfill.ts')) {
-  backfillImageDimensions()
-    .then(({ written, skipped }) => {
-      console.log(`görsel ölçüsü: ${written} satır yazıldı, ${skipped} ölçülemedi (CDN yok ya da dosya çözülemedi)`);
-    })
-    .catch((err: unknown) => {
-      console.error(err instanceof Error ? err.message : String(err));
-      process.exit(1);
-    });
-}
+backfillImageDimensions()
+  .then(({ written, skipped }) => {
+    console.log(`görsel ölçüsü: ${written} satır yazıldı, ${skipped} ölçülemedi (CDN yok ya da dosya çözülemedi)`);
+  })
+  .catch((err: unknown) => {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  });
