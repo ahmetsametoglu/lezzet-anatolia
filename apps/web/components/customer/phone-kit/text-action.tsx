@@ -11,8 +11,9 @@ import { Link } from '@/i18n/navigation';
   (`edges="down"`, native `compactEdges`): sepet satırında "kaldır"ın hemen üstünde sayaç duruyor ve iki etek
   çakışınca "+"ya dokunmak satırı siliyordu (native 20.08).
 
-  Eylem iki türlü, biri verilir: `onClick` (sayfadaki iş) ya da `href` (başka sayfaya — `<a>` olarak çizilir ki
-  tarayıcı onu bağ olarak okusun).
+  Eylem üç türlü, biri verilir: `onClick` (sayfadaki iş) · `href` (başka sayfaya — `<a>` olarak çizilir ki tarayıcı onu
+  bağ olarak okusun) · `externalHref` (sitenin DIŞINA — kargo takibi; yeni sekmede açılır, `rel="noopener"` şart:
+  `_blank` ile açılan sekme `window.opener` üzerinden bu sayfaya erişebilir).
 */
 
 interface TextActionProps {
@@ -20,6 +21,8 @@ interface TextActionProps {
   label: string;
   onClick?: () => void;
   href?: ComponentProps<typeof Link>['href'];
+  /** Sitenin dışındaki adres (taşıyıcının takip sayfası) — yeni sekmede açılır. */
+  externalHref?: string;
   tone?: 'olive' | 'terracotta';
   /** Görünen metinden AYRI ekran okuyucu adı — "kaldır" tek başına hangi satırı söylemez. */
   ariaLabel?: string;
@@ -31,12 +34,19 @@ const EDGES: Record<NonNullable<TextActionProps['edges']>, string> = {
   down: 'after:-inset-x-1 after:top-0 after:-bottom-6',
 };
 
-export function TextAction({ label, onClick, href, tone = 'olive', ariaLabel, edges = 'all' }: TextActionProps) {
+export function TextAction({ label, onClick, href, externalHref, tone = 'olive', ariaLabel, edges = 'all' }: TextActionProps) {
   const className = [
     "relative cursor-pointer font-sans text-control transition-opacity after:absolute after:content-[''] hover:opacity-70 active:opacity-50",
     EDGES[edges],
     tone === 'olive' ? 'text-olive' : 'text-terracotta',
   ].join(' ');
+  if (externalHref !== undefined) {
+    return (
+      <a href={externalHref} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={className}>
+        {label}
+      </a>
+    );
+  }
   if (href !== undefined) {
     return (
       <Link href={href} aria-label={ariaLabel} className={className}>

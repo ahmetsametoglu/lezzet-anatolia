@@ -1,7 +1,7 @@
 'use client';
 
 import type { OrderTimelineStep } from '@lezzet/domain-core';
-import { formatDeliveryDate, formatOrderDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
+import { formatDeliveryDate, formatPrice, formatShortDate, formatTime } from '@/lib/storefront/format';
 import { buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { statusPillClass } from '@/components/customer/ui/badge';
@@ -11,11 +11,11 @@ import type { CustomerOrderDetail, CustomerOrderDetailLine } from '@/lib/order/c
 import type { DetailViewProps } from '../detail-types';
 
 /**
- * Sipariş detayının blokları (tasarım: `Musteri - Siparis Detay.dc.html`).
+ * Sipariş detayının MASAÜSTÜ blokları (tasarım: `Musteri - Siparis Detay.dc.html`).
  *
- * Masaüstü ve mobil AYNI parçaları kullanır ama **aynı düzeni kullanmaz**: tasarımda mobil, dar
- * masaüstü değil — üstte zeytin zeminli durum kartı, yatay mini çizgi, toplam kalemler kartının
- * içinde. Bu yüzden parça bazında ortak, diziliş bazında ayrı.
+ * Telefon görünümü 14.09'dan beri native detay ekranının kitini çiziyor (`detail.mobile.tsx`); buradan yalnız iki
+ * görünümün ortak kurallarını okur — damga (`formatStamp`), taşıyıcı adı (`carrierLabel`), ödeme hâli
+ * (`paymentKeyOf`). Eski telefon blokları (durum kahramanı, yatay mini çizgi, kargo kartı) o gün kalktı.
  */
 
 /**
@@ -128,7 +128,7 @@ function ClosedStateCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
  * bugün aynı değeri üretiyordu, ama biçim kararı (ör. `fr-FR` yerine `fr-BE`) tek yerde
  * değiştirilebilmeli — iki harita, birinin öğrenip ötekinin öğrenmediği bir karar demek.
  */
-function formatStamp(iso: string, locale: DetailViewProps['locale']): string {
+export function formatStamp(iso: string, locale: DetailViewProps['locale']): string {
   return `${formatShortDate(iso, locale)}, ${formatTime(iso, locale)}`;
 }
 
@@ -248,7 +248,7 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
  * İki ayrı alana bölmek ("enum ya da isim") derleyicinin doğrulayamayacağı bir sözleşme kurardı —
  * "tam olarak biri dolu" tipte yazılamaz, ve bir gün ikisi de boş kalırdı.
  */
-function carrierLabel(t: DetailViewProps['t'], name: string | null): string {
+export function carrierLabel(t: DetailViewProps['t'], name: string | null): string {
   if (!name) return '';
   return t.carrier[name as keyof DetailViewProps['t']['carrier']] ?? name;
 }
@@ -316,34 +316,6 @@ function TrackingButton({ t, shipment }: { t: DetailViewProps['t']; shipment: Cu
 }
 
 /**
- * **Kargo künyesi — MOBİLİN kendi bloğu** (08.5).
- *
- * Masaüstünde bu bilgi Teslimat kartının içinde yaşıyor (tasarım: *"📦 Kargo ile — Colissimo /
- * Takip no: …"*), ama **mobilde Teslimat kartı YOK**: teslimat bilgisi durum kahramanının tek
- * satırına toplanmış (gün — adres). Tasarımın mobil bölümü kargolu siparişi hiç çizmemiş; yalnız
- * rota örneği var (`Musteri - Siparis Detay.dc.html`).
- *
- * Boşluğu doldurmamak, mobil web müşterisinin takip numarasını HİÇ görememesi demekti — ve müşteri
- * kitlesinin çoğunun bulunduğu yüzey orası. İçerik masaüstüyle birebir aynı, yalnız kabuğu kendi:
- * ikisini ayrı ayrı yazmak, bir gün taşıyıcı adının bir ekranda değişip ötekinde kalması olurdu.
- * Sapma `design/BACKLOG.md`'ye yazıldı.
- */
-export function ShipmentCard({ t, order, title }: Pick<DetailViewProps, 't' | 'order'> & { title: string }) {
-  const shipment = order.shipment;
-  if (!shipment) return null;
-
-  return (
-    <Panel title={title}>
-      <span className="font-sans text-body-sm leading-relaxed text-body">
-        {t.shippingLine} — {carrierLabel(t, shipment.carrierName)}
-        <TrackingLines t={t} shipment={shipment} />
-      </span>
-      <TrackingButton t={t} shipment={shipment} />
-    </Panel>
-  );
-}
-
-/**
  * Tutar + ödeme. Ödeme bir SATIR değil **hap** (tasarım) ve emojiyle geliyor; hâller kapalı liste.
  * Eksik kalem varsa altında iade notu — para nerede kaldı sorusunu ekran cevaplıyor.
  */
@@ -387,19 +359,23 @@ export function SummaryCard({ t, locale, order, title }: Pick<DetailViewProps, '
 }
 
 /**
- * Ödeme hâli — tasarımın beş hapı. Sıra ANLAMLI: iade her şeyi ezer (para geri döndüyse "kapıda
- * ödenecek" demek yanlış olur), vade yöntemden önce gelir (vadeli sipariş de kapıda kapanabilir).
+ * Ödeme hâli — tasarımın beş hapı; masaüstü hapı ve telefonun özet satırı AYNI anahtardan okur (14.09). Sıra ANLAMLI:
+ * iade her şeyi ezer (para geri döndüyse "kapıda ödenecek" demek yanlış olur), vade yöntemden önce gelir (vadeli
+ * sipariş de kapıda kapanabilir). Native'in `paymentKey`i aynı sırayı izliyor.
  */
+export function paymentKeyOf(
+  order: Pick<CustomerOrderDetail, 'paymentStatus' | 'onAccount' | 'paymentMethod'>,
+): 'refunded' | 'credit' | 'online' | 'transfer' | 'door' {
+  if (order.paymentStatus === 'refunded') return 'refunded';
+  if (order.onAccount) return 'credit';
+  if (order.paymentMethod === 'online') return order.paymentStatus === 'paid' ? 'online' : 'transfer';
+  if (order.paymentMethod === 'bank_transfer') return 'transfer';
+  return 'door';
+}
+
+/** Ödeme hapı — anahtar `paymentKeyOf`tan, ton hâlin kendisinden. */
 function PaymentPill({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
-  const key = order.paymentStatus === 'refunded'
-    ? 'refunded'
-    : order.onAccount
-      ? 'credit'
-      : order.paymentMethod === 'online'
-        ? order.paymentStatus === 'paid' ? 'online' : 'transfer'
-        : order.paymentMethod === 'bank_transfer'
-          ? 'transfer'
-          : 'door';
+  const key = paymentKeyOf(order);
 
   const tone: Record<typeof key, string> = {
     online: 'bg-olive-bg text-olive',
@@ -464,58 +440,5 @@ export function FeedbackInviteCard({
         {t.feedback.cta}
       </Link>
     </section>
-  );
-}
-
-/**
- * Mobilin zaman çizgisi — tasarımda **yatay** dört adım, tek satırda (dikey çizginin dar ekrandaki
- * karşılığı değil, ayrı bir çizim). Damga yazılmaz: dört etiket bir satıra ancak böyle sığıyor ve
- * bildirimden gelen müşterinin sorusu "neredeyim", "ne zaman"dan önce geliyor.
- */
-export function TimelineStrip({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
-  if (!order.timeline) return <ClosedStateCard t={t} order={order} />;
-
-  return (
-    <div className="flex justify-between rounded-[16px] border border-sand-200 bg-card p-3.5">
-      {order.timeline.map((step) => (
-        <span
-          key={step.milestone}
-          className={[
-            'flex flex-col items-center gap-1 font-sans text-micro leading-tight',
-            step.state === 'pending' ? 'text-sand-600' : 'text-olive',
-            step.state === 'current' ? 'font-bold' : '',
-          ].join(' ')}
-        >
-          {step.state === 'done' ? (
-            <Icon name="check" size={13} strokeWidth={2.4} />
-          ) : (
-            <span aria-hidden="true" className={['size-2.5 rounded-full', step.state === 'current' ? 'bg-current' : 'border-[1.5px] border-current'].join(' ')} />
-          )}
-          {t.milestone[step.milestone]}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Mobilin durum kahramanı — zeytin zeminli kart (tasarım): solda durum, sağda tarih, altında
- * "bugün kapınıza geliyor — adres". Bildirimden gelen müşteri ilk bakışta *nerede olduğunu* görür;
- * masaüstünde bu bilgi çizgide ve teslimat kartında dağınık durur, dar ekranda tek yere toplanıyor.
- */
-export function StatusHero({ listT, locale, order }: Pick<DetailViewProps, 'listT' | 'locale' | 'order'>) {
-  const day = order.deliveryDate ? formatDeliveryDate(order.deliveryDate, locale) : null;
-  const city = order.address ? [order.address.line1, order.address.city].filter(Boolean).join(', ') : null;
-
-  return (
-    <div className="flex flex-col gap-1 rounded-[16px] bg-olive-bg px-4 py-3.5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="font-sans text-body-sm font-bold leading-tight text-olive">{listT.status[order.status]}</span>
-        <span className="font-sans text-micro leading-tight text-body">{formatOrderDate(order.createdAt, locale, true)}</span>
-      </div>
-      {(day || city) && (
-        <span className="font-sans text-note leading-relaxed text-ink">{[day, city].filter(Boolean).join(' — ')}</span>
-      )}
-    </div>
   );
 }

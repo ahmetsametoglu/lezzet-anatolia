@@ -2,12 +2,14 @@ import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
+import ordersMessages from '@lezzet/i18n/customer/orders';
 import { readOrderFeedbackInvite } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getCustomerOrderDetail } from '@/lib/order/customer-orders';
 import { orderIdOrNull } from '@/lib/order/order-id';
+import { OrderStatusTag } from '@/components/customer/phone-kit/order-status-tag';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
@@ -27,7 +29,8 @@ import listMessages from '../messages.json';
  * okuyor. Segment adını değiştirmek `routing.ts`'teki üç dilli yolu da oynatırdı; kazanç yok.
  *
  * **Durum metinleri LİSTEDEN geliyor** (`listMessages`): rozet aynı altı hâli yazıyor ve iki mesaj
- * dosyasında iki "Teslim edildi" tutmak, bir gün ayrışan iki çeviri demekti.
+ * dosyasında iki "Teslim edildi" tutmak, bir gün ayrışan iki çeviri demekti. Telefonun başlık rozeti
+ * native'in sözlüğünden (`@lezzet/i18n/customer/orders`) — telefon görünümünün bütün metni oradan.
  */
 interface OrderDetailPageProps {
   params: Promise<{ locale: string; reference: string }>;
@@ -64,10 +67,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       accountChrome={{
         back: { label: t.back, href: '/orders' },
         title: order.referenceNo ?? '—',
-        // Mobilde düğme başlıkta DEĞİL, sayfanın altında (tasarım) — sağ uç boş kalır ve başlık
-        // ortada durur. Masaüstünde tasarım onu başlığın sağ ucuna koyuyor.
+        // Masaüstünde tekrar sipariş başlığın sağ ucunda (tasarım). Telefonda sağ uçta native'in durum rozeti; tekrar
+        // sipariş sayfanın altında, tam genişlikte.
         right:
-          device === 'mobile' ? undefined : (
+          device === 'mobile' ? (
+            <OrderStatusTag status={order.status} label={ordersMessages[locale as Locale].status[order.status]} />
+          ) : (
             <ReorderButton locale={locale as Locale} orderId={order.id} />
           ),
       }}
