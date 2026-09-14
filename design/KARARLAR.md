@@ -2824,9 +2824,26 @@ hesap sözlüğündeki kopya (`addressForm`) kalktı.
 - **Öneri listesi MENÜ olarak açılır — v1'den bilinçli sapma (14.09, kullanıcı isteği):** *"…bu liste
   diyaloğun yüksekliğini arttırıyor. Bunun bu şekilde olmaması lazım. Açılan kısım bir popup menü gibi
   açılmalı. Ve diyalog formunun üzerinde gerçekleşmeli."* v1 listeyi pencerenin akışında çiziyor;
-  masaüstünde artık arama alanının altında formun ÜSTÜNE açılıyor (`SuggestionList` · `floating`, kitin
-  menü gölgesi), satırlar v1'in aynı, kaynak künyesi menünün içinde. Dışarı basınca, Escape'le (pencere
-  açık kalır) ya da odak arama kutusundan çıkınca kapanır. Mobil web çekmecesi akıştaki listeyle kaldı.
+  masaüstünde artık arama alanının altında formun ÜSTÜNE açılıyor (`SuggestionList` · `anchorRef`, kitin
+  menü gölgesi), satırlar v1'in aynı, kaynak künyesi menünün içinde. Menü ekrana sabit — pencerenin
+  kaydırma kutusu onu kesmez; dört buçuk satır görünür, içi kayar (aynı gün: *"dört falan… aşağı da
+  kaydırılabilir. Bir popup olması lazım."*). Dışarı basınca, Escape'le (pencere açık kalır) ya da odak
+  arama kutusundan çıkınca kapanır. Mobil web çekmecesi akıştaki listeyle kaldı.
+
+## Adres önerisi yalnız KAPI düzeyinde (14.09, kullanıcı kararı)
+
+Kullanıcı: *"Sadece kapı numarası olanlar gelsin, çünkü biz kapı düzeyinde bir teslimat yapmak
+zorundayız."* Öneri listesi yalnız kapı numaralı adres getirir (FR BAN `type=housenumber`; DE Google
+önerisinden sokak türü `route` çıktı). Önce sokak, mevki ve belediye önerisi seçilince form "Adres
+doğrulandı" diyordu; ödeme ekranı, sevkiyat ve kurye ise aynı adrese "kapı doğrulanmadı" diyordu.
+Ölçüldü (14.09, BAN'a süzgeçle sorularak): numarasız sokak ve yalnız posta kodu 0 sonuç; "192c rue du
+Maréchal Foch" yalnız gerçek kapıyı (67380 Lingolsheim) döndürüyor.
+
+- **Numarasız yazı "bulamadık" DEĞİLDİR:** sokak var, eksik olan numara — kutu "Kapı numarasını da
+  yazın" der; alan etiketi "Sokak ve kapı numarası".
+- **Elle giriş açık kalır:** numarası servis kaydında olmayan kapı (yeni yapı, bazı `bis/ter`) elle
+  girilir; defter reddetmez (10.08), ödeme ekranı "kapı doğrulanamadı" deyip devam ettirir.
+- **Native uygulamanın önerisi henüz süzgeçsiz** — mobil şeride not bırakıldı.
 
 ## Posta kodu yalnız başlıktaki haptan sorulur — ülkesiyle (14.09, kullanıcı kararı)
 
