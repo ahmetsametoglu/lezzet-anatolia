@@ -7,8 +7,9 @@ Yöneticinin şirketin parasını tek mantıkla izlediği yer: para bir **hesapt
 ## 2. İçerik envanteri — ne var, neden
 
 - **Hesap listesi + bakiyeler** — her hesabın adı, tipi (nakit/banka/ödeme sağlayıcı) ve güncel bakiyesi; bakiye hareketlerden hesaplanır, elle yazılmaz. "Param nerede, ne kadar" tek bakışta
-- **Para hareketleri listesi** — her satır: hesap, yön (giriş/çıkış), tutar, tip (sipariş ödemesi / iade / stok alımı / gider / transfer / sermaye / sair), kategori (kira, akaryakıt, maaş, reklam…), tarih, açıklama; bağlıysa sipariş veya alım referansı. Filtre/arama ihtiyacı vardır (hesap, tip, tarih aralığı)
-- **Elle hareket girişi** — tip + kategori + hesap + tutar + tarih + açıklama; **reklam giderinde kampanya etiketi** girilir — analitik tarafında kampanyanın cirosu ve gideri yan yana konur (gerçek ROI), etiket bu köprünün anahtarıdır
+- **Para hareketleri listesi** — her satır: hesap, yön (giriş/çıkış), tutar, tip (sipariş ödemesi / iade / stok alımı / gider / transfer / sermaye / sair), tür (kira, akaryakıt, maaş, reklam… — tek), cari (kime ödendi / kimden geldi), serbest etiketler, tarih, açıklama; bağlıysa sipariş, alım ya da belge referansı. Süzgeç: hesap (bakiye kartının kendisi), tip, tarih aralığı. Satıra dokununca ayrıntısı açılır: neyle izah edildiği, sınıflandırması, geri alma
+- **Belgeler** — fatura, fiş, dekont: tutarı, KDV'si, **açık kalanı** (ödenmemiş fatura bir borçtur) ve hangi hareketlerle ödendiği. Hareketlerin yanında ayrı bir liste; "yalnız açık" süzgeci ödenmeyi bekleyenleri gösterir
+- **Elle hareket girişi** — tip + tür + cari + etiketler + hesap + tutar + tarih + açıklama; **reklam giderinde kampanya etiketi** girilir — analitik tarafında kampanyanın cirosu ve gideri yan yana konur (gerçek ROI), etiket bu köprünün anahtarıdır
 - **Transfer** — hesaplar arası taşıma (nakit→banka, Stripe→banka aktarımı): tek işlem, iki hesapta simetrik hareket; kullanıcı "gelir/gider" diye düşünmek zorunda kalmaz
 - **Banka Excel import** — banka dosyası yüklenir; **ilk seferde AI dosyanın sütun düzenini çıkarır** (hangi sütun tarih, hangisi tutar/açıklama/yön), kullanıcı onaylar, şablon o hesaba kaydedilir; sonraki importlar otomatik okunur. Satırlar hesabın hareketleri olarak girer
 - **Satır eşleştirme (öneri + onay)** — import edilen satırlar sipariş ödemesi / gider / transfer adaylarıyla eşleştirilir: sistem önerir (tutar/tarih/açıklama benzerliği), **kullanıcı onaylar veya düzeltir** — tam otomatik değil. Vadeli (hesaba) B2B siparişin havalesi de burada eşleşip siparişi "ödendi" yapar
@@ -19,7 +20,8 @@ Yöneticinin şirketin parasını tek mantıkla izlediği yer: para bir **hesapt
 - Elle hareket girme (gider/gelir/sermaye/sair; reklamda kampanya etiketiyle)
 - Transfer kaydetme (hesaptan hesaba)
 - Banka dosyası yükleme → AI şablon çıkarımını onaylama (ilk sefer) → satır önerilerini onaylama/düzeltme/atlamalı geçme
-- Hareketi bir siparişe/alıma elle bağlama (öneri yanlışsa)
+- Hareketi bir siparişe/alıma/belgeye elle bağlama (öneri yanlışsa)
+- Belgeye ödeme bağlama — belgenin tarafından: yönü tutan, kalanı olan hareketler önerilir
 - Hareket düzeltme/silme (elle girilenlerde); import satırı silinmez, eşleşmesi değişir
 - Hesap ekleme/pasifleştirme (nadir; kurulum işi)
 

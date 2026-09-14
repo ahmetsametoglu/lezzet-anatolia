@@ -492,15 +492,22 @@ penceresinde "Düzenle"nin satır içindeki yeri, mobil webde çekmece içinde �
 çiziminden SONRA doğdu (kullanıcı kararları 13.09: her hareket türüyle, belgesiyle ya da bir işe
 bağıyla izahlı; ortağın kaydı ortak cari hesabı; fatura gelince borç doğar) ve çizimde karşılıkları
 yok. Kitin gramerinde yazıldılar: "+ Belge" diyaloğu (elle hareket penceresinin kalıbı; cari ·
-tedarikçi · tür · etiket menüleri), "Sözlük" penceresi (Türler · Cariler · Etiketler sekmeleri), sağ
-sütunda banka kuyruğunun üstüne "Açık belgeler" kart listesi (kuyruk kartının kalıbı), defter
-satırında tür · cari · etiket menüleri (muhasebeci deseni — `design/KARARLAR.md`), belge bağı çipi,
+tedarikçi · tür · etiket menüleri), "Sözlük" penceresi (Türler · Cariler · Etiketler sekmeleri),
+defter satırının orta hücresinde tür · cari · etiket menüleri (muhasebeci deseni — `design/KARARLAR.md`),
 "Eşleşmeyi geri al" ve ortak carisinde bakiye altı cümle. Çizim yapılırsa bakılacaklar: belge
-panelinin sağ sütundaki ağırlığı (kuyrukla yer paylaşıyor), belge kartında dosya ikonu, satır
-araçlarının yoğunluğu (12.17'de satır tıklanınca sağda ayrıntı paneli), tür ve etiket çiplerinin
-ayrışması (ikisi de olive).
+kartında dosya ikonu, tür ve etiket çiplerinin ayrışması (ikisi de olive).
+**Eki (12.17 · ekranın düzeni):** çizimin tek listeli tezgâhı kullanıcı istekleriyle yeniden dizildi
+ve yeni düzenin çizimde karşılığı yok: bakiye şeridi türe göre gruplu ve kartı süzgeç (Toplam en
+solda, kapalılar en sonda, taşarsa yatay kayar); süzgeç satırında "Hareketler | Belgeler" sekmesi,
+"+ tip", tarih aralığı çipi, izah rozeti ve başlıktaki beş düğmenin yerine "Eylemler" menüsü; satır
+tıklanınca sağ sütunda hareketin ya da belgenin ayrıntı paneli (seçim yokken banka kuyruğu);
+eşleştirme penceresinin yerine tetikleyiciye bağlı seçici menü. Çizim yapılırsa bakılacaklar:
+şeridin grup başlıkları ve kapalı hesabın sönüklüğü, orta hücrenin dar bütçesinde kesilen adların
+okunurluğu (tür önce, cari iki kat hızlı daralır), ayrıntı panelinin bölümleri (Karşılığı ·
+Sınıflandırma · Etiketler · Ödemeler), seçici menüde önerinin hedef listesinden ayrışması, belge
+satırının açık kalan sütunu.
 **Eki (12.13 · 12.16):** eşleştirme kuyruğunun "Seç / Düzelt / Elle bağla" penceresi çizimde yalnız
-sipariş adaylarını gösteriyordu; artık bir HEDEF SEÇİCİ — öneriler üstte, altında yöne uyan bütün
+sipariş adaylarını gösteriyordu; artık bir HEDEF SEÇİCİ (12.17'den beri pencere değil, tetikleyiciye bağlı menü) — öneriler üstte, altında yöne uyan bütün
 hedefler bölüm bölüm (zaten yazılmış hareket · açık belge · mal kabul · transfer ucu · sipariş · iade
 · cari · başka hesap), arama kutusu, en altta "Türünü koy" (yöne uyan türler). Kartta "Gider"
 düğmesinin yerini "Türünü koy" menüsü aldı. Çizim yapılırsa bakılacaklar: bölümlerin sekme mi liste

@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { AccountService, MoneyMovementService } from './money.service';
+import { AccountService, MoneyDocumentService, MoneyMovementService } from './money.service';
 import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
 
@@ -15,6 +15,7 @@ const movements = new MoneyMovementService(db);
 
 const stamp = Date.now();
 const createdAccounts: string[] = [];
+const createdDocuments: string[] = [];
 let counter = 0;
 
 /** Test hesabı — hesap adı BENZERSİZDİR (unique index `lower(name)`), o yüzden her açılış sayaçlı. */
@@ -39,7 +40,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   // Hareket → hesap sırası `cleanup.ts`'te; her dosya kendi sırasını uydurursa biri yanlış olur.
-  await purgeTestData(db, { accountIds: createdAccounts });
+  await purgeTestData(db, { accountIds: createdAccounts, documentIds: createdDocuments });
 });
 
 describe('hesap', () => {
@@ -252,5 +253,25 @@ describe('para hareketi — euro↔cent sınırı', () => {
 
     expect((await accounts.balance(account.id)).balanceCents).toBe(7525);
     await purgeTestData(db, { accountIds: [account.id] });
+  });
+});
+
+describe('belge arşivi — tarih aralığı ve imleç (12.17)', () => {
+  it('aralık belge gününü süzer; sayfa en yeniden eskiye, imleç kaldığı yerden devam eder', async () => {
+    const documents = new MoneyDocumentService(db);
+    // Yerelde kimsenin yazmadığı bir ay: sayfa bütün belgeleri okur, aralığa yalnız bu testinkiler düşer.
+    const days = ['2003-03-02', '2003-03-05', '2003-03-09', '2003-03-12'];
+    for (const [i, issuedOn] of days.entries()) {
+      const document = await documents.insert({ kind: 'invoice', number: `ARSIV-${stamp}-${i}`, issuedOn, direction: 'out', amountCents: 1000 + i });
+      createdDocuments.push(document.id);
+    }
+
+    // 12'si aralığın dışında; ilk sayfa en yeni iki belge, imleç üçüncüyü getirir.
+    const first = await documents.page({ from: '2003-03-01', to: '2003-03-10', limit: 2 });
+    expect(first.rows.map((document) => document.issuedOn)).toEqual(['2003-03-09', '2003-03-05']);
+    expect(first.nextCursor).not.toBeNull();
+    const second = await documents.page({ from: '2003-03-01', to: '2003-03-10', limit: 2, cursor: first.nextCursor! });
+    expect(second.rows.map((document) => document.issuedOn)).toEqual(['2003-03-02']);
+    expect(second.nextCursor).toBeNull();
   });
 });

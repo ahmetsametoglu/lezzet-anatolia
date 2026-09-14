@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
 import { AnchoredMenu } from '@/components/operation/ui/anchored-menu';
 import { CalendarIcon } from '@/components/operation/ui/icons';
 import { FieldShell } from './field-shell';
@@ -220,13 +220,7 @@ interface DateRangeFieldProps {
   className?: string;
 }
 
-/**
- * Tarih aralığı seçici — iki ay yan yana + önayar sütunu (tasarım).
- *
- * SEÇİM İKİ TIKLAMA: ilki başlangıcı koyar, ikincisi bitişi. Aradaki gezinme aralığı ön izler.
- * İkinci tıklama başlangıçtan ÖNCEYE düşerse aralık ters kurulmaz — o gün yeni başlangıç olur;
- * "31'den 24'e" diye bir aralık, hiç geçerli olmayan bir kuraldır ve DB de reddeder.
- */
+/** Tarih aralığı seçici — form alanı. Açılır gövde `DateRangeMenu`de (süzgeç çipiyle ORTAK). */
 export function DateRangeField({
   label,
   from,
@@ -241,9 +235,53 @@ export function DateRangeField({
 }: DateRangeFieldProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
+  const text = from && to ? `${formatDay(from)} – ${formatDay(to)}` : from ? `${formatDay(from)} – …` : '';
+
+  return (
+    <FieldShell label={label} labelAside={labelAside} error={error} className={className}>
+      <Trigger
+        text={text}
+        placeholder={placeholder}
+        disabled={disabled}
+        triggerRef={triggerRef}
+        onClick={() => setOpen((o) => !o)}
+        onClear={from || to ? () => onChange('', '') : undefined}
+      />
+      <DateRangeMenu anchorRef={triggerRef} open={open} onClose={() => setOpen(false)} from={from} to={to} onChange={onChange} presets={presets} />
+    </FieldShell>
+  );
+}
+
+interface DateRangeMenuProps {
+  anchorRef: RefObject<HTMLElement | null>;
+  open: boolean;
+  onClose: () => void;
+  from: string;
+  to: string;
+  onChange: (from: string, to: string) => void;
+  presets?: boolean;
+}
+
+/**
+ * Tarih aralığı seçicinin AÇILIR GÖVDESİ — iki ay yan yana + önayar sütunu (tasarım) + seçim satırı.
+ * Form alanı (`DateRangeField`) ve süzgeç çipi (`DateRangeFilterChip`, 13.09 Para) aynı gövdeyi açar:
+ * takvim iki yerde çizilseydi iki seçici bir gün farklı davranırdı.
+ *
+ * SEÇİM İKİ TIKLAMA: ilki başlangıcı koyar, ikincisi bitişi. Aradaki gezinme aralığı ön izler.
+ * İkinci tıklama başlangıçtan ÖNCEYE düşerse aralık ters kurulmaz — o gün yeni başlangıç olur;
+ * "31'den 24'e" diye bir aralık, hiç geçerli olmayan bir kuraldır ve DB de reddeder.
+ */
+export function DateRangeMenu({ anchorRef, open, onClose, from, to, onChange, presets = true }: DateRangeMenuProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const today = new Date();
   const [view, setView] = useState(() => initialMonth(from, today));
+  // Açılışta seçili aralığın ayına dönülür — menü kapalıyken gezilen ay bir sonraki açılışa taşınmaz.
+  // Prop değişince durumu ayarlamanın React deseni: efekt değil, çizim sırasında karşılaştırma.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setView(initialMonth(from, today));
+  }
   const second = shiftMonth(view.year, view.month, 1);
   const activePreset = matchingPreset(from, to, today);
 
@@ -254,105 +292,90 @@ export function DateRangeField({
       return;
     }
     onChange(from, day);
-    setOpen(false);
+    onClose();
   };
 
-  const text = from && to ? `${formatDay(from)} – ${formatDay(to)}` : from ? `${formatDay(from)} – …` : '';
-
   return (
-    <FieldShell label={label} labelAside={labelAside} error={error} className={className}>
-      <Trigger
-        text={text}
-        placeholder={placeholder}
-        disabled={disabled}
-        triggerRef={triggerRef}
-        onClick={() => {
-          setView(initialMonth(from, today));
-          setOpen((o) => !o);
-        }}
-        onClear={from || to ? () => onChange('', '') : undefined}
-      />
-      {/* Genişlik ızgaradan TÜRETİLİR: 3 kenarlık + [130 önayar] + 24 dolgu + 2×208 + 18 ara.
-          Sabit sayı uydurmak, hücreleri esneten ya da ayı alta kaydıran bir kutu üretiyordu. */}
-      <AnchoredMenu anchorRef={triggerRef} open={open} onClose={() => setOpen(false)} width={presets ? 592 : 462}>
-        <div className="flex flex-wrap" onMouseLeave={() => setHovered(null)}>
-          {presets ? (
-            <div className="flex w-[130px] flex-none flex-col gap-0.5 self-stretch border-r border-ops-line bg-ops-subtle p-2.5">
-              {RANGE_PRESETS.map((preset) => {
-                const active = activePreset === preset.key;
-                return (
-                  <button
-                    key={preset.key}
-                    type="button"
-                    onClick={() => {
-                      const r = preset.range(today);
-                      onChange(r.from, r.to);
-                      setView(initialMonth(r.from, today));
-                      setOpen(false);
-                    }}
-                    className={`cursor-pointer rounded-ops-btn px-3 py-[7px] text-left font-ops-display text-ops-xs font-medium transition-colors ${
-                      active ? 'bg-ops-olive text-white' : 'text-ops-body hover:bg-ops-line-soft'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-              {/* "Özel…" bir önayar DEĞİL, hiçbirine uymayan seçimin adı — tıklanmaz, durum söyler. */}
-              <span
-                className={`rounded-ops-btn px-3 py-[7px] font-ops-display text-ops-xs font-medium ${
-                  activePreset === null && (from || to) ? 'bg-ops-olive-bg text-ops-olive-dark' : 'text-ops-faint'
-                }`}
-                title="Takvimden seçilen aralık"
-              >
-                Özel…
-              </span>
-            </div>
-          ) : null}
-
-          <div className="flex flex-1 flex-wrap gap-[18px] p-3">
-            <Calendar
-              year={view.year}
-              month={view.month}
-              from={from || null}
-              to={to || null}
-              hovered={hovered}
-              onHover={setHovered}
-              today={toDay(today)}
-              outsideDays={false}
-              onPrev={() => setView((v) => shiftMonth(v.year, v.month, -1))}
-              onPick={pick}
-            />
-            <Calendar
-              year={second.year}
-              month={second.month}
-              from={from || null}
-              to={to || null}
-              hovered={hovered}
-              onHover={setHovered}
-              today={toDay(today)}
-              outsideDays={false}
-              onNext={() => setView((v) => shiftMonth(v.year, v.month, 1))}
-              onPick={pick}
-            />
+    // Genişlik ızgaradan TÜRETİLİR: 3 kenarlık + [130 önayar] + 24 dolgu + 2×208 + 18 ara.
+    // Sabit sayı uydurmak, hücreleri esneten ya da ayı alta kaydıran bir kutu üretiyordu.
+    <AnchoredMenu anchorRef={anchorRef} open={open} onClose={onClose} width={presets ? 592 : 462}>
+      <div className="flex flex-wrap" onMouseLeave={() => setHovered(null)}>
+        {presets ? (
+          <div className="flex w-[130px] flex-none flex-col gap-0.5 self-stretch border-r border-ops-line bg-ops-subtle p-2.5">
+            {RANGE_PRESETS.map((preset) => {
+              const active = activePreset === preset.key;
+              return (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => {
+                    const r = preset.range(today);
+                    onChange(r.from, r.to);
+                    setView(initialMonth(r.from, today));
+                    onClose();
+                  }}
+                  className={`cursor-pointer rounded-ops-btn px-3 py-[7px] text-left font-ops-display text-ops-xs font-medium transition-colors ${
+                    active ? 'bg-ops-olive text-white' : 'text-ops-body hover:bg-ops-line-soft'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+            {/* "Özel…" bir önayar DEĞİL, hiçbirine uymayan seçimin adı — tıklanmaz, durum söyler. */}
+            <span
+              className={`rounded-ops-btn px-3 py-[7px] font-ops-display text-ops-xs font-medium ${
+                activePreset === null && (from || to) ? 'bg-ops-olive-bg text-ops-olive-dark' : 'text-ops-faint'
+              }`}
+              title="Takvimden seçilen aralık"
+            >
+              Özel…
+            </span>
           </div>
+        ) : null}
+
+        <div className="flex flex-1 flex-wrap gap-[18px] p-3">
+          <Calendar
+            year={view.year}
+            month={view.month}
+            from={from || null}
+            to={to || null}
+            hovered={hovered}
+            onHover={setHovered}
+            today={toDay(today)}
+            outsideDays={false}
+            onPrev={() => setView((v) => shiftMonth(v.year, v.month, -1))}
+            onPick={pick}
+          />
+          <Calendar
+            year={second.year}
+            month={second.month}
+            from={from || null}
+            to={to || null}
+            hovered={hovered}
+            onHover={setHovered}
+            today={toDay(today)}
+            outsideDays={false}
+            onNext={() => setView((v) => shiftMonth(v.year, v.month, 1))}
+            onPick={pick}
+          />
         </div>
-        {/* Seçim satırı: iki tıklamalık akışta "şimdi neredeyim" sorusunu yanıtlar. */}
-        <div className="border-t border-ops-line bg-ops-subtle px-3.5 py-2 font-ops-body text-ops-xs text-ops-muted">
-          {from && to ? (
-            <>
-              {/* Tarih metni GÖVDE yazı tipiyle (tasarımın alt yazısı da öyle): mono, sabit genişlikli
-                  boşluklarıyla "15  Tem  2026" gibi gerilmiş okunuyordu. Mono hizalanan sütunlar
-                  içindir, cümle içindeki tarih için değil. */}
-              Seçili: <span className="font-ops-body font-semibold text-ops-ink">{`${formatDay(from)} – ${formatDay(to)}`}</span>
-            </>
-          ) : from ? (
-            <>Bitiş gününü seçin — başlangıçtan önceki bir gün yeni başlangıç olur.</>
-          ) : (
-            <>Başlangıç gününü seçin ya da soldan bir önayar kullanın.</>
-          )}
-        </div>
-      </AnchoredMenu>
-    </FieldShell>
+      </div>
+      {/* Seçim satırı: iki tıklamalık akışta "şimdi neredeyim" sorusunu yanıtlar. */}
+      <div className="border-t border-ops-line bg-ops-subtle px-3.5 py-2 font-ops-body text-ops-xs text-ops-muted">
+        {from && to ? (
+          <>
+            {/* Tarih metni GÖVDE yazı tipiyle (tasarımın alt yazısı da öyle): mono, sabit genişlikli
+                boşluklarıyla "15  Tem  2026" gibi gerilmiş okunuyordu. Mono hizalanan sütunlar
+                içindir, cümle içindeki tarih için değil. */}
+            Seçili: <span className="font-ops-body font-semibold text-ops-ink">{`${formatDay(from)} – ${formatDay(to)}`}</span>
+          </>
+        ) : from ? (
+          <>Bitiş gününü seçin — başlangıçtan önceki bir gün yeni başlangıç olur.</>
+        ) : (
+          <>Başlangıç gününü seçin ya da soldan bir önayar kullanın.</>
+        )}
+      </div>
+    </AnchoredMenu>
   );
 }

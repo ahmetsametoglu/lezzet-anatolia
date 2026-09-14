@@ -68,6 +68,17 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
 };
 
 /**
+ * Bakiye şeridinin GRUP başlıkları (12.17 · kullanıcı isteği: "benzer şeyler bir arada; banka, kasa
+ * birbirinden ayrılsın; kapananlar en sonda") — çoğul, çünkü grubun adıdır, tek hesabın değil.
+ */
+export const ACCOUNT_GROUP_LABEL: Record<AccountType, string> = {
+  bank: 'Bankalar',
+  cash: 'Kasalar',
+  provider: 'Ödeme sağlayıcılar',
+  partner: 'Ortak carileri',
+};
+
+/**
  * Hesap rengi — kasa/banka/sağlayıcı bir bakışta ayrışsın diye.
  *
  * **Sağlayıcı `violet` DEĞİL `slate`** ve bu bir renk zevki değil, kural: `violet` bu yüzeyde
@@ -145,6 +156,20 @@ export const MATCH_EFFECT: Record<MatchKindView, string> = {
   counterparty: 'carinin satırı olur; varsayılan türü varsa tür de konur',
 };
 
+/** Hareketin kaynağı — sağ panelde "bu satır nereden geldi" (12.17). */
+export const MOVEMENT_SOURCE_LABEL = {
+  bank_import: 'ekstre satırı',
+  manual: 'elle yazıldı',
+  system: 'sistem yazdı',
+} as const;
+
+/** Belgenin hâli — açık kalanından türer (12.17): borç sürüyor, kapandı ya da fazla ödendi. */
+export const DOCUMENT_STATE_LABEL = {
+  open: 'açık',
+  settled: 'kapandı',
+  overpaid: 'fazla ödendi',
+} as const;
+
 /** Carinin türü (13.09) — seçicide ve sözlükte grup başlığı. */
 export const COUNTERPARTY_KIND_LABEL: Record<CounterpartyKind, string> = {
   institution: 'Kurum',
@@ -174,6 +199,9 @@ export const NOTES = {
     'Henüz hareket yok. İlk tahsilat, gider ya da banka dosyası girdiğinde liste burada dolmaya başlar.',
   allMatched: 'Eşleşme bekleyen banka satırı yok.',
   noOpenDocuments: 'Açık belge yok — girilen her fatura ve bordronun ödemesi bağlanmış.',
+  noLedgerMatch: 'Bu süzgeçlerle hareket yok — tarih aralığını genişletin ya da süzgeci kaldırın.',
+  noDocuments: 'Henüz belge yok. Fatura, fiş ya da bordro geldiğinde "Eylemler → Belge ekle" ile girilir; ödemesi sonra bağlanır.',
+  noDocumentMatch: 'Bu tarih aralığında belge yok.',
   noBankFile:
     'Banka dosyası yüklenmedi. Dosyayı yükleyince satırlar buraya düşer; sistem eşleşme önerir, kararı siz verirsiniz.',
 } as const;

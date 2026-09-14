@@ -9,7 +9,8 @@ import { one, oneOf, type RawParams } from '@/lib/url-params';
 // kendi sözleşmesi: *"Tek model → kasa/banka/Stripe aynı kavram; hesap yalnız bir filtre çipi"*
 // (`Operasyon - Para.dc.html`), sayfa dokümanı da aynı cümleyi kuruyor (`admin-para.md §6`:
 // "tek liste, hesap yalnız bir filtredir"). Bu yüzden varsayılan `all`; kasa ile bankanın ayrı
-// ekranı yok, ayrı sözlüğü de yok.
+// ekranı yok, ayrı sözlüğü de yok. Süzgeç 12.17'den beri bakiye şeridinin KARTIDIR (kullanıcı
+// isteği 13.09): kart hem bakiyeyi söyler hem daraltır — aynı hesabın adı iki yerde yazmaz.
 
 export const FINANCE_PATH = '/operations/finance';
 
@@ -19,7 +20,7 @@ export const ALL_ACCOUNTS = 'all';
 /**
  * Kuyruk daraltması.
  *  · `all`       → bütün hareketler
- *  · `unmatched` → banka ekstresiyle eşleşmemiş satırlar
+ *  · `unmatched` → izah bekleyen hareketler (13.09: ad paylaşılmış bağlantılar kırılmasın diye kaldı)
  *
  * `unmatched` bir süzgeçten fazlası: tasarım onu **iş kuyruğu** ilan ediyor (*"sağ üstteki
  * 'eşleşmemiş satır' sayacı iş kuyruğudur"*). Rozet tıklanınca buraya iner, yani sayı ile liste
@@ -29,39 +30,52 @@ const FINANCE_SCOPES = [ALL_ACCOUNTS, 'unmatched'] as const;
 export type FinanceScope = (typeof FINANCE_SCOPES)[number];
 
 /**
- * Tarih daraltması — HAZIR ARALIK, serbest tarih seçici değil.
- *
- * Tasarımın süzgeç barında "+ tarih" duruyor ama biçimini söylemiyor. Hazır aralığı seçtim çünkü bu
- * ekranın tarih sorusu bir rapor sorusu değil: operatör "geçen ay ne oldu"ya bakıyor, "12–19 Mart
- * arası"na değil (o soru Raporlar'ın, 12.6/12.7). Serbest aralık iki alan, iki doğrulama ve bir
- * takvim açardı; kazanç, bu ekranda kimsenin sormadığı bir kesinlik olurdu.
- *
- * Varsayılan `all` ve bu bilinçli: liste zaten en yeniden eskiye sonsuz kaydırıyor. Öntanımlı bir
- * pencere koysaydık, aradığı eski hareketi bulamayan operatör listede değil **süzgeçte** kaybolurdu.
+ * Ekranın iki listesi (12.17 · kullanıcı sorusu 13.09: "belgeleri nerede görüyorum?") — hareketler ve
+ * belgeler. Sekme adreste taşınır: "bu ayın belgeleri" bağlantısı paylaşılabilsin. Tarih süzgeci iki
+ * sekmede aynı anlamı taşır (hareketin değer günü · belgenin belge günü).
  */
-export const FINANCE_PERIODS = ['all', 'd7', 'd30', 'd90'] as const;
-export type FinancePeriod = (typeof FINANCE_PERIODS)[number];
-
-/** Gün karşılıkları — `all` penceresizdir, bu yüzden haritada yok. */
-const PERIOD_DAYS: Record<Exclude<FinancePeriod, 'all'>, number> = { d7: 7, d30: 30, d90: 90 };
+const FINANCE_TABS = ['movements', 'documents'] as const;
+export type FinanceTab = (typeof FINANCE_TABS)[number];
 
 export interface FinanceUrlState {
   /** Hesap kimliği ya da `all`. Bilinmeyen kimlik sayfada `all`'a düşer — bkz. `resolveAccount`. */
   acct: string;
+  tab: FinanceTab;
   type: MovementType | 'all';
-  period: FinancePeriod;
+  /**
+   * Tarih ARALIĞI (`YYYY-MM-DD`; boş = sınırsız) — 12.17'de hazır dört aralığın ("son 7/30/90 gün")
+   * yerini aldı: kullanıcı "tarih aralığında süzebilmeliyim" dedi ve "geçen ayın 5'i ile 20'si"
+   * sorulamıyordu. Önayarlar aralık seçicinin içinde durur (`DateRangeMenu`).
+   */
+  from: string;
+  to: string;
   scope: FinanceScope;
+  /** Belgeler sekmesinde yalnız AÇIK belgeler — ödenmemiş fatura, bize ödenecek dekont. */
+  open: boolean;
 }
 
-const DEFAULTS: FinanceUrlState = { acct: ALL_ACCOUNTS, type: 'all', period: 'all', scope: ALL_ACCOUNTS };
+const DEFAULTS: FinanceUrlState = { acct: ALL_ACCOUNTS, tab: 'movements', type: 'all', from: '', to: '', scope: ALL_ACCOUNTS, open: false };
+
+/** Adresteki gün — biçimi ve kendisi geçerliyse (`2026-13-40` düşer); değilse boş (sınırsız). */
+function dayOf(raw: RawParams[string]): string {
+  const value = one(raw).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) ? value : '';
+}
 
 /** URL → ekran durumu. Tanınmayan değer sessizce varsayılana düşer (bozuk bağlantı ekranı kırmaz). */
 export function parseFinanceUrl(params: RawParams): FinanceUrlState {
+  const from = dayOf(params.from);
+  const to = dayOf(params.to);
+  // Elle yazılmış TERS aralık çevrilir: "20'den 5'e" boş bir liste göstermez, kastedilen aralığı açar.
+  const [start, end] = from && to && from > to ? [to, from] : [from, to];
   return {
     acct: one(params.acct).trim() || DEFAULTS.acct,
+    tab: oneOf(params.tab, FINANCE_TABS, DEFAULTS.tab),
     type: oneOf(params.type, MovementTypeEnum.options, DEFAULTS.type),
-    period: oneOf(params.period, FINANCE_PERIODS, DEFAULTS.period),
+    from: start,
+    to: end,
     scope: oneOf(params.scope, FINANCE_SCOPES, DEFAULTS.scope),
+    open: one(params.open) === '1',
   };
 }
 
@@ -69,9 +83,12 @@ export function parseFinanceUrl(params: RawParams): FinanceUrlState {
 export function financeUrl(state: FinanceUrlState): string {
   const p = new URLSearchParams();
   if (state.acct !== DEFAULTS.acct) p.set('acct', state.acct);
+  if (state.tab !== DEFAULTS.tab) p.set('tab', state.tab);
   if (state.type !== DEFAULTS.type) p.set('type', state.type);
-  if (state.period !== DEFAULTS.period) p.set('period', state.period);
+  if (state.from) p.set('from', state.from);
+  if (state.to) p.set('to', state.to);
   if (state.scope !== DEFAULTS.scope) p.set('scope', state.scope);
+  if (state.open) p.set('open', '1');
   const qs = p.toString();
   return qs ? `${FINANCE_PATH}?${qs}` : FINANCE_PATH;
 }
@@ -80,30 +97,9 @@ export function financeUrl(state: FinanceUrlState): string {
  * Adresteki hesap kimliği GERÇEK bir hesap mı — değilse `all`.
  *
  * Kimlik URL'de taşındığı için elle düzenlenebiliyor, ve pasifleştirilmiş bir hesabın bağlantısı
- * kayıtlı kalabiliyor. Doğrulamasaydık ekran hiçbir çipin seçili görünmediği bir hâlde boş liste
+ * kayıtlı kalabiliyor. Doğrulamasaydık ekran hiçbir kartın seçili görünmediği bir hâlde boş liste
  * gösterirdi: operatör "hiç hareket yok" diye okur, oysa yalnız süzgeç geçersizdir.
  */
 export function resolveAccount(acct: string, accountIds: readonly string[]): string {
   return acct === ALL_ACCOUNTS || accountIds.includes(acct) ? acct : ALL_ACCOUNTS;
 }
-
-/**
- * Dönem → tarih penceresi. `all` pencere üretmez (`undefined`), yani servise hiç süzgeç geçilmez.
- *
- * `now` DIŞARIDAN gelir: fonksiyon saf kalsın diye (test edilebilirlik) ve sunucu ile istemcinin
- * ayrı `Date.now()` okuması hidrasyon uyuşmazlığı doğurmasın diye.
- */
-export function periodRange(period: FinancePeriod, now: Date): { from: string; to: string } | undefined {
-  if (period === 'all') return undefined;
-  const day = 86_400_000;
-  const end = now.getTime();
-  const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
-  return { from: iso(end - PERIOD_DAYS[period] * day), to: iso(end) };
-}
-
-export const PERIOD_LABEL: Record<FinancePeriod, string> = {
-  all: 'Tüm zamanlar',
-  d7: 'Son 7 gün',
-  d30: 'Son 30 gün',
-  d90: 'Son 90 gün',
-};

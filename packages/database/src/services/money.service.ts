@@ -147,6 +147,11 @@ class AccountLedgerService extends BaseDbService<AccountLedgerRow, never, never>
     );
   }
 
+  /** Tek hareketin defter satırları — transferde iki (gönderen ve alan hesabın defteri). */
+  rowsOf(movementId: string): Promise<AccountLedgerRow[]> {
+    return this.getAll({ id: movementId });
+  }
+
   /**
    * İZAH EDİLMEMİŞ hareket SAYISI — süzgeçten bağımsız, hesap-üstü tek sayı.
    *
@@ -252,6 +257,14 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     return this.ledgerView.page(opts);
   }
 
+  /**
+   * Tek hareketin defter satırları (12.17) — "devamını yükle" ile gelmiş satır yazımdan sonra kendisi
+   * yeniden okunur; listenin tamamı baştan çekilmez.
+   */
+  ledgerRows(movementId: string): Promise<AccountLedgerRow[]> {
+    return this.ledgerView.rowsOf(movementId);
+  }
+
   /** İzah edilmemiş hareket sayısı — süzgeçten bağımsız iş kuyruğu rozeti (12.4 · 13.09). */
   unexplainedCount(): Promise<number> {
     return this.ledgerView.unexplainedCount();
@@ -269,6 +282,11 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       { explained: false },
       { orderBy: 'valueDate', orderDirection: 'desc', keysetAfter: opts.cursor, limit: opts.limit ?? DEFAULT_PAGE_SIZE },
     );
+  }
+
+  /** Kimlik listesiyle hareketler — belge panelinin ödemeleri (12.17) bağlarından tek turda okunur. */
+  listByIds(ids: readonly string[]): Promise<MoneyMovement[]> {
+    return this.getByIds([...ids]);
   }
 
   /** Siparişin para hareketleri — tahsilat/iade toplamı (`amount_*` cache'inin kaynağı, 12.2). */
@@ -650,6 +668,19 @@ export class MoneyAllocationService extends BaseDbService<MoneyAllocation, Money
     return all;
   }
 
+  /**
+   * Belgelerin bağları tek turda — belge panelinin "ödemeleri" ve Belgeler sekmesi (12.17) "hangi
+   * hareketlerle kapandı" sorusunu buradan yanıtlar. Kimlikler öbeklenir (`listByMovements` gerekçesi).
+   */
+  async listByDocuments(documentIds: readonly string[]): Promise<MoneyAllocation[]> {
+    const BATCH_SIZE = 200;
+    const all: MoneyAllocation[] = [];
+    for (let i = 0; i < documentIds.length; i += BATCH_SIZE) {
+      all.push(...(await this.getAll({ documentId: documentIds.slice(i, i + BATCH_SIZE) }, { orderBy: 'createdAt' })));
+    }
+    return all;
+  }
+
   /** Bir bağı kaldırır — hareket ve belge kalır. Kaldırılacak bağ yoksa `false` (çağıran "bulunamadı" der). */
   async remove(movementId: string, documentId: string): Promise<boolean> {
     if (!(await this.getOneBy({ movementId, documentId }))) return false;
@@ -671,13 +702,20 @@ export class MoneyDocumentService extends BaseDbService<MoneyDocument, MoneyDocu
     super(supabase, 'money_document', MoneyDocumentSchema, MoneyDocumentInsertSchema, MoneyDocumentUpdateSchema);
   }
 
-  /** Belgeler — belge tarihine göre en yeni önce, keyset sayfalı (belge arşivi veriyle sınırsız büyür). */
-  page(opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<MoneyDocument>> {
+  /**
+   * Belgeler — belge tarihine göre en yeni önce, keyset sayfalı (belge arşivi veriyle sınırsız büyür).
+   * `from`/`to` belge gününü süzer (12.17 · Para ekranının Belgeler sekmesi, tarih aralığı süzgeci).
+   */
+  page(opts: { from?: string; to?: string; cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<MoneyDocument>> {
+    const rangeFilters: Array<{ field: string; operator: 'gte' | 'lte'; value: string }> = [];
+    if (opts.from) rangeFilters.push({ field: 'issuedOn', operator: 'gte', value: opts.from });
+    if (opts.to) rangeFilters.push({ field: 'issuedOn', operator: 'lte', value: opts.to });
     return this.getPage(undefined, {
       orderBy: 'issuedOn',
       orderDirection: 'desc',
       keysetAfter: opts.cursor,
       limit: opts.limit ?? DEFAULT_PAGE_SIZE,
+      rangeFilters,
     });
   }
 

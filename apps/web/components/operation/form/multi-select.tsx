@@ -5,7 +5,7 @@ import { AnchoredMenu } from '../ui/anchored-menu';
 import { useOptionSearch } from './use-option-search.hook';
 import { Chip } from '../ui/chip';
 import { Input } from './input';
-import { SearchIcon } from '../ui/icons';
+import { CheckIcon, SearchIcon } from '../ui/icons';
 import { Thumbnail } from '../ui/thumbnail';
 
 /**
@@ -27,6 +27,8 @@ interface MultiSelectProps<T extends string> {
   selected: T[];
   onChange: (next: T[]) => void;
   addLabel?: string;
+  /** Ekleme çipinin adı, yazısı tek işaretse ("+") — bkz. `Chip` `ariaLabel`. */
+  addAriaLabel?: string;
   searchPlaceholder?: string;
   /**
    * Seçilenleri çip olarak GÖSTERME — yalnız aramalı ekleme tetikleyicisi kalır. Seçim başka bir
@@ -55,6 +57,22 @@ interface MultiSelectProps<T extends string> {
    * deseni): sözlüğe yeni kayıt açmak için pencereden çıkılmaz. Kaydı çağıran açar ve seçime ekler.
    */
   onCreate?: (label: string) => void;
+  /**
+   * Menü BÜTÜN seçenekleri gösterir, seçililer işaretli (✓); dokunuş ekler ya da çıkarır ve menü
+   * açık kalır (13.09 · muhasebeci deseni, Para etiketleri). Varsayılan kipte seçilen menüden DÜŞER —
+   * satırında tek kayıtlı etiket zaten seçili olan kullanıcı o kipte "kayıtlı etiket gelmiyor" diye
+   * okudu (kullanıcı bildirimi 13.09).
+   */
+  checkable?: boolean;
+  /**
+   * `cell` — tablo hücresi ölçüsü (satır yüksekliğine uyar, `Chip` `cell`); varsayılan form/süzgeç ölçüsü.
+   * Hücrede çip dar ve adı kesilir: dokunuş KALDIRMAZ, menüyü açar — kaldırma menüdeki işaretten (kip
+   * kendiliğinden `checkable`). Kesilmiş bir çipin tek dokunuşla silinmesi yoğun bir tabloda kaza
+   * demekti. Ekleme çipi yalnız hiç seçim yokken durur; seçim varken çipin kendisi menüdür.
+   */
+  size?: 'sm' | 'cell';
+  /** En çok kaç seçili çip çizilir; kalanı "+N" çipinde sayılır ve dokunuş menüyü açar. */
+  maxVisible?: number;
 }
 
 export function MultiSelect<T extends string>({
@@ -62,6 +80,7 @@ export function MultiSelect<T extends string>({
   selected,
   onChange,
   addLabel = '+ ekle',
+  addAriaLabel,
   searchPlaceholder = 'Ara…',
   hideSelected = false,
   onSearch,
@@ -69,9 +88,15 @@ export function MultiSelect<T extends string>({
   emptyText = 'Sonuç yok',
   disabled = false,
   onCreate,
+  checkable = false,
+  size = 'sm',
+  maxVisible,
 }: MultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
+  const cell = size === 'cell';
+  // Hücre kipi seçilileri menüde işaretli gösterir: orada çip kaldırmaz, kaldırma menüdeki işaretten.
+  const marked = checkable || cell;
   const { query, onQuery, reset, visible, remote } = useOptionSearch({
     options,
     onSearch,
@@ -88,22 +113,43 @@ export function MultiSelect<T extends string>({
   const typed = query.trim();
   const canCreate =
     onCreate !== undefined && typed !== '' && !options.some((o) => o.label.toLocaleLowerCase('tr') === typed.toLocaleLowerCase('tr'));
+  // İşaretli kipte menü seçilileri de listeler; öteki kipte yalnız eklenecek olanları.
+  const listed = marked ? visible : remaining;
+  const toggle = (v: T) => onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+  const shown = maxVisible === undefined ? selected : selected.slice(0, maxVisible);
+  const hiddenCount = selected.length - shown.length;
+  const openMenu = () => {
+    reset();
+    setOpen((v) => !v);
+  };
 
   return (
-    <div className="flex flex-wrap items-center gap-[7px]">
+    <div ref={cell ? anchorRef : undefined} className={cell ? 'flex min-w-0 flex-nowrap items-center gap-1' : 'flex flex-wrap items-center gap-[7px]'}>
       {hideSelected
         ? null
-        : selected.map((v) => {
+        : shown.map((v) => {
             const o = optionOf(v);
             return (
-              <Chip key={v} active onClick={disabled ? undefined : () => onChange(selected.filter((x) => x !== v))}>
+              <Chip key={v} active size={size} onClick={disabled ? undefined : cell ? openMenu : () => onChange(selected.filter((x) => x !== v))}>
                 {o?.imageUrl !== undefined ? <Thumbnail src={o.imageUrl} alt="" size={18} iconSize={10} className="!rounded-[5px]" /> : null}
-                {/* Kilitliyken kaldırma işareti YAZILMAZ: tıklanamayan bir "✕" yalan söyler. */}
-                {o?.label ?? v}
-                {disabled ? '' : ' ✕'}
+                {cell ? (
+                  <span className="min-w-0 truncate">{o?.label ?? v}</span>
+                ) : (
+                  <>
+                    {o?.label ?? v}
+                    {/* Kilitliyken kaldırma işareti YAZILMAZ: tıklanamayan bir "✕" yalan söyler. */}
+                    {disabled ? '' : ' ✕'}
+                  </>
+                )}
               </Chip>
             );
           })}
+      {/* Sığmayan seçililer tek çipte sayılır; dokunuş menüyü açar (işaretli kipte orada görünürler). */}
+      {!hideSelected && hiddenCount > 0 ? (
+        <Chip size={size} className="flex-none" onClick={disabled ? undefined : openMenu}>
+          +{hiddenCount}
+        </Chip>
+      ) : null}
 
       {disabled ? (
         // Kilitli ve hiç seçim yoksa alan boş bir satır olarak kalmasın: "yok" demek, "bu alanda
@@ -111,46 +157,65 @@ export function MultiSelect<T extends string>({
         selected.length === 0 ? (
           <span className="font-ops-body text-ops-sm text-ops-faint">—</span>
         ) : null
-      ) : remote || onCreate !== undefined || options.length > selected.length ? (
+      ) : remote || marked || onCreate !== undefined || options.length > selected.length ? (
         <>
-          <div ref={anchorRef} className="inline-flex">
-            <Chip
-              dashed
-              onClick={() => {
-                reset();
-                setOpen((v) => !v);
-              }}
-            >
-              {addLabel}
-            </Chip>
-          </div>
+          {/* Hücrede menü bütün alana bağlanır (kök `div`): seçim varken ekleme çipi yok. */}
+          {cell ? (
+            selected.length === 0 ? (
+              <Chip dashed size={size} className="flex-none" ariaLabel={addAriaLabel} onClick={openMenu}>
+                {addLabel}
+              </Chip>
+            ) : null
+          ) : (
+            <div ref={anchorRef} className="inline-flex flex-none">
+              <Chip dashed size={size} ariaLabel={addAriaLabel} onClick={openMenu}>
+                {addLabel}
+              </Chip>
+            </div>
+          )}
           <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={withImages ? 288 : 240} className="flex flex-col">
             <div className="flex items-center gap-2 border-b border-ops-line-soft px-2.5 py-2 text-ops-faint">
               <SearchIcon size={14} />
               <Input inputSize="sm" autoFocus value={query} onChange={(e) => onQuery(e.target.value)} placeholder={searchPlaceholder} className="border-0 !px-0 !py-0 focus:border-0" />
             </div>
             <div className="max-h-52 overflow-y-auto">
-              {loading && remaining.length === 0 ? (
+              {loading && listed.length === 0 ? (
                 <div className="px-[13px] py-2.5 font-ops-body text-ops-sm text-ops-faint">Aranıyor…</div>
-              ) : remaining.length === 0 ? (
+              ) : listed.length === 0 ? (
                 <div className="px-[13px] py-2.5 font-ops-body text-ops-sm text-ops-faint">
                   {remote && !query.trim() ? searchPlaceholder : emptyText}
                 </div>
               ) : (
-                remaining.map((o) => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => {
-                      onChange([...selected, o.value]);
-                      reset();
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-2.5 px-[13px] py-2 text-left font-ops-body text-ops-base text-ops-strong hover:bg-ops-subtle"
-                  >
-                    {o.imageUrl !== undefined ? <Thumbnail src={o.imageUrl} alt="" size={26} iconSize={12} className="!rounded-[6px]" /> : null}
-                    <span className="min-w-0 flex-1 truncate">{o.label}</span>
-                  </button>
-                ))
+                listed.map((o) => {
+                  const on = marked && selected.includes(o.value);
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      aria-pressed={marked ? on : undefined}
+                      onClick={() => {
+                        // İşaretli kipte dokunuş aç/kapa ve menü AÇIK kalır: üç etiket üç açılış istemesin.
+                        if (marked) {
+                          toggle(o.value);
+                          return;
+                        }
+                        onChange([...selected, o.value]);
+                        reset();
+                      }}
+                      className={`flex w-full cursor-pointer items-center gap-2.5 px-[13px] py-2 text-left font-ops-body text-ops-base hover:bg-ops-subtle ${
+                        on ? 'bg-ops-olive-bg text-ops-olive-dark' : 'text-ops-strong'
+                      }`}
+                    >
+                      {o.imageUrl !== undefined ? <Thumbnail src={o.imageUrl} alt="" size={26} iconSize={12} className="!rounded-[6px]" /> : null}
+                      <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                      {on ? (
+                        <span className="flex-none">
+                          <CheckIcon size={14} />
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })
               )}
               {canCreate ? (
                 <button

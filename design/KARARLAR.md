@@ -2574,3 +2574,27 @@ gösterim iyimserdir, kapı reddederse eski hâle döner. Menüde olmayan etiket
 oluşturulur (`MultiSelect.onCreate`); tekil seçimin boşa dönüşü menünün başındaki "kaldır" satırıdır
 (`Combobox.onClear` — tetikleyicinin içine ✕ konamaz, düğmenin içinde düğme olur). Referans:
 `~/dev/muhasebeci` banka eşleştirme modülü (TagInput · TransactionNatureSelect).
+
+## Para: ekranın düzeni — kart süzer, eylemler tek menüde, ayrıntı sağda, eşleştirme menüden (13.09)
+
+Kullanıcı istekleri (12.17): *"hesap filtreleri ile yukarıdaki hesap kartlarını birleştirme… aksiyon
+butonları menüsü… tarih filtresi… etiketleri ortadaki boş alana koyabiliriz, satır yüksekliğini
+arttırmayacak şekilde… eşleştirme ile ilgili diğer tarafta kullanılan komponenti inceleyip bizim
+tasarım deseniyle benzer bir komponent"*. Kapanan kararlar:
+
+- **Hesap kartı SÜZGEÇTİR**, süzgeç satırında ayrı "Hesap" çipi yok — aynı hesabın adı iki yerde
+  yazmaz. "Tek liste, hesap yalnız bir filtre" (`admin-para.md §6`) korunuyor; filtre kartın kendisi.
+- **Eşleştirme penceresi kalktı**, yerine tetikleyiciye bağlı aranabilir seçici menü
+  (`match-selector.tsx`; referans `~/dev/muhasebeci` `TransactionMatchSelector`). Hareketin
+  panelinde, kuyruk kartında ve belgenin panelinde ("Ödeme bağla") aynı bileşen. Pencere satırın
+  bağlamını örtüyordu; menü tetikleyicinin yanında açılır, seçim anında yazılır.
+- **Tarih aralığı, hazır dönem çiplerinin yerine** ("son 7/30/90 gün" kalktı): "geçen ayın 5'i ile
+  20'si" sorulamıyordu. Önayarlar aralık menüsünün içinde (`DateRangeMenu`); dolu çipe dokunmak
+  süzgeci kaldırır.
+- **Hücrede çip menüyü açar, silmez** (`MultiSelect` `cell` kipi): orta hücrenin çipi dar ve adı
+  kesik; tek dokunuşla silinmesi yoğun tabloda kazaydı. Kaldırma menüdeki işaretten. Formda ve
+  ayrıntı panelinde çip ✕ ile silinir — orada yer var.
+- **Orta hücrenin bütçesi:** hiçbir kontrol hücreden düşmez; tür önce gelir, cari iki kat hızlı
+  daralır, tür/cari taşıyan satırda etiket daveti "+" ("Etiket ekle" adıyla). Ölçüldü: 1440 pikselde
+  hücre 177px; uzun cari adı etiket düğmesini hücrenin dışına itiyordu.
+- Kaba tip süzgecinin adı **"+ tip"** (12.16'dan): satırın "+ tür" menüsüyle aynı adı taşıyordu.

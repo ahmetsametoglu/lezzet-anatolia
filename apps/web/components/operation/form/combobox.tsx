@@ -132,9 +132,11 @@ export function Combobox({
             çünkü hata `Combobox`ın kendisindeydi — her çağıran kazanıyor (`MultiSelect` bunu zaten
             doğru yapıyordu). */}
         <span className="min-w-0 flex-1 truncate text-left">{triggerText || placeholder}</span>
-        <span className="flex-none text-ops-faint">
-          {variant === 'chip' ? <ChevronDownIcon /> : open ? '▴' : '▾'}
-        </span>
+        {/* Hücre biçiminde ok yok: satırın ortasında her seçicinin oku, çipleri bir menü şeridine
+            çevirirdi; hücrenin tıklanabilirliği çerçevesinden ve imleçten okunur. */}
+        {variant === 'cell' ? null : (
+          <span className="flex-none text-ops-faint">{variant === 'chip' ? <ChevronDownIcon /> : open ? '▴' : '▾'}</span>
+        )}
       </button>
 
       {/* Çip biçiminde menü çipin genişliğini MİRAS ALMAZ: çip içeriği kadar dardır, menü ise
@@ -143,7 +145,7 @@ export function Combobox({
         anchorRef={anchorRef}
         open={open}
         onClose={() => setOpen(false)}
-        width={variant === 'chip' ? CHIP_MENU_WIDTH : 'anchor'}
+        width={variant === 'field' ? 'anchor' : CHIP_MENU_WIDTH}
       >
         <div className="flex items-center gap-2 border-b border-ops-line px-[13px] py-2.5 text-ops-faint">
           <SearchIcon size={14} />

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { AccountService, BankImportProfileService, serviceDb } from '@lezzet/database';
+import { AccountService, BankImportProfileService, MovementNatureService, serviceDb } from '@lezzet/database';
 import { dictionarySlugOf, parseBankRows, type MappingSuggestion, type ParseProfile, type RowParseFailure } from '@lezzet/domain-core';
 import {
   ADVERTISING_NATURE,
@@ -9,6 +9,7 @@ import {
   type BankImportProfile,
   type CounterpartyKind,
   type DocumentKind,
+  type KeysetCursor,
   type MovementDirection,
   type RawBankRow,
 } from '@lezzet/types';
@@ -16,7 +17,7 @@ import { requireFinance } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { recordAdvertisingExpense, recordExpense, recordMovement, transfer } from '@/lib/money/movement';
-import { applyMatch, dismissRow, unmatchRow, type MatchTarget } from '@/lib/bank/reconcile';
+import { applyMatch, dismissRow, documentPaymentOptions, linkDocument, matchOptions, unmatchRow, type MatchTarget } from '@/lib/bank/reconcile';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from '@/lib/bank/import';
 import {
   addCounterparty,
@@ -44,7 +45,25 @@ import {
   RECONCILE_REASON,
   TAG_REASON,
 } from '@/app/(operations)/operations/finance/finance-labels';
-import { FINANCE_PATH } from '@/app/(operations)/operations/finance/finance-url';
+import { FINANCE_PATH, parseFinanceUrl } from '@/app/(operations)/operations/finance/finance-url';
+import {
+  namesOf,
+  readDictionaries,
+  readDocumentRow,
+  readDocumentsPage,
+  readLedgerPage,
+  readLedgerRows,
+  withResolvedAccount,
+} from '@/app/(operations)/operations/finance/finance-data';
+import { toDocumentPaymentsView, toMatchOptionsView } from '@/app/(operations)/operations/finance/finance-read';
+import type {
+  DocumentListView,
+  DocumentPaymentsView,
+  DocumentRowView,
+  LedgerView,
+  MatchOptionsView,
+  MovementRowView,
+} from '@/app/(operations)/operations/finance/finance-types';
 import type { ManualType } from '@/components/operation/form/movement-form/schema';
 
 // Para ekranı server action'ları — 'use server' + guard ilk + kapıya devret + `{ data, error }`
@@ -317,6 +336,107 @@ export async function removeAllocationAction(movementId: string, documentId: str
 
     revalidatePath(FINANCE_PATH);
     return { data: { ok: true }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+// ── Liste devamı · sağ panel (12.17) ──────────────────────────────────────────
+
+/**
+ * Listenin SONRAKİ sayfası. Süzgeçler adresten okunur (`search`), böylece devam eden sayfa ilk
+ * sayfayla aynı ölçüte uyar (müşteri ekranının deseni); sayfayı kuran okuma sayfanınkiyle aynıdır
+ * (`finance-data.ts`). İmleç istemcide JSON metni olarak durur.
+ */
+export async function loadMoreLedgerAction(search: string, cursor: string): Promise<ActionResult<Pick<LedgerView, 'rows' | 'nextCursor'>>> {
+  try {
+    await requireFinance();
+    const db = serviceDb();
+    const dictionaries = await readDictionaries(db);
+    const urlState = withResolvedAccount(parseFinanceUrl(Object.fromEntries(new URLSearchParams(search))), dictionaries.accounts);
+    const page = await readLedgerPage(db, urlState, namesOf(dictionaries), JSON.parse(cursor) as KeysetCursor);
+    return { data: { rows: page.rows, nextCursor: page.nextCursor }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Belgeler sekmesinin sonraki sayfası — aynı sözleşme. */
+export async function loadMoreDocumentsAction(search: string, cursor: string): Promise<ActionResult<Pick<DocumentListView, 'rows' | 'nextCursor'>>> {
+  try {
+    await requireFinance();
+    const db = serviceDb();
+    const dictionaries = await readDictionaries(db);
+    const urlState = parseFinanceUrl(Object.fromEntries(new URLSearchParams(search)));
+    const page = await readDocumentsPage(db, urlState, namesOf(dictionaries), JSON.parse(cursor) as KeysetCursor);
+    return { data: { rows: page.rows, nextCursor: page.nextCursor }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Tek hareketin satırları (12.17) — "devamını yükle" ile gelmiş satır yazımdan sonra kendisi
+ * tazelenir; listenin tamamı baştan istenmez (operatörün kaydırdığı yer kaybolmasın).
+ */
+export async function ledgerRowsAction(movementId: string): Promise<ActionResult<MovementRowView[]>> {
+  try {
+    await requireFinance();
+    const db = serviceDb();
+    return { data: await readLedgerRows(db, movementId, namesOf(await readDictionaries(db))), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Tek belgenin satırı — aynı gerekçe (bağ yazımı belgenin açık kalanını değiştirir). */
+export async function documentRowAction(documentId: string): Promise<ActionResult<DocumentRowView | null>> {
+  try {
+    await requireFinance();
+    const db = serviceDb();
+    return { data: await readDocumentRow(db, documentId, namesOf(await readDictionaries(db))), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Sağ panelin hareket seçicisi (12.17 · muhasebeci deseni) — satırın önerileri ve hedefleri, menü
+ * açılınca istenir. Hesap seçili olmasa da ("Tümü") aynı öneri: kuyruğun hesabına bağlı değil.
+ */
+export async function matchOptionsAction(movementId: string): Promise<ActionResult<MatchOptionsView>> {
+  try {
+    await requireFinance();
+    const options = await matchOptions(movementId);
+    if (!options) return { data: null, error: RECONCILE_REASON.not_found };
+    const natures = await new MovementNatureService(serviceDb()).list();
+    return { data: toMatchOptionsView(options, new Map(natures.map((nature) => [nature.slug, nature.label] as const))), error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Hareketi belgeye bağlar — hareket panelinin "Bağla"sı ve belge panelinin "Ödeme bağla"sı (12.17). */
+export async function linkDocumentAction(movementId: string, documentId: string): Promise<ActionResult<{ ok: true }>> {
+  try {
+    await requireFinance();
+    const outcome = await linkDocument(movementId, documentId);
+    if (outcome.status === 'invalid') return { data: null, error: RECONCILE_REASON[outcome.reason] };
+
+    revalidatePath(FINANCE_PATH);
+    return { data: { ok: true }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/** Belge panelinin ödemeleri ve ödeme adayları (12.17) — panel açılınca istenir. */
+export async function documentPaymentsAction(documentId: string): Promise<ActionResult<DocumentPaymentsView>> {
+  try {
+    await requireFinance();
+    const [options, accounts] = await Promise.all([documentPaymentOptions(documentId), new AccountService(serviceDb()).list()]);
+    if (!options) return { data: null, error: DOCUMENT_REASON.not_found };
+    return { data: toDocumentPaymentsView(options, new Map(accounts.map((account) => [account.id, account.name] as const))), error: null };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

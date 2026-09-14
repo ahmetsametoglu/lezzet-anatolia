@@ -1,7 +1,7 @@
 import { acceptsNature, type MatchKind, type MatchSuggestion } from '@lezzet/domain-core';
-import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance, MovementType } from '@lezzet/types';
+import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance, MoneyMovement, MovementType } from '@lezzet/types';
 import { dayMonth, money } from '@/components/operation/ui/format';
-import type { MatchTargets } from '@/lib/bank/reconcile';
+import type { DocumentPaymentOptions, MatchOptions, MatchTargets } from '@/lib/bank/reconcile';
 import {
   ACCOUNT_TONE,
   ACCOUNT_TYPE_LABEL,
@@ -11,7 +11,16 @@ import {
   MOVEMENT_TYPE_LABEL,
   type MatchKindView,
 } from './finance-labels';
-import type { AccountView, MatchCandidateView, MatchRowView, MatchTargetView, MovementRowView, OpenDocumentView } from './finance-types';
+import type {
+  AccountView,
+  DocumentPaymentsView,
+  DocumentRowView,
+  MatchCandidateView,
+  MatchOptionsView,
+  MatchRowView,
+  MatchTargetView,
+  MovementRowView,
+} from './finance-types';
 
 // Para ekranının SAF indirgemeleri — servis satırı → görünüm satırı.
 //
@@ -59,15 +68,16 @@ function partyOf(doc: Pick<MoneyDocument, 'counterpartyId' | 'supplierId'>, part
 }
 
 /**
- * Açık belge kartları (12.12). Açık kalan GÖRÜNÜMDEN gelir, burada hesaplanmaz; künye belge
- * numarasıyla başlar, numarasız belgede türün adıyla (fiş, bordro).
+ * Belge satırları (12.12 · 12.17) — Belgeler sekmesi, sağ panelin belgesi ve "Ödemesini yaz" formunun
+ * künyesi. Açık kalan GÖRÜNÜMDEN gelir, burada hesaplanmaz; künye belge numarasıyla başlar, numarasız
+ * belgede türün adıyla (fiş, bordro).
  */
-export function toOpenDocumentViews(
+export function toDocumentRows(
   documents: ReadonlyArray<MoneyDocument & { balance: MoneyDocumentBalance }>,
-  partyNames: ReadonlyMap<string, string>,
-): OpenDocumentView[] {
+  names: Pick<MovementReadContext, 'partyNames' | 'natureLabels'>,
+): DocumentRowView[] {
   return documents.map((doc) => {
-    const partyName = partyOf(doc, partyNames);
+    const partyName = partyOf(doc, names.partyNames);
     return {
       id: doc.id,
       kind: doc.kind,
@@ -76,10 +86,14 @@ export function toOpenDocumentViews(
       direction: doc.direction,
       nature: doc.nature,
       counterpartyId: doc.counterpartyId,
+      supplierId: doc.supplierId,
       tags: doc.tags,
+      note: doc.note,
+      amountCents: doc.amountCents,
+      vatAmountCents: doc.vatAmountCents,
       kindLabel: DOCUMENT_KIND_LABEL[doc.kind],
       partyName,
-      amountCents: doc.amountCents,
+      natureLabel: doc.nature ? (names.natureLabels.get(doc.nature) ?? doc.nature) : null,
       openAmountCents: doc.balance.openAmountCents,
       hasFile: doc.fileKey !== null,
       label: `${documentHead(doc)} · ${partyName ?? '—'} · açık ${money(doc.balance.openAmountCents)}`,
@@ -95,8 +109,8 @@ export interface MovementReadContext {
   partyNames: ReadonlyMap<string, string>;
   /** Tür anahtarı → okunur adı — pasif türler dâhil. */
   natureLabels: ReadonlyMap<string, string>;
-  /** Hareketin bağlı belgeleri (bağ tablosundan) — künyeyle. */
-  documentsOf: ReadonlyMap<string, Array<{ id: string; label: string }>>;
+  /** Hareketin bağlı belgeleri (bağ tablosundan) — künyesi ve bağın tutarıyla. */
+  documentsOf: ReadonlyMap<string, Array<{ id: string; label: string; amountCents: number }>>;
 }
 
 /**
@@ -183,6 +197,10 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
       counterpartyId: row.counterpartyId,
       tags: row.tags,
       signedAmountCents: row.signedAmountCents,
+      amountCents: row.amountCents,
+      description: row.description,
+      source: row.source,
+      reconciled: row.reconciled,
       // Açıklamasız satır boş hücre bırakmaz: bankadan gelen satırın açıklaması hep vardır, elle
       // girilende boş kalabilir — o zaman okunacak tek şey tipin adıdır.
       title: row.description?.trim() || MOVEMENT_TYPE_LABEL[row.type],
@@ -194,6 +212,7 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
       natureLabel: row.nature ? (context.natureLabels.get(row.nature) ?? row.nature) : null,
       counterpartyName: row.counterpartyId ? (context.partyNames.get(row.counterpartyId) ?? null) : null,
       documents,
+      remainingCents: row.amountCents - documents.reduce((sum, document) => sum + document.amountCents, 0),
       fromBank,
       canUnmatch: fromBank && (row.reconciled || documents.length > 0 || row.counterpartyId !== null),
     };
@@ -393,4 +412,43 @@ function sentenceOf(strength: MatchRowView['strength'], best: MatchCandidateView
   if (!best) return 'Eşleşen bulunamadı — "Elle bağla" ile hedefi seçin ya da satırın türünü koyun.';
   if (strength === 'strong') return `${best.title} · ${MATCH_EFFECT[best.kind]}.`;
   return 'Birden çok hedef bu satıra uyuyor — hangisi olduğunu siz seçin.';
+}
+
+/**
+ * Sağ panelin hareket seçicisi (12.17) — kuyruk kartıyla AYNI öneri görünümü (`toMatchRows`) ve
+ * aynı hedef listesi (`toMatchTargets`): tek satır için ikinci bir öneri dili yazılmaz.
+ */
+export function toMatchOptionsView(options: MatchOptions, natureLabels: ReadonlyMap<string, string>): MatchOptionsView {
+  const targets = toMatchTargets(options.targets, natureLabels);
+  const [row] = toMatchRows([options], targets);
+  return { row: row!, targets, bankRow: options.bankRow };
+}
+
+/** Belge panelinin ödemeleri ve adayları (12.17) — hareket künyeleriyle, puan sebepleri operatörün dilinde. */
+export function toDocumentPaymentsView(options: DocumentPaymentOptions, accountNames: ReadonlyMap<string, string>): DocumentPaymentsView {
+  const titleOf = (movement: MoneyMovement) => movement.description?.trim() || MOVEMENT_TYPE_LABEL[movement.type];
+  return {
+    openAmountCents: options.document.balance.openAmountCents,
+    payments: options.payments.map(({ movement, amountCents }) => ({
+      movementId: movement.id,
+      title: titleOf(movement),
+      valueDate: movement.valueDate,
+      accountName: accountNames.get(movement.accountId) ?? '—',
+      amountCents,
+      movementAmountCents: movement.amountCents,
+      // Ekstre satırının bağı "Eşleşmeyi geri al" ile çözülür: tek bağı sökmek satırı mutabık ama
+      // bağsız bırakırdı (tipi ve adı belgeden gelmişti).
+      removable: movement.source !== 'bank_import',
+    })),
+    candidates: options.candidates.map((candidate) => ({
+      movementId: candidate.movement.id,
+      title: titleOf(candidate.movement),
+      valueDate: candidate.movement.valueDate,
+      accountName: accountNames.get(candidate.movement.accountId) ?? '—',
+      direction: candidate.movement.direction,
+      remainingCents: candidate.remainingCents,
+      score: candidate.score,
+      reasons: reasonsOf(candidate.reasons),
+    })),
+  };
 }

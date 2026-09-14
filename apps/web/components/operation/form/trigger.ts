@@ -8,7 +8,8 @@
  */
 import { CONTROL_H } from '../ui/control';
 
-export type TriggerVariant = 'field' | 'chip';
+/** `cell` (13.09) — tablo hücresindeki seçici: satır yüksekliğine uyar (bkz. `CELL_BASE`). */
+export type TriggerVariant = 'field' | 'chip' | 'cell';
 
 /**
  * Dolu çipin rengi — ANLAM taşır, süs değil.
@@ -50,6 +51,12 @@ const FIELD_BASE =
 const CHIP_BASE =
   `flex cursor-pointer items-center gap-1.5 rounded-ops-chip border px-3 font-ops-body text-ops-sm font-medium outline-none transition-colors ${CONTROL_H.sm}`;
 
+// TABLO HÜCRESİ (13.09, Para defteri): satırın ortasındaki tür/cari seçicisi satır yüksekliğine
+// uyar — `StepButton`ın (26px) ve `Chip` `cell` ölçüsünün gerekçesi. Bar ölçüsü (32px) satırı
+// şişirirdi. Genişlik hücreye bağlı: uzun ad kesilir, hücreyi taşırmaz.
+const CELL_BASE =
+  'inline-flex h-6 min-w-0 max-w-full cursor-pointer items-center gap-1 rounded-ops-chip border px-2 font-ops-body text-ops-xs font-medium outline-none transition-colors';
+
 /** Çip biçimindeki seçicinin menü genişliği — çip dar, menü içeriğe yeter. */
 export const CHIP_MENU_WIDTH = 220;
 
@@ -62,9 +69,9 @@ export function triggerClass({
   invite = true,
 }: TriggerState): string {
   const parts =
-    variant === 'chip'
+    variant !== 'field'
       ? [
-          CHIP_BASE,
+          variant === 'cell' ? CELL_BASE : CHIP_BASE,
           filled
             ? CHIP_FILLED[tone]
             : invite
