@@ -17,10 +17,14 @@ import type { PackagesViewProps } from './packages-types';
 export function PackagesMobile({ t, locale, packages }: PackagesViewProps) {
   return (
     <div className="flex flex-col">
-      {/* Başlık çerçevenin çubuğunda ("Paketler", 14.09); burada görünür ikinci bir kopyası olmaz.
-          `h1` arama motoru ve ekran okuyucu için yerinde kalır. */}
-      <h1 className="sr-only">{t.title}</h1>
-      <p className="px-4 pt-4 pb-3 font-sans text-note leading-relaxed text-body">{t.subtitle}</p>
+      {/* Paketler native'de bir SEKME KÖKÜ: geri yolu yok, başlık sayfanın içinde (native
+          `packages-list-screen` başlığı — serif sayfa başlığı + soluk açıklama, 16/4 nefes). Çerçeve
+          başlık çizmez (14.09). Metin şimdilik sayfanın kendi sözlüğünden; native'in üst başlığı ve
+          cümlesi ortak metin paketiyle Faz 1'in paketler turunda gelir. `h1` arama motorunun okuduğu. */}
+      <header className="flex flex-col gap-1 px-[18px] pt-4 pb-3">
+        <h1 className="font-serif text-page-title-sm leading-[1.15] text-ink">{t.title}</h1>
+        <p className="font-sans text-note leading-relaxed text-muted">{t.subtitle}</p>
+      </header>
 
       {packages.length === 0 ? (
         <div className="mx-4 mt-2 flex flex-col items-center gap-2 rounded-card border border-dashed border-sand-500 px-5 py-8 text-center">

@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./locale": "./src/locale.ts",
-    "./paths": "./src/paths.ts"
+    "./paths": "./src/paths.ts",
+    "./customer/tab-bar": "./src/customer/tab-bar.json"
   },
   "types": "./src/index.ts",
   "scripts": {

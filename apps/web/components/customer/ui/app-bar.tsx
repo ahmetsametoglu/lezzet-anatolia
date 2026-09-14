@@ -20,7 +20,7 @@ interface AppBarProps {
 
 export function AppBar({ title, left, right }: AppBarProps) {
   return (
-    <header className="sticky top-0 z-30 flex flex-none items-center gap-2.5 border-b-[1.5px] border-ink bg-cream/96 px-3.5 py-2 backdrop-blur-sm">
+    <header className="sticky top-0 z-30 flex flex-none items-center gap-2.5 border-b-[1.5px] border-ink bg-sand-50/96 px-3.5 py-2 backdrop-blur-sm">
       {left}
       <span className="min-w-0 flex-1 truncate font-serif text-[17px] font-semibold text-ink">{title}</span>
       {right && <div className="flex flex-none items-center">{right}</div>}

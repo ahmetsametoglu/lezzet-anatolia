@@ -34,9 +34,9 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 // 18.08: +4 açık / +2 karanlık (`ops-band*`) — panel şeridi kendi ailesini aldı; koyu blokta
 //        yalnız zemin ve çizgi var, mürekkep/ikincil metin açık temadaki değerini koruyor.
 // 14.09: +10 — web v1 (13.09): 3 renk (`ink-hover`, `sand-275`, `olive-edge`), 3 hareket
-//        (`animate-*`), 4 gölge (`shadow-*`). İki renk adı native'in `ink-deep`/`sand-250`inden
+//        (`animate-*`), 5 gölge (`shadow-*`). İki renk adı native'in `ink-deep`/`sand-250`inden
 //        bilerek ayrı: aynı ad kompozisyonda uygulamanın başka tonuyla ezilirdi (`customer-app.ts`).
-const EXPECTED_LIGHT_COUNT = 177; // @theme bloğu, fontlar hariç (112 renk + 51 yazı + 7 yarıçap + 3 hareket + 4 gölge) — +2: messenger/instagram marka (15.15)
+const EXPECTED_LIGHT_COUNT = 178; // @theme bloğu, fontlar hariç (112 renk + 51 yazı + 7 yarıçap + 3 hareket + 5 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));

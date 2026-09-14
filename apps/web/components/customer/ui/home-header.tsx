@@ -19,8 +19,8 @@ type Copy = (typeof messages)['tr'];
  * doğardı; saat sınırına denk gelen tek karelik fark `suppressHydrationWarning` ile karşılanır.
  * Selamlama `h1` DEĞİL — vitrinin başlığı kahramanın cümlesi.
  *
- * BEKLEYEN(08.58): native bu satırda puan etiketini ve toptan rozetini de taşıyor; web kökünde bu iki
- * veri yok (hesap bağlamı yalnız ad + e-posta) — vitrin turunda sayfanın okumasıyla gelecek.
+ * BEKLEYEN(08.58): native bu satırda puan etiketini ve toptan rozetini de taşıyor. Toptancı bilgisi
+ * artık kökte (`useWholesale`, 14.09); rozetin kendisi ve puan etiketi vitrin turunda (Faz 1) çizilecek.
  */
 interface HomeHeaderProps {
   locale: Locale;

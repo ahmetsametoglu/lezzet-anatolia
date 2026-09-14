@@ -183,6 +183,7 @@
   --shadow-menu: 0 14px 34px rgb(58 65 71 / 0.2); /* açılır menü (v1 hesap menüsü) */
   --shadow-dialog: 0 24px 64px rgb(47 53 58 / 0.36); /* ortalanmış pencere (v1 masaüstü adres penceresi) */
   --shadow-sheet: 0 -12px 40px rgb(47 53 58 / 0.28); /* mobil çekmecenin gölgesi (Mobil v1) */
+  --shadow-hard: 3px 3px 0 #343b41; /* sert gölge — native v3'ün imzası; telefon görünümünün yüzen düğmesi (14.09) */
 
   /* ─────────────────────────────────────────────────────────────────────────
      Operasyon evreni — "Veri Masası" token'ları (admin + depo + kurye).

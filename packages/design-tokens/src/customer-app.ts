@@ -30,7 +30,7 @@
   dönüşümü tüketicinin (Unistyles teması) işidir, kaynağın değil — `customer.ts` başlığındaki
   kuralın aynısı. Karanlık mod YOK: müşteri vitrini tek temalıdır, uygulama da öyle.
 */
-import { customerSurface } from './customer';
+import { customerShadow, customerShadowOffset } from './customer';
 
 /* ── (1) FARK RENKLERİ — tabanın aynı adlı anahtarını EZER ───────────────────
    Token Kararlari #3'te ölçülen uygulama değerleri. Küçük ayak izi kuralı gereği web değeri
@@ -251,11 +251,13 @@ export const customerAppRadius = {
  * kendi düzen kutusunda bu kadar yer ayırması gerekir. Ayırmayan öğe, kendisini sınırında kırpan
  * bir kapsayıcının (kaydırma alanı) içinde gölgesini kaybeder — ölçüldü, cihaz 09.08.
  */
-export const customerAppShadowOffset = 3;
+export const customerAppShadowOffset = customerShadowOffset;
 
 export const customerAppShadow = {
   soft: '0 1px 3px rgba(58, 65, 71, 0.08)',
-  hard: `${customerAppShadowOffset}px ${customerAppShadowOffset}px 0 ${customerSurface.ink}`,
+  /* Tanım tabanda (`customerShadow.hard`, 14.09): telefon görünümü de aynı gölgeyi çiziyor; iki
+     yazım bir gün ayrışırdı. Değer yine `ink`ten ve kayma ölçüsünden türüyor. */
+  hard: customerShadow.hard,
   /* · `badge` — Token Kararlari #16'nın TEK DURAĞI. Rozet fotoğrafın ya da kartın üstünde YÜZER;
      `soft`un 1 px'lik yüksekliği orada yetmiyor, rozet fotoğrafa yapışık duruyordu. Tasarımda
      .18/.20/.22/.25 dörtlüsü ölçüldü, karar hepsini .22'ye çekti — bir rozetin ne kadar

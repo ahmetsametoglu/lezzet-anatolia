@@ -43,10 +43,6 @@
     },
     "menu": "Menü",
     "back": "Geri",
-    "tabs": {
-      "home": "Vitrin",
-      "cart": "Sepet"
-    },
     "info": "Bilgi"
   },
   "fr": {
@@ -93,10 +89,6 @@
     },
     "menu": "Menu",
     "back": "Retour",
-    "tabs": {
-      "home": "Accueil",
-      "cart": "Panier"
-    },
     "info": "Informations"
   },
   "de": {
@@ -143,10 +135,6 @@
     },
     "menu": "Menü",
     "back": "Zurück",
-    "tabs": {
-      "home": "Start",
-      "cart": "Warenkorb"
-    },
     "info": "Informationen"
   }
 }

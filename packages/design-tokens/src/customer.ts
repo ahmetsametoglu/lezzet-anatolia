@@ -226,10 +226,21 @@ export const customerMotion = {
 
 /* ── Yüzen yüzey gölgeleri (`--shadow-` öneki · 13.09) ───────────────────────
    Web v1'in bildirim hapı, açılır menüsü, ortalanmış penceresi ve mobil çekmecesi. Mobil
-   uygulamanın gölge ailesi AYRIDIR (`customerAppShadow`: soft · hard · badge) — adlar çakışmaz. */
+   uygulamanın gölge ailesi ayrı (`customerAppShadow`: soft · hard · badge); `hard` İKİ yüzeyin
+   ortak gölgesi (14.09) — tek tanım burada, uygulama ailesi onu buradan okur. */
+/**
+ * Sert gölgenin KAYMA MİKTARI (px) — gölge dizgesi bundan türer, sayı ikinci kez yazılmaz.
+ * Uygulama tarafı aynı ölçüyü `customerAppShadowOffset` adıyla dışarı verir (basılı durumun
+ * kayması ve gölgenin taşma payı onu okur).
+ */
+export const customerShadowOffset = 3;
+
 export const customerShadow = {
   toast: '0 10px 30px rgb(47 53 58 / 0.3)', // bildirim hapının gölgesi
   menu: '0 14px 34px rgb(58 65 71 / 0.2)', // açılır menü (v1 hesap menüsü)
   dialog: '0 24px 64px rgb(47 53 58 / 0.36)', // ortalanmış pencere (v1 masaüstü adres penceresi)
   sheet: '0 -12px 40px rgb(47 53 58 / 0.28)', // mobil çekmecenin gölgesi (Mobil v1)
+  /** Native v3'ün imzası: kaydırılmış, bulanıklığı olmayan mürekkep gölge. Telefon görünümü native
+      tasarımı aldığı için (kullanıcı kararı 14.09) web'e de gerekti — yüzen sepet düğmesi. */
+  hard: `${customerShadowOffset}px ${customerShadowOffset}px 0 ${customerSurface.ink}`,
 } as const satisfies Record<string, string>;

@@ -331,3 +331,13 @@ export const CUSTOMER_ICON_PATHS = {
   /** Yıldız — bildirim listesi ve "Ürünleri değerlendir" (v3:1789 `NIC.star`). */
   star: { paths: ['M12 3l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2-5.6-3.2-5.6 3.2 1.3-6.2L3 9.5l6.3-.7z'] },
 } as const satisfies Record<string, CustomerIconGeometry>;
+
+/*
+  ÇİZGİ KALINLIĞI DURAKLARI — çizimin kuralı da ikonun parçası: aynı geometri iki yüzeyde aynı
+  kalınlıkla çizilsin. Değerler native kitin `theme.border.iconStroke*` duraklarıyla AYNI
+  (`packages/mobile-kit/src/theme/metrics.ts`); kit bunları buradan okuduğunda tek kaynak olur.
+  · `base`  — satır içi işaret, sekme ikonu;
+  · `large` — 34 dp ve üstü boş/hata bloğu (geometrinin `large` bayrağı): büyük ikon ince çizilir;
+  · `bold`  — ikon bir eylemin kendisi (native `Icon`un `bold`u); boy kuralını ezer.
+*/
+export const ICON_STROKE = { base: 1.8, large: 1.6, bold: 2.2 } as const;

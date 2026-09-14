@@ -1,63 +1,90 @@
 'use client';
 
+import tabBarCopy from '@lezzet/i18n/customer/tab-bar';
+import type { IconName } from '@lezzet/brand/icons';
 import { Link, usePathname } from '@/i18n/navigation';
 import type { routing } from '@/i18n/routing';
-import { useCart } from '@/components/customer/cart/cart-context';
+import { useWholesale } from '@/components/customer/account/account-context';
+import { CartFab } from '@/components/customer/cart/cart-fab';
 import { PlaceSheet } from '@/components/customer/delivery/place-sheet';
 import { AppBar } from './app-bar';
 import { BackButton } from './back-button';
 import { FunnelHeader } from './funnel-header';
 import { HomeHeader } from './home-header';
-import { Icon, type IconName } from './icons';
+import { MobileIcon } from './mobile-icon';
 import type { SiteFrameProps } from './site-frame';
 import messages from './site-frame-messages.json';
 
 type Copy = (typeof messages)['tr'];
 type Route = keyof typeof routing.pathnames;
+type TabKey = keyof (typeof tabBarCopy)['tr']['tabs'];
 
 /**
- * Müşteri çerçevesinin MOBİL WEB yüzü — başlıkta native uygulamanın sistemi, altta Mobil v1'in
- * sekme çubuğu (kullanıcı kararları 13.09 · 14.09). Masaüstü çerçevesi `site-frame.tsx`te; bu
- * dosyayı yalnız cihaz mobilken o çağırır.
+ * Müşteri çerçevesinin TELEFON yüzü — native uygulamanın kabuğu (kullanıcı kararları 14.09: müşterinin
+ * telefon tasarımı uygulamada ve web'de aynı, referans native). Masaüstü çerçevesi `site-frame.tsx`te;
+ * bu dosyayı yalnız cihaz mobilken o çağırır.
  *
- * ── BAŞLIK: NATIVE'İN SİSTEMİ (14.09) ───────────────────────────────────────────────
+ * ── BAŞLIK: NATIVE'İN SİSTEMİ ───────────────────────────────────────────────────────
  * Native'de tek bir başlık yok; ekranın türü seçer (`design/KARARLAR.md` "üç header", 16.08) ve
  * burada da öyle. Seçim ROTADAN (`usePathname` locale'siz şablonu verir: `/product/[slug]`) —
  * sayfalar `SiteFrame`i bugünkü gibi çağırıyor, 25 çağrı yerine dokunulmadı:
  *   · vitrin → selamlama + konum satırı + zil (`HomeHeader`, native vitrin başlığı)
- *   · hesap → yalnız başlık (native hesap)
+ *   · hesap → yalnız başlık (native'de sekme kökü, geri yolu yok)
  *   · eylemsiz bölüm sayfaları → ‹ + "HESABIM" + büyük başlık (`FunnelHeader`; native siparişler ·
  *     puan geçmişi · bildirimler)
- *   · başlığını kendisi kuran ekranlar → çerçeve çizmez: katalog (başlık + sayı + arama, native
- *     katalogun arama başlığı gibi), sepet ve checkout (`bare`), giriş, keşif, sipariş onayı
+ *   · başlığını kendisi kuran ekranlar → çerçeve çizmez: katalog, paketler (ikisi de sekme kökü),
+ *     sepet ve checkout (`bare`), giriş, keşif, sipariş onayı
  *   · geri kalanı → yapışkan `AppBar` (‹ · başlık · ekranın eylemi)
- * Mobil v1'in tek biçim üst barı, koyu sepet düğmesi ve yeşil yer satırı bu kararla kalktı; konum
- * vitrin başlığında, sepete sekme çubuğundan gidilir.
+ *
+ * ── SEKME ÇUBUĞU VE SEPET: NATIVE'İN MODELİ ─────────────────────────────────────────
+ * Dört sekme: Vitrin · Katalog · Paketler|Siparişler · Hesap (native `(tabs)/_layout.tsx`). Üçüncü
+ * yuva kişiye göre: onaylı toptancı Siparişler'i görür (perakendenin paket listesi toptancıda boş),
+ * yuva `/orders`'ı açar. Etiketler iki yüzeyin ortak metninden (`@lezzet/i18n/customer/tab-bar`),
+ * ikonlar native'in (`@lezzet/brand/icons`).
+ * Çubuk YALNIZ sekme köklerinde: native'de öteki her ekran yığında, çubuğun üstünde açılır. Sepet
+ * sekme DEĞİL: yüzen düğme, native'in beş ekranında (vitrin · katalog · ürün · paket · tarif
+ * detayı) — sekme köklerinde çubuğun 20px üstünde, detayda alttan 112px (native ölçüleri).
  *
  * ── YASAL BAĞLANTILAR VE DİL ────────────────────────────────────────────────────────
  * Mobilde footer yok. Yasal sayfalar ve dil seçimi hesap ekranının en altında (kullanıcı kararı
- * 13.09, `account/components/site-links.tsx`): sekme çubuğu her ekranda, yani her sayfadan iki
- * dokunuş — misafir de görür.
+ * 13.09, `account/components/site-links.tsx`): hesap bir sekme kökü, her kökten tek dokunuş — misafir
+ * de görür.
+ *
+ * ── ZEMİN VE ÇENTİK ─────────────────────────────────────────────────────────────────
+ * Zemin native'in ekran yüzeyi (`sand-50`). Yatay tutuşta çentik payı kökte (`viewport-fit=cover`,
+ * müşteri yerleşimi); dikey tutuşta yan paylar 0'dır.
  */
 type SiteFrameMobileProps = Pick<SiteFrameProps, 'locale' | 'mobileChrome' | 'detail' | 'accountChrome' | 'fill' | 'children'>;
 
-/** v1 `tablar` — dört sekme kökü; sekme yalnız kendi ekranında yanar. */
-const TABS: readonly { href: '/' | '/catalog' | '/cart' | '/account'; icon: IconName; label: (t: Copy) => string; badge?: true }[] = [
-  { href: '/', icon: 'home', label: (t) => t.tabs.home },
-  { href: '/catalog', icon: 'grid', label: (t) => t.nav.catalog },
-  { href: '/cart', icon: 'basketPlain', label: (t) => t.tabs.cart, badge: true },
-  { href: '/account', icon: 'user', label: (t) => t.accountNav.account },
-];
+interface Tab {
+  key: TabKey;
+  href: '/' | '/catalog' | '/packages' | '/orders' | '/account';
+  icon: IconName;
+}
+
+/** Native sırası; üçüncü yuva kişiye göre (native `TABS` + `useWholesale`). */
+function tabsFor(wholesale: boolean): readonly Tab[] {
+  return [
+    { key: 'index', href: '/', icon: 'home' },
+    { key: 'catalog', href: '/catalog', icon: 'catalog' },
+    wholesale ? { key: 'orders', href: '/orders', icon: 'orders' } : { key: 'packages', href: '/packages', icon: 'packages' },
+    { key: 'account', href: '/account', icon: 'account' },
+  ];
+}
+
+/** Sekme kökleri — native `(tabs)` grubunun rotaları; çubuk yalnız bunlarda görünür. */
+const TAB_ROOTS: readonly string[] = ['/', '/catalog', '/packages', '/account'] satisfies Route[];
+/** Yüzen sepet düğmesi: sekme köklerinde çubuğa bağlı, detayda sabit (native'in beş ekranı). */
+const FAB_ON_TAB_BAR: readonly string[] = ['/', '/catalog'] satisfies Route[];
+const FAB_ON_DETAIL: readonly string[] = ['/product/[slug]', '/package/[slug]', '/recipe/[slug]'] satisfies Route[];
 
 /** Hangi başlık — künyedeki eşleme (`none`: sayfa kendi kuruyor). */
 type HeaderKind = 'home' | 'title' | 'page' | 'bar' | 'none';
 
 /** Başlığını KENDİSİ kuran ekranlar — çerçeve bunlarda başlık çizmez. */
-const OWN_HEADER: readonly string[] = ['/catalog', '/login', '/discover', '/checkout', '/checkout/[reference]'] satisfies Route[];
+const OWN_HEADER: readonly string[] = ['/catalog', '/packages', '/login', '/discover', '/checkout', '/checkout/[reference]'] satisfies Route[];
 /** Eylemsiz bölüm sayfaları — native'in "sayfa başlığı" durağı. */
 const SECTION_PAGES: readonly string[] = ['/orders', '/account/points', '/account/notifications'] satisfies Route[];
-/** v1 `tabVar` — giriş, keşif, checkout ve sipariş onayı: huninin içi ve sonu, sekme çubuğu yok. */
-const WITHOUT_TAB_BAR: readonly string[] = ['/login', '/discover', '/checkout', '/checkout/[reference]'] satisfies Route[];
 
 function headerOf(route: string, mobileChrome: SiteFrameProps['mobileChrome']): HeaderKind {
   if (mobileChrome === 'bare' || OWN_HEADER.includes(route)) return 'none';
@@ -69,7 +96,6 @@ function headerOf(route: string, mobileChrome: SiteFrameProps['mobileChrome']): 
 
 /** Başlık metni — sayfa vermediğinde (detay ve hesap alanı veriyor). */
 const TITLES: Partial<Record<Route, (t: Copy) => string>> = {
-  '/packages': (t) => t.nav.packages,
   '/recipes': (t) => t.nav.recipes,
   '/cart': (t) => t.cart,
   '/orders': (t) => t.accountNav.orders,
@@ -86,13 +112,19 @@ function titleOf(route: string, t: Copy): string {
 export function SiteFrameMobile({ locale, mobileChrome, detail, accountChrome, fill, children }: SiteFrameMobileProps) {
   const t = messages[locale];
   const route: string = usePathname();
+  const wholesale = useWholesale();
   const kind = headerOf(route, mobileChrome);
   const title = detail?.title ?? accountChrome?.title ?? titleOf(route, t);
   // Geçmiş boşken ‹'nin gideceği üst sayfa (`BackButton` sözleşmesi) — derin bağlantıyla gelen de döner.
   const fallback = detail?.fallback ?? accountChrome?.back?.href ?? '/';
 
   return (
-    <div className={['flex flex-col bg-cream text-ink', fill ? 'h-dvh overflow-hidden' : 'min-h-dvh'].join(' ')}>
+    <div
+      className={[
+        'flex flex-col bg-sand-50 pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink',
+        fill ? 'h-dvh overflow-hidden' : 'min-h-dvh',
+      ].join(' ')}
+    >
       {kind === 'home' && <HomeHeader locale={locale} />}
       {/* Native hesap: yalnız başlık, 24px serif — sekme kökü, geri yolu yok. */}
       {kind === 'title' && <h1 className="px-[18px] pt-5 font-serif text-card-title text-ink">{title}</h1>}
@@ -103,7 +135,10 @@ export function SiteFrameMobile({ locale, mobileChrome, detail, accountChrome, f
           bununla dipte kalır — masaüstü çerçevesinin aynı kuralı. */}
       <main className={['flex flex-1 flex-col', fill ? 'min-h-0' : ''].join(' ')}>{children}</main>
 
-      {!WITHOUT_TAB_BAR.includes(route) && <TabBar t={t} route={route} />}
+      {TAB_ROOTS.includes(route) && (
+        <TabBar locale={locale} route={route} tabs={tabsFor(wholesale)} menuLabel={t.menu} cartLabel={t.cart} fab={FAB_ON_TAB_BAR.includes(route)} />
+      )}
+      {FAB_ON_DETAIL.includes(route) && <CartFab label={t.cart} placement="detail" />}
 
       {/* Yer sorusu çekmecesi — vitrinin konum satırı ve sayfa içindeki "teslimat yerini değiştir"
           bağları aynı durumu açar (`PlaceProvider.panelOpen`); masaüstünde aynı durum başlığın
@@ -114,42 +149,47 @@ export function SiteFrameMobile({ locale, mobileChrome, detail, accountChrome, f
 }
 
 interface TabBarProps {
-  t: Copy;
+  locale: SiteFrameProps['locale'];
   route: string;
+  tabs: readonly Tab[];
+  menuLabel: string;
+  cartLabel: string;
+  /** Yüzen sepet düğmesi bu kökte çubuğa bağlı mı (vitrin, katalog). */
+  fab: boolean;
 }
 
 /**
- * v1'in alt sekme çubuğu. Akışın SONUNDA ve yapışkan: kısa sayfada ekranın dibinde, uzun sayfada
- * kaydırırken de dipte kalır — içerik altında kaybolmaz, çünkü çubuk kendi yerini akışta tutuyor.
- * Sepete giden yol burası (başlıkta sepet yok — native'in başlıkları da taşımıyor).
+ * Native'in alt sekme çubuğu (`components/ui/bottom-tab-bar.tsx`, müşteri tonu) — krem cam
+ * (`sand-50` %96 + 8px bulanıklık), 1,5px mürekkep üst çizgi, 8px üst/yan dolgu; alt dolgu güvenli
+ * alanla 6px'in BÜYÜĞÜ (native'in kuralı: ikisi toplanmaz). Seçili sekme terracotta, ikonu 2px
+ * kalkar ve 1,12 büyür; seçilmeyen soluk. Rozet yok — sepet sekme değil. Akışın sonunda ve
+ * yapışkan: kısa sayfada ekranın dibinde, uzun sayfada kaydırırken de dipte kalır.
  */
-function TabBar({ t, route }: TabBarProps) {
-  const { view, ready } = useCart();
-  // Sayı ilk okuma bitmeden çizilmez: girişli müşteriye bir an "boş" göstermez.
-  const count = ready ? view.itemCount : 0;
+function TabBar({ locale, route, tabs, menuLabel, cartLabel, fab }: TabBarProps) {
+  const copy = tabBarCopy[locale].tabs;
 
   return (
     <nav
-      aria-label={t.menu}
-      className="sticky bottom-0 z-30 flex flex-none border-t border-sand-275 bg-cream px-2 pt-2 pb-[calc(12px+env(safe-area-inset-bottom))]"
+      aria-label={menuLabel}
+      className="sticky bottom-0 z-30 flex flex-none border-t-[1.5px] border-ink bg-sand-50/96 px-2 pt-2 pb-[max(6px,env(safe-area-inset-bottom))] backdrop-blur-sm"
     >
-      {TABS.map((tab) => {
+      {fab && <CartFab label={cartLabel} placement="tab-bar" />}
+      {tabs.map((tab) => {
         const active = tab.href === route;
         return (
           <Link
-            key={tab.href}
+            key={tab.key}
             href={tab.href}
             aria-current={active ? 'page' : undefined}
             className={[
-              'relative flex flex-1 cursor-pointer flex-col items-center gap-1 py-1.5 transition-colors',
-              active ? 'text-olive' : 'text-muted hover:text-ink',
+              'flex flex-1 cursor-pointer flex-col items-center gap-0.5 py-1.5 transition-opacity',
+              active ? 'text-terracotta' : 'text-muted hover:opacity-70',
             ].join(' ')}
           >
-            <Icon name={tab.icon} size={21} />
-            <span className="font-sans text-[10px] font-bold tracking-[0.02em]">{tab.label(t)}</span>
-            {tab.badge && count > 0 && (
-              <span className="absolute top-0.5 right-[22px] rounded-lg bg-terracotta px-[5px] py-px font-sans text-[9.5px] font-bold text-white">{count}</span>
-            )}
+            <span className={['flex', active ? '-translate-y-0.5 scale-[1.12]' : ''].join(' ')}>
+              <MobileIcon name={tab.icon} size={23} />
+            </span>
+            <span className="font-sans text-micro font-bold">{copy[tab.key]}</span>
           </Link>
         );
       })}

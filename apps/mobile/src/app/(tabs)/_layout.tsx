@@ -7,7 +7,7 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { useWholesale } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useStaffLanding } from '@/screens/operations/use-staff-landing.hook';
 // `typeof messages` için DEĞER bağı gerek (Messages tipi JSON'dan türer) — `import type` olmaz.
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/tab-bar';
 
 /*
   SEKME KABUĞU — dört sekme: Vitrin · Katalog · Paketler|Siparişler · Hesap. Sepet SEKME DEĞİL;
@@ -35,10 +35,9 @@ import messages from './messages.json';
   kitin anladığı düz liste. Böylece kit navigasyon kütüphanesinin şeklini bilmez ve testi
   router'sız koşar.
 
-  METİN KOLOKASYONU: sekme etiketleri bu klasördeki `messages.json`da (CLAUDE §2 — global JSON
-  yok, tip `LocalizedCopy`den türer). JSON dosyası expo-router için ROTA DEĞİLDİR: yönlendirici
-  yalnız `.js/.jsx/.ts/.tsx` uzantılarını tarar, o yüzden metin dosyası kullanıldığı yerin
-  yanında durabiliyor.
+  METİN İKİ YÜZEYİN ORTAK MALI (kullanıcı kararı 14.09): sekme etiketleri web'in telefon
+  görünümüyle aynı; tek kaynak `@lezzet/i18n/customer/tab-bar` (CLAUDE §2'nin istisnası — müşteri
+  ekranının ortak metni i18n paketinde, ekran başına). Tip yine `LocalizedCopy`den türer.
 */
 
 type Messages = LocalizedCopy<typeof messages>;

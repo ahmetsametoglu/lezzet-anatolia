@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { notFound } from 'next/navigation';
 import { Lora, Karla } from 'next/font/google';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
@@ -17,6 +17,7 @@ import { getDeliveryZones } from '@/lib/delivery/read';
 import { readPlaceSnapshot } from '@/lib/delivery/read-place';
 import { currentCustomer } from '@/lib/guard';
 import { detectDevice } from '@/lib/device';
+import { readPricingViewer } from '@/lib/storefront/read-viewer';
 import { TITLE_TEMPLATE } from '@/lib/seo/title';
 import layoutMessages from './layout-messages.json';
 
@@ -67,6 +68,14 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
+/**
+ * iPhone'da sayfa ekranın güvenli alanına kadar uzanır (`viewport-fit=cover`, 14.09): telefon
+ * görünümünün alt sekme çubuğu kendi alt boşluğunu `env(safe-area-inset-bottom)`dan hesaplıyor ve
+ * bu ayar olmadan iPhone o değeri 0 verir. Yatay tutuşta çentik payını telefon çerçevesinin kökü
+ * alıyor (`site-frame.mobile.tsx`); dikey tutuşta ve masaüstünde yan paylar 0'dır.
+ */
+export const viewport: Viewport = { viewportFit: 'cover' };
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -91,7 +100,15 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
   // Yerin İLK KARESİ de burada (13.09): adres ya da çerezden çözülmüş hâliyle iner; istemci artık
   // çerezi okuyup yeniden çözmüyor (`PlaceProvider` künyesi).
   // Cihaz ipucu bildirimin yeri için: mobil webde hap sekme çubuğunun üstünde durur (`ToastProvider`).
-  const [zones, account, placeSnapshot, device] = await Promise.all([getDeliveryZones(), currentCustomer(), readPlaceSnapshot(), detectDevice()]);
+  // Onaylı toptancı bilgisi de burada (14.09): telefon görünümünün sekme çubuğu kişiye göre değişiyor.
+  // Kaynak vitrinin fiyat kapısı — istek başına tek çözüm (`cache`), vitrin sayfaları aynı cevabı okur.
+  const [zones, account, placeSnapshot, device, viewer] = await Promise.all([
+    getDeliveryZones(),
+    currentCustomer(),
+    readPlaceSnapshot(),
+    detectDevice(),
+    readPricingViewer(),
+  ]);
 
   return (
     <RootShell lang={locale} surface="customer" className={`${lora.variable} ${karla.variable}`}>
@@ -103,7 +120,7 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
             teslimat satırı ve sepetteki kısıt bloğu aynı cevabı görmeli. Sepetin içine konsaydı
             ürün sayfası onu okumak için sepete bağımlı olurdu — oysa ikisi ayrı sorular. */}
         {/* Hesap künyesi de kökte: başlıktaki giriş her sayfada aynı kişiyi göstermeli. */}
-        <AccountProvider account={account}>
+        <AccountProvider account={account} wholesale={viewer.channel === 'b2b'}>
           {/* Günlük ziyaret puanı (17.4) — hiçbir şey çizmez, oturum başına bir kez "geldi" der.
               Yalnız GİRİŞLİ müşteride monte edilir: kimlik zaten yukarıda okundu, ziyaretçi için
               boşuna sunucu turu atılmaz. Yazma burada DEĞİL istemci efektinde olur — render yan
