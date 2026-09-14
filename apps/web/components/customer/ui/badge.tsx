@@ -60,7 +60,10 @@ const SHAPE: Record<BadgeVariant, string> = {
   tint: 'rounded-soft px-2 py-0.5 text-note',
   filled: 'rounded-soft px-2 py-0.5 text-micro',
   plain: 'text-micro',
-  outline: 'rounded-soft px-2.5 py-0.5 text-micro',
+  // `inline-flex items-center` (ölçüldü 14.09, kullanıcı bildirimi): satır içi (inline) hap yazının
+  // kutusuna göre 20px boyanıyordu, içindeki ikon+metin ise 17px'lik satırda — içerik ~2px yukarıda
+  // duruyordu (ikon üst/alt 2/6px). Esnek kutuda hap satırı sarar ve ortalar (5.6/5.6px, 23px).
+  outline: 'inline-flex items-center rounded-soft px-2.5 py-0.5 text-micro',
 };
 
 interface BadgeProps {
