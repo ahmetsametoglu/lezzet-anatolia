@@ -19,15 +19,14 @@ import {
 } from '@/lib/finance/actions';
 import { FinanceDesktop } from './finance.desktop';
 import { financeUrl, type FinanceUrlState } from './finance-url';
-import { nextUnexplainedKey } from './finance-read';
-import { ledgerRowKey, type DialogKind, type DocumentRowView, type FinanceData, type FinanceSelection, type FinanceViewProps, type MovementRowView } from './finance-types';
+import type { DialogKind, DocumentRowView, FinanceData, FinanceViewProps, MovementRowView } from './finance-types';
 
 // Para client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
 // mobil deneyim native uygulamada — `docs/uygulama`.
 //
 // Süzgeçler GERÇEK GEZİNMEDİR (`?acct=…&tab=…&from=…`) çünkü veriyi sunucu okuyor ve "şu hesabın
-// hareketleri" bağlantısı paylaşılabilir olmalı. Seçim (sağ panel) ve listenin eklenen sayfaları ise
-// İSTEMCİ durumudur: imleç adrese yazılmaz (CLAUDE §1), seçim bir bakıştır.
+// hareketleri" bağlantısı paylaşılabilir olmalı. Listenin eklenen sayfaları ise İSTEMCİ durumudur:
+// imleç adrese yazılmaz (CLAUDE §1).
 
 interface FinanceClientProps {
   data: FinanceData;
@@ -48,10 +47,8 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
   const [payingDocument, setPayingDocument] = useState<DocumentRowView | null>(null);
   /** Yapısal yazım bekleyen satır (bağ, hedef, geri alma). */
   const [rowBusyId, setRowBusyId] = useState<string | null>(null);
-  /** Satırın ya da panelin son reddi — listenin üstünde okunur. */
+  /** Satırın son reddi — listenin üstünde okunur. */
   const [rowError, setRowError] = useState<string | null>(null);
-  const [selection, setSelection] = useState<FinanceSelection | null>(null);
-  const [detailVersion, setDetailVersion] = useState(0);
 
   // ── Liste: ilk sayfa sunucudan, devamı action ile EKLENİR (müşteri ekranının deseni) ──
   const onDocuments = urlState.tab === 'documents';
@@ -61,7 +58,7 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
   const [cursor, setCursor] = useState<string | null>(firstPage?.nextCursor ?? null);
   const [loadingMore, setLoadingMore] = useState(false);
   /*
-    SÜZGEÇ ya da SEKME değişince eklenen sayfalar ve seçim SIFIRLANIR — eski süzgecin satırları yeni
+    SÜZGEÇ ya da SEKME değişince eklenen sayfalar SIFIRLANIR — eski süzgecin satırları yeni
     listede kalmasın. Yazım sonrası tazelemede KORUNUR: sayfa 2'deki satıra etiket koyan operatörün
     listesi başa dönmez, o satırın kendisi yeniden okunur (`refreshMovement`). Prop değişince durumu
     ayarlamanın React deseni: efekt değil, çizim sırasında karşılaştırma.
@@ -75,7 +72,6 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     setExtraMovements([]);
     setExtraDocuments([]);
     setCursor(firstPage?.nextCursor ?? null);
-    setSelection(null);
   } else if (seenFirst !== firstPage) {
     setSeenFirst(firstPage);
     // Henüz sayfa eklenmediyse imleç ilk sayfanın yenisinden okunur (başa yeni satır eklenmiş olabilir).
@@ -114,9 +110,8 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     }
     if (fresh) setExtraDocuments((documents) => documents.map((document) => (document.id === documentId ? fresh : document)));
   };
-  /** Yazım sonrası: panel önerilerini yeniden ister, eklenmiş sayfadaki satır ya da belge tazelenir. */
+  /** Yazım sonrası: eklenmiş sayfadaki satır ya da belge tazelenir (satırın menüleri verisini açılınca okur). */
   const afterWrite = (movementId: string, documentId: string | null = null) => {
-    setDetailVersion((version) => version + 1);
     void refreshMovement(movementId);
     if (documentId) void refreshDocument(documentId);
   };
@@ -150,25 +145,6 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     startNav(() => router.refresh());
     afterWrite(movementId, documentId);
     return true;
-  };
-
-  /**
-   * KARAR SONRASI SIRADAKİ (12.19 · tek liste + tek panel): panelde onaylanan satırın ardından listedeki
-   * sıradaki izah bekleyen satır açılır — kuyruk kartlarının "onayla, sıradakine geç" akışı panelde
-   * sürer. Yalnız kararın satırı hâlâ seçiliyse: belge panelinden bağlanan ödeme paneli değiştirmez,
-   * operatör bu arada başka satıra geçtiyse onun seçimi ezilmez.
-   */
-  const decide = async (movementId: string, run: () => Promise<ActionOutcome>, documentId: string | null = null): Promise<boolean> => {
-    const ok = await runRowAction(movementId, run, documentId);
-    if (ok) {
-      setSelection((current) => {
-        if (current?.kind !== 'movement') return current;
-        if (movementRows.find((row) => ledgerRowKey(row) === current.key)?.id !== movementId) return current;
-        const next = nextUnexplainedKey(movementRows, current.key);
-        return next ? { kind: 'movement', key: next } : null;
-      });
-    }
-    return ok;
   };
 
   /** Menüden yeni etiket — sözlüğe girer, anahtarı döner (ad zaten varsa var olanınki). */
@@ -226,7 +202,6 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     onCloseDialog: () => setDialog(null),
     onSaved: () => {
       setPayingDocument(null);
-      setDetailVersion((version) => version + 1);
       refresh();
     },
     onSetNature: (movementId, nature) => writeRow(movementId, () => setMovementNatureAction(movementId, nature)),
@@ -235,8 +210,8 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     onCreateTag: createTag,
     onUnmatch: (movementId) => void runRowAction(movementId, () => unmatchRowAction(movementId)),
     onRemoveAllocation: (movementId, documentId) => void runRowAction(movementId, () => removeAllocationAction(movementId, documentId), documentId),
-    onApplyTarget: (movementId, target) => decide(movementId, () => applyMatchAction(movementId, target)),
-    onLinkDocument: (movementId, documentId) => decide(movementId, () => linkDocumentAction(movementId, documentId), documentId),
+    onApplyTarget: (movementId, target) => runRowAction(movementId, () => applyMatchAction(movementId, target)),
+    onLinkDocument: (movementId, documentId) => runRowAction(movementId, () => linkDocumentAction(movementId, documentId), documentId),
     rowBusyId,
     rowError,
     movementRows,
@@ -244,9 +219,6 @@ export function FinanceClient({ data, urlState, writableAccounts }: FinanceClien
     hasMore: cursor !== null,
     loadingMore,
     onLoadMore,
-    selection,
-    onSelect: setSelection,
-    detailVersion,
     payingDocument,
     onPayDocument: setPayingDocument,
     onClosePay: () => setPayingDocument(null),

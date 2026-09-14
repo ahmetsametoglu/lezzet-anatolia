@@ -160,7 +160,16 @@ async function toRowViews(db: SupabaseClient, ledgerRows: readonly AccountLedger
   }
   const suggestions = new Map(
     toMatchRows(queue.rows, toMatchTargets(queue.targets, names.natureLabels)).map(
-      (entry) => [entry.movementId, { strength: entry.strength, title: entry.candidates[0]?.title ?? null }] as const,
+      (entry) =>
+        [
+          entry.movementId,
+          {
+            strength: entry.strength,
+            title: entry.candidates[0]?.title ?? null,
+            // ✓ yalnız güçlü önerinin hedefini taşır (12.21) — çoklu adayda seçimi menü yapar.
+            target: entry.strength === 'strong' ? (entry.candidates[0]?.target ?? null) : null,
+          },
+        ] as const,
     ),
   );
   return toMovementRows(ledgerRows, { ...names, orderRefs, documentsOf, suggestions });

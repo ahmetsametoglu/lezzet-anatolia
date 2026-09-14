@@ -439,3 +439,12 @@ export function QuestionIcon({ size = 16 }: { size?: number }) {
     </Svg>
   );
 }
+
+/** Üç nokta — satırın seyrek eylemlerini açan menü ("⋯", 12.21). */
+export function MoreIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={2.8}>
+      <path d="M5 12h.01M12 12h.01M19 12h.01" />
+    </Svg>
+  );
+}

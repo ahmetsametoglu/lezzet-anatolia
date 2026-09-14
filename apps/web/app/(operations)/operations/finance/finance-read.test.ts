@@ -1,31 +1,79 @@
+import type { AccountLedgerRow } from '@lezzet/types';
 import { describe, expect, it } from 'vitest';
-import { nextUnexplainedKey } from './finance-read';
-import { ledgerRowKey, type MovementRowView } from './finance-types';
+import type { MatchTarget } from '@/lib/bank/reconcile';
+import { toMovementRows, type MovementReadContext } from './finance-read';
 
 /**
- * Sıradaki izah bekleyen satır (12.19) — panelde karar verilince açılan satır. Kuralın okuduğu yalnız
- * satırın anahtarı ve izahı; fikstür o iki alanı taşır.
+ * Defter satırının görünümü (12.21 · sağ panel kalktı): BAĞ "Karşılığı" sütununa (`link`), İPUCU
+ * açıklamanın altına (`ref`), ekstre satırının önerisi hapa (`suggestion*`) gider. Fikstür yalnız
+ * indirgemenin okuduğu alanları taşır — okumadığı alanlar (`createdAt`, `accountId`, parmak izi…) yok,
+ * bu yüzden tip `unknown` üstünden verilir.
  */
-const row = (id: string, explained: boolean) => ({ id, ledgerAccountId: 'hesap', explained }) as MovementRowView;
-const key = (id: string) => ledgerRowKey(row(id, false));
-const rows = [row('a', false), row('b', true), row('c', false), row('d', false)];
+const base = {
+  id: 'mov-1',
+  ledgerAccountId: 'acc-1',
+  valueDate: '2026-09-10',
+  type: 'expense',
+  direction: 'out',
+  explained: true,
+  nature: null,
+  counterpartyId: null,
+  tags: [],
+  signedAmountCents: -36000,
+  amountCents: 36000,
+  description: 'PRLV CABINET COMPTABLE MULLER',
+  source: 'manual',
+  reconciled: false,
+  meta: {},
+  orderId: null,
+  stockIntakeId: null,
+  supplierId: null,
+  counterAccountId: null,
+} as unknown as AccountLedgerRow;
 
-describe('nextUnexplainedKey', () => {
-  it('şimdiki satırdan SONRAKİ izah bekleyen', () => {
-    expect(nextUnexplainedKey(rows, key('a'))).toBe(key('c'));
-    expect(nextUnexplainedKey(rows, key('c'))).toBe(key('d'));
+const context = (over: Partial<MovementReadContext> = {}): MovementReadContext => ({
+  accountNames: new Map([
+    ['acc-1', 'Crédit Mutuel'],
+    ['acc-2', 'Kasa'],
+  ]),
+  orderRefs: new Map([['ord-1', 'LZA-26-7K4M2P']]),
+  partyNames: new Map([['sup-1', 'Anadolu Gıda']]),
+  natureLabels: new Map(),
+  documentsOf: new Map(),
+  ...over,
+});
+
+const read = (over: Partial<AccountLedgerRow>, ctx = context()) => toMovementRows([{ ...base, ...over }], ctx)[0];
+
+describe('toMovementRows — bağ ve ipucu', () => {
+  it('bağ "Karşılığı" sütununa gider, en somut olanı okunur; altta ipucu kalmaz', () => {
+    expect(read({ type: 'order_payment', orderId: 'ord-1' })).toMatchObject({ link: { text: 'sipariş LZA-26-7K4M2P', tone: 'olive' }, ref: null });
+    expect(read({ type: 'purchase', stockIntakeId: 'int-1', supplierId: 'sup-1' })).toMatchObject({ link: { text: 'mal kabule bağlı', tone: 'olive' } });
+    expect(read({ type: 'purchase', supplierId: 'sup-1' })).toMatchObject({ link: { text: 'tedarikçi: Anadolu Gıda', tone: 'olive' } });
+    expect(read({ type: 'transfer', counterAccountId: 'acc-2' })).toMatchObject({ link: { text: 'karşı hesap: Kasa', tone: 'neutral' } });
   });
 
-  it('sonda bulunamazsa baştan döner', () => {
-    expect(nextUnexplainedKey(rows, key('d'))).toBe(key('a'));
+  it('ipucu kampanya ya da izah sorusudur; soru tür alan satıra türü, almayana eksik bağı söyler', () => {
+    expect(read({ meta: { campaign: 'Ramazan' } })).toMatchObject({ ref: 'kampanya: Ramazan', refTone: 'olive', link: null });
+    expect(read({ explained: false })).toMatchObject({ ref: 'izah bekliyor — türünü seçin ya da belgeye bağlayın', refTone: 'amber' });
+    expect(read({ type: 'order_payment', explained: false })).toMatchObject({ ref: 'izah bekliyor — siparişe bağlı değil', refTone: 'amber' });
   });
 
-  it('şimdiki satır sayılmaz — liste henüz tazelenmemişken aynı satırı yeniden açmaz', () => {
-    expect(nextUnexplainedKey([row('a', false)], key('a'))).toBeNull();
+  it('eşleşme bekleyen ekstre satırının sorusu alta yazılmaz — önerisiyle hapa gider', () => {
+    const target: MatchTarget = { kind: 'document', documentId: 'doc-1' };
+    const suggestions = new Map([['mov-1', { strength: 'strong' as const, title: 'FA-2026-0912 · Cabinet Muller', target }]]);
+    expect(read({ source: 'bank_import', explained: false }, context({ suggestions }))).toMatchObject({
+      ref: null,
+      suggestion: 'strong',
+      suggestionTitle: 'FA-2026-0912 · Cabinet Muller',
+      suggestionTarget: target,
+    });
+    expect(read({ source: 'bank_import', explained: false })).toMatchObject({ suggestion: null, suggestionTitle: null, suggestionTarget: null });
   });
 
-  it('seçim yokken ilk izah bekleyen; hiç yoksa null', () => {
-    expect(nextUnexplainedKey(rows, null)).toBe(key('a'));
-    expect(nextUnexplainedKey([row('a', true)], null)).toBeNull();
+  it('geri alma yalnız ekstre satırının cevabındadır', () => {
+    expect(read({ source: 'bank_import', reconciled: true })).toMatchObject({ canUnmatch: true });
+    expect(read({ source: 'bank_import', counterpartyId: 'cp-1' })).toMatchObject({ canUnmatch: true });
+    expect(read({ source: 'manual', reconciled: true })).toMatchObject({ canUnmatch: false });
   });
 });

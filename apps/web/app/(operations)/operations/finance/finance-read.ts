@@ -1,7 +1,7 @@
 import { acceptsNature, type MatchKind, type MatchSuggestion } from '@lezzet/domain-core';
 import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance, MoneyMovement, MovementType } from '@lezzet/types';
 import { dayMonth, money } from '@/components/operation/ui/format';
-import type { DocumentPaymentOptions, MatchOptions, MatchTargets } from '@/lib/bank/reconcile';
+import type { DocumentPaymentOptions, MatchOptions, MatchTarget, MatchTargets } from '@/lib/bank/reconcile';
 import {
   ACCOUNT_TONE,
   ACCOUNT_TYPE_LABEL,
@@ -21,7 +21,6 @@ import type {
   MatchTargetView,
   MovementRowView,
 } from './finance-types';
-import { ledgerRowKey } from './finance-types';
 
 // Para ekranının SAF indirgemeleri — servis satırı → görünüm satırı.
 //
@@ -120,6 +119,8 @@ export interface MovementReadContext {
 export interface RowSuggestion {
   strength: MatchRowView['strength'];
   title: string | null;
+  /** Güçlü önerinin hedefi (12.21) — satırın ✓'si tek dokunuşla uygular; güçlü değilse `null`. */
+  target: MatchTarget | null;
 }
 
 /**
@@ -135,71 +136,56 @@ const MISSING_LINK: Partial<Record<MovementType, string>> = {
 };
 
 /**
- * Hareketin NEYE bağlı olduğu — tek cümle + tonu.
+ * Açıklamanın altındaki İPUCU ve satırın BAĞI (12.21 · sağ panel kalktı).
  *
- * Sıra öncelik sırasıdır ve rastgele değil: bir satır hem tedarikçiye hem mal kabule bağlı olabilir,
- * ve o zaman okunmak istenen şey **en somut olandır**. Kampanya en başta çünkü reklam giderinin tek
- * ayırt edici bilgisi odur (`meta.campaign`).
- *
- * Eşleşmeyi bekleyen banka satırı `amber` döner — o bir bağ değil, bir SORU: "bu para neyin nesi".
- * Tür, cari ve belge bağı satırın kendi araçlarında okunur (13.09); burada tekrarlanmaz — kalan
- * cümle satırın HÂLİDİR: ekstre satırı cevap bekliyor mu, satır izahsız mı.
+ * İpucu yalnız iki şeydir: kampanya (reklam giderinin tek ayırt edici bilgisi, `meta.campaign`) ya da
+ * izah sorusu. Bağ "Karşılığı" sütununa gider (`linkOf`); tür, cari ve belge bağı satırın kendi
+ * araçlarında okunur (13.09) ve burada tekrarlanmaz. Eşleşme bekleyen ekstre satırının sorusu ("bu para
+ * neyin nesi") o sütunun hapıdır — altta ayrıca yazılmaz.
  */
-function refOf(
-  row: AccountLedgerRow,
-  context: MovementReadContext,
-  documents: ReadonlyArray<{ id: string; label: string }>,
-): { ref: string | null; refTone: MovementRowView['refTone'] } {
+function refOf(row: AccountLedgerRow, context: MovementReadContext): Pick<MovementRowView, 'ref' | 'refTone' | 'link'> {
   const campaign = typeof row.meta?.campaign === 'string' ? row.meta.campaign : null;
-  if (campaign) return { ref: `kampanya: ${campaign}`, refTone: 'olive' };
+  const bankPending = row.source === 'bank_import' && !row.reconciled;
+  // Soru tür alan satıra türü, almayana eksik bağı söyler.
+  const hint: Pick<MovementRowView, 'ref' | 'refTone'> = campaign
+    ? { ref: `kampanya: ${campaign}`, refTone: 'olive' }
+    : !row.explained && !bankPending
+      ? {
+          ref: acceptsNature(row.type) ? 'izah bekliyor — türünü seçin ya da belgeye bağlayın' : `izah bekliyor — ${MISSING_LINK[row.type] ?? 'bağı eksik'}`,
+          refTone: 'amber',
+        }
+      : { ref: null, refTone: 'neutral' };
+  return { ...hint, link: linkOf(row, context) };
+}
 
+/**
+ * Satırın BAĞI — "Karşılığı" sütununda düz yazı (12.21). Sıra öncelik sırasıdır: en somut olan okunur.
+ * Ekstre satırının belge bağı ve önerisi burada değil, sütunun hapında.
+ */
+function linkOf(row: AccountLedgerRow, context: MovementReadContext): MovementRowView['link'] {
   if (row.orderId) {
     // Referans numarası okunabildiyse o yazılır: "siparişe bağlı" doğru ama HANGİ sipariş sorusunu
     // cevapsız bırakır ve operatörü satırdan çıkıp aramaya iter.
     const reference = context.orderRefs.get(row.orderId);
-    return { ref: reference ? `sipariş ${reference}` : 'siparişe bağlı', refTone: 'olive' };
+    return { text: reference ? `sipariş ${reference}` : 'siparişe bağlı', tone: 'olive' };
   }
-  if (row.stockIntakeId) return { ref: 'mal kabule bağlı', refTone: 'olive' };
+  if (row.stockIntakeId) return { text: 'mal kabule bağlı', tone: 'olive' };
   if (row.supplierId) {
     const supplier = context.partyNames.get(row.supplierId);
-    return { ref: supplier ? `tedarikçi: ${supplier}` : 'tedarikçi ödemesi', refTone: 'olive' };
+    return { text: supplier ? `tedarikçi: ${supplier}` : 'tedarikçi ödemesi', tone: 'olive' };
   }
-
   if (row.counterAccountId) {
     // Transferde okunmak istenen şey karşı taraftır; bu satırın kendi hesabı zaten sütunda yazıyor.
     const counter = context.accountNames.get(row.counterAccountId);
-    return { ref: counter ? `karşı hesap: ${counter}` : 'transfer', refTone: 'neutral' };
+    return { text: counter ? `karşı hesap: ${counter}` : 'transfer', tone: 'neutral' };
   }
-
-  if (row.source === 'bank_import' && !row.reconciled) {
-    // Kısmen bağlı satır: belgesi var ama kalan henüz karşılanmadı — kuyrukta kalanıyla durur (13.09).
-    if (documents.length > 0) return { ref: 'kısmen bağlı — kalanı eşleşme bekliyor', refTone: 'amber' };
-    // ÖNERİ SATIRDA (12.19 · tek liste + tek panel): kuyruk kartları kalktı, motorun cevabı satırın
-    // kendisinde okunur — onayı satırın panelinde. Güçlü aday olive (onaya hazır), çoklu aday amber.
-    const suggestion = context.suggestions?.get(row.id);
-    if (suggestion?.title) {
-      const many = suggestion.strength === 'ambiguous' ? ' · birden çok aday' : '';
-      return { ref: `öneri: ${suggestion.title}${many}`, refTone: suggestion.strength === 'strong' ? 'olive' : 'amber' };
-    }
-    // "Öneri bekliyor" DEĞİL (kullanıcı bulgusu 13.09: "öneride nasıl bulunacağımı anlayamadım"):
-    // cümle operatöre yapacağı işi söyler — satırın türünü koymak ya da onu bir kayda bağlamak.
-    return { ref: 'eşleşme bekliyor — türünü seçin ya da bağlayın', refTone: 'amber' };
-  }
-  // Hiçbiri yok: satır izah bekliyor (13.09) — bu bir bilgi değil, bir SORU. Cümle satırın
-  // araçlarına uyar: tür alan satıra tür, almayana eksik bağı söylenir.
-  if (!row.explained) {
-    const ref = acceptsNature(row.type)
-      ? 'izah bekliyor — türünü seçin ya da belgeye bağlayın'
-      : `izah bekliyor — ${MISSING_LINK[row.type] ?? 'bağı eksik'}`;
-    return { ref, refTone: 'amber' };
-  }
-  return { ref: null, refTone: 'neutral' };
+  return null;
 }
 
 export function toMovementRows(rows: readonly AccountLedgerRow[], context: MovementReadContext): MovementRowView[] {
   return rows.map((row) => {
     const documents = context.documentsOf.get(row.id) ?? [];
-    const { ref, refTone } = refOf(row, context, documents);
+    const { ref, refTone, link } = refOf(row, context);
     const fromBank = row.source === 'bank_import';
     return {
       id: row.id,
@@ -222,6 +208,7 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
       title: row.description?.trim() || MOVEMENT_TYPE_LABEL[row.type],
       ref,
       refTone,
+      link,
       accountName: context.accountNames.get(row.ledgerAccountId) ?? '—',
       typeLabel: MOVEMENT_TYPE_LABEL[row.type],
       canClassify: acceptsNature(row.type),
@@ -231,6 +218,8 @@ export function toMovementRows(rows: readonly AccountLedgerRow[], context: Movem
       remainingCents: row.amountCents - documents.reduce((sum, document) => sum + document.amountCents, 0),
       fromBank,
       suggestion: context.suggestions?.get(row.id)?.strength ?? null,
+      suggestionTitle: context.suggestions?.get(row.id)?.title ?? null,
+      suggestionTarget: context.suggestions?.get(row.id)?.target ?? null,
       canUnmatch: fromBank && (row.reconciled || documents.length > 0 || row.counterpartyId !== null),
     };
   });
@@ -468,16 +457,4 @@ export function toDocumentPaymentsView(options: DocumentPaymentOptions, accountN
       reasons: reasonsOf(candidate.reasons),
     })),
   };
-}
-
-/**
- * Sıradaki izah bekleyen satırın anahtarı (12.19) — panelde karar verilince ona geçilir, "Atla" ve
- * "Sıradakini aç" onu açar. Şimdiki satırdan SONRA aranır, bulunmazsa baştan; şimdiki satır sayılmaz
- * (yazımdan hemen sonra liste henüz tazelenmemiş olabilir — aynı satırı yeniden açmasın).
- */
-export function nextUnexplainedKey(rows: readonly MovementRowView[], currentKey: string | null): string | null {
-  const at = currentKey === null ? -1 : rows.findIndex((row) => ledgerRowKey(row) === currentKey);
-  const order = at === -1 ? rows : [...rows.slice(at + 1), ...rows.slice(0, at)];
-  const next = order.find((row) => !row.explained && ledgerRowKey(row) !== currentKey);
-  return next ? ledgerRowKey(next) : null;
 }

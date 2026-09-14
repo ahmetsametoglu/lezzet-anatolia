@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { AccountType } from '@lezzet/types';
 import { ActionMenu } from '@/components/operation/ui/action-menu';
-import { Button } from '@/components/operation/ui/button';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { DateRangeFilterChip } from '@/components/operation/ui/date-range-filter-chip';
@@ -15,15 +14,16 @@ import { Tabs } from '@/components/operation/ui/tabs';
 import { Combobox } from '@/components/operation/form/combobox';
 import { MultiSelect } from '@/components/operation/form/multi-select';
 import { naturesForDirection } from '@/components/operation/form/movement-form/schema';
-import { ACCOUNT_GROUP_LABEL, EXPLAINED_LABEL, MOVEMENT_TYPE_CHIP, MOVEMENT_TYPE_ORDER, NOTES } from './finance-labels';
+import { ACCOUNT_GROUP_LABEL, EXPLAINED_LABEL, MOVEMENT_SOURCE_LABEL, MOVEMENT_TYPE_CHIP, MOVEMENT_TYPE_ORDER, NOTES } from './finance-labels';
 import { ledgerRowKey } from './finance-types';
 import type { AccountView, DialogKind, MovementRowView, RowEditor } from './finance-types';
 import { ALL_ACCOUNTS, type FinanceUrlState } from './finance-url';
 import { MovementTypeIcon } from './movement-type-icon';
+import { MovementMatchCell, type RowMatcher } from './row-actions';
 import { useRowWrites } from './use-row-writes.hook';
 
 // Para ekranının blokları (12.17 düzeni): bakiye şeridi (hesap süzgeci) · sekme ve süzgeç bandı ·
-// hareket listesi · izah özeti (12.19: kuyruk kartları kalktı, öneri satırda, onay panelde). Operasyon web'i masaüstü-yalnız (06.08) — telefon
+// hareket listesi (12.21: sağ sütun kalktı — satırın bütün eylemleri satırın kendisinde). Operasyon web'i masaüstü-yalnız (06.08) — telefon
 // kartı ve `stacked` kipi söküldü; personelin mobil deneyimi native uygulamada.
 
 /** İşaretli tutarın rengi — giriş olive, çıkış nötr, iade kırmızı. */
@@ -284,28 +284,23 @@ export function FinanceToolbar({ urlState, unexplainedCount, openDocumentCount, 
  * Tablo şeridi — başlıklar ve hücreler AYNI diziyi okur, hiza elle tutulmaz. Orta sütun (12.17):
  * tür · cari · etiket — kullanıcı "etiketleri ortadaki boş alana koy, satır yüksekliği artmasın" dedi.
  */
-const ROW_GRID = 'grid grid-cols-[56px_minmax(0,1.2fr)_minmax(0,1fr)_96px_minmax(0,112px)_10px] items-center gap-x-3';
+// 12.21: sağ sütun kalktı, liste tam genişlik — "Karşılığı" sütunu geldi, orta hücre ~250px'e genişledi;
+// hesap · tip sütunu kaynağı da taşıyor ("sipariş ödemesi · sistem" 130px'te kesiliyordu, ölçüldü).
+const ROW_GRID = 'grid grid-cols-[56px_minmax(0,1.3fr)_minmax(0,1.1fr)_minmax(0,1fr)_96px_minmax(0,180px)_10px] items-center gap-x-3';
 
 interface MovementListProps {
   rows: MovementRowView[];
   /** Boşken basılacak cümle — "hiç yok" ile "bu süzgeçte yok" ayrı cümlelerdir. */
   note: string | null;
   editor: RowEditor;
-  selectedKey: string | null;
-  onSelect: (row: MovementRowView) => void;
+  /** Satırın bağ kararları — "Karşılığı" sütununun hapı ve ✓'si (12.21). */
+  matcher: RowMatcher;
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
 }
 
-export function MovementList({ rows, note, editor, selectedKey, onSelect, hasMore, loadingMore, onLoadMore }: MovementListProps) {
-  // Seçilen satır GÖRÜNÜR kalır (12.19): panel karardan sonra sıradakine geçince ya da "Sıradakini aç"
-  // denince açılan satır listenin alt kenarında yarım kalıyordu — operatör neyin açıldığını görmüyordu.
-  const selectedRef = useRef<HTMLLIElement>(null);
-  useEffect(() => {
-    selectedRef.current?.scrollIntoView({ block: 'nearest' });
-  }, [selectedKey]);
-
+export function MovementList({ rows, note, editor, matcher, hasMore, loadingMore, onLoadMore }: MovementListProps) {
   if (rows.length === 0) return <EmptyState title="Hareket yok" description={note ?? NOTES.emptyLedger} />;
 
   return (
@@ -316,54 +311,47 @@ export function MovementList({ rows, note, editor, selectedKey, onSelect, hasMor
         <span>Tarih</span>
         <span>Açıklama</span>
         <span>Tür · cari · etiket</span>
+        <span>Karşılığı</span>
         <span className="text-right">Tutar</span>
         {/* "Tip", "tür" değil (13.09): bu sütun kaba tipi (gider · transfer · sipariş ödemesi) söyler. */}
         <span>Hesap · tip</span>
         <span />
       </div>
       <ul aria-label="Hareketler" className="min-h-0 flex-1 overflow-y-auto">
-        {rows.map((row) => {
-          const key = ledgerRowKey(row);
-          const selected = key === selectedKey;
-          return (
-            // SATIR TIKLANIR (12.17 · kullanıcı bulgusu: "kayıtların üzerine tıklayınca sağ tarafta bir
-            // şey olmuyor") — sağ sütunda hareketin ayrıntısı açılır: karşılığı, belgesi, geri alma.
-            <li
-              key={key}
-              ref={selected ? selectedRef : undefined}
-              tabIndex={0}
-              aria-selected={selected}
-              onClick={() => onSelect(row)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  onSelect(row);
-                }
-              }}
-              className={`${ROW_GRID} cursor-pointer border-b border-ops-line-soft px-6 py-2 outline-none transition-colors focus-visible:bg-ops-subtle ${
-                selected ? 'bg-ops-olive-bg' : 'hover:bg-ops-subtle'
-              }`}
-            >
-              <span className="font-ops-mono text-ops-xs text-ops-faint">{dayMonth(row.valueDate)}</span>
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate font-ops-body text-ops-sm text-ops-ink">{row.title}</span>
-                {row.ref ? <RefLine row={row} /> : null}
-              </div>
-              <RowCell row={row} editor={editor} />
-              <span className={`text-right font-ops-mono text-ops-sm ${amountTone(row.signedAmountCents, row.type === 'order_refund')}`}>
-                {signedAmount(row.signedAmountCents)}
+        {rows.map((row) => (
+          // SATIR SEÇİLMEZ (12.21 · sağ panel kalktı): her iş satırın kendi kontrolünde — tür · cari ·
+          // etiket orta hücrede, bağ ve öneri "Karşılığı" sütununda.
+          <li key={ledgerRowKey(row)} className={`${ROW_GRID} border-b border-ops-line-soft px-6 py-2 transition-colors hover:bg-ops-subtle`}>
+            <span className="font-ops-mono text-ops-xs text-ops-faint">{dayMonth(row.valueDate)}</span>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              {/* Kesilen açıklamanın tamamı fareyle üstüne gelince — panel onu tam yazıyordu. */}
+              <span title={row.title} className="truncate font-ops-body text-ops-sm text-ops-ink">
+                {row.title}
               </span>
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate font-ops-body text-ops-xs text-ops-ink">{row.accountName}</span>
-                <span className="flex min-w-0 items-center gap-1 font-ops-body text-ops-micro text-ops-faint">
-                  <MovementTypeIcon type={row.type} size={12} />
-                  <span className="truncate">{row.typeLabel}</span>
+              {row.ref ? <RefLine row={row} /> : null}
+            </div>
+            <RowCell row={row} editor={editor} />
+            {/* Hücre HER satırda durur: bağı olmayan satırda boş kalır — yoksa ızgarada tutar bir sütun sola
+                kayıyordu (ölçüldü: bağsız 12 satırda "Karşılığı" sütununda tutar okunuyordu). */}
+            <div className="flex min-w-0 items-center">
+              <MovementMatchCell row={row} matcher={matcher} />
+            </div>
+            <span className={`text-right font-ops-mono text-ops-sm ${amountTone(row.signedAmountCents, row.type === 'order_refund')}`}>
+              {signedAmount(row.signedAmountCents)}
+            </span>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="truncate font-ops-body text-ops-xs text-ops-ink">{row.accountName}</span>
+              {/* Kaynak (ekstre · elle · sistem) tipin yanında — panelin künyesindeydi (12.21). */}
+              <span className="flex min-w-0 items-center gap-1 font-ops-body text-ops-micro text-ops-faint">
+                <MovementTypeIcon type={row.type} size={12} />
+                <span title={`${row.typeLabel} · ${MOVEMENT_SOURCE_LABEL[row.source]}`} className="truncate">
+                  {row.typeLabel} · {MOVEMENT_SOURCE_LABEL[row.source]}
                 </span>
-              </div>
-              <MatchDot explained={row.explained} />
-            </li>
-          );
-        })}
+              </span>
+            </div>
+            <MatchDot explained={row.explained} />
+          </li>
+        ))}
         {/* Gözcü listenin İÇİNDE: kaydırma kabı bu `ul` — dışında dursaydı hep görünür sayılır ve
             sayfalar kendiliğinden art arda çekilirdi. */}
         <li className="list-none">
@@ -385,7 +373,7 @@ interface RowCellProps {
  * menüsü bütün etiketleri seçilileri işaretli gösterir ve menüde olmayanı oluşturur. Hücrede tek
  * etiket çizilir, kalanı "+N" çipinde sayılır. Tür ve cari yalnız sınıflandırılabilen satırda.
  *
- * GENİŞLİK BÜTÇESİ: hücre dar (1440 pikselde 177px) ve hiçbir kontrol ondan DÜŞMEZ. Tür/cari taşıyan
+ * GENİŞLİK BÜTÇESİ: hücre dar (1440 pikselde 177px idi; 12.21'de sağ panel kalkınca ~260px) ve hiçbir kontrol ondan DÜŞMEZ. Tür/cari taşıyan
  * satırda etiket alanı daralmaz ama sınırlıdır (tek çip, adı kesik); tür ve cari kalanı paylaşıp
  * adlarını keser (tam ad sağdaki ayrıntıda). Taşımayan satırda hücrenin tamamı etiketindir. Cari İKİ kat hızlı daralır: satırın izahı türdür, cari çoğu kez açıklamada
  * zaten yazılı. Tür/cari taşıyan satırda etiket daveti "+" (üçüncü bir "+ x" yazısı yer yiyordu).
@@ -396,13 +384,7 @@ function RowCell({ row, editor }: RowCellProps) {
   const writes = useRowWrites(row, editor);
 
   return (
-    // Hücredeki dokunuş satırı SEÇMEZ: menü açmak ile ayrıntıya gitmek ayrı niyetlerdir. Menü portal
-    // ile çizilse de tıklaması React ağacında buraya kabarır — kesilen yer burası.
-    <div
-      className="flex min-w-0 items-center gap-1 overflow-hidden"
-      onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => event.stopPropagation()}
-    >
+    <div className="flex min-w-0 items-center gap-1 overflow-hidden">
       {row.canClassify ? (
         <>
           <Combobox
@@ -475,74 +457,5 @@ function MatchDot({ explained, className = '' }: { explained: boolean; className
       role="img"
       className={`size-2 rounded-full ${explained ? 'bg-ops-olive' : 'bg-ops-amber'} ${className}`}
     />
-  );
-}
-
-interface ExplainSummaryProps {
-  /** Hesap-üstü izahsız hareket sayısı — `null` sayaç kapısı yok demek ("bilinmiyor"), sıfır değil. */
-  unexplainedCount: number | null;
-  /** Yüklü satırlardaki güçlü öneri sayısı — onaya hazır iş. */
-  strongCount: number;
-  /** Listede açılabilecek izah bekleyen satır var mı. */
-  canOpenNext: boolean;
-  /** Liste zaten izah bekleyenlere süzülü mü. */
-  filtered: boolean;
-  onOpenNext: () => void;
-  onShowUnexplained: () => void;
-}
-
-/**
- * Sağ sütun, satır seçili değilken (12.19 · kullanıcı kararı "tek liste + tek panel"). Banka
- * eşleştirme kuyruğunun kartları kalktı: aynı satırlar solda ve sağda iki ayrı arayüzle duruyordu,
- * kart soldaki satırı bilmiyordu (kullanıcı: "ekranın solu ve sağı birbirinden kopuk"). İş kuyruğu
- * artık listenin kendisi (izah bekleyen süzgeci); öneri satırın ikinci satırında, onay satırın
- * panelinde. Burada yalnız ne kadar iş kaldığı ve sıradakine giden kapı durur.
- */
-export function ExplainSummary({ unexplainedCount, strongCount, canOpenNext, filtered, onOpenNext, onShowUnexplained }: ExplainSummaryProps) {
-  return (
-    <section aria-label="İzah özeti" className="flex flex-col gap-4 px-5 py-5">
-      <div className="flex flex-col gap-0.5">
-        <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">İzah bekleyen hareketler</span>
-        <span className="font-ops-body text-ops-xs text-ops-faint">sistem önerir, siz onaylarsınız · satıra dokununca ayrıntısı burada açılır</span>
-      </div>
-      <dl className="grid grid-cols-2 gap-2">
-        <SummaryFigure label="izah bekleyen" value={unexplainedCount === null ? '—' : num(unexplainedCount)} />
-        <SummaryFigure label="bu listede güçlü öneri" value={num(strongCount)} />
-      </dl>
-      {unexplainedCount === 0 ? (
-        <p className="font-ops-body text-ops-sm text-ops-olive-dark">Her hareket izahlı.</p>
-      ) : canOpenNext ? (
-        <div className="flex flex-col items-start gap-1.5">
-          <Button size="sm" onClick={onOpenNext}>
-            Sıradakini aç
-          </Button>
-          <span className="font-ops-body text-ops-xs text-ops-faint">
-            Onayladıkça sıradaki satır kendiliğinden açılır; "Atla" satıra bir şey yazmadan geçer.
-          </span>
-        </div>
-      ) : filtered ? (
-        <p className="font-ops-body text-ops-sm text-ops-muted">Bu süzgeçte izah bekleyen satır yok.</p>
-      ) : (
-        <div className="flex">
-          <Button variant="secondary" size="sm" onClick={onShowUnexplained}>
-            İzah bekleyenleri listele
-          </Button>
-        </div>
-      )}
-    </section>
-  );
-}
-
-interface SummaryFigureProps {
-  label: string;
-  value: string;
-}
-
-function SummaryFigure({ label, value }: SummaryFigureProps) {
-  return (
-    <div className="flex flex-col gap-0.5 rounded-ops-card border border-ops-line bg-ops-card px-3 py-2.5">
-      <dd className="font-ops-mono text-ops-title text-ops-ink">{value}</dd>
-      <dt className="font-ops-body text-ops-micro text-ops-faint">{label}</dt>
-    </div>
   );
 }

@@ -108,17 +108,15 @@ export const EXPLAINED_LABEL = {
 } as const;
 
 /**
- * Eşleştirme önerisinin GÜCÜ — tezgâh sözleşmesinin üç hâli: *"yeşil rozet güçlü aday (onayla),
- * amber çoklu aday (seç), gri önerisiz (elle bağla)"*.
- *
- * Üçünün eylem adı da farklı ve bu kasıtlı: aynı düğmeye üç ayrı iş yüklenirse operatör güçlü
- * adayı da "seçmek" zorunda sanır, tek tıkla geçilebilecek satırda durup düşünür.
+ * Eşleştirme önerisinin GÜCÜ — "Karşılığı" hapının tonu (12.21): yeşil güçlü aday (yanında ✓, tek
+ * dokunuşla onay), amber çoklu aday (menüden seç), gri önerisiz (menüden elle bağla). Üç hâlin ayrı
+ * eylemi kasıtlı: güçlü adayı da "seçmek" zorunda sanan operatör tek dokunuşluk satırda durup düşünür.
  */
 export const SUGGESTION_VIEW = {
-  strong: { label: 'güçlü aday', tone: 'olive', action: '✓ Onayla' },
-  ambiguous: { label: 'çoklu aday', tone: 'amber', action: 'Seç' },
-  none: { label: 'öneri yok', tone: 'neutral', action: 'Elle bağla' },
-} as const satisfies Record<string, { label: string; tone: OpsTone; action: string }>;
+  strong: { tone: 'olive' },
+  ambiguous: { tone: 'amber' },
+  none: { tone: 'neutral' },
+} as const satisfies Record<string, { tone: OpsTone }>;
 
 export type SuggestionStrength = keyof typeof SUGGESTION_VIEW;
 
@@ -157,10 +155,11 @@ export const MATCH_EFFECT: Record<MatchKindView, string> = {
 };
 
 /** Hareketin kaynağı — sağ panelde "bu satır nereden geldi" (12.17). */
+// Kaynak satırın tip hücresinde, tipin yanında okunur ("gider · ekstre") — kısa (12.21: panelin künyesindeydi).
 export const MOVEMENT_SOURCE_LABEL = {
-  bank_import: 'ekstre satırı',
-  manual: 'elle yazıldı',
-  system: 'sistem yazdı',
+  bank_import: 'ekstre',
+  manual: 'elle',
+  system: 'sistem',
 } as const;
 
 /** Belgenin hâli — açık kalanından türer (12.17): borç sürüyor, kapandı ya da fazla ödendi. */

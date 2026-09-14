@@ -30,8 +30,9 @@ export type AccountView = Pick<Account, 'id' | 'name' | 'type' | 'isActive'> & {
  * yönü değil, satırın hangi hesabın defterinde durduğu.
  *
  * ── SATIR KENDİ YERİNDE DÜZENLENİR (13.09 · 12.17) ─────────────────────────
- * Tür, cari ve etiket satırın ortasındaki hücrede; belge bağı, eşleştirme ve geri alma sağ panelde
- * (satıra tıklayınca). Bir tur satır salt okunurdu ve verilen cevap geri alınamıyordu.
+ * Tür, cari ve etiket satırın ortasındaki hücrede; belge bağı, eşleştirme ve geri alma "Karşılığı"
+ * sütununun hapında (12.21 — bir tur sağ paneldeydi). Bir tur satır salt okunurdu ve verilen cevap geri
+ * alınamıyordu.
  */
 export type MovementRowView = Pick<
   AccountLedgerRow,
@@ -53,12 +54,15 @@ export type MovementRowView = Pick<
   /** Operatörün okuduğu cümle — açıklama yoksa tipin adı (boş hücre bırakmaktansa). */
   title: string;
   /**
-   * Satırın hâli ya da bağı: "sipariş LZA-26-7K4M2P" · "eşleşme bekliyor — …" · "izah bekliyor — …".
-   * `null` ise alt satırda cümle çizilmez — "—" yazmak, bağ olmamasını bir eksiklik gibi gösterirdi.
+   * Açıklamanın altındaki İPUCU (12.21): kampanya ya da izah sorusu ("izah bekliyor — …"). Bağ `link`te,
+   * ekstre satırının önerisi `suggestion*`da. `null` ise alt satır çizilmez — "—" yazmak, ipucu olmamasını
+   * bir eksiklik gibi gösterirdi.
    */
   ref: string | null;
   /** Cümlenin tonu: bir kayda gidiyorsa `olive`, cevap bekliyorsa `amber`, düz bilgiyse `neutral`. */
   refTone: OpsTone;
+  /** Satırın BAĞI (12.21 · "Karşılığı" sütunu): sipariş, mal kabul, tedarikçi ya da karşı hesap — düz yazı. */
+  link: { text: string; tone: OpsTone } | null;
   accountName: string;
   /** Kaba tip — "gider", "transfer". Tür ve etiketler satırın kendi hücresinde okunur (13.09). */
   typeLabel: string;
@@ -70,17 +74,21 @@ export type MovementRowView = Pick<
   counterpartyName: string | null;
   /** Bağlı belgeler (13.09 · bağ ayrı tabloda) — künyesi ve bağın tutarıyla. */
   documents: Array<{ id: string; label: string; amountCents: number }>;
-  /** Belgelere bağlanmamış kalan (**cent**) — sağ panelin "bağlı / tutar" hapı (12.17). */
+  /** Belgelere bağlanmamış kalan (**cent**) — "Karşılığı" hapının "bağlı / tutar"ı. */
   remainingCents: number;
   /** Ekstreden mi geldi — geri alma ve bağın kaldırılması bu ayrıma göre çizilir. */
   fromBank: boolean;
   /** Ekstre satırının cevabı geri alınabilir mi: mutabık, belgeye bağlı ya da carisi konmuş. */
   canUnmatch: boolean;
   /**
-   * Mutabık olmayan ekstre satırının önerisinin GÜCÜ (12.19) — listenin ikinci satırı ve sağdaki
-   * özetin "güçlü öneri" sayısı bundan; öteki satırlarda `null`.
+   * Mutabık olmayan ekstre satırının önerisinin GÜCÜ (12.19) — "Karşılığı" hapının tonu bundan (12.21);
+   * öteki satırlarda `null`.
    */
   suggestion: MatchRowView['strength'] | null;
+  /** En iyi adayın adı — "Karşılığı" hapının "öneri: …"su (12.21). */
+  suggestionTitle: string | null;
+  /** Güçlü önerinin hedefi — satırın ✓'si tek dokunuşla uygular (12.21). */
+  suggestionTarget: MatchTarget | null;
 };
 
 /**
@@ -100,7 +108,7 @@ export function ledgerRowKey(row: Pick<MovementRowView, 'id' | 'ledgerAccountId'
   return `${row.id}:${row.ledgerAccountId}`;
 }
 
-/** Eşleştirme kuyruğunun kartı — banka satırı + sistemin önerisi. */
+/** Satırın öneri görünümü — banka satırı + sistemin önerisi (eşleştirme menüsünün "Öneriler"i). */
 export interface MatchRowView {
   movementId: string;
   /** Bankanın kendi yazdığı satır ("VIREMENT 8829 LEROY") — sadeleştirilmeden gösterilir. */
@@ -172,8 +180,7 @@ export interface LedgerView {
 }
 
 /**
- * Belge satırı (12.12 · 12.17) — Belgeler sekmesinin satırı, sağ panelin belgesi ve "Ödemesini yaz"
- * formunun künyesi. `openAmountCents` belgenin alanı DEĞİL, `money_document_balance` görünümünden
+ * Belge satırı (12.12 · 12.17) — Belgeler sekmesinin satırı ve "Ödemesini yaz" formunun künyesi. `openAmountCents` belgenin alanı DEĞİL, `money_document_balance` görünümünden
  * gelir: açık kalan saklanmaz, bağlarından türetilir.
  */
 export type DocumentRowView = Pick<
@@ -196,7 +203,7 @@ export interface DocumentListView {
   note: string | null;
 }
 
-/** Sağ panelin hareket seçicisi (12.17) — `matchOptionsAction`ın cevabı. */
+/** Hareketin eşleştirme menüsü (12.17 · 12.21'den beri satırda) — `matchOptionsAction`ın cevabı. */
 export interface MatchOptionsView {
   /** Satırın öneri görünümü — kuyruk kartıyla AYNI (güç, cümle, adaylar, kalan). */
   row: MatchRowView;
@@ -205,7 +212,7 @@ export interface MatchOptionsView {
   bankRow: boolean;
 }
 
-/** Belge panelinin bir ödemesi (bağ) — hareketin künyesiyle. */
+/** Belgenin bir ödemesi (bağ) — ödeme menüsünde, hareketin künyesiyle. */
 export interface PaymentView {
   movementId: string;
   title: string;
@@ -218,7 +225,7 @@ export interface PaymentView {
   removable: boolean;
 }
 
-/** Belge panelinin ödeme adayı — kalanı olan, belgenin yönündeki hareket. */
+/** Belgenin ödeme adayı — kalanı olan, belgenin yönündeki hareket. */
 export interface PaymentCandidateView {
   movementId: string;
   title: string;
@@ -284,8 +291,8 @@ export interface FinanceData {
 export type DialogKind = 'movement' | 'transfer' | 'document' | 'dictionary' | 'bankImport' | null;
 
 /**
- * Satırın yazım sözleşmesi (13.09 · 12.17) — ortadaki hücre ve sağ panel aynı seçenekleri ve aynı
- * kapıları kullanır (`useRowWrites`); pasif etiketin adı sözlüğün tamamından.
+ * Satırın yazım sözleşmesi (13.09 · 12.17) — ortadaki hücrenin seçenekleri ve kapıları (`useRowWrites`);
+ * pasif etiketin adı sözlüğün tamamından.
  */
 export interface RowEditor {
   natureOptions: NatureOption[];
@@ -298,9 +305,6 @@ export interface RowEditor {
   onTag: (movementId: string, tags: string[]) => Promise<boolean>;
   onCreateTag: (label: string) => Promise<string | null>;
 }
-
-/** Sağ panelde açık olan kayıt (12.17) — hareket (defter satırının anahtarıyla) ya da belge. */
-export type FinanceSelection = { kind: 'movement'; key: string } | { kind: 'document'; id: string };
 
 /**
  * İki cihaz görünümünün ORTAK sözleşmesi.
@@ -332,13 +336,13 @@ export interface FinanceViewProps {
   onUnmatch: (movementId: string) => void;
   /** Elle yazılmış satırın belge bağını kaldırır. */
   onRemoveAllocation: (movementId: string, documentId: string) => void;
-  /** Sağ panelin kararı (seçici ya da öneri onayı) — ardından sıradaki izah bekleyen satır açılır (12.19). */
+  /** Satırın kararı ("Karşılığı" hapı ya da ✓) — ekstre satırı kapının hedefine gider (12.21). */
   onApplyTarget: (movementId: string, target: MatchTarget) => Promise<boolean>;
-  /** Hareket ↔ belge bağı — hareket panelinin "Bağla"sı ve belge panelinin "Ödeme bağla"sı. */
+  /** Hareket ↔ belge bağı — hareket satırının hapı ve belge satırının "Ödeme bağla"sı (12.21). */
   onLinkDocument: (movementId: string, documentId: string) => Promise<boolean>;
   /** Hangi satır beklemede (geri alma, bağ kaldırma) — iki kez tıklanmasın. */
   rowBusyId: string | null;
-  /** Satırın ya da panelin son reddi — listenin üstünde okunur. */
+  /** Satırın son reddi — listenin üstünde okunur. */
   rowError: string | null;
 
   // ── Listeler: ilk sayfa sunucudan, devamı action ile eklenir (12.17) ──
@@ -347,12 +351,6 @@ export interface FinanceViewProps {
   hasMore: boolean;
   loadingMore: boolean;
   onLoadMore: () => void;
-
-  // ── Sağ panel (12.17 · kullanıcı isteği: "satıra tıklayınca sağda bir şey olmuyor") ──
-  selection: FinanceSelection | null;
-  onSelect: (selection: FinanceSelection | null) => void;
-  /** Panel okumasının sürümü — bir yazımdan sonra artar, panel önerilerini yeniden ister. */
-  detailVersion: number;
 
   // ── Belge ──
   /** "Ödemesini yaz" — belge seçildi, elle hareket formu belgeyle dolu açılır. */

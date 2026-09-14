@@ -20,12 +20,12 @@ import type { DocumentPaymentsView, MatchOptionsView, MatchTargetView, MovementR
   hedefler bölüm bölüm. Adaya dokunmak bağlar — Kaydet ya da ikinci onay yok (muhasebeci'de de yok).
 
   Kabuk (`LinkSelector`) veriyi BİLMEZ: iki yan kendi bölümlerini kurar — hareket → hedef
-  (`MovementMatchSelector`), belge → ödeme (`DocumentPaymentSelector`). Kuyruk kartı da aynı seçiciyi
-  kendi düğmesiyle açar; bir tur ayrı bir büyük pencere (`MatchDialog`) vardı ve iki yüzey iki ayrı
-  hedef dili konuşuyordu.
+  (`MovementMatchSelector`), belge → ödeme (`DocumentPaymentSelector`). 12.21'den beri hap tablonun
+  satırında durur (hareketin "Karşılığı" sütunu, belgenin ödeme sütunu) ve menü AÇILINCA verisini
+  okur; bir tur ayrı bir büyük pencere (`MatchDialog`) vardı ve iki yüzey iki ayrı hedef dili konuşuyordu.
 */
 
-type SelectorTone = 'olive' | 'amber' | 'neutral';
+export type SelectorTone = 'olive' | 'amber' | 'neutral';
 
 const PILL_TONE: Record<SelectorTone, string> = {
   olive: 'border-ops-olive-line bg-ops-olive-bg text-ops-olive-dark hover:border-ops-olive',
@@ -64,8 +64,10 @@ interface LinkedItem {
 interface LinkSelectorProps {
   label: string;
   tone: SelectorTone;
-  /** Kuyruk kartında kartın kendi düğmesi tetikler — hap yerine onun sınıfı. */
+  /** Hap yerine başka bir tetikleyici sınıfı. */
   triggerClassName?: string;
+  /** `cell` — tablo satırındaki hap (24px, satır yüksekliğine uyar); varsayılan 32px. */
+  size?: 'md' | 'cell';
   className?: string;
   linked: LinkedItem[];
   sections: SelectorSection[];
@@ -73,6 +75,12 @@ interface LinkSelectorProps {
   error?: string | null;
   emptyText: string;
   searchPlaceholder: string;
+  /** Aday listesi ve arama — yalnız bağı gösterip eylem sunan menüde kapalı (eşleşmiş satır). */
+  searchable?: boolean;
+  /** Menünün altındaki eylemler (ör. "Eşleşmeyi geri al"). */
+  actions?: Array<{ key: string; label: string; hint?: string; onSelect: () => void }>;
+  /** Menü açılırken — satırdaki seçici verisini o an okur (12.21). */
+  onOpen?: () => void;
   disabled?: boolean;
 }
 
@@ -80,6 +88,7 @@ function LinkSelector({
   label,
   tone,
   triggerClassName,
+  size = 'md',
   className,
   linked,
   sections,
@@ -87,6 +96,9 @@ function LinkSelector({
   error = null,
   emptyText,
   searchPlaceholder,
+  searchable = true,
+  actions = [],
+  onOpen,
   disabled = false,
 }: LinkSelectorProps) {
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -104,12 +116,15 @@ function LinkSelector({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
-          if (!open) setQuery('');
+          if (!open) {
+            setQuery('');
+            onOpen?.();
+          }
           setOpen((current) => !current);
         }}
         className={
           triggerClassName ??
-          `inline-flex h-8 max-w-full cursor-pointer items-center rounded-ops-chip border px-3 font-ops-body text-ops-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${PILL_TONE[tone]}`
+          `inline-flex max-w-full cursor-pointer items-center rounded-ops-chip border font-ops-body text-ops-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${size === 'cell' ? 'h-6 px-2' : 'h-8 px-3'} ${PILL_TONE[tone]}`
         }
       >
         <span className="truncate">{label}</span>
@@ -139,64 +154,86 @@ function LinkSelector({
             </ul>
           </div>
         ) : null}
-        <div className="flex items-center gap-2 border-b border-ops-line-soft px-2.5 py-2 text-ops-faint">
-          <SearchIcon size={14} />
-          <Input
-            inputSize="sm"
-            autoFocus
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={searchPlaceholder}
-            className="border-0 !px-0 !py-0 focus:border-0"
-          />
-        </div>
-        <div className="max-h-[320px] overflow-y-auto p-1.5">
-          {loading ? (
-            <Note>Adaylar okunuyor…</Note>
-          ) : error ? (
-            <Note tone="red">{error}</Note>
-          ) : visible.length === 0 ? (
-            <Note>{needle ? 'Aramaya uyan aday yok.' : emptyText}</Note>
-          ) : (
-            visible.map((section) => (
-              <section key={section.key} className="flex flex-col gap-0.5 pb-1.5">
-                <SectionTitle title={section.title} hint={section.hint} />
-                {section.items.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => {
-                      setOpen(false);
-                      item.onSelect();
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-2 rounded-sm border-l-2 border-transparent px-2 py-1.5 text-left transition-colors hover:border-ops-olive hover:bg-ops-subtle"
-                  >
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <ItemText title={item.title} detail={item.detail} />
-                      {item.reasons && item.reasons.length > 0 ? (
-                        <span className="flex flex-wrap gap-1">
-                          {item.reasons.map((reason) => (
-                            <Badge key={reason} tone="neutral" outline>
-                              {reason}
-                            </Badge>
-                          ))}
+        {searchable ? (
+          <>
+            <div className="flex items-center gap-2 border-b border-ops-line-soft px-2.5 py-2 text-ops-faint">
+              <SearchIcon size={14} />
+              <Input
+                inputSize="sm"
+                autoFocus
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={searchPlaceholder}
+                className="border-0 !px-0 !py-0 focus:border-0"
+              />
+            </div>
+            <div className="max-h-[320px] overflow-y-auto p-1.5">
+              {loading ? (
+                <Note>Adaylar okunuyor…</Note>
+              ) : error ? (
+                <Note tone="red">{error}</Note>
+              ) : visible.length === 0 ? (
+                <Note>{needle ? 'Aramaya uyan aday yok.' : emptyText}</Note>
+              ) : (
+                visible.map((section) => (
+                  <section key={section.key} className="flex flex-col gap-0.5 pb-1.5">
+                    <SectionTitle title={section.title} hint={section.hint} />
+                    {section.items.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          setOpen(false);
+                          item.onSelect();
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-sm border-l-2 border-transparent px-2 py-1.5 text-left transition-colors hover:border-ops-olive hover:bg-ops-subtle"
+                      >
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <ItemText title={item.title} detail={item.detail} />
+                          {item.reasons && item.reasons.length > 0 ? (
+                            <span className="flex flex-wrap gap-1">
+                              {item.reasons.map((reason) => (
+                                <Badge key={reason} tone="neutral" outline>
+                                  {reason}
+                                </Badge>
+                              ))}
+                            </span>
+                          ) : null}
                         </span>
-                      ) : null}
-                    </span>
-                    <span className="flex flex-none flex-col items-end gap-0.5">
-                      {item.amount ? <span className="font-ops-mono text-ops-xs text-ops-ink">{item.amount}</span> : null}
-                      {item.score ? (
-                        <Badge tone="amber" outline>
-                          {item.score}
-                        </Badge>
-                      ) : null}
-                    </span>
-                  </button>
-                ))}
-              </section>
-            ))
-          )}
-        </div>
+                        <span className="flex flex-none flex-col items-end gap-0.5">
+                          {item.amount ? <span className="font-ops-mono text-ops-xs text-ops-ink">{item.amount}</span> : null}
+                          {item.score ? (
+                            <Badge tone="amber" outline>
+                              {item.score}
+                            </Badge>
+                          ) : null}
+                        </span>
+                      </button>
+                    ))}
+                  </section>
+                ))
+              )}
+            </div>
+          </>
+        ) : null}
+        {actions.length > 0 ? (
+          <div className="flex flex-col border-t border-ops-line-soft p-1.5">
+            {actions.map((action) => (
+              <button
+                key={action.key}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  action.onSelect();
+                }}
+                className="flex w-full cursor-pointer flex-col gap-0.5 rounded-sm px-2 py-1.5 text-left transition-colors hover:bg-ops-subtle"
+              >
+                <span className="font-ops-body text-ops-sm text-ops-strong">{action.label}</span>
+                {action.hint ? <span className="font-ops-body text-ops-xs text-ops-faint">{action.hint}</span> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </AnchoredMenu>
     </div>
   );
@@ -252,18 +289,27 @@ interface MovementMatchSelectorProps {
   linkedDocuments: MovementRowView['documents'];
   /** Elle yazılan satırın belge bağı tek tek kaldırılır; ekstre satırınınki geri almayla çözülür. */
   removable: boolean;
-  /** Seçicinin verisi; `null` = henüz okunmadı. */
+  /** Seçicinin verisi; `null` = henüz okunmadı (satırda menü açılınca okunur — `onOpen`). */
   options: MatchOptionsView | null;
   loading?: boolean;
   error?: string | null;
-  /** Eşleşme bekleyen ekstre satırının seçimi — kuyruğun kapısı (`applyMatch`). */
+  /** Eşleşme bekleyen ekstre satırının seçimi — kapının hedefi (`applyMatch`). */
   onApplyTarget: (target: MatchTarget) => void;
   /** Elle yazılan satırın seçimi — yalnız belge bağı. */
   onLinkDocument?: (documentId: string) => void;
   onRemoveAllocation?: (documentId: string) => void;
-  /** Kuyruk kartı kendi düğmesiyle açar ("Seç", "Düzelt", "Elle bağla"). */
+  /**
+   * Eşleşmiş ekstre satırı (12.21): menü aday aramaz — bağlı olanı gösterir ve "Eşleşmeyi geri al"ı
+   * sunar (`onUnmatch`). Panelin geri alma düğmesi buraya geldi.
+   */
+  matched?: boolean;
+  onUnmatch?: () => void;
+  onOpen?: () => void;
+  /** Hapın yazısı ve tonu — satır öneriyi ("öneri: …") ya da bağı kendisi söyler. */
   triggerLabel?: string;
+  tone?: SelectorTone;
   triggerClassName?: string;
+  size?: 'md' | 'cell';
   className?: string;
   disabled?: boolean;
 }
@@ -279,8 +325,13 @@ export function MovementMatchSelector({
   onApplyTarget,
   onLinkDocument,
   onRemoveAllocation,
+  matched = false,
+  onUnmatch,
+  onOpen,
   triggerLabel,
+  tone: toneOverride,
   triggerClassName,
+  size,
   className,
   disabled,
 }: MovementMatchSelectorProps) {
@@ -299,19 +350,20 @@ export function MovementMatchSelector({
     reasons,
     onSelect: () => choose(target),
   });
-  const sections: SelectorSection[] = options
-    ? [
-        { key: 'suggested', title: 'Öneriler', hint: 'motorun puanladıkları', items: candidates.map((candidate) => itemOf(candidate, candidate.score, candidate.reasons)) },
-        ...KIND_ORDER.map((kind) => ({
-          key: kind,
-          title: MATCH_KIND_LABEL[kind],
-          hint: MATCH_EFFECT[kind],
-          items: options.targets
-            .filter((target) => target.kind === kind && (target.direction === null || target.direction === direction) && !suggested.has(target.key))
-            .map((target) => itemOf(target)),
-        })),
-      ]
-    : [];
+  const sections: SelectorSection[] =
+    options && !matched
+      ? [
+          { key: 'suggested', title: 'Öneriler', hint: 'motorun puanladıkları', items: candidates.map((candidate) => itemOf(candidate, candidate.score, candidate.reasons)) },
+          ...KIND_ORDER.map((kind) => ({
+            key: kind,
+            title: MATCH_KIND_LABEL[kind],
+            hint: MATCH_EFFECT[kind],
+            items: options.targets
+              .filter((target) => target.kind === kind && (target.direction === null || target.direction === direction) && !suggested.has(target.key))
+              .map((target) => itemOf(target)),
+          })),
+        ]
+      : [];
   const linkedCents = amountCents - remainingCents;
   const linked: LinkedItem[] = linkedDocuments.map((document) => ({
     key: document.id,
@@ -320,23 +372,25 @@ export function MovementMatchSelector({
     amount: money(document.amountCents),
     onRemove: removable && onRemoveAllocation ? () => onRemoveAllocation(document.id) : undefined,
   }));
-  const label = triggerLabel ?? (linkedCents > 0 ? `bağlı ${amount(linkedCents)} / ${money(amountCents)}` : options && !options.bankRow ? 'Belgeye bağla' : 'Eşleştir');
-  const tone: SelectorTone = linkedCents > 0 ? (remainingCents <= 0 ? 'olive' : 'amber') : 'neutral';
+  const label = triggerLabel ?? (linkedCents > 0 ? `bağlı ${amount(linkedCents)} / ${money(amountCents)}` : 'Eşleştir');
+  const tone: SelectorTone = toneOverride ?? (linkedCents > 0 ? (remainingCents <= 0 ? 'olive' : 'amber') : 'neutral');
 
   return (
     <LinkSelector
       label={label}
       tone={tone}
       triggerClassName={triggerClassName}
+      size={size}
       className={className}
       linked={linked}
       sections={sections}
       loading={loading}
       error={error}
       disabled={disabled}
-      emptyText={
-        options && !options.bankRow ? 'Bu yöne uyan açık belge yok.' : 'Bu satırın yönüne uyan açık hedef yok — türünü koyun ya da kuyruktan düşürün.'
-      }
+      searchable={!matched}
+      onOpen={onOpen}
+      actions={onUnmatch ? [{ key: 'unmatch', label: 'Eşleşmeyi geri al', hint: 'satır ekstreden geldiği hâle döner, yeniden izah bekler', onSelect: onUnmatch }] : []}
+      emptyText={options && !options.bankRow ? 'Bu yöne uyan açık belge yok.' : 'Bu satırın yönüne uyan açık hedef yok — türünü koyun.'}
       searchPlaceholder="Sipariş no, belge no, cari, açıklama…"
     />
   );
@@ -346,17 +400,34 @@ export function MovementMatchSelector({
 
 interface DocumentPaymentSelectorProps {
   amountCents: number;
+  /** Belgenin açık kalanı — hap veri okunmadan da doğru yazsın (satırda menü açılınca okunur, 12.21). */
+  openAmountCents: number;
   /** Ödemeler ve adaylar; `null` = henüz okunmadı. */
   view: DocumentPaymentsView | null;
   loading?: boolean;
   error?: string | null;
   onLink: (movementId: string) => void;
   onRemove: (movementId: string) => void;
+  onOpen?: () => void;
+  size?: 'md' | 'cell';
+  className?: string;
   disabled?: boolean;
 }
 
-export function DocumentPaymentSelector({ amountCents, view, loading, error, onLink, onRemove, disabled }: DocumentPaymentSelectorProps) {
-  const openCents = view?.openAmountCents ?? amountCents;
+export function DocumentPaymentSelector({
+  amountCents,
+  openAmountCents,
+  view,
+  loading,
+  error,
+  onLink,
+  onRemove,
+  onOpen,
+  size,
+  className,
+  disabled,
+}: DocumentPaymentSelectorProps) {
+  const openCents = view?.openAmountCents ?? openAmountCents;
   const paidCents = amountCents - openCents;
   const linked: LinkedItem[] = (view?.payments ?? []).map((payment) => ({
     key: payment.movementId,
@@ -392,11 +463,14 @@ export function DocumentPaymentSelector({ amountCents, view, loading, error, onL
     <LinkSelector
       label={label}
       tone={tone}
+      size={size}
+      className={className}
       linked={linked}
       sections={sections}
       loading={loading}
       error={error}
       disabled={disabled}
+      onOpen={onOpen}
       emptyText="Bu belgenin yönünde, kalanı olan hareket yok — önce ödemeyi yazın ya da banka dosyasını yükleyin."
       searchPlaceholder="Açıklama, hesap…"
     />

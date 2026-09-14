@@ -1,25 +1,23 @@
 'use client';
 
-import { EmptyState } from '@/components/operation/ui/empty-state';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { AccountSetup } from './account-setup';
 import { BankImportDialog } from './bank-import-dialog';
 import { DictionaryDialog } from './dictionary-dialog';
-import { DocumentDetail } from './document-detail';
 import { DocumentDialog } from './document-dialog';
 import { DocumentList } from './documents-list';
-import { nextUnexplainedKey } from './finance-read';
-import { AccountStrip, ExplainSummary, FinanceToolbar, MovementList } from './finance-sections';
-import { ledgerRowKey, type FinanceViewProps, type RowEditor } from './finance-types';
+import { AccountStrip, FinanceToolbar, MovementList } from './finance-sections';
+import type { FinanceViewProps, RowEditor } from './finance-types';
 import { ALL_ACCOUNTS } from './finance-url';
-import { MovementDetail } from './movement-detail';
 import { MovementDialog } from './movement-dialog';
+import type { DocumentRowActions, RowMatcher } from './row-actions';
 import { TransferDialog } from './transfer-dialog';
 
-// Para — MASAÜSTÜ (12.17 düzeni, kullanıcı istekleri 13.09):
+// Para — MASAÜSTÜ (12.17 düzeni, kullanıcı istekleri 13.09 · 12.21):
 //   başlık · bakiye şeridi (= hesap süzgeci; Toplam en solda, gruplu, kapananlar sonda, yatay kayar)
 //   · tek bant: "Hareketler | Belgeler" + süzgeçler + izah sayacı + Eylemler menüsü
-//   · gövde: solda liste, sağda iş masası — satır seçiliyse ayrıntı paneli, değilse eşleştirme kuyruğu.
+//   · gövde: tam genişlik liste — satırın bütün işi satırın kendisinde (12.21: sağ panel kalktı; tür ·
+//     cari · etiket orta hücrede, bağ ve öneri "Karşılığı" hapında, belgenin ödemesi kendi hapında).
 //
 // Başlıktaki beş düğme kalktı: seyrek eylemler (hareket, transfer, belge, banka dosyası, sözlük)
 // bandın sağındaki tek menüde. Açık belgeler sağ sütundan Belgeler sekmesine taşındı — ödenen belge
@@ -50,9 +48,6 @@ export function FinanceDesktop({
   hasMore,
   loadingMore,
   onLoadMore,
-  selection,
-  onSelect,
-  detailVersion,
   payingDocument,
   onPayDocument,
   onClosePay,
@@ -72,12 +67,8 @@ export function FinanceDesktop({
     onCreateTag,
   };
   const onDocuments = urlState.tab === 'documents';
-  // Seçim KİMLİKLE tutulur; kayıt taze listeden türetilir (kopya tutulsaydı yazım yansımazdı).
-  const selectedMovement = selection?.kind === 'movement' ? (movementRows.find((row) => ledgerRowKey(row) === selection.key) ?? null) : null;
-  const selectedDocument = selection?.kind === 'document' ? (documentRows.find((document) => document.id === selection.id) ?? null) : null;
-  // Sıradaki izah bekleyen satır (12.19) — panelin "Atla"sı ve özetin "Sıradakini aç"ı aynı kuraldan.
-  const nextKey = nextUnexplainedKey(movementRows, selectedMovement ? ledgerRowKey(selectedMovement) : null);
-  const openNext = nextKey ? () => onSelect({ kind: 'movement', key: nextKey }) : undefined;
+  const matcher: RowMatcher = { busyId: rowBusyId, onApplyTarget, onLinkDocument, onRemoveAllocation, onUnmatch };
+  const documentActions: DocumentRowActions = { busyId, onPay: onPayDocument, onOpenFile: onOpenDocumentFile, onLinkDocument, onRemoveAllocation };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -95,77 +86,31 @@ export function FinanceDesktop({
             onOpenDialog={onOpenDialog}
           />
 
-          <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.7fr)_minmax(380px,1fr)] overflow-hidden">
-            <div className="flex min-h-0 flex-col border-r border-ops-line">
-              {rowError ? (
-                <p className="border-b border-ops-red-line bg-ops-red-bg px-6 py-2.5 font-ops-body text-ops-xs text-ops-red">{rowError}</p>
-              ) : null}
-              {onDocuments ? (
-                <DocumentList
-                  rows={documentRows}
-                  note={data.documents?.note ?? null}
-                  tagLabels={tagLabels}
-                  selectedId={selectedDocument?.id ?? null}
-                  onSelect={(document) => onSelect({ kind: 'document', id: document.id })}
-                  hasMore={hasMore}
-                  loadingMore={loadingMore}
-                  onLoadMore={onLoadMore}
-                />
-              ) : (
-                <MovementList
-                  rows={movementRows}
-                  note={data.ledger?.note ?? null}
-                  editor={editor}
-                  selectedKey={selectedMovement ? ledgerRowKey(selectedMovement) : null}
-                  onSelect={(row) => onSelect({ kind: 'movement', key: ledgerRowKey(row) })}
-                  hasMore={hasMore}
-                  loadingMore={loadingMore}
-                  onLoadMore={onLoadMore}
-                />
-              )}
-            </div>
-
-            <div className="flex min-h-0 flex-col overflow-y-auto bg-ops-surface-sunken">
-              {selectedMovement ? (
-                <MovementDetail
-                  key={ledgerRowKey(selectedMovement)}
-                  row={selectedMovement}
-                  editor={editor}
-                  version={detailVersion}
-                  busy={rowBusyId === selectedMovement.id}
-                  onClose={() => onSelect(null)}
-                  onApplyTarget={onApplyTarget}
-                  onLinkDocument={onLinkDocument}
-                  onRemoveAllocation={onRemoveAllocation}
-                  onUnmatch={onUnmatch}
-                  onNext={openNext}
-                />
-              ) : selectedDocument ? (
-                <DocumentDetail
-                  key={selectedDocument.id}
-                  document={selectedDocument}
-                  tagLabels={tagLabels}
-                  version={detailVersion}
-                  busy={busyId === selectedDocument.id}
-                  onClose={() => onSelect(null)}
-                  onPay={onPayDocument}
-                  onOpenFile={onOpenDocumentFile}
-                  onLinkDocument={onLinkDocument}
-                  onRemoveAllocation={onRemoveAllocation}
-                />
-              ) : onDocuments ? (
-                <EmptyState title="Belge seçin" description="Belgeye dokununca toplamı, açık kalanı ve ödemeleri burada açılır." />
-              ) : (
-                <ExplainSummary
-                  unexplainedCount={data.unexplainedCount}
-                  strongCount={movementRows.filter((row) => row.suggestion === 'strong').length}
-                  canOpenNext={nextKey !== null}
-                  filtered={urlState.scope === 'unmatched'}
-                  onOpenNext={() => openNext?.()}
-                  onShowUnexplained={() => onFilter({ scope: 'unmatched' })}
-                />
-              )}
-            </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {rowError ? (
+              <p className="border-b border-ops-red-line bg-ops-red-bg px-6 py-2.5 font-ops-body text-ops-xs text-ops-red">{rowError}</p>
+            ) : null}
+            {onDocuments ? (
+              <DocumentList
+                rows={documentRows}
+                note={data.documents?.note ?? null}
+                tagLabels={tagLabels}
+                actions={documentActions}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                onLoadMore={onLoadMore}
+              />
+            ) : (
+              <MovementList
+                rows={movementRows}
+                note={data.ledger?.note ?? null}
+                editor={editor}
+                matcher={matcher}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                onLoadMore={onLoadMore}
+              />
+            )}
           </div>
         </>
       ) : (
