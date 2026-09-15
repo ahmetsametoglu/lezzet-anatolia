@@ -36,48 +36,23 @@ import {
 import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 
-/**
- * Konuşma servisleri (15.1) — **karar vermez, satır getirir/yazar** (STACK §4).
- *
- * Kimliğin telefondan çözülmesi burada DEĞİL, uygulama katmanında (`lib/messaging/conversation.ts`):
- * karar motorun (`resolveIdentity`), satır servisin. Servis kimliği de çözseydi aynı kural iki
- * yerde yaşar ve WhatsApp'tan gelen müşteri, web'den gelenle farklı bir kapıdan geçerdi.
- *
- * Servis penceresinin 24 saati de burada değil (`serviceWindowExpiry`): süreyi taşıyan taraf
- * hesaplayan taraf olmamalı.
- */
+/** Kimlik çözümü uygulama katmanında, pencerenin 24 saati motorda: servis karar vermez, satır getirir ve yazar. */
 export class ConversationService extends BaseDbService<Conversation, ConversationInsert, ConversationUpdate> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'conversation', ConversationSchema, ConversationInsertSchema, ConversationUpdateSchema, false);
   }
 
   /**
-   * **Aç ya da bul** (`open_conversation`) — tek deyimlik upsert.
-   *
-   * Oku-sonra-yaz YARIŞIR: aynı numaradan iki mesaj arka arkaya gelirse (adım 2'de olağan) ikisi de
-   * "konuşma yok" görür, ikincisi tekillik indeksine çarpar ve mesaj kaybolur.
-   *
-   * Mevcut müşteri bağı EZİLMEZ (`coalesce`): bağlanmış bir konuşmayı başka müşteriye kaydırmak bir
-   * BİRLEŞTİRME kararıdır ve insana aittir (DOMAIN §10). `profileName` ise tersine YENİSİYLE
-   * güncellenir — görünen ad kimlik değil, son görülen değer tutulur.
-   *
-   * `source` ZORUNLU ve varsayılansız (21.08): üç kanal dünyasında sessiz bir 'whatsapp'
-   * varsayılanı, kaynağı unutan tek çağıranın Messenger mesajını WhatsApp konuşmasına dikmesiydi.
-   *
-   * Bu yüzden `insert` bu serviste kapalı — tek yazma yolu RPC.
+   * Tek yazma yolu bu RPC: oku-sonra-yaz, arka arkaya gelen iki mesajda tekillik indeksine çarpar ve mesaj kaybolurdu. Müşteri
+   * bağı ezilmez (birleştirme insanın kararı), profil adı ise son görülen değerle güncellenir.
    */
   async open(input: {
     source: ConversationSource;
     externalRef: string;
     customerId?: string | null;
-    /** Konuşmanın aktığı işletme hesabı (phone_number_id / sayfa id / IG hesap id) — webhook yazar. */
     providerAccountRef?: string | null;
-    /** Sağlayıcı profil adı — kimliksiz sohbetin başlığı; son görülen değer kazanır. */
     profileName?: string | null;
-    /**
-     * Yeni sohbetin yürütücüsü (15.30) — çağıran ayardan okur (`defaultConversationHandler`), RPC
-     * yalnız satır DOĞARKEN yazar; var olan sohbetin modu değişmez. Boş = kolon varsayılanı (`human`).
-     */
+    /** RPC yalnız satır doğarken yazar; var olan sohbetin modu değişmez. */
     handledBy?: TicketHandler | null;
   }): Promise<Conversation> {
     const raw = await this.executeRpc('open_conversation', {
@@ -91,53 +66,27 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
     return ConversationSchema.parse(dbToApp(raw));
   }
 
-  /**
-   * Sağlayıcı anahtarıyla tek konuşma — gelen mesajın hangi sohbete ait olduğu sorusu.
-   *
-   * `source` ile birlikte aranır ve ZORUNLUDUR, çünkü tekillik o ikilide: aynı dize başka bir
-   * kaynakta başka birini gösterebilir (varsayılan 21.08'de kaldırıldı — `open` ile aynı gerekçe).
-   */
+  /** `source` zorunlu: tekillik o ikilide, aynı dize başka kaynakta başka birini gösterebilir. */
   async findByExternalRef(source: ConversationSource, externalRef: string): Promise<Conversation | null> {
     const rows = await this.getAll({ source, externalRef }, { limit: 1 });
     return rows[0] ?? null;
   }
 
-  /**
-   * Bir müşterinin konuşmaları — müşteri kartından sohbetine geçiş (15.5).
-   *
-   * Sayfalanmaz ve bu bilinçli: bir müşterinin konuşma sayısı veriyle büyüyen bir küme değil,
-   * kaynak sayısı kadardır (bugün bir). Sayfalayan bir okuma burada yalnız imleç taşırdı.
-   */
+  /** Sayfalanmaz: müşterinin konuşma sayısı kanal sayısı kadardır, veriyle büyümez. */
   listByCustomer(customerId: string): Promise<Conversation[]> {
     return this.getAll({ customerId }, { orderBy: 'lastMessageAt', orderDirection: 'desc' });
   }
 
   /**
-   * **Kimliksiz sohbeti müşteriye bağla** (15.16) — YALNIZ boşsa yazar, dolu bağı EZMEZ.
-   *
-   * Messenger/Instagram'da bu kapı istisna değil KURALDIR: PSID/IGSID telefon taşımaz, yani o
-   * kanallarda konuşma daima kimliksiz doğar (`open_conversation` künyesi) ve kimliğin tek yolu
-   * operatörün "bu sohbet şu müşteri" demesidir. WhatsApp'ta ise ancak telefon/e-posta çakışması
-   * yaşandığında gerekir — orada kimlik zaten numaradan çözülür.
-   *
-   * Ezmeme güvencesi `open_conversation`ın `coalesce` kuralıyla AYNI cümledir ve aynı sebeple:
-   * bağlanmış bir konuşmayı başka müşteriye kaydırmak bir BİRLEŞTİRME kararıdır ve insana aittir
-   * (DOMAIN §10) — yanlış hesaba bağlanmış bir sohbet, bağlanmamış bir sohbetten pahalıdır.
-   * Yarışı DB çözer (`updateIfNull` künyesi): kaybeden `null` alır, sessiz bir ezme olmaz.
-   *
-   * **Ayırma (unlink) kapısı BİLEREK YOK.** Yanlış bağı düzeltmek bir birleştirme/ayırma işidir ve
-   * Müşteriler ekranının işidir (09.10); buraya ikinci bir yol açmak, aynı kararı iki yerde
-   * yaşatmak olurdu.
+   * Yalnız boşsa yazar: bağlı konuşmayı başka müşteriye kaydırmak birleştirme kararıdır ve Müşteriler ekranının işidir. Yarışı
+   * DB çözer, kaybeden `null` alır.
    */
   linkCustomer(
     id: string,
     input: { customerId: string; linkedBy: string | null; proof: ConversationLinkProof },
   ): Promise<Conversation | null> {
-    /* Bağ ve KÜNYESİ tek yazımda gider (15.19): ayrı iki çağrı olsaydı ikincisi düştüğünde
-       elimizde "kim bağladı, neye dayanarak" sorusu cevapsız bir bağ kalırdı — ve tam da o satır
-       denetlenmek istenen satır olurdu. Kanıtın DEĞERİ değil TÜRÜ yazılır (kolonun künyesi).
-       Damgayı burada koyuyoruz, DB varsayılanıyla değil: kolon `null` kalabilmeli (sistemin
-       çözdüğü WhatsApp bağı), yani `default now()` yanlış olurdu. */
+    // Bağ ve künyesi tek yazımda: ayrı çağrıda ikincisi düşerse "kim bağladı, neye dayanarak" cevapsız kalırdı. Damga burada,
+    // DB varsayılanında değil: sistemin kurduğu WhatsApp bağında kolon boş kalmalı.
     return this.updateIfNull(id, 'customerId', {
       customerId: input.customerId,
       linkedBy: input.linkedBy,
@@ -147,122 +96,56 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   }
 
   /**
-   * **Sağlayıcı profil adını doldur** (15.7 · 22.08) — `linkCustomer` ile aynı kural: YALNIZ boşsa yazar.
-   *
-   * İhtiyaç canlı Messenger turunda ölçüldü: Meta'nın `messages` webhook'u **ad taşımıyor**, yalnız
-   * `sender.id` (PSID) veriyor — WhatsApp'ta `profile.name` geliyor, Messenger/IG'de gelmiyor. Ad
-   * doldurulmazsa gelen kutusunda başlık ham PSID olur (`38324983613781600`) ve operatöre hiçbir şey
-   * söylemez; adı ayrı bir Graph çağrısı getiriyor (`lib/messaging/meta-profile.ts`).
-   *
-   * **Neden `updateIfNull`:** ad bir kez öğrenilir ve OPERATÖRÜN düzelttiği bir alan olabilir; her
-   * mesajda yeniden yazmak hem gereksiz bir tur hem de elle düzeltmeyi sessizce ezmek olurdu. Ayrıca
-   * yarış güvencesi bedava gelir — iki mesaj aynı anda düşerse ikincisi `null` alır, ezme olmaz.
+   * Yalnız boşsa yazar: Messenger/Instagram webhook'u ad taşımaz ve ad ayrı bir Graph çağrısıyla bir kez öğrenilir; her mesajda
+   * yazmak elle düzeltmeyi ezerdi.
    */
   setProfileName(id: string, profileName: string): Promise<Conversation | null> {
     return this.updateIfNull(id, 'profileName', { profileName });
   }
 
-  /**
-   * Ticari mesaj izni (DOMAIN §11) — **müşterinin CEVABI** yazılır, üç hâl birden korunur.
-   *
-   * İzin ve ANI birlikte yazılır: ikisi ayrı çağrıya bırakılsaydı biri unutulur ve elimizde
-   * tarihsiz bir "izin var" kaydı kalırdı; GDPR'da ne zaman verildiği yazılmayan izin, izin
-   * değildir. DB kısıtı da bunu zorluyor — burası kısıtın okunur yüzü.
-   *
-   * ── RET DE BİR CEVAPTIR VE İZ BIRAKIR (15.12, düzeltildi 25.08) ─────────────
-   * Eskiden ret `optIn=false, optInAt=null` yazıyordu — kolonların VARSAYILANIYLA birebir aynı.
-   * Yani "Müşteri reddetti" düğmesi hiçbir şey kaydetmiyordu ve kimliksiz sohbette (Messenger/IG'nin
-   * olağan hâli) ret tamamen kayboluyordu. Artık `optInAskedAt` her cevapta damgalanıyor.
-   *
-   * ── İZİN DAMGASI ÜZERİNE YAZILMAZ ───────────────────────────────────────────
-   * Ret geldiğinde `optInAt`e DOKUNULMUYOR. Silmek ya da üzerine yazmak, 1. gün verilip 30. gün
-   * geri alınan bir izinde *"o gün izni vardı"* kanıtını yok ederdi — oysa ispat yükü bizde.
-   * `optIn` bugünkü hâli, `optInAt` ise bir kez yaşanmış olayı söyler.
-   */
+  /** İzin ve anı birlikte yazılır, ret de `optInAskedAt` ile iz bırakır. Ret geldiğinde `optInAt`e dokunulmaz: "o gün izni vardı" kanıtı yok olurdu. */
   setOptIn(id: string, granted: boolean): Promise<Conversation> {
     const now = new Date().toISOString();
     return this.update({ id, optIn: granted, optInAskedAt: now, ...(granted ? { optInAt: now } : {}) });
   }
 
   /**
-   * **Soruldu ama henüz cevap YOK** (15.12) — ajanın izin sorusunu gönderdiği an.
-   *
-   * Cevabı beklerken `optIn` false kalır (bu doğru: izin yok). Ayrı bir kapı, çünkü `setOptIn`
-   * bir CEVABI kaydediyor; soruyu da ona yükleseydik "granted=false" ile "cevap gelmedi" aynı
-   * çağrıya girer ve çağıran hangisini kastettiğini söyleyemezdi.
-   *
-   * Koşullu yazım (`updateIfNull`) bilinçli: iki tur arka arkaya koşarsa ya da operatör aynı anda
-   * kaydederse, İLK soru anı korunur — sonraki turun damgası öncekini ileri itmemeli, yoksa
-   * "ne zaman sorduk" sorusu her turda tazelenir ve ajan hiç susmaz.
+   * Cevap değil, sorunun kendisi: `setOptIn`e yüklenseydi "reddetti" ile "cevap gelmedi" aynı çağrıya girerdi. Yalnız boşsa
+   * yazar ki ilk soru anı korunsun ve ajan her turda yeniden sormasın.
    */
   markOptInAsked(id: string): Promise<Conversation | null> {
     return this.updateIfNull(id, 'optInAskedAt', { optInAskedAt: new Date().toISOString() });
   }
 
-  /**
-   * Yürütücü modunu değiştir (kullanıcı kararı 16.08) — `TicketService.setMode` ile aynı sözleşme:
-   * hibritten düşerken bekleyen taslak birlikte düşer, yoksa bir sonraki dönüşte bayat bir cevap
-   * "hazır" diye sunulurdu.
-   */
+  /** Hibritten düşerken bekleyen taslak da düşer, yoksa sonraki dönüşte bayat bir cevap "hazır" diye sunulurdu. */
   setMode(id: string, mode: TicketHandler): Promise<Conversation> {
     return mode === 'hybrid'
       ? this.update({ id, handledBy: mode })
       : this.update({ id, handledBy: mode, aiDraftReply: null, aiDraftGeneratedAt: null });
   }
 
-  /** Bekleyen AI taslağını tüket (16.08) — `TicketService.clearDraft` ile aynı sözleşme. */
   clearDraft(id: string): Promise<Conversation> {
     return this.update({ id, aiDraftReply: null, aiDraftGeneratedAt: null });
   }
 
-  /**
-   * Müşteriyle konuştuğumuz dili yaz (15.28) — **son gelen kazanır**, `updateIfNull` DEĞİL.
-   *
-   * Profil adının tersine (`setProfileName`: bir kez öğrenilir) dil değişebilir: Türk müşteri
-   * "Bonjour" ile başlayıp Türkçe sürdürür. Kararı çağıran verir (`spokenLanguageOf`: yalnız
-   * konuştuğumuz üç dil), burası yazar.
-   */
+  /** Son gelen kazanır, `updateIfNull` değil: müşteri "Bonjour" ile başlayıp Türkçe sürdürebilir. */
   setLanguage(id: string, language: PreferredLanguage): Promise<Conversation> {
     return this.update({ id, language });
   }
 
-  /**
-   * Cevabı insanın yazmadığı sohbet sayısı (16.5) — başlığın "N AI'da" sayacı.
-   * `TicketService.countHandledByAi` ile aynı soru; konuşmanın "kapanmış" hâli olmadığı için
-   * ek durum süzgeci yok. Kanal süzgeci var (21.08): başlık süzgeçli kuyruğu sayarken süzgeçsiz
-   * sayı yazsaydı, tam da kalabalıkta yalan söylerdi.
-   */
+  /** Kanal süzgecine uyar: süzgeçli kuyruğun başlığı süzgeçsiz sayı yazsaydı kalabalıkta yalan söylerdi. */
   countHandledByAi(source?: ConversationSource): Promise<number> {
     return this.count({ handledBy: ['ai', 'hybrid'], source });
   }
 
-  /**
-   * **ONAY BEKLEYEN TASLAK SAYISI** (21.301) — karar kutusunun sosyal kutucuğunun alt satırı.
-   *
-   * Tasarım o satıra *"1 taslak onay bekliyor"* yazıyor ve saydığı şey bir işlem değil bir
-   * BEKLEYİŞ: hibrit modda asistan cevabı yazdı, **müşteri onu henüz almadı**. Yani sayı
-   * "kaç müşteri, cevabı hazır olduğu hâlde bekliyor" demek — kuyruktaki en pahalı bekleyiş,
-   * çünkü iş bitmiş, yalnız bir dokunuş eksik.
-   *
-   * Mod SÜZGECİ YOK ve bu bilinçli: taslağı yazan hibrit moddur, ama sohbet o sırada `human`a
-   * çevrilmiş olabilir ve taslak satırda DURMAYA devam eder (`ai_draft_reply` temizlenmiyor).
-   * Modla süzseydik o taslaklar sayıdan düşer, ekranda ise durmaya devam ederdi.
-   */
+  /** Mod süzgeci yok: sohbet `human`a çevrilse de taslak satırda durur; modla süzülse sayıdan düşer ama ekranda kalırdı. */
   countPendingDrafts(source?: ConversationSource): Promise<number> {
     return this.count({ source }, { isNotNullFields: ['ai_draft_reply'] });
   }
 
   /**
-   * **KİMLİK → SERVİS PENCERESİNİN BİTİŞİ** (21.301) — talep kuyruğu pencereyi böyle öğrenir.
-   *
-   * Talep satırı konuşmanın kimliğini taşıyor (`ticket.conversation_id`) ama penceresini
-   * taşımıyor: `ticket_queue` görünümü o kolonu hiç seçmiyor. Görünümü genişletmek migration ve
-   * **veritabanı yenilemesi** isterdi (kullanıcının kararı, `CLAUDE §0`) — oysa soru sayfa başına
-   * TEK toplu okumayla cevaplanıyor. N+1 açılmadı: satır başına sorgu değil, sayfanın tamamı için
-   * bir `in(...)`.
-   *
-   * Dönen harita YALNIZ damga taşır, satırın tamamını değil: çağıran pencerenin hâlini motordan
-   * hesaplıyor (`serviceWindowState`), buradan bir karar çıkmıyor.
+   * Talep kuyruğu pencereyi buradan öğrenir: `ticket_queue` o kolonu seçmez ve soru sayfa başına tek `in(...)` okumasıyla
+   * cevaplanır. Yalnız damga döner: pencerenin hâlini çağıran motordan hesaplar.
    */
   async windowsByIds(ids: readonly string[]): Promise<Map<string, string | null>> {
     const unique = [...new Set(ids)];
@@ -272,37 +155,21 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
   }
 }
 
-/**
- * Konuşmanın mesajları (15.1). **Defterdir — yazılır, güncellenmez:** gönderilmiş mesaj değişmez,
- * o yüzden güncelleme tipi `never`. Bir gün biri "mesajı düzelt" demek istese derleme durdurur.
- */
+/** Defterdir, yazılır ve güncellenmez: güncelleme tipi `never`, "mesajı düzelt" derlemede durur. */
 export class MessageService extends BaseDbService<Message, MessageInsert, never> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'message', MessageSchema, MessageInsertSchema, MessageSchema as never, false);
   }
 
   /**
-   * Sesin çözülmüş metnini satıra yazar (15.26) — **defterin tek yazılabilir alanı** ve sınırı bu.
-   *
-   * `message` yazılır, güncellenmez: müşterinin sözü, yönü, anı sonradan değişmez. `media_transcript`
-   * ise müşterinin sözü DEĞİL, bizim ondan TÜRETTİĞİMİZ bir alan — defterin değişmezliği ona
-   * uzanmıyor. Yine de kapı dar tutuluyor: yalnız bu tek alan, yalnız BOŞSA.
-   *
-   * **`updateIfNull` çünkü çözüm birden çok kez koşabilir:** olay tekrar düşerse ya da iki tur
-   * yarışırsa ikinci sonuç birincisini EZMEMELİ. İki çözüm birbirinden farklı çıkabilir (model
-   * belirlenimci değil) ve operatörün okuduğu metnin, ajanın gördüğü metnin aynısı olması gerekir.
+   * Türetilmiş alan olduğu için defterin tek yazılabilir alanı. Yalnız boşsa yazar: çözüm yeniden koşabilir ve operatörle ajan
+   * aynı metni görmeli.
    */
   setTranscript(id: string, transcript: string): Promise<Message | null> {
     return this.updateIfNull(id, 'mediaTranscript', { mediaTranscript: transcript });
   }
 
-  /**
-   * Çeviri üçlüsünü yazar (15.28) — `setTranscript` ile aynı sınır: türetilmiş alan, yalnız BOŞSA.
-   *
-   * Gelişteki çeviri ile kuyruk aynı satıra denk gelebilir; ikinci sonuç birincisini EZMEZ
-   * (`updateIfNull` damgaya bakar). `null` = zaten damgalıydı — çağıran bunu "yarışı kaybettim"
-   * diye okur, hata diye değil.
-   */
+  /** Yalnız boşsa yazar: gelişteki çeviri ile kuyruk aynı satıra denk gelebilir; `null` = yarış kaybedildi, hata değil. */
   setTranslation(
     id: string,
     patch: { language: SourceLanguage | null; translations: TranslationBag | null; translatedAt: string },
@@ -310,39 +177,23 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     return this.updateIfNull(id, 'translatedAt', patch);
   }
 
-  /**
-   * Mesaj + konuşmanın damgaları, TEK turda (`record_message`).
-   *
-   * Ayrı iki yazım olsaydı ikincisi düştüğünde gelen kutusu sessizce bayatlardı: yeni mesaj gelmiş
-   * ama konuşma listenin dibinde kalmış olurdu — ve kimse fark etmezdi.
-   *
-   * `windowExpiresAt` KARAR DEĞİL, kararın taşınmasıdır (`serviceWindowExpiry`). Verilmezse
-   * pencereye dokunulmaz; giden mesaj pencereyi açmaz.
-   */
+  /** Mesaj ve konuşma damgaları tek turda: ikinci yazım düşerse gelen kutusu sessizce bayatlardı. `windowExpiresAt` verilmezse pencereye dokunulmaz. */
   async record(input: {
     conversationId: string;
     direction: MessageDirection;
     body: MessageBody;
-    /** Kim yazdı (16.08). Verilmezse RPC yönden türetir: gelen → customer, giden → admin. */
+    /** Verilmezse RPC yönden türetir. */
     author?: TicketSender | null;
     kind?: MessageKind;
     templateName?: string | null;
-    /** Şablonun ücret sınıfı — adla birlikte gelir, ondan ayrı düşemez (DB kısıtı zorlar). */
     templateCategory?: TemplateCategory | null;
     providerMessageId?: string | null;
     windowExpiresAt?: string | null;
-    /**
-     * Gelen medyanın PRIVATE R2 anahtarı ve türü (`r2Keys.conversationMedia`). İkisi de boş
-     * kalabilir: indirme düşse bile satır yazılır — defterin ilk kuralı mesajın kaybolmamasıdır.
-     */
+    /** İndirme düşse de satır yazılır: defterin ilk kuralı mesajın kaybolmamasıdır. */
     mediaKey?: string | null;
     mediaMime?: string | null;
-    /** Sesin makine çözümü (15.26) — müşterinin alt yazısıyla KARIŞMASIN diye ayrı alan. */
     mediaTranscript?: string | null;
-    /**
-     * Çeviri üçlüsü (15.28) — giden mesajda gönderilen metinle TEK turda yazılır; gelen mesajda
-     * boş kalır ve `setTranslation` sonradan doldurur.
-     */
+    /** Giden mesajda gönderilen metinle tek turda yazılır; gelende `setTranslation` sonradan doldurur. */
     language?: SourceLanguage | null;
     translations?: TranslationBag | null;
     translatedAt?: string | null;
@@ -367,30 +218,13 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     return MessageSchema.parse(dbToApp(raw));
   }
 
-  /**
-   * Bir konuşmanın mesajları — eskiden yeniye, TAMAMI.
-   *
-   * `TicketMessageService.listByTicket` ile aynı gerekçe: konuşma ortasından okunmaz, baştan okunur.
-   * **Ama burada bir sınır var ve adım 2'de gelecek:** canlı kanalda konuşma gerçekten sınırsız
-   * büyür (aylar süren tek bir sohbet). Bugün elle işlenen bir avuç mesaj var; sayfalama, onu
-   * tüketecek ekranla (15.5 detayı) birlikte yazılır — bugün yazılsaydı imleci okuyan kimse
-   * olmazdı ve `CLAUDE §1`'in "sayfalayan okumanın tüketeni olmalı" kuralına düşerdi.
-   */
   listByConversation(conversationId: string): Promise<Message[]> {
     return this.getAll({ conversationId }, { orderBy: 'createdAt' });
   }
 
   /**
-   * Çeviri kuyruğu (15.28) — `TicketMessageService.listUntranslated` ile aynı soru, bir süzgeç fazla:
-   *
-   * **Çözümü henüz gelmemiş SES kuyruğa GİRMEZ.** Kuyruk "metni yok" gördüğü satırı damgalar
-   * (bir daha bakmaz); sesli mesajın transkripti ise yazımdan saniyeler sonra gelir. Aradaki
-   * pencerede kuyruk o satırı görse "bakıldı, metin yok" der ve transkript geldiğinde çevrilecek
-   * satır çoktan kapanmış olurdu. Çözülemeyen ses de girmez ve bu doğru: çevrilecek metin yok.
-   *
-   * PostgREST `or` grubu: metinsiz/medyasız satır (`media_mime` boş) · ses olmayan medya · çözümü
-   * gelmiş ses. Süzgeç DB'de, çağıranda değil — çağıranda süzülseydi çözümsüz sesler `limit`in
-   * dilimini doldurup kuyruğun önünü sonsuza dek tıkardı (20 çözümsüz ses = hiç ilerlemeyen tur).
+   * Çözümü gelmemiş ses kuyruğa girmez: kuyruk metinsiz satırı damgalar ve transkript saniyeler sonra geldiğinde satır kapanmış
+   * olurdu. Süzgeç DB'de: çağıranda süzülse çözümsüz sesler `limit`i doldurup kuyruğu tıkardı.
    */
   listUntranslated(limit = 20): Promise<Message[]> {
     return this.getAll(
@@ -404,41 +238,12 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     );
   }
 
-  /**
-   * **Sayfalı geçmiş — ESKİDEN YENİYE** (15.5). Konuşmayı BAŞTAN okuyan yolların kapısı: AI bağlamı,
-   * dışa aktarma, denetim. Sohbet bir anlatıdır ve baştan okunur.
-   *
-   * `listByConversation` (tamamı) da duruyor: küçük konuşmada sayfalamanın maliyeti yok.
-   *
-   * ⚠ **EKRANIN kapısı bu DEĞİL** — `listRecent`. Artan sırada `keysetAfter` "bundan sonrakiler",
-   * yani ileri gitmek daha YENİYE gider; sohbet penceresi ise tersini ister.
-   */
+  /** Eskiden yeniye: sohbeti baştan okuyan yollar için (yapay zekâ bağlamı, dışa aktarma); ekranın kapısı `listRecent`. */
   listPage(conversationId: string, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<Message>> {
     return this.getPage({ conversationId }, { orderBy: 'createdAt', limit, keysetAfter: cursor });
   }
 
-  /**
-   * **Sohbet penceresinin kapısı — YENİDEN ESKİYE** (operasyon talebi 08.08).
-   *
-   * ── NEDEN İKİNCİ BİR OKUMA, VE NEDEN İLKİ YETMEDİ ───────────────────────────
-   * `listPage` artan sıralı ve ilk sayfası sohbetin EN ESKİ mesajlarıdır. Adım 1'de bu görünmüyordu
-   * (elle işlenmiş bir avuç mesaj), ama canlı kanalda iki ay süren bir sohbet operatöre iki ay
-   * önceki *"merhaba"*dan açılırdı — cevaplanacak mesaj imlecin en sonunda, birkaç "daha fazla"
-   * tıklaması ötede kalırdı. Operasyon şeridi ekranı yazarken `listPage`'i **tüketemedi** ve sebebi
-   * buydu.
-   *
-   * **Kusur benim cevabımda da yazılıydı ve iki taraf da göremedi:** `listPage` künyesine
-   * *"'daha eski' düğmesi imleci ileri taşır"* demişim — artan sırada imleci ileri taşımak daha
-   * eskiye değil daha YENİYE gider. Cümle kendi içinde çelişkiliydi; talebin ifadesini devralırken
-   * yönü hiç sınamamışım.
-   *
-   * ── İKİSİ DE MEŞRU, ADLARI YÖNLERİNİ SÖYLESİN ───────────────────────────────
-   * `listPage` silinmedi: yanlış değil, farklı bir soruyu cevaplıyor. İkisini tek metotta bir
-   * `direction` parametresiyle birleştirmek de yapılmadı — çağıran o parametreyi unuttuğunda
-   * sessizce YANLIŞ uca düşerdi, ve bu hata tam olarak bir kez zaten yaşandı.
-   *
-   * **Sıra ters çevirme EKRANIN işi** (talebin kendi cümlesi): sıralama kararı burada, sunum orada.
-   */
+  /** Yeniden eskiye: sohbet penceresi en yenisiyle açılır. İki yön tek metotta birleşmez: unutulan `direction` sessizce yanlış uca düşerdi. */
   listRecent(conversationId: string, cursor?: KeysetCursor, limit = DEFAULT_PAGE_SIZE): Promise<Page<Message>> {
     return this.getPage(
       { conversationId },
@@ -447,30 +252,18 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
   }
 }
 
-/**
- * Sohbetin iç notları (15.29) — **defter: yazılır, güncellenmez** (`MessageService` ile aynı sınır).
- *
- * Mesaj servisinden AYRI, çünkü not mesaj DEĞİL: pencereye, "cevap bekliyor" hesabına ve çeviri
- * kuyruğuna girmez (tablo künyesi `0039`). Aynı sınıfta dursaydı mesaj okuyan bir yol notu da
- * "müşteriyle yazışma" sanabilirdi.
- */
+/** Mesaj servisinden ayrı: not pencereye, "cevap bekliyor" hesabına ve çeviri kuyruğuna girmez. */
 export class ConversationNoteService extends BaseDbService<ConversationNote, ConversationNoteInsert, never> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'conversation_note', ConversationNoteSchema, ConversationNoteInsertSchema, ConversationNoteSchema as never, false);
   }
 
-  /** Bir sohbetin notları, eskiden yeniye — ekran mesajlarla zaman sırasında birleştirir. */
   listByConversation(conversationId: string): Promise<ConversationNote[]> {
     return this.getAll({ conversationId }, { orderBy: 'createdAt' });
   }
 }
 
-/**
- * `conversation_inbox` görünümü (15.5) — gelen kutusunun okuduğu satır.
- *
- * Ayrı bir servis, çünkü görünüm YAZILMAZ: aynı sınıfa koymak, insert/update'i olmayan bir tabloya
- * yazma metotları açardı (`TicketQueueService` emsali).
- */
+/** Görünüm yazılmaz: aynı sınıfta dursaydı yazma metotları açılırdı. */
 export class ConversationInboxService extends BaseDbService<ConversationInboxRow, never, never> {
   constructor(supabase: SupabaseClient) {
     super(
@@ -484,17 +277,8 @@ export class ConversationInboxService extends BaseDbService<ConversationInboxRow
   }
 
   /**
-   * Kuyruk — **son GELEN mesaja göre** sıralı (21.289 · kullanıcı kararı 07.09).
-   *
-   * Eksen `lastMessageAt` DEĞİL: kendi cevabımız da onu ilerletiyordu, yani operatör bir sohbete
-   * yazdığı an o sohbet tepeye çıkıyor, bekleyen müşteri aşağıda kalıyordu. `lastInboundAt` yalnız
-   * gelen mesajla ilerler — böylece "cevap bekleyenler üstte" ayrı bir kural olmadan sağlanır
-   * (kolon künyesi `0039`). Kanal süzgeci (21.08): sosyal gelen kutusu üç kanalı tek kuyrukta
-   * gösterir, operatör istediğinde tek kanala daraltır.
-   *
-   * Sayfalı, çünkü konuşma kümesi veriyle SINIRSIZ büyür (`CLAUDE §1`) — canlı kanalda aylarca.
-   * İmleci ekran tüketiyor ("daha eski" düğmesi), yani sessiz kırpma yok.
-   * Eksen `inboxAt`, `lastInboundAt` değil: boş son gelen mesaj azalan sırada başa düşer ve imleç kurulamaz.
+   * Son gelen mesaja göre: kendi cevabımız sohbeti tepeye taşısaydı bekleyen müşteri aşağıda kalırdı. Eksen `inboxAt`: boş son
+   * gelen mesaj azalan sırada başa düşer ve imleç kurulamaz.
    */
   list(
     filter: { awaitingReply?: boolean; source?: ConversationSource; handledBy?: TicketHandler } = {},
@@ -502,45 +286,25 @@ export class ConversationInboxService extends BaseDbService<ConversationInboxRow
     limit = DEFAULT_PAGE_SIZE,
   ): Promise<Page<ConversationInboxRow>> {
     return this.getPage(
-      /* YÜRÜTÜCÜ SÜZGECİ (21.289 · kullanıcı isteği): *"kimin yönettiğine göre de
-         filtreleyebilmeliyim"*. Kuyruk üç yürütücüyü karıştırıyor ve "ajanın kendi başına
-         yürüttükleri" ile "insan bekleyenler" ayrı sorulardır — biri denetim, öteki iş. */
+      // "Ajanın kendi yürüttükleri" ile "insan bekleyenler" ayrı sorulardır: biri denetim, öteki iş.
       { awaitingReply: filter.awaitingReply, source: filter.source, handledBy: filter.handledBy },
       { orderBy: 'inboxAt', orderDirection: 'desc', limit, keysetAfter: cursor },
     );
   }
 
-  /**
-   * "3 cevap bekliyor" başlığının sayısı — SAYIM, sayfa uzunluğu değil.
-   *
-   * Yüklenmiş sayfadan saymak, tam da sayının anlam kazandığı yerde (kalabalık kuyrukta) yalan
-   * söylerdi: "ilk sayfada 3 bekliyor" ile "3 bekliyor" aynı cümle değil. Kanal süzgeciyle sayılır
-   * (21.08) — süzgeçli kuyruğun başlığı süzgeçsiz sayı yazamaz.
-   */
+  /** Sayım, sayfa uzunluğu değil: "ilk sayfada 3 bekliyor" ile "3 bekliyor" aynı cümle değil. */
   countAwaitingReply(source?: ConversationSource): Promise<number> {
     return this.count({ awaitingReply: true, source });
   }
 }
 
-/**
- * `customer_inbox` görünümü (15.38 · kullanıcı kararı 15.09) — sosyal gelen kutusunun KİŞİ başına satırı:
- * aynı kişinin üç kanaldaki sohbetleri tek satırda, kanallar satırın içinde. Gruplama görünümde (künyesi
- * `0041`); servis yalnız süzgeç ve sıra verir.
- *
- * Sohbet başına kuyruk (`ConversationInboxService`) yerinde duruyor — native uygulama ve yüzen pencerenin
- * yeni mesaj ölçütü onu okuyor.
- */
+/** Gruplama görünümde (`0041`); sohbet başına kuyruk (`ConversationInboxService`) native uygulama için yerinde durur. */
 export class CustomerInboxService extends BaseDbService<CustomerInboxRow, never, never> {
   constructor(supabase: SupabaseClient) {
     super(supabase, 'customer_inbox', CustomerInboxRowSchema, CustomerInboxRowSchema as never, CustomerInboxRowSchema as never, false);
   }
 
-  /**
-   * Kuyruk — kişinin son GELEN mesajına göre (21.289'un ekseni), müşterinin hiç yazmadığı kişi sonda.
-   *
-   * Süzgeçler KİŞİYE uygulanır (çizimin kuralı): "cevap bekliyor" herhangi bir kanalında top bizde olan
-   * kişidir, kanal süzgeci o kanaldan mesajı olan kişidir — satır yine kişinin bütün kanallarını taşır.
-   */
+  /** Süzgeçler kişiye uygulanır: satır yine kişinin bütün kanallarını taşır. */
   list(
     filter: { awaitingReply?: boolean; source?: ConversationSource } = {},
     cursor?: KeysetCursor,
@@ -552,21 +316,17 @@ export class CustomerInboxService extends BaseDbService<CustomerInboxRow, never,
     );
   }
 
-  /** "N cevap bekliyor" — KİŞİ sayısı, kuyrukla aynı süzgeç (sayfa uzunluğu değil). */
+  /** Kişi sayısı, kuyrukla aynı süzgeç. */
   countAwaitingReply(source?: ConversationSource): Promise<number> {
     return this.count({ awaitingAny: true }, { containsFilters: channelFilter(source) });
   }
 
-  /**
-   * Tek kişinin satırı — sohbet başlığının kanal sekmeleri buradan. Süzgeç kişi anahtarında ve görünümün
-   * toplamasının ALTINA iner: tek kişiyi okumak bütün kutuyu hesaplatmaz.
-   */
+  /** Süzgeç kişi anahtarında ve toplamanın altına iner: tek kişiyi okumak bütün kutuyu hesaplatmaz. */
   rowOf(personKey: string): Promise<CustomerInboxRow | null> {
     return this.getOneBy({ personKey });
   }
 }
 
-/** Kanal süzgeci — kişinin kanal dizisinde o kanal var mı (`sources @> {kanal}`). */
 function channelFilter(source?: ConversationSource): { field: string; values: readonly unknown[] }[] | undefined {
   return source ? [{ field: 'sources', values: [source] }] : undefined;
 }

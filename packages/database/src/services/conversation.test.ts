@@ -4,15 +4,7 @@ import { purgeTestData } from '../testing/cleanup';
 import { ConversationInboxService, ConversationService, CustomerInboxService, MessageService } from './conversation.service';
 import { UserProfileService } from './user-profile.service';
 
-/**
- * Konuşma zemini (15.1) — `conversation` + `message` (0039).
- *
- * Sınanan şey dört değişmez:
- *   1. **Bir kişi, bir konuşma** — aynı numara ikinci kez satır açmaz (WhatsApp'ta thread yoktur).
- *   2. **Mevcut kimlik bağı ezilmez** — yeniden bağlama bir birleştirme kararıdır, insana aittir.
- *   3. **Kimliksiz konuşma geçerlidir** — adım 2'de webhook mesajı önce yazar, kimliği sonra çözer.
- *   4. **Pencereyi yalnız gelen mesaj açar** — giden mesaj ücretsiz süreyi uzatamaz.
- */
+// Dört değişmez: bir kişi bir konuşma, mevcut bağ ezilmez, kimliksiz konuşma geçerlidir, pencereyi yalnız gelen mesaj açar.
 const db = serviceDb();
 const conversations = new ConversationService(db);
 const messages = new MessageService(db);
@@ -29,11 +21,7 @@ function numara(): string {
   return `+336${String(stamp).slice(-6)}${String(sira).padStart(2, '0')}`;
 }
 
-/**
- * Zaman damgası ANLARLA karşılaştırılır, DİZEYLE değil: PostgREST `…+00:00` döndürüyor, JS
- * `…000Z` üretiyor — aynı an, farklı yazım. Dize karşılaştırması burada sessizce yanlış olurdu ve
- * daha kötüsü: sıralamada da yanlış olurdu ('+' < '.' olduğu için eşit an DB tarafında önce gelir.)
- */
+/** Anlarla karşılaştırılır, dizeyle değil: PostgREST `…+00:00`, JS `…000Z` yazar ve dize karşılaştırması sıralamada da yanılırdı. */
 const an = (value: string | null | undefined): string | null => (value ? new Date(value).toISOString() : null);
 
 async function konusmaAc(externalRef: string, customerId?: string | null) {
@@ -98,7 +86,6 @@ describe('konuşma açılışı', () => {
 
   it('izin ve ANI birlikte yazılır — tarihsiz bir izin, izin değildir', async () => {
     const row = await konusmaAc(numara());
-    // Başlangıç HİÇ SORULMAMIŞ hâldir; üç hâlin ayrımı buradan başlıyor.
     expect(row.optInAskedAt).toBeNull();
 
     const verildi = await conversations.setOptIn(row.id, true);
@@ -108,21 +95,16 @@ describe('konuşma açılışı', () => {
   });
 
   it('RET de iz bırakır — "reddetti" ile "hiç sorulmadı" ayırt edilebilmeli (15.12)', async () => {
-    /* Eskiden ret `optIn=false, optInAt=null` yazıyordu: kolonların VARSAYILANIYLA birebir aynı.
-       Yani "Müşteri reddetti" düğmesi hiçbir şey kaydetmiyordu ve kimliksiz sohbette (Messenger/
-       IG'nin olağan hâli) ret tamamen kayboluyordu — ajan da reddedene tekrar tekrar sorabilirdi. */
     const row = await konusmaAc(numara());
     const reddetti = await conversations.setOptIn(row.id, false);
 
     expect(reddetti.optIn).toBe(false);
-    expect(reddetti.optInAskedAt).not.toBeNull(); // ← asıl iddia: ret artık görünür
+    expect(reddetti.optInAskedAt).not.toBeNull(); // asıl iddia: ret iz bırakır
     expect(reddetti.optInAt).toBeNull(); // izin verilmedi, izin damgası da yok
   });
 
   it('İZİN DAMGASI geri alınınca SİLİNMEZ — "o gün izni vardı" sonradan da sorulabilmeli', async () => {
-    /* İspat yükü bizde (GDPR md. 7/1). Damgayı ret hâlinde silmek ya da üzerine yazmak, 1. gün
-       verilip 30. gün geri alınan bir izinde kanıtı yok ederdi: `optIn` bugünkü hâli söyler,
-       `optInAt` ise bir kez yaşanmış olayı. */
+    // İspat yükü bizde (GDPR md. 7/1): `optIn` bugünkü hâli, `optInAt` bir kez yaşanmış olayı söyler.
     const row = await konusmaAc(numara());
     const verildi = await conversations.setOptIn(row.id, true);
     const damga = verildi.optInAt;
@@ -155,14 +137,8 @@ describe('konuşma açılışı', () => {
 });
 
 /**
- * **YALNIZ BOŞSA YAZAN KAPILAR** (`BaseDbService.updateIfNull` · 15.16 · 15.7 · dalga 1a).
- *
- * `open()`in `coalesce` güvencesi zaten sınanıyor (yukarıda) — bunlar ONDAN AYRI iki kapı ve ayrı
- * bir riski var: `open` bir konuşmayı AÇARKEN korur, bu ikisi ise VAR OLAN satırı günceller. Aynı
- * cümleyi ikinci kez, farklı bir yolda kurmanın bedeli, o yolun bir gün gevşemesidir.
- *
- * Kaybedenin `null` alması testin merkezinde: sessiz bir ezme, yanlış hesaba bağlanmış bir sohbet
- * demektir ve o, bağlanmamış bir sohbetten pahalıdır (`linkCustomer` künyesi).
+ * `open()` konuşmayı açarken korur, bu kapılar var olan satırı günceller: aynı güvence ikinci yolda da sınanmalı. Kaybedenin
+ * `null` alması merkezde: sessiz ezme, yanlış hesaba bağlanmış sohbet demektir.
  */
 describe('yalnız boşsa yazan kapılar', () => {
   it('linkCustomer BOŞ bağı doldurur', async () => {
@@ -173,8 +149,7 @@ describe('yalnız boşsa yazan kapılar', () => {
 
     const sonuc = await conversations.linkCustomer(konusma.id, { customerId: musteri.id, linkedBy: null, proof: 'email' });
     expect(sonuc?.customerId).toBe(musteri.id);
-    // Bağ ve KÜNYESİ tek yazımda gider (15.19): damgasız bir bağ, "kim neye dayanarak bağladı"
-    // sorusunu cevapsız bırakırdı ve denetlenmek istenen satır tam da o olurdu.
+    // Bağ ve künyesi tek yazımda: damgasız bağ "kim, neye dayanarak" sorusunu cevapsız bırakırdı.
     expect(sonuc?.linkProof).toBe('email');
     expect(sonuc?.linkedAt).not.toBeNull();
   });
@@ -197,7 +172,7 @@ describe('yalnız boşsa yazan kapılar', () => {
   });
 
   it('setProfileName BOŞ adı doldurur — Messenger/IG başlığının tek kaynağı', async () => {
-    // Webhook ad taşımıyor (23.08 canlı ölçümü); ad Graph'tan gelip bu kapıdan yazılıyor.
+    // Messenger/Instagram webhook'u ad taşımaz; ad Graph'tan gelip bu kapıdan yazılır.
     const konusma = await konusmaAc(numara());
     expect(konusma.profileName).toBeNull();
 
@@ -248,14 +223,12 @@ describe('mesaj kaydı', () => {
     expect(an((await conversations.getById(konusma.id))?.windowExpiresAt)).toBe(bitis);
 
     await messages.record({ conversationId: konusma.id, direction: 'outbound', body: { text: 'buyurun' } });
-    // Giden mesaj `windowExpiresAt` taşımıyor → pencere OLDUĞU GİBİ kalır, ileri kaymaz.
+    // Giden mesaj `windowExpiresAt` taşımıyor: pencere olduğu gibi kalır, ileri kaymaz.
     expect(an((await conversations.getById(konusma.id))?.windowExpiresAt)).toBe(bitis);
   });
 
   it('pencere GERİ GİTMEZ — geç düşen eski mesaj hâlâ ücretsiz olan aralığı kapatamaz', async () => {
-    // Sağlayıcı webhook'ları ne sıralı gelir ne tek kez denenir. `coalesce` ile yazılsaydı yeniden
-    // denenen eski bir mesaj pencereyi kısaltır, biz de ücretsiz aralıkta şablon ücreti öderdik —
-    // ve hiçbir yerde hata görünmezdi.
+    // Webhook'lar ne sıralı gelir ne tek kez denenir: `coalesce` ile yeniden denenen eski mesaj pencereyi kısaltır ve ücretsiz aralıkta kalıp ücreti ödetirdi.
     const konusma = await konusmaAc(numara());
     const gec = new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString();
     const erken = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
@@ -285,8 +258,7 @@ describe('mesaj kaydı', () => {
   });
 
   it('şablon KATEGORİSİZ kaydedilemez — faturası okunamayan bir gönderim olurdu', async () => {
-    // Kolonu nullable bırakıp "sonra doldururuz" demek, tam da doldurulamayacak olan boyutu boş
-    // bırakmaktı: kategori yazılmadan geçen mesaj için "ne ödedik" hiçbir zaman cevaplanamaz.
+    // Kategori yazılmadan geçen mesaj için "ne ödedik" hiçbir zaman cevaplanamaz.
     const konusma = await konusmaAc(numara());
 
     await expect(
@@ -338,11 +310,7 @@ describe('mesaj kaydı', () => {
   });
 });
 
-/*
-  MÜŞTERİ BAZLI GELEN KUTUSU (15.38 · `customer_inbox`). Kuyruk kişi başına tek satır: aynı müşterinin
-  kanalları birleşir, kimliksiz sohbet kendi başına kalır, "cevap bekliyor" kişinin hâlidir. Kuyruk
-  küresel olduğu için sayfada yalnız KENDİ kişimiz aranır — sayı sayılmaz.
-*/
+// Kuyruk küresel: sayfada yalnız kendi kişimiz aranır, sayı sayılmaz.
 describe('müşteri bazlı gelen kutusu (15.38)', () => {
   const kutu = new CustomerInboxService(db);
 

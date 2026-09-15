@@ -1,194 +1,90 @@
--- Modül 15 adım 1 — Konuşma zemini (15.1/15.2; üç kanala genişledi 21.08, ADR-006).
--- CHANNELS §7, `data-model/iletisim-geribildirim.md`.
---
--- ── KONUŞMA BİZİM VERİTABANIMIZDA YAŞAR ─────────────────────────────────────
--- Meta'nın kendi arşivi var; yine de konuşmayı biz tutuyoruz. Üç sebep:
---   • AI ajanının bağlamı bizde olmalı — "geçen sefer ne konuştuk" sorusu dış API'ye sorulamaz;
---   • servis penceresi ve opt-in bizim kararımızdır (hangi mesaj ücretsiz, hangisi template);
---   • sağlayıcı değişse de konuşma tarihi ve müşteri bağı bizde kalır (taşınırlık).
---
--- ── ADIM 1 YALNIZ ZEMİN ATAR ────────────────────────────────────────────────
--- Bugün satırları **elle** doğuyor: admin gelen DM'i işler (yalnız WhatsApp — Messenger/IG kişi
--- kimliği PSID/IGSID'dir ve operatörce bilinemez; o satırları webhook yazacak, 15.7). Adım 2'de
--- aynı satırları webhook yazar. Veri modeli değişmez — değişen tek şey satırı yazan yüzeydir
--- (CHANNELS §8). Bu yüzden alanların tamamı bugünden var: sonradan eklenen bir kolon, o güne
--- kadarki her konuşmanın geçmişini belirsiz bırakırdı (`ticket.handled_by` ile aynı gerekçe).
+-- Konuşma bizde yaşar: yapay zekânın bağlamı, servis penceresi ve izin kararı bizimdir, sağlayıcı değişse de geçmiş bizde kalır.
 
--- Üç Meta kanalı, tek tablo (ADR-006): kanal `source` ekseninde ayrışır. `external_ref`in uzayı
--- kaynağa bağlı — WhatsApp'ta E.164 telefon, Messenger'da PSID, Instagram'da IGSID. `messenger`
--- ile `instagram` AYRI değerler, tek "meta" kovası değil: aynı kişinin FB ve IG kimlikleri farklı
--- dizelerdir, tek kova iki uzayı karıştırırdı.
+-- `messenger` ile `instagram` ayrı değerler: aynı kişinin Facebook ve Instagram kimlikleri farklı dizelerdir, tek "meta" kovası
+-- iki uzayı karıştırırdı.
 create type conversation_source as enum ('whatsapp', 'messenger', 'instagram');
--- Yön, gönderenden AYRI bir eksendir: `ticket_message.sender` "kim yazdı" (müşteri/personel/AI)
--- der, burada sorulan "hangi tarafa aktı". WhatsApp'ta bizim adımıza AI da personel de yazabilir;
--- ikisi de aynı numaradan çıkar ve müşteri farkı görmez — yani taşıma açısından tek yöndür.
+-- Yön gönderenden ayrı eksendir: bizim adımıza yapay zekâ da personel de aynı numaradan yazar, taşıma açısından tek yöndür.
 create type message_direction as enum ('inbound', 'outbound');
--- Mesajın taşıdığı biçim. `template` bir ÜCRET sınıfıdır, süs değil: 24 saatlik servis penceresi
--- dışında yalnız Meta-onaylı template gönderilebilir.
+-- `template` bir ücret sınıfıdır: 24 saatlik pencere dışında yalnız Meta onaylı kalıp gönderilebilir.
 create type message_kind as enum ('text', 'interactive', 'template', 'media');
--- Şablonun Meta kategorisi — **FİYATI BELİRLEYEN alan.** Adlar Meta'nındır, biz uydurmuyoruz.
---
---   · marketing      — kampanya/duyuru. Her hâlde ÜCRETLİ; ayrıca izin ister (DOMAIN §11).
---   · utility        — sipariş onayı, kargo bildirimi. Servis penceresi İÇİNDE ücretsizdir ve
---                      ADR-005 zaten "pencere içinde önceliklidir" diyor. Dayanağı izin değil,
---                      siparişin kendisidir (sözleşmenin ifası).
---   · authentication — güvenlik kodu.
---
--- **Neden mesajda saklanıyor, ayrı bir şablon tablosunda değil:** bu bir DEFTERDİR ve defter olanı
--- yazar. Kategori Meta tarafında sonradan değişebilir (yeniden sınıflandırma olağan); mesajı
--- değişebilen bir kayda bağlasaydık, geçmiş faturamız bugünün sınıflandırmasıyla yeniden yazılırdı.
+-- Fiyatı belirleyen alan, adlar Meta'nındır. Mesajda saklanır, şablon tablosunda değil: kategori Meta'da sonradan değişebilir
+-- ve geçmiş fatura bugünün sınıflandırmasıyla yeniden yazılırdı.
 create type template_category as enum ('marketing', 'utility', 'authentication');
 
 create table public.conversation (
   id uuid primary key default gen_random_uuid(),
 
-  -- Telefonla çözülür (DOMAIN §10). **Nullable ve öyle kalmalı:** adım 2'de webhook mesajı önce
-  -- yazar, kimliği sonra çözer — kimlik çözülemediği için mesajın kaybolduğu bir yol olamaz.
-  -- `cascade`: hesap silinince konuşma da gider (GDPR kovası 1, `anonymize_customer`).
+  -- Nullable kalmalı: webhook mesajı önce yazar, kimliği sonra çözer. `cascade`: hesap silinince konuşma da gider (GDPR).
   customer_id uuid references public.user_profiles (id) on delete cascade,
 
-  -- Varsayılan YOK (21.08): üç kanal dünyasında sessiz bir 'whatsapp' varsayılanı, kaynağı geçmeyi
-  -- unutan tek çağıranın Messenger mesajını WhatsApp konuşmasına dikmesi demekti.
+  -- Varsayılan yok: sessiz bir 'whatsapp' varsayılanı, kaynağı unutan çağıranın Messenger mesajını WhatsApp konuşmasına dikerdi.
   source conversation_source not null,
-  -- Sağlayıcıdaki kişi/thread anahtarı — uzayı kaynağa bağlı: WhatsApp'ta **E.164 normalize
-  -- telefon** (`wa_id` numarayı `+` olmadan verir, biz `+33…` tutarız), Messenger'da **PSID**,
-  -- Instagram'da **IGSID**. Normalize etmeyen bir telefon yazımı aynı kişiye ikinci bir konuşma
-  -- açar ve geçmiş ikiye bölünür; PSID/IGSID opak dizedir, normalize edilmez.
+  -- WhatsApp'ta E.164 telefon, Messenger'da PSID, Instagram'da IGSID. Normalize edilmemiş telefon aynı kişiye ikinci konuşma açar.
   external_ref text not null check (length(btrim(external_ref)) > 0),
-  -- Konuşmanın aktığı İŞLETME hesabı (21.08): WhatsApp'ta phone_number_id, Messenger'da sayfa
-  -- kimliği, Instagram'da IG hesap kimliği. Zeminde (elle işleme) boş — webhook yazmaya
-  -- başladığında dolar ve cevabın hangi hesaptan gönderileceğini söyler. Tekillik bugün
-  -- `(source, external_ref)` — ikinci bir işletme hesabı açıldığı gün üçlüye genişletilir
-  -- (PSID sayfa-kapsamlıdır; bugün genişletmek elle işlenen geçmişi webhook geçmişinden bölerdi).
+  -- Cevabın gideceği işletme hesabı. Tekillik `(source, external_ref)`: ikinci işletme hesabı açılınca üçlüye genişletilir,
+  -- PSID sayfa kapsamlıdır.
   provider_account_ref text,
-  -- Sağlayıcı profil adı (21.08): WhatsApp push name, Messenger ad-soyad, Instagram kullanıcı adı.
-  -- GÖRÜNEN addır, kimlik değil — kullanıcı istediği an değiştirir, son görülen değer tutulur.
-  -- Messenger/IG'de kimlik otomatik çözülemez (PSID/IGSID telefon taşımaz); kimliksiz sohbetin
-  -- başlığı buradan okunur — WhatsApp'ta okunaklı telefon zaten vardı.
+  -- Görünen ad, kimlik değil: son görülen değer tutulur ve kimliksiz Messenger/Instagram sohbetinin başlığıdır.
   profile_name text,
 
-  -- Sohbeti kim yürütüyor (15.13/16.5 · kullanıcı kararı 16.08). `ticket.handled_by` ile aynı
-  -- gerekçe ve AYNI enum: iki yüzeyde iki ayrı "yürütücü" kümesi, bir gün ayrışan iki gerçek
-  -- olurdu. `hybrid` = AI taslak yazar, operatör onaylamadan gitmez; `ai` = özerk.
+  -- `ticket.handled_by` ile aynı enum: iki yüzeyde iki ayrı yürütücü kümesi bir gün ayrışırdı.
   handled_by ticket_handler not null default 'human',
 
-  -- ── AI taslağı — `ticket.ai_draft_reply` ile aynı sözleşme (0026'daki künye) ─
-  -- Satırda durur, mesaj değil: `message` defteri gönderilmiş gerçeği yazar, onaylanmamış taslak
-  -- oraya giremez. Damga önbellek anahtarı; tüketilince ikisi birden boşalır.
+  -- Taslak mesaj değil, satırda durur: `message` defteri gönderilmiş gerçeği yazar, onaylanmamış taslak oraya giremez.
   ai_draft_reply text,
   ai_draft_generated_at timestamptz,
 
-  -- ── TİCARİ MESAJ İZNİ (DOMAIN §11) — ÜÇ HÂL, ÇÜNKÜ İKİSİ YETMİYOR (15.12) ──
-  -- Faz 2 broadcast'inin dayanağı; bugün yalnız kaydedilir.
-  --
-  -- Ölçülen açık (25.08): iki kolonla *sorulmadı* ile *soruldu, reddetti* AYIRT EDİLEMİYORDU —
-  -- ret `opt_in=false, opt_in_at=null` yazıyordu ve varsayılan da tam olarak bu. Yani "Müşteri
-  -- reddetti" düğmesi sohbet düzeyinde hiçbir kalıcı iz bırakmıyordu; kimliksiz sohbette (Messenger/
-  -- IG'nin olağan hâli) ret tamamen kayboluyordu. Ajanın "reddedene tekrar sorma" kuralı da bu
-  -- veriyle kurulamıyordu.
-  --
-  -- Damgayı ret hâlinde de `opt_in_at`e yazmak ÇARE DEĞİLDİ ve daha kötüsüydü: izin 1. gün verilip
-  -- 30. gün geri alınırsa üzerine yazılan damga *"o gün izni vardı"* kanıtını yok ederdi — oysa
-  -- ispat yükü bizde (GDPR md. 7/1). Bu yüzden iki damga ayrı yaşıyor:
-  --   · opt_in_asked_at → müşteriye SORULDUĞU an (cevap ne olursa olsun)
-  --   · opt_in_at       → İZNİN VERİLDİĞİ an; bir kez yazılır, geri alınsa bile SİLİNMEZ
+  -- `opt_in_asked_at` sorulduğu an, ret de iz bıraksın diye; `opt_in_at` iznin verildiği an. İzin geri alınsa da `opt_in_at`
+  -- silinmez: ispat yükü bizde (GDPR madde 7/1).
   opt_in boolean not null default false,
   opt_in_at timestamptz,
   opt_in_asked_at timestamptz,
 
-  -- ── BAĞIN KÜNYESİ (15.19) — kimliği KİM kurdu, NE ZAMAN, HANGİ KANITLA ─────
-  -- Messenger/IG'de kimliğin tek yolu operatörün elle kurduğu bağdır (PSID/IGSID telefon
-  -- taşımaz). O bağ yanlış kurulursa yalnız ekran değil, AJANIN ARAÇLARI da yanlış müşteriye
-  -- açılır (`support-tools.ts` kimliğe kapatılmıştır) — yani hata tek bir alanı değil, o
-  -- müşterinin verisinin TAMAMINI açar. Üç kolon o kararı geri izlenebilir kılıyor.
-  --
-  -- **Üçü de boş = bağı SİSTEM kurdu:** WhatsApp'ta kimlik numaradan çözülür ve ortada bir
-  -- operatör kararı yoktur. Boşluk burada "bilgi eksik" değil, okunur bir CEVAPTIR.
+  -- Yanlış bağ ajanın araçlarını da yanlış müşteriye açar, bu yüzden bağ geri izlenebilmeli. Üçü de boş = bağı sistem kurdu
+  -- (WhatsApp'ta numaradan).
   linked_by uuid references public.user_profiles (id) on delete set null,
   linked_at timestamptz,
-  -- Kanıtın TÜRÜ — değeri DEĞİL (`CLAUDE §1`: kimlik yazılır, içerik yazılmaz). Sorulacak soru
-  -- "hangi kanıtla bağlandı"dır; "e-postası neydi" değil, ve değeri saklamak gereksiz bir
-  -- kişisel veriyi ikinci bir yere kopyalamak olurdu. Enum DEĞİL `text`+check: dördüncü değer
-  -- (04.10'un e-posta kodu) geldiğinde tip değişimi gerektirmesin.
-  -- **Dördüncü değer geldi (15.22 · 07.09): `cart_link`** — sohbette kurulan sepetin bağlantısını
-  -- açıp giriş yapan kişi. Kanıt operatörün değil SİSTEMİN doğruladığı bir jetondur (`cart_link`
-  -- tablosu, 0055): bağlantıyı alan kişi sohbetin öteki ucundadır, giriş yapan kişi posta kutusunun
-  -- sahibidir — iki katlı kanıt, `wa_link_token`ın (0011) aynı kuralı, ters yönde.
+  -- Kanıtın değeri değil türü: değeri saklamak kişisel veriyi ikinci bir yere kopyalamak olurdu. Enum değil `text`+check,
+  -- yeni değer tip değişimi gerektirmesin.
   link_proof text check (link_proof in ('order_ref', 'email', 'phone', 'cart_link')),
 
-  -- ── Müşteriyle KONUŞTUĞUMUZ dil (15.28) ─────────────────────────────────────
-  -- Giden mesajın çevrileceği hedef. Enum (tr|fr|de), serbest ISO kodu DEĞİL: alan "müşteri
-  -- hangi dilde yazdı"yı değil "biz ona hangi dilde yazarız"ı söyler ve o küme bizim konuştuğumuz
-  -- üç dildir — Boşnakça yazan müşteriye Boşnakça cevap üretemeyiz, onun satırı boş kalır ve hedef
-  -- yedek zincirden gelir (profil dili → piyasa varsayılanı; karar motorda, `outboundLanguage`).
-  --
-  -- GELEN mesajın tespit edilen dilinden öğrenilir ve SON GELEN KAZANIR: müşterinin yazdığı dil,
-  -- kayıtta operatörün de doldurmuş olabileceği profil tercihinden daha güçlü kanıttır. Üç dilden
-  -- biri değilse ("ok" → en, Boşnakça → bs) dokunulmaz; önceki bilgi kalır.
+  -- Biz ona hangi dilde yazarız: küme konuştuğumuz üç dildir, Boşnakça yazana Boşnakça cevap üretemeyiz. Gelen mesajdan öğrenilir
+  -- ve son gelen kazanır.
   language preferred_language,
 
-  -- ── Müşterinin SÖYLEDİĞİ posta kodu (15.20 · kullanıcı kararı 10.09) ─────────
-  -- Ajan sepete yazmadan önce yeri bilmek ZORUNDA: o adrese gidip gitmediğimiz ve hangi ürünün
-  -- (kapıya teslim · kargo · hiç) gidebildiği ancak onunla bilinir. Sohbette bir kez söylenir, burada
-  -- saklanır — sonraki turlar aynı soruyu sormaz. Kimlik DEĞİL, teslimat yeri: kayıtlı adresi olan
-  -- müşteride adres zaten var; bu kolon kimliksiz sohbetin (Messenger/IG) ve adresi olmayanın yeridir.
-  -- Yalnız gerçek kod yazılır (`cart/chat-place.ts`); biçim `@lezzet/helper`in beş hanesi.
+  -- Ajan sepete yer bilmeden yazamaz: o adrese gidip gitmediğimiz ve hangi ürünün gidebildiği ancak kodla bilinir. Sohbette bir
+  -- kez söylenir, sonraki turlar yeniden sormaz.
   postal_code text check (postal_code ~ '^[0-9]{5}$'),
-  -- Kodun ÜLKESİ (15.20 · kullanıcı kararı 10.09). 610 kod iki hizmet ülkesinde birden geçerli ve ülke
-  -- bilinmeden depo seçilemez: o kodda ajan müşteriye ülkeyi SORAR, cevap buraya yazılır. Tek ülkeli
-  -- kodda koddan türer ve yine yazılır — okuyan hep aynı iki alana bakar (web yer çerezinin `country`
-  -- alanıyla aynı kural: yer = kod + ülke). `null` = kod yok ya da ülke henüz sorulmadı.
+  -- Bazı kodlar iki hizmet ülkesinde birden geçerli ve ülke bilinmeden depo seçilemez: ajan sorar, cevap buraya yazılır.
   postal_country country_code,
 
-  -- 24 saatlik servis penceresinin bitişi. Kararı motor verir (`serviceWindowExpiry`), burası
-  -- yalnız saklar — süreyi SQL'e de yazsaydık aynı kural iki dilde iki kopya olurdu.
+  -- Kararı motor verir (`serviceWindowExpiry`): süre SQL'e de yazılsaydı aynı kural iki dilde iki kopya olurdu.
   window_expires_at timestamptz,
-  -- Son hareketin anı; konuşmanın "ne zaman kımıldadı" damgası. `record_message` yazar.
   last_message_at timestamptz,
-  -- KUYRUĞUN SIRALAMA ALANI — son GELEN mesajın anı (21.289 · kullanıcı kararı 07.09:
-  -- "Mesajlaşmanın son güncellendiği tarih değil, karşıdan son gelen mesajın tarihine göre").
-  --
-  -- `last_message_at` bu iş için YANLIŞ eksendi ve sebebi somut: kendi cevabımız da onu
-  -- ilerletiyor. Yani operatör bir sohbete cevap yazdığı an o sohbet kuyruğun tepesine çıkıyor —
-  -- oysa artık yapılacak bir şey yok. Bekleyen müşteri ise aşağıda kalıyordu.
-  --
-  -- Bu alan yalnız GELEN mesajla ilerler, giden mesaj dokunmaz. Kuyruk buna göre sıralanınca
-  -- "cevap bekleyenler" ayrı bir kurala gerek kalmadan üste çıkar: bekleyen bir sohbet, tanımı
-  -- gereği en son müşterinin yazdığı sohbettir. Ayrı bir "top bizde önce" ekseni bu yüzden
-  -- AÇILMADI (talebin `queue_sort_at` çözümü burada gereksiz olurdu).
-  --
-  -- `null` = müşteri hiç yazmamış (biz başlatmışız). O satır kuyruğun sonuna düşer — cevap
-  -- bekleyenlerin önüne geçemez.
+  -- Kuyruğun ekseni, yalnız gelen mesajla ilerler: kendi cevabımız sohbeti tepeye taşısaydı bekleyen müşteri aşağıda kalırdı.
+  -- `null` = müşteri hiç yazmadı.
   last_inbound_at timestamptz,
 
   created_at timestamptz not null default now(),
 
-  -- İzin bir KANITTIR: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez.
+  -- İzin bir kanıttır: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez.
   constraint conversation_opt_in_stamp check (opt_in = false or opt_in_at is not null),
-  -- Sorulmadan izin VERİLEMEZ. Kural veride durur: izin damgası varken "hiç sorulmadı" diyen bir
-  -- satır, ajanın "reddedene tekrar sorma" kararını sessizce bozardı (o satırı hep sorulmamış sayar).
+  -- İzin damgası varken "hiç sorulmadı" diyen satır, ajanın "reddedene tekrar sorma" kararını bozardı.
   constraint conversation_opt_in_asked check (opt_in_at is null or opt_in_asked_at is not null),
-  -- Taslak ile damgası ayrışamaz (`ticket_ai_draft_stamp` ile aynı gerekçe).
   constraint conversation_ai_draft_stamp check ((ai_draft_reply is null) = (ai_draft_generated_at is null)),
-  -- Bağın künyesi: damga ile kanıt BİRLİKTE doğar; kanıtsız damga "bağladım ama neye dayanarak
-  -- bilmiyorum" demekti. **`linked_by` bu çifte DAHİL DEĞİL** ve bu bilinçli: FK'si `set null`,
-  -- yani personel kaydı silindiğinde kolon boşalır — üçlü bir kısıt tam o gün, hiç kimsenin
-  -- beklemediği bir yerde kırılırdı. Kimin bağladığı kaybolabilir, neye dayanarak bağladığı hayır.
+  -- Damga ile kanıt birlikte doğar; `linked_by` dahil değil, çünkü personel silinince `set null` üçlü kısıtı kırardı.
   constraint conversation_link_proof check ((linked_at is null) = (link_proof is null)),
-  -- Bağ künyesi ancak BAĞ VARKEN yazılabilir: müşterisi olmayan bir konuşmanın "kim bağladı"sı olmaz.
+  -- Müşterisi olmayan konuşmanın "kim bağladı"sı olmaz.
   constraint conversation_link_customer check (linked_at is null or customer_id is not null),
-  -- Kodsuz ülke OLMAZ: ülke kodun ülkesidir, tek başına bir yer söylemez.
+  -- Ülke kodun ülkesidir, tek başına bir yer söylemez.
   constraint conversation_postal_country check (postal_country is null or postal_code is not null)
 );
 
 alter table public.conversation enable row level security;
 
--- **Bir kişi, bir konuşma — kanal başına.** Üç kanalda da thread kavramı yoktur: aynı kişiden gelen
--- her mesaj aynı sohbetin devamıdır. Tekillik olmasaydı ikinci mesaj yeni bir satır açar, admin aynı
--- müşteriyi gelen kutusunda iki kez görür ve AI ajanı geçmişin yarısını okurdu. `source` anahtarın
--- parçası: PSID ile IGSID ayrı uzaylardır, aynı dize iki kanalda iki farklı kişiyi gösterebilir.
+-- Kanal başına bir kişi, bir konuşma: ikinci satır ajanın geçmişin yarısını okuması demekti. `source` anahtarın parçası, çünkü
+-- PSID ile IGSID ayrı uzaylardır.
 create unique index conversation_external_ref_key on public.conversation (source, external_ref);
--- Müşteri kartından konuşmasına geçiş (15.5) — yeniden eskiye.
 create index conversation_customer_idx on public.conversation (customer_id, last_message_at desc) where customer_id is not null;
 
 create table public.message (
@@ -196,87 +92,50 @@ create table public.message (
   conversation_id uuid not null references public.conversation (id) on delete cascade,
 
   direction message_direction not null,
-  -- Kim yazdı (16.08) — yön "hangi tarafa aktı" der, bu alan "bunu kim söyledi" der. Bizim
-  -- adımıza AI da personel de yazar ve müşteri farkı görmez; iç izlenebilirlik görsün diye alan
-  -- BAŞTAN var (`ticket_message.sender` ile aynı gerekçe: sonradan eklenen kolon, o güne kadarki
-  -- her mesajın yazarını belirsiz bırakırdı). Enum ortak: `ticket_sender`. Varsayılan YOK —
-  -- yazan taraf söyler; unutursa `record_message` yönden türetir, alttaki kısıt da yanlışı keser.
+  -- Yön "hangi tarafa aktı", bu alan "bunu kim söyledi": müşteri farkı görmez ama iç izlenebilirlik görmeli. Varsayılan yok:
+  -- unutulursa `record_message` yönden türetir, kısıt yanlışı keser.
   author ticket_sender not null,
   kind message_kind not null default 'text',
 
-  -- Metin ya da kart/interaktif yapı. jsonb, çünkü `text` dışındaki türlerin şekli sağlayıcıya
-  -- bağlı ve adım 2'de (15.9) netleşecek; bugün uydurulmuş bir kolon kümesi, yarın bırakılacak
-  -- bir kolon kümesi olurdu.
+  -- jsonb, çünkü `text` dışındaki türlerin şekli sağlayıcıya bağlı; uydurulmuş kolon kümesi yarın bırakılacak bir küme olurdu.
   body jsonb not null,
 
-  -- Meta-onaylı şablonun adı — yalnız `template` mesajında.
   template_name text,
-  -- Şablonun kategorisi = ücret sınıfı. **Defterle birlikte doğuyor, sonradan eklenmiyor:** yazılırken
-  -- atlanan bir boyut geriye dönük doldurulamaz — bugün kategorisiz yazılan mesajlar için "geçen ay
-  -- ne ödedik" sorusu hiçbir zaman cevaplanamazdı. (`ticket.handled_by` ile aynı gerekçe.)
+  -- Defterle birlikte doğar: yazılırken atlanan ücret sınıfı geriye dönük doldurulamaz.
   template_category template_category,
-  -- 360dialog/Cloud API mesaj kimliği. Adım 1'de boş (elle kayıt), adım 2'de dolar.
   provider_message_id text,
 
-  -- ── Gelen medyanın deposu (15.x) ───────────────────────────────────────────
-  -- Müşterinin gönderdiği fotoğraf/ses/belge PRIVATE R2 kovasına indirilir; burada duran onun
-  -- ANAHTARIDIR (`r2Keys.conversationMedia`), sağlayıcının medya kimliği değil.
-  --
-  -- **Neden indiriyoruz:** Meta'nın verdiği adres dakikalar içinde ölüyor ve medyanın kendisi de
-  -- ~30 gün sonra siliniyor. Adresi saklasaydık ekran ertesi gün boş açılırdı; hiç saklamasaydık
-  -- ezik ürün fotoğrafı — şikâyetin tek kanıtı — talep sonuçlanmadan yok olurdu.
-  --
-  -- **`body` içine konmadı:** `body` sağlayıcının gövdesini taşıyor, bu ise BİZİM ürettiğimiz bir
-  -- kayıt. Kolon olması ayrıca yetim nesne taramasını mümkün kılıyor (kovada olup satırda olmayan).
+  -- Kendi private R2 anahtarımız: Meta'nın adresi dakikalarda ölür, medya ~30 günde silinir ve şikâyetin tek kanıtı talep
+  -- sonuçlanmadan yok olurdu. `body`de değil kolonda: bizim kaydımızdır ve yetim nesne taramasını mümkün kılar.
   media_key text,
-  -- Türü ekranın işi: fotoğraf mı, ses mi, belge mi — `kind` hepsine `media` diyor. Sağlayıcının
-  -- gövdesinden okunabilirdi ama o gövdenin şekli kanala göre değişiyor; ekran sağlayıcı biçimi
-  -- bilmemeli.
+  -- `kind` bütün medyaya `media` der; sağlayıcı gövdesinin şekli kanala göre değiştiği için ekran onu okumaz.
   media_mime text,
-  -- Sesli mesajın ÇÖZÜLMÜŞ metni (15.26). `body->>'text'` DEĞİL ve bu ayrım şart: orası müşterinin
-  -- KENDİ yazdığı alt yazıdır, burası MAKİNENİN duyduğudur. Aynı alana yazmak ikisini birbirinden
-  -- ayırt edilemez kılardı — operatör hangi cümlenin insandan geldiğini bilemez, ajan da makine
-  -- çıktısını müşterinin kesin sözü sanırdı (15.26'nın teyit kuralı tam bu yüzden var).
-  -- Boş kalması normaldir: çözülemeyen kayıt, fotoğraf/belge, ya da çözüm henüz koşmamış.
+  -- Makinenin duyduğu, müşterinin yazdığı alt yazı (`body->>'text'`) değil: aynı alanda operatör insan cümlesini ayırt edemez,
+  -- ajan makine çıktısını müşterinin kesin sözü sanardı.
   media_transcript text,
 
-  -- ── Çeviri üçlüsü (15.28) — `ticket_message` ile aynı desen, aynı torba ────
-  -- `language` KANALDAN GEÇEN metnin dilidir: gelen mesajda müşterinin yazdığı, giden mesajda
-  -- müşteriye GÖNDERİLEN cümle. `body->>'text'` daima kanaldan geçen hâldir; operatörün/ajanın
-  -- Türkçesi giden mesajda torbaya düşer (`translations->'tr'`). Kural tek olsun diye: telefondan
-  -- ya da echo'dan düşen giden mesaj da API'den gönderilen de "müşteri ne okudu" sorusuna aynı
-  -- kolondan cevap verir. Sesli mesajda dil transkriptin dilidir (alt yazı yok).
-  -- Serbest ISO 639 (Boşnakça da gelir); torbada kaynak dil YOKTUR; `translated_at` başarısızlıkta
-  -- da dolar ki bozuk tek satır kuyruğun önünü tıkamasın (0026'nın kuralı).
+  -- Kanaldan geçen metnin dili: gelen mesajda müşterinin yazdığı, giden mesajda gönderilen; operatörün Türkçesi torbada.
+  -- `translated_at` başarısızlıkta da dolar ki bozuk tek satır kuyruğu tıkamasın.
   language text check (language ~ '^[a-z]{2,3}$'),
   translations jsonb,
   translated_at timestamptz,
 
   created_at timestamptz not null default now(),
 
-  -- Metin mesajı metinsiz olamaz: `body->>'text'` boşsa ortada bir mesaj yoktur ve ekranda boş bir
-  -- balon olarak görünür. Kontrol veride durur — yazan yüzey unutsa bile satır girmez.
+  -- Metinsiz metin mesajı ekranda boş balon olurdu; kural veride, yazan yüzey unutsa da satır girmez.
   constraint message_text_body check (
     kind <> 'text' or (body ? 'text' and length(btrim(body ->> 'text')) > 0)
   ),
-  -- Şablon adı ile tür AYRIŞAMAZ: adsız bir template gönderilemez, adlı bir serbest metin de
-  -- ücretlendirme tarafında template sanılırdı.
+  -- Adsız kalıp gönderilemez, adlı serbest metin de ücretlendirmede kalıp sanılırdı.
   constraint message_template_name check ((kind = 'template') = (template_name is not null)),
-  -- Kategori de aynı kapıdan geçer ve ŞART: kategorisiz bir şablon kaydı, faturası okunamayan bir
-  -- gönderimdir. Kolonu nullable bırakıp "sonra doldururuz" demek, tam da doldurulamayacak olan
-  -- boyutu boş bırakmaktı.
+  -- Kategorisiz kalıp kaydı faturası okunamayan bir gönderimdir.
   constraint message_template_category check ((kind = 'template') = (template_category is not null)),
-  -- Template İŞLETME-BAŞLATANDIR; gelen mesaj template olamaz. Tersi mümkün olsaydı, gelen bir
-  -- mesaj pencere hesabında "biz gönderdik" gibi okunurdu.
+  -- Kalıp işletme başlatandır: gelen kalıp pencere hesabında "biz gönderdik" gibi okunurdu.
   constraint message_inbound_kind check (direction = 'outbound' or kind <> 'template'),
-  -- Yazar yönle ÇELİŞEMEZ: gelen mesajın yazarı daima müşteridir, giden mesajı müşteri yazamaz.
   -- Kısıt olmasaydı yanlış eşleşme sessizce geçer ve "AI mı cevapladı" sorusu yalan okurdu.
   constraint message_author_direction check ((direction = 'inbound') = (author = 'customer')),
-  -- Medya alanları YALNIZ medya mesajında dolabilir — ama TERSİ ŞART DEĞİL, ve bu bilinçli:
-  -- indirme düşse bile mesaj satırı yazılır (`kind='media'`, anahtar boş). Çift yönlü bir kısıt
-  -- (`(kind='media') = (media_key is not null)`) o satırı reddederdi; yani sağlayıcıdaki geçici
-  -- bir arıza, müşterinin mesajını tümüyle kaybettirirdi. Defterin ilk kuralı satırın
-  -- kaybolmamasıdır — medya ikinci sıradadır.
+  -- Tek yönlü, bilerek: indirme düşse de mesaj satırı yazılmalı; çift yönlü kısıt geçici bir sağlayıcı arızasında müşterinin
+  -- mesajını kaybettirirdi.
   constraint message_media_kind check (
     (media_key is null and media_mime is null and media_transcript is null) or kind = 'media'
   )
@@ -284,85 +143,46 @@ create table public.message (
 
 alter table public.message enable row level security;
 
--- Tek okuma deseni: bir konuşmanın mesajları, eskiden yeniye.
 create index message_conversation_idx on public.message (conversation_id, created_at);
--- Çeviri kuyruğu (15.28): bakılmamış satırlar, eskiden yeniye — `ticket_message_untranslated_idx`
--- ile aynı biçim. Kısmi, çünkü kuyruk küçüktür ve tablo büyür; tam indeks çevrilmiş milyonu taşırdı.
+-- Kısmi: kuyruk küçüktür, tablo büyür; tam indeks çevrilmiş milyonu taşırdı.
 create index message_untranslated_idx on public.message (created_at) where translated_at is null;
--- Mesaj-düzeyi idempotency'nin SON savunma hattı (15.7): Meta teslimatı 7 gün boyunca tekrarlar;
--- birincil koruma `webhook_event` claim'idir (provider+event_id = mesaj kimliği), bu indeks ise
--- claim'in atlandığı bir yolda aynı sağlayıcı mesajının deftere iki kez yazılmasını VERİDE keser.
--- Kısmi: elle işlenen satırlar kimliksizdir ve null tekilliğe girmez.
+-- Mesaj düzeyinde son savunma: Meta teslimatı 7 gün tekrarlar ve `webhook_event` claim'inin atlandığı bir yolda aynı mesaj
+-- deftere iki kez yazılmamalı.
 create unique index message_provider_message_key on public.message (provider_message_id) where provider_message_id is not null;
 
--- ── Sohbetin İÇ NOTU (15.29 · kullanıcı kararı 10.09) ────────────────────────
--- Müşteriye GİTMEYEN satır: operatör sohbet akışında okur. İlk yazanı ajanın devri ("AI devretti —
--- sebep") — sebep eskiden yalnız backend stdout'una düşüyordu, operatör "AI neden bıraktı"yı
--- ekranda göremiyordu ve bir yanlış devri teşhis etmek için karar yeniden üretilmek zorunda kaldı.
---
--- **`message` tablosuna YAZILMADI ve bu bilinçli:** o defter "kanaldan ne aktı"yı tutar — pencere
--- damgaları (`record_message`), gelen kutusunun "cevap bekliyor" hesabı (son mesajın yönü), çeviri
--- kuyruğu ve mobilin mesaj türü eşlemesi onu okur. Notu oraya koymak her okuyana "bu satır müşteriye
--- gitmedi" istisnasını öğretmek olurdu; birini unutan yüzey notu gönderilmiş bir mesaj sayardı.
+-- `message`a yazılmadı: o defteri okuyan her yüzey (pencere damgaları, "cevap bekliyor", çeviri kuyruğu, native mesaj türü) notu
+-- gönderilmiş mesaj sayardı.
 create table public.conversation_note (
   id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversation (id) on delete cascade,
-  -- Yazar enum'u mesajla ORTAK (`ticket_sender`), ama müşteri iç not yazamaz: müşterinin sözü mesajdır.
+  -- Müşteri iç not yazamaz: müşterinin sözü mesajdır.
   author ticket_sender not null,
   body text not null,
   created_at timestamptz not null default now(),
   constraint conversation_note_author check (author <> 'customer'),
-  -- Boş not yok: ekranda boş bir satır, olmayan bir kaydı gösterirdi.
+  -- Boş not ekranda olmayan bir kaydı gösterirdi.
   constraint conversation_note_body check (length(btrim(body)) > 0)
 );
 
 alter table public.conversation_note enable row level security;
 
--- Tek okuma deseni: bir sohbetin notları, eskiden yeniye — ekran mesajlarla zaman sırasında birleştirir.
 create index conversation_note_conversation_idx on public.conversation_note (conversation_id, created_at);
 
--- ── Talebin konuşma bağı ─────────────────────────────────────────────────────
--- `ticket.conversation_id` 0026'da FK'siz kondu — işaret ettiği tablo henüz yoktu. Şimdi var.
---
--- **`set null` DEĞİL:** `ticket_source_link` kısıtı "kaynağı whatsapp olan talep konuşmasız olamaz"
--- diyor. `set null` bir konuşmayı silerken talebin kolonunu boşaltmaya çalışır ve o kısıta çarpardı —
--- hata SİLİNEN satırda değil, adı hiç geçmeyen bir talepte görünürdü.
---
--- **`restrict` de DEĞİL, `no action` (varsayılan):** ikisi aynı şeyi yasaklar ama farklı ANDA
--- bakarlar. Hesap silindiğinde iki zincir birden koşuyor — talep `cascade` ile, konuşma `cascade`
--- ile. `restrict` anında bakar, yani konuşma zinciri talepten önce koştuğunda henüz silinmemiş bir
--- talebi görüp hata verir; hangisinin önce koştuğu ise kısıtların OLUŞTURULMA SIRASINA bağlıdır —
--- yani bugün çalışan bir silme, yarın eklenen bir FK yüzünden bozulabilirdi. `no action` deyimin
--- SONUNDA bakar: iki zincir de bittiğinde ortada yetim talep yoksa geçer. Aynı korumayı sıradan
--- bağımsız verir.
+-- `set null` değil: "kaynağı whatsapp olan talep konuşmasız olamaz" kısıtına, silinen satırda değil adı geçmeyen bir talepte
+-- çarpardı. `restrict` değil `no action`: hesap silinirken iki cascade zinciri koşar ve denetim zincir sırasından bağımsız, deyimin sonunda yapılmalı.
 alter table public.ticket
   add constraint ticket_conversation_fk foreign key (conversation_id)
   references public.conversation (id);
 
--- ── Konuşmayı aç ya da bul ───────────────────────────────────────────────────
--- Oku-sonra-yaz YARIŞIR: aynı numaradan iki mesaj arka arkaya gelirse (adım 2'de olağan) ikisi de
--- "konuşma yok" görür ve ikisi de açmaya çalışır. Tekillik indeksi ikincisini reddeder, yani mesaj
--- kaybolur. Tek deyimlik upsert bunu imkânsız kılar.
---
--- **`coalesce(conversation.customer_id, excluded.customer_id)`** — mevcut bağ EZİLMEZ. Bir konuşma
--- bir müşteriye bağlandıktan sonra başka bir müşteriye kaydırmak bir BİRLEŞTİRME kararıdır ve
--- insana aittir (DOMAIN §10); sessizce yapılırsa geçmiş yanlış hesapta görünür.
---
--- Üç alanın üç ayrı birleşme kuralı var ve fark bilinçli (21.08):
---   · customer_id          → yalnız BOŞSA dolar (birleştirme insana ait);
---   · provider_account_ref → yalnız BOŞSA dolar (konuşma hesabını değiştirmez — değişen hesap
---     yeni bir external_ref uzayı demektir, aynı satırda sessizce el değiştiremez);
---   · profile_name         → YENİSİ kazanır (görünen ad kimlik değil; kullanıcı adını değiştirir
---     ve son görülen ad, aylar önceki addan değerlidir).
+-- Tek deyimlik upsert: oku-sonra-yaz, arka arkaya gelen iki mesajda tekillik indeksine çarpar ve mesaj kaybolurdu. Müşteri ve
+-- işletme hesabı yalnız boşsa dolar (birleştirme insanın kararı, hesap değişimi yeni uzay demek); profil adında yenisi kazanır.
 create or replace function public.open_conversation(
   p_source conversation_source,
   p_external_ref text,
   p_customer_id uuid default null,
   p_provider_account_ref text default null,
   p_profile_name text default null,
-  -- Yeni sohbetin yürütücüsü (15.30): çağıran ayardan okuyup geçirir; `null` = kolon varsayılanı.
-  -- YALNIZ satır doğarken yazılır — çakışma dalı bilerek dokunmuyor: açık sohbetin modu operatörün
-  -- kararıdır, genel bir ayar onu sessizce ezmemeli.
+  -- Yalnız satır doğarken yazılır: açık sohbetin modu operatörün kararıdır, genel ayar onu sessizce ezmemeli.
   p_handled_by ticket_handler default null
 ) returns public.conversation
 language plpgsql
@@ -384,22 +204,8 @@ begin
 end;
 $$;
 
--- ── Mesaj kaydı ──────────────────────────────────────────────────────────────
--- İki tabloya birden dokunur (mesaj + konuşmanın damgaları) → tek RPC (STACK §13 (b)). Ayrı iki
--- yazım olsaydı, ikincisi düştüğünde gelen kutusu sıralaması sessizce bayatlardı: yeni mesaj gelmiş
--- ama konuşma listenin dibinde kalmış olurdu.
---
--- `p_window_expires_at` KARAR DEĞİL, kararın taşınmasıdır: 24 saati motor hesaplar
--- (`serviceWindowExpiry`). `null` = pencereye DOKUNMA — giden mesaj pencereyi açmaz. Açsaydı
--- ücretsiz mesajlaşma süresini kendi kendimize uzatmış olurduk; Meta'nın kuralı bizim tarafımızda
--- yanlış yazılır ve fatura sürpriz olurdu.
---
--- **`greatest`, `coalesce` DEĞİL — pencere GERİ GİTMEZ.** İlk yazımda `coalesce` vardı ve sessiz bir
--- para kaybıydı: sağlayıcı webhook'ları ne sıralı gelir ne de tek kez denenir. Yeniden denenen ya da
--- geç düşen ESKİ bir mesaj, kendi anına göre hesaplanmış daha erken bir bitişi yazar ve pencereyi
--- KISALTIRDI. Sonuç hiçbir yerde hata vermez; yalnız hâlâ ücretsiz olan bir aralıkta "pencere
--- kapandı" der ve şablon ücreti ödetir. `greatest` null'ları yok sayar (`greatest(null, x) = x`),
--- yani "dokunma" davranışı da korunur.
+-- İki tabloya birden dokunur, tek RPC: ikinci yazım düşerse gelen kutusu sıralaması sessizce bayatlardı. Pencere `greatest` ile
+-- yazılır ve geri gitmez: yeniden denenen eski mesaj pencereyi kısaltıp hâlâ ücretsiz aralıkta kalıp ücreti ödetirdi.
 create or replace function public.record_message(
   p_conversation_id uuid,
   p_direction message_direction,
@@ -409,17 +215,13 @@ create or replace function public.record_message(
   p_template_category template_category default null,
   p_provider_message_id text default null,
   p_window_expires_at timestamptz default null,
-  -- Kim yazdı (16.08). `null` = yönden türet: gelen daima müşteri, giden personel varsayılır —
-  -- AI kendi gönderdiğinde 'ai' der. Yanlış eşleşmeyi tablo kısıtı keser.
+  -- `null` = yönden türet; yanlış eşleşmeyi tablo kısıtı keser.
   p_author ticket_sender default null,
-  -- Gelen medyanın PRIVATE R2 anahtarı ve türü. İkisi de `null` kalabilir — indirme düşse bile
-  -- satır yazılır; RPC burada karar vermez, yalnız taşır (kural `send.ts`/webhook tarafında).
+  -- İndirme düşse de satır yazılır; RPC karar vermez, yalnız taşır.
   p_media_key text default null,
   p_media_mime text default null,
   p_media_transcript text default null,
-  -- Çeviri üçlüsü (15.28): giden mesaj gönderimden ÖNCE çevrilir ve gönderilen metinle tek turda
-  -- yazılır — ayrı bir güncelleme, "gitti ama çevirisi yazılamadı" diye ikinci bir yarım hâl
-  -- doğururdu. Gelen mesajda üçü de boş kalır; çeviri yazımdan sonra, webhook'un dışında koşar.
+  -- Giden mesaj gönderimden önce çevrilir ve tek turda yazılır: ayrı güncelleme "gitti ama çevirisi yazılamadı" yarım hâlini doğururdu.
   p_language text default null,
   p_translations jsonb default null,
   p_translated_at timestamptz default null
@@ -431,11 +233,8 @@ as $$
 declare
   v_message public.message;
 begin
-  -- Kalıp mesaj (template) bir WhatsApp kavramıdır — Meta-onaylı şablon + ücret sınıfı. Messenger/
-  -- Instagram'da karşılığı yok (ücretsiz kanallar; pencere-dışı kuralları etikettir, şablon değil).
-  -- `message` tablosunun kendi kısıtları kaynağı GÖREMEZ (source `conversation`'da durur), kural
-  -- bu yüzden burada: yanlış kanala yazılan şablon, maliyet raporunu ve pencere mantığını sessizce
-  -- kirletirdi (21.08).
+  -- Kalıp yalnız WhatsApp kavramıdır ve `message` kısıtları kaynağı göremez: yanlış kanala yazılan kalıp maliyet raporunu ve
+  -- pencere mantığını kirletirdi.
   if p_kind = 'template' and (select source from public.conversation where id = p_conversation_id) <> 'whatsapp' then
     raise exception 'template mesaji yalniz whatsapp konusmasina yazilabilir (conversation %)', p_conversation_id;
   end if;
@@ -461,8 +260,7 @@ begin
 
   update public.conversation
      set last_message_at = v_message.created_at,
-         /* YALNIZ GELEN MESAJ İLERLETİR (kolon künyesi): `case` burada, çağıranda değil —
-            iki yazma yolu (webhook · gönderim kapısı) aynı kuralı iki kez yazmasın. */
+         -- Kural burada, çağıranda değil: iki yazma yolu aynı kuralı iki kez yazmasın.
          last_inbound_at = case when p_direction = 'inbound' then v_message.created_at else last_inbound_at end,
          window_expires_at = greatest(window_expires_at, p_window_expires_at)
    where id = p_conversation_id;
@@ -475,6 +273,6 @@ revoke all on function public.open_conversation(conversation_source, text, uuid,
 revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender, text, text, text, text, jsonb, timestamptz) from anon;
 
 comment on table public.conversation is
-  'Mesajlaşma konuşması (15.1 · üç kanal 21.08): kaynak (whatsapp/messenger/instagram), kimlik bağı, opt-in, 24s servis penceresi, son hareket.';
+  'Mesajlaşma konuşması: kaynak (whatsapp/messenger/instagram), kimlik bağı, izin, 24 saatlik servis penceresi, son hareket.';
 comment on table public.message is
-  'Konuşmanın mesajları (15.1): yön + tür + gövde. Defterdir — yazılır, güncellenmez.';
+  'Konuşmanın mesajları: yön, tür, gövde. Defterdir; yazılır, güncellenmez.';
