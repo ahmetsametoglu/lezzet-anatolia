@@ -5,13 +5,9 @@ import { checkAddress } from './address-check';
 import { fakeGeocoder } from './geocode.testkit';
 
 /**
- * **"Bu kapı var mı" kapısı** (11.11) — servisin cevabının SATIRA dönüşü.
- *
- * Kararın kendisi saf ve ayrı testli (`domain-core/delivery/address-verdict.test.ts`, 14 test);
- * burada sınanan şey ARADAKİ HER ŞEY: ikinci sorgunun ne zaman atıldığı, satıra ne yazıldığı, ve
- * kapının hiçbir hâlde satışı durdurmadığı.
- *
- * Servis taklit ediliyor — testler AĞA ÇIKMAZ.
+ * Adres doğrulamasının satıra dönüşü: karar saf ve kendi testinde (`@lezzet/address` `address-verdict.test.ts`); burada sınanan
+ * aradaki her şey: ikinci sorgunun ne zaman atıldığı, satıra ne yazıldığı ve kapının hiçbir hâlde satışı durdurmadığı. Servis
+ * taklit edilir, testler ağa çıkmaz.
  */
 const db = serviceDb();
 const addresses = new AddressService(db);
@@ -20,7 +16,7 @@ const stamp = Date.now();
 let customerId: string;
 const createdProfiles: string[] = [];
 
-/** Kullanıcının ölçtüğü gerçek cevap: kapı yalnız Lingolsheim'de, Strasbourg'da yalnız sokak var. */
+/** Gerçek cevap: kapı yalnız Lingolsheim'de, Strasbourg'da yalnız sokak var. */
 const LINGOLSHEIM = {
   label: '192c Rue du Maréchal Foch 67380 Lingolsheim',
   postalCode: '67380',
@@ -75,10 +71,7 @@ const oku = async (id: string) => (await addresses.listByIds([id]))[0]!;
 
 describe('checkAddress · kullanıcının vakası', () => {
   it('kapı BAŞKA kodda bulundu → teklif döner VE satıra yazılır', async () => {
-    /*
-      Ölçülmüş hâl: `192c Rue du Maréchal Foch` 67000 Strasbourg ile kaydedilmiş; kapı orada YOK,
-      67380 Lingolsheim'de var. Bugüne dek sistem bunu sessizce kabul ediyordu.
-    */
+    /* `192c Rue du Maréchal Foch` 67000 Strasbourg ile kaydedilmiş; kapı orada yok, 67380 Lingolsheim'de var. */
     const row = await adres();
     const fake = fakeGeocoder(SOKAK, { status: 'ok', candidates: [LINGOLSHEIM] });
 
@@ -176,8 +169,8 @@ describe('checkAddress · teklif YOK ama uyarı var', () => {
 
 describe('checkAddress · FAIL-OPEN — satışı durdurmaz', () => {
   it('servis DÜŞERSE susulur ve satıra dokunulmaz', async () => {
-    /* Kullanıcı kararı (02.09): doğrulama sipariş anında koşuyor, yani servisin düştüğü an
-       checkout DURMAMALI. "Doğrulayamadım" ile "adres yanlış" ayrı şeylerdir. */
+    /* Doğrulama sipariş anında koşar, bu yüzden servisin düştüğü an checkout durmamalı: "doğrulayamadım" ile "adres yanlış" ayrı
+       şeylerdir. */
     const row = await adres();
     const önce = await oku(row.id);
 

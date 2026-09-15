@@ -14,11 +14,8 @@ import { cancelOrder } from '../order/refund';
 import { advanceOrder } from '../order/advance.testkit';
 
 /**
- * Kuryenin gün listesi (11.1) ve kapıdaki iki olumsuz sonuç (11.4) — terfi 21.10 ile birlikte
- * taşındı (kaynağı `apps/web/lib/courier/day.test.ts`).
- *
- * En kritik iki doğrulama: **başka kuryenin durağı görünmüyor mu** ve **ulaşılamadı ile reddedildi
- * ayrı mı** — ikisi karışırsa stok ve iade süreci karışır (tasarım §6).
+ * Kuryenin gün listesi ve kapıdaki iki olumsuz sonuç. En kritik iki doğrulama: başka kuryenin durağı görünmüyor mu ve ulaşılamadı
+ * ile reddedildi ayrı mı, çünkü ikisi karışırsa stok ve iade süreci karışır.
  */
 const db = serviceDb();
 const orders = new OrderService(db);
@@ -27,10 +24,8 @@ const reservations = new ReservationService(db);
 
 const stamp = Date.now();
 /*
-  Telefon DAMGALI (`user_profiles.phone` benzersiz — sabit numara paralel koşuda web köprü
-  testiyle çarpışıyordu, defter 08.08). Önek '07': web ve mobile-api aynı `Date.now()` formülünü
-  '06' ile kullanıyor; aynı milisaniyede başlayan iki dosya aynı numarayı üretmesin.
-  Bağlantı testi de BU değerden türetir — sabit numara beklentisi damgayla birlikte kalktı.
+  Telefon damgalı, çünkü `user_profiles.phone` benzersizdir ve sabit numara paralel koşuda çarpışır. Önek '07', çünkü web ve
+  mobile-api aynı formülü '06' ile kullanıyor; bağlantı testi de beklentisini bu değerden türetir.
 */
 const customerPhone = `07${String(stamp).slice(-8)}`;
 let customerId: string;
@@ -44,9 +39,9 @@ let productId: string;
 let categoryId: string;
 let stockId: string;
 let accountId: string;
-/** Sefer akışının rotası (18.08): start artık zone claim'i yapıyor — zonesuz sipariş görünmez. */
+/** Sefer akışının rotası: başlatma bölgeyi talep eder, bölgesiz sipariş görünmez. */
 let zoneId: string;
-/** İkinci deponun rotası (11.7): kapsam süzgecinin "görmemesi gereken" tarafı — negatif kanıt. */
+/** İkinci deponun rotası: kapsam süzgecinin "görmemesi gereken" tarafı, negatif kanıt. */
 let foreignWarehouseId: string;
 let foreignZoneId: string;
 /** Kuryenin KENDİ deposundaki ikinci rota — "aynı anda tek sefer" ve "araçtan çıkar" ölçümleri
@@ -77,13 +72,12 @@ beforeAll(async () => {
   courierId = courier.id;
   otherCourierId = other.id;
   createdProfiles.push(customer.id, courier.id, other.id);
-  // Kurye rol + depo kapsamıyla açılır (11.7): kapı kapsamı profilden çözüyor ve boş kapsam
-  // fail-closed `no_route` demek — üretimde de Ayarlar bu ikisini birlikte yazıyor.
+  // Kurye rol ve depo kapsamıyla açılır: kapı kapsamı profilden çözer ve boş kapsam fail-closed `no_route` demektir; üretimde de
+  // Ayarlar ikisini birlikte yazar.
   await profiles.setRoles(courierId, ['courier'], [warehouseId]);
   await profiles.setRoles(otherCourierId, ['courier'], [warehouseId]);
 
-  /* Alıcı ve telefon 22.08'de zorunlu oldu. Değerler bu dosyada ANLAMLI: alıcı hesabın sahibinden
-     FARKLI (hediye/iş adresi hâli) ve telefon dolu — kurye durağının "kapıda kimi sorayım, kimi
+  /* Alıcı hesabın sahibinden farklı (hediye/iş adresi hâli) ve telefon dolu, çünkü kurye durağının "kapıda kimi sorayım, kimi
      arayayım" cevabı buradan türüyor. */
   addressId = (await new AddressService(db).insert({
     customerId,
@@ -101,8 +95,8 @@ beforeAll(async () => {
   secondZoneId = (await new DeliveryZoneService(db).insert({
     name: `Kurye testi ikinci rota ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
   })).id;
-  // İkinci depo + rotası (11.7): kuryenin kapsamı DIŞINDA — süzgecin negatif tarafı ancak
-  // gerçekten var olan ama görünmemesi gereken bir rotayla sınanabilir.
+  // İkinci depo ve rotası kuryenin kapsamı dışında: süzgecin negatif tarafı ancak var olan ama görünmemesi gereken bir rotayla
+  // sınanabilir.
   foreignWarehouseId = (await createTestWarehouse(db)).id;
   foreignZoneId = (await new DeliveryZoneService(db).insert({
     name: `Yabancı depo rotası ${stamp}`, warehouseId: foreignWarehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
@@ -121,15 +115,8 @@ beforeEach(async () => {
     await db.from('delivery_run_close').delete().in('delivery_run_id', runIds);
     await db.from('delivery_run').delete().in('id', runIds);
   }
-  // **SIRA: defter → parti → sipariş** (06.14). Teslim deftere bir `sale` satırı yazıyor ve o satır
-  // İKİSİNİ birden `restrict` ile tutuyor (`stock_id` ve `order_id`); `purgeVariantStock` partinin
-  // bütün hareketlerini topladığı için sipariş de aynı anda serbest kalıyor. Sıra oradadır, burada
-  // değil (`CLAUDE §4b`).
-  //
-  // Eskiden üçü de `db.from(...).delete()` ile yazılmıştı ve o çağrı hatayı **yutuyor** — silme
-  // başarısız olur, kimse bakmaz, teardown sessizce yarım kalır. Belirtisi düşen teardown değil
-  // **çift sayım** olur: her test bir öncekinin malını da sayar (ölçüldü 27.08, kardeş dosyalarda:
-  // kalan stok 28 yerine 137, borç 4000 yerine 8000). Künye `cleanup.ts`te.
+  // Sıra: defter → parti → sipariş, çünkü teslimin yazdığı `sale` satırı ikisini birden `restrict` ile tutar ve
+  // `purgeVariantStock` partinin bütün hareketlerini topladığı için sipariş de aynı anda serbest kalır.
   await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
@@ -140,9 +127,8 @@ beforeEach(async () => {
 const vehicleIds: string[] = [];
 
 afterAll(async () => {
-  // Sipariş, rezervasyon ve adres AYRICA silinmez: üçü de `purgeTestData`'nın bildiği bağlar
-  // (sipariş `profileIds`ten, rezervasyon `productIds`ten, adres profil cascade'inden). Elle
-  // yazılan bu satırlar teardown'ı öldürüyordu (ölçüldü 14.08, `cleanup.ts` künyesi).
+  // Sipariş, rezervasyon ve adres ayrıca silinmez: üçü de `purgeTestData`'nın bildiği bağlar (sipariş `profileIds`ten,
+  // rezervasyon `productIds`ten, adres profil cascade'inden).
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -155,11 +141,8 @@ afterAll(async () => {
 });
 
 /**
- * Yola çıkmış sipariş — kuryenin gün listesine düşmesi için gereken en kısa yol.
- *
- * `upTo` gün başlatmanın (K1) üç adayını kurabilmek için var: yoldaki (varsayılan), HAZIR ve henüz
- * hazırlanmamış sipariş. Varsayılan davranış değişmedi — `upTo` verilmeyen her çağrı eskisi gibi
- * `out_for_delivery`e kadar gider.
+ * Yola çıkmış sipariş, kuryenin gün listesine düşmesi için gereken en kısa yol. `upTo` gün başlatmanın üç adayını kurar: yoldaki
+ * (varsayılan), hazır ve henüz hazırlanmamış sipariş.
  */
 async function dispatched(
   opts: {
@@ -168,12 +151,10 @@ async function dispatched(
     orderedTotalCents?: number;
     date?: string;
     upTo?: 'confirmed' | 'ready';
-    /* Kutu araca BİNMESİN (05.09): mühürlenir ama okutulmaz. "Kutusu rampada kalmış"
-       hâli — iptal edilen durağın görünüp görünmeyeceğini belirleyen tek ölçüt bu. */
+    /* Kutu araca binmesin: mühürlenir ama okutulmaz; iptal edilen durağın görünüp görünmeyeceğini belirleyen tek ölçüt bu. */
     load?: boolean;
-    /* Adresin ANLIK GÖRÜNTÜSÜNE eklenecek alanlar (11.11) — kapı doğrulaması bu kayıttan okunuyor
-       (`doorCheckOf`), adres tablosundan değil. Kolon `z.record(z.unknown())`, yani tip de öyle:
-       daraltmak, motorun bir gün öğreneceği beşinci alanı fikstürden dışarıda bırakırdı. */
+    /* Adresin anlık görüntüsüne eklenecek alanlar: kapı doğrulaması (`doorCheckOf`) adres tablosundan değil bu kayıttan okur.
+       Tip kolon gibi geniş, çünkü daraltmak motorun bir gün öğreneceği alanı fikstürden dışarıda bırakırdı. */
     snapshot?: Record<string, unknown>;
   } = {},
 ) {
@@ -203,11 +184,8 @@ async function dispatched(
   }
 
   /*
-    HAZIRLIK KUTUYLA (kullanıcı kararı 30.08) — kutusuz sipariş ne `ready` olur ne yola çıkar.
-    Mühür siparişi HAZIR yapar. Kutu HER HÂLDE araca bindirilir (`loadBox`): 31.08'den beri
-    yükleme siparişi yola ÇIKARMIYOR, yalnız malı araca geçiriyor — yani `ready` durak da
-    yüklenmiş olabilir ve gerçekte de öyledir (kurye rampada yükler, sonra seferi başlatır).
-    `out_for_delivery` istendiğinde geçiş AYRICA yazılır.
+    Hazırlık kutuyla: kutusuz sipariş ne `ready` olur ne yola çıkar, mühür siparişi hazır yapar. Kutu her hâlde araca bindirilir,
+    çünkü yükleme siparişi yola çıkarmaz, yalnız malı araca geçirir; `out_for_delivery` istendiğinde geçiş ayrıca yazılır.
   */
   await advanceOrder(db, order.id, ['confirmed', 'preparing']);
   const box = await openBox(db, { orderId: order.id, warehouseId });
@@ -235,8 +213,8 @@ describe('gün listesi (11.1)', () => {
     const stop = mine(await listCourierDay(db, { courierId }), orderId);
 
     expect(stop.address).toBe('12 rue des Fleurs, 67000, Strasbourg');
-    /* `collectedAtDoorCents` 30.08'de eklendi: kapıda FİİLEN alınan para. Bekleyen durakta `null` —
-       henüz alınmadı; sonuçlanmış durakta gün listesi "nakit 85,00 € alındı" cümlesini onunla kuruyor. */
+    /* `collectedAtDoorCents` kapıda fiilen alınan paradır: bekleyen durakta `null`, sonuçlanmış durakta gün listesi "nakit
+       85,00 € alındı" cümlesini onunla kurar. */
     expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash', collectedAtDoorCents: null });
     expect(stop.contentSummary).toMatch(/^3 × Kayısılı Reçel .*\(250 g\)$/);
     expect(stop.outcome).toBe('pending');
@@ -273,11 +251,8 @@ describe('gün listesi (11.1)', () => {
     const stop = mine(await listCourierDay(db, { courierId }), orderId);
 
     /*
-      YASAK LİSTESİNDEN `unitPrice` ÇIKTI (kullanıcı kararı 30.08) ve sınır DARALMADI, netleşti:
-      yasak olan İŞLETMENİN defteridir — alış fiyatı, maliyet, marj, müşterinin kredi limiti.
-      Kalemin SATIŞ fiyatı ise kuryenin gördüğü tek paranın bileşenidir: kapıda bir kalem geri
-      verildiğinde tahsilattan ne düşeceğini ekran onunla hesaplıyor (`lineAmountCents`). Olmadığı
-      hâlde kurye "1/2 geri verildi" yazıp altında hâlâ tam tutarı görüyordu.
+      Yasak olan işletmenin defteridir (alış fiyatı, maliyet, marj, kredi limiti); kalemin satış fiyatı kuryenin gördüğü tek paranın
+      bileşenidir, çünkü kapıda geri verilen kalemde tahsilattan ne düşeceğini ekran onunla hesaplar (`lineAmountCents`).
     */
     const serialized = JSON.stringify(stop);
     for (const forbidden of ['purchasePrice', 'cogs', 'margin', 'creditLimit']) {
@@ -288,15 +263,8 @@ describe('gün listesi (11.1)', () => {
   });
 
   /*
-    VADELİ SİPARİŞ: İKİ EKRAN TEK CEVAP (21.270 · denetim bulgusu 6'nın kalanı).
-
-    Durak hesabı vadeliyi 01.09'dan beri muaf tutuyordu (`DOMAIN §7`: vadeli sipariş banka
-    havalesiyle ödenir, kurye o kapıdan para istemez). Rota kartı ise KENDİ formülünü yazmıştı ve
-    tek satır ayrılıyordu: vadeliyi elemiyordu. Sonuç çelişkiydi — kurye sabah "1 tahsilat" diye
-    seçtiği rotada akşam kapıda konuşulacak para bulamıyordu.
-
-    Bu test o iki cevabı AYNI siparişte yan yana koyuyor: hesap ortak dosyaya alındığı için (
-    `door-payment.ts`) ayrışmaları artık derlemeyi değil bu satırı kırar.
+    Vadeli sipariş iki ekranda tek cevap: vadeli sipariş havaleyle ödenir ve kurye o kapıdan para istemez (`DOMAIN §7`). Test iki
+    cevabı aynı siparişte yan yana koyar, çünkü hesap ortak dosyada (`door-payment.ts`) ve ayrışmaları ancak bu satırı kırar.
   */
   it('VADELİ sipariş iki ekranda da tahsilat DEĞİL — rota kartı ile durak aynı hesabı okuyor', async () => {
     const scope = warehouseScope(['courier'], [warehouseId]);
@@ -333,20 +301,9 @@ describe('gün listesi (11.1)', () => {
   });
 
   /*
-    ── İPTAL EDİLEN DURAK: DURAĞI AYAKTA TUTAN ŞEY ARAÇTAKİ KUTUDUR ───────────────────────────
-    (kullanıcı kararı 05.09)
-
-    ÖLÇÜLEN HÂL: `listCourierDay` durum süzgeci HİÇ uygulamıyordu ve `outcomeOf` iptal edilmiş
-    siparişi `pending`e düşürüyordu — iptal edilmiş durak, teslim edilecek durakla BİREBİR aynı
-    görünüyordu. Kurye o kapıya gidiyor, zili çalıyor, teslim etmeye çalışıyordu.
-
-    Ölçüt siparişin durumu DEĞİL kutunun araçta olması: kutu binmediyse kuryenin orada işi yok
-    (gösterilmesi yalnız gürültü, üstelik "acaba araçta var mı" diye aracı karıştırtır); kutu
-    araçtaysa iş VARDIR ve fizikseldir — o mal depoya geri getirilecek.
-
-    Pencere gerçek ve dar: `out_for_delivery → cancelled` motorda İZİNLİ DEĞİL, yani bu hâl ancak
-    kutu rampada araca bindikten sonra, sefer yola çıkmadan önce doğabiliyor. Sefer çıkınca sipariş
-    `cancelled` kalıyor (`startCourierDay` onu `skipped`a atıyor) ve kurye o kutuyla yola çıkıyor.
+    İptal edilen durağı ayakta tutan şey araçtaki kutudur: kutu binmediyse kuryenin orada işi yoktur, bindiyse mal depoya geri
+    getirilecektir. Pencere dar: `out_for_delivery → cancelled` motorda yasak, bu hâl ancak kutu araca bindikten sonra ve sefer yola
+    çıkmadan önce doğar.
   */
   it('İPTAL + KUTU ARAÇTA → durak DURUR ve iptal olduğunu SÖYLER', async () => {
     const { orderId } = await dispatched({ upTo: 'ready' });
@@ -384,9 +341,8 @@ describe('gün listesi (11.1)', () => {
 });
 
 /**
- * Kapı kasası hesabı (21.10d). Ayar KÜRESEL tekil bir satır: her test kendi penceresini açıp
- * bulduğu hâli geri koyuyor (CLAUDE §4b · emsal `apps/web/lib/order/quick-sale.test.ts`) — pencere
- * ne kadar kısa olursa paralel koşan başka bir ajanın okuması o kadar az etkilenir.
+ * Kapı kasası hesabı. Ayar küresel tekil bir satır: her test kendi penceresini açıp bulduğu hâli geri koyar (CLAUDE §4b), pencere
+ * kısa tutulur ki paralel koşan okumalar etkilenmesin.
  */
 describe('kapı kasası hesabı (21.10d)', () => {
   it('hesap AYARDAN okunur — ekranın tahsilat kapısını açan tek değer', async () => {
@@ -434,12 +390,7 @@ function mustStart(result: CourierDayStart): Extract<CourierDayStart, { status: 
 
 describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık #12)', () => {
   /*
-    KİMLİĞİN YANINDA AD DURUR.
-
-    Künye 30.08'e kadar yalnız `vehicleId` taşıyordu ve sefer künyesi ekranı aracın adının
-    *ulaşmadığını yazmak* zorunda kalıyordu — kurye rampada bir uuid'den hangi aracın önüne
-    gideceğini çıkaramaz. Aynı kural rota SEÇİM listesinde zaten uygulanıyordu; eksik olan
-    günün seferiydi.
+    Kimliğin yanında ad durur: kurye rampada bir uuid'den hangi aracın önüne gideceğini çıkaramaz.
   */
   it('araç adı PLAKA + okunur ad — plaka aracın sahadaki tek tekil işareti', async () => {
     const adli = await new VehicleService(db).insert({
@@ -494,14 +445,8 @@ describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık
 });
 
 /*
-  ── ARAÇ TEKELLİĞİ (21.249 · kullanıcı kararı 04.09) ─────────────────────────
-  Bugüne kadar seferin aracı YALNIZ bir etiketti: kaydediliyor, ekranda yazılıyor, başka hiçbir
-  karara girmiyordu. Bunun iki sessiz sonucu ölçüldü (04.09):
-    · aynı fiziksel aracı iki kurye aynı gün seçebiliyordu — ne kısıt vardı ne kontrol;
-    · bir kuryenin araca eklediği ikinci sefer BAŞKA bir araç taşıyabiliyordu, oysa "araç hepsini
-      birden taşır" (rota seçim ekranının kendi cümlesi) tek bir araç varsayıyor.
-  İkisi de test edilmiyordu ve edilemezdi: ortada doğrulanacak bir karar yoktu. Bu blok kararı
-  önce yazıyor, uygulaması arkadan geliyor.
+  Araç tekelliği: aynı fiziksel araç aynı gün iki kuryede olamaz ve bir kuryenin ikinci seferi aynı aracı taşımalı, çünkü "araç
+  hepsini birden taşır" tek bir araç varsayar.
 */
 describe('araç tekelliği: bir araç, bir kurye', () => {
   it('AYNI ARAÇ iki kuryede birden açık sefer taşıyamaz', async () => {
@@ -579,7 +524,7 @@ describe('sefer KUR ↔ sefer BAŞLAT (31.08)', () => {
 
     const baslayan = mustStart(await startCourierDay(db, { courierId, zoneId }));
 
-    // AYNI sefer: kurma ikinci bir satır doğurmuyor, rota+gün başına tek sefer (K3).
+    // Aynı sefer: kurma ikinci bir satır doğurmaz, rota+gün başına tek sefer.
     expect(baslayan.run.runId).toBe(kurulan.run.runId);
     expect(baslayan.run.departedAt).not.toBeNull();
     expect(baslayan.started).toContain(orderId);
@@ -598,10 +543,8 @@ describe('sefer KUR ↔ sefer BAŞLAT (31.08)', () => {
 
   it('AYNI ANDA TEK SEFER SÜRÜLÜR — ikinci sefer KURULUR ama yola çıkmaz', async () => {
     /*
-      Kullanıcı kararı 31.08: araç birden çok seferi TAŞIR ama kurye birini SÜRER. İki sefer aynı
-      anda yoldayken ekranın üç sorusu birden cevapsız kalıyor — durak sırası hangi seferin sırası,
-      "3/6 durak" hangisinin ilerlemesi, kapanışta hangi kasa sayılacak. Tasarımın hiçbir karesi de
-      iki sürülen sefer göstermiyor.
+      Araç birden çok seferi taşır ama kurye birini sürer: iki sefer aynı anda yoldayken durak sırası, ilerleme ve kapanış kasası
+      sorularının cevabı kalmaz.
     */
     await dispatched({ upTo: 'ready' });
     const surulen = mustStart(await startCourierDay(db, { courierId, zoneId }));
@@ -623,14 +566,12 @@ describe('sefer KUR ↔ sefer BAŞLAT (31.08)', () => {
 
 describe('seferi ARAÇTAN ÇIKAR (31.08 · kullanıcı kararı)', () => {
   /*
-    Tasarımda karşılığı YOK ve boşluk cihazda görüldü: yanlış rotayı araca alan kuryenin tek çıkışı
-    onu BAŞLATIP kapatmaktı — yani hatanın bedeli müşteriye bildirim olarak yansıyordu. Kurulmuş
-    sefer bir NİYETTİR: durak açılmadı, haber gitmedi, para ve stok oynamadı.
+    Yanlış rotayı araca alan kuryenin tek çıkışı onu başlatıp kapatmak olursa hatanın bedeli müşteriye bildirim olarak yansır.
+    Kurulmuş sefer bir niyettir: durak açılmadı, haber gitmedi, para ve stok oynamadı.
   */
   it('siparişler serbest kalır, kutuların araç damgası silinir, rota yeniden seçilebilir', async () => {
-    /* KUTU HAZIRLIKTA AÇILIR: `openBox` `preparing` bekliyor ve mühür siparişi HAZIR yapıyor
-       (30.08 · kutusuz sipariş `ready` olamaz). Fikstür bu yüzden `confirmed`de duruyor ve
-       kalanını elle yürüyor. */
+    /* Kutu hazırlıkta açılır: `openBox` `preparing` bekler ve mühür siparişi hazır yapar; fikstür bu yüzden `confirmed`de durup
+       kalanını elle yürür. */
     const { orderId, itemId } = await dispatched({ upTo: 'confirmed' });
     await advanceOrder(db, orderId, ['preparing']);
     const kurulan = mustStart(await startCourierDay(db, { courierId, zoneId, depart: false }));
@@ -720,11 +661,8 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect(result.awaitingBoxes).toEqual([{ orderId, loadedBoxes: 0, boxCount: 1 }]);
     expect((await orders.getById(orderId))?.status).toBe('ready');
 
-    /* SEFER YOLDAYKEN okutulan son kutu durağı AÇAR (kullanıcı kararı 03.09 · denetim bulgusu 3).
-       31.08'e kadar burada "sipariş HÂLÂ HAZIR" ölçülüyordu ve geçişi ikinci başlatma yazıyordu —
-       ama sürülen seferde o ikinci başlatmaya giden düğme yoktu; durak teslim edilemiyordu.
-       Yükleme yine emanet değişimidir (`load.test.ts`: sefersiz/başlamamış seferde `ready` kalır);
-       istisna yalnız yola çıkmış sefer. Haber de tam bu anda ve BİR KEZ gider: port çağrısı ölçülür. */
+    /* Sefer yoldayken okutulan son kutu durağı açar: yükleme emanet değişimidir ve istisna yalnız yola çıkmış sefer. Haber tam
+       bu anda ve bir kez gider, bu yüzden port çağrısı ölçülür. */
     const notified: Array<{ orderId: string; status: string }> = [];
     const loaded = await loadBox(db, {
       code: opened.box.code,
@@ -770,8 +708,8 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect(result.started).toHaveLength(0);
     expect((await orders.getById(orderId))?.status).toBe('confirmed');
 
-    // Gün listesi de söyler (03.09): sefere damgalı ama hazırlanmamış durak bayrağını taşır —
-    // yükleme ekranı "kutu yok"u "hazırlanmadı" diye okuyabilsin.
+    // Gün listesi de söyler: sefere damgalı ama hazırlanmamış durak bayrağını taşır, yükleme ekranı "kutu yok"u "hazırlanmadı"
+    // diye okuyabilsin.
     const stop = mine(await listCourierDay(db, { courierId, runId: result.run.runId }), orderId);
     expect(stop.awaitingPreparation).toBe(true);
     expect(stop.outcome).toBe('pending');
@@ -791,9 +729,7 @@ describe('seferi başlat (K1 · 18.08)', () => {
   });
 
   it('sabah BAŞKASINA atanmış görünen sipariş de sefere geçer — kurye SEFERDEN gelir (18.08)', async () => {
-    // Eski değişmez tersiydi ("başka kuryenin siparişi yola çıkmaz") ve atama modeline aitti.
-    // 18.08 kararı: atama plandır, gerçek seferdir — rotayı fiilen süren claim eder ve
-    // `order.courier_id` seferin kuryesiyle SENKRONLANIR ("siparişin kuryesi seferin kuryesinden").
+    // Atama plandır, gerçek seferdir: rotayı fiilen süren sipariş talep eder ve `order.courier_id` seferin kuryesiyle eşitlenir.
     const { orderId } = await dispatched({ courier: otherCourierId, upTo: 'ready' });
 
     const result = mustStart(await startCourierDay(db, { courierId, zoneId }));
@@ -807,9 +743,8 @@ describe('seferi başlat (K1 · 18.08)', () => {
   it('BAŞKA günün hazır durağı başlatılmaz — gün imzada durur, iki gün iki AYRI seferdir', async () => {
     const { orderId } = await dispatched({ date: dayOffset(3), upTo: 'ready' });
 
-    /* İKİSİ DE `depart:false` (31.08): "aynı anda tek sefer sürülür" kuralı GÜNE de bakmıyor —
-       kurye ileri günün seferini bugünkünü kapatmadan yola çıkaramaz. Ölçülen şey burada
-       başlatma değil GÜN SÜZGECİ: hangi durak hangi sefere claim ediliyor. */
+    /* İkisi de `depart:false`, çünkü "aynı anda tek sefer sürülür" kuralı güne bakmaz; ölçülen şey başlatma değil gün süzgeci:
+       hangi durak hangi sefere talep ediliyor. */
     const bugun = mustStart(await startCourierDay(db, { courierId, zoneId, depart: false }));
     const { data: bugunOrders } = await db.from('order').select('id').eq('delivery_run_id', bugun.run.runId);
     expect((bugunOrders ?? []).map((row) => row.id as string)).not.toContain(orderId);
@@ -822,11 +757,9 @@ describe('seferi başlat (K1 · 18.08)', () => {
   });
 
   it('eşzamanlı iki çağrıda sefer TAM BİR KEZ açılır; başkasının açık seferi `already_started` alır', async () => {
-    // Hangi çağrının kazandığı SABİTLENMİYOR — yarış gerçek ve kilit VERİDEDİR (`delivery_run_key`
-    // mutlak unique, 0046). AYNI kuryenin ikinci basışı artık bir ret DEĞİL, catch-up claim'dir
-    // (18.08, mobil bulgu: gün ortasında hazırlanan durak da sefere bağlanabilmeli) — iki cevap da
-    // `ok` ve AYNI seferi gösterir. Sabit kalan değişmezler: sefer bir kez açılır, geçiş bir kez
-    // yazılır, durak `started` listelerinin TOPLAMINDA tam bir kez görünür.
+    // Hangi çağrının kazandığı sabitlenmez, yarış gerçek ve kilit veride (`delivery_run_key` mutlak unique); aynı kuryenin ikinci
+    // basışı ret değil yetişme talebidir. Sabit kalan: sefer bir kez açılır, geçiş bir kez yazılır, durak `started`
+    // listelerinin toplamında tam bir kez görünür.
     const { orderId } = await dispatched({ upTo: 'ready' });
 
     const [a, b] = await Promise.all([
@@ -873,8 +806,7 @@ describe('ulaşılamadı / reddedildi (11.4)', () => {
   });
 
   it('kuryenin kapıda yazdığı not durum kaydına DÜŞER', async () => {
-    // Düzeltme 95428fb: not `transition`a geçirilmezse kuryenin girdiği tek serbest bilgi hiçbir
-    // yere yazılmıyordu — ekran "sebep yok" gösteriyordu ve sebep gerçekten yoktu.
+    // Not `transition`a geçirilmezse kuryenin girdiği tek serbest bilgi hiçbir yere yazılmaz ve ekran "sebep yok" gösterir.
     const { orderId } = await dispatched();
 
     await markUndelivered(db, { orderId, courierId, outcome: 'unreachable', note: 'zil bozuk' });
@@ -914,10 +846,8 @@ describe('ulaşılamadı / reddedildi (11.4)', () => {
 
   it('TESLİM EDİLMİŞ durak kapıdan `returned` yapılamaz — iade kuryenin işi değil', async () => {
     /*
-      Depo notu 04.09: motor `delivered → returned` kenarını İZİNLİ tutuyor (iade süreci o kenar)
-      ve `markUndelivered` yalnız motora soruyordu — yani kurye teslim ettiği siparişi geri
-      çevirebiliyordu. Mal teslimde fiilen düşmüş oluyor; geri yazım stoğu geri getirmiyor, iade
-      sürecini de başlatmıyor. Sipariş sessizce depocunun rampa listesine düşüyordu.
+      Motor `delivered → returned` kenarını iade süreci için izinli tutar, ama kurye teslim ettiği siparişi geri çeviremez: mal
+      teslimde düşmüştür, geri yazım stoğu getirmez ve iade sürecini başlatmaz.
     */
     const { orderId } = await dispatched();
     expect((await orders.deliver(orderId)).ok).toBe(true);
@@ -931,9 +861,8 @@ describe('ulaşılamadı / reddedildi (11.4)', () => {
 
   it('kenarın kendisi MEŞRU kalır — iade yolu yönetim akışına AÇIK', async () => {
     /*
-      Kapıyı kapatırken kenarı da kapatmadığımızın kanıtı. `delivered → returned` motor için hâlâ
-      izinli olmalı; kapanan yalnız KURYENİN o kenara basma yolu. Bu iddia olmadan biri yarın
-      `status-machine`den kenarı silerek "düzeltme" yapabilir ve iade süreci sessizce ölürdü.
+      Kenar motor için izinli kalmalı, kapanan yalnız kuryenin o kenara basma yolu; bu iddia olmadan kenarı `status-machine`den
+      silen bir "düzeltme" iade sürecini sessizce öldürürdü.
     */
     expect(canTransition('delivered', 'returned').allowed).toBe(true);
   });
@@ -963,11 +892,8 @@ describe('depo kapsamı (11.7 · kullanıcı kuralı 21.08)', () => {
 describe('seçim kartının üç sayısı (v3:17 · 31.08)', () => {
   it('rota DURAK, KUTU ve TAHSİLAT sayılarını birlikte taşır', async () => {
     /*
-      Kart yalnız durak sayısını yazıyordu ve durak sayısı YÜKÜ SÖYLEMİYOR: üç duraklık bir rota
-      on bir kutu taşıyabiliyor. Kurye aracı doldurmadan önce hem hacmi (kutu) hem nakit yükünü
-      (tahsilat) bilmek zorunda — tasarımın kendi satırı "5 durak · 7 kutu · 2 tahsilat".
-
-      Fikstür kutulu ve borçlu bir durak kuruyor; sayılar oradan doğrulanıyor.
+      Durak sayısı yükü söylemez (üç durak on bir kutu taşıyabilir): kurye aracı doldurmadan önce hem hacmi hem nakit yükünü bilmeli.
+      Fikstür kutulu ve borçlu bir durak kurar, sayılar oradan doğrulanır.
     */
     const { order, items } = await orders.create(
       {
@@ -1000,13 +926,8 @@ describe('seçim kartının üç sayısı (v3:17 · 31.08)', () => {
   });
 
   /*
-    İPTAL EDİLEN SİPARİŞ YÜKÜN PARÇASI DEĞİL — ama araçtaki kutusu KAYBOLMAZ (05.09).
-
-    Üç sayı ("5 durak · 7 kutu · 2 tahsilat") "bugün ne taşıyacağım" sorusunun cevabı; iptal edilmiş
-    sipariş bunların hiçbiri değil. Araca binmiş kutusu ise AYRI bir sayı: "araçta yanlışlıkla duran
-    ne var". İçeri karışsaydı kurye onu teslim edilecek bir kutu sanar, akşam sayısı tutmazdı.
-
-    DELTA ile ölçülüyor (CLAUDE §4b): aynı rotada bu dosyanın öteki testleri de sipariş kuruyor.
+    İptal edilen sipariş yükün parçası değildir ama araçtaki kutusu kaybolmaz: ayrı sayılır, yoksa kurye onu teslim edilecek kutu
+    sanırdı. Delta ile ölçülür (CLAUDE §4b), çünkü aynı rotada bu dosyanın öteki testleri de sipariş kurar.
   */
   it('İPTAL sayaçlardan DÜŞER; araçtaki kutusu AYRI sayılır', async () => {
     const scope = warehouseScope(['courier'], [warehouseId]);
@@ -1048,18 +969,13 @@ describe('seçim kartının üç sayısı (v3:17 · 31.08)', () => {
 });
 
 /**
- * **KAPI DOĞRULAMASI DURAĞA ULAŞIYOR MU** (11.11) — kablonun testi.
- *
- * Kararın kendisi saf ve ayrı testli (`domain-core/delivery/door-check.test.ts`, 6 test); burada
- * sınanan tek şey `listCourierDay`in onu SİPARİŞ ANLIK GÖRÜNTÜSÜNDEN okuyup sözleşmeye koyduğu.
- *
- * Bu kablo koparsa hiçbir şey patlamaz: kurye ekranı çizilmeye devam eder, yalnız kapıdaki uyarı
- * bir daha hiç görünmez — ve kurye var olmayan bir kapıda bunun bilindiğini bilemez.
+ * Kapı doğrulamasının durağa ulaşması: karar saf ve kendi testinde (`@lezzet/address` `door-check.test.ts`); burada sınanan tek
+ * şey `listCourierDay`in onu sipariş anlık görüntüsünden okuyup sözleşmeye koyması, çünkü bu kablo koparsa kapıdaki uyarı sessizce
+ * kaybolur.
  */
 describe('durak kartı · kapı doğrulaması (11.11)', () => {
   it('KÜNYE YOKSA uyarı üretilmez — `unknown`', async () => {
-    /* Bugün Almanya kalıcı olarak bu hâlde (sağlayıcı yok). Nötr değerin varsayılan olması şart:
-       aksi hâlde hakkında hiçbir şey bilmediğimiz her durak kapıda bir işaret taşırdı. */
+    /* Nötr değer varsayılan olmalı, yoksa hakkında hiçbir şey bilmediğimiz her durak kapıda bir işaret taşırdı. */
     const { orderId } = await dispatched();
     mustStart(await startCourierDay(db, { courierId, zoneId }));
 
@@ -1075,10 +991,8 @@ describe('durak kartı · kapı doğrulaması (11.11)', () => {
 
   it('DÜZELTME ÖNERİSİ varsa `elsewhere` — kuryenin bilmesi gereken hâl', async () => {
     /*
-      Kullanıcının ölçtüğü vaka: kapı 67380 Lingolsheim'de bulundu, müşteri 67000 Strasbourg'u
-      korudu. Kurye var olmayan bir kapıya gidiyor — ve bu satır ona tutarsızlığın BİLİNDİĞİNİ ve
-      KASITLI olduğunu söylüyor. Aksi hâlde bir veri hatası sanıp ofisi arar; oysa araması gereken
-      müşteridir.
+      Kapı 67380 Lingolsheim'de bulundu, müşteri 67000 Strasbourg'u korudu: bu satır kuryeye tutarsızlığın bilindiğini ve kasıtlı
+      olduğunu söyler, yoksa veri hatası sanıp ofisi arardı; oysa araması gereken müşteridir.
     */
     const { orderId } = await dispatched({
       snapshot: { geoPrecision: 'street', geoAltLabel: '192c Rue du Maréchal Foch 67380 Lingolsheim' },

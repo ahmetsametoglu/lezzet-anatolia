@@ -57,7 +57,7 @@ adres ekleyebilir, soru ancak malın gideceği kapı seçilince anlamlıdır.
 verir, ikincisi vermez. Kodu sabitlemek "posta kodu yanlış" hâlini **yapısal olarak görünmez**
 kılıyordu — ölçüldü (01.09): `192c Rue du Maréchal Foch` 67000 ile sorulduğunda Strasbourg'un aynı
 adlı SOKAĞI dönüyor (0,717), kısıtsız sorulduğunda 67380 Lingolsheim'deki gerçek kapı (0,973).
-Arada 7,2 km. Karar `domain-core/delivery/address-verdict`, kapı
+Arada 7,2 km. Karar `@lezzet/address` `address-verdict`, kapı
 `application/delivery/address-check`.
 
 ### Almanya: Google Maps Platform — BAĞLANDI (13.09; karar 02.09)
