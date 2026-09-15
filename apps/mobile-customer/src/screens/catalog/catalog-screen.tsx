@@ -115,7 +115,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
     return {
       name: product.name,
       image: product.image,
-      priceLabel: productPriceLabel(product.priceCents, product.variantCount, locale),
+      priceLabel: productPriceLabel(product.priceCents, locale),
       soldOut: product.soldOut,
       soldOutLabel: t.card.soldOut,
       /* Rozet yalnız fırsat: kapsam kampanyası her karta basılsa sepette bir kez inen indirim ürün başına vaat gibi okunurdu. */

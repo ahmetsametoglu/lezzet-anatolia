@@ -152,7 +152,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
                   key={product.slug}
                   href={{ pathname: '/product/[slug]', params: { slug: product.slug } }}
                   name={product.name}
-                  priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
+                  priceLabel={productPriceLabel(product.priceCents, locale)}
                   discountLabel={cardBadgeOf(product, { offer: copy.card.offer })}
                   image={product.image}
                   mark={note}

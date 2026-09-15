@@ -74,7 +74,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
     return {
       name: product.name,
       image: product.image,
-      priceLabel: productPriceLabel(product.priceCents, product.variantCount, locale),
+      priceLabel: productPriceLabel(product.priceCents, locale),
       soldOut: product.soldOut,
       soldOutLabel: copy.card.soldOut,
       discountLabel: cardBadgeOf(product, { offer: copy.card.offer }),

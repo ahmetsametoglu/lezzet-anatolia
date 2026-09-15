@@ -438,8 +438,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   <ProductCircleCard
                     key={product.slug}
                     name={product.name}
-                    /* Etiket kitin türetmesinden: çok boyluda "…'dan" eki, fiyat yoksa çip hiç çizilmez. */
-                    priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
+                    priceLabel={productPriceLabel(product.priceCents, locale)}
                     /* Yalnız fırsat rozeti: kapsam kampanyası kesitin kendi kartında, ürün başına yazılsa vaat gibi okunurdu. */
                     discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                     image={product.image}

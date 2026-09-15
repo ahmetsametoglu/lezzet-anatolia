@@ -376,9 +376,8 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                     <View>
                       <Text style={styles.familyName}>{member.label}</Text>
                       <Text style={styles.familyPrice}>
-                        {/* "…'dan" eki ORTAK PAKETTEN (`@lezzet/helper` `price-label`): aynı cümle katalog ve
-                            vitrin kartlarında da yazılıyor, iki yerde tanımlansaydı bir gün
-                            ayrışırdı (CLAUDE §1). Fiyat yoksa satır boş kalır — sıfır yazılmaz. */}
+                        {/* Aile kartındaki sayı başka ürünün en ucuz boyu, bu yüzden "'dan" ekiyle yazılır; fiyat yoksa satır
+                            boş kalır. */}
                         {member.isCurrent ? t.family.current : (fromPriceLabel(member.fromPriceCents, locale) ?? '')}
                       </Text>
                     </View>
@@ -497,7 +496,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                 <ProductCircleCard
                   key={product.slug}
                   name={product.name}
-                  priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
+                  priceLabel={productPriceLabel(product.priceCents, locale)}
                   /* Yalnız fırsat rozeti; kural katalog ve vitrinle aynı kurucuda. */
                   discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                   size="sm"

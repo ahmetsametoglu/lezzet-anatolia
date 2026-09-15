@@ -8,39 +8,19 @@ import type { StockMarkView } from './stock-mark';
 import { Tag } from './tag';
 
 /*
-  YUVARLAK ÜRÜN KARTI — vitrin rayı ve "bunları da sevebilirsiniz" rayı. İki boyut: 146 (vitrin,
-  `lg`) · 96 (benzerler, `sm`).
-
-  IZGARANIN 138'LİK KADEMESİ (`md`) EMEKLİ EDİLDİ — kullanıcı kararı 07.08: katalog ızgarası
-  daireden KARE karta geçti (`ProductPhotoCard`), o kademenin tek tüketicisi oydu. Kullanılmayan
-  bir boyutu "ileride lazım olur" diye tutmak, kartın kaç biçimi olduğu sorusunu kodun içinde
-  cevapsız bırakırdı; ara kademe gerçekten geri gelirse ölçüsüyle birlikte yeniden açılır.
-  Varsayılan bu yüzden `lg`: geriye kalan iki kullanımın baskını vitrindir.
-
-  FİYAT ÇİPİ ZORUNLUDUR: tasarımda fiyatsız bir ürün dairesi YOK — fiyat dairenin sağ alt
-  köşesine taşan eğik bir rozettir (Tag) ve kartın kimliğidir. Zorunlu prop olması bilinçli;
-  isteğe bağlı olsaydı bir gün fiyatsız bir kart doğardı.
-
-  TÜKENDİ: daire `opacity .45` ile solar ve üstüne rozet biner (tasarımın kendi çözümü) —
-  ürün gizlenmez, "yok" bilgisi de bir bilgidir. Tükendi/indirim rozetlerinin METNİ prop'tan
-  gelir (i18n üstte).
+  Yuvarlak ürün kartı: vitrin rayı (`lg`, 146) ve benzer ürünler rayı (`sm`, 96). Tükenmiş ya da bu adrese gitmeyen ürünün
+  dairesi solar ama gizlenmez, çünkü "yok" bilgisi de bir bilgidir.
 */
 
 interface ProductCircleCardProps {
   /** Ürün adı — i18n gerektirmez, veriden gelir. */
   name: string;
-  /**
-   * Biçimlenmiş fiyat ("12,90 €" ya da çok boyluda "12,90 €'dan") — türetme çağıranın işi
-   * (`customer-kit/price-label`).
-   * **VERİLMEZSE ÇİP HİÇ ÇİZİLMEZ** — kare kartın (`ProductPhotoCard`) aynı kararı. Fiyatı
-   * bilinmeyen ürün VERİDE var (`priceCents: null`) ve zorunlu olduğu sürece çağıranlar `?? 0`
-   * yazıp müşteriye **"0,00 €"** gösteriyordu; ölçülemeyen değer sıfır değildir (`CLAUDE §1`).
-   */
+  /** Biçimlenmiş fiyat (`productPriceLabel`); verilmezse çip çizilmez, fiyatı bilinmeyen ürüne "0,00 €" yazılmaz. */
   priceLabel?: string;
   onPress: () => void;
   /** `lg` vitrin rayı (146) · `sm` benzer ürünler rayı (96). */
   size?: 'sm' | 'lg';
-  /** Ürün görseli — dairenin çapına yeten kare CDN türevi (21.303, `CirclePhoto`). */
+  /** Ürün görseli — dairenin çapına yeten kare CDN türevi (`CirclePhoto`). */
   image?: CatalogImage | null;
   /** Fotoğraf yoksa dairede görünecek baş harf. */
   initial?: string;
@@ -49,15 +29,7 @@ interface ProductCircleCardProps {
   soldOutLabel?: string;
   /** "İndirim" etiketi; verilirse indirim rozeti çıkar. */
   discountLabel?: string;
-  /**
-   * YER işareti (21.20) — kare katalog kartıyla AYNI komponent, aynı cümle, aynı ton
-   * (`StockMark`). Vitrin ve katalog aynı ürüne bakan iki ekran; işaret birinde çizilip ötekinde
-   * çizilmezse müşteri iki ekranda iki farklı gerçek okur.
-   *
-   * Yeri fotoğrafın KÖŞESİ değil, adın ALTI: daire kartın kimliği ad ve fiyat çipiyle kuruluyor
-   * ve dairenin üstüne binen üçüncü bir rozet fotoğrafı yutardı. Web de aynı yeri seçiyor —
-   * işaret künyenin altında, satın alma kararından önce (`storefront-cards.tsx`).
-   */
+  /** Yer işareti; kare katalog kartıyla aynı cümle ve ton, çünkü vitrin ve katalog aynı ürüne bakar. */
   stockMark?: StockMarkView | null;
   /** Bu adrese hiç gitmeyen ürün — daire tükendiyle aynı değerde solar (gerekçe: kare kart künyesi). */
   dimmed?: boolean;
@@ -116,22 +88,12 @@ export function ProductCircleCard({
           </View>
         ) : !soldOut && discountLabel !== undefined ? (
           <View style={styles.statusBadge}>
-            {/* HAP KÖŞE (kullanıcı isteği 23.08 — "biraz daha yuvarlak, dikkat çekici"): kampanya
-                rozeti buraya geldiğinde (21.100) kullanıcı onun metnin arasında kaybolduğunu
-                söyledi. Ton DEĞİŞMEDİ ve bu bilinçli: terracotta bu kartta FİYAT çipinindir
-                (aşağıda) ve indirimi de ona boyamak, satın alma kararının birincil vurgusunu
-                ikiye bölerdi. Fırsat şeridindeki çip terracotta çünkü orada fiyat düz metin —
-                yani tasarım dili tutarlı, kartların ihtiyacı farklı. Rengin yükseltilmesi bir
-                TASARIM kararıdır ve uydurulmadı (`design/KARARLAR.md`). */}
+            {/* Hap köşe, krem ton: terracotta bu kartta fiyat çipinin, indirimi de ona boyamak satın alma vurgusunu ikiye
+                bölerdi. */}
             <Tag label={discountLabel} tone="cream" rotate={-7} shadow shape="pill" />
           </View>
         ) : null}
-        {/* YER İŞARETİ DAİRENİN İÇİNDE (kullanıcı kararı 10.08) — kartın ALTINDA değil.
-            Önce `StockMark` olarak ada ve fiyata eklenen üçüncü bir satırdı; yatay şeritte
-            kartların boyu ona göre uzuyor ve rota dışı müşteride şeridin tamamı metne dönüyordu.
-            Yazı artık solmuş görselin üstünde, kendi filigranıyla: solma sebebi ile sebebin
-            AÇIKLAMASI aynı yerde duruyor. Kabuk YOK (kataloğun aynı kararı: "her şey rozet
-            içindeymiş gibi görünüyor") — okunurluğu filigran veriyor.
+        {/* Yer işareti dairenin içinde, solmuş görselin üstünde: kartın altına satır eklemek şeridin boyunu uzatırdı.
             `pointerEvents="none"`: örtü dokunuşu yutmaz, kart yine açılır. */}
         {mark === null ? null : (
           <View
@@ -170,13 +132,8 @@ const styles = StyleSheet.create((theme) => ({
     opacity: theme.soldOutOpacity,
   },
   /**
-   * Yer işaretinin FİLİGRANI — dairenin tamamını örten yarı saydam katman.
-   *
-   * Solma tek başına SESSİZ bir işarettir: müşteri kartın neden soluk olduğunu bilemez. Filigran
-   * hem sebebi yazacak zemini verir hem de "bu kart farklı" demeyi görselin kendisine bırakmaz.
-   * Örtü fotoğrafın ÜSTÜNDE ayrı bir kardeş: solma fotoğrafa uygulanıyor (`soldOutPhoto`) ve yazı
-   * onunla birlikte solsaydı, tam da okunması gereken cümle okunaksızlaşırdı — kataloğun aynı
-   * dersi (kullanıcı bildirimi 10.08).
+   * Yer işaretinin filigranı: solma tek başına sebebi söylemez, filigran onu yazacak zemini verir. Örtü fotoğrafın kardeşi, çünkü
+   * yazı fotoğrafla birlikte solsaydı okunması gereken cümle okunaksızlaşırdı.
    */
   markVeil: {
     position: 'absolute',
@@ -196,7 +153,7 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.cream,
     textAlign: 'center',
   },
-  // Fiyat çipi dairenin SAĞ ALT köşesinden taşar (tasarım: `bottom:-2px;right:-2px`).
+  // Fiyat çipi dairenin sağ alt köşesinden taşar.
   priceBadge: {
     position: 'absolute',
     right: -theme.space['2xs'],

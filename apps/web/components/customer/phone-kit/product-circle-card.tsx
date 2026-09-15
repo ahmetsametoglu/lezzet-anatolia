@@ -14,7 +14,7 @@ interface ProductCircleCardProps {
   /** Geçmişe eklemeden yerine koy: kardeş ürüne geçişte geri, ürün zincirine girilen yere döner. */
   replace?: boolean;
   name: string;
-  /** Biçimlenmiş fiyat ("12,90 €" ya da çok boyluda "12,90 €'dan"); verilmezse çip çizilmez. */
+  /** Biçimlenmiş fiyat (`productPriceLabel`); verilmezse çip çizilmez. */
   priceLabel?: string;
   image: CatalogImage;
   /** "Fırsat" rozeti — verilirse sol üstte hap köşe. */

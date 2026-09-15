@@ -136,7 +136,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
                 replace
                 href={{ pathname: '/product/[slug]', params: { slug: item.slug } }}
                 name={item.name}
-                priceLabel={productPriceLabel(item.priceCents, item.variantCount, locale)}
+                priceLabel={productPriceLabel(item.priceCents, locale)}
                 discountLabel={cardBadgeOf(item, { offer: copy.card.offer })}
                 image={item.image}
               />

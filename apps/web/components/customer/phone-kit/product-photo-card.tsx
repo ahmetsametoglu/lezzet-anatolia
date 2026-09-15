@@ -5,25 +5,15 @@ import { Link } from '@/i18n/navigation';
 import { Tag } from './tag';
 
 /*
-  KARE ÜRÜN KARTI — native `ProductPhotoCard`ın (`apps/mobile/src/components/ui/product-photo-card.tsx`) web
-  telefon görünümündeki ikizi (14.09): katalog ızgarasının iki sütunlu kartı. Daire kart (`ProductCircleCard`)
-  "fotoğraf + altında ad", bu kart "fotoğrafın İÇİNDE ad" — iki düzen, iki bileşen (native'in kararı).
-
-  · Fiyat çipi kartın sağ üst köşesinden TAŞAR (+4°); bu yüzden kart kırpılmaz, kırpılan yalnız fotoğraf
-    katmanı. Fiyat bilinmiyorsa çip hiç çizilmez (`productPriceLabel` künyesi).
-  · Tek rozet yuvası sol üstte: tükendi indirimin önüne geçer — tükenmiş üründe indirim alınabilir bir şey
-    söylemez.
-  · SOLMA FOTOĞRAFA UYGULANIR, BİLGİYE DEĞİL (native 10.08): rozet, künye ve yer notu solan grubun dışında;
-    solmanın sebebini söyleyen cümle okunur kalmalı. Skrim solan grupta kalır.
-  · Yer notu (gönderemediğimiz ya da bölgede şu an olmayan ürün) kartın ortasında, kartı örten filigranın
-    üstünde; "kargoyla gelir" kartta yazılmaz — listenin başındaki bant söyler (native 10.08).
+  Kare ürün kartı, native `ProductPhotoCard`ın web ikizi: ad fotoğrafın içinde, fiyat çipi sağ üst köşeden taşar ve bu yüzden
+  yalnız fotoğraf katmanı kırpılır. Solma fotoğrafa uygulanır, bilgiye değil: rozet, künye ve yer notu okunur kalır.
 */
 
 interface ProductPhotoCardProps {
   href: ComponentProps<typeof Link>['href'];
   name: string;
   image: CatalogImage;
-  /** Biçimlenmiş fiyat ("12,90 €" · çok boyluda "12,90 €'dan"); verilmezse çip çizilmez. */
+  /** Biçimlenmiş fiyat (`productPriceLabel`); verilmezse çip çizilmez. */
   priceLabel?: string;
   soldOut?: boolean;
   /** "Tükendi" — tükendiyse zorunlu (rozet metinsiz çizilmez). */
