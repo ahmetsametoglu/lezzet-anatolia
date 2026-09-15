@@ -78,7 +78,8 @@ proje/
 │   ├── web/          # Next.js 15 — müşteri + operasyon yüzeyleri, Server Action'lar, ödeme webhook'u (`app/api/webhooks/stripe`)
 │   ├── backend/      # Hono — zamanlı işler (`jobs/`), Meta + Sendcloud webhook'ları (`webhooks/`), MCP yönetici asistanı (`mcp/`)
 │   ├── mobile-api/   # Hono — native uygulamanın arka ucu (`/api/v1`)
-│   └── mobile/       # Expo 57 / React Native 0.86 — native uygulama (müşteri + operasyon)
+│   ├── mobile-customer/   # Expo 57 / React Native 0.86 — native müşteri uygulaması
+│   └── mobile-operations/ # native operasyon uygulaması ("Lezzet Operasyonu"); ortak çekirdek packages/mobile-kit
 ├── packages/
 │   ├── types/            # Zod şemaları + domain tipler  ← TEK KAYNAK (yalnız zod'a bağlı)
 │   ├── database/         # BaseDbService + entity servisleri (supabase-js, ORM yok)
@@ -98,7 +99,7 @@ proje/
 │   ├── eslint-config/
 │   └── typescript-config/
 ├── supabase/migrations/  # numaralı SQL — greenfield evresinde doğrudan düzenlenir; ilk üretim dağıtımından sonra yalnız ileri doğru (WORKFLOW.md §2)
-├── scripts/              # seed, repo:check, test koşucusu + kilidi, dev:health, ui:shot … (deploy.sh henüz yok)
+├── scripts/              # seed, repo:check, test koşucusu + kilidi, dev:health, ui:shot, deploy.sh (WORKFLOW.md §3) …
 └── docs/                 # bu klasör (ürün, domain, veri modeli, kararlar...)
 ```
 
@@ -529,7 +530,7 @@ gömmek, her yeni dosya türünde aynı kararı yeniden yazmak olurdu.
 
 Bu dosya uyarlanmış **şablondur**; proje ayrıca kendi envanterini tutar (rota haritası, bileşen aileleri, tam veri modeli, kalıcı "neden"ler). Domain kuralları `DOMAIN.md`'de, veri modeli `DATA_MODEL.md`'de, sapmaların gerekçeleri `ARCHITECTURE_DECISIONS.md`'de zaten ayrık — bu dosyalar birlikte `ARCHITECTURE.md` işlevini görür.
 
-Açık iş kalemleri buraya **girmez**; `BACKLOG.md`'ye gider (WORKFLOW.md §8 rol ayrımı).
+Açık iş kalemleri buraya **girmez**; `docs/KALAN.md`'ye gider (WORKFLOW.md §8 rol ayrımı).
 
 ---
 
@@ -543,12 +544,12 @@ Açık iş kalemleri buraya **girmez**; `BACKLOG.md`'ye gider (WORKFLOW.md §8 r
 - **Telafi mantığı bir garanti DEĞİLDİR (karar 30.07 — 07.4).** "Önce başlığı yaz, kalemler düşerse geri sil" deseni RPC'nin yerini tutmaz: silme de düşebilir, süreç arada ölebilir, ve telafi yalnız HATA anında çalışır — sessiz bir yarım yazım hiç fark edilmez. Üstelik iki ifade arasında bozuk hâl **okunabilir** durumdadır. `create_order` (b) bu yüzden yazıldı: sipariş başlığı + kalemler + indirim kullanım kaydı tek transaction. Yeni bir yazım yolunda "telafi ile hallederim" görülürse, o yol RPC eşiğini zaten geçmiştir.
 - **Değişmez, yazım yolunda değil VERİDE durur (karar 30.07 — 07.4).** Bir kural yalnız tek yazım yolunda denetleniyorsa, ikinci yol açıldığı gün (elle giriş, onarım betiği, doğrudan SQL) sessizce delinir. Tablolar arası değişmezler bu yüzden **ertelenmiş kısıt tetikleyicisiyle** (`deferrable initially deferred`) yazılır: kontrol COMMIT anında yapılır, yani ifade sırası (önce başlık, sonra kalemler) kısıtı geçici olarak bozabilir ama transaction kapanırken bütün doğrulanır. İlk örnek `order_discount_balance`: `order.discount_amount = Σ order_item.line_discount_amount`.
 - **Okumada RPC eşiği (karar 27.07):** okuma için Postgres fonksiyonu **istisnadır, kural değil.** Üç koşul BİRLİKTE sağlanmadıkça yazılmaz: (1) veri **birden fazla tablodan** birleşiyor, (2) işi veritabanı sunucusunda yapmak **toplam** performansı iyileştiriyor (tur sayısı + uygulamaya taşınan satır hacmi dâhil), (3) fark **bariz** — "belki daha hızlıdır" yetmez. Her küçük okuma için yazılmaz; tek tablolu ve küçük okumalar servis sorgu kurucusunda kalır. N+1 kırmanın **ilk** aracı RPC değil, PostgREST'in gömülü `select`'idir (ilişkiyi zaten sunucuda join'ler); RPC ancak kurucunun ifade **edemediği** hâllerde gerekir: çok dilli tam-metin arama + sıralama, tek turda çok koşullu toplama, pencere fonksiyonu. Okuma RPC'si **iş kuralı taşımaz** (eşik/sıra/izin motorun işi — §4); yalnız veri toplar ve süzer. Dönen satırlar servis okumalarıyla aynı disiplinle **Zod'dan geçer**; fonksiyon `create or replace` ile migration'a yazılır (WORKFLOW §2).
-- **Migration mekanizması:** numaralı SQL dosyaları tek transaction içinde uygulanır; uygulandı bilgisi `schema_migrations`'ta; deploy hattı migration hatasında durur (araç: Supabase CLI veya basit runner — seçim netleşecek).
+- **Migration mekanizması:** numaralı SQL dosyaları tek transaction içinde uygulanır; uygulandı bilgisi `schema_migrations`'ta; deploy hattı migration hatasında durur (araç: Supabase CLI `db push`, sunucudan — `scripts/deploy.sh`).
 - **Webhook güvenliği:** imza doğrulanmadan gövde işlenmez; her olay `WebhookEvent`'e yazılır (provider+event_id unique) — aynı olay ikinci kez gelirse no-op (idempotent).
 - **Yedekleme/felaket kurtarma:** Supabase planında günlük yedek/PITR doğrulanır + haftalık `pg_dump` off-site + Storage senkronu + yılda bir **geri yükleme provası** ("provası yapılmamış yedek, yedek değildir"); Caddyfile/PM2 konfigürasyonu repo'da.
 - **Log, hata izleme ve sistem sağlığı → [`OBSERVABILITY.md`](OBSERVABILITY.md).** Karar verildi (29.07), bu satır artık taslak değil: üç katman birlikte kurulur — `pino` yapılandırılmış log (üretimde JSON, stdout; döndürme süreç yöneticisinin işi) · `error_log` tablosu + `capture_error` RPC (parmak iziyle gruplanan kendi hata izlemesi, Sentry yok) · `system_health_snapshot` (backend cron'u iki dakikada bir sunucu/süreç/servis görüntüsü alır, eşiklerden `ok`/`warn`/`crit` türetir). **E-posta alarmı YOK** (kullanıcı kararı): izleme çekme modeliyle çalışır, tek operasyon ekranı (`/operations/system`) alarmın yerini tutar. Saklama tanımlı: hata 90 gün (çözülmüşler; çözülmemişler süresiz), sağlık 14 gün. `context`'e kimlik yazılır, içerik yazılmaz.
 - **Cron disiplini:** `apps/backend` tek instance (fork mode); her zamanlanmış iş **taramalı ve idempotent** yazılır (kaçan tik bir sonraki taramada telafi olur); kritik işler `last_run` bırakır, gecikince alarm. **Uygulama (06.4):** işler ortak bir kabuktan (`apps/backend/src/jobs/runner.ts`) geçer — üst üste binme koruması (önceki tur bitmediyse tik atlanır), hata yakalama (cron geri çağrısındaki hata sessizce kaybolmaz, süreç de düşmez) ve iz yazımı orada tek yerde. İz `job_run` tablosunda iş başına TEK satırdır (tarihçe değil); hatalı turda da `last_run_at` yazılır — "koştu ama düştü" ile "hiç koşmadı" ayrımı alarmın girdisidir.
-- **Deploy atomikliği:** yeni sürüm ayrı dizine derlenir → symlink değişimi → `pm2 reload`; derleme düşük trafik saatinde.
+- **Deploy atomikliği:** yeni sürüm ayrı klasörde kurulup derlenir → migration → `current` bağı çevrilir → `pm2 reload` (`scripts/deploy.sh`); önceki sürümler geri dönüş için durur.
 - **Test/CI/staging:** her push'ta typecheck+lint+birim test (GitHub Actions); yerel Supabase üzerinde entegrasyon testleri — özellikle **paralel rezervasyon yarışı** ve para-akışı RPC'leri; staging = ikinci (ücretsiz) Supabase projesi + aynı VPS'te ikinci PM2 app; migration provası önce staging'de.
 - **`vitest` yalnız KÖK package.json'da ve bu bilinçlidir (denetim B5, 02.08).** Tek bir kök
   `vitest.config.ts` iki projeyi (`unit`/`integration`) birlikte tanımlıyor; koşum noktası daima kök.

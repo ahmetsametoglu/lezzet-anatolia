@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.12). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.14). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -141,13 +141,10 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 ## 18 · Operasyon ve Güvenlik
 
 - [ ] (18.1) **Veri erişim modeli (RLS kapsamı):** service-role + guard tek kat mı, + RLS ikinci hat mı; RLS'nin ilk kapsadığı tablolar (müşteri kendi satırı, kurye kendi teslimatı). *Öneri:* çift kat, RLS temel tablolarda ikinci savunma.
-- [ ] (18.2) **Migration aracı:** Supabase CLI vs kendi runner. *Öneri:* CLI ile başla, yeterli gelmezse runner.
 - [ ] (18.3) **Webhook güvenliği gözden geçirme:** 07 (Stripe) ve 15 (360dialog) idempotency + imza doğrulaması yerinde mi; `WebhookEvent` tablosu tüm sağlayıcıları kapsıyor mu. *Öneri:* tek desen, her sağlayıcı aynı.
 - [ ] (18.4) **Yedekleme / felaki kurtarma:** günlük yedek/PITR (Supabase planı) + haftalık off-site `pg_dump` + Storage senkronu + yılda bir **restore provası**. *Öneri:* provası yapılmamış yedeğe güvenilmez — provayı takvime bağla.
 - [ ] (18.6) **Cron disiplini doğrulama:** `apps/backend` tek instance (fork); her iş taramalı-idempotent; kritik işler `last_run` + gecikince alarm. (TTL süpürme 06'da, feedback daveti 17'de bu disiplinle yazıldı — kontrol.)
-- [ ] (18.7) **Deploy atomikliği:** ayrı dizine derle → symlink swap → `pm2 reload`; derleme düşük trafik saatinde. *Öneri:* symlink deseni + reload.
 - [ ] (18.8) **CI + staging:** GitHub Actions (typecheck+lint+birim test her push); entegrasyon testleri lokal Supabase'de (özellikle **paralel rezervasyon yarışı** + para RPC'leri); staging = ikinci ücretsiz Supabase projesi + ikinci PM2 app; migration provası önce staging. *Öneri:* erken kur — geliştirmeyi hızlandırır.
-- [ ] (18.9) **VPS kurulumu:** Caddy (TLS + reverse proxy), PM2 (web + backend), env yönetimi; Caddyfile/PM2 ecosystem repo'da. *Öneri:* erken kur, canlı ortamı baştan gerçekçi tut.
 - [ ] (18.10) **Paket sınırı aracı son kontrolü:** `apps/*` sipariş/stok/para yazımını yalnız domain-core üzerinden yapıyor; database servislerini doğrudan import edemiyor (00'da kurulan kural üretimde sağlam mı).
 - [~] (18.11) **Süreç emniyet ağı + cron kabuğu testi** (denetim G2 · T4).
 - [~] (18.12) **GDPR: kişisel verinin silinmesi ve maskelenmesi — arka uç motoru.**
@@ -364,3 +361,9 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   geçti ve Fransa'yı da sunucudan soruyor; BAN'ın IP başına kota gerekçesiyle çelişiyor, hangisinin doğru olduğu kullanıcı kararı.
 - [ ] (K.12) [hedef: mobil] Keşif ekranının ortak metni `@lezzet/i18n/customer/discover`tan okunsun — web telefon görünümü aynı
   cümleleri oradan okuyor, native `screens/discover/messages.json` ikinci kopya olarak kaldı.
+- [ ] (K.13) [hedef: müşteri] Gizlilik politikası kişisel veriyi işleyen hizmetleri saysın (lansmandan önce) — web
+  `legal/privacy/content.json` ve native ortak `packages/i18n/src/customer/legal.json` bugün yalnız Hetzner'i anıyor;
+  veritabanı barındırılan Supabase'de (AB bölgesi) duracak, Stripe · Resend · Cloudflare R2 · Sendcloud · Google Maps ·
+  Meta da kişisel veri işliyor (tam liste `docs/architecture/INTEGRATIONS.md`).
+- [ ] (K.14) [hedef: web] Gerçek test besleme dosyası — test sunucusunun ve üretimin ilk başlangıç verisi olacak;
+  bugünkü `base` katmanıyla ilişkisi (yerine mi, üstüne mi) kullanıcıyla birlikte kararlaştırılır.

@@ -244,7 +244,7 @@ PM2 süreç çıktısını dosyaya yazar; döndürme `pm2-logrotate` ile (boyut 
 sayısı). JSON log'un yeri stdout'tur — dosyaya yazmayı uygulama üstlenmez: süreç yöneticisi bunu
 zaten yapıyor ve iki yazan olursa biri eksik kalır.
 
-Ayrıntı ve komutlar dağıtım işinde (`18.9`); burada yalnız kural: **uygulama stdout'a yazar, döndürme
+Kurulum komutları `docs/runbook/test-sunucusu.md`'de (`pm2-logrotate`, varsayılan ayarlarla); burada yalnız kural: **uygulama stdout'a yazar, döndürme
 süreç yöneticisinin işidir.**
 
 ---

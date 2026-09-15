@@ -14,9 +14,11 @@ pnpm workspaces + Turborepo · Next.js (App Router, RSC + Server Action) · Type
 apps/
   web/        Next.js — müşteri + admin
   backend/    Hono + node-cron — webhook ve zamanlı işler
+  mobile-api/ Hono — native uygulamaların arka ucu (/api/v1)
+  mobile-customer/ mobile-operations/   Expo — native müşteri ve operasyon uygulamaları
 packages/
-  types/ database/ domain-core/ helper/ brand/
-  i18n/ storage/ email/ notify/ ai/
+  types/ database/ domain-core/ application/ helper/ brand/ design-tokens/
+  i18n/ storage/ email/ notify/ ai/ observability/ address/ sendcloud/ mobile-kit/
   eslint-config/ typescript-config/
 supabase/migrations/   numaralı SQL (additive-only)
 scripts/               deploy, seed
@@ -63,5 +65,15 @@ pnpm dev              # web + backend
 
 Servisler: Postgres `54322` (`postgres:postgres`) · API `54321` · Studio `54323` · Mailpit (giden e-posta) `54324`.
 Ayrıntı ve ajan kuralları: [`WORKFLOW.md §4b`](docs/architecture/WORKFLOW.md) — okuma serbest, **yıkıcı komutları kullanıcı çalıştırır**.
+
+### Dağıtım (test sunucusu)
+
+```bash
+cp .env.deploy.example .env.deploy   # SSH_HOST ve parola dosyası
+bash scripts/deploy.sh               # HEAD → yeni sürüm klasörü → derleme → migration → yayında
+```
+
+Hat ve kuralları [`WORKFLOW.md §3`](docs/architecture/WORKFLOW.md); sunucu kurulumu, env dosyaları, geri dönüş ve
+test veritabanını sıfırlama [`docs/runbook/test-sunucusu.md`](docs/runbook/test-sunucusu.md).
 
 Node ≥ 22, pnpm 9.

@@ -12,7 +12,8 @@
     ".": {
       "entry": [
         "scripts/*.ts",
-        "e2e/setup/*.setup.ts"
+        "e2e/setup/*.setup.ts",
+        "ecosystem.config.cjs"
       ]
     },
     "apps/web": {

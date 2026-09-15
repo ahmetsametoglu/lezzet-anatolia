@@ -23,6 +23,8 @@ Rapor dürüstlüğü: test düştüyse çıktısıyla birlikte söyle; adım at
 ## 2. Migration: yalnız ileri doğru
 
 > **Şu an istisna — greenfield.** Proje canlıya çıkmadı: üretim ortamı, gerçek müşteri, gerçek sipariş yok. Bu süre boyunca **mevcut migration dosyaları doğrudan düzenlenir** — alan eklemek/yeniden adlandırmak/kaldırmak için üstüne yama migration'ı yazılmaz. Şema temiz ve okunur kalsın; `pnpm db:reset` ile sıfırdan kurulur. Aşağıdaki "donar" kuralı **ilk üretim dağıtımından itibaren** yürürlüğe girer; o gün bu not silinir. Geriye uyum kaygısı (eski kayıt/eski kolon) bugün için yoktur.
+>
+> **Test sunucusu bu istisnanın içindedir.** Uzak test veritabanı atılabilir. `supabase db push` yalnız uygulanmamış numarayı çalıştırdığı için uzakta uygulanmış bir dosya düzenlenince deploy betiği durur: veritabanını kullanıcı sıfırlar, sunucudaki `shared/migrations.sha256` silinir, dağıtım tekrarlanır ve `db:seed:base` koşar (`docs/runbook/test-sunucusu.md`).
 
 Bir migration canlıya çıktığı an **donar**. Sonraki her değişiklik yeni numaralı dosyadır.
 
@@ -44,16 +46,23 @@ Sonuçlar:
 
 ## 3. Dağıtım (deploy) hattı
 
-Tek komut, sabit sıra. Sıradaki her adım bir öncekinin başarısına bağlı — biri düşerse dağıtım **durur**, yarım uygulanmış durum oluşmaz.
+Tek komut: `bash scripts/deploy.sh` (ayar `.env.deploy`; sunucu kurulumu, env, geri dönüş `docs/runbook/test-sunucusu.md`). Sabit sıra; her adım bir öncekinin başarısına bağlı — biri düşerse dağıtım **durur** ve yayındaki sürüme dokunulmaz.
 
 ```
-1. tip kontrolü          → düşerse hiçbir şey gönderilmez
-2. kaynağı sunucuya it   (rsync; node_modules/.next/.env hariç)
-3. bağımlılıkları kur    (--frozen-lockfile)
-4. SUNUCUDA derle        ← kritik, aşağıya bak
-5. migration'ları uygula (yalnız yeni dosyalar)
-6. süreçleri reload et   (sıfır kesinti)
+1. HEAD arşivi → yeni sürüm klasörü   (git archive; çalışma ağacı ve env dosyaları gitmez)
+2. env bağı                           (tek shared/app.env → sürümdeki dört env yolu; yoksa durur)
+3. bağımlılıkları kur                 (--frozen-lockfile; kök + web/backend/mobile-api)
+4. tip denetimi + SUNUCUDA derle      ← kritik, aşağıya bak
+5. migration'ları uygula              (yalnız yeni dosyalar; uygulanmış dosya değiştiyse durur)
+6. current bağını çevir, PM2 reload   (yeni sürüm tek hamlede yayında)
+7. sağlık uçları + eski sürüm temizliği (son 3 sürüm geri dönüş için kalır)
 ```
+
+**Neden HEAD, çalışma ağacı değil:** üç şerit tek ağacı paylaşır; commit'lenmemiş yarım iş sunucuya gitmemeli. Tip denetimi de aynı sebeple sunucuda, gönderilen kod üzerinde yapılır.
+
+**Neden ayrı sürüm klasörü:** `next build` başlarken derleme klasörünü siler; yayındaki klasörde derlemek, derleme süresince çalışan süreci silinmiş dosyalarla bırakır. Ayrı klasörde derlenen sürüm hazır olunca bağ tek hamlede çevrilir; geri dönüş bağı önceki klasöre çevirmektir. Şema geri dönmez — yalnız ileri migration kuralı eski kodun yeni şemayla çalışmasını sağlar.
+
+**Tek kimlik doğrulama:** betik bir ana SSH bağlantısı açar (ControlMaster), sonraki her komut onu kullanır; art arda parolalı girişlerde sunucu aralıklı ret veriyor.
 
 **Derleme neden sunucuda:** derleme anında gömülen genel ortam değişkenleri (`NEXT_PUBLIC_*`) varsa, yerelde derlemek üretim değerlerini geliştirme makinesine getirmeyi zorunlu kılar. Sunucuda derleyince üretim sırları yalnız sunucuda yaşar.
 

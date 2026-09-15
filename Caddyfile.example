@@ -1,0 +1,27 @@
+# Test sunucusunda /etc/caddy/Caddyfile. Tek alan adı: yol önekleri üç süreç arasında çakışmıyor.
+# Uygulama portlarına yalnız sunucunun içinden erişilir (Hetzner duvarı dışarıya kapalı).
+
+test.lezzetanatolie.com {
+	encode zstd gzip
+	# Test ortamı arama motorlarına kapalı.
+	header X-Robots-Tag "noindex, nofollow"
+
+	handle /api/v1/* {
+		reverse_proxy 127.0.0.1:3002
+	}
+
+	handle /webhooks/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	# MCP akış yanıtı tamponlanırsa istemci olayları geç alır.
+	handle /mcp {
+		reverse_proxy 127.0.0.1:8787 {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}
