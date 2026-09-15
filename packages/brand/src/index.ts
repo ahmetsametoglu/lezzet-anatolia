@@ -1,12 +1,11 @@
-// @lezzet/brand — marka sabitleri (ad, renkler, yasal metin yolları).
-// Renkler Tailwind token kaynağıyla hizalı (kesin palet Claude Design çıktısıyla gelir).
+// @lezzet/brand — marka kimliği: ad (`./name`), dışarıya verilen iletişim künyesi, WhatsApp bağlantısı ve
+// telefon yüzeylerinin ikon sözlüğü (`./icons`). Dil listesi burada DEĞİL — tek kaynak `@lezzet/i18n`
+// (`LOCALES`, `DEFAULT_LOCALE`); renkler de değil — `@lezzet/design-tokens`.
 import { BRAND_NAME } from './name';
 
 export const brand = {
   /** Ad TEK yerde yazılı (`./name` — native `app.config.ts`in Node'dan okuduğu yaprak dosya). */
   name: BRAND_NAME,
-  locales: ['tr', 'fr', 'de'] as const,
-  defaultLocale: 'fr' as const,
   /**
    * İşletmenin DIŞARIYA verilen iletişim künyesi (`docs/architecture/BUSINESS_CATALOG.md`).
    *
@@ -44,5 +43,3 @@ export function whatsappHref(text?: string | null): string {
   const message = text?.trim();
   return message ? `https://wa.me/${number}?text=${encodeURIComponent(message)}` : `https://wa.me/${number}`;
 }
-
-export type BrandLocale = (typeof brand.locales)[number];

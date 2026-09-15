@@ -60,7 +60,7 @@ const karla = Karla({ subsets: ['latin', 'latin-ext'], variable: '--font-karla',
  */
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const t = hasLocale(routing.locales, locale) ? layoutMessages[locale] : layoutMessages[brand.defaultLocale];
+  const t = hasLocale(routing.locales, locale) ? layoutMessages[locale] : layoutMessages[routing.defaultLocale];
   return {
     metadataBase: new URL(siteOrigin()),
     title: { template: TITLE_TEMPLATE, default: brand.name },

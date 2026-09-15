@@ -86,7 +86,7 @@ proje/
 │   ├── application/      # UYGULAMA katmanı: domain-core + database'i birleştiren, taşıma-bağımsız orkestrasyonlar (§4)
 │   ├── helper/           # saf fonksiyonlar (tarih/para/format/kimlik/slug) — tek iç bağımlılığı i18n
 │   ├── i18n/             # dil birimleri + ortak yerelleştirme sabitleri + URL yol tablosu (arayüz metni sayfanın messages.json'unda)
-│   ├── brand/            # marka sabitleri: ad, diller, iletişim, WhatsApp bağlantısı
+│   ├── brand/            # marka kimliği: ad, iletişim, WhatsApp bağlantısı, telefon yüzeylerinin ikon sözlüğü
 │   ├── design-tokens/    # tasarım token'ları — bugün fiilî kaynak web `globals.css`, parite testi ikisini birebir tutar
 │   ├── observability/    # gözlemleme: logger, captureError, maskeleme (OBSERVABILITY.md)
 │   ├── storage/          # Cloudflare R2 (S3-uyumlu) dosya deposu
@@ -436,7 +436,8 @@ Genel blueprint §10 ile aynı. Env'e yalnız sır + ortama göre değişen değ
 
 | Değer | Yeri |
 | --- | --- |
-| Marka adı, diller, iletişim bilgisi, WhatsApp bağlantısı | `packages/brand` |
+| Marka adı, iletişim bilgisi, WhatsApp bağlantısı | `packages/brand` |
+| Diller (`LOCALES`, `DEFAULT_LOCALE`) | `packages/i18n` — `locale.ts` |
 | Alan adı (site kökü) | `packages/i18n` — `siteOrigin()` (`NEXT_PUBLIC_SITE_URL`) |
 | Renkler | `packages/design-tokens` + web `globals.css` (parite testiyle birebir) |
 | Logo yolu | tek sabiti yok — web'de elle yazılı (`/logo.…`) |

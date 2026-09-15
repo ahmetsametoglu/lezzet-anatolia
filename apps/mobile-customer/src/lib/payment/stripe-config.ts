@@ -20,7 +20,7 @@
 
 /**
  * İşletmenin kurulu olduğu ülke (ISO 3166-1 alpha-2) — Apple/Google Pay cüzdanlarının zorunlu
- * alanı. Dil DEĞİLDİR: `brand.defaultLocale` Fransızcadır ama o müşterinin dilidir; buradaki
+ * alanı. Dil DEĞİLDİR: `DEFAULT_LOCALE` (`@lezzet/i18n`) Fransızcadır ama o müşterinin dilidir; buradaki
  * değer satıcının ülkesidir ve kart ağı bunu ödeme kimliği olarak kullanır.
  */
 export const MERCHANT_COUNTRY_CODE = 'FR';

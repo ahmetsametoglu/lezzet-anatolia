@@ -33,7 +33,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 <!-- durum:başlangıç -->
 | # | Dosya | Kapsam | Durum | Görev |
 | --- | --- | --- | --- | --- |
-| 00 | `00-iskelet.md` | Monorepo İskeleti | sürüyor | 8/10 (+1 kısmi) |
+| 00 | `00-iskelet.md` | Monorepo İskeleti | sürüyor | 8/11 (+2 kısmi) |
 | 01 | `01-types.md` | `packages/types`: Şemalar ve Enum'lar | tamam | 13/13 |
 | 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | tamam | 18/18 |
 | 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | tamam | 12/12 |
