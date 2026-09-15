@@ -54,8 +54,16 @@ type Messages = LocalizedCopy<typeof messages>;
 type LoginStage = 'choose' | 'email' | 'code' | 'verifying' | 'done';
 
 
-/** Logonun kaynak oranı (1244×602) — yükseklik şablondan (52), genişlik orandan türer. */
-const LOGO_ASPECT = 1244 / 602;
+/**
+ * Karenin yatay logosu (`assets/images/logo-yatay.png` — `design/00-marka/logo-yatay.png`in kopyası, 900×234):
+ * yükseklik "Hızlı Doğrulama" karesinin 42'si (Musteri Mobil.dc.html:865; web telefon girişi de 42), genişlik orandan
+ * türer. Kitin `loginLogoHeight`ı (52) tanıtım ve profil kurulumunun eski logosunda kalır.
+ */
+const LOGO_ASPECT = 900 / 234;
+const LOGO_HEIGHT = 42;
+
+/** Karenin yol düğmesi (Musteri Mobil.dc.html:870 — 54; kitin `controlLg`si 52). Web telefon girişi de 54. */
+const PROVIDER_HEIGHT = 54;
 
 /** Kaba e-posta kontrolü: ekran KAPI DEĞİL, yalnız apaçık yanlışı erkenden söyler. */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -249,14 +257,13 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
         <BackButton onPress={closeLogin} accessibilityLabel={t.back} testID="login-back" />
       </View>
       <FormScroll contentContainerStyle={styles.content} testID="login-scroll">
-        {/* Logo yükseklikten ölçülür (şablon: 52). Varlık ŞEFFAF PNG: kaynak jpg beyaz zeminliydi
-            ve şablonun `multiply` karışımı iOS'ta uygulanmadı (ölçüldü 08.08 — beyaz kutu görünüyordu);
-            beyaz→alfa dönüşümü türetim script'iyle yapıldı, karışıma gerek kalmadı. */}
+        {/* Logo yükseklikten ölçülür (karenin 42'si). Varlık karenin saydam PNG'si — beyaz zeminli eski jpg'nin
+            `multiply` karışımı iOS'ta uygulanmıyordu (ölçüldü 08.08); saydam dosyada karışıma gerek yok. */}
         <Image
           // Statik varlık Metro'da `require` ile yüklenir (Expo png için modül tipi bildirmiyor,
           // `import` derlenmez) — kural TS import disiplinine bakıyor, varlık yolunu bilmiyor.
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('@lezzet/mobile-kit/assets/images/logo.png')}
+          source={require('../../../assets/images/logo-yatay.png')}
           style={styles.logo}
           accessibilityLabel={brand.name}
         />
@@ -434,8 +441,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   /* Genişlik orandan HESAPLANIR (onboarding'in cihaz kanıtı 09.08 — `aspectRatio` tek başına
      güvenilir çözülmüyor, resim ham boyuna düşebiliyor). Aynı varlık, aynı ölçü, tek kaynak. */
   logo: {
-    height: customerMetrics.loginLogoHeight,
-    width: customerMetrics.loginLogoHeight * LOGO_ASPECT,
+    height: LOGO_HEIGHT,
+    width: LOGO_HEIGHT * LOGO_ASPECT,
     alignSelf: 'flex-start',
   },
   title: {
@@ -450,12 +457,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     lineHeight: theme.text.control * theme.text['lead--line-height'],
     color: theme.colors.body,
   },
-  providers: { gap: theme.space.lg },
+  /* Karenin yol bloğunun üst payı (Musteri Mobil.dc.html:869 `margin-top:6px`; web `mt-1.5`). */
+  providers: { gap: theme.space.lg, marginTop: theme.space.sm },
   providerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.xl,
-    height: theme.size.controlLg,
+    height: PROVIDER_HEIGHT,
     paddingHorizontal: theme.space['5xl'],
     borderRadius: theme.radius.pill,
   },
