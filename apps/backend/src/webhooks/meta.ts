@@ -1,7 +1,7 @@
 import { handleMetaWebhook, metaAppSecret, metaVerifyToken, verifyMetaSignature } from '@lezzet/application';
 import { logger } from '@lezzet/observability';
 import type { Context } from 'hono';
-import type { AppEnv } from '../http/request-log';
+import type { AppEnv } from '../context';
 
 /**
  * Meta webhook uç noktası (WhatsApp, Messenger, Instagram tek adres), ince kabuk: el sıkışma ve imza burada, ayrıştırma ve defter

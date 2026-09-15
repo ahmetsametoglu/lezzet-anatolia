@@ -1,7 +1,7 @@
-import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { compress } from 'hono/compress';
-import { captureError, logger, SOURCES } from '@lezzet/observability';
+import { captureError, SOURCES } from '@lezzet/observability';
+import { requestLog } from '@lezzet/observability/request-log';
 import { v1 } from './api/v1/router';
 import { fail } from './lib/respond';
 import type { AppEnv } from './context';
@@ -12,21 +12,8 @@ import type { AppEnv } from './context';
  */
 export const app = new Hono<AppEnv>();
 
-// İstek izi önce takılır ki sonraki her şey `reqId` taşısın; seviye durumdan türer (5xx bizim hatamız, 4xx çağıranın) ve hata
-// kaydı `app.onError`ın işidir, yoksa aynı hata iki kez kaydedilirdi.
-app.use('*', async (c, next) => {
-  const reqId = randomUUID();
-  c.set('reqId', reqId);
-  const startedAt = Date.now();
-
-  await next();
-
-  const status = c.res.status;
-  const line = { reqId, method: c.req.method, path: c.req.path, status, ms: Date.now() - startedAt };
-  if (status >= 500) logger.error(line, 'request');
-  else if (status >= 400) logger.warn(line, 'request');
-  else logger.info(line, 'request');
-});
+// İstek izi önce takılır ki sonraki her şey `reqId` taşısın.
+app.use('*', requestLog);
 
 /*
   Yanıt sıkıştırma: katalog cevapları tekrar eden CDN adresleriyle büyüdü ve gzip onları büyük ölçüde küçültüyor; istemcinin

@@ -12,7 +12,7 @@ import {
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { providerStub } from '@lezzet/application/shipping/provider.testkit';
 import { signWebhookBody } from '@lezzet/sendcloud';
-import type { AppEnv } from '../http/request-log';
+import type { AppEnv } from '../context';
 import { handleSendcloudWebhook } from './sendcloud';
 
 /**

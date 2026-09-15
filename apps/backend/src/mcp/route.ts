@@ -1,7 +1,7 @@
 import { RESPONSE_ALREADY_SENT } from '@hono/node-server/utils/response';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Context } from 'hono';
-import type { AppEnv } from '../http/request-log';
+import type { AppEnv } from '../context';
 import { mcpGuard } from './guard';
 import { createMcpServer } from './server-factory';
 

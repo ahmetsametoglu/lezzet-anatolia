@@ -4,7 +4,7 @@ import { logger } from '@lezzet/observability';
 import { parseWebhookIdentity, verifyWebhookSignature } from '@lezzet/sendcloud';
 import type { OrderEffects, ShippingRateProvider } from '@lezzet/application';
 import type { Context } from 'hono';
-import type { AppEnv } from '../http/request-log';
+import type { AppEnv } from '../context';
 
 /**
  * Taşıyıcı webhook'u, ince kabuk: imza, idempotens ve eşleşme burada, durumun kendisi `syncShipmentStatus`ta okunur ve yazılır.

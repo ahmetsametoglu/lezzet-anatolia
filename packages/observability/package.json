@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./logger": "./src/logger.ts",
-    "./mask": "./src/mask.ts"
+    "./mask": "./src/mask.ts",
+    "./request-log": "./src/request-log.ts"
   },
   "types": "./src/index.ts",
   "scripts": {

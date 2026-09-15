@@ -34,6 +34,9 @@
     "packages/brand": {
       "includeEntryExports": true
     },
+    "packages/observability": {
+      "includeEntryExports": true
+    },
     "packages/application": {
       "ignoreDependencies": [
         "@expo-google-fonts/karla"
