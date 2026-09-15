@@ -42,7 +42,7 @@ export default async function CartPage({ params, searchParams }: CartPageProps) 
 
   return (
     // Mobilde çıplak kabuk: tasarımın karesi logosuz tek satır çiziyor, o satırı sayfa kurar.
-    <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="none">
+    <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="slim">
       <CartClient t={t} locale={locale} device={device} emptyContext={emptyContext} awaitingPayment={awaitingPayment} />
     </SiteFrame>
   );

@@ -137,7 +137,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   };
 
   return (
-    <SiteFrame device={device} locale={locale}>
+    <SiteFrame device={device} locale={locale} footer="slim">
       {/* Ödeme beklerken sayfa canlıdır: webhook düşünce kendini yeniler (çizmez, yalnız dinler). */}
       {view.awaitingCard && <OrderWatch orderId={order.id} />}
       <ConfirmationClient t={t} shared={checkoutMessages[locale]} locale={locale as Locale} view={view} device={device} />

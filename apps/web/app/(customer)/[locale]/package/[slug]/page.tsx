@@ -61,12 +61,7 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
   if (!pack) notFound();
 
   return (
-    <SiteFrame
-      device={device}
-      locale={locale}
-      activeNav="packages"
-      footer="slim"
-    >
+    <SiteFrame device={device} locale={locale} activeNav="packages">
       <PackageClient t={t} locale={locale} pack={pack} device={device} />
     </SiteFrame>
   );

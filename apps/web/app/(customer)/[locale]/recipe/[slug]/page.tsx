@@ -69,12 +69,7 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   void recordPageView('/recipe/[slug]', await searchParams, { subjectType: 'recipe', subjectId: recipe.id });
 
   return (
-    <SiteFrame
-      device={device}
-      locale={locale}
-      activeNav="recipes"
-      footer="slim"
-    >
+    <SiteFrame device={device} locale={locale} activeNav="recipes">
       <RecipeJsonLd recipe={recipe} url={localizedUrl('/recipe/[slug]', locale, { slug })} />
       <RecipeClient t={t} locale={locale} recipe={recipe} device={device} />
     </SiteFrame>

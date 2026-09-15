@@ -26,10 +26,10 @@ export interface SiteFrameProps {
    */
   mobileChrome?: 'default' | 'bare';
   /**
-   * Footer katmanı (yalnız masaüstü): `full` varsayılan, `slim` ürün/paket/tarif detayında, `none` huni
-   * ve girişli yüzeylerde. Verilmezse `fill` ve hesap alanı `none`, kalan `full`.
+   * Footer katmanı (yalnız masaüstü): sepet, ödeme ve hesap alanı `slim`, kalan her yer `full`.
+   * Verilmezse hesap alanı (`accountChrome`) `slim`, kalan `full` alır.
    */
-  footer?: 'full' | 'slim' | 'none';
+  footer?: 'full' | 'slim';
   /**
    * Hesap alanının başlığı; verilirse vitrin başlığının yerine geçer. `SiteFrame` içinde durur, çünkü
    * `main` ve footer aynı kalıyor ve ayrı çerçeve footer'ı ikinci kez tanımlardı.
@@ -47,7 +47,7 @@ export interface SiteFrameProps {
   };
   /**
    * Sayfa ekranı doldurur (yazışma yüzeyleri): cevap kutusu içeriğin bittiği yerde değil ekranın
-   * dibinde durur. `main` kendi içinde kayar ve footer çizilmez.
+   * dibinde durur. `main` kendi içinde kayar, footer ekranın dibinde kalır.
    */
   fill?: boolean;
   children: ReactNode;

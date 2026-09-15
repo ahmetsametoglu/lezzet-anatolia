@@ -61,7 +61,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
   const t = messages[locale];
   // Hesap alanında duyuru bandı çizilmez ve başlık değişir.
   const account = accountChrome;
-  const footerTier = footer ?? (fill || account ? 'none' : 'full');
+  const footerTier = footer ?? (account ? 'slim' : 'full');
 
   return (
     <div className={`flex flex-col bg-cream text-ink ${fill ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
@@ -152,7 +152,6 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       <main className={`${SHELL} flex flex-1 flex-col ${fill ? 'min-h-0' : ''}`}>{children}</main>
 
       {/* Footer zemini tam genişlikte, içerik kabuk içinde; katmanı `footerTier` seçer. */}
-      {footerTier !== 'none' && (
       <footer className="bg-ink text-neutral-400">
         {footerTier === 'slim' ? (
           <div className={`${SHELL} flex items-center justify-between px-12 py-4 font-sans text-micro`}>
@@ -207,7 +206,6 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
           ))}
         </div>
       </footer>
-      )}
     </div>
   );
 }

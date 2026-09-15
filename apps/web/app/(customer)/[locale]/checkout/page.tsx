@@ -43,7 +43,7 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
 
   return (
     // Mobilde çıplak kabuk: tasarımın karesi logosuz, geri bağını sayfa kurar (`checkout.mobile`).
-    <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="none">
+    <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="slim">
       <CheckoutClient
         t={t}
         locale={locale}

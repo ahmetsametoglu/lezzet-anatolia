@@ -98,12 +98,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   ]);
 
   return (
-    <SiteFrame
-      device={device}
-      locale={locale}
-      activeNav="catalog"
-      footer="slim"
-    >
+    <SiteFrame device={device} locale={locale} activeNav="catalog">
       {/* Puan yalnız gerçekten varsa yazılır: uydurma bir puan yapısal veride yaptırıma uğrar. */}
       <ProductJsonLd
         product={product}
