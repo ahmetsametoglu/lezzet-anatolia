@@ -6,17 +6,10 @@ import { DocumentKindEnum, DocumentVatRegimeEnum, MovementDirectionEnum } from '
 import { ProductDateTypeEnum, ProductSchema } from './product.schema';
 
 /**
- * AI asistanının ONAY KUYRUĞU (22.3) — `0042_assistant_proposal.sql`.
- * Kurgu: `docs/architecture/AI_ADMIN_ASSISTANT.md §5`.
- *
- * **`payload` bir KOMUT değil DİLEKÇEDİR.** Asistan "şu tabloya şunu yaz" demez; "şu paketi şu
- * kalemlerle kur" der ve uygulama onaydan sonra NORMAL servis/motor yolundan koşar. Bu yüzden
- * payload şemaları hedef tablonun kolonlarını değil, **var olan servis kapılarının girdisini**
- * taklit eder — kuyruk ikinci bir yazma yolu açmaz.
- *
- * **Şema kind başına ayrı ve TEK YERDE** (`PROPOSAL_PAYLOAD_SCHEMAS`): üç yüzey (öneriyi YAZAN
- * MCP aracı, GÖSTEREN panel, UYGULAYAN kapı) aynı sözlükten okur. Ayrı ayrı yazılsalardı biri
- * gevşer ve panelde görünen ile uygulanan ayrışırdı — onay ekranının tek vaadi tam olarak budur.
+ * Asistanın onay kuyruğu (`0042_assistant_proposal.sql`): `payload` bir komut değil dilekçedir, uygulama onaydan sonra normal
+ * servis ve motor yolundan koşar, bu yüzden şemalar tablo kolonlarını değil servis kapılarının girdisini taklit eder. Şema kind
+ * başına tek yerde (`PROPOSAL_PAYLOAD_SCHEMAS`), çünkü yazan araç, gösteren panel ve uygulayan kapı ayrı yazsaydı panelde görünen
+ * ile uygulanan ayrışırdı.
  */
 
 export const AssistantProposalKindEnum = z.enum([
@@ -37,13 +30,9 @@ export const AssistantProposalKindEnum = z.enum([
 export type AssistantProposalKind = z.infer<typeof AssistantProposalKindEnum>;
 
 /**
- * ─── FATURANIN PARA KÜNYESİ (22.44 · 12.26) ─────────────────────────────────
- *
- * Faturadan beklenen teslimat (`purchase_order`, `source: 'invoice'`) faturanın numarasını, gününü,
- * vadesini, toplamını, KDV'sini ve rejimini taşır: onayda sipariş GÖNDERİLMİŞ açılır ve fatura
- * siparişe bağlı bir BELGE olarak doğar — tedarikçi borcu o belgeden türer, mal gelince rampa sayar.
- * Toplam faturanın KENDİ yazdığıdır (satırlardan toplanmaz: fark nakliye, iskonto ya da okunamamış
- * satırdır); KDV belgede yoksa `null` — sıfır "KDV yok" demek olurdu.
+ * Faturadan beklenen teslimatın para künyesi: onayda sipariş gönderilmiş açılır ve fatura siparişe bağlı bir belge olarak doğar,
+ * tedarikçi borcu o belgeden türer. Toplam faturanın kendi yazdığıdır (fark nakliye, iskonto ya da okunamamış satırdır); KDV
+ * belgede yoksa `null`, çünkü sıfır "KDV yok" demek olurdu.
  */
 export const InvoiceTermsPayloadSchema = z.object({
   number: z.string().nullable(),
@@ -58,14 +47,9 @@ export type InvoiceTermsPayload = z.infer<typeof InvoiceTermsPayloadSchema>;
 export const AssistantProposalStatusEnum = z.enum(['pending', 'applied', 'rejected', 'expired', 'failed']);
 export type AssistantProposalStatus = z.infer<typeof AssistantProposalStatusEnum>;
 
-// ─── Payload şemaları — bugün UYGULANABİLEN YEDİ tip ─────────────────────────
+// ─── Payload şemaları ─────────────────────────────────────────────────────────────
 //
-// Enum dokuz tip taşıyor ve bugün DOKUZU DA uygulanabilir (09.08: son iki tip eklendi). Şemasız tip için öneri HİÇ DOĞMAZ: yazıp uygulayamamak, panelde
-// onaylanan ama hiçbir şey yapmayan bir kalem üretirdi — "çizip yazmamak"ın kuyruk hâli.
-//
-// Kapsam 09.08'de TASARIMA göre genişledi (kullanıcı kararı): ilk üç tip "en kolay yazılabilen"e
-// göre seçilmişti; tasarımın seçtiği beşli ise kullanıcının gerçek iş listesiydi (faturadan stok
-// girişi, para girişi, ürün tamamlama, bölge önerisi). Değer kolaylığı yendi.
+// Şemasız tip için öneri doğmaz: yazıp uygulayamamak, panelde onaylanan ama hiçbir şey yapmayan bir kalem üretirdi.
 
 /** Vitrin işareti — en küçük yazma: tek boolean, tek kayıt. */
 export const FeaturedFlagPayloadSchema = z.object({
@@ -79,12 +63,8 @@ export const FeaturedFlagPayloadSchema = z.object({
    */
   name: z.string().min(1),
   /**
-   * Aynı türde ŞU AN vitrinde kaç kayıt var (22.5 · denetim taraması 09.08).
-   *
-   * "Vitrine ekle" kararı tek başına verilemez: vitrin bir liste değil bir SEÇKİdir ve doluysa
-   * eklenen şey ötekini aşağı iter. Önizleme bunu söylemiyordu; patron "bir tane daha eklemekle"
-   * "sekizinciyi eklemek" arasındaki farkı göremiyordu. Sayı önerinin kurulduğu andaki hâldir —
-   * uygulama anında değişmiş olabilir, o yüzden karar girdisi, kural değil.
+   * Aynı türde şu an vitrinde kaç kayıt var: vitrin bir seçkidir ve doluysa eklenen şey ötekini aşağı iter, patron bu farkı
+   * görmeli. Sayı önerinin kurulduğu andaki hâldir, uygulama anında değişmiş olabilir; karar girdisidir, kural değil.
    */
   currentlyFeaturedCount: z.number().int().nonnegative().optional(),
 });
@@ -93,15 +73,8 @@ export const FeaturedFlagPayloadSchema = z.object({
 export const PurchaseOrderPayloadSchema = z.object({
   warehouseId: z.string().uuid(),
   /**
-   * Deponun KODU — kimlik onay ekranında okunmaz (22.11).
-   *
-   * **Depo bir boyut değil DEĞİŞMEZDİR** (`CLAUDE §1`): "hangi depoya mal isteniyor" tedarik
-   * siparişinin kararının kendisidir, yan bilgisi değil. Dilekçe yalnız `warehouseId` taşıyordu ve
-   * kart "STR mi KEHL mi" sorusunu cevaplayamıyordu — özet cümlesinde geçiyor olması yetmez, çünkü
-   * cümle serbest metindir ve bir gün başka türlü yazılır.
-   *
-   * `.default(null)` — alan sonradan açıldı; onsuz yazılmış dilekçeler `safeParse`ta düşmesin
-   * (`counterAccountName` ile aynı gerekçe).
+   * Deponun kodu, çünkü kimlik onay ekranında okunmaz ve "hangi depoya mal isteniyor" tedarik siparişinin kararının kendisidir.
+   * `.default(null)`: alan sonradan açıldı, onsuz yazılmış dilekçeler `safeParse`ta düşmesin.
    */
   warehouseCode: z.string().nullable().default(null),
   supplierId: z.string().uuid().nullable(),
@@ -113,21 +86,17 @@ export const PurchaseOrderPayloadSchema = z.object({
         productName: z.string().min(1),
         qty: z.number().int().positive(),
         /**
-         * Bu tedarikçiden SON alınan birim fiyat (cent) — siparişin tahmini tutarının tabanı (22.11).
-         *
-         * **Kesin fiyat değildir ve öyle sunulmaz:** alış siparişte değil MAL KABULDE kesinleşir
-         * (`stock_intake.unitCostCents`). Ama "yaklaşık ne kadara mal olacak" sorusu onaysız
-         * bırakılamaz — kasadan çıkacak parayı bilmeden verilen sipariş kararı, kararın kendisi
-         * değildir. Kaynak `supplier_product.last_purchase_price`; eşleme yoksa `null` ve kart
-         * toplamı hiç yazmaz (`CLAUDE §1` — eksik tabanla bulunan tutar, gerçeğinden azdır).
+         * Bu tedarikçiden son alınan birim fiyat (cent), siparişin tahmini tutarının tabanı; kesin fiyat mal kabulde doğar ama
+         * kasadan çıkacak parayı bilmeden verilen sipariş kararı eksiktir. Eşleme yoksa `null` ve kart toplamı yazmaz, çünkü eksik
+         * tabanla bulunan tutar gerçeğinden azdır.
          */
         lastPurchasePriceCents: z.number().int().nonnegative().nullable().default(null),
         /**
-         * FATURANIN birim fiyatı (cent, KDV hariç) — yalnız faturadan sipariş kaynağında (22.44). Tahmin
-         * değil, tedarikçinin kestiği fiyat: taslağa yazılır ve eşlemedeki "son alış"ın önüne geçer.
+         * Faturanın birim fiyatı (cent, KDV hariç), yalnız faturadan sipariş kaynağında: tedarikçinin kestiği fiyattır, taslağa
+         * yazılır ve eşlemedeki son alışın önüne geçer.
          */
         unitPriceCents: z.number().int().nonnegative().nullable().default(null),
-        /** Tedarikçinin kalemi (22.43 · 22.44) — mal kabul dilekçesinin aynı üç alanı: anahtar, ad, eşleme önerisi. */
+        /** Tedarikçinin kalemi: mal kabul dilekçesinin aynı üç alanı (anahtar, ad, eşleme önerisi). */
         supplierItemKey: z.string().nullable().default(null),
         supplierItemName: z.string().nullable().default(null),
         mappingProposed: z.boolean().default(false),
@@ -136,9 +105,8 @@ export const PurchaseOrderPayloadSchema = z.object({
     .min(1),
   note: z.string().optional(),
   /**
-   * KAYNAK (22.44): `engine` = eşik altı eksiğinden (adetleri motor hesaplar, TASLAK doğar);
-   * `invoice` = tedarikçinin faturasından (adet ve fiyat faturadan; sipariş GÖNDERİLMİŞ açılır, fatura
-   * siparişe bağlı belge olarak doğar — `InvoiceTermsPayloadSchema`). `.default`: eski dilekçeler.
+   * Kaynak: `engine` eşik altı eksiğinden (adetleri motor hesaplar, taslak doğar), `invoice` tedarikçinin faturasından (sipariş
+   * gönderilmiş açılır, fatura siparişe bağlı belge olarak doğar). `.default`: eski dilekçeler.
    */
   source: z.enum(['engine', 'invoice']).default('engine'),
   invoice: InvoiceTermsPayloadSchema.nullable().default(null),
@@ -165,12 +133,8 @@ export const BundleDraftPayloadSchema = z.object({
 });
 
 /**
- * Mal kabul / alım girişi — patronun verdiği FATURADAN kurulur.
- *
- * **Alış fiyatı (`unitCostCents`) burada VAR ve bu çelişki değil** (`AI_ADMIN_ASSISTANT §6`):
- * finans sınırı OKUMA yönlüdür. Bilgi zaten patronun elindeki belgeden geliyor, yani sızma yönü
- * tersine dönmüyor — asistan yazdığını geri OKUYAMAZ (okuma araçlarında alış fiyatı yok ve testi
- * bunu kilitliyor).
+ * Mal kabul, patronun verdiği faturadan kurulur; alış fiyatı (`unitCostCents`) burada var ve bu çelişki değil, çünkü finans sınırı
+ * okuma yönlüdür ve bilgi zaten patronun belgesinden gelir. Asistan yazdığını geri okuyamaz (okuma araçlarında alış fiyatı yok).
  */
 export const StockIntakePayloadSchema = z.object({
   warehouseId: z.string().uuid(),
@@ -182,25 +146,15 @@ export const StockIntakePayloadSchema = z.object({
   /** İrsaliye/fatura numarası — önizlemenin "belge no" satırı. */
   documentNo: z.string().nullable(),
   /**
-   * ─── BELGENİN TARİHİ VE TOPLAMI (11.08 · alan denkliği taraması) ────────────
-   *
-   * `date`: mal kabulün tarihi. Verilmezse kabul BUGÜNE yazılır — ama fatura dünkü olabilir ve
-   * genelde öyledir (patron akşam fotoğraflar, ertesi gün onaylar). Yanlış tarihe yazılan bir
-   * kabul, stok yaşı ve dönem mutabakatı hesaplarını sessizce kaydırır. Belgede tarih yazıyor,
-   * asistan onu okuyabiliyordu; sorulmadığı için kayboluyordu.
-   *
-   * `totalAmountCents`: **faturanın kendi yazdığı toplam.** Satır maliyetlerinin toplamı DEĞİLDİR
-   * ve öyle hesaplanmamalı — ikisinin farkı tam da aranan şeydir: nakliye, iskonto, okunamayan bir
-   * satır. Kendi hesabımızı belgenin toplamıyla karşılaştırabilmek, "okuduğum fatura doğru mu"
-   * sorusunun tek makine cevabı. Uydurulmaz: belgede toplam görünmüyorsa `null` kalır
-   * (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
+   * `date` mal kabulün tarihi: verilmezse kabul bugüne yazılır, oysa fatura genelde dünküdür ve yanlış tarih stok yaşını ve dönem
+   * mutabakatını kaydırır. `totalAmountCents` faturanın kendi toplamıdır, satırlardan hesaplanmaz, çünkü farkı (nakliye, iskonto,
+   * okunamayan satır) tam aranan şeydir; görünmüyorsa `null`.
    */
   date: z.string().nullable().default(null),
   totalAmountCents: z.number().int().nonnegative().nullable().default(null),
   /**
-   * FATURANIN KDV'Sİ, REJİMİ ve VADESİ (22.44 · 12.26) — toplam okunduysa fatura kabule bağlı bir BELGE
-   * olarak doğar ve tedarikçi borcu o belgeden türer (kabulün satır toplamı KDV hariçtir). KDV belgede
-   * yoksa `null`; ters yüklemede ve muafiyette belgede KDV olmaz (`vatRegimeProblem`). `.default`: eski dilekçeler.
+   * Faturanın KDV'si, rejimi ve vadesi: toplam okunduysa fatura kabule bağlı bir belge olarak doğar ve tedarikçi borcu o belgeden
+   * türer. KDV belgede yoksa `null` (ters yükleme ve muafiyette belgede KDV olmaz); `.default`: eski dilekçeler.
    */
   vatAmountCents: z.number().int().nonnegative().nullable().default(null),
   vatRegime: DocumentVatRegimeEnum.default('standard'),
@@ -216,10 +170,9 @@ export const StockIntakePayloadSchema = z.object({
         lotNumber: z.string().nullable(),
         unitCostCents: z.number().int().nonnegative().nullable(),
         /**
-         * TEDARİKÇİNİN KALEMİ (22.43 · kullanıcı kararı 14.09): faturadaki ad ya da kod — anahtarı motor
-         * türetir (`supplierItemKeyOf`), varyantı tedarikçinin eşlemesi verir. `mappingProposed`: eşleme
-         * yoktu, varyantı asistan katalogdan buldu; onayda eşleme bu anahtarla kaydedilir ve sonraki
-         * fatura tam eşleşir. `.default`: eski dilekçeler.
+         * Tedarikçinin kalemi: faturadaki ad ya da kod, anahtarı motor türetir (`supplierItemKeyOf`), varyantı tedarikçinin
+         * eşlemesi verir. `mappingProposed`: eşleme yoktu, varyantı asistan buldu ve onayda eşleme bu anahtarla kaydedilir;
+         * `.default`: eski dilekçeler.
          */
         supplierItemKey: z.string().nullable().default(null),
         supplierItemName: z.string().nullable().default(null),
@@ -236,64 +189,44 @@ export const MoneyMovementPayloadSchema = z.object({
   direction: z.enum(['in', 'out']),
   amountCents: z.number().int().positive(),
   /**
-   * `money_movement.type` ALT kümesi — üç tip bilerek dışarıda.
-   *
-   * `order_payment`/`order_refund` baştan yoktu: sipariş bakiyesi iki yerden değişemez.
-   * **`purchase` 22.5'te ÇIKARILDI (operasyon şeridinin sorusu, 09.08):** stok alımı mal kabule
-   * bağlıdır ve motor bağsız satırı `supply_link_missing` ile zaten reddediyor — yani asistan
-   * uygulanması İMKÂNSIZ bir öneri kurabiliyordu. Kuyruğun en sinsi çürüme yolu bu: reddedilmeyi
-   * bekleyen kalemler patronun onay refleksini köreltir. Alım önerisi `stock_intake`ten geçer.
+   * `money_movement.type` alt kümesi: sipariş ödemesi ve iadesi yok, çünkü sipariş bakiyesi iki yerden değişemez. `purchase` da
+   * yok, çünkü stok alımı mal kabule bağlıdır ve motor bağsız satırı reddeder; alım önerisi `stock_intake`ten geçer.
    */
   type: z.enum(['expense', 'transfer', 'capital', 'misc']),
   /**
-   * TÜR — sözlük slug'ı (`movement_nature`), 22.42. Bir tur serbest `category` kelimesiydi; 12.16'dan
-   * beri defter sözlükten tür istiyor ve kelime sözlükte yoksa hareket türsüz açılıyor, giderde kaydet
-   * düğmesi kilitleniyordu. Araç artık kelimeyi öneri anında sözlükle doğruluyor (`matchNature`).
-   * `.default(null)`: alan sonradan adlandı; kuyrukta `category` taşıyan eski dilekçe türsüz açılır.
+   * Tür, sözlük slug'ı (`movement_nature`): defter türü sözlükten ister ve sözlükte olmayan kelimeyle açılan hareket türsüz kalır,
+   * bu yüzden araç kelimeyi öneri anında doğrular (`matchNature`). `.default(null)`: `category` taşıyan eski dilekçe türsüz açılır.
    */
   nature: z.string().nullable().default(null),
   description: z.string().nullable(),
   /**
-   * CARİ — kime ödendi / kimden geldi (22.42). Tedarikçi bu tipte YOK: mal bedeli mal kabule bağlı
-   * `purchase` satırıdır ve banka eşleştirmesinden yazılır (12.13); bir tur buradaki `supplierId`
-   * kuyruk formunda hiçbir kutuya düşmüyordu (formun girdisinde tedarikçi yok), bağ sessizce
-   * kayboluyordu. Kimlik sunucuda ADDAN çözülür — tam ad ya da eşleşme kelimesi, nokta atışı
-   * (`pinpointCounterparty`); çözülemezse `null` kalır, ad `counterpartyName`ta durur, seçimi operatör yapar.
+   * Cari, kime ödendi ya da kimden geldi; tedarikçi bu tipte yok, çünkü mal bedeli mal kabule bağlı `purchase` satırıdır. Kimlik
+   * sunucuda addan nokta atışı çözülür (`pinpointCounterparty`); çözülemezse `null` kalır, ad `counterpartyName`ta durur ve
+   * seçimi operatör yapar.
    */
   counterpartyId: z.string().uuid().nullable().default(null),
   counterpartyName: z.string().nullable(),
   counterAccountId: z.string().uuid().nullable(),
   /**
-   * Hedef hesabın ADI — transferde kararın yarısı (22.11).
-   *
-   * Kimlik tek başına okunamaz: "Kasa → `9a46b355…` 500 €" diye bir öneri onaylanamaz, çünkü paranın
-   * nereye gittiği görünmüyor. Ad öneri anında yazılıyor (`accountName` ile aynı gerekçe): dilekçe
-   * o günün gerçeğini taşır, hesap sonradan yeniden adlandırılsa bile öneri neyi teklif ettiğini
-   * söylemeye devam eder.
-   *
-   * `.default(null)` — alan sonradan açıldı ve kuyrukta onsuz yazılmış dilekçeler var; zorunlu
-   * yapmak onları `safeParse`ta düşürür ve kartları sessizce asistanın cümlesine indirirdi.
+   * Hedef hesabın adı, transferde kararın yarısı: kimlik tek başına okunamaz ve ad öneri anında yazılır ki hesap sonradan yeniden
+   * adlandırılsa da öneri neyi teklif ettiğini söylesin. `.default(null)`: alan sonradan açıldı, onsuz yazılmış dilekçeler
+   * düşmesin.
    */
   counterAccountName: z.string().nullable().default(null),
   valueDate: z.string().nullable(),
 });
 
 /**
- * Bölgeye posta kodu ekleme — **geri alınamaz dış etkisi olan tek tip**.
- *
- * Kod bölgeye girince `zone_available` uzlaştırma işi haber bekleyenlere bildirim gönderir
- * (14.10 · 19.21). Uygulayıcı bildirimi KENDİ göndermez — cron zaten "kapsanmış ve haberi
- * gitmemiş" bekleyişleri arıyor; ikinci bir gönderim yolu açmak aynı mesajı iki kez yollardı.
- * Ekranın uyarısı bu yüzden doğru ve şart: bölge kapatılsa bile mesaj gitmiş olur.
+ * Bölgeye posta kodu ekleme, geri alınamaz dış etkisi olan tek tip: kod bölgeye girince uzlaştırma işi (`zone_available`) haber
+ * bekleyenlere bildirim gönderir. Uygulayıcı bildirimi kendisi göndermez, çünkü ikinci bir gönderim yolu aynı mesajı iki kez
+ * yollardı; bölge sonradan kapatılsa bile mesaj gitmiş olur.
  */
 export const ZoneExtendPayloadSchema = z.object({
   zoneId: z.string().uuid(),
   zoneName: z.string().min(1),
   /**
-   * **KAPALI küme (22.5 · operasyon şeridinin sorusu, 09.08).** Önce `z.string().length(2)` idi ve
-   * daraltmayı EKRAN yapıyordu: tanınmayan ülkede rota kurulumu ön dolgu yapamıyor, öneri sessizce
-   * yarım açılıyordu. Daraltma şemaya taşındı — araç geçersiz ülkeyi kuyruğa hiç yazamaz, yani
-   * uygulanamayacak bir öneri doğmaz. Kapalı küme genişlerse (yeni ülke) tek yerden genişler.
+   * Kapalı küme, çünkü daraltmayı ekran yapsaydı tanınmayan ülkede öneri sessizce yarım açılırdı; araç geçersiz ülkeyi kuyruğa
+   * hiç yazamaz. Küme genişlerse tek yerden genişler.
    */
   country: CountryEnum,
   postalCodes: z
@@ -309,39 +242,16 @@ export const ZoneExtendPayloadSchema = z.object({
 });
 
 /**
- * ─── BELGEDEN ÜRÜN (22.6) — ortak parçalar ───────────────────────────────────
- *
- * Patron ambalajın fotoğrafını asistana verir; asistan okur, kuyruğa dilekçe bırakır. İki hâl var
- * (`product_create` yeni kayıt · `product_draft` var olanı tamamlama) ve alanların çoğu ortak —
- * bu yüzden bir kez tanımlanıp ikisinde de kullanılır (`CLAUDE §1`: duplication yok).
- *
- * ── GIDA DUVARI ŞEMADAN EKRANA TAŞINDI (kullanıcı kararı 09.08) ─────────────
- * 22.3'te alerjen ve saklama alanları payload'da YOKTU — "fiziksel engel", çünkü modelin
- * uydurduğu bir alerjen satırı insana zarar verebilir. Bu senaryoda o duvar işlevsiz: **ambalajın
- * fotoğrafını patron veriyor**, yani bilgi uydurma değil belgeden okuma (fatura senaryosunda aynı
- * karar zaten verilmişti — `AI_ADMIN_ASSISTANT §6` write-only nüansı). Yeni duvar kullanıcının
- * kendi cümlesiyle: *"en net duvarımız onay ekranımız."*
- *
- * Duvarın veri tarafındaki ayağı ise DEĞİŞMEDİ: `status` bu payload'ların hiçbirinde YOK. Asistan
- * beyanı doldurabilir ama ürünü satışa çıkaramaz — ürün aday doğar, yayın ayrı karardır. Yanlış
- * okunmuş bir alerjen en kötü hâlde bile vitrine düşmez.
+ * Belgeden ürün: patron ambalajın fotoğrafını verir, asistan okur ve kuyruğa dilekçe bırakır; iki tip (`product_create`,
+ * `product_draft`) ortak alanları bir kez tanımlanmış parçalardan alır. Alerjen ve saklama alanları açık, çünkü bilgi uydurma
+ * değil belgeden okumadır ve duvar onay ekranıdır; `status` hiçbirinde yok, ürün aday doğar ve yayın ayrı karardır.
  */
 const DeclarationGapEnum = z.enum(['lang', 'ingredients', 'nutrition', 'storage', 'allergens']);
 
 /**
- * Ambalajdan okunan beyan alanları — iki tipin de ortak gövdesi.
- *
- * **`ProductSchema`'dan TÜRETİLİR, yeniden yazılmaz** (denetim K2-1, 10.08): altı alanın tipi
- * ürünün kendi tanımıyla aynı kalmalı. Elle yazıldığı sürece `NutritionSchema` bir kalem eklerse
- * ya da `allergens` kümesi değişirse, dilekçe eski tipte kalır ve **onay ekranı asistanın yazdığını
- * ürünün kabul edeceğinden farklı doğrular** — hata vermeden.
- *
- * `pick` bilinçli: ürüne yarın eklenen bir alan buraya KENDİLİĞİNDEN girmez. Asistanın
- * dokunabileceği küme kapalı kalır (`AI_ADMIN_ASSISTANT §6`), açık olan yalnız tipler.
- * `partial()` ise dilekçenin doğası — belgeden okunamayan alan boş gelir.
- *
- * Alan künyeleri: **saklama koşulu** 22.3'te yasaktı, belgeden okuma olduğu için açıldı (yukarıdaki
- * künye). **Alerjen ve iz** serbest metin DEĞİL, kapalı küme — model cümle uyduramaz, listeden seçer.
+ * Ambalajdan okunan beyan alanları `ProductSchema`dan türetilir: elle yazılsaydı ürünün tipi değiştiğinde onay ekranı asistanın
+ * yazdığını ürünün kabul edeceğinden farklı doğrulardı. `pick` bilinçli (yarın eklenen alan buraya kendiliğinden girmez),
+ * `partial()` dilekçenin doğası; alerjen ve iz kapalı küme, model cümle uyduramaz.
  */
 const ProductDeclarationSchema = ProductSchema.pick({
   description: true,
@@ -353,15 +263,9 @@ const ProductDeclarationSchema = ProductSchema.pick({
 }).partial();
 
 /**
- * Onay ekranının iki karar girdisi — ikisi de ARAÇTA hesaplanır, ekranda değil.
- *
- * `uncertainFields`: modelin net okuyamadığı alan adları (bulanık, kesik, yansımalı satır).
- * Ekranın gözü buraya yönlendirmesi bütün alanları tek tek okutmaktan değerli — patron ürünü
- * zaten tanıyor, ona "şuraya bak" demek yeter. Boş dizi "hepsini net okudum" demektir.
- *
- * `remainingGaps`: **bu öneri uygulanırsa hangi beyanlar HÂLÂ eksik kalacak.** Ölçüt motordan
- * (`missingDeclarations`) gelir, araç kendi ölçütünü uydurmaz. Ekranın en önemli tek cümlesi
- * buradan çıkar: *"onaylarsan kayıt tam olur"* ya da *"onaylasan da besin künyesi eksik kalacak"*.
+ * Onay ekranının iki karar girdisi, ikisi de araçta hesaplanır: `uncertainFields` modelin net okuyamadığı alanlardır ve ekranın
+ * gözü oraya yönlendirmesi her alanı okutmaktan değerlidir (boş dizi "hepsini net okudum"). `remainingGaps` öneri uygulanırsa
+ * hâlâ eksik kalacak beyanlardır, ölçüt motordan (`missingDeclarations`) gelir.
  */
 const ProductReviewSignalsSchema = z.object({
   uncertainFields: z.array(z.string()).default([]),
@@ -379,25 +283,14 @@ export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(Product
   shelfLifeDays: z.number().int().positive().nullable(),
   vatRate: z.number().positive(),
   /**
-   * Kargoyla gönderilebilir mi (11.08 · alan denkliği taraması).
-   *
-   * Ürün formunun kutusu ve varsayılanı `true`. Ambalajdan OKUNABİLİR bir karar: "-18 °C'de
-   * saklayın" yazan bir ürün kargoya verilemez ve asistan saklama koşulunu zaten okuyor. Alan
-   * sorulmadığı için her ürün sessizce kargolanabilir doğuyordu — donmuş bir ürünün kargoya
-   * açılması, iadesi müşteride biten türden bir hatadır.
-   *
-   * `.default(null)` ve nullable: **bilinmiyor ile "hayır" ayrı şeyler** (`CLAUDE §1`). Model
-   * emin değilse boş bırakır, ürün kapının kendi varsayılanıyla doğar.
+   * Kargoyla gönderilebilir mi: ambalajdan okunabilir bir karar ("-18 °C'de saklayın" yazan ürün kargoya verilemez) ve
+   * sorulmadığında her ürün sessizce kargolanabilir doğardı. `null` "bilinmiyor" demektir ve "hayır"dan ayrıdır; ürün kapının
+   * kendi varsayılanıyla doğar.
    */
   shippable: z.boolean().nullable().default(null),
   /**
-   * En az BİR boy — varyantsız ürün satılamaz (fiyat ve stok varyanta bağlıdır). Fiyat BURADA YOK
-   * ve olmayacak: ayrı bir karar, ayrı bir ekran.
-   *
-   * `netWeightG` ve `piecesCount` 11.08'de eklendi: ikisi de ambalajın ÜSTÜNDE yazıyor ("500 g",
-   * "12 adet") ve varyant formunun kutusu. Etiket metni ("500 g") ile net ağırlık (500) ayrı
-   * alanlar — biri müşterinin okuduğu, öteki kilo başı fiyat ve kargo hesabının tabanı. Etiketi
-   * yazıp ağırlığı boş bırakmak, aynı bilgiyi yarım kaydetmek olurdu. Okunamıyorsa `null`.
+   * En az bir boy, çünkü fiyat ve stok varyanta bağlıdır; fiyat burada yok, ayrı karardır. Etiket metni ("500 g") ile net ağırlık
+   * (500) ayrı alanlar: biri müşterinin okuduğu, öteki kilo başı fiyatın ve kargo hesabının tabanı; okunamıyorsa `null`.
    */
   variants: z
     .array(
@@ -407,15 +300,8 @@ export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(Product
         piecesCount: z.number().int().positive().nullable().default(null),
         portionKind: PortionKindEnum.nullable().default(null),
         /**
-         * ── AMBALAJLI ÜRÜN ÖLÇÜSÜ (28.08) ───────────────────────────────────
-         * **Bu alanlar ambalajın ÜSTÜNDE YAZMAZ** ve künyenin en önemli cümlesi budur: net
-         * ağırlık etikette basılıdır, brüt ağırlık ve dış ölçü ise TARTILIP ÖLÇÜLÜR. Model
-         * fotoğraftan tahmin ederse üretilen sayı kargo tarifesine girer ve yanlış tarife
-         * faturada düzeltilir — sessiz değil, pahalı bir hata.
-         *
-         * Bu yüzden varsayılan `null` ve araç künyesi modele açıkça *"bilmiyorsan boş bırak,
-         * tahmin etme"* diyor. Alan yine de burada, çünkü operatör asistana ölçüyü SÖYLEYEBİLİR
-         * ("kutusu 30×20×15, brüt 1,2 kg") ya da tedarikçi künyesinde yazılı olabilir.
+         * Ambalajlı ürün ölçüsü ambalajın üstünde yazmaz, tartılıp ölçülür: model fotoğraftan tahmin ederse sayı kargo
+         * tarifesine girer. Bu yüzden varsayılan `null`; operatör ölçüyü söyleyebilir ya da tedarikçi künyesinde yazılı olabilir.
          */
         packedWeightG: z.number().int().positive().nullable().default(null),
         packedLengthMm: z.number().int().positive().nullable().default(null),
@@ -428,12 +314,8 @@ export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(Product
 export type ProductCreatePayload = z.infer<typeof ProductCreatePayloadSchema>;
 
 /**
- * Var olan ürünün tamamlanması — ambalajdan ya da elle. Alan kümesi 22.6'da **beş çok dilli
- * alana + beyan alanlarına** genişledi; gerekçe yukarıdaki ortak künyede.
- *
- * `ad` da yazılabilir hâle geldi (kullanıcı isteği: *"uzun adları kısaltmak için öneri"*) ve bu
- * SEO'yu kırmıyor: slug ürün yaratılırken bir kez üretiliyor, `updateDetails` ona hiç dokunmuyor —
- * yani ad değişse de URL sabit kalır (ölçüldü 09.08).
+ * Var olan ürünün tamamlanması, ambalajdan ya da elle. Ad da yazılabilir ve bu SEO'yu kırmaz, çünkü slug ürün yaratılırken bir
+ * kez üretilir ve `updateDetails` ona dokunmaz.
  */
 export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
   productId: z.string().uuid(),
@@ -447,41 +329,22 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
     { message: 'En az bir alan doldurulmalı' },
   ),
   /**
-   * ALANLARIN BUGÜNKÜ HÂLİ — çünkü uygulama ÜZERİNE YAZAR (22.5 · denetim taraması 09.08).
-   *
-   * `updateDetails` düz bir `update`tir ve sürüm tutmaz: dolu bir açıklama onaylandığı an
-   * kaybolur, geri getirilemez. Ekran "fark tablosu" vaat ediyordu ama karşılaştıracak eski
-   * değeri hiç almıyordu — yani yazan taraf "boş alanı dolduruyorum" diyordu, gerçekte bunu
-   * kimse doğrulamıyordu. Eski değer payload'da: patron neyi kaybedeceğini GÖREREK onaylar.
-   *
-   * Alanın `null` gelmesi "boştu" demektir (ezilen bir şey yok); `currentFields`in hiç gelmemesi
-   * "eski hâl okunamadı" demektir ve ekran o zaman varsaymaz — ikisi ayrı şeydir.
+   * Alanların bugünkü hâli, çünkü uygulama üzerine yazar ve sürüm tutmaz: patron neyi kaybedeceğini görerek onaylar. Alanın `null`
+   * gelmesi "boştu", `currentFields`in hiç gelmemesi "eski hâl okunamadı" demektir ve ekran o zaman varsaymaz.
    */
   currentFields: ProductDeclarationSchema.extend({ name: LocalizedTextSchema.nullable().optional() }).optional(),
 });
 
 /**
- * Kampanya / indirim tanımı.
- *
- * **Kupon her zaman sepet düzeyindedir** (`DOMAIN §5`) — kod alanı `scope`u `cart` dışına
- * taşıyamaz; kategori/koleksiyon kapsamı yalnız OTOMATİK indirimde anlamlı. Şema bu kuralı
- * taşımaz (kural motorda ve veride), ama araç önerdiği kombinasyonu kapıya sorar.
+ * Kampanya ya da indirim tanımı; kupon her zaman sepet düzeyindedir (`DOMAIN §5`), kategori ve koleksiyon kapsamı yalnız otomatik
+ * indirimde anlamlı. Şema bu kuralı taşımaz (kural motorda ve veride), araç önerdiği kombinasyonu kapıya sorar.
  */
 export const DiscountDraftPayloadSchema = z.object({
   name: z.string().min(1),
   /**
-   * MÜŞTERİYE görünen ad, dil başına — `name` operatörün listesi içindir, bu sepette ve mailde
-   * indirim satırının etiketidir ("İndirim — Hoş geldin indirimi").
-   *
-   * Alan 10.08'de EKLENDİ ve gerekçesi kullanıcının sorusudur: form kuyruğa gelince boş kutular
-   * görünür oldu ve *"bunlardan asistanın haberi var mıydı?"* diye soruldu. Yoktu — şemada bu alan
-   * hiç bulunmuyordu. Boş kalan bir kutu "asistan atladı" gibi okunur; oysa gerçek "asistana
-   * sorulmadı"ydı ve ikisi bambaşka şeyler.
-   *
-   * **ZORUNLU OLDU (26.08).** Alan burada vardı ama uygulayıcı onu DÜŞÜRÜYORDU (`applyDiscountDraft`)
-   * — yani asistan yolundan yazılan indirim etiketsiz doğardı. Kural artık veride
-   * (`discount_public_label_filled`); şema da onu istiyor ki eksik bir öneri UYGULAMA anında değil
-   * DOĞUŞ anında reddedilsin. Adsız bir kampanya önerisi zaten uygulanamaz bir öneridir.
+   * Müşteriye görünen ad, dil başına: `name` operatörün listesi içindir, bu ise sepette ve mailde indirim satırının etiketidir.
+   * Zorunlu, çünkü veride de zorunlu (`discount_public_label_filled`) ve eksik öneri uygulama anında değil doğuş anında
+   * reddedilmeli.
    */
   publicLabel: LocalizedTextSchema,
   trigger: z.enum(['coupon', 'automatic']),
@@ -499,10 +362,8 @@ export const DiscountDraftPayloadSchema = z.object({
   /** Yalnız İLK siparişte mi geçerli — müşteri kazanım kampanyalarının belirleyici koşulu. */
   firstOrderOnly: z.boolean().optional(),
   /**
-   * Kullanım tavanları. **Sınırsız bir kupon ticari bir risktir** ve asistanın bunu önerememesi,
-   * kararı sessizce "sınırsız"a bırakıyordu: alan yoksa varsayılan `null` yazılıyor, `null` da
-   * sınırsız demek. Bir kararın varsayılanı, o karar hiç sorulmadığında en tehlikeli hâline
-   * düşmemeli.
+   * Kullanım tavanları: sınırsız bir kupon ticari bir risktir ve alan olmasaydı karar sessizce "sınırsız"a düşerdi. Bir kararın
+   * varsayılanı, o karar hiç sorulmadığında en tehlikeli hâline düşmemeli.
    */
   maxUses: z.number().int().positive().nullable().optional(),
   perCustomerLimit: z.number().int().positive().nullable().optional(),
@@ -528,19 +389,9 @@ export const RecipeDraftPayloadSchema = z.object({
   /** "4 kişilik" gibi bir METİN — sayı değil (modelde `LocalizedText`). */
   serves: LocalizedTextSchema.nullable().optional(),
   /**
-   * ─── TARİF FORMUNUN GERİ KALAN ÜÇ KUTUSU (11.08 · alan denkliği taraması) ──
-   *
-   * `duration` (süre) · `meal` (öğün) · `pantry` (evinizden gerekenler) — üçü de `Recipe`
-   * varlığında var ve tarif formunda operatörün önüne kutu olarak çıkıyor. Dilekçede YOKTULAR:
-   * asistan tarifi kurarken bu üçünü hiç doldurmuyordu ve onay ekranında boş kutu olarak
-   * görünüyorlardı.
-   *
-   * **Boş kutu "asistan atladı" diye okunur; gerçek ise "asistana sorulmadı"ydı** — ikisi bambaşka
-   * şeyler ve fark yalnız bu şema düzeltilerek kapanır (`publicLabel` ile aynı gerekçe, 10.08).
-   *
-   * `pantry` özellikle asistanın işi: tarifin bizden satın alınmayan malzemesi (tuz, su, zeytinyağı)
-   * satılabilir bir satır DEĞİLDİR (`recipe.pantry` künyesi) ama tarifin yapılabilmesi için
-   * söylenmesi gerekir. Modelin tarifi yazarken zaten bildiği bir şeydi, sorulmadığı için kayboluyordu.
+   * Tarif formunun kalan üç kutusu (`duration`, `meal`, `pantry`): dilekçede olmasalar onay ekranında boş kutu kalırdı ve boş kutu
+   * "asistan atladı" diye okunur. `pantry` tarifin bizden satın alınmayan malzemesidir (tuz, su), satılabilir satır değil ama
+   * söylenmesi gerekir.
    */
   duration: LocalizedTextSchema.nullable().optional(),
   meal: LocalizedTextSchema.nullable().optional(),
@@ -557,16 +408,9 @@ export const RecipeDraftPayloadSchema = z.object({
 });
 
 /**
- * Parti teklifi — SKT'si yaklaşan partiye indirimli satış fiyatı (`stock.offer_price`).
- *
- * **Payload PARTİYE bağlıdır, ürüne değil** ve bu ayrım kurgunun kendisidir: aynı ürünün taze
- * partisi tam fiyatta kalır, yalnız tarihi yaklaşan parti ucuzlar. İndirim tablosuna ürün kapsamı
- * eklemek (harici denetimin önerisiydi) bunu YAPAMAZDI — indirim ürünün tamamını kapsar ve taze
- * malı da ucuzlatırdı.
- *
- * `listPriceCents` künye olarak taşınır: onay ekranı "3,20 € → 2,24 € (%30)" diyebilsin diye.
- * Uygulama anında fiyat değişmişse motor değil ekran yanılmış olur — o yüzden karar anında da
- * gösterilir, saklanmaz.
+ * Parti teklifi, SKT'si yaklaşan partiye indirimli fiyat: payload ürüne değil partiye bağlıdır, çünkü taze parti tam fiyatta
+ * kalmalı ve ürün kapsamlı bir indirim taze malı da ucuzlatırdı. `listPriceCents` onay ekranı "3,20 € → 2,24 € (%30)" diyebilsin
+ * diye taşınır, saklanmaz.
  */
 export const BatchOfferPayloadSchema = z.object({
   batchId: z.string().uuid(),
@@ -583,14 +427,9 @@ export const BatchOfferPayloadSchema = z.object({
 export type BatchOfferPayload = z.infer<typeof BatchOfferPayloadSchema>;
 
 /**
- * **Belge** — faturadan borç (22.44 · kullanıcı kararı 14.09). MAL DIŞI fatura (kira, muhasebe,
- * sigorta, telefon) içindir: asistan faturayı okur, araç kimlikleri NOKTA ATIŞI çözer — tedarikçi
- * vergi no · telefon · tam adla, cari tam adla ya da eşleşme kelimesiyle (`pinpoint*`) — tür sözlükten.
- * Mal faturası buradan değil: mal kabul ya da faturalı sipariş önerisinin içinde, alımına BAĞLI doğar
- * (borç o belgeden türer). **Dosya MCP'den geçmez** (araçların girdisi yalnız metin): onay formunda bırakılır.
- *
- * `counterpartyId` araç adı çözebildiyse dolu; çözemediyse `null` ve ad `counterpartyName`de durur —
- * seçimi operatör yapar (para hareketi önerisinin aynı sözleşmesi, 22.42).
+ * Belge: mal dışı faturadan borç (kira, muhasebe, sigorta, telefon); araç tedarikçiyi ve cariyi nokta atışı çözer, tür sözlükten
+ * gelir, mal faturası ise alımına bağlı doğar. Dosya MCP'den geçmez, onay formunda bırakılır; `counterpartyId` çözülemediyse
+ * `null` ve seçimi operatör yapar.
  */
 export const MoneyDocumentPayloadSchema = z.object({
   kind: DocumentKindEnum,
@@ -610,9 +449,8 @@ export const MoneyDocumentPayloadSchema = z.object({
 });
 
 /**
- * **Tedarikçi** — faturanın başlığından yeni kart (22.44). Vergi no, telefon, e-posta, adres, ülke ve
- * vade faturada yazılı; asistan okur, araç kayıtlı bir tedarikçiye nokta atışı gitmediğini doğrular
- * (aynı vergi no · telefon · tam adla ikinci kart açılmaz; kapı onayda bir kez daha sorar).
+ * Tedarikçi: faturanın başlığından yeni kart; araç kayıtlı bir tedarikçiye nokta atışı gitmediğini doğrular, çünkü aynı vergi
+ * no, telefon ya da tam adla ikinci kart açılmamalı. Kapı onayda bir kez daha sorar.
  */
 export const SupplierCreatePayloadSchema = z.object({
   name: z.string().min(1),
@@ -628,9 +466,8 @@ export type MoneyDocumentPayload = z.infer<typeof MoneyDocumentPayloadSchema>;
 export type SupplierCreatePayload = z.infer<typeof SupplierCreatePayloadSchema>;
 
 /**
- * Kind → payload şeması. Şeması olmayan tip öneri ÜRETEMEZ: MCP araçları, panel ve uygulayan kapı bu
- * sözlükten okur (yukarıdaki gerekçe). Kuyruğun içinde karar alan tiplerde (`inline`) yazan kapı
- * varlığın kendi eylemidir, uygulayıcı değil — şema yine burada, çünkü dilekçenin şekli tek yerde.
+ * Kind → payload şeması; şeması olmayan tip öneri üretemez, çünkü araçlar, panel ve uygulayan kapı bu sözlükten okur. Kuyruk
+ * içinde karar alan tiplerde (`inline`) yazan kapı varlığın kendi eylemidir, şema yine burada, çünkü dilekçenin şekli tek yerde.
  */
 export const PROPOSAL_PAYLOAD_SCHEMAS = {
   featured_flag: FeaturedFlagPayloadSchema,

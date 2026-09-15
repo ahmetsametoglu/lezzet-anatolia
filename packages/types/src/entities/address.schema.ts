@@ -2,28 +2,20 @@ import { z } from 'zod';
 import { AddressGeoPrecisionEnum, AddressGeoSourceEnum, CountryEnum } from '../primitives/enums.schema';
 import { dbNumericNullable } from '../primitives/db-numeric';
 
-// Address — müşteri adresi. `customerId` = "müşteri rolüyle davranan profil" (`user_profiles.id`);
-// ayrı bir müşteri tablosu yoktur (bkz. user-profile.schema).
-//
-// `inRoute` SAKLANMAZ: posta kodunun aktif bir DeliveryZone'a düşmesinden türetilir (modül 07).
+// Müşteri adresi; `customerId` müşteri rolüyle davranan profildir (`user_profiles.id`), ayrı müşteri tablosu yoktur. `inRoute`
+// saklanmaz, posta kodunun aktif bir bölgeye düşmesinden türetilir.
 
 export const AddressSchema = z.object({
   id: z.string().uuid(),
   customerId: z.string().uuid(),
   /**
-   * Müşterinin kendi verdiği ad ("Ev", "İş"). Checkout adres kartının başlığı budur — iki adres
-   * arasında seçim yapan müşteri sokak adını okuyarak değil, adıyla ayırt eder. Boşsa ekran şehri
-   * başlık yapar; uydurma bir etiket yazılmaz.
+   * Müşterinin verdiği ad ("Ev", "İş") ve adres kartının başlığı, çünkü müşteri iki adresi sokak adıyla değil adıyla ayırt eder.
+   * Boşsa ekran şehri başlık yapar.
    */
   label: z.string().nullable(),
   /**
-   * Adrese GİDEN kişi — hesap sahibiyle aynı olmak zorunda değil (hediye, iş adresi, aile büyüğü).
-   * Kurye kapıda kimi soracağını buradan bilir.
-   *
-   * ZORUNLU (kullanıcı kararı 22.08, kolon `not null`): adres kaydının kendisi *"burada kim teslim
-   * alır"* sorusunun cevabıdır. Nullable kaldığı sürece cevap OKUMA anına erteleniyordu ve okuyan
-   * her uç kendi yedeğini uyduruyordu — ölçüldü, iki yüzey aynı veride zıt karar verdi. Kolaylık
-   * formda: yeni adres hesabın künyesiyle dolu açılır, müşteri ister değiştirir.
+   * Adrese giden kişi; hesap sahibi olmak zorunda değil (hediye, iş adresi) ve kurye kapıda kimi soracağını buradan bilir. Zorunlu,
+   * çünkü boş bırakılırsa okuyan her uç kendi yedeğini uydurur ve yüzeyler ayrışır; yeni adres hesabın künyesiyle dolu açılır.
    */
   recipient: z.string(),
   line1: z.string(),
@@ -31,36 +23,24 @@ export const AddressSchema = z.object({
   postalCode: z.string(),
   city: z.string(),
   /**
-   * Teslimat telefonu — ADRESE aittir, hesaba değil (`UserProfile.phone` hesabın numarasıdır).
-   * Kapıya teslimde kurye önce arar; hediye adresinde aranacak numara alıcınınkidir.
-   *
-   * ZORUNLU (kullanıcı kararı 22.08, kolon `not null`) — gerekçesi `recipient` ile aynı. Biçim
-   * E.164 ve istemcide indirgeniyor (`normalizePhone`); şema BİÇİM dayatmaz, varlığını zorlar.
+   * Teslimat telefonu adrese aittir, hesaba değil: hediye adresinde aranacak numara alıcınınkidir. Zorunlu (gerekçesi `recipient`
+   * ile aynı); biçim istemcide E.164'e indirgenir, şema yalnız varlığını zorlar.
    */
   phone: z.string(),
   country: CountryEnum,
   /** Checkout'un önceden seçtiği adres — tekildir (yenisi seçilince eskisi düşer). */
   isDefault: z.boolean(),
   /**
-   * **FATURA ADRESİ** — işletmenin künye adresi; faturaya çıkan, siparişten siparişe değişmeyen
-   * adres (kullanıcı kararı 08.09). Tekildir, `is_default` gibi kısmi indeksle zorlanıyor.
-   *
-   * `isDefault` ile AYRI iki rol ve ikisi aynı satırda olabilir: *"malı nereye götürelim"* ile
-   * *"fatura nereye kesilecek"* çoğu küçük işletmede aynı yeri gösterir. Bu yüzden tek bir tür
-   * kolonu (`kind`) seçilmedi — o, aynı adresi iki satıra bölerdi.
-   *
-   * Teslimat seçimini KISITLAMAZ: checkout tüm adresleri listelemeye devam eder. Fatura adresini
-   * seçenekten çıkarmak, en yaygın hâli (iş yeri = teslimat yeri) bozardı.
+   * Fatura adresi: faturaya çıkan, siparişten siparişe değişmeyen işletme adresi; tekildir, kısmi indeksle zorlanır. `isDefault` ile
+   * ayrı iki rol olduğu için ikisi aynı satırda olabilir ve teslimat seçimini kısıtlamaz, çünkü çoğu küçük işletmede iş yeri teslimat
+   * yeridir.
    */
   isBilling: z.boolean(),
   createdAt: z.string(),
 
   /**
-   * Adresin coğrafi noktası (11.9) — rota sıralamasının girdisi.
-   *
-   * `null` = **ölçülemedi**, sıfır değil (`CLAUDE §1`): koordinatsız durak sıralamadan düşmez,
-   * "sırasız" olarak görünür. (0, 0) Gine Körfezi'dir ve kuryeyi oraya dizmek sessiz bir arızadır.
-   * İkisi birlikte var ya da birlikte yok — kolon kısıtı bunu zorluyor (`address_geo_point`).
+   * Adresin coğrafi noktası, rota sıralamasının girdisi; `null` ölçülemedi demektir, sıfır değil, çünkü (0, 0) Gine Körfezi'dir.
+   * İkisi birlikte var ya da birlikte yok (`address_geo_point` kısıtı).
    */
   lat: dbNumericNullable,
   lng: dbNumericNullable,
@@ -72,31 +52,22 @@ export const AddressSchema = z.object({
   /** Son DENEME anı (başarısız da olsa) — taramanın freni; `geoAt` ile ayrı sorulardır. */
   geoCheckedAt: z.string().nullable(),
   /**
-   * Servisin kaç kez "eşleşme yok" dediği. Yalnız CEVAPLI ret sayılır: geçici arıza sayacı
-   * tüketmez, yoksa servisin düştüğü bir öğleden sonra yüzlerce adres kalıcı "çözülemez" damgası
-   * yerdi. Sayacın kendisi durumdur — ayrı bir `geoStatus` alanına gerek yok.
+   * Servisin kaç kez "eşleşme yok" dediği; yalnız cevaplı ret sayılır, yoksa servisin düştüğü bir öğleden sonra yüzlerce adres
+   * kalıcı "çözülemez" damgası yerdi. Sayacın kendisi durumdur, ayrı bir `geoStatus` gerekmez.
    */
   geoAttempts: z.number().int(),
   /**
-   * **"Bunu mu demek istediniz"** (11.11) — servisin bulduğu DAHA İYİ cevabın tam etiketi. Kapı
-   * istenen posta kodunda yok ama BAŞKA bir kodda varsa dolu; dolu olması "yanlış kodda" demek.
-   *
-   * Metin SERVİSİN etiketidir, bizim birleştirmemiz değil: kendi cümlemizi kursaydık servisin
-   * bildiği yazımdan (aksan, kısaltma) sapardık ve müşteriye tanımadığı bir adres gösterirdik.
-   *
-   * **Aynı zamanda "uyarıldı ama düzeltmedi" kaydıdır:** teklif kabul edilirse adres değişir, nokta
-   * düşer, yeniden çözülür ve etiket temizlenir; reddedilirse etiket kalır. Ayrı bir alan gerekmiyor.
+   * "Bunu mu demek istediniz": kapı istenen kodda yok ama başka bir kodda varsa servisin kendi etiketi, çünkü bizim kuracağımız
+   * cümle servisin yazımından sapardı. Aynı zamanda "uyarıldı ama düzeltmedi" kaydıdır: teklif kabul edilirse adres değişir ve
+   * etiket temizlenir, reddedilirse kalır.
    */
   geoAltLabel: z.string().nullable(),
 });
 export type Address = z.infer<typeof AddressSchema>;
 
 /**
- * Yazılabilir koordinat künyesi — beş alan tek parça hâlinde taşınır.
- *
- * Tek tek yazılmıyor çünkü **bölünemezler**: nokta olmadan kademe yazmak `address_geo_meta`
- * kısıtını ihlal eder, kademe olmadan nokta yazmak ölçümün inceliğini kaybeder. Tek tip, tek kapı
- * (`resolveAddressPoint`) — her yazma yolunun kendi kuralını yazmasının önü böyle kapanıyor.
+ * Yazılabilir koordinat künyesi: beş alan tek parça taşınır, çünkü bölünemezler (nokta olmadan kademe yazmak `address_geo_meta`
+ * kısıtını ihlal eder). Tek kapı `resolveAddressPoint`; her yazma yolunun kendi kuralını yazmasının önü böyle kapanır.
  */
 export const AddressGeoWriteSchema = z.object({
   lat: z.number().nullable(),
@@ -114,7 +85,7 @@ export type AddressGeoWrite = z.infer<typeof AddressGeoWriteSchema>;
 export const AddressInsertSchema = z.object({
   customerId: z.string().uuid(),
   label: z.string().nullish(),
-  /** Kolon `not null` — yazan hiçbir yol (form, besleme, içe aktarma) bunu atlayamaz (22.08). */
+  /** Kolon `not null`: yazan hiçbir yol (form, besleme, içe aktarma) bunu atlayamaz. */
   recipient: z.string().min(1),
   line1: z.string().min(1),
   line2: z.string().nullish(),

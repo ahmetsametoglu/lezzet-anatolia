@@ -1,11 +1,8 @@
 import { z } from 'zod';
 import { CountryEnum } from '../primitives/enums.schema';
 
-// DeliveryZone — rota bölgesi (DOMAIN §6/§17, ADR-002). Haftalık günler + bağlı depo;
-// ikisi de admin-editable, kod sabiti değil.
-//
-// **Rota içi/dışı SAKLANMAZ, türetilir:** adresin posta kodu aktif bir bölgeye düşüyorsa rota içi.
-// Saklansaydı bölge sınırı değişince ertesi gün yalan olurdu.
+// Rota bölgesi: haftalık günler ve bağlı depo, ikisi de yönetimden düzenlenir. Rota içi/dışı saklanmaz, türetilir: saklansaydı
+// bölge sınırı değişince ertesi gün yanlış olurdu.
 
 export const DeliveryZoneSchema = z.object({
   id: z.string().uuid(),
@@ -33,16 +30,10 @@ export type DeliveryZoneInsert = z.infer<typeof DeliveryZoneInsertSchema>;
 export const DeliveryZoneUpdateSchema = DeliveryZoneSchema.partial().required({ id: true });
 export type DeliveryZoneUpdate = z.infer<typeof DeliveryZoneUpdateSchema>;
 
-// ── Posta kodu ↔ bölge (tekillik VERİDE) ────────────────────────────────────
-// Kod kümesi `postalCodes` dizisiydi ve iki bölgeye aynı kodu yazmak serbestti; çözücü "ilki
-// kazanır" diyerek sessizce birini seçiyordu. Tek depoda bu yalnız yanlış rota günü demekti,
-// çok depoda **siparişin yanlış depoya düşmesi** demek. Küme kendi tablosuna taşındı.
-//
-// Anahtar `(country, postalCode)`: posta kodu ülkeler arası benzersiz DEĞİLDİR — `67000` hem
-// Fransa'da hem Almanya'da geçerli. Yer çözümü daima bu ikilidir.
-//
-// Ülke BÖLGEDE değil burada durur: bir bölge sınır ötesi olabilir (ADR-002 — Strasbourg rotası
-// Kehl'i kapsayabilir), bölgeye tek ülke yazmak onu bir devlete hapsederdi.
+// ── Posta kodu ↔ bölge ─────────────────────────────────────────────────────────
+// Küme kendi tablosunda ve anahtarı `(country, postalCode)`, çünkü iki bölgeye aynı kod yazılabilseydi çok depoda sipariş yanlış
+// depoya düşerdi ve posta kodu ülkeler arası benzersiz değildir (`67000` hem Fransa'da hem Almanya'da var). Ülke bölgede değil
+// burada durur: bölge sınır ötesi olabilir (Strasbourg rotası Kehl'i kapsayabilir).
 
 export const DeliveryZonePostalCodeSchema = z.object({
   country: CountryEnum,
