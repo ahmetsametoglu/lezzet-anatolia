@@ -41,6 +41,8 @@ export const SocialConversationRowSchema = ConversationInboxRowSchema.pick({
   aiDraftReply: true,
   windowExpiresAt: true,
   lastMessageAt: true,
+  /** Müşteriden gelen SON mesajın anı — yeni mesaj sesinin ölçütü (15.35 · web 15.34 ile aynı karar, `hasNewInbound`). */
+  lastInboundAt: true,
   messageCount: true,
   awaitingReply: true,
   lastMessageText: true,

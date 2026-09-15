@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { BELL_EVENT, type ConversationHandler, type ConversationSource } from '@lezzet/types';
+import type { ConversationHandler, ConversationSource } from '@lezzet/types';
 
-import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 import type { ApiFail } from '@lezzet/mobile-kit/src/lib/api/client';
 import { fetchSocialInbox, type SocialRow } from '@/lib/api/social';
+import { useBellChannel } from '@/lib/realtime/use-bell-channel.hook';
 
 /*
   SOSYAL KUYRUK VERİSİ — talep listesi hook'unun (`use-tickets.hook.ts`) sayfalama deseni birebir:
@@ -144,18 +144,9 @@ export function useSocialInbox(): UseSocialInboxResult {
     `refresh` iskelet çizmez (`silent`), çünkü operatör listeye BAKIYOR olabilir: gelen bir mesaj
     yüzünden ekranı boşaltıp yeniden çizmek, okunan satırı parmağın altından çekmek olurdu.
   */
-  useEffect(() => {
-    if (bellChannel === null) return;
-
-    const supabase = getSupabase();
-    const subscription = supabase
-      .channel(bellChannel)
-      .on('broadcast', { event: BELL_EVENT }, () => refresh())
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(subscription);
-    };
-  }, [bellChannel, refresh]);
+  // Abonelik ORTAK kayıttan (15.35): aynı kanalı kökteki yeni mesaj sesi de dinliyor; kendi aboneliği
+  // ekrandan çıkarken kanalı sesin elinden de alırdı (`use-bell-channel.hook` künyesi).
+  useBellChannel(bellChannel, refresh);
 
   const retry = useCallback(() => {
     void load({ silent: false, refresh: false });

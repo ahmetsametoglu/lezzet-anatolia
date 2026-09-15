@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { MessageChime } from '@/components/operations/message-chime';
 import { NoRoleNotice } from '@/components/operations/no-role-notice';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
@@ -112,6 +113,8 @@ export default function OperationsLayout() {
         resolvedWarehouseId: access.resolvedWarehouseId,
       }}
     >
+      {/* YENİ MESAJ SESİ (15.35) — kökte, çünkü ses ekrandan bağımsız: operatör hangi ekrandaysa orada duyar. */}
+      <MessageChime />
       {/* KAYDIRMA DURUMU KABUĞUN TAMAMINI SARAR (Komponent Envanteri M1): yapışkan mikro başlık
           ve sekme çubuğu gizlemesi aynı karardan beslenir. Sağlayıcı burada, çünkü tüketenler iki
           ayrı ağaçta duruyor — şerit ekranın içinde, çubuk bölüm kabuğunda. */}

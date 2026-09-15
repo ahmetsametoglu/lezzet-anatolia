@@ -82,6 +82,7 @@ function detay(over: Record<string, unknown> = {}, mesajlar: unknown[] = []) {
       aiDraftReply: null,
       windowExpiresAt: new Date(Date.now() + 20 * 3_600_000).toISOString(),
       lastMessageAt: new Date().toISOString(),
+      lastInboundAt: new Date().toISOString(),
       messageCount: mesajlar.length,
       awaitingReply: true,
       lastMessageText: 'Merhaba',

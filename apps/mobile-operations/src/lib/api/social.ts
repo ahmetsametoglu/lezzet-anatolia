@@ -51,6 +51,8 @@ export function fetchSocialInbox(params: {
   source?: ConversationSource;
   /** Yürütücü süzgeci (21.289) — insan · hibrit · yapay zekâ; verilmezse hepsi. */
   handledBy?: ConversationHandler;
+  /** Sayfa boyu — verilmezse sunucunun varsayılanı. Yeni mesaj sesi yalnız ilk satırı ister (15.35). */
+  limit?: number;
 }): Promise<ApiResult<z.infer<typeof SocialInboxResponseSchema>>> {
   return authorizedFetch(
     `/api/v1/social/conversations${queryString({
@@ -58,6 +60,7 @@ export function fetchSocialInbox(params: {
       filter: params.filter,
       source: params.source,
       handledBy: params.handledBy,
+      limit: params.limit?.toString(),
     })}`,
     SocialInboxResponseSchema,
   );

@@ -79,6 +79,7 @@ function satir(id: string, over: Record<string, unknown> = {}) {
     aiDraftReply: null,
     windowExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
     lastMessageAt: new Date().toISOString(),
+    lastInboundAt: new Date().toISOString(),
     messageCount: 2,
     awaitingReply: true,
     lastMessageText: 'Fıstıklı baklava var mı?',
