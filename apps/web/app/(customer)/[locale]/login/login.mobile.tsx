@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { brand } from '@lezzet/brand';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import loginMessages from '@lezzet/i18n/customer/login';
@@ -16,25 +16,8 @@ import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-
 import type { LoginViewProps } from './login-types';
 
 /*
-  HIZLI DOĞRULAMA — telefon görünümü (15.09): kaynak `design/01-musteri/Musteri Mobil.dc.html`'in "Hızlı Doğrulama"
-  karesi (uygulama ile web telefon görünümünün ortak tasarımı; kullanıcının paylaştığı görüntü). Native müşteri
-  girişiyle aynı ekran: ‹ · ortada büyük işaret logosu · başlık · sabit cümle · üç yol (Google · WhatsApp · E-posta) ·
-  gizlilik cümlesi. E-posta yolunda alan ve "Tek kullanımlık kod gönder", sonra tek kod alanı; altı hane girilince kendiliğinden
-  doğrulanır.
-
-  Metin ortak sözlükten (`@lezzet/i18n/customer/login` — native aynı dosyayı okur); hata cümleleri web'in auth kapısından
-  (`login-client`). Seçim ile e-posta ayrımı YALNIZ bu görünümde: masaüstü e-postayı ilk ekranda açar; kod gönderme,
-  doğrulama ve başarıdaki yönlendirme ikisinde de `login-client`in.
-
-  ── TASARIMDAN SAPMALAR ─────────────────────────────────────────────────────
-  1. WhatsApp düğmesi bilgi verir: WhatsApp ile giriş kurulu değil (arka uç yalnız e-postaya kod gönderiyor); düğme
-     karedeki yerinde durur, basılınca "çok yakında" satırı çıkar (native aynı).
-  2. Karenin "Demo: herhangi 6 rakam girin" satırı yazılmadı — prototipin kendine notu.
-  3. ‹ adım adım geri döner — kod → e-posta → seçim, seçimde girişi kapatır; karenin `lg.cancel`i her adımda
-     kapatıyordu (kullanıcı bulgusu 15.09: "e-posta adımına geçtikten sonra kullanıcı geri gelemiyor"; native aynı).
-  4. Logo karenin 42'lik yatay logosu değil, metinsiz işaret (`logo-isaret.png`): görünür yüksekliğin %20'si, en çok
-     180; logo ile blok birlikte dikeyde ortada — kullanıcı kararı 15.09: "aşağıda boş bir alan var, burayı verimli
-     kullanamıyoruz" (native aynı).
+  Native müşteri girişiyle aynı ekran ve aynı ortak sözlük. Seçim adımı yalnız telefon görünümünde (masaüstü e-postayı
+  ilk ekranda açar); kod gönderme, doğrulama ve yönlendirme `login-client`te.
 */
 
 type Copy = LocalizedCopy<typeof loginMessages>;
@@ -47,34 +30,52 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
   const [step, setStep] = useState<Step>('choose');
   /** Seçim aşamasının bilgi satırı (WhatsApp "yakında"). */
   const [notice, setNotice] = useState<string | null>(null);
-  /**
-   * ‹'in adımı (sapma 3): kod → e-posta `login-client`in `onBack`i (yazılan adres formda kalır), e-posta → seçim burada;
-   * seçimde adım yok, düğme geçmişe döner. Tarayıcının kendi geri hareketi adım bilmez, sayfadan çıkar.
-   */
-  const stepBack = stage.kind === 'code' ? onBack : step === 'email' ? () => setStep('choose') : undefined;
+  /** Adım derinliği (seçim 0, e-posta 1, kod 2) — geçmişteki adım kayıtlarıyla eşleşir. */
+  const depth = stage.kind === 'code' ? 2 : step === 'email' ? 1 : 0;
+  /** Bu ekranın geçmişe eklediği adım kaydı sayısı. */
+  const pushedSteps = useRef(0);
+
+  /*
+    Android'in geri tuşu ve iOS Safari'nin kaydırması tarayıcı geçmişine gider: ileri her adım aynı adresle bir kayıt
+    ekler, geri hareketi (‹ dahil) onu çıkarıp adımı geri alır. Next'in `pushState` yaması kendi durumunu kayda
+    kopyaladığı için sayfa yenilenmez.
+  */
+  useEffect(() => {
+    while (pushedSteps.current < depth) {
+      pushedSteps.current += 1;
+      window.history.pushState({ loginStep: pushedSteps.current }, '');
+    }
+  }, [depth]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (pushedSteps.current === 0) return;
+      pushedSteps.current -= 1;
+      // Kod → e-posta `login-client`te: yazılan adres formda kalır.
+      if (stage.kind === 'code') onBack();
+      else setStep('choose');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [stage.kind, onBack]);
 
   return (
     <main
-      // Telefon yazı ölçeği: giriş çerçevesiz bir sayfa (başlığını kendisi kuruyor), özniteliği kendisi taşır — telefon
-      // çerçevesinin kökündekiyle aynı (`site-frame.mobile.tsx`).
+      // Giriş telefon çerçevesinin dışında; yazı ölçeğini kendisi taşır.
       data-type-scale="phone"
       className="flex min-h-dvh flex-col bg-sand-50 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink"
     >
       <div className="flex items-center px-3.5 pt-2">
-        <BackButton label={copy.back} fallback="/" onPress={stepBack} />
+        <BackButton label={copy.back} fallback="/" />
       </div>
 
       <div className="flex flex-1 flex-col justify-center gap-4 px-6.5 pt-5 pb-7.5">
-        {/* Metinsiz işaret logosu ortada: boyu görünür yüksekliğin %20'si, en çok 180 (native aynı kural); logo ile
-            altındaki blok birlikte dikeyde ortalanır — boşluk üstte ve altta eşit. Karenin yatay logosundan sapma (4). */}
+        {/* Boy görünür yüksekliğin %20'si, en çok 180: kısa ekranda yollar görünür kalsın. */}
         <img src="/logo-isaret.png" alt={brand.name} className="mb-4 h-[min(180px,20dvh)] self-center" />
         <h1 className="font-serif text-page-title-sm leading-tight text-ink">{copy.title}</h1>
         <p className="font-sans text-control leading-normal font-normal text-body">{copy.body}</p>
 
-        {/* Adımın alanı SABİT yükseklikte (kullanıcı bulgusu 15.09): blok ortalandığı için e-posta ve kod adımlarının
-            kısa alanı logoyu ve başlığı oynatıyordu. Seçimin üç yolu ve bilgi satırı kadar yer ayrılır — 215 = 6 üst
-            pay + 3 × 54 yol + 2 × 10 aralık + 6 + 21 bilgi satırı (telefon ölçeğinde `text-note` 14 × 1,5; native aynı
-            hesabı kendi token'ıyla yapar); hata satırı da bu alanın içinde. */}
+        {/* Seçimin üç yolu ve bilgi satırı kadar sabit yer (6 + 3 × 54 + 2 × 10 + 6 + 21): kısa adımlarda ortalanmış blok oynamasın. */}
         <div className="flex min-h-53.75 flex-col">
           {stage.kind === 'code' ? (
             <CodeStep email={stage.email} copy={copy} onVerify={onVerify} onResend={onResend} />
@@ -130,7 +131,6 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
           )}
         </div>
 
-        {/* Gizlilik bağlantısı CÜMLENİN İÇİNDE (karenin kendisi; native aynı). */}
         <p className="mt-2.5 font-sans text-micro leading-normal text-muted">
           {copy.legalPrefix}
           <Link href="/legal/privacy" className="cursor-pointer text-olive underline transition-colors hover:text-olive-dark">
@@ -152,7 +152,7 @@ interface ProviderButtonProps {
   onClick: () => void;
 }
 
-/** Karenin yol düğmesi — native girişin `providerButton`ı: 54 yükseklik, hap köşe, 20 yan dolgu, işaretle etiket arası 12. */
+/** Yol düğmesi; ölçüler native girişin `providerButton`ıyla aynı. */
 function ProviderButton({ label, mark, tone, onClick }: ProviderButtonProps) {
   return (
     <button
@@ -181,7 +181,7 @@ function CodeStep({ email, copy, onVerify, onResend }: CodeStepProps) {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<'input' | 'verifying' | 'done'>('input');
-  /** Sunucunun bekleme cezası (sn) — yalnız yeniden gönderme eyleminin etiketinde işler (native aynı kural). */
+  /** Sunucunun bekleme cezası (sn) — yalnız yeniden gönderme etiketinde sayar. */
   const [cooldownSec, setCooldownSec] = useState(0);
   const [resending, setResending] = useState(false);
 
@@ -201,7 +201,7 @@ function CodeStep({ email, copy, onVerify, onResend }: CodeStepProps) {
         setPhase('done');
         return;
       }
-      // Yanlış kod: alan temizlenir, cümle altında — native'in aynı akışı.
+      // Yanlış kod: alan temizlenir, cümle altında.
       setPhase('input');
       setCode('');
       setError(result.error);

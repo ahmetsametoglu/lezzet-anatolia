@@ -5,24 +5,19 @@ import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
 import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { LoginScreen } from './login-screen';
 
-/*
-  HIZLI DOĞRULAMA — GERÇEK akış telden (fetch mock'u): kod isteği + doğrulama istemci yolunu
-  (`lib/auth/otp` → zarf + şema) katederek koşar; başarıda oturum cihaza yazılır (supabase mock'u
-  bunu kanıtlar). Cihaz dili tr'ye sabit — assert edilen cümleler makine diline bağlı olmasın.
-*/
+/* Akış telden koşar (fetch sahtesi): kod isteği ve doğrulama istemci yolunu katederek, başarıda oturum cihaza yazılır.
+   Cihaz dili tr'ye sabit ki beklenen cümleler makine diline bağlı olmasın. */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
-/* `canGoBack` VARSAYILAN true: bu ekranın olağan girişi "üstüne itilmek"tir (sepet, hesap, keşif
-   duvarı). Yığın boşken ne olduğu ayrı bir testin konusu — cihazda ölçülmüş arıza oydu (12.08,
-   onboarding'in `replace` ile gelen yeni son adımı) ve çaresi `closeLogin`in kendisi. */
+/* `canGoBack` varsayılan true: ekranın olağan girişi başka bir ekranın üstüne itilmek. */
 const mockRouter = { back: jest.fn(), push: jest.fn(), replace: jest.fn(), canGoBack: jest.fn(() => true) };
-jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
+/* Ekran iOS'un kaydırma hareketini adımda kapatıyor (`gestureEnabled`). */
+const mockNavigation = { setOptions: jest.fn() };
+jest.mock('expo-router', () => ({ useRouter: () => mockRouter, useNavigation: () => mockNavigation }));
 
 const mockSetSession = jest.fn(async () => ({ error: null }));
-/* `getSession` de gerekli: doğrulama bitince ekran KÜNYEYİ okuyor (`fetchMe` → yetkili istek) ve
-   o yol oturum jetonunu buradan alıyor. Eksik bırakılırsa test gerçek akışı değil, mock'un
-   patlamasını ölçer. */
+/* `getSession` gerekli: doğrulama sonrası künye okuması jetonu buradan alıyor; eksikse test sahtenin patlamasını ölçer. */
 jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
@@ -44,7 +39,7 @@ jest.mock('@lezzet/mobile-kit/src/lib/auth/dev-login', () => ({
   devSignIn: (email: string) => mockDevSignIn(email),
 }));
 
-// Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı bırakmasın.
+// Toast deposu gerçek zamanlayıcı açıyor — sahte, koşu sonunda asılı tanıtıcı bırakmasın.
 const mockToast = jest.fn();
 jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
@@ -52,7 +47,7 @@ jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastInfo: (m: string) => mockToast(m),
 }));
 
-/** Üç yollu seçim aşamasından e-posta yoluna iner — akış testlerinin ortak girişi. */
+/** Seçimden e-posta adımına geçer — akış testlerinin ortak girişi. */
 async function toEmailStage() {
   await fireEvent.press(screen.getByTestId('login-email'));
 }
@@ -63,10 +58,7 @@ function reply(status: number, body: unknown): Response {
   return { status, headers: { get: () => null }, json: async () => body } as unknown as Response;
 }
 
-/**
- * `/me` cevabı — künye kapısının okuduğu gövde. Fixture ORTAK (`screens/operations/me-fixture`):
- * ikinci bir `Me` yazmak, sözleşme değişince yalnız birinin kırılması demekti.
- */
+/** `/me` cevabı; fixture ortak, ikinci bir `Me` yazılmaz. */
 function meReply(overrides: Partial<Me> = {}): Response {
   return reply(200, { data: meFixture(['customer'], overrides), error: null });
 }
@@ -149,8 +141,7 @@ describe('hızlı doğrulama', () => {
     expect(mockToast).toHaveBeenCalled();
   });
 
-  /* Kit girişi MÜŞTERİNİN (21.312): personelin dev düğmeleri operasyon uygulamasının kendi girişinde. Ret de
-     seçim aşamasında söylenir, ekran kapanmaz. */
+  /* Personelin dev düğmeleri operasyon uygulamasında; ret seçim adımında söylenir, ekran kapanmaz. */
   it('dev düğmeleri yalnız müşteri hesapları; düğmenin reddi seçim aşamasında söylenir', async () => {
     mockDevSignIn.mockResolvedValueOnce({ error: 'dev_session_failed' });
     await render(<LoginScreen />);
@@ -199,7 +190,7 @@ describe('hızlı doğrulama', () => {
     await fireEvent.press(screen.getByTestId('login-send'));
 
     await waitFor(() => expect(screen.getByTestId('login-send')).toHaveTextContent('Biraz bekleyin (42 sn)'));
-    // Donmuş bir "bekleyin" cümlesi ayrıca basılMAZ (kullanıcı bulgusu 08.08).
+    // Donmuş bir "bekleyin" cümlesi ayrıca basılmaz.
     expect(screen.queryByText(/Yeni kod için biraz bekleyin/)).toBeNull();
 
     // Kilitliyken basmak yeni istek atmaz.
@@ -227,7 +218,7 @@ describe('hızlı doğrulama', () => {
   it('doğru kod: oturum cihaza yazılır ve ekran kapanır', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
     fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
-    // Künyesi TAM müşteri: kapı açılmaz, ekran normal kapanır.
+    // Künyesi tam müşteri: ekran normal kapanır.
     fetchMock.mockResolvedValueOnce(meReply());
     await render(<LoginScreen />);
     await toEmailStage();
@@ -245,12 +236,7 @@ describe('hızlı doğrulama', () => {
     expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 
-  /* KÜNYE SORUSUNUN İLK ANI (kullanıcı kararı 10.08) — kapı artık uygulama AÇILIŞINDA değil,
-     kimliğin kurulduğu anda çalışıyor. Ölçüt ad + telefon; burada telefon boş. */
-  /* KÜNYE EKSİKKEN DE GİRİŞ NORMAL BİTER (kullanıcı kararı 15.08). Test tersini kilitliyordu:
-     telefonu olmayan müşteri `/profile-setup`e yollanıyordu. Karar değişti — ad ve telefon artık
-     ilk siparişte, gerekçesi ekranda yazılı olarak isteniyor; giriş kimliğin kurulduğu andır,
-     künyenin değil. İddia korunuyor ama TERSİNE çevrildi: yönlendirme OLMAMALI. */
+  /* Künye eksik olsa da giriş normal biter: ad ve telefon ilk siparişte istenir. */
   it('doğrulama bitti, künye eksik olsa da hiçbir yere yönlendirilmez — ekran kapanır', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { data: true, error: null }));
     fetchMock.mockResolvedValueOnce(reply(200, { data: SESSION, error: null }));
@@ -279,11 +265,11 @@ describe('hızlı doğrulama', () => {
 
     await fireEvent.changeText(screen.getByTestId('login-code-input'), '123');
 
-    expect(fetchMock).toHaveBeenCalledTimes(1); // yalnız kod İSTEĞİ; doğrulama çağrısı yok
+    expect(fetchMock).toHaveBeenCalledTimes(1); // yalnız kod isteği; doğrulama çağrısı yok
   });
 });
 
-describe('geri oku (kullanıcı kuralı 14.09 — alt ekransa var)', () => {
+describe('geri oku', () => {
   it('müşteri girişi vitrinin alt ekranıdır: geri oku çizilir ve ekranı kapatır', async () => {
     await render(<LoginScreen />);
 
@@ -292,7 +278,6 @@ describe('geri oku (kullanıcı kuralı 14.09 — alt ekransa var)', () => {
     expect(mockRouter.back).toHaveBeenCalled();
   });
 
-  /* ADIM ADIM GERİ (kullanıcı bulgusu 15.09): e-posta adımında ‹ girişi kapatıyordu, müşteri seçime dönemiyordu. */
   it('e-posta adımında ‹ seçime döner, ekranı kapatmaz', async () => {
     await render(<LoginScreen />);
     await toEmailStage();
@@ -336,5 +321,16 @@ describe('geri oku (kullanıcı kuralı 14.09 — alt ekransa var)', () => {
     });
     expect(handled).toBe(false);
     listen.mockRestore();
+  });
+
+  it("iOS'un kenardan kaydırma hareketi adımda kapalı, seçimde açık — hareket girişi e-posta adımından kapatamaz", async () => {
+    await render(<LoginScreen />);
+    expect(mockNavigation.setOptions).toHaveBeenLastCalledWith({ gestureEnabled: true });
+
+    await toEmailStage();
+    expect(mockNavigation.setOptions).toHaveBeenLastCalledWith({ gestureEnabled: false });
+
+    await fireEvent.press(screen.getByTestId('login-back'));
+    expect(mockNavigation.setOptions).toHaveBeenLastCalledWith({ gestureEnabled: true });
   });
 });

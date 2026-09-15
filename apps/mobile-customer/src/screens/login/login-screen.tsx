@@ -1,7 +1,7 @@
 import { brand } from '@lezzet/brand';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { OTP_CODE_LENGTH, type AuthErrorKey } from '@lezzet/types';
-import { useRouter, type Href } from 'expo-router';
+import { useNavigation, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { BackHandler, Image, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -29,60 +29,32 @@ import { CodeField } from './code-field';
 import messages from '@lezzet/i18n/customer/login';
 
 /*
-  HIZLI DOĞRULAMA (v3 `vLogin`, v3:757-796) — şifresiz giriş: üç yol (Google · WhatsApp · e-posta),
-  e-posta yolunda tek kullanımlık kod. GERÇEK AKIŞ (21.14c): kod isteği/doğrulaması telden
-  (`lib/auth/otp`), Google sistem tarayıcısı + şema dönüşüyle (`lib/auth/oauth` — PKCE); başarıda
-  oturum cihaza yazılır. Hata METNİ ekran sözlüğünden, TÜRÜ sözleşmeden (`AuthErrorKey`).
-  Müşteri uygulamasının girişidir: operasyon uygulaması kendi ekranını taşıyor (21.312 — kayıtlı olmayan
-  giremez, "hazır" ve "yetki yok" hâlleri). 15.09'da ortak çekirdekten (21.310) müşteri uygulamasına döndü
-  (kullanıcı kararı): kitte yalnız iki uygulamanın ortak uyarı tanımı (`login-notice.ts`) kaldı.
-
-  ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────
-  1. **WhatsApp düğmesi BİLGİ VERİR** (web `login-client` ile aynı karar): sağlayıcı kurulmadı
-     (modül 15); düğme tasarımdaki yerinde durur, basılınca "çok yakında" satırı çıkar — sahte
-     oturum kurulamaz, sessiz düğme de olamaz.
-  2. **"Demo: herhangi 6 rakam girin" satırı YAZILMADI** — prototipin kendine notu; üründe yer
-     tutucu bir yalan olurdu.
-  3. **Gömülü gizlilik bağlantısının dokunma hedefi satır yüksekliğidir** (v3 birebir, kullanıcı
-     kararı 08.08 — daha önce ayrı satıra alınmıştı): erişilebilirlik payı bilinçli feda edildi,
-     bağlantı ekranın en alt köşesinde ikincil bir yol.
+  WhatsApp sağlayıcısı kurulu değil: düğme yerinde durur ve "yakında" der, sahte oturum kurulmaz. Tasarımın "Demo"
+  satırı prototipin notu olduğu için yazılmadı.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Ekranın durumu — şablonun `lg.mNull` / `emailShown` / `sent` / `busy` bayraklarının adı konmuş hâli. */
 type LoginStage = 'choose' | 'email' | 'code' | 'verifying' | 'done';
 
-
-/**
- * Metinsiz işaret logosu (`assets/images/logo-isaret.png`, 615×540 saydam): `design/uploads/lezzet-anatolie-logo-no-text.png`
- * karesinin ortası kırpıldı, krem zemini saydama çevrildi — 3x ekranda en büyük boyda (180) bile keskin. Boy ekran
- * yüksekliğinin %20'si, en çok 180 (web telefon girişi aynı kural, görünür yükseklikle); genişlik orandan türer. Karenin
- * 42'lik yatay logosu yerine — kullanıcı kararı 15.09. Kitin `loginLogoHeight`ı (52) tanıtım ve profil kurulumunun eski
- * logosunda kalır.
- */
+/** Varlığın oranı (615×540). Boy ekran yüksekliğinin %20'si, en çok 180: kısa ekranda yollar görünür kalsın. */
 const LOGO_ASPECT = 615 / 540;
 const LOGO_MAX_HEIGHT = 180;
 const LOGO_SCREEN_SHARE = 0.2;
 const logoHeight = (screenHeight: number) => Math.min(LOGO_MAX_HEIGHT, screenHeight * LOGO_SCREEN_SHARE);
 
-/** Karenin yol düğmesi (Musteri Mobil.dc.html:870 — 54; kitin `controlLg`si 52). Web telefon girişi de 54. */
+/** Tasarımın yol düğmesi 54; kitin `controlLg`si 52 olduğu için ayrı sabit. */
 const PROVIDER_HEIGHT = 54;
 
-/** Kaba e-posta kontrolü: ekran KAPI DEĞİL, yalnız apaçık yanlışı erkenden söyler. */
+/** Kaba kontrol: yalnız apaçık yanlışı erkenden söyler, asıl doğrulama sunucuda. */
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface LoginScreenProps {
-  /** Doğrulama bitince çağrılır; varsayılanı geri dönmek (şablonun `finishLogin` davranışı). */
+  /** Doğrulama bitince çağrılır; verilmezse ekran kapanır. */
   onVerified?: () => void;
-  /**
-   * Açılışta söylenecek sebep — anahtar taşınır, metin taşınmaz. İki kaynağı var: OAuth dönüş
-   * rotasının adlı reddi (`/auth/callback` → `?notice=`; Google akışı bu ekranın DIŞINDA düşer ve
-   * cümlesi yine buradan kurulur) ve reddedilen oturum (21.304 — oturumu sunucu reddetti, ekranı
-   * kökteki kanca açar).
-   */
+  /** Açılışta söylenecek sebep (anahtar): OAuth dönüşünün reddi ya da sunucunun reddettiği oturum. */
   initialNotice?: LoginNotice;
-  /** Gizlilik metninin adresi (rota uygulamanın). Verilmezse cümle bağlantısız çizilir. */
+  /** Gizlilik metninin adresi; verilmezse cümle bağlantısız çizilir. */
   privacyHref?: Href;
 }
 
@@ -91,7 +63,7 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
   const t: Messages = messages[locale];
   const { theme } = useUnistyles();
   const router = useRouter();
-  /* Geliştirme düğmeleri yalnız müşteri hesapları (21.312): personelinkiler operasyon uygulamasının girişinde. */
+  /* Personelin geliştirme girişleri operasyon uygulamasında. */
   const devButtons = DEV_ACCOUNTS.filter((account) => !account.operations);
 
   const [stage, setStage] = useState<LoginStage>('choose');
@@ -99,7 +71,7 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
   const [emailError, setEmailError] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
-  /** Seçim aşamasının bilgi/hata satırı (WhatsApp "yakında", Google arızası, açılış sebebi). */
+  /** Seçim adımının bilgi ya da hata satırı. */
   const [notice, setNotice] = useState<string | null>(() => {
     if (initialNotice === undefined) return null;
     // Reddedilen oturumun cümlesi bu ekranın sözlüğünde; auth retleri ortak auth sözlüğünde.
@@ -116,31 +88,13 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
     return () => clearTimeout(timer);
   }, [cooldownSec]);
 
-  /**
-   * **Ekranı kapat — geri gidilecek yer YOKSA vitrine düş** (cihazda ölçüldü 12.08).
-   *
-   * ── ÖLÇÜLEN ARIZA ───────────────────────────────────────────────────────────
-   * Bu ekran kendini `router.back()` ile kapatıyordu ve bu, "birisi beni ÜSTÜNE itti" varsayımıdır.
-   * Onboarding'in yeni son adımı (12.08) giriş ekranına `replace` ile geliyor — yığında altında
-   * hiçbir şey yok. Sonuç cihazda görüldü: dev girişi başarılı oldu, ekran *"Doğrulandı — hoş
-   * geldiniz"* dedi ve ORADA ASILI KALDI; navigatör de `The action 'GO_BACK' was not handled by any
-   * navigator` uyarısını bastı. Aynı ölü kapı geri okundaki `‹` düğmesinde de vardı.
-   *
-   * ── NEDEN ÇARE BURADA, ONBOARDING'DE DEĞİL ──────────────────────────────────
-   * Onboarding'i `push`a çevirmek bu vakayı kapatırdı ama kuralı kapatmazdı: bir bildirimden ya da
-   * derin bağlantıdan doğrudan `/login`e düşen her yol aynı duvara çarpar. "Kendimi kapat" cümlesi,
-   * çağıranı olmadığında da bir anlam taşımalı — o anlam uygulamanın yaşadığı yerdir (vitrin).
-   */
+  /** Yığında geri gidilecek ekran yoksa (onboarding `replace` ile, derin bağlantı) vitrine döner; yoksa ekran asılı kalır. */
   const closeLogin = useCallback(() => {
     if (router.canGoBack()) router.back();
     else router.replace('/');
   }, [router]);
 
-  /**
-   * **Geri adım adım** (kullanıcı bulgusu 15.09 — e-posta adımında ‹ ve Android'in geri tuşu girişi kapatıyordu, müşteri
-   * seçime dönemiyordu): kod → e-posta (yazılan adres yerinde) → seçim; seçimde adım yok, ekran kapanır. Doğrulama
-   * sürerken ve bittiğinde de adım yok. Web telefon girişi aynı. `true` = adım atıldı.
-   */
+  /** Geri adım adım: kod → e-posta → seçim. `false`: adım yok, ekran kapanmalı. */
   const stepBack = useCallback(() => {
     if (stage === 'code') {
       setStage('email');
@@ -156,47 +110,42 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
     return false;
   }, [stage]);
 
-  /* ANDROID'İN GERİ TUŞU ‹ ile aynı yolu izler (kitin çekmecesiyle aynı API — `bottom-sheet.tsx`): adım yoksa `false`
-     döner ve gezgin ekranı kendisi kapatır. iOS'ta `BackHandler` sessiz. */
+  /* Android'in geri tuşu ‹ ile aynı yolu izler; adım yoksa gezgin ekranı kapatır. */
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', stepBack);
     return () => subscription.remove();
   }, [stepBack]);
 
+  /* iOS'un kenardan kaydırması BackHandler'a uğramadan yığını geri alır; adımda kapalı ki girişi kapatmasın. */
+  const navigation = useNavigation();
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: stage === 'choose' });
+  }, [navigation, stage]);
+
   useEffect(() => {
     if (stage !== 'done') return;
-    // v3'ün `finishLogin` toast'ı: kapanan ekranın ARKASINDA görünür (host kökte) — giriş
-    // başarısının tek görsel onayı; sekme zaten girişli hâle dönmüş oluyor.
+    // Toast kökte yaşar, kapanan ekranın arkasında görünür: girişin tek görsel onayı.
     toastSuccess(t.verifiedToast);
     if (onVerified !== undefined) {
-      // Ekranı gömen host kendi akışını sürdürür; künye sorusu da onun yüzeyinin işidir.
+      // Ekranı gömen yer kendi akışını sürdürür.
       onVerified();
       return;
     }
-    /* GİRİŞTE KÜNYE SORULMAZ (kullanıcı kararı 15.08) — buradan `/profile-setup`e bir yönlendirme
-       vardı ve kaldırıldı. Kullanıcının cümlesi: *"kullanıcı adresini ve adını vermek istemeyebilir,
-       giriş yaptığında. Bu da bizim için problem olmamalı."* Ad ve telefon artık ilk SİPARİŞTE,
-       gerekçesi ekranda yazılı olarak isteniyor (ödeme ekranının iletişim bölümü). Kimliğini yeni
-       kuran kişiyi bir forma sokmak, ona daha hiçbir şey vermeden bilgi istemekti.
-       Profil BURADA okunup yayınlanır (`auth-callback`in ölçülmüş yarışının aynısı): `useMe`
-       oturum olayını gecikmeli işliyor, dönülen ekran o aralıkta "misafir" sanabiliyor. */
+    /* Girişte künye sorulmaz, ad ve telefon ilk siparişte istenir. Profil burada okunup yayınlanır: `useMe` oturum
+       olayını geç işlediği için dönülen ekran kendini misafir sanabiliyor. */
     void fetchMe()
       .then((result) => {
         if (result.error !== null) return closeLogin();
         publishMe(result.data);
         closeLogin();
       })
-      /* SESSİZ CATCH DEĞİL, AÇIK ÇARE (CLAUDE §1): okuma beklenmedik biçimde patlarsa müşteri
-         doğrulanmış hâlde giriş ekranında ASILI kalırdı — künye sorusu yardımcı, giriş ise asıl
-         iştir. Okunamayan profil "künyesi eksik" demek de değildir; ekran normal kapanır. */
+      /* Okuma patlasa da ekran kapanır: doğrulanmış müşteri girişte asılı kalmasın. */
       .catch(() => closeLogin());
   }, [stage, onVerified, closeLogin, t.verifiedToast]);
 
   /**
-   * Bekleme cezası TEK kaynaktan söylenir: saniye sayacı yalnız DÜĞME etiketinde işler
-   * (kullanıcı bulgusu 08.08 — saniyeyi hata metnine gömmek donmuş bir "bekleyin" yazısını
-   * aktif düğmenin yanında bırakıyordu). Cezalı hâllerde hata satırı hiç açılmaz; kalanlarda
-   * cümle sözlükten okunur.
+   * Bekleme cezasının saniyesi yalnız düğme etiketinde sayar; cezalı hâlde ayrı hata satırı açılmaz, yoksa donmuş bir
+   * "bekleyin" yazısı kalırdı.
    */
   const applyError = (
     result: { error: AuthErrorKey; retryAfterSec: number | null },
@@ -211,7 +160,7 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
   const startDevSignIn = (email: string) => {
     setNotice(null);
     void devSignIn(email).then((result) => {
-      // Dev yolunda HAM mesaj basılır (sebep `dev-login.ts` künyesinde): teşhis için.
+      // Dev yolunda ham mesaj basılır: teşhis için.
       if (result.error !== null) {
         setNotice(result.error);
         return;
@@ -222,9 +171,8 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
 
   const startGoogle = () => {
     setNotice(null);
-    /* Ekran 'verifying'e GEÇMEZ: başarı "tarayıcı açıldı" demektir ve akışın kalanı `/auth/
-       callback` rotasında yaşar (dinleyici kurgusunun cihazda düşüşü — `oauth.ts` künyesi).
-       Vazgeçip elle dönen müşteri ekranı bıraktığı gibi bulur; asılı bir bekleme yok. */
+    /* Başarı yalnız "tarayıcı açıldı" demek; akışın kalanı `/auth/callback` rotasında. Vazgeçen müşteri ekranı
+       bıraktığı gibi bulur. */
     void signInWithGoogle().then((result) => {
       if (result.error !== null) setNotice(authErrorText(locale, result.error));
     });
@@ -294,12 +242,8 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
         />
       </View>
       <FormScroll contentContainerStyle={styles.content} testID="login-scroll">
-        {/* Metinsiz işaret logosu ortada; logo ile altındaki blok birlikte dikeyde ortalanır — boşluk üstte ve altta
-            eşit (kullanıcı kararı 15.09; web telefon girişi aynı). Karenin yatay logosundan sapma. Varlık saydam PNG —
-            beyaz zeminli eski jpg'nin `multiply` karışımı iOS'ta uygulanmıyordu (ölçüldü 08.08). */}
         <Image
-          // Statik varlık Metro'da `require` ile yüklenir (Expo png için modül tipi bildirmiyor,
-          // `import` derlenmez) — kural TS import disiplinine bakıyor, varlık yolunu bilmiyor.
+          // Statik varlık Metro'da `require` ile yüklenir: Expo png için modül tipi bildirmiyor, `import` derlenmez.
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           source={require('../../../assets/images/logo-isaret.png')}
           style={styles.logo}
@@ -310,8 +254,6 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
         </Text>
         <Text style={styles.body}>{t.body}</Text>
 
-        {/* Adımın alanı SABİT yükseklikte (`stepArea` — kullanıcı bulgusu 15.09): blok ortalandığı için e-posta ve kod
-            adımlarının kısa alanı logoyu ve başlığı oynatıyordu. */}
         <View style={styles.stepArea}>
           {stage === 'choose' ? (
             <View style={styles.providers}>
@@ -390,7 +332,7 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
                 </Text>
               )}
               <View style={styles.resendRow}>
-                {/* Bekleme süresince GERÇEKTEN kilitli (soluk + basılamaz) — sayaç yalnız burada. */}
+                {/* Sayaç yalnız burada; bekleme süresince eylem kilitli. */}
                 <TextAction
                   label={cooldownSec > 0 ? t.resendWait.replace('{s}', String(cooldownSec)) : t.resend}
                   onPress={resend}
@@ -413,7 +355,6 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
           ) : null}
         </View>
 
-        {/* Gizlilik bağlantısı CÜMLENİN İÇİNDE (v3 birebir — sapma 3'ün notu). */}
         <Text style={styles.legal}>
           {t.legalPrefix}
           {privacyHref === undefined ? (
@@ -431,11 +372,7 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
           {t.legalSuffix}
         </Text>
 
-        {/* GELİŞTİRME GİRİŞLERİ (kullanıcı isteği 09.08) — yalnız dev derlemesinde çizilir;
-            OTP/Google turunu atlayan ama Supabase doğrulamasından geçen GERÇEK oturum
-            (`lib/auth/dev-login` künyesi). Metin sabit Türkçe: müşteri bu satırı hiç görmez.
-            Yalnız müşteri hesapları (21.312): personelin rol başına düğmeleri operasyon uygulamasının
-            kendi girişinde. */}
+        {/* Geliştirme girişleri yalnız dev derlemesinde: OTP'yi atlayan ama Supabase doğrulamasından geçen gerçek oturum. */}
         {__DEV__ ? (
           <View style={styles.devRow}>
             {devButtons.map((account) => (
@@ -459,8 +396,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     backgroundColor: theme.colors['sand-50'],
     paddingTop: rt.insets.top,
   },
-  /* Dört düğme tek satıra sığmıyor: `wrap` + daha dar boşluk. Dar cihazda ikinci satıra iner,
-     taşıp kesilmez (yalnız dev satırı — müşteri bunu hiç görmez). */
+  /* Düğmeler dar cihazda ikinci satıra iner. */
   devRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -474,8 +410,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space['2xl'],
     paddingTop: theme.space.md,
   },
-  /* `flexGrow` + ortalama: içerik kısa olsa da ekranı doldurur, logo ile blok birlikte dikeyde ortada durur (web
-     `flex-1 justify-center`). Uzun içerikte (klavye, kısa ekran) ortalama etkisizleşir, kaydırma başlar. */
+  /* Kısa içerik ekranı doldurur ve blok dikeyde ortalanır; uzun içerikte kaydırma başlar. */
   content: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -484,8 +419,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingBottom: rt.insets.bottom + theme.space['8xl'],
     gap: theme.space['3xl'],
   },
-  /* Genişlik orandan HESAPLANIR (onboarding'in cihaz kanıtı 09.08 — `aspectRatio` tek başına
-     güvenilir çözülmüyor, resim ham boyuna düşebiliyor). Logonun altı başlığa bir boşluk daha açar (web `mb-4`). */
+  /* Genişlik orandan hesaplanır: `aspectRatio` tek başına resmi ham boyuna düşürebiliyor. */
   logo: {
     height: logoHeight(rt.screen.height),
     width: logoHeight(rt.screen.height) * LOGO_ASPECT,
@@ -504,14 +438,11 @@ const styles = StyleSheet.create((theme, rt) => ({
     lineHeight: theme.text.control * theme.text['lead--line-height'],
     color: theme.colors.body,
   },
-  /* Adımın alanı SABİT yükseklikte: seçimin üç yolu ve bilgi satırı kadar (üst pay + 3 yol + 2 aralık + satırın payı ve
-     yüksekliği) — e-posta ve kod adımları daha kısa, ortalanmış blok onlarla kısalınca logo ve başlık oynuyordu
-     (kullanıcı bulgusu 15.09). Web `min-h-53.75` aynı hesabı kendi token'ıyla yapar. */
+  /* Seçimin üç yolu ve bilgi satırı kadar sabit yer: kısa adımlarda ortalanmış blok oynamasın. */
   stepArea: {
     minHeight:
       theme.space.sm + 3 * PROVIDER_HEIGHT + 2 * theme.space.lg + theme.space.sm + theme.text.note * theme.text['lead--line-height'],
   },
-  /* Karenin yol bloğunun üst payı (Musteri Mobil.dc.html:869 `margin-top:6px`; web `mt-1.5`). */
   providers: { gap: theme.space.lg, marginTop: theme.space.sm },
   providerButton: {
     flexDirection: 'row',
@@ -538,8 +469,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.step,
     color: theme.colors['brand-google'],
   },
-  /** Seçim aşamasının bilgi satırı (WhatsApp "yakında" / Google arızası) — web'in `notice` muadili. Satır yüksekliği
-      açık: `stepArea`nın ayırdığı yer bu satırın boyuyla hesaplanıyor. */
+  /** Satır yüksekliği açık: `stepArea` bu satırın boyuyla hesaplanıyor. */
   notice: {
     fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
@@ -564,7 +494,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   busy: {
     alignItems: 'center',
     paddingVertical: theme.space['7xl'],
-    // Halkanın ölçüsü kitten; blok yüksekliği tasarımın kendi nefesinden.
     minHeight: customerMetrics.codeFieldHeight,
   },
   legal: {

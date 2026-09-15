@@ -1,15 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-/** Gezinme sözleşmesi `storefront.smoke.ts`teki gibi `domcontentloaded` — gerekçesi orada (04.08). */
+/** Gezinme `storefront.smoke.ts`teki gibi `domcontentloaded`; gerekçesi orada. */
 const NAV = { waitUntil: 'domcontentloaded' as const };
 
-/**
- * TELEFON GİRİŞİ (08.58 · kullanıcı kararı 15.09) — `Musteri Mobil.dc.html` "Hızlı Doğrulama" karesi; native müşteri
- * girişiyle aynı ekran. Yalnız `mobile-web` projesinde anlamlı: masaüstü aynı adreste kendi girişini çizer.
- *
- * Veritabanına YAZMAZ: kod gönderilmez, e-posta adımı yalnız açılır. İddialar: tek `h1`, üç yol düğmesi, WhatsApp'ın
- * "yakında" satırı, E-posta yolunun alanı ve gönder düğmesi, cümlenin içindeki gizlilik bağı.
- */
+/** Telefon girişi yalnız `mobile-web`de anlamlı (masaüstü aynı adreste kendi girişini çizer); kod gönderilmez, veritabanına yazılmaz. */
 test.describe('telefon girişi — ziyaretçi', () => {
   test('Hızlı Doğrulama: üç yol, WhatsApp bilgisi, e-posta adımı', async ({ page }) => {
     test.skip(test.info().project.name !== 'mobile-web', 'telefon görünümüne özgü');
@@ -30,8 +24,15 @@ test.describe('telefon girişi — ziyaretçi', () => {
     await expect(page.getByRole('textbox', { name: 'Votre adresse e-mail' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Envoyer un code à usage unique' })).toBeVisible();
 
-    // ‹ adım adım geri (kullanıcı bulgusu 15.09): e-posta adımından seçime döner, sayfadan çıkmaz.
+    // ‹ e-posta adımından seçime döner, sayfadan çıkmaz.
     await page.getByRole('button', { name: 'Retour' }).click();
+    await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
+    await expect(page).toHaveURL(/\/fr\/connexion$/);
+
+    // Tarayıcının geri hareketi de (Android geri tuşu, iOS Safari kaydırması) adım adım.
+    await page.getByRole('button', { name: "Continuer avec l'e-mail" }).click();
+    await expect(page.getByRole('button', { name: 'Envoyer un code à usage unique' })).toBeVisible();
+    await page.goBack();
     await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
     await expect(page).toHaveURL(/\/fr\/connexion$/);
   });
