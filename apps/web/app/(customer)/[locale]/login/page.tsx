@@ -42,9 +42,8 @@ export default async function LoginPage({ params, searchParams }: LoginPageProps
         initialError={initialError}
         device={device}
       />
-      {/* Hızlı giriş şeridi — kapı kapalıysa kendisi `null` döner (bileşenin künyesi). Cihaz
-          forkunun DIŞINDA: liste iki dosyada yaşamasın. */}
-      <DevLoginLinks />
+      {/* Cihaz ayrımının dışında: hesap listesi iki görünümde ayrı yaşamasın. */}
+      <DevLoginLinks customerOnly={device === 'mobile'} />
     </>
   );
 }
