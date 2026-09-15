@@ -55,6 +55,11 @@ chown -R lezzet:lezzet /opt/lezzet
 runuser -u lezzet -- env HOME=/home/lezzet corepack prepare pnpm@9.15.9 --activate
 runuser -u lezzet -- env HOME=/home/lezzet PM2_HOME=/home/lezzet/.pm2 pm2 install pm2-logrotate
 pm2 startup systemd -u lezzet --hp /home/lezzet
+
+# 6 · Takas alanı — Next derlemesi 3,7 GB belleği aşıyor
+fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+sysctl vm.swappiness=10 && echo 'vm.swappiness=10' > /etc/sysctl.d/99-swappiness.conf
 ```
 
 Güncelleme `/var/run/reboot-required` bıraktıysa sonunda `systemctl reboot`; açılışta `pm2-lezzet`
@@ -83,6 +88,28 @@ ssh root@<sunucu> 'cat > /etc/caddy/Caddyfile.new' < Caddyfile.example
 caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile \
   && mv /etc/caddy/Caddyfile.new /etc/caddy/Caddyfile && systemctl reload caddy
 ```
+
+## Kök adres: tanıtım sayfası (lansmana kadar)
+
+`lezzetanatolie.com` uygulamayı değil künyeli, durağan, üç dilli bir sayfayı gösterir
+(`/var/www/lezzetanatolie`). Metin ve künye repodaki kaynaklardan üretilir: tanıtım ana sayfanın
+`messages.json`'undan, künye `legal/terms/content.json` + `@lezzet/brand`'den, gizlilik politikası
+`legal/privacy/content.json`'dan (`/confidentialite/`, `/de/datenschutz/`, `/tr/gizlilik/` — Google marka
+doğrulaması onu bu alan adında ister), sayfaya özgü birkaç satır `scripts/holding-page/messages.json`'dan,
+renkler token'lardan. Künye, gizlilik ya da tanıtım metni değişince yeniden üretilip yüklenir; klasör
+sunucuda tek hamlede değişir.
+
+```bash
+# yerelden
+pnpm exec tsx scripts/build-holding-page.ts
+COPYFILE_DISABLE=1 tar -C dist/holding-page -cf /tmp/holding-page.tar .
+ssh root@<sunucu> 'set -e; D=/var/www/lezzetanatolie; rm -rf "$D.new"; mkdir -p "$D.new"
+  tar -x --no-same-owner -C "$D.new"; chmod -R a+rX "$D.new"; rm -rf "$D.old"
+  if [ -d "$D" ]; then mv "$D" "$D.old"; fi; mv "$D.new" "$D"; rm -rf "$D.old"' < /tmp/holding-page.tar
+```
+
+DNS: `@` A kaydı sunucuyu gösterir (DNS only); `www` köke CNAME'dir, Caddy onu köke yönlendirir.
+Lansmanda Caddyfile'daki kök blok uygulamaya çevrilir ve bu sayfa kalkar.
 
 ## Env dosyası
 
@@ -131,5 +158,7 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
 1. Uzak veritabanını sıfırla — yıkıcı; kararı ve işlemi veritabanının sahibi yapar.
 2. Sunucuda `rm /opt/lezzet/shared/migrations.sha256`.
 3. `bash scripts/deploy.sh` — migration'lar baştan uygulanır.
-4. Temel veri, sunucuda:
-   `cd /opt/lezzet/current && runuser -u lezzet -- env HOME=/home/lezzet SEED_ALLOW_REMOTE=true pnpm db:seed:base`
+4. Gerçek başlangıç verisi (`scripts/seed-real/data.ts`), sunucuda:
+   `cd /opt/lezzet/current && runuser -u lezzet -- env HOME=/home/lezzet pnpm db:seed:real`
+   `--dry-run` ile önce ne yazacağını listeler. Var olan kayda dokunmaz, tekrar çalıştırılabilir; stok
+   yazmaz — stok paneldeki tedarikçi siparişlerine karşı mal kabulüyle girer.

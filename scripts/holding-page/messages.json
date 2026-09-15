@@ -1,0 +1,26 @@
+{
+  "tr": {
+    "soon": "Online mağazamız çok yakında açılıyor.",
+    "contactTitle": "Bize ulaşın",
+    "phone": "Telefon",
+    "whatsapp": "WhatsApp",
+    "email": "E-posta",
+    "languages": "Dil"
+  },
+  "fr": {
+    "soon": "Notre boutique en ligne ouvre très bientôt.",
+    "contactTitle": "Nous contacter",
+    "phone": "Téléphone",
+    "whatsapp": "WhatsApp",
+    "email": "E-mail",
+    "languages": "Langue"
+  },
+  "de": {
+    "soon": "Unser Onlineshop öffnet in Kürze.",
+    "contactTitle": "Kontakt",
+    "phone": "Telefon",
+    "whatsapp": "WhatsApp",
+    "email": "E-Mail",
+    "languages": "Sprache"
+  }
+}

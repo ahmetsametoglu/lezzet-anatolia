@@ -1,4 +1,4 @@
-# Test sunucusunda /etc/caddy/Caddyfile. Tek alan adı: yol önekleri üç süreç arasında çakışmıyor.
+# Test sunucusunda /etc/caddy/Caddyfile. Test sitesinde yol önekleri üç süreç arasında çakışmıyor.
 # Uygulama portlarına yalnız sunucunun içinden erişilir (Hetzner duvarı dışarıya kapalı).
 
 test.lezzetanatolie.com {
@@ -24,4 +24,15 @@ test.lezzetanatolie.com {
 	handle {
 		reverse_proxy 127.0.0.1:3000
 	}
+}
+
+# Kök adres lansmana kadar künyeli tanıtım sayfasıdır (scripts/build-holding-page.ts); uygulama değil.
+lezzetanatolie.com {
+	encode zstd gzip
+	root * /var/www/lezzetanatolie
+	file_server
+}
+
+www.lezzetanatolie.com {
+	redir https://lezzetanatolie.com{uri} permanent
 }
