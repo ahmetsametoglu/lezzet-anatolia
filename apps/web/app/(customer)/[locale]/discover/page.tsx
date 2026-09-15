@@ -17,30 +17,17 @@ import type { Messages } from './discover-types';
 import messages from './messages.json';
 
 /**
- * Keşif — aday ürün kaydırma turu (08.7 · 17.3 · DOMAIN §13).
- *
- * **Ziyaretçiye AÇIK.** Kaydırma kimliksiz de sayılır (toplu talep sinyali) ve tur bitince hesap
- * daveti gelir; hesap açılırsa biriken puan geriye dönük yüklenir. Giriş duvarı koymak sinyali de
- * dönüşümü de kaybettirirdi.
- *
- * **Deste SUNUCUDA hazır gelir**, kart başına çağrı yok: kaydırma saniyeler süren bir jest, her
- * kartta ağ beklemek akışı öldürürdü (tasarım §7: "akışı yavaşlatan ek adım konmamalı"). Girişlide
- * daha önce oylanan kartlar hiç gönderilmez.
- *
- * **Kart başına puan AYARDAN okunur** (`points_feedback_candidate`), ekranda sabit değil — tasarımın
- * "+30 puan" çipi bir makettir. Kodlansaydı ayar değiştiği gün ekran sistemin vermeyeceği sayıyı
- * söylerdi (aynı ders: hesap kartındaki eşik ayrışması, 29.07).
+ * Keşif ziyaretçiye açık: kaydırma kimliksiz de sayılır ve hesap açılırsa puan geriye dönük yüklenir.
+ * Deste sunucuda hazır gelir, çünkü kart başına ağ beklemek kaydırma akışını öldürürdü.
  */
 interface DiscoverPageProps {
   params: Promise<{ locale: string }>;
-  /** Yalnız kampanya etiketleri için (08.9). */
+  /** Yalnız kampanya etiketleri için. */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
- * Sayfa TARANIR ama indekslenecek içerik ince: aday ürünler satılık değil ve liste her ziyarette
- * değişiyor. Yine de `alternates` veriliyor — üç dilin aynı sayfa olduğunu söylemek her hâlükârda
- * doğru; `robots`/`sitemap` kararı ayrı (bkz. `sitemap.ts`).
+ * İndekslenecek içerik ince ama `alternates` yine verilir: üç dilin aynı sayfa olduğu her hâlükârda doğru.
  */
 export async function generateMetadata({ params }: DiscoverPageProps): Promise<Metadata> {
   const { locale } = await params;
@@ -64,8 +51,7 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
   ]);
 
   return (
-    // Keşif kapalı bir kabuk (tasarım: tam ekran örtü, "X Kapat" sayfanın kendi satırında) —
-    // mobilde site başlığı hiç çizilmez, footer yok (kullanıcı kararı 20.08).
+    // Keşif kapalı bir kabuk: mobilde site başlığı çizilmez, "X Kapat" sayfanın kendi satırında.
     <SiteFrame device={device} locale={locale as Locale} activeNav="discover" mobileChrome="bare" footer="none">
       <DiscoverClient
         t={t}
@@ -74,9 +60,7 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
         cards={cards}
         signedIn={customerId !== null}
         pointsPerCard={points.points}
-        // Para karşılığı SUNUCUDA biçimlenir: iki cihaz dalı da aynı cümleyi alsın ve biçimleyici
-        // istemciye taşınmasın. Destenin tamamı kazanılırsa ne edeceğini gösterir — davetin
-        // somutluğu bu sayıdan geliyor.
+        // Para karşılığı sunucuda biçimlenir: iki cihaz dalı aynı cümleyi alsın, biçimleyici istemciye taşınmasın.
         moneyOf={formatPrice(cards.length * points.points * points.centValue, locale as Locale)}
       />
     </SiteFrame>

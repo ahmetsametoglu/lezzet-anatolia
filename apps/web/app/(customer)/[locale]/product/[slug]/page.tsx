@@ -22,34 +22,18 @@ import { ProductClient } from './product-client';
 import type { Messages } from './product-types';
 import messages from './messages.json';
 
-/** Tasarım: ürün detayda ilk ÜÇ yorum; fazlası "tümü" panelinde (design/BACKLOG §1). */
+/** Tasarım: ürün detayda ilk üç yorum; fazlası "tümü" panelinde. */
 const REVIEW_PAGE_SIZE = 3;
 
 interface ProductPageProps {
   params: Promise<{ locale: string; slug: string }>;
-  /** Yalnız kampanya etiketleri için (08.9) — reklam bağı sıkça doğrudan ürüne iner. */
+  /** Yalnız kampanya etiketleri için: reklam bağlantısı sıkça doğrudan ürünü açar. */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
- * Ürün detay sayfası (08.11). Veri `lib/storefront/product` kapısından TEK turda okunur.
- *
- * Ürün yoksa ya da satışta değilse 404: aday/pasif ürünün doğrudan linkle açılabilmesi, katalogdan
- * gizlemiş olmayı anlamsız kılardı (DOMAIN §13).
- *
- * Çerçeve metinleri (duyuru şeridi, gezinme, arama) anasayfanın `messages.json`'undan gelir —
- * `SiteFrame` her sayfada aynı metni gösterir, kopyalanırsa diller birbirinden kayar.
- */
-/**
- * Ürün sayfasının başlığı, açıklaması ve `hreflang`ı (08.1).
- *
- * Slug DİLDEN BAĞIMSIZ (`PATHNAMES` künyesi: içerikten türer), yani üç dilin karşılığı aynı slug'ı
- * taşır ve yalnız segment kelimesi değişir (`/produit/…` · `/urun/…`). Bu yüzden `alternates`
- * parametreyi olduğu gibi geçirebiliyor — dil başına ayrı slug çözmek gerekmiyor.
- *
- * Ürün bulunamazsa boş dönülüyor: sayfa zaten 404 verecek, meta üretmek için ikinci bir sorgu
- * atmanın anlamı yok. Next iki çağrıyı da aynı istekte önbellekliyor, yani ürün okuması iki kez
- * yapılmıyor.
+ * Ürün yoksa ya da satışta değilse 404: aday/pasif ürünün doğrudan linkle açılabilmesi katalogdan
+ * gizlemeyi anlamsız kılardı. Slug dilden bağımsız, bu yüzden `alternates` parametreyi olduğu gibi geçirir.
  */
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { locale, slug } = await params;
@@ -62,16 +46,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     ...(product.description ? { description: product.description } : {}),
     alternates: localeAlternates('/product/[slug]', locale, { slug }),
     /**
-     * **Paylaşım kartı** (08.1 · `lib/seo/open-graph.ts`). Ürün bağlantısı WhatsApp'ta dolaşan en
-     * yaygın içerik ve bugüne dek GÖRSELSİZ çıkıyordu — kart yalnız çıplak adres gösteriyordu.
-     *
-     * Görsel JSON-LD ile AYNI FOTOĞRAF (`product.image`): iki yerde iki farklı görsel seçmek, arama
-     * sonucunda bir fotoğraf paylaşım kartında başkasını gösterirdi. Kadraj ayrışıyor ve bilinçli:
-     * kart operatörün "sohbet kartı" kadrajını alır (05.37, kapının künyesi), JSON-LD özgün dosyayı —
-     * arama motoru yüksek çözünürlüklü kaynağı ister, oranı kendisi seçer.
-     *
-     * `type` `product` DEĞİL `website` ve gerekçesi kapının künyesinde: `product` kartı fiyat/stok
-     * beklentisi doğurur, o alanları doğru doldurmak bugün taşımadığımız bir söz.
+     * Paylaşım kartının görseli JSON-LD ile aynı fotoğraf; kart operatörün sohbet kadrajını, JSON-LD
+     * özgün dosyayı alır. `type` `website`: `product` kartı fiyat/stok beklentisi doğurur.
      */
     openGraph: openGraphOf({
       route: '/product/[slug]',
@@ -97,8 +73,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   ]);
   if (!product) notFound();
 
-  // Ürün görüntülemesi (08.9). Prefetch/bot/personel elemesi KAPIDA — atıcı ne olduğunu söyler,
-  // neyin sayılacağına kapı karar verir (`ANALYTICS §4`).
+  // Prefetch/bot/personel elemesi kapıda: atıcı ne olduğunu söyler, neyin sayılacağına kapı karar verir.
   void recordEvent(
     {
       type: 'product_view',
@@ -107,21 +82,17 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       productId: product.id,
       availability: availabilityOf(product.variants),
     },
-    // Render anında atılan her olay kendi kalıbını geçer (denetim P1). Ölçülen hata tam buradaydı:
-    // `/fr/produit/…` ziyareti deftere `product_view path=/catalogue` yazıyordu.
+    // Kalıbı olay kendisi geçer: render anında kapının `referer` türetimi bir önceki sayfayı gösterir.
     { path: '/product/[slug]' },
   );
 
   /**
-   * Yorum bölümünün verisi (17.1). Ürün bulunduktan SONRA okunur — 404'e düşecek bir sayfa için
-   * yorum sorgusu atmanın anlamı yok. Üç okuma paralel: skor, ilk sayfa ve "bu müşteri yazabilir mi".
-   *
-   * `REVIEW_PAGE_SIZE` tasarımın kuralı: ürün detayda İLK ÜÇ yorum görünür, fazlası panele kalır.
+   * Yorumlar ürün bulunduktan sonra okunur: 404'e düşecek sayfa için yorum sorgusu atılmaz.
    */
   const customerId = await currentCustomerId();
   const [score, page, eligibility] = await Promise.all([
     getProductScore(product.id),
-    // Dil ZORUNLU: yorumlar okuyucunun dilinde gösteriliyor (20.2 — orijinal korunur, çeviri yanına konur).
+    // Dil zorunlu: yorumlar okuyucunun dilinde gösterilir, orijinal korunur ve çeviri yanına konur.
     listProductReviews(product.id, locale as PreferredLanguage, undefined, REVIEW_PAGE_SIZE),
     getReviewEligibility(customerId, product.id),
   ]);
@@ -133,9 +104,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       activeNav="catalog"
       footer="slim"
     >
-      {/* Yapısal veri (08.1): arama sonucunda fiyat, stok ve puanın görünmesini sağlar. Puan
-          YALNIZ gerçekten varsa yazılıyor — `average` null ise (hiç beyan yok) blok hiç doğmuyor,
-          çünkü uydurma bir puan yapısal veride yaptırıma uğrar. */}
+      {/* Puan yalnız gerçekten varsa yazılır: uydurma bir puan yapısal veride yaptırıma uğrar. */}
       <ProductJsonLd
         product={product}
         locale={locale as Locale}
@@ -150,14 +119,8 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         reviews={{
           score,
           reviews: page.rows,
-          // Toplam YAZILI yorum sayısı skordan gelir: liste sayfalı, `rows.length` yalnız bu sayfayı
-          // söyler ve "tümü" bağlantısı ona bakarsa hiç görünmezdi.
-          //
-          // **`commentCount`, `ratingCount` DEĞİL** (04.08 düzeltmesi). Satırın künyesi baştan beri
-          // "YAZILI yorum sayısı" diyordu ama geçirilen değer yıldız sayısıydı; form yıldız YA DA
-          // metin kabul ettiği için (ikisinden biri yeterli) yalnız yıldız veren müşteriler de o
-          // sayıya giriyordu. 20 yıldız + 2 yazılı yorumu olan üründe bağ "20 yorumun tümü" der,
-          // panel 2 yorum gösterirdi. Alan motorda yoktu, arka uçtan istendi ve geldi.
+          // Yazılı yorum sayısı skordan gelir: liste sayfalı olduğu için `rows.length` yalnız bu sayfayı
+          // söyler. `ratingCount` değil, çünkü yalnız yıldız veren müşteri yazılı yorum bırakmamıştır.
           total: score.commentCount,
           canReview: eligibility.canReview,
           alreadyWrote: eligibility.existing !== null,

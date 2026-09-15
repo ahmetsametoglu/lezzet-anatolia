@@ -16,21 +16,14 @@ import messages from './messages.json';
 
 interface PackagePageProps {
   params: Promise<{ locale: string; slug: string }>;
-  /** Yalnız kampanya etiketleri için (08.9). */
+  /** Yalnız kampanya etiketleri için. */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
- * Paket detay sayfası (05.5). Veri `lib/storefront/packages` kapısından TEK turda okunur.
- *
- * **Birincil senaryo sosyal medya linki:** ziyaretçi buraya siteyi hiç görmeden düşebilir, sayfa tek
- * başına ilk izlenim olabilir (`musteri-paket-detay.md §7`). Bu yüzden çerçeve tam gösterilir ve
- * geri dönüş yolu paket listesine bağlanır — gelen kişinin "buranın devamı var" görmesi gerekir.
- *
- * Satılmayan paket 404: pasif ya da kalemi satıştan kalkmış paketin doğrudan linkle açılabilmesi,
- * listeden düşmüş olmayı anlamsız kılardı (okuma bu kararı `listSellable` ile verir).
+ * Ziyaretçi buraya siteyi hiç görmeden, sosyal medya linkiyle gelebilir; bu yüzden geri dönüş yolu
+ * paket listesine bağlanır. Satılmayan paket 404: doğrudan linkle açılabilmesi listeden düşmeyi anlamsız kılardı.
  */
-/** Paket sayfasının başlığı ve `hreflang`ı (08.1) — slug dilden bağımsız, ürün sayfasıyla aynı kural. */
 export async function generateMetadata({ params }: PackagePageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
@@ -38,9 +31,7 @@ export async function generateMetadata({ params }: PackagePageProps): Promise<Me
   if (!pack) return {};
   return {
     title: pack.name,
-    // `description` ARTIK VAR: paylaşım kartı adı tek başına gösterse "Bayram Sofrası Paketi"
-    // yazan çıplak bir kutu üretirdi. Paketin açıklaması boş olabilir (operatör girmemiş) — kapı
-    // o hâlde alanı hiç yazmıyor.
+    // Açıklama paylaşım kartını çıplak bir ad kutusu olmaktan kurtarır; boşsa alan hiç yazılmaz.
     ...(pack.description ? { description: pack.description } : {}),
     alternates: localeAlternates('/package/[slug]', locale, { slug }),
     openGraph: openGraphOf({
@@ -61,9 +52,8 @@ export default async function PackagePage({ params, searchParams }: PackagePageP
   void recordPageView('/package/[slug]', await searchParams);
 
   const t: Messages = messages[locale];
-  // Yer kapıya parametre (19.22) — gerekçe `packages/page.tsx` künyesinde. `generateMetadata`
-  // BİLEREK yersiz kalıyor: başlık ve paylaşım kartı ziyaretçinin yerine göre değişmez, üstelik
-  // meta üretimi çerez okursa sayfa dinamikleşir ve her paylaşım linki yeniden render edilir.
+  // Yer kapıya parametre olarak geçer. `generateMetadata` yersiz kalır: meta üretimi çerez okursa
+  // sayfa dinamikleşir ve her paylaşım linki yeniden render edilir.
   const [pack, device] = await Promise.all([
     getPackageDetail(slug, locale, await readPlaceWarehouses()),
     detectDevice(),

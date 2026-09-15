@@ -15,31 +15,15 @@ import messages from './messages.json';
 interface CheckoutPageProps {
   params: Promise<{ locale: string }>;
   /**
-   * `?group=shipping` — sepetin KARGO grubundan açılan ikinci sipariş (19.7).
-   *
-   * URL'de taşınması bilinçli: müşteri geri gelebilmeli, sayfayı yenileyebilmeli ve hangi siparişi
-   * verdiğini adres çubuğunda görebilmeli. Bir bellek durumunda tutulsaydı yenileme sessizce rota
-   * checkout'una düşerdi — üstelik kargo grubunun kalemleriyle.
-   *
-   * Bayrak bir YETKİ değil, bir seçim: uydurulmuş bir değerin yapabileceği tek şey kendi sepetinin
-   * kargo kalemlerini sipariş etmek. Taslak zaten kendi kontrollerini yapıyor (kargo deposu var mı,
-   * soğuk zincir kalemi var mı, kalemler o depoda mı).
+   * `?group=shipping` — sepetin kargo grubundan açılan ikinci sipariş. URL'de taşınır ki yenileme ve
+   * geri dönüş aynı siparişi açsın; bayrak yetki değil seçimdir, taslak kendi kontrollerini yapar.
    */
   searchParams: Promise<{ group?: string }>;
 }
 
 /**
- * Checkout sayfası (08.13).
- *
- * Sepet gibi, veriyi RSC'de OKUMAZ: sepetin kaynağı oturuma göre değişiyor ve ziyaretçininki
- * tarayıcıda yaşıyor. Sunucu burada yalnız **kimliği** çözer ve fatura künyesini (Stripe'a elle
- * geçecek ad/e-posta) verir. Geri kalanı istemci action'larla çözer.
- *
- * ── GİRİŞSİZ MÜŞTERİ SEPETE DÖNER (kullanıcı kararı 13.09) ───────────────────
- * Kimlik ve adres SEPETTE sorulur (`CartIdentity`); ödeme ekranı ikisini de hazır bulur. Eskiden
- * burada bir "adım 0" vardı (misafir e-posta kodu / Google) — kimliksiz gelen artık o adımı
- * sepette görür. Kimliğin sunucuda çözülmesi yine şart: "girişli miyim" sorusunu istemciye
- * sordurmak, kapıyı atlatmanın en kolay yolu olurdu.
+ * Sepet gibi veriyi RSC'de okumaz; sunucu yalnız kimliği ve fatura künyesini çözer. Kimliğin sunucuda
+ * çözülmesi şart: "girişli miyim" sorusunu istemciye sordurmak kapıyı atlatmanın en kolay yolu olurdu.
  */
 export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const [{ locale }, { group }] = await Promise.all([params, searchParams]);
@@ -52,16 +36,13 @@ export default async function CheckoutPage({ params, searchParams }: CheckoutPag
   if (!profile) return redirect({ href: '/cart', locale });
 
   /**
-   * Huninin dördüncü adımı (08.9). **`loadCheckoutAction`'dan DEĞİL sayfadan atılıyor:** o eylem
-   * adres her değiştiğinde yeniden çağrılıyor ve oradan atsaydık huninin ikinci adımı birincisinden
-   * büyük çıkardı. Sayfa render'ı ise checkout'a girişin kendisidir — ziyaret başına bir kez.
+   * Huni adımı eylemden değil sayfadan atılır: `loadCheckoutAction` adres her değiştiğinde yeniden
+   * çağrılıyor, oradan atılsa adım sayısı şişerdi.
    */
   void recordEvent({ type: 'checkout_start' }, { path: '/checkout' });
 
   return (
-    // Huni sayfası ÇIPLAK kabukta (kullanıcı kararı 20.08, ikinci tur — sepetle aynı gerekçe:
-    // logolu bar üst bölgeyi iki katlıyordu, tasarımın karesi logosuz). Geri bağını sayfa kurar
-    // (`checkout.mobile`). Footer yok — CGV bağı zaten onay metninde.
+    // Mobilde çıplak kabuk: tasarımın karesi logosuz, geri bağını sayfa kurar (`checkout.mobile`).
     <SiteFrame device={device} locale={locale} mobileChrome="bare" footer="none">
       <CheckoutClient
         t={t}

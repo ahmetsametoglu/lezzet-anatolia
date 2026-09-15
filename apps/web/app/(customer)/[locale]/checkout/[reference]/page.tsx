@@ -16,27 +16,12 @@ import { ConfirmationClient } from './confirmation-client';
 import { stripePaymentGateway } from '@/lib/stripe';
 import { paymentStateOf, type ConfirmationView } from './confirmation-types';
 import messages from './messages.json';
-// Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`, 08.20).
+// Aile kökünün sözlüğü: özetin ortak sözcükleri orada yaşıyor (`confirmation-types`).
 import checkoutMessages from '../messages.json';
 
 /**
- * Sipariş alındı sayfası (08.13) — ödeme dönüşünün ve kapıda ödemenin ortak varış noktası.
- *
- * **Yolda taşınan kimlik SİPARİŞ KİMLİĞİDİR, referans numarası değil.** Numara ancak sipariş
- * onaylanınca doğuyor (07.5); kapıda ödemede ve ödeme henüz onaylanmamışken ortada numara yok.
- * Sorgu dizesi de kullanılmadı — paylaşılan bir linkte sorgu kaybolur, yol kaybolmaz.
- *
- * **Sayfa YALAN SÖYLEMEZ.** Müşteri Stripe'tan döndüğünde ödeme onayı bize webhook'la gelir ve o
- * çağrı müşterinin tarayıcısından bağımsızdır — bazen ondan saniyeler sonra. Bu yüzden "Ödendi"
- * yazısı siparişin KENDİ durumundan okunur: taslaksa "onaylanıyor" denir, onaylandıysa "ödendi".
- * Dönüşü başarı saymak, iptal olmuş bir ödemede müşteriye ödendi demek olurdu. Beklerken ekran
- * asılı da kalmaz: `OrderWatch` zili duyunca sayfayı sunucudan yeniden ister.
- *
- * **Bu dosya artık yalnız VERİYİ çözüyor** (03.08): yerleşim `page → *-client (useDevice) →
- * *.desktop/*.mobile` zincirinde (CLAUDE.md §2). Yüzeydeki tek istisna burasıydı — tek dosya içinde
- * `compact` bayrağıyla dallanıyordu, yani cihaz kararı sunucunun UA tahminine mahkûmdu ve tahmin
- * yanılırsa ödeme dönüşünün indiği ekran yanlış düzende kalıyordu. Emsal yanı başında:
- * `orders/[reference]`.
+ * Sipariş alındı sayfası; yolda sipariş kimliği taşınır, çünkü referans numarası ancak onayla doğar.
+ * "Ödendi" dönüşten değil siparişin kendi durumundan okunur: onay webhook'la, dönüşten sonra gelebilir.
  */
 interface ConfirmationPageProps {
   params: Promise<{ locale: string; reference: string }>;
@@ -53,8 +38,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
 
   const db = serviceDb();
   const profile = user ? await new UserProfileService(db).findByAuthUserId(user.id) : null;
-  // Biçimi geçersiz kimlik servise HİÇ gitmez: UUID olmayan segment veritabanı hatasına düşüp
-  // müşteriye 500 gösteriyordu (09.08'de sipariş detayında ölçüldü, aynı açık burada da vardı).
+  // Biçimi geçersiz kimlik servise gitmez: UUID olmayan segment veritabanı hatası olup 500 gösterirdi.
   const orderId = orderIdOrNull(reference);
   const found = orderId ? await new OrderService(db).getWithItems(orderId) : null;
   // Başkasının siparişi GÖRÜNMEZ: kimlik yoldan geliyor, sahiplik sunucuda doğrulanır.
@@ -62,8 +46,8 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
 
   const { order, items } = found;
   /**
-   * Sipariş KESİNLEŞTİ mi (taslak değil, iptal değil). "Ödendi" ile aynı şey DEĞİL: ödeme ayrı bir
-   * eksendir (DOMAIN §7) — kapıda ödenecek bir sipariş de kesinleşmiştir.
+   * Sipariş kesinleşti mi (taslak değil, iptal değil); "ödendi" ile aynı şey değil, kapıda ödenecek
+   * sipariş de kesinleşmiştir.
    */
   const placed = order.status !== 'draft' && order.status !== 'cancelled';
   const cancelled = order.status === 'cancelled';
@@ -86,36 +70,27 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
   );
 
   /**
-   * Komşu daveti (17.10) — **okuma YAZABİLİR ve bu bilinçli**, puan kartındaki (`readCustomerPoints`)
-   * aynı karar ve aynı gerekçe: ekran "komşunu çağır" diyecekse paylaşılacak bir bağlantı VAR olmalı;
-   * müşteri düğmeye dokunduğunda hiçbir şey olmaması daha kötüdür. Yazım idempotent — sipariş başına
-   * tek davet (veride unique) ve ikinci render aynı satırı döndürür.
-   *
-   * Yalnız KESİNLEŞMİŞ ROTA siparişinde denenir: kargoda sefer yok, taslakta çağrılacak bir gün yok.
-   * Kapı ayrıca seferin kesim saatine de bakıyor ve kapanmışsa davet açmıyor (`openNeighborInvite`).
+   * Komşu daveti okuması yazabilir: ekran "komşunu çağır" diyecekse paylaşılacak bağlantı var olmalı,
+   * yazım idempotent. Yalnız kesinleşmiş rota siparişinde denenir; kargoda sefer, taslakta gün yok.
    */
   const invite =
     placed && order.deliveryType === 'route' ? await tryOpenNeighborInvite(db, { orderId: order.id, customerId: profile.id }) : null;
 
   /**
-   * "Ödemeniz onaylanıyor · bankanızdan onay bekliyoruz" YALNIZ kart ödemesinde doğru. Kapıda
-   * ödemede beklenen bir banka yok; havalede de öyle — orada beklenen müşterinin transferi.
+   * "Bankanızdan onay bekliyoruz" yalnız kart ödemesinde doğru; kapıda ödemede ve havalede
+   * beklenen bir banka onayı yok.
    */
   const awaitingCard = !placed && !cancelled && order.paymentMethod === 'online';
   /**
-   * Sağlayıcının söylediği (07.18) — yalnız ödemesi beklenen kart taslağında sorulur. Okuma YAN ETKİSİZ:
-   * sipariş burada ne onaylanır ne iptal edilir; o iş canlı bağın eylemiyle (`verifyPaymentAction`)
-   * açıkça yapılır — sayfanın çizimi bir karar anı değildir. Sorulamazsa `null` ve ekran bugünkü
-   * cümlede kalır; hata burada yutulmuyor sayılmaz çünkü canlı bağın eylemi aynı soruyu birkaç saniye
-   * sonra yeniden sorar ve orada iz bırakır.
+   * Sağlayıcının söylediği, yalnız ödemesi beklenen kart taslağında sorulur; okuma yan etkisizdir. Hata
+   * burada `null`a düşer, çünkü canlı bağın eylemi aynı soruyu saniyeler sonra sorar ve orada iz bırakır.
    */
   const payment = awaitingCard && order.paymentRef ? await stripePaymentGateway()?.read(order.paymentRef).catch(() => null) : null;
 
   const view: ConfirmationView = {
     orderId: order.id,
-    /* Kontenjan SUNUCUDA sayılıyor (08.55): ekran "kaç komşu daha" cümlesini kurabilsin ve davet
-       dolduysa paylaşımı hiç sunmasın. Sayım siparişlerden yapılır, iptal olan sayılmaz — kural
-       ortak pakette (`remainingNeighborInviteUses`), mobil uç da aynı kapıdan geçiyor. */
+    /* Kontenjan sunucuda sayılır: ekran "kaç komşu daha" cümlesini kurabilsin ve dolan davet
+       paylaşımı hiç sunmasın. */
     neighborInvite: invite
       ? {
           url: neighborInviteUrl(invite.token, locale as Locale),
@@ -127,8 +102,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     createdAt: order.createdAt,
     placed,
     cancelled,
-    // Damga HAM taşınır; "para iade edildi mi" kararını ekran tek bir yerden sorar
-    // (`isRefundedCancellation`) — kuralı burada da kurmak aynı kararın ikinci kopyası olurdu.
+    // Damga ham taşınır: "para iade edildi mi" kararını ekran tek yerden sorar (`isRefundedCancellation`).
     refundedAt: order.providerRefundedAt,
     awaitingCard,
     paymentState: payment ? paymentStateOf(payment.status) : null,
@@ -139,12 +113,8 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     totalCents: order.orderedTotalCents,
     discountCents: order.discountAmountCents,
     /**
-     * İndirim satırının adı. Kaynak SİPARİŞTEKİ KOPYADIR (`discount_label`), tanım değil: kampanya
-     * o günden sonra yeniden adlandırılmış, süresi dolmuş ya da silinmiş olabilir — sipariş özeti
-     * geriye dönük dil değiştirmemeli. Bu yüzden tanımı okumak için ayrıca DB'ye de gidilmez.
-     *
-     * **Oran YAZILMAZ** ve bu bir eksik değil: siparişte saklanan şey inen TUTARDIR, oran değil.
-     * Sepette oran gösterilir çünkü orada karar ANLIK; siparişte karar geçmiştir.
+     * İndirim adı siparişteki kopyadan okunur: kampanya sonradan değişse de özet geriye dönük dil
+     * değiştirmemeli. Oran yazılmaz, çünkü siparişte saklanan tutardır.
      */
     discountName: order.discountLabel ? resolveLocalizedText(order.discountLabel, locale as Locale) : '',
     shippingFeeCents: order.shippingFeeCents,

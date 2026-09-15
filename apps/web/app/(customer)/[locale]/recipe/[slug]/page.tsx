@@ -19,24 +19,13 @@ import messages from './messages.json';
 
 interface RecipePageProps {
   params: Promise<{ locale: string; slug: string }>;
-  /** Yalnız kampanya etiketleri için (08.9). */
+  /** Yalnız kampanya etiketleri için. */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
- * Tarif detay sayfası (08.24) — "Sofradan Fikirler"in okunan yüzü.
- *
- * **Birincil senaryo arama motoru ve paylaşılan bağlantı:** ziyaretçi buraya siteyi hiç görmeden
- * düşebilir ("mıhlama nasıl yapılır"). Bu yüzden telefonda ‹ hep fotoğrafın üstünde durur ve geçmiş
- * boşsa tariflere döner (paket detayı emsali; `recipe.mobile.tsx`).
- *
- * **Paylaş düğmesi YOK ve bu bilinçli:** tasarımın mobil başlığında çizili değil, ayrıca `share`
- * konusu ölçüm defterinin tanıdığı iki türle sınırlı (`product` · `bundle`). Tarif için üçüncü bir
- * tür açmak ölçüm tarafında bir karar ve bu görevin kapsamı değil; konusu bilinmeyen bir paylaşımı
- * çizmek ise defterde karşılığı olmayan tıklama üretirdi (`SiteFrame.share` künyesi).
- *
- * Yayında olmayan tarif 404: taslak bir tarifin doğrudan linkle okunabilmesi, yayın kısıtının
- * (üç dil dolmadan yayın yok — 05.16) taşıdığı kararı boşa çıkarırdı. Kararı okuma veriyor.
+ * Paylaş düğmesi yok: ölçüm defteri `share` konusunda yalnız `product` ve `bundle` tanıyor, konusu
+ * bilinmeyen paylaşım karşılıksız tıklama üretirdi. Yayında olmayan tarif 404 verir.
  */
 export async function generateMetadata({ params }: RecipePageProps): Promise<Metadata> {
   const { locale, slug } = await params;
@@ -48,13 +37,8 @@ export async function generateMetadata({ params }: RecipePageProps): Promise<Met
     ...(recipe.description ? { description: recipe.description } : {}),
     alternates: localeAlternates('/recipe/[slug]', locale, { slug }),
     /**
-     * **Paylaşım kartı** (08.1 · `lib/seo/open-graph.ts`) — tarif WhatsApp'ta paylaşılacak şeyin
-     * ta kendisi; görselsiz bir tarif bağlantısı, paylaşıldığı grupta hiç tıklanmaz.
-     *
-     * `type: 'article'` — tarif okunan bir içerik, satılan bir şey değil.
-     *
-     * `description` burada HEP dolu ve bu bir şans değil, yayın kısıtının sonucu: üç dilde
-     * açıklaması olmayan tarif yayına giremiyor (0038). Ürün tarafında aynı güvence yok.
+     * `type: 'article'`: tarif okunan bir içerik, satılan bir şey değil. `description` hep dolu, çünkü
+     * üç dilde açıklaması olmayan tarif yayına giremiyor.
      */
     openGraph: openGraphOf({
       route: '/recipe/[slug]',
@@ -80,13 +64,8 @@ export default async function RecipePage({ params, searchParams }: RecipePagePro
   ]);
   if (!recipe) notFound();
 
-  /* Ölçüm tarif ÇÖZÜLDÜKTEN sonra (08.57): görüntüleme artık HANGİ tarife bakıldığını söylüyor ve
-     kimlik ancak burada belli. `path` yine rota kalıbı — slug maskeli kalıyor (denetim P2), kimliğin
-     evi `subject_id`.
-
-     Çağrı yukarıdan buraya taşındı ve bunun bir yan etkisi var, kayda geçiyor: **bulunamayan tarif
-     artık sayılmıyor** (`notFound()` önce koşuyor). Eskiden 404 de bir görüntüleme yazıyordu; o sayı
-     "tarife ilgi" değil "ölü bağlantı" ölçüyordu, yani düzeltme sayının kendisini de iyileştiriyor. */
+  /* Ölçüm tarif çözüldükten sonra atılır: görüntüleme hangi tarife bakıldığını söyler ve bulunamayan
+     tarif sayılmaz. `path` rota kalıbıdır, kimliğin yeri `subject_id`. */
   void recordPageView('/recipe/[slug]', await searchParams, { subjectType: 'recipe', subjectId: recipe.id });
 
   return (
