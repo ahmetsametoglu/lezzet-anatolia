@@ -2,18 +2,8 @@ import type { ComponentProps } from 'react';
 import { Link } from '@/i18n/navigation';
 
 /*
-  BİRİNCİL DÜĞME — native kitin `PrimaryButton`ının (`packages/mobile-kit/src/components/ui/primary-button.tsx`)
-  web telefon ikizi (14.09). Zeytin dolgu, krem (`on-image`) etiket `button` kademesinde (14,5/700). İki biçim,
-  Token Kararlari #8'in kendisi — gölgeli yüzey kayar, gölgesiz yüzey küçülür:
-  · `pill`  — içerik genişliği, 46 yükseklik (`controlSm`), hap köşe, 26 yan dolgu; gölgesiz, basılınca küçülür.
-  · `block` — tam genişlik, 52 yükseklik (`controlLg`), kontrol köşe (16); sert gölge, basılınca gölgeyi
-              yutar (3px kayar — yüzen sepet düğmesinin aynı ölçüsü).
-
-  Eylem iki türlü, biri verilir: `onClick` (sayfadaki bir iş) ya da `href` (başka sayfaya gider — `<a>` olarak
-  çizilir ki tarayıcı ve arama motoru onu bağ olarak okusun; native'de ikisi de `onPress`).
-  KAPALI hâl native'in çözümü: dolgu `disabled-fill`, metin `disabled-text`, gölge ve basış geri bildirimi YOK (ödeme
-  ekranının onayı engel varken). Kapalı düğme bağ olarak çizilmez — tıklanamayan bir `<a>` olmaz.
-  Öteki tonlar (mürekkep · hata), ikonlu ve ipuçlu hâl ilk çağıranlarıyla gelir.
+  Native kitin `PrimaryButton`ının web telefon ikizi. `href` verilirse bağ (`<a>`) çizilir ki tarayıcı ve arama motoru onu
+  bağ olarak okusun; kapalı düğme bağ olarak çizilmez, tıklanamayan bir `<a>` olmaz.
 */
 
 interface PrimaryButtonProps {
@@ -23,7 +13,8 @@ interface PrimaryButtonProps {
   onClick?: () => void;
   /** Başka sayfaya giden eylem. */
   href?: ComponentProps<typeof Link>['href'];
-  shape?: 'pill' | 'block';
+  /** `pill` içerik genişliği, hap köşe, gölgesiz · `block` tam genişlik, sert gölgeli · `raised` içerik genişliği, sert gölgeli. */
+  shape?: 'pill' | 'block' | 'raised';
   disabled?: boolean;
   /** Formun gönder düğmesi — girişin e-posta formu Enter'la da gönderilir. Varsayılan `button`. */
   type?: 'button' | 'submit';
@@ -32,13 +23,17 @@ interface PrimaryButtonProps {
 const SHAPE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
   pill: 'inline-flex h-11.5 flex-none rounded-pill',
   block: 'flex h-13 w-full rounded-control',
+  raised: 'inline-flex h-12 flex-none rounded-control',
 };
+
+const HARD_SHADOW_LIVE =
+  'cursor-pointer bg-olive text-on-image shadow-hard hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none';
 
 /** Açık hâlin dolgusu ve basış geri bildirimi — gölgeli yüzey kayar, gölgesiz yüzey küçülür. */
 const LIVE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
   pill: 'cursor-pointer bg-olive text-on-image hover:bg-olive-dark active:scale-[0.97]',
-  block:
-    'cursor-pointer bg-olive text-on-image shadow-hard hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
+  block: HARD_SHADOW_LIVE,
+  raised: HARD_SHADOW_LIVE,
 };
 
 export function PrimaryButton({ label, onClick, href, shape = 'pill', disabled = false, type = 'button' }: PrimaryButtonProps) {

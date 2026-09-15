@@ -36,4 +36,16 @@ test.describe('telefon girişi — ziyaretçi', () => {
     await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
     await expect(page).toHaveURL(/\/fr\/connexion$/);
   });
+
+  test('Bildirimler: misafir sayfada kalır, doğrulama daveti girişe götürür', async ({ page }) => {
+    test.skip(test.info().project.name !== 'mobile-web', 'telefon görünümüne özgü');
+
+    const res = await page.goto('/fr/compte/notifications', NAV);
+    expect(res?.ok()).toBeTruthy();
+    await expect(page).toHaveURL(/\/fr\/compte\/notifications$/);
+    await expect(page.getByText('Vos notifications arrivent ici', { exact: true })).toBeVisible();
+
+    await page.getByRole('link', { name: 'Vérification rapide' }).click();
+    await expect(page).toHaveURL(/\/fr\/connexion\?next=/);
+  });
 });

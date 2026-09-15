@@ -8,6 +8,11 @@
       "title": "Şimdilik her şey sakin",
       "body": "Siparişleriniz ve talepleriniz hakkındaki gelişmeler burada görünür."
     },
+    "guest": {
+      "title": "Bildirimleriniz burada toplanır",
+      "body": "Sipariş durumu, fırsatlar ve stok haberleri için birkaç saniyede doğrulanın.",
+      "cta": "Hızlı doğrulama"
+    },
     "loadMore": "Devamını yükle",
     "loading": "Yükleniyor…"
   },
@@ -20,6 +25,11 @@
       "title": "Tout est calme pour l'instant",
       "body": "Les nouvelles concernant vos commandes et vos demandes apparaîtront ici."
     },
+    "guest": {
+      "title": "Vos notifications arrivent ici",
+      "body": "Pour le suivi de vos commandes, les offres et les retours en stock, vérifiez-vous en quelques secondes.",
+      "cta": "Vérification rapide"
+    },
     "loadMore": "Charger la suite",
     "loading": "Chargement…"
   },
@@ -31,6 +41,11 @@
     "empty": {
       "title": "Im Moment ist alles ruhig",
       "body": "Neuigkeiten zu Ihren Bestellungen und Anfragen erscheinen hier."
+    },
+    "guest": {
+      "title": "Hier sammeln sich Ihre Mitteilungen",
+      "body": "Für Bestellstatus, Angebote und Lagermeldungen in Sekunden verifizieren.",
+      "cta": "Schnell verifizieren"
     },
     "loadMore": "Mehr laden",
     "loading": "Wird geladen…"
