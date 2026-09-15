@@ -2,38 +2,27 @@ import type { AppNotificationKind } from '@lezzet/types';
 import type { Locale } from './locale';
 
 /*
-  BİLDİRİM SÖZLÜĞÜ — kind + payload → cümle; İKİ YÜZEYİN ortak malı (14.15).
-
-  Sözlük `apps/mobile-customer`ın bildirim ekranında doğdu (14.13); web hesap akışı (14.15) aynı müşteriye
-  aynı satırı gösterince BURAYA terfi etti: 11 tür × 3 dilin iki kopyası, ilk düzeltmede sessizce
-  ayrışır ve aynı bildirim telefonda başka, web'de başka konuşurdu (CLAUDE §1). Paket seçimi de
-  bu yüzden `@lezzet/i18n`: PATHNAMES ile aynı gerekçe — birden çok yüzeyin okuduğu dil verisi
-  tek kaynakta durur. `@lezzet/types` bağı yalnız TİPTİR (derlemede silinir); paket çalışma
-  zamanında bağımsız kalır.
-
-  ── METİN SATIRDA DEĞİL, BURADA (14.12 kararı) ──────────────────────────────
-  Satır cümle taşımaz: `kind` bir ANAHTAR, `payload` dil-bağımsız küçük veri (referenceNo,
-  postalCode). Cümleyi okuyan yüzey kurar — dil müşterinin tercihi ve değişebilir.
-
-  ── `Record` DEĞİL, `Partial` + genel cümle — bilinçli SAPMA ────────────────
-  Küme AÇIK: `kind` DB'de düz text ve her modülle büyüyecek (0049) — sunucu yarın yeni bir tür
-  yazar ve SAHADAKİ ESKİ mobil sürüm onu tanımaz. `Record` derlemeyi bugüne kilitler ama eski
-  sürümü kurtaramazdı; bilinmeyen türe GENEL cümleyle düşmek sözleşmenin kendisi.
+  Müşteri bildiriminin başlığı ve cümlesi — iki yüzeyin (native bildirim ekranı, web hesap akışı) ortak kaynağı. Satır
+  metin taşımaz: `kind` anahtardır, metin `payload`tan (dil-bağımsız küçük veri) okuyan yüzeyin dilinde kurulur.
 */
 
 interface NotificationCopy {
-  /** Satırın cümlesi — payload'dan kurulur; kişisel içerik payload'a hiç girmiyor (0049). */
+  /** Kartın kısa başlığı — ne oldu. */
+  title: (payload: Record<string, unknown>, locale: Locale) => string;
+  /** Kartın cümlesi — payload'dan kurulur; kişisel içerik payload'a hiç girmez. */
   sentence: (payload: Record<string, unknown>, locale: Locale) => string;
 }
 
 const say = (locale: Locale, phrases: Record<Locale, string>): string => phrases[locale];
 
-/** Referans payload'da olmayabilir (eski satır, farklı üretici) — cümle çizgisiz de kurulur. */
+/** Referans payload'da olmayabilir (eski satır, farklı üretici) — cümle referanssız da kurulur. */
 const refOf = (payload: Record<string, unknown>): string =>
   typeof payload.referenceNo === 'string' && payload.referenceNo !== '—' ? ` ${payload.referenceNo}` : '';
 
+/* Küme açık (`kind` DB'de düz metin, her modülle büyür): `Record` değil `Partial` — bilinmeyen tür genel metne düşer. */
 const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
   order_confirmed: {
+    title: (_p, l) => say(l, { tr: 'Siparişiniz alındı', fr: 'Commande reçue', de: 'Bestellung eingegangen' }),
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişiniz${refOf(p)} alındı.`,
@@ -42,6 +31,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   order_out_for_delivery: {
+    title: (_p, l) => say(l, { tr: 'Siparişiniz yolda', fr: 'Commande en route', de: 'Bestellung unterwegs' }),
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişiniz${refOf(p)} yola çıktı.`,
@@ -50,6 +40,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   order_delivered: {
+    title: (_p, l) => say(l, { tr: 'Siparişiniz teslim edildi', fr: 'Commande livrée', de: 'Bestellung zugestellt' }),
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişiniz${refOf(p)} teslim edildi. Afiyet olsun!`,
@@ -58,6 +49,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   order_cancelled: {
+    title: (_p, l) => say(l, { tr: 'Siparişiniz iptal edildi', fr: 'Commande annulée', de: 'Bestellung storniert' }),
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişiniz${refOf(p)} iptal edildi.`,
@@ -66,6 +58,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   order_shortfall: {
+    title: (_p, l) => say(l, { tr: 'Eksik teslimat', fr: 'Livraison incomplète', de: 'Unvollständige Lieferung' }),
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişinizde${refOf(p)} bir kalem eksik karşılandı — ayrıntı sipariş sayfasında.`,
@@ -74,6 +67,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   order_refunded: {
+    title: (_p, l) => say(l, { tr: 'İade işlendi', fr: 'Remboursement effectué', de: 'Erstattung veranlasst' }),
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişiniz${refOf(p)} için iade işlendi.`,
@@ -82,6 +76,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   ticket_replied: {
+    title: (_p, l) => say(l, { tr: 'Talebinize cevap var', fr: 'Réponse à votre demande', de: 'Antwort auf Ihre Anfrage' }),
     sentence: (_p, l) =>
       say(l, {
         tr: 'Talebinize cevap geldi.',
@@ -90,6 +85,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   ticket_status_changed: {
+    title: (_p, l) => say(l, { tr: 'Talebiniz güncellendi', fr: 'Demande mise à jour', de: 'Anfrage aktualisiert' }),
     sentence: (_p, l) =>
       say(l, {
         tr: 'Talebinizin durumu güncellendi.',
@@ -98,9 +94,8 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   feedback_invite: {
-    // Referans `referenceNo`dan okunur, `orderReferenceNo`dan DEĞİL (27.08): satırın hedefi
-    // siparişe çevrilince payload öteki sipariş türleriyle aynı ada geçti — tek ad, tek anlam.
-    // (`orderReferenceNo` yaşıyor ama MESAJIN alanı olarak: mail/WhatsApp gövdesi onu okuyor.)
+    title: (_p, l) => say(l, { tr: 'Siparişinizi değerlendirin', fr: 'Votre avis compte', de: 'Ihre Meinung zählt' }),
+    // Referans `referenceNo`dan okunur: hedef siparişe çevrildiğinden beri öteki sipariş türleriyle aynı ad.
     sentence: (p, l) =>
       say(l, {
         tr: `Siparişinizi${referans(p) ? ` (${p.referenceNo})` : ''} değerlendirir misiniz?`,
@@ -109,6 +104,7 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   zone_available: {
+    title: (_p, l) => say(l, { tr: 'Bölgeniz açıldı', fr: 'Votre zone est desservie', de: 'Ihr Gebiet wird beliefert' }),
     sentence: (p, l) =>
       say(l, {
         tr: `Beklediğiniz bölge (${typeof p.postalCode === 'string' ? p.postalCode : '…'}) artık teslimat ağımızda!`,
@@ -117,6 +113,10 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   b2b_application_result: {
+    title: (p, l) =>
+      p.approved === true
+        ? say(l, { tr: 'Kurumsal başvurunuz onaylandı', fr: 'Demande pro approuvée', de: 'Geschäftsantrag genehmigt' })
+        : say(l, { tr: 'Kurumsal başvurunuz sonuçlandı', fr: 'Demande pro traitée', de: 'Geschäftsantrag bearbeitet' }),
     sentence: (p, l) =>
       p.approved === true
         ? say(l, {
@@ -132,48 +132,43 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
   },
 };
 
-/** Bilinmeyen türün cümlesi — eski uygulama sürümü yeni türü boş satırla değil, bununla karşılar. */
+/** Bilinmeyen türün metni — eski uygulama sürümü yeni türü boş satırla değil, bununla karşılar. */
+const FALLBACK_TITLE: Record<Locale, string> = {
+  tr: 'Yeni bildirim',
+  fr: 'Nouvelle notification',
+  de: 'Neue Mitteilung',
+};
+
 const FALLBACK: Record<Locale, string> = {
   tr: 'Hesabınızla ilgili bir gelişme var.',
   fr: 'Du nouveau concernant votre compte.',
   de: 'Es gibt Neuigkeiten zu Ihrem Konto.',
 };
 
-/** Müşteri satırının cümlesi — mobil bildirim ekranı ve web hesap akışı aynı fonksiyonu çağırır. */
+/** Müşteri kartının başlığı — native bildirim ekranı ve web hesap akışı aynı fonksiyonu çağırır. */
+export function notificationTitle(row: { kind: string; payload: Record<string, unknown> }, locale: Locale): string {
+  const copy = COPY[row.kind as AppNotificationKind];
+  return copy ? copy.title(row.payload, locale) : FALLBACK_TITLE[locale];
+}
+
+/** Müşteri kartının cümlesi — native bildirim ekranı ve web hesap akışı aynı fonksiyonu çağırır. */
 export function notificationSentence(row: { kind: string; payload: Record<string, unknown> }, locale: Locale): string {
   const copy = COPY[row.kind as AppNotificationKind];
   return copy ? copy.sentence(row.payload, locale) : FALLBACK[locale];
 }
 
 /*
-  ── TÜRÜN GÖRSEL KİMLİĞİ (kullanıcı kararı 26.08) ───────────────────────────
-  "Kullanıcı baktığı zaman bir bakışta bildirim tipini anlayabilmeli" — satır tek tip metin değil:
-  her türün İKONU, TONU ve kısa TÜR ETİKETİ var. Eşleme cümlelerle AYNI kaynakta durur (dört yüzey
-  — web/mobil × müşteri akışı/rozet — tek anlamdan çizer; iki kopya ilk yeni türde ayrışırdı).
-
-  · İkon İKİ BİÇİMDE (14.09): `symbol` ÇİZGİ SETİNİN adı — web müşteri yüzeyi v1 ile emojiyi bıraktı,
-    ikonları kendi setinden çiziyor (`components/customer/ui/icons.tsx`). `icon` EMOJİ — native
-    uygulamanın bugünkü çizimi. Mobil (native + web telefon görünümü) ile web masaüstünün ikonları aynı
-    olmak zorunda değil (kullanıcı kararı 15.09); iki biçim bu yüzden ayrı alan. Anlam tek yerde: iki
-    biçim aynı satırda yazılır, ayrışamaz.
-    Operasyon yüzeyi emoji KULLANMAZ (SVG dili) — o taraf `staffNotificationBrief`.
-  · Ton SEMANTİKTİR, renk değil: `positive` (yolunda) · `attention` (bekleyen/eksik) · `issue`
-    (iptal/sorun) · `neutral` (bilgi). Web bunu kendi token ailesine (olive/honey/terracotta/kum),
-    mobil kendi temasına çevirir — CLAUDE §3: token adı taşınır, hex taşınmaz.
-  · Etiket üç dilli ve KISA ("Sipariş", "Teslimat", "İade") — cümlenin üstünde tür şapkası.
+  Türün görsel kimliği: ikon, semantik ton ve kısa tür etiketi — müşteri bir bakışta türü ayırt eder. İkon iki biçimde
+  (`symbol` web çizgi setinin adı, `icon` native'in emojisi); ton renk değil anlamdır, yüzey kendi paletine çevirir.
 */
 
 export type NotificationVisualTone = 'positive' | 'attention' | 'issue' | 'neutral';
 
-/**
- * Bildirim türünün çizgi ikonu — web müşteri setinin (`IconName`) ADLARI. Paket o tipi bilemez
- * (bağımlılık ters yöne dönerdi); küme burada dar tutulur ve web tarafında `IconName`e atanabilir
- * olması derleyiciyle sınanır: sette olmayan bir ad yazılırsa web derlenmez.
- */
+/** Web çizgi setinin (`IconName`) adları — sette olmayan ad yazılırsa web derlenmez. */
 export type NotificationSymbol = 'check' | 'truck' | 'box' | 'close' | 'warning' | 'undo' | 'chat' | 'star' | 'pin' | 'building' | 'bell';
 
 export interface NotificationVisual {
-  /** Emoji — native uygulamanın bugünkü çizimi (künye). */
+  /** Emoji — native uygulamanın çizimi. */
   icon: string;
   /** Çizgi ikonun adı — web müşteri yüzeyi bununla çizer. */
   symbol: NotificationSymbol;
@@ -197,13 +192,13 @@ const VISUAL: Partial<Record<AppNotificationKind, (payload: Record<string, unkno
   b2b_application_result: (p) => ({
     symbol: 'building',
     icon: '🏢',
-    // Onay yolunda "yolunda", diğer sonuçta "bak" — cümle sözlüğünün aynı ayrımı.
+    // Onay "yolunda", öteki sonuç "bak" — metnin aynı ayrımı.
     tone: p.approved === true ? 'positive' : 'attention',
     label: etiket({ tr: 'Kurumsal', fr: 'Professionnel', de: 'Geschäftlich' }),
   }),
 };
 
-/** Bilinmeyen tür görselsiz kalmaz: zil ikonu + nötr ton (genel cümlenin görsel eşi). */
+/** Bilinmeyen tür görselsiz kalmaz: zil ikonu ve nötr ton. */
 const VISUAL_FALLBACK: NotificationVisual = {
   symbol: 'bell',
   icon: '🔔',
@@ -217,34 +212,19 @@ export function notificationVisual(row: { kind: string; payload: Record<string, 
 }
 
 /*
-  ── PERSONEL SATIRI — AYRI SESLENİŞ, AYNI TERFİ GEREKÇESİ ───────────────────
-  Müşteri sözlüğü "siparişiniz" der, personel sözlüğü "e-postasız müşterinin onayı" — iki ayrı
-  sesleniş, tek dil (operasyon yüzeyi yalnız Türkçe, CLAUDE §2). Başlık metni de iki yüzeyde
-  (native operasyon akışı + web operasyon zili) aynı satır için aynı olmak zorunda; yüzeye özgü
-  olan yalnız GİDİLECEK YER (mobil bölüm ↔ web rotası) ve o eşleme yüzeyde kalır.
+  Personel satırı ayrı seslenişle (operasyon yalnız Türkçe) ama aynı kaynakta: başlık native operasyon akışında ve web
+  operasyon zilinde aynı olmak zorunda; yüzeye özgü olan yalnız gidilecek yer.
 */
 
-/**
- * Personel satırının aciliyet tonu — tasarım tonu değil ANLAM:
- * `alert` = bekleyen insan işi (kırmızı) · `attention` = bakılmalı ama yangın değil (amber) ·
- * `quiet` = bilgi. Yüzeyler kendi paletine çevirir (web ops red/amber/nötr, mobil dot aynı adlar).
- */
+/** Personel satırının aciliyeti: `alert` bekleyen insan işi, `attention` bakılmalı, `quiet` bilgi. */
 export type StaffNotificationTone = 'alert' | 'attention' | 'quiet';
 
 export interface StaffNotificationBrief {
   title: string;
-  /**
-   * AÇIKLAYICI İKİNCİ SATIR (05.09) — tasarımın `bn.alt`ı. YENİ BİLGİ DEĞİL: 04.09'a kadar tek
-   * satıra sıkışan cümlenin kendi dikişinden ayrılmış hâli. Başlık "ne oldu + hangi kayıt", alt
-   * satır "ne kadar / neden". Bölmenin sebebi tasarım değil okunabilirlik: tek satır cihazda üç
-   * satıra sarıyordu ve kartın baş satırındaki rozet/saat hizası bozuluyordu.
-   *
-   * `null` meşru bir değerdir — her türün söyleyecek ikinci bir şeyi yok (talep tipi yazılmamışsa
-   * "Yeni talep — REF" satırının altına yazacak bir olgu YOKTUR ve uydurulmaz).
-   */
+  /** Başlık "ne oldu + hangi kayıt", alt satır "ne kadar / neden"; söyleyecek olgu yoksa `null`, uydurulmaz. */
   subtitle: string | null;
   tone: StaffNotificationTone;
-  /** Kısa TÜR etiketi ("Belge") — satırın şapkası: operatör bir bakışta türü ayırt eder (26.08). */
+  /** Kısa tür etiketi ("Belge") — satırın şapkası. */
   label: string;
 }
 
@@ -254,15 +234,7 @@ const TALEP_TIPI: Record<string, string> = { damaged: 'hasarlı ürün', missing
 const referans = (p: Record<string, unknown>): string =>
   typeof p.referenceNo === 'string' && p.referenceNo !== '—' ? ` — ${p.referenceNo}` : '';
 
-/**
- * HANGİ belge ulaşamadı — `payload.event`ten (üretici olayı oraya yazıyor: `dispatch.ts`).
- *
- * Belge sınıfı ALTI olayı kapsıyor (`NOTIFY_EVENT_META`: onay · teslim · iptal · eksik · iade ·
- * kurumsal sonuç) ama başlık 27.08'e kadar hepsine "sipariş onayı" diyordu: aynı siparişin iki
- * farklı belgesi ekranda AYNI satır gibi görünüyordu ve operatör hangisini elden göndereceğini
- * satırdan okuyamıyordu (cihazda ölçüldü — üreticinin künyesi "yönetici bunu satırdan okur"
- * diyordu, satır ise olayı hiç okumuyordu).
- */
+/** Hangi belge ulaşamadı (`payload.event`): altı olay aynı satır görünmesin, operatör elden göndereceğini okusun. */
 const BELGE_ADI: Record<string, string> = {
   order_confirmed: 'sipariş onayı',
   order_delivered: 'teslim özeti',
@@ -276,7 +248,7 @@ const belgeAdi = (p: Record<string, unknown>): string =>
 
 const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, unknown>) => StaffNotificationBrief>> = {
   document_undeliverable: (p) => ({
-    // `alert`: yasal belge (dayanıklı ortam) hiçbir kanala ulaşamadı ve iş İNSANA düştü.
+    // `alert`: yasal belge hiçbir kanala ulaşamadı, iş insana düştü.
     tone: 'alert',
     label: 'Belge',
     title: `Ulaştırılamayan ${belgeAdi(p)}${referans(p)}`,
@@ -286,7 +258,7 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     tone: 'alert',
     label: p.ticketType === 'damaged' || p.ticketType === 'missing' ? 'Şikâyet' : 'Talep',
     title: `Yeni ${p.ticketType === 'damaged' || p.ticketType === 'missing' ? 'şikâyet' : 'talep'}${referans(p)}`,
-    /* Talep tipi yazılmamışsa alt satır YOK — "diğer" yazmak, bilinmeyeni bir kategoriye çevirmek olurdu. */
+    /* Talep tipi yazılmamışsa alt satır yok: "diğer" yazmak bilinmeyeni bir kategoriye çevirmek olurdu. */
     subtitle: typeof p.ticketType === 'string' ? (TALEP_TIPI[p.ticketType] ?? null) : null,
   }),
   stock_low: (p) => ({
@@ -301,21 +273,21 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     title: `Gün kapanışında uyuşmazlık${referans(p)}`,
     subtitle: 'sayım beklenenden farklı',
   }),
-  /* Askıda kalan durak (03.09): kapanış "yeniden planlanacak" dedi, planlayan sevkiyat masası. */
+  /* Kapanış "yeniden planlanacak" dedi; planlayan sevkiyat masası. */
   run_close_pending: (p) => ({
     tone: 'attention',
     label: 'Sevkiyat',
     title: `Sefer kapandı${referans(p)}`,
     subtitle: `${typeof p.pendingCount === 'number' ? p.pendingCount : '?'} durak askıda · yeniden planla`,
   }),
-  /* Transfer eksiği (04.09, 21.248): alan depo beyan etti, kayıp onun hanesine yazıldı — gönderen depo duyar. */
+  /* Alan depo eksiği beyan etti, kayıp onun hanesine yazıldı — gönderen depo duyar. */
   transfer_shortfall: (p) => ({
     tone: 'attention',
     label: 'Transfer',
     title: `Transfer eksik kabul edildi${referans(p)}`,
     subtitle: `${typeof p.shortQty === 'number' ? p.shortQty : '?'} adet eksik · ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} kayıp yazdı`,
   }),
-  /* Transfer fazlası (04.09, 21.253): alan depo fazlayı stoğuna yazdı — gönderende o birim hâlâ duruyor, kendi sayımında bulsun. */
+  /* Alan depo fazlayı stoğuna yazdı — gönderen o birimi kendi sayımında bulsun. */
   transfer_excess: (p) => ({
     tone: 'attention',
     label: 'Transfer',
@@ -330,10 +302,7 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
   }),
 };
 
-/**
- * Personel satırının başlığı + tonu; bilinmeyen türde `null` — genel satırın METNİ yüzeyindir
- * (mobil "uygulamayı güncelleyin" der, web diyemez: web her zaman sunucuyla aynı sürümdür).
- */
+/** Personel satırının başlığı ve tonu; bilinmeyen türde `null` — genel metin yüzeyin işi (mobil "güncelleyin" der, web diyemez). */
 export function staffNotificationBrief(row: { kind: string; payload: Record<string, unknown> }): StaffNotificationBrief | null {
   const build = STAFF_COPY[row.kind as AppNotificationKind];
   return build ? build(row.payload) : null;

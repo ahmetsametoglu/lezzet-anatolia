@@ -64,6 +64,7 @@ export default async function NotificationsPage({ params }: NotificationsPagePro
           unread: feed.unread,
         }}
         channel={notificationsChannelName(customerId)}
+        device={device}
       />
     </SiteFrame>
   );

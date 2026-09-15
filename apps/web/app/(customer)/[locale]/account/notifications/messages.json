@@ -13,6 +13,7 @@
       "body": "Sipariş durumu, fırsatlar ve stok haberleri için birkaç saniyede doğrulanın.",
       "cta": "Hızlı doğrulama"
     },
+    "prefsNote": "Kampanya bildirimlerini Hesap bölümündeki Kampanya iletişimi ayarından yönetebilirsiniz.",
     "loadMore": "Devamını yükle",
     "loading": "Yükleniyor…"
   },
@@ -30,6 +31,7 @@
       "body": "Pour le suivi de vos commandes, les offres et les retours en stock, vérifiez-vous en quelques secondes.",
       "cta": "Vérification rapide"
     },
+    "prefsNote": "Gérez les messages promotionnels depuis le réglage « Communications commerciales » de votre compte.",
     "loadMore": "Charger la suite",
     "loading": "Chargement…"
   },
@@ -47,6 +49,7 @@
       "body": "Für Bestellstatus, Angebote und Lagermeldungen in Sekunden verifizieren.",
       "cta": "Schnell verifizieren"
     },
+    "prefsNote": "Werbenachrichten verwalten Sie in Ihrem Konto unter „Werbekommunikation“.",
     "loadMore": "Mehr laden",
     "loading": "Wird geladen…"
   }

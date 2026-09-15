@@ -1,23 +1,33 @@
 import type { KeysetCursor, MeNotification } from '@lezzet/types';
-import type { LocalizedCopy } from '@lezzet/i18n';
-// `typeof messages` için DEĞER bağı gerek (tip JSON'dan türetilir) — puan sayfasının aynı deseni.
+import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+// `typeof messages` için değer bağı gerek (tip JSON'dan türetilir).
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
 
-/** Sayfaya-özel tipler kendi dosyasında (`page → client → page` döngüsü doğmasın — boundaries). */
+/** Sayfaya özel tipler kendi dosyasında: `page → client → page` döngüsü doğmasın. */
 export type Messages = LocalizedCopy<typeof messages>;
 
-/**
- * Bir sayfalık akış — action ile istemci aynı şekli konuşur. Satır şekli MOBİL SÖZLEŞMEYLE AYNI
- * (`MeNotification`, 14.13 künyesi: "iki tüketici tek şekle bağlansın"); imleç web'de zarfsız
- * gezer — action teli JSON taşır, base64 kodlama uca özgü bir taşıma ayrıntısıydı.
- */
+/** Bir sayfalık akış — satır şekli mobil sözleşmeyle aynı (`MeNotification`); imleç web'de zarfsız gezer. */
 export interface NotificationsFeedPage {
   rows: MeNotification[];
   nextCursor: KeysetCursor | null;
-  /** Okunmamış VE gizlenmemiş — tanım tek yerde (`AppNotificationService.UNREAD`). */
+  /** Okunmamış ve gizlenmemiş — tanım tek yerde (`AppNotificationService.UNREAD`). */
   unread: number;
 }
 
-/** Ekranı dolduracak kadar geniş; akış sınırsız büyür → keyset (puan sayfasının aynı ölçüsü). */
+/** Telefon ve masaüstü görünümünün ortak sözleşmesi — durum ve eylemler `notifications-client`te. */
+export interface NotificationsViewProps {
+  t: Messages;
+  locale: Locale;
+  rows: MeNotification[];
+  unread: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
+  onRead: (id: string) => void;
+  onReadAll: () => void;
+  onDismiss: (id: string) => void;
+}
+
+/** Ekranı dolduracak kadar geniş; akış sınırsız büyür → keyset. */
 export const FEED_PAGE_SIZE = 30;

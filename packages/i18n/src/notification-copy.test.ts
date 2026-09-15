@@ -1,21 +1,32 @@
 import { describe, expect, it } from 'vitest';
 import type { AppNotificationKind } from '@lezzet/types';
-import { notificationSentence, notificationVisual, staffNotificationBrief } from './notification-copy';
+import { notificationSentence, notificationTitle, notificationVisual, staffNotificationBrief } from './notification-copy';
 
-/*
-  BİLDİRİM SÖZLÜĞÜ (14.13 → 14.15'te paylaşılan pakete terfi) — çivilenenler:
-  · bilinen her müşteri türü × üç dil boş olmayan cümle üretir (küme AÇIK, tip bunu zorlayamaz)
-  · bilinmeyen tür GENEL cümleye düşer — eski sürüm yeni türü boş satırla karşılamaz
-  · payload cümleye girer (referans) ama YOKLUĞU cümleyi bozmaz
-  · personel başlığı referans taşır; bilinmeyen personel türünde `null` — genel metin YÜZEYİN işi
-  (test mobil jest'ten taşındı: sözlük artık iki yüzeyin ortak malı, testi de tek yerde koşar)
-*/
+/* Küme açık (tip bunu zorlayamaz): bilinen her tür üç dilde metin üretmeli, bilinmeyen tür genel metne düşmeli. */
 
 const KNOWN: AppNotificationKind[] = [
   'order_confirmed', 'order_out_for_delivery', 'order_delivered', 'order_cancelled',
   'order_shortfall', 'order_refunded', 'ticket_replied', 'ticket_status_changed',
   'feedback_invite', 'zone_available', 'b2b_application_result',
 ];
+
+describe('notificationTitle', () => {
+  it('bilinen her tür, üç dilde, boş olmayan başlık üretir; bilinmeyen tür genel başlığa düşer', () => {
+    for (const kind of KNOWN) {
+      for (const locale of ['tr', 'fr', 'de'] as const) {
+        expect(notificationTitle({ kind, payload: { approved: true } }, locale).trim().length, kind).toBeGreaterThan(3);
+      }
+    }
+    expect(notificationTitle({ kind: 'yarin_gelecek_tur', payload: {} }, 'tr')).toBe('Yeni bildirim');
+  });
+
+  it('kurumsal başvurunun başlığı sonuca göre ayrılır', () => {
+    const onay = notificationTitle({ kind: 'b2b_application_result', payload: { approved: true } }, 'tr');
+    const sonuc = notificationTitle({ kind: 'b2b_application_result', payload: { approved: false } }, 'tr');
+    expect(onay).toContain('onaylandı');
+    expect(onay).not.toBe(sonuc);
+  });
+});
 
 describe('notificationSentence', () => {
   it('bilinen her tür, üç dilde, boş olmayan cümle üretir', () => {
@@ -45,7 +56,7 @@ describe('notificationVisual', () => {
     for (const kind of KNOWN) {
       const visual = notificationVisual({ kind, payload: { approved: true } });
       expect(visual.icon.length).toBeGreaterThan(0);
-      // Web çizgi setinin adı da her türde var (14.09): emoji native'in, ad web'in çizimi.
+      // Web çizgi setinin adı da her türde var: emoji native'in, ad web'in çizimi.
       expect(visual.symbol.length).toBeGreaterThan(0);
       expect(['positive', 'attention', 'issue', 'neutral']).toContain(visual.tone);
       for (const locale of ['tr', 'fr', 'de'] as const) expect(visual.label(locale).length).toBeGreaterThan(1);
@@ -79,8 +90,7 @@ describe('staffNotificationBrief', () => {
     }
   });
 
-  /* BAŞLIK "ne oldu + hangi kayıt", ALT SATIR "neden" (05.09 bölmesi) — sebep artık başlıkta
-     aranmaz. Bölme bilgi eklemedi/çıkarmadı, dikişinden ayırdı; test de o dikişi çiviliyor. */
+  /* Başlık "ne oldu + hangi kayıt", alt satır "neden" — sebep başlıkta aranmaz. */
   it('ulaştırılamayan belge: alert tonu, başlıkta referans, alt satırda sebep', () => {
     const brief = staffNotificationBrief({ kind: 'document_undeliverable', payload: { referenceNo: 'LA-26-X1' } });
     expect(brief).not.toBeNull();
@@ -92,12 +102,11 @@ describe('staffNotificationBrief', () => {
   it('belge başlığı HANGİ belge olduğunu söyler — aynı siparişin iki olayı ayrı satır okunur', () => {
     const baslik = (event: string) =>
       staffNotificationBrief({ kind: 'document_undeliverable', payload: { event, referenceNo: 'LA-26-X1' } })!.title;
-    // Belge sınıfı altı olayı kapsıyor; 27.08'e kadar hepsi "sipariş onayı" diye görünüyordu.
     expect(baslik('order_confirmed')).toContain('sipariş onayı');
     expect(baslik('order_delivered')).toContain('teslim özeti');
     expect(baslik('order_cancelled')).toContain('iptal bildirimi');
     expect(baslik('order_refunded')).toContain('iade bildirimi');
-    // İki farklı olay AYNI metni üretmemeli — ekranda ayırt edilebilirliğin çivisi.
+    // İki farklı olay aynı metni üretmemeli: ekranda ayırt edilebilmeli.
     expect(baslik('order_confirmed')).not.toBe(baslik('order_delivered'));
     // Tanınmayan olay başlığı bozmaz: genel "belge" der, satır yine okunur.
     expect(baslik('yarin_gelecek_belge')).toContain('Ulaştırılamayan belge');
@@ -115,8 +124,7 @@ describe('staffNotificationBrief', () => {
     expect(esik!.subtitle).toContain('3/10');
   });
 
-  /* ALT SATIR UYDURMAZ: tipi olmayan talebin altına yazacak bir OLGU yoktur ve "diğer" demek,
-     bilinmeyeni bir kategoriye çevirmek olurdu (CLAUDE §1 — ölçülemeyen değer sıfır değildir). */
+  /* Alt satır uydurmaz: tipi olmayan talebin altına yazacak bir olgu yok. */
   it('alt satır uydurmaz: tipsiz talepte null, tanınmayan tipte de null', () => {
     expect(staffNotificationBrief({ kind: 'ticket_opened', payload: { referenceNo: 'LA-26-X1' } })!.subtitle).toBeNull();
     expect(staffNotificationBrief({ kind: 'ticket_opened', payload: { ticketType: 'yarin_gelecek_tip' } })!.subtitle).toBeNull();
