@@ -34,43 +34,9 @@ import { useProfessionals } from './use-professionals.hook';
 import messages from './messages.json';
 
 /*
-  PROFESYONEL BAŞVURUSU (v3 `vPro`) — vitrindeki davet kutusunun hedefi.
-
-  İKİ HÂL, şablonun kendi ayrımı: `pr.notSent` (tanıtım + adımlar + form + WhatsApp satırı) ve
-  `pr.sent` (ortalanmış onay bloğu). Onay hâli gövdenin TAMAMINI değiştirir — tanıtım da düşer,
-  çünkü başvurmuş birine "başvurun" demenin anlamı yok (v3:66-73).
-
-  ── AKIŞ BURADA, ALANLAR FORMDA (21.31) ─────────────────────────────────────
-  Üç uç bağlandı (`GET /b2b/company/:siret` · `GET /b2b/vat/:number` · `POST /me/b2b/application`)
-  ve akışın tamamı bu dosyada: resmî kaydı getir → alanları doldur → motorla denetle → gönder →
-  gerekirse kimlik adımını aç → aynı gövdeyle tekrar dene. Form yalnız çizer.
-
-  **DÖRT HÂL DAHA VAR** ve ikisi başvurudan önce gelir (`GET /me/b2b`): `pending` (inceleniyor),
-  `approved` (onaylandı), `rejected` (gerekçesiyle) — başvurmuş birine yeniden form göstermek,
-  aynı kuyruğu ikinci kez meşgul etmeye davet olurdu. `none` ve misafir formu görür.
-
-  ── KİMLİK, GÖNDERİRKEN İSTENİR ─────────────────────────────────────────────
-  Kullanıcı kararı (11.08): "kullanıcı başvurmadan önce giriş yaparsa daha iyi olur, ama başvuru
-  formunda da giriş yöntemini seçip OTP kodunu girebilir". İkisi de karşılanıyor: girişli müşteri
-  hiçbir ek adım görmez (jeton zaten var), misafirin formu ise gönderirken bir çekmece açar —
-  e-posta → altı haneli kod → oturum → başvuru KENDİLİĞİNDEN gider. Yeni altyapı yok: bölge talebi
-  çekmecesinin mekaniği (`use-otp-sign-in`) ve alanları (`otp-sign-in-fields`) paylaşılan.
-  Kapının kendisi SUNUCUDA: `POST /me/b2b/application` Bearer istiyor, ekran 401'i "önce kimlik"
-  diye okuyor — yani doğrulama istemcinin iyi niyetine bağlı değil.
-
-  ── ŞABLONDAN SAPMALAR ─────────────────────────────────────────────────────
-  1. **Onay bloğu kitin `EmptyState`i.** v3'ün ölçüleri (`padding:70px 32px`, ortalanmış ikon ·
-     başlık · gövde · hap düğme) kitin boş durumuyla zaten aynı iskelet; ikinci bir ortalanmış
-     blok yazmak aynı yerleşimin ikinci kopyası olurdu. Başlık kitin kademesinde (18) kalıyor,
-     şablonun 22'sinde değil — ekran başlığı kademesi kite ait bir karar.
-  2. **İkon zarf, kâğıt uçak değil.** v3 bir kâğıt uçak çiziyor; o geometri ne kitin sözlüğünde
-     ne müşteri tamamlayıcısında var ve ikisi de bu şeridin yazma alanı dışında. Zarf hem mevcut
-     hem cümlenin kendisiyle aynı şeyi söylüyor ("sonucu e-posta ile bildireceğiz"); webin onay
-     kartı da zarf kullanıyor (📨). İhtiyaç raporlandı.
-  3. **WhatsApp satırı sohbeti AÇMAZ, "çok yakında" der.** Numara `@lezzet/brand`te ve o paket
-     `apps/mobile`ın bağımlılığı değil; uydurma bir numaraya bağlantı kurmaktansa giriş ekranının
-     kurulu davranışı tekrarlandı (`login-screen` WhatsApp düğmesi — web'le de aynı bilgi).
-     Mesaj v3'ün kendi toast'ıyla veriliyor (v3:854 `pr.wa`).
+  Profesyonel başvurusu: iki hâl (gönderilmedi, gönderildi) ve başvurusu olan adayın durum blokları (`pending`, `approved`,
+  `rejected`); başvurmuş birine form gösterilmez, çünkü aynı kuyruğu ikinci kez meşgul ederdi. Kimlik gönderirken istenir: misafirin
+  formu gönderimde bir çekmece açar ve oturum kurulunca başvuru aynı gövdeyle kendiliğinden gider, kapının kendisi sunucuda.
 */
 
 export function ProfessionalsScreen() {
@@ -93,23 +59,9 @@ export function ProfessionalsScreen() {
   const applicant = b2b.status === 'ready' ? b2b.applicant : null;
 
   /*
-    ── ÖN DOLGU: PROFİLDEKİ KÜNYE, AMA YAZILANI EZMEDEN (MB-05) ──────────────
-    Sözleşme üç alanı zaten taşıyor ve künyesi "form ön dolgusu" diyor
-    (`b2b-api.schema.ts` `B2bApplicantSchema`); ekran okuyordu ama kullanmıyordu — girişli müşteri
-    sistemin bildiği üç şeyi yeniden yazıyordu.
-
-    İKİ KORUMA VAR ve ikisi de ölçülen bir yarışa karşı: form okuma BİTMEDEN çiziliyor (`loading`
-    hâlinde de `pro-form` görünür — beklemeyi kaldırmak yerine formu göstermemek çalışan bir
-    sayfayı bir okuma gecikmesine bağlamak olurdu), dolayısıyla cevap müşteri yazarken gelebilir.
-    · Alan bazlı: yalnız BOŞ alana yazılır — dolu alan müşterinin kendi metnidir, üstüne yazmak
-      klavyenin altındaki bir alanı sessizce değiştirmek olurdu.
-    · Bir kereye mahsus: `prefilled` bayrağı. Gönderim sonrası `applicant` yeniden set ediliyor
-      (`use-professionals` `submit`); bayrak olmasaydı boşaltılmış bir alan o anda geri dolardı.
-
-    `email` artık EKRANDA GÖRÜNMÜYOR (MB-04) ama dolduruluyor: sözleşmede alan duruyor (motor ve
-    şema web'le ortak, kaldırma kararı iki yüzeyin) ve gövdenin yalan taşımaması gerek — girişli
-    müşterinin gövdesindeki adres, sunucunun oturumdan yazacağı adresin AYNISI olur. Misafirde
-    boş gider; sunucu zaten gövdeye bakmıyor.
+    Ön dolgu profildeki künyeden, ama yazılanı ezmeden: form okuma bitmeden çizildiği için cevap müşteri yazarken gelebilir, bu yüzden
+    yalnız boş alana ve yalnız bir kez (`prefilled`) yazılır. `email` ekranda görünmez ama doldurulur, çünkü gövde sunucunun
+    oturumdan yazacağı adresin aynısını taşımalı.
   */
   const prefilled = useRef(false);
   useEffect(() => {
@@ -124,16 +76,8 @@ export function ProfessionalsScreen() {
   }, [applicant]);
 
   /*
-    ── ÜÇ ADIM, GİRİŞLİYE İKİ (MB-08) ───────────────────────────────────────
-    "Kaydolun" adımı yalnız MİSAFİRE gösterilir: hesabı olana kayıt anlatmak, yapılmış bir işi
-    yapılacak gibi göstermektir.
-
-    Ölçüt `b2b.status === 'guest'` ve bu bilerek `useMe` DEĞİL: durum okuması (`GET /me/b2b`)
-    zaten Bearer istiyor ve oturumsuz çağrı ağa hiç çıkmadan yerel 401 ile `guest`e düşüyor
-    (kancanın künyesi) — yani cevap elimizde, `useMe`ye abone olmak İKİNCİ bir ağ okuması açardı
-    (`use-me.hook`: "abone olmak ağa çıkmaktır"). `loading`/`error` hâllerinde adım ÇİZİLMEZ:
-    misafirden bir adımı bir an gizlemek zararsız, girişliye kayıt adımı göstermek ise
-    düzeltmeye çalıştığımız arızanın kendisi.
+    "Kaydolun" adımı yalnız misafire gösterilir; ölçüt `b2b.status === 'guest'`, çünkü durum okuması oturumsuz çağrıda ağa çıkmadan
+    `guest`e düşer ve `useMe`ye abone olmak ikinci bir ağ okuması açardı.
   */
   const steps =
     b2b.status === 'guest'
@@ -141,14 +85,8 @@ export function ProfessionalsScreen() {
       : [t.steps.review, t.steps.priceList];
 
   /*
-    ── SONUÇ HANGİ ADRESE GİDİYOR (MB-04) ────────────────────────────────────
-    Adres YENİ BİR OKUMADAN gelmiyor: `GET /me/b2b` zaten profildeki künyeyi taşıyor
-    (`B2bApplicantSchema.email` = `user_profiles.email`, `readB2bApplicant`) ve sunucu başvuruya
-    da tam o adresi yazıyor — yani ekranda gösterilen ile kayda giren AYNI kaynak. `useMe`ye
-    abone olmak İKİNCİ bir ağ turu açardı (adım künyesindeki ölçütün aynısı).
-
-    Üç değer: misafirde `null` (adres henüz yok, doğrulama adımında girilecek), okuma sürerken ya
-    da düştüğünde `undefined` (satır çizilmez — bir an yanlış vaat okutmaktansa hiç okutmamak).
+    Sonucun gideceği adres yeni bir okumadan değil `GET /me/b2b`nin taşıdığı künyeden gelir, sunucu da başvuruya tam o adresi
+    yazar. Misafirde `null` (adres doğrulamada girilecek), okuma sürerken ya da düşünce `undefined` (satır çizilmez).
   */
   const accountEmail =
     b2b.status === 'guest' ? null : applicant !== null && applicant.email !== '' ? applicant.email : undefined;
@@ -158,13 +96,11 @@ export function ProfessionalsScreen() {
     (issues: readonly B2bApplicationField[]): string => {
       if (input.kind === 'siret' && issues.includes('siret')) return t.errors.siretLength;
       const labels = issues
-        // `email` de dışarıda: formda o kutu YOK (MB-04), müşterinin düzeltebileceği bir yer
-        // göstermeyen bir alan adını cümleye yazmak, olmayan bir kutuyu aramaya yollamaktır.
+        // `email` de dışarıda: formda o kutu yok, olmayan bir alanın adı müşteriyi olmayan bir kutuyu aramaya yollar.
         .filter((field): field is FieldLabelKey => field !== 'kind' && field !== 'email')
         .map((field) => t.form[field]);
-      /* Geriye ad kalmadıysa ret HESABIN adresindendir (profilde e-posta yok — telefonla açılmış
-         taslak kayıt). Sessiz geçilemez: "Şu alanları kontrol edin: " diye boş biten bir cümle,
-         müşteriye gösterilecek en kötü şeydi. Çözüm müşterinin elinde: yeniden giriş. */
+      /* Geriye ad kalmadıysa ret hesabın adresindendir (telefonla açılmış taslak kayıtta e-posta yok); "Şu alanları kontrol edin: "
+         diye boş biten bir cümle gösterilemez. Çözüm müşterinin elinde: yeniden giriş. */
       if (labels.length === 0) return t.errors.accountEmail;
       return t.errors.incomplete.replace('{fields}', labels.join(' · '));
     },
@@ -177,15 +113,8 @@ export function ProfessionalsScreen() {
        kullanıcıyı göremediği bir kapıya yollamaktı. */
     if (input.kind === 'siret' && normalizeSiret(input.siret).length === 14) setCompanyOpen(true);
 
-    // Denetim İKİ yerde ve bu tekrar değil: buradaki kullanıcı için (anında ve alan adlarıyla),
-    // sunucudaki güvenlik için (form atlanarak da o kapıya istek atılabilir).
-    //
-    /* `email` bu ön denetimden ÇIKARILIR (MB-04) ve gerekçe ölçüldü: motor alanı zorunlu tutuyor
-       (`b2bApplicationIssues` → `isValidEmail`), alan ise formdan kalktı. Süzmeseydik misafirin
-       `input.email`i boş kalacağı için gönderim ekranın kendi kapısında durur, istek uca HİÇ
-       çıkmaz, 401 gelmez ve KİMLİK ÇEKMECESİ AÇILMAZDI — yani başvuru yolu tamamen kapanırdı.
-       Kural gevşemiyor, yalnız yer değiştiriyor: adresi sunucu oturumdan yazıyor ve aynı motoru
-       orada bir kez daha koşuyor (gövdeden gelen değerin önemi yok, ezilir). */
+    // Denetim iki yerde: burada kullanıcı için (anında ve alan adlarıyla), sunucuda güvenlik için. `email` bu ön denetimden
+    // çıkarılır, çünkü alan formda yok ve süzülmezse misafirin gönderimi ekranın kendi kapısında durur, kimlik çekmecesi açılmazdı.
     const issues = b2bApplicationIssues(input).filter((field) => field !== 'email');
     if (issues.length > 0) {
       setNotice(noticeForIssues(issues));
@@ -274,10 +203,8 @@ export function ProfessionalsScreen() {
     />
   );
 
-  /* BAŞVURUSU OLAN ADAY FORMU GÖRMEZ. `rejected`te "Yeniden başvur" formu geri açar — ret SİLMEZ,
-     ESKİR (motorun künyesi: yeniden başvuru damgası ret damgasının önüne geçer). `none` ve misafir
-     doğrudan forma düşer; okuma düştüyse de form açılır — beklemeyi kaldırmak yerine formu
-     göstermemek, çalışan bir sayfayı bir okuma arızası yüzünden kapatmak olurdu. */
+  /* Başvurusu olan aday formu görmez; `rejected`te "Yeniden başvur" formu geri açar, çünkü ret silinmez, eskir. Okuma düştüyse de
+     form açılır, yoksa çalışan sayfa bir okuma arızası yüzünden kapanırdı. */
   if (!sent && applicant !== null && applicant.status !== 'none' && !reapply) {
     const rejected = applicant.status === 'rejected';
     return (
@@ -360,8 +287,7 @@ export function ProfessionalsScreen() {
       <FormScroll contentContainerStyle={styles.content} testID="pro-form">
         {/* Tanıtım kartı — v3'ün mürekkep bloğu: üstbaşlık · vaat · gerekçe. */}
         <View style={styles.hero}>
-          {/* Büyük harf dilin kuralıyla; stilin `textTransform`u Android'de CİHAZIN dilini
-              kullanıyor (ölçüldü 28.08 — `cart-line-row` künyesi). */}
+          {/* Büyük harf dilin kuralıyla, çünkü stilin `textTransform`u Android'de cihazın dilini kullanır. */}
           <Text style={styles.heroEyebrow}>{upperIn(t.hero.eyebrow, locale)}</Text>
           <Text style={styles.heroTitle} accessibilityRole="header">
             {t.hero.title}

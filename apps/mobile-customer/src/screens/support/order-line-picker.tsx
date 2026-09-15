@@ -13,34 +13,14 @@ import { useOrder } from '@/screens/orders/use-order.hook';
 import type messages from '@lezzet/i18n/customer/support';
 
 /*
-  YENİ TALEBİN KALEM SEÇİCİSİ (v3 `vTalepNew` · `tn.items`) — seçilen siparişin kalemlerini GERÇEK
-  detay ucundan (`GET /api/v1/me/orders/:reference`) okur ve işaretlenenleri yukarı bildirir.
-
-  ── NEDEN AYRI DOSYA ────────────────────────────────────────────────────────
-  Detay yalnız SİPARİŞLİ talepte okunur; hook'lar koşullu çağrılamaz. Kancayı ekranın gövdesine
-  koysaydık genel talepte de boş bir referansla istek atardık — olmayan bir siparişi sormak.
-  Kapı komponent sınırında: bu parça yalnız referans varken çizilir.
-
-  ── PAKET SATIRI İŞARETLENEMEZ (bilinen sözleşme boşluğu, sessiz değil) ─────
-  Talep açılışı `orderItemIds` istiyor ve bunlar KALEM kimlikleridir (uuid). Mobil sipariş
-  sözleşmesi paket satırını TEK satıra katlayıp sentetik bir kimlik veriyor (`bundle:…`) ve o
-  satırın arkasındaki kalem kimliklerini TAŞIMIYOR — web'in görünümünde `orderItemIds` var, mobil
-  zarfında yok. Seçilebilir yapıp göndermemek sessiz bir kayıp olurdu (müşteri işaretledi sanır,
-  operatöre hiçbir şey gitmez); göndermek de sunucunun tüm talebi reddetmesi demekti (uuid
-  değil). Bu yüzden paket satırı LİSTEDE DURUR (sipariş eksik görünmesin) ama işaretlenemez, ve
-  altında bunu söyleyen bir satır çıkar. Sözleşme `orderItemIds` taşımaya başladığı gün bu
-  ayrım silinir — terfi ihtiyacı rapor edildi.
+  Yeni talebin kalem seçicisi: seçilen siparişin kalemlerini detay ucundan okur ve işaretlenenleri yukarı bildirir; ayrı dosya, çünkü
+  detay yalnız siparişli talepte okunur ve kanca koşullu çağrılamaz. Paket satırı listede durur ama işaretlenemez, çünkü mobil
+  sipariş sözleşmesi paketin kalem kimliklerini taşımıyor ve sentetik kimliği göndermek talebi reddettirirdi.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/**
- * Bekleme skeleton'ı — üç kalem satırı (v3 `hint-placeholder-count="3"`).
- *
- * YÜKSEKLİK YAZILMIYOR (10.08): eskiden `46` diye ham bir sayıydı ve satırın kendi dolgusundan
- * bağımsızdı. Skeleton artık satırın GERÇEK kabuğunu kuruyor (`styles.lineRow` + boştaki çerçeve
- * tonu) ve içine iki çubuk koyuyor; yükseklik kendiliğinden çıkıyor.
- */
+/** Bekleme iskeleti, üç kalem satırı: satırın gerçek kabuğunu kurar, bu yüzden yüksekliği yazılmaz, kendiliğinden çıkar. */
 const SKELETON_SLOTS = [0, 1, 2];
 
 interface OrderLinePickerProps {

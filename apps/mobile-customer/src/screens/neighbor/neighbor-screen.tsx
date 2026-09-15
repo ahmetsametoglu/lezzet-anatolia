@@ -20,32 +20,9 @@ import messages from './messages.json';
 import { useNeighborWelcome } from './use-neighbor-welcome.hook';
 
 /*
-  KOMŞU DAVETİ KARŞILAMASI (21.45) — sefer davetinin uygulamada indiği yer.
-
-  ── GETİREN DAVETİNİN KARDEŞİ AMA AYNI EKRAN DEĞİL ──────────────────────────
-  Getiren daveti bir KİŞİYE çağırır ("seni şu kişi davet etti"); bu bir GÜNE çağırır ("aracımız
-  Salı günü sokağında"). Ekranı ayırmanın sebebi kozmetik değil: buradaki davetin seferi GEÇEBİLİR
-  ve kontenjanı DOLABİLİR — getiren davetinde ikisinin de karşılığı yok. Ortak ekrana sığdırmak,
-  hiç dolmayan dallar taşıyan bir bileşen olurdu.
-
-  ── KULLANICININ VURGUSU: GÜN GÖRÜNSÜN ──────────────────────────────────────
-  *"Komşunuz Yaman sizi davet etti. Salı günü aracımız sokağınızda olacak."* Günü söylemeyen bir
-  komşu daveti, davet değil sadece bir bağlantıdır. Reddedilen hâllerde bile tarih yazılıyor —
-  "sefer geçti" cümlesi hangi seferin geçtiğini söyleyebilmeli.
-
-  ── "SEFER" KELİMESİ EKRANDA GEÇMEZ ─────────────────────────────────────────
-  Kullanıcı kararı: o bizim lojistik kelimemiz. Müşteriye gün söylenir — *"14 Ağustos Perşembe
-  teslimatı"*. Sözlükte de öyle yazılı.
-
-  ── KABUL AÇILIŞTA DEĞİL, DOKUNUŞTA ─────────────────────────────────────────
-  Belirteç cihaza ancak davetli bir düğmeye bastığında yazılır; girişten sonra kişiye devredilir
-  (`claimPendingInvite`). Bağlantıyı açmak bir NİYET değildir — web çerezinin aynı kararı.
-
-  ── ZATEN GİRİŞLİYSE DE AYNI KAPI, AMA HEMEN ────────────────────────────────
-  Girişli müşteride de belirteç cihaza yazılıp AYNI devir kapısından geçiyor — ekran ikinci bir
-  "kabul" yolu kurmuyor. Fark yalnız ZAMAN: kabul anında bir kez denenir, düşerse girişte yeniden.
-  İlk yazımda bu deneme YOKTU ve cihazda ölçüldü (12.08): oturumu açık müşteri daveti kabul edince
-  sunucuya hiçbir şey yazılmıyordu (`accept` künyesi).
+  Komşu daveti karşılaması, bir güne çağıran davetin uygulamada indiği yer: getiren davetinden ayrı ekran, çünkü günün seferi geçebilir
+  ve kontenjanı dolabilir. Gün her hâlde yazılır ve "sefer" kelimesi geçmez, çünkü o bizim lojistik kelimemiz; belirteç cihaza ancak
+  düğmeye basılınca yazılır ve girişli müşteride kabul anında hemen devredilir.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -63,19 +40,9 @@ export function NeighborScreen({ token }: NeighborScreenProps) {
   const welcome = useNeighborWelcome(token);
 
   /**
-   * Daveti KABUL eder ve gidilecek yere götürür.
-   *
-   * **Kabul yazıldıktan HEMEN SONRA devir denenir** ve bu ölçülmüş bir arızanın düzeltmesi
-   * (12.08, cihazda): oturumu AÇIK bir müşteri daveti kabul edince sunucuya hiçbir şey
-   * yazılmıyordu — belirteç cihazda bekliyor, devir yalnız bir sonraki GİRİŞTE koşuyordu ve
-   * oturum kalıcı olduğu için o an hiç gelmeyebiliyordu. Komşu davetinin alıcısı ise çoğu zaman
-   * ZATEN müşterimiz (kullanıcı kararı 11.08) — yani akışın en olası yolu sessizce ölüydü.
-   *
-   * Kapı giriş yolunu bilmediği gibi "ne zaman" sorusunu da bilmiyor: oturum VARSA şimdi yazar,
-   * yoksa 401'e düşer ve belirteç cihazda kalır (`claimPendingInvite` künyesi: yalnız başarıda
-   * tüketir). İki hâl için iki ayrı kod yazmaya gerek yok.
-   *
-   * Beklenmiyor (`void`): yazma düşse de davetli yoluna devam etmeli.
+   * Daveti kabul eder ve gidilecek yere götürür; kabul yazıldıktan hemen sonra devir denenir, çünkü komşu davetinin alıcısı çoğu
+   * zaman zaten girişli müşteridir ve devri bir sonraki girişe bırakmak o yolu sessizce öldürürdü. Beklenmez, yazma düşse de
+   * davetli yoluna devam etmeli.
    */
   const accept = (target: '/catalog' | '/login') => {
     void rememberNeighborInvite(token).then(() => claimPendingInvite());

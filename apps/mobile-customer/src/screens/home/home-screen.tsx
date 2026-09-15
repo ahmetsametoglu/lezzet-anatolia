@@ -9,7 +9,7 @@ import {
   scopeBadgeOf,
 } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
-// Metin iki yüzeyin ORTAK malı (14.09): web'in telefon görünümü de bu sözlükten okur.
+// Metin iki yüzeyin ortak malı: web'in telefon görünümü de bu sözlükten okur.
 import messages from '@lezzet/i18n/customer/home';
 import { useRouter } from 'expo-router';
 import { useEffect, useState, useSyncExternalStore } from 'react';
@@ -53,53 +53,23 @@ import { useHome } from './use-home.hook';
 import { useHomeOrders } from './use-home-orders.hook';
 
 /*
-  VİTRİN (v3 `vHome`) — uygulamanın açılış ekranı. Şablonun sırası birebir korundu: başlık →
-  süren sipariş → günün fırsatı → fırsat rayı → koleksiyon bantları → vitrin rayı → tarif rayı →
-  hazır paketler → Keşif ve profesyonel davetleri.
-
-  ── VERİNİN DÖRT KAYNAĞI ────────────────────────────────────────────────────
-  · `/api/v1/home` (bantlar · seçki · FIRSATLAR · tarifler · paketler),
-  · `/api/v1/me` (selamlama adı, toptan rozeti),
-  · `/api/v1/me/orders` (süren sipariş bandı + "geçen siparişi tekrarla" bandı — 09.08),
-  · cihaz (`lib/onboarding` — teslimat bölgesi kodu) + `/places` (kodun şehri).
-  Fixture'da kalan tek şey günün fırsatıdır ve o da ÇİZİLMİYOR (aşağıdaki künye). Veri PROP olarak
-  alınıyor (varsayılanı fixture) ki testler kendi hâllerini aynı kapıdan kursun.
-
-  ── AŞAĞI ÇEKEREK YENİLEME (kullanıcı isteği 09.08) ─────────────────────────
-  Vitrin uygulamanın açılış ekranı ve içeriği gün içinde değişiyor (fırsat biter, paket tükenir);
-  o yüzden hareket İKİ kaynağı birden tazeler — vitrin bölümlerini ve kimliği. Yenileme sırasında
-  ekran iskelete DÜŞMEZ: bölümler yerinde kalır, hareketin kendi göstergesi yeter (hook künyesi).
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **Onboarding (`ob`) ve toast ÇİZİLMEDİ.** İkisi de kabuk öğesidir, vitrinin parçası değil:
-     onboarding uygulamanın ilk açılışına, toast ise küresel bir bildirim katmanına ait. Bu
-     ekranın içine gömülselerdi ikisi de yalnız vitrinde çalışırdı.
-  2. **`moreCats`/`band1-3` yolları kullanılmadı.** Şablon aynı koleksiyon şeridini iki ayrı
-     yoldan kuruyor (döngü + üç elle yazılmış bant); döngü olan alındı, ötekisi aynı şeyin ikinci
-     kopyasıydı.
-  3. **Puan rozeti B2B'de ve misafirde çizilmez** — şablonun kendi kuralı (`hdrPts`).
-  4. **Süren sipariş ile "tekrarla" bandı aynı anda çıkmaz** (şablon: `lastOrder` yalnız süren
-     sipariş yokken hesaplanıyor). Veri ikisini birden verirse SÜREN olan kazanır: aktif bir
-     teslimatın üstüne "geçen siparişi tekrarla" demek, olan biteni gizlerdi.
-  5. **Geri sayım saniyede bir tazelenir**, şablondaki gibi; süre dolduğunda sayaç yerine "süre
-     doldu" yazılır — negatif bir süre yazmak ya da 00:00:00'da donmak ikisi de yalan olurdu.
+  Vitrin, uygulamanın açılış ekranı: şablonun sırası korunur (başlık → süren sipariş → fırsat rayı → koleksiyon bantları → vitrin
+  rayı → tarif rayı → hazır paketler → davetler) ve veri dört kaynaktan gelir (`/home`, `/me`, `/me/orders`, cihazdaki posta kodu).
+  Aşağı çekme bölümleri ve kimliği birlikte tazeler, ekran iskelete düşmez; süren sipariş varken "tekrarla" bandı çizilmez, çünkü
+  aktif teslimatın üstüne "geçen siparişi tekrarla" demek olan biteni gizlerdi.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
 interface HomeScreenProps {
-  /** Vitrin verisi — varsayılanı fixture (UI-only etap). */
+  /** Vitrin verisi; varsayılanı fixture, testler kendi hâllerini aynı kapıdan kurar. */
   data?: HomeData;
 }
 
-/* Selamlamanın saati ÇİZİM ANINDA okunur. Eskiden geri sayımın saniyelik sayacına bağlıydı; o
-   sayaç günün fırsatıyla birlikte kalktı ve yalnız selamlama için saniyede bir yeniden çizim
-   yapmak, bir saatte bir değişen bir kelime için ödenecek bedel değil. En kötü hâl, ekran açık
-   dururken selamlamanın bir sonraki etkileşime kadar geç dönmesidir. */
+/* Selamlamanın saati çizim anında okunur: bir saatte bir değişen bir kelime için saniyelik yeniden çizim ödenecek bedel değil. */
 
-/* Selamlama, fırsat kartının sınır satırı ve bandın sayaç satırı `@lezzet/helper`ta (`home-copy.ts`,
-   14.09): web'in telefon görünümü de bu vitrini çiziyor ve üç cümle iki yüzeyin ortak malı oldu.
-   Künyeleri (19.08 "kaç tane kaldıysa o kadar acele" · 08.44 sayaç satırı · eşik 5) oraya taşındı. */
+/* Selamlama, fırsat kartının sınır satırı ve bandın sayaç satırı `@lezzet/helper`ın `home-copy.ts`inde, çünkü web'in telefon
+   görünümü de bu vitrini çizer. */
 
 export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const locale = useAppLocale();
@@ -110,20 +80,16 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const count = cartCount(cart);
 
   const { customer: fixtureCustomer } = data;
-  /* KİMLİK GERÇEK OTURUMDAN (21.14c): ad `/me`den (ilk kelime — selamlama tam ad değil hitaptır),
-     toptan rozeti onaylı kurumsal müşteriden (ölçüt `useWholesale`da, sekme çatalıyla ORTAK).
-     PUAN ARTIK ÇİZİLMEZ: `/me` puan taşımıyor (puan modülü ayrı) ve oturum gerçekken kurgu sayı
-     basılamaz — alan bağlanınca rozet geri gelir. Bildirim sayacı da aynı gerekçeyle 0 (altyapısı
-     21.13). `error` misafir GİBİ çizilir ama misafir sayılmaz (hook künyesi). */
+  /* Kimlik gerçek oturumdan: ad `/me`den (ilk kelime, çünkü selamlama hitaptır), toptan rozeti onaylı kurumsal müşteriden. `/me`
+     puan taşımadığı için puan rozeti çizilmez; `error` misafir gibi çizilir ama misafir sayılmaz. */
   const meState = useMe();
   const wholesale = useWholesale();
   /* Ad HİÇ girilmemiş olabilir (e-postayla yeni açılan hesap: `name` boş dize) — boş ad, adsız
      selamlamadır; "İyi akşamlar, " diye yarım cümle kurulmaz. */
   const firstName = meState.status === 'ready' && meState.me !== null ? (meState.me.name.trim().split(/\s+/)[0] ?? '') : '';
   const signedIn = meState.status === 'ready' && meState.me !== null;
-  /* ROZET GERÇEK UÇTAN (14.13): sayı `/me/notifications/badge`ten, canlılık kişinin kendi
-     kanalından, odakta tazelenir — bildirim ekranından dönüşte okunan satır rozetten anında düşer
-     (hook künyesi). Fixture'ın sabit sayısı kalktı. */
+  /* Bildirim rozeti gerçek uçtan (`/me/notifications/badge`), odakta tazelenir; bildirim ekranından dönüşte okunan satır rozetten
+     anında düşer. */
   const unreadNotifications = useNotificationBadge(signedIn && meState.me !== null ? meState.me.id : null);
   const customer = {
     ...fixtureCustomer,
@@ -132,34 +98,23 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
     points: null,
     unreadNotifications,
   };
-  /* Bantlar + seçki + FIRSATLAR + tarifler + paketler GERÇEK uçtan (`/api/v1/home`); yüklenirken/
-     hata anında bu bölümler çizilmez (vitrin tasarımında iskelet/hata hâli yok; gerekçe hook
-     künyesinde). Fixture'da kalanlar: kimlikli bölümler ve günün fırsatı (fixture künyesi). */
+  /* Bantlar, seçki, fırsatlar, tarifler ve paketler `/api/v1/home`dan gelir; yüklenirken ve hata anında bu bölümler çizilmez. */
 
-  /* SİPARİŞ BANTLARI GERÇEK UÇTAN (09.08): süren sipariş ve "geçen siparişi tekrarla" artık
-     `/api/v1/me/orders`tan okunuyor — sabit `LA-2418` kalktı. Kapı oturuma bağlı (`signedIn`):
-     misafirde ne çağrı yapılır ne bant çizilir; giriş/çıkış anında hook kendiliğinden döner. */
+  /* Sipariş bantları `/api/v1/me/orders`tan ve oturuma bağlı: misafirde ne çağrı yapılır ne bant çizilir. */
   const homeOrders = useHomeOrders(locale, signedIn);
   const liveOrder = homeOrders.live;
   const lastOrder = homeOrders.last;
 
-  /* TESLİMAT BÖLGESİ — kaynak CİHAZ (onboarding'de yazılan kod), adı da gerçek uçtan (`/places`).
-     Fixture'daki sabit "67000 STRASBOURG" kalktı: kullanıcının kendi cevabı dururken uydurma bir
-     şehir yazmak, ekranın en görünür yerinde yalan söylemekti. Kod hiç girilmemişse (onboarding
-     atlandı) hap bir DAVET olur — boş bir yer adı basılmaz. */
+  /* Teslimat bölgesinin kaynağı cihazdaki kod, adı `/places`tan; kod hiç girilmemişse hap bir davet olur, boş yer adı basılmaz. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
-  /* Tam kanca (`place` + `refresh`): aşağı çekme KAPSAMI da tazeliyor — kullanıcı isteği 02.09,
-     *"parmak ile beraber bilginin de güncellenmesi"*. Kanca kendi tetikleyicilerini zaten
-     dinliyor; jest çağıranın kaydırma alanına ait olduğu için buradan bağlanır. */
+  /* Tam kanca (`place` + `refresh`), çünkü aşağı çekme kapsamı da tazeler; hareket çağıranın kaydırma alanına ait olduğu için buradan
+     bağlanır. */
   const savedPlaceLookup = usePlaceLookup(postalCode ?? '');
   const savedPlace = savedPlaceLookup.place;
   const resolvedName = savedPlace?.kind === 'resolved' ? savedPlace.place.placeName : null;
-  /* HATIRLANAN AD (MB-80, 23.08) — ölçüldü: `resolvedName` üç durumda birden `null` (kod eksik ·
-     cevap HENÜZ gelmedi · istek DÜŞTÜ) ve başlık o üçünde de çıplak kod yazıyordu. Yani vitrin HER
-     açılışta, `/places` cevabı gelene kadar "67000" gösteriyordu; kullanıcının 11.08'de yakaladığı
-     kare buydu. İstek düşerse çıplak kod KALICI oluyordu. Bir posta kodunun şehri değişmez, cihaz
-     onu geçen sefer öğrendi — en doğru tahmin odur (vitrin yerleşim izinin aynı gerekçesi). */
+  /* Hatırlanan ad: `/places` cevabı gelene kadar ya da istek düşerse başlık çıplak kod yazardı; bir posta kodunun şehri değişmez,
+     cihazın geçen sefer öğrendiği ad en doğru tahmindir. */
   const rememberedName = useRememberedPlaceName(postalCode);
   const savedPlaceName = resolvedName ?? rememberedName;
   const postalLabel =
@@ -171,9 +126,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
     if (postalCode !== null && resolvedName !== null) void rememberPlaceName(postalCode, resolvedName);
   }, [postalCode, resolvedName]);
 
-  /* Vitrin okuması YERE bağlı: posta kodu `useHome`a geçer, sunucu depoyu çözer ve fırsat şeridi
-     ancak öyle dolar (ölçüldü 09.08 — kodsuz 0, 67000 ile 2). Çağrı bu yüzden posta kodunun
-     TANIMLANDIĞI satırdan sonra durur; kod değişince hook yeniden okur. */
+  /* Vitrin okuması yere bağlı: posta kodu `useHome`a geçer, sunucu depoyu çözer ve fırsat rayı ancak öyle dolar; çağrı bu yüzden
+     posta kodunun tanımlandığı satırdan sonra durur. */
   const home = useHome(locale, postalCode);
   const bands = home.home?.bands ?? [];
   const featured = home.home?.featured ?? [];
@@ -181,17 +135,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const recipes = home.home?.recipes ?? [];
   const packages = home.home?.packages ?? [];
 
-  /* ── SKELETON'IN YERLEŞİMİ SON AÇILIŞTAN (kullanıcı kararı 10.08) ──────────────
-     Vitrinin bölümleri koşullu, iskelet ise veri gelmeden hangisinin çıkacağını bilemez. Sabit
-     bir iskelet (eski hâli) her açılışta olmayan blokları çizip veri gelince kaybediyordu — ekran
-     zıplıyordu. Cihaz bu vitrini geçen sefer gördü; iz o yüzden tutuluyor ve iskelet onu çiziyor.
-
-     YAZMA YALNIZ BAŞARILI YÜKLEMEDE: hata hâlinde bölümler zaten çizilmiyor, o boşluğu "geçen
-     sefer böyleydi" diye kaydetmek bir sonraki açılışın iskeletini yanlış küçültürdü.
-
-     Sipariş bandı iki kapıdan geçer — İZ ve OTURUM. İz "vardı" dese bile MİSAFİRDE çizilmez
-     (bant girişe bağlı); oturum henüz OKUNMADIYSA ize güvenilir, çünkü ölçülmemiş bir değeri
-     "yok" saymak bilinen bir bilgiyi çöpe atmaktır (CLAUDE §1). */
+  /* İskeletin yerleşimi son açılıştan gelir, çünkü sabit iskelet olmayan blokları çizip veri gelince kaybeder ve ekran zıplar; iz
+     yalnız başarılı yüklemede yazılır. Sipariş bandı misafirde çizilmez, oturum henüz okunmadıysa ize güvenilir (CLAUDE §1). */
   const storedLayout = useSyncExternalStore(subscribeHomeLayout, getHomeLayoutSnapshot);
   const knownGuest = meState.status === 'ready' && meState.me === null;
   const layout = storedLayout ?? DEFAULT_HOME_LAYOUT;
@@ -202,7 +147,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
     if (home.status !== 'ready') return;
     void saveHomeLayout({
       orderBand: hasOrderBand,
-      // Günün fırsatı sayfada ÇİZİLMİYOR (ucu yok — aşağıdaki künye), yani hiç görülmedi.
+      // Günün fırsatı çizilmiyor (ucu yok), yani hiç görülmedi.
       flash: false,
       offers: offers.length,
       bands: bands.length,
@@ -221,53 +166,23 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   ]);
 
   const [zipSheetOpen, setZipSheetOpen] = useState(false);
-  /* HAP HER HÂLDE ÇEKMECEYİ AÇAR (kullanıcı kararı 09.08) — v3'ün `pillTap` kuralından bilinçli
-     sapma.
-
-     Şablon girişli müşteride çekmece yerine "adresleriniz Hesap bölümünde" diyordu ve gerekçesi
-     makul görünüyordu: girişlinin gerçek adres kaydı var, buradaki yalnız bir bölge kodu. Ama
-     ölçülünce iki arıza çıktı (kullanıcı, cihaz 09.08):
-       1. Girişli müşteri vitrini BAŞKA bir bölge için gezemiyordu ("anneme göndersem ne çıkar").
-       2. Kayıtlı adresi OLMAYAN girişli müşteri hiçbir yerden bölge seçemiyordu — ne hap açılıyor
-          ne seçilecek adres var. Çıkışsız oda; fırsatlar da o yüzden hiç çözülmüyordu.
-
-     KURGU (kullanıcının tarifi, web'de zaten böyle): posta kodu bir GEZİNME MERCEĞİDİR, teslimat
-     kararı değil. Müşteri onu istediği gibi değiştirir; SEPETE gidince sepet gönderilecek ADRESE
-     göre güncellenir. İki bilgi ayrı sorulara cevap veriyor, o yüzden çelişmiyorlar — ve çekmece
-     bunu girişli müşteriye açıkça söyler (kit künyesi: `browsingOnly`).
-
-     KAYDI ÇEKMECE YAPAR (10.08, kite taşınırken): kaydetme ve onay toast'ı artık çekmecenin
-     içinde — aynı çekmeceyi bilgi bandı ve teslimat bölgeleri sayfası da açıyor ve kaydın ne
-     yaptığı üç ekranda üç kez yazılmamalı. Vitrine kalan tek şey açma/kapama. */
+  /* Hap her hâlde çekmeceyi açar, şablonun girişliye "adresleriniz Hesap'ta" demesinden bilinçli sapma: posta kodu bir gezinme
+     merceğidir, teslimat kararı değil, ve girişli müşteri de vitrini başka bir bölge için gezebilmeli. Kayıt ve onay
+     çekmecenin içindedir. */
   const openLocation = () => setZipSheetOpen(true);
 
   const openProduct = (slug: string) => router.push({ pathname: '/product/[slug]', params: { slug } });
 
-  /* İLK YÜK: sayfanın yerini iskelet tutar (kullanıcı isteği 09.08 — "vitrin sayfasını bire bir
-     kopyalasın"). Yalnız İLK yük: aşağı çekerek yenilemede hook `loading`e düşmez (künyesi),
-     bölümler yerinde kalır. Bütün kancalar bu satırın ÜSTÜNDE çağrılıyor; erken dönüş çağrı
-     sırasını bozmaz. Hangi bölümlerin çizileceğini son açılışın izi söyler (yukarıdaki künye). */
+  /* İlk yükte sayfanın yerini iskelet tutar, yenilemede bölümler yerinde kalır; bütün kancalar bu satırın üstünde çağrıldığı için
+     erken dönüş çağrı sırasını bozmaz. */
   if (home.status === 'loading')
     return (
-      /* KEŞİF DAVETİ ARTIK HER HÂLDE ÇİZİLİYOR (MB-75, 18.08 — aşağıdaki künye), o yüzden iskelet
-         de kutuya HER ZAMAN yer ayırır. Eskiden `!knownGuest` idi çünkü kart misafirde hiç
-         çizilmiyordu; ölçüt orada kalsaydı misafirin sayfası oturduğu an bir kutu boyu AŞAĞI
-         kayardı — iskeletin işi tam bunu önlemek. Sipariş bandının `knownGuest` ölçütü yerinde
-         duruyor: o blok gerçekten girişliye özel. */
+      /* Keşif daveti her hâlde çizildiği için iskelet de kutuya her zaman yer ayırır; sipariş bandı ise girişliye özel kalır. */
       <HomeSkeleton sections={skeletonSections} discoverInvite testID="home-skeleton" />
     );
 
-  /* SUNUCUYA ULAŞILAMADIYSA SAYFA BUNU SÖYLER (kullanıcı kararı 20.08).
-     Eskiden bu dal YOKTU ve `error` hâli olduğu gibi aşağıya düşüyordu: `home` `null` kaldığı için
-     her bölüm "boş dizi = bölüm yok" kuralına takılıp çizilmiyor, ekranda yalnız selamlama ile iki
-     statik davet kartı kalıyordu. Cihazda ölçüldü (20.08, mobil API kapalı, soğuk açılış): vitrin
-     BOMBOŞ ve tek bir uyarı yok — müşteri "mağaza boş" ya da daha kötüsü "sepetim gitmiş" sanıyor
-     (sepet rozeti de o hâlde çizilmiyor). Kaybolan veri değil, okunamayan sunucuydu.
-
-     Dosyanın üstündeki künye bu boşluğu "tasarımdan hata hâli gelirse bu durumdan okunur" diye
-     bırakmıştı; karar geldi. Görünüm İCAT EDİLMİYOR: katalog/paketler/siparişler ekranlarının
-     zaten kullandığı `connection-off` kalıbı (`OfflineNotice`), yalnız metni vitrinin kendi
-     sözlüğünden. `retry` kancada zaten vardı, kullanılmıyordu. */
+  /* Sunucuya ulaşılamadıysa sayfa bunu söyler, yoksa her bölüm "boş dizi = bölüm yok" kuralıyla düşer ve vitrin "mağaza boş" gibi
+     okunurdu; görünüm katalog ve siparişlerin `connection-off` kalıbıdır (`OfflineNotice`). */
   if (home.status === 'error')
     return (
       <OfflineNotice
@@ -297,7 +212,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
             />
           )}
         </View>
-        {/* Konum hapı artık ÇEKMECE açıyor (v3 `shZip` — kullanıcı isteği 09.08). */}
+        {/* Konum hapı çekmece açar (v3 `shZip`). */}
         <PressableSurface
           onPress={openLocation}
           feedback="opacity"
@@ -336,11 +251,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
     </View>
   );
 
-  /* TESLİM PENCERESİ YAZILMIYOR (ölçüldü 09.08): şablon "Bugün 14:00 – 18:00" diyordu ama böyle
-     bir veri YOK — sözleşmenin liste satırı (`MeOrderSummary`) teslim günü taşımıyor, veritabanı
-     da yalnız GÜN tutuyor (`order.delivery_date` bir `date`; saat aralığı hiçbir yerde yok).
-     Uydurma bir saat basmak müşteriye verilmiş bir söz olurdu; bant tek satır çiziliyor ve alan
-     ihtiyacı raporlandı. */
+  /* Teslim penceresi yazılmaz: sözleşme saat taşımıyor, veritabanı da yalnız günü tutuyor ve uydurma bir saat müşteriye verilmiş
+     bir söz olurdu. */
   const liveOrderBand =
     liveOrder === null ? null : (
       <PressableSurface
@@ -368,14 +280,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
       </PressableSurface>
     );
 
-  /* Sapma 4: süren sipariş varken "tekrarla" bandı çizilmez.
-
-     BANT SEPETE DEĞİL SİPARİŞ DETAYINA GÖTÜRÜR (09.08): tekrar sipariş, kalemleri BUGÜNKÜ fiyat
-     ve satılabilirlikle sepete kopyalayan bir orkestrasyondur; o kural `@lezzet/application`a
-     terfi etmedi ve ucu da yok (`orders-screen` künyesi sapma 1). Eski hedef boş sepeti açıyordu
-     — "tek dokunuşla sepete" diyip hiçbir şey eklememek verilmiş bir sözü tutmamaktı. Detay,
-     müşterinin ne aldığını gördüğü ve tekrarın gerçekten başladığı yer; alt satır da bu yüzden
-     vaatsiz künyeye (`{reference} · {total}`) indi. Uç geldiği gün hedef sepet olur. */
+  /* Süren sipariş varken "tekrarla" bandı çizilmez. Bant sepete değil sipariş detayına götürür, çünkü tekrar siparişin ucu yok ve
+     boş sepeti açmak "tek dokunuşla sepete" sözünü tutmamak olurdu. */
   const lastOrderBand =
     liveOrder !== null || lastOrder === null ? null : (
       <PressableSurface
@@ -398,16 +304,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
       </PressableSurface>
     );
 
-  /* ── GÜNÜN FIRSATI ÇİZİLMİYOR (kullanıcı kararı 09.08) ────────────────────────
-     Şablonda geri sayımlı bir "günün fırsatı" bandı var ve buraya fixture'la çizilmişti. Ölçüldü:
-     BÖYLE BİR ÖZELLİK YOK — ne "günün fırsatı" diye seçilmiş bir kayıt, ne de bitiş anını
-     (`endsAtMs`) taşıyan bir uç. Fırsat şeridi (`offers`) başka bir şeydir: SKT'si yaklaşan
-     partiden doğan indirimli ürünler, süresi yok.
-
-     Kurgu veriyle çizilip bırakılsaydı ekranın en görünür yerinde tutulamayacak bir söz dururdu —
-     sayaç işleyip biterdi ama arkasında bir kampanya olmazdı. Kaldırıldı; kavram
-     `design/BACKLOG.md`ye yazıldı ve uç geldiği gün blok şablondaki yerine döner.
-     Yardımcılar (`countdownLabel`, `now` sayacı) da onunla birlikte kalktı. */
+  /* Günün fırsatı çizilmez: böyle bir özellik yok (seçilmiş kayıt da bitiş anını taşıyan uç da), fırsat rayı ise süresiz
+     indirimli ürünlerdir; kurgu veriyle çizmek tutulamayacak bir söz olurdu. */
 
   const offerRail =
     offers.length === 0 ? null : (
@@ -423,7 +321,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
           >
             <View style={styles.offerBadge}>
               <Tag
-                // Oran iki yüzeyin ortak kurucusundan (14.09); `?? 0` tip daraltması (uç fiyatsızı süzer).
+                // Oran iki yüzeyin ortak kurucusundan; `?? 0` tip daraltmasıdır (uç fiyatsızı süzer).
                 label={offerDiscountLabel(offer.priceCents ?? 0, offer.wasCents, t.offers)}
                 rotate={-7}
                 shadow
@@ -444,8 +342,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                 <Text style={styles.offerPrice}>{formatPrice(offer.priceCents ?? 0, locale)}</Text>
                 <Text style={styles.offerWas}>{formatPrice(offer.wasCents, locale)}</Text>
               </View>
-              {/* SATIR ARTIK VERİDEN (kullanıcı bulgusu + kararı 19.08) — gerekçe `offerLimit`
-                  yardımcısının künyesinde. Sınır YOKSA hiçbir şey yazılmaz. */}
+              {/* Satır veriden gelir, gerekçesi `offerLimit` yardımcısında; sınır yoksa hiçbir şey yazılmaz. */}
               {offerLimitOf(offer.limitLabel, t.offers) === null ? null : (
                 <Text style={styles.offerLimit}>{offerLimitOf(offer.limitLabel, t.offers)}</Text>
               )}
@@ -486,9 +383,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         {bands.length === 0 ? null : (
           <View style={styles.collections}>
             <Text style={[styles.sectionEyebrow, styles.collectionsEyebrow]}>{upperIn(t.collections.eyebrow, locale)}</Text>
-            {/* Daireler bantların İÇİNDE değil, yığının ÜSTÜNDE (aşağıdaki katman): v3'te daire
-                komşu bantlara taşar; RN'de kardeş sırası z-sırası olduğundan bunu ancak sonradan
-                çizilen bir üst katman verebilir (kullanıcı bulgusu 08.08). */}
+            {/* Daireler bantların içinde değil yığının üstünde: v3'te daire komşu bantlara taşar ve RN'de kardeş sırası z-sırası olduğu
+                için bunu ancak sonradan çizilen bir üst katman verir. */}
             <View style={styles.bandStack}>
               {bands.map((band, index) => (
                 <CollectionBand
@@ -502,10 +398,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   index={index}
                   image={band.image}
                   onPress={() =>
-                    /* Her iki tür de katalogu KENDİ süzgeciyle açar (21.64 — koleksiyon kesiti
-                       eklenene kadar koleksiyon bandı kataloğun köküne gidiyordu ve müşteri
-                       "Bayram Sofrası"na basıp tüm katalogu görüyordu). Parametre adları uçtakiyle
-                       ve web'in URL'siyle aynı; süzgecin sahibi katalog ekranıdır. */
+                    /* Her iki tür de kataloğu kendi süzgeciyle açar; parametre adları uçtakiyle ve web'in URL'siyle aynı, süzgecin sahibi
+                       katalog ekranı. */
                     band.kind === 'category'
                       ? router.push({ pathname: '/catalog', params: { category: band.slug } })
                       : router.push({ pathname: '/catalog', params: { collection: band.slug } })
@@ -520,8 +414,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   name={band.name}
                   index={index}
                   image={band.image}
-                  /* Rozet DAİRENİN köşesinde (27.08 · kullanıcı isteği) ve daireler bu katmanda
-                     çiziliyor — bandın kendi dalına verilen `discountLabel` vitrinde kullanılmaz. */
+                  /* Rozet dairenin köşesinde ve daireler bu katmanda çiziliyor; bandın kendi dalına verilen `discountLabel` vitrinde
+                     kullanılmaz. */
                   discountLabel={scopeBadgeOf(band.campaign, t.campaign, locale)}
                 />
               ))}
@@ -532,34 +426,24 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         {featured.length === 0 ? null : (
           <View style={styles.section}>
             <View style={styles.sectionPad}>
-              {/* Başlığın sağındaki "Tüm katalog ›" bağlantısı KALKTI (v3 yeni sürüm): kapı artık
-                  rayın SONUNDAKİ kart — parmağın zaten kaydırdığı yerde duruyor. */}
+              {/* Kataloğun kapısı rayın sonundaki kart, parmağın zaten kaydırdığı yerde. */}
               <SectionHeader eyebrow={t.featured.eyebrow} title={t.featured.title} testID="home-featured-header" />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.circleRail}>
               {featured.map((product) => {
-                /* YER İŞARETİ (21.20) — katalog kartıyla AYNI cümle, AYNI komponent. Vitrin ve
-                   katalog aynı ürüne bakan iki ekran; işaret yalnız birinde çizilseydi rota dışı
-                   müşteri iki ekranda iki farklı gerçek okurdu. Kaynak da aynı: `stockStatus`
-                   sözleşmede zaten vardı (`CatalogProductSchema`), vitrin onu atıyordu. */
+                /* Yer işareti katalog kartıyla aynı cümle ve aynı bileşen, çünkü iki ekran aynı ürüne bakar ve işaret yalnız birinde
+                   çizilseydi rota dışı müşteri iki farklı gerçek okurdu. */
                 const stockMark = stockMarkOf(product.stockStatus, savedPlace, locale);
-                /* "KARGOYLA GELİR" ÇİZİLMEZ (kullanıcı kararı 10.08 — katalog ekranının aynı
-                   satırı). Rota dışı müşterinin kartlarının neredeyse TAMAMI o işareti taşıyordu,
-                   yani bilgi olmaktan çıkıp gürültü oluyordu; cümle listenin başındaki bilgi
-                   bandına, TEK yere taşındı. Kartta yalnız KAPALI kapı konuşur ("bu adrese
-                   gönderemiyoruz") — o istisnadır ve söylenmezse müşteri sepette öğrenir. */
+                /* "Kargoyla gelir" kartta çizilmez, cümlesi listenin başındaki bantta tek yerde durur; kartta yalnız kapalı kapı
+                   konuşur. */
                 const placeMark = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark;
                 return (
                   <ProductCircleCard
                     key={product.slug}
                     name={product.name}
-                    /* Etiket kitin türetmesinden: çok boyluda "…'dan" eki, fiyat yoksa çip hiç
-                       çizilmez. Buradaki eski `?? 0` gerekçeliydi (uç fiyatsızı süzer) ama artık
-                       gereksiz — kural tek yerde ve sıfıra düşmüyor (`@lezzet/helper` `price-label`). */
+                    /* Etiket kitin türetmesinden: çok boyluda "…'dan" eki, fiyat yoksa çip hiç çizilmez. */
                     priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
-                    /* Yalnız FIRSAT rozeti (27.08). Kapsam kampanyası buradan kalktı: sepete bir
-                       kez inen indirimi ürünün üstüne yazmak, ürün başına vaat gibi okunuyordu —
-                       yeri kesitin kendi kartı oldu (yukarıdaki koleksiyon bantları). */
+                    /* Yalnız fırsat rozeti: kapsam kampanyası kesitin kendi kartında, ürün başına yazılsa vaat gibi okunurdu. */
                     discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                     image={product.image}
                     stockMark={placeMark}
@@ -583,9 +467,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               >
                 <View style={styles.catalogCircleFrame}>
                   <View style={styles.catalogCircle}>
-                    {/* v3:133 ikonu 46; kitin dekoratif ikon durağı `decorIcon` (44) tam bu aralık.
-                        Eskiden `emptyIcon`di ve o durak 16.08'de 80'e çıktı (boş hâl ikonu büyüdü) —
-                        bu ikon sabit bir dairenin İÇİNDE, sayfanın konusu değil; ayrıldılar. */}
+                    {/* İkon v3'te 46; kitin dekoratif ikon durağı `decorIcon` (44) bu aralık, boş hâl ikonundan ayrıdır. */}
                     <Icon name="catalog" size={theme.size.decorIcon} color={theme.colors['sand-600']} />
                   </View>
                   <View style={styles.catalogArrow}>
@@ -611,8 +493,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   height={customerMetrics.recipeCardHeight}
                   image={recipe.image}
                   initial={recipe.name.slice(0, 1)}
-                  /* `duration` hazır metindir ("35 dk" — 05.16, cümleyi cihaz kurmaz); null →
-                     rozet çizilmez (girilmemiş süreye rozet uydurulmaz). */
+                  /* `duration` hazır metindir ("35 dk"), `null` ise rozet çizilmez. */
                   topBadge={recipe.duration === null ? undefined : <Tag label={recipe.duration} tone="cream" rotate={-3} />}
                   onPress={() => router.push({ pathname: '/recipe/[slug]', params: { slug: recipe.slug } })}
                   accessibilityLabel={recipe.name}
@@ -623,11 +504,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   <Text style={styles.tileMeta}>{t.recipes.meta.replace('{n}', String(recipe.itemCount + recipe.pantryCount))}</Text>
                 </PhotoTile>
               ))}
-              {/* Rayın sonundaki KOYU kart (v3:155) → tarifler listesi. Tasarımın başlığı
-                  "{n} tarif daha" diyor ama o sayı SÖZLEŞMEDE YOK: `/home` yalnız rayın kendi
-                  dilimini taşıyor, toplam tarif sayısını değil. Uydurma bir sayı yazmaktansa
-                  sayısız cümle kuruldu ("Tüm tarifler") — alan geldiği gün metin tek satırda
-                  sayılı hâline döner (terfi ihtiyacı raporlandı). */}
+              {/* Rayın sonundaki koyu kart tarifler listesine götürür; "{n} tarif daha" yazılmaz, çünkü toplam tarif sayısı sözleşmede
+                  yok. */}
               <PressableSurface
                 onPress={() => router.push('/recipes')}
                 feedback="scale"
@@ -657,10 +535,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         </View>
         <View style={styles.packages}>
           {packages.map((pack) => {
-            /* PAKETİN YER EKSENİ (10.08) — ürün dairesiyle AYNI kapı, AYNI cümle: paketin kendi
-               gerçeği (`soldOut` + `route`) önce ürün sözlüğüne çevrilir (`packageStockStatus`),
-               cümleyi yine `stockMarkOf` kurar. Vitrin ile paketler sekmesi aynı karta bakan iki
-               ekran; işaret yalnız birinde çizilseydi müşteri iki farklı gerçek okurdu. */
+            /* Paketin yer işareti ürün dairesiyle aynı kapıdan: paketin hâli önce ürün sözlüğüne çevrilir (`packageStockStatus`), cümleyi
+               `stockMarkOf` kurar. */
             const stockMark = stockMarkOf(packageStockStatus(pack), savedPlace, locale);
             /* "Kargoyla gelir" (`info`) yazılmaz — cümlesi listelerin başındaki bantta (ürün
                dairesinin aynı satırı). Kartta yalnız kapalı kapı ve bekleyen bölge konuşur. */
@@ -715,51 +591,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         )}
 
         <View style={styles.invites}>
-          {/* KEŞİF DAVETİNİN CÜMLESİ SAYI VERMEZ (MB-15, ölçüldü 11.08). Burada bir süre
-              "Her tamamlanan tur +10 puan kazandırır" yazıyordu ve o sayı HİÇBİR ayara karşılık
-              gelmiyordu: gerçek kazanç kart sayısı × `points_feedback_candidate` (=2), yani dört
-              kartlık turda 8; "+10" muhtemelen `points_visit`/`points_order` ile karışmıştı.
-              Sayıyı ayardan KURAMIYORUZ: vitrin sözleşmesi puan taşımıyor (`home-api.schema`) ve
-              turdaki kart sayısı da burada bilinmiyor (deste `/discover` çağrılınca kuruluyor) —
-              ikisi de uç değişikliği ister. Ekrana sabit sayı gömmek ise 29.07 denetiminin
-              kapattığı arıza sınıfı: ayar değiştiği gün ekran, vermediğimiz bir ödülü vaat eder.
-              Vaadin kendisi (tamamlanan tur puan kazandırır) doğru ve ölçülebilir; yanlış olan
-              yalnız sayıydı.
-
-              ── MİSAFİRE DE ÇİZİLİR, AMA BAŞKA CÜMLEYLE (MB-75, 18.08) ────────
-              **Eski hâl (MB-58a, 14.08): kart misafire HİÇ çizilmiyordu.** Gerekçesi doğruydu —
-              kartın cümlesi *"tamamlanan tur puan kazandırır"* diyor, oysa motor kimliksiz oya
-              puan yazmıyor (`application/feedback/discover.ts`, `pointsAwarded: null`); misafire
-              tutulamayacak bir söz veriliyordu.
-
-              **Ama çare fazla genişti ve künyesi bunu görmüyordu.** Aynı künye *"turun KENDİSİ
-              misafire açık kalmaya devam ediyor … misafir sekmeden ya da bitiş ekranının giriş
-              davetinden geçer"* diye yazıyordu; ölçüldü (18.08, kullanıcı sorusu üzerine):
-              **sekme YOK** (`app/(tabs)`: index · catalog · packages · account) ve bitiş ekranı
-              turun İÇİNDE. `/discover`a giden öteki iki çağrı hesap ekranında, o da misafiri
-              `/login`e itiyor. Yani ödül vaadiyle birlikte TURUN KENDİSİ de kapanmıştı ve
-              tasarımın kararı (*"misafirin oyu da talep sinyalidir"*) fiilen uygulanmıyordu.
-
-              **Doğru çare cümleyi düzeltmek, kapıyı kapatmak değil** — ve o cümle zaten YAZILMIŞ:
-              turun bitiş ekranı aynı sorunu aynı gün doğru çözmüş (MB-14): *"Giriş YAPARSANIZ
-              keşif turları puan kazandırır."* Koşullu, gelecek zamanlı, yalansız. Kart artık
-              misafirde o registeri kullanıyor (`t.discover.guestBody`); girişlide vaat kesindir
-              ve `body` aynen kalır.
-
-              **Misafirin emeği de kaybolmuyor:** girişsiz oylar cihazda tutulup girişte hesaba
-              bağlanıyor (`lib/discover/pending-swipes-store` → `/me/discover/claim`). Yani
-              koşullu cümle bir teselli değil, gerçekten tutulan bir söz. */}
-          {/* OYLANACAK KART KALMADIYSA DAVET HİÇ ÇİZİLMEZ (MB-58b, 20.08). Aday kümesi operatörün
-              eliyle büyür ve bugün küçük; hepsini oylamış müşteriye davet göstermek, açtığında
-              BOŞ çıkan bir tura çağırmaktı. Sayı artık vitrin sözleşmesinde (`discoverCards`) ve
-              destenin kendisini kuran kuraldan geliyor, yani iki taraf ayrı düşemez.
-
-              Backlog bunu "sıcak yola iki sorgu" diye askıya almıştı; askının dayanağı sorguların
-              SIRAYLA koşacağı varsayımıydı — ölçüldü, uç zaten yedi okumayı paralel yapıyor ve
-              yenisi demetin içine girdi (uç künyesi).
-
-              KOŞUL `> 0`, `!== 0` DEĞİL: sözleşme negatif sayı taşımıyor ama ölçüt niyeti söylesin
-              — çizmenin şartı kart OLMASI. */}
+          {/* Keşif davetinin cümlesi sayı vermez, çünkü kazanç kart sayısına bağlı ve ne vitrin sözleşmesi puan taşıyor ne kart sayısı
+              burada biliniyor; misafire de çizilir ama "giriş yaparsanız puan kazandırır" cümlesiyle. Oylanacak kart kalmadıysa
+              (`discoverCards`) davet hiç çizilmez, çünkü boş bir tura çağırmak olurdu. */}
           {home.home !== null && home.home.discoverCards > 0 ? (
             <DashedInvite
               title={t.discover.title}
@@ -769,29 +603,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               testID="home-discover"
             />
           ) : null}
-          {/* İKİ DAVET AYNI GÖRSEL DİLDE AMA AYNI RENKTE DEĞİL (MB-27).
-              **Birinci adım (14.08):** kart `sand` tonundaydı ve canlı Keşif kartının yanında
-              DEVRE DIŞI gibi duruyordu (kullanıcı bulgusu 11.08). Kusur tonun kendisinde değil,
-              yanlış seçilmiş olmasındaydı: `sand` bilgi tonudur, bu kart ise bir sayfaya davet
-              ediyor. Terracotta'ya çevrildi.
-              **İkinci adım (15.08, kullanıcı kararı):** o zaman da iki kart alt alta AYNI renkte
-              kaldı ve bu istenmedi. Zeytine geçti — ayrım *"biri sönük"* diye değil, **ikisi ayrı
-              yere götürüyor** diye kuruldu; zeytin uygulamanın olumlu/birincil rengi olduğu için
-              kart canlı kalıyor. İşaret ikisinde de aynı (`›`): renk NEREYE gittiğini söyler,
-              jest ise ne yapıldığını — ikisi farklı sorular. */}
-          {/* CEVABI BELLİ SORU SORULMAZ (kullanıcı kararı 20.08). Kart *"Restoran ya da market
-              misiniz? Toptan fiyatlar için profesyonel hesap açın"* diyor; onaylı toptancıya bunu
-              göstermek, yaptığı şeyi yapmaya davet etmektir — cihazda görüldü (20.08, Bosphore
-              hesabı: başlıkta TOPTAN rozeti VE altında bu davet, aynı ekranda). Başvurusu
-              incelemede olan da aynı: cevabını vermiş, sırasını bekliyor.
-
-              MB-58(a) ile AYNI SINIF: karşılığı olmayan davet. Ölçüt yeni yazılmadı, `useWholesale`
-              zaten burada (TOPTAN rozetini o çiziyor) — künyesi *"iki kopya bir gün ayrışır"* diyor
-              ve bu üçüncü çağıran.
-
-              KİŞİSEL HESAPTA DURUR (kullanıcı kararı, seçenekli soruldu): `/professionals`a giden
-              TEK kapı bu kart; girişli herkesten gizleseydik kişisel hesapla kaydolmuş bir
-              restoranın başvuru yolu tamamen kapanırdı. Soru orada hâlâ anlamlı. */}
+          {/* İki davet aynı görsel dilde ama ayrı renkte, çünkü ikisi ayrı yere götürür. Profesyonel daveti onaylı toptancıya ve
+              başvurusu incelemede olana gösterilmez, kişisel hesapta durur, çünkü `/professionals`a giden tek kapı bu kart. */}
           {wholesale || (meState.status === 'ready' && meState.me?.b2bPending === true) ? null : (
             <DashedInvite
               title={t.professional.title}
@@ -802,12 +615,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               testID="home-professional"
             />
           )}
-          {/* VİTRİNDE YASAL BLOK YOK — bir kez konup GERİ ALINDI (kullanıcı kararı 19.08).
-              Gerekçe web'in altbilgisiydi: orada beş belge her sayfanın dibinde durur. Ama web'de
-              altbilgi sayfanın ZATEN parçası, native'de vitrin alışverişin kendisi — kanunun
-              istediği şey belgelerin ERİŞİLEBİLİR olması, her ekranda GÖSTERİLMESİ değil. Ölçüt:
-              devlet nerede neyi istiyorsa o kadar. Kapılar hesap ekranında (kalıcı ev) ve
-              checkout'ta (sözleşme öncesi bilgi) — vitrin alışveriş yüzeyi olarak kaldı. */}
+          {/* Vitrinde yasal blok yok: kanun belgelerin erişilebilir olmasını ister, her ekranda gösterilmesini değil; kapılar hesap
+              ekranında ve checkout'ta. */}
         </View>
       </ScrollView>
 
@@ -921,7 +730,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.control,
     color: theme.colors['sand-50'],
   },
-  /* `liveDay` (teslim penceresi satırı) KALDIRILDI — veri yok, bant tek satır (bandın künyesi). */
   trackTilt: { transform: [{ rotate: '3deg' }] },
   trackChip: {
     paddingVertical: theme.space.sm,
@@ -1221,11 +1029,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['olive-light'],
   },
-  /* YER NOTU — paket listesindeki kardeşiyle AYNI karar: zeminsiz yazı, künyenin son satırı.
-     RENK VURGU TONU (kullanıcı kararı 11.08, paketler sekmesiyle tek karar): krem (`on-image`) adın
-     ve üstbaşlığın rengiydi, not onların arasında üçüncü bir künye satırı gibi okunuyordu — oysa
-     taşıdığı şey künye değil bir UYARI. İki ekran aynı karta bakıyor (yukarıdaki satırın künyesi);
-     rengin ayrışması aynı cümleyi iki ekranda iki ayrı ağırlıkta gösterirdi. */
+  /* Yer notu zeminsiz yazı, künyenin son satırı ve vurgu tonunda, çünkü taşıdığı şey künye değil uyarı; paket listesindeki
+     kardeşiyle aynı karar. */
   packagePlaceNote: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text['body-sm'],

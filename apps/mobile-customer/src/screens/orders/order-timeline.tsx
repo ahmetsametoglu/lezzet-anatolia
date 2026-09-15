@@ -6,25 +6,9 @@ import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 
 /*
-  SİPARİŞ ZAMAN ÇİZGİSİ (v3:719) — dört durak: alındı → hazırlandı → yolda → teslim edildi.
-
-  ── ADIMLARI ARTIK MOTOR VERİYOR (21.18) ────────────────────────────────────
-  Önceki sürüm durumdan kendi çıkarımını yapıyordu (`STATUS_INDEX` haritası + dörtlü saat dizisi).
-  Artık `timeline` sözleşmeden geliyor ve kararı motor veriyor (`orderTimeline`): hangi durak
-  geçildi, hangisi ŞU AN, hangisi bekliyor. Fark bir incelik değil — motor GEÇMİŞE bakıyor
-  (`order_status_log`), anlık duruma değil: sipariş yoldayken "hazırlandı"nın da geçildiğini yalnız
-  geçmiş söyleyebilir ve atlanan geçişler (hızlı satış yolu) anlık durumdan çıkarılamaz.
-
-  İPTAL/İADE ÇİZGİDE YER TUTMAZ: motor o hâllerde `null` döndürüyor ve ekran çizgi yerine tek durum
-  bloğu çiziyor (kararı çağıran veriyor — bu komponent yalnız adımları alır).
-
-  ÜÇ GÖRSEL DURUM: geçilmiş (zeytin) · şu an (terracotta) · henüz değil (kum). "Şu an" olan durak
-  ayrıca bir NOT taşır ("Kurye bölgenizde…"); teslim edilmişte hiçbir durak `current` olmaz, çünkü
-  söylenecek bir "şu an" kalmamıştır.
-
-  SAAT YALNIZ KAYDI OLAN ADIMDA yazılır: motor `at: null` döndürdüğünde ekran boş bırakır. Geçilmiş
-  sayılan ama damgası olmayan adım olabilir — orada tarih uydurmak, kaydı olmayan bir olaya saat
-  yazmak olurdu (CLAUDE §1).
+  Sipariş zaman çizgisi, dört durak (alındı → hazırlandı → yolda → teslim edildi): adımları motor verir (`orderTimeline`), çünkü
+  geçilmiş durağı ve atlanan geçişleri anlık durum değil geçmiş söyler. İptal ve iade çizgide yer tutmaz; saat yalnız kaydı olan
+  adımda yazılır, çünkü damgasız adıma tarih uydurmak kaydı olmayan olaya saat yazmak olurdu.
 */
 
 /** Durağın ikonu — sıra tasarımın sırası; küme motorun `OrderMilestone`u (kapalı, derlemede zorlar). */

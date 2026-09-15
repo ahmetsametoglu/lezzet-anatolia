@@ -22,46 +22,9 @@ import messages from './messages.json';
 import { useDeliveryZones } from './use-delivery-zones.hook';
 
 /*
-  TESLİMAT BÖLGELERİ — "siz nereye gidiyorsunuz?" sorusunun cevabı (kullanıcı kararı 10.08).
-
-  NİYE VAR: bölge dışı müşteri bugüne dek yalnız "buraya gelmiyoruz" cümlesini okuyordu ve
-  ölçülen tepki şuydu — *"on posta kodu denedim, hiçbirine gitmiyorsunuz"*. Gittiğimiz yerlerin
-  listesi hiçbir ekranda yoktu; müşteri haritayı kod kod deneyerek kendi çıkarmak zorundaydı.
-  Sayfanın kapısı bilgi bandındaki "Nerelere gidiyorsunuz?" bağıdır (katalog · paketler).
-
-  ── LİSTE POSTA KODUDUR (kullanıcı düzeltmesi 10.08) ────────────────────────
-  ~~Liste şehir ADIYLA okunur ("insanın tanıdığı dil"), kodla değil.~~ Kullanıcı bunu ölçüp
-  düzeltti: *"ben senden posta kodlarını göster istedim, veritabanındaki delivery zone name'in
-  müşteri için bir anlamı yok ki"*. Haklı — bölge adı OPERASYONUN rota etiketidir ("Strasbourg
-  merkez rota 2"); müşterinin elindeki tek anahtar kendi posta kodudur ve sayfaya "benimki var mı"
-  diye bakar.
-
-  ── ÖBEK VE SATIR ŞEKLİ İKİ TURDA OTURDU ────────────────────────────────────
-  Kullanıcı ÖLÇEĞİ sordu — *"yarın iki yüz posta koduna hizmet veriyorum, ellisi Almanya'da"* — ve
-  düz kod listesi orada çöktü: 200 satır okunmaz, Alman kodu Fransız kodunun arasına karışır. Uç
-  bu yüzden **ülke → yer → kodlar** diye öbekli döndürüyor (`DeliveryAreaListSchema`).
-  ~~Kodlar rozet ızgarası olarak çizilir.~~ İlk deneme cihazda görüldü ve kullanıcı eledi: *"bu
-  tasarım çok kötü, aşırı kötü"*. Her komün bir BAŞLIK, her kod bir ROZETTİ; yedi kod ekranı
-  dolduruyordu. Şimdi **satır başına tek yer**: `Strasbourg (67000 · 67100 · 67200)` — ad ve
-  kodları aynı satırda, parantez içinde (kullanıcının kendi önerisi). 80 komün 80 satırdır, 80
-  başlık + 200 rozet değil.
-
-  Müşterinin KENDİ kodunu denemesi ayrı ve tek bir eylemdir: aynı posta kodu çekmecesi
-  (`PostalCodeSheet`), vitrin başlığındakinin ta kendisi — ikinci bir alan yazılmadı.
-
-  ── ÜÇ HÂLİN ÜÇÜ DE ÇİZİLİ, VE ÜÇÜ AYRI ŞEY SÖYLER ──────────────────────────
-  · yükleniyor — listenin SKELETON'ı (kullanıcı kararı 10.08; eskiden kitin halkasıydı),
-  · hata       — kitin hata kutusu (`Note tone="error"`) + tekrar dene. Sayfanın kalanı (giriş
-                 cümlesi, kod deneme, kapanış) YERİNDE kalır: liste okunamadı diye "kargoyla
-                 gönderiyoruz" bilgisi yanlış olmaz, onu da gizlemek müşteriyi boş bir sayfada
-                 bırakırdı.
-  · boş liste  — HATA DEĞİL (sözleşmenin açık hükmü): ilan edilmiş tek bir posta kodu bile
-                 olmayabilir. Kitin boş durumu kendi cümlesiyle söyler.
-
-  ── TASARIMDA YOK, KİTİN DİLİYLE KURULDU ────────────────────────────────────
-  v3'te bu sayfa çizilmemiş. Yeni bir görsel dil üretilmedi: başlık çubuğu · bölüm başlığı ·
-  bilgi kutusu · metin eylemi · boş durum — hepsi kitin mevcut komponentleri, tüm ölçü ve renkler
-  token'dan. Sapma `design/KARARLAR.md` sonunda kayıtlı.
+  Teslimat bölgeleri, "nereye gidiyorsunuz?" sorusunun cevabı: liste posta kodudur, çünkü müşterinin elindeki tek anahtar kendi
+  kodudur ve bölge adı operasyonun rota etiketidir. Satır başına tek yer (`Strasbourg (67000 · 67100)`), ülke öbekleri altında, çünkü
+  yüzlerce kod düz listede okunmaz; kendi kodunu denemek vitrin başlığındaki aynı posta kodu çekmecesiyle yapılır.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -89,10 +52,8 @@ export function DeliveryZonesScreen() {
 
   const list =
     zones.status === 'loading' ? (
-      /* Halka yerine LİSTENİN KENDİSİ bekler (kullanıcı kararı 10.08): burada bekleyen şey bir
-         işlem değil bir YERLEŞİM — ülke başlığı ve altında yer satırları. Halka o yerleşimi
-         tutmuyordu ve liste gelince sayfa bir anda uzuyordu. Ölçüler sayfanın kendi stillerinden;
-         iki öbek ve dörder satır "en az makul" (fazlası veri gelince kaybolur, azı eklenir). */
+      /* Halka yerine listenin iskeleti bekler, çünkü beklenen şey bir işlem değil bir yerleşim ve halka onu tutmadığı için liste
+         gelince sayfa bir anda uzardı. */
       <View
         style={styles.groups}
         testID="zones-loading"
@@ -140,12 +101,7 @@ export function DeliveryZonesScreen() {
                 taraf her zaman ekran (uç biçimli metin göndermez, katalog kartının kuralı). */}
             <Text style={styles.country}>{t.countries[area.country]}</Text>
             {area.places.map((place, index) => (
-              /* SATIR BAŞINA TEK YER: ad + parantez içinde kodları (kullanıcı kararı 10.08).
-                 Önceki hâlde her komün bir BAŞLIK, her kod bir ROZETTİ ve yedi kod ekranı
-                 dolduruyordu — 80 komünde okunamaz bir duvar olurdu. Kullanıcının sözü: *"bu
-                 tasarım çok kötü… isminin yanına parantez içerisinde posta kodlarını yazabiliriz"*.
-                 Anahtar ada + SIRAYA bağlı: adsız öbek `null` taşır ve iki ülke aynı yer adını
-                 taşıyabilir — çıplak ad anahtarı o gün çakışırdı. */
+              /* Anahtar ad ve sıraya bağlı: adsız öbek `null` taşır ve iki ülke aynı yer adını taşıyabilir, çıplak ad o gün çakışırdı. */
               <Text key={`${place.name ?? ''}-${index}`} style={styles.placeLine} testID={`zones-place-${index}`}>
                 {/* Adı olmayan öbek YALNIZ kodlarıyla çizilir (sözleşmenin `name: null` hâli):
                     yer kaydı yok diye kodu gizlemek, gittiğimiz bir yeri saklamak olurdu. */}
@@ -176,11 +132,8 @@ export function DeliveryZonesScreen() {
           accessibilityHint={t.tryCodeHint}
           testID="zones-try-code"
         />
-        {/* KAPANIŞ CÜMLESİ: liste bir kapı değil bir haritadır — "burada yoksanız satmıyoruz"
-            diye okunmasın diye sayfanın sonunda kargo yolu açıkça söylenir.
-            ÜLKELER VERİDEN (18.08): metne "Fransa ve Almanya" yazılıydı ve bu bir varsayımdı —
-            küme kargo depolarından türüyor. Okuma düşerse ülkesiz hâl yazılır; cümlenin kendisi
-            sayı/ülke istemeyen kısmıyla ayakta kalır (`use-delivery-terms` künyesi). */}
+        {/* Kapanış cümlesi kargo yolunu açıkça söyler ki liste "burada yoksanız satmıyoruz" diye okunmasın; ülkeler kargo depolarından
+            türer, okuma düşerse cümle ülkesiz hâliyle ayakta kalır. */}
         <Note tone="warm" description={closing} testID="zones-closing" />
       </ScrollView>
 

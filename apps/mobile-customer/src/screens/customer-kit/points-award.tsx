@@ -7,37 +7,9 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import messages from './points-award-messages.json';
 
 /*
-  PUAN KAZANIMININ SONUCU — HER KAZANMA ANININ ORTAK BLOĞU (kullanıcı isteği 15.08).
-
-  Kullanıcının cümlesi tek satırdı ve iki soru soruyordu: *"ne kadar kazandı, sonra mevcut puanın ne
-  olduğu — her puan kazanma durumunun sonucunda aynı sayfayı göstermek lazım."*
-
-  ── NEDEN TEK BİLEŞEN ───────────────────────────────────────────────────────
-  Ölçüldü 15.08: iki ayrı sonuç ekranı vardı ve İKİSİ AYNI ŞEYİ FARKLI SÖYLÜYORDU. Geri bildirim
-  daveti üç satır yazıyordu (kazanılan · not · toplam); keşif turu tek bir hap çipe *"+N puan
-  kazandınız"* yazıp toplamı hiç söylemiyordu. Aynı sistemin iki ödülü, iki ayrı biçim, iki ayrı
-  metin kümesi — biri değiştiğinde ötekinin unutulacağı klasik ikilik (`points-earn-list.tsx`
-  künyesindeki aynı gerekçe: üç yüzey aynı programı anlatıyorsa metin de sayı da tek yerden gelir).
-
-  Kazanan biçim geri bildirimdekiydi ve bu bir zevk kararı değil: kullanıcı onu üç tur döndürerek
-  onayladı (15.08 — kutu kalktı, ölçek büyüdü, işaret kalpten `✦`e döndü).
-
-  ── SAYFA EKRANIN ORTASINDA DURUR — BU BİR TASARIM DESENİ (kullanıcı kararı 15.08) ──
-  Kullanıcının cümlesi: *"biz puan verdiğimiz zaman ekran ortalanıyor. Ekranın ortasında bir puan
-  verme sayfası varken bu bir tasarım desenidir, bunu takip etmek lazım."*
-
-  Yani ortalama bu bloğun bir SÜSÜ değil, puan kazanma anının kuralı: kazanımı gösteren ekran
-  içeriği dikeyde ortalar (`flexGrow: 1` + `justifyContent: 'center'` — kaydırma kabında). Blok
-  bunu KENDİ İÇİNDE yapamaz, çünkü ortalanan şey blok değil SAYFADIR (başlık, gövde, düğme dahil);
-  her yüzey kendi kaydırma kabına uygular. Bugün ikisi de uyguluyor: geri bildirim sonucu
-  (`contentFill`, yalnız sonuç aşamasında) ve keşif bitişi (`done`). Üçüncü bir kazanım ekranı
-  açılırsa aynı kural onun için de geçerli.
-
-  ── NOT SATIRI ARTIK BAĞLAMI TEKRARLAMIYOR ──────────────────────────────────
-  Eskiden *"bu değerlendirme için hesabınıza eklendi"* yazıyordu. Ortak bileşende bağlam cümlesi
-  taşımak, her yüzeye bir metin daha eklemek (yani ikiliği geri getirmek) olurdu. Bağlamı zaten
-  bloğun ÜSTÜNDEKİ başlık söylüyor — *"Değerlendirmeniz için teşekkürler"* / *"Hepsi bu kadardı"*;
-  not satırı yalnız ödülün nereye gittiğini söyler.
+  Puan kazanımının sonucu, her kazanma anının ortak bloğu: kazanılanı ve toplamı tek biçimde söyler, çünkü ayrı yazılan iki biçim bir
+  gün ayrışır. Kazanımı gösteren sayfa içeriği dikeyde ortalar; bunu blok değil her yüzeyin kaydırma kabı yapar, çünkü ortalanan şey
+  sayfanın tamamıdır.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -54,17 +26,8 @@ interface PointsSparkProps {
 }
 
 /**
- * **Puan yıldızı (✦) — puanın görsel imzası** (kullanıcı kararı 15.08).
- *
- * Geri bildirim sonucunda kalp vardı ve kalp jenerikti: *"beğendim"* der, oysa anın konusu PUAN.
- * `✦` uygulamanın puan dilinin kendisi — hesap kartı `✦ 10`, kazanım satırı `✦ +15 puan` diye
- * yazıyor; işaret artık yanındaki metinle aynı şeyi söylüyor.
- *
- * Geometri: (12,12) merkezli dört uçlu yıldız; kenarlar merkeze doğru İÇBÜKEY, yani uçlar sivri.
- * Düz bir eşkenar dörtgen büyük ölçekte şekil değil LEKE gibi okunuyor.
- *
- * `customer-icon.tsx` sözlüğüne girmedi: oradaki `star` beş uçlu klasik yıldız ve başka bir işi var
- * (bildirim listesi · "Ürünleri değerlendir"). İkisi aynı ada iki geometri olurdu.
+ * Puan yıldızı (✦), puanın görsel imzası: hesap kartı ve kazanım satırı puanı `✦` ile yazar. Dört uçlu ve kenarları içbükey, çünkü
+ * düz eşkenar dörtgen büyük ölçekte leke gibi okunur; sözlükteki `star` beş uçlu ve başka bir işin ikonu.
  */
 export function PointsSpark({ size, color }: PointsSparkProps) {
   return (
@@ -82,11 +45,8 @@ export function PointsSpark({ size, color }: PointsSparkProps) {
 
 interface PointsAwardProps {
   /**
-   * Bu anda GERÇEKTEN yazılan puan — motorun defterinden, ekranın çarpımından değil.
-   *
-   * `null` = ödülün sahibi yok (girişsiz tur) ve bu SIFIR DEĞİLDİR; `0` = motor gerçekten yazmadı
-   * (günlük tavan · B2B · aynı kayda ikinci ödül). İkisinde de blok çizilmez: kazanılmayan bir
-   * ödülün sonucu gösterilmez.
+   * Bu anda gerçekten yazılan puan, motorun defterinden. `null` ödülün sahibi yok (girişsiz tur), `0` motor yazmadı (günlük tavan,
+   * B2B, aynı kayda ikinci ödül); ikisinde de blok çizilmez, çünkü kazanılmayan ödülün sonucu gösterilmez.
    */
   points: number | null;
   /**
@@ -97,22 +57,16 @@ interface PointsAwardProps {
    */
   balance: number | null;
   /**
-   * Toplam henüz OTURMADI mı — yolda, cevabı gelmemiş bir yazım var demektir.
-   *
-   * `true` iken sayı YAZILMAZ, bekleme SÖYLENİR. MB-16'nın ölçümü buydu (11.08): 4 oy verilmiş,
-   * deftere 8 puan yazılmış, ekran "+6" demişti — sayı yanlış hesaplanmıyordu, HENÜZ TAMAMLANMAMIŞ
-   * bir sayı tam gibi gösteriliyordu.
+   * Toplam henüz oturmadı mı, yani yolda cevabı gelmemiş bir yazım var mı: `true` iken sayı yazılmaz, bekleme söylenir, çünkü
+   * tamamlanmamış bir sayı tam gibi gösterilirdi.
    */
   settling?: boolean;
   testID?: string;
 }
 
 /**
- * Kazanımın üç satırı — **kutu değil**, yalnız kendi aralığı olan bir küme.
- *
- * Kullanıcı kararı 15.08: *"kart görmek istemiyorum… sayfa ekran ile bütünleşik olsun, bölüm bölüm
- * görünmesini istemiyorum."* Hiyerarşi çerçeveyle değil ÖLÇEK ve BOŞLUKLA kuruluyor; öne çıkan şey
- * sayının kendi ölçeği (`h1-sm` — mobilin kahraman durağı) ve çevresindeki nefes.
+ * Kazanımın üç satırı kutu değil, kendi aralığı olan bir küme: sayfa ekranla bütünleşik durur, hiyerarşi çerçeveyle değil ölçek ve
+ * boşlukla kurulur.
  */
 export function PointsAward({ points, balance, settling = false, testID }: PointsAwardProps) {
   const locale = useAppLocale();

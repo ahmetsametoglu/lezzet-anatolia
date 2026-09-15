@@ -19,34 +19,9 @@ import messages from './messages.json';
 import { useInviteWelcome } from './use-invite-welcome.hook';
 
 /*
-  DAVET KARŞILAMASI (21.43) — paylaşılan davet bağlantısının uygulamada indiği yer.
-
-  ── NİYE UYGULAMADA DA VAR, WEB SAYFASI DURURKEN ────────────────────────────
-  Bağlantı bir WEB adresidir ve uygulaması olmayan davetli onu tarayıcıda açar — doğrusu budur.
-  Ama iki davet türünden biri, komşu daveti, çoğu zaman ZATEN müşterimiz olan birine gider
-  (kullanıcı kararı 11.08). Uygulaması olan o kişiyi tarayıcıya atıp yeniden giriş yaptırmak,
-  elimizdeki en kolay yolu en zor hâline getirmek olurdu. Aynı adres, işletim sisteminin kendi
-  davranışıyla iki yere birden gider: uygulaması olanda buraya, olmayanda web sayfasına. Yani
-  "web mi uygulama mı" diye bir seçim yok — ekran iki yüzeyde de yazılır, web olan yalnız ADRESTİR.
-
-  ── DÖRT HÂL, DÖRDÜ DE ÇİZİLİ (web sayfasıyla birebir) ──────────────────────
-  Hâller sunucudan gelir (`readInviteWelcome`), burada hesaplanmaz — iki yüzeyin aynı soruya
-  farklı cevap vermesi ancak böyle engellenir.
-  · `ok`               — davet çizilir; getirenin YALNIZ adı geçer.
-  · `self`             — müşteri kendi bağlantısını açtı; ona söylenecek şey bağlantısının
-                         ÇALIŞTIĞIDIR, "zaten müşterimizsin" değil (sunucudaki sıra kararı).
-  · `already_customer` — zaten müşteri; davet yeni müşteri içindir, bağ kurulmaz.
-  · `unknown`          — kod tanınmıyor. **HATA EKRANI DEĞİL:** bağlantı WhatsApp'ta kırpılmış
-                         olabilir ve davetliyi kapıda çevirmek olurdu; katalog kapısı açık kalır.
-
-  ── KABUL AÇILIŞTA DEĞİL, DOKUNUŞTA ─────────────────────────────────────────
-  Kod cihaza ancak davetli bir düğmeye bastığında yazılır (`rememberInvite`). Bağlantıyı açmak bir
-  NİYET değildir — mesajı yanlışlıkla açan da onu açar. Web çerezinin aynı kararı, aynı gerekçe.
-
-  ── TASARIMDA YOK, KİTİN DİLİYLE KURULDU ────────────────────────────────────
-  v3'te bu ekran çizilmemiş. Yeni bir görsel dil üretilmedi: başlık çubuğu · boş durum bloğu ·
-  düğmeler · hata kutusu — hepsi kitin mevcut komponentleri, ölçü ve renkler token'dan (teslimat
-  bölgeleri ekranının aynı sapması; `design/KARARLAR.md`).
+  Davet karşılaması, paylaşılan davet bağlantısının uygulamada indiği yer: bağlantı bir web adresidir, uygulaması olan davetli buraya,
+  olmayan web sayfasına iner. Dört hâl (`ok`, `self`, `already_customer`, `unknown`) sunucudan gelir ki iki yüzey aynı soruya aynı
+  cevabı versin; kod cihaza ancak düğmeye basılınca yazılır, çünkü bağlantıyı açmak bir niyet değildir.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -64,16 +39,8 @@ export function InviteScreen({ code }: InviteScreenProps) {
   const welcome = useInviteWelcome(code);
 
   /**
-   * Daveti KABUL eder ve gidilecek yere götürür.
-   *
-   * **Kabulden hemen sonra devir denenir** (21.46 — komşu ekranında ölçülen arızanın ikizi burada
-   * da kapatıldı): kapı oturum VARSA şimdi yazar, yoksa 401'e düşer ve kod cihazda kalıp ilk
-   * girişte yazılır (`claimPendingInvite` yalnız başarıda tüketir). Getiren davetinde girişli
-   * ziyaretçi zaten `already_customer` görüyor ve bu düğmeyi hiç görmüyor — deneme yine de var,
-   * çünkü iki davet ekranının aynı şeyi farklı yapması, birini okuyup ötekini varsayan kişiyi
-   * yanıltır.
-   *
-   * Beklenmiyor (`void`): yazma düşse de davetli yoluna devam etmeli.
+   * Daveti kabul eder ve gidilecek yere götürür; kabulden hemen sonra devir denenir: oturum varsa şimdi yazar, yoksa kod cihazda
+   * kalıp ilk girişte yazılır. Beklenmez, çünkü yazma düşse de davetli yoluna devam etmeli.
    */
   const accept = (target: '/catalog' | '/login') => {
     void rememberInvite(code).then(() => claimPendingInvite());

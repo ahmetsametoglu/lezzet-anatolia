@@ -46,83 +46,22 @@ import { CartSkeleton } from './cart-skeleton';
 import messages from '@lezzet/i18n/customer/cart';
 
 /*
-  SEPET (v3 `vCart`) — satırlar, kupon, tutar özeti ve yapışkan "siparişi tamamla" barı.
-
-  ── EKRAN HESAP YAPMAZ, ÇİZER ───────────────────────────────────────────────
-  Ara toplam · indirim · toplam · asgari sepet · ücretsiz kargo eşiği · "tükendi, çıkarın" hâli —
-  hepsi SUNUCUNUN çözdüğü görünümden (`MeCartView`) okunur. Ekranın kendi aritmetiği YOK ve kupon
-  sözlüğü YOK: sepetteki fiyat bağlayıcı değildir, her okumada yeniden çözülür (DOMAIN §5) ve iki
-  yüzeyde iki ayrı hesap bir gün iki farklı tutar gösterirdi. Görünümü misafirde de sunucu çözer
-  (`POST /cart/view`) — aynı sepet misafirken bir, giriş yapınca başka bir tutar göstermesin.
-
-  Deponun kaynağını (sunucu ⟷ cihaz) ekran BİLMEZ; sunucu turunu da o AÇMAZ (`useCartSync` KÖK
-  kabukta takılı — `app/_layout`; ikinci kez takmak aynı aboneliği iki yerden yönetmek olurdu).
-  Kapı 28.08'de sekme kabuğundan köke taşındı: bu ekran `(tabs)` grubunun DIŞINDA ve derin
-  bağlantıyla açıldığında kabuk hiç monte olmuyordu — gerekçenin tamamı `cart-store.ts` künyesinde.
-
-  ── SEPETİN ÜÇ GRUBU (kullanıcı kararı 10.08) ───────────────────────────────
-  Grubu SÖZLEŞME söyler (`line.group`), ekran türetmez: `local` kapıya teslim (bizim aracımız —
-  soğuk zincir ürün buradan gider), `shipping` NORMAL kargo, `undeliverable` bu adrese HİÇ gelemez.
-
-  ELLE SÜZGEÇ SÖKÜLDÜ ve sebebi ölçüldü (10.08, cihazda): ekran `route !== 'shipping'` diyerek
-  teslim edilemeyen kalemi "kapıya teslim" grubuna sokuyordu. Sepette üç satır, 38,36 € ve YEŞİL
-  bir "Siparişi tamamla" duruyordu; engel ancak bir dokunuş sonra checkout'ta kırmızı bir kutuyla
-  çıkıyordu — müşteri gidemeyecek kalemi son adımda öğreniyordu. Karar artık tek yerde
-  (`cartGroupOf`, `@lezzet/application`) ve cevabı sunucu taşıyor.
-
-  Başlıklar YALNIZ birden çok grup doluyken çizilir (web sepetinin aynı hükmü, `cart-group.tsx`):
-  tek yolu olan sepette başlık, olmayan bir seçimi varmış gibi gösterir.
-
-  KALEM SİLİNMEZ, SİLDİRİLMEZ: gelemeyen satır sepette işaretli bekler — yarın bölge içi bir adres
-  eklenirse o kalem yine lazım. "Kaldır" eylemi satırda duruyor (müşterinin kendi kararı) ama ekran
-  onu teşvik etmez ve "şunu çıkarın" demez.
-
-  ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────
-  1. **Kupon sayfası kitin `BottomSheet`i.** Şablonun kupon yüzeni (`shCoupon`) aynı yerleşimi
-     kullanıyor; ikinci bir yüzen sayfa kurmak yerine kitteki kullanıldı.
-  2. **Kuponun REDDİ artık sunucudan gelir ve alanın altında değil, sepette yazar.** Doğrulama bir
-     ağ turudur; yüzen sayfayı cevabı beklerken açık tutmak, müşteriyi boş bir formun başında
-     bekletirdi. Alanın kendi hata satırı duruyor ama tek işi kalıyor: boş kodu göndermemek.
-     Sebep CÜMLESİ gerçek (`süresi dolmuş` ⟷ `asgari sepet` ⟷ `hakkı bitmiş` üç ayrı şeydir ve
-     ikincisinde müşteri sepetine ürün ekleyerek kuponu kullanabilir).
-  3. **Asgari tutar uyarısı `Note` ile** (kitteki terracotta tonu) — şablonun kum-turuncu kutusu
-     birebir aynı rol. Yapışkan bardaki düğme o sırada ENGELLİ değil: şablon da tıklatınca uyarıyı
-     gösteriyor, yani engel checkout'un kapısında değil sepetin kendisindedir. Burada uyarı ZATEN
-     görünür olduğu için düğme kapatıldı — görünmeyen bir kuralı düğmeye basınca öğrenmek yerine
-     kural ekranda duruyor.
-  4. **Tükendi satırı otomatik silinmez.** Şablon da silmiyor: müşteriye "şunu kaldırın" diyor.
-     Sessizce kaldırmak, sepetten haber vermeden ürün çıkarmak olurdu.
-  5. **Grup başlıkları ve bölünme uyarısı kitin `SectionHeader`/`Note`u ile.** Mobil tasarımda
-     sepetin bölünmesi çizilmemiş; yeni bir görsel dil üretmek yerine ekranın zaten kullandığı iki
-     bileşen kullanıldı — bilgi web sepetiyle aynı, biçim mobilin kendi kiti.
+  Sepet: ekran hesap yapmaz, çizer; ara toplam, indirim, toplam, asgari sepet ve tükendi hâli sunucunun çözdüğü görünümden okunur,
+  çünkü sepetteki fiyat bağlayıcı değildir ve iki yüzeyde iki hesap bir gün iki tutar gösterirdi. Grubu sözleşme söyler (`local`,
+  `shipping`, `undeliverable`), gelemeyen kalem sepette işaretli bekler ve silinmez, çünkü bölge içi bir adres eklenirse yine lazım olur.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
 /**
- * ÜRÜNLER ÜSTTE, PAKETLER ALTTA — grup İÇİ sıra (kullanıcı kararı 28.08: *"paketlerin arasına ürün
- * girmesi çok hoş görünmüyor"*).
- *
- * Teslimat grubunun (`local` · `shipping` · `undeliverable`) sırasına DOKUNMAZ: o tasarımın kendi
- * ayrımı ve daha üst bir bilgi — bir kalemin nasıl geleceği, ne olduğundan önce gelir. Sıralama her
- * grubun kendi içinde yapılır, yani "kargoyla gelen paket" hâlâ kargo başlığının altındadır.
- *
- * Sıra KARARLIDIR (`sort` ES2019'dan beri kararlı): iki ürün ya da iki paket arasında sunucunun
- * verdiği sıra — sepete eklenme sırası — olduğu gibi korunur. Yalnız tür sınırı taşınır.
+ * Ürünler üstte, paketler altta, ama yalnız grup içinde: teslimat grubunun sırası daha üst bir bilgidir. Sıralama kararlıdır, iki
+ * ürün ya da iki paket arasında sunucunun verdiği sıra korunur.
  */
 function productsFirst(lines: readonly MeCartViewLine[]): MeCartViewLine[] {
   return [...lines].sort((a, b) => Number(a.kind === 'bundle') - Number(b.kind === 'bundle'));
 }
 
-/**
- * PAKET SATIRI DA DÜZENLENEBİLİR (20.08). Buradaki süzgeç, satırın adresi olmadığı döneme aitti:
- * `PATCH`/`DELETE` yalnız varyant + parti ile adresliyor, paket kimliğiyle atılan istek satırı
- * bulamıyordu — basılınca hiçbir şey yapmayan bir sayaç göstermektense sayaç hiç çizilmiyordu.
- * Servis imzası satır anahtarına geçince (`CartRef`) gerekçe düştü ve süzgeç kalktı.
- *
- * Fonksiyon DURUYOR çünkü salt-okunur hâl kavramı duruyor: yarın uygulamadan yazılamayan başka bir
- * satır türü doğarsa yeri burasıdır. Bugün hiçbir satır salt okunur değil.
- */
+/** Salt okunur satırın yeri: uygulamadan yazılamayan bir satır türü doğarsa burada ayrılır; bugün hiçbiri salt okunur değil. */
 function isReadOnly(_line: MeCartViewLine): boolean {
   return false;
 }
@@ -141,21 +80,9 @@ export function CartScreen() {
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const browsingCode = onboarding?.postalCode ?? '';
 
-  /* ── SEPETİN YERİ: KAYITLI ADRES (kullanıcı kararı 10.08) ──────────────────
-     Posta kodu çekmecesinin kendi cümlesi *"Bu kod yalnız vitrini gezmek içindir; siparişte
-     kayıtlı adresiniz kullanılır"* diyor — sepet bu sözü tutmuyordu ve grupları GEZİNME koduyla
-     çözüyordu. Ölçülen bedeli üç ayrı arızaydı (grup · toplam · tahsilat): müşteri 67000 ile gezip
-     sepette "her şey yolunda" görüyor, adresi 67380 olduğu için checkout'ta başka bir gerçekle
-     karşılaşıyordu.
-
-     İki yeri yan yana yazıp farkı UYARIYLA yönetmek yerine kaynak TEKE indirildi: satın alma
-     tarafının tamamı (sepet + checkout) adresle çözülür, gezinme kodu vitrinde kalır. Ayrışma artık
-     yapısal olarak imkânsız; açıklanacak bir fark yok.
-
-     ADRESİ OLMAYANDA gezinme koduna düşülür (misafir ya da hiç adres eklememiş müşteri) — orada
-     zaten iki kaynak yok, çelişki de yok. */
-  /* `me` de okunuyor (22.08): adres çekmecesi yeni adresi hesabın künyesiyle DOLU açıyor.
-     Ek uçuş YOK — kanca zaten bu ekranda kurulu, alınan alan sayısı değişti yalnız. */
+  /* Sepetin yeri kayıtlı adrestir: satın alma tarafının tamamı (sepet ve checkout) adresle çözülür, gezinme kodu vitrinde kalır,
+     böylece iki yer ayrışamaz; adresi olmayanda gezinme koduna düşülür. `me`, adres çekmecesi yeni adresi hesabın künyesiyle dolu
+     açsın diye okunur. */
   const { status: meStatus, me } = useMe();
   const { addresses, publish: publishAddresses } = useAddresses(meStatus === 'ready');
   /* Seçim ORTAK depoda (`delivery-address-store`): sepette seçilen adres checkout'ta da geçerli.
@@ -165,14 +92,8 @@ export function CartScreen() {
     addresses.find((a) => a.id === selectedAddressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
-  /* ── GÖRÜNÜM TEK, YERİ ADRESTEN GELİR (20.08) ──────────────────────────────
-     10.08'de sepet doğru bir sebeple adrese bağlandı (gezinme kodu vitrinde kalır) ama bu, ekrana
-     İKİNCİ bir okuma eklenerek yapılmıştı: yazma turları deponun görünümünü tazeliyor, ekran ise
-     o ikinci okumayı çiziyordu ve o yalnız dil/adres/kupon değişince yenileniyordu. Adet bunlardan
-     biri değil — ekran donuyordu (ölçüldü cihazda: DB 3, satır 2, başlık "3 ürün").
-
-     Karar korunuyor, uygulaması değişti: yer DEPOYA bildiriliyor, görünüm yine tek yerde çözülüyor.
-     Ekranın seçeceği iki görünüm kalmadı; bayatlayacak ikinci kaynak da yok. */
+  /* Görünüm tek ve yeri adresten gelir: yer depoya bildirilir, görünüm tek yerde çözülür; ikinci bir okuma yazma turlarıyla
+     tazelenmediği için ekranı dondururdu. */
   useEffect(() => {
     setPurchasePlace(deliveryAddress?.postalCode ?? null);
   }, [deliveryAddress?.postalCode]);
@@ -192,13 +113,11 @@ export function CartScreen() {
      olurdu (CLAUDE §1). */
   const unresolved = cart.products.length > 0 && view.lines.length === 0;
 
-  /* PAKET DE SUNUCUNUN SATIRIDIR (20.08). Buradaki süzgeç, sunucunun paketi çözemediği döneme
-     aitti: yerel kayıt çiziliyor, sunucunun adsız/fiyatsız satırı eleniyordu. Paket sunucuya
-     bağlanınca gerekçe düştü ve süzgeç KALKTI — kalsaydı paket satırı bu kez hiç çizilmezdi. */
+  /* Paket de sunucunun satırıdır: ad, fiyat ve yol ile çözülür, ayrı bir yerel blok gerekmez. */
   const lines = view.lines;
 
-  /* GRUP SÖZLEŞMEDEN OKUNUR, yoldan TÜRETİLMEZ (künye: elle süzgecin ölçülmüş arızası). Sıra
-     tasarımın sırası: önce gelenler, sonra kargoyla gelenler, en sonda bu adrese gelemeyenler. */
+  /* Grup sözleşmeden okunur, yoldan türetilmez. Sıra tasarımın sırası: önce gelenler, sonra kargoyla gelenler, en sonda bu adrese
+     gelemeyenler. */
   const localLines = productsFirst(lines.filter((line) => line.group === 'local'));
   const shippingLines = productsFirst(lines.filter((line) => line.group === 'shipping'));
   const undeliverableLines = productsFirst(lines.filter((line) => line.group === 'undeliverable'));
@@ -216,23 +135,13 @@ export function CartScreen() {
   const split = localLines.length > 0 && shippingLines.length > 0;
 
   const discount = view.discount;
-  /* DÜĞMEYİ GELEMEYEN KALEM KAPATMAZ (kullanıcı kararı 10.08): müşteri gelebilecek kalemleri
-     sipariş eder, ötekiler sepette işaretli bekler. Kapatan üç hâl duruyor — görünüm çözülemedi,
-     SATILAMAZ kalem var (`hasBlocked` — tükendi/satışa kapandı, teslim edilebilirlikle ilgisi yok)
-     ve asgari sepet tutmuyor (eşiğin matrahından gelemeyen kalemler zaten sunucuda düşülüyor). */
+  /* Düğmeyi gelemeyen kalem kapatmaz, müşteri gelebilecekleri sipariş eder. Kapatan üç hâl: görünüm çözülemedi, satılamaz kalem var
+     (`hasBlocked`) ve asgari sepet tutmuyor. */
   const checkoutBlocked = unresolved || view.hasBlocked || !view.minBasketOk;
 
   /*
-    Kilitli düğmenin GEREKÇESİ — kısa hâli, barın içinde.
-
-    SIRA ANLAMLI: satılamayan kalem asgari sepetten ÖNCE söylenir, çünkü kalem çıkarılınca tutar da
-    değişir. Önce "şu kalemi çıkarın", sonra kalan tutarı konuşmak doğru sıra; tersi müşteriye
-    karşılayamayacağı bir eşik gösterip ardından sepeti küçültmesini istemek olurdu. Aynı sıra
-    sunucunun `cartBlockReason`ında da yazılı — mobil o paketi (`@lezzet/application`) bilmiyor,
-    bu yüzden sıra burada tekrar ediyor.
-
-    `unresolved` hâlinde SUSAR: sepet daha getirilemediyse ortada bir engel değil, bir bilinmezlik
-    var ve onun kendi bloğu yukarıda çiziliyor (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+    Kilitli düğmenin kısa gerekçesi: satılamayan kalem asgari sepetten önce söylenir, çünkü kalem çıkarılınca tutar da değişir (sıra
+    sunucunun `cartBlockReason`ındakiyle aynı). Sepet çözülemediyse susar, çünkü ortada engel değil bilinmezlik vardır.
   */
   const barBlockText = ((): string | null => {
     if (unresolved) return null;
@@ -268,10 +177,8 @@ export function CartScreen() {
         : t.coupon.rejected[rejection.reason];
 
   const discountSummary = discountRow();
-  /* Toplam SEPETTE DURAN her şeyi sayar (sözleşmenin hükmü: ekran müşterinin sepetini eksiksiz
-     göstermeli) — ama gelemeyen kalem siparişe girmiyor. Kapsam belirsiz kalmasın diye tutar ayrı
-     bir satırda yazılır ve panelin dip notu ne demek olduğunu söyler. Hesap YOK: sayı sunucudan
-     olduğu gibi geliyor (`undeliverableSubtotalCents`). */
+  /* Toplam sepette duran her şeyi sayar ama gelemeyen kalem siparişe girmez; kapsam belirsiz kalmasın diye o tutar ayrı satırda
+     yazılır ve sunucudan olduğu gibi gelir. */
   const undeliverableCents = view.undeliverableSubtotalCents;
   const summaryRows: SummaryRow[] = [
     { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(view.subtotalCents, locale) },
@@ -280,12 +187,8 @@ export function CartScreen() {
       ? []
       : [{ key: 'undeliverable', label: t.summary.undeliverable, value: formatPrice(undeliverableCents, locale) }]),
   ];
-  /* ÜÇ KATMANLI AÇIKLAMA (19.08 kullanıcı kararı) — kural · kazanan · elinin altındaki.
-     Kazananın adı zaten yukarıdaki özet satırında (`discountRow`). Buradaki iki cümle ötekini
-     tamamlıyor: motor bütün adayları hesaplayıp kazananı seçiyor ve kaybedenleri sessizce atıyor,
-     müşteri de yalnız sonucu görüyordu — hangi kampanyaların yarıştığını, birleşmediklerini ve
-     birinin bir adım ötede olduğunu bilmiyordu. Kupon için bu cümle vardı (`outranked`), otomatik
-     kampanya için yoktu. */
+  /* Üç katmanlı açıklama (kural, kazanan, elinin altındaki): motor adayları hesaplayıp kazananı seçer ve kaybedenleri atar, müşteri
+     de hangi kampanyaların yarıştığını ve birinin bir adım ötede olduğunu buradan öğrenir. */
   const singleRuleNote = discountSummary === null ? null : t.summary.singleRule;
   const reachable = view.reachableDiscount;
   const reachableNote =
@@ -342,11 +245,8 @@ export function CartScreen() {
           ? t.line.readOnly
           : undefined;
 
-    /* ADI OLMAYAN SATIRA AD VERİLİR (28.08). Sunucu çözemediği kalemi boş adla döndürüyor —
-       kimlik kataloğun gerisinde kalmış (ürün satıştan kalkmış, kimlik yenilenmiş). O hâlde satır
-       sepette DURUR ve gerekçesini de yazar (`t.line.closed`), ama adsız bir kutu müşteriye neyi
-       çıkaracağını söylemiyordu. Kaynağı ayrıca kesildi (`CartService.existingOnly`); buradaki ad
-       ondan ÖNCE yazılmış satırların ve yarın doğabilecek başka bir bayatlamanın karşılığı. */
+    /* Adı olmayan satıra ad verilir: sunucu çözemediği kalemi boş adla döndürür ve adsız bir kutu müşteriye neyi çıkaracağını
+       söylemez. */
     const shownName = line.name === '' ? t.line.unknown : line.name;
 
     return (
@@ -380,17 +280,8 @@ export function CartScreen() {
     );
   };
 
-  /* ── İKİ GRUP = İKİ SİPARİŞ (web'in hükmü, `cart-group.tsx`) ───────────────
-     *"Tek sepet, iki grup, iki checkout"* — ikinci sipariş ZORUNLU DEĞİL: müşteri vermezse o
-     kalemler sepette bekler, kapıya siparişi hiç etkilenmez. Bölünmenin kendisi bir seçim değil,
-     stokun sonucu: rota deposunda bulunan her şey — kargolanabilir olsa bile — araçla gider.
-
-     GRUP TOPLAMLARI satırlardan toplanır ve İNDİRİM bu toplamlara yazılmaz; web'in aynı kararı ve
-     aynı gerekçesi: kupon/kampanya siparişin kendi kalemlerine göre checkout'ta yeniden çözülüyor,
-     sepette bir gruba düşecek payı kesin bilemeyiz. Dökümün yeri özet kartı.
-
-     KARGO ÜCRETİ SUNUCUDAN (`shippingGroupFeeCents`): eşikle tarifeyi karşılaştırma kararı iş
-     kuralıdır, istemcide tekrarlanmaz (sözleşme künyesi). */
+  /* İki grup iki sipariştir ve ikincisi zorunlu değil: bölünme bir seçim değil stokun sonucudur. Grup toplamlarına indirim yazılmaz,
+     çünkü kupon ve kampanya checkout'ta siparişin kendi kalemlerine göre yeniden çözülür; kargo ücreti sunucudan gelir. */
   const localItemsCents = localLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
   const shippingItemsCents = shippingLines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);
   const shippingFeeCents = view.shippingGroupFeeCents;
@@ -409,10 +300,8 @@ export function CartScreen() {
     .filter((part) => part !== null)
     .join(' · ');
 
-  /* Ücretsiz kargo eşiği YALNIZ kargo grubu varken anlamlıdır: kapıya teslimde kargo ücreti diye
-     bir şey yok ve eşiği orada göstermek olmayan bir hedefi varmış gibi okuturdu. Eşik 0 =
-     "tanımsız" (sözleşmenin hükmü) — blok hiç çizilmez. BÖLÜNMÜŞ sepette çizilmez çünkü aynı bilgi
-     kargo grubunun kendi kartında, tutarıyla birlikte zaten yazılı. */
+  /* Ücretsiz kargo eşiği yalnız kargo grubu varken anlamlıdır; eşik 0 tanımsız demektir ve bölünmüş sepette aynı bilgi kargo
+     grubunun kartında zaten yazılı olduğu için blok çizilmez. */
   const freeShippingNote =
     view.freeShippingCents === 0 || shippingLines.length === 0 || split ? null : view.shippingFreeRemainingCents > 0 ? (
       <Note
@@ -425,12 +314,8 @@ export function CartScreen() {
     );
 
   /**
-   * Kargo grubunun KENDİ eylemi — çerçeveli düğme, ikincil ağırlık (web'in aynı hiyerarşisi):
-   * asıl akış kapıya gidendir, bu isteğe bağlı ikinci siparıştir.
-   *
-   * ASGARİ SEPET BU GRUBA İŞLEMEZ (web'in kararı): eşik siparişin kendi tutarına bakar ve kargo
-   * siparişi ayrı bir siparıştir — rota grubunun eksiği yüzünden kargo siparişini kilitlemek,
-   * olmayan bir bağ kurmak olurdu. SATILAMAZ kalem ise sepetin tamamını durdurur (`hasBlocked`).
+   * Kargo grubunun kendi eylemi, ikincil ağırlıkta: asıl akış kapıya gidendir. Asgari sepet bu gruba işlemez, çünkü kargo siparişi
+   * ayrı bir sipariştir; satılamaz kalem ise sepetin tamamını durdurur.
    */
   const shippingAction = !split ? null : (
     <View style={styles.groupCard} testID="cart-shipping-group">
@@ -484,11 +369,8 @@ export function CartScreen() {
     <View style={styles.screen}>
       {header}
       <ScrollView contentContainerStyle={styles.content} testID="cart-scroll">
-        {/* TESLİMAT ADRESİ — SEPETİN YERİNİ SÖYLER (kullanıcı kararı 10.08).
-            Sepetin neye göre değerlendirildiği ekranda YAZILI olmalı: müşteri az önce katalogda
-            başka bir posta koduyla geziyor olabilir ve kalemlerin neden bu hâle geldiğini burada
-            görmeli. Posta kodu düzenleyicisi sepette YOK — başka bir yere gönderecekse adres seçer
-            ya da ekler; iki ayrı yer tutmak, az önce kapattığımız ayrışmayı geri açardı. */}
+        {/* Teslimat adresi sepetin neye göre değerlendirildiğini söyler; posta kodu düzenleyicisi sepette yok, çünkü iki ayrı yer
+            tutmak kapattığımız ayrışmayı geri açardı. */}
         {deliveryAddress === null ? (
           browsingCode === '' ? null : (
             <View style={styles.place}>
@@ -504,38 +386,23 @@ export function CartScreen() {
             <Text style={styles.placeNote}>{t.address.note}</Text>
             <TextAction
               label={t.address.change}
-              /* EKRAN TERK EDİLMEZ (kullanıcı bulgusu 10.08): burası eskiden `/account`a
-                 yönlendiriyordu ve müşteri Hesabım'ın tepesine düşüp adres bölümünü arıyor, geri
-                 dönünce de sepete değil vitrine çıkıyordu (sekme değiştiği için). Checkout aynı işi
-                 kendi ekranında yapıyor; sepetin ondan farkı yok. */
+              /* Ekran terk edilmez: adres seçici burada açılır, checkout'un aynı işi. */
               onPress={() => setPickerOpen(true)}
               testID="cart-place-address"
             />
           </View>
         )}
 
-        {/* GELEMEYEN KALEMLERİN TEK UYARISI, satırların ÜSTÜNDE: müşteri sepetini okumadan önce
-            neyle karşılaşacağını bilsin. Ton `warm` — bu bir HATA değil, adresin gerçeği; `error`
-            kırmızısı müşteriye yanlış bir şey yaptığını söylerdi. Çıkış yolu da burada yazılı:
-            bölge içi bir adres. "Ürünü kaldırın" YAZILMAZ (kullanıcı kararı 10.08). */}
+        {/* Gelemeyen kalemlerin tek uyarısı satırların üstünde ve `warm` tonda, çünkü bu bir hata değil adresin gerçeği; çıkış yolu
+            bölge içi bir adres, "ürünü kaldırın" yazılmaz. */}
         {undeliverableLines.length === 0 ? null : (
-          /* KODU DEĞİŞTİRME KUTUNUN İÇİNDE (kullanıcı bulgusu 10.08): bağlantı kutunun ALTINDA
-             dururken bandın parçası gibi değil, bağımsız bir eylem gibi okunuyordu. `Note`un kendi
-             eylem yuvası zaten kutunun içinde çiziyor.
-
-             Web sepette bunu hiç sunmuyor çünkü orada kod sitenin tepesindeki kanonik panelde ve
-             hep görünür; uygulamada sepet TAM EKRAN, müşteri problemi burada görüyor ve kodu
-             değiştirecek yer ekranda yok. Üçüncü bir posta kodu girdisi YAZILMIYOR: kitteki kanonik
-             çekmece açılıyor (web'in aynı gerekçesi — aynı doğrulamayı üç yerde bakıma bırakmamak). */
+          /* Kodu değiştirme kutunun içinde, bandın parçası olarak; uygulamada sepet tam ekran olduğu için kod burada değiştirilir ve
+             kitteki kanonik çekmece açılır, üçüncü bir posta kodu girdisi yazılmaz. */
           <Note
             tone="warm"
             title={t.undeliverable.title.replace('{place}', placeLabel)}
             description={t.undeliverable.body.replace('{place}', placeLabel)}
-            /* EYLEM YALNIZ ADRESİ OLMAYANDA (kullanıcı bulgusu 10.08): adres varken bandın içine de
-               "adresi değiştir" koymak, hemen üstündeki künyenin "Değiştir"iyle AYNI yere açan ikinci
-               bir düğme demekti. Aynı işi yapan iki eylem, müşteriye "acaba farklı bir şey mi
-               yapıyorlar" diye düşündürür. Adres yokken bandın kendi çıkışı gerekli — o hâlde
-               yukarıdaki künye de kod künyesidir. */
+            /* Eylem yalnız adresi olmayanda, çünkü adres varken üstteki künyenin "Değiştir"iyle aynı yere açan ikinci düğme olurdu. */
             action={
               deliveryAddress !== null ? undefined : (
                 <TextAction label={t.undeliverable.change} onPress={() => setCodeSheetOpen(true)} testID="cart-change-code" />
@@ -546,12 +413,8 @@ export function CartScreen() {
         )}
 
         <View style={styles.lines}>
-          {/* Paket satırı artık gruplarla birlikte çiziliyor (`renderLine` paket dalını zaten
-              tanıyor): sunucu onu ad, fiyat ve yol ile çözüyor, yani grubu da doğru. Buradaki
-              ayrı yerel blok 20.08'de SÖKÜLDÜ — paketin sepetin toplamına girmemesiyle aynı kök. */}
-          {/* Grubun EYLEMİ kendi kalemlerinin hemen ardında: web'in yerleşimi ve gerekçesi aynı —
-              "kargolu ürünleri ayrıca sipariş ver" düğmesi, hangi ürünlerden bahsettiği görünürken
-              anlam taşır. Rota grubunun düğmesi yapışkan bardadır, burada yalnız künyesi durur. */}
+          {/* Grubun eylemi kendi kalemlerinin hemen ardında, çünkü "kargolu ürünleri ayrıca sipariş ver" düğmesi hangi ürünlerden
+              bahsettiği görünürken anlam taşır. */}
           {groups.map((group) => (
             <Fragment key={group.key}>
               {showGroupHeadings ? <SectionHeader eyebrow={group.eyebrow} testID={`cart-group-${group.key}`} /> : null}
@@ -562,11 +425,8 @@ export function CartScreen() {
           ))}
         </View>
 
-        {/* ÇÖZÜLMEMİŞ SEPET: elimizde ürün var ama satırları henüz kuramadık. Bu bir işlem değil
-            YERLEŞİM beklemesidir (ölçüldü 10.08) — eskiden halka dönüyordu ve liste boş
-            duruyordu; satırlar gelince kupon daveti, özet ve bar aşağı zıplıyordu. Satır sayısı
-            TAHMİN DEĞİL: sepet cihazda yaşıyor, kaç ürün olduğunu biliyoruz (skeleton künyesi).
-            Okuma DÜŞERSE skeleton yerine tek satırlık ret durur — bekleme bitti, cevap yok. */}
+        {/* Çözülmemiş sepette satırların iskeleti bekler, sayısı tahmin değil (sepet cihazda yaşar); okuma düşerse iskelet yerine tek
+            satırlık ret durur. */}
         {unresolved ? (
           cart.resolving ? (
             <CartSkeleton
@@ -628,11 +488,8 @@ export function CartScreen() {
           testID="cart-summary"
         />
 
-        {/* Sunucu reddi: iyimser yazım geri alındı, yani ekrandaki sepet SUNUCUDAKİ sepettir.
-            GELİŞTİRMEDE RET ANAHTARI DA YAZILIR: müşteriye tek cümle yeter ama biz o cümleyle
-            arızayı teşhis edemiyorduk — "eşitlenemedi" `unauthorized`ı da `invalid_response`u da
-            aynı görünüşe indiriyor ve hangisi olduğu ancak cihazda tekrar üretilerek anlaşılıyor
-            (09.08). Anahtar depoda zaten duruyordu, ekran onu atıyordu. */}
+        {/* Sunucu reddinde iyimser yazım geri alındı, ekrandaki sepet sunucudakidir; geliştirmede ret anahtarı da yazılır, çünkü tek
+            cümle `unauthorized` ile `invalid_response`u ayırmaz. */}
         {cart.error === null ? null : (
           <Note
             tone="terracotta"
@@ -643,17 +500,8 @@ export function CartScreen() {
 
         {view.hasBlocked ? <Note tone="error" description={t.blocked} testID="cart-blocked" /> : null}
 
-        {/*
-          DİPTEKİ UYARI EKSİK TUTARI TEKRAR ETMEZ (MB-69, 18.08).
-
-          16.08'de bara kısa bir gerekçe satırı kondu ("neden basamıyorum") ve dipteki bu uzun
-          açıklamanın kalmasına karar verildi — çünkü ikisi ayrı soruyu cevaplıyor. Ama metin o
-          işbölümüne uymuyordu: ikisi de AYNI eksik tutarı yazıyordu (*"36,32 € eksik"*) ve turda
-          aynı cümle ekranda iki kez okundu (17.08). Tekrar eden sayı silindi, iki uçtan biri
-          ötekinde olmayanı söylüyor: bar EKSİĞİ (`{missing}`), buradaki EŞİĞİ (`{minimum}`) ve ne
-          yapılacağını. Notu tamamen kaldırmak da adaydı; o zaman asgari sepetin KAÇ olduğu hiçbir
-          yerde yazmıyordu — müşteri hedefi bilmeden mesafeyi okuyordu.
-        */}
+        {/* Dipteki uyarı eksik tutarı tekrar etmez: bar eksiği (`{missing}`), burası eşiği (`{minimum}`) ve ne yapılacağını
+            söyler. */}
         {view.minBasketOk || unresolved ? null : (
           <Note
             tone="terracotta"
@@ -669,36 +517,15 @@ export function CartScreen() {
 
       {/* Yapışkan bar kaydırma alanının DIŞINDA (RN'de `position: sticky` yok — kitin kendi kalıbı). */}
       <View style={styles.stickyBar}>
-        {/*
-          ENGELİN SEBEBİ DÜĞMENİN YANINDA (kullanıcı bulgusu 16.08, cihazda ölçüldü).
-
-          Sebep zaten yazılıydı — ama kaydırma alanının EN DİBİNDE, kalemlerin ve özet tablosunun
-          altında. Tek kalemlik sepette görünüyor; 23 kalemlik sepette ekranın çok altında kalıyor.
-          Müşterinin gördüğü tek şey kilitli bir düğme oluyor ve düğme neden kilitli olduğunu
-          söylemiyordu. Kullanıcının cümlesi: *"sepet hazırken uyarmıyoruz, ödemeye kalkınca
-          uyarıyoruz"* — uyarı vardı, kararın verildiği yerde değildi.
-
-          Sebep TİPTEN geliyor (`cartBlockReason`, `@lezzet/application`), ekranın kendi `if`inden
-          değil: aynı iki koşul üç ekranda birden sorulacaktı ve ayrıştıkları gün biri düğmeyi açıp
-          öteki kapatırdı. Dipteki uzun açıklama KALIYOR — orası "ne yapmalıyım"ı anlatıyor, burası
-          yalnız "neden basamıyorum"u.
-        */}
+        {/* Engelin sebebi düğmenin yanında, çünkü uzun sepette dipteki açıklama ekranın çok altında kalır; sebep `cartBlockReason`dan
+            gelir, dipteki uzun açıklama "ne yapmalıyım"ı anlatır. */}
         {barBlockText === null ? null : (
           <Text style={styles.barBlock} testID="cart-bar-block">
             {barBlockText}
           </Text>
         )}
-        {/*
-          SEPETİN TAMAMI KARGODAYSA DÜĞME KARGO SİPARİŞİNİ AÇAR (19.15 · web `cart-checkout-bar`ın
-          aynı kararı, 27.08'de mobile de geçirildi — eski `BEKLEYEN(21.14)`ün kapanışı).
-
-          Bölünmüş sepetin kapısı zaten açıktı (kargo grubunun kendi düğmesi), açık kalan tek hâl
-          SALT-KARGO sepetti: orada `split` false olduğu için o kart hiç çizilmiyor ve tek düğme
-          düz `/checkout`a gidiyordu — yani ROTA taslağı. Sonucu ekranın kendisiyle çelişmesiydi:
-          sepet "kargoyla gönderilir" diyor, açılan sipariş kapıya teslim siparişi oluyor ve
-          teslimat/ödeme kararı adresin cevabından çözülüyordu (kargo siparişinde tür adresin
-          cevabını EZER — `checkout-snapshot` künyesi). Bayrak TÜRETİLMEZ, rotadan gelir.
-        */}
+        {/* Sepetin tamamı kargodaysa düğme kargo siparişini açar, yoksa sepet "kargoyla gönderilir" derken açılan sipariş kapıya
+            teslim siparişi olurdu; bayrak türetilmez, rotadan gelir. */}
         <PressableSurface
           onPress={() => router.push(view.shippingOnly ? '/checkout?group=shipping' : '/checkout')}
           feedback="shadow"
@@ -740,11 +567,7 @@ export function CartScreen() {
         </View>
       </BottomSheet>
 
-      {/* Kanonik posta kodu çekmecesi — vitrinle AYNI dosya, aynı doğrulama, aynı kaydetme.
-          Kapanınca `useCartSync` yeni kodu görüp görünümü yeniden çözdürüyor; ekranın ayrıca bir şey
-          yapması gerekmiyor. */}
-      {/* Adres seçici — ekranı terk etmeden (künyesi `address-picker-sheet`). Seçim ortak depoya
-          yazılır, yani checkout da aynı adresi okur. */}
+      {/* Adres seçici ekranı terk etmeden açılır; seçim ortak depoya yazılır, checkout da aynı adresi okur. */}
       <AddressPickerSheet
         visible={pickerOpen}
         addresses={addresses}
@@ -770,7 +593,7 @@ export function CartScreen() {
           selectDeliveryAddress(savedId);
           setAddressSheet(null);
         }}
-        /* Yeni adres hesabın künyesiyle DOLU açılır (22.08). */
+        /* Yeni adres hesabın künyesiyle dolu açılır. */
         defaults={addressDefaultsOf(me)}
         testID="cart-address-sheet"
       />

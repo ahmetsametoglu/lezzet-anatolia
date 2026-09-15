@@ -5,17 +5,9 @@ import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable
 import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 
 /*
-  YÜZEN SEPET DÜĞMESİ (v3:1302) — sepet bir SEKME DEĞİL; vitrinden ve katalogdan ona bu düğmeyle
-  gidilir. Şablonun kuralı aynen: sepet BOŞKEN hiç çizilmez (boş bir sepete davet etmenin anlamı
-  yok), doluyken sağ altta durur ve adedi rozetle söyler.
-
-  Düğme KENDİNİ KONUMLANDIRMAZ: nerede duracağı ekranın yerleşim kararıdır (sekme çubuğunun mu,
-  yapışkan bir barın mı üstünde) ve şablonda da ekrana göre değişiyor (84 ⟷ 112 px). Komponent
-  yalnız daireyi, ikonu ve rozeti çizer.
-
-  ÖLÇÜ: şablon 58 dp çiziyor; ölçü katmanında o durak YOK (bu etapta `theme/metrics.ts` yazıya
-  kapalı) — en yakın durak 56. Fark 2 dp, dokunma hedefinin çok üstünde; ihtiyaç raporlandı.
-  Gölge de aynı sebeple resmî `hard` (3 px): şablonun 4 px'lik varyantı token değil.
+  Yüzen sepet düğmesi: sepet bir sekme değildir, vitrinden ve katalogdan bu düğmeyle gidilir; boşken hiç çizilmez, doluyken adedi
+  rozetle söyler. Düğme kendini konumlandırmaz, çünkü yeri ekranın yerleşim kararıdır; ölçü şablonun 58'i yerine ölçekteki en yakın
+  durak 56, gölge de token olan `hard`.
 */
 
 interface CartFabProps {

@@ -20,31 +20,9 @@ import { usePoints } from '@/screens/account/use-points.hook';
 import { usePointsHistory } from './use-points-history.hook';
 
 /*
-  PUAN GEÇMİŞİ (MB-59 · kullanıcı isteği 15.08) — *"hangi puan nereden geldi konusunu da
-  gösterebileceğimiz bir bölümümüz olmalı."*
-
-  ── NEDEN AYRI EKRAN, HESAP KARTININ İÇİNDE BİR LİSTE DEĞİL ─────────────────
-  Defter veriyle SINIRSIZ büyüyor (CLAUDE §1) ve sonsuz kaydırma istiyor; hesap kartının içine
-  konsaydı ya ilk birkaç satırla kesilir (kullanıcının istediği "nereden geldi" sorusunu tam
-  yanıtlamaz) ya da hesap ekranını her açılışta defter okumaya mecbur ederdi. Kart bir ÖZETTİR,
-  geçmiş bir ARŞİV.
-
-  ── EN BÜYÜK İKİ ÖDÜLÜN GÖRÜNDÜĞÜ TEK YER BURASI ────────────────────────────
-  `referral` (500) ve `neighbor` (100) başkasının eylemiyle doğuyor — davet edilen kişi parasını
-  ödediğinde — ve müşteri o an uygulamada değil, yani gösterilebilecek bir "sonuç sayfası" yok.
-  Günlük ziyaret puanı da bilinçli sessiz yazılıyor (karar 11.08). Üçünün de müşteriye görünür
-  olduğu ilk yer bu ekran.
-
-  ── SEBEP CÜMLESİ EKRANDA KURULUR ───────────────────────────────────────────
-  Sunucu ANAHTAR gönderiyor (`PointsReason`), cümle burada — i18n istemcide, üç dil
-  (`points-earn-list`in aynı kararı). Küme TAM: `redemption` ve `manual` da var, çünkü geçmiş
-  "program neyle ödüllendirir" sorusunu değil "defterde ne var" sorusunu yanıtlıyor.
-  `Record` derlemede tam kapsam ister — defter yeni bir sebep öğrenirse burası DERLENMEZ, eksik
-  çizmez.
-
-  ── TARİH BİÇİMİ ORTAK ──────────────────────────────────────────────────────
-  `formatOrderDate` altı ekranın zaten paylaştığı kapı; ikinci bir `Intl` tablosu açmak duplikasyon
-  olurdu (CLAUDE §1). O dosyanın `@lezzet/helper`a terfi borcu kendi künyesinde kayıtlı.
+  Puan geçmişi, "hangi puan nereden geldi" sorusunun cevabı: defter sınırsız büyüdüğü için hesap kartında değil ayrı ekranda ve sonsuz
+  kaydırmayla durur. Sebep cümlesi ekranda kurulur ve küme tam (`Record`), çünkü defter yeni bir sebep öğrenirse burası derlemede
+  kırılmalı.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -61,22 +39,14 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
   const { theme } = useUnistyles();
   const router = useRouter();
   const history = usePointsHistory();
-  /* Kart ile defter AYRI uçlar ve ayrı kalmaları bilinçli (sözleşme künyesi: kartın tavanı sabit,
-     defter sınırsız büyüyor). Bu ekran ikisini de okur çünkü müşterinin buraya getiren sorusu tek
-     değil: *"hangi puan nereden geldi"* defterin işi, *"kaç puanım var"* kartın. Bakiyeyi görmek
-     için hesap ekranına dönmek zorunda kalmak MB-67'nin ta kendisiydi. */
+  /* Kart ve defter ayrı uçlar ve bu ekran ikisini de okur: "hangi puan nereden geldi" defterin, "kaç puanım var" kartın sorusu. */
   const points = usePoints(true);
   const card = points.view?.points ?? null;
   const pending = card?.pendingNeighborAwards ?? [];
   const neighborPoints = card?.earnWays.find((way) => way.key === 'neighbor')?.points ?? null;
 
-  /* HEADER: "sayfa başlığı" durağı — `‹` kendi satırında → eyebrow → 26px başlık
-     (`design/KARARLAR.md` 16.08, "üç header" kuralı). Ölçüt: kaydırırken erişilebilir kalması
-     gereken bir eylem YOK, yani bu bir bölüm girişi — siparişlerle aynı aile.
-
-     BU EKRAN KURALIN NEDEN YAZILDIĞININ KANITI: ilk hâlinde başlık + ALT BAŞLIK vardı ve bu
-     dördüncü bir varyanttı — kural yazılı olmadığı için uydurulmuştu. Alt başlık ("Hangi puan
-     nereden geldi") kaldırıldı; sözü listenin kendisi zaten veriyor. */
+  /* Başlık "sayfa başlığı" durağı (`‹` kendi satırında → eyebrow → 26px başlık), çünkü kaydırırken erişilebilir kalması gereken bir
+     eylem yok; alt başlık yok, sözü liste veriyor. */
   const header = (
     <View style={styles.header}>
       <View style={styles.backRow}>
@@ -87,10 +57,8 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
         {t.title}
       </Text>
 
-      {/* BAKİYE BAŞLIKTA (MB-67): ekran müşterinin *"puanlarım nerede"* diye geldiği yer ve tek
-          satırlık bir defterin altında koca bir boşluk bırakıyordu. Kart okunmadan çizilmez —
-          "0 puan" gösterip sonra gerçek sayıya atlamak, olmayan bir bakiyeyi bir an doğru gibi
-          okuturdu (CLAUDE §1: ölçülemeyen değer sıfır değildir). */}
+      {/* Bakiye başlıkta, çünkü müşteri buraya "puanlarım nerede" diye gelir; kart okunmadan çizilmez, yoksa bir an "0 puan"
+          yazardı. */}
       {card === null ? null : (
         <View style={styles.balanceRow} testID="points-history-balance">
           <Text style={styles.balanceLabel}>{t.pending.balance}</Text>
@@ -98,9 +66,8 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
         </View>
       )}
 
-      {/* YOLDA (★ karar 3): defterde KARŞILIĞI YOK ve olmamalı — bekleyen ödül henüz yazılmadı.
-          O yüzden listeye satır olarak karışmıyor, listenin ÜSTÜNDE ayrı bir blok olarak duruyor:
-          sanal bir satır hem tarih sırasını hem bakiyenin toplamını yalan söyletirdi. */}
+      {/* Yolda olan ödül defterde yok, çünkü henüz yazılmadı: listeye satır olarak karışmaz, üstünde ayrı blok durur, yoksa sanal bir
+          satır tarih sırasını ve toplamı yanlış söyletirdi. */}
       {pending.length === 0 || neighborPoints === null ? null : (
         <View style={styles.pendingCard} testID="points-history-pending">
           <Text style={styles.pendingTitle}>{t.pending.title}</Text>
@@ -114,9 +81,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
     </View>
   );
 
-  /* Beş hâl de listenin YERİNE geçer, içine değil: hiçbirinde kaydırılacak satır yok ve `FlatList`
-     kabuğu boşuna kurulmaz (sipariş ekranının kararı). Boş hâller `fill` ile ORTALANIR — kullanıcı
-     kararı 15.08, tam-ekran boş hâlin yerleşimi. */
+  /* Beş hâl de listenin yerine geçer, çünkü hiçbirinde kaydırılacak satır yok; boş hâller `fill` ile ortalanır. */
   if (history.status === 'loading') {
     return (
       <View style={styles.screen}>
@@ -237,10 +202,8 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
             {group.count === 1 ? group.date : `${group.date} · ${t.count.replace('{n}', String(group.count))}`}
           </Text>
         </View>
-        {/* İŞARET RENKTEN DE OKUNUR ama YALNIZ renkten değil: rakamın önünde `+`/`−` duruyor.
-            Renk körlüğünde kazanım ile harcamayı ayıran tek şey renk olamaz (web kartının aynı
-            kararı, orada da işaret yazılıyor). Eksi işareti `−` (U+2212), tire değil: rakamla aynı
-            yükseklikte durur. */}
+        {/* İşaret yalnız renkten okunmaz, rakamın önünde `+`/`−` durur: renk körlüğünde kazanımı harcamadan ayıran tek şey renk
+            olamaz. Eksi işareti `−` (U+2212), tire değil, çünkü rakamla aynı yükseklikte durur. */}
         <Text style={earned ? styles.plus : styles.minus}>
           {earned ? '+' : '−'}
           {Math.abs(group.points)}
@@ -275,20 +238,9 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
 }
 
 /**
- * Sebebin müşteri cümlesi — küme TAM (`Record`), yani defter yeni bir sebep öğrenirse burası
- * derlemede kırılır ve eksik çizmez.
- */
-/**
- * Satırın adı — **işarete duyarlı** (★ karar 7 · 17.08).
- *
- * Geri alma aynı sebeple ve ters işaretle yazılıyor, yani ham etiket kullanılsaydı müşteri aynı adı
- * biri artı biri eksi olmak üzere iki kez görür ve ne olduğunu anlamazdı: *"Komşu daveti +100"*
- * altında *"Komşu daveti −100"*. Ayrım VERİDE değil SUNUMDA yapılıyor — sebep enum'u bilerek
- * büyütülmedi (★ karar 7d).
- *
- * Sözlük yalnız geri ALINABİLEN sebepleri taşıyor; ötekiler kendi adında kalır. `redemption` zaten
- * doğası gereği eksidir ("Kupona çevrildi") ve `manual` eksi de artı da olabilir — ikisine de ters
- * etiket uydurmak, olmayan bir olayı adlandırmak olurdu.
+ * Satırın adı işarete duyarlıdır: geri alma aynı sebeple ters işaretle yazıldığı için ham etiket "Komşu daveti +100" altında
+ * "Komşu daveti −100" gösterirdi. Sözlük yalnız geri alınabilen sebepleri taşır; `redemption` ve `manual`e ters etiket uydurmak
+ * olmayan bir olayı adlandırmak olurdu.
  */
 function reasonLabel(t: Messages, reason: PointsReason, points: number): string {
   const labels: Record<PointsReason, string> = t.reason;
@@ -317,7 +269,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space['3xl'],
     paddingBottom: theme.space['2xl'],
   },
-  /** Geri düğmesi: glif başlıkla hizalanır — künyesi sipariş ekranında (16.08 hizalama kararı). */
+  /** Geri düğmesi: glif başlıkla hizalanır, sipariş ekranının aynı ölçüsü. */
   backRow: {
     flexDirection: 'row',
     marginLeft: -theme.space['3xl'],
