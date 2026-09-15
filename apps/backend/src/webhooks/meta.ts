@@ -4,40 +4,9 @@ import type { Context } from 'hono';
 import type { AppEnv } from '../http/request-log';
 
 /**
- * META WEBHOOK UÇ NOKTASI (15.7) — WhatsApp + Messenger + Instagram, TEK adres.
- *
- * **İnce kabuk**: el sıkışma (GET) + imza (POST) burada; ayrıştırma, kimlik çözümü ve defter yazımı
- * `@lezzet/application`'daki işleyicide (HTTP'siz, test edilebilir). Sendcloud kabuğuyla aynı iş
- * bölümü — ve artık aynı uygulamada.
- *
- * ── NEDEN BACKEND'E TAŞINDI (29.08 · kullanıcı kararı) ──────────────────────
- * Uç bir tur boyunca `apps/web/app/api/webhooks/meta/route.ts`'teydi ve dayanağı Stripe'ın
- * sapmasıydı (`ADR Sapma 5`). İki gerekçe birden çürüdü:
- *
- * 1. **Sapmanın kendi çıkış şartı tetiklenmişti:** *"ikinci bir sağlayıcı webhook'u geldiğinde
- *    geri dönülür"* yazıyordu; Meta o ikinci sağlayıcıydı ama karar gözden geçirilmeden o da web'e
- *    kondu.
- * 2. **Sapmanın sebebi kalmamıştı:** gerekçe *"kapılar uygulama katmanında, backend onları
- *    göremez"*di. Bu işleyicinin çağırdığı sekiz kapının sekizi de `@lezzet/application`'a terfi
- *    etmişti; web'e bağlayan yalnız kimlik çözümü ile profil adı kalmıştı ve ikisinin de hiçbir
- *    Next.js bağımlılığı yoktu (ölçüldü: sıfır). İkisi de pakete taşındı.
- *
- * ── ÖLÇÜLEN PRATİK SEBEP: DEV SUNUCUSU WEBHOOK'A UYGUN DEĞİL ────────────────
- * Next.js dev sunucusu rotayı İLK çağrıda derliyor; sağlayıcılar ise kısa sürede cevap bekler.
- * 29.08'de tünel log'unda görüldü: `Failed to proxy HTTP: Incoming request ended abruptly ...
- * originService=http://localhost:3000`. Backend sade bir Node servisi — derleme adımı yok.
- *
- * ── YAN KAZANÇ: TEK TÜNEL ──────────────────────────────────────────────────
- * Geliştirmede genel adres `cloudflared` ile açılıyor ve kargo webhook'u zaten bu uygulamaya
- * bakıyordu. Meta de buraya gelince İKİNCİ tünel gereksizleşti — 29.08'de üç kez tünel
- * yönetmek zorunda kalındı ve her seferinde arıza sessizdi (adres DNS'te duruyor, bağlantı ölü).
- *
- * ── CEVAP KODLARI (Sendcloud kabuğuyla aynı sözleşme) ──────────────────────
- * - **200** — işlendi (ya da tekrar gelen olay: idempotens kapısı işleyicide).
- * - **401** — imza yok/tutmuyor. Tekrar denemesi anlamsız.
- * - **400** — imzası doğru ama gövdesi çözümlenemiyor.
- * - **500** — bizde bir şey düştü → Meta 7 gün boyunca azalan sıklıkla tekrar gönderir.
- * - **503** — anahtar yapılandırılmamış. Uç AÇIK KALMAZ: doğrulanamayan gövde işlenmez.
+ * Meta webhook uç noktası (WhatsApp, Messenger, Instagram tek adres), ince kabuk: el sıkışma ve imza burada, ayrıştırma ve defter
+ * yazımı `@lezzet/application`daki işleyicide. Cevap kodları sözleşmedir: 200 işlendi, 401 imza yok ya da tutmuyor, 400 gövde
+ * çözümlenemiyor, 500 bizde düştü (Meta yeniden gönderir), 503 anahtar yok ve doğrulanamayan gövde işlenmez.
  */
 
 /**
@@ -68,10 +37,8 @@ export async function metaWebhook(c: Context<AppEnv>): Promise<Response> {
   const signature = c.req.header('x-hub-signature-256');
 
   if (!verifyMetaSignature(body, signature ?? null, secret)) {
-    /* İmza tutmuyor: istek Meta'dan gelmemiş olabilir. İZ BIRAKILIR ama `captureError` DEĞİL —
-       kapının beklenen reddi, uygulama arızası değil. Gövde LOGLANMAZ: doğrulanmamış içeriktir.
-       İmza kimlik kurgusunun temeli (15.7): imzasız uca "şu numaradan geliyorum" diyebilen biri,
-       04.10'un güvenlik kodunu da anlamsız kılardı. */
+    /* İmza tutmuyor: iz bırakılır ama `captureError` değil, çünkü bu kapının beklenen reddidir, uygulama arızası değil. Gövde
+       loglanmaz, doğrulanmamış içeriktir. */
     logger.warn({ context: 'webhook/meta', reason: signature ? 'invalid' : 'missing' }, 'meta webhook imza doğrulaması başarısız');
     return c.text('invalid signature', 401);
   }

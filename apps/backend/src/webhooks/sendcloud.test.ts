@@ -16,12 +16,8 @@ import type { AppEnv } from '../http/request-log';
 import { handleSendcloudWebhook } from './sendcloud';
 
 /**
- * TAŞIYICI WEBHOOK KAPISI (07.12) — üç emniyet, üçü de ayrı soru.
- *
- * **Cevap kodları bir SÖZLEŞMEDİR** ve testin asıl konusu bu: Sendcloud başarısız çağrıyı 10 kez,
- * 5 dk → 1 saat artan gecikmeyle yeniden gönderiyor. Yanlış kod dönmek ya sağlayıcıyı boşuna
- * koşturur (ilgilendirmeyen olaya 4xx) ya da kaçan bir durum değişimini sessizleştirir
- * (işlenememiş olaya 200).
+ * Taşıyıcı webhook kapısı; testin asıl konusu cevap kodları, çünkü Sendcloud başarısız çağrıyı on kez yeniden gönderir ve
+ * yanlış kod ya sağlayıcıyı boşuna koşturur ya da kaçan bir durum değişimini sessizleştirir.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -124,12 +120,8 @@ afterAll(async () => {
   else process.env.SENDCLOUD_WEBHOOK_SECRET = oncekiSecret;
 
   /*
-    SÜZGEÇ ÖNEKE DEĞİL DAMGAYA bakıyor — ölçülmüş bir sızıntının düzeltmesi (29.08): önek
-    `pw-<stamp>-%` idi, ama "eşleşmeyen koli" testi olayı `bizde-yok-<stamp>:<stamp>` diye
-    yazıyor ve o kalıba UYMUYORDU. Satır her koşuda birikiyordu; canlı webhook'u ararken
-    `webhook_event`te onu bulup gerçek sanmak an meselesiydi.
-
-    Damga `Date.now()` ve bu koşuya ait, yani süzgeç başka şeridin satırına dokunamaz.
+    Süzgeç öneke değil damgaya bakar, çünkü bazı testler olay kimliğini farklı önekle yazar ve önek süzgeci o satırları
+    biriktirirdi; damga bu koşuya ait olduğu için başka bir koşunun satırına dokunmaz.
   */
   await db.from('webhook_event').delete().eq('provider', 'sendcloud').like('event_id', `%${stamp}%`);
   await db.from('order').delete().eq('customer_id', customerId);
@@ -173,9 +165,8 @@ describe('sendcloud webhook — işleme', () => {
     const res = await post(app(null, 'DELIVERED'), govde(`bizde-yok-${stamp}`));
     expect(res.status).toBe(500);
 
-    // Damga ATILMAZ: olay işlenmemiş kalır, yeniden denendiğinde işlenecek.
-    // Anahtar koli + BİLDİRİLEN DURUM + damga (29.08): aynı saniyeye düşen iki ayrı durum
-    // değişimi aynı anahtarı üretmesin — ikincisi "tekrar" sayılıp sessizce düşerdi.
+    // Damga atılmaz: olay işlenmemiş kalır ve yeniden denendiğinde işlenir. Anahtarda bildirilen durum da var ki aynı saniyeye
+    // düşen iki durum değişimi aynı anahtarı üretmesin.
     const { data } = await db.from('webhook_event').select('processed_at, error').eq('provider', 'sendcloud').eq('event_id', `bizde-yok-${stamp}:DELIVERED:${stamp}`).single();
     expect(data?.processed_at).toBeNull();
     expect(data?.error).toMatch(/öksüz/);

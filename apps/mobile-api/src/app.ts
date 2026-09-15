@@ -12,11 +12,8 @@ import type { AppEnv } from './context';
  */
 export const app = new Hono<AppEnv>();
 
-// İstek izi ÖNCE takılır: sonraki her şey `reqId` taşısın (OBSERVABILITY §3).
-//
-// apps/backend'in request-log'u ile bilinçli paralel; olgunlaşınca observability'ye terfi
-// (02-mimari §3.1). Seviye durumdan türer: 5xx bizim hatamız, 4xx çağıranın, gerisi bilgi.
-// Hata KAYDETMEZ — o `app.onError`'ın işi; ikisi karışırsa aynı hata iki kez kaydedilir.
+// İstek izi önce takılır ki sonraki her şey `reqId` taşısın; seviye durumdan türer (5xx bizim hatamız, 4xx çağıranın) ve hata
+// kaydı `app.onError`ın işidir, yoksa aynı hata iki kez kaydedilirdi.
 app.use('*', async (c, next) => {
   const reqId = randomUUID();
   c.set('reqId', reqId);
@@ -32,20 +29,14 @@ app.use('*', async (c, next) => {
 });
 
 /*
-  YANIT SIKIŞTIRMA (21.303). Katalog cevapları görsel türevleriyle (`frames`) büyüdü — ölçüldü 10.09:
-  vitrin 5,9 → 90,5 KB, 20 ürünlük sayfa 10,5 → 113,5 KB. Büyüyen şey tekrar eden CDN adresleri ve gzip
-  onları ~%95 küçültüyor (vitrin 4,4 KB — sözleşme büyümeden önceki ham boyundan az). İstemcinin `fetch`i
-  (Android OkHttp · iOS NSURLSession) `Accept-Encoding: gzip` gönderip açıyor; uygulamada değişiklik yok.
-
-  İstek izinin ARDINDA: iz cevabın durumunu okur, sıkıştırma gövdeyi değiştirir. Akış ucu yok (SSE —
-  ölçüldü); ikili gövdeler (PDF, medya) Hono'nun sıkıştırılabilir tür süzgecine takılmaz, olduğu gibi gider.
+  Yanıt sıkıştırma: katalog cevapları tekrar eden CDN adresleriyle büyüdü ve gzip onları büyük ölçüde küçültüyor; istemcinin
+  `fetch`i gzip'i kendisi açar. İstek izinin ardında, çünkü iz cevabın durumunu okur, sıkıştırma gövdeyi değiştirir.
 */
 app.use('*', compress());
 
 /**
- * Yakalanmamış hata → kayıt + zarf. Kayıt cevabı BEKLETMEZ (`void` — apps/backend deseni);
- * istemci 500'ünü hemen alır. Gövde de zarf sözleşmesindedir: mobil istemci hata dalında bile
- * `{ data, error }` şekli okur, iç mesaj sızmaz (`internal` bir anahtardır, metin ekranda yaşar).
+ * Yakalanmamış hata → kayıt + zarf: kayıt cevabı bekletmez ve istemci 500'ünü hemen alır. Gövde de zarf sözleşmesindedir;
+ * mobil istemci hata dalında bile `{ data, error }` okur ve iç mesaj sızmaz.
  */
 app.onError((err, c) => {
   void captureError(err, {

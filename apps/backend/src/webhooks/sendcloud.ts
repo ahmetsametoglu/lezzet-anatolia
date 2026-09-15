@@ -7,39 +7,14 @@ import type { Context } from 'hono';
 import type { AppEnv } from '../http/request-log';
 
 /**
- * TAŞIYICI WEBHOOK'U (07.12) — **ince kabuk**: imza + idempotens + eşleşme. Durumun kendisi
- * `syncShipmentStatus`ta okunur ve yazılır; bu dosya karar vermez.
- *
- * ── NEDEN BACKEND'DE (Stripe web'deyken) ────────────────────────────────────
- * `STACK §7` webhook'ları zaten backend'e koyuyor; Stripe'ınki sapmaydı ve künyesinde gerekçesi
- * yazılı (ödeme kapıları web'de). Burada sapmaya gerek yok, üstelik ters yönde bir bağ var:
- * **aynı uzlaştırmayı nöbet cron'u da çağırıyor** ve o zaten bu süreçte koşuyor. Webhook'u web'e
- * koymak, tek bir işi iki sürece bölmek olurdu.
- *
- * ── ÜÇ KAPI, ÜÇÜ DE AYRI SORU ───────────────────────────────────────────────
- * 1. **İmza** — `Sendcloud-Signature`, HAM gövde üzerinden HMAC-SHA256 (hex). Gövde
- *    `c.req.text()` ile okunur: `json()` normalleştirir ve imzayı geçersiz kılar (ölçüldü —
- *    tek bir boşluk farkı özeti değiştiriyor). Anahtarsız ortamda uç nokta AÇIK KALMAZ.
- * 2. **İdempotens** — `webhook_event`, `(provider, event_id)` benzersiz. Sendcloud olay kimliği
- *    GÖNDERMİYOR; anahtar koli + damgadan kuruluyor (`parseWebhookIdentity`).
- * 3. **Eşleşme** — koli kimliği → `order_box.provider_parcel_ref` → gönderi.
- *
- * ── CEVAP KODLARI BİR SÖZLEŞMEDİR ───────────────────────────────────────────
- * Sendcloud başarısız çağrıyı **10 kez, 5 dk → 1 saat** artan gecikmeyle yeniden gönderiyor
- * (doküman). Kod seçimi bu yüzden davranış seçimidir:
- * - **200** — işlendi, ya da bizi ilgilendirmiyor (koli kimliği taşımayan entegrasyon olayları).
- *   İlgilendirmeyen olaya 4xx dönmek sağlayıcıyı 10 tur boşuna koştururdu.
- * - **400/401** — imza yok/tutmuyor. Tekrar denemesi anlamsız.
- * - **500** — bizde bir şey eksik ya da düştü. **Eşleşmeyen koli de buraya düşer** ve bu bilinçli:
- *   duyuru yazımıyla webhook yarışabilir (koli açıldı, satırımız henüz yazılmadı). Yeniden deneme
- *   penceresi o yarışı kendiliğinden çözer. Gerçekten öksüz bir koliyse 10 uyarı bırakır — o da
- *   susturulması gereken bir gürültü değil, aradığımız alarmın ta kendisidir.
+ * Taşıyıcı webhook'u, ince kabuk: imza, idempotens ve eşleşme burada, durumun kendisi `syncShipmentStatus`ta okunur ve yazılır.
+ * Cevap kodları sözleşmedir, çünkü Sendcloud başarısız çağrıyı artan gecikmeyle on kez yeniden gönderir: ilgilendirmeyen olaya
+ * 200, imza sorununa 400/401, eşleşmeyen koliye bilerek 500 (duyuru yazımıyla yarış yeniden deneme penceresinde çözülür).
  */
 
 /**
- * İmza anahtarı. Doküman: *"`Secret Key` ya da `Webhook Signature Key`, entegrasyon tipine göre"* —
- * API Shop entegrasyonu gizli anahtarla imzalıyor. Ayrı env ÖNCE okunuyor ki panelde ayrı bir
- * imza anahtarı tanımlandığında kod değişmesin.
+ * İmza anahtarı: API Shop entegrasyonu gizli anahtarla imzalar; ayrı env önce okunur ki panelde ayrı bir imza anahtarı
+ * tanımlandığında kod değişmesin.
  */
 const webhookSecret = (): string | undefined => process.env.SENDCLOUD_WEBHOOK_SECRET || process.env.SENDCLOUD_SECRET_KEY || undefined;
 
@@ -81,18 +56,9 @@ export async function handleSendcloudWebhook(c: Context<AppEnv>, provider: Shipp
   const identity = parseWebhookIdentity(raw);
   if (!identity) {
     /*
-      Entegrasyon olayları (bağlandı/silindi) aynı adrese düşüyor ve koli kimliği taşımıyorlar.
-      Bunlar bir arıza değil; kabul edilir ve işlenmez.
-
-      **GÖVDENİN ŞEKLİ YAZILIR, İÇERİĞİ YAZILMAZ** — ve bu ayrım burada hem kural hem ihtiyaç.
-      Kural: taşıyıcı yükü alıcı adı/adresi/telefonu taşıyabilir (`CLAUDE §1` kırmızı çizgi).
-      İhtiyaç: v3 dokümanı webhook gövdesinin şemasını VERMİYOR, yani tanımadığımız bir zarf
-      geldiğinde onu ancak buradan öğrenebiliriz. Anahtar adları içerik değildir — `parcel`,
-      `action`, `timestamp` bir kimlik ya da adres taşımaz, yalnız zarfın biçimini söyler.
-
-      Ölçülerek gerekti (29.08): sağlayıcı beş olay gönderdi, imza TUTTU, ama ayrıştırıcı hiçbirinde
-      koli kimliği bulamadı ve hepsi sessizce "ignored" oldu. Şekli görmeden hangi alanın nerede
-      olduğunu tahmin etmek gerekirdi.
+      Entegrasyon olayları (bağlandı, silindi) koli kimliği taşımaz, arıza değildir; kabul edilir ve işlenmez. Gövdenin şekli
+      yazılır, içeriği yazılmaz: yük alıcının kişisel verisini taşıyabilir, anahtar adları ise taşımaz ve dokümanda şeması
+      olmayan zarfı ancak buradan öğrenebiliriz.
     */
     let sekil: string[] = [];
     try {
@@ -121,11 +87,8 @@ export async function handleSendcloudWebhook(c: Context<AppEnv>, provider: Shipp
   });
 
   /*
-    TEKRAR GELEN OLAY: damgalıysa gerçekten işlenmiş demektir → 200. Damgasızsa önceki tur
-    DÜŞMÜŞTÜR ve bu yeniden denemedir → işlenir. Stripe kapısı burada koşulsuz `duplicate` diyor;
-    ayrım bu kulvarda gerekli çünkü en olası düşüş sebebi GEÇİCİ: duyuru yazımıyla yarış, ya da
-    sağlayıcıya çıkan REST çağrısının o an düşmesi. Koşulsuz 200 dönseydik, 10 turluk yeniden
-    deneme penceresinin tamamı ilk tur bir kez düştüğü için boşa giderdi.
+    Tekrar gelen olay damgalıysa işlenmiştir ve 200 döner; damgasızsa önceki tur düşmüştür ve yeniden işlenir, çünkü en olası
+    düşüş geçicidir ve koşulsuz 200 yeniden deneme penceresini boşa harcardı.
   */
   if (!claim.fresh && claim.event.processedAt) return c.json({ duplicate: true }, 200);
 
