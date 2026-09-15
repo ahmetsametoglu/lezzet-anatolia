@@ -2,7 +2,7 @@ import { Tabs, useRouter } from 'expo-router';
 import type { LocalizedCopy } from '@lezzet/i18n';
 
 import { BottomTabBar, type BottomTabItem } from '@lezzet/mobile-kit/src/components/ui/bottom-tab-bar';
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { useWholesale } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 // `typeof messages` için DEĞER bağı gerek (Messages tipi JSON'dan türer) — `import type` olmaz.

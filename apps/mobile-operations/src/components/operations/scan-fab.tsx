@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 

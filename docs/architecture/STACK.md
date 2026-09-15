@@ -86,8 +86,8 @@ proje/
 │   ├── application/      # UYGULAMA katmanı: domain-core + database'i birleştiren, taşıma-bağımsız orkestrasyonlar (§4)
 │   ├── helper/           # saf fonksiyonlar (tarih/para/format/kimlik/slug) — tek iç bağımlılığı i18n
 │   ├── i18n/             # dil birimleri + ortak yerelleştirme sabitleri + URL yol tablosu (arayüz metni sayfanın messages.json'unda)
-│   ├── brand/            # marka kimliği: ad, iletişim, WhatsApp bağlantısı, telefon yüzeylerinin ikon sözlüğü
-│   ├── design-tokens/    # tasarım token'ları — bugün fiilî kaynak web `globals.css`, parite testi ikisini birebir tutar
+│   ├── brand/            # marka kimliği: ad, iletişim, şirket künyesi, WhatsApp bağlantısı
+│   ├── design-tokens/    # tasarım token'ları (fiilî kaynak web `globals.css`, parite testi ikisini birebir tutar) + telefon yüzeylerinin ikon sözlüğü ve çizgi kalınlığı (`./icons`)
 │   ├── observability/    # gözlemleme: logger, captureError, maskeleme (OBSERVABILITY.md)
 │   ├── storage/          # Cloudflare R2 (S3-uyumlu) dosya deposu
 │   ├── email/            # mail istemcisi + şablonlar (Auth OTP dahil TÜM mail buradan; Supabase mail yapısı kullanılmaz)
@@ -440,6 +440,7 @@ Genel blueprint §10 ile aynı. Env'e yalnız sır + ortama göre değişen değ
 | Diller (`LOCALES`, `DEFAULT_LOCALE`) | `packages/i18n` — `locale.ts` |
 | Alan adı (site kökü) | `packages/i18n` — `siteOrigin()` (`NEXT_PUBLIC_SITE_URL`) |
 | Renkler | `packages/design-tokens` + web `globals.css` (parite testiyle birebir) |
+| İkon geometrisi ve çizgi kalınlığı (telefon yüzeyleri: native + web telefon görünümü) | `packages/design-tokens` — `icons.ts`; web masaüstünün ikon seti ayrı (`apps/web/components/customer/ui/icons.tsx`) |
 | Logo yolu | tek sabiti yok — web'de elle yazılı (`/logo.…`) |
 | Yasal metinler | sayfanın kendi dosyası: web `legal/*/content.json` + `legal-messages.json`; native ortak sözlükten `packages/i18n/src/customer/legal.json` (14.09 — web'in telefon hesap ekranı bilgi kartının başlığını ve sayfa adlarını da oradan okur) |
 | Arayüz metinleri (tr/fr/de) | her sayfanın yanındaki `messages.json` (tipi `LocalizedCopy`, `@lezzet/i18n`); iki yüzeyin ortak bildirim cümleleri `packages/i18n/src/notification-copy.ts` |

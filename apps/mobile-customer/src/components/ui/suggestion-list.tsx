@@ -1,4 +1,4 @@
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';

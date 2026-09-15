@@ -3,7 +3,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { operationsTheme } from '../../theme/unistyles';
 import { Icon } from './icon';
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import { PressableSurface } from './pressable-surface';
 
 /*

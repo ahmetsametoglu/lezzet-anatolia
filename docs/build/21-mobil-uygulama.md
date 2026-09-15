@@ -7110,7 +7110,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 - [x] (21.136) **DEPO HUB v3 — düz liste üç katmana ayrıldı** (Operasyon Mobil v3:35-174)
   `touches:` `apps/mobile-operations/src/screens/warehouse/{warehouse-hub-screen.tsx,messages.json}` ·
   `apps/mobile-operations/src/components/operations/section-header.tsx` ·
-  `packages/mobile-kit/src/components/ui/icon.tsx` · `packages/brand/src/icons.ts` · `packages/mobile-kit/src/theme/metrics.ts` ·
+  `packages/mobile-kit/src/components/ui/icon.tsx` · `packages/design-tokens/src/icons.ts` · `packages/mobile-kit/src/theme/metrics.ts` ·
   `packages/design-tokens/src/operations-app.ts`
 
   **Durum (30.08).** v3 geçişinin ilk ekranı. v2 sekiz işi eşit ağırlıkta satırlara diziyordu;
@@ -7572,7 +7572,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.153) **YERİNDE SATIŞ + FİŞ v3 — sonuç kendi sayfasında, kapıda çevrimdışı satış yok** (v3:1752-1900, 22)
   `touches:` `apps/mobile-operations/src/screens/sale/*` · `apps/mobile-operations/src/app/(operations)/sale/receipt.tsx` ·
-  `apps/mobile-operations/src/lib/operations/stamp.ts` · `packages/brand/src/icons.ts`
+  `apps/mobile-operations/src/lib/operations/stamp.ts` · `packages/design-tokens/src/icons.ts`
 
   **Durum (30.08).** v3 satışı TEK ekran çiziyor (liste + sepet + tahsilat alt alta); bizde ikiye
   ayrı ve ayrılmasının sebebi KULLANICI KARARIDIR (26.08: "ürün listesi ve sepet aynı yerde olması
@@ -11439,7 +11439,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   tekerleğe bağlantıdan gidilir. Tam paket sonucu commit notunda. Cihazda ölçüldü (Oppo).
 
 - [x] (21.241) **STOK DÜŞÜMÜNÜN KENDİ İKONU — hub'da sayımla aynı şekli gösteriyordu; sayacın ORTA hedefi ± düğmelerinden dar kalmıştı** (kullanıcı bulguları 03.09, Oppo'da ölçüldü)
-  `touches:` `packages/brand/src/icons.ts` · `packages/mobile-kit/src/theme/metrics.ts` · `apps/mobile-operations/src/components/operations/stepper-group.tsx` · `apps/mobile-operations/src/screens/warehouse/warehouse-hub-screen.tsx`
+  `touches:` `packages/design-tokens/src/icons.ts` · `packages/mobile-kit/src/theme/metrics.ts` · `apps/mobile-operations/src/components/operations/stepper-group.tsx` · `apps/mobile-operations/src/screens/warehouse/warehouse-hub-screen.tsx`
 
   **1 · İKON.** D4b 02.09'da açılırken sayımın liste ikonunu (`stock-count`, üç çizgi) ödünç
   almıştı; hub'da iki kutucuk aynı şekli gösteriyordu, ayıran tek şey renkti. Tasarımın kendi ikonu
@@ -12983,7 +12983,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   konuşan testler ancak ekran alanı gerçekten okuduğunda geçiyor.
 
 - [x] (21.275) **TALEP YAZIŞMASI v3'E GEÇTİ — anlatım kartı · gün ayracı · ekli görseller · tek satır cevap kutusu** (kullanıcı kararı 06.09: *"Talepler kısmındaki mesajlaşma bölümüne odaklan ve tasarım ile aynı olsun"*)
-  `touches:` `apps/mobile-operations/src/screens/management/{complaint-screen.tsx,messages.json,complaint-exception-screens.test.tsx}` · `apps/mobile-operations/src/components/operations/{party-avatar.tsx,stack-header.tsx,icon-button.tsx}` · `packages/brand/src/icons.ts`
+  `touches:` `apps/mobile-operations/src/screens/management/{complaint-screen.tsx,messages.json,complaint-exception-screens.test.tsx}` · `apps/mobile-operations/src/components/operations/{party-avatar.tsx,stack-header.tsx,icon-button.tsx}` · `packages/design-tokens/src/icons.ts`
 
   **KAPSAM YARIM, VE BİLEREK.** Tasarımın talep ekranı (v3:30) iki yarımdır: **yazışma** ve
   ⋮ ile açılan **Aksiyonlar çekmecesi**. Bu görev yalnız birincisini getirdi; çekmece 21.276'da.
@@ -13042,7 +13042,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   tipine değmiyor.
 
 - [x] (21.276) **Talep ekranının KARAR yarısı — ⋮ Aksiyonlar çekmecesi TASARIMIN DÖRT BÖLÜMÜYLE** (21.275'in ikinci yarısı · kullanıcı kararı 06.09)
-  `touches:` `apps/mobile-operations/src/screens/management/{complaint-screen.tsx,messages.json,complaint-exception-screens.test.tsx}` · `apps/mobile-operations/src/screens/management/use-complaint.hook.ts` · `apps/mobile-operations/src/lib/api/management.ts` · `packages/types/src/contracts/management-api.schema.ts` · `apps/mobile-api/src/api/v1/{management.ts,management.test.ts}` · `packages/brand/src/icons.ts`
+  `touches:` `apps/mobile-operations/src/screens/management/{complaint-screen.tsx,messages.json,complaint-exception-screens.test.tsx}` · `apps/mobile-operations/src/screens/management/use-complaint.hook.ts` · `apps/mobile-operations/src/lib/api/management.ts` · `packages/types/src/contracts/management-api.schema.ts` · `apps/mobile-api/src/api/v1/{management.ts,management.test.ts}` · `packages/design-tokens/src/icons.ts`
 
   **Durum (06.09) — ÇEKMECE AÇILDI, İÇİNDE BİR BÖLÜM VAR.** Kullanıcı *"en büyük fark aksiyon
   butonlarının olduğu kısım, önce buna odaklan"* dedi; çekmecenin kabuğu ve tasarımın iki kapısı
@@ -13206,7 +13206,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   — kargo/web, iki notla kayıtlı).
 
 - [x] (21.279) **SOHBET BİÇİMLENDİRMESİ MOBİLDE ÇİZİLİYOR — üç yüzey birden** (kullanıcı kararı 06.09; sosyal şeridiyle ortak iş)
-  `touches:` `packages/mobile-kit/src/components/ui/{chat-text.tsx,chat-text.test.tsx}` · `packages/brand/src/icons.ts` · `packages/mobile-kit/src/theme/fonts.ts` · `apps/mobile-operations/src/screens/management/{chat-bubble.tsx,complaint-screen.tsx}` · `apps/mobile-customer/src/screens/support/ticket-detail-screen.tsx`
+  `touches:` `packages/mobile-kit/src/components/ui/{chat-text.tsx,chat-text.test.tsx}` · `packages/design-tokens/src/icons.ts` · `packages/mobile-kit/src/theme/fonts.ts` · `apps/mobile-operations/src/screens/management/{chat-bubble.tsx,complaint-screen.tsx}` · `apps/mobile-customer/src/screens/support/ticket-detail-screen.tsx`
 
   Kullanıcı WhatsApp biçimlendirmesinin **talep ekranlarında da** çizilmesini, hem web hem mobilde,
   hem müşteri hem operasyonda istedi. İş **iki şerit arasında bölüşüldü**
@@ -13423,7 +13423,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   köprünün sessizce geri gelmesini gerçekten yakalıyor.
 
 - [x] (21.283) **KARAR KUTUSU v3'ÜN YENİ ÇİZİMİNE GEÇTİ — üstbaşlık bağırmıyor, ikon tanıtıyor** (tasarım güncellendi 07.09 · kullanıcı isteği)
-  `touches:` `design/derived/operasyon-mobil-v3/*` (türetildi) · `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/management/hub.ts` · `packages/brand/src/icons.ts` · `packages/mobile-kit/src/theme/metrics.ts` · `apps/mobile-operations/src/screens/management/{management-hub-screen.tsx,management-hub-screen.test.tsx,day-summary-screen.test.tsx,messages.json}`
+  `touches:` `design/derived/operasyon-mobil-v3/*` (türetildi) · `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/management/hub.ts` · `packages/design-tokens/src/icons.ts` · `packages/mobile-kit/src/theme/metrics.ts` · `apps/mobile-operations/src/screens/management/{management-hub-screen.tsx,management-hub-screen.test.tsx,day-summary-screen.test.tsx,messages.json}`
 
   Tasarım bugün güncellendi; `pnpm design:split` ile türetilenler tazelendi (36 → **37 ekran**;
   `36-b2bOnay` yeni, bildirim 37'ye kaydı). Yerel kopya 31.08'den kalmaydı — CLAUDE §3'ün
@@ -13599,7 +13599,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   gerçek WhatsApp gönderimi kullanıcının onayına bağlı ve henüz alınmadı.
 
 - [x] (21.287) **SOSYAL SOHBET MEDYAYI GÖSTERİYOR — fotoğraf ızgarası + sesli mesaj transkripti** (kullanıcı sorusu 07.09: *"resimli ve sesli mesajları gösterebiliyor musun?"* · tasarım kararı: *"arka arkaya gönderildiği zaman mesajlaşma alanı dolmamalı… resimler yan yana"*)
-  `touches:` `packages/types/src/contracts/social-api.schema.ts` · `apps/mobile-api/{package.json,src/api/v1/social.ts,src/api/v1/social.test.ts}` · `apps/mobile-operations/src/lib/api/social.ts` · `packages/brand/src/icons.ts` · `apps/mobile-operations/src/screens/management/{social-conversation-screen.tsx,social-conversation-screen.test.tsx,chat-bubble.tsx,messages.json}`
+  `touches:` `packages/types/src/contracts/social-api.schema.ts` · `apps/mobile-api/{package.json,src/api/v1/social.ts,src/api/v1/social.test.ts}` · `apps/mobile-operations/src/lib/api/social.ts` · `packages/design-tokens/src/icons.ts` · `apps/mobile-operations/src/screens/management/{social-conversation-screen.tsx,social-conversation-screen.test.tsx,chat-bubble.tsx,messages.json}`
 
   **Durum (07.09) — TAMAM (cihaz turu hariç).** Ölçülen açık: sözleşme `mediaMime`i, `mediaTranscript`i
   ve adresi hiç taşımıyordu; ekranın tek satırı `message.body.text?.trim() || t.kind[message.kind]`
@@ -13660,7 +13660,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   gönderebilmemiz ayrı bir yükleme akışı + sağlayıcı kapısı demek (15.11'in kapsamı).
 
 - [x] (21.288) **SOSYAL SOHBET MEDYASI UYGULAMANIN İÇİNDE + GELEN KUTUSU TASARIMIN RENGİNE DÖNDÜ** (kullanıcı kararları 07.09: *"Sesli mesaj uygulama içerisinde dinlenebilmeli… resimlerin üzerine basınca da uygulama içerisinde tam ekran… Uygulama dışına çıkışlar olmamalı"* · *"liste ekranının renkleri ile bizim ekranın renkleriyle hiç alakası yok… Belki bu filtre konusu için bir açılır çekmece yapabiliriz"*)
-  `touches:` `apps/mobile-customer/package.json` · `apps/mobile-customer/jest.setup.ts` · `apps/mobile-operations/src/testing/expo-audio.mock.ts` · `apps/mobile-operations/src/components/ui/{photo-viewer.tsx,audio-player.tsx}` · `packages/brand/src/icons.ts` · `apps/mobile-operations/src/screens/management/{social-inbox-screen.tsx,social-inbox-screen.test.tsx,social-conversation-screen.tsx,social-conversation-screen.test.tsx,complaint-screen.tsx,messages.json}`
+  `touches:` `apps/mobile-customer/package.json` · `apps/mobile-customer/jest.setup.ts` · `apps/mobile-operations/src/testing/expo-audio.mock.ts` · `apps/mobile-operations/src/components/ui/{photo-viewer.tsx,audio-player.tsx}` · `packages/design-tokens/src/icons.ts` · `apps/mobile-operations/src/screens/management/{social-inbox-screen.tsx,social-inbox-screen.test.tsx,social-conversation-screen.tsx,social-conversation-screen.test.tsx,complaint-screen.tsx,messages.json}`
 
   **Durum (07.09) — TAMAM, cihazda ölçüldü.**
 
@@ -13917,7 +13917,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   operatörün mobilden cevabı, hepsi sağlayıcı kimlikli.
 
 - [x] (21.293) **KURUMSAL BAŞVURUNUN KAPISI — ekranı vardı, karar kutusunda kartı yoktu** (kullanıcı sorusu 08.09: *"kurumsal başvuru kartı var mı şu an mevcut tasarımda? Aynı zamanda bizim kendi uygulamamızda da var mı?"*)
-  `touches:` `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/management/hub.ts` · `packages/brand/src/icons.ts` · `apps/mobile-operations/src/screens/management/{management-hub-screen.tsx,management-hub-screen.test.tsx,day-summary-screen.test.tsx,messages.json}`
+  `touches:` `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/management/hub.ts` · `packages/design-tokens/src/icons.ts` · `apps/mobile-operations/src/screens/management/{management-hub-screen.tsx,management-hub-screen.test.tsx,day-summary-screen.test.tsx,messages.json}`
 
   **Durum (08.09) — TAMAM.** Soru bir ölçümle cevaplandı: kart tasarımda ÜÇ yerde çizili (karar
   kutusu v3:2625 · "Kurumsal başvurular" listesi · onay ekranı v3:36), uygulamada ise liste ve
@@ -14953,7 +14953,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · **Taşınan:** `Icon` (`packages/mobile-kit/src/components/ui/icon.tsx`), `CustomerIcon`
     (`packages/mobile-kit/src/components/customer/customer-icon.tsx`), iki düğme, sekme çubuğu ve giriş ekranı
     (`packages/mobile-kit/src/screens/login/login-screen.tsx`), testleriyle. İkon verisi kite GİRMEDİ: çiziciler
-    sözlüğü `@lezzet/brand/icons`tan okuyor; sözlüğün sahibi marka paketi, kit yalnız çizer.
+    sözlüğü `@lezzet/brand/icons`tan okuyor; sözlüğün sahibi marka paketi, kit yalnız çizer. (15.09: sözlük
+    `@lezzet/design-tokens/icons`a taşındı, 00.11 — kit yine yalnız çizer.)
   · **Yönlendirici silindi:** `icon-paths.ts`i okuyan 12 import betikle doğrudan pakete çevrildi. Betiğe yönlendirme
     ve silme eklendi: tüketeni kalmayan dosya gider. Kalan tek anma bir yorumdu (`feedback-icons.tsx`), düzeltildi.
   · **Kit manifesti yeniden türetildi:** 5 çalışma alanı paketi (artık `@lezzet/brand` dahil) · 19 eş · 34 geliştirme
@@ -14961,7 +14962,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · **Doküman:** taşınan dosyaların anmaları araçla çevrildi; kısmen taşınmış üç kısaltma elle ayrıldı. Araç üstü
     çizili yol taşıyan satırı bütünüyle atlamıştı: öyle bir satırda çizili bölümün dışında kalan iki anma da elle
     çevrildi (biri ikinci dilimden kalmıştı). Silinen yönlendiricinin kapanmış görevlerdeki sekiz anması sözlüğün
-    bugünkü yerine (`packages/brand/src/icons.ts`) çevrildi.
+    bugünkü yerine (~~`packages/brand/src/icons.ts`~~ → 15.09 itibarıyla `packages/design-tokens/src/icons.ts`, 00.11) çevrildi.
   · **Doğrulama:** kit `typecheck` · jest 229/231 (iki düşüş `unistyles.test.ts`in yazı tipi testleri, önceden var) ·
     uygulama `typecheck` · jest 1361/1361 · `lint` · `knip` ve `boundaries` bizde temiz · `docs:check` · Android dışa
     aktarımı: kitten 60 dosya paketlendi, üç çizici kitten, sözlük marka paketinden; eski yönlendirici pakette yok;

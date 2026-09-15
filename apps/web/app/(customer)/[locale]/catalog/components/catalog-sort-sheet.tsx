@@ -1,4 +1,4 @@
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type catalogMessages from '@lezzet/i18n/customer/catalog';
 import { CATALOG_SORTS, type CatalogSort } from '@lezzet/types';

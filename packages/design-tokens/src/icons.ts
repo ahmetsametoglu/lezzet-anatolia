@@ -3,12 +3,15 @@
 
   NEDEN BURADA: müşterinin telefon tasarımı native uygulamada ve web'in telefon görünümünde AYNI
   (`design/KARARLAR.md` "MÜŞTERİ MOBİL TASARIMIN KAYNAĞI NATIVE UYGULAMA"); ikon o tasarımın parçası.
-  Veri yalnız burada durur, iki yüzey de buradan okur. Çizim davranışı (renk, boy, çizgi kalınlığı,
-  erişilebilirlik) okuyanın kendi kitindedir: native `components/ui/icon.tsx` ve
-  `screens/customer-kit/customer-icon.tsx` (react-native-svg), web telefon görünümü SVG ile.
+  Veri yalnız burada durur, iki yüzey de buradan okur. Çizim davranışı (renk, boy, hangi çizgi
+  durağının seçileceği, erişilebilirlik) okuyanın kendi kitindedir: native `@lezzet/mobile-kit`
+  (`components/ui/icon.tsx`, `components/customer/customer-icon.tsx` — react-native-svg), web telefon
+  görünümü SVG ile (`apps/web/components/customer/ui/mobile-icon.tsx`).
 
   PLATFORMA BAĞLANMAZ: import yok, yalnız sabit veri. `@lezzet/mobile-kit` react-native'e bağlı olduğu
-  için web onu okuyamazdı; bu yüzden sözlük kitte değil burada.
+  için web onu okuyamazdı; bu yüzden sözlük kitte değil burada. Paketi TASARIM TOKEN'LARI (kullanıcı
+  kararı 15.09; 14.09'dan o güne `@lezzet/brand/icons`taydı): ikon geometrisi ve çizgi kalınlığı
+  markanın kimliği (ad, künye) değil, tasarımın verisidir — renk token'larıyla aynı sınıf.
 
   Web MASAÜSTÜ kendi v1 setini taşır (`apps/web/components/customer/ui/icons.tsx`, kullanıcı kararı
   14.09); bu sözlük telefon yüzeylerinindir.
@@ -336,10 +339,18 @@ export const CUSTOMER_ICON_PATHS = {
 
 /*
   ÇİZGİ KALINLIĞI DURAKLARI — çizimin kuralı da ikonun parçası: aynı geometri iki yüzeyde aynı
-  kalınlıkla çizilsin. Değerler native kitin `theme.border.iconStroke*` duraklarıyla AYNI
-  (`packages/mobile-kit/src/theme/metrics.ts`); kit bunları buradan okuduğunda tek kaynak olur.
-  · `base`  — satır içi işaret, sekme ikonu;
-  · `large` — 34 dp ve üstü boş/hata bloğu (geometrinin `large` bayrağı): büyük ikon ince çizilir;
-  · `bold`  — ikon bir eylemin kendisi (native `Icon`un `bold`u); boy kuralını ezer.
+  kalınlıkla çizilsin. TEK KAYNAK burası (15.09): native kitin `theme.border.iconStroke*` durakları bu
+  değerlerden türer (`packages/mobile-kit/src/theme/metrics.ts`), web telefon görünümü doğrudan okur.
+  · `base` 1,8 — tasarımın BASKIN değeri (19 kullanım): satır içi işaret, sekme ikonu. Şablon 1,5–2,2
+    arasında geziniyor ama sistemli değil; kalınlık ikon BOYUYLA ters oynuyor (küçük ikon kalın, büyük
+    ikon ince) — optik ağırlığı sabit tutmanın elle yapılmış hâli. Duraklar o davranışı kurala
+    çeviriyor; aradaki tek-onda farklar (1,7 · 1,9 · 2,0) en yakın durağa çekildi.
+  · `large` 1,6 — 34 dp ve üstü boş/hata bloğu (geometrinin `large` bayrağı; tasarım 1,5–1,7): büyük
+    ikon ince çizilir.
+  · `bold` 2,2 — ikon bir eylemin kendisi (native `Icon`un `bold`u); boy kuralını ezer. Şablonun ÜST
+    ucu: bir dönem "en yakın durağa çekildi" denilerek 1,8'e indirilmişti, kullanıcı bulgusu 18.08 geri
+    istedi (katalogun koleksiyon temizleme çarpısı 1,8'de işaret gibi duruyordu, düğme gibi değil).
+    Uydurulmuş bir değer DEĞİL — tasarımda geçen üçüncü durak; boyla değil ROLLE seçilir: büyüten
+    şey ikonun ölçüsü değil, taşıdığı eylemin ağırlığı.
 */
 export const ICON_STROKE = { base: 1.8, large: 1.6, bold: 2.2 } as const;

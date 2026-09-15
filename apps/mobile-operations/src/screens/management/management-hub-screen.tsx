@@ -10,7 +10,7 @@ import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { OperationsSurface } from '@/components/operations/surface';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';

@@ -34,8 +34,9 @@ kiti, API istemcisi, oturum, push, dil, test sahteleri. İki tüketeni var: `app
 - **Kurulumdan sonra kilit farkına bak.** Yeni içe aktarıcı eklenince pnpm Expo araçlarının yama
   sürümünü kaydırabiliyor (`@expo/image-utils`, `@expo/require-utils`; ölçüldü 14.09, iki kez). Kayma
   HEAD değerine döndürülür ve `pnpm install --frozen-lockfile` ile doğrulanır.
-- **İkon verisi kitte DEĞİL:** geometri `@lezzet/brand/icons`ta (web'in telefon görünümüyle ortak,
-  platformdan bağımsız). Kit yalnız çizicileri taşır.
+- **İkon verisi kitte DEĞİL:** geometri ve çizgi kalınlığı `@lezzet/design-tokens/icons`ta (web'in
+  telefon görünümüyle ortak, platformdan bağımsız; temanın `iconStroke*` durakları oradan türer). Kit
+  yalnız çizicileri taşır.
 
 ## Komutlar
 

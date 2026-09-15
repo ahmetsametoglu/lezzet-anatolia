@@ -14,7 +14,7 @@ import { NotificationBell } from '@/components/operations/notification-bell';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';

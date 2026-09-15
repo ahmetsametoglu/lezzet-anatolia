@@ -10,7 +10,7 @@ import { Chip } from '@lezzet/mobile-kit/src/components/ui/chip';
 import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-refresh';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';

@@ -2,7 +2,7 @@ import { customerColors } from '@lezzet/design-tokens';
 import { render, screen } from '@testing-library/react-native';
 
 import { Icon } from './icon';
-import { ICON_PATHS } from '@lezzet/brand/icons';
+import { ICON_PATHS } from '@lezzet/design-tokens/icons';
 import { appMetrics } from '../../theme/metrics';
 
 /*

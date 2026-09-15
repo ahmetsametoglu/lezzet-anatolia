@@ -1,7 +1,7 @@
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useUnistyles } from 'react-native-unistyles';
 
-import { ICON_PATHS, type IconName } from '@lezzet/brand/icons';
+import { ICON_PATHS, type IconName } from '@lezzet/design-tokens/icons';
 
 /*
   İKON — kitin tek çizim kapısı (21.7). Geometri `icon-paths.ts`te (v3 tasarımından birebir),

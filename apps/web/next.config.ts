@@ -188,6 +188,8 @@ const config: NextConfig = {
   // Paketler kaynak olarak dışa verildiği için Next transpile eder (ara derleme yok).
   transpilePackages: [
     '@lezzet/brand',
+    // Telefon görünümünün ikon sözlüğü ve çizgi kalınlığı (`@lezzet/design-tokens/icons`, 15.09).
+    '@lezzet/design-tokens',
     '@lezzet/i18n',
     '@lezzet/types',
     '@lezzet/helper',

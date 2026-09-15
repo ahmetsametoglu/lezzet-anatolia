@@ -2,7 +2,7 @@ import { type StyleProp, Text, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles, type UnistylesThemes } from 'react-native-unistyles';
 
 import { Icon } from './icon';
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import { PressableSurface } from './pressable-surface';
 
 /*

@@ -1,7 +1,7 @@
 'use client';
 
 import tabBarCopy from '@lezzet/i18n/customer/tab-bar';
-import type { IconName } from '@lezzet/brand/icons';
+import type { IconName } from '@lezzet/design-tokens/icons';
 import { Link, usePathname } from '@/i18n/navigation';
 import type { routing } from '@/i18n/routing';
 import { useWholesale } from '@/components/customer/account/account-context';
@@ -42,7 +42,7 @@ type TabKey = keyof (typeof tabBarCopy)['tr']['tabs'];
  * Dört sekme: Vitrin · Katalog · Paketler|Siparişler · Hesap (native `(tabs)/_layout.tsx`). Üçüncü
  * yuva kişiye göre: onaylı toptancı Siparişler'i görür (perakendenin paket listesi toptancıda boş),
  * yuva `/orders`'ı açar. Etiketler iki yüzeyin ortak metninden (`@lezzet/i18n/customer/tab-bar`),
- * ikonlar native'in (`@lezzet/brand/icons`).
+ * ikonlar native'in (`@lezzet/design-tokens/icons`).
  * Çubuk YALNIZ sekme köklerinde: native'de öteki her ekran yığında, çubuğun üstünde açılır. Sepet
  * sekme DEĞİL: yüzen düğme, native'in beş ekranında (vitrin · katalog · ürün · paket · tarif
  * detayı) — sekme köklerinde çubuğun 20px üstünde, detayda alttan 112px (native ölçüleri).

@@ -13,6 +13,7 @@
 */
 
 import { customerAppShadowOffset } from '@lezzet/design-tokens';
+import { ICON_STROKE } from '@lezzet/design-tokens/icons';
 
 export const appMetrics = {
   /** Boşluk ölçeği — dolgu, aralık, kenar boşluğu. */
@@ -325,23 +326,14 @@ export const appMetrics = {
     /** Yükleniyor halkasının kalınlığı (tasarım: küçükte 3, büyükte 4). */
     spinner: 4,
     spinnerSm: 3,
-    /**
-     * İKON ÇİZGİSİ — tasarımın BASKIN değeri (1,8 · 19 kullanım). Şablon 1,5–2,2 arasında
-     * geziniyor ama sistemli değil: kalınlık ikon BOYUYLA ters oynuyor (küçük ikon kalın, büyük
-     * ikon ince) — optik ağırlığı sabit tutmanın elle yapılmış hâli. İki durak o davranışı
-     * kurala çeviriyor; aradaki tek-onda farklar (1,7 · 1,9 · 2,0 · 2,2) en yakın durağa çekildi.
-     */
-    iconStroke: 1.8,
-    /** 34 dp ve üstü ikonun ince çizgisi (tasarım: 1,5–1,7). */
-    iconStrokeLarge: 1.6,
-    /**
-     * VURGULU ikon çizgisi — şablonun ÜST ucu (2,2), yukarıdaki künyede "en yakın durağa çekildi"
-     * denilerek 1,8'e indirilmişti. Kullanıcı bulgusu 18.08 onu geri istedi: katalogun koleksiyon
-     * temizleme çarpısı 1,8'de bir işaret gibi duruyor, düğme gibi değil. Uydurulmuş bir değer
-     * DEĞİL — tasarımda zaten geçen üçüncü durak; boyla değil ROLLE seçilir (`Icon` `bold` prop'u),
-     * çünkü burada büyüten şey ikonun ölçüsü değil, taşıdığı eylemin ağırlığı.
-     */
-    iconStrokeBold: 2.2,
+    /*
+      İKON ÇİZGİSİ durakları — değerler ve tasarım gerekçeleri `@lezzet/design-tokens/icons`ta
+      (`ICON_STROKE`): web'in telefon görünümü de aynı duraklardan çizer, iki yüzey tek kaynaktan
+      okur (15.09). Tema adları (`iconStroke*`) çizicilerin sözleşmesi olduğu için değişmedi.
+    */
+    iconStroke: ICON_STROKE.base,
+    iconStrokeLarge: ICON_STROKE.large,
+    iconStrokeBold: ICON_STROKE.bold,
     /** Yüzen sayfa tutamağının kalınlığı (tasarım: 5). Yarıçapı bundan TÜREtilir. */
     sheetHandle: 5,
   },

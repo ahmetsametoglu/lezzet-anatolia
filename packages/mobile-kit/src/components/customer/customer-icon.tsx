@@ -1,12 +1,13 @@
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useUnistyles } from 'react-native-unistyles';
-import { CUSTOMER_ICON_PATHS } from '@lezzet/brand/icons';
+import { CUSTOMER_ICON_PATHS } from '@lezzet/design-tokens/icons';
 
 /*
   MÜŞTERİ EKRANLARININ İKON TAMAMLAYICISI — v3'ün müşteri ekranlarında geçen ama paylaşılan kitin
-  sözlüğünde HENÜZ OLMAYAN geometrilerin ÇİZİCİSİ. Geometrinin kendisi 14.09'dan beri
-  `@lezzet/brand/icons`ta (`CUSTOMER_ICON_PATHS`): müşterinin telefon tasarımı uygulamada ve web
-  telefon görünümünde aynı, ikon verisi iki yüzeyin ortak ve platformdan bağımsız kısmında.
+  sözlüğünde HENÜZ OLMAYAN geometrilerin ÇİZİCİSİ. Geometrinin kendisi `@lezzet/design-tokens/icons`ta
+  (`CUSTOMER_ICON_PATHS`; 14.09'da `brand`e, 15.09'da tasarım token'larının yanına taşındı): müşterinin
+  telefon tasarımı uygulamada ve web telefon görünümünde aynı, ikon verisi iki yüzeyin ortak ve
+  platformdan bağımsız kısmında.
 
   NEDEN BURADA, KİTTE DEĞİL (21.14'ün açık kısıtı): bu etapta `components/ui` YAZIYA KAPALI —
   operasyon ekranları aynı dosyalarda paralel çalışıyor. İhtiyaç yöneticiye raporlandı; sözlük

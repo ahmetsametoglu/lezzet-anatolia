@@ -1,10 +1,10 @@
-import { CUSTOMER_ICON_PATHS, ICON_PATHS, ICON_STROKE, type IconName } from '@lezzet/brand/icons';
+import { CUSTOMER_ICON_PATHS, ICON_PATHS, ICON_STROKE, type IconName } from '@lezzet/design-tokens/icons';
 
 /**
  * Telefon görünümünün ikonu — native kitin `Icon` ve `CustomerIcon` çizicilerinin web ikizi
  * (kullanıcı kararı 14.09: müşterinin telefon tasarımı uygulamada ve web'de aynı, ikon dahil).
  *
- * Geometri ve çizgi durakları `@lezzet/brand/icons`ta, iki yüzeyin ortak ve platformdan bağımsız
+ * Geometri ve çizgi durakları `@lezzet/design-tokens/icons`ta, iki yüzeyin ortak ve platformdan bağımsız
  * kısmında; burada yalnız ÇİZİM. Kurallar native'inkiyle aynı: kare olmayan kutuda genişlik
  * `viewBox` oranından türer, büyük geometri ince, vurgulu ikon kalın çizilir, uçlar yuvarlak.
  * Renk `currentColor`: web'de ikon rengini yanındaki metin verir (native'de açık prop, çünkü RN

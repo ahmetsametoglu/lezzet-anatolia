@@ -1,6 +1,6 @@
-// @lezzet/brand — marka kimliği: ad (`./name`), dışarıya verilen iletişim künyesi, WhatsApp bağlantısı ve
-// telefon yüzeylerinin ikon sözlüğü (`./icons`). Dil listesi burada DEĞİL — tek kaynak `@lezzet/i18n`
-// (`LOCALES`, `DEFAULT_LOCALE`); renkler de değil — `@lezzet/design-tokens`.
+// @lezzet/brand — marka kimliği: ad (`./name`), dışarıya verilen iletişim künyesi, şirket künyesi ve
+// WhatsApp bağlantısı. Dil listesi burada DEĞİL — tek kaynak `@lezzet/i18n` (`LOCALES`,
+// `DEFAULT_LOCALE`); renkler ve ikon sözlüğü de değil — `@lezzet/design-tokens` (`./icons`).
 import { BRAND_NAME } from './name';
 
 export const brand = {
