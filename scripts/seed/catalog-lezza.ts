@@ -391,6 +391,11 @@ function satilabilirDurum(o: {
   return 'candidate';
 }
 
+/** Faturadaki varyantlar; değer, satış biriminin faturaya göre düzeltilmiş etiketi ve gramajıdır. */
+export interface LezzaSecim {
+  variants: ReadonlyMap<string, { label?: LocalizedText; netWeightG?: number; piecesCount?: number }>;
+}
+
 /** Kataloğu kurar; çağıran servisleri ve başlangıç sırasını verir, sonuç sayıları döner. */
 export async function seedLezzaProducts(
   categories: CategoryService,
@@ -407,6 +412,8 @@ export async function seedLezzaProducts(
   kurgu: { sku: ReadonlySet<string>; slug: ReadonlySet<string> },
   /** Besleme katmanı — `base` kusursuz katalog kurar (künye `tier.ts` ve `kusurlu` satırında). */
   katman: Katman,
+  /** Verilirse yalnız seçilen varyantlar, onları taşıyan ürünler ve kategorileri kurulur (`seed-real.ts`). */
+  secim?: LezzaSecim,
 ): Promise<{ made: number; photos: number; variants: number; families: number }> {
   /** Bilinçli boşluklar (pasif · aday · beyansız · kapaksız · çevirisi yarım) `extend`ten itibaren. */
   const kusurlu = enAz(katman, 'extend');
@@ -417,6 +424,7 @@ export async function seedLezzaProducts(
   const turetmeSerbest = kusurlu;
   if (!turetmeSerbest) console.log('  · türetilmiş alan YAZILMAYACAK: alerjen · iz · içindekiler · saklama · besin künyesi · raf ömrü · KDV tahmini · hedef marj. Belgesi olan 6 ürün etkilenmez.');
   const katalog = readLezzaCatalog();
+  const secili = (sku: string | number | null | undefined): boolean => !secim || (sku != null && secim.variants.has(String(sku)));
   /** Aile bağı ÜRÜNLER KURULDUKTAN SONRA yazılır: bağ iki ucun da var olmasını ister. */
   const urunIdBySlug = new Map<string, string>();
 
@@ -425,6 +433,7 @@ export async function seedLezzaProducts(
   const gorselUrl = lezzaGorselUrlByDosya();
   for (const [k, c] of katalog.categories.entries()) {
     if (catId.has(c.key)) continue;
+    if (secim && !katalog.products.some((p) => p.category === c.key && p.variants.some((v) => secili(v.sku)))) continue;
     const vitrinDisi = k >= sonKategoriler - 1; // ızgara 6 slot; ikisi dışarıda kalsın
     // `create` girdisi bilinçli dar (ad + sıra); tagline ve vitrin işareti update ile — aile
     // bağının `products.update` emsali. Tek çağrıda: ikisi de aynı ilk-kurulum kararının parçası.
@@ -471,7 +480,7 @@ export async function seedLezzaProducts(
   let photos = 0;
   let varyantSayisi = 0;
 
-  const urunler = katalog.products;
+  const urunler = katalog.products.filter((p) => p.variants.some((v) => secili(v.sku)));
 
   const ceviriler = readCeviriler();
   const cevirisizler = urunler.filter((p) => !ceviriler[p.slug]).map((p) => p.slug);
@@ -582,7 +591,10 @@ export async function seedLezzaProducts(
       autoPrice: turetmeSerbest && i % 4 === 0,
       status: durum,
       sortOrder: startOrder + i,
-      variants: p.variants.map((v, n) => ({
+      variants: p.variants
+        .filter((v) => secili(v.sku))
+        .map((v) => ({ ...v, ...(secim && v.sku != null ? secim.variants.get(String(v.sku)) : undefined) }))
+        .map((v, n) => ({
         // Boysuz ürün tek varsayılan varyant taşır — modelin kendi kuralı.
         label: v.label ?? { tr: 'Tek boy', fr: 'Taille unique', de: 'Einheitsgröße' },
         // Gramajsız varyant gerçek bir hâl (operatör boş bırakabilir); yalnız `extend`te ve aday üründe
@@ -615,7 +627,7 @@ export async function seedLezzaProducts(
     urunIdBySlug.set(p.slug, product.id);
   }
 
-  const aileler = await aileleriKur(families, products, urunIdBySlug);
+  const aileler = await aileleriKur(families, products, urunIdBySlug, secim !== undefined);
 
   return { made, photos, variants: varyantSayisi, families: aileler };
 }
@@ -935,9 +947,13 @@ async function aileleriKur(
   families: ProductFamilyService,
   products: ProductService,
   urunIdBySlug: Map<string, string>,
+  /** Seçimli katalogda aile, kurulan üyeleri iki ve üstündeyse açılır; pasif aile sahnesi de kurulmaz. */
+  secimli: boolean,
 ): Promise<number> {
   // Tek üyeli satır bir yazım hatasıdır ve süzülür.
-  const kurulacak = ELLE_AILELER.filter((a) => a.uyeler.length >= 2);
+  const kurulacak = ELLE_AILELER.filter(
+    (a) => a.uyeler.length >= 2 && (!secimli || a.uyeler.filter((u) => urunIdBySlug.has(u.slug)).length >= 2),
+  );
 
   // **Üyesi katalogda BULUNAMAYAN satır sessiz geçmez.** Liste elle yazılıyor ve katalog
   // değişebiliyor; tutmayan bir slug o çeşidi ekrandan sessizce düşürür — aile yine kurulur,
@@ -949,7 +965,7 @@ async function aileleriKur(
   for (const { ad: taban, uyeler } of kurulacak) {
     // Aile adı yalnız operatör gördüğü için tek dillidir. Son aile pasif kurulur ki pasif ailenin çeşit
     // bloğu çizmemesi sınansın.
-    const aile = await families.insert({ name: taban, isActive: kurulan < kurulacak.length - 1 });
+    const aile = await families.insert({ name: taban, isActive: secimli || kurulan < kurulacak.length - 1 });
     for (const [sira, uye] of uyeler.entries()) {
       const id = urunIdBySlug.get(uye.slug);
       if (!id) continue;

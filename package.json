@@ -63,6 +63,7 @@
     "db:seed": "node scripts/with-test-lock.mjs --kind=ddl tsx scripts/seed.ts",
     "db:seed:base": "node scripts/with-test-lock.mjs --kind=ddl tsx scripts/seed.ts --tier=base",
     "db:seed:extend": "node scripts/with-test-lock.mjs --kind=ddl tsx scripts/seed.ts --tier=extend",
+    "db:seed:real": "node scripts/with-test-lock.mjs --kind=ddl tsx scripts/seed-real.ts",
     "seed:coverage": "tsx scripts/seed-coverage.ts",
     "db:refresh": "node scripts/with-test-lock.mjs --kind=ddl sh -c \"supabase db reset && tsx scripts/seed.ts && tsx scripts/seed-coverage.ts\"",
     "db:refresh:base": "node scripts/with-test-lock.mjs --kind=ddl sh -c \"supabase db reset && tsx scripts/seed.ts --tier=base && tsx scripts/seed-coverage.ts --tier=base\"",
