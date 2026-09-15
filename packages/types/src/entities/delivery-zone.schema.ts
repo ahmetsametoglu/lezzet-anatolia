@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CountryEnum } from '../primitives/enums.schema';
+import { PostalCodeSchema } from '../primitives/postal-code.schema';
 
 // Rota bölgesi: haftalık günler ve bağlı depo, ikisi de yönetimden düzenlenir. Rota içi/dışı saklanmaz, türetilir: saklansaydı
 // bölge sınırı değişince ertesi gün yanlış olurdu.
@@ -37,8 +38,8 @@ export type DeliveryZoneUpdate = z.infer<typeof DeliveryZoneUpdateSchema>;
 
 export const DeliveryZonePostalCodeSchema = z.object({
   country: CountryEnum,
-  /** Normalize saklanır (boşluksuz, büyük harf); kısıt veritabanında da var. */
-  postalCode: z.string(),
+  /** Beş rakam; okuma ve yazma aynı şekil, servis yazmadan önce boşlukları siler. */
+  postalCode: PostalCodeSchema,
   zoneId: z.string().uuid(),
 });
 export type DeliveryZonePostalCode = z.infer<typeof DeliveryZonePostalCodeSchema>;

@@ -2,6 +2,7 @@
 // olduğu için buradan yukarı import yoktur (yön testi `src/layering.test.ts`). `db-numeric` bilerek dışa açılmaz, çünkü sürücü
 // ayrıntısıdır ve tüketici zaten sayı görür.
 export * from './enums.schema';
+export * from './postal-code.schema';
 // Vitrin kontenjanı bir ŞEMA değil bir SABİT — ama ölçüt aynı: birden çok tablonun (kategori ·
 // koleksiyon · paket) paylaştığı tek bir kural ve artık iki uygulama birden okuyor (web + MCP).
 export * from './featured-slots';

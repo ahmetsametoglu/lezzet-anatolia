@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AddressGeoPrecisionEnum, AddressGeoSourceEnum, CountryEnum } from '../primitives/enums.schema';
 import { dbNumericNullable } from '../primitives/db-numeric';
+import { PostalCodeSchema } from '../primitives/postal-code.schema';
 
 // Müşteri adresi; `customerId` müşteri rolüyle davranan profildir (`user_profiles.id`), ayrı müşteri tablosu yoktur. `inRoute`
 // saklanmaz, posta kodunun aktif bir bölgeye düşmesinden türetilir.
@@ -89,7 +90,7 @@ export const AddressInsertSchema = z.object({
   recipient: z.string().min(1),
   line1: z.string().min(1),
   line2: z.string().nullish(),
-  postalCode: z.string().min(1),
+  postalCode: PostalCodeSchema,
   city: z.string().min(1),
   /** Kolon `not null`; biçim E.164'e istemcide indirgenir (`normalizePhone`). */
   phone: z.string().min(1),
@@ -112,5 +113,6 @@ export const AddressInsertSchema = z.object({
 });
 export type AddressInsert = z.infer<typeof AddressInsertSchema>;
 
-export const AddressUpdateSchema = AddressSchema.partial().required({ id: true });
+/** Okuma şeklinden türer ama posta kodunda yazma kuralını taşır: kural okumaya konsaydı eski bir satır listeyi kırardı. */
+export const AddressUpdateSchema = AddressSchema.partial().required({ id: true }).extend({ postalCode: PostalCodeSchema.optional() });
 export type AddressUpdate = z.infer<typeof AddressUpdateSchema>;

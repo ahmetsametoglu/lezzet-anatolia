@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PortionKindEnum } from './product-variant.schema';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
+import { PostalCodeSchema } from '../primitives/postal-code.schema';
 import { DocumentKindEnum, DocumentVatRegimeEnum, MovementDirectionEnum } from './money.schema';
 import { ProductDateTypeEnum, ProductSchema } from './product.schema';
 
@@ -232,7 +233,7 @@ export const ZoneExtendPayloadSchema = z.object({
   postalCodes: z
     .array(
       z.object({
-        postalCode: z.string().min(3),
+        postalCode: PostalCodeSchema,
         placeName: z.string().nullable(),
         requestCount: z.number().int().nonnegative(),
         waitingCount: z.number().int().nonnegative(),

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { AddressService, ConversationService, UserProfileService, serviceDb } from '@lezzet/database';
 import { effectiveChannelOf, placeOrder } from '@lezzet/application';
+import { isValidPostalCode, normalizePostalCode } from '@lezzet/address';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { ORDERS_PATH } from '../orders-url';
@@ -95,10 +96,11 @@ export async function createAddressAction(
     const recipient = input.recipient.trim();
     const phone = input.phone.trim();
     const line1 = input.line1.trim();
-    const postalCode = input.postalCode.trim();
+    const postalCode = normalizePostalCode(input.postalCode);
     const city = input.city.trim();
     if (!recipient || !phone) throw new Error('Alıcı ve telefon girilmeli.');
     if (!line1 || !postalCode || !city) throw new Error('Sokak, posta kodu ve şehir girilmeli.');
+    if (!isValidPostalCode(postalCode)) throw new Error('Posta kodu beş rakam olmalı.');
 
     const row = await new AddressService(serviceDb()).addForCustomer({
       customerId,

@@ -66,6 +66,10 @@ export type PlaceResolution = z.infer<typeof PlaceResolutionSchema>;
  * duvarı vazgeçmeye en yakın anda ikinci engel olurdu; girişli müşteride e-posta sunucuda çözülür.
  */
 export const PlaceNoticeBodySchema = z.object({
+  /**
+   * Biçim burada değil uygulamada ortak kuralla denetlenir (`recordZoneNotice`), çünkü biçimsiz kod bir gövde hatası değil ayrı
+   * bir `invalid_code` cevabıdır.
+   */
   postalCode: z.string().trim().min(1).max(16),
   country: CountryEnum,
   /**

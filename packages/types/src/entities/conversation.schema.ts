@@ -11,6 +11,7 @@ import {
   TicketSenderEnum,
 } from '../primitives/enums.schema';
 import { SourceLanguageSchema, TranslationBagSchema } from '../primitives/user-text.schema';
+import { PostalCodeSchema } from '../primitives/postal-code.schema';
 
 // Konuşma durumu bizde yaşar: yapay zekânın bağlamı, servis penceresi ve izin kararı sağlayıcı değişse de bizde kalmalı. Üç
 // Meta kanalı aynı modele düşer, kanal `source` ekseninde ayrışır.
@@ -62,7 +63,7 @@ export const ConversationSchema = z.object({
    */
   language: PreferredLanguageEnum.nullable(),
   /** Sohbette bir kez söylenir; ajanın araçları sepete yer bilinmeden yazmaz (`cart/chat-place.ts`). */
-  postalCode: z.string().regex(/^\d{5}$/).nullable(),
+  postalCode: PostalCodeSchema.nullable(),
   /** Kod iki hizmet ülkesinde geçerliyse müşteriye sorulur; `null` iken depo seçilmez. */
   postalCountry: CountryEnum.nullable(),
   lastMessageAt: z.string().nullable(),

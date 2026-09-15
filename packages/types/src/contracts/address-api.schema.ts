@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AddressSchema } from '../entities/address.schema';
 import { AddressGeoPrecisionEnum, AddressGeoSourceEnum, CountryEnum } from '../primitives/enums.schema';
+import { PostalCodeSchema } from '../primitives/postal-code.schema';
 
 /**
  * `/api/v1/me/addresses` sözleşmesi: mobil adres uçlarının ve hesap ekranının ortak dili. `address.schema.ts` veritabanı satırının
@@ -74,7 +75,7 @@ export const AddressWriteSchema = z.object({
   phone: z.string().min(1),
   line1: z.string().min(1),
   line2: z.string().nullish(),
-  postalCode: z.string().regex(/^\d{5}$/),
+  postalCode: PostalCodeSchema,
   city: z.string().min(1),
   /**
    * Seçilen yerin ülkesi, öneri listesinden gelir: kapı bu değeri kodun o ülkede geçerli olup olmadığına bakmadan yazmaz, yani alan
@@ -148,7 +149,7 @@ export const AddressLookupResolvedSchema = AddressLookupAddressSchema.nullable()
 /** Elle girilen adresin doğrulama gövdesi — `POST /me/addresses/lookup/check`. Ülke SEÇİLİR (önce ülke). */
 export const AddressLookupCheckBodySchema = z.object({
   line1: z.string().min(1),
-  postalCode: z.string().regex(/^\d{5}$/),
+  postalCode: PostalCodeSchema,
   city: z.string().min(1),
   country: CountryEnum,
 });
