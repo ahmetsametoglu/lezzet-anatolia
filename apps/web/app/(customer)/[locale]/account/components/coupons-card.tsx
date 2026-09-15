@@ -9,23 +9,9 @@ import { TextAction } from '@/components/customer/phone-kit/text-action';
 import type { AccountCopy, Messages } from '../account-types';
 
 /**
- * "Kuponlarım" listesi (17.5) — puan çeviriminin VARIŞ noktası.
- *
- * Tasarımda satır kesikli zeytin çerçeveli ve zeytin zeminli: bir bilgi kartı değil, **elle
- * taşınacak bir kod**. Kesikli çerçeve bunu söylüyor — koparılıp kullanılan bir şey.
- *
- * Kod SEÇİLEBİLİR metin olarak duruyor ve ayrıca kopyalanabiliyor. İkisi birden, çünkü panoya
- * yazma her ortamda çalışmaz (güvensiz köken, izin reddi, eski tarayıcı); kopyalama düşerse
- * müşteri kodu yine de gözüyle okuyup elle yazabilmeli. Düğme sessizce başarısız olsaydı müşteri
- * boş bir panoyla sepete giderdi.
- *
- * **Değer motordan geliyor, ekranda HESAPLANMIYOR.** Kupon tutar ya da yüzde olabilir (indirim
- * motorunun iki tipi); ekran hangisi doluysa onu yazıyor. Puan kuponu bugün hep tutardır ama bunu
- * ekranın varsayması, tipi bir gün değişince sessizce boş bir satır çizmek olurdu.
- *
- * **Telefon görünümü native'in kupon satırını çizer** (14.09, `phoneCopy` verilince): puan kartının
- * İÇİNDE, kart beyazı zemin, kesikli zeytin çizgi, rozet köşe; ikon · kod · değer. Kopyalama eylemi
- * web'in eki — native kart kodu yalnız gösteriyor.
+ * Kuponlarım listesi, puan çeviriminin varış noktası: kod seçilebilir metin olarak durur ve ayrıca kopyalanabilir, çünkü panoya
+ * yazma her ortamda çalışmaz ve müşteri kodu gözüyle okuyabilmeli. Değer motordan gelir (tutar ya da yüzde), ekranda hesaplanmaz;
+ * `phoneCopy` verilince satır native'in kupon satırı olarak çizilir.
  */
 interface CouponsCardProps {
   t: Messages;

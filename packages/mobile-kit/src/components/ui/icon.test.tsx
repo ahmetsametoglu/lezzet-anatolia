@@ -6,13 +6,9 @@ import { ICON_PATHS } from '@lezzet/design-tokens/icons';
 import { appMetrics } from '../../theme/metrics';
 
 /*
-  Testin işi üç şey: (1) geometri TASARIMDAN geliyor mu (sözlük ile çizim ayrışmasın),
-  (2) renk ve kalınlık TEMADAN geliyor mu (ham değer yasak), (3) ikon ekran okuyucuda
-  görünmüyor mu — kitteki her kullanımda ikonun yanında zaten bir metin var.
-
-  `includeHiddenElements` HER SORGUDA açık: ikon kendini a11y ağacından çıkarıyor ve RNTL'in
-  varsayılan sorguları gizli öğeleri atlıyor. Bayrağı açmak testin ikonu bulmasını sağlar,
-  gizliliğin KENDİSİ ise son testte ayrıca doğrulanıyor.
+  Test üç şeyi sınar: geometri tasarım sözlüğünden gelir, renk ve kalınlık temadan gelir, ikon ekran okuyucudan gizlidir.
+  `includeHiddenElements` her sorguda açık, çünkü ikon kendini erişilebilirlik ağacından çıkarır; gizliliğin kendisi son testte
+  sınanır.
 */
 
 const hidden = { includeHiddenElements: true } as const;

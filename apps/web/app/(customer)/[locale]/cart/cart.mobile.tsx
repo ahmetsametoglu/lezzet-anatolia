@@ -33,29 +33,13 @@ import { PhoneCartRowsSkeleton } from './components/phone-cart-skeleton';
 import type { CartCopy, CartViewProps } from './cart-types';
 
 /**
- * Sepet — TELEFON görünümü: native sepet ekranının (`apps/mobile/src/screens/cart/cart-screen.tsx`) web ikizi
- * (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Metin ortak sözlükten
- * (`@lezzet/i18n/customer/cart`), satır `PhoneCartLine`.
- *
- * Sıra native'in sırası: başlık satırı (‹ · Sepet · adet) → teslimat adresi künyesi → bu adrese gelemeyenlerin TEK
- * uyarısı → satırlar (grup başlıkları yalnız birden çok grup doluyken; bölünmüş sepette grubun künyesi kendi
- * kalemlerinin ardında, kargo grubunun ayrı sipariş düğmesiyle) → ücretsiz kargo · bölünme notları → kupon (uygulanmış
- * satır ya da davet; kod alttan açılan çekmecede) → elinin altındaki indirim → tutar özeti → engeller → "Alışverişe
- * devam et" → yapışkan "Siparişi tamamla" barı. Engelin kısa sebebi düğmenin ÜSTÜNDE (native 16.08: sebep dipte
- * kalınca kilitli düğme neden kilitli olduğunu söylemiyordu); uzun açıklama akıştaki kutuda.
- *
- * ── WEB'E ÖZGÜ ─────────────────────────────────────────────────────────────
- * · Kimlik ve adres SEPETTE çözülür (13.09): misafire adres künyesinin yerinde giriş bloğu (`CartIdentity`); barın
- *   kilidi sepetin engelinden SONRA kimlik/adres kapısını da okur (`useCheckoutGate`) — kargo grubunun düğmesi de.
- * · Ödemesi beklenen kart siparişi (07.18), yer değişimi (19.7) ve tekrar siparişin eksik gelen kalemleri uyarıların
- *   ilki; sonraya kaydedilenler (K33) satırların ardında — native'de bu dört hâl yok.
- * · Tutar ÖDENECEK tutardır (`cartPayableCents`, 19.08): sepetin tamamı kargodaysa kargo ücreti özetin kendi satırında.
- * · Sepet tarayıcıda çözülür: ilk karede başlık gerçek, satırların yerinde iskelet — rota iskeletiyle (`loading.tsx`)
- *   aynı parça, geçişte yerleşim kaymaz. Okuma düşerse boş sepet çizilmez: kalemler duruyor, "tekrar dene".
- * · Boş sepet native'in boş hâli (ikon · başlık · cümle · "Kataloğa göz at"); masaüstünün öneri blokları telefonda yok.
+ * Sepetin telefon görünümü, native sepet ekranının web ikizi: metin ortak sözlükten (`@lezzet/i18n/customer/cart`), sıra native'in
+ * ve engelin kısa sebebi düğmenin üstünde, çünkü kilitli düğme neden kilitli olduğunu söylemeli. Web'e özgü: kimlik ve adres sepette
+ * çözülür (`CartIdentity`, `useCheckoutGate`), tutar ödenecek tutardır (`cartPayableCents`), sepet tarayıcıda çözüldüğü için ilk
+ * karede iskelet durur ve okuma düşerse boş sepet çizilmez.
  */
 
-/** Ürünler üstte, paketler altta — grup İÇİ sıra (native `productsFirst`, kullanıcı kararı 28.08); `sort` kararlı. */
+/** Ürünler üstte, paketler altta, yalnız grup içinde (native `productsFirst`); `sort` kararlı. */
 function productsFirst(lines: readonly CartLine[]): CartLine[] {
   return [...lines].sort((a, b) => Number(a.kind === 'bundle') - Number(b.kind === 'bundle'));
 }
@@ -172,7 +156,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
     ...(view.shippingOnly
       ? [{ key: 'shipping', label: t.group.shippingRow, value: fee.feeCents > 0 ? formatPrice(fee.feeCents, locale) : t.group.free }]
       : []),
-    // Gelemeyen kalem toplamda DURUR ama siparişe girmez: kapsam belirsiz kalmasın diye ayrı satır (native 10.08).
+    // Gelemeyen kalem toplamda durur ama siparişe girmez: kapsam belirsiz kalmasın diye ayrı satır.
     ...(view.undeliverableSubtotalCents > 0
       ? [{ key: 'undeliverable', label: copy.summary.undeliverable, value: formatPrice(view.undeliverableSubtotalCents, locale) }]
       : []),
@@ -254,8 +238,8 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
 
         <CartIdentity t={t} locale={locale} compact />
 
-        {/* Gelemeyen kalemlerin TEK uyarısı satırların üstünde; ton `warm` — hata değil, adresin gerçeği. Adres varken
-            çıkış künyedeki "Değiştir"; adres yokken kutunun kendi çıkışı posta kodu çekmecesi. "Kaldırın" yazılmaz. */}
+        {/* Gelemeyen kalemlerin tek uyarısı satırların üstünde ve `warm` tonda, çünkü hata değil adresin gerçeği. Çıkış adres varken
+            künyedeki "Değiştir", yokken kutunun posta kodu çekmecesi; "kaldırın" yazılmaz. */}
         {undeliverableLines.length > 0 && (
           <Note
             tone="warm"
@@ -324,7 +308,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
         <SummaryPanel rows={summaryRows} totalLabel={copy.summary.total} totalValue={formatPrice(cartPayableCents(view), locale)} note={summaryNote} />
 
         {view.hasBlocked && <Note tone="error" description={copy.blocked} />}
-        {/* Dipteki kutu EŞİĞİ ve ne yapılacağını söyler; eksik tutar barda (native 18.08 — aynı sayı iki kez okunmasın). */}
+        {/* Dipteki kutu eşiği ve ne yapılacağını söyler, eksik tutar barda: aynı sayı iki kez okunmasın. */}
         {!view.minBasketOk && <Note tone="terracotta" description={copy.minimum.replace('{minimum}', formatPrice(view.minBasketCents, locale))} />}
 
         <div className="flex justify-center pt-1">
@@ -339,7 +323,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
             {barInner}
           </button>
         ) : (
-          // Sepetin tamamı kargodaysa açılacak taslak da KARGO taslağıdır (19.15).
+          // Sepetin tamamı kargodaysa açılacak taslak da kargo taslağıdır.
           <Link
             href={view.shippingOnly ? { pathname: '/checkout', query: { group: 'shipping' } } : '/checkout'}
             className={`${CHECKOUT} cursor-pointer bg-olive transition-[translate,box-shadow,background-color] hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none`}
@@ -362,10 +346,9 @@ interface CouponSheetProps {
 }
 
 /**
- * Kupon kodu çekmecesi — native kupon yüzeninin (kitin `BottomSheet`i + alan + birincil düğme) web ikizi. Durum
- * çekmecenin KENDİSİNDE: yazarken sepet yeniden çizilmez. Ret sunucudan gelir ve sepette yazar (native'in kararı —
- * doğrulama bir ağ turu, çekmeceyi cevabı beklerken açık tutmak müşteriyi boş formun başında bekletirdi); alanın kendi
- * hata satırının tek işi boş kodu göndermemek.
+ * Kupon kodu çekmecesi, native kupon yüzeninin web ikizi: durum çekmecenin kendisinde, yazarken sepet yeniden çizilmez. Ret sunucudan
+ * gelir ve sepette yazar, çünkü çekmeceyi ağ cevabını beklerken açık tutmak müşteriyi boş formun başında bekletirdi; alanın kendi
+ * hata satırı yalnız boş kodu durdurur.
  */
 function CouponSheet({ copy, locale, onApply, onClose }: CouponSheetProps) {
   const [value, setValue] = useState('');

@@ -27,27 +27,9 @@ import { Link } from '@/i18n/navigation';
 import type { HomeMobileProps } from './home-types';
 
 /**
- * Anasayfa — TELEFON görünümü: native vitrinin (`apps/mobile/src/screens/home/home-screen.tsx`) web
- * ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı). Sıra native'inki:
- * [başlık — çerçevede, `home-header.tsx`] → süren sipariş | geçen sipariş → fırsat rayı → koleksiyon
- * bantları → seçki rayı (sonunda katalog kartı) → tarif rayı (sonunda koyu kart) → hazır paketler →
- * keşif ve profesyonel davetleri. Veri native uçla AYNI okumadan (`readHome`), metin ortak sözlükten
- * (`@lezzet/i18n/customer/home`), cümle kurucular `@lezzet/helper`dan.
- *
- * ── WEB'E ÖZGÜ KORUNANLAR ──────────────────────────────────────────────────
- * · `h1` arama motoru için sayfada (görünmez): native vitrinin kahramanı yok ve selamlama bir
- *   hitaptır, sayfanın konusu değil. Arama başlığı, açıklama ve yapısal veri `page.tsx`te.
- * · Sipariş bandı sipariş KİMLİĞİYLE bağlanır (web `/orders/[reference]` segmenti kimlik taşıyor).
- * · Aşağı çekerek yenileme, iskelet ve bağlantı hatası ekranı native'e özgü: sayfa sunucuda çözülür,
- *   okuma düşerse sitenin hata sınırı devreye girer.
- *
- * ── BİLİNÇLİ, GEÇİCİ FARK ─────────────────────────────────────────────────
- * · Köşe (18 ↔ 20) ve birkaç ton native'den bir tık ayrık: aynı adı masaüstü başka değerle kullanıyor;
- *   masaüstü yeni ada geçince taban native'e çekilir (08.58 token maddesi).
- *
- * Kartın yer işareti native'le TEK kaynaktan (14.09, katalog turu): cümle `@lezzet/i18n/customer/place`,
- * kural `placeMarkOf` + `cardPlaceNoteOf` (`@lezzet/helper`) — "kargoyla gelir" kartta yazılmaz, kapalı
- * kapı soldurur.
+ * Anasayfanın telefon görünümü, native vitrinin web ikizi: sıra native'in, veri native uçla aynı okumadan (`readHome`), metin ortak
+ * sözlükten. Web'e özgü: `h1` arama motoru için görünmez durur, çünkü native vitrinin kahramanı yok ve selamlama sayfanın konusu
+ * değil; aşağı çekme, iskelet ve bağlantı hatası ekranı yok, çünkü sayfa sunucuda çözülür.
  */
 
 /** Yatay ray — native `ScrollView horizontal`ın karşılığı; üstteki nefes rozetlerin taşması için. */
@@ -60,8 +42,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
   const wholesale = useWholesale();
   const { place } = useDeliveryPlace();
   const { home, orders, b2bPending } = data;
-  // Süren sipariş varken "tekrarla" bandı çizilmez: aktif bir teslimatın üstüne "geçen siparişi
-  // tekrarla" demek, olan biteni gizlerdi (native sapma 4).
+  // Süren sipariş varken "tekrarla" bandı çizilmez: aktif teslimatın üstüne "geçen siparişi tekrarla" demek olan biteni gizlerdi.
   const live = orders.live;
   const last = live === null ? orders.last : null;
 
@@ -125,7 +106,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
                     <span className="font-sans text-body-sm font-bold text-terracotta">{formatPrice(offer.priceCents ?? 0, locale)}</span>
                     <span className="font-sans text-micro text-muted line-through">{formatPrice(offer.wasCents, locale)}</span>
                   </span>
-                  {/* Sınır satırı VERİDEN (native 19.08): sınır yoksa hiçbir şey yazılmaz. */}
+                  {/* Sınır satırı veriden gelir: sınır yoksa hiçbir şey yazılmaz. */}
                   {limit !== null && <span className="font-sans text-eyebrow-xs tracking-normal text-terracotta">{limit}</span>}
                 </span>
               </Link>
@@ -294,11 +275,11 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
       )}
 
       <div className="flex flex-col gap-3 px-5.5 pt-3">
-        {/* Oylanacak kart kalmadıysa davet çizilmez (MB-58b); misafire koşullu cümle — giriş yaparsa puan (MB-75). */}
+        {/* Oylanacak kart kalmadıysa davet çizilmez; misafire koşullu cümle: giriş yaparsa puan kazandırır. */}
         {home.discoverCards > 0 && (
           <DashedInvite href="/discover" title={copy.discover.title} description={signedIn ? copy.discover.body : copy.discover.guestBody} />
         )}
-        {/* Cevabı belli soru sorulmaz (native 20.08): onaylı toptancıya ve başvurusu incelemede olana davet yok. */}
+        {/* Cevabı belli soru sorulmaz: onaylı toptancıya ve başvurusu incelemede olana davet yok. */}
         {!wholesale && !b2bPending && (
           <DashedInvite href="/professionals" tone="olive" title={copy.professional.title} description={copy.professional.body} />
         )}

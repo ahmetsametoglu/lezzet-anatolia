@@ -5,17 +5,9 @@ import { MobileCustomerIcon } from '@/components/customer/ui/mobile-icon';
 import { useCart } from './cart-context';
 
 /**
- * Yüzen sepet düğmesi — native `CartFab`ın (`screens/customer-kit/cart-fab.tsx`) telefon görünümü
- * ikizi (kullanıcı kararı 14.09: gezinme native'in modeli, sepet sekme değil).
- *
- * Native kuralları aynen: sepet BOŞKEN hiç çizilmez (boş bir sepete davet etmenin anlamı yok),
- * doluyken adedi terracotta rozetle söyler; `sand-50` halka rozeti zeytin daireden ayırır. İlk okuma
- * bitmeden de çizilmez — sunucudaki sepeti görmeden düğme gösterip kaybolması bir anlık yalan olurdu.
- * Ölçüler native'in: 56px daire, sert gölge; basılınca gölgeyi yutar (3px kayar — karar #8).
- *
- * Düğme ekranın yerleşim kararıyla konumlanır (native'de de öyle): sekme köklerinde çubuğun 20px
- * üstünde (`tab-bar` — çubuğun içinde durur, çubukla birlikte yapışır), ürün/paket/tarif detayında
- * alttan 112px + güvenli alan payı (`detail` — native `productFabBottom`).
+ * Yüzen sepet düğmesi, native `CartFab`ın telefon görünümü ikizi: sepet boşken ve ilk okuma bitmeden hiç çizilmez, doluyken adedi
+ * rozetle söyler. Düğme ekranın yerleşim kararıyla konumlanır: sekme köklerinde çubuğun üstünde (`tab-bar`), detay ekranlarında
+ * alttan güvenli alan payıyla (`detail`).
  */
 interface CartFabProps {
   /** Ekran okuyucu adı ("Sepetim" / "Mon panier") — i18n çağıranda çözülür; adet ona eklenir. */

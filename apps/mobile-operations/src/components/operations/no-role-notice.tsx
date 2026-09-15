@@ -7,10 +7,9 @@ import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 
 /*
-  "BU HESAP OPERASYONA TANIMLI DEĞİL" (21.312 — giriş tasarımının `yetkiYok` hâli). İki kapıda aynı blok: giriş
-  (doğrulanan hesabın rolü yok) ve kabuğun kapısı (oturum var, bölüm yok — rol sonradan alındıysa). Kişiye NEDEN
-  içeri alınmadığını ve yetkiyi kimin açtığını söyler; tek eylemi başka hesapla girmek. "Yetki talebi gönder"
-  çizilmez (kullanıcı kararı 14.09 — talep akışı yok, hesabı yönetici açar). Kilit karosu `error-mark-bg`.
+  "Bu hesap operasyona tanımlı değil" bloğu, girişte (rolü olmayan hesap) ve kabuğun kapısında (bölümü olmayan oturum) aynı:
+  kişiye neden içeri alınmadığını ve yetkiyi kimin açtığını söyler, tek eylemi başka hesapla girmek. "Yetki talebi gönder"
+  çizilmez, çünkü talep akışı yok, hesabı yönetici açar.
 */
 
 const t = operationsCopy.gate.forbidden;

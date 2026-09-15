@@ -29,28 +29,17 @@ import { ProfileEditForm, WhatsappRow } from './components/profile-card';
 import { RedeemPoints } from './components/redeem-points';
 
 /**
- * Hesabım — telefon görünümü, native hesap ekranının (`apps/mobile/src/screens/account/account-screen.tsx`) web
- * ikizi (14.09 · 08.58 Faz 1). Sıra native'in: profil · şirket künyesi · puanlar (kuponlar içinde) · davet · menü ·
- * adresler · dil · kampanya iletişimi · veriler · bilgi ve koşullar · çıkış. Metin ortak sözlükten
- * (`@lezzet/i18n/customer/account`); web'e özgü cümleler sayfanın `messages.json`'unda.
- *
- * Web'e özgü bloklar native'in sırasına, kum kartın kabuğuyla yerleşir:
- * - sohbet bağlantısının sonucu (15.16) en üstte, bir kez;
- * - bağlı sohbetler (15.16) menünün hemen altında;
- * - sonraya kaydedilenler ve bölge haberleri adreslerden sonra — YALNIZ içerik varken: boş kart,
- *   olmayan bir özelliği varmış gibi gösterir;
- * - WhatsApp kimlik bağı (04.10) profil çekmecesinde, formun altında.
- *
- * Bilinçli farklar (08.58 Durum'unda): yazı boyutu kartı yok (tarayıcının kendi yakınlaştırması var);
- * sıfır bakiyede kazanma listesi kartın içinde değil puan sayfasında; bölge dışı sorusu yok; puan
- * çevirmenin onay diyaloğu web'in kararı (geri alınamaz iş, `RedeemPoints` künyesi).
+ * Hesabım'ın telefon görünümü, native hesap ekranının web ikizi: sıra native'in, metin ortak sözlükten
+ * (`@lezzet/i18n/customer/account`), web'e özgü bloklar kum kartın kabuğuyla araya yerleşir; yazı boyutu kartı yok, çünkü tarayıcının
+ * kendi yakınlaştırması var. Sonraya kaydedilenler ve bölge haberleri yalnız içerik varken çizilir, çünkü boş kart olmayan bir özelliği
+ * varmış gibi gösterir.
  */
 export function AccountMobile({ t, locale, account, chatNotice, legal }: AccountViewProps) {
   const copy = accountMessages[locale];
   const { points, company } = account;
   return (
     <div className="flex flex-col gap-3.5 px-4.5 pt-3.5 pb-5">
-      {/* Sohbet bağlantısının sonucu (15.16): girişten hemen sonra, en üstte, bir kez. */}
+      {/* Sohbet bağlantısının sonucu girişten hemen sonra, en üstte, bir kez. */}
       {chatNotice && <ChatLinkNoticeBanner t={t} notice={chatNotice} />}
 
       <ProfileSection t={t} copy={copy} account={account} />
@@ -78,7 +67,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
         <NavRow label={copy.menu.delivery} href="/legal/delivery" icon={<MobileCustomerIcon name="truck" size={17} className="text-muted" />} divider />
       </nav>
 
-      {/* Bağlı sohbetler (15.16) — menünün hemen altında; salt okunur, gerekçesi kartta. */}
+      {/* Bağlı sohbetler menünün hemen altında; salt okunur, gerekçesi kartta. */}
       <LinkedChatsCard t={t} locale={locale} chats={account.chats} compact />
 
       <AddressesCard
@@ -151,13 +140,13 @@ interface ProfileSectionProps {
 }
 
 /**
- * Profil kartı (native `profileCard`) — "Düzenle" formu çekmecede açar; form masaüstü kartıyla aynı bileşen
- * (`ProfileEditForm`). WhatsApp kimlik bağı (web'e özgü, 04.10) çekmecede formun altında.
+ * Profil kartı (native `profileCard`): "Düzenle" formu çekmecede açar, form masaüstü kartıyla aynı bileşen (`ProfileEditForm`);
+ * WhatsApp kimlik bağı çekmecede formun altında.
  */
 function ProfileSection({ t, copy, account }: ProfileSectionProps) {
   const [editing, setEditing] = useState(false);
   const { profile } = account;
-  // Büyük satır ya adı söyler ya adın eksik olduğunu; e-posta künye satırında (native MB-66 · MB-73).
+  // Büyük satır ya adı söyler ya adın eksik olduğunu; e-posta künye satırında.
   const nameMissing = profile.name.trim() === '';
   // Avatar harfi KİMLİKTEN: ad yoksa e-postanın ilk harfi (native'in kuralı).
   const avatarSource = nameMissing ? (profile.email ?? '') : profile.name;
@@ -198,9 +187,8 @@ interface PointsSectionProps {
 }
 
 /**
- * Puan kartı (native `pointsCard`) — bakiye · kural · kalan · çevirme · geçmiş · kuponlar. Eşik ve karşılık ayardan
- * gelir (`redeem`), ekran sayı uydurmaz. Çevirmenin tetikleyicisi native'in birincil düğmesi; eşiğin altında pasif ve
- * kalan puan yazılı — pasif bir düğmenin sebebi görünmelidir.
+ * Puan kartı (native `pointsCard`): eşik ve karşılık ayardan gelir (`redeem`), ekran sayı uydurmaz. Çevirme düğmesi eşiğin altında
+ * pasif ve kalan puan yazılı, çünkü pasif bir düğmenin sebebi görünmeli.
  */
 function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps) {
   const { minimumPoints, valueCents } = points.redeem;

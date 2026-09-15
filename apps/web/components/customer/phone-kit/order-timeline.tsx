@@ -2,19 +2,12 @@ import type { OrderMilestone, OrderTimelineStep } from '@lezzet/types';
 import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-icon';
 
 /*
-  SİPARİŞ ZAMAN ÇİZGİSİ — native `OrderTimeline`ın (`apps/mobile/src/screens/orders/order-timeline.tsx`) web telefon ikizi
-  (14.09): dört durak (alındı → hazırlandı → yolda → teslim edildi), kum panelde dikey ray.
-
-  Adımları MOTOR verir (`orderTimeline`): hangi durak geçildi, hangisi ŞU AN, hangisi bekliyor — ekran durumdan çıkarım
-  yapmaz, sırayı da değiştirmez. İptal/iade çizgide yer tutmaz (motor `null` döndürür, çağıran tek durum bloğu çizer).
-
-  Üç görsel durum native'in: geçilmiş zeytin · şu an terracotta · henüz değil kum. "Şu an" olan durak bir not taşır;
-  teslim edilmişte hiçbir durak `current` olmaz. Saat yalnız kaydı olan adımda yazılır — damgası olmayan geçilmiş adıma
-  saat uydurmak, kaydı olmayan bir olaya zaman yazmak olurdu. Ray çizgisinin rengini SONRAKİ adım belirler: geçilmiş
-  bir duraktan henüz yaşanmamış olana giden yol yaşanmış gibi boyanmaz.
+  Sipariş zaman çizgisi, native `OrderTimeline`ın web telefon ikizi: adımları motor verir (`orderTimeline`), ekran durumdan çıkarım
+  yapmaz ve iptal ile iade çizgide yer tutmaz. Saat yalnız kaydı olan adımda yazılır ve ray çizgisinin rengini sonraki adım belirler,
+  çünkü yaşanmamış yol yaşanmış gibi boyanmamalı.
 */
 
-/** Durağın ikonu — küme motorun `OrderMilestone`u (kapalı, derlemede zorlar); ev ikonu genel setten. */
+/** Durağın ikonu — küme motorun `OrderMilestone`u (kapalı, derlemede zorlar). */
 const STEP_ICON = {
   received: 'check',
   prepared: 'box',

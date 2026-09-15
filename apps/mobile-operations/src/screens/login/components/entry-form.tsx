@@ -16,15 +16,9 @@ import type { OperationsLogin } from '../use-operations-login.hook';
 import { CodeBoxes } from './code-boxes';
 
 /*
-  GİRİŞ HÂLİ (tasarım: `giris`) — başlık, adres adımı ya da kod adımı, "YA DA", Google. Tasarımın DEMO satırı ve
-  hâl seçicisi tuval gereci, çizilmez; alt satırdaki "Yardım · Erişimim yok" da çizilmez (kullanıcı kararı 14.09).
-  Google işareti kitin emsali: tek renk "G" + `brand-google` (çok renkli logo ham hex isterdi).
-
-  KOD ADIMI ADRESİN YERİNE AÇILIR (kullanıcı kararı 14.09 — tasarımda ikisi alt alta): panel açılınca e-posta alanı
-  ve düğme kalkar; panel adresi tek satırda söyler ve "E-postayı değiştir" adrese döndürür. İki adım TEK YUVADA
-  durur ve yuvanın boyu ikisinin gördüğü en büyük boydur: Google düğmesi adımlar arasında yerinden oynamaz.
-  Bekleyen adım yuvada saydam ve dokunulmaz bir katman olarak kalır — boyunu ölçtürmek için; ekran okuyucudan
-  saklanır, kimlikleri (testID) yalnız etkin adımda.
+  Giriş hâli: başlık, adres ya da kod adımı, "YA DA" ve Google (tek renk "G", çünkü çok renkli logo ham hex isterdi); tasarımın
+  demo satırı, hâl seçicisi ve "Yardım · Erişimim yok" satırı çizilmez. Kod adımı adresin yerine açılır ve iki adım, boyu en
+  büyüğüne göre sabit tek yuvada durur; bekleyen adım saydam ve dokunulmaz kalır, böylece Google düğmesi yerinden oynamaz.
 */
 
 const t = loginCopy;
@@ -317,7 +311,7 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     color: c.muted,
   },
-  /** Boş adres de bir satır tutar: bekleyen katman ilk harfte uzayıp yuvayı büyütmesin (cihazda ölçüldü 14.09: 3 px). */
+  /** Boş adres de bir satır tutar: bekleyen katman ilk harfte uzayıp yuvayı büyütmesin. */
   codeAddress: {
     ...helperText,
     minHeight: helperText.lineHeight,

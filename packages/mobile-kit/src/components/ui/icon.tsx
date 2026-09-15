@@ -4,25 +4,9 @@ import { useUnistyles } from 'react-native-unistyles';
 import { ICON_PATHS, type IconName } from '@lezzet/design-tokens/icons';
 
 /*
-  İKON — kitin tek çizim kapısı (21.7). Geometri `icon-paths.ts`te (v3 tasarımından birebir),
-  burada yalnız ÇİZİM DAVRANIŞI var: boy, renk, çizgi kalınlığı, uç biçimi.
-
-  NEDEN `react-native-svg`: tasarımın ikonları yol (path) olarak yazılı; RN'de yolu çizen başka
-  bir yol yok. Yerel modüldür — dev-client'ın yeniden derlenmesi gerekir (rapor edildi).
-
-  RENK ÇAĞIRANDAN, HAM DEĞİL: `color` prop'u tema token'ı bekler. Web'in `currentColor` kalıbının
-  RN karşılığı yoktur (RN metin rengini SVG'ye miras vermez), o yüzden renk açıkça geçirilir —
-  varsayılan mürekkeptir, yani renk vermeyen çağıran da paletin içinde kalır.
-
-  ÇİZGİ KALINLIĞI BOYA BAĞLI: şablon büyük ikonlarda (34 dp ve üstü boş/hata bloğu) çizgiyi
-  inceltiyor — optik ağırlık boyla birlikte artmasın diye. Kural sözlükte `large` bayrağıyla
-  duruyor; komponent onu kalınlık durağına çevirir, çağıran hesap yapmaz.
-
-  ERİŞİLEBİLİRLİK: ikon VARSAYILAN OLARAK SESSİZDİR (`accessibilityElementsHidden`). Kitteki
-  kullanımların hepsinde ikonun yanında metin var (sekme etiketi, boş durum başlığı, arama
-  kutusunun kendi etiketi); ikonu ayrıca okutmak ekran okuyucuda aynı bilgiyi iki kez söyletirdi.
-  Metinsiz bir ikon düğmesi gerektiğinde ETİKET DÜĞMENİN üstünde durur (`PressableSurface`in
-  `accessibilityLabel`ı), ikonun kendisinde değil.
+  İkon çizicisi: geometri `@lezzet/design-tokens/icons`ta, burada yalnız çizim davranışı var (boy, renk, çizgi kalınlığı, uç). Renk
+  açıkça geçirilir, çünkü RN metin rengini SVG'ye miras vermez; ikon varsayılan olarak sessizdir, çünkü yanında hep aynı şeyi
+  söyleyen bir metin ya da düğme etiketi vardır.
 */
 
 interface IconProps {
@@ -32,18 +16,17 @@ interface IconProps {
   /** Tema renk token'ının değeri; verilmezse mürekkep. */
   color?: string;
   /**
-   * Çizgiyi VURGULU durağa alır (`iconStrokeBold`). Ham kalınlık prop'u BİLEREK yok: sayı
-   * verilebilseydi çağıranlar ölçeğin dışına çıkardı ve ikonlar birbirinden habersiz kalınlaşırdı.
-   * Ölçü değil ROL seçiliyor — "bu ikon bir eylemin kendisi, satır içi bir işaret değil".
+   * Çizgiyi vurgulu durağa alır (`iconStrokeBold`); ham kalınlık prop'u bilerek yok, çünkü sayı verilebilseydi çağıranlar ölçeğin
+   * dışına çıkardı. Ölçü değil rol seçilir: bu ikon bir eylemin kendisi, satır içi bir işaret değil.
    */
   bold?: boolean;
   testID?: string;
 }
 
-/** Şablonun varsayılan çizim kutusu — `IC` sözlüğündeki ikonların hepsi 24×24. */
+/** Varsayılan çizim kutusu; kare olmayan ikon kendi `viewBox`unu taşır. */
 const DEFAULT_VIEW_BOX = '0 0 24 24';
 
-/** `"0 0 19 17"` → `[19, 17]`. Kare olmayan kutuda genişliği yükseklikten türetmek için. */
+/** `"0 0 19 17"` → 19/17: kare olmayan kutuda genişliği yükseklikten türetmek için. */
 function viewBoxRatio(viewBox: string): number {
   const [, , width, height] = viewBox.split(' ').map(Number);
   return width === undefined || height === undefined || height === 0 ? 1 : width / height;
