@@ -2,37 +2,18 @@ import { randomUUID } from 'node:crypto';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { getR2Private, r2Keys } from '@lezzet/storage';
 
-/**
- * Sohbetten gelen medyayı Meta'dan indirip PRIVATE kovaya yazar (15.x).
- *
- * ── NEDEN İNDİRİYORUZ, ADRESİ SAKLAMIYORUZ ──────────────────────────────────
- * Meta gövdede dosyayı vermiyor, bir MEDYA KİMLİĞİ veriyor. O kimlikten üretilen indirme adresi
- * dakikalar içinde ölüyor ve medyanın kendisi de sağlayıcıda ~30 gün sonra siliniyor. Adresi
- * saklasaydık ekran ertesi gün boş açılırdı; hiç saklamasaydık ezik ürün fotoğrafı — yani
- * şikâyetin tek kanıtı — talep sonuçlanmadan yok olurdu. Kanıtın ömrü sağlayıcının saklama
- * süresine bağlanamaz.
- *
- * ── İKİ ADIM, ÇÜNKÜ META ÖYLE VERİYOR ───────────────────────────────────────
- * 1. `GET /{media-id}` → `{ url, mime_type, file_size }` (jetonla)
- * 2. o `url`'i **Authorization başlığıyla** indir — adres imzalı değil, jeton isteyen bir uçtur.
- *    Başlıksız çağrı 401 döner; bu tuzağa düşmemek için indirme buraya kapatıldı.
- *
- * ── DÜŞERSE MESAJ YİNE YAZILIR ──────────────────────────────────────────────
- * Bu modülün her hata yolu `null` döner, hiçbiri FIRLATMAZ. Çağıran (webhook) `null` görünce medya
- * anahtarsız satırı yine yazar. Defterin ilk kuralı mesajın kaybolmamasıdır — medya ikinci
- * sıradadır; sağlayıcıdaki geçici bir arıza müşterinin mesajını yok edemez.
- */
+// Medya indirilip kendi kovamıza yazılır: Meta'nın adresi dakikalarda ölür, medya ~30 günde silinir ve şikâyetin tek kanıtı talep
+// sonuçlanmadan yok olurdu.
+
+// Her hata yolu `null` döner, hiçbiri fırlatmaz: çağıran medyasız satırı yine yazar, sağlayıcıdaki geçici arıza müşterinin
+// mesajını yok edemez.
 
 const GRAPH = 'https://graph.facebook.com/v21.0';
 
-/**
- * Kabul edilen en büyük dosya. Meta'nın kendi tavanı türe göre 16–100 MB; buradaki sınır bizim
- * belleğimizi koruyor — indirme belleğe alınıp kovaya yazılıyor ve sınırsız bir gövde, webhook
- * işleyicisini tek mesajla düşürebilirdi. Aşan dosya kaydedilmez ama MESAJ YİNE YAZILIR.
- */
+/** Bizim belleğimizi korur: indirme belleğe alınır ve sınırsız gövde webhook işleyicisini tek mesajla düşürebilirdi. */
 const MAX_BYTES = 25 * 1024 * 1024;
 
-/** Kovaya yazılan dosyanın uzantısı MIME'dan türer — sağlayıcı dosya adı vermiyor. */
+/** Sağlayıcı dosya adı vermez, uzantı MIME'dan türer. */
 const EXT_BY_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -45,7 +26,6 @@ const EXT_BY_MIME: Record<string, string> = {
   'application/pdf': 'pdf',
 };
 
-/** `audio/ogg; codecs=opus` gibi parametreli değerlerden türü ayıklar. */
 function baseMime(value: string): string {
   return value.split(';')[0]!.trim().toLowerCase();
 }
@@ -55,9 +35,7 @@ function extensionFor(mime: string): string {
 }
 
 export interface StoredMedia {
-  /** `r2Keys.conversationMedia` anahtarı — satıra bu yazılır. */
   key: string;
-  /** Ekran fotoğraf mı ses mi çizeceğini bundan bilir. */
   mime: string;
 }
 
@@ -68,11 +46,7 @@ interface MediaDescriptor {
   error?: { message?: string; code?: number };
 }
 
-/**
- * Medya kimliğinden dosyayı indirip kovaya yazar. Başarısızlığın HER türü `null`'dır: jeton yok,
- * kova ayarlı değil, sağlayıcı reddetti, dosya çok büyük, ağ düştü. Çağıran ayrım yapmaz — yapacak
- * bir şeyi yok, mesajı zaten yazacak.
- */
+/** Başarısızlığın her türü `null`'dır: çağıranın yapacağı bir ayrım yok, mesajı zaten yazacak. */
 export async function storeConversationMedia(
   conversationId: string,
   mediaId: string,
@@ -82,8 +56,7 @@ export async function storeConversationMedia(
   if (!token) return null;
 
   const r2 = getR2Private();
-  // Yerelde R2'siz çalışmak MÜMKÜN olmalı: kova yoksa medya saklanmaz, sohbet çalışmaya devam
-  // eder (`privateReadUrl`ın aynı nezaketi).
+  // Yerelde R2'siz çalışmak mümkün olmalı: kova yoksa medya saklanmaz, sohbet sürer.
   if (!r2) return null;
 
   try {
@@ -92,8 +65,7 @@ export async function storeConversationMedia(
     });
     const descriptor = (await tanim.json()) as MediaDescriptor;
     if (!tanim.ok || descriptor.error || !descriptor.url) {
-      // Sağlayıcının bilinen sınırı (süresi geçmiş kimlik, silinmiş medya) — arıza değil.
-      // İçerik loglanmaz, kimlik loglanır (CLAUDE §1).
+      // Sağlayıcının bilinen sınırı (süresi geçmiş kimlik, silinmiş medya) arıza değildir; log'a kimlik yazılır.
       logger.info(
         { context: 'messaging/meta-media', conversationId, mediaId, code: descriptor.error?.code ?? tanim.status },
         'medya tanımı alınamadı — mesaj medyasız yazılır',
@@ -109,26 +81,23 @@ export async function storeConversationMedia(
       return null;
     }
 
-    // Adres imzalı DEĞİL: jeton başlıkta gitmezse 401 döner.
+    // Adres imzalı değil: jeton başlıkta gitmezse 401 döner.
     const indirilen = await fetchBytes(descriptor.url, { authorization: `Bearer ${token}` }, { conversationId, ref: mediaId }, fetchImpl);
     if (!indirilen) return null;
 
     const mime = baseMime(descriptor.mime_type ?? indirilen.contentType ?? 'application/octet-stream');
     return await putMedia(r2, conversationId, indirilen.bytes, mime);
   } catch (err) {
-    // Beklenmedik olan burası (ağ, kova, ayrıştırma) — bilinen retlerin aksine iz bırakır.
+    // Beklenmedik olan burası (ağ, kova, ayrıştırma); bilinen retlerin aksine iz bırakır.
     captureError(err, { source: SOURCES.webhook, context: { step: 'meta-media', conversationId, mediaId } });
     return null;
   }
 }
 
-/** Messenger/Instagram ekinin türü — webhook'un `attachments[].type` alanı. `fallback` (bağlantı önizlemesi) ve `template` dosya değildir, indirilmez. */
+/** `fallback` (bağlantı önizlemesi) ve `template` dosya değildir, indirilmez. */
 export type MessengerAttachmentType = 'audio' | 'image' | 'video' | 'file';
 
-/**
- * CDN türü söylemezse (octet-stream) ek türünden makul varsayılan. Boş bırakılamaz: ses çözümü
- * `audio/*` görmeden koşmaz ve tür bilgisi elimizde varken dosyayı "bilinmeyen" yazmak kör nokta olurdu.
- */
+/** Boş bırakılamaz: ses çözümü `audio/*` görmeden koşmaz. */
 const GENERIC_MIME_BY_TYPE: Record<MessengerAttachmentType, string> = {
   audio: 'audio/mp4',
   image: 'image/jpeg',
@@ -137,13 +106,8 @@ const GENERIC_MIME_BY_TYPE: Record<MessengerAttachmentType, string> = {
 };
 
 /**
- * **MESSENGER / INSTAGRAM EKİ — ADRESTEN İNDİR** (08.09, canlıda ölçüldü).
- *
- * Bu kanallar medya KİMLİĞİ değil doğrudan CDN ADRESİ verir (`attachments[].payload.url`,
- * `cdn.fbsbx.com`): adres imzalıdır, jeton istemez ve kısa ömürlüdür. İlk canlı sesli mesaj bunu
- * gösterdi — ek `{type:'audio', payload:{url}}` geldi, indirilmediği için ajan "açamadığım bir dosya"
- * görüp devretti; WhatsApp'ta çözülen ses Messenger'da kör noktaydı. İndirme aynı kovaya, aynı
- * anahtar düzeniyle; ses çözümü ve ekran yolu ortak (15.25 · 15.26). Adres log'a yazılmaz (imzalı).
+ * Bu kanallar medya kimliği değil imzalı, jetonsuz ve kısa ömürlü bir CDN adresi verir; indirilmezse ses çözülemez ve ajan dosyayı
+ * açamayıp devrederdi. Adres log'a yazılmaz, imzalıdır.
  */
 export async function storeConversationMediaFromUrl(
   conversationId: string,
@@ -166,10 +130,7 @@ export async function storeConversationMediaFromUrl(
   }
 }
 
-/**
- * Gövdeyi indirir ve boyut sınırını ölçer — iki kaynağın (Meta medya kimliği · Messenger CDN adresi)
- * ortak yarısı. Başarısızlık `null`, gerekçesi log'da; `ref` teşhis için kimlik/tür, adres değil.
- */
+/** `ref` teşhis içindir: kimlik ya da tür, imzalı adres değil. */
 async function fetchBytes(
   url: string,
   headers: Record<string, string>,
@@ -190,10 +151,7 @@ async function fetchBytes(
   return { bytes, contentType: dosya.headers.get('content-type') };
 }
 
-/**
- * Kovaya yazar. Anahtar SAĞLAYICININ kimliğinden türemez: kanal değiştiğinde biçimi değişir ve depo
- * düzenimiz Meta'nın adlandırmasına bağlanırdı. Kendi tek kullanımlık kimliğimiz.
- */
+/** Anahtar sağlayıcının kimliğinden türemez: depo düzenimiz Meta'nın adlandırmasına bağlanırdı. */
 async function putMedia(
   r2: NonNullable<ReturnType<typeof getR2Private>>,
   conversationId: string,

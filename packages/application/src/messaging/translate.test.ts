@@ -6,19 +6,8 @@ import { recordInboundMessage, recordOutboundMessage } from './record';
 import { sendOutboundMessage, type MessageSender, type SendMessageInput, type SendResult } from './send';
 import { saveMessageTranslation, translateConversationMessageNow } from './translate';
 
-/**
- * Sohbet çevirisi (15.28) — iki yön, iki an.
- *
- * Çevirinin KALİTESİ burada sınanmaz (modelin işi); sınanan, kaliteden bağımsız değişmezler:
- *   1. Gelen mesaj çevrilince satır dolar ve konuşma müşterinin dilini ÖĞRENİR — yalnız üç dilden
- *      biriyse, yalnız gelen mesajdan.
- *   2. Giden mesaj müşterinin dilinde GİDER; defter gönderileni yazar, Türkçe torbada durur.
- *   3. Çeviri düşerse mesaj GİTMEZ — Türkçeyi Fransız müşteriye göndermek sessiz arızadır.
- *   4. Dil bildirilmiş sistem mesajında model HİÇ çağrılmaz.
- *   5. Kuyruk çözümü gelmemiş sesli mesajı listelemez — transkript sonradan gelir.
- *
- * `fakeAiModel` ağa çıkmaz; sahte sağlayıcı gönderileni KAYDEDER ki "müşteri ne okudu" sorulabilsin.
- */
+// Çevirinin kalitesi değil kaliteden bağımsız değişmezler sınanır: dil yalnız gelen mesajdan ve üç dilden öğrenilir, giden mesaj
+// müşterinin dilinde gider, çeviri düşerse mesaj gitmez. `fakeAiModel` ağa çıkmaz; sahte sağlayıcı gönderileni kaydeder.
 const db = serviceDb();
 const conversations = new ConversationService(db);
 const messages = new MessageService(db);
@@ -51,7 +40,6 @@ const TR_CEVAP = JSON.stringify({
 });
 const EN_TEK_KELIME = JSON.stringify({ sourceLanguage: 'en', tr: 'tamam', fr: "d'accord", de: 'okay' });
 
-/** Penceresi AÇIK WhatsApp konuşması; dil verilirse konuşmaya yazılır. */
 async function konusma(language: 'tr' | 'fr' | 'de' | null = null) {
   const row = await conversations.open({
     source: 'whatsapp',
@@ -65,7 +53,7 @@ async function konusma(language: 'tr' | 'fr' | 'de' | null = null) {
   return language ? conversations.setLanguage(row.id, language) : row;
 }
 
-/** Gönderileni KAYDEDEN sahte sağlayıcı — "müşteri ne okudu" sorusu buradan cevaplanır. */
+/** Gönderileni kaydeden sahte sağlayıcı: "müşteri ne okudu" sorusu buradan cevaplanır. */
 function kaydedenSender(result: SendResult = { ok: true, providerMessageId: `wamid.${stamp}.${(sira += 1)}` }): MessageSender & { sent: SendMessageInput[] } {
   const sent: SendMessageInput[] = [];
   return {
@@ -91,7 +79,7 @@ describe('gelen mesajın çevirisi — dil öğrenme', () => {
 
     const yazilan = await messages.getById(m.id);
     expect(yazilan?.language).toBe('fr');
-    // Torbada KAYNAK DİL YOK — orijinal satırda duruyor.
+    // Torbada kaynak dil yok: orijinal satırda duruyor.
     expect(yazilan?.translations).toEqual({ tr: 'Merhaba, siparişim gecikti', de: 'Hallo, meine Bestellung verspätet sich' });
     expect(yazilan?.translatedAt).not.toBeNull();
     expect((await conversations.getById(k.id))?.language).toBe('fr');
@@ -184,9 +172,7 @@ describe('çeviri kuyruğu — hangi satırlar listelenir', () => {
       receivedAt: at,
     });
 
-    /* Kuyruk küreseldir ve eskiden yeniye sıralı: başka şeritlerin satırları da içindedir, o yüzden
-       sayı DEĞİL üyelik ölçülür (`CLAUDE §4b`). Tavan geniş — kuyruk bundan derinse test gürültüyle
-       düşer, bu da bir bulgudur (kuyruk ilerlemiyor demektir). */
+    // Kuyruk küreseldir: sayı değil üyelik ölçülür. Tavan geniş; kuyruk bundan derinse test düşer ve bu da bir bulgudur.
     const ids = (await messages.listUntranslated(1000)).map((r) => r.id);
     expect(ids).toContain(metin.id);
     expect(ids).toContain(cozulmusSes.id);
@@ -211,10 +197,10 @@ describe('giden mesaj — müşterinin dilinde gider', () => {
     const satir = sonuc.status === 'sent' ? sonuc.message : null;
     expect(satir?.body.text).toBe('Bonjour ! Elle arrive jeudi.');
     expect(satir?.language).toBe('fr');
-    // Torba = gönderilen dil HARİÇ her şey: yazarın Türkçesi + öteki çeviri.
+    // Torba gönderilen dil hariç her şey: yazarın Türkçesi ve öteki çeviri.
     expect(satir?.translations).toEqual({ tr: 'Merhaba! Perşembe geliyor.', de: 'Hallo! Sie kommt am Donnerstag.' });
     expect(satir?.translatedAt).not.toBeNull();
-    // Giden mesaj dil ÖĞRETMEZ.
+    // Giden mesaj dil öğretmez.
     expect((await conversations.getById(k.id))?.language).toBe('fr');
   });
 

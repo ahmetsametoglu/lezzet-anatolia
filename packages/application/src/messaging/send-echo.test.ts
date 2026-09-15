@@ -7,23 +7,8 @@ import { purgeTestData } from '@lezzet/database/testing';
 import { fakeCloudApiConfig, fakeMeta } from '@lezzet/notify/testing';
 import { handleMetaWebhook } from './meta-webhook';
 
-/**
- * **GÖNDER → DEFTERE YAZ → ECHO GERİ DÜŞ** (15.11 · 24.08) — zincirin iki ucu bir arada.
- *
- * ── NEDEN BU TEST, VE NEDEN ANCAK ŞİMDİ YAZILABİLDİ ─────────────────────────
- * Messenger/Instagram'da sayfadan giden HER mesaj bize `message_echoes` olarak geri düşer. Yani
- * kendi gönderdiğimiz mesaj birkaç saniye sonra webhook'tan geri gelir. Soru şu: **aynı mesaj
- * deftere iki kez mi yazılır?**
- *
- * Bu yarış bugüne kadar hiç kurulamamıştı çünkü iki yarısı da eksikti: gönderim kanalı yoktu
- * (Meta kısıtı) ve echo'yu tetikleyecek gerçek bir gönderim yapılamıyordu. **Sahte Meta** ikisini
- * birden mümkün kıldı: gönderim sahte sağlayıcıya gider, dönen sağlayıcı kimliği alınır ve AYNI
- * kimlikle gerçek webhook işleyicisine echo düşürülür.
- *
- * ── SINANAN ŞEY BİR SAYI DEĞİL, BİR SONUÇ ───────────────────────────────────
- * Çift yazımın bedeli görünür: operatör kendi cevabını sohbette iki kez görür ve "gönderilmiş mi,
- * yoksa iki kez mi gitti" sorusunun cevabı defterden okunamaz hâle gelir.
- */
+// Sayfadan giden her mesaj bize `message_echoes` olarak geri düşer: aynı mesaj deftere iki kez yazılırsa operatör kendi cevabını iki
+// kez görür. Sahte Meta gönderimin kimliğini verir ve aynı kimlikle gerçek işleyiciye echo düşürülür.
 const db = serviceDb();
 const conversations = new ConversationService(db);
 const messages = new MessageService(db);
@@ -36,7 +21,7 @@ const PAGE = `PAGE-ECHO-${stamp}`;
 
 let conversationId = '';
 
-/** Meta'nın echo zarfı — sender SAYFA, recipient KİŞİ (ters okuyan kod herkesi tek sohbette birleştirir). */
+/** Echo'da sender sayfa, recipient kişidir: ters okuyan kod herkesi tek sohbette birleştirir. */
 function echoBody(mid: string) {
   return {
     object: 'page',
@@ -67,7 +52,7 @@ beforeAll(async () => {
   });
   conversationId = konusma.id;
   conversationIds.push(konusma.id);
-  // Pencereyi GELEN mesaj açar (ADR-005) — gönderim kapısı kapalı pencerede serbest metni reddeder.
+  // Pencereyi gelen mesaj açar; kapalı pencerede serbest metin reddedilirdi.
   await recordInboundMessage(db, {
     conversationId,
     text: 'Siparişim ne zaman gelir?',
@@ -90,7 +75,7 @@ describe('gönderim → defter', () => {
     expect(sonuc.status).toBe('sent');
     if (sonuc.status !== 'sent') return;
 
-    // Sağlayıcıya GERÇEKTEN gitti: kapı "gönderdim" deyip atlamıyor.
+    // Sağlayıcıya gerçekten gitti: kapı "gönderdim" deyip atlamıyor.
     expect(meta.calls).toHaveLength(1);
     expect(meta.calls[0]!.body).toMatchObject({ recipient: { id: PSID }, messaging_type: 'RESPONSE' });
 
@@ -98,7 +83,7 @@ describe('gönderim → defter', () => {
       (m) => m.providerMessageId === sonuc.providerMessageId,
     );
     expect(satir?.direction).toBe('outbound');
-    // Kimlik olmadan echo ayırt edilemez — bu alanın dolu olması aşağıdaki iddianın ön şartı.
+    // Kimlik olmadan echo ayırt edilemez: bu alanın dolu olması aşağıdaki iddianın ön şartı.
     expect(sonuc.providerMessageId).toMatch(/^m_/);
   });
 });
@@ -120,13 +105,11 @@ describe('echo geri düştüğünde defter ÇİFTLEMEZ', () => {
     const webhook = await handleMetaWebhook(echoBody(mid));
 
     const sonrakiSatirlar = await messages.listByConversation(conversationId);
-    // ASIL İDDİA: aynı sağlayıcı kimliğiyle TEK satır.
+    // Asıl iddia: aynı sağlayıcı kimliğiyle tek satır.
     expect(sonrakiSatirlar.filter((m) => m.providerMessageId === mid)).toHaveLength(1);
     expect(sonrakiSatirlar.length).toBe(oncekiSayi);
 
-    /* Webhook'un CEVABI da önemli: bu bir hata DEĞİL, bilinen bir tekrardır. `status: 'error'`
-       dönerse kabuk 500 verir ve Meta aynı echo'yu 7 gün boyunca yeniden gönderir — hiçbir zaman
-       başarılı olamayacak bir olayı. Kuyruk şişer, `error_log` dolar ve kimse sebebini aramaz. */
+    // Bu hata değil bilinen bir tekrar: `error` dönseydi kabuk 500 verir ve Meta aynı echo'yu 7 gün yeniden gönderirdi.
     expect(webhook.status).toBe('ok');
   });
 });

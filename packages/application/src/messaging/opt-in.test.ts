@@ -3,17 +3,7 @@ import { ConversationService, UserProfileService, serviceDb } from '@lezzet/data
 import { purgeTestData } from '@lezzet/database/testing';
 import { recordConversationOptIn } from './opt-in';
 
-/**
- * SOHBETTE VERİLEN İZNİN ÇİFT YAZIMI (15.12 · DOMAIN §11 · test dalgası 15.18).
- *
- * ── ASIL KORUNAN DAL BİR YOKLUK ─────────────────────────────────────────────
- * Messenger/Instagram izni müşteri KARTINA yazılmaz. `marketing_consent` bugün yalnız `email` ve
- * `whatsapp` anahtarlarını taşıyor; olmayan bir kanalı karta yazmak, dayanağı olmayan bir izin
- * kaydı üretmekti — ve kampanya gönderimi bir gün o kayda bakacak. Sohbetin kendi izni ise HER
- * kanalda yazılır: izin bir kanıttır ve sohbette verilmiştir.
- *
- * Yani bu dosyanın en değerli iddiası "yazıldı mı" değil, **"yazılmadı mı"**.
- */
+// Asıl korunan dal bir yokluk: Messenger/Instagram izni müşteri kartına yazılmaz, sohbetin kendi izni ise her kanalda yazılır.
 const db = serviceDb();
 const conversations = new ConversationService(db);
 const profiles = new UserProfileService(db);
@@ -37,13 +27,7 @@ async function sohbetAc(source: 'whatsapp' | 'messenger' | 'instagram', customer
   return konusma;
 }
 
-/**
- * Müşterinin kartındaki WhatsApp izni.
- *
- * Kayıt bir BAYRAK DEĞİL, KANIT (ölçüldü 24.08 — ilk yazımda `boolean` sanmıştım): `{ granted,
- * at, source }`. Üçü birlikte durmak zorunda; "izin var" demek ne zaman ve nereden verildiği
- * yazılmadan GDPR'da bir şey ifade etmez. `undefined` = kanal kartta HİÇ yok.
- */
+/** Kayıt bayrak değil kanıttır (`{ granted, at, source }`); `undefined` = kanal kartta hiç yok. */
 async function karttakiIzin(profileId: string): Promise<{ granted: boolean; at: string; source: string } | undefined> {
   const profile = await profiles.getById(profileId);
   return (profile?.marketingConsent as { whatsapp?: { granted: boolean; at: string; source: string } } | null)?.whatsapp;
@@ -67,20 +51,18 @@ describe('sohbetin izni HER kanalda yazılır', () => {
 
     const guncel = await conversations.getById(konusma.id);
     expect(guncel?.optIn).toBe(true);
-    // İzin bir KANITTIR: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez.
+    // İzin bir kanıttır: ne zaman verildiği yazılmadan "izin var" demek GDPR'da bir şey ifade etmez.
     expect(guncel?.optInAt).not.toBeNull();
 
     const kart = await karttakiIzin(musteriId);
     expect(kart?.granted).toBe(true);
-    // KAYNAK da yazılır ve operatöre ham hâliyle görünür: hesap sayfasından verilen izinle
-    // sohbette verilen izin ayırt edilebilmeli ("12.03.2026 · whatsapp").
+    // Kaynak da yazılır: hesap sayfasından verilen izinle sohbette verilen ayırt edilebilmeli.
     expect(kart?.source).toBe('whatsapp');
     expect(kart?.at).toBeTruthy();
   });
 
   it('KİMLİKSİZ WhatsApp sohbetinde izin yine yazılır — kimlik sonra bağlanınca kaybolmasın', async () => {
-    // Kimliksizlik tasarımın bir hâli (webhook önce yazar, kimliği sonra çözer). İzni "müşteri
-    // kaydı yok" diye atmak, müşterinin az önce söylediği şeyi çöpe atmaktı.
+    // İzni "müşteri kaydı yok" diye atmak, müşterinin az önce söylediğini çöpe atmaktı.
     const konusma = await sohbetAc('whatsapp', null);
     const sonuc = await recordConversationOptIn(db, { conversationId: konusma.id, granted: true });
     expect(sonuc).toEqual({ status: 'recorded', profileUpdated: false });
@@ -94,7 +76,7 @@ describe('sohbetin izni HER kanalda yazılır', () => {
     expect(sonuc.status).toBe('recorded');
 
     expect((await conversations.getById(konusma.id))?.optIn).toBe(false);
-    // Ret de bir KAYITTIR: kaydı silmek "hiç sorulmadı" demek olurdu ve ikisi ayrı şeydir.
+    // Ret de bir kayıttır: kaydı silmek "hiç sorulmadı" demek olurdu.
     const kart = await karttakiIzin(musteriId);
     expect(kart?.granted).toBe(false);
     expect(kart?.at).toBeTruthy();
@@ -103,8 +85,7 @@ describe('sohbetin izni HER kanalda yazılır', () => {
 
 describe('Messenger/Instagram izni MÜŞTERİ KARTINA yazılmaz', () => {
   it('Messenger: sohbete yazılır, karta YAZILMAZ', async () => {
-    // Kartta `messenger` diye bir anahtar yok; `whatsapp` anahtarına yazmak ise düpedüz yanlış
-    // kanalın iznini uydurmak olurdu — kampanya gönderimi bir gün o satıra bakacak.
+    // Kartta `messenger` anahtarı yok; `whatsapp` anahtarına yazmak yanlış kanalın iznini uydurmak olurdu.
     const temiz = await profiles.insert({ name: `İzin messenger ${stamp}`, email: `izin-fb-${stamp}@example.test` });
     profileIds.push(temiz.id);
 
@@ -113,7 +94,7 @@ describe('Messenger/Instagram izni MÜŞTERİ KARTINA yazılmaz', () => {
     expect(sonuc).toEqual({ status: 'recorded', profileUpdated: false });
 
     expect((await conversations.getById(konusma.id))?.optIn).toBe(true);
-    // Kart HİÇ dokunulmamış olmalı: `false` bile değil, YOK.
+    // Karta hiç dokunulmamış olmalı: `false` bile değil, yok.
     expect(await karttakiIzin(temiz.id)).toBeUndefined();
   });
 

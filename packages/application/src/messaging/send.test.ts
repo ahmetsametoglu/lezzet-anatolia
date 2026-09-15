@@ -12,18 +12,8 @@ import {
   type SendTarget,
 } from './send';
 
-/**
- * Giden mesaj kapısı (15.11 · dalga 1a).
- *
- * Sınanan şey dört değişmez ve dördü de **sessiz** arızalara karşı:
- *   1. Gönderim düşerse deftere YAZILMAZ — yoksa operatör cevap verildiğini sanır, müşteri bekler.
- *   2. Gönderim başarılıysa defter satırı sağlayıcı kimliğiyle yazılır — aynı cevap ikinci kez yazılmaz.
- *   3. Pencere kapalıyken serbest metin REDDEDİLİR — sağlayıcı ya reddeder ya şablon ücretiyle geçer.
- *   4. `refused` (bizim kuralımız) ile `failed` (sağlayıcı tarafı) ayrı döner — "yeniden dene"
- *      düğmesi yalnız ikincisine konabilir.
- *
- * Sağlayıcı bir PORT olduğu için testin kendi sahtesi var; ağa çıkılmıyor.
- */
+// Dört değişmez, dördü de sessiz arızaya karşı: düşen gönderim deftere yazılmaz, başarılı gönderim sağlayıcı kimliğiyle yazılır,
+// kapalı pencerede serbest metin reddedilir, `refused` ile `failed` ayrı döner.
 const db = serviceDb();
 const conversations = new ConversationService(db);
 const messages = new MessageService(db);
@@ -42,7 +32,7 @@ afterAll(async () => {
   await purgeTestData(db, { conversationIds });
 });
 
-/** Çağrıları KAYDEDEN sahte sağlayıcı — "gönderildi mi" ve "kaç kez" ayrı sorular. */
+/** Çağrıları kaydeden sahte: "gönderildi mi" ile "kaç kez" ayrı sorular. */
 function fakeSender(result: SendResult): MessageSender & { calls: { target: SendTarget }[] } {
   const calls: { target: SendTarget }[] = [];
   return {
@@ -55,7 +45,7 @@ function fakeSender(result: SendResult): MessageSender & { calls: { target: Send
   };
 }
 
-/** Penceresi AÇIK konuşma: pencereyi yalnız gelen mesaj açar (ADR-005). */
+/** Pencereyi yalnız gelen mesaj açar. */
 async function acikKonusma(source: 'whatsapp' | 'messenger' = 'whatsapp') {
   const externalRef = source === 'whatsapp' ? numara() : `PSID-${stamp}-${(sira += 1)}`;
   const row = await conversations.open({
@@ -70,13 +60,7 @@ async function acikKonusma(source: 'whatsapp' | 'messenger' = 'whatsapp') {
   return row;
 }
 
-/**
- * Penceresi KAPANMIŞ konuşma — gelen mesaj `gunOnce` gün önce düşmüş gibi yazılıyor.
- *
- * Damgayı geçmişe koymak meşru: `recordInboundMessage` mesajın ANINI istiyor ("şimdi"yi değil) ve
- * webhook yolunda o damga zaten payload'dan geliyor. Pencereyi geriye çekmenin başka yolu yok —
- * RPC `greatest` kullanıyor, yani var olan bir pencereyi kısaltamayız (o da bilinçli bir koruma).
- */
+/** Damgayı geçmişe koymak meşru: RPC `greatest` kullandığı için var olan pencere kısaltılamaz, tek yol gelen mesajı eski anla yazmak. */
 async function kapaliKonusma(source: 'whatsapp' | 'messenger', gunOnce: number) {
   const externalRef = source === 'whatsapp' ? numara() : `PSID-${stamp}-${(sira += 1)}`;
   const row = await conversations.open({
@@ -95,7 +79,6 @@ async function kapaliKonusma(source: 'whatsapp' | 'messenger', gunOnce: number) 
   return row;
 }
 
-/** Penceresi HİÇ açılmamış konuşma: gelen mesaj yok, `window_expires_at` boş. */
 async function penceresizKonusma() {
   const row = await conversations.open({
     source: 'whatsapp',
@@ -121,8 +104,7 @@ describe('sendOutboundMessage — reddetme kuralları', () => {
   });
 
   it('pencere HİÇ AÇILMAMIŞSA serbest metin reddedilir — `window_never_opened`', async () => {
-    // "Kapandı" ile "hiç açılmadı" aynı reddedişe düşer ama aynı şey değil: biri kaçırılmış fırsat,
-    // öteki kurulmamış ilişki. Operatöre önerilecek eylem farklı, o yüzden sebep de farklı.
+    // "Kapandı" ile "hiç açılmadı" ayrı sebepler: operatöre önerilecek eylem farklı.
     const konusma = await penceresizKonusma();
     const sender = fakeSender({ ok: true, providerMessageId: 'x' });
     const sonuc = await sendOutboundMessage(db, sender, { conversationId: konusma.id, text: 'merhaba' });
@@ -163,22 +145,19 @@ describe('sendOutboundMessage — reddetme kuralları', () => {
 
 describe('insan-temsilci penceresi — kapalı 24 saatten sonra 7 gün (28.08 · CHANNELS §3b)', () => {
   it('MESSENGER: pencere kapalı ama 7 gün içinde → gider ve ETİKETLİ gider', async () => {
-    /* Danışma kanalının varlık sebebi: müşteri cuma yazar, cevap pazartesi yazılır. Bu dal
-       açılmadan önce operatörün cevabı "gönderilemedi" ile geri dönüyordu ve müşteri hafta sonu
-       sorduğu sorunun cevabını hiç almıyordu — üstelik ücret sebebi de yoktu. */
+    // Müşteri cuma yazar, cevap pazartesi yazılır: bu dal olmadan operatörün cevabı "gönderilemedi" diye dönerdi.
     const konusma = await kapaliKonusma('messenger', 2);
     const sender = fakeSender({ ok: true, providerMessageId: 'm_HA1' });
     const sonuc = await sendOutboundMessage(db, sender, { conversationId: konusma.id, text: 'Pazartesi cevabı' });
 
     expect(sonuc.status).toBe('sent');
     expect(sender.calls).toHaveLength(1);
-    // Bayrak SÜRÜCÜYE ulaşmalı: `sent` dönmesi yeterli değil, etiketsiz giden mesajı Meta reddeder.
+    // Bayrak sürücüye ulaşmalı: etiketsiz giden mesajı Meta reddeder.
     expect(sender.calls[0]!.target.humanAgent).toBe(true);
   });
 
   it('WHATSAPP: aynı süre geçmişken REDDEDİLİR — orada çare etiket değil, ücretli şablon', async () => {
-    // Etiketi üç kanala birden açmak en kolay yoldu ve yanlış olurdu: WhatsApp'ta böyle bir kavram
-    // yok, istek sağlayıcıda düşerdi ve sebebi bizim tarafta okunamazdı.
+    // WhatsApp'ta etiket kavramı yok: istek sağlayıcıda düşer ve sebebi bizde okunamazdı.
     const konusma = await kapaliKonusma('whatsapp', 2);
     const sender = fakeSender({ ok: true, providerMessageId: 'x' });
     const sonuc = await sendOutboundMessage(db, sender, { conversationId: konusma.id, text: 'merhaba' });
@@ -197,13 +176,8 @@ describe('insan-temsilci penceresi — kapalı 24 saatten sonra 7 gün (28.08 ·
   });
 
   it('ÖZERK AJAN etiketi kullanamaz — "human agent" adının gereği', async () => {
-    /* Meta'nın tanımı harfiyen "a business representative to MANUALLY respond". Otomatik cevap o
-       tanıma girmiyor ve etiketi oraya açmak, Meta'nın denetlediği bir beyanı yanlış yapardı —
-       yaptırımı da hesap düzeyinde olurdu, tek mesaj düzeyinde değil.
-
-       Bu iddia bir REGRESYONUN bekçisi: kapı ilk yazımda ajana da açıktı ve `ai.test.ts`in
-       "pencere kapalıysa devredilir" iddiası düştü. Ajan için doğru davranış devirdir; operatör
-       aynı sohbete kendi eliyle yazdığında etiket zaten devreye giriyor (bir üstteki iddia). */
+    // Meta'nın tanımı insanın elle cevabıdır; otomatik cevaba etiket açmak denetlenen bir beyanı yanlış yapardı. Ajan için doğru
+    // davranış devirdir.
     const konusma = await kapaliKonusma('messenger', 2);
     const sender = fakeSender({ ok: true, providerMessageId: 'x' });
     const sonuc = await sendOutboundMessage(db, sender, {
@@ -217,9 +191,7 @@ describe('insan-temsilci penceresi — kapalı 24 saatten sonra 7 gün (28.08 ·
   });
 
   it('pencere AÇIKKEN etiket KULLANILMAZ — gerekçesi olmayan etiket bahanedir', async () => {
-    /* Her mesajı etiketlemek en dayanıklı görünen yoldu ama Meta bu etiketin kötüye kullanımını
-       denetliyor: dayanağı "insan temsilci, standart pencerede çözülemeyen bir konuyu ele alıyor".
-       Pencere açıkken o dayanak yok. */
+    // Pencere açıkken etiketin dayanağı yok ve Meta kötüye kullanımı denetliyor.
     const konusma = await acikKonusma('messenger');
     const sender = fakeSender({ ok: true, providerMessageId: 'm_OK' });
     const sonuc = await sendOutboundMessage(db, sender, { conversationId: konusma.id, text: 'hemen cevap' });
@@ -237,7 +209,7 @@ describe('sendOutboundMessage — gönderim ve defter', () => {
 
     expect(sonuc).toEqual({ status: 'failed', reason: 'rate_limited', retryable: true });
 
-    // Defterde YALNIZ gelen mesaj olmalı: gönderilmemiş bir cevabın satırı kalmamalı.
+    // Defterde yalnız gelen mesaj olmalı: gönderilmemiş bir cevabın satırı kalmamalı.
     const defter = await messages.listByConversation(konusma.id);
     expect(defter.filter((m) => m.direction === 'outbound')).toHaveLength(0);
   });
@@ -260,7 +232,7 @@ describe('sendOutboundMessage — gönderim ve defter', () => {
     if (sonuc.status !== 'sent') return;
     expect(sonuc.providerMessageId).toBe('wamid.OK1');
     expect(sonuc.message?.direction).toBe('outbound');
-    // Kimlik defterde de durmalı: tekrar teslimin son savunma hattı bu kolondur (0039).
+    // Kimlik defterde de durmalı: tekrar teslimin son savunma hattı bu kolondur.
     expect(sonuc.message?.providerMessageId).toBe('wamid.OK1');
   });
 
@@ -269,10 +241,8 @@ describe('sendOutboundMessage — gönderim ve defter', () => {
     const sender = fakeSender({ ok: true, providerMessageId: 'wamid.OK2' });
     await sendOutboundMessage(db, sender, { conversationId: konusma.id, text: 'merhaba' });
 
-    /* `toEqual` bilerek korunuyor (`toMatchObject` değil): hedefe sessizce bir alan eklenirse bu
-       satır düşsün ve eklenen şeyin sürücüye ne söylediği düşünülsün. 28.08'de tam olarak bu oldu —
-       `humanAgent` eklendi ve iddia düştü; alan burada AÇIKÇA yazılıyor, yani WhatsApp'ta etiketin
-       hiçbir koşulda `true` olmadığı da bu satırda çivilenmiş oluyor. */
+    // `toEqual` bilerek: hedefe sessizce alan eklenirse satır düşsün ve alanın sürücüye ne söylediği düşünülsün. WhatsApp'ta
+    // etiketin hiçbir koşulda `true` olmadığı da burada çivili.
     expect(sender.calls[0]?.target).toEqual({
       source: 'whatsapp',
       externalRef: konusma.externalRef,
@@ -296,12 +266,11 @@ describe('sendOutboundMessage — gönderim ve defter', () => {
 describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kullanıcı kararı)', () => {
   const URL = 'http://localhost:3000/tr/sepet?link=ABCDEFGH1234';
 
-  /** Girdileri KAYDEDEN sahte: her çağrıya ayrı kimlik verir; `basarisiz` verilen sıradaki çağrı düşer. */
+  /** Girdileri kaydeden sahte: her çağrıya ayrı kimlik verir; `basarisiz` verilen sıradaki çağrı düşer. */
   function kaydedenSender(basarisiz: number | null = null): MessageSender & { inputs: SendMessageInput[] } {
     const inputs: SendMessageInput[] = [];
-    /* Kimlik GÖNDERİCİ BAŞINA ayrışır: sağlayıcı kimliği defterde tekil (echo savunması) ve iki testin
-       aynı `m_<damga>_1`i üretmesi ikincinin satırını sessizce düşürüyordu (ölçüldü 08.09: kapı
-       dürüst davranıp `sent` + `message: null` döndü, defter boş kaldı). */
+    // Kimlik gönderici başına ayrışır: sağlayıcı kimliği defterde tekildir ve iki testin aynı kimliği üretmesi ikincinin satırını
+    // sessizce düşürürdü.
     const nonce = (sira += 1);
     return {
       name: 'fake',
@@ -406,8 +375,7 @@ describe('sepet bağlantısı Messenger/IG\'de DÜĞME olarak gider (08.09, kull
   });
 
   it('düğme DÜŞERSE gövde yine `sent` — cevap gitti, bağlantı gitmedi; iz `error_log`ta, deftere tek satır', async () => {
-    /* Gövdeyi "gönderilemedi" diye geri çevirmek yalan olurdu: ajan devreder, operatör aynı cevabı
-       ikinci kez yazardı. Dönüş gövdenin gerçeğini söyler; düğmenin düşüşü kimlikle kaydedilir. */
+    // Gövdeyi "gönderilemedi" diye çevirmek yalan olurdu: ajan devreder, operatör aynı cevabı ikinci kez yazardı.
     const konusma = await acikKonusma('messenger');
     const sender = kaydedenSender(2);
     const sonuc = await sendOutboundMessage(db, sender, {

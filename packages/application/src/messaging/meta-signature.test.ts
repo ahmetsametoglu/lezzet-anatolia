@@ -2,20 +2,7 @@ import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { verifyMetaSignature } from './meta-webhook';
 
-/*
-  Meta webhook imzası (15.7 · test dalgası 15.18).
-
-  Bu test bir hijyen kontrolü değil, KİMLİK KURGUSUNUN nöbetçisi. `04.10`'un güvenlik kodu
-  "kod doğru **ve** doğru numaradan geldi" şartına dayanıyor; numaranın doğruluğunu bize Meta
-  beyan ediyor ve o beyana ancak imza doğruysa güvenilir. İmza gevşerse, imzasız uca "şu
-  numaradan geliyorum" diyebilen birine karşı geriye yalnız 6 haneyi tahmin etmek kalır.
-
-  Beş hâl 21.08'de elle ölçülmüştü ve teste dönmemişti; bu dosya o borcu kapatıyor.
-
-  DOSYA `apps/web/lib` ALTINDA AMA DB'SİZ: `verifyMetaSignature` saf bir fonksiyon
-  (`node:crypto` + dize). Bu yüzden `vitest.config.ts`in `WEB_LIB_DBSIZ` listesine yazıldı —
-  liste olmadan test entegrasyon projesine düşer ve şeridin kendisi koşamaz (`CLAUDE §4b`).
-*/
+// Kimlik kurgusunun nöbetçisi: güvenlik kodu "doğru numaradan geldi" beyanına dayanır ve o beyana ancak imza doğruysa güvenilir.
 
 const SECRET = 'test-app-secret';
 const BODY = JSON.stringify({ object: 'whatsapp_business_account', entry: [{ id: 'x' }] });
@@ -54,15 +41,14 @@ describe('verifyMetaSignature', () => {
   });
 
   it('UZUNLUĞU farklı imzada erken döner ve PATLAMAZ', () => {
-    // `timingSafeEqual` eşit olmayan uzunlukta FIRLATIR; erken dönüş olmasaydı uç nokta 401 yerine
-    // 500 verir, Meta da olayı 7 gün boyunca yeniden denerdi.
+    // `timingSafeEqual` eşit olmayan uzunlukta fırlatır; erken dönüş olmasaydı uç 401 yerine 500 verir, Meta da olayı 7 gün yeniden denerdi.
     expect(() => verifyMetaSignature(BODY, 'sha256=kisa', SECRET)).not.toThrow();
     expect(verifyMetaSignature(BODY, 'sha256=kisa', SECRET)).toBe(false);
     expect(verifyMetaSignature(BODY, `sha256=${'a'.repeat(200)}`, SECRET)).toBe(false);
   });
 
   it('boş gövde de doğru imzayla kabul edilir', () => {
-    // Meta boş gövde yollamaz ama kapı bunu bir istisna gibi ele almamalı: kural imzadır, içerik değil.
+    // Meta boş gövde yollamaz ama kapı bunu istisna gibi ele almamalı: kural imzadır, içerik değil.
     expect(verifyMetaSignature('', sign(''), SECRET)).toBe(true);
   });
 });

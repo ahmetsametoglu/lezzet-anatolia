@@ -8,55 +8,19 @@ import { cartLinkButton, LINK_BUTTON_TEXT, linkTail, splitCartLink } from '../ca
 import { recordOutboundMessage } from './record';
 import { prepareOutboundText, resolveOutboundLanguage, type MessageTranslationPatch } from './translate';
 
-/**
- * **GİDEN MESAJ KAPISI** (15.11 iskeleti) — gönderim ve defter yazımı TEK yerde.
- *
- * ── NEDEN TEK KAPI ──────────────────────────────────────────────────────────
- * İki ayrı çağrı bırakılsaydı (önce gönder, sonra ayrıca kaydet) iki yanlış hâl doğardı ve ikisi de
- * sessizdir: **gönderilmemiş bir mesajın deftere yazılması** (operatör müşteriye cevap verildiğini
- * sanır, müşteri bekler) ve **gönderilmiş bir mesajın deftere yazılmaması** (aynı cevap ikinci kez
- * yazılır). Kapı tek olunca ikisi de yapısal olarak imkânsızlaşır.
- *
- * ── SIRA: ÖNCE GÖNDER, SONRA YAZ ────────────────────────────────────────────
- * Tersi daha "güvenli" görünür (yaz, sonra gönder, düşerse geri al) ama değil: gönderim **geri
- * alınamaz** — müşteri mesajı okumuştur. Defter yazımı ise telafi edilebilir; elimizde sağlayıcı
- * mesaj kimliği vardır ve Messenger/IG'de echo webhook'u satırı zaten geri getirir.
- * Bu yüzden düşen defter yazımı `captureError`la GÜRÜLTÜ çıkarır, sessizce yutulmaz.
- *
- * ── ÇEVİRİ KAPININ İÇİNDE (15.28) ───────────────────────────────────────────
- * Operatör de ajan da Türkçe yazar; müşteri kendi dilinde okumalı. Çeviri gönderimden ÖNCE ve
- * BURADA koşuyor (`prepareOutboundText`), çağıranlarda değil: bu kapının dört çağıranı var (web
- * eylemi · özerk ajan · devir haberi · mobil uç) ve çeviriyi her birine bırakmak, birinin
- * unutmasıydı — unutan çağıranın müşterisi Türkçe okurdu ve hiçbir yerde hata çıkmazdı.
- * Gönderilen metin defterin `body.text`i olur, yazılan Türkçe torbaya düşer (künye `translate.ts`).
- * Çeviri düşerse mesaj GİTMEZ (`failed/translation_failed`): Türkçeyi Fransız müşteriye
- * göndermek sessiz arızadır, göndermemek gürültülü.
- *
- * ── SAĞLAYICI BİR PORTTUR, İSTEMCİ DEĞİL ────────────────────────────────────
- * Uygulama katmanı HTTP bilmez (`STACK §4`). `MessageSender` bir arayüzdür; Cloud API istemcisi onu
- * 15.11'in ikinci yarısında uygular, testler kendi sahtesini verir. Stripe'ın (`stripeClient`) ve
- * AI'ın (`AiTask`) aynı deseni.
- *
- * ── BUGÜN EKRANA BAĞLI DEĞİL VE BİLEREK ─────────────────────────────────────
- * Varsayılan sağlayıcı `unconfiguredSender`: her çağrıyı `not_configured` ile REDDEDER. Başarı
- * taklidi yapan bir sahte, bu dosyanın önlemek için yazıldığı arızanın ta kendisi olurdu — ekran
- * "gönderildi" der, mesaj hiçbir yere gitmez. Operasyon ekranının kutusu bu yüzden hâlâ DEFTER
- * kutusudur ve gerçek istemci gelene kadar öyle kalır.
- */
+// Gönderim ve defter yazımı tek kapıda: ayrı iki çağrı gönderilmemiş mesajı deftere yazdırır ya da gönderilmişi yazmaz, ikisi de
+// sessizdir. Önce gönderilir sonra yazılır, çünkü gönderim geri alınamaz, defter yazımı telafi edilebilir.
 
-/** Kime ve hangi işletme hesabından — konuşmadan türer, çağıran uydurmaz. */
+// Çeviri de burada, çağıranlarda değil: dört çağırandan birinin unutması müşteriye sessizce Türkçe okuturdu. Çeviri düşerse mesaj
+// gitmez: Türkçeyi Fransız müşteriye göndermek sessiz, göndermemek gürültülü arızadır.
+
+/** Konuşmadan türer, çağıran uydurmaz. */
 export interface SendTarget {
   source: ConversationSource;
-  /** WhatsApp'ta E.164 telefon, Messenger/IG'de PSID/IGSID. */
   externalRef: string;
-  /** WhatsApp'ta `phone_number_id`, Messenger/IG'de Sayfa kimliği. Yoksa gönderim yönlendirilemez. */
+  /** Yoksa gönderim yönlendirilemez. */
   accountRef: string | null;
-  /**
-   * **İnsan-temsilci etiketiyle mi gidiyor** (yalnız Messenger/IG) — 24 saat kapandıktan sonraki
-   * 7 günlük aralık. Hedefin "kime"si değil "nasıl"ı ama burada duruyor ve bilerek: kararı bu kapı
-   * veriyor (pencere hesabı, kanal ayrımı), sürücü yalnız uyguluyor. Ayrı bir parametre olsaydı
-   * `send` imzası üçe çıkar ve her sürücü onu geçirmeyi ayrı ayrı hatırlamak zorunda kalırdı.
-   */
+  /** Yalnız Messenger/Instagram, 24 saatten sonraki 7 gün. Kararı bu kapı verir, sürücü yalnız uygular. */
   humanAgent?: boolean;
 }
 
@@ -65,26 +29,14 @@ export interface SendMessageInput {
   text: string | null;
   kind?: MessageKind;
   payload?: Record<string, unknown> | null;
-  /** Kim yazdı — özerk ajan `ai` geçer; boş bırakılırsa defter gideni personel sayar (`record.ts`). */
+  /** Boşsa defter gideni personel sayar. */
   author?: TicketSender | null;
-  /** Dolu ise KALIP mesaj — yalnız WhatsApp, ve pencere kapalıyken tek gidebilen tür. */
+  /** Yalnız WhatsApp; pencere kapalıyken gidebilen tek tür. */
   templateName?: string | null;
   templateCategory?: TemplateCategory | null;
-  /**
-   * Şablonun DİLİ (`en_US`, `tr`, `fr`…) — Meta şablonu ad + dil ÇİFTİYLE arar, yalnız adla değil.
-   *
-   * Geçilmezse istemcinin varsayılanı (`tr`) kullanılır. Alan 28.08'de açıldı: sabit `tr` yüzünden
-   * `en_US` dilinde onaylanmış hiçbir şablon gönderilemiyordu — Meta'nın kendi test şablonları
-   * (`hello_world`) dahil, ve hata `132001` ("şablon bulunamadı") diye geliyordu, yani sebep bizim
-   * dilimizken sağlayıcı arızası gibi okunuyordu.
-   */
+  /** Meta kalıbı ad ve dil çiftiyle arar; sabit dilde, başka dilde onaylı kalıp `132001` "bulunamadı" ile düşerdi. */
   templateLanguage?: string | null;
-  /**
-   * Metnin YAZILDIĞI dil — çağıran biliyorsa söyler (15.28). Hedef dille aynıysa çeviri modeli hiç
-   * çağrılmaz: elle üç dilde yazılmış sistem mesajları (bağlama onayı, güvenlik kodu) böyle geçer —
-   * bedava, deterministik, ve güvenlik kodu gibi bir değer gereksiz yere modelden geçmez. Boşsa
-   * kapı dili tespit eder.
-   */
+  /** Hedef dille aynıysa çeviri modeli çağrılmaz: elle yazılmış sistem mesajları ve güvenlik kodu modelden geçmez. */
   language?: PreferredLanguage | null;
 }
 
@@ -92,45 +44,31 @@ export type SendResult =
   | { ok: true; providerMessageId: string }
   | { ok: false; reason: string; retryable: boolean };
 
+/** Uygulama katmanı HTTP bilmez: sürücü bu arayüzü uygular, testler kendi sahtesini verir. */
 export interface MessageSender {
-  /** Günlüğe yazılır — hangi sürücünün gönderdiği sonradan da sorulabilmeli. */
+  /** Hangi sürücünün gönderdiği sonradan da sorulabilmeli. */
   readonly name: string;
   send(target: SendTarget, input: SendMessageInput): Promise<SendResult>;
 }
 
-/**
- * Yapılandırılmamış sağlayıcı — **varsayılan**. Her çağrıyı reddeder.
- *
- * Sessizce "başarılı" dönen bir sahte, gönderilmemiş mesajı deftere yazdırırdı. Reddetmek, gönderim
- * kanalı açılana kadar tek dürüst davranış.
- */
+/** Varsayılan sürücü her çağrıyı reddeder: başarı taklidi yapan sahte gönderilmemiş mesajı deftere yazdırırdı. */
 export const unconfiguredSender: MessageSender = {
   name: 'unconfigured',
   send: async () => ({ ok: false, reason: 'not_configured', retryable: false }),
 };
 
 export type SendOutcome =
-  /**
-   * Gönderildi. `message` **null OLABİLİR** ve bu bir kaçamak değil, gerçek bir hâlin adı: mesaj
-   * gitti ama defter yazımı düştü. Tipin bunu söylemesi şart — `Message` diye yazıp boş dönmek,
-   * okuyan tarafı olmayan bir satıra güvendirirdi.
-   */
+  /** `message` null olabilir: mesaj gitti ama defter yazımı düştü; tip bunu söylemeli. */
   | { status: 'sent'; message: Message | null; providerMessageId: string }
   | { status: 'refused'; reason: string }
   | { status: 'failed'; reason: string; retryable: boolean };
 
-/**
- * Giden mesajı GÖNDER ve deftere yaz.
- *
- * Reddetme (`refused`) ile başarısızlık (`failed`) AYRI: ilki bizim kuralımızdır (pencere kapalı,
- * yanlış kanal) ve tekrar denemek anlamsızdır; ikincisi sağlayıcı tarafıdır ve `retryable` olabilir.
- * Tek kovaya atmak, çağıranı "yeniden dene" düğmesini yanlış yere koymaya iterdi.
- */
-/** Test/enjeksiyon: çeviri modeli verilirse env ve ağ atlanır (`translate-user-text` deseni). */
+/** Çeviri modeli verilirse env ve ağ atlanır (testler). */
 export interface SendOptions {
   model?: AiModel;
 }
 
+/** `refused` bizim kuralımızdır ve tekrar denemek anlamsız; `failed` sağlayıcınındır ve `retryable` olabilir. */
 export async function sendOutboundMessage(
   db: SupabaseClient,
   sender: MessageSender,
@@ -140,41 +78,13 @@ export async function sendOutboundMessage(
   const conversation = await new ConversationService(db).getById(input.conversationId);
   if (!conversation) return { status: 'refused', reason: 'conversation_not_found' };
 
-  // Kalıp mesaj bir WhatsApp kavramıdır (Meta-onaylı şablon + ücret sınıfı). Defter kapısı da aynı
-  // kuralı taşıyor ama orada FIRLATIR; burada gönderimden ÖNCE reddediyoruz — sağlayıcıya boşuna
-  // gitmek hem tur hem (yanlış kabul edilirse) para demektir.
+  // Defter kapısı da reddeder ama fırlatarak; burada gönderimden önce: sağlayıcıya boşuna gitmek tur ve para demek.
   if (input.templateName && conversation.source !== 'whatsapp') {
     return { status: 'refused', reason: 'template_wrong_channel' };
   }
 
-  /*
-    PENCERE KURALI — bu kapının en pahalı kararı.
-
-    Serbest metin ancak 24 saatlik servis penceresi AÇIKKEN gidebilir; üç kanalda da böyle. Pencere
-    kapalıyken çare KANALA GÖRE ayrışıyor:
-      · WhatsApp     → yalnız onaylı KALIP mesaj (ücretli)
-      · Messenger/IG → "insan-temsilci" etiketiyle 7 güne kadar (ÜCRETSİZ) — 28.08'de yazıldı
-
-    ── NEDEN GEREKTİ (`CHANNELS §3b`) ─────────────────────────────────────────
-    Danışma kanalının tek gerçek altyapı borcu buydu: müşteri cuma akşamı yazar, cevap pazartesi
-    yazılır ve 24 saat çoktan geçmiştir. O ana kadar kapı serbest metni REDDEDİYORDU — yani
-    operatör cevabı yazar, ekran "gönderilemedi" derdi ve müşteri hafta sonu sorduğu sorunun
-    cevabını hiç almazdı. Ücret sebebi de yoktu: Meta bu kanallarda para değil KURAL koyuyor.
-
-    Etiket YALNIZ gerçekten kapalı pencerede kullanılıyor: açıkken `RESPONSE` doğru zarftır ve
-    her mesajı etiketlemek, etiketin dayandığı gerekçeyi (insan temsilci devrede) yalan yapardı.
-    7 gün de geçmişse yine reddediliyor — o noktada Meta'nın kendisi de kabul etmez ve reddin
-    sebebi burada okunur, orada ham hata kodu olurdu.
-
-    ── ETİKET ÖZERK AJANA KAPALI, VE BU ADININ GEREĞİ ─────────────────────────
-    Meta'nın tanımı harfiyen şu: *"the Human Agent tag allows a business representative to MANUALLY
-    respond to a person's messages"*. Özerk ajanın otomatik cevabı bu tanıma girmiyor — etiketi
-    oraya açmak, Meta'nın denetlediği bir beyanı yanlış yapmaktı (ve yaptırımı hesap düzeyindedir,
-    tek mesaj düzeyinde değil). Bu satır bir TESTİN bulgusudur: kapı ilk yazımda ajana da açıktı ve
-    *"pencere kapalıysa devredilir"* iddiası düştü — iddia haklıydı, kapı fazla genişti.
-    Ajan için doğru davranış değişmedi: pencere kapalıysa İNSANA DEVREDER; operatör aynı sohbete
-    kendi eliyle yazdığında etiket zaten devreye girer.
-  */
+  // Pencere kapalıyken WhatsApp'ta yalnız ücretli kalıp, Messenger/Instagram'da 7 güne kadar insan temsilci etiketi gider. Etiket
+  // özerk ajana kapalı: Meta'nın tanımı insanın elle cevabıdır ve yanlış beyanın yaptırımı hesap düzeyindedir.
   const pencere = serviceWindowState(conversation.windowExpiresAt);
   const insanTemsilci =
     !input.templateName &&
@@ -188,7 +98,6 @@ export async function sendOutboundMessage(
   }
 
   if (!conversation.providerAccountRef) {
-    // Hangi işletme hesabından gideceği bilinmiyor: elle işlenmiş eski satırlarda bu alan boştur.
     return { status: 'refused', reason: 'account_ref_missing' };
   }
 
@@ -200,39 +109,22 @@ export async function sendOutboundMessage(
   };
 
   if (insanTemsilci) {
-    // Etiketli gönderim bir İSTİSNADIR ve izi kalmalı: Meta bu etiketin kötüye kullanımını
-    // denetliyor (pazarlama içeriği insan-temsilci etiketiyle gönderilemez). Sayı değil KİMLİK
-    // yazılıyor — hangi sohbet olduğu yeter, içeriği defterde zaten duruyor (`CLAUDE §1`).
+    // Etiketli gönderim istisnadır ve izi kalmalı: Meta kötüye kullanımını denetler. Log'a kimlik yazılır, içerik değil.
     logger.info(
       { context: 'messaging/send', conversationId: conversation.id, source: conversation.source },
       'pencere kapalı — insan-temsilci etiketiyle gönderiliyor',
     );
   }
 
-  /*
-    SEPET BAĞLANTISI DÜĞME OLARAK (08.09, kullanıcı kararı) — künyesi `cart/link-text.ts`.
-
-    Üç kanalda kuyruktaki sabit satır + adres gövdeden AYRILIR: gövde çevrilip gider, bağlantı ikinci
-    bir mesajda düğmeyle gider (Messenger/IG düğme şablonu, WhatsApp `cta_url` — ham adres yerine
-    "Sepete git"; WhatsApp'ta pencere içinde şablonsuz, kullanıcı kararı 08.09). Kural BURADA,
-    çağıranlarda değil: ajan, operatör (web/mobil) ve taslak yolu aynı metni üretiyor ve düğmeyi her
-    birine bırakmak, birinin unutmasıydı. Ayırma çeviriden ÖNCE — çeviriden sonra sabit satır
-    tanınmaz olurdu; düğme metni üç dilde elle yazılı, modelden geçmez. Hesap bağlantısı (15.16) aynı
-    yoldan gider: kuyruğun cümlesi amacı söyler, düğme ona göre "Hesabı bağla" olur.
-
-    Defterde İKİ satır ve iki sağlayıcı kimliği: Messenger echo'su iki mesajı ayrı düşürür, tek
-    satırda toplansaydı ikinci echo yeni bir mesaj sanılırdı (`send-echo.test.ts`in tuzağı).
-    Gövde yalnız bağlantıdan ibaretse (operatör taslaktan gövdeyi silmiş) tek mesaj gider: düğme.
-    Kalıp (template) mesajda ayırma yok: şablonun gövdesi Meta'da sabittir, bizim kuyruğumuz olamaz.
-  */
+  // Bağlantı gövdeden ayrılıp ikinci mesajda düğmeyle gider; kural burada, çünkü ajan, operatör ve taslak aynı metni üretir.
+  // Ayırma çeviriden önce (sonra sabit satır tanınmazdı), defterde iki satır: Messenger echo'su iki mesajı ayrı düşürür.
   const ayrik = !input.templateName && input.text ? splitCartLink(input.text) : null;
   const baglanti = ayrik?.link ?? null;
   const govdeGirdisi: SendMessageInput = baglanti ? { ...input, text: ayrik!.body } : input;
 
   let govde: SendOutcome | null = null;
   if (!baglanti || govdeGirdisi.text) {
-    /* ÇEVİRİ GÖNDERİMDEN ÖNCE (15.28) — künyesi yukarıda ve `translate.ts`te. Düşerse sağlayıcıya
-       HİÇ gidilmez ve deftere yazılmaz; `retryable`, çünkü sebep bizim tarafta ve geçici. */
+    // Çeviri düşerse sağlayıcıya hiç gidilmez ve deftere yazılmaz; `retryable`, çünkü sebep bizde ve geçici.
     const hazir = await prepareOutboundText(db, conversation, govdeGirdisi, opts);
     if (!hazir.ok) {
       logger.warn(
@@ -262,16 +154,15 @@ export async function sendOutboundMessage(
     },
     {
       language: dil,
-      // Operatör Türkçe okur: müşteriye giden dil Türkçe değilse torbaya Türkçesi düşer (15.28 kuralı).
+      // Müşteriye giden dil Türkçe değilse operatör için torbaya Türkçesi düşer.
       translations: dil === 'tr' ? null : { tr: linkTail(baglanti) },
       translatedAt: new Date().toISOString(),
     },
   );
   if (!govde) return dugme;
   if (dugme.status !== 'sent') {
-    /* Gövde GİTTİ, düğme gitmedi: müşteri cevabı okudu ama bağlantıyı almadı. Gövdeyi "gönderilemedi"
-       diye geri çevirmek yalan olurdu (ajan devrederdi, operatör yeniden yazardı); kayıt gürültülü,
-       dönüş dürüst: gövde `sent`, düğmenin düşüşü `error_log`ta kimlikle. */
+    // Gövde gitti, düğme gitmedi: gövdeyi "gönderilemedi" diye çevirmek yalan olurdu (ajan devreder, operatör yeniden yazar).
+    // Düşüş `error_log`a kimlikle yazılır, dönüş `sent` kalır.
     await captureError(new Error(`bağlantı düğmesi gönderilemedi (${baglanti.purpose}): ${dugme.reason}`), {
       source: SOURCES.webServer,
       context: { area: 'messaging/send', conversationId: conversation.id, providerMessageId: govde.providerMessageId },
@@ -280,7 +171,7 @@ export async function sendOutboundMessage(
   return govde;
 }
 
-/** Sağlayıcıya ver, sonra deftere yaz — gövde ve düğme aynı kapıdan geçer, sıra ve telafi tek yerde. */
+/** Gövde ve düğme aynı kapıdan geçer: sıra ve telafi tek yerde. */
 async function teslimEtVeYaz(
   db: SupabaseClient,
   sender: MessageSender,
@@ -299,7 +190,7 @@ async function teslimEtVeYaz(
   }
 
   try {
-    // Deftere GÖNDERİLEN metin ve çeviri üçlüsü tek turda: satır "müşteri ne okudu" der.
+    // Gönderilen metin ve çeviri üçlüsü tek turda: satır "müşteri ne okudu" der.
     const message = await recordOutboundMessage(db, {
       ...giden,
       language: hazir.language,
@@ -309,11 +200,8 @@ async function teslimEtVeYaz(
     });
     return { status: 'sent', message, providerMessageId: result.providerMessageId };
   } catch (err) {
-    /*
-      Mesaj GİTTİ ama deftere yazılamadı — geri alınamaz bir olayın kaydı düştü. Sessiz kalmak, aynı
-      cevabın ikinci kez yazılmasına yol açar. `captureError` hem stdout'a hem `error_log`'a yazar
-      ve fırlatmaz; çağıran "gitti" bilgisini KAYBETMEMELİ, o yüzden `sent` dönüyoruz.
-    */
+    // Mesaj gitti ama kaydı düştü: sessiz kalmak aynı cevabın ikinci kez yazılmasına yol açardı. `captureError` fırlatmaz ve
+    // çağıran "gitti" bilgisini kaybetmemeli.
     await captureError(err, {
       source: SOURCES.webServer,
       context: {
@@ -323,8 +211,7 @@ async function teslimEtVeYaz(
         note: 'mesaj gönderildi ama deftere yazılamadı',
       },
     });
-    // `sent` dönüyoruz: gönderim GERÇEKLEŞTİ ve çağıran bunu kaybetmemeli. `message: null` eksiği
-    // söylüyor; çağıran isterse telafi eder (yeniden yazma değil, İZ bırakma).
+    // `message: null` eksiği söyler; telafi yeniden yazmak değil, iz bırakmaktır.
     return { status: 'sent', message: null, providerMessageId: result.providerMessageId };
   }
 }
