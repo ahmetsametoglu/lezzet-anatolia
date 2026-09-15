@@ -23,13 +23,8 @@ import type {
 } from './new-order-types';
 import type { PaymentMethod } from '@lezzet/types';
 
-// Elle sipariş girişi — server action'ları (09.8).
-//
-// Desen ekranın geri kalanıyla aynı: `'use server'` + `requireAdmin` İLK + servise/motora devret +
-// `{ data, error }` döner (throw yok).
-//
-// **PAZARLIKLI FİYAT YALNIZ ADMİN** (tasarım sözleşmesi §3): kapı `requireAdmin` ve başka bir yeri
-// yok. Ekranda gizlemek yetmez — istemci gizlenmiş bir alanı yine gönderebilir.
+// Elle sipariş girişinin sunucu eylemleri: `requireAdmin` ilk satırda, iş servise ve motora devredilir, sonuç `{ data, error }`
+// döner. Pazarlıklı fiyat yalnız admin, çünkü ekranda gizlemek yetmez: istemci gizlenmiş bir alanı yine gönderebilir.
 
 export async function searchCustomersAction(term: string): Promise<ActionResult<CustomerPickOption[]>> {
   try {
@@ -41,17 +36,9 @@ export async function searchCustomersAction(term: string): Promise<ActionResult<
 }
 
 /**
- * **Müşteri bul-veya-OLUŞTUR'un "oluştur" tarafı** (09.8) — telefonla gelen müşterinin hesabı
- * olmayabilir ve olması da gerekmez.
- *
- * Kayıt `auth_user_id` OLMADAN açılır (kolon nullable) ve `is_draft` işaretlenir: doğrulanmamış bir
- * kimlik doğrulanmış gibi durmamalı. Müşteri bir gün siteye kaydolursa aynı satır oturuma bağlanır
- * (`04.4` tetikleyicisi + `09.10` birleştirme); şimdiden ikinci bir kayıt açmak, aynı kişiyi iki
- * kez oluşturmak olurdu.
- *
- * **Telefon ZORUNLU ama benzersiz DEĞİL:** aile numarası meşru bir hâldir (`0001` künyesi). Kimlik
- * anahtarı olmadığı için burada tekillik aranmıyor; operatör önce ARAR, çıkmazsa oluşturur —
- * "bul-veya-oluştur" akışının sırası budur ve ekran onu zorluyor.
+ * Bul ya da oluştur akışının "oluştur" tarafı: kayıt `auth_user_id` olmadan ve `is_draft` işaretli açılır, çünkü doğrulanmamış
+ * bir kimlik doğrulanmış gibi durmamalı ve müşteri bir gün kaydolursa aynı satır oturuma bağlanır. Telefon zorunlu ama benzersiz
+ * değil (aile numarası meşru), bu yüzden operatör önce arar, çıkmazsa oluşturur.
  */
 export async function createCustomerAction(input: NewCustomerInput): Promise<ActionResult<CustomerPickOption>> {
   try {
@@ -66,7 +53,7 @@ export async function createCustomerAction(input: NewCustomerInput): Promise<Act
       phone,
       email: input.email?.trim() || null,
       type: input.type,
-      // Doğrulanmamış kayıt: sayfanın başlık sayacı bunları ayrı gösteriyor (09.9).
+      // Doğrulanmamış kayıt: sayfanın başlık sayacı bunları ayrı gösterir.
       isDraft: true,
     });
     return {
@@ -96,10 +83,8 @@ export async function readAddressesAction(customerId: string): Promise<ActionRes
 }
 
 /**
- * Adres ekleme — sipariş deposu ve teslimat günü BUNDAN çözülür, yani adressiz sipariş açılamaz.
- *
- * Alıcı ve telefon zorunlu (22.08): kurye kapıda kimi soracağını ve kimi arayacağını bilmek
- * zorunda; hediye ya da iş adresinde o kişi hesap sahibinden başkasıdır.
+ * Adres ekleme: sipariş deposu ve teslimat günü adresten çözülür, yani adressiz sipariş açılamaz. Alıcı ve telefon zorunlu, çünkü
+ * kurye kapıda kimi soracağını ve kimi arayacağını bilmek zorunda.
  */
 export async function createAddressAction(
   customerId: string,
@@ -177,11 +162,8 @@ interface ManualOrderInput {
   onAccount: boolean;
   isGiftOrder: boolean;
   /**
-   * SOHBET KÖPRÜSÜ (15.4) — sipariş bir konuşmadan açıldıysa onun kimliği.
-   *
-   * Kaynağı (`order_source`) buradan TÜRETİYORUZ, istemciden almıyoruz: ekran "bu sipariş
-   * WhatsApp'tan geldi" diye bir iddia gönderemez, sunucu konuşmaya bakıp kendi kararını verir.
-   * Aksi hâlde adres çubuğunu düzenleyen biri raporlardaki kanal dağılımını yazabilirdi.
+   * Sipariş bir konuşmadan açıldıysa onun kimliği; kaynak (`order_source`) istemciden alınmaz, sunucu konuşmaya bakıp türetir,
+   * çünkü aksi hâlde istemci raporlardaki kanal dağılımını yazabilirdi.
    */
   conversationId?: string | null;
   /** Kalemler; `unitPriceCents` YALNIZ pazarlık edildiyse gönderilir (aşağıdaki künye). */
@@ -189,32 +171,9 @@ interface ManualOrderInput {
 }
 
 /**
- * **Siparişi aç** — telefonla gelen siparişin masada yazılması (09.8).
- *
- * Zincir müşteri yolunun TA KENDİSİ (`placeOrder`): KDV işlemi, posta kodu → bölge → depo, tek
- * depo değişmezi, stok karşılanabilirliği, rezervasyon ve indirim dengesi aynı kurallardan geçer.
- * Farkı yalnız `staff` künyesi taşıyor (gerekçeler `CheckoutDraftInput.staff`ta).
- *
- * **PAZARLIKSIZ KALEM FİYAT GÖNDERMEZ ve bu bir güvenlik kararıdır.** İstemci her kalem için bir
- * sayı gönderseydi siparişin parası tarayıcıdan belirlenirdi — ekran liste fiyatını gösterip
- * konsoldan 1 kuruş göndermek mümkün olurdu. Operatör fiyata DOKUNMADIYSA sunucu fiyatı kendisi
- * çözer; dokunduysa gönderilen sayı bir KARARDIR ve izi (`list_unit_price` + `price_set_by`)
- * yazılır. Yetki kapısı `requireAdmin`.
- *
- * **Ödeme sağlayıcısı YOK** (`createPaymentSession: null`): masada kart çekilmiyor. Kartla ödeme
- * seçilirse sipariş yine açılır ve tahsilat kapıda/kuryede gerçekleşir — `payment_method` o anlamı
- * zaten taşıyor. Online ödeme müşterinin kendi checkout'unun işi.
- */
-/**
- * Sohbetten açılan siparişin KAYNAĞI — konuşmanın kanalından türer (15.4).
- *
- * Konuşma kimliği yoksa (masadan girilen normal sipariş) `undefined` döner ve motor kendi
- * varsayılanını (`manual`) kullanır — köprüsüz çağıranın davranışı DEĞİŞMEZ.
- *
- * Bugün yalnız WhatsApp eşleniyor: `order_source` enum'unda messenger/instagram YOK ve bu bilinçli
- * (15.15 künyesi) — kullanılmayan enum değeri, yazılabilirmiş gibi görünüp yazılamayan bir yalandır.
- * Messenger köprüsü açıldığı gün enum da o yolla birlikte büyür. O güne kadar Messenger sohbetinden
- * açılan sipariş `manual` kalır: eksik ama DOĞRU bir kayıt, uydurulmuş bir kanaldan iyidir.
+ * Sohbetten açılan siparişin kaynağı konuşmanın kanalından türer; konuşma yoksa `undefined` döner ve motor kendi varsayılanını
+ * (`manual`) kullanır. Bugün yalnız WhatsApp eşlenir, çünkü `order_source`ta Messenger ve Instagram yok ve eksik ama doğru kayıt
+ * uydurulmuş bir kanaldan iyidir.
  */
 async function orderSourceOfConversation(conversationId: string | null | undefined): Promise<OrderSource | undefined> {
   if (!conversationId) return undefined;
@@ -222,6 +181,11 @@ async function orderSourceOfConversation(conversationId: string | null | undefin
   return conversation?.source === 'whatsapp' ? 'whatsapp' : undefined;
 }
 
+/**
+ * Telefonla gelen siparişin masada yazılması; zincir müşteri yolunun kendisidir (`placeOrder`), farkı yalnız `staff` künyesi.
+ * Pazarlıksız kalem fiyat göndermez, çünkü istemcinin gönderdiği sayı siparişin parasını belirlerdi; masada ödeme sağlayıcısı
+ * yoktur, kart seçilirse tahsilat kapıda yapılır.
+ */
 export async function createManualOrderAction(input: ManualOrderInput): Promise<ActionResult<{ orderId: string }>> {
   try {
     const staff = await requireAdmin();
@@ -250,10 +214,7 @@ export async function createManualOrderAction(input: ManualOrderInput): Promise<
         actorId: staff.profileId,
         priceOverrides: overrides.size > 0 ? overrides : undefined,
         isGiftOrder: input.isGiftOrder,
-        // Kaynak SUNUCUDA çözülür (künye `conversationId`de): konuşma WhatsApp'sa sipariş de
-        // WhatsApp kaynaklıdır. Messenger/Instagram bugün `manual` kalıyor — `order_source`
-        // enum'unda o değerler YOK ve bilerek (15.15): kullanılmayan enum değeri yalan söyler,
-        // o yol açıldığı gün (Messenger köprüsü) enum da büyür.
+        // Kaynak sunucuda, konuşmanın kanalından çözülür (`orderSourceOfConversation`).
         orderSource: await orderSourceOfConversation(input.conversationId),
       },
       createPaymentSession: null,
@@ -268,11 +229,8 @@ export async function createManualOrderAction(input: ManualOrderInput): Promise<
 }
 
 /**
- * Motorun yapısal reddini operatörün diline çevirir.
- *
- * Çeviri BURADA yapılıyor, motorda değil: aynı ret müşteri yüzeyinde başka bir cümleyle
- * anlatılıyor ("bir ürün tükendi" ≠ "bu depoda 3 tane var"). Motor ADLI ve YAPISAL sonuç döndürür,
- * dili çağıran seçer (`PlaceOrderRejection` künyesi).
+ * Motorun yapısal reddini operatörün diline çevirir; çeviri motorda değil burada, çünkü aynı ret müşteri yüzeyinde başka bir
+ * cümleyle anlatılır ve dili çağıran seçer.
  */
 function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>>, { status: 'placed' }>): string {
   switch (outcome.status) {
@@ -303,11 +261,8 @@ function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>
     case 'insufficient_stock':
       return `Stok araya girdi — kalan adet: ${outcome.available}`;
     /**
-     * Masada ödeme sağlayıcısı YOK (`createPaymentSession: null`) — online ödeme buraya hiç
-     * gelmemeli ve seçici onu zaten çıkarıyor (`readDeliveryContext` künyesi). Yine de karşılıksız
-     * bırakılmıyor: ölçüldü 26.08, liste sıralı olduğu için `online` İLK seçenekti, akış burada
-     * kırıldı ve ekranda **"Sipariş açılamadı."** yazıyordu. Sebebi yutan bir mesaj, arızayı
-     * gözden saklar (CLAUDE §0).
+     * Masada ödeme sağlayıcısı yok ve seçici online ödemeyi zaten çıkarıyor; yine de karşılıksız bırakılmaz, çünkü sebebi yutan
+     * "Sipariş açılamadı." mesajı arızayı gözden saklar.
      */
     case 'payment_unavailable':
       return 'Bu ekranda online ödeme alınamaz — masada kart çekilmiyor. Nakit, kart (kapıda), çek ya da havale seçin.';
@@ -325,9 +280,8 @@ function rejectionMessage(outcome: Exclude<Awaited<ReturnType<typeof placeOrder>
     case 'min_basket':
       return `Asgari sepet tutmuyor (${outcome.missingCents} kuruş eksik).`;
     /**
-     * Kart yolunun hâli: taslak açıldı, ödeme istemcide tamamlanacak. Buraya GELEMEZ çünkü kapı
-     * sağlayıcıyı hiç açmıyor — ama tip birleşiminde var ve `never`e daraltılamaz. Yutmak yerine
-     * adlandırılıyor: gelirse sipariş ORTADA kalmış demektir ve operatör bunu bilmeli.
+     * Kart yolunun hâli buraya gelemez, çünkü kapı sağlayıcıyı hiç açmıyor; ama tip birleşiminde var ve adlandırılıyor, çünkü
+     * gelirse sipariş ortada kalmış demektir ve operatör bunu bilmeli.
      */
     case 'payment_required':
       return 'Sipariş taslak olarak açıldı ama ödeme adımı bu ekranda tamamlanamaz — siparişler listesinden takip edin.';
