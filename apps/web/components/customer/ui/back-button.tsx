@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from '@/i18n/navigation';
+import { backStaysInSite } from './back-target';
 
 /** Rota tipi `router.push`tan türer; elle liste tutulmaz. */
 type PushHref = Parameters<ReturnType<typeof useRouter>['push']>[0];
@@ -8,20 +9,28 @@ type PushHref = Parameters<ReturnType<typeof useRouter>['push']>[0];
 interface BackButtonProps {
   /** Ekran okuyucu adı — işaret ikon olduğu için zorunlu. */
   label: string;
-  /** Tarayıcı geçmişi boşken gidilecek yer. */
+  /** Geri siteden çıkaracaksa (geçmiş yok ya da öncesi başka site) gidilecek yer. */
   fallback: PushHref;
   /** `bar` başlık çubuğunun zeminsiz dairesi; `photo` fotoğraf üstündeki kum daire. */
   variant?: 'bar' | 'photo';
 }
 
 /**
- * Tarayıcı geçmişine döner; geçmiş yoksa (derin bağlantı) `fallback`e gider ki geri düğmesi çıkmaz sokak olmasın.
- * Dokunma alanı görünmez `after` katmanıyla 44'e tamamlanır; konum çağıranın dolgusundan gelir.
+ * Tarayıcı geçmişine döner; bir önceki kayıt başka bir sitedeyse (Google girişi dönüşü, arama motoru) ya da hiç yoksa
+ * `fallback`e gider ki geri düğmesi müşteriyi siteden çıkarmasın. Dokunma alanı görünmez `after` katmanıyla 44'e
+ * tamamlanır; konum çağıranın dolgusundan gelir.
  */
 export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps) {
   const router = useRouter();
   const goBack = () => {
-    if (window.history.length > 1) router.back();
+    const stays = backStaysInSite({
+      length: window.history.length,
+      navigationIndex: (window as { navigation?: { currentEntry?: { index: number } | null } }).navigation?.currentEntry?.index ?? null,
+      firstEntryUrl: performance.getEntriesByType('navigation')[0]?.name ?? null,
+      currentUrl: window.location.href,
+      referrer: document.referrer,
+    });
+    if (stays) router.back();
     else router.push(fallback);
   };
   return (
