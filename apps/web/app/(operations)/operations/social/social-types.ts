@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import {
-  LinkProofKindEnum,
   TicketTypeEnum,
   type ConversationSource,
   type CustomerInboxThread,
@@ -226,51 +225,18 @@ export const RecordOutboundSchema = z.object({
 });
 
 /**
- * Kimliksiz sohbeti müşteriye bağlama (15.16) — iki kimlik, ikisi de uuid.
- *
- * Serbest metin (ad/telefon) ALMIYOR ve bu bilinçli: operatör seçiciden bir KAYIT seçer, kimlik
- * yazmaz. Metin kabul etseydik "aynı adlı iki müşteri" sorusunu bu kapının çözmesi gerekirdi ve
- * çözemezdi — sohbet yanlış hesaba bağlanırdı.
- */
-export const LinkConversationCustomerSchema = z.object({
-  conversationId: z.string().uuid(),
-  customerId: z.string().uuid(),
-  /**
-   * **Kanıt ZORUNLU** (15.19) — türü kapalı listeden, değeri müşterinin söylediği metin. Sunucu
-   * değeri seçilen müşteriye karşı doğruluyor; opsiyonel olsaydı kapıyı çağıranın nezaketine
-   * bırakmış olurduk ve ikinci bir yüzey onu boş geçerdi.
-   */
-  proof: z.object({
-    kind: LinkProofKindEnum,
-    value: z.string().trim().min(3, 'Kanıt değeri yazılmalı'),
-  }),
-});
-
-/**
  * Sohbette verilen/reddedilen ticari mesaj izninin KAYDI (15.12 · DOMAIN §11).
  *
  * `granted` boolean ve üçüncü bir "sorulmadı" değeri YOK: sorulmamışlık bir beyan değil, kaydın
  * hiç olmamasıdır (`opt_in_at` boş kalır). Enum'a "sorulmadı" eklemek, sorulmamış bir izni
  * kaydedilmiş gibi göstermek olurdu.
+ *
+ * (Elle bağlama ve e-posta çapası şemaları 15.40'ta kalktı — bağı ve çapayı müşteri hesap bağlantısıyla
+ * kendisi kurar, kullanıcı kararı 15.09.)
  */
 export const ConversationOptInSchema = z.object({
   conversationId: z.string().uuid(),
   granted: z.boolean(),
-});
-
-/**
- * **E-posta çapası başlatma** (04.10 · DOMAIN §10) — kod bu adrese gider, cevap WhatsApp'tan döner.
- *
- * Adres burada SATIRA yazılıyor, sonra gelen mesajdan okunmuyor: doğrulama numaradan kimliğe,
- * kimlikten BEKLEYEN ADRESE gidiyor. Adres cevabın içinden okunsaydı, kodu ele geçiren biri onu
- * istediği adresle eşleştirebilirdi (`koddan kimliğe gidilmez` kuralının ikinci yüzü).
- *
- * Biçim doğrulaması BURADA DEĞİL, pakette (`startEmailAnchor`): aynı kural mobil/ajan kapısı
- * doğduğunda ikinci kez yazılmasın. Buradaki `min(3)` yalnız boş gönderimi eliyor.
- */
-export const AnchorEmailSchema = z.object({
-  conversationId: z.string().uuid(),
-  email: z.string().min(3),
 });
 
 /**
@@ -312,14 +278,13 @@ export interface SocialViewProps {
   /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
   onSuggestDraft: () => void;
   onNewTicket: () => void;
-  /** Kimliksiz sohbeti müşteriye bağla (15.16) — Messenger/IG'de kimliğin TEK yolu. */
-  onLinkCustomer: () => void;
   /** Sohbette verilen izni KAYDET (15.12) — operatör karar vermez, müşterinin dediğini yazar. */
   onOptIn: (granted: boolean) => void;
-  /** Kimlik çapası penceresini aç (04.10) — e-posta kodu ya da 6 haneli kod orada seçilir. */
-  onOpenAnchor: () => void;
   /** Sepet bağlantısını sohbete gönder (15.21) — ajanın aracının insan eli; müşteri sitede tamamlar. */
   onSendCartLink: () => void;
-  /** Hesap bağlantısını sohbete gönder (15.16) — müşteri e-postasıyla giriş yapar, sohbet kendi hesabına bağlanır. */
+  /**
+   * Hesap bağlantısını sohbete gönder (15.16 · 15.40) — müşteri e-postasıyla giriş yapar, sohbet kendi hesabına bağlanır
+   * ve çapası kurulur. Panelde bağlamanın ve çapanın TEK yolu: operatör bağlamaz, kod üretmez (kullanıcı kararı 15.09).
+   */
   onSendAccountLink: () => void;
 }

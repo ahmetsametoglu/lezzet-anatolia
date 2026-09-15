@@ -44,9 +44,7 @@ export function SocialDesktop({
   onConsumeDraft,
   onSuggestDraft,
   onNewTicket,
-  onLinkCustomer,
   onOptIn,
-  onOpenAnchor,
   onSendCartLink,
   onSendAccountLink,
 }: SocialViewProps) {
@@ -137,9 +135,7 @@ export function SocialDesktop({
               canMessage={humanCanReply(data.detail.window)}
               busy={busy}
               onNewTicket={onNewTicket}
-              onLinkCustomer={onLinkCustomer}
               onOptIn={onOptIn}
-              onOpenAnchor={onOpenAnchor}
               onSendCartLink={onSendCartLink}
               onSendAccountLink={onSendAccountLink}
             />

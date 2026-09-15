@@ -3012,6 +3012,11 @@ yok; ek çizim istenmedi (`15.32`).
   en çok 600 px (çizim 352 × 456 — kendi tuvalinin ölçeğinde; burada cevap kutusu pencere ve dil notunu taşıyor);
   liste başlığında "Tümü →" duruyor (tam kuyruğa geçiş); cevap kutusunun notları sayfanınki (çizimin "Sayfa değişmez…"
   notu yerine pencere ve dil bilgisi); "Kalıp mesaj seç…" yok (kalıp mesaj ertelendi, kullanıcı 15.09).
+- **Sağ panelde bağı ve çapayı müşteri kurar (15.40, kullanıcı kararı 15.09):** çizimin "Müşteriye bağla →" ve
+  "Kimlik çapası · Kur →" öğeleri yerine hesap bağlantısı — kimliksiz sohbette "Hesap bağlantısı gönder", çapa
+  satırında "Bağlantı gönder →". Elle bağlama penceresi ve çapa penceresi (e-postaya kod · 6 haneli kod) kalktı;
+  15.31'deki "Kur →" + pencere kararının yerini aldı. Taslak kaydın uyarısı müşterinin girişiyle birleşmeyi söylüyor;
+  Müşteriler ekranına giden bağ adın üstünde duruyor.
 
 ## Native adres çekmecesi tasarımda — tek adres kapısı ve bilinçli farklar (15.09, kullanıcı kararları 13.09 · 14.09)
 

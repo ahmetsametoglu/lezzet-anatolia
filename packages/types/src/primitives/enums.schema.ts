@@ -355,44 +355,16 @@ export const ConversationHandlerEnum = z.enum(TicketHandlerEnum.options);
 export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
 
 /**
- * **Sohbeti müşteriye bağlarken sunulan KANIT** (15.19).
+ * **Sohbet–müşteri bağının KANITI** (`conversation.link_proof` · 15.19 · 15.22) — satır "bağ nasıl kuruldu" diye
+ * okur. Bugün yazan tek yol sistemdir: `cart_link` — müşterinin açtığı hesap/sepet bağlantısının jetonu; sistemin
+ * doğruladığı, operatörün ne bildiği ne yazdığı bir kanıt.
  *
- * Messenger/Instagram'da kimliğin tek yolu operatörün elle kurduğu bağdır (PSID/IGSID telefon
- * taşımaz) ve o bağ yanlış kurulursa yalnız ekran değil, AJANIN ARAÇLARI da yanlış müşteriye
- * açılır — hata tek alanı değil, o müşterinin verisinin tamamını açar. Bu yüzden bağ bir kanıta
- * dayanır ve kanıt SUNUCUDA doğrulanır.
- *
- * Üçü de **kişinin bilmesi gereken** şeylerdir, operatörün gözüyle doğrulanan şeyler değil:
- *   · `order_ref` — sipariş referansı; seçilen müşterinin siparişlerinden biri olmak zorunda.
- *   · `email` / `phone` — kayıtlı iletişim anahtarı; normalize edilip kayıtla karşılaştırılır.
- *
- * **"Kontrol ettim" kutusu YOK** ve olmayacak: onay kutusu bir KAYIT olurdu, bir KAPI değil —
- * acelede tıklanır ve hiçbir şeyi durdurmaz.
- *
- * **Dördüncü değer bekleniyor:** kayıtlı kanala kod gönderip sohbetten geri istemek en güçlü
- * doğrulamadır ama sistemin gönderim kanalı yok (15.11); o yol 04.10'un çapası ve geldiğinde
- * buraya eklenir.
+ * İlk üç değer operatörün elle bağlama penceresinin kanıtlarıydı (sipariş numarası · kayıtlı e-posta · kayıtlı
+ * telefon); pencere 15.40'ta kalktı (kullanıcı kararı 15.09: bağı müşteri kurar). Değerler DB kısıtında duruyor ve
+ * satır şemayla birebir kalsın diye burada da.
  */
-export const LinkProofKindEnum = z.enum(['order_ref', 'email', 'phone']);
-export type LinkProofKind = z.infer<typeof LinkProofKindEnum>;
-
-/**
- * **Dördüncü değer geldi (15.22 · 07.09): `cart_link`** — ama OPERATÖRÜN listesine DEĞİL, satırın.
- * `LinkProofKindEnum` operatörün pencereden sunabildiği kanıtlardır; sepet bağlantısı ise sistemin
- * doğruladığı bir jetondur (`cart_link` tablosu) — operatör onu ne bilir ne yazar. İki küme ayrı
- * tutuluyor ki pencere jetonu bir seçenek olarak ÇİZMESİN: satır "bağ nasıl kuruldu" diye okur,
- * pencere "operatör ne sunabilir" diye seçer.
- */
-export const ConversationLinkProofEnum = z.enum([...LinkProofKindEnum.options, 'cart_link']);
+export const ConversationLinkProofEnum = z.enum(['order_ref', 'email', 'phone', 'cart_link']);
 export type ConversationLinkProof = z.infer<typeof ConversationLinkProofEnum>;
-
-/** Kanıt türlerinin operatöre görünen adları — pencere üçünü seçtirir, satır rozeti dördüncüyü de okur. */
-export const LINK_PROOF_LABELS: Record<ConversationLinkProof, string> = {
-  order_ref: 'Sipariş numarası',
-  email: 'Kayıtlı e-posta',
-  phone: 'Kayıtlı telefon',
-  cart_link: 'Sepet bağlantısı',
-};
 
 /** Mod anahtarının etiketleri — Talepler ve WhatsApp ekranı aynı üçlüyü okur (16.08). */
 export const TICKET_HANDLER_LABELS: Record<TicketHandler, string> = {

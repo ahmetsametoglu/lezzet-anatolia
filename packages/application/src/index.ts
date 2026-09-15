@@ -238,8 +238,6 @@ export { fetchMetaProfileName } from './messaging/meta-profile';
   Meta webhook'u (backend).
 */
 export { findOrCreateCustomer } from './customer/find-or-create';
-// Kimlik bağlama KAPISI (15.19) — kanıt sunucuda doğrulanır; ikinci yüzey kendi kapısını yazmasın.
-export { linkConversationCustomer } from './messaging/link';
 // Sohbet izninin çift yazımı (15.12) — kural tek yerde, iki yüzey aynı kapıdan.
 export { recordConversationOptIn } from './messaging/opt-in';
 // Cloud API sürücüsü (15.11) — portun gerçek uygulaması; ekrana BAĞLI DEĞİL (künyesi dosyada).
@@ -265,7 +263,6 @@ export { defaultConversationHandler, setDefaultConversationHandler } from './mes
 export { readCustomerChannels } from './messaging/customer-channels';
 export type { MessageTranslationPatch } from './messaging/translate';
 export type { RecordMessageInput } from './messaging/record';
-export type { LinkProof, LinkOutcome } from './messaging/link';
 export type { ConversationOptInOutcome } from './messaging/opt-in';
 
 // ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────

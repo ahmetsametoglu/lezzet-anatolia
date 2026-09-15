@@ -634,24 +634,15 @@ export function ReplyBox({ conversationId, source, window: win, language, busy, 
   yok), boş liste cümleleri, "Müşterilerde ara" (bağla penceresi zaten arıyor).
 
   İŞLEVİ OLAN ama çizimde yeri olmayanlar çizimin diline indi: izin kaydı rozetin menüsünde, kimlik
-  çapası tek satır + pencere (`AnchorDialog`), sepet/hesap bağlantısı YALNIZ pencere açıkken (kapalıyken
-  gönderim kapısı reddeder — düğme işlevsizdi), sipariş köprüsü başlıkta.
+  çapası tek satır, sepet/hesap bağlantısı YALNIZ pencere açıkken (kapalıyken gönderim kapısı reddeder —
+  düğme işlevsizdi), sipariş köprüsü başlıkta.
+
+  BAĞI VE ÇAPAYI MÜŞTERİ KURAR (15.40 · kullanıcı kararı 15.09): elle bağlama penceresi (kayıt seç + kanıt
+  yaz) ve çapa penceresi (e-postaya kod · sohbete 6 haneli kod) kalktı; ikisinin yerinde hesap bağlantısı.
+  "Kod doğrula" kutusu yok ve olmayacak (DOMAIN §10) — doğrulama yalnız müşterinin kendi numarasından ya da
+  kendi posta kutusundan geçer.
 */
 
-/**
- * **Kimlik çapası** (04.10 · DOMAIN §10) — "bu numaranın GEÇMİŞİ kimin" sorusunun kapısı.
- *
- * Numaranın kanıtlanması "bu hat BUGÜN bu kişide" der. Devredilmiş hattın yeni sahibi hattı da
- * gelen kodu da meşru olarak alır — çözen tek şey, ŞÜPHE DOĞMADAN ÖNCE kurulmuş bir sırdır. Bu
- * yüzden blok "dönüşte" değil, müşteri hâlâ tanıdığımız hâldeyken kullanılır.
- *
- * **"Kod doğrula" kutusu YOK ve olmayacak** (DOMAIN §10, açık yasak): doğrulama yalnız müşterinin
- * KENDİ numarasından gelen mesajla olur. Telefonda arayan müşteriyi bu ekrandan doğrulamanın yolu
- * yoktur; operatör ondan WhatsApp'tan yazmasını ister ya da birleştirmeye gider (04.7).
- *
- * Çapası olana ikinci çapa sunulmaz: iki anahtar bir arada bulunmaz ve ikincisi yalnız silinecek
- * bir sır üretirdi.
- */
 /**
  * **Cevaplanmayan kimlik sorusu** (04.10) — sistemin kendi başına bitiremediği tek hâl.
  *
@@ -685,37 +676,42 @@ function PendingChallenge({ challenge }: { challenge: AnchorSnapshot['challenge'
 interface AnchorRowProps {
   anchor: AnchorSnapshot;
   busy: boolean;
-  onOpen: () => void;
+  /** Bağlantı sohbete mesajdır — yalnız pencere açıkken gider; kapalıyken düğme çizilmez. */
+  canMessage: boolean;
+  /** Hesap bağlantısını gönder (15.16) — çapayı müşteri kurar. */
+  onSendLink: () => void;
 }
 
 /**
- * Kimlik çapasının panodaki TEK SATIRI (14.09): durum rozeti + kurma bağı. E-posta kutusu, 6 haneli kod
- * ve gerekçesi pencerede (`AnchorDialog`) — kararın verildiği yer orası; panonun her açılışında
- * okunacak bir kılavuz değil. Çapası olana ikinci çapa sunulmaz, bağ o hâlde hiç çizilmez.
+ * Kimlik çapasının panodaki TEK SATIRI — durum rozeti + (kurulmamışsa) "Bağlantı gönder →" (15.40 · kullanıcı
+ * kararı 15.09). Çapayı MÜŞTERİ kurar: hesap bağlantısını açar, e-postasıyla girer (kod posta kutusuna gelir,
+ * kendisi doğrular) — giriş hesabı olan müşteri çapalıdır (`anchorStateOf`: `authUserId`). Operatör kod üretmez,
+ * adres yazmaz: panelin eski penceresi (e-postaya kod · sohbete 6 haneli kod) kalktı — kullanıcı: "OTP kodu
+ * üretmeye gerek yok, bir buton link göndersin, müşteri kendi kendine bağlasın". Hesabını hiç bağlamayan
+ * müşterinin güvenlik kodu otomatik akışta duruyor (`offerAnchorIfDue`); rozet onu da okur ("Kod verildi").
+ * Çapası olana bağlantı sunulmaz.
  */
-function AnchorRow({ anchor, busy, onOpen }: AnchorRowProps) {
+function AnchorRow({ anchor, busy, canMessage, onSendLink }: AnchorRowProps) {
   const kurulu = anchor.state !== 'none';
-  const rozet: { label: string; tone: 'olive' | 'amber' | 'slate' } = kurulu
+  const rozet: { label: string; tone: 'olive' | 'slate' } = kurulu
     ? { label: anchor.state === 'email' ? 'E-posta bağlı' : 'Kod verildi', tone: 'olive' }
-    : anchor.hasPendingEmail
-      ? { label: 'Cevap bekleniyor', tone: 'amber' }
-      : { label: 'Kurulmadı', tone: 'slate' };
+    : { label: 'Kurulmadı', tone: 'slate' };
 
   return (
     <div className="flex flex-col items-start gap-1.5">
       <SectionLabel>Kimlik çapası</SectionLabel>
       <div className="flex items-center gap-2">
         <Badge tone={rozet.tone}>{rozet.label}</Badge>
-        {kurulu ? null : (
+        {!kurulu && canMessage ? (
           <button
             type="button"
             disabled={busy}
-            onClick={onOpen}
+            onClick={onSendLink}
             className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive hover:underline disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {anchor.hasPendingEmail ? 'Yeniden gönder →' : 'Kur →'}
+            Bağlantı gönder →
           </button>
-        )}
+        ) : null}
       </div>
       {kurulu ? <PendingChallenge challenge={anchor.challenge} /> : null}
     </div>
@@ -764,15 +760,14 @@ interface SocialContextPaneProps {
   canMessage: boolean;
   busy: boolean;
   onNewTicket: () => void;
-  /** Kimliksiz sohbeti müşteriye bağlama penceresini açar (15.16). */
-  onLinkCustomer: () => void;
   /** Sohbette verilen izni KAYDET (15.12) — operatör karar vermez, müşterinin dediğini yazar. */
   onOptIn: (granted: boolean) => void;
-  /** Kimlik çapası penceresini açar (04.10). */
-  onOpenAnchor: () => void;
   /** Sepet bağlantısı (15.21) — sohbeti personel yürütürken müşteriyi sepete taşıyan tek yol. */
   onSendCartLink: () => void;
-  /** Hesap bağlantısı (15.16) — müşteri e-postasıyla giriş yapar, sohbet kendi hesabına bağlanır. */
+  /**
+   * Hesap bağlantısı (15.16 · 15.40) — bağı ve çapayı MÜŞTERİ kurar: bağlantıyı açıp e-postasıyla girer, sohbet
+   * hesabına bağlanır. Panelin bağlama ve çapa eylemlerinin tek kapısı — elle bağlama ve kod penceresi kalktı.
+   */
   onSendAccountLink: () => void;
 }
 
@@ -787,9 +782,7 @@ export function SocialContextPane({
   canMessage,
   busy,
   onNewTicket,
-  onLinkCustomer,
   onOptIn,
-  onOpenAnchor,
   onSendCartLink,
   onSendAccountLink,
 }: SocialContextPaneProps) {
@@ -810,22 +803,17 @@ export function SocialContextPane({
           <Badge tone="amber">Kimlik yok</Badge>
         </div>
         {/* Kimliksiz sohbet bir ARIZA DEĞİL — Messenger/IG'de varsayılan hâl (PSID/IGSID telefon taşımaz);
-            WhatsApp'ta telefon/e-posta çakışmasında bilerek bağlanmadan açılır. Kimliğin kurulduğu TEK yer
-            bağla penceresi (15.16) ve arama da onun içinde — ayrı "Müşterilerde ara" bağı bu yüzden kalktı. */}
+            WhatsApp'ta telefon/e-posta çakışmasında bilerek bağlanmadan açılır. BAĞI MÜŞTERİ KURAR (15.40 ·
+            kullanıcı kararı 15.09: "biz bağlamayalım, müşteri kendi kendine bağlasın"): hesap bağlantısını açıp
+            e-postasıyla girer, sohbet hesabına bağlanır. Operatörün elle bağlama penceresi (kayıt seç + kanıt yaz)
+            kalktı. */}
         <ContextNotice>
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
-            {whatsapp ? 'Numara bir müşteriye bağlanmadı.' : 'Sohbet bir müşteriye bağlı değil.'}
+            {whatsapp ? 'Numara bir müşteriye bağlanmadı.' : 'Sohbet bir müşteriye bağlı değil.'} Bağı müşteri kurar: hesap
+            bağlantısını açıp e-postasıyla girer.
           </span>
-          <button
-            type="button"
-            onClick={onLinkCustomer}
-            className="cursor-pointer self-start font-ops-display text-ops-xs font-semibold text-ops-amber hover:underline"
-          >
-            Müşteriye bağla →
-          </button>
         </ContextNotice>
-        {/* MÜŞTERİNİN KENDİ BAĞLADIĞI YOL (15.16) — bağlantı sohbete gider, müşteri e-postasıyla giriş
-            yapınca sohbet onun hesabına bağlanır. Sohbete mesajdır: yalnız pencere açıkken bir iş yapar. */}
+        {/* Bağlantı sohbete mesajdır: yalnız pencere açıkken bir iş yapar. */}
         {canMessage ? (
           <Button variant="secondary" size="sm" disabled={busy} onClick={onSendAccountLink}>
             Hesap bağlantısı gönder
@@ -841,16 +829,17 @@ export function SocialContextPane({
           müşteri varsa ad araması ikisini birden getirirdi). */}
       <ContextIdentity context={context} href={searchHref} />
 
-      {/* Taslak kayıt — çizimin uyarısı. Birleştirme MÜŞTERİLER ekranının işi (09.10): bağ oraya aramayla
-          gider, burada ikinci bir birleştirme kapısı çizilmez. */}
+      {/* Taslak kayıt — çizimin uyarısı. WhatsApp'ta kayıt, müşteri hesap bağlantısıyla girince hesabına BİRLEŞİR
+          (`bindPhoneToAccount`); eylemi aşağıdaki çapa satırında ("Bağlantı gönder →"). Çizimin "Müşteriye bağla →"su
+          bu yüzden yok (15.40): operatör bağlamaz. Kayıtları elle birleştirmek Müşteriler ekranının işi (09.10) —
+          ada basınca oraya gidilir. */}
       {context.isDraft ? (
         <ContextNotice>
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
-            {whatsapp ? 'Numara kayıtlı müşteriyle eşleşmedi — taslak kayıt.' : 'Sohbetten açılmış taslak kayıt.'}
+            {whatsapp
+              ? 'Numara kayıtlı müşteriyle eşleşmedi — taslak kayıt. Müşteri hesap bağlantısıyla girince kayıt hesabına birleşir.'
+              : 'Sohbetten açılmış taslak kayıt.'}
           </span>
-          <Link href={searchHref} className="cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-amber hover:underline">
-            Müşteriye bağla →
-          </Link>
         </ContextNotice>
       ) : null}
 
@@ -866,7 +855,7 @@ export function SocialContextPane({
         recordHint={whatsapp ? 'Müşteri kartına da işlenir.' : `Yalnız bu ${SOURCE_LABELS[source]} sohbetine yazılır.`}
       />
 
-      {anchor ? <AnchorRow anchor={anchor} busy={busy} onOpen={onOpenAnchor} /> : null}
+      {anchor ? <AnchorRow anchor={anchor} busy={busy} canMessage={canMessage} onSendLink={onSendAccountLink} /> : null}
 
       <LinkedTickets tickets={tickets} />
 

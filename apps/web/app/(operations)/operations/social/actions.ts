@@ -3,13 +3,10 @@
 import { revalidatePath } from 'next/cache';
 import {
   generateConversationDraft,
-  issueAndSendSecurityCode,
-  linkConversationCustomer,
   metaSenderFromEnv,
   recordConversationOptIn,
   sendOutboundMessage,
   setDefaultConversationHandler,
-  startEmailAnchor,
 } from '@lezzet/application';
 // Alt yoldan (`settings-keys` emsali): barrel o gün başka şeritlerin elindeydi (07.09).
 import { startCartLink } from '@lezzet/application/cart/link';
@@ -18,17 +15,9 @@ import { ConversationService, CustomerInboxService, serviceDb } from '@lezzet/da
 import { ConversationHandlerEnum, DEFAULT_PAGE_SIZE, type CartLinkPurpose, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
-import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
 import { openTicket } from '@/lib/ticket/write';
 import { toInboxRows } from './social-read';
-import {
-  AnchorEmailSchema,
-  ConversationOptInSchema,
-  ConversationTicketSchema,
-  LinkConversationCustomerSchema,
-  RecordOutboundSchema,
-  type InboxRowView,
-} from './social-types';
+import { ConversationOptInSchema, ConversationTicketSchema, RecordOutboundSchema, type InboxRowView } from './social-types';
 import { channelSource, parseSocialUrl, SOCIAL_PATH } from './social-url';
 
 // Sosyal gelen kutusunun YAZMA KAPILARI (15.5 · üç kanal 15.15 + 15.1'in yüzey yarısı) — guard ilk,
@@ -236,71 +225,6 @@ export async function consumeConversationDraftAction(conversationId: string): Pr
 }
 
 /**
- * Sohbet için müşteri arama (15.16) — paylaşılan seçicinin kaynağı (`lib/customer-options`), talep
- * ve fiyat ekranlarıyla AYNI sorgu. Guard ve zarf burada, çünkü action sayfa klasöründe yaşar.
- */
-export async function searchSocialCustomersAction(term: string): Promise<ActionResult<CustomerOption[]>> {
-  try {
-    await requireAdmin();
-    const query = term.trim();
-    if (!query) return { data: [], error: null };
-    return { data: await searchCustomerOptions(query), error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
-
-/**
- * Reddin operatöre görünen yüzü — her sebep FARKLI bir eylem öneriyor (15.19).
- *
- * Tek bir "bağlanamadı" cümlesi olsaydı operatör hangi kapıya gideceğini bilemezdi: kanıt
- * tutmadıysa müşteriden başka bir kanıt istenir, sohbet bu arada bağlandıysa ekran tazelenir.
- */
-const LINK_REFUSAL: Record<'conversation_not_found' | 'customer_not_found' | 'proof_mismatch' | 'already_linked', string> = {
-  conversation_not_found: 'Sohbet bulunamadı — ekranı tazeleyin.',
-  customer_not_found: 'Seçilen müşteri kaydı bulunamadı — listeden yeniden seçin.',
-  proof_mismatch:
-    'Kanıt bu müşteri kaydıyla eşleşmedi — bağ kurulmadı. Müşteriden sipariş numarasını, kayıtlı e-postasını ya da telefonunu isteyin.',
-  already_linked:
-    'Sohbet bu sırada bir müşteriye bağlanmış — ekranı tazeleyin. Bağı değiştirmek Müşteriler ekranının birleştirme işidir.',
-};
-
-/**
- * **Kimliksiz sohbeti müşteriye bağla** (15.16) — Messenger/Instagram'da kimliğin TEK yolu.
- *
- * O kanallarda konuşma daima kimliksiz doğar (PSID/IGSID telefon taşımaz), yani "bu sohbet şu
- * müşteri" cümlesini ancak operatör kurabilir: müşteri sohbette kendini tanıtır, operatör kaydı
- * seçer. WhatsApp'ta da işe yarar ama orada istisnadır — kimlik numaradan çözülür, bu kapı yalnız
- * telefon/e-posta çakışmasında bağlanmadan açılmış sohbetler için gerekir.
- *
- * Dolu bağ EZİLMEZ ve yarış sessiz geçilmez: kapı `null` dönerse bu sırada başka biri bağlamıştır
- * ve operatöre söylenir (`ConversationService.linkCustomer` künyesi). Ayırma yolu YOK — yanlış bağı
- * düzeltmek Müşteriler ekranının birleştirme işidir (09.10).
- */
-export async function linkConversationCustomerAction(input: unknown): Promise<ActionResult<{ customerId: string }>> {
-  try {
-    await requireAdmin();
-    const staff = await requireAdmin();
-    const parsed = LinkConversationCustomerSchema.parse(input);
-    /* Kapı PAKETTE (`linkConversationCustomer`): kanıt doğrulaması burada değil, çünkü mobil
-       sosyal kutunun bağlama ucu açıldığı gün aynı kuralın ikinci bir kopyası doğardı — ve
-       atlanabilen bir güvenlik kapısı kapı değildir. Burası yalnız guard + zarf. */
-    const sonuc = await linkConversationCustomer(serviceDb(), {
-      conversationId: parsed.conversationId,
-      customerId: parsed.customerId,
-      proof: parsed.proof,
-      // FK'li kolona giden şey PROFİL kimliğidir, auth kullanıcısı değil (`StaffUser` künyesi).
-      staffId: staff.profileId,
-    });
-    if (sonuc.status === 'refused') return { data: null, error: LINK_REFUSAL[sonuc.reason] };
-    refresh();
-    return { data: { customerId: parsed.customerId }, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
-
-/**
  * **Sohbetteki izni KAYDET** (15.12 · DOMAIN §11) — operatör karar vermez, müşterinin dediğini yazar.
  *
  * ── İKİ YERE BİRDEN YAZILIR VE İKİSİ AYRI SORUYU CEVAPLAR ───────────────────
@@ -367,107 +291,12 @@ export async function openConversationTicketAction(input: unknown): Promise<Acti
   }
 }
 
-// ── Kimlik çapası (04.10) ────────────────────────────────────────────────────
-// DOMAIN §10. Numaranın kanıtlanması "bu hat BUGÜN bu kişide" der; çapa "bu numaranın GEÇMİŞİ
-// kimin" sorusunu cevaplar. Devredilmiş hattın yeni sahibi hattı da OTP'yi de meşru olarak alır —
-// çözen tek şey, şüphe doğmadan ÖNCE kurulmuş bir sırdır.
-//
-// **Kapılar OPERATÖRDE, ajanda değil — bugünlük.** DOMAIN "ilk sipariş tamamlanınca e-posta
-// önerilir" diyor ve o otomasyon ajanın işi (15.8'in izin sorma deseniyle aynı yer). Operatör
-// kapısı onun YERİNE değil ÖNÜNE geçiyor: kural bir kez burada yazılıyor, ajan doğduğunda aynı
-// paket fonksiyonunu çağırıyor. 15.16/15.19'un izlediği sıranın aynısı — önce insan eli, sonra
-// otomasyon.
-//
-// **"Kod doğrula" kutusu YOK ve olmayacak** (DOMAIN §10): doğrulama yalnız müşterinin KENDİ
-// numarasından gelen mesajla olur (`answerEmailAnchor` · `verifySecurityCode`, ikisi de `phone`
-// alıyor). Telefonda arayan müşteriyi bu ekrandan doğrulamanın yolu yoktur ve olmaması tasarımdır.
-
-/**
- * **E-posta çapasını başlat** — kod müşterinin adresine gider, cevabı WhatsApp'tan bekleriz.
- *
- * Kanıtın gücü çaprazlıktan geliyor: kod, doğrulanan kanaldan BAŞKA bir kanaldan geçiyor. Bu yüzden
- * kodu buradan sohbete yazmıyoruz — yazsaydık kanıt kendi kendini doğrulayan bir tur olurdu.
- */
-export async function startEmailAnchorAction(input: unknown): Promise<ActionResult<{ email: string }>> {
-  try {
-    await requireAdmin();
-    const parsed = AnchorEmailSchema.parse(input);
-
-    const conversation = await new ConversationService(serviceDb()).getById(parsed.conversationId);
-    if (!conversation?.customerId) return { data: null, error: 'Sohbet bir müşteriye bağlı değil — önce bağlayın.' };
-
-    const sonuc = await startEmailAnchor(serviceDb(), conversation.customerId, parsed.email);
-    if (sonuc.status === 'throttled') {
-      return { data: null, error: `Bu adrese çok sık kod istendi. ${Math.ceil(sonuc.retryAfterSec / 60)} dk sonra deneyin.` };
-    }
-    if (sonuc.status !== 'ok') {
-      // Cümle EKRANDA kurulur, anahtar pakette: aynı retler mobil/ajan kapısı doğduğunda başka
-      // cümlelerle karşılanacak ve o cümleleri yüzey yazar.
-      const cumle: Record<typeof sonuc.status, string> = {
-        invalid_email: 'Adresi okuyamadık — yazımını kontrol edin.',
-        profile_not_found: 'Müşteri kaydı bulunamadı — ekranı tazeleyin.',
-        already_anchored: 'Bu müşterinin çapası zaten var; ikinci bir çapa kurulmaz.',
-        email_locked: 'Kartta başka bir adres yazılı. Adres değiştirmek birleştirme işidir (Müşteriler ekranı).',
-        // Bekleyen adres SATIRDA DURUYOR: operatör tekrar deneyebilir, ikinci istek eskisini
-        // geçersizler (0003) — yani "gitmedi" hâli müşteriyi çapasız bırakmıyor, geciktiriyor.
-        send_failed: 'Kod maili gönderilemedi. Birazdan tekrar deneyin.',
-      };
-      return { data: null, error: cumle[sonuc.status] };
-    }
-
-    refresh();
-    return { data: { email: sonuc.email }, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
-
-/**
- * **6 haneli güvenlik kodunu ver** — e-posta bağlamak İSTEMEYENİN tek çapası.
- *
- * Kod sohbete YAZILIR (`issueAndSendSecurityCode`), operatörün ekranına değil: DOMAIN §10 "aynı
- * konuşmada verilir" diyor ve elle kopyalanan bir sır, kopyalanırken yanlış sohbete düşebilir.
- * Gönderim yapılandırılmamışsa kod yine de üretilmiş olur ve operatöre DÖNER — sır zaten satırda
- * özetli, geri almanın yolu yok; onu saklamak müşteriyi çapasız bırakmak olurdu.
- *
- * **Sır şüphe doğmadan ÖNCE kurulur:** dönüş anında üretilen bir kod hiçbir şey kanıtlamaz — kim
- * çıkarsa kodu o belirler ve geçmişi o devralır.
- *
- * **Düğme artık tek yol DEĞİL** (26.08): siparişi olan çapasız müşteriye kod, gelen ilk mesajda
- * kendiliğinden gidiyor (`offerAnchorIfDue`). Düğme duruyor çünkü operatörün elinde kalması gereken
- * bir kapı var — otomatik yolun kapsamadığı hâller (kanal dışından gelen sipariş, gönderimi düşmüş
- * kod) ve müşterinin telefonda isteyebileceği durum.
- */
-export async function issueSecurityCodeAction(conversationId: string): Promise<ActionResult<{ code: string | null }>> {
-  try {
-    await requireAdmin();
-
-    const conversation = await new ConversationService(serviceDb()).getById(conversationId);
-    if (!conversation?.customerId) return { data: null, error: 'Sohbet bir müşteriye bağlı değil — önce bağlayın.' };
-
-    // Üretim + gönderim TEK gövdede (`issueAndSendSecurityCode`): aynı kodu otomatik kapı da
-    // veriyor (gelen mesajda, siparişi olan çapasız müşteriye) ve müşteriye söylenen cümlenin iki
-    // kopyası olsaydı biri gün gelip ötekinden ayrılırdı.
-    const sonuc = await issueAndSendSecurityCode(serviceDb(), metaSenderFromEnv(), {
-      conversationId,
-      customerId: conversation.customerId,
-    });
-    // Gönderim tuttuysa kodu ekrana DÖNDÜRMÜYORUZ: müşteride, bizde özeti var; üçüncü bir kopya
-    // operatörün ekranında durmasın. Düştüyse dönüyor — kodu iletecek olan artık insandır.
-    if (sonuc.status === 'sent' || sonuc.status === 'send_failed') {
-      refresh();
-      return { data: { code: sonuc.status === 'sent' ? null : sonuc.code }, error: null };
-    }
-
-    const cumle: Record<typeof sonuc.status, string> = {
-      profile_not_found: 'Müşteri kaydı bulunamadı — ekranı tazeleyin.',
-      already_anchored: 'Bu müşterinin e-posta çapası var; kod gerekmiyor.',
-    };
-    return { data: null, error: cumle[sonuc.status] };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
+// ── Kimlik çapası (04.10 · 15.40) ────────────────────────────────────────────
+// Panelde çapa KAPISI YOK (kullanıcı kararı 15.09: "OTP kodu üretmeye gerek yok, bir buton link göndersin,
+// müşteri kendi kendine bağlasın"): operatör e-postaya kod göndermez, sohbete 6 haneli kod yazmaz. Çapayı
+// müşteri kurar — hesap bağlantısını (`sendAccountLinkAction`) açıp e-postasıyla girer; giriş hesabı olan
+// müşteri çapalıdır (`anchorStateOf`). Hesabını hiç bağlamayan müşterinin güvenlik kodu otomatik akışta
+// (`offerAnchorIfDue`, gelen mesajda) duruyor. "Kod doğrula" kutusu da yok (DOMAIN §10).
 
 /**
  * **Sohbet bağlantısını gönder** — sepet (15.21 · kullanıcı kararı 07.09) ya da hesap (15.16 ·

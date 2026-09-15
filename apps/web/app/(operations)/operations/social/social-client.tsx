@@ -14,9 +14,7 @@ import {
   setDefaultConversationModeAction,
   suggestConversationDraftAction,
 } from './actions';
-import { AnchorDialog } from './anchor-dialog';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
-import { LinkCustomerDialog } from './link-customer-dialog';
 import { SocialDesktop } from './social.desktop';
 import { socialUrl, type SocialChannelKey, type SocialFilterKey, type SocialUrlState } from './social-url';
 import type { InboxRowView, SocialData } from './social-types';
@@ -66,15 +64,8 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /**
-   * Gelen mesaj penceresinin iki kapısı, TEK durum: `new` yeni bir WhatsApp numarası, `follow` açık
-   * sohbetin devamı (anahtar kilitli, kanal-nötr). İki ayrı bayrak tutmak, ikisinin aynı anda açık
-   * olabildiği bir hâl üretirdi — üstelik pencere zaten aynı pencere.
-   */
+  // Talep penceresi — yalnız kimliği çözülmüş sohbette açılır (aşağıdaki künye).
   const [ticketOpen, setTicketOpen] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(false);
-  // Kimlik çapası penceresi (04.10 · 14.09) — panoda yalnız durum satırı; kutu ve gerekçe pencerede.
-  const [anchorOpen, setAnchorOpen] = useState(false);
 
   const detail = data.detail;
 
@@ -142,22 +133,19 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
       if (detail) void run(() => suggestConversationDraftAction(detail.id));
     },
     onNewTicket: () => setTicketOpen(true),
-    onLinkCustomer: () => setLinkOpen(true),
     /** İzin kaydı (15.12) — yazma sarmalından geçer: hata görünür, başarıda sunucu yeniden okunur. */
     onOptIn: (granted: boolean) => {
       if (detail) void run(() => recordConversationOptInAction({ conversationId: detail.id, granted }));
     },
-    /**
-     * Kimlik çapası (04.10) — pencere kendi kapısını çağırır ve hatasını kendisi gösterir (bağla
-     * penceresinin deseni). Kod bu ekrandan GEÇMİYOR: e-posta çapasında müşterinin posta kutusuna,
-     * güvenlik kodunda doğrudan sohbete gidiyor.
-     */
-    onOpenAnchor: () => setAnchorOpen(true),
     /** Sepet bağlantısı (15.21) — aynı yazma sarmalı; bağlantı sohbete gider, ekrana değil. */
     onSendCartLink: () => {
       if (detail) void run(() => sendCartLinkAction(detail.id));
     },
-    /** Hesap bağlantısı (15.16) — aynı yazma sarmalı; müşteri bağlantıyı açıp giriş yapınca sohbet onun hesabına bağlanır. */
+    /**
+     * Hesap bağlantısı (15.16 · 15.40) — aynı yazma sarmalı. Bağı ve çapayı MÜŞTERİ kurar: bağlantıyı açıp e-postasıyla
+     * girince sohbet onun hesabına bağlanır, giriş hesabı olan müşteri çapalıdır. Operatör bağlamaz, kod üretmez
+     * (kullanıcı kararı 15.09) — elle bağlama penceresi ve çapa penceresi bu yüzden kalktı.
+     */
     onSendAccountLink: () => {
       if (detail) void run(() => sendAccountLinkAction(detail.id));
     },
@@ -166,38 +154,6 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
   return (
     <>
       <SocialDesktop {...view} />
-
-      {/* Bağlama penceresi YALNIZ kimliksiz sohbette açılır — bağı DEĞİŞTİRME yolu değil, KURMA
-          yolu (15.16). Dolu bağı değiştirmek bir birleştirme kararıdır ve Müşteriler ekranının
-          işidir; kapıyı burada da açmak aynı kararı iki yerde yaşatırdı. */}
-      {linkOpen && detail && !detail.context ? (
-        <LinkCustomerDialog
-          conversationId={detail.id}
-          title={detail.title}
-          source={detail.source}
-          onClose={() => setLinkOpen(false)}
-          onLinked={() => {
-            setLinkOpen(false);
-            // Bağ kurulunca sağ panel müşteri kartına döner: sipariş geçmişi ve izin sunucudan gelir.
-            router.refresh();
-          }}
-        />
-      ) : null}
-
-      {/* Çapa MÜŞTERİNİN künyesi (04.10) — kimliği çözülmüş sohbette açılır; kurulu çapaya ikinci çapa
-          kurulmadığı için satır o hâlde pencereyi hiç açmaz. */}
-      {anchorOpen && detail?.context && detail.anchor ? (
-        <AnchorDialog
-          conversationId={detail.id}
-          customerName={detail.context.name}
-          hasPendingEmail={detail.anchor.hasPendingEmail}
-          onClose={() => setAnchorOpen(false)}
-          onDone={() => {
-            setAnchorOpen(false);
-            router.refresh();
-          }}
-        />
-      ) : null}
 
       {/* Talep penceresi YALNIZ kimliği çözülmüş sohbette açılır: talep bir müşteriye açılır ve
           müşterisi olmayan bir sohbette açılacak talebin sahibi yoktur. */}
