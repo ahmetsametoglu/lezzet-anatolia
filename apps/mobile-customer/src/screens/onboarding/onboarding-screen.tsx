@@ -217,13 +217,7 @@ export function OnboardingScreen() {
           style={styles.logo}
           accessibilityLabel={brand.name}
         />
-        <PressableSurface
-          onPress={() => leave('/')}
-          feedback="opacity"
-          compact
-          accessibilityLabel={t.skip}
-          testID="onboarding-skip"
-        >
+        <PressableSurface onPress={() => leave('/')} feedback="opacity" compact accessibilityLabel={t.skip} testID="onboarding-skip">
           <Text style={styles.skip}>{t.skip}</Text>
         </PressableSurface>
       </View>
@@ -339,10 +333,7 @@ export function OnboardingScreen() {
                 </Text>
               )}
               {zipNote === null ? null : (
-                <Text
-                  style={[styles.zipNote, zipInside ? styles.zipNoteInside : styles.zipNoteShipping]}
-                  testID="onboarding-zip-note"
-                >
+                <Text style={[styles.zipNote, zipInside ? styles.zipNoteInside : styles.zipNoteShipping]} testID="onboarding-zip-note">
                   {zipNote}
                 </Text>
               )}
@@ -361,10 +352,7 @@ export function OnboardingScreen() {
             <Text style={styles.body}>{t.delivery.body}</Text>
             <View style={styles.payList}>
               {deliveryRows.map((row, index) => (
-                <View
-                  key={row.key}
-                  style={[styles.payRow, index < deliveryRows.length - 1 ? styles.payRowDivider : undefined]}
-                >
+                <View key={row.key} style={[styles.payRow, index < deliveryRows.length - 1 ? styles.payRowDivider : undefined]}>
                   {row.icon}
                   <View style={styles.payText}>
                     <Text style={styles.payTitle}>{row.copy.title}</Text>
@@ -388,10 +376,7 @@ export function OnboardingScreen() {
             </Text>
             <View style={styles.payList}>
               {paymentRows.map((row, index) => (
-                <View
-                  key={row.key}
-                  style={[styles.payRow, index < paymentRows.length - 1 ? styles.payRowDivider : undefined]}
-                >
+                <View key={row.key} style={[styles.payRow, index < paymentRows.length - 1 ? styles.payRowDivider : undefined]}>
                   {row.icon}
                   <View style={styles.payText}>
                     <Text style={styles.payTitle}>{row.copy.title}</Text>
@@ -441,7 +426,6 @@ export function OnboardingScreen() {
                     )}
                   </View>
                 </View>
-
               </>
             ) : null}
           </>
@@ -461,10 +445,7 @@ export function OnboardingScreen() {
                     {copy.title}
                   </Text>
                   <Text style={styles.body}>{copy.body}</Text>
-                  <PointsEarnList
-                    rules={{ ...pointsRules.rules, earnWays: group.ways }}
-                    testID={`onboarding-points-ways-${group.key}`}
-                  />
+                  <PointsEarnList rules={{ ...pointsRules.rules, earnWays: group.ways }} testID={`onboarding-points-ways-${group.key}`} />
                 </View>
               );
             })()
