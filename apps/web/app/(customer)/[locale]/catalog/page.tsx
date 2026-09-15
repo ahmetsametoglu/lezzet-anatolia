@@ -26,18 +26,8 @@ interface CatalogPageProps {
 }
 
 /**
- * Katalog sayfası (08.10). Süzgeç durumu URL'de yaşar — filtreli liste paylaşılabilir, geri tuşu
- * çalışır, ilk boya sunucudan tam gelir. Veri `lib/storefront/catalog` kapısından okunur; süzme ve
- * sayfalama SQL'de çözülür (keyset), listeye giren ürün sayısı istemci yükünü artırmaz.
- *
- * Çerçeve metinleri (duyuru şeridi, gezinme, arama) anasayfanın `messages.json`'undan gelir:
- * `SiteFrame` her sayfada aynı metni gösterir, kopyalanırsa diller birbirinden kayar.
- */
-/**
- * Başlık ve `hreflang` (08.1). Süzgeçli hâlleri AYRI bir kanonik almaz: `canonical` her zaman
- * süzgeçsiz katalogu gösterir (`localeAlternates` sorgu dizesi taşımaz), çünkü "zeytinli börek
- * süzgeçli katalog" ayrı bir sayfa değil, aynı sayfanın bir görünümü — indekste ayrı tutulsaydı
- * yüzlerce neredeyse-aynı sayfa doğardı.
+ * Süzgeç durumu URL'de yaşar; süzgeçli hâller yine de ayrı kanonik almaz, `canonical` hep süzgeçsiz
+ * katalogu gösterir. Aynı sayfanın görünümleri indekste ayrı tutulsaydı yüzlerce neredeyse-aynı sayfa doğardı.
  */
 export async function generateMetadata({ params, searchParams }: CatalogPageProps): Promise<Metadata> {
   const { locale } = await params;
@@ -45,17 +35,8 @@ export async function generateMetadata({ params, searchParams }: CatalogPageProp
   const { collection } = await searchParams;
 
   /**
-   * **Koleksiyon hâlinin KENDİ paylaşım kartı** (08.26) — ötekilerden ayrılan tek süzgeç bu.
-   *
-   * Kategori/sıralama/çip hâlleri kart almaz ve almamalı: onlar aynı sayfanın görünümleri, kimse
-   * "artan fiyata sıralı katalog" bağlantısını paylaşmaz. Koleksiyon ise **paylaşılmak için var** —
-   * "Bayram" bağlantısı WhatsApp'ta dolaşan içeriğin ta kendisi ve kartı adını, açıklamasını ve
-   * kapağını göstermeli. Kart yoksa paylaşılan bağlantı "Katalog" başlığıyla düşer, yani
-   * koleksiyonun tamamı görünmez olur.
-   *
-   * Sorgu YALNIZ slug varken atılır; süzgeçsiz katalogun metadata'sı bir sorgu daha ödemez.
-   * `canonical` yine süzgeçsiz katalogu gösteriyor (aşağıdaki `localeAlternates`) — koleksiyon
-   * ayrı bir sayfa değil, indekste ikinci bir kayıt doğurmamalı.
+   * Yalnız koleksiyon hâli kendi paylaşım kartını alır: koleksiyon bağlantısı paylaşılmak için var,
+   * kartsız "Katalog" başlığıyla düşerdi. Sorgu yalnız slug varken atılır.
    */
   const head = collection ? await readCollectionHead(serviceDb(), collection, locale) : null;
   const title = head ? `${head.name} · ${messages[locale].title}` : messages[locale].title;
@@ -98,26 +79,16 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
       query: { categorySlug: category, collectionSlug: collection, search: q, sort: activeSort, onlyOffers, onlyShippable },
       place: await readPlaceWarehouses(),
       viewer: await readPricingViewer(),
-      // Boş katalogda vitrin fikstürü — paket varsayılanı "yedek yok" (mobil ucun kararı); web
-      // bugünkü davranışını bu parametreyle korur. Geçirmeyi unutan, boş katalogda boş ekran üretir.
+      // Paketin varsayılanı "yedek yok"; web boş katalogda vitrin fikstürünü göstermek için bunu geçirir.
       fallbackCategories: FIXTURE_CATEGORIES,
     }),
     detectDevice(),
   ]);
 
   /**
-   * Arama ve SÜZGEÇ boşluğu (08.9 · `ANALYTICS §4`).
-   *
-   * **İkisi ayrı raporlanır ve ayrımı burada yapıyoruz:** süzgeç boşluğu SIK bir arayüz sinyalidir
-   * (üç çipi üst üste seçen müşteri), arama boşluğu SEYREK bir çeşit sinyali ("müşterinin istediği
-   * ama bizde olmayan şey"). Aynı listeye düşerlerse sık olan seyreği boğar ve o liste kullanılamaz
-   * hâle gelir.
-   *
-   * Metin varsa kaynak ARAMADIR — süzgeç de açık olsa: müşterinin yazdığı kelime, tıkladığı çipten
-   * daha güçlü bir niyet beyanıdır.
-   *
-   * **Yalnız ilk sayfa ölçülür.** Sonraki sayfalar `loadMoreCatalogAction`'dan geliyor ve oradan da
-   * atsaydık tek arama, kaydırma sayısı kadar sayılırdı.
+   * Arama ve süzgeç boşluğu ayrı raporlanır ki sık gelen süzgeç sinyali seyrek arama sinyalini
+   * boğmasın; metin varsa kaynak aramadır. Yalnız ilk sayfa ölçülür, yoksa tek arama kaydırma
+   * sayısı kadar sayılırdı.
    */
   const filtered = Boolean(category || onlyOffers || onlyShippable);
   if (q || filtered) {
@@ -128,8 +99,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
         resultCount: data.products.length,
         zeroResultKind: data.products.length > 0 ? null : q ? 'search' : 'filter',
       },
-      // Render anında atılan her olay kendi kalıbını geçer (denetim P1): kapının `referer`
-      // türetimi bu anda BİR ÖNCEKİ sayfayı gösteriyor.
+      // Kalıbı olay kendisi geçer: render anında kapının `referer` türetimi bir önceki sayfayı gösterir.
       { path: '/catalog' },
     );
   }

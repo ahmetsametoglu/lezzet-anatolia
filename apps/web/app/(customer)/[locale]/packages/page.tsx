@@ -16,21 +16,14 @@ import messages from './messages.json';
 
 interface PackagesPageProps {
   params: Promise<{ locale: string }>;
-  /** Yalnız kampanya etiketleri için (08.9) — paket kampanyası doğrudan buraya iner. */
+  /** Yalnız kampanya etiketleri için: paket kampanyasının bağlantısı doğrudan bu sayfayı açar. */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
- * Paketler sayfası (05.5'in müşteri tarafı).
- *
- * Süzgeç/arama/sıralama YOK ve URL'de durum taşımaz: liste yönetimin kurduğu bir SEÇKİdir. Bu
- * yüzden sayfa `searchParams` almaz — katalogdan ayrıldığı yer burası.
- *
- * Veri tek turda okunur: paket kümesi operatörün elle kurduğu, doğal tavanı olan bir kümedir
- * (CLAUDE.md §1) — veriyle büyümez, keyset sayfalama gerektirmez. Tasarımın "12 + Daha fazla"
- * düzeni bir gösterim kararıdır ve ekranda çözülür.
+ * Liste yönetimin kurduğu bir seçkidir: süzgeç, arama, sıralama yok. Küme operatörün elle kurduğu,
+ * doğal tavanı olan bir küme olduğu için tek turda okunur.
  */
-/** Başlık ve `hreflang` (08.1) — üç dilin karşılıkları `routing.ts` tablosundan türer. */
 export async function generateMetadata({ params }: PackagesPageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
@@ -44,10 +37,8 @@ export default async function PackagesPage({ params, searchParams }: PackagesPag
   void recordPageView('/packages', await searchParams);
 
   const t: Messages = messages[locale];
-  // Yer KAPIYA parametre olarak geçer, kapının içinde okunmaz (19.22): istek bağlamına bağlı bir
-  // okumayı orkestrasyonun içine koymak onu istek DIŞINDA çağrılamaz hâle getirir (cron/webhook/
-  // mobil uç) — ölçülmüş bir hata, 34 test düşürmüştü (`settings-scope.ts` künyesi). Çerezi okuyan
-  // taraf sayfadır. Yer bilinmiyorsa kapı bugünküyle birebir aynı davranır (`route: null`).
+  // Yer kapıya parametre olarak geçer: istek bağlamına bağlı okuma kapının içinde olsaydı kapı istek
+  // dışından (cron, webhook, mobil uç) çağrılamazdı.
   const [packages, hero, device] = await Promise.all([
     listStorefrontPackages(locale, undefined, await readPlaceWarehouses()),
     readSiteImage('packages_hero', locale),

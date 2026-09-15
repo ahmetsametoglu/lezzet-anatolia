@@ -17,18 +17,13 @@ import messages from './messages.json';
 
 interface RecipesPageProps {
   params: Promise<{ locale: string }>;
-  /** Yalnız kampanya etiketleri için (08.9) — tarif bağlantısı kampanyadan da gelebilir. */
+  /** Yalnız kampanya etiketleri için: tarif bağlantısı kampanyadan da gelebilir. */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
- * Tarifler sayfası — "Sofradan Fikirler" (08.24 · veri modeli 05.16).
- *
- * Liste bir SEÇKİdir: süzgeç/arama/sıralama yok ve URL durum taşımaz (paket sayfası emsali).
- *
- * **Yer ve persona okunuyor** ve bu sayfa için şart: karttaki toplam gerçek bir fiyattır, tanım
- * değil. Yeri ve kanalı geçirmeseydik B2B müşteri kartta perakende toplamı görür, sonra detayda
- * ve sepette başka bir sayıyla karşılaşırdı — sayfa kendi kendisiyle çelişirdi.
+ * Liste bir seçkidir: süzgeç, arama, sıralama yok. Yer ve persona okunur, çünkü karttaki toplam
+ * gerçek fiyattır ve detaydaki, sepetteki sayıyla aynı olmalı.
  */
 export async function generateMetadata({ params }: RecipesPageProps): Promise<Metadata> {
   const { locale } = await params;
@@ -38,9 +33,8 @@ export async function generateMetadata({ params }: RecipesPageProps): Promise<Me
     title: t.title,
     description: t.heroBody,
     alternates: localeAlternates('/recipes', locale),
-    // Görselsiz og bilinçli: liste sayfasının kendi görseli yok (kartlardan birini seçmek
-    // editoryal bir karar olurdu ve o kart yarın değişir). Başlık + açıklama yine kart üretir;
-    // görsel ihtiyacı çıkarsa `design/BACKLOG §1`'in kahraman-görsel ailesine düşer.
+    // Görselsiz og bilinçli: liste sayfasının kendi görseli yok, kartlardan birini seçmek editoryal
+    // bir karar olurdu.
     openGraph: openGraphOf({ route: '/recipes', locale, title: t.title, description: t.heroBody }),
   };
 }
