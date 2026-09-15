@@ -1,187 +1,138 @@
 # CLAUDE.md — Lezzet Anatolie
 
-> Bağlayıcı kurallar. Her oturum yüklenir, varsayılan davranışı ezer. Detay `docs/`'ta; bu dosya
-> "her zaman aklımda olması gereken"ler + haritadır. **Kod ile doküman çelişirse KOD haklı.**
+> Bağlayıcı kurallar; her oturum yüklenir, varsayılan davranışı ezer. **Kaynak KODDUR:** kod ile
+> doküman çelişirse kod haklı. Proje olgun: tasarım `.dc.html`'de, akış kodda; doküman yalnız referans.
 
-> **Proje evresi: greenfield.** Canlı yok, müşteri yok, veri yok. Migration dosyaları **doğrudan düzenlenir**
-> (yama migration'ı yazılmaz), geriye uyum gözetilmez — temiz şema > legacy nezaketi.
-> İlk üretim dağıtımında bu not silinir, `WORKFLOW §2` (ileri-doğru) yürürlüğe girer.
-> **Ama `db:reset`/`db:refresh` yine de KULLANICININ kararıdır** — yereldeki elle girilmiş veriyi siler.
-> Şema değişikliği reset istiyorsa söyle, o çalıştırsın. Yerel DB'ye **okumak için** bağlanmak serbest → `WORKFLOW §4b`.
-
-> **YEREL VERİ SAHTEDİR — ondan İSTATİSTİK ÇIKARILMAZ** (kullanıcı kararı 11.08). Tablolardaki her şey
-> seed'in ürettiği ya da ajanların testte yazdığı uydurma kayıt: siparişler, satış sayıları, talep
-> sinyalleri, stok, müşteri davranışı. **Okumak serbest** ve teşhisin tek doğru yolu — "bu alan dolu
-> mu", "hangi kimlik yazılmış", "kısıt neden reddetti" hep DB'den ölçülür. Yasak olan o satırlardan
-> İŞ ÇIKARIMI yapmak: "en çok satan ürün", "talep şu bölgede yoğun", "şu kategori zayıf" gibi cümleler
-> kurmak, ya da bir eşiği/varsayılanı bu sayılara bakarak seçmek. Gerçek dünyadan tek veri kullanıcının
-> kendisidir; sayıya dayalı bir karar gerekiyorsa ona sor.
+> **Evre: greenfield.** Canlı yok, müşteri yok. Migration dosyası doğrudan düzenlenir (yama migration'ı
+> yok). `db:reset`/`db:refresh` KULLANICININ kararıdır; şema reset istiyorsa söyle, o çalıştırsın.
+> Yerel DB'ye okumak için bağlanmak serbest. **Yerel veri sahtedir:** teşhis için okunur; ondan iş
+> çıkarımı ("en çok satan", eşik seçimi) yapılmaz — gerçek veri kullanıcıdır, ona sor.
 
 ## 0. Kırmızı çizgiler
-- **Onaysız `git commit`/`push` YOK.** Onay her commit için ayrı; "commitle" bir sonrakini kapsamaz. → WORKFLOW §5
-- **Çalışma ağacını topluca silen komut YOK** — `git checkout -- .`, `git restore .`, `git reset --hard`, `git clean`, yolsuz `git stash`. Bunlar KULLANICININ komutudur. Geri alma daima **yol adı vererek** ve önce doğrulanarak yapılır. → WORKFLOW §5
-- **Commit DAİMA yol adı vererek: `git commit -- <yollar>`; `git add` ile commit arasında boşluk BIRAKILMAZ**
-  (yaşandı 08.08). Üç şerit **tek çalışma ağacını ve tek indeksi** paylaşıyor: indekste bekleyen dosya,
-  o pencerede commit atan **başka şeridin** commit'ine girer. Onay beklerken staged bırakılan dört dosya
-  böyle kayboldu — kod kayıp değildi ama gerekçesi başkasının künyesinin altında kaldı ve `git log`'dan
-  bulunamaz oldu. İki yönlü kural: kendi işini `git add`siz tek adımda commit'le (`git commit -- <yollar>`
-  indeksi zaten yok sayar), **ve yolsuz `git commit` atma** — o an indekste ne varsa alır. → WORKFLOW §5
-- Canlı DB'ye bağlanma / prod env dosyası okuma yok. → WORKFLOW §4
-- Kanıtsız "oldu/geçti" deme; çıktıyı göster. → WORKFLOW §1
-- **Sebebi KANITLANMADAN müdahale YOK; pansuman çözüm YOK** (kullanıcı kararı 05.08). Bir arıza
-  gördüğünde önce kökünü **ölç** — hangi satır, hangi veri, hangi an; belirtiden teori kurup o
-  teoriye göre kod yazmak, olmayan bir soruna makine kurmaktır. Belirtiyi susturan düzeltme
-  (ekranda sayıyı gizlemek, hatayı yutmak, "böyle de çalışıyor" demek) **çözüm değil, arızayı
-  gözden saklamaktır** — arıza yerinde durur ve artık görünmez. Ölçemiyorsan "ölçemedim" de ve
-  DUR; yanlış teoriyle yazılmış kod, hiç yazılmamış koddan pahalıdır (yaşandı 05.08: ekranda
-  "0,00 €" görülünce "demek fiyatsız ürün var" diye üç dosya değiştirildi, ölçünce fiyatsız ürün
-  olmadığı ve sebebin sayacın niyetten sayılması olduğu çıktı — hepsi geri alındı). → WORKFLOW §1
+- **Onaysız `git commit`/`push` yok;** onay her commit için ayrı. Push kullanıcının işidir, konuşulmaz.
+- **Çalışma ağacını topluca değiştiren git komutu yok:** `checkout -- .`, `restore .`, `reset --hard`,
+  `clean`, yolsuz `stash`. Geri alma daima yol adıyla ve önce bakılarak.
+- **Commit DAİMA `git commit -- <yollar>`;** yeni dosya için `git add -- <yol>` aynı komutta hemen önce;
+  yolsuz commit yok. Üç şerit tek ağacı ve tek indeksi paylaşıyor: indekste bekleyen dosya başka
+  şeridin commit'ine girer. Paylaşılan dosyada ayrıca `git diff` oku — pathspec dosyayı korur, içini korumaz.
+- Canlı DB'ye bağlanma, prod env dosyası okuma yok. Süreç listesinde yalnız PID ve ad basılır
+  (`ps -o pid=,comm=`); komut satırı basılmaz (tünel jetonu argv'de).
+- **Kanıtsız "geçti/oldu" yok;** çıktıyı göster. Ölçülmemiş bilgi verilmez, "olabilir" cümlesi kurulmaz.
+- **Sebep ÖLÇÜLMEDEN müdahale yok;** belirtiyi susturan düzeltme çözüm değildir. Ölçemiyorsan
+  "ölçemedim" de ve dur.
+- Alt ajan / workflow yok; iş ana şeritte, kendin.
+- **Görevin dışına çıkma:** bulduğun açığı bir satırla raporla, görev bitince yeni iş iste.
 
 ## 1. Mimari değişmezler
-- **Hiçbir türde duplication yok** — kod/tip/komponent/sabit. Önce "var mı, türetebilir miyim?" diye bak. → STACK §10, WORKFLOW §6
-- **Şema tek kaynak:** tüm tipler `packages/types` Zod şeması; `z.infer` + `.pick/.omit/.partial/.extend` ile türet, elle interface yazma. → STACK §5
-- **View-model'i şemadan türet:** `View = Entity & { extra }`; DB alanlarını görünüm için elle yeniden yazma.
-- **Proje-geneli tip sayfa altına konmaz** (dil/alerjen/domain enum → `packages/types`). Sayfaya-özel tip onu kullanan dosyada / `-types.ts`.
-- **Tipler artımlı** yazılır, toptan değil.
-- **Servis ham `this.supabase` yazmaz** — `BaseDbService` metodları; junction tablosu = kendi alt sınıfı. → STACK §6
-- **domain-core = saf karar** (DB'siz, testli); **database = saf I/O** (satır getirir/yazar). Birbirlerini BİLMEZLER; ikisini birleştiren yer uygulama katmanıdır — ama uygulama iş kuralını kendi içinde hesaplayamaz, motora sorar. → STACK §4, §13
-- **Bağımlılık tek yönlü.** → STACK §4
-- **`console` YASAK, `logger` var** (lint zorlar). Sunucuda `logger.info/warn/error({bağlam}, 'mesaj')` — bağlam nesnesi ÖNCE, mesaj sonra. Yakalanan hata `captureError(err, {source, context})` ile gidir: önce stdout, sonra `error_log`; asla fırlatmaz. `console` yalnız istemci komponentinde ve `scripts/`'te (pino node-only). → OBSERVABILITY §2
-- **Sessiz `catch` yok.** Bir hatayı yutuyorsan ya izini bırak ya **neden sessiz olduğunu yaz** — yorumsuz boş `catch`, altı ay sonra kimsenin bulamayacağı bir arızadır. Server action'lar zaten hata kapısından geçiyor (operasyon `getErrorMessage`, müşteri `customerErrorKey` — ikisi de `captureError`a yazar), ayrıca loglama gerekmez.
-- **Ölçülemeyen değer SIFIR değildir.** Ölçüm düştüyse `null` dön ve okuyan taraf "bilinmiyor" göstersin; sıfıra düşürmek bozuk ölçümü sağlıklı gibi okutur (yaşandı: `df` düşünce disk "%0 dolu" → sistem "iyi"). Aynısı sayaçlar ve eşikler için de geçerli.
-- **Log'a kimlik yazılır, içerik yazılmaz** — `orderId` evet; ham e-posta/telefon/adres/gövde/OTP kodu HAYIR. Teşhis için kimlik yeter, o kimlikle DB'ye bakılır. **Kimliğin OLMADIĞI yolda (misafir OTP, ziyaretçiye açık çözüm, mail gönderimi) kişisel veri MASKELENEREK yazılabilir** (kullanıcı kararı 03.08): `maskEmail`/`maskPhone` (`@lezzet/observability/mask`) — kim olduğunu söylemez, hangi kayıt olduğunu söyler. Maskeleme geri döndürülemez olmalı, kısaltma değil. Serbest metin `captureError`'da tek kapıdan geçer (`scrubMessage`): en tehlikeli sızıntı bizim yazdığımız bağlam değil, veritabanının kısıt ihlaline gömdüğü değerdir. **OTP kodu hiçbir hâlde, maskeli bile yazılmaz.** → OBSERVABILITY §5
-- **Depo bir boyut değil, DEĞİŞMEZ.** Stok/rezervasyon/sipariş/kabul deposuz yazılamaz; okuma da depo süzgeçsiz yapılmaz — süzgeci unutulan sorgu tek depolu veride DOĞRU cevap verir ve sistem sessizce olmayan malı satar. Kural veride durur (ertelenmiş kısıtlar, `not null`, kısmi unique). **Varsayılan depo YOKTUR**: depo ya adresin posta kodundan ya personelin sabit deposundan gelir. Depo-üstü okuma (`available_stock_total`) yalnız "hiç var mı" sorusunundur, satış kararının değil. → DOMAIN §17, data-model/depo.md
-- **Sayfalama ölçütü liste olmak değil, SINIRSIZ büyümek.** Veriyle büyüyen küme (ürün, sipariş, müşteri, stok partisi, hareket) → keyset (cursor) + infinite scroll; **imleç URL'e yazılmaz** (süzgeç yazılır). Doğal tavanı olan, operatörün elle kurduğu küme (kategori, koleksiyon, alerjen, dil, rota, ayar) → **tek turda** çekilir. Editoryal seçki (vitrin şeridi, benzer ürünler) → sayfalama yok ama **sabit sınır** var; liste değil, tıklatma davetidir. Sayfalayan her okumanın tüketeni de olmalı: `nextCursor` üretip kullanmayan ekran, listenin kuyruğunu sessizce yutar.
+- **Hiçbir türde duplication yok** (kod/tip/komponent/sabit); önce "var mı, türetebilir miyim".
+- **Şema tek kaynak:** tipler `packages/types` Zod şeması; `z.infer` + `.pick/.omit/.partial/.extend`,
+  elle interface yok. View-model `Entity & { extra }`. Proje-geneli tip sayfaya konmaz. Tipler artımlı.
+- Servis ham `this.supabase` yazmaz: `BaseDbService`; junction tablosu kendi alt sınıfı.
+- **domain-core = saf karar** (DB'siz, testli); **database = saf I/O;** birbirini bilmez; uygulama
+  katmanı birleştirir, iş kuralını kendisi hesaplamaz. Bağımlılık tek yönlü (`pnpm boundaries`).
+- **`console` yasak, `logger` var:** `logger.info({bağlam}, 'mesaj')`; yakalanan hata
+  `captureError(err, {source, context})`. **Sessiz `catch` yok:** ya iz bırak ya nedenini yaz.
+- **Ölçülemeyen değer sıfır değildir:** `null` dön, okuyan taraf "bilinmiyor" göstersin.
+- **Log'a kimlik yazılır, içerik yazılmaz;** kimliksiz yolda `maskEmail`/`maskPhone`
+  (`@lezzet/observability/mask`). OTP kodu hiçbir hâlde, maskeli bile yazılmaz.
+- **Depo bir DEĞİŞMEZDİR:** stok/rezervasyon/sipariş/kabul deposuz yazılmaz, okuma depo süzgeçsiz
+  yapılmaz; varsayılan depo yok (adresin posta kodundan ya da personelin deposundan gelir).
+  `available_stock_total` yalnız "hiç var mı" sorusunundur.
+- **Sayfalama ölçütü sınırsız büyümektir:** veriyle büyüyen küme keyset + infinite scroll (imleç URL'e
+  yazılmaz); operatörün kurduğu küme tek turda; editoryal seçki sabit sınır. `nextCursor` üreten her
+  okumanın tüketeni olur.
 
 ## 2. Web & i18n (apps/web)
-- **İki yüzey:** müşteri (i18n, `/…`) + operasyon (personel, Türkçe, `/operations`); girişte `staff_role`'e göre yönlenir (tek `/connexion`). → DOMAIN, build/04-auth-kimlik
-- **Cihaz forku, responsive DEĞİL:** `page → *-client (useDevice) → *.desktop/*.mobile`. `md:` ile akışkan responsive YAPMA. → ADR Sapma 3
-  **İstisna — OPERASYON yüzeyi YALNIZ MASAÜSTÜ (kullanıcı kararı 06.08):** operasyonda `*.mobile`
-  forku YAZILMAZ ve mevcutları söküldü — personelin mobil deneyimi native uygulamanın işidir
-  (`docs/uygulama/README.md` yüzey formülü). Müşteri yüzeyinde fork aynen sürer.
-- **İki "mobil" var; çıplak "mobil" YAZILMAZ (kullanıcı kararı 07.08):** müşteri yüzeyinin cihaz
-  forku **"mobil web"**dir (`*.mobile.tsx`, Playwright `mobile-web` projesi, `ui:shot`
-  `mobile-web.png`); `apps/mobile*` + `docs/uygulama` ise **"native uygulama"**. Metinde, yorumda,
-  script çıktısında ve talep imzasında hangisi kastediliyorsa o terim kullanılır.
-- **Dosya adları:** `page` · `<f>-client` · `<f>.desktop/.mobile` · `<f>-types.ts` (tip dosyası "view" değil).
-- **Komponent yerleşimi:** paylaşılan → `components/{customer,operation}/` (`ui/`+`form/`); sayfaya-özel → `<sayfa>/components/`. Ham `<input>/<select>` son çare, form kitini kullan. → STACK §7,§9
-- **URL:** iç yol İngilizce, dış URL dile göre (fr/de/tr); operasyon öneksiz ama segment yine İngilizce (`/operations/products`). Yeni müşteri rotası → `packages/i18n/src/paths.ts` (`PATHNAMES`) — `routing.ts` yalnız onu geçirir; tabloyu native uygulama da okur. → SEO_I18N
-- **i18n:** global JSON yok; her sayfa kendi `messages.json`'u; metin tipi `LocalizedCopy`'den türer (elle interface değil). Operasyon yüzeyi yalnız Türkçe.
-  **İstisna (kullanıcı kararı 14.09):** müşteri ekranının native uygulamayla ORTAK metni `packages/i18n/src/customer/<ekran>.json`'da durur ve iki yüzey oradan okur (ilk örnek `tab-bar.json`); web'e özgü metin (SEO, misafir hâlleri) sayfanın `messages.json`'unda kalır.
-- **Server action'lar sayfa klasöründe kolokasyon;** throw yok, sonuç döner — **sözleşme yüzeye göre ayrı:** operasyon `{ data, error }` + `getErrorMessage` (`lib/error.ts`; personel iç mesajı görür), müşteri `{ data, errorKey }` + `customerErrorKey` (`lib/customer-error.ts`; metin değil ANAHTAR döner, müşteriye söylenecek hata `CustomerError('anahtar')` ile fırlatılır, cümle ekranın `messages.json`'unda — ham mesaj müşteriye sızmaz). İlk satırda işe uygun **en dar** guard (`lib/guard.ts`): `requireAdmin` / `requireFinance` / `requireWarehouseScope` …, rol fark etmiyorsa `requireStaff`; müşteri action'ı oturum ister ya da herkese açıktır. Paylaşılan yardımcı `lib/`.
-- Kod İngilizce, yorum Türkçe. Props tipi her zaman fonksiyon üstünde adlı `interface`. Ayrı hook → `use-x.hook.ts`.
-- Etkileşimli her öğe `cursor-pointer` + hover geri bildirimi. **Ölü kod yok — `knip`.**
+- **İki yüzey:** müşteri (i18n, `/…`) + operasyon (personel, Türkçe, `/operations`, **yalnız masaüstü**).
+  Giriş tek `/connexion`, `staff_role`'e göre yönlenir.
+- **Cihaz forku, responsive değil:** `page → *-client (useDevice) → *.desktop/*.mobile`; `md:` ile
+  akışkan responsive yok. Operasyonda `*.mobile` yazılmaz.
+- **İki "mobil" var:** müşteri web forku **"mobil web"** (`*.mobile.tsx`, Playwright `mobile-web`);
+  `apps/mobile-*` **"native uygulama"**. Çıplak "mobil" yazılmaz.
+- Dosya adları `page` · `<f>-client` · `<f>.desktop/.mobile` · `<f>-types.ts`. Paylaşılan komponent
+  `components/{customer,operation}/` (`ui/`+`form/`); sayfaya özel `<sayfa>/components/`. Ham
+  `<input>/<select>` son çare, form kiti var.
+- **URL:** iç yol İngilizce, dış URL dile göre (fr/de/tr); yeni müşteri rotası
+  `packages/i18n/src/paths.ts` (`PATHNAMES`) — native de okur.
+- **i18n:** global JSON yok, her sayfa kendi `messages.json`; tip `LocalizedCopy`'den türer. Web + native
+  ORTAK metin `packages/i18n/src/customer/<ekran>.json`. Operasyon yalnız Türkçe.
+- **Server action sayfa klasöründe;** throw yok, sonuç döner: operasyon `{ data, error }` +
+  `getErrorMessage`, müşteri `{ data, errorKey }` + `customerErrorKey` (`CustomerError('anahtar')`,
+  cümle `messages.json`'da). İlk satırda en dar guard (`lib/guard.ts`).
+- Kod İngilizce, yorum Türkçe. Props tipi fonksiyon üstünde adlı `interface`. Ayrı hook `use-x.hook.ts`.
+  Etkileşimli öğe `cursor-pointer` + hover. Ölü kod yok (`knip`).
 
 ## 3. Tasarım
-- **Altın kural: sade & sezgisel;** sistemin karmaşıklığı arayüze yansımaz.
-- `design/` per-sayfa markdown: *hangi bilgi, hangi amaçla* — **stil verme**, Claude Design'a bırak.
-- **İmplement ederken improvise ETME:** görsel karar `.dc.html`'de verili (web/mobil ayrı bölüm); birebir uygula.
-- **Statik ≠ işlevsiz:** öğenin içeriğinden işlevini çıkar; bağımlılığı olmayanı TAM yap (UI+backend); dış-modül bekleyende UI tam, arka uç stub.
-- `.dc.html` dış çerçeve = canvas chrome (UI değil).
-- **Ham hex YASAK** — renk `globals.css` token'ından gelir (envanter §0). Token yoksa kodlama, envantere ekletme. Tailwind'in sabit renkleri (`bg-white`, `*-gray-500`) operasyonda kullanılmaz: karanlık modda dönmezler. → STACK §9
+- **Sade ve sezgisel;** sistemin karmaşıklığı arayüze yansımaz.
+- **Görsel karar `.dc.html`'de verili; birebir uygula, improvise etme.** Dış çerçeve canvas chrome'dur.
+  Yerel `.dc.html` günceldir. Müşteri web telefon görünümü ile native müşteri uygulaması AYNI
+  tasarımdır; sayfa sayfa, kullanıcı kontrolüyle ilerler.
+- **Statik ≠ işlevsiz:** öğenin işlevini içeriğinden çıkar; bağımlılığı olmayanı tam yap; dış modül
+  bekleyende UI tam, arka uç stub.
+- **Ham hex yasak:** renk `globals.css` token'ından; token yoksa kodlama, ekletme. Operasyonda Tailwind
+  sabit renkleri (`bg-white`, `*-gray-500`) yok (karanlık mod). Yazı boyu `--text-ops-*` merdiveninden.
 
-## 4. Çalışma disiplini & kullanıcı
-- **Tek seferde tek kritik konu** çöz-geç; uzun liste dökme.
-- **İş birimi TALEP değil ALANDIR** (kullanıcı kararı 03.08, iki kez söylendi). Bir modül hiç
-  başlanmamışken oradan istenen küçük parçayı tek başına yapmak verimsizdir: bağlamı bir kez kurup
-  bir kez bırakmak, aynı bağlamı üç kez kurmaktan ucuzdur — ve yarım teslim edilen parça, teslim
-  edildiği gün kullanılamadığı için değer de üretmez. **Hiç dokunulmamış alan BÜTÜN alınır.**
-- **Talepler çalışmayı BÖLMEZ, aralarına girer.** Sıra: bir iş birimini bitir → bekleyen talepleri
-  topluca gider → sıradaki birime geç. İstisna gerçekten acil olandır (ön ucu durduran arıza,
-  yanlış veri yazan hata) — o hemen yapılır. **Acil olmayan bir talep, girdiği modül sırası gelince
-  o modülle birlikte tamamlanır**; cevabına gerekçesi ve tasarımı yazılır ki o gün mekanik bir
-  ekleme olsun.
-- **Aynı konudaki talepler KÜMELENİR:** biri karşılanıp ötekiler beklemez. Bir kümenin tamamı tek
-  turda ve mümkünse **tek `db:refresh` penceresinde** iner.
-- **Parametrik değer** (eşik/oran/süre) **sorma** — makul varsayılan koy, parametrik yap, bildir. "Sistem + bize ne kazandırır" ekseninde konuş.
-- **Sade ve açık yaz;** teknik terimin yanına düz Türkçe karşılığı.
-- **"İndi / inen / inecek" YASAK** (kullanıcı kararı 04.08). İngilizce *"a change landed"*ın birebir
-  çevirisiydi ve Türkçede karşılığı YOK: "inmek" aşağı inmektir, teslim etmek değil. Doğrusu
-  **tamamlandı · teslim edildi · yazıldı ve çalışıyor · yayında**. *("Eşiğin altına inen parti",
-  "net 0'a indi" gibi gerçek kullanımlar elbette serbest — yasak yalnız "teslim edildi" anlamına.)*
-- **Petit referans:** `~/dev/petitcigogne` kanonik; işe başlamadan karşılığına bak, saptığında (ne/neden) bildir.
-- Her tasarım/modül implementinden sonra **kural-uygunluk kontrolü** yap.
-- **Dev server'ı KULLANICI yönetir** (başlatır/durdurur). Dev çalışırken **çıplak `next build` çalıştırma** — aynı `.next`'i bozar (webpack "Cannot find module './vendor-chunks/…'" runtime hataları). Doğrulamayı dev'e dokunmayan `typecheck`/`lint`/`knip`/`boundaries` ile yap. Bozulursa çare: `rm -rf apps/web/.next` + kullanıcı dev'i yeniden başlatır.
-  - **PARALEL PRODUCTION SUNUCUSU VAR (kullanıcı isteği 14.08) — "dev'i durdur" artık son çare değil.**
-    Çakışan şey PORT değil DİZİN'di: `next.config.ts` artık çıktı dizinini env'den okuyor
-    (`distDir: process.env.NEXT_DIST_DIR ?? '.next'`), yani production derlemesi dev'in okuduğu
-    klasöre hiç dokunmuyor. `pnpm prod:web` (derler, `.next-prod`) + `pnpm prod:web:start`
-    (**3001**). **Ölçüldü 14.08:** derleme koşarken dev 3000'de `200` verdi (1,3 sn); ikisi
-    ayaktayken prod **45 ms**, dev **260–315 ms**. Kullanıcının derdi buydu — dev'de sayfa sürekli
-    yenilenip yavaş yükleniyor, test edilemiyor.
-    **Sunucu DONMUŞ bir kopyadır:** kod değişince güncellenmez, yeniden derlenir. Veritabanı ortak
-    (`db:refresh` ikisini birden etkiler). `.next-prod` `.gitignore`da ayrıca yazılı — `.next/`
-    kalıbı onu yakalamaz.
-  - **İSTİSNA — bellek tazeleme YALNIZ DENETİMDE (kullanıcı kararı 09.08):** dev server dokunulan
-    her rotayı derleyip bellekte tutuyor ve uzun oturumlarda birikiyor (ölçüldü: 38 dakikada tepe
-    **3,2 GB**, sonra 740 MB'a inen dalgalı bir seyir; tek e2e dosyası koşarken 600 → 1284 MB).
-    Şikâyet "testler RAM yiyor" diye gelir ama ölçüm başkasını söyler: Chromium en çok tüketen ilk
-    altı sürecin içinde bile değildir — yük derleme birikimidir. **Denetim şeridi** `pnpm dev:health`
-    ile ölçer, eşik aşılmışsa `--apply` ile yeniden başlatır (`nohup`lu, oturumdan bağımsız; çıktı
-    `.test-results/dev-server.log`). **Öteki şeritler dev server'a DOKUNMAZ** — iki ajan aynı anda
-    yeniden başlatırsa kimsenin beklemediği bir kesinti doğar. Eşik parametrik (`DEV_RSS_LIMIT_MB`,
-    varsayılan 2048). **Sunucu PORTUNDAN tanınır** (`DEV_PORT`, varsayılan 3000), adından değil:
-    paralel production kopyası da `next-server` diye görünüyor ve araç bir tur onu ölçtü (ölçüldü
-    21.08: prod için **108 MB** yazdı, gerçek dev **548 MB**'daydı). Belirtisi yoktu çünkü araç yine
-    bir sayı basıyordu — yanlış sürecin sayısını; eşik pratikte hiç tetiklenemezdi (donmuş kopya
-    derleme biriktirmez) ve `--apply` tetikleseydi 3001'i kapatırdı.
-- **3001 COMMIT KAPISI DEĞİL — YALNIZ KULLANICI İSTEYİNCE TAZELENİR (kullanıcı kararı 15.09).** 14.09'da
-  "her commit'ten önce 3001 derlenir" kuralı kondu ve bir gecede bedeli ölçüldü: şeritler aynı kopyayı
-  dakikalar arayla derledi, bekleyen iş kesildi; bir şeridin derlemesi çalışan sunucunun okuduğu
-  `.next-prod` klasörüne yazdığı için ötekinin ekran denetimi o yarım çıktıyı okudu ve geçersiz kaldı.
-  Kullanıcının hükmü: *"Bu üç bin bir düşündüğümden daha çok geliştirmeyi engelleyen bir şey oldu."*
-  Bugünkü kural: şerit commit öncesi 3001'e **dokunmaz** (derlemez, yeniden başlatmaz); doğrulama tip
-  denetimi · lint · knip · docs:check · `pnpm test:commit` ile yapılır (§4b — tam paketi yalnız gerekince o
-  çağırır). Kullanıcı "3001'i tazele" deyince **tek bir
-  ajan HEAD'i** derler: `/tmp/lezzet-prod` worktree'sinde `git checkout --detach <HEAD>` → `pnpm install
-  --offline --frozen-lockfile` → `pnpm --filter @lezzet/web run build:prod` → 3001'i dinleyen süreç
-  durdurulur, aynı dizinden `nohup pnpm --filter @lezzet/web run start:prod` (günlük
-  `.test-results/prod-server.log`) → sayfanın cevap verdiği görülür. Başlamadan süren bir `next build`
-  varsa (`pgrep -f 'next build'`) bitmesi beklenir. 3001 ana ağaçtan değil worktree'den koşar — ağaçtaki
-  başka şeridin yarım işi derlemeyi düşürmesin (üstteki `pnpm prod:web` onu güncellemez). `/tmp` makine
-  açılışında silinir: `git worktree prune` → `git worktree add --detach /tmp/lezzet-prod HEAD` → `.env`
-  ve `apps/web/.env.local` kopyalanır (içerik basılmaz). Dev (3000) yine kullanıcının.
+## 4. Çalışma disiplini
+- **Tek seferde tek konu.** Önce kısa cevap/izah, sonra iş. Soru iş emri değildir: önce cevapla,
+  müdahale istenince.
+- **İş birimi alandır:** dokunulmamış alan bütün alınır. Talepler işi bölmez, araya girer; aynı
+  konudakiler kümelenir ve tek `db:refresh` penceresinde gider.
+- **Parametrik değer sorma:** makul varsayılan koy, parametrik yap, bildir. Objektif doğrusu olan
+  sorulmaz; yalnız gerçek ödünleşme sorulur, küçük karar şıklarla.
+- **Sade Türkçe yaz;** teknik terimin yanına karşılığı. "İndi/inen/inecek" yasak → tamamlandı · teslim
+  edildi · yayında. Rapor kısa maddelerle.
+- Referans proje `~/dev/petitcigogne` (iç desenler); saptığında bildir.
+- **Dev server (3000) kullanıcının;** çıplak `next build` yok (`.next`'i bozar). Doğrulama
+  typecheck/lint/knip/boundaries/test ile. `dev:health` yalnız denetim şeridi çalıştırır.
+- **3001 production kopyası commit kapısı DEĞİL;** yalnız kullanıcı "3001'i tazele" deyince tek ajan:
+  `/tmp/lezzet-prod` worktree'sinde `git checkout --detach HEAD` → `pnpm install --offline
+  --frozen-lockfile` → `pnpm --filter @lezzet/web run build:prod` → 3001'i dinleyen süreç durdurulur →
+  `nohup pnpm --filter @lezzet/web run start:prod` (`.test-results/prod-server.log`). `/tmp` silinmişse
+  `git worktree add --detach /tmp/lezzet-prod HEAD` + `.env` ve `apps/web/.env.local` kopyalanır.
+- **Şeritler:** web (denetim; altında arka uç / operasyon / müşteri) ↔ native (mobil). **Şeritler arası
+  iş `docs/KALAN.md` satırıdır:** `[hedef: mobil] ne — neden` biçiminde açan yazar, yapan siler; soru
+  gerekiyorsa aynı satırın altına tek satır **Cevap**. Ayrı talep/not dosyası yok, sohbette laf iletme yok.
+- **Ağır denetimler sırayla:** typecheck/lint/knip/test ve native derlemeler aynı anda koşmaz.
 
-## 4b. Test disiplini (paylaşılan veritabanı — her ajan için bağlayıcı)
-> Üç ajan **tek çalışma ağacını ve tek yerel Supabase'i** paylaşıyor. Kural bundan doğdu: eşzamanlı iki
-> entegrasyon koşusu birbirinin satırlarını ezer ve ortaya **tekrarlanmayan bir düşüş** çıkar. Yalancı
-> düşüş yavaş koşudan pahalıdır — olmayan bir hatanın teşhisine harcanan zaman geri gelmez.
+## 4b. Test disiplini (paylaşılan veritabanı)
+- **Çalışırken `pnpm test:unit`** + dokunduğun dosyaların birim testleri (DB'siz, saniyeler).
+- **DB'ye vuran koşu ve e2e yalnız denetmenin.** Şeridin tek DB kapısı commit öncesi
+  `pnpm test:commit -- <commit'in yolları>`: yollar seçer (`scripts/test-gate-rules.mjs`) —
+  migration / seed / fikstür / test yapılandırması / `pnpm-lock.yaml` / kök `package.json` → tam paket;
+  değilse birim tamamı + `vitest related` entegrasyon. Yollar commit'in listesidir, ağacın farkı değil.
+- **Tam paket elle çağrılmaz:** `test:commit` tetiği ya da denetimin `pnpm test:health`. Koşucu tek
+  uçuşlu (`scripts/shared-test-run.mjs`); sonuç `.test-results/latest.json` + `run.log`
+  (`pnpm test:status`). Katıldıysan `startedAt`e bak. DDL (`db:reset/refresh/migrate/seed`) aynı kuyrukta.
+- DB'ye vuran test entegrasyon köküne (`apps/web/lib`, `packages/database`, `packages/application`,
+  `apps/backend`, `apps/mobile-api`). Küresel tekil satır kirletilmez (önce oku, `afterAll` geri koy);
+  küresel sayıya bakan test yok; teardown `purgeTestData` + `mustDelete` (`@lezzet/database/testing`),
+  elle silme yok.
+- **Hangi test yazılır:** test, adını verebildiğin bir arızayı yakalar. Yazmadan önce tek cümle:
+  *"bu test şu hatada kırmızıya döner"*; cümle kurulamıyorsa test yazılmaz. **Yazılır:** dallanan karar
+  (fiyat, stok, durum geçişi, izin), veri kısıtı ve RPC davranışı, iki yüzeyin ortak sözleşmesi,
+  ölçülmüş bir arızanın tekrarı. **Yazılmaz:** sabit/sözlük/tip/ikon içeriğini yeniden yazan test,
+  "render oluyor", mock'un kendisini doğrulayan test, sayı için test. Kanıt: bozmayı uygulayıp testin
+  düştüğünü görmek.
 
-- **Çalışırken `pnpm test:unit` + dokunduğun dosyaların BİRİM testleri.** Birim projesi DB'siz ve paraleldir: 2427 test ~9 sn (15.09) — bunlar herkese, her an serbest.
-- **DB'YE VURAN KOŞU ŞERİTLERE KAPALI (kullanıcı kararı 08.08): entegrasyon dosyası koşusu ve UÇTAN UCA (e2e) test YALNIZ DENETMENİN işidir.** Şeridin DB'ye vuran TEK kapısı commit öncesi `pnpm test:commit`tir (alttaki madde — entegrasyonu test kilidi altında koşar) — `pnpm vitest run <entegrasyon-yolu>` dahil gelişigüzel DB koşusu yapılmaz; ihtiyaç varsa denetmene işaret bırakılır. E2e denetmende bile "her değişiklikte" koşulmaz: teslim noktalarında ve altyapı penceresi SAKİNKEN koşulur, koşudan önce DB doluluğu yoklanır. Gerekçe yaşananlardır (08.08): tekil e2e/DB koşuları kilit görmez; reset/seed penceresine denk gelen koşular yalancı kırmızı üretti, PostgREST kesintisiyle birleşince teardown'lar yarım kaldı ve teşhise saatler gitti.
-- **Commit kapısı `pnpm test:commit -- <commit'in yolları>` (kullanıcı kararı 15.09).** Hangi testin koşacağına YOLLAR karar verir (liste tek yerde: `scripts/test-gate-rules.mjs`). Yollardan biri veritabanını ya da test düzenini **koddan bağımsız** değiştiriyorsa — `supabase/` (migration) · seed · test fikstürü ve temizlik sırası · test yapılandırması ve koşucusu · bağımlılık sürümü (`pnpm-lock.yaml`, kök `package.json`) — **tam paket**; değilse birim paketinin tamamı + yollara içe aktarma zinciriyle bağlı entegrasyon dosyaları (`vitest related`, kilit altında). Zincirde olmayan yol (müşteri sayfası, native uygulama, doküman) entegrasyon dosyası seçmez, koşu saniyeler sürer. Ölçüm (15.09): tam paket 4 dk 39 sn ve neredeyse tamamı SIRAYLA koşan 205 entegrasyon dosyası; 13.09'dan beri 83 commit'in en az 23'ü bu dosyaların bağlı olduğu hiçbir koda dokunmamıştı. Ölçüt "servise ya da migration'a dokundum mu" DEĞİL: entegrasyon kodu 16 paketi içe aktarıyor (bir `domain-core` kuralı veritabanına yazılan tutarı servise dokunmadan değiştirir) — zinciri `related` çözer. **Yollar commit'in listesidir, ağacın farkı değil:** `--changed` ortak ağaçta başka şeridin yarım işini de "değişen" sayar.
-- **Tam paket şeridin elle çağırdığı bir komut DEĞİL (kullanıcı kararı 15.09).** `pnpm test` gerekçesiz koşmaz; iki kapısı var: `test:commit`in tetiği (gerekçe `commit:<yol>`) ve **denetim şeridinin sağlık koşusu** — `pnpm test:health`, seçici koşunun göremediği hâli (başka şeridin HEAD'e soktuğu kırılma) yakalar; HEAD son GEÇEN sağlık koşusundan beri değişmediyse koşmaz. **Şerit ajanı "sağlık koşusu" gerekçesiyle tam paket koşmaz.** Her tam koşu gerekçesi ve HEAD'iyle `.test-results/history.jsonl`a yazılır, `pnpm test:status` son beşini basar. Tam paket yalnız ana çalışma ağacında koşar (worktree kopyasında reddeder: katılımcı sonucu ana ağacın `latest.json`ından okuyor). Koşucu **TEK UÇUŞLUDUR** (`scripts/shared-test-run.mjs`, kullanıcı kararı 03.08): tam paket sürerken tetikleyen YENİ koşu başlatmaz, sürene katılır ve aynı sonucu okur; kilidi tam paket değil e2e/entegrasyon/şema işi tutuyorsa katılmaz, bitmesini bekleyip kendisi koşar (10.09 — eskiden e2e'ye "katılıp" bir önceki paketin sonucunu basıyordu). Sonuç tek yerden: `.test-results/latest.json` + `run.log` (`pnpm test:status` koşturmadan basar); her koşu öncekini `previous.*`e taşır. Katıldıysan `startedAt`e bak — koşu senin değişikliğinden ÖNCE başladıysa sonuç seni içermez, bir kez daha tetikle. Çıplak `vitest run` ile tam paket koşma; kilidi atlar.
-- **DDL de aynı kuyrukta** (03.08): `db:reset`/`db:refresh`/`db:migrate`/**`db:seed`** artık test kilidini görüyor ve süren koşuyu bekliyor. (`db:seed` 08.08'de eklendi — atlanmıştı ve arıza şöyle görünüyordu: seed katalogun TAMAMINI okuyor, okuma anında bir testin fikstür ürünleri de listede oluyor, teardown onları silince seed var olmayan bir varyanta fiyat yazmaya çalışıp `23503` ile kesiliyordu. `db:refresh` hiç göstermiyordu çünkü o zaten kilidi alıyordu.) Koşu ortasında şema değişince PostgREST önbelleği düşüyor ve paket `Could not find the table 'public.account'` diye onlarca dosyada birden kırmızıya dönüyordu — kod hatası değil, altyapı (ölçüldü: 156 test hiç koşamadan kesildi). `db:reset` yine **kullanıcının kararıdır**; değişen tek şey sırasını beklemesi. Kırmızı bir koşunun kanıtı da artık silinmiyor: son koşu `run.log`, bir önceki `previous.log`.
-- **Testler küresel tekil satırı kirletmez.** Damgayla (`Date.now()`) ayrılmış satırlar güvenlidir; `settings` gibi TÜM suite'in okuduğu satırlar değil. Değiştirmek şartsa **önce oku, sonra geri koy** (`afterAll`) — "boşa çek" de bir varsayımdır ve bir gün yanlış olur. Örnek desen: `lib/feedback/invite.test.ts` (`overrideSetting` + snapshot).
-- **DB'ye vuran test entegrasyon köküne yazılır** (`apps/web/lib`, `packages/database`, `packages/application`, `apps/backend`, `apps/mobile-api`). Birim projesinde `.env` yüklenmez ve DB env'i silinir; yanlış yere düşen test sessizce değil, ilk satırında "Supabase env eksik" diye patlar.
-- **Teardown'da elle silme YOK, `purgeTestData` + `mustDelete` var** (`@lezzet/database/testing`).
-  Silme SIRASI tek yerde durur (`cleanup.ts`); her dosya kendi sırasını uydurursa biri mutlaka
-  yanlış olur. Özellikle `warehouse` ve `account`: ikisi de `restrict` FK'lerle korunuyor ve
-  Supabase `delete()` hatayı **fırlatmaz, döndürür** — kimse bakmadığı için teardown sessizce
-  yarım kalır, koşu yeşil görünür, kirlilik haftalarca birikir (ölçüldü: `money_movement` 41→187).
-  `mustDelete(db, tablo, (q) => q.eq(...))` hatayı fırlatır; kirlilik gürültüye döner. Purge'ün
-  bilmediği bir hedef gerekiyorsa **purge'e ekle**, dosyaya elle silme yazma. İki tablo için
-  `docs:check §3f` makineyle zorluyor — `typecheck` göremez (çağrı tip olarak geçerli), `lint` de
-  göremez (proje disiplini, dil kuralı değil).
-- **Küresel sayıya bakan test yazma** (`toplam N rezervasyon süpürüldü` gibi): başka bir ajanın verisi o sayıyı oynatır. Kendi kurduğun satırları say.
-- **Şeritler arası talep VE alan-dışı gözlem `docs/talep/`** (kural + şablonlar README'de; kullanıcı kararı 03.08): talepte dosya başına tek iş, hedef şerit **Cevap**'a yazar, AÇAN karşılanınca siler; **not** (`not-<kime>-*.md`) "gördüm, alan senin" gözlemidir — ALAN şerit işleyip siler. Sohbette başka şeride laf iletme; dosya aç. Her oturum başında kendine bakan `not-*`/talep dosyalarına göz at. Klasör repoya gitmez (yalnız kullanıcı `git add -f` ile gönderir); `docs/build`'e yeni talep AÇILMAZ.
+## 5. Yorum, doküman, açık iş
+- **Yorum yalnız koddan okunamayan NEDEN'i yazar,** en fazla iki cümle. Tarih, ajan/şerit adı,
+  "yaşandı/ölçüldü" hikâyesi, süreç ve karar tarihçesi yorum değildir; commit mesajına gider.
+  Dokunulan dosyanın yorumları aynı commit'te bu ölçüye çekilir. Blok yorumda `*/` yazılmaz.
+- **Açık işin tek listesi `docs/KALAN.md`:** satır = kimlik + ne + neden; biten satır silinir,
+  ilerleme notu yazılmaz. Koddaki boşluk `BEKLEYEN(<kimlik>): <ne>` ile KALAN'daki satıra bağlanır
+  (`pnpm repo:check` doğrular); `TODO`/`FIXME` yok. Yeni kimlik `K.<sıradaki sayı>`.
+- **`docs/architecture/*` referanstır:** kural değişirse aynı commit'te o cümle düzeltilir;
+  durum/ilerleme/tarihçe yazılmaz. Veri modeli alan tabloları `pnpm docs:sync` ile migration'dan
+  türetilir, elle yazılmaz.
+- **Commit mesajı:** ne + neden, en fazla ~12 satır; doğrulama tek satır; hikâye yok.
+- **Bellek (`memory/`):** yalnız koddan ve bu dosyadan türemeyen kısa olgu; kural olgunlaşınca
+  buraya terfi eder.
 
-## 5. Doküman senkronu (her ajan için bağlayıcı)
-- **Durumun tek sahibi `docs/build/NN-*.md` görev satırıdır.** İş ilerlediyse aynı oturumda o satır `[x]`/`[~]` olur + altına **Durum** notu yazılır. `BACKLOG` kapsam tutar, ilerleme tutmaz; `build/README` özet tablosu **türetilir** (`pnpm docs:sync`), elle yazılmaz.
-- **Kod ve doküman aynı commit'te gider.** Ayrı commit "sonra yazarım"dır, o da yazmamaktır.
-- **Görev kimliği `(NN.k)`** — iş bu kimlikle üstlenilir. Paralel ajan varsa görev satırına `touches:` (dokunulacak yollar) yazılır; kesişen iki görev aynı anda başlamaz, her ajan kendi dalında çalışır (`WORKFLOW §7`).
-- **Geride bırakılan boşluk `BEKLEYEN(<ref>): <ne>` ile işaretlenir** — `TODO`/`FIXME` YASAK (kimseye söz vermez, denetlenmez, çürür). İşaret envanter DEĞİL, envantere giden **doğrulanmış bağdır**: açığın kendisi gerekçesiyle `design/BACKLOG.md`'ye ya da görev satırına yazılır; `<ref>` ya görev kimliğidir (`08.5`) ya backlog bölümüdür (`BACKLOG §1`). `docs:check` referansın gerçekten var olduğunu doğrular — kayıt düşülmeyen boşluk commit'ten geçmez.
-- **Tamamlanmış görev satırı VAAT ETTİĞİNİ teslim etmiş olmalı.** `[x]`/`[~]` satırında anılan dosya ya da `pnpm` komutu gerçekten var olmalı; yön değiştiyse vaat **üstü çizilir** (`~~…~~`) ve gerekçesi yazılır. Satırı okuyup altındaki notu okumayan ajan olmayan bir komutu çağırır — CLAUDE.md §5'in "durumun tek sahibi görev satırıdır" kuralı ancak böyle ayakta durur. `docs:check` bunu doğrular.
-- **Doğrulama:** `pnpm docs:check` — veri modeli ↔ migration ↔ Zod alan karşılaştırması, anılan paketlerin varlığı, görev kimlikleri, **kapanmış göreve asılı `BEKLEYEN` işareti**, **tamamlanmış satırın vaat ettiği dosya/komut**, özet tazeliği. `pnpm hooks:install` ile commit öncesi otomatik koşar.
-- Veri modeli konu dosyalarına bölüktür (`docs/architecture/data-model/`): **alan** oraya, **karar** ana `DATA_MODEL.md`'ye yazılır.
-- **`docs/denetim/` yalnız denetim ajanının yönetimindedir.** Şerit ajanları buradaki dosyalara YALNIZ kendi **Cevap:** bölümlerini yazar; dosya silmek, yeniden adlandırmak, denetim metnini değiştirmek ya da dosyayı **eski bir sürümüyle ezmek** YASAK (yaşandı: 02.08, inceltilmiş bir dosya eski tam kopyayla ezildi). Cevap yazmadan önce dosyanın GÜNCEL hâlini oku; klasörün yaşam döngüsünü (açık maddeye indirme, kapanan dosyayı silme) yalnız denetim ajanı işletir.
-
-## 6. docs haritası
-Kurallar + kod dizilimi → `STACK` · Disiplin (migration/deploy/git/ajan) → `WORKFLOW` · İş kuralları → `DOMAIN` ·
-Veri: ortak ilke + kalıcı kararlar → `DATA_MODEL`, varlık tabloları → `data-model/{katalog,stok-tedarik,musteri-siparis,para,iletisim-geribildirim}.md` ·
-Sipariş durum makinesi → `ORDER_LIFECYCLE` · i18n/SEO → `SEO_I18N` ·
-Log / hata izleme / sistem sağlığı → `OBSERVABILITY` (iş kaydı DEĞİL — ayrım §1'de) ·
-Faz 2 niyeti: MCP ile sınırlı AI yönetici asistanı → `AI_ADMIN_ASSISTANT` (karar değil; bugünkü kararlar bu hedefin önünü kapatmasın) ·
-Blueprint'ten sapmalar → `ARCHITECTURE_DECISIONS` · Modül planı + durum → `docs/build/NN-*.md` · Kapsam listesi → `BACKLOG` ·
-Tasarım ↔ kod açığı (yalnız AÇIK maddeler) → `design/BACKLOG.md` · kapanmış tasarım kararları ve bilinçli sapmalar (yeniden tartışılmaz) → `design/KARARLAR.md`.
-Tam navigasyon: `docs/architecture/README.md`.
+## 6. Harita
+Kod dizilimi → `docs/architecture/STACK.md` · migration/deploy/git → `WORKFLOW.md` · iş kuralları →
+`DOMAIN.md` · veri → `DATA_MODEL.md` + `data-model/*.md` · sipariş makinesi → `ORDER_LIFECYCLE.md` ·
+i18n/SEO → `SEO_I18N.md` · log/PII → `OBSERVABILITY.md` · analitik kapıları → `ANALYTICS.md` · kanal ve
+sipariş kaynağı → `CHANNELS.md` · dış servisler → `INTEGRATIONS.md` · sapmalar →
+`ARCHITECTURE_DECISIONS.md` · şirket künyesi → `BUSINESS_CATALOG.md` + `packages/brand` · sefer modeli →
+`docs/feature/` · operasyon prosedürü → `docs/runbook/` · açık işler → `docs/KALAN.md` · tasarım →
+`design/Harita.dc.html`.

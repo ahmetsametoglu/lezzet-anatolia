@@ -2,7 +2,7 @@
 
 Donuk Türk gıdası satış ve operasyon sistemi (Strasbourg; FR/DE; TR/FR/DE; B2B + B2C).
 
-Mimari ve iş kuralları: [`docs/architecture/`](docs/architecture/). İnşa sırası: [`docs/build/`](docs/build/). Tasarım girdileri: [`design/`](design/).
+Kurallar: [`CLAUDE.md`](CLAUDE.md). Mimari ve iş kuralları: [`docs/architecture/`](docs/architecture/). Açık işler: [`docs/KALAN.md`](docs/KALAN.md). Tasarım: [`design/`](design/).
 
 ## Yığın
 
@@ -46,9 +46,9 @@ pnpm dev              # web + backend
 | `pnpm test:unit`  | DB'siz birim testler — paralel, ~1 sn (günlük döngü) |
 | `pnpm test`       | tam paket (birim + entegrasyon), **kilitli** — bkz. `CLAUDE.md §4b` |
 | `pnpm test:integration` | yalnız yerel Supabase'e vuranlar, kilitli |
-| `pnpm docs:check` | doküman ↔ kod tutarlılığı (bkz. WORKFLOW §8) |
-| `pnpm docs:sync`  | türetilmiş durum özetini yeniden yazar     |
-| `pnpm hooks:install` | commit öncesi doküman denetimini kurar  |
+| `pnpm repo:check` | repo tutarlılığı: veri modeli ↔ migration ↔ Zod, `BEKLEYEN` bağları, kod disiplinleri |
+| `pnpm docs:sync`  | veri modeli alan tablolarını migration'dan yeniden üretir |
+| `pnpm hooks:install` | commit öncesi `repo:check` kancasını kurar |
 
 ### Veritabanı (yerel Supabase)
 

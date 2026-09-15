@@ -192,53 +192,28 @@ Aynı mantıkla: ihtiyaç doğmadan çoklu dil, özellik bayrağı, eklenti mima
 
 ## 7. Ajanla çalışma
 
-### Her ajan için (tek ya da çok, fark etmez)
-
-- **Kapsamı önce konuş.** Ne yapılacağı ve **nasıl test edileceği** kararlaştırılmadan koda girme
-- Belirsizlik varsa ve iki yorum farklı işe götürüyorsa **sor**. Rutin kararları kendin ver, sorma
-- İstenmeyen şeyi kendiliğinden ekleme. İyileştirme fikri varsa **söyle**, sessizce yapma
-- Geri döndürülemez veya dışa dönük eylemlerden önce onay al
-- **İş bitince görev satırı güncellenir** — `docs/build/NN-*.md` içindeki `(NN.k)` satırı `[x]`/`[~]` olur ve altına **Durum** notu düşülür. Kod ve doküman **aynı commit'te** gider; ayrı commit "sonra yazarım" demektir, o da yazmamak demektir (§8)
-
-### Paralel çalışma (birden çok ajan)
-
-Varsayılan tek ajandır. Paralel çalışma **istenirse** şu üç kural bağlayıcıdır — yoksa ajanlar aynı dosyaya yazıp birbirinin işini ezer:
-
-1. **Görev kimliğiyle üstlenme.** Ajan işi `(NN.k)` kimliğiyle alır ve görev satırına `touches:` ile dokunacağı yolları yazar. Kimliksiz iş başlatılmaz — kimlik yoksa iki ajanın aynı işi yaptığı ancak birleştirmede anlaşılır
-2. **`touches` kesişmesi = sıraya girme.** Dokunma kümeleri çakışan iki görev aynı anda başlamaz. Çakışma kaçınılmazsa işler bölünür ya da biri bekler
-3. **Ajan başına ayrı dal/çalışma ağacı.** Aynı çalışma dizininde iki ajan koşmaz (dosya yarışı); her ajan kendi dalında çalışır, birleştirme sırası bağımlılık sırasıdır
-
-**Doküman yazımında da aynı kural geçerlidir.** Veri modeli konu dosyalarına bölünmüştür (`docs/architecture/data-model/`) — iki ajan farklı konuya paralel yazabilir; ortak ilkeler ve "Kalıcı kararlar" tek dosyada (`DATA_MODEL.md`) olduğundan oraya **sırayla** yazılır.
-
-**Birleştirmeden önce** `pnpm docs:check` — doküman/kod sapmasını ve bayat durum özetini yakalar; `pnpm docs:sync` özet tabloyu tazeler.
-
-### Testleri kim çalıştırır
-
-Bu projede kimin neyi koşturduğu **CLAUDE.md §4** (derleme · dev sunucusu) ve **§4b**'de (birim ·
-commit kapısı `pnpm test:commit` · entegrasyon · e2e · tam paket ve sağlık koşusu) yazılıdır; bağlayıcı
-olan oradaki metindir, burada tekrar edilmez.
-(10.09: bu bölümdeki eski kopya ikisiyle de çelişiyordu — "derleme serbest" dev açıkken yasaktı,
-e2e "kullanıcıda" değil denetimdeydi.)
-
-Oradan ayrı kalan tek kural: canlı servis çağıran testleri (ücretli API, dış sağlayıcı) ajan
-**hazırlar ve tarif eder**, çalıştırmayı kullanıcı yapar.
+- **Kapsamı önce konuş:** ne yapılacağı ve nasıl doğrulanacağı kararlaştırılmadan koda girme. İki yorum
+  farklı işe götürüyorsa sor; rutin kararı kendin ver.
+- İstenmeyeni kendiliğinden ekleme; iyileştirme fikrini söyle. Geri döndürülemez ya da dışa dönük eylemden
+  önce onay al.
+- Üç şerit tek çalışma ağacını ve tek indeksi paylaşır: commit daima yol adıyla (`CLAUDE.md §0`). Şeritler
+  arası iş `docs/KALAN.md` satırıdır (`CLAUDE.md §4`).
+- Canlı servis çağıran testleri (ücretli API, dış sağlayıcı) ajan hazırlar ve tarif eder; çalıştırmayı
+  kullanıcı yapar. Kimin neyi koşturduğu `CLAUDE.md §4`–`§4b`'de yazılıdır.
 
 ---
 
-## 8. Dokümantasyon bakımı
+## 8. Dokümantasyon
 
-- **Tek dil.** Doküman hangi dilde yazılıyorsa tamamı o dilde; yalnız dile bağlı özel adlar yabancı kalır. Kod tanımlayıcıları ve commit mesajları teknik kalabilir
-- **Rol ayrımı** (bunların karışması dokümanı öldürür):
-  - `DATA_MODEL.md` + `data-model/*.md` · `DOMAIN.md` · `STACK.md` · `ARCHITECTURE_DECISIONS.md` — ne var, nerede, neden öyle
-  - `BACKLOG.md` — ne yapılacak (kapsam; **ilerleme değil**)
-  - `docs/build/NN-*.md` — nerede kaldık (görev satırı = durumun **tek** kaynağı)
-  - `WORKFLOW.md` / `STACK.md` — nasıl çalışılır, nasıl kurulur
-- Kalıcı bir karar aldığında ("bu böyle kalacak, sebebi şu") o an ilgili dokümana yaz. Sonra yazmak, yazmamak demektir
-- Doküman koddan farklıysa **kod haklıdır** — dokümanı düzelt. Ajana yanlış bilgi veren doküman, bilgisiz ajandan daha tehlikelidir
-- **`pnpm docs:check` bunu makine işi yapar:** veri modeli tablosu ↔ migration kolonu ↔ Zod alanı karşılaştırması, anılan paketlerin varlığı, görev kimliklerinin bütünlüğü, durum özetinin tazeliği. Birleştirmeden önce koşar; `pnpm docs:sync` türetilmiş özeti yeniden yazar
-- **PAYLAŞILAN AĞAÇTA ÖZET TUZAĞI (ölçüldü 25.08, bir günde üç blokaj).** `docs:sync` özeti **çalışma ağacındaki TÜM** modül dosyalarından üretir; birden çok ajan tek ağacı paylaşırken bu, kaçınılmaz olarak **başka şeridin commit'lenmemiş işini de saymak** demektir. O satır commit'e girerse HEAD kendi kaynağıyla çelişir ve pre-commit kancası **ağaçtaki herkesi** durdurur — kanca denetimi commit'e girecek içeriğe koşuyor (`git checkout-index`), yani kendi işi kusursuz olan şerit de kırmızıyı miras alır. **Kural: `docs:sync` sonrası YALNIZ kendi modülünüzün satırını commit'e alın**, ötekileri HEAD'deki hâline döndürün (`diff <(git show HEAD:docs/build/README.md) docs/build/README.md`). `docs:sync` artık bunu kendisi uyarıyor: oynayan satırlardan hangilerinin commit'lenmemiş bir modül dosyasından geldiğini adıyla yazar. **Otomatik ayıklanamaz** — akış `git commit -- <yollar>` (sahnelemesiz) olduğu için makine "benim kirli dosyam" ile "onun kirli dosyası"nı ayırt edemez; ayrım niyet bilgisidir
-- **İki sapma sınıfı 02.08'de eklendi (denetim bulgusu + kullanıcı isteği):** *(a)* kapanmış (`[x]`) bir göreve asılı `BEKLEYEN` işareti — kimlik doğru olduğu için eski kontrolden geçiyordu, ama görev kapandığı an o boşluk **sahipsiz** kalır (bugün uyarı; kalanlar temizlenince hata olmalı); *(b)* tamamlanmış satırın **teslim ettiği dosya/komut** gerçekten var mı — yön değiştiğinde gerekçe alttaki Durum notuna yazılıp başlık düzeltilmeden kalıyordu, ve satırı okuyup notu okumayan ajan olmayan bir komutu çağırıyordu. İkisi de gerçek örnekle bulundu (`BEKLEYEN(14.3)` kapanmış göreve asılıydı; `pnpm test:purge` ve silinmiş bir onarım betiği teslim ediliyor görünüyordu). Geri alınan vaat **üstü çizilir** (`~~…~~`) — o zaman denetim atlar
-- **`pnpm hooks:install` bunu her commit'te koşturur** ve denetim **çalışma ağacına değil, commit'e giren içeriğe** uygulanır. Ayrım paralel çalışmada belirleyicidir: ağaçta duran ama commit'e girmeyen dosya — yarım işin ya da **başka ajanın kodu** — denetimi yanlış yeşile boyar. Bir kez yaşandı: yalnız dokümanı taşıyan commit, ağaçtaki diğer ajanın enum kodu sayesinde "tutarlı" göründü; oysa o commit tek başına tutarsızdı. Bekçi, tam da "kod ve doküman aynı commit'te gider" kuralının çiğnendiği hâle kördü
+- Kaynak koddur; doküman koddan farklıysa dokümanı düzelt. `docs/architecture/*` yalnız kural ve karar
+  taşır; durum, ilerleme ve tarihçe yazılmaz — açık işler `docs/KALAN.md`'de, tarihçe git log'da.
+- Rol ayrımı: `DATA_MODEL.md` + `data-model/*.md` · `DOMAIN.md` · `STACK.md` · `ARCHITECTURE_DECISIONS.md`
+  = ne var, nerede, neden öyle · `WORKFLOW.md` = nasıl çalışılır · `KALAN.md` = ne yapılacak.
+- Kalıcı bir karar alındığında o an ilgili dokümana yazılır; sonra yazmak, yazmamaktır. Tek dil: doküman
+  Türkçe; kod tanımlayıcıları yabancı kalabilir.
+- `pnpm repo:check` (commit kancası) makine denetimidir: veri modeli alan tablosu ↔ migration ↔ Zod, enum
+  listesi, para alanı beyanı, migration numarası, `BEKLEYEN` işaretlerinin KALAN'a bağı, kod disiplinleri.
+  `pnpm docs:sync` yalnız türetilmiş alan tablolarını yeniden yazar.
 
 ---
 

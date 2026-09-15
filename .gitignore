@@ -17,9 +17,8 @@ temp/
 # Ortak test koşusunun sonucu (tek uçuş — scripts/shared-test-run.mjs); her koşuda yeniden doğar
 .test-results/
 
-# Şeritler arası talepler: karşılanınca silinir, repoya YALNIZ kullanıcı isterse girer (git add -f)
-docs/talep/*
-!docs/talep/README.md
+# Repodan çıkarılan dosyaların yerel arşivi (git'e girmez; silinen doküman ve eski talepler)
+.arsiv/
 
 # Playwright (00.9): anlık ekran bakışları + e2e raporu (düşüş artefaktları .test-results/ altında)
 .ui-shots/
@@ -28,32 +27,15 @@ docs/talep/*
 .ui-shots-mobile/
 playwright-report/
 
-# Operasyon envanter turu (28-29.08): fiziksel cihazda çekilen 59 kare (12 MB) ve onları anlatan
-# iki doküman. Claude Design'ın operasyon yeniden kurgusuna GİRDİ olarak üretildi; tasarım kararı
-# taşımaz ve tasarım kesinleşince değerini yitirir — repoya taşınacak kalıcı bilgi değil.
-# `.ui-shots-mobile/` ile aynı gerekçe (07.08); ayrı klasör, çünkü kareler kendi dokümanının
-# yanında duruyor ve markdown görsel bağları göreli yoldan çözülüyor.
-docs/uygulama/ekran-goruntuleri/
-docs/uygulama/06-operasyon-ekran-envanteri.md
-docs/uygulama/07-operasyon-fonksiyonel-kontrol-listesi.md
-
 # Tasarım ekranlarının resmi — üretilir, depoya gitmez (scripts/design-shot.mjs)
 .design-shots/
 
-# v3 geçişinin karşılaştırma çiftleri (30.08): her uyuşmazlık girdisinin yanında duran cihaz +
-# tasarım karesi. `scripts/v3-compare.mjs` üretir; kalıcı olan notun içindeki ölçüm, kareler
-# geçişle birlikte doğar ve onunla ölür — `docs/uygulama/ekran-goruntuleri/` ile aynı gerekçe.
-# Dosya adı kalıbı `v3-gorsel-*.md` defterlerini YAKALAMAZ (onlar repoda kalır).
-docs/uygulama/v3-gorsel/
-
-# Claude Design'ın çalışma klasörü — KAYNAKLAR REPODA, gürültü dışarıda (kullanıcı kararı 14.09; 31.08'in
-# "klasörün tamamı dışarıda" kararını daraltır). İzlenenler: numaralı kaynak klasörleri (01–07),
-# `Harita.dc.html`, README/CLAUDE.md, çalışma zamanı `.js`leri ve `assets/`. Tasarım farkı araçları önceki
-# sürümü HEAD'den okur. Dışarıda kalanlar üretilmiş ya da yüklenmiş dosyalar: ürün görselleri (`uploads/`,
-# 18 MB), ekran görüntüsü setleri (`screenshots/`, 17 MB), tek dosyaya gömülü çıktılar (`08-export/`) ve
-# eski sürümler (`09-arsiv/`, geçmişi git'te).
-# `design/derived/` ve `design/*.md` REPODA KALIR — implementin okuduğu karar metinleri onlar.
-design/project/uploads/
-design/project/screenshots/
-design/project/08-export/
-design/project/09-arsiv/
+# Tasarım kaynağı repoda (`design/*.dc.html`, `support.js`, `assets/`, `derived/`); Claude Design paketinin
+# geri kalanı (brief, yükleme, dışa aktarım, ekran görüntüsü, keşif, eski sürüm) ve aracın çalışma klasörü dışarıda.
+design/pages/
+design/uploads/
+design/screenshots/
+design/07-kesif/
+design/08-export/
+design/09-arsiv/
+design/project/
