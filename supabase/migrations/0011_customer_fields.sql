@@ -1,46 +1,26 @@
--- Modül 04 — Müşterinin ticari alanları + adres. DOMAIN §10 (kimlik), §7 (vade/kapıda), §5 (indirim).
---
--- **Ayrı `customer` tablosu YOKTUR.** Müşteri bir ROLDÜR: kimlik (müşteri + personel) tek tabloda,
--- `user_profiles`'ta yaşar (0001). Kimlik anahtarları (telefon/e-posta/auth bağı) ve tekillik
--- indeksleri orada; burada yalnız **müşteri rolüyle davranan** profilin ticari alanları eklenir —
--- 0001'in planladığı gibi ("kredi/pazarlama/şirket alanları ilgili modüllerin migration'larında").
---
--- Neden bölmedik: alanların hepsi küçük skaler, satır dar; güvenlik sınırı bizde tabloda değil
--- (her okuma sunucudan service_role + guard'dan geçer, RLS ikinci hat). 1:1 uzantı tablosu her
--- sepet/checkout okumasına bir join ekler, bul-veya-oluştur'a ikinci satır, birleştirmeye ikinci taşıma.
+-- Müşterinin ticari alanları ve adres. Ayrı müşteri tablosu yok: müşteri bir roldür, kimlik `user_profiles`ta yaşar ve buraya yalnız
+-- ticari alanlar eklenir, çünkü 1:1 uzantı tablosu her sepet ve ödeme okumasına bir join eklerdi.
 
 alter table public.user_profiles
   -- Doluysa B2B. Kanal (b2b/b2c) SAKLANMAZ, bunun varlığından türetilir (DATA_MODEL türetme ilkesi).
   add column company_info jsonb,
   add column vat_number text,                        -- AB vergi no (Alman USt-IdNr) — reverse charge
   add column vat_number_valid boolean,               -- VIES doğrulaması; null = hiç sorulmadı
-  -- Sonucun YAŞI. Bayrak tek başına "doğru mu" der, "ne zaman doğruydu" demez — ve bu kolon
-  -- reverse charge'ı (%0 KDV) açan kolondur: başvuruda geçerli olup sonradan iptal edilmiş bir
-  -- numara, damga olmadan sonsuza kadar geçerli görünür. Damga `vat_number_valid` ile BİRLİKTE
-  -- yazılır ve yalnız KESİN cevapta (true/false); "sorulamadı" ne bayrağı ne damgayı değiştirir,
-  -- yoksa VIES'in meşgul olduğu bir gün bilgimizi silerdi.
+  -- Sonucun yaşı: %0 KDV'yi (reverse charge) açan bayrak "ne zaman doğruydu"yu söylemez ve sonradan iptal edilen bir numara
+  -- damgasız hep geçerli görünürdü. Damga `vat_number_valid` ile birlikte ve yalnız kesin cevapta yazılır; "sorulamadı" ikisini de
+  -- değiştirmez, yoksa VIES'in meşgul olduğu bir gün bilgiyi silerdi.
   add column vat_number_checked_at timestamptz,
 
-  -- ── B2B başvurusunun ZAMAN EKSENİ (08.7 · 09.11) ─────────────────────────────────────────────
-  -- `b2b_approved` iki hâl taşıyor ama başvurunun ÜÇ hâli var: bekliyor · onaylandı · reddedildi.
-  -- Ret de `false` bıraktığı için (09.11: "ret SİLMEZ, kayıt B2C olarak kalır") "sırasını bekliyor"
-  -- ile "bakıldı, olmadı" veride ayrışmıyordu; ekran reddedilen adaya hiç gelmeyecek bir cevabı
-  -- beklediğini söylüyordu. Üçüncü hâl bir enum'la DEĞİL, damgalarla ayrılır: enum yalnız "hangi
-  -- hâl"i söyler, damga "ne zaman ve neden"i de söyler — ve onay kartının istediği zaten bu.
-  --
-  -- Başvuru damgası. `created_at` bu işi GÖREMEZ: o profilin doğduğu andır ve B2C olarak açılıp
-  -- aylar sonra B2B'ye başvuran müşteride kuyruğu yanlış sıralar (bugünkü başvuru en eski görünür).
+  -- Başvurunun üç hâli (bekliyor, onaylandı, reddedildi) `b2b_approved` ile ayrışmaz, çünkü ret de `false` bırakır; hâller enum
+  -- yerine damgalarla ayrılır, çünkü damga "ne zaman"ı da söyler. Başvuru damgası `created_at` olamaz: B2C açılıp aylar sonra
+  -- başvuran müşteri kuyrukta en eski görünürdü.
   add column b2b_applied_at timestamptz,
   add column b2b_rejected_at timestamptz,
   add column b2b_rejected_by uuid references public.user_profiles (id) on delete set null,
   add column b2b_reject_reason text,
-  -- **Ret gerekçesi MÜŞTERİYE gider** (e-postayla) — yani personelin Türkçe cümlesi, Fransızca ya da
-  -- Almanca konuşan bir muhataba ulaşır. Çevrilmezse gerekçe olmayan bir gerekçedir. Torba yalnız
-  -- makine çevirilerini taşır; orijinal `b2b_reject_reason`'da durur (20.2).
-  --
-  -- Dil kolonu YOK ve gerekmiyor: operasyon yüzeyi tek dilli (CLAUDE §2, Türkçe) ve torbada
-  -- olmayan bir dil "orijinal zaten o dildedir" demeye yeter — `resolveUserText` bu hâlde orijinale
-  -- düşer, ki doğrusu da odur. Nadiren yazılan bir alan için üçüncü bir kolon taşımıyoruz.
+  -- Ret gerekçesi e-postayla müşteriye gider, yani personelin Türkçe cümlesi Fransızca ya da Almanca konuşan birine ulaşır; torba
+  -- yalnız makine çevirilerini taşır, orijinal `b2b_reject_reason`da durur. Dil kolonu yok, çünkü operasyon tek dilli ve torbada
+  -- olmayan dil için `resolveUserText` orijinale düşer.
   add column b2b_reject_reason_translations jsonb,
   -- Çeviri işi baktı mı. Başarısızlıkta da yazılır (sonsuz retry yok) — bkz. 0027.
   add column b2b_reject_reason_translated_at timestamptz,
@@ -57,93 +37,36 @@ alter table public.user_profiles
   add column price_group_id uuid references public.price_group (id) on delete restrict,
   add column cod_allowed boolean not null default true, -- kapıda ödeme izni; kötüye kullanımda kapanır
 
-  -- Kanal bazlı pazarlama izni + GDPR kanıtı (ne zaman, nereden). **OPT-IN**: anahtar yoksa izin
-  -- YOKTUR. Kampanya göndermek açık rıza ister; sessizliği rıza saymak hukuken de yanlıştır.
+  -- Kanal bazlı pazarlama izni ve GDPR kanıtı (ne zaman, nereden); opt-in, yani anahtar yoksa izin yoktur. Kampanya açık rıza ister
+  -- ve sessizliği rıza saymak hukuken yanlıştır.
   add column marketing_consent jsonb not null default '{}'::jsonb,
   /*
-    Bildirim TÜRÜ bazlı ret (22.08) — kanal değil TÜR. Bugün tek anahtar: `feedbackInvite`.
-
-    ── NEDEN `marketing_consent`E EKLENMEDİ ────────────────────────────────────
-    O şemanın anahtarları KANAL adıdır ve `MarketingChannelEnum` onlardan TÜRÜYOR
-    (`user-profile.schema` künyesi: "üçüncü kanal eklendiğinde derleme dursun"). Değerlendirme
-    daveti bir kanal değil; oraya konsaydı operasyonun "izinli müşteriler" süzgecinde bir kanal
-    olarak belirir ve "e-posta / WhatsApp / değerlendirme daveti" diye okunurdu.
-
-    ── VARSAYILAN TERS, VE BİLEREK ─────────────────────────────────────────────
-    `marketing_consent` opt-in; bu alan **opt-OUT**: anahtar yoksa davet GİDER. Sebebi hukuki ayrım
-    — kampanya açık rıza ister, teslim edilmiş bir siparişin değerlendirme daveti mevcut müşteri
-    ilişkisine dayanır ve gereken şey rıza değil, KOLAY REDDEDİLEBİLİRLİKTİR. Opt-in yapılsaydı
-    özellik doğduğu gün susardı (bugün davet herkese gidiyor).
-
-    Şekil `marketing_consent` ile aynı (`{granted, at, source}`) — iki alan iki dilde konuşmasın.
+    Bildirim türü bazlı ret (anahtar tür adıdır, `feedbackInvite` gibi); `marketing_consent`e konmadı, çünkü oradaki anahtarlar kanal
+    adıdır ve değerlendirme daveti operasyonun izin süzgecinde bir kanal gibi görünürdü. Varsayılan bilerek ters, opt-out: davet
+    mevcut müşteri ilişkisine dayanır ve gereken rıza değil kolay reddedilebilirliktir; şekil `marketing_consent` ile aynı
+    (`{granted, at, source}`).
   */
   add column notification_consent jsonb not null default '{}'::jsonb,
   /*
-    Bildirim tercihleri sayfasının OTURUMSUZ anahtarı (22.08). Her giden mailin altbilgisinde
-    "Bildirim tercihleri" bağı var ve o bağ bugüne kadar giriş duvarına çıkıyordu.
-
-    **Neden gerekli:** izni geri almak, vermek kadar kolay olmalı (GDPR). İzni checkout'ta tek
-    tıkla veren müşteriye geri almak için OTP'li giriş yaptırmak bu ölçüte uymaz.
-
-    **Neden `referral_code` KULLANILMIYOR:** o kod paylaşılmak için var — WhatsApp'ta, ekran
-    görüntüsünde dolaşır. Aynı dizeyle tercih değiştirilebilseydi, davet bağlantısını gören herkes
-    davet edenin bildirimlerini kapatabilirdi.
-
-    **İSTEK ÜZERİNE üretilir** (`referral_code` deseni): mail göndermeyen bir profile jeton
-    yazmanın karşılığı yok. `null` = bu profile henüz mail gitmedi.
-
-    Süresi YOK ve bu bilinçli: jeton yıllar önce gönderilmiş bir mailin altbilgisinde duruyor
-    olabilir ve süreli olsaydı o mail bir gün sessizce ölü bağa dönerdi. Taşıdığı yetki dar —
-    yalnız tercihleri okumak ve yazmak; kimlik, adres, sipariş görünmez. Kimlik silinince
-    (`anonymize_customer`, 0037) jeton da düşer.
+    Bildirim tercihleri sayfasının oturumsuz anahtarı: izni geri almak vermek kadar kolay olmalı (GDPR) ve `referral_code`
+    kullanılamaz, çünkü paylaşılan o kodu gören herkes davet edenin bildirimlerini kapatabilirdi. Süresi bilerek yok, çünkü yıllar
+    önceki bir mailin bağı ölmemeli; yetkisi yalnız tercihleri okuyup yazmaktır ve istek üzerine üretilir (`null` = henüz mail
+    gitmedi).
   */
   add column notification_token text unique,
   -- Edinim kaynağı — İLK siparişte bir kez yazılır, sonra değişmez.
   add column acquisition_source jsonb,
   add column referred_by uuid references public.user_profiles (id) on delete set null,
-  -- **Davet kodu** (17.7) — müşterinin paylaştığı bağlantının ucundaki dize.
-  --
-  -- Neden `id` KULLANILMIYOR: davet bağlantısı WhatsApp'ta, sosyal medyada, ekran görüntüsünde
-  -- dolaşır. Orada bir uuid paylaşmak, kimliği tahmin edilemez sanılan bir alanı herkese açık hâle
-  -- getirir — ve o kimlik başka yerlerde (destek, admin URL'i) bir anahtardır.
-  --
-  -- **İSTEK ÜZERİNE üretilir, herkese peşin verilmez:** müşterilerin çoğu hiç davet etmez ve
-  -- kullanılmayacak bir kodu her satıra yazmak, tekillik çakışmalarını da boşuna göze almak olurdu.
-  -- `null` = bu müşteri henüz davet bağlantısı istemedi.
-  --
-  -- Sipariş referansı ve kupon koduyla AYNI okunabilir alfabe: telefonda elle yazılabilmeli,
-  -- karıştırılan harfler (O/0, I/1) alfabede yok.
-  -- **GDPR silme damgası** (05.08 · `anonymize_customer`, 0037). Satır SİLİNMEZ, kimliği boşaltılır:
-  -- `order` bu profile `restrict` ile bağlı ve sipariş/fatura kaydı yasal olarak duruyor.
-  --
-  -- Damga bir "silindi mi" bayrağı DEĞİL, bir TARİHTİR: "ne zaman" sorusu denetimde sorulur ve
-  -- boolean'a düşürülmüş bir kayıt o soruyu bir daha cevaplayamaz. `null` = hiç silinmedi.
+  -- `anonymized_at` bir tarihtir, bayrak değil: satır silinmez (sipariş ve fatura kaydı yasal olarak durur), kimliği boşaltılır ve
+  -- "ne zaman" sorusu denetimde sorulur. `referral_code` istek üzerine üretilen okunabilir koddur; uuid paylaşmak başka yerlerde
+  -- anahtar olan kimliği açığa çıkarırdı.
   add column anonymized_at timestamptz,
   add column referral_code text,
 
   /*
-    ── WHATSAPP BAĞLAMA JETONU (04.10) ────────────────────────────────────────────────────────────
-    Müşteri "WhatsApp'ımı bağla"ya bastığında üretilen, ÖNCEDEN YAZILI mesajın içine konan dize.
-    Müşteri o mesajı bize gönderir; webhook iki şeyi birden görür — **kimden geldiği** (numaranın
-    zilyetlik kanıtı) ve **jeton** (hangi hesap). Kanıt kurulur, jeton düşer.
-
-    **Neden gerekiyor:** numaranın kanıtlanması "bu hat bu kişide" der, "bu kişi ŞU HESAP" demez.
-    Müşteri kendiliğinden yazdığında elimizde hesabı gösteren hiçbir şey yoktur ve yeni bir taslak
-    doğar. Jeton tam olarak o boşluğu kapatır — ve bunu **bize hiç mesaj GÖNDERMEDEN** yapar:
-    bağlantıya basan müşteridir, 24 saatlik ücretsiz pencereyi de o açar (DOMAIN §11).
-
-    **JETON, 6 HANELİ GÜVENLİK KODU DEĞİLDİR — ikisini karıştırmak tehlikelidir.** DOMAIN §10 der ki
-    *"koddan kimliğe gidilmez, kimlikten koda gidilir"*; o kural 6 hanelik ÇAPA kodu içindir ve orada
-    doğrudur, çünkü kod kısa (10⁶) ve gücünü numaraya bağlı olmaktan alır. Burada sorgunun yönü
-    zorunlu olarak jetondan kimliğedir (mesaj gelene kadar kimin yazdığını bilmiyoruz), o yüzden
-    güvenlik **entropiden** gelmek zorunda: `readableCode(12)` ≈ 60 bit, artı kısa ömür, artı tek
-    kullanım. Tahminle bir jeton bulmak, bulanın numarasını başkasının hesabına yazdırırdı — yani
-    hesap devralma; kısa kod burada asla yeterli olmazdı.
-
-    **Süre ZORUNLU** (`notification_token`un tersi, ve ayrım bilinçli): o jeton yıllar önceki bir
-    mailin altbilgisinde yaşayabilmeli ve yalnız tercihleri açıyor. Bu jeton bir KİMLİK anahtarı
-    yazdırıyor; ömrü ekranla WhatsApp arasındaki birkaç dakikadan uzun olamaz. Kullanılınca ikisi de
-    `null`'lanır — tek kullanım kuralı veride değil kodda ama izi burada.
+    WhatsApp bağlama jetonu: müşterinin bize gönderdiği hazır mesajın içinde durur ve webhook hem numaranın sahipliğini hem hesabı
+    görür. Güvenlik kodu gibi kısa olamaz, çünkü sorgu jetondan kimliğe gider ve tahmin edilen bir jeton hesabı devralmak olurdu;
+    bu yüzden entropisi yüksek, ömrü kısa ve tek kullanımlıktır.
   */
   add column wa_link_token text,
   add column wa_link_expires_at timestamptz,
@@ -152,36 +75,10 @@ alter table public.user_profiles
   add constraint user_profiles_wa_link_pair check ((wa_link_token is null) = (wa_link_expires_at is null)),
 
   /*
-    ── KİMLİK ÇAPASI (04.10 · DOMAIN §10) ─────────────────────────────────────────────────────────
-    Numaranın kanıtlanması "bu hat BUGÜN bu kişide" der. Çapa başka bir soruyu cevaplar:
-    **"bu numaranın GEÇMİŞİ kimin?"** — çünkü zilyetlik gerçektir ama bağ bayat olabilir. Operatör
-    karantina süresi dolan bir numarayı yeniden dağıtır; yeni sahibi hattı meşru olarak elinde tutar
-    ve OTP'yi de meşru olarak alır. Çözen tek şey, **şüphe doğmadan ÖNCE kurulmuş bir sırdır.**
-
-    ── İKİ ÇAPA, İKİ AYRI KİTLE — YEDEK DEĞİL ─────────────────────────────────────────────────────
-    `email_anchored_at` → e-posta çapası: kod E-POSTAYA gider, müşteri WHATSAPP'TAN geri yazar.
-    Kanıtın gücü çaprazlıktan gelir: "bu hattı tutan kişi şu posta kutusunu da yönetiyor."
-    `security_code_hash` → e-posta bağlamak İSTEMEYENE verilen 6 hane.
-
-    İkisi aynı müşteride bir arada BULUNMAZ: e-posta doğrulanınca kod silinir (DOMAIN §10). Yani
-    "yedek" değiller — biri ötekinin yokluğunda tek çapadır.
-
-    ── NEDEN AYRI BİR DAMGA (`email_anchored_at`), `email is not null` YETMİYOR ────────────────────
-    `email` kolonu her zaman kanıt taşımıyor: elle işlenen DM'de operatör adresi klavyeden
-    girebiliyor (`openWhatsappConversation`). Yani "e-postası var" ile "e-postası kanıtlandı" iki
-    ayrı gerçek — telefonda yaptığımız ayrımın aynısı, bir kolon ötede. Üçüncü bir kanıt yolu daha
-    var ve o damga İSTEMİYOR: `auth_user_id` dolu ise müşteri o kutuya gelen kodla giriş yapmıştır.
-    Çapa hâli bu üçünden TÜRETİLİR, saklanmaz.
-
-    ── KOD ÖZETLENEREK SAKLANIR ───────────────────────────────────────────────────────────────────
-    Canlı DB'ye yazma yetkisi olana karşı değil (o zaten cevabı değiştirebilir): **yedek sızarsa**
-    ortaya (numara, kod) listesi çıkmasın diye. `email_verifications` ile aynı disiplin (0003).
-
-    ── BEKLEYEN ADRES NEDEN SATIRDA DURUYOR ───────────────────────────────────────────────────────
-    `email_verifications` e-postayla anahtarlanmış; "hangi MÜŞTERİ hangi adresi bağlamayı bekliyor"
-    sorusunu cevaplayamıyor. Ve o soru güvenliğin kendisi: doğrulama **numaradan kimliğe, kimlikten
-    bekleyen adrese** gider (DOMAIN §10 — "koddan kimliğe gidilmez"). Adres mesajdan okunsaydı,
-    kodu ele geçiren biri onu İSTEDİĞİ adresle eşleştirebilirdi.
+    Kimlik çapası "bu numaranın geçmişi kimin" sorusunu cevaplar: yeniden dağıtılan numaranın yeni sahibi OTP'yi meşru alır ve onu
+    ayıran tek şey önceden kurulmuş bir sırdır. Çapa ya kanıtlanmış e-posta (`email_anchored_at`, çünkü `email` operatörce elle
+    girilmiş olabilir) ya da yedek sızarsa liste çıkmasın diye özetlenen 6 haneli koddur; bekleyen adres satırda durur, çünkü
+    doğrulama numaradan kimliğe, kimlikten bekleyen adrese gider.
   */
   add column email_anchored_at timestamptz,
   add column anchor_email text,
@@ -197,33 +94,15 @@ alter table public.user_profiles
   add constraint user_profiles_single_anchor check (email_anchored_at is null or security_code_hash is null),
 
   /*
-    ── BEKLEYEN KİMLİK SORUSU (04.10) — DOMAIN §10 ────────────────────────────────────────────────
-    Tetik (uzun sessizlik / taşıyıcının `failed` beyanı) bir AN'dır; soru ise o andan sonra
-    CEVAPLANANA KADAR sürer. Kolon tam olarak bu süreyi tutuyor.
-
-    ── NEDEN TÜRETİLEMİYOR, SAKLANMAK ZORUNDA ─────────────────────────────────────────────────────
-    Tetiğin ölçütü `customer_phone.last_seen_at`; ama o damga, soruyu doğuran mesajın KENDİSİ
-    tarafından tazeleniyor. Yani soru sorulduktan sonra bakıldığında boşluk çoktan kapanmış görünür
-    ve soru kendiliğinden buharlaşır — dönen yabancının iki kez "merhaba" yazması kapıyı açardı.
-    Bu yüzden karar, boşluğun HÂLÂ görülebildiği tek anda (kanıt tazelenmeden hemen önce) verilip
-    buraya yazılıyor.
-
-    ── NEDEN PROFİLDE, NUMARADA DEĞİL ─────────────────────────────────────────────────────────────
-    Kapının koruduğu şey KİMLİKTİR (geçmiş · puan · kişiye özel fiyat) ve cevabı da kimliğin
-    çapasıdır. Numaraya yazsaydık iki numaralı müşteride "bir numaradan sorulmuş, ötekinden
-    cevaplanmış" hâli doğardı.
-
-    Sebep saklanıyor çünkü cevabı DEĞİŞTİRMİYOR ama ANLAMINI değiştiriyor: `delivery_failed`
-    taşıyıcının beyanıdır (numara kapanmış/engellemiş), `silence` yalnız bir işarettir — yılda bir
-    bayramda sipariş veren sadık müşteri ile devredilmiş hat aynı şekli üretir. Operatör ekranda
-    hangisi olduğunu görmeli.
+    Bekleyen kimlik sorusu cevaplanana kadar sürer ve türetilemez: tetiğin ölçütü `customer_phone.last_seen_at` soruyu doğuran
+    mesajla tazelenir, soru kendiliğinden kaybolurdu; profilde durur, çünkü korunan şey kimliktir. Sebep saklanır, çünkü
+    `delivery_failed` taşıyıcının beyanı, `silence` yalnız bir işarettir ve operatör hangisi olduğunu görmeli.
   */
   add column challenge_reason text,
   add column challenge_raised_at timestamptz,
   add constraint user_profiles_challenge_pair check ((challenge_reason is null) = (challenge_raised_at is null)),
-  -- Değer kümesi VERİDE kilitli: motorun `ChallengeReason` birleşimi ile aynı iki değer. Enum
-  -- açmadık — bu küme domain-core'da yaşıyor ve orada büyüyor; iki yerde büyütmek yerine veri
-  -- yalnız yanlışı reddediyor.
+  -- Değer kümesi `ChallengeReasonEnum` (types) ile aynı iki değer; Postgres enum'u açılmadı, çünkü küme şemada büyür ve veri yalnız
+  -- yanlışı reddeder.
   add constraint user_profiles_challenge_reason_values check (
     challenge_reason is null or challenge_reason in ('silence', 'delivery_failed')
   ),
@@ -234,9 +113,8 @@ alter table public.user_profiles
     (b2b_rejected_at is null) = (b2b_reject_reason is null)
   );
 
--- Ret ASLA silinmez, ESKİR: yeniden başvuru damgası ret damgasının önüne geçer. Ret alanlarını
--- temizleseydik 09.11'in istediği geçmiş ("aynı kişi yarın yeniden başvurursa bilelim") ilk yeniden
--- başvuruda kaybolurdu — tam da geçmişi bilmenin işe yaradığı yerde.
+-- Ret silinmez, eskir: yeniden başvuru damgası ret damgasının önüne geçer, böylece aynı kişinin önceki reddi yeniden başvuruda
+-- kaybolmaz.
 create or replace function public.stamp_b2b_application() returns trigger
 language plpgsql
 set search_path = public
@@ -248,26 +126,19 @@ begin
   -- INSERT'te `old` YOKTUR; dallar `tg_op` ile ayrılır. Tek koşulda `or` ile birleştirmek
   -- güvenli değil — SQL boolean operatörlerinde kısa devre GARANTİSİ yoktur.
   if tg_op = 'INSERT' then
-    -- Künyesiyle birlikte AÇILAN profil de bir başvurudur (operatörün müşteri adına girmesi,
-    -- tohum verisi). İlk yazımda tetikleyici yalnız UPDATE'te koşuyordu ve bu satırlar hiç damga
-    -- almıyordu: kuyruk onları sıralayamıyor, ret damgası konunca da hâlleri belirsizleşiyordu.
+    -- Künyesiyle birlikte açılan profil de bir başvurudur (operatörün müşteri adına girmesi, tohum verisi); damgasız kalsa kuyruk
+    -- onu sıralayamazdı.
     kunye_degisti := new.company_info is not null;
     ret_yeni := new.b2b_reject_reason is not null;
   else
-    -- Damga KÜNYE DEĞİŞTİĞİNDE düşer, her profil güncellemesinde değil: telefonunu değiştiren
-    -- reddedilmiş bir aday sırf o yüzden kuyruğa geri dönmemeli.
-    --
-    -- Aynı künyeyle ikinci kez başvurmak da yeni bir başvuru değildir: reddedilen şey aynı bilgi.
-    -- Adayın yapması gereken künyeyi DÜZELTMEK; formu değiştirmeden yeniden göndermek yeni bilgi
-    -- taşımaz, yalnız operatörü aynı kararı ikinci kez vermeye çağırır.
+    -- Damga yalnız künye değiştiğinde düşer: telefonunu değiştiren reddedilmiş aday kuyruğa dönmemeli. Aynı künyeyle yeniden
+    -- göndermek de yeni başvuru değildir, çünkü yeni bilgi taşımaz ve operatörü aynı kararı ikinci kez vermeye çağırır.
     kunye_degisti := new.company_info is not null and new.company_info is distinct from old.company_info;
     ret_yeni := new.b2b_reject_reason is not null and old.b2b_reject_reason is null;
   end if;
 
-  -- **Ret damgasını da tetikleyici atar** ve sebebi "unutulmasın"dan fazlası: iki damga
-  -- BİRBİRİYLE KARŞILAŞTIRILIYOR (`b2b_pending`). Biri uygulamanın saatinden, öteki
-  -- veritabanınınkinden gelseydi aradaki kayma reddedilmiş bir adayı kuyruğa geri sokabilir ya da
-  -- taze bir başvuruyu reddedilmiş gösterebilirdi. Karşılaştırılan iki değer tek saatten gelmeli.
+  -- Ret damgasını da tetikleyici atar, çünkü iki damga `b2b_pending`te birbiriyle karşılaştırılır ve tek saatten gelmeli: uygulama
+  -- ile veritabanı saati arasındaki kayma reddedilmiş adayı kuyruğa geri sokabilirdi.
   if ret_yeni then
     new.b2b_rejected_at := now();
   end if;
@@ -280,24 +151,15 @@ begin
 end;
 $$;
 
--- Damgalar UYGULAMADA yazılmaz: bugün başvuruyu yazan tek yol var, ama yarın ikincisi açılırsa
--- (operatörün müşteri adına künye girmesi) o yol damgayı unutur ve kuyruk sessizce yanlış sıralanır.
--- Kural veride durur (CLAUDE §1).
+-- Damgalar uygulamada yazılmaz: başvuruyu yazan ikinci bir yol (operatörün müşteri adına künye girmesi) damgayı unutur ve kuyruk
+-- sessizce yanlış sıralanırdı.
 create trigger user_profiles_b2b_stamp_trg
   before insert or update on public.user_profiles
   for each row execute function public.stamp_b2b_application();
 
--- ── ÇEVİRİ BAYATLAMASINI VERİ ÖNLER (20.2) ───────────────────────────────────
--- Kaynak metin değişince eski çeviri ARTIK YANLIŞTIR ve sessizce yanlıştır: müşteri, personelin
--- SİLDİĞİ bir gerekçenin Fransızcasını okur. Aynı tehlike ürün yorumunda da var (yorumunu
--- düzenleyen müşteri).
---
--- Kural kapıya değil VERİYE konuyor: kapı bir yol unutabilir, ikinci bir yazar hiç bilmeyebilir.
--- Fonksiyon GENEL — kolon adlarını `tg_argv`'den alır — çünkü üç tabloda aynı kural üç kez
--- yazılsaydı biri mutlaka ötekilerden ayrışırdı (CLAUDE §1).
---
--- **Neden burada tanımlı:** ilk kullanan tablo bu (0011). `create trigger` fonksiyonun O ANDA var
--- olmasını ister; 0027'de tanımlanmış bir fonksiyonu buradan bağlamak migration'ı kırardı.
+-- Kaynak metin değişince eski çeviri sessizce yanlış olur; kural bu yüzden kapıya değil veriye konur ve fonksiyon kolon adlarını
+-- `tg_argv`den alarak üç tabloda aynı kalır. Burada tanımlı, çünkü ilk kullanan tablo bu ve `create trigger` fonksiyonun o anda
+-- var olmasını ister.
 create or replace function public.reset_translation_on_text_change() returns trigger
 language plpgsql
 set search_path = public
@@ -342,53 +204,31 @@ create index user_profiles_reject_reason_untranslated_idx
   on public.user_profiles (b2b_rejected_at)
   where b2b_reject_reason is not null and b2b_reject_reason_translated_at is null;
 
--- "Onay bekliyor" hâli — ÜRETİLMİŞ kolon, çünkü kuralın tek bir yerde durması gerekiyor.
---
--- Kural şu: künyesi var + onaylanmamış + (hiç reddedilmemiş VEYA reddi eskimiş). Üç ayrı yer bunu
--- sormak zorunda: kısmi indeks, kuyruk süzgeci ve başvuru durumu (`b2bStatusOf`). Üçüne ayrı ayrı
--- yazılsaydı biri bir gün ötekilerden ayrışırdı — hem de sessizce, çünkü "reddedilen kuyrukta
--- görünüyor" bir hata mesajı vermez, yalnız yanlış bir liste üretir.
---
--- Ayrıca uygulama bunu SÜZGEÇ olarak soramıyordu: PostgREST kolon-kolona karşılaştırma yazamaz
--- (`b2b_rejected_at=lt.b2b_applied_at` sağ tarafı düz metin sanar). Üretilmiş kolon düz bir boolean
--- verdiği için süzgeç de indeks de sıradan hâle geliyor.
+-- "Onay bekliyor" üretilmiş kolondur, çünkü kural (künye var, onay yok, ret yok ya da eskimiş) kısmi indeks, kuyruk süzgeci ve
+-- `b2bStatusOf` tarafından soruluyor ve tek yerde durmalı. PostgREST kolonu kolonla karşılaştıramadığı için süzgeç de ancak düz bir
+-- boolean üzerinden yazılabilir.
 alter table public.user_profiles
--- **Üç değerli olamaz.** İlk yazımda son koşul `b2b_rejected_at is null or b2b_rejected_at <
--- b2b_applied_at` idi ve reddi olup başvuru damgası olmayan satırda `false or NULL` = **NULL**
--- üretiyordu. Kolon null dönünce şema (`z.boolean()`) her okumada patlıyordu — hata, sessiz bir
--- yanlış listeden iyidir ama bu kolonun tek işi soruya EVET/HAYIR demek: "bilinmiyor" bir cevap
--- değil. Başvuru damgasının varlığı açıkça sorularak karşılaştırma iki dolu değere indirildi.
+-- Kolon üç değerli olamaz: reddi olup başvuru damgası olmayan satırda karşılaştırma NULL üretir ve şema (`z.boolean()`) okumada
+-- patlar; bu yüzden başvuru damgasının varlığı açıkça sorulur.
   add column b2b_pending boolean generated always as (
     company_info is not null
     and coalesce(b2b_approved, false) = false
     and (b2b_rejected_at is null or (b2b_applied_at is not null and b2b_rejected_at < b2b_applied_at))
   ) stored;
 
--- B2B onay kuyruğu (onaylanana dek toptan fiyat görünmez — DOMAIN §10).
---
--- Sıralama `b2b_applied_at`: kuyruk BAŞVURU sırasına göre okunur. `created_at` profilin doğduğu
--- andır ve B2C açılıp aylar sonra başvuran müşteriyi listenin dibine gönderirdi.
+-- B2B onay kuyruğu başvuru sırasıyla okunur; `created_at` profilin doğduğu andır ve B2C açılıp aylar sonra başvuranı listenin
+-- dibine gönderirdi.
 create index user_profiles_b2b_pending_idx on public.user_profiles (b2b_applied_at desc)
   where b2b_pending;
 -- Taslak listesi (birleştirme ekranı).
 create index user_profiles_draft_idx on public.user_profiles (created_at desc) where is_draft = true;
 
--- ── ADRESİN COĞRAFİ NOKTASI — İKİ ENUM (11.9) ───────────────────────────────────────────────────
--- Rota sıralaması için gereken şey adresin nerede olduğudur; bugüne dek sistem bunu ancak POSTA KODU
--- düzeyinde biliyordu (`postal_code_place.lat/lng`) ve bir kodda 20 durak varsa hepsi tek noktaya
--- çöküyordu — yani sıralanamıyordu.
---
--- **İNCELİK SAKLANIR, ÇÜNKÜ ÖLÇÜM HER ZAMAN AYNI DEĞİL** (`CLAUDE §1`): BAN'ın `housenumber`
--- eşleşmesi kapıyı gösterir, `municipality` eşleşmesi BELEDİYE MERKEZİNİ — kilometrelerce sapabilir.
--- İkisini tek `lat/lng` çiftinde eşitlemek kaba bir ölçümü kesinmiş gibi okuturdu ve hata GÖRÜNMEZ
--- kalırdı: liste dolu ve makul görünür, yalnız kurye yanlış sıraya dizilir.
---
--- Kademeler BAN'ın kendi dört değerinin AYNASI (`packages/address-fr` `BanResultTypeSchema`):
--- yeniden adlandırmak bir eşleme tablosu ve o tablonun bir gün ayrışması demekti.
+-- Adresin coğrafi noktası ve inceliği: kapı eşleşmesi ile belediye merkezi kilometrelerce ayrışabilir, tek bir çiftte eşitlenirse
+-- kaba ölçüm kesinmiş gibi okunur. Kademeler BAN'ın kendi dört değerinin aynası, çünkü yeniden adlandırmak bir gün ayrışacak bir
+-- eşleme tablosu demek olurdu.
 create type public.address_geo_precision as enum ('housenumber', 'street', 'locality', 'municipality');
--- Üç kaynak: Fransız adres servisi (BAN), Google (Almanya — 13.09, Address Validation / Places) ve
--- insan. Kaynak yaşlanma kuralını belirler: `google` noktası 30 günden uzun saklanmaz (Google
--- politikası; `geocode-scan` düşürür), `ban` süresiz (Licence Ouverte).
+-- Üç kaynak: Fransız adres servisi (BAN), Google (Almanya) ve insan. Kaynak yaşlanma kuralını belirler: `google` noktası Google
+-- politikası gereği 30 günden uzun saklanmaz (`geocode-scan` düşürür), `ban` süresizdir (Licence Ouverte).
 create type public.address_geo_source as enum ('ban', 'google', 'manual');
 
 -- `customer_id` = "müşteri rolüyle davranan profil". Kolon adı ticari bağlamda okunur kalsın diye
@@ -396,60 +236,30 @@ create type public.address_geo_source as enum ('ban', 'google', 'manual');
 create table public.address (
   id uuid primary key default gen_random_uuid(),
   customer_id uuid not null references public.user_profiles (id) on delete cascade,
-  -- Müşterinin kendi verdiği ad ("Ev", "İş", "Annem"). Checkout adres kartının başlığı budur:
-  -- iki adres arasında seçim yapan müşteri sokak adını okuyarak değil, adıyla ayırt eder.
-  -- Boş bırakılabilir — o zaman ekran şehri başlık yapar, uydurma bir etiket yazılmaz.
+  -- Müşterinin verdiği ad ("Ev", "İş") adres kartının başlığıdır, çünkü iki adres arasında seçen müşteri sokak adıyla değil adıyla
+  -- ayırt eder. Boşsa ekran şehri başlık yapar; uydurma etiket yazılmaz.
   label text,
-  -- Alıcı: adrese GİDEN kişi. Hesap sahibiyle aynı olmak ZORUNDA DEĞİL — hediye gönderimi, iş
-  -- adresi, aile büyüğüne sipariş. Kurye kapıda kimi soracağını buradan bilir; hesabın adını
-  -- kullanmak "Ayşe'nin siparişi" yazan bir paketi annesinin kapısına götürmek olurdu.
-  --
-  -- NOT NULL (kullanıcı kararı 22.08): *"Her hâlükârda net bir şekilde bir teslimat kişisi ve
-  -- teslimat numarasına ihtiyacımız var… kaydedilen adresin de bir parçası olması gerekir."*
-  -- Kolon nullable'ken kural yalnız YORUMDA yaşıyordu ve ölçüldü (22.08): native form iki alanı
-  -- hiç sormuyordu, web zorunlu tutuyordu, okuyan iki uç boşluğu iki FARKLI şekilde dolduruyordu
-  -- (biri hesabın numarasına düşüyor, öteki düşmüyor) — yani aynı veri iki yüzeyde iki başka
-  -- cevap veriyordu. Kural veride durmalı: değişmez burada zorlanmazsa bir sonraki yazan yol
-  -- (içe aktarma, besleme, yeni bir yüzey) yine boş satır üretir. Aynı ders `stock`ta yazılı.
-  --
-  -- Varsayılan YOK ve bilerek: `''` koymak "alıcı yazılmamış"ı "alıcı boş" diye kaydetmek olurdu.
-  -- Kolaylık form tarafında — yeni adres hesabın künyesiyle DOLU açılıyor, müşteri ister
-  -- değiştirir ister olduğu gibi kaydeder.
+  -- Alıcı adrese giden kişidir, hesap sahibiyle aynı olmak zorunda değil (hediye, iş adresi); kurye kapıda kimi soracağını buradan
+  -- bilir. Zorunlu ve varsayılansız: kural veride durmazsa her yeni yazma yolu boş satır üretir, `''` ise "yazılmamış"ı "boş" diye
+  -- kaydederdi.
   recipient text not null,
   line1 text not null,
   line2 text,
   postal_code text not null,
   city text not null,
-  -- Teslimat telefonu — ADRESE aittir, hesaba değil (`user_profiles.phone` hesabın numarasıdır).
-  -- Kapıya teslimde kurye zili çalmadan önce arar; hediye adresinde aranacak numara müşterinin
-  -- kendi numarası değil, alıcınınkidir. Tek numara tutulsaydı bu iki hâl birbirini ezerdi.
-  --
-  -- NOT NULL — gerekçesi `recipient` ile aynı (kullanıcı kararı 22.08). Biçim E.164'tür ve
-  -- İSTEMCİDE indirgenir (`normalizePhone`, iki yüzey de aynı kapıdan): kolonda `06 12 …` ile
-  -- `+33612…` yan yana birikirse aynı numara iki numara gibi okunur. Kısıt olarak yazılMADI —
-  -- biçim dayatan bir check, numarası olan müşteriyi adres ekleyemez hâle getirebilir
-  -- (adres defteri hiçbir hâlde reddetmez, kullanıcı kararı 10.08); burada zorlanan şey
-  -- "bir numara VAR" olması, hangi biçimde olduğu değil.
+  -- Teslimat telefonu adrese aittir, hesaba değil: hediye adresinde aranacak numara alıcınınkidir. Biçim E.164'e istemcide
+  -- (`normalizePhone`) indirgenir ve kısıt yalnız numaranın varlığını zorlar, çünkü adres defteri biçim yüzünden reddetmez.
   phone text not null,
   country country_code not null default 'FR',
   -- Checkout'un önceden seçtiği adres; TEKİLDİR (yenisi seçilince eskisi düşer).
   is_default boolean not null default false,
-  -- ── FATURA ADRESİ (kullanıcı kararı 08.09) ────────────────────────────────
-  -- İşletmenin KÜNYE adresi: faturaya çıkan, siparişten siparişe değişmeyen adres. `is_default`ten
-  -- AYRI bir rol, çünkü ikisi ayrı soruların cevabı — "malı nereye götürelim" ile "fatura kime ve
-  -- nereye kesilecek". Bir hesapta ikisi de olabilir ve çoğu küçük işletmede AYNI satırdır; bu
-  -- yüzden `kind` gibi tekil bir tür kolonu seçilMEDİ — o, aynı adresi iki satıra bölerdi ve iki
-  -- satır bir gün ayrışırdı (`CLAUDE §1`).
-  --
-  -- Kurumsal başvuru onay kartı bu adresi okur: karar "bu İŞLETME toptan fiyatı görsün mü"dur ve
-  -- ölçülmesi gereken şey başvuranın ev adresi değil, iş yerinin nerede olduğudur (ölçüldü 08.09 —
-  -- kart "Colmar · rota içi" diyordu, oysa başvuru Strasbourg'daki restorandı).
+  -- Fatura adresi işletmenin künye adresidir ve `is_default`ten ayrı bir roldür, çünkü "mal nereye" ile "fatura kime ve nereye" ayrı
+  -- sorulardır. Çoğu küçük işletmede ikisi aynı satırdır; tekil bir `kind` kolonu aynı adresi bir gün ayrışacak iki satıra bölerdi.
   is_billing boolean not null default false,
   created_at timestamptz not null default now(),
 
-  -- ── COĞRAFİ NOKTA (11.9) ──────────────────────────────────────────────────
-  -- Nullable ve öyle kalacak: adres defteri hiçbir hâlde reddetmez (kullanıcı kararı 10.08) ve
-  -- koordinat çözümü ağın öbür ucunda. Noktasız adres "sıralanamadı" der, sıfıra düşmez.
+  -- Nokta boş olabilir: adres defteri hiçbir hâlde reddetmez ve koordinat ağın öbür ucunda çözülür. Noktasız adres "sıralanamadı"
+  -- der, sıfıra düşmez.
   lat numeric(9, 6),
   lng numeric(9, 6),
   geo_precision address_geo_precision,
@@ -457,27 +267,14 @@ create table public.address (
   -- ÖLÇÜMÜN anı (nokta yazıldığı an) ile son DENEME anı ayrı sorular: ikincisi taramanın frenidir.
   geo_at timestamptz,
   geo_checked_at timestamptz,
-  -- Servisin kaç kez "eşleşme yok" dediği. Yalnız CEVAPLI ret sayılır — geçici arıza
-  -- (`unavailable`/`rate_limited`) sayacı tüketmez, yoksa servisin düştüğü bir öğleden sonra
-  -- yüzlerce adres kalıcı olarak "çözülemez" damgası yerdi. Böylece "adres yanlış yazılmış" ile
-  -- "servis o gün düşüktü" ayrı kalır ve ayrı bir `geo_status` kolonuna gerek kalmaz.
+  -- Servisin kaç kez "eşleşme yok" dediği; yalnız cevaplı ret sayılır, çünkü geçici arızayı (`unavailable`/`rate_limited`) saymak
+  -- servisin düştüğü bir günde yüzlerce adresi kalıcı olarak çözülemez yapardı. Böylece yanlış yazılmış adres ile düşük servis ayrı
+  -- kalır ve ayrı bir `geo_status` kolonu gerekmez.
   geo_attempts int not null default 0,
 
-  -- ── "BUNU MU DEMEK İSTEDİNİZ" (11.11) ─────────────────────────────────────
-  -- Servisin bulduğu DAHA İYİ cevabın tam etiketi — kapı istenen posta kodunda yok ama BAŞKA bir
-  -- kodda varsa doluyor. Dolu olması "yanlış kodda" demek; içeriği doğrudan ekrana yazılır.
-  --
-  -- Neden tek bir metin kolonu: enum de ikinci tablo da gerekmiyor. Değer servisin kendi etiketidir
-  -- ve biz cümle KURMAYIZ — kendi birleştirmemiz servisin bildiği yazımdan (aksan, kısaltma) sapardı.
-  --
-  -- **VE BU AYNI ZAMANDA "UYARILDI AMA DÜZELTMEDİ" KAYDIDIR** (kullanıcı kararı 01.09: teklif
-  -- edilir, ENGELLENMEZ). Müşteri teklifi kabul ederse adres değişir → nokta düşer → yeniden
-  -- çözülür → etiket temizlenir. Reddederse etiket kalır. Ayrı bir "uyarıldı" alanına gerek yok:
-  -- eksik olan alan değil, OKUYAN.
-  --
-  -- Ölçülmüş vaka (01.09): `192c Rue du Maréchal Foch` iki siparişte aynı yazılmıştı; kapı yalnız
-  -- 67380 Lingolsheim'de var (BAN 0,973), 67000 Strasbourg'da yalnız aynı adlı SOKAK (0,717) —
-  -- arada 7,2 km ve sistem farkı hiçbir yerde söylemiyordu.
+  -- Servisin başka posta kodunda bulduğu kapının tam etiketi; doluysa adres yanlış kodda demektir ve metin servisin kendi yazımıyla
+  -- ekrana basılır. Aynı zamanda "uyarıldı ama düzeltmedi" kaydıdır: teklif kabul edilirse adres değişir ve etiket temizlenir,
+  -- reddedilirse kalır.
   geo_alt_label text,
 
   -- İkisi birlikte var ya da birlikte yok (`postal_code_place_point` emsali): tek başına enlem bir
@@ -487,13 +284,12 @@ create table public.address (
   -- doğru" hem "şunu mu demek istediniz" derdi. `wrong_postal_code` hâlinde satırın kendi inceliği
   -- zaten `housenumber` DEĞİLDİR (kısıtlı arama kapıyı bulamamıştır) — kısıt o değişmezi çiviliyor.
   constraint address_geo_alt check (geo_alt_label is null or geo_precision is distinct from 'housenumber'),
-  -- Kaynağı olan ama noktası olmayan satır YASAK. Böyle bir satır, yazma yolunun yarım kalması
-  -- demektir ve sessizce "ölçüldü" gibi okunurdu.
+  -- Kaynağı olan ama noktası olmayan satır yasak: yazma yolunun yarım kaldığını gösterir ve sessizce çözülmüş gibi okunurdu.
   constraint address_geo_meta check (
     lat is not null or (geo_precision is null and geo_source is null and geo_at is null)
   )
 );
--- `in_route` SAKLANMAZ: posta kodunun aktif bir DeliveryZone'a düşmesinden türetilir (modül 07).
+-- `in_route` saklanmaz: posta kodunun aktif bir teslimat bölgesine düşmesinden türetilir.
 
 -- Taramanın kuyruğu — çözülmüş satırlar indekse hiç girmez (çoğunluk oradadır).
 -- Eşik (`geo_attempts < N`) yükleme YAZILMAZ: indeks yüklemi değişmez olmalı ve eşik parametrik
@@ -502,30 +298,20 @@ create index address_geo_pending_idx on public.address (geo_checked_at nulls fir
 
 create index address_customer_idx on public.address (customer_id);
 
--- ── "MÜŞTERİ BAŞINA TEK VARSAYILAN" KURALI VERİDE (02.15) ────────────────────────────────────────
--- Kuralı bugüne dek yalnız uygulama tutuyordu (`BaseDbService.setExclusiveFlag`). Bir kural yalnız
--- kodda durduğu sürece o koddan GEÇMEYEN her yazım onu sessizce kırar: tohum, düzeltme betiği,
--- ileride yazılacak toplu içe alma. Kırıldığında hata da vermez — checkout iki "varsayılan" adres
--- görür ve hangisini seçtiği sıralamaya kalır, yani müşteri siparişini yanlış adrese verir ve
--- sebebi hiçbir ekranda görünmez (`CLAUDE §1`: kural veride durur).
---
--- KISMİ indeks, çünkü `is_default = false` satırlar sınırsızdır; tekillik yalnız işaretlilere aittir.
--- `setExclusiveFlag`in sırasıyla uyumlu (**önce temizle, sonra işaretle**): ters sıra bir an iki
--- işaretli satır üretir ve indeks o anda ihlal olurdu.
+-- Müşteri başına tek varsayılan adres kuralı veride durur: uygulamadan geçmeyen her yazım (tohum, düzeltme betiği, içe alma) onu
+-- sessizce kırar ve checkout iki varsayılandan birini sıralamaya göre seçerdi. Kısmi indeks, çünkü tekillik yalnız işaretlilere
+-- aittir; `setExclusiveFlag` önce temizler sonra işaretler, ters sıra bir an iki işaretli satır üretirdi.
 create unique index address_one_default_per_customer
   on public.address (customer_id)
   where is_default;
 
--- Fatura adresi de TEKİLDİR ve aynı gerekçeyle kısmi: bir hesabın faturası tek bir adrese kesilir.
--- İki işaretli satır, "fatura adresi hangisi" sorusunu okuma anına ertelerdi ve okuyan her uç kendi
--- yedeğini uydururdu — `is_default`in kendi künyesindeki hata. Yazımı da aynı sırayla
--- (`setExclusiveFlag`: önce temizle, sonra işaretle).
+-- Fatura adresi de tekildir ve aynı gerekçeyle kısmi: bir hesabın faturası tek adrese kesilir, iki işaretli satır ise okuyan her
+-- ucu kendi yedeğini uydurmaya iterdi.
 create unique index address_one_billing_per_customer
   on public.address (customer_id)
   where is_billing;
 
 alter table public.address enable row level security;
 
--- Müşteriye özel fiyat satırı (0005'te FK'siz açılmıştı — kimlik tablosu hazır, bağ kuruldu).
 alter table public.price add constraint price_customer_fk
   foreign key (customer_id) references public.user_profiles (id) on delete cascade;
