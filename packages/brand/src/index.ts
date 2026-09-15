@@ -22,6 +22,21 @@ export const brand = {
     phoneDisplay: '+33 (0)6 16 99 06 81',
     email: 'lezzetanatolie@gmail.com',
   },
+  /**
+   * Şirket künyesi — resmî kayıttaki tüzel kişi (INPI/RNE; `docs/architecture/BUSINESS_CATALOG.md`).
+   *
+   * Buraya taşındı çünkü aynı künye iki yerde ayrı yazılıydı ve biri eskimişti: web'in yapılandırılmış
+   * verisi (`lib/seo/json-ld`) 03.08'deki resmî düzeltmeyle Lingolsheim adresini taşıyordu, müşteriye
+   * giden bildirim maillerinin yasal alt satırı (`notify`) ise hâlâ "12 Rue du Marché, 67000 Strasbourg"
+   * yazıyordu (ölçüldü 15.09).
+   *
+   * `name` (marka) ile `legalName` (unvan) AYRI: ziyaretçi markayı arar, yasal kayıt unvanı taşır.
+   */
+  company: {
+    legalName: 'QUALITE SAS',
+    vatId: 'FR50907496640',
+    address: { street: '46 rue des Prés', postalCode: '67380', city: 'Lingolsheim', countryCode: 'FR' },
+  },
 } as const;
 
 /**

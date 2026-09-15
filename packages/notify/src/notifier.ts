@@ -62,8 +62,12 @@ export function createNotifier(drivers: readonly NotifyDriver[]): Notifier {
   };
 }
 
-/** Yasal alt bilgi — mail her ülkede gönderenin adresini taşımak zorundadır. */
-const POSTAL_ADDRESS = `${brand.name} · 12 Rue du Marché, 67000 Strasbourg, France`;
+/**
+ * Yasal alt bilgi — mail her ülkede gönderenin adresini taşımak zorundadır. Adres şirket künyesinden
+ * (`brand.company`); ülke adı bütün dillerde "France", çünkü alt satır bugün tek dilli.
+ */
+const companyAddress = brand.company.address;
+const POSTAL_ADDRESS = `${brand.name} · ${companyAddress.street}, ${companyAddress.postalCode} ${companyAddress.city}, France`;
 
 /**
  * Projenin standart bildirim kurulumu — **sürücü sırasının tek kaynağı.**
