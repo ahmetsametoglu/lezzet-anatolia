@@ -2,7 +2,6 @@
   "tr": {
     "skip": "Atla",
     "next": "Devam",
-    "start": "Alışverişe başla",
     "doneToast": "Hoş geldiniz — afiyetle! ✓",
     "step": "Adım {n} / {total}",
     "language": {
@@ -97,7 +96,6 @@
   "fr": {
     "skip": "Passer",
     "next": "Continuer",
-    "start": "Commencer mes achats",
     "doneToast": "Bienvenue — bon appétit ! ✓",
     "step": "Étape {n} sur {total}",
     "language": {
@@ -192,7 +190,6 @@
   "de": {
     "skip": "Überspringen",
     "next": "Weiter",
-    "start": "Einkauf starten",
     "doneToast": "Willkommen — guten Appetit! ✓",
     "step": "Schritt {n} von {total}",
     "language": {
