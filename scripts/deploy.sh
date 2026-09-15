@@ -26,11 +26,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [ -n "$PASS_FILE" ]; then
-  [ -f "$PASS_FILE" ] || { echo "✗ parola dosyası yok: $PASS_FILE"; exit 1; }
+# Parola dosyadan ya da çağrı anındaki SSH_PASSWORD'dan gelir; sshpass'a ortamla verilir, çünkü argv
+# süreç listesinde görünür. İkisi de yoksa SSH anahtarı kullanılır.
+PASS_OPTS=(-o PreferredAuthentications=password -o PubkeyAuthentication=no)
+if [ -n "$PASS_FILE" ] && [ -f "$PASS_FILE" ]; then
   command -v sshpass >/dev/null || { echo "✗ sshpass kurulu değil (brew install sshpass)"; exit 1; }
-  sshpass -f "$PASS_FILE" ssh "${SSH_OPTS[@]}" -o ControlMaster=yes -o ControlPersist=30m \
-    -o PreferredAuthentications=password -o PubkeyAuthentication=no -fN "$TARGET"
+  sshpass -f "$PASS_FILE" ssh "${SSH_OPTS[@]}" "${PASS_OPTS[@]}" -o ControlMaster=yes -o ControlPersist=30m -fN "$TARGET"
+elif [ -n "${SSH_PASSWORD:-}" ]; then
+  command -v sshpass >/dev/null || { echo "✗ sshpass kurulu değil (brew install sshpass)"; exit 1; }
+  SSHPASS="$SSH_PASSWORD" sshpass -e ssh "${SSH_OPTS[@]}" "${PASS_OPTS[@]}" -o ControlMaster=yes -o ControlPersist=30m -fN "$TARGET"
 else
   ssh "${SSH_OPTS[@]}" -o ControlMaster=yes -o ControlPersist=30m -fN "$TARGET"
 fi
@@ -64,14 +68,8 @@ mkdir -p apps/web/.next
 ln -sfn "$SHARED/next-cache" apps/web/.next/cache
 chown -R "$APP_USER:$APP_USER" "$REL"
 
-echo "→ bağımlılıklar"
-as_app pnpm install --frozen-lockfile \
-  --filter lezzet-anatolie --filter '@lezzet/web...' --filter '@lezzet/backend...' --filter '@lezzet/mobile-api...'
-
-echo "→ tip denetimi + derleme"
-as_app pnpm --filter @lezzet/backend --filter @lezzet/mobile-api run typecheck
-as_app env NEXT_DIST_DIR=.next pnpm --filter @lezzet/web run build
-
+# Derlemeden önce: sitemap derleme sırasında veritabanını okur, tablolar hazır olmalı. Yayına geçişten
+# önce kaldığı için "şema kodu bekler" kuralı korunur.
 echo "→ migration"
 MANIFEST="$SHARED/migrations.sha256"
 if [ -f "$MANIFEST" ] && ! sha256sum --quiet -c "$MANIFEST"; then
@@ -84,6 +82,14 @@ DB_URL="${DB_URL%[\"\']}"
 [ -n "$DB_URL" ] || { echo "✗ SUPABASE_DB_URL boş: $ENV_FILE"; exit 1; }
 supabase db push --db-url "$DB_URL" --yes
 sha256sum supabase/migrations/*.sql > "$MANIFEST"
+
+echo "→ bağımlılıklar"
+as_app pnpm install --frozen-lockfile \
+  --filter lezzet-anatolie --filter '@lezzet/web...' --filter '@lezzet/backend...' --filter '@lezzet/mobile-api...'
+
+echo "→ tip denetimi + derleme"
+as_app pnpm --filter @lezzet/backend --filter @lezzet/mobile-api run typecheck
+as_app env NEXT_DIST_DIR=.next pnpm --filter @lezzet/web run build
 
 echo "→ yayına alma"
 ln -sfn "$REL" "$APP_DIR/current.new"

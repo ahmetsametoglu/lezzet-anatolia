@@ -51,9 +51,9 @@ Tek komut: `bash scripts/deploy.sh` (ayar `.env.deploy`; sunucu kurulumu, env, g
 ```
 1. HEAD arşivi → yeni sürüm klasörü   (git archive; çalışma ağacı ve env dosyaları gitmez)
 2. env bağı                           (tek shared/app.env → sürümdeki dört env yolu; yoksa durur)
-3. bağımlılıkları kur                 (--frozen-lockfile; kök + web/backend/mobile-api)
-4. tip denetimi + SUNUCUDA derle      ← kritik, aşağıya bak
-5. migration'ları uygula              (yalnız yeni dosyalar; uygulanmış dosya değiştiyse durur)
+3. migration'ları uygula              (yalnız yeni dosyalar; uygulanmış dosya değiştiyse durur)
+4. bağımlılıkları kur                 (--frozen-lockfile; kök + web/backend/mobile-api)
+5. tip denetimi + SUNUCUDA derle      ← kritik, aşağıya bak
 6. current bağını çevir, PM2 reload   (yeni sürüm tek hamlede yayında)
 7. sağlık uçları + eski sürüm temizliği (son 3 sürüm geri dönüş için kalır)
 ```
@@ -66,7 +66,7 @@ Tek komut: `bash scripts/deploy.sh` (ayar `.env.deploy`; sunucu kurulumu, env, g
 
 **Derleme neden sunucuda:** derleme anında gömülen genel ortam değişkenleri (`NEXT_PUBLIC_*`) varsa, yerelde derlemek üretim değerlerini geliştirme makinesine getirmeyi zorunlu kılar. Sunucuda derleyince üretim sırları yalnız sunucuda yaşar.
 
-**Migration adımı 6'dan önce:** şema kodu bekler, kod şemayı beklemez. Migration düşerse eski kod + eski şema ayakta kalır — tutarlı bir durum.
+**Migration derlemeden ve yayına geçişten önce:** şema kodu bekler, kod şemayı beklemez; derleme de veritabanını okur (`sitemap.ts` derleme anında üretilir). Migration düşerse eski kod + eski şema ayakta kalır — tutarlı bir durum.
 
 **Otomatik olmayan, kasıtlı:** veritabanı sıfırlama ve tohum (seed) verisi yükleme. İkisi de yıkıcı; dağıtım hattına asla girmez, elle çalıştırılır.
 
