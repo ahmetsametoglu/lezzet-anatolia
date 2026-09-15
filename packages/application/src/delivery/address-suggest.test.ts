@@ -1,5 +1,4 @@
 import { addressLineOf, type AddressSuggestion } from '@lezzet/address';
-import type * as AddressModule from '@lezzet/address';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /*
@@ -9,16 +8,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const ban = vi.hoisted(() => ({ reply: { status: 'unavailable' } as unknown }));
 
-vi.mock('@lezzet/address', async (importOriginal) => {
-  const actual = await importOriginal<typeof AddressModule>();
-  return { ...actual, searchAddresses: vi.fn(async () => ban.reply) };
-});
+vi.mock('@lezzet/address/fr', () => ({ searchAddresses: vi.fn(async () => ban.reply) }));
 vi.mock('./google-maps', () => ({
   googleMapsApiKey: () => null,
   traceGoogleFailure: (_kind: string, result: unknown) => result,
 }));
 
-const { searchAddresses } = await import('@lezzet/address');
+const { searchAddresses } = await import('@lezzet/address/fr');
 const { lookupAddressOptions, resolveAddressOption } = await import('./address-suggest');
 
 const ROW: AddressSuggestion = {

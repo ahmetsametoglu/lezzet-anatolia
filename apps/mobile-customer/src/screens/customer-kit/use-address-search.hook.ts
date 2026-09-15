@@ -1,4 +1,5 @@
-import { MIN_QUERY_LENGTH, searchAddresses, type AddressSuggestion } from '@lezzet/address';
+import { MIN_QUERY_LENGTH, type AddressSuggestion } from '@lezzet/address';
+import { searchAddresses } from '@lezzet/address/fr';
 
 import { useDebouncedLookup, type LookupResult } from '@lezzet/address/react';
 

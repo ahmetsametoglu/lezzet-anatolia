@@ -1,4 +1,5 @@
-import { addressLineOf, searchAddresses } from '@lezzet/address';
+import { addressLineOf } from '@lezzet/address';
+import { searchAddresses } from '@lezzet/address/fr';
 import { autocompleteAddresses, lookupPlace, type AutocompleteLookup, type PlaceLookup } from '@lezzet/address/google';
 import type { AddressGeoPrecision, Country } from '@lezzet/types';
 import { googleMapsApiKey, traceGoogleFailure } from './google-maps';

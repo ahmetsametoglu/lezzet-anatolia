@@ -82,6 +82,26 @@ describe('paketler uygulamaları bilmez', () => {
   });
 });
 
+describe('adres kökü ağa çıkan koda ulaşamaz', () => {
+  const r = kural('address-root-is-pure');
+
+  it('yalnız kök giriş kuralın kapsamındadır', () => {
+    expect(r.from.test('packages/address/src/index.ts')).toBe(true);
+    expect(r.from.test('packages/address/src/fr/index.ts')).toBe(false);
+  });
+
+  it('BAN istemcisini, Google girişini ve kancayı yakalar', () => {
+    expect(r.to.test('packages/address/src/fr/ban-client.ts')).toBe(true);
+    expect(r.to.test('packages/address/src/google/client.ts')).toBe(true);
+    expect(r.to.test('packages/address/src/react/use-debounced-lookup.hook.ts')).toBe(true);
+  });
+
+  it('saf modüllere dokunmaz', () => {
+    expect(r.to.test('packages/address/src/fr/address.ts')).toBe(false);
+    expect(r.to.test('packages/address/src/address-line.ts')).toBe(false);
+  });
+});
+
 describe('kural kümesi eksilmez', () => {
   /*
     Kuralı SİLMEK de körleştirmenin bir yoludur ve kalıp testleri onu göremez — silinen kuralın
@@ -89,7 +109,16 @@ describe('kural kümesi eksilmez', () => {
   */
   it('beklenen kurallar yerinde', () => {
     expect(config.forbidden.map((r) => r.name).sort()).toEqual(
-      ['ai-scope', 'database-scope', 'domain-core-scope', 'no-circular', 'no-orphans', 'packages-not-to-apps', 'types-is-pure'].sort(),
+      [
+        'address-root-is-pure',
+        'ai-scope',
+        'database-scope',
+        'domain-core-scope',
+        'no-circular',
+        'no-orphans',
+        'packages-not-to-apps',
+        'types-is-pure',
+      ].sort(),
     );
   });
 });

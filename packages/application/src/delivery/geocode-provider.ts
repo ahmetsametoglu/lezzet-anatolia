@@ -4,7 +4,7 @@
   bir sorgu atılır.
 */
 
-import { searchAddresses } from '@lezzet/address';
+import { searchAddresses } from '@lezzet/address/fr';
 import { validateAddress, type AddressValidation } from '@lezzet/address/google';
 import type { Country } from '@lezzet/types';
 import { googleMapsApiKey, traceGoogleFailure } from './google-maps';

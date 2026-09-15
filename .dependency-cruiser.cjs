@@ -49,6 +49,13 @@ module.exports = {
       to: { path: '^(packages/(?!(types|ai)/)|@lezzet/(?!types$))' },
     },
     {
+      name: 'address-root-is-pure',
+      severity: 'error',
+      comment: 'address kökü saf kalır: ağa çıkan istemci (fr/ban-client, google) ve kanca (react) yalnız kendi girişinden okunur.',
+      from: { path: '^packages/address/src/index\\.ts$' },
+      to: { path: '^packages/address/src/(fr/ban-client|google/|react/)', reachable: true },
+    },
+    {
       name: 'no-orphans',
       severity: 'warn',
       comment: 'Bağlantısız modül (config/kabuk dosyaları hariç).',
