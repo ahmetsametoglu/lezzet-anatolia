@@ -20,28 +20,9 @@ import { CatalogSortSheet } from './components/catalog-sort-sheet';
 import type { CatalogFilterPatch, CatalogViewProps } from './catalog-types';
 
 /**
- * Katalog — TELEFON görünümü: native katalogun (`apps/mobile/src/screens/catalog/catalog-screen.tsx`) web
- * ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Sıra
- * native'inki: yapışkan başlık [arama kutusu + süzgeç düğmesi → koleksiyon satırı ya da kategori rayı →
- * kampanya cümlesi] → bölge dışı bandı (yalnız rota dışında) → iki sütun kare kart ızgarası → liste sonu.
- * Metin ortak sözlükten (`@lezzet/i18n/customer/catalog`), kart cümleleri `@lezzet/helper`dan, kit
- * bileşenleri `components/customer/phone-kit/`ten.
- *
- * ── WEB'E ÖZGÜ KORUNANLAR ──────────────────────────────────────────────────
- * · Süzgeç ADRESTE yaşar (paylaşılabilir liste, tarayıcı geri): çip, sıralama, anahtarlar ve arama adresi
- *   ilerletir, sayfa sunucuda yeniden çözülür; geçiş sürerken native'in iskeleti çizilir (native'de her
- *   süzgeç değişimi bir ilk yüktür). Arama yazdıkça gider (`useSearchDraft`) ve geçmişi kirletmez.
- * · `h1` arama motoru için sayfada: koleksiyon açıksa adı görünen başlıktır, değilse kategori adı ya da
- *   "Katalog" ekran okuyucuda durur (native katalogda görünür başlık yok).
- * · Sıralama çekmecesinde "Sadece indirimliler" anahtarı — web okuması süzgeci taşıyor (`catalog-sort-sheet`).
- * · Sonsuz kaydırmanın gözlemcisi tur sınırına varırsa (`useLoadMore`) listenin sonunda açık bir "daha fazla"
- *   düğmesi; native'in `onEndReached`i buna ihtiyaç duymuyor, tarayıcının gözlemcisi duyuyor.
- * · İlk yük sunucuda: aşağı çekme ve bağlantı hatası ekranı native'e özgü.
- *
- * ── BİLİNÇLİ, GEÇİCİ FARK ─────────────────────────────────────────────────
- * · Çekmecenin kabuğu müşteri kitinin çekmecesi (`Dialog placement="sheet"`); native'in tutamaklı sayfası yer
- *   çekmecesinin telefon turunda bütün çekmecelerle birlikte gelir (08.58 Açık).
- * · Köşe (18 ↔ 20), `sand-300` ve `on-image-soft` tabanın değerinde (08.58 token maddesi).
+ * Katalogun telefon görünümü, native katalogun web ikizi; süzgeç adreste yaşar ki liste paylaşılabilsin ve tarayıcının geri
+ * hareketi çalışsın, bu yüzden her süzgeç değişimi sayfayı sunucuda yeniden çözer. `h1` arama motoru için sayfada durur:
+ * koleksiyon açıksa görünen başlıktır, değilse ekran okuyucuda.
  */
 
 /** Kategori rayı — native `ScrollView horizontal`ın karşılığı; kaydırma çubuğu gizli. */
@@ -141,7 +122,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
               enterKeyHint="search"
               className="min-w-0 flex-1 bg-transparent font-sans text-body-sm text-ink outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none"
             />
-            {/* Temizle yalnız yazı varken (native 15.08): boşken duran düğme kutunun içinde gürültü olurdu. */}
+            {/* Temizle yalnız yazı varken: boşken duran düğme kutunun içinde gürültü olurdu. */}
             {draft.length > 0 && (
               <button
                 type="button"
@@ -167,8 +148,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
           </button>
         </div>
 
-        {/* Koleksiyon açıkken kategori rayı HİÇ çizilmez (native 18.08 = web'in kararı): kesit kategori havuzunu
-            da daralttığı için rayda yalnız "Tümü" kalıyordu. Satır kapsızdır — üstbaşlık, ad ve çarpı. */}
+        {/* Koleksiyon açıkken kategori rayı çizilmez: kesit kategori havuzunu da daralttığı için rayda yalnız "Tümü" kalırdı. */}
         {data.activeCollection !== null ? (
           <div className="flex items-center gap-2.5 px-4.5">
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -194,7 +174,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
           </div>
         )}
 
-        {/* Kampanya cümlesi bir fiyat vaadi değil — "sepette uygulanır" (08.44); zeytin zemin, kazanç bilgisi. */}
+        {/* Kampanya cümlesi fiyat vaadi değil, "sepette uygulanır" der; zemin zeytin, çünkü bu bir kazanç bilgisi. */}
         {campaignLine !== null && (
           <p data-testid="catalog-campaign" className="mx-4.5 rounded-control bg-olive-bg px-3.5 py-2.5 font-sans text-body-sm leading-[1.6] text-olive-dark">
             {campaignLine}

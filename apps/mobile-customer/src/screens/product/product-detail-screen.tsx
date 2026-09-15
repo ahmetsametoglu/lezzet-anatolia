@@ -1,4 +1,4 @@
-// Kart rozeti ve fiyat etiketi iki yüzeyin ortak malı (14.09): web telefon görünümü de okur.
+// Kart rozeti ve fiyat etiketi web telefon görünümüyle ortak kuruculardan.
 import { cardBadgeOf, formatPrice, fromPriceLabel, productPriceLabel } from '@lezzet/helper';
 import type { TextSegment } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
@@ -34,54 +34,13 @@ import { NoticeSheet, type NoticeSheetCopy } from '@/screens/customer-kit/notice
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-// Ekranın metni iki yüzeyin ortak malı (14.09): web'in telefon ürün sayfası da aynı sözlüğü okur.
 import messages from '@lezzet/i18n/customer/product';
 import { ProductSkeleton } from './product-skeleton';
 import { useProduct } from './use-product.hook';
 
 /*
-  ÜRÜN DETAY (v3 `vProduct`, v3:238-316 + yapışkan bar v3:1228-1252) — GERÇEK UÇTAN okur
-  (`GET /api/v1/products/:slug`): sayfaya katalogdan gerçek slug'la gelinir ve fixture göstermek
-  müşteriye başka bir ürünü satmak olurdu. 21.14'ün "backend işi üretmez" kısıtı bozulmadı — uç
-  zaten vardı (21.6), burada yalnız TÜKETİLİYOR (katalog ekranının emsali).
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **Puan/yorum ÇİZİLMEZ, "yorum yok" hâli çizilir.** Sözleşme yorumu bilerek taşımıyor
-     (`CatalogProductDetail` künyesi, 17.1: moderasyon geri bildirim modülünün işi). Üstbaşlıkta
-     bu yüzden yalnız kategori adı var (şablon: "{kategori} · ★ 4,8 (12)"); Değerlendirmeler
-     bölümü şablonun kendi `noRev` kutusunu gösterir. Geri bildirim modülü bağlanınca iki yer
-     birlikte açılır.
-  2. **"İz miktarda" satırı EKLENDİ** (şablonda yok): çapraz bulaşma beyanı INCO'nun zorunlu
-     yüküdür ve sözleşme `traces`i bunun için taşıyor (`StorefrontDeclaration` künyesi) — yasal
-     beyanı tasarım unuttu diye düşürmek seçenek değil. Cümle web'in şablonuyla AYNI.
-  3. **B2B adet çipleri (×5 ×10 ×20) ÇİZİLMEDİ**: şablon `b2bChip` bayrağına bağlıyor ve müşteri
-     tipi bu etapta cihaza bağlanmadı (oturum → müşteri profili ucu ayrı iş). Tip geldiğinde bar
-     altına şablondaki sıra eklenir.
-  4. **"Stok gelince haber ver" GERÇEK KAYIT (21.306)** — şablonda yalnız bir bayrak çeviriyordu
-     ve burada da 10.09'a kadar öyleydi: düğme "✓ Haber verilecek" diyor, hiçbir şey yazmıyordu.
-     Artık web'in `variant_stock_notice` kaydını aynı kapıdan bırakıyor (`POST /me/stock-notices`);
-     misafir bölge bandının çekmecesiyle hesabını doğrular. Ekran "not aldık" der, "haber
-     vereceğiz" DEMEZ: stok gelince haber gönderen iş henüz yok (kapının künyesi).
-  5. **Paylaş, sistem paylaşım kağıdını açar** (şablon kendi sheet'ini çiziyor): RN'de bunun
-     doğal karşılığı `Share.share`. Web ürün URL'i müşteri yüzeyine bağlanınca mesaja eklenir;
-     bugün ürün adı paylaşılıyor.
-  6. **Sepete ekleme onayı sessiz** (şablon toast basıyor): küresel toast katmanı bilinen borç
-     (21.14a raporu) — katman gelince buradaki `add` da onu çağırır.
-  7. **İskelet şablonda tanımlı değil**; katalog iskeletinin diliyle asgari bloklar çizildi
-     (kahraman + başlık + satır). Uydurulmuş bir tasarım değil, uygulamanın kendi bekleme dili.
-  8. **Yer işareti KAHRAMANIN FİLİGRANI, satın alma barı ise KALKAR** (kullanıcı bildirimi 10.08 —
-     arıza düzeltmesi; şablonda ikisi de yok, `design/KARARLAR.md`). Ekran şimdiye dek yalnız
-     `soldOut`a bakıyordu; `stockStatus`ün `elsewhere` hâli hiç okunmadığı için katalogda
-     "Bölgenizde şu an yok" yazan ürün DETAYDA normal satılabilir çiziliyor ve sepete girebiliyordu.
-     Cümle KATALOGLA AYNI yerden gelir (`stockMarkOf`) — ikinci bir sözlük açılmadı.
-  9. **Kahraman GALERİ oldu** (kullanıcı isteği 09.08, `design/KARARLAR.md`): şablonun tek
-     `image-slot`u yerine kaydırılabilir şerit (`PhotoGallery`) — sözleşme zaten birden çok görsel
-     taşıyordu (`gallery`) ve ekran onları atıyordu. Yerleşim DEĞİŞMEDİ: ölçü, degrade, yüzen
-     düğmeler ve rozetler aynı yerde; tek görselli üründe şerit de gösterge de çizilmez.
-
-  KAHRAMAN ROZETİ KOMŞUYA TAŞAR (fiyat, alt kenardan -22): kardeş çizim sırası yüzünden içerik
-  bloğu rozeti ezerdi — kahraman kapsayıcısı `zIndex` ile üste alındı (koleksiyon dairelerinin
-  dersi, 08.08; burada tek kapsayıcı yettiği için ayrı üst katman komponenti gerekmedi).
+  Ürün detayı gerçek uçtan okur (`GET /api/v1/products/:slug`). Yer işareti kahramanın filigranıdır ve kapalı kapıda satın alma
+  barı kalkar; cümle katalogla aynı yerden (`stockMarkOf`) gelir.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -110,9 +69,8 @@ function allergenList(codes: ProductAllergen[], locale: 'tr' | 'fr' | 'de'): str
 }
 
 /**
- * Beyan tablosunu şablonun TEK SATIRINA indirger ("100 g için: …" — v3:285): dolu kalemler
- * INCO sırasıyla (`NUTRITION_KEYS`) "Ad değer" çiftine döner. Enerji iki birimi tek kalemde
- * taşır (kJ/kcal) — ikisi ayrı satır olsaydı aynı şeyin iki ölçümü iki kalem gibi okunurdu.
+ * Beyan tablosunu tek satıra indirger: dolu kalemler INCO sırasıyla "Ad değer" çifti olur. Enerji iki birimi tek kalemde taşır,
+ * ayrı satırlar aynı ölçümü iki kalem gibi okuturdu.
  */
 function nutritionLine(nutrition: Nutrition, t: Messages): string {
   const parts: string[] = [];
@@ -147,27 +105,20 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   const { theme } = useUnistyles();
   const locale = useAppLocale();
   const t: Messages = messages[locale];
-  /* Yer bağlamı katalogla AYNI kaynaktan: iki ekran farklı yer sorarsa aynı ürün iki fiyatla
-     görünür (ölçüldü 09.08 — listede 1,84 €, detayda 2,30 €). */
+  /* Yer bağlamı katalogla aynı kaynaktan: iki ekran farklı yer sorarsa aynı ürün iki fiyatla görünür. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const { status, detail, retry } = useProduct(slug, locale, onboarding?.postalCode ?? null);
-  /* "Rota içinde miyim" sorusunun kapısı katalogla AYNI (`usePlaceResolution`): stok HÂLİNİ sunucu
-     zaten cevaplıyor, buradaki çözüm yalnız `elsewhere`in iki alt sebebini ayırmaya yarıyor
-     (geçici KALEM ↔ kalıcı BÖLGE). Kod beş haneye ulaşmamışsa hook `null` döner ve kural
-     "bilinmiyorsa kalem" der. */
+  /* "Rota içinde miyim" kapısı katalogla aynı; stok hâlini sunucu cevaplar, bu çözüm yalnız `elsewhere`in geçici kalem ile
+     kalıcı bölge sebebini ayırır. */
   const place = usePlaceResolution(onboarding?.postalCode ?? '');
 
-  /* Seçim ürüne değil boya aittir; ürün değişince (aile çipi `setParams`la slug'ı yerinde
-     değiştirir, rota `key={slug}` ile ekranı yeniden kurar) seçim doğal olarak sıfırlanır.
-     `null` = henüz seçilmedi → ilk boy (şablon `vs[0]`). */
+  /* Seçim boya aittir; aile çipi slug'ı değiştirince rota ekranı yeniden kurar ve seçim sıfırlanır. `null` = henüz seçilmedi,
+     açılış boyu kullanılır. */
   const [variantId, setVariantId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
-  /* "GELİNCE HABER VER" KAYDININ HÂLİ (21.306) — BOY başına: başka boya geçmek yeni bir sorudur.
-     `sending` düğmeyi kilitler (çift dokunuş iki kayıt denemesi olmasın); `ok`/`already` sunucunun
-     cevabıdır, yerel bir anahtar değil. */
+  /* "Gelince haber ver" kaydının hâli boy başına; `sending` çift dokunuşu kilitler, `ok`/`already` sunucunun cevabıdır. */
   const [stockNotice, setStockNotice] = useState<{ variantId: string; status: 'sending' | 'ok' | 'already' } | null>(null);
-  /* Misafir çekmecesi — bölge bandının aynı kararı: girişliye e-posta sorulmaz, misafir aynı akışta
-     doğrulanmış hesaba dönüşür (kullanıcı kararı 10.08). */
+  /* Misafire çekmece: girişliye e-posta sorulmaz, misafir aynı akışta doğrulanmış hesaba dönüşür. */
   const stockSheet = useSheet();
   const meState = useMe();
   /** Eklemenin ANINDAKİ kalem sayısı — sunucunun cevabını bu sayının değişmesinden anlıyoruz. */
@@ -176,29 +127,9 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   const fabCount = cartCount(cart);
 
   /*
-    ASGARİ SEPET HATIRLATMASI — eklemeden hemen sonra, ama SUNUCUNUN cevabıyla (kullanıcı isteği
-    16.08). Müşteri katalogdayken öğrensin ki sepete gidip kilitli bir düğmeyle karşılaşmasın.
-
-    ── BURADA, ÇÜNKÜ HOOK KOŞULSUZ OLMALI (cihazda ölçüldü 16.08) ─────────────
-    Etki önce `addToCart`ın yanında duruyordu ve orası ekranın erken `return`lerinden SONRASI:
-    yükleme/bulunamadı hâllerinde bileşen o satıra hiç varmıyor, veri gelince varıyordu. React
-    bunu "önceki render'dan daha fazla hook" diye reddetti ve ekran KIRMIZI hata verdi. Hook'ların
-    sırası her render'da aynı olmalı — o yüzden bütün hook'lar ilk `return`den önce toplanır.
-
-    ── NEDEN İKİNCİ BİR TOAST DEĞİL, AYNI TOAST'IN GÜNCELLENMESİ ──────────────
-    Toast deposu tek satır taşır ve yeni mesaj eskisinin yerine geçer (`toast-store` künyesi).
-    Yani bu çağrı ikinci bir bildirim ÜRETMİYOR, ilkinin metnini zenginleştiriyor. Ve `toastInfo`
-    ile: titreşim ZATEN basma anında verildi, ikinci bir titreşim tek harekete iki cevap olurdu.
-
-    ── NEDEN `itemCount` NÖBETİ ───────────────────────────────────────────────
-    Ekleme anındaki sayı saklanıyor ve etki yalnız sayı DEĞİŞİNCE konuşuyor. `resolving` bayrağına
-    bakmak yetmezdi: eklemenin hemen ardından tur henüz başlamamış olabilir ve etki o karede ESKİ
-    görünümü okuyup eski rakamı yazardı. Sayının değişmesi, sunucunun bu eklemeyi görmüş olmasının
-    kendisidir.
-
-    Eşiği geçen sepette SESSİZ: söylenecek bir şey yok, ilk onay zaten yerinde duruyor. Eşik
-    tanımsızsa (`minBasketCents === 0`, sözleşmenin "bilinmiyor" hâli) de susar — sıfır bir eşik
-    değil, ölçülmemiş bir değerdir.
+    Asgari sepet hatırlatması eklemeden sonra, sunucunun cevabıyla gelir: ekleme anındaki kalem sayısı değişince konuşur, çünkü
+    sayının değişmesi sunucunun bu eklemeyi görmesidir. Hook koşulsuz olmalı, bu yüzden erken `return`lerden önce; eşik
+    tanımsızsa (`0`) susar.
   */
   useEffect(() => {
     if (awaitingMinimumHint === null || cart.view.itemCount === awaitingMinimumHint) return;
@@ -206,13 +137,9 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
     if (cart.view.minBasketOk || cart.view.minBasketCents === 0) return;
     toastInfo(t.minimumHint.replace('{missing}', formatPrice(cart.view.missingForMinBasketCents, locale)));
   }, [awaitingMinimumHint, cart.view, locale, t.minimumHint]);
-  /* Akordeonlar kapalı açılır (şablonun `acc` başlangıcı boş). */
   const [accordion, setAccordion] = useState({ ingredients: false, nutrition: false, storage: false });
 
-  /* İLK YÜK: sayfanın yerini skeleton tutar (`product-skeleton` — yalnız HER ZAMAN görünen
-     bölümler; gerekçesi ve ölçülerin kaynağı o dosyanın künyesinde). Ekranın içine gömülü dört
-     çubuk sökülüp oraya taşındı: ölçüleri ham sayıydı ve sayfanın yarısını (akordeon ·
-     değerlendirmeler · yapışkan bar) hiç temsil etmiyordu. */
+  /* İlk yükte sayfanın yerini iskelet tutar; kapsamı ve ölçüleri `product-skeleton`da. */
   if (status === 'loading') return <ProductSkeleton testID="product-loading" />;
 
   if (status === 'missing' || status === 'error' || detail === null) {
@@ -237,12 +164,8 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   }
 
   const variants = detail.variants;
-  /* AÇILIŞ BOYU SUNUCUDAN (`primaryVariantId`) — `variants[0]` DEĞİL. Liste `sort_order`dadır,
-     yani operatörün sırası, ve fiyatı bilmez; kartta yazan fiyat ise fiyatı olan EN UCUZ boyunkidir
-     (`primaryVariantOf`). İkisi ayrışınca kart bir fiyat, detay başka bir fiyat gösteriyordu —
-     ölçüldü (MB-20: kart 4,11 €, detay 6,80 €/450g seçili açıldı). Web müşteri yüzeyi aynı kararı
-     `08.10`'da almıştı (`product-client.tsx:45`); mobil sözleşmede alan yoktu, o yüzden geride
-     kalmıştı. Ölçüt EKRANDA HESAPLANMAZ, okunur — iki yüzeyin ayrışmaması buna bağlı. */
+  /* Açılış boyu sunucudan (`primaryVariantId`): kartta yazan fiyat en ucuz boyunkidir, `variants[0]` ise operatörün sırası ve
+     ikisi ayrışınca kart ile detay farklı fiyat gösterirdi. Ölçüt ekranda hesaplanmaz ki web ile ayrışmasın. */
   const variant: CatalogVariant | undefined =
     variants.find((v) => v.id === variantId) ??
     variants.find((v) => v.id === detail.primaryVariantId) ??
@@ -251,33 +174,23 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   const was = variant?.wasCents;
   const soldOut = variant?.soldOut ?? true;
   const discounted = was !== undefined;
-  /* YERİN CEVABI — cümleyi kuran yer `stockMarkOf`, ekran yalnız çizer (katalog kartının emsali).
-     İki eleme bilinçli:
-       · `info` ("Kargoyla gelir") ELENİR — kullanıcı kararı 10.08 ile o işaret ekranlardan
-         kaldırıldı; kargolanabilirlik künyedeki `noShip` çipiyle zaten konuşuyor.
-       · fiyatsız ürün SESSİZ kalır — ürün her kanalda satışa kapalıyken "bu adrese gelmiyor"
-         demek, cevabı olmayan bir soruya cevap vermektir (tükendinin aynı kuralı; `soldOut`
-         hâlinde `stockMarkOf` kendiliğinden `null` döner). */
+  /* `info` ("Kargoyla gelir") elenir, kargolanabilirliği künyedeki `noShip` çipi söylüyor. Fiyatsız ürün sessiz kalır: satışa
+     kapalı ürüne "bu adrese gelmiyor" demek cevabı olmayan bir soruya cevap vermektir. */
   const stockMark = variant === undefined || price === null ? null : stockMarkOf(variant.stockStatus, place, locale);
   const placeMark = stockMark === null || stockMark.tone === 'info' ? null : stockMark;
-  /* "Haber ver" dalı PAYLAŞILIR (yeni düğme kurulmadı): tükendi ile "bölgenizde şu an yok" farklı
-     sebepler ama müşterinin yapabileceği şey aynı — kalem gelince haber almak. `blocked` bu dala
-     GİRMEZ: orada beklenen kalem değil BÖLGEdir ve tutamayacağımız bir söz verilmez. */
+  /* "Haber ver" dalını tükendi ile "bölgenizde şu an yok" paylaşır, müşterinin yapabileceği aynı. `blocked` bu dala girmez:
+     orada beklenen kalem değil bölgedir. */
   const alertBar = soldOut || placeMark?.tone === 'pending';
-  /* Barın açıklama satırı tek yerde kurulur. Filigrandaki iki satırlık cümle barda TEK satıra
-     iner: barın yüksekliği tasarımın kararıdır (v3:1228) ve bir cümle onu büyütmemeli. */
+  /* Filigrandaki iki satırlık cümle barda tek satıra iner: barın yüksekliği bir cümleyle büyümemeli. */
   const barNote = soldOut ? t.soldOutBar.text : placeMark === null ? null : placeMark.label.replace('\n', ' ');
-  /* KAYDIN YERİ — cihazın ÇÖZÜLMÜŞ cevabı (`country` + `postalCode`, yer çözümünün anahtarı). Yer
-     bilinmiyorsa (kod yok, cevap gelmedi ya da kod iki ülkeye düşüyor) düğme ÇİZİLMEZ: nereye haber
-     vereceğimizi bilmeden kayıt alınmaz (web'in aynı hükmü, `recordVariantStockNoticeAction`). */
+  /* Kaydın yeri cihazın çözülmüş cevabı; yer bilinmiyorsa düğme çizilmez, nereye haber vereceğimizi bilmeden kayıt alınmaz. */
   const stockBody =
     variant !== undefined && place?.kind === 'resolved'
       ? { variantId: variant.id, country: place.place.country, postalCode: place.place.postalCode }
       : null;
   const stockStatus = stockNotice !== null && stockNotice.variantId === variant?.id ? stockNotice.status : null;
   const placeCopy = placeMessages[locale].placeNotice;
-  /* Çekmecenin cümleleri: kimlik adımı ve hata hâlleri yer ailesinin sözlüğünden (aynı akış, aynı
-     söz), başlık · giriş · sonuçlar bu ekranın kendi kaydından. */
+  /* Kimlik adımı ve hata cümleleri yer ailesinin sözlüğünden (aynı akış), başlık ve sonuçlar bu ekranın kaydından. */
   const stockCopy: NoticeSheetCopy | null =
     stockBody === null
       ? null
@@ -300,8 +213,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
     }
     setStockNotice({ variantId: stockBody.variantId, status: 'sending' });
     void submitStockNotice(stockBody).then((result) => {
-      /* Dört hâlin dördü de SÖYLENİR. Kaydın alınmadığı hâllerde düğme geri gelir ki müşteri tekrar
-         deneyebilsin — kaydedilmemiş bir bekleyişi kaydedilmiş gibi göstermek sözü bozmak olurdu. */
+      /* Dört hâlin dördü de söylenir; kayıt alınmadıysa düğme geri gelir ki müşteri tekrar deneyebilsin. */
       if (result.error !== null) {
         setStockNotice(null);
         toastError(placeCopy.failed);
@@ -319,19 +231,13 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
     });
   };
   const declaration = detail.declaration;
-  /* Fiyatsız benzer kart çizilmez: kitin kartı fiyat etiketini zorunlu tutuyor (fiyatsız kart
-     doğmasın diye) ve fiyatı olmayan ürün zaten satışa kapalı. */
+  /* Fiyatsız benzer kart çizilmez: kart fiyat etiketini zorunlu tutar, fiyatı olmayan ürün zaten satışa kapalı. */
   const similar = detail.similar.filter((product) => product.priceCents !== null);
-  /* Kahraman şeridi sözleşmenin GALERİSİNDEN kurulur (ilk öğe kapaktır — `CatalogProductDetail`
-     künyesi); galeri hiç gelmediyse tek kapakla çizilir ve ekran bugünkü hâlini korur. Adressiz
-     görseli galeri eler: `url === null` "görsel yok / R2 tabanı ayarsız" demektir, boş bir karo değil. */
+  /* Kahraman şeridi sözleşmenin galerisinden (ilk öğe kapak); galeri gelmediyse tek kapakla çizilir. */
   const heroPhotos = detail.gallery.length > 0 ? detail.gallery : [detail.image];
 
-  /* PAYLAŞIM ADRESİ TAŞIR, YALNIZ AD DEĞİL (08.45). Eskiden gövde `detail.name`di: karşı tarafa
-     "Su Böreği" yazan, tıklanacak hiçbir şeyi olmayan bir mesaj gidiyordu — cihazda ölçüldü.
-     Adres SUNUCUDAN gelir (`shareUrl`), burada kurulmaz: dil öneki ve yolun çevirisi web rotasının
-     kuralıdır (sözleşme künyesi). Ad da düşmez — bağlantı önizlemesi çıkmayan uygulamalarda
-     (SMS, bazı mesajlaşma kutuları) neyin paylaşıldığını yalnız o söylüyor. */
+  /* Paylaşım adı ve adresi taşır: önizleme çıkmayan uygulamada neyin paylaşıldığını ad söyler. Adres sunucudan (`shareUrl`),
+     çünkü dil öneki ve yol çevirisi web rotasının kuralı. */
   const share = () => {
     void Share.share({ message: `${detail.name}\n${detail.shareUrl}` });
   };
@@ -341,9 +247,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
     addProduct(
       {
         id: `${detail.slug}-${variant.id}`,
-        /* Sunucudaki ADRES açıkça geçer (27.08 · eski 21.14 işareti): depo kimliği `id`den
-           ayıklayabiliyor ama o bir ÇIKARIMDIR — `id`nin biçimi bir gün değişirse satır sessizce
-           adressiz kalır ve sunucuya hiç yazılamaz. Bilen taraf burası, söylemesi bedava. */
+        /* Sunucudaki adres açıkça geçer: `id`den çıkarmak, biçimi değişince satırı sessizce adressiz bırakırdı. */
         variantId: variant.id,
         slug: detail.slug,
         name: detail.name,
@@ -356,10 +260,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
       quantity,
     );
     toastSuccess(t.addedToast);
-    /* Eşik hatırlatması İKİNCİ kademede (aşağıdaki etki): eklemenin sepeti eşiğin neresine
-       taşıdığını ancak SUNUCU söyleyebilir. Burada tahmini bir sayı yazmak, kalemin hangi gruba
-       (kapıya teslim / kargo) düştüğünü bilmeden hesap yapmak olurdu — yanlış bir sayı, hiç sayı
-       olmamasından kötüdür. Anlık onay yine anında veriliyor; eksik kalan yalnız RAKAM. */
+    /* Eşik hatırlatması ikinci kademede: eklemenin sepeti eşiğin neresine taşıdığını ancak sunucu söyleyebilir. */
     setAwaitingMinimumHint(cart.view.itemCount);
   };
 
@@ -367,7 +268,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   return (
     <View style={styles.screen} testID="product-detail">
       <ScrollView contentContainerStyle={styles.content} testID="product-scroll">
-        {/* ── Kahraman: galeri şeridi + üst degrade + yüzen düğmeler + rozetler (v3:240-249) ── */}
+        {/* ── Kahraman: galeri şeridi, üst degrade, yüzen düğmeler, rozetler ── */}
         <View style={styles.hero}>
           {/* Şerit kahramanın YERİNE geçer, yerleşimini değiştirmez: degrade, düğmeler ve rozetler
               onun üstünde çizilmeye devam eder (kardeş sırası korundu). */}
@@ -387,12 +288,8 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
             style={styles.heroScrim}
             pointerEvents="none"
           />
-          {/* YER FİLİGRANI — kart ailesinin ikizi (`ProductPhotoCard.noteVeil`,
-              `ProductCircleCard.markVeil`): kahramanı örten yarı saydam katman + ORTALANMIŞ cümle,
-              rozet kabuğu YOK. Galerinin KARDEŞİ, çocuğu değil: örtü şeridin içine konsaydı hem
-              kaydırmayla birlikte kayar hem de solmaya ortak olurdu — okunması gereken cümle tam o
-              anda okunaksızlaşırdı (10.08 kart arızasının dersi). `pointerEvents="none"`: galeri
-              kaydırması ve göstergesi bozulmaz, yüzen düğmeler de üstte kalır. */}
+          {/* Yer filigranı galerinin kardeşi, çocuğu değil: şeridin içinde kaydırmayla kayar ve solmaya ortak olurdu.
+              `pointerEvents="none"` galeriyi ve yüzen düğmeleri bozmaz. */}
           {placeMark === null ? null : (
             <View style={styles.placeVeil} pointerEvents="none" testID="product-place-veil">
               <Text style={styles.placeVeilText} numberOfLines={3}>
@@ -461,9 +358,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                   <PressableSurface
                     key={member.slug}
                     onPress={() => {
-                      /* Aile çipi yığına sayfa EKLEMEZ (kullanıcı kararı 08.08): aynı rotanın
-                         parametresi değişir, içerik yerinde tazelenir. Geri tuşu böylece aileyi
-                         gezinti geçmişi olarak değil, geldiği yeri hatırlayarak çalışır. */
+                      /* Aile çipi yığına sayfa eklemez: rotanın parametresi değişir, geri tuşu geldiği yeri hatırlar. */
                       if (!member.isCurrent) router.setParams({ slug: member.slug });
                     }}
                     feedback="scale-small"
@@ -522,7 +417,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
           {detail.description === null ? null : <Text style={styles.description}>{detail.description}</Text>}
         </View>
 
-        {/* ── Akordeonlar (v3:281-288): üst/alt düz mürekkep, aralar kesik kum ── */}
+        {/* ── Akordeonlar: üst ve alt düz mürekkep, aralar kesik kum ── */}
         <View style={styles.accordion}>
           <PressableSurface
             onPress={() => setAccordion((current) => ({ ...current, ingredients: !current.ingredients }))}
@@ -588,7 +483,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
           ) : null}
         </View>
 
-        {/* ── Değerlendirmeler: sözleşme yorum taşımıyor → şablonun "yorum yok" hâli (sapma 1) ── */}
+        {/* ── Değerlendirmeler: sözleşme yorum taşımıyor, bu yüzden "yorum yok" hâli çizilir ── */}
         <View style={styles.reviews}>
           <Text style={styles.sectionTitle}>{t.reviews.title}</Text>
           <Text style={styles.reviewsEmpty}>{t.reviews.empty}</Text>
@@ -603,8 +498,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                   key={product.slug}
                   name={product.name}
                   priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
-                  /* Yalnız FIRSAT rozeti (27.08) — kapsam kampanyası ürün kartında yanıltıcıydı,
-                     yeri vitrin bandı oldu. Kural kitte; katalog ve vitrinle aynı. */
+                  /* Yalnız fırsat rozeti; kural katalog ve vitrinle aynı kurucuda. */
                   discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                   size="sm"
                   image={product.image}
@@ -617,19 +511,18 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
           </View>
         )}
 
-        {/* Yapışkan barın payı (v3:314 — 108). */}
+        {/* Yapışkan barın payı. */}
         <View style={styles.barSpace} />
       </ScrollView>
 
-      {/* ── Yapışkan alt bar (v3:1228-1252) — krem cam, tab bar ile aynı yüzey kararı ── */}
+      {/* ── Yapışkan alt bar: krem cam, sekme çubuğuyla aynı yüzey ── */}
       <BlurView intensity={theme.glassBlurIntensity} tint="light" style={styles.bar} testID="product-bar">
         <View style={styles.barGlass} pointerEvents="none" />
         {alertBar ? (
           <View style={styles.barRow}>
             <Text style={styles.soldOutText}>{barNote}</Text>
             {stockStatus === 'ok' || stockStatus === 'already' ? (
-              /* Kayıt alındı: düğme KALKAR, yerine sonucun tek satırı geçer — alınmış bir kaydı
-                 ikinci kez isteten düğme "sayılmadım mı?" sorusunu doğururdu (bölge bandının kararı). */
+              /* Kayıt alındı: düğme kalkar, yerine sonucun satırı geçer; ikinci kez isteten düğme "sayılmadım mı?" dedirtirdi. */
               <View style={[styles.alertButton, styles.alertButtonOn]} testID="product-stock-alert-recorded">
                 <Text style={[styles.alertText, styles.alertTextOn]}>{t.soldOutBar.alertOn}</Text>
               </View>
@@ -647,10 +540,8 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
             )}
           </View>
         ) : placeMark !== null ? (
-          /* KAPALI KAPI (`blocked`) — satın alma öğeleri hiç çizilmez, yerine TEK satır bilgi.
-             Buraya "Buraya da gelin" eylemi KONMAZ: o bandın işi kataloğun başındadır ve mesele
-             bu ürün değil BÖLGEdir; aynı daveti ikinci kez, hem de müşterinin alamayacağı bir
-             ürünün sayfasında tekrarlamak, onu ürünün olmadığı bir işe zorlamak olurdu. */
+          /* Kapalı kapı: satın alma öğeleri yerine tek satır bilgi. "Buraya da gelin" daveti konmaz, mesele bu ürün değil bölgedir ve
+             davetin yeri katalog bandı. */
           <Text style={styles.soldOutText} testID="product-place-blocked">
             {barNote}
           </Text>
@@ -696,8 +587,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
         )}
       </BlurView>
 
-      {/* Misafirin "gelince haber ver" çekmecesi — ilk açılışta kurulur, kapanınca sökülmez
-          (`use-sheet.hook` künyesi). Yer yoksa düğme de yok, çekmece de. */}
+      {/* Misafirin "gelince haber ver" çekmecesi ilk açılışta kurulur, kapanınca sökülmez; yer yoksa çekmece de yok. */}
       {stockSheet.mounted && stockBody !== null && stockCopy !== null ? (
         <NoticeSheet
           visible={stockSheet.visible}
@@ -709,8 +599,7 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
         />
       ) : null}
 
-      {/* Sepet FAB'ı — v3:602: sepet doluyken vitrin·katalog·ürün·paket dörtlüsünde; bu sayfada
-          yapışkan barın ÜSTÜNDE durur (v3 `b:112px`). Boş sepette komponent kendini çizmez. */}
+      {/* Sepet FAB'ı sepet doluyken çizilir; bu sayfada yapışkan barın üstünde durur. */}
       <View style={styles.fabSlot} pointerEvents="box-none">
         <CartFab
           count={fabCount}
@@ -759,11 +648,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     position: 'absolute',
     inset: 0,
   },
-  /**
-   * YER FİLİGRANI — kahramanı örten yarı saydam katman (kart ailesinin ikizi: `noteVeil` /
-   * `markVeil`). Cümle bir dipnot değil, sayfanın o müşteri için verdiği cevap: ortalanır ve
-   * künye kademesinde (`body`) yazılır. Zemin/kenarlık YOK — okunurluğu filigranın kendisi verir.
-   */
+  /** Yer filigranı: cümle sayfanın o müşteriye cevabı olduğu için ortalı ve `body` kademesinde; okunurluğu örtünün kendisi verir. */
   placeVeil: {
     position: 'absolute',
     inset: 0,
@@ -781,17 +666,14 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   heroButtons: {
     position: 'absolute',
-    /* Foto tam ekrana taşar (saatİN ALTINA girer — v3 niyeti); düğmeler ise girmez: şablonun
-       8px'i ÜST GÜVENLİ ALANIN üstüne eklenir (kullanıcı bulgusu 08.08 — iPhone'da saate biniyordu;
-       çentiksiz cihazda inset 0, davranış şablonla aynı kalır).
-       Değerler v3'ün kendisi (göz denetimi 09.08): `top:8 · left/right:16` — md/3xl; tarifle hizalı. */
+    /* Fotoğraf saatin altına taşar, düğmeler taşmaz: üst güvenli alanın üstüne 8 eklenir, çentiksiz cihazda inset 0. */
     top: rt.insets.top + theme.space.md,
     left: theme.space['3xl'],
     right: theme.space['3xl'],
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  /** Paylaş dairesi geri düğmesinin `photo` varyantıyla AYNI yüzey (v3 ikisini tek stile bağlıyor). */
+  /** Paylaş dairesi geri düğmesinin `photo` varyantıyla aynı yüzey. */
   shareButton: {
     width: theme.size.iconButtonOnPhoto,
     height: theme.size.iconButtonOnPhoto,
@@ -821,7 +703,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.note,
     color: theme.colors.terracotta,
   },
-  /** Fiyat alt kenardan sarkar (v3: `bottom:-22px`, 3° dönüş, gölge) — taşma tasarımın imzası. */
+  /** Fiyat alt kenardan sarkar; taşma tasarımın imzası. */
   priceBadge: {
     position: 'absolute',
     right: theme.space.xl,
@@ -896,10 +778,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     letterSpacing: emToDp(theme.text['eyebrow--letter-spacing'], theme.text.eyebrow),
     color: theme.colors.terracotta,
   },
-  /* Ray kenardan kenara kayar (şablon: `margin:0 -22px; padding:2px 22px`). RN'de ikisi AYRI
-     katmana gider: negatif kenar payı ScrollView'ın KENDİSİNE, iç dolgu İÇERİK kabına — ikisi
-     birden içerik kabına konursa ilk/son kart sayfa boşluğunun altında kalır (yaşandı 08.08,
-     kullanıcı bulgusu). */
+  /* Ray kenardan kenara kayar: negatif kenar payı ScrollView'a, iç dolgu içerik kabına; ikisi birden içerik kabına konursa ilk
+     ve son kart sayfa boşluğunun altında kalır. */
   familyRailPull: {
     marginHorizontal: -theme.space['2xl'],
   },
@@ -907,8 +787,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space.lg,
     paddingHorizontal: theme.space['2xl'],
   },
-  /* Dolgular v3'ün kendisi (göz kıyası 09.08 — dar basılıyordu): `7px 14px 7px 8px` + iç gap 9;
-     sol dar bilerek (foto o kenara yaslı), ±1 yuvarlamada ferah yön seçildi. */
+  /* Sol dolgu bilerek dar: fotoğraf o kenara yaslı. */
   familyChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -936,7 +815,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     flexWrap: 'wrap',
     gap: theme.space.md,
   },
-  /* Dolgu v3'ün kendisi (aynı göz kıyası): `9px 15px` — ±1'de ferah yön (10/16). */
   variantChip: {
     gap: theme.space['2xs'],
     paddingVertical: theme.space.lg,
@@ -1055,7 +933,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     height: customerMetrics.productBarSpace,
   },
 
-  /** FAB yapışkan barın üstünde (v3: 112); bar alt insetle büyüdüğünde arayı korumak için fark eklenir. */
+  /** FAB yapışkan barın üstünde; bar alt boşlukla büyüyünce ara korunur. */
   fabSlot: {
     position: 'absolute',
     right: theme.space['4xl'],
@@ -1070,7 +948,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderTopColor: theme.colors.ink,
     paddingTop: theme.space.lg,
     paddingHorizontal: theme.space.xl,
-    /* Alt güvenli alan barın İÇİNDE; dolguyla TOPLANMAZ (tab bar kararı 08.08 — ikisinin büyüğü). */
+    /* Alt güvenli alan barın içinde ve dolguyla toplanmaz, ikisinin büyüğü alınır. */
     paddingBottom: Math.max(rt.insets.bottom, theme.space['2xl']),
   },
   barGlass: {
@@ -1095,11 +973,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  /* İM, BAŞLIK DEĞİL (18.08). Durak `h2-sm`di — yani BAŞLIK kademesi — oysa bu bir `−`/`+` imi.
-     `icon-sm` aynı boyu (20) taşıyor, dolayısıyla ekranda tek piksel oynamıyor; değişen şey ölçekte
-     hangi rolün kullanıldığı. Token künyesi rolü zaten yazıyor: *"İkon/emoji ölçüleri — metin
-     hiyerarşisinin parçası DEĞİL (başlık kurmazlar)"*. Başlık durağına bağlı kalsaydı, bir gün
-     başlık ölçeği ayarlandığında adet seçici de onunla birlikte oynardı. */
+  /* Glif `icon-sm`de, başlık kademesinde değil: `−`/`+` bir imdir ve başlık ölçeği değişince adet seçici oynamamalı. */
   stepGlyph: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['icon-sm'],

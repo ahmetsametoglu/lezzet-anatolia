@@ -6,12 +6,8 @@ import { catalogCategory, catalogProduct } from './catalog-fixture';
 import messages from '@lezzet/i18n/customer/catalog';
 
 /*
-  EKRAN TESTİ — durumların hepsi (iskelet · veri · boş · hata) ve çip süzgeci. Hook TAKLİT
-  EDİLMEZ: gerçek hook + taklit `fetch` ile koşuyor, yani ekranın gördüğü veri gerçekten
-  sözleşmeden geçmiş oluyor.
-
-  RNTL v14 tuzağı: aynı testte İKİNCİ bir `render` öncekini söker — her test tek render kullanır
-  ve durumu `fetch` taklidiyle kurar.
+  Hook taklit edilmez: gerçek hook taklit `fetch` ile koşar, ekranın gördüğü veri sözleşmeden geçer. RNTL v14'te aynı testteki
+  ikinci `render` öncekini söktüğü için her test tek render kullanır ve durumu `fetch` taklidiyle kurar.
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
@@ -44,9 +40,9 @@ const page = (
   products,
   total: products.length,
   nextCursor,
-  // Sözleşmede ZORUNLU ve nullable (21.64): koleksiyon süzgeci yokken uç `null` döner.
+  // Sözleşmede zorunlu ve nullable: koleksiyon süzgeci yokken uç `null` döner.
   activeCollection,
-  // Aynı kural kampanya için de (08.44): kesitte kampanya yoksa `null` — ekran cümleyi çizmez.
+  // Kampanya da öyle: kesitte kampanya yoksa `null`, ekran cümleyi çizmez.
   campaign: null,
 });
 
@@ -119,9 +115,8 @@ describe('CatalogScreen', () => {
 
     await render(<CatalogScreen />);
 
-    /* Rozet BÜYÜK HARFTE ve dönüşüm UYGULAMANIN diliyle: bu dosya `tr-FR` mock'luyor, yani
-       "Tükendi" → "TÜKENDİ" (noktalı İ). Stilin `textTransform`una bırakılsaydı dönüşümü Android
-       native CİHAZIN diliyle yapardı (ölçüldü 28.08 — `cart-line-row` künyesi). */
+    /* Büyük harf dönüşümü uygulamanın diliyle yapılır ("Tükendi" → "TÜKENDİ", noktalı İ); stilin `textTransform`u Android'de
+       cihazın diliyle dönüştürürdü. */
     await waitFor(() => expect(screen.getByText('TÜKENDİ')).toBeOnTheScreen());
     // İki üründen yalnız birinin fiyatı var.
     expect(screen.getAllByText('12,90 €')).toHaveLength(1);

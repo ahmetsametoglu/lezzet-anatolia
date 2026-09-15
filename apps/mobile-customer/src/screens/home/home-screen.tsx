@@ -135,7 +135,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
   const packages = home.home?.packages ?? [];
 
   /* İskeletin yerleşimi son açılıştan gelir, çünkü sabit iskelet olmayan blokları çizip veri gelince kaybeder ve ekran zıplar; iz
-     yalnız başarılı yüklemede yazılır. Sipariş bandı misafirde çizilmez, oturum henüz okunmadıysa ize güvenilir (CLAUDE §1). */
+     yalnız başarılı yüklemede yazılır. Sipariş bandı misafirde çizilmez, oturum henüz okunmadıysa ize güvenilir. */
   const storedLayout = useSyncExternalStore(subscribeHomeLayout, getHomeLayoutSnapshot);
   const knownGuest = meState.status === 'ready' && meState.me === null;
   const layout = storedLayout ?? DEFAULT_HOME_LAYOUT;
@@ -211,7 +211,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
             />
           )}
         </View>
-        {/* Konum hapı çekmece açar (v3 `shZip`). */}
+        {/* Konum hapı çekmece açar. */}
         <PressableSurface
           onPress={openLocation}
           feedback="opacity"
@@ -326,7 +326,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                 shadow
               />
             </View>
-            {/* Foto varsa foto, yoksa baş harf — kitin tek dairesi (v3 fırsat kartı daire FOTO çizer). */}
+            {/* Fotoğraf yoksa baş harf; kitin tek dairesi. */}
             <CirclePhoto
               size={customerMetrics.offerPhoto}
               initial={offer.name.slice(0, 1)}
@@ -358,15 +358,13 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         refreshControl={
           <RefreshControl
             refreshing={home.refreshing}
-            /* Hareket İKİ kaynağı tazeler: vitrin bölümleri ve kimlik (ad/toptan rozeti). Gösterge
-               vitrinin hâline bağlı — kimlik okuması sessiz ve hızlıdır, ayrı bir gösterge
-               göstermek kullanıcıya iki ayrı yükleme varmış izlenimi verirdi. */
+            /* Hareket vitrini, yeri, kimliği ve sipariş bantlarını birlikte tazeler; gösterge yalnız vitrinin hâline bağlı, ayrı
+               göstergeler birden çok yükleme varmış izlenimi verirdi. */
             onRefresh={() => {
               home.refresh();
               savedPlaceLookup.refresh();
               meState.refresh();
-              // Sipariş bantları da tazelenir: teslimat gün içinde ilerliyor ("hazırlanıyor" →
-              // "yolda") ve ekranın en üstünde eski bir durum kalması vitrinin yalan söylemesidir.
+              // Teslimat gün içinde ilerler; en üstte eski bir durum kalması vitrinin yanlış söylemesi olurdu.
               homeOrders.refresh();
             }}
             {...pullRefreshColors(theme.colors.olive)}
@@ -382,8 +380,8 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
         {bands.length === 0 ? null : (
           <View style={styles.collections}>
             <Text style={[styles.sectionEyebrow, styles.collectionsEyebrow]}>{upperIn(t.collections.eyebrow, locale)}</Text>
-            {/* Daireler bantların içinde değil yığının üstünde: v3'te daire komşu bantlara taşar ve RN'de kardeş sırası z-sırası olduğu
-                için bunu ancak sonradan çizilen bir üst katman verir. */}
+            {/* Daireler bantların içinde değil yığının üstünde: daire komşu bantlara taşar ve RN'de kardeş sırası z-sırası olduğu için
+                bunu ancak sonradan çizilen bir üst katman verir. */}
             <View style={styles.bandStack}>
               {bands.map((band, index) => (
                 <CollectionBand
@@ -446,17 +444,15 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                     discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                     image={product.image}
                     stockMark={placeMark}
-                    // Solma yalnız KAPALI kapıda (gerekçe: katalog ekranının aynı satırı).
+                    // Solma yalnız kapalı kapıda, katalogdaki kuralla aynı.
                     dimmed={stockMark?.tone === 'blocked'}
                     onPress={() => openProduct(product.slug)}
                     testID={`home-featured-${product.slug}`}
                   />
                 );
               })}
-              {/* Rayın sonundaki KATALOG kartı (v3:130) — ürün dairesinin ikizi ama ürün DEĞİL:
-                  fiyat çipi yerine ok rozeti, fotoğraf yerine katalog ikonu taşır. Bu yüzden
-                  `ProductCircleCard` kullanılmadı; o kart fiyatı ZORUNLU tutar (künyesi) ve
-                  fiyatsız bir kart doğurmak, ürün kartını "bazen ürün değil"e çevirirdi. */}
+              {/* Rayın sonundaki katalog kartı ürün dairesinin ikizi ama ürün değil; `ProductCircleCard` fiyatı zorunlu tuttuğu için
+                  kullanılmadı. */}
               <PressableSurface
                 onPress={() => router.push('/catalog')}
                 feedback="scale"
@@ -466,7 +462,6 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               >
                 <View style={styles.catalogCircleFrame}>
                   <View style={styles.catalogCircle}>
-                    {/* İkon v3'te 46; kitin dekoratif ikon durağı `decorIcon` (44) bu aralık, boş hâl ikonundan ayrıdır. */}
                     <Icon name="catalog" size={theme.size.decorIcon} color={theme.colors['sand-600']} />
                   </View>
                   <View style={styles.catalogArrow}>
@@ -669,7 +664,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   greeting: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
-    // Şablon 27; ölçekte en yakın durak `page-title-sm` (26).
+    // Tasarımın 27'si ölçekte yok, en yakın durak `page-title-sm`.
     fontSize: theme.text['page-title-sm'],
     lineHeight: theme.text['page-title-sm'] * theme.text['h1--line-height'],
     color: theme.colors.ink,
@@ -785,7 +780,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   flashEyebrow: {
     fontFamily: theme.font.body[theme.text['eyebrow--font-weight']],
     fontSize: theme.text.eyebrow,
-    // Şablonun `.16em`i ile kitin üstbaşlık aralığı (.18em) arasındaki fark ölçülemez; token kazanır.
+    // Kitin üstbaşlık aralığı; tasarımın .16em'iyle farkı gözle seçilmez.
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['terracotta-line'],
   },
@@ -818,10 +813,10 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderRadius: customerMetrics.flashPhoto / 2,
     overflow: 'hidden',
     marginRight: -theme.space['5xl'],
-    // v3: görsel 132, yuvası 124 — üstten ve alttan 4'er px bandın DIŞINA taşar (die-cut imzası).
+    // Görsel bandın dışına üstten ve alttan taşar; kesik görünüm tasarımın imzası.
     marginVertical: -theme.space.xs,
     transform: [{ rotate: '8deg' }],
-    // v3'ün drop-shadow'u (0 8 16 rgba(21,23,15,.35)) — iOS gölge + Android elevation.
+    // Gölge iOS'ta `shadow*`, Android'de `elevation` ile.
     shadowColor: theme.colors.ink,
     shadowOffset: { width: 0, height: theme.space.md },
     shadowRadius: theme.space['4xl'],
@@ -899,8 +894,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
 
   /* ── Bölümler ───────────────────────────────────────────────────────────── */
-  // v3'te bantlar BİTİŞİK (kolon, gap yok) — taşan daireler bantlar arasını köprüler; boşluk
-  // yalnız üstbaşlıkla ilk bant arasında (v3: eyebrow'un kendi 10px alt boşluğu).
+  // Bantlar bitişik, taşan daireler aralarını köprüler; boşluk yalnız üstbaşlıkla ilk bant arasında.
   collections: {},
   collectionsEyebrow: { paddingBottom: theme.space.md },
   // Daire katmanının konum çapası + yatay taşmanın kırpılmaması.
@@ -940,7 +934,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     justifyContent: 'center',
     backgroundColor: theme.colors['sand-250'],
   },
-  /** Fiyat çipiyle AYNI köşe (v3:135) — kart ürün dairesinin ikizi olduğu için hiza da aynı. */
+  /** Fiyat çipiyle aynı köşe: kart ürün dairesinin ikizi. */
   catalogArrow: {
     position: 'absolute',
     right: -theme.space['2xs'],
@@ -953,7 +947,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors.ink,
     textAlign: 'center',
   },
-  /** Tarif rayının koyu kapanış kartı — tarif kartıyla aynı ölçü (v3:155). */
+  /** Tarif rayının koyu kapanış kartı, tarif kartıyla aynı ölçüde. */
   recipesMoreCard: {
     width: customerMetrics.recipeCardWidth,
     height: customerMetrics.recipeCardHeight,
@@ -971,7 +965,6 @@ const styles = StyleSheet.create((theme, rt) => ({
   },
   recipesMoreTitle: {
     fontFamily: theme.font.display[theme.text['h2-sm--font-weight']],
-    // v3:158 — 26; sayfa başlığı kademesiyle aynı durak.
     fontSize: theme.text['page-title-sm'],
     lineHeight: theme.text['page-title-sm'] * theme.text['h1--line-height'],
     color: theme.colors['on-image'],
@@ -1085,8 +1078,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors['olive-dark'],
   },
 
-  /* Yüzen düğme: sekme çubuğunun üstünde, sağ altta (şablon: `right:18px; bottom:84px` — çubuğun
-     yüksekliği ekranın kendi akışında olduğu için burada yalnız çubuğun üstündeki nefes kalır). */
+  /* Yüzen düğme sekme çubuğunun üstünde sağ altta; çubuk ekranın akışında olduğu için burada yalnız üstündeki nefes kalır. */
   fabSlot: {
     position: 'absolute',
     right: theme.space['4xl'],
