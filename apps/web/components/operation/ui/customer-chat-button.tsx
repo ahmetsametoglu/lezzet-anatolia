@@ -6,23 +6,10 @@ import type { MessengerContext } from './customer-channel-model';
 import { ChatIcon } from './icons';
 import { useSocialMessenger } from './use-social-messenger.hook';
 
-/**
- * **Müşteriye yaz — tek düğme** (15.33) — liste ve tablo satırı için.
- *
- * Kanal düğmeleri (`CustomerChannels`) müşterinin bütün kanallarını açılışta okur; o tek müşterili bir
- * KART içindir (sipariş, müşteri, talep panosu). Otuz satırlık bir tabloda aynı okuma otuz sunucu turu
- * olurdu ve Next eylemleri sırayla koşar. Bu düğme hiçbir şey okumadan çizilir; basınca müşterinin
- * kanalları BİR kez okunur ve en son yazdığı kanalın sohbeti yüzen pencerede açılır (`openForCustomer`).
- * Hiç sohbeti yoksa ve telefonu kayıtlıysa WhatsApp sohbeti numarayla açılır; o da yoksa pencere sebebini
- * söyler. Yazışma uygulamanın içinden — `wa.me` ve personelin kendi telefonu yok (kullanıcı kuralı 14.09).
- *
- * Pencere yoksa (yönetici değil) çizilmez.
- */
+/** Tabloda satır başına okuma yapılmaz, otuz satır otuz sunucu turu olurdu: kanallar basınca bir kez okunur (`openForCustomer`). */
 interface CustomerChatButtonProps {
   customerId: string;
-  /** `icon`: tablo hücresinde ikon düğme · `button`: kart ve pencere satırında "Mesaj yaz" yazılı düğme. */
   variant?: 'icon' | 'button';
-  /** Pencerenin üst şeridinde taşınacak özet — açan satırın konusu. */
   context?: MessengerContext;
 }
 
@@ -32,7 +19,7 @@ export function CustomerChatButton({ customerId, variant = 'icon', context }: Cu
   const messenger = useSocialMessenger();
   if (!messenger) return null;
 
-  // Satır tıklanabilir olabilir (tablo satırı detay açar) — düğmenin tıklaması satıra geçmesin.
+  // Satır tıklanabilir olabilir: düğmenin tıklaması satıra geçmesin.
   const open = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     messenger.openForCustomer(customerId, context);

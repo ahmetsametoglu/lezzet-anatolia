@@ -1,29 +1,20 @@
 'use client';
 
 /**
- * **Yeni mesaj sesi** (15.34) — operasyon web'inde, sekme açıkken (arka planda da) müşteriden mesaj gelince.
- *
- * Ses DOSYASI YOK: iki kısa ton Web Audio ile üretilir. Dosya bir varlık ve bir istek demekti; bu tını için
- * ikisine de gerek yok.
- *
- * **Tarayıcı sesi kullanıcı dokunuşundan önce çaldırmaz** (otomatik oynatma kuralı). Kilit sayfaya ilk dokunuşta
- * açılır (`unlockMessageChime`); kilit açılmadan gelen mesajda ses çalmaz ve bu bilinçli — uyarının görsel
- * yarısı (düğmenin rozeti, kuyruk) yine çalışır.
- *
- * Ne zaman çalacağı burada DEĞİL, motorda (`hasNewInbound` · `alertAllowed`): mobil uygulama aynı kararı okur.
+ * Ses dosyası yok: iki kısa ton Web Audio ile üretilir, dosya bir varlık ve bir istek demekti. Ne zaman çalacağı motorda
+ * (`hasNewInbound`, `alertAllowed`): native uygulama aynı kararı okur.
  */
 
 let context: AudioContext | null = null;
 
-/** İlk dokunuşta ses bağlamını kurar; dönen fonksiyon dinleyicileri kaldırır (bileşen ayrılırken). */
+/** Tarayıcı sesi kullanıcı dokunuşundan önce çaldırmaz; kilit ilk dokunuşta açılır, dönen fonksiyon dinleyicileri kaldırır. */
 export function unlockMessageChime(): () => void {
   const unlock = () => {
     try {
       context ??= new AudioContext();
       void context.resume();
     } catch {
-      // Tarayıcı Web Audio vermiyorsa ses YOK — uyarının görsel yarısı çalışmaya devam eder; iz bırakacak
-      // bir arıza değil, tarayıcının yeteneği.
+      // Web Audio yoksa ses yok, rozet ve kuyruk yine çalışır: iz bırakacak bir arıza değil, tarayıcının yeteneği.
     }
     detach();
   };
@@ -37,7 +28,7 @@ export function unlockMessageChime(): () => void {
   return detach;
 }
 
-/** İki tonlu kısa tını. Kilit açılmadıysa sessizce geçer (künye). */
+/** Kilit açılmadıysa sessizce geçer: uyarının görsel yarısı yine çalışır. */
 export function playMessageChime(): void {
   if (!context || context.state !== 'running') return;
   const start = context.currentTime;

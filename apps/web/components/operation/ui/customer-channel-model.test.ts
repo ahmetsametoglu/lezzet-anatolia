@@ -2,9 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { appendToDraft, chatContext, chatTargetOf, orderChatContext, toCustomerChannels } from './customer-channel-model';
 import { money, shortDate } from './format';
 
-// 15.32 — kanal düğmesinin görünümü. Sıra ve "en son" kararı motorda sınanıyor (`customerChannelsOf`);
-// burada yalnız çevirinin sözü: karar AYNEN geçer, yaş dar biçime döner, yazılmamış kanala yaş uydurulmaz.
-
 describe('toCustomerChannels — kanal düğmesinin görünümü', () => {
   const now = new Date('2026-09-14T12:00:00Z');
   const ch = (id: string, source: 'whatsapp' | 'messenger' | 'instagram', lastInboundAt: string | null, latest: boolean) => ({

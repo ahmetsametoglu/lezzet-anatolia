@@ -1,11 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ConversationSource } from '@lezzet/types';
 
-/*
-  Kanalın İŞARETİ (15.38) — çizimin üç glifi (`Operasyon - Sosyal Mesajlar.dc.html`, `chIcon`). Renk
-  `currentColor`dan: kuyruk noktasında kanalın marka rengi, seçili sekmede zeminin üstündeki yazı rengi.
-  `WhatsAppIcon` bilerek kullanılmadı — kendi yeşiline kilitli, seçili sekmenin yeşil zemininde kaybolurdu.
-*/
+// `WhatsAppIcon` bilerek kullanılmadı: kendi yeşiline kilitli ve seçili sekmenin yeşil zemininde kaybolurdu; renk `currentColor`dan.
 const GLYPHS: Record<ConversationSource, ReactNode> = {
   whatsapp: <path d="M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z" />,
   messenger: (

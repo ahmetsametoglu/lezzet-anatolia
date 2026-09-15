@@ -7,20 +7,11 @@ import type { CustomerChannelView, CustomerChannelsView, MessengerContext } from
 import { Skeleton } from './skeleton';
 import { useSocialMessenger, type SocialMessengerApi } from './use-social-messenger.hook';
 
-/**
- * **Müşterinin sohbet kanalları** (15.32 · kullanıcı isteği 14.09) — "bizimle hangi kanallardan yazıştı,
- * en son hangisinden". Müşteriyle konuşmanın gerektiği her ekranda (sipariş, müşteri kartı, talep) aynı
- * düğme sırası: her kanal bir düğme, en son yazdığı işaretli; basınca o sohbet YÜZEN PENCEREDE açılır —
- * operatör bulunduğu ekrandan çıkmaz, `wa.me` ve kendi telefonu yok (kullanıcı kuralı 14.09).
- *
- * Pencere yoksa (yönetici değil) hiçbir şey çizilmez ve okuma da yapılmaz — kapı sohbet sayfasınınki.
- */
+/** Basınca sohbet yüzen pencerede açılır: operatör bulunduğu ekrandan çıkmaz. Pencere yoksa (yönetici değil) okuma da yapılmaz. */
 interface CustomerChannelsProps {
   customerId: string;
-  /** Düğme boyu — başlık barında yanındaki düğmelerle aynı yükseklik (`md`), panelde dar (`sm`). */
   size?: 'sm' | 'md';
   className?: string;
-  /** Pencerenin üstünde taşınacak bağlam (15.39) — sipariş ekranları verir: referans · tutar · teslim günü. */
   context?: MessengerContext;
 }
 
@@ -61,7 +52,7 @@ function ChannelButtons({ customerId, size, className, context, messenger }: Cha
   const wrap = ['flex flex-wrap items-center gap-2', className].filter(Boolean).join(' ');
   const button = `${CHANNEL_BUTTON} ${size === 'md' ? 'py-2' : 'py-1.5'}`;
 
-  // Okuma düştüyse SÖYLENİR: boş sıra "bu müşterinin kanalı yok" diye okunurdu (CLAUDE §1).
+  // Okuma düştüyse söylenir: boş sıra "bu müşterinin kanalı yok" diye okunurdu.
   if (error) return <span className="font-ops-body text-ops-xs text-ops-red">{error}</span>;
   if (!view) {
     return (
@@ -111,7 +102,6 @@ function ChannelButtons({ customerId, size, className, context, messenger }: Cha
   );
 }
 
-/** Düğmenin ikinci yarısı: "son · 2 saat" (en son yazdığı) · "5 gün" · "yazmadı" (sohbeti biz açtık). */
 function channelMeta(channel: CustomerChannelView): string {
   if (channel.lastInboundAgo === null) return 'yazmadı';
   return channel.latest ? `son · ${channel.lastInboundAgo}` : channel.lastInboundAgo;
