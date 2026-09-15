@@ -256,8 +256,8 @@ function CardPhoto({ card }: { card: DiscoverCard }) {
       crop={card.image.crop}
       frames={card.image.frames}
       sizes="100vw"
-      placeholder={<span className="font-serif text-h1-sm text-on-image-soft">{card.name.slice(0, 1)}</span>}
-      className="!absolute inset-0 !aspect-auto !rounded-none !bg-sand-300"
+      placeholder={<span className="font-serif text-h1-sm text-sand-500">{card.name.slice(0, 1)}</span>}
+      className="!absolute inset-0 !aspect-auto !rounded-none !bg-sand-100"
     />
   );
 }
@@ -277,8 +277,8 @@ function CardFace({ card, x, shown, live, labels }: CardFaceProps) {
   const reach = reachOf(x);
   return (
     <div className={['pointer-events-none absolute inset-0 transition-opacity duration-280', shown ? 'opacity-100' : 'opacity-0'].join(' ')}>
-      <span aria-hidden className="absolute inset-0 bg-linear-to-b from-scrim-soft to-ink-deep/0 to-30%" />
-      <span aria-hidden className="absolute inset-0 bg-linear-to-b from-ink-deep/0 from-30% via-ink-deep/35 via-58% to-ink-deep/88" />
+      {/* Koyuluk yalnız altta, yazının okunması için; üst yarı fotoğrafın kendi aydınlığında kalır. */}
+      <span aria-hidden className="absolute inset-0 bg-linear-to-b from-ink-deep/0 from-40% via-ink-deep/35 via-68% to-ink-deep/88" />
       {card.category !== null && (
         <span className="absolute top-4 left-4 rounded-badge bg-sand-50/92 px-2.75 py-1.5 font-sans text-badge-sm font-bold tracking-[0.1em] text-body uppercase">
           {card.category}
