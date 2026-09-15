@@ -215,7 +215,8 @@ Varsayılan tek ajandır. Paralel çalışma **istenirse** şu üç kural bağla
 ### Testleri kim çalıştırır
 
 Bu projede kimin neyi koşturduğu **CLAUDE.md §4** (derleme · dev sunucusu) ve **§4b**'de (birim ·
-entegrasyon · e2e · tam paket) yazılıdır; bağlayıcı olan oradaki metindir, burada tekrar edilmez.
+commit kapısı `pnpm test:commit` · entegrasyon · e2e · tam paket ve sağlık koşusu) yazılıdır; bağlayıcı
+olan oradaki metindir, burada tekrar edilmez.
 (10.09: bu bölümdeki eski kopya ikisiyle de çelişiyordu — "derleme serbest" dev açıkken yasaktı,
 e2e "kullanıcıda" değil denetimdeydi.)
 

@@ -16,13 +16,20 @@
  * Katılan ajan için ölçü `startedAt`tir: koşu senin değişikliğinden ÖNCE başladıysa sonuç senin
  * kodunu içermez — bitince bir kez daha tetikle (bu sefer koşucu sensin).
  *
+ * **Gerekçesiz koşmaz (kullanıcı kararı 15.09, CLAUDE §4b).** Tam paket commit kapısı değil; iki
+ * kapısı var: `pnpm test:commit`in tetiği (`--reason=commit:<yol>`, `commit-tests.mjs`) ve denetim
+ * şeridinin sağlık koşusu (`pnpm test:health` → `--reason=health`; HEAD son GEÇEN sağlık koşusundan
+ * beri değişmediyse koşmaz). Her koşu gerekçesi ve HEAD'iyle `.test-results/history.jsonl`a yazılır.
+ * Kararlar saf modülde: `test-gate-rules.mjs`.
+ *
  * Kilit `with-test-lock.mjs` ile AYNI dizindir: eski kuyruk kullanıcıları (ör. ölçüm koşuları)
  * ve bu koşucu birbirini görür, DB'ye aynı anda iki paket vurmaz.
  */
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, createWriteStream } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync, createWriteStream } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { healthVerdict, parseHistory, parseReason } from './test-gate-rules.mjs';
 import { SUITE_KIND, ownerAction } from './test-lock-owner.mjs';
 
 const ROOT = join(import.meta.dirname, '..');
@@ -31,6 +38,8 @@ const RESULTS = join(ROOT, '.test-results');
 const LATEST = join(RESULTS, 'latest.json');
 const LOG = join(RESULTS, 'run.log');
 const VITEST_JSON = join(RESULTS, 'vitest.json');
+/** Her tam koşunun gerekçesi ve HEAD'i — kim neden tam paket koştu, sonradan okunabilsin (15.09). */
+const HISTORY = join(RESULTS, 'history.jsonl');
 /** Kilit sahibi çökmüş olabilir (Ctrl-C, kill -9): bu yaştan sonra kilit devralınır. */
 const STALE_MS = 15 * 60 * 1000;
 const POLL_MS = 2000;
@@ -54,12 +63,24 @@ const isAlive = (pid) => {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Git'in tek satırlık cevabı; git yoksa ya da sorgu düşerse `null` — okuyan taraf "bilinmiyor" diye davranır. */
+const git = (...args) => {
+  try {
+    return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch {
+    return null;
+  }
+};
+
+const readHistory = () => parseHistory(existsSync(HISTORY) ? readFileSync(HISTORY, 'utf8') : '');
+
 function summaryLine(result) {
   if (!result) return 'sonuç yok (henüz hiç koşu yapılmadı ya da koşucu çöktü)';
   if (result.status === 'running') return `koşu sürüyor (pid ${result.ownerPid}, başlangıç ${result.startedAt})`;
   const t = result.tests;
   const counts = t ? `${t.passed}/${t.total} geçti${t.failed ? `, ${t.failed} DÜŞTÜ` : ''}` : 'sayım okunamadı';
-  return `${result.status.toUpperCase()} — ${counts} (başlangıç ${result.startedAt}, süre ${Math.round((result.durationMs ?? 0) / 1000)}s, log: .test-results/run.log)`;
+  const why = result.reason ? `gerekçe ${result.reason}, ` : '';
+  return `${result.status.toUpperCase()} — ${counts} (${why}başlangıç ${result.startedAt}, süre ${Math.round((result.durationMs ?? 0) / 1000)}s, log: .test-results/run.log)`;
 }
 
 // ── --status: koşturmadan son durumu bas ──────────────────────────────────────
@@ -68,7 +89,46 @@ if (process.argv.includes('--status')) {
   console.log(summaryLine(result));
   const previous = readJson(join(RESULTS, 'previous.json'));
   if (previous) console.log(`[test] bir önceki: ${summaryLine(previous)} (log: .test-results/previous.log)`);
+  for (const entry of readHistory().slice(-5)) {
+    console.log(
+      `[test] geçmiş: ${entry.startedAt ?? '?'} · ${entry.reason ?? 'gerekçesiz'} · ${entry.status ?? '?'} · HEAD ${entry.head?.slice(0, 8) ?? '?'}`,
+    );
+  }
   process.exit(result?.status === 'passed' ? 0 : result?.status === 'failed' ? 1 : 2);
+}
+
+// ── Gerekçe kapısı (kullanıcı kararı 15.09, CLAUDE §4b) ───────────────────────
+//
+// Tam paket commit kapısı DEĞİL. Yalnız metinde duran bir kural "sağlık koşusu yapıyorum" diyen her
+// ajanın koşusunu durdurmazdı; sınır bu yüzden araçta.
+const reason = parseReason(process.argv);
+if (!reason) {
+  console.error(
+    [
+      '[test] tam paket gerekçesiz koşmaz (kullanıcı kararı 15.09, CLAUDE §4b).',
+      "  commit için:    pnpm test:commit -- <commit'in yolları>   (tam paket gerekiyorsa o çağırır)",
+      '  sağlık koşusu:  pnpm test:health                          (YALNIZ denetim şeridi)',
+    ].join('\n'),
+  );
+  process.exit(2);
+}
+// Yalnız ana çalışma ağacında: katılımcı sonucu ROOT'taki `latest.json`dan okuyor. Bir worktree
+// kopyasında koşan paket oraya yazmaz ve ana ağaçtaki katılımcı BAYAT sonucu "geçti" diye okurdu.
+const gitDir = git('rev-parse', '--git-dir');
+const commonDir = git('rev-parse', '--git-common-dir');
+if (gitDir && commonDir && resolve(ROOT, gitDir) !== resolve(ROOT, commonDir)) {
+  console.error('[test] tam paket yalnız ana çalışma ağacında koşar — burası bir git worktree kopyası.');
+  process.exit(2);
+}
+const head = git('rev-parse', 'HEAD');
+if (reason.kind === 'health') {
+  const verdict = healthVerdict(readHistory(), head);
+  if (!verdict.run) {
+    console.log(
+      `[test] sağlık koşusu gereksiz: HEAD ${head?.slice(0, 8)} son geçen sağlık koşusundan (${verdict.since}) beri değişmedi.`,
+    );
+    process.exit(0);
+  }
 }
 
 // ── Kilidi almayı dene: alan KOŞUCU olur, alamayan KATILIMCI ─────────────────
@@ -161,8 +221,8 @@ rmSync(VITEST_JSON, { force: true });
 mkdirSync(RESULTS, { recursive: true });
 const startedAt = new Date().toISOString();
 const startMs = Date.now();
-writeFileSync(LATEST, JSON.stringify({ status: 'running', ownerPid: process.pid, startedAt }, null, 2));
-console.log(`[test] koşu başladı (${startedAt}) — sonuç: .test-results/latest.json`);
+writeFileSync(LATEST, JSON.stringify({ status: 'running', ownerPid: process.pid, startedAt, reason: reason.text, head }, null, 2));
+console.log(`[test] koşu başladı (${startedAt}, gerekçe ${reason.text}) — sonuç: .test-results/latest.json`);
 
 const child = spawn(
   'pnpm',
@@ -189,10 +249,16 @@ child.on('close', (code) => {
     startedAt,
     finishedAt: new Date().toISOString(),
     durationMs: Date.now() - startMs,
+    reason: reason.text,
+    head,
     log: '.test-results/run.log',
   };
   log.end();
   writeFileSync(LATEST, JSON.stringify(result, null, 2));
+  appendFileSync(
+    HISTORY,
+    `${JSON.stringify({ startedAt, finishedAt: result.finishedAt, status: result.status, tests, reason: reason.text, head })}\n`,
+  );
   console.log(`[test] ${summaryLine(result)}`);
   process.exit(code ?? 1);
 });
