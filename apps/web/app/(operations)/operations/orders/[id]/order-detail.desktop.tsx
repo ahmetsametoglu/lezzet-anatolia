@@ -31,14 +31,7 @@ import type { OrderDecision } from '@lezzet/domain-core';
 import type { OrderSource, OrderStatus } from '@lezzet/types';
 import { cardClass } from '@/components/operation/ui/card';
 
-// Sipariş DETAYI — MASAÜSTÜ. Tasarım "Operasyon - Siparis Detay" birebir.
-//
-// İskelet: üst bar (künye + ulaşma + birincil geçiş) → açılır izinli geçiş şeridi → gövde:
-// sol kolon KAYIT (künye → kalemler → para → zaman), sağ 336px ray BAĞLAM (müşteri/vade,
-// teslimat/kanıt, bağlar, sınır notu).
-//
-// Bölüm sırası yoğun ve sade siparişte AYNIDIR; verisi olmayan blok hiç çizilmez (tasarım
-// sözleşmesi) — operatör aynı ekranda hep aynı yere bakar.
+// Bölüm sırası yoğun ve sade siparişte aynıdır, verisi olmayan blok hiç çizilmez: operatör aynı ekranda hep aynı yere bakar.
 
 interface OrderDetailDesktopProps {
   order: OrderDetailView;
@@ -49,15 +42,13 @@ interface OrderDetailDesktopProps {
 }
 
 export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }: OrderDetailDesktopProps) {
-  // Geçiş şeridi KAPALI başlar (tasarım): birincil geçiş üst barda, gerisi istendiğinde açılır.
+  // Geçiş şeridi kapalı başlar: birincil geçiş üst barda, gerisi istendiğinde açılır.
   const [nextOpen, setNextOpen] = useState(false);
   const primary = order.allowedNext[0] ?? null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      {/* Geri düğmesi YOK (tasarımdan bilinçli sapma): operasyon kabuğunun kalıcı yan çubuğu zaten
-          "Siparişler"i taşıyor. Her ekranın başına bir de kendi geri oku koymak, kabuğun işini
-          ekrana devretmek ve sayfaya sayfa-dışı bir öğe sokmak olurdu. */}
+      {/* Geri düğmesi yok: kabuğun yan çubuğu "Siparişler"i zaten taşır, ekrana ikinci bir geri oku kabuğun işini devralmak olurdu. */}
       <header className="flex flex-wrap items-center gap-3 border-b border-ops-line px-6 py-3.5">
         <div className="mr-auto flex min-w-0 flex-col gap-0.5">
           <div className="flex flex-wrap items-baseline gap-2.5">
@@ -75,14 +66,10 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
           </span>
         </div>
 
-        {/* Ulaşma — metin YOK, yalnız sohbeti açar: ne yazılacağı operatörün kararı (tasarım). Sohbet
-            UYGULAMANIN İÇİNDE, yüzen pencerede açılır (15.32 · kullanıcı kuralı 14.09): müşterinin yazıştığı
-            her kanal bir düğme, en son yazdığı işaretli. `wa.me` bağlantısı operatörü kendi telefonuna
-            gönderiyordu. */}
+        {/* Ulaşma metin yazmaz, yalnız sohbeti uygulamanın içinde açar: ne yazılacağı operatörün kararı. */}
         <CustomerChannels
           customerId={order.customer.id}
           size="md"
-          // Balonun BAĞLAM şeridi (15.39 · çizim): operatör hangi siparişten söz ettiğini elle yazmasın.
           context={orderChatContext('Sipariş detayından', {
             referenceNo: order.referenceNo,
             totalCents: order.payment.totalCents,
@@ -99,7 +86,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
           </a>
         ) : null}
 
-        {/* Birincil geçiş + şerit anahtarı. Terminal kayıtta hiç çizilmez — ilerleyecek yer yok. */}
+        {/* Terminal kayıtta birincil geçiş çizilmez: ilerleyecek yer yok. */}
         {primary ? (
           <button
             type="button"
@@ -145,10 +132,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
       ) : null}
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_336px] overflow-y-auto">
-        {/* ── SOL: KAYIT ── */}
         <div className="flex flex-col gap-4 border-r border-ops-line-soft px-6 py-5">
-          {/* Kimlik şeridi BÜYÜK ve RENKLİ (15.08, kullanıcı isteği — "her yer çok metin"): değerler
-              başlık kademesinde, kaynak kendi tonunda, eşleşmemiş fatura amber uyarır. */}
           <div className="grid grid-cols-4 overflow-hidden rounded-ops-card border border-ops-line bg-ops-white">
             <MetaCell label="Referans" value={order.referenceNo ?? '—'} mono strong />
             <MetaCell label="Kaynak" value={sourceLabel(order.source)} tone={SOURCE_TONE[order.source]} />
@@ -163,16 +147,13 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             settled={order.fulfillmentSettled}
           />
 
-          {/* PARA ile ZAMAN ÇİZELGESİ YAN YANA (15.08, kullanıcı kararı — geniş ekran turu): ikisi
-              de kısa/dar içerik ve tam genişlikte "satırda üç kelime, bin piksel boşluk" okunuyordu
-              (1920'de ölçüldü). Kalemler ve Kararlar tam genişlikte kalır — biri tablo, öteki eylem
-              şeridi. Kartlar EŞİT BOYDA gerilir (`items-start` denendi, geri alındı — 15.08 ikinci
-              bildirim: farklı yükseklikler kötü görünüyordu). */}
+          {/* Para ve zaman çizelgesi yan yana: ikisi de dar içerik, tam genişlikte satırda üç kelime ve bin piksel boşluk kalıyordu.
+              Kartlar eşit boyda gerilir. */}
           <div className="grid grid-cols-2 gap-4">
           <section className={cardClass()}>
             <div className="flex items-center gap-2.5 border-b border-ops-line bg-ops-subtle px-3.5 py-[11px]">
               <span className="mr-auto font-ops-display text-ops-base font-semibold text-ops-ink">Para</span>
-              {/* Ton da DURUMDAN okunur: "kalan 0" ile "ödendi" aynı şey değil. */}
+              {/* Ton da durumdan okunur: "kalan 0" ile "ödendi" aynı şey değil. */}
               <Badge
                 tone={
                   order.payment.overdue
@@ -216,7 +197,6 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               ))}
             </div>
 
-            {/* Vade uyarısı — tasarımda kırmızı kutu. "Tahsilat →" köprüsü Para ekranı açılınca gelir. */}
             {order.payment.overdue ? (
               <div className="mx-3.5 mb-3 flex items-center gap-2.5 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3.5 py-2.5">
                 <span className="flex-none font-ops-display text-ops-xs font-semibold text-ops-red">Vadesi geçti</span>
@@ -262,9 +242,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
           </section>
           </div>
 
-          {/* KARARLAR — kaydın altında, çünkü karar okumanın SONUCUDUR: kalemleri, parayı ve
-              geçmişi gördükten sonra verilir. Hangi kararın açık olduğunu motor söyler
-              (`allowedDecisions`); ekran listeyi uydurmaz. Terminal kayıtta blok hiç çizilmez. */}
+          {/* Kararlar kaydın altında, çünkü karar okumanın sonucudur; hangi kararın açık olduğunu motor söyler (`allowedDecisions`). */}
           {order.decisions.length > 0 ? (
             <section className="overflow-hidden rounded-ops-card border border-ops-line-strong bg-ops-white">
               <div className="flex items-center gap-2.5 border-b border-ops-line-soft px-3.5 py-[11px]">
@@ -273,11 +251,8 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                   yalnız bu siparişe ait · gün planı Rotalar'da
                 </span>
               </div>
-              {/* Kartlar genişlik yettikçe YAN YANA — `auto-fill`, `auto-fit` DEĞİL (15.08, kullanıcı
-                  bildirimi): karar sayısı duruma göre 1-3 arası değişiyor ve `auto-fit` tek kararı
-                  bütün satıra yayıp devasa boş bir kutu çiziyordu. `auto-fill` boş rayları korur —
-                  tek karar da üç karar da aynı ölçüde kart alır, satır dengeli kalır. Ölçü kartın
-                  KENDİ okunabilirlik tabanıdır (250px altında alt metin üç satıra düşüyor). */}
+              {/* `auto-fill`, `auto-fit` değil: tek kararı bütün satıra yayıp devasa boş kutu çizmesin. 250 px kartın okunabilirlik
+                  tabanı, altında alt metin üç satıra düşer. */}
               <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-2 px-3.5 py-[13px]">
                 {order.decisions.map((decision) => {
                   const copy = DECISION_COPY[decision];
@@ -324,7 +299,6 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
           ) : null}
         </div>
 
-        {/* ── SAĞ RAY: BAĞLAM ── */}
         <aside className="flex flex-col gap-3.5 bg-ops-subtle px-5 py-5">
           <div className={cardClass('flex flex-col gap-2.5 px-3.5 py-[13px]')}>
             <div className="flex items-center gap-2.5">
@@ -358,7 +332,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                     tone="red"
                   />
                 ) : null}
-                {/* Doluluk çubuğu: limitin ne kadarı kullanıldı. Limit yoksa çizilmez — oranı yok. */}
+                {/* Limit yoksa doluluk çubuğu çizilmez: oranı yok. */}
                 {order.customer.credit.limitCents !== null ? (
                   <span className="block h-[5px] overflow-hidden rounded-[3px] bg-ops-line-soft">
                     <span
@@ -371,10 +345,8 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             ) : null}
           </div>
 
-          {/* Finansal — ROL KAPILI (tasarım: "Operatör rolünde bu kart hiç render edilmez"). Bugün
-              kapı sayfanın kendisinde: `/orders/[id]` `requireAdmin` ister, dolayısıyla kart
-              yöneticinin dışına çıkmıyor. Sayfa depo/kurye rollerine açıldığı gün `finance` alanı
-              `null` gelir ve burası kendiliğinden susar. */}
+          {/* Finansal kart rol kapılı: sayfa bugün `requireAdmin` ister; başka rollere açıldığı gün `finance` `null` gelir ve kart
+              kendiliğinden susar. */}
           {order.finance ? (
             <div className={cardClass()}>
               <div className="flex items-center gap-2 border-b border-ops-line-soft px-3.5 py-2.5">
@@ -384,8 +356,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               <div className="flex flex-col gap-1.5 px-3.5 py-[11px]">
                 {order.finance.rows.map((row) => (
                   <div key={row.label} className="flex items-baseline gap-2.5">
-                    {/* Tahmini maliyet SÖNÜK yazılır ve eksi işareti almaz: kâra girmiyor, bir
-                        çıkarma işleminin parçasıymış gibi görünmemeli. */}
+                    {/* Tahmini maliyet sönük ve eksisiz: kâra girmez, çıkarmanın parçası gibi görünmemeli. */}
                     <span
                       className={`mr-auto font-ops-body text-ops-xs ${
                         row.kind === 'sale' ? 'font-medium text-ops-ink' : row.kind === 'estimate' ? 'text-ops-muted' : 'text-ops-body'
@@ -418,8 +389,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                     </div>
                     {order.finance.marginPercent !== null ? (
                       <div className="flex items-baseline gap-2.5">
-                        {/* Marj = katkı payı ÷ ciro — kârlılık raporunun (12.6) tanımının AYNISI.
-                            Aynı siparişin marjı iki ekranda iki sayı olamaz. */}
+                        {/* Marj kârlılık raporunun tanımıyla aynı: aynı siparişin marjı iki ekranda iki sayı olamaz. */}
                         <span className="mr-auto font-ops-body text-ops-xs text-ops-body">Kâr marjı</span>
                         <span
                           className={`font-ops-mono text-ops-xs ${
@@ -455,19 +425,15 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             </div>
             <div className="flex flex-col gap-2 px-3.5 py-[11px]">
               <InfoRow label="Gün" value={order.delivery.date ? shortDate(order.delivery.date) : 'girilmemiş'} />
-              {/* Kapı doğrulaması adresin İPUCU satırında (11.11) — alıcı satırındaki "adreste alıcı
-                  yazılı değil" ipucuyla aynı kalıp: ikisi de kopyanın bir niteliğini söylüyor, ikisi
-                  de bir engel değil. `confirmed`/`unknown` hiçbir şey yazmaz (`DOOR_CHECK_NOTE`
-                  künyesi); her siparişte beliren bir satır uyarıyı gürültüye çevirirdi. */}
+              {/* Kapı doğrulaması engel değil kopyanın niteliği, bu yüzden ipucu satırında; `confirmed`/`unknown` hiçbir şey yazmaz,
+                  her siparişte beliren bir satır uyarıyı gürültüye çevirirdi. */}
               <InfoRow
                 label="Adres"
                 value={order.delivery.address || 'kopya yok'}
                 hint={DOOR_CHECK_NOTE[order.delivery.doorCheck]}
               />
-              {/* ALICI — kargo künyesine yazılacak ad. Taşıyıcıların hiçbiri adsız künye üretmiyor
-                  ve teslim noktası kimliği bu adla karşılaştırıyor; hediye adresinde o ad hesap
-                  sahibininki DEĞİL. Ad adreste yoksa hesap sahibine düşülür ama bu GÖRÜNÜR yazılır:
-                  künyeyi yazan kişi tahmin edilmiş bir adı ölçülmüş sanmamalı. */}
+              {/* Alıcı kargo künyesine yazılacak addır ve hediye adresinde hesap sahibininki değil. Adreste yoksa hesap sahibine
+                  düşülür ama görünür yazılır: tahmin edilmiş ad ölçülmüş sanılmasın. */}
               {order.delivery.recipient ? (
                 <InfoRow
                   label="Alıcı"
@@ -475,28 +441,19 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                   hint={order.delivery.recipient.fromAccount ? 'adreste alıcı yazılı değil — hesap sahibi' : undefined}
                 />
               ) : null}
-              {/* Adresin telefonu — hesabınki değil (kapıda aranacak numara başkasınınki olabilir).
-                  Yoksa satır hiç çizilmez: boş bir alan "numara yok" der, oysa cevap bilinmiyor. */}
+              {/* Adresin telefonu, hesabınki değil; yoksa satır çizilmez, boş alan "numara yok" derdi, oysa cevap bilinmiyor. */}
               {order.delivery.recipient?.phone ? (
                 <InfoRow label="Adres tel." value={order.delivery.recipient.phone} />
               ) : null}
-              {/* HANGİ DEPODAN — künye, kontrol değil: depo adresin posta kodundan türedi ve sipariş
-                  tek depodan çıkar (DOMAIN §17). Buradan değiştirilemez; değiştirilebilseydi malın
-                  ayrıldığı depo ile siparişin deposu ayrışırdı. */}
+              {/* Depo künyedir, kontrol değil: posta kodundan türedi ve buradan değişseydi malın ayrıldığı depo ile siparişin deposu ayrışırdı. */}
               {order.delivery.warehouse ? (
                 <InfoRow
                   label="Hangi depodan"
                   value={`${order.delivery.warehouse.name} (${order.delivery.warehouse.code})`}
                 />
               ) : null}
-              {/* Kurye YALNIZ GÖRÜNÜR: kuryeyi sefer yazar (kurye rotayı alınca), tek siparişin
-                  özelliği değil. Sefer satırı da künyedir — "bu durak hangi araç turuyla gitti"
-                  sorusunun cevabı; geçmişi Teslimat & Rota → Seferler'de.
-
-                  **İkisi de ROTA kulvarının satırı** (07.12 düzeltmesi): kargo siparişinde kurye
-                  de sefer de HİÇ doğmaz, yani o siparişte bu iki satır sonsuza dek "sefer
-                  bekliyor / açılmadı" yazıyordu. Cevabı olmayan bir soruyu boş bırakmak, operatöre
-                  eksik bir şey varmış gibi okutur. */}
+              {/* Kurye ve sefer rota kulvarının satırları: kargoda ikisi hiç doğmaz ve "sefer bekliyor" sonsuza dek eksik bir şey
+                  varmış gibi okunurdu. Kuryeyi sefer yazar, tek siparişin özelliği değil. */}
               {order.delivery.type !== 'shipping' ? (
                 <>
                   <InfoRow label="Kurye" value={order.delivery.courierName ?? 'sefer bekliyor'} />
@@ -505,13 +462,10 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               ) : (
                 <ShipmentRows shipment={order.delivery.shipment} showParcels={order.delivery.boxes.length === 0} />
               )}
-              {/* KUTU İZİ (07.09): hangi kutular çıktı — mühür, yükleme/devir, kapıda okutma. Yerinde
-                  satışta (`pickup`) hazırlık yok, satır da yok; "kutu açılmadı" orada yanlış olurdu. */}
+              {/* Yerinde satışta (`pickup`) hazırlık yok, kutu satırı da yok: "kutu açılmadı" orada yanlış olurdu. */}
               {order.delivery.type !== 'pickup' ? <BoxRows boxes={order.delivery.boxes} type={order.delivery.type} /> : null}
-              {/* Kanıt AÇILABİLİR olmalı (07.08): türünü yazmak yetmiyor, ihtilafta bakılan şey
-                  görselin kendisi. `imageUrl` süreli imzalı adres — sayfa her açıldığında yeniden
-                  doğuyor, saklanmıyor. Kova yoksa görsel yerine SEBEP yazılır; boş bir çerçeve
-                  "kanıt bozuk" der, oysa kayıt yerinde. */}
+              {/* Kanıt açılabilir olmalı: ihtilafta bakılan şey görselin kendisi. Kova yoksa görsel yerine sebep yazılır, boş çerçeve
+                  "kanıt bozuk" derdi. */}
               {order.delivery.proof ? (
                 <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-olive-line bg-ops-olive-bg px-3 py-2.5">
                   <span className="font-ops-display text-ops-xs font-semibold text-ops-olive-dark">Teslim kanıtı</span>
@@ -526,9 +480,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                     ) : null}
                   </div>
                   {order.delivery.proof.imageUrl ? (
-                    // Ham `<img>` BİLEREK (emsal `support/components/ticket-thread.tsx`): adres
-                    // R2'nin imzalı ve SÜRELİ adresi (15 dk), `next/image` onu önbelleğe alıp
-                    // süresi dolduktan sonra kırık gösterirdi.
+                    // Ham `<img>` bilerek: adres süreli imzalı, `next/image` onu önbelleğe alıp süresi dolunca kırık gösterirdi.
                     <img
                       src={order.delivery.proof.imageUrl}
                       alt={`Teslim kanıtı — ${PROOF_KIND_LABEL[order.delivery.proof.kind]}`}
@@ -536,7 +488,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                     />
                   ) : (
                     <span className="rounded-ops-btn border border-ops-olive-line bg-ops-white px-2.5 py-2 font-ops-body text-ops-micro leading-[1.45] text-ops-olive-dark">
-                      {/* `box_scan` görselsizdir ve bu bir arıza değil (23.8) — "açılamıyor" cümlesi yanlış olurdu. */}
+                      {/* `box_scan` görselsizdir ve arıza değil: "açılamıyor" cümlesi yanlış olurdu. */}
                       {order.delivery.proof.kind === 'box_scan' ? ORDER_NOTES.proofBoxScan : ORDER_NOTES.proofImageUnavailable}
                     </span>
                   )}
@@ -549,12 +501,9 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             </div>
           </div>
 
-          {/* Bağlar — talepler ve parti izi TEK kartta: sorusu tek ("bu sipariş başka nereye
-              dokunuyor?"). Hedef ekranı olan satır davet eder, olmayan yalnız kaydı gösterir. */}
+          {/* Hedef ekranı olan satır davet eder, olmayan yalnız kaydı gösterir; parti izi kalemdeki lot köprüsünde. */}
           {order.links.length > 0 ? (
             <div className={cardClass()}>
-              {/* Kart artık YALNIZ talepleri taşır (16.08, kullanıcı kararı): parti izi kalemdeki
-                  LOT köprüsüne taşındı — aynı bilgiyi sağ rayda ikinci kez anlatmak yer yiyordu. */}
               <div className="border-b border-ops-line-soft px-3.5 py-2.5 font-ops-display text-ops-sm font-semibold text-ops-ink">
                 Bağlı talepler
               </div>
@@ -581,26 +530,16 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               ))}
             </div>
           ) : null}
-
-          {/* "Buraya girmeyenler" kartı SÖKÜLDÜ (15.08, kullanıcı kararı): sayfada OLMAYANI anlatan
-              not operatöre değil geliştiriciye konuşuyordu. Sınırın kendisi geçerli kalır — gün
-              planı/kurye Teslimat'ın, hazırlık kuyruğu Depo'nun işidir; bu sayfa o kararları almaz. */}
         </aside>
       </div>
     </div>
   );
 }
 
-/** Kaynağın tonu — kimlik şeridinde kaynak renkle de okunur (15.08): WhatsApp yeşil, kapı önü amber. */
+/** Kaynak renkle de okunur: WhatsApp yeşil, kapı önü amber. */
 const SOURCE_TONE: Record<OrderSource, MetaTone> = {
   web: 'blue',
-  /*
-    ÜÇ SOHBET KANALI AYNI TONDA ve bu bir eksiklik değil, seçim: renk SINIFI söylüyor ("sohbetten
-    geldi"), platformu etiket söylüyor (Messenger / Instagram). Her kanala ayrı renk vermek yeni
-    tonlar icat etmek olurdu — palet tasarımın kararıdır, buranın değil (`CLAUDE §3`), ve dört
-    kaynağı dört renkle ayırmanın operatöre kazandıracağı bir şey de yok: aradığı ayrım "sohbet mi
-    site mi", kanal adı zaten yanında yazıyor.
-  */
+  // Üç sohbet kanalı aynı tonda: renk sınıfı ("sohbetten geldi"), etiket platformu söyler; kanal başına renk yeni ton icat etmek olurdu.
   whatsapp: 'olive',
   messenger: 'olive',
   instagram: 'olive',
@@ -622,7 +561,7 @@ interface MetaCellProps {
   value: string;
   mono?: boolean;
   strong?: boolean;
-  /** Değerin rengi — durum taşıyan hücrede (kaynak, eşleşmemiş fatura); yoksa mürekkep. */
+  /** Durum taşıyan hücrede (kaynak, eşleşmemiş fatura); yoksa mürekkep. */
   tone?: MetaTone;
 }
 
@@ -632,8 +571,7 @@ function MetaCell({ label, value, mono, strong, tone }: MetaCellProps) {
       <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.07em] text-ops-muted">
         {label}
       </span>
-      {/* Değer BAŞLIK kademesinde (15.08, kullanıcı isteği: şerit "daha büyük ve renkli") —
-          kimlik şeridi sayfanın en üst bilgisi, gövde metni gibi fısıldamaz. */}
+      {/* Değer başlık kademesinde: kimlik şeridi sayfanın en üst bilgisi, gövde metni gibi fısıldamaz. */}
       <span
         className={`truncate ${mono ? 'font-ops-mono' : 'font-ops-body'} text-ops-base ${
           tone ? `font-medium ${META_TONE_CLASS[tone]}` : strong ? 'font-semibold text-ops-ink' : 'text-ops-strong'
@@ -645,18 +583,7 @@ function MetaCell({ label, value, mono, strong, tone }: MetaCellProps) {
   );
 }
 
-/**
- * `hint` = değerin NEREDEN geldiğini söyleyen kısa not (bugün tek kullanıcısı: alıcı adının hesap
- * sahibine düşmesi). Ayrı bir satır değil, değerin devamı: künye satırlarının arasına ikinci bir
- * satır girseydi kartın ritmi bozulur ve not kendi başına bir bilgi gibi okunurdu — oysa o notun
- * tek işi üstündeki değeri nitelemek.
- */
-/**
- * **KUTU İZİ** (07.09) — Teslimat kartının "hangi kutular çıktı" satırları. Kutu mobilde açılır,
- * kapanır, yüklenir; burası yalnız GÖRÜNÜRLÜK (`design/KARARLAR.md §4`, kullanıcı kararı). Satır
- * kalıbı `InfoRow`la aynı (78 px etiket + gövde): yeni görsel dil yok. Kargoda takip numarası aynı
- * satırda — koli listesi ikinci kez yazılmaz (`ShipmentRows`a `showParcels`).
- */
+/** Kutu mobilde açılır, kapanır, yüklenir; burası yalnız görünürlük. Kargoda takip numarası aynı satırda, koli listesi ikinci kez yazılmaz. */
 function BoxRows({ boxes, type }: { boxes: OrderDetailView['delivery']['boxes']; type: OrderDetailView['delivery']['type'] }) {
   if (boxes.length === 0) return <InfoRow label="Kutular" value={ORDER_NOTES.noBoxes} />;
   return (
@@ -686,6 +613,10 @@ function BoxRows({ boxes, type }: { boxes: OrderDetailView['delivery']['boxes'];
   );
 }
 
+/**
+ * `hint` değerin nereden geldiğini söyler ve ayrı satır değil değerin devamıdır: ayrı satır kartın ritmini bozar, not kendi başına
+ * bir bilgi gibi okunurdu.
+ */
 function InfoRow({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="flex items-baseline gap-2">
@@ -699,26 +630,15 @@ function InfoRow({ label, value, hint }: { label: string; value: string; hint?: 
 }
 
 /**
- * **KARGO GÖNDERİSİ** (07.12) — rota kulvarının "Kurye / Sefer" satırlarının kargodaki karşılığı.
- *
- * Üç ayrı hâl ve üçü de farklı cümle kuruyor; hiçbiri boş satır bırakmıyor:
- *   · gönderi YOK           → "duyurulmadı" (hazırlık bitince açılacak)
- *   · gönderi VAR, numara yok → taşıyıcı + durum yazılır, numara beklenir
- *   · gönderi VAR, numara var → koli başına satır
- *
- * **Koli başına satır**, çünkü çok kolili gönderide her kolinin AYRI numarası var. Operatör
- * müşteriye "hangi kutu nerede" sorusunu ancak böyle cevaplayabilir; tek numara gösteren bir kart
- * üç kutulu siparişte yanlış cevap verirdi.
- *
- * Numara TIKLANABİLİR (bağlantısı varsa): operatör telefondayken numarayı elle kopyalamak zorunda
- * kalmasın.
+ * Üç hâl, hiçbiri boş satır bırakmaz: gönderi yok, numarasız, numaralı. Koli başına satır, çünkü çok kolili gönderide her kolinin
+ * ayrı numarası var ve "hangi kutu nerede" ancak böyle cevaplanır.
  */
 function ShipmentRows({
   shipment,
   showParcels,
 }: {
   shipment: OrderDetailView['delivery']['shipment'];
-  /** Koli satırları kutu izinde zaten yazılıyorsa burada İKİNCİ kez çizilmez — yalnız kutusuz elle girişte. */
+  /** Koli satırları kutu izinde zaten yazılıyorsa ikinci kez çizilmez. */
   showParcels: boolean;
 }) {
   if (!shipment) return <InfoRow label="Gönderi" value="duyurulmadı" />;

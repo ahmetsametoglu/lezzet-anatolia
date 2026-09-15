@@ -12,40 +12,19 @@ import { Table, withCells } from '@/components/operation/ui/table';
 import { CustomerChatButton } from '@/components/operation/ui/customer-chat-button';
 import { chatContext } from '@/components/operation/ui/customer-channel-model';
 import type { ColumnTrack } from '@/components/operation/ui/table-columns';
-// Kanal rozetinin tonu Siparişler tablosuyla AYNI kaynaktan (16.08): aynı kanal iki ekranda iki
-// renk olamaz. Sözlük orada tanımlı ve süzgeç çipleriyle paylaşılıyor — kopyası yazılmadı.
+// Kanal tonu Siparişler'in sözlüğünden: aynı kanal iki ekranda iki renk olamaz.
 import { CHANNEL_TONE } from '../orders/orders-url';
 import { CARRIER_LABEL } from '@/components/operation/ui/labels';
 import { DISPATCH_NOTES, PREP_VIEW, RUN_NOTES } from './deliveries-labels';
 import { dayLabel, shiftDay } from './deliveries-url';
 import type { DispatchDayView, DispatchStopView } from './dispatch-types';
 
-// Sevkiyatçının gün planının blokları (09.15).
-//
-// ⚠ ~~**Duraklar arası SIRA çizilmiyor** (tasarım §6): sistem sırayı bilmiyor.~~ **DEĞİŞTİ (11.9):**
-// sistem sırayı artık BİLİYOR (kapalı tur hesabı, `delivery_run.stop_order`) ve sefer şeridindeki
-// katlanır harita onu çiziyor. Tabloda hâlâ numara YOK ve bu ayrı bir karar: tablo bölgeye göre
-// sıralı bir LİSTE, turun kendisi değil — iki sıralamayı aynı ekranda yan yana koymak hangisinin
-// rota olduğunu belirsizleştirirdi.
+// Tabloda durak numarası yok: tablo bölgeye göre sıralı bir liste, turun kendisi değil; iki sıralama yan yana hangisinin rota
+// olduğunu belirsizleştirirdi.
 
 /**
- * **Günün özeti — ÜSTTE KÜNYE, ALTTA ENGEL** (kullanıcı kararı 16.08).
- *
- * ── ÖNCE DÖRT SAYAÇTI, ALTI KUSURU ÖLÇÜLDÜ ─────────────────────────────────
- *   1. **Aynı sayı üç kez.** `ÇIKIŞ 4` · `HAZIR 2/4` · hemen altta `4 durak` — 250 piksel içinde.
- *   2. **Kargo özete hiç girmiyordu.** Aşağıda iki paket vardı ve birinde takip numarası yoktu;
- *      tasarım §2 ona *"gün kapanmadan görünür bir eksiklik"* diyor ama özet susuyordu.
- *   3. **Yük toplamı yoktu.** Satırlarda adet vardı (2+3+1+4 = 10), künyede yoktu — oysa
- *      sevkiyatçının ilk sorusu *"araca ne kadar yer lazım"* ve kolon tam bunun için eklenmişti.
- *   4. **Boş günde üç sıfır ve tek kelime açıklama yok** (ölçüldü: 22 Ağu → `0` · `0/0` · `0`).
- *   5. **İki amber yan yana, sahipleri farklı.** `HAZIR 2/4` depoyu bekler, `ATANMAMIŞ 3` sevkiyatçının
- *      kendi işi; aynı tonda oldukları için *"hangisi bana bakıyor"* ayrılmıyordu.
- *   6. **Kesim cümlesi sağ yarıyı kaplıyordu** — ikili bir olgu için iki satır metin.
- *
- * ── ŞİMDİ ──────────────────────────────────────────────────────────────────
- * **Künye** günün ne olduğunu söyler: kaç durak, ne kadar yük, hangi depodan, liste kesin mi.
- * **Engel şeridi** yalnız sevkiyatçının kapatması gerekenleri sayar; hiçbiri yoksa sayı basmaz,
- * *"araç çıkabilir"* der. Para engel değildir — künye bilgisidir, o yüzden sağ uçta ve nötr.
+ * Künye günün ne olduğunu söyler (durak, yük, depo, liste kesin mi); engel şeridi yalnız sevkiyatçının kapatması gerekenleri sayar.
+ * Para engel değil künye bilgisidir, o yüzden sağ uçta ve nötr.
  */
 export function DaySummary({ day }: { day: DispatchDayView }) {
   const s = day.summary;
@@ -54,10 +33,7 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
     : day.date === day.today
       ? DISPATCH_NOTES.openShort(day.cutoff.time)
       : DISPATCH_NOTES.openShortAhead;
-  /**
-   * Açıklama cümlesi kesimin AİT OLDUĞU güne bakıyor (`isPrevDay`, 17.08 kuralı): sarkan bir kesimde
-   * "kesim saati geçti" demek yanlış okunuyordu — geçen şey bir önceki günün saatiydi.
-   */
+  // Açıklama kesimin ait olduğu güne bakar: sarkan kesimde "kesim saati geçti" demek yanlış okunur, geçen bir önceki günün saatidir.
   const cutoffWhy = day.cutoff.settled
     ? day.cutoff.isPrevDay
       ? DISPATCH_NOTES.settledPrevDay(day.cutoff.time)
@@ -66,16 +42,14 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
       ? DISPATCH_NOTES.openPrevDay(day.cutoff.time)
       : DISPATCH_NOTES.open(day.cutoff.time);
 
-  // Sıra SERTLİĞE göre: rotaya hiç düşmemiş sipariş (araç uğramaz) > depo yetişmedi > kurye
-  // atanmadı > kargo künyesi eksik. Hazır olmayanlar ADIYLA anılıyor — tablodaki amber bant buraya
-  // taşındı, aynı uyarı iki yerde iki kez yazılmasın diye.
+  // Sıra sertliğe göre: rotaya düşmemiş sipariş > depo yetişmedi > kurye atanmadı > kargo künyesi eksik. Hazır olmayanlar adıyla
+  // anılır ki aynı uyarı tabloda ikinci kez yazılmasın.
   const blockers = [
-    // Askıda kalan ÖNCE: bugünün değil, geçmişin borcudur ve büyümeye devam eder.
+    // Askıda kalan önce: bugünün değil geçmişin borcudur ve büyümeye devam eder.
     s.stranded > 0 ? DISPATCH_NOTES.blockers.stranded(s.stranded) : null,
     s.zoneless > 0 ? DISPATCH_NOTES.blockers.zoneless(s.zoneless) : null,
-    /* ADRES UYARILARI (11.11) — `zoneless`in hemen ardında ve bilerek: üçü de "araç yanlış yere
-       gidiyor ya da hiç gitmiyor" ailesinden. `elsewhere` daha sert çünkü elimizde DOĞRUSU var ve
-       telefon açılabilir; `unverified` yalnız bir belirsizlik. */
+    // Adres uyarıları `zoneless`in ardında: üçü de "araç yanlış yere gidiyor ya da hiç gitmiyor" ailesinden. `elsewhere` daha
+    // sert, çünkü doğrusu elimizde ve telefon açılabilir.
     s.doorElsewhere > 0 ? DISPATCH_NOTES.blockers.doorElsewhere(s.doorElsewhere) : null,
     s.notReadyNames.length > 0 ? DISPATCH_NOTES.blockers.notReady(s.notReadyNames) : null,
     s.runless > 0 ? DISPATCH_NOTES.blockers.runless(s.runless) : null,
@@ -85,7 +59,6 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
 
   return (
     <div className="border-b border-ops-line-soft bg-ops-surface-sunken px-6 pb-2.5 pt-3">
-      {/* ── KÜNYE ───────────────────────────────────────────────────────── */}
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-ops-body text-ops-sm text-ops-body">
         {s.stops === 0 ? (
           <span className="text-ops-muted">{DISPATCH_NOTES.emptyRoute}</span>
@@ -94,7 +67,7 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
             <Fact value={num(s.stops)} unit="durak" />
             <Dot />
             <Fact value={num(s.units)} unit="adet" />
-            {/* Çok depolu gün = iki ayrı araç, iki ayrı yükleme (tasarım §4) — karar künyede okunur. */}
+            {/* Çok depolu gün iki ayrı araç, iki ayrı yükleme demek: karar künyede okunur. */}
             {s.warehouses.length > 0 ? (
               <>
                 <Dot />
@@ -103,8 +76,7 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
             ) : null}
           </>
         )}
-        {/* Kargo kuyruğu bir GÜNE ait değil, o yüzden künyenin sonunda ve ayrı sayılıyor. Tavana
-            dayanmışsa "+" ile yazılır: sessiz kırpma, kuyruğu olduğundan kısa gösterirdi. */}
+        {/* Kargo kuyruğu bir güne ait değil, künyenin sonunda ayrı sayılır; tavana dayanmışsa "+", çünkü sessiz kırpma kuyruğu kısa gösterirdi. */}
         {s.parcels > 0 ? (
           <>
             <Dot />
@@ -112,8 +84,7 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
           </>
         ) : null}
         <Dot />
-        {/* Kesim saati burada DEĞİŞTİRİLMEZ (ayarların işi) — yalnız etkisi görünür. Uzun gerekçe
-            kaybolmadı: kısa etiketin başlığında duruyor. */}
+        {/* Kesim saati burada değiştirilmez, yalnız etkisi görünür; uzun gerekçe kısa etiketin başlığında. */}
         <span
           title={cutoffWhy}
           className={`cursor-help underline decoration-dotted underline-offset-4 ${day.cutoff.settled ? 'text-ops-olive-dark' : 'text-ops-muted'}`}
@@ -122,9 +93,7 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
         </span>
       </p>
 
-      {/* ── ENGELLER ─────────────────────────────────────────────────────
-          Boş güne "✓ araç çıkabilir" YAZILMAZ: çıkacak araç yok, o cümle bir onay değil bir
-          yanlış anlama olurdu. Söylenecek hiçbir şey yoksa şerit hiç çizilmiyor. */}
+      {/* Boş güne "araç çıkabilir" yazılmaz: çıkacak araç yok, o cümle onay değil yanlış anlama olurdu. */}
       {blockers.length > 0 || s.stops > 0 || s.doorCount > 0 ? (
         <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-ops-body text-ops-xs">
           {blockers.length > 0 ? (
@@ -134,12 +103,10 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
               </span>
             ))
           ) : s.stops > 0 && day.date >= day.today ? (
-            // "Araç çıkabilir" GELECEK zamanlı bir cümle: geçmiş güne bakarken çıkacak araç yok ve
-            // o gün zaten yaşandı. Geçmişte engel kalmadıysa şerit susar (16.08).
+            // "Araç çıkabilir" gelecek zamanlı bir cümle: geçmiş günde engel kalmadıysa şerit susar.
             <span className="text-ops-olive-dark">✓ {DISPATCH_NOTES.readyToGo}</span>
           ) : null}
-          {/* Para bir ENGEL DEĞİL, künye bilgisi: kapıda tahsilat gün planını durdurmaz, kuryeye
-              not düşer. Uyarı tonuna sokmamak için nötr ve şeridin sağ ucunda. */}
+          {/* Kapıda tahsilat gün planını durdurmaz, kuryeye not düşer: uyarı tonuna sokulmaz. */}
           {s.doorCount > 0 ? (
             <span className="ml-auto whitespace-nowrap text-ops-muted">
               <span className="font-ops-mono text-ops-sm text-ops-ink">{money(s.doorCents)}</span> kapıda ·{' '}
@@ -152,10 +119,7 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
   );
 }
 
-/**
- * Tahsilat hücresi — üç hâl (künyesi `RouteTable`in `due` kolonunda). Askıda şeridi de aynı hücreyi
- * kullanıyor: orada da "Ödendi" ile "borç kaldı" ayrımı aynı ölçüde önemli.
- */
+/** Askıda şeridi de aynı hücreyi kullanır: "Ödendi" ile "borç kaldı" ayrımı orada da aynı ölçüde önemli. */
 function DueCell({ stop }: { stop: DispatchStopView }) {
   if (stop.dueAmountCents !== null) {
     return (
@@ -176,7 +140,6 @@ function DueCell({ stop }: { stop: DispatchStopView }) {
   return <span className="font-ops-body text-ops-xs text-ops-faint">Ödendi</span>;
 }
 
-/** Künyenin sayı+birim ikilisi — sayı vurgulu, birim sakin. */
 function Fact({ value, unit }: { value: string; unit: string }) {
   return (
     <span className="whitespace-nowrap">
@@ -190,21 +153,8 @@ function Dot() {
 }
 
 /**
- * Gün seçici — dün / bugün / yarın **ve takvim** (tasarım §2: sayfa gün üzerine kurulu).
- *
- * ── DÖRDÜNCÜ ÇİP TAKVİME DÖNDÜ (16.08, kullanıcı isteği) ────────────────────
- * Eskiden `+2` diye sabit bir dördüncü gün vardı ve **neden iki gün** sorusunun cevabı yoktu:
- * bugün 16 Ağustos ise dördüncü çip "18 Ağu Sal" der, 19'una bakmanın yolu bulunmazdı. Seçili gün
- * dörtlünün dışına düşerse kendi çipiyle görünen bir kaçış yolu vardı ama o çipe basılarak
- * ULAŞILAMIYORDU — yalnız adresten gelen bir günü gösteriyordu.
- *
- * Takvim her günü açar ve geçmiş de serbesttir: *"geçen salı ne çıktı"* sevkiyatın gerçek sorusu.
- * Hızlı üç gün ÇİP olarak kaldı — en sık üç sorgu tek tıkta kalmalı; takvim iki tık.
- *
- * **`DateFilterChip` aynen kullanılıyor** (Siparişler'in teslim günü süzgeciyle aynı taş): ikinci
- * bir takvim çizilmedi. Sözleşmesi de örtüşüyor — boş değer = "hızlı günlerden birindeyiz", dolu
- * değer = adıyla yazılı özel gün + ✕. Tek fark ✕'in anlamı: burada gün BOŞ olamaz (sayfanın konusu
- * bir gün), o yüzden temizlemek bugüne döner.
+ * Hızlı üç gün çip, gerisi takvim: en sık üç sorgu tek tıkta kalmalı, geçmiş de serbest ("geçen salı ne çıktı"). ✕ bugüne döner,
+ * çünkü sayfanın konusu bir gündür ve gün boş olamaz.
  */
 export function DayPicker({ day, onDate }: { day: DispatchDayView; onDate: (date: string) => void }) {
   const quick = [-1, 0, 1].map((offset) => shiftDay(day.today, offset));
@@ -226,12 +176,8 @@ export function DayPicker({ day, onDate }: { day: DispatchDayView; onDate: (date
 }
 
 /**
- * **SEFER ŞERİDİ** (18.08, `docs/feature/sefer.md` — AssignBar'ın halefi). Toplu kurye ataması
- * söküldü (K2: *"arayüzden atama saçma — kurye rotayı alır ve sürer"*); sevkiyatçının yeni sorusu
- * sipariş başına "kime atandı" değil, ROTA başına **"araç çıktı mı, döndü mü, kim sürüyor"**.
- *
- * Rota başına tek satır: durum · kurye · araç · SF kodu. Kalan tek elle müdahale DEVİR — açık
- * seferi başka kuryeye vermek (hasta kurye, evde kalan telefon); sipariş seçimi geri gelmez.
+ * Sevkiyatçının sorusu sipariş başına "kime atandı" değil, rota başına "araç çıktı mı, döndü mü, kim sürüyor". Kalan tek elle
+ * müdahale devir: açık seferi başka kuryeye vermek.
  */
 export function RunStrip({
   day,
@@ -253,7 +199,6 @@ export function RunStrip({
   );
 }
 
-/** Şeridin bir satırı — durum cümlesi + devir menüsü satırın kendi içinde. */
 function RunRow({
   route,
   couriers,
@@ -290,7 +235,7 @@ function RunRow({
             {run.courierName ?? 'bilinmeyen kurye'}
             {run.vehicleLabel ? <span className="text-ops-faint"> · {run.vehicleLabel}</span> : null}
           </span>
-          {/* Devir yalnız AÇIK seferde: kapanmış seferin mutabakatı yapıldı, devredilecek yol yok. */}
+          {/* Devir yalnız açık seferde: kapanmış seferin mutabakatı yapıldı, devredilecek yol yok. */}
           {!run.closed ? (
             <div ref={anchorRef} className="ml-auto inline-flex">
               <button
@@ -319,21 +264,14 @@ function RunRow({
           </AnchoredMenu>
         </>
       ) : (
-        // Sefer açılmamış rota SOLUK değil AMBER: kurye henüz rotayı almadı — gün başında normal,
-        // çıkış saati yaklaşırken bir engel (engel şeridi sayıyor).
+        // Sefer açılmamış rota amber: gün başında normal, çıkış saati yaklaşırken bir engel.
         <span className="ml-auto font-ops-body text-ops-xs text-ops-amber-dark">{RUN_NOTES.waiting}</span>
       )}
       </div>
-      {/* ── TURUN ÖNİZLEMESİ (11.9) — motorun DENETİM gözü ─────────────────────
-          Sıra bir hesaptır ve yanıldığı yer normalde sahada anlaşılır: araç çıktıktan sonra. Harita
-          onu ÖNCE gösteriyor — kuş uçuşuyla dizilmiş bir tur kâğıt üstünde kusursuz görünüp bariyer
-          (nehir, tek yön) atlayabilir ve o hatayı burada bir insan gözü yakalar.
-
-          Katlanır: şerit bir DURUM satırıdır, harita ise incelenen bir şey. Her seferin haritasını
-          açık tutmak, sevkiyatçının asıl işini (kim çıktı, kim döndü) aşağı iterdi. */}
+      {/* Harita motorun sırasını araç çıkmadan gösterir: kuş uçuşu kusursuz görünen tur bir bariyeri (nehir, tek yön) atlayabilir
+          ve onu burada insan gözü yakalar. Katlanır, çünkü şerit bir durum satırıdır, harita incelenen bir şey. */}
       {run?.stopOrder ? (
-        // Kimlikli kanca: şeritte birden çok sefer var ve duman senaryosu KENDİ kurduğu seferin
-        // haritasını açmalı. Metinle seçmek ("Turu haritada gör") ilk eşleşene basardı.
+        // Kimlikli kanca: şeritte birden çok sefer var ve duman senaryosu kendi seferinin haritasını açmalı.
         <details data-testid={`run-map-${run.runId}`} className="px-1 pb-2">
           <summary className="cursor-pointer font-ops-body text-ops-xs text-ops-muted transition-colors hover:text-ops-olive">
             Turu haritada gör
@@ -370,9 +308,8 @@ interface StopCustomerProps {
 }
 
 /**
- * Müşteri hücresi — ad + "müşteriye yaz" (15.33). Üç tablo da (rota · askıda · kargo) aynı hücreyi çizer:
- * gecikme haberi, yeni teslim günü ve takip sorusu sevkiyatçının müşteriyle konuşmasını ister. Düğme basınca
- * müşterinin en son yazdığı kanalı yüzen pencerede açar — satır başına kanal okunmaz.
+ * Üç tablo da (rota, askıda, kargo) aynı hücreyi çizer: gecikme haberi, yeni gün ve takip sorusu müşteriyle konuşmayı ister.
+ * Satır başına kanal okunmaz, düğme basınca okur.
  */
 function StopCustomer({ stop }: StopCustomerProps) {
   return (
@@ -390,30 +327,10 @@ function StopCustomer({ stop }: StopCustomerProps) {
 }
 
 /**
- * **Rota çıkışları — TABLO** (kullanıcı kararı 16.08: *"sipariş sayfasındaki tablonun formatını
- * kullanalım"*). Bölge TANIMI burada değişmez, Depolar'a köprü verilir.
- *
- * ── ÖNCE İKİ KATLI SATIR LİSTESİYDİ, ÜÇ SORUNU ÖLÇÜLDÜ ──────────────────────
- *   1. **Açık adres bir karar üretmiyordu.** Navigasyon ve arama kuryenin ekranında
- *      (`kurye-teslimat.md §2` — *"navigasyon ve arama/WhatsApp erişimi buradan"*); sevkiyatçının
- *      adresle yapabileceği tek iş durak sırası kurmaktı ve tasarım onu açıkça yasaklıyor (§6 —
- *      sistem sırayı bilmiyor). Kaldırıldı; tam adres sipariş detayında duruyor.
- *   2. **"1 kalem" yanlış birimi sayıyordu** (`order_item` satırı). Günün dört siparişinin dördü de
- *      "1 kalem" yazıyordu, gerçek adetler 1 · 2 · 3 · 4'tü — dört farklı yük eşit görünüyordu.
- *   3. **Bölgesiz sipariş SON grupta kayboluyordu** (*"Bölgesi çözülemedi"*), oysa en acil satır o.
- *
- * ── KOLONLAR SİPARİŞLER TABLOSUNUN ŞERİDİNDEN ────────────────────────────────
- * Ölçüler `ORDERS_COLUMN_TRACKS` ile bilinçli olarak aynı (No 100px, Müşteri esnek, Kanal 48px,
- * Tahsilat ~130px): iki ekran aynı nesneyi listeliyor ve operatörün gözünün aynı yerde aynı şeyi
- * bulması bir tutarlılık kararı. Şerit KOPYALANMADI, ayrı tanımlı — kolon kümeleri farklı (burada
- * bölge/yük/kurye var, orada durum/teslim/depo) ve ortak bir sabit ikisini de kısıtlardı.
- *
- * **Kanal (B2B/B2C) Siparişler'den GELDİ** ve sebebi tahsilat: kurumsal müşterinin ödemesi vadeli
- * olabiliyor, yani "kapıda ne olacak" sorusunun cevabı kanala göre değişiyor.
+ * Ölçüler Siparişler tablosuyla bilinçli olarak aynı, şerit ayrı tanımlı: kolon kümeleri farklı ve ortak sabit ikisini de
+ * kısıtlardı. Kanal kolonu tahsilat için: kurumsal müşterinin ödemesi vadeli olabilir.
  */
 const ROUTE_TRACKS: ColumnTrack[] = [
-  // `select` kolonu SÖKÜLDÜ (18.08): seçimin tek tüketicisi toplu atamaydı ve atama kalktı —
-  // kurye rotayı kendisi alıyor, elle müdahale sefer şeridindeki DEVİR.
   { key: 'no', header: 'No', width: '100px' },
   { key: 'customer', header: 'Müşteri', width: 'minmax(132px,1fr)' },
   { key: 'channel', header: 'Kanal', width: '48px' },
@@ -422,8 +339,7 @@ const ROUTE_TRACKS: ColumnTrack[] = [
   { key: 'prep', header: 'Durum', width: '110px' },
   { key: 'courier', header: 'Kurye', width: 'minmax(96px,120px)' },
   { key: 'due', header: 'Tahsilat', width: 'minmax(104px,130px)', align: 'right' },
-  // Eylem kolonu SAĞ UÇTA ve geniş: "60,00 € kapıda" ile "başka güne taşı" bitişikken tek bir metin
-  // gibi okunuyordu (ekranda ölçüldü). 116px, tutarla arasında görünür bir boşluk bırakıyor.
+  // Eylem kolonu sağ uçta ve geniş: tutarla bitişikken "60,00 € kapıda başka güne taşı" tek bir metin gibi okunuyordu.
   { key: 'move', header: '', width: '116px', align: 'right' },
 ];
 
@@ -449,7 +365,7 @@ export function RouteTable({
     ),
     customer: (stop) => <StopCustomer stop={stop} />,
     channel: (stop) => <Badge tone={CHANNEL_TONE[stop.channel]}>{stop.channel.toUpperCase()}</Badge>,
-    // Bölgesiz satır AMBER: hiçbir rotaya düşmemiş sipariş bir eksiklik hâlidir, boşluk değil.
+    // Bölgesiz satır amber: hiçbir rotaya düşmemiş sipariş bir eksikliktir, boşluk değil.
     zone: (stop) =>
       stop.zoneName ? (
         <span className="flex min-w-0 flex-col">
@@ -462,15 +378,8 @@ export function RouteTable({
         <span className="font-ops-body text-ops-sm text-ops-amber">Bölgesiz</span>
       ),
     load: (stop) => <span className="font-ops-mono text-ops-sm text-ops-body">{num(stop.unitCount)}</span>,
-    /**
-     * Hazır olmayan sipariş GÖRÜNÜR bir uyarıdır: araç eksik yüklenmesin (tasarım §4).
-     *
-     * **"Hazır" hâli rozet değil, soluk metin.** `PREP_VIEW.ready` `null` döndürüyor ve bu satır
-     * listesinde doğruydu — dikkat isteyen konuşur, ötekiler susar. Tabloda ise başlığı olan bir
-     * kolon boş kalıyordu ve boş hücre *"durumu bilinmiyor"* diye okunur (`CLAUDE §1` — ölçülemeyen
-     * değer boş bırakılmaz, adı konur). Rozet YAPILMADI: dördü de rozet olsaydı asıl uyarılar
-     * kalabalığın içinde kaybolurdu.
-     */
+    // Hazır olmayan görünür bir uyarıdır ki araç eksik yüklenmesin. "Hazır" rozet değil soluk metin: boş hücre "bilinmiyor" diye
+    // okunurdu, dördü de rozet olsaydı asıl uyarılar kalabalıkta kaybolurdu.
     prep: (stop) => {
       const view = PREP_VIEW[stop.prep];
       return view ? (
@@ -479,29 +388,17 @@ export function RouteTable({
         <span className="font-ops-body text-ops-xs text-ops-faint">Hazır</span>
       );
     },
-    /**
-     * Kurye SEFERDEN gelir (18.08): `courier_id`yi artık `start_delivery_run` claim'i yazıyor —
-     * boş hücre "sevkiyatçı atamayı unuttu" değil "rotanın seferi henüz açılmadı" demek. Rozet bu
-     * yüzden amber DEĞİL soluk metin: uyarının evi sefer şeridi + engel sayacı (`runless`), satır
-     * satır tekrar etmek aynı uyarıyı iki yerde iki kez yazmak olurdu.
-     */
+    // Kurye seferden gelir: boş hücre "sefer henüz açılmadı" demek ve uyarının evi sefer şeridi ile engel sayacı, satırda tekrar edilmez.
     courier: (stop) =>
       stop.courierName ? (
         <span className="truncate font-ops-body text-ops-sm text-ops-body">{stop.courierName}</span>
       ) : (
         <span className="font-ops-body text-ops-xs text-ops-faint">Sefer bekliyor</span>
       ),
-    /**
-     * Tahsilat ÜÇ hâl, iki değil (düzeltme 16.08).
-     *
-     * Eskiden `dueAmountCents === null` doğrudan **"Ödendi"** diye yazılıyordu ve bu bir yalandı:
-     * `null` yalnız *"kapıda para konuşulmayacak"* demek — sonuçlanmış siparişte de null oluyor.
-     * Ekranda ölçüldü: dün teslim edilmiş bir sipariş "Ödendi" yazıyordu, oysa 6,00 € tutarın
-     * 0,00 €'su tahsil edilmişti. Üçüncü hâl o boşluktu ve amber: kapıda toplanmayacak ama **borç
-     * duruyor** — tahsilatı artık müşteri kartının işi.
-     */
+    // `dueAmountCents` null yalnız "kapıda para konuşulmayacak" demek ve sonuçlanmış siparişte de null olur: borç duruyorsa
+    // "Ödendi" yazmak yalan olurdu.
     due: (stop) => <DueCell stop={stop} />,
-    // Hedefler bölgenin YAKLAŞAN teslim günleri; bölgesiz siparişin taşınacağı gün de yok.
+    // Hedefler bölgenin yaklaşan teslim günleri; bölgesiz siparişin taşınacağı gün yok.
     move: (stop) => {
       const dates = stop.zoneId ? (day.moveDatesByZone[stop.zoneId] ?? []) : [];
       return dates.length > 0 ? (
@@ -512,8 +409,7 @@ export function RouteTable({
 
   return (
     <section className="flex min-h-0 flex-col">
-      {/* Durak SAYISI burada YAZMIYOR (16.08): künye zaten "4 durak" diyor. Seçim kutucuğu da
-          KALKTI (18.08) — tek tüketicisi toplu atamaydı; bölümün adı düz başlık oldu. */}
+      {/* Durak sayısı burada yazılmaz: künye zaten söylüyor. */}
       <div className="flex items-center gap-3 border-b border-ops-line bg-ops-surface-sunken px-6 py-2">
         <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Araçla giden</span>
       </div>
@@ -523,18 +419,7 @@ export function RouteTable({
   );
 }
 
-
-/**
- * Başka güne taşıma — hedefler bölgenin YAKLAŞAN teslim günleri, serbest tarih değil.
- *
- * **Gün ADIYLA yazılır, ISO'yla değil** (16.08, kullanıcı bildirimi). Menü `2026-08-18` diye ham
- * tarih basıyordu; hemen üstündeki gün çipleri ise aynı günü *"18 Ağu Sal"* diye söylüyor — tek
- * ekranda aynı şeyin iki dili. Etiket artık gün seçicininkiyle AYNI işlevden geliyor (`dayLabel`),
- * yani "Yarın" olan hedef "Yarın" yazıyor.
- *
- * Genişlik de ölçüldü: 180 px'lik menüde en uzun satır ~101 px yer kaplıyordu, her satırın sağında
- * 80 px boş şerit kalıyordu. 132 px, en uzun etikete ("21 Ağu Cum") sığan ölçü.
- */
+/** Hedefler bölgenin yaklaşan teslim günleri, serbest tarih değil. Gün adıyla yazılır (`dayLabel`): üstteki gün çipleriyle tek dil. */
 function MoveMenu({
   stop,
   dates,
@@ -549,9 +434,7 @@ function MoveMenu({
   busy: boolean;
 }) {
   const movable = stop.status === 'confirmed' || stop.status === 'preparing' || stop.status === 'ready';
-  // Yola çıkmış siparişin günü değişmez — düğme HİÇ çizilmiyor, kapalı da gösterilmiyor. Gün
-  // GEÇTİKTEN sonra aynı sipariş askıda şeridine düşer ve orada kendi kapısı vardır
-  // (`bringForwardAction`): kural bugünün kuralıdır, dünün değil.
+  // Yola çıkmış siparişin günü değişmez ve düğme hiç çizilmez; gün geçince sipariş askıda şeridine düşer, orada kendi kapısı var.
   if (!movable) return null;
 
   return (
@@ -565,12 +448,7 @@ function MoveMenu({
   );
 }
 
-/**
- * **Gün seçen açılır menü** — taşıma ve askıdan kurtarma AYNI taşı kullanıyor: iki eylem de bölgenin
- * yaklaşan teslim günlerinden birini yazıyor, tek farkı düğmenin adı ve arkasındaki eylem.
- *
- * Günler ADIYLA yazılır, ISO'yla değil (16.08) — üstteki gün çipleriyle tek dil.
- */
+/** Taşıma ve askıdan kurtarma aynı taşı kullanır: ikisi de bölgenin yaklaşan teslim günlerinden birini yazar. */
 function DateMenu({
   label,
   dates,
@@ -599,8 +477,7 @@ function DateMenu({
           {label}
         </button>
       </div>
-      {/* 132 px = en uzun etikete ("21 Ağu Cum") sığan ölçü; 180'de her satırın sağında 80 px boş
-          şerit kalıyordu (ekranda ölçüldü). */}
+      {/* 132 px en uzun etikete ("21 Ağu Cum") sığan ölçü; daha genişi her satırın sağında boş şerit bırakırdı. */}
       <AnchoredMenu anchorRef={anchorRef} open={open} onClose={() => setOpen(false)} width={132}>
         {dates.map((date) => (
           <MenuRow
@@ -618,22 +495,8 @@ function DateMenu({
 }
 
 /**
- * **ASKIDA KALANLAR — teslim günü geçmiş ama sonuçlanmamış siparişler** (kullanıcı kararı 16.08:
- * *"görünür devir — sevkiyatçı karar verir"*).
- *
- * Şerit bugünün planının ÜSTÜNDE duruyor ve sebebi ölçüldü: bu satırlar hiçbir listede yoktu.
- * Sevkiyatçının bugünü onları göstermiyordu (`delivery_date = bugün` süzgeci), kuryenin ekranı da
- * göstermiyordu (aynı süzgeç, tarih hep bugün) — yalnız düne elle giden görebiliyordu ve düne kimse
- * bakmaz. Tam künye `DispatchDayView.stranded`ta.
- *
- * ── HEDEF GÜNLER SERBEST DEĞİL ─────────────────────────────────────────────
- * Aynı kural taşımadakiyle bir: **bölgenin yaklaşan teslim günleri.** Ekranda "bugüne al" diye
- * kestirme bir düğme YOK, çünkü bakılan gün o bölgenin günü olmayabilir ve o zaman düğme, oraya
- * araç gitmeyen bir güne sipariş yazardı — kaybolan siparişi kurtarırken teslim edilemeyecek bir
- * sipariş yaratmak. Bakılan gün bölgenin günüyse listede zaten görünüyor.
- *
- * **Bölgesi çözülemeyen satır sessiz bırakılmıyor:** hedef üretilemiyor ve sebebi yazılıyor —
- * yapılacak iş adresin kendisinde.
+ * Bu satırlar başka hiçbir listede görünmez (sevkiyat da kurye de bugünü süzer), şerit bu yüzden planın üstünde. "Bugüne al"
+ * kestirmesi yok: bakılan gün bölgenin günü olmayabilir ve araç gitmeyen bir güne sipariş yazılırdı.
  */
 const STRANDED_TRACKS: ColumnTrack[] = [
   { key: 'day', header: 'Teslim günü', width: '112px' },
@@ -677,8 +540,7 @@ export function StrandedSection({
         <span className="font-ops-body text-ops-sm text-ops-amber">Bölgesiz</span>
       ),
     load: (stop) => <span className="font-ops-mono text-ops-sm text-ops-body">{num(stop.unitCount)}</span>,
-    // "Neden askıda" iki ayrı hikâye ve ayrımı önemli: yolda kalan sipariş ARAÇLA çıkmıştır
-    // (kurye sonucu yazmamış), yola çıkmamış olan depoda ya da rafta beklemiştir.
+    // İki ayrı hikâye: yolda kalan araçla çıkmıştır (kurye sonucu yazmamış), yola çıkmamış olan depoda ya da rafta beklemiştir.
     state: (stop) => (
       <span className="font-ops-body text-ops-xs text-ops-muted">
         {stop.status === 'out_for_delivery' ? DISPATCH_NOTES.strandedStuck : DISPATCH_NOTES.strandedWaiting}
@@ -720,16 +582,8 @@ export function StrandedSection({
 }
 
 /**
- * Kargo kuyruğunun kolonları — rota tablosuyla AYNI dili konuşur ama daha kısadır, ve eksik olan her
- * kolonun sebebi var: **bölge/kurye YOK** (kargonun rotası ve kuryesi olmaz, taşıyıcısı olur),
- * **tahsilat YOK** (kargo yalnız online peşin ödenir — K37; boş bir para kolonu "bilgi gelmedi" diye
- * okunurdu), **durum YOK** (kuyruğun tanımı zaten "hazırlanmış").
- *
- * Ölçüler rota tablosuyla birebir aynı (No 100px, Müşteri esnek, Kanal 48px, Yük 56px) ve **başta
- * boş bir şerit var**: iki tablo alt alta duruyor, rotada seçim kutucuğu için 28px'lik bir kolon
- * bulunuyor ve o kolon burada olmayınca bütün satır 28px kayıyordu — göz ikisini iki ayrı liste
- * sanıyordu (ekranda ölçüldü). Kargo satırı seçilemez (toplu kurye ataması kargoda anlamsız), o
- * yüzden şerit boş: yeteneği taklit etmiyor, hizayı koruyor.
+ * Eksik kolonların sebebi var: kargonun rotası ve kuryesi olmaz, ödemesi yalnız online peşindir (boş para kolonu "bilgi gelmedi"
+ * diye okunurdu), kuyruğun tanımı zaten "hazırlanmış".
  */
 const SHIPPING_TRACKS: ColumnTrack[] = [
   { key: 'gutter', header: '', width: '28px' },
@@ -759,20 +613,16 @@ const shippingColumns = withCells<DispatchStopView>(SHIPPING_TRACKS, {
         {stop.trackingNumber}
       </span>
     ) : (
-      // Paket çıkmış ama müşteri bilmiyor — gün kapanmadan görünür bir eksiklik.
+      // Paket çıkmış ama müşteri bilmiyor: gün kapanmadan görünür bir eksiklik.
       <Badge tone="amber">Takip numarası yok</Badge>
     ),
 });
 
-/**
- * Kargo bölümü. **Takip numarası OKUNUR, yazılmaz** (07.12): etiketi paketi kapatan kişi elinde
- * tutar, kaydı hazırlık ekranı yazar. Bu sayfa planlar ve EKSİĞİ gösterir.
- */
+/** Takip numarası okunur, yazılmaz: kaydı paketi kapatan hazırlık ekranı yazar, bu sayfa planlar ve eksiği gösterir. */
 export function ShippingSection({ stops, truncated }: { stops: DispatchStopView[]; truncated: boolean }) {
   return (
     <section className="border-b border-ops-line">
-      {/* Paket SAYISI burada yazmıyor (16.08): künye zaten "2 kargo paketi" diyor ve bu satır onu
-          60 piksel altında ikinci kez tekrarlıyordu — rota şeridinde kaldırılan tekrarın aynısı. */}
+      {/* Paket sayısı burada yazılmaz: künye zaten söylüyor. */}
       <div className="flex items-center gap-3 bg-ops-surface-sunken px-6 py-2">
         <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">Kargo kuyruğu</span>
         <span className="ml-auto max-w-[460px] text-right font-ops-body text-ops-micro text-ops-faint">

@@ -13,19 +13,12 @@ import { loadOrderPeekAction } from './actions';
 import { ORDERS_PATH } from './orders-url';
 import type { OrderPeek, OrderRow } from './orders-types';
 
-// Siparişe HIZLI BAKIŞ — SAĞ PANEL (15.08, kullanıcı kararı; önceden diyalogdu).
-//
-// Tasarım bu bakışı bir pencere olarak çizmişti ("Bu bir bakıştır") ama pencere listeyi örtüyor:
-// operatör bir satıra bakarken ötekileri göremiyor, karşılaştırmak için aç-kapa turluyordu.
-// Ürünler ekranının deseni buraya taşındı — liste solda akar, seçili satırın açılımı sağda durur
-// (bilinçli sapma, `design/KARARLAR.md`). İçerik diyalogdakiyle AYNI: pencerenin işi neyse panelin
-// işi de o — tablo satırının kısaltmalarını açmak, hiçbir şeyi DEĞİŞTİRMEMEK.
-//
-// Burada hiçbir kayıt değişmez — durum ilerletme dahil; karar detay sayfasında verilir. Tek eylem
-// istisnası MÜŞTERİYE ULAŞMAK: listeden çıkmayı gerektirmez ve hiçbir kaydı değiştirmez.
+// Hızlı bakış diyalog değil sağ panel: pencere listeyi örtüyor ve operatör satırları karşılaştırmak için aç-kapa turluyordu.
+
+// Burada hiçbir kayıt değişmez, karar detay sayfasında verilir; tek istisna müşteriye ulaşmak, çünkü listeden çıkmayı gerektirmez.
 
 interface OrderPreviewProps {
-  /** Seçili satır; `null` = seçim yok, panel davet çizer. */
+  /** `null` = seçim yok, panel davet çizer. */
   row: OrderRow | null;
 }
 
@@ -43,7 +36,7 @@ export function OrderPreview({ row }: OrderPreviewProps) {
   return <SelectedOrder key={row.id} row={row} />;
 }
 
-/** Seçili satırın açılımı — `key={row.id}` ile taze kurulur, bayat peek bir sonraki satıra sızmaz. */
+/** `key={row.id}` ile taze kurulur: bayat bakış bir sonraki satıra sızmaz. */
 function SelectedOrder({ row }: { row: OrderRow }) {
   const delivery = deliveryText(row, shortDate);
   const [peek, setPeek] = useState<OrderPeek | null>(null);
@@ -66,8 +59,7 @@ function SelectedOrder({ row }: { row: OrderRow }) {
 
   return (
     <aside className="flex min-h-0 flex-col overflow-y-auto bg-ops-card">
-      {/* Başlık — pencerenin başlık barının panel hâli; künye (şirket adı ya da telefon) BURADA
-          yazılır, listede değil: aynı adı iki kez gören operatör zaten satırı seçer. */}
+      {/* Künye (şirket adı ya da telefon) burada yazılır, listede değil: aynı adı iki kez gören operatör zaten satırı seçer. */}
       <div className="flex items-start justify-between gap-3 border-b border-ops-line px-4 py-3">
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="font-ops-display text-ops-base font-semibold text-ops-ink">Sipariş {row.referenceNo ?? '—'}</span>
@@ -94,15 +86,12 @@ function SelectedOrder({ row }: { row: OrderRow }) {
             {shortDateTime(row.createdAt)} · {row.source}
           </span>
 
-          {/* Ulaşma — metin YOK, yalnız sohbeti açar: ne yazılacağı operatörün kararı. Sohbet UYGULAMANIN
-              İÇİNDE, yüzen pencerede açılır (15.32 · kullanıcı kuralı 14.09): müşterinin yazıştığı her kanal
-              bir düğme, en son yazdığı işaretli. `wa.me` bağlantısı operatörü kendi telefonuna gönderiyordu. */}
+          {/* Ulaşma metin yazmaz, yalnız sohbeti uygulamanın içinde açar: ne yazılacağı operatörün kararı. */}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             {peek ? (
               <CustomerChannels
                 customerId={peek.customer.id}
                 className="justify-end"
-                // Balonun BAĞLAM şeridi (15.39) — detaydaki satırın aynısı (`orderChatContext`).
                 context={orderChatContext('Siparişlerden', {
                   referenceNo: row.referenceNo,
                   totalCents: row.totalCents,
@@ -127,7 +116,6 @@ function SelectedOrder({ row }: { row: OrderRow }) {
           <Metric label="Teslim" value={delivery.main} hint={delivery.meta || undefined} />
         </div>
 
-        {/* Kalemler — satırın "3 kalem"i burada adlanır. Eksik giden adet satırın kendi başında. */}
         <section className="overflow-hidden rounded-ops-card border border-ops-line bg-ops-subtle">
           <div className="border-b border-ops-line px-3.5 py-2 font-ops-display text-ops-xs font-semibold text-ops-ink">
             Kalemler
@@ -138,8 +126,7 @@ function SelectedOrder({ row }: { row: OrderRow }) {
             <p className="px-3.5 py-2.5 font-ops-body text-ops-xs text-ops-muted">yükleniyor…</p>
           ) : (
             peek.lines.map((line) => {
-              // Eksiklik ancak hazırlık kesinleştiyse vardır; öncesinde `fulfilledQty` yalnız
-              // "henüz yazılmadı" demektir (`isFulfillmentSettled`).
+              // Eksiklik ancak hazırlık kesinleştiyse vardır; öncesinde `fulfilledQty` yalnız "henüz yazılmadı" demektir.
               const short = peek.fulfillmentSettled && line.fulfilledQty < line.qty;
               return (
                 <div key={line.id} className="flex items-center gap-2.5 border-b border-ops-line-soft px-3.5 py-2 last:border-b-0">
@@ -150,7 +137,7 @@ function SelectedOrder({ row }: { row: OrderRow }) {
                   >
                     {short ? `${line.fulfilledQty}/${line.qty}` : `${line.qty}×`}
                   </span>
-                  {/* Görsel adetle ad arasında (15.08, kullanıcı isteği): hızlı bakışın işi tanımaktır. */}
+                  {/* Hızlı bakışın işi tanımaktır: görsel adetle ad arasında. */}
                   <Thumbnail src={line.imageUrl} alt={line.title} size={24} />
                   <span className="min-w-0 flex-1 truncate font-ops-body text-ops-xs text-ops-ink">{line.title}</span>
                   <span className="font-ops-mono text-ops-xs text-ops-ink">{money(line.lineTotalCents)}</span>
@@ -165,7 +152,6 @@ function SelectedOrder({ row }: { row: OrderRow }) {
           <span className={`font-ops-mono text-ops-sm ${paymentToneClass(row)}`}>{paymentText(row, money)}</span>
         </div>
 
-        {/* Teslimat — tabloda semt vardı, burada adresin tamamı ve kim götürüyor. */}
         {peek ? (
           <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-2.5">
             <PeekRow label="Adres" value={peek.delivery.address || 'adres kopyası yok'} />
@@ -177,7 +163,7 @@ function SelectedOrder({ row }: { row: OrderRow }) {
           </div>
         ) : null}
 
-        {/* Bağlar — açık bir talep varsa operatör bunu ilerletmeden ÖNCE bilmeli. */}
+        {/* Açık bir talep varsa operatör siparişi ilerletmeden önce bilmeli. */}
         {peek && peek.links.length > 0 ? (
           <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3.5 py-2.5">
             <span className="font-ops-display text-ops-xs font-semibold text-ops-amber">Bu siparişin bağları var</span>
