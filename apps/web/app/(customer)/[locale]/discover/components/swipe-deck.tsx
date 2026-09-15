@@ -307,8 +307,8 @@ function Stamp({ label, like, opacity, live }: { label: string; like: boolean; o
       aria-hidden
       style={{ opacity, transition: live ? 'none' : `opacity ${SETTLE_MS}ms ease` }}
       className={[
-        'absolute top-5.5 rounded-badge border-3 bg-sand-50/94 px-4 py-2 font-sans text-h2-sm font-bold tracking-[0.06em] uppercase',
-        like ? 'left-4.5 -rotate-13 border-olive text-olive' : 'right-4.5 rotate-13 border-terracotta text-terracotta',
+        'absolute top-5.5 rounded-badge border-[2.5px] bg-sand-50/94 px-3 py-1.5 font-sans text-step font-bold tracking-[0.06em] uppercase',
+        like ? 'left-4.5 -rotate-13 border-olive/60 text-olive/80' : 'right-4.5 rotate-13 border-terracotta/60 text-terracotta/80',
       ].join(' ')}
     >
       {label}
