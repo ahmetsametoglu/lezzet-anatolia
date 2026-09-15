@@ -1,104 +1,80 @@
 /*
-  MÜŞTERİ EKRANLARININ ÖLÇÜ TAMAMLAYICISI — v3'te ölçülmüş, paylaşılan ölçü katmanında
-  (`src/theme/metrics.ts`) HENÜZ OLMAYAN duraklar.
-
-  NEDEN AYRI DOSYA: `theme/` bu etapta YAZIYA KAPALI (21.14 kısıtı — operasyon ekranları paralel
-  çalışıyor). Ama bu değerlerin komponent dosyalarına ham piksel olarak dağılması ölçü katmanının
-  kendi kuralını (tek yerde durur) bozardı: bir kart yüksekliği üç ekranda üç kez yazılırsa bir
-  gün üçü ayrışır. O yüzden ham değerler DAĞILMADI, sadece İKİNCİ BİR TEK YERE konuldu.
-
-  BU DOSYA GEÇİCİDİR: `theme/metrics.ts` yazıya açıldığı gün buradaki duraklar oraya taşınır ve
-  dosya silinir. Ad çakışması bilerek yok — buradaki hiçbir ad `appMetrics` içinde geçmiyor.
-  Terfi ihtiyacı raporlandı.
-
-  YUVARLAMA: ölçü katmanının kendi kuralı burada da geçerli — YAPISAL ölçüler (kart yüksekliği,
-  daire çapı) yuvarlanMAZ; onları yuvarlamak tasarımın hizasını bozar.
+  Müşteri ekranlarının kitin ortak ölçü katmanında (`theme/metrics.ts`) bulunmayan tasarım ölçüleri; ekran dosyalarına ham
+  piksel olarak dağılmasınlar diye tek yerde durur. Yapısal ölçüler (kart yüksekliği, daire çapı) yuvarlanmaz, çünkü
+  yuvarlamak tasarımın hizasını bozar.
 */
 
 export const customerMetrics = {
-  /** Yüzen sepet düğmesi (v3:1303 — 58×58). */
+  /** Yüzen sepet düğmesi. */
   fab: 58,
 
-  /**
-   * Koleksiyon bandı ve üstünden taşan daire (v3:105, 111 — 132 yükseklik · 148 daire).
-   * Daire banttan 16 dp yüksektir; taşma tasarımın imzasıdır, bant kırpmaz.
-   */
+  /** Koleksiyon bandı ve üstünden taşan daire; taşma tasarımın imzası olduğu için bant kırpmaz. */
   collectionBand: 132,
   collectionPhoto: 148,
 
-  /** Tarif kartı (v3:136 — 220×280) ve hazır paket kartının fotoğraf yüksekliği (v3:151 — 172). */
+  /** Tarif kartı ve hazır paket kartının fotoğraf yüksekliği. */
   recipeCardWidth: 220,
   recipeCardHeight: 280,
   packageCardHeight: 172,
 
-  /** Vitrin raylarının sonundaki "tümünü gör" kartındaki ok dairesi (v3:161 — 34). */
+  /** Vitrin raylarının sonundaki "tümünü gör" kartındaki ok dairesi. */
   railMoreArrow: 34,
 
-  /** Tarifler listesindeki tam genişlik kart (v3:912 — 168). */
+  /** Tarifler listesindeki tam genişlik kart. */
   recipeListCardHeight: 168,
-  /** Paketler listesindeki kartın fotoğraf bölgesi (v3:875 — 198). */
+  /** Paketler listesindeki kartın fotoğraf bölgesi. */
   packageListPhotoHeight: 198,
 
-  /** Günün fırsatı bandındaki daire fotoğraf (v3:85 — 132). */
+  /** Günün fırsatı bandındaki daire fotoğraf. */
   flashPhoto: 132,
 
-  /** Fırsat kartındaki küçük daire (v3:93 — 48). */
+  /** Fırsat kartındaki küçük daire. */
   offerPhoto: 48,
 
-  /** Ürün detayının kahraman fotoğrafı (v3:240 — 400) ve alt kenardan sarkan fiyat rozeti (22). */
+  /** Ürün detayının kahraman fotoğrafı ve alt kenardan sarkan fiyat rozeti. */
   productHero: 400,
   productPriceDrop: 22,
-  /** Aile (çeşit) çipindeki küçük daire (v3:263 — 34). */
+  /** Aile (çeşit) çipindeki küçük daire. */
   productFamilyPhoto: 34,
-  /** Yapışkan bar stepper'ı (v3:1233 — düğme 44×48, değer sütunu 30) ve barın kaydırma payı (v3:314 — 108). */
+  /** Yapışkan barın adet seçicisi (düğme ve değer sütunu) ve barın kaydırma payı. */
   productStepButtonWidth: 44,
   productStepButtonHeight: 48,
   productStepValueWidth: 30,
   productBarSpace: 108,
-  /** Sepet FAB'ının yapışkan barın üstündeki konumu (v3:602 — `b:'112px'`). */
+  /** Sepet FAB'ının yapışkan barın üstündeki konumu. */
   productFabBottom: 112,
 
-  /*
-    TARİF ve PAKET DETAYININ ölçüleri — 10.08'e kadar kendi ekran dosyalarında ham sabit olarak
-    duruyorlardı ("kit bu etapta yazıya kapalı, terfi ihtiyacı raporlandı" künyeleriyle). Terfi
-    burada gerçekleşti: skeleton'lar da aynı ölçülere ihtiyaç duyunca ekran dosyasından import
-    etmek dairesel bağımlılık doğuruyordu ve ikinci bir kopya yazmak duplikasyondu.
-  */
-  /** Tarif kahramanı (v3:1184 — 300; ürünün 400'lüğünden bilerek basık) + rozetin sarkması (v3:1187). */
+  /* Tarif ve paket detayının ölçüleri burada, çünkü iskeletler de okuyor: ekran dosyasından içe aktarmak dairesel
+     bağımlılık doğururdu. */
+  /** Tarif kahramanı (ürününkünden bilerek basık) ve rozetin sarkması. */
   recipeHero: 300,
   recipeBadgeDrop: 18,
-  /** Malzeme satırının daire fotoğrafı (v3:1191 — 46) ve sepete + kutusu (v3:1193 — 38×38). */
+  /** Malzeme satırının daire fotoğrafı ve sepete ekleme kutusu. */
   recipeRowPhoto: 46,
   recipeAddBox: 38,
-  /** Hazırlanış adımının numara dairesi (v3:1206 — 28) ve barın kaydırma payı (v3:1223 — 108). */
+  /** Hazırlanış adımının numara dairesi ve barın kaydırma payı. */
   recipeStepBadge: 28,
   recipeBarSpace: 108,
-  /** Paket içerik satırının küçük karesi (v3:27 — 46, köşe 10). */
+  /** Paket içerik satırının küçük karesi. */
   packageItemPhoto: 46,
-  /**
-   * Geri bildirim akışının oy aşaması (v3:1016 — 380 fotoğraf · v3:1026 — 56 oy düğmesi; kitin
-   * 52'lik `controlLg`sinden bilerek büyük, şablonun kendi vurgusu). Terfi gerekçesi ÜSTTEKİYLE
-   * AYNI: skeleton aynı ölçüleri isteyince ekran dosyasından import dairesel bağımlılık olurdu.
-   * Yalnız SKELETON'IN da okuduğu iki durak taşındı; teşekkür dairesi ve kalp ikonu (88/38) tek
-   * tüketenli kaldığı için ekranın kendi bloğunda durur.
-   */
+  /** Geri bildirim akışının oy aşaması: fotoğraf ve oy düğmesi (kitin `controlLg`sinden bilerek büyük); iskelet de okur. */
   feedbackPhoto: 380,
   feedbackVoteButton: 56,
 
-  /** Sipariş detayındaki canlı takip haritası (v3:702 — 195). */
+  /** Sipariş detayındaki canlı takip haritası. */
   mapHeight: 195,
 
-  /** Tek kullanımlık kod alanı — rakamlar için özellikle yüksek (v3:781 — 62). */
+  /** Tek kullanımlık kod alanı — rakamlar için özellikle yüksek. */
   codeFieldHeight: 62,
 
-  /** Giriş ekranındaki logo yüksekliği (v3:770 — 52; genişlik kaynak oranından türer). */
+  /** Karşılama ve künye tamamlama ekranlarının üstündeki logo; genişlik görselin oranından türer. */
   loginLogoHeight: 52,
 
-  /** Onay ekranlarının büyük ✓ dairesi (v3:614 — 92) ve ödeme ekranındaki küçüğü (v3:604 — 64). */
+  /** Onay ekranlarının büyük ✓ dairesi ve ödeme ekranındaki küçüğü. */
   confirmMark: 92,
   paymentMark: 64,
 
-  /** Kampanya iletişimi anahtarı (v3:882 — 50×30, topuz 24). */
+  /** Kampanya iletişimi anahtarı: gövde ve topuz. */
   switchWidth: 50,
   switchHeight: 30,
   switchKnob: 24,

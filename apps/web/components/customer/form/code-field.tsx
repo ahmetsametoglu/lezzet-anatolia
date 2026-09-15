@@ -3,17 +3,9 @@
 import { useEffect, useRef } from 'react';
 
 /*
-  TEK KOD ALANI — native müşteri girişinin kod alanının (`CodeField`, `packages/mobile-kit/src/screens/login/code-field.tsx`)
-  web telefon ikizi (15.09, `Musteri Mobil.dc.html` "Hızlı Doğrulama" karesinin kod adımı): altı rakam TEK girdide,
-  ortalı ve rakamlar arası nefesli (tasarımın `.22em`i), 62'lik gövde (native `codeFieldHeight`), zeytin çerçeve, sayfa
-  başlığı kademesinde kalın rakam.
-
-  Kutulu alan (`auth/otp-code-input`) masaüstünün ve sepetin çizimi; bu alan telefon tasarımınınki. Tek girdi olduğu için
-  yapıştırma ve tarayıcının kod önerisi (`autocomplete="one-time-code"`) kendiliğinden çalışır. Alan yalnız rakamı ve
-  en çok `length` haneyi geçirir; müşteri biçim hatası görmez (native aynı kural).
-
-  Ham `<input>` burada son çare değil, kitin kendisi: form kitinin öteki alanları etiket kabuğu taşıyor, karede etiket
-  yok — ad ekran okuyucuya `label` ile gider.
+  Telefon tasarımının tek girdili kod alanı; kutulu `auth/otp-code-input` masaüstünün ve sepetin çizimidir. Tek girdi olduğu
+  için yapıştırma ve tarayıcının kod önerisi kendiliğinden çalışır; kural native eşiyle
+  (`apps/mobile-customer/src/screens/login/code-field.tsx`) aynı: yalnız rakam, en çok `length` hane.
 */
 interface CodeFieldProps {
   value: string;
@@ -29,13 +21,13 @@ interface CodeFieldProps {
 
 export function CodeField({ value, onChange, label, placeholder, length, invalid = false }: CodeFieldProps) {
   const ref = useRef<HTMLInputElement>(null);
-  // Kod adımı açılınca imleç alanda: müşteri bir dokunuş daha yapmadan yazar (masaüstünün kutulu alanı da ilk kutuya
-  // odaklanıyor).
+  // Kod adımı açılınca imleç alanda: müşteri bir dokunuş daha yapmadan yazar.
   useEffect(() => {
     ref.current?.focus();
   }, []);
 
   return (
+    // Ham girdi: form kitinin alanları etiket kabuğu taşır, tasarımda etiket yok; ad ekran okuyucuya `label` ile gider.
     <input
       ref={ref}
       type="text"

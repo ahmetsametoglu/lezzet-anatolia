@@ -24,50 +24,20 @@ import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-ga
 import messages from './messages.json';
 
 /*
-  KÜNYE TAMAMLAMA — doğrulaması bitmiş ama künyesi eksik müşteriye ADIM ADIM sorulan üç bilgi:
-  ad-soyad → adres → telefon (kullanıcı kararı 10.08).
-
-  ── NİYE VAR (ölçülmüş arıza) ───────────────────────────────────────────────
-  E-posta/OTP ile açılan hesapta ad HİÇ DOLMUYOR (gerekçe zinciri `profile-gaps.ts`te), telefon
-  da adres de boş kalıyordu — ve uygulama hiçbir yerde sormuyordu. Onboarding soramaz: o giriş
-  ÖNCESİ akıştır ve girişsiz geçilebiliyor. Kapı bu yüzden `/me` okunduktan sonra çalışır
-  (`use-profile-setup-gate.hook`).
-
-  ── ADIM LİSTESİ BİR KEZ KURULUR ────────────────────────────────────────────
-  Hangi adımların sorulacağı açılışta hesaplanır ve DONDURULUR. Canlı türetilseydi ad kaydedilir
-  kaydedilmez o adım listeden düşer, kalan adımların sırası kayar ve kullanıcı bir adımı atlanmış
-  görürdü. Dondurma aynı zamanda "yeniden girilebilirlik"tir: yarıda bırakılan akış bir sonraki
-  açılışta yalnız EKSİK KALANI sorar, tamamlanan alan bir daha sorulmaz.
-
-  ── HER ADIM KENDİ BAŞINA KAYDEDER ──────────────────────────────────────────
-  Ad ve telefon `PATCH /me`ye, adres `POST /me/addresses`e ayrı ayrı gider. Toplu kaydetseydik
-  ikinci adımda uygulamayı kapatan müşterinin adı da kaybolurdu.
-
-  ── ATLANABİLİRLİK ──────────────────────────────────────────────────────────
-  Ad ve telefon zorunlu (ikisi de tek satır ve iletişimin ön koşulu); ADRES adımı "Sonra
-  ekleyeceğim" ile geçilebilir — sipariş vermeyecek müşteriyi en pahalı adıma zorlamak, checkout
-  zaten adresi kendi çekmecesinde sorarken gereksiz bir kapıdır.
-
-  ── TASARIM ─────────────────────────────────────────────────────────────────
-  v3'te bu akış YOK. Görsel dil ONBOARDING'in adım deseninden alındı (üstbaşlık · başlık · gövde ·
-  alt bölmede nokta göstergesi ve birincil düğme) ve adres adımı `shAddr` çekmecesinin FORMUNU
-  olduğu gibi kullanır (`customer-kit/address-form`) — dördüncü bir adres formu yazılmadı. Yeni
-  görsel dil üretilmedi; sapma `design/KARARLAR.md` sonuna kaydedildi.
+  Doğrulanmış ama künyesi eksik müşteriye ad, adres ve telefon adım adım sorulur; onboarding giriş öncesi akış olduğu için
+  soramaz. Adım listesi açılışta kurulup dondurulur ki kaydedilen adım düşüp sırayı kaydırmasın, her adım yarıda kapatan
+  müşterinin cevabı kaybolmasın diye ayrı kaydeder ve adres adımı atlanabilir, çünkü checkout adresi zaten sorar.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Logonun kaynak oranı (1244×602) — onboarding/login ekranlarındaki sabitin ikizi. */
+/** Logo görselinin kaynak oranı (1244×602). */
 const LOGO_ASPECT = 1244 / 602;
 
 type StepKey = 'name' | 'address' | 'phone';
 
 interface ProfileSetupScreenProps {
-  /**
-   * Akış bitince (ya da sorulacak bir şey kalmadığında) dönülecek yol — soruyu SORAN yer verir:
-   * sepetten gelen sepete, girişten gelen vitrine döner. Cevap veren müşteriyi başladığı yerden
-   * koparmamak için var; verilmezse vitrin.
-   */
+  /** Akış bitince dönülecek yol; soruyu soran yer verir ki müşteri başladığı yere dönsün, verilmezse vitrin. */
   next?: string;
 }
 
@@ -75,14 +45,13 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
   const locale = useAppLocale();
   const t: Messages = messages[locale];
   const router = useRouter();
-  // Rota tipi ilk `expo start`ta üretiliyor; gelen yol köprü olarak `Href`e sabitlenir (kapının
-  // `profileSetupRoute` hükmünün aynısı).
+  // Rota tipi ilk `expo start`ta üretilir; gelen yol köprü olarak `Href`e sabitlenir.
   const exitTo = next as Href;
 
   const { status, me } = useMe();
   const addressBook = useAddresses(status === 'ready');
 
-  /** Sorulacak adımlar — bir kez kurulur, sonra dondurulur (dosya künyesi). */
+  /** Sorulacak adımlar: bir kez kurulur, sonra dondurulur. */
   const [steps, setSteps] = useState<StepKey[] | null>(null);
   const [index, setIndex] = useState(0);
   const [draftName, setDraftName] = useState('');
@@ -92,8 +61,8 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
 
   useEffect(() => {
     if (steps !== null || status !== 'ready' || me === null) return;
-    // Adres okuması SÜRERKEN liste kurulmaz; DÜŞTÜYSE adres adımı sorulmaz — okunamayan bir
-    // liste "adresi yok" demek değildir (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+    // Adres okuması sürerken liste kurulmaz; düştüyse adres adımı sorulmaz, çünkü okunamayan liste "adresi yok" demek
+    // değildir.
     if (addressBook.status === 'loading') return;
     const list: StepKey[] = [];
     if (isNameMissing(me)) list.push('name');
@@ -102,8 +71,7 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
     setSteps(list);
   }, [addressBook.addresses.length, addressBook.status, me, status, steps]);
 
-  /* Sorulacak bir şey kalmadıysa (ya da akışa elle girildiyse) ekran yerinde durmaz: künye tamam
-     olan müşteriye boş bir akış göstermek, cevabı olmayan bir soru sormaktır. */
+  /* Sorulacak bir şey yoksa ekran yerinde durmaz: künyesi tam müşteriye boş akış göstermek cevabı olmayan soru sormaktır. */
   const nothingToAsk = steps !== null && steps.length === 0;
   useEffect(() => {
     if (nothingToAsk) router.replace(exitTo);
@@ -198,15 +166,14 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
           {t.address.title}
         </Text>
         <Text style={styles.body}>{t.address.body}</Text>
-        {/* ADRES FORMU KİTTEN — hesap ekranı ve checkout ile AYNI dosya (BAN önerileri, doğrulama
-            ve kaydetme dahil). Kendi Kaydet düğmesini taşıdığı için alt bölmenin birincil düğmesi
-            bu adımda çizilmez; geçiş yolu "Sonra ekleyeceğim". */}
+        {/* Adres formu hesap ekranı ve checkout'la aynı dosya; kendi Kaydet düğmesi olduğu için alt bölmede birincil düğme
+            çizilmez. */}
         <AddressForm
           editing={null}
           addresses={addressBook.addresses}
           saveLabel={t.address.save}
-          /* Bu akışın ÖNCEKİ adımı zaten adı ve numarayı yazdırıyor — adres adımına gelindiğinde
-             ikisini bir kez daha sormak, az önce verilen cevabı unutmuş gibi görünürdü (22.08). */
+          /* Önceki adımlar adı ve numarayı zaten yazdırdı; adres adımında yeniden sormak az önceki cevabı unutmak gibi
+             görünürdü. */
           defaults={addressDefaultsOf(me)}
           onSaved={(next) => {
             addressBook.publish(next);
@@ -220,9 +187,9 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
-        {/* Onboarding/login ile aynı varlık ve ölçü; "Atla" YOK — ad ve telefon zorunlu. */}
+        {/* "Atla" yok: ad ve telefon zorunlu. */}
         <Image
-          // Statik varlık Metro'da `require` ile yüklenir (onboarding ekranındaki hükümle aynı).
+          // Statik varlık Metro'da `require` ile yüklenir.
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           source={require('@lezzet/mobile-kit/assets/images/logo.png')}
           style={styles.logo}
@@ -239,9 +206,7 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
         <View style={styles.footerNav}>
           <View style={styles.footerSide}>
             {index === 0 ? null : (
-              /* Geri bağlantısı onboarding'in kendisi: kitin `TextAction`ı yalnız zeytin/terracotta
-                 biliyor, bu satır ise SOLUK gezinme künyesidir — ikinci bir ton eklemek kitin
-                 sözlüğünü büyütürdü (terfi ihtiyacı raporlandı). */
+              /* Geri bağlantısı onboarding'inki: kitin `TextAction`ı soluk tonu bilmiyor. */
               <PressableSurface
                 onPress={() => {
                   setError(null);
@@ -300,7 +265,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     height: customerMetrics.loginLogoHeight,
     width: customerMetrics.loginLogoHeight * LOGO_ASPECT,
   },
-  /* Onboarding'in adım gövdesiyle aynı ölçü ve hizalama: dikeyde ortalı, 26'lık yan boşluk. */
+  /* Onboarding'in adım gövdesiyle aynı ölçü ve hizalama. */
   content: {
     flex: 1,
     justifyContent: 'center',
