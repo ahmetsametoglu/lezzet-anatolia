@@ -23,29 +23,9 @@ import { ShippingOrderNote } from './components/shipping-order-note';
 import { checkoutBlocker, type CheckoutCopy, type CheckoutViewProps } from './checkout-types';
 
 /**
- * Ödeme — TELEFON görünümü: native "Siparişi tamamla" ekranının (`apps/mobile/src/screens/checkout/checkout-screen.tsx`)
- * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Metin ortak
- * sözlükten (`@lezzet/i18n/customer/checkout`); durum ve sunucu turları `checkout-client.tsx`te, masaüstüyle ortak.
- *
- * Sıra native'in sırası: başlık çubuğu (‹ · "Siparişi tamamla") → "Az kaldı" + siparişin küçük resimleri → hesap şeridi →
- * teslimat adresi → siparişe girmeyenlerin notu → teslimat (yol · komşu daveti · gün) → ödeme yolu → tutar özeti
- * (terracotta rozet) → kampanya izni → adres teklifi · hata → engelin sebebi → onay düğmesi → satış koşulları. Sebep
- * düğmenin ÜSTÜNDE ve düğme kapalı: kuralı basmadan önce göstermek, denemeye zorlamaktan iyi (native'in kararı).
- *
- * ── WEB'E ÖZGÜ ─────────────────────────────────────────────────────────────
- * · Adres SEPETTE seçilir, burada salt okunur (13.09): yeni tasarımın kartı (1b88bde0 — seçili satır, "Değiştir"
- *   sepete götürür, altında "adres sepette seçildi"). Native bu ekranda liste ve adres çekmecesi çiziyor.
- * · Kart ödemesi sayfanın içinde (Stripe bölümü): online seçilince ödeme bölümünün altında açılır ve onayı KENDİ düğmesi
- *   verir — onay düğmesi o yolda çizilmez (iki düğme "hangisi bitiriyor" sordururdu). Native yerel ödeme kartını açıyor.
- * · Kargo siparişinde taşıyıcı seçenekleri (07.12) ve "ayrı sipariş" bandı (19.7); hesap şeridinde "Siz değil misiniz?".
- * · Güven satırı (Stripe · 3D Secure) en altta.
- *
- * ── BİLİNÇLİ FARKLAR ───────────────────────────────────────────────────────
- * · İletişim künyesi (ad + telefon, native 15.08) istenmiyor — masaüstünde de yok; kural web'in iki görünümüne birlikte
- *   gelir.
- * · Komşu davetinin "kaldır"ı yok: web'de reddetme eylemi yok.
- * · İzin cümlesi web'in (native "e-posta/WhatsApp" diyor, web "e-posta"): bayrak aynı, kanal kapsamı ayrı bir karar.
- * · Masaüstünün ilerleme şeridi telefonda yok — native'de karşılığı yok.
+ * Ödemenin telefon görünümü, native "Siparişi tamamla" ekranının web ikizi: metin ortak sözlükten, durum ve sunucu turları
+ * `checkout-client.tsx`te masaüstüyle ortak. Web'e özgü farklar: adres sepette seçilir ve burada salt okunur, kart ödemesi
+ * sayfanın içinde kendi düğmesiyle onaylanır, kargoda taşıyıcı seçenekleri çıkar.
  */
 
 /** Kahraman satırının küçük resimleri — en fazla dört; yığın kitte (`ThumbStack`, native `AvatarThumb` `stacked`). */
@@ -79,14 +59,14 @@ export function CheckoutMobile(props: CheckoutViewProps) {
   const isRoute = delivery?.deliveryType === 'route';
   const dates = delivery?.availableDates ?? [];
 
-  // DÖKÜM VE TOPLAM AYNI OKUMADAN (kullanıcı kararı 21.08): özet varsa satırlar da indirim de ondan, yoksa ikisi de
-  // sepetten — asla karışık. Adres seçilmeden özet yoktur ve o hâlde sepete düşmek doğrudur (masaüstünün aynı kuralı).
+  // Döküm ve toplam aynı okumadan: özet varsa satırlar da indirim de ondan, yoksa ikisi de sepetten, asla karışık. Adres
+  // seçilmeden özet yoktur ve o hâlde sepete düşmek doğrudur.
   const orderedCartLines = cart.lines.filter((line) => line.group !== 'undeliverable');
   const summaryLines: SummaryLine[] =
     summary === null
       ? orderedCartLines.map((line) => ({ key: cartKey(line), name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }))
       : summary.lines.map((line, index) => ({ key: `order-${index}`, name: line.name, qty: line.qty, lineTotalCents: line.lineTotalCents }));
-  // Bu adrese gelemeyen kalem siparişe GİRMEZ, sepette bekler — özette üstü çizili durur (native 10.08).
+  // Bu adrese gelemeyen kalem siparişe girmez, sepette bekler; özette üstü çizili durur.
   const droppedLines: SummaryLine[] =
     summary === null
       ? cart.lines
@@ -210,7 +190,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
               {selectedAddress && <p className="font-sans text-micro leading-[1.45] text-muted">{t.address.inCartNote}</p>}
             </section>
 
-            {/* ENGEL DEĞİL, BİLGİ (native 10.08): o kalemler bu siparişe girmiyor, sepette bekliyor. */}
+            {/* Engel değil bilgi: o kalemler bu siparişe girmiyor, sepette bekliyor. */}
             {droppedLines.length > 0 && (
               <Note
                 title={copy.undeliverable.title}
@@ -238,8 +218,8 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                   descriptionTone={isRoute ? 'danger' : 'muted'}
                 />
                 {delivery.blocked && <Note tone="error" description={t.delivery.blocked} />}
-                {/* Komşu daveti gün seçiminin HEMEN ÜSTÜNDE: cümle o seçimin gerekçesi. Cümle seçime bağlı — başka güne
-                    geçen müşteriye "o gün sizin için seçili" demek yalan olurdu (native 12.08). */}
+                {/* Komşu daveti gün seçiminin hemen üstünde, çünkü cümle o seçimin gerekçesi. Cümle seçime bağlı: başka güne
+                    geçen müşteriye "o gün sizin için seçili" demek yalan olurdu. */}
                 {isRoute &&
                   !delivery.blocked &&
                   delivery.neighborInvites.map((invite) => (
@@ -313,8 +293,8 @@ export function CheckoutMobile(props: CheckoutViewProps) {
           </span>
         </label>
 
-        {/* ADRES TEKLİFİ onay düğmesinin hemen üstünde: soru "Siparişi onayla"ya basıldığı an doğuyor. İki hâl AYRI YAPI —
-            başka kodda bulunduysa iki eylem, doğrulanamadıysa tek cümle. Metin SERVİSİN etiketi; biz cümle kurmayız. */}
+        {/* Adres teklifi onay düğmesinin hemen üstünde, çünkü soru o anda doğar; iki hâl ayrı yapıdır: başka kodda bulunduysa
+            iki eylem, doğrulanamadıysa tek cümle. Metin servisin etiketidir, biz cümle kurmayız. */}
         {addressNotice?.status === 'wrong_postal_code' ? (
           <Note
             title={copy.addressCheck.foundElsewhere}
@@ -374,9 +354,8 @@ function lineValue(copy: CheckoutCopy, line: SummaryLine, locale: CheckoutViewPr
 }
 
 /**
- * Kargo servisi (07.12) — web'e özgü; seçenekler taşıyıcıdan canlı, fiyat İSTEMCİDE hesaplanmaz (seçim sunucuya gidip
- * anlık görüntüyü yeniden çözer). Eşik üstünde seçim SORULMAZ (kullanıcı kararı 29.08 — parayı biz ödüyoruz, koli eve
- * gider); teklif alınamadıysa sebebi ve sabit tarife söylenir, sessiz geri düşüş yok.
+ * Kargo servisi seçimi web'e özgü: seçenekler taşıyıcıdan canlı gelir, fiyat istemcide hesaplanmaz. Eşik üstünde seçim
+ * sorulmaz, çünkü ücreti biz ödüyoruz ve koli eve gider; teklif alınamadıysa sebebi ve sabit tarife söylenir.
  */
 function CarrierChoice({ t, locale, snapshot, state, onSelectShipping }: CheckoutViewProps) {
   const shipping = snapshot.shipping;

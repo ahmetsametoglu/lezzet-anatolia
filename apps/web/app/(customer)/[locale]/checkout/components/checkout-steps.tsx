@@ -16,9 +16,8 @@ import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefron
 import { checkoutBlocker, type CheckoutViewProps } from '../checkout-types';
 
 /**
- * Checkout'un üç adımı — masaüstü ve mobil AYNI bloklar (tasarım: numaralı 1·2·3 kartları).
- * Cihaz forku yerleşimi ayırır, mantığı değil; bu yüzden bloklar burada tek kez yazılır ve iki
- * ekran dosyası yalnız onları farklı düzenlerde sıralar.
+ * Checkout'un üç adımı, masaüstü ve mobil web için aynı bloklar. Cihaz forku yerleşimi ayırır, mantığı değil; bu yüzden bloklar
+ * burada tek kez yazılır ve iki ekran dosyası yalnız onları farklı düzenlerde sıralar.
  */
 
 export function StepShell({ step, title, compact, children }: { step: string; title: string; compact?: boolean; children: React.ReactNode }) {
@@ -74,12 +73,8 @@ function ChoiceCard({
 }
 
 /**
- * Girişli müşteride kimlik satırı — adım DEĞİL, ince bir künye.
- *
- * Doğrulanmış müşteriden ikinci kez doğrulama istemek sürtünmedir; ama siparişin KİME bağlandığı
- * da görünmeli. Paylaşılan bir cihazda (aile bilgisayarı) bir öncekinin oturumu açık kalmış
- * olabilir ve sipariş sessizce ona yazılır. Tek satır, tek çıkış (desen: referans projedeki
- * "Connecté en tant que X · Pas vous ?").
+ * Girişli müşterinin kimlik satırı adım değil künyedir: doğrulanmış müşteriden ikinci doğrulama sürtünmedir, ama siparişin kime
+ * bağlandığı görünmeli, çünkü paylaşılan cihazda bir öncekinin oturumu açık kalmış olabilir.
  */
 export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; email: string; compact?: boolean }) {
   const [confirming, setConfirming] = useState(false);
@@ -87,12 +82,8 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
   if (!email) return null;
 
   /**
-   * "Siz değil misiniz?" GERÇEKTEN çıkış yapar. Önceden yalnız giriş sayfasına bağlanıyordu ve
-   * oturum ayakta kalıyordu — paylaşılan cihazda ikinci kişi birincinin hesabıyla sipariş
-   * verebilirdi (referans projedeki `logoutCheckout` aynı senaryo için var).
-   *
-   * Tam yenileme: oturum sunucuda çözülüyor ve ona göre kurulmuş her şey (sepet, adresler, seçili
-   * adım) sıfırdan kurulmalı.
+   * "Siz değil misiniz?" gerçekten çıkış yapar, yoksa paylaşılan cihazda ikinci kişi birincinin hesabıyla sipariş verebilirdi.
+   * Tam yenileme, çünkü oturuma göre kurulmuş her şey (sepet, adresler, seçili adım) sıfırdan kurulmalı.
    */
   const signOut = async () => {
     setBusy(true);
@@ -104,7 +95,7 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
     <div
       className={[
         'flex flex-wrap items-center gap-x-3 gap-y-1',
-        // Telefonda native ödeme ekranının hesap şeridi (kum kutu, kontrol köşe, mürekkep yazı); masaüstünde zeytin künye.
+        // Telefonda native ödeme ekranının hesap bandı (kum kutu, kontrol köşe, mürekkep yazı); masaüstünde zeytin künye.
         compact ? 'rounded-control bg-sand-150 px-3.5 py-3' : 'rounded-soft bg-olive-bg px-4 py-2.5',
       ].join(' ')}
     >
@@ -138,15 +129,8 @@ export function AccountLine({ t, email, compact }: { t: CheckoutViewProps['t']; 
 }
 
 /**
- * Adres adımı — **SALT OKUNUR** (kullanıcı kararı 13.09).
- *
- * Seçim, ekleme ve düzenleme SEPETTE (`CartIdentity` → `AddressPickerDialog`); burası sepette
- * seçilen adresi gösterir ve değiştirmek isteyeni sepete yollar. Ölçülen sitelerin hepsi bağlamı
- * her sayfadan değiştirtiyor; bizim kural daha dar (tek yerden değiştir) — bu yüzden çıkış
- * bağlantısı ŞART: yanlış adresi ödeme adımında fark eden müşteri nereye gideceğini aramamalı.
- *
- * Eski hâl (seçim + form burada) 01.08–13.09 arasında yaşadı; iki ekranın iki ayrı adresle
- * konuşmasının kaynağı oydu.
+ * Adres adımı salt okunur: seçim, ekleme ve düzenleme sepette (`CartIdentity` → `AddressPickerDialog`), iki ekran iki ayrı
+ * adresle konuşmasın diye. Çıkış bağlantısı şart, çünkü yanlış adresi ödeme adımında fark eden müşteri nereye gideceğini aramamalı.
  */
 export function AddressStep({ t, compact, selectedAddress }: CheckoutViewProps) {
   return (
@@ -185,18 +169,13 @@ export function DeliveryStep(props: CheckoutViewProps) {
   const inRoute = delivery.deliveryType === 'route';
 
   /**
-   * Kısıt bloğunun bakacağı yer: SEÇİLİ ADRES. Blok eskiden sitenin ortak cevabına (başlıktaki
-   * hap) bakıyordu ve checkout'ta neredeyse hiç doğmuyordu — müşteri sepette "şimdi değil" deyip
-   * kod vermemişse hap boştu, blok da yoktu. Geriye yalnız soluk bir cümle kalıyor, hangi kalemin
-   * gelemeyeceği hiçbir yerde yazmıyordu (29.07 kullanıcı geri bildirimi).
-   *
-   * Bölge adı ve gün TAŞINMAZ: blok ikisini de kullanmıyor, tek sorduğu "rota içinde mi".
+   * Kısıt bloğu seçili adrese bakar, sitenin ortak cevabına (başlıktaki hap) değil: müşteri sepette kod vermemişse hap boştur
+   * ve hangi kalemin gelemeyeceği hiçbir yerde yazmazdı. Bölge adı ve gün taşınmaz, çünkü blok yalnız "rota içinde mi" diye sorar.
    */
   const addressPlace = selectedAddress
     ? {
         postalCode: selectedAddress.postalCode,
-        // Ülke adresin KENDİSİNDEN gelir, posta kodundan türetilmez: burada zaten cevap verilmiş
-        // bir soru var (19.8 türetmesi kod tek başına girildiğinde gerekir).
+        // Ülke adresin kendisinden gelir, posta kodundan türetilmez: türetme yalnız kod tek başına girildiğinde gerekir.
         country: selectedAddress.country,
         // Yer adı, yerleşim listesi ve bölge adı TAŞINMAZ: blok üçünü de kullanmıyor, tek sorduğu
         // "rota içinde mi".
@@ -205,8 +184,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
         zoneName: null,
         inRoute,
         nextDate: null,
-        // Koordinat da TAŞINMAZ, aynı gerekçeyle: nokta yalnız adres önerisini sıralamak için var
-        // (08.41) ve bu blok öneri göstermiyor — seçilmiş bir adresin kısıtlarını yazıyor.
+        // Koordinat da taşınmaz: nokta yalnız adres önerisini sıralamak için var ve bu blok öneri göstermiyor.
         point: null,
       }
     : null;
@@ -216,11 +194,8 @@ export function DeliveryStep(props: CheckoutViewProps) {
 
   return (
     <StepShell step={t.delivery.step} title={t.delivery.title} compact={compact}>
-      {/* Teslimat TÜRÜ önce söylenir: gün seçeneği ancak "kim getiriyor" bilindikten sonra anlam
-          kazanıyor. Kargo bir HATA gibi yazılmaz — o da bizim teslimat yolumuz. */}
-      {/* Tasarımda teslimat türü bir ROZET (zeytin metin, zeytin-zemin, radius 12, ped 3/10),
-          açıklaması onun altında DÜZ metin. Renkli bir kutu içine almak bilgiyi uyarı gibi
-          gösteriyordu — oysa burada bir sorun yok, bir künye var. */}
+      {/* Teslimat türü önce söylenir, çünkü gün seçeneği ancak "kim getiriyor" bilinince anlam kazanır; kargo hata gibi yazılmaz.
+          Tür bir rozet, açıklaması altında düz metin: renkli kutu bilgiyi uyarı gibi gösterirdi. */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <span className="inline-flex w-max items-center gap-1.5 rounded-[12px] bg-olive-bg px-2.5 py-[3px] font-sans text-note font-semibold text-olive">
@@ -242,9 +217,9 @@ export function DeliveryStep(props: CheckoutViewProps) {
         )}
       </div>
 
-      {/* Teslimat kısıtı — sepettekiyle AYNI bileşen (tasarım): aynı sıra, aynı dil, aynı üç çıkış.
-          Sepet ve ödeme ekranı aynı adresi okuduğu için (13.09) sepette çözülmüş kısıt burada
-          yeniden doğmaz; blok yalnız derin bağlantıyla gelen ya da sepeti atlayan müşteride görünür. */}
+      {/* Teslimat kısıtı sepettekiyle aynı bileşen: aynı sıra, aynı dil, aynı üç çıkış. Sepet ve ödeme ekranı aynı adresi okuduğu
+          için sepette çözülmüş kısıt burada yeniden doğmaz; blok yalnız derin bağlantıyla gelen ya da sepeti atlayan müşteride
+          görünür. */}
       <PlaceRestriction
         locale={locale}
         lines={cart.lines}
@@ -252,7 +227,7 @@ export function DeliveryStep(props: CheckoutViewProps) {
         freeShippingCents={cart.freeShippingCents}
         compact={compact}
         place={addressPlace}
-        // Adres SEPETTE değişir (13.09): çıkış sepete götürür, burada bir seçici açmaz.
+        // Adres sepette değişir: çıkış sepete götürür, burada seçici açılmaz.
         onChangePlace={() => router.push('/cart')}
       />
       {/* Sunucu "gönderilemez" diyor ama blok çizilmediyse (ör. kalem aynı zamanda tükendiği için
@@ -261,13 +236,8 @@ export function DeliveryStep(props: CheckoutViewProps) {
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.delivery.blocked}</p>
       )}
 
-      {/* **Komşu daveti — günün ÜSTÜNDE** (17.10, kullanıcı vurgusu 12.08: *"bunun kaybolmaması
-          lazım"*). Seçimin altında dursaydı davetli önce günü seçer, sonra neden o günü seçtiğini
-          okurdu. Cümle davet edenin YALNIZ adını taşır; gün zaten aşağıda önseçili geliyor. */}
-      {/* HER DAVET KENDİ SATIRINDA (MB-61, kullanıcı kararı 21.08): sözleşme artık liste taşıyor
-          çünkü müşteriyi birden çok komşusu birden çok güne çağırmış olabilir ve eskiden yalnız en
-          yakın gün görünüyordu — ikinci davet sessizce kayboluyordu. Cümle aynı, tekrarlanan yok:
-          aynı sözlük satırı her davet için kuruluyor. */}
+      {/* Komşu daveti günün üstünde, çünkü altında dursaydı davetli önce günü seçer sonra nedenini okurdu; cümle davet edenin
+          yalnız adını taşır. Her davet kendi satırında, çünkü müşteriyi birden çok komşu birden çok güne çağırmış olabilir. */}
       {inRoute &&
         !delivery.blocked &&
         delivery.neighborInvites.map((invite) => (
@@ -299,23 +269,9 @@ export function DeliveryStep(props: CheckoutViewProps) {
           </span>
         )
       )}
-      {/* ── KARGO SERVİSİ SEÇİMİ (07.12) ────────────────────────────────────────
-          Burada eskiden statik bir "2-3 iş gününde kargoda" satırı vardı; artık taşıyıcı
-          seçenekleri canlı geliyor. `ChoiceCard` bu ekranda ZATEN üç yerde kullanılıyor (adres ·
-          gün · ödeme yöntemi) — bu dördüncüsü, yeni bir komponent yazılmadı.
-
-          Fiyat İSTEMCİDE hesaplanmıyor: kart yalnız sunucudan gelen tutarı yazıyor ve seçim
-          sunucuya gidip anlık görüntüyü yeniden çözüyor. */}
-      {/*
-        **EŞİK ÜSTÜNDE SEÇİM SORULMAZ** (kullanıcı kararı 29.08): kargo ücretsizse parayı BİZ
-        ödüyoruz, koli EVE gider ve müşteriye sorulacak bir şey yoktur — sorsaydık ücreti hiç
-        etkilemeyen bir soru sormuş olurduk (ölçüldü: eşik üstünde seçimin tutara etkisi sıfır).
-        Eşik altında liste aynen duruyor; orada parayı müşteri ödüyor ve teslimat noktasını kendisi
-        seçebilir.
-
-        Kural asıl SEVKTE bağlayıcı (`quoteOrderShipment` → `requiresHomeDelivery`): seçilen kod
-        hiçbir yere yazılmıyor, taşıyıcıyı depo seçiyor. Burası yalnız SORMAMA kısmı.
-      */}
+      {/* Kargo servisi seçimi: seçenekler taşıyıcıdan canlı gelir ve fiyat istemcide hesaplanmaz, seçim sunucuya gidip anlık
+          görüntüyü yeniden çözer. Eşik üstünde seçim sorulmaz, çünkü ücret sıfır ve koli eve gider; kural asıl sevkte bağlayıcı
+          (`quoteOrderShipment` → `requiresHomeDelivery`), burası yalnız sormama kısmı. */}
       {!inRoute && !delivery.blocked && snapshot.shipping?.mode === 'auto' && (
         <div className="flex flex-col gap-1">
           <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.carrierTitle}</span>
@@ -361,10 +317,8 @@ export function DeliveryStep(props: CheckoutViewProps) {
               <span className="font-sans text-note text-muted">{t.delivery.carrierHint}</span>
             </>
           ) : (
-            /* SESSİZ GERİ DÜŞÜŞ YOK (07.12): teklif alınamadıysa sebebi yazılır ve sabit tarife
-               uygulandığı SÖYLENİR — hesaplanmamış bir sayıyı "canlı fiyat" diye göstermek
-               müşteriye yalan olurdu. Sebep ayrı cümleler çünkü çözümü de ayrı: ölçü eksikliği
-               bizim işimiz, seçenek yokluğu adresin gerçeği. */
+            /* Sessiz geri düşüş yok: teklif alınamadıysa sebebi yazılır ve sabit tarife uygulandığı söylenir. Sebepler ayrı
+               cümleler, çünkü çözümleri de ayrı: ölçü eksikliği bizim işimiz, seçenek yokluğu adresin gerçeği. */
             <span className="font-sans text-note leading-relaxed text-muted">
               {snapshot.shipping?.status === 'unmeasured'
                 ? t.delivery.carrierUnmeasured
@@ -390,8 +344,8 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onTo
   if (!payment) return null;
 
   const options: { method: PaymentMethod; onAccount: boolean; title: string; body: string; blocked: string | null }[] = [
-    // `online` = Stripe yolu (peşin, sayfa içinde). `card`/`cheque` KAPIDA kullanılan araçlardır;
-    // müşteri burada "kapıda öderim" der, hangi aracı kullandığını kurye kapanışta yazar (11.x).
+    // `online` Stripe yoludur (peşin, sayfa içinde); `card`/`cheque` kapıda kullanılan araçlardır ve hangisinin kullanıldığını
+    // kurye kapanışta yazar.
     { method: 'online', onAccount: false, title: t.payment.card, body: t.payment.cardBody, blocked: null },
     {
       method: 'cash',
@@ -461,23 +415,19 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onTo
   );
 }
 
-/** Sağdaki (mobilde alttaki) özet — kalemler, indirim, kargo, toplam ve onay düğmesi. */
+/** Sağdaki (mobil webde alttaki) özet — kalemler, indirim, kargo, toplam ve onay düğmesi. */
 export function OrderSummary(props: CheckoutViewProps) {
   const { t, locale, cart, cartReady, cartFailed, snapshot, state, compact, busy, error, onConfirm, selectedAddress } = props;
   const { addressNotice, onAcceptAddressFix, onDismissAddressNotice } = props;
   const payment = snapshot.payment;
   const delivery = snapshot.delivery;
-  // Özetin ORTAK sözcükleri (08.20) — aynı blok sepette, onay ekranında ve sipariş detayında da
-  // çiziliyor; kelimeler dört sözlükte kopyalanmıştı ve Fransızca/Almancada ayrışmıştı.
+  // Özetin ortak sözcükleri: aynı blok sepette, onay ekranında ve sipariş detayında da çiziliyor ve dört sözlükte ayrı tutulunca
+  // diller arasında ayrışır.
   const summary = summaryCopy(locale);
 
   /**
-   * Teslimat satırı — **`payment` yokken "Ücretsiz" YAZILMAZ** (denetim notu 04.08).
-   *
-   * Ücretin bilindiği tek an taslak okunduktan sonrasıdır: rota teslimatı ücretsiz, kargo 7,90 €
-   * ve hangisi olduğu ADRESTEN çıkıyor. Adres seçilmeden "Ücretsiz" yazmak, kargoyla alacak
-   * müşteriye tutmayacağımız bir söz vermekti — üstelik en görünür yerde, toplamın hemen üstünde.
-   * Bilinmeyen tutar bu blokta zaten "—" ile yazılıyor (kalem satırları), aynı idiyom.
+   * `payment` yokken teslimat satırına "Ücretsiz" yazılmaz: ücret adresten çıkar (rota ücretsiz, kargo ücretli) ve adres seçilmeden
+   * yazmak tutmayacağımız bir söz olurdu. Bilinmeyen tutar bu blokta "—" ile yazılır.
    */
   const shippingLabel = !payment
     ? UNKNOWN_AMOUNT
@@ -486,18 +436,8 @@ export function OrderSummary(props: CheckoutViewProps) {
       : summary.free;
   const totalCents = payment?.orderTotalCents ?? cart.totalCents;
   /*
-    ── DÖKÜM VE TOPLAM AYNI OKUMADAN (kullanıcı kararı 21.08) ──────────────────
-    Kural TEK CÜMLE: **özet varsa hem satırlar hem indirim ondan gelir; yoksa ikisi de sepetten.
-    Asla karışık.**
-
-    Karışıktı: satırlar `cart.lines`ten, toplam `payment`ten geliyordu — ve aynı ifade mobilde de
-    birebir duruyordu. Sepet SUNUCUDA yaşayıp iki yüzeyde paylaşıldığı için ikisi ayrışabiliyor;
-    cihazda ölçüldü (21.08): ekran `2× kek + 8× börek` listelerken genel toplam `16,00 €` yazdı.
-    Kalemler 63,47 € topluyordu ve hangisinin doğru olduğunu söyleyen hiçbir şey yoktu — doğru
-    olan TOPLAMDI, bayat olan listeydi.
-
-    Adres seçilmeden özet YOKTUR (sunucu kapsamı çözemez) ve o hâlde sepete düşmek doğrudur:
-    ekran "sepetin şu, şimdi adres seç" der. Yanlış olan ikisini aynı anda karıştırmaktı.
+    Döküm ve toplam aynı okumadan: özet varsa satırlar da indirim de ondan, yoksa ikisi de sepetten, asla karışık, çünkü sepet iki
+    yüzeyde paylaşıldığı için liste ile toplam ayrışabilir. Adres seçilmeden özet yoktur ve o hâlde sepete düşmek doğrudur.
   */
   const orderSummary = snapshot.summary;
   const summaryLines: { key: string; kind: 'variant' | 'bundle'; name: string; qty: number; lineTotalCents: number | null }[] =
@@ -514,28 +454,20 @@ export function OrderSummary(props: CheckoutViewProps) {
   // Onay düğmesi kart ödemesinde ÇİZİLMEZ: orada onayı Stripe formunun kendi düğmesi veriyor
   // (önce kartı valide etmesi gerekiyor). İki düğme müşteriye hangisinin bitirdiğini sordururdu.
   const showConfirm = state.paymentMethod !== null && state.paymentMethod !== 'online';
-  // Engel TEK yerde kararlaşır (`checkoutBlocker`) — burada ve kart ödemesinin formunda aynı
-  // cevap okunur. Koşul iki yerde ayrı yazılıyken ikisi tutmuyordu ve fark hiçbir hata vermiyordu.
-  // (Sepet okunamadıysa da sipariş verilemez: ekrandaki 0,00 € bir toplam değil, cevapsızlıktır.)
+  // Engel tek yerde kararlaşır (`checkoutBlocker`): burada ve kart ödemesinin formunda aynı cevap okunur. Sepet okunamadıysa da
+  // sipariş verilemez, çünkü ekrandaki 0,00 € bir toplam değil cevapsızlıktır.
   const blocked = checkoutBlocker({ cartFailed, cartHasBlocked: cart.hasBlocked, snapshot, addressId: state.addressId }) !== null;
 
   return (
-    // Tasarım künyesi: `radius 18 · ped 22/24 · gap 12` — adım kartlarıyla aynı aile, bir tık dar.
-    // `snug` tam olarak bu: paylaşılan kartın yaygın pedi 22/26, özet kartı tasarımda 22/24 (M2).
+    // Tasarım künyesi `radius 18 · ped 22/24 · gap 12`: adım kartlarıyla aynı aile, bir tık dar; `snug` tam olarak bu.
     <Card compact={compact} pad="snug">
       <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{summary.title}</span>
 
-      {/* Kalemler ÖZETİN İÇİNDE, tasarımdaki gibi: `ad × adet ——— tutar`, sonra indirim, teslimat
-          ve genel toplam; hepsi TEK sütunda, aynı ölçüde (400 14px). Sol sütunda ayrı bir
-          "Sepetiniz" kartı vardı (referans projeden gelen bir ekleme) — tasarımda öyle bir kart
-          yok ve olması aynı listeyi iki yerde tutmak demekti. Checkout'un sorusu "ne aldım" değil,
-          "ne ödüyorum"; ad satırı o toplamın dökümüdür, ikinci bir sepet ekranı değil.
-
-          Ara toplam satırı DÜŞTÜ: kalemler zaten tek tek yazılıyorken onların toplamını bir kez
-          daha yazmak, altındaki genel toplamla karıştırılan üçüncü bir sayı üretiyordu. */}
+      {/* Kalemler özetin içinde, tek sütunda: checkout'un sorusu "ne aldım" değil "ne ödüyorum" ve ad satırları o toplamın
+          dökümü. Ara toplam yazılmaz, çünkü genel toplamla karıştırılan üçüncü bir sayı olurdu. */}
       <div className="flex flex-col gap-1.5">
-        {/* Sepet istemcide okunuyor: ilk karede kalem satırları yok. Boş bırakmak "özetiniz yok"
-            gibi okunuyordu; iskelet üç satırlık yerini tutar ve tutarlar gelince sayfa zıplamaz. */}
+        {/* Sepet istemcide okunduğu için ilk karede kalem yok; boş bırakmak "özetiniz yok" gibi okunur, iskelet yerini tutar ve
+            tutarlar gelince sayfa zıplamaz. */}
         {!cartReady &&
           [0, 1, 2].map((i) => (
             <div key={i} className="flex items-baseline justify-between gap-3">
@@ -564,9 +496,8 @@ export function OrderSummary(props: CheckoutViewProps) {
             tone="olive"
           />
         )}
-        {/* Ücretsizde YALNIZ tutar yeşil (tasarım): ücret bir maliyet, ücretsizlik bir kazanç. */}
-        {/* Yeşil ton bir KAZANÇ söyler ("Ücretsiz"); bilinmeyen tutar bir kazanç değil, o yüzden
-            `payment` yokken ton da nötr kalır — yoksa "—" yeşil çıkar ve iyi haber gibi okunur. */}
+        {/* Ücretsizde yalnız tutar yeşil, çünkü ücretsizlik bir kazançtır; `payment` yokken ton nötr kalır, yoksa "—" yeşil çıkar
+            ve iyi haber gibi okunurdu. */}
         <SummaryRow
           label={summary.delivery}
           value={shippingLabel}
@@ -576,11 +507,8 @@ export function OrderSummary(props: CheckoutViewProps) {
             çeviriyor; oysa bu bir sayı satırı ve üstündeki satırlarla aynı ailede okunmalı. */}
         <div className="flex items-baseline justify-between gap-3 border-t border-sand-200 pt-2.5">
           <span className="font-sans text-card-title-sm font-bold text-ink">{summary.total}</span>
-          {/* Sepet OKUNMADAN toplam yazılmaz (denetim notu 04.08). Burada `formatPrice(0)` basılıyordu
-              ve ekranda **0,00 €** görünüyordu: kalem satırları iskelet gösterirken toplam kendinden
-              emin bir sayı söylüyordu. Ziyaretçi checkout'unda bu hâl kalıcı — misafir doğrulanana
-              kadar taslak hiç okunmuyor — yani "sepetim boş / bedava" diye okunabilecek bir sayı
-              ekranda öylece duruyordu. `CLAUDE §1`: ölçülemeyen değer sıfır değildir. */}
+          {/* Sepet okunmadan toplam yazılmaz: `formatPrice(0)` misafirde kalıcı olarak "0,00 €" gösterir ve sepet boş ya da bedava
+              gibi okunurdu. */}
           {cartReady ? (
             <span className="font-sans text-card-title-sm font-bold text-ink">{formatPrice(totalCents, locale)}</span>
           ) : (
@@ -590,21 +518,17 @@ export function OrderSummary(props: CheckoutViewProps) {
         <span className="font-sans text-micro text-muted">{summary.vatIncluded}</span>
       </div>
 
-      {/* Sepet okunamadı: kalemsiz bir özet ve 0,00 € toplam çizilmişken sessiz kalmak, müşteriye
-          sepetini kaybettiğini düşündürüyordu. Boş sepet bir DURUM, ulaşılamayan sepet bir ARIZA. */}
+      {/* Sepet okunamadıysa bu söylenir: boş sepet bir durum, ulaşılamayan sepet bir arızadır. */}
       {cartFailed && <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.summary.cartUnreachable}</p>}
 
-      {/* Sipariş bu hâliyle verilemiyor (gönderilemeyen kalem var): toplam da nihai değil. Tek
-          satır, kalem ADI YOK — hangi kalem olduğunu adım 2'deki blok söyler, özet dar bir yer ve
-          orada ikinci bir liste tutmak (kullanıcı geri bildirimi) doğru yöntem değil. */}
+      {/* Gönderilemeyen kalem varken toplam nihai değil; satır kalem adı taşımaz, çünkü hangisi olduğunu adım 2'deki blok söyler
+          ve özette ikinci liste tutulmaz. */}
       {snapshot.delivery?.blocked && (
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">{t.summary.blockedTotal}</p>
       )}
 
-      {/* Alt sınır YERE bağlıdır ve cümle bunu söyler (08.13): sepet eşiği çerezdeki koda göre
-          gösterir, checkout seçilen ADRESE göre hesaplar — ikisi ayrı bölgeye düşen müşteride sayı
-          değişir. Yalnız sayıyı yazan bir cümle "az önce başka bir şey diyordu" hissi bırakırdı;
-          yeri taşıyan cümle farkı kendiliğinden açıklar. */}
+      {/* Alt sınır yere bağlıdır ve cümle yeri taşır: sepet çerezdeki koda, checkout seçilen adrese göre hesaplar ve iki ayrı
+          bölgeye düşen müşteride sayı değişir. */}
       {payment && !payment.minBasketOk && (
         <p className="font-sans text-note leading-relaxed font-semibold text-honey">
           {t.summary.minBasket
@@ -616,13 +540,8 @@ export function OrderSummary(props: CheckoutViewProps) {
 
       {error && <p className="font-sans text-note leading-relaxed font-semibold text-terracotta">{error}</p>}
 
-      {/* ── ADRESİN KAPISI (11.11) ─────────────────────────────────────────
-          Sipariş anında soruluyor ve söylenecek bir şey varsa akış BİR KEZ duruyor. Ton mevcut
-          desenden: `text-honey` uyarı (asgari sepet satırıyla aynı), yeni bir görsel dil YOK.
-
-          **İki hâlin tonu FARKLI olmalı** ve burada yapısal olarak farklı: "başka kodda bulundu"
-          düzeltilebilir bir hatadır ve DÜĞMESİ vardır; ötekiler yalnız birer belirsizliktir ve
-          düğmesizdir. Aynı görünselerdi müşteri geçerli bir yeni bina adresini hata sanardı. */}
+      {/* Adresin kapısı sipariş anında sorulur ve söylenecek bir şey varsa akış bir kez durur. İki hâl yapısal olarak farklı:
+          başka kodda bulunan kapı düzeltilebilir hatadır ve düğmesi vardır, ötekiler düğmesiz belirsizliktir. */}
       {addressNotice && addressNotice.status === 'wrong_postal_code' ? (
         <div className="flex flex-col gap-2 rounded-lg border border-honey/40 bg-honey/10 p-3">
           <span className="font-sans text-note leading-relaxed text-body">{t.addressCheck.foundElsewhere}</span>
@@ -652,10 +571,8 @@ export function OrderSummary(props: CheckoutViewProps) {
         </Button>
       )}
 
-      {/* Koşul cümlesi bir süredir bağsızdı: "kabul etmiş olursunuz" diyor ama kabul edilen metnin
-          okunacağı yer yoktu. Sayfa 08.8'de doğdu, bağ verildi — onay isteyen bir cümlenin
-          okunacak bir karşılığı olmalı. Ayrı satır, çünkü yerelleştirilmiş cümleyi parçalayıp
-          içine bağ gömmek üç dilde de kırılgan olurdu. */}
+      {/* Onay isteyen cümlenin okunacak bir karşılığı olmalı; bağ ayrı satırda, çünkü yerelleştirilmiş cümleye bağ gömmek üç
+          dilde kırılgan olurdu. */}
       <span className="font-sans text-micro leading-relaxed text-muted">
         {t.summary.terms}{' '}
         <Link href="/legal/sales" className="cursor-pointer font-bold text-olive transition-colors hover:text-olive-dark">
@@ -666,9 +583,8 @@ export function OrderSummary(props: CheckoutViewProps) {
       {/* Soğuk zincir güvencesi: kapıya teslimde ve gün belliyken. Kargoda söylenmez — o zincire
           biz kefil olamayız, zaten soğuk zincir kalemi kargoya hiç girmiyor. */}
       {delivery?.deliveryType === 'route' && state.deliveryDate && selectedAddress && (
-        // Tasarımda KUM zemin (kum-100), zeytin değil: bu bir güvence cümlesi, olumlu bir DURUM
-        // bildirimi değil. Yeşil kutu onu "her şey yolunda" rozetine çeviriyor ve özetteki asıl
-        // yeşil öğeyle (ücretsiz teslimat satırı) yarışıyordu.
+        // Kum zemin, zeytin değil: bu bir güvence cümlesi ve yeşil kutu onu "her şey yolunda" rozetine çevirip özetteki ücretsiz
+        // teslimat satırıyla yarıştırırdı.
         <p className="rounded-soft bg-sand-100 px-4 py-3 font-sans text-note leading-loose text-body">
           {t.summary.coldChain.replace('{date}', formatDeliveryDate(state.deliveryDate, locale))}
         </p>

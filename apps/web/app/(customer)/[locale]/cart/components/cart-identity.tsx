@@ -33,33 +33,9 @@ import { formatDeliveryDate } from '@/lib/storefront/format';
 import type { Messages } from '../cart-types';
 
 /**
- * **Sepetin kimlik ve adres bloğu** — özet panelinin üstünde (kullanıcı kararı 13.09).
- *
- * Ödeme ekranına geçmeden önce iki şey belli olmalı: KİM ve NEREYE. İkisi de burada sorulur;
- * ödeme ekranı yalnız gösterir (`AddressStep` salt okunur). Ölçülen pratik de bu: Picard'da
- * sepetteki "Commander" giriş sayfasına götürüyor, REWE hesapsız sipariş almıyor.
- *
- * ── İKİ HÂL, TEK YER ────────────────────────────────────────────────────────
- * · Girişsiz → kompakt giriş bloğu. Adres alanı HİÇ görünmez (kullanıcı kararı): kimliği olmayan
- *   müşteriye adres sormak, cevabı kaydedemeyeceğimiz bir soru sormaktır.
- * · Girişli, MASAÜSTÜ → v1'in birebir aynısı (14.09, kullanıcının görüntü çifti): kimlik kartı
- *   (baş harfli yuvarlak · ad · e-posta · "Hesabım") ve adres kartı — kayıtlı adresler seçim kartı
- *   olarak (seçmek = varsayılan yapmak), "+ Yeni adres", altta teslim şeridi. Düzenleme ve silme
- *   hesap sayfasında; v1 sepette "Değiştir · Düzenle" çizmiyor.
- * · Girişli, MOBİL WEB → native sepetin teslimat adresi KÜNYESİ (08.58, 14.09): kutu değil, sepetin başında
- *   duran bir durum bildirimi — terracotta üstbaşlık · tek satır adres · not · "Değiştir" (adres penceresi, ekran
- *   terk edilmez); adres yoksa aynı yerde "+ Adres ekle". Metin ortak sepet sözlüğünden (`@lezzet/i18n/customer/cart`).
- *   Misafirin giriş bloğu telefonda native sepetin grup kutusunun kabuğunda (kum zemin, kum çerçeve): native'de sepet
- *   girişsiz açılmıyor, bloğun karşılığı yok.
- *
- * ── GİRİŞ BLOĞU ÖDEME EKRANININ ESKİ BLOĞU DEĞİL ────────────────────────────
- * Oradaki "adım 0" kartı 480 px'lik ortalanmış bir sütundu ve kullanıcı sepet için onu kaba buldu.
- * Burası özet kartının kendi dilinde: aynı kart kabuğu (`cardClass snug`), aynı başlık kademesi,
- * giriş sayfasının sırası (Google · ayraç · e-posta · gönder). Yeni bir görsel dil yok.
- *
- * **Giriş sonrası sayfa TAZELENİR, yönlendirilmez:** oturum çereze düşer, `router.refresh()` layout'u
- * yeniden çizer (hesap künyesi ve yer bağlamı iner), sepet yeniden okunur (`reload` — misafir
- * sepeti sunucuya devralınır, `readCartAction` künyesi). Müşteri sepetinden ayrılmaz.
+ * Sepetin kimlik ve adres bloğu: ödemeye geçmeden önce "kim" ve "nereye" burada sorulur, ödeme ekranı yalnız gösterir.
+ * Girişsiz müşteriye adres sorulmaz, çünkü cevabı kaydedilemez; giriş sonrası sayfa yönlendirilmez, tazelenir ki müşteri
+ * sepetinden ayrılmasın.
  */
 interface CartIdentityProps {
   t: Messages;
@@ -85,7 +61,7 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
   const trimmed = email.trim();
   const validEmail = isValidEmail(trimmed);
 
-  /** Anahtar → cümle. `authErrorMessage` saf tablo; çeviri ekranda yapılıyor (denetim S1). */
+  /** Anahtar → cümle: `authErrorMessage` saf tablo, çeviri ekranda yapılır. */
   const say = (key: AuthErrorKey | null): string => (key ? authErrorMessage(key, locale) : c.googleUnavailable);
 
   const google = async () => {
@@ -131,8 +107,7 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
     router.refresh();
   };
 
-  // Masaüstünde DİKKAT TONU (kullanıcı isteği 14.09): ödemeye geçmenin ilk şartı bu kart, eksik adım
-  // sepetin geri kalanından ayrışsın. Telefonda native sepetin grup kutusunun kabuğu (dosya künyesi).
+  // Masaüstünde dikkat tonu: ödemeye geçmenin ilk şartı bu kart ve eksik adım sepetin geri kalanından ayrışmalı.
   return (
     <div
       className={
@@ -190,9 +165,8 @@ function CartLogin({ t, locale, compact }: Required<CartIdentityProps>) {
 }
 
 /**
- * Telefon görünümü — native sepetin teslimat adresi künyesi (`cart-screen.tsx` `place`, dosya künyesi). Künye sepetin
- * NEYE göre değerlendirildiğini söyler; adresi değiştirmek sepeti terk ettirmez (native 10.08 kullanıcı bulgusu). Adres
- * tek satır (native `addressLine`: sokak · posta kodu şehir); düzenleme hesap sayfasında — native künye onu çizmiyor.
+ * Telefon görünümünün adres künyesi, native sepetinkinin ikizi: sepetin neye göre değerlendirildiğini söyler ve adresi
+ * değiştirmek sepeti terk ettirmez.
  */
 function CartAddress({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
   const copy = cartMessages[locale].address;
@@ -221,10 +195,7 @@ function CartAddress({ t, locale }: Pick<CartIdentityProps, 't' | 'locale'>) {
   );
 }
 
-/**
- * Masaüstü v1'in iki kartı (14.09) — kimlik ve teslimat adresi. Sağ sütunun `gap`i ikisini ayırır
- * (v1 14px); parça bu yüzden tek kutu değil, iki kart döndürür.
- */
+/** Masaüstünde kimlik ve adres iki ayrı kart: sağ sütunun boşluğu onları ayırır, bu yüzden parça iki kart döndürür. */
 interface CartAccountDesktopProps {
   t: Messages;
   locale: Locale;
@@ -236,7 +207,7 @@ function CartAccountDesktop({ t, locale, account }: CartAccountDesktopProps) {
     <>
       <div className={cardClass({ pad: 'row' })}>
         <div className="flex items-center gap-2.75">
-          {/* Başlıktaki hesap girişinin yuvarlağıyla aynı baş harfler ve aynı ton (v1 ikisinde de #efdfc2). */}
+          {/* Başlıktaki hesap girişinin yuvarlağıyla aynı baş harfler ve aynı ton. */}
           <span aria-hidden className="grid size-9 flex-none place-items-center rounded-full bg-honey-line font-sans text-note font-bold text-honey">
             {initialsOf(account.name, account.email, locale)}
           </span>
@@ -260,13 +231,8 @@ interface AddressChoiceProps {
 }
 
 /**
- * Teslimat adresi kartı — kayıtlı adresler SEÇİM KARTI olarak (v1). Liste ve seçim adres penceresi
- * ve yer paneliyle ortak (`useMyAddresses`); seçmek = varsayılan yapmak, o yüzden seçili kart
- * "· varsayılan" taşır (yer panelinin kartıyla aynı dil). Çizim ayrı: v1 sepette kartı krem zeminde,
- * tek satır adresle ve kanal rozetsiz çiziyor.
- *
- * Altta TESLİM ŞERİDİ: seçili adresin kodu ve teslim şekli. Kargo hâlinde süre yazılmaz (v1 "2–3 iş
- * günü" diyor): taşıma süresini bu noktada bilmiyoruz, ekrana yalnız olgu yazılır.
+ * Kayıtlı adresler seçim kartı olarak; seçmek varsayılan yapmaktır, bu yüzden seçili kart "· varsayılan" taşır. Alttaki teslim
+ * bandında kargo süresi yazılmaz, çünkü taşıma süresi bu noktada bilinmiyor ve ekrana yalnız olgu yazılır.
  */
 function AddressChoice({ t, locale }: AddressChoiceProps) {
   const c = t.identity;
@@ -287,9 +253,8 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
 
   const dialog = adding && <AddressPickerDialog locale={locale} initialMode="new" onClose={() => setAdding(false)} />;
 
-  // Seçilecek adres YOKSA kartın TAMAMI "+ Yeni adres"tir (kullanıcı isteği 14.09): köşedeki yeşil bağ
-  // bal zeminde gözden kaçabiliyordu. Tek düğme — bağ burada yalnız görsel etiket, iç içe düğme yok;
-  // pencere kartın DIŞINDA çizilir (düğmenin içinde etkileşimli içerik olamaz).
+  // Seçilecek adres yoksa kartın tamamı "+ Yeni adres" düğmesidir, çünkü köşedeki bağ bal zeminde gözden kaçar. Pencere kartın
+  // dışında çizilir: düğmenin içinde etkileşimli içerik olamaz.
   if (rows.length === 0) {
     return (
       <>
@@ -315,9 +280,8 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
     );
   }
 
-  // Seçili adres yoksa DİKKAT TONU (kullanıcı isteği 14.09) — koşul "Ödemeye geç" kapısının adres
-  // şartıyla aynı (`useCheckoutGate`). Seçili adres sunucudan hazır geldiği için kart ilk karede doğru
-  // tonda açılır. Karşılanamayan adreste kart düz kalır: uyarıyı kartın içindeki şerit söylüyor.
+  // Seçili adres yoksa dikkat tonu; koşul "Ödemeye geç" kapısının adres şartıyla aynı (`useCheckoutGate`). Karşılanamayan adreste
+  // kart düz kalır, çünkü uyarıyı kartın içindeki bant söyler.
   return (
     <div className={cardClass({ pad: 'side', gap: 'sm', tone: current ? 'plain' : 'attention' })}>
       <div className="flex items-baseline justify-between gap-3">
@@ -325,8 +289,7 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
         <button
           type="button"
           onClick={() => setAdding(true)}
-          // Kitin odak halkası: pencere kapanınca odak bu düğmeye döner ve halka yazılmayınca
-          // tarayıcının mavi çerçevesi çiziliyordu (14.09, kullanıcının görüntüsü).
+          // Kitin odak halkası: pencere kapanınca odak bu düğmeye döner ve halka yazılmazsa tarayıcının mavi çerçevesi çizilir.
           className={`flex-none cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark ${focusRingClass}`}
         >
           {am.add}
@@ -356,8 +319,7 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
                 {row.label || row.city}
                 {selected && ` · ${placeMessages[locale].panelDefault}`}
               </span>
-              {/* Alıcı — kapıda kimin karşılayacağı (kullanıcı isteği 14.09: gönderilen kişinin adı kartta
-                  görünmeli). v1 kartı çizmiyor. */}
+              {/* Alıcı: kapıda kimin karşılayacağı kartta görünmeli. */}
               <span className="truncate font-sans text-note text-ink">{row.recipient}</span>
               <span className="font-sans text-note leading-normal text-body">
                 {row.line1} · {row.postalCode} {row.city}
@@ -372,8 +334,7 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
           <span>{stripText(c, locale, current, place)}</span>
         </DeliveryStrip>
       )}
-      {/* Adres karşılanamıyorsa şerit bunu SÖYLER (14.09): önce hiç çizilmiyordu, sepet susuyordu ve
-          müşteri ret cümlesini ancak siparişi onaylarken görüyordu (ölçüldü: 90451 Nürnberg). */}
+      {/* Adres karşılanamıyorsa bant bunu söyler, yoksa müşteri ret cümlesini ancak siparişi onaylarken görürdü. */}
       {current && !place && unresolved && (
         <DeliveryStrip inRoute={false} unreachable tone="deep">
           <span>{c.stripUnreachable.replace('{place}', `${current.postalCode} ${current.city}`)}</span>

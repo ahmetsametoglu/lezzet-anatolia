@@ -16,22 +16,8 @@ import messages from '@lezzet/i18n/customer/address';
 import placeMessages from './place-messages.json';
 
 /**
- * **Teslimat adresi seçici** — kayıtlı adreslerden seç · yeni ekle · düzenle (kullanıcı kararı 13.09).
- *
- * İki yerden açılır ve ikisi de aynı soruyu soruyor: sepet panelinin "Değiştir / Yeni adres"i ve
- * başlıktaki yer paneli ("+ Yeni adres ekle"). Aynı seçici iki yerde iki türlü çizilseydi müşteri
- * ikisini iki ayrı şey sanırdı.
- *
- * **Seçmek = varsayılan yapmak.** Şemanın kendi tanımı zaten bu (`Address.isDefault`: *"checkout'un
- * önceden seçtiği adres"*); ikinci bir "seçili adres" alanı, aynı gerçeğin iki kaynağı olurdu.
- * Yer bağlamı seçimi sunucuya yazar ve yeni kareyi benimser (`selectAddress`); burası yalnız
- * listeyi çizer. Liste ve seçim adımı masaüstü yer paneliyle ortak (`useMyAddresses`).
- *
- * **Yeni adres v1'in penceresi** (13.09): başlık "Yeni teslimat adresi", altında tek cümle, 580px;
- * gövde `AddressForm`. Kaydedince bildirim adresin eklendiğini ve seçildiğini söyler (v1 `bildir`).
- *
- * Hesap sayfasına bağlantı en altta (kullanıcı kararı: *"kullanıcıyı bunlar için hesabına da
- * yönlendirebiliriz"*): silme ve fatura işareti orada; burası dar bir seçim penceresi.
+ * Teslimat adresi seçici: sepet panelinden ve başlıktaki yer panelinden aynı soru için açılır, bu yüzden tek bileşendir.
+ * Seçmek varsayılan yapmaktır (`Address.isDefault`), çünkü ikinci bir "seçili adres" alanı aynı gerçeğin iki kaynağı olurdu.
  */
 interface AddressPickerDialogProps {
   locale: Locale;
@@ -67,8 +53,7 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
 
   const save = async (id: string | null, input: Parameters<typeof toAddressFields>[0]) => {
     setError(null);
-    /* Çağrı DÖNMEDİYSE (sunucuya ulaşılamadı, bağlantı koptu) genel cümleye düşer: reddi yutmak
-       değil, müşteriye söylemek. Önce düğme kilitli, pencere cümlesiz kalıyordu (yaşandı 14.09). */
+    /* Çağrı dönmediyse (sunucuya ulaşılamadı, bağlantı koptu) genel cümleye düşer: ret yutulmaz, müşteriye söylenir. */
     const result = await saveAddress({
       id,
       fields: toAddressFields(input),
