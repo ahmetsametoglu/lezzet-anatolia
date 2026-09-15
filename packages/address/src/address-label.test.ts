@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressDefaultsOf, addressLabelKind } from './address-label';
+import { addressDefaultsOf, addressLabelKind, addressTitle } from './address-label';
 
 const TR = { kindHome: 'Ev', kindWork: 'İş' };
 const FR = { kindHome: 'Maison', kindWork: 'Travail' };
@@ -41,5 +41,14 @@ describe('addressDefaultsOf', () => {
 
   it('numarasız hesapta telefon boş gelir — alan müşteriden istenir', () => {
     expect(addressDefaultsOf({ name: 'Claire Weber', phone: null })).toEqual({ recipient: 'Claire Weber', phone: '' });
+  });
+});
+
+describe('addressTitle', () => {
+  it('etiketsiz ya da boş etiketli adreste başlık şehirdir', () => {
+    // `??` boş etiketi başlık sayar ve başlık boş kalırdı; bu yüzden iki yüzey aynı fonksiyonu kullanır.
+    expect(addressTitle({ label: null, city: 'Strasbourg' })).toBe('Strasbourg');
+    expect(addressTitle({ label: '', city: 'Strasbourg' })).toBe('Strasbourg');
+    expect(addressTitle({ label: 'Ev', city: 'Strasbourg' })).toBe('Ev');
   });
 });

@@ -1,6 +1,6 @@
 'use server';
 
-import { isValidPostalCode, normalizePostalCode, placeLabel } from '@lezzet/address';
+import { isValidPostalCode, minPostalQueryLength, normalizePostalCode, placeLabel } from '@lezzet/address';
 import { suggestPlaces } from '@lezzet/application';
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, serviceDb } from '@lezzet/database';
 import { resolvePlaceByPostalCode } from '@lezzet/domain-core';
@@ -97,8 +97,8 @@ async function finishResolved(
  */
 export async function suggestPostalCodesAction(prefix: string): Promise<PlaceOption[]> {
   const normalized = normalizePostalCode(prefix);
-  // Servisin eşiği (kodda iki hane, adda üç harf) burada da uygulanır ki kısa terim için sunucu turu harcanmasın.
-  if (normalized.length < (/\p{L}/u.test(normalized) ? 3 : 2)) return [];
+  // Servisin eşiği burada da uygulanır ki kısa terim için sunucu turu harcanmasın.
+  if (normalized.length < minPostalQueryLength(normalized)) return [];
   try {
     // Öneri `suggestPlaces`ten geçer ki ad türetme kuralı tek yerde kalsın ve iki yüzey aynı cevabı görsün.
     return await suggestPlaces(serviceDb(), normalized);

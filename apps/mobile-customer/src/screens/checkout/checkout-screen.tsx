@@ -25,7 +25,7 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { hapticError, hapticSuccess } from '@lezzet/mobile-kit/src/lib/haptics/haptics';
 import { presentPayment } from '@/lib/payment/payment-sheet';
-import { addressLine } from '@lezzet/address';
+import { addressLine, addressTitle } from '@lezzet/address';
 import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { cartLineId, refreshCart, setPurchasePlace, useCart } from '@/screens/customer-kit/cart-store';
@@ -616,8 +616,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
               {addresses.map((candidate) => (
                 <OptionRow
                   key={candidate.id}
-                  // Etiketsiz adreste başlık ŞEHİRDİR — uydurma etiket yazılmaz (entity künyesi).
-                  label={candidate.label ?? candidate.city}
+                  label={addressTitle(candidate)}
                   description={addressLine(candidate)}
                   selected={candidate.id === selectedAddress?.id}
                   onPress={() => setAddressId(candidate.id)}

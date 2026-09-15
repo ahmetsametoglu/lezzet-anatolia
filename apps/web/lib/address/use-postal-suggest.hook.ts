@@ -1,5 +1,6 @@
 'use client';
 
+import { MIN_POSTAL_PREFIX_LENGTH } from '@lezzet/address';
 import { useDebouncedLookup, type LookupResult } from '@lezzet/address/react';
 
 import type { PlaceOption } from '@lezzet/types';
@@ -10,9 +11,6 @@ import { suggestPostalCodesAction } from '@/lib/delivery/actions';
   Web adres formunun posta kodu alanı kendi `postal_code_place` tablomuzdan önerilir, çünkü elle yazılan kod ülkesini
   söylemiyor ve 610 kod iki ülkede birden geçerli. Seçilen satır `(country, postalCode)` ikilisini birlikte taşır.
 */
-
-/** Kancanın eşiği iki: gerçek eşik eylemde terimin türüne göre uygulanıyor (kodda 2, adda 3); burada küçüğü duruyor ki üç harfli bir ad eyleme ulaşabilsin. */
-const MIN_PREFIX_LENGTH = 2;
 
 const EMPTY: PlaceOption[] = [];
 
@@ -26,5 +24,6 @@ async function lookup(term: string): Promise<LookupResult<PlaceOption[]>> {
 }
 
 export function usePostalSuggest(prefix: string, { enabled }: { enabled: boolean }): PlaceOption[] {
-  return useDebouncedLookup(prefix, { enabled, minLength: MIN_PREFIX_LENGTH, empty: EMPTY, lookup, cache });
+  // Küçük eşik: türe göre asıl eşik eylemde uygulanır ve üç harfli bir ad oraya ulaşabilmeli.
+  return useDebouncedLookup(prefix, { enabled, minLength: MIN_POSTAL_PREFIX_LENGTH, empty: EMPTY, lookup, cache });
 }

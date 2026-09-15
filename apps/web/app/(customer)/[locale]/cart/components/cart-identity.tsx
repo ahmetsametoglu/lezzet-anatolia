@@ -22,7 +22,7 @@ import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { useMyAddresses } from '@/components/customer/delivery/use-my-addresses.hook';
 import addressMessages from '@lezzet/i18n/customer/address';
 import placeMessages from '@/components/customer/delivery/place-messages.json';
-import { addressLine } from '@lezzet/address';
+import { addressLine, addressTitle } from '@lezzet/address';
 import { createClient } from '@/lib/supabase/client';
 import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
 import { sendEmailOtp, verifyEmailOtp } from '@/lib/auth/otp-actions';
@@ -316,7 +316,7 @@ function AddressChoice({ t, locale }: AddressChoiceProps) {
             <RadioMark selected={selected} />
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="truncate font-sans text-body-sm font-bold text-ink">
-                {row.label || row.city}
+                {addressTitle(row)}
                 {selected && ` · ${placeMessages[locale].panelDefault}`}
               </span>
               {/* Alıcı: kapıda kimin karşılayacağı kartta görünmeli. */}

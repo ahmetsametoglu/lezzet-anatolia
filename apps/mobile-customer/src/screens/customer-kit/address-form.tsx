@@ -1,4 +1,11 @@
-import { addressLabelKind, hasHouseNumber, MIN_QUERY_LENGTH, type AddressLabelKind } from '@lezzet/address';
+import {
+  addressLabelKind,
+  addressTitle,
+  hasHouseNumber,
+  MIN_QUERY_LENGTH,
+  POSTAL_CODE_PATTERN,
+  type AddressLabelKind,
+} from '@lezzet/address';
 import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import addressCopy from '@lezzet/i18n/customer/address';
@@ -44,9 +51,6 @@ export { addressDefaultsOf } from '@lezzet/address';
 
 type AddressCopy = LocalizedCopy<typeof addressCopy>;
 type PlaceCopy = LocalizedCopy<typeof placeCopy>;
-
-/** FR ve DE'de ortak beş hane; form kapısıdır, asıl kural sunucuda. */
-const POSTAL_CODE = /^\d{5}$/;
 
 /** Google künye görselinin kendi oranı (98×18'lik logonun 3 katı: 294×54 piksel). */
 const GOOGLE_LOGO_RATIO = 294 / 54;
@@ -122,7 +126,7 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
   const phone = phoneDraft ?? defaults?.phone ?? '';
   const label = kind === 'home' ? t.kindHome : kind === 'work' ? t.kindWork : custom.trim() || null;
   const manualReady =
-    manual !== null && manual.line1.trim() !== '' && POSTAL_CODE.test(manual.postalCode) && manual.city.trim() !== '';
+    manual !== null && manual.line1.trim() !== '' && POSTAL_CODE_PATTERN.test(manual.postalCode) && manual.city.trim() !== '';
   // Alıcı ve telefon olmadan kurye kapıya gidemez; sokak ve kod olmadan adres adres değildir.
   const complete = (picked !== null || manualReady) && recipient.trim() !== '' && phone.trim() !== '';
 
@@ -206,7 +210,7 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
       const savedId = editing?.id ?? result.data.find((address) => !knownIds.has(address.id))?.id ?? null;
       if (editing === null && savedId !== null) {
         selectDeliveryAddress(savedId);
-        toastSuccess(copy.savedToast.replace('{name}', label ?? base.city));
+        toastSuccess(copy.savedToast.replace('{name}', addressTitle({ label, city: base.city })));
       }
       onSaved(result.data, savedId);
     } finally {

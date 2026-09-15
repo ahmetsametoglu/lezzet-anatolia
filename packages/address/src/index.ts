@@ -9,9 +9,17 @@ export { addressLineOf } from './fr/address';
 export type { AddressKind, AddressSuggestion } from './fr/address';
 export { hasHouseNumber } from './house-number';
 export { addressLine } from './address-line';
-export { addressDefaultsOf, addressLabelKind } from './address-label';
+export { addressDefaultsOf, addressLabelKind, addressTitle } from './address-label';
 export type { AddressLabelKind } from './address-label';
-export { isValidPostalCode, normalizePostalCode } from './postal-code';
+export {
+  isPlaceNameQuery,
+  isValidPostalCode,
+  MIN_PLACE_NAME_LENGTH,
+  MIN_POSTAL_PREFIX_LENGTH,
+  minPostalQueryLength,
+  normalizePostalCode,
+  POSTAL_CODE_PATTERN,
+} from './postal-code';
 export { cityMatchesPlaces, normalizePlaceName, placeLabel } from './place-name';
 export { addressVerdict } from './address-verdict';
 export type { AddressCandidate, AddressVerdict } from './address-verdict';

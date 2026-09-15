@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { addressTitle } from '@lezzet/address';
 import type { PaymentMethod } from '@lezzet/types';
 import { Link, useRouter } from '@/i18n/navigation';
 import { Button } from '@/components/customer/ui/button';
@@ -139,7 +140,7 @@ export function AddressStep({ t, compact, selectedAddress }: CheckoutViewProps) 
         // Seçili kartın dili: `2px zeytin + zeytin-zemin` (tasarımın seçili adres kartı) — ama bir
         // `<button>` değil, çünkü burada seçilecek bir şey yok.
         <div className="flex w-max max-w-full flex-col gap-[3px] rounded-soft border-2 border-olive bg-olive-bg px-[18px] py-3.5">
-          <span className="font-sans text-body-sm font-bold text-ink">{selectedAddress.label ?? selectedAddress.city}</span>
+          <span className="font-sans text-body-sm font-bold text-ink">{addressTitle(selectedAddress)}</span>
           <span className="font-sans text-note leading-relaxed text-body">
             {selectedAddress.line1}
             {selectedAddress.line2 && `, ${selectedAddress.line2}`}

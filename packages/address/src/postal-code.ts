@@ -7,6 +7,23 @@ export function normalizePostalCode(value: string): string {
 }
 
 /** İki pazarın (FR, DE) biçimi aynı beş hane; üçüncü bir ülke açılırsa kural burada dallanır. */
+export const POSTAL_CODE_PATTERN = /^\d{5}$/;
+
 export function isValidPostalCode(raw: string): boolean {
-  return /^\d{5}$/.test(normalizePostalCode(raw));
+  return POSTAL_CODE_PATTERN.test(normalizePostalCode(raw));
+}
+
+/** Tek haneli önek hiçbir yeri işaret etmez. */
+export const MIN_POSTAL_PREFIX_LENGTH = 2;
+
+/** İki harflik ad parçası yüzlerce yerleşime uyar ve trigram indeksi üç harfin altında çalışmaz. */
+export const MIN_PLACE_NAME_LENGTH = 3;
+
+/** FR ve DE kodları tamamen sayısal olduğu için harfli terim yer adıdır. */
+export function isPlaceNameQuery(term: string): boolean {
+  return /\p{L}/u.test(term);
+}
+
+export function minPostalQueryLength(term: string): number {
+  return isPlaceNameQuery(term) ? MIN_PLACE_NAME_LENGTH : MIN_POSTAL_PREFIX_LENGTH;
 }

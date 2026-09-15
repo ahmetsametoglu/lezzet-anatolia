@@ -3,6 +3,11 @@ import { nationalPhone } from '@lezzet/helper';
 /** "Bu adres ne?" seçimi. */
 export type AddressLabelKind = 'home' | 'work' | 'other';
 
+/** Etiketsiz adreste başlık şehirdir, uydurma etiket yazılmaz; boş etiket de etiketsizdir. */
+export function addressTitle(address: { label?: string | null; city: string }): string {
+  return address.label || address.city;
+}
+
 /**
  * Kayıtlı başlıktan seçim: dilin "Ev"/"İş" adıysa o seçim, başka bir adsa "Diğer" ve ad, boşsa "Diğer".
  * Etiket yazıldığı dilde saklanır; başka dilde açılan form onu "Diğer" altında gösterir, müşterinin yazdığı değiştirilmez.

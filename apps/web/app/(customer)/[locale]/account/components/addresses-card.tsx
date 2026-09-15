@@ -8,7 +8,7 @@ import { AddressForm, toAddressFields, toFormInput, type AddressDefaults } from 
 import { Note } from '@/components/customer/phone-kit/note';
 import { SettingsCard, SettingsDivider } from '@/components/customer/phone-kit/settings-card';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
-import { addressLine } from '@lezzet/address';
+import { addressLine, addressTitle } from '@lezzet/address';
 import { errorText } from '@/lib/customer-error-text';
 import { addAddressAction, deleteAddressAction, setBillingAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';
@@ -101,7 +101,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
         {/* Adres yokken çizilmez: olmayan rozetin açıklaması gürültüdür. */}
         {addresses.length > 0 && <p className="font-sans text-helper text-muted">{phoneCopy.note}</p>}
         {addresses.map((address, index) => {
-          const title = address.label || address.city;
+          const title = addressTitle(address);
           const actions = [
             address.isDefault ? null : (
               <TextAction
@@ -203,7 +203,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact, billing
           >
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="truncate font-sans text-body-sm font-bold text-ink">
-                {address.label || address.city}
+                {addressTitle(address)}
                 {address.isDefault && ` · ${t.addressDefault}`}
                 {/* İki rol ayrı yazılır: bir adres ikisi birden olabilir. */}
                 {billing && address.isBilling && ` · ${t.addressBilling}`}

@@ -1,3 +1,4 @@
+import { addressTitle } from '@lezzet/address';
 import { formatCompactEuro, formatPrice } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { Country } from '@lezzet/types';
@@ -233,7 +234,7 @@ export function AccountScreen({
       if (result.error !== null) return setBillingFailed(true);
       setBillingFailed(false);
       addressBook.publish(result.data);
-      toastSuccess(t.addresses.billingDone.replace('{label}', address.label ?? address.city));
+      toastSuccess(t.addresses.billingDone.replace('{label}', addressTitle(address)));
     });
   };
 
@@ -242,8 +243,7 @@ export function AccountScreen({
       if (result.error !== null) return setDefaultFailed(true);
       setDefaultFailed(false);
       addressBook.publish(result.data);
-      // Başlık kartla aynı kural: etiketsiz adreste şehir.
-      toastSuccess(t.addresses.defaultDone.replace('{label}', address.label ?? address.city));
+      toastSuccess(t.addresses.defaultDone.replace('{label}', addressTitle(address)));
     });
   };
 

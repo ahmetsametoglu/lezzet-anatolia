@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { addressTitle } from '@lezzet/address';
 import type { Address } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { Link } from '@/i18n/navigation';
@@ -64,7 +65,7 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
     if (!result.ok) return setError(errorText(t.errors, result.errorKey));
     // Yeni adres için iş bitti: müşteri adresi oraya göndermek için ekledi, listeye dönmesine
     // gerek yok. Düzenlemede de aynı — seçim değişmedi, yalnız satır güncellendi.
-    if (id === null) notify(t.savedToast.replace('{name}', result.address.label || result.address.city));
+    if (id === null) notify(t.savedToast.replace('{name}', addressTitle(result.address)));
     onClose();
   };
 
@@ -127,7 +128,7 @@ export function AddressPickerDialog({ locale, onClose, compact = false, initialM
                   className="flex min-w-0 flex-1 cursor-pointer flex-col gap-0.5 text-left disabled:cursor-progress"
                 >
                   <span className="truncate font-sans text-body-sm font-bold text-ink">
-                    {row.label || row.city}
+                    {addressTitle(row)}
                     {selected && <span className="font-semibold text-olive-dark"> · {t.selected}</span>}
                   </span>
                   <span className="truncate font-sans text-note text-body">{row.line1}</span>

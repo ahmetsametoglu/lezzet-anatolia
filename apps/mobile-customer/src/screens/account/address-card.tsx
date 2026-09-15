@@ -4,8 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { MeAddress } from '@/lib/api/addresses';
-import { addressLine } from '@lezzet/address';
-import { addressTitle } from '@/screens/customer-kit/address-format';
+import { addressLine, addressTitle } from '@lezzet/address';
 // Yalnız metin bloğunun tipi için: komponent sözlüğü okumaz, çağıran geçirir.
 import type accountMessages from '@lezzet/i18n/customer/account';
 

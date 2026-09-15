@@ -358,8 +358,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   `not-fiyat-*`, `not-bildirim-*`, `bildirim-*`, `inceleme-*`, `koordinasyon-*`, `ekler-*`, `biriken-*`) gözden geçirilecek.
 - [ ] (K.8) [hedef: paket] `mobile-kit` turunda `screens/login/login-notice.ts` tek başına kaldı (giriş ekranı müşteri
   uygulamasına taşındı); iki uygulamanın ortak uyarı tanımı `lib/auth` gibi bir yere alınmalı.
-- [ ] (K.9) [hedef: paket] Posta kodu önek eşiği (kodda 2, adda 3) dört yerde ayrı yazılı: veritabanı `postal-code-place.service`,
-  web `suggestPostalCodesAction` ve iki `usePostalSuggest`; `helper`da posta kodu fonksiyonlarının yanında tek sabit olmalı.
 - [ ] (K.10) [hedef: paket] 300 ms arama gecikmesi üç yerde ayrı: `@lezzet/address/react` çekirdeği, web `use-search-draft`,
   native operasyon `use-batch-subject`; aynı ölçü, tek sabit olmalı.
 - [ ] (K.11) [hedef: web] Web adres araması iki yoldan gidiyor (Fransa tarayıcıdan, Almanya sunucu eylemiyle), native tek kapıya

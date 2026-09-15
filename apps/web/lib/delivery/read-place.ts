@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
+import { POSTAL_CODE_PATTERN } from '@lezzet/address';
 import { AddressService, PostalCodePlaceService, serviceDb } from '@lezzet/database';
 import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
 import type { Address } from '@lezzet/types';
@@ -138,7 +139,7 @@ async function readPlaceAnswerFromCookie(): Promise<PlaceAnswer | null> {
     if (typeof parsed !== 'object' || parsed === null) return null;
     const row = parsed as Record<string, unknown>;
     // İstemciden gelen her şey şüphelidir; uymayan çerez yok sayılır, bozuk çerez yüzünden sayfa çökmez.
-    if (typeof row.postalCode !== 'string' || !/^\d{5}$/.test(row.postalCode)) return null;
+    if (typeof row.postalCode !== 'string' || !POSTAL_CODE_PATTERN.test(row.postalCode)) return null;
     if (row.country !== 'FR' && row.country !== 'DE') return null;
     return { country: row.country, postalCode: row.postalCode };
   } catch {

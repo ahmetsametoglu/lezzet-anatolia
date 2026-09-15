@@ -1,3 +1,5 @@
+import { POSTAL_CODE_PATTERN } from '../postal-code';
+
 /*
   BAN kapı numarasını yalnız sokak adından önce yazılınca tanıyor: "rue du Maréchal Foch 192c" sıfır sonuç, "192c rue du
   Maréchal Foch" gerçek kapıyı döndürüyor. Müşteri numarayı sonda da yazdığı için ikinci soru numara başa alınarak sorulur.
@@ -7,7 +9,6 @@
 const SUFFIX = /^(?:bis|ter|quater|[a-z])$/i;
 /** Kapı numarası, eki bitişik ya da eksiz: "12", "192c", "12bis"; beş hane posta kodudur. */
 const NUMBER = /^\d{1,4}(?:bis|ter|quater|[a-z])?$/i;
-const POSTAL = /^\d{5}$/;
 
 /**
  * Sondaki numarası başa alınmış sorgu; sonda numara yoksa ya da metin zaten numarayla başlıyorsa `null`.
@@ -19,7 +20,7 @@ export function houseNumberFirst(query: string): string | null {
     .split(/\s+/)
     .map((word) => word.replace(/,$/, ''))
     .filter(Boolean);
-  const postal = words.length > 1 && POSTAL.test(words[words.length - 1] ?? '') ? words.pop() : undefined;
+  const postal = words.length > 1 && POSTAL_CODE_PATTERN.test(words[words.length - 1] ?? '') ? words.pop() : undefined;
 
   const last = words[words.length - 1];
   const beforeLast = words[words.length - 2];

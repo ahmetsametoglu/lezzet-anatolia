@@ -1,7 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PostalCodePlaceSchema, type Country, type PostalCodePlace } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
-import { normalizePlaceName, normalizePostalCode } from '@lezzet/address';
+import {
+  isPlaceNameQuery,
+  MIN_PLACE_NAME_LENGTH,
+  MIN_POSTAL_PREFIX_LENGTH,
+  normalizePlaceName,
+  normalizePostalCode,
+} from '@lezzet/address';
 import { DeliveryZonePostalCodeService } from './delivery-zone.service';
 
 /** Salt okunur: veri GeoNames dökümünden üretilir (`pnpm postal:build`) ve elle düzeltme bir sonraki üretimde sessizce geri alınırdı. */
@@ -39,17 +45,15 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
    * sıralamada öne alınır ama seçilmez, çünkü adaylar arasındaki fark KDV oranı da olabilir.
    */
   async search(term: string, limit = 8): Promise<PostalCodeSuggestion[]> {
-    // Dal terimin kendisinden seçilir, çağırandan bayrak alınmaz: FR ve DE kodları tamamen sayısal olduğu için harfli terim yer
-    // adıdır.
-    const byName = /\p{L}/u.test(term);
+    // Dal terimin kendisinden seçilir, çağırandan bayrak alınmaz.
+    const byName = isPlaceNameQuery(term);
     return byName ? this.searchByPlace(term, limit) : this.searchByCode(term, limit);
   }
 
   /** Önek indeksi (`postal_code_place_code`) üstünde çalışır. */
   private async searchByCode(prefix: string, limit: number): Promise<PostalCodeSuggestion[]> {
-    // Tek haneli önek hiçbir yeri işaret etmez; kısa öneki reddetmek başarım değil anlam meselesi.
     const normalized = normalizePostalCode(prefix);
-    if (normalized.length < 2) return [];
+    if (normalized.length < MIN_POSTAL_PREFIX_LENGTH) return [];
 
     return this.enrich(
       await this.getAll(undefined, {
@@ -66,9 +70,8 @@ export class PostalCodePlaceService extends BaseDbService<PostalCodePlace, never
    * bulamaz.
    */
   private async searchByPlace(term: string, limit: number): Promise<PostalCodeSuggestion[]> {
-    // İki harflik parça yüzlerce yerleşime uyar; trigram indeksi de üç harfin altında çalışmaz.
     const normalized = normalizePlaceName(term);
-    if (normalized.length < 3) return [];
+    if (normalized.length < MIN_PLACE_NAME_LENGTH) return [];
 
     return this.enrich(
       await this.getAll(undefined, {
