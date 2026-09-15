@@ -1,22 +1,16 @@
 /*
-  EĞİK ROZET — native `apps/mobile/src/components/ui/tag.tsx`in web telefon görünümündeki ikizi (14.09).
-  Fiyat çipi · "Tükendi" · indirim · "TOPTAN" · takip çipi hep budur; imzası hafif dönüştür ve açı
-  içeriğe göre değiştiği için PROP. Dört ton token'dan: terracotta (fiyat/fırsat) · ink (koyu vurgu) ·
-  cream (fotoğraf ve koyu blok üstünde) · sand (yumuşak vurgu). Yazı ve gölge rozetin KENDİ
-  kademesinden (`text-badge`, `shadow-badge` — Token Kararlari #16).
-
-  Dönüş satır içi `rotate` ile: açı çağırandan gelen bir sayı ve Tailwind derleme anında bilinmeyen bir
-  değerden sınıf üretemez. `transform` değil `rotate` özelliği — basılı ölçekleme (`scale`) ile
-  çakışmasın.
+  Eğik rozet — fiyat çipi, "Tükendi", indirim, "TOPTAN" hep budur; açı içeriğe göre değiştiği için prop, tonlar token'dan.
+  Dönüş satır içi `rotate` özelliğiyle: Tailwind derleme anında bilinmeyen açıdan sınıf üretemez, `transform` da basılı ölçeklemeyle çakışırdı.
 */
 
-type TagTone = 'terracotta' | 'ink' | 'cream' | 'sand';
+type TagTone = 'terracotta' | 'ink' | 'cream' | 'sand' | 'muted';
 
 const TONE: Record<TagTone, string> = {
   terracotta: 'bg-terracotta text-card',
   ink: 'bg-ink text-sand-50',
   cream: 'bg-sand-50 text-ink',
   sand: 'bg-sand-150 text-olive-dark',
+  muted: 'bg-muted text-card',
 };
 
 interface TagProps {
@@ -27,17 +21,20 @@ interface TagProps {
   rotate?: number;
   /** Rozetin kendi gölgesi — fotoğrafın ya da kartın üstünde yüzen rozetler taşır. */
   shadow?: boolean;
-  /** Köşe kademesi: `badge` (12) bugünkü kullanımların hepsi; `pill` hap köşe (kampanya rozeti, 23.08). */
+  /** Köşe kademesi: `badge` (12) ya da `pill` hap köşe. */
   shape?: 'badge' | 'pill';
+  /** Boy: `lg` paket listesinin büyük fiyat rozeti (15 px yazı, 16 köşe). */
+  size?: 'md' | 'lg';
 }
 
-export function Tag({ label, tone = 'terracotta', rotate = 0, shadow = false, shape = 'badge' }: TagProps) {
+export function Tag({ label, tone = 'terracotta', rotate = 0, shadow = false, shape = 'badge', size = 'md' }: TagProps) {
   return (
     <span
       style={rotate === 0 ? undefined : { rotate: `${rotate}deg` }}
       className={[
-        'inline-block px-3 py-1.5 font-sans text-badge leading-[1.2] whitespace-nowrap',
-        shape === 'pill' ? 'rounded-pill' : 'rounded-badge',
+        'inline-block font-sans leading-[1.2] whitespace-nowrap',
+        size === 'lg' ? 'px-3.5 py-2 text-chip' : 'px-3 py-1.5 text-badge',
+        shape === 'pill' ? 'rounded-pill' : size === 'lg' ? 'rounded-control' : 'rounded-badge',
         TONE[tone],
         shadow ? 'shadow-badge' : '',
       ]

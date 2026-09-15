@@ -4,6 +4,14 @@
     "title": "Sofrayı biz kuralım, siz buyur edin",
     "body": "Bayram, kahvaltı ya da kalabalık bir akşam — hazırladığımız paketler tek fiyata gelir, içeriği bellidir.",
     "meta": "{n} çeşit · TEK FİYAT",
+    "item": "{label} (×{qty})",
+    "note": {
+      "coldChain": "❄ Soğuk zincir",
+      "shippable": "kargoya uygun",
+      "regionOnly": "yalnız bölge içi teslimat",
+      "blocked": "bu adrese teslim edemiyoruz",
+      "away": "bölgenizde şu an yok"
+    },
     "cta": "Paketi incele ›",
     "open": "{name} paketini aç",
     "card": {
@@ -25,6 +33,14 @@
     "title": "Nous dressons la table, vous n'avez qu'à inviter",
     "body": "Une fête, un petit-déjeuner ou un grand dîner — nos coffrets arrivent à prix unique, contenu annoncé.",
     "meta": "{n} produits · PRIX UNIQUE",
+    "item": "{label} (×{qty})",
+    "note": {
+      "coldChain": "❄ Chaîne du froid",
+      "shippable": "expédiable par transporteur",
+      "regionOnly": "livraison dans la zone uniquement",
+      "blocked": "non livrable à cette adresse",
+      "away": "indisponible dans votre zone"
+    },
     "cta": "Voir le coffret ›",
     "open": "Ouvrir le coffret {name}",
     "card": {
@@ -46,6 +62,14 @@
     "title": "Wir decken den Tisch, Sie laden ein",
     "body": "Fest, Frühstück oder ein großer Abend — unsere Pakete kommen zum Festpreis, mit klarem Inhalt.",
     "meta": "{n} Sorten · FESTPREIS",
+    "item": "{label} (×{qty})",
+    "note": {
+      "coldChain": "❄ Kühlkette",
+      "shippable": "versandfähig",
+      "regionOnly": "nur Lieferung in der Region",
+      "blocked": "an diese Adresse nicht lieferbar",
+      "away": "in Ihrer Region derzeit nicht verfügbar"
+    },
     "cta": "Paket ansehen ›",
     "open": "Paket {name} öffnen",
     "card": {
