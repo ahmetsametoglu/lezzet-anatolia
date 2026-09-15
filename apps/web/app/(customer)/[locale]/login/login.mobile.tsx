@@ -56,7 +56,9 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
       </div>
 
       <div className="flex flex-col gap-4 px-6.5 pt-5 pb-7.5">
-        <img src="/logo.jpg" alt={brand.name} className="h-10.5 self-start mix-blend-multiply" />
+        {/* Karenin yatay logosu (`design/00-marka/logo-yatay.png`: işaret + "Lezzet Anatolie" yazısı), 42 yükseklik.
+            Saydam PNG — eski `logo.jpg`nin beyaz zeminini yutan `mix-blend-multiply`ye gerek yok. */}
+        <img src="/logo-yatay.png" alt={brand.name} className="h-10.5 self-start" />
         <h1 className="font-serif text-page-title-sm leading-tight text-ink">{copy.title}</h1>
         <p className="font-sans text-control leading-normal font-normal text-body">{copy.body}</p>
 
