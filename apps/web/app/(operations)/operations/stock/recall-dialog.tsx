@@ -12,17 +12,11 @@ import { chatContext } from '@/components/operation/ui/customer-channel-model';
 import { recallByLotAction } from './actions';
 import type { BatchView, RecallResult } from './stock-types';
 
-// Geri çağırma (rappel) sorgusu — "bu partiden çıkan mal kime gitti".
-//
-// ACİL BİR İŞTİR: tedarikçi bir lotu geri çağırdığında cevap dakikalar içinde verilmelidir. Bu yüzden
-// tek alan, tek düğme ve doğrudan sonuç; ne süzgeç ne sekme. Telefon numarası sonuçta DURUR, çünkü
-// bu listenin devamı müşteriyi aramaktır. Yanında "Mesaj yaz" (15.33): haber uygulamanın içinden YAZILI da
-// gider — cevapsız kalan arama iz bırakmaz, mesaj bırakır.
-//
-// Zincir HAZIRLIK KAYITLARINDAN gelir (`OrderItemBatch`): depocunun onayladığı gerçek, tahmin değil.
+// Geri çağırma acil bir iştir: tek alan, tek düğme ve doğrudan sonuç, ne süzgeç ne sekme. Zincir hazırlık kayıtlarından gelir:
+// depocunun onayladığı gerçek, tahmin değil.
 
 interface RecallDialogProps {
-  /** Satırdan gelen parti numarası — kutu dolu açılır ve sorgu kendiliğinden koşar. */
+  /** Satırdan gelen parti numarası: kutu dolu açılır ve sorgu kendiliğinden koşar. */
   initialLot?: string;
   onClose: () => void;
 }
@@ -47,8 +41,7 @@ export function RecallDialog({ initialLot = '', onClose }: RecallDialogProps) {
     setResult(data);
   };
 
-  // Satırdan gelindiyse sorgu KENDİ KOŞAR: operatör lot'a bastıysa sonucu istiyor demektir,
-  // dolu kutunun yanındaki düğmeye bir kez daha bastırmak boş bir adım olurdu.
+  // Satırdan gelindiyse sorgu kendi koşar: dolu kutunun yanındaki düğmeye bir kez daha bastırmak boş bir adım olurdu.
   useEffect(() => {
     if (!initialLot) return;
     // Yalnız açılışta: sonraki aramalar operatörün kendi tuşuyla koşar.
@@ -179,7 +172,7 @@ interface HitRowProps {
   batch: Pick<BatchView, 'title' | 'lotNumber'> | null;
 }
 
-/** Tek sipariş satırı — müşteriye ULAŞMAK için gereken her şey burada: ad, telefon, tarih, miktar. */
+/** Telefon satırda durur: bu listenin devamı müşteriyi aramaktır. */
 function HitRow({ hit, batch }: HitRowProps) {
   return (
     <div className="flex items-center gap-3 border-b border-ops-line-soft px-3 py-2.5 last:border-b-0">
@@ -200,7 +193,7 @@ function HitRow({ hit, batch }: HitRowProps) {
       ) : (
         <span className="font-ops-body text-ops-xs text-ops-faint">telefon yok</span>
       )}
-      {/* En son yazdığı kanaldan, yüzen pencerede — pencere bu diyaloğun üstünde açılır, liste yerinde kalır. */}
+      {/* Cevapsız kalan arama iz bırakmaz, yazılı mesaj bırakır; pencere diyaloğun üstünde açılır, liste yerinde kalır. */}
       <CustomerChatButton
         customerId={hit.customerId}
         variant="button"

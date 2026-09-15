@@ -10,9 +10,6 @@ import type { ScoreRowView } from '@/lib/feedback/moderation-read';
 import type { CandidateCardView, ModerationCardView, PointsRowView } from './feedback-types';
 import type { ReviewStack } from './feedback-url';
 
-// Geri Bildirim ekranının paylaşılan parçaları — sekme panelleri bunları çizer; kararın kendisi
-// burada tek yerde durur.
-
 interface ModerationCardProps {
   card: ModerationCardView;
   stack: ReviewStack;
@@ -21,18 +18,12 @@ interface ModerationCardProps {
 }
 
 /**
- * Bir yorumun moderasyon kartı.
- *
- * **Metin en görünür yerde ve KIRPILMIYOR.** Karar metne bakılarak veriliyor; üç satırda kesilmiş
- * bir yorumu onaylamak, okumadan onaylamaktır. Uzun yorum kartı uzatır — kuyruk zaten kaydırmalı.
- *
- * **Dil rozeti künyede** (`TR · FR · DE`): yorumlar üç dilden geliyor (§7) ve moderatör Almanca bir
- * metinle karşılaştığında bunu şaşırarak değil, bekleyerek görmeli.
+ * Metin kırpılmaz: karar metne bakılarak verilir, kesilmiş yorumu onaylamak okumadan onaylamaktır. Dil rozeti künyede, çünkü
+ * yorumlar üç dilden gelir ve moderatör Almanca metni beklemeli.
  */
 export function ModerationCard({ card, stack, pending, onModerate }: ModerationCardProps) {
   const { review } = card;
-  // Yayındaki bir yorumun tek kararı GERİ ÇEKMEK, reddedilenin tek kararı YAYINLAMAK. Üç yığında da
-  // iki düğme çizilseydi biri daima anlamsız olurdu ("onaylanmışı onayla").
+  // Yayındaki yorumun tek kararı geri çekmek, reddedilenin tek kararı yayınlamak: üç yığında iki düğme olsaydı biri daima anlamsız olurdu.
   const canApprove = stack !== 'approved';
   const canReject = stack !== 'rejected';
 
@@ -47,11 +38,8 @@ export function ModerationCard({ card, stack, pending, onModerate }: ModerationC
             {review.language ? ` · ${review.language.toUpperCase()}` : ''}
           </span>
         </div>
-        {/* Yıldızsız yorum da moderasyona girer (yalnız metin yazılmış olabilir) — o zaman hiç
-            yıldız çizilmez; sıfır yıldız göstermek "bir puan verdi" diye okunurdu. */}
-        {/* Yıldızın RENGİ puana bağlı (çizim: ≥4 olive · 3 amber · altı kırmızı). Sabit bir renk
-            kuyruğu tararken en önemli sinyali yutuyordu: kötü puanlı yorum göze çarpmalı, çünkü
-            moderatörün önce okuması gereken o. */}
+        {/* Yıldızsız yorumda yıldız çizilmez: sıfır yıldız "bir puan verdi" diye okunurdu. */}
+        {/* Yıldızın rengi puana bağlı: kötü puanlı yorum göze çarpmalı, moderatörün önce okuması gereken o. */}
         {card.stars ? (
           <span className={`flex-none font-ops-mono text-ops-base font-semibold ${ratingTone(review.rating)}`}>{card.stars}</span>
         ) : null}
@@ -63,8 +51,7 @@ export function ModerationCard({ card, stack, pending, onModerate }: ModerationC
 
       <div className="flex items-center gap-2 border-t border-ops-line-soft pt-2">
         <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">{STACK_HINTS[stack]}</span>
-        {/* Yorumu yazana dönüş (15.33): kötü puan çoğu zaman bir şikâyettir ve cevabı yorumun altına değil
-            müşterinin kendisine gider — en son yazdığı kanaldan, yüzen pencerede. Kimliksiz yorumda düğme yok. */}
+        {/* Kötü puan çoğu zaman şikâyettir ve cevabı yorumun altına değil müşterinin kendisine gider. Kimliksiz yorumda düğme yok. */}
         {review.customerId ? (
           <CustomerChatButton
             customerId={review.customerId}
@@ -72,9 +59,7 @@ export function ModerationCard({ card, stack, pending, onModerate }: ModerationC
             context={chatContext('Yorumdan', [card.productName, review.rating ? `${review.rating}/5 puan` : null])}
           />
         ) : null}
-        {/* `danger` (çerçeveli kırmızı), `destructive` (dolu) DEĞİL: ret geri alınabilir bir karar —
-            reddedilen yorum duruyor ve yeniden yayınlanabilir. Dolu kırmızı, geri alınamayan işler
-            için ayrıldı. */}
+        {/* `danger` (çerçeveli), `destructive` (dolu) değil: ret geri alınabilir, dolu kırmızı geri alınamayan işler için. */}
         {canReject ? (
           <Button variant="danger" size="sm" disabled={pending} onClick={() => onModerate(review.id, 'rejected')}>
             Reddet
@@ -90,10 +75,9 @@ export function ModerationCard({ card, stack, pending, onModerate }: ModerationC
   );
 }
 
-/** Moderasyon kuyruğunun boş hâli — yığına göre ayrı cümle. */
 export function ModerationEmpty({ stack }: { stack: ReviewStack }) {
   const text: Record<ReviewStack, { title: string; description: string }> = {
-    // Boş kuyruk bir başarıdır, bir eksiklik değil — cümle de öyle kurulur (`§4`).
+    // Boş kuyruk bir başarıdır, cümle de öyle kurulur.
     pending: { title: 'Bekleyen yorum yok', description: 'Gelen her yorum yayınlandı ya da karara bağlandı.' },
     approved: { title: 'Yayında yorum yok', description: 'Onaylanan yorumlar burada listelenir.' },
     rejected: { title: 'Reddedilen yorum yok', description: 'Reddedilen yorumlar burada durur; kararı geri almak için buradan yayınlanır.' },
@@ -102,18 +86,12 @@ export function ModerationEmpty({ stack }: { stack: ReviewStack }) {
 }
 
 /**
- * Aday panosunun bir satırı — sıra · ad · beğeni · güvenilirlik · çubuk.
- *
- * **Ham beğeni ile güvenilirlik YAN YANA duruyor** ve ayrı okunuyor (DOMAIN §14). Yalnız ham sayı
- * gösterilseydi 40 savurma beğenisi 8 gerçek beğeniden büyük görünürdü; yalnız ağırlık gösterilseydi
- * operatör kaç kişinin ilgilendiğini hiç bilemezdi. Karar ikisinin arasında.
+ * Ham beğeni ile güvenilirlik yan yana: yalnız ham sayı 40 savurma beğenisini 8 gerçek beğeniden büyük gösterir, yalnız ağırlık
+ * kaç kişinin ilgilendiğini gizlerdi.
  */
 export function CandidateRow({ card, onActivate }: { card: CandidateCardView; onActivate: (id: string) => void }) {
   const trust = trustLabel(card.signal.trust);
 
-  // Bir tur boyunca burada bir `Badge` daha vardı ve alt satırın söylediğini ("güvenilirlik yüksek")
-  // ikinci kez söylüyordu. Çizimde rozet YOK — çizimin rozeti *Ürün skorları* tablosunun `Sinyal`
-  // kolonuydu, aday satırının değil. Uydurulmuş bir öğe, üstelik tekrar eden bir bilgi.
   return (
     <div className="flex items-center gap-3 rounded-ops-card border border-ops-line bg-ops-white px-4 py-3">
       <span className="grid h-[30px] w-[30px] flex-none place-items-center rounded-ops-chip bg-ops-olive-bg font-ops-mono text-ops-sm font-semibold text-ops-olive-dark">
@@ -128,10 +106,7 @@ export function CandidateRow({ card, onActivate }: { card: CandidateCardView; on
       <span className="h-[7px] w-[120px] flex-none overflow-hidden rounded-ops-chip bg-ops-gray-100">
         <span className="block h-full bg-ops-olive" style={{ width: `${card.barPct}%` }} />
       </span>
-      {/* Panonun TEK eylemi (çizim + `admin-geri-bildirim.md §3`): yüksek talepli adayı ürün
-          yönetiminde etkinleştirmeye gitmek. Bir tur boyunca `onActivate` opsiyoneldi ve
-          hiçbir yerden geçilmiyordu — yani düğme hiç çizilmedi, pano da okunacak ama üzerine
-          hiçbir şey yapılamayacak bir listeye dönüştü. Artık zorunlu. */}
+      {/* Panonun tek eylemi: yüksek talepli adayı ürün yönetiminde etkinleştirmeye gitmek. */}
       <Button variant="primary" size="sm" onClick={() => onActivate(card.productId)}>
         Satışa aç →
       </Button>
@@ -139,23 +114,13 @@ export function CandidateRow({ card, onActivate }: { card: CandidateCardView; on
   );
 }
 
-/**
- * Puan tablosunun bir satırı.
- *
- * **"Çevrilen" kolonu kupon SAYISI değil, çevrilen PUAN.** Çizim "2 kupon" diyor ama defter kaç
- * kupon çıktığını taşımıyor; bugünkü veri harcanan puanın toplamı (`spent`). Sayıyı uydurmaktansa
- * elde olanı doğru adıyla göstermek yeğdir — kupon sayısı arka uçtan istendi.
- */
 export function PointsRow({ row, onAdjust }: { row: PointsRowView; onAdjust?: (customer: { id: string; name: string }) => void }) {
   return (
     <div className={`grid ${POINTS_GRID(Boolean(onAdjust))} items-center gap-x-2.5 border-b border-ops-line-soft px-6 py-3 last:border-b-0`}>
       <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{row.customerName}</span>
       <span className="text-right font-ops-mono text-ops-sm font-medium text-ops-ink">{row.balance}</span>
-      {/* Çizimin istediği "2 kupon" — SAYI, harcanan puan değil (04.08, `redemptionCount` geldi).
-          Sayım sebebe bakıyor (`reason='redemption'`), işarete değil: elle yapılan bir düşüm de
-          negatiftir ve işaretle sayılsaydı operatörün düzeltmesi müşterinin ödülü gibi görünürdü.
-          Harcanan puan ikinci satırda kalıyor — ikisi ayrı sorular ("kaç kez çevirdi" · "ne kadar
-          harcadı") ve çizimin kolon başlığı birinciyi soruyor. */}
+      {/* Sayım sebebe bakar (`reason='redemption'`), işarete değil: elle düşüm de negatiftir ve düzeltme ödül gibi görünürdü.
+          Harcanan puan ikinci satırda, çünkü "kaç kez çevirdi" ile "ne kadar harcadı" ayrı sorular. */}
       <span className="flex flex-col items-center">
         <span className={`font-ops-mono text-ops-xs ${row.redemptionCount > 0 ? 'text-ops-olive-dark' : 'text-ops-faint'}`}>
           {row.redemptionCount > 0 ? `${row.redemptionCount} kupon` : '—'}
@@ -163,9 +128,7 @@ export function PointsRow({ row, onAdjust }: { row: PointsRowView; onAdjust?: (c
         {row.spent < 0 ? <span className="font-ops-mono text-ops-micro text-ops-muted">{row.spent} puan</span> : null}
       </span>
       <span className="text-right font-ops-mono text-ops-xs text-ops-muted">{row.lastAgoLabel}</span>
-      {/* Etiket "Geçmiş" — pencere önce defteri gösteriyor, düzeltme onun altında. "Düzelt"
-          yazsaydı operatör yalnız değiştirmek istediğinde tıklardı ve GÖRMEK için bir yol kalmazdı;
-          oysa asıl eksik olan görmekti. */}
+      {/* Etiket "Geçmiş": pencere önce defteri gösterir; "Düzelt" yazsaydı yalnız görmek için bir yol kalmazdı. */}
       {onAdjust ? (
         <Button variant="secondary" size="sm" onClick={() => onAdjust({ id: row.customerId, name: row.customerName })}>
           Geçmiş
@@ -175,16 +138,11 @@ export function PointsRow({ row, onAdjust }: { row: PointsRowView; onAdjust?: (c
   );
 }
 
-/**
- * Puan tablosunun ızgarası — başlık ve satır AYNI dizeyi kullanır.
- *
- * İki yerde elle yazılsaydı biri değiştiğinde kolonlar kayardı ve bu kayma sessiz olurdu: tablo
- * "çalışıyor" görünür, yalnız başlıklar yanlış sütunun üstünde durur.
- */
+/** Başlık ve satır aynı dizeyi kullanır: iki yerde yazılsaydı biri değişince başlıklar sessizce yanlış sütunun üstünde kalırdı. */
 const POINTS_GRID = (withAction: boolean) =>
   withAction ? 'grid-cols-[minmax(120px,1fr)_88px_116px_88px_84px]' : 'grid-cols-[minmax(120px,1fr)_88px_116px_88px]';
 
-/** Puan tablosunun başlığı. Son kolonun başlığı YOK — düğme sütununa ad vermek gürültü olurdu. */
+/** Son kolonun başlığı yok: düğme sütununa ad vermek gürültü olurdu. */
 export function PointsHeader({ withAction = false }: { withAction?: boolean }) {
   return (
     <div
@@ -199,14 +157,7 @@ export function PointsHeader({ withAction = false }: { withAction?: boolean }) {
   );
 }
 
-/**
- * SKOR TABLOSU — çizimin dört kolonu: Ürün · Skor · Beğeni · Sinyal.
- *
- * **Not satırı çizimin en önemli parçası** ("128 yorum" · "3 yorum · örneklem küçük" · "beğeni
- * yüksek, güven düşük"): tasarımın kuralı *"3 yorumla en kötü ürün damgası vurulmaz"* ve motor bunu
- * `confident` ile zaten söylüyor. Örneklem küçükse not amber yazılır — sayı aynı sayıdır ama okuyan
- * ona farklı güvenmelidir.
- */
+/** Not satırı tablonun en önemli parçası: 3 yorumla en kötü ürün damgası vurulmaz, örneklem küçükse not amber yazılır. */
 const SCORE_GRID = 'grid-cols-[minmax(130px,1fr)_80px_96px_110px]';
 
 export function ScoreHeader() {
@@ -225,21 +176,8 @@ export function ScoreHeader() {
 export function ScoreRow({ row }: { row: ScoreRowView }) {
   const { score, signal, complaints } = row;
 
-  /**
-   * SİNYAL, SKORUN KENDİSİ DEĞİL — "bu sayıya ne kadar güvenebilirim" sorusunun cevabı.
-   *
-   * Üç hâl, üç ayrı sebep ve sırası ÖNEMLİ:
-   *  1. **Az veri** — örneklem küçük (`confident:false`). Hiçbir şey söylenemez, önce bu.
-   *  2. **Düşük güven** — veri var ama kaydırmalar güvenilmez (`trust` düşük): hep aynı yöne
-   *     savuran, kartta hiç durmayan hareketler (DOMAIN §14). Çizimin notu bunu birebir söylüyor:
-   *     *"beğeni yüksek, güven düşük"*.
-   *  3. **Güçlü** — ikisi de değil.
-   *
-   * Bir tur boyunca 2. hâlin yerinde `likeRatio < 0.5` vardı ve bu bir MANTIK hatasıydı: düşük
-   * beğeni oranı ürünün sevilmediğidir, ölçümün güvenilmezliği değil — ve o bilgi zaten `Skor`
-   * kolonunda duruyordu. Kolon komşusunu yanlış bir adla tekrar ediyordu. Gerçek ölçü arka uçtan
-   * geldi (`getProductSignals`, 04.08) ve eksen artık gerçekten üçüncü bir eksen.
-   */
+  // Sinyal skorun kendisi değil, "bu sayıya ne kadar güvenebilirim"in cevabıdır. Sıra önemli: önce az veri, sonra düşük güven
+  // (hep aynı yöne savuran kaydırmalar), sonra güçlü.
   const trust = signal?.trust ?? null;
   const signalView = !score.confident
     ? { label: 'Az veri', tone: 'neutral' as const }
@@ -247,13 +185,7 @@ export function ScoreRow({ row }: { row: ScoreRowView }) {
       ? { label: 'Düşük güven', tone: 'amber' as const }
       : { label: 'Güçlü', tone: 'olive' as const };
 
-  /**
-   * Not satırı — beyanın bileşimi, üstüne varsa ŞİKÂYET.
-   *
-   * Şikâyet en sona ve amber yazılıyor çünkü tablonun en ağır bilgisi o: "az beğenilmiş" ile
-   * "sürekli bozuk geliyor" farklı iki durumdur ve skor tek başına ikisini ayıramaz. Çizimin
-   * *"şikâyet + düşük skor birleşiyor"* satırı tam olarak bu birleşimi görünür kılmak içindi.
-   */
+  // Şikâyet en sona ve amber yazılır: "az beğenilmiş" ile "sürekli bozuk geliyor" ayrı durumlardır ve skor tek başına ayıramaz.
   const voteCount = score.likeCount + score.dislikeCount;
   const parts = [score.ratingCount > 0 ? `${score.ratingCount} yorum` : null, voteCount > 0 ? `${voteCount} kaydırma` : null].filter(Boolean);
   const base = score.confident ? parts.join(' · ') : `${parts.join(' · ') || 'beyan yok'} · örneklem küçük`;
@@ -266,8 +198,7 @@ export function ScoreRow({ row }: { row: ScoreRowView }) {
         <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{row.productName}</span>
         <span className={`truncate font-ops-body text-ops-xs ${noteBad ? 'text-ops-amber-dark' : 'text-ops-muted'}`}>{note}</span>
       </div>
-      {/* Skoru olmayan satır buraya düşmez (`product_rating` yalnız beyanı olan ürün için satır
-          üretir), ama tip `null` diyor ve ekran ona uymak zorunda: "—" yazmak, uydurma bir 0'dan iyi. */}
+      {/* Tip `null` diyor: "—" yazmak uydurma bir 0'dan iyi. */}
       <span className={`justify-self-center font-ops-mono text-ops-sm font-semibold ${ratingTone(score.average)}`}>
         {score.average === null ? '—' : score.average.toFixed(1).replace('.', ',')}
       </span>
