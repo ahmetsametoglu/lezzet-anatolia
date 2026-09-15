@@ -4,15 +4,7 @@ import { Link } from '@/i18n/navigation';
 import { Icon } from '@/components/customer/ui/icons';
 import type { Messages } from '../discover-types';
 
-/**
- * Destenin ORTAK parçaları — iki cihaz görünümünün paylaştığı üç öğe.
- *
- * Ayrı dosyada çünkü ikisi de aynı şeyi söylüyor, yalnız farklı yere koyuyor: mobil başlıkta üç
- * satır (kapat · başlık+sayaç · puan çipi), web'de aynı üçlü tek satırda. Her görünüme kopyalansaydı
- * "puan çipi mi davet mi" kararı iki yerde yaşardı ve biri bir gün ötekinden ayrılırdı.
- */
-
-/** Kapat — her an çıkılır (tasarım: "✕ Kapat"). Çıkış KATALOĞA: keşif bir sayfa değil bir turdur. */
+/** Kapat — masaüstünün çıkışı; keşif bir sayfa değil bir tur olduğu için kataloğa döner. */
 export function CloseLink({ t }: { t: Messages }) {
   return (
     <Link href="/catalog" className="inline-flex cursor-pointer items-center gap-1.5 font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark">
@@ -23,12 +15,8 @@ export function CloseLink({ t }: { t: Messages }) {
 }
 
 /**
- * Puan çipi ya da giriş daveti — **aynı köşe, iki farklı cümle** (tasarım "Girişsiz kullanıcı"
- * durumu). Girişliye kazandığı, girişsize kazanabileceği söylenir; ikisi de aynı yerde durur ki
- * girişsiz ekranda açıklanmamış bir boşluk kalmasın.
- *
- * Girişsizde çip değil KESİKLİ çerçeveli bir davet: dolu bir çip "kazandın" der, oysa henüz
- * kazanılmış bir şey yok — puan hesap açılınca yüklenecek.
+ * Puan çipi ya da giriş daveti: girişliye kazandığı, girişsize kazanabileceği söylenir.
+ * Girişsizde dolu çip değil kesikli davet, çünkü henüz kazanılmış bir şey yok; puan hesap açılınca yüklenir.
  */
 export function PointsChip({ t, earned, signedIn }: { t: Messages; earned: number; signedIn: boolean }) {
   if (signedIn) {
@@ -49,15 +37,8 @@ export function PointsChip({ t, earned, signedIn }: { t: Messages; earned: numbe
 }
 
 /**
- * TEK karar düğmesi — kaydırmanın klavye/fare karşılığı (tasarım: 👎 sade, 👍 zeytin dolgu).
- *
- * **İkisi tek bileşende toplanmadı** çünkü iki cihazda YAPICA farklı duruyorlar: mobilde kartın
- * ALTINDA yan yana (aralarında "Atla" etiketi), web'de kartın İKİ YANINDA — yani aralarında kartın
- * kendisi var. Bir "düğme çifti" bileşeni web'i çizemezdi; dizilişi görünümler kurar, bu dosya
- * yalnız düğmenin kendisini tek yerde tutar.
- *
- * Beğen düğmesi bilerek DAHA BÜYÜK (tasarım: 76 ↔ 64 mobil, 72 ↔ 60 web): olumlu karar birincil
- * eylemdir, olumsuz olan cezasız bir geçiştir.
+ * Masaüstünün oy düğmesi — kaydırmanın fare/klavye karşılığı, kartın iki yanında durur.
+ * Beğen bilerek daha büyük: olumlu karar birincil eylem, olumsuzu cezasız bir geçiş.
  */
 export function VoteButton({
   t,
@@ -89,23 +70,5 @@ export function VoteButton({
     >
       <Icon name={like ? 'thumbUp' : 'thumbDown'} size={like ? (compact ? 30 : 28) : compact ? 24 : 22} />
     </button>
-  );
-}
-
-/**
- * Mobilin karar satırı — 👎 · "Atla" · 👍 (tasarım).
- *
- * **Ortadaki "Atla" bir DÜĞME DEĞİL, etiket:** etkileşim sözleşmesi *"sola kaydırma 'geç'tir ve
- * cezasızdır; ayrı 'atla' düğmesi gerekmez, alt etiket bunu söyler"* diyor. Üçüncü bir düğme,
- * müşteriye ayırt edemeyeceği iki olumsuz seçenek sunardı. Web'de bu etiket hiç yok — orada
- * düğmeler kartın iki yanında ve aralarına yazı sığmıyor (tasarım da çizmiyor).
- */
-export function VoteRow({ t, onVote, busy }: { t: Messages; onVote: (vote: 'like' | 'dislike') => void; busy: boolean }) {
-  return (
-    <div className="flex items-center justify-center gap-5.5">
-      <VoteButton t={t} kind="dislike" onVote={onVote} busy={busy} compact />
-      <span className="font-sans text-note font-bold text-muted">{t.skip}</span>
-      <VoteButton t={t} kind="like" onVote={onVote} busy={busy} compact />
-    </div>
   );
 }

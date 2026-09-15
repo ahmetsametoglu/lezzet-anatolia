@@ -13,22 +13,8 @@ import { DiscoverOutcome } from './components/discover-outcome';
 import type { Messages } from './discover-types';
 
 /**
- * Keşif akışının durumu — deste, konum, biriken puan ve talep.
- *
- * **Cihaz çatalı YERLEŞİMDE, mantıkta değil.** İki görünüm aynı desteyi farklı diziyor (mobil
- * birincil biçim, web ortalanmış + klavye); kaydırma mantığı, puan sayacı ve talep tek yerde —
- * ikiye bölmek aynı durum makinesini iki kez yazmak olurdu.
- *
- * ── PUAN İYİMSER SAYILIR AMA UYDURULMAZ ─────────────────────────────────────
- * Sayaç her kaydırmada kart başına puan kadar artıyor; gerçek yazma sunucuda oluyor ve günlük
- * tavana takılabiliyor. Sayacın gösterdiği "bu turda kazanabileceğin" — tasarımın çipi de tur
- * tamamlanınca işleyen bir vaat. Kart başına puan AYARDAN geliyor (`points_feedback_candidate`),
- * ekranda sabit değil: kodlansaydı ayar değiştiği gün ekran sistemin vermeyeceği sayıyı söylerdi.
- *
- * ── TALEP GİRİŞ DÖNÜŞÜNDE KENDİLİĞİNDEN KOŞAR ───────────────────────────────
- * Ziyaretçi kaydırıp giriş yaptıysa, geri döndüğünde tarayıcıda bekleyen kaydırma kimlikleri
- * kapıya gönderilir ve puan hesabına yazılır. Bir düğmeye bağlanmadı: müşteri "puanımı al" diye
- * ikinci bir eylem yapmak zorunda kalsaydı, unutan herkes hak ettiğini kaybederdi.
+ * Keşif turunun durumu — deste, konum, puan, beğeni sayısı ve giriş dönüşündeki talep; cihaz çatalı yalnız yerleşimde.
+ * Puan sayacı kart başına ayardaki puanı yazım başarılı olunca ekler; ekranda sabit bir sayı yok.
  */
 interface DiscoverClientProps {
   t: Messages;
@@ -38,16 +24,18 @@ interface DiscoverClientProps {
   signedIn: boolean;
   /** Kart başına puan (ayardan) — sayacın adımı. */
   pointsPerCard: number;
-  /** Biriken puanın para karşılığını kuran biçim ("0,12 €") — sunucuda hesaplandı. */
+  /** Biriken puanın para karşılığı ("0,12 €") — sunucuda hesaplandı. */
   moneyOf: string;
 }
 
 export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCard, moneyOf }: DiscoverClientProps) {
   const [index, setIndex] = useState(0);
   const [earned, setEarned] = useState(0);
-  const [busy, setBusy] = useState(false);
+  const [likes, setLikes] = useState(0);
+  /** Cevabı beklenen yazım sayısı: sıfır olmadan puan toplamı tam değildir. */
+  const [pending, setPending] = useState(0);
   const [claimed, setClaimed] = useState<number | null>(null);
-  /** Kartın ekrana geldiği an — `dwell_ms` sinyal kalitesinin girdisi (DOMAIN §14). */
+  /** Kartın ekrana geldiği an — `dwell_ms` sinyal kalitesinin girdisi. */
   const shownAt = useRef(Date.now());
 
   const card = cards[index] ?? null;
@@ -57,14 +45,12 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
     shownAt.current = Date.now();
   }, [index]);
 
-  // Giriş dönüşü: bekleyen kaydırmalar hesaba bağlanır. Girişsizde hiç çalışmaz.
+  // Giriş dönüşü: bekleyen kaydırmalar hesaba bağlanır; liste yalnız başarılı talepte silinir ki puan sonraki ziyarette yeniden denensin.
   useEffect(() => {
     if (!signedIn) return;
-    const pending = readSwipeIds();
-    if (pending.length === 0) return;
-    void claimSwipesAction(pending).then((res) => {
-      // Liste YALNIZ başarılı talepte silinir: kapı ulaşılamazsa puan tarayıcıda beklemeye devam
-      // eder ve sonraki ziyarette yeniden denenir.
+    const queued = readSwipeIds();
+    if (queued.length === 0) return;
+    void claimSwipesAction(queued).then((res) => {
       if (!res.data) return;
       clearSwipeIds();
       if (res.data.points > 0) setClaimed(res.data.points);
@@ -73,35 +59,58 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
 
   const vote = useCallback(
     (choice: 'like' | 'dislike') => {
-      if (!card || busy) return;
-      setBusy(true);
+      if (!card) return;
       const dwellMs = Date.now() - shownAt.current;
-      void swipeAction(card.productId, choice, dwellMs).then((res) => {
-        setBusy(false);
-        // Yazma DÜŞSE DE kart ilerler: müşteriyi aynı kartta kilitlemek, düzeltemeyeceği bir
-        // arıza için turu bitirmesini engellemek olurdu. Kayıp tek bir sinyal.
-        setIndex((i) => i + 1);
-        if (!res.data) return;
-        // Ziyaretçinin kimliği tarayıcıda saklanır; girişlide gerek yok, puanı zaten yazıldı.
-        if (!signedIn && res.data.feedbackId) addSwipeId(res.data.feedbackId);
-        setEarned((p) => p + pointsPerCard);
-      });
+      // Kart yazımı beklemeden ilerler: kaydırma bir jest, ağ beklemesi akışı keser; düşen yazım yalnız bir sinyal kaybıdır.
+      setIndex((i) => i + 1);
+      if (choice === 'like') setLikes((n) => n + 1);
+      setPending((n) => n + 1);
+      void swipeAction(card.productId, choice, dwellMs)
+        .then((res) => {
+          if (!res.data) return;
+          // Ziyaretçinin kimliği tarayıcıda saklanır; girişlide puan zaten yazıldı.
+          if (!signedIn && res.data.feedbackId) addSwipeId(res.data.feedbackId);
+          setEarned((p) => p + pointsPerCard);
+        })
+        .finally(() => setPending((n) => n - 1));
     },
-    [card, busy, signedIn, pointsPerCard],
+    [card, signedIn, pointsPerCard],
   );
 
-  // Web'de klavye: tasarımın etkileşim sözleşmesi ←/→ istiyor. Mobilde dinleyici hiç kurulmaz.
+  // Masaüstünde klavye ←/→; önceki yazım sürerken dinlenmez ki basılı tutulan ok desteyi boşaltmasın.
   useEffect(() => {
-    if (resolved === 'mobile' || !card) return;
+    if (resolved === 'mobile' || !card || pending > 0) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') vote('like');
       else if (e.key === 'ArrowLeft') vote('dislike');
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [resolved, card, vote]);
+  }, [resolved, card, vote, pending]);
+
+  if (resolved === 'mobile') {
+    return (
+      <DiscoverMobile
+        t={t}
+        locale={locale}
+        deck={cards.slice(index)}
+        current={index}
+        total={cards.length}
+        earned={earned}
+        likes={likes}
+        settling={pending > 0}
+        signedIn={signedIn}
+        onVote={vote}
+        claimed={claimed}
+        emptyDeck={cards.length === 0}
+        earnedMoney={moneyOf}
+      />
+    );
+  }
 
   if (!card) {
+    // Son oyun yazımı bitmeden puan toplamı eksiktir; bitiş yazım bitince çizilir.
+    if (pending > 0) return null;
     return (
       <>
         {claimed !== null && (
@@ -116,21 +125,22 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
           earnedMoney={moneyOf}
           // Hiç kart gelmediyse tur BİTMEDİ, hiç başlamadı — iki hâl ayrı cümle ister.
           emptyDeck={cards.length === 0}
-          compact={resolved === 'mobile'}
+          compact={false}
         />
       </>
     );
   }
 
-  const view = {
-    t,
-    locale,
-    card,
-    position: { index: index + 1, total: cards.length },
-    earned,
-    signedIn,
-    onVote: vote,
-    busy,
-  };
-  return resolved === 'mobile' ? <DiscoverMobile {...view} /> : <DiscoverDesktop {...view} />;
+  return (
+    <DiscoverDesktop
+      t={t}
+      locale={locale}
+      card={card}
+      position={{ index: index + 1, total: cards.length }}
+      earned={earned}
+      signedIn={signedIn}
+      onVote={vote}
+      busy={pending > 0}
+    />
+  );
 }

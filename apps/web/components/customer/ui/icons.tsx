@@ -1,19 +1,8 @@
 import type { ReactNode } from 'react';
 
 /**
- * Müşteri ikon seti — v1 tasarımının çizgi ikonları (`design/project/Musteri Web v1.dc.html`, 13.09).
- *
- * Müşteri yüzeyi uzun süre emoji konuştu (📍 🧺 ❄ 🚚 📦) — eski çizimlerin dili buydu. v1 dili
- * değiştirdi: 24'lük ızgarada 1,9 çizgi, `currentColor`; renk ikonu kullanan yerden gelir.
- * Operasyonun seti ayrı (`operation/ui/icons.tsx`): iki evren ayrı çizimler taşıyor.
- *
- * Tek bileşen + ad: dışa tek `Icon` açılır, henüz kullanılmayan çizim `knip`e ölü ihraç olarak
- * düşmez. `bell` tasarımda YOK — bildirim zili v1'de çizilmemiş; aynı çizgi diliyle eklendi ki
- * yüzeyde tek emoji kalmasın.
- *
- * Mobil v1'in (`Musteri Mobil v1.dc.html`) sekme çubuğu çizimleri de burada: `home` · `grid` ·
- * `basketPlain` · `user`. `basketPlain` ayrı bir çizim — mobilin sepeti iç çizgisiz, web v1'inki
- * (`basket`) iki dikey çizgili.
+ * Müşteri ikon seti: 24'lük ızgarada çizgi ikonlar, renk `currentColor` ile kullanan yerden gelir.
+ * Tek bileşen + ad: dışa yalnız `Icon` açılır ki henüz kullanılmayan çizim `knip`e ölü ihraç olarak düşmesin.
  */
 export type IconName =
   | 'pin'
@@ -47,7 +36,10 @@ export type IconName =
   | 'home'
   | 'grid'
   | 'user'
-  | 'basketPlain';
+  | 'basketPlain'
+  | 'heart'
+  | 'arrowLeft'
+  | 'arrowRight';
 
 const PATHS: Record<IconName, ReactNode> = {
   pin: (
@@ -216,10 +208,15 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M9 9.5 10.6 4M15 9.5 13.4 4" />
     </>
   ),
+  heart: (
+    <path d="M12 20.5C6 15.5 3 12.3 3 8.8 3 6.2 5 4.5 7.3 4.5c1.8 0 3.4 1 4.7 2.7 1.3-1.7 2.9-2.7 4.7-2.7C19 4.5 21 6.2 21 8.8c0 3.5-3 6.7-9 11.7z" />
+  ),
+  arrowLeft: <path d="M19 12H5M11 6l-6 6 6 6" />,
+  arrowRight: <path d="M5 12h14M13 6l6 6-6 6" />,
 };
 
-/** Yüzey olarak çizilen ikonlar — çizgi değil dolgu (puan yıldızı). */
-const FILLED: ReadonlySet<IconName> = new Set<IconName>(['star']);
+/** Çizgi değil dolgu olarak çizilen ikonlar (puan yıldızı, kalp). */
+const FILLED: ReadonlySet<IconName> = new Set<IconName>(['star', 'heart']);
 
 interface IconProps {
   name: IconName;

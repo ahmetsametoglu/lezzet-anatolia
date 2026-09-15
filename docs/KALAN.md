@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.11). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.12). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -364,3 +364,5 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   native operasyon `use-batch-subject`; aynı ölçü, tek sabit olmalı.
 - [ ] (K.11) [hedef: web] Web adres araması iki yoldan gidiyor (Fransa tarayıcıdan, Almanya sunucu eylemiyle), native tek kapıya
   geçti ve Fransa'yı da sunucudan soruyor; BAN'ın IP başına kota gerekçesiyle çelişiyor, hangisinin doğru olduğu kullanıcı kararı.
+- [ ] (K.12) [hedef: mobil] Keşif ekranının ortak metni `@lezzet/i18n/customer/discover`tan okunsun — web telefon görünümü aynı
+  cümleleri oradan okuyor, native `screens/discover/messages.json` ikinci kopya olarak kaldı.
