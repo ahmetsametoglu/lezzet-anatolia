@@ -12,6 +12,7 @@ import {
   ContextPane,
 } from '@/components/operation/ui/customer-context-pane';
 import { CustomerChannels } from '@/components/operation/ui/customer-channels';
+import type { MessengerContext } from '@/components/operation/ui/customer-channel-model';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { bubbleClass, MessageRow, SectionLabel } from '@/components/operation/ui/message-thread';
 import { EDGE_CLASS, QueueRow as SharedQueueRow } from '@/components/operation/ui/queue-pane';
@@ -611,6 +612,8 @@ function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTrigg
 interface TicketContextPaneProps {
   context: CustomerContextData | null;
   customerName: string;
+  /** Kanal düğmesinin pencereye taşıdığı özet — talebin konusu ve bağlı siparişi. */
+  chat: MessengerContext;
 }
 
 /**
@@ -628,7 +631,7 @@ interface TicketContextPaneProps {
  * **Kampanya izni 14.09'da kalktı** (kullanıcı isteği: işlevi olmayan bilgi kalkar): talep bir şikâyet
  * işi ve pazarlama izni bu ekranda hiçbir kararı etkilemiyordu.
  */
-export function TicketContextPane({ context, customerName }: TicketContextPaneProps) {
+export function TicketContextPane({ context, customerName, chat }: TicketContextPaneProps) {
   if (!context) {
     return (
       <ContextPane>
@@ -650,7 +653,7 @@ export function TicketContextPane({ context, customerName }: TicketContextPanePr
       />
       {/* Sohbet kanalları (15.32): talebin cevabı talep akışında kalır; kanal düğmesi müşteriye WhatsApp,
           Messenger ya da Instagram'dan — en son yazdığı yerden — yüzen pencerede ulaşmak içindir. */}
-      <CustomerChannels customerId={context.customerId} />
+      <CustomerChannels customerId={context.customerId} context={chat} />
       <ContextOrders context={context} />
     </ContextPane>
   );

@@ -4,6 +4,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { CustomerChatButton } from '@/components/operation/ui/customer-chat-button';
+import { chatContext } from '@/components/operation/ui/customer-channel-model';
 import { ratingTone, signedCount, STACK_HINTS, trustLabel } from './feedback-labels';
 import type { ScoreRowView } from '@/lib/feedback/moderation-read';
 import type { CandidateCardView, ModerationCardView, PointsRowView } from './feedback-types';
@@ -64,7 +65,13 @@ export function ModerationCard({ card, stack, pending, onModerate }: ModerationC
         <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">{STACK_HINTS[stack]}</span>
         {/* Yorumu yazana dönüş (15.33): kötü puan çoğu zaman bir şikâyettir ve cevabı yorumun altına değil
             müşterinin kendisine gider — en son yazdığı kanaldan, yüzen pencerede. Kimliksiz yorumda düğme yok. */}
-        {review.customerId ? <CustomerChatButton customerId={review.customerId} variant="button" /> : null}
+        {review.customerId ? (
+          <CustomerChatButton
+            customerId={review.customerId}
+            variant="button"
+            context={chatContext('Yorumdan', [card.productName, review.rating ? `${review.rating}/5 puan` : null])}
+          />
+        ) : null}
         {/* `danger` (çerçeveli kırmızı), `destructive` (dolu) DEĞİL: ret geri alınabilir bir karar —
             reddedilen yorum duruyor ve yeniden yayınlanabilir. Dolu kırmızı, geri alınamayan işler
             için ayrıldı. */}

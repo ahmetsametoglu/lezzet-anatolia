@@ -8,8 +8,9 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { Input } from '@/components/operation/form/input';
 import { shortDate } from '@/components/operation/ui/format';
 import { CustomerChatButton } from '@/components/operation/ui/customer-chat-button';
+import { chatContext } from '@/components/operation/ui/customer-channel-model';
 import { recallByLotAction } from './actions';
-import type { RecallResult } from './stock-types';
+import type { BatchView, RecallResult } from './stock-types';
 
 // Geri çağırma (rappel) sorgusu — "bu partiden çıkan mal kime gitti".
 //
@@ -121,6 +122,8 @@ function RecallOutcome({ result }: RecallOutcomeProps) {
   }
 
   const customers = new Set(result.hits.map((h) => h.customerId)).size;
+  // Birden çok parti eşleşince hangi siparişe hangisinin gittiği satırda yok; ürün ve lot yalnız tek partide yazılır.
+  const only = result.batches.length === 1 ? (result.batches[0] ?? null) : null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -161,7 +164,7 @@ function RecallOutcome({ result }: RecallOutcomeProps) {
           </span>
           <div className="overflow-hidden rounded-ops-card border border-ops-line">
             {result.hits.map((h) => (
-              <HitRow key={h.orderId} hit={h} />
+              <HitRow key={h.orderId} hit={h} batch={only} />
             ))}
           </div>
         </div>
@@ -172,10 +175,12 @@ function RecallOutcome({ result }: RecallOutcomeProps) {
 
 interface HitRowProps {
   hit: RecallHit;
+  /** Tek parti eşleştiyse o parti; birden çok partide `null`. */
+  batch: Pick<BatchView, 'title' | 'lotNumber'> | null;
 }
 
 /** Tek sipariş satırı — müşteriye ULAŞMAK için gereken her şey burada: ad, telefon, tarih, miktar. */
-function HitRow({ hit }: HitRowProps) {
+function HitRow({ hit, batch }: HitRowProps) {
   return (
     <div className="flex items-center gap-3 border-b border-ops-line-soft px-3 py-2.5 last:border-b-0">
       <div className="mr-auto flex min-w-0 flex-col gap-px">
@@ -196,7 +201,16 @@ function HitRow({ hit }: HitRowProps) {
         <span className="font-ops-body text-ops-xs text-ops-faint">telefon yok</span>
       )}
       {/* En son yazdığı kanaldan, yüzen pencerede — pencere bu diyaloğun üstünde açılır, liste yerinde kalır. */}
-      <CustomerChatButton customerId={hit.customerId} variant="button" />
+      <CustomerChatButton
+        customerId={hit.customerId}
+        variant="button"
+        context={chatContext('Geri çağırmadan', [
+          batch?.title,
+          batch?.lotNumber ? `lot ${batch.lotNumber}` : null,
+          hit.referenceNo ?? 'Sipariş',
+          `${hit.qty} ad.`,
+        ])}
+      />
       <Badge tone="neutral">{ORDER_STATUS_LABELS[hit.orderStatus]}</Badge>
     </div>
   );

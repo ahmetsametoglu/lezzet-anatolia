@@ -19,8 +19,9 @@ export interface SocialMessengerApi {
   /**
    * Müşterinin EN SON yazdığı kanalın sohbetini açar — listelerin tek düğmesinden (`CustomerChatButton`,
    * 15.33); kanallar basınca okunur. Hiç sohbeti yoksa ve telefonu kayıtlıysa WhatsApp sohbeti açılır.
+   * `context`: açan satırın özeti.
    */
-  openForCustomer: (customerId: string) => void;
+  openForCustomer: (customerId: string, context?: MessengerContext) => void;
   /**
    * Müşterinin WhatsApp sohbeti yoksa kayıtlı numarasıyla AÇAR. Yalnız WhatsApp: Messenger/Instagram'da
    * işletme sohbet başlatamaz, ilk sözü müşteri söyler. `context`: `openConversation`ınki (15.39).

@@ -1,7 +1,9 @@
 'use client';
 
+import { TICKET_TYPE_LABELS } from '@lezzet/types';
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
+import { chatContext } from '@/components/operation/ui/customer-channel-model';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { FilterBar, QueuePane } from '@/components/operation/ui/queue-pane';
 import { DetailPlaceholder, QueueEmpty, QueueRow, TicketContextPane, TicketDetail } from './tickets-sections';
@@ -101,7 +103,15 @@ export function TicketsDesktop({
                 onTriggerReturn={onTriggerReturn}
               />
             </div>
-            <TicketContextPane context={data.context} customerName={data.detail.customer.name} />
+            <TicketContextPane
+              context={data.context}
+              customerName={data.detail.customer.name}
+              // Konusuz talepte tür yazılır: şerit boş kalırsa operatör hangi talepten yazdığını göremez.
+              chat={chatContext('Talepten', [
+                data.detail.ticket.subject?.trim() || TICKET_TYPE_LABELS[data.detail.ticket.type],
+                data.detail.order?.referenceNo,
+              ])}
+            />
           </>
         ) : (
           <div className="flex min-h-0 flex-1">

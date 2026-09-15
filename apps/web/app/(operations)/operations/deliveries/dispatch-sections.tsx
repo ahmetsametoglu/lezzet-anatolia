@@ -7,9 +7,10 @@ import { RouteMap } from '@/components/operation/ui/route-map';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { DateFilterChip } from '@/components/operation/ui/date-filter-chip';
-import { money, num } from '@/components/operation/ui/format';
+import { money, num, shortDate } from '@/components/operation/ui/format';
 import { Table, withCells } from '@/components/operation/ui/table';
 import { CustomerChatButton } from '@/components/operation/ui/customer-chat-button';
+import { chatContext } from '@/components/operation/ui/customer-channel-model';
 import type { ColumnTrack } from '@/components/operation/ui/table-columns';
 // Kanal rozetinin tonu Siparişler tablosuyla AYNI kaynaktan (16.08): aynı kanal iki ekranda iki
 // renk olamaz. Sözlük orada tanımlı ve süzgeç çipleriyle paylaşılıyor — kopyası yazılmadı.
@@ -377,7 +378,13 @@ function StopCustomer({ stop }: StopCustomerProps) {
   return (
     <span className="flex min-w-0 items-center gap-1">
       <span className="truncate font-ops-body text-ops-sm text-ops-ink">{stop.customerName}</span>
-      <CustomerChatButton customerId={stop.customerId} />
+      <CustomerChatButton
+        customerId={stop.customerId}
+        context={chatContext('Teslimattan', [
+          stop.referenceNo ?? 'Sipariş',
+          stop.deliveryDate ? `${shortDate(stop.deliveryDate)} teslim` : null,
+        ])}
+      />
     </span>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendToDraft, chatTargetOf, orderChatContext, toCustomerChannels } from './customer-channel-model';
+import { appendToDraft, chatContext, chatTargetOf, orderChatContext, toCustomerChannels } from './customer-channel-model';
 import { money, shortDate } from './format';
 
 // 15.32 — kanal düğmesinin görünümü. Sıra ve "en son" kararı motorda sınanıyor (`customerChannelsOf`);
@@ -58,6 +58,15 @@ describe('orderChatContext — balonun BAĞLAM şeridi (15.39)', () => {
 
   it('gün girilmemişse gün uydurulmaz; referansı olmayan sipariş "Sipariş" diye anılır', () => {
     expect(orderChatContext('Siparişlerden', { referenceNo: null, totalCents: 1200, deliveryDate: null }).summary).toBe(`Sipariş · ${money(1200)}`);
+  });
+});
+
+describe('chatContext — boş parça', () => {
+  it('boş parça atlanır, ayırıcı tek — boş gün ya da referans satıra uydurulmaz', () => {
+    expect(chatContext('Yorumdan', ['Fıstıklı Baklava', null, '  ', undefined, '2/5'])).toEqual({
+      origin: 'Yorumdan',
+      summary: 'Fıstıklı Baklava · 2/5',
+    });
   });
 });
 

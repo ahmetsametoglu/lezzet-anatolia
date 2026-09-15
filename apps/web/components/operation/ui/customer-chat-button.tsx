@@ -2,6 +2,7 @@
 
 import type { MouseEvent } from 'react';
 import { Button } from './button';
+import type { MessengerContext } from './customer-channel-model';
 import { ChatIcon } from './icons';
 import { useSocialMessenger } from './use-social-messenger.hook';
 
@@ -21,18 +22,20 @@ interface CustomerChatButtonProps {
   customerId: string;
   /** `icon`: tablo hücresinde ikon düğme · `button`: kart ve pencere satırında "Mesaj yaz" yazılı düğme. */
   variant?: 'icon' | 'button';
+  /** Pencerenin üst şeridinde taşınacak özet — açan satırın konusu. */
+  context?: MessengerContext;
 }
 
 const TITLE = 'Müşteriye yaz — en son yazdığı kanaldan, uygulamanın içinde';
 
-export function CustomerChatButton({ customerId, variant = 'icon' }: CustomerChatButtonProps) {
+export function CustomerChatButton({ customerId, variant = 'icon', context }: CustomerChatButtonProps) {
   const messenger = useSocialMessenger();
   if (!messenger) return null;
 
   // Satır tıklanabilir olabilir (tablo satırı detay açar) — düğmenin tıklaması satıra geçmesin.
   const open = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    messenger.openForCustomer(customerId);
+    messenger.openForCustomer(customerId, context);
   };
 
   if (variant === 'button') {

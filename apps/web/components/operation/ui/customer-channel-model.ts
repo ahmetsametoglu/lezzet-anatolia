@@ -76,15 +76,21 @@ export interface MessengerContext {
   summary: string;
 }
 
+/** Boş parça atlanır: özet müşteriye gidecek cümleye eklenebilir, girilmemiş bir değer uydurulmamalı. */
+export function chatContext(origin: string, parts: readonly (string | null | undefined)[]): MessengerContext {
+  return { origin, summary: parts.filter((part): part is string => Boolean(part?.trim())).join(' · ') };
+}
+
 /** Siparişin bağlamı — detay ve önizleme aynı satırı kurar (iki kopya bir gün ayrı biçimde yazardı). */
 export function orderChatContext(
   origin: string,
   order: { referenceNo: string | null; totalCents: number; deliveryDate: string | null },
 ): MessengerContext {
-  const parts = [order.referenceNo ?? 'Sipariş', money(order.totalCents)];
-  // Gün girilmemişse satıra gün uydurulmaz — müşteriye gidecek bir cümlenin parçası olabilir.
-  if (order.deliveryDate) parts.push(`${shortDate(order.deliveryDate)} teslim`);
-  return { origin, summary: parts.join(' · ') };
+  return chatContext(origin, [
+    order.referenceNo ?? 'Sipariş',
+    money(order.totalCents),
+    order.deliveryDate ? `${shortDate(order.deliveryDate)} teslim` : null,
+  ]);
 }
 
 /** "Ekle" (15.39): özet taslağın SONUNA, ayrı satırda — yazılmış cümle ezilmez. */

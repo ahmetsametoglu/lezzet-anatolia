@@ -139,7 +139,7 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   );
 
   const openForCustomer = useCallback(
-    (customerId: string) =>
+    (customerId: string, ctx?: MessengerContext) =>
       openVia(async () => {
         const { data, error } = await customerChannelsAction(customerId);
         if (!data) return { notice: error ?? 'Sohbet kanalları okunamadı.' };
@@ -147,7 +147,7 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
         if (target.kind === 'conversation') return { conversationId: target.conversationId };
         if (target.kind === 'start_whatsapp') return whatsappOutcome(customerId);
         return { notice: 'Bu müşteri bize hiçbir kanaldan yazmadı ve telefonu kayıtlı değil — yazılacak kanal yok.' };
-      }),
+      }, ctx),
     [openVia],
   );
 
