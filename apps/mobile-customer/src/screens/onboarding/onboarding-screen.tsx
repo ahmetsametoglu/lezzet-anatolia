@@ -1,10 +1,9 @@
-import { brand } from '@lezzet/brand';
 import { formatCompactEuro } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { MePointsEarnWayKey } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Keyboard, Pressable, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, Text, TextInput, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { FormScroll } from '@lezzet/mobile-kit/src/components/ui/form-scroll';
@@ -19,10 +18,10 @@ import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolutio
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@lezzet/mobile-kit/src/lib/settings/font-scale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
-import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { PointsEarnList } from '@/screens/customer-kit/points-earn-list';
 import { usePointsRules } from '@/screens/customer-kit/use-points-rules.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
+import { OnboardingLogo } from './onboarding-logo';
 import { StepDots } from './step-dots';
 import messages from './messages.json';
 
@@ -53,9 +52,6 @@ const POINTS_GROUPS = [
 
 /** Dil seçildikten sonra sonraki adıma kendiliğinden geçmeden önceki bekleme. */
 const LANGUAGE_ADVANCE_MS = 250;
-
-/** Logo görselinin kaynak oranı (1244×602). */
-const LOGO_ASPECT = 1244 / 602;
 
 /** Posta kodu girdisinin yüksekliği; tasarımın bu büyük ve kalın girdisi kitin `TextField`ında yok. */
 const ZIP_FIELD_HEIGHT = 56;
@@ -210,13 +206,7 @@ export function OnboardingScreen() {
        klavyenin altında kalır. Katman şeffaf ve ekran okuyucuya kapalı; içteki düğmeler kendi dokunuşlarını alır. */
     <Pressable style={styles.screen} onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.header}>
-        <Image
-          // Statik varlık Metro'da `require` ile yüklenir; kural TS içe aktarma disiplinine bakar, varlık yolunu bilmez.
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('@lezzet/mobile-kit/assets/images/logo.png')}
-          style={styles.logo}
-          accessibilityLabel={brand.name}
-        />
+        <OnboardingLogo />
         <PressableSurface onPress={() => leave('/')} feedback="opacity" compact accessibilityLabel={t.skip} testID="onboarding-skip">
           <Text style={styles.skip}>{t.skip}</Text>
         </PressableSurface>
@@ -512,12 +502,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space['2xs'],
     paddingHorizontal: theme.space['6xl'],
     marginBottom: -theme.space.md,
-  },
-  /* Genişlik orandan hesaplanır, `aspectRatio`ya bırakılmaz: satır kabında `height + aspectRatio` çözülmez, görsel ham
-     boyuna düşüp "Atla"yı dışarı iter. */
-  logo: {
-    height: customerMetrics.onboardingLogoHeight,
-    width: customerMetrics.onboardingLogoHeight * LOGO_ASPECT,
   },
   skip: {
     fontFamily: theme.font.body[theme.text['badge--font-weight']],

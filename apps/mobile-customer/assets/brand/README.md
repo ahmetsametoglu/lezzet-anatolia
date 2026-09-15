@@ -5,8 +5,9 @@ seed fikstürlerinde alınan dersin aynısı: kaynağın repo DIŞINDA (`temp/`,
 bir gün silinince yeniden üretimi imkânsız kılar.
 
 Yazısız sürüm bilerek: ikon telefonda ~60 px çizilir, o boyutta kelime markası okunaksız bir şeride
-döner. **Yazılı sürüm** giriş/onboarding/profil ekranlarında kullanılan `../images/logo.png`tir ve
-o AYRI bir varlıktır (geniş oran) — ikon ailesiyle karıştırılmaz.
+döner. **Yazılı sürüm** karşılama ve künye tamamlama ekranlarının logosu olan kitteki
+`packages/mobile-kit/assets/images/logo.png` görselidir (`OnboardingLogo` çizer) ve o AYRI bir varlıktır (geniş oran) —
+ikon ailesiyle karıştırılmaz.
 
 ## Türetilen beş varlık ve parametreleri (`21.116`)
 

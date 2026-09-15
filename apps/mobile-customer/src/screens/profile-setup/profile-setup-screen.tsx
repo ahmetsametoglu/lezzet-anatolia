@@ -1,8 +1,7 @@
-import { brand } from '@lezzet/brand';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
@@ -15,9 +14,9 @@ import { updateMe } from '@lezzet/mobile-kit/src/lib/api/me';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { AddressForm, addressDefaultsOf } from '@/screens/customer-kit/address-form';
-import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { publishMe, useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
+import { OnboardingLogo } from '@/screens/onboarding/onboarding-logo';
 import { StepDots } from '@/screens/onboarding/step-dots';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
 import { isNameMissing, isPhoneMissing } from '@/screens/customer-kit/profile-gaps';
@@ -30,9 +29,6 @@ import messages from './messages.json';
 */
 
 type Messages = LocalizedCopy<typeof messages>;
-
-/** Logo görselinin kaynak oranı (1244×602). */
-const LOGO_ASPECT = 1244 / 602;
 
 type StepKey = 'name' | 'address' | 'phone';
 
@@ -188,13 +184,7 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
     <View style={styles.screen}>
       <View style={styles.header}>
         {/* "Atla" yok: ad ve telefon zorunlu. */}
-        <Image
-          // Statik varlık Metro'da `require` ile yüklenir.
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('@lezzet/mobile-kit/assets/images/logo.png')}
-          style={styles.logo}
-          accessibilityLabel={brand.name}
-        />
+        <OnboardingLogo />
       </View>
 
       <View style={styles.content}>
@@ -260,10 +250,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space['2xs'],
     paddingHorizontal: theme.space['6xl'],
     marginBottom: -theme.space.md,
-  },
-  logo: {
-    height: customerMetrics.onboardingLogoHeight,
-    width: customerMetrics.onboardingLogoHeight * LOGO_ASPECT,
   },
   /* Onboarding'in adım gövdesiyle aynı ölçü ve hizalama. */
   content: {
