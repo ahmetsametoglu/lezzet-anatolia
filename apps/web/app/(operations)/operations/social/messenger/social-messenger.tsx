@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { alertAllowed, hasNewInbound } from '@lezzet/domain-core';
@@ -13,11 +13,13 @@ import { useBell } from '@/components/operation/ui/use-bell.hook';
 import { playMessageChime, unlockMessageChime } from '@/components/operation/ui/message-chime';
 import { SOURCE_LABELS } from '@/components/operation/ui/conversation-source';
 import { SocialMessengerContext, type SocialMessengerApi } from '@/components/operation/ui/use-social-messenger.hook';
-import { chatTargetOf } from '@/components/operation/ui/customer-channel-model';
+import { MessageDraftContext, type MessageDraftStore } from '@/components/operation/ui/use-message-draft.hook';
+import { appendToDraft, chatTargetOf, type MessengerContext } from '@/components/operation/ui/customer-channel-model';
 import { customerChannelsAction } from '@/lib/messaging/customer-channel-actions';
 import { loadMoreConversationsAction, sendOutboundAction } from '../actions';
 import { WINDOW_TONE } from '../social-labels';
-import { Bubble, InboxRow, NoteLine, ReplyBox } from '../social-sections';
+import { humanCanReply } from '../social-read';
+import { Bubble, ChannelTabs, InboxRow, NoteLine, ReplyBox } from '../social-sections';
 import { SOCIAL_PATH, socialLink } from '../social-url';
 import type { ConversationDetailView, InboxRowView } from '../social-types';
 import { messengerConversationAction, messengerPulseAction, startWhatsappConversationAction } from './actions';
@@ -31,9 +33,10 @@ import { messengerConversationAction, messengerPulseAction, startWhatsappConvers
  * **Kural (kullanıcı, 14.09 — iki kez söylendi):** operasyon müşteriye YALNIZ uygulamanın içinden yazar;
  * `wa.me` bağlantısı ve personelin kendi telefonu yok. Bu pencere o kuralın web ayağı.
  *
- * **Ek çizim yok ve bilerek:** liste satırı ve sohbet alanı sohbet sayfasının kendi parçaları (`InboxRow`,
- * `Bubble`, `ReplyBox`) — pencere yalnız ikisi arasında geçiş. Kopya parça olsaydı sayfa ile pencere bir gün
- * aynı sohbeti farklı çizerdi. Mod anahtarı, taslak ve müşteri bağlamı tam ekranda kalır ("Tam ekran →").
+ * **Parçalar sayfanınki:** liste satırı ve sohbet alanı sohbet sayfasının kendi parçaları (`InboxRow`, `Bubble`,
+ * `ReplyBox`, `ChannelTabs`) — kopya parça olsaydı sayfa ile pencere bir gün aynı sohbeti farklı çizerdi. Çizim 15.09'da
+ * geldi ("Mesaj Balonu", 15.39): kişinin kanal sekmeleri, açan ekranın BAĞLAM şeridi + "Ekle" ve ekranlar arası taslak
+ * (depo bu sağlayıcıda). Mod anahtarı, hibrit taslak ve müşteri bağlamı paneli tam ekranda kalır ("Tam ekran ↗").
  *
  * **Yalnız yönetici:** sohbet sayfasının kapısı `requireAdmin`; pencere ikinci bir yetki yolu değil, kısayol.
  * Sohbet sayfasının kendisinde düğme ve pencere çizilmez — tam ekran zaten açık. Yeni mesaj SESİ (15.34) ise her
@@ -56,6 +59,8 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Açan ekranın bağlamı (15.39) — başlığın alt satırı ve BAĞLAM şeridi; listeden başka sohbet seçilince düşer.
+  const [context, setContext] = useState<MessengerContext | null>(null);
   // `null` = HENÜZ ÖLÇÜLMEDİ — rozet uydurulmaz: "0" iş yok derdi (bildirim zilinin kuralı).
   const [awaiting, setAwaiting] = useState<number | null>(null);
   // Kuyruk zili TEK yerde dinlenir, liste bu sayaçla haberdar olur — aynı kanala iki abonelik açılmasın.
@@ -92,18 +97,34 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   // Açık pencerenin listesi yalnız görünürken tazelenir (gizli sekmede tur yok — `useBell`in varsayılanı).
   useBell(enabled && open && !onSocialPage ? inboxChannel : null, () => setInboxTick((tick) => tick + 1));
 
-  const openConversation = useCallback((id: string) => {
+  // Taslak deposu (15.39): sohbet kimliğine göre, kabuğun ömrü boyunca — sayfanın cevap kutusu da buradan okur,
+  // yani "Tam ekran"a geçince yarım cümle taşınır (`useMessageDraft` künyesi).
+  const drafts = useRef(new Map<string, string>());
+  const draftStore = useMemo<MessageDraftStore>(
+    () => ({
+      read: (id) => drafts.current.get(id) ?? '',
+      write: (id, text) => {
+        if (text) drafts.current.set(id, text);
+        else drafts.current.delete(id);
+      },
+    }),
+    [],
+  );
+
+  const openConversation = useCallback((id: string, ctx?: MessengerContext) => {
     setOpen(true);
     setNotice(null);
+    setContext(ctx ?? null);
     setConversationId(id);
   }, []);
 
   // Pencereyi "sohbet açılıyor" hâlinde açar ve sohbeti bulan işi koşar. İş ya sohbet kimliği döner ya
   // operatöre söylenecek SEBEBİ (numara okunamadı, iki kayda çıkıyor, kanal yok) — sessiz boş pencere değil.
-  const openVia = useCallback((resolve: () => Promise<OpenOutcome>) => {
+  const openVia = useCallback((resolve: () => Promise<OpenOutcome>, ctx?: MessengerContext) => {
     setOpen(true);
     setConversationId(null);
     setNotice(null);
+    setContext(ctx ?? null);
     setOpening(true);
     void resolve().then((outcome) => {
       setOpening(false);
@@ -112,7 +133,10 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
     });
   }, []);
 
-  const startWhatsapp = useCallback((customerId: string) => openVia(() => whatsappOutcome(customerId)), [openVia]);
+  const startWhatsapp = useCallback(
+    (customerId: string, ctx?: MessengerContext) => openVia(() => whatsappOutcome(customerId), ctx),
+    [openVia],
+  );
 
   const openForCustomer = useCallback(
     (customerId: string) =>
@@ -138,35 +162,47 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   };
 
   return (
-    <SocialMessengerContext.Provider value={api}>
-      {children}
-      {/* Sohbet sayfasında pencere de çizilmez: aynı sohbet iki yerde açık kalır ve aynı zile iki abonelik düşerdi.
-          Katman `Dialog`un (z-50) üstünde (15.33): geri çağırma penceresinden açılınca örtünün arkasında kalmasın. */}
-      {enabled && open && !onSocialPage ? (
-        <section
-          role="dialog"
-          aria-label="Mesajlar"
-          className="fixed right-5 bottom-[84px] z-[55] flex h-[min(600px,calc(100vh-110px))] w-[380px] flex-col overflow-hidden rounded-ops-card border border-ops-line bg-ops-card shadow-[0_24px_70px_rgba(20,22,18,0.4)] print:hidden"
-        >
-          {conversationId ? (
-            <ConversationView key={conversationId} conversationId={conversationId} onBack={() => setConversationId(null)} onClose={close} />
-          ) : (
-            <ListView
-              opening={opening}
-              notice={notice}
-              awaiting={awaiting}
-              tick={inboxTick}
-              onSelect={(id) => {
-                setNotice(null);
-                setConversationId(id);
-              }}
-              onClose={close}
-            />
-          )}
-        </section>
-      ) : null}
-      {enabled && !onSocialPage ? <MessengerFab open={open} awaiting={awaiting} onToggle={() => (open ? close() : setOpen(true))} /> : null}
-    </SocialMessengerContext.Provider>
+    <MessageDraftContext.Provider value={draftStore}>
+      <SocialMessengerContext.Provider value={api}>
+        {children}
+        {/* Sohbet sayfasında pencere de çizilmez: aynı sohbet iki yerde açık kalır ve aynı zile iki abonelik düşerdi.
+            Katman `Dialog`un (z-50) üstünde (15.33): geri çağırma penceresinden açılınca örtünün arkasında kalmasın. */}
+        {enabled && open && !onSocialPage ? (
+          <section
+            role="dialog"
+            aria-label="Mesajlar"
+            className="fixed right-5 bottom-[84px] z-[55] flex h-[min(600px,calc(100vh-110px))] w-[380px] flex-col overflow-hidden rounded-ops-card border border-ops-line bg-ops-card shadow-[0_24px_70px_rgba(20,22,18,0.4)] print:hidden"
+          >
+            {conversationId ? (
+              <ConversationView
+                key={conversationId}
+                conversationId={conversationId}
+                context={context}
+                // Kişinin öteki kanalı (15.39) — aynı kişi, bağlam kalır.
+                onSelectThread={setConversationId}
+                onBack={() => setConversationId(null)}
+                onClose={close}
+              />
+            ) : (
+              <ListView
+                opening={opening}
+                notice={notice}
+                awaiting={awaiting}
+                tick={inboxTick}
+                onSelect={(id) => {
+                  setNotice(null);
+                  // Listeden seçilen sohbet açan ekranın müşterisi olmayabilir — bağlam düşer.
+                  setContext(null);
+                  setConversationId(id);
+                }}
+                onClose={close}
+              />
+            )}
+          </section>
+        ) : null}
+        {enabled && !onSocialPage ? <MessengerFab open={open} awaiting={awaiting} onToggle={() => (open ? close() : setOpen(true))} /> : null}
+      </SocialMessengerContext.Provider>
+    </MessageDraftContext.Provider>
   );
 }
 
@@ -272,7 +308,7 @@ function ListView({ opening, notice, awaiting, tick, onSelect, onClose }: ListVi
     <>
       <header className="flex flex-none items-center gap-2 border-b border-ops-line px-4 py-3">
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="font-ops-display text-ops-base font-semibold text-ops-ink">Mesajlar</span>
+          <span className="font-ops-display text-ops-base font-semibold text-ops-ink">Sosyal Mesajlar</span>
           {awaiting !== null ? <span className="font-ops-body text-ops-micro text-ops-muted">{awaiting} cevap bekliyor</span> : null}
         </div>
         <Link
@@ -312,7 +348,7 @@ function ListView({ opening, notice, awaiting, tick, onSelect, onClose }: ListVi
         ) : rows.length === 0 ? (
           <p className="px-4 py-3 font-ops-body text-ops-xs text-ops-muted">Henüz sohbet yok.</p>
         ) : (
-          rows.map((row) => <InboxRow key={row.id} row={row} active={false} onSelect={onSelect} />)
+          rows.map((row) => <InboxRow key={row.id} row={row} target={row.id} active={false} onSelect={onSelect} />)
         )}
         {cursor ? (
           <button
@@ -331,15 +367,27 @@ function ListView({ opening, notice, awaiting, tick, onSelect, onClose }: ListVi
 
 interface ConversationViewProps {
   conversationId: string;
+  /** Açan ekranın bağlamı (15.39) — başlığın alt satırı ve BAĞLAM şeridi; yoksa şerit çizilmez. */
+  context: MessengerContext | null;
+  /** Kanal sekmesi (15.39) — kişinin öteki kanalındaki sohbet. */
+  onSelectThread: (conversationId: string) => void;
   onBack: () => void;
   onClose: () => void;
 }
 
-function ConversationView({ conversationId, onBack, onClose }: ConversationViewProps) {
+function ConversationView({ conversationId, context, onSelectThread, onBack, onClose }: ConversationViewProps) {
   const [detail, setDetail] = useState<ConversationDetailView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  // "Ekle"nin kutuya taşıdığı metin (15.39) — sayfanın "Cevap kutusuna taşı"sıyla aynı kapı (`prefill`).
+  const [prefill, setPrefill] = useState<{ text: string } | null>(null);
+  const drafts = useContext(MessageDraftContext);
+
+  /** "Ekle": bağlam satırı taslağın sonuna — yazılmış cümle ezilmez (`appendToDraft`). */
+  const addContext = () => {
+    if (context) setPrefill({ text: appendToDraft(drafts?.read(conversationId) ?? '', context.summary) });
+  };
 
   const load = useCallback(() => {
     void messengerConversationAction(conversationId).then(({ data, error: actionError }) => {
@@ -387,8 +435,12 @@ function ConversationView({ conversationId, onBack, onClose }: ConversationViewP
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{detail?.title ?? 'Sohbet'}</span>
           {detail ? (
-            <span className="flex items-center gap-1.5 font-ops-body text-ops-micro text-ops-muted">
-              {SOURCE_LABELS[detail.source]}
+            <span className="flex min-w-0 items-center gap-1.5 font-ops-body text-ops-micro text-ops-muted">
+              {/* Açan ekran önce (çizim: "Sipariş detayından · WhatsApp") — pencere nereden geldiğini söyler. */}
+              <span className="truncate">
+                {context ? `${context.origin} · ` : ''}
+                {SOURCE_LABELS[detail.source]}
+              </span>
               <Badge tone={WINDOW_TONE[detail.window.tone]}>{detail.window.chip}</Badge>
             </span>
           ) : null}
@@ -398,7 +450,7 @@ function ConversationView({ conversationId, onBack, onClose }: ConversationViewP
           onClick={onClose}
           className="flex-none cursor-pointer font-ops-display text-ops-xs font-semibold text-ops-olive hover:underline"
         >
-          Tam ekran →
+          Tam ekran ↗
         </Link>
         <CloseButton onClose={onClose} />
       </header>
@@ -412,6 +464,30 @@ function ConversationView({ conversationId, onBack, onClose }: ConversationViewP
         </div>
       ) : (
         <>
+          {/* Kişinin kanal sekmeleri (15.39 · çizim) — dar hâl: ikon + sayı; açık kanalın adı sağda. */}
+          <div className="flex flex-none items-center gap-2 border-b border-ops-line-soft px-3 py-2">
+            <ChannelTabs compact threads={detail.threads} activeId={detail.id} onSelect={onSelectThread} />
+            <span className="ml-auto flex-none font-ops-body text-ops-micro text-ops-faint">{SOURCE_LABELS[detail.source]}</span>
+          </div>
+          {/* BAĞLAM şeridi (15.39 · çizim: "sipariş bağlamı üstte taşınır") — "Ekle" özeti taslağa yazar. Kutu yokken
+              (pencere kapalı) eklenecek yer de yok; düğme o hâlde çizilmez. */}
+          {context ? (
+            <div className="flex flex-none items-center gap-2 border-b border-ops-olive-line bg-ops-olive-bg px-3 py-1.5">
+              <span className="flex-none font-ops-display text-ops-micro font-semibold tracking-[0.04em] text-ops-olive-dark">BAĞLAM</span>
+              <span title={context.summary} className="min-w-0 flex-1 truncate font-ops-body text-ops-xs text-ops-olive-dark">
+                {context.summary}
+              </span>
+              {humanCanReply(detail.window) ? (
+                <button
+                  type="button"
+                  onClick={addContext}
+                  className="flex-none cursor-pointer rounded-[5px] border border-ops-olive-line bg-ops-card px-2 py-0.5 font-ops-display text-ops-micro font-semibold text-ops-olive transition-colors hover:border-ops-olive"
+                >
+                  Ekle
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {detail.thread.length === 0 ? (
             <p className="flex flex-1 items-center justify-center bg-ops-gray-25 px-4 font-ops-body text-ops-xs text-ops-muted">
               Bu sohbette henüz mesaj yok.
@@ -428,11 +504,13 @@ function ConversationView({ conversationId, onBack, onClose }: ConversationViewP
             </MessageThread>
           )}
           <ReplyBox
+            conversationId={conversationId}
             source={detail.source}
             window={detail.window}
             language={detail.language}
             busy={busy}
             error={sendError}
+            prefill={prefill}
             onSendReply={onSendReply}
           />
         </>

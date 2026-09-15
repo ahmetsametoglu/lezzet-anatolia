@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   ConversationInboxRowSchema,
+  CustomerInboxRowSchema,
   ConversationInsertSchema,
   ConversationNoteInsertSchema,
   ConversationNoteSchema,
@@ -10,6 +11,7 @@ import {
   MessageSchema,
   type Conversation,
   type ConversationInboxRow,
+  type CustomerInboxRow,
   type ConversationInsert,
   type ConversationNote,
   type ConversationNoteInsert,
@@ -517,4 +519,53 @@ export class ConversationInboxService extends BaseDbService<ConversationInboxRow
   countAwaitingReply(source?: ConversationSource): Promise<number> {
     return this.count({ awaitingReply: true, source });
   }
+}
+
+/**
+ * `customer_inbox` görünümü (15.38 · kullanıcı kararı 15.09) — sosyal gelen kutusunun KİŞİ başına satırı:
+ * aynı kişinin üç kanaldaki sohbetleri tek satırda, kanallar satırın içinde. Gruplama görünümde (künyesi
+ * `0041`); servis yalnız süzgeç ve sıra verir.
+ *
+ * Sohbet başına kuyruk (`ConversationInboxService`) yerinde duruyor — native uygulama ve yüzen pencerenin
+ * yeni mesaj ölçütü onu okuyor.
+ */
+export class CustomerInboxService extends BaseDbService<CustomerInboxRow, never, never> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'customer_inbox', CustomerInboxRowSchema, CustomerInboxRowSchema as never, CustomerInboxRowSchema as never, false);
+  }
+
+  /**
+   * Kuyruk — kişinin son GELEN mesajına göre (21.289'un ekseni), müşterinin hiç yazmadığı kişi sonda.
+   *
+   * Süzgeçler KİŞİYE uygulanır (çizimin kuralı): "cevap bekliyor" herhangi bir kanalında top bizde olan
+   * kişidir, kanal süzgeci o kanaldan mesajı olan kişidir — satır yine kişinin bütün kanallarını taşır.
+   */
+  list(
+    filter: { awaitingReply?: boolean; source?: ConversationSource } = {},
+    cursor?: KeysetCursor,
+    limit = DEFAULT_PAGE_SIZE,
+  ): Promise<Page<CustomerInboxRow>> {
+    return this.getPage(
+      { awaitingAny: filter.awaitingReply },
+      { orderBy: 'inboxAt', orderDirection: 'desc', limit, keysetAfter: cursor, containsFilters: channelFilter(filter.source) },
+    );
+  }
+
+  /** "N cevap bekliyor" — KİŞİ sayısı, kuyrukla aynı süzgeç (sayfa uzunluğu değil). */
+  countAwaitingReply(source?: ConversationSource): Promise<number> {
+    return this.count({ awaitingAny: true }, { containsFilters: channelFilter(source) });
+  }
+
+  /**
+   * Tek kişinin satırı — sohbet başlığının kanal sekmeleri buradan. Süzgeç kişi anahtarında ve görünümün
+   * toplamasının ALTINA iner: tek kişiyi okumak bütün kutuyu hesaplatmaz.
+   */
+  rowOf(personKey: string): Promise<CustomerInboxRow | null> {
+    return this.getOneBy({ personKey });
+  }
+}
+
+/** Kanal süzgeci — kişinin kanal dizisinde o kanal var mı (`sources @> {kanal}`). */
+function channelFilter(source?: ConversationSource): { field: string; values: readonly unknown[] }[] | undefined {
+  return source ? [{ field: 'sources', values: [source] }] : undefined;
 }

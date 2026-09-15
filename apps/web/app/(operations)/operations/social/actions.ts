@@ -14,7 +14,7 @@ import {
 // Alt yoldan (`settings-keys` emsali): barrel o gün başka şeritlerin elindeydi (07.09).
 import { startCartLink } from '@lezzet/application/cart/link';
 import { linkTail } from '@lezzet/application/cart/link-text';
-import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerInboxService, serviceDb } from '@lezzet/database';
 import { ConversationHandlerEnum, DEFAULT_PAGE_SIZE, type CartLinkPurpose, type KeysetCursor, type Page, type TicketHandler } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -54,13 +54,13 @@ function refresh(): void {
  * Kuyruğun SONRAKİ sayfası — imleç `null` ise İLKİ: yüzen mesaj penceresi (15.32) listesini buradan okur
  * (sayfanın kendi ilk sayfası sunucuda okunur). Süzgeç ADRESTEN okunur, istemciden gelen bir nesneden değil: devam eden
  * sayfa ilk sayfayla aynı ölçüte uymalı ve o ölçüt tek yerde (`social-url`) tanımlı — kanal çipi de
- * dahil.
+ * dahil. Satırlar KİŞİ başına (15.38 · `customer_inbox`): aynı kişi iki sayfaya bölünmez, gruplama görünümde.
  */
 export async function loadMoreConversationsAction(search: string, cursor: KeysetCursor | null): Promise<ActionResult<Page<InboxRowView>>> {
   try {
     await requireAdmin();
     const urlState = parseSocialUrl(Object.fromEntries(new URLSearchParams(search)));
-    const page = await new ConversationInboxService(serviceDb()).list(
+    const page = await new CustomerInboxService(serviceDb()).list(
       { awaitingReply: urlState.f === 'awaiting' ? true : undefined, source: channelSource(urlState.ch) },
       cursor ?? undefined,
       DEFAULT_PAGE_SIZE,

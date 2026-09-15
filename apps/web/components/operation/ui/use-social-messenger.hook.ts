@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext } from 'react';
+import type { MessengerContext } from './customer-channel-model';
 
 /**
  * **Yüzen mesaj penceresinin kapısı** (15.32) — sayfalar pencereyi buradan açar.
@@ -10,8 +11,11 @@ import { createContext, useContext } from 'react';
  * yalnız `*-url`); sözleşme bu yüzden ortak kitte — modül uygular, sayfalar yalnız bunu bilir.
  */
 export interface SocialMessengerApi {
-  /** Sohbeti pencerede açar — müşterinin kanal düğmesinden (`CustomerChannels`). */
-  openConversation: (conversationId: string) => void;
+  /**
+   * Sohbeti pencerede açar — müşterinin kanal düğmesinden (`CustomerChannels`). `context` (15.39): açan ekran ve
+   * pencerenin üstünde duracak özet (sipariş detayı: referans · tutar · teslim günü).
+   */
+  openConversation: (conversationId: string, context?: MessengerContext) => void;
   /**
    * Müşterinin EN SON yazdığı kanalın sohbetini açar — listelerin tek düğmesinden (`CustomerChatButton`,
    * 15.33); kanallar basınca okunur. Hiç sohbeti yoksa ve telefonu kayıtlıysa WhatsApp sohbeti açılır.
@@ -19,9 +23,9 @@ export interface SocialMessengerApi {
   openForCustomer: (customerId: string) => void;
   /**
    * Müşterinin WhatsApp sohbeti yoksa kayıtlı numarasıyla AÇAR. Yalnız WhatsApp: Messenger/Instagram'da
-   * işletme sohbet başlatamaz, ilk sözü müşteri söyler.
+   * işletme sohbet başlatamaz, ilk sözü müşteri söyler. `context`: `openConversation`ınki (15.39).
    */
-  startWhatsapp: (customerId: string) => void;
+  startWhatsapp: (customerId: string, context?: MessengerContext) => void;
 }
 
 export const SocialMessengerContext = createContext<SocialMessengerApi | null>(null);

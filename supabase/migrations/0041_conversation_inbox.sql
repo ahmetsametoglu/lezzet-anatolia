@@ -68,3 +68,59 @@ comment on view public.conversation_inbox is
 -- değil sonuna düşmeli — henüz kimse bir şey söylememiş bir sohbet, cevap bekleyenlerin önüne
 -- geçemez.
 create index conversation_last_inbound_idx on public.conversation (last_inbound_at desc nulls last);
+
+-- ── MÜŞTERİ BAZLI GELEN KUTUSU (15.38 · kullanıcı kararı 15.09) ─────────────
+-- Aynı kişi bize üç kanaldan yazabilir ve sohbet başına satır onu üç ayrı kişi gibi gösteriyordu:
+-- operatör öteki kanaldaki yazışmayı ancak tesadüfen fark ediyordu. Bu görünüm KİŞİ başına tek
+-- satır verir; kişinin kanalları satırın içinde (`threads`), sohbet ekranında sekme.
+--
+-- **Kişi = müşteri kaydı; kimliksiz sohbet kendi başına bir kişidir.** Messenger/IG sohbeti bir
+-- müşteriye bağlanana kadar kimin olduğunu bilmiyoruz — onu başka bir satırla birleştirmek tahmin
+-- olurdu. Bağ kurulduğu an (müşterinin kendi açtığı hesap bağlantısı) satırlar kendiliğinden birleşir.
+--
+-- **Satırın yüzü BAŞ sohbettir** — kişinin en son yazdığı sohbet (`last_inbound_at`, kuyruğun ekseni
+-- 21.289). Başlık, önizleme, pencere ve yürütücü ondan okunur: üst düzey alanlar `conversation_inbox`un
+-- satırının aynısı, kural iki yerde yazılmasın diye oradan gelir.
+--
+-- **Neden ekranda gruplamak değil:** sohbet kuyruğunun sayfasını gruplamak, aynı kişinin ikinci sohbeti
+-- sonraki sayfaya düştüğünde onu iki kez gösterir (ya da istemcinin ayıklamasını ister), sayılar sohbet
+-- sayar ve kanalları okumak için her sayfaya ikinci bir sorgu gerekir. Kullanıcı kararı (15.09): bilgiyi
+-- gereksiz sorgularla türetmek sonradan pahalı — gruplamayı veritabanı yapar.
+--
+-- **Tek geçiş:** `conversation_inbox` bir kez okunur (son mesajın hesabı sohbet başına bir kez), satırlar
+-- kişi anahtarında toplanır; baş sohbetin satırı toplamın içinden seçilir, ikinci kez okunmaz.
+--
+-- **`person_key` dışarı açık:** sohbet başlığının sekmeleri tek kişinin satırını okur ve bu kolondaki
+-- süzgeç toplamanın ALTINA iner (gruplama ifadesi) — tek kişiyi okumak bütün kutuyu hesaplatmaz.
+--
+-- **`inbox_at` — boş kalmayan sıralama ekseni:** kişinin hiçbir sohbetinde müşteri yazmamışsa (sohbeti
+-- biz açtık) `last_inbound_at` boştur. PostgREST'in azalan sırası boşları BAŞA alır (Postgres
+-- varsayılanı) ve imleç boş değerden kurulamaz; ekseni `-infinity`e düşürmek o satırı kuyruğun SONUNA
+-- koyar ve imleci her satırda kurulabilir kılar. Ekranda gösterilen bir değer değil — yaş
+-- `last_message_at`ten okunur.
+create or replace view public.customer_inbox as
+select (p.head).*,
+       p.person_key,
+       coalesce((p.head).last_inbound_at, '-infinity'::timestamptz) as inbox_at,
+       p.threads,
+       p.sources,
+       p.awaiting_any
+  from (
+    select coalesce(t.customer_id, t.id) as person_key,
+           (array_agg(t order by t.last_inbound_at desc nulls last, t.last_message_at desc nulls last, t.id))[1] as head,
+           -- Kişinin BÜTÜN sohbetleri, başla aynı sırada — kanal noktası, sekme ve "hangisi bekliyor".
+           jsonb_agg(
+             jsonb_build_object('id', t.id, 'source', t.source, 'messageCount', t.message_count, 'awaitingReply', t.awaiting_reply)
+             order by t.last_inbound_at desc nulls last, t.last_message_at desc nulls last, t.id
+           ) as threads,
+           -- Süzgecin ve noktanın kanalları: YALNIZ mesajı olan (çizimin kuralı — boş kanal görünmez).
+           coalesce(array_agg(distinct t.source) filter (where t.message_count > 0), '{}'::conversation_source[]) as sources,
+           -- "Cevap bekliyor" KİŞİNİN hâli: herhangi bir kanalında son sözü müşteri söylediyse top bizde.
+           bool_or(t.awaiting_reply) as awaiting_any
+      from public.conversation_inbox t
+     group by coalesce(t.customer_id, t.id)
+  ) p;
+
+comment on view public.customer_inbox is
+  'Müşteri bazlı gelen kutusu (15.38): kişi başına tek satır — yüzü en son yazdığı sohbet, kanalları '
+  'threads/sources, cevap bekleyişi awaiting_any. Hepsi conversation_inbox''tan türer, kopya tutulmaz.';

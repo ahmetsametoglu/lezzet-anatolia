@@ -3001,6 +3001,17 @@ yok; ek çizim istenmedi (`15.32`).
 - **Messenger/Instagram'da 24 saat son değil (15.37, kullanıcı kararı 15.09):** insan temsilci olarak 7 güne kadar
   yazılır; kutu açık kalır, rozet kalan günü gösterir. Yeni çizimin "24 saat geçti — serbest mesaja kapalı" cümleleri
   bilinçli olarak alınmadı (Meta kuralı ve gönderim kapısı 7 gün).
+- **Liste müşteri bazlı, sohbette kanal sekmeleri (15.38, kullanıcı isteği 15.09 · yeni çizim):** aynı kişinin kanalları
+  tek satırda, satırda kanal ikonları; sohbet başlığı çizimin iki satırı, sekme yalnız mesajı olan kanalda (açık sohbet
+  mesajsız olsa da sekmesi durur). Seçili satırın kenarı olive — kanal rengi kalktı, kanal noktada okunur. Bilinçli
+  farklar: başlığın "⋯" menüsü yazılmadı (üç maddesinden yapay zekâ özeti yazılmadı, "Kalıp mesaj" ertelendi —
+  kullanıcı 15.09, "Talep (şikâyet) aç" sağ panelde); kuyruk 330 px'te kaldı (09.08 kararı); mod cümleleri kodun
+  cümleleri ("AI ajanı yürütüyor — gerekirse Devral ile araya girin").
+- **Mesaj balonu (15.39, yeni çizim "Mesaj Balonu"):** liste kişi başına, sohbette dar kanal sekmeleri, sipariş
+  ekranlarından açılınca BAĞLAM şeridi + "Ekle", taslak ekranlar arasında korunur. Bilinçli farklar: pencere 380 px ×
+  en çok 600 px (çizim 352 × 456 — kendi tuvalinin ölçeğinde; burada cevap kutusu pencere ve dil notunu taşıyor);
+  liste başlığında "Tümü →" duruyor (tam kuyruğa geçiş); cevap kutusunun notları sayfanınki (çizimin "Sayfa değişmez…"
+  notu yerine pencere ve dil bilgisi); "Kalıp mesaj seç…" yok (kalıp mesaj ertelendi, kullanıcı 15.09).
 
 ## Native adres çekmecesi tasarımda — tek adres kapısı ve bilinçli farklar (15.09, kullanıcı kararları 13.09 · 14.09)
 

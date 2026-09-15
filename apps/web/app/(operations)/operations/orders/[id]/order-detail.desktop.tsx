@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
 import { Timeline } from '@/components/operation/ui/timeline';
 import { CustomerChannels } from '@/components/operation/ui/customer-channels';
+import { orderChatContext } from '@/components/operation/ui/customer-channel-model';
 import { money, percent, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { DOOR_CHECK_NOTE } from '@/components/operation/ui/labels';
 import { statusLabel, statusTone } from '../orders-labels';
@@ -78,7 +79,16 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             UYGULAMANIN İÇİNDE, yüzen pencerede açılır (15.32 · kullanıcı kuralı 14.09): müşterinin yazıştığı
             her kanal bir düğme, en son yazdığı işaretli. `wa.me` bağlantısı operatörü kendi telefonuna
             gönderiyordu. */}
-        <CustomerChannels customerId={order.customer.id} size="md" />
+        <CustomerChannels
+          customerId={order.customer.id}
+          size="md"
+          // Balonun BAĞLAM şeridi (15.39 · çizim): operatör hangi siparişten söz ettiğini elle yazmasın.
+          context={orderChatContext('Sipariş detayından', {
+            referenceNo: order.referenceNo,
+            totalCents: order.payment.totalCents,
+            deliveryDate: order.delivery.date,
+          })}
+        />
 
         {order.customer.phone ? (
           <a

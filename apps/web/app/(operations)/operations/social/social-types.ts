@@ -3,6 +3,7 @@ import {
   LinkProofKindEnum,
   TicketTypeEnum,
   type ConversationSource,
+  type CustomerInboxThread,
   type KeysetCursor,
   type MessageDirection,
   type MessageKind,
@@ -44,17 +45,24 @@ export interface WindowView {
   tone: 'open' | 'soon' | 'closed' | 'idle';
 }
 
-/** Gelen kutusu satırı — sol panel. */
+/**
+ * Gelen kutusu satırı — sol panel. **Bir KİŞİ** (15.38 · `customer_inbox`): aynı müşterinin kanalları tek satırda.
+ * Başlık, önizleme, yaş, yürütücü ve pencere BAŞ sohbetin (en son yazdığı); kanallar ve bekleyiş kişinin.
+ */
 export interface InboxRowView {
+  /** Baş sohbetin kimliği — satırın anahtarı; süzgeçsiz kuyrukta basınca açılan sohbet. */
   id: string;
-  /** Hangi kanal (15.15) — satırın kenar rengi ve rozeti buradan okunur. */
-  source: ConversationSource;
+  /** Mesajı olan kanallar (15.38) — satırın kanal noktaları; boş kanal görünmez. */
+  channels: ConversationSource[];
+  /** Kişinin bütün sohbetleri, en son yazdığı önce — basınca hangisinin açılacağı (`rowTarget`) ve seçili satır. */
+  threads: CustomerInboxThread[];
   /** Müşteri adı; çözülmemişse sağlayıcı profil adı; o da yoksa dış anahtar (boş satır yerine). */
   title: string;
   /** Son mesajın tek satırlık önizlemesi; metinsiz türde türün adı okunur. */
   preview: string;
   /** Son hareketin yaşı — dar sütun biçiminde (`agoShort`). */
   ago: string;
+  /** Kişi cevap bekliyor — herhangi bir kanalında son sözü müşteri söyledi (15.38). */
   awaitingReply: boolean;
   /** Kimlik çözülmemiş konuşma (webhook önce yazar, sonra çözer — Messenger/IG'de varsayılan hâl). */
   unidentified: boolean;
@@ -162,6 +170,11 @@ export interface ConversationDetailView {
   thread: ThreadItemView[];
   /** Başlıktaki "N mesaj" — iç notlar SAYILMAZ: müşteriyle yazışmanın parçası değiller. */
   messageCount: number;
+  /**
+   * Kişinin sohbetleri — başlığın KANAL SEKMELERİ (15.38): mesajı olan kanallar ve açık sohbetin kendisi
+   * (`tabsOf`). Tek kanalda da tek sekme çizilir (çizim) — operatör hangi kanalda olduğunu sekmeden okur.
+   */
+  threads: CustomerInboxThread[];
   /**
    * Müşteri bağlamı — ORTAK okuma (`lib/customer/context`), Talepler ekranı da aynısını kullanır.
    * Kimlik çözülememiş konuşmada `null`; sağ panel o zaman kanala göre ne yapılacağını söyler.

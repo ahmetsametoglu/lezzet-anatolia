@@ -13,8 +13,8 @@ import type { Conversation, ConversationNote, Message, Ticket } from '@lezzet/ty
  * sorusunu Talepler ekranı da soruyor ve cevabı tek yerde durmalı. Konuşmanın okumasına gömseydik,
  * iki ekran aynı soruyu iki biçimde cevaplardı — ve biri gün gelip taslak bayrağını unuturdu.
  *
- * Gelen kutusu listesi de burada değil: o tek servis çağrısı (`ConversationInboxService.list`) ve
- * sarmalamak yalnız bir dolaylılık katmanı olurdu.
+ * Gelen kutusu listesi de burada değil: o tek servis çağrısı (`CustomerInboxService.list` — kişi başına,
+ * 15.38) ve sarmalamak yalnız bir dolaylılık katmanı olurdu.
  */
 /**
  * Mesaj + medya adresi. Adres **imzalı R2 bağlantısı değil, kendi geçidimiz** (`media/[id]/route`).

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { customerChannelsAction } from '@/lib/messaging/customer-channel-actions';
 import { SOURCE_DOT, SOURCE_LABELS } from './conversation-source';
-import type { CustomerChannelView, CustomerChannelsView } from './customer-channel-model';
+import type { CustomerChannelView, CustomerChannelsView, MessengerContext } from './customer-channel-model';
 import { Skeleton } from './skeleton';
 import { useSocialMessenger, type SocialMessengerApi } from './use-social-messenger.hook';
 
@@ -20,13 +20,15 @@ interface CustomerChannelsProps {
   /** Düğme boyu — başlık barında yanındaki düğmelerle aynı yükseklik (`md`), panelde dar (`sm`). */
   size?: 'sm' | 'md';
   className?: string;
+  /** Pencerenin üstünde taşınacak bağlam (15.39) — sipariş ekranları verir: referans · tutar · teslim günü. */
+  context?: MessengerContext;
 }
 
-export function CustomerChannels({ customerId, size = 'sm', className }: CustomerChannelsProps) {
+export function CustomerChannels({ customerId, size = 'sm', className, context }: CustomerChannelsProps) {
   const messenger = useSocialMessenger();
   if (!messenger) return null;
   // `key`: müşteri değişince bir öncekinin kanalları bir an bile görünmesin.
-  return <ChannelButtons key={customerId} customerId={customerId} size={size} className={className} messenger={messenger} />;
+  return <ChannelButtons key={customerId} customerId={customerId} size={size} className={className} context={context} messenger={messenger} />;
 }
 
 const CHANNEL_BUTTON =
@@ -36,10 +38,11 @@ interface ChannelButtonsProps {
   customerId: string;
   size: 'sm' | 'md';
   className?: string;
+  context?: MessengerContext;
   messenger: SocialMessengerApi;
 }
 
-function ChannelButtons({ customerId, size, className, messenger }: ChannelButtonsProps) {
+function ChannelButtons({ customerId, size, className, context, messenger }: ChannelButtonsProps) {
   const [view, setView] = useState<CustomerChannelsView | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,7 +87,7 @@ function ChannelButtons({ customerId, size, className, messenger }: ChannelButto
         <button
           key={channel.conversationId}
           type="button"
-          onClick={() => messenger.openConversation(channel.conversationId)}
+          onClick={() => messenger.openConversation(channel.conversationId, context)}
           title={channelTitle(channel)}
           className={button}
         >
@@ -96,7 +99,7 @@ function ChannelButtons({ customerId, size, className, messenger }: ChannelButto
       {view.canStartWhatsapp ? (
         <button
           type="button"
-          onClick={() => messenger.startWhatsapp(customerId)}
+          onClick={() => messenger.startWhatsapp(customerId, context)}
           title="Müşteri WhatsApp'tan henüz yazmadı — sohbet kayıtlı numarasıyla açılır."
           className={button}
         >

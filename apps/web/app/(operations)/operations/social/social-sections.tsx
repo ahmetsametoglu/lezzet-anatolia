@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { AnchorSnapshot } from '@lezzet/application';
-import type { TicketHandler } from '@lezzet/types';
+import type { ConversationSource, CustomerInboxThread, TicketHandler } from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
 import { AiDraftCard, handlerOptions } from '@/components/operation/ui/ai-handling';
 import { Badge } from '@/components/operation/ui/badge';
@@ -21,9 +21,11 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { AlertIcon, WhatsAppIcon } from '@/components/operation/ui/icons';
 import { bubbleClass, MessageRow, MessageThread, SectionLabel } from '@/components/operation/ui/message-thread';
 import { QueueRow } from '@/components/operation/ui/queue-pane';
-import { SOURCE_EDGE, SOURCE_LABELS } from '@/components/operation/ui/conversation-source';
+import { SOURCE_LABELS, SOURCE_SOLID, SOURCE_TINT } from '@/components/operation/ui/conversation-source';
+import { ChannelIcon } from '@/components/operation/ui/channel-icon';
 import { ChatText } from '@/components/text/chat-text';
 import { Textarea } from '@/components/operation/form/input';
+import { useMessageDraft } from '@/components/operation/ui/use-message-draft.hook';
 import { ORDERS_PATH } from '../orders/orders-url';
 import { TICKETS_PATH } from '../tickets/tickets-url';
 import { customersUrl } from '../customers/customers-url';
@@ -51,30 +53,49 @@ import type { ConversationDetailView, InboxRowView, MessageView, NoteView } from
 // SOL — gelen kutusu satırı
 // ─────────────────────────────────────────────────────────────────────────────
 
+interface ChannelDotProps {
+  source: ConversationSource;
+}
+
+/**
+ * Kanal noktası — kuyruk satırında kanalın marka ikonu, açık zeminde (15.38 · çizim). Adı `title`a ve ekran
+ * okuyucuya yazılır: ikon tanınmasa da kanal söylenir.
+ */
+function ChannelDot({ source }: ChannelDotProps) {
+  return (
+    <span title={SOURCE_LABELS[source]} className={`flex items-center rounded-[5px] px-1.5 py-[3px] ${SOURCE_TINT[source]}`}>
+      <ChannelIcon source={source} size={11} />
+      <span className="sr-only">{SOURCE_LABELS[source]}</span>
+    </span>
+  );
+}
+
 interface InboxRowProps {
   row: InboxRowView;
+  /** Basınca açılacak sohbet — satır bir kişi, birden çok sohbet taşıyabilir (`rowTarget`, 15.38). */
+  target: string;
   active: boolean;
   onSelect: (id: string) => void;
 }
 
-export function InboxRow({ row, active, onSelect }: InboxRowProps) {
+export function InboxRow({ row, target, active, onSelect }: InboxRowProps) {
   return (
+    // Seçili kenar olive (çizim · 15.38): satır artık bir KİŞİ — tek kanalın rengi birden çok kanalı olan
+    // satırı yanlış okuturdu. Kanal noktalarda okunur.
     <QueueRow
-      id={row.id}
+      id={target}
       active={active}
       onSelect={onSelect}
       title={row.title}
-      // Seçili kenar KANALIN marka rengi (15.15): kuyruk artık üç kanalın kuyruğu, satırın nereden
-      // geldiği ilk bakışta okunmalı.
-      edgeClass={SOURCE_EDGE[row.source]}
       trailing={<span className="flex-none font-ops-mono text-ops-micro text-ops-faint">{row.ago}</span>}
       preview={row.preview}
       badges={
         <>
-          {/* Kanal rozeti — "Tümü" görünümünde satırlar karışık akar, rozet ayırt eder; tek kanala
-              daralmış görünümde de kalır: rozetin var/yok oynaması satırı süzgece göre başka
-              gösterirdi. */}
-          <Badge tone="slate">{SOURCE_LABELS[row.source]}</Badge>
+          {/* Kişinin kanalları (15.38) — mesajı olan her kanal bir nokta. Tek kanala daralmış görünümde de
+              hepsi kalır: süzgeç KİŞİYİ bulur, kişinin öteki kanalları gizlenmez. */}
+          {row.channels.map((source) => (
+            <ChannelDot key={source} source={source} />
+          ))}
           {row.awaitingReply ? (
             <Badge tone="amber" dot>
               Cevap bekliyor
@@ -286,6 +307,53 @@ function MediaBody({ message, transcript, lang }: { message: MessageView; transc
   );
 }
 
+interface ChannelTabsProps {
+  threads: readonly CustomerInboxThread[];
+  /** Açık sohbet — seçili sekme. */
+  activeId: string;
+  onSelect: (conversationId: string) => void;
+  /** Yüzen pencerenin dar hâli (15.39 · çizim): yalnız ikon + sayı — kanal adı `title`da ve pencerenin künyesinde. */
+  compact?: boolean;
+}
+
+/**
+ * Kişinin KANAL SEKMELERİ (15.38 · çizim) — aynı müşterinin kanallarındaki yazışma tek ekranda, sekmeyle
+ * gezilir; her kanal kendi kulvarında (pencere kuralı kanala göre, 15.37). Sekme: ikon + ad + mesaj sayısı.
+ * Seçili olmayan sekmede top bizdeyse amber nokta — "okunmadı" sayacı yok ve bilerek (`conversation_inbox`
+ * künyesi): son sözü müşteri söylediyse o kanal cevap bekliyor.
+ */
+export function ChannelTabs({ threads, activeId, onSelect, compact = false }: ChannelTabsProps) {
+  return (
+    <div role="tablist" aria-label="Müşterinin kanalları" className="flex flex-wrap items-center gap-1.5">
+      {threads.map((thread) => {
+        const active = thread.id === activeId;
+        return (
+          <button
+            key={thread.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            title={`${SOURCE_LABELS[thread.source]} · ${thread.messageCount} mesaj`}
+            onClick={() => {
+              if (!active) onSelect(thread.id);
+            }}
+            className={[
+              'flex cursor-pointer items-center gap-1.5 rounded-[7px] border font-ops-display text-ops-micro font-semibold transition-opacity hover:opacity-80',
+              compact ? 'px-2 py-1' : 'px-2.5 py-[5px]',
+              active ? SOURCE_SOLID[thread.source] : SOURCE_TINT[thread.source],
+            ].join(' ')}
+          >
+            <ChannelIcon source={thread.source} size={12} />
+            {compact ? null : SOURCE_LABELS[thread.source]}
+            <span className="font-ops-mono opacity-80">{thread.messageCount}</span>
+            {!active && thread.awaitingReply ? <span aria-label="cevap bekliyor" className="h-1.5 w-1.5 rounded-full bg-ops-amber-dot" /> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 interface ConversationPaneProps {
   detail: ConversationDetailView;
   busy: boolean;
@@ -297,27 +365,55 @@ interface ConversationPaneProps {
   onConsumeDraft: () => Promise<string | null>;
   /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
   onSuggestDraft: () => void;
+  /** Kanal sekmesi (15.38) — kişinin öteki kanalındaki sohbeti açar. */
+  onSelectThread: (conversationId: string) => void;
 }
 
-export function ConversationPane({ detail, busy, error, onSendReply, onMode, onConsumeDraft, onSuggestDraft }: ConversationPaneProps) {
+export function ConversationPane({ detail, busy, error, onSendReply, onMode, onConsumeDraft, onSuggestDraft, onSelectThread }: ConversationPaneProps) {
   // "Kutuya taşı"nın taşıdığı metin — nesne kimliği tetikleyicidir (talep ekranıyla aynı desen).
   const [prefill, setPrefill] = useState<{ text: string } | null>(null);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-ops-gray-25">
-      {/* Başlık barı ÇİZİMİN yeri: mod anahtarı + (AI'daysa) Devral (16.08) + Sipariş oluştur (köprü 15.4;
-          14.09'da sağ panelin dibinden buraya — çizim onu başlıkta çiziyor).
-          SARAR (14.09, ölçüldü): 1440 px'te sohbet sütunu ~660 px ve denetimler başlığı kelime kelime alt
-          alta itiyordu ("Re…"). Başlık 200 px'in altına inmez; sığmayan denetimler ikinci satıra, sağa yaslı. */}
-      <div className="flex flex-none flex-wrap items-center justify-end gap-3 border-b border-ops-line bg-ops-card px-5 py-3">
-        <div className="flex min-w-[200px] flex-1 flex-col">
-          <span className="truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{detail.title}</span>
-          <span className="font-ops-body text-ops-xs text-ops-muted">
-            {/* Kanal adı alt satırda da yazar: başlık bir müşteri adı olabilir ve aynı kişinin iki
-                kanalda iki sohbeti olabilir — hangisine bakıldığı cümleyle söylenmeli. */}
-            {SOURCE_LABELS[detail.source]} · {detail.context ? (detail.context.isCompany ? 'B2B' : 'B2C') : 'kimlik çözülmedi'} ·{' '}
+      {/* Başlık barı ÇİZİMİN İKİ SATIRI (15.38): üstte kim (ad · müşteri türü · dil) · pencere · Sipariş oluştur;
+          altta kanal sekmeleri · künye · mod anahtarı (+ AI'daysa Devral). Sekmeler aynı kişinin kanalları —
+          başlık bir müşteri adı ve aynı kişinin iki kanalda iki sohbeti olabilir; hangisine bakıldığını seçili
+          sekme söyler. "Sipariş oluştur" 14.09'da sağ panelin dibinden buraya geldi (çizim onu başlıkta çiziyor).
+          SARAR (14.09, ölçüldü): 1440 px'te sohbet sütunu ~660 px; sığmayan denetimler alt satıra düşer. */}
+      <div className="flex flex-none flex-col gap-2.5 border-b border-ops-line bg-ops-card px-5 py-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="min-w-0 truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{detail.title}</span>
+          {/* Müşteri türü (çizim) — kimliksiz sohbette "Kimlik yok": sağ panelin rozetiyle aynı söz. */}
+          {detail.context ? (
+            <Badge tone={detail.context.isDraft ? 'amber' : 'olive'}>
+              {detail.context.isDraft ? 'Taslak kayıt' : detail.context.isCompany ? 'B2B müşteri' : 'B2C müşteri'}
+            </Badge>
+          ) : (
+            <Badge tone="amber">Kimlik yok</Badge>
+          )}
+          {/* Müşterinin dili (15.28) — operatör Türkçe yazar, giden bu dile çevrilir; dayanağı altlıkta. */}
+          <span className="font-ops-body text-ops-xs text-ops-faint">{LANGUAGE_LABELS[detail.language.language]}</span>
+          <span className="ml-auto flex flex-none items-center gap-2.5">
+            <Badge tone={WINDOW_TONE[detail.window.tone]}>{detail.window.chip}</Badge>
+            {/* SİPARİŞ KÖPRÜSÜ (15.4) — YALNIZ kimlik çözülmüşken: köprü müşteri önseçili girişi açar,
+                kimliksiz sohbette müşteri seçimi boş gelirdi. Bağ tek parametre taşıyor; KAYNAĞI sunucu
+                konuşmadan çözüyor (`orderSourceOfConversation`) — kanalı adrese yazdırmak raporlardaki
+                dağılımı elle düzenlenebilir kılardı. */}
+            {detail.context ? (
+              <Link
+                href={`${ORDERS_PATH}/new?conversation=${detail.id}`}
+                className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none whitespace-nowrap' })}
+              >
+                Sipariş oluştur
+              </Link>
+            ) : null}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <ChannelTabs threads={detail.threads} activeId={detail.id} onSelect={onSelectThread} />
+          <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">
             {detail.messageCount} mesaj ·{' '}
-            {/* Alt satır modu CÜMLEYLE de söyler (çizim: "AI ajanı yürütüyor / insan yürütüyor") —
+            {/* Künye modu CÜMLEYLE de söyler (çizim: "AI ajanı yürütüyor / insan yürütüyor") —
                 anahtar seçimi, cümle durumu okur. */}
             {/* Üç mod da GERÇEK (ajan 15.8, anahtar 29.08). Bir tur boyunca burada "AI modunda ama
                 ajan yok — cevapsız bekliyor" yazıyordu: ajan yazıldıktan sonra kimse cümleyi
@@ -329,37 +425,22 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
                 ? 'hibrit — AI taslak yazar'
                 : 'insan yürütüyor'}
           </span>
+          {/* ÜÇ MOD DA AÇIK (29.08 · kullanıcı kararı). `AI` bir tur boyunca kapalıydı ve sebebi
+              ipucunda yazıyordu ("mesajı gönderecek kanal açılmadı"); o kısıt kalktığı gün ipucu da
+              kaldırıldı — kapalı bir düğmenin yanında duran eskimiş bir açıklama, düğmenin
+              kendisinden daha yanıltıcıdır. Sunucu tarafı zaten `ConversationHandlerEnum`den
+              türüyor (kural istemcinin nezaketine bırakılmaz) ve o enum de artık üç değer taşıyor. */}
+          <MultiToggle size="sm" label="Yürütücü modu" value={detail.handledBy} options={handlerOptions(busy)} onChange={onMode} />
+          {/* Devral yalnız AI modundayken — çizimdeki "özerk ajanı sustur" düğmesi, ve 29.08'den beri
+              gerçekten o: mod açılana kadar yalnız motoru olmayan bir moda düşmüş eski satırları
+              kurtarıyordu. Ajan konuşurken operatörün tek dokunuşla araya girmesi, özerk modun
+              emniyet kemeridir: müşteri yanlış anlaşıldığında beklenecek bir cron turu olmamalı. */}
+          {detail.handledBy === 'ai' ? (
+            <Button size="sm" variant="violet" className="flex-none" onClick={() => onMode('human')} disabled={busy}>
+              Devral
+            </Button>
+          ) : null}
         </div>
-        {/* ÜÇ MOD DA AÇIK (29.08 · kullanıcı kararı). `AI` bir tur boyunca kapalıydı ve sebebi
-            ipucunda yazıyordu ("mesajı gönderecek kanal açılmadı"); o kısıt kalktığı gün ipucu da
-            kaldırıldı — kapalı bir düğmenin yanında duran eskimiş bir açıklama, düğmenin
-            kendisinden daha yanıltıcıdır. Sunucu tarafı zaten `ConversationHandlerEnum`den
-            türüyor (kural istemcinin nezaketine bırakılmaz) ve o enum de artık üç değer taşıyor. */}
-        <MultiToggle size="sm" label="Yürütücü modu" value={detail.handledBy} options={handlerOptions(busy)} onChange={onMode} />
-        {/* Devral yalnız AI modundayken — çizimdeki "özerk ajanı sustur" düğmesi, ve 29.08'den beri
-            gerçekten o: mod açılana kadar yalnız motoru olmayan bir moda düşmüş eski satırları
-            kurtarıyordu. Ajan konuşurken operatörün tek dokunuşla araya girmesi, özerk modun
-            emniyet kemeridir: müşteri yanlış anlaşıldığında beklenecek bir cron turu olmamalı. */}
-        {detail.handledBy === 'ai' ? (
-          <Button size="sm" variant="violet" className="flex-none" onClick={() => onMode('human')} disabled={busy}>
-            Devral
-          </Button>
-        ) : null}
-        <Badge tone={WINDOW_TONE[detail.window.tone]}>{detail.window.chip}</Badge>
-        {/* Müşterinin dili (15.28) — operatör Türkçe yazar, giden bu dile çevrilir; dayanağı altlıkta. */}
-        <Badge tone="slate">{LANGUAGE_LABELS[detail.language.language]}</Badge>
-        {/* SİPARİŞ KÖPRÜSÜ (15.4) — YALNIZ kimlik çözülmüşken: köprü müşteri önseçili girişi açar,
-            kimliksiz sohbette müşteri seçimi boş gelirdi. Bağ tek parametre taşıyor; KAYNAĞI sunucu
-            konuşmadan çözüyor (`orderSourceOfConversation`) — kanalı adrese yazdırmak raporlardaki
-            dağılımı elle düzenlenebilir kılardı. */}
-        {detail.context ? (
-          <Link
-            href={`${ORDERS_PATH}/new?conversation=${detail.id}`}
-            className={buttonClass({ variant: 'secondary', size: 'sm', className: 'flex-none whitespace-nowrap' })}
-          >
-            Sipariş oluştur
-          </Link>
-        ) : null}
       </div>
 
       {detail.thread.length === 0 ? (
@@ -420,9 +501,10 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
       ) : null}
 
       <ReplyBox
-        // Konuşma değişince kutu SIFIRLANIR: yarım kalmış bir metin bir sonraki müşterinin
-        // penceresinde durursa yanlış sohbetin defterine işlenir.
+        // Konuşma değişince kutu yeniden kurulur ve O sohbetin taslağını okur (15.39): yarım kalmış bir metin
+        // bir sonraki müşterinin penceresinde durmaz — kendi sohbetinde bekler, yanlış deftere işlenmez.
         key={detail.id}
+        conversationId={detail.id}
         source={detail.source}
         window={detail.window}
         language={detail.language}
@@ -436,6 +518,8 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
 }
 
 interface ReplyBoxProps {
+  /** Hangi sohbetin kutusu — yazı ona göre saklanır (15.39): pencere ile sayfa aynı taslağı görür. */
+  conversationId: string;
   source: ConversationDetailView['source'];
   window: ConversationDetailView['window'];
   /** Müşteriye hangi dilde gideceği ve dayanağı (15.28) — altlık bunu operatöre SÖYLER. */
@@ -469,8 +553,9 @@ interface ReplyBoxProps {
  * **Messenger/Instagram'da kutu 7 güne kadar açık (15.37):** 24 saat dolunca insan temsilci süresi başlar;
  * karar `humanCanReply`de, gönderim kapısının aynı kuralı (yapay zekâ bu sürede yazamaz).
  */
-export function ReplyBox({ source, window: win, language, busy, error, prefill, onSendReply }: ReplyBoxProps) {
-  const [text, setText] = useState('');
+export function ReplyBox({ conversationId, source, window: win, language, busy, error, prefill, onSendReply }: ReplyBoxProps) {
+  // Yazı kabuğun taslak deposunda (15.39) — pencere kapanıp açılınca, "Tam ekran"a geçince ve ekran değişince yerinde.
+  const [text, setText] = useMessageDraft(conversationId);
 
   /*
     DİL CÜMLESİ (15.28): operatör Türkçe yazar ve mesaj müşterinin diline çevrilerek gider — bunu
@@ -487,7 +572,7 @@ export function ReplyBox({ source, window: win, language, busy, error, prefill, 
   // basılan düğme zaten "bu metinle çalışacağım" demek (talep ekranıyla aynı kural).
   useEffect(() => {
     if (prefill) setText(prefill.text);
-  }, [prefill]);
+  }, [prefill, setText]);
 
   const submit = async () => {
     if (!text.trim()) return;

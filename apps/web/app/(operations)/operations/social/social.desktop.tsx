@@ -2,7 +2,7 @@
 
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { handlerOptions } from '@/components/operation/ui/ai-handling';
-import { humanCanReply } from './social-read';
+import { humanCanReply, rowTarget } from './social-read';
 import { Chip } from '@/components/operation/ui/chip';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { FilterBar, QueuePane } from '@/components/operation/ui/queue-pane';
@@ -97,13 +97,24 @@ export function SocialDesktop({
           onLoadMore={onLoadMore}
         >
           {data.rows.map((row) => (
-            <InboxRow key={row.id} row={row} active={row.id === urlState.c} onSelect={onSelect} />
+            // Satır bir KİŞİ (15.38): açık sohbet kişinin herhangi bir kanalıysa satır seçili; basınca süzgece
+            // uyan sohbet açılır (`rowTarget`) — "Messenger" çipinde Messenger, "Cevap bekliyor"da bekleyen.
+            <InboxRow
+              key={row.id}
+              row={row}
+              target={rowTarget(row, urlState)}
+              active={row.threads.some((thread) => thread.id === urlState.c)}
+              onSelect={onSelect}
+            />
           ))}
         </QueuePane>
 
         {data.detail ? (
           <>
             <ConversationPane
+              // Sohbet değişince pano SIFIRLANIR (15.39): "Cevap kutusuna taşı"nın metni panonun durumunda ve
+              // kutu yeniden kurulurken onu okuyor — anahtar olmasaydı A'nın taslağı B'nin kutusuna düşerdi.
+              key={data.detail.id}
               detail={data.detail}
               busy={busy}
               error={error}
@@ -111,6 +122,8 @@ export function SocialDesktop({
               onMode={onMode}
               onConsumeDraft={onConsumeDraft}
               onSuggestDraft={onSuggestDraft}
+              // Kanal sekmesi (15.38) kuyruk satırıyla aynı kapıdan geçer: seçim adreste (`?c=`), paylaşılabilir.
+              onSelectThread={onSelect}
             />
             <SocialContextPane
               context={data.detail.context}

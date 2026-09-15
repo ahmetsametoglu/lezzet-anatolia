@@ -6,6 +6,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Metric } from '@/components/operation/ui/metric';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { CustomerChannels } from '@/components/operation/ui/customer-channels';
+import { orderChatContext } from '@/components/operation/ui/customer-channel-model';
 import { money, shortDate, shortDateTime } from '@/components/operation/ui/format';
 import { contentText, deliveryText, paymentText, paymentToneClass, statusLabel, statusTone } from './orders-labels';
 import { loadOrderPeekAction } from './actions';
@@ -97,7 +98,18 @@ function SelectedOrder({ row }: { row: OrderRow }) {
               İÇİNDE, yüzen pencerede açılır (15.32 · kullanıcı kuralı 14.09): müşterinin yazıştığı her kanal
               bir düğme, en son yazdığı işaretli. `wa.me` bağlantısı operatörü kendi telefonuna gönderiyordu. */}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-            {peek ? <CustomerChannels customerId={peek.customer.id} className="justify-end" /> : null}
+            {peek ? (
+              <CustomerChannels
+                customerId={peek.customer.id}
+                className="justify-end"
+                // Balonun BAĞLAM şeridi (15.39) — detaydaki satırın aynısı (`orderChatContext`).
+                context={orderChatContext('Siparişlerden', {
+                  referenceNo: row.referenceNo,
+                  totalCents: row.totalCents,
+                  deliveryDate: peek.delivery.date,
+                })}
+              />
+            ) : null}
             {phone ? (
               <a
                 href={`tel:${phone}`}

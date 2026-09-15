@@ -1,6 +1,6 @@
 'use server';
 
-import { ConversationInboxService, UserProfileService, serviceDb } from '@lezzet/database';
+import { CustomerInboxService, UserProfileService, serviceDb } from '@lezzet/database';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { openWhatsappConversation } from '@/lib/messaging/conversation';
@@ -14,14 +14,18 @@ import type { ConversationDetailView } from '../social-types';
 // sayfalar çiziyor.
 
 /**
- * Pencerenin NABZI — düğmenin rozeti (cevap bekleyen sohbet SAYIMI, sayfa uzunluğu değil) ve yeni mesaj sesinin
- * ölçütü (15.34): kuyruğun en son GELEN mesaj anı. Kuyruk o anın büyüğünden küçüğüne sıralı; ilk satırın damgası
- * en sonuncusudur — ayrı bir sorgu gerekmez.
+ * Pencerenin NABZI — düğmenin rozeti (cevap bekleyen KİŞİ sayımı, sayfa uzunluğu değil — kuyrukla aynı birim, 15.38)
+ * ve yeni mesaj sesinin ölçütü (15.34): kuyruğun en son GELEN mesaj anı. Kuyruk o anın büyüğünden küçüğüne sıralı;
+ * ilk satırın damgası en sonuncusudur — ayrı bir sorgu gerekmez.
+ *
+ * Kişi kuyruğundan okunuyor (15.38), sohbet kuyruğundan değil: sohbet kuyruğunun azalan sırası damgası boş sohbeti
+ * (müşteri hiç yazmadı, sohbeti biz açtık) BAŞA alıyor ve imleç boş değerden kurulamıyor (`pageOf` fırlatır) — o
+ * hâlde nabız her turda düşerdi. Kişi kuyruğunun ekseni boş kalmaz (`inbox_at`, görünümün künyesi `0041`).
  */
 export async function messengerPulseAction(): Promise<ActionResult<{ awaiting: number; latestInboundAt: string | null }>> {
   try {
     await requireAdmin();
-    const inbox = new ConversationInboxService(serviceDb());
+    const inbox = new CustomerInboxService(serviceDb());
     const [awaiting, top] = await Promise.all([inbox.countAwaitingReply(), inbox.list({}, undefined, 1)]);
     return { data: { awaiting, latestInboundAt: top.rows[0]?.lastInboundAt ?? null }, error: null };
   } catch (err) {

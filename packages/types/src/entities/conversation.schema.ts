@@ -332,3 +332,37 @@ export const ConversationInboxRowSchema = ConversationSchema.extend({
   lastMessageTranscript: z.string().nullable(),
 });
 export type ConversationInboxRow = z.infer<typeof ConversationInboxRowSchema>;
+
+/**
+ * Kişinin bir sohbeti (15.38) — `customer_inbox.threads`in öğesi: kuyruk satırının kanal noktası ve sohbet
+ * başlığının sekmesi. Alanlar gelen kutusu satırından SEÇİLİR, yeniden yazılmaz.
+ */
+export const CustomerInboxThreadSchema = ConversationInboxRowSchema.pick({ id: true, source: true, messageCount: true, awaitingReply: true });
+export type CustomerInboxThread = z.infer<typeof CustomerInboxThreadSchema>;
+
+/**
+ * `customer_inbox` görünümü (15.38 · kullanıcı kararı 15.09) — sosyal gelen kutusunun KİŞİ başına satırı.
+ *
+ * Aynı kişi üç kanaldan yazabilir; sohbet başına satır onu üç ayrı kişi gibi gösteriyordu. Kişi = müşteri
+ * kaydı; kimliksiz sohbet kendi başına bir kişidir (bağ kurulunca satırlar kendiliğinden birleşir).
+ *
+ * Satırın YÜZÜ baş sohbettir — kişinin en son yazdığı sohbet; üst düzey alanların hepsi onun gelen kutusu
+ * satırı. Kişiye ait olanlar ayrı adlı: `awaitingReply` baş sohbetin, `awaitingAny` kişinin.
+ */
+export const CustomerInboxRowSchema = ConversationInboxRowSchema.extend({
+  /** Kişinin anahtarı — müşteri kaydının kimliği; kimliksiz sohbette sohbetin kendi kimliği. */
+  personKey: z.string().uuid(),
+  /**
+   * Sıralama ekseni — baş sohbetin son GELEN mesajı; müşteri hiç yazmadıysa `-infinity` (kuyruğun sonu).
+   * Görüntülenen bir değer DEĞİL, imlecin altyapısı: boş değer PostgREST'in azalan sırasında başa düşer
+   * ve imleç boş değerden kurulamaz (görünümün künyesi `0041`).
+   */
+  inboxAt: z.string(),
+  /** Kişinin bütün sohbetleri, en son yazdığı önce — ilki baş sohbettir. */
+  threads: z.array(CustomerInboxThreadSchema),
+  /** Mesajı olan kanallar — süzgeç ve kanal noktası (boş kanal görünmez). */
+  sources: z.array(ConversationSourceEnum),
+  /** Kişi cevap bekliyor — herhangi bir sohbetinde son sözü müşteri söyledi. */
+  awaitingAny: z.boolean(),
+});
+export type CustomerInboxRow = z.infer<typeof CustomerInboxRowSchema>;

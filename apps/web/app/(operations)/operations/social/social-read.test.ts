@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { ConversationInboxRow } from '@lezzet/types';
+import type { CustomerInboxRow, CustomerInboxThread } from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
 import {
   consentStateOf,
   humanCanReply,
   previewOf,
   remainingLabel,
+  rowTarget,
+  tabsOf,
   toInboxRows,
   toMessageViews,
   toThreadItems,
@@ -19,7 +21,7 @@ import {
 
 const NOW = new Date('2026-08-08T12:00:00.000Z');
 
-function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxRow {
+function inboxRow(patch: Partial<CustomerInboxRow> = {}): CustomerInboxRow {
   return {
     id: '11111111-1111-4111-8111-111111111111',
     customerId: '22222222-2222-4222-8222-222222222222',
@@ -61,6 +63,12 @@ function inboxRow(patch: Partial<ConversationInboxRow> = {}): ConversationInboxR
     lastMessageLanguage: null,
     lastMessageTranslations: null,
     lastMessageTranscript: null,
+    // Kişi (15.38): tek WhatsApp sohbetli müşteri — baş sohbet kendisi, kanal dizisi tek.
+    personKey: '22222222-2222-4222-8222-222222222222',
+    inboxAt: NOW.toISOString(),
+    threads: [{ id: '11111111-1111-4111-8111-111111111111', source: 'whatsapp', messageCount: 3, awaitingReply: true }],
+    sources: ['whatsapp'],
+    awaitingAny: true,
     ...patch,
   };
 }
@@ -239,6 +247,61 @@ describe('toInboxRows', () => {
   it('sesli mesajın önizlemesi TRANSKRİPTTİR, "[görsel / dosya]" değil', () => {
     const rows = toInboxRows([inboxRow({ lastMessageKind: 'media', lastMessageText: null, lastMessageTranscript: 'Merhaba baklava istiyorum' })], NOW);
     expect(rows[0]?.preview).toBe('Merhaba baklava istiyorum');
+  });
+});
+
+describe('toInboxRows — kişi satırı (15.38)', () => {
+  it('bekleyiş KİŞİNİN: baş sohbet cevaplanmış olsa da öteki kanalda top bizdeyse satır bekliyor', () => {
+    const [row] = toInboxRows([inboxRow({ awaitingReply: false, awaitingAny: true })], NOW);
+    expect(row?.awaitingReply).toBe(true);
+  });
+
+  it('kanal noktaları ve sohbetler görünümden olduğu gibi gelir — satır uydurmaz', () => {
+    const threads: CustomerInboxThread[] = [
+      { id: 'ig', source: 'instagram', messageCount: 2, awaitingReply: true },
+      { id: 'wa', source: 'whatsapp', messageCount: 5, awaitingReply: false },
+    ];
+    const [row] = toInboxRows([inboxRow({ threads, sources: ['instagram', 'whatsapp'] })], NOW);
+    expect(row).toMatchObject({ channels: ['instagram', 'whatsapp'], threads });
+  });
+});
+
+describe('rowTarget — satıra basınca açılan sohbet (15.38)', () => {
+  const wa: CustomerInboxThread = { id: 'wa', source: 'whatsapp', messageCount: 4, awaitingReply: false };
+  const ig: CustomerInboxThread = { id: 'ig', source: 'instagram', messageCount: 2, awaitingReply: true };
+  const kisi = { id: 'wa', threads: [wa, ig] };
+
+  it('süzgeç yoksa baş sohbet — en son yazdığı', () => {
+    expect(rowTarget(kisi, { f: 'all', ch: 'all' })).toBe('wa');
+  });
+
+  it('kanal çipinde o kanalın sohbeti', () => {
+    expect(rowTarget(kisi, { f: 'all', ch: 'instagram' })).toBe('ig');
+  });
+
+  it('"Cevap bekliyor"da topun bizde olduğu sohbet', () => {
+    expect(rowTarget(kisi, { f: 'awaiting', ch: 'all' })).toBe('ig');
+  });
+
+  it('kanal ve bekleyiş birlikte tutmazsa kanal önce gelir — çip kanalı adıyla seçti', () => {
+    expect(rowTarget(kisi, { f: 'awaiting', ch: 'whatsapp' })).toBe('wa');
+  });
+});
+
+describe('tabsOf — kanal sekmeleri (15.38)', () => {
+  const wa: CustomerInboxThread = { id: 'wa', source: 'whatsapp', messageCount: 0, awaitingReply: false };
+  const ms: CustomerInboxThread = { id: 'ms', source: 'messenger', messageCount: 3, awaitingReply: true };
+
+  it('mesajsız kanal sekme olmaz — çizimin kuralı', () => {
+    expect(tabsOf([ms, wa], ms).map((t) => t.id)).toEqual(['ms']);
+  });
+
+  it('açık sohbet mesajsız olsa da sekmesi durur — operatör hangi kanalda olduğunu görmeli', () => {
+    expect(tabsOf([ms, wa], wa).map((t) => t.id)).toEqual(['ms', 'wa']);
+  });
+
+  it('kişinin satırı okunamadıysa sekme açık sohbetin kendisi', () => {
+    expect(tabsOf([], ms)).toEqual([ms]);
   });
 });
 

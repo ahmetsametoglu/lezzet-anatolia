@@ -1,10 +1,10 @@
 import 'server-only';
 import { anchorOf } from '@lezzet/application';
-import { serviceDb } from '@lezzet/database';
+import { CustomerInboxService, serviceDb } from '@lezzet/database';
 import { TICKET_STATUS_LABELS } from '@lezzet/types';
 import { readCustomerContext } from '@/lib/customer/context';
 import { readConversationDetail } from '@/lib/messaging/read';
-import { consentStateOf, titleOf, toThreadItems, toWindowView } from './social-read';
+import { consentStateOf, tabsOf, titleOf, toThreadItems, toWindowView } from './social-read';
 import type { ConversationDetailView } from './social-types';
 
 /**
@@ -23,9 +23,12 @@ export async function readConversationDetailView(conversationId: string, now: Da
   const customerId = detail.conversation.customerId;
   // Müşteri bağlamı ORTAK okumadan (`lib/customer/context`) — Talepler ekranı da aynısını okuyor. Çapa
   // MÜŞTERİNİN künyesi, konuşmanın değil (04.10) — kimliksiz sohbette sorulacak bir şey yok.
-  const [context, anchor] = customerId
-    ? await Promise.all([readCustomerContext(customerId), anchorOf(serviceDb(), customerId)])
-    : [null, null];
+  const [context, anchor, person] = await Promise.all([
+    customerId ? readCustomerContext(customerId) : null,
+    customerId ? anchorOf(serviceDb(), customerId) : null,
+    // Kişinin satırı (15.38) — başlığın kanal sekmeleri. Kişi = müşteri; kimliksiz sohbette sohbetin kendisi.
+    new CustomerInboxService(serviceDb()).rowOf(customerId ?? detail.conversation.id),
+  ]);
 
   return {
     id: detail.conversation.id,
@@ -39,6 +42,13 @@ export async function readConversationDetailView(conversationId: string, now: Da
     // Mesajlar + iç notlar tek akışta (15.29); başlıktaki sayı yalnız mesajları sayar.
     thread: toThreadItems(detail.messages, detail.notes),
     messageCount: detail.messages.length,
+    // Kanal sekmeleri (15.38): kişinin mesajı olan kanalları + açık sohbetin kendisi (`tabsOf`).
+    threads: tabsOf(person?.threads ?? [], {
+      id: detail.conversation.id,
+      source: detail.conversation.source,
+      messageCount: detail.messages.length,
+      awaitingReply: false,
+    }),
     context,
     tickets: detail.tickets.map((t) => ({
       id: t.id,

@@ -13,13 +13,21 @@ export const SOURCE_LABELS: Record<ConversationSource, string> = {
 };
 
 /**
- * Kuyruk satırının seçili kenarı — kanal MARKA rengiyle: kuyruk üç kanalın kuyruğu ve satırın hangi
- * kanaldan geldiği ilk bakışta okunmalı.
+ * Kanal işaretinin AÇIK hâli — marka rengi yazı/çizgi, markanın açık zemini (15.38): kuyruk satırının kanal
+ * noktası ve seçili olmayan sohbet sekmesi. Kuyruk satırı artık bir KİŞİ (birden çok kanal); seçili kenarı
+ * tek kanalın rengiyle boyamak yanlış okuturdu — kenar olive'e döndü (çizim), kanal noktada okunur.
  */
-export const SOURCE_EDGE: Record<ConversationSource, string> = {
-  whatsapp: 'border-l-brand-whatsapp',
-  messenger: 'border-l-brand-messenger',
-  instagram: 'border-l-brand-instagram',
+export const SOURCE_TINT: Record<ConversationSource, string> = {
+  whatsapp: 'border-brand-whatsapp/25 bg-brand-whatsapp/10 text-brand-whatsapp',
+  messenger: 'border-brand-messenger/25 bg-brand-messenger/10 text-brand-messenger',
+  instagram: 'border-brand-instagram/25 bg-brand-instagram/10 text-brand-instagram',
+};
+
+/** Seçili sohbet sekmesi — marka zemini, üstünde kart rengi (15.38; yüzen düğmenin zemin/kart deseni). */
+export const SOURCE_SOLID: Record<ConversationSource, string> = {
+  whatsapp: 'border-brand-whatsapp bg-brand-whatsapp text-ops-card',
+  messenger: 'border-brand-messenger bg-brand-messenger text-ops-card',
+  instagram: 'border-brand-instagram bg-brand-instagram text-ops-card',
 };
 
 /** Kanal noktası — müşterinin kanal düğmelerinde; kuyruk kenarıyla AYNI marka rengi. */

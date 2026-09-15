@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { chatTargetOf, toCustomerChannels } from './customer-channel-model';
+import { appendToDraft, chatTargetOf, orderChatContext, toCustomerChannels } from './customer-channel-model';
+import { money, shortDate } from './format';
 
 // 15.32 — kanal düğmesinin görünümü. Sıra ve "en son" kararı motorda sınanıyor (`customerChannelsOf`);
 // burada yalnız çevirinin sözü: karar AYNEN geçer, yaş dar biçime döner, yazılmamış kanala yaş uydurulmaz.
@@ -44,5 +45,28 @@ describe('chatTargetOf — listedeki "Mesaj yaz" nereye açılır (15.33)', () =
 
   it('sohbet de telefon da yok → hedef yok, pencere sebebini söyler', () => {
     expect(chatTargetOf(view([], false))).toEqual({ kind: 'none' });
+  });
+});
+
+describe('orderChatContext — balonun BAĞLAM şeridi (15.39)', () => {
+  it('referans · tutar · teslim günü, açan ekranla birlikte', () => {
+    expect(orderChatContext('Sipariş detayından', { referenceNo: 'LZA-2451', totalCents: 9240, deliveryDate: '2026-09-17' })).toEqual({
+      origin: 'Sipariş detayından',
+      summary: `LZA-2451 · ${money(9240)} · ${shortDate('2026-09-17')} teslim`,
+    });
+  });
+
+  it('gün girilmemişse gün uydurulmaz; referansı olmayan sipariş "Sipariş" diye anılır', () => {
+    expect(orderChatContext('Siparişlerden', { referenceNo: null, totalCents: 1200, deliveryDate: null }).summary).toBe(`Sipariş · ${money(1200)}`);
+  });
+});
+
+describe('appendToDraft — "Ekle" (15.39)', () => {
+  it('boş taslağa satırın kendisi yazılır', () => {
+    expect(appendToDraft('  ', 'LZA-2451')).toBe('LZA-2451');
+  });
+
+  it('yazılmış cümle EZİLMEZ — satır sonuna, ayrı satırda', () => {
+    expect(appendToDraft('Merhaba, siparişiniz hazır. ', 'LZA-2451')).toBe('Merhaba, siparişiniz hazır.\nLZA-2451');
   });
 });

@@ -1,11 +1,19 @@
 import { humanAgentWindowState, resolveUserText, serviceWindowState, stripChatFormatting, translatableTextOf } from '@lezzet/domain-core';
-import type { ConversationInboxRow, ConversationNote, ConversationSource, TranslationBag } from '@lezzet/types';
+import type {
+  ConversationInboxRow,
+  ConversationNote,
+  ConversationSource,
+  CustomerInboxRow,
+  CustomerInboxThread,
+  TranslationBag,
+} from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
 import type { ConsentState } from '@/components/operation/ui/customer-context-pane';
 import { agoShort, shortDateTime } from '@/components/operation/ui/format';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { MESSAGE_KIND_LABELS, TEMPLATE_CATEGORY_LABELS } from './social-labels';
 import type { InboxRowView, MessageView, ThreadItemView, WindowView } from './social-types';
+import type { SocialChannelKey, SocialFilterKey } from './social-url';
 
 // Sosyal gelen kutusunun OKUMA DÖNÜŞÜMLERİ (15.5 · üç kanal 15.15) — saf fonksiyonlar, sunucu turu yok.
 //
@@ -158,14 +166,16 @@ function shownTextOf(source: {
 }
 
 /**
- * Gelen kutusu satırları. `now` DIŞARIDAN gelir — sayfa onu bir kez okur ve ekrandaki bütün yaşlar
- * aynı ana göre çıkar; içeride okunsaydı listenin başı ile sonu farklı anlara göre hesaplanırdı.
+ * Gelen kutusu satırları — KİŞİ başına (15.38 · `customer_inbox`). `now` DIŞARIDAN gelir — sayfa onu bir kez
+ * okur ve ekrandaki bütün yaşlar aynı ana göre çıkar; içeride okunsaydı listenin başı ile sonu farklı anlara
+ * göre hesaplanırdı.
  */
-export function toInboxRows(rows: readonly ConversationInboxRow[], now: Date): InboxRowView[] {
+export function toInboxRows(rows: readonly CustomerInboxRow[], now: Date): InboxRowView[] {
   const nowMs = now.getTime();
   return rows.map((row) => ({
     id: row.id,
-    source: row.source,
+    channels: row.sources,
+    threads: row.threads,
     title: titleOf(row),
     // Önizleme operatörün dilinde ve sesli mesajda transkript (15.28): kuyruk açılmadan taranır.
     preview: previewOf(
@@ -178,11 +188,35 @@ export function toInboxRows(rows: readonly ConversationInboxRow[], now: Date): I
       row.lastMessageKind,
     ),
     ago: row.lastMessageAt ? agoShort(ageMinutes(row.lastMessageAt, nowMs)) : '—',
-    awaitingReply: row.awaitingReply,
+    // KİŞİNİN hâli (15.38): baş sohbet cevaplanmış olsa da öteki kanalda top bizde olabilir.
+    awaitingReply: row.awaitingAny,
     unidentified: row.customerId === null,
     handledBy: row.handledBy,
     window: toWindowView(row.windowExpiresAt, now, row.source),
   }));
+}
+
+/**
+ * Kuyruk satırına basınca AÇILACAK sohbet (15.38) — kişinin satırı birden çok sohbet taşır. Süzgeç varsa ona
+ * uyan sohbet: "Messenger" çipinde Messenger'ı, "Cevap bekliyor"da topun bizde olduğunu açar; ikisi birden
+ * tutmazsa kanal önce gelir (çip kanalı ADIYLA seçti). Süzgeç yoksa baş sohbet — en son yazdığı. Sıra
+ * görünümden gelir (en son yazdığı önce).
+ */
+export function rowTarget(row: Pick<InboxRowView, 'id' | 'threads'>, filter: { f: SocialFilterKey; ch: SocialChannelKey }): string {
+  const fits = (thread: CustomerInboxThread) => filter.ch === 'all' || thread.source === filter.ch;
+  const waits = (thread: CustomerInboxThread) => filter.f !== 'awaiting' || thread.awaitingReply;
+  const hit = row.threads.find((t) => fits(t) && waits(t)) ?? row.threads.find(fits) ?? row.threads.find(waits);
+  return hit?.id ?? row.id;
+}
+
+/**
+ * Sohbet başlığının kanal SEKMELERİ (15.38) — çizimin kuralı: sekme yalnız mesajı olan kanalda görünür, boş
+ * kanal sekmesi çıkmaz. İstisna açık sohbetin kendisi: "WhatsApp'tan yaz" ile açılmış mesajsız sohbet de ekrandaysa
+ * sekmesi durur — yoksa operatör hangi kanalda olduğunu göremezdi. Kişinin satırı okunamadıysa sekme açık sohbettir.
+ */
+export function tabsOf(threads: readonly CustomerInboxThread[], current: CustomerInboxThread): CustomerInboxThread[] {
+  const visible = threads.filter((thread) => thread.messageCount > 0 || thread.id === current.id);
+  return visible.some((thread) => thread.id === current.id) ? visible : [current, ...visible];
 }
 
 /** Bir damganın dakika cinsinden yaşı. Negatife DÜŞMEZ: saat kayması "-3 dk" diye okunurdu. */

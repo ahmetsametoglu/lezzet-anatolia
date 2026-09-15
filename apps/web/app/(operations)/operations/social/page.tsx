@@ -1,12 +1,12 @@
 import { conversationChannelName, conversationsChannelName, defaultConversationHandler } from '@lezzet/application';
-import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerInboxService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { LiveRefresh } from '@/components/operation/ui/live-refresh';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { SocialClient } from './social-client';
 import { readConversationDetailView } from './social-detail';
-import { toInboxRows } from './social-read';
+import { rowTarget, toInboxRows } from './social-read';
 import { channelSource, parseSocialUrl } from './social-url';
 import type { SocialData } from './social-types';
 
@@ -50,13 +50,14 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
   }
 
   const urlState = parseSocialUrl(await searchParams);
-  const inbox = new ConversationInboxService(serviceDb());
+  // Kuyruk KİŞİ başına (15.38 · `customer_inbox`): aynı müşterinin kanalları tek satırda — gruplama görünümde.
+  const inbox = new CustomerInboxService(serviceDb());
   const source = channelSource(urlState.ch);
 
   const [page, awaitingCount, aiCount, defaultHandler] = await Promise.all([
     inbox.list({ awaitingReply: urlState.f === 'awaiting' ? true : undefined, source }, undefined, DEFAULT_PAGE_SIZE),
     // Sayaçlar kanal süzgecine UYAR: süzgeçli kuyruğun başlığı süzgeçsiz sayı yazsaydı, tam da
-    // kalabalıkta yalan söylerdi.
+    // kalabalıkta yalan söylerdi. Bekleyen KİŞİ sayılır (15.38) — kuyruğun satırıyla aynı birim.
     inbox.countAwaitingReply(source),
     // Çizimin "1 AI yürütüyor" sayısı — 16.08'e kadar bilerek yoktu (daima 0 gösterirdi).
     new ConversationService(serviceDb()).countHandledByAi(source),
@@ -64,20 +65,23 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
     defaultConversationHandler(serviceDb()),
   ]);
 
-  /**
-   * **Seçim yoksa ilk satır açılır.** Sohbet panosu ekranın büyük yarısı: boş bırakmak operatöre
-   * "önce bir şey seç" adımı dayatırdı ve kuyruk zaten cevap bekleyeni öne alan sırada geliyor.
-   */
-  const selectedId = urlState.c || (page.rows[0]?.id ?? '');
   // Tek an, tüm pencereler: kuyruk rozetleri ve sohbet altlığı aynı `now`'a göre hesaplanır — ikisi
   // ayrı okunsaydı aynı konuşma listede "2 dk" derken altlıkta "kapalı" diyebilirdi.
   const now = new Date();
+  const rows = toInboxRows(page.rows, now);
+
+  /**
+   * **Seçim yoksa ilk satır açılır.** Sohbet panosu ekranın büyük yarısı: boş bırakmak operatöre
+   * "önce bir şey seç" adımı dayatırdı ve kuyruk zaten cevap bekleyeni öne alan sırada geliyor.
+   * Satır bir kişi (15.38): süzgece uyan sohbeti açılır (`rowTarget`) — satıra basmakla aynı hedef.
+   */
+  const selectedId = urlState.c || (rows[0] ? rowTarget(rows[0], urlState) : '');
 
   // Detayın görünümü ORTAK okumadan (`social-detail`) — yüzen mesaj penceresi (15.32) aynısını okuyor.
   const detailView = selectedId ? await readConversationDetailView(selectedId, now) : null;
 
   const data: SocialData = {
-    rows: toInboxRows(page.rows, now),
+    rows,
     nextCursor: page.nextCursor,
     awaitingCount,
     aiCount,

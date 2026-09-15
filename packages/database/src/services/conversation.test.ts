@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
-import { ConversationService, MessageService } from './conversation.service';
+import { ConversationService, CustomerInboxService, MessageService } from './conversation.service';
 import { UserProfileService } from './user-profile.service';
 
 /**
@@ -335,5 +335,80 @@ describe('mesaj kaydı', () => {
 
     expect(await conversations.getById(konusma.id)).toBeNull();
     expect(await messages.listByConversation(konusma.id)).toEqual([]);
+  });
+});
+
+/*
+  MÜŞTERİ BAZLI GELEN KUTUSU (15.38 · `customer_inbox`). Kuyruk kişi başına tek satır: aynı müşterinin
+  kanalları birleşir, kimliksiz sohbet kendi başına kalır, "cevap bekliyor" kişinin hâlidir. Kuyruk
+  küresel olduğu için sayfada yalnız KENDİ kişimiz aranır — sayı sayılmaz.
+*/
+describe('müşteri bazlı gelen kutusu (15.38)', () => {
+  const kutu = new CustomerInboxService(db);
+
+  async function musteriAc(ad: string) {
+    const musteri = await profiles.insert({ name: `${ad} ${stamp}` });
+    profileIds.push(musteri.id);
+    return musteri;
+  }
+
+  async function sosyalAc(source: 'messenger' | 'instagram', customerId: string | null) {
+    sira += 1;
+    const row = await conversations.open({ source, externalRef: `PSID-KUTU-${stamp}-${sira}`, customerId });
+    conversationIds.push(row.id);
+    return row;
+  }
+
+  const gelen = (conversationId: string, text: string) => messages.record({ conversationId, direction: 'inbound', body: { text } });
+
+  it('aynı müşterinin kanalları TEK satırdır — yüzü en son yazdığı sohbet, kanal dizisi ikisi', async () => {
+    const musteri = await musteriAc('Kutu iki kanal');
+    const wa = await konusmaAc(numara(), musteri.id);
+    const ig = await sosyalAc('instagram', musteri.id);
+    await gelen(wa.id, 'önce WhatsApp');
+    await gelen(ig.id, 'sonra Instagram');
+
+    const satir = await kutu.rowOf(musteri.id);
+    expect(satir).toMatchObject({ id: ig.id, source: 'instagram', customerId: musteri.id, lastMessageText: 'sonra Instagram' });
+    expect(satir?.threads.map((t) => t.id)).toEqual([ig.id, wa.id]);
+    expect([...(satir?.sources ?? [])].sort()).toEqual(['instagram', 'whatsapp']);
+
+    // Kuyrukta da bir kez: kanal süzgeci kişiyi bulur, satır yine iki kanalı taşır.
+    const sayfa = await kutu.list({ source: 'whatsapp' });
+    expect(sayfa.rows.filter((r) => r.personKey === musteri.id).map((r) => r.id)).toEqual([ig.id]);
+  });
+
+  it('kimliksiz sohbet kendi başına bir kişidir — başka satırla birleştirilmez', async () => {
+    const ms = await sosyalAc('messenger', null);
+    await gelen(ms.id, 'kimliksiz');
+
+    const satir = await kutu.rowOf(ms.id);
+    expect(satir?.customerId).toBeNull();
+    expect(satir?.threads).toEqual([{ id: ms.id, source: 'messenger', messageCount: 1, awaitingReply: true }]);
+  });
+
+  it('cevap bekleyiş KİŞİNİN — baş sohbet cevaplanmış olsa da öteki kanalda top bizdeyse bekliyor', async () => {
+    const musteri = await musteriAc('Kutu bekleyiş');
+    const ig = await sosyalAc('instagram', musteri.id);
+    const wa = await konusmaAc(numara(), musteri.id);
+    await gelen(ig.id, 'Instagram’dan soru');
+    await gelen(wa.id, 'WhatsApp’tan soru');
+    await messages.record({ conversationId: wa.id, direction: 'outbound', body: { text: 'WhatsApp’a cevap' } });
+
+    const sayfa = await kutu.list({ awaitingReply: true });
+    const satir = sayfa.rows.find((r) => r.personKey === musteri.id);
+    expect(satir).toMatchObject({ id: wa.id, awaitingReply: false, awaitingAny: true });
+    expect(satir?.threads.find((t) => t.id === ig.id)?.awaitingReply).toBe(true);
+  });
+
+  it('mesajsız sohbet kanal sayılmaz; müşterinin hiç yazmadığı kişinin ekseni kuyruğun sonudur', async () => {
+    const musteri = await musteriAc('Kutu sessiz');
+    const wa = await konusmaAc(numara(), musteri.id);
+
+    const satir = await kutu.rowOf(musteri.id);
+    expect(satir?.sources).toEqual([]);
+    expect(satir?.threads).toEqual([{ id: wa.id, source: 'whatsapp', messageCount: 0, awaitingReply: false }]);
+    // Boş eksen imleci kuramaz ve PostgREST'in azalan sırası onu BAŞA alırdı (görünümün künyesi).
+    expect(satir?.inboxAt).toBe('-infinity');
   });
 });
