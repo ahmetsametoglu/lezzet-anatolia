@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
-import { ConversationService, CustomerInboxService, MessageService } from './conversation.service';
+import { ConversationInboxService, ConversationService, CustomerInboxService, MessageService } from './conversation.service';
 import { UserProfileService } from './user-profile.service';
 
 /**
@@ -410,5 +410,22 @@ describe('müşteri bazlı gelen kutusu (15.38)', () => {
     expect(satir?.threads).toEqual([{ id: wa.id, source: 'whatsapp', messageCount: 0, awaitingReply: false }]);
     // Boş eksen imleci kuramaz ve PostgREST'in azalan sırası onu BAŞA alırdı (görünümün künyesi).
     expect(satir?.inboxAt).toBe('-infinity');
+  });
+});
+
+// Kuyruk küresel: yalnız kendi satırımız ve baştaki satırın ekseni sınanır, sayı sayılmaz.
+describe('sohbet kuyruğunun ekseni', () => {
+  const kuyruk = new ConversationInboxService(db);
+
+  it('hiç yazılmamış sohbet kuyruğun SONUNDA — başa düşmez, sayfanın imleci kurulur', async () => {
+    const sessiz = await konusmaAc(numara());
+    const yazan = await konusmaAc(numara());
+    await messages.record({ conversationId: yazan.id, direction: 'inbound', body: { text: 'merhaba' } });
+
+    expect((await kuyruk.getById(sessiz.id))?.inboxAt).toBe('-infinity');
+    // Az önce gelen mesajı olan bir sohbet var: tek satırlık ilk sayfa boş eksenli bir satırla başlayamaz.
+    const ilk = await kuyruk.list({}, undefined, 1);
+    expect(ilk.rows[0]?.inboxAt).not.toBe('-infinity');
+    expect(ilk.nextCursor).not.toBeNull();
   });
 });

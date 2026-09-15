@@ -37,7 +37,9 @@ select c.*,
        -- çözümü de burada — o satırın önizlemesi "[görsel / dosya]" değil, müşterinin dediğidir.
        m.last_language                               as last_message_language,
        m.last_translations                           as last_message_translations,
-       m.last_transcript                             as last_message_transcript
+       m.last_transcript                             as last_message_transcript,
+       -- Boş kalmayan sıralama ekseni: PostgREST'in azalan sırası boş değeri başa alır ve imleç ondan kurulamaz.
+       coalesce(c.last_inbound_at, '-infinity'::timestamptz) as inbox_at
   from public.conversation c
   left join public.user_profiles u on u.id = c.customer_id
   left join lateral (
@@ -59,15 +61,9 @@ comment on view public.conversation_inbox is
 -- Kuyruğun sıralama ekseni. Konuşma kümesi veriyle SINIRSIZ büyür (canlı kanalda aylarca) →
 -- keyset sayfalama şart, keyset de sıralı bir indeks ister.
 --
--- SIRALAMA `last_inbound_at` ÜZERİNDEN (21.289): kuyruk "karşıdan en son ne zaman yazıldı"ya göre
--- diziliyor, "konuşma en son ne zaman kımıldadı"ya göre değil — gerekçe kolonun künyesinde
--- (`0039`). İndeks bu yüzden o alanda; `last_message_at` üzerindeki indeks müşteri yazışma
--- geçmişinin (`conversation_customer_idx`) işine yaramaya devam ediyor.
---
--- `nulls last`: alan yalnız müşterinin HİÇ yazmadığı konuşmada boştur. O satır kuyruğun BAŞINA
--- değil sonuna düşmeli — henüz kimse bir şey söylememiş bir sohbet, cevap bekleyenlerin önüne
--- geçemez.
-create index conversation_last_inbound_idx on public.conversation (last_inbound_at desc nulls last);
+-- Eksen son GELEN mesajdır, son hareket değil: kendi cevabımız bekleyen müşteriyi aşağı itmesin. İndeks
+-- görünümün `inbox_at` ifadesinin aynısıdır; farklı olsaydı sıralama indeksi kullanamazdı.
+create index conversation_inbox_at_idx on public.conversation ((coalesce(last_inbound_at, '-infinity'::timestamptz)) desc, id desc);
 
 -- ── MÜŞTERİ BAZLI GELEN KUTUSU (15.38 · kullanıcı kararı 15.09) ─────────────
 -- Aynı kişi bize üç kanaldan yazabilir ve sohbet başına satır onu üç ayrı kişi gibi gösteriyordu:
@@ -93,15 +89,9 @@ create index conversation_last_inbound_idx on public.conversation (last_inbound_
 -- **`person_key` dışarı açık:** sohbet başlığının sekmeleri tek kişinin satırını okur ve bu kolondaki
 -- süzgeç toplamanın ALTINA iner (gruplama ifadesi) — tek kişiyi okumak bütün kutuyu hesaplatmaz.
 --
--- **`inbox_at` — boş kalmayan sıralama ekseni:** kişinin hiçbir sohbetinde müşteri yazmamışsa (sohbeti
--- biz açtık) `last_inbound_at` boştur. PostgREST'in azalan sırası boşları BAŞA alır (Postgres
--- varsayılanı) ve imleç boş değerden kurulamaz; ekseni `-infinity`e düşürmek o satırı kuyruğun SONUNA
--- koyar ve imleci her satırda kurulabilir kılar. Ekranda gösterilen bir değer değil — yaş
--- `last_message_at`ten okunur.
 create or replace view public.customer_inbox as
 select (p.head).*,
        p.person_key,
-       coalesce((p.head).last_inbound_at, '-infinity'::timestamptz) as inbox_at,
        p.threads,
        p.sources,
        p.awaiting_any

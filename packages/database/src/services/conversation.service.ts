@@ -494,6 +494,7 @@ export class ConversationInboxService extends BaseDbService<ConversationInboxRow
    *
    * Sayfalı, çünkü konuşma kümesi veriyle SINIRSIZ büyür (`CLAUDE §1`) — canlı kanalda aylarca.
    * İmleci ekran tüketiyor ("daha eski" düğmesi), yani sessiz kırpma yok.
+   * Eksen `inboxAt`, `lastInboundAt` değil: boş son gelen mesaj azalan sırada başa düşer ve imleç kurulamaz.
    */
   list(
     filter: { awaitingReply?: boolean; source?: ConversationSource; handledBy?: TicketHandler } = {},
@@ -505,7 +506,7 @@ export class ConversationInboxService extends BaseDbService<ConversationInboxRow
          filtreleyebilmeliyim"*. Kuyruk üç yürütücüyü karıştırıyor ve "ajanın kendi başına
          yürüttükleri" ile "insan bekleyenler" ayrı sorulardır — biri denetim, öteki iş. */
       { awaitingReply: filter.awaitingReply, source: filter.source, handledBy: filter.handledBy },
-      { orderBy: 'lastInboundAt', orderDirection: 'desc', limit, keysetAfter: cursor },
+      { orderBy: 'inboxAt', orderDirection: 'desc', limit, keysetAfter: cursor },
     );
   }
 

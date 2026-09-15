@@ -330,6 +330,8 @@ export const ConversationInboxRowSchema = ConversationSchema.extend({
   lastMessageTranslations: TranslationBagSchema.nullable(),
   /** Sesli mesajın önizlemesi transkripttir — "[görsel / dosya]" değil, müşterinin dediği. */
   lastMessageTranscript: z.string().nullable(),
+  /** Sıralama ekseni; müşteri hiç yazmadıysa `-infinity` — boş değer azalan sırada başa düşer ve imleç kurulamaz. */
+  inboxAt: z.string(),
 });
 export type ConversationInboxRow = z.infer<typeof ConversationInboxRowSchema>;
 
@@ -352,12 +354,6 @@ export type CustomerInboxThread = z.infer<typeof CustomerInboxThreadSchema>;
 export const CustomerInboxRowSchema = ConversationInboxRowSchema.extend({
   /** Kişinin anahtarı — müşteri kaydının kimliği; kimliksiz sohbette sohbetin kendi kimliği. */
   personKey: z.string().uuid(),
-  /**
-   * Sıralama ekseni — baş sohbetin son GELEN mesajı; müşteri hiç yazmadıysa `-infinity` (kuyruğun sonu).
-   * Görüntülenen bir değer DEĞİL, imlecin altyapısı: boş değer PostgREST'in azalan sırasında başa düşer
-   * ve imleç boş değerden kurulamaz (görünümün künyesi `0041`).
-   */
-  inboxAt: z.string(),
   /** Kişinin bütün sohbetleri, en son yazdığı önce — ilki baş sohbettir. */
   threads: z.array(CustomerInboxThreadSchema),
   /** Mesajı olan kanallar — süzgeç ve kanal noktası (boş kanal görünmez). */
