@@ -8,25 +8,19 @@ import { consentStateOf, tabsOf, titleOf, toThreadItems, toWindowView } from './
 import type { ConversationDetailView } from './social-types';
 
 /**
- * Sohbet DETAYININ ekran görünümü — sohbet sayfasının ve yüzen mesaj penceresinin (15.32) ORTAK okuması.
- *
- * Sayfanın içindeydi; pencere aynı sohbeti açınca ikinci bir kopya doğacaktı ve iki kopya bir gün ayrışır —
- * pencerede "kapalı" yazan pencere sayfada "açık" okunurdu.
- *
- * `now` DIŞARIDAN: sayfa kuyruk rozetleriyle aynı anı kullanır — ikisi ayrı okunsaydı aynı konuşma listede
- * "2 dk" derken altlıkta "kapalı" diyebilirdi.
+ * Sohbet sayfası ile yüzen mesaj penceresinin ortak okuması: iki kopya bir gün ayrışır, pencerede "kapalı" yazan sohbet sayfada
+ * "açık" okunurdu. `now` dışarıdan gelir ki kuyruk rozetleri ile sohbet altlığı aynı ana göre hesaplansın.
  */
 export async function readConversationDetailView(conversationId: string, now: Date): Promise<ConversationDetailView | null> {
   const detail = await readConversationDetail(conversationId);
   if (!detail) return null;
 
   const customerId = detail.conversation.customerId;
-  // Müşteri bağlamı ORTAK okumadan (`lib/customer/context`) — Talepler ekranı da aynısını okuyor. Çapa
-  // MÜŞTERİNİN künyesi, konuşmanın değil (04.10) — kimliksiz sohbette sorulacak bir şey yok.
+  // Çapa müşterinin künyesidir, konuşmanın değil: kimliksiz sohbette sorulacak bir şey yok.
   const [context, anchor, person] = await Promise.all([
     customerId ? readCustomerContext(customerId) : null,
     customerId ? anchorOf(serviceDb(), customerId) : null,
-    // Kişinin satırı (15.38) — başlığın kanal sekmeleri. Kişi = müşteri; kimliksiz sohbette sohbetin kendisi.
+    // Kimliksiz sohbette kişi sohbetin kendisidir.
     new CustomerInboxService(serviceDb()).rowOf(customerId ?? detail.conversation.id),
   ]);
 
@@ -37,12 +31,10 @@ export async function readConversationDetailView(conversationId: string, now: Da
     externalRef: detail.conversation.externalRef,
     profileName: detail.conversation.profileName,
     window: toWindowView(detail.conversation.windowExpiresAt, now, detail.conversation.source),
-    // Hedef dil okuma kapısından, gönderim kapısıyla aynı karar (15.28) — ekran hesaplamaz.
+    // Hedef dil gönderim kapısıyla aynı karardan gelir; ekran hesaplamaz.
     language: detail.language,
-    // Mesajlar + iç notlar tek akışta (15.29); başlıktaki sayı yalnız mesajları sayar.
     thread: toThreadItems(detail.messages, detail.notes),
     messageCount: detail.messages.length,
-    // Kanal sekmeleri (15.38): kişinin mesajı olan kanalları + açık sohbetin kendisi (`tabsOf`).
     threads: tabsOf(person?.threads ?? [], {
       id: detail.conversation.id,
       source: detail.conversation.source,
@@ -57,7 +49,6 @@ export async function readConversationDetailView(conversationId: string, now: Da
     })),
     handledBy: detail.conversation.handledBy,
     aiDraft: detail.conversation.aiDraftReply,
-    // Kampanya izni ÜÇ hâlli (14.09) — "sorulmadı" ile "reddetti" ayrı; kaynağı kanala göre ayrı.
     consent: consentStateOf({
       source: detail.conversation.source,
       customerConsent: context?.whatsappConsent ?? null,

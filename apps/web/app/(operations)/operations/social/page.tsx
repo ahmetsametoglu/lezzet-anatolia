@@ -10,29 +10,11 @@ import { rowTarget, toInboxRows } from './social-read';
 import { channelSource, parseSocialUrl } from './social-url';
 import type { SocialData } from './social-types';
 
-// Sosyal gelen kutusu (15.5 · üç kanal 15.15) — WhatsApp + Messenger + Instagram DM tek kuyrukta;
-// sohbet ve müşteri bağlamı aynı ekranda.
-//
-// ── KAPI: YALNIZ YÖNETİCİ ────────────────────────────────────────────────────
-// Talepler ekranıyla aynı gerekçe: burada müşterinin kendi cümleleri okunuyor ve elle işlenen her
-// satır ticari bir kaydın (sipariş, talep) zeminine dönüşüyor. Depo ve kurye görmez.
-//
-// ── DEPO BAĞLAMI BU SAYFAYI DARALTMAZ ────────────────────────────────────────
-// Konuşma bir müşteri ilişkisidir, bir depo işi değil — aynı sohbette iki deponun siparişi
-// anılabilir. Depo süzgeci konsaydı, kuyruk deposu olmayan konuşmaları (henüz sipariş yok) sessizce
-// yutardı ve tam da yeni müşteriler kaybolurdu.
-//
-// ── DETAY SUNUCUDA OKUNUR ────────────────────────────────────────────────────
-// Seçili konuşma adreste (`?c=`), yani okuması burada. Talepler ekranı da buraya konuşma kimliğiyle
-// bağlanıyor; istemcide tutulan bir seçim o bağlantıyı imkânsız kılardı.
-//
-// ── ÇİZİMİN ÇİZİP DE BUGÜN YAZILMAYANLARI ────────────────────────────────────
-// **"Sipariş oluştur" BAŞLIKTA** (15.4 köprüsü): 14.09'da sağ panelin dibinden çizimin yerine taşındı
-// — panelin dibinde ilk ekranda görünmüyordu.
-// **"Kalıp mesaj" düğmesi YOK:** onaylı şablon da gönderim sürücüsü de 15.11'in işi. Pencere
-// kapalıyken UYARI yine de gösteriliyor, çünkü uyarı ölçülmüş bir gerçek; eylem ise henüz yok.
-// (AI rozeti + mod anahtarı + hibrit taslak 16.08'de geldi: mod bir VERİ ve `conversation.handled_by`
-// gerçek — motorun kendisi hâlâ 15.8/15.13'ün işi.)
+// Yalnız yönetici: müşterinin kendi cümleleri okunuyor ve işlenen her satır ticari bir kaydın zeminine dönüşüyor.
+
+// Depo bağlamı süzmez: konuşma bir müşteri ilişkisidir ve depo süzgeci henüz siparişi olmayan yeni müşterileri yutardı.
+
+// BEKLEYEN(15.11): başlıktaki "Kalıp mesaj" düğmesi; kapalı pencerenin uyarısı şimdiden gösteriliyor.
 
 interface SocialPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -50,34 +32,25 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
   }
 
   const urlState = parseSocialUrl(await searchParams);
-  // Kuyruk KİŞİ başına (15.38 · `customer_inbox`): aynı müşterinin kanalları tek satırda — gruplama görünümde.
   const inbox = new CustomerInboxService(serviceDb());
   const source = channelSource(urlState.ch);
 
   const [page, awaitingCount, aiCount, defaultHandler] = await Promise.all([
     inbox.list({ awaitingReply: urlState.f === 'awaiting' ? true : undefined, source }, undefined, DEFAULT_PAGE_SIZE),
-    // Sayaçlar kanal süzgecine UYAR: süzgeçli kuyruğun başlığı süzgeçsiz sayı yazsaydı, tam da
-    // kalabalıkta yalan söylerdi. Bekleyen KİŞİ sayılır (15.38) — kuyruğun satırıyla aynı birim.
+    // Sayaçlar kanal süzgecine uyar: süzgeçli kuyruğun başlığı süzgeçsiz sayı yazsaydı tam da kalabalıkta yalan söylerdi.
     inbox.countAwaitingReply(source),
-    // Çizimin "1 AI yürütüyor" sayısı — 16.08'e kadar bilerek yoktu (daima 0 gösterirdi).
     new ConversationService(serviceDb()).countHandledByAi(source),
-    // Yeni sohbetin varsayılan modu (15.30) — webhook'un okuduğu ayarın aynısı, başlıkta anahtar.
     defaultConversationHandler(serviceDb()),
   ]);
 
-  // Tek an, tüm pencereler: kuyruk rozetleri ve sohbet altlığı aynı `now`'a göre hesaplanır — ikisi
-  // ayrı okunsaydı aynı konuşma listede "2 dk" derken altlıkta "kapalı" diyebilirdi.
+  // Tek an: ayrı okunsaydı aynı konuşma listede "2 dk" derken sohbet altlığında "kapalı" diyebilirdi.
   const now = new Date();
   const rows = toInboxRows(page.rows, now);
 
-  /**
-   * **Seçim yoksa ilk satır açılır.** Sohbet panosu ekranın büyük yarısı: boş bırakmak operatöre
-   * "önce bir şey seç" adımı dayatırdı ve kuyruk zaten cevap bekleyeni öne alan sırada geliyor.
-   * Satır bir kişi (15.38): süzgece uyan sohbeti açılır (`rowTarget`) — satıra basmakla aynı hedef.
-   */
+  // Seçim yoksa süzgece uyan ilk sohbet açılır: sohbet panosu ekranın büyük yarısı, boş kalması "önce seç" adımı dayatırdı.
   const selectedId = urlState.c || (rows[0] ? rowTarget(rows[0], urlState) : '');
 
-  // Detayın görünümü ORTAK okumadan (`social-detail`) — yüzen mesaj penceresi (15.32) aynısını okuyor.
+  // Seçim adreste durur ve detay sunucuda okunur: talepler ekranı sohbete bağlantıyla gelir.
   const detailView = selectedId ? await readConversationDetailView(selectedId, now) : null;
 
   const data: SocialData = {
@@ -91,15 +64,9 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
 
   return (
     <>
-      {/* CANLI BAĞ (16.8): bugün tek arka plan yazarı AI cron'unun hibrit taslağı — ekran açıkken
-          taslak belirmeli. Kanal talep kuyruğununkinden AYRI: her müşteri talebinde bu ekranı da
-          tazelemek, konuşmayı okuyan operatörün altından sayfayı çekerdi. */}
+      {/* Hibrit taslak arka planda yazılır. Kanal talep kuyruğundan ayrı: her talepte bu ekran da tazelenirdi. */}
       <LiveRefresh channel={conversationsChannelName()} />
-      {/* AÇIK SOHBETİN KENDİ ZİLİ (08.09, ölçüldü): kuyruk zili mesaj yazıldığı an ve ajan cevabında
-          çalıyor; sesin transkripti ve çeviri ise saniyeler SONRA yazılıyor ve o an yalnız sohbetin
-          tekil zili çalıyor (`triggerInboundPipeline`in ikinci zili). Bu ekran onu duymuyordu:
-          operatör sesli mesajı transkriptsiz görüyor, metin ancak kendisi bir şey yapınca beliriyordu.
-          Kanal adı sohbetin UUID'sinden türer — talep ekranındaki müşteri zilinin aynı kalıbı. */}
+      {/* Transkript ve çeviri mesajdan saniyeler sonra yazılır ve yalnız sohbetin kendi zilini çalar. */}
       {selectedId ? <LiveRefresh channel={conversationChannelName(selectedId)} /> : null}
       <SocialClient data={data} urlState={{ ...urlState, c: selectedId }} />
     </>

@@ -41,26 +41,11 @@ import {
 import { humanCanReply } from './social-read';
 import type { ConversationDetailView, InboxRowView, MessageView, NoteView } from './social-types';
 
-// Sosyal gelen kutusunun PANOLARI (15.5 · üç kanal 15.15) — sol kuyruk satırı, orta sohbet, sağ
-// müşteri bağlamı.
-//
-// Üçünün de İSKELETİ ortak kitten geliyor (`QueueRow` · `MessageThread` · `ContextPane`): Talepler
-// ekranı aynı iskeleti kullanıyor ve iki kopya bir gün ayrışırdı. Burada kalan yalnız ANLAM —
-// hangi rozet, hangi renk, hangi cümle. Kanal (`source`) da bir ANLAM eksenidir: kenar rengi,
-// pencere cümlesi ve sağ panelin dili ona göre seçilir.
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SOL — gelen kutusu satırı
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface ChannelDotProps {
   source: ConversationSource;
 }
 
-/**
- * Kanal noktası — kuyruk satırında kanalın marka ikonu, açık zeminde (15.38 · çizim). Adı `title`a ve ekran
- * okuyucuya yazılır: ikon tanınmasa da kanal söylenir.
- */
+/** Ad `title`a ve ekran okuyucuya da yazılır: ikon tanınmasa da kanal söylenir. */
 function ChannelDot({ source }: ChannelDotProps) {
   return (
     <span title={SOURCE_LABELS[source]} className={`flex items-center rounded-[5px] px-1.5 py-[3px] ${SOURCE_TINT[source]}`}>
@@ -72,7 +57,7 @@ function ChannelDot({ source }: ChannelDotProps) {
 
 interface InboxRowProps {
   row: InboxRowView;
-  /** Basınca açılacak sohbet — satır bir kişi, birden çok sohbet taşıyabilir (`rowTarget`, 15.38). */
+  /** Basınca açılacak sohbet: satır bir kişidir ve birden çok sohbet taşıyabilir. */
   target: string;
   active: boolean;
   onSelect: (id: string) => void;
@@ -80,8 +65,7 @@ interface InboxRowProps {
 
 export function InboxRow({ row, target, active, onSelect }: InboxRowProps) {
   return (
-    // Seçili kenar olive (çizim · 15.38): satır artık bir KİŞİ — tek kanalın rengi birden çok kanalı olan
-    // satırı yanlış okuturdu. Kanal noktalarda okunur.
+    // Seçili kenar kanal renginde değil: satır bir kişidir, tek kanalın rengi birden çok kanalı olan satırı yanlış okuturdu.
     <QueueRow
       id={target}
       active={active}
@@ -91,8 +75,7 @@ export function InboxRow({ row, target, active, onSelect }: InboxRowProps) {
       preview={row.preview}
       badges={
         <>
-          {/* Kişinin kanalları (15.38) — mesajı olan her kanal bir nokta. Tek kanala daralmış görünümde de
-              hepsi kalır: süzgeç KİŞİYİ bulur, kişinin öteki kanalları gizlenmez. */}
+          {/* Tek kanala daralmış görünümde de bütün noktalar kalır: süzgeç kişiyi bulur, öteki kanallarını gizlemez. */}
           {row.channels.map((source) => (
             <ChannelDot key={source} source={source} />
           ))}
@@ -101,8 +84,7 @@ export function InboxRow({ row, target, active, onSelect }: InboxRowProps) {
               Cevap bekliyor
             </Badge>
           ) : null}
-          {/* Çizimin "AI" çipi (16.08) — dar sütunda tek kelime; Hibrit satır seçilmeli, çünkü
-              bekleyen taslak ancak açılınca görünür. */}
+          {/* Hibrit satır da işaretlenir: bekleyen taslak ancak sohbet açılınca görünür. */}
           {row.handledBy === 'ai' ? <Badge tone="violet">AI</Badge> : null}
           {row.handledBy === 'hybrid' ? <Badge tone="violet">Hibrit</Badge> : null}
           {row.unidentified ? <Badge tone="slate">kimlik yok</Badge> : null}
@@ -129,10 +111,6 @@ export function InboxEmpty({ filtered }: { filtered: boolean }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ORTA — sohbet
-// ─────────────────────────────────────────────────────────────────────────────
-
 export function DetailPlaceholder() {
   return (
     <div className="flex flex-1 items-center justify-center bg-ops-gray-25">
@@ -145,28 +123,12 @@ export function DetailPlaceholder() {
   );
 }
 
-/**
- * Mesaj balonu — künye ÜSTTE, balon altta (ortak `MessageRow`).
- *
- * Çizim yalnız giden mesaja bir ad yazıyor ("Siz"), gelene yazmıyor: gelenin kim olduğunu zaten
- * başlık söylüyor ve her balona ad koymak diziyi gürültüye boğardı.
- *
- * **Çizimde saat YOK, burada VAR ve tek sapma bu:** defter ELLE tutuluyor ve 24 saatlik pencerenin
- * dayanağı mesajın ANI. Saati göstermeyen bir defterde "pencere neden kapalı" sorusunun cevabı
- * ekranda hiç görünmezdi. Ayrı satır AÇILMIYOR — çizimin zaten var olan künye satırına yazılıyor.
- */
+/** Çizimde saat yok, burada var: pencerenin dayanağı mesajın anıdır ve saatsiz defterde "pencere neden kapalı" cevapsız kalırdı. */
 export function Bubble({ message }: { message: MessageView }) {
   const mine = message.direction === 'outbound';
-  // AI'ın KENDİ gönderdiği mesaj ayrı tonda (16.08): müşteri farkı görmez ama operatör görmeli —
-  // "bunu kim söyledi" sorusu sonradan da cevaplanabilmeli (talep yazışmasıyla aynı kural).
+  // Müşteri farkı görmez ama operatör görmeli: "bunu kim söyledi" sonradan da cevaplanabilmeli.
   const ai = message.author === 'ai';
-  /*
-    ÇEVİRİ ORİJİNALİN YERİNE GEÇMEZ (15.28 · talep ekranının 20.2 kuralı): varsayılan Türkçe
-    (operatör kuyruğu tarayabilmeli), kanaldan geçen metin bir tık uzakta. Gelen mesajda o metin
-    müşterinin cümlesi (aynen alıntılamak gerekebilir), giden mesajda müşterinin GERÇEKTE okuduğu
-    cümle — "ben öyle demedim" tartışmasında bakılacak yer orası. Künye sesli mesajda transkripte,
-    ötekilerde gövdeye aittir; hangisiyse orijinal onun yerine geçer.
-  */
+  // Çeviri orijinalin yerine geçmez, bir tık uzakta durur: gelen mesajda müşterinin cümlesi, giden mesajda müşterinin gerçekte okuduğu cümle.
   const [showOriginal, setShowOriginal] = useState(false);
   const original = message.translation && showOriginal ? message.translation : null;
   const transcript = original && message.mediaTranscript ? original.original : message.mediaTranscript;
@@ -182,27 +144,22 @@ export function Bubble({ message }: { message: MessageView }) {
             </span>
           ) : null}
           <span className="font-ops-mono text-ops-micro text-ops-faint">{message.stamp}</span>
-          {/* Şablon etiketi rozet DEĞİL, künye: mesajın kendisi değil, ücret sınıfı hakkında bir not. */}
+          {/* Kalıp etiketi rozet değil künyedir: mesajın değil, ücret sınıfının notu. */}
           {message.templateLabel ? (
             <span className="font-ops-body text-ops-micro text-ops-amber">· kalıp: {message.templateLabel}</span>
           ) : null}
         </>
       }
     >
-      {/* Balonun METNİ biçimli çizilir (06.09). WhatsApp müşterinin ekranında `*kalın*`ı zaten
-          çiziyordu; operatör aynı mesajı çıplak yıldızlarla görüyordu — iki taraf aynı cümleyi
-          farklı okuyordu. Çizici ortak (`ChatText`), balonun DERİSİ yine `bubbleClass`. */}
+      {/* Biçimli çizilir: müşteri `*kalın*`ı WhatsApp'ta çizili görüyor, operatör aynı cümleyi farklı okumamalı. */}
       <div className={bubbleClass(ai ? 'violet' : mine ? 'olive' : 'neutral', 'flex flex-col gap-2')}>
         <MediaBody message={message} transcript={transcript} lang={original?.language ?? undefined} />
-        {/* Metin medyanın ALTINDA: gelen bir fotoğrafta metin alt yazıdır, başlık değil. Metin
-            yoksa satır hiç çizilmiyor — boş bir balon gövdesi, olmayan bir mesaj gösterirdi.
-            Orijinal gösteriliyorsa dili söylenir: tarayıcı çevirisi Fransızcayı Türkçe sanmasın. */}
+        {/* Orijinal gösterilirken dili söylenir: tarayıcı çevirisi Fransızcayı Türkçe sanmasın. */}
         {text ? <ChatText text={text} lang={original && !message.mediaTranscript ? (original.language ?? undefined) : undefined} /> : null}
       </div>
       {message.translation ? (
         <span className={`flex items-center gap-2 ${mine ? 'self-end' : ''}`}>
-          {/* MOR = makine konuştu (`ui/tone.ts`): gelen mesajda ekrandaki cümle makine çevirisidir;
-              giden mesajda müşteriye giden cümle makine çevirisidir. Rozet iki yönde de bunu söyler. */}
+          {/* Mor, makine konuştu demektir: gelen mesajda ekrandaki, giden mesajda müşteriye giden cümle makine çevirisidir. */}
           <Badge tone="violet">
             {mine
               ? `${languageLabel(message.translation.language)} gönderildi`
@@ -225,12 +182,7 @@ interface NoteLineProps {
   note: NoteView;
 }
 
-/**
- * Sohbetin İÇ NOTU (15.29) — balon DEĞİL: müşteriye gitmedi, akışta olayın olduğu yerde duran satır.
- * Ortada ve kesikli çerçevede, çünkü iki yandan birine hizalansaydı bir tarafın mesajı sanılırdı. AI'ın
- * notu mor (makine konuştu — `ui/tone.ts`), personelinki nötr. Künye "müşteri görmez" der: operatör notu
- * müşteriye yazılmış bir cümle sanmasın.
- */
+/** Ortada ve kesikli: bir yana hizalansaydı o tarafın mesajı sanılırdı. Künyedeki "müşteri görmez", notun müşteriye yazılmış sanılmaması için. */
 export function NoteLine({ note }: NoteLineProps) {
   const ai = note.author === 'ai';
   return (
@@ -247,16 +199,7 @@ export function NoteLine({ note }: NoteLineProps) {
   );
 }
 
-/**
- * Medya gövdesi — fotoğraf görünür, ses çalınır, ötekiler indirilir.
- *
- * **Adres SÜRELİ ve bu ekranın bilmesi gereken tek şey değil:** imzalı adres dakikalar içinde ölür,
- * yani operatör sekmeyi bir saat açık bırakırsa görsel kırılır. Sayfa yenilenince yeni adres gelir;
- * kalıcı adres saklamak, sohbeti okuma yetkisi olmayan birinin bağlantıyı ele geçirmesi demekti.
- *
- * **Adres yoksa gövde YİNE ÇİZİLİR** ("[medya]" değil, sebebiyle birlikte): mesajın kendisi
- * kaybolmadı, yalnız dosyası elimizde yok. Boş bırakmak, operatöre olmayan bir sessizlik gösterirdi.
- */
+/** Adres yoksa gövde yine çizilir: mesaj kaybolmadı, yalnız dosyası elimizde yok. */
 function MediaBody({ message, transcript, lang }: { message: MessageView; transcript: string | null; lang?: string }) {
   if (message.kind !== 'media') return null;
 
@@ -266,14 +209,9 @@ function MediaBody({ message, transcript, lang }: { message: MessageView; transc
   }
   if (mime.startsWith('image/')) {
     return (
-      /* Tıklayınca yeni sekmede TAM boy (talep ekranının ek küçük resimleriyle aynı desen): ezik
-         kutunun köşesi 288 piksellik önizlemede görünmez, operatör kanıta yakından bakabilmeli.
-         Bağlantı GEÇİDE gider — gezinme anında yeniden imzalanır, bayat adres yok. */
+      /* Tam boy yeni sekmede: ezik kutunun köşesi önizlemede görünmez, operatör kanıta yakından bakabilmeli. */
       <a href={message.mediaUrl} target="_blank" rel="noreferrer" className="cursor-pointer transition-opacity hover:opacity-80">
-        {/* Ham `<img>` ve sebebi var: geçidin arkasındaki adres İMZALI ve SÜRELİ. `next/image` onu
-            kendi önbelleğine almaya çalışır; adres birkaç dakikada öldüğü için önbellekte kırık bir
-            kayıt kalır ve optimizasyondan kazanılan hiçbir şey yoktur — dosya zaten operatörün tek
-            seferlik baktığı bir kanıt, katalog görseli değil. */}
+        {/* Ham `<img>`: geçidin yönlendirdiği adres süreli, `next/image` önbelleğinde kırık kayıt kalırdı. */}
         <img src={message.mediaUrl} alt="Müşterinin gönderdiği görsel" className="max-h-72 w-auto rounded-ops-sm" />
       </a>
     );
@@ -281,17 +219,12 @@ function MediaBody({ message, transcript, lang }: { message: MessageView; transc
   if (mime.startsWith('audio/')) {
     return (
       <div className="flex flex-col gap-1.5">
-        {/* Genişlik SABİT ve sebebi ölçülmüş (08.09): `w-full` balonun genişliğini alıyordu, balon ise
-            içeriğe göre daralıyor — transkript henüz yazılmamışken balonda yalnız bu öğe kalınca ikisi
-            birbirini sıfıra çekiyordu ve operatör boş bir kutu görüyordu. Oynatıcı kendi genişliğini taşır. */}
+        {/* Genişlik sabit: balon içeriğe göre daralır ve transkriptsiz balonda `w-full` oynatıcıyı sıfıra çekerdi. */}
         <audio controls src={message.mediaUrl} className="w-72 max-w-full" />
-        {/* Çözülmüş metin kaydın ALTINDA ve künyeli. Balonun kendi metniymiş gibi çizilseydi
-            operatör onu müşterinin YAZDIĞI cümle sanırdı; oysa makine duyduğunu yazdı ve
-            yanılmış olabilir. Kayıt yerinde duruyor — şüphelenen dinler. */}
+        {/* Çözülmüş metin kaydın altında ve künyeli: makine duyduğunu yazdı ve yanılmış olabilir, müşterinin yazdığı sanılmamalı. */}
         {transcript ? (
           <>
             <span className="font-ops-mono text-ops-micro text-ops-faint">yazıya çevrildi · makine</span>
-            {/* Transkript operatörün dilinde gelir (15.28); orijinali gösterilirken `lang` dolar. */}
             <span lang={lang} className="whitespace-pre-wrap font-ops-body text-ops-micro italic text-ops-lead">
               {transcript}
             </span>
@@ -309,19 +242,13 @@ function MediaBody({ message, transcript, lang }: { message: MessageView; transc
 
 interface ChannelTabsProps {
   threads: readonly CustomerInboxThread[];
-  /** Açık sohbet — seçili sekme. */
   activeId: string;
   onSelect: (conversationId: string) => void;
-  /** Yüzen pencerenin dar hâli (15.39 · çizim): yalnız ikon + sayı — kanal adı `title`da ve pencerenin künyesinde. */
+  /** Yüzen pencerenin dar hâli: kanal adı `title`da ve pencerenin künyesinde. */
   compact?: boolean;
 }
 
-/**
- * Kişinin KANAL SEKMELERİ (15.38 · çizim) — aynı müşterinin kanallarındaki yazışma tek ekranda, sekmeyle
- * gezilir; her kanal kendi kulvarında (pencere kuralı kanala göre, 15.37). Sekme: ikon + ad + mesaj sayısı.
- * Seçili olmayan sekmede top bizdeyse amber nokta — "okunmadı" sayacı yok ve bilerek (`conversation_inbox`
- * künyesi): son sözü müşteri söylediyse o kanal cevap bekliyor.
- */
+/** Seçili olmayan sekmede top bizdeyse amber nokta: okunmadı sayacı yok, son sözü müşteri söylediyse o kanal cevap bekliyor. */
 export function ChannelTabs({ threads, activeId, onSelect, compact = false }: ChannelTabsProps) {
   return (
     <div role="tablist" aria-label="Müşterinin kanalları" className="flex flex-wrap items-center gap-1.5">
@@ -359,31 +286,23 @@ interface ConversationPaneProps {
   busy: boolean;
   error: string | null;
   onSendReply: (text: string) => Promise<boolean>;
-  /** Yürütücü modu (16.08) — Devral da buradan geçer (`mode='human'`). */
   onMode: (mode: TicketHandler) => void;
-  /** Hibrit taslağı tüket — metni döndürür, ekran cevap kutusuna taşır. */
   onConsumeDraft: () => Promise<string | null>;
-  /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
   onSuggestDraft: () => void;
-  /** Kanal sekmesi (15.38) — kişinin öteki kanalındaki sohbeti açar. */
   onSelectThread: (conversationId: string) => void;
 }
 
 export function ConversationPane({ detail, busy, error, onSendReply, onMode, onConsumeDraft, onSuggestDraft, onSelectThread }: ConversationPaneProps) {
-  // "Kutuya taşı"nın taşıdığı metin — nesne kimliği tetikleyicidir (talep ekranıyla aynı desen).
+  // Nesne kimliği tetikleyicidir: aynı taslak ikinci kez de taşınabilsin.
   const [prefill, setPrefill] = useState<{ text: string } | null>(null);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-ops-gray-25">
-      {/* Başlık barı ÇİZİMİN İKİ SATIRI (15.38): üstte kim (ad · müşteri türü · dil) · pencere · Sipariş oluştur;
-          altta kanal sekmeleri · künye · mod anahtarı (+ AI'daysa Devral). Sekmeler aynı kişinin kanalları —
-          başlık bir müşteri adı ve aynı kişinin iki kanalda iki sohbeti olabilir; hangisine bakıldığını seçili
-          sekme söyler. "Sipariş oluştur" 14.09'da sağ panelin dibinden buraya geldi (çizim onu başlıkta çiziyor).
-          SARAR (14.09, ölçüldü): 1440 px'te sohbet sütunu ~660 px; sığmayan denetimler alt satıra düşer. */}
+      {/* Başlık bir müşteri adıdır ve kişinin iki kanalda iki sohbeti olabilir; hangisine bakıldığını seçili sekme söyler.
+          Satırlar sarar: dar sohbet sütununda sığmayan denetimler alt satıra düşer. */}
       <div className="flex flex-none flex-col gap-2.5 border-b border-ops-line bg-ops-card px-5 py-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="min-w-0 truncate font-ops-display text-ops-lead font-semibold text-ops-ink">{detail.title}</span>
-          {/* Müşteri türü (çizim) — kimliksiz sohbette "Kimlik yok": sağ panelin rozetiyle aynı söz. */}
           {detail.context ? (
             <Badge tone={detail.context.isDraft ? 'amber' : 'olive'}>
               {detail.context.isDraft ? 'Taslak kayıt' : detail.context.isCompany ? 'B2B müşteri' : 'B2C müşteri'}
@@ -391,14 +310,11 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
           ) : (
             <Badge tone="amber">Kimlik yok</Badge>
           )}
-          {/* Müşterinin dili (15.28) — operatör Türkçe yazar, giden bu dile çevrilir; dayanağı altlıkta. */}
           <span className="font-ops-body text-ops-xs text-ops-faint">{LANGUAGE_LABELS[detail.language.language]}</span>
           <span className="ml-auto flex flex-none items-center gap-2.5">
             <Badge tone={WINDOW_TONE[detail.window.tone]}>{detail.window.chip}</Badge>
-            {/* SİPARİŞ KÖPRÜSÜ (15.4) — YALNIZ kimlik çözülmüşken: köprü müşteri önseçili girişi açar,
-                kimliksiz sohbette müşteri seçimi boş gelirdi. Bağ tek parametre taşıyor; KAYNAĞI sunucu
-                konuşmadan çözüyor (`orderSourceOfConversation`) — kanalı adrese yazdırmak raporlardaki
-                dağılımı elle düzenlenebilir kılardı. */}
+            {/* Yalnız kimlik çözülmüşken: köprü müşteri önseçili girişi açar. Kaynağı sunucu konuşmadan çözer; kanalı adrese
+                yazdırmak raporlardaki dağılımı elle düzenlenebilir kılardı. */}
             {detail.context ? (
               <Link
                 href={`${ORDERS_PATH}/new?conversation=${detail.id}`}
@@ -413,28 +329,15 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
           <ChannelTabs threads={detail.threads} activeId={detail.id} onSelect={onSelectThread} />
           <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">
             {detail.messageCount} mesaj ·{' '}
-            {/* Künye modu CÜMLEYLE de söyler (çizim: "AI ajanı yürütüyor / insan yürütüyor") —
-                anahtar seçimi, cümle durumu okur. */}
-            {/* Üç mod da GERÇEK (ajan 15.8, anahtar 29.08). Bir tur boyunca burada "AI modunda ama
-                ajan yok — cevapsız bekliyor" yazıyordu: ajan yazıldıktan sonra kimse cümleyi
-                güncellememişti ve operatör, ajanın az önce cevapladığı sohbette "cevapsız" okuyordu
-                (canlı turda görüldü 07.09). */}
+            {/* Anahtar seçimi gösterir, cümle durumu okur. */}
             {detail.handledBy === 'ai'
               ? 'AI ajanı yürütüyor — gerekirse Devral ile araya girin'
               : detail.handledBy === 'hybrid'
                 ? 'hibrit — AI taslak yazar'
                 : 'insan yürütüyor'}
           </span>
-          {/* ÜÇ MOD DA AÇIK (29.08 · kullanıcı kararı). `AI` bir tur boyunca kapalıydı ve sebebi
-              ipucunda yazıyordu ("mesajı gönderecek kanal açılmadı"); o kısıt kalktığı gün ipucu da
-              kaldırıldı — kapalı bir düğmenin yanında duran eskimiş bir açıklama, düğmenin
-              kendisinden daha yanıltıcıdır. Sunucu tarafı zaten `ConversationHandlerEnum`den
-              türüyor (kural istemcinin nezaketine bırakılmaz) ve o enum de artık üç değer taşıyor. */}
           <MultiToggle size="sm" label="Yürütücü modu" value={detail.handledBy} options={handlerOptions(busy)} onChange={onMode} />
-          {/* Devral yalnız AI modundayken — çizimdeki "özerk ajanı sustur" düğmesi, ve 29.08'den beri
-              gerçekten o: mod açılana kadar yalnız motoru olmayan bir moda düşmüş eski satırları
-              kurtarıyordu. Ajan konuşurken operatörün tek dokunuşla araya girmesi, özerk modun
-              emniyet kemeridir: müşteri yanlış anlaşıldığında beklenecek bir cron turu olmamalı. */}
+          {/* Özerk modun emniyet kemeri: müşteri yanlış anlaşıldığında beklenecek bir cron turu olmamalı. */}
           {detail.handledBy === 'ai' ? (
             <Button size="sm" variant="violet" className="flex-none" onClick={() => onMode('human')} disabled={busy}>
               Devral
@@ -458,10 +361,7 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
         </MessageThread>
       )}
 
-      {/* HİBRİT taslak (16.08) — talep ekranından TEK farkı eylemler: burada gönderim kanalı yok
-          (15.7/15.11), taslağın tek dürüst çıkışı defter kutusuna taşınmak. Operatör metni
-          telefonundan/Business Suite'ten gönderir, kutu zaten "gönderdiğini işle" kutusudur.
-          Pencere kapalıyken taşınacak kutu da yok — kart yine görünür ama eylem yerine sebep yazar. */}
+      {/* Pencere kapalıyken taşınacak kutu yok: kart yine görünür, eylem yerine sebep yazar. */}
       {detail.handledBy === 'hybrid' ? (
         <div className="flex flex-none flex-col border-t border-ops-line bg-ops-card px-5 pt-3">
           {detail.aiDraft ? (
@@ -486,8 +386,7 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
               )}
             </AiDraftCard>
           ) : (
-            // Talep ekranıyla aynı desen (20.4): cron 5 dk'da bir üretiyor, operatör beklemek
-            // zorunda değil.
+            // Cron beş dakikada bir üretir; operatör beklemek zorunda değil.
             <div className="flex items-center gap-2.5 pb-1">
               <Button size="sm" variant="violet" onClick={onSuggestDraft} disabled={busy}>
                 ✦ Taslak öner
@@ -501,8 +400,7 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
       ) : null}
 
       <ReplyBox
-        // Konuşma değişince kutu yeniden kurulur ve O sohbetin taslağını okur (15.39): yarım kalmış bir metin
-        // bir sonraki müşterinin penceresinde durmaz — kendi sohbetinde bekler, yanlış deftere işlenmez.
+        // Kutu sohbet başına kurulur ve o sohbetin taslağını okur: yarım metin bir sonraki müşterinin kutusunda durmaz.
         key={detail.id}
         conversationId={detail.id}
         source={detail.source}
@@ -518,58 +416,30 @@ export function ConversationPane({ detail, busy, error, onSendReply, onMode, onC
 }
 
 interface ReplyBoxProps {
-  /** Hangi sohbetin kutusu — yazı ona göre saklanır (15.39): pencere ile sayfa aynı taslağı görür. */
+  /** Yazı sohbet başına saklanır: pencere ile sayfa aynı taslağı görür. */
   conversationId: string;
   source: ConversationDetailView['source'];
   window: ConversationDetailView['window'];
-  /** Müşteriye hangi dilde gideceği ve dayanağı (15.28) — altlık bunu operatöre SÖYLER. */
   language: ConversationDetailView['language'];
   busy: boolean;
   error: string | null;
-  /** Hibrit taslağın taşıdığı metin — nesne kimliği değişince kutuya yazılır (16.08). */
+  /** Nesne kimliği değişince kutuya yazılır. */
   prefill?: { text: string } | null;
   onSendReply: (text: string) => Promise<boolean>;
 }
 
-/**
- * Altlık — **çizimin iki hâli birebir**: pencere açıkken tek kutu + tek eylem, kapalıyken yalnız
- * uyarı bandı (kutu HİÇ çizilmez, çizimde de yok). Bandın CÜMLESİ kanala göre seçilir (15.15):
- * WhatsApp'ta kapalı pencere bir ücret kararıdır, Messenger/IG'de bir kural sınırı — yanlış cümle
- * operatörü olmayan bir ücretten korkutur ya da olmayan bir serbestliğe güvendirir.
- *
- * Kapalıyken kutunun kalkması yalnız çizime uymak değil, DOĞRU: pencere kapalıyken serbest metin
- * kanal tarafında da gönderilemez. Yani kaydedilecek bir cevap da yoktur.
- *
- * **Kutu 06.09'da DEFTER kutusu olmaktan çıktı, GÖNDERME kutusu oldu.** Eski hâlin gerekçesi
- * gerçekti — yazışma operatörün telefonundan yürüyor, ekran kaydını tutuyordu — ama WhatsApp'ta o
- * gerekçe çöktü: numara Cloud API'ye kaydedildi ve Meta'nın kuralı gereği artık WhatsApp Business
- * uygulamasıyla kullanılamıyor. Telefondan yazan kimse kalmayınca "Deftere işle" düğmesi sessizce
- * bir yalana döndü: operatör cevabı yazıyor, satır deftere düşüyor, müşteriye HİÇBİR ŞEY gitmiyor.
- * Şimdi düğme gerçekten gönderiyor ve gönderemezse SEBEBİNİ söylüyor (`SEND_REFUSAL`).
- *
- * **GELEN mesaj yalnız kanaldan gelir** (webhook). Elle kaydı 15.36'da kalktı (kullanıcı kararı 15.09):
- * operatörün yazdığı bir "gelen" satır, müşterinin söylemediği bir cümleyi deftere onun ağzından yazabilirdi.
- *
- * **Messenger/Instagram'da kutu 7 güne kadar açık (15.37):** 24 saat dolunca insan temsilci süresi başlar;
- * karar `humanCanReply`de, gönderim kapısının aynı kuralı (yapay zekâ bu sürede yazamaz).
- */
+/** Pencere kapalıyken kutu hiç çizilmez: serbest metin kanalda da gönderilemez. Bandın cümlesi kanala göre seçilir (`WINDOW_NOTE`). */
 export function ReplyBox({ conversationId, source, window: win, language, busy, error, prefill, onSendReply }: ReplyBoxProps) {
-  // Yazı kabuğun taslak deposunda (15.39) — pencere kapanıp açılınca, "Tam ekran"a geçince ve ekran değişince yerinde.
+  // Yazı kabuğun taslak deposunda: pencere kapanıp açılınca, tam ekrana geçince ve ekran değişince yerinde kalır.
   const [text, setText] = useMessageDraft(conversationId);
 
-  /*
-    DİL CÜMLESİ (15.28): operatör Türkçe yazar ve mesaj müşterinin diline çevrilerek gider — bunu
-    görmeden gönderen operatör, müşterinin Fransızca okuduğunu bilmez ve "neden Türkçe cevap
-    yazdın" sorusu asla cevaplanamaz. Türkçe konuşan müşteride çeviri yok ve bu da söylenir.
-    Dayanak parantezde: varsayılana düşmüş sohbet (müşteri henüz yazmadı) dikkat ister.
-  */
+  // Operatör Türkçe yazar, mesaj müşterinin diline çevrilerek gider: bunu görmeden gönderen müşterinin Fransızca okuduğunu bilmez.
   const dilNotu =
     language.language === 'tr'
       ? `Müşteriyle Türkçe yazışılıyor (${LANGUAGE_BASIS_NOTE[language.basis]}).`
       : `Türkçe yazın — müşteriye ${LANGUAGE_LABELS[language.language]} çevrilerek gider (${LANGUAGE_BASIS_NOTE[language.basis]}).`;
 
-  // Taslak kutuya OPERATÖRÜN kararıyla taşınır ("Cevap kutusuna taşı") — ezmesi bu yüzden kabul:
-  // basılan düğme zaten "bu metinle çalışacağım" demek (talep ekranıyla aynı kural).
+  // Taslağı operatör kendisi taşıdı; basılan düğme "bu metinle çalışacağım" demek, kutudakini ezmesi bu yüzden kabul.
   useEffect(() => {
     if (prefill) setText(prefill.text);
   }, [prefill, setText]);
@@ -622,37 +492,9 @@ export function ReplyBox({ conversationId, source, window: win, language, busy, 
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SAĞ — müşteri bağlamı (ORTAK pano + bu ekrana özel bloklar)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/*
-  ÇİZİMİN İSKELETİ (14.09 · kullanıcı isteği: "işlevi olmayan bilgi ve butonları kaldıralım, orijinal
-  tasarıma uygun hâle getirelim"). Çizim: ad + rozet · son siparişler · kampanya izni · tek eylem.
-
-  Kalkanlar: açıklama paragrafları (pano bir kılavuz değil), telefon/anahtar satırı (çizimde yok, işi
-  yok), boş liste cümleleri, "Müşterilerde ara" (bağla penceresi zaten arıyor).
-
-  İŞLEVİ OLAN ama çizimde yeri olmayanlar çizimin diline indi: izin kaydı rozetin menüsünde, kimlik
-  çapası tek satır, sepet/hesap bağlantısı YALNIZ pencere açıkken (kapalıyken gönderim kapısı reddeder —
-  düğme işlevsizdi), sipariş köprüsü başlıkta.
-
-  BAĞI VE ÇAPAYI MÜŞTERİ KURAR (15.40 · kullanıcı kararı 15.09): elle bağlama penceresi (kayıt seç + kanıt
-  yaz) ve çapa penceresi (e-postaya kod · sohbete 6 haneli kod) kalktı; ikisinin yerinde hesap bağlantısı.
-  "Kod doğrula" kutusu yok ve olmayacak (DOMAIN §10) — doğrulama yalnız müşterinin kendi numarasından ya da
-  kendi posta kutusundan geçer.
-*/
-
 /**
- * **Cevaplanmayan kimlik sorusu** (04.10) — sistemin kendi başına bitiremediği tek hâl.
- *
- * Soru kendiliğinden soruluyor ve kapı kendiliğinden kapanıyor; ama cevap hiç gelmezse ortada
- * SESSİZCE bekleyen bir insan kalır ve sistem bunu bir daha hatırlatmaz. `DOMAIN §10`: *"kalanı bir
- * kapıya değil İNSANA düşür."* Bu blok o düşürmenin kendisi.
- *
- * **Sipariş sayısı aciliyettir, süs değil:** soru açıldıktan sonra sipariş gelmeye devam ediyorsa,
- * kimliği doğrulanmamış birinin siparişleri başkasının kaydına yazılıyor olabilir. Sıfırsa acele
- * yok — muhtemelen kimse dönmedi.
+ * Sistemin kendi başına bitiremediği tek hâl: cevap gelmezse sessizce bekleyen bir insan kalır ve sistem bunu bir daha
+ * hatırlatmaz. Sipariş sayısı aciliyettir: soru açıkken gelen siparişler doğrulanmamış birinin, başkasının kaydına yazılıyor olabilir.
  */
 function PendingChallenge({ challenge }: { challenge: AnchorSnapshot['challenge'] }) {
   if (!challenge) return null;
@@ -676,20 +518,14 @@ function PendingChallenge({ challenge }: { challenge: AnchorSnapshot['challenge'
 interface AnchorRowProps {
   anchor: AnchorSnapshot;
   busy: boolean;
-  /** Bağlantı sohbete mesajdır — yalnız pencere açıkken gider; kapalıyken düğme çizilmez. */
+  /** Bağlantı sohbete mesajdır: pencere kapalıyken düğme çizilmez. */
   canMessage: boolean;
-  /** Hesap bağlantısını gönder (15.16) — çapayı müşteri kurar. */
   onSendLink: () => void;
 }
 
 /**
- * Kimlik çapasının panodaki TEK SATIRI — durum rozeti + (kurulmamışsa) "Bağlantı gönder →" (15.40 · kullanıcı
- * kararı 15.09). Çapayı MÜŞTERİ kurar: hesap bağlantısını açar, e-postasıyla girer (kod posta kutusuna gelir,
- * kendisi doğrular) — giriş hesabı olan müşteri çapalıdır (`anchorStateOf`: `authUserId`). Operatör kod üretmez,
- * adres yazmaz: panelin eski penceresi (e-postaya kod · sohbete 6 haneli kod) kalktı — kullanıcı: "OTP kodu
- * üretmeye gerek yok, bir buton link göndersin, müşteri kendi kendine bağlasın". Hesabını hiç bağlamayan
- * müşterinin güvenlik kodu otomatik akışta duruyor (`offerAnchorIfDue`); rozet onu da okur ("Kod verildi").
- * Çapası olana bağlantı sunulmaz.
+ * Çapayı müşteri kurar: hesap bağlantısını açıp e-postasıyla girer, doğrulama yalnız kendi posta kutusundan geçer. Operatör kod
+ * üretmez; hesabını bağlamayan müşterinin güvenlik kodu otomatik akıştadır (`offerAnchorIfDue`) ve rozet onu da okur.
  */
 function AnchorRow({ anchor, busy, canMessage, onSendLink }: AnchorRowProps) {
   const kurulu = anchor.state !== 'none';
@@ -722,7 +558,7 @@ interface LinkedTicketsProps {
   tickets: ConversationDetailView['tickets'];
 }
 
-/** Bu sohbetten açılmış talepler — köprü iki yönlü. Boşken HİÇ çizilmez (14.09): "açılmadı" cümlesi bir iş yaptırmıyordu. */
+/** Boşken hiç çizilmez: "açılmadı" cümlesi bir iş yaptırmıyordu. */
 function LinkedTickets({ tickets }: LinkedTicketsProps) {
   if (tickets.length === 0) return null;
   return (
@@ -744,30 +580,18 @@ function LinkedTickets({ tickets }: LinkedTicketsProps) {
 
 interface SocialContextPaneProps {
   context: CustomerContextData | null;
-  /** Konuşmanın dış anahtarı — WhatsApp'ta okunaklı telefon, Messenger/IG'de opak PSID/IGSID. */
   externalRef: string;
   source: ConversationDetailView['source'];
   profileName: string | null;
   tickets: ConversationDetailView['tickets'];
-  /** Kampanya izninin üç hâli (`consentStateOf`) — rozet ve kayıt menüsü buradan. */
   consent: ConsentState;
-  /** Kimlik çapası (04.10) — kimliksiz sohbette `null`, satır hiç çizilmez. */
   anchor: AnchorSnapshot | null;
-  /**
-   * Sohbete mesaj gidebiliyor mu (pencere açık). Bağlantı düğmeleri SOHBETE mesaj gönderir ve pencere
-   * kapalıyken gönderim kapısı reddeder — o hâlde düğme işlevsizdir ve çizilmez (14.09).
-   */
+  /** Bağlantı düğmeleri sohbete mesaj gönderir; pencere kapalıyken gönderim reddedilir ve düğmeler çizilmez. */
   canMessage: boolean;
   busy: boolean;
   onNewTicket: () => void;
-  /** Sohbette verilen izni KAYDET (15.12) — operatör karar vermez, müşterinin dediğini yazar. */
   onOptIn: (granted: boolean) => void;
-  /** Sepet bağlantısı (15.21) — sohbeti personel yürütürken müşteriyi sepete taşıyan tek yol. */
   onSendCartLink: () => void;
-  /**
-   * Hesap bağlantısı (15.16 · 15.40) — bağı ve çapayı MÜŞTERİ kurar: bağlantıyı açıp e-postasıyla girer, sohbet
-   * hesabına bağlanır. Panelin bağlama ve çapa eylemlerinin tek kapısı — elle bağlama ve kod penceresi kalktı.
-   */
   onSendAccountLink: () => void;
 }
 
@@ -787,33 +611,26 @@ export function SocialContextPane({
   onSendAccountLink,
 }: SocialContextPaneProps) {
   const whatsapp = source === 'whatsapp';
-  // Müşteri araması kanala göre ANLAMLI anahtarla yapılır: WhatsApp'ta numara kimlik anahtarıdır ve
-  // kesin eşleşir; Messenger/IG'de elimizde yalnız görünen ad var — arama kesinlik değil ADAY verir.
+  // WhatsApp'ta numara kesin eşleşir; Messenger/Instagram'da elde yalnız görünen ad var ve arama yalnız aday verir.
   const searchHref = customersUrl({ q: whatsapp ? externalRef : (profileName ?? ''), type: 'all', scope: 'all', mc: 'any' });
 
   if (!context) {
     return (
       <ContextPane>
         <div className="flex flex-col items-start gap-1.5">
-          {/* WhatsApp'ta anahtar (telefon) gösterilir — operatörün tanıdığı şey. PSID/IGSID GÖSTERİLMEZ:
-              operatöre hiçbir şey söylemez, profil adı söyler. */}
+          {/* PSID/IGSID gösterilmez: operatöre bir şey söylemez, profil adı söyler. */}
           <span className="font-ops-display text-ops-base font-semibold text-ops-ink">
             {whatsapp ? externalRef : (profileName ?? 'İsimsiz profil')}
           </span>
           <Badge tone="amber">Kimlik yok</Badge>
         </div>
-        {/* Kimliksiz sohbet bir ARIZA DEĞİL — Messenger/IG'de varsayılan hâl (PSID/IGSID telefon taşımaz);
-            WhatsApp'ta telefon/e-posta çakışmasında bilerek bağlanmadan açılır. BAĞI MÜŞTERİ KURAR (15.40 ·
-            kullanıcı kararı 15.09: "biz bağlamayalım, müşteri kendi kendine bağlasın"): hesap bağlantısını açıp
-            e-postasıyla girer, sohbet hesabına bağlanır. Operatörün elle bağlama penceresi (kayıt seç + kanıt yaz)
-            kalktı. */}
+        {/* Kimliksiz sohbet arıza değil: Messenger/Instagram'da varsayılan hâl, WhatsApp'ta çakışmada bilerek bağlanmadan açılır. */}
         <ContextNotice>
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
             {whatsapp ? 'Numara bir müşteriye bağlanmadı.' : 'Sohbet bir müşteriye bağlı değil.'} Bağı müşteri kurar: hesap
             bağlantısını açıp e-postasıyla girer.
           </span>
         </ContextNotice>
-        {/* Bağlantı sohbete mesajdır: yalnız pencere açıkken bir iş yapar. */}
         {canMessage ? (
           <Button variant="secondary" size="sm" disabled={busy} onClick={onSendAccountLink}>
             Hesap bağlantısı gönder
@@ -825,14 +642,10 @@ export function SocialContextPane({
 
   return (
     <ContextPane>
-      {/* WhatsApp'ta ad müşteri ekranına NUMARAYLA gider (kimliğin anahtarı numara; aynı adlı iki
-          müşteri varsa ad araması ikisini birden getirirdi). */}
+      {/* WhatsApp'ta ad müşteri ekranına numarayla gider: aynı adlı iki müşteriyi ad araması birlikte getirirdi. */}
       <ContextIdentity context={context} href={searchHref} />
 
-      {/* Taslak kayıt — çizimin uyarısı. WhatsApp'ta kayıt, müşteri hesap bağlantısıyla girince hesabına BİRLEŞİR
-          (`bindPhoneToAccount`); eylemi aşağıdaki çapa satırında ("Bağlantı gönder →"). Çizimin "Müşteriye bağla →"su
-          bu yüzden yok (15.40): operatör bağlamaz. Kayıtları elle birleştirmek Müşteriler ekranının işi (09.10) —
-          ada basınca oraya gidilir. */}
+      {/* Elle birleştirme Müşteriler ekranının işi; WhatsApp taslağı müşteri hesap bağlantısıyla girince kendiliğinden birleşir. */}
       {context.isDraft ? (
         <ContextNotice>
           <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
@@ -845,9 +658,7 @@ export function SocialContextPane({
 
       <ContextOrders context={context} />
 
-      {/* Kampanya izni — çizimin rozeti; rozete basınca müşterinin sohbette verdiği cevap kaydedilir
-          (15.12). Kaydın nereye yazıldığı menüde söylenir: WhatsApp'ta müşteri kartına da işlenir,
-          Messenger/IG'de yalnız bu sohbete (izin şeması bugün email + whatsapp taşıyor). */}
+      {/* Kaydın yeri menüde söylenir: WhatsApp'ta müşteri kartına da işlenir, Messenger/Instagram'da yalnız sohbete. */}
       <ContextConsent
         state={consent}
         onRecord={onOptIn}
@@ -859,8 +670,6 @@ export function SocialContextPane({
 
       <LinkedTickets tickets={tickets} />
 
-      {/* SEPET BAĞLANTISI (15.21 · kullanıcı izni 07.09) — ajanın `sepet_baglantisi` aracının insan eli.
-          Sohbete mesaj gönderir: pencere kapalıyken gönderim kapısı reddeder, düğme o hâlde çizilmez. */}
       {canMessage ? (
         <Button variant="secondary" size="sm" disabled={busy} onClick={onSendCartLink}>
           Sepet bağlantısı gönder

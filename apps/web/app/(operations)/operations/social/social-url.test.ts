@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { parseSocialUrl, socialLink, socialUrl, SOCIAL_PATH } from './social-url';
 
-// 15.5/15.15 — adres sözleşmesi. Bozuk bağlantı ekranı KIRMAZ; varsayılanlar adrese yazılmaz.
-
 describe('parseSocialUrl', () => {
   it('boş adres varsayılana düşer — ve varsayılan "Tümü / tüm kanallar"dır', () => {
-    // Talepler'den bilinçli ayrım: buraya çoğu zaman belirli bir sohbeti okumaya gelinir. Varsayılan
-    // "cevap bekliyor" olsaydı, cevaplanmış bir konuşmanın bağlantısı boş kuyrukla açılırdı.
     expect(parseSocialUrl({})).toEqual({ f: 'all', ch: 'all', c: '' });
   });
 

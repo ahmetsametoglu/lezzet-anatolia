@@ -10,16 +10,8 @@ import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { openConversationTicketAction } from './actions';
 
 /**
- * Sohbetten talep açma (çizim, sağ pano) — müşteri ve konuşma ZATEN belli.
- *
- * Talepler ekranının elle talep penceresiyle aynı iş değil ve o yüzden ayrı: orada operatör önce
- * müşteriyi arıyor, burada müşteri sohbetin kendisinden geliyor. Asıl fark ise bağ — burada açılan
- * talep `conversation_id` taşır ve Talepler ekranındaki "bağlı WhatsApp konuşması" satırı ilk kez
- * gerçekten dolar.
- *
- * **Sipariş seçici YOK ve bu bilinçli:** çizim burada tek adımlık bir pencere gösteriyor
- * ("konuşmadan talep kaydı açılır; müşteri ve varsa sipariş bağlanır") ve sipariş bağı Talepler
- * ekranında zaten kurulabiliyor. İkinci bir seçici çizmek, aynı kararı iki yerde yaşatmak olurdu.
+ * Talepler'in elle talep penceresinden ayrı: müşteri sohbetten gelir ve açılan talep `conversation_id` taşır. Sipariş seçici
+ * yok: sipariş bağı Talepler ekranında kurulabiliyor, ikinci seçici aynı kararı iki yerde yaşatırdı.
  */
 
 interface ConversationTicketDialogProps {

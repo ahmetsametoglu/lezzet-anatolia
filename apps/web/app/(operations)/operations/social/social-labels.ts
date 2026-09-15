@@ -3,23 +3,11 @@ import { PreferredLanguageEnum, type ConversationSource, type MessageKind, type 
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { WindowView } from './social-types';
 
-// Sosyal gelen kutusunun SÖZLÜĞÜ ve RENK EŞLEMESİ (15.5 · üç kanal 15.15).
-//
-// **Ad haritaları neden burada, enum'un yanında değil:** bugün tek tüketici bu ekran. `Record`'un
-// eksik anahtarda derlemeyi durdurma güvencesi nerede dururlarsa dursun geçerli; `packages/types`'ın
-// asıl gerekçesi ise "birden çok yüzey aynı adı okusun"dur ve o gerekçe henüz doğmadı. Mesaj türünü
-// gösteren ikinci bir yüzey çıktığında (native uygulama izleme ekranı) haritalar enum'un yanına
-// taşınır — o gün mekanik bir taşıma olsun diye burada tek parça duruyorlar.
-//
-// **Kanal adı ve marka rengi (`SOURCE_*`) 15.32'de ortak kite taşındı** (`ui/conversation-source`):
-// müşterinin kanal düğmesi — sipariş, müşteri kartı ve talep ekranlarında — ikinci tüketici oldu.
+// Ad haritaları enum'un yanında değil, çünkü tek tüketicisi bu ekran; ikinci bir yüzey okuduğunda `packages/types`a taşınır.
 
 /**
- * Mesaj türü → metinsiz balonun okunacak hâli.
- *
- * `text` haritada YOK denemez — türü metin olan bir mesajın gövdesi boş çıkarsa (adım 2'de
- * sağlayıcıdan gövdesiz bir olay gelebilir) balon boş kalır ve operatör "mesaj kayboldu" sanır.
- * Köşeli parantez ayırıyor: bu bizim yazdığımız bir açıklama, müşterinin cümlesi değil.
+ * `text` de haritada: gövdesiz metin olayı boş balon bırakır ve operatör mesajın kaybolduğunu sanırdı. Köşeli parantez bunun
+ * müşterinin cümlesi değil, bizim açıklamamız olduğunu gösterir.
  */
 export const MESSAGE_KIND_LABELS: Record<MessageKind, string> = {
   text: '[boş mesaj]',
@@ -28,46 +16,32 @@ export const MESSAGE_KIND_LABELS: Record<MessageKind, string> = {
   media: '[görsel / dosya]',
 };
 
-/**
- * Şablon kategorisi = **ücret sınıfı**, süs değil (`message.template_category`). Operatör kalıp
- * mesajın hangi kovadan çıktığını görmeli: pazarlama en pahalısı, utility pencere içinde ücretsiz.
- * (Şablon yalnız WhatsApp'ta var — kural veride, `record_message`.)
- */
+/** Kategori ücret sınıfıdır: pazarlama en pahalısı, işlem kalıbı pencere içinde ücretsiz. */
 export const TEMPLATE_CATEGORY_LABELS: Record<TemplateCategory, string> = {
   marketing: 'pazarlama',
   utility: 'işlem',
   authentication: 'doğrulama',
 };
 
-/** Konuştuğumuz üç dilin adı — Türkçe, çünkü okuyan operatör (15.28). */
 export const LANGUAGE_LABELS: Record<PreferredLanguage, string> = {
   tr: 'Türkçe',
   fr: 'Fransızca',
   de: 'Almanca',
 };
 
-/**
- * Herhangi bir ISO kodunun rozet metni: konuştuğumuz dilse adı, değilse kodun kendisi (`BS`).
- * Kod boşsa dil tespit edilmemiştir — uydurulmaz, "dil bilinmiyor" yazılır.
- */
 export function languageLabel(code: string | null): string {
   const parsed = PreferredLanguageEnum.safeParse(code);
   if (parsed.success) return LANGUAGE_LABELS[parsed.data];
   return code ? code.toUpperCase() : 'dil bilinmiyor';
 }
 
-/**
- * Hedef dilin DAYANAĞI — kompozörün altındaki cümle. Varsayılana düşen sohbet ayrıca söylenir:
- * müşteri henüz üç dilden birinde yazmamıştır ve operatörün kendisi dili biliyorsa Türkçe
- * yerine doğrudan o dilde yazabilir (kapı yazılan dili tanır, çevirmez).
- */
+/** Varsayılana düşen sohbet ayrıca söylenir: operatör dili biliyorsa doğrudan o dilde yazabilir, kapı yazılan dili tanır ve çevirmez. */
 export const LANGUAGE_BASIS_NOTE: Record<OutboundLanguageBasis, string> = {
   conversation: 'son mesajından',
   customer: 'profil tercihinden',
   default: 'varsayılan — müşteri henüz Türkçe, Fransızca ya da Almanca yazmadı',
 };
 
-/** Pencere tonu → ortak renk sözlüğü. Ekranda ham renk seçilmez (CLAUDE.md §3). */
 export const WINDOW_TONE: Record<WindowView['tone'], OpsTone> = {
   open: 'olive',
   soon: 'amber',
@@ -76,29 +50,19 @@ export const WINDOW_TONE: Record<WindowView['tone'], OpsTone> = {
 };
 
 /**
- * Altlığın bandı — pencere durumunun operatöre söylediği şey, KANAL BAŞINA (15.15).
- *
- * Cümleler kanala göre ayrışmak ZORUNDA, süs değil: "kapalı" WhatsApp'ta bir ÜCRET kararıdır
- * (yalnız ücretli kalıp mesaj gider), Messenger/Instagram'da ise bir KURAL sınırıdır (ücret yok;
- * cevap 7 güne kadar yalnız insan-temsilci istisnasıyla gidebilir). WhatsApp cümlesini üç kanala
- * yaymak, operatörü Messenger'da olmayan bir ücretten korkutur ya da olmayan bir serbestliğe
- * güvendirirdi.
- *
- * `closed` ile `never` her kanalda AYRI cümle kurar: biri kaçırılmış bir fırsattır (müşteri
- * yazmıştı, süre doldu), öteki kurulmamış bir ilişkidir (müşteri hiç yazmadı) — Messenger/IG'de
- * üstelik işletme SOHBET BAŞLATAMAZ, ilk sözü daima müşteri söyler.
+ * Cümleler kanala göre ayrışmak zorunda: "kapalı" WhatsApp'ta bir ücret kararıdır, Messenger/Instagram'da bir kural sınırı.
+ * `closed` kaçırılmış fırsat, `never` kurulmamış ilişkidir; Messenger/Instagram'da sohbeti daima müşteri başlatır.
  */
 export const WINDOW_NOTE: Record<ConversationSource, Record<WindowView['state'], string>> = {
   whatsapp: {
-    // Açık hâlin cümlesi kalan süreyle TAMAMLANIR (çizim: *"Cevap süresi açık · 23 saat kaldı"*),
-    // o yüzden burada nokta yok — süreyi ekleyen yer altlığın kendisi.
+    // Açık hâlin cümlesini kalan süre tamamlar, o yüzden nokta yok.
     open: 'Cevap süresi açık ·',
-    // WhatsApp'ta insan temsilci süresi YOK — motor bu hâli bu kanalda üretmez; tip bütünlüğü için cümle.
+    // Motor bu hâli WhatsApp'ta üretmez; cümle tip bütünlüğü için.
     human: 'Cevap süresi doldu — WhatsApp\'ta insan temsilci istisnası yok; yalnız onaylı kalıp mesaj gider.',
     closed: 'Cevap süresi doldu — serbest mesaj gönderilemez. Yalnız onaylı kalıp mesaj (ücretli) gider.',
     never: 'Müşteri bize hiç yazmadı — pencere hiç açılmadı. Kalıp mesaj bile ancak pazarlama izniyle gider.',
   },
-  // Messenger/Instagram (15.37): 24 saat dolunca insan temsilci süresi başlar — kutu açık, cümle süreyle tamamlanır.
+  // 24 saat dolunca insan temsilci süresi başlar; cümleyi kalan süre tamamlar.
   messenger: {
     open: 'Cevap süresi açık ·',
     human: 'Standart 24 saat doldu — insan temsilci olarak yazabilirsiniz ·',
@@ -113,18 +77,7 @@ export const WINDOW_NOTE: Record<ConversationSource, Record<WindowView['state'],
   },
 };
 
-/**
- * Giden balonun künyesi — çizimin sözcüğü ("Siz"). GELEN balona ad YAZILMAZ: kimin yazdığını zaten
- * başlık söylüyor ve her balona ad koymak diziyi gürültüye boğardı (çizim de öyle yapıyor).
- */
+/** Gelen balona ad yazılmaz: kimin yazdığını başlık söylüyor, her balonda ad diziyi gürültüye boğardı. */
 export const OUTBOUND_LABEL = 'Siz';
 
-/** AI'ın KENDİ gönderdiği balonun künyesi (16.08) — çizimin sözcüğü ("AI ajanı"), mor tonla okunur. */
 export const AI_OUTBOUND_LABEL = 'AI ajanı';
-
-/*
-  `AI_MODE_UNAVAILABLE` KALDIRILDI (29.08) — mod açıldı, ipucunun anlattığı kısıt kalmadı.
-  Cümle *"mesajı gönderecek kanal açılmadı"* diyordu ve 28.08'de o kanal açıldı (15.11); kapalı bir
-  düğmenin yanında duran eskimiş bir açıklama, düğmenin kendisinden daha yanıltıcıdır. Gerekçenin
-  tarihsel hâli `ConversationHandlerEnum` künyesinde duruyor.
-*/

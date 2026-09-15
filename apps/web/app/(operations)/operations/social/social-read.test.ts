@@ -15,10 +15,6 @@ import {
   WINDOW_SOON_MS,
 } from './social-read';
 
-// 15.5/15.15 — okuma dönüşümlerinin ölçütleri. Üçü de birer KARAR ve karar sınanabilir olmalı:
-// pencerenin ne zaman "az kaldı"ya döndüğü, gövdesiz bir mesajın nasıl okunacağı, adsız bir
-// konuşmanın satırda ne göstereceği.
-
 const NOW = new Date('2026-08-08T12:00:00.000Z');
 
 function inboxRow(patch: Partial<CustomerInboxRow> = {}): CustomerInboxRow {
@@ -34,23 +30,15 @@ function inboxRow(patch: Partial<CustomerInboxRow> = {}): CustomerInboxRow {
     aiDraftGeneratedAt: null,
     optIn: false,
     optInAt: null,
-    // Hiç sorulmamış hâl (15.12): üç izin hâlinden ilki — ret de bu satırdan ayırt edilebilmeli.
     optInAskedAt: null,
-    // Bağ künyesi boş: bu satırın bağını SİSTEM kurmuş (WhatsApp, numaradan) — operatör kararı yok.
     linkedBy: null,
     linkedAt: null,
     linkProof: null,
-    // Müşteriyle konuştuğumuz dil bilinmiyor (15.28): önizleme çeviriyi torbadan, hedefi motordan alır.
     language: null,
-    // Müşteri sohbette posta kodu söylemedi (15.20, 10.09) — bu fikstür yeri sınamıyor, satırı tamamlıyor.
     postalCode: null,
-    // Kodun ülkesi (15.20 · 10.09) — kod yokken ülke de yok (DB kısıtı); satırı tamamlıyor.
     postalCountry: null,
     windowExpiresAt: null,
     lastMessageAt: NOW.toISOString(),
-    /* 21.289 · sözleşmeye eklendi: kuyruğun sıralama ekseni artık son GELEN mesaj (gerekçe
-       `conversation.schema` künyesinde). Bu fikstür sıralamayı sınamıyor — alan yalnız satırı
-       tamamlıyor; mobil şeridin şema değişikliğiyle aynı düzenlemede geldi. */
     lastInboundAt: NOW.toISOString(),
     createdAt: NOW.toISOString(),
     customerName: 'Ayşe Kaya',
@@ -59,11 +47,9 @@ function inboxRow(patch: Partial<CustomerInboxRow> = {}): CustomerInboxRow {
     lastMessageText: 'Teslimat perşembe olur mu?',
     lastMessageDirection: 'inbound',
     lastMessageKind: 'text',
-    // Çeviri üçlüsü boş = tespit koşmadı; önizleme orijinali okur (15.28).
     lastMessageLanguage: null,
     lastMessageTranslations: null,
     lastMessageTranscript: null,
-    // Kişi (15.38): tek WhatsApp sohbetli müşteri — baş sohbet kendisi, kanal dizisi tek.
     personKey: '22222222-2222-4222-8222-222222222222',
     inboxAt: NOW.toISOString(),
     threads: [{ id: '11111111-1111-4111-8111-111111111111', source: 'whatsapp', messageCount: 3, awaitingReply: true }],
@@ -90,8 +76,6 @@ function message(patch: Partial<MessageWithMedia> = {}): MessageWithMedia {
     language: null,
     translations: null,
     translatedAt: null,
-    // Adres okuma kapısında imzalanıyor (`readConversationDetail`), çeviricinin işi değil —
-    // fikstür de onu veri olarak taşıyor.
     mediaUrl: null,
     createdAt: NOW.toISOString(),
     ...patch,
@@ -100,8 +84,6 @@ function message(patch: Partial<MessageWithMedia> = {}): MessageWithMedia {
 
 describe('toWindowView', () => {
   it('damga yoksa "hiç açılmadı" — kapanmışla AYNI ŞEY DEĞİL', () => {
-    // İkisi de "serbest mesaj gönderemezsin"e düşer ama biri kaçırılmış fırsat, öteki kurulmamış
-    // ilişkidir; tek kovaya atmak operatöre yanlış eylemi önerirdi.
     expect(toWindowView(null, NOW, 'whatsapp')).toEqual({ state: 'never', chip: '—', tone: 'idle' });
   });
 
@@ -131,7 +113,7 @@ describe('toWindowView', () => {
     const closed6hAgo = new Date(NOW.getTime() - 6 * 60 * 60 * 1000).toISOString();
     expect(toWindowView(closed6hAgo, NOW, 'messenger')).toEqual({ state: 'human', chip: '5 gün', tone: 'soon' });
     expect(toWindowView(closed6hAgo, NOW, 'instagram').state).toBe('human');
-    // WhatsApp'ta insan temsilci istisnası yok — aynı an orada kapalıdır.
+    // WhatsApp'ta insan temsilci istisnası yok: aynı an orada kapalıdır.
     expect(toWindowView(closed6hAgo, NOW, 'whatsapp').state).toBe('closed');
   });
 
@@ -186,16 +168,12 @@ describe('previewOf', () => {
   });
 
   it('BİÇİM İŞARETLERİNİ SÖKER — kuyrukta çıplak yıldız görünmez (07.09)', () => {
-    /* Ajan cevapları biçimli üretiliyor ve WhatsApp onları çiziyor; aynı metin deftere düşünce
-       kuyruk satırında ham işaret olarak görünüyordu. Balon ÇİZER, satır SÖKER — ikisi zıt ve
-       bilinçli: liste satırı okunacak metin değil, tek satırlık bir tarama dizesidir. */
     expect(previewOf('*Fıstıklı Baklava* 4,57 €', 'text')).toBe('Fıstıklı Baklava 4,57 €');
     expect(previewOf('_yarın_ ~iptal~ gönderim', 'text')).toBe('yarın iptal gönderim');
   });
 
   it('madde listesi tek satıra düzleşir, işaret KALIR', () => {
-    // `•` bir biçim işareti değil, düz metinde de okunan bir karakter: kalması satırı bozmuyor,
-    // aksine "burada liste vardı" bilgisini taşıyor.
+    // `•` biçim işareti değil, düz metinde de okunur ve "burada liste vardı" bilgisini taşır.
     expect(previewOf('*Boylar*:\n• 225 g — 4,57 €\n• 450 g — 9,15 €', 'text')).toBe('Boylar: • 225 g — 4,57 € • 450 g — 9,15 €');
   });
 
@@ -230,7 +208,6 @@ describe('toInboxRows', () => {
   });
 
   it('önizleme operatörün DİLİNDE — kuyruk açılmadan taranabilmeli (15.28)', () => {
-    // `ticket_queue`nun aynı kararı: detay çevrilip kuyruk çevrilmezse triyaj ancak açarak yapılır.
     const rows = toInboxRows(
       [
         inboxRow({
@@ -337,25 +314,18 @@ describe('toMessageViews', () => {
     expect(views.map((v) => v.text)).toEqual(['ilk', 'ikinci']);
   });
 
-  /*
-    MEDYADA YER TUTUCU KALKTI (07.09) — dosyanın kendisi çizildiği gün "[görsel / dosya]" yazısı
-    onun altında aynı şeyi ikinci kez söylemeye başladı. Balonun boş kalmama güvencesi kayboLMADI,
-    yer değiştirdi: `MediaBody` ya dosyayı çiziyor ya "alınamadı" diyor. Bu ikisini tek yer
-    tutucuya indirmek, "yazısız fotoğraf" ile "dosyası elimizde yok"u aynı görünüme sokardı.
-  */
   it('medyada yer tutucu YOK — dosyayı balon çiziyor, metin yalnız alt yazıdır', () => {
     expect(toMessageViews([message({ kind: 'media', body: { text: null } })])[0]?.text).toBe('');
     expect(toMessageViews([message({ kind: 'media', body: { text: 'ezik geldi' } })])[0]?.text).toBe('ezik geldi');
   });
 
   it('medya DIŞINDA gövdesiz mesaj hâlâ türünün adıyla okunur', () => {
-    // Kart/şablonun çizilecek bir dosyası yok; orada yer tutucu tek okunabilir çıkış.
+    // Kart ve kalıbın çizilecek dosyası yok; orada yer tutucu tek okunabilir çıkış.
     expect(toMessageViews([message({ kind: 'interactive', body: { text: null } })])[0]?.text).toBe('[etkileşimli kart]');
   });
 
   it('medya adresi ve türü balona OLDUĞU GİBİ geçer — çevirici imzalamaz', () => {
-    // İmzalama okuma kapısının işi (`readConversationDetail`): süreli adres her okumada yeniden
-    // üretilir, saf çevirici ise ağa çıkmamalı.
+    // Adresi okuma kapısı üretir (`readConversationDetail`); saf çevirici ağa çıkmaz.
     const views = toMessageViews([message({ kind: 'media', mediaMime: 'image/jpeg', mediaUrl: 'https://r2.example/imzali' })]);
     expect(views[0]?.mediaMime).toBe('image/jpeg');
     expect(views[0]?.mediaUrl).toBe('https://r2.example/imzali');
@@ -371,11 +341,6 @@ describe('toMessageViews', () => {
   });
 });
 
-/*
-  ÇEVİRİ (15.28) — operatör Türkçe okur, kanaldan geçen metin künyede durur. Gelen mesajda o metin
-  müşterinin cümlesi, giden mesajda müşterinin GERÇEKTE okuduğu çeviri: ikisi de bir tık uzakta
-  olmalı, ikisi de makine cümlesi diye işaretlenmeli.
-*/
 describe('toMessageViews — çeviri', () => {
   it('GELEN mesaj Türkçe okunur, orijinal ve dili künyede durur', () => {
     const [view] = toMessageViews([
@@ -444,16 +409,13 @@ describe('consentStateOf — kampanya izninin üç hâli (15.12 · 14.09)', () =
   });
 
   it('Messenger/Instagram: SORULMAMIŞ izin ret değildir — 14.09 arızası', () => {
-    // Pano "Sorulmadı" derken aynı sohbette "Müşteri reddetti" seçili görünüyordu: kayıt yalnız
-    // `opt_in`in evet/hayırını okuyordu ve sorulmamış izin verilmiş bir ret gibi çiziliyordu.
     expect(consentStateOf({ source: 'messenger', customerConsent: null, optIn: false, optInAskedAt: null })).toBe('unasked');
     expect(consentStateOf({ source: 'instagram', customerConsent: null, optIn: false, optInAskedAt: asked })).toBe('refused');
     expect(consentStateOf({ source: 'messenger', customerConsent: null, optIn: true, optInAskedAt: asked })).toBe('granted');
   });
 
   it("Messenger/IG'de müşteri kaydının izni KULLANILMAZ — o kutu WhatsApp'ın", () => {
-    // İzin şeması bugün email + whatsapp taşıyor; WhatsApp iznini Messenger rozetine yazmak, olmayan
-    // bir izne güvendirmek olurdu.
+    // Müşteri kaydının izni WhatsApp'ındır; Messenger rozetine yazmak olmayan bir izne güvendirirdi.
     expect(consentStateOf({ source: 'messenger', customerConsent: { granted: true }, optIn: false, optInAskedAt: null })).toBe('unasked');
   });
 });

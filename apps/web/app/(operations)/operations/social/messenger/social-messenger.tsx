@@ -25,28 +25,14 @@ import type { ConversationDetailView, InboxRowView } from '../social-types';
 import { messengerConversationAction, messengerPulseAction, startWhatsappConversationAction } from './actions';
 
 /**
- * **Yüzen mesaj penceresi** (15.32 · kullanıcı isteği 14.09) — operasyon web'inin her ekranında sağ altta bir
- * düğme; basınca küçük bir WhatsApp ekranı gibi pencere açılır: üç kanalın sohbet listesi, dokununca
- * sohbetin içi. Müşteriyle konuşmanın gerektiği ekranlarda (sipariş, müşteri kartı, talep) müşterinin
- * kanal düğmeleri durur (`CustomerChannels`) ve basınca o kanalın sohbeti doğrudan burada açılır.
- *
- * **Kural (kullanıcı, 14.09 — iki kez söylendi):** operasyon müşteriye YALNIZ uygulamanın içinden yazar;
- * `wa.me` bağlantısı ve personelin kendi telefonu yok. Bu pencere o kuralın web ayağı.
- *
- * **Parçalar sayfanınki:** liste satırı ve sohbet alanı sohbet sayfasının kendi parçaları (`InboxRow`, `Bubble`,
- * `ReplyBox`, `ChannelTabs`) — kopya parça olsaydı sayfa ile pencere bir gün aynı sohbeti farklı çizerdi. Çizim 15.09'da
- * geldi ("Mesaj Balonu", 15.39): kişinin kanal sekmeleri, açan ekranın BAĞLAM şeridi + "Ekle" ve ekranlar arası taslak
- * (depo bu sağlayıcıda). Mod anahtarı, hibrit taslak ve müşteri bağlamı paneli tam ekranda kalır ("Tam ekran ↗").
- *
- * **Yalnız yönetici:** sohbet sayfasının kapısı `requireAdmin`; pencere ikinci bir yetki yolu değil, kısayol.
- * Sohbet sayfasının kendisinde düğme ve pencere çizilmez — tam ekran zaten açık. Yeni mesaj SESİ (15.34) ise her
- * ekranda, sohbet sayfasında da çalar; kuyruk zilinin aboneliği ortak (`useBell`), aynı kanala tek abonelik.
+ * Operasyon müşteriye yalnız uygulamanın içinden yazar (`wa.me` ve personelin kendi telefonu yok); bu pencere o kuralın web ayağı.
+ * Parçalar sohbet sayfasınınki (`InboxRow`, `Bubble`, `ReplyBox`, `ChannelTabs`): kopya parça, aynı sohbetin bir gün iki yerde farklı çizilmesi demekti.
  */
 
 interface SocialMessengerProviderProps {
-  /** Yalnız yönetici — değilse pencere de kapı da yok. */
+  /** Yalnız yönetici: pencere ikinci bir yetki yolu değil, sohbet sayfasına kısayoldur. */
   enabled: boolean;
-  /** Kuyruk zilinin kanal adı — sunucu sırrından türer, layout'tan iner (`conversationsChannelName`). */
+  /** Kanal adı sunucu sırrından türer, bu yüzden layout'tan gelir (`conversationsChannelName`). */
   inboxChannel: string | null;
   children: ReactNode;
 }
@@ -59,15 +45,13 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  // Açan ekranın bağlamı (15.39) — başlığın alt satırı ve BAĞLAM şeridi; listeden başka sohbet seçilince düşer.
   const [context, setContext] = useState<MessengerContext | null>(null);
-  // `null` = HENÜZ ÖLÇÜLMEDİ — rozet uydurulmaz: "0" iş yok derdi (bildirim zilinin kuralı).
+  // `null` = henüz ölçülmedi: rozet uydurulmaz, "0" iş yok derdi.
   const [awaiting, setAwaiting] = useState<number | null>(null);
-  // Kuyruk zili TEK yerde dinlenir, liste bu sayaçla haberdar olur — aynı kanala iki abonelik açılmasın.
+  // Kuyruk zili tek yerde dinlenir, liste bu sayaçla haberdar olur: aynı kanala iki abonelik açılmasın.
   const [inboxTick, setInboxTick] = useState(0);
 
-  // Yeni mesaj sesi (15.34): son ölçülen "en son gelen mesaj" anı ve son sesin zamanı. `undefined` = henüz
-  // ölçülmedi — açılıştaki ilk ölçüm taban çizgisidir, zaten bekleyen mesajlar ses çaldırmaz (`hasNewInbound`).
+  // `undefined` = henüz ölçülmedi: açılıştaki ilk ölçüm taban çizgisidir, zaten bekleyen mesajlar ses çaldırmaz.
   const latestInbound = useRef<string | null | undefined>(undefined);
   const lastChimeAt = useRef<number | null>(null);
 
@@ -87,18 +71,16 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   useEffect(() => {
     if (!enabled) return;
     pulse();
-    // Tarayıcı sesi ancak kişi sayfaya bir kez dokunduktan sonra çaldırır — kilidi ilk dokunuş açar.
+    // Tarayıcı sesi ancak kişi sayfaya bir kez dokunduktan sonra çaldırır; kilidi ilk dokunuş açar.
     return unlockMessageChime();
   }, [enabled, pulse]);
 
-  // Nabız HER ekranda ve sekme arka plandayken de dinlenir: ses tam da operatör başka sekmedeyken gerekir.
-  // Sohbet sayfasında da — orada kuyruğu sayfa kendi zinciriyle tazeliyor; abonelik ortak (`useBell`), tek.
+  // Nabız her ekranda ve sekme arka plandayken de dinlenir: ses tam da operatör başka sekmedeyken gerekir.
   useBell(enabled ? inboxChannel : null, pulse, { whileHidden: 'run' });
-  // Açık pencerenin listesi yalnız görünürken tazelenir (gizli sekmede tur yok — `useBell`in varsayılanı).
+  // Liste yalnız görünürken tazelenir: gizli sekmede tur harcanmaz.
   useBell(enabled && open && !onSocialPage ? inboxChannel : null, () => setInboxTick((tick) => tick + 1));
 
-  // Taslak deposu (15.39): sohbet kimliğine göre, kabuğun ömrü boyunca — sayfanın cevap kutusu da buradan okur,
-  // yani "Tam ekran"a geçince yarım cümle taşınır (`useMessageDraft` künyesi).
+  // Taslak deposu kabuğun ömrü boyunca yaşar: sayfanın cevap kutusu da buradan okur, "Tam ekran"a geçince yarım cümle taşınır.
   const drafts = useRef(new Map<string, string>());
   const draftStore = useMemo<MessageDraftStore>(
     () => ({
@@ -118,8 +100,7 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
     setConversationId(id);
   }, []);
 
-  // Pencereyi "sohbet açılıyor" hâlinde açar ve sohbeti bulan işi koşar. İş ya sohbet kimliği döner ya
-  // operatöre söylenecek SEBEBİ (numara okunamadı, iki kayda çıkıyor, kanal yok) — sessiz boş pencere değil.
+  // Sohbeti bulan iş ya sohbet kimliği döner ya operatöre söylenecek sebebi: sessiz boş pencere olmaz.
   const openVia = useCallback((resolve: () => Promise<OpenOutcome>, ctx?: MessengerContext) => {
     setOpen(true);
     setConversationId(null);
@@ -165,8 +146,8 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
     <MessageDraftContext.Provider value={draftStore}>
       <SocialMessengerContext.Provider value={api}>
         {children}
-        {/* Sohbet sayfasında pencere de çizilmez: aynı sohbet iki yerde açık kalır ve aynı zile iki abonelik düşerdi.
-            Katman `Dialog`un (z-50) üstünde (15.33): geri çağırma penceresinden açılınca örtünün arkasında kalmasın. */}
+        {/* Sohbet sayfasında pencere çizilmez: aynı sohbet iki yerde açık kalır ve aynı zile iki abonelik düşerdi.
+            Katman `Dialog`un (z-50) üstünde: geri çağırma penceresinden açılınca örtünün arkasında kalmasın. */}
         {enabled && open && !onSocialPage ? (
           <section
             role="dialog"
@@ -178,7 +159,7 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
                 key={conversationId}
                 conversationId={conversationId}
                 context={context}
-                // Kişinin öteki kanalı (15.39) — aynı kişi, bağlam kalır.
+                // Kişinin öteki kanalı: aynı kişi, bağlam kalır.
                 onSelectThread={setConversationId}
                 onBack={() => setConversationId(null)}
                 onClose={close}
@@ -191,7 +172,7 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
                 tick={inboxTick}
                 onSelect={(id) => {
                   setNotice(null);
-                  // Listeden seçilen sohbet açan ekranın müşterisi olmayabilir — bağlam düşer.
+                  // Listeden seçilen sohbet açan ekranın müşterisi olmayabilir; bağlam düşer.
                   setContext(null);
                   setConversationId(id);
                 }}
@@ -206,10 +187,8 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   );
 }
 
-/** Sohbeti bulan işin sonucu — açılacak sohbet ya da operatöre söylenecek sebep. */
 type OpenOutcome = { conversationId: string } | { notice: string };
 
-/** WhatsApp sohbetini müşterinin kayıtlı numarasıyla açar; açılamazsa sebebi döner. */
 async function whatsappOutcome(customerId: string): Promise<OpenOutcome> {
   const { data, error } = await startWhatsappConversationAction(customerId);
   return data ? { conversationId: data.conversationId } : { notice: error ?? 'WhatsApp sohbeti açılamadı.' };
@@ -221,7 +200,6 @@ interface MessengerFabProps {
   onToggle: () => void;
 }
 
-/** Sağ alttaki düğme — cevap bekleyen sohbet varsa sayısı üstünde (tavan sığdırma: "99+"). */
 function MessengerFab({ open, awaiting, onToggle }: MessengerFabProps) {
   return (
     <button
@@ -259,27 +237,25 @@ function CloseButton({ onClose }: CloseButtonProps) {
 }
 
 interface ListViewProps {
-  /** Müşterinin sohbeti aranıyor ya da açılıyor (`openForCustomer` · `startWhatsapp`). */
   opening: boolean;
-  /** Açılamamanın sebebi — liste yine görünür, operatör başka sohbete geçebilir. */
+  /** Liste yine görünür: operatör başka sohbete geçebilir. */
   notice: string | null;
   awaiting: number | null;
-  /** Kuyruk zilinin sayacı — değişince liste sunucudan yeniden okunur. */
+  /** Değişince liste sunucudan yeniden okunur. */
   tick: number;
   onSelect: (id: string) => void;
   onClose: () => void;
 }
 
 function ListView({ opening, notice, awaiting, tick, onSelect, onClose }: ListViewProps) {
-  // `null` = ilk okuma bitmedi — "sohbet yok" yazılmaz, iskelet çizilir (yükleme yokluk gibi okunmasın).
+  // `null` = ilk okuma bitmedi: "sohbet yok" yazılmaz, iskelet çizilir.
   const [rows, setRows] = useState<InboxRowView[] | null>(null);
   const [cursor, setCursor] = useState<KeysetCursor | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Zil gelince sayfalar SIFIRLANIR: sıra son gelen mesaja göre, yeni mesaj bir satırı tepeye taşımış olabilir.
+  // Zil gelince sayfalar sıfırlanır: yeni mesaj bir satırı tepeye taşımış olabilir.
   useEffect(() => {
-    // Süzgeçsiz (boş adres): pencere üç kanalın TÜMÜNÜ gösterir, kuyruğun sırasıyla (son GELEN mesaj).
     void loadMoreConversationsAction('', null).then(({ data, error: actionError }) => {
       if (!data) {
         setError(actionError ?? 'Sohbetler okunamadı.');
@@ -296,7 +272,7 @@ function ListView({ opening, notice, awaiting, tick, onSelect, onClose }: ListVi
     setLoadingMore(true);
     void loadMoreConversationsAction('', cursor)
       .then(({ data }) => {
-        // Düşen devam sessiz değil: düğme yerinde kalır ve yeniden denenebilir (sunucu = gerçek).
+        // Düşen devam sessiz değil: düğme yerinde kalır ve yeniden denenebilir.
         if (!data) return;
         setRows((prev) => [...(prev ?? []), ...data.rows]);
         setCursor(data.nextCursor);
@@ -367,9 +343,7 @@ function ListView({ opening, notice, awaiting, tick, onSelect, onClose }: ListVi
 
 interface ConversationViewProps {
   conversationId: string;
-  /** Açan ekranın bağlamı (15.39) — başlığın alt satırı ve BAĞLAM şeridi; yoksa şerit çizilmez. */
   context: MessengerContext | null;
-  /** Kanal sekmesi (15.39) — kişinin öteki kanalındaki sohbet. */
   onSelectThread: (conversationId: string) => void;
   onBack: () => void;
   onClose: () => void;
@@ -380,11 +354,10 @@ function ConversationView({ conversationId, context, onSelectThread, onBack, onC
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  // "Ekle"nin kutuya taşıdığı metin (15.39) — sayfanın "Cevap kutusuna taşı"sıyla aynı kapı (`prefill`).
+  // "Ekle", sayfanın "Cevap kutusuna taşı"sıyla aynı kapıdan yazar.
   const [prefill, setPrefill] = useState<{ text: string } | null>(null);
   const drafts = useContext(MessageDraftContext);
 
-  /** "Ekle": bağlam satırı taslağın sonuna — yazılmış cümle ezilmez (`appendToDraft`). */
   const addContext = () => {
     if (context) setPrefill({ text: appendToDraft(drafts?.read(conversationId) ?? '', context.summary) });
   };
@@ -403,7 +376,7 @@ function ConversationView({ conversationId, context, onSelectThread, onBack, onC
   useEffect(() => {
     load();
   }, [load]);
-  // Sohbetin KENDİ zili: transkript ve çeviri mesajdan saniyeler sonra yazılır (sohbet sayfasının künyesi).
+  // Sohbetin kendi zili: transkript ve çeviri mesajdan saniyeler sonra yazılır.
   useBell(conversationChannelName(conversationId), load);
 
   const onSendReply = async (text: string): Promise<boolean> => {
@@ -412,7 +385,7 @@ function ConversationView({ conversationId, context, onSelectThread, onBack, onC
     setSendError(null);
     const { data, error: actionError } = await sendOutboundAction({ conversationId, text });
     setBusy(false);
-    // Red GÖRÜNÜR kalır ve kutu temizlenmez (sayfanın kuralı): operatör yazdığını kaybetmesin.
+    // Red görünür kalır ve kutu temizlenmez: operatör yazdığını kaybetmesin.
     if (data === null) {
       setSendError(actionError ?? 'Gönderilemedi.');
       return false;
@@ -436,7 +409,6 @@ function ConversationView({ conversationId, context, onSelectThread, onBack, onC
           <span className="truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{detail?.title ?? 'Sohbet'}</span>
           {detail ? (
             <span className="flex min-w-0 items-center gap-1.5 font-ops-body text-ops-micro text-ops-muted">
-              {/* Açan ekran önce (çizim: "Sipariş detayından · WhatsApp") — pencere nereden geldiğini söyler. */}
               <span className="truncate">
                 {context ? `${context.origin} · ` : ''}
                 {SOURCE_LABELS[detail.source]}
@@ -464,13 +436,11 @@ function ConversationView({ conversationId, context, onSelectThread, onBack, onC
         </div>
       ) : (
         <>
-          {/* Kişinin kanal sekmeleri (15.39 · çizim) — dar hâl: ikon + sayı; açık kanalın adı sağda. */}
           <div className="flex flex-none items-center gap-2 border-b border-ops-line-soft px-3 py-2">
             <ChannelTabs compact threads={detail.threads} activeId={detail.id} onSelect={onSelectThread} />
             <span className="ml-auto flex-none font-ops-body text-ops-micro text-ops-faint">{SOURCE_LABELS[detail.source]}</span>
           </div>
-          {/* BAĞLAM şeridi (15.39 · çizim: "sipariş bağlamı üstte taşınır") — "Ekle" özeti taslağa yazar. Kutu yokken
-              (pencere kapalı) eklenecek yer de yok; düğme o hâlde çizilmez. */}
+          {/* Kutu yokken (pencere kapalı) eklenecek yer de yok; "Ekle" o hâlde çizilmez. */}
           {context ? (
             <div className="flex flex-none items-center gap-2 border-b border-ops-olive-line bg-ops-olive-bg px-3 py-1.5">
               <span className="flex-none font-ops-display text-ops-micro font-semibold tracking-[0.04em] text-ops-olive-dark">BAĞLAM</span>

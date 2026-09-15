@@ -7,21 +7,10 @@ import { openWhatsappConversation } from '@/lib/messaging/conversation';
 import { readConversationDetailView } from '../social-detail';
 import type { ConversationDetailView } from '../social-types';
 
-// YÜZEN MESAJ PENCERESİNİN kapıları (15.32) — sohbet sayfasıyla AYNI okumalar, AYNI kapı (`requireAdmin`):
-// pencere bir kısayol, ikinci bir yetki yolu değil. Liste sayfası ve gönderim sayfanın kendi kapılarından
-// (`loadMoreConversationsAction` · `sendOutboundAction`) — pencere kuralı ve çeviri tek yerde kalsın.
-// Müşterinin kanal düğmesinin kapısı ortak (`lib/messaging/customer-channel-actions`): düğmeyi başka
-// sayfalar çiziyor.
+// Sohbet sayfasıyla aynı kapı (`requireAdmin`): pencere bir kısayol, ikinci bir yetki yolu değil. Liste ve gönderim sayfanın
+// kendi action'larından gelir ki pencere kuralı ve çeviri tek yerde kalsın.
 
-/**
- * Pencerenin NABZI — düğmenin rozeti (cevap bekleyen KİŞİ sayımı, sayfa uzunluğu değil — kuyrukla aynı birim, 15.38)
- * ve yeni mesaj sesinin ölçütü (15.34): kuyruğun en son GELEN mesaj anı. Kuyruk o anın büyüğünden küçüğüne sıralı;
- * ilk satırın damgası en sonuncusudur — ayrı bir sorgu gerekmez.
- *
- * Kişi kuyruğundan okunuyor (15.38), sohbet kuyruğundan değil: sohbet kuyruğunun azalan sırası damgası boş sohbeti
- * (müşteri hiç yazmadı, sohbeti biz açtık) BAŞA alıyor ve imleç boş değerden kurulamıyor (`pageOf` fırlatır) — o
- * hâlde nabız her turda düşerdi. Kişi kuyruğunun ekseni boş kalmaz (`inbox_at`, görünümün künyesi `0041`).
- */
+/** Rozet cevap bekleyen kişiyi sayar, kuyrukla aynı birim; kuyruk son gelen mesaja göre sıralı, ilk satırın damgası sesin ölçütüdür. */
 export async function messengerPulseAction(): Promise<ActionResult<{ awaiting: number; latestInboundAt: string | null }>> {
   try {
     await requireAdmin();
@@ -33,7 +22,6 @@ export async function messengerPulseAction(): Promise<ActionResult<{ awaiting: n
   }
 }
 
-/** Tek sohbet — sayfanın detayıyla AYNI görünüm (`readConversationDetailView`). */
 export async function messengerConversationAction(conversationId: string): Promise<ActionResult<ConversationDetailView>> {
   try {
     await requireAdmin();
@@ -46,12 +34,8 @@ export async function messengerConversationAction(conversationId: string): Promi
 }
 
 /**
- * **WhatsApp sohbetini aç** — müşteri bize WhatsApp'tan hiç yazmamışsa, kayıtlı numarasıyla
- * (`openWhatsappConversation`; e-posta ikinci anahtar olarak geçer ki sohbet bu müşteriye bağlansın).
- * Messenger/Instagram'da bu yol YOK: işletme orada sohbet başlatamaz.
- *
- * İlk mesaj yine Meta kuralına tabi: müşteri son 24 saatte yazmadıysa WhatsApp'a yalnız onaylı kalıp
- * mesaj gider. Pencere bunu kapalı pencere bandıyla söyler (`WINDOW_NOTE`); kapı burada bir şey vaat etmez.
+ * E-posta ikinci anahtar olarak geçer ki sohbet bu müşteriye bağlansın; Messenger/Instagram'da bu yol yok, işletme orada
+ * sohbet başlatamaz. İlk mesaj yine Meta kuralına tabi: son 24 saatte yazmamış müşteriye yalnız onaylı kalıp gider.
  */
 export async function startWhatsappConversationAction(customerId: string): Promise<ActionResult<{ conversationId: string }>> {
   try {

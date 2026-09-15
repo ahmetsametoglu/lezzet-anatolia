@@ -4,24 +4,18 @@ import { CONTROL_H } from '@/components/operation/ui/control';
 import { Skeleton, SkeletonFilterBar, SkeletonLine, SkeletonRows, SkeletonText } from '@/components/operation/ui/skeleton';
 
 /**
- * Sosyal gelen kutusunun ROTA DÜZEYİ beklemesi (09.2 dersi): bu dosya olmadan raydan bu ekrana
- * geçmek tarayıcıda ESKİ sayfayı bırakır ve operatör tıklamanın işlediğini anlamaz.
- *
- * İskelet ekranın gerçek iskeletini çiziyor — ÜÇ SÜTUN: kuyruk, sohbet, müşteri bağlamı. Daha az
- * sütunlu bir iskelet, yüklenme bitince yerleşimin sıçramasına yol açardı.
+ * Bu dosya olmadan raydan geçişte tarayıcı eski sayfayı bırakır ve operatör tıklamanın işlediğini anlamaz. İskelet ekranın üç
+ * sütununu gerçek genişlikleriyle çizer ki yüklenme bitince yerleşim sıçramasın.
  */
 export default function Loading() {
   return (
     <LoadingRegion className="flex min-h-0 flex-1 flex-col bg-ops-card" label="Sosyal mesajlar yükleniyor">
-      {/* Başlık GERÇEK (15.08, emsal: fiyatlar); alt satır sayaçtır — veridir, çubuk kalır. */}
+      {/* Başlık sabit metindir; alt satır sayaç olduğu için çubukla bekler. */}
       <PageHeader title="Sosyal Mesajlar" subtitle={<SkeletonLine className="w-64" />}>
-        {/* "+ Elle DM" gerçekte `sm` (32px). */}
         <Skeleton className={`${CONTROL_H.sm} w-[120px] rounded-ops-btn`} />
       </PageHeader>
       <SkeletonFilterBar count={2} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        {/* Genişlik ekranın kendisiyle AYNI olmak zorunda (330 px): iskelet dar kalırsa yüklenme
-            bitince yerleşim sıçrar — bu dosyanın var oluş sebebinin tam tersi. */}
         <div className="min-h-0 w-[330px] flex-none overflow-hidden border-r border-ops-line">
           <SkeletonRows rows={7} />
         </div>
