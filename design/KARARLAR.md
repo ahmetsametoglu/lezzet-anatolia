@@ -2990,6 +2990,9 @@ yok; ek çizim istenmedi (`15.32`).
   ekranlarındaki wa.me düğmesi söküldü.
 - **Yalnız yönetici:** sohbet sayfasının kapısı neyse pencereninki de o — başka rolde ne düğme ne kanal
   düğmeleri çizilir.
+- **Listelerde tek düğme (15.33, 15.09):** geri çağırma penceresi, teslimat tabloları (ikon) ve yorum kartında
+  "Mesaj yaz". Kanal düğmeleri tek müşterili kartta kalır; listede satır başına kanal okumak otuz sunucu turu olurdu
+  — tek düğme basınca okur ve müşterinin en son yazdığı kanalı açar. Çizimlerde bu düğmeler yok; bilinçli ek.
 
 ## Native adres çekmecesi tasarımda — tek adres kapısı ve bilinçli farklar (15.09, kullanıcı kararları 13.09 · 14.09)
 

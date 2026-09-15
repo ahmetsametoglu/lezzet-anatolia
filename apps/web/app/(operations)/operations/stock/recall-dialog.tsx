@@ -7,6 +7,7 @@ import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Input } from '@/components/operation/form/input';
 import { shortDate } from '@/components/operation/ui/format';
+import { CustomerChatButton } from '@/components/operation/ui/customer-chat-button';
 import { recallByLotAction } from './actions';
 import type { RecallResult } from './stock-types';
 
@@ -14,7 +15,8 @@ import type { RecallResult } from './stock-types';
 //
 // ACİL BİR İŞTİR: tedarikçi bir lotu geri çağırdığında cevap dakikalar içinde verilmelidir. Bu yüzden
 // tek alan, tek düğme ve doğrudan sonuç; ne süzgeç ne sekme. Telefon numarası sonuçta DURUR, çünkü
-// bu listenin devamı müşteriyi aramaktır.
+// bu listenin devamı müşteriyi aramaktır. Yanında "Mesaj yaz" (15.33): haber uygulamanın içinden YAZILI da
+// gider — cevapsız kalan arama iz bırakmaz, mesaj bırakır.
 //
 // Zincir HAZIRLIK KAYITLARINDAN gelir (`OrderItemBatch`): depocunun onayladığı gerçek, tahmin değil.
 
@@ -193,6 +195,8 @@ function HitRow({ hit }: HitRowProps) {
       ) : (
         <span className="font-ops-body text-ops-xs text-ops-faint">telefon yok</span>
       )}
+      {/* En son yazdığı kanaldan, yüzen pencerede — pencere bu diyaloğun üstünde açılır, liste yerinde kalır. */}
+      <CustomerChatButton customerId={hit.customerId} variant="button" />
       <Badge tone="neutral">{ORDER_STATUS_LABELS[hit.orderStatus]}</Badge>
     </div>
   );

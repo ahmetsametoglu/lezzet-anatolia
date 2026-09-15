@@ -11,6 +11,8 @@ import { Skeleton } from '@/components/operation/ui/skeleton';
 import { useBell } from '@/components/operation/ui/use-bell.hook';
 import { SOURCE_LABELS } from '@/components/operation/ui/conversation-source';
 import { SocialMessengerContext, type SocialMessengerApi } from '@/components/operation/ui/use-social-messenger.hook';
+import { chatTargetOf } from '@/components/operation/ui/customer-channel-model';
+import { customerChannelsAction } from '@/lib/messaging/customer-channel-actions';
 import { loadMoreConversationsAction, sendOutboundAction } from '../actions';
 import { WINDOW_TONE } from '../social-labels';
 import { Bubble, InboxRow, NoteLine, ReplyBox } from '../social-sections';
@@ -78,25 +80,38 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
     setConversationId(id);
   }, []);
 
-  const startWhatsapp = useCallback((customerId: string) => {
+  // Pencereyi "sohbet açılıyor" hâlinde açar ve sohbeti bulan işi koşar. İş ya sohbet kimliği döner ya
+  // operatöre söylenecek SEBEBİ (numara okunamadı, iki kayda çıkıyor, kanal yok) — sessiz boş pencere değil.
+  const openVia = useCallback((resolve: () => Promise<OpenOutcome>) => {
     setOpen(true);
     setConversationId(null);
     setNotice(null);
     setOpening(true);
-    void startWhatsappConversationAction(customerId).then(({ data, error }) => {
+    void resolve().then((outcome) => {
       setOpening(false);
-      // Açılamadıysa SEBEBİ söylenir (numara okunamadı, iki kayda çıkıyor) — sessiz boş pencere değil.
-      if (!data) {
-        setNotice(error ?? 'WhatsApp sohbeti açılamadı.');
-        return;
-      }
-      setConversationId(data.conversationId);
+      if ('conversationId' in outcome) setConversationId(outcome.conversationId);
+      else setNotice(outcome.notice);
     });
   }, []);
 
+  const startWhatsapp = useCallback((customerId: string) => openVia(() => whatsappOutcome(customerId)), [openVia]);
+
+  const openForCustomer = useCallback(
+    (customerId: string) =>
+      openVia(async () => {
+        const { data, error } = await customerChannelsAction(customerId);
+        if (!data) return { notice: error ?? 'Sohbet kanalları okunamadı.' };
+        const target = chatTargetOf(data);
+        if (target.kind === 'conversation') return { conversationId: target.conversationId };
+        if (target.kind === 'start_whatsapp') return whatsappOutcome(customerId);
+        return { notice: 'Bu müşteri bize hiçbir kanaldan yazmadı ve telefonu kayıtlı değil — yazılacak kanal yok.' };
+      }),
+    [openVia],
+  );
+
   const api = useMemo<SocialMessengerApi | null>(
-    () => (enabled ? { openConversation, startWhatsapp } : null),
-    [enabled, openConversation, startWhatsapp],
+    () => (enabled ? { openConversation, openForCustomer, startWhatsapp } : null),
+    [enabled, openConversation, openForCustomer, startWhatsapp],
   );
 
   const close = () => {
@@ -107,12 +122,13 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   return (
     <SocialMessengerContext.Provider value={api}>
       {children}
-      {/* Sohbet sayfasında pencere de çizilmez: aynı sohbet iki yerde açık kalır ve aynı zile iki abonelik düşerdi. */}
+      {/* Sohbet sayfasında pencere de çizilmez: aynı sohbet iki yerde açık kalır ve aynı zile iki abonelik düşerdi.
+          Katman `Dialog`un (z-50) üstünde (15.33): geri çağırma penceresinden açılınca örtünün arkasında kalmasın. */}
       {enabled && open && !onSocialPage ? (
         <section
           role="dialog"
           aria-label="Mesajlar"
-          className="fixed right-5 bottom-[84px] z-40 flex h-[min(600px,calc(100vh-110px))] w-[380px] flex-col overflow-hidden rounded-ops-card border border-ops-line bg-ops-card shadow-[0_24px_70px_rgba(20,22,18,0.4)] print:hidden"
+          className="fixed right-5 bottom-[84px] z-[55] flex h-[min(600px,calc(100vh-110px))] w-[380px] flex-col overflow-hidden rounded-ops-card border border-ops-line bg-ops-card shadow-[0_24px_70px_rgba(20,22,18,0.4)] print:hidden"
         >
           {conversationId ? (
             <ConversationView key={conversationId} conversationId={conversationId} onBack={() => setConversationId(null)} onClose={close} />
@@ -134,6 +150,15 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
       {enabled && !onSocialPage ? <MessengerFab open={open} awaiting={awaiting} onToggle={() => (open ? close() : setOpen(true))} /> : null}
     </SocialMessengerContext.Provider>
   );
+}
+
+/** Sohbeti bulan işin sonucu — açılacak sohbet ya da operatöre söylenecek sebep. */
+type OpenOutcome = { conversationId: string } | { notice: string };
+
+/** WhatsApp sohbetini müşterinin kayıtlı numarasıyla açar; açılamazsa sebebi döner. */
+async function whatsappOutcome(customerId: string): Promise<OpenOutcome> {
+  const { data, error } = await startWhatsappConversationAction(customerId);
+  return data ? { conversationId: data.conversationId } : { notice: error ?? 'WhatsApp sohbeti açılamadı.' };
 }
 
 interface MessengerFabProps {
@@ -180,7 +205,7 @@ function CloseButton({ onClose }: CloseButtonProps) {
 }
 
 interface ListViewProps {
-  /** WhatsApp sohbeti açılıyor (`startWhatsapp`). */
+  /** Müşterinin sohbeti aranıyor ya da açılıyor (`openForCustomer` · `startWhatsapp`). */
   opening: boolean;
   /** Açılamamanın sebebi — liste yine görünür, operatör başka sohbete geçebilir. */
   notice: string | null;
@@ -242,7 +267,9 @@ function ListView({ opening, notice, awaiting, tick, onSelect, onClose }: ListVi
         <CloseButton onClose={onClose} />
       </header>
       {opening ? (
-        <p className="flex-none border-b border-ops-line px-4 py-2 font-ops-body text-ops-xs text-ops-muted">WhatsApp sohbeti açılıyor…</p>
+        <p className="flex-none border-b border-ops-line px-4 py-2 font-ops-body text-ops-xs text-ops-muted">
+          Müşterinin sohbeti açılıyor…
+        </p>
       ) : null}
       {notice ? (
         <p

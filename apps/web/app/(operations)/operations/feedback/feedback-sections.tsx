@@ -3,6 +3,7 @@
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { EmptyState } from '@/components/operation/ui/empty-state';
+import { CustomerChatButton } from '@/components/operation/ui/customer-chat-button';
 import { ratingTone, signedCount, STACK_HINTS, trustLabel } from './feedback-labels';
 import type { ScoreRowView } from '@/lib/feedback/moderation-read';
 import type { CandidateCardView, ModerationCardView, PointsRowView } from './feedback-types';
@@ -61,6 +62,9 @@ export function ModerationCard({ card, stack, pending, onModerate }: ModerationC
 
       <div className="flex items-center gap-2 border-t border-ops-line-soft pt-2">
         <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">{STACK_HINTS[stack]}</span>
+        {/* Yorumu yazana dönüş (15.33): kötü puan çoğu zaman bir şikâyettir ve cevabı yorumun altına değil
+            müşterinin kendisine gider — en son yazdığı kanaldan, yüzen pencerede. Kimliksiz yorumda düğme yok. */}
+        {review.customerId ? <CustomerChatButton customerId={review.customerId} variant="button" /> : null}
         {/* `danger` (çerçeveli kırmızı), `destructive` (dolu) DEĞİL: ret geri alınabilir bir karar —
             reddedilen yorum duruyor ve yeniden yayınlanabilir. Dolu kırmızı, geri alınamayan işler
             için ayrıldı. */}

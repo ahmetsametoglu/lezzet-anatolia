@@ -28,6 +28,8 @@ export interface DispatchStopView {
    */
   deliveryDate: string | null;
   customerName: string;
+  /** Satırın "müşteriye yaz" düğmesi için (15.33) — askıda kalan sipariş ve gecikme haberi müşteriyle konuşmayı ister. */
+  customerId: string;
   /**
    * **B2B mi B2C mi** (16.08) — Siparişler tablosundan alındı ve sebebi tahsilat: kurumsal müşterinin
    * ödemesi vadeli olabiliyor, yani "kapıda ne olacak" sorusunun cevabı kanala göre değişiyor.

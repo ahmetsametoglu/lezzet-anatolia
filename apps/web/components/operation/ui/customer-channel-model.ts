@@ -50,3 +50,16 @@ export function toCustomerChannels(channels: readonly RankedConversation[], now:
     latest: channel.latest,
   }));
 }
+
+/** Tek düğmenin hedefi (15.33) — açılacak sohbet, WhatsApp'ı numarayla açmak ya da yazılacak kanal yok. */
+export type ChatTarget = { kind: 'conversation'; conversationId: string } | { kind: 'start_whatsapp' } | { kind: 'none' };
+
+/**
+ * Listedeki "Mesaj yaz" nereye açılır: müşterinin EN SON yazdığı kanal (sıra motordan — ilk satır); hiç
+ * sohbeti yoksa ve telefonu kayıtlıysa WhatsApp sohbeti; o da yoksa hiçbiri — pencere sebebini söyler.
+ */
+export function chatTargetOf(view: CustomerChannelsView): ChatTarget {
+  const first = view.channels[0];
+  if (first) return { kind: 'conversation', conversationId: first.conversationId };
+  return view.canStartWhatsapp ? { kind: 'start_whatsapp' } : { kind: 'none' };
+}

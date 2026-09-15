@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toCustomerChannels } from './customer-channel-model';
+import { chatTargetOf, toCustomerChannels } from './customer-channel-model';
 
 // 15.32 — kanal düğmesinin görünümü. Sıra ve "en son" kararı motorda sınanıyor (`customerChannelsOf`);
 // burada yalnız çevirinin sözü: karar AYNEN geçer, yaş dar biçime döner, yazılmamış kanala yaş uydurulmaz.
@@ -25,5 +25,24 @@ describe('toCustomerChannels — kanal düğmesinin görünümü', () => {
 
   it('hiç yazmadığı kanalda yaş YOK — "şimdi" ya da "0 dk" uydurulmaz', () => {
     expect(toCustomerChannels([ch('biz', 'whatsapp', null, false)], now)[0]?.lastInboundAgo).toBeNull();
+  });
+});
+
+describe('chatTargetOf — listedeki "Mesaj yaz" nereye açılır (15.33)', () => {
+  const view = (ids: string[], canStartWhatsapp: boolean) => ({
+    channels: ids.map((id, i) => ({ conversationId: id, source: 'whatsapp' as const, lastInboundAgo: null, latest: i === 0 })),
+    canStartWhatsapp,
+  });
+
+  it('kanal varsa İLKİ — sıra motorun, burada yeniden seçilmez', () => {
+    expect(chatTargetOf(view(['ig', 'wa'], true))).toEqual({ kind: 'conversation', conversationId: 'ig' });
+  });
+
+  it('sohbet yok, telefon kayıtlı → WhatsApp sohbeti numarayla açılır', () => {
+    expect(chatTargetOf(view([], true))).toEqual({ kind: 'start_whatsapp' });
+  });
+
+  it('sohbet de telefon da yok → hedef yok, pencere sebebini söyler', () => {
+    expect(chatTargetOf(view([], false))).toEqual({ kind: 'none' });
   });
 });

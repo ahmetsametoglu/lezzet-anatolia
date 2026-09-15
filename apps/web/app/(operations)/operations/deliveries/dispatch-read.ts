@@ -191,6 +191,7 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
       referenceNo: order.referenceNo,
       deliveryDate: order.deliveryDate ?? null,
       customerName: customerName.get(order.customerId) ?? '—',
+      customerId: order.customerId,
       channel: order.channel,
       deliveryType: order.deliveryType,
       status: order.status,

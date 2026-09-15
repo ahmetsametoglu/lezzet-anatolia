@@ -9,6 +9,7 @@ import { Chip } from '@/components/operation/ui/chip';
 import { DateFilterChip } from '@/components/operation/ui/date-filter-chip';
 import { money, num } from '@/components/operation/ui/format';
 import { Table, withCells } from '@/components/operation/ui/table';
+import { CustomerChatButton } from '@/components/operation/ui/customer-chat-button';
 import type { ColumnTrack } from '@/components/operation/ui/table-columns';
 // Kanal rozetinin tonu Siparişler tablosuyla AYNI kaynaktan (16.08): aynı kanal iki ekranda iki
 // renk olamaz. Sözlük orada tanımlı ve süzgeç çipleriyle paylaşılıyor — kopyası yazılmadı.
@@ -363,6 +364,24 @@ function MenuRow({ label, onClick }: { label: string; onClick: () => void }) {
   );
 }
 
+interface StopCustomerProps {
+  stop: DispatchStopView;
+}
+
+/**
+ * Müşteri hücresi — ad + "müşteriye yaz" (15.33). Üç tablo da (rota · askıda · kargo) aynı hücreyi çizer:
+ * gecikme haberi, yeni teslim günü ve takip sorusu sevkiyatçının müşteriyle konuşmasını ister. Düğme basınca
+ * müşterinin en son yazdığı kanalı yüzen pencerede açar — satır başına kanal okunmaz.
+ */
+function StopCustomer({ stop }: StopCustomerProps) {
+  return (
+    <span className="flex min-w-0 items-center gap-1">
+      <span className="truncate font-ops-body text-ops-sm text-ops-ink">{stop.customerName}</span>
+      <CustomerChatButton customerId={stop.customerId} />
+    </span>
+  );
+}
+
 /**
  * **Rota çıkışları — TABLO** (kullanıcı kararı 16.08: *"sipariş sayfasındaki tablonun formatını
  * kullanalım"*). Bölge TANIMI burada değişmez, Depolar'a köprü verilir.
@@ -421,7 +440,7 @@ export function RouteTable({
         {stop.referenceNo ?? '—'}
       </Link>
     ),
-    customer: (stop) => <span className="truncate font-ops-body text-ops-sm text-ops-ink">{stop.customerName}</span>,
+    customer: (stop) => <StopCustomer stop={stop} />,
     channel: (stop) => <Badge tone={CHANNEL_TONE[stop.channel]}>{stop.channel.toUpperCase()}</Badge>,
     // Bölgesiz satır AMBER: hiçbir rotaya düşmemiş sipariş bir eksiklik hâlidir, boşluk değil.
     zone: (stop) =>
@@ -643,7 +662,7 @@ export function StrandedSection({
         {stop.referenceNo ?? '—'}
       </Link>
     ),
-    customer: (stop) => <span className="truncate font-ops-body text-ops-sm text-ops-ink">{stop.customerName}</span>,
+    customer: (stop) => <StopCustomer stop={stop} />,
     zone: (stop) =>
       stop.zoneName ? (
         <span className="truncate font-ops-body text-ops-sm text-ops-body">{stop.zoneName}</span>
@@ -723,7 +742,7 @@ const shippingColumns = withCells<DispatchStopView>(SHIPPING_TRACKS, {
       {stop.referenceNo ?? '—'}
     </Link>
   ),
-  customer: (stop) => <span className="truncate font-ops-body text-ops-sm text-ops-ink">{stop.customerName}</span>,
+  customer: (stop) => <StopCustomer stop={stop} />,
   channel: (stop) => <Badge tone={CHANNEL_TONE[stop.channel]}>{stop.channel.toUpperCase()}</Badge>,
   load: (stop) => <span className="font-ops-mono text-ops-sm text-ops-body">{num(stop.unitCount)}</span>,
   tracking: (stop) =>
