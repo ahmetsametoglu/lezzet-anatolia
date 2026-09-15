@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Text, TextInput, View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { DEV_ACCOUNTS } from '@lezzet/mobile-kit/src/lib/auth/dev-login';
@@ -122,7 +122,7 @@ function AddressStep({ login, active }: StepProps) {
   return (
     <View style={styles.stack}>
       <View style={[styles.field, fieldTone]}>
-        <CustomerIcon name="mail" size={operationsTheme.size.inlineIcon} color={c.muted} />
+        <Icon name="mail" size={operationsTheme.size.inlineIcon} color={c.muted} />
         <TextInput
           // Koddan dönüşte alan yeniden kurulur ve odağı alır; ilk açılışta klavye açılmaz.
           key={`address-${login.addressRound}`}

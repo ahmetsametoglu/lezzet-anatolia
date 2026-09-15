@@ -25,7 +25,7 @@ const shapesOf = (testID: string): ElementChild[] =>
     );
 
 describe('Icon', () => {
-  it('sözlükteki yolları çizer — geometri komponentte değil, `icon-paths.ts`te durur', async () => {
+  it('sözlükteki yolları çizer — geometri komponentte değil, tasarım sözlüğünde durur', async () => {
     await render(<Icon name="home" size={appMetrics.size.tabIcon} testID="ic" />);
 
     expect(shapesOf('ic').map((shape) => shape.props.d)).toEqual(ICON_PATHS.home.paths);
@@ -38,6 +38,14 @@ describe('Icon', () => {
 
     expect(shapesOf('ic').map((shape) => shape.type)).toEqual(['RNSVGPath', 'RNSVGCircle']);
     expect(shapesOf('ic')[1]?.props).toMatchObject({ cx: 11, cy: 11, r: 7 });
+  });
+
+  it('dikdörtgenli ikonda gövde `<rect>` olarak çizilir — zarf, kilit ve kartın gövdesi bu daldan gelir', async () => {
+    await render(<Icon name="mail" size={appMetrics.size.inlineIcon} testID="ic" />);
+
+    const [x, y, width, height, rx] = ICON_PATHS.mail.rects[0];
+    expect(shapesOf('ic').map((shape) => shape.type)).toEqual(['RNSVGPath', 'RNSVGRect']);
+    expect(shapesOf('ic')[1]?.props).toMatchObject({ x, y, width, height, rx });
   });
 
   it('renk ÇAĞIRANDAN gelir; verilmezse paletin mürekkebine düşer', async () => {

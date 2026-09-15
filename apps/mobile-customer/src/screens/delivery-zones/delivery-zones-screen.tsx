@@ -14,7 +14,7 @@ import { SectionHeader } from '@/components/ui/section-header';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useDeliveryTerms } from '@/screens/customer-kit/use-delivery-terms.hook';
 import { useSheet } from '@/screens/customer-kit/use-sheet.hook';
@@ -88,7 +88,7 @@ export function DeliveryZonesScreen() {
          blokları var; ortalama onları aşağı iterdi. */
       <EmptyState
         fill={false}
-        icon={<CustomerIcon name="truck" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
+        icon={<Icon name="truck" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
         title={t.empty.title}
         description={t.empty.body}
         testID="zones-empty"

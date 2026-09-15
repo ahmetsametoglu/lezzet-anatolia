@@ -12,7 +12,7 @@ import { LoadingState } from '@/components/customer/phone-kit/loading-state';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { BackButton } from '@/components/customer/ui/back-button';
-import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-icon';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import type { LoginViewProps } from './login-types';
 
 /*
@@ -102,7 +102,7 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
                   setNotice(null);
                   setStep('email');
                 }}
-                mark={<MobileCustomerIcon name="mail" size={17} />}
+                mark={<MobileIcon name="mail" size={17} />}
               />
               {notice && <p className="mt-1.5 text-center font-sans text-note font-semibold text-olive-dark">{notice}</p>}
             </div>

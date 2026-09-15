@@ -24,7 +24,6 @@ import { CLIENT_ERROR } from '@lezzet/mobile-kit/src/lib/api/client';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { toastInfo } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { OtpSignInFields } from '@/screens/customer-kit/otp-sign-in-fields';
 import { useOtpSignIn } from '@/screens/customer-kit/use-otp-sign-in.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
@@ -215,7 +214,7 @@ export function ProfessionalsScreen() {
               bu bir boş EKRAN değil, bir DURUM bloğu. */}
           <EmptyState
             fill={false}
-            icon={<CustomerIcon name="mail" size={theme.size.emptyIcon} color={theme.colors['olive-dark']} />}
+            icon={<Icon name="mail" size={theme.size.emptyIcon} color={theme.colors['olive-dark']} />}
             title={
               applicant.status === 'pending'
                 ? t.status.pendingTitle
@@ -260,7 +259,7 @@ export function ProfessionalsScreen() {
       <View style={styles.screen}>
         {bar}
         <EmptyState
-          icon={<CustomerIcon name="mail" size={theme.size.emptyIcon} color={theme.colors['olive-dark']} />}
+          icon={<Icon name="mail" size={theme.size.emptyIcon} color={theme.colors['olive-dark']} />}
           title={t.sent.title}
           description={t.sent.body}
           action={

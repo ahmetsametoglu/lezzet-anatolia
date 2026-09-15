@@ -13,7 +13,7 @@ import { SecondaryButton } from '@/components/customer/phone-kit/secondary-butto
 import { DASHED_TOP, SettingsCard } from '@/components/customer/phone-kit/settings-card';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { Dialog } from '@/components/customer/ui/dialog';
-import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-icon';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import type { AccountView } from '@/lib/account/read';
 import { useShareLink } from '@/lib/use-share-link.hook';
 import { setConsentAction } from './actions';
@@ -63,8 +63,8 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
       <nav className="overflow-hidden rounded-card bg-sand-250">
         <NavRow label={copy.menu.orders} href="/orders" icon={<MobileIcon name="orders" size={17} className="text-muted" />} />
         <NavRow label={copy.menu.tickets} href="/support" icon={<MobileIcon name="whatsapp" size={17} className="text-muted" />} divider />
-        <NavRow label={copy.menu.write} href="/support/new" icon={<MobileCustomerIcon name="mail" size={17} className="text-muted" />} divider />
-        <NavRow label={copy.menu.delivery} href="/legal/delivery" icon={<MobileCustomerIcon name="truck" size={17} className="text-muted" />} divider />
+        <NavRow label={copy.menu.write} href="/support/new" icon={<MobileIcon name="mail" size={17} className="text-muted" />} divider />
+        <NavRow label={copy.menu.delivery} href="/legal/delivery" icon={<MobileIcon name="truck" size={17} className="text-muted" />} divider />
       </nav>
 
       {/* Bağlı sohbetler menünün hemen altında; salt okunur, gerekçesi kartta. */}

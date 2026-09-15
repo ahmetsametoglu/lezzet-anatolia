@@ -21,7 +21,6 @@ import { requestOtp, verifyOtp } from '@lezzet/mobile-kit/src/lib/auth/otp';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { fetchMe } from '@lezzet/mobile-kit/src/lib/api/me';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { SESSION_ENDED_NOTICE, type LoginNotice } from '@lezzet/mobile-kit/src/screens/login/login-notice';
@@ -281,7 +280,7 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
                 accessibilityLabel={t.email}
                 testID="login-email"
               >
-                <CustomerIcon name="mail" size={theme.size.inlineIcon} color={theme.colors.card} />
+                <Icon name="mail" size={theme.size.inlineIcon} color={theme.colors.card} />
                 <Text style={[styles.providerLabel, styles.oliveLabel]}>{t.email}</Text>
               </PressableSurface>
               {notice === null ? null : (

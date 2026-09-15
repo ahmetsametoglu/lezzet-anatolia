@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { CustomerCoupon } from '@lezzet/application';
 import { formatPrice } from '@/lib/storefront/format';
-import { MobileCustomerIcon } from '@/components/customer/ui/mobile-icon';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import type { AccountCopy, Messages } from '../account-types';
 
@@ -74,7 +74,7 @@ function CouponRow({ t, locale, coupon, phoneCopy }: CouponRowProps) {
         : phoneCopy.couponPercent.replace('{n}', String(coupon.percent ?? 0));
     return (
       <div className="flex items-center gap-2.5 rounded-badge border border-dashed border-olive-line bg-card px-3.5 py-2.5">
-        <MobileCustomerIcon name="coupon" size={17} className="text-terracotta" />
+        <MobileIcon name="coupon" size={17} className="text-terracotta" />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-sans text-note font-bold text-terracotta">{coupon.code}</span>
           <span className="font-sans text-helper text-muted">{minBasket === null ? phoneValue : `${phoneValue} · ${minBasket}`}</span>

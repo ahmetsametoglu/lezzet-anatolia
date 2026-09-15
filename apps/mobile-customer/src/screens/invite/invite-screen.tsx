@@ -14,7 +14,7 @@ import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { claimPendingInvite } from '@/lib/invite/invite-api';
 import { rememberInvite } from '@/lib/invite/invite-store';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import messages from './messages.json';
 import { useInviteWelcome } from './use-invite-welcome.hook';
 
@@ -81,7 +81,7 @@ interface InviteFaceProps {
 /** Hâlin yüzü — dördü de aynı bloğu kullanır; ekran bir DURUM ekranıdır, dört ayrı sayfa değil. */
 function InviteFace({ welcome, t, accept, iconColor }: InviteFaceProps) {
   const router = useRouter();
-  const icon = (name: 'coupon' | 'check') => <CustomerIcon name={name} size={44} color={iconColor} />;
+  const icon = (name: 'coupon' | 'check-wide') => <Icon name={name} size={44} color={iconColor} />;
 
   switch (welcome.status) {
     case 'ok':
@@ -106,7 +106,7 @@ function InviteFace({ welcome, t, accept, iconColor }: InviteFaceProps) {
       return (
         <EmptyState
           testID="invite-self"
-          icon={icon('check')}
+          icon={icon('check-wide')}
           title={t.self.title}
           description={t.self.body}
           action={<PrimaryButton label={t.self.primary} shape="pill" onPress={() => router.replace('/account')} />}
@@ -116,7 +116,7 @@ function InviteFace({ welcome, t, accept, iconColor }: InviteFaceProps) {
       return (
         <EmptyState
           testID="invite-already-customer"
-          icon={icon('check')}
+          icon={icon('check-wide')}
           title={t.alreadyCustomer.title}
           description={t.alreadyCustomer.body}
           action={<PrimaryButton label={t.alreadyCustomer.primary} shape="pill" onPress={() => router.replace('/catalog')} />}

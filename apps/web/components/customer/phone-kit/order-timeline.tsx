@@ -1,5 +1,5 @@
 import type { OrderMilestone, OrderTimelineStep } from '@lezzet/types';
-import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-icon';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 
 /*
   Sipariş zaman çizgisi, native `OrderTimeline`ın web telefon ikizi: adımları motor verir (`orderTimeline`), ekran durumdan çıkarım
@@ -9,7 +9,7 @@ import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-
 
 /** Durağın ikonu — küme motorun `OrderMilestone`u (kapalı, derlemede zorlar). */
 const STEP_ICON = {
-  received: 'check',
+  received: 'check-wide',
   prepared: 'box',
   on_the_way: 'truck',
   delivered: 'home',
@@ -43,11 +43,7 @@ export function OrderTimeline({ steps, labels, notes, formatAt }: OrderTimelineP
                   current ? 'bg-terracotta' : reached ? 'bg-olive' : 'bg-sand-300',
                 ].join(' ')}
               >
-                {icon === 'home' ? (
-                  <MobileIcon name="home" size={17} className={iconClass} />
-                ) : (
-                  <MobileCustomerIcon name={icon} size={17} className={iconClass} />
-                )}
+                <MobileIcon name={icon} size={17} className={iconClass} />
               </span>
               {index < steps.length - 1 && (
                 <span

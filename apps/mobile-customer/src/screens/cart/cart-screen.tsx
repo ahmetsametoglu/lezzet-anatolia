@@ -30,7 +30,7 @@ import {
   setPurchasePlace,
   useCart,
 } from '@/screens/customer-kit/cart-store';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
 import { addressLine } from '@lezzet/address';
 import { AddressPickerSheet } from '@/screens/customer-kit/address-picker-sheet';
@@ -355,7 +355,7 @@ export function CartScreen() {
       <View style={styles.screen}>
         {header}
         <EmptyState
-          icon={<CustomerIcon name="cart" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
+          icon={<Icon name="cart" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.empty.title}
           description={t.empty.body}
           action={<PrimaryButton label={t.empty.cta} shape="pill" onPress={() => router.push('/catalog')} testID="cart-browse" />}
@@ -445,7 +445,7 @@ export function CartScreen() {
 
         {discount.status === 'applied' ? (
           <View style={styles.couponApplied} testID="cart-coupon-applied">
-            <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+            <Icon name="coupon" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
             <Text style={styles.couponAppliedLabel}>{t.coupon.applied.replace('{code}', discount.code)}</Text>
             <TextAction
               label={t.coupon.remove}
@@ -462,7 +462,7 @@ export function CartScreen() {
             accessibilityLabel={t.coupon.add}
             testID="cart-coupon-open"
           >
-            <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors.terracotta} />
+            <Icon name="coupon" size={theme.size.inlineIcon} color={theme.colors.terracotta} />
             <Text style={styles.couponInviteLabel}>{t.coupon.add}</Text>
             <Text style={styles.couponChevron}>›</Text>
           </PressableSurface>

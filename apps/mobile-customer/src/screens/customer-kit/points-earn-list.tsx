@@ -8,7 +8,6 @@ import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { PointsRules } from '@/lib/api/points';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import messages from './points-earn-messages.json';
 import { formatCompactEuro } from '@lezzet/helper';
 
@@ -33,7 +32,7 @@ function iconOf(key: MePointsEarnWayKey, size: number, invited: string, own: str
     /* Ziyaretin ikonu tekrar oku, onay işareti değil: tik "bugün alındı" durumuna ayrılmış, ikon "bu ne" der; dairesel ok ödülün
        her gün tekrarladığını söyler. */
     visit: <Icon name="refresh" size={size} color={own} />,
-    feedback_purchase: <CustomerIcon name="star" size={size} color={own} />,
+    feedback_purchase: <Icon name="star" size={size} color={own} />,
     feedback_candidate: <Icon name="search" size={size} color={own} />,
   };
   return icons[key];
@@ -100,7 +99,7 @@ export function PointsEarnList({ rules, actions, showRules = false, visitClaimed
                   /* İşaretin kendi test kimliği var, çünkü sıklık metni sözlük anahtarıyla korunuyor ama ikon değil: işareti kümeye yayan
                      bir yazım metinde görünmez, yalnız ikonda görünür. */
                   <View testID={`points-earn-${way.key}-claimed`}>
-                    <CustomerIcon name="check" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+                    <Icon name="check-wide" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
                   </View>
                 ) : null}
               </View>

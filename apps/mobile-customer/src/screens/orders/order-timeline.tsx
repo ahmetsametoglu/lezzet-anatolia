@@ -3,7 +3,6 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 
 /*
   Sipariş zaman çizgisi, dört durak (alındı → hazırlandı → yolda → teslim edildi): adımları motor verir (`orderTimeline`), çünkü
@@ -13,7 +12,7 @@ import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/custome
 
 /** Durağın ikonu — sıra tasarımın sırası; küme motorun `OrderMilestone`u (kapalı, derlemede zorlar). */
 const STEP_ICONS = {
-  received: 'check',
+  received: 'check-wide',
   prepared: 'box',
   on_the_way: 'truck',
   delivered: 'home',
@@ -48,11 +47,7 @@ export function OrderTimeline({ steps, labels, notes, formatAt, testID }: OrderT
           <View key={step.milestone} style={styles.row}>
             <View style={styles.rail}>
               <View style={[styles.mark, markStyle]}>
-                {icon === 'home' ? (
-                  <Icon name="home" size={theme.size.inlineIcon} color={markColor} />
-                ) : (
-                  <CustomerIcon name={icon} size={theme.size.inlineIcon} color={markColor} />
-                )}
+                <Icon name={icon} size={theme.size.inlineIcon} color={markColor} />
               </View>
               {/* Son durağın altında çizgi yok: çizgi İKİ durağı bağlar, tek başına bir şey demez.
                   Rengi SONRAKİ adım belirler (web'in aynı kararı): "Yolda" geçilmiş olsa da ondan

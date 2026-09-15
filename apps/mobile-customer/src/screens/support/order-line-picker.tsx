@@ -6,7 +6,7 @@ import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable
 import { Skeleton } from '@/components/ui/skeleton';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { Note } from '@/components/ui/note';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { useOrder } from '@/screens/orders/use-order.hook';
 // Sözlük burada YALNIZ tip için okunuyor (metni ekran veriyor): çalışma zamanında ikinci bir JSON
 // kopyası taşınmasın diye tip-yalnız import.
@@ -110,7 +110,7 @@ export function OrderLinePicker({ reference, locale, t, selected, onToggle }: Or
           >
             <Text style={styles.lineLabel}>{label}</Text>
             {isSelected ? (
-              <CustomerIcon name="check" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+              <Icon name="check-wide" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
             ) : null}
           </PressableSurface>
         );

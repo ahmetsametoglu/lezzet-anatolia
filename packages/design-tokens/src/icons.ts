@@ -169,31 +169,8 @@ export const ICON_PATHS = {
   business: {
     paths: ['M3 21h18', 'M5 21V7l7-4 7 4v14', 'M9 21v-5h6v5', 'M9 10h.01M15 10h.01M9 13h.01M15 13h.01'],
   },
-} as const satisfies Record<string, IconGeometry>;
 
-/** Kitin tanıdığı ikon adları — `Icon` bunun dışına çıkamaz (yanlış ad derlemede yakalanır). */
-export type IconName = keyof typeof ICON_PATHS;
-
-/*
-  Müşteri ekranlarının tamamlayıcısı: yukarıdaki sözlükte olmayan geometriler, çizicisi kitin `CustomerIcon`u. Sözlükler ayrı,
-  çünkü ikisinde aynı adla iki ayrı çizim var (`check`).
-*/
-
-interface CustomerIconGeometry {
-  /** `<path d="…">` dizeleri — şablondan birebir. */
-  paths?: readonly string[];
-  /** `<circle cx cy r>` üçlüleri. */
-  circles?: readonly (readonly [cx: number, cy: number, r: number])[];
-  /** `<rect x y width height rx>` beşlileri. */
-  rects?: readonly (readonly [x: number, y: number, width: number, height: number, rx: number])[];
-  /** Şablonun kendi çizim kutusu; kare değilse genişlik bundan türer. */
-  viewBox?: string;
-  /** 34 dp ve üstünde çizilen ikon — çizgisi incelir (kitin `large` bayrağıyla aynı kural). */
-  large?: true;
-}
-
-/** Ad → geometri; hepsi müşteri ekranlarının tasarımından birebir. */
-export const CUSTOMER_ICON_PATHS = {
+  /* ── Müşteri ekranları ─────────────────────────────────────────────────────── */
   /** Sepet: yüzen sepet düğmesi, boş sepet bloğu. */
   cart: { paths: ['M4 9h16l-1.5 11h-13zM8 9c0-4.5 8-4.5 8 0'] },
   /** Kupon etiketi: sepetin kupon satırı, hesabın kupon listesi. */
@@ -213,13 +190,16 @@ export const CUSTOMER_ICON_PATHS = {
   lock: { paths: ['M8 10V7a4 4 0 0 1 8 0v3'], rects: [[4, 10, 16, 10, 2]] },
   /** Banka kartı: "Kartla öde". */
   card: { paths: ['M2 10h20'], rects: [[2, 5, 20, 14, 2.5]] },
-  /** Onay: sipariş zaman çizgisinin ilk durağı. */
-  check: { paths: ['M20 6 9 17l-5-5'] },
+  /** Geniş onay imi (sipariş zaman çizgisi, seçili ve tamamlanmış satırlar); `check` fişin daire içindeki dar imidir. */
+  'check-wide': { paths: ['M20 6 9 17l-5-5'] },
   /** Koli: zaman çizgisinin "Hazırlanıyor" durağı. */
   box: { paths: ['M21 8 12 3 3 8l9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8'] },
   /** Yıldız: bildirim listesi ve "Ürünleri değerlendir". */
   star: { paths: ['M12 3l2.7 5.8 6.3.7-4.7 4.3 1.3 6.2-5.6-3.2-5.6 3.2 1.3-6.2L3 9.5l6.3-.7z'] },
-} as const satisfies Record<string, CustomerIconGeometry>;
+} as const satisfies Record<string, IconGeometry>;
+
+/** Çizicilerin tanıdığı ikon adları; yanlış ad derlemede yakalanır. */
+export type IconName = keyof typeof ICON_PATHS;
 
 /*
   Çizgi kalınlığı durakları; native kitin `theme.border.iconStroke*` durakları buradan türer, web telefon görünümü doğrudan okur.

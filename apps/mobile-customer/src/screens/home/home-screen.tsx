@@ -32,7 +32,6 @@ import { rememberPlaceName, useRememberedPlaceName } from '@/lib/places/place-na
 import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { PhotoTile } from '@/screens/customer-kit/photo-tile';
@@ -264,7 +263,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
           .replace('{reference}', liveOrder.reference)}
         testID="home-live-order"
       >
-        <CustomerIcon name="truck" size={theme.size.inlineIcon} color={theme.colors['olive-light']} />
+        <Icon name="truck" size={theme.size.inlineIcon} color={theme.colors['olive-light']} />
         <View style={styles.liveText}>
           <Text style={styles.liveTitle} numberOfLines={1}>
             {t.liveOrder.title

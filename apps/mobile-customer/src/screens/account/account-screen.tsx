@@ -33,7 +33,6 @@ import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-no
 import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { NavRow } from '@/screens/customer-kit/nav-row';
 import { PointsEarnList, type PointsEarnActions } from '@/screens/customer-kit/points-earn-list';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
@@ -440,7 +439,7 @@ export function AccountScreen({
             {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
             {coupons.map((coupon) => (
               <View key={coupon.id} style={styles.couponRow} testID={`account-coupon-${coupon.code}`}>
-                <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors.terracotta} />
+                <Icon name="coupon" size={theme.size.inlineIcon} color={theme.colors.terracotta} />
                 <Text style={styles.couponCode}>{coupon.code}</Text>
                 <Text style={styles.couponValue}>
                   {coupon.amountCents === null
@@ -489,14 +488,14 @@ export function AccountScreen({
           <NavRow
             label={t.menu.write}
             onPress={() => router.push('/support/new')}
-            icon={<CustomerIcon name="mail" size={theme.size.inlineIcon} color={theme.colors.muted} />}
+            icon={<Icon name="mail" size={theme.size.inlineIcon} color={theme.colors.muted} />}
             divider
             testID="account-menu-write"
           />
           <NavRow
             label={t.menu.delivery}
             onPress={() => router.push({ pathname: '/legal/[page]', params: { page: 'delivery' } })}
-            icon={<CustomerIcon name="truck" size={theme.size.inlineIcon} color={theme.colors.muted} />}
+            icon={<Icon name="truck" size={theme.size.inlineIcon} color={theme.colors.muted} />}
             divider
             testID="account-menu-delivery"
           />

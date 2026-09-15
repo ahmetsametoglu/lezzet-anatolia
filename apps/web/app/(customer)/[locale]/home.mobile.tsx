@@ -22,7 +22,7 @@ import { PhotoTile } from '@/components/customer/phone-kit/photo-tile';
 import { ProductCircleCard } from '@/components/customer/phone-kit/product-circle-card';
 import { SectionHeader } from '@/components/customer/phone-kit/section-header';
 import { Tag } from '@/components/customer/phone-kit/tag';
-import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-icon';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { Link } from '@/i18n/navigation';
 import type { HomeMobileProps } from './home-types';
 
@@ -55,7 +55,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
           href={{ pathname: '/orders/[reference]', params: { reference: live.id } }}
           className="mx-5.5 flex cursor-pointer items-center gap-3 rounded-card bg-ink px-4 py-3 transition-transform hover:opacity-95 active:scale-[0.98]"
         >
-          <MobileCustomerIcon name="truck" size={17} className="flex-none text-olive-light" />
+          <MobileIcon name="truck" size={17} className="flex-none text-olive-light" />
           <span className="min-w-0 flex-1 truncate font-sans text-control text-sand-50">
             {copy.liveOrder.title.replace('{status}', copy.liveOrder.status[live.status]).replace('{reference}', live.referenceNo)}
           </span>

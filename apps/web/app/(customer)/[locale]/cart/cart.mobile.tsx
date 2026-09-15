@@ -19,7 +19,7 @@ import placeMessages from '@/components/customer/delivery/place-messages.json';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { BackButton } from '@/components/customer/ui/back-button';
 import { Dialog } from '@/components/customer/ui/dialog';
-import { MobileCustomerIcon } from '@/components/customer/ui/mobile-icon';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { summaryCopy } from '@/components/customer/ui/summary-row';
 import { Link } from '@/i18n/navigation';
 import { cartKey, cartPayableCents, shippingGroupFee, type CartLine } from '@/lib/cart/cart-types';
@@ -102,7 +102,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
         {header}
         <EmptyState
           fill
-          icon={<MobileCustomerIcon name="cart" size={80} className="text-sand-600" />}
+          icon={<MobileIcon name="cart" size={80} className="text-sand-600" />}
           title={copy.empty.title}
           description={copy.empty.body}
           action={<PrimaryButton label={copy.empty.cta} href="/catalog" />}
@@ -284,7 +284,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
 
         {discount.status === 'applied' ? (
           <div className="flex items-center gap-2.5 rounded-control bg-sand-150 px-3.5 py-3">
-            <MobileCustomerIcon name="coupon" size={17} className="flex-none text-olive-dark" />
+            <MobileIcon name="coupon" size={17} className="flex-none text-olive-dark" />
             <span className="min-w-0 flex-1 font-sans text-note font-bold text-olive-dark">{copy.coupon.applied.replace('{code}', discount.code)}</span>
             <TextAction label={copy.coupon.remove} onClick={clearCoupon} ariaLabel={copy.coupon.removeLabel} />
           </div>
@@ -294,7 +294,7 @@ export function CartMobile({ t, locale, awaitingPayment }: CartViewProps) {
             onClick={() => setCouponOpen(true)}
             className="flex cursor-pointer items-center gap-2.5 rounded-card bg-sand-250 px-4 py-3.5 text-left transition-[scale,background-color] hover:bg-sand-300 active:scale-[0.98]"
           >
-            <MobileCustomerIcon name="coupon" size={17} className="flex-none text-terracotta" />
+            <MobileIcon name="coupon" size={17} className="flex-none text-terracotta" />
             <span className="min-w-0 flex-1 font-sans text-note font-bold text-ink">{copy.coupon.add}</span>
             <span aria-hidden className="font-sans text-icon-sm leading-none text-sand-600">
               ›

@@ -17,7 +17,6 @@ import placeMessages from '@lezzet/i18n/customer/place';
 import { maskPostalCode, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { applyFontScale, FONT_SCALES, saveFontScale, type FontScale } from '@lezzet/mobile-kit/src/lib/settings/font-scale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { PointsEarnList } from '@/screens/customer-kit/points-earn-list';
 import { usePointsRules } from '@/screens/customer-kit/use-points-rules.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
@@ -171,13 +170,13 @@ export function OnboardingScreen() {
   const deliveryRows = [
     {
       key: 'route',
-      icon: <CustomerIcon name="truck" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
+      icon: <Icon name="truck" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
       copy: t.delivery.route,
     },
     {
       key: 'shipping',
       // Koli ikonu: iki satırın ayrımı "araç ↔ koli" olarak okunur, bina silueti kargoyu anlatmaz.
-      icon: <CustomerIcon name="box" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
+      icon: <Icon name="box" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
       copy: t.delivery.shipping,
     },
   ] as const;
@@ -185,7 +184,7 @@ export function OnboardingScreen() {
   const paymentRows = [
     {
       key: 'online',
-      icon: <CustomerIcon name="card" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
+      icon: <Icon name="card" size={PAYMENT_ICON_SIZE} color={theme.colors.olive} />,
       copy: t.payment.online,
     },
     {
@@ -352,7 +351,7 @@ export function OnboardingScreen() {
               ))}
             </View>
             <View style={styles.secureBox}>
-              <CustomerIcon name="truck" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+              <Icon name="truck" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
               <Text style={styles.secureText}>{t.delivery.note}</Text>
             </View>
           </>
@@ -376,7 +375,7 @@ export function OnboardingScreen() {
               ))}
             </View>
             <View style={styles.secureBox}>
-              <CustomerIcon name="lock" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+              <Icon name="lock" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
               <Text style={styles.secureText}>{t.payment.secure}</Text>
             </View>
           </>
@@ -402,7 +401,7 @@ export function OnboardingScreen() {
             {pointsRules.status === 'ready' ? (
               <>
                 <View style={styles.secureBox}>
-                  <CustomerIcon name="coupon" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
+                  <Icon name="coupon" size={theme.size.inlineIcon} color={theme.colors['olive-dark']} />
                   <View style={styles.pointsHeadline}>
                     <Text style={styles.pointsRate} testID="onboarding-points-rate">
                       {t.points.rate

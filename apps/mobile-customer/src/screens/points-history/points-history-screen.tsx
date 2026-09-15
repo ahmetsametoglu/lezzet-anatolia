@@ -13,7 +13,6 @@ import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-ref
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import messages from './messages.json';
 import { groupPointsHistory, type PointsHistoryGroup } from './points-history-group';
 import { usePoints } from '@/screens/account/use-points.hook';
@@ -125,7 +124,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
-          icon={<CustomerIcon name="lock" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
+          icon={<Icon name="lock" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.denied.title}
           description={t.denied.body}
           testID="points-history-denied"
@@ -156,7 +155,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
         <View style={styles.headerPad}>{header}</View>
         <EmptyState
           fill
-          icon={<CustomerIcon name="star" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
+          icon={<Icon name="star" size={theme.size.emptyIcon} color={theme.colors['sand-600']} />}
           title={t.empty.title}
           description={t.empty.body}
           action={<PrimaryButton label={t.empty.cta} shape="pill" onPress={() => router.push('/account')} testID="points-history-earn" />}

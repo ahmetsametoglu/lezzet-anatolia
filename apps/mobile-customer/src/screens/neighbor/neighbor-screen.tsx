@@ -14,7 +14,7 @@ import { SecondaryButton } from '@lezzet/mobile-kit/src/components/ui/secondary-
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { claimPendingInvite } from '@/lib/invite/invite-api';
 import { rememberNeighborInvite } from '@/lib/invite/invite-store';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { formatDeliveryDate } from '@/screens/orders/order-format';
 import messages from './messages.json';
 import { useNeighborWelcome } from './use-neighbor-welcome.hook';
@@ -86,7 +86,7 @@ interface NeighborFaceProps {
 /** Hâlin yüzü — beşi de aynı bloğu kullanır; ekran bir DURUM ekranıdır, beş ayrı sayfa değil. */
 function NeighborFace({ welcome, t, accept, iconColor, day }: NeighborFaceProps) {
   const router = useRouter();
-  const icon = (name: 'truck' | 'check' | 'coupon') => <CustomerIcon name={name} size={44} color={iconColor} />;
+  const icon = (name: 'truck' | 'check-wide' | 'coupon') => <Icon name={name} size={44} color={iconColor} />;
 
   switch (welcome.status) {
     case 'ok':
@@ -111,7 +111,7 @@ function NeighborFace({ welcome, t, accept, iconColor, day }: NeighborFaceProps)
       return (
         <EmptyState
           testID="neighbor-self"
-          icon={icon('check')}
+          icon={icon('check-wide')}
           title={t.self.title}
           description={t.self.body}
           action={<PrimaryButton label={t.self.primary} shape="pill" onPress={() => router.replace('/orders')} />}

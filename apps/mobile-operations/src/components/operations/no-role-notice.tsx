@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { operationsTheme } from '@lezzet/mobile-kit/src/theme/unistyles';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
@@ -26,7 +26,7 @@ export function NoRoleNotice({ email, onSwitchAccount, testID }: NoRoleNoticePro
   return (
     <View style={styles.stack} testID={testID}>
       <View style={styles.tile}>
-        <CustomerIcon name="lock" size={operationsTheme.size.headerIcon} color={c.error} />
+        <Icon name="lock" size={operationsTheme.size.headerIcon} color={c.error} />
       </View>
       <View style={styles.texts}>
         <Text style={styles.title} accessibilityRole="header">

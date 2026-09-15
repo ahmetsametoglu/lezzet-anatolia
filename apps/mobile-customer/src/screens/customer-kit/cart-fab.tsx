@@ -2,7 +2,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 
 /*
   Yüzen sepet düğmesi: sepet bir sekme değildir, vitrinden ve katalogdan bu düğmeyle gidilir; boşken hiç çizilmez, doluyken adedi
@@ -32,7 +32,7 @@ export function CartFab({ count, onPress, accessibilityLabel, testID }: CartFabP
       accessibilityLabel={accessibilityLabel}
       testID={testID}
     >
-      <CustomerIcon name="cart" size={theme.size.tabIcon} color={theme.colors.card} />
+      <Icon name="cart" size={theme.size.tabIcon} color={theme.colors.card} />
       {/* Rozet ekran okuyucuya AYRICA okunmaz: sayı düğmenin kendi adının içinde geçiyor. */}
       <View style={styles.badge} pointerEvents="none">
         <Text style={styles.badgeLabel}>{count}</Text>

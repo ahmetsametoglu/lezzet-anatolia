@@ -1,7 +1,7 @@
 'use client';
 
 import { Link } from '@/i18n/navigation';
-import { MobileCustomerIcon } from '@/components/customer/ui/mobile-icon';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { useCart } from './cart-context';
 
 /**
@@ -32,7 +32,7 @@ export function CartFab({ label, placement }: CartFabProps) {
           : 'fixed right-[18px] bottom-[calc(112px+max(0px,env(safe-area-inset-bottom)-14px))] z-30',
       ].join(' ')}
     >
-      <MobileCustomerIcon name="cart" size={23} />
+      <MobileIcon name="cart" size={23} />
       {/* Rozet ekran okuyucuya ayrıca okunmaz: adet düğmenin adında (native kural). */}
       <span
         aria-hidden
