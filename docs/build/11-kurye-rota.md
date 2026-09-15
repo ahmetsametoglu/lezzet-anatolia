@@ -401,7 +401,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     bir hız işi değil PARA işidir. Gerekçe ve maliyet kıyası: `BACKLOG` §8 (c).
 
 - [~] (11.11) **Adres DOĞRULANABİLİRLİĞİ — "bu kapı var mı" sorusu hiç sorulmuyor:** kaba eşleşme tespit edilir, müşteriye düzeltme teklif edilir, düzeltilmezse sevkiyat ve kurye uyarılır
-  `touches: supabase/migrations/0011_customer_fields.sql, packages/domain-core/src/delivery/, packages/application/src/delivery/{geocode-port,geocode-provider,geo-address,geocode-scan}.ts, apps/web/components/customer/delivery/, apps/web/app/(operations)/operations/deliveries/, apps/mobile/src/screens/customer-kit/, apps/mobile/src/screens/courier/`
+  `touches: supabase/migrations/0011_customer_fields.sql, packages/domain-core/src/delivery/, packages/application/src/delivery/{geocode-port,geocode-provider,geo-address,geocode-scan}.ts, apps/web/components/customer/delivery/, apps/web/app/(operations)/operations/deliveries/, apps/mobile-customer/src/screens/customer-kit/, apps/mobile-operations/src/screens/courier/`
   - **KULLANICI BULGUSU (01.09) — iki gerçek sipariş, aynı adres, biri var olmayan kapı.** Kullanıcı
     uygulamadan iki sipariş kurdu (15:24 ve 15:43) ve ikisinin de satırı **`192c Rue du Maréchal Foch`**:
     - `LA-26-T77JPW` · 5 Eylül · **67380 Lingolsheim** → `housenumber`, (48.551249, 7.669976) — GERÇEK

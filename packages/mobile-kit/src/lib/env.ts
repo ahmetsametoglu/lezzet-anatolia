@@ -40,7 +40,7 @@ import Constants from 'expo-constants';
 
 function required(value: string | undefined, name: string): string {
   if (!value) {
-    throw new Error(`${name} tanımsız — apps/mobile/.env dosyasını .env.example'dan oluşturun`);
+    throw new Error(`${name} tanımsız — uygulamanın .env dosyasını (apps/mobile-customer ya da apps/mobile-operations) .env.example'dan oluşturun`);
   }
   return value;
 }

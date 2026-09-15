@@ -99,7 +99,7 @@ function resolveTarget() {
     // Uygulama kurulu mu? Kurulu değilse çekim başlatıcı ekranını "rota" diye okuturdu.
     const installed = adb(['-s', serial, 'shell', 'pm', 'list', 'packages', BUNDLE_ID], { stdio: ['ignore', 'pipe', 'ignore'] });
     if (!installed.includes(BUNDLE_ID)) {
-      console.error(`[ui-shot-mobile] ${BUNDLE_ID} ${serial} cihazında kurulu değil — pnpm mobile:rebuild:android ile derleyin.`);
+      console.error(`[ui-shot-mobile] ${BUNDLE_ID} ${serial} cihazında kurulu değil — pnpm mobile-customer:rebuild:android ile derleyin.`);
       process.exit(1);
     }
     const model = adb(['-s', serial, 'shell', 'getprop', 'ro.product.model'], { stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -142,7 +142,7 @@ function resolveTarget() {
     try {
       simctl(['get_app_container', device.udid, BUNDLE_ID], { stdio: 'pipe' });
     } catch {
-      console.error(`[ui-shot-mobile] ${BUNDLE_ID} bu simülatörde kurulu değil — pnpm mobile:rebuild:ios ile derleyin.`);
+      console.error(`[ui-shot-mobile] ${BUNDLE_ID} bu simülatörde kurulu değil — pnpm mobile-customer:rebuild:ios ile derleyin.`);
       process.exit(1);
     }
     return {

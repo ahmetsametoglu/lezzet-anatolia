@@ -32,7 +32,7 @@
         "@expo-google-fonts/karla"
       ]
     },
-    "apps/mobile": {
+    "apps/mobile-customer": {
       "entry": [
         "src/testing/expo-image-picker.mock.ts"
       ]

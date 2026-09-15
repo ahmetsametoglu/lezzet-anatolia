@@ -9,7 +9,7 @@ import { displayName, variantNames } from './names';
  * **Kurye dönüşü — D6'nın OKUMA yarısı** (21.11d). Yazma yarısı zaten vardı
  * (`order/refund.adjustFulfillment` + `POST /warehouse/returns/:orderId`); eksik olan tek şey
  * *"bugün rampama ne geri geldi"* sorusunun cevabıydı ve o yokluk ekranda bir fixture'a dönüşmüştü
- * (`apps/mobile/.../courier-return-fixture.ts`).
+ * (`apps/mobile-customer/.../courier-return-fixture.ts`).
  *
  * ── ANAHTAR KURYENİN GÜNÜ DEĞİL, DEPONUN RAMPASI (ölçüldü) ──────────────────
  * İlk akla gelen kapı `courier/day-close.openDayClose`ın `returned` listesiydi. ELENDİ, iki ölçümle:

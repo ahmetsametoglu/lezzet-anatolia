@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
   GECİKMELİ ARAMA ÇEKİRDEĞİ — "yazarken öneri getir" davranışının ÜÇ kararı, tek yerde.
 
   ── PAKETE TAŞINDI: ARTIK İKİ YÜZEYİN DE ÇEKİRDEĞİ (kullanıcı kararı 21.08) ─
-  Dosya `apps/mobile/src/lib/hooks/` altında doğdu (21.28) ve orada yalnız native'e bakıyordu.
+  Dosya `apps/mobile-customer/src/lib/hooks/` altında doğdu (21.28) ve orada yalnız native'e bakıyordu.
   Web aynı davranışı isteyince seçenek ikiye indi: ikinci bir nüsha yazmak ya da çekirdeği ortak
   bir eve taşımak. Nüsha, bu künyenin en başta önlemek için yazıldığı şeydi (CLAUDE §1) — kural
   bir yüzeyin içinde geçerliyse yüzeyler arasında da geçerli.

@@ -35,7 +35,7 @@ kırmızı yanmaz. Dalganın tek işi bu sessizliği kapatmak.
 | --- | --- | --- |
 | `vitest --project unit` | 118 dosya · **1380 test** · ~4 sn | herkes, her an (`CLAUDE §4b`) |
 | `vitest --project integration` | 140 dosya (yerel Supabase'e vurur) | **yalnız denetmen**, kilitli tam pakette |
-| `apps/mobile` jest | 86 dosya | mobil şerit (`pnpm --filter mobile test`) |
+| `apps/mobile-customer` jest | 86 dosya | mobil şerit (`pnpm --filter mobile test`) |
 | Playwright duman | 10 senaryo (`e2e/`) | **yalnız denetmen**, sakin pencerede |
 
 **Kapsam boşluğu buradan görünmüyor** ve görünmemesi normaldir: 1380 testin ezici çoğunluğu

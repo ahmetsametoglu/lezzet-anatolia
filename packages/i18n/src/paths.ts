@@ -9,7 +9,7 @@
 // kopyasını taşımak zorunda kalırdı — ve bir rota değiştiğinde iki kopyadan biri sessizce eskir,
 // giden mailin bağlantısı 404'e düşerdi. Kimse de fark etmezdi: mail gider, tıklanmaz.
 //
-// **Neden `index`te değil de KENDİ modülünde (26.08, ölçüldü):** `apps/mobile/app.config.ts` bu
+// **Neden `index`te değil de KENDİ modülünde (26.08, ölçüldü):** `apps/mobile-customer/app.config.ts` bu
 // tabloyu Metro'dan ÖNCE, Node'un kendi ESM yükleyicisiyle okur ve Node uzantısız göreli ihracı
 // (`export … from './locale'`) çözemez — index'e `./locale` ayrıştırması gelince `expo start`
 // `ERR_MODULE_NOT_FOUND` ile kesildi (MB-42'nin birebir tekrarı; çare de aynısı:

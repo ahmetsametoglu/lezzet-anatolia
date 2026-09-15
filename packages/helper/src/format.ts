@@ -42,7 +42,7 @@ export function formatPrice(cents: number, locale: Locale): string {
  *
  * ÜRÜN ve SİPARİŞ tutarları bununla YAZILMAZ — onlar kuruşuyla, `formatPrice` ile yazılır.
  *
- * Terfi 18.08: gövde `apps/mobile/src/screens/customer-kit/points-value.ts`ten geldi. İkinci
+ * Terfi 18.08: gövde `apps/mobile-customer/src/screens/customer-kit/points-value.ts`ten geldi. İkinci
  * tüketen doğdu (ilan edilen teslimat tutarları) ve o tüketen web'de de var — kural mobil bir
  * ekranın içinde kalsaydı web kendi kopyasını yazardı, `formatPrice`ın 29.07'de yaşadığı ayrışmanın
  * aynısı.

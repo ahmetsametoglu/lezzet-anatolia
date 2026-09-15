@@ -336,7 +336,7 @@ export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
  *
  * ── AD KORUNDU, LİSTE TALEPTEN TÜRÜYOR ──────────────────────────────────────
  * Ayrı ad iki sebeple duruyor: mobil sözleşme onu adıyla tüketiyor (`ConversationHandler` —
- * `apps/mobile` sosyal ekranı `.options`tan türetiyor, yani bu satır değişince orası da
+ * `apps/mobile-customer` sosyal ekranı `.options`tan türetiyor, yani bu satır değişince orası da
  * kendiliğinden açıldı) ve "sohbette hangi modlar" sorusunun tek adresi olması, gelecekte ayrışma
  * gerekirse tek dosyayı değiştirmeyi yeterli kılıyor.
  *

@@ -154,7 +154,7 @@ Stoğun ve tedariğin iş katmanı: parti (`Stock`) servisleri, **atomik rezerva
 
 **Kod da kendi içinde bayat:** `stock.service.ts` üç yerde artık var olmayan adları anıyor (`:74` `OrderService.listBatches`, `:375` ve `:385` `unitCostMap`) — ve `:358`'deki künye bloğu **yanlış metoda yapışmış**: ağırlıklı ortalama maliyeti anlatan JSDoc `purchaseHistoryCentsMap`'in üstünde duruyor, o metodun kendi künyesi hemen altında. Bunlar `06.4`'ün açık borcu değil, dosyanın kendi bakımı → `BEKLEYEN(06.4)` yazılmadı, doğrudan düzeltilecekler listesine değil buraya kaydedildi çünkü dosya başka şeritlerin de elinde.
 
-**Bekçinin ölçülmüş kör noktası — modül 05'te bulunanın devamı.** `docs-check.mjs:595` `codeRoots = ['apps/web', 'packages', 'scripts']`. Taranmayanlar ve içlerindeki işaret sayısı: **`supabase/` 6 · `apps/mobile` 19 · `apps/mobile-api` 6 · `apps/backend` 1 · `docs/` 240**; taranan üç kökte 68 geçiş var, denetimin saydığı 17. Yani `CLAUDE §5`'in *"`docs:check` referansın gerçekten var olduğunu doğrular"* sözü ağacın küçük bir diliminde geçerli. En keskin kanıt: `walk()` `.sql` uzantısını kabul ediyor ama **taranan üç kökte sıfır `.sql` dosyası var** — migration tarama yeteneği yazılmış ve hiç çalışmamış.
+**Bekçinin ölçülmüş kör noktası — modül 05'te bulunanın devamı.** `docs-check.mjs:595` `codeRoots = ['apps/web', 'packages', 'scripts']`. Taranmayanlar ve içlerindeki işaret sayısı: **`supabase/` 6 · `apps/mobile-customer` 19 · `apps/mobile-api` 6 · `apps/backend` 1 · `docs/` 240**; taranan üç kökte 68 geçiş var, denetimin saydığı 17. Yani `CLAUDE §5`'in *"`docs:check` referansın gerçekten var olduğunu doğrular"* sözü ağacın küçük bir diliminde geçerli. En keskin kanıt: `walk()` `.sql` uzantısını kabul ediyor ama **taranan üç kökte sıfır `.sql` dosyası var** — migration tarama yeteneği yazılmış ve hiç çalışmamış.
 
 **Genişletmenin bedeli ÖLÇÜLDÜ, tahmin edilmedi** (risk ajanı, `docs-check.mjs`in scratchpad KOPYASI üzerinde; orijinale dokunulmadı):
 
@@ -162,11 +162,11 @@ Stoğun ve tedariğin iş katmanı: parti (`Stock`) servisleri, **atomik rezerva
 |---|---|---|
 | bugünkü | 0 | — (ama 32 kod işareti görünmez) |
 | + `supabase`, `apps/backend`, `apps/mobile-api` | **1** | +1 |
-| + `apps/mobile`, `docs` | 1 | +5 |
+| + `apps/mobile-customer`, `docs` | 1 | +5 |
 
 - **Tek sert hata gerçek bir borç ve yıllardır görünmez:** `apps/backend/src/mcp/tools-propose.ts:502` → `BEKLEYEN(BACKLOG §8)`, oysa `design/BACKLOG.md`de §8 **yok** (mevcut: §1 · §2 · §4 · §5). Yani kayıt düşülmeden bırakılmış bir boşluk, tam da `CLAUDE §5`'in makineyle engellediğini söylediği şey. Borcun kendisi geçerli: `postal_code_demand` ülke taşımıyor, `demand_signals` çıktısı ülkesiz kalıyor.
 - **`docs` eklemenin faydası ÖLÇÜLEN SIFIR** — ve bu, modül 05'te yazdığım *"docs taranmıyor"* cümlesini daraltıyor: `walk()` yalnız `.ts|.tsx|.mjs|.sql` alıyor, yani `docs/` kök listesine eklense bile **tek bir `.md` okunmazdı**. Oradaki 240 işaret için sorun tek başına kök değil, uzantı süzgeci.
-- **`apps/mobile-api` sıfır gerçek işaret getiriyor**; `apps/mobile`ın dört `[bilgi]`si mobil şeridin bayat işaretleri.
+- **`apps/mobile-api` sıfır gerçek işaret getiriyor**; `apps/mobile-customer`ın dört `[bilgi]`si mobil şeridin bayat işaretleri.
 - Kökleri genişletmek üç şeridin commit'ini birden etkileyebileceği için **karar kullanıcının**; denetim turnikeye dokunmadı, yalnız ölçtü.
 
 ## Netleşecekler

@@ -30,7 +30,7 @@ import { TEST_LABELS } from './test-labels';
  * gerçekçi), gövde varyant sırasından türer (deterministik — iki koşu aynı kodu üretir, guard'lı
  * seed'de çakışma doğmaz). Kontrol hanesi hesaplanmaz; sistem biçim zorlamıyor (şema künyesi).
  *
- * **AYNASI VAR:** mobilin simülasyon havuzu (`apps/mobile/src/components/scan/dev-scan-pool.ts`)
+ * **AYNASI VAR:** mobilin simülasyon havuzu (`apps/mobile-operations/src/components/scan/dev-scan-pool.ts`)
  * aynı formülü taşıyor — scripts mobile'a bağlanamadığı için bilinçli kopya. Formül değişirse iki
  * taraf birlikte değişir; ayrışırsa havuz çipleri "tanınmayan kod"a düşer (kırılmaz, söyler).
  */

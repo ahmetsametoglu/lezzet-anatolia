@@ -15,7 +15,7 @@
       { ...customerColors, ...customerAppColors, ...operationsAppColors }
       { ...customerText,   ...customerAppText,   ...operationsAppText   }
       { ...customerRadius, ...customerAppRadius, ...operationsAppRadius }
-  Birleştirme TÜKETİCİNİN işidir (Unistyles teması, `apps/mobile/src/theme/unistyles.ts`) — kaynak
+  Birleştirme TÜKETİCİNİN işidir (Unistyles teması, `packages/mobile-kit/src/theme/unistyles.ts`) — kaynak
   paket tema kurmaz. Web'e SIFIR etki: bu dosya `globals.css` ikizinin parçası değildir,
   `render-theme-css.ts` onu basmaz, parite testi hiç görmez (aynı gerekçe: `customer-app.ts`).
 

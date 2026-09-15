@@ -1096,7 +1096,7 @@ function uyarPaylasilanAgac(yeniBlok) {
 // ekranı, sipariş detayı) bakan iki kişi farklı cümle okursa hangisinin daha yeni olduğunu
 // tartışırlar — oysa ikisi de aynı `geo_precision` değerini okuyor.
 //
-// **Neden tek dosyada birleşemiyor:** web `apps/web`in, mobil `apps/mobile`ın; ikisi ayrı uygulama,
+// **Neden tek dosyada birleşemiyor:** web `apps/web`in, mobil `apps/mobile-operations`ın; ikisi ayrı uygulama,
 // ayrı paket, ayrı derleme. Metni ortak bir pakete koymak `@lezzet/types`a UI dili sokardı. Bağ
 // bugüne kadar yalnız künyeydi ve künye çürür — biri cümleyi düzeltir, öteki eski hâlinde kalır ve
 // **hiçbir şey kırılmaz**: iki ekran da kendi içinde tutarlı görünür.
@@ -1106,7 +1106,9 @@ function uyarPaylasilanAgac(yeniBlok) {
 // tarafta da anahtarları yok.
 {
   const WEB = 'apps/web/components/operation/ui/labels.ts';
-  const MOBIL = 'apps/mobile/src/screens/courier/messages.json';
+  // Kurye ekranı 21.310 ayrımında operasyon uygulamasına geçti; yol o gün güncellenmedi ve §3k 15.09'a dek
+  // SESSİZCE atlandı (`existsSync` false) — dosyanın yokluğu karşılaştırmayı iptal ediyordu, hata vermiyordu.
+  const MOBIL = 'apps/mobile-operations/src/screens/courier/messages.json';
   if (existsSync(join(ROOT, WEB)) && existsSync(join(ROOT, MOBIL))) {
     const webBlok = read(WEB).match(/export const DOOR_CHECK_NOTE[^=]*=\s*\{([\s\S]*?)\n\};/);
     if (!webBlok) {
@@ -1341,7 +1343,7 @@ function envOku(dir, out = new Set()) {
     if (entry.isDirectory()) envOku(rel, out);
     else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$|\.testkit\.ts$/.test(entry.name)) {
       /*
-        YORUMLAR AYIKLANIR — ölçülmüş yanlış pozitif (29.08): `apps/mobile/src/lib/env.ts`in künyesi
+        YORUMLAR AYIKLANIR — ölçülmüş yanlış pozitif (29.08): `packages/mobile-kit/src/lib/env.ts`in künyesi
         kuralı anlatırken `process.env.EXPO_PUBLIC_X` yazıyor ve ham tarama onu GERÇEK bir okuma
         sandı. Var olmayan bir değişkeni belgelemeye zorlayan bir denetim, görmezden gelinmeyi
         öğretir — ve görmezden gelinen denetim, denetim değildir.

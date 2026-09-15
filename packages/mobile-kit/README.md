@@ -2,8 +2,8 @@
 
 Native uygulama ikiye bölünüyor: müşteri ve operasyon (kullanıcı kararı 14.09, görev 21.310 —
 `docs/build/21-mobil-uygulama.md`). İki uygulamanın ORTAK kullandığı kod burada durur: tema, UI
-kiti, API istemcisi, oturum, push, dil, test sahteleri. Bugün tek tüketen `apps/mobile`; bölme
-tamamlanınca iki uygulama.
+kiti, API istemcisi, oturum, push, dil, test sahteleri. İki tüketeni var: `apps/mobile-customer` ve
+`apps/mobile-operations` (bölme 21.310; müşteri klasörü 15.09'da `apps/mobile`dan yeniden adlandı).
 
 ## Kurallar
 
@@ -21,7 +21,8 @@ tamamlanınca iki uygulama.
   uygulamanınkiyle AYNI klasörlere bağlanmalı. Ayrışırsa Metro iki ayrı `react-native-unistyles`
   kopyası paketler ve tema kaydı ikiye bölünür. Karşılaştırma:
   `readlink packages/mobile-kit/node_modules/react-native-unistyles` ile
-  `readlink apps/mobile/node_modules/react-native-unistyles` aynı depo klasörünü göstermeli.
+  `readlink apps/mobile-customer/node_modules/react-native-unistyles` (ya da `apps/mobile-operations/…`) aynı
+  depo klasörünü göstermeli.
   Bu karşılaştırmayı uygulamanın testi makineyle yapar (`src/testing/dependency-guard.ts`).
 - **Sürüm TAM yazılır, aralıkla değil.** Kit yeni bir içe aktarıcı olduğu için aynı aralık en yükseğe
   çözülebilir: `expo-constants` `~57.0.9` iken 57.0.14'e gitti ve pnpm uygulamanın Expo CLI kopyasını

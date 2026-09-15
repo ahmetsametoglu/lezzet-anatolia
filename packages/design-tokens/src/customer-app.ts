@@ -224,7 +224,7 @@ export const customerAppShadow = {
    "yarı saydam krem" derken ikisini birden almalı.
    Değer CSS yarıçapıdır (`backdrop-filter: blur(8px)`); RN tarafında `expo-blur` yarıçap değil
    1–100 arası bir YOĞUNLUK ister ve px↔yoğunluk için tanımlı bir dönüşüm YOKTUR — çeviri
-   tüketicinin işidir ve gerekçesi orada durur (`apps/mobile/src/theme/metrics.ts`). */
+   tüketicinin işidir ve gerekçesi orada durur (`packages/mobile-kit/src/theme/metrics.ts`). */
 export const customerAppBlur = {
   glass: '8px',
 } as const satisfies Record<string, string>;

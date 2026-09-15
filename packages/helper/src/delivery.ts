@@ -17,7 +17,7 @@ import type placeMessages from '@lezzet/i18n/customer/place';
  * Kural iki YÜZEYİN de sorusu: web kartı/ürün detayı (`components/customer/delivery/stock-mark`)
  * ve native uygulamanın katalog/vitrin kartı aynı üç cümleyi kuruyor. Ev seçimini katman kuralı
  * belirledi, tercih değil:
- *   · `@lezzet/application` OLAMAZ — `apps/mobile` o pakete bağlı DEĞİL (`package.json`: yalnız
+ *   · `@lezzet/application` OLAMAZ — `apps/mobile-customer` o pakete bağlı DEĞİL (`package.json`: yalnız
  *     brand · design-tokens · helper · i18n · types) ve bağlanması `@supabase/supabase-js`'i RN
  *     paketine sokardı. Ölçüldü, varsayılmadı.
  *   · `@lezzet/domain-core` da olamaz, aynı sebeple (mobil onu da bilmiyor).
@@ -57,7 +57,7 @@ export interface PlaceMark {
  *                    bilinmiyorken "bölgenizde şu an yok" (bekleyen) — ayrımı `elsewhereReasonOf` verir.
  *   `available` · `out_of_stock` → işaret YOK: iyi haber sessizdir, "Tükendi" kartın kendi rozetidir.
  *
- * Native'de doğdu (`apps/mobile/src/lib/places/place-view.ts` → `stockMarkOf`); web'in telefon görünümü
+ * Native'de doğdu (`apps/mobile-customer/src/lib/places/place-view.ts` → `stockMarkOf`); web'in telefon görünümü
  * ikinci çağıran olunca kural buraya taşındı — iki yüzey aynı kartı aynı cümleyle çiziyor. `status` bir
  * `StockStatus`tur (`@lezzet/types`); bu paket ona bağlı değil, bakılan iki değer adıyla yazılı. `null` =
  * hâl bilinmiyor, işaret yok.

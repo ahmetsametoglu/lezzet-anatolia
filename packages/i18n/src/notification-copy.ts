@@ -4,7 +4,7 @@ import type { Locale } from './locale';
 /*
   BİLDİRİM SÖZLÜĞÜ — kind + payload → cümle; İKİ YÜZEYİN ortak malı (14.15).
 
-  Sözlük `apps/mobile`ın bildirim ekranında doğdu (14.13); web hesap akışı (14.15) aynı müşteriye
+  Sözlük `apps/mobile-customer`ın bildirim ekranında doğdu (14.13); web hesap akışı (14.15) aynı müşteriye
   aynı satırı gösterince BURAYA terfi etti: 11 tür × 3 dilin iki kopyası, ilk düzeltmede sessizce
   ayrışır ve aynı bildirim telefonda başka, web'de başka konuşurdu (CLAUDE §1). Paket seçimi de
   bu yüzden `@lezzet/i18n`: PATHNAMES ile aynı gerekçe — birden çok yüzeyin okuduğu dil verisi

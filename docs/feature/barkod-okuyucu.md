@@ -16,9 +16,9 @@
 | `order.reference_no` (rastgele, unique) · `purchase_order.reference_no` · `documentPrefixFor` | **Sipariş kutusu/kolisi kavramı yok** — şemada yalnız tedarik tarafında `pack_qty` |
 | `order_status_log` (from/to/kim/zaman) — aşama izi tam | Kurye yükleme adımı TOPLU: `startCourierDay` günün tüm `ready` siparişlerini tek hamlede `out_for_delivery` yapıyor (`courier/day.ts:218-243`); koli başına doğrulama yok |
 | `order_item_batch` — satılan malın parti izi (index yorumu: *"Geri çağırma (rappel): partiden siparişe"*) | Parti/koli etiketi üretimi yok |
-| Dört aşamanın RPC'si: `receive_intake` · `record_preparation` · `dispatch/receive_transfer` · `deliver_order` (+`delivery_proof` jsonb) · `quick_sale` | Tarama komponenti yok; mobilde kamera bağımlılığı yok (`apps/mobile/package.json`) |
+| Dört aşamanın RPC'si: `receive_intake` · `record_preparation` · `dispatch/receive_transfer` · `deliver_order` (+`delivery_proof` jsonb) · `quick_sale` | Tarama komponenti yok; mobilde kamera bağımlılığı yok (`apps/mobile-customer/package.json`) |
 | mobile-api uçları: `/warehouse/{intake,preparation,adjustments,transfers,returns}` · `/courier/{day,day/start,stops/:id/deliver,proof-upload,day-close}` | Basım yolu yok (yazıcı entegrasyonu hiç) |
-| Mobil operasyon kabuğu HAZIR: `apps/mobile/src/app/(operations)/` dört bölüm + 17 ekran (`intake` · `picking` · `stock-count` · `inbound` · `near-expiry` · `delivery/[orderId]` · `courier-return` · `day-close` …) | Mobilde harita yok (rota çizimi/takibi — `BACKLOG §8`) |
+| Mobil operasyon kabuğu HAZIR: `apps/mobile-operations/src/app/(operations)/` dört bölüm + 17 ekran (`intake` · `picking` · `stock-count` · `inbound` · `near-expiry` · `delivery/[orderId]` · `courier-return` · `day-close` …) | Mobilde harita yok (rota çizimi/takibi — `BACKLOG §8`) |
 
 Yani sistem barkoda **hazırlıksız değil ama boş**: kimlik alanları ve dört aşamanın arka ucu duruyor;
 taranabilir kod alanı, tek bir tarama girişi ve kutu kavramı eksik.
@@ -62,7 +62,7 @@ taranabilir kod alanı, tek bir tarama girişi ve kutu kavramı eksik.
    kabul edilemez (kullanıcı bunu cihazda denedi). Yol: **Expo modülü + Brother Print SDK** (SDK
    ağ/WiFi/BT/USB-OTG üzerinden PDF·PNG·raster basar, diyalog yok). **Sıra: önce hazır paket
    (`expo-brother-printer-sdk`, v0.7.0 MIT) denenir; tutmazsa kendi local modülümüz yazılır**
-   (`apps/mobile/modules/brother-print/`; `expo-dev-client` zaten kurulu). Ortalıktaki bridge
+   (`apps/mobile-customer/modules/brother-print/`; `expo-dev-client` zaten kurulu). Ortalıktaki bridge
    dönemi paketleri (`react-native-brother-printers` vb.) bu projede ÇALIŞMAZ: RN 0.86.2, ve RN
    0.85 Bridge'i koddan çıkardı. **Ölçülmemiş tek şey SDK'nın New Architecture altında bağlanması**
    — bir günlük "iğne deneyi" (boş modül + tek `printLabel` + gerçek 1110NWB) ile ölçülür ve kutu

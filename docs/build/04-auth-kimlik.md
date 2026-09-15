@@ -297,7 +297,7 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
   · Kendi ürettiği iki arıza (04.11 · 07.08 boş kurye ekranları) yine bypass'a eklenen makineyle
     yamanmıştı — `DEV_AUTH_BYPASS_USER_ID` ve layout'un rol düşüşü.
 
-  **MOBİL AYNI BYPASS'I BİLEREK REDDETMİŞTİ** ve gerekçesini ölçmüştü (`apps/mobile/src/lib/auth/
+  **MOBİL AYNI BYPASS'I BİLEREK REDDETMİŞTİ** ve gerekçesini ölçmüştü (`packages/mobile-kit/src/lib/auth/
   dev-login.ts`, 11.08: müşteri jetonuyla `/courier/day` → 403, kurye jetonuyla → 200) —
   *"bypass'ı mobile taşımak, dev'de yakalanabilen yetki hatalarını görünmez kılardı."* Yani kural
   zaten yazılıydı, web onu uygulamamıştı.

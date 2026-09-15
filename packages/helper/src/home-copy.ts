@@ -5,7 +5,7 @@ import { campaignValueOf, type CampaignView } from './campaign-label';
 /*
   VİTRİNİN CÜMLELERİ — native vitrin ile web telefon görünümünün ORTAK kurucuları (14.09).
 
-  Üçü de native vitrinde (`apps/mobile/src/screens/home/home-screen.tsx`) doğdu. Müşterinin telefon
+  Üçü de native vitrinde (`apps/mobile-customer/src/screens/home/home-screen.tsx`) doğdu. Müşterinin telefon
   tasarımı iki yüzeyde aynı olunca (kullanıcı kararı 14.09) web'in telefon görünümü ikinci çağıran
   oldu ve buraya taşındılar: iki kopya bir gün ayrışır, aynı fırsat kartı iki yüzeyde iki ayrı cümle
   söylerdi (CLAUDE §1). Metin `@lezzet/i18n/customer/home`da; bu dosya yalnız hangi cümlenin hangi

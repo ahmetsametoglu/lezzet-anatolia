@@ -828,7 +828,7 @@ Bunlar plandan değil ölçümden çıktı; iş başlamadan önce cevaplanmalı.
 ## 10. Test planı — dört tip, ve bir SESSİZ TUZAK
 
 > Kullanıcı şartı 28.08: *"eklediğin her özelliğin testlerini de beraber gönder."* Test tipleri
-> ölçüldü (`vitest.config.ts` · `playwright.config.ts` · `apps/mobile/jest.config.cjs`).
+> ölçüldü (`vitest.config.ts` · `playwright.config.ts` · `apps/mobile-customer/jest.config.cjs`).
 
 ### 11.1 Dört tip
 
@@ -837,7 +837,7 @@ Bunlar plandan değil ölçümden çıktı; iş başlamadan önce cevaplanmalı.
 | **unit** | vitest `--project unit` | `packages/{domain-core,helper,types,notify,email,i18n,ai,observability,…}` · `apps/web/{app,components}` · `scripts/*.test.ts` + üç DB'siz liste | DB'siz, **paralel**, ~1,3 sn. Şeritlere HER AN açık |
 | **integration** | vitest `--project integration` | `apps/web/lib` · `packages/database` · `packages/application` · `apps/backend` · `apps/mobile-api` | Yerel Supabase, **seri**, kilit altında. `CLAUDE §4b`: şeritlere KAPALI, yalnız commit öncesi tam paket |
 | **e2e** | Playwright, `**/*.smoke.ts` | `e2e/{operations,customer}` · projeler: `ops-setup` · `operations` · `desktop` · `mobile-web` | Teslim noktalarında, sakin pencerede |
-| **jest** | `apps/mobile` | native ekranlar | **Mobil şeridin** işi |
+| **jest** | `apps/mobile-customer` | native ekranlar | **Mobil şeridin** işi |
 
 ### 11.2 ⚠ SESSİZ TUZAK — yeni paketin testi HİÇ KOŞMAZ
 

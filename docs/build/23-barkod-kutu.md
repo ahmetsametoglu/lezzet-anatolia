@@ -109,10 +109,10 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     sözleşme + D1 ekranında "Koliye: X" (yalnız alıcı hesap sahibinden farklıysa; web `parcelName`
     kuralı birebir) + 2 jest. Depo jest 10 suite · 81 test.
 - [x] (23.4) **Kamera taraması (mobil):** `expo-camera` beyanlı girer; tek `onScan` bileşeni
-  (`apps/mobile/src/components/scan/`); mal kabul entegrasyonu — tara → satır bul (koli kodunda
+  (`apps/mobile-operations/src/components/scan/`); mal kabul entegrasyonu — tara → satır bul (koli kodunda
   çarpan kadar öner) → tanınmayan kodda "bu kod hangi ürün?" → `learnCode` · touches:
   `apps/mobile-operations/src/components/scan/scan-sheet.tsx`, `apps/mobile-operations/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,messages.json}`,
-  `apps/mobile-operations/src/lib/api/warehouse.ts`, `apps/mobile/app.config.ts`, `apps/mobile/jest.setup.ts`
+  `apps/mobile-operations/src/lib/api/warehouse.ts`, `apps/mobile-customer/app.config.ts`, `apps/mobile-customer/jest.setup.ts`
   - *Bitti:* gerçek cihazda koli okutulup satırın bulunduğu ve tanınmayan kodun öğretildiği görüldü
   - **Durum (22.08) — YAZILDI, cihaz ölçümü bekliyor.** `expo-camera ~57.0.4` girdi (beyan modül
     dosyasında; app.config'e izin metniyle eklendi — "yalnız kod okutmak için"). `ScanSheet` tek
@@ -165,7 +165,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     doğrulanamaz, sonuç cümlesiyle doğrulanır.
 - [x] (23.5) **İğne deneyi (basım):** `expo-brother-printer-sdk` v0.7.0 + gerçek QL-1110NWB — RN
   0.86/New Architecture altında bağlanma ÖLÇÜLMEMİŞ tek varsayım; tutmazsa
-  `apps/mobile/modules/brother-print/` local modülü. Hiçbir fazı bloklamaz.
+  `apps/mobile-customer/modules/brother-print/` local modülü. Hiçbir fazı bloklamaz.
   - **Durum (22.08) — DENEY TUTTU, iki yazıcıda da kâğıt çıktı.** SDK New Arch dev-client'ına
     bağlandı (config plugin + autolinking, elle native iş yok); `searchNetworkPrinters` iki
     yazıcıyı da buldu (QL-1110NWB → 192.168.1.90 · QL-820NWB → 192.168.1.169 — ağ keşfiyle
@@ -264,7 +264,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   okutulmadan teslim tamamlanmaz) · kurye ekranları · touches:
   `packages/application/src/courier/{load.ts,day.ts,delivery.ts,proof.ts}`,
   `packages/types/src/{entities/courier.schema.ts,contracts/courier-api.schema.ts}`,
-  `apps/mobile-api/src/api/v1/courier.ts`, `apps/mobile/src/screens/courier/*`,
+  `apps/mobile-api/src/api/v1/courier.ts`, `apps/mobile-operations/src/screens/courier/*`,
   `apps/mobile-operations/src/components/scan/scan-sheet.tsx`
   - *Bitti:* çok kutulu sipariş son kutu okutulmadan yolda sayılmadı; kodsuz teslim `boxes_missing`
     ile reddedildi; kapanan teslimin kanıtında okutulan kodlar göründü — entegrasyonda ölçüldü.
@@ -290,7 +290,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
     çizilir** — sinyalin yokluğu ile ölçümün yokluğu karışmasın; Netleşecek 5 böylece kapandı
     (sinyalin yeri: Dikkat sekmesi).
 - [x] (23.10) **Test dalgası — Dalga 1b** (plan: `docs/build/test-dalgasi.md` §5, §6.2). Modül 23 en
-  yeni modül ve yüzeyi hâlâ küçük; testi ucuzken yazılır. `touches: packages/database/src/services/variant-barcode.service.ts, apps/mobile/src/components/scan/**, packages/types/src/entities/variant-barcode.schema.ts`
+  yeni modül ve yüzeyi hâlâ küçük; testi ucuzken yazılır. `touches: packages/database/src/services/variant-barcode.service.ts, apps/mobile-operations/src/components/scan/**, packages/types/src/entities/variant-barcode.schema.ts`
   - *Bitti:* envanterin tamamı yazıldı ve KOŞTU — kilitli tam pakette (25.08) modül 23'ün dokuz
     test dosyası da yeşil: `variant-barcode` 7 · `scan` 6 · `variant-search` 7 · `intake` 27 ·
     `boxes` 14 · `label-svg` 6 · `preparation` 17 · `load` 8 · `barcode-svg` 15.
@@ -331,7 +331,7 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   okutma bir SAYIM değil TANITIMDIR. Kod çözülünce ürün kartı çekmecesi açılır (görsel + ad +
   kaynak künyesi + beklenen), varsayılan adet okutulan birimin miktarı (koli → çarpan, tekil → 1);
   "10 koli geldi" gerçeği adet artırılarak söylenir, satıra ONAYLA yazılır. · touches:
-  ~~`apps/mobile/src/components/operations/qty-slider.tsx`~~ (kaydırıcı 02.09'da söküldü — kullanıcı
+  ~~`apps/mobile-customer/src/components/operations/qty-slider.tsx`~~ (kaydırıcı 02.09'da söküldü — kullanıcı
   kararı, 21.231: adet her yerde kitin sayacı; koli çarpanı öğrenme adımı da ona geçti),
   `apps/mobile-operations/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`,
   `packages/types/src/contracts/warehouse-api.schema.ts`, `packages/application/src/warehouse/{scan.ts,names.ts}`
@@ -571,7 +571,7 @@ sözleşmesini kullanması.
    ve font kontrolüyle birlikte verilir — etiketin içeriğine sunucu karar verdiği için biçim de
    sunucu tarafının kararı.
 3. **Hazır paket mi kendi modülümüz mü?** `expo-brother-printer-sdk` (v0.7.0, MIT) önce denenir;
-   RN 0.86 altında tutmazsa `apps/mobile/modules/brother-print/` local modülü yazılır (kullanıcı
+   RN 0.86 altında tutmazsa `apps/mobile-customer/modules/brother-print/` local modülü yazılır (kullanıcı
    kararı 17.08: ucuzdan başla).
 4. **Kutu kodunun biçimi.** `order.reference_no` OLMAMALI — o müşteriye gösteriliyor; kutu kodu ayrı
    ve tahmin edilemez olmalı, yoksa referansı bilen biri teslim kaydı düşürebilir.
