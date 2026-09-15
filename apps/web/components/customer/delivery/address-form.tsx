@@ -23,84 +23,37 @@ import { ChannelBadge } from './channel-badge';
 import { DeliveryStrip } from './delivery-strip';
 import { useDeliveryPlace } from './place-context';
 import messages from '@lezzet/i18n/customer/address';
-// Ülke adları: yer hapıyla ORTAK kaynak — iki sözlüğe kopyalamak bir gün iki ayrı ad demekti.
+// Ülke adları yer hapıyla ortak sözlükten.
 import placeCopy from './place-messages.json';
 
-/**
- * K35 · Adres formu — **v1 adres penceresinin gövdesi** (13.09, kullanıcı kararı: görünümde birebir,
- * parçalar kitten) ve adres penceresi ile hesap sayfasının ORTAK parçası.
- *
- * Akış v1'in sırasıyla: ülke (Fransa | Almanya — önce ülke) → tek arama alanı → öneri listesi (FR BAN,
- * tarayıcıdan · DE Google Places, sunucudan) → seçilince "Adres doğrulandı" kutusu ve teslim şeridi;
- * öneri çıkmazsa "Bu adresi kayıtlarda bulamadık" → "Adresi elle gireyim" → elle giriş kartı → "Bu
- * adres ne?" (Ev · İş · Diğer + ad) → kapı / daire no → kaydet.
- *
- * ── ADRES DOĞRULAMA İKİ YOLDAN (13.09) ──────────────────────────────────────
- * Öneriden seçilen adres kaynağında doğrulanmıştır (BAN satırı · Google yer detayı) ve noktasıyla
- * gelir. Elle girilen adres KAYDETMEDEN önce doğrulanır — tarama işinin aynı kapısı
- * (`checkAddressAction` → `geocoder().locate`: FR BAN, DE Google Address Validation); bulunursa nokta
- * ve incelik kayda aday olarak gider, bulunamazsa adres yine kaydedilir ve noktasını tarama arar
- * (defter hiçbir hâlde reddetmez — kullanıcı kararı 10.08).
- *
- * ── v1'DEN VERİ FARKLARI ─────────────────────────────────────────────────
- *   · Alıcı adı ve telefon VAR (v1'de yok): ikisi de adresin zorunlu alanı (kullanıcı kararı 22.08);
- *     yeni adreste hesabın künyesiyle dolu açılır (`defaults`).
- *   · "Kuryeye not" YOK: adres tablosunda kolonu yok.
- *   · Almanya önerisinde teslim şekli rozeti YOK: Google satırı posta kodunu ayrı alan olarak vermiyor;
- *     kod seçimle gelir ve cevap doğrulama kutusunda yazılır.
- *   · "Varsayılan yap" ve "fatura adresim" kutuları hesap sayfasının kendi soruları.
- *
- * **Metin kendi sözlüğünden** (`@lezzet/i18n/customer/address` — native adres çekmecesiyle ORTAK, 21.313): form
- * bir sayfaya değil teslimat kitine ait.
- * Hesap sayfası ile adres penceresi aynı metni iki ayrı sözlükte taşıyordu (13.09 kopya bulgusu).
- */
+/*
+  Adres penceresi ile hesap sayfasının ortak formu. Öneriden seçilen adres kaynağında doğrulanmış ve noktasıyla gelir; elle girilen
+  adres kaydetmeden önce doğrulanır, bulunamazsa yine kaydedilir ve noktasını tarama arar, çünkü defter hiçbir adresi reddetmez.
+*/
 
 export interface NewAddressInput {
-  /** "Ev", "İş" — kart başlığı olur; boş bırakılabilir, o zaman şehir başlık olur. */
+  /** Kart başlığı olur; boşsa başlık şehirdir. */
   label?: string;
-  /**
-   * Alıcı: adrese GİDEN kişi, hesabın sahibi olmak zorunda değil (hediye, iş adresi).
-   *
-   * **ZORUNLU oldu** (kullanıcı kararı 22.08 — *"her hâlükârda net bir şekilde bir teslimat kişisi
-   * ve teslimat numarasına ihtiyacımız var"*). Kolaylık ön-doldurmada (`defaults`).
-   */
+  /** Adrese giden kişi, hesap sahibi olmayabilir; kurye kapıda onu sorduğu için zorunlu. */
   recipient: string;
   line1: string;
   line2?: string;
   postalCode: string;
   city: string;
-  /** Teslimat telefonu — `recipient` ile aynı gerekçeyle ZORUNLU (22.08). */
+  /** Kurye kapıda bu numarayı arar; bu yüzden zorunlu. */
   phone: string;
-  /**
-   * Adresin ülkesi — v1'de ÖNCE sorulur (13.09, kullanıcı kararı "önce ülke"): pencerenin ilk satırı
-   * Fransa | Almanya, öneri ve doğrulama o ülkede yapılır. 19.8'in "ülke posta kodundan türer" kuralı
-   * bu formda kalktı; telefonun ülke kodu da buradan gelir.
-   */
+  /** Önce sorulur: öneri ve doğrulama o ülkede yapılır, telefonun ülke kodu da buradan gelir. */
   country?: Country;
-  /**
-   * Seçilen önerinin ya da doğrulamanın KOORDİNATI (11.9 · 13.09) — bir BEYAN değil bir ADAYDIR:
-   * sunucu onu makullük süzgecinden geçirir (`resolveAddressPoint`) ve posta kodu merkezinden çok
-   * uzaksa yazmaz. Süzgeçten düşerse satır tarama kuyruğuna girer. Kaynağıyla gelir (BAN / Google —
-   * `CheckedPoint` künyesi): kaynaksız nokta `ban` sayılıyordu.
-   */
+  /** Beyan değil adaydır: sunucu makullük süzgecinden geçirir, düşerse satır tarama kuyruğuna girer. */
   point?: CheckedPoint;
   makeDefault?: boolean;
-  /**
-   * "Fatura adresim yap" (kullanıcı kararı 08.09) — `makeDefault`ın ikizi, ayrı rol. Yalnız
-   * kurumsal hesabın formunda sorulur (`billingChoice`); tabloda kolonu `is_billing` ve onu da
-   * ayrı bir eylem yönetir (tek işaretli satır kuralı), form yalnız NİYETİ taşır.
-   */
+  /** Yalnız niyet: `is_billing`i ayrı bir eylem yönetir, çünkü hesapta tek işaretli satır olabilir. */
   makeBilling?: boolean;
 }
 
 /**
- * Formun çıktısı → adres alanları. Dönüşüm AÇIK yazılır (yayma ile değil): `NewAddressInput` formun
- * kendi sözleşmesi ve içinde `makeDefault` var — adres tablosunda öyle bir kolon yok, `is_default`
- * var ve onu ayrı bir eylem yönetiyor. Yayarak geçmek, kapının ayıklamasına güvenmek demekti.
- *
- * **Formun yanında durur, çağıranın içinde değil:** hesap sayfası ile adres penceresi aynı formu
- * kullanıyor ve aynı dönüşüme ihtiyaç duyuyor. İki kopya olsaydı biri yeni bir alan öğrenip öteki
- * öğrenmezdi — `recipient` ile `phone`ın bir kez sessizce düşmesi (28.07) tam olarak bu sınıftandı.
+ * Dönüşüm açık yazılır, yayma ile değil: formun `makeDefault` gibi tabloda karşılığı olmayan alanları var. Formun yanında durur ki
+ * iki çağıran aynı dönüşümü kullansın.
  */
 export function toAddressFields(input: NewAddressInput) {
   return {
@@ -110,22 +63,14 @@ export function toAddressFields(input: NewAddressInput) {
     line2: input.line2 ?? null,
     postalCode: input.postalCode,
     city: input.city,
-    /**
-     * ── TELEFON TEK BİÇİME İNDİRİLİYOR (kullanıcı kararı 21.08) ────────────────────────────
-     * Telefon KİMLİK ANAHTARIDIR (`CHANNELS §3`) ve biçimi tutmayan anahtar eşleşmez: WhatsApp
-     * konuşması, kurye araması ve bul-veya-oluştur hep bu numaradan gidiyor. Form ülke kodunu
-     * SORMUYOR (ülke seçili, kod ondan), birleştirme burada yapılır.
-     *
-     * **Çözemezse HAM değeri korur, boşaltmaz:** anlaşılmayan bir numarayı silmek, "yazamadım"ı
-     * "numara yok"a çevirmek olurdu (CLAUDE §1 — ölçülemeyen değer sıfır değildir).
-     */
+    /** Telefon kimlik anahtarıdır ve biçimi tutmayan anahtar eşleşmez; çözülemeyen numara boşaltılmaz, ham hâliyle korunur. */
     phone: normalizePhone(input.phone, input.country ?? 'FR') ?? input.phone.trim(),
-    /* Kolon `not null`: form ülkeyi her zaman taşır (v1 — önce ülke); geri düşüş eski çağıranlar için. */
+    /* Kolon `not null`; geri düşüş ülkesiz çağıran için. */
     country: input.country ?? ('FR' as const),
   };
 }
 
-/** Yeni adresin ön-dolu açılacağı iki alan — `AddressForm.defaults`in şekli. */
+/** Yeni adresin ön-dolu açılacağı iki alan. */
 export interface AddressDefaults {
   recipient: string;
   phone: string;
@@ -134,7 +79,7 @@ export interface AddressDefaults {
 /** Hesabın künyesinden adres varsayılanı; kural iki yüzeyin ortak adres paketinde, çağıranlar buradan okur. */
 export { addressDefaultsOf } from '@lezzet/address';
 
-/** DB satırı → formun beklediği şekil. Düzenlemede alanlar DOLU açılır; boş form yeniden yazdırırdı. */
+/** Düzenlemede alanlar dolu açılır, müşteri adresi yeniden yazmak zorunda kalmaz. */
 export function toFormInput(address: Address): NewAddressInput {
   return {
     label: address.label ?? undefined,
@@ -143,7 +88,7 @@ export function toFormInput(address: Address): NewAddressInput {
     line2: address.line2 ?? undefined,
     postalCode: address.postalCode,
     city: address.city,
-    /** Kayıtlı numara E.164; form ülke içi yazımı gösterir (kod ülkeden). Gidiş-dönüş kayıpsız. */
+    /** Kayıtlı numara E.164; form ülke içi yazımı gösterir, gidiş-dönüş kayıpsızdır. */
     phone: nationalPhone(address.phone, address.country),
     country: address.country,
     makeDefault: address.isDefault,
@@ -153,44 +98,26 @@ export function toFormInput(address: Address): NewAddressInput {
 
 interface AddressFormProps {
   locale: Locale;
-  /** Düzenlemede mevcut değerler; yeni adreste boş. */
   initial?: NewAddressInput;
-  /**
-   * YENİ adresin ön-dolu açılacağı künye — hesabın adı ve numarası (kullanıcı kararı 22.08).
-   * `initial` varsa (düzenleme) BAKILMAZ: kayıtlı alıcının üstüne hesabın adını yazmak, hediye
-   * adresine konmuş bir adı sessizce silmek olurdu.
-   */
+  /** Düzenlemede bakılmaz: kayıtlı alıcının üstüne hesabın adını yazmak hediye adresindeki adı sessizce silerdi. */
   defaults?: AddressDefaults;
-  /**
-   * "Fatura adresim yap" kutusu çizilsin mi — yalnız KURUMSAL hesabın adres kartı `true` geçer
-   * (kullanıcı kararı 08.09). Varsayılan kapalı: formu çağıran her yer bilerek açar.
-   */
+  /** Yalnız kurumsal hesabın kartı açar; varsayılan kapalı ki her çağıran bilerek açsın. */
   billingChoice?: boolean;
   onSave: (input: NewAddressInput) => Promise<void>;
   onCancel: () => void;
-  /**
-   * Kart çerçevesi çizilsin mi (yalnız masaüstü). Satır içi açılan form (hesap sayfası) kendi kartını
-   * çizer; bir PENCERENİN içinde açılan form çizmez: pencere zaten bir kap.
-   */
+  /** Pencerenin içindeki form çerçeve çizmez: pencere zaten bir kap. */
   frame?: boolean;
-  /**
-   * "Bu adresi varsayılan yap" kutusu sorulsun mu. Pencereden eklenen adres ZATEN seçili adres olur
-   * (kaydetmek = seçmek — düğme de "Adresi kaydet ve seç" der); orada kutu cevapsız bir soru olurdu.
-   */
+  /** Pencereden eklenen adres zaten seçili adres olur; orada kutu cevapsız bir soru olurdu. */
   defaultChoice?: boolean;
-  /** Mobil web forku — form bir ÇEKMECENİN içinde çizilir ve ikili satırlar tek sütuna iner (21.08). */
+  /** Mobil webde form çekmecede çizilir ve ikili satırlar tek sütuna iner. */
   compact?: boolean;
-  /**
-   * Kaydın hata cümlesi — ÇAĞIRANIN (sözlüğü onda). Formun içinde, kaydet düğmesinin hemen üstünde
-   * çizilir: pencere de çekmece de aynı yerde gösterir. Önce pencere cümleyi formun ALTINA kendisi
-   * basıyordu ve çekmecede (mobil web) hiç çizilmiyordu (14.09).
-   */
+  /** Cümleyi çağıran kurar; kaydet düğmesinin üstünde çizilir ki pencere ve çekmece aynı yerde göstersin. */
   error?: string | null;
 }
 
 type Kind = AddressLabelKind;
 
-/** Seçilen (doğrulanmış) adres — BAN satırından ya da Google yer detayından; noktasıyla gelir. */
+/** Kaynağında doğrulanmış adres; noktasıyla gelir. */
 interface Picked {
   line1: string;
   postalCode: string;
@@ -211,15 +138,13 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   const t = copy.form;
   const places = placeCopy[locale];
   const { place } = useDeliveryPlace();
-  // Yeni adreste v1 "Ev" seçili açılır; düzenlemede kayıtlı başlıktan çıkarılır.
-  // Kayıtlı başlık → çip: ortak kural (`addressLabelKind`, native çekmeceyle aynı — 21.313).
+  // Yeni adres "Ev" seçili açılır; düzenlemede çip kayıtlı başlıktan çıkarılır.
   const start = initial ? addressLabelKind(initial.label, t) : { kind: 'home' as const, custom: '' };
 
   const [country, setCountry] = useState<Country>(initial?.country ?? place?.country ?? 'FR');
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<Picked | null>(null);
-  // Düzenlemede kayıtlı satır ELLE GİRİŞ kartında açılır: kaynağında doğrulanıp doğrulanmadığını
-  // bu an bilmiyoruz; "Adres doğrulandı" demek bilmediğimizi söylemek olurdu. Değiştirmek için arama açık.
+  // Düzenlemede kayıtlı satır elle giriş kartında açılır: doğrulanıp doğrulanmadığını bilmiyoruz, "doğrulandı" demek uydurma olurdu.
   const [manual, setManual] = useState<ManualDraft | null>(initial ? { line1: initial.line1, postalCode: initial.postalCode, city: initial.city } : null);
   const [answer, setAnswer] = useState<DeliveryPlace | null>(null);
   const [kind, setKind] = useState<Kind>(start.kind);
@@ -230,7 +155,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   const [makeDefault, setMakeDefault] = useState(initial?.makeDefault ?? false);
   const [makeBilling, setMakeBilling] = useState(initial?.makeBilling ?? false);
   const [busy, setBusy] = useState(false);
-  /** Google oturumu: yazma boyunca aynı jeton, seçimle biter (oturum kademesinden ücret — paket künyesi). */
+  /** Google ücreti oturumdan keser: jeton yazma boyunca aynı, seçimle biter. */
   const [sessionToken, setSessionToken] = useState(() => crypto.randomUUID());
 
   const term = query.trim();
@@ -239,21 +164,14 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   const google = useGermanAddressSearch(query, { enabled: searchOn && country === 'DE', sessionToken });
   const found = country === 'FR' ? ban : google;
   const throttled = country === 'FR' && ban.throttled;
-  // "Bulamadık" yalnız cevap BU sorgu için geldiyse — yoksa yazarken kutu yanıp sönerdi.
+  // "Bulamadık" yalnız cevap bu sorgu için geldiyse; yoksa yazarken kutu yanıp sönerdi.
   const notFound = searchOn && manual === null && term.length >= MIN_QUERY_LENGTH && found.term === term && found.suggestions.length === 0 && !throttled;
-  /**
-   * Yazılanda KAPI NUMARASI yok (posta kodu çıkarılınca rakam kalmıyor). Öneriler yalnız kapı düzeyinde
-   * (kullanıcı kararı 14.09) ve numarasız sokak 0 sonuç veriyor: "bulamadık" demek var olan bir sokağı
-   * yok saymak olurdu — kutu "kapı numarasını da yazın" der. Elle giriş yolu ikisinde de açık.
-   */
+  /** Öneriler yalnız kapı düzeyinde olduğundan numarasız sokak sonuç vermez; "bulamadık" yerine "kapı numarasını da yazın" denir. */
   const lacksDoor = !hasHouseNumber(term);
 
   /**
-   * ── ÖNERİLER MENÜ OLARAK AÇILIR (masaüstü · kullanıcı isteği 14.09) ──────────────────────────
-   * Liste akışta dururken pencere her harfte uzayıp kısalıyordu; artık arama kutusunun altında formun
-   * ÜSTÜNE açılıyor (`SuggestionList floating`). Yazınca ve alana basınca açılır; dışarı basınca,
-   * Escape'le ya da odak kutudan çıkınca kapanır — Tab'la örtülen alana geçen müşterinin önünde menü
-   * kalmasın. Mobil web çekmecesinde liste akışta kalır (tasarım kaynağı native uygulama, 08.58).
+   * Masaüstünde öneriler menü olarak açılır, yoksa pencere her harfte uzayıp kısalırdı; odak kutudan çıkınca kapanır ki Tab'la
+   * geçenin önünde kalmasın. Mobil webde liste akışta kalır.
    */
   const floating = !compact;
   const [menuOpen, setMenuOpen] = useState(true);
@@ -264,13 +182,8 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   useDismiss(searchBox, menuVisible, () => setMenuOpen(false));
 
   /**
-   * Teslimat cevabı yerin ORTAK çözümünden (`resolvePlaceAction` — hapın da sorduğu motor), ama YALNIZ
-   * SORULUR: seçim sitenin yerini değiştirmez. Yer adres KAYDEDİLİNCE değişir ("Adresi kaydet ve seç");
-   * vazgeçen müşterinin yeri yerinde kalır.
-   *
-   * `setPostalCode` burada kullanılmaz: o kapı cevabı sitenin yeri olarak da yazar (çerez + tazeleme).
-   * Adressiz müşteride ("+ Adres ekle") öneri seçmek yeri kayıttan önce değiştiriyordu; sepet yer
-   * değişince yeniden okunuyor ve sepette açılan bu pencere kapanıyordu (yaşandı 14.09).
+   * Teslimat cevabı yalnız sorulur, sitenin yeri değişmez: yer adres kaydedilince değişir, yoksa sepette açılan bu pencere yer
+   * değişince kapanırdı.
    */
   const answerFor = async (code: string, where: Country) => {
     const { data } = await resolvePlaceAction(code, where).catch(() => ({ data: null }));
@@ -288,7 +201,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   const pickFrench = (id: string) => {
     const row = ban.suggestions.find((suggestion) => suggestion.id === id);
     if (!row) return;
-    // Nokta SEÇİLEN satırdan: müşterinin gözüyle onayladığı kapı, ikinci bir çağrı gerekmez.
+    // Nokta seçilen satırdan: müşterinin onayladığı kapı, ikinci çağrı gerekmez.
     choose({ line1: addressLineOf(row), postalCode: row.postalCode, city: row.city, country: 'FR', point: { lat: row.latitude, lng: row.longitude, precision: row.kind, source: 'ban' } });
   };
 
@@ -298,8 +211,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
     // Oturum seçimle biter; sonraki yazma yeni bir oturumdur.
     setSessionToken(crypto.randomUUID());
     setBusy(false);
-    // Kod ya da şehir gelmediyse (Google bazı sonuçlarda vermiyor — paket künyesi) seçim yarımdır:
-    // bilinenle elle giriş kartı açılır, müşteri tamamlar; kaydederken yine doğrulanır.
+    // Google kodu ya da şehri vermediyse seçim yarımdır: bilinenle elle giriş kartı açılır, kayıtta yine doğrulanır.
     if (!resolved || !resolved.postalCode || !resolved.city) {
       setManual({ line1: resolved?.line1 ?? term, postalCode: resolved?.postalCode ?? '', city: resolved?.city ?? '' });
       return;
@@ -309,12 +221,12 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
       postalCode: resolved.postalCode,
       city: resolved.city,
       country: 'DE',
-      // Nokta Google'ın yer detayından: kaynak `google` — 30 gün kuralı bu etikete bakıyor.
+      // Kaynak `google`: 30 gün saklama kuralı bu etikete bakar.
       point: { lat: resolved.latitude, lng: resolved.longitude, precision: resolved.precision, source: 'google' },
     });
   };
 
-  // Ülke değişince arama ve seçim düşer (v1): öneri ve doğrulama o ülkede yapılır.
+  // Ülke değişince arama ve seçim düşer: öneri ve doğrulama o ülkede yapılır.
   const changeCountry = (next: Country) => {
     if (next === country) return;
     setCountry(next);
@@ -325,19 +237,16 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
 
   const label = kind === 'home' ? t.kindHome : kind === 'work' ? t.kindWork : custom.trim() || undefined;
   const manualReady = manual !== null && manual.line1.trim() !== '' && isValidPostalCode(manual.postalCode) && manual.city.trim() !== '';
-  // Alıcı ve telefon olmadan kurye kapıya gidemez; sokak ve kod olmadan adres adres değildir (22.08).
+  // Alıcı ve telefon olmadan kurye kapıya gidemez; sokak ve kod olmadan adres adres değildir.
   const complete = (picked !== null || manualReady) && recipient.trim() !== '' && phone.trim() !== '';
 
   const save = async () => {
     const base = picked ?? (manual && manualReady ? { line1: manual.line1.trim(), postalCode: manual.postalCode, city: manual.city.trim(), country } : null);
     if (!base || !complete) return;
     setBusy(true);
-    /* Düğme HER HÂLDE geri açılır (`finally`). Kayıt çağrısı dönmediğinde — sunucuya ulaşılamadı,
-       bağlantı koptu — düğme kilitli, pencere açık ve ekranda tek cümle olmadan kalıyordu (yaşandı
-       14.09: dev sunucusu yeniden başlarken; kayıt sunucuya hiç ulaşmadı). Cümleyi çağıran kurar
-       (`error`); reddi yakalamak da onun işi — form yalnız kilidi bırakır. */
+    /* Düğme her hâlde geri açılır; cümleyi ve reddi çağıran yönetir, form yalnız kilidi bırakır. */
     try {
-      // Elle girilen adres kaydetmeden önce doğrulanır (künye); seçilen öneri noktasını zaten taşıyor.
+      // Elle girilen adres kaydetmeden önce doğrulanır; seçilen öneri noktasını zaten taşıyor.
       const point = picked?.point ?? (await checkAddressAction({ line1: base.line1, postalCode: base.postalCode, city: base.city, country: base.country }).catch(() => null)) ?? undefined;
       await onSave({
         label,
@@ -382,7 +291,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           onSelect={(id) => void pickGerman(id)}
           label={t.suggestLabel}
           icon={pin}
-          // Google önerisi haritasız gösterildiğinde logo ZORUNLU (Places kullanım koşulları).
+          // Google önerisi haritasız gösterildiğinde logo zorunlu (Places kullanım koşulları).
           footnote={<img src="/attribution/google-maps.svg" alt="Google Maps" width={78} height={14} className="block" />}
           anchorRef={floating ? searchBox : undefined}
         />
@@ -396,10 +305,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
     </Button>
   );
 
-  /**
-   * Eylem satırı — v1: ince ayraç, solda "Vazgeç" (sessiz metin), sağda kaydet. **Çekmecede "Vazgeç"
-   * YOK** (kullanıcı kararı 21.08): çekmece zaten üç kapanış yolu sunuyor (✕, örtü, Escape).
-   */
+  /** Çekmecede "Vazgeç" yok: çekmecenin zaten üç kapanış yolu var (✕, örtü, Escape). */
   const actions = compact ? (
     saveButton
   ) : (
@@ -414,7 +320,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   const body = (
     <div className={frame && !compact ? cardClass({ className: 'w-full' }) : 'w-full'}>
       <div className="flex flex-col gap-4">
-        {/* Önce ülke (v1): öneri ve doğrulama seçilen ülkede yapılır. */}
+        {/* Önce ülke: öneri ve doğrulama seçilen ülkede yapılır. */}
         <div className="flex gap-2">
           {CountryEnum.options.map((code) => (
             <ChoiceChip
@@ -427,14 +333,13 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           ))}
         </div>
 
-        {/* Arama kutusu — menü bu kutunun altına açılır (ekrana sabit, yeri kutudan ölçülür). Menü DOM'da kutunun
-            İÇİNDE: Tab alandan satırlara geçer ve "dışarı basınca kapan" kutuyu kapsar. */}
+        {/* Menü DOM'da kutunun içinde: Tab alandan satırlara geçer ve "dışarı basınca kapan" kutuyu kapsar. */}
         <div
           ref={searchBox}
           className="flex flex-col gap-2"
           onKeyDown={(e) => {
-            // Menü açıkken Escape YALNIZ menüyü kapatır. Pencere Escape'i belgede dinliyor ve React'in kökü de
-            // belgede: `stopPropagation` aynı düğümdeki pencere dinleyicisini durdurmaz, bütün pencere kapanırdı.
+            // Menü açıkken Escape yalnız menüyü kapatır. Pencere Escape'i belgede dinliyor ve `stopPropagation` aynı düğümdeki
+            // dinleyiciyi durdurmaz, bütün pencere kapanırdı.
             if (!menuVisible || e.key !== 'Escape') return;
             e.stopPropagation();
             e.nativeEvent.stopImmediatePropagation();
@@ -455,13 +360,11 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
               setAnswer(null);
               setMenuOpen(true);
             }}
-            // Kapanan menü alana basınca geri gelir; odağın alana dönmesi açmaz (Escape odağı buraya getirir).
+            // Kapanan menü alana basınca geri gelir; odağın alana dönmesi açmaz, Escape odağı buraya getirir.
             onClick={() => setMenuOpen(true)}
             placeholder={country === 'DE' ? t.searchPlaceholderDE : t.searchPlaceholderFR}
             icon={<Icon name="search" size={18} />}
-            /* Tarayıcının kayıtlı adres önerisi SOKAK satırını doldursun (kullanıcı bulgusu 14.09): `off`u
-               Chrome adres alanlarında yok sayıyor, etiketteki "posta kodu" yüzünden alanı posta kodu
-               sanıp kod öneriyordu. Açık jeton sezgiyi ezer; doldurulan satır öneri aramasını da başlatır. */
+            /* Chrome adres alanında `off`u yok sayıp etiketteki "posta kodu" yüzünden kod öneriyordu; açık jeton bu sezgiyi ezer. */
             autoComplete="address-line1"
           />
           {searchOn && term.length > 0 && term.length < MIN_QUERY_LENGTH && (
@@ -470,9 +373,9 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           {floating && suggestionLists}
         </div>
 
-        {/* Mobil webde liste akışta, kutunun ALTINDA — önceki yerleşimin aynısı. */}
+        {/* Mobil webde liste akışta, kutunun altında. */}
         {!floating && suggestionLists}
-        {/* Kota doldu (429): tek satır söylenir ve BİTER — elle giriş açık; bir hata değil, kırmızı değil. */}
+        {/* Kota doluluğu hata değildir: tek satır söylenir, elle giriş açık kalır. */}
         {searchOn && throttled && <span className="font-sans text-note leading-relaxed text-body">{t.suggestBusy}</span>}
 
         {notFound && (
@@ -588,7 +491,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           )}
         </div>
 
-        {/* v1'in kapı satırı; kurye notunun yerinde alıcı adı (kolon zorunlu, not kolonu yok — künye). */}
+        {/* Kurye notu için kolon yok; o yerde alıcı adı durur. */}
         <div className={compact ? 'flex flex-col gap-2.5' : 'grid grid-cols-[180px_1fr] gap-2.5'}>
           <FormInputField
             hideLabel
@@ -609,7 +512,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
             name="recipient"
           />
         </div>
-        {/* Numara ülke içi yazılır; kod seçili ülkeden gelir ve kayıtta birleştirilir (`toAddressFields`). */}
+        {/* Numara ülke içi yazılır; kod seçili ülkeden gelir ve kayıtta birleştirilir. */}
         <FormInputField
           hideLabel
           label={t.phone}
@@ -633,7 +536,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
           </label>
         )}
 
-        {/* İkinci rol AYRI kutu (08.09): "malı nereye götürelim" ile "fatura nereye kesilecek" iki soru. */}
+        {/* Ayrı kutu: "mal nereye" ile "fatura nereye" iki ayrı soru. */}
         {billingChoice && (
           <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
             <input
@@ -657,11 +560,7 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
     </div>
   );
 
-  /**
-   * ── ÇEKMECE KARARI FORMUN KENDİSİNDE, ÇAĞIRANLARDA DEĞİL (kullanıcı kararı 21.08) ────────────
-   * Sarmalamayı çağıranlara bıraksaydık aynı `Dialog` kurulumu her çağıranda yazılırdı. Çağıran tek
-   * bir şey söyler: `compact`. **`onCancel` çekmecenin de kapanışıdır** — ✕, örtü ve Escape oraya bağlı.
-   */
+  /** Çekmece kararı formda, çağıranda değil: yoksa aynı `Dialog` kurulumu her çağıranda yazılırdı. `onCancel` çekmecenin de kapanışıdır. */
   if (!compact) return body;
   return (
     <Dialog
