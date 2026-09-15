@@ -2995,6 +2995,12 @@ yok; ek çizim istenmedi (`15.32`).
 - **Listelerde tek düğme (15.33, 15.09):** geri çağırma penceresi, teslimat tabloları (ikon) ve yorum kartında
   "Mesaj yaz". Kanal düğmeleri tek müşterili kartta kalır; listede satır başına kanal okumak otuz sunucu turu olurdu
   — tek düğme basınca okur ve müşterinin en son yazdığı kanalı açar. Çizimlerde bu düğmeler yok; bilinçli ek.
+- **"Gelen mesaj işle" yok (15.36, kullanıcı kararı 15.09):** elle mesaj kaydı kalktı — operatörün "gelen" diye yazdığı
+  satır müşterinin söylemediği bir cümle olabilirdi. Yeni çizimin "⋯" menüsündeki aynı adlı öğe ise yapay zekâ özeti;
+  o ayrı bir özellik ve yazılmadı.
+- **Messenger/Instagram'da 24 saat son değil (15.37, kullanıcı kararı 15.09):** insan temsilci olarak 7 güne kadar
+  yazılır; kutu açık kalır, rozet kalan günü gösterir. Yeni çizimin "24 saat geçti — serbest mesaja kapalı" cümleleri
+  bilinçli olarak alınmadı (Meta kuralı ve gönderim kapısı 7 gün).
 
 ## Native adres çekmecesi tasarımda — tek adres kapısı ve bilinçli farklar (15.09, kullanıcı kararları 13.09 · 14.09)
 

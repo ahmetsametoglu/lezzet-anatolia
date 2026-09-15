@@ -36,6 +36,7 @@ import {
   WINDOW_NOTE,
   WINDOW_TONE,
 } from './social-labels';
+import { humanCanReply } from './social-read';
 import type { ConversationDetailView, InboxRowView, MessageView, NoteView } from './social-types';
 
 // Sosyal gelen kutusunun PANOLARI (15.5 · üç kanal 15.15) — sol kuyruk satırı, orta sohbet, sağ
@@ -101,7 +102,7 @@ export function InboxEmpty({ filtered }: { filtered: boolean }) {
       description={
         filtered
           ? 'Süzgeçle eşleşen konuşma kalmadı. Tümü çipleriyle bütün konuşmalara dönebilirsiniz.'
-          : 'Müşteri WhatsApp’tan yazdığında sohbeti buraya işleyin — üstteki "Gelen DM işle" düğmesi numaradan konuşmayı açar. Messenger ve Instagram sohbetleri canlı bağlantıyla (webhook) düşecek.'
+          : 'Müşteri WhatsApp, Messenger ya da Instagram’dan yazdığında sohbet buraya kendiliğinden düşer.'
       }
     />
   );
@@ -289,7 +290,6 @@ interface ConversationPaneProps {
   detail: ConversationDetailView;
   busy: boolean;
   error: string | null;
-  onIncoming: () => void;
   onSendReply: (text: string) => Promise<boolean>;
   /** Yürütücü modu (16.08) — Devral da buradan geçer (`mode='human'`). */
   onMode: (mode: TicketHandler) => void;
@@ -299,7 +299,7 @@ interface ConversationPaneProps {
   onSuggestDraft: () => void;
 }
 
-export function ConversationPane({ detail, busy, error, onIncoming, onSendReply, onMode, onConsumeDraft, onSuggestDraft }: ConversationPaneProps) {
+export function ConversationPane({ detail, busy, error, onSendReply, onMode, onConsumeDraft, onSuggestDraft }: ConversationPaneProps) {
   // "Kutuya taşı"nın taşıdığı metin — nesne kimliği tetikleyicidir (talep ekranıyla aynı desen).
   const [prefill, setPrefill] = useState<{ text: string } | null>(null);
 
@@ -348,9 +348,6 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
         <Badge tone={WINDOW_TONE[detail.window.tone]}>{detail.window.chip}</Badge>
         {/* Müşterinin dili (15.28) — operatör Türkçe yazar, giden bu dile çevrilir; dayanağı altlıkta. */}
         <Badge tone="slate">{LANGUAGE_LABELS[detail.language.language]}</Badge>
-        <Button variant="secondary" size="sm" className="flex-none whitespace-nowrap" onClick={onIncoming}>
-          Gelen mesaj işle
-        </Button>
         {/* SİPARİŞ KÖPRÜSÜ (15.4) — YALNIZ kimlik çözülmüşken: köprü müşteri önseçili girişi açar,
             kimliksiz sohbette müşteri seçimi boş gelirdi. Bağ tek parametre taşıyor; KAYNAĞI sunucu
             konuşmadan çözüyor (`orderSourceOfConversation`) — kanalı adrese yazdırmak raporlardaki
@@ -369,7 +366,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
         <div className="flex min-h-0 flex-1 items-center justify-center">
           <EmptyState
             title="Bu konuşmada henüz mesaj yok"
-            description="Konuşma açıldı ama defterine hiç mesaj işlenmedi."
+            description="Konuşma açıldı; müşteriden ya da bizden henüz mesaj yok."
           />
         </div>
       ) : (
@@ -388,7 +385,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
         <div className="flex flex-none flex-col border-t border-ops-line bg-ops-card px-5 pt-3">
           {detail.aiDraft ? (
             <AiDraftCard draft={detail.aiDraft}>
-              {detail.window.state === 'open' ? (
+              {humanCanReply(detail.window) ? (
                 <Button
                   size="sm"
                   variant="violet"
@@ -466,8 +463,11 @@ interface ReplyBoxProps {
  * bir yalana döndü: operatör cevabı yazıyor, satır deftere düşüyor, müşteriye HİÇBİR ŞEY gitmiyor.
  * Şimdi düğme gerçekten gönderiyor ve gönderemezse SEBEBİNİ söylüyor (`SEND_REFUSAL`).
  *
- * **GELEN mesaj burada işlenmez** — o iş "Gelen mesaj işle" penceresinin, çünkü gelen mesaj
- * pencereyi AÇAN olaydır ve alınma anını ister.
+ * **GELEN mesaj yalnız kanaldan gelir** (webhook). Elle kaydı 15.36'da kalktı (kullanıcı kararı 15.09):
+ * operatörün yazdığı bir "gelen" satır, müşterinin söylemediği bir cümleyi deftere onun ağzından yazabilirdi.
+ *
+ * **Messenger/Instagram'da kutu 7 güne kadar açık (15.37):** 24 saat dolunca insan temsilci süresi başlar;
+ * karar `humanCanReply`de, gönderim kapısının aynı kuralı (yapay zekâ bu sürede yazamaz).
  */
 export function ReplyBox({ source, window: win, language, busy, error, prefill, onSendReply }: ReplyBoxProps) {
   const [text, setText] = useState('');
@@ -494,7 +494,7 @@ export function ReplyBox({ source, window: win, language, busy, error, prefill, 
     if (await onSendReply(text)) setText('');
   };
 
-  if (win.state !== 'open') {
+  if (!humanCanReply(win)) {
     return (
       <div className="flex flex-none border-t border-ops-line bg-ops-card px-5 py-3">
         <div className="flex w-full items-center gap-2.5 rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3.5 py-2.5">
@@ -526,7 +526,9 @@ export function ReplyBox({ source, window: win, language, busy, error, prefill, 
           <span className="font-semibold text-ops-red">{error}</span>
         ) : (
           <>
-            {WINDOW_NOTE[source].open} {win.chip} kaldı · bu süre içinde cevap ücretsizdir.
+            {win.state === 'human'
+              ? `${WINDOW_NOTE[source].human} ${win.chip} kaldı · yapay zekâ bu sürede yazamaz.`
+              : `${WINDOW_NOTE[source].open} ${win.chip} kaldı · bu süre içinde cevap ücretsizdir.`}
           </>
         )}
       </span>

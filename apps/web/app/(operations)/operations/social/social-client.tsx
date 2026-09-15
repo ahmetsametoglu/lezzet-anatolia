@@ -17,7 +17,6 @@ import {
 import { AnchorDialog } from './anchor-dialog';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
 import { LinkCustomerDialog } from './link-customer-dialog';
-import { ManualDmDialog } from './manual-dm-dialog';
 import { SocialDesktop } from './social.desktop';
 import { socialUrl, type SocialChannelKey, type SocialFilterKey, type SocialUrlState } from './social-url';
 import type { InboxRowView, SocialData } from './social-types';
@@ -72,7 +71,6 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
    * sohbetin devamı (anahtar kilitli, kanal-nötr). İki ayrı bayrak tutmak, ikisinin aynı anda açık
    * olabildiği bir hâl üretirdi — üstelik pencere zaten aynı pencere.
    */
-  const [dmMode, setDmMode] = useState<'new' | 'follow' | null>(null);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   // Kimlik çapası penceresi (04.10 · 14.09) — panoda yalnız durum satırı; kutu ve gerekçe pencerede.
@@ -143,8 +141,6 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
     onSuggestDraft: () => {
       if (detail) void run(() => suggestConversationDraftAction(detail.id));
     },
-    onIncoming: () => setDmMode('follow'),
-    onNewDm: () => setDmMode('new'),
     onNewTicket: () => setTicketOpen(true),
     onLinkCustomer: () => setLinkOpen(true),
     /** İzin kaydı (15.12) — yazma sarmalından geçer: hata görünür, başarıda sunucu yeniden okunur. */
@@ -170,25 +166,6 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
   return (
     <>
       <SocialDesktop {...view} />
-
-      {dmMode ? (
-        <ManualDmDialog
-          // Devam kapısı sohbeti KİMLİĞİYLE alır, operatör anahtar yazmaz — ve yazamaz da:
-          // değiştirilebilir olsaydı mesaj farkında olmadan başka birinin sohbetine düşerdi.
-          existing={
-            dmMode === 'follow' && detail
-              ? { conversationId: detail.id, title: detail.title, source: detail.source }
-              : undefined
-          }
-          onClose={() => setDmMode(null)}
-          onOpened={(conversationId) => {
-            setDmMode(null);
-            // İşlenen sohbet AÇILIR: operatör onu okumak için buraya geldi, kuyrukta aramamalı.
-            go({ c: conversationId });
-            router.refresh();
-          }}
-        />
-      ) : null}
 
       {/* Bağlama penceresi YALNIZ kimliksiz sohbette açılır — bağı DEĞİŞTİRME yolu değil, KURMA
           yolu (15.16). Dolu bağı değiştirmek bir birleştirme kararıdır ve Müşteriler ekranının

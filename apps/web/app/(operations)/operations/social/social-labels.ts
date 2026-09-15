@@ -93,19 +93,22 @@ export const WINDOW_NOTE: Record<ConversationSource, Record<WindowView['state'],
     // Açık hâlin cümlesi kalan süreyle TAMAMLANIR (çizim: *"Cevap süresi açık · 23 saat kaldı"*),
     // o yüzden burada nokta yok — süreyi ekleyen yer altlığın kendisi.
     open: 'Cevap süresi açık ·',
+    // WhatsApp'ta insan temsilci süresi YOK — motor bu hâli bu kanalda üretmez; tip bütünlüğü için cümle.
+    human: 'Cevap süresi doldu — WhatsApp\'ta insan temsilci istisnası yok; yalnız onaylı kalıp mesaj gider.',
     closed: 'Cevap süresi doldu — serbest mesaj gönderilemez. Yalnız onaylı kalıp mesaj (ücretli) gider.',
     never: 'Müşteri bize hiç yazmadı — pencere hiç açılmadı. Kalıp mesaj bile ancak pazarlama izniyle gider.',
   },
+  // Messenger/Instagram (15.37): 24 saat dolunca insan temsilci süresi başlar — kutu açık, cümle süreyle tamamlanır.
   messenger: {
     open: 'Cevap süresi açık ·',
-    closed:
-      'Standart 24 saatlik süre doldu — cevap 7 güne kadar yalnız insan-temsilci kuralıyla gidebilir (ücret yok).',
+    human: 'Standart 24 saat doldu — insan temsilci olarak yazabilirsiniz ·',
+    closed: '7 günlük insan temsilci süresi de doldu — Messenger\'a mesaj gönderilemez; müşterinin yeniden yazması gerekir.',
     never: 'Müşteri henüz yazmadı — Messenger sohbetini her zaman müşteri başlatır.',
   },
   instagram: {
     open: 'Cevap süresi açık ·',
-    closed:
-      'Standart 24 saatlik süre doldu — cevap 7 güne kadar yalnız insan-temsilci kuralıyla gidebilir (ücret yok).',
+    human: 'Standart 24 saat doldu — insan temsilci olarak yazabilirsiniz ·',
+    closed: '7 günlük insan temsilci süresi de doldu — Instagram\'a mesaj gönderilemez; müşterinin yeniden yazması gerekir.',
     never: 'Müşteri henüz yazmadı — Instagram sohbetini her zaman müşteri başlatır.',
   },
 };

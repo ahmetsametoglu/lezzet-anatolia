@@ -2,7 +2,7 @@
 
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
 import { handlerOptions } from '@/components/operation/ui/ai-handling';
-import { Button } from '@/components/operation/ui/button';
+import { humanCanReply } from './social-read';
 import { Chip } from '@/components/operation/ui/chip';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { FilterBar, QueuePane } from '@/components/operation/ui/queue-pane';
@@ -43,8 +43,6 @@ export function SocialDesktop({
   onDefaultMode,
   onConsumeDraft,
   onSuggestDraft,
-  onIncoming,
-  onNewDm,
   onNewTicket,
   onLinkCustomer,
   onOptIn,
@@ -65,9 +63,6 @@ export function SocialDesktop({
             anahtarı sohbet panosunda ve bu ayrım cümleyle söyleniyor. */}
         <span className="font-ops-body text-ops-micro text-ops-faint">Yeni sohbet:</span>
         <MultiToggle size="sm" label="Yeni sohbetin yürütücüsü" value={data.defaultHandler} options={handlerOptions(busy)} onChange={onDefaultMode} />
-        <Button variant="dark" size="sm" onClick={onNewDm}>
-          + Gelen DM işle
-        </Button>
       </PageHeader>
 
       {/* İki çip ekseni tek şeritte, ayraçla: durum (Tümü/Cevap bekliyor) ve kanal. Eksenler
@@ -112,7 +107,6 @@ export function SocialDesktop({
               detail={data.detail}
               busy={busy}
               error={error}
-              onIncoming={onIncoming}
               onSendReply={onSendReply}
               onMode={onMode}
               onConsumeDraft={onConsumeDraft}
@@ -127,7 +121,7 @@ export function SocialDesktop({
               consent={data.detail.consent}
               anchor={data.detail.anchor}
               // Cevap kutusuyla AYNI ölçüt: kutu yalnız pencere açıkken çizilir, sohbete giden bağlantılar da.
-              canMessage={data.detail.window.state === 'open'}
+              canMessage={humanCanReply(data.detail.window)}
               busy={busy}
               onNewTicket={onNewTicket}
               onLinkCustomer={onLinkCustomer}

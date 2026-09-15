@@ -3,6 +3,7 @@ import type { ConversationInboxRow } from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
 import {
   consentStateOf,
+  humanCanReply,
   previewOf,
   remainingLabel,
   toInboxRows,
@@ -93,28 +94,52 @@ describe('toWindowView', () => {
   it('damga yoksa "hiç açılmadı" — kapanmışla AYNI ŞEY DEĞİL', () => {
     // İkisi de "serbest mesaj gönderemezsin"e düşer ama biri kaçırılmış fırsat, öteki kurulmamış
     // ilişkidir; tek kovaya atmak operatöre yanlış eylemi önerirdi.
-    expect(toWindowView(null, NOW)).toEqual({ state: 'never', chip: '—', tone: 'idle' });
+    expect(toWindowView(null, NOW, 'whatsapp')).toEqual({ state: 'never', chip: '—', tone: 'idle' });
   });
 
   it('süresi geçmiş damga kapalıdır', () => {
     const past = new Date(NOW.getTime() - 60_000).toISOString();
-    expect(toWindowView(past, NOW)).toEqual({ state: 'closed', chip: 'kapalı', tone: 'closed' });
+    expect(toWindowView(past, NOW, 'whatsapp')).toEqual({ state: 'closed', chip: 'kapalı', tone: 'closed' });
   });
 
   it('bol süre kalan pencere olive, eşiğin altına düşen amber', () => {
     const wide = new Date(NOW.getTime() + 20 * 60 * 60 * 1000).toISOString();
-    expect(toWindowView(wide, NOW)).toMatchObject({ state: 'open', tone: 'open', chip: '20 sa' });
+    expect(toWindowView(wide, NOW, 'whatsapp')).toMatchObject({ state: 'open', tone: 'open', chip: '20 sa' });
 
     const tight = new Date(NOW.getTime() + WINDOW_SOON_MS - 60_000).toISOString();
-    expect(toWindowView(tight, NOW)).toMatchObject({ state: 'open', tone: 'soon' });
+    expect(toWindowView(tight, NOW, 'whatsapp')).toMatchObject({ state: 'open', tone: 'soon' });
   });
 
   it('eşiğin tam üstünde henüz amber DEĞİL, tam üstündeki dakika sınırın kendisidir', () => {
     const atThreshold = new Date(NOW.getTime() + WINDOW_SOON_MS).toISOString();
-    expect(toWindowView(atThreshold, NOW).tone).toBe('soon');
+    expect(toWindowView(atThreshold, NOW, 'whatsapp').tone).toBe('soon');
 
     const justAbove = new Date(NOW.getTime() + WINDOW_SOON_MS + 60_000).toISOString();
-    expect(toWindowView(justAbove, NOW).tone).toBe('open');
+    expect(toWindowView(justAbove, NOW, 'whatsapp').tone).toBe('open');
+  });
+
+  it('Messenger/Instagram: 24 saat dolunca 7 güne kadar insan temsilci süresi — kutu açık (15.37)', () => {
+    // Pencere gelen mesajdan 24 saat sonra biter: 6 saat önce bitmiş = müşteri 30 saat önce yazmış.
+    const closed6hAgo = new Date(NOW.getTime() - 6 * 60 * 60 * 1000).toISOString();
+    expect(toWindowView(closed6hAgo, NOW, 'messenger')).toEqual({ state: 'human', chip: '5 gün', tone: 'soon' });
+    expect(toWindowView(closed6hAgo, NOW, 'instagram').state).toBe('human');
+    // WhatsApp'ta insan temsilci istisnası yok — aynı an orada kapalıdır.
+    expect(toWindowView(closed6hAgo, NOW, 'whatsapp').state).toBe('closed');
+  });
+
+  it('7 gün de dolunca Messenger/Instagram kapalıdır', () => {
+    // Pencere 7 gün önce bitmiş = müşteri 8 gün önce yazmış.
+    const closed7dAgo = new Date(NOW.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    expect(toWindowView(closed7dAgo, NOW, 'messenger')).toEqual({ state: 'closed', chip: 'kapalı', tone: 'closed' });
+  });
+});
+
+describe('humanCanReply — insan operatör şimdi yazabilir mi (15.37)', () => {
+  it('açık pencere ve insan temsilci süresi evet; kapalı ve hiç açılmamış hayır', () => {
+    expect(humanCanReply({ state: 'open', chip: '20 sa', tone: 'open' })).toBe(true);
+    expect(humanCanReply({ state: 'human', chip: '5 gün', tone: 'soon' })).toBe(true);
+    expect(humanCanReply({ state: 'closed', chip: 'kapalı', tone: 'closed' })).toBe(false);
+    expect(humanCanReply({ state: 'never', chip: '—', tone: 'idle' })).toBe(false);
   });
 });
 
@@ -130,6 +155,11 @@ describe('remainingLabel', () => {
 
   it('bir saatten fazlası saat cinsinden', () => {
     expect(remainingLabel(3 * 60 * 60_000)).toBe('3 sa');
+  });
+
+  it('bir günü AŞAN süre gün cinsinden (insan temsilci süresi); tam 24 saat hâlâ saat', () => {
+    expect(remainingLabel(30 * 60 * 60_000)).toBe('1 gün');
+    expect(remainingLabel(24 * 60 * 60_000)).toBe('24 sa');
   });
 });
 

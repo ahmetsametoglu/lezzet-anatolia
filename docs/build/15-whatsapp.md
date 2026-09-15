@@ -31,7 +31,7 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
 
 ### Adım 1 — Zemin (elle işleme)
 
-- [x] (15.1) `Conversation` + `Message` servisleri ve elle konuşma/mesaj kaydı (admin, gelen DM'i işler) `touches: supabase/migrations/0039_conversation.sql, packages/types/src/entities/conversation.schema.ts, packages/database/src/services/conversation.service.ts, packages/domain-core/src/messaging/**, apps/web/lib/messaging/**`
+- [x] (15.1) `Conversation` + `Message` servisleri ve ~~elle konuşma/mesaj kaydı (admin, gelen DM'i işler)~~ *(elle kayıt 15.36'da kalktı)* `touches: supabase/migrations/0039_conversation.sql, packages/types/src/entities/conversation.schema.ts, packages/database/src/services/conversation.service.ts, packages/domain-core/src/messaging/**, apps/web/lib/messaging/**`
   - **Kapı klasörü taşındı (21.08 · 15.15):** `apps/web/lib/whatsapp/` → `apps/web/lib/messaging/` — kayıt kapıları (`recordInbound/OutboundMessage`) kanal-nötr çıktı, yalnız açılış kapısı (`openWhatsappConversation`) kanalını adında taşıyor.
   - *Bitti:* konuşma açılıyor, mesajlar yön/tür ile kaydediliyor; alanlar `DATA_MODEL.md` ile birebir
   - **YÜZEY YARISI 15.5 İLE GELDİ (08.08 · operasyon).** Satır "elle konuşma/mesaj kaydı (admin, gelen DM'i işler)" diyordu ve servisler yazılmıştı, ama onları ÇAĞIRAN hiçbir ekran yoktu — yani gelen kutusunun veri kaynağı da yoktu (webhook 15.7'de). `/operations/whatsapp` üç kapı açtı: *+ Gelen DM işle* (numaradan konuşma + ilk mesaj, tek adımda), altlıktan *gelen* ve *giden* mesaj işleme. Kapıların reddi sessiz geçilmiyor: numara çözülemezse ve telefon↔e-posta ayrı müşterilere çıkarsa (`conflict`) konuşma AÇILMIYOR ve operatöre çaresi söyleniyor.
@@ -681,6 +681,14 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
   - **Yalnız ön planda:** arka planda sistem uygulamayı dondurur; orada yol push'tur (14.16). Arka planda duyulan zil taban çizgisini ilerletmez — öne dönüşte arada gelen mesaj varsa bir kez çalar.
   - **Zil kaydı ortak:** kuyruk ekranı ve ses aynı kanalı dinliyor; Supabase istemcisi (realtime-js 2.110) aynı adlı kanala ikinci çağrıda var olanı döndürüyor, ayrı abonelikler birbirinin kanalını kapatırdı. Kanal bir kez açılır, dinleyiciler içeride dağıtılır.
   - **Sınır — sessiz mod:** ses modu uygulama geneli; sesli mesaj oynatıcısı açıldığında "sessizde de çal"a geçiyor, sonrasında tını da sessizde çalar. Titreşim her durumda var.
+
+- [x] (15.36) **"Gelen mesaj işle" kalktı — gelen mesaj yalnız kanaldan gelir** *(kullanıcı kararı 15.09: "manuel mesaj kaydetmek doğru bir yaklaşım değil — hem saçma hem manipüle edici")* · `touches: apps/web/app/(operations)/operations/social/**`
+  - **Durum (15.09) — YAZILDI.** Sosyal Mesajlar başlığındaki "+ Gelen DM işle", sohbet başlığındaki "Gelen mesaj işle", pencere dosyası, iki kapı (yeni numaradan konuşma açıp ilk mesajı yazan · var olan sohbete gelen mesaj yazan) ve iki şema kalktı. Gelen mesaj yalnız webhook'tan yazılıyor; kayıt kapısı (`recordInboundMessage`) webhook'un kapısı olarak duruyor. Operatörün müşteriye ilk sözü "WhatsApp'tan yaz" (15.32) — o bir GİDEN mesajdır.
+  - Neden: operatörün "gelen" diye yazdığı satır müşterinin söylemediği bir cümleyi deftere onun ağzından yazabiliyordu; defter tanıklık etmeli, tanık üretmemeli.
+
+- [x] (15.37) **Messenger/Instagram'da 7 güne kadar insan temsilci — ekran 24 saatte kesmiyor** *(kullanıcı kararı 15.09)* · `touches: apps/web/app/(operations)/operations/social/**`
+  - **Durum (15.09) — YAZILDI.** Gönderim kapısı kuralı zaten uyguluyordu (`humanAgentWindowState`: müşterinin son mesajından 7 gün, yalnız insan), ama ekran pencereyi kanaldan habersiz hesaplıyor ve 24 saatte cevap kutusunu kaldırıyordu. Pencere görünümü artık kanalı biliyor ve yeni bir hâli var (`human`): kutu açık, rozet kalan günü amber gösteriyor, not "yapay zekâ bu sürede yazamaz" diyor; 7 gün de dolunca kapalı. Karar tek yerde (`humanCanReply`) — cevap kutusu, hibrit taslağı taşıma ve sağ paneldeki bağlantı düğmeleri onu okuyor; yüzen pencere aynı parçaları kullandığı için orada da düzeldi. WhatsApp'ta değişen yok (24 saat sonrası yalnız kalıp mesaj).
+  - Mobil uygulamanın kendi pencere hesabı (`socialWindowOf`) da kanaldan habersiz — mobil şeride not bırakıldı.
 
 ## Netleşecekler
 

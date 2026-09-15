@@ -1,4 +1,4 @@
-import { resolveUserText, serviceWindowState, stripChatFormatting, translatableTextOf } from '@lezzet/domain-core';
+import { humanAgentWindowState, resolveUserText, serviceWindowState, stripChatFormatting, translatableTextOf } from '@lezzet/domain-core';
 import type { ConversationInboxRow, ConversationNote, ConversationSource, TranslationBag } from '@lezzet/types';
 import type { MessageWithMedia } from '@/lib/messaging/read';
 import type { ConsentState } from '@/components/operation/ui/customer-context-pane';
@@ -31,6 +31,8 @@ export const WINDOW_SOON_MS = 3 * 60 * 60 * 1000;
 export function remainingLabel(msRemaining: number): string {
   const minutes = Math.floor(msRemaining / 60_000);
   if (minutes < 60) return `${Math.max(minutes, 1)} dk`;
+  // Bir günü aşan süre (Messenger/Instagram'ın 7 günlük insan temsilci süresi, 15.37) gün cinsinden.
+  if (minutes > 24 * 60) return `${Math.floor(minutes / (24 * 60))} gün`;
   return `${Math.floor(minutes / 60)} sa`;
 }
 
@@ -39,18 +41,34 @@ export function remainingLabel(msRemaining: number): string {
  *
  * Süre burada yeniden hesaplanmaz ve hesaplanmamalı: 24 saat kuralı motorda tek kopya durur
  * (`serviceWindowExpiry`), ekran onu ikinci kez yazsaydı bir gün ayrışırlardı ve ayrışma sessiz
- * olurdu — ekranda "açık" yazarken gönderim şablon ücretiyle geçerdi. Pencerenin SÜRESİ üç kanalda
+ * olurdu — ekranda "açık" yazarken gönderim şablon ücretiyle geçerdi. Standart pencere üç kanalda
  * aynı (24 saat); ANLAMI kanala göre sözlükte ayrışır (`WINDOW_NOTE[source]`).
+ *
+ * **Messenger/Instagram'da 24 saat son değil (15.37 · kullanıcı kararı 15.09):** insan temsilci olarak
+ * müşterinin son mesajından 7 güne kadar yazılabilir (`humanAgentWindowState` — gönderim kapısının aynı
+ * kuralı). Bu aralık ayrı bir hâldir (`human`): kutu açık, yapay zekâ yazamaz. Ekran bir tur bunu 24 saatte
+ * "kapalı" diye kesiyordu — kapı gönderirken kutu yoktu.
  */
-export function toWindowView(windowExpiresAt: string | null, now: Date): WindowView {
+export function toWindowView(windowExpiresAt: string | null, now: Date, source: ConversationSource): WindowView {
   const state = serviceWindowState(windowExpiresAt, now);
   if (!state.everOpened) return { state: 'never', chip: '—', tone: 'idle' };
-  if (!state.open) return { state: 'closed', chip: 'kapalı', tone: 'closed' };
-  return {
-    state: 'open',
-    chip: remainingLabel(state.msRemaining),
-    tone: state.msRemaining <= WINDOW_SOON_MS ? 'soon' : 'open',
-  };
+  if (state.open) {
+    return {
+      state: 'open',
+      chip: remainingLabel(state.msRemaining),
+      tone: state.msRemaining <= WINDOW_SOON_MS ? 'soon' : 'open',
+    };
+  }
+  if (source !== 'whatsapp') {
+    const human = humanAgentWindowState(windowExpiresAt, now);
+    if (human.open) return { state: 'human', chip: remainingLabel(human.msRemaining), tone: 'soon' };
+  }
+  return { state: 'closed', chip: 'kapalı', tone: 'closed' };
+}
+
+/** İnsan operatör bu sohbete şimdi serbest metin yazabilir mi — 24 saatlik pencere ya da insan temsilci süresi (15.37). */
+export function humanCanReply(window: WindowView): boolean {
+  return window.state === 'open' || window.state === 'human';
 }
 
 /**
@@ -163,7 +181,7 @@ export function toInboxRows(rows: readonly ConversationInboxRow[], now: Date): I
     awaitingReply: row.awaitingReply,
     unidentified: row.customerId === null,
     handledBy: row.handledBy,
-    window: toWindowView(row.windowExpiresAt, now),
+    window: toWindowView(row.windowExpiresAt, now, row.source),
   }));
 }
 

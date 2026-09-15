@@ -33,7 +33,7 @@ export async function readConversationDetailView(conversationId: string, now: Da
     title: context?.name.trim() || titleOf({ profileName: detail.conversation.profileName, externalRef: detail.conversation.externalRef }),
     externalRef: detail.conversation.externalRef,
     profileName: detail.conversation.profileName,
-    window: toWindowView(detail.conversation.windowExpiresAt, now),
+    window: toWindowView(detail.conversation.windowExpiresAt, now, detail.conversation.source),
     // Hedef dil okuma kapısından, gönderim kapısıyla aynı karar (15.28) — ekran hesaplamaz.
     language: detail.language,
     // Mesajlar + iç notlar tek akışta (15.29); başlıktaki sayı yalnız mesajları sayar.

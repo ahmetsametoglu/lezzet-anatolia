@@ -29,8 +29,12 @@ import type { SocialChannelKey, SocialFilterKey, SocialUrlState } from './social
  * Üç durum AYRI tutulur ve son ikisi aynı "serbest mesaj gönderemezsin"e düşse de aynı şey değildir:
  * `closed` kaçırılmış bir fırsattır (müşteri yazmıştı, süre doldu), `never` kurulmamış bir ilişkidir
  * (müşteri bize hiç yazmadı). İkisini tek kovaya atmak, operatöre yanlış eylemi önerirdi.
+ *
+ * **`human` (15.37):** Messenger/Instagram'da standart 24 saat doldu ama insan temsilci süresi (son gelen
+ * mesajdan 7 gün) sürüyor — operatör yazabilir, yapay zekâ yazamaz. WhatsApp'ta bu hâl YOK: orada 24 saat
+ * sonrası yalnız onaylı kalıp mesaj.
  */
-export type WindowState = 'open' | 'closed' | 'never';
+export type WindowState = 'open' | 'human' | 'closed' | 'never';
 
 export interface WindowView {
   state: WindowState;
@@ -200,45 +204,12 @@ export interface SocialData {
 }
 
 /**
- * Elle DM işleme penceresinin girdisi (15.1'in yüzey yarısı) — **yalnız WhatsApp**: telefon kimlik
- * anahtarıdır ve operatör onu telefonundan okur. Messenger/IG kişi kimliği (PSID/IGSID) operatörce
- * bilinemez — o konuşmaları webhook doğuracak (15.7); var olan sohbete mesaj işlemek ise kanal-nötr
- * (`RecordOutboundSchema` + gelen-devam kapısı konuşma kimliğiyle çalışır).
- *
- * `receivedAt` ZORUNLU ve varsayılanı YOK — kapının kendi kuralı (`recordInboundMessage`) ve tam da
- * bu ekran için konmuş: admin sabah gelen bir DM'i öğlen işler, pencere ise müşteri YAZDIĞINDA
- * başlamıştır. "Şimdi"den hesaplanan bitiş Meta'nınkinden saatlerce geç olur ve biz "serbest metin
- * gönderebilirim" derken gönderim şablon ücretiyle geçer.
- */
-export const ManualInboundSchema = z.object({
-  phone: z.string().min(1),
-  name: z.string().optional(),
-  email: z.string().optional(),
-  text: z.string().min(1),
-  receivedAt: z.string().min(1),
-});
-
-/**
- * Var olan konuşmaya GİDEN mesaj işleme — damga YOK ve olmamalı: giden mesaj pencereye dokunmuyor.
- *
- * Gelen mesajın kendi kapısı var (`ManualInboundSchema` + devam modu), çünkü gelen mesaj pencereyi
- * AÇAN olaydır ve alınma anını ister. İkisini tek şemaya toplamak, damgayı "bazen zorunlu" bir
- * alana çevirirdi.
+ * Var olan konuşmaya GİDEN mesaj — damga YOK ve olmamalı: giden mesaj pencereye dokunmuyor. GELEN mesaj
+ * yalnız kanaldan (webhook) gelir; elle kaydı 15.36'da kalktı (kullanıcı kararı 15.09).
  */
 export const RecordOutboundSchema = z.object({
   conversationId: z.string().uuid(),
   text: z.string().min(1),
-});
-
-/**
- * Var olan sohbete GELEN mesaj (devam) — kanal-nötr: konuşma zaten var, kimlik anahtarı gerekmez.
- * Yeni-numara yolundan (`ManualInboundSchema`) ayrı, çünkü orada kimlik çözümü de yapılır ve o
- * yalnız WhatsApp'ta mümkün.
- */
-export const FollowUpInboundSchema = z.object({
-  conversationId: z.string().uuid(),
-  text: z.string().min(1),
-  receivedAt: z.string().min(1),
 });
 
 /**
@@ -327,10 +298,6 @@ export interface SocialViewProps {
   onConsumeDraft: () => Promise<string | null>;
   /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
   onSuggestDraft: () => void;
-  /** Açık sohbete GELEN mesaj — anahtarı kilitli pencereyi açar (kanal-nötr devam kapısı). */
-  onIncoming: () => void;
-  /** Yeni WhatsApp DM'i işle — yalnız WhatsApp (kimlik anahtarı telefon). */
-  onNewDm: () => void;
   onNewTicket: () => void;
   /** Kimliksiz sohbeti müşteriye bağla (15.16) — Messenger/IG'de kimliğin TEK yolu. */
   onLinkCustomer: () => void;

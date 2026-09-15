@@ -7,7 +7,6 @@ import {
   linkConversationCustomer,
   metaSenderFromEnv,
   recordConversationOptIn,
-  recordInboundMessage,
   sendOutboundMessage,
   setDefaultConversationHandler,
   startEmailAnchor,
@@ -21,15 +20,12 @@ import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
 import { openTicket } from '@/lib/ticket/write';
-import { openWhatsappConversation } from '@/lib/messaging/conversation';
 import { toInboxRows } from './social-read';
 import {
   AnchorEmailSchema,
   ConversationOptInSchema,
   ConversationTicketSchema,
-  FollowUpInboundSchema,
   LinkConversationCustomerSchema,
-  ManualInboundSchema,
   RecordOutboundSchema,
   type InboxRowView,
 } from './social-types';
@@ -45,10 +41,10 @@ import { channelSource, parseSocialUrl, SOCIAL_PATH } from './social-url';
 // (`lib/messaging/conversation`) motora sorularak yapılıyor (STACK §4). Buradaki tek çeviri, kapının
 // sonucunu ekranın sözleşmesine döndürmek.
 //
-// ── BURADAN MESAJ GÖNDERİLMEZ ────────────────────────────────────────────────
-// Adım 1'de gönderim kanalı yok (webhook/sürücü 15.7/15.11). Bu kapılar DEFTER tutar: yazışma
-// admin'in telefonundan/Business Suite'ten yürür, olan biten buraya işlenir. Adları da bunu
-// söylüyor — `record…`, `send…` değil.
+// ── GELEN MESAJ YALNIZ KANALDAN ──────────────────────────────────────────────
+// Gelen mesaj webhook'tan yazılır (15.7); elle kaydı 15.36'da kalktı (kullanıcı kararı 15.09 —
+// operatörün "gelen" diye yazdığı satır müşterinin söylemediği bir cümle olabilirdi). Giden mesaj
+// gönderim kapısından gider (`sendOutboundAction`, 06.09).
 
 function refresh(): void {
   revalidatePath(SOCIAL_PATH);
@@ -70,77 +66,6 @@ export async function loadMoreConversationsAction(search: string, cursor: Keyset
       DEFAULT_PAGE_SIZE,
     );
     return { data: { rows: toInboxRows(page.rows, new Date()), nextCursor: page.nextCursor }, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
-
-/**
- * **Gelen DM'i işle** — numaradan konuşmayı açar ve ilk mesajı deftere yazar (15.1'in beyanı).
- * **Yalnız WhatsApp:** kimlik anahtarı telefondur ve operatör onu telefonundan okur; Messenger/IG
- * kişi kimliği (PSID/IGSID) operatörce bilinemez — o konuşmaları webhook doğuracak (15.7).
- *
- * İkisi TEK adımda, çünkü mesajsız açılan bir konuşma gelen kutusunda `last_message_at` boş bir
- * satır olarak durur: sıralaması belirsiz, önizlemesi boş, `awaiting_reply` yanlış. Operatör de
- * zaten okuduğu bir mesaj yüzünden buraya geliyor.
- *
- * Kapının reddi SESSİZ GEÇİLMEZ: numara çözülemediğinde ya da telefon/e-posta ayrı müşterilere
- * çıktığında (`conflict`) konuşma AÇILMAZ — yanlış hesaba bağlanmış bir sohbet, bağlanmamış bir
- * sohbetten pahalıdır. Operatöre ne olduğu söylenir, çünkü çaresi onda: numarayı düzeltmek ya da
- * müşteri kartlarını birleştirmek.
- */
-export async function openManualDmAction(input: unknown): Promise<ActionResult<{ conversationId: string }>> {
-  try {
-    await requireAdmin();
-    const parsed = ManualInboundSchema.parse(input);
-
-    const opened = await openWhatsappConversation({
-      phone: parsed.phone,
-      name: parsed.name?.trim() || null,
-      email: parsed.email?.trim() || null,
-    });
-
-    if (opened.status === 'invalid_phone') {
-      return { data: null, error: 'Numara okunamadı. Ülke koduyla yazın (ör. +33 6 12 34 56 78).' };
-    }
-    if (opened.status === 'conflict') {
-      return {
-        data: null,
-        error: 'Bu numara ile e-posta ayrı müşterilere ait. Konuşma açılmadı — önce Müşteriler ekranından kayıtları birleştirin.',
-      };
-    }
-
-    await recordInboundMessage(serviceDb(), {
-      conversationId: opened.conversation.id,
-      text: parsed.text,
-      receivedAt: parsed.receivedAt,
-    });
-
-    refresh();
-    return { data: { conversationId: opened.conversation.id }, error: null };
-  } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
-  }
-}
-
-/**
- * Var olan sohbete GELEN mesaj (devam) — KANAL-NÖTR: konuşma zaten var, kimlik anahtarı gerekmez.
- *
- * Eski yol devam mesajını da telefon üzerinden işliyordu (`openManualDmAction`) ve her seferinde
- * kimlik çözümünü yeniden koşuyordu; Messenger/IG'de telefon hiç olmadığı için o yol kapanır —
- * devam kapısı konuşma kimliğiyle çalışır (15.15). Pencereyi yine gelen mesaj açar, damga şart.
- */
-export async function recordFollowUpInboundAction(input: unknown): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireAdmin();
-    const parsed = FollowUpInboundSchema.parse(input);
-    const message = await recordInboundMessage(serviceDb(), {
-      conversationId: parsed.conversationId,
-      text: parsed.text,
-      receivedAt: parsed.receivedAt,
-    });
-    refresh();
-    return { data: { id: message.id }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
