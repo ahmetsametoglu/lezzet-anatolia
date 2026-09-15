@@ -1,28 +1,12 @@
 import type { ReactNode } from 'react';
 import type { OpsTone } from './tone';
 
-/**
- * **YAZIŞMA panolarının ortak parçaları** (Talepler 16.3 · WhatsApp 15.5).
- *
- * İki ekran da aynı üç şeyi çiziyordu: dipten yukarı akan bir dizi, hizalı bir balon, ve balonun
- * üstünde kim/ne zaman künyesi. İki kopya bir gün ayrışır ve ayrıştığı gün biri künyeyi unutur —
- * yani personel makine cümlesini müşterinin cümlesi sanar (Talepler'in kendi dersi).
- *
- * **Balonun KUTUSU burada çizilmez, SINIFI verilir** (`bubbleClass`) ve bu bilinçli: Talepler'in
- * gövdesi çeviri anahtarını kutunun DIŞINDA taşımak zorunda (`TranslatedBody`), yani kutuyu
- * kendisi çizer. Kutuyu sahiplenen bir komponent o ekranı çatallamaya zorlardı. Aynı desen kitte
- * zaten var: `buttonClass` de sınıfı ihraç eder, kutuyu değil.
- */
+// Balonun kutusu burada çizilmez, sınıfı verilir (`bubbleClass`): Talepler'in gövdesi çeviri anahtarını kutunun dışında taşır ve
+// kutuyu sahiplenen bir komponent o ekranı çatallamaya zorlardı.
 
-/** Mesajın yönü — "ben mi yazdım" tek soru; iki ekranda iki farklı alandan türer. */
 type MessageSide = 'in' | 'out';
 
-/**
- * Balonun derisi — anlam rengi kitin sözlüğünden (`OpsTone`), ham renk değil.
- *
- * `neutral` gelen mesajdır (beyaz kutu, nötr çerçeve): müşterinin cümlesi bir DURUM söylemiyor.
- * Öteki tonlar giden mesajın kimliğini taşır — olive personel, violet makine.
- */
+/** `neutral` gelen mesajdır, müşterinin cümlesi bir durum söylemez; öteki tonlar giden mesajın kimliğini taşır (olive personel, violet makine). */
 const SKIN: Record<OpsTone, string> = {
   neutral: 'border-ops-line bg-ops-white',
   olive: 'border-ops-olive-line bg-ops-olive-bg',
@@ -43,12 +27,7 @@ export function bubbleClass(tone: OpsTone = 'neutral', extra?: string): string {
     .join(' ');
 }
 
-/**
- * Tek mesajın satırı: künye ÜSTTE, gövde altta, ikisi de yöne göre hizalı.
- *
- * Künye satırı ekranın kararı (`Siz · 14:30` ya da `AI ajanı · 14:30 · otomatik çevrildi`), ama
- * YERİ ortak — balonun üstü. Altına koymak iki ekranda iki farklı okuma ritmi üretirdi.
- */
+/** Künyenin yeri ortak, balonun üstü: altına koymak iki ekranda iki ayrı okuma ritmi üretirdi. */
 export function MessageRow({ side, meta, children }: { side: MessageSide; meta: ReactNode; children: ReactNode }) {
   const mine = side === 'out';
   return (
@@ -60,11 +39,8 @@ export function MessageRow({ side, meta, children }: { side: MessageSide; meta: 
 }
 
 /**
- * Mesaj dizisinin kaydırma kutusu — **kısa sohbet ALTA yaslanır** (`mt-auto`).
- *
- * Sohbetin okunacak yeri yazma kutusunun hemen üstüdür; yukarı yaslanan bir dizi son mesajı ekranın
- * öbür ucuna atardı. Sarmalayıcıya `justify-end` vermek yerine iç kabuğa `mt-auto`: taşan içerikte
- * `justify-end` kaydırma kutusunun TEPESİNİ kırpar ve eski mesajlara hiç ulaşılamaz.
+ * Kısa sohbet alta yaslanır, çünkü okunacak yer yazma kutusunun üstüdür. `justify-end` değil iç kabukta `mt-auto`: taşan
+ * içerikte `justify-end` kutunun tepesini kırpar ve eski mesajlara ulaşılamazdı.
  */
 export function MessageThread({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -74,7 +50,6 @@ export function MessageThread({ children, className }: { children: ReactNode; cl
   );
 }
 
-/** Pano içi bölüm başlığı — küçük, büyük harf, aralıklı. İki ekranda da aynı markup'tı. */
 export function SectionLabel({ children }: { children: ReactNode }) {
   return <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">{children}</span>;
 }

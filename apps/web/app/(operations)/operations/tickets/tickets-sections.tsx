@@ -26,7 +26,7 @@ import { agoLabel, agoShort, money, shortDateTime } from '@/components/operation
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { CustomerContextData } from '@/lib/customer/context';
 import type { TicketMessageView } from '@/lib/ticket/ticket-types';
-// Başka ekranların URL SÖZLEŞMESİ (STACK §7 istisnası): adres elle kurulmaz, sahibinden alınır.
+// Başka ekranların URL sözleşmesi: adres elle kurulmaz, sahibinden alınır.
 import { customersUrl } from '../customers/customers-url';
 import { ORDERS_PATH } from '../orders/orders-url';
 import { socialLink } from '../social/social-url';
@@ -40,14 +40,6 @@ import {
 } from './tickets-labels';
 import type { TicketDetailView, TicketRowView } from './tickets-types';
 
-/**
- * Talepler ekranının ORTAK parçaları (16.3) — kuyruk satırı ve detay panosu tek yerde durur ki
- * aynı talep iki yerde farklı okunmasın. Operasyon web'i masaüstü-yalnız; mobil deneyim native
- * uygulamada (`docs/uygulama`).
- */
-
-// ── Kuyruk satırı ────────────────────────────────────────────────────────────
-
 interface QueueRowProps {
   row: TicketRowView;
   active: boolean;
@@ -55,25 +47,17 @@ interface QueueRowProps {
 }
 
 /**
- * Kuyruğun tek satırı. Sol kenar çubuğu TÜRÜN rengidir (çizim): tarama sırasında hangi satırın para
- * işi olduğu okunmadan görünsün.
- *
- * **Çizimde olmayan iki işaret bilerek eklendi ve ikisi de brief'ten geliyor** (`admin-talepler.md
- * §2`): *"cevap bekleyenin bekletilmemesi kuyruğun tek amacıdır"* → `Cevap bekliyor` rozeti, ve
- * fotoğraflı şikâyetin ayırt edilmesi (*"bozuk ürün kararı çoğu kez fotoğraftan verilir"*) → kamera
- * işareti. İkisinin de verisi görünümde hazır (`awaiting_reply`, `has_attachment`) ve çizim onları
- * kullanmıyordu; sapma `design/BACKLOG.md`'de kayıtlı.
+ * Çizimde olmayan iki işaret bilerek eklendi: "Cevap bekliyor" (kuyruğun tek amacı cevap bekleyeni bekletmemek) ve kamera (bozuk
+ * ürün kararı çoğu kez fotoğraftan verilir).
  */
 export function QueueRow({ row, active, onSelect }: QueueRowProps) {
   const tone = TICKET_TYPE_TONE[row.type];
   return (
-    // Satırın İSKELETİ ortak (`ui/queue-pane`) — WhatsApp gelen kutusu da aynısını kullanıyor.
-    // Burada kalan yalnız ANLAM: hangi rozet, hangi kenar rengi, hangi künye.
     <SharedQueueRow
       id={row.id}
       active={active}
       onSelect={onSelect}
-      // Sol kenar TÜRÜN rengi (çizim): tarama sırasında hangi satırın para işi olduğu okunmadan görünsün.
+      // Sol kenar türün rengi: tarama sırasında hangi satırın para işi olduğu okunmadan görünsün.
       edgeClass={EDGE_CLASS[tone]}
       title={row.customerName}
       trailing={<Badge tone={tone}>{TICKET_TYPE_LABELS[row.type]}</Badge>}
@@ -87,19 +71,15 @@ export function QueueRow({ row, active, onSelect }: QueueRowProps) {
             </Badge>
           ) : null}
           {row.handledBy === 'ai' ? <Badge tone="violet">AI yürütüyor</Badge> : null}
-          {/* Hibrit satır KUYRUKTAN seçilmeli: bekleyen taslak ancak açılınca görünür, rozet
-              operatörü oraya çağırır (16.08). */}
+          {/* Hibrit satır işaretlenir: bekleyen taslak ancak talep açılınca görünür. */}
           {row.handledBy === 'hybrid' ? <Badge tone="violet">Hibrit</Badge> : null}
-          {/* Fotoğraf işareti YALNIZ İKON — sipariş numarası buradan kalktı (03.08). İkisi birlikte
-              rozet şeridini taşırıp yaşı alt satıra atıyordu; sipariş bağı zaten detayda kartıyla
-              duruyor ve kuyrukta okunması gereken şey "kim, ne tipte, ne durumda, ne kadar bekledi". */}
+          {/* Fotoğraf işareti yalnız ikon: kuyrukta okunacak şey kim, ne tipte, ne durumda, ne kadar bekledi; sipariş bağı detayda. */}
           {row.hasAttachment ? (
             <span className="text-ops-faint" title="Fotoğraf var">
               <CameraIcon size={13} />
             </span>
           ) : null}
-          {/* Yaş KISA biçimde (`agoShort`): "önce" eki bu sütunda bilgi taşımıyor ama genişlik yiyordu
-              ve rozetlerin yanına sığmayıp satırı ikiye bölüyordu. */}
+          {/* Yaş kısa biçimde: "önce" eki bu sütunda bilgi taşımaz ama genişlik yer ve satırı ikiye bölerdi. */}
           <span className="ml-auto flex-none font-ops-mono text-ops-micro text-ops-faint">{agoShort(row.ageMinutes)}</span>
         </>
       }
@@ -107,7 +87,7 @@ export function QueueRow({ row, active, onSelect }: QueueRowProps) {
   );
 }
 
-/** Kuyruk boşken: "hiç talep yok" ile "bu süzgeçte yok" AYRI cümlelerdir (EmptyState künyesi). */
+/** "Hiç talep yok" ile "bu süzgeçte yok" ayrı cümlelerdir. */
 export function QueueEmpty({ filtered }: { filtered: boolean }) {
   return (
     <EmptyState
@@ -122,19 +102,15 @@ export function QueueEmpty({ filtered }: { filtered: boolean }) {
   );
 }
 
-// ── Detay panosu ─────────────────────────────────────────────────────────────
-
 interface TicketDetailProps {
   detail: TicketDetailView;
   busy: boolean;
   error: string | null;
   onStatus: (to: TicketStatus) => void;
   onReply: (body: string) => Promise<boolean>;
-  /** Yürütücü modu (16.08): human · hybrid · ai — operatörün açık kararı. */
   onMode: (mode: TicketHandler) => void;
-  /** Hibrit taslağı tüket: `send=true` olduğu gibi gönderir, `send=false` metni döndürür (kutuya taşınır). */
+  /** `send=true` olduğu gibi gönderir, `send=false` metni döndürür ve kutuya taşınır. */
   onConsumeDraft: (send: boolean) => Promise<string | null>;
-  /** Taslağı İSTEK üzerine üret (20.4) — cron beklenmez, operatör "öner" der. */
   onSuggestDraft: () => void;
   onTakeOver: () => void;
   onTriggerReturn: () => void;
@@ -142,12 +118,9 @@ interface TicketDetailProps {
 
 export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, onConsumeDraft, onSuggestDraft, onTakeOver, onTriggerReturn }: TicketDetailProps) {
   const { ticket, customer, order, messages, returnOutcome, returnTrigger } = detail;
-  // İlk mesaj MÜŞTERİNİN ANLATIMIDIR (`TicketMessage` künyesi: ayrı bir `description` alanı yok).
-  // Çizim onu "Müşterinin anlatımı" başlığı altında, yazışmadan ayrı gösteriyor — aynı kayıt, iki
-  // farklı okuma işi: biri şikâyetin kendisi, öteki konuşmanın seyri.
+  // İlk mesaj müşterinin anlatımıdır (ayrı `description` alanı yok): aynı kayıt, iki okuma işi, şikâyetin kendisi ve konuşmanın seyri.
   const [first, ...rest] = messages;
-  // "Düzenleyerek gönder"in taşıdığı metin — nesne kimliği tetikleyicidir: aynı taslak iki kez
-  // taşınabilmeli (operatör kutuyu temizleyip vazgeçmiş olabilir), düz string ikinciyi yutardı.
+  // Nesne kimliği tetikleyicidir: aynı taslak iki kez taşınabilmeli, düz string ikinciyi yutardı.
   const [prefill, setPrefill] = useState<{ text: string } | null>(null);
 
   return (
@@ -155,14 +128,11 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
       <div className="flex items-start gap-3 border-b border-ops-line px-5 py-3.5">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex min-w-0 items-center gap-2">
-            {/* Müşteri köprüsü (brief §2). Müşteri ekranının DETAY rotası yok — liste + pencere;
-                bu yüzden köprü aramadır. Terim en ayırt edici kimlikten seçilir (e-posta → telefon
-                → ad): aynı adlı iki müşteri varsa ad araması ikisini birden getirirdi. */}
+            {/* Müşteri ekranının detay rotası yok, köprü aramadır; terim en ayırt edici kimlikten seçilir (e-posta → telefon → ad),
+                çünkü aynı adlı iki müşteri ad aramasında birlikte gelirdi. */}
             <Link
               href={customersUrl({ q: customer.email ?? customer.phone ?? customer.name, type: 'all', scope: 'all', mc: 'any' })}
-              // Çizim 15px → merdivende `lead` (künye: `lead ← 15 · 16`). `section` (19px) İKİ
-              // kademe büyüktü: detay panosunun künyesi bir kart adıdır, sayfa başlığı değil —
-              // `PageHeader`'daki "Talepler" ile aynı ağırlıkta görünmemeli.
+              // `lead`, `section` değil: detay künyesi bir kart adıdır, sayfa başlığıyla aynı ağırlıkta görünmemeli.
               className="min-w-0 truncate font-ops-display text-ops-lead font-semibold text-ops-ink hover:text-ops-olive"
             >
               {customer.name}
@@ -170,9 +140,7 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
             <Badge tone={TICKET_TYPE_TONE[ticket.type]}>{TICKET_TYPE_LABELS[ticket.type]}</Badge>
           </span>
 
-          {/* KÜNYE — çizimde tek satır ("geliş yolu · açıldı X önce"); brief iki şey daha istiyor
-              (§2 müşteri geçmişi, §3 iadenin sonucu izlenebilsin) ve ikisinin de verisi sözleşmede
-              hazır. Ayrı bir bloğa değil aynı künyeye kondular: karar verirken okunacaklar. */}
+          {/* Müşteri geçmişi ve iadenin sonucu ayrı blokta değil künyede: karar verirken okunacaklar. */}
           <span className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
             {TICKET_SOURCE_LABELS[ticket.source]} · açıldı {agoLabel(detail.openedAgoMinutes)} ·{' '}
             {customer.totalTickets > 1 ? `${customer.totalTickets}. talebi` : 'ilk talebi'}
@@ -186,10 +154,6 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
             ) : null}
           </span>
 
-          {/* Sohbet köprüsü GERÇEK BAĞLANTI: izleme ekranı yazıldı (15.5) ve konuşmayı kimliğiyle
-              açıyor; 21.08'de ekran üç kanallı sosyal gelen kutusuna dönüştü (15.15) — köprü aynı,
-              adres yeni. Bir tur boyunca düz metindi — o zaman doğruydu, çünkü var olmayan bir
-              sayfaya götüren bağlantı çalışan bir şey vaat ederdi. */}
           {ticket.conversationId ? (
             <Link
               href={socialLink(ticket.conversationId)}
@@ -200,9 +164,7 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
           ) : null}
         </div>
 
-        {/* İki anahtar ÜST ÜSTE ve aynı hizada: durum "iş nerede", mod "cevabı kim yazıyor" —
-            ikisi de talebin künyesidir ve karar yeri başlıktır (kullanıcı kararı 16.08; modun
-            görsel dili mobil çizimden taşındı, `Operasyon Mobil v2` YZ deseni). */}
+        {/* İki anahtar üst üste: durum "iş nerede", mod "cevabı kim yazıyor"; ikisi de talebin künyesidir ve karar yeri başlıktır. */}
         <div className="flex flex-none flex-col items-end gap-1.5">
           <MultiToggle
             size="sm"
@@ -227,9 +189,7 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
         {first ? (
           <section className="flex flex-col gap-2">
             <SectionLabel>Müşterinin anlatımı</SectionLabel>
-            {/* Anlatım metni `strong` (#3a3f37) — çizimin değeri. Şikâyetin kendisi bu kutuda ve
-                ekranın en dikkatli okunan yeri; balon metniyle aynı kademede olmalı.
-                Çeviri rozeti BURADA en gerekli: iade kararının dayanağı tam olarak bu cümle. */}
+            {/* Anlatım ekranın en dikkatli okunan yeri ve iade kararının dayanağı: metin balonla aynı kademede, çeviri rozeti burada en gerekli. */}
             <TranslatedBody
               message={first}
               className="rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3 font-ops-body text-ops-base leading-relaxed text-ops-strong"
@@ -249,31 +209,25 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
       </div>
 
       <div className="flex flex-col gap-2.5 border-t border-ops-line px-5 py-3.5">
-        {/* AI şeridi yalnız AI ÖZERK yürütürken (mod anahtarı + seed ile artık gerçek veri var;
-            motorun kendisi 16.5). Devral = insana in + bekleyen taslağı düşür (`takeOverTicket`). */}
+        {/* AI şeridi yalnız AI özerk yürütürken; Devral insana geçer ve bekleyen taslağı düşürür (`takeOverTicket`). */}
         {ticket.handledBy === 'ai' ? (
           <div className="flex items-center gap-2.5 rounded-ops-card border border-ops-violet-line bg-ops-violet-bg px-3 py-2.5">
             <span className="flex-1 font-ops-body text-ops-xs leading-[1.6] text-ops-violet">
               Bu talebi şu an AI ajanı yürütüyor. Devralırsanız AI susturulur, sonraki cevaplar sizden gider.
             </span>
-            {/* Çizimde DOLU mor: bu düğme kararın kendisi (AI susar, geri dönüşü yok), ikincil bir
-                seçenek değil. Çerçeveli `secondary` onu bir "isterseniz" gibi gösteriyordu. */}
+            {/* Dolu mor: bu düğme kararın kendisi (AI susar), ikincil bir seçenek değil. */}
             <Button size="sm" variant="violet" onClick={onTakeOver} disabled={busy}>
               Devral
             </Button>
           </div>
         ) : null}
 
-        {/* HİBRİT (16.08): AI'ın taslağı — mobildeki desen (`Operasyon Mobil v2` v2:548) web'e
-            taşındı. Kesikli çerçeve taslak olduğunu ŞEKLİNDEN söyler; mor = makine konuştu
-            (envanter sözlüğü). Taslak yoksa dürüst cümle: "üretilmedi" — boş bir kart, bekleyen
-            bir cevap varmış gibi okunurdu. */}
+        {/* Kesikli çerçeve taslak olduğunu şeklinden söyler, mor makine konuştu demektir. Taslak yoksa boş kart değil cümle: boş kart
+            bekleyen bir cevap varmış gibi okunurdu. */}
         {ticket.handledBy === 'hybrid' ? (
           ticket.aiDraftReply ? (
             <AiDraftCard draft={ticket.aiDraftReply}>
-              {/* İki çıkış AYRIŞIR ve ikisi de taslağı tüketir (mobil desen, `complaint-screen`):
-                  çevirmek olduğu gibi gönderir, düzenlemek metni kutuya taşır — düzenleme yeri
-                  zaten orasıdır. */}
+              {/* İki çıkış da taslağı tüketir: çevirmek olduğu gibi gönderir, düzenlemek metni kutuya taşır. */}
               <Button size="sm" variant="violet" disabled={busy} onClick={() => void onConsumeDraft(true)}>
                 Cevaba çevir →
               </Button>
@@ -291,8 +245,7 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
               </Button>
             </AiDraftCard>
           ) : (
-            // Taslak yoksa BEKLEMEK zorunda değil: cron 5 dakikada bir üretiyor ama operatör
-            // şimdi istiyorsa düğme oradadır (20.4'ün çıkış ölçütü: "taslak öner" der, kutu dolar).
+            // Cron beş dakikada bir üretir; operatör şimdi istiyorsa beklemez.
             <div className="flex items-center gap-2.5">
               <Button size="sm" variant="violet" onClick={onSuggestDraft} disabled={busy}>
                 ✦ Taslak öner
@@ -310,8 +263,7 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
           </p>
         ) : null}
 
-        {/* Kapalı düğmenin SEBEBİ yazılır, gizlenmez — ama SATIRIN ÜSTÜNDE: çizim üç kontrolü tek
-            satırda tutuyor ve araya sığdırılan bir açıklama o satırı bozuyordu. */}
+        {/* Kapalı düğmenin sebebi yazılır, gizlenmez; satırın üstünde, çünkü çizim üç kontrolü tek satırda tutar. */}
         {!returnTrigger.allowed ? (
           <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">{RETURN_BLOCKED_REASON[returnTrigger.reason]}</span>
         ) : null}
@@ -329,7 +281,6 @@ export function TicketDetail({ detail, busy, error, onStatus, onReply, onMode, o
   );
 }
 
-/** Detay seçilmemişken masaüstünün sağ sütunu — boş bir pano değil, ne yapılacağını söyleyen bir yüzey. */
 export function DetailPlaceholder() {
   return (
     <div className="flex h-full items-center justify-center bg-ops-subtle">
@@ -341,26 +292,9 @@ export function DetailPlaceholder() {
   );
 }
 
-// ── Parçalar ─────────────────────────────────────────────────────────────────
-
 /**
- * Durum kontrolünün SEÇENEKLERİ — kontrolün kendisi ortak (`MultiToggle`, Envanter O8).
- *
- * Bu ekran bir tur boyunca kendi segmentini elden yazmıştı ve bedeli ölçülebilirdi: `role="radiogroup"`,
- * ok tuşu gezinmesi, roving tabindex ve kayan hap yoktu; üstelik ray iki farklı gri tonda çiziliyordu
- * (aynı uygulamada iki "segment"). Eksik olan tek şey seçenek başına `disabled`'dı — o da artık
- * ortak komponentte.
- *
- * **İzinsiz geçiş DEVRE DIŞI, gizli DEĞİL.** Motor "çözülmüş talepte yalnız `open`" diyor
- * (`allowedTicketTransitions`). Gizlemek kontrolün genişliğini talebe göre oynatır ve operatör aynı
- * ekranı her seferinde farklı bulurdu; kapalı ama görünür bir seçenek kuralı da öğretir.
- *
- * **Ton VERİLMİYOR** (varsayılan olive) ve bu bilinçli bir geri adım: bir tur boyunca durum rozetiyle
- * aynı sözlük geçilmişti (`TICKET_STATUS_TONE`) ve sonuç ekranda yanlış okunuyordu — kuyruğun
- * VARSAYILAN hâli "Açık", yani hap neredeyse her zaman amber doluyordu ve nötr bir kontrol sürekli
- * uyarı veriyormuş gibi duruyordu. Çizim orada beyaz/nötr bir hap gösteriyor; sistemin bu kontrolde
- * beyazı yok (`MultiToggle` künyesindeki bilinçli sapma), en yakın nötr karşılık varsayılan olive.
- * Rozet ile hap "aynı gerçeği iki kez söylemiyor" zaten: rozet DURUMU, hap SEÇİMİ gösteriyor.
+ * İzinsiz geçiş devre dışı, gizli değil: gizlemek kontrolün genişliğini talebe göre oynatır, kapalı ama görünür seçenek kuralı da
+ * öğretir. Ton verilmez: durum tonu varsayılan "Açık"ta hapı sürekli amber doldurur ve nötr kontrol uyarı veriyormuş gibi durur.
  */
 function statusOptions(status: TicketStatus, allowed: readonly TicketStatus[], busy: boolean): MultiToggleOption<TicketStatus>[] {
   return (Object.keys(TICKET_STATUS_LABELS) as TicketStatus[]).map((key) => ({
@@ -370,15 +304,12 @@ function statusOptions(status: TicketStatus, allowed: readonly TicketStatus[], b
   }));
 }
 
-// Mod seçenekleri ve taslak kartı ORTAK (`ui/ai-handling`): WhatsApp ekranı da aynısını kullanıyor.
-
-/** Bağlı sipariş + müşterinin işaretlediği kalemler — şikâyetin somut zemini (brief §2). */
+/** Müşterinin işaretlediği kalemler şikâyetin somut zeminidir. */
 function OrderCard({ order }: { order: NonNullable<TicketDetailView['order']> }) {
   return (
     <div className="flex flex-col gap-2 rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3">
       <div className="flex items-center justify-between gap-3">
-        {/* Çizim 12px → `xs`. Kart BAŞLIĞI ama kartın içeriğinden büyük değil: asıl okunacak şey
-            kalem satırları. */}
+        {/* Kart başlığı içerikten büyük değil: asıl okunacak şey kalem satırları. */}
         <span className="font-ops-display text-ops-xs font-semibold text-ops-ink">
           Bağlı sipariş {order.referenceNo ?? `#${order.id.slice(0, 8)}`}
         </span>
@@ -393,7 +324,6 @@ function OrderCard({ order }: { order: NonNullable<TicketDetailView['order']> })
               <span className="grid h-4 w-4 flex-none place-items-center rounded-[4px] bg-ops-red-bg font-ops-display text-ops-micro font-bold text-ops-red">
                 !
               </span>
-              {/* Çizim: kalem adı 12,5px → `sm`, adet 11,5px → `xs`. İkisi de bir kademe küçüktü. */}
               <span className="min-w-0 flex-1 truncate font-ops-body text-ops-sm text-ops-body">{item.name}</span>
               <span className="flex-none font-ops-mono text-ops-xs text-ops-muted">{item.qty} ad.</span>
             </li>
@@ -408,8 +338,7 @@ function OrderCard({ order }: { order: NonNullable<TicketDetailView['order']> })
   );
 }
 
-/** Balonun zemin+kenarlığı; METİN buraya girmez — gerekçe `MessageBubble` künyesinde. */
-/** Gönderici ADININ rengi — ayrımı taşıyan yer burası. Balonun DERİSİ ortak (`bubbleClass`). */
+/** Ayrımı gönderici adının rengi taşır, metin değil: tonlu metin tonlu zeminde en çok okunan yerde kontrastını kaybederdi. */
 const SENDER_NAME: Record<OpsTone, string> = {
   olive: 'text-ops-olive-dark',
   violet: 'text-ops-violet',
@@ -421,25 +350,8 @@ const SENDER_NAME: Record<OpsTone, string> = {
 };
 
 /**
- * Yazışmadaki tek mesaj. Müşteri solda, operasyon ve AI sağda — ve **AI ayrı tonda**: "bunu kim
- * söyledi" sorusu sonradan da cevaplanabilmeli (`admin-talepler.md §6`).
- *
- * **RENK ADI TAŞIR, METNİ DEĞİL** — ve bu bir tur boyunca TERS kuruluydu: gönderici adı sabit gri,
- * balon metni tonluydu. Çizim tam tersini yapıyor ve haklı: ayrımı taşıması gereken şey kimliktir,
- * okunması gereken şey metindir. Tonlu bir metin, tonlu bir zeminin üstünde kontrastını kaybediyor
- * — üstelik en çok okunan yerde.
- */
-/**
- * Müşteri metninin ÇEVİRİLİ gösterimi (20.2) — anlatım kutusu ve yazışma balonu bunu paylaşır.
- *
- * ── ÇEVİRİ ORİJİNALİN YERİNE GEÇMEZ ─────────────────────────────────────────
- * Varsayılan çeviridir (operatör kuyruğu tarayabilmeli), ama orijinal bir tık uzakta durur:
- * personel müşterinin cümlesini bazen aynen alıntılamak zorunda (iade kararı, kargo şikâyeti) ve
- * makine çevirisi bir yorum katmanıdır — "kutu ezilmişti" ile "kutu hasarlıydı" aynı tazminat
- * kararını vermez.
- *
- * Tek komponent çünkü aynı üçlü iki yerde çiziliyor; iki kopya bir gün ayrışır ve ayrıştığı gün
- * biri rozeti unutur, yani personel makine cümlesini müşterinin cümlesi sanar.
+ * Çeviri orijinalin yerine geçmez, bir tık uzakta durur: personel müşterinin cümlesini bazen aynen alıntılamak zorunda ve "kutu
+ * ezilmişti" ile "kutu hasarlıydı" aynı tazminat kararını vermez.
  */
 function TranslatedBody({ message, className, align = 'start' }: { message: TicketMessageView; className: string; align?: 'start' | 'end' }) {
   const [showOriginal, setShowOriginal] = useState(false);
@@ -448,20 +360,16 @@ function TranslatedBody({ message, className, align = 'start' }: { message: Tick
 
   return (
     <>
-      {/* Metin BİÇİMLİ çiziliyor (06.09): ajan cevabını `*kalın*` / `•` madde ile yazıyor ve bu
-          ekran onu bugüne dek sökülmüş görüyordu — yani operatör müşteriye giden vurguyu
-          göremiyordu. Çizici ortak (`ChatText`); kutunun sınıfı yine buradan geçiyor. */}
+      {/* Metin biçimli çizilir: müşteriye giden `*kalın*` vurgusu operatörde de görünmeli. */}
       <ChatText
         className={className}
-        // Gösterilen metin ORİJİNALSE dilini söylüyoruz: ekran okuyucusu ve tarayıcı çevirisi
-        // Fransızca bir cümleyi Türkçe sanmasın. Çeviri gösteriliyorsa dil zaten yüzeyin dili.
+        // Gösterilen metin orijinalse dili söylenir: tarayıcı çevirisi Fransızca cümleyi Türkçe sanmasın.
         lang={original ? (message.language ?? undefined) : undefined}
         text={original ? message.originalBody : message.body}
       />
       {translated ? (
         <span className={`flex items-center gap-2 ${align === 'end' ? 'self-end' : ''}`}>
-          {/* MOR = makine konuştu (`ui/tone.ts` sözlüğü): rozet bir durum değil, KİMİN yazdığını
-              söylüyor — personelin okuduğu cümle müşterinin kendi cümlesi değil. */}
+          {/* Mor, makine konuştu demektir: personelin okuduğu cümle müşterinin kendi cümlesi değil. */}
           <Badge tone="violet">otomatik çevrildi</Badge>
           <button
             type="button"
@@ -476,13 +384,11 @@ function TranslatedBody({ message, className, align = 'start' }: { message: Tick
   );
 }
 
+/** Müşteri solda, operasyon ve AI sağda; AI ayrı tonda, çünkü "bunu kim söyledi" sonradan da cevaplanabilmeli. */
 function MessageBubble({ message }: { message: TicketMessageView }) {
   const mine = message.sender !== 'customer';
   const tone = TICKET_SENDER_TONE[message.sender];
   return (
-    // Hizalama ve künye satırı ORTAK (`ui/message-thread`); WhatsApp sohbeti de aynısını kullanıyor.
-    // Kutuyu yine `TranslatedBody` çiziyor, sınıfı ortak: çeviri anahtarı kutunun DIŞINDA durmak
-    // zorunda, o yüzden kutuyu sahiplenen bir komponent bu ekranı çatallamaya zorlardı.
     <MessageRow
       side={mine ? 'out' : 'in'}
       meta={
@@ -498,14 +404,7 @@ function MessageBubble({ message }: { message: TicketMessageView }) {
   );
 }
 
-/**
- * Mesajın ekleri. **Her mesajda olabilir** (`ticket_message.attachments`), yalnız ilkinde değil —
- * çizim fotoğrafları anlatımın altına koymuş ama şema onları mesaja bağlıyor; ekler bu yüzden
- * mesajın içinde duruyor (ilk mesajınki yine anlatımın altında görünür, aynı şey).
- *
- * Adres SÜRELİ ve imzalı (`privateReadUrl`, 15 dk): bozuk ürün fotoğrafı private kovada durur.
- * Yeni sekmede açılır çünkü karar çoğu kez fotoğraftan verilir ve küçük kutu buna yetmez.
- */
+/** Ekler her mesajda olabilir, yalnız ilkinde değil. Yeni sekmede açılır: karar çoğu kez fotoğraftan verilir ve küçük kutu yetmez. */
 function Attachments({ urls, align = 'start' }: { urls: readonly string[]; align?: 'start' | 'end' }) {
   if (urls.length === 0) return null;
   const size = 72;
@@ -524,39 +423,21 @@ interface ReplyBarProps {
   busy: boolean;
   returnAllowed: boolean;
   returnReason?: string;
-  /** "Düzenleyerek gönder"in taşıdığı taslak — nesne kimliği değişince kutuya yazılır (16.08). */
+  /** Nesne kimliği değişince kutuya yazılır. */
   prefill?: { text: string } | null;
   onReply: (body: string) => Promise<boolean>;
   onTriggerReturn: () => void;
 }
 
 /**
- * Alt bar — **çizimdeki gibi TEK SATIR**: kutu, "İade tetikle", "Gönder".
- *
- * Bir tur boyunca üçe bölünmüştü (kutu · altında Gönder satırı · altında ayrı bir İade satırı) ve
- * çizimin niyeti orada kayboluyordu: bu üçü aynı kararın parçası — operatör cevabı yazarken "bu
- * para işi mi" sorusunu da veriyor. Üç kata yayılınca ikisi ayrı iş gibi okunuyordu.
- *
- * **Bir açıklama satırı da SİLİNDİ:** "cevap müşteriye e-posta ile de gider…" diye eklediğim cümle
- * zaten placeholder'ın söylediğini (*"aynen müşteriye görünür"*) ikinci kez söylüyordu ve satırı
- * bozan şeyin kendisiydi — `mr-auto` taşıyan bir yazı ile `fullWidth` bir düğme aynı flex satırında
- * çakışıyordu.
- *
- * **Kutu tek satırlık DEĞİL, `Textarea`** — çizimden bilinçli sapma: cevaplar paragraf uzunluğunda
- * yazılıyor ve tek satırlık bir kutuda operatör yazdığını göremezdi. Satırın kendisi `items-end`
- * hizalı, böylece kutu büyüse de düğmeler tabanda kalıyor.
- *
- * Metin BURADA durur, üst durumda değil: her tuşta client kökünü yeniden çizmenin karşılığı yok.
- * **Gönderilemeyen metin SİLİNMEZ** — kapı reddederse kutu olduğu gibi kalır; operatörün yazdığı
- * üç paragrafı bir hata mesajı uğruna kaybetmesi kabul edilemez.
+ * Kutu, "İade tetikle" ve "Gönder" tek satırda: operatör cevabı yazarken "bu para işi mi" kararını da verir. Gönderilemeyen metin
+ * silinmez: yazılan üç paragraf bir hata mesajı uğruna kaybolmamalı.
  */
 function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTriggerReturn }: ReplyBarProps) {
   const [body, setBody] = useState('');
   const empty = body.trim().length === 0;
 
-  // Taslak kutuya OPERATÖRÜN kararıyla taşınır ("Düzenleyerek gönder") — kutudaki metni ezmesi bu
-  // yüzden kabul: basılan düğme zaten "bu metinle çalışacağım" demek. Kendiliğinden dolan bir kutu
-  // olsaydı yazılmakta olan cevabı silmek olurdu.
+  // Taslağı operatör kendisi taşıdı; basılan düğme "bu metinle çalışacağım" demek, kutudakini ezmesi bu yüzden kabul.
   useEffect(() => {
     if (prefill) setBody(prefill.text);
   }, [prefill]);
@@ -568,11 +449,7 @@ function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTrigg
     });
   };
 
-  // Kutu TEK SATIR yüksekliğinde (`CONTROL_H.md` = 36px) ve düğmeler de `md` — çizimde
-  // üçünün dolgusu da `10px 13px`, yani AYNI yükseklik. Bir tur boyunca kutu iki satır (`rows=2`),
-  // düğmeler `sm` (32px) idi: satır hem kalın hem hizasızdı (kullanıcı bildirimi, 03.08).
-  // `Textarea` kalıyor (`Input` değil): tek satır GÖRÜNÜYOR ama yeni satır kabul ediyor ve
-  // taşınca kendi içinde kayıyor — cevaplar paragraf uzunluğunda yazılıyor.
+  // Kutu tek satır yüksekliğinde ve düğmelerle aynı boyda; `Textarea`, çünkü cevap paragraf uzunluğunda yazılır ve taşınca kendi içinde kayar.
   const box = (
     <Textarea
       value={body}
@@ -596,8 +473,6 @@ function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTrigg
     </Button>
   );
 
-  // `items-center`: üçü de aynı yükseklikte olduğu için hizalama artık taban değil merkez —
-  // `items-end` iki farklı yükseklik varken gerekliydi, eşitlendiğinde gereksiz.
   return (
     <div className="flex items-center gap-2.5">
       {box}
@@ -607,37 +482,19 @@ function ReplyBar({ busy, returnAllowed, returnReason, prefill, onReply, onTrigg
   );
 }
 
-// ── Müşteri bağlamı panosu ───────────────────────────────────────────────────
-
 interface TicketContextPaneProps {
   context: CustomerContextData | null;
   customerName: string;
-  /** Kanal düğmesinin pencereye taşıdığı özet — talebin konusu ve bağlı siparişi. */
   chat: MessengerContext;
 }
 
-/**
- * Talep detayının SAĞ SÜTUNU — "bu kişi kim, bizden ne aldı".
- *
- * **Bu ekranda bir tur boyunca HİÇ YOKTU** ve eksikliği kullanıcı fark etti (08.08): talep detayı
- * müşterinin adını ve kaçıncı talebi olduğunu söylüyordu ama BAŞKA siparişlerini göstermiyordu —
- * oysa iade kararının en sık sorulan sorusu tam da o ("bu müşteri düzenli mi, ilk kez mi sorun
- * yaşıyor"). Pano WhatsApp ekranı için yazılmıştı; aynı soruyu soran iki ekran olduğu anlaşılınca
- * ortak kite taşındı (`ui/customer-context-pane`) ve buraya da takıldı.
- *
- * Talebin KENDİ siparişi burada DEĞİL: o, gövdedeki `OrderCard`'dır ve kalemleriyle birlikte
- * şikâyetin zeminidir. Buradaki liste "öteki alışverişleri" — ikisi ayrı soru.
- *
- * **Kampanya izni 14.09'da kalktı** (kullanıcı isteği: işlevi olmayan bilgi kalkar): talep bir şikâyet
- * işi ve pazarlama izni bu ekranda hiçbir kararı etkilemiyordu.
- */
+/** Talebin kendi siparişi burada değil gövdedeki `OrderCard`'dadır: buradaki liste müşterinin öteki alışverişleri, ayrı bir soru. */
 export function TicketContextPane({ context, customerName, chat }: TicketContextPaneProps) {
   if (!context) {
     return (
       <ContextPane>
         <span className="font-ops-display text-ops-base font-semibold text-ops-ink">{customerName}</span>
-        {/* Bağlam okunamadıysa SUSMUYORUZ: boş bir pano "bu müşterinin siparişi yok" diye okunurdu
-            ve iade kararı o yanlış okumaya dayanabilirdi (CLAUDE §1: ölçülemeyen değer sıfır değil). */}
+        {/* Bağlam okunamadıysa söylenir: boş pano "siparişi yok" diye okunur ve iade kararı ona dayanabilirdi. */}
         <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">Sipariş geçmişi okunamadı.</span>
       </ContextPane>
     );
@@ -645,14 +502,12 @@ export function TicketContextPane({ context, customerName, chat }: TicketContext
 
   return (
     <ContextPane>
-      {/* Ad müşteri ekranına EN AYIRT EDİCİ anahtarla gider (e-posta → telefon → ad): aynı adlı iki
-          müşteri varsa ad araması ikisini birden getirirdi. Detay panosunun köprüsüyle aynı kural. */}
+      {/* Ad müşteri ekranına en ayırt edici anahtarla gider: aynı adlı iki müşteri ad aramasında birlikte gelirdi. */}
       <ContextIdentity
         context={context}
         href={customersUrl({ q: context.email ?? context.phone ?? context.name, type: 'all', scope: 'all', mc: 'any' })}
       />
-      {/* Sohbet kanalları (15.32): talebin cevabı talep akışında kalır; kanal düğmesi müşteriye WhatsApp,
-          Messenger ya da Instagram'dan — en son yazdığı yerden — yüzen pencerede ulaşmak içindir. */}
+      {/* Talebin cevabı talep akışında kalır; kanal düğmesi müşteriye en son yazdığı yerden ulaşmak içindir. */}
       <CustomerChannels customerId={context.customerId} context={chat} />
       <ContextOrders context={context} />
     </ContextPane>
