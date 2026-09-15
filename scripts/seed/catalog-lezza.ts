@@ -10,33 +10,9 @@ import { teklifSkulari } from './supplier-prices';
 import { enAz, type Katman } from './tier';
 
 /**
- * **GERÇEK katalog** (05 · kullanıcı kararı 04.08) — Lezza Foods'un 141 ürünü, uydurulmuş 69'un
- * yerine.
- *
- * ── İKİ KATMAN, VE AYRIMI OKUNAKLI TUTMAK ŞART ───────────────────────────────
- * `data/lezza-catalog.json` kaynağın AYNASIDIR (`pnpm lezza:catalog` üretir): ad, slug, SKU,
- * kategori, kanal, görsel adresi ve gramaj GERÇEKTİR. Bu dosya ise **sahnedir**: kaynakta hiç
- * olmayan alanları — yasal beyan, KDV, raf ömrü, durum, marj — biz ekliyoruz.
- *
- * Kullanıcı kararı bu ikinci katmanı açıkça istedi (*"datayı manipüle edelim, bazı bilgilerini biz
- * ekleyelim"*), ama bu bir uyarıyı geçersiz kılmıyor, yerini değiştiriyor: **ürün adları ve marka
- * GERÇEK olduğu için buradaki beyanlar üretim verisi sanılmamalı.** İki koruma koydum:
- *   1. Türetilen her alan bu dosyada, tek yerde ve gerekçesiyle duruyor — aramak için grep yeter.
- *   2. Türetim ADIN KENDİSİNDEN yapılıyor (aşağıdaki anahtar kelime tablosu), rastgele değil:
- *      "Cheese Pastry" süt+gluten, "Baklava with Walnut" sert kabuklu alır. Rastgele bir alerjen
- *      dağıtımı, gerçek bir ürüne gerçekten yanlış bir beyan yazardı; addan türeyen tahmin en
- *      azından ürünle tutarlı olur.
- *
- * **`ALERJEN_DESENLERI` gibi indise bağlı bir dağıtım BİLEREK KULLANILMADI.** Uydurma katalogda
- * doğruydu (orada ad da uydurmaydı, tek dert süzgecin denenmesiydi); burada "Vegan Falafel"e balık
- * alerjeni yazardı.
- *
- * ── SÜZGEÇ SENARYOLARI KORUNDU ───────────────────────────────────────────────
- * Eski toplu üretici her boşluğu indise göre serpiştiriyordu (eksik dil · eksik beyan · görselsiz ·
- * pasif · aday · kargolanamaz) ve operasyon süzgeçleri bundan besleniyordu. Gerçek veri bu
- * boşlukların hiçbirini taşımıyor — yani hiçbir şey yapmasaydık **süzgeçlerin yarısı sonuçsuz
- * kalırdı** ve bu sessiz bir kayıp olurdu. O yüzden boşluklar burada da serpiştiriliyor, ama
- * SEYREK: gerçekçilik ile denenebilirlik arasındaki denge, oranların içinde yazılı.
+ * Gerçek Lezza kataloğu (`data/lezza-catalog.json`, kaynağın aynası) üzerine kaynakta olmayan alanları
+ * (beyan, KDV, raf ömrü, durum) ekleyen sahne. Türetilen her alan addan ve tek yerde çıkar; `extend`
+ * katmanı süzgeçler sonuç versin diye seyrek boşluklar serpiştirir.
  */
 
 interface LezzaVariant {
@@ -46,10 +22,7 @@ interface LezzaVariant {
   /** Paket içi adet (`(12 Pieces)` · `4x80g`). `null` = bildirilmemiş — sıfır DEĞİL. */
   piecesCount: number | null;
   sku: string | null;
-  // `logistics` (koli/palet künyesi) BU TİPTE ARTIK YOK ve üreteç de yazmıyor (kullanıcı kararı
-  // 28.08 · `05.22`): alan hiç okunmuyordu ve sorduğu soru başka yerde çözüldü — "kolide kaç adet"
-  // `variant_barcode.qty_per_code`, palet ekseni ise kapsam dışı. Gerekçenin tamamı üreteçte.
-  /** Kaynağı API OLMAYAN kalemlerde (basılı katalogdan gelen 7 SKU) `null`. */
+  /** Kaynağı API olmayan kalemlerde (basılı katalogdan gelenler) `null`. */
   sourceId: number | null;
   sourceSlug: string | null;
 }
@@ -94,20 +67,8 @@ function readLezzaCatalog(): LezzaCatalog {
 
 
 /**
- * ── ÜRÜN ADI VE AÇIKLAMASININ ÜÇ DİLLİ KARŞILIĞI (kullanıcı isteği 16.08) ────────────────────────
- *
- * Kaynak katalog yalnız İNGİLİZCE ve öyle kalıyor (`sourceLanguage: 'en'` — üreteç künyesi). Eskiden
- * aynı İngilizce metin üç dile de yazılıyordu: Fransız müşteri "Spiral Rose Börek with Cheese"
- * okuyordu ve **kayıt teknik olarak "tam" görünüyordu** (`is_incomplete` yalnız alanın DOLU olmasına
- * bakar, dilinin doğru olmasına değil). Yani eksiklik hiçbir sayaçta görünmüyordu.
- *
- * `data/translations.json` bu boşluğu kapatıyor: 126 ürünün adı ve açıklaması üç dilde ELLE yazılı.
- * Dosya üretilmiş değil — `lezza:catalog` ona dokunmaz.
- *
- * **Kaynak İngilizce ad yine de gerekli ve saklanıyor:** alerjen tahmini ve KDV ölçütü İngilizce
- * anahtar kelimelere bakıyor (`ice cream`, `cup`, `slice`). Görünen ad çevrildiği hâlde bu desenler
- * kaynağın adı üzerinde çalışmaya devam eder — yoksa "Maraş Dondurması" İngilizce desene takılmaz ve
- * KDV sessizce %5,5'e düşerdi.
+ * Ürün adı ve açıklamasının elle yazılmış üç dilli karşılığı (`data/translations.json`); kaynak yalnız
+ * İngilizce. Alerjen ve KDV desenleri yine kaynağın İngilizce adına bakar, çevrilmiş ada değil.
  */
 interface LezzaCeviri {
   name: LocalizedText;
@@ -120,12 +81,7 @@ function readCeviriler(): Record<string, LezzaCeviri> {
   return Object.fromEntries(Object.entries(ham).filter(([k, v]) => !k.startsWith('_') && typeof v === 'object')) as Record<string, LezzaCeviri>;
 }
 
-/**
- * Ada bakarak alerjen çıkarımı — **tahmindir, beyan değildir** (dosya künyesi).
- *
- * Sıra önemli değil, kapsam önemli: bir ürün birden çok anahtar kelime taşıyabilir ve hepsi
- * birikir ("Cheese Pastry (Su Börek)" hem süt hem gluten alır).
- */
+/** Addan alerjen tahmini, beyan değil; bir ad birden çok desene uyabilir ve alerjenler birikir. */
 const ALERJEN_IPUCLARI: Array<[RegExp, ProductAllergen[]]> = [
   [/b[öo]rek|bagel|pastry|bun|cake|baklava|kunefe|k[üu]nefe|calzone|simit|croissant|pide|lahmacun|pizza|donut|profiterol|tiramisu|cheesecake|waffle|kadayif|kaday[ıi]f|nugget|burger|fillet|wings|crispy|breaded/i, ['gluten']],
   [/cheese|milk|cream|yogurt|yoghurt|butter|latte|tiramisu|cheesecake|ice cream|dondurma|kaymak|mara[şs]|profiterol|s[üu]tla[çc]|tres leches|mousse/i, ['sut']],
@@ -143,13 +99,8 @@ function alerjenTuret(ad: string): ProductAllergen[] {
 }
 
 /**
- * Spek belgesindeki alerjen adı → yasal enum. **Türetme değil ÇEVİRİ:** üstteki tablo addan tahmin
- * yürütür, bu tablo belgenin yazdığını karşılığına koyar.
- *
- * İkisi eşleme istiyor ve ikisi de `sert_kabuklu` altında toplanıyor: `ceviz` ve `antep fistigi`.
- * AB'nin on dörtlü listesinde ceviz ve fıstık ayrı kalem değildir — "sert kabuklu yemişler"
- * (fruits à coque) tek başlıktır. **`yer_fistigi` ile karıştırmamak kritik:** yer fıstığı baklagildir,
- * listede AYRI bir kalemdir ve alerjisi de ayrıdır; ikisini birleştirmek yanlış bir beyan olurdu.
+ * Spek belgesindeki alerjen adı → yasal enum (çeviri, tahmin değil). Ceviz ve antep fıstığı AB
+ * listesinde tek başlıktır (sert kabuklu); yer fıstığı ayrı kalemdir, birleştirilmez.
  */
 const SPEK_ALERJEN: Record<string, ProductAllergen> = {
   gluten: 'gluten',
@@ -162,11 +113,7 @@ const SPEK_ALERJEN: Record<string, ProductAllergen> = {
   'antep fistigi': 'sert_kabuklu',
 };
 
-/**
- * Tanınmayan ad SESSİZ DÜŞMEZ, seed'i durdurur. Bir beyan alanında sessiz kayıp, eksik bir alerjen
- * satırı demektir — ve eksik alerjen beyanı, hiç beyan olmamasından tehlikelidir: ürün "beyanı tam"
- * görünür, oysa bir kalemi düşmüştür.
- */
+/** Tanınmayan ad beslemeyi durdurur: sessizce düşen bir alerjen, "beyanı tam" görünen eksik bir beyandır. */
 function spekAlerjen(liste: string[]): ProductAllergen[] {
   return [
     ...new Set(
@@ -179,32 +126,12 @@ function spekAlerjen(liste: string[]): ProductAllergen[] {
   ];
 }
 
-/**
- * Spek metnini üç dile de yazar. **Çeviri DEĞİL, kopya** — ve bu ad/açıklamadaki kararın aynısı
- * (`sourceLanguage`): makine çevirisini buraya gömmek, çevrilmiş metni belgenin kendi cümlesi gibi
- * gösterirdi. Çeviri ayrı bir adımdır (20.2); o gün bu üç kopyanın ikisi gerçek çeviriyle değişir.
- */
+/** Spek metni üç dile kopyalanır; makine çevirisi belgenin kendi cümlesi gibi görünmesin diye gömülmez. */
 const ucDile = (metin: string): LocalizedText => ({ tr: metin, fr: metin, de: metin });
 
 /**
- * **İZ (çapraz bulaşma) — kapsamın ikinci ayağı, ve buradaki karar dosyanın en incelikli yeri.**
- *
- * Addan türetme yalnız YEDİ alerjen üretiyor (gluten · süt · sert kabuklu · yumurta · susam · soya ·
- * balık). Kalan yedisi (`kabuklu` · `yer_fistigi` · `kereviz` · `hardal` · `sulfit` · `aci_bakla` ·
- * `yumusaka`) hiçbir üründe geçmezse **alerjen süzgeci o yedisinde sessizce sonuçsuz kalır** — eski
- * toplu üreticinin künyesi tam bunu koruyordu (*"on dört yasal alerjenin TAMAMI en az bir üründe
- * geçer"*) ve geçen hafta düzeltilen hata da tam bu sınıftı: `% 7` ölçütü 14'lük dizide 7. deseni
- * her seferinde eliyordu, yani bir alerjen veriye HİÇ girmiyordu ve kimse fark etmiyordu.
- *
- * **Ama kapsamı `allergens` alanına yazarak sağlamak yanlış olurdu:** baklavaya "kereviz İÇERİR"
- * yazmak gerçek bir ürüne gerçekten yanlış bir beyandır. `traces` ise farklı bir cümledir —
- * *"aynı üretim hattında bulunabilir"* — ve ortak hatlı bir gıda üreticisinde savunulabilir.
- * Bu yüzden nadir alerjenler İZ olarak dağıtılıyor: süzgeç denenebilir kalıyor, hiçbir ürüne
- * yanlış bir "içerir" beyanı yazılmıyor.
- *
- * Dağıtım `% uzunluk` ile dönüyor ve araya "boş bırak" ölçütü KONMUYOR — ikinci bir modulo, ortak
- * çarpanı olduğu gün yine bir değeri sessizce elerdi. Boş iz zaten `beyanEksik` ve türetilmiş
- * alerjenle çakışma hâllerinden doğal olarak çıkıyor.
+ * Addan türeyemeyen nadir alerjenler iz (`traces`) olarak dağıtılır ki alerjen süzgeci on dördünde de
+ * sonuç versin; "içerir" yazmak gerçek ürüne yanlış beyan olurdu, "bulunabilir" savunulabilir.
  */
 const NADIR_IZLER: ProductAllergen[][] = [
   ['yer_fistigi'],
@@ -214,20 +141,13 @@ const NADIR_IZLER: ProductAllergen[][] = [
   ['kereviz'],
   ['aci_bakla'],
   ['yumusaka'],
-  // `balik` bu katalogda ADDAN da türeyemiyor (fırın/tatlı/tavuk kataloğunda balıklı ürün yok) ve
-  // ölçtüm: listeye konmazsa on dört alerjenden biri veriye HİÇ girmiyor. En zayıf halka bu —
-  // ortak hatlı bir tatlı üreticisinde balık izi zorlama bir varsayım. Yine de konuyor, çünkü
-  // hiçbir sonuç döndüremeyen bir süzgeç denenemez ve denenmeyen süzgeç bozuk olduğunda susar.
+  // Balık addan türemiyor; listede olmasa on dört alerjenden biri veride hiç geçmez.
   ['balik'],
   ['yer_fistigi', 'sert_kabuklu'],
   ['sulfit', 'hardal'],
 ];
 
-/**
- * KDV — Fransa gıda oranları. Dondurulmuş/paketli gıda %5,5; **hazır tüketime yakın kalemler %10**
- * (Fransa'da "consommation immédiate" ayrımı). Kaynakta oran yok, bu bizim varsayımımız ve
- * PARAMETRİK: tek yerde durduğu için değiştirilmesi tek satır.
- */
+/** Fransa gıda KDV'si %5,5, hazır tüketime yakın kalemler %10; kaynakta oran yok, tahmin yalnız `extend`te. */
 const KDV_HAZIR = 10;
 const KDV_GIDA = 5.5;
 const HAZIR_TUKETIM = /ice cream|dondurma|cup|slice|mono pack/i;
@@ -295,21 +215,8 @@ function icindekiler(alerjenler: ProductAllergen[]): LocalizedText {
 }
 
 /**
- * ── KATEGORİ FOTOĞRAFLARI — BEŞİ DE ELLE SEÇİLDİ (kullanıcı kararı 16.08) ────────────────────────
- *
- * Kaynağın kendi kategori kapağı (`categories[].imageUrl`) ARTIK KULLANILMIYOR. Onlar illüstrasyon +
- * ürün kolajıydı; kullanıcı 253 fotoğrafın tamamına bakıp her kategoriye **ambalajsız ürün
- * fotoğrafı** seçti — müşteri kategoriye tıklamadan önce ürünün kendisini görsün, kutusunu değil.
- *
- * **Dizinin İLKİ kapaktır** (`category.image_key`), kalan dördü havuza gider (`category_image`,
- * 05.23) ve kart kareyi GÜNE göre havuzdan seçer. Beş sayısı kullanıcının tavanı.
- *
- * Seçim SEED'DE duruyor, üreteçte değil, ve bu ayrım bilinçli: üreteç kaynağın aynasıdır ve bir
- * sonraki `pnpm lezza:catalog` koşusu oraya yazılmış her elle kararı sessizce silerdi. Hangi
- * fotoğrafın kapak olacağı editoryal bir karardır — sahnenin işi.
- *
- * ⚠ **Tavuk ürünlerinin beşi de AMBALAJLI** ve bu bir tercih değil, arşivin sınırı: kategorinin
- * 11 fotoğrafının 11'i de poşet çekimi (ölçüldü 16.08). Ambalajsız fotoğraf çekilene kadar böyle.
+ * Kategori fotoğrafları elle seçildi: ilki kapak, kalanı günlük döndürülen havuz. Seçim üreteçte değil
+ * burada, çünkü `pnpm lezza:catalog` üretecin çıktısını her koşuda yeniden yazar.
  */
 const KATEGORI_GORSELLERI: Record<string, string[]> = {
   bakery: [
@@ -356,11 +263,7 @@ const KATEGORI_GORSELLERI: Record<string, string[]> = {
   ],
 };
 
-/**
- * Dosya adı → uzak adres. Seçimler DOSYA ADIYLA yazılı (arşivde insanın gördüğü ad); indirme ise
- * adresi ister. Harita katalogdan kurulur, sabit bir liste tutulmaz — adres kaynakta değişirse
- * seçim yine tutar.
- */
+/** Seçimler dosya adıyla yazılı, indirme adres ister; harita katalogdan kurulur ki adres değişince seçim tutsun. */
 export function lezzaGorselUrlByDosya(): Map<string, string> {
   const harita = new Map<string, string>();
   for (const p of readLezzaCatalog().products) {
@@ -372,12 +275,7 @@ export function lezzaGorselUrlByDosya(): Map<string, string> {
   return harita;
 }
 
-/**
- * Kategori ALTYAZILARI (05.17 · kullanıcı kararı 08.08) — mobil vitrin bandının ikinci satırı,
- * web kullanımı tasarım kararına açık. Metinler EDİTORYAL fikstürdür: operatör Katalog ekranından
- * değiştirir (üç dilli form + AI çeviri önerisi); buradaki değer ilk kurulumun cümlesi, sözleşme
- * değil. Boş bırakılan kategori altyazısız çizilir — yedek metin uydurulmaz.
- */
+/** Kategori altyazıları ilk kurulumun cümlesidir; operatör Katalog ekranından değiştirir, boş olan altyazısız çizilir. */
 const KATEGORI_TAGLINE: Record<string, LocalizedText> = {
   bakery: { tr: 'Börekler ve hamur işleri', fr: 'Böreks et pâtisseries', de: 'Börek und Gebäck' },
   dessert: { tr: 'Baklava ve şerbetli tatlılar', fr: 'Baklava et desserts', de: 'Baklava und Süßspeisen' },
@@ -388,50 +286,20 @@ const KATEGORI_TAGLINE: Record<string, LocalizedText> = {
 };
 
 /**
- * **SAKLAMA REJİMLERİ — `shippable` buradan TÜRER, ayrı yazılmaz** (müşteri şeridi talebi 08.08).
- *
- * ── NEDEN TEK KAYNAK ────────────────────────────────────────────────────────
- * Önce iki alan elle ayrı yazılıyordu: saklama metni TEK bir sabitti (`−18 °C`, 110 ürüne aynısı)
- * ve `shippable` ondan bağımsız bir kategori kuralıydı (`p.category !== 'ice-cream'`). İki alan
- * elle ayrı tutulduğunda **bir gün çelişirler** ve çelişkinin görüldüğü yer ekran olur: *"−18 °C'de
- * saklayın"* yazan bir ürün kargoya verilir. Rejim tek kaynak; metin de kargo izni de ondan çıkar.
- *
- * ── AYRI BİR KOLON DEĞİL, SEED SÖZLÜĞÜ ──────────────────────────────────────
- * `storage_instructions` modelde SERBEST METİNDİR (çok dilli, operatör yazar) ve öyle kalmalı —
- * rejimi kolona çevirmek, operatörün cümlesini bir listeye hapsederdi. Bu sözlük yalnız BESLEMENİN
- * kuralı: gerçek katalogda rejimi insan seçer, burada üretilmesi gerekiyor.
- *
- * ── ORAN ────────────────────────────────────────────────────────────────────
- * Ölçülen sorun (talep 08.08): 120 üründen 114'ü `shippable=true`, yani yer'e bağlı her ekran
- * (katalog çipi, `StockMark`, sepet teslimat kısıtı, "karma paket" kuralı) altı dondurma üzerinden
- * sınanıyordu. Karma paket hâli seed'de HİÇ doğmuyordu. Serpiştirme ~%40'ı kargo dışına taşır.
+ * Saklama rejimi metnin de kargo izninin de tek kaynağı: iki alan ayrı yazılınca "−18 °C'de saklayın"
+ * yazan ürün kargoya verilir. `extend` rejimi serpiştirir ki karma paket hâli doğsun.
  */
 type SaklamaRejimi = 'donuk' | 'soguk-zincir' | 'sogutulmus' | 'raf';
 
 /**
- * **Belgenin saklama cümlesi "−18 °C" diyor mu** — tek yerde, çünkü artık İKİ alan buna bakıyor
- * (`shippable` ve `storageType`). Ayrı ayrı yazılsalardı aynı belgeden iki farklı sonuç çıkarabilir
- * hâle gelirlerdi; bu dosyanın 08.08'de öğrendiği ders tam olarak buydu.
- *
- * Ölçüldü (16.08): belgesi olan altı ürünün **altısı da** "-18°C dondurulmuş" diyor, yani
- * kaynaklarda `chilled` ya da `ambient` tek bir kanıt YOK. Desen bu yüzden tek yönlü: "−18 °C
- * yazıyorsa donuk", yazmıyorsa **bilmiyoruz** (alan yazılmaz, kolonun varsayılanı kalır).
+ * Belgenin saklama cümlesi "−18 °C" diyor mu; `shippable` ve `storageType` aynı sonuca buradan varır.
+ * Tek yönlüdür: yazmıyorsa "bilmiyoruz", alan yazılmaz.
  */
 const BEYAN_DONUK = /-\s*18\s*°?\s*c/i;
 
 /**
- * **REJİM ARTIK ÜÇ ŞEYİN TEK KAYNAĞI** (16.08 · `product.storage_type` kolonu eklendi).
- *
- * Soğuk zincir bugüne kadar saklanMIYORDU: `shippable = false` onun yerine geçiyordu, yani sistem
- * SEBEBİ değil SONUCU tutuyordu (migration `0005` künyesi). Kolon gelince seed'in seçeceği bir
- * değer daha doğdu — ve onu ayrı bir sözlüğe yazmak, bu dosyanın 08.08'de çözdüğü hatayı geri
- * getirirdi: **iki alan elle ayrı tutulduğunda bir gün çelişirler.** Şimdi metin de, kargo izni de,
- * saklama rejimi de aynı satırdan çıkıyor; "−18 °C yazan ürün `ambient` işaretlenmiş" hâli
- * temsil edilemez oldu.
- *
- * Eşleme dörtten üçe iniyor ve kayıp yok: `donuk` ile `soguk-zincir` **aynı rejimdir** (ikisi de
- * `frozen`), ayrıldıkları yer kargo iznidir — dondurma yolu kaldırmaz, börek kaldırır. Kolonun üç
- * değeri saklamayı anlatıyor, teslimatı `shippable` anlatıyor; ikisi ayrı sorular (0005 künyesi).
+ * Metin, kargo izni ve saklama türü aynı satırdan çıkar ki birbiriyle çelişemesin. `donuk` ile
+ * `soguk-zincir` aynı saklama türüdür; ayrıldıkları yer kargo iznidir.
  */
 const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean; storageType: ProductStorageType }> = {
   // Donuk ama kargolanabilir: yalıtımlı kutu 24-48 saatlik yolu kaldırır — kataloğun ana kütlesi.
@@ -479,20 +347,12 @@ const SAKLAMA: Record<SaklamaRejimi, { metin: LocalizedText; shippable: boolean;
 };
 
 /**
- * Ürünün rejimi — kategori gerçek kuralı verir, serpiştirme çeşitliliği.
- *
- * **Dondurma her zaman soğuk zincir** ve bu serpiştirme DEĞİL, gerçek bir iş kuralı: eski kodun tek
- * doğru satırıydı, aynen korundu. Ötekilerde `i` üzerinden deterministik dağıtım — her kategoride
- * hem kargolanan hem kargolanmayan kalem bulunsun (talebin birinci maddesi), çünkü "karma paket"
- * hâli ancak öyle doğar ve `packages.ts`'in *"bir kalem kargolanamıyorsa paket tamamen rota içi"*
- * kuralı ancak öyle sınanır.
- *
- * Rastgele DEĞİL: seed her koşuda aynı kataloğu kurmalı, yoksa "dün geçen test bugün düştü" olur.
+ * Dondurma her zaman soğuk zincirdir (iş kuralı); öteki kategorilerde `i` ile deterministik dağıtılır ki
+ * her kategoride kargolanan ve kargolanmayan kalem bulunsun.
  */
 function saklamaRejimi(kategori: string | null, i: number): SaklamaRejimi {
   if (kategori === 'ice-cream') return 'soguk-zincir';
-  // Bölenler ÖLÇÜLEREK seçildi (talebin istediği ~%25-40 bandı): 5/5/7 denendi → %48, 6/7/5 → %39,
-  // 7/8/5 → %36. Sonuncusu alındı; üçünde de her kategoride iki yön birden doğuyor.
+  // Bölenler kargo dışı payı ~%36'da tutar ve her kategoride iki yönü de doğurur.
   if (i % 7 === 0) return 'soguk-zincir';
   if (i % 8 === 3) return 'sogutulmus';
   if (i % 5 === 2) return 'raf';
@@ -500,33 +360,8 @@ function saklamaRejimi(kategori: string | null, i: number): SaklamaRejimi {
 }
 
 /**
- * Ürünün SATIŞ DURUMU — tek karar noktası (kullanıcı kararı 19.08).
- *
- * Sıralama bilinçli: önce satılabilir olmayı GEREKTİREN sebepler, sonra katman, sonra kusurlar.
- * Ters sırada yazılsaydı bir indis, paket kalemini pasife düşürebilir ve paketi bozardı.
- *
- * ── AİLE BÖLÜNMEZ (kullanıcı kararı 19.08) ───────────────────────────────────────────────────
- * *"Simitler bir aile olarak görünmüyor… ailelerin net görülebilmesi için bunların hepsinin
- * bilgisinin olması gerekiyor."* Ölçüldü: 25 ailenin **8'i tamamen adaydı** (Meze · Poğaça · Tavuk
- * Kanat · Kol Böreği · Kek Bardağı · Çıtır Tavuk Fileto · Mini Pide · Kalzone) — yani vitrinde HİÇ
- * yoklardı. Simit ailesinde 3 üründen yalnız Tatlı Simit satıştaydı; müşteri "simit" arayınca tek
- * sonuç görüyordu ve çeşit bloğu hiç çizilmiyordu.
- *
- * Sebebi ölçütün ürün başına bakmasıydı: *teklifte SKU'su yoksa aday*. Tesadüfen bir ailenin hiçbir
- * üyesi 22.12.2025 teklifinde yoksa aile toptan kayboluyordu.
- *
- * Kural artık şu: **aile üyesi ürün aday OLAMAZ.** Ticari gerekçesi de bu — aile aynı ürünün çeşit
- * eksenidir (E böreği: peynirli/kıymalı/patatesli/ıspanaklı) ve müşteri o eksende SEÇİM yapar. Yarım
- * bir çeşit bloğu bozuk raftır: dört çeşidin ikisini listeleyen dükkân, satmadığı iki çeşidi de
- * hatırlatmış olur. Bir ürün hattı ya bütün alınır ya hiç alınmaz.
- *
- * Aday bu yüzden **ailesiz ürünlerden** seçiliyor: tek başına duran bir kalemi stoklamamak hiçbir
- * ekranı yarım bırakmaz. Ölçülen sonuç: 64 aday → 26, sekiz boş ailenin hepsi doldu.
- *
- * Kural ayrıca bir fikstürü GEREKSİZ kıldı: `VITRIN_FIKSTURU` (901016B · 901023B · 901015B ·
- * 901024B) elle satışa açılmış dört Artisan kek idi ve dördü de aynı ailenin üyesi — aile kuralı
- * onları zaten aktif doğuruyor. Elle liste silindi; iki ölçüt aynı şeyi söylerse biri bir gün
- * ötekinden ayrılır ve hangisinin karar verdiği görünmez olur.
+ * Ürünün satış durumuna tek yerde karar verilir: önce satılabilir olmayı gerektiren sebepler, sonra
+ * katman, sonra kusurlar. Aile üyesi aday olamaz: yarım çeşit bloğu bozuk raftır.
  */
 function satilabilirDurum(o: {
   teklifli: boolean;
@@ -534,37 +369,14 @@ function satilabilirDurum(o: {
   zayifVeri: boolean;
   aileli: boolean;
   kusurlu: boolean;
-  /**
-   * **Üç dil / yasal beyan eksik → YAYINLANAMAZ** (05.36, 27.08). Kural artık veride:
-   * `product_publish_requires_all_locales`. Seed'in sentetik kusurları (`dilEksik`, `beyanEksik`)
-   * bu üretece bildirilmiyordu ve `active` doğabiliyorlardı — kısıt konunca `db:reset` o satırda
-   * kesilirdi.
-   *
-   * **Kova KAYBOLMUYOR, yerini buluyor:** "çevirisi tamamlanmamış ürün" hâli hâlâ doğuyor, artık
-   * `candidate` olarak. Formun "çeviri eksik" uyarısı aday üründe de koşar — zaten operatörün
-   * gerçek akışı da bu: ürün aday doğar, üç dil dolunca yayına alınır.
-   */
+  /** Üç dil ya da yasal beyan eksikse ürün yayınlanamaz (`product_publish_requires_all_locales`). */
   yayinaHazirDegil: boolean;
   i: number;
 }): ProductStatus {
-  // **TEKLİFLİ VE KURGUDAKİ ÜRÜNLER EN ÖNDE** — ama artık koşullu (05.36). Alış fiyatı olan ya da
-  // bir pakete/koleksiyona giren ürün satıştadır; bu kural duruyor. Değişen şu: yayın kısıtı
-  // (`product_publish_requires_all_locales`) bir kestirme tanımıyor — metinleri eksik ürün
-  // `active` YAZILAMAZ, veritabanı reddeder. O yüzden burada da aday'a düşüyor; "satın aldığımız
-  // mal satılamaz olmasın" kaygısının cevabı artık ürünün metinlerini tamamlamaktır, durumu
-  // zorlamak değil.
+  // Alış fiyatı olan ya da satış kurgusuna giren ürün satıştadır; metni eksikse kısıt reddettiği için aday kalır.
   if (o.teklifli || o.kurguda) return o.yayinaHazirDegil ? 'candidate' : 'active';
-  // ── PASİF ARTIK İNDİSTEN DEĞİL, VERİNİN KENDİSİNDEN (kullanıcı kararı 19.08) ─────────────────
-  // *"85 aday çok, bazılarını pasife çekelim — özenle seçelim: bilgilerinin düzgün olmayışı,
-  // resimlerinin olmayışı."* Ölçüt artık o ve indis (`i % 23`) yerine geçti: görseli, açıklaması
-  // ya da çevirisi olmayan ürün SATIŞA SUNULAMAZ, dolayısıyla "aday" da değildir — aday tedarik
-  // edilebilecek üründür, listelenebilecek olan.
-  //
-  // **YAYIN KONTROLÜNDEN ÖNCE ve bu bir düzeltme** (ölçüldü 27.08): `yayinaHazirDegil` bir tur en
-  // öne konmuştu ve bu dalı YUTTU — `passive` ürün sayısı 3'ten **0'a** düştü, yani yukarıdaki
-  // kullanıcı kararı seed'den sessizce kayboldu. İkisi AYRI hâl ve `catalog_health` onları ayrı
-  // sayıyor: `passive` geri çekilmiş kaydın hâli, `candidate` henüz tamamlanmamış olanın. Kısıt
-  // açısından fark yok — ikisi de `active` değil, yani ikisi de kısıttan muaf.
+  // Görseli, açıklaması ya da çevirisi olmayan ürün satışa sunulamaz: pasiftir, aday değil. Yayın
+  // kontrolünden önce durur ki pasif hâli yutulmasın.
   if (o.zayifVeri) return 'passive';
   // Metinleri/beyanı eksik olan aday kalır — kısıt onu yayına almazdı zaten.
   if (o.yayinaHazirDegil) return 'candidate';
@@ -579,10 +391,7 @@ function satilabilirDurum(o: {
   return 'candidate';
 }
 
-/**
- * Kataloğu kurar. İmza eski toplu üreticiyle aynı şekilde: çağıran servisleri ve başlangıç sırasını
- * verir, sonuç sayıları döner.
- */
+/** Kataloğu kurar; çağıran servisleri ve başlangıç sırasını verir, sonuç sayıları döner. */
 export async function seedLezzaProducts(
   categories: CategoryService,
   categoryImages: CategoryImageService,
@@ -592,10 +401,8 @@ export async function seedLezzaProducts(
   catId: Map<string, string>,
   startOrder: number,
   /**
-   * Satış kurgusuna GİRMİŞ ürünler — paket kalemi, tarif malzemesi, koleksiyon üyesi. Aday seçimi
-   * bunları ATLAR (künyesi `durum` satırında). Küme çağırandan geliyor çünkü listelerin sahibi
-   * `catalog.ts` ve `recipe.ts`; buraya kopyalansaydı iki liste bir gün ayrılır ve ayrıldığı gün
-   * kimse fark etmezdi. Import de tek yönlü (`catalog.ts → catalog-lezza.ts`), tersi çevrim olurdu.
+   * Satış kurgusuna girmiş ürünler (paket, tarif, koleksiyon); aday seçimi bunları atlar. Listeler
+   * `catalog.ts` ve `recipe.ts`'te kalır, kopyalanmaz.
    */
   kurgu: { sku: ReadonlySet<string>; slug: ReadonlySet<string> },
   /** Besleme katmanı — `base` kusursuz katalog kurar (künye `tier.ts` ve `kusurlu` satırında). */
@@ -604,25 +411,8 @@ export async function seedLezzaProducts(
   /** Bilinçli boşluklar (pasif · aday · beyansız · kapaksız · çevirisi yarım) `extend`ten itibaren. */
   const kusurlu = enAz(katman, 'extend');
   /**
-   * **`base` HİÇBİR ALANI TÜRETMEZ** (kullanıcı kararı 16.08: *"hiçbir içerik üretilmeyecek"*).
-   *
-   * Bugün dokuz alan hesaplanıyor ve hiçbirinin arkasında bir belge yok: alerjen ADDAN çıkarılıyor,
-   * besin künyesi KATEGORİ ORTALAMASINDAN, içindekiler alerjen listesinden kurulan bir cümleden,
-   * saklama metni kategori rejiminden, raf ömrü kategori sabitinden, KDV oranı ürün ADININ
-   * regex'inden, hedef marj ve otomatik fiyat indisten. Yerelde bunlar ekran doldurur; üretimde
-   * **yanlış yasal beyan ve yanlış vergi sınıflandırması** olurlar.
-   *
-   * Şema bu boşluğu zaten temsil edebiliyor (ölçüldü): `allergens`/`traces` varsayılanı `{}`,
-   * `ingredients`/`nutrition`/`storage_instructions`/`shelf_life_days`/`target_margin_percent`
-   * nullable, `shippable` varsayılanı `false` ("bilmiyoruz" = kargolanmaz), `auto_price` `false`.
-   * Tek istisna `vat_rate`: `NOT NULL` ve varsayılanı **5,5** — o bir tahmin değil, Fransa'da gıda
-   * KDV oranının kendisi. Sonuç: 128 ürün `is_incomplete=true` doğar ve operatör doldurur.
-   *
-   * **Belgesi olan altı ürün etkilenmez** — onların beyanı gerçek ve üretime de gider.
-   *
-   * Ölçüt `kusurlu`nun aynısı ve bu bir tesadüf değil: türetilmiş bir alan da bilinçli bir boşluk
-   * da aynı şeyi yapıyor — gerçekte olmayan bir hâli veriye yazmak. Uzak hedef ayrıca kontrol
-   * edilmiyor çünkü `seed.ts` kapısı uzağa YALNIZ `base`i geçiriyor.
+   * `base` hiçbir alanı türetmez: addan alerjen, kategoriden besin künyesi ya da addan KDV üretimde
+   * yanlış yasal beyan olurdu. Belgesi olan ürünlerin beyanı gerçektir ve her katmanda yazılır.
    */
   const turetmeSerbest = kusurlu;
   if (!turetmeSerbest) console.log('  · türetilmiş alan YAZILMAYACAK: alerjen · iz · içindekiler · saklama · besin künyesi · raf ömrü · KDV tahmini · hedef marj. Belgesi olan 6 ürün etkilenmez.');
@@ -630,33 +420,7 @@ export async function seedLezzaProducts(
   /** Aile bağı ÜRÜNLER KURULDUKTAN SONRA yazılır: bağ iki ucun da var olmasını ister. */
   const urunIdBySlug = new Map<string, string>();
 
-  // Kategoriler ARTIK YALNIZ kaynaktan kurulur (kullanıcı kararı 08.08: "resmî olmayan kategori
-  // kalmasın"): elle yazılmış üçlü (Baklava/Şerbetli/Börek) ve `Malzeme` kaldırıldı, ürünleri de
-  // gerçek katalogda birebir karşılığı olduğu için (kopyaydılar) katalogdan çıktı.
-  //
-  // Üç besleme birden (08.08): GÖRSEL kaynağın kendi kategori kapağından (`imageUrl` — build
-  // script `/products/categories` ucundan çeker; "boş gri kutu" hâli seed'de artık örneklenmez),
-  // TAGLINE alttaki sözlükten (mobil vitrin bandının altyazısı — 05.17; başlık = kategori ADI),
-  // `isFeatured` HEPSİNE true: tasarımın vitrin ızgarası 6 slot ve kategori sayısı tam 6 —
-  // operatör dilediğini Katalog ekranından vitrinden düşürür (05.18).
-  //
-  // ── KAPSAM BOŞLUKLARI: KATEGORİ (09.08) ────────────────────────────────────
-  // Altı kategorinin altısı da aktif + kapaklı + altyazılı + vitrinde olduğu için DÖRT ekran hâli
-  // seed'de hiç doğmuyordu (`pnpm seed:coverage`): kapaksız kartın baş-harf yedeği, altyazısız
-  // bandın tek satırlık hâli, vitrin dışı kayıt ve pasif kategori. İkisini kullanıcı zaten EKRANDA
-  // gördü ve sordu ("bu resmi olmayan kutular nedir?") — yani hâl gerçekti, seed onu üretmiyordu.
-  //
-  // Boşluk SON kategorilere konuyor: vitrin ızgarası altı slot ve sıra `sort_order`'dan geliyor,
-  // yani vitrinden düşen kayıt listenin sonundaki olsun — ilk sıradakini düşürmek ana sayfayı
-  // gerçek katalogda olmayacak bir hâlde gösterirdi.
-  // **"Kapaksız kategori" boşluğu buradan KALKTI** (16.08): kullanıcı altı kategorinin altısına da
-  // fotoğraf seçti ve seçilmiş bir kapağı "süzgeç denensin" diye atmak, kararı çöpe atmaktır. Kova
-  // boş kalmıyor — aşağıdaki SEZONLUK kategori kapaksız doğuyor ve baş-harf yedeğini o sınıyor.
-  // **"Altyazısız kategori" boşluğu da KALKTI (kullanıcı bildirimi 16.08: "dondurma kategorisinde
-  // hiçbir metin yok").** Boşluk sondan ikinciye düşüyordu ve o kategori Dondurma'ydı: metni
-  // sözlükte YAZILI olduğu hâlde seed onu siliyordu. Ekranda bunun bir kurgu olduğu anlaşılmıyor —
-  // eksik bir veri gibi görünüyor, ki kullanıcı da öyle okudu. Kova sezonluk kategoriden doluyor
-  // (aşağıda): o hem kapaksız hem altyazısız doğuyor, yani iki hâli birden sınıyor.
+  // Kategoriler yalnız kaynaktan kurulur; vitrin ızgarası altı slot olduğu için sondakiler vitrin dışı kalır.
   const sonKategoriler = katalog.categories.length - 1;
   const gorselUrl = lezzaGorselUrlByDosya();
   for (const [k, c] of katalog.categories.entries()) {
@@ -672,10 +436,7 @@ export async function seedLezzaProducts(
     });
     catId.set(c.key, created.id);
 
-    // Beş fotoğraf: ilki kapak (`image_key`), kalan dördü havuz (`category_image` — kart kareyi
-    // güne göre oradan seçer). Yükleme başarısızsa (R2 ayarsız) o kare atlanır, seed durmaz.
-    // Sürüm ve ölçü görselle birlikte yazılır (künyeden — `shared.ts`). Havuz sırası servisin `add`i
-    // gibi: yazılan kareler 0'dan ardışık.
+    // İlk fotoğraf kapak, kalanı havuz; R2 ayarsızsa kare atlanır, besleme durmaz.
     let havuzSirasi = 0;
     for (const [n, dosya] of (KATEGORI_GORSELLERI[c.key] ?? []).entries()) {
       const url = gorselUrl.get(dosya);
@@ -697,12 +458,8 @@ export async function seedLezzaProducts(
     }
   }
 
-  // **PASİF kategori** — ayrı ve EK bir kayıt, gerçek altısından biri kapatılarak DEĞİL: pasif
-  // kategori ürünlerini de katalogdan düşürür, yani gerçek bir kategoriyi kapatmak 20-30 ürünü
-  // vitrinden silerdi. Sezonluk kategori gerçek bir operasyon hâlidir (yılın on ayı kapalı durur).
-  //
-  // **`base` katmanında YAZILMAZ:** kaynakta böyle bir kategori yok, bu kayıt yalnız kapsam denetimi için
-  // uydurulmuş. Gerçek veriden başka bir şey yazmayan bir katmanda yeri olamaz.
+  // Pasif kategori ayrı bir kayıt: gerçek bir kategoriyi kapatmak ürünlerini de vitrinden düşürürdü.
+  // Kaynakta olmadığı için `base`te yazılmaz.
   if (kusurlu) {
     const sezonluk = await categories.create({
       name: { tr: 'Ramazan Sofrası', fr: 'Table du Ramadan', de: 'Ramadan-Tafel' },
@@ -714,17 +471,6 @@ export async function seedLezzaProducts(
   let photos = 0;
   let varyantSayisi = 0;
 
-  // ── `mono` SÜZGECİ KALDIRILDI — SORUN SEED'DE DEĞİL KAYNAKTAYMIŞ (kullanıcı kararı 19.08) ────
-  // 04.08'de tek porsiyonluk `mono` kayıtlar seed'e hiç alınmıyordu: kaynak onları AYRI ÜRÜN olarak
-  // kurmuştu ve ayrı ürün kaldıkları sürece limonlu kekin sayfasında üstte dört çeşit, altta
-  // "bunlarla da ilgilenebilirsiniz"de AYNI dört kek çıkıyordu. Süzgeç o belirtiyi susturuyordu.
-  //
-  // Doğrusu kullanıcının kuralıydı: *"Tatlı simidin dört paketi de olabilir, yüzlü paketi de
-  // olabilir. Biz bunları varyant olarak sunarız."* Ambalaj boyu ürün değil VARYANTTIR — ve artık
-  // öyle kuruluyor: eşleme `data/sources/variant-packs.json`da, birleştirme üreteçte
-  // (`build-lezza-catalog.mjs` §3b). Ölçüldü: 8 mono kayıt bağlandı, katalog 134 → 126 ürün /
-  // 175 varyant, çok boylu ürün 35 → 43. Süzgecin susturduğu şey artık doğru yerde duruyor,
-  // dolayısıyla süzgecin kendisi de gereksiz.
   const urunler = katalog.products;
 
   const ceviriler = readCeviriler();
@@ -740,75 +486,20 @@ export async function seedLezzaProducts(
     // Kaynağın İNGİLİZCE adı — desen eşleştirmeleri (alerjen, KDV) bunun üzerinde çalışır.
     const ad = p.name.tr ?? '';
     const ceviri = ceviriler[p.slug];
-    // **GERÇEK BEYAN VARSA TAHMİN HİÇ ÇALIŞMAZ** (15.08). Altı üründe üretici spesifikasyonu var ve
-    // belgenin yazdığı alerjen, addan çıkarılandan hem daha doğru hem daha eksiksiz: `alerjenTuret`
-    // "Vegan Çiğköfte"den kerevizi çıkaramaz (ada yazmıyor), belge çıkarıyor.
+    // Belgesi olan üründe beyan belgeden gelir, addan tahmin çalışmaz.
     const beyan = p.declarations;
-    // **UZAK HEDEFTE TAHMİN YAZILMAZ** (katman künyesi `tier.ts`). Alerjen addan çıkarılıyor, besin
-    // künyesi kategori ortalamasından, içindekiler alerjen listesinden — üçü de INCO kapsamında
-    // YASAL BEYAN ve tahmin edilmiş bir beyan yanlış beyandır. Belgesi olan altı ürün etkilenmez:
-    // onların beyanı gerçek ve üretime de gidebilir. Kalanlar boş gider, `is_incomplete` true olur
-    // ve operatör doldurur — eksik bir künye, uydurulmuş bir künyeden dürüsttür.
+    // Belgesiz üründe tahmin yalnız `extend`te yazılır; tahmin edilmiş yasal beyan yanlış beyandır.
     const alerjenler = beyan ? spekAlerjen(beyan.allergens) : turetmeSerbest ? alerjenTuret(`${ad} ${p.description ?? ''}`) : [];
 
-    // ── Serpiştirilen boşluklar — YALNIZ `extend`ten itibaren (katman künyesi `tier.ts`) ─────────
-    // `base` KUSURSUZDUR: açılış günü kataloğunda beyanı eksik, çevirisi yarım, kapaksız ya da
-    // pasif ürün YOKTUR — bunlar operatörün zamanla biriktirdiği hâllerdir, kurulumun değil.
-    //
-    // Oranlar eski toplu üreticiden SEYREK: orada veri zaten uydurmaydı, burada gerçek bir katalogu
-    // bozmamak gerekiyor. Yine de her süzgecin en az birkaç sonucu olacak kadar sık.
-    // **Oran 17'de birden 41'de bire SEYRELDİ (16.08):** çeviriler artık gerçek ve elle yazılı, o
-    // yüzden onları "süzgeç denensin" diye atmanın bedeli yükseldi. Üç ürün hâli sınamaya yeter.
+    // Serpiştirilen boşluklar yalnız `extend`ten itibaren ve seyrek: `base` açılış günü kataloğudur.
     const dilEksik = kusurlu && i % 41 === 0; // fr/de düşer → "çevirisi tamamlanmamış ürün" hâli
-    // **Beyanı GERÇEK olan ürün bu boşluğa hiç girmez.** Elimizde belgesi olan bir ürünün beyanını
-    // "süzgeç denensin" diye silmek, sahnelemek değil veri kaybetmektir — ve kapsam zaten kalan
-    // 128 üründen fazlasıyla doğuyor.
+    // Belgesi olan ürünün beyanı süzgeç için silinmez; bu sahneleme değil veri kaybı olurdu.
     const beyanEksik = kusurlu && !beyan && i % 13 === 0; // beyan dörtlüsü boş → "beyan eksik" süzgeci
     const kapaksiz = kusurlu && i % 19 === 0; // görselsiz kayıt → boş kapak durumu
 
-    // ── DURUM STOK GERÇEĞİNDEN AYRILAMAZ (kullanıcı kararı 16.08) ─────────────────────────────
-    // Önce durum burada (`i % 29`), stok ise `stock.ts`'te (`i < 45 || i % 3`) BİRBİRİNDEN HABERSİZ
-    // iki indis kuralıyla veriliyordu. Sonuç ölçüldü: **116 aktif ürünün 53'ünün hiç stok partisi
-    // yoktu** — yani kataloğun neredeyse yarısı müşteriye "tükendi" diye çıkıyordu, ve hepsi
-    // BİTTİĞİ için değil hiç GELMEDİĞİ için. Buna karşılık gerçekten tükenmiş (partisi olup miktarı
-    // sıfırlanmış) tek bir aktif ürün yoktu; tek örnek (`L-BITTI`) pasif bir ürüne düşmüştü, yani
-    // müşteri yüzeyi onu hiç çizmiyordu.
-    //
-    // Oysa DOMAIN §13 aday ürünü zaten böyle tanımlıyor: *"stokta olmayan ama tedarik edilebilecek
-    // ürün"*. Hiç stoklanmamış bir ürün "tükendi" değildir — daha satışa hiç çıkmamıştır, ve
-    // operatöre "ne zaman gelecek" diye sorulabilen bir cevabı da yoktur. Doğru yeri keşif akışıdır.
-    //
-    // Kural artık TEK YÖNLÜ ve tek kaynaklı: **aday = stoklanmayacak ürün**; `stock.ts` aday
-    // olmayan HER varyantı stoklar (orada ikinci bir "stoklu mu" kuralı kalmadı). "Tükendi" hâli
-    // kayb olmuyor, `stock.ts`'te bilinçli olarak BİTMİŞ partiyle doğuyor — geçmişi olan bir tükeniş.
-    //
-    // **Satış kurgusuna girmiş ürün aday olamaz:** paket kalemi, tarif malzemesi ya da koleksiyon
-    // üyesi bir ürünü aday yapmak o paketi/tarifi/seçkiyi sessizce satılamaz kılardı (aday ürünün
-    // fiyatı da yok — paket fiyatı kalemlerin fiyatından türüyor, biri eksikse tutar yalan söyler).
-    //
-    // ── ÖLÇÜT ARTIK İNDİS DEĞİL, GERÇEK ALIŞ FİYATI (kullanıcı kararı 19.08) ──────────────────
-    // Kural yukarıda doğru kurulmuştu ("aday = stoklanmayacak ürün") ama ÖLÇÜTÜ hâlâ indisti
-    // (`i % 4 === 2`) ve o indisin gerçekle hiçbir bağı yoktu: 134 üründen 95'i aktif doğuyordu,
-    // oysa gerçek alış fiyatımız **33 üründe** var. Kalan 62 aktif ürün fiyatını uydurma bir kilo
-    // tabanından alıyor, stok partisi de uydurma — yani "satıştaki dükkân" büyük ölçüde kurgu.
-    //
-    // Kullanıcının istediği ölçüt açıktı: *"alış fiyatı ve satış fiyatı belirlenebilir olanlara
-    // satın alma bilgisi gireceğiz; diğerlerinin az bir kısmı stokta bitti gösterirken büyük bir
-    // kısmını aday yapacağız."* Ölçüt artık o: **teklifte SKU'su olan ürün aktif, olmayan aday.**
-    //
-    // "Tükendi" hâli TEKLİFSİZ ürünlerden seçiliyor (`i % 7`), teklifli olanlardan değil: teklifli
-    // 33 ürün "aktif satın alınmış gibi" görünmeli, tükenmiş değil. Onların stoğu `stock.ts`te dolu
-    // doğuyor, tükenenlerin partisi ise BİTMİŞ — geçmişi olan bir tükeniş (o dosyanın künyesi).
-    //
-    // **`base`te tükendi ve pasif YOK, ama aday VAR.** Açılış gününde bitmiş bir parti ya da geri
-    // çekilmiş bir ürün olamaz — ikisi de zamanla doğar. Aday ise tam tersi: alış fiyatı olmayan,
-    // stoğa hiç girmemiş ürün açılış günü de adaydır. Eskiden `base`te hepsi aktif doğuyordu ve
-    // sonuç fiyatsız-stoksuz "aktif" ürünlerdi — vitrinde alınamaz kart, sebebi görünmeyen bir hâl.
-    //
-    // ⚠ **Satış kurgusundaki 16 ürün ADAY OLAMIYOR ve bu bir ödünç:** paket kalemi, tarif malzemesi
-    // ve koleksiyon üyelerinin çoğu teklifte yok, ama aday yapılırlarsa o paket/tarif/seçki sessizce
-    // satılamaz olur (aday ürünün fiyatı da yok; paket fiyatı kalemlerden türüyor). Doğru çözüm
-    // kurguları teklifteki 34 kalemden yeniden kurmak. → BEKLEYEN(BACKLOG §2): satış kurguları
+    // Aday stoklanmayacak üründür ve ölçütü alış fiyatıdır; satış kurgusuna giren ürün aday olamaz, yoksa
+    // paketi ve tarifi sessizce satılamaz kalır. BEKLEYEN(BACKLOG §2): satış kurguları teklifteki kalemlerden
+    // kurulsun.
     const kurguda = kurgu.slug.has(p.slug) || p.variants.some((v) => v.sku && kurgu.sku.has(String(v.sku)));
     const teklifli = p.variants.some((v) => v.sku && TEKLIF_SKULARI.has(String(v.sku)));
     // KÜNYESİ YARIM ÜRÜN — üç sinyal de KAYNAĞIN kendi eksiği, bizim ürettiğimiz bir kusur değil:
@@ -819,11 +510,7 @@ export async function seedLezzaProducts(
     // ikinci bir listeye kopyalanmıyor: aileye bir çeşit eklenince satış durumu da kendiliğinden
     // doğru olsun — iki liste bir gün ayrılsaydı, ayrıldığı gün aile yine yarım kalırdı.
     const aileli = AILE_UYESI_SLUG.has(p.slug);
-    // `durum` METİNLERDEN VE GÖRSELDEN SONRA hesaplanıyor (aşağıda) — yayın kısıtı onlara bakıyor.
-    // **Künyesi eksik ürün** (kapsam denetimi 09.08) — ikisi de ayrı bir EKRAN hâli, ayrı sebep:
-    //   raf ömrü yok  → "kalan %" hesaplanamaz; parti kartı o çubuğu HİÇ basmamalı
-    //   hedef marj yok → marj uyarısı hesaplanamaz; "uyarı yok" ile "veri yok" aynı şey değil
-    // Operatörün gerçekte unuttuğu iki alan bunlar; ikisi de zorunlu değil ve boş kalabiliyor.
+    // Raf ömrü ve hedef marjı boş ürün ayrı ekran hâlleridir ("veri yok" ≠ "uyarı yok"); yalnız `extend`te.
     const rafOmruYok = kusurlu && i % 31 === 0;
     const marjYok = kusurlu && i % 37 === 0;
 
@@ -845,13 +532,7 @@ export async function seedLezzaProducts(
     const kapakUrl = kapaksiz ? null : p.imageUrls[0];
     const kapak = kapakUrl ? await uploadImageFromUrl(kapakUrl, r2Keys.productImage(p.slug, kapakUrl.split('/').pop() || 'cover.webp')) : null;
 
-    // ── YAYINA HAZIR MI (05.36) ─────────────────────────────────────────────────────────────────
-    // Ölçüt `hasAllLocales` — `has_all_locales(jsonb)` kısıtının TS karşılığı, elle yeniden
-    // yazılmıyor. Beyan alanları (`ingredients`/`storage_instructions`) burada dolaylı sınanıyor:
-    // ikisi de `beyanEksik`/türetme kapalıyken `null` yazılıyor ve kısıt onları da arıyor.
-    //
-    // **`imageAlt` yok** — kısıt onu aramıyor (formda alanı da yok, boşsa ürün adına düşüyor;
-    // gerekçe `0005` kısıt künyesinde).
+    // Yayına hazırlık `has_all_locales` kısıtının TS karşılığıyla ölçülür, elle yeniden yazılmaz.
     const yayinaHazirDegil =
       !hasAllLocales(name) || !hasAllLocales(aciklama) || beyanEksik || (!beyan && !turetmeSerbest);
     const durum: ProductStatus = satilabilirDurum({ teklifli, kurguda, zayifVeri, aileli, kusurlu, yayinaHazirDegil, i });
@@ -863,9 +544,7 @@ export async function seedLezzaProducts(
       // Anahtar + sürüm + ölçü birlikte (künyeden — `shared.ts`); kapaksız üründe alanlar yazılmaz.
       ...kapak,
       allergens: beyanEksik ? [] : alerjenler,
-      // İz: nadir alerjenler buradan dolaşır (künyesi `NADIR_IZLER`'de). Ürünün ZATEN içerdiği bir
-      // alerjen ize yazılmaz — "içerir" demişken "bulunabilir" demek, aynı şeyi iki kez ve daha
-      // zayıf söylemektir. **Belgesi olan üründe iz de belgeden**, dağıtımdan değil.
+      // Ürünün zaten içerdiği alerjen ize yazılmaz; belgesi olan üründe iz de belgeden gelir.
       traces: beyan
         ? spekAlerjen(beyan.traces).filter((a) => !alerjenler.includes(a))
         : beyanEksik || !turetmeSerbest
@@ -880,9 +559,7 @@ export async function seedLezzaProducts(
           ? null
           : rejim.metin,
       nutrition: beyan?.nutritionPer100g ?? (beyanEksik || !turetmeSerbest ? null : besinDegeri(p.category, i)),
-      // **KDV oranı ürün ADINDAN tahmin ediliyordu** (`HAZIR_TUKETIM` regex'i → %10). Vergi
-      // sınıflandırması bir tahmin işi değil: yanlışı yasal sonuç doğurur. Türetme kapalıyken alan
-      // hiç yazılmaz ve kolonun varsayılanı (%5,5 — Fransa gıda KDV'si) geçerli olur.
+      // Vergi sınıflandırması tahmin edilmez; türetme kapalıyken kolonun varsayılanı (%5,5) geçerlidir.
       vatRate: turetmeSerbest ? (HAZIR_TUKETIM.test(ad) ? KDV_HAZIR : KDV_GIDA) : undefined,
       // Raf ömrü belgede AY cinsinden; kolon gün tutuyor. Boşluk (`rafOmruYok`) gerçek veriyi
       // silmemek için burada da devre dışı — gerekçesi `beyanEksik` satırının aynısı.
@@ -891,18 +568,9 @@ export async function seedLezzaProducts(
         : rafOmruYok || !turetmeSerbest
           ? undefined
           : (RAF_OMRU[p.category ?? ''] ?? 180),
-      // Kargo izni SAKLAMA REJİMİNDEN türer, ayrı yazılmaz — gerekçe `SAKLAMA` künyesinde.
-      // **Belgesi olan üründe rejim metnin kendisinden okunur:** "-18°C" yazan bir ürün donuktur ve
-      // kategoriden türetilmiş tahminin ne dediği önemsizdir. Kaynağın cümlesi tahmini yener.
-      // Türetme kapalıyken kolonun varsayılanı (`false`) kalır — "bilmiyoruz" donuk gıdada "hayır".
+      // Kargo izni saklama rejiminden türer; belgesi olan üründe "-18°C" cümlesi tahmini yener.
       shippable: beyan?.storage ? !BEYAN_DONUK.test(beyan.storage) : beyanEksik || !turetmeSerbest ? false : rejim.shippable,
-      // ── SOĞUK ZİNCİR İŞARETİ (16.08 · `product.storage_type`) ──────────────────────────────
-      // Sıra `shippable`ınkiyle aynı ve bilinçli: **belge tahmini yener.** Belgesi olan altı ürün
-      // gerçek cümlesinden `frozen` alır — bu, `base` katmanına da giden GERÇEK veridir.
-      // Belgesi olmayanda alan `base`de HİÇ YAZILMAZ: kaynakta o ürünün nasıl saklandığına dair
-      // kanıt yok ve kolonun varsayılanı zaten güvenli tarafta (`frozen` — 0005 künyesi). Uydurmak
-      // yerine varsayılanı bırakmak, "biliyoruz" ile "varsayıyoruz"u ayırt edilebilir tutuyor.
-      // `extend`ten itibaren rejim sözlüğü konuşur ve üç değer de doğar (ekranların sınanması için).
+      // Belge tahmini yener; belgesiz üründe `base` alanı yazmaz, kolonun güvenli varsayılanı (`frozen`) kalır.
       storageType: beyan?.storage
         ? BEYAN_DONUK.test(beyan.storage)
           ? 'frozen'
@@ -917,65 +585,27 @@ export async function seedLezzaProducts(
       variants: p.variants.map((v, n) => ({
         // Boysuz ürün tek varsayılan varyant taşır — modelin kendi kuralı.
         label: v.label ?? { tr: 'Tek boy', fr: 'Taille unique', de: 'Einheitsgröße' },
-        // ── AĞIRLIKSIZ VARYANT ARTIK BİLİNÇLİ BİR BOŞLUK (19.08) ────────────────────────────
-        // Eskiden kendiliğinden doğuyordu: 12 varyantın gramajı boştu. Basılı katalogdaki sayılar
-        // üretece bağlanınca (05.31) **175 varyantın hepsi boyunu aldı** ve kapsam denetimi haklı
-        // olarak kırmızıya döndü — "ağırlıksız varyant" hâli hiç doğmuyordu.
-        //
-        // Hâl GERÇEK ve korunmalı: `net_weight_g` nullable ve operatör ürün formundan elle ürün
-        // açarken boş bırakabiliyor. Ekranlar bunu karşılamak zorunda (boy etiketi, kilo fiyatı,
-        // kargo hesabı) ve karşılayıp karşılamadıkları ancak böyle bir satırla sınanır.
-        //
-        // **Yalnız `extend`+ ve yalnız ADAY üründe:** `base` gerçek veridir, orada boş gramaj
-        // uydurma bir eksiklik olurdu. Ölçüt eskiden "teklifsiz" idi ve VİTRİNE bozuk kart
-        // düşürüyordu (ölçüldü 19.08): gramajı olmayan varyantın fiyatı da hesaplanamıyor
-        // (`pricing.ts` nöbeti), yani `Peynirli Adana Böreği` satıştaki bir ürün olarak doğup
-        // alınamaz kart oluyordu. Aday üründe aynı hâl vitrini hiç kirletmiyor — aday zaten
-        // satılabilir katalogda değil, keşif bölümünde.
+        // Gramajsız varyant gerçek bir hâl (operatör boş bırakabilir); yalnız `extend`te ve aday üründe
+        // sahnelenir ki vitrine fiyatsız kart düşmesin.
         netWeightG: kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0 ? undefined : (v.netWeightG ?? undefined),
         piecesCount: v.piecesCount ?? undefined,
         portionKind: v.portionKind ?? undefined,
         sku: v.sku ?? undefined,
-        /*
-          AMBALAJ ÖLÇÜSÜ (28.08) — kargo kanalının girdisi. Sayılar net ağırlıktan TÜRETİLİR ve
-          uydurmadır; gerçek ambalaj ölçüsü tartılıp ölçülür ve hiçbir kaynağımızda yok
-          (`packing.ts` künyesi). Beslemenin işi gerçeği taklit etmek değil, ekranların
-          karşılaşacağı ÜÇ HÂLİ birden kurmak:
-            tam   → canlı teklif alınabilir
-            yarım → tartılmış, ölçülmemiş (kısıt izin veriyor; ekran ayırt etmeli)
-            yok   → "ölçüsü eksik" süzgecinin ve teklif reddinin sınandığı hâl
-          Kusursuz katmanda (`base`) hepsi TAM: gerçek veride uydurma eksiklik olmaz — gramajın
-          kendi kuralının aynısı (yukarıdaki künye).
-        */
+        // Ambalaj ölçüsü net ağırlıktan türetilir (gerçeği tartılmadı); `extend` tam, yarım ve yok
+        // hâllerini kurar, `base`te hepsi tam.
         ...ambalajAlanlari(
           kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0 ? null : (v.netWeightG ?? null),
           olcuHali(i + n, kusurlu),
         ),
-        // **"Bu boy satıştan kalktı"** (kapsam denetimi 09.08) — kendi başına küçük bir alan ama
-        // BÜYÜK bir kuralın tek tetikleyicisi: pasif varyant, o varyantı taşıyan PAKETİ
-        // `listSellable`'dan tamamen düşürür (detay sayfası da 404). O kural bu hâl seed'de hiç
-        // doğmadığı için bugüne dek hiç koşmadı.
-        //
-        // **Yalnız ÇOK BOYLU üründe ve son boyda:** tek varyantlı ürünün tek boyunu kapatmak, ürünü
-        // satılamaz hâlde bırakır — gerçekte o karar `status: 'passive'` ile verilir, boy
-        // kapatmakla değil. İki farklı niyeti aynı veriyle anlatmak, ekranda ikisini de okunmaz kılar.
+        // Pasif boy onu taşıyan paketi satıştan düşürür; yalnız çok boylu üründe son boy kapatılır ki
+        // ürün satılamaz kalmasın.
         isActive: kusurlu && p.variants.length > 1 && n === p.variants.length - 1 && i % 11 === 0 ? false : undefined,
       })),
     });
     made += 1;
     varyantSayisi += variants.length;
 
-    // ── GALERİ TAVANI UYGULAMADAN GELİR (05.14 · operasyon notu 08.08) ───────────────────────
-    // Kaynakta tavan yok, uygulamada var (`PRODUCT_GALLERY_MAX`) — operasyon formu altıncı
-    // fotoğrafı REDDEDİYOR. Seed sınırsız yazsaydı, formun KURAMAYACAĞI bir kayıt üretirdi:
-    // operatör ürünü açar, fotoğrafı silmeden kaydedemez ve sebebini anlamaz.
-    //
-    // 08.08'de "bugün en kabarık ürün tam tavanda" diye kayda geçmişti; **adet birleşmesiyle
-    // (09.08) tavan AŞILDI** — dört baklava kaydı tek ürüne inince görselleri de birleşti ve
-    // `baklava-with-pistachio` 7 görsele çıktı (ölçüldü). Yani risk teorik değil, gerçekleşti.
-    //
-    // Sabit `@lezzet/types`'tan geliyor, burada yeniden yazılmıyor: ikinci bir sayı, bir gün
-    // formunkinden ayrılırdı.
+    // Galeri tavanı uygulamanın sabitinden (`PRODUCT_GALLERY_MAX`): form tavanı aşan kaydı kaydedemez.
     for (const [n, url] of p.imageUrls.slice(1, 1 + PRODUCT_GALLERY_MAX).entries()) {
       const gorsel = await uploadImageFromUrl(url, r2Keys.productImage(`${p.slug}-${n + 2}`, url.split('/').pop() || 'g.webp'));
       if (!gorsel) continue;
@@ -990,23 +620,12 @@ export async function seedLezzaProducts(
   return { made, photos, variants: varyantSayisi, families: aileler };
 }
 
-// ── ÜRÜN AİLELERİ (05.15 · nihai kürasyon 16.08) ─────────────────────────────
-// Gerçek katalogda aileler ZATEN VAR ve uydurmaya gerek yok: *"E-Shaped Börek with Cheese / Meat /
-// Potato / Spinach & Cheese"* tam olarak bir ailedir — aynı ürünün dolgusu değişiyor. Aynı desen
-// Gül Böreği, Mini Rulo ve daha birçok dalda tekrarlanıyor.
-//
-// **Bir zamanlar addan TÜRETİLİYORDU; artık elle listeleniyor** (`ELLE_AILELER` künyesi). Gerekçe
-// orada: ürün adları çevrildiği anda `"X with Y"` deseni çöker ve aileler habersiz dağılırdı.
-// Türetici (`aileParcala`) bu yüzden silindi — arkasında kalan tek şey aşağıdaki dolgu sözlüğü,
-// çünkü etiketin çevirisi hâlâ gerekli.
+// ── ÜRÜN AİLELERİ ─────────────────────────────────────────────────────────────
+// Aileler elle listelenir (`ELLE_AILELER`); dolgu sözlüğü etiketin üç dilli karşılığı için durur.
 
 /**
- * Dolgu adının üç dilli karşılığı. Kaynak katalog YALNIZ İNGİLİZCE (`sourceLanguage: 'en'`), yani
- * çeviri uydurulacak değil TÜRETİLECEK — alerjen tablosuyla aynı yaklaşım.
- *
- * Sözlükte olmayan dolgu üç dile de İngilizcesiyle yazılır: ürün ADLARI da bugün öyle duruyor
- * (üreteç aynı metni üç dile koyuyor), yani seed kendi içinde tutarlı kalır ve **var olmayan bir
- * çeviri varmış gibi görünmez.**
+ * Dolgu adının üç dilli karşılığı. Sözlükte olmayan dolgu üç dile de İngilizcesiyle yazılır, var
+ * olmayan bir çeviri varmış gibi görünmez.
  */
 const DOLGU_SOZLUK: Record<string, LocalizedText> = {
   cheese: { tr: 'Peynirli', fr: 'Fromage', de: 'Käse' },
@@ -1070,24 +689,8 @@ function dolguEtiketi(dolgu: string): LocalizedText {
 }
 
 /**
- * ── AİLELERİN TAMAMI ELLE LİSTELENİR (kullanıcı kararı 16.08: "nihai şeklini veriyoruz") ─────────
- *
- * **Addan türetme KALDIRILDI ve sebebi tek cümle: ürün adları çevriliyor.** `aileParcala` İngilizce
- * `"X with Y"` desenine bağlıydı; adlar Türkçeleşince ("Peynirli Su Böreği") o desen çöker ve
- * aileler HABERSİZ dağılırdı — hata vermeden, yalnız çeşit blokları ekrandan kaybolarak.
- *
- * Elle liste ayrıca kullanıcının istediği şeyi mümkün kılıyor: hangi ürünün hangi ürünle aile
- * olduğu **tek yerde, okunarak onaylanabilir** durumda. Türetme bunu yapamazdı — kuralı okuyup
- * sonucu zihinde canlandırmak gerekirdi.
- *
- * ⚠ Eski künyenin uyarısı hâlâ geçerli ve listeyi bu yüzden kısa tutmuyoruz, DOĞRU tutuyoruz:
- * bir kez "aynı uzunlukta, tek konumda ayrışan adlar aynı ailedendir" kuralı denenmişti ve
- * `Hummus | Lahmacun | Şakşuka | Tiramisu`yu tek aile yapmıştı. **Yanlış bir aile, ekranı çizen
- * ajana ve müşteriye kavramı yanlış öğretir.**
- *
- * **Ne aile OLMAZ:** paket biçimi (dökme/bulk, tepsi, kutu) ve porsiyon (dilim, bardak, mono) çeşit
- * değildir — onlar boy eksenidir ve varyanta aittir. "Vegan" da aile değildir: bir özelliktir,
- * çeşit değil; süzgeci ayrıca gelir.
+ * Aileler elle listelenir: addan türetme, adlar çevrilince habersiz dağılırdı. Paket biçimi ve porsiyon
+ * çeşit değil boydur, "vegan" da çeşit değil özelliktir; aile olmazlar.
  */
 const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: string }> }> = [
   // ── FIRIN: dolgu ekseni ────────────────────────────────────────────────────
@@ -1176,8 +779,7 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
   },
   // ── TATLI ──────────────────────────────────────────────────────────────────
   {
-    // Kullanıcı kararı 16.08: baklava İKİYE ayrılıyor. Buradakiler günlük çeşitler — müşterinin
-    // "hangi baklava" sorusuna verdiği ilk cevap.
+    // Günlük baklava çeşitleri; özel baklavalar ayrı ailede.
     ad: 'Baklava',
     uyeler: [
       { slug: 'baklava-with-pistachio', dolgu: 'Pistachio' },
@@ -1248,11 +850,7 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
       { slug: 'tiramisu-whole-cake', dolgu: 'Tiramisu' },
     ],
   },
-  // **`… Mono Pack` ürünleri BİLEREK AİLE YAPILMADI** (kullanıcı kararı 04.08). Bir tur ayrı bir
-  // aile olarak kurulmuşlardı ve sonucu ölçüldü: limonlu kekin sayfasında üstte dört çeşit,
-  // ALTTA "bunlarla da ilgilenebilirsiniz"de **aynı dört kek** tek porsiyonluk hâliyle çıkıyordu.
-  // Modelde doğrusu bunların ayrı ürün değil aynı ürünün bir PAKET BOYU olmasıydı; kaynak katalog
-  // öyle kurmadı ve bu bir test verisi, kaynağın kurgusunu düzeltmek seed'in işi değil.
+  // `… Mono Pack` ürünleri aile değil: aynı kekin paket boyudur, ayrı aile olunca aynı kekler iki kez görünür.
   {
     ad: 'Kek Bardağı',
     uyeler: [
@@ -1273,9 +871,7 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
   },
   // ── ANADOLU MUTFAĞI ────────────────────────────────────────────────────────
   {
-    // Kullanıcı kararı 16.08. Beşi de aynı masada, aynı kullanımda — "yanına ne alsam" sorusunun
-    // cevabı. **Vegan ürünler aile DEĞİL:** "vegan" bir çeşit değil bir özelliktir; çiğ köfte ile
-    // falafeli aynı seçicide göstermek, ikisini birbirinin alternatifi sanmak olurdu.
+    // Aynı masada, aynı kullanımda beş meze. Vegan ürünler aile değil: vegan bir özelliktir, çeşit değil.
     ad: 'Meze',
     uyeler: [
       { slug: 'hummus', dolgu: 'Hummus' },
@@ -1329,31 +925,18 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
   },
 ];
 
-/**
- * Bir aileye BAĞLANACAK ürünlerin slug'ları — satış durumu kararının okuduğu küme.
- *
- * Süzgeç `aileleriKur`unkinin aynısı ve öyle kalmalı: tek üyeli satır aile KURMUYOR, dolayısıyla o
- * ürün ailesizdir ve aday olabilir. İki yerde iki farklı süzgeç olsaydı, tek üyeli bir satır burada
- * "aileli" sayılıp satışa açılır ama ekranda çeşit bloğu yine çizilmezdi — sebebi görünmeyen bir hâl.
- */
+/** Aileye bağlanacak ürünler; süzgeç `aileleriKur`unkiyle aynı kalmalı, yoksa tek üyeli satır "aileli" sayılır. */
 const AILE_UYESI_SLUG: ReadonlySet<string> = new Set(
   ELLE_AILELER.filter((a) => a.uyeler.length >= 2).flatMap((a) => a.uyeler.map((u) => u.slug)),
 );
 
-/**
- * Aynı tabanı paylaşan **iki ya da daha çok** ürünü bir aileye bağlar.
- *
- * Tek üyeli grup aile SAYILMAZ: bir çeşidi olan ürün ailesizdir ve ekranda çeşit bloğu hiç
- * çizilmez (brief §1b). Veri buna izin verirdi ama seed'in gerçekçi olması gerekiyor.
- */
+/** Aynı tabanı paylaşan iki ya da daha çok ürünü bir aileye bağlar; tek üyeli grup aile sayılmaz. */
 async function aileleriKur(
   families: ProductFamilyService,
   products: ProductService,
   urunIdBySlug: Map<string, string>,
 ): Promise<number> {
-  // **Liste ARTIK TEK KAYNAK** (16.08): addan türetme kaldırıldı, künyesi `ELLE_AILELER`'de.
-  // Tek üyeli aile yine kurulmaz — bir çeşidi olan ürün ailesizdir ve ekranda çeşit bloğu hiç
-  // çizilmez (brief §1b). Listede tek üyeli bir aile kalırsa bu bir yazım hatasıdır, süzülür.
+  // Tek üyeli satır bir yazım hatasıdır ve süzülür.
   const kurulacak = ELLE_AILELER.filter((a) => a.uyeler.length >= 2);
 
   // **Üyesi katalogda BULUNAMAYAN satır sessiz geçmez.** Liste elle yazılıyor ve katalog
@@ -1364,9 +947,8 @@ async function aileleriKur(
 
   let kurulan = 0;
   for (const { ad: taban, uyeler } of kurulacak) {
-    // Aile adı TEK DİLLİ: yalnız operatör görüyor (kullanıcı kararı 04.08).
-    // **Son aile PASİF** (kapsam denetimi 09.08): üyeleri satışta kalır ama "Çeşitler" bloğu
-    // çizilmez (0004 künyesi). Silmek yerine pasifleştirme kuralının tek sınanma yeri burası.
+    // Aile adı yalnız operatör gördüğü için tek dillidir. Son aile pasif kurulur ki pasif ailenin çeşit
+    // bloğu çizmemesi sınansın.
     const aile = await families.insert({ name: taban, isActive: kurulan < kurulacak.length - 1 });
     for (const [sira, uye] of uyeler.entries()) {
       const id = urunIdBySlug.get(uye.slug);
