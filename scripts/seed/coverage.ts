@@ -1112,8 +1112,8 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
-    // ASİSTAN KUYRUĞU (Modül 22 · 26.08): onbir öneri tipinin HER BİRİNİN kendi gövdesi var ve
-    // gövde ancak o tipten bir dilekçe kuyruktayken ekranda açılabiliyor. Kova sayısı onbirin
+    // ASİSTAN KUYRUĞU (Modül 22 · 26.08): öneri tiplerinin HER BİRİNİN kendi gövdesi var ve
+    // gövde ancak o tipten bir dilekçe kuyruktayken ekranda açılabiliyor. Kova tip sayısının
     // altına düşerse bir gövde gözle hiç sınanamaz — modülün ekran doğrulamaları tam bu yüzden
     // aylarca takılı kaldı (kuyruk her `db:refresh`te boşalıyordu).
     //
@@ -1127,7 +1127,7 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'onaylanmış', zorunlu: true, filtre: (q) => q.eq('status', 'applied') },
       { ad: 'reddedilmiş', zorunlu: true, filtre: (q) => q.eq('status', 'rejected') },
       { ad: 'süresi dolmuş', zorunlu: true, filtre: (q) => q.eq('status', 'expired') },
-      { ad: 'ONBİR tipin hepsi kuyrukta', zorunlu: true, sayac: tumTiplerKuyrukta },
+      { ad: 'BÜTÜN öneri tipleri kuyrukta', zorunlu: true, sayac: tumTiplerKuyrukta },
     ],
   },
   {
@@ -1163,11 +1163,12 @@ const KAPSAM: KapsamAlani[] = [
 ];
 
 /**
- * Bekleyen dilekçelerin kaç FARKLI tip taşıdığı — onbir beklenir (`AssistantProposalKindEnum`).
+ * Bekleyen dilekçelerin kaç FARKLI tip taşıdığı — enumdaki tiplerin HEPSİ beklenir
+ * (`AssistantProposalKindEnum`; sayı buraya yazılmaz, 22.44'te "onbir" bayat kalmıştı).
  *
- * Sayı değil KAPSAM ölçüyor: elli dilekçe olsa ama hepsi aynı tipten olsa öteki on gövde yine
- * ekranda açılamazdı. Eksik tipler adlarıyla basılır, çünkü "10/11" görüp hangisinin eksik
- * olduğunu aramak teşhisi uzatır.
+ * Sayı değil KAPSAM ölçüyor: elli dilekçe olsa ama hepsi aynı tipten olsa öteki gövdeler yine
+ * ekranda açılamazdı. Eksik tipler adlarıyla basılır, çünkü yalnız bir oran görüp hangisinin
+ * eksik olduğunu aramak teşhisi uzatır.
  */
 async function tumTiplerKuyrukta(db: Db): Promise<number> {
   const { data, error } = await db.from('assistant_proposal').select('kind').eq('status', 'pending');

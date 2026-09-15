@@ -1,14 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import {
-  PurchaseOrderItemService,
-  PurchaseOrderService,
-  ReorderService,
-  SupplierProductService,
-  SupplierService,
-  serviceDb,
-} from '@lezzet/database';
+import { PurchaseOrderItemService, PurchaseOrderService, ReorderService, SupplierProductService, serviceDb } from '@lezzet/database';
 import { matchSupplierItem, supplierItemKeyOf } from '@lezzet/domain-core';
 import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
 import { requireAdmin, requireFinance } from '@/lib/guard';
@@ -16,13 +9,7 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readWarehouseContext } from '@/lib/warehouse/context';
 import { sendPurchaseOrder } from '@/lib/stock/purchase-order-send';
 import { readOrderDetail, readOrderPage, readSupplierProducts, searchVariantOptions } from './procurement-read';
-import type {
-  OrderDetailView,
-  PurchaseOrderRowView,
-  SupplierFormInput,
-  SupplierProductRowView,
-  VariantPickOption,
-} from './procurement-types';
+import type { OrderDetailView, PurchaseOrderRowView, SupplierProductRowView, VariantPickOption } from './procurement-types';
 
 const PATH = '/operations/procurement';
 
@@ -66,44 +53,8 @@ export async function loadOrderDetailAction(orderId: string): Promise<ActionResu
 // Kart olmadan sipariş de olmaz: sıfırdan kurulumda ilk iş tedarikçiyi tanıtmaktır. Bu yüzden
 // CRUD ekranın en temel parçası, süsü değil.
 
-/**
- * Tedarikçi ekler ya da günceller (`id` varsa güncelleme).
- *
- * İletişim JSON olarak durur (`contact`) ve **elle üç alandan kurulur**: telefon, e-posta, adres.
- * Serbest JSON'a bırakılsaydı her kayıt farklı anahtar kullanır ve "WhatsApp'tan sipariş gönder"
- * bağlantısı hiçbir kayıtta güvenle çalışmazdı — telefon o bağlantının anahtarıdır.
- */
-export async function saveSupplierAction(input: SupplierFormInput): Promise<ActionResult<{ id: string }>> {
-  try {
-    await requireFinance();
-    const name = input.name.trim();
-    if (!name) throw new Error('Tedarikçi adı gerekli.');
-
-    const svc = new SupplierService(serviceDb());
-    const contact = {
-      ...(input.phone?.trim() ? { phone: input.phone.trim() } : {}),
-      ...(input.email?.trim() ? { email: input.email.trim() } : {}),
-      ...(input.address?.trim() ? { address: input.address.trim() } : {}),
-    };
-    const fields = {
-      name,
-      // Boş nesne yerine null: "iletişim bilgisi yok" ile "boş kayıt" aynı şey değil, ve okuyan
-      // taraf `contact?.phone` diye bakıyor — boş nesne de aynı cevabı verir ama satırı kirletir.
-      contact: Object.keys(contact).length > 0 ? contact : null,
-      vatNumber: input.vatNumber?.trim() || null,
-      // null = peşin çalışıyoruz (şemanın kendi sözleşmesi); 0 gün yazmak "vade var ama sıfır" olurdu.
-      paymentTermDays: input.paymentTermDays ?? null,
-      note: input.note?.trim() || null,
-      isActive: input.isActive,
-    };
-
-    const saved = input.id ? await svc.update({ id: input.id, ...fields }) : await svc.insert(fields);
-    revalidatePath(PATH);
-    return { data: { id: saved.id }, error: null };
-  } catch (error) {
-    return { data: null, error: getErrorMessage(error) };
-  }
-}
+// Kartın kaydı `lib/stock/supplier-actions.ts`te (`saveSupplierAction`, 22.44): asistan kuyruğunun
+// tedarikçi önerisi de aynı kapıdan yazar ve kardeş sayfadan import edemez (`STACK §7`).
 
 // ─── Ürün–kod eşlemesi ────────────────────────────────────────────────────────
 // `DOMAIN §16`: tedarik siparişi TEDARİKÇİNİN DİLİYLE yazılsın diye — bizim varyantımız ↔ onun

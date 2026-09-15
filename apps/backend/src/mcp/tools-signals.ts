@@ -4,8 +4,10 @@ import {
   AnalyticsSearchDailyService,
   ConversationInboxService,
   DeliveryZoneService,
+  MoneyDocumentService,
   MoneyMovementService,
   PostalCodeDemandService,
+  StockIntakeBalanceService,
   ProductFeedbackService,
   ProductService,
   TicketService,
@@ -159,14 +161,32 @@ export async function moneyOverview(days: number) {
 
   const accountService = new AccountService(db);
   const movements = new MoneyMovementService(db);
-  const [accounts, balances, totals, recent] = await Promise.all([
+  const [accounts, balances, totals, recent, unexplainedMovements, openDocuments, uninvoicedIntakes] = await Promise.all([
     accountService.list({ activeOnly: true }),
     accountService.balances(),
     movements.periodTotals(from, to),
     // Son hareketler: en yeni 15 — "kasada ne oldu" sorusunun dolaysız cevabı. Sayfalama yok,
     // pencere zaten dar (`CLAUDE §1`: doğal tavanı olan küme).
     movements.ledger({ limit: 15 }),
+    // İZAH VE BORÇ (22.44): üçü de doğal tavanlı kümeler (izah edilen, kapanan, faturası girilen düşer).
+    movements.unexplainedCount(),
+    new MoneyDocumentService(db).listOpen(),
+    new StockIntakeBalanceService(db).listOpen(),
   ]);
+
+  // ── BEKLEYEN İŞİN SAYILARI (22.44) — ADSIZ ──────────────────────────────────
+  // Brifingin para satırı ve ay sonu yığılmasının önü: kaç hareket izah bekliyor, kaç belge açık (yönüyle),
+  // kaçının vadesi geçti, faturası girilmemiş kaç kabulün borcu var. Karşı tarafların ADI YOK: kritik
+  // kayıt listelenmez (`AI_ADMIN_ASSISTANT §6`, kullanıcı kararı 14.09) — sayı yeter, kimliği ekran söyler.
+  const payable = openDocuments.filter((doc) => doc.direction === 'out' && doc.balance.openAmountCents > 0);
+  const receivable = openDocuments.filter((doc) => doc.direction === 'in' && doc.balance.openAmountCents > 0);
+  const sumOpen = (docs: typeof openDocuments) => docs.reduce((sum, doc) => sum + doc.balance.openAmountCents, 0);
+  const attention = {
+    unexplainedMovements,
+    openPayableDocuments: { count: payable.length, openCents: sumOpen(payable), overdueCount: payable.filter((doc) => doc.dueOn !== null && doc.dueOn < to).length },
+    openReceivableDocuments: { count: receivable.length, openCents: sumOpen(receivable) },
+    intakesWithoutInvoice: { count: uninvoicedIntakes.length, openCents: uninvoicedIntakes.reduce((sum, intake) => sum + intake.openAmountCents, 0) },
+  };
 
   const accountName = new Map(accounts.map((a) => [a.id, a.name]));
 
@@ -181,6 +201,8 @@ export async function moneyOverview(days: number) {
     })),
     /** Tür × yön kırılımı (tahsilat/gider/transfer × giren/çıkan) — ham toplam, yorum yok. */
     periodTotals: totals,
+    /** Bekleyen işin sayıları (22.44) — izah bekleyen hareket, açık belge (yönüyle, vadesi geçen), faturasız kabul. */
+    attention,
     recentMovements: recent.rows.map((row) => ({
       valueDate: row.valueDate,
       type: row.type,

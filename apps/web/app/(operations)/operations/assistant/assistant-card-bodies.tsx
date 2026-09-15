@@ -8,12 +8,14 @@ import {
   type BundleDraftPayload,
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
+  type MoneyDocumentPayload,
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
   type RecipeDraftPayload,
   type StockIntakePayload,
+  type SupplierCreatePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
 import { BatchOfferCard } from './cards/batch-offer-card';
@@ -21,12 +23,14 @@ import { BundleCard } from './cards/bundle-card';
 import { DiscountCard } from './cards/discount-card';
 import { FeaturedCard } from './cards/featured-card';
 import { MoneyCard } from './cards/money-card';
+import { MoneyDocumentCard } from './cards/money-document-card';
 import { ProductCreateCard } from './cards/product-create-card';
 import { ProductDraftCard } from './cards/product-draft-card';
 import { PurchaseOrderCard } from './cards/purchase-order-card';
 import { RecipeCard } from './cards/recipe-card';
 import { SummaryLine } from './cards/shared';
 import { StockIntakeCard } from './cards/stock-intake-card';
+import { SupplierCard } from './cards/supplier-card';
 import { ZoneCard } from './cards/zone-card';
 import type { AssistantRowView } from './assistant-types';
 
@@ -83,6 +87,10 @@ export function cardBodyOf(row: AssistantRowView): ReactNode {
       return renderWith<RecipeDraftPayload>(row, 'recipe_draft', (p) => <RecipeCard payload={p} row={row} />);
     case 'featured_flag':
       return renderWith<FeaturedFlagPayload>(row, 'featured_flag', (p) => <FeaturedCard payload={p} row={row} />);
+    case 'money_document':
+      return renderWith<MoneyDocumentPayload>(row, 'money_document', (p) => <MoneyDocumentCard payload={p} />);
+    case 'supplier_create':
+      return renderWith<SupplierCreatePayload>(row, 'supplier_create', (p) => <SupplierCard payload={p} />);
     default:
       // Tanımadığı tip: asistanın CÜMLESİ. On bir tipin hepsinin kartı var, yani bu dal bugün
       // ulaşılamaz — ama şema büyüdüğünde kartsız kalan tip boş bir kutu değil, okunur bir özet

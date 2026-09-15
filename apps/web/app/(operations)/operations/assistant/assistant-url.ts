@@ -121,6 +121,9 @@ const TARGET_SCREENS: Record<string, { path: string; open: string; list: string 
   routes: { path: '/operations/deliveries?tab=routes', open: 'Rota ekranında', list: "Rotalara" },
   receiving: { path: '/operations/receiving', open: 'Mal kabulde', list: 'Mal kabule' },
   finance: { path: '/operations/finance', open: 'Para ekranında', list: 'Paraya' },
+  // Belge Para ekranının BELGELER sekmesinde (22.44); hareket hareketler sekmesinde (`finance`).
+  document: { path: '/operations/finance?tab=documents', open: 'Para ekranında', list: 'Belgelere' },
+  supplier: { path: '/operations/procurement?tab=suppliers', open: 'Tedarik ekranında', list: 'Tedarikçilere' },
   // Fırsat devri "yaklaşan tarihli" sekmesine gider, seviye tablosuna değil: teklif kararı bir RAF
   // ÖMRÜ kararıdır ve o sekme zaten karar bekleyen partileri listeliyor. Varsayılan sekmeye
   // düşseydi devredilen parti listede hiç görünmezdi.

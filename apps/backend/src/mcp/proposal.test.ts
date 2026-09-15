@@ -1,4 +1,4 @@
-import { AssistantProposalService, CategoryService, serviceDb } from '@lezzet/database';
+import { AssistantProposalService, CategoryService, MoneyDocumentService, SupplierService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { APPLIERS, KIND_META, amountCentsOf, applyProposal, impactOf, modeOf, type ProposalMode } from '@lezzet/application';
 import {
@@ -8,6 +8,8 @@ import {
   parseProposalPayload,
   resolveLocalizedText,
   type FeaturedFlagPayload,
+  type MoneyDocumentPayload,
+  type SupplierCreatePayload,
 } from '@lezzet/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { HANDLERS, TOOLS } from './server-factory';
@@ -136,6 +138,13 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     expect(amountCentsOf('stock_intake', { lines: [{ qty: 2, unitCostCents: 500 }] })).toBe(1000);
     expect(amountCentsOf('stock_intake', { lines: [{ qty: 2, unitCostCents: null }] })).toBeNull();
     expect(amountCentsOf('featured_flag', { name: 'x' })).toBeNull();
+    // FATURANIN TUTARI faturanın KENDİ yazdığı (22.44): satırlardan toplamak KDV'yi ve nakliyeyi
+    // dışarıda bırakırdı — belge, faturalı sipariş ve toplamı okunmuş mal kabul.
+    expect(amountCentsOf('money_document', { amountCents: 42000 })).toBe(42000);
+    expect(amountCentsOf('purchase_order', { lines: [], invoice: { totalAmountCents: 180207 } })).toBe(180207);
+    expect(amountCentsOf('purchase_order', { lines: [], invoice: null })).toBeNull();
+    expect(amountCentsOf('stock_intake', { totalAmountCents: 4800, lines: [{ qty: 2, unitCostCents: 2000 }] })).toBe(4800);
+    expect(amountCentsOf('supplier_create', { name: 'x' })).toBeNull();
   });
 
   it('her kind’ın ekran künyesi var ve hedef tablolar GERÇEK şema adları', () => {
@@ -154,6 +163,15 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
 
   it('bölge önerisinin etki cümlesi geri alınamazlığı SÖYLER', () => {
     expect(KIND_META.zone_extend.impact).toMatch(/GERİ ALINAMAZ/);
+  });
+
+  it('faturalı mal kabul ve faturadan sipariş, etkide BELGEYİ söyler (22.44)', () => {
+    // Toplamı okunmuş kabulde fatura belge olarak doğar; okunmamışsa cümle belge vaat etmez.
+    expect(impactOf('stock_intake', { lines: [{ qty: 2 }], totalAmountCents: 4800 })).toMatch(/belge olarak doğar/);
+    expect(impactOf('stock_intake', { lines: [{ qty: 2 }], totalAmountCents: null })).not.toMatch(/belge/);
+    // Faturadan sipariş GÖNDERİLMİŞ açılır; eşik altı önerisi TASLAK kalır.
+    expect(impactOf('purchase_order', { lines: [{ qty: 2 }], source: 'invoice' })).toMatch(/GÖNDERİLMİŞ/);
+    expect(impactOf('purchase_order', { lines: [{ qty: 2 }], source: 'engine' })).toMatch(/TASLAK/);
   });
 
   /**
@@ -250,6 +268,9 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
       'recipe_draft',
       'money_movement',
       'stock_intake',
+      // 22.44: faturadan belge ve tedarikçi — ikisi de varlığın kendi formuyla kuyruğun içinde.
+      'money_document',
+      'supplier_create',
     ] as const) {
       expect(modeOf(kind)).toBe('inline');
       expect(KIND_META[kind].resultKey).toBeTruthy();
@@ -276,6 +297,61 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
       expect(KIND_META[kind].resultKey).toBeTruthy();
     }
     expect(modeOf('featured_flag')).toBe('apply');
+  });
+});
+
+describe('belge ve tedarikçi uygulayıcıları — ekranın kapısından (22.44)', () => {
+  const supplierIds: string[] = [];
+  const documentIds: string[] = [];
+  const vatNumber = `BE0${stamp}`;
+
+  afterAll(async () => {
+    await purgeTestData(db, { documentIds, supplierIds });
+  });
+
+  it('tedarikçi önerisi kartı açar; aynı vergi numarası ikinci kez REDDEDİLİR', async () => {
+    const payload: SupplierCreatePayload = {
+      name: `Kuyruk tedarikçisi ${stamp}`,
+      vatNumber,
+      phone: null,
+      email: null,
+      address: null,
+      country: 'BE',
+      paymentTermDays: 10,
+      note: null,
+    };
+    const result = await APPLIERS.supplier_create(db, payload);
+    supplierIds.push(result.supplierId!);
+    expect(await new SupplierService(db).getById(result.supplierId!)).toMatchObject({ name: payload.name, vatNumber, country: 'BE', paymentTermDays: 10 });
+    // Aynı vergi numarası başka adla: faturadaki kimlik tek karta gider, ikinci kart açılmaz.
+    await expect(APPLIERS.supplier_create(db, { ...payload, name: `Başka ad ${stamp}` })).rejects.toThrow(/zaten kayıtlı/);
+  });
+
+  it('belge önerisi belge kapısından yazılır; ters yüklemede KDV REDDEDİLİR', async () => {
+    const payload: MoneyDocumentPayload = {
+      kind: 'invoice',
+      number: `KUY-${stamp}`,
+      issuedOn: '2026-09-10',
+      dueOn: '2026-09-20',
+      direction: 'out',
+      supplierId: supplierIds[0]!,
+      supplierName: null,
+      counterpartyId: null,
+      counterpartyName: null,
+      nature: null,
+      amountCents: 12000,
+      vatAmountCents: null,
+      vatRegime: 'reverse_charge',
+      note: null,
+    };
+    const result = await APPLIERS.money_document(db, payload);
+    documentIds.push(result.moneyDocumentId!);
+    expect(await new MoneyDocumentService(db).getById(result.moneyDocumentId!)).toMatchObject({
+      supplierId: supplierIds[0],
+      vatRegime: 'reverse_charge',
+      dueOn: '2026-09-20',
+    });
+    await expect(APPLIERS.money_document(db, { ...payload, number: `KUY2-${stamp}`, vatAmountCents: 500 })).rejects.toThrow(/vat_with_regime/);
   });
 });
 
@@ -329,9 +405,14 @@ describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçe
     featured_flag: { id: 'name ile bulunur', currentlyFeaturedCount: 'vitrin sayımı — araç hesaplar' },
     purchase_order: {
       warehouseId: 'warehouseCode ile bulunur',
-      supplierId: 'supplierName ile TAM eşitlikle bulunur (22.42 nokta atışı — parça ad yok, liste yok)',
+      supplierId: 'supplierVatNumber · supplierPhone · supplierName ile nokta atışı bulunur (22.42 · 22.44 — parça ad yok, liste yok)',
       supplierName: 'tedarikçi kaydından — araç adı doğrulayıp yazar',
-      lines: 'ADETLER MOTORDAN — eşik altı eksiği hesaplanır, model veremez',
+      lines: 'motor kipinde ADETLER MOTORDAN (eşik altı eksiği); fatura kipinde araç girdisi `lines` (22.44)',
+      source: 'araç türetir — `lines` verildiyse fatura, yoksa motor (22.44)',
+    },
+    money_document: {
+      supplierId: 'supplierVatNumber · supplierPhone · supplierName ile nokta atışı bulunur (22.44)',
+      counterpartyId: 'counterpartyName ile bulunur — tam ad ya da eşleşme kelimesi; bulunmazsa null, adı kart taşır',
     },
     bundle_draft: { items: 'kalem listesi araçta var; payların dağıtımı motorda' },
     stock_intake: {

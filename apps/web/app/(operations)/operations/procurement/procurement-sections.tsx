@@ -137,7 +137,7 @@ export function SupplierCard({ supplier, onEdit }: { supplier: SupplierCardView;
           <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-muted">
             Bu yıl alım
           </span>
-          <span className="font-ops-mono text-ops-lead text-ops-ink">{money(supplier.intakeTotalCents)}</span>
+          <span className="font-ops-mono text-ops-lead text-ops-ink">{money(supplier.purchasedCents)}</span>
         </span>
       </div>
     </section>

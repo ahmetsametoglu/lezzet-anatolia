@@ -1,4 +1,4 @@
-import type { AccountType, CounterpartyKind, DocumentKind, MovementDirection, MovementType } from '@lezzet/types';
+import type { AccountType, CounterpartyKind, MovementDirection, MovementType } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 
 // Para ekranının SÖZLÜĞÜ. Tasarımın §6 kuralı burada zorlanıyor ve tezgâh sözleşmesi onu aynen
@@ -236,21 +236,9 @@ export const INVALID_REASON = {
   nature_not_applicable: 'Sipariş parası, stok alımı ve transfer tür almaz — onları bağları açıklar.',
 } as const;
 
-/** Belge türü — operatörün diliyle (12.12). `other` "sair" değil "bu beşten hiçbiri". */
-export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {
-  invoice: 'Fatura',
-  receipt: 'Fiş',
-  payslip: 'Bordro',
-  contract: 'Sözleşme',
-  statement: 'Dekont',
-  other: 'Diğer belge',
-};
-
-/** Belgenin yönü — "kime borçluyuz / kim bize borçlu" diliyle, `in/out` değil. */
-export const DOCUMENT_DIRECTION_LABEL: Record<MovementDirection, string> = {
-  out: 'Biz ödeyeceğiz',
-  in: 'Bize ödenecek',
-};
+// Belge türünün, yönünün ve KDV rejiminin adları ortak belge formunda
+// (`components/operation/form/document-form/labels.ts`, 12.26): asistan kuyruğu da aynı formu açıyor
+// ve kardeş sayfadan import edemez (`STACK §7`).
 
 /** Belge kapısının reddi → operatörün cümlesi. */
 export const DOCUMENT_REASON = {
@@ -264,6 +252,14 @@ export const DOCUMENT_REASON = {
   wrong_key: 'Yüklenen dosya bu belgeye ait değil — yeniden yükleyin.',
   unsupported_type: 'Yalnız PDF ve fotoğraf (JPG, PNG, WEBP, HEIC) yüklenebilir.',
   storage_unavailable: 'Belge deposu bu ortamda tanımlı değil — belge kaydedildi, dosyası sonra yüklenebilir.',
+  // 12.26 — KDV rejimi, vade ve stok alımının bağı
+  vat_with_regime: 'Ters yüklemeli ya da muaf belgede KDV tutarı olamaz — KDV kutusunu boşaltın ya da rejimi "Standart" yapın.',
+  due_before_issue: 'Vade belgenin tarihinden önce olamaz.',
+  link_conflict: 'Belge ya bir mal kabulün ya bir tedarik siparişinin faturasıdır — ikisi birden olmaz.',
+  link_needs_supplier: 'Mal kabulün ya da siparişin faturası bir tedarikçinin belgesidir — önce tedarikçiyi seçin.',
+  link_not_found: 'Seçilen mal kabul ya da sipariş bulunamadı — sayfayı tazeleyin.',
+  link_supplier_mismatch: 'Seçilen mal kabul ya da sipariş başka bir tedarikçinin — belgenin tedarikçisiyle aynı olmalı.',
+  link_has_document: 'Bu mal kabulün ya da siparişin faturası zaten girilmiş.',
 } as const;
 
 /** Belge bağı kapısının reddi (13.09 · bağ tutarıyla) → operatörün cümlesi. */

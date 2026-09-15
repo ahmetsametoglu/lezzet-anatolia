@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { QueueTab } from '@/lib/assistant/assistant-types';
 import { applyProposalAction, rejectProposalAction } from './actions';
-import { inlineBodyOf } from './assistant-body';
+import { appliedNoteOf, inlineBodyOf } from './assistant-body';
 import { notifyCountOf } from './assistant-labels';
 import { AssistantDecisionDialog } from './assistant-decision-dialog';
 import { AssistantDesktop } from './assistant.desktop';
@@ -71,7 +71,7 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
           setNotice(bodyError);
           return;
         }
-        setNotice(body.appliedNote);
+        setNotice(appliedNoteOf(body, payload));
         setDecision(null);
         router.refresh();
         return;

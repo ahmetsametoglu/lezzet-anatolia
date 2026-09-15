@@ -57,7 +57,7 @@ const bekleyen = dilekceler(capalar, kalemler, kalemler);
 const karara = kararlilar(capalar, kalemler);
 
 describe('asistan kuyruğu seed’i', () => {
-  it('ONBİR tipin hepsinden dilekçe üretir — eksik tip, ekranda hiç açılmayan bir gövde demektir', () => {
+  it('BÜTÜN tiplerden dilekçe üretir — eksik tip, ekranda hiç açılmayan bir gövde demektir', () => {
     const tipler = new Set(bekleyen.map((d) => d.kind));
 
     expect([...tipler].sort()).toEqual([...AssistantProposalKindEnum.options].sort());

@@ -19,8 +19,8 @@ import { BaseDbService } from '../core/base.service';
 /**
  * Tedarikçi kartı (06.8) — müşteri kartının simetriği (DOMAIN §16).
  *
- * **Borç saklanmaz, türetilir:** Σ stok girişleri − Σ tedarikçiye ödemeler (`debt()`, 12.3).
- * İki yarım da hesaplanıyor; dönem daraltması ve cent dönüşümü orada.
+ * **Borç saklanmaz, türetilir:** Σ alım − Σ ödeme (`debt()`, 12.3); alım 12.26'dan beri BELGEDEN —
+ * tedarikçinin faturaları + faturası henüz girilmemiş kabuller. Dönem daraltması ve cent dönüşümü orada.
  */
 export class SupplierService extends BaseDbService<Supplier, SupplierInsert, SupplierUpdate> {
   constructor(supabase: SupabaseClient) {
@@ -32,56 +32,73 @@ export class SupplierService extends BaseDbService<Supplier, SupplierInsert, Sup
   }
 
   /**
-   * Tedarikçiye borç — **türetilir, saklanmaz**: Σ girişler − Σ ödemeler (12.3).
+   * Tedarikçiye borç — **türetilir, saklanmaz**: Σ alım − Σ ödeme (12.3 · 12.26).
    *
-   * `paid`, o tedarikçiye ÇIKAN paranın toplamıdır — tipine bakılmaz. Ölçüt hareketin `supplier_id`
-   * bağıdır: mal bedeli (`purchase`) da, sonradan yapılan bir düzeltme ödemesi de aynı borcu kapatır.
-   * Tipe göre süzseydik, doğru bağlanmış ama farklı tipteki bir ödeme borçta görünmezdi.
+   * ── ALIM BELGEDEN TÜRER (12.26 · kullanıcı kararı 14.09) ────────────────────
+   * Alım = tedarikçinin BELGELERİ (fatura artı, tedarikçinin alacak dekontu eksi) + faturası henüz
+   * girilmemiş mal kabullerin satır toplamı. Bir tur yalnız kabullerin toplamıydı ve ölçüldü: kabulün
+   * toplamı birim maliyet × adettir — KDV hariç, nakliyeyi ve iskontoyu bilmez — oysa ödenen şey
+   * faturanın toplamıdır; sahadan maliyetsiz yapılan kabulde borç hiç doğmuyordu. Faturası girilen
+   * (belgeye ya da siparişine bağlanan) kabul `stock_intake_balance.has_document` taşır ve burada
+   * ikinci kez sayılmaz.
    *
-   * İki tur okur: girişler ve ödemeler ayrı tablolarda. Tedarikçi başına çağrılır (kart ekranı),
-   * liste ekranı gerekirse toplu okuma ayrıca eklenir.
+   * `paid` = o tedarikçiye ÇIKAN para eksi ondan GİREN para (iade) — tipine bakılmaz. Ölçüt hareketin
+   * `supplier_id` bağıdır: mal bedeli (`purchase`) da, sonradan yapılan bir düzeltme ödemesi de aynı
+   * borcu kapatır. Faturanın ödemesi "Ödemesini yaz" ile de yazılsa, banka satırından da bağlansa
+   * hareket tedarikçiyi taşır (12.26). Giren parayı düşmemek, alacak dekontunu alımdan düşüp iadesini
+   * ödemeden düşmemek olurdu — borç iade tutarı kadar eksiye kayardı.
    *
-   * **Dönem isteğe bağlı** (tedarik talebi §6): aralık verilmezse ömür boyu — bugünkü davranış, hiçbir
-   * çağıran kırılmaz. Aralık ikinci bir toplayıcı olarak DEĞİL bu metoda eklendi: borç da dönem
-   * toplamı da aynı hareketlerden türüyor, ayrı bir okuma aynı kararı iki yere koymak olurdu.
+   * Üç tur okur (belge · belgesiz kabul · hareket). Tedarikçi başına çağrılır (kart ekranı), liste
+   * ekranı gerekirse toplu okuma ayrıca eklenir.
+   *
+   * **Dönem isteğe bağlı** (tedarik talebi §6): aralık verilmezse ömür boyu. Dönem İŞİN GÜNÜNE göre
+   * süzülür — belgenin günü (`issued_on`), kabulün günü (`date`), paranın günü (`value_date`); kaydın
+   * yazıldığı an değil: dün akşam fotoğraflanan fatura bugün girilir ama dünün alımıdır.
    *
    * ⚠ **Dönem `balanceCents`'i bir borç DEĞİLDİR** ve okuyan taraf bunu bilmeli: aralık verildiğinde
    * `paidCents` da kırpılır, yani "bu yıl alınan mal − bu yıl yapılan ödeme" çıkar. Geçen yılın malına
-   * bu yıl yapılan ödeme o farkı negatife çeker. Dönemli çağrının anlamlı alanı `intakeTotalCents`'tir
+   * bu yıl yapılan ödeme o farkı negatife çeker. Dönemli çağrının anlamlı alanı `purchasedCents`'tir
    * ("bu tedarikçiyle bu yıl ne kadar iş yaptık"); borç sorusu dönemsizdir.
    *
-   * **Dönüş cent** (02.9 · `STACK §8`). İki toplam iki AYRI ailenin kolonundan geliyor (`stock_intake`
-   * tedarik, `money_movement` para) ve ikisi de ham okunuyor — biri cent'e inip öteki euro kalsaydı
-   * aynı nesnede iki birim yan yana dururdu ve `balance` çıkarması sessizce 100× şaşardı.
+   * **Dönüş cent** (02.9 · `STACK §8`). Toplamlar üç AYRI ailenin kolonundan geliyor ve hepsi ham
+   * okunuyor — biri cent'e inip öteki euro kalsaydı `balance` çıkarması sessizce 100× şaşardı.
    */
   async debt(
     supplierId: string,
     period: { from?: Date; to?: Date } = {},
-  ): Promise<{ intakeTotalCents: number; paidCents: number; balanceCents: number }> {
-    const inPeriod = <T extends { gte: (c: string, v: string) => T; lte: (c: string, v: string) => T }>(query: T): T => {
+  ): Promise<{ purchasedCents: number; paidCents: number; balanceCents: number }> {
+    const day = (date: Date) => date.toISOString().slice(0, 10);
+    const inPeriod = <T extends { gte: (c: string, v: string) => T; lte: (c: string, v: string) => T }>(query: T, column: string): T => {
       let scoped = query;
-      if (period.from) scoped = scoped.gte('created_at', period.from.toISOString());
-      if (period.to) scoped = scoped.lte('created_at', period.to.toISOString());
+      if (period.from) scoped = scoped.gte(column, day(period.from));
+      if (period.to) scoped = scoped.lte(column, day(period.to));
       return scoped;
     };
 
-    const [intakes, payments] = await Promise.all([
-      inPeriod(this.supabase.from('stock_intake').select('total_amount').eq('supplier_id', supplierId)),
-      inPeriod(this.supabase.from('money_movement').select('amount').eq('supplier_id', supplierId).eq('direction', 'out')),
+    const [documents, intakes, movements] = await Promise.all([
+      inPeriod(this.supabase.from('money_document').select('amount, direction').eq('supplier_id', supplierId), 'issued_on'),
+      inPeriod(
+        this.supabase.from('stock_intake_balance').select('amount').eq('supplier_id', supplierId).eq('has_document', false),
+        'date',
+      ),
+      inPeriod(this.supabase.from('money_movement').select('amount, direction').eq('supplier_id', supplierId), 'value_date'),
     ]);
+    if (documents.error) throw documents.error;
     if (intakes.error) throw intakes.error;
-    if (payments.error) throw payments.error;
+    if (movements.error) throw movements.error;
 
     // Toplama SATIR SATIR cent'e inilerek yapılır, euro'da toplanıp sonra çevrilerek değil: kayan
     // noktada biriken artık, çevrimden önce toplandığında bir kuruş kaydırabilir. Cent tamsayı
-    // olduğu için toplamın kendisi kesindir — eski kodun `Math.round(v * 100) / 100` düzeltmesi
-    // artık gereksiz, çünkü düzeltilecek bir artık kalmıyor.
-    const sumCents = (rows: unknown[], field: string) =>
-      rows.reduce<number>((sum, row) => sum + toCents(Number((row as Record<string, string | number>)[field])), 0);
+    // olduğu için toplamın kendisi kesindir.
+    type Row = Record<string, string | number | null>;
+    const centsOf = (row: unknown, field: string) => toCents(Number((row as Row)[field]));
+    const signedCents = (rows: unknown[], field: string) =>
+      rows.reduce<number>((sum, row) => sum + ((row as Row).direction === 'in' ? -1 : 1) * centsOf(row, field), 0);
+    const sumCents = (rows: unknown[], field: string) => rows.reduce<number>((sum, row) => sum + centsOf(row, field), 0);
 
-    const intakeTotalCents = sumCents(intakes.data ?? [], 'total_amount');
-    const paidCents = sumCents(payments.data ?? [], 'amount');
-    return { intakeTotalCents, paidCents, balanceCents: intakeTotalCents - paidCents };
+    const purchasedCents = signedCents(documents.data ?? [], 'amount') + sumCents(intakes.data ?? [], 'amount');
+    const paidCents = signedCents(movements.data ?? [], 'amount');
+    return { purchasedCents, paidCents, balanceCents: purchasedCents - paidCents };
   }
 }
 

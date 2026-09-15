@@ -2,11 +2,11 @@ import { acceptsNature, type MatchKind, type MatchSuggestion } from '@lezzet/dom
 import type { Account, AccountBalance, AccountLedgerRow, MoneyDocument, MoneyDocumentBalance, MoneyMovement, MovementType } from '@lezzet/types';
 import { dayMonth, money } from '@/components/operation/ui/format';
 import type { DocumentPaymentOptions, MatchOptions, MatchTarget, MatchTargets } from '@/lib/bank/reconcile';
+import { DOCUMENT_KIND_LABEL } from '@/components/operation/form/document-form/labels';
 import {
   ACCOUNT_TONE,
   ACCOUNT_TYPE_LABEL,
   COUNTERPARTY_KIND_LABEL,
-  DOCUMENT_KIND_LABEL,
   MATCH_EFFECT,
   MOVEMENT_TYPE_LABEL,
   type MatchKindView,
@@ -83,6 +83,7 @@ export function toDocumentRows(
       kind: doc.kind,
       number: doc.number,
       issuedOn: doc.issuedOn,
+      dueOn: doc.dueOn,
       direction: doc.direction,
       nature: doc.nature,
       counterpartyId: doc.counterpartyId,
@@ -91,6 +92,7 @@ export function toDocumentRows(
       note: doc.note,
       amountCents: doc.amountCents,
       vatAmountCents: doc.vatAmountCents,
+      vatRegime: doc.vatRegime,
       kindLabel: DOCUMENT_KIND_LABEL[doc.kind],
       partyName,
       natureLabel: doc.nature ? (names.natureLabels.get(doc.nature) ?? doc.nature) : null,

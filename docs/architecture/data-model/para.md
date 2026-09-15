@@ -175,13 +175,16 @@ Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleş
 | `kind` | document_kind |  |  |
 | `number` | text | • |  |
 | `issued_on` | date |  |  |
+| `due_on` | date | • |  |
 | `counterparty_id` | uuid | • |  |
 | `supplier_id` | uuid | • |  |
 | `stock_intake_id` | uuid | • |  |
+| `purchase_order_id` | uuid | • |  |
 | `direction` | movement_direction |  |  |
 | `nature` | text | • |  |
 | `amount` | numeric(12, 2) |  |  |
 | `vat_amount` | numeric(12, 2) | • |  |
+| `vat_regime` | document_vat_regime |  | `'standard'` |
 | `currency` | currency |  | `'EUR'` |
 | `file_key` | text | • |  |
 | `tags` | text[] |  | `'{}'` |
@@ -192,7 +195,9 @@ Resmî muhasebe sorduğunda hareketin dayanağı: fatura, fiş, bordro, sözleş
 **Kararlar**
 
 - **Satış faturaları burada değil:** bizim kestiğimiz fatura numarası siparişin üstünde (`order.invoice_no`, 12.7).
-- **Stok alımının faturası mal kabule bağlanır** (`stock_intake_id`) ve ikinci bir borç DOĞURMAZ — tedarikçi borcu mal kabulden türemeye devam eder (12.3).
+- ~~**Stok alımının faturası mal kabule bağlanır** (`stock_intake_id`) ve ikinci bir borç DOĞURMAZ — tedarikçi borcu mal kabulden türemeye devam eder (12.3).~~ **Borç belgeden türer** (12.26 · kullanıcı kararı 14.09): stok alımının faturası mal kabule (`stock_intake_id`) ya da mal gelmeden kesildiyse tedarik siparişine (`purchase_order_id`) bağlanır — ikisinden en çok biri, ikisi de tedarikçi ister (`money_document_stock_link` · `money_document_supply_party`). Tedarikçi borcu faturanın toplamından okunur; faturası girilmemiş kabulün satır toplamı yedektir (`SupplierService.debt`). Ölçüm: kabulün satırları KDV hariç ve nakliyesizdi, sahadan yapılan kabulde sıfırdı — ödenen şey faturanın toplamıydı. Aynı kabule ya da siparişe ikinci fatura bağlanamaz (kapı, `link_has_document`).
+- **`vat_regime`** (12.26) — `standard` · `reverse_charge` (autoliquidation: AB içi alım ya da ithalat; belgede KDV yok, beyanda hesaplanır) · `exempt` (sigorta, banka masrafı). Etiket değil ALAN: "KDV 0" iki ayrı şeyi anlatıyordu. Standart dışında belgede KDV olamaz (`money_document_vat_regime`); öneri tedarikçinin ülkesinden (`suggestVatRegime`). Muhasebeci dökümünde sütun.
+- **`due_on`** (12.26) — vade; belgede yazmıyorsa NULL, belge gününden önce olamaz (`money_document_due`). Tedarikçi faturasında form kartın vadesinden önerir (`documentDueOn`).
 - **`direction`** hareketinkiyle aynı dilde: `out` = bizim ödeyeceğimiz, `in` = bize ödenecek.
 - **`vat_amount`** belgede yoksa NULL; sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
 - **`file_key`** — özel R2 kovası (`r2Keys.financeDocument`), public adresi yok: belgede karşı tarafın adı ve banka bilgisi yazar.

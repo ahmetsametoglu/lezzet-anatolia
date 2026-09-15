@@ -14,12 +14,14 @@ import {
   proposeBundleDraft,
   proposeDiscountDraft,
   proposeFeaturedFlag,
+  proposeMoneyDocument,
   proposeMoneyMovement,
   proposeProductCreate,
   proposeProductDraft,
   proposePurchaseOrder,
   proposeRecipeDraft,
   proposeStockIntake,
+  proposeSupplierCreate,
   proposeZoneExtend,
 } from './tools-propose';
 
@@ -43,6 +45,7 @@ const INSTRUCTIONS = [
   'HOW THIS BUSINESS IS SHAPED — read every number through this. (1) There is NO default warehouse: stock, orders and delivery zones all belong to a specific warehouse, so "12 boxes in total" is never a fact you can act on — ask which warehouse. (2) A delivery zone IS a delivery route: it belongs to one warehouse, runs on fixed weekdays, and covers a set of postal codes. Extending a zone means adding a stop to a van that is already driving — so proximity to that zone\'s existing codes matters (delivery_map gives you the distance). (3) Prices have channels, and **every money field names its own VAT basis**: `…IncVat` means VAT-included (all b2c list, offer and suggested prices), `…ExVat` means VAT-excluded (purchase costs). Subtracting an ExVat figure from an IncVat one overstates margin by the whole VAT rate — divide by (1 + vatRate/100) first. If a field name carries neither suffix it is not money you should compare. (4) A product carries two independent axes: whether its legal declarations are complete, and whether it is on sale. You can help with the first; the second is never yours.',
   'All data you see is aggregate and identity-free by design: no customer names/contacts, no per-product purchase prices, no message content. Do not speculate about individuals.',
   'SUPPLIERS AND COUNTERPARTIES ARE NEVER LISTED (owner decision 14.09): no tool returns them and you must not search them by name fragments. Identify a supplier by what the invoice prints — VAT number (TVA/SIRET), phone, or the exact full name — and a counterparty by its exact name or keyword. If a tool cannot find the record, ask the admin; never guess or retry with a fragment.',
+  'INVOICES — pick the tool by what the invoice is for. Goods that ARRIVED and whose labels you can read (expiry dates): propose_stock_intake with the invoice total, VAT and due date — the invoice is booked as a document linked to that receipt. Goods NOT arrived yet (invoice e-mailed before the delivery, no expiry dates): propose_purchase_order in INVOICE mode. Anything that is not goods (rent, accountant, insurance, phone, fuel): propose_money_document. Supplier not found by its VAT number, phone or exact name: propose_supplier_create from the invoice header first. The VAT regime is a field, not a tag: reverse_charge when the invoice says so ("Verlegging van heffing", "Autoliquidation", "Reverse charge") and shows no VAT. Files never travel through these tools — tell the admin to drop the PDF on the approval screen.',
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
   "Start-of-day habit: when the admin greets you or asks what's up, call morning_briefing first, and lead your answer with its `attention` list.",
   'Ground every proposal in a tool result. For a weekly route/zone proposal call delivery_map FIRST (it tells you which zones exist, which warehouse and weekdays they run on, and how far an uncovered code is from each) — demand_signals alone only tells you a code was asked for, not where it belongs. For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
@@ -258,17 +261,56 @@ export const TOOLS = [
   {
     name: 'propose_purchase_order',
     description:
-      'PROPOSE (does not apply): a draft purchase order for ONE warehouse, built from the below-threshold reorder suggestions. QUANTITIES COME FROM THE ENGINE, not from you — you pick the warehouse (and optionally the supplier); the shortfall is computed from stock thresholds. Writes to the approval queue; the admin applies it. Tells you how many OTHER suppliers still have pending shortfalls so nothing is silently dropped.',
+      "PROPOSE (does not apply): a purchase order for ONE warehouse, in one of two modes. ENGINE mode (no `lines`): a DRAFT built from the below-threshold reorder suggestions — QUANTITIES COME FROM THE ENGINE, not from you; you pick the warehouse (and optionally the supplier) and the reply tells you how many OTHER suppliers still have pending shortfalls. INVOICE mode (`lines` + `invoice`): the supplier already invoiced goods that have NOT arrived yet — typically an invoice e-mailed before the delivery. Identify the supplier by what the invoice prints (supplierVatNumber / supplierPhone / exact supplierName) and give every invoice line with the supplier's item name or code exactly as printed, the quantity and the unit price excl. VAT. On approval the order is opened as SENT (no message goes to the supplier), the invoice is booked as a document linked to the order (the supplier debt is derived from it) and the warehouse counts the goods on arrival, entering expiry dates and lots there — so an invoice WITHOUT expiry dates belongs here, not in propose_stock_intake.",
     inputSchema: {
       type: 'object',
       properties: {
-        warehouseCode: { type: 'string', description: 'Warehouse code, e.g. "STR" (see morning_briefing.reorder).' },
+        warehouseCode: { type: 'string', description: 'Warehouse code, e.g. "STR" (see morning_briefing.reorder) — the warehouse that receives the goods.' },
+        supplierVatNumber: { type: 'string', description: "INVOICE mode: the supplier's VAT / SIRET number exactly as printed — the most reliable key." },
+        supplierPhone: { type: 'string', description: "INVOICE mode: the supplier's phone as printed." },
         supplierName: {
           type: 'string',
           description:
-            'Optional: restrict to one supplier, by its EXACT name as morning_briefing.reorder spells it (no fragments, no guessing). Default is the largest group of shortfalls.',
+            'ENGINE mode: optional, restrict to one supplier by its EXACT name as morning_briefing.reorder spells it (default is the largest group of shortfalls). INVOICE mode: the exact full name as printed. Never a fragment, never guessed.',
         },
-        note: { type: 'string', description: 'Optional note carried onto the draft order.' },
+        lines: {
+          type: 'array',
+          description: 'INVOICE mode only — one entry per invoice line.',
+          items: {
+            type: 'object',
+            properties: {
+              supplierItemName: { type: 'string', description: "The supplier's item name EXACTLY as printed on the line, in its own language." },
+              supplierItemCode: { type: 'string', description: "The supplier's article code, if printed." },
+              variantId: {
+                type: 'string',
+                description:
+                  'Our variant uuid (catalog_lookup) — only when the supplier has no mapping for that item yet; send it TOGETHER WITH supplierItemName and the mapping is saved on approval.',
+              },
+              qty: { type: 'number', description: 'Positive integer, as invoiced.' },
+              unitPriceCents: { type: 'number', description: 'Unit price excl. VAT, in cents, as invoiced.' },
+            },
+            required: ['qty'],
+          },
+        },
+        invoice: {
+          type: 'object',
+          description: 'INVOICE mode only — the invoice itself.',
+          properties: {
+            number: { type: 'string', description: 'Invoice number as printed.' },
+            issuedOn: { type: 'string', description: 'Invoice date, YYYY-MM-DD.' },
+            dueOn: { type: 'string', description: 'Due date, YYYY-MM-DD, only if printed. Never computed by you.' },
+            totalAmountCents: { type: 'number', description: 'The total the invoice prints (VAT included), in cents — not your sum of the lines.' },
+            vatAmountCents: { type: 'number', description: 'The VAT the invoice prints, in cents; omit if none is shown.' },
+            vatRegime: {
+              type: 'string',
+              description:
+                "'standard' | 'reverse_charge' | 'exempt' — reverse_charge for wording like 'Verlegging van heffing', 'Autoliquidation', 'Reverse charge'. Omit to let the server suggest it from the supplier's country.",
+            },
+          },
+          required: ['issuedOn', 'totalAmountCents'],
+        },
+        note: { type: 'string', description: 'Optional note carried onto the order.' },
+        reason: { type: 'string', description: 'One line: what this is based on (e.g. "invoice e-mailed by the supplier, goods not yet delivered").' },
       },
       required: ['warehouseCode'],
       additionalProperties: false,
@@ -332,7 +374,20 @@ export const TOOLS = [
         totalAmountCents: {
           type: 'number',
           description:
-            'The total the INVOICE itself prints, in cents. Do not add the lines up yourself — the point is to compare our sum against the document and surface the gap (shipping, discount, a line you could not read). Omit if the document shows no total.',
+            'The total the INVOICE itself prints (VAT included), in cents. Do not add the lines up yourself — the point is to compare our sum against the document and surface the gap (shipping, discount, a line you could not read). Given together with the supplier, the invoice is ALSO booked as a document linked to this receipt and the supplier debt is derived from it. Omit if the document shows no total.',
+        },
+        vatAmountCents: {
+          type: 'number',
+          description: 'The VAT amount the invoice prints, in cents. Omit if the invoice shows none — never write 0 for "not shown".',
+        },
+        vatRegime: {
+          type: 'string',
+          description:
+            "'standard' | 'reverse_charge' | 'exempt'. reverse_charge when the invoice carries no VAT because WE self-assess it (intra-EU purchase or import — wording like 'Verlegging van heffing', 'Autoliquidation', 'Reverse charge'). Omit to let the server suggest it from the supplier's country.",
+        },
+        dueOn: {
+          type: 'string',
+          description: "The invoice's due date, YYYY-MM-DD, only if printed ('Vervaldatum', 'Échéance', 'Due date'). Never computed by you.",
         },
         reason: { type: 'string', description: 'One line: what this is based on (e.g. "invoice photo sent by the admin").' },
       },
@@ -374,6 +429,71 @@ export const TOOLS = [
         reason: { type: 'string' },
       },
       required: ['accountName', 'direction', 'amountCents', 'type'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_money_document',
+    description:
+      "PROPOSE (does not apply): book a NON-GOODS invoice or receipt as a document — rent, accountant, insurance, phone, fuel receipt, URSSAF, payslip… The debt is born now; the payment comes later as a movement and is linked to it. You read the document the admin gave you; this tool VERIFIES what you read: the supplier by what the document prints (supplierVatNumber / supplierPhone / exact supplierName) or the counterparty by its exact name or keyword (counterpartyName), the nature against reference_data.natures, the VAT regime against the VAT amount, and that the same number is not already booked for that party. GOODS invoices do NOT go here — propose_stock_intake when the goods arrived with expiry dates known, propose_purchase_order in INVOICE mode when they have not arrived yet. The file cannot travel through this tool: the admin drops it on the approval screen.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', description: "'invoice' | 'receipt' | 'payslip' | 'contract' | 'statement' | 'other'." },
+        number: { type: 'string', description: 'Document number as printed (a receipt may have none).' },
+        issuedOn: { type: 'string', description: 'Document date, YYYY-MM-DD.' },
+        dueOn: { type: 'string', description: 'Due date, YYYY-MM-DD, only if printed. Never computed by you.' },
+        direction: { type: 'string', description: "'out' = we have to pay it (almost always); 'in' = it will be paid to us (credit note, refund)." },
+        supplierVatNumber: { type: 'string', description: 'When the issuer is one of our SUPPLIERS: its VAT / SIRET number as printed.' },
+        supplierPhone: { type: 'string', description: 'When the issuer is one of our suppliers: its phone as printed.' },
+        supplierName: { type: 'string', description: 'When the issuer is one of our suppliers: its exact full name as printed.' },
+        counterpartyName: {
+          type: 'string',
+          description:
+            "Otherwise (landlord, accountant, insurer, telecom, tax office…): the issuer's EXACT name as printed. Matched against the counterparty dictionary by exact name or keyword; counterparties are never listed. If not found the proposal is still created and the admin picks or creates the counterparty.",
+        },
+        nature: {
+          type: 'string',
+          description: 'What the document is for — slug or label from reference_data.natures, verbatim. Leave it out if none fits; the admin picks one. An unknown word is rejected.',
+        },
+        amountCents: { type: 'number', description: 'The total the document prints (VAT included), in cents.' },
+        vatAmountCents: { type: 'number', description: 'The VAT the document prints, in cents; omit if none is shown — never 0 for "not shown".' },
+        vatRegime: {
+          type: 'string',
+          description:
+            "'standard' | 'reverse_charge' | 'exempt'. exempt for VAT-exempt services (insurance premiums, bank fees); reverse_charge when the issuer charges no VAT because WE self-assess it. Omit to let the server suggest it.",
+        },
+        note: { type: 'string', description: 'Short note, e.g. "September rent".' },
+        reason: { type: 'string', description: 'One line for the admin: what this is based on (e.g. "invoice photo sent by the admin").' },
+      },
+      required: ['kind', 'issuedOn', 'direction', 'amountCents'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'propose_supplier_create',
+    description:
+      "PROPOSE (does not apply): open a NEW supplier card from an invoice's header — name, VAT number, phone, e-mail, address, country, payment term. Use it when propose_stock_intake, propose_purchase_order or propose_money_document answer that the supplier cannot be found. The tool refuses when a supplier with the same VAT number, phone or exact name already exists and tells you which one — use that one instead. Suppliers are never listed; this is the only way a new one enters.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'The supplier\'s full legal name as printed (e.g. "BEHOTRADE BV").' },
+        vatNumber: { type: 'string', description: 'VAT / SIRET number as printed — the key its next invoices will be matched with.' },
+        phone: { type: 'string', description: 'Phone as printed.' },
+        email: { type: 'string', description: 'E-mail as printed.' },
+        address: { type: 'string', description: 'Postal address as printed, on one line.' },
+        country: {
+          type: 'string',
+          description: "ISO 3166-1 alpha-2 code of the supplier's country (BE, TR, FR…), read from the address or the VAT prefix. It decides the VAT regime suggested for its invoices.",
+        },
+        paymentTermDays: {
+          type: 'number',
+          description: 'Payment term in days, only when the invoice states it or its due date minus its invoice date shows it. Omit for cash.',
+        },
+        note: { type: 'string' },
+        reason: { type: 'string', description: 'One line for the admin: what this is based on.' },
+      },
+      required: ['name'],
       additionalProperties: false,
     },
   },
@@ -558,7 +678,7 @@ export const TOOLS = [
   {
     name: 'money_overview',
     description:
-      'Where the money stands: balance per cash/bank account, totals for the window broken down by movement type and direction, and the latest ledger lines (signed amount, account, description). Call it BEFORE propose_money_movement — without it that tool can only write what the admin dictated; with it you can see that the till has built up, or that an expense category jumped. READS ONLY, and deliberately raw: no profit, no margin, no cash forecast — proposing a movement is in scope, interpreting the business finances is not. A balance of null means the account has never been touched; do not read it as zero.',
+      'Where the money stands: balance per cash/bank account, totals for the window broken down by movement type and direction, the latest ledger lines (signed amount, account, description), and an `attention` block counting what is waiting — unexplainedMovements (ledger lines with no nature yet), openPayableDocuments (count, openCents, overdueCount = past their due date), openReceivableDocuments (count, openCents) and intakesWithoutInvoice (goods receipts whose supplier invoice is not booked yet: count and their unpaid line total, which excludes VAT and freight — ask the admin for those invoices). Counts only, never names. Call it BEFORE propose_money_movement — without it that tool can only write what the admin dictated; with it you can see that the till has built up, or that an expense category jumped. READS ONLY, and deliberately raw: no profit, no margin, no cash forecast — proposing a movement is in scope, interpreting the business finances is not. A balance of null means the account has never been touched; do not read it as zero.',
     inputSchema: {
       type: 'object',
       properties: { days: { type: 'number', description: 'Window in days, 1-90. Default 30.' } },
@@ -604,6 +724,8 @@ export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise
   propose_bundle_draft: (a) => proposeBundleDraft(a),
   propose_discount_draft: (a) => proposeDiscountDraft(a),
   propose_recipe_draft: (a) => proposeRecipeDraft(a),
+  propose_money_document: (a) => proposeMoneyDocument(a),
+  propose_supplier_create: (a) => proposeSupplierCreate(a),
   list_proposals: (a) => listProposals(num(a.limit, 20)),
 };
 

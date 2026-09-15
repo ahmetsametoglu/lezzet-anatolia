@@ -9,10 +9,16 @@ create table public.supplier (
   name text not null,
   contact jsonb,                                     -- telefon/e-posta/adres
   vat_number text,                                   -- muhasebe eşleşmesi
+  -- ÜLKE (12.26 · kullanıcı kararı 14.09): ISO 3166-1 alfa-2. Faturanın KDV rejimi buradan önerilir —
+  -- Fransa dışındaki tedarikçinin KDV'siz faturası ters yüklemedir (autoliquidation): KDV'yi biz
+  -- beyan ederiz. Bilinmiyorsa NULL; "FR" varsayılmaz — varsayılan ülke, olmayan bir bilgiyi yazmaktır.
+  country text,
   payment_term_days int,                             -- BİZE tanıdığı vade; null = peşin
   note text,
   is_active boolean not null default true,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+
+  constraint supplier_country_iso check (country ~ '^[A-Z]{2}$')
 );
 
 -- Tedarikçiye borç SAKLANMAZ, türetilir: Σ girişler − Σ ödemeler (DOMAIN §16).

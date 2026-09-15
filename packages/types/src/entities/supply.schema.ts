@@ -10,11 +10,19 @@ import { z } from 'zod';
 // ── Supplier ────────────────────────────────────────────────────────────────
 // Tedarikçiye borç SAKLANMAZ, türetilir: Σ girişler − Σ ödemeler.
 
+/**
+ * Ülke kodu — ISO 3166-1 alfa-2, büyük harf (12.26). Tedarikçinin ülkesi faturanın KDV rejimini
+ * önerir (`suggestVatRegime`); kısıt veride de duruyor (`supplier_country_iso`).
+ */
+const CountryCodeSchema = z.string().regex(/^[A-Z]{2}$/, 'Ülke iki harfli ISO kodu olmalı (FR, BE, TR…).');
+
 export const SupplierSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   contact: z.record(z.unknown()).nullable(), // telefon/e-posta/adres
   vatNumber: z.string().nullable(),
+  /** Ülke (12.26) — bilinmiyorsa `null`; "FR" varsayılmaz. */
+  country: CountryCodeSchema.nullable(),
   /** BİZE tanıdığı vade (gün); null = peşin. */
   paymentTermDays: z.number().int().nullable(),
   note: z.string().nullable(),
@@ -27,6 +35,7 @@ export const SupplierInsertSchema = z.object({
   name: z.string().min(1),
   contact: z.record(z.unknown()).nullish(),
   vatNumber: z.string().nullish(),
+  country: CountryCodeSchema.nullish(),
   paymentTermDays: z.number().int().nullish(),
   note: z.string().nullish(),
   isActive: z.boolean().optional(),

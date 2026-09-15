@@ -52,6 +52,7 @@ const document = (over: Partial<MovementExportDocument> = {}): MovementExportDoc
   counterpartyName: 'SCI Rhin Immobilier',
   amountCents: 145_000,
   vatAmountCents: 0,
+  vatRegime: 'standard',
   ...over,
 });
 

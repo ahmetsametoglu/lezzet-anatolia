@@ -8,22 +8,28 @@ import {
   type BundleDraftPayload,
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
+  type MoneyDocumentPayload,
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
   type RecipeDraftPayload,
   type StockIntakePayload,
+  type SupplierCreatePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
 import { toCents } from '@lezzet/helper';
-import { recordManualMovementAction, recordTransferAction } from '@/lib/finance/actions';
+import { createDocumentAction, recordManualMovementAction, recordTransferAction } from '@/lib/finance/actions';
+import { saveSupplierAction } from '@/lib/stock/supplier-actions';
+import { DocumentFormSchema, documentBlock, documentInputOf, invoiceTermsOf } from '@/components/operation/form/document-form/schema';
+import { uploadDocumentFile } from '@/components/operation/form/document-form/file-field';
+import { SupplierFormValuesSchema, type SupplierFormValues } from '@/components/operation/form/supplier-form/schema';
 import { ManualMovementSchema, movementBlock, type ManualMovementForm } from '@/components/operation/form/movement-form/schema';
 import { TransferFormSchema, transferBlock, type TransferForm } from '@/components/operation/form/transfer-form/schema';
 import { receiveIntakeFromProposalAction } from '@/lib/warehouse/intake-actions';
-import { countedLines, intakeBlock, type IntakeFormValues } from '@/components/operation/form/intake-form/schema';
+import { countedLines, intakeBlock } from '@/components/operation/form/intake-form/schema';
 import { createDraftFromProposalAction } from '@/lib/stock/purchase-order-actions';
-import { purchaseOrderBlock, type PurchaseOrderFormValues } from '@/components/operation/form/purchase-order-form/schema';
+import { purchaseOrderBlock } from '@/components/operation/form/purchase-order-form/schema';
 import { setFeaturedGridFromProposalAction } from '@/lib/catalog/featured-actions';
 import type { FeaturedFormValues } from '@/components/operation/form/featured-form/schema';
 import { addZoneCodesFromProposalAction } from '@/lib/delivery/zone-actions';
@@ -56,9 +62,11 @@ import { BatchOfferBody } from './bodies/batch-offer-body';
 import { BundleDraftBody, bundleDraftValuesFrom } from './bodies/bundle-draft-body';
 import { RecipeDraftBody, recipeDraftValuesFrom } from './bodies/recipe-draft-body';
 import { MoneyMovementBody, movementValuesFrom } from './bodies/money-movement-body';
+import { MoneyDocumentBody, documentValuesFrom, type DocumentDraft } from './bodies/money-document-body';
 import { TransferBody, transferValuesFrom } from './bodies/transfer-body';
-import { StockIntakeBody, intakeValuesFrom } from './bodies/stock-intake-body';
-import { PurchaseOrderBody, purchaseOrderValuesFrom } from './bodies/purchase-order-body';
+import { StockIntakeBody, intakeInvoiceBlock, intakeValuesFrom, type IntakeDraft } from './bodies/stock-intake-body';
+import { PurchaseOrderBody, purchaseOrderInvoiceBlock, purchaseOrderValuesFrom, type PurchaseOrderDraft } from './bodies/purchase-order-body';
+import { SupplierCreateBody, supplierValuesFrom } from './bodies/supplier-create-body';
 import { FeaturedFlagBody, featuredValuesFrom } from './bodies/featured-flag-body';
 import { ZoneExtendBody, zoneValuesFrom } from './bodies/zone-extend-body';
 import { DiscountDraftBody } from './bodies/discount-draft-body';
@@ -150,9 +158,25 @@ interface InlineBody<Payload, Draft> {
    */
   width?: number;
   /** Alt bardaki onay düğmesinin metni — "Uygula" değil, işin kendi adı. */
-  applyLabel: string;
-  /** Karardan sonra söylenecek cümle; kuyruk tazelendiğinde kart başka öneriye geçmiş olur. */
-  appliedNote: string;
+  applyLabel: string | ((payload: Payload) => string);
+  /**
+   * Karardan sonra söylenecek cümle; kuyruk tazelendiğinde kart başka öneriye geçmiş olur.
+   *
+   * **Dilekçeye göre değişebilir (22.44):** aynı tip iki ayrı iş yapabiliyor — tedarik siparişi eşik
+   * altından TASLAK açar, faturadan GÖNDERİLMİŞ açar ve belge yazar. Tek sabit cümle ikisinden birinde
+   * yalan söylerdi; düğme de ("Taslağı oluştur") öyle.
+   */
+  appliedNote: string | ((payload: Payload) => string);
+}
+
+/** Düğmenin metni — sabit ya da dilekçeye göre (`InlineBody.appliedNote` künyesi). */
+export function applyLabelOf(body: ErasedBody, payload: unknown): string {
+  return typeof body.applyLabel === 'function' ? body.applyLabel(payload) : body.applyLabel;
+}
+
+/** Karardan sonraki cümle — sabit ya da dilekçeye göre. */
+export function appliedNoteOf(body: ErasedBody, payload: unknown): string {
+  return typeof body.appliedNote === 'function' ? body.appliedNote(payload) : body.appliedNote;
 }
 
 /**
@@ -585,7 +609,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
    * dilekçeden değil — düzeltilen değeri yok sayıp dilekçedekini yazmak, ekranda görünen ile deftere
    * geçen arasında sessiz bir ayrışma bırakırdı (`receiveIntakeFromProposalAction` künyesi).
    */
-  purchase_order: defineBody<PurchaseOrderPayload, PurchaseOrderFormValues>({
+  purchase_order: defineBody<PurchaseOrderPayload, PurchaseOrderDraft>({
     parse: parseWith<PurchaseOrderPayload>('purchase_order'),
     initial: (payload) => purchaseOrderValuesFrom(payload),
     render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
@@ -600,23 +624,48 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
         readOnly={readOnly}
       />
     ),
-    blocked: (values) => purchaseOrderBlock(values),
-    submit: (_payload, values, proposalId) =>
-      createDraftFromProposalAction({
-        supplierId: values.supplierId,
+    blocked: (draft, payload) => purchaseOrderBlock(draft.order) ?? purchaseOrderInvoiceBlock(draft, payload),
+    submit: async (payload, draft, proposalId) => {
+      const invoice = draft.invoice && payload.invoice ? invoiceTermsOf(draft.invoice) : null;
+      const result = await createDraftFromProposalAction({
+        supplierId: draft.order.supplierId,
         // Boş bırakmak GEÇERLİ ve `null` onu söylüyor — hedefi bilinmeyen sipariş hiçbir deponun
         // eksiğini kapatmış sayılmaz (şema künyesi).
-        targetWarehouseId: values.targetWarehouseId || null,
-        note: values.note.trim() || null,
-        lines: values.lines.map((line) => ({ variantId: line.variantId, qty: line.qty })),
+        targetWarehouseId: draft.order.targetWarehouseId || null,
+        note: draft.order.note.trim() || null,
+        // Faturadan siparişte birim fiyat FATURANIN (22.44); eşik altı önerisinde boş — kapı eşlemedeki son alışı yazar.
+        lines: draft.order.lines.map((line) => ({ variantId: line.variantId, qty: line.qty, unitPriceCents: line.unitPriceCents })),
+        invoice:
+          invoice && payload.invoice
+            ? {
+                number: payload.invoice.number,
+                issuedOn: payload.invoice.issuedOn,
+                amountCents: invoice.amountCents,
+                vatAmountCents: invoice.vatAmountCents,
+                vatRegime: invoice.vatRegime,
+                dueOn: invoice.dueOn,
+              }
+            : null,
+        // Eşleme önerileri (22.44): onay, tedarikçinin kalem eşlemesinin de onayıdır.
+        mappings: payload.lines
+          .filter((line) => line.mappingProposed && line.supplierItemKey)
+          .map((line) => ({ variantId: line.variantId, supplierCode: line.supplierItemKey as string, nameAtSupplier: line.supplierItemName })),
         proposalId,
-      }),
+      });
+      if (result.error) return { error: result.error };
+      // Dosya belge YAZILDIKTAN sonra: anahtar belgenin kimliğinden kurulur (`uploadDocumentFile`).
+      if (draft.file && result.data?.documentId) return { error: await uploadDocumentFile(result.data.documentId, draft.file) };
+      return { error: null };
+    },
     // Satır ızgarası dört kolon; dar sütunda ürün adı ile adet birbirine giriyor.
     width: 1180,
-    applyLabel: 'Taslağı oluştur',
+    applyLabel: (payload) => (payload.source === 'invoice' ? 'Siparişi ve faturayı kaydet' : 'Taslağı oluştur'),
     // Taslak GÖNDERİLMEZ ve bu ayrım kayıtta duruyor (`applyPurchaseOrder` künyesi): onay "bu
-    // siparişi hazırla" demektir, "tedarikçiye yolla" değil. Gönderme ayrı ve insanlı bir adım.
-    appliedNote: 'Sipariş TASLAK olarak açıldı — Tedarik ekranından gözden geçirip gönderin.',
+    // siparişi hazırla" demektir, "tedarikçiye yolla" değil. Faturadan siparişte sipariş zaten verilmiş (22.44).
+    appliedNote: (payload) =>
+      payload.source === 'invoice'
+        ? 'Sipariş GÖNDERİLMİŞ açıldı ve fatura siparişe bağlı belge olarak kaydedildi — mal gelince rampa sayar, borç Para ekranında.'
+        : 'Sipariş TASLAK olarak açıldı — Tedarik ekranından gözden geçirip gönderin.',
   }),
 
   /**
@@ -627,7 +676,7 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
    * Kaydeden kapı kuyruğun kendi eylemi (`receiveIntakeFromProposalAction`): fiyat FORMDAN gider,
    * dilekçeden değil — patron faturayı yanlış okunmuş görürse maliyeti onaydan önce düzeltebilmeli.
    */
-  stock_intake: defineBody<StockIntakePayload, IntakeFormValues>({
+  stock_intake: defineBody<StockIntakePayload, IntakeDraft>({
     parse: parseWith<StockIntakePayload>('stock_intake'),
     initial: (payload) => intakeValuesFrom(payload),
     render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
@@ -642,9 +691,11 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
         readOnly={readOnly}
       />
     ),
-    blocked: (values) => intakeBlock(values),
-    submit: (payload, values, proposalId) =>
-      receiveIntakeFromProposalAction({
+    // Faturanın engeli satırlarınkinden SONRA (22.44): toplam boşsa fatura yok, engel de yok.
+    blocked: (draft) => intakeBlock(draft.intake) ?? intakeInvoiceBlock(draft),
+    submit: async (payload, draft, proposalId) => {
+      const values = draft.intake;
+      const result = await receiveIntakeFromProposalAction({
         warehouseId: values.warehouseId,
         // Eşleme önerileri (22.43): dilekçede işaretli kalemler, giriş onaylanınca tedarikçi
         // eşlemesine bu anahtar ve adla yazılır — sonraki fatura kendiliğinden eşleşir.
@@ -667,12 +718,93 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
           // bilmiyorum ve öyle gider — sıfır yazmak bedava alınmış gibi okunurdu.
           unitCostCents: line.unitCost === null ? null : toCents(line.unitCost),
         })),
+        // Faturanın toplamı girildiyse fatura kabule bağlı BELGE olarak doğar ve tedarikçi borcu ondan
+        // türer (22.44 · 12.26); boşsa kabul faturasız yazılır — faturası sonra gelen kabul meşrudur.
+        invoice: draft.invoice.amount === null ? null : invoiceTermsOf(draft.invoice),
         proposalId,
-      }),
+      });
+      if (result.error) return { error: result.error };
+      // Dosya belge YAZILDIKTAN sonra: anahtar belgenin kimliğinden kurulur (`uploadDocumentFile`).
+      if (draft.file && result.data?.documentId) return { error: await uploadDocumentFile(result.data.documentId, draft.file) };
+      return { error: null };
+    },
     // Satır ızgarası altı kolon + fiyat: dar sütunda kalemler okunmuyor.
     width: 1560,
     applyLabel: 'Girişi kaydet',
-    appliedNote: 'Partiler stoğa girdi — Stok ekranında görünüyor ve satılabilir hâle geldi.',
+    appliedNote:
+      'Partiler stoğa girdi — Stok ekranında görünüyor ve satılabilir hâle geldi. Fatura girildiyse kabule bağlı belge olarak Para ekranında.',
+  }),
+
+  /**
+   * BELGE — mal dışı fatura ya da fiş (22.44 · kullanıcı kararı 14.09): kira, muhasebe, sigorta, akaryakıt.
+   *
+   * Form Para ekranının belge penceresinin gövdesi (`document-form/`), kaydeden kapı onun eylemi
+   * (`createDocumentAction` + `withProposal`) — kuyruk ikinci bir yazma yolu açmaz. Dosya MCP'den geçmez:
+   * onay anında burada seçilir ve belge yazıldıktan sonra yüklenir (Para ekranının penceresiyle aynı sıra).
+   */
+  money_document: defineBody<MoneyDocumentPayload, DocumentDraft>({
+    parse: parseWith<MoneyDocumentPayload>('money_document'),
+    // Tür sözlükten: dilekçenin slug'ı sözlükte ve yönüne uyuyorsa (`documentValuesFrom`).
+    initial: (payload, options) => documentValuesFrom(payload, options.natures),
+    render: ({ payload, subject, options, meta, draft, onDraft, disabled, readOnly }) => (
+      <MoneyDocumentBody
+        payload={payload}
+        subject={subject}
+        options={options}
+        meta={meta}
+        draft={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    // Engel FORMUN kendi dosyasından — Para ekranının belge penceresi de aynı iki kapıyı okuyor.
+    blocked: (draft) => {
+      const parsed = DocumentFormSchema.safeParse(draft.values);
+      if (!parsed.success) return parsed.error.issues[0]?.message ?? 'Form eksik';
+      return documentBlock(draft.values);
+    },
+    submit: async (_payload, draft, proposalId) => {
+      const result = await createDocumentAction(documentInputOf(draft.values), proposalId);
+      if (result.error || !result.data) return { error: result.error ?? 'Belge yazılamadı.' };
+      if (draft.file) return { error: await uploadDocumentFile(result.data.documentId, draft.file) };
+      return { error: null };
+    },
+    // Belge penceresi 640 px için tasarlandı; yanına dilekçe sütunu geliyor.
+    width: 1180,
+    applyLabel: 'Belgeyi kaydet',
+    appliedNote: 'Belge kaydedildi — Para → Belgeler sekmesinde. Ödeme yapılınca "Ödemesini yaz" ile belgeye bağlanır.',
+  }),
+
+  /**
+   * TEDARİKÇİ — faturanın başlığından yeni kart (22.44). Form Tedarik ekranının kartı (`supplier-form/`),
+   * kaydeden kapı onun eylemi (`saveSupplierAction` + `withProposal`): yeni kayıtta vergi no, telefon ya da
+   * tam adla mükerrer yoklaması orada bir kez daha yapılır.
+   */
+  supplier_create: defineBody<SupplierCreatePayload, SupplierFormValues>({
+    parse: parseWith<SupplierCreatePayload>('supplier_create'),
+    initial: (payload) => supplierValuesFrom(payload),
+    render: ({ payload, subject, meta, draft, onDraft, disabled, readOnly }) => (
+      <SupplierCreateBody
+        payload={payload}
+        subject={subject}
+        meta={meta}
+        values={draft}
+        onChange={onDraft}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    ),
+    blocked: (values) => {
+      const parsed = SupplierFormValuesSchema.safeParse(values);
+      return parsed.success ? null : (parsed.error.issues[0]?.message ?? 'Form eksik');
+    },
+    submit: (_payload, values, proposalId) => saveSupplierAction(values, proposalId),
+    // Kart formu iki sütunlu ve kısa; yanına dilekçe sütunu geliyor.
+    width: 1120,
+    applyLabel: 'Tedarikçiyi kaydet',
+    appliedNote:
+      'Tedarikçi kaydedildi — Tedarik → Tedarikçiler sekmesinde. Faturası artık vergi numarasıyla bulunur; asistandan faturayı yeniden işlemesini isteyin.',
   }),
 };
 

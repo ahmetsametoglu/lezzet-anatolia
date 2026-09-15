@@ -20,7 +20,7 @@ import type { DocumentKind, MoneyDocument, MoneyMovement, MovementDirection, Mov
  */
 
 /** Dökümün gördüğü belge — hareketin BAĞLI olduğu belgelerden biri (bir havale birkaç faturayı kapatabilir). */
-export type MovementExportDocument = Pick<MoneyDocument, 'kind' | 'number' | 'issuedOn' | 'amountCents' | 'vatAmountCents'> & {
+export type MovementExportDocument = Pick<MoneyDocument, 'kind' | 'number' | 'issuedOn' | 'amountCents' | 'vatAmountCents' | 'vatRegime'> & {
   /** Belgenin karşı tarafının ADI (cari ya da tedarikçi); yoksa `null`. */
   counterpartyName: string | null;
 };
@@ -71,6 +71,11 @@ export interface MovementExportRow {
   documentTotal: number | null;
   /** Belgelerde yazan KDV toplamı (euro); `null` = hiçbir belgede KDV yok ya da belge yok. */
   documentVat: number | null;
+  /**
+   * İlk belgenin KDV rejimi (12.26) — ters yüklemeli alımda belgede KDV yoktur ama muhasebeci onu
+   * beyanda hesaplar; "KDV 0" ile ayırt edebilmesi bu sütunun bütün sebebi. Belge yoksa `null`.
+   */
+  documentVatRegime: MoneyDocument['vatRegime'] | null;
   /**
    * Karşı taraf — SIRAYLA: cari → belgenin karşı tarafı → tedarikçi → sipariş referansı → transferin
    * karşı hesabı. İlk dolu olan yazılır; sıra kaydın doğrudanlığıdır (cari satırın kendi bağı).
@@ -133,6 +138,7 @@ export function buildMovementRow(input: MovementExportInput): MovementExportRow 
     documentDate: first?.issuedOn ?? null,
     documentTotal: first ? fromCents(documents.reduce((sum, document) => sum + document.amountCents, 0)) : null,
     documentVat: vatOf(documents),
+    documentVatRegime: first?.vatRegime ?? null,
     counterparty:
       input.counterpartyName ??
       documents.find((document) => document.counterpartyName !== null)?.counterpartyName ??

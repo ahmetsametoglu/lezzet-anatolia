@@ -1,7 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { AccountService, BankImportProfileService, MovementNatureService, serviceDb } from '@lezzet/database';
+import {
+  AccountService,
+  BankImportProfileService,
+  MoneyDocumentService,
+  MovementNatureService,
+  PurchaseOrderService,
+  StockIntakeBalanceService,
+  serviceDb,
+} from '@lezzet/database';
 import { dictionarySlugOf, parseBankRows, type MappingSuggestion, type ParseProfile, type RowParseFailure } from '@lezzet/domain-core';
 import {
   ADVERTISING_NATURE,
@@ -9,6 +17,7 @@ import {
   type BankImportProfile,
   type CounterpartyKind,
   type DocumentKind,
+  type DocumentVatRegime,
   type KeysetCursor,
   type MovementDirection,
   type RawBankRow,
@@ -16,7 +25,9 @@ import {
 import { requireFinance } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
-import { recordAdvertisingExpense, recordExpense, recordMovement, transfer } from '@/lib/money/movement';
+import { recordAdvertisingExpense, recordExpense, recordMovement, recordSupplierPayment, transfer } from '@/lib/money/movement';
+import { dayMonth, money } from '@/components/operation/ui/format';
+import type { StockLinkOption } from '@/components/operation/form/document-form/schema';
 import { applyMatch, documentPaymentOptions, linkDocument, matchOptions, unmatchRow, type MatchTarget } from '@/lib/bank/reconcile';
 import { analyzeFile, importBankRows, profileFor, saveProfile } from '@/lib/bank/import';
 import {
@@ -113,8 +124,11 @@ interface ManualMovementInput {
  *
  * Sipariş tahsilatı ve iade BİLEREK yok (tasarım §6): onlar kendi akışlarından düşer (online ödeme,
  * kapıda tahsilat, kurye gün kapanışı) ve elle girilseydi aynı para iki kez sayılırdı — bir kez
- * akıştan, bir kez elden. Stok alımı da yok: o `purchase` tipi mal kabule bağlıdır, motor bağsız
- * olanı zaten reddediyor (`supply_link_missing`).
+ * akıştan, bir kez elden. Stok alımı da yok: o `purchase` tipi mal kabule ya da tedarikçiye bağlıdır,
+ * motor bağsız olanı zaten reddediyor (`supply_link_missing`). **Tek kapı tedarikçinin belgesidir**
+ * (12.26): belgeden "Ödemesini yaz" ile gelinen ödenecek tedarikçi belgesinde ödeme ALIM olarak yazılır
+ * (`recordSupplierPayment`; tedarikçi ve belgenin kabulü bağlı) — tedarikçi borcu o belgeden türüyor ve
+ * gider diye yazılan ödeme borcu hiç kapatmazdı.
  *
  * **Reklam gideri ayrı kapıdan geçer** çünkü tür sabiti tek yerde yaşamalı: `reklam` dizesini burada
  * elle yazsaydık, sabit değişince rapor hata vermeden boşalırdı (12.5'in künyesi: *"sessiz sıfır,
@@ -151,6 +165,24 @@ export async function recordManualMovementAction(
       input.proposalId,
       staff.profileId,
       async () => {
+        // TEDARİKÇİ FATURASININ ÖDEMESİ (12.26): mal bedelidir — tedarikçiye bağlı ALIM (`purchase`),
+        // gider değil. Bir tur "Ödemesini yaz" onu gider olarak yazıyordu: hareket tedarikçi bağı
+        // taşımadığı için tedarikçi borcunu hiç kapatmıyordu ve muhasebeci dökümünde mal alımı gider
+        // görünüyordu. Faturanın kabul bağı da ödemeye geçer (hangi kabulün parası olduğu görünsün).
+        const document = input.documentId ? await new MoneyDocumentService(serviceDb()).getById(input.documentId) : null;
+        if (document?.supplierId && document.direction === 'out') {
+          const payment = await recordSupplierPayment({
+            supplierId: document.supplierId,
+            accountId: shared.accountId,
+            amountCents: shared.amountCents,
+            stockIntakeId: document.stockIntakeId,
+            valueDate: shared.valueDate,
+            description: shared.description,
+          });
+          if (payment.status === 'invalid') throw new Error(invalidMessage(payment.reason));
+          return payment;
+        }
+
         const nature = input.nature || null;
         const result =
           input.type === 'expense' && nature === ADVERTISING_NATURE
@@ -429,9 +461,14 @@ interface DocumentInput {
   kind: DocumentKind;
   number: string;
   issuedOn: string;
+  /** Vade (12.26) — belgede yazmıyorsa `null`. */
+  dueOn: string | null;
   /** Karşı taraf (13.09): cari YA DA tedarikçi — ikisinden en çok biri. */
   counterpartyId: string | null;
   supplierId: string | null;
+  /** Neyin faturası (12.26): mal kabul YA DA tedarik siparişi — yalnız tedarikçinin belgesinde; borç bu belgeden türer. */
+  stockIntakeId: string | null;
+  purchaseOrderId: string | null;
   direction: MovementDirection;
   /** Belgenin türü — ödemesi bağlanınca harekete de geçer. */
   nature: string | null;
@@ -439,6 +476,8 @@ interface DocumentInput {
   amountCents: number;
   /** **Cent**; `null` = belgede KDV yazmıyor (sıfır "KDV yok" demek olurdu). */
   vatAmountCents: number | null;
+  /** KDV rejimi (12.26) — ters yüklemede ve muafiyette belgede KDV olamaz. */
+  vatRegime: DocumentVatRegime;
   tags: string[];
   note: string;
 }
@@ -447,27 +486,91 @@ interface DocumentInput {
  * **Belge girişi** — fatura gelince borç doğar; ödeme sonra hareket olarak gelip belgeye bağlanır.
  * Dosya AYRI adımda (`requestDocumentUploadAction` → istemci PUT → `attachDocumentFileAction`):
  * anahtar belge kimliğinden kurulduğu için belge önce doğmak zorunda.
+ *
+ * **Asistanın belge önerisi de bu kapıdan yazar** (22.44 · `proposalId`): kayıt ile kuyruk satırı
+ * BİRLİKTE koşar (`withProposal`) ve kuyruk ikinci bir yazma yolu açmaz. Öneriden gelindiyse kapının
+ * reddi FIRLATILIR — hiçbir şey yazılmadı demektir; sessizce dönseydi satır "uygulandı" damgası yerdi
+ * (`recordManualMovementAction` künyesi). Ekranın kendi yolunda ret okunur bir cümle olarak döner.
  */
-export async function createDocumentAction(input: DocumentInput): Promise<ActionResult<{ documentId: string }>> {
+export async function createDocumentAction(input: DocumentInput, proposalId?: string | null): Promise<ActionResult<{ documentId: string }>> {
+  try {
+    const staff = await requireFinance();
+    const db = serviceDb();
+    const write = () =>
+      createMoneyDocument(db, {
+        kind: input.kind,
+        number: input.number.trim() || null,
+        issuedOn: input.issuedOn,
+        dueOn: input.dueOn || null,
+        counterpartyId: input.counterpartyId || null,
+        supplierId: input.supplierId || null,
+        stockIntakeId: input.stockIntakeId || null,
+        purchaseOrderId: input.purchaseOrderId || null,
+        direction: input.direction,
+        nature: input.nature || null,
+        amountCents: input.amountCents,
+        vatAmountCents: input.vatAmountCents,
+        vatRegime: input.vatRegime,
+        tags: input.tags.map((tag) => tag.trim()).filter((tag) => tag !== ''),
+        note: input.note.trim() || null,
+      });
+
+    if (!proposalId) {
+      const outcome = await write();
+      if (outcome.status === 'invalid') return { data: null, error: DOCUMENT_REASON[outcome.reason] };
+      revalidatePath(FINANCE_PATH);
+      return { data: { documentId: outcome.document.id }, error: null };
+    }
+
+    const document = await withProposal(
+      proposalId,
+      staff.profileId,
+      async () => {
+        const outcome = await write();
+        if (outcome.status === 'invalid') throw new Error(DOCUMENT_REASON[outcome.reason]);
+        return outcome.document;
+      },
+      (written) => ({ moneyDocumentId: written.id }),
+    );
+    revalidatePath(FINANCE_PATH);
+    revalidatePath('/operations/assistant');
+    return { data: { documentId: document.id }, error: null };
+  } catch (error) {
+    return { data: null, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * "Neyin faturası" seçenekleri (12.26) — seçili tedarikçinin FATURASI GİRİLMEMİŞ kabulleri ve açık
+ * siparişleri. Faturası girilmiş olan (belgesi kabulün kendisine ya da siparişine bağlı) listeye
+ * girmez: ikinci bir bağ aynı alımın borcunu iki kez yazardı — kapı da reddeder (`link_has_document`).
+ * Tutarı sıfır görünen kabul BİLEREK listede: sahadan maliyetsiz yapılan kabuldür ve borcu ancak
+ * faturasıyla doğar.
+ */
+export async function documentStockLinksAction(supplierId: string): Promise<ActionResult<StockLinkOption[]>> {
   try {
     await requireFinance();
-    const outcome = await createMoneyDocument(serviceDb(), {
-      kind: input.kind,
-      number: input.number.trim() || null,
-      issuedOn: input.issuedOn,
-      counterpartyId: input.counterpartyId || null,
-      supplierId: input.supplierId || null,
-      direction: input.direction,
-      nature: input.nature || null,
-      amountCents: input.amountCents,
-      vatAmountCents: input.vatAmountCents,
-      tags: input.tags.map((tag) => tag.trim()).filter((tag) => tag !== ''),
-      note: input.note.trim() || null,
-    });
-    if (outcome.status === 'invalid') return { data: null, error: DOCUMENT_REASON[outcome.reason] };
-
-    revalidatePath(FINANCE_PATH);
-    return { data: { documentId: outcome.document.id }, error: null };
+    const db = serviceDb();
+    const [intakes, orders] = await Promise.all([
+      new StockIntakeBalanceService(db).listWithoutDocument(supplierId),
+      new PurchaseOrderService(db).listOpenBySupplier(supplierId),
+    ]);
+    const invoiced = new Set((await new MoneyDocumentService(db).listByPurchaseOrders(orders.map((order) => order.id))).map((d) => d.purchaseOrderId));
+    return {
+      data: [
+        ...intakes.map((intake) => ({
+          value: `intake:${intake.stockIntakeId}`,
+          label: `Mal kabul · ${dayMonth(intake.date)}${intake.note ? ` · ${intake.note}` : ''} · ${money(intake.amountCents)}`,
+        })),
+        ...orders
+          .filter((order) => !invoiced.has(order.id))
+          .map((order) => ({
+            value: `order:${order.id}`,
+            label: `Sipariş · ${order.referenceNo ?? 'numarasız taslak'} · ${dayMonth(order.createdAt.slice(0, 10))}`,
+          })),
+      ],
+      error: null,
+    };
   } catch (error) {
     return { data: null, error: getErrorMessage(error) };
   }

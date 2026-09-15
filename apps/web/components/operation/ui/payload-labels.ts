@@ -5,6 +5,7 @@ import {
   type DeclarationGap,
   type ProductAllergen,
 } from '@lezzet/types';
+import { DOCUMENT_KIND_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
 
 /**
  * DİLEKÇE KÜNYESİNİN SÖZLÜKLERİ — `payload-tree`nin saf yarısı (26.08'de ayrıldı).
@@ -46,6 +47,10 @@ export const ENUM_LABEL: Record<string, Record<string, string>> = {
   trigger: { coupon: 'Kupon kodu', automatic: 'Otomatik' },
   scope: { cart: 'Sepetin tamamı', category: 'Kategori', collection: 'Koleksiyon' },
   target: { category: 'Kategori', collection: 'Koleksiyon', bundle: 'Paket' },
+  // Belge (22.44) — sözlükler belge formunun etiketlerinden: aynı kelime iki yerde yazılmaz.
+  kind: DOCUMENT_KIND_LABEL,
+  vatRegime: VAT_REGIME_LABEL,
+  source: { engine: 'Eşik altı eksiği', invoice: 'Tedarikçinin faturası' },
 };
 
 /**
@@ -138,6 +143,25 @@ const FIELD_LABEL: Record<string, string> = {
   listPriceCents: 'Liste fiyatı',
   amountCents: 'Tutar',
   totalAmountCents: 'Fatura toplamı',
+  // belge / fatura (22.44)
+  vatAmountCents: 'KDV',
+  vatRegime: 'KDV rejimi',
+  dueOn: 'Vade',
+  issuedOn: 'Belge tarihi',
+  number: 'Belge no',
+  kind: 'Belge türü',
+  invoice: 'Fatura',
+  source: 'Kaynak',
+  unitPriceCents: 'Faturadaki birim fiyat',
+  supplierItemKey: 'Tedarikçideki anahtar',
+  supplierItemName: 'Tedarikçideki ad',
+  mappingProposed: 'Eşleme önerisi',
+  // tedarikçi kartı (22.44)
+  vatNumber: 'Vergi no',
+  phone: 'Telefon',
+  email: 'E-posta',
+  address: 'Adres',
+  paymentTermDays: 'Vade (gün)',
   unitCostCents: 'Birim alış',
   lastPurchasePriceCents: 'Son alış',
   minBasketCents: 'Asgari sepet',

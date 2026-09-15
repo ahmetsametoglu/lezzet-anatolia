@@ -89,6 +89,15 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
   }
 
   /**
+   * Bir siparişin kabulleri (12.26) — belge kapısı "siparişin faturası girilirken kabullerinden birinin
+   * faturası zaten var mı" diye sorar: varsa sipariş faturası borcu İKİ kez yazardı. Sipariş başına
+   * doğal tavanlı (kısmi teslimler), tek turda.
+   */
+  listByPurchaseOrder(purchaseOrderId: string): Promise<StockIntake[]> {
+    return this.getAll({ purchaseOrderId }, { orderBy: 'date', orderDirection: 'desc' });
+  }
+
+  /**
    * **Kabul edilen girişler — "ne geldi" sorusunun cevabı** (22.28).
    *
    * ── SAYFALI, ÇÜNKÜ SINIRSIZ BÜYÜR ───────────────────────────────────────────

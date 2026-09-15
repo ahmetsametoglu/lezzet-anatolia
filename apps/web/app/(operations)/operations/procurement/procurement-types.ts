@@ -1,5 +1,4 @@
-import { z } from 'zod';
-import { SupplierInsertSchema, type KeysetCursor, type PurchaseOrderStatus } from '@lezzet/types';
+import type { KeysetCursor, PurchaseOrderStatus } from '@lezzet/types';
 
 // Tedarik ekranının görünüm modelleri — sunucu okur ve bu biçime indirger, ekran yalnız çizer.
 
@@ -53,31 +52,22 @@ export interface SupplierCardView {
   email: string | null;
   address: string | null;
   vatNumber: string | null;
+  /** Ülke (12.26) — ISO iki harf; bilinmiyorsa `null`. Faturanın KDV rejimi bundan önerilir. */
+  country: string | null;
   note: string | null;
   /** null = peşin çalışılır. */
   paymentTermDays: number | null;
-  /** Türetilen borç (cent): Σ girişler − Σ ödemeler. */
+  /** Türetilen borç (cent): Σ alım − Σ ödeme; alım 12.26'dan beri faturalardan (`SupplierService.debt`). */
   debtCents: number;
-  /** Toplam alım (cent). Tasarım "bu yıl" istiyor — dönemli toplam arka uç talebinde (bilinçli sapma). */
-  intakeTotalCents: number;
+  /** Bu yılki alım (cent) — faturalar + faturası henüz girilmemiş kabuller (`purchasedCents`, dönemli çağrı). */
+  purchasedCents: number;
   /** Bu tedarikçiden yolda: gönderilmiş, henüz kapanmamış sipariş sayısı. */
   pendingOrderCount: number;
   isActive: boolean;
 }
 
-/**
- * Tedarikçi formunun girdisi — **varlık şemasından türetilir** (elle interface yazılmaz, CLAUDE.md §1).
- * `contact` serbest JSON'u formda üç adlı alana açılır; birleştirme `saveSupplierAction`'da.
- */
-export const SupplierFormSchema = SupplierInsertSchema.omit({ contact: true }).extend({
-  /** Boşsa yeni kayıt. */
-  id: z.string().uuid().optional(),
-  phone: z.string().nullish(),
-  email: z.string().nullish(),
-  address: z.string().nullish(),
-  isActive: z.boolean(),
-});
-export type SupplierFormInput = z.infer<typeof SupplierFormSchema>;
+// Tedarikçi formunun şeması ortak bileşende (`components/operation/form/supplier-form/schema.ts`, 22.44):
+// asistan kuyruğunun tedarikçi önerisi aynı formu açıyor.
 
 /**
  * Tedarik siparişi liste satırı — ham okuma (`PurchaseOrderRow`) + motorun özeti

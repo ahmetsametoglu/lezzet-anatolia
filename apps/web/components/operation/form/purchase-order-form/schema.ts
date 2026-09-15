@@ -29,6 +29,12 @@ export const PurchaseOrderFormLineSchema = z.object({
    * `null` = bu varyant için eşleme/geçmiş yok — satır toplama GİRMEZ, "eksik" sayılır.
    */
   lastPurchasePriceCents: z.number().int().nullable(),
+  /**
+   * BU SİPARİŞİN birim fiyatı (**cent**, KDV hariç) — yalnız faturadan açılan siparişte dolu (22.44):
+   * tedarikçi fiyatı kesti, tahmin değil. Doluysa taslağa yazılır ve tahmin tutarı onu okur; boşsa
+   * eşlemedeki son alış (`lastPurchasePriceCents`) — iki sayı iki ayrı soruya cevap, biri ötekini ezmez.
+   */
+  unitPriceCents: z.number().int().nullable(),
 });
 export type PurchaseOrderFormLine = z.infer<typeof PurchaseOrderFormLineSchema>;
 
@@ -51,7 +57,7 @@ export type PurchaseOrderFormValues = z.infer<typeof PurchaseOrderFormSchema>;
 
 /** Boş satır — "kalem ekle" ve dilekçe kalemleri için tek yerden. */
 export function emptyPurchaseOrderLine(variantId = '', title = ''): PurchaseOrderFormLine {
-  return { variantId, title, qty: 1, lastPurchasePriceCents: null };
+  return { variantId, title, qty: 1, lastPurchasePriceCents: null, unitPriceCents: null };
 }
 
 /**
@@ -85,10 +91,18 @@ export function purchaseOrderBlock(values: PurchaseOrderFormValues): string | nu
  * yazılsaydı biri bir gün ötekinden ayrılırdı.
  */
 export function purchaseOrderEstimate(values: PurchaseOrderFormValues): { totalCents: number | null; unpricedCount: number } {
-  const unpricedCount = values.lines.filter((line) => line.lastPurchasePriceCents === null).length;
+  const unpricedCount = values.lines.filter((line) => linePriceOf(line) === null).length;
   if (unpricedCount > 0) return { totalCents: null, unpricedCount };
   return {
-    totalCents: values.lines.reduce((sum, line) => sum + (line.lastPurchasePriceCents ?? 0) * line.qty, 0),
+    totalCents: values.lines.reduce((sum, line) => sum + (linePriceOf(line) ?? 0) * line.qty, 0),
     unpricedCount: 0,
   };
+}
+
+/**
+ * Satırın fiyatı — faturadan siparişte faturanın birim fiyatı, yoksa eşlemedeki son alış (22.44). Satırın
+ * fiyat hücresi ve tahmin tutarı AYNI sayıyı okusun diye tek yerde.
+ */
+export function linePriceOf(line: PurchaseOrderFormLine): number | null {
+  return line.unitPriceCents ?? line.lastPurchasePriceCents;
 }

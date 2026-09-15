@@ -10,6 +10,7 @@ import { money, num } from '@/components/operation/ui/format';
 import { PlusIcon, TrashIcon } from '@/components/operation/ui/icons';
 import {
   emptyPurchaseOrderLine,
+  linePriceOf,
   purchaseOrderEstimate,
   type PurchaseOrderFormLine,
   type PurchaseOrderFormValues,
@@ -154,10 +155,11 @@ export function PurchaseOrderFormBody({ values, onChange, onSearch, suppliers, w
                   value={String(line.qty ?? '')}
                   onChange={(e) => patchLine(index, { qty: Number(e.target.value.replace(/\D/g, '')) || 0 })}
                 />
-                {/* Fiyat SALT OKUNUR: alış mal kabulde kesinleşir (şema künyesi). Bilinmiyorsa "—",
+                {/* Fiyat SALT OKUNUR: alış mal kabulde kesinleşir (şema künyesi). Faturadan açılan siparişte
+                    faturanın birim fiyatı, ötekinde son alış (`linePriceOf`, 22.44). Bilinmiyorsa "—",
                     sıfır değil — bedava alınmış gibi okunurdu (`CLAUDE §1`). */}
                 <span className="text-right font-ops-mono text-ops-sm text-ops-muted">
-                  {line.lastPurchasePriceCents === null ? '—' : money(line.lastPurchasePriceCents)}
+                  {linePriceOf(line) === null ? '—' : money(linePriceOf(line) ?? 0)}
                 </span>
                 <button
                   type="button"

@@ -427,6 +427,47 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
     },
   });
 
+  // Belge (22.44) — mal DIŞI fatura: sigorta primi, MUAF rejim (sigorta KDV'den muaftır), vadeli; cari
+  // adla geliyor ve sözlükte yok — kuyruk formunun "cariyi operatör seçer" yolu seed'de görünsün.
+  liste.push({
+    kind: 'money_document',
+    summary: 'Belge — Rhin Assurances sigorta primi 420,00 € (muaf)',
+    reason: 'Sigorta faturasının fotoğrafı; ekim vadeli, KDV yazmıyor.',
+    payload: {
+      kind: 'invoice',
+      number: 'RA-2026-10-0042',
+      issuedOn: gun(-3),
+      dueOn: gun(27),
+      direction: 'out',
+      supplierId: null,
+      supplierName: null,
+      counterpartyId: null,
+      counterpartyName: 'Rhin Assurances',
+      nature: 'sigorta',
+      amountCents: 42_000,
+      vatAmountCents: null,
+      vatRegime: 'exempt',
+      note: 'Depo sigortası — yıllık prim, 1. taksit',
+    },
+  });
+
+  // Tedarikçi (22.44) — faturanın başlığından yeni kart: Belçikalı toptancı (ülke BE → faturaları ters yükleme).
+  liste.push({
+    kind: 'supplier_create',
+    summary: 'Yeni tedarikçi — Anatolia Import BV (BE)',
+    reason: 'Faturanın başlığında vergi numarası ve 10 gün vade yazıyor; kayıtlı tedarikçilerde bu vergi numarası yok.',
+    payload: {
+      name: 'Anatolia Import BV',
+      vatNumber: 'BE0123456789',
+      phone: '+3211223344',
+      email: 'orders@anatolia-import.be',
+      address: 'Industrieweg 12, 3600 Genk, België',
+      country: 'BE',
+      paymentTermDays: 10,
+      note: null,
+    },
+  });
+
   return liste;
 }
 

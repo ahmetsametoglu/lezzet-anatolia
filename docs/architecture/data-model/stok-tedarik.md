@@ -174,7 +174,7 @@ Tek bir "tip + kimlik" çifti (polimorfik anahtar) REDDEDİLDİ: veritabanına F
 
 ## Supplier (tedarikçi)
 
-Müşteri kartının simetriği (bkz. `DOMAIN.md §16`). **Tedarikçiye borç türetilir**, saklanmaz: Σ stok girişleri − Σ tedarikçiye ödemeler (`MoneyMovement.supplier_id`).
+Müşteri kartının simetriği (bkz. `DOMAIN.md §16`). **Tedarikçiye borç türetilir**, saklanmaz: Σ alım − Σ tedarikçiye ödemeler (`MoneyMovement.supplier_id`). ~~Alım = Σ stok girişleri~~ (12.26 · kullanıcı kararı 14.09): alım = tedarikçinin BELGELERİ (fatura artı, alacak dekontu eksi) + faturası henüz girilmemiş kabullerin satır toplamı — kabulün satırları KDV hariçtir ve nakliyeyi bilmez, ödenen şey faturanın toplamıdır (`SupplierService.debt`).
 
 <!-- alanlar:supplier -->
 | Kolon | Tip | Null | Varsayılan |
@@ -183,6 +183,7 @@ Müşteri kartının simetriği (bkz. `DOMAIN.md §16`). **Tedarikçiye borç t�
 | `name` | text |  |  |
 | `contact` | jsonb | • |  |
 | `vat_number` | text | • |  |
+| `country` | text | • |  |
 | `payment_term_days` | int | • |  |
 | `note` | text | • |  |
 | `is_active` | boolean |  | `true` |
@@ -192,7 +193,8 @@ Müşteri kartının simetriği (bkz. `DOMAIN.md §16`). **Tedarikçiye borç t�
 **Kararlar**
 
 - **`contact`** — telefon/e-posta/adres
-- **`vat_number`** — tedarikçinin vergi no'su (muhasebe eşleşmesi)
+- **`vat_number`** — tedarikçinin vergi no'su (muhasebe eşleşmesi; asistanın faturadan nokta atışı anahtarı, 22.42)
+- **`country`** (12.26) — ISO 3166-1 alfa-2; bilinmiyorsa NULL ("FR" varsayılmaz). Faturanın KDV rejimi ondan önerilir: Fransa dışındaki tedarikçinin KDV'siz faturası ters yüklemedir.
 - **`payment_term_days`** — bize tanıdığı vade (gün); null = peşin
 
 ## SupplierProduct (ürün–tedarikçi eşlemesi)

@@ -306,7 +306,9 @@ async function loadTargets(
       }),
     ),
     ...intakeTargets.map(
-      (i): MatchCandidate => ({ kind: 'intake', id: i.stockIntakeId, referenceNo: null, amountCents: i.openAmountCents, date: i.date, direction: 'out', nameHints: [i.supplierName] }),
+      // Kabulün notu irsaliye/fatura numarasıdır (12.26): banka satırı onu anarsa referans eşleşmesi
+      // kurulur — bir tur `null` veriliyordu ve fatura numarasıyla gelen ödeme yalnız tutar ve günle puanlanıyordu.
+      (i): MatchCandidate => ({ kind: 'intake', id: i.stockIntakeId, referenceNo: i.note, amountCents: i.openAmountCents, date: i.date, direction: 'out', nameHints: [i.supplierName] }),
     ),
     // Ucun yönü GÖNDERENİN gözünden yazılı: uç `out` ise para bu hesaba GİRİYOR.
     ...legTargets.map(

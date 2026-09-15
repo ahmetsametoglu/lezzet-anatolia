@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import {
+  createMoneyDocument,
   openIntakeForm,
   receiveGoods,
   receivePurchase,
@@ -10,7 +11,8 @@ import {
 } from '@lezzet/application';
 import { ProductService, SupplierProductService, SupplierService, serviceDb } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
-import { resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type DocumentVatRegime } from '@lezzet/types';
+import { DOCUMENT_REASON } from '@/app/(operations)/operations/finance/finance-labels';
 import { titleOf } from '@/lib/catalog/title';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -212,6 +214,11 @@ export async function receiveIntakeFromProposalAction(input: {
    * (`supplierItemKeyOf`), ad olduğu gibi.
    */
   mappings?: Array<{ variantId: string; supplierCode: string; nameAtSupplier: string | null }>;
+  /**
+   * FATURANIN PARA KÜNYESİ (22.44 · 12.26): verildiyse fatura kabule bağlı bir BELGE olarak doğar ve
+   * tedarikçi borcu o belgeden türer. Numarası kabulün notu, günü kabulün günüdür — iki kez sorulmaz.
+   */
+  invoice?: { amountCents: number; vatAmountCents: number | null; vatRegime: DocumentVatRegime; dueOn: string | null } | null;
   proposalId: string;
 }): Promise<ActionResult<ReceiveOutcome>> {
   try {
@@ -268,12 +275,41 @@ export async function receiveIntakeFromProposalAction(input: {
         }
       }
     }
-    if (failedMappings.length > 0) {
-      return {
-        data: null,
-        error: `Giriş kaydedildi ama ${failedMappings.length} tedarikçi eşlemesi yazılamadı — Tedarik ekranından elle eşleyin: ${failedMappings.join(' · ')}`,
-      };
+    // ── FATURA BELGE OLARAK DOĞAR (22.44 · 12.26) ────────────────────────────
+    // Toplam verildiyse fatura kabule bağlı bir belge olur ve tedarikçi borcu o belgeden türer — kabulün
+    // satır toplamı KDV hariçtir, nakliyeyi bilmez. Kabul olmuş bir gerçek: belge yazılamazsa giriş geri
+    // alınmaz ve cevap bunu SÖYLER (eşlemenin aynı deseni).
+    let documentId: string | null = null;
+    let documentProblem: string | null = null;
+    if (input.invoice) {
+      if (!input.supplierId) {
+        documentProblem = DOCUMENT_REASON.link_needs_supplier;
+      } else {
+        const outcome = await createMoneyDocument(serviceDb(), {
+          kind: 'invoice',
+          number: input.note,
+          issuedOn: input.date ?? new Date().toISOString().slice(0, 10),
+          dueOn: input.invoice.dueOn,
+          supplierId: input.supplierId,
+          stockIntakeId: result.result.intakeId,
+          direction: 'out',
+          amountCents: input.invoice.amountCents,
+          vatAmountCents: input.invoice.vatAmountCents,
+          vatRegime: input.invoice.vatRegime,
+        });
+        if (outcome.status === 'ok') documentId = outcome.document.id;
+        else documentProblem = DOCUMENT_REASON[outcome.reason];
+      }
+      revalidatePath('/operations/finance');
     }
+
+    const problems = [
+      ...(failedMappings.length > 0
+        ? [`${failedMappings.length} tedarikçi eşlemesi yazılamadı — Tedarik ekranından elle eşleyin: ${failedMappings.join(' · ')}`]
+        : []),
+      ...(documentProblem ? [`fatura belgesi yazılamadı (${documentProblem}) — Para ekranından kabule bağlayın`] : []),
+    ];
+    if (problems.length > 0) return { data: null, error: `Giriş kaydedildi ama ${problems.join(' · ')}.` };
 
     return {
       data: {
@@ -281,6 +317,7 @@ export async function receiveIntakeFromProposalAction(input: {
         storageMismatches: result.storageMismatches,
         differences: result.differences,
         batches: result.result.stockIds.length,
+        documentId,
       },
       error: null,
     };

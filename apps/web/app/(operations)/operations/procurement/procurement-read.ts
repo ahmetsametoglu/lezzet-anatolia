@@ -303,7 +303,7 @@ export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
 
   return Promise.all(
     suppliers.map(async (s) => {
-      const [{ balanceCents }, { intakeTotalCents }, pendingOrderCount] = await Promise.all([
+      const [{ balanceCents }, { purchasedCents }, pendingOrderCount] = await Promise.all([
         // BORÇ dönemsizdir ve öyle kalmalı: tedarikçiye olan borç, bu yıl ne aldığımızdan bağımsız
         // bir gerçektir. Dönemli çağrının `balanceCents`'i borç DEĞİLDİR (servis künyesi) — dönem
         // içindeki ödemeler dönem dışındaki alımları kapatmaz ve sayı sessizce yalan söylerdi.
@@ -321,10 +321,11 @@ export async function readSupplierCards(db: Db): Promise<SupplierCardView[]> {
         name: s.name,
         ...contactOf(s.contact),
         vatNumber: s.vatNumber,
+        country: s.country,
         note: s.note,
         paymentTermDays: s.paymentTermDays,
         debtCents: balanceCents, // servis cent döndürüyor (02.9) — çeviri kalmadı
-        intakeTotalCents,
+        purchasedCents,
         pendingOrderCount,
         isActive: s.isActive,
       };

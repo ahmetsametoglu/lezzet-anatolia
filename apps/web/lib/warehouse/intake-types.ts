@@ -16,4 +16,6 @@ export interface ReceiveOutcome {
   differences: IntakeDifference[];
   /** Kaç parti yazıldı. */
   batches: number;
+  /** Faturası belge olarak doğduysa kimliği (22.44 · kuyruktan kabul) — istemci dosyayı buna yükler. */
+  documentId?: string | null;
 }

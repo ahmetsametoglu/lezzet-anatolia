@@ -1,6 +1,7 @@
 import type { Account, AccountLedgerRow, Counterparty, MoneyDocument, MovementDirection, MovementNature, MovementTag } from '@lezzet/types';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { CounterpartyOption, NatureOption, TagOption } from '@/components/operation/form/movement-form/schema';
+import type { SupplierOption } from '@/components/operation/form/document-form/schema';
 import type { MatchTarget } from '@/lib/bank/reconcile';
 import type { MatchKindView, SuggestionStrength } from './finance-labels';
 import type { FinanceUrlState } from './finance-url';
@@ -185,7 +186,20 @@ export interface LedgerView {
  */
 export type DocumentRowView = Pick<
   MoneyDocument,
-  'id' | 'kind' | 'number' | 'issuedOn' | 'direction' | 'nature' | 'counterpartyId' | 'supplierId' | 'tags' | 'note' | 'amountCents' | 'vatAmountCents'
+  | 'id'
+  | 'kind'
+  | 'number'
+  | 'issuedOn'
+  | 'dueOn'
+  | 'direction'
+  | 'nature'
+  | 'counterpartyId'
+  | 'supplierId'
+  | 'tags'
+  | 'note'
+  | 'amountCents'
+  | 'vatAmountCents'
+  | 'vatRegime'
 > & {
   kindLabel: string;
   /** Karşı tarafın ADI (13.09) — cari ya da tedarikçi; yoksa `null`. */
@@ -266,7 +280,8 @@ export interface FinanceData {
   /** Açık belge sayısı — Belgeler sekmesinin rozeti: ödenmemiş fatura bir iştir. */
   openDocumentCount: number;
   /** Belge formunun tedarikçi seçeneği; yalnız aktif tedarikçiler. */
-  supplierOptions: Array<{ value: string; label: string }>;
+  /** Belge formunun tedarikçi seçeneği; yalnız aktifler — ülkesi ve vadesiyle (rejim ve vade önerisi, 12.26). */
+  supplierOptions: SupplierOption[];
   /** Tür seçenekleri (13.09) — yalnız AKTİF; seçici satırın yönüyle süzsün diye yönü de taşır. */
   natureOptions: NatureOption[];
   /** Serbest etiketler — yalnız AKTİF: pasif etiket yeni harekete verilmez. */

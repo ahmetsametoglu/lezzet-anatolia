@@ -4,7 +4,8 @@ import { Badge } from '@/components/operation/ui/badge';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 import { amount, dayMonth, money, monthYear } from '@/components/operation/ui/format';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
-import { DOCUMENT_DIRECTION_LABEL, DOCUMENT_STATE_LABEL, NOTES } from './finance-labels';
+import { DOCUMENT_DIRECTION_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
+import { DOCUMENT_STATE_LABEL, NOTES } from './finance-labels';
 import { groupConsecutive } from './finance-read';
 import type { DocumentRowView } from './finance-types';
 import { GroupHeading, ROW_EDGE } from './list-parts';
@@ -106,9 +107,13 @@ export function DocumentList({ rows, note, tagLabels, actions, hasMore, loadingM
                         </span>
                         {/* Günü alt satırın başında — ay başlıkta. KDV belgede yoksa yazılmaz: sıfır "KDV yok" demek
                             olurdu, "bilinmiyor" değil (CLAUDE §1). */}
+                        {/* Vade ve rejim (12.26): vade belgede yazıyorsa, rejim yalnız standart DEĞİLSE — ters yüklemeli
+                            faturada "KDV 0" ile beyan edilecek KDV'yi ayırt eden tek işaret bu. */}
                         <span className="truncate font-ops-body text-ops-micro text-ops-faint">
                           {dayMonth(document.issuedOn)} · {DOCUMENT_DIRECTION_LABEL[document.direction]}
+                          {document.dueOn ? ` · vade ${dayMonth(document.dueOn)}` : ''}
                           {document.vatAmountCents === null ? '' : ` · KDV ${money(document.vatAmountCents)}`}
+                          {document.vatRegime === 'standard' ? '' : ` · ${VAT_REGIME_LABEL[document.vatRegime]}`}
                           {document.note ? ` · ${document.note}` : ''}
                         </span>
                       </div>

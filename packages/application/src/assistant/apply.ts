@@ -21,14 +21,18 @@ import {
   type BundleDraftPayload,
   type DiscountDraftPayload,
   type FeaturedFlagPayload,
+  type MoneyDocumentPayload,
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
   type RecipeDraftPayload,
   type StockIntakePayload,
+  type SupplierCreatePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
+import { createMoneyDocument } from '../accounting/document';
+import { createSupplier, duplicateSupplierMessage } from '../warehouse/supplier';
 
 /**
  * Onaylanmış önerinin UYGULANMASI (22.3) — `AI_ADMIN_ASSISTANT §5`.
@@ -79,6 +83,10 @@ const applyPurchaseOrder: Applier = async (db, raw) => {
   // Tedarikçi ZORUNLU ve kapının kendi kuralı: eşlenmemiş kalemlerden sipariş açılamaz. Öneri
   // tedarikçisiz geldiyse burada durur — asistanın "bir şekilde" sipariş açması, sonradan kimin
   // gönderileceği bilinmeyen bir taslak bırakırdı.
+  // FATURADAN SİPARİŞ (22.44) bu kapıdan uygulanmaz: onayı faturanın BELGESİNİ de yazar ve dosyası kuyruğun
+  // formunda bırakılır — kuyruğun gövdesi (`createDraftFromProposalAction`) tek doğru yol. Buradan geçseydi
+  // sipariş belgesiz ve taslak açılır, tedarikçi borcu hiç doğmazdı.
+  if (payload.source === 'invoice') throw new Error('Faturadan sipariş kuyruğun formundan onaylanır — fatura belgesi orada doğar.');
   if (!payload.supplierId) throw new Error('Tedarikçisi belirlenmemiş öneriden sipariş açılamaz.');
   const { order } = await new PurchaseOrderService(db).createDraft(
     payload.supplierId,
@@ -359,8 +367,44 @@ const applyBatchOffer: Applier = async (db, raw) => {
   return { stockId: row.id };
 };
 
+/**
+ * Belge (22.44) — belge kapısından (`createMoneyDocument`): Para ekranının eylemiyle aynı kurallar (KDV
+ * toplamı aşamaz, standart dışı rejimde KDV yok, vade belge gününden önce olamaz, tek karşı taraf). Cari
+ * adla çözülemediyse dilekçede kimlik yoktur ve kapı karşı tarafsız belgeyi reddeder — seçim kuyruğun
+ * formunda yapılır.
+ */
+const applyMoneyDocument: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('money_document', raw) as MoneyDocumentPayload;
+  const outcome = await createMoneyDocument(db, {
+    kind: payload.kind,
+    number: payload.number,
+    issuedOn: payload.issuedOn,
+    dueOn: payload.dueOn,
+    supplierId: payload.supplierId,
+    counterpartyId: payload.counterpartyId,
+    direction: payload.direction,
+    nature: payload.nature,
+    amountCents: payload.amountCents,
+    vatAmountCents: payload.vatAmountCents,
+    vatRegime: payload.vatRegime,
+    note: payload.note,
+  });
+  if (outcome.status === 'invalid') throw new Error(`Belge yazılamadı (${outcome.reason}).`);
+  return { moneyDocumentId: outcome.document.id };
+};
+
+/** Tedarikçi (22.44) — Tedarik ekranının kapısından (`createSupplier`): nokta atışı mükerrer yoklamasıyla. */
+const applySupplierCreate: Applier = async (db, raw) => {
+  const payload = parseProposalPayload('supplier_create', raw) as SupplierCreatePayload;
+  const outcome = await createSupplier(db, { ...payload, isActive: true });
+  if (outcome.status === 'duplicate') throw new Error(duplicateSupplierMessage(outcome.existingName));
+  return { supplierId: outcome.supplierId };
+};
+
 export const APPLIERS = {
   featured_flag: applyFeaturedFlag,
+  money_document: applyMoneyDocument,
+  supplier_create: applySupplierCreate,
   batch_offer: applyBatchOffer,
   purchase_order: applyPurchaseOrder,
   bundle_draft: applyBundleDraft,

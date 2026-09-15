@@ -45,7 +45,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 15/29 (+14 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | tamam | 9/9 |
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 8/11 (+1 kısmi) |
-| 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 24/25 |
+| 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 25/26 |
 | 13 | `13-analitik.md` | Analitik | sürüyor | 6/8 (+2 kısmi) |
 | 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 12/17 |
 | 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | sürüyor | 13/32 (+17 kısmi) |
@@ -55,7 +55,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 27/31 (+4 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 3/4 (+1 kısmi) |
 | 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 296/312 (+8 kısmi) |
-| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 34/43 (+9 kısmi) |
+| 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 35/44 (+9 kısmi) |
 | 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | tamam | 14/14 |
 <!-- durum:son -->
 

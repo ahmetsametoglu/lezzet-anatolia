@@ -34,7 +34,13 @@ create type public.assistant_proposal_kind as enum (
   'batch_offer',
   -- Ambalaj fotoğrafından YENİ ÜRÜN (22.6). Öteki tipler var olan bir kaydı değiştirir; bu, katalogda
   -- olmayan bir şeyi doğurur. `status` payload'da YOK: ürün aday doğar, satışa çıkarmak ayrı karardır.
-  'product_create'
+  'product_create',
+  -- Faturadan BELGE (22.44 · kullanıcı kararı 14.09): mal dışı faturanın (kira, muhasebe, sigorta)
+  -- kaydı — borç doğar, ödeme sonra bağlanır. Dosya MCP'den geçmez; onay formunda bırakılır.
+  'money_document',
+  -- Faturanın başlığından YENİ TEDARİKÇİ (22.44): vergi no, telefon, ülke ve vade faturada yazılı.
+  -- Kayıtlı tedarikçi aynı kimlikle ikinci kez önerilemez (araç nokta atışı sorar).
+  'supplier_create'
 );
 
 -- `failed` AYRI bir hâl ve şart: onaylandı ama uygulanamadı (stok bu arada bitti, motor reddetti).

@@ -82,7 +82,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `analytics_subject_type`: product, variant, bundle, category, collection, recipe
 - `analytics_surface`: web, native
 - `analytics_zero_result_kind`: search, filter *(sonuçsuz kalan neydi)*
-- `assistant_proposal_kind`: bundle_draft, featured_flag, discount_draft, purchase_order, stock_intake, money_movement, zone_extend, product_draft, recipe_draft, batch_offer, product_create *(asistan kuyruğundaki öneri tipi)*
+- `assistant_proposal_kind`: bundle_draft, featured_flag, discount_draft, purchase_order, stock_intake, money_movement, zone_extend, product_draft, recipe_draft, batch_offer, product_create, money_document, supplier_create *(asistan kuyruğundaki öneri tipi; son ikisi faturadan belge ve tedarikçi — 22.44)*
 - `assistant_proposal_status`: pending, applied, rejected, expired, failed
 - `barcode_kind`: unit, case *(tekil ürün mü koli mi)*
 - `carrier`: colissimo, chronopost, dhl, ups, other
@@ -97,6 +97,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `discount_trigger`: coupon, automatic
 - `discount_type`: percent, fixed
 - `document_kind`: invoice, receipt, payslip, contract, statement, other *(muhasebe belgesinin türü; `statement` banka/sağlayıcı dekontu)*
+- `document_vat_regime`: standard, reverse_charge, exempt *(belgenin KDV rejimi — 12.26; `reverse_charge` = autoliquidation: belgede KDV yok, beyanda hesaplanır; `exempt` = muaf; standart dışında belgede KDV olmaz)*
 - `error_log_level`: warning, error, fatal
 - `feedback_channel`: email, whatsapp
 - `feedback_context`: purchase, candidate

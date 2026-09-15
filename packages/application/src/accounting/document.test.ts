@@ -44,6 +44,30 @@ afterAll(async () => {
 
 const movements = () => new MoneyMovementService(db);
 
+/**
+ * STOK ALIMININ BAĞI, REJİM VE VADE (12.26) — kapının okunur retleri. Kabul ve sipariş kurmayı
+ * gerektirmeyen dallar burada (ret, arama yapılmadan döner); kabule bağlanan faturanın borcu ve ikinci
+ * faturanın reddi `apps/web/lib/money/supplier-document-debt.test.ts`'te.
+ */
+describe('belgenin koşulları — okunur retler (12.26)', () => {
+  const base = { kind: 'invoice' as const, issuedOn: '2026-09-12', direction: 'out' as const, amountCents: 1000 };
+  const someId = '00000000-0000-4000-8000-000000000001';
+
+  it('kabul ve sipariş aynı anda bağlanamaz; bağ tedarikçi ister; olmayan kabul bulunamaz', async () => {
+    expect(await createMoneyDocument(db, { ...base, supplierId: someId, stockIntakeId: someId, purchaseOrderId: someId })).toMatchObject({
+      status: 'invalid',
+      reason: 'link_conflict',
+    });
+    expect(await createMoneyDocument(db, { ...base, stockIntakeId: someId })).toMatchObject({ status: 'invalid', reason: 'link_needs_supplier' });
+    expect(await createMoneyDocument(db, { ...base, supplierId: someId, stockIntakeId: someId })).toMatchObject({ status: 'invalid', reason: 'link_not_found' });
+  });
+
+  it('standart dışındaki rejimde KDV olamaz; vade belgenin gününden önce olamaz', async () => {
+    expect(await createMoneyDocument(db, { ...base, vatAmountCents: 100, vatRegime: 'exempt' })).toMatchObject({ status: 'invalid', reason: 'vat_with_regime' });
+    expect(await createMoneyDocument(db, { ...base, dueOn: '2026-09-01' })).toMatchObject({ status: 'invalid', reason: 'due_before_issue' });
+  });
+});
+
 describe('etiket — serbest işaret (13.09)', () => {
   it('okunur addan slug üretir, aynı ad ikinci kez girmez', async () => {
     const eklenen = await addMovementTag(db, { label: `Ortak A aracı ${stamp}` });

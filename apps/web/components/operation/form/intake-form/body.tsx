@@ -54,6 +54,11 @@ interface IntakeFormBodyProps {
    */
   documentTotalCents?: number | null;
   /**
+   * Faturanın KDV'si (cent, 22.44) — verilirse mutabakat KDV HARİÇ tutarla yapılır: satırların maliyeti
+   * KDV hariçtir ve KDV'li bir faturanın toplamıyla karşılaştırılınca "fark" KDV'nin kendisi çıkıyordu.
+   */
+  documentVatCents?: number | null;
+  /**
    * Yeni tedarikçiyi HIZLI ekleme kapısı — verilmezse alan yalnız seçim yapar. `null` dönerse kayıt
    * yazılamadı demektir ve satır açık kalır (hata çağıranın kapısında görünür).
    */
@@ -161,6 +166,7 @@ export function IntakeFormBody({
   storageAreas,
   showCost = false,
   documentTotalCents = null,
+  documentVatCents = null,
   onCreateSupplier,
   disabled = false,
 }: IntakeFormBodyProps) {
@@ -406,8 +412,18 @@ export function IntakeFormBody({
           {documentTotalCents !== null ? (
             <span className="text-ops-muted">
               Belgede yazan <span className="font-ops-mono font-semibold text-ops-ink">{money(documentTotalCents)}</span>
-              {documentTotalCents !== totalCents ? (
-                <span className="font-ops-mono font-semibold text-ops-amber"> · fark {money(Math.abs(documentTotalCents - totalCents))}</span>
+              {/* KDV biliniyorsa karşılaştırma KDV HARİÇ tutarla (22.44): satırların maliyeti KDV hariçtir. */}
+              {documentVatCents ? (
+                <>
+                  {' '}
+                  · KDV hariç <span className="font-ops-mono font-semibold text-ops-ink">{money(documentTotalCents - documentVatCents)}</span>
+                </>
+              ) : null}
+              {documentTotalCents - (documentVatCents ?? 0) !== totalCents ? (
+                <span className="font-ops-mono font-semibold text-ops-amber">
+                  {' '}
+                  · fark {money(Math.abs(documentTotalCents - (documentVatCents ?? 0) - totalCents))}
+                </span>
               ) : null}
             </span>
           ) : (

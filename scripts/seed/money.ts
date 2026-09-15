@@ -231,6 +231,27 @@ export async function seedMoney(db: Db): Promise<void> {
     });
   }
 
+  // FATURASI GİRİLMİŞ KABUL (12.26 · borç belgeden türer): ilk kabulün faturası tedarikçinin belgesi —
+  // ithalat olduğu için belgede KDV yok (ters yükleme), kabulün satırlarında olmayan nakliye faturada
+  // (toplam satırlardan 120 € fazla), vadeli. Tedarikçi kartının borcu artık bu belgenin tutarından
+  // okunur; "Neyin faturası" seçicisi bu kabulü bir daha önermez, ikinci kabul seçicide kalır.
+  const faturali = ((girisler ?? []) as Array<{ id: string; supplier_id: string | null; total_amount: string }>).find((giris) => giris.supplier_id);
+  if (faturali?.supplier_id) {
+    await documents.insert({
+      kind: 'invoice',
+      number: 'GBF-2026-0911',
+      issuedOn: gun(-12),
+      dueOn: gun(33),
+      supplierId: faturali.supplier_id,
+      stockIntakeId: faturali.id,
+      direction: 'out',
+      amountCents: toCents(Number(faturali.total_amount) + 120),
+      vatAmountCents: 0,
+      vatRegime: 'reverse_charge',
+      note: 'Mal bedeli + nakliye — ithalat, KDV beyanda (autoliquidation)',
+    });
+  }
+
   // Transferler: TEK satır, iki hesabı simetrik etkiler (karşı uçta işaret ters).
   await movements.insert({
     accountId: hesapId.get('kasa')!,
@@ -270,7 +291,7 @@ export async function seedMoney(db: Db): Promise<void> {
   const ozet = HESAPLAR.map((h) => `${h.name}: ${euro((bakiyeler.get(hesapId.get(h.key)!)?.balanceCents ?? 0) / 100)} €`).join(' · ');
   console.log(`  ✓ bakiye (türetilmiş) → ${ozet}`);
   console.log(
-    `✓ para: ${HESAPLAR.length} hesap · ${GIDERLER.length + 1} gider · 3 transfer · tedarikçi ödemesi · 3 belge · ${CARILER.length} cari · ${ETIKETLER.length} etiket`,
+    `✓ para: ${HESAPLAR.length} hesap · ${GIDERLER.length + 1} gider · 3 transfer · tedarikçi ödemesi · ${faturali?.supplier_id ? 4 : 3} belge · ${CARILER.length} cari · ${ETIKETLER.length} etiket`,
   );
 }
 

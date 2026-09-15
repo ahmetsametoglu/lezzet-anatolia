@@ -734,6 +734,16 @@ Depolar'ın `.dc`'si yok, sıfırdan çizilecek; sayfa dokümanı 01.08'de yazı
 içine girdi** (aşağıdaki bilgi mimarisi kararı). Fiyatların
 **Teklifler sekmesi** de aynı turda (kısmi eksen — sözleşme §5/§8).
 
+### Belge ve tedarikçi pencerelerinin yeni alanları — çizimi yok (14.09, 12.26 · 22.44)
+
+`Operasyon - Para` belge penceresinde **vade**, **KDV rejimi** (Standart · Ters yükleme · Muaf) ve
+**"Neyin faturası"** (faturası girilmemiş mal kabul ya da açık sipariş) alanları; `Operasyon - Satın
+Alma` tedarikçi kartında **ülke** alanı; asistan kuyruğunda iki yeni gövde (**Belge** · **Tedarikçi**)
+ve mal kabul ile sipariş gövdelerinde **fatura bloğu** (toplam · KDV · rejim · vade · dosya). Hiçbirinin
+çizimi yok; mevcut ızgara ve kit desenleriyle eklendi (iki sütunlu satırlar, `MultiToggle`, `DateField`,
+`Combobox`). Belge listesinin alt satırında vade ve standart dışı rejim metin olarak duruyor. Çizim
+gelince bu yüzeyler birebir güncellenir.
+
 
 ---
 

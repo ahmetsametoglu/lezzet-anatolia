@@ -167,7 +167,8 @@ describe('kapsam sözleşmesi', () => {
       expect(toolScope(tool.name)).toBe(tool.name.startsWith('propose_') ? 'propose' : 'read');
     }
     // Sözleşmenin sayısal hâli — yeni araç eklenince bu satır düşer ve kapsam ailesi bilinçli seçilir.
-    expect(TOOLS.filter((t) => toolScope(t.name) === 'propose')).toHaveLength(11);
+    // 22.44: belge ve tedarikçi önerileri (propose_money_document · propose_supplier_create) — ikisi de yazar.
+    expect(TOOLS.filter((t) => toolScope(t.name) === 'propose')).toHaveLength(13);
     expect(TOOLS.filter((t) => toolScope(t.name) === 'read')).toHaveLength(15);
   });
 

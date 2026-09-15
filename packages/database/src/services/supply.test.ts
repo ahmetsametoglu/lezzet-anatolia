@@ -107,32 +107,32 @@ describe('tedarikçi ve kod eşlemesi (06.8)', () => {
     await mappings.setPreferred(a.id); // sonraki testler için tercihliyi geri al
   });
 
-  it('borç türetilir: girişler − ödemeler', async () => {
+  it('borç türetilir: alım − ödeme', async () => {
     await intakes.receive({
       warehouseId,
       supplierId,
       lines: [{ variantId, qty: 10, expiryDate: dayOffset(250), unitCostCents: 400 }],
     });
 
-    // Ödeme tarafı 12.3'te bağlandı; buradaki sözleşme yalnız denklemin kendisidir
-    // (ödemenin borcu gerçekten kapattığı `apps/web/lib/money/supplier-debt.test.ts`'te).
+    // Ödeme tarafı 12.3'te bağlandı, alımın belgeden türemesi 12.26'da; buradaki sözleşme yalnız
+    // denklemin kendisidir (ödemenin ve faturanın borcu nasıl kurduğu `apps/web/lib/money/supplier-debt.test.ts`'te).
     const debt = await suppliers.debt(supplierId);
-    expect(debt.intakeTotalCents).toBeGreaterThanOrEqual(4000);
-    expect(debt.balanceCents).toBe(debt.intakeTotalCents - debt.paidCents);
+    expect(debt.purchasedCents).toBeGreaterThanOrEqual(4000);
+    expect(debt.balanceCents).toBe(debt.purchasedCents - debt.paidCents);
   });
 
   /**
    * Dönemli toplam (tedarik talebi §6) — kart "bu yıl ne kadar iş yaptık" soruyor, ömür boyu toplam
-   * o soruya cevap vermiyor. Kendi kurduğumuz girişleri sayıyoruz, küresel sayıya bakmıyoruz
-   * (`CLAUDE.md §4b`).
+   * o soruya cevap vermiyor. Dönem kabulün GÜNÜNE göre (12.26). Kendi kurduğumuz girişleri sayıyoruz,
+   * küresel sayıya bakmıyoruz (`CLAUDE.md §4b`).
    */
   it('dönem verilince yalnız o aralığın girişleri sayılır', async () => {
     const gecmis = await suppliers.debt(supplierId, { to: new Date(Date.now() - 86_400_000) });
-    // Bu testin girişleri az önce yazıldı; dünden öncesi onları GÖRMEMELİ.
-    expect(gecmis.intakeTotalCents).toBe(0);
+    // Bu testin girişleri bugünün tarihiyle yazıldı; dünden öncesi onları GÖRMEMELİ.
+    expect(gecmis.purchasedCents).toBe(0);
 
     const bugun = await suppliers.debt(supplierId, { from: new Date(Date.now() - 86_400_000) });
-    expect(bugun.intakeTotalCents).toBeGreaterThanOrEqual(4000);
+    expect(bugun.purchasedCents).toBeGreaterThanOrEqual(4000);
   });
 
   it('dönemsiz çağrı bugünkü davranışı korur — hiçbir çağıran kırılmaz', async () => {

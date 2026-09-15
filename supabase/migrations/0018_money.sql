@@ -30,6 +30,13 @@ create type movement_source as enum ('manual', 'bank_import', 'system');
 -- Belge türü (13.09): resmî muhasebe sorduğunda hareketin dayanağı. `statement` banka/sağlayıcı
 -- dekontu (payout dökümü), `other` kalan her şey — küme kapalıdır, "sair" bir kaçış kutusu değil.
 create type document_kind as enum ('invoice', 'receipt', 'payslip', 'contract', 'statement', 'other');
+-- Belgenin KDV REJİMİ (12.26 · kullanıcı sorusu 14.09: "ters KDV etiket üzerinden mi belirlenmeli?").
+-- Etiket değil, ALAN: "KDV 0" iki ayrı şeyi anlatıyordu ve ayırt edilemiyordu. `standard` = belge KDV'yi
+-- kendisi taşır (sıfır oranlı ürün de buradadır); `reverse_charge` = ters yükleme (autoliquidation:
+-- AB içi alım ya da ithalat — belgede KDV yok, Fransız KDV'si bizim beyanımızda hesaplanır ve indirilir);
+-- `exempt` = muaf (sigorta primi, banka masrafı). Satış tarafının `VatTreatment`ı ayrı bir sorudur
+-- (müşteriye kestiğimiz fatura), bu sözlük gelen belgenin — o yüzden ayrı küme.
+create type document_vat_regime as enum ('standard', 'reverse_charge', 'exempt');
 
 create table public.account (
   id uuid primary key default gen_random_uuid(),
@@ -134,11 +141,20 @@ create table public.money_document (
   -- Belge numarası: faturada var, fiş ve bordroda olmayabilir.
   number text,
   issued_on date not null,
+  -- VADE (12.26): ödemenin son günü — belgede yazmıyorsa NULL. Tedarikçi faturasında form, kartın
+  -- vadesinden önerir (`dueDateOf`); belge gününden önce olamaz (`money_document_due`).
+  due_on date,
   -- Karşı taraf (13.09 · ikinci karar): CARİ (kiraya veren, çalışan, kurum) ya da TEDARİKÇİ — ikisinden
   -- en çok biri. Bir tur serbest metindi ve aynı kurum iki yazımla iki kişi oluyordu.
   counterparty_id uuid references public.counterparty (id) on delete set null,
   supplier_id uuid references public.supplier (id) on delete set null,
+  -- STOK ALIMININ BAĞI (12.26 · kullanıcı kararı 14.09) — fatura ya MAL KABULE ya da mal gelmeden
+  -- kesildiyse TEDARİK SİPARİŞİNE bağlanır; ikisi birden olmaz (`money_document_stock_link`), ikisi de
+  -- tedarikçi ister (`money_document_supply_party`). **Borç bu belgeden türer:** kabulün satır toplamı
+  -- KDV hariçtir, nakliye ve iskontoyu bilmez — ödenecek tutar faturanın toplamıdır. Belgeli kabul
+  -- `stock_intake_balance.has_document` taşır ve borca ikinci kez girmez.
   stock_intake_id uuid references public.stock_intake (id) on delete set null,
+  purchase_order_id uuid references public.purchase_order (id) on delete set null,
   -- Belgenin YÖNÜ hareketinkiyle aynı dilde: `out` = bizim ödeyeceğimiz (gelen fatura, bordro),
   -- `in` = bize ödenecek (tedarikçi iadesi, ortağa kesilen dekont).
   direction movement_direction not null,
@@ -147,6 +163,9 @@ create table public.money_document (
   amount numeric(12, 2) not null check (amount > 0),
   -- KDV tutarı; belgede yoksa NULL — sıfır "KDV yok" demektir, "bilinmiyor" değil (CLAUDE §1).
   vat_amount numeric(12, 2) check (vat_amount >= 0),
+  -- KDV REJİMİ (12.26) — `document_vat_regime` künyesi. Standart dışındaki rejimde belgede KDV
+  -- olamaz (`money_document_vat_regime`): ters yüklemeli faturada KDV'yi karşı taraf değil biz beyan ederiz.
+  vat_regime document_vat_regime not null default 'standard',
   currency currency not null default 'EUR',
   -- Dosyanın ÖZEL kovadaki anahtarı (`r2Keys.financeDocument`); yoksa belge yalnız künyedir.
   file_key text,
@@ -155,12 +174,17 @@ create table public.money_document (
   note text,
   created_at timestamptz not null default now(),
 
-  constraint money_document_party check (counterparty_id is null or supplier_id is null)
+  constraint money_document_party check (counterparty_id is null or supplier_id is null),
+  constraint money_document_stock_link check (stock_intake_id is null or purchase_order_id is null),
+  constraint money_document_supply_party check ((stock_intake_id is null and purchase_order_id is null) or supplier_id is not null),
+  constraint money_document_vat_regime check (vat_regime = 'standard' or coalesce(vat_amount, 0) = 0),
+  constraint money_document_due check (due_on is null or due_on >= issued_on)
 );
 create index money_document_issued_idx on public.money_document (issued_on desc);
 create index money_document_counterparty_idx on public.money_document (counterparty_id) where counterparty_id is not null;
 create index money_document_supplier_idx on public.money_document (supplier_id) where supplier_id is not null;
 create index money_document_intake_idx on public.money_document (stock_intake_id) where stock_intake_id is not null;
+create index money_document_purchase_order_idx on public.money_document (purchase_order_id) where purchase_order_id is not null;
 
 create table public.money_movement (
   id uuid primary key default gen_random_uuid(),
@@ -473,10 +497,13 @@ select d.id                                                       as document_id
  group by d.id;
 
 -- ── Mal kabulün açık kalanı ──────────────────────────────────────────────────
--- Tedarikçi borcu türetilir (12.3): kabulün tutarı − kabule bağlı alım ödemeleri. Banka eşleştirmesi
--- (12.13) "bu çıkış hangi mal kabulün parası" sorusunu buradan yanıtlar. Faturası belge olarak
--- girilmiş kabul (`money_document.stock_intake_id`) `has_document = true` taşır ve aday listesine
--- belge üzerinden girer — aynı borcun iki aday olması operatörü ikilemde bırakırdı.
+-- Faturası girilmemiş kabulün borcu (12.3 · 12.13): kabulün tutarı − kabule bağlı alım ödemeleri.
+-- Banka eşleştirmesi (12.13) "bu çıkış hangi mal kabulün parası" sorusunu buradan yanıtlar.
+-- Faturası belge olarak girilmiş kabul — belge kabulün kendisine (`money_document.stock_intake_id`) ya
+-- da kabulün SİPARİŞİNE (`purchase_order_id`, 12.26: fatura mal gelmeden kesildi) bağlı —
+-- `has_document = true` taşır: borcu belgenin açık kalanındadır (12.26 · borç belgeden türer), aday
+-- listesine belge üzerinden girer ve tedarikçi borcunda ikinci kez sayılmaz. `note` kabulün
+-- irsaliye/fatura numarasıdır (12.26): banka satırı onu anarsa referans eşleşmesi kurulur.
 create or replace view public.stock_intake_balance as
 select i.id                                                       as stock_intake_id,
        i.supplier_id,
@@ -485,7 +512,12 @@ select i.id                                                       as stock_intak
        coalesce(sum(case when m.direction = 'out' then m.amount else -m.amount end), 0)::numeric(12, 2) as paid,
        (i.total_amount - coalesce(sum(case when m.direction = 'out' then m.amount else -m.amount end), 0))::numeric(12, 2)
                                                                   as open_amount,
-       exists (select 1 from public.money_document d where d.stock_intake_id = i.id) as has_document
+       exists (
+         select 1 from public.money_document d
+          where d.stock_intake_id = i.id
+             or (i.purchase_order_id is not null and d.purchase_order_id = i.purchase_order_id)
+       )                                                          as has_document,
+       i.note
   from public.stock_intake i
   left join public.money_movement m on m.stock_intake_id = i.id and m.type = 'purchase'
  group by i.id;

@@ -277,6 +277,35 @@ export const KIND_META = {
     target: 'recipe',
     resultKey: 'recipeId',
   },
+  /**
+   * ── BELGE (22.44 · kullanıcı kararı 14.09) ────────────────────────────────
+   * Faturadan borç — Para ekranının belge formuyla kuyruğun İÇİNDE düzeltilir ve kaydedilir. Dosya
+   * MCP'den geçmediği için onay formunda bırakılır. Kaydeden kapı Para ekranının kendi eylemi
+   * (`createDocumentAction` + `withProposal`); kuyruk ikinci bir yazma yolu açmaz.
+   */
+  money_document: {
+    label: 'Belge',
+    impact:
+      'Belge kaydedilir ve borç (bize ödenecekse alacak) doğar; ödeme sonra hareket olarak gelip belgeye bağlanır. Para ekranının Belgeler sekmesinde görünür.',
+    tables: ['money_document'],
+    mode: 'inline',
+    target: 'document',
+    resultKey: 'moneyDocumentId',
+  },
+  /**
+   * ── TEDARİKÇİ (22.44) ─────────────────────────────────────────────────────
+   * Faturanın başlığından yeni kart — Tedarik ekranının kart formuyla kuyruğun içinde. Kaydeden kapı
+   * `saveSupplierAction` + `withProposal`; kayıtlı kimlik (vergi no · telefon · tam ad) ikinci kez açılmaz.
+   */
+  supplier_create: {
+    label: 'Tedarikçi',
+    impact:
+      'Tedarikçi kartı açılır; sipariş, mal kabul ve faturaları bu kartla eşleşir. Asistan onu sonra faturadaki vergi numarası, telefon ya da tam adla bulur.',
+    tables: ['supplier'],
+    mode: 'inline',
+    target: 'supplier',
+    resultKey: 'supplierId',
+  },
 } as const satisfies Record<AssistantProposalKind, KindMeta>;
 
 /** Kararın cinsi — ekran kapıyı buradan seçer (`satisfies` sayesinde yeni tip eklenince derlenmez). */
@@ -319,10 +348,18 @@ export function impactOf(kind: AssistantProposalKind, payload: unknown): string 
   }
 
   if (kind === 'stock_intake' && Array.isArray(p.lines)) {
-    return `${p.lines.length} parti stoğa girer ve satılabilir hâle gelir; son kullanma tarihleri bu tabloyla sabitlenir. Bağlı tedarik siparişi varsa kapanışı da bu kabulden türer.`;
+    // Faturanın toplamı okunduysa fatura da BELGE olarak doğar (22.44) — borç kabulün satırlarından
+    // değil o belgeden türer (12.26); cümle bunu söylemezse operatör onayın defteri de yazdığını bilmez.
+    const invoice = typeof p.totalAmountCents === 'number' ? ' Fatura kabule bağlı bir belge olarak doğar; tedarikçi borcu o belgeden türer.' : '';
+    return `${p.lines.length} parti stoğa girer ve satılabilir hâle gelir; son kullanma tarihleri bu tabloyla sabitlenir. Bağlı tedarik siparişi varsa kapanışı da bu kabulden türer.${invoice}`;
   }
 
   if (kind === 'purchase_order' && Array.isArray(p.lines)) {
+    // FATURADAN SİPARİŞ (22.44): tedarikçi faturayı mal gelmeden kesti — sipariş zaten verilmiş demektir.
+    // Taslak açıp "gönder" beklemek olmayan bir adımı bekletmek olurdu; sipariş GÖNDERİLMİŞ açılır.
+    if (p.source === 'invoice') {
+      return `${p.lines.length} kalemlik sipariş GÖNDERİLMİŞ olarak açılır (fatura kesilmiş, sipariş verilmiş) ve fatura siparişe bağlı bir belge olarak doğar; tedarikçi borcu o belgeden türer. Mal gelince rampa bu siparişi sayar, son kullanma tarihini ve lotu orada girer. Tedarikçiye mesaj gitmez.`;
+    }
     return `${p.lines.length} kalemlik tedarik siparişi TASLAK olarak açılır; tedarikçiye gönderilmez. Göndermek ayrı ve insanlı bir adımdır.`;
   }
 
@@ -366,7 +403,13 @@ export function amountCentsOf(kind: AssistantProposalKind, payload: unknown): nu
 
   // Paket fiyatı EURO tutulur (paket ailesi cent'e göçmedi — `Bundle.totalPrice`); çevrim burada.
   if (kind === 'bundle_draft' && typeof p.totalPrice === 'number') return Math.round(p.totalPrice * 100);
-  if (kind === 'money_movement' && typeof p.amountCents === 'number') return p.amountCents;
+  if ((kind === 'money_movement' || kind === 'money_document') && typeof p.amountCents === 'number') return p.amountCents;
+
+  // FATURANIN TUTARI (22.44) — faturalı sipariş ve faturası okunmuş mal kabulde tutar faturanın
+  // KENDİ yazdığıdır: ödenecek olan o. Satırlardan toplamak KDV'yi ve nakliyeyi dışarıda bırakırdı.
+  const invoice = p.invoice as { totalAmountCents?: unknown } | null | undefined;
+  if (kind === 'purchase_order' && typeof invoice?.totalAmountCents === 'number') return invoice.totalAmountCents;
+  if (kind === 'stock_intake' && typeof p.totalAmountCents === 'number') return p.totalAmountCents;
 
   // Mal kabulde tutar KALEMLERDEN toplanır; bir kalemin maliyeti bilinmiyorsa toplam UYDURULMAZ
   // (eksik veriyi 0 saymak faturayı olduğundan ucuz gösterirdi — `packages.ts` ağırlık kuralının aynısı).

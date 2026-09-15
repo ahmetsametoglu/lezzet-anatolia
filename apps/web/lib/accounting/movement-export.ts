@@ -17,7 +17,8 @@ import {
   type MovementExportRow,
 } from '@lezzet/domain-core';
 import { toCsv } from '@lezzet/helper';
-import { DOCUMENT_KIND_LABEL, MOVEMENT_TYPE_LABEL } from '@/app/(operations)/operations/finance/finance-labels';
+import { MOVEMENT_TYPE_LABEL } from '@/app/(operations)/operations/finance/finance-labels';
+import { DOCUMENT_KIND_LABEL, VAT_REGIME_LABEL } from '@/components/operation/form/document-form/labels';
 
 /**
  * Hareket dökümü kapısı (12.15) — DOMAIN §9. Satış dosyasının (12.7) yanına dönemin her para
@@ -84,6 +85,7 @@ export async function buildMovementExport(period: ExportPeriod): Promise<Movemen
       issuedOn: document.issuedOn,
       amountCents: document.amountCents,
       vatAmountCents: document.vatAmountCents,
+      vatRegime: document.vatRegime,
       counterpartyName: party,
     });
     documentsOf.set(allocation.movementId, list);
@@ -112,7 +114,14 @@ export async function buildMovementExport(period: ExportPeriod): Promise<Movemen
 }
 
 /** Dosyanın satırı — dökümün satırı artı operatörün diliyle yazılan sütunlar (tip, belge türü, kaynak). */
-type MovementCsvRow = MovementExportRow & { typeLabel: string; documentKindLabel: string | null; sourceLabel: string; explainedLabel: string };
+type MovementCsvRow = MovementExportRow & {
+  typeLabel: string;
+  documentKindLabel: string | null;
+  /** KDV rejiminin okunur adı (12.26) — "Ters yükleme": belgede KDV yok ama beyanda hesaplanır. */
+  documentVatRegimeLabel: string | null;
+  sourceLabel: string;
+  explainedLabel: string;
+};
 
 const SOURCE_LABEL = { manual: 'elle', bank_import: 'banka ekstresi', system: 'sistem' } as const;
 
@@ -135,6 +144,7 @@ const COLUMNS: ReadonlyArray<{ key: keyof MovementCsvRow & string; label: string
   { key: 'documentDate', label: 'Belge tarihi' },
   { key: 'documentTotal', label: 'Belge toplamı' },
   { key: 'documentVat', label: 'Belge KDV' },
+  { key: 'documentVatRegimeLabel', label: 'KDV rejimi' },
   { key: 'tags', label: 'Etiketler' },
   { key: 'description', label: 'Açıklama' },
   { key: 'sourceLabel', label: 'Kaynak' },
@@ -152,6 +162,7 @@ export function toMovementCsv(data: MovementExport): string {
     ...row,
     typeLabel: MOVEMENT_TYPE_LABEL[row.type],
     documentKindLabel: row.documentKind ? DOCUMENT_KIND_LABEL[row.documentKind] : null,
+    documentVatRegimeLabel: row.documentVatRegime ? VAT_REGIME_LABEL[row.documentVatRegime] : null,
     sourceLabel: SOURCE_LABEL[row.source],
     explainedLabel: row.explained ? 'izahlı' : 'İZAHSIZ',
   }));

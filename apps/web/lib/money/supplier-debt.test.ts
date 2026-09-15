@@ -72,7 +72,7 @@ async function malKabul(qty = 10, unitCostCents = 400) {
 describe('tedarikçi borcu TÜRETİLİR', () => {
   it('ödeme yokken borç girişlerin toplamıdır', async () => {
     await malKabul();
-    expect(await suppliers.debt(supplierId)).toMatchObject({ intakeTotalCents: 4000, paidCents: 0, balanceCents: 4000 });
+    expect(await suppliers.debt(supplierId)).toMatchObject({ purchasedCents: 4000, paidCents: 0, balanceCents: 4000 });
   });
 
   it('ödeme borcu kapatır; kalan doğru türetilir', async () => {
@@ -81,7 +81,7 @@ describe('tedarikçi borcu TÜRETİLİR', () => {
     const result = await recordSupplierPayment({ supplierId, accountId: bankAccount, amountCents: 2500, description: 'Kısmi ödeme' });
     expect(result.status).toBe('ok');
 
-    expect(await suppliers.debt(supplierId)).toMatchObject({ intakeTotalCents: 4000, paidCents: 2500, balanceCents: 1500 });
+    expect(await suppliers.debt(supplierId)).toMatchObject({ purchasedCents: 4000, paidCents: 2500, balanceCents: 1500 });
   });
 
   it('tamamı ödenince borç sıfırlanır', async () => {
@@ -98,7 +98,7 @@ describe('tedarikçi borcu TÜRETİLİR', () => {
 
     // 15,50 €'luk ödeme bilinçli: kuruşlu bir tutar euro toplamında artık bırakırdı (34.499…),
     // cent tamsayısında bırakmaz — çıkarma kesin.
-    expect(await suppliers.debt(supplierId)).toMatchObject({ intakeTotalCents: 7000, paidCents: 3550, balanceCents: 3450 });
+    expect(await suppliers.debt(supplierId)).toMatchObject({ purchasedCents: 7000, paidCents: 3550, balanceCents: 3450 });
   });
 
   it('ödeme mal kabule bağlanabilir — hangi girişin kapandığı görünür', async () => {

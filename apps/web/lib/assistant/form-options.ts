@@ -120,7 +120,11 @@ export interface AssistantFormOptions {
    * sayfalanmaz, tek turda çekilir.
    */
   warehouses: Array<{ id: string; name: string }>;
-  suppliers: Array<{ id: string; name: string }>;
+  /**
+   * Ülke ve vade de taşınıyor (22.44): belge gövdesi faturanın KDV rejimini ülkeden, vadesini kartın
+   * vadesinden önerir (`supplierSuggestion`). Liste zaten okunuyordu; iki alan için ikinci tur açılmadı.
+   */
+  suppliers: Array<{ id: string; name: string; country: string | null; paymentTermDays: number | null }>;
   /**
    * Stoklama alanları — kabul dilekçesinin raf seçeneği (19.29).
    *
@@ -236,7 +240,7 @@ export async function readAssistantFormOptions(
     counterparties: counterparties.map((counterparty) => ({ value: counterparty.id, label: counterparty.name, defaultNature: counterparty.defaultNature })),
     tags: tags.map((tag) => ({ value: tag.slug, label: tag.label })),
     warehouses: warehouses.map((w) => ({ id: w.id, name: w.name })),
-    suppliers: suppliers.map((s) => ({ id: s.id, name: s.name })),
+    suppliers: suppliers.map((s) => ({ id: s.id, name: s.name, country: s.country, paymentTermDays: s.paymentTermDays })),
     storageAreas: storageAreas.map((a) => ({ id: a.id, name: a.name, kind: a.kind })),
   };
 }

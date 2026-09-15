@@ -72,7 +72,10 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
     counterpartyOptions: counterparties
       .filter((counterparty) => counterparty.isActive)
       .map((counterparty) => ({ value: counterparty.id, label: counterparty.name, defaultNature: counterparty.defaultNature })),
-    supplierOptions: suppliers.filter((supplier) => supplier.isActive).map((supplier) => ({ value: supplier.id, label: supplier.name })),
+    // Ülke ve vade de taşınır (12.26): belge formu faturanın KDV rejimini ülkeden, vadesini kartın vadesinden önerir.
+    supplierOptions: suppliers
+      .filter((supplier) => supplier.isActive)
+      .map((supplier) => ({ value: supplier.id, label: supplier.name, country: supplier.country, paymentTermDays: supplier.paymentTermDays })),
     dictionary: {
       natures: natures.map(({ slug, label, direction, accountCode, isActive }) => ({ slug, label, direction, accountCode, isActive })),
       counterparties: counterparties.map(({ id, name, kind, keywords, defaultNature, isActive }) => ({ id, name, kind, keywords, defaultNature, isActive })),

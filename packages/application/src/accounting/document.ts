@@ -1,5 +1,14 @@
-import { CounterpartyService, MoneyAllocationService, MoneyDocumentService, MoneyMovementService, MovementTagService } from '@lezzet/database';
-import { checkDocumentFile } from '@lezzet/domain-core';
+import {
+  CounterpartyService,
+  MoneyAllocationService,
+  MoneyDocumentService,
+  MoneyMovementService,
+  MovementTagService,
+  PurchaseOrderService,
+  StockIntakeBalanceService,
+  StockIntakeService,
+} from '@lezzet/database';
+import { checkDocumentFile, vatRegimeProblem } from '@lezzet/domain-core';
 import { financeDocumentScope, privateReadUrl, privateUploadUrl, r2Keys } from '@lezzet/storage';
 import type { MoneyAllocation, MoneyDocument, MoneyDocumentBalance, MoneyDocumentInsert } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -35,7 +44,23 @@ export type DocumentOutcome =
   | { status: 'ok'; document: MoneyDocument }
   | {
       status: 'invalid';
-      reason: 'unknown_tag' | 'unknown_nature' | 'nature_direction' | 'unknown_counterparty' | 'party_conflict' | 'vat_over_amount' | 'not_found' | 'wrong_key';
+      reason:
+        | 'unknown_tag'
+        | 'unknown_nature'
+        | 'nature_direction'
+        | 'unknown_counterparty'
+        | 'party_conflict'
+        | 'vat_over_amount'
+        | 'not_found'
+        | 'wrong_key'
+        // 12.26 — KDV rejimi, vade ve stok alımının bağı
+        | 'vat_with_regime'
+        | 'due_before_issue'
+        | 'link_conflict'
+        | 'link_needs_supplier'
+        | 'link_not_found'
+        | 'link_supplier_mismatch'
+        | 'link_has_document';
     };
 
 export type DocumentUploadOutcome =
@@ -56,7 +81,12 @@ export async function unknownTagOf(db: SupabaseClient, tags: readonly string[]):
  */
 export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocumentInsert): Promise<DocumentOutcome> {
   if ((input.vatAmountCents ?? 0) > input.amountCents) return { status: 'invalid', reason: 'vat_over_amount' };
+  // KDV REJİMİ ve VADE (12.26) — veri kısıtlarının okunur hâli: ret bir cümle olsun, PG hatası değil.
+  if (vatRegimeProblem(input.vatRegime ?? 'standard', input.vatAmountCents)) return { status: 'invalid', reason: 'vat_with_regime' };
+  if (input.dueOn && input.dueOn < input.issuedOn) return { status: 'invalid', reason: 'due_before_issue' };
   if (input.counterpartyId && input.supplierId) return { status: 'invalid', reason: 'party_conflict' };
+  const linkProblem = await supplyLinkProblemOf(db, input);
+  if (linkProblem) return { status: 'invalid', reason: linkProblem };
   if (input.counterpartyId && !(await new CounterpartyService(db).getById(input.counterpartyId))?.isActive) {
     return { status: 'invalid', reason: 'unknown_counterparty' };
   }
@@ -66,6 +96,41 @@ export async function createMoneyDocument(db: SupabaseClient, input: MoneyDocume
 
   const document = await new MoneyDocumentService(db).insert(input);
   return { status: 'ok', document };
+}
+
+type SupplyLinkProblem = 'link_conflict' | 'link_needs_supplier' | 'link_not_found' | 'link_supplier_mismatch' | 'link_has_document';
+
+/**
+ * STOK ALIMININ BAĞI (12.26 · kullanıcı kararı 14.09: borç belgeden türer) — fatura bir MAL KABULE ya
+ * da mal gelmeden kesildiyse bir TEDARİK SİPARİŞİNE bağlanır. Kurallar veride de duruyor (tek bağ,
+ * tedarikçi şart — `money_document_stock_link` · `money_document_supply_party`); burada ÖNCE sorulur
+ * ki ret okunur olsun, ve veride duramayan iki kural burada: bağlanan alım AYNI tedarikçinin olmalı, ve
+ * faturası zaten girilmiş olmamalı — ikinci bir belge aynı alımın borcunu iki kez yazardı.
+ */
+async function supplyLinkProblemOf(db: SupabaseClient, input: MoneyDocumentInsert): Promise<SupplyLinkProblem | null> {
+  if (!input.stockIntakeId && !input.purchaseOrderId) return null;
+  if (input.stockIntakeId && input.purchaseOrderId) return 'link_conflict';
+  if (!input.supplierId) return 'link_needs_supplier';
+
+  if (input.stockIntakeId) {
+    // Görünümün `has_document`ı iki yolu da bilir: belge kabulün kendisine ya da SİPARİŞİNE bağlı olabilir.
+    const intake = await new StockIntakeBalanceService(db).findByIntake(input.stockIntakeId);
+    if (!intake) return 'link_not_found';
+    if (intake.supplierId !== input.supplierId) return 'link_supplier_mismatch';
+    return intake.hasDocument ? 'link_has_document' : null;
+  }
+
+  const orderId = input.purchaseOrderId;
+  if (!orderId) return null;
+  const order = await new PurchaseOrderService(db).getById(orderId);
+  if (!order) return 'link_not_found';
+  if (order.supplierId !== input.supplierId) return 'link_supplier_mismatch';
+  const documents = new MoneyDocumentService(db);
+  if ((await documents.listByPurchaseOrders([orderId])).length > 0) return 'link_has_document';
+  // Siparişin kabullerinden birinin faturası KENDİ BAŞINA girilmişse sipariş faturası aynı malı ikinci kez borçlandırır.
+  const intakes = await new StockIntakeService(db).listByPurchaseOrder(orderId);
+  const intakeDocuments = await Promise.all(intakes.map((intake) => documents.listByIntake(intake.id)));
+  return intakeDocuments.some((list) => list.length > 0) ? 'link_has_document' : null;
 }
 
 export type AllocationOutcome =

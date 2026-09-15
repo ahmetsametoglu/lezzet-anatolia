@@ -10,7 +10,7 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { ChevronDownIcon } from '@/components/operation/ui/icons';
 import { money, shortDateTime } from '@/components/operation/ui/format';
 import { KIND_TONE, STATUS_VIEW, decisionByline, decisionFooterNote, decisionNote, notifyCountOf } from './assistant-labels';
-import { inlineBodyOf } from './assistant-body';
+import { applyLabelOf, inlineBodyOf } from './assistant-body';
 import { ProposalPreview } from './assistant-preview';
 import type { AssistantRowView, DecisionKind } from './assistant-types';
 
@@ -277,7 +277,7 @@ export function ProposalDialog({
                   disabled={busy || blocked !== null}
                   title={blocked ?? undefined}
                 >
-                  {busy ? 'Kaydediliyor…' : inline.applyLabel}
+                  {busy ? 'Kaydediliyor…' : applyLabelOf(inline, bodyPayload)}
                 </Button>
               </>
             ) : mode === 'inline' ? (

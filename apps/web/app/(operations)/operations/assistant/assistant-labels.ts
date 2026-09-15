@@ -46,6 +46,12 @@ export const KIND_TONE: Record<AssistantProposalKind, OpsTone> = {
   // (`status` payload'da yok, ürün aday doğar). Ayrı bir renk verilseydi "yeni ürün" panelde daha
   // ağır bir karar gibi okunurdu; oysa ağırlığı aynı ve duvar da aynı yerde: onay ekranı.
   product_create: 'neutral',
+  // **Belge para ekseninde** (22.44): hareketle aynı mor — ikisi de defterin konusu, biri borcu biri
+  // parayı yazar; rozet metni ("Belge" ↔ "Para") ayrımı taşıyor.
+  money_document: 'violet',
+  // **Tedarikçi tedarik ekseninde** (22.44): sipariş ve stokla aynı mavi — mal önce ısmarlanır, sonra
+  // girer; kart da o zincirin başıdır.
+  supplier_create: 'blue',
 };
 
 /** Tazelik rozeti — eşiği KAPI biliyor (`freshness`), ekran yalnız çiziyor. `ok` rozetsizdir. */

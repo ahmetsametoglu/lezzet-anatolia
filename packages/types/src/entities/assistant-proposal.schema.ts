@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PortionKindEnum } from './product-variant.schema';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
+import { DocumentKindEnum, DocumentVatRegimeEnum, MovementDirectionEnum } from './money.schema';
 import { ProductDateTypeEnum, ProductSchema } from './product.schema';
 
 /**
@@ -30,8 +31,29 @@ export const AssistantProposalKindEnum = z.enum([
   'recipe_draft',
   'batch_offer',
   'product_create',
+  'money_document',
+  'supplier_create',
 ]);
 export type AssistantProposalKind = z.infer<typeof AssistantProposalKindEnum>;
+
+/**
+ * ─── FATURANIN PARA KÜNYESİ (22.44 · 12.26) ─────────────────────────────────
+ *
+ * Faturadan beklenen teslimat (`purchase_order`, `source: 'invoice'`) faturanın numarasını, gününü,
+ * vadesini, toplamını, KDV'sini ve rejimini taşır: onayda sipariş GÖNDERİLMİŞ açılır ve fatura
+ * siparişe bağlı bir BELGE olarak doğar — tedarikçi borcu o belgeden türer, mal gelince rampa sayar.
+ * Toplam faturanın KENDİ yazdığıdır (satırlardan toplanmaz: fark nakliye, iskonto ya da okunamamış
+ * satırdır); KDV belgede yoksa `null` — sıfır "KDV yok" demek olurdu.
+ */
+export const InvoiceTermsPayloadSchema = z.object({
+  number: z.string().nullable(),
+  issuedOn: z.string().nullable(),
+  dueOn: z.string().nullable(),
+  totalAmountCents: z.number().int().positive(),
+  vatAmountCents: z.number().int().nonnegative().nullable(),
+  vatRegime: DocumentVatRegimeEnum,
+});
+export type InvoiceTermsPayload = z.infer<typeof InvoiceTermsPayloadSchema>;
 
 export const AssistantProposalStatusEnum = z.enum(['pending', 'applied', 'rejected', 'expired', 'failed']);
 export type AssistantProposalStatus = z.infer<typeof AssistantProposalStatusEnum>;
@@ -100,10 +122,26 @@ export const PurchaseOrderPayloadSchema = z.object({
          * toplamı hiç yazmaz (`CLAUDE §1` — eksik tabanla bulunan tutar, gerçeğinden azdır).
          */
         lastPurchasePriceCents: z.number().int().nonnegative().nullable().default(null),
+        /**
+         * FATURANIN birim fiyatı (cent, KDV hariç) — yalnız faturadan sipariş kaynağında (22.44). Tahmin
+         * değil, tedarikçinin kestiği fiyat: taslağa yazılır ve eşlemedeki "son alış"ın önüne geçer.
+         */
+        unitPriceCents: z.number().int().nonnegative().nullable().default(null),
+        /** Tedarikçinin kalemi (22.43 · 22.44) — mal kabul dilekçesinin aynı üç alanı: anahtar, ad, eşleme önerisi. */
+        supplierItemKey: z.string().nullable().default(null),
+        supplierItemName: z.string().nullable().default(null),
+        mappingProposed: z.boolean().default(false),
       }),
     )
     .min(1),
   note: z.string().optional(),
+  /**
+   * KAYNAK (22.44): `engine` = eşik altı eksiğinden (adetleri motor hesaplar, TASLAK doğar);
+   * `invoice` = tedarikçinin faturasından (adet ve fiyat faturadan; sipariş GÖNDERİLMİŞ açılır, fatura
+   * siparişe bağlı belge olarak doğar — `InvoiceTermsPayloadSchema`). `.default`: eski dilekçeler.
+   */
+  source: z.enum(['engine', 'invoice']).default('engine'),
+  invoice: InvoiceTermsPayloadSchema.nullable().default(null),
 });
 
 /** Paket taslağı — paylar `domain-core`'un mutabakat kuralından geçer (servis kapısında). */
@@ -159,6 +197,14 @@ export const StockIntakePayloadSchema = z.object({
    */
   date: z.string().nullable().default(null),
   totalAmountCents: z.number().int().nonnegative().nullable().default(null),
+  /**
+   * FATURANIN KDV'Sİ, REJİMİ ve VADESİ (22.44 · 12.26) — toplam okunduysa fatura kabule bağlı bir BELGE
+   * olarak doğar ve tedarikçi borcu o belgeden türer (kabulün satır toplamı KDV hariçtir). KDV belgede
+   * yoksa `null`; ters yüklemede ve muafiyette belgede KDV olmaz (`vatRegimeProblem`). `.default`: eski dilekçeler.
+   */
+  vatAmountCents: z.number().int().nonnegative().nullable().default(null),
+  vatRegime: DocumentVatRegimeEnum.default('standard'),
+  dueOn: z.string().nullable().default(null),
   lines: z
     .array(
       z.object({
@@ -536,7 +582,56 @@ export const BatchOfferPayloadSchema = z.object({
 });
 export type BatchOfferPayload = z.infer<typeof BatchOfferPayloadSchema>;
 
-/** Kind → payload şeması. Uygulayıcısı olmayan tip burada YOKTUR (yukarıdaki gerekçe). */
+/**
+ * **Belge** — faturadan borç (22.44 · kullanıcı kararı 14.09). MAL DIŞI fatura (kira, muhasebe,
+ * sigorta, telefon) içindir: asistan faturayı okur, araç kimlikleri NOKTA ATIŞI çözer — tedarikçi
+ * vergi no · telefon · tam adla, cari tam adla ya da eşleşme kelimesiyle (`pinpoint*`) — tür sözlükten.
+ * Mal faturası buradan değil: mal kabul ya da faturalı sipariş önerisinin içinde, alımına BAĞLI doğar
+ * (borç o belgeden türer). **Dosya MCP'den geçmez** (araçların girdisi yalnız metin): onay formunda bırakılır.
+ *
+ * `counterpartyId` araç adı çözebildiyse dolu; çözemediyse `null` ve ad `counterpartyName`de durur —
+ * seçimi operatör yapar (para hareketi önerisinin aynı sözleşmesi, 22.42).
+ */
+export const MoneyDocumentPayloadSchema = z.object({
+  kind: DocumentKindEnum,
+  number: z.string().nullable(),
+  issuedOn: z.string(),
+  dueOn: z.string().nullable(),
+  direction: MovementDirectionEnum,
+  supplierId: z.string().uuid().nullable(),
+  supplierName: z.string().nullable(),
+  counterpartyId: z.string().uuid().nullable(),
+  counterpartyName: z.string().nullable(),
+  nature: z.string().nullable(),
+  amountCents: z.number().int().positive(),
+  vatAmountCents: z.number().int().nonnegative().nullable(),
+  vatRegime: DocumentVatRegimeEnum,
+  note: z.string().nullable(),
+});
+
+/**
+ * **Tedarikçi** — faturanın başlığından yeni kart (22.44). Vergi no, telefon, e-posta, adres, ülke ve
+ * vade faturada yazılı; asistan okur, araç kayıtlı bir tedarikçiye nokta atışı gitmediğini doğrular
+ * (aynı vergi no · telefon · tam adla ikinci kart açılmaz; kapı onayda bir kez daha sorar).
+ */
+export const SupplierCreatePayloadSchema = z.object({
+  name: z.string().min(1),
+  vatNumber: z.string().nullable(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
+  address: z.string().nullable(),
+  country: z.string().regex(/^[A-Z]{2}$/).nullable(),
+  paymentTermDays: z.number().int().nonnegative().nullable(),
+  note: z.string().nullable(),
+});
+export type MoneyDocumentPayload = z.infer<typeof MoneyDocumentPayloadSchema>;
+export type SupplierCreatePayload = z.infer<typeof SupplierCreatePayloadSchema>;
+
+/**
+ * Kind → payload şeması. Şeması olmayan tip öneri ÜRETEMEZ: MCP araçları, panel ve uygulayan kapı bu
+ * sözlükten okur (yukarıdaki gerekçe). Kuyruğun içinde karar alan tiplerde (`inline`) yazan kapı
+ * varlığın kendi eylemidir, uygulayıcı değil — şema yine burada, çünkü dilekçenin şekli tek yerde.
+ */
 export const PROPOSAL_PAYLOAD_SCHEMAS = {
   featured_flag: FeaturedFlagPayloadSchema,
   purchase_order: PurchaseOrderPayloadSchema,
@@ -549,6 +644,8 @@ export const PROPOSAL_PAYLOAD_SCHEMAS = {
   recipe_draft: RecipeDraftPayloadSchema,
   batch_offer: BatchOfferPayloadSchema,
   product_create: ProductCreatePayloadSchema,
+  money_document: MoneyDocumentPayloadSchema,
+  supplier_create: SupplierCreatePayloadSchema,
 } as const satisfies Partial<Record<AssistantProposalKind, z.ZodTypeAny>>;
 
 /** Bugün öneri ÜRETİLEBİLEN tipler — MCP araçları ve panel bu listeden türer. */

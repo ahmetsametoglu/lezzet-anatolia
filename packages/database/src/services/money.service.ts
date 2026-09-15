@@ -730,6 +730,24 @@ export class MoneyDocumentService extends BaseDbService<MoneyDocument, MoneyDocu
   }
 
   /**
+   * Siparişlerin belgeleri (12.26) — faturası mal gelmeden kesilen sipariş. Belge penceresinin "neyin
+   * faturası" seçicisi faturası girilmiş siparişi bir daha önermez; tek turda, kimlik listesiyle.
+   */
+  listByPurchaseOrders(purchaseOrderIds: readonly string[]): Promise<MoneyDocument[]> {
+    if (purchaseOrderIds.length === 0) return Promise.resolve([]);
+    // Dizi değer PostgREST'te `IN (…)` demektir (`FilterOptions` künyesi).
+    return this.getAll({ purchaseOrderId: [...purchaseOrderIds] }, { orderBy: 'issuedOn' });
+  }
+
+  /**
+   * Numarasıyla belgeler (22.44) — aynı faturanın ikinci kez girilmesini NUMARAYLA yakalamak için.
+   * Numara tekil DEĞİLDİR (iki tedarikçi aynı numarayı kesebilir): karşı tarafı çağıran süzer.
+   */
+  listByNumber(number: string): Promise<MoneyDocument[]> {
+    return this.getAll({ number }, { orderBy: 'issuedOn' });
+  }
+
+  /**
    * Belgelerin açık kalanı — görünümden, tek turda. Dönen harita eksik anahtar bırakmaz: hiç
    * ödemesi olmayan belge de bir satırdır (`left join`), açık kalanı tutarın kendisi.
    */
@@ -785,5 +803,20 @@ export class StockIntakeBalanceService extends BaseDbService<StockIntakeBalance,
       { hasDocument: false },
       { orderBy: 'date', orderDirection: 'desc', rangeFilters: [{ field: 'openAmountCents', operator: 'gt', value: 0 }] },
     );
+  }
+
+  /**
+   * Bir tedarikçinin FATURASI GİRİLMEMİŞ kabulleri (12.26) — belge penceresinin "neyin faturası"
+   * seçicisi. Açık kalanına BAKILMAZ: sahadan maliyetsiz yapılan kabulün tutarı sıfırdır ve tam da
+   * faturasının girilmesi gereken kabuldür. Sınırsız büyüyen küme — seçici en yeni `limit` kabulü
+   * sunar, sabit sınırla (`CLAUDE §1` editoryal seçki sınıfı).
+   */
+  listWithoutDocument(supplierId: string, limit = 30): Promise<StockIntakeBalance[]> {
+    return this.getAll({ supplierId, hasDocument: false }, { orderBy: 'date', orderDirection: 'desc', limit });
+  }
+
+  /** Tek kabulün borç satırı — belge kapısı "bu kabulün faturası zaten var mı" diye sorar (12.26). */
+  findByIntake(stockIntakeId: string): Promise<StockIntakeBalance | null> {
+    return this.getOneBy({ stockIntakeId });
   }
 }

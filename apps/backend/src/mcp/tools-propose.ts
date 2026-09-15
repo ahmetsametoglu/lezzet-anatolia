@@ -6,6 +6,7 @@ import {
   CollectionService,
   CounterpartyService,
   DeliveryZoneService,
+  MoneyDocumentService,
   MovementNatureService,
   PostalCodeDemandService,
   PriceService,
@@ -32,7 +33,9 @@ import {
   pinpointSupplier,
   rebalanceAllocations,
   suggestedOfferPriceCents,
+  suggestVatRegime,
   supplierItemKeyOf,
+  vatRegimeProblem,
 } from '@lezzet/domain-core';
 // Para biçimi TEK YERDEN (`formatPrice`): özet cümleleri operasyon yüzeyinde okunuyor ve elle
 // kurulan `(cents / 100).toFixed(2)` Türkçede yanlış ayraç veriyordu — "150.00 €" değil "150,00 €"
@@ -40,6 +43,8 @@ import {
 import { formatPrice, stripLineOrdinals, toCents } from '@lezzet/helper';
 import {
   CountryEnum,
+  DocumentKindEnum,
+  DocumentVatRegimeEnum,
   FEATURED_PLACEMENT,
   FEATURED_SLOTS,
   missingDeclarations,
@@ -50,14 +55,18 @@ import {
   type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
+  type DocumentVatRegime,
   type FeaturedFlagPayload,
   type FeaturedTarget,
+  type InvoiceTermsPayload,
+  type MoneyDocumentPayload,
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
   type RecipeDraftPayload,
   type StockIntakePayload,
+  type SupplierCreatePayload,
   type ZoneExtendPayload,
 } from '@lezzet/types';
 
@@ -160,13 +169,68 @@ async function resolveSupplier(
   }
   return {
     supplier: null,
-    error: `Tedarikçi bulunamadı (${given}). Faturadaki vergi numarasını (TVA/SIRET), telefonu ya da tam unvanı OLDUĞU GİBİ verin; parça ad ya da tahminle aramayın. Belgede yoksa yöneticiye sorun.`,
+    error: `Tedarikçi bulunamadı (${given}). Faturadaki vergi numarasını (TVA/SIRET), telefonu ya da tam unvanı OLDUĞU GİBİ verin; parça ad ya da tahminle aramayın. Kimlik doğruysa tedarikçi kayıtlı değildir — faturanın başlığından propose_supplier_create ile önerin; belgede kimlik yoksa yöneticiye sorun.`,
   };
 }
 
 /** Pozitif tam sayı argümanı; verilmediyse ya da anlamsızsa `null` ("sınır yok"). */
 function positiveIntArg(raw: unknown): number | null {
   return Number.isInteger(raw) && (raw as number) > 0 ? (raw as number) : null;
+}
+
+/** Serbest metin argümanı — kırpılmış; boşsa ya da metin değilse `null` ("belgede yok"). */
+function textArg(raw: unknown): string | null {
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+}
+
+/**
+ * Varyantların kaydı ve okunur adı ("Ürün · Boy") — tek sorgu çifti. Tedarik siparişinin iki kipi ve mal
+ * kabul aynı adı kuruyor (22.44); üç kopya, bir gün üç ayrı biçim olurdu.
+ */
+async function variantsWithNames(db: ReturnType<typeof serviceDb>, variantIds: readonly string[]) {
+  const variants = await new ProductVariantService(db).listByIds([...variantIds]);
+  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
+  const productById = new Map(products.map((p) => [p.id, p]));
+  return new Map(
+    variants.map((v) => [
+      v.id,
+      { variant: v, name: `${resolveLocalizedText(productById.get(v.productId)?.name ?? {}, 'tr')} · ${resolveLocalizedText(v.label, 'tr')}` },
+    ]),
+  );
+}
+
+/**
+ * Cariyi NOKTA ATIŞI bulur (22.42 · kullanıcı kararı 14.09) — tam ad ya da eşleşme kelimesi
+ * (`pinpointCounterparty`); cari listesi hiçbir araçtan dönmez. Para hareketi ve belge önerisinin (22.44)
+ * ortak kapısı. Bulunamaması hata DEĞİL: ad kartta kalır, kimliği operatör seçer ya da Sözlük'ten açar.
+ */
+async function resolveCounterparty(
+  db: ReturnType<typeof serviceDb>,
+  text: string | null,
+): Promise<{ counterparty: { id: string; name: string } | null; error?: string }> {
+  if (!text) return { counterparty: null };
+  const outcome = pinpointCounterparty(await new CounterpartyService(db).list({ activeOnly: true }), text);
+  if (outcome.status === 'ambiguous') return { counterparty: null, error: `'${text}' birden çok cariye gidiyor (${outcome.count}) — tam adı verin.` };
+  return { counterparty: outcome.status === 'found' ? outcome.record : null };
+}
+
+/**
+ * Türü SÖZLÜKTEN doğrular (22.42) — slug ya da ad, yönüne uymalı (`matchNature`). Tanınmayan kelime HATADIR:
+ * model `reference_data.natures`ten birini verir ya da alanı boş bırakır, türü operatör seçer. Para hareketi
+ * ve belge önerisinin (22.44) ortak kapısı.
+ */
+async function resolveNature(
+  db: ReturnType<typeof serviceDb>,
+  word: string | null,
+  direction: MoneyMovementPayload['direction'],
+): Promise<{ nature: { slug: string; label: string } | null; error?: string }> {
+  if (!word) return { nature: null };
+  const nature = matchNature(await new MovementNatureService(db).list({ activeOnly: true }), word, direction);
+  if (nature) return { nature };
+  return {
+    nature: null,
+    error: `Tür sözlükte yok ya da bu yöne uymuyor: '${word}'. reference_data.natures listesindeki slug ya da adı OLDUĞU GİBİ verin; emin değilseniz nature alanını boş bırakın, türü yönetici seçer.`,
+  };
 }
 
 /** Tekil kimlik alanı için standart ret — örnek kimlikle, ki model biçimi tahmin etmesin. */
@@ -436,6 +500,14 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
   );
   if (!warehouse) return { error: `Depo bulunamadı: ${warehouseCode}` };
 
+  // ── FATURA KİPİ (22.44 · kullanıcı kararı 14.09) ──────────────────────────
+  // Kalemleri faturanın kendisi taşıyor: eşik altı motoru devreye girmez, adet ve fiyat faturadan.
+  // İki kip TEK araçta, çünkü ikisi de "bu depoya bu tedarikçiden mal gelecek" diyor — ayrı araç,
+  // modelin hangisini seçeceğini tahmin etmesini isterdi. Kalemsiz fatura bir kip değil, eksik çağrıdır.
+  const invoiceLines = Array.isArray(args.lines) ? (args.lines as Record<string, unknown>[]) : [];
+  if (invoiceLines.length > 0) return proposeInvoicePurchaseOrder(db, args, warehouse, invoiceLines);
+  if (args.invoice !== undefined) return { error: 'invoice verildi ama lines boş — faturadan siparişte faturadaki kalemleri de verin.' };
+
   const groups = await new ReorderService(db).suggestions(warehouse.id);
   const withSupplier = groups.filter((g) => g.supplierId !== null);
   if (withSupplier.length === 0) {
@@ -461,23 +533,12 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
   }
 
   const supplier = group.supplierId ? await new SupplierService(db).getById(group.supplierId) : null;
-  const variants = await new ProductVariantService(db).listByIds(group.lines.map((l) => l.variantId));
-  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
-  const productById = new Map(products.map((p) => [p.id, p]));
-  const nameByVariant = new Map(
-    variants.map((v) => [
-      v.id,
-      `${resolveLocalizedText(productById.get(v.productId)?.name ?? {}, 'tr')} · ${resolveLocalizedText(v.label, 'tr')}`,
-    ]),
-  );
+  const named = await variantsWithNames(db, group.lines.map((l) => l.variantId));
 
   // Tedarikçinin kataloğu: "bu kalem bu tedarikçiden en son kaça alınmıştı". Sipariş tutarı buradan
   // TAHMİN ediliyor — kesin fiyat mal kabulde doğuyor, ama patron kasadan ne çıkacağını görmeden
   // sipariş onaylamamalı.
-  const catalog = group.supplierId ? await new SupplierProductService(db).listBySupplier(group.supplierId) : [];
-  const lastPriceByVariant = new Map(
-    catalog.filter((c) => c.lastPurchasePriceCents !== null).map((c) => [c.variantId, c.lastPurchasePriceCents]),
-  );
+  const lastPriceByVariant = lastPriceByVariantOf(group.supplierId ? await new SupplierProductService(db).listBySupplier(group.supplierId) : []);
 
   const payload: PurchaseOrderPayload = {
     warehouseId: warehouse.id,
@@ -487,17 +548,25 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
     supplierName: supplier?.name ?? null,
     lines: group.lines.map((line) => ({
       variantId: line.variantId,
-      productName: nameByVariant.get(line.variantId) ?? line.variantId,
+      productName: named.get(line.variantId)?.name ?? line.variantId,
       qty: line.suggestedQty,
       // Son alış fiyatı TEK sorguda (tedarikçinin kataloğu): satır başına sorgu, on dört kalemlik
       // bir siparişte on dört gidiş dönüş demekti. Eşlemesi olmayan kalemde `null` — uydurulmuyor.
       lastPurchasePriceCents: lastPriceByVariant.get(line.variantId) ?? null,
+      // Eşik altı önerisinde fatura yok (22.44): birim fiyatı eşlemedeki son alış söyler, tedarikçinin
+      // kalem adı ve eşleme önerisi de yok — kalemler zaten eşlemeden geliyor.
+      unitPriceCents: null,
+      supplierItemKey: null,
+      supplierItemName: null,
+      mappingProposed: false,
     })),
     ...(typeof args.note === 'string' && args.note.trim() ? { note: args.note.trim() } : {}),
+    source: 'engine',
+    invoice: null,
   };
 
   const summary = `${supplier?.name ?? 'tedarikçi'} — ${payload.lines.length} kalemlik tedarik siparişi taslağı (${warehouseCode})`;
-  const queued = await queue('purchase_order', payload, summary);
+  const queued = await queue('purchase_order', payload, summary, args.reason);
   return {
     ...queued,
     // Öbür tedarikçilerin eksiği SESSİZCE düşmesin: model patrona söyleyebilsin.
@@ -765,13 +834,170 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
   return queue('product_create', payload, summary, args.reason);
 }
 
-/** Fatura kalemi → varyant: eşlemeden mi geldi, öneri mi, sorun mu (22.43). */
-interface ResolvedIntakeLine {
+/** Fatura kalemi → varyant: eşlemeden mi geldi, öneri mi, sorun mu (22.43 · 22.44). */
+/** Tedarikçinin kalem eşlemesi — `supplier_product` satırı. */
+type SupplierMapping = Awaited<ReturnType<SupplierProductService['listBySupplier']>>[number];
+
+/** Eşlemedeki son alış fiyatı, varyant başına — fiyatı olmayan eşleme haritaya girmez (uydurulmaz, `null` kalır). */
+function lastPriceByVariantOf(mappings: readonly SupplierMapping[]): Map<string, number> {
+  return new Map(
+    mappings
+      .filter((mapping) => mapping.lastPurchasePriceCents !== null)
+      .map((mapping) => [mapping.variantId, mapping.lastPurchasePriceCents as number]),
+  );
+}
+
+interface ResolvedInvoiceLine {
   variantId: string;
   key: string | null;
   name: string | null;
   proposed: boolean;
   problem: string | null;
+}
+
+/**
+ * FATURA KALEMLERİ TEDARİKÇİNİN ADIYLA ÇÖZÜLÜR (22.43 · kullanıcı kararı 14.09) — mal kabul ve faturadan
+ * sipariş (22.44) aynı çözümü kullanır; ikinci bir kopya iki ayrı eşleşme kuralı demekti.
+ *
+ * Fatura kalemi tedarikçinin diliyle yazılıdır ("Druivenmelasse 650gr"); bizim varyantımıza bağ tedarikçi
+ * eşlemesidir (`supplier_product`). Anahtar kod, kod yoksa adın slug'ı — motor `supplierItemKeyOf`;
+ * eşitlik tamdır (`matchSupplierItem`), parça ad yok. Eşleme yoksa model katalogda bulduğu varyantı adla
+ * BİRLİKTE gönderir: kalem "eşleme önerisi" olarak işaretlenir, onayda eşleme kaydedilir ve sonraki fatura
+ * tam eşleşir. Model tek başına uydurmaz: adsız kalem için variantId zaten şart; adlı ama eşlemesiz kalem
+ * için variantId yoksa cevap "eşleme yok".
+ *
+ * Eşlemeler ÇAĞIRANDAN gelir: faturadan sipariş son alış fiyatını da aynı listeden okuyor, ikinci sorgu
+ * açılmaz. Tedarikçi yoksa liste boştur.
+ */
+function resolveInvoiceLines(
+  mappings: readonly SupplierMapping[],
+  supplier: { id: string; name: string } | null,
+  rawLines: Record<string, unknown>[],
+): ResolvedInvoiceLine[] {
+  return rawLines.map((raw, i) => {
+    const givenId = typeof raw.variantId === 'string' ? raw.variantId.trim() : '';
+    const item = {
+      code: typeof raw.supplierItemCode === 'string' && raw.supplierItemCode.trim() ? raw.supplierItemCode.trim() : null,
+      name: typeof raw.supplierItemName === 'string' && raw.supplierItemName.trim() ? raw.supplierItemName.trim() : null,
+    };
+    const key = supplierItemKeyOf(item.code, item.name);
+    const label = item.name ?? item.code ?? '';
+    const base: ResolvedInvoiceLine = { variantId: givenId, key, name: item.name, proposed: false, problem: null };
+    if (!key) {
+      return givenId ? base : { ...base, problem: `lines[${i}]: variantId ya da tedarikçinin kalem adı/kodu (supplierItemName · supplierItemCode) gerekli.` };
+    }
+    if (!supplier) {
+      return givenId
+        ? base
+        : { ...base, problem: `lines[${i}]: '${label}' tedarikçi verilmeden çözülemez — supplierVatNumber / supplierPhone / supplierName verin ya da variantId gönderin.` };
+    }
+    const match = matchSupplierItem(mappings, item);
+    if (match.status === 'found') {
+      if (givenId && givenId !== match.record.variantId) {
+        return { ...base, problem: `lines[${i}]: '${label}' eşlemede başka bir varyanta bağlı — eşleme doğruysa variantId göndermeyin, yanlışsa yönetici eşlemeyi düzeltsin.` };
+      }
+      return { ...base, variantId: match.record.variantId };
+    }
+    if (match.status === 'ambiguous') {
+      return { ...base, problem: `lines[${i}]: '${label}' bu tedarikçide birden çok eşlemeye gidiyor (${match.count}) — kodla gönderin ya da yöneticiye sorun.` };
+    }
+    if (!givenId) {
+      return {
+        ...base,
+        problem: `lines[${i}]: '${label}' için eşleme yok. Ürünü catalog_lookup ile bulup variantId'yi bu adla BİRLİKTE gönderin — onayda eşleme kaydedilir. Bulamazsanız yöneticiye sorun, uydurmayın.`,
+      };
+    }
+    return { ...base, proposed: true };
+  });
+}
+
+/** `YYYY-AA-GG` biçiminde bir gün mü — bozuk tarih süzülür; sessizce bugün yazmak, olmayan bir günü yazmaktır. */
+function isIsoDay(value: unknown): boolean {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+/**
+ * FATURANIN KDV'Sİ, REJİMİ VE VADESİ (22.44 · 12.26) — mal kabul, faturadan sipariş ve belge önerisinin
+ * ORTAK doğrulaması; üç kopya üç ayrı kural olurdu.
+ *
+ * Rejim verilmediyse tedarikçinin ülkesinden ÖNERİLİR (`suggestVatRegime`: Fransa dışındaki tedarikçinin
+ * KDV'siz faturası ters yüklemedir). Verilen rejim KDV'yle çelişiyorsa RET (`vatRegimeProblem`): ters
+ * yüklemede ve muafiyette belgede KDV olmaz. KDV toplamı aşamaz ve vade belge gününden önce olamaz — belge
+ * kapısının (`createMoneyDocument`) kuralları; burada yakalanmasa öneri onay anında düşerdi.
+ *
+ * Vade yalnız belgede yazıyorsa: model hesaplamaz. Bozuk KDV ya da vade RET — bir tur sessizce süzülüyordu
+ * ve süzülen değer "belgede yok" diye okunuyordu (`CLAUDE §1`: ölçülemeyen değer sıfır değildir).
+ */
+async function invoiceTermsFrom(
+  db: ReturnType<typeof serviceDb>,
+  args: Record<string, unknown>,
+  supplier: { id: string } | null,
+  document: { totalCents: number | null; issuedOn: string | null },
+): Promise<{ vatAmountCents: number | null; vatRegime: DocumentVatRegime; dueOn: string | null } | { error: string }> {
+  const given = (value: unknown) => value !== undefined && value !== null;
+  const vatAmountCents = Number.isInteger(args.vatAmountCents) && (args.vatAmountCents as number) >= 0 ? (args.vatAmountCents as number) : null;
+  if (given(args.vatAmountCents) && vatAmountCents === null) {
+    return { error: `vatAmountCents cent cinsinden tam sayı olmalı (gelen: '${String(args.vatAmountCents)}') — belgede KDV yazmıyorsa göndermeyin.` };
+  }
+  if (vatAmountCents !== null && document.totalCents !== null && vatAmountCents > document.totalCents) {
+    return { error: 'KDV toplamdan büyük olamaz — toplam KDV dâhil tutardır; iki sayıyı belgeden yeniden okuyun.' };
+  }
+  const regimeArg = typeof args.vatRegime === 'string' ? args.vatRegime.trim() : '';
+  const parsed = DocumentVatRegimeEnum.safeParse(regimeArg);
+  if (regimeArg && !parsed.success) return { error: `vatRegime 'standard' | 'reverse_charge' | 'exempt' olmalı (gelen: '${regimeArg}').` };
+  const supplierCountry = supplier ? ((await new SupplierService(db).getById(supplier.id))?.country ?? null) : null;
+  const vatRegime: DocumentVatRegime = parsed.success ? parsed.data : suggestVatRegime({ supplierCountry, vatAmountCents });
+  if (vatRegimeProblem(vatRegime, vatAmountCents)) {
+    return {
+      error: `Rejim '${vatRegime}' iken belgede KDV olamaz — faturada KDV yazıyorsa rejim 'standard'dır; yazmıyorsa vatAmountCents göndermeyin.`,
+    };
+  }
+  if (given(args.dueOn) && !isIsoDay(args.dueOn)) {
+    return { error: `dueOn 'YYYY-AA-GG' olmalı (gelen: '${String(args.dueOn)}') — belgede vade yazmıyorsa göndermeyin.` };
+  }
+  const dueOn = isIsoDay(args.dueOn) ? String(args.dueOn) : null;
+  if (dueOn && document.issuedOn && dueOn < document.issuedOn) {
+    return { error: `Vade (${dueOn}) belge gününden (${document.issuedOn}) önce olamaz — iki tarihi belgeden yeniden okuyun.` };
+  }
+  return { vatAmountCents, vatRegime, dueOn };
+}
+
+/**
+ * FATURANIN TOPLAMI İLE SATIRLARIN TOPLAMI — mal kabul ve faturadan siparişin ortak kontrolü (22.44).
+ *
+ * Karşılaştırma KDV HARİÇ: satır fiyatları KDV hariçtir, faturanın toplamı KDV dâhil — KDV biliniyorsa
+ * düşülür. Bir tur düşülmüyordu ve her KDV'li faturada "fark" KDV'nin kendisi çıkıyordu. Fark varsa MODEL
+ * ÖĞRENSİN: düzeltmenin ucuz anı onaydan öncesidir, sonra parti maliyetleri ve borç yazılmış olur.
+ */
+function invoiceTotalCheck(input: { totalAmountCents: number; vatAmountCents: number | null; vatRegime: DocumentVatRegime; linesCents: number }) {
+  const gap = input.totalAmountCents - (input.vatAmountCents ?? 0) - input.linesCents;
+  return {
+    documentCents: input.totalAmountCents,
+    vatCents: input.vatAmountCents,
+    linesCents: input.linesCents,
+    gapCents: gap,
+    note:
+      gap === 0
+        ? 'Satırların toplamı faturanın KDV hariç tutarını tutuyor.'
+        : `DİKKAT: satırların toplamı faturanın KDV hariç tutarından ${Math.abs(gap)} cent ${gap > 0 ? 'AZ' : 'FAZLA'}. Olası sebepler: okunamamış bir satır, nakliye kalemi, iskonto${
+            input.vatAmountCents === null && input.vatRegime === 'standard' ? ' ya da okunmamış KDV (vatAmountCents gönderilmedi)' : ''
+          }. Yöneticiye söyleyin.`,
+  };
+}
+
+/**
+ * Eşleme sayıları (22.43) — model kaç kalemin tedarikçi eşlemesinden geldiğini, kaçının onayda eşleme olarak
+ * kaydedileceğini görsün; "hepsini ben buldum" sanmasın. Mal kabul ve faturadan siparişin ortak cevabı.
+ */
+function mappingCountsOf(lines: ReadonlyArray<{ supplierItemKey: string | null; mappingProposed: boolean }>, approval: string) {
+  const mappedFromSupplier = lines.filter((line) => line.supplierItemKey && !line.mappingProposed).length;
+  const proposals = lines.filter((line) => line.mappingProposed).length;
+  return {
+    ...(mappedFromSupplier > 0 ? { mappedFromSupplier } : {}),
+    ...(proposals > 0
+      ? { mappingNote: `${proposals} kalemin tedarikçi eşlemesi yoktu; yönetici ${approval} onaylayınca eşleme bu adlarla kaydedilir ve sonraki fatura kendiliğinden eşleşir.` }
+      : {}),
+  };
 }
 
 /**
@@ -808,54 +1034,12 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   const { supplier, error: supplierError } = await resolveSupplier(db, args);
   if (supplierError) return { error: supplierError };
 
-  // ── KALEM TEDARİKÇİNİN ADIYLA ÇÖZÜLÜR (22.43 · kullanıcı kararı 14.09) ────
-  // Fatura kalemi tedarikçinin diliyle yazılıdır ("Druivenmelasse 650gr"); bizim varyantımıza bağ
-  // tedarikçi eşlemesidir (`supplier_product`). Anahtar kod, kod yoksa adın slug'ı — motor
-  // `supplierItemKeyOf`; eşitlik tamdır (`matchSupplierItem`), parça ad yok. Eşleme yoksa model
-  // katalogda bulduğu varyantı adla BİRLİKTE gönderir: kalem "eşleme önerisi" olarak işaretlenir,
-  // onayda eşleme kaydedilir ve sonraki fatura tam eşleşir. Model tek başına uydurmaz: adsız kalem
-  // için variantId zaten şart; adlı ama eşlemesiz kalem için variantId yoksa cevap "eşleme yok".
+  // ── KALEMLER TEDARİKÇİNİN ADIYLA ÇÖZÜLÜR (22.43) — ortak yardımcıda (`resolveInvoiceLines`):
+  // faturadan sipariş de aynı çözümü kullanır (22.44), iki kopya iki ayrı eşleşme kuralı olurdu.
+  // Eşlemeler bir kez okunur; kalem çözümü onlardan geçer (`resolveInvoiceLines`).
   const mappings = supplier ? await new SupplierProductService(db).listBySupplier(supplier.id) : [];
-  const resolved: ResolvedIntakeLine[] = rawLines.map((raw, i) => {
-    const givenId = typeof raw.variantId === 'string' ? raw.variantId.trim() : '';
-    const item = {
-      code: typeof raw.supplierItemCode === 'string' && raw.supplierItemCode.trim() ? raw.supplierItemCode.trim() : null,
-      name: typeof raw.supplierItemName === 'string' && raw.supplierItemName.trim() ? raw.supplierItemName.trim() : null,
-    };
-    const key = supplierItemKeyOf(item.code, item.name);
-    const label = item.name ?? item.code ?? '';
-    const base: ResolvedIntakeLine = { variantId: givenId, key, name: item.name, proposed: false, problem: null };
-    if (!key) {
-      return givenId ? base : { ...base, problem: `lines[${i}]: variantId ya da tedarikçinin kalem adı/kodu (supplierItemName · supplierItemCode) gerekli.` };
-    }
-    if (!supplier) {
-      return givenId
-        ? base
-        : { ...base, problem: `lines[${i}]: '${label}' tedarikçi verilmeden çözülemez — supplierVatNumber / supplierPhone / supplierName verin ya da variantId gönderin.` };
-    }
-    const match = matchSupplierItem(mappings, item);
-    if (match.status === 'found') {
-      if (givenId && givenId !== match.record.variantId) {
-        return { ...base, problem: `lines[${i}]: '${label}' eşlemede başka bir varyanta bağlı — eşleme doğruysa variantId göndermeyin, yanlışsa yönetici eşlemeyi düzeltsin.` };
-      }
-      return { ...base, variantId: match.record.variantId };
-    }
-    if (match.status === 'ambiguous') {
-      return { ...base, problem: `lines[${i}]: '${label}' bu tedarikçide birden çok eşlemeye gidiyor (${match.count}) — kodla gönderin ya da yöneticiye sorun.` };
-    }
-    if (!givenId) {
-      return {
-        ...base,
-        problem: `lines[${i}]: '${label}' için eşleme yok. Ürünü catalog_lookup ile bulup variantId'yi bu adla BİRLİKTE gönderin — onayda eşleme kaydedilir. Bulamazsanız yöneticiye sorun, uydurmayın.`,
-      };
-    }
-    return { ...base, proposed: true };
-  });
-
-  const variants = await new ProductVariantService(db).listByIds(resolved.map((line) => line.variantId).filter(isUuid));
-  const byId = new Map(variants.map((v) => [v.id, v]));
-  const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
-  const productById = new Map(products.map((p) => [p.id, p]));
+  const resolved = resolveInvoiceLines(mappings, supplier, rawLines);
+  const named = await variantsWithNames(db, resolved.map((line) => line.variantId).filter(isUuid));
 
   // ── KALEM HATALARI TOPLU DÖNER (harici MCP denetiminin önerisi, 09.08) ────
   // İlk hatada dönmek "short-circuit"tü ve teknik olarak doğruydu; ama her araç çağrısı modelin
@@ -865,27 +1049,20 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   const problems: string[] = [];
   for (const [i, raw] of rawLines.entries()) {
     const line = resolved[i]!;
-    if (line.problem) problems.push(line.problem);
-    const variant = byId.get(line.variantId);
+    const found = named.get(line.variantId);
     const qty = Number(raw.qty);
     const expiryDate = String(raw.expiryDate ?? '').trim();
 
-    if (!line.problem && !isUuid(line.variantId)) {
-      problems.push(`lines[${i}]: variantId UUID biçiminde değil (gelen: "${line.variantId || '(boş)'}") — katalogdaki kimliği olduğu gibi kullanın.`);
-    } else if (!line.problem && !variant) {
-      problems.push(`lines[${i}]: varyant bulunamadı (${line.variantId}) — katalogdan doğru kimliği bulun.`);
-    }
-    if (!Number.isInteger(qty) || qty <= 0) problems.push(`lines[${i}]: qty pozitif tam sayı olmalı (gelen: ${String(raw.qty)}).`);
+    problems.push(...invoiceLineProblems(i, line, found !== undefined, raw.qty));
     // SKT UYDURULMAZ: faturada/etikette yoksa asistan patrona sorar. Tarihsiz parti gıdada kör noktadır.
     if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryDate)) {
       problems.push(`lines[${i}]: expiryDate 'YYYY-AA-GG' olmalı (gelen: ${expiryDate || '(boş)'}). Belgede yoksa UYDURMAYIN — yöneticiye sorun.`);
     }
-    if (!variant || problems.length > 0) continue;
+    if (!found || problems.length > 0) continue;
 
-    const name = `${resolveLocalizedText(productById.get(variant.productId)?.name ?? {}, 'tr')} · ${resolveLocalizedText(variant.label, 'tr')}`;
     lines.push({
-      variantId: variant.id,
-      productName: name,
+      variantId: found.variant.id,
+      productName: found.name,
       qty,
       expiryDate,
       lotNumber: typeof raw.lotNumber === 'string' && raw.lotNumber.trim() ? raw.lotNumber.trim() : null,
@@ -919,6 +1096,18 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
     return { error: `Açık sipariş bulunamadı: '${wantedRef}'. ${supplier?.name} için açık olanlar: ${refs || 'yok'}` };
   }
 
+  // ── FATURANIN KDV'Sİ, REJİMİ VE VADESİ (22.44 · 12.26) ───────────────────
+  // Toplam okunduysa fatura onayda kabule bağlı bir BELGE olarak doğar ve tedarikçi borcu o belgeden
+  // türer. Rejim verilmediyse tedarikçinin ülkesinden önerilir; verilen rejim KDV'yle çelişiyorsa RET.
+  // Belgenin tarihi ve toplamı (11.08). Tarih biçimi burada süzülüyor: bozuk bir tarihi geçirmek,
+  // kabulü sessizce bugüne yazdırmaktan farksız olurdu. İkisi faturanın koşullarını da sınıyor —
+  // KDV toplamı aşamaz, vade kabulün gününden önce olamaz (`invoiceTermsFrom`).
+  const date = isIsoDay(args.date) ? String(args.date) : null;
+  const totalAmountCents =
+    Number.isInteger(args.totalAmountCents) && (args.totalAmountCents as number) >= 0 ? (args.totalAmountCents as number) : null;
+  const terms = await invoiceTermsFrom(db, args, supplier, { totalCents: totalAmountCents, issuedOn: date });
+  if ('error' in terms) return { error: terms.error };
+
   const payload: StockIntakePayload = {
     warehouseId: warehouse.id,
     warehouseCode: warehouse.code,
@@ -926,33 +1115,30 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
     supplierName: supplier?.name ?? null,
     purchaseOrderId: linkedOrder?.id ?? null,
     documentNo: typeof args.documentNo === 'string' && args.documentNo.trim() ? args.documentNo.trim() : null,
-    // Belgenin tarihi ve toplamı (11.08). Tarih biçimi burada süzülüyor: bozuk bir tarihi geçirmek,
-    // kabulü sessizce bugüne yazdırmaktan farksız olurdu.
-    date: /^\d{4}-\d{2}-\d{2}$/.test(String(args.date ?? '')) ? String(args.date) : null,
-    totalAmountCents: Number.isInteger(args.totalAmountCents) && (args.totalAmountCents as number) >= 0 ? (args.totalAmountCents as number) : null,
+    date,
+    totalAmountCents,
+    vatAmountCents: terms.vatAmountCents,
+    vatRegime: terms.vatRegime,
+    dueOn: terms.dueOn,
     lines,
   };
   const doc = payload.documentNo ? ` — irsaliye ${payload.documentNo}` : '';
   const queued = await queue('stock_intake', payload, `${warehouse.code} deposuna ${lines.length} parti stok girişi${doc}`, args.reason);
 
-  // ── BELGENİN TOPLAMI İLE BİZİM TOPLAMIMIZ ────────────────────────────────
-  // Fark varsa MODEL ÖĞRENSİN: okunamamış bir satır, nakliye kalemi ya da iskonto demektir ve
-  // düzeltmenin ucuz anı burasıdır — onaydan sonra parti maliyetleri yazılmış olur.
-  const linesTotal = lines.reduce((sum, line) => sum + (line.unitCostCents ?? 0) * line.qty, 0);
+  // Belgenin toplamı ile bizimki (`invoiceTotalCheck`) — ancak bir kalemin bile maliyeti okunduysa.
   const anyCost = lines.some((line) => line.unitCostCents !== null);
-  const gap = payload.totalAmountCents !== null && anyCost ? payload.totalAmountCents - linesTotal : null;
-  const mappedFromSupplier = lines.filter((line) => line.supplierItemKey && !line.mappingProposed).length;
-  const mappingProposals = lines.filter((line) => line.mappingProposed).length;
+  const totalCheck =
+    totalAmountCents !== null && anyCost
+      ? invoiceTotalCheck({
+          totalAmountCents,
+          vatAmountCents: terms.vatAmountCents,
+          vatRegime: terms.vatRegime,
+          linesCents: lines.reduce((sum, line) => sum + (line.unitCostCents ?? 0) * line.qty, 0),
+        })
+      : null;
   return {
     ...queued,
-    // Eşleme sayıları (22.43): model kaç kalemin tedarikçi eşlemesinden geldiğini, kaçının onayda
-    // eşleme olarak kaydedileceğini görsün — "hepsini ben buldum" sanmasın.
-    ...(mappedFromSupplier > 0 ? { mappedFromSupplier } : {}),
-    ...(mappingProposals > 0
-      ? {
-          mappingNote: `${mappingProposals} kalemin tedarikçi eşlemesi yoktu; yönetici girişi onaylayınca eşleme bu adlarla kaydedilir ve sonraki fatura kendiliğinden eşleşir.`,
-        }
-      : {}),
+    ...mappingCountsOf(lines, 'girişi'),
     ...(payload.date ? {} : { dateNote: 'Belge tarihi verilmedi — kabul BUGÜNE yazılacak. Fatura dünküyse date alanını doldurun.' }),
     // Tedarikçi bağı: kurulmadıysa SESSİZ KALINMAZ. Bedeli görünmez ve zincirleme — son alış fiyatı
     // tazelenmez, sonraki tedarik siparişi tahmini tutar veremez.
@@ -960,7 +1146,7 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
       ? { supplier: supplier.name }
       : {
           supplierNote:
-            'Tedarikçi bağlanmadı — bu kabul son alış fiyatını TAZELEMEZ ve sonraki sipariş önerisi "yaklaşık ne kadar" diyemez. Faturada tedarikçi yazıyorsa supplierName ile gönderin (adlar: reference_data).',
+            'Tedarikçi bağlanmadı — bu kabul son alış fiyatını TAZELEMEZ ve sonraki sipariş önerisi "yaklaşık ne kadar" diyemez. Faturada tedarikçi yazıyorsa vergi numarasıyla (supplierVatNumber), telefonla (supplierPhone) ya da tam unvanla (supplierName) gönderin; kayıtlı değilse propose_supplier_create ile önerin.',
         }),
     ...(linkedOrder
       ? { linkedPurchaseOrder: linkedOrder.referenceNo ?? '(numarasız taslak)' }
@@ -970,18 +1156,14 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
             purchaseOrderNote: `${supplier?.name} için ${openOrders.length} açık sipariş var; hangisini karşıladığını purchaseOrderRef ile söyleyin, yoksa hiçbiri kapanmaz.`,
           }
         : {}),
-    ...(gap === null
+    ...(totalCheck ? { totalCheck } : {}),
+    // Faturanın belgesi (22.44): toplam ve tedarikçi varsa onayda kabule bağlı belge olarak doğar.
+    ...(payload.totalAmountCents === null
       ? {}
       : {
-          totalCheck: {
-            documentCents: payload.totalAmountCents,
-            linesCents: linesTotal,
-            gapCents: gap,
-            note:
-              gap === 0
-                ? 'Satır maliyetlerinin toplamı faturanın yazdığı toplamı tutuyor.'
-                : `DİKKAT: bizim toplamımız faturadan ${Math.abs(gap)} cent ${gap > 0 ? 'AZ' : 'FAZLA'}. Sebebi okunamamış bir satır, nakliye kalemi ya da iskonto olabilir — yöneticiye söyleyin.`,
-          },
+          invoiceDocument: supplier
+            ? `Onayda fatura kabule bağlı belge olarak doğar (rejim: ${payload.vatRegime}); tedarikçi borcu o belgeden türer. Dosyasını yönetici onay ekranında bırakır.`
+            : 'Tedarikçi bağlanmadığı için fatura belge olarak DOĞMAZ — tedarikçiyi faturadaki kimlikle verin ya da propose_supplier_create ile önerin.',
         }),
   };
 }
@@ -1036,35 +1218,22 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   // ── TÜR SÖZLÜKTEN, ÖNERİ ANINDA DOĞRULANIR (22.42) ──────────────────────
   // Bir tur serbest `category` kelimesiydi ve sözlükle ancak onay ekranında karşılaştırılıyordu:
   // eşleşmeyince hareket türsüz açılıyor, giderde kaydet düğmesi kilitleniyordu. Kelime artık
-  // burada sözlükle eşlenir (`matchNature`); tanınmayan kelime HATADIR — model `reference_data`
-  // türlerinden birini verir ya da alanı boş bırakır (o zaman türü operatör seçer).
-  const natureWord = typeof args.nature === 'string' && args.nature.trim() ? args.nature.trim() : null;
+  // burada sözlükle eşlenir (`resolveNature`); tanınmayan kelime HATADIR.
+  const natureWord = textArg(args.nature);
   if (natureWord && !acceptsNature(type as MoneyMovementPayload['type'])) {
     return { error: 'Transfer tür almaz — onu karşı hesap açıklar. nature alanını kaldırın.' };
   }
-  const nature = natureWord
-    ? matchNature(await new MovementNatureService(db).list({ activeOnly: true }), natureWord, direction as MoneyMovementPayload['direction'])
-    : null;
-  if (natureWord && !nature) {
-    return {
-      error: `Tür sözlükte yok ya da bu yöne uymuyor: '${natureWord}'. reference_data.natures listesindeki slug ya da adı OLDUĞU GİBİ verin; emin değilseniz nature alanını boş bırakın, türü yönetici seçer.`,
-    };
-  }
+  const { nature, error: natureError } = await resolveNature(db, natureWord, direction as MoneyMovementPayload['direction']);
+  if (natureError) return { error: natureError };
 
   // ── CARİ NOKTA ATIŞI (22.42 · kullanıcı kararı 14.09) ─────────────────────
-  // Kime ödendiği tam ad ya da eşleşme kelimesiyle bulunur (`pinpointCounterparty`); cari listesi
-  // hiçbir araçtan dönmez. Bulunamazsa öneri YİNE kurulur: ad kartta yazılı kalır, kimlik boş ve
-  // seçimi operatör yapar — fiş fotoğrafındaki "TotalEnergies" sözlükte yoksa bu bir hata değil,
-  // sözlüğe eklenecek yeni bir caridir. Tedarikçi bu tipte YOK (payload künyesi): mal bedeli mal
-  // kabule bağlıdır ve banka eşleştirmesinden yazılır.
-  const counterpartyText = typeof args.counterpartyName === 'string' && args.counterpartyName.trim() ? args.counterpartyName.trim() : null;
-  const counterpartyOutcome = counterpartyText
-    ? pinpointCounterparty(await new CounterpartyService(db).list({ activeOnly: true }), counterpartyText)
-    : ({ status: 'none' } as const);
-  if (counterpartyOutcome.status === 'ambiguous') {
-    return { error: `'${counterpartyText}' birden çok cariye gidiyor (${counterpartyOutcome.count}) — tam adı verin.` };
-  }
-  const counterparty = counterpartyOutcome.status === 'found' ? counterpartyOutcome.record : null;
+  // Kime ödendiği tam ad ya da eşleşme kelimesiyle bulunur (`resolveCounterparty`). Bulunamazsa öneri
+  // YİNE kurulur: ad kartta yazılı kalır, kimlik boş ve seçimi operatör yapar — fiş fotoğrafındaki
+  // "TotalEnergies" sözlükte yoksa bu bir hata değil, sözlüğe eklenecek yeni bir caridir. Tedarikçi bu
+  // tipte YOK (payload künyesi): mal bedelinin ödemesi tedarikçinin belgesine bağlanır (12.26).
+  const counterpartyText = textArg(args.counterpartyName);
+  const { counterparty, error: counterpartyError } = await resolveCounterparty(db, counterpartyText);
+  if (counterpartyError) return { error: counterpartyError };
   const payload: MoneyMovementPayload = {
     accountId: account.id,
     accountName: account.name,
@@ -1092,11 +1261,289 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   return {
     ...queued,
     ...(nature ? { nature: nature.label } : {}),
-    ...(counterpartyText && !counterparty
+    ...(counterpartyText && !counterparty ? { counterpartyNote: counterpartyNoteOf(counterpartyText) } : {}),
+  };
+}
+
+/** Bulunamayan carinin notu — ad kartta kalır; para hareketi ve belge önerisinin (22.44) ortak cümlesi. */
+function counterpartyNoteOf(text: string): string {
+  return `Cari bulunamadı: '${text}' — ad kartta duracak, kimliği yönetici seçer ya da Sözlük'ten açar. Tam adı ya da eşleşme kelimesini biliyorsanız onunla tekrar gönderin.`;
+}
+
+/**
+ * Fatura kaleminin ORTAK sorunları — eşleşme, varyant kimliği ve adet (mal kabul ve faturadan sipariş).
+ * Kalemin eşleşme sorunu varsa kimlik cümlesi yazılmaz: aynı kusur iki kez okunmasın.
+ */
+function invoiceLineProblems(i: number, line: ResolvedInvoiceLine, known: boolean, rawQty: unknown): string[] {
+  const problems: string[] = [];
+  if (line.problem) {
+    problems.push(line.problem);
+  } else if (!isUuid(line.variantId)) {
+    problems.push(`lines[${i}]: variantId UUID biçiminde değil (gelen: "${line.variantId || '(boş)'}") — katalogdaki kimliği olduğu gibi kullanın.`);
+  } else if (!known) {
+    problems.push(`lines[${i}]: varyant bulunamadı (${line.variantId}) — katalogdan doğru kimliği bulun.`);
+  }
+  const qty = Number(rawQty);
+  if (!Number.isInteger(qty) || qty <= 0) problems.push(`lines[${i}]: qty pozitif tam sayı olmalı (gelen: ${String(rawQty)}).`);
+  return problems;
+}
+
+/**
+ * FATURADAN TEDARİK SİPARİŞİ (22.44 · kullanıcı kararı 14.09) — tedarikçi faturayı mal gelmeden kesti.
+ *
+ * Tipik vaka e-postayla önden gelen fatura: mal yolda, SKT ve lot henüz görülmedi. Mal kabul önerisi burada
+ * YANLIŞ araçtır — SKT'siz kalem kabule giremez ve uydurulamaz. Sipariş onayda GÖNDERİLMİŞ açılır
+ * (`sendPurchaseOrder`; tedarikçiye mesaj gitmez), fatura siparişe bağlı bir belge olarak doğar ve tedarikçi
+ * borcu o belgeden türer; mal gelince rampa bu siparişi sayar, SKT ve lotu orada girer.
+ *
+ * Kalemler mal kabulle AYNI yoldan çözülür (`resolveInvoiceLines`): tedarikçinin adıyla eşlemeden; eşleme
+ * yoksa modelin katalogda bulduğu varyant eşleme önerisi olur. Tedarikçi ZORUNLU — faturanın sahibi o. Aynı
+ * numaralı fatura aynı tedarikçiye ikinci kez yazılmaz.
+ */
+async function proposeInvoicePurchaseOrder(
+  db: ReturnType<typeof serviceDb>,
+  args: Record<string, unknown>,
+  warehouse: { id: string; code: string },
+  rawLines: Record<string, unknown>[],
+) {
+  const { supplier, error: supplierError } = await resolveSupplier(db, args);
+  if (supplierError) return { error: supplierError };
+  if (!supplier) {
+    return {
+      error:
+        'Faturadan siparişte tedarikçi zorunlu — faturadaki vergi numarasını (supplierVatNumber), telefonu (supplierPhone) ya da tam unvanı (supplierName) verin. Kayıtlı değilse önce propose_supplier_create ile önerin.',
+    };
+  }
+
+  const invoiceArgs = typeof args.invoice === 'object' && args.invoice !== null ? (args.invoice as Record<string, unknown>) : null;
+  if (!invoiceArgs) return { error: 'invoice zorunlu — faturadan siparişte faturanın tarihi (issuedOn) ve toplamı (totalAmountCents) gerekli.' };
+  const totalAmountCents = invoiceArgs.totalAmountCents;
+  if (!Number.isInteger(totalAmountCents) || (totalAmountCents as number) <= 0) {
+    return { error: 'invoice.totalAmountCents faturanın yazdığı KDV dâhil toplam olmalı (cent, pozitif tam sayı) — satırların toplamı değil.' };
+  }
+  if (!isIsoDay(invoiceArgs.issuedOn)) return { error: "invoice.issuedOn 'YYYY-AA-GG' olmalı — faturanın üzerindeki tarih." };
+  const issuedOn = String(invoiceArgs.issuedOn);
+  const terms = await invoiceTermsFrom(db, invoiceArgs, supplier, { totalCents: totalAmountCents as number, issuedOn });
+  if ('error' in terms) return { error: terms.error };
+  const number = textArg(invoiceArgs.number);
+  if (number && (await new MoneyDocumentService(db).listByNumber(number)).some((doc) => doc.supplierId === supplier.id)) {
+    return { error: `${supplier.name} için '${number}' numaralı belge zaten kayıtlı — aynı fatura ikinci kez yazılmaz. Yöneticiye sorun.` };
+  }
+
+  // Eşlemeler bir kez okunur: kalem çözümü ve son alış fiyatı aynı listeden.
+  const mappings = await new SupplierProductService(db).listBySupplier(supplier.id);
+  const resolved = resolveInvoiceLines(mappings, supplier, rawLines);
+  const named = await variantsWithNames(db, resolved.map((line) => line.variantId).filter(isUuid));
+  const lastPriceByVariant = lastPriceByVariantOf(mappings);
+
+  // Kalem hataları TOPLU döner (mal kabulün aynı gerekçesi): model bütün sorunları tek turda görsün.
+  const lines: PurchaseOrderPayload['lines'] = [];
+  const problems: string[] = [];
+  for (const [i, raw] of rawLines.entries()) {
+    const line = resolved[i]!;
+    const found = named.get(line.variantId);
+    problems.push(...invoiceLineProblems(i, line, found !== undefined, raw.qty));
+    const price = raw.unitPriceCents;
+    const priceGiven = price !== undefined && price !== null;
+    if (priceGiven && (!Number.isInteger(price) || (price as number) < 0)) {
+      problems.push(`lines[${i}]: unitPriceCents faturadaki KDV hariç birim fiyat olmalı (cent, tam sayı; gelen: ${String(price)}).`);
+    }
+    if (!found || problems.length > 0) continue;
+    lines.push({
+      variantId: found.variant.id,
+      productName: found.name,
+      qty: Number(raw.qty),
+      lastPurchasePriceCents: lastPriceByVariant.get(found.variant.id) ?? null,
+      // Faturanın birim fiyatı; okunmadıysa `null` ve kapı eşlemedeki son alışı yazar — uydurulmaz.
+      unitPriceCents: priceGiven ? (price as number) : null,
+      supplierItemKey: line.key,
+      supplierItemName: line.name,
+      mappingProposed: line.proposed,
+    });
+  }
+  if (problems.length > 0) return { error: `${problems.length} kalem sorunu — hepsini düzeltip tekrar gönderin:`, problems };
+
+  const invoice: InvoiceTermsPayload = {
+    number,
+    issuedOn,
+    dueOn: terms.dueOn,
+    totalAmountCents: totalAmountCents as number,
+    vatAmountCents: terms.vatAmountCents,
+    vatRegime: terms.vatRegime,
+  };
+  const note = textArg(args.note);
+  const payload: PurchaseOrderPayload = {
+    warehouseId: warehouse.id,
+    warehouseCode: warehouse.code,
+    supplierId: supplier.id,
+    supplierName: supplier.name,
+    lines,
+    ...(note ? { note } : {}),
+    source: 'invoice',
+    invoice,
+  };
+  const summary = `${supplier.name} — fatura${number ? ` ${number}` : ''}: ${lines.length} kalemlik sipariş, mal bekleniyor (${warehouse.code})`;
+  const queued = await queue('purchase_order', payload, summary, args.reason);
+
+  const anyPrice = lines.some((line) => line.unitPriceCents !== null);
+  return {
+    ...queued,
+    supplier: supplier.name,
+    ...mappingCountsOf(lines, 'siparişi'),
+    ...(anyPrice
       ? {
-          counterpartyNote: `Cari bulunamadı: '${counterpartyText}' — ad kartta duracak, kimliği yönetici seçer ya da Sözlük'ten açar. Tam adı ya da eşleşme kelimesini biliyorsanız onunla tekrar gönderin.`,
+          totalCheck: invoiceTotalCheck({
+            totalAmountCents: invoice.totalAmountCents,
+            vatAmountCents: invoice.vatAmountCents,
+            vatRegime: invoice.vatRegime,
+            linesCents: lines.reduce((sum, line) => sum + (line.unitPriceCents ?? 0) * line.qty, 0),
+          }),
         }
       : {}),
+    invoiceDocument: `Onayda sipariş GÖNDERİLMİŞ açılır (tedarikçiye mesaj gitmez) ve fatura siparişe bağlı belge olarak doğar (rejim: ${invoice.vatRegime}); tedarikçi borcu o belgeden türer. Mal gelince rampa sayar, SKT ve lotu orada girer. Dosyasını yönetici onay ekranında bırakır.`,
+  };
+}
+
+/**
+ * BELGE ÖNERİSİ — mal dışı fatura ya da fiş (22.44 · kullanıcı kararı 14.09): kira, muhasebeci, sigorta,
+ * telefon, akaryakıt fişi. Borç ŞİMDİ doğar; ödemesi sonra hareket olarak gelir ve belgeye bağlanır.
+ *
+ * Asistan belgeyi okur, araç okunanı DOĞRULAR: karşı taraf nokta atışı (tedarikçi faturadaki kimlikle, cari
+ * tam ad ya da kelimeyle), tür sözlükten, rejim KDV'yle çelişmez, aynı numara aynı tarafa ikinci kez
+ * yazılmaz. Mal faturası bu yoldan GİRMEZ: mal geldiyse mal kabul, gelmediyse faturadan sipariş — ikisi de
+ * belgeyi stok bağıyla doğurur ve borç o bağla doğru okunur. Dosya MCP'den geçmez; yönetici onay ekranında
+ * bırakır.
+ */
+export async function proposeMoneyDocument(args: Record<string, unknown>) {
+  const db = serviceDb();
+  const kind = DocumentKindEnum.safeParse(textArg(args.kind));
+  if (!kind.success) return { error: `kind ${DocumentKindEnum.options.map((option) => `'${option}'`).join(' | ')} olmalı.` };
+  const direction = textArg(args.direction);
+  if (direction !== 'in' && direction !== 'out') {
+    return { error: "direction 'out' (biz ödeyeceğiz — neredeyse hep) ya da 'in' (bize ödenecek: iade, alacak dekontu) olmalı." };
+  }
+  if (!isIsoDay(args.issuedOn)) return { error: "issuedOn 'YYYY-AA-GG' olmalı — belgenin üzerindeki tarih." };
+  const issuedOn = String(args.issuedOn);
+  const amountCents = args.amountCents;
+  if (!Number.isInteger(amountCents) || (amountCents as number) <= 0) {
+    return { error: 'amountCents belgenin yazdığı KDV dâhil toplam olmalı (cent, pozitif tam sayı).' };
+  }
+
+  // ── KARŞI TARAF: TEDARİKÇİ YA DA CARİ, İKİSİ BİRDEN DEĞİL ─────────────────
+  // Belge kapısının kuralı (`createMoneyDocument`): karşı taraf en çok bir tanedir. Tedarikçi faturadaki
+  // kimlikle bulunur ve bulunamaması HATADIR; cari bulunamazsa ad kartta kalır — sözlüğe eklenecek yeni
+  // bir caridir.
+  const counterpartyText = textArg(args.counterpartyName);
+  const { supplier, error: supplierError } = await resolveSupplier(db, args);
+  if (supplierError) return { error: supplierError };
+  if (supplier && counterpartyText) {
+    return {
+      error: 'Belgenin tek karşı tarafı olur — tedarikçi kimliği ile counterpartyName birlikte verilmez. Belgeyi kesen tedarikçimizse yalnız tedarikçi kimliğini verin.',
+    };
+  }
+  if (!supplier && !counterpartyText) {
+    return {
+      error: 'Karşı taraf gerekli — belgeyi kesen tedarikçimizse supplierVatNumber / supplierPhone / supplierName, değilse counterpartyName (belgedeki ad, olduğu gibi).',
+    };
+  }
+  const { counterparty, error: counterpartyError } = await resolveCounterparty(db, counterpartyText);
+  if (counterpartyError) return { error: counterpartyError };
+
+  const { nature, error: natureError } = await resolveNature(db, textArg(args.nature), direction);
+  if (natureError) return { error: natureError };
+
+  const terms = await invoiceTermsFrom(db, args, supplier, { totalCents: amountCents as number, issuedOn });
+  if ('error' in terms) return { error: terms.error };
+
+  // Aynı numara aynı tarafa ikinci kez yazılmaz. Numara tekil DEĞİL (iki taraf aynı numarayı kesebilir),
+  // bu yüzden karşı tarafla süzülür; cari bulunamadıysa kimlikle kıyaslanamaz — onayda operatör görür.
+  const number = textArg(args.number);
+  if (number && (supplier || counterparty)) {
+    const booked = (await new MoneyDocumentService(db).listByNumber(number)).some((doc) =>
+      supplier ? doc.supplierId === supplier.id : doc.counterpartyId === counterparty?.id,
+    );
+    if (booked) {
+      return { error: `'${number}' numaralı belge ${supplier?.name ?? counterparty?.name} için zaten kayıtlı — aynı belge ikinci kez yazılmaz. Yöneticiye sorun.` };
+    }
+  }
+
+  const payload: MoneyDocumentPayload = {
+    kind: kind.data,
+    number,
+    issuedOn,
+    dueOn: terms.dueOn,
+    direction,
+    supplierId: supplier?.id ?? null,
+    supplierName: supplier?.name ?? null,
+    counterpartyId: counterparty?.id ?? null,
+    // Bulunduysa KAYITTAKİ ad, bulunmadıysa belgede yazan — para hareketi önerisinin aynı sözleşmesi.
+    counterpartyName: counterparty?.name ?? counterpartyText,
+    nature: nature?.slug ?? null,
+    amountCents: amountCents as number,
+    vatAmountCents: terms.vatAmountCents,
+    vatRegime: terms.vatRegime,
+    note: textArg(args.note),
+  };
+  const party = payload.supplierName ?? payload.counterpartyName ?? '';
+  const summary = `Belge — ${party}: ${formatPrice(payload.amountCents, 'tr')}${nature ? ` (${nature.label})` : ''}`;
+  const queued = await queue('money_document', payload, summary, args.reason);
+  return {
+    ...queued,
+    ...(supplier ? { supplier: supplier.name } : {}),
+    ...(nature ? { nature: nature.label } : {}),
+    // Rejim verilmediyse sunucu önerdi — model neyin yazılacağını görsün.
+    vatRegime: terms.vatRegime,
+    ...(counterpartyText && !counterparty ? { counterpartyNote: counterpartyNoteOf(counterpartyText) } : {}),
+    fileNote: 'Belgenin dosyası bu araçtan geçmez — yönetici onay ekranında bırakır.',
+  };
+}
+
+/**
+ * TEDARİKÇİ ÖNERİSİ — faturanın başlığından yeni kart (22.44 · kullanıcı kararı 14.09).
+ *
+ * Tedarikçiler hiçbir araçtan listelenmez (22.42); yeni biri yalnız bu yoldan girer. Araç kayıtlı bir
+ * tedarikçiye NOKTA ATIŞI gitmediğini doğrular: aynı vergi no, telefon ya da tam adla kayıt varsa RET ve
+ * kaydın adı söylenir — pasif kayıt da sayılır, ikinci kart borcu ikiye bölerdi. Kapı onayda bir kez daha
+ * sorar (`saveSupplierAction`).
+ */
+export async function proposeSupplierCreate(args: Record<string, unknown>) {
+  const db = serviceDb();
+  const name = textArg(args.name);
+  if (!name) return { error: 'name zorunlu — faturadaki tam unvan, olduğu gibi.' };
+  const country = textArg(args.country)?.toUpperCase() ?? null;
+  if (country && !/^[A-Z]{2}$/.test(country)) {
+    return { error: `country ISO 3166-1 iki harfli kod olmalı (BE, TR, FR…; gelen: '${country}').` };
+  }
+  const term = args.paymentTermDays;
+  const termGiven = term !== undefined && term !== null;
+  if (termGiven && (!Number.isInteger(term) || (term as number) < 0)) {
+    return { error: `paymentTermDays gün sayısı olmalı (tam sayı, 0 ya da büyük; gelen: '${String(term)}') — peşinse göndermeyin.` };
+  }
+
+  const identity = { vatNumber: textArg(args.vatNumber), phone: textArg(args.phone), name };
+  const existing = pinpointSupplier(await new SupplierService(db).list(), identity);
+  if (existing.status === 'found') {
+    return { error: `Bu tedarikçi zaten kayıtlı: '${existing.record.name}'. Faturayı o kayıtla işleyin — vergi numarası ya da tam adıyla.` };
+  }
+  if (existing.status === 'ambiguous') {
+    return { error: `Verilen kimlikler (vergi no, telefon, ad) ${existing.count} kayıtlı tedarikçiye gidiyor — tedarikçi zaten kayıtlı. Yöneticiye sorun.` };
+  }
+
+  const payload: SupplierCreatePayload = {
+    name,
+    vatNumber: identity.vatNumber,
+    phone: identity.phone,
+    email: textArg(args.email),
+    address: textArg(args.address),
+    country,
+    paymentTermDays: termGiven ? (term as number) : null,
+    note: textArg(args.note),
+  };
+  const queued = await queue('supplier_create', payload, `Yeni tedarikçi — ${name}${country ? ` (${country})` : ''}`, args.reason);
+  return {
+    ...queued,
+    nextStep:
+      'Yönetici kartı onaylayınca faturayı yeniden gönderin (propose_stock_intake · propose_purchase_order · propose_money_document) — tedarikçi o zaman vergi numarasıyla bulunur.',
   };
 }
 

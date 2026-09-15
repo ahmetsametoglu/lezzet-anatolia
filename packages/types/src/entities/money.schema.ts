@@ -244,6 +244,20 @@ export type AccountBalance = z.infer<typeof AccountBalanceSchema>;
 export const DocumentKindEnum = z.enum(['invoice', 'receipt', 'payslip', 'contract', 'statement', 'other']);
 export type DocumentKind = z.infer<typeof DocumentKindEnum>;
 
+/**
+ * Belgenin KDV REJİMİ (12.26 · kullanıcı sorusu 14.09: "ters KDV etiket üzerinden mi belirlenmeli?").
+ *
+ * Etiket değil ALAN, çünkü "KDV 0" iki ayrı şeyi anlatıyordu: standart belgede sıfır KDV ile ters
+ * yüklemeli (autoliquidation) belge aynı görünüyordu ve muhasebecinin dökümünde ayırt edilemiyordu.
+ * `standard` belge KDV'yi kendisi taşır · `reverse_charge` AB içi alım ya da ithalat: belgede KDV yok,
+ * Fransız KDV'si bizim beyanımızda hesaplanıp indirilir · `exempt` muaf (sigorta, banka masrafı).
+ *
+ * **Satışın `VatTreatmentEnum`ı DEĞİL:** o, müşteriye kestiğimiz faturanın sorusu (alıcı AB'li B2B
+ * mi); bu, gelen belgenin. Aynı kümeye sıkıştırmak iki ayrı vergi kuralını tek adla anlatırdı.
+ */
+export const DocumentVatRegimeEnum = z.enum(['standard', 'reverse_charge', 'exempt']);
+export type DocumentVatRegime = z.infer<typeof DocumentVatRegimeEnum>;
+
 export const MoneyDocumentSchema = z.object({
   id: z.string().uuid(),
   kind: DocumentKindEnum,
@@ -251,11 +265,20 @@ export const MoneyDocumentSchema = z.object({
   number: z.string().nullable(),
   /** Belgenin kendi tarihi (ISO gün). */
   issuedOn: z.string(),
+  /** VADE (12.26) — ödemenin son günü; belgede yazmıyorsa `null`. Belge gününden önce olamaz (veri kısıtı). */
+  dueOn: z.string().nullable(),
   /** Karşı taraf (13.09): cari (kiraya veren, çalışan, kurum) — tedarikçiyse `supplierId`; ikisinden en çok biri. */
   counterpartyId: z.string().uuid().nullable(),
   supplierId: z.string().uuid().nullable(),
-  /** Stok alımının faturası mal kabule bağlanır; ikinci bir borç DOĞURMAZ (borç mal kabulden türer, 12.3). */
+  /**
+   * Stok alımının faturası MAL KABULE ya da TEDARİK SİPARİŞİNE bağlanır (12.26) — ikisinden en çok biri,
+   * ikisi de tedarikçi ister. **Borç bu belgeden türer** (12.26 · kullanıcı kararı 14.09): kabulün
+   * satır toplamı KDV hariçtir ve nakliye, iskonto içermez; faturanın toplamı ödenecek tutardır.
+   * Belgeli kabul `stock_intake_balance.has_document` taşır ve borca ikinci kez girmez.
+   */
   stockIntakeId: z.string().uuid().nullable(),
+  /** Faturası mal gelmeden kesilen sipariş (12.26): siparişin kabulleri bu belgeyle borçlanır. */
+  purchaseOrderId: z.string().uuid().nullable(),
   /** `out` = bizim ödeyeceğimiz (gelen fatura, bordro), `in` = bize ödenecek (tedarikçi iadesi). */
   direction: MovementDirectionEnum,
   /** Belgenin TÜRÜ (13.09) — ödemesi bağlanınca harekete de geçer (hareketin türü boşsa). */
@@ -264,6 +287,8 @@ export const MoneyDocumentSchema = z.object({
   amountCents: z.number().int(),
   /** KDV tutarı (**cent**); belgede yoksa `null` — sıfır "KDV yok" demektir, "bilinmiyor" değil. */
   vatAmountCents: z.number().int().nullable(),
+  /** KDV rejimi (12.26) — `standard` dışındaki rejimde belgede KDV olamaz (veri kısıtı `money_document_vat_regime`). */
+  vatRegime: DocumentVatRegimeEnum,
   currency: CurrencyEnum,
   /** Dosyanın ÖZEL kovadaki anahtarı (`r2Keys.financeDocument`); yoksa belge yalnız künyedir. */
   fileKey: z.string().nullable(),
@@ -278,13 +303,16 @@ export const MoneyDocumentInsertSchema = z.object({
   kind: DocumentKindEnum,
   number: z.string().nullish(),
   issuedOn: z.string(),
+  dueOn: z.string().nullish(),
   counterpartyId: z.string().uuid().nullish(),
   supplierId: z.string().uuid().nullish(),
   stockIntakeId: z.string().uuid().nullish(),
+  purchaseOrderId: z.string().uuid().nullish(),
   direction: MovementDirectionEnum,
   nature: z.string().nullish(),
   amountCents: z.number().int().positive(),
   vatAmountCents: z.number().int().nonnegative().nullish(),
+  vatRegime: DocumentVatRegimeEnum.optional(),
   currency: CurrencyEnum.optional(),
   fileKey: z.string().nullish(),
   tags: z.array(z.string()).optional(),
@@ -345,7 +373,10 @@ export const StockIntakeBalanceSchema = z.object({
   paidCents: z.number().int(),
   /** `amount − paid`; eksi çıkabilir (fazla ödeme) ve gizlenmez. */
   openAmountCents: z.number().int(),
+  /** Kabulün kendisine ya da SİPARİŞİNE bağlı bir belge var mı (12.26) — varsa borç belgenin açık kalanındadır. */
   hasDocument: z.boolean(),
+  /** Kabulün notu — irsaliye/fatura numarası orada durur; banka satırı onu anarsa referans eşleşmesi (12.26). */
+  note: z.string().nullable(),
 });
 export type StockIntakeBalance = z.infer<typeof StockIntakeBalanceSchema>;
 
