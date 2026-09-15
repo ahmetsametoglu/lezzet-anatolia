@@ -3,13 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { addressVerdict, type AddressCandidate } from './address-verdict';
 
 /**
- * **"Bu kapı var mı" kararı** (11.11) — merkezinde kullanıcının ölçtüğü gerçek vaka.
- *
- * İki sipariş, aynı adres satırı (`192c Rue du Maréchal Foch`), iki farklı posta kodu; kapı
- * yalnız birinde var ve aralarında 7,2 km. BAN'a kısıtsız sorulduğunda cevap netti:
- * `housenumber 0,973 → 67380 Lingolsheim`, `street 0,717 → 67000 Strasbourg`.
- *
- * Bu dosyanın işi, o cevabın **doğru karara** dönüştüğünü çivilemek.
+ * Merkezdeki vaka: aynı adres satırı iki kodla yazılmış ve kısıtsız BAN cevabı `housenumber 0,973 → 67380 Lingolsheim`,
+ * `street 0,717 → 67000 Strasbourg`; dosya bu cevabın doğru karara dönüştüğünü sabitler.
  */
 const LINGOLSHEIM: AddressCandidate = {
   label: '192c Rue du Maréchal Foch 67380 Lingolsheim',
@@ -56,8 +51,7 @@ describe('addressVerdict · doğrulanan kapı', () => {
 
 describe('addressVerdict · yanlış posta kodu (kullanıcının vakası)', () => {
   it('kapı BAŞKA kodda bulunduysa DÜZELTME TEKLİF EDİLİR', () => {
-    /* Ölçülen vakanın kendisi: müşteri 67000 Strasbourg yazdı, kapı 67380 Lingolsheim'de.
-       Bugün sistem bunu sessizce kabul ediyor ve kurye var olmayan bir kapıya sıralanıyor. */
+    /* Müşteri 67000 Strasbourg yazdı, kapı 67380 Lingolsheim'de: teklif olmazsa kurye var olmayan bir kapıya sıralanır. */
     const verdict = addressVerdict({
       matchedPrecision: 'street',
       elsewhere: [LINGOLSHEIM],

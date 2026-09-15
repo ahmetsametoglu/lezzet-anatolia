@@ -1,5 +1,5 @@
-// @lezzet/domain-core — UI'sız domain motoru: durum makinesi, stok, fiyat, kanal.
-// Yalnız types + helper bilir; uygulamayı bilmez. İçerik: docs/build/03-domain-core.md
+// Saf karar motoru: DB'siz ve uygulamasız, çünkü birim testi veritabanı olmadan koşmalı; bildiği paketleri
+// `pnpm boundaries` zorlar.
 export * from './pricing/resolve-price';
 export * from './pricing/apply-discount';
 export * from './pricing/bundle-allocation';
@@ -16,7 +16,6 @@ export * from './order/decisions';
 export * from './order/box-completion';
 export * from './order/customer-status';
 export * from './order/draft-payment';
-// Kimlik ÇAPASI (04.10) — "bu numaranın geçmişi kimin" sorusu; anahtar çözümünden ayrı bir karar.
 export * from './identity/anchor';
 export * from './identity/b2b-application';
 export * from './identity/b2b-approval';

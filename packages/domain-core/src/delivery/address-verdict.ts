@@ -1,25 +1,9 @@
 import type { AddressGeoPrecision } from '@lezzet/types';
 
 /**
- * **"Bu kapı var mı" sorusunun SAF cevabı** (11.11) — servis ne dediyse ondan çıkan karar.
- *
- * ── NEDEN AYRI BİR KARAR, NEDEN `precision` YETMİYOR ────────────────────────
- * `geo_precision` tek başına *"kapıyı doğrulayamadım"* diyor ama **neden**ini söylemiyor, ve iki
- * bambaşka hâl aynı değere düşüyor:
- *   · kapı hiçbir yerde yok — muhtemelen YENİ YAPI, adres doğru olabilir
- *   · kapı VAR ama BAŞKA posta kodunda — neredeyse kesin YAZIM HATASI
- * Birincisinde müşteriye söylenecek tek şey bir belirsizliktir; ikincisinde elimizde **doğrusu**
- * vardır ve tek tıkla düzeltilebilir. Aynı değerle gösterilirlerse müşteri geçerli bir yeni bina
- * adresini hata sanar, ya da gerçek hatayı belirsizlik sanıp geçer.
- *
- * ── ÖLÇÜLMÜŞ VAKA (kullanıcı bulgusu 01.09) ────────────────────────────────
- * `192c Rue du Maréchal Foch` iki siparişte aynı yazılmıştı:
- *   · `67380 Lingolsheim` → kapı bulundu (BAN skoru **0,973**) — GERÇEK
- *   · `67000 Strasbourg`  → yalnız aynı adlı SOKAK (0,717) — kapı YOK, 7,2 km ötede
- * Kodu pinleyen tek bir sorgu bunu göremez: BAN'a *"67000 içinde bul"* dediğimiz sürece
- * Lingolsheim'ı hiç duymayız. Kararın girdisi bu yüzden İKİ sorgudur — kısıtlı ve kısıtsız.
- *
- * Karar burada saf ve DB'siz; hangi servise sorulduğu (BAN, Google) çağıranın bilgisi.
+ * "Bu kapı var mı" sorusunun saf cevabı: `geo_precision` kapının doğrulanamadığını söyler ama nedenini söylemez, oysa hiçbir
+ * yerde olmayan kapı (yeni yapı olabilir) ile başka kodda bulunan kapı (neredeyse kesin yazım hatası) ayrı cevap ister. Karar bu
+ * yüzden kısıtlı ve kısıtsız iki sorgudan çıkar, çünkü kodu pinleyen sorgu başka koddaki kapıyı hiç duymaz.
  */
 
 /** Kısıtsız aramadan dönen bir aday — hangi kodda, hangi incelikte, ne güvenle. */
@@ -27,11 +11,7 @@ export interface AddressCandidate {
   /** Servisin verdiği tam etiket — düzeltme teklifinin metni bu olur. */
   label: string;
   postalCode: string;
-  /**
-   * Şehir — teklifi UYGULAYABİLMEK için şart. `label` gösterim metnidir ve ayrıştırılamaz
-   * (servisin yazımı, aksanlar, sıralama); düzeltme ise satıra yapılandırılmış alan yazar.
-   * Ölçülen vakada değişen tam olarak bu ikili: sokak+numara aynı, **kod ve şehir** farklı.
-   */
+  /** Teklifi uygulamak için şart: `label` ayrıştırılamayan gösterim metnidir, düzeltme ise satıra yapılandırılmış alan yazar. */
   city: string;
   precision: AddressGeoPrecision;
   /** Servisin eşleşme güveni (0..1). */
@@ -49,22 +29,14 @@ export type AddressVerdict =
   | { kind: 'not_found' };
 
 /**
- * Düzeltme TEKLİF etmek için gereken asgari güven.
- *
- * Eşik `geocode-provider`ın `MIN_SCORE`undan (0,4) YÜKSEK ve bilerek: o eşik *"bu bir cevap mı"*
- * sorusunun, bu ise *"müşterinin ağzına söz koyacak kadar emin miyim"* sorusunun eşiği. Zayıf bir
- * eşleşmeyle *"şunu mu demek istediniz"* demek, doğru yazılmış bir adresi yanlışmış gibi gösterir.
- * Ölçülen vakada doğru cevap 0,973 ile rahatça geçiyor.
+ * Teklif eşiği `geocode-provider`ın `MIN_SCORE`undan yüksek: o "bu bir cevap mı", bu "müşterinin ağzına söz koyacak kadar emin
+ * miyim" sorusunun eşiği.
  */
 const OFFER_MIN_SCORE = 0.8;
 
 /**
- * İki aday bu farktan yakınsa AYIRT EDİLEMEZ sayılır ve teklif YAPILMAZ.
- *
- * Motorun `indistinguishable` reddiyle aynı disiplin (`route-order.ts`): birbirine denk iki
- * seçenekten birini seçmek bir hesap değil, bir kura. Aynı kapı iki ayrı kodda benzer güvenle
- * bulunuyorsa doğru cevap "hangisi olduğunu bilmiyorum"dur — müşteriye rastgele birini önermek,
- * onu bizim tahminimize göre adresini değiştirmeye davet ederdi.
+ * Bu farktan yakın iki aday ayırt edilemez sayılır ve teklif yapılmaz: denk iki seçenekten birini önermek müşteriyi bizim
+ * tahminimizle adresini değiştirmeye davet ederdi.
  */
 const AMBIGUOUS_MARGIN = 0.05;
 

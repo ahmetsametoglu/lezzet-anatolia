@@ -2,30 +2,10 @@ import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 /**
- * SINIR BEKÇİSİNİN BEKÇİSİ (02.19) — `pnpm boundaries` gerçekten ısırıyor mu?
- *
- * ── NEDEN VAR ────────────────────────────────────────────────────────────────
- * `.dependency-cruiser.cjs`teki dört kapsam kuralı (`types-is-pure`, `domain-core-scope`,
- * `database-scope`, `ai-scope`) **doğduklarından 26.08'e kadar hiç ateşlenemedi.** Hepsi hedefi
- * modül ADIYLA arıyordu (`^@lezzet/…`), oysa depcruise workspace importunu **çözülmüş yola**
- * çevirir: `@lezzet/domain-core` → `packages/domain-core/src/index.ts`. Kalıp hiçbir kenara uymuyor,
- * kural hiçbir şey yakalamıyordu.
- *
- * Arızanın sinsi yanı belirtisizliğiydi: `pnpm boundaries` her koşuda **yeşil** dönüyordu. Yeşillik
- * "ihlal yok" demek değildi, "bakamıyorum" demekti — ve altında gerçek bir ihlal duruyordu
- * (`packages/database/…/bundle.test.ts → @lezzet/domain-core`). Kör bir bekçi, bekçisizlikten
- * beterdir: bekçisizlik bilinir, körlük bilinmez.
- *
- * ── NEDEN BÖYLE SINANIYOR ────────────────────────────────────────────────────
- * Bu test depcruise'u KOŞTURMAZ. Koşturmak "bugün depoda ihlal var mı" sorusunu yanıtlar; buradaki
- * soru başka ve kalıcı: **"kural, bir ihlal olsaydı onu görebilir miydi?"** Depo bugün temiz olduğu
- * için koşu her hâlde yeşil döner — yani koşturmak, tam da gizlemek istediğimiz körlüğü gizlerdi.
- *
- * O yüzden kalıplar, depcruise'un ürettiği GERÇEK yol biçimine karşı sınanır. Biri kalıbı modül
- * adına geri çevirirse ya da yeni bir paketi yanlışlıkla serbest bırakırsa, burası kırmızıya döner.
- *
- * İddialar KURALDAN yazılmıştır, koddan değil: her satır "şu bağımlılık yasak olmalı" der;
- * yapılandırmanın bugün ne dediğini tekrarlamaz.
+ * `pnpm boundaries`in gerçekten ısırdığını sınar: kalıplar depcruise'un ürettiği çözülmüş yol biçimine karşı denenir, çünkü
+ * depcruise'u koşturmak yalnız "bugün ihlal var mı"yı cevaplar ve temiz depoda her hâlde yeşil döner. İddialar kuraldan yazılır,
+ * yapılandırmanın bugün ne dediğinden değil: kalıp modül adına geri çevrilir ya da bir paket yanlışlıkla serbest kalırsa
+ * kırmızıya döner.
  */
 
 const config = createRequire(import.meta.url)('../.dependency-cruiser.cjs') as {
@@ -75,9 +55,8 @@ describe('kapsam kuralları çözülmüş yolu görür (asıl arıza buydu)', ()
 
 describe('kalıp modül adına GERİLETİLİRSE kural körleşir — o yüzden ikisi birden tutulur', () => {
   /*
-    Kalıplar hem çözülmüş yolu hem modül adını kabul ediyor. Çözülmüş yol asıl haldir (workspace
-    kurulu olduğunda depcruise onu üretir); modül adı emniyettir — paket kurulu değilse depcruise
-    ham dizeyi bırakır ve kural yine de görmelidir. Biri atılırsa o hâl kör kalır.
+    Çözülmüş yol asıl hâldir (workspace kuruluyken depcruise onu üretir), modül adı emniyettir (paket kurulu değilse depcruise ham
+    dizeyi bırakır); biri atılırsa o hâl kör kalır.
   */
   it('çözülemeyen import (ham modül adı) da yakalanır', () => {
     expect(kural('database-scope').to.test('@lezzet/domain-core')).toBe(true);

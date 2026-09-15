@@ -1,13 +1,6 @@
 /**
- * **Durağın kapısı doğrulandı mı** (11.11) — sipariş anlık görüntüsünden okunan SAF karar.
- *
- * Ek sorgu YOK: `addressSnapshot` adres satırının tamamının kopyası (`checkout-draft`:
- * `addressSnapshot: { ...address }`), yani koordinat künyesi ve düzeltme önerisi zaten içinde.
- *
- * ── NEDEN SİPARİŞTEN, ADRES KAYDINDAN DEĞİL ────────────────────────────────
- * Snapshot **sipariş anındaki** gerçeği taşır ve sevkiyatçının sorusu tam olarak o: *"bu sipariş
- * hangi adrese çıkıyor."* Adres kaydı sonradan düzeltilmiş olabilir — düzeltme bir sonraki siparişi
- * ilgilendirir, araca bugün yüklenen kutuyu değil.
+ * Kapı doğrulaması sipariş anlık görüntüsünden okunur, adres kaydından değil: sevkiyatın sorusu siparişin çıktığı adrestir ve
+ * sonradan yapılan düzeltme bir sonraki siparişi ilgilendirir. Görüntü adres satırının tam kopyası olduğu için ek sorgu gerekmez.
  */
 
 import type { DoorCheck } from '@lezzet/types';

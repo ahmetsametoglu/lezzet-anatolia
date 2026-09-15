@@ -2,12 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { addressAnomalies, cityMatchesPlaces, placeLabel } from './place-name';
 
 /**
- * Yer adının güvenilirliği (19.17).
- *
- * Bu testlerin çivilediği şey 19.8'in YANLIŞ İDDİASI: "birden çok yerleşim varsa üst idari birime
- * çık, daha geniş ama asla yanlış değil". Fransız arrondissement'ı merkez kasabasının adını taşıdığı
- * için o etiket geçerli bir belediye adı gibi okunuyordu — 67800 için "Strasbourg", oysa orası
- * Bischheim / Hœnheim.
+ * Fransız arrondissement'ı merkez kasabasının adını taşır: üst idari birime çıkan bir etiket 67800'e "Strasbourg" yazar, oysa
+ * orası Bischheim / Hœnheim.
  */
 describe('kodun tartışmasız adı var mı', () => {
   it('tek yerleşimli kod adını verir — kodların %60,6\'sı böyle', () => {
@@ -15,11 +11,7 @@ describe('kodun tartışmasız adı var mı', () => {
   });
 
   it('ÇOK yerleşimli kodda ad YOKTUR — birini seçmek yanlış belediye adı yazmaktı', () => {
-    // 67800: gerçek hâl. Eski kural buraya "Strasbourg" yazıyordu ve Bischheim'lı müşteri
-    // adresinde başka bir şehrin adını görüyordu.
-    //
-    // `null` "gösterilecek bir şey yok" DEMEK DEĞİL: `places` ekranın elinde ve ne yazacağına
-    // (liste, ilk N + "+X", çıplak kod) o karar verir. Burada verilen cevap VERİYE aittir.
+    // `null` "gösterilecek bir şey yok" demek değil: `places` ekranın elinde ve ne yazacağına ekran karar verir.
     expect(placeLabel(['Bischheim', 'Hœnheim'])).toBeNull();
   });
 
@@ -28,15 +20,9 @@ describe('kodun tartışmasız adı var mı', () => {
   });
 });
 
-// `normalizePlaceName`in kendi testleri `@lezzet/helper`a taşındı (`OB-03` · 15.08), fonksiyonla
-// birlikte. Aşağıdaki `cityMatchesPlaces` testleri onu dolaylı olarak zaten sürüyor.
-
 /**
- * Adres tutarlılığı — YAŞANMIŞ arızanın kapısı.
- *
- * `LA-26-RFRWKK`: `67000` + `LINGOLSHEIM`, rota + kapıda ödeme. Lingolsheim'ın kodu 67380 ve o kod
- * rotamızda yok; kurye kapıya gidemezdi. Yolu belirleyen tek şey posta koduydu ve hiçbir yerde
- * adresle karşılaştırılmıyordu.
+ * Yol yalnız posta kodundan belirlenir: `67000` + `LINGOLSHEIM` yazan müşterinin kapısı rotada olmayan 67380'dedir ve kurye
+ * oraya gidemez.
  */
 describe('yazılan şehir bu koda ait mi', () => {
   it('ait olmayan şehir YAKALANIR', () => {
@@ -51,8 +37,7 @@ describe('yazılan şehir bu koda ait mi', () => {
   });
 
   it('BİLİNMEYEN kod engellemez — ölçülemeyen değer sıfır değildir', () => {
-    // Kod referansta yok ama kendi bölge tablomuzda olabilir (19.16a). Boş listeyi "uyuşmadı"
-    // saymak, referansı eksik olan her adresi reddetmek olurdu.
+    // Kod referansta olmayıp bölge tablomuzda olabilir; boş listeyi "uyuşmadı" saymak eksik referanslı her adresi reddederdi.
     expect(cityMatchesPlaces('Bischheim', [])).toBe(true);
   });
 
@@ -76,23 +61,19 @@ describe('yazılan şehir bu koda ait mi', () => {
   });
 });
 
-/**
- * Adres uyarıları (19.19) — operasyon listesinin işareti. Sınanan şey ayrımın kendisi: "bilmiyorum"
- * ile "çelişiyor" aynı uyarı DEĞİL, ve ikisi birden basılmaz.
- */
+/** "Bilmiyorum" ile "çelişiyor" aynı uyarı değildir ve ikisi birden basılmaz. */
 describe('addressAnomalies', () => {
   it('kod hiçbir yerde tanınmıyorsa unknown_code', () => {
     expect(addressAnomalies({ city: 'Neresi', places: [], inRoute: false })).toEqual(['unknown_code']);
   });
 
   it('kod KENDİ bölge tablomuzdaysa tanınır — referans susmuş olsa bile', () => {
-    // 19.16a: kendi tablomuz referansın üstündedir. GeoNames bir kodu bilmiyor olabilir; biz o kodu
-    // bölgemize eklediysek oraya gidiyoruz demektir ve uyarı yanlış öterdi.
+    // Bölge tablomuz referansın üstündedir: kodu bölgemize eklediysek oraya gidiyoruz ve uyarı yanlış öterdi.
     expect(addressAnomalies({ city: 'Neresi', places: [], inRoute: true })).toEqual([]);
   });
 
   it('YAŞANMIŞ vaka: 67000 + LINGOLSHEIM → city_mismatch', () => {
-    // 19.17'yi doğuran şikâyet. Burada bilinmeyen bir şey yok: iki beyan birbiriyle çelişiyor.
+    // Bilinmeyen bir şey yok: iki beyan birbiriyle çelişiyor.
     expect(addressAnomalies({ city: 'LINGOLSHEIM', places: ['Strasbourg'], inRoute: true })).toEqual(['city_mismatch']);
   });
 

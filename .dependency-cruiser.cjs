@@ -1,29 +1,8 @@
 /**
- * Paket sınırı kuralları — STACK §4 "bağımlılık tek yönlü".
- * İhlal `pnpm boundaries` ile hata olarak yakalanır.
- *
- * **HEDEF ÇÖZÜLMÜŞ YOLLA EŞLENİR, MODÜL ADIYLA DEĞİL — sadeleştirmeyin.** Bu satır 26.08'e kadar
- * *"workspace bağımlılığı modül adıyla (`@lezzet/<ad>`) eşlenir"* diyordu ve YANLIŞTI: depcruise
- * workspace importunu çözer, `@lezzet/domain-core` kenarda `packages/domain-core/src/index.ts`
- * olarak görünür. Sonucu dört kuralın (`types-is-pure`, `domain-core-scope`, `database-scope`,
- * `ai-scope`) **doğduklarından beri hiç ateşlenememesiydi** — ve altlarında gerçek bir ihlal
- * duruyordu. `pnpm boundaries` yine de her koşuda yeşil dönüyordu: yeşillik "ihlal yok" değil,
- * "bakamıyorum" demekti. Yanlış beyanın kendisi arızayı görünmez kıldı, çünkü okuyan kalıbı
- * sorgulamak yerine künyeye güvendi.
- *
- * Kalıplar bu yüzden İKİ hâli birden kabul eder: çözülmüş yol (asıl hâl) ve ham modül adı (paket
- * kurulu değilse depcruise dizeyi bırakır). Bekçinin ısırdığını `scripts/boundaries.test.ts`
- * sabitliyor — depcruise'u koşturmaz, çünkü depo temizken koşu her hâlde yeşil döner ve tam da
- * gizlemek istediğimiz körlüğü gizler; kalıpları gerçek yol biçimine karşı sınar.
- *
- * **`boundaries` komutu neden İKİ parçalı** (sadeleştirmeyin): `apps/web`'in `@/` takma adı
- * `apps/web/tsconfig.json`'un `paths`'inde tanımlı ve depcruise bunu ancak `--ts-config` ile
- * çözebiliyor. Kökten `--ts-config apps/web/tsconfig.json` ÇALIŞMAZ — TS, `include` yollarını
- * cwd'ye göre çözüp `TS18003` verir; o yüzden web koşusu `pnpm -C apps/web` ile o dizinden
- * başlatılır. Tek parçaya indirilirse `@/` ile yazılan her import HİÇBİR YERE GİTMEYEN bir kenar
- * olur (ölçüldü: 4106 kenarın 1352'si, %33) ve iki bekçi birden körleşir: `no-orphans`'ın tamamı
- * yanlış pozitife döner (yalan söyleyen uyarı okunmaz), `no-circular` ise yalnız GÖRELİ
- * importlardan kurulu döngüleri görür — `@/` üzerinden kurulan bir döngü sessiz kalır.
+ * Paket sınırı kuralları (STACK §4): kalıplar hedefi hem çözülmüş yolla (`packages/<ad>/src/index.ts`) hem ham modül adıyla
+ * eşler, çünkü depcruise workspace importunu çözer ve yalnız modül adına bakan kural hiçbir kenarı göremez; bunu
+ * `scripts/boundaries.test.ts` sabitler. `boundaries` komutu web'i kendi dizininden ayrıca koşar, çünkü `@/` takma adı ancak
+ * `apps/web/tsconfig.json` ile çözülür ve çözülmeyen kenarlar `no-orphans`ı yanlış pozitife, `no-circular`ı körlüğe iter.
  */
 module.exports = {
   forbidden: [
@@ -75,10 +54,8 @@ module.exports = {
       comment: 'Bağlantısız modül (config/kabuk dosyaları hariç).',
       from: {
         orphan: true,
-        // `packages/mobile-kit` HARİÇ (21.310): kitin tüketeni native uygulamalar ve onlar bu koşuda
-        // cruise EDİLMİYOR — uygulamadan kullanılan her kit modülü burada "yetim" görünürdü (ölçüldü
-        // 14.09: ilk taşınan `defer-press.ts`). Yalan söyleyen uyarı okunmaz; kitin ölü dosyasını
-        // `knip` görür, çünkü uygulamanın derin importunu (`@lezzet/mobile-kit/src/…`) izler.
+        // `packages/mobile-kit` hariç: tüketeni olan native uygulamalar bu koşuda taranmaz ve her kit modülü yetim görünürdü;
+        // kitin ölü dosyasını `knip` görür, çünkü uygulamanın derin importunu izler.
         pathNot: ['\\.d\\.ts$', 'src/index\\.ts$', 'config\\.(ts|js|mjs|cjs)$', '^packages/mobile-kit/'],
       },
       to: {},
@@ -86,9 +63,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    // `.next-prod` de dışarıda: paralel production derlemesinin çıktısı (`NEXT_DIST_DIR`), kaynak
-    // değil. `\.next` kalıbı onu YAKALAMIYOR (araya `-prod` giriyor) ve derlenmiş 283 dosya
-    // "orphan" diye uyarıya düşüp gerçek ihlalleri gömüyordu — eslint'te aynısı düzeltilmişti.
+    // `.next-prod` production derlemesinin çıktısıdır, kaynak değil; `\.next` kalıbı araya `-prod` girdiği için onu yakalamaz.
     exclude: { path: '(\\.next(-prod)?|\\.turbo|dist)/' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
