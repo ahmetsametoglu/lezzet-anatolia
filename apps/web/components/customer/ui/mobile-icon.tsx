@@ -1,21 +1,9 @@
 import { CUSTOMER_ICON_PATHS, ICON_PATHS, ICON_STROKE, type IconName } from '@lezzet/design-tokens/icons';
 
 /**
- * Telefon görünümünün ikonu — native kitin `Icon` ve `CustomerIcon` çizicilerinin web ikizi
- * (kullanıcı kararı 14.09: müşterinin telefon tasarımı uygulamada ve web'de aynı, ikon dahil).
- *
- * Geometri ve çizgi durakları `@lezzet/design-tokens/icons`ta, iki yüzeyin ortak ve platformdan bağımsız
- * kısmında; burada yalnız ÇİZİM. Kurallar native'inkiyle aynı: kare olmayan kutuda genişlik
- * `viewBox` oranından türer, büyük geometri ince, vurgulu ikon kalın çizilir, uçlar yuvarlak.
- * Renk `currentColor`: web'de ikon rengini yanındaki metin verir (native'de açık prop, çünkü RN
- * renk mirası vermiyor). İkon SESSİZDİR — yanındaki metin ya da düğmenin adı konuşur.
- *
- * İKİ BİLEŞEN, İKİ SÖZLÜK — native'deki gibi: `MobileIcon` kitin sözlüğünü, `MobileCustomerIcon`
- * müşteri tamamlayıcısını çizer. Ekran port edilirken native ekran hangisini kullanıyorsa o seçilir;
- * iki sözlükte aynı adla iki ayrı çizim var (`check`), tek bileşende ad hangisinin çizileceğini
- * söyleyemezdi.
- *
- * Masaüstü kendi v1 setini taşır (`icons.tsx`, kullanıcı kararı 14.09).
+ * Telefon görünümünün ikonu, native kitin `Icon` ve `CustomerIcon` çizicilerinin web ikizi: geometri ve çizgi durakları
+ * `@lezzet/design-tokens/icons`ta, burada yalnız çizim; renk `currentColor`, çünkü web'de ikon rengini yanındaki metin verir.
+ * İki sözlükte aynı adla iki ayrı çizim (`check`) olduğu için iki bileşen var; ekran native'de hangisini kullanıyorsa o seçilir.
  */
 
 type CustomerIconName = keyof typeof CUSTOMER_ICON_PATHS;
