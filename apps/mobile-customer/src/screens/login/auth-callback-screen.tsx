@@ -3,12 +3,12 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { LoadingState } from '../../components/ui/loading-state';
-import { fetchMe } from '../../lib/api/me';
-import { exchangeOAuthCode } from '../../lib/auth/oauth';
-import { useAppLocale } from '../../lib/i18n/app-locale';
-import { toastSuccess } from '../../lib/toast/toast-store';
-import { publishMe } from '../../lib/me/use-me.hook';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
+import { fetchMe } from '@lezzet/mobile-kit/src/lib/api/me';
+import { exchangeOAuthCode } from '@lezzet/mobile-kit/src/lib/auth/oauth';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
+import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import messages from '@lezzet/i18n/customer/login';
 
 /*

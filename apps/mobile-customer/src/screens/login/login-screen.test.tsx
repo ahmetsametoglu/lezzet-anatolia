@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import type { Me } from '../../lib/api/me';
-import { meFixture } from '../../testing/me-fixture';
+import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { LoginScreen } from './login-screen';
 
 /*
@@ -22,7 +22,7 @@ const mockSetSession = jest.fn(async () => ({ error: null }));
 /* `getSession` de gerekli: doğrulama bitince ekran KÜNYEYİ okuyor (`fetchMe` → yetkili istek) ve
    o yol oturum jetonunu buradan alıyor. Eksik bırakılırsa test gerçek akışı değil, mock'un
    patlamasını ölçer. */
-jest.mock('../../lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({
     auth: {
       setSession: mockSetSession,
@@ -32,10 +32,10 @@ jest.mock('../../lib/auth/supabase', () => ({
 }));
 
 const mockGoogle = jest.fn(async (): Promise<{ error: string | null }> => ({ error: null }));
-jest.mock('../../lib/auth/oauth', () => ({ signInWithGoogle: () => mockGoogle() }));
+jest.mock('@lezzet/mobile-kit/src/lib/auth/oauth', () => ({ signInWithGoogle: () => mockGoogle() }));
 
 const mockDevSignIn = jest.fn(async (_email: string): Promise<{ error: string | null }> => ({ error: null }));
-jest.mock('../../lib/auth/dev-login', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/dev-login', () => ({
   DEV_ACCOUNTS: [
     { label: 'Müşteri', email: 'musteri@test.fr', operations: false },
     { label: 'Kurye', email: 'kurye@test.fr', operations: true },
@@ -45,7 +45,7 @@ jest.mock('../../lib/auth/dev-login', () => ({
 
 // Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı bırakmasın.
 const mockToast = jest.fn();
-jest.mock('../../lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
   toastError: (m: string) => mockToast(m),
   toastInfo: (m: string) => mockToast(m),

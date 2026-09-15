@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import { AuthCallbackScreen } from '@lezzet/mobile-kit/src/screens/login/auth-callback-screen';
+import { AuthCallbackScreen } from '@/screens/login/auth-callback-screen';
 
 /*
   Rota İNCE (login kabuğunun deseni) — `lezzetanatolie://auth/callback?code=…` derin bağlantısı

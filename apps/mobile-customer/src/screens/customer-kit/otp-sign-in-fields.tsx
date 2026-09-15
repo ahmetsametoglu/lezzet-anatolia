@@ -5,7 +5,7 @@ import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state
 import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
-import { CodeField } from '@lezzet/mobile-kit/src/screens/login/code-field';
+import { CodeField } from '@/screens/login/code-field';
 import type { useOtpSignIn } from './use-otp-sign-in.hook';
 
 /*

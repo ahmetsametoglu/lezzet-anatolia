@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react-native';
 
-import type { Me } from '../../lib/api/me';
-import { meFixture } from '../../testing/me-fixture';
+import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
+import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
 import { AuthCallbackScreen } from './auth-callback-screen';
 
 /*
@@ -17,7 +17,7 @@ import { AuthCallbackScreen } from './auth-callback-screen';
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
-jest.mock('../../lib/auth/supabase', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/auth/supabase', () => ({
   getSupabase: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'access-1' } } }) } }),
 }));
 
@@ -25,10 +25,10 @@ const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ replace: (to: unknown) => mockReplace(to) }) }));
 
 const mockExchange = jest.fn(async (_code: string): Promise<{ error: string | null }> => ({ error: null }));
-jest.mock('../../lib/auth/oauth', () => ({ exchangeOAuthCode: (code: string) => mockExchange(code) }));
+jest.mock('@lezzet/mobile-kit/src/lib/auth/oauth', () => ({ exchangeOAuthCode: (code: string) => mockExchange(code) }));
 
 const mockToast = jest.fn();
-jest.mock('../../lib/toast/toast-store', () => ({
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({
   toastSuccess: (m: string) => mockToast(m),
   toastError: (m: string) => mockToast(m),
   toastInfo: (m: string) => mockToast(m),

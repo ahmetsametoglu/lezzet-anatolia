@@ -46,7 +46,9 @@
       "babel": true,
       "entry": [
         "src/testing/gorhom-bottom-sheet.mock.tsx",
-        "src/lib/settings/font-scale.ts"
+        "src/lib/settings/font-scale.ts",
+        "src/components/customer/customer-metrics.ts",
+        "src/lib/auth/error-text.ts"
       ]
     }
   },

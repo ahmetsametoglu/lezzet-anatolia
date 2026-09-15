@@ -6,26 +6,26 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { BackButton } from '../../components/ui/back-button';
-import { FormScroll } from '../../components/ui/form-scroll';
-import { Icon } from '../../components/ui/icon';
-import { LoadingState } from '../../components/ui/loading-state';
-import { PressableSurface } from '../../components/ui/pressable-surface';
-import { PrimaryButton } from '../../components/ui/primary-button';
-import { TextAction } from '../../components/ui/text-action';
-import { TextField } from '../../components/ui/text-field';
-import { DEV_ACCOUNTS, devSignIn } from '../../lib/auth/dev-login';
-import { authErrorText } from '../../lib/auth/error-text';
-import { signInWithGoogle } from '../../lib/auth/oauth';
-import { requestOtp, verifyOtp } from '../../lib/auth/otp';
-import { useAppLocale } from '../../lib/i18n/app-locale';
-import { fetchMe } from '../../lib/api/me';
-import { toastSuccess } from '../../lib/toast/toast-store';
-import { CustomerIcon } from '../../components/customer/customer-icon';
-import { customerMetrics } from '../../components/customer/customer-metrics';
-import { publishMe } from '../../lib/me/use-me.hook';
+import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
+import { FormScroll } from '@lezzet/mobile-kit/src/components/ui/form-scroll';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
+import { LoadingState } from '@lezzet/mobile-kit/src/components/ui/loading-state';
+import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
+import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-button';
+import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
+import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
+import { DEV_ACCOUNTS, devSignIn } from '@lezzet/mobile-kit/src/lib/auth/dev-login';
+import { authErrorText } from '@lezzet/mobile-kit/src/lib/auth/error-text';
+import { signInWithGoogle } from '@lezzet/mobile-kit/src/lib/auth/oauth';
+import { requestOtp, verifyOtp } from '@lezzet/mobile-kit/src/lib/auth/otp';
+import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { fetchMe } from '@lezzet/mobile-kit/src/lib/api/me';
+import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
+import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
+import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
+import { SESSION_ENDED_NOTICE, type LoginNotice } from '@lezzet/mobile-kit/src/screens/login/login-notice';
 import { CodeField } from './code-field';
-import { SESSION_ENDED_NOTICE, type LoginNotice } from './login-notice';
 import messages from '@lezzet/i18n/customer/login';
 
 /*
@@ -34,7 +34,8 @@ import messages from '@lezzet/i18n/customer/login';
   (`lib/auth/otp`), Google sistem tarayıcısı + şema dönüşüyle (`lib/auth/oauth` — PKCE); başarıda
   oturum cihaza yazılır. Hata METNİ ekran sözlüğünden, TÜRÜ sözleşmeden (`AuthErrorKey`).
   Müşteri uygulamasının girişidir: operasyon uygulaması kendi ekranını taşıyor (21.312 — kayıtlı olmayan
-  giremez, "hazır" ve "yetki yok" hâlleri).
+  giremez, "hazır" ve "yetki yok" hâlleri). 15.09'da ortak çekirdekten (21.310) müşteri uygulamasına döndü
+  (kullanıcı kararı): kitte yalnız iki uygulamanın ortak uyarı tanımı (`login-notice.ts`) kaldı.
 
   ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────
   1. **WhatsApp düğmesi BİLGİ VERİR** (web `login-client` ile aynı karar): sağlayıcı kurulmadı
@@ -255,7 +256,7 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
           // Statik varlık Metro'da `require` ile yüklenir (Expo png için modül tipi bildirmiyor,
           // `import` derlenmez) — kural TS import disiplinine bakıyor, varlık yolunu bilmiyor.
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('../../../assets/images/logo.png')}
+          source={require('@lezzet/mobile-kit/assets/images/logo.png')}
           style={styles.logo}
           accessibilityLabel={brand.name}
         />

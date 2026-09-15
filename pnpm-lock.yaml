@@ -922,9 +922,6 @@ importers:
 
   packages/mobile-kit:
     dependencies:
-      '@lezzet/brand':
-        specifier: workspace:*
-        version: link:../brand
       '@lezzet/design-tokens':
         specifier: workspace:*
         version: link:../design-tokens

@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 
 import { LoginNoticeSchema } from '@lezzet/mobile-kit/src/screens/login/login-notice';
-import { LoginScreen } from '@lezzet/mobile-kit/src/screens/login/login-screen';
+import { LoginScreen } from '@/screens/login/login-screen';
 
 /*
   HIZLI DOĞRULAMA — sekme kabuğunun dışında, kök yığında: tasarımda giriş bir SAYFA olarak
@@ -12,7 +12,8 @@ import { LoginScreen } from '@lezzet/mobile-kit/src/screens/login/login-screen';
   `lib/auth/use-session-ended-login`). Değer URL'den geldiği için süzülür (`LoginNoticeSchema`) —
   tanınmayan anahtar ekrana inmez.
 
-  Gizlilik adresi BURADAN verilir (21.310): ekran ortak çekirdekte ve rota ağacını bilmez. Giriş kişiyi
+  Gizlilik adresi BURADAN verilir (21.310 — ekran o gün ortak çekirdekteydi; 15.09'dan beri yine uygulamada ama
+  rota ağacını yine bu kabuk bilir). Giriş kişiyi
   geldiği yere döndürür; personelin girişi operasyon uygulamasının kendi ekranı (21.312).
 */
 

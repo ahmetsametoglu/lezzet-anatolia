@@ -1,7 +1,7 @@
 import { TextInput } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { customerMetrics } from '../../components/customer/customer-metrics';
+import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 
 /*
   TEK KULLANIMLIK KOD ALANI (v3:781) — kitin `TextField`inden BİLEREK ayrı: bu kontrol metin alanı
