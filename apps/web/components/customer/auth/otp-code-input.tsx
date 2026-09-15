@@ -5,7 +5,8 @@ import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 
-const CODE_LENGTH = 6;
+/** Kodun hane sayısı — telefon girişinin tek kod alanı da buradan okur. */
+export const CODE_LENGTH = 6;
 
 export type OtpVerifyResult = { ok: true } | { ok: false; error: string };
 export type OtpResendResult = { ok: true; cooldownSec?: number } | { ok: false; error: string; retryAfterSec?: number };

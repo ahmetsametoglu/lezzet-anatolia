@@ -10,8 +10,11 @@ import type { ReactNode } from 'react';
  *              durur. Hap girdiden (`pill-input`) ayrı çizim: etiket kabuğu var, köşe hap değil.
  *   `sheet`  — Mobil v1'in yer çekmecesindeki aynı alan: künye ve kutu `inline` ile aynı, zemin
  *              BEYAZ, metin 13,5px — çekmecenin zemini krem, alan ondan ayrılmalı.
+ *   `pill`   — telefon tasarımının hap alanı (15.09, "Hızlı Doğrulama" karesinin e-postası; native
+ *              `TextField`ın `shape="pill"`i): 54px gövde, hap köşe, beyaz zemin, 15px metin, 22px yan
+ *              dolgu. Künye kabuğu `form`unki — karede etiket yok, çağıran `hideLabel` verir.
  */
-export type FieldVariant = 'form' | 'inline' | 'sheet';
+export type FieldVariant = 'form' | 'inline' | 'sheet' | 'pill';
 
 /**
  * Form alanlarının ortak iskeleti = **K34 · Form Alanı** (envanter): etiket → kontrol → yardım/hata.
@@ -79,11 +82,16 @@ export function errorIdFor(fieldId: string, error?: string): string | undefined 
   return error ? `${fieldId}-error` : undefined;
 }
 
-/** Çizime göre değişen gövde: yükseklik, köşe, zemin, punto (gerisi iki çizimde ortak). */
+/**
+ * Çizime göre değişen gövde: yükseklik, köşe, zemin, punto ve YAN DOLGU (gerisi bütün çizimlerde ortak). Yan dolgu
+ * 15.09'da ortak satırdan buraya indi: hap alanın 22'si ortak `px-4`ün üstüne yazılamazdı — Tailwind çakışan iki
+ * sınıfı kaynak sırasına göre çözer, dizgideki sıraya göre değil (`pill-input` künyesinin aynı tuzağı).
+ */
 const CONTROL: Record<FieldVariant, string> = {
-  form: 'h-12 rounded-soft bg-card text-body',
-  inline: 'h-10.5 rounded-xl bg-cream text-body-sm font-semibold',
-  sheet: 'h-10.5 rounded-xl bg-card text-control font-semibold',
+  form: 'h-12 rounded-soft bg-card px-4 text-body',
+  inline: 'h-10.5 rounded-xl bg-cream px-4 text-body-sm font-semibold',
+  sheet: 'h-10.5 rounded-xl bg-card px-4 text-control font-semibold',
+  pill: 'h-13.5 rounded-pill bg-card px-5.5 text-body',
 };
 
 /**
@@ -129,7 +137,7 @@ const CONTROL: Record<FieldVariant, string> = {
  */
 export function controlClass(invalid?: boolean, extra?: string, variant: FieldVariant = 'form'): string {
   return [
-    'w-full border-[1.5px] px-4 font-sans leading-tight text-ink outline-none transition-colors placeholder:text-sand-600',
+    'w-full border-[1.5px] font-sans leading-tight text-ink outline-none transition-colors placeholder:text-sand-600',
     CONTROL[variant],
     'focus:border-olive focus:ring-[0.5px] focus:ring-inset focus:ring-olive disabled:cursor-not-allowed disabled:opacity-60',
     // Salt-okunur (ülke gibi sabit değerler): krem zemin + soluk kenar ve metin — K34'ün beşinci hâli.

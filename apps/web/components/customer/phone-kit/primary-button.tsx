@@ -25,6 +25,8 @@ interface PrimaryButtonProps {
   href?: ComponentProps<typeof Link>['href'];
   shape?: 'pill' | 'block';
   disabled?: boolean;
+  /** Formun gönder düğmesi — girişin e-posta formu Enter'la da gönderilir. Varsayılan `button`. */
+  type?: 'button' | 'submit';
 }
 
 const SHAPE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
@@ -39,7 +41,7 @@ const LIVE: Record<NonNullable<PrimaryButtonProps['shape']>, string> = {
     'cursor-pointer bg-olive text-on-image shadow-hard hover:bg-olive-dark active:translate-x-[3px] active:translate-y-[3px] active:shadow-none',
 };
 
-export function PrimaryButton({ label, onClick, href, shape = 'pill', disabled = false }: PrimaryButtonProps) {
+export function PrimaryButton({ label, onClick, href, shape = 'pill', disabled = false, type = 'button' }: PrimaryButtonProps) {
   const className = [
     'items-center justify-center px-6.5 font-sans text-button transition-[scale,translate,box-shadow,background-color]',
     SHAPE[shape],
@@ -61,7 +63,7 @@ export function PrimaryButton({ label, onClick, href, shape = 'pill', disabled =
     );
   }
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <button type={type === 'submit' ? 'submit' : 'button'} onClick={onClick} className={className}>
       {label}
     </button>
   );

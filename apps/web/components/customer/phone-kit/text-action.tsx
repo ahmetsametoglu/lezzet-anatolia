@@ -27,6 +27,11 @@ interface TextActionProps {
   /** Görünen metinden AYRI ekran okuyucu adı — "kaldır" tek başına hangi satırı söylemez. */
   ariaLabel?: string;
   edges?: 'all' | 'down';
+  /**
+   * Kapalı hâl — basılamaz ve soluk (native `TextAction`ın `disabled`ı; girişte yeniden gönderme cezası sürerken).
+   * Yalnız düğme kapanır: kapalı bir bağ çizilmez, verilmişse `href` yok sayılır (`PrimaryButton`ın aynı kuralı).
+   */
+  disabled?: boolean;
 }
 
 const EDGES: Record<NonNullable<TextActionProps['edges']>, string> = {
@@ -34,12 +39,20 @@ const EDGES: Record<NonNullable<TextActionProps['edges']>, string> = {
   down: 'after:-inset-x-1 after:top-0 after:-bottom-6',
 };
 
-export function TextAction({ label, onClick, href, externalHref, tone = 'olive', ariaLabel, edges = 'all' }: TextActionProps) {
+export function TextAction({ label, onClick, href, externalHref, tone = 'olive', ariaLabel, edges = 'all', disabled = false }: TextActionProps) {
   const className = [
-    "relative cursor-pointer font-sans text-control transition-opacity after:absolute after:content-[''] hover:opacity-70 active:opacity-50",
+    "relative font-sans text-control transition-opacity after:absolute after:content-['']",
+    disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:opacity-70 active:opacity-50',
     EDGES[edges],
     tone === 'olive' ? 'text-olive' : 'text-terracotta',
   ].join(' ');
+  if (disabled) {
+    return (
+      <button type="button" disabled aria-label={ariaLabel} className={className}>
+        {label}
+      </button>
+    );
+  }
   if (externalHref !== undefined) {
     return (
       <a href={externalHref} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={className}>

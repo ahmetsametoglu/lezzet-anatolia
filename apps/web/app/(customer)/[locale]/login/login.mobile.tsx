@@ -1,101 +1,236 @@
+'use client';
+
+import { useEffect, useState, type ReactNode } from 'react';
 import { brand } from '@lezzet/brand';
-import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
+import type { LocalizedCopy } from '@lezzet/i18n';
+import loginMessages from '@lezzet/i18n/customer/login';
+import { Link } from '@/i18n/navigation';
+import { CODE_LENGTH, type OtpResendResult, type OtpVerifyResult } from '@/components/customer/auth/otp-code-input';
+import { CodeField } from '@/components/customer/form/code-field';
 import { FormInputField } from '@/components/customer/form/form-input-field';
-import { Button } from '@/components/customer/ui/button';
-import { Icon } from '@/components/customer/ui/icons';
-import { GoogleIcon, WhatsAppIcon } from '@/components/customer/auth/provider-icons';
+import { LoadingState } from '@/components/customer/phone-kit/loading-state';
+import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
+import { BackButton } from '@/components/customer/ui/back-button';
+import { MobileCustomerIcon, MobileIcon } from '@/components/customer/ui/mobile-icon';
 import type { LoginViewProps } from './login-types';
 
-// Sıcak degrade — tasarımdaki hero image-slot yerine geçici placeholder (gerçek foto gelince değişir).
-// Kahraman gradyanı — token'lardan kurulur (envanter §0: bal · ara durak · mürekkep).
-const HERO_BG = 'linear-gradient(150deg,var(--color-honey) 0%,var(--color-hero-mid) 45%,var(--color-ink) 100%)';
+/*
+  HIZLI DOĞRULAMA — telefon görünümü (15.09): kaynak `design/01-musteri/Musteri Mobil.dc.html`'in "Hızlı Doğrulama"
+  karesi (uygulama ile web telefon görünümünün ortak tasarımı; kullanıcının paylaştığı görüntü). Native müşteri
+  girişiyle aynı ekran: ‹ · sola yaslı logo · başlık · sabit cümle · üç yol (Google · WhatsApp · E-posta) · gizlilik
+  cümlesi. E-posta yolunda alan ve "Tek kullanımlık kod gönder", sonra tek kod alanı; altı hane girilince kendiliğinden
+  doğrulanır.
 
-// Mobil sunumu (birincil biçim) — tasarım "Giris Mobil" (üstte hero'lu e-posta adımı) ve "Giris Kod"
-// (hero'suz başlık barlı kod adımı). Canvas çerçevesi (390px kart/rounded/shadow) chrome, atıldı;
-// ekran cihazı kaplar, sabit genişlik yok (yatay taşma olmaz).
-export function LoginMobile({ t, errors, subtitle, locale, stage, error, notice, isSending, emailInvalid, emailRef, emailField, onSubmit, onBack, onGoogle, onWhatsApp, onVerify, onResend }: LoginViewProps) {
-  if (stage.kind === 'code') {
+  Metin ortak sözlükten (`@lezzet/i18n/customer/login` — native aynı dosyayı okur); hata cümleleri web'in auth kapısından
+  (`login-client`). Seçim ile e-posta ayrımı YALNIZ bu görünümde: masaüstü e-postayı ilk ekranda açar; kod gönderme,
+  doğrulama ve başarıdaki yönlendirme ikisinde de `login-client`in.
+
+  ── TASARIMDAN SAPMALAR ─────────────────────────────────────────────────────
+  1. WhatsApp düğmesi bilgi verir: WhatsApp ile giriş kurulu değil (arka uç yalnız e-postaya kod gönderiyor); düğme
+     karedeki yerinde durur, basılınca "çok yakında" satırı çıkar (native aynı).
+  2. Karenin "Demo: herhangi 6 rakam girin" satırı yazılmadı — prototipin kendine notu.
+  3. ‹ girişi kapatır, kod adımında e-postaya dönmez (karenin `lg.cancel`i; native aynı).
+*/
+
+type Copy = LocalizedCopy<typeof loginMessages>;
+
+/** Seçim ekranı ile e-posta formu — kod aşaması `stage`ten gelir. */
+type Step = 'choose' | 'email';
+
+export function LoginMobile({ locale, stage, error, isSending, emailInvalid, emailRef, emailField, onSubmit, onGoogle, onVerify, onResend }: LoginViewProps) {
+  const copy: Copy = loginMessages[locale];
+  const [step, setStep] = useState<Step>('choose');
+  /** Seçim aşamasının bilgi satırı (WhatsApp "yakında"). */
+  const [notice, setNotice] = useState<string | null>(null);
+
+  return (
+    <main
+      // Telefon yazı ölçeği: giriş çerçevesiz bir sayfa (başlığını kendisi kuruyor), özniteliği kendisi taşır — telefon
+      // çerçevesinin kökündekiyle aynı (`site-frame.mobile.tsx`).
+      data-type-scale="phone"
+      className="flex min-h-dvh flex-col bg-sand-50 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink"
+    >
+      <div className="flex items-center px-3.5 pt-2">
+        <BackButton label={copy.back} fallback="/" />
+      </div>
+
+      <div className="flex flex-col gap-4 px-6.5 pt-5 pb-7.5">
+        <img src="/logo.jpg" alt={brand.name} className="h-10.5 self-start mix-blend-multiply" />
+        <h1 className="font-serif text-page-title-sm leading-tight text-ink">{copy.title}</h1>
+        <p className="font-sans text-control leading-normal font-normal text-body">{copy.body}</p>
+
+        {stage.kind === 'code' ? (
+          <CodeStep email={stage.email} copy={copy} onVerify={onVerify} onResend={onResend} />
+        ) : step === 'choose' ? (
+          <div className="mt-1.5 flex flex-col gap-2.5">
+            <ProviderButton
+              tone="card"
+              label={copy.google}
+              onClick={() => {
+                setNotice(null);
+                onGoogle();
+              }}
+              mark={
+                <span aria-hidden className="font-sans text-step font-bold text-brand-google">
+                  G
+                </span>
+              }
+            />
+            <ProviderButton tone="card" label={copy.whatsapp} onClick={() => setNotice(copy.whatsappSoon)} mark={<MobileIcon name="whatsapp" size={17} className="text-brand-whatsapp-pure" />} />
+            <ProviderButton
+              tone="olive"
+              label={copy.email}
+              onClick={() => {
+                setNotice(null);
+                setStep('email');
+              }}
+              mark={<MobileCustomerIcon name="mail" size={17} />}
+            />
+            {notice && <p className="mt-1.5 text-center font-sans text-note font-semibold text-olive-dark">{notice}</p>}
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} noValidate className="mt-1.5 flex flex-col gap-2.5">
+            <FormInputField
+              label={copy.emailField}
+              hideLabel
+              variant="pill"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder={copy.emailField}
+              error={emailInvalid ? copy.emailInvalid : undefined}
+              inputRef={emailRef}
+              {...emailField}
+            />
+            <PrimaryButton type="submit" shape="block" label={isSending ? copy.sending : copy.send} disabled={isSending} />
+          </form>
+        )}
+
+        {error && stage.kind !== 'code' && (
+          <p role="alert" className="text-center font-sans text-note font-semibold text-terracotta-bright">
+            {error}
+          </p>
+        )}
+
+        {/* Gizlilik bağlantısı CÜMLENİN İÇİNDE (karenin kendisi; native aynı). */}
+        <p className="mt-2.5 font-sans text-micro leading-normal text-muted">
+          {copy.legalPrefix}
+          <Link href="/legal/privacy" className="cursor-pointer text-olive underline transition-colors hover:text-olive-dark">
+            {copy.privacyInline}
+          </Link>
+          {copy.legalSuffix}
+        </p>
+      </div>
+    </main>
+  );
+}
+
+interface ProviderButtonProps {
+  label: string;
+  /** Sağlayıcının işareti — "G" harfi ya da ikon; renk çağırandan. */
+  mark: ReactNode;
+  /** `card` — beyaz, kum çerçeveli (Google · WhatsApp); `olive` — dolu zeytin (E-posta). */
+  tone: 'card' | 'olive';
+  onClick: () => void;
+}
+
+/** Karenin yol düğmesi — native girişin `providerButton`ı: 54 yükseklik, hap köşe, 20 yan dolgu, işaretle etiket arası 12. */
+function ProviderButton({ label, mark, tone, onClick }: ProviderButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'flex h-13.5 w-full cursor-pointer items-center gap-3 rounded-pill px-5 transition-[scale,border-color,background-color] active:scale-[0.97]',
+        tone === 'card' ? 'border-[1.5px] border-sand-400 bg-card text-ink hover:border-olive' : 'bg-olive text-card hover:bg-olive-dark',
+      ].join(' ')}
+    >
+      {mark}
+      <span className="font-sans text-body-sm font-bold">{label}</span>
+    </button>
+  );
+}
+
+interface CodeStepProps {
+  email: string;
+  copy: Copy;
+  onVerify: (code: string) => Promise<OtpVerifyResult>;
+  onResend: () => Promise<OtpResendResult>;
+}
+
+/** Kod aşaması: tek alan; altı hane girilince doğrulanır. Başarıda yönlendirmeyi `login-client` yapar. */
+function CodeStep({ email, copy, onVerify, onResend }: CodeStepProps) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<'input' | 'verifying' | 'done'>('input');
+  /** Sunucunun bekleme cezası (sn) — yalnız yeniden gönderme eyleminin etiketinde işler (native aynı kural). */
+  const [cooldownSec, setCooldownSec] = useState(0);
+  const [resending, setResending] = useState(false);
+
+  useEffect(() => {
+    if (cooldownSec <= 0) return;
+    const timer = setTimeout(() => setCooldownSec((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldownSec]);
+
+  const change = (digits: string) => {
+    setCode(digits);
+    setError(null);
+    if (digits.length !== CODE_LENGTH) return;
+    setPhase('verifying');
+    void onVerify(digits).then((result) => {
+      if (result.ok) {
+        setPhase('done');
+        return;
+      }
+      // Yanlış kod: alan temizlenir, cümle altında — native'in aynı akışı.
+      setPhase('input');
+      setCode('');
+      setError(result.error);
+    });
+  };
+
+  const resend = () => {
+    if (cooldownSec > 0 || resending) return;
+    setResending(true);
+    setCode('');
+    setError(null);
+    void onResend().then((result) => {
+      setResending(false);
+      if (result.ok) {
+        if (result.cooldownSec) setCooldownSec(result.cooldownSec);
+        return;
+      }
+      if (result.retryAfterSec) setCooldownSec(result.retryAfterSec);
+      setError(result.error);
+    });
+  };
+
+  if (phase !== 'input') {
     return (
-      <main className="flex min-h-screen flex-col bg-cream">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            {t.back}
-          </Button>
-          <img src="/logo.jpg" alt={brand.name} className="h-[38px] mix-blend-multiply" />
-          <span className="w-10" />
-        </div>
-        <div className="flex flex-col gap-4 px-6 pt-[22px] pb-10 text-center">
-          <h1 className="font-serif text-card-title font-semibold leading-tight text-ink">{t.codeTitle}</h1>
-          <OtpCodeInput email={stage.email} locale={locale} onVerify={onVerify} onResend={onResend} />
-        </div>
-      </main>
+      <div className="flex min-h-15.5 items-center justify-center py-6.5">
+        <LoadingState label={phase === 'done' ? copy.done : copy.verifying} />
+      </div>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col bg-cream">
-      {/* Hero (üst şerit) — foto + degrade cream'e iner; beyaz Geri + tazelik rozeti */}
-      <div className="relative h-[150px] flex-none" style={{ background: HERO_BG }}>
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,rgba(52,59,65,.34) 0%,rgba(52,59,65,0) 55%,rgba(250,246,236,.96) 100%)' }} />
-        <div className="absolute inset-x-4 top-3.5 flex items-center justify-between">
-          <button type="button" onClick={onBack} className="cursor-pointer font-sans text-body-sm font-bold text-on-image">
-            {t.back}
-          </button>
-          <span className="inline-flex items-center gap-1.5 rounded-2xl bg-cream/90 px-3 py-1 font-sans text-micro font-semibold uppercase tracking-wider text-olive">
-            <Icon name="snowflake" size={12} />
-            {t.heroPillShort}
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={onSubmit} className="-mt-1 flex flex-col gap-[18px] px-6 pt-1 pb-10" noValidate>
-        <div className="flex flex-col gap-2 text-center">
-          <img src="/logo.jpg" alt={brand.name} className="mx-auto h-11 mix-blend-multiply" />
-          <h1 className="font-serif text-page-title-sm text-ink">{t.title}</h1>
-          <p className="font-sans text-body-sm leading-relaxed text-body">{subtitle}</p>
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          <Button variant="secondary" compact fullWidth onClick={onGoogle}>
-            <GoogleIcon /> {t.googleCta}
-          </Button>
-          <Button variant="secondary" compact fullWidth onClick={onWhatsApp}>
-            <WhatsAppIcon /> {t.whatsappCta}
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-3 font-sans text-note text-sand-600">
-          <span className="h-px flex-1 bg-sand-300" />
-          {t.orEmail}
-          <span className="h-px flex-1 bg-sand-300" />
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          <FormInputField
-            label={t.emailPlaceholder}
-            hideLabel
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            placeholder={t.emailPlaceholder}
-            error={emailInvalid ? errors.invalidEmail : undefined}
-            inputRef={emailRef}
-            {...emailField}
-          />
-          <Button type="submit" compact fullWidth disabled={isSending}>
-            {isSending ? t.sending : t.sendCta}
-          </Button>
-        </div>
-
-        {error && <p className="text-center font-sans text-note font-semibold text-terracotta-bright">{error}</p>}
-        {notice && <p className="text-center font-sans text-note font-semibold text-olive">{notice}</p>}
-
-        <p className="text-center font-sans text-micro leading-relaxed text-muted">
-          {t.consentBefore}
-          <span className="text-olive">{t.consentLink}</span>
-          {t.consentAfter}
+    <div className="mt-1.5 flex flex-col gap-2.5">
+      <p className="font-sans text-control font-semibold text-ink">{copy.sent.replace('{email}', email)}</p>
+      <CodeField value={code} onChange={change} label={copy.codeField} placeholder={copy.codePlaceholder} length={CODE_LENGTH} invalid={error !== null} />
+      {error && (
+        <p role="alert" className="text-center font-sans text-note font-semibold text-terracotta-bright">
+          {error}
         </p>
-      </form>
-    </main>
+      )}
+      <div className="flex justify-center pt-1">
+        <TextAction
+          label={cooldownSec > 0 ? copy.resendWait.replace('{s}', String(cooldownSec)) : copy.resend}
+          onClick={resend}
+          disabled={cooldownSec > 0 || resending}
+        />
+      </div>
+    </div>
   );
 }
