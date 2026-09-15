@@ -46,7 +46,8 @@ const EXCLUDED_FONT_TOKENS = ['--font-sans', '--font-serif', '--font-ops-display
 //        telefon kataloğunun hap düğmesi ve anahtar topuzu (`customer.ts` künyesi).
 // 14.09 (5): +1 — ürün detayının sarkan fiyat rozetinin gölgesi (`price`).
 // 14.09 (6): +2 — hata ailesinin metni ve zemini (`error`, `error-bg`): paket detayının "bu adrese gitmiyor" işareti.
-const EXPECTED_LIGHT_COUNT = 204; // @theme bloğu, fontlar hariç (121 renk + 63 yazı + 9 yarıçap + 3 hareket + 8 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
+// 15.09: +2 — giriş düğmelerinin iki marka işareti (`brand-google`, `brand-whatsapp-pure`) telefon görünümüyle tabana çıktı.
+const EXPECTED_LIGHT_COUNT = 206; // @theme bloğu, fontlar hariç (123 renk + 63 yazı + 9 yarıçap + 3 hareket + 8 gölge) — +2: messenger/instagram marka (15.15) · +1: sert gölge (14.09)
 const EXPECTED_DARK_COUNT = 65; // operasyon karanlık bloğu (tümü --color-ops-*)
 
 const cssPath = fileURLToPath(new URL('../../../apps/web/app/globals.css', import.meta.url));

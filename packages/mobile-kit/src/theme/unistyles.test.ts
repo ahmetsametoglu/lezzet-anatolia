@@ -45,9 +45,11 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
     expect(lightTheme.radius.pill).toBe(Number.parseFloat(customerAppRadius.pill));
   });
 
-  it('uygulamaya-yeni aileleri ekler (hata çerçevesi · marka), tabana çıkanları tabandan okur (hata · örtü · kum · yarıçap)', () => {
+  it('uygulamaya-yeni aileleri ekler (hata çerçevesi · marka), tabana çıkanları tabandan okur (hata · örtü · kum · yarıçap · giriş işaretleri)', () => {
     expect(lightTheme.colors['error-line']).toBe(customerAppColors['error-line']);
-    expect(lightTheme.colors['brand-google']).toBe(customerAppColors['brand-google']);
+    expect(lightTheme.colors['brand-apple']).toBe(customerAppColors['brand-apple']);
+    // Giriş düğmelerinin iki işareti web telefon girişiyle tabana çıktı (15.09): değer aynı, kaynak taban.
+    expect(lightTheme.colors['brand-google']).toBe(customerColors['brand-google']);
     // Telefon görünümüyle tabana çıkanlar (14.09): değer aynı, kaynak taban.
     expect(lightTheme.colors.error).toBe(customerColors.error);
     expect(lightTheme.colors.scrim).toBe(customerColors.scrim);
@@ -202,7 +204,7 @@ describe('Operasyon teması ↔ üç katman kompozisyonu', () => {
   it('WhatsApp ikon yeşili İKİNCİ KEZ yazılmadı — operasyon marka ihracından gelir', () => {
     expect(operationsTheme.colors['brand-whatsapp']).toBe(operationsBrand['brand-whatsapp']);
     // Müşterinin kanonik marka yeşiliyle karışmaz: iki ayrı ad, iki ayrı bağlam.
-    expect(operationsTheme.colors['brand-whatsapp-pure']).toBe(customerAppColors['brand-whatsapp-pure']);
+    expect(operationsTheme.colors['brand-whatsapp-pure']).toBe(customerColors['brand-whatsapp-pure']);
     expect(operationsTheme.colors['brand-whatsapp']).not.toBe(operationsTheme.colors['brand-whatsapp-pure']);
   });
 

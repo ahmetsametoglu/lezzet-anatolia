@@ -154,6 +154,17 @@ export const customerScrim = {
   'scrim-heavy': 'rgba(21, 23, 15, 0.82)', // fotoğrafın alt kenarı, üstünde başlık okunur
 } as const satisfies Record<string, string>;
 
+/* ── Marka işaretleri — Token Kararlari #5 · (telefon, 15.09) ─────────────────
+   Palete AİT DEĞİL: üçüncü tarafların kendi renkleri, temayla dönmez. Giriş ekranının iki sağlayıcı işareti
+   telefon görünümüyle tabana çıktı (web telefon girişi, `Musteri Mobil.dc.html` "Hızlı Doğrulama"): Google
+   düğmesinin "G"si ve WhatsApp'ın kanonik yeşili. AD ÇARPIŞMASI: `brand-whatsapp` adı operasyonun koyultulmuş
+   ikon yeşiline (#128c4b, `operations.ts`) ait — aynı CSS adı iki değer taşıyamaz; kanonik yeşil Token Kararlari
+   #21 ile `brand-whatsapp-pure` adını aldı, ikisi aynı markanın iki bağlamdaki tonu. */
+export const customerBrand = {
+  'brand-whatsapp-pure': '#25d366', // giriş: WhatsApp düğmesinin ikonu
+  'brand-google': '#4285f4', // giriş: Google düğmesinin "G"si
+} as const satisfies Record<string, string>;
+
 /* Müşteri renklerinin tam kümesi — CSS dosya sırasıyla (`--color-` öneki). */
 export const customerColors = {
   ...customerSurface,
@@ -165,6 +176,7 @@ export const customerColors = {
   ...customerError,
   ...customerInteraction,
   ...customerScrim,
+  ...customerBrand,
 } as const satisfies Record<string, string>;
 
 /* ── §0.4b Tipografi ölçeği (`--text-` öneki · aynı envanter bölümü) ─────────

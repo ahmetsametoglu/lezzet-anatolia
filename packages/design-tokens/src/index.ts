@@ -19,6 +19,7 @@ export {
   customerError,
   customerInteraction,
   customerScrim,
+  customerBrand,
   customerColors,
   customerText,
   customerPhoneTextStepPx,

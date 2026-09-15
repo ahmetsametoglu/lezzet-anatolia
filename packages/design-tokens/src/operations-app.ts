@@ -63,8 +63,9 @@
   MARKA: WhatsApp ikonunun #128c4b'si de yeni değil — `operationsBrand['brand-whatsapp']` TAM
   olarak bu değerdir ve gerekçesi de aynıdır (koyultulmuş ikon yeşili, operasyon bağlamı). Marka
   renkleri palete ait olmadığı için önekleri de yoktur; operasyon mobil teması o tek anahtarlı
-  ihracı doğrudan yayar. `customer-app.ts`teki `brand-whatsapp-pure` (#25d366) AYRI bir kayıttır —
-  müşteri uygulamasının kanonik marka yeşili; ikisi tek ada indirilmedi, indirilmemeli.
+  ihracı doğrudan yayar. `customer.ts`teki `brand-whatsapp-pure` (#25d366; 15.09'a dek `customer-app.ts`te,
+  web telefon girişiyle tabana çıktı) AYRI bir kayıttır — müşterinin kanonik marka yeşili; ikisi tek ada
+  indirilmedi, indirilmemeli.
 
   Değerler tabandaki gibi CSS dizgesi tutulur ("20px", "rgba(…)"); birim/parse dönüşümü tüketicinin
   işidir. Karanlık mod YOK: operasyonun karanlık teması masaüstü yüzeyinindir (`operations.ts`);

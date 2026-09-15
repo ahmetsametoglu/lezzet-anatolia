@@ -89,7 +89,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
   });
 
   it('uygulamaya-YENİ anahtarlar tabanda yok, birleşimde var', () => {
-    for (const key of ['error-line', 'cream-glass', 'cream-glass-soft', 'accent-leaf', 'brand-google']) {
+    for (const key of ['error-line', 'cream-glass', 'cream-glass-soft', 'accent-leaf', 'brand-apple']) {
       expect(customerColors, `${key} tabanda olmamalı`).not.toHaveProperty(key);
       expect(composedColors, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
@@ -132,7 +132,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     expect(composedText).not.toHaveProperty('badge-sm--letter-spacing');
   });
 
-  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 22 yeni', () => {
+  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 20 yeni', () => {
     expect(sharedKeys(customerColors, customerAppColors)).toHaveLength(6);
     expect(sharedKeys(customerRadius, customerAppRadius)).toHaveLength(2);
     // Tipografide tek çakışma üstbaşlığın üç alt-anahtarıdır; dördüncü bir çakışma bilinçsizdir.
@@ -159,8 +159,10 @@ describe('customer-app ↔ customer kompozisyonu', () => {
        34 → 32 (14.09, katalog turu): düğme etiketi (`button` + ağırlık) tabana çıktı; gölgenin
        `soft`u da tabana çıktı ama sayıda kalır (aynı gerekçe).
        32 → 30 (14.09, paketler turu): hata ailesinin metni ve zemini (`error` · `error-bg`) tabana çıktı —
-       web telefon görünümünün "bu adrese gitmiyor" işareti; çerçevesi (`error-line`) burada kalır. */
-    expect(appTotal).toBe(30); // 8 fark + 22 uygulamaya-yeni
+       web telefon görünümünün "bu adrese gitmiyor" işareti; çerçevesi (`error-line`) burada kalır.
+       30 → 28 (15.09, giriş turu): giriş düğmelerinin iki marka işareti (`brand-google` · `brand-whatsapp-pure`)
+       tabana çıktı — web telefon girişi aynı işaretleri çiziyor. */
+    expect(appTotal).toBe(28); // 8 fark + 20 uygulamaya-yeni
   });
 
   it('birleşim tabanı BÜYÜTÜR, küçültmez — hiçbir taban anahtarı kaybolmaz', () => {

@@ -119,13 +119,9 @@ export const customerAppAccent = {
    marka yeşili "olumlu" demek değildir) ve temayla dönmezler — döndükleri an marka olmaktan
    çıkarlar. Token olarak duruyorlar ki ham hex ikon/rozet gövdesine dağılmasın (CLAUDE §3). */
 export const customerAppBrand = {
-  /* AD ÇARPIŞMASI: Token Kararlari #5 bunu "brand-whatsapp" diye yazmıştı, ama o ad ZATEN
-     operasyonun koyultulmuş ikon yeşiline (#128c4b) ait — aynı CSS adı iki değer taşıyamaz.
-     `brand-whatsapp-pure` (WhatsApp'ın kanonik marka yeşili) Token Kararlari #21 ile RESMÎ ad
-     oldu; operasyonun `brand-whatsapp`ı ayrı bir kayıt olarak yerinde kalıyor — ikisi aynı
-     markanın iki farklı bağlamdaki tonudur, tek ada indirilmedi. */
-  'brand-whatsapp-pure': '#25d366',
-  'brand-google': '#4285f4', // Google ile giriş düğmesi
+  /* Giriş ekranının iki işareti (`brand-whatsapp-pure` · `brand-google`) web telefon girişiyle tabana çıktı
+     (15.09, `customer.ts` `customerBrand` — ad çarpışmasının künyesi de orada); burada yalnız uygulamanın
+     ödeme ve giriş işaretleri kaldı. */
   /* Apple Pay / Apple ile giriş — ham siyah. `ink`e ÇEKİLMEZ: marka işareti paletin mürekkebi
      değildir ve Apple'ın kılavuzu tam siyah ister. */
   'brand-apple': '#000000',
@@ -137,7 +133,7 @@ export const customerAppBrand = {
   'brand-mastercard-alt': '#f79e1b',
 } as const satisfies Record<string, string>;
 
-/* Uygulamaya-özgü renklerin tam kümesi (17): 6 fark + 11 yeni. Tabanla birleştirilerek
+/* Uygulamaya-özgü renklerin tam kümesi (15): 6 fark + 9 yeni. Tabanla birleştirilerek
    kullanılır — `{ ...customerColors, ...customerAppColors }`. */
 export const customerAppColors = {
   ...customerAppOverrides,
