@@ -262,8 +262,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     marginBottom: -theme.space.md,
   },
   logo: {
-    height: customerMetrics.loginLogoHeight,
-    width: customerMetrics.loginLogoHeight * LOGO_ASPECT,
+    height: customerMetrics.onboardingLogoHeight,
+    width: customerMetrics.onboardingLogoHeight * LOGO_ASPECT,
   },
   /* Onboarding'in adım gövdesiyle aynı ölçü ve hizalama. */
   content: {

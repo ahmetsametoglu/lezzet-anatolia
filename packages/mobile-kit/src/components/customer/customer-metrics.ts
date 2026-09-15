@@ -68,7 +68,7 @@ export const customerMetrics = {
   codeFieldHeight: 62,
 
   /** Karşılama ve künye tamamlama ekranlarının üstündeki logo; genişlik görselin oranından türer. */
-  loginLogoHeight: 52,
+  onboardingLogoHeight: 52,
 
   /** Onay ekranlarının büyük ✓ dairesi ve ödeme ekranındaki küçüğü. */
   confirmMark: 92,

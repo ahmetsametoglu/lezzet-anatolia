@@ -535,8 +535,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   /* Genişlik orandan hesaplanır, `aspectRatio`ya bırakılmaz: satır kabında `height + aspectRatio` çözülmez, görsel ham
      boyuna düşüp "Atla"yı dışarı iter. */
   logo: {
-    height: customerMetrics.loginLogoHeight,
-    width: customerMetrics.loginLogoHeight * LOGO_ASPECT,
+    height: customerMetrics.onboardingLogoHeight,
+    width: customerMetrics.onboardingLogoHeight * LOGO_ASPECT,
   },
   skip: {
     fontFamily: theme.font.body[theme.text['badge--font-weight']],
