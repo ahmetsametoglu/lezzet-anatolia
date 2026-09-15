@@ -10,7 +10,7 @@ import {
   type DeliveryZoneUpdate,
   type DeliveryZoneWithCodes,
 } from '@lezzet/types';
-import { normalizePostalCode } from '@lezzet/helper';
+import { normalizePostalCode } from '@lezzet/address';
 import { BaseDbService } from '../core/base.service';
 
 /** Karar vermez, bölge satırlarını getirir; rota içi ve teslim günü kararını çağıran motora sorar. */

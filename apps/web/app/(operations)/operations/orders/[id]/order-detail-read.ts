@@ -34,7 +34,6 @@ import {
   derivePaymentStatusForOrder,
   dueDateOf,
   defaultsToDiscardOnReturn,
-  doorCheckOf,
   fulfilledLineAmountCents,
   isFulfillmentSettled,
   isOverdue,
@@ -45,6 +44,7 @@ import {
   skippedBetween,
   vatSplitOf,
 } from '@lezzet/domain-core';
+import { doorCheckOf } from '@lezzet/address';
 import { listOrderBoxes, readDeliveryProof, readOrderTracking, thumbnailImageUrl } from '@lezzet/application';
 import { toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';

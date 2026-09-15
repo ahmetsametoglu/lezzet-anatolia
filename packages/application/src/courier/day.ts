@@ -13,11 +13,11 @@ import {
   UserProfileService,
   WarehouseService,
 } from '@lezzet/database';
+import { doorCheckOf } from '@lezzet/address';
 import {
   canAccessWarehouse,
   canTransition,
   deliveryRunReferenceNo,
-  doorCheckOf,
   sortBySequence,
   warehouseScope,
   whatsAppLink,

@@ -1,4 +1,5 @@
 import type { AddressGeoPrecision } from '@lezzet/types';
+import { normalizePostalCode } from './postal-code';
 
 /**
  * "Bu kapı var mı" sorusunun saf cevabı: `geo_precision` kapının doğrulanamadığını söyler ama nedenini söylemez, oysa hiçbir
@@ -65,11 +66,11 @@ export function addressVerdict(input: {
     /* Kapı İSTENEN kodda bulunduysa adres doğrudur: kısıtlı sorgu bulamamış olabilir (sorgu metni,
        yazım), ama servis kapının orada olduğunu söylüyor. Bunu "yanlış kod" diye göstermek
        müşteriye doğru adresini değiştirtmek olurdu. */
-    if (norm(best.postalCode) === norm(input.postalCode)) return { kind: 'confirmed' };
+    if (normalizePostalCode(best.postalCode) === normalizePostalCode(input.postalCode)) return { kind: 'confirmed' };
 
     /* AYIRT EDİLEMEZ İKİLİ: aynı kapı iki ayrı kodda neredeyse aynı güvenle. Birini seçmek kura
        atmaktır — teklif yapılmaz, müşteriye yalnız kapının doğrulanamadığı söylenir. */
-    const rival = doors.find((candidate) => norm(candidate.postalCode) !== norm(best.postalCode));
+    const rival = doors.find((candidate) => normalizePostalCode(candidate.postalCode) !== normalizePostalCode(best.postalCode));
     if (rival && best.score - rival.score < AMBIGUOUS_MARGIN) return { kind: 'street_only' };
 
     return { kind: 'wrong_postal_code', suggestion: best };
@@ -79,6 +80,3 @@ export function addressVerdict(input: {
   // (yeni yapı, `bis/ter` ekleri); hiç eşleşme yoksa söylenecek şey de farklı.
   return input.matchedPrecision === null ? { kind: 'not_found' } : { kind: 'street_only' };
 }
-
-/** Posta kodu karşılaştırması boşluk ve büyük harfe duyarsız — kaynaklar farklı yazabiliyor. */
-const norm = (code: string) => code.replace(/\s+/g, '').toUpperCase();

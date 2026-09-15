@@ -106,10 +106,6 @@ export interface DeliveryZoneSummary {
   postalCodes: string[];
 }
 
-// Form girdisi, motorun karşılaştırması ve veritabanının saklama biçimi aynı fonksiyonlardan gelir; istemci de doğrular ki her
-// tuşta sunucuya gidilmesin.
-export { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
-
 // Web'deki çağıranlar yerin sözlüğünü tek dosyadan okur.
 export { elsewhereReasonOf } from '@lezzet/helper';
 

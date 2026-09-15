@@ -8,8 +8,8 @@ import {
   suggestPlaces,
   UNRESOLVED_PLACE,
 } from '@lezzet/application';
-import { placeLabel, type PostalCodeResolution } from '@lezzet/domain-core';
-import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
+import { isValidPostalCode, normalizePostalCode, placeLabel } from '@lezzet/address';
+import type { PostalCodeResolution } from '@lezzet/domain-core';
 import {
   DeliveryAreaListSchema,
   PlaceNoticeBodySchema,

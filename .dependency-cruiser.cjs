@@ -30,16 +30,16 @@ module.exports = {
     {
       name: 'domain-core-scope',
       severity: 'error',
-      comment: 'domain-core yalnız types + helper bilir.',
+      comment: 'domain-core yalnız types + helper + address kökü bilir.',
       from: { path: '^packages/domain-core/' },
-      to: { path: '^(packages/(?!(types|helper|domain-core)/)|@lezzet/(?!(types|helper)$))' },
+      to: { path: '^(packages/(?!(types|helper|domain-core)/|address/src/index\\.ts$)|@lezzet/(?!(types|helper|address)$))' },
     },
     {
       name: 'database-scope',
       severity: 'error',
-      comment: 'database yalnız types + helper bilir.',
+      comment: 'database yalnız types + helper + address kökü bilir.',
       from: { path: '^packages/database/' },
-      to: { path: '^(packages/(?!(types|helper|database)/)|@lezzet/(?!(types|helper)$))' },
+      to: { path: '^(packages/(?!(types|helper|database)/|address/src/index\\.ts$)|@lezzet/(?!(types|helper|address)$))' },
     },
     {
       name: 'ai-scope',

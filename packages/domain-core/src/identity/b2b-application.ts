@@ -1,4 +1,5 @@
-import { isValidEmail, normalizePhone, isValidPostalCode } from '@lezzet/helper';
+import { isValidPostalCode } from '@lezzet/address';
+import { isValidEmail, normalizePhone } from '@lezzet/helper';
 import type { CompanyInfo } from '@lezzet/types';
 
 /*

@@ -13,6 +13,7 @@
   "dependencies": {
     "@expo-google-fonts/karla": "^0.4.2",
     "@hono/node-server": "^1.13.7",
+    "@lezzet/address": "workspace:*",
     "@lezzet/application": "workspace:*",
     "@lezzet/database": "workspace:*",
     "@lezzet/domain-core": "workspace:*",

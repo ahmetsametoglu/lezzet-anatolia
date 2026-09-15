@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AddressService } from '@lezzet/database';
-import { addressVerdict, type AddressVerdict } from '@lezzet/domain-core';
+import { addressVerdict, type AddressVerdict } from '@lezzet/address';
 import type { AddressGeoWrite } from '@lezzet/types';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { geocoder as defaultGeocoder } from './geocode-provider';

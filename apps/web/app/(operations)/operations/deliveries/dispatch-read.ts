@@ -8,11 +8,11 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
+import { doorCheckOf } from '@lezzet/address';
 import { listCourierRoutes } from '@lezzet/application';
 import {
   cutoffBelongsToPreviousDay,
   deliveryRunWindow,
-  doorCheckOf,
   findZoneForPostalCode,
   ORDER_CUTOFF_KEY,
   PREP_CUTOFF_KEY,

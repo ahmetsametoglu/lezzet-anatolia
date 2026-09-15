@@ -1,5 +1,6 @@
 import { AddressService, UserProfileService } from '@lezzet/database';
-import { normalizePhone, normalizePostalCode } from '@lezzet/helper';
+import { normalizePostalCode } from '@lezzet/address';
+import { normalizePhone } from '@lezzet/helper';
 import {
   b2bApplicationIssues,
   b2bStatusOf,

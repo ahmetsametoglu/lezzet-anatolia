@@ -10,8 +10,6 @@ export * from './home-copy';
 export * from './identity';
 export * from './money';
 export * from './package';
-export * from './postal-code';
-export * from './place-name';
 export * from './price-label';
 export * from './recipe';
 export * from './rich-text';

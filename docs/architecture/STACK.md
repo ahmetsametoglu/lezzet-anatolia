@@ -93,7 +93,7 @@ proje/
 │   ├── email/            # mail istemcisi + şablonlar (Auth OTP dahil TÜM mail buradan; Supabase mail yapısı kullanılmaz)
 │   ├── notify/           # soyut OUTBOUND bildirim katmanı (e-posta / wa.me / WhatsApp API / push)
 │   ├── ai/               # sağlayıcı-agnostik AI portu: görev kaydı + tipli çağrı + token ölçümü (yalnız types bilir)
-│   ├── address/          # adres araması ve metni: BAN (FR) ve Google (DE) istemcileri, öneri kancası (`/react`)
+│   ├── address/          # adres kuralları ve metni (posta kodu, yer adı, kapı kararı) + BAN (`/fr`) ve Google (`/google`) istemcileri, öneri kancası (`/react`)
 │   ├── sendcloud/        # Sendcloud API v3 istemcisi (resmî SDK yok, REST) + webhook
 │   ├── eslint-config/
 │   └── typescript-config/
@@ -122,35 +122,36 @@ Paketler kaynak dışa verir (`"exports": { ".": "./src/index.ts" }`), ara derle
 Oklar "tarafından kullanılır" yönündedir. Şema çekirdek zinciri gösterir; tam liste alttaki tabloda.
 
 ```
-types ─→ i18n ─→ helper ─┬─→ database ────┐
-  │                      └─→ domain-core ─┼─→ application ─→ uygulamalar
-  └─→ ai ─────────────────────────────────┘
+types ─→ i18n ─→ helper ─→ address ─┬─→ database ────┐
+  │                                 └─→ domain-core ─┼─→ application ─→ uygulamalar
+  └─→ ai ────────────────────────────────────────────┘
 ```
 
-Paketlerin bugün bildiği iç paketler (`package.json`, ölçüldü 10.09):
+Paketlerin bildiği iç paketler (`package.json`):
 
 | Paket | Bildiği iç paketler |
 | --- | --- |
 | `types` | — (yalnız `zod`) |
 | `i18n` | `types` |
 | `helper` | `i18n` |
-| `database` | `types` · `helper` |
-| `domain-core` | `types` · `helper` |
+| `database` | `types` · `helper` · `address` |
+| `domain-core` | `types` · `helper` · `address` |
 | `ai` | `types` |
 | `observability` | `types` · `database` |
 | `email` | `types` · `brand` · `i18n` · `domain-core` · `observability` |
 | `notify` | `types` · `brand` · `email` |
 | `application` | `types` · `helper` · `i18n` · `database` · `domain-core` · `ai` · `brand` · `email` · `notify` · `observability` · `storage` · `address` · `sendcloud` |
-| `address` | `helper` |
+| `address` | `types` · `helper` |
+| `mobile-kit` | `types` · `i18n` · `design-tokens` · `domain-core` |
 | `brand` · `storage` · `design-tokens` · `sendcloud` | — |
 
 - `types` yalnız `zod`'a bağlı; hiçbir iç pakete değil.
-- `database` yalnız `types` + `helper` bilir.
-- `domain-core` `types` + `helper` bilir; uygulamayı bilmez.
+- `database` yalnız `types` + `helper` + `address` kökü bilir.
+- `domain-core` `types` + `helper` + `address` kökü bilir; uygulamayı bilmez.
 - `ai` yalnız `types` bilir — DB, logger, iş kuralı yok.
 - Uygulamalar paketleri bilir; paketler uygulamaları **asla** bilmez.
 - `domain-core` ↮ `database`: **birbirini bilmezler.** Motor saf kalsın (birim testi DB'siz koşsun), servis I/O'da kalsın diye. İkisini birleştiren yer UYGULAMA katmanıdır: birden çok yüzeyin (web · backend · mobile-api) çağırdığı akış `packages/application`'da, tek yüzeyin işi o uygulamanın Server Action'ında ya da Hono ucunda (ölçüt: `packages/application/src/index.ts`). Bkz. §13.
-- Döngü yasak; ortak parça `types` veya `helper`'a iner.
+- Döngü yasak; ortak parça `types` ya da `helper`'a, adres kuralıysa `address` köküne iner.
 - `address` kökü saf kalır: ağa çıkan istemciler (`/fr` BAN, `/google`) ve kanca (`/react`) ayrı girişlerdedir, kök onlara dolaylı yoldan da ulaşamaz.
 - Kurallar `.dependency-cruiser.cjs`te tanımlı: `types-is-pure` · `database-scope` · `domain-core-scope` · `ai-scope` · `address-root-is-pure` · `packages-not-to-apps` · `no-circular`.
 
@@ -555,5 +556,5 @@ Açık iş kalemleri buraya **girmez**; `BACKLOG.md`'ye gider (WORKFLOW.md §8 r
   yok — bağımlılığı paketlere dağıtmak, var olmayan bir kullanımı desteklemek olurdu. Ayrım
   dizinle çizilir (aşağıdaki madde), paket sınırıyla değil; ikisi çakışsaydı 52 dosya yer değiştirirdi.
 - **Test paketi ikiye ayrıktır (karar 29.07 — ölçümle):** `unit` (DB'siz, **paralel**, 568 test ~1,3 sn) ve `integration` (yerel Supabase, **seri**, ~35 sn). Ayrım öncesi tek paket `fileParallelism: false` altında 45–107 sn geziyordu; oysa saf yarının asıl test süresi 224 ms'ti — kalanı kurulum ve sıra bekleme. **Sınır dizinle çizilir** (`apps/web/lib`, `packages/database`, `apps/backend` = entegrasyon kökleri), isimle değil: 52 dosyayı yeniden adlandırmak paralel ajanların işine dokunurdu. **Sınır kendini denetler:** birim kurulumu `.env` yüklemez ve DB env'ini siler, yani yanlış projeye düşen test sessizce paralel koşup veri kirletmez — ilk satırında "Supabase env eksik" diye patlar. Tam paket **kilit altında** koşar (`scripts/with-test-lock.mjs`; `flock` macOS'ta yok, `mkdir` atomikliği yeter) çünkü üç ajan tek yerel veritabanını paylaşıyor ve eşzamanlı iki koşu **tekrarlanmayan düşüşler** üretiyordu. Kurallar → `CLAUDE.md §4b`.
-- **Paket sınırı araçla zorlanır** (karar 27.07 — §4'teki şema bağlayıcıdır): `domain-core` DB bilmez, `database` motoru bilmez; ikisi de yalnız `types`+`helper`'a bağlanır. `apps/*` **her ikisini de** çağırabilir, AMA sipariş/stok/para/fiyat **kararını** kendi içinde hesaplayamaz — kararı domain-core'a sorar, servisi yalnız o kararı yazmak/okumak için kullanır. Kural sızması testi: bir `if` içinde iş kuralı varsa (eşik, sıra, izin) yeri motordur.
+- **Paket sınırı araçla zorlanır** (§4'teki şema bağlayıcıdır): `domain-core` DB bilmez, `database` motoru bilmez; ikisi de yalnız `types`, `helper` ve `address` köküne bağlanır. `apps/*` **her ikisini de** çağırabilir, AMA sipariş/stok/para/fiyat **kararını** kendi içinde hesaplayamaz — kararı domain-core'a sorar, servisi yalnız o kararı yazmak/okumak için kullanır. Kural sızması testi: bir `if` içinde iş kuralı varsa (eşik, sıra, izin) yeri motordur.
 - **Admin yüzey izolasyonu:** `(admin)`/`(shop)` route group ayrımı + `/admin` altı middleware'de toptan oturum+rol kontrolü (sayfa içi guard yine tekrarlanır — çift kat) + `noindex`.

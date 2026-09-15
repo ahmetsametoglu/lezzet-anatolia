@@ -144,6 +144,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.14(hono@4.12.31)
+      '@lezzet/address':
+        specifier: workspace:*
+        version: link:../../packages/address
       '@lezzet/application':
         specifier: workspace:*
         version: link:../../packages/application
@@ -658,6 +661,9 @@ importers:
       '@lezzet/helper':
         specifier: workspace:*
         version: link:../helper
+      '@lezzet/types':
+        specifier: workspace:*
+        version: link:../types
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -778,6 +784,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@lezzet/address':
+        specifier: workspace:*
+        version: link:../address
       '@lezzet/helper':
         specifier: workspace:*
         version: link:../helper
@@ -812,6 +821,9 @@ importers:
 
   packages/domain-core:
     dependencies:
+      '@lezzet/address':
+        specifier: workspace:*
+        version: link:../address
       '@lezzet/helper':
         specifier: workspace:*
         version: link:../helper

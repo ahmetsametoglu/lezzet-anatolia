@@ -1,6 +1,5 @@
 import { PostalCodePlaceService, type Db } from '@lezzet/database';
-import { placeLabel } from '@lezzet/domain-core';
-import { normalizePostalCode } from '@lezzet/helper';
+import { normalizePostalCode, placeLabel } from '@lezzet/address';
 import type { Country, PlaceOption } from '@lezzet/types';
 
 /** Yer çözümünden ayrı, çünkü ödeme çerezdeki kodu değil adresin kodunu sorar ve ikisi farklı olabilir. */

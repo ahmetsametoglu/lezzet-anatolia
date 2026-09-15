@@ -1,11 +1,11 @@
 'use server';
 
+import { isValidPostalCode, normalizePostalCode } from '@lezzet/address';
 import { recordZoneNotice, type ZoneNoticeOutcome } from '@lezzet/application';
 import { VariantStockNoticeService, serviceDb } from '@lezzet/database';
 import type { PreferredLanguage } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
-import { isValidPostalCode, normalizePostalCode } from './place-types';
 import { readPlaceAnswer } from './read-place';
 
 /**

@@ -9,7 +9,8 @@ import {
   UserProfileService,
   type Db,
 } from '@lezzet/database';
-import { cityMatchesPlaces, deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
+import { cityMatchesPlaces } from '@lezzet/address';
+import { deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import type { AddressDeliveryType, OrderItemInsert, OrderSource, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';

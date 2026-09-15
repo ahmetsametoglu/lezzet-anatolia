@@ -1,14 +1,15 @@
 'use server';
 
+import { isValidPostalCode, normalizePostalCode, placeLabel } from '@lezzet/address';
 import { suggestPlaces } from '@lezzet/application';
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService, serviceDb } from '@lezzet/database';
-import { placeLabel, resolvePlaceByPostalCode } from '@lezzet/domain-core';
+import { resolvePlaceByPostalCode } from '@lezzet/domain-core';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { Country, PlaceOption } from '@lezzet/types';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { recordEvent } from '@/lib/analytics/record';
 import { describePlace } from './describe-place';
-import { isValidPostalCode, normalizePostalCode, type PlaceLookup } from './place-types';
+import type { PlaceLookup } from './place-types';
 
 /**
  * Guard yok: soru ziyaretçiye de açık. Checkout'un teslimat çözümüne sorar, kuralı yeniden yazmaz; sepet bilinmediği için "kargo

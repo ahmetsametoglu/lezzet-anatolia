@@ -1,7 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { addressLabelKind, addressLineOf, hasHouseNumber, MIN_QUERY_LENGTH, type AddressLabelKind } from '@lezzet/address';
+import {
+  addressLabelKind,
+  addressLineOf,
+  hasHouseNumber,
+  isValidPostalCode,
+  MIN_QUERY_LENGTH,
+  type AddressLabelKind,
+} from '@lezzet/address';
 import { CountryEnum, type Address, type Country } from '@lezzet/types';
 import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
@@ -17,7 +24,7 @@ import { checkAddressAction, resolveGermanAddressAction, type CheckedPoint } fro
 import { useAddressSearch } from '@/lib/address/use-address-search.hook';
 import { useGermanAddressSearch } from '@/lib/address/use-german-address-search.hook';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
-import { isValidPostalCode, type DeliveryPlace } from '@/lib/delivery/place-types';
+import type { DeliveryPlace } from '@/lib/delivery/place-types';
 import { formatDeliveryDate } from '@/lib/storefront/format';
 import { ChannelBadge } from './channel-badge';
 import { DeliveryStrip } from './delivery-strip';

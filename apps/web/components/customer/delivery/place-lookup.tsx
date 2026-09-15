@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
+import { isValidPostalCode } from '@lezzet/address';
 import type { Country } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { usePostalSuggest } from '@/lib/address/use-postal-suggest.hook';
-import { isValidPostalCode, type DeliveryPlace, type PlaceLookup } from '@/lib/delivery/place-types';
+import type { DeliveryPlace, PlaceLookup } from '@/lib/delivery/place-types';
 import { useDeliveryPlace } from './place-context';
 import messages from './place-messages.json';
 

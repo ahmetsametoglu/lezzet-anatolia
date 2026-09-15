@@ -1,6 +1,6 @@
 import { DeliveryZoneService, PostalCodePlaceService, WarehouseService } from '@lezzet/database';
 import { findShippingWarehouse, resolvePlaceByPostalCode, type PostalCodeResolution } from '@lezzet/domain-core';
-import { normalizePostalCode } from '@lezzet/helper';
+import { normalizePostalCode } from '@lezzet/address';
 import type { Country } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 

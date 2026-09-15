@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { PostalCodePlaceSchema, type Country, type PostalCodePlace } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
-import { normalizePlaceName, normalizePostalCode } from '@lezzet/helper';
+import { normalizePlaceName, normalizePostalCode } from '@lezzet/address';
 import { DeliveryZonePostalCodeService } from './delivery-zone.service';
 
 /** Salt okunur: veri GeoNames dökümünden üretilir (`pnpm postal:build`) ve elle düzeltme bir sonraki üretimde sessizce geri alınırdı. */

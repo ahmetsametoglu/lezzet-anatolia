@@ -1,7 +1,7 @@
 // `z` porttan gelir: SDK tek zod örneği bekliyor.
 import { z } from '@lezzet/ai';
 import { AddressService, ConversationService, type Db } from '@lezzet/database';
-import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
+import { isValidPostalCode, normalizePostalCode } from '@lezzet/address';
 import { logger } from '@lezzet/observability';
 import { COUNTRY_LABELS, CountryEnum, type Address, type Conversation, type Country } from '@lezzet/types';
 import type { PlaceWarehouses } from '../catalog/storefront-types';

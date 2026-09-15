@@ -25,8 +25,8 @@ const cozulmus = (paket: string) => `packages/${paket}/src/index.ts`;
 describe('kapsam kuralları çözülmüş yolu görür (asıl arıza buydu)', () => {
   const senaryolar = [
     { kural: 'types-is-pure', kaynak: 'packages/types/src/entities/order.schema.ts', yasak: ['helper', 'domain-core', 'database'], serbest: ['types'] },
-    { kural: 'domain-core-scope', kaynak: 'packages/domain-core/src/order/status-machine.ts', yasak: ['database', 'application', 'ai'], serbest: ['types', 'helper', 'domain-core'] },
-    { kural: 'database-scope', kaynak: 'packages/database/src/services/bundle.test.ts', yasak: ['domain-core', 'application', 'ai'], serbest: ['types', 'helper', 'database'] },
+    { kural: 'domain-core-scope', kaynak: 'packages/domain-core/src/order/status-machine.ts', yasak: ['database', 'application', 'ai'], serbest: ['types', 'helper', 'domain-core', 'address'] },
+    { kural: 'database-scope', kaynak: 'packages/database/src/services/bundle.test.ts', yasak: ['domain-core', 'application', 'ai'], serbest: ['types', 'helper', 'database', 'address'] },
     { kural: 'ai-scope', kaynak: 'packages/ai/src/client.ts', yasak: ['database', 'domain-core', 'helper'], serbest: ['types', 'ai'] },
   ] as const;
 
@@ -67,6 +67,23 @@ describe('kalıp modül adına GERİLETİLİRSE kural körleşir — o yüzden i
     expect(kural('database-scope').to.test('@lezzet/types')).toBe(false);
     expect(kural('domain-core-scope').to.test('@lezzet/helper')).toBe(false);
   });
+});
+
+describe('karar paketleri adres kökünü okur, ağa çıkan girişlerini okuyamaz', () => {
+  for (const ad of ['domain-core-scope', 'database-scope']) {
+    const r = kural(ad);
+
+    it(`${ad}: /fr, /google ve /react girişlerini yakalar`, () => {
+      expect(r.to.test('packages/address/src/fr/index.ts')).toBe(true);
+      expect(r.to.test('packages/address/src/google/index.ts')).toBe(true);
+      expect(r.to.test('packages/address/src/react/index.ts')).toBe(true);
+      expect(r.to.test('@lezzet/address/fr')).toBe(true);
+    });
+
+    it(`${ad}: ham modül adında kökü serbest bırakır`, () => {
+      expect(r.to.test('@lezzet/address')).toBe(false);
+    });
+  }
 });
 
 describe('paketler uygulamaları bilmez', () => {

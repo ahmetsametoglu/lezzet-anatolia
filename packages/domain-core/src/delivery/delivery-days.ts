@@ -1,4 +1,4 @@
-import { normalizePostalCode } from '@lezzet/helper';
+import { normalizePostalCode } from '@lezzet/address';
 import type { Country } from '@lezzet/types';
 
 /*

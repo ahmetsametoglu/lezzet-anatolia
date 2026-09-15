@@ -4,7 +4,8 @@
 */
 
 import type { AddressGeoPrecision, AddressGeoSource, Country } from '@lezzet/types';
-import type { AddressCandidate, GeoPoint } from '@lezzet/domain-core';
+import type { AddressCandidate } from '@lezzet/address';
+import type { GeoPoint } from '@lezzet/domain-core';
 
 export interface GeocodeQuery {
   line1: string;

@@ -1,6 +1,6 @@
 import { DeliveryZoneService, VariantStockNoticeService, ZoneNoticeService, type Db } from '@lezzet/database';
 import { notificationToken, type PostalCodeResolution } from '@lezzet/domain-core';
-import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
+import { isValidPostalCode, normalizePostalCode } from '@lezzet/address';
 import { logger } from '@lezzet/observability';
 import type { Country, PreferredLanguage } from '@lezzet/types';
 import { resolvePlaceForPostalCode } from './place';

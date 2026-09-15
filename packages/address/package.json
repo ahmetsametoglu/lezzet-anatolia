@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@lezzet/helper": "workspace:*",
+    "@lezzet/types": "workspace:*",
     "zod": "^3.24.1"
   },
   "peerDependencies": {

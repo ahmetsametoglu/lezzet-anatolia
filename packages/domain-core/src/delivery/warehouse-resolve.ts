@@ -3,10 +3,9 @@
   bölgedeyse cevap hatadır, çünkü sessizce birini seçmek siparişi yanlış depoya düşürür.
 */
 
+import { normalizePostalCode, placeLabel } from '@lezzet/address';
 import type { Country } from '@lezzet/types';
-import { normalizePostalCode } from '@lezzet/helper';
 import { matchZones, type DeliveryZoneCandidate } from './delivery-days';
-import { placeLabel } from './place-name';
 
 export interface WarehouseCandidate {
   id: string;
