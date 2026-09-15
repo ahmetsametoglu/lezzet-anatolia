@@ -152,9 +152,10 @@ export function notificationSentence(row: { kind: string; payload: Record<string
   — web/mobil × müşteri akışı/rozet — tek anlamdan çizer; iki kopya ilk yeni türde ayrışırdı).
 
   · İkon İKİ BİÇİMDE (14.09): `symbol` ÇİZGİ SETİNİN adı — web müşteri yüzeyi v1 ile emojiyi bıraktı,
-    ikonları kendi setinden çiziyor (`components/customer/ui/icons.tsx`; kullanıcı kararı: "ikon
-    tasarım desenimiz her yerde aynı olmalı"). `icon` EMOJİ — native uygulama bugün onu çiziyor; o
-    şerit `symbol`a geçince bu alan düşer. Anlam tek yerde: iki biçim aynı satırda yazılır, ayrışamaz.
+    ikonları kendi setinden çiziyor (`components/customer/ui/icons.tsx`). `icon` EMOJİ — native
+    uygulamanın bugünkü çizimi. Mobil (native + web telefon görünümü) ile web masaüstünün ikonları aynı
+    olmak zorunda değil (kullanıcı kararı 15.09); iki biçim bu yüzden ayrı alan. Anlam tek yerde: iki
+    biçim aynı satırda yazılır, ayrışamaz.
     Operasyon yüzeyi emoji KULLANMAZ (SVG dili) — o taraf `staffNotificationBrief`.
   · Ton SEMANTİKTİR, renk değil: `positive` (yolunda) · `attention` (bekleyen/eksik) · `issue`
     (iptal/sorun) · `neutral` (bilgi). Web bunu kendi token ailesine (olive/honey/terracotta/kum),

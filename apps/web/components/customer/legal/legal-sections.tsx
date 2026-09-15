@@ -71,7 +71,7 @@ interface LegalNoticeBandProps {
  * Çıkış bandı — *"statik sayfa çıkmaz sokak olmamalı"* (içerik envanteri §2).
  *
  * Buraya belirli bir soruyla gelen ziyaretçi cevabı bulamadığında gidecek bir yer görmeli. Başta
- * emoji yok (14.09 — ikon dili tek, 💡 kalktı); metin ile bağlar tek cümlede akıyor,
+ * emoji yok (14.09, 💡 kalktı); metin ile bağlar tek cümlede akıyor,
  * ayrı bir düğme değil — bant bir çağrı değil, bir hatırlatma.
  */
 export function LegalNoticeBand({ notice, compact = false }: LegalNoticeBandProps) {

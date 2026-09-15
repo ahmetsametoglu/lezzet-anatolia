@@ -2898,7 +2898,9 @@ tartışıldı (web/denetim · müşteri web · mobil adına); karar kullanıcı
 - **İkon (kullanıcı kararı, aynı gün):** telefonda (uygulama + web telefon görünümü) native çizimler; web
   masaüstü v1 ikonlarında kalır. 14.09'daki "ikon deseni her yerde aynı" kararı böylece telefonla sınırlandı.
   Web'in 32 ikon adının 18'inin native'de karşılığı yok (ortak ad 14); telefon görünümünde eşlenir, olmayan
-  çizim tasarımdan istenir.
+  çizim tasarımdan istenir. **15.09 (kullanıcı):** *"Mobildeki ikonlar ile webdeki ikonlar aynı olmak zorunda
+  değil"* — "mobil" uygulama + web telefon görünümüdür ve ikisi birebir aynıdır; web masaüstünün ikonları
+  onlardan ayrı olabilir. "İkon tasarım desenimiz her yerde aynı olmalı" alıntısı kod yorumlarından kalktı.
 - **Ekran metinleri (kullanıcı kararı, aynı gün):** aynı müşteri ekranının metni ortak pakette durur (i18n,
   ekran başına; `packages/i18n/src/notification-copy.ts` deseni) ve iki taraf okur; web'e özgü metin
   (SEO, misafir hâlleri) web'de kalır. CLAUDE §2'nin "her sayfa kendi `messages.json`u" kuralı müşteri

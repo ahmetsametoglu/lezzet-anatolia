@@ -227,7 +227,7 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
 
       {/* İki yol — tasarımın iki hapı. `radiogroup` çünkü seçim birbirini dışlıyor. */}
       <div className="flex gap-2" role="radiogroup" aria-label={t.form.title}>
-        {/* Bayrak YOK (14.09 — ikon dili tek): ülke sekmenin metninde zaten yazılı ("Fransız şirketi"). */}
+        {/* Bayrak YOK (14.09): ülke sekmenin metninde zaten yazılı ("Fransız şirketi"). */}
         <KindTab label={t.form.tabSiret} active={isSiret} onSelect={() => switchKind('siret')} />
         <KindTab label={t.form.tabVat} active={!isSiret} onSelect={() => switchKind('eu_vat')} />
       </div>

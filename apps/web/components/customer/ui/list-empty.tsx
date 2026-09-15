@@ -16,8 +16,8 @@ import { Icon, type IconName } from './icons';
  * çizdiği `w-[340px]` krem kart. Tasarımda gerçekten farklılar; primitif yalnız İÇ dizilimi taşır.
  *
  * `compact` tek bir şey değiştirir — simge ölçüsü. Tasarım aynı kartı Talep sayfasında bir tık
- * küçük çiziyor (32 ↔ 34); iki ölçü tasarımdan birebir alınmıştır. Simge ikon setinden (14.09):
- * emoji yerine çizgi ikon — ikon dili her yerde aynı.
+ * küçük çiziyor (32 ↔ 34); iki ölçü tasarımdan birebir alınmıştır. Simge web'in ikon setinden
+ * (14.09): emoji yerine çizgi ikon.
  */
 interface ListEmptyProps {
   /** Kutunun simgesi — ikon setinden. */

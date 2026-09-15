@@ -18,8 +18,8 @@ import { Icon, type IconName } from './icons';
 interface MessageScreenProps {
   device: 'mobile' | 'desktop';
   /**
-   * Ekranın simgesi — ikon setinden (14.09). Müşteri evreni bir süre dekoratif emoji kullandı; v1 ile
-   * ikon dili tek oldu (kullanıcı kararı: "ikon tasarım desenimiz her yerde aynı olmalı").
+   * Ekranın simgesi — web'in ikon setinden (14.09). Müşteri evreni bir süre dekoratif emoji kullandı;
+   * v1 ile emoji kalktı.
    */
   icon: IconName;
   /** Küçük büyük-harf üst etiket ("404 · Sayfa bulunamadı"). */
