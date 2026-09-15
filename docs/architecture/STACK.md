@@ -436,7 +436,7 @@ Genel blueprint §10 ile aynı. Env'e yalnız sır + ortama göre değişen değ
 
 | Değer | Yeri |
 | --- | --- |
-| Marka adı, iletişim bilgisi, şirket künyesi (unvan, KDV no, adres), WhatsApp bağlantısı | `packages/brand` |
+| Marka adı, iletişim bilgisi, şirket künyesi (unvan, SIREN/SIRET, KDV no, adres) ve yasal metinlerdeki künye yer tutucularının doldurucusu (`fillBrandFacts`), WhatsApp bağlantısı | `packages/brand` |
 | Diller (`LOCALES`, `DEFAULT_LOCALE`) | `packages/i18n` — `locale.ts` |
 | Alan adı (site kökü) | `packages/i18n` — `siteOrigin()` (`NEXT_PUBLIC_SITE_URL`) |
 | Renkler | `packages/design-tokens` + web `globals.css` (parite testiyle birebir) |

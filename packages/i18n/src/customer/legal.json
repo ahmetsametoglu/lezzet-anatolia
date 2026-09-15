@@ -158,8 +158,8 @@
           {
             "heading": "Verilerinizden kim sorumlu",
             "paragraphs": [
-              "Bu sitede toplanan kişisel verilerin sorumlusu QUALITE SAS'tır (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, Fransa. Site Lezzet Anatolie markasıyla işletilmektedir.",
-              "Veri koruma ile ilgili her konuda lezzetanatolie@gmail.com adresinden bize ulaşabilirsiniz."
+              "Bu sitede toplanan kişisel verilerin sorumlusu {legalName}'tır (SIRET {siret}), {address}, Fransa. Site Lezzet Anatolie markasıyla işletilmektedir.",
+              "Veri koruma ile ilgili her konuda {email} adresinden bize ulaşabilirsiniz."
             ],
             "bullets": []
           },
@@ -211,7 +211,7 @@
           {
             "heading": "Haklarınız",
             "paragraphs": [
-              "GDPR (AB 2016/679) kapsamında aşağıdaki haklara sahipsiniz. Bunları kullanmak için lezzetanatolie@gmail.com adresine yazmanız yeterli; talebinize en geç bir ay içinde dönüş yapılır."
+              "GDPR (AB 2016/679) kapsamında aşağıdaki haklara sahipsiniz. Bunları kullanmak için {email} adresine yazmanız yeterli; talebinize en geç bir ay içinde dönüş yapılır."
             ],
             "bullets": [
               "Verilerinize erişme ve bir kopyasını isteme",
@@ -254,7 +254,7 @@
           {
             "heading": "Kapsam",
             "paragraphs": [
-              "Bu koşullar, QUALITE SAS (SIRET 907 496 640 00026 · 46 rue des Prés, 67380 Lingolsheim, Fransa) tarafından Lezzet Anatolie markasıyla bu site üzerinden yapılan tüm satışlara uygulanır. Sipariş vermekle bu koşulları kabul etmiş olursunuz.",
+              "Bu koşullar, {legalName} (SIRET {siret} · {address}, Fransa) tarafından Lezzet Anatolie markasıyla bu site üzerinden yapılan tüm satışlara uygulanır. Sipariş vermekle bu koşulları kabul etmiş olursunuz.",
               "Koşullar değişebilir; siparişinize uygulanacak olan, siparişi verdiğiniz tarihte yürürlükte olan sürümdür. Sayfanın başındaki güncelleme tarihi hangi sürüme baktığınızı gösterir."
             ],
             "bullets": []
@@ -359,26 +359,26 @@
           {
             "heading": "Site sahibi",
             "paragraphs": [
-              "Bu site, Lezzet Anatolie markasıyla QUALITE SAS tarafından işletilmektedir."
+              "Bu site, Lezzet Anatolie markasıyla {legalName} tarafından işletilmektedir."
             ],
             "bullets": [
-              "Ticari unvan: QUALITE",
+              "Ticari unvan: {denomination}",
               "Marka adı: Lezzet Anatolie",
               "Hukuki biçim: SAS — société par actions simplifiée",
               "Sermaye: 500 €",
-              "SIREN: 907 496 640",
-              "SIRET (merkez): 907 496 640 00026",
-              "KDV numarası: FR50907496640",
+              "SIREN: {siren}",
+              "SIRET (merkez): {siret}",
+              "KDV numarası: {vatId}",
               "APE kodu: 4791B — uzaktan satış, uzmanlaşmış katalog",
-              "Merkez: 46 rue des Prés, 67380 Lingolsheim, Fransa",
-              "E-posta: lezzetanatolie@gmail.com",
-              "Telefon: +33 (0)6 16 99 06 81"
+              "Merkez: {address}, Fransa",
+              "E-posta: {email}",
+              "Telefon: {phone}"
             ]
           },
           {
             "heading": "Yayın sorumlusu",
             "paragraphs": [
-              "Yayın sorumlusu Yigit Bilgin'dir (QUALITE SAS başkanı). İçerikle ilgili her talep yukarıdaki e-posta adresine iletilebilir."
+              "Yayın sorumlusu Yigit Bilgin'dir ({legalName} başkanı). İçerikle ilgili her talep yukarıdaki e-posta adresine iletilebilir."
             ],
             "bullets": []
           },
@@ -593,8 +593,8 @@
           {
             "heading": "Qui est responsable de vos données",
             "paragraphs": [
-              "Le responsable du traitement des données personnelles collectées sur ce site est la société QUALITE SAS (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, France, exploitant le site sous le nom commercial Lezzet Anatolie.",
-              "Pour toute question relative à la protection des données, vous pouvez nous écrire à lezzetanatolie@gmail.com."
+              "Le responsable du traitement des données personnelles collectées sur ce site est la société {legalName} (SIRET {siret}), {address}, France, exploitant le site sous le nom commercial Lezzet Anatolie.",
+              "Pour toute question relative à la protection des données, vous pouvez nous écrire à {email}."
             ],
             "bullets": []
           },
@@ -646,7 +646,7 @@
           {
             "heading": "Vos droits",
             "paragraphs": [
-              "Au titre du RGPD (UE 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à lezzetanatolie@gmail.com ; une réponse vous est apportée dans un délai maximal d'un mois."
+              "Au titre du RGPD (UE 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à {email} ; une réponse vous est apportée dans un délai maximal d'un mois."
             ],
             "bullets": [
               "Accéder à vos données et en demander une copie",
@@ -689,7 +689,7 @@
           {
             "heading": "Champ d'application",
             "paragraphs": [
-              "Les présentes conditions s'appliquent à toutes les ventes réalisées via ce site par la société QUALITE SAS (SIRET 907 496 640 00026 · 46 rue des Prés, 67380 Lingolsheim, France), sous le nom commercial Lezzet Anatolie. En passant commande, vous acceptez ces conditions.",
+              "Les présentes conditions s'appliquent à toutes les ventes réalisées via ce site par la société {legalName} (SIRET {siret} · {address}, France), sous le nom commercial Lezzet Anatolie. En passant commande, vous acceptez ces conditions.",
               "Ces conditions peuvent évoluer ; la version applicable à votre commande est celle en vigueur à la date de la commande. La date de mise à jour en haut de page indique la version que vous consultez."
             ],
             "bullets": []
@@ -794,26 +794,26 @@
           {
             "heading": "Éditeur du site",
             "paragraphs": [
-              "Ce site est édité par la société QUALITE SAS, sous le nom commercial Lezzet Anatolie."
+              "Ce site est édité par la société {legalName}, sous le nom commercial Lezzet Anatolie."
             ],
             "bullets": [
-              "Dénomination sociale : QUALITE",
+              "Dénomination sociale : {denomination}",
               "Nom commercial : Lezzet Anatolie",
               "Forme juridique : SAS — société par actions simplifiée",
               "Capital social : 500 €",
-              "SIREN : 907 496 640",
-              "SIRET (siège) : 907 496 640 00026",
-              "Numéro de TVA intracommunautaire : FR50907496640",
+              "SIREN : {siren}",
+              "SIRET (siège) : {siret}",
+              "Numéro de TVA intracommunautaire : {vatId}",
               "Code APE : 4791B — vente à distance sur catalogue spécialisé",
-              "Siège social : 46 rue des Prés, 67380 Lingolsheim, France",
-              "E-mail : lezzetanatolie@gmail.com",
-              "Téléphone : +33 (0)6 16 99 06 81"
+              "Siège social : {address}, France",
+              "E-mail : {email}",
+              "Téléphone : {phone}"
             ]
           },
           {
             "heading": "Directeur de la publication",
             "paragraphs": [
-              "Le directeur de la publication est Yigit Bilgin, président de QUALITE SAS. Toute demande relative au contenu peut être adressée à l'adresse e-mail ci-dessus."
+              "Le directeur de la publication est Yigit Bilgin, président de {legalName}. Toute demande relative au contenu peut être adressée à l'adresse e-mail ci-dessus."
             ],
             "bullets": []
           },
@@ -1028,8 +1028,8 @@
           {
             "heading": "Wer für Ihre Daten verantwortlich ist",
             "paragraphs": [
-              "Verantwortlich für die auf dieser Website erhobenen personenbezogenen Daten ist die QUALITE SAS (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, Frankreich, die die Website unter dem Handelsnamen Lezzet Anatolie betreibt.",
-              "Bei allen Fragen zum Datenschutz erreichen Sie uns unter lezzetanatolie@gmail.com."
+              "Verantwortlich für die auf dieser Website erhobenen personenbezogenen Daten ist die {legalName} (SIRET {siret}), {address}, Frankreich, die die Website unter dem Handelsnamen Lezzet Anatolie betreibt.",
+              "Bei allen Fragen zum Datenschutz erreichen Sie uns unter {email}."
             ],
             "bullets": []
           },
@@ -1081,7 +1081,7 @@
           {
             "heading": "Ihre Rechte",
             "paragraphs": [
-              "Nach der DSGVO (EU 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an lezzetanatolie@gmail.com; wir antworten spätestens innerhalb eines Monats."
+              "Nach der DSGVO (EU 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an {email}; wir antworten spätestens innerhalb eines Monats."
             ],
             "bullets": [
               "Auskunft über Ihre Daten und eine Kopie davon verlangen",
@@ -1124,7 +1124,7 @@
           {
             "heading": "Geltungsbereich",
             "paragraphs": [
-              "Diese Bedingungen gelten für alle über diese Website getätigten Verkäufe der QUALITE SAS (SIRET 907 496 640 00026 · 46 rue des Prés, 67380 Lingolsheim, Frankreich) unter dem Handelsnamen Lezzet Anatolie. Mit Ihrer Bestellung erkennen Sie diese Bedingungen an.",
+              "Diese Bedingungen gelten für alle über diese Website getätigten Verkäufe der {legalName} (SIRET {siret} · {address}, Frankreich) unter dem Handelsnamen Lezzet Anatolie. Mit Ihrer Bestellung erkennen Sie diese Bedingungen an.",
               "Die Bedingungen können sich ändern; für Ihre Bestellung gilt die zum Bestelldatum gültige Fassung. Das Aktualisierungsdatum oben auf der Seite zeigt, welche Fassung Sie einsehen."
             ],
             "bullets": []
@@ -1229,26 +1229,26 @@
           {
             "heading": "Betreiber der Website",
             "paragraphs": [
-              "Diese Website wird von der QUALITE SAS unter dem Handelsnamen Lezzet Anatolie betrieben."
+              "Diese Website wird von der {legalName} unter dem Handelsnamen Lezzet Anatolie betrieben."
             ],
             "bullets": [
-              "Firma: QUALITE",
+              "Firma: {denomination}",
               "Handelsname: Lezzet Anatolie",
               "Rechtsform: SAS — société par actions simplifiée",
               "Stammkapital: 500 €",
-              "SIREN: 907 496 640",
-              "SIRET (Sitz): 907 496 640 00026",
-              "USt-IdNr.: FR50907496640",
+              "SIREN: {siren}",
+              "SIRET (Sitz): {siret}",
+              "USt-IdNr.: {vatId}",
               "APE-Code: 4791B — Fernabsatz über spezialisierten Katalog",
-              "Sitz: 46 rue des Prés, 67380 Lingolsheim, Frankreich",
-              "E-Mail: lezzetanatolie@gmail.com",
-              "Telefon: +33 (0)6 16 99 06 81"
+              "Sitz: {address}, Frankreich",
+              "E-Mail: {email}",
+              "Telefon: {phone}"
             ]
           },
           {
             "heading": "Verantwortlich für den Inhalt",
             "paragraphs": [
-              "Verantwortlich für den Inhalt ist Yigit Bilgin, Präsident der QUALITE SAS. Anfragen zum Inhalt richten Sie bitte an die oben genannte E-Mail-Adresse."
+              "Verantwortlich für den Inhalt ist Yigit Bilgin, Präsident der {legalName}. Anfragen zum Inhalt richten Sie bitte an die oben genannte E-Mail-Adresse."
             ],
             "bullets": []
           },

@@ -6,27 +6,27 @@
         "id": "isletme",
         "heading": "Site sahibi",
         "body": [
-          "Bu site, Lezzet Anatolie markasıyla QUALITE SAS tarafından işletilmektedir."
+          "Bu site, Lezzet Anatolie markasıyla {legalName} tarafından işletilmektedir."
         ],
         "bullets": [
-          "Ticari unvan: QUALITE",
+          "Ticari unvan: {denomination}",
           "Marka adı: Lezzet Anatolie",
           "Hukuki biçim: SAS — société par actions simplifiée",
           "Sermaye: 500 €",
-          "SIREN: 907 496 640",
-          "SIRET (merkez): 907 496 640 00026",
-          "KDV numarası: FR50907496640",
+          "SIREN: {siren}",
+          "SIRET (merkez): {siret}",
+          "KDV numarası: {vatId}",
           "APE kodu: 4791B — uzaktan satış, uzmanlaşmış katalog",
-          "Merkez: 46 rue des Prés, 67380 Lingolsheim, Fransa",
-          "E-posta: lezzetanatolie@gmail.com",
-          "Telefon: +33 (0)6 16 99 06 81"
+          "Merkez: {address}, Fransa",
+          "E-posta: {email}",
+          "Telefon: {phone}"
         ]
       },
       {
         "id": "yayin",
         "heading": "Yayın sorumlusu",
         "body": [
-          "Yayın sorumlusu Yigit Bilgin'dir (QUALITE SAS başkanı). İçerikle ilgili her talep yukarıdaki e-posta adresine iletilebilir."
+          "Yayın sorumlusu Yigit Bilgin'dir ({legalName} başkanı). İçerikle ilgili her talep yukarıdaki e-posta adresine iletilebilir."
         ]
       },
       {
@@ -78,27 +78,27 @@
         "id": "isletme",
         "heading": "Éditeur du site",
         "body": [
-          "Ce site est édité par la société QUALITE SAS, sous le nom commercial Lezzet Anatolie."
+          "Ce site est édité par la société {legalName}, sous le nom commercial Lezzet Anatolie."
         ],
         "bullets": [
-          "Dénomination sociale : QUALITE",
+          "Dénomination sociale : {denomination}",
           "Nom commercial : Lezzet Anatolie",
           "Forme juridique : SAS — société par actions simplifiée",
           "Capital social : 500 €",
-          "SIREN : 907 496 640",
-          "SIRET (siège) : 907 496 640 00026",
-          "Numéro de TVA intracommunautaire : FR50907496640",
+          "SIREN : {siren}",
+          "SIRET (siège) : {siret}",
+          "Numéro de TVA intracommunautaire : {vatId}",
           "Code APE : 4791B — vente à distance sur catalogue spécialisé",
-          "Siège social : 46 rue des Prés, 67380 Lingolsheim, France",
-          "E-mail : lezzetanatolie@gmail.com",
-          "Téléphone : +33 (0)6 16 99 06 81"
+          "Siège social : {address}, France",
+          "E-mail : {email}",
+          "Téléphone : {phone}"
         ]
       },
       {
         "id": "yayin",
         "heading": "Directeur de la publication",
         "body": [
-          "Le directeur de la publication est Yigit Bilgin, président de QUALITE SAS. Toute demande relative au contenu peut être adressée à l'adresse e-mail ci-dessus."
+          "Le directeur de la publication est Yigit Bilgin, président de {legalName}. Toute demande relative au contenu peut être adressée à l'adresse e-mail ci-dessus."
         ]
       },
       {
@@ -150,27 +150,27 @@
         "id": "isletme",
         "heading": "Betreiber der Website",
         "body": [
-          "Diese Website wird von der QUALITE SAS unter dem Handelsnamen Lezzet Anatolie betrieben."
+          "Diese Website wird von der {legalName} unter dem Handelsnamen Lezzet Anatolie betrieben."
         ],
         "bullets": [
-          "Firma: QUALITE",
+          "Firma: {denomination}",
           "Handelsname: Lezzet Anatolie",
           "Rechtsform: SAS — société par actions simplifiée",
           "Stammkapital: 500 €",
-          "SIREN: 907 496 640",
-          "SIRET (Sitz): 907 496 640 00026",
-          "USt-IdNr.: FR50907496640",
+          "SIREN: {siren}",
+          "SIRET (Sitz): {siret}",
+          "USt-IdNr.: {vatId}",
           "APE-Code: 4791B — Fernabsatz über spezialisierten Katalog",
-          "Sitz: 46 rue des Prés, 67380 Lingolsheim, Frankreich",
-          "E-Mail: lezzetanatolie@gmail.com",
-          "Telefon: +33 (0)6 16 99 06 81"
+          "Sitz: {address}, Frankreich",
+          "E-Mail: {email}",
+          "Telefon: {phone}"
         ]
       },
       {
         "id": "yayin",
         "heading": "Verantwortlich für den Inhalt",
         "body": [
-          "Verantwortlich für den Inhalt ist Yigit Bilgin, Präsident der QUALITE SAS. Anfragen zum Inhalt richten Sie bitte an die oben genannte E-Mail-Adresse."
+          "Verantwortlich für den Inhalt ist Yigit Bilgin, Präsident der {legalName}. Anfragen zum Inhalt richten Sie bitte an die oben genannte E-Mail-Adresse."
         ]
       },
       {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
+import { fillBrandFacts } from '@lezzet/brand';
 import type { AppRoute, Locale } from '@lezzet/i18n';
 import { localeAlternates } from '@/lib/seo/alternates';
 import { detectDevice } from '@/lib/device';
@@ -43,10 +44,13 @@ interface LegalPageProps {
   document: LegalDocument;
 }
 
-export async function LegalPage({ locale, document: doc }: LegalPageProps) {
+export async function LegalPage({ locale, document: source }: LegalPageProps) {
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
 
+  /* Şirket künyesi (unvan, SIRET, adres, e-posta …) metne gömülü değil, `{siret}` gibi yer tutucu;
+     değer `@lezzet/brand`den burada dolar (15.09). Beş sayfa bu kabuktan geçtiği için tek yer. */
+  const doc = fillBrandFacts(source);
   const t: LegalMessages = messages[locale];
   const device = await detectDevice();
   /**

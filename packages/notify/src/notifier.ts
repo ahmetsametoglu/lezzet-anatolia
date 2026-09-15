@@ -1,4 +1,4 @@
-import { brand } from '@lezzet/brand';
+import { brand, companyAddressLine } from '@lezzet/brand';
 import { emailDriver } from './drivers/email.driver';
 import { pushDriver } from './drivers/push.driver';
 import { waLinkDriver } from './drivers/wa-link.driver';
@@ -63,11 +63,11 @@ export function createNotifier(drivers: readonly NotifyDriver[]): Notifier {
 }
 
 /**
- * Yasal alt bilgi — mail her ülkede gönderenin adresini taşımak zorundadır. Adres şirket künyesinden
- * (`brand.company`); ülke adı bütün dillerde "France", çünkü alt satır bugün tek dilli.
+ * Yasal alt bilgi — mail her ülkede gönderenin adresini taşımak zorundadır. Adres satırı şirket
+ * künyesinden (`companyAddressLine` — yasal metinler de aynı satırı okur); ülke adı bütün dillerde
+ * "France", çünkü alt satır bugün tek dilli.
  */
-const companyAddress = brand.company.address;
-const POSTAL_ADDRESS = `${brand.name} · ${companyAddress.street}, ${companyAddress.postalCode} ${companyAddress.city}, France`;
+const POSTAL_ADDRESS = `${brand.name} · ${companyAddressLine}, France`;
 
 /**
  * Projenin standart bildirim kurulumu — **sürücü sırasının tek kaynağı.**

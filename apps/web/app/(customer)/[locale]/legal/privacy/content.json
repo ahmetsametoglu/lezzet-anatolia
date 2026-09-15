@@ -6,8 +6,8 @@
         "id": "sorumlu",
         "heading": "Verilerinizden kim sorumlu",
         "body": [
-          "Bu sitede toplanan kişisel verilerin sorumlusu QUALITE SAS'tır (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, Fransa. Site Lezzet Anatolie markasıyla işletilmektedir.",
-          "Veri koruma ile ilgili her konuda lezzetanatolie@gmail.com adresinden bize ulaşabilirsiniz."
+          "Bu sitede toplanan kişisel verilerin sorumlusu {legalName}'tır (SIRET {siret}), {address}, Fransa. Site Lezzet Anatolie markasıyla işletilmektedir.",
+          "Veri koruma ile ilgili her konuda {email} adresinden bize ulaşabilirsiniz."
         ]
       },
       {
@@ -60,7 +60,7 @@
         "id": "haklariniz",
         "heading": "Haklarınız",
         "body": [
-          "GDPR (AB 2016/679) kapsamında aşağıdaki haklara sahipsiniz. Bunları kullanmak için lezzetanatolie@gmail.com adresine yazmanız yeterli; talebinize en geç bir ay içinde dönüş yapılır."
+          "GDPR (AB 2016/679) kapsamında aşağıdaki haklara sahipsiniz. Bunları kullanmak için {email} adresine yazmanız yeterli; talebinize en geç bir ay içinde dönüş yapılır."
         ],
         "bullets": [
           "Verilerinize erişme ve bir kopyasını isteme",
@@ -95,8 +95,8 @@
         "id": "sorumlu",
         "heading": "Qui est responsable de vos données",
         "body": [
-          "Le responsable du traitement des données personnelles collectées sur ce site est la société QUALITE SAS (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, France, exploitant le site sous le nom commercial Lezzet Anatolie.",
-          "Pour toute question relative à la protection des données, vous pouvez nous écrire à lezzetanatolie@gmail.com."
+          "Le responsable du traitement des données personnelles collectées sur ce site est la société {legalName} (SIRET {siret}), {address}, France, exploitant le site sous le nom commercial Lezzet Anatolie.",
+          "Pour toute question relative à la protection des données, vous pouvez nous écrire à {email}."
         ]
       },
       {
@@ -149,7 +149,7 @@
         "id": "haklariniz",
         "heading": "Vos droits",
         "body": [
-          "Au titre du RGPD (UE 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à lezzetanatolie@gmail.com ; une réponse vous est apportée dans un délai maximal d'un mois."
+          "Au titre du RGPD (UE 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à {email} ; une réponse vous est apportée dans un délai maximal d'un mois."
         ],
         "bullets": [
           "Accéder à vos données et en demander une copie",
@@ -184,8 +184,8 @@
         "id": "sorumlu",
         "heading": "Wer für Ihre Daten verantwortlich ist",
         "body": [
-          "Verantwortlich für die auf dieser Website erhobenen personenbezogenen Daten ist die QUALITE SAS (SIRET 907 496 640 00026), 46 rue des Prés, 67380 Lingolsheim, Frankreich, die die Website unter dem Handelsnamen Lezzet Anatolie betreibt.",
-          "Bei allen Fragen zum Datenschutz erreichen Sie uns unter lezzetanatolie@gmail.com."
+          "Verantwortlich für die auf dieser Website erhobenen personenbezogenen Daten ist die {legalName} (SIRET {siret}), {address}, Frankreich, die die Website unter dem Handelsnamen Lezzet Anatolie betreibt.",
+          "Bei allen Fragen zum Datenschutz erreichen Sie uns unter {email}."
         ]
       },
       {
@@ -238,7 +238,7 @@
         "id": "haklariniz",
         "heading": "Ihre Rechte",
         "body": [
-          "Nach der DSGVO (EU 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an lezzetanatolie@gmail.com; wir antworten spätestens innerhalb eines Monats."
+          "Nach der DSGVO (EU 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an {email}; wir antworten spätestens innerhalb eines Monats."
         ],
         "bullets": [
           "Auskunft über Ihre Daten und eine Kopie davon verlangen",

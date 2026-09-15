@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { fillBrandFacts } from '@lezzet/brand';
 import { deliveryTermsLines } from '@lezzet/helper';
 
 import { AppBar } from '@/components/ui/app-bar';
@@ -54,9 +55,14 @@ interface LegalScreenProps {
   page: string;
 }
 
+/* Şirket künyesi (unvan, SIRET, adres, e-posta …) metne gömülü değil, `{siret}` gibi yer tutucu;
+   değer `@lezzet/brand`den modül yüklenirken BİR kez dolar (15.09) — web'in yasal sayfaları da aynı
+   fonksiyondan geçiyor. */
+const LEGAL_MESSAGES = fillBrandFacts(messages);
+
 export function LegalScreen({ page }: LegalScreenProps) {
   const locale = useAppLocale();
-  const t: Messages = messages[locale];
+  const t: Messages = LEGAL_MESSAGES[locale];
   const router = useRouter();
   /* KOŞULSUZ çağrı: aşağıda "bu sayfa yok" erken dönüşü var ve hook ondan sonra çağrılamaz.
      Bedeli yok — yalnız teslimat sayfası okuyor, ötekiler cevabı hiç kullanmıyor. */
