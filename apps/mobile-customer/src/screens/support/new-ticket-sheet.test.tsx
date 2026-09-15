@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import * as ImagePicker from 'expo-image-picker';
 
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/support';
 import { NewTicketSheet } from './new-ticket-sheet';
 
 /*

@@ -22,7 +22,8 @@
     "./customer/checkout": "./src/customer/checkout.json",
     "./customer/account": "./src/customer/account.json",
     "./customer/legal": "./src/customer/legal.json",
-    "./customer/orders": "./src/customer/orders.json"
+    "./customer/orders": "./src/customer/orders.json",
+    "./customer/support": "./src/customer/support.json"
   },
   "types": "./src/index.ts",
   "scripts": {

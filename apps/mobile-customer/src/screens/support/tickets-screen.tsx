@@ -20,7 +20,7 @@ import { NewTicketSheet } from './new-ticket-sheet';
 import { ticketMeta, ticketScope, ticketTitle } from './ticket-format';
 import { TicketStatusTag } from './ticket-status-tag';
 import { TicketsSkeleton } from './tickets-skeleton';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/support';
 import { useTickets } from './use-tickets.hook';
 
 /*

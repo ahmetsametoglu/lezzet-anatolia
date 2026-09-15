@@ -10,7 +10,7 @@ import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/custome
 import { useOrder } from '@/screens/orders/use-order.hook';
 // Sözlük burada YALNIZ tip için okunuyor (metni ekran veriyor): çalışma zamanında ikinci bir JSON
 // kopyası taşınmasın diye tip-yalnız import.
-import type messages from './messages.json';
+import type messages from '@lezzet/i18n/customer/support';
 
 /*
   YENİ TALEBİN KALEM SEÇİCİSİ (v3 `vTalepNew` · `tn.items`) — seçilen siparişin kalemlerini GERÇEK

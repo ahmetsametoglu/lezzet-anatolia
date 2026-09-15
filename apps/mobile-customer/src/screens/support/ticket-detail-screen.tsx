@@ -24,7 +24,7 @@ import { formatOrderDate } from '@/screens/orders/order-format';
 import { ticketScope, ticketTitle } from './ticket-format';
 import { TicketDetailSkeleton } from './ticket-detail-skeleton';
 import { TicketStatusTag } from './ticket-status-tag';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/support';
 import { useTicket } from './use-ticket.hook';
 
 /*

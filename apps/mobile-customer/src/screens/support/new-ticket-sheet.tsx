@@ -21,7 +21,7 @@ import { useOrders } from '@/screens/orders/use-orders.hook';
 import { OrderLinePicker } from './order-line-picker';
 import { OrderPicker } from './order-picker';
 import { useTicketPhotos, type TicketPhotoFailure } from './use-ticket-photos.hook';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/support';
 
 /*
   YENİ TALEP · "BİZE YAZIN" — v3 `vTalepNew`in akışı, **ÇEKMECE olarak** (kullanıcı kararı 09.08).
