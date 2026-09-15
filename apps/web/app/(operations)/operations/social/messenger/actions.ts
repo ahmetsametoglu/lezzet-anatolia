@@ -13,11 +13,17 @@ import type { ConversationDetailView } from '../social-types';
 // Müşterinin kanal düğmesinin kapısı ortak (`lib/messaging/customer-channel-actions`): düğmeyi başka
 // sayfalar çiziyor.
 
-/** Düğmenin rozeti — cevap bekleyen sohbet SAYIMI (kuyruk başlığının aynı sayısı, sayfa uzunluğu değil). */
-export async function messengerAwaitingCountAction(): Promise<ActionResult<number>> {
+/**
+ * Pencerenin NABZI — düğmenin rozeti (cevap bekleyen sohbet SAYIMI, sayfa uzunluğu değil) ve yeni mesaj sesinin
+ * ölçütü (15.34): kuyruğun en son GELEN mesaj anı. Kuyruk o anın büyüğünden küçüğüne sıralı; ilk satırın damgası
+ * en sonuncusudur — ayrı bir sorgu gerekmez.
+ */
+export async function messengerPulseAction(): Promise<ActionResult<{ awaiting: number; latestInboundAt: string | null }>> {
   try {
     await requireAdmin();
-    return { data: await new ConversationInboxService(serviceDb()).countAwaitingReply(), error: null };
+    const inbox = new ConversationInboxService(serviceDb());
+    const [awaiting, top] = await Promise.all([inbox.countAwaitingReply(), inbox.list({}, undefined, 1)]);
+    return { data: { awaiting, latestInboundAt: top.rows[0]?.lastInboundAt ?? null }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

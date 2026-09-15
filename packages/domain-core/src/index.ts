@@ -70,6 +70,7 @@ export * from './support/ticket-flow';
 export * from './messaging/chat-formatting';
 export * from './messaging/conversation-language';
 export * from './messaging/customer-channels';
+export * from './messaging/message-alert';
 export * from './messaging/default-handler';
 export * from './messaging/notification-preferences';
 export * from './messaging/secret-masking';

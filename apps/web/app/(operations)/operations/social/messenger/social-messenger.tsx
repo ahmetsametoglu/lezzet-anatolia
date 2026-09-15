@@ -1,14 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { alertAllowed, hasNewInbound } from '@lezzet/domain-core';
 import { conversationChannelName, type KeysetCursor } from '@lezzet/types';
 import { Badge } from '@/components/operation/ui/badge';
 import { ArrowLeftIcon, ChatIcon, XIcon } from '@/components/operation/ui/icons';
 import { MessageThread } from '@/components/operation/ui/message-thread';
 import { Skeleton } from '@/components/operation/ui/skeleton';
 import { useBell } from '@/components/operation/ui/use-bell.hook';
+import { playMessageChime, unlockMessageChime } from '@/components/operation/ui/message-chime';
 import { SOURCE_LABELS } from '@/components/operation/ui/conversation-source';
 import { SocialMessengerContext, type SocialMessengerApi } from '@/components/operation/ui/use-social-messenger.hook';
 import { chatTargetOf } from '@/components/operation/ui/customer-channel-model';
@@ -18,7 +20,7 @@ import { WINDOW_TONE } from '../social-labels';
 import { Bubble, InboxRow, NoteLine, ReplyBox } from '../social-sections';
 import { SOCIAL_PATH, socialLink } from '../social-url';
 import type { ConversationDetailView, InboxRowView } from '../social-types';
-import { messengerAwaitingCountAction, messengerConversationAction, startWhatsappConversationAction } from './actions';
+import { messengerConversationAction, messengerPulseAction, startWhatsappConversationAction } from './actions';
 
 /**
  * **Yüzen mesaj penceresi** (15.32 · kullanıcı isteği 14.09) — operasyon web'inin her ekranında sağ altta bir
@@ -34,8 +36,8 @@ import { messengerAwaitingCountAction, messengerConversationAction, startWhatsap
  * aynı sohbeti farklı çizerdi. Mod anahtarı, taslak ve müşteri bağlamı tam ekranda kalır ("Tam ekran →").
  *
  * **Yalnız yönetici:** sohbet sayfasının kapısı `requireAdmin`; pencere ikinci bir yetki yolu değil, kısayol.
- * Sohbet sayfasının kendisinde düğme çizilmez — tam ekran zaten açık (ve kuyruk zilini orada sayfa dinler:
- * aynı kanala iki abonelik açılmaz).
+ * Sohbet sayfasının kendisinde düğme ve pencere çizilmez — tam ekran zaten açık. Yeni mesaj SESİ (15.34) ise her
+ * ekranda, sohbet sayfasında da çalar; kuyruk zilinin aboneliği ortak (`useBell`), aynı kanala tek abonelik.
  */
 
 interface SocialMessengerProviderProps {
@@ -59,20 +61,36 @@ export function SocialMessengerProvider({ enabled, inboxChannel, children }: Soc
   // Kuyruk zili TEK yerde dinlenir, liste bu sayaçla haberdar olur — aynı kanala iki abonelik açılmasın.
   const [inboxTick, setInboxTick] = useState(0);
 
-  const refreshCount = useCallback(() => {
-    void messengerAwaitingCountAction().then(({ data }) => {
-      if (data !== null) setAwaiting(data);
+  // Yeni mesaj sesi (15.34): son ölçülen "en son gelen mesaj" anı ve son sesin zamanı. `undefined` = henüz
+  // ölçülmedi — açılıştaki ilk ölçüm taban çizgisidir, zaten bekleyen mesajlar ses çaldırmaz (`hasNewInbound`).
+  const latestInbound = useRef<string | null | undefined>(undefined);
+  const lastChimeAt = useRef<number | null>(null);
+
+  const pulse = useCallback(() => {
+    void messengerPulseAction().then(({ data }) => {
+      if (data === null) return;
+      setAwaiting(data.awaiting);
+      const now = Date.now();
+      if (hasNewInbound(latestInbound.current, data.latestInboundAt) && alertAllowed(lastChimeAt.current, now)) {
+        lastChimeAt.current = now;
+        playMessageChime();
+      }
+      latestInbound.current = data.latestInboundAt;
     });
   }, []);
 
   useEffect(() => {
-    if (enabled && !onSocialPage) refreshCount();
-  }, [enabled, onSocialPage, refreshCount]);
+    if (!enabled) return;
+    pulse();
+    // Tarayıcı sesi ancak kişi sayfaya bir kez dokunduktan sonra çaldırır — kilidi ilk dokunuş açar.
+    return unlockMessageChime();
+  }, [enabled, pulse]);
 
-  useBell(enabled && !onSocialPage ? inboxChannel : null, () => {
-    refreshCount();
-    setInboxTick((tick) => tick + 1);
-  });
+  // Nabız HER ekranda ve sekme arka plandayken de dinlenir: ses tam da operatör başka sekmedeyken gerekir.
+  // Sohbet sayfasında da — orada kuyruğu sayfa kendi zinciriyle tazeliyor; abonelik ortak (`useBell`), tek.
+  useBell(enabled ? inboxChannel : null, pulse, { whileHidden: 'run' });
+  // Açık pencerenin listesi yalnız görünürken tazelenir (gizli sekmede tur yok — `useBell`in varsayılanı).
+  useBell(enabled && open && !onSocialPage ? inboxChannel : null, () => setInboxTick((tick) => tick + 1));
 
   const openConversation = useCallback((id: string) => {
     setOpen(true);
