@@ -18,8 +18,8 @@ import type { LoginViewProps } from './login-types';
 /*
   HIZLI DOĞRULAMA — telefon görünümü (15.09): kaynak `design/01-musteri/Musteri Mobil.dc.html`'in "Hızlı Doğrulama"
   karesi (uygulama ile web telefon görünümünün ortak tasarımı; kullanıcının paylaştığı görüntü). Native müşteri
-  girişiyle aynı ekran: ‹ · sola yaslı logo · başlık · sabit cümle · üç yol (Google · WhatsApp · E-posta) · gizlilik
-  cümlesi. E-posta yolunda alan ve "Tek kullanımlık kod gönder", sonra tek kod alanı; altı hane girilince kendiliğinden
+  girişiyle aynı ekran: ‹ · ortada büyük işaret logosu · başlık · sabit cümle · üç yol (Google · WhatsApp · E-posta) ·
+  gizlilik cümlesi. E-posta yolunda alan ve "Tek kullanımlık kod gönder", sonra tek kod alanı; altı hane girilince kendiliğinden
   doğrulanır.
 
   Metin ortak sözlükten (`@lezzet/i18n/customer/login` — native aynı dosyayı okur); hata cümleleri web'in auth kapısından
@@ -30,7 +30,11 @@ import type { LoginViewProps } from './login-types';
   1. WhatsApp düğmesi bilgi verir: WhatsApp ile giriş kurulu değil (arka uç yalnız e-postaya kod gönderiyor); düğme
      karedeki yerinde durur, basılınca "çok yakında" satırı çıkar (native aynı).
   2. Karenin "Demo: herhangi 6 rakam girin" satırı yazılmadı — prototipin kendine notu.
-  3. ‹ girişi kapatır, kod adımında e-postaya dönmez (karenin `lg.cancel`i; native aynı).
+  3. ‹ adım adım geri döner — kod → e-posta → seçim, seçimde girişi kapatır; karenin `lg.cancel`i her adımda
+     kapatıyordu (kullanıcı bulgusu 15.09: "e-posta adımına geçtikten sonra kullanıcı geri gelemiyor"; native aynı).
+  4. Logo karenin 42'lik yatay logosu değil, metinsiz işaret (`logo-isaret.png`): görünür yüksekliğin %20'si, en çok
+     180; logo ile blok birlikte dikeyde ortada — kullanıcı kararı 15.09: "aşağıda boş bir alan var, burayı verimli
+     kullanamıyoruz" (native aynı).
 */
 
 type Copy = LocalizedCopy<typeof loginMessages>;
@@ -38,11 +42,16 @@ type Copy = LocalizedCopy<typeof loginMessages>;
 /** Seçim ekranı ile e-posta formu — kod aşaması `stage`ten gelir. */
 type Step = 'choose' | 'email';
 
-export function LoginMobile({ locale, stage, error, isSending, emailInvalid, emailRef, emailField, onSubmit, onGoogle, onVerify, onResend }: LoginViewProps) {
+export function LoginMobile({ locale, stage, error, isSending, emailInvalid, emailRef, emailField, onSubmit, onBack, onGoogle, onVerify, onResend }: LoginViewProps) {
   const copy: Copy = loginMessages[locale];
   const [step, setStep] = useState<Step>('choose');
   /** Seçim aşamasının bilgi satırı (WhatsApp "yakında"). */
   const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * ‹'in adımı (sapma 3): kod → e-posta `login-client`in `onBack`i (yazılan adres formda kalır), e-posta → seçim burada;
+   * seçimde adım yok, düğme geçmişe döner. Tarayıcının kendi geri hareketi adım bilmez, sayfadan çıkar.
+   */
+  const stepBack = stage.kind === 'code' ? onBack : step === 'email' ? () => setStep('choose') : undefined;
 
   return (
     <main
@@ -52,68 +61,74 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
       className="flex min-h-dvh flex-col bg-sand-50 pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink"
     >
       <div className="flex items-center px-3.5 pt-2">
-        <BackButton label={copy.back} fallback="/" />
+        <BackButton label={copy.back} fallback="/" onPress={stepBack} />
       </div>
 
-      <div className="flex flex-col gap-4 px-6.5 pt-5 pb-7.5">
-        {/* Karenin yatay logosu (`design/00-marka/logo-yatay.png`: işaret + "Lezzet Anatolie" yazısı), 42 yükseklik.
-            Saydam PNG — eski `logo.jpg`nin beyaz zeminini yutan `mix-blend-multiply`ye gerek yok. */}
-        <img src="/logo-yatay.png" alt={brand.name} className="h-10.5 self-start" />
+      <div className="flex flex-1 flex-col justify-center gap-4 px-6.5 pt-5 pb-7.5">
+        {/* Metinsiz işaret logosu ortada: boyu görünür yüksekliğin %20'si, en çok 180 (native aynı kural); logo ile
+            altındaki blok birlikte dikeyde ortalanır — boşluk üstte ve altta eşit. Karenin yatay logosundan sapma (4). */}
+        <img src="/logo-isaret.png" alt={brand.name} className="mb-4 h-[min(180px,20dvh)] self-center" />
         <h1 className="font-serif text-page-title-sm leading-tight text-ink">{copy.title}</h1>
         <p className="font-sans text-control leading-normal font-normal text-body">{copy.body}</p>
 
-        {stage.kind === 'code' ? (
-          <CodeStep email={stage.email} copy={copy} onVerify={onVerify} onResend={onResend} />
-        ) : step === 'choose' ? (
-          <div className="mt-1.5 flex flex-col gap-2.5">
-            <ProviderButton
-              tone="card"
-              label={copy.google}
-              onClick={() => {
-                setNotice(null);
-                onGoogle();
-              }}
-              mark={
-                <span aria-hidden className="font-sans text-step font-bold text-brand-google">
-                  G
-                </span>
-              }
-            />
-            <ProviderButton tone="card" label={copy.whatsapp} onClick={() => setNotice(copy.whatsappSoon)} mark={<MobileIcon name="whatsapp" size={17} className="text-brand-whatsapp-pure" />} />
-            <ProviderButton
-              tone="olive"
-              label={copy.email}
-              onClick={() => {
-                setNotice(null);
-                setStep('email');
-              }}
-              mark={<MobileCustomerIcon name="mail" size={17} />}
-            />
-            {notice && <p className="mt-1.5 text-center font-sans text-note font-semibold text-olive-dark">{notice}</p>}
-          </div>
-        ) : (
-          <form onSubmit={onSubmit} noValidate className="mt-1.5 flex flex-col gap-2.5">
-            <FormInputField
-              label={copy.emailField}
-              hideLabel
-              variant="pill"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              placeholder={copy.emailField}
-              error={emailInvalid ? copy.emailInvalid : undefined}
-              inputRef={emailRef}
-              {...emailField}
-            />
-            <PrimaryButton type="submit" shape="block" label={isSending ? copy.sending : copy.send} disabled={isSending} />
-          </form>
-        )}
+        {/* Adımın alanı SABİT yükseklikte (kullanıcı bulgusu 15.09): blok ortalandığı için e-posta ve kod adımlarının
+            kısa alanı logoyu ve başlığı oynatıyordu. Seçimin üç yolu ve bilgi satırı kadar yer ayrılır — 215 = 6 üst
+            pay + 3 × 54 yol + 2 × 10 aralık + 6 + 21 bilgi satırı (telefon ölçeğinde `text-note` 14 × 1,5; native aynı
+            hesabı kendi token'ıyla yapar); hata satırı da bu alanın içinde. */}
+        <div className="flex min-h-53.75 flex-col">
+          {stage.kind === 'code' ? (
+            <CodeStep email={stage.email} copy={copy} onVerify={onVerify} onResend={onResend} />
+          ) : step === 'choose' ? (
+            <div className="mt-1.5 flex flex-col gap-2.5">
+              <ProviderButton
+                tone="card"
+                label={copy.google}
+                onClick={() => {
+                  setNotice(null);
+                  onGoogle();
+                }}
+                mark={
+                  <span aria-hidden className="font-sans text-step font-bold text-brand-google">
+                    G
+                  </span>
+                }
+              />
+              <ProviderButton tone="card" label={copy.whatsapp} onClick={() => setNotice(copy.whatsappSoon)} mark={<MobileIcon name="whatsapp" size={17} className="text-brand-whatsapp-pure" />} />
+              <ProviderButton
+                tone="olive"
+                label={copy.email}
+                onClick={() => {
+                  setNotice(null);
+                  setStep('email');
+                }}
+                mark={<MobileCustomerIcon name="mail" size={17} />}
+              />
+              {notice && <p className="mt-1.5 text-center font-sans text-note font-semibold text-olive-dark">{notice}</p>}
+            </div>
+          ) : (
+            <form onSubmit={onSubmit} noValidate className="mt-1.5 flex flex-col gap-2.5">
+              <FormInputField
+                label={copy.emailField}
+                hideLabel
+                variant="pill"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder={copy.emailField}
+                error={emailInvalid ? copy.emailInvalid : undefined}
+                inputRef={emailRef}
+                {...emailField}
+              />
+              <PrimaryButton type="submit" shape="block" label={isSending ? copy.sending : copy.send} disabled={isSending} />
+            </form>
+          )}
 
-        {error && stage.kind !== 'code' && (
-          <p role="alert" className="text-center font-sans text-note font-semibold text-terracotta-bright">
-            {error}
-          </p>
-        )}
+          {error && stage.kind !== 'code' && (
+            <p role="alert" className="mt-2.5 text-center font-sans text-note font-semibold text-terracotta-bright">
+              {error}
+            </p>
+          )}
+        </div>
 
         {/* Gizlilik bağlantısı CÜMLENİN İÇİNDE (karenin kendisi; native aynı). */}
         <p className="mt-2.5 font-sans text-micro leading-normal text-muted">

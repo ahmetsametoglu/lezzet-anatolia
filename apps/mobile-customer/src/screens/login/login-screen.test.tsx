@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
 
 import type { Me } from '@lezzet/mobile-kit/src/lib/api/me';
 import { meFixture } from '@lezzet/mobile-kit/src/testing/me-fixture';
@@ -289,5 +290,51 @@ describe('geri oku (kullanıcı kuralı 14.09 — alt ekransa var)', () => {
     await fireEvent.press(screen.getByTestId('login-back'));
 
     expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  /* ADIM ADIM GERİ (kullanıcı bulgusu 15.09): e-posta adımında ‹ girişi kapatıyordu, müşteri seçime dönemiyordu. */
+  it('e-posta adımında ‹ seçime döner, ekranı kapatmaz', async () => {
+    await render(<LoginScreen />);
+    await toEmailStage();
+
+    await fireEvent.press(screen.getByTestId('login-back'));
+
+    expect(screen.getByTestId('login-google')).toBeOnTheScreen();
+    expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  it('kod adımında ‹ e-postaya döner; yazılan adres yerinde', async () => {
+    fetchMock.mockResolvedValue(reply(200, { data: true, error: null }));
+    await render(<LoginScreen />);
+    await toEmailStage();
+    await fireEvent.changeText(screen.getByTestId('login-email-input'), 'ayse@example.com');
+    await fireEvent.press(screen.getByTestId('login-send'));
+    await waitFor(() => expect(screen.getByTestId('login-code-input')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByTestId('login-back'));
+
+    expect(screen.getByTestId('login-email-input').props.value).toBe('ayse@example.com');
+    expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  it("Android'in geri tuşu ‹ ile aynı yolu izler: e-posta adımında seçime döner, seçimde gezgine bırakır", async () => {
+    const listen = jest.spyOn(BackHandler, 'addEventListener');
+    await render(<LoginScreen />);
+    await toEmailStage();
+    // Ekran her adımda dinleyiciyi yeniler: basılan, son kurulan dinleyicidir.
+    const pressBack = () => listen.mock.calls.at(-1)?.[1]({ type: 'hardwareBackPress', timeStamp: Date.now() });
+
+    let handled: boolean | null | undefined;
+    await act(async () => {
+      handled = pressBack();
+    });
+    expect(handled).toBe(true);
+    expect(screen.getByTestId('login-google')).toBeOnTheScreen();
+
+    await act(async () => {
+      handled = pressBack();
+    });
+    expect(handled).toBe(false);
+    listen.mockRestore();
   });
 });

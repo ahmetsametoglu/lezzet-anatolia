@@ -29,5 +29,10 @@ test.describe('telefon girişi — ziyaretçi', () => {
     await page.getByRole('button', { name: "Continuer avec l'e-mail" }).click();
     await expect(page.getByRole('textbox', { name: 'Votre adresse e-mail' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Envoyer un code à usage unique' })).toBeVisible();
+
+    // ‹ adım adım geri (kullanıcı bulgusu 15.09): e-posta adımından seçime döner, sayfadan çıkmaz.
+    await page.getByRole('button', { name: 'Retour' }).click();
+    await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
+    await expect(page).toHaveURL(/\/fr\/connexion$/);
   });
 });

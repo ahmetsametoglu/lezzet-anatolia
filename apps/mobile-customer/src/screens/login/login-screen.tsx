@@ -3,7 +3,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { OTP_CODE_LENGTH, type AuthErrorKey } from '@lezzet/types';
 import { useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { BackHandler, Image, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { BackButton } from '@lezzet/mobile-kit/src/components/ui/back-button';
@@ -55,12 +55,16 @@ type LoginStage = 'choose' | 'email' | 'code' | 'verifying' | 'done';
 
 
 /**
- * Karenin yatay logosu (`assets/images/logo-yatay.png` — `design/00-marka/logo-yatay.png`in kopyası, 900×234):
- * yükseklik "Hızlı Doğrulama" karesinin 42'si (Musteri Mobil.dc.html:865; web telefon girişi de 42), genişlik orandan
- * türer. Kitin `loginLogoHeight`ı (52) tanıtım ve profil kurulumunun eski logosunda kalır.
+ * Metinsiz işaret logosu (`assets/images/logo-isaret.png`, 615×540 saydam): `design/uploads/lezzet-anatolie-logo-no-text.png`
+ * karesinin ortası kırpıldı, krem zemini saydama çevrildi — 3x ekranda en büyük boyda (180) bile keskin. Boy ekran
+ * yüksekliğinin %20'si, en çok 180 (web telefon girişi aynı kural, görünür yükseklikle); genişlik orandan türer. Karenin
+ * 42'lik yatay logosu yerine — kullanıcı kararı 15.09. Kitin `loginLogoHeight`ı (52) tanıtım ve profil kurulumunun eski
+ * logosunda kalır.
  */
-const LOGO_ASPECT = 900 / 234;
-const LOGO_HEIGHT = 42;
+const LOGO_ASPECT = 615 / 540;
+const LOGO_MAX_HEIGHT = 180;
+const LOGO_SCREEN_SHARE = 0.2;
+const logoHeight = (screenHeight: number) => Math.min(LOGO_MAX_HEIGHT, screenHeight * LOGO_SCREEN_SHARE);
 
 /** Karenin yol düğmesi (Musteri Mobil.dc.html:870 — 54; kitin `controlLg`si 52). Web telefon girişi de 54. */
 const PROVIDER_HEIGHT = 54;
@@ -131,6 +135,33 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
     if (router.canGoBack()) router.back();
     else router.replace('/');
   }, [router]);
+
+  /**
+   * **Geri adım adım** (kullanıcı bulgusu 15.09 — e-posta adımında ‹ ve Android'in geri tuşu girişi kapatıyordu, müşteri
+   * seçime dönemiyordu): kod → e-posta (yazılan adres yerinde) → seçim; seçimde adım yok, ekran kapanır. Doğrulama
+   * sürerken ve bittiğinde de adım yok. Web telefon girişi aynı. `true` = adım atıldı.
+   */
+  const stepBack = useCallback(() => {
+    if (stage === 'code') {
+      setStage('email');
+      setCode('');
+      setCodeError(null);
+      return true;
+    }
+    if (stage === 'email') {
+      setStage('choose');
+      setEmailError(null);
+      return true;
+    }
+    return false;
+  }, [stage]);
+
+  /* ANDROID'İN GERİ TUŞU ‹ ile aynı yolu izler (kitin çekmecesiyle aynı API — `bottom-sheet.tsx`): adım yoksa `false`
+     döner ve gezgin ekranı kendisi kapatır. iOS'ta `BackHandler` sessiz. */
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', stepBack);
+    return () => subscription.remove();
+  }, [stepBack]);
 
   useEffect(() => {
     if (stage !== 'done') return;
@@ -254,16 +285,23 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
   return (
     <View style={styles.screen}>
       <View style={styles.topBar}>
-        <BackButton onPress={closeLogin} accessibilityLabel={t.back} testID="login-back" />
+        <BackButton
+          onPress={() => {
+            if (!stepBack()) closeLogin();
+          }}
+          accessibilityLabel={t.back}
+          testID="login-back"
+        />
       </View>
       <FormScroll contentContainerStyle={styles.content} testID="login-scroll">
-        {/* Logo yükseklikten ölçülür (karenin 42'si). Varlık karenin saydam PNG'si — beyaz zeminli eski jpg'nin
-            `multiply` karışımı iOS'ta uygulanmıyordu (ölçüldü 08.08); saydam dosyada karışıma gerek yok. */}
+        {/* Metinsiz işaret logosu ortada; logo ile altındaki blok birlikte dikeyde ortalanır — boşluk üstte ve altta
+            eşit (kullanıcı kararı 15.09; web telefon girişi aynı). Karenin yatay logosundan sapma. Varlık saydam PNG —
+            beyaz zeminli eski jpg'nin `multiply` karışımı iOS'ta uygulanmıyordu (ölçüldü 08.08). */}
         <Image
           // Statik varlık Metro'da `require` ile yüklenir (Expo png için modül tipi bildirmiyor,
           // `import` derlenmez) — kural TS import disiplinine bakıyor, varlık yolunu bilmiyor.
           // eslint-disable-next-line @typescript-eslint/no-require-imports
-          source={require('../../../assets/images/logo-yatay.png')}
+          source={require('../../../assets/images/logo-isaret.png')}
           style={styles.logo}
           accessibilityLabel={brand.name}
         />
@@ -272,104 +310,108 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
         </Text>
         <Text style={styles.body}>{t.body}</Text>
 
-        {stage === 'choose' ? (
-          <View style={styles.providers}>
-            <PressableSurface onPress={startGoogle} feedback="scale" style={[styles.providerButton, styles.cardButton]} accessibilityLabel={t.google} testID="login-google">
-              <Text style={styles.googleMark}>G</Text>
-              <Text style={[styles.providerLabel, styles.cardLabel]}>{t.google}</Text>
-            </PressableSurface>
-            <PressableSurface
-              onPress={() => setNotice(t.whatsappSoon)}
-              feedback="scale"
-              style={[styles.providerButton, styles.cardButton]}
-              accessibilityLabel={t.whatsapp}
-              testID="login-whatsapp"
-            >
-              <Icon name="whatsapp" size={theme.size.inlineIcon} color={theme.colors['brand-whatsapp-pure']} />
-              <Text style={[styles.providerLabel, styles.cardLabel]}>{t.whatsapp}</Text>
-            </PressableSurface>
-            <PressableSurface
-              onPress={() => {
-                setNotice(null);
-                setStage('email');
-              }}
-              feedback="scale"
-              style={[styles.providerButton, styles.oliveButton]}
-              accessibilityLabel={t.email}
-              testID="login-email"
-            >
-              <CustomerIcon name="mail" size={theme.size.inlineIcon} color={theme.colors.card} />
-              <Text style={[styles.providerLabel, styles.oliveLabel]}>{t.email}</Text>
-            </PressableSurface>
-            {notice === null ? null : (
-              <Text style={styles.notice} testID="login-notice">
-                {notice}
-              </Text>
-            )}
-          </View>
-        ) : null}
+        {/* Adımın alanı SABİT yükseklikte (`stepArea` — kullanıcı bulgusu 15.09): blok ortalandığı için e-posta ve kod
+            adımlarının kısa alanı logoyu ve başlığı oynatıyordu. */}
+        <View style={styles.stepArea}>
+          {stage === 'choose' ? (
+            <View style={styles.providers}>
+              <PressableSurface onPress={startGoogle} feedback="scale" style={[styles.providerButton, styles.cardButton]} accessibilityLabel={t.google} testID="login-google">
+                <Text style={styles.googleMark}>G</Text>
+                <Text style={[styles.providerLabel, styles.cardLabel]}>{t.google}</Text>
+              </PressableSurface>
+              <PressableSurface
+                onPress={() => setNotice(t.whatsappSoon)}
+                feedback="scale"
+                style={[styles.providerButton, styles.cardButton]}
+                accessibilityLabel={t.whatsapp}
+                testID="login-whatsapp"
+              >
+                <Icon name="whatsapp" size={theme.size.inlineIcon} color={theme.colors['brand-whatsapp-pure']} />
+                <Text style={[styles.providerLabel, styles.cardLabel]}>{t.whatsapp}</Text>
+              </PressableSurface>
+              <PressableSurface
+                onPress={() => {
+                  setNotice(null);
+                  setStage('email');
+                }}
+                feedback="scale"
+                style={[styles.providerButton, styles.oliveButton]}
+                accessibilityLabel={t.email}
+                testID="login-email"
+              >
+                <CustomerIcon name="mail" size={theme.size.inlineIcon} color={theme.colors.card} />
+                <Text style={[styles.providerLabel, styles.oliveLabel]}>{t.email}</Text>
+              </PressableSurface>
+              {notice === null ? null : (
+                <Text style={styles.notice} testID="login-notice">
+                  {notice}
+                </Text>
+              )}
+            </View>
+          ) : null}
 
-        {stage === 'email' ? (
-          <View style={styles.form}>
-            <TextField
-              value={email}
-              onChangeText={(value) => {
-                setEmail(value);
-                setEmailError(null);
-              }}
-              accessibilityLabel={t.emailField}
-              placeholder={t.emailField}
-              shape="pill"
-              content="email"
-              errorText={emailError ?? undefined}
-              testID="login-email-input"
-            />
-            <PrimaryButton
-              label={cooldownSec > 0 ? t.sendWait.replace('{s}', String(cooldownSec)) : sending ? t.sending : t.send}
-              onPress={sendCode}
-              disabled={sending || cooldownSec > 0}
-              testID="login-send"
-            />
-          </View>
-        ) : null}
-
-        {stage === 'code' ? (
-          <View style={styles.form}>
-            <Text style={styles.sentLine}>{t.sent.replace('{email}', email.trim())}</Text>
-            <CodeField
-              value={code}
-              onChangeText={onCodeChange}
-              accessibilityLabel={t.codeField}
-              placeholder={t.codePlaceholder}
-              testID="login-code-input"
-            />
-            {codeError === null ? null : (
-              <Text style={styles.codeError} testID="login-code-error">
-                {codeError}
-              </Text>
-            )}
-            <View style={styles.resendRow}>
-              {/* Bekleme süresince GERÇEKTEN kilitli (soluk + basılamaz) — sayaç yalnız burada. */}
-              <TextAction
-                label={cooldownSec > 0 ? t.resendWait.replace('{s}', String(cooldownSec)) : t.resend}
-                onPress={resend}
+          {stage === 'email' ? (
+            <View style={styles.form}>
+              <TextField
+                value={email}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  setEmailError(null);
+                }}
+                accessibilityLabel={t.emailField}
+                placeholder={t.emailField}
+                shape="pill"
+                content="email"
+                errorText={emailError ?? undefined}
+                testID="login-email-input"
+              />
+              <PrimaryButton
+                label={cooldownSec > 0 ? t.sendWait.replace('{s}', String(cooldownSec)) : sending ? t.sending : t.send}
+                onPress={sendCode}
                 disabled={sending || cooldownSec > 0}
-                testID="login-resend"
+                testID="login-send"
               />
             </View>
-          </View>
-        ) : null}
+          ) : null}
 
-        {stage === 'verifying' || stage === 'done' ? (
-          <View style={styles.busy}>
-            <LoadingState
-              size="md"
-              label={stage === 'done' ? t.done : t.verifying}
-              accessibilityLabel={stage === 'done' ? t.done : t.verifying}
-              testID="login-busy"
-            />
-          </View>
-        ) : null}
+          {stage === 'code' ? (
+            <View style={styles.form}>
+              <Text style={styles.sentLine}>{t.sent.replace('{email}', email.trim())}</Text>
+              <CodeField
+                value={code}
+                onChangeText={onCodeChange}
+                accessibilityLabel={t.codeField}
+                placeholder={t.codePlaceholder}
+                testID="login-code-input"
+              />
+              {codeError === null ? null : (
+                <Text style={styles.codeError} testID="login-code-error">
+                  {codeError}
+                </Text>
+              )}
+              <View style={styles.resendRow}>
+                {/* Bekleme süresince GERÇEKTEN kilitli (soluk + basılamaz) — sayaç yalnız burada. */}
+                <TextAction
+                  label={cooldownSec > 0 ? t.resendWait.replace('{s}', String(cooldownSec)) : t.resend}
+                  onPress={resend}
+                  disabled={sending || cooldownSec > 0}
+                  testID="login-resend"
+                />
+              </View>
+            </View>
+          ) : null}
+
+          {stage === 'verifying' || stage === 'done' ? (
+            <View style={styles.busy}>
+              <LoadingState
+                size="md"
+                label={stage === 'done' ? t.done : t.verifying}
+                accessibilityLabel={stage === 'done' ? t.done : t.verifying}
+                testID="login-busy"
+              />
+            </View>
+          ) : null}
+        </View>
 
         {/* Gizlilik bağlantısı CÜMLENİN İÇİNDE (v3 birebir — sapma 3'ün notu). */}
         <Text style={styles.legal}>
@@ -432,18 +474,23 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingHorizontal: theme.space['2xl'],
     paddingTop: theme.space.md,
   },
+  /* `flexGrow` + ortalama: içerik kısa olsa da ekranı doldurur, logo ile blok birlikte dikeyde ortada durur (web
+     `flex-1 justify-center`). Uzun içerikte (klavye, kısa ekran) ortalama etkisizleşir, kaydırma başlar. */
   content: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: theme.space['7xl'],
     paddingTop: theme.space['5xl'],
     paddingBottom: rt.insets.bottom + theme.space['8xl'],
     gap: theme.space['3xl'],
   },
   /* Genişlik orandan HESAPLANIR (onboarding'in cihaz kanıtı 09.08 — `aspectRatio` tek başına
-     güvenilir çözülmüyor, resim ham boyuna düşebiliyor). Aynı varlık, aynı ölçü, tek kaynak. */
+     güvenilir çözülmüyor, resim ham boyuna düşebiliyor). Logonun altı başlığa bir boşluk daha açar (web `mb-4`). */
   logo: {
-    height: LOGO_HEIGHT,
-    width: LOGO_HEIGHT * LOGO_ASPECT,
-    alignSelf: 'flex-start',
+    height: logoHeight(rt.screen.height),
+    width: logoHeight(rt.screen.height) * LOGO_ASPECT,
+    alignSelf: 'center',
+    marginBottom: theme.space['3xl'],
   },
   title: {
     fontFamily: theme.font.display[theme.text['page-title-sm--font-weight']],
@@ -456,6 +503,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.control,
     lineHeight: theme.text.control * theme.text['lead--line-height'],
     color: theme.colors.body,
+  },
+  /* Adımın alanı SABİT yükseklikte: seçimin üç yolu ve bilgi satırı kadar (üst pay + 3 yol + 2 aralık + satırın payı ve
+     yüksekliği) — e-posta ve kod adımları daha kısa, ortalanmış blok onlarla kısalınca logo ve başlık oynuyordu
+     (kullanıcı bulgusu 15.09). Web `min-h-53.75` aynı hesabı kendi token'ıyla yapar. */
+  stepArea: {
+    minHeight:
+      theme.space.sm + 3 * PROVIDER_HEIGHT + 2 * theme.space.lg + theme.space.sm + theme.text.note * theme.text['lead--line-height'],
   },
   /* Karenin yol bloğunun üst payı (Musteri Mobil.dc.html:869 `margin-top:6px`; web `mt-1.5`). */
   providers: { gap: theme.space.lg, marginTop: theme.space.sm },
@@ -484,10 +538,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.step,
     color: theme.colors['brand-google'],
   },
-  /** Seçim aşamasının bilgi satırı (WhatsApp "yakında" / Google arızası) — web'in `notice` muadili. */
+  /** Seçim aşamasının bilgi satırı (WhatsApp "yakında" / Google arızası) — web'in `notice` muadili. Satır yüksekliği
+      açık: `stepArea`nın ayırdığı yer bu satırın boyuyla hesaplanıyor. */
   notice: {
     fontFamily: theme.font.body[600],
     fontSize: theme.text.note,
+    lineHeight: theme.text.note * theme.text['lead--line-height'],
     color: theme.colors['olive-dark'],
     textAlign: 'center',
     marginTop: theme.space.sm,

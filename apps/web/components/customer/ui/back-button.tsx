@@ -28,6 +28,11 @@ interface BackButtonProps {
    * (14.09, ürün detayının kahramanı): 42px `sand-50` daire; basılınca küçülür.
    */
   variant?: 'bar' | 'photo';
+  /**
+   * Adımlı ekranın kendi geri adımı (15.09 — telefon girişi: kod → e-posta → seçim). Verilirse geçmişe GİTMEZ, bunu
+   * çağırır; ekran ilk adımına dönünce çağıran vermeyi bırakır ve düğme yine geçmişe döner.
+   */
+  onPress?: () => void;
 }
 
 /**
@@ -38,10 +43,11 @@ interface BackButtonProps {
  * native'inkinden küçük ve ağır duruyordu (kullanıcı bulgusu). Mobil webin başlıkları bunu taşır: `AppBar`,
  * `FunnelHeader`, paket detayının çubuğu.
  */
-export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps) {
+export function BackButton({ label, fallback, variant = 'bar', onPress }: BackButtonProps) {
   const router = useRouter();
   const goBack = () => {
-    if (window.history.length > 1) router.back();
+    if (onPress) onPress();
+    else if (window.history.length > 1) router.back();
     else router.push(fallback);
   };
   return (
