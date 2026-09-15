@@ -15,44 +15,19 @@ import { Price } from './price';
 import { QtyStepper } from './qty-stepper';
 
 /**
- * §2 · Kartlar — K7 Ürün · K8 Fırsat · K9 Kategori · K10 Paket. Anasayfada doğdular ama katalog ve
- * ürün detay da bunları tüketecek, bu yüzden sayfa klasöründe değil ortak dizindeler (`STACK §7`).
- * Dördü aynı dosyada çünkü aynı ailedir: aynı çerçeve oranı, aynı kenarlık dili, aynı fiyat bloğu.
- *
- * Kart kendi fiyatını BİÇİMLENDİRMEZ (K6 `Price`), kendi rozetini BOYAMAZ (K5 `Badge`) — ikisi de
- * ortak karardır. Kartın işi yerleşim.
- *
- * Cihaz farkı `compact` ile taşınır (Sapma 3: `md:` akışkan responsive YOK). Kompakt = mobil
- * ölçüleri; düzenin kendisi (kaç sütun, hangi sırada) çağıran sayfanın işidir.
- *
- * Görsel her zaman `FramedImage` — kırpma künyesi (odak + zoom) kaynaktan gelir, kart kendi
- * kırpmasını uydurmaz; görsel yoksa placeholder zemin kalır (05.11 · envanter §0B).
+ * Ürün, fırsat, kategori, koleksiyon ve paket kartları: aynı çerçeve oranı, kenarlık dili ve fiyat bloğunu paylaştıkları için
+ * tek dosyada. Kart fiyatını `Price`, rozetini `Badge` ile çizer; cihaz farkı `compact` ile taşınır, düzen çağıranın işidir.
  */
 
-/**
- * Ürün kartının hedefi — detay sayfası (08.11 ile açıldı). Slug dil-bağımsızdır, `Link` segment
- * kelimesini dile göre çevirir (`/urun/...` · `/produit/...` · `/produkt/...`).
- */
+/** Ürün kartının hedefi; slug dil bağımsız, `Link` segment kelimesini dile göre çevirir. */
 const productHref = (slug: string) => ({ pathname: '/product/[slug]' as const, params: { slug } });
 
-/** Paket detayının hedefi (05.5) — ürünle aynı kural: slug dil-bağımsız, segment kelimesi çevrilir. */
+/** Paket detayının hedefi; ürünle aynı kural. */
 const packageHref = (slug: string) => ({ pathname: '/package/[slug]' as const, params: { slug } });
 
 /**
- * **Kapaksız kartın yedek çizimi — ad baş harfi** (08.26; arka-uç notu 08.08).
- *
- * Kart bugüne dek `placeholder` geçirmiyordu ve `FramedImage` boş gri bir dikdörtgen çiziyordu —
- * yani müşteri onu "bozuk" diye okuyordu. Oysa kapaksızlık bir arıza değil, **beklenen bir hâl**:
- * seed'in kendi künyesi bunu bir test durumu olarak kuruyor (*"müşteride ad baş harfiyle çıkar,
- * boş gri kutu çizilmez"*) ve üretimde de operatör bir kategoriyi kapaksız bırakabilir.
- * Ölçüldü (08.08): on kategorinin yedisi kapaksızdı, yani boşluk istisna değil çoğunluktu.
- *
- * Zemin `absolute inset-0` ile FramedImage'in kendi kutusunu KAPLAR — çerçevenin varsayılan gri
- * zemini (paylaşılan primitif, operasyon da kullanıyor) müşteri kartında görünmesin diye. Harf
- * serif ve zeytin: kart bir kapı, boşluğun kendisi değil.
- *
- * Baş harf `Intl`e bırakılmadan alınıyor ama **kod noktası bazında** (`[...name]`): "Şerbetli"nin
- * baş harfi Ş'dir ve `name[0]` çok baytlı bir karakterin yarısını kesebilirdi.
+ * Kapaksız kartın yedek çizimi, ad baş harfi: kapaksızlık beklenen bir hâl ve boş gri kutu "bozuk" diye okunur. Baş harf kod
+ * noktası bazında alınır, çünkü `name[0]` "Ş" gibi çok baytlı bir karakterin yarısını kesebilirdi.
  */
 function InitialMark({ name }: { name: string }) {
   const initial = [...name.trim()][0]?.toLocaleUpperCase('tr') ?? '';
@@ -65,7 +40,7 @@ function InitialMark({ name }: { name: string }) {
 
 interface CategoryCardProps {
   category: StorefrontCategory;
-  /** Mobil şeritte kategori dairesi (kırpma yine kare) — envanter O15. */
+  /** Mobil şeritte kategori dairesi; kırpma yine kare. */
   circle?: boolean;
 }
 
@@ -97,24 +72,8 @@ export function CategoryCard({ category, circle = false }: CategoryCardProps) {
 }
 
 /**
- * **K—Koleksiyon bandı** (08.26) — ana sayfanın "Koleksiyonlar" bölümünün kartı.
- *
- * Koleksiyon kartı öteki kartlardan AYRI bir tür ve karıştırılmamalı: ürün/paket kartı bir SATIN
- * ALMA sunar (fiyat, sepet düğmesi), koleksiyon kartı yalnız kataloğun bir kesitine kapı açar.
- * Fiyat, stok, sepet — hiçbiri yok ve olmamalı; koleksiyonun kendi fiyatı yoktur.
- *
- * ── ÇERÇEVE 16:7, KAYNAK 16:9 ────────────────────────────────────────────────
- * Tasarım bandı `aspect-ratio:16/7` çiziyor, kapak ise 16:9 kayıtlı (`RATIO_BAND`, aynı kapak OG
- * kartında da kullanılıyor). İkisi çelişmiyor: tek kaynaktan odak+zoom ile türeyen iki çerçeve —
- * `FramedImage`'in tüm varlık sebebi bu (envanter §0B). Kırpılmış ikinci bir kopya saklanmaz.
- *
- * **Kart CDN'in geniş (2:1) çerçevesinden beslenir** (05.37 · 10.09): 16:7'ye en yakın adlı çerçeve
- * o ve operatörün kırpma penceresi onu "vitrin kartı (web)" diye önizliyor. 2:1'den 16:7'ye kalan fark
- * `cover` ile üstten ve alttan merkezden kesilir (her kenardan ~%6).
- *
- * ── GRADYAN TOKEN'DAN ────────────────────────────────────────────────────────
- * Tasarımın `rgba(52,59,65,.78→0)` gradyanı ham yazılmadı: `--color-ink` üzerinden `color-mix` ile
- * kuruluyor (`CLAUDE §3` — ham hex yasak). Marka tonu bir gün değişirse bant da onunla döner.
+ * Koleksiyon bandı yalnız kataloğun bir kesitine kapı açar, satın alma sunmaz: fiyat, stok ve sepet yok. Tasarımın 16:7 çerçevesi
+ * 16:9 kayıtlı kapaktan odak ve zoomla türer; gradyan `--color-ink` üzerinden `color-mix` ile kurulur ki marka tonuyla dönsün.
  */
 const RATIO_COLLECTION_BAND = 16 / 7;
 const BAND_SCRIM =
@@ -137,8 +96,7 @@ interface CollectionCardProps {
 export function CollectionCard({ collection, labels, campaignValue = null, compact = false }: CollectionCardProps) {
   return (
     <Link
-      // Koleksiyon AYRI BİR SAYFA DEĞİL, katalogun bir hâli (tasarım kararı 08.08): süzgeç URL'de
-      // yaşar, "tüm kataloğa dön" tek tıkla geri alır ve bağlantı paylaşılabilir kalır.
+      // Koleksiyon ayrı bir sayfa değil, katalogun bir hâli: süzgeç URL'de yaşar ve bağlantı paylaşılabilir kalır.
       href={{ pathname: '/catalog', query: { collection: collection.slug } }}
       // Yarıçap `rounded-card` (18px): tasarım 22px çiziyor ama envanterde o kademe YOK ve dört
       // piksel için ölçeği bölmek, sayfadaki her kartın köşesini birbirinden ayırmak olurdu.
@@ -165,9 +123,7 @@ export function CollectionCard({ collection, labels, campaignValue = null, compa
           {collection.name}
         </span>
         <span className="font-sans text-note font-bold text-on-image">
-          {/* KAMPANYA AYNI SATIRA (08.44) — kartın kendi ölçüsü fotoğraf oranına bağlı (16:7) ve
-              yeni bir satır bandı uzatırdı; sayaç satırı zaten tek satır ve kampanya oraya sığıyor.
-              Mobil vitrindeki bantla aynı karar, aynı gerekçe. */}
+          {/* Kampanya sayaçla aynı satırda: kartın ölçüsü fotoğraf oranına bağlı ve yeni satır bandı uzatırdı. */}
           {labels.items.replace('{n}', String(collection.productCount))}
           {campaignValue === null ? null : ` · ${campaignValue}`} · {labels.go}
         </span>
@@ -176,13 +132,7 @@ export function CollectionCard({ collection, labels, campaignValue = null, compa
   );
 }
 
-/**
- * Kart etiketleri — çağıran sayfa `messages.json`'undan geçer; komponent metin taşımaz.
- *
- * **İstisna: yer işaretleri** (19.7). "📦 Kargoyla gönderilir" ve "Bölgenizde şu an yok" dört
- * sayfada birden aynı cümledir ve kartın değil YER ailesinin metnidir — dört `messages.json`'a
- * kopyalamak yerine `StockMark` kendi sözlüğünü taşır (`place-chip` ile aynı desen).
- */
+/** Kart etiketleri çağıranın sözlüğünden gelir; yer işaretleri yer ailesinin metni olduğu için `StockMark`in kendi sözlüğünde. */
 interface ProductCardLabels {
   addToCart: string;
   /** Çok varyantlı ürün: listeden eklenemez, detayda seçilir. */
@@ -212,26 +162,9 @@ interface ProductCardProps {
 }
 
 /**
- * K7 · Ürün Kartı — vitrin ve katalog listesinin ortak parçası. Dört durumu vardır ve dördü de
- * tasarımın "Etkileşim sözleşmesi" bölümünden gelir:
- *   normal        → "Sepete ekle" (tek varyant, listeden eklenir)
- *   sepette       → buton YERİNDE K19 adet seçicisine dönüşür; 1'de "−" ürünü çıkarır, buton geri gelir
- *   çok varyantlı → "Seçenekler →" (varyant seçimi ATLANAMAZ, detaya götürür)
- *   fırsat        → "Fırsat" rozeti + üstü çizili eski fiyat + varsa adet sınırı
- *   tükendi       → aksiyon pasif, görsel soluk; KART yine detaya tıklanabilir (geri gelecek beklentisi)
- *
- * "Sepette" hâli süs değil, listeden alışverişin ta kendisi: müşteri kataloğu gezerken adet
- * ayarlamak için sepete gidip geri dönmez. Buton kalıp "Eklendi ✓" deseydi ikinci tıklama ikinci
- * adet mi, yoksa hiçbir şey mi belli olmazdı.
- *
- * ── YER EKSENİ (19.7) ────────────────────────────────────────────────────────
- * Bunların ÜSTÜNE, yere bağlı bir işaret dili biner (`stockStatus`, tasarım §3): kargoyla gelen
- * ürün işaretlenir, bölgede olmayan solar ve birincil eylemi "Gelince haber ver" olur. İkisi
- * dikey eksendir — kargoyla gelen bir ürün de fırsatlı olabilir, sepette de olabilir.
- *
- * `soldOut` ile `stockStatus` çakışmaz: `soldOut` artık YALNIZ `out_of_stock` hâlinde true
- * (19.10). Bir dönem "senin deponda yok" anlamına kaymıştı ve kargoyla gönderebileceğimiz ürünü
- * "Tükendi" gösteriyordu — sistem müşteriyi tanıdıkça daha az satıyordu.
+ * Ürün kartı: tek boylu ürün listeden eklenir ve sepetteyse düğmenin yerini adet seçici alır; çok boylu ürün "Seçenekler →" ile
+ * detaya gider, tükenmiş ürünün eylemi pasif ama kartı açılır. Bölgede olmayan ürün solar ve eylemi "Gelince haber ver" olur;
+ * `soldOut` yalnız `out_of_stock` demektir, kargoyla gönderilebilen ürün tükendi görünmez.
  */
 export function ProductCard({ product, locale, labels, compact = false }: ProductCardProps) {
   const isOffer = product.wasCents !== undefined;
@@ -239,21 +172,8 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
   // "Bölgenizde şu an yok": ürün ağda var, müşterinin yerine ulaşamıyor. Tükendi DEĞİL — görsel
   // yarı solar (tamamen değil: ürün gerçek ve geri gelecek), fiyat sessizleşir, ad ink kalır.
   const away = product.stockStatus === 'elsewhere';
-  /* **Sepete eklenebilir mi** (08.46) — iki şart: eklenecek bir boy VAR ve o boy BU KANALDA
-     satılıyor. İkincisi eksikti: kart yalnız `variantId`ye bakıyordu ve fiyatı olmayan üründe
-     "Sepete ekle" açık duruyordu. `map.ts` künyesi *"kart fiyat göstermez VE aksiyonu pasifleşir"*
-     diye söz veriyor; ikinci yarısı hiç yazılmamıştı.
-
-     Zincirin öteki üç katmanı zaten doğru davranıyordu (motor `sellable:false`, detay düğmeyi
-     kapatıyor, sepet `blocked` işaretliyor) — yani para riski yoktu, GÜVEN riski vardı: müşteri
-     engeli rafta değil kasada öğreniyordu.
-
-     Katalog artık bu ürünü hiç listelemiyor (0032 süzüyor), ama güvence YEREL kalmalı: kart
-     süzülmemiş bir kümeyle de çizilebilir ve o gün susmamalı.
-
-     Sabit `boolean` değil KİMLİK tutuyor ve bu tesadüf değil: ayrı bir bayrak, `variantId`yi
-     daraltmaz — eylem yine `null` olabilen bir kimliği okurdu ve koşul ikinci kez yazılmak
-     zorunda kalırdı. Kimliği taşıyınca tek kaynak hem iki düğmeyi hem eylemi besliyor. */
+  /* Sepete eklenebilirlik iki şarta bağlı: eklenecek bir boy var ve o boy bu kanalda satılıyor. Bayrak değil kimlik tutulur ki
+     tek kaynak hem iki düğmeyi hem eylemi beslesin. */
   const buyableVariantId = product.priceCents != null ? product.variantId : null;
   // Tek boylu ürün listeden eklenir; teklif kalemi ÇIPALI PARTİSİYLE girer (DOMAIN §5).
   const addToCart = () => {
@@ -270,9 +190,8 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           ratio={RATIO_SOURCE}
           crop={product.image.crop}
           frames={product.image.frames}
-          /* Kart her yerde aynı ızgarada: masaüstü 4 sütun (~301 px — vitrin · katalog · benzerler ·
-             boş sepet; içerik 1360 px'te durur), mobil 2 sütun. Yeni bir ızgara açılırsa bu değer de
-             gözden geçirilir (05.37, `FramedImage` künyesi). */
+          /* Kart her yerde aynı ızgarada: masaüstü 4 sütun (~301 px, içerik 1360 px'te durur), mobil 2 sütun; yeni ızgara
+             açılırsa bu değer de gözden geçirilir. */
           sizes={compact ? '50vw' : '310px'}
           className={['!rounded-none', product.soldOut ? 'opacity-60 grayscale' : away ? 'opacity-85 grayscale-[.55]' : ''].join(' ')}
         />
@@ -312,11 +231,8 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             {labels.limit}
           </Badge>
         )}
-        {/* DAR KARTTA İKİ SATIR (kullanıcı kararı 20.08): fiyat ile eylem aynı satırı paylaşınca
-            "0,95 €'dan" + üstü çizili fiyat + "Seçenekler →" kart kenarından taşıyordu (kullanıcı
-            görüntüsüyle ölçüldü; FR/DE metinlerde daha da uzun). Fiyat kendi satırında, eylem tam
-            genişlikte altta — BACKLOG §4'ün "yatay eksen kalıntısı" da böyle kapanıyor: tam
-            genişlik eylem 44px'i iki eksende de sağlar. Masaüstü kartı eski düzeninde. */}
+        {/* Dar kartta fiyat ve eylem iki satırda: aynı satırda üstü çizili fiyat ve "Seçenekler →" kart kenarından taşar, tam
+            genişlik eylem 44px'i iki eksende de sağlar. Masaüstü kartı tek satırda. */}
         <div className={compact ? 'mt-1.5 flex flex-col items-stretch gap-2' : 'mt-1 flex items-center justify-between gap-2'}>
           <Price
             cents={product.priceCents}
@@ -342,23 +258,17 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               {labels.addToCart}
             </span>
           ) : away ? (
-            /* Kartta TEK eylem "haber ver" (tasarım): dar kartta iki düğme sığmaz ve bu hâlde
-               müşterinin sorusu "alabilir miyim" değil, "ne zaman alabilirim". Sepete ekleme yolu
-               kapanmıyor — ürün detayında "sonraya kaydet" ile sürüyor.
-               Neyin haberi olduğunu düğme KENDİ seçiyor: rota içinde kalemin (`variant_stock_notice`),
-               rota dışında bölgenin (`zone_notice`). Kart o ayrımı bilmez. */
+            /* Kartta tek eylem "haber ver": dar kartta iki düğme sığmaz ve müşterinin sorusu "ne zaman alabilirim". Haberin kalem
+               mi bölge mi olduğunu düğme kendisi seçer. */
             <StockNoticeButton
               variantId={product.variantId}
               productName={product.name}
               locale={locale}
-              /* Bölge notu alındıktan sonra düğmenin yerine detay köprüsü geçer (16.08): kartta
-                 uzun onay cümlesi taşıyordu, boş kalan eylem yuvası detaya davet ediyor. */
+              /* Bölge notu alındıktan sonra düğmenin yerine detay köprüsü geçer, uzun onay cümlesi kartta taşardı. */
               productHref={productHref(product.slug)}
             />
           ) : product.purchaseMode === 'options' ? (
-            /* Mobilde düğme belirgin şekilde küçülür (tasarım: 11px · 5/9 ped): dar kartta fiyatla
-               aynı satırı paylaşıyor, masaüstü ölçüsüyle kalınca kartın dışına taşıyordu. `nowrap`
-               şart — "Seçenekler" ile "→" iki satıra bölününce düğme kartı dikey olarak da şişiriyordu. */
+            /* `nowrap` şart: "Seçenekler" ile "→" iki satıra bölünürse düğme kartı dikey olarak şişirir. */
             <Link
               href={productHref(product.slug)}
               className={buttonClass({
@@ -371,9 +281,8 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               {labels.options}
             </Link>
           ) : inCart ? (
-            /* K19 — buton yerine adet seçici. `min={0}`: 1'deyken "−" ürünü sepetten ÇIKARIR ve
-               düğme geri gelir (envanter K19: "1'de − sepetten çıkarır"). Tavan sunucunun çözdüğü
-               fırsat sınırıdır; dolunca "+" pasifleşir ve çerçeve nötrleşir. */
+            /* Buton yerine adet seçici: 1'deyken "−" ürünü sepetten çıkarır ve düğme geri gelir; tavan sunucunun çözdüğü fırsat
+               sınırı. */
             <QtyStepper
               value={inCart.qty}
               onChange={(next) => product.variantId && setQty({ kind: 'variant', variantId: product.variantId, stockId: inCart.stockId }, next)}
@@ -383,10 +292,8 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
               fullWidth={compact}
             />
           ) : compact ? (
-            /* 26px'lik "+" dairesi İKİ SATIR düzeniyle birlikte kalktı (kullanıcı kararı 20.08):
-               eylem artık satırın tamamı, adlı düğme daireden hem daha okunur hem 44px'i iki
-               eksende de sağlıyor. Eklemede yerini AYNI kutuyu dolduran seçiciye bırakır
-               (`fullWidth` — kart zıplamaz, tek-kontrol modeli ürün detayla aynı). */
+            /* Dar kartta eylem satırın tamamı: adlı düğme okunur ve 44px'i iki eksende sağlar; eklemede aynı kutuyu dolduran
+               seçiciye döner, kart zıplamaz. */
             <button
               type="button"
               onClick={addToCart}

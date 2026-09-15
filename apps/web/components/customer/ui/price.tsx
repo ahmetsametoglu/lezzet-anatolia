@@ -2,18 +2,10 @@ import type { Locale } from '@lezzet/i18n';
 import { formatPrice } from '@/lib/storefront/format';
 
 /**
- * K6 · Fiyat Bloğu — müşteri yüzeyinde fiyat gösteren TEK yer. Kart, liste satırı, ürün detay ve
- * sepet aynı bloğu kullanır; biçimlendirme (`formatPrice`) ve "eski fiyat üstü çizili" kuralı
- * burada yaşar, çağıran yerlerde tekrarlanmaz.
- *
- * `was` verildiğinde fiyat fırsat rengine (terracotta) döner — indirimin GÖRSEL dili tek karardır,
- * her kartta yeniden verilmez. İndirimin SEBEBİ hiçbir zaman burada değildir (musteri-anasayfa §6).
+ * Müşteri yüzeyinde fiyatı gösteren tek blok: biçim (`formatPrice`) ve "eski fiyat üstü çizili" kuralı burada, çağıranlarda
+ * tekrarlanmaz. `wasCents` verilince fiyat fırsat rengine döner; indirimin sebebi burada yazılmaz.
  */
-/**
- * `muted` — fiyat DURUYOR ama sessizleşiyor: "bölgenizde şu an yok" kartında (19.7) ürün gerçek ve
- * fiyatı doğru, ama şu an alınamıyor. Fiyatı gizlemek ürünü bilinmez kılardı; ink bırakmak ise
- * alınabilir gibi okuturdu.
- */
+/** `muted`: "bölgenizde şu an yok" kartında fiyat durur ama sessizleşir; gizlemek ürünü bilinmez, ink alınabilir gösterirdi. */
 type PriceTone = 'default' | 'onDark' | 'muted';
 type PriceSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -35,11 +27,7 @@ interface PriceProps {
   size?: PriceSize;
   /** Koyu blok üstünde (paket kartı) fiyat krem renktedir. */
   tone?: PriceTone;
-  /**
-   * Eski fiyat YAN YANA değil ALT ALTA. Dar mobil kartta iki fiyat yan yana satırı şişirir ve
-   * aksiyon düğmesini kartın dışına iter (yaşandı — 28.07). Tasarım da mobil kartta fiyat sütununu
-   * `flex-direction:column` çiziyor.
-   */
+  /** Eski fiyat alt alta: dar mobil kartta yan yana iki fiyat satırı şişirir ve eylem düğmesini kartın dışına iter. */
   stacked?: boolean;
   /**
    * "…'dan başlayan" ŞABLONU — çok boylu üründe fiyatın bir VAAT değil bir ALT SINIR olduğunu
