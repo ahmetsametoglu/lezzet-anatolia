@@ -1,28 +1,13 @@
 import 'server-only';
-import { ProductFeedbackService, ProductService, serviceDb } from '@lezzet/database';
+import { CategoryService, ProductFeedbackService, ProductService, serviceDb } from '@lezzet/database';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { imageOf } from '@lezzet/application';
 import type { StorefrontImage } from '@lezzet/application';
+import { countCandidateLikers } from './product-feedback';
 
 /**
- * Keşif destesinin OKUMA kapısı (08.7 · design/pages/musteri-kesif.md).
- *
- * Yazma tarafı aylardır hazırdı (`recordVote` + `candidate` bağlamı: adaylığı doğruluyor,
- * ziyaretçiyi de kabul ediyor, puanı veriyor); eksik olan **hangi kartların gösterileceğiydi.**
- *
- * ── ADAY ÜRÜN SATILABİLİR ÜRÜN DEĞİLDİR ─────────────────────────────────────
- * Bu yüzden dönüş `StorefrontProduct` DEĞİL. Vitrin sözleşmesi fiyat, stok, varyant ve "sepete
- * ekle" taşıyor; aday üründe bunların hiçbiri yok ve tasarımın yasağı da tam bu (§6: *"aday
- * ürünler satın alınabilir gibi sunulmaz — fiyat, stok, sepete ekleme yoktur"*). Vitrin tipini
- * yeniden kullansaydım kart, doldurulmamış fiyat alanlarıyla gelir ve bir gün biri onları
- * çizerdi. Taşınmayan alan, yanlışlıkla gösterilemez.
- *
- * ── AYNI KARTI İKİ KEZ SORMAYIZ, AMA YALNIZ GİRİŞLİDE ───────────────────────
- * Tasarım *"daha önce oyladığı kartlar tekrar sorulmaz"* diyor. Girişsiz ziyaretçide bunu yapmanın
- * yolu yok ve **olmaması bilinçli**: tekilleştirmek kimlik tutmak demektir (`recordVote` künyesi
- * de aynı sınırı yazıyor). Ziyaretçi turu yenilerse aynı kartları görür — bu bir kusur değil,
- * kimlik tutmamanın bedeli ve daha ucuz olanı.
+ * Keşif destesinin okuma kapısı. Aday ürün satılabilir ürün değildir: kart fiyat, stok ve varyant taşımaz ki yanlışlıkla çizilemesin.
  */
 
 /** Kartın taşıdığı her şey — fiyat/stok/varyant YOK ve olmayacak. */
@@ -32,37 +17,36 @@ export interface DiscoverCard {
   /** Kısa tanıtım; yoksa kart yalnız ad ve görselle durur (uydurma metin yazılmaz). */
   description: string | null;
   image: StorefrontImage;
+  /** Kategori adı; ürün kategorisizse rozet çizilmez. */
+  category: string | null;
+  /** Kaç kişi beğendi (kimlikli, tekilleştirilmiş) — aday panosuyla aynı ölçü. */
+  likedBy: number;
 }
 
-/**
- * Deste boyu. Tavan var çünkü keşif bir LİSTE değil bir tur: tasarım "kartlar tükenince bitiş
- * durumu" diyor, yani turun bitmesi akışın parçası. Sınırsız bir deste bitiş ekranını hiç
- * göstermez ve tur "bitmeyen bir görev"e döner.
- *
- * Sayfalama YOK ve `CLAUDE.md §1`'in ölçütüyle uyumlu: aday kümesi veriyle değil, operatörün
- * eliyle büyüyor (ürünü aday yapan admin) — doğal tavanı olan küme tek turda çekilir.
- */
+/** Deste boyu: keşif bir liste değil bir tur, bitiş ekranı akışın parçası; aday kümesini operatör kurar, tek turda çekilir. */
 const DECK_SIZE = 20;
 
+/** Girişlide daha önce oylanan kartlar elenir; ziyaretçide tekilleştirmek kimlik tutmak demek olurdu, turu yenileyen aynı kartları görür. */
 export async function openDiscoverDeck(locale: Locale, customerId: string | null): Promise<DiscoverCard[]> {
   const db = serviceDb();
-  const candidates = await new ProductService(db).listCandidates();
+  const [candidates, categories] = await Promise.all([new ProductService(db).listCandidates(), new CategoryService(db).list()]);
   if (candidates.length === 0) return [];
 
-  // Girişsizde okuma HİÇ YAPILMAZ: elenecek bir geçmiş yok ve boşuna bir sorgu, ziyaretçinin
-  // ilk kartını geciktirirdi.
+  // Girişsizde geçmiş okuması yapılmaz: elenecek bir şey yok, boşuna sorgu ilk kartı geciktirirdi.
   const seen = customerId ? await votedProductIds(db, customerId) : new Set<string>();
+  const deck = candidates.filter((p) => !seen.has(p.id)).slice(0, DECK_SIZE);
+  const likers = await countCandidateLikers(deck.map((p) => p.id));
+  const categoryName = new Map(categories.map((c) => [c.id, resolveLocalizedText(c.name, locale)]));
 
-  return candidates
-    .filter((p) => !seen.has(p.id))
-    .slice(0, DECK_SIZE)
-    .map((p) => ({
-      productId: p.id,
-      name: resolveLocalizedText(p.name, locale),
-      // Boş/boşluk metin YOK sayılır — boş bir paragraf kartın altında açıklanmamış bir boşluk bırakır.
-      description: p.description ? textOrNull(resolveLocalizedText(p.description, locale)) : null,
-      image: imageOf(p),
-    }));
+  return deck.map((p) => ({
+    productId: p.id,
+    name: resolveLocalizedText(p.name, locale),
+    // Boş/boşluk metin YOK sayılır — boş bir paragraf kartta açıklanmamış bir boşluk bırakır.
+    description: p.description ? textOrNull(resolveLocalizedText(p.description, locale)) : null,
+    image: imageOf(p),
+    category: p.categoryId ? (categoryName.get(p.categoryId) ?? null) : null,
+    likedBy: likers.get(p.id) ?? 0,
+  }));
 }
 
 /** Müşterinin daha önce kaydırdığı aday ürünler. */

@@ -37,29 +37,15 @@ import { awardFeedbackPoints } from './points';
 import { logger } from '@lezzet/observability';
 
 /**
- * Ürün geri bildirimi kapıları (17.1, 17.3) — motor karar verir, servisler satır getirir, burası
- * ikisini birleştirir.
- *
- * **İki bağlam, iki kapı** ve bu ayrım yalnız burada uygulanabilir:
- *   · `purchase`  → müşteri o ürünü gerçekten almış olmalı. Veritabanı bunu zorlayamaz (siparişin
- *     kalemlerine bakmak gerekir), motor da bilemez (sipariş okuması ister).
- *   · `candidate` → ürün gerçekten aday olmalı. Satın alma aranmaz ve aranamaz: aday ürün henüz
- *     satılmıyor.
- *
- * Kapıdan geçmeyen bir yazma yolu açılmadığı sürece kural sızdırmaz — bu yüzden servis doğrudan
- * çağrılmaz, ekranlar bu dosyayı çağırır.
+ * Ürün geri bildirimi kapıları: motor karar verir, servis satır getirir, burası ikisini birleştirir.
+ * `purchase` bağlamı satın almayı, `candidate` bağlamı adaylığı doğrular; bu yüzden ekranlar servisi değil bu dosyayı çağırır.
  */
 
 export type FeedbackWriteResult<T> = { ok: true; data: T } | { ok: false; reason: string };
 
 /**
- * Müşteri bu ürünü gerçekten aldı mı — ve hangi siparişte.
- *
- * **Teslim edilmiş olması aranmaz, satın alınmış olması yeter.** Sipariş yolda diye görüşünü
- * yazamayan müşteri unutur; asıl kayıp odur. Ama iptal edilmiş ve taslak sipariş sayılmaz: orada
- * bir alışveriş hiç gerçekleşmemiştir.
- *
- * En YENİ uygun sipariş döner — görüş en son deneyime aittir.
+ * Müşteri bu ürünü hangi siparişte aldı: teslim aranmaz, iptal ve taslak sayılmaz.
+ * Görüş en son deneyime ait olduğu için en yeni uygun sipariş döner.
  */
 async function findPurchase(customerId: string, productId: string): Promise<string | null> {
   const db = serviceDb();
@@ -81,13 +67,8 @@ async function findPurchase(customerId: string, productId: string): Promise<stri
 }
 
 /**
- * Davet çağırandan gelir — **onun daveti mi.**
- *
- * Doğrulanmasaydı A, kendi yorumunu B'nin `feedbackRequestId`'siyle yazabilirdi: kayıt B'nin
- * davetine düşer, B akışı açtığında A'nın metnini "senin değerlendirmen" diye görür, "2/5"
- * ilerlemesi şişer ve akış sonu kararının (`feedbackOutcomeOf`) beğeni sayımı bozulur. DB'de FK
- * bile yok; tek denetim yeri burası. Geçersiz bağ **sessizce düşürülür** — davet bir bağlamdır,
- * yorumun kendisini geri çevirmesi orantısız olurdu.
+ * Davet çağıranın mı: doğrulanmasa biri kendi yorumunu başkasının davetine yazıp onun ilerlemesini ve sonucunu bozabilirdi.
+ * DB'de FK yok; geçersiz bağ sessizce düşürülür çünkü davet yorumun kendisi değil, bağlamıdır.
  */
 async function ownedRequestId(customerId: string, feedbackRequestId: string | null | undefined): Promise<string | null> {
   if (!feedbackRequestId) return null;
@@ -96,13 +77,8 @@ async function ownedRequestId(customerId: string, feedbackRequestId: string | nu
 }
 
 /**
- * Ortak yazım: varsa güncelle, yoksa aç. Tekillik `(müşteri, ürün, bağlam)` üzerindedir.
- *
- * **Güncelleme KISMİDİR — verilmeyen alan silinmez.** Tek satırda üç beyan yaşayabiliyor (yıldız,
- * beğeni, metin) ve bunlar ayrı anlarda gelir: müşteri önce 👍 der, iki gün sonra yorum yazar.
- * Her alanı `?? null` ile yazsaydık ikinci çağrı birincisini siler; beğeni ürün puanından düşer,
- * ya da tersinde onaylanmış yorum metni yok olurdu. Motorun "ikisi bir arada yaşar" vaadi
- * (`points.ts` — iki ayrı puan satırı) tam da bu yüzden yazımda da tutulmalı.
+ * Varsa güncelle, yoksa aç; tekillik `(müşteri, ürün, bağlam)` üzerindedir.
+ * Güncelleme kısmidir: yıldız, beğeni ve metin ayrı anlarda gelir ve verilmeyen alan öncekini silmemeli.
  */
 async function upsertFeedback(input: {
   customerId: string;
@@ -129,15 +105,11 @@ async function upsertFeedback(input: {
       ...(input.rating !== undefined ? { rating: input.rating } : {}),
       ...(input.vote !== undefined ? { vote: input.vote } : {}),
       ...(input.dwellMs !== undefined ? { dwellMs: input.dwellMs } : {}),
-      // Metne dokunulmadıysa moderasyon durumu da olduğu gibi kalır: bir beğeni, onaylanmış bir
-      // yorumu yeniden kuyruğa sokmamalı — okunacak yeni bir şey yok.
+      // Metne dokunulmadıysa moderasyon durumu da olduğu gibi kalır: bir beğeni, onaylanmış bir yorumu yeniden kuyruğa sokmamalı.
       ...(touchesComment
         ? {
             comment,
-            // Dil ve çeviri BURADA sıfırlanmıyor — tetikleyici yapıyor (`0011`'deki genel
-            // fonksiyon). Metin değişince bayat çeviri düşer, satır kuyruğa geri girer.
-            // Değişen metin yeniden kuyruğa girer: onaylanmış metni sonradan değiştirebilmek
-            // moderasyonu tamamen anlamsız kılardı.
+            // Çeviri burada değil tetikleyicide sıfırlanır; değişen metin yeniden kuyruğa girer, yoksa onaylanmış metin sonradan değiştirilebilirdi.
             status,
             moderatedAt: null,
             moderatedBy: null,
@@ -163,10 +135,8 @@ async function upsertFeedback(input: {
 }
 
 /**
- * **Yazılı yorum / yıldız** — satın alınmış ürüne (`context='purchase'`).
- *
- * Aynı ürüne bir müşteriden tek kayıt: ikinci kez alan müşteri görüşünü günceller — aynı kişinin
- * iki yıldızı ortalamayı iki kez etkilerdi.
+ * Yazılı yorum / yıldız, satın alınmış ürüne (`context='purchase'`).
+ * Aynı ürüne bir müşteriden tek kayıt: aynı kişinin iki yıldızı ortalamayı iki kez etkilerdi.
  */
 export async function submitReview(input: {
   customerId: string;
@@ -182,8 +152,7 @@ export async function submitReview(input: {
   // Satın almayan yazamaz (DOMAIN §14) — doğrulanmamış yorum sosyal kanıt değil reklamdır.
   if (!orderId) return { ok: false, reason: 'not_purchased' };
 
-  // Metin bu çağrının konusu değilse hiç geçirilmez — yalnız yıldız gönderen bir istek, daha önce
-  // yazılmış (ve onaylanmış) yorumu silmemeli.
+  // Metin bu çağrının konusu değilse hiç geçirilmez — yalnız yıldız gönderen bir istek, daha önce yazılmış yorumu silmemeli.
   const saved = await upsertFeedback({
     ...input,
     ...(input.comment !== undefined ? { comment } : {}),
@@ -197,13 +166,8 @@ export async function submitReview(input: {
 }
 
 /**
- * **Beğen / geç** — iki bağlamda da aynı mekanizma (17.3).
- *
- * `purchase`: alım-sonrası ankette aldığı ürünü değerlendirir → satın alma doğrulanır.
- * `candidate`: keşif bölümünde aday ürünü kaydırır → ürünün aday olduğu doğrulanır.
- *
- * **Ziyaretçi de kaydırabilir** (`customerId` yok): kayıt kimliksiz düşer, aday panosuna sayılır
- * ama puan doğurmaz ve tekilleştirilemez — tekilleştirmek kimlik tutmayı gerektirirdi.
+ * Beğen / geç: `purchase`ta satın alma, `candidate`ta ürünün adaylığı doğrulanır.
+ * Ziyaretçi de kaydırabilir; kayıt kimliksiz düşer, aday panosuna sayılır ama puan doğurmaz ve tekilleştirilemez.
  */
 export async function recordVote(input: {
   customerId?: string | null;
@@ -217,8 +181,7 @@ export async function recordVote(input: {
     const product = await new ProductService(serviceDb()).getById(input.productId);
     if (!product) return { ok: false, reason: 'not_found' };
     // Aday olmayan ürün keşif kartlarına düşmez; oradan gelen bir oy tutarsızdır.
-    // Adaylık ayrı bir bayrak değil bir DURUMDUR (`product.status`): satılabilir ürün aynı anda
-    // aday olamaz — ikisi aynı eksenin iki değeridir.
+    // Adaylık ayrı bir bayrak değil bir DURUMDUR (`product.status`): satılabilir ürün aynı anda aday olamaz.
     if (product.status !== 'candidate') return { ok: false, reason: 'not_candidate' };
   }
 
@@ -280,13 +243,8 @@ export interface PublishedReview {
 }
 
 /**
- * Ürün sayfasının yorum listesi — **yalnız yayınlanmış YAZILI** yorumlar, keyset sayfalı.
- *
- * Beğeniler burada görünmez: onlar okunacak değil sayılacak şeylerdir, skora girerler.
- *
- * **`viewLanguage` zorunlu ve bilerek** (20.2): yorum artık okuyucunun dilinde gösteriliyor, yani
- * "hangi dil" bu okumanın bir parametresidir. Varsayılan koysaydık dilini vermeyi unutan bir ekran
- * herkese Türkçe gösterir ve bu hiçbir yerde hata vermezdi — sessizce yanlış çalışan bir sayfa.
+ * Ürün sayfasının yorum listesi: yalnız yayınlanmış yazılı yorumlar, keyset sayfalı; beğeniler skora girer, burada görünmez.
+ * `viewLanguage` bilerek zorunlu: varsayılan olsaydı dilini vermeyi unutan ekran herkese Türkçe gösterir ve hata vermezdi.
  */
 export async function listProductReviews(
   productId: string,
@@ -330,9 +288,7 @@ export async function getProductScore(productId: string): Promise<ProductScore> 
 
 /**
  * Bir listedeki ürünlerin skorları — katalog kartları, "benzer ürünler", vitrin şeridi.
- *
- * Haritada olmayan ürünün skoru yoktur; çağıran `?? EMPTY_PRODUCT_SCORE` okur. Tüm ürünler için
- * boş kayıt üretmek, 200 ürünlük bir katalogda 200 gereksiz nesne olurdu.
+ * Haritada olmayan ürünün skoru yoktur; çağıran `?? EMPTY_PRODUCT_SCORE` okur.
  */
 export async function getProductScores(productIds: readonly string[]): Promise<Map<string, ProductScore>> {
   if (productIds.length === 0) return new Map();
@@ -341,19 +297,8 @@ export async function getProductScores(productIds: readonly string[]): Promise<M
 }
 
 /**
- * **Ürünlerin SİNYAL KALİTESİ** (operasyon talebi 03.08 · `DOMAIN §14`) — skor tablosunun güven
- * kolonu.
- *
- * `getProductScores` "ne kadar sevildi"yi söyler; bu "bu sevgiye ne kadar güvenelim"i. İkisi ayrı
- * sorular ve ayrı okumalar: skor `product_rating` görünümünün HAM sayılarından türer, güven ise
- * tek tek kaydırmaların süresini ve kaydıranın desenini ister — görünüm onları taşımaz.
- *
- * **Bağlam `purchase`**, aday panosunun tersine: burada soru "satın alan ne dedi", orada "henüz
- * satmadığımız ürün isteniyor mu". Aynı üründe ikisi de bulunabilir ve karıştırılmaları ürünü
- * hiç kimse almamışken yüksek puanlı gösterirdi (`product_rating`'in bağlamı süzmesinin sebebi).
- *
- * Ağırlıklandırma aday panosuyla **AYNI motor fonksiyonundan** geçiyor (`weighSwipesByProduct`) —
- * iki ekran aynı ürün için iki farklı güven gösteremesin.
+ * Ürünlerin sinyal kalitesi, `purchase` bağlamında: skor "ne kadar sevildi"yi, bu "bu sevgiye ne kadar güvenelim"i söyler ve tek tek kaydırmaları ister.
+ * Ağırlık aday panosuyla aynı motor fonksiyonundan geçer; iki ekran aynı ürüne iki ayrı güven göstermesin.
  */
 export async function getProductSignals(
   productIds: readonly string[],
@@ -372,10 +317,8 @@ export function listReviewsForModeration(status: ReviewStatus, cursor?: KeysetCu
 }
 
 /**
- * Onay / ret / geri çekme. İzni motor verir (`canModerate`), damgayı servis basar.
- *
- * **Metinsiz kayıt moderasyona girmez** (`nothing_to_read`): bir yıldızı ya da beğeniyi reddetmek
- * anlamsızdır. Metne DOKUNULMAZ — bu kapının bir "düzenle" ikizi yok ve olmayacak.
+ * Onay / ret / geri çekme: izni motor verir (`canModerate`), damgayı servis basar.
+ * Metinsiz kayıt moderasyona girmez ve metne dokunulmaz — bu kapının bir "düzenle" ikizi yok.
  */
 export async function moderateReview(input: {
   reviewId: string;
@@ -407,29 +350,12 @@ export interface CandidateDemandRow {
 }
 
 /**
- * **Aday ürün talep panosu, sinyal kalitesi ağırlıklı** (13.4 · 17.3 · DOMAIN §14).
- *
- * Ham beğeni sayısı panoda yanıltıcıdır: 40 savurma beğenisi 8 gerçek beğeniden büyük görünür.
- * Burada her kaydırma kendi ağırlığıyla sayılır — kartta geçirilen süre ve kaydıranın deseni
- * (hep aynı yöne savuran bilgi taşımaz).
- *
- * **Müşterinin puanı bundan ETKİLENMEZ** (DOMAIN §14 "ödül ≠ güven"): kalitesiz kaydırma da
- * ödülünü almıştır, yalnız iş kararını bozmaz.
- *
- * Sıralama ağırlıklı sayıya göredir; ham sayı da taşınır ki ekran ikisini yan yana gösterebilsin.
- */
-/**
- * Ağırlıklandırmanın okuduğu kaydırma sayısı. Küme sınırsız büyür (ziyaretçi kaydırması
- * tekilleştirilmiyor); pano en YENİ bu kadarını sayar. Sınıra dayanıldığında ekran bunu söyler —
- * sessiz kırpma "her şey sayıldı" diye okunur.
+ * Ağırlıklandırmanın okuduğu kaydırma sayısı; küme sınırsız büyür, pano en yenilerini sayar.
+ * Sınıra dayanınca bunu söyler: sessiz kırpma "her şey sayıldı" diye okunur.
  */
 const CANDIDATE_SAMPLE_SIZE = 5000;
 
-/**
- * DB satırı → motorun tanıdığı ham kaydırma. Tek yerde, çünkü iki okuma da (aday panosu · ürün
- * skoru sinyali) aynı eşlemeyi yapıyor ve alan adları ayrışırsa (`customerId` ↔ `swiperId`)
- * biri sessizce hep "kimliksiz" görürdü — desen ağırlığı da o an nötre düşerdi.
- */
+/** DB satırı → motorun ham kaydırması; tek yerde, çünkü alan adları ayrışırsa (`customerId` ↔ `swiperId`) biri sessizce hep "kimliksiz" görürdü. */
 const toRawSwipe = (row: ProductFeedback): RawSwipe => ({
   productId: row.productId,
   vote: row.vote,
@@ -438,6 +364,14 @@ const toRawSwipe = (row: ProductFeedback): RawSwipe => ({
   at: row.createdAt,
 });
 
+/** Tekilleştirilmiş listede kimlikli beğeni sayısı — aday panosunun ve keşif kartının ortak "kaç kişi" ölçüsü. */
+const identifiedLikes = (tekil: ReturnType<typeof dedupeBySwiper>): number =>
+  tekil.filter((s) => s.vote === 'like' && s.swiperId).length;
+
+/**
+ * Aday ürün talep panosu, sinyal kalitesi ağırlıklı: ham beğeni sayısı yanıltır, her kaydırma süresi ve kaydıranın deseniyle tartılır.
+ * Müşterinin puanı bundan etkilenmez; sıralama ağırlıklı sayıya göredir, ham sayı da yan yana taşınır.
+ */
 export async function listCandidateDemand(limit = 20, since?: string): Promise<CandidateDemandRow[]> {
   const db = serviceDb();
   const rows = await new ProductFeedbackService(db).listCandidateVotes(CANDIDATE_SAMPLE_SIZE, since);
@@ -446,24 +380,28 @@ export async function listCandidateDemand(limit = 20, since?: string): Promise<C
     logger.warn({ context: 'feedback/candidateBoard', sampleSize: CANDIDATE_SAMPLE_SIZE }, 'örneklem tavana dayandı; sıralama en yeni kaydırmalara göre');
   }
 
-  // Ağırlıklandırma MOTORDA (`weighSwipesByProduct`) — ürün skorunun güven kolonu da aynı
-  // fonksiyonu çağırıyor. İki ekran iki ayrı hesap yapsaydı fark hiçbir yerde hata vermez, yalnız
-  // aynı ürün için iki farklı güven gösterirdi.
+  // Ağırlık motorda; ürün skorunun güven kolonu da aynı fonksiyonu çağırır.
   const byProduct = weighSwipesByProduct(rows.map(toRawSwipe));
 
   return [...byProduct.entries()]
     .map(([productId, swipes]) => {
-      // **Üç sayı da AYNI tekilleştirilmiş listeden türer.** Ayrı ayrı sayılsalardı biri bir gün
-      // ötekinden ayrışırdı: pano "12 beğeni, 3 kimlikli" derken ikisi farklı kümeyi sayıyor olurdu
-      // ve fark hiçbir yerde hata vermezdi. Aynı kişinin aynı ürüne tekrarı hepsinde bir kez sayılır.
+      // Üç sayı da aynı tekilleştirilmiş listeden türer; aynı kişinin aynı ürüne tekrarı hepsinde bir kez sayılır.
       const tekil = dedupeBySwiper(swipes);
       return {
         productId,
         dislikeCount: tekil.filter((s) => s.vote === 'dislike').length,
-        identifiedLikeCount: tekil.filter((s) => s.vote === 'like' && s.swiperId).length,
+        identifiedLikeCount: identifiedLikes(tekil),
         signal: candidateSignalOf(tekil),
       };
     })
     .sort((a, b) => b.signal.weightedLikes - a.signal.weightedLikes)
     .slice(0, limit);
+}
+
+/** Aday ürünleri kaç kişinin beğendiği — keşif kartının "N kişi istedi" satırı, panoyla aynı ölçü. */
+export async function countCandidateLikers(productIds: readonly string[]): Promise<Map<string, number>> {
+  if (productIds.length === 0) return new Map();
+  const rows = await new ProductFeedbackService(serviceDb()).listVotesByProducts(productIds, 'candidate');
+  const byProduct = weighSwipesByProduct(rows.map(toRawSwipe));
+  return new Map([...byProduct.entries()].map(([productId, swipes]) => [productId, identifiedLikes(dedupeBySwiper(swipes))]));
 }
