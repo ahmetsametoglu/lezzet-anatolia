@@ -2,20 +2,13 @@
 
 import type { Locale } from '@lezzet/i18n';
 import { NewsStrip } from '@/components/customer/ui/toast';
+import { useDevice } from '@/lib/use-device.hook';
 import messages from './cart-messages.json';
 
-/**
- * Silme sonrası geri alma şeridi — tasarım sözleşmesi: "0'a inen kalem silinir (onay istenmez,
- * 'geri al' snackbar'ı 5 sn görünür)".
- *
- * Onay kutusu yerine geri alma seçildi çünkü ikisi aynı korumayı vermez ama maliyetleri farklıdır:
- * onay HER silmeyi yavaşlatır, geri alma yalnız YANLIŞ silmeyi düzeltir. Sepetten kalem çıkarmak
- * sık ve zararsız bir iştir; her seferinde "emin misiniz?" sormak asıl işi cezalandırır.
- *
- * METİNLERİNİ KENDİ TAŞIR (`cart-messages.json`): şerit kökte durur, hangi sayfada açılacağı
- * belli değildir — sayfa `messages.json`'undan beslenemez. Kutunun kendisi kitin haber şeridi
- * (`NewsStrip`); ekranın ÜSTÜNDE durur, gerekçesi orada.
- */
+/*
+  Silme sonrası geri alma şeridi: onay her silmeyi yavaşlatır, geri alma yalnız yanlış silmeyi düzeltir. Metinlerini kendi
+  taşır, çünkü şerit kökte durur ve hangi sayfada açılacağı belli değildir; telefon görünümünde silme sessizdir.
+*/
 interface CartUndoProps {
   locale: Locale;
   /** Silinen kalemin adı; bilinmiyorsa genel cümleye düşülür. */
@@ -27,7 +20,9 @@ interface CartUndoProps {
 
 export function CartUndo({ locale, name, open, onUndo, onClose }: CartUndoProps) {
   const t = messages[locale];
-  if (!open) return null;
+  // Şerit bir silmeden sonra açılır; o ana kadar cihaz pencere ölçüsünden çözülmüş olur.
+  const device = useDevice('desktop');
+  if (!open || device === 'mobile') return null;
 
   return (
     <NewsStrip
