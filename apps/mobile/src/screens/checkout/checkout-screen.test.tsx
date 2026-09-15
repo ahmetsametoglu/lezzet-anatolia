@@ -3,7 +3,7 @@ import type { CheckoutSnapshot } from '@lezzet/types';
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
 import { cartView, cartViewLine } from '@/screens/cart/cart-view-fixture';
-import sheetMessages from '@/screens/customer-kit/address-sheet-messages.json';
+import addressCopy from '@lezzet/i18n/customer/address';
 import { CheckoutScreen } from './checkout-screen';
 import messages from '@lezzet/i18n/customer/checkout';
 
@@ -440,6 +440,6 @@ describe('CheckoutScreen — adres teklifi ve düzenleme', () => {
 
     await fireEvent(row, 'longPress');
 
-    expect(await screen.findByText(sheetMessages.tr.titleEdit)).toBeOnTheScreen();
+    expect(await screen.findByText(addressCopy.tr.editTitle)).toBeOnTheScreen();
   });
 });

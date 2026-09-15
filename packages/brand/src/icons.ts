@@ -131,6 +131,8 @@ export const ICON_PATHS = {
   /* Fişin onay imi (v3:22). Metin "✓" ile çizilemezdi: daire içinde ortalanan bir glif, yazı
      tipinin kendi çizgi yüksekliğine yaslanır ve dairenin merkezinden kayar. */
   check: { paths: ['M5 12.5l4.5 4.5L19 7'] },
+  /** Harita iğnesi — adres çekmecesinin öneri satırı (Musteri Mobil `shAddr`, 21.313); web v1 çiziminin aynısı. */
+  pin: { paths: ['M12 21.5s7-6.6 7-11.4A7 7 0 1 0 5 10.1c0 4.8 7 11.4 7 11.4z'], circles: [[12, 10, 2.4]] },
   /* OKUTMA ÇERÇEVESİ (v3 · 02, 05, 06, 08, 17) — dört köşe ayracı ve ortada tarama çizgisi.
      Emojinin (📷/📄) yerini aldı: emoji cihazdan cihaza başka çiziliyor, tasarımın çizgi
      kalınlığını taşımıyor ve renk alamıyor — düğmenin zeytin tonunu hiç almıyordu. */

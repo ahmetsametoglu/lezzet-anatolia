@@ -13,7 +13,7 @@ import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-butt
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { AddressFields } from '@/screens/customer-kit/address-fields';
-import addressMessages from '@/screens/customer-kit/address-sheet-messages.json';
+import addressMessages from '@/screens/customer-kit/address-fields-messages.json';
 import type { Messages } from './professionals-types';
 
 /*

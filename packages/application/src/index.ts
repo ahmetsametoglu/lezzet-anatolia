@@ -370,8 +370,19 @@ export { ensureStopOrder, type StopOrderOutcome } from './courier/stop-order';
 export { geocodeAddressesScan, type GeocodeScanResult } from './delivery/geocode-scan';
 export { geocoder, geocoderConfigured } from './delivery/geocode-provider';
 // Almanya adres önerisi — Google Places, sunucudan (13.09). FR önerisi tarayıcıdan BAN'a gider.
-export { resolveAddressSuggestion, suggestAddresses } from './delivery/address-suggest';
-export type { AddressResolveOutcome, AddressSuggestOutcome } from './delivery/address-suggest';
+export {
+  lookupAddressOptions,
+  resolveAddressOption,
+  resolveAddressSuggestion,
+  suggestAddresses,
+} from './delivery/address-suggest';
+export type {
+  AddressLookupAddress,
+  AddressLookupOption,
+  AddressLookupOutcome,
+  AddressResolveOutcome,
+  AddressSuggestOutcome,
+} from './delivery/address-suggest';
 export { googleMapsConfigured } from './delivery/google-maps';
 export { resolveAddressPoint, type AddressPointCandidate } from './delivery/geo-address';
 export { checkAddress, type AddressCheckOutcome } from './delivery/address-check';

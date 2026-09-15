@@ -51,7 +51,11 @@
       "makeBilling": "Fatura adresim yap",
       "save": "Adresi kaydet",
       "saveAndSelect": "Adresi kaydet ve seç",
-      "cancel": "Vazgeç"
+      "cancel": "Vazgeç",
+      "countryLabel": "Ülke",
+      "delete": "Adresi sil",
+      "deleted": "Adres silindi",
+      "saving": "Kaydediliyor…"
     }
   },
   "fr": {
@@ -106,7 +110,11 @@
       "makeBilling": "En faire mon adresse de facturation",
       "save": "Enregistrer l'adresse",
       "saveAndSelect": "Enregistrer et choisir cette adresse",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "countryLabel": "Pays",
+      "delete": "Supprimer l'adresse",
+      "deleted": "Adresse supprimée",
+      "saving": "Enregistrement…"
     }
   },
   "de": {
@@ -161,7 +169,11 @@
       "makeBilling": "Als meine Rechnungsadresse festlegen",
       "save": "Adresse speichern",
       "saveAndSelect": "Speichern und als Lieferadresse wählen",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "countryLabel": "Land",
+      "delete": "Adresse löschen",
+      "deleted": "Adresse gelöscht",
+      "saving": "Wird gespeichert…"
     }
   }
 }

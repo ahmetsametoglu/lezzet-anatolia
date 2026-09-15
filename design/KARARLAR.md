@@ -2990,3 +2990,18 @@ yok; ek çizim istenmedi (`15.32`).
   ekranlarındaki wa.me düğmesi söküldü.
 - **Yalnız yönetici:** sohbet sayfasının kapısı neyse pencereninki de o — başka rolde ne düğme ne kanal
   düğmeleri çizilir.
+
+## Native adres çekmecesi tasarımda — tek adres kapısı ve bilinçli farklar (15.09, kullanıcı kararları 13.09 · 14.09)
+
+Kullanıcı: *"Bu yeni adres ekleme ekranı orijinal tasarımda nasıl incele? … Burası bu şekilde olmaması lazım."*
+Native çekmece (`AddressForm`, `21.313`) Musteri Mobil `shAddr`in akışına geçti; web v1 penceresiyle aynı sözlük
+(`@lezzet/i18n/customer/address`), görünüm kitin parçalarıyla.
+
+- **Tek adres kapısı (14.09):** *"Bu ikisi de adrestir … aynı paket(te) oluşturulmalı."* Öneri ve seçim tek uçtan,
+  ülke bir parametre; sağlayıcıyı uygulama katmanı seçer (FR BAN, DE Google). 09.08'in "BAN önerisi cihazdan"
+  kararı native çekmecede kalktı — bedeli BAN kotasının sunucu IP'sinde toplanması (bugünkü ölçekte karşılığı yok).
+- **Veri farkları (tasarımdan bilinçli):** alıcı adı ve telefon VAR (22.08, zorunlu) · "Kuryeye not" YOK (kolonu
+  yok) · "67 ile başlayan posta kodları bölgemizdedir" cümlesi YOK (11.08: genellenmiş ve yanlış; cevap her adreste
+  teslim satırında gerçek bölgeden) · teslim satırında gün YOK (native yer sözleşmesi tarih taşımıyor) · "Diğer"in
+  adı zorunlu değil (web ile aynı; etiketsiz eski adres düzenlenirken kilitlenmesin).
+- **Rozet ve teslim satırı bölge listesinden:** öneri başına yer ucuna sorulmaz — o uç "yer çözüldü" hunisini sayıyor.

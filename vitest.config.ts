@@ -77,6 +77,8 @@ const UYGULAMA_DBSIZ = [
     ikisi de makul görünen bir cevap döner. O yüzden sınanacak yer istek, cevap değil.
   */
   'packages/application/src/delivery/geocode-provider.test.ts',
+  // Tek adres kapısının DAĞITIMI (21.313) — ülke → sağlayıcı ve cevabın çevirisi; BAN taklit, Google anahtarsız.
+  'packages/application/src/delivery/address-suggest.test.ts',
   // Matris → maliyet çevirisi (11.9): simetrikleştirme ve "tek null tüm matrisi reddeder" kuralı
   // saf; sağlayıcının kendisi ağa çıkar ve o elle provadır.
   'packages/application/src/delivery/route-matrix-port.test.ts',
@@ -114,8 +116,6 @@ const UYGULAMA_DBSIZ = [
 const WEB_LIB_DBSIZ = [
   // Adresin tek satırı (14.09) — saf: alanlar girer, satır çıkar; sepetin künyesi ve ödemenin adres kartı okur.
   'apps/web/lib/address/address-line.test.ts',
-  // Kapı numarası var mı (14.09) — saf: dize girer, evet/hayır çıkar; öneri kutusunun iki cümlesi buna bakar.
-  'apps/web/lib/address/house-number.test.ts',
   'apps/web/lib/analytics/route-pattern.test.ts',
   'apps/web/lib/analytics/session-key.test.ts',
   'apps/web/lib/analytics/utm.test.ts',

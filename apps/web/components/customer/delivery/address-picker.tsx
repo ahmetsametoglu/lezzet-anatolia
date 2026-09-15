@@ -12,7 +12,7 @@ import { errorText } from '@/lib/customer-error-text';
 import { AddressForm, addressDefaultsOf, toAddressFields, toFormInput } from './address-form';
 import { useDeliveryPlace } from './place-context';
 import { useMyAddresses } from './use-my-addresses.hook';
-import messages from './address-messages.json';
+import messages from '@lezzet/i18n/customer/address';
 import placeMessages from './place-messages.json';
 
 /**

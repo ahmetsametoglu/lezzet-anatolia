@@ -1,9 +1,18 @@
 import type { z } from 'zod';
+import type { Locale } from '@lezzet/i18n';
 import {
   AddressCheckResultSchema,
+  AddressLookupCheckResultSchema,
+  AddressLookupResolvedSchema,
+  AddressLookupSuggestResultSchema,
   MeAddressListSchema,
   type AddressCheckResult,
+  type AddressLookupAddressSchema,
+  type AddressLookupCheckBodySchema,
+  type AddressLookupOptionSchema,
+  type AddressLookupPointSchema,
   type AddressWriteSchema,
+  type Country,
   type MeAddressSchema,
 } from '@lezzet/types';
 
@@ -66,4 +75,49 @@ export function makeBillingAddress(id: string): Promise<ApiResult<MeAddress[]>> 
  */
 export function checkAddress(id: string): Promise<ApiResult<AddressCheckResult>> {
   return authorizedFetch(`/api/v1/me/addresses/${id}/check`, AddressCheckResultSchema, { method: 'POST' });
+}
+
+/** Öneri satırı — alan kümesi sözleşmenin kendisi; `address` doluysa seçim ikinci adım istemez. */
+export type AddressOption = z.infer<typeof AddressLookupOptionSchema>;
+/** Açılmış adres — sokak, kod, şehir ve kaynağıyla nokta. */
+export type LookupAddress = z.infer<typeof AddressLookupAddressSchema>;
+/** Doğrulanan nokta — kayda ADAY olarak gider, kaynağıyla (BAN / Google). */
+export type CheckedPoint = z.infer<typeof AddressLookupPointSchema>;
+
+/*
+  ADRES ARAMA (21.313) — TEK KAPI, ülke parametre: sağlayıcıyı (FR BAN · DE Google) sunucu seçer
+  (`/me/addresses/lookup/*`, kullanıcı kararı 14.09). Üçü de başarısızlığı BİR DEĞER olarak döndürür:
+  öneri yoksa boş liste, açılış ya da doğrulama yoksa `null` — çekmece elle girişe düşer, kayıt
+  hiçbir hâlde engellenmez (10.08).
+
+  `sessionToken` Google'ın ücret oturumudur: yazma boyunca aynı, seçimle biter (çekmece üretir).
+*/
+export function suggestAddressOptions(input: {
+  country: Country;
+  query: string;
+  sessionToken: string;
+  locale: Locale;
+}): Promise<ApiResult<z.infer<typeof AddressLookupSuggestResultSchema>>> {
+  const params = new URLSearchParams({
+    country: input.country,
+    query: input.query,
+    session: input.sessionToken,
+    locale: input.locale,
+  });
+  return authorizedFetch(`/api/v1/me/addresses/lookup/suggest?${params.toString()}`, AddressLookupSuggestResultSchema);
+}
+
+export function resolveAddressOption(input: {
+  country: Country;
+  id: string;
+  sessionToken: string;
+  locale: Locale;
+}): Promise<ApiResult<LookupAddress | null>> {
+  const params = new URLSearchParams({ country: input.country, id: input.id, session: input.sessionToken, locale: input.locale });
+  return authorizedFetch(`/api/v1/me/addresses/lookup/resolve?${params.toString()}`, AddressLookupResolvedSchema);
+}
+
+/** Elle girilen adresi kaydetmeden önce doğrular (FR BAN · DE Google Address Validation). */
+export function locateAddress(input: z.input<typeof AddressLookupCheckBodySchema>): Promise<ApiResult<CheckedPoint | null>> {
+  return authorizedFetch('/api/v1/me/addresses/lookup/check', AddressLookupCheckResultSchema, { method: 'POST', body: input });
 }

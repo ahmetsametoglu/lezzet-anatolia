@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AddressSchema } from '../entities/address.schema';
-import { AddressGeoPrecisionEnum, CountryEnum } from '../primitives/enums.schema';
+import { AddressGeoPrecisionEnum, AddressGeoSourceEnum, CountryEnum } from '../primitives/enums.schema';
 
 /**
  * `/api/v1/me/addresses` SÖZLEŞME şemaları (21.15) — mobil adres uçlarının ve hesap ekranının
@@ -175,6 +175,73 @@ export const AddressWriteSchema = z.object({
       lat: z.number(),
       lng: z.number(),
       precision: AddressGeoPrecisionEnum,
+      /**
+       * Noktayı KİM verdi (21.313): Fransa önerisi BAN, Almanya önerisi ve elle girilenin doğrulaması
+       * Google. Kaynak yaşlanma kuralını belirliyor — Google noktası 30 günden uzun saklanamaz
+       * (`geocode-scan`). Verilmezse kapı `ban` sayar (`AddressPointCandidate` künyesi) ve bu varsayılan
+       * bir kez yanlış veri yazdı (14.09, web): native çekmece artık her yolda kaynağıyla gönderiyor.
+       */
+      source: AddressGeoSourceEnum.exclude(['manual']).optional(),
     })
     .nullish(),
 });
+
+/*
+  ADRES ARAMA KAPILARI (21.313) — adres çekmecesinin sunucuya sorduğu üç şey: öneri, seçilen önerinin
+  açılışı ve elle girilen adresin doğrulanması. TEK KAPI, ÜLKEYE GÖRE SAĞLAYICI (kullanıcı kararı
+  14.09): Fransa → BAN, Almanya → Google; sözleşme ülkeden bağımsız, ülke yalnız bir parametre. Kural
+  `@lezzet/application`da (`lookupAddressOptions` · `resolveAddressOption` · `geocoder().locate`).
+*/
+
+/** Doğrulanmış nokta — kaynağıyla; kayda ADAY olarak gider (`AddressWriteSchema.point`). */
+export const AddressLookupPointSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+  precision: AddressGeoPrecisionEnum,
+  source: AddressGeoSourceEnum.exclude(['manual']),
+});
+
+/**
+ * Açılmış adres — sokak satırı, kod, şehir ve noktası. Google bazı sonuçlarda kodu ya da şehri
+ * vermiyor: alan `null` gelir ve çekmece elle giriş kartını bilinenle açar.
+ */
+export const AddressLookupAddressSchema = z.object({
+  line1: z.string(),
+  postalCode: z.string().nullable(),
+  city: z.string().nullable(),
+  point: AddressLookupPointSchema,
+});
+
+/**
+ * Öneri satırı — `GET /me/addresses/lookup/suggest?country=`. `address` sağlayıcı öneride tam adresi
+ * veriyorsa (BAN) dolu; vermiyorsa (Google) `null` ve seçim `…/lookup/resolve` ister.
+ */
+export const AddressLookupOptionSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  subtitle: z.string().nullable(),
+  address: AddressLookupAddressSchema.nullable(),
+});
+
+/** Öneri cevabı. `busy`: sağlayıcının kotası doldu — ekran "biraz sonra" der, elle giriş açık kalır. */
+export const AddressLookupSuggestResultSchema = z.object({
+  options: z.array(AddressLookupOptionSchema),
+  busy: z.boolean(),
+});
+
+/** `GET /me/addresses/lookup/resolve?country=&id=` — seçilen önerinin tam adresi; bulunamazsa `null`. */
+export const AddressLookupResolvedSchema = AddressLookupAddressSchema.nullable();
+
+/** Elle girilen adresin doğrulama gövdesi — `POST /me/addresses/lookup/check`. Ülke SEÇİLİR (önce ülke). */
+export const AddressLookupCheckBodySchema = z.object({
+  line1: z.string().min(1),
+  postalCode: z.string().regex(/^\d{5}$/),
+  city: z.string().min(1),
+  country: CountryEnum,
+});
+
+/**
+ * Doğrulamanın cevabı — nokta ya da `null`. Bulunamazsa adres yine kaydedilir, noktasını tarama arar
+ * (adres defteri hiçbir hâlde reddetmez — kullanıcı kararı 10.08).
+ */
+export const AddressLookupCheckResultSchema = AddressLookupPointSchema.nullable();

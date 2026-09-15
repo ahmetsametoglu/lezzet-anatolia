@@ -2209,7 +2209,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   uydurma bir genellemenin kaldırılması (kullanıcı kararları 11.08).**
   `touches:` ~~`apps/mobile/src/screens/cart/messages.json`~~ (14.09 → `packages/i18n/src/customer/cart.json`, ortak sözlük) ·
   `apps/mobile/src/screens/customer-kit/address-form.tsx` ·
-  `apps/mobile/src/screens/customer-kit/address-sheet-messages.json`
+  ~~`apps/mobile/src/screens/customer-kit/address-sheet-messages.json`~~ (21.313: çekmecenin metni ortak pakete geçti — `packages/i18n/src/customer/address.json`; adres alanlarının etiketleri `address-fields-messages.json`)
 
   **1 · ASGARİ SEPET CÜMLESİ TABANINI SÖYLÜYOR (MB-21).** Cihazda ölçülmüştü: ekranda
   `Toplam 3,80 €` yazarken altında `Asgari sepet 40,00 € — 33,20 € eksik` çıkıyordu; eksik indirim
@@ -15146,3 +15146,40 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     e-posta → uyarı kutusu; kod adımı adresin yerine açıldı ve başlık–Google aralığı dört anda sabit kaldı (567 px:
     boş · dolu · kod · geri dönüş, adres korundu); personel kodla doğrudan depo bölümüne girdi; müşteri hesabı →
     "yetki yok", "Başka hesapla gir" girişe döndü; klavye kod tamamlanınca kapanıyor.
+
+- [~] (21.313) **ADRES ÇEKMECESİ TASARIMDA — ülke, tek arama, rozetli öneri, doğrulama; adres araması TEK KAPIDAN** (tasarım: 01-musteri / Musteri Mobil `shAddr`; kullanıcı kararları 13.09 · 14.09)
+  `touches:` `apps/mobile/src/screens/customer-kit/address-form.tsx` · `apps/mobile/src/screens/customer-kit/address-sheet.tsx` · `apps/mobile/src/screens/customer-kit/use-address-lookup.hook.ts` · `apps/mobile/src/screens/customer-kit/use-door-codes.hook.ts` · `apps/mobile/src/screens/customer-kit/channel-badge.tsx` · `apps/mobile/src/components/ui/suggestion-list.tsx` · `apps/mobile/src/lib/api/addresses.ts` · `apps/mobile/src/lib/random-key.ts` · `packages/mobile-kit/src/components/ui/text-field.tsx` · `packages/application/src/delivery/address-suggest.ts` · `packages/types/src/contracts/address-api.schema.ts` · `apps/mobile-api/src/api/v1/addresses.ts` · `packages/i18n/src/customer/address.json` · `packages/helper/src/address-label.ts` · `packages/address-fr/src/house-number.ts` · `apps/web/components/customer/delivery/address-form.tsx`
+
+  Kullanıcı kararları: *"yeni adres ekleme formunu olabildiğince tasarımda bire bir yapmaya çalışalım"* (13.09) ·
+  *"Bu ikisi de adrestir. Ülkesine göre farklı bir servis, farklı bir hizmet sağlayıcı devreye girebilir. Fakat
+  bunlar aynı paket(te) oluşturulmalı"* (14.09 — tek uç, tek paket) · alıcı ve telefon zorunlu kalır (22.08) · kurye
+  notu yok, kapı ikinci satırda (21.312'deki karar).
+
+  **Durum (15.09) — çekmece tasarımın akışında, arama tek kapıdan.**
+  · **Çekmece** (`AddressForm`; hesap · sepet · ödeme · profil tamamlama aynı dosya): ülke (Fransa | Almanya) →
+    büyüteçli, zeytin çerçeveli arama → öneri listesi (iğne · sokak · "kod şehir" · teslim rozeti) → "Adres
+    doğrulandı" kartı ve teslim satırı / öneri yoksa "bulamadık", numarasız yazıda "kapı numarasını da yazın" →
+    elle giriş kartı → Ev · İş · Diğer (+ ad) → kapı/daire → alıcı → telefon (ülke içi yazım, kod ülkeden) →
+    "Adresi kaydet ve seç". Kaydedilen yeni adres teslimat adresi olarak seçilir ve bildirim bunu söyler.
+  · **Tek adres kapısı:** `lookupAddressOptions` · `resolveAddressOption` (ülke → sağlayıcı: FR BAN yalnız kapı
+    düzeyi, DE Google); uçlar `/me/addresses/lookup/suggest` · `resolve` · `check`, ülke parametre. Bedeli: BAN
+    kotası (IP başına 50/sn) artık sunucunun IP'sinde — bugünkü ölçekte karşılığı yok; kota dolarsa `busy`, elle
+    giriş açık. Web'in Fransa önerisi hâlâ tarayıcıdan gidiyor (web şeridine not). Profesyonel başvuru formu
+    (oturumsuz) cihazdan BAN'a gitmeye devam ediyor — kapı girişli müşteriye açık.
+  · **Ortak metin ve kurallar:** web'in adres sözlüğü ortak pakete taşındı (web üç dosyada yalnız içe aktarmayı
+    değiştirdi); ülke adları ve rozet sözcükleri ortak yer sözlüğünde; kapı numarası kontrolü `@lezzet/address-fr`e,
+    etiket eşlemesi ve varsayılan alıcı/telefon `@lezzet/helper`a geçti — iki yüzey tek kuralı okuyor. Rozet ve
+    teslim satırı bölge listesinden (öneri başına yer ucuna sorulmaz; o uç huni sayacını tutuyor).
+  · **Kit:** metin alanına baş ikon ve vurgulu çerçeve (`border.accent` 2); öneri listesine satır ikonu, rozet ve
+    öğe künye; harita iğnesi `@lezzet/brand`de; Google künye görseli `apps/mobile/assets/images/google-maps-attribution.png`.
+  · **Tasarımdan bilinçli farklar** (`design/KARARLAR.md`): alıcı + telefon var · "Kuryeye not" yok · "67 ile
+    başlayan" bölge cümlesi yok (11.08) · teslim satırında gün yok (native yer sözleşmesi tarih taşımıyor) ·
+    "Diğer"in adı zorunlu değil (web ile aynı).
+  · **Doğrulama:** typecheck types · application · mobile-api · helper · kit · müşteri · web; lint kit · müşteri ·
+    mobile-api · helper · application · types · address-fr · brand · web; `knip` yeşil. Jest: çekmece 11/11, hesap
+    18/18, dokunulan öteki dosyalar (ödeme, sepet, başvuru, çekmeceler, öneri listesi) ve kit metin alanı 7/7
+    yeşil; birim projesi 2425/2426 — düşen tek test yardımcının kendi testindeki yanlış beklentiydi, düzeltildi,
+    dosya 7/7. Cihaz (Oppo): çekmece tasarımın sırasıyla açıldı; FR araması tek kapıdan beş öneri — 67000
+    "livraison à domicile", öteki kodlar "par transporteur" — ve BAN künyesi. **Koşulmadı (kullanıcı talimatı
+    15.09):** kilitli tam paket ve 3001 derlemesi. Cihazda doğrulandı kartı, Almanya araması ve kaydetme henüz
+    denenmedi. `boundaries` kırmızı: öteki şeridin `supplier.test.ts` dosyası (not yazılı).

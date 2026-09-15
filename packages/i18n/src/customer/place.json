@@ -50,7 +50,11 @@
       "unknownNote": "Bu kodu bulamadık — yazımını kontrol eder misiniz?",
       "unresolvedNote": "Şu an bu kod için teslimat şeklini söyleyemiyoruz; sipariş adımında birlikte bakacağız.",
       "browsingOnly": "Bu kod yalnız vitrini gezmek içindir; siparişte kayıtlı adresiniz kullanılır."
-    }
+    },
+    "countryFR": "Fransa",
+    "countryDE": "Almanya",
+    "channelDoor": "kapıya teslim",
+    "channelShip": "kargoyla"
   },
   "fr": {
     "shipMark": "📦 Envoyé par transporteur",
@@ -103,7 +107,11 @@
       "unknownNote": "Nous n'avons pas trouvé ce code — pouvez-vous vérifier la saisie ?",
       "unresolvedNote": "Nous ne pouvons pas encore préciser la livraison pour ce code ; nous verrons cela à la commande.",
       "browsingOnly": "Ce code sert uniquement à parcourir la boutique ; votre adresse enregistrée sera utilisée pour la commande."
-    }
+    },
+    "countryFR": "France",
+    "countryDE": "Allemagne",
+    "channelDoor": "livraison à domicile",
+    "channelShip": "par transporteur"
   },
   "de": {
     "shipMark": "📦 Wird versandt",
@@ -156,6 +164,10 @@
       "unknownNote": "Diesen Code konnten wir nicht finden — bitte die Eingabe prüfen.",
       "unresolvedNote": "Für diesen Code können wir die Lieferart noch nicht sagen; wir klären das bei der Bestellung.",
       "browsingOnly": "Diese Postleitzahl dient nur zum Stöbern; für die Bestellung wird Ihre gespeicherte Adresse verwendet."
-    }
+    },
+    "countryFR": "Frankreich",
+    "countryDE": "Deutschland",
+    "channelDoor": "Hauslieferung",
+    "channelShip": "per Versand"
   }
 }

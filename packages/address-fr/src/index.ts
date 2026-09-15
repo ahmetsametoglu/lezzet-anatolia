@@ -21,4 +21,5 @@
 export { MIN_QUERY_LENGTH, reverseAddress, searchAddresses } from './ban-client';
 export type { AddressLookup, AddressSearchInput, ReverseAddressInput } from './ban-client';
 export { addressLineOf } from './address';
+export { hasHouseNumber } from './house-number';
 export type { AddressKind, AddressSuggestion } from './address';

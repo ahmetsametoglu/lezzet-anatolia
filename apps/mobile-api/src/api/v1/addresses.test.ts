@@ -282,3 +282,37 @@ describe('kapı doğrulaması ucu', () => {
     expect(res.status).toBe(401);
   });
 });
+
+/**
+ * ADRES ARAMA KAPILARI (21.313) — tek kapı, ülke parametre. Sağlayıcıya (BAN / Google) giden yollar
+ * burada KOŞULMAZ: dış servise çıkarlar ve kuralları uygulama katmanının birim testinde
+ * (`delivery/address-suggest.test.ts`). Burada sınanan TAŞIMA: biçimsiz soru 400, oturumsuz 401 — ve
+ * `POST /lookup/check`in adres kimliği sanılıp `/:id/check`e düşmemesi (sıra kuralı).
+ */
+describe('adres arama kapıları — biçim ve kimlik', () => {
+  it('ülkesiz öneri sorusu biçimsizdir — 400 invalid_query', async () => {
+    const res = await req('/lookup/suggest?query=12%20rue');
+    expect(res.status).toBe(400);
+    expect(await envelopeError(res)).toBe('invalid_query');
+  });
+
+  it('kimliksiz açılış sorusu biçimsizdir — 400 invalid_query', async () => {
+    const res = await req('/lookup/resolve?country=DE');
+    expect(res.status).toBe(400);
+    expect(await envelopeError(res)).toBe('invalid_query');
+  });
+
+  it('doğrulama gövdesi ülkesiz ve biçimsiz kodla geçmez — `/:id/check`e değil kendi kapısına düşer', async () => {
+    const res = await req('/lookup/check', {
+      method: 'POST',
+      body: JSON.stringify({ line1: '1 rue du Test', postalCode: '670', city: 'Strasbourg' }),
+    });
+    expect(res.status).toBe(400);
+    expect(await envelopeError(res)).toBe('invalid_body');
+  });
+
+  it('oturumsuz öneri isteği 401 — Google oturum başına ücret keser, kapı ziyaretçiye kapalı', async () => {
+    const res = await app.request('/api/v1/me/addresses/lookup/suggest?country=FR&query=12%20rue');
+    expect(res.status).toBe(401);
+  });
+});

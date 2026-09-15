@@ -20,7 +20,7 @@ import { AddressPickerDialog } from '@/components/customer/delivery/address-pick
 import { DeliveryStrip } from '@/components/customer/delivery/delivery-strip';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { useMyAddresses } from '@/components/customer/delivery/use-my-addresses.hook';
-import addressMessages from '@/components/customer/delivery/address-messages.json';
+import addressMessages from '@lezzet/i18n/customer/address';
 import placeMessages from '@/components/customer/delivery/place-messages.json';
 import { addressLine } from '@/lib/address/address-line';
 import { createClient } from '@/lib/supabase/client';

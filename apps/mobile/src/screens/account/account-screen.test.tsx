@@ -62,6 +62,11 @@ jest.mock('@/lib/api/addresses', () => ({
   deleteAddress: (id: string) => mockDeleteAddress(id),
   makeDefaultAddress: (id: string) => mockMakeDefaultAddress(id),
   makeBillingAddress: (id: string) => mockMakeBillingAddress(id),
+  /* Çekmecenin arama kapıları (21.313): öneri çıkmaz, doğrulama bulamaz — bu dosyanın konusu hesap
+     ekranı; öneri akışının kendi testi `customer-kit/address-form.test.tsx`. */
+  suggestAddressOptions: async () => ({ data: { options: [], busy: false }, error: null, status: 200, retryAfterSec: null }),
+  resolveAddressOption: async () => ({ data: null, error: null, status: 200, retryAfterSec: null }),
+  locateAddress: async () => ({ data: null, error: null, status: 200, retryAfterSec: null }),
 }));
 
 /* Toast deposu gerçek zamanlayıcı açıyor (2400 ms) — mock, koşu sonunda asılı tanıtıcı
@@ -291,33 +296,42 @@ describe('AccountScreen', () => {
 
     await fireEvent.press(screen.getByTestId('account-address-add'));
     expect(screen.getByTestId('account-address-sheet')).toBeOnTheScreen();
-    expect(screen.getByTestId('address-line').props.value).toBe('');
+    // Çekmece (Musteri Mobil `shAddr`, 21.313): boş arama alanı, elle giriş kartı KAPALI.
+    expect(screen.getByTestId('address-search').props.value).toBe('');
+    expect(screen.queryByTestId('address-manual')).toBeNull();
 
-    // Eksik alanla istek ATILMAZ — hata satırı çekmecede söylenir.
-    await fireEvent.press(screen.getByTestId('address-save'));
+    // Eksik adreste istek ATILMAZ — Kaydet düğmesi kapalıdır (tasarımın gri düğmesi).
+    expect(screen.getByTestId('address-save')).toBeDisabled();
     expect(mockCreateAddress).not.toHaveBeenCalled();
-    expect(screen.getByTestId('address-error')).toBeOnTheScreen();
 
-    await fireEvent.changeText(screen.getByTestId('address-line'), '8 Rue Neuve');
-    // Posta kodu maskesi: sayı dışı düşer, 5 hanede kesilir (v3 `sa.onZ`).
+    // Öneri çıkmayınca "Adresi elle gireyim" — kart yazılanla açılır.
+    await fireEvent.changeText(screen.getByTestId('address-search'), '8 Rue Neuve');
+    await waitFor(() => expect(screen.getByTestId('address-manual-open')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('address-manual-open'));
+    expect(screen.getByTestId('address-line').props.value).toBe('8 Rue Neuve');
+    // Posta kodu maskesi: sayı dışı düşer, 5 hanede kesilir.
     await fireEvent.changeText(screen.getByTestId('address-zip'), '67100abc9');
     expect(screen.getByTestId('address-zip').props.value).toBe('67100');
     await fireEvent.changeText(screen.getByTestId('address-city'), 'Strasbourg');
     await fireEvent.press(screen.getByTestId('address-save'));
 
-    /* Boş etiket null olarak gider; line2 gövdede HİÇ yok (gönderilmeyen alana kapı dokunmaz).
-       ALICI VE TELEFON HESABIN KÜNYESİNDEN (22.08): müşteri o iki alana hiç dokunmadı ve gövde
-       yine de dolu gitti — kullanıcı kararının ("alanlar dolu gelecek, değiştirmeyip de
-       kaydedebilecek") ekrandaki karşılığı budur. Telefon E.164'e indi (`+33 6 24…` → `+336 24…`):
-       fikstürün yazdığı boşluklu biçim tek sütunda ikinci bir biçim olarak birikmiyor. */
-    expect(mockCreateAddress).toHaveBeenCalledWith({
-      label: null,
-      recipient: 'Ayşe Demir',
-      phone: '+33624510988',
-      line1: '8 Rue Neuve',
-      postalCode: '67100',
-      city: 'Strasbourg',
-    });
+    /* Yeni adres "Ev" seçili açılır (tasarım); kat/daire boşsa `null` gider. ALICI VE TELEFON
+       HESABIN KÜNYESİNDEN (22.08): müşteri o iki alana hiç dokunmadı ve gövde yine de dolu gitti —
+       kullanıcı kararının ("alanlar dolu gelecek, değiştirmeyip de kaydedebilecek") ekrandaki
+       karşılığı. Telefon E.164'e indi (`+33 6 24…` → `+336 24…`). Ülke SEÇİLİR ve her zaman gider
+       (önce ülke); doğrulama kapısı bulamadığı için nokta hiç konmaz. */
+    await waitFor(() =>
+      expect(mockCreateAddress).toHaveBeenCalledWith({
+        label: 'Ev',
+        recipient: 'Ayşe Demir',
+        phone: '+33624510988',
+        line1: '8 Rue Neuve',
+        line2: null,
+        postalCode: '67100',
+        city: 'Strasbourg',
+        country: 'FR',
+      }),
+    );
     await waitFor(() => expect(screen.queryByTestId('account-address-sheet')).toBeNull());
     expect(screen.getByText('8 Rue Neuve, 67100 Strasbourg')).toBeOnTheScreen();
   });

@@ -1,9 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { addressLineOf, MIN_QUERY_LENGTH } from '@lezzet/address-fr';
+import { addressLineOf, hasHouseNumber, MIN_QUERY_LENGTH } from '@lezzet/address-fr';
 import { CountryEnum, type Address, type Country } from '@lezzet/types';
-import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
+import { addressLabelKind, DIAL_CODE, nationalPhone, normalizePhone, type AddressLabelKind } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { Button, focusRingClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
@@ -14,7 +14,6 @@ import { SuggestionList } from '@/components/customer/ui/suggestion-list';
 import { useDismiss } from '@/components/customer/ui/use-dismiss.hook';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { checkAddressAction, resolveGermanAddressAction, type CheckedPoint } from '@/lib/address/lookup-actions';
-import { hasHouseNumber } from '@/lib/address/house-number';
 import { useAddressSearch } from '@/lib/address/use-address-search.hook';
 import { useGermanAddressSearch } from '@/lib/address/use-german-address-search.hook';
 import { resolvePlaceAction } from '@/lib/delivery/actions';
@@ -23,7 +22,7 @@ import { formatDeliveryDate } from '@/lib/storefront/format';
 import { ChannelBadge } from './channel-badge';
 import { DeliveryStrip } from './delivery-strip';
 import { useDeliveryPlace } from './place-context';
-import messages from './address-messages.json';
+import messages from '@lezzet/i18n/customer/address';
 // Ülke adları: yer hapıyla ORTAK kaynak — iki sözlüğe kopyalamak bir gün iki ayrı ad demekti.
 import placeCopy from './place-messages.json';
 
@@ -51,7 +50,8 @@ import placeCopy from './place-messages.json';
  *     kod seçimle gelir ve cevap doğrulama kutusunda yazılır.
  *   · "Varsayılan yap" ve "fatura adresim" kutuları hesap sayfasının kendi soruları.
  *
- * **Metin kendi sözlüğünden** (`address-messages.json`): form bir sayfaya değil teslimat kitine ait.
+ * **Metin kendi sözlüğünden** (`@lezzet/i18n/customer/address` — native adres çekmecesiyle ORTAK, 21.313): form
+ * bir sayfaya değil teslimat kitine ait.
  * Hesap sayfası ile adres penceresi aynı metni iki ayrı sözlükte taşıyordu (13.09 kopya bulgusu).
  */
 
@@ -132,25 +132,11 @@ export interface AddressDefaults {
 }
 
 /**
- * Hesabın künyesinden adres varsayılanı (kullanıcı kararı 22.08): *"her hâlükârda net bir şekilde bir
- * teslimat kişisi ve teslimat numarasına ihtiyacımız var. Bu kısım varsayılan olarak kişinin
- * bilgileri ile gelebilir."*
- *
- * **Künye yoksa `undefined`, boş dize değil:** form alanları boş açar ve müşteriden ister.
- *
- * Telefon ülke içi yazıma çevrilir (profil E.164 saklıyor): kod formda ülkeden okunuyor; ham
- * geçirseydik müşteri kodu iki kez yazılmış sanırdı. Ülke HENÜZ BİLİNMİYOR — `FR` varsayılanı;
- * başka ülkenin koduyla başlayan numarayı `nationalPhone` olduğu gibi bırakır, kırpmaz.
- *
- * **Mobil şeridin `addressDefaultsOf`u ile aynı ADI taşır, aynı işi yapmaz** ve bu bilinçli: orada
- * form ülke kodunu ayırmıyor, numara ham geçiyor.
+ * Hesabın künyesinden adres varsayılanı (kullanıcı kararı 22.08) — kural ortak yardımcıda
+ * (`@lezzet/helper` `addressLabelKind`ın yanında): native adres çekmecesi de artık ülke kodunu ayırıyor ve
+ * aynı işi yapıyor (21.313); iki yüzeyde iki kopya bir gün ayrışırdı. Çağıranlar buradan okumaya devam eder.
  */
-export function addressDefaultsOf(
-  profile: { name: string; phone: string | null } | null | undefined,
-): AddressDefaults | undefined {
-  if (profile == null) return undefined;
-  return { recipient: profile.name.trim(), phone: nationalPhone(profile.phone, 'FR') };
-}
+export { addressDefaultsOf } from '@lezzet/helper';
 
 /** DB satırı → formun beklediği şekil. Düzenlemede alanlar DOLU açılır; boş form yeniden yazdırırdı. */
 export function toFormInput(address: Address): NewAddressInput {
@@ -206,9 +192,7 @@ interface AddressFormProps {
   error?: string | null;
 }
 
-type Kind = 'home' | 'work' | 'other';
-
-type FormCopy = (typeof messages)['tr']['form'];
+type Kind = AddressLabelKind;
 
 /** Seçilen (doğrulanmış) adres — BAN satırından ya da Google yer detayından; noktasıyla gelir. */
 interface Picked {
@@ -225,13 +209,6 @@ interface ManualDraft {
   city: string;
 }
 
-/** Kayıtlı başlık → çip: dilin "Ev"/"İş" adıysa o çip, başka bir adsa "Diğer" + ad, boşsa "Diğer". */
-function kindOf(label: string | undefined, t: FormCopy): { kind: Kind; custom: string } {
-  const value = label?.trim() ?? '';
-  if (value.toLocaleLowerCase() === t.kindHome.toLocaleLowerCase()) return { kind: 'home', custom: '' };
-  if (value.toLocaleLowerCase() === t.kindWork.toLocaleLowerCase()) return { kind: 'work', custom: '' };
-  return { kind: 'other', custom: value };
-}
 
 export function AddressForm({ locale, initial, defaults, billingChoice = false, frame = true, defaultChoice = true, onSave, onCancel, compact = false, error = null }: AddressFormProps) {
   const copy = messages[locale];
@@ -239,7 +216,8 @@ export function AddressForm({ locale, initial, defaults, billingChoice = false, 
   const places = placeCopy[locale];
   const { place } = useDeliveryPlace();
   // Yeni adreste v1 "Ev" seçili açılır; düzenlemede kayıtlı başlıktan çıkarılır.
-  const start = initial ? kindOf(initial.label, t) : { kind: 'home' as const, custom: '' };
+  // Kayıtlı başlık → çip: ortak kural (`addressLabelKind`, native çekmeceyle aynı — 21.313).
+  const start = initial ? addressLabelKind(initial.label, t) : { kind: 'home' as const, custom: '' };
 
   const [country, setCountry] = useState<Country>(initial?.country ?? place?.country ?? 'FR');
   const [query, setQuery] = useState('');

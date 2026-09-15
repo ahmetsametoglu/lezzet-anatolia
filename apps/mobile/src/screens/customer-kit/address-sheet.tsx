@@ -5,10 +5,10 @@ import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import type { MeAddress } from '@/lib/api/addresses';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { AddressForm } from './address-form';
-import messages from './address-sheet-messages.json';
+import addressCopy from '@lezzet/i18n/customer/address';
 
 /*
-  ADRES ÇEKMECESİ (v3 `shAddr`) — formun yüzen sayfa kabuğu. İçerik `AddressForm`; burada yalnız
+  ADRES ÇEKMECESİ (Musteri Mobil `shAddr`, 21.313) — formun yüzen sayfa kabuğu. İçerik `AddressForm`; burada yalnız
   AÇILMA/KAPANMA kararları var. İki tüketen: hesap ekranının adres bölümü ve "Siparişi tamamla"
   ekranının adres dilimi (10.08'e kadar orada düğme müşteriyi profil sayfasına atıyordu).
 
@@ -21,7 +21,8 @@ import messages from './address-sheet-messages.json';
      `target` null olur olmaz formu boşaltsaydık, çekmece boş bir formla aşağı kayardı.
 */
 
-type Messages = LocalizedCopy<typeof messages>;
+/** Başlık formun ortak sözlüğünden (web adres penceresiyle aynı metin — `@lezzet/i18n/customer/address`). */
+type AddressCopy = LocalizedCopy<typeof addressCopy>;
 
 /** Çekmecenin konusu: `editing: null` yeni adres, dolu ise düzenleme. `null` = kapalı. */
 export interface AddressSheetTarget {
@@ -42,7 +43,7 @@ interface AddressSheetProps {
 
 export function AddressSheet({ target, addresses, onClose, onSaved, defaults, testID }: AddressSheetProps) {
   const locale = useAppLocale();
-  const t: Messages = messages[locale];
+  const copy: AddressCopy = addressCopy[locale];
 
   const [session, setSession] = useState(0);
   const opened = useRef<AddressSheetTarget | null>(null);
@@ -55,7 +56,7 @@ export function AddressSheet({ target, addresses, onClose, onSaved, defaults, te
   return (
     <BottomSheet
       visible={target !== null}
-      title={shown?.editing == null ? t.titleNew : t.titleEdit}
+      title={shown?.editing == null ? copy.newTitle : copy.editTitle}
       onClose={onClose}
       testID={testID}
     >

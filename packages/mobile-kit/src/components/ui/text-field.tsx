@@ -1,6 +1,9 @@
+import type { IconName } from '@lezzet/brand/icons';
 import type { ReactNode } from 'react';
 import { Text, TextInput, View, type TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+
+import { Icon } from './icon';
 
 /*
   METİN ALANI — v3'te ~18 kullanım. İki köşe kademesi (hap ⟷ yumuşak), sayısal ve çok satırlı
@@ -100,6 +103,17 @@ interface TextFieldProps {
   multiline?: boolean;
   /** Alanın sonundaki yuva — genellikle bir düğme. */
   trailing?: ReactNode;
+  /**
+   * Alanın BAŞINDAKİ ikon (21.313 — adres çekmecesinin arama kutusu: büyüteç). İkon alanın İÇİNDE
+   * durur ve dokunmayı almaz; metin ikonun sağından başlar. Ölçü satır içi ikon durağından
+   * (`size.inlineIcon`), renk sessiz metin rengi.
+   */
+  icon?: IconName;
+  /**
+   * VURGULU ÇERÇEVE (21.313) — tasarımın "şimdi burayı doldur" alanı: zeytin ve kalın (Musteri Mobil
+   * `shAddr`: arama kutusu ve "Diğer" adı `border:2px solid olive`). Hata çerçevesi bunu EZER.
+   */
+  accent?: boolean;
   helperText?: string;
   errorText?: string;
   editable?: boolean;
@@ -118,6 +132,8 @@ export function TextField({
   numeric = false,
   multiline = false,
   trailing,
+  icon,
+  accent = false,
   helperText,
   errorText,
   editable = true,
@@ -133,6 +149,11 @@ export function TextField({
     <View style={styles.stack}>
       {label === undefined ? null : <Text style={styles.label}>{label}</Text>}
       <View style={styles.row}>
+        {icon === undefined ? null : (
+          <View style={styles.iconSlot} pointerEvents="none">
+            <Icon name={icon} size={theme.size.inlineIcon} color={theme.colors.muted} />
+          </View>
+        )}
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -154,8 +175,10 @@ export function TextField({
             density === 'compact' ? styles.compact : styles.comfortable,
             shape === 'pill' ? styles.pill : styles.soft,
             multiline ? styles.multiline : styles.singleLine,
-            /* Hata çerçevesi yoğunluğun çerçevesini EZER ve sırası bu yüzden sonda: sessiz alan
-               hata verdiğinde sessiz kalmamalı. */
+            icon === undefined ? undefined : styles.withIcon,
+            accent ? styles.accent : undefined,
+            /* Hata çerçevesi yoğunluğun ve vurgunun çerçevesini EZER ve sırası bu yüzden sonda: sessiz
+               alan hata verdiğinde sessiz kalmamalı. */
             hasError ? styles.errorBorder : undefined,
             editable ? undefined : styles.readOnly,
           ]}
@@ -206,6 +229,12 @@ const styles = StyleSheet.create((theme) => ({
   },
   pill: { borderRadius: theme.radius.pill },
   soft: { borderRadius: theme.radius.control },
+  /* Baştaki ikon — alanın İÇİNDE, sol dolgunun üstünde (satırın ilk öğesi girdi olduğu için sol kenar
+     girdinin kenarıdır). Mutlak konum: ikon satırda yer tutmaz, girdi tam genişlikte kalır. */
+  iconSlot: { position: 'absolute', left: theme.space['3xl'], zIndex: 1 },
+  /** İkonlu alanda metin ikonun sağından başlar: dolgu + ikon + aralık. */
+  withIcon: { paddingLeft: theme.space['3xl'] + theme.size.inlineIcon + theme.space.md },
+  accent: { borderColor: theme.colors.olive, borderWidth: theme.border.accent },
   errorBorder: { borderColor: theme.colors['terracotta-line'] },
   readOnly: {
     backgroundColor: theme.colors['sand-50'],

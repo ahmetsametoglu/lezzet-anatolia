@@ -4,14 +4,28 @@ import {
   addCustomerAddress,
   checkAddressForCustomer,
   deleteCustomerAddress,
+  geocoder,
   listCustomerAddresses,
+  lookupAddressOptions,
+  resolveAddressOption,
   setBillingCustomerAddress,
   setDefaultCustomerAddress,
   updateCustomerAddress,
   type CustomerAddressOutcome,
 } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { AddressCheckResultSchema, AddressWriteSchema, MeAddressListSchema } from '@lezzet/types';
+import {
+  AddressCheckResultSchema,
+  AddressLookupCheckBodySchema,
+  AddressLookupCheckResultSchema,
+  AddressLookupResolvedSchema,
+  AddressLookupSuggestResultSchema,
+  AddressWriteSchema,
+  CountryEnum,
+  MeAddressListSchema,
+  PreferredLanguageEnum,
+  type Country,
+} from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
 
@@ -55,6 +69,73 @@ addresses.use('*', resolveCustomer);
 addresses.get('/', async (c) => {
   const rows = await listCustomerAddresses(serviceDb(), c.get('customerId'));
   return ok(c, MeAddressListSchema.parse(rows));
+});
+
+/*
+  ADRES ARAMA KAPILARI (21.313) — adres çekmecesinin önerisi, seçilen önerinin açılışı ve elle girilen
+  adresin doğrulanması. TEK KAPI, ÜLKE PARAMETRE (kullanıcı kararı 14.09): sağlayıcıyı (FR BAN · DE
+  Google) uygulama katmanı seçer, burası yalnız taşıma. Web'in aynı işi bugün sunucu eylemlerinde
+  (`apps/web/lib/address/lookup-actions.ts`).
+
+  YALNIZ GİRİŞLİ MÜŞTERİ (router'ın `bearerAuth`u + bu dosyanın profil çözümü): Google oturum başına
+  ücret keser; kapıyı ziyaretçiye açmak faturayı herkese açmak olurdu (web'in aynı gerekçesi).
+
+  4xx YALNIZ BİÇİMSİZ SORUDA. Sağlayıcı düşerse ya da anahtar yoksa boş liste / `null` döner ve
+  çekmece elle girişe düşer — öneri bir kolaylık, yokluğu müşterinin işini durdurmaz.
+
+  SIRA BİLEREK BURADA, `/:id/…` uçlarından ÖNCE: `POST /lookup/check` sonra bağlansaydı Hono "lookup"u
+  adres kimliği sanıp adres doğrulamasına (`POST /:id/check`) gönderirdi.
+*/
+
+/** Cevabın dili — Google adresi o dilde biçimler. Tanınmayan değer soruyu bozmaz, Fransızcaya düşer. */
+function lookupLocale(c: Context<CustomerEnv>): string {
+  const parsed = PreferredLanguageEnum.safeParse(c.req.query('locale'));
+  return parsed.success ? parsed.data : 'fr';
+}
+
+/** Adres ÖNCE ülkeyle sorulur (v1 kararı 13.09) — ülkesiz soru biçimsizdir. */
+function lookupCountry(c: Context<CustomerEnv>): Country | null {
+  const parsed = CountryEnum.safeParse(c.req.query('country'));
+  return parsed.success ? parsed.data : null;
+}
+
+addresses.get('/lookup/suggest', async (c) => {
+  const country = lookupCountry(c);
+  if (country === null) return fail(c, 'invalid_query', 400);
+  const outcome = await lookupAddressOptions({
+    country,
+    query: c.req.query('query') ?? '',
+    sessionToken: c.req.query('session') ?? '',
+    locale: lookupLocale(c),
+  });
+  return ok(
+    c,
+    AddressLookupSuggestResultSchema.parse(
+      outcome.status === 'ok' ? { options: outcome.options, busy: false } : { options: [], busy: true },
+    ),
+  );
+});
+
+addresses.get('/lookup/resolve', async (c) => {
+  const country = lookupCountry(c);
+  const id = c.req.query('id') ?? '';
+  if (country === null || id === '') return fail(c, 'invalid_query', 400);
+  const address = await resolveAddressOption({ country, id, sessionToken: c.req.query('session') ?? '', locale: lookupLocale(c) });
+  return ok(c, AddressLookupResolvedSchema.parse(address));
+});
+
+addresses.post('/lookup/check', async (c) => {
+  const body = AddressLookupCheckBodySchema.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return fail(c, 'invalid_body', 400);
+  const outcome = await geocoder().locate(body.data);
+  return ok(
+    c,
+    AddressLookupCheckResultSchema.parse(
+      outcome.status === 'ok'
+        ? { lat: outcome.point.lat, lng: outcome.point.lng, precision: outcome.precision, source: outcome.source }
+        : null,
+    ),
+  );
 });
 
 /*

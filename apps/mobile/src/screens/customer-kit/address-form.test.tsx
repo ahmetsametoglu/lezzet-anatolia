@@ -1,239 +1,269 @@
+import addressCopy from '@lezzet/i18n/customer/address';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import type { AddressWrite } from '@/lib/api/addresses';
+import type { AddressWrite, MeAddress } from '@/lib/api/addresses';
 import { AddressForm } from './address-form';
 
 /*
-  ADRES FORMU — POSTA KODU SEÇİLİR, YAZILMAZ (21.28).
+  ADRES FORMU — Musteri Mobil `shAddr` akışı (21.313).
 
-  KRİTİK İDDİA: kaydetme gövdesinde `country` VARDIR ve değeri seçilen satırdan gelir. Ülke bir
-  alan değil koddan türeyen bir sonuçtur (`0033_postal_code_place.sql`), ama koddan her zaman
-  türemiyor — 610 kod iki ülkede birden geçerli. Seçim o belirsizliği doğmadan kapatır.
+  KRİTİK İDDİALAR:
+  · öneri TEK kapıdan ve SEÇİLİ ülkeyle sorulur; seçilen adres kaynağıyla (BAN / Google) noktasını
+    gövdeye taşır — ikinci bir ağ turu yok, kaynak 30 gün kuralını belirliyor;
+  · kaydetmek = seçmek: yeni adres teslimat adresi olur ve bildirim bunu söyler;
+  · elle girilen adres kaydetmeden önce doğrulanır ama doğrulama kaydı ENGELLEMEZ (10.08);
+  · numarasız yazıda sıfır sonuç "bulamadık" değil "kapı numarasını da yazın"dır (14.09).
 
-  Seçim yoksa gövdede `country` da YOKTUR ve bu bir eksik değil: kapı kodu kendisi çözer, çözemezse
-  kolon varsayılanına düşer. Form hiçbir hâlde kaydı engellemez — adres defteri hizmet alanımızı
-  bilmez (kullanıcı kararı 10.08).
-
-  Öneri ucu GERÇEK yolundan koşuyor (`suggestPostalCodes` → `apiFetch` → şema): zarf ve sözleşme
-  gerçekten kat ediliyor, yalnız tel (`fetch`) ve yazma uçları taklit.
+  Uçlar taklit; öneri kancasının önbelleği modül düzeyinde yaşadığı için her test KENDİ sorgusunu yazar
+  (aynı metne iki farklı cevap kursaydık ikinci test birincinin önbelleğini okurdu).
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR' }] }));
 
 const mockCreate = jest.fn();
+const mockUpdate = jest.fn();
+const mockDelete = jest.fn();
+const mockSuggest = jest.fn();
+const mockResolve = jest.fn();
+const mockLocate = jest.fn();
 jest.mock('@/lib/api/addresses', () => ({
   createAddress: (body: AddressWrite) => mockCreate(body),
-  updateAddress: jest.fn(),
-  deleteAddress: jest.fn(),
+  updateAddress: (id: string, body: AddressWrite) => mockUpdate(id, body),
+  deleteAddress: (id: string) => mockDelete(id),
+  suggestAddressOptions: (input: unknown) => mockSuggest(input),
+  resolveAddressOption: (input: unknown) => mockResolve(input),
+  locateAddress: (input: unknown) => mockLocate(input),
 }));
 
-/* BAN (sokak) araması dış servise çıkar — taklit ediliyor. VARSAYILANI "unavailable": posta kodu
-   testlerinin ölçtüğü tek şey kod yolu olsun. Koordinat testleri cevabı kendileri kurar; jest
-   fabrikası yalnız `mock` önekli değişkeni görebildiği için değer bir kutuda taşınıyor. */
-const mockBan: { reply: unknown } = { reply: { status: 'unavailable' } };
-jest.mock('@lezzet/address-fr', () => ({
-  MIN_QUERY_LENGTH: 3,
-  addressLineOf: (suggestion: { line1?: string }) => suggestion.line1 ?? '',
-  searchAddresses: async () => mockBan.reply,
+/* Bölge listesi: yalnız 67000 aracın yolunda — rozet ve teslim satırı bu gerçekten söyler. */
+jest.mock('@/lib/api/places', () => ({
+  fetchDeliveryAreas: async () => ({
+    data: { areas: [{ country: 'FR', places: [{ name: 'Strasbourg', codes: ['67000'] }] }] },
+    error: null,
+  }),
 }));
 
-/** TEK yerleşimli: şehir seçim gerektirmez. */
-const STRASBOURG = { country: 'FR', postalCode: '67000', placeName: 'Strasbourg', places: ['Strasbourg'], inRoute: true };
-/** ÇOK yerleşimli: şehir seçtirilmeli — birini otomatik yazmak 19.17'nin yasakladığı şey. */
-const BISCHWILLER = {
-  country: 'FR',
-  postalCode: '67240',
-  placeName: null,
-  places: ['Bischwiller', 'Gries', 'Kaltenhouse'],
-  inRoute: false,
+const mockSelect = jest.fn();
+jest.mock('./delivery-address-store', () => ({ selectDeliveryAddress: (id: string | null) => mockSelect(id) }));
+const mockToast = jest.fn();
+jest.mock('@lezzet/mobile-kit/src/lib/toast/toast-store', () => ({ toastSuccess: (text: string) => mockToast(text) }));
+
+const t = addressCopy.tr.form;
+
+const BAN_POINT = { lat: 48.5839, lng: 7.7455, precision: 'housenumber', source: 'ban' } as const;
+
+/** BAN önerisi — tam adresiyle gelir, seçim ikinci adım istemez. */
+const FR_OPTION = {
+  id: 'ban-1',
+  title: '12 rue des Fleurs',
+  subtitle: '67000 Strasbourg',
+  address: { line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg', point: BAN_POINT },
 };
-/** AYNI kod, Almanya — 610 çakışan koddan biri; ülkeyi ancak seçim ayırır. */
-const BOBENHEIM = { country: 'DE', postalCode: '67240', placeName: 'Bobenheim-Roxheim', places: ['Bobenheim-Roxheim'], inRoute: false };
 
-/**
- * Ucun `67240` için GERÇEK cevabı (ölçüldü 10.08): aynı kod, iki ülke, tek listede. Sıra da
- * sunucunun — rota adayı önce, eşitlikte ülke kodu; DE bu yüzden başta.
- *
- * Testler bu tek listeyi paylaşıyor ÇÜNKÜ öneri önbelleği modül düzeyinde ve dosya boyunca yaşıyor
- * (hook'un kararı: çekmece kapanıp açılınca sorgu tekrar ağa çıkmasın). Aynı koda iki farklı cevap
- * kursaydık ikinci test birincinin önbelleğini okur ve sebebi görünmeyen bir düşüş verirdi.
- */
-const CAKISAN = [BOBENHEIM, BISCHWILLER];
-const DE = 0;
-const FR = 1;
+/** Google önerisi — yalnız metin; tam adres seçimde açılır. */
+const DE_OPTION = { id: 'place-1', title: 'Hauptstraße 12', subtitle: 'Kehl, Deutschland', address: null };
 
-function suggestReply(rows: unknown[]): Response {
-  return { status: 200, headers: { get: () => null }, json: async () => ({ data: rows, error: null }) } as unknown as Response;
+const SAVED: MeAddress = {
+  id: 'yeni',
+  label: 'Ev',
+  recipient: 'Claire Weber',
+  phone: '+33612345678',
+  line1: '12 rue des Fleurs',
+  line2: null,
+  postalCode: '67000',
+  city: 'Strasbourg',
+  country: 'FR',
+  isDefault: false,
+  isBilling: false,
+};
+
+function suggestReply(options: unknown[]) {
+  return { data: { options, busy: false }, error: null };
 }
 
-async function renderForm(rows: unknown[]): Promise<void> {
-  globalThis.fetch = jest.fn(async () => suggestReply(rows)) as unknown as typeof fetch;
-  /* `defaults` üretimdeki hâli taklit ediyor (22.08): dört çağıranın dördü de hesabın künyesini
-     geçiriyor ve form o hâlde alıcı/telefon alanlarını DOLU açıyor. Geçirilmezse kaydetme
-     doğrulamaya takılır — bu dosyanın konusu posta kodu seçimi, o yüzden künye verilerek
-     yolun önü açılıyor; zorunluluğun kendi testi ayrı. */
-  await render(
-    <AddressForm
-      editing={null}
-      addresses={[]}
-      onSaved={jest.fn()}
-      defaults={{ recipient: 'Claire Weber', phone: '+33612345678' }}
-    />,
-  );
+/** Üretimdeki varsayılan: hesabın adı ve ÜLKE İÇİ numarası (`addressDefaultsOf`). */
+const DEFAULTS = { recipient: 'Claire Weber', phone: '0612345678' };
+
+async function renderNew(onSaved = jest.fn()): Promise<jest.Mock> {
+  await render(<AddressForm editing={null} addresses={[]} onSaved={onSaved} defaults={DEFAULTS} />);
+  return onSaved;
 }
 
-/** Kod alanına yazıp öneri listesinin gelmesini bekler (gecikme + tel turu). */
-async function type(code: string): Promise<void> {
-  await fireEvent.changeText(screen.getByTestId('address-zip'), code);
-  await waitFor(() => expect(screen.getByTestId('address-zip-suggestions')).toBeTruthy());
+/** Arama alanına yazıp öneri listesinin gelmesini bekler (gecikme + tel turu). */
+async function search(text: string): Promise<void> {
+  await fireEvent.changeText(screen.getByTestId('address-search'), text);
+  await waitFor(() => expect(screen.getByTestId('address-suggestions')).toBeTruthy());
 }
 
 beforeEach(() => {
-  // Uç taban adresi olmadan `env.apiUrl` FIRLATIR ve çağrı sessizce `network_error`a düşerdi —
-  // öneri listesi hiç çizilmez, test de sebebini söylemezdi (kardeş ekran testlerinin aynı satırı).
-  process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
-  mockBan.reply = { status: 'unavailable' };
-  mockCreate.mockReset();
-  mockCreate.mockResolvedValue({ data: [], error: null });
+  for (const mock of [mockCreate, mockUpdate, mockDelete, mockSuggest, mockResolve, mockLocate, mockSelect, mockToast]) mock.mockReset();
+  mockSuggest.mockResolvedValue(suggestReply([]));
+  mockCreate.mockResolvedValue({ data: [SAVED], error: null });
+  mockLocate.mockResolvedValue({ data: null, error: null });
 });
 
-describe('adres formu — posta kodu seçimi', () => {
-  it('tek yerleşimli kod seçilince şehir DOLAR — ayrıca seçtirilmez', async () => {
-    await renderForm([STRASBOURG]);
-    await type('67000');
+describe('adres formu — öneri ve doğrulama', () => {
+  it('Fransa önerisi seçilince adres doğrulanır; teslim satırı bölge listesinden gelir', async () => {
+    mockSuggest.mockResolvedValue(suggestReply([FR_OPTION]));
+    await renderNew();
+    await search('12 rue des fl');
 
-    await fireEvent.press(screen.getByTestId('address-zip-suggestions-0'));
+    expect(mockSuggest).toHaveBeenLastCalledWith(expect.objectContaining({ country: 'FR', query: '12 rue des fl' }));
+    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
 
-    expect(screen.getByTestId('address-city').props.value).toBe('Strasbourg');
-    expect(screen.queryByTestId('address-city-suggestions')).toBeNull();
+    expect(screen.getByTestId('address-verified')).toBeOnTheScreen();
+    await waitFor(() => expect(screen.getByTestId('address-delivery')).toHaveTextContent(t.verifiedInRouteNoDate));
   });
 
-  it('çok yerleşimli kodda şehir BOŞ kalır ve yerleşim listesi açılır — ad uydurulmaz', async () => {
-    await renderForm(CAKISAN);
-    await type('67240');
-
-    await fireEvent.press(screen.getByTestId(`address-zip-suggestions-${FR}`));
-
-    expect(screen.getByTestId('address-city').props.value).toBe('');
-    expect(screen.getByTestId('address-city-suggestions')).toBeTruthy();
-
-    // Seçim şehri yazar ve listeyi kapatır.
-    await fireEvent.press(screen.getByText('Gries'));
-    expect(screen.getByTestId('address-city').props.value).toBe('Gries');
-    expect(screen.queryByTestId('address-city-suggestions')).toBeNull();
-  });
-
-  it('kaydetme gövdesi SEÇİLEN ülkeyi taşır', async () => {
-    await renderForm(CAKISAN);
-    await fireEvent.changeText(screen.getByTestId('address-line'), '5 Hauptstraße');
-    await type('67240');
-    await fireEvent.press(screen.getByTestId(`address-zip-suggestions-${DE}`));
+  it('kaydetme gövdesi ülkeyi, kaynağıyla noktayı, etiketi ve E.164 telefonu taşır', async () => {
+    mockSuggest.mockResolvedValue(suggestReply([FR_OPTION]));
+    await renderNew();
+    await search('12 rue des flo');
+    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
     await fireEvent.press(screen.getByTestId('address-save'));
 
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
-    // AYNI kodun FR satırı da listedeydi: gövdeye giden ülke, seçilen satırın ülkesidir.
-    expect(mockCreate.mock.calls[0][0]).toMatchObject({ postalCode: '67240', city: 'Bobenheim-Roxheim', country: 'DE' });
+    expect(mockCreate.mock.calls[0][0]).toEqual({
+      label: t.kindHome,
+      recipient: 'Claire Weber',
+      phone: '+33612345678',
+      line1: '12 rue des Fleurs',
+      line2: null,
+      postalCode: '67000',
+      city: 'Strasbourg',
+      country: 'FR',
+      point: BAN_POINT,
+    });
+    // Öneri noktasını zaten taşıyordu: doğrulama kapısına ikinci kez gidilmez.
+    expect(mockLocate).not.toHaveBeenCalled();
   });
 
-  it('kod ELLE değişince seçim düşer — gövdede ülke gitmez, kapı kendisi çözer', async () => {
-    await renderForm([STRASBOURG]);
-    await fireEvent.changeText(screen.getByTestId('address-line'), '3 rue des Lilas');
-    await type('67000');
-    await fireEvent.press(screen.getByTestId('address-zip-suggestions-0'));
+  it('yeni adres kaydedilince teslimat adresi olarak SEÇİLİR ve bildirim bunu söyler', async () => {
+    mockSuggest.mockResolvedValue(suggestReply([FR_OPTION]));
+    const onSaved = await renderNew();
+    await search('12 rue des flou');
+    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
+    await fireEvent.press(screen.getByTestId('address-save'));
 
-    // Müşteri kodu değiştirdi: eski satırın ülkesi artık bu kodun cevabı değil.
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith([SAVED], 'yeni'));
+    expect(mockSelect).toHaveBeenCalledWith('yeni');
+    expect(mockToast).toHaveBeenCalledWith(addressCopy.tr.savedToast.replace('{name}', t.kindHome));
+  });
+
+  it('Almanya seçilince öneri DE ile sorulur; adressiz öneri seçimde açılır ve kaynağı Google olur', async () => {
+    const googlePoint = { lat: 48.5719, lng: 7.8147, precision: 'housenumber', source: 'google' } as const;
+    mockSuggest.mockResolvedValue(suggestReply([DE_OPTION]));
+    mockResolve.mockResolvedValue({
+      data: { line1: 'Hauptstraße 12', postalCode: '77694', city: 'Kehl', point: googlePoint },
+      error: null,
+    });
+    await renderNew();
+    await fireEvent.press(screen.getByTestId('address-country-DE'));
+    await search('Hauptstr 12');
+
+    expect(mockSuggest).toHaveBeenLastCalledWith(expect.objectContaining({ country: 'DE', query: 'Hauptstr 12' }));
+    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
+    await waitFor(() => expect(screen.getByTestId('address-verified')).toBeOnTheScreen());
+    expect(mockResolve).toHaveBeenCalledWith(expect.objectContaining({ country: 'DE', id: 'place-1' }));
+
+    await fireEvent.press(screen.getByTestId('address-save'));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({ country: 'DE', postalCode: '77694', city: 'Kehl', point: googlePoint });
+  });
+
+  it('Google kodu vermezse seçim yarım kalır: elle giriş kartı bilinenle açılır', async () => {
+    mockSuggest.mockResolvedValue(suggestReply([DE_OPTION]));
+    mockResolve.mockResolvedValue({
+      data: { line1: 'Hauptstraße 12', postalCode: null, city: null, point: { lat: 1, lng: 1, precision: 'street', source: 'google' } },
+      error: null,
+    });
+    await renderNew();
+    await fireEvent.press(screen.getByTestId('address-country-DE'));
+    await search('Hauptstr 14');
+    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
+
+    await waitFor(() => expect(screen.getByTestId('address-manual')).toBeOnTheScreen());
+    expect(screen.getByTestId('address-line').props.value).toBe('Hauptstraße 12');
+    expect(screen.getByTestId('address-zip').props.value).toBe('');
+    expect(screen.queryByTestId('address-verified')).toBeNull();
+  });
+});
+
+describe('adres formu — öneri çıkmayınca', () => {
+  it('numarasız yazıda "kapı numarasını da yazın", numaralıda "bulamadık" der', async () => {
+    await renderNew();
+    await fireEvent.changeText(screen.getByTestId('address-search'), 'rue des lilas');
+    await waitFor(() => expect(screen.getByText(t.needDoorTitle)).toBeOnTheScreen());
+
+    await fireEvent.changeText(screen.getByTestId('address-search'), '3 rue des lilas');
+    await waitFor(() => expect(screen.getByText(t.notFoundTitle)).toBeOnTheScreen());
+  });
+
+  it('elle girilen adres kaydetmeden önce doğrulanır; bulunan nokta gövdeye girer', async () => {
+    const checked = { lat: 48.6, lng: 7.76, precision: 'housenumber', source: 'ban' } as const;
+    mockLocate.mockResolvedValue({ data: checked, error: null });
+    await renderNew();
+    await fireEvent.changeText(screen.getByTestId('address-search'), '5 rue des tilleuls');
+    await waitFor(() => expect(screen.getByTestId('address-manual-open')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('address-manual-open'));
+
+    // Kart yazılanla açılır; kod ve şehir müşteriden.
+    expect(screen.getByTestId('address-line').props.value).toBe('5 rue des tilleuls');
     await fireEvent.changeText(screen.getByTestId('address-zip'), '67100');
-
     await fireEvent.changeText(screen.getByTestId('address-city'), 'Strasbourg');
     await fireEvent.press(screen.getByTestId('address-save'));
 
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
-    expect(mockCreate.mock.calls[0][0].country).toBeUndefined();
+    expect(mockLocate).toHaveBeenCalledWith({ line1: '5 rue des tilleuls', postalCode: '67100', city: 'Strasbourg', country: 'FR' });
+    expect(mockCreate.mock.calls[0][0].point).toEqual(checked);
+  });
+
+  it('doğrulama bulamazsa adres YİNE kaydedilir — nokta hiç gönderilmez (defter reddetmez)', async () => {
+    await renderNew();
+    await fireEvent.changeText(screen.getByTestId('address-search'), '7 rue des tilleuls');
+    await waitFor(() => expect(screen.getByTestId('address-manual-open')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('address-manual-open'));
+    await fireEvent.changeText(screen.getByTestId('address-zip'), '67100');
+    await fireEvent.changeText(screen.getByTestId('address-city'), 'Strasbourg');
+    await fireEvent.press(screen.getByTestId('address-save'));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0].point).toBeUndefined();
+  });
+
+  it('adres seçilmeden ya da yazılmadan Kaydet kapalı', async () => {
+    await renderNew();
+    expect(screen.getByTestId('address-save')).toBeDisabled();
   });
 });
 
-/**
- * ── ÖNERİNİN KOORDİNATI (11.9 · 01.09) ──────────────────────────────────────
- * 01.09'a kadar bu form BAN önerisinin koordinatını ATIYORDU (web karşılığı 31.08'de bağlanmıştı).
- * Sonuç sessizdi: adres noktasız kaydediliyor, tarama işi on dakika sonra AYNI soruyu ikinci kez
- * BAN'a soruyordu — ve arada kalan pencerede o durak posta kodu merkezine düşüyordu. Strasbourg'da
- * o merkez hiçbir şey ayırt etmiyor (ölçüldü 31.08: üç kodun üçü de aynı nokta), yani rota sırası
- * o adres için keyfîleşiyordu.
- *
- * Sınanan şey noktanın DOĞRULUĞU değil (o sunucunun süzgecinin işi — `geo-address.test.ts`),
- * gövdeye GİRİP GİRMEDİĞİ ve seçim bozulunca DÜŞÜP DÜŞMEDİĞİ.
- */
-const ONERI = {
-  id: 'ban-1',
-  line1: '12 rue des Fleurs',
-  postalCode: '67000',
-  city: 'Strasbourg',
-  latitude: 48.5839,
-  longitude: 7.7455,
-  kind: 'housenumber',
-};
+describe('adres formu — düzenleme', () => {
+  const EDITING: MeAddress = { ...SAVED, id: 'eski', label: 'Anne evi', line2: '2. kat' };
 
-/** Sokak alanına yazıp BAN listesinin gelmesini bekler. */
-async function typeStreet(text: string): Promise<void> {
-  await fireEvent.changeText(screen.getByTestId('address-line'), text);
-  await waitFor(() => expect(screen.getByTestId('address-suggestions')).toBeTruthy());
-}
+  it('kayıtlı adres elle giriş kartında açılır; başka bir ad "Diğer"e düşer; güncelleme SEÇMEZ', async () => {
+    mockUpdate.mockResolvedValue({ data: [EDITING], error: null });
+    const onSaved = jest.fn();
+    await render(<AddressForm editing={EDITING} addresses={[EDITING]} onSaved={onSaved} />);
 
-describe('adres formu — öneri koordinatı', () => {
-  it('BAN önerisi seçilince nokta gövdeye GİRER — ikinci bir ağ turu yok', async () => {
-    mockBan.reply = { status: 'ok', suggestions: [ONERI] };
-    await renderForm([STRASBOURG]);
-    await typeStreet('12 rue des');
-    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
+    expect(screen.getByTestId('address-line').props.value).toBe('12 rue des Fleurs');
+    expect(screen.getByTestId('address-label').props.value).toBe('Anne evi');
+    expect(screen.getByTestId('address-line2').props.value).toBe('2. kat');
+    // Kayıtlı E.164 numara ülke içi yazımla gösterilir; kod seçili ülkeden.
+    expect(screen.getByTestId('address-phone').props.value).toBe('0612345678');
 
     await fireEvent.press(screen.getByTestId('address-save'));
-
-    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
-    expect(mockCreate.mock.calls[0][0]).toMatchObject({
-      line1: '12 rue des Fleurs',
-      point: { lat: 48.5839, lng: 7.7455, precision: 'housenumber' },
-    });
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith([EDITING], 'eski'));
+    expect(mockUpdate.mock.calls[0]).toEqual(['eski', expect.objectContaining({ label: 'Anne evi', line2: '2. kat', phone: '+33612345678' })]);
+    expect(mockSelect).not.toHaveBeenCalled();
   });
 
-  it('öneri seçilmeden yazılan adreste nokta GÖNDERİLMEZ — alan hiç konmaz', async () => {
-    /* "Bilinmiyor"u bir değere çevirmemek (ülke alanının aynı kuralı): `point: null` göndermek de
-       çalışırdı ama gövdeyi anlamsız bir alanla şişirirdi. Satır sunucuda tarama kuyruğuna girer. */
-    await renderForm([STRASBOURG]);
-    await fireEvent.changeText(screen.getByTestId('address-line'), '3 rue des Lilas');
-    await type('67000');
-    await fireEvent.press(screen.getByTestId('address-zip-suggestions-0'));
-    await fireEvent.press(screen.getByTestId('address-save'));
+  it('silme listeyi günceller ve bildirir', async () => {
+    mockDelete.mockResolvedValue({ data: [], error: null });
+    const onSaved = jest.fn();
+    await render(<AddressForm editing={EDITING} addresses={[EDITING]} onSaved={onSaved} />);
 
-    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
-    expect(mockCreate.mock.calls[0][0].point).toBeUndefined();
-  });
-
-  it('SOKAK elle değişince nokta DÜŞER — nokta seçilen SATIRA aittir', async () => {
-    /* Arıza somut: müşteri "12 rue des Fleurs"ü seçer, sonra elle "14" yapar. Nokta 12 numaranınki
-       kalırdı ve makullük süzgeci de geçerdi (aynı posta kodu) — kurye YANLIŞ KAPIYA sıralanırdı ve
-       hiçbir ekran bunu söylemezdi. */
-    mockBan.reply = { status: 'ok', suggestions: [ONERI] };
-    await renderForm([STRASBOURG]);
-    await typeStreet('12 rue des');
-    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
-
-    await fireEvent.changeText(screen.getByTestId('address-line'), '14 rue des Fleurs');
-    await fireEvent.press(screen.getByTestId('address-save'));
-
-    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
-    expect(mockCreate.mock.calls[0][0].point).toBeUndefined();
-  });
-
-  it('POSTA KODU elle değişince de nokta DÜŞER — ülkenin kardeş kuralı', async () => {
-    mockBan.reply = { status: 'ok', suggestions: [ONERI] };
-    await renderForm([STRASBOURG]);
-    await typeStreet('12 rue des');
-    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
-
-    await fireEvent.changeText(screen.getByTestId('address-zip'), '67100');
-    await fireEvent.press(screen.getByTestId('address-save'));
-
-    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
-    expect(mockCreate.mock.calls[0][0].point).toBeUndefined();
+    await fireEvent.press(screen.getByTestId('address-delete'));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith([], null));
+    expect(mockToast).toHaveBeenCalledWith(t.deleted);
   });
 });

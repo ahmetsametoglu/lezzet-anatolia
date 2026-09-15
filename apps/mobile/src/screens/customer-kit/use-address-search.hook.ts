@@ -45,8 +45,18 @@ const EMPTY: AddressSearchState = { suggestions: [], throttled: false };
 /** Sorgu metni → öneriler. Modül düzeyinde: çekmece kapanıp açılınca da yaşar (aynı oturum). */
 const cache = new Map<string, AddressSearchState>();
 
+/*
+  YALNIZ KAPI DÜZEYİ (kullanıcı kararı 14.09 — *"sadece kapı numarası olanlar gelsin, çünkü biz kapı
+  düzeyinde bir teslimat yapmak zorundayız"*; `design/KARARLAR.md` "Adres önerisi yalnız KAPI
+  düzeyinde"). Sokak / belediye önerisi seçilince adres "doğrulandı" sayılıyordu, ödeme ve kurye ise aynı
+  adrese "kapı doğrulanmadı" diyordu. Web'in aynı çağrısı: `apps/web/lib/address/use-address-search.hook.ts`.
+
+  BU KANCAYI ARTIK YALNIZ PROFESYONEL BAŞVURU FORMU OKUYOR (`address-fields`, oturumsuz ziyaretçi).
+  Adres çekmecesi öneriyi TEK kapıdan istiyor (`use-address-lookup.hook`, 21.313); o kapı girişli
+  müşteriye açık, başvuru formu ise oturumsuz — ikinci yolun tek sebebi bu.
+*/
 async function lookup(term: string): Promise<LookupResult<AddressSearchState>> {
-  const found = await searchAddresses({ query: term });
+  const found = await searchAddresses({ query: term, kind: 'housenumber' });
   switch (found.status) {
     case 'ok':
       return { value: { suggestions: found.suggestions, throttled: false }, cache: true };

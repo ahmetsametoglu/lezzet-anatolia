@@ -1,15 +1,20 @@
+import type { IconName } from '@lezzet/brand/icons';
+import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 
 /*
   ÖNERİ LİSTESİ — bir metin alanının ALTINDA açılan, dokunulunca alanı dolduran kısa liste.
   İlk tüketici: adres çekmecesinin sokak alanı (BAN adres araması).
 
-  ── TASARIMDA YOK, BİLEREK KİTTEN KURULDU (sapma — `design/KARARLAR.md`) ────
-  v3 şablonunun adres çekmecesinde (`shAddr`) öneri listesi ÇİZİLMEMİŞ; şablon dört düz alan
-  gösteriyor. Yeni bir görsel dil ÜRETİLMEDİ: kutu, kitin girdi çerçevesiyle aynı ailedendir
+  ── TASARIMDA ARTIK VAR (Musteri Mobil `shAddr`, 21.313) ────────────────────
+  v3 şablonu listeyi çizmiyordu; yeni tasarım çiziyor: satır başında harita iğnesi, sokak + "kod
+  şehir", sağda teslim rozeti. Üçü çağırandan gelir (`icon`, `badge`) — liste yalnız dizer; rozetin
+  kararı (kapıya teslim / kargo) bölge listesinden verilir, burada değil. Kutu kitin girdi
+  ailesinde kaldı; yeni bir görsel dil ÜRETİLMEDİ: kutu, kitin girdi çerçevesiyle aynı ailedendir
   (kart zemini + `sand-400` çerçeve + kontrol yarıçapı), satırlar kitin basılabilir yüzeyini
   (`PressableSurface`) `tint` geri bildirimiyle kullanır — açılır listede küçültme/kaydırma
   titrek durur, zemin değişimi hizayı bozmaz (aynı gerekçe başlık çubuğu düğmesinde de var).
@@ -46,19 +51,27 @@ interface SuggestionItem {
   title: string;
   /** İkincil satır (ör. posta kodu + şehir); yoksa tek satır çizilir. */
   subtitle?: string;
+  /** Satırın sağındaki rozet (ör. teslim şekli) — kararı çağıran verir, liste yalnız yerleştirir. */
+  badge?: ReactNode;
 }
 
 interface SuggestionListProps {
   items: SuggestionItem[];
   onSelect: (id: string) => void;
-  /** Kaynak künyesi — veri lisansı gerektiriyorsa ZORUNLU olarak verilir. */
-  footnote?: string;
+  /**
+   * Kaynak künyesi — veri lisansı gerektiriyorsa ZORUNLU olarak verilir. Metin ya da öğe: BAN'ın
+   * künyesi bir cümle, Google Places'inki bir LOGO (haritasız gösterimde kullanım koşulu).
+   */
+  footnote?: ReactNode;
+  /** Her satırın başındaki ikon (ör. harita iğnesi) — satırlar tek türden olduğu için liste başına bir kez. */
+  icon?: IconName;
   /** Ekran okuyucu adı — liste bir alanın altında belirir, bağlamı kendisi söylemeli. */
   accessibilityLabel: string;
   testID?: string;
 }
 
-export function SuggestionList({ items, onSelect, footnote, accessibilityLabel, testID }: SuggestionListProps) {
+export function SuggestionList({ items, onSelect, footnote, icon, accessibilityLabel, testID }: SuggestionListProps) {
+  const { theme } = useUnistyles();
   if (items.length === 0) return null;
 
   return (
@@ -81,18 +94,26 @@ export function SuggestionList({ items, onSelect, footnote, accessibilityLabel, 
             accessibilityLabel={item.subtitle === undefined ? item.title : `${item.title}, ${item.subtitle}`}
             testID={testID === undefined ? undefined : `${testID}-${index}`}
           >
-            <Text style={styles.title} numberOfLines={1}>
-              {item.title}
-            </Text>
-            {item.subtitle === undefined ? null : (
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {item.subtitle}
+            {icon === undefined ? null : <Icon name={icon} size={theme.size.inlineIcon} color={theme.colors.muted} />}
+            <View style={styles.text}>
+              <Text style={styles.title} numberOfLines={1}>
+                {item.title}
               </Text>
-            )}
+              {item.subtitle === undefined ? null : (
+                <Text style={styles.subtitle} numberOfLines={1}>
+                  {item.subtitle}
+                </Text>
+              )}
+            </View>
+            {item.badge ?? null}
           </PressableSurface>
         ))}
       </ScrollView>
-      {footnote === undefined ? null : <Text style={styles.footnote}>{footnote}</Text>}
+      {footnote === undefined ? null : (
+        <View style={styles.footnote}>
+          {typeof footnote === 'string' ? <Text style={styles.footnoteText}>{footnote}</Text> : footnote}
+        </View>
+      )}
     </View>
   );
 }
@@ -115,10 +136,18 @@ const styles = StyleSheet.create((theme) => ({
       (theme.space.xl * 2 + theme.space['2xs'] + theme.text['body-sm'] * theme.text['h1-sm--line-height'] * 2) *
       VISIBLE_ROWS,
   },
+  /* Satır YATAY: ikon · metin sütunu · rozet (tasarım `gap:10px`). İkonu ve rozeti olmayan çağıranda
+     metin sütunu satırı doldurur, görünüm eskisiyle aynı kalır. */
   row: {
-    gap: theme.space['2xs'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.lg,
     paddingHorizontal: theme.space['3xl'],
     paddingVertical: theme.space.xl,
+  },
+  text: {
+    flex: 1,
+    gap: theme.space['2xs'],
   },
   divider: {
     borderTopWidth: theme.border.hairline,
@@ -145,6 +174,8 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.space['3xl'],
     paddingTop: theme.space.lg,
     paddingBottom: theme.space.lg,
+  },
+  footnoteText: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
     color: theme.colors.muted,

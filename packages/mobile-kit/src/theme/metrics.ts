@@ -315,6 +315,11 @@ export const appMetrics = {
     hairline: 1,
     /** Standart çerçeve — girdi, çip, başlık çubuğu altı (tasarım: 1.5px). */
     base: 1.5,
+    /**
+     * Vurgulu girdi — "şimdi burayı doldur" alanının zeytin çerçevesi (tasarım: 2px; Musteri Mobil
+     * `shAddr` arama kutusu ve "Diğer" adı, 21.313).
+     */
+    accent: 2,
     /** Yığın avatarının krem halkası (tasarım: 2.5px). */
     ring: 2.5,
     /** Yükleniyor halkasının kalınlığı (tasarım: küçükte 3, büyükte 4). */
