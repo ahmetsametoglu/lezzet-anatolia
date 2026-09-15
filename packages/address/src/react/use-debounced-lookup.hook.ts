@@ -21,7 +21,7 @@ interface DebouncedLookupOptions<T> {
   minLength: number;
   /** Sorgu yokken gösterilen değer; kimliği sabit olmalı (modül düzeyi). */
   empty: T;
-  /** Sorgu metninden cevap; fırlatmamalı, başarısızlık da bir değer olarak adlandırılır. */
+  /** Sorgu metninden cevap; başarısızlığı bir değer olarak adlandırmak çağıranın işi, yine de fırlarsa liste boşalır. */
   lookup: (term: string) => Promise<LookupResult<T>>;
   /** Sorgudan cevaba depo; her kaynak kendi deposunu verir, modül düzeyinde tutulur ki ekran kapanıp açılınca da yaşasın. */
   cache: Map<string, T>;
@@ -58,17 +58,23 @@ export function useDebouncedLookup<T>(
     }
 
     const timer = setTimeout(() => {
-      void call.current(term).then((result) => {
-        if (run !== generation.current) return;
-        if (result.cache) {
-          if (cache.size >= CACHE_LIMIT) {
-            const oldest = cache.keys().next();
-            if (!oldest.done) cache.delete(oldest.value);
+      void call.current(term).then(
+        (result) => {
+          if (run !== generation.current) return;
+          if (result.cache) {
+            if (cache.size >= CACHE_LIMIT) {
+              const oldest = cache.keys().next();
+              if (!oldest.done) cache.delete(oldest.value);
+            }
+            cache.set(term, result.value);
           }
-          cache.set(term, result.value);
-        }
-        setState(result.value);
-      });
+          setState(result.value);
+        },
+        // Fırlayan arama (ör. ağda düşen sunucu eylemi) önceki sorgunun adaylarını ekranda bırakmasın; cevap hatırlanmaz.
+        () => {
+          if (run === generation.current) setState(empty);
+        },
+      );
     }, debounceMs);
 
     // Sorgu değişti ya da ekran kapandı: bekleyen istek atılmaz, yoldaki cevabı `generation` eler.
