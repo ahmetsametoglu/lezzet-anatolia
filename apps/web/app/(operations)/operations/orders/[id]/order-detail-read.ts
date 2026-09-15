@@ -62,18 +62,12 @@ import type {
   RefundRouteView,
 } from './order-detail-types';
 
-/**
- * Sipariş detayının OKUMASI (09.7) — sayfanın tek veri turu.
- *
- * Tasarımın sözü: "türetilmiş alan yazılmaz". Burada da hiçbir kural YENİDEN yazılmaz — ödeme
- * durumu ve kalan tutar `derivePaymentStatusForOrder`'dan, vade `isOverdue`/`creditPosition`'dan,
- * sunulacak geçişler `officeTransitions`'tan, atlanan adımlar `skippedBetween`'den gelir.
- *
- * Okuma satır sayısıyla ÇARPMAZ: sipariş + kalemleri + o kalemlerin boy/ürün adları + paket adları
- * + partileri + geçiş kaydı + para hareketleri + talepler. Hepsi kimlik kümesi üzerinden tek turda.
- */
+/*
+  Sipariş detayının tek veri turu; hiçbir kural burada yeniden yazılmaz, ödeme, vade, geçiş ve atlanan adım motordan okunur. Okuma
+  satır sayısıyla çarpmaz: her şey kimlik kümesi üzerinden tek turda gelir.
+*/
 
-/** Vade süresi ayarı — checkout ve liste ekranıyla AYNI anahtar. */
+/** Ödeme ve liste ekranıyla aynı anahtar. */
 const PAYMENT_TERM_KEY = 'payment_term_days';
 const PAYMENT_TERM_DEFAULT = 30;
 
@@ -113,38 +107,30 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   const productNames = new Map(products.map((p) => [p.id, resolveLocalizedText(p.name)]));
-  // Kalem görseli ÜRÜNDEN gelir (15.08, kullanıcı isteği — fiyatlar emsali): ürünler bu okumada
-  // zaten çekili, ek sorgu yok. Görselsiz ürün `null` taşır, ekran yer tutucu ikon çizer.
+  // Kalem görseli üründen gelir ve ürünler zaten çekili; görselsiz üründe ekran yer tutucu çizer.
   const productsById = new Map(products.map((p) => [p.id, p]));
   const variantImages = new Map(
     variants.map((v) => {
       const product = productsById.get(v.productId);
-      // Kalem küçük resmi (24–44 px) — CDN kare@200 (05.37).
+      // Küçük resim, CDN kare@200.
       return [v.id, product ? thumbnailImageUrl(product) : null];
     }),
   );
-  // Kalemden müşteri ürün sayfasına köprü (15.08, kullanıcı isteği) — slug da üründen gelir.
-  // YALNIZ SATIŞTAKİ ürün köprülenir (yaşandı 15.08): müşteri sayfası pasif/aday ürün için YOK —
-  // eski siparişin pasifleşmiş kalemine köprü koymak operatörü 404'e yollamaktı (ölçüldü:
-  // `crispy-chicken-nugget` pasif, sayfası 404). Köprüsüz kalem düz metin kalır.
+  // Yalnız satıştaki ürün köprülenir: pasif ürünün müşteri sayfası yoktur ve köprü operatörü 404'e yollardı.
   const variantSlugs = new Map(
     variants.map((v) => {
       const product = productsById.get(v.productId);
       return [v.id, product?.status === 'active' ? product.slug : null];
     }),
   );
-  // Başlık haritası BURADA kuruluyor, ortak `readVariantTitles` ile DEĞİL: bu okuma varyantları ve
-  // ürünleri zaten çekti (aşağıdaki `variantSubs`/`variantProducts` haritaları için) — yardımcıyı
-  // çağırmak aynı iki sorguyu tekrar sormak olurdu. Ortaklaşan şey `titleOf` formatlayıcısı; yalnız
-  // başlık isteyen çağıran (sipariş özeti diyaloğu) yardımcıyı kullanır.
+  // Başlık haritası burada kurulur, çünkü varyant ve ürünler zaten çekili; ortak olan `titleOf` biçimleyicisi.
   const variantTitles = new Map(
     variants.map((v) => [v.id, titleOf(productNames.get(v.productId) ?? '—', resolveLocalizedText(v.label))]),
   );
   const variantSubs = new Map(variants.map((v) => [v.id, resolveLocalizedText(v.label)]));
-  // Kalemdeki LOT köprüsünün arama anahtarı: stok ekranı ÜRÜN ADIYLA arar (parti numarasıyla değil).
+  // Lot köprüsünün arama anahtarı ürün adıdır: stok ekranı parti numarasıyla değil ürün adıyla arar.
   const variantProducts = new Map(variants.map((v) => [v.id, productNames.get(v.productId) ?? '']));
-  // İade varsayılanı ÜRÜNÜN saklama rejiminden (16.08) — karar motorun, eşiği tek yerde yazılı.
-  // Ürün bulunamazsa `false`: bilinmeyeni imhaya yazmak, ölçülemeyeni bir değer sanmaktır.
+  // İade varsayılanı ürünün saklama rejiminden, kararı motor verir; ürün bulunamazsa `false`, bilinmeyen imhaya yazılmaz.
   const variantDiscardDefault = new Map(
     variants.map((v) => {
       const product = productsById.get(v.productId);
@@ -165,29 +151,16 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const customer = people.find((p) => p.id === order.customerId);
   const courier = order.courierId ? people.find((p) => p.id === order.courierId) : undefined;
-  // Tek "şimdi": vade gecikmesi, açık bakiye ve yaş etiketleri aynı ana bakmalı — okuma uzun sürerse
-  // iki ayrı `new Date()` aynı satırı hem gecikmiş hem gecikmemiş gösterebilirdi.
+  // Tek "şimdi": vade gecikmesi, açık bakiye ve yaş etiketleri aynı ana bakmalı, yoksa aynı satır hem gecikmiş hem değil görünebilirdi.
   const now = new Date();
 
   /*
-    ── MÜŞTERİNİN GERÇEK AÇIK BAKİYESİ (01.09, kullanıcı bildirimi) ───────────────────────────────
-    Kartta "Açık bakiye" yazan sayı `openAmountCents(order)` idi — yani YALNIZ BU SİPARİŞİN açık
-    tutarı. Yanında limit ve bir doluluk çubuğu duruyordu, dolayısıyla ekran "müşteri limitinin
-    neresinde" sorusuna cevap veriyormuş gibi görünüyor ama başka bir sorunun cevabını basıyordu.
-    Beş açık siparişi ve 2.400 € borcu olan müşteride kart yine tek siparişi gösterir, operatör bol
-    yer var sanırdı.
-
-    Doğru cevabı üreten motor zaten var (`creditPosition`: ödenmemiş `on_account` siparişleri
-    toplar) ve Müşteriler ekranı onu kullanıyordu; burada çağrılmamıştı.
-
-    Okuma YALNIZ vadesi açık müşteride yapılır — peşin müşteride kart zaten çizilmiyor, o hâlde
-    sorgusu da olmamalı. Sayfa sınırı `listByCustomer`ın varsayılanı: vade defteri tavanı olan bir
-    kümedir (açık siparişler), veriyle sınırsız büyüyen bir liste değil.
+    Kartın açık bakiyesi bu siparişin değil müşterinin toplam borcudur, yoksa limit çubuğu yanlış soruyu cevaplardı. Okuma yalnız
+    vadesi açık müşteride yapılır; açık siparişler tavanı olan bir kümedir.
   */
   const creditOrders = customer?.creditEnabled ? (await orderSvc.listByCustomer(order.customerId, { limit: 100 })).rows : [];
   const credit = creditPosition(creditOrders, termDays, now);
-  // Sefer köprüsü (18.08): sipariş hangi GERÇEKLEŞEN seferle gitti — SF kodu detayda okunur,
-  // geçmişi Seferler sekmesinde durur. Tek satırlık okuma; sefersiz siparişte hiç sorgu yapılmaz.
+  // Sipariş hangi seferle gitti; sefersiz siparişte sorgu yapılmaz.
   const run = order.deliveryRunId ? await new DeliveryRunService(db).getById(order.deliveryRunId) : null;
 
   const lines = items.map<OrderLineView>((item) => ({
@@ -203,8 +176,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     lineDiscountCents: item.lineDiscountAmountCents,
     vatRate: item.vatRate,
     lineTotalCents: lineTotalOf(item),
-    // Ödenecek: motorun kalem formülü. Hazırlık kesinleşmediyse sipariş edilen okunur — o aşamada
-    // `fulfilled_qty` bir karar değil, henüz yazılmamış bir sayıdır.
+    // Hazırlık kesinleşmediyse sipariş edilen okunur: o aşamada `fulfilled_qty` bir karar değil, henüz yazılmamış bir sayıdır.
     payableCents: fulfilledLineAmountCents(payableLineOf(item), isFulfillmentSettled(order.status, items)),
     bundleId: item.bundleId,
     returnDisposition: item.returnDisposition,
@@ -223,8 +195,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     };
   });
 
-  // Ödeme durumu ve kalan MOTORDAN: ekranın gösterdiği "kalan" ile checkout'un tahsil edeceği tutar
-  // aynı hesaptan çıkmalı.
+  // Ekranın "kalan"ı ile ödemenin tahsil edeceği tutar aynı hesaptan çıkmalı.
   const derivation = derivePaymentStatusForOrder(order, items, {
     collectedCents: order.amountCollectedCents,
     refundedCents: order.amountRefundedCents,
@@ -271,16 +242,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
     timeline: timelineOf(logs, new Map(actors.map((a) => [a.id, a.name])), tickets, order.status),
     /*
-      Şerit YALNIZ ofisin geçişlerini sunar (`officeTransitions`): izinli, düz kapıdan geçen ve
-      anı ofisin olan. İki süzgeç üst üste:
-        · KAPI (denetim 26.08) — süzgeçsiz hâli `cancelled` ve `delivered` düğmelerini de çiziyordu
-          ve ikisi de düz duruma yazılıyordu: iptal edilen siparişin ayrılmış malı serbest
-          kalmıyor, teslim edilenin fiili stoğu hiç düşmüyordu. İptal aşağıdaki "Kararlar"
-          bloğunda (`allowedDecisions` aynı durumlarda `cancel` veriyor).
-        · SAHİPLİK (09.29) — hazırlık, yola çıkış ve kapıdaki sonuç sahadan yazılır; web'den
-          "hazırlandı" denen siparişte kutu ve eksik beyanı olmadığı için karşılanan adet sıfır
-          kalıyordu (12.09 ölçümü). Kalan: teslimden sonra iade süreci ve kapanış.
-      Eylem tarafında ikinci bir kat daha var: eski bir sekmeden gelen istek de reddedilir.
+      Şerit yalnız ofisin geçişlerini sunar: iptal ve teslim düz durum yazımıyla stok ve rezervasyonu atlardı, hazırlık ve kapıdaki
+      sonuç ise sahanın işidir. Eski sekmeden gelen istek eylem tarafında da reddedilir.
     */
     allowedNext: officeTransitions(order.status),
     decisions: [...allowedDecisions(order.status)],
@@ -290,23 +253,16 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       type: order.deliveryType,
       date: order.deliveryDate,
       address: addressOf(order.addressSnapshot),
-      /* Türetim TEK yerden (`doorCheckOf`) — kurye gün listesi, sevkiyat masası ve bu ekran aynı
-         fonksiyonu çağırıyor. Kopyalansaydı üç yüzey bir gün aynı sipariş için üç farklı şey der. */
+      /* Kurye listesi ve sevkiyat masasıyla aynı fonksiyon: üç yüzey aynı durağa aynı şeyi söyler. */
       doorCheck: doorCheckOf(order.addressSnapshot as Record<string, unknown> | null),
       recipient: recipientOf(order.addressSnapshot, customer?.name ?? null),
       courierName: courier?.name ?? null,
       runReference: run?.referenceNo ?? null,
       proof: await proofOf(order.deliveryProof),
       warehouse: warehouseLabels.get(order.warehouseId) ?? null,
-      // Kutu izi paketin kapısından (07.09) — kanıt siparişin kendi satırında, ikinci okuma yok.
+      // Kutu izi paketin kapısından; ikinci okuma yok.
       boxes: await listOrderBoxes(db, order),
-      /*
-        Kargo künyesi MÜŞTERİ YÜZEYİYLE AYNI kapıdan (`readOrderTracking`): operatörün gördüğü
-        numara ile müşteriye gösterilen aynı olmak zorunda. İki ayrı sorgu bir gün ayrışır ve
-        destek konuşması "bende başka görünüyor"a döner.
-
-        Yalnız kargo siparişinde soruluyor — rotada gönderi satırı hiç doğmaz.
-      */
+      /* Kargo künyesi müşteri yüzeyiyle aynı kapıdan okunur ki iki taraf aynı numarayı görsün; yalnız kargo siparişinde. */
       shipment:
         order.deliveryType === 'shipping'
           ? await readOrderTracking(db, order.id, { carrier: order.carrier, trackingNumber: order.trackingNumber })
@@ -319,11 +275,10 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       meta: [customer?.phone, customer?.email].filter(Boolean).join(' · '),
       phone: customer?.phone ?? null,
       isCompany: Boolean(customer?.companyInfo),
-      // Vade kartı YALNIZ vadesi açık müşteride çizilir: peşin müşteride "limit 0" yazmak, olmayan
-      // bir kısıtı varmış gibi gösterirdi.
+      // Vade kartı yalnız vadesi açık müşteride çizilir: peşin müşteride "limit 0" olmayan bir kısıtı varmış gibi gösterirdi.
       credit: customer?.creditEnabled
         ? {
-            // MÜŞTERİNİN borcu, bu siparişinki değil — gerekçesi yukarıdaki blokta.
+            // Müşterinin borcu, bu siparişinki değil.
             openBalanceCents: credit.openBalanceCents,
             limitCents: customer.creditLimitCents,
             overdueDays: isOverdue(order, termDays, now)
@@ -339,11 +294,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 }
 
 /**
- * **Gerçek COGS** — fiilen çıkan partilerin alış maliyeti (`order_item_batch` × `stock.purchasePrice`).
- *
- * Teorik maliyet (ürünün güncel alışı) DEĞİL: aynı ürün iki partide iki fiyata girmiş olabilir ve
- * siparişten çıkan hangi partiyse kârı o belirler. Parti seçilmemişse (hazırlık yapılmadı) ya da
- * partinin alış fiyatı girilmemişse maliyet **bilinmez** — `null` döner, sıfır sayılmaz.
+ * Fiilen çıkan partilerin alış maliyeti, çünkü aynı ürün iki partide iki fiyata girmiş olabilir. Parti ya da alış fiyatı eksikse
+ * maliyet bilinmez, `null` döner.
  */
 function cogsOf(
   batches: ReadonlyArray<{ stockId: string; qty: number }>,
@@ -361,24 +313,14 @@ function cogsOf(
 }
 
 /**
- * Finansal kart — **merkezî kârlılık motorunun (`orderContribution`, 12.6) ekran dökümü.**
- *
- * Burada ikinci bir kâr formülü YOK ve bu bilinçli: sipariş detayı bir zamanlar kendi hesabını
- * yapıyordu (satış `qty` üzerinden, marj maliyete markup, kapanmamış siparişte de kâr) ve aynı
- * siparişin kârı bu sayfada bir, kârlılık raporunda başka çıkıyordu. Ciro da marj da artık
- * raporun kullandığı sayının aynısıdır — ikisi ayrışırsa hangisinin doğru olduğu tartışılırdı.
- *
- * **Kâr yalnız maliyetler SABİTLENMİŞSE hesaplanır** (DOMAIN §12). Kapanmamış siparişte dağıtım
- * payı, komisyon ve ambalaj henüz yazılmamıştır; onları 0 sayıp "kâr" demek, olmayan giderleri
- * sıfırlayıp sayıyı şişirmek olurdu. Parti alışından çıkan maliyet yine de GÖSTERİLİR — ama
- * tahmin olarak işaretlenir ve kâra girmez: bilgi vermek ile hesap uydurmak farklı şeylerdir.
+ * Kâr raporuyla aynı sayı için motorun dökümü; burada ikinci formül yok. Kâr yalnız maliyetler sabitlenince hesaplanır, parti
+ * maliyeti öncesinde yalnız tahmin olarak gösterilir.
  */
 function financeOf(order: Order, items: readonly OrderItem[], batchCogsCents: number | null): OrderFinanceView {
   const contribution = orderContribution(
     {
       id: order.id,
-      // Satış günü: teslim günü varsa o, yoksa siparişin açıldığı gün. Katkı payı hesabına girmez,
-      // çıktıyı damgalar — rapor da aynı kaydı aynı günle görsün.
+      // Satış günü teslim günü, yoksa açılış günü; hesaba girmez, çıktıyı damgalar ki rapor aynı kaydı aynı günle görsün.
       saleDate: order.deliveryDate ?? order.createdAt.slice(0, 10),
       channel: order.channel,
       vatTreatment: order.vatTreatment,
@@ -423,20 +365,14 @@ function financeOf(order: Order, items: readonly OrderItem[], batchCogsCents: nu
 }
 
 /**
- * İade yolları — **gerçek hesap listesinden**. Varsayılan, paranın GİRDİĞİ hesaptır: iade kuralı
- * (`lib/order/refund`) zaten öyle yapıyor; ekran o kararı yeniden vermez, gösterir ve gerekirse
- * operatörün saptırmasına izin verir (Stripe'tan tahsil edilip nakit iade etmek meşru bir karardır).
- *
- * Kapalı hesap listelenmez — paranın çıkamayacağı bir yeri seçenek diye sunmak yanlış olurdu.
+ * Varsayılan paranın girdiği hesaptır; operatör saptırabilir, çünkü karttan tahsil edip nakit iade etmek meşrudur. Kapalı hesap
+ * listelenmez.
  */
 function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyMovement[]): RefundRouteView[] {
   const paidInto = movements.filter((m) => m.type === 'order_payment').at(-1)?.accountId ?? null;
 
-  // **Yol = hesap TÜRÜ, hesabın kendisi değil.** Kasa listesi operasyonun iç kaydıdır (kurye
-  // kasası, kapanış kasası, kapı kasası…) ve iade penceresine on satır olarak dökülürse soru
-  // "parayı nasıl geri veriyorum"dan "hangi kasayı seçmeliyim"e kayar. Tür başına TEK temsilci
-  // seçilir: para hangi hesaptan girdiyse o, yoksa türün en eski hesabı. Kart hangi hesaba
-  // yazacağını yine de adıyla söyler — seçim gizlenmez, sadeleşir.
+  // Yol hesap türüdür: on kasa satırı soruyu "nasıl geri veriyorum"dan "hangi kasa"ya kaydırırdı. Tür başına paranın girdiği hesap,
+  // yoksa türün en eskisi seçilir.
   const byType = new Map<Account['type'], Account>();
   for (const account of [...accounts].filter((a) => a.isActive).sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
     if (account.id === paidInto) byType.set(account.type, account);
@@ -449,9 +385,7 @@ function refundRoutesOf(accounts: readonly Account[], movements: readonly MoneyM
       label: ROUTE_LABELS[account.type],
       sub: account.name,
       isDefault: account.id === paidInto,
-      // Sağlayıcı yolunda para KARTA DÖNER (07.11): önce `refunds.create`, sonra hareket. Ekran
-      // bunu söyler çünkü iki yolun sonucu operatör için farklıdır — kasadan iade elden verilir,
-      // karta iade müşteriye birkaç gün sonra ulaşır.
+      // Karta iade müşteriye birkaç gün sonra ulaşır; ekran bunu söyler.
       caveat: account.type === 'provider' ? 'Para karta döner; bankaya geçmesi birkaç gün sürebilir.' : '',
     }))
     .sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
@@ -461,17 +395,10 @@ const ROUTE_LABELS: Record<Account['type'], string> = {
   provider: 'Karta geri',
   cash: 'Nakit',
   bank: 'Havaleyle',
-  // 13.09: iade ortağın carisinden de yazılabilir (ortak müşteriye elden ödediyse) — nadir, ama
-  // hesap türü kapalı küme ve harita tam olmak zorunda.
+  // Nadir ama hesap türü kapalı küme ve harita tam olmak zorunda.
   partner: 'Ortak carisinden',
 };
 
-/**
- * "Bağlı talepler" — bu siparişe açılmış müşteri talepleri.
- *
- * Parti izi satırları SÖKÜLDÜ (16.08, kullanıcı kararı): aynı bilgi kalemin altındaki LOT
- * numarasında duruyor ve artık oradan tıklanıyor — sağ rayda ikinci kez anlatmak yer yiyordu.
- */
 function linksOf(tickets: readonly Ticket[]): OrderLinkView[] {
   return tickets.map((ticket) => ({
     key: `ticket-${ticket.id}`,
@@ -479,24 +406,21 @@ function linksOf(tickets: readonly Ticket[]): OrderLinkView[] {
     state: TICKET_STATUS_LABELS[ticket.status],
     tone: ticket.status === 'resolved' ? 'olive' : ticket.status === 'open' ? 'amber' : 'slate',
     title: ticket.subject?.trim() || 'Konu yazılmamış',
-    // Cümleler operatöre "bu satır ne ve bana ne söylüyor" diye anlatır (15.08, kullanıcı
-    // bildirimi: kart anlaşılmıyordu) — kısaltılmış iç jargon değil.
+    // Cümle operatöre satırın ne olduğunu anlatır, kısaltılmış iç jargon değil.
     note: ticket.returnTriggeredAt
       ? 'Bu siparişin iadesi bu müşteri talebinden başlatıldı; iade tutarı yandaki Para kartında.'
       : 'Müşteri bu siparişle ilgili bir talep açtı — yazışma talebin kendi sayfasında sürer.',
-    // Köprü talebin KENDİSİNE gider (`?t=<id>` — kuyruk açılır, satır seçili). Ekran 16.3'te
-    // doğmuştu; bu satır 19.08'e dek `href: null` taşıyordu (BEKLEYEN 09.12 — kapanışında bağlandı).
+    // Köprü talebin kendisine gider: kuyruk açılır, satır seçili.
     href: ticketsLink(ticket.id),
     cta: 'Talebi aç',
   }));
 }
 
-/** Satır tutarı: sipariş edilen adet × birim − kalemin indirim payı. Kalemin TAMAMI için. */
+/** Karşılanan değil sipariş edilen adet üzerinden, kalemin tamamı için. */
 function lineTotalOf(item: OrderItem): number {
   return item.unitPriceCents * item.qty - item.lineDiscountAmountCents;
 }
 
-/** Kalem satırının motor karşılığı — `fulfilledLineAmountCents`in beklediği şekil. */
 function payableLineOf(item: OrderItem) {
   return {
     fulfilledQty: item.fulfilledQty,
@@ -507,29 +431,8 @@ function payableLineOf(item: OrderItem) {
 }
 
 /**
- * Toplam bloğu — **her satır bir öncekinden çıkar ve sonda gerçek rakam durur.**
- *
- * ── ÜÇ ARIZA BİRDEN DÜZELTİLDİ (01.09, kullanıcı bildirimi · sipariş `LA-26-93UXKY`) ────────────
- *
- * **(1) İndirim İKİ KEZ görünüyordu.** "Kalemler" satırı `lineTotalCents` topluyordu ve o değer
- * indirimi ZATEN düşülmüş hâlidir (`lineTotalOf`); hemen altına bir de "Sepet indirimi −8,18"
- * konuyordu. `order.discount_amount` ile Σ `line_discount_amount` aynı paradır (ertelenmiş kısıt),
- * yani blok aynı indirimi bir kez uygulayıp bir kez daha listeliyordu. Yukarıdan aşağı okuyan
- * operatör 46,39 − 8,18 − 19,09 = 19,12 gibi hiçbir gerçeği olmayan bir sayıya varıyordu.
- * **Çözüm:** "Kalemler" artık BRÜT (adet × birim), indirim satırı gerçekten düşülen bir satır.
- * Kimlik korunur: brüt − indirim + kargo = `order.total` (Σ lineTotal + kargo ile aynı şey).
- *
- * **(2) Blok kendi çıkarmasını yok sayıyordu.** İki düşüm satırı gösterilip altına yine
- * `order.total` yazılıyordu. **Çözüm:** düşüm varsa "Sipariş toplamı" ARA TOPLAM olur ve sonuç
- * **"Ödenecek"** satırında durur. Düşüm yoksa blok eskisi gibi tek toplamla biter.
- *
- * **(3) Karşılanmayan adet kalemlerden YENİDEN hesaplanıyordu** ve motorun sayısıyla bir kuruş
- * ayrışıyordu (19,09 + 27,29 = 46,38 ≠ 46,39). **Çözüm:** düşüm artık `total − karşılanan`
- * farkından geliyor; motorun cevabı esastır ve blok tanım gereği tutar. Aynı gerçeği iki yoldan
- * hesaplamak, ikisinin ayrıştığı günü beklemekti (CLAUDE §1).
- *
- * `fulfilledAmountCents` motordan gelir (`derivePaymentStatusForOrder`) — para panelindeki "Kalan"
- * ile aynı hesap. Ekranın iki yerinde iki farklı sayı çıkmasının yolu böylece kapalı.
+ * Her satır bir öncekinden çıkar ve sonda gerçek rakam durur. İndirim `total − karşılanan` farkından gelir, çünkü motorun cevabı
+ * esastır ve yeniden hesaplamak kuruş ayrıştırırdı.
  */
 export function totalsOf(
   order: Order,
@@ -538,80 +441,37 @@ export function totalsOf(
   fulfilledAmountCents: number,
 ): OrderTotalLine[] {
   /*
-    ── BLOK GİDEN MALI ANLATIR, SİPARİŞ EDİLENİ DEĞİL (01.09, kullanıcı kararı) ──────────────────
-    Zincir bir gün önce sipariş edilenden başlıyordu (54,57 → −8,18 → 46,39 → −19,10 → 27,29).
-    Aritmetiği tutuyordu ama **indirim satırı yalan söylüyordu:** "Sepet indirimi 8,18 €" müşteriye
-    verilmiş bir indirim gibi okunuyor, oysa onun 3,37 €'su hiç gitmemiş bir kutu böreğin
-    indirimiydi. Gerçekten verilen indirim 4,81 €.
-
-    Ve bu sayıyı sistemin geri kalanı ZATEN öyle biliyor: muhasebe kalemi (`lineAmountCents`)
-    indirim payını karşılanan orana bölüyor, yani kâr paneli, muhasebe dosyası ve KDV beyanı
-    hepsi 4,81 diyor. 8,18 diyen tek yer bu bloktu — ekran kendi sisteminin dışına düşmüştü.
-
-    "Ne sipariş edilmişti" sorusunun cevabı KAYBOLMUYOR: kalem tablosunda SİP./KARŞIL. sütunları
-    duruyor ve satır tutarının üstü çiziliyor (`payableCents`). Aynı gerçeği iki yerde anlatmak
-    yerine, her biri kendi işini yapıyor — tablo sipariş↔teslim farkını, blok ödenecek parayı.
+    Blok giden malı anlatır, sipariş edileni değil: indirim de karşılanan orana göre sayılır, muhasebe ve kâr paneli de öyle bilir.
+    Sipariş edilen, kalem tablosunun sütunlarında durur.
   */
   const gross = lines.reduce((sum, l) => sum + (settled ? l.unitPriceCents * l.fulfilledQty : l.unitPriceCents * l.qty), 0);
   const shipping = order.shippingFeeCents;
-  // İndirim de aynı tabandan: brüt − indirim + kargo = ödenecek. Kimlik korunuyor, çünkü ikisi de
-  // motorun kalem formülünden türüyor.
+  // Brüt − indirim + kargo = ödenecek; ikisi de motorun kalem formülünden türediği için kimlik korunur.
   const discount = Math.max(0, gross + shipping - fulfilledAmountCents);
   const refunded = order.amountRefundedCents;
 
   const rows: OrderTotalLine[] = [{ label: 'Kalemler', amountCents: gross, kind: 'sum' }];
-  // İndirimin SEBEBİ de yazılır (15.08, kullanıcı isteği): müşteri sepette "İndirim — Hoş geldin
-  // indirimi" görüyor, operatör yalnız tutarı görüyordu. Ad sipariş anındaki kopyadan gelir
-  // (`discountLabel`) — kampanya sonradan silinse de satır sebebini söylemeye devam eder.
+  // İndirimin sebebi sipariş anındaki kopyadan yazılır; kampanya sonradan silinse de satır sebebini söyler.
   if (discount > 0) {
     const label = order.discountLabel ? resolveLocalizedText(order.discountLabel) : '';
     rows.push({ label: label ? `Sepet indirimi — ${label}` : 'Sepet indirimi', amountCents: discount, kind: 'deduction' });
   }
-  /*
-    ARA TOPLAM YALNIZ ARDINDA BİR ŞEY VARKEN (kullanıcı isteği 01.09 + itiraz).
-    Kargosuz siparişte ara toplam ile ödenecek aynı sayıdır; iki kez yazmak bloğu okunmaz yapar ve
-    okuyana "bu ikisi neden farklı olabilir" diye boş bir soru sordurur. Kargo varsa satır gerçek
-    bir ara duraktır ve orada yazılıyor.
-  */
+  /* Ara toplam yalnız ardında kargo varken yazılır; kargosuz siparişte ödenecekle aynı sayıdır. */
   if (shipping > 0) {
     rows.push({ label: 'Ara toplam', amountCents: gross - discount, kind: 'sum' });
     rows.push({ label: 'Kargo', amountCents: shipping, kind: 'sum' });
   }
 
   rows.push({ label: 'Ödenecek', amountCents: fulfilledAmountCents, kind: 'grand' });
-  // KDV bir DÜŞÜM DEĞİL, bilgi: b2c fiyatı zaten dahil, b2b'de fatura ayrı gösterir. Satırın işi
-  // "bu siparişin vergisi ne" sorusunu tutarı bozmadan yanıtlamak.
+  // KDV bir düşüm değil bilgidir: "bu siparişin vergisi ne" sorusunu tutarı bozmadan yanıtlar.
   rows.push({ label: 'İçindeki KDV', amountCents: vatInsideOf(order, lines, settled), kind: 'note' });
   if (refunded > 0) rows.push({ label: 'İade edildi', amountCents: refunded, kind: 'refund' });
   return rows;
 }
 
 /**
- * Kalemlerin içinde duran KDV payı — **kararı MOTOR verir** (`vatSplitOf`).
- *
- * ── NEDEN ARTIK BURADA HESAPLANMIYOR (denetim 26.08) ─────────────────────────
- * Bu fonksiyon motorun kopyasıydı ve iki dalını (b2c'de içinden çıkar, b2b'de üstüne ekle) birebir
- * tekrarlıyordu — ama motorun ÜÇÜNCÜ dalı, `zeroRated`, burada hiç yoktu. Sonucu şuydu: VIES ile
- * doğrulanmış vergi numaralı Alman B2B siparişinde KDV yasal olarak SIFIRDIR (reverse charge,
- * müşteri kendi ülkesinde beyan eder) ama ekran `addVat(...) − tutar` yazıyor, yani olmayan bir
- * vergiyi varmış gibi gösteriyordu. Toplamı bozmuyordu (satır `note`), fakat operatörün mutabakat
- * yaparken okuduğu sayı yanlıştı.
- *
- * Veri hep elin altındaydı: `order.vatTreatment` bu okumanın kendi çıktısında zaten taşınıyor.
- * Eksik olan bilgi değil, motora sormaktı.
- *
- * ── TABAN KARŞILANAN TUTAR, SİPARİŞ EDİLEN DEĞİL (01.09, kullanıcı bildirimi) ───────────────────
- * Hesap `lineTotalCents` üzerinden yapılıyordu, yani **hiç gitmeyen malın vergisi de sayılıyordu.**
- * Ölçüldü (`LA-26-93UXKY`): ekran 2,42 € yazıyordu, teslim edilenin KDV'si 1,42 € — tam bir euro
- * fazla. Satır `note` olduğu için toplamı bozmuyordu; bozduğu şey mutabakattı, ve vergi satırının
- * tek işi zaten mutabakat.
- *
- * Kalem başına taban **motorun kendi formülünden** geliyor (`fulfilledLineAmountCents`): "ödenecek"
- * hangi tutarsa verginin tabanı da odur. Formülü burada ikinci kez yazmak, ikisinin ayrıştığı günü
- * beklemek olurdu — ve ayrıştığında kimse fark etmezdi.
- *
- * `settled = false` iken taban sipariş edilen adettir: hazırlık kesinleşmeden "eksik gitti"
- * denemez, dolayısıyla eksiltilmiş bir vergi de yazılamaz.
+ * Kararı motor verir, ters vergilendirmenin sıfır dalı dahil. Taban karşılanan tutardır, hiç gitmeyen malın vergisi sayılmaz;
+ * hazırlık kesinleşmeden sipariş edilen adet esastır.
  */
 function vatInsideOf(order: Pick<Order, 'channel' | 'vatTreatment'>, lines: OrderLineView[], settled: boolean): number {
   const zeroRated = isZeroRated(order.vatTreatment);
@@ -625,12 +485,8 @@ function vatInsideOf(order: Pick<Order, 'channel' | 'vatTreatment'>, lines: Orde
 }
 
 /**
- * Zaman çizelgesi — geçiş kaydı **artık talep olaylarıyla birlikte**. Atlanan ana hat adımı
- * SİLİNMEZ, `skipped` işaretiyle görünür kalır: "burada bir şey olmadı" ile "burası hiç yoktu"
- * farklı şeylerdir.
- *
- * Talepler araya ZAMANINA göre girer, sona eklenmez: teslimden bir gün sonra açılan şikâyet, tam
- * oraya düştüğünde okunur bir hikâye olur.
+ * Atlanan adım silinmez, işaretle görünür: "burada bir şey olmadı" ile "burası hiç yoktu" farklıdır. Talepler sona değil zamanına
+ * göre araya girer.
  */
 function timelineOf(
   logs: readonly OrderStatusLog[],
@@ -681,14 +537,12 @@ function timelineOf(
     });
   }
 
-  // Kararlı sıra: atlanan adım, kendisini doğuran geçişin ÖNÜNDE kalmalı — `sort` kararlı olduğu
-  // için aynı damgalı olaylar eklenme sırasını korur.
+  // Atlanan adım kendisini doğuran geçişin önünde kalmalı; `sort` kararlı olduğu için aynı damgalı olaylar eklenme sırasını korur.
   events.sort((a, b) => a.at.localeCompare(b.at));
 
   const steps = events.map(({ at: _at, ...step }) => step);
 
-  // "Şu an buradayız" yalnız açık kayıtta: kapanmış siparişin güncel adımı olmaz. İşaret son DURUM
-  // adımına düşer, araya giren bir talebe değil.
+  // "Şu an buradayız" yalnız açık kayıtta; işaret son durum adımına düşer, araya giren talebe değil.
   if (!isTerminal(status)) {
     for (let i = steps.length - 1; i >= 0; i -= 1) {
       const step = steps[i];
@@ -701,7 +555,7 @@ function timelineOf(
   return steps;
 }
 
-/** Adresin sipariş anındaki kopyası — alan eksikse boş döner, uydurulmaz. */
+/** Sipariş anındaki kopyadan; alan eksikse boş döner, uydurulmaz. */
 function addressOf(snapshot: Record<string, unknown> | null): string {
   if (!snapshot) return '';
   const part = (key: string): string => (typeof snapshot[key] === 'string' ? (snapshot[key] as string).trim() : '');
@@ -711,15 +565,8 @@ function addressOf(snapshot: Record<string, unknown> | null): string {
 }
 
 /**
- * Kargo künyesine yazılacak ALICI — adresin kendi alıcısı, hesap sahibi değil.
- *
- * Adres alanı bir süredir toplanıyordu ama hiçbir ekran okumuyordu (ölçüldü 21.08); oysa taşıyıcı
- * künyesi ad olmadan üretilemiyor ve teslim noktası kimliği o adla karşılaştırıyor. Hediye
- * adresinde hesap sahibinin adını yazmak, paketi alamayacak birinin adına göndermektir.
- *
- * Geri düşüş İŞARETLENİR, gizlenmez: künyeyi yazan kişi "bu ad adresten mi geldi yoksa hesaptan mı
- * tahmin edildi" sorusunun cevabını görmeli. `phone` hesabınkine DÜŞMEZ — adresin telefonu yoksa
- * cevap "bilinmiyor"dur, hesabınki değil (hesap numarası hediye adresinde başka birinin olabilir).
+ * Adresin kendi alıcısı, hesap sahibi değil: hediye adresine hesap sahibinin adıyla gönderilen paket teslim alınamaz. Hesaba geri
+ * düşüş işaretlenir; telefon ise hesabınkine düşmez, çünkü hediye adresinde o numara başkasınındır.
  */
 function recipientOf(
   snapshot: Record<string, unknown> | null,
@@ -738,15 +585,8 @@ function recipientOf(
 }
 
 /**
- * Teslim kanıtı — **ham `jsonb` BURADA ayrıştırılmıyor** (07.08).
- *
- * Eskiden ayrıştırılıyordu ve tam da bu yüzden sözleşme ayrıştı: ekran `signature`/`photos[]`
- * arıyordu, yazan taraf `kind`/`imageKey` yazıyordu. İki uç da kendi içinde tutarlı olduğu için
- * hiçbir yerde hata vermedi; kanıt "var" göründü, hiç açılamadı. Şekil artık tek şemada ve okuma
- * tek kapıda (`readDeliveryProof`) — burada yapılan iş yalnız ekranın alan adlarına çevirmek.
- *
- * Kapı şema tutmayan bloğa `null` diyor: yarım bir kanıt göstermektense hiç göstermemek doğru,
- * çünkü yarım kanıt yine "kanıt var" der.
+ * Ham blok burada ayrıştırılmaz; okuma tek kapıda (`readDeliveryProof`) ki yazan ve okuyan aynı şemayı kullansın. Şemaya uymayan
+ * kanıt gösterilmez: yarım kanıt yine "kanıt var" der.
  */
 async function proofOf(raw: unknown): Promise<OrderDetailView['delivery']['proof']> {
   const proof = await readDeliveryProof(raw);

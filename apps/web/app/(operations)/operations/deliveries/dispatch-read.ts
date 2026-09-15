@@ -25,85 +25,46 @@ import { shiftDay, toIsoDate } from './deliveries-url';
 import { runPreviewOf, type StopOrderPreview } from './dispatch-preview';
 import type { DispatchDayView, DispatchRunView, DispatchStopView, PrepStage } from './dispatch-types';
 
-/**
- * Sevkiyatçının gün planının okuması (09.15) — `design/pages/admin-teslimat.md`.
- *
- * **Kurye kapısı KULLANILMIYOR ve kullanılamaz:** `listCourierDay` kurye kimliğini zorunlu tutuyor
- * (o imza bir güvenlik sınırı) ve bu ekranın asıl sorusu tam tersi — *"bugün kim ATANMAMIŞ".*
- * Atanmamışı görmek için kurye süzgeci olmayan bir okuma gerekiyor; `listByStatus` zaten o okumayı
- * yapıyor (depo kuyruğunun okuması) ve gün süzgeci taşıyor.
- *
- * **Bölge burada TANIMLANMAZ, okunur** (tasarım §6): posta kodu → bölge eşlemesi motorun
- * (`findZoneForPostalCode`), bölge kaydı Depolar'ın. Bu okuma yalnız zinciri kuruyor.
- */
+/*
+  Sevkiyat masasının sorusu "kim atanmamış" olduğu için kurye süzgeçli gün listesi kullanılamaz; kurye süzgeci olmayan durum okuması
+  kullanılır. Bölge burada tanımlanmaz: posta kodundan bölgeyi motor çözer, bölge kaydı depoların.
+*/
 
-/**
- * Günün "çıkış" sayılan durumları. `confirmed` de dâhil ve bilerek: hazırlanmamış siparişin bu
- * listede GÖRÜNMESİ gerekiyor (tasarım §4 "hazır olmayan sipariş listede — görünür uyarı hâli"),
- * gizlenseydi araç eksik yüklenirdi. `cancelled` yok: iptal bir çıkış değil.
- */
+/** Hazırlanmamış sipariş de listede görünür, gizlenseydi araç eksik yüklenirdi; iptal bir çıkış değildir. */
 const DAY_STATUSES: OrderStatus[] = [
   'confirmed',
   'preparing',
   'ready',
   'out_for_delivery',
   'delivered',
-  // **`completed` UNUTULMUŞTU** (düzeltme 16.08, ekranda ölçüldü). `delivered → completed` yaşam
-  // döngüsünün NORMAL kapanışıdır (`ORDER_LIFECYCLE`), yani gün kapandıkça duraklar listeden birer
-  // birer siliniyordu: dünün ekranı "2 durak · 3 adet" derken veritabanında 5 sipariş · 14 adet
-  // vardı — üçü `completed` olduğu için hiç okunmuyordu. Unutulduğunun kanıtı hemen altında:
-  // `prepOf` `completed`i zaten karşılıyor ve "Teslim" diye gösteriyor.
-  // Takvim geldikten sonra bu hata BÜYÜDÜ: artık her geçmiş gün bir tık uzakta.
+  // Teslim edilen sipariş zamanla `completed` olur; listede olmasa geçmiş günün durakları birer birer kaybolurdu.
   'completed',
   'returned',
 ];
 
-/** Hazırlık kademesi — durumdan OKUNUR, yeniden karar verilmez (karar depo ekranının). */
+/** Durumdan okunur, yeniden karar verilmez; karar depo ekranının. */
 function prepOf(status: OrderStatus): PrepStage {
   if (status === 'confirmed') return 'not_started';
   if (status === 'preparing') return 'preparing';
-  // Yola çıkmış sipariş "Hazır" DEĞİLDİR (düzeltme 16.08): bu satır yokken `out_for_delivery` son
-  // satıra düşüp "Hazır" diye okunuyordu — yani "depoda bekliyor". Mal araçtaydı.
+  // Yola çıkmış sipariş "Hazır" değildir: mal depoda değil araçtadır.
   if (status === 'out_for_delivery') return 'on_the_way';
   if (status === 'delivered' || status === 'completed') return 'delivered';
   if (status === 'returned') return 'returned';
   return 'ready';
 }
 
-/**
- * Kargo kuyruğunun tavanı. Sessiz kırpma YOK: tavana dayanıldığı ekrana söyleniyor, yoksa "kuyruk
- * bitti" sanılırdı. Kuyruk doğası gereği kısa olmalı — uzunsa asıl haber odur.
- */
+/** Tavana dayanıldığı ekrana söylenir, yoksa "kuyruk bitti" sanılırdı; uzun kuyruk zaten asıl haberdir. */
 const SHIPPING_QUEUE_LIMIT = 100;
 
-/**
- * **Askıda kalmış sayılan durumlar** — teslim günü geçtiği hâlde sonuçlanmamış olanlar. Dördü de
- * "henüz bitmedi" der: `confirmed` hiç hazırlanmamış · `preparing` depoda kalmış · `ready` yola
- * çıkmamış ya da çıkıp geri dönmüş (ulaşılamadı) · `out_for_delivery` yolda takılı kalmış.
- *
- * `delivered`/`completed`/`returned`/`cancelled` YOK: hepsi bir sonuç, askıda değil.
- */
+/** Teslim günü geçip sonuçlanmamış durumlar; teslim, kapanış, iade ve iptal birer sonuç olduğu için yok. */
 const STRANDED_STATUSES: OrderStatus[] = ['confirmed', 'preparing', 'ready', 'out_for_delivery'];
 
-/**
- * Askıda listesinin tavanı. Sağlıklı bir operasyonda bu liste boş olmalı; uzunsa asıl haber odur ve
- * ekran "daha var" diyebilmeli — sessiz kırpma "hepsi bu" diye okunur.
- */
+/** Sağlıklı operasyonda liste boştur; tavan aşılınca ekran "daha var" der, sessiz kırpma "hepsi bu" diye okunurdu. */
 const STRANDED_LIMIT = 50;
 
 /**
- * Kapıda tahsil edilecek tutar — **HÂLÂ tahsil edilebilir olanlar** (tasarım §2: "kapıda tahsil
- * edilecek toplam").
- *
- * İki eleme var ve ikisi de ölçümle kondu (06.08, seed verisi üstünde):
- *
- * - **Kargoda her zaman `null`** (K37: kargo yalnız online peşin ödenir). Kural veride de duruyor
- *   ama ekran onu varsaymıyor, açıkça uyguluyor: kapıda tahsilat kargo satırında hiç doğmamalı.
- * - **Sonuçlanmış durak sayılmaz.** Reddedilen siparişin parası HİÇ tahsil edilmeyecek (mal depoya
- *   döndü), teslim edilmişin parası da kapıda değil — kurye oradan ayrıldı, kalan varsa o bir
- *   BORÇTUR ve müşteri kartının konusudur. İkisi de dâhilken günün beklenen tahsilatı 747,80 €
- *   çıkıyordu, oysa en fazla 689,80 € toplanabilirdi: ekran sevkiyatçıya olmayan parayı vaat
- *   ediyordu ve akşam kasa mutabakatı (11.6) o farkı açıklanamaz bir eksik olarak gösterirdi.
+ * Kargoda hiç yok, çünkü kargo peşin ödenir. Sonuçlanmış durak sayılmaz: reddedilenin parası tahsil edilmez, teslim edilenin
+ * kalanı ise müşteri kartının konusu olan bir borçtur.
  */
 function doorDueCents(order: Order): number | null {
   if (order.deliveryType === 'shipping') return null;
@@ -112,18 +73,7 @@ function doorDueCents(order: Order): number | null {
   return due > 0 ? due : null;
 }
 
-/**
- * **Hâlâ ödenmemiş tutar — aşamadan BAĞIMSIZ** (düzeltme 16.08, ekranda ölçüldü).
- *
- * `doorDueCents` "kapıda tahsil edilecek" sorusunu cevaplıyor ve sonuçlanmış siparişte bilinçli
- * olarak `null` dönüyor. Ama tablo o `null`ı **"Ödendi"** diye okuyordu ve bu bir YALANDI: dün
- * teslim edilmiş `LA-26-EJXNWT` ekranda "Ödendi" yazıyordu, oysa tutar 6,00 € · tahsil edilen
- * 0,00 € · `payment_status = pending`. Kimse ödememişti.
- *
- * İki soru ayrıldı: *"kapıda para konuşulacak mı"* (`doorDueCents`) ve *"bu siparişin borcu var mı"*
- * (bu). Kodun kendi yorumu zaten ayrımı yazıyordu — *"kalan varsa o bir BORÇTUR ve müşteri kartının
- * konusudur"* — ekran o cümleyi görmüyordu.
- */
+/** Aşamadan bağımsız borç: `doorDueCents`in sonuçlanmış durakta `null` dönmesi "ödendi" demek değildir. */
 function outstandingCents(order: Order): number {
   return Math.max(0, order.orderedTotalCents - (order.amountCollectedCents - order.amountRefundedCents));
 }
@@ -134,10 +84,9 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
 
   const [dayOrders, shippingQueue, strandedPage, zones, warehouses, couriers, dayRoutes] = await Promise.all([
     new OrderService(db).listByStatus(DAY_STATUSES, { deliveryDate: date }),
-    // Kargo GÜN süzgeciyle okunmaz — kargoda `delivery_date` şema gereği null (bkz. `shipping` künyesi).
+    // Kargoda `delivery_date` boş olduğu için kuyruk gün süzgeciyle okunmaz.
     new OrderService(db).listByStatus(['ready'], { limit: SHIPPING_QUEUE_LIMIT }),
-    // Askıda kalanlar BAKILAN GÜNDEN bağımsız: ölçüt "teslim günü bugünden önce ve sonuçlanmamış".
-    // Bakılan güne göre okunsaydı geçmiş bir güne bakan operatör kendi baktığı günü de askıda görürdü.
+    // Askıdakiler bakılan günden bağımsızdır, yoksa geçmiş güne bakan operatör o günü de askıda görürdü.
     new OrderService(db).listPage(
       { status: STRANDED_STATUSES, deliveryType: 'route', deliveryTo: shiftDay(toIsoDate(now), -1) },
       { limit: STRANDED_LIMIT },
@@ -145,27 +94,18 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
     new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
     new WarehouseService(db).list(),
     new UserProfileService(db).listByRole('courier'),
-    // Sefer şeridi (18.08): kuryenin rota seçim ekranıyla AYNI kapı — sevkiyatçının gördüğü
-    // "açılmadı" ile kuryenin gördüğü seçim listesi ayrışamaz. Kapsam AÇIKÇA depo-üstü (11.7):
-    // bu dala yalnız admin ulaşıyor (page guard `requireAdmin`) ve sevkiyat masasının işi tam
-    // olarak bütün ağın gününü görmek — kuryedeki daraltma burada bir kayıp olurdu.
+    // Kuryenin rota seçimiyle aynı kapı ki iki ekran ayrışmasın; kapsam bilerek depo-üstü, çünkü bu masaya yalnız admin ulaşır ve
+    // bütün ağın gününü görür.
     listCourierRoutes(db, { date, scope: { kind: 'all' } }),
   ]);
 
-  /**
-   * Eşikler **rota başına** okunuyor (kullanıcı kararı 17.08) — küresel tek saat DEĞİL.
-   *
-   * Eskiden burada `get('order_cutoff_time', '16:00')` vardı: kapsam bağlamı geçmediği için rotaya
-   * yazılan kesim bu ekranda hiç uygulanmıyordu. Sorgu sayısı rota sayısıyla çarpmaz — anahtar başına
-   * tek sorgu (`readDayHours` künyesi).
-   */
+  // Eşikler rota başına okunur, çünkü rotaya yazılan kesim de uygulanmalı; sorgu anahtar başına tektir.
   const hours = await readDayHours(
     new SettingsService(db),
     zones.map((zone) => zone.id),
   );
 
-  // Rota günü + kargo kuyruğu + askıdakiler tek küme olarak çözülür (müşteri adı, adet, bölge aynı
-  // yoldan geliyor); ayrı ayrı çözmek aynı üç sorguyu üç kez sormak olurdu.
+  // Rota günü, kargo kuyruğu ve askıdakiler tek küme olarak çözülür; ayrı ayrı çözmek aynı sorguları üç kez sormak olurdu.
   const shipping = shippingQueue.filter((order) => order.deliveryType === 'shipping');
   const stranded = strandedPage.rows;
   const extra = [...shipping, ...stranded];
@@ -200,52 +140,37 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
       courierName: order.courierId ? (courierName.get(order.courierId) ?? 'bilinmeyen kurye') : null,
       dueAmountCents: doorDueCents(order),
       outstandingCents: outstandingCents(order),
-      // ADET, satır sayısı değil (16.08 düzeltmesi — `unitCount` künyesi).
+      // Satır sayısı değil adet.
       unitCount: items.filter((item) => item.orderId === order.id).reduce((sum, item) => sum + item.qty, 0),
       carrier: order.carrier,
       trackingNumber: order.trackingNumber,
       zoneId,
       zoneName: zone?.name ?? null,
       warehouseName: zone ? (warehouseName.get(zone.warehouseId) ?? null) : null,
-      /* Kapı doğrulaması SNAPSHOT'tan okunuyor (11.11) — ek sorgu YOK: `addressSnapshot` adres
-         satırının tamamının kopyası, koordinat künyesi ve düzeltme önerisi zaten içinde. */
+      /* Anlık görüntü adres satırının tam kopyası olduğu için kapı doğrulaması ek sorgusuz okunur. */
       doorCheck: doorCheckOf(snapshot),
     };
   });
 
-  // Özet YALNIZ GÜNÜN çıkışlarını sayar. Kargo kuyruğu bir güne ait değil; durak sayacına katsaydı
-  // "bugün kaç çıkış" sorusunun cevabı her gün aynı sayı kadar şişerdi. **Ama kuyruğun EKSİĞİ
-  // (takip numarası yazılmamış paket) künyeye giriyor** (16.08): tasarım §2 onu "gün kapanmadan
-  // görünür bir eksiklik" diye tanımlıyordu, oysa özet susuyor ve eksik yalnız ekranın alt yarısında
-  // görünüyordu. Kargo bir durak DEĞİL — kendi alanında sayılıyor, `stops`'a karışmıyor.
+  // Özet yalnız günün çıkışlarını sayar; kargo kuyruğu bir güne ait değildir ve takip numarasız paketiyle kendi alanında sayılır.
   const dayStops = stops.filter((stop) => dayOrders.some((order) => order.id === stop.orderId));
   const route = dayStops.filter((stop) => stop.deliveryType === 'route');
   const shippingStops = stops.filter((stop) => shipping.some((order) => order.id === stop.orderId));
-  // EN ESKİ ÖNDE: askıda kalmanın ağırlığı süreyle artar. `listPage` `createdAt`e göre sıralıyor —
-  // sipariş sırası burada bir şey söylemiyor, bekleme süresi söylüyor.
-  /**
-   * **Hâlâ müdahale edilebilir duraklar** — engel sayaçlarının kümesi (düzeltme 16.08).
-   *
-   * Sayaçlar bütün günü sayıyordu ve geçmiş günde ekran kendi kendisiyle çelişiyordu: şerit
-   * *"1 sipariş hiçbir rotaya düşmedi"* derken aynı satır **"Teslim"** yazıyordu. Sonuçlanmış bir
-   * durak bir engel değildir — mal gitti, yapılacak bir şey kalmadı. Künye sayaçları (`stops`,
-   * `units`) bütün günü saymaya devam ediyor: onlar günün KİMLİĞİ, engel değil.
-   */
+  // Engel sayaçları yalnız hâlâ müdahale edilebilir durakları sayar: sonuçlanmış durak engel değildir, künye sayaçları bütün günü sayar.
   const open = route.filter((stop) => stop.prep !== 'delivered' && stop.prep !== 'returned');
 
+  // En eski önde: askıda kalmanın ağırlığı süreyle artar.
   const strandedStops = stops
     .filter((stop) => stranded.some((order) => order.id === stop.orderId))
     .sort((a, b) => (a.deliveryDate ?? '').localeCompare(b.deliveryDate ?? ''));
 
-  // Görünüm modeli sözleşmenin aynası: kapının döndürdüğü satır alan alan eşlenir — fazlası
-  // (zoneId'nin run içindeki kopyası gibi) taşınmaz.
-  /* TURUN ÖNİZLEMESİ (11.9) — motorun dizdiği sıra, araç çıkmadan önce görülebilsin diye.
-     Tek turda: seferlerin durakları ve koordinatları `readRunPreviews` içinde toplu okunuyor. */
+  /* Motorun dizdiği sıra araç çıkmadan görülebilsin diye önizleme; seferlerin durakları tek turda okunur. */
   const previews = await readRunPreviews(
     db,
     dayRoutes.flatMap((route) => (route.run ? [route.run.runId] : [])),
   );
 
+  // Satır alan alan eşlenir, fazlası taşınmaz.
   const runs: DispatchRunView[] = dayRoutes.map((route) => ({
     zoneId: route.zoneId,
     zoneName: route.zoneName,
@@ -279,7 +204,7 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
     summary: {
       stops: route.length,
       units: route.reduce((sum, stop) => sum + stop.unitCount, 0),
-      // Sıra okumanın sırası (bölge `sort_order`), alfabetik değil: operatörün dizdiği düzen.
+      // Okumanın sırası (bölge `sort_order`), alfabetik değil: operatörün dizdiği düzen.
       warehouses: [...new Set(route.map((stop) => stop.warehouseName).filter((name) => name !== null))],
       notReadyNames: [
         ...new Set(
@@ -288,8 +213,7 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
             .map((stop) => stop.customerName),
         ),
       ],
-      // Sefer YALNIZ rotada anlamlı: kargonun kuryesi olmaz, taşıyıcısı olur (18.08 — sipariş
-      // başına "atanmadı" sayacının halefi; kurye artık rotayı kendisi alıyor).
+      // Sefer yalnız rotada anlamlı: kargonun kuryesi değil taşıyıcısı olur.
       runless: runs.filter((route) => route.run === null).length,
       zoneless: open.filter((stop) => stop.zoneId === null).length,
       doorCents: dayStops.reduce((sum, stop) => sum + (stop.dueAmountCents ?? 0), 0),
@@ -297,8 +221,7 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
       parcels: shippingStops.length,
       parcelsUntracked: shippingStops.filter((stop) => !stop.trackingNumber).length,
       stranded: strandedStops.length,
-      /* İKİSİ AYRIK sayılıyor: `elsewhere` daha keskin bir bilgi ve kendi satırında duruyor; aynı
-         durağı iki satırda saymak şeridi kendi kendine şişirirdi. `unknown` hiç sayılmaz. */
+      /* İkisi ayrık sayılır: aynı durağı iki satırda saymak özeti şişirirdi; `unknown` hiç sayılmaz. */
       doorElsewhere: open.filter((stop) => stop.doorCheck === 'elsewhere').length,
       doorUnverified: open.filter((stop) => stop.doorCheck === 'unverified').length,
     },
@@ -307,7 +230,7 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
   };
 }
 
-/** Bir rotanın iki eşiği — okumanın `ZoneHours`undan ya da rota yoksa küresel satırdan. */
+/** Rotanın kendi eşiği, yoksa küresel satır. */
 function thresholdsOf(
   zoneId: string | null,
   hours: Awaited<ReturnType<typeof readDayHours>>,
@@ -320,20 +243,8 @@ function thresholdsOf(
 }
 
 /**
- * **Liste kesinleşti mi** (tasarım §2) — ve hangi saatin yazılacağı.
- *
- * Geçmiş gün kesindir; gelecek gün büyümeye açıktır; bugün ise kesime bağlıdır. Bu, ekranın verdiği
- * bir güven duygusudur ve uydurulmaz: **kararı motor veriyor** (`deliveryRunWindow`). Bir dönem
- * burada elle bir saat karşılaştırması vardı ve künyesi *"motorun kesim mantığının aynısı"* diyordu —
- * kopya olduğunu kendisi söylüyordu. Kesim önceki güne sarkabildiği gün (17.08 kuralı) o kopya
- * sessizce yanlışlaşacaktı: aynı-gün varsayımıyla yazılmıştı.
- *
- * **Eşikler rota başına, cevap ise TEK** — ekranın bir tane kesim satırı var. Bu yüzden:
- * · `settled` = HER rota kapandıysa (liste ancak son rota da sipariş almayı bırakınca büyümeyi keser;
- *   en erken kesime bakmak, hâlâ büyüyen bir listeyi "kesin" diye okuturdu)
- * · `time` = EN GEÇ kesim (operatörün beklemesi gereken an)
- *
- * Rota hiç yoksa küresel satır okunur — kargo-yalnız bir günde de ekran bir saat yazabilmeli.
+ * Kararı motor verir (`deliveryRunWindow`). Eşikler rota başına, cevap tek: liste ancak her rota kapanınca kesinleşir ve yazılan
+ * saat en geç kesimdir, çünkü operatörün beklemesi gereken an odur.
  */
 function cutoffView(
   zones: readonly DeliveryZoneWithCodes[],
@@ -347,26 +258,14 @@ function cutoffView(
     (row) => deliveryRunWindow({ deliveryDate: date, now, cutoffTime: row.cutoffTime, prepCutoffTime: row.prepCutoffTime }) !== 'open',
   );
   const time = rows.map((row) => row.cutoffTime).sort((a, b) => b.localeCompare(a))[0]!;
-  /**
-   * Gösterilen SAATİN hangi güne ait olduğu — cümle buna göre kuruluyor.
-   *
-   * Yazılan saat en geç kesim olduğu için, o saatin sahibi rotanın kuralı okunuyor. Rotalar
-   * ayrışıyorsa (biri sarkan, biri değil) cümle en geç olanı anlatır; ekranın tek satırı var ve
-   * operatörün beklemesi gereken an odur.
-   */
+  // Yazılan saatin hangi güne ait olduğu, o saatin sahibi rotanın kuralından okunur.
   const owner = rows.find((row) => row.cutoffTime === time) ?? rows[0]!;
   return { time, settled, isPrevDay: cutoffBelongsToPreviousDay(owner.cutoffTime, owner.prepCutoffTime) };
 }
 
 /**
- * Rota satırlarının sırası — **bölgeye göre, bölgesizler ÖNDE** (16.08).
- *
- * Gruplama kalkıp bölge kolona dönünce sıra bir yerleşim tercihi olmaktan çıktı, bir öncelik kararı
- * oldu: bölgesi çözülemeyen sipariş hiçbir rotaya düşmemiştir, yani araç ona uğramaz. Eskiden bu
- * satırlar *"Bölgesi çözülemedi"* diye SON gruba düşüyordu — en acil olan en altta. Şimdi başta.
- *
- * Bölge içinde sıra okumanın verdiği sıradır (`delivery_zone.sort_order` → operatörün dizdiği sıra);
- * durak sırası DEĞİLDİR ve olmamalı — sistem sırayı bilmiyor (tasarım §6).
+ * Bölgesizler önde: hiçbir rotaya düşmeyen siparişe araç uğramaz, en acil olan odur. Bölge içindeki sıra operatörün dizdiği
+ * sıradır, durak sırası değil.
  */
 function sortByZone(stops: readonly DispatchStopView[], zones: readonly DeliveryZoneWithCodes[]): DispatchStopView[] {
   const rank = new Map(zones.map((zone, index) => [zone.id, index]));
@@ -378,11 +277,7 @@ function sortByZone(stops: readonly DispatchStopView[], zones: readonly Delivery
   });
 }
 
-/**
- * Bir durağın taşınabileceği yaklaşan günler, bölge başına. Serbest tarih seçtirmiyoruz: bölgenin
- * haftalık günü olmayan bir güne taşımak, o gün oraya araç gitmediği için teslim edilemeyecek bir
- * sipariş yaratırdı. Kesim saati de aynı motorda uygulanıyor.
- */
+/** Serbest tarih seçtirilmez: bölgenin haftalık günü olmayan güne taşınan sipariş teslim edilemez. */
 function moveDates(
   zones: readonly DeliveryZoneWithCodes[],
   hours: Awaited<ReturnType<typeof readDayHours>>,
@@ -390,19 +285,13 @@ function moveDates(
 ): Record<string, string[]> {
   const map: Record<string, string[]> = {};
   for (const zone of zones) {
-    // Her rota KENDİ kesimini ve hazırlık kapanışını görüyor: taşınabilecek günler rotanın kendi
-    // penceresinden çıkar, komşusunun penceresinden değil.
+    // Her rota kendi kesim penceresini görür, komşusununkini değil.
     map[zone.id] = upcomingDeliveryDates({ weekdays: zone.weekdays, now, count: 4, ...thresholdsOf(zone.id, hours) });
   }
   return map;
 }
 
-/**
- * Adresin anlık kopyasından bölge KİMLİĞİ — kararı motor veriyor, ekran değil.
- *
- * Bölge nesnesinin tamamı değil yalnız kimliği dönüyor: gruplama zaten bölge listesi üzerinden
- * kuruluyor, nesneyi ikinci kez taşımak aynı kaydın iki kopyasını dolaştırmak olurdu.
- */
+/** Yalnız kimlik döner; bölge nesnesi listede zaten var. */
 function zoneIdOf(snapshot: Record<string, unknown>, zones: readonly DeliveryZoneWithCodes[]): string | null {
   const postalCode = typeof snapshot.postalCode === 'string' ? snapshot.postalCode : null;
   const country = typeof snapshot.country === 'string' ? (snapshot.country as Country) : null;
@@ -410,20 +299,9 @@ function zoneIdOf(snapshot: Record<string, unknown>, zones: readonly DeliveryZon
   return findZoneForPostalCode({ country, postalCode }, zones)?.id ?? null;
 }
 
-// `addressTextOf` SİLİNDİ (16.08) — sevkiyatçının tablosunda açık adres kolonu kalmadı. Adres
-// kuryenin ekranında yaşıyor (`lib/courier/day.ts`, orada navigasyon/arama bağıyla birlikte) ve tam
-// hâli sipariş detayında; burada okunması bir karar üretmiyordu. Snapshot yine okunuyor, ama yalnız
-// BÖLGE çözmek için (`zoneIdOf`).
-
 /**
- * **Turun önizlemesi** (11.9) — sefer başına: depo noktası, durakların koordinatı ve sırası.
- *
- * Sevkiyatçının haritada gördüğü şey bu ve amacı DENETİM: motorun dizdiği tur, araç çıkmadan önce
- * bir insan gözünden geçsin. Kuş uçuşuyla dizilmiş bir rota kâğıt üstünde kusursuz görünüp bariyer
- * (nehir, tek yön) atlayabilir; o hatayı sahadan önce yakalayabilecek tek yer burası.
- *
- * Sırası HESAPLANMAMIŞ sefer `null` döner — harita çizilmez. Boş bir harita çizip "sıra yok" demek,
- * operatöre bakacak bir şey vaat edip vermemek olurdu.
+ * Amaç denetim: kuş uçuşuyla dizilmiş tur nehir ya da tek yön gibi bir engeli atlayabilir ve bunu sahadan önce ancak bir insan
+ * görür. Sırası hesaplanmamış sefer `null` döner, harita çizilmez.
  */
 async function readRunPreviews(db: SupabaseClient, runIds: readonly string[]): Promise<Map<string, StopOrderPreview>> {
   const out = new Map<string, StopOrderPreview>();
@@ -439,9 +317,7 @@ async function readRunPreviews(db: SupabaseClient, runIds: readonly string[]): P
   ]);
   const warehouseById = new Map(warehouses.map((row) => [row.id, row]));
 
-  /* EŞLEME AYRI BİR DOSYADA VE SAF (`dispatch-preview.ts`): burada kalan iş yalnız OKUMA. Ayrımın
-     bedeli bir dosya, kazancı üç kararın DB'siz sınanabilmesi — sıradaki yerin kimlikten türemesi,
-     koordinatsız durağın haritaya girmemesi ve çıpasız deponun uydurulmaması. */
+  /* Eşleme saf ve ayrı dosyada (`dispatch-preview.ts`) ki veritabanısız sınanabilsin; burada yalnız okuma var. */
   for (const run of sequenced) {
     const preview = runPreviewOf({
       run,
