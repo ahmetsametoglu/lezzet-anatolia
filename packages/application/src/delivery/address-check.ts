@@ -6,40 +6,19 @@ import { captureError, SOURCES } from '@lezzet/observability';
 import { geocoder as defaultGeocoder } from './geocode-provider';
 import type { Geocoder } from './geocode-port';
 
-/**
- * **"Bu kapı var mı" kapısı** (11.11) — servise sorar, kararı alır, satıra yazar.
- *
- * ── NE ZAMAN ÇALIŞIR: SİPARİŞ ANINDA, ADRES GİRİŞİNDE DEĞİL ────────────────
- * Kullanıcı kararı (02.09): müşteri on adres ekleyebilir ve her birini kaydederken doğrulamak, hiç
- * kullanılmayacak adresler için servise gitmek olurdu. Hangi adresi seçerse **sipariş anında** o
- * doğrulanır; düzeltme teklifi hem siparişin adresini hem KAYDI düzeltir.
- *
- * ── ENGEL DEĞİL: HER HÂLDE `ok` DÖNER ──────────────────────────────────────
- * Dönüş bir RET değil bir BİLGİDİR. Servis düşerse `unknown` döner ve çağıran hiçbir şey yapmaz —
- * bir dış servisin kesintisi satışı durduramaz (`FAIL-OPEN`, kullanıcı kararı 02.09). Adres defteri
- * de hiçbir hâlde reddetmez (10.08) ve bu kapı o kuralı bozmaz.
- *
- * ── İKİNCİ SORGU YALNIZ GEREKİRSE ──────────────────────────────────────────
- * Kapı ilk turda doğrulandıysa `elsewhere`e hiç çıkılmaz. Bugünkü veride yirmi adresin biri ikinci
- * sorguyu görüyor; yani maliyet sıfıra yakın ve bu bir hız ayarı değil, **servise saygı**.
- */
+/*
+  Kapı doğrulaması adres girişinde değil sipariş anında yapılır: müşterinin kullanmayacağı adresler için servise gidilmesin. Cevap
+  bir ret değil bilgidir; servis düşünce susulur, çünkü dış servisin kesintisi satışı durduramaz.
+*/
 
 export type AddressCheckOutcome =
   | { status: 'confirmed' }
-  /**
-   * Kapı BAŞKA kodda bulundu. `label` EKRANA yazılan metin (servisin kendi yazımı, biz cümle
-   * kurmayız); `postalCode`/`city` ise teklifi UYGULAMAK için — etiketi ayrıştırmak kırılgan olurdu.
-   * Ölçülen vakada değişen tam olarak bu ikili: sokak+numara aynı, kod ve şehir farklı.
-   */
+  /** `label` ekranda gösterilir; teklif uygulanırken `postalCode` ve `city` yazılır, çünkü etiketi ayrıştırmak kırılgan olurdu. */
   | { status: 'wrong_postal_code'; label: string; postalCode: string; city: string }
-  /** Sokak var, kapı hiçbir yerde yok — yeni yapı olabilir; yalnız yumuşak uyarı. */
+  /** Yeni yapı olabilir; yalnız yumuşak uyarı. */
   | { status: 'street_only' }
   | { status: 'not_found' }
-  /**
-   * Sorulamadı: servis düştü, ülke desteklenmiyor, ya da satır okunamadı. **Susulur** —
-   * "doğrulayamadım" ile "adres yanlış" ayrı şeylerdir ve ikincisini söylemek müşteriyi suçlamak
-   * olurdu (`CLAUDE §1`: ölçülemeyen değer sıfır değildir).
-   */
+  /** Sorulamadı; susulur, çünkü "doğrulayamadım" demek "adres yanlış" demek değildir. */
   | { status: 'unknown' };
 
 export async function checkAddress(
@@ -58,13 +37,11 @@ export async function checkAddress(
     if (located.status === 'rate_limited' || located.status === 'unavailable' || located.status === 'invalid_response') {
       return { status: 'unknown' };
     }
-    /* Ülkenin sağlayıcısı yoksa SUSULUR — bugün Almanya bu hâlde. "Doğrulayamadım"ı "adres yanlış"
-       diye göstermek, hakkında hiçbir şey bilmediğimiz bir adresi suçlamak olurdu. */
+    // Ülkenin sağlayıcısı yoksa da susulur.
     if (located.status === 'unsupported_country') return { status: 'unknown' };
 
     const matchedPrecision = located.status === 'ok' ? located.precision : null;
 
-    /* İKİNCİ SORGU YALNIZ GEREKİRSE: kapı zaten doğrulandıysa soracak bir şey yok. */
     const alternatives = matchedPrecision === 'housenumber' ? [] : await elsewhereOf(service, query);
     if (alternatives === null) return { status: 'unknown' };
 
@@ -72,8 +49,7 @@ export async function checkAddress(
     await writeVerdict(addresses, { addressId: row.id, verdict, located });
     return toOutcome(verdict);
   } catch (error) {
-    /* Bağlama KİMLİK yazılır, adres YAZILMAZ (`CLAUDE §1`): `addressId` teşhis için yeter ve o
-       kimlikle veritabanına bakılır. Fırlatmıyoruz — bu kapı satışı durduramaz. */
+    /* Bağlama kimlik yazılır, adres yazılmaz. Fırlatılmaz: bu kapı satışı durduramaz. */
     await captureError(error, {
       source: SOURCES.applicationDelivery,
       context: { flow: 'address_check', addressId: input.addressId },
@@ -82,19 +58,17 @@ export async function checkAddress(
   }
 }
 
-/** Kısıtsız arama; geçici arıza `null` döner ve çağıran SUSAR (boş liste ile karıştırılmaz). */
+/** Geçici arıza `null` döner ki boş aday listesiyle karışmasın. */
 async function elsewhereOf(service: Geocoder, query: Parameters<Geocoder['locate']>[0]) {
   const found = await service.elsewhere(query);
   if (found.status === 'unavailable') return null;
-  // `unsupported_country` burada boş listeyle EŞ: soru soruldu, cevap yok. Kararın kendisi zaten
-  // "aday bulunamadı" dalını doğru işliyor.
+  // `unsupported_country` burada boş listeyle eştir: aday yok.
   return found.status === 'ok' ? found.candidates : [];
 }
 
 /**
- * Kararın satıra yansıması. **Koordinat künyesi de TAZE yazılır**, yalnız etiket değil: az önce
- * ölçtüğümüz bir cevabın yanında bayat bir koordinat bırakmak, satırı kendi içinde çelişkili yapardı
- * — ve `address_geo_alt` kısıtı da tam olarak o çelişkiyi reddediyor.
+ * Koordinat künyesi de taze yazılır: yeni cevabın yanında bayat koordinat satırı çelişkili bırakırdı ve `address_geo_alt` kısıtı
+ * bunu reddeder.
  */
 async function writeVerdict(
   addresses: AddressService,
@@ -108,8 +82,7 @@ async function writeVerdict(
   const alt = input.verdict.kind === 'wrong_postal_code' ? input.verdict.suggestion.label : null;
 
   if (input.located.status === 'no_match') {
-    // Nokta yok: künyenin beş alanı birlikte boşalır (`address_geo_meta`). Sayaç BURADA artmaz —
-    // o taramanın muhasebesi (`nextGeoState`); bu kapı doğrulama yapar, kuyruk yönetmez.
+    // Künyenin beş alanı birlikte boşalır (`address_geo_meta`); deneme sayacı taramanın işi, burada artmaz.
     await addresses.update({
       id: input.addressId,
       lat: null,

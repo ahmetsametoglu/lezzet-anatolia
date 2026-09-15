@@ -25,30 +25,12 @@ import { recordNativeEvent } from '../../lib/analytics';
 import { localeOf } from './cart-view';
 
 /**
- * Yer uçları — onboarding'in "posta kodunuz" adımı (19.8 · 19.16b).
- *
- * **AÇIK KÜME, katalog kararının kendisi** (02-mimari §4: "oturumsuz kullanım = müşteri
- * gezinmesi"): posta kodu GİRİŞTE, hesap açılmadan sorulur — uygulamanın ilk sorusunu Bearer'ın
- * arkasına koymak, vitrini görmek için hesap açtırmak olurdu. Kimliğin bu uçta kişiselleştireceği
- * bir şey de yok: aynı kod herkes için aynı yere düşer. `router.ts`te `bearerAuth`tan ÖNCE bağlanır.
- *
- * ── DEPO KİMLİĞİ ZARFA GİRMEZ (19.9 güvenlik sınırı) ─────────────────────────
- * Çözümün depo ayağı sunucuda kalır; cihaz yalnız CEVABI saklar (`country` + `postalCode` —
- * sözleşmenin yer anahtarı) ve vitrin uçları yeri her istekte yeniden çözer. İstemcinin
- * yazabildiği bir değer hangi deponun stoğunu göstereceğimizi belirleyemez (web çerezinin
- * birebir kuralı, `place-types.ts` künyesi).
- *
- * BU DOSYA KURAL HESAPLAMAZ: belirsizlik/bilinmezlik/rota kararları saf motorda
- * (`resolvePlaceByPostalCode`), girdilerin toplanması `@lezzet/application`da
- * (`resolvePlaceForPostalCode`). Burada yalnız biçim denetimi, sözleşme indirgemesi ve zarf.
+ * Oturumsuz açık uçlar (`bearerAuth`tan önce bağlanır): uygulamanın ilk sorusu posta kodu ve cevabı herkes için aynı. Depo kimliği
+ * zarfa girmez; cihaz yalnız cevabı saklar, vitrin uçları yeri her istekte yeniden çözer.
  */
 export const places = new Hono<AppEnv>();
 
-/**
- * Motor cevabı → sözleşme şekli. `route`/`shipping` tek `resolved` hâline iner ve fark `inRoute`
- * bayrağına çekilir: onboarding'in sorusu "hangi depo" değil "araç mı kargo mu". Seçenek adı
- * motorun TEK kuralından türer (`placeLabel`) — çok yerleşimli kodda ad UYDURULMAZ (19.17).
- */
+/** Rota ve kargo tek `resolved` hâline iner, fark `inRoute`tadır: onboarding'in sorusu depo değil, araç mı kargo mu. */
 function toContract(code: string, resolution: PostalCodeResolution): z.input<typeof PlaceResolutionSchema> {
   switch (resolution.kind) {
     case 'route':
@@ -66,8 +48,7 @@ function toContract(code: string, resolution: PostalCodeResolution): z.input<typ
     case 'ambiguous':
       return {
         kind: 'ambiguous',
-        // Her seçenek saklanabilir bir yer anahtarı taşır (country + normalize kod): istemci
-        // seçileni OLDUĞU GİBİ saklar, sorgudaki ham kodu hatırlamak zorunda kalmaz.
+        // Her seçenek saklanabilir yer anahtarı taşır ki istemci sorgudaki ham kodu hatırlamak zorunda kalmasın.
         options: resolution.candidates.map((candidate) => ({
           country: candidate.country,
           postalCode: code,
@@ -84,13 +65,8 @@ function toContract(code: string, resolution: PostalCodeResolution): z.input<typ
 }
 
 /**
- * `GET /places/by-postal-code?code=67000` — kod nereye düşer.
- *
- * **Biçimsiz kod 400, tanınmayan kod `unknown` — ikisi AYRI şeyler:** "67 000" normalize edilip
- * denenir ama "670" ya da boş sorgu geçerli bir soru bile değildir (400 `invalid_code`); beş
- * haneli ama hiçbir ülkede geçerli olmayan kod ise geçerli bir sorunun geçerli bir CEVABIDIR
- * (`kind: 'unknown'` — büyük olasılıkla yazım hatası, ekran öyle söyler). Karıştırılsalardı
- * "kodu kontrol edin" cümlesi yanlış yerde görünürdü.
+ * Biçimsiz kod geçerli bir soru değildir (400); hiçbir ülkede olmayan beş haneli kod ise geçerli sorunun cevabıdır (`unknown`) ve
+ * ekran ikisine ayrı cümle kurar.
  */
 places.get('/places/by-postal-code', async (c) => {
   const code = normalizePostalCode(c.req.query('code') ?? '');
@@ -99,119 +75,55 @@ places.get('/places/by-postal-code', async (c) => {
   const db = serviceDb();
   const resolution = await resolvePlaceForPostalCode(db, code);
 
-  /* YER KAPISI — HUNİNİN İLK ADIMI (24.08 · MB-63). `ANALYTICS §3`ün cümlesi: *"oturumda yer
-     çözülmeden düşen ziyaretçi en erken ve muhtemelen en büyük kayıptır."*
-
-     BU UÇ SAYILIR, `suggest` SAYILMAZ ve ayrım bu dosyanın kendi künyesinde yazılı: *"öneri bir
-     OKUMA, onay bir NİYET."* Kardeş uç her tuşta çağrılıyor; onu saymak paydayı tuş sayısı kadar
-     şişirirdi.
-
-     ÜLKE BURADA GERÇEKTEN BİLİNİYOR — `ambiguous`/`unknown` dışındaki her çözüm onu taşıyor. Bu,
-     katalog uçlarının `null` geçtiği alanın DOLDUĞU tek yer (`BEKLEYEN(21.103)`).
-
-     DEPO YAZILMAZ: bu uç depo çözmüyor (kardeşi `readPlace` çözüyor) ve ölçüm uğruna ikinci bir
-     tur atmak, henüz kurulmamış bir bağlamı sormak olurdu. */
+  /* Huninin ilk adımı bu uçta sayılır, öneri ucunda sayılmaz: öneri her tuşta çağrılır ve paydayı şişirirdi. Katalog uçlarının
+     `null` geçtiği ülke burada biliniyor (`BEKLEYEN(21.103)`); depo çözülmez, ölçüm için ikinci tur atılmaz. */
   void recordNativeEvent(
     {
       db,
-      // Kanal SORULMUYOR: bu uç oturumsuz gezilen kapıda ve çözüm fiyat taşımıyor. Ziyaretçinin
-      // kanalı B2C'dir; B2B müşterisi de aynı soruyu aynı cevapla alır.
+      // Çözüm fiyat taşımadığı için kanal sorulmaz; B2B müşterisi de aynı cevabı alır.
       channel: 'b2c',
       customerId: await optionalCustomerId(db, c.req.header('authorization')),
       place: UNRESOLVED_PLACE,
-      // Bu uç DİL ALMIYOR ve cevabı dile bağlı değil — uydurulmuş bir dil yazmaktansa boş.
+      // Uç dil almıyor; uydurulmuş dil yerine boş.
       locale: null,
       country: 'country' in resolution ? resolution.country : null,
     },
     { type: 'place_resolved', resolved: resolution.kind === 'route' || resolution.kind === 'shipping' },
   );
 
-  // Sözleşme kilidi + süzgeç (`catalog.ts` emsali): şekil derlemede, fazla alan çalışma zamanında yakalanır.
+  // Şekil derlemede, fazla alan çalışma zamanında yakalanır.
   return ok(c, PlaceResolutionSchema.parse(toContract(code, resolution)));
 });
 
 /**
- * `GET /places/suggest?prefix=672` — adres formunun kod alanı yazarken gösterdiği aday listesi (21.28).
- *
- * ── ÇÖZÜM UCUNUN BİR KİPİ DEĞİL, AYRI BİR KAPI (web emsali) ─────────────────
- * Web'in aynı ayrımı `lib/delivery/actions.ts` künyesinde yazılı: **öneri bir OKUMA, onay bir
- * NİYET.** Orada gerekçe sayaçtı (her tuşlanan kod "bölge dışı talep"e düşerdi); burada sayaç
- * zaten bu yüzeyde yok (`/places/by-postal-code` sayaca dokunmuyor — kardeş ucun künyesi), ama
- * ayrım yine doğru: bu uç LİSTE döner, öteki KARAR. Tek uca sıkıştırılsalardı cevap şekli
- * sorgunun kipine göre değişirdi.
- *
- * Ziyaretçiye açık, kardeşleriyle aynı gerekçe: adres formu doğrulama sonrası profil tamamlama
- * akışında da açılıyor ve orada henüz kimlik yok.
- *
- * Kısa önekte BOŞ liste, 400 değil: "6" geçersiz bir soru değil, henüz hiçbir yeri işaret etmeyen
- * bir sorudur (kapı da aynı eşiği uyguluyor — `searchPrefix` künyesi). `by-postal-code`un
- * `invalid_code` reddiyle karıştırılmamalı: orada TAM bir kod bekleniyor.
+ * Çözüm ucundan ayrı, çünkü bu uç liste, öteki karar döner. Kısa önek geçersiz soru değil henüz hiçbir yeri işaret etmeyen
+ * sorudur: 400 değil boş liste.
  */
 places.get('/places/suggest', async (c) => {
   const rows = await suggestPlaces(serviceDb(), c.req.query('prefix') ?? '');
-  // Sözleşme kilidi + süzgeç (`catalog.ts` emsali): boş dizi geçerli bir cevaptır.
+  // Boş dizi geçerli bir cevaptır.
   return ok(c, PlaceOptionListSchema.parse(rows));
 });
 
 /**
- * `GET /places/zones` — *"soğuk zincir aracımız nerelere gidiyor"* listesi (kullanıcı kararı 10.08).
- *
- * ── ZİYARETÇİYE AÇIK ────────────────────────────────────────────────────────
- * Kardeş uçlarla aynı kümede (`bearerAuth`tan ÖNCE bağlı): soru bölge dışı kalan müşterinin ilk
- * sorusudur ve tam da vazgeçmeye en yakın anda sorulur — cevabın önüne giriş duvarı koymak, "size
- * gelmiyoruz" dedikten sonra "nereye geldiğimizi öğrenmek için hesap açın" demek olurdu. Kimliğin
- * kişiselleştireceği bir şey de yok: araç herkes için aynı yerlere gidiyor.
- *
- * ── DİLSİZ, VE BU BİR EKSİK DEĞİL ───────────────────────────────────────────
- * Kardeşi `POST /places/notice` dili ZORUNLU ister (haber o dilde gidecek); bu uç İSTEMEZ çünkü
- * döndürdüğü şey ÇEVİRİ DEĞİL, ÖZEL ADDIR: "Strasbourg" üç dilde de Strasbourg'dur ve öbek başlığı
- * posta kodu referansının yer adından gelir (`postal_code_place.places[0]`) — çevirisi ne veride var
- * ne olmalı (şehir adını çevirmek onu tanınmaz kılar). Dil parametresi alsaydık cevabı değiştirmeyen
- * bir girdi istemiş, üstelik "bunun çevirisi bir gün gelecek" diye tutulamayacak bir söz vermiş
- * olurduk. Ekranın çevrilen kısmı (başlık, boş liste cümlesi) istemcinin kendi sözlüğünde.
- *
- * KURAL BURADA DEĞİL: süzgeç (aktif bölge), ad çözümü, ülke → yer öbeklemesi ve belirlenimci sıra
- * `@lezzet/application` kapısında (`delivery/zones.ts`). Burada yalnız sözleşme kilidi ve zarf var.
+ * Ziyaretçiye açık: bölge dışı kalan müşterinin vazgeçmeye en yakın andaki sorusu. Dil almaz, çünkü döndürdüğü yer adları özel
+ * addır ve çevrilmez.
  */
 places.get('/places/zones', async (c) => {
   const areas = await listPublicDeliveryAreas(serviceDb());
-  // Sözleşme kilidi (`catalog.ts` emsali): boş dizi geçerli bir cevaptır — okuma düşseydi servis
-  // fırlatır, `app.onError` kaydeder ve zarf hata dönerdi; ekran ikisini karıştırmaz.
+  // Boş dizi geçerli bir cevaptır; okuma düşerse servis fırlatır ve zarf hata döner.
   return ok(c, DeliveryAreaListSchema.parse(areas));
 });
 
 /**
- * `POST /places/notice?locale=fr` — *"buraya da gelin"* kaydı (21.20).
- *
- * ── OTURUMSUZ, ÇÜNKÜ AKIŞ ORADA DOĞUYOR ─────────────────────────────────────
- * Uç `bearerAuth`ın ÖNÜNDE: düğme, müşterinin vazgeçmeye en yakın olduğu anda — bölge dışı
- * cevabının hemen altında — duruyor ve önüne giriş duvarı koymak ikinci bir engel çıkarmaktır
- * (`zone_notice.email` künyesi). Hesap ZORUNLU DEĞİL.
- *
- * ── KİMLİK VARSA SUNUCUDA ÇÖZÜLÜR, GÖVDEDEN ASLA ────────────────────────────
- * Bearer'ı uç KENDİ okur (`optionalCustomerId` — `discover.ts`in kimlik zinciri; token yoksa ya da
- * bayatsa misafir gibi davranılır, 401 hiçbir hâlde dönmez). Girişli müşteride adres PROFİLDEN
- * gelir: gövdeden gelen bir adresi hesabın kaydına yazmak, kaydı hesaba bağlarken adresi başkasına
- * ait yapmaya açık kapı olurdu. **Profilinde e-posta olmayan** müşteride (telefonla açılmış hesap)
- * gövdedeki adrese düşülür — misafirin zaten yapabildiği şeyin fazlası değil, ve tek alternatifi
- * girişli müşteriyi kayıt bırakamaz hâle getirmekti.
- *
- * ── KURAL BURADA DEĞİL ──────────────────────────────────────────────────────
- * Yer doğrulaması, yer adının dondurulması, tekillik ve anonim sayaç `@lezzet/application`ın
- * kapısında (`delivery/notice.ts` → `recordZoneNotice`) — web eyleminin okuduğu kuralın TAM AYNISI.
- * Burada yalnız gövde/sorgu çözümü, kimlik çözümü ve zarf var.
- *
- * ── SAYAÇ BU YÜZEYDE BURADA ARTAR ───────────────────────────────────────────
- * `countDemand: true`: mobilin yer çözümü ucu (`/places/by-postal-code`) sayaca dokunmuyor, yani
- * bu uç mobilin TEK sayım noktası. Web tersi (çözerken sayıyor) — ayrımın ölçümü kapının künyesinde.
+ * Oturumsuz, çünkü düğme bölge dışı cevabının hemen altında durur. Kimlik Bearer'dan çözülür ve girişli müşterinin adresi profilden
+ * gelir; e-postası olmayan hesapta gövdedeki adrese düşülür.
  */
 places.post('/places/notice', async (c) => {
   const body = PlaceNoticeBodySchema.safeParse(await readJsonBody(c));
   if (!body.success) return fail(c, 'invalid_body', 400);
 
-  // Dil ZORUNLU ve varsayılansız — sepet/checkout ailesiyle AYNI okuma (`cart-view.ts` → `localeOf`).
-  // Kayıt hesapsız olabildiği için haber gönderilirken dili çözecek bir profil çoğu zaman YOKTUR:
-  // burada sessizce "bilinmiyor" yazmak, o müşteriye bir gün yanlış dilde mail gitmesi demekti.
+  // Dil zorunlu: kayıt hesapsız olabildiği için haber gönderilirken dili çözecek profil çoğu zaman yoktur.
   const locale = localeOf(c);
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
@@ -226,11 +138,11 @@ places.post('/places/notice', async (c) => {
     customerId,
     locale: locale.data,
     source: body.data.source,
+    // Mobilin tek sayım noktası: yer çözümü ucu sayaca dokunmuyor.
     countDemand: true,
   });
 
-  // Biçim retleri müşteriye ANLATILACAK bir hâl değil, geçersiz bir istektir → 400 (uçtaki yer
-  // çözümüyle aynı anahtar: `invalid_code`). Kalan dördü sözleşmenin hâlleri ve hepsi 200'dür.
+  // Biçim retleri geçersiz istektir (400); kalan dördü sözleşmenin hâlleri ve 200 döner.
   if (outcome === 'postal_code_invalid') return fail(c, 'invalid_code', 400);
   if (outcome === 'email_invalid') return fail(c, 'invalid_email', 400);
 

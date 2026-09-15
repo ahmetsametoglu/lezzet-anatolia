@@ -1,4 +1,4 @@
-// `z` porttan geliyor — SDK tek zod örneği bekliyor (`support-tools.ts` künyesi).
+// `z` porttan gelir: SDK tek zod örneği bekliyor.
 import { z } from '@lezzet/ai';
 import { AddressService, ConversationService, type Db } from '@lezzet/database';
 import { isValidPostalCode, normalizePostalCode } from '@lezzet/helper';
@@ -8,41 +8,14 @@ import type { PlaceWarehouses } from '../catalog/storefront-types';
 import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
 
 /*
-  SOHBETİN TESLİMAT YERİ (15.20 · kullanıcı kararı 10.09) — ajanın araçları "bu adrese gider mi"yi
-  hangi posta koduna göre okur ve o kod sohbette nasıl hatırlanır.
-
-  ── NEDEN (canlı Messenger turu, 10.09) ────────────────────────────────────────
-  Müşteri posta kodu söylemeden baklava ve yaş pasta istedi; ajan ikisini de sepete koydu, toplamı
-  ve "Sepetiniz hazır"ı söyledi — o adrese hizmet verip vermediğimizi ve soğuk zincir ürününün
-  gidip gidemeyeceğini bilmeden. Araçlar "posta kodunu sor" diyordu ama bu bir ricaydı; model başka
-  bir soru sordu. Kural artık araçta: sepete yazan araç yer bilinmeden YAZMAZ (`agent-tools.ts`).
-
-  ── YER DÖRT KAYNAKTAN, BU SIRAYLA — TEK YERDE ─────────────────────────────────
-  (1) bu turda SÖYLENEN kod · (2) sohbette SAKLANAN kod · (3) kayıtlı adres (yalnız kimlik kapısı
-  izin veriyorsa) · (4) hiçbiri. Söylenen öndedir: "annemin evine, 75001'e" diyen müşteride kayıtlı
-  adres yanlış cevabı verirdi. Sıra önceden üç araçta ayrı ayrı yazılıydı (ürün araması, ürün
-  çözümü, sepet); biri bir gün saklanan kodu unutsaydı aynı sohbet iki ayrı yere bakardı.
-
-  ── KOD BİR KEZ SÖYLENİR ────────────────────────────────────────────────────────
-  Söylenen kod `conversation.postal_code`a yazılır; sonraki turlar sormaz. Yalnız GERÇEK bir kod
-  saklanır (referans tablosunda var — hizmet versek de vermesek de). Yazım hatası saklansaydı sohbet
-  yanlış bir yere kilitlenir ve her cevap "oraya gitmiyoruz" derdi.
-
-  ── YER = KOD + ÜLKE (kullanıcı kararı 10.09) ───────────────────────────────────
-  610 kod iki hizmet ülkesinde birden geçerli (yerelde ölçülen örnekler: 01640 · 01990 · 02620) ve
-  ülke bilinmeden depo seçilemez. Eskiden bu kod hiç saklanmıyor, müşteri siteye yollanıyordu — ve
-  bir sonraki tur kodu da bilmediği için posta kodunu YENİDEN soruyordu. Artık kod saklanır, ülke
-  müşteriye sorulur, cevabı `conversation.postal_country`ye yazılır. Kural web'in yer çerezindekiyle
-  aynı (`country` alanı): ülke tahmin edilmez, SEÇİLİR; seçim de kodun geçerli olduğu ülkelerle
-  sınırlıdır (süzgeç — `resolvePlaceForPostalCode`). Tek ülkeli kodda ülke koddan türer ve yine yazılır.
+  Sohbetin yeri bu sırayla okunur: bu turda söylenen kod, sohbette saklanan kod, kimlik kapısı izin veriyorsa kayıtlı adres;
+  söylenen öndedir, çünkü "annemin evine" diyen müşteride kayıtlı adres yanlış cevap verir. Yalnız referansta bulunan kod saklanır,
+  yazım hatası saklansaydı sohbet yanlış yere kilitlenirdi.
 */
 
 const LOG = 'cart/chat-place';
 
-/**
- * Araçların ÜLKE girdisi — yer okuyan yedi araçta aynı tanım (sepet ve ürün araçları, posta kodu
- * kontrolü). Seçenekler ülke sözlüğünden türer; model yalnız müşterinin söylediğini geçer.
- */
+/** Yer okuyan araçların ortak ülke girdisi; model yalnız müşterinin söylediği ülkeyi geçer, tahmin etmez. */
 export const ULKE_GIRDISI = z
   .enum(CountryEnum.options)
   .optional()
@@ -51,16 +24,12 @@ export const ULKE_GIRDISI = z
       'Araç "ulkeBelirsiz" demediyse ve müşteri söylemediyse boş bırak — tahmin etme.',
   );
 
-/** Sohbette hatırlanan yer — iki araç seti aynı turda aynı nesneyi paylaşır. */
+/** İki araç seti aynı turda aynı nesneyi paylaşır. */
 export interface ChatPlaceMemory {
-  /** Sohbette saklanan kod — müşteri daha önce söyledi; yoksa `null`. */
   known(): string | null;
-  /** Saklanan kodun ülkesi — koddan türedi ya da müşteri seçti; kod iki ülkeli ve ülke sorulmadıysa `null`. */
+  /** Kod iki ülkeli ve ülke henüz sorulmadıysa `null`. */
   knownCountry(): Country | null;
-  /**
-   * Müşterinin söylediği kodu (ve söylediyse ülkesini) sohbete yazar — yalnız gerçek bir kodsa. Ülke
-   * bir SEÇİMDİR: kodun geçerli olmadığı ülke yazılmaz, eski yer yerinde kalır.
-   */
+  /** Yalnız gerçek kodu yazar. Ülke bir seçimdir: kodun geçerli olmadığı ülke yazılmaz, eski yer yerinde kalır. */
   remember(postalCode: string, country?: Country): Promise<void>;
 }
 
@@ -73,61 +42,58 @@ export function chatPlaceMemory(db: Db, conversation: Pick<Conversation, 'id' | 
     remember: async (postalCode, country) => {
       const temiz = normalizePostalCode(postalCode);
       if (!isValidPostalCode(temiz)) return;
-      // Aynı kod, yeni bir ülke bilgisi olmadan yeniden söylendi — yazılacak bir şey yok.
       if (temiz === kod && (country === undefined || country === ulke)) return;
       const cozum = await resolvePlaceForPostalCode(db, temiz, country);
-      // Tanınmayan kod (yazım hatası) ya da kodun geçerli olmadığı ülke saklanmaz.
+      // Yazım hatası ya da kodun geçerli olmadığı ülke saklanmaz.
       if (cozum.kind === 'unknown') return;
-      // İki ülkeli kodda ülke henüz yok: kod yine saklanır ki sonraki tur yalnız ÜLKEYİ sorsun, kodu değil.
+      // İki ülkeli kodda da kod saklanır ki sonraki tur yalnız ülkeyi sorsun.
       const yeniUlke = cozum.kind === 'ambiguous' ? null : cozum.country;
       await new ConversationService(db).update({ id: conversation.id, postalCode: temiz, postalCountry: yeniUlke });
       kod = temiz;
       ulke = yeniUlke;
-      // Kod KİŞİSEL bir yer bilgisi — log'a kimlik yazılır, kodun kendisi değil (CLAUDE §1).
+      // Posta kodu kişisel yer bilgisi: log'a kimlik yazılır, kod yazılmaz.
       logger.info({ context: LOG, conversationId: conversation.id }, 'sohbetin posta kodu saklandı');
     },
   };
 }
 
-/** Yerin hâli — araçların neyi söyleyebileceğini ve sepete yazıp yazamayacağını belirler. */
+/** Araçların ne söyleyebileceğini ve sepete yazıp yazamayacağını belirler. */
 export type ChatPlaceState =
-  /** Kod yok — "bu adrese gider mi" okunamaz; sepete yazılmaz, posta kodu sorulur. */
+  /** Sepete yazılmaz, posta kodu sorulur. */
   | 'bilinmiyor'
-  /** Kod söylendi ama böyle bir posta kodu yok (ya da seçilen ülkede yok) — büyük olasılıkla yazım hatası. */
+  /** Böyle bir kod yok ya da seçilen ülkede yok; büyük olasılıkla yazım hatası. */
   | 'gecersiz'
-  /** Kod iki hizmet ülkesinde birden geçerli ve ülke henüz seçilmedi — depo seçilemez, ülke sorulur. */
+  /** İki hizmet ülkesinde geçerli ve ülke seçilmedi: depo seçilemez, ülke sorulur. */
   | 'belirsiz'
-  /** Gerçek kod, ama oraya ne rota ne kargo gidiyor. */
+  /** Gerçek kod ama oraya ne rota ne kargo gidiyor. */
   | 'hizmet-yok'
-  /** Rota ya da kargo deposu çözüldü — "bu adrese gider mi" okunabilir. */
+  /** Rota ya da kargo deposu çözüldü. */
   | 'biliniyor';
 
 export interface ChatPlace {
   kod: string | null;
-  /** Kodun ülkesi — seçilen ya da koddan türeyen; bilinmiyorsa `null`. */
+  /** Seçilen ya da koddan türeyen ülke. */
   ulke: Country | null;
   place: PlaceWarehouses;
   durum: ChatPlaceState;
-  /** Yalnız `belirsiz` hâlde dolu: kodun geçerli olduğu hizmet ülkeleri — müşteriye sorulacak seçenekler. */
+  /** Yalnız `belirsiz` hâlde dolu: müşteriye sorulacak ülkeler. */
   adaylar: readonly Country[];
 }
 
-/** Varsayılan adres, yoksa ilk adres — müşterinin "benim adresim" dediği tek yer. */
+/** Müşterinin "benim adresim" dediği yer: varsayılan, yoksa ilk adres. */
 export function birincilAdres(adresler: Address[]): Address | null {
   return adresler.find((a) => a.isDefault) ?? adresler[0] ?? null;
 }
 
 /**
- * **Sohbetin yeri** — dört kaynaktan, dosya başındaki sırayla. Söylenen kod gerçekse sohbete yazılır;
- * kod söylenmeden gelen ülke saklı koda eklenir (iki ülkeli kodun cevabı). Depo çözülemezse sebebi
- * ayrıca okunur, çünkü müşteriye söylenecek cümle değişiyor: yazım hatası "kodu teyit eder misiniz",
- * iki ülke "hangi ülke", hizmet yok "oraya şu an gitmiyoruz".
+ * Kodsuz gelen ülke saklı koda eklenir; iki ülkeli kodun cevabıdır. Depo çözülemezse sebep ayrıca okunur, çünkü müşteriye
+ * söylenecek cümle her sebepte başka.
  */
 export async function resolveChatPlace(
   db: Db,
   input: {
     said?: string | null;
-    /** Müşterinin söylediği ülke — kodla birlikte ya da tek başına (kod zaten saklıysa) gelebilir. */
+    /** Kodla birlikte ya da kod zaten saklıysa tek başına gelebilir. */
     saidCountry?: Country;
     memory: ChatPlaceMemory | null;
     addressCustomerId: string | null;
@@ -144,8 +110,7 @@ export async function resolveChatPlace(
   const kod = soylenen || saklanan || adres?.postalCode || null;
   if (!kod) return { kod: null, ulke: null, place: UNRESOLVED_PLACE, durum: 'bilinmiyor', adaylar: [] };
 
-  /* Ülke kodla AYNI kaynaktan: söylenen ülke önce; yoksa saklı kodun saklı ülkesi ya da kayıtlı adresin
-     kendi ülkesi. Söylenen kod saklanamadıysa (tanınmadı) eski kodun ülkesi ona UYGULANMAZ. */
+  /* Ülke kodla aynı kaynaktan okunur. Söylenen kod saklanamadıysa eski kodun ülkesi ona uygulanmaz. */
   const ulke =
     input.saidCountry ??
     (kod === saklanan ? (input.memory?.knownCountry() ?? null) : kod === adres?.postalCode ? adres.country : null);
@@ -159,8 +124,8 @@ export async function resolveChatPlace(
 }
 
 /**
- * Yer okunamadıysa modele ne söyleneceği — sepet özetinin ek satırı, sepete yazmanın engeli ve ürün
- * aramasının yer notu buradan (10.09). Anahtar hâlin adıdır; model hangisini gördüğüne göre konuşur.
+ * Sepet özeti, sepete yazma engeli ve ürün araması aynı notu buradan alır; anahtar hâlin adıdır ki model hangisini gördüğüne göre
+ * konuşsun.
  */
 export function yerNotu(yerim: ChatPlace): Record<string, string> {
   switch (yerim.durum) {

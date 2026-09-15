@@ -3,10 +3,8 @@ import type * as AddressModule from '@lezzet/address';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /*
-  TEK ADRES KAPISI (21.313) — ülke yalnız sağlayıcıyı seçer (kullanıcı kararı 14.09). DB'siz ve AĞSIZ:
-  BAN istemcisi taklit, Google anahtarı yok sayılıyor. Sınanan şey dağıtım ve çeviri: Fransa BAN'a
-  KAPI DÜZEYİNDE sorulur ve öneri tam adresle döner; kota `busy`, arıza boş liste; Almanya BAN'a hiç
-  gitmez ve anahtarsızken boş döner (müşteri elle yazar).
+  Ağsız: BAN istemcisi taklit, Google anahtarı yok sayılıyor. Sınanan şey ülkeye göre dağıtım ve cevabın çekmece satırına
+  çevrilmesi.
 */
 
 const ban = vi.hoisted(() => ({ reply: { status: 'unavailable' } as unknown }));

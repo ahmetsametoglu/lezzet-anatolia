@@ -1,16 +1,7 @@
-/**
- * Coğrafi kodlama portu (11.9) — adres metni → nokta. **Arayüz; sağlayıcı sonradan takılır.**
- *
- * Desen `shipping/port.ts` + `shipping/provider.ts` ile birebir aynı (`INTEGRATIONS.md`: *"her dış
- * servis bir agnostik arayüzün arkasında yaşar"*): bu dosya hiçbir sağlayıcı paketini ithal etmez,
- * fabrika (`geocode-provider.ts`) env'i tek yerden okur.
- *
- * ── HİÇBİR YOL FIRLATMAZ, HER BAŞARISIZLIK ADLI ─────────────────────────────
- * `@lezzet/address` BAN istemcisinin disiplini aynen: çağıran (tarama işi) her hâl için ayrı
- * davranıyor ve ayrım kritik — **`no_match` sayacı tüketir, `unavailable` tüketmez.** Servisin
- * düştüğü bir öğleden sonra sayaç tüketilseydi yüzlerce adres kalıcı olarak "çözülemez" damgası
- * yerdi ve kimse bir daha denemezdi.
- */
+/*
+  Adres metninden nokta: sağlayıcı paketi burada değil fabrikada (`geocode-provider`) bağlanır. Her başarısızlık adlıdır, çünkü
+  `no_match` tarama sayacını tüketir, `unavailable` tüketmez; servis düştüğünde yüzlerce adres kalıcı "çözülemez" damgası yemesin.
+*/
 
 import type { AddressGeoPrecision, AddressGeoSource, Country } from '@lezzet/types';
 import type { AddressCandidate, GeoPoint } from '@lezzet/domain-core';
@@ -26,54 +17,41 @@ export type GeocodeOutcome =
   | {
       status: 'ok';
       point: GeoPoint;
-      /** Ölçümün inceliği — `municipality` bir kapıyı değil belediye merkezini gösterir. */
+      /** `municipality` kapıyı değil belediye merkezini gösterir. */
       precision: AddressGeoPrecision;
-      /** Noktayı veren SERVİS — `manual` bu yoldan gelmez: insanın koyduğu nokta bir servis cevabı değil. */
+      /** `manual` bu yoldan gelmez: insanın koyduğu nokta servis cevabı değil. */
       source: Extract<AddressGeoSource, 'ban' | 'google'>;
-      /** Servisin eşleşme güveni (0..1) — eşiğin altındaysa çağıran `no_match` sayar. */
+      /** Servisin eşleşme güveni, 0..1. */
       score: number;
     }
-  /** Servis CEVAPLADI, eşleşme yok → adres muhtemelen hatalı; sayaç artar, seyrek yeniden denenir. */
+  /** Servis cevapladı, eşleşme yok: sayaç artar, seyrek yeniden denenir. */
   | { status: 'no_match' }
   | { status: 'rate_limited'; retryAfterMs: number }
-  /** Geçici: ağ düştü, zaman aşımı, 5xx. **Sayacı TÜKETMEZ.** */
+  /** Geçici; sayacı tüketmez. */
   | { status: 'unavailable' }
-  /** Cevap geldi ama beklenen şekilde değil — sözleşme değişmiş olabilir. */
+  /** Sözleşme değişmiş olabilir. */
   | { status: 'invalid_response' }
   /**
-   * O ülkeye bakan sağlayıcı yok ya da yapılandırılmamış. **Sayacı tüketmez ve tarama o satırları
-   * sonsuza dek denemez** — bugün Almanya bu hâlde (BAN yalnız Fransa). Uydurma bir nokta yazmak
-   * yerine "bilinmiyor" demek doğrudur: koordinatsız durak "sırasız" görünür, yanlış koordinatlı
-   * durak kuryeyi sessizce başka mahalleye dizer.
+   * Sayacı tüketmez ve tarama o satırları boşuna denemez. Uydurma nokta yazılmaz: koordinatsız durak "sırasız" görünür, yanlış
+   * koordinatlı durak kuryeyi başka mahalleye dizer.
    */
   | { status: 'unsupported_country' };
 
 /**
- * KISITSIZ aramanın sonucu (11.11) — *"bu kapı BAŞKA bir posta kodunda mı var"* sorusunun cevabı.
- *
- * `locate`ten ayrı bir metot, çünkü ayrı bir SORU ve ayrı bir MALİYET: `locate` posta kodunu
- * pinleyerek sorar (istenen davranış — başka kodda çıkan sonuç onun aradığı cevap değil), bu ise
- * pini KALDIRIR. Aynı çağrıya sıkıştırılsaydı her adres için iki tur atılırdı; oysa kapı istenen
- * kodda bulunduğunda ikinci soruya hiç gerek yok (bugünkü veride yirmi adresin biri).
- *
- * **Google'da (13.09) ikinci tur YOK:** doğrulama yanlış kodu bağlamdan kendisi düzeltir, yani bu
- * sorunun cevabı `locate`in cevabının içindedir; adaptör aynı cevabı ikinci kez okur
- * (`geocode-provider` künyesi). Pini kaldırmak orada körlüğü açmıyor — bağlamı atıp kör ediyor.
+ * `locate`ten ayrı, çünkü ikinci tur yalnız kapı istenen kodda bulunamadığında atılır. Google'da ikinci tur yoktur: yanlış kodu
+ * doğrulama kendisi düzeltir ve cevap `locate`inkinin içindedir.
  */
 export type GeocodeElsewhere =
   | { status: 'ok'; candidates: AddressCandidate[] }
-  /** Geçici — ağ, zaman aşımı, 5xx. Çağıran SUSAR: "doğrulayamadım" ≠ "adres yanlış". */
+  /** Geçici; çağıran susar. */
   | { status: 'unavailable' }
   | { status: 'unsupported_country' };
 
 export interface Geocoder {
   locate(query: GeocodeQuery): Promise<GeocodeOutcome>;
   /**
-   * Aynı adres, posta kodu PİNLENMEDEN (BAN) ya da servisin düzelttiği hâliyle (Google). Yalnız
-   * `locate` kapıyı doğrulayamadığında çağrılır.
-   *
-   * Kısıtın kendisi doğru ama aynı zamanda bir KÖRLÜK (`geocode-provider` künyesi, ölçüldü 01.09):
-   * kodu pinlediğimiz sürece adresin başka kodda olduğunu öğrenmenin yolu yok.
+   * Aynı adres, posta kodu pinlenmeden (BAN) ya da servisin düzelttiği hâliyle (Google): pinli sorgu adresin başka kodda olduğunu
+   * göremez.
    */
   elsewhere(query: GeocodeQuery): Promise<GeocodeElsewhere>;
 }
