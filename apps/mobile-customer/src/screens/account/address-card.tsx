@@ -6,31 +6,12 @@ import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { MeAddress } from '@/lib/api/addresses';
 import { addressLine } from '@lezzet/address';
 import { addressTitle } from '@/screens/customer-kit/address-format';
-// Yalnız METİN BLOĞUNUN TİPİ için: komponent sözlüğü okumaz, çağıran geçirir.
+// Yalnız metin bloğunun tipi için: komponent sözlüğü okumaz, çağıran geçirir.
 import type accountMessages from '@lezzet/i18n/customer/account';
 
 /*
-  ADRES KARTI — "etiket · rol rozeti · adres satırı · rol eylemi · Düzenle" (v3:859-866).
-
-  ROLÜN ADI "TESLİMAT ADRESİ", "VARSAYILAN" DEĞİL (kullanıcı kararı 08.09): *"varsayılan"* bir
-  MEKANİZMANIN adıdır (bir alanın önceden dolu gelmesi), rolün adı değil. Müşterinin gördüğü şey
-  bir roldür — bu adres siparişte teslimat için önden seçilir. Web hesap sayfası aynı gün aynı
-  kelimeye geçti; iki yüzey aynı rolü iki adla anmamalı. Ödeme ekranının rozeti BİLEREK
-  "varsayılan" kaldı ve web'de de öyle: başlığı zaten "Teslimat adresi" olan bir listede
-  "teslimat adresi" rozeti kendini tekrar ederdi.
-  Veri artık SÖZLEŞMEDEN (`MeAddress`, 21.15) — fixture tipi kalktı; kart, uçların döndürdüğünü çizer.
-
-  METİNLER TEK BLOK HÂLİNDE GEÇER (`copy`): çağıran sözlüğün (`@lezzet/i18n/customer/account`) `addresses`
-  bölümünü okuyor; beş ayrı metin prop'u yerine bloğun kendisi geçince yeni bir metin eklendiğinde
-  imza değişmez. Tip de o bloktan TÜRER, elle yazılmaz.
-
-  ROL EYLEMİ yalnız o rolü TAŞIMAYAN kartta çıkar (şablonun kendi kuralı) — teslimat adresini
-  teslimat adresi yapan bir düğme, basılınca hiçbir şey yapmayan bir düğmedir. Aynısı faturada.
-
-  EYLEM ETİKETİ MOBİLDE KISA ("teslimat adresi yap" · "fatura adresi yap"), web'de cümle
-  ("Teslimat adresim yap"). Ayrım bilinçli: tasarımda eylemler satırda `flex:none` duruyor, yani
-  KISALMIYORLAR — uzayan etiket adres satırını ezer. Ortak olması gereken şey rolün ADI, eylemin
-  cümlesi değil; iki yüzey de "teslimat adresi" ve "fatura adresi" diyor.
+  Rolün adı "teslimat adresi", "varsayılan" değil: varsayılan bir mekanizmanın adıdır, müşterinin gördüğü şey roldür. Rol eylemi
+  yalnız o rolü taşımayan kartta çıkar ve mobilde kısa yazılır, çünkü eylemler kısalmaz ve uzayan etiket adres satırını ezer.
 */
 
 type AddressCopy = LocalizedCopy<typeof accountMessages>['addresses'];
@@ -39,20 +20,15 @@ interface AddressCardProps {
   address: MeAddress;
   copy: AddressCopy;
   onMakeDefault: () => void;
-  /**
-   * **FATURA ADRESİ YAP** (kullanıcı kararı 08.09) — `null` ise bu kart fatura rolünü hiç
-   * göstermez. Bireysel hesapta bu kavramın karşılığı yok ve gösterilmesi, müşteriye cevabı
-   * olmayan bir soru sormak olurdu; ayrım çağıranda (`type === 'company'`).
-   */
+  /** `null` ise kart fatura rolünü göstermez: bireysel hesapta bu kavramın karşılığı yok. */
   onMakeBilling: (() => void) | null;
-  /** Düzenleme kapısı — v3 kartının "Düzenle" ucu; çekmeceyi dolu açar. */
+  /** Çekmeceyi dolu açar. */
   onEdit: () => void;
   testID?: string;
 }
 
 export function AddressCard({ address, copy, onMakeDefault, onMakeBilling, onEdit, testID }: AddressCardProps) {
-  /* İki rol AYRI rozet: bir adres ikisi birden olabilir ve çoğu işletmede öyledir. Tek bir rozete
-     indirseydik ("Varsayılan · Fatura") müşteri hangi rolü kaldırdığını göremezdi. */
+  /* İki rol ayrı rozet: bir adres ikisi birden olabilir ve müşteri hangi rolü kaldırdığını görmeli. */
   const faturaGoster = onMakeBilling !== null;
 
   const eylemler = [
@@ -84,18 +60,8 @@ export function AddressCard({ address, copy, onMakeDefault, onMakeBilling, onEdi
   ].filter((eylem) => eylem !== null);
 
   /*
-    ÜÇÜNCÜ EYLEM SATIRA SIĞMIYOR — KENDİ SATIRINA İNER (cihazda ölçüldü 09.09).
-
-    Tasarımın satırında İKİ eylem var ("varsayılan yap · Düzenle") ve eylemler `flex:none`, yani
-    KISALMIYORLAR — yeri metin bloğu veriyor. Fatura rolü tasarımdan SONRA doğdu ve rolsüz bir
-    adreste eylem sayısı üçe çıkıyor: ölçüldü, adres satırı 111 px'e sıkışıp kelime ortasından
-    bölünüyordu ("12 Quai des Ba / teliers"). Okunmuyordu.
-
-    Bu kusur bugüne kadar GÖRÜNMEDİ çünkü fatura rolünün kapısı ölü bir alana bağlıydı
-    (`account-screen` künyesi) — kapı açılınca ortaya çıktı.
-
-    İki eylemde tasarımın satırı aynen korunur; üçte eylemler metnin ALTINA, sağa yaslı tek şeride
-    iner. Sayıya bakılıyor çünkü kusur sayıdan doğuyor: sığmayan şey üçüncü eylemin genişliği.
+    Eylemler kısalmadığı için üçüncü eylem adres satırını kelime ortasından böler; üç eylemde eylemler metnin altına, sağa yaslı
+    tek şeride iner. İki eylemde tasarımın satırı aynen korunur.
   */
   const tekSatir = eylemler.length <= 2;
 
@@ -115,15 +81,13 @@ export function AddressCard({ address, copy, onMakeDefault, onMakeBilling, onEdi
 }
 
 const styles = StyleSheet.create((theme) => ({
-  /* Kartın KENDİ zemini yok (kullanıcı kararı 09.08): satırlar hesap ekranının adres PANELİNİN
-     içinde yaşıyor ve panel zaten `sand-250` — iki aynı ton üst üste gelince sınır okunmuyordu.
-     Ayrım artık panelin kesikli satır ayracında; kart yalnız satırın kendi düzenini kurar. */
+  /* Kartın kendi zemini yok: panel zaten aynı tonda ve üst üste iki aynı ton sınırı okutmaz; ayrım panelin satır ayracında. */
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.lg,
   },
-  /* Üç eylemli hâl — künyesi komponentin içinde. Metin tam genişlikte, eylemler altında. */
+  /* Üç eylemli hâl: metin tam genişlikte, eylemler altında. */
   cardStacked: { gap: theme.space.md },
   actions: {
     flexDirection: 'row',
@@ -157,9 +121,7 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.space.md,
     overflow: 'hidden',
   },
-  /* FATURA ROZETİ AYRI TONDA — aynı tonu paylaşsalardı yan yana duran iki rozet tek bir şey gibi
-     okunurdu. Zeytin "teslimat", kum "künye": renk ayrımı rolün ayrımını taşıyor, ama etiket de
-     yazılı (renk tek başına anlam taşımaz). */
+  /* Fatura rozeti ayrı tonda, yoksa yan yana iki rozet tek şey gibi okunurdu; etiket de yazılı, çünkü renk tek başına anlam taşımaz. */
   billingBadge: {
     fontFamily: theme.font.body[theme.text['field-label--font-weight']],
     fontSize: theme.text.eyebrow,

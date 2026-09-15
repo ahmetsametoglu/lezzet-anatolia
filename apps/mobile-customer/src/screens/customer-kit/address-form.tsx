@@ -35,53 +35,17 @@ import { useAddressLookup } from './use-address-lookup.hook';
 import { useDoorCodes } from './use-door-codes.hook';
 
 /*
-  ADRES FORMU — Musteri Mobil `shAddr` çekmecesinin gövdesi (21.313; kullanıcı kararı 13.09:
-  *"yeni adres ekleme formunu olabildiğince tasarımda bire bir yapmaya çalışalım"*). Web'in v1 adres
-  penceresiyle AYNI akış ve AYNI metin (`@lezzet/i18n/customer/address`); görünüm kitin parçalarıyla.
-
-  ── AKIŞ (tasarımın sırası) ────────────────────────────────────────────────
-  ülke (Fransa | Almanya — ÖNCE ülke) → tek arama alanı → öneri listesi (iğne · sokak · "kod şehir" ·
-  teslim rozeti) → seçilince "Adres doğrulandı" kartı ve teslim satırı; öneri yoksa "bulamadık" (ya da
-  numarasız yazıda "kapı numarasını da yazın") → "Adresi elle gireyim" → elle giriş kartı → "Bu adres
-  ne?" (Ev · İş · Diğer + ad) → kapı / daire → alıcı → telefon → "Adresi kaydet ve seç".
-
-  ── TEK KAPI (kullanıcı kararı 14.09) ──────────────────────────────────────
-  Öneri ve seçim ülkeden bağımsız tek kapıdan gelir (`use-address-lookup.hook` → `/me/addresses/lookup`);
-  sağlayıcıyı (FR BAN · DE Google) sunucu seçer. Formda ülkeye göre dallanan tek şey metin: yer tutucu ve
-  künye (BAN'ın lisans cümlesi, Google'ın zorunlu logosu).
-
-  ── DOĞRULAMA İKİ YOLDAN ───────────────────────────────────────────────────
-  Öneriden seçilen adres kaynağında doğrulanmıştır ve noktasıyla (kaynağıyla) gelir. Elle girilen adres
-  kaydetmeden ÖNCE aynı kapıdan doğrulanır (`locateAddress` → `geocoder().locate`); bulunamazsa yine
-  kaydedilir, noktasını tarama arar — adres defteri hiçbir hâlde reddetmez (kullanıcı kararı 10.08).
-  Düzenlemede kayıtlı satır ELLE GİRİŞ kartında açılır: kaynağında doğrulandığını o an bilmiyoruz.
-
-  ── KAYDETMEK = SEÇMEK ─────────────────────────────────────────────────────
-  Yeni adres kaydedilince teslimat adresi olarak seçilir ve bildirim bunu söyler (tasarım "Adresi
-  kaydet ve seç"). Seçim ortak depoya yazılır — hesap, sepet ve ödeme aynı adresi okur; üç çağıranın
-  ayrı ayrı seçmesi gerekmez.
-
-  ── TASARIMDAN BİLİNÇLİ FARKLAR (veri) ─────────────────────────────────────
-  · Alıcı adı ve telefon VAR (kullanıcı kararı 22.08 — adresin zorunlu alanları; yeni adreste hesabın
-    künyesiyle dolu açılır).
-  · "Kuryeye not" YOK: adres tablosunda kolonu yok (web'in aynı kararı).
-  · "67 ile başlayan posta kodları bölgemizdedir" cümlesi YOK (kullanıcı kararı 11.08: genellenmiş ve
-    yanlıştı — aktif kodlar tek tek; cevap her adres için teslim satırında GERÇEK veriden).
-  · Teslim satırında gün YOK: native yer sözleşmesi tarih taşımıyor (web'in tarihsiz cümlesi).
-  · "Diğer"in adı zorunlu değil (web ile aynı): etiketsiz eski adres düzenlenirken kilitlenmesin; ad
-    yoksa ekranlar şehri başlık yapar.
+  Web adres penceresiyle aynı akış ve metin; öneri ve seçim ülkeden bağımsız tek kapıdan gelir, sağlayıcıyı sunucu seçer. Elle
+  girilen adres kaydetmeden önce doğrulanır, bulunamazsa yine kaydedilir ve noktasını tarama arar, çünkü defter hiçbir adresi reddetmez.
 */
 
-/**
- * Hesabın künyesinden yeni adresin varsayılanı — kural ortak yardımcıda (web adres penceresiyle aynı,
- * 21.313); dört çağıran (hesap, sepet, ödeme, profil tamamlama) onu buradan okumaya devam ediyor.
- */
+/** Kural ortak adres paketinde; dört çağıran onu buradan okumaya devam eder. */
 export { addressDefaultsOf } from '@lezzet/address';
 
 type AddressCopy = LocalizedCopy<typeof addressCopy>;
 type PlaceCopy = LocalizedCopy<typeof placeCopy>;
 
-/** Beş hane, yalnız rakam — FR ve DE'de ortak biçim (form kapısı; asıl kural sunucuda). */
+/** FR ve DE'de ortak beş hane; form kapısıdır, asıl kural sunucuda. */
 const POSTAL_CODE = /^\d{5}$/;
 
 /** Google künye görselinin kendi oranı (98×18'lik logonun 3 katı: 294×54 piksel). */
@@ -90,24 +54,15 @@ const GOOGLE_LOGO_RATIO = 294 / 54;
 interface AddressFormProps {
   /** Düzenlenen adres; `null` = yeni adres (silme bağlantısı da yalnız düzenlemede çıkar). */
   editing: MeAddress | null;
-  /**
-   * Yazımdan ÖNCEKİ liste. YENİ adresin kimliği bununla FARKTAN çözülür: uçlar tek tek adres değil
-   * güncel LİSTE döndürüyor, çağıran ise yeni adresi hemen seçmek zorunda.
-   */
+  /** Yeni adresin kimliği bu listeyle farktan çözülür: uçlar tek adres değil güncel listeyi döndürür. */
   addresses: MeAddress[];
-  /** Yazım başarılı. `addresses` uçtan dönen GÜNCEL liste; `savedId` kaydedilen adres — SİLMEDE `null`. */
+  /** `addresses` uçtan dönen güncel liste; `savedId` silmede `null`. */
   onSaved: (addresses: MeAddress[], savedId: string | null) => void;
   /** Kaydet düğmesinin metni; verilmezse "Adresi kaydet ve seç" (düzenlemede "Adresi kaydet"). */
   saveLabel?: string;
-  /**
-   * Form ekranda mı — kapanma animasyonu boyunca ayakta duran çekmece `false` geçer ve öneri sorgusu
-   * ağa çıkmaz (görünmeyen bir formun sorusunun cevabı da görünmez).
-   */
+  /** Kapanma animasyonu boyunca ayakta duran çekmece `false` geçer; görünmeyen formun sorgusu ağa çıkmaz. */
   active?: boolean;
-  /**
-   * YENİ adreste teslim alacak kişi ve numaranın varsayılanı — hesabın künyesi (22.08). Prop, çünkü
-   * dört çağıran profili ZATEN okuyor ve formu oturuma bağlamak onu test edilemez kılardı.
-   */
+  /** Prop, çünkü dört çağıran profili zaten okuyor ve formu oturuma bağlamak onu test edilemez kılardı. */
   defaults?: { recipient: string; phone: string };
 }
 
@@ -143,11 +98,10 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
   const [kind, setKind] = useState<AddressLabelKind>(start.kind);
   const [custom, setCustom] = useState(start.custom);
   const [line2, setLine2] = useState(editing?.line2 ?? '');
-  /* ALICI VE NUMARA: `null` = "MÜŞTERİ DOKUNMADI". Görünen değer o hâlde hesabınkine düşer; müşteri
-     yazdığı an dize olur ve yedek devreden çıkar. Efektle doldurulmuyor: çekmece `/me` cevabından ÖNCE
-     açılabiliyor — efekt ya alanı boş gösterir ya da müşterinin o arada yazdığını ezerdi. */
+  /* `null` "müşteri dokunmadı" demektir ve görünen değer hesabınkine düşer. Efektle doldurulmaz: çekmece `/me` cevabından önce
+     açılabilir ve efekt müşterinin o arada yazdığını ezerdi. */
   const [recipientDraft, setRecipient] = useState<string | null>(editing?.recipient ?? null);
-  // Numara ÜLKE İÇİ yazımla gösterilir; ülke kodu seçili ülkeden gelir ve kayıtta birleştirilir.
+  // Numara ülke içi yazımla gösterilir; ülke kodu seçili ülkeden gelir ve kayıtta birleştirilir.
   const [phoneDraft, setPhone] = useState<string | null>(editing === null ? null : nationalPhone(editing.phone, editing.country));
   /** Google'ın ücret oturumu: yazma boyunca aynı, seçimle biter. BAN kullanmaz. */
   const [sessionToken, setSessionToken] = useState(randomKey);
@@ -161,8 +115,7 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
   // "Bulamadık" yalnız cevap BU sorgu için geldiyse — yoksa yazarken kutu yanıp sönerdi.
   const notFound =
     searchOn && manual === null && term.length >= MIN_QUERY_LENGTH && found.term === term && found.options.length === 0 && !found.busy;
-  /* Yazılanda KAPI NUMARASI yok: öneriler yalnız kapı düzeyinde (kullanıcı kararı 14.09) ve numarasız
-     sokak sıfır sonuç verir — "bulamadık" demek var olan bir sokağı yok saymak olurdu. */
+  /* Öneriler yalnız kapı düzeyinde olduğundan numarasız sokak sonuç vermez; "bulamadık" demek var olan sokağı yok saymak olurdu. */
   const lacksDoor = !hasHouseNumber(term);
 
   const recipient = recipientDraft ?? defaults?.recipient ?? '';
@@ -170,7 +123,7 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
   const label = kind === 'home' ? t.kindHome : kind === 'work' ? t.kindWork : custom.trim() || null;
   const manualReady =
     manual !== null && manual.line1.trim() !== '' && POSTAL_CODE.test(manual.postalCode) && manual.city.trim() !== '';
-  // Alıcı ve telefon olmadan kurye kapıya gidemez; sokak ve kod olmadan adres adres değildir (22.08).
+  // Alıcı ve telefon olmadan kurye kapıya gidemez; sokak ve kod olmadan adres adres değildir.
   const complete = (picked !== null || manualReady) && recipient.trim() !== '' && phone.trim() !== '';
 
   const choose = (address: LookupAddress): void => {
@@ -460,7 +413,7 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
         content="addressLine2"
         testID="address-line2"
       />
-      {/* Tasarımın "Kuryeye not" yuvasında alıcı ve telefon (künye: veri farkları). */}
+      {/* Kurye notu için kolon yok; o yuvada alıcı ve telefon durur. */}
       <TextField
         value={recipient}
         onChangeText={setRecipient}
@@ -533,7 +486,7 @@ const styles = StyleSheet.create((theme) => ({
     borderColor: theme.colors['sand-200'],
     backgroundColor: theme.colors.card,
   },
-  /* Posta kodu dar sabit sütun + şehir kalan genişlik (eski çekmecenin ölçüsü, v3:206-209 — zip 120px). */
+  /* Posta kodu dar sabit sütun, şehir kalan genişlik. */
   zipRow: {
     flexDirection: 'row',
     gap: theme.space.md,
@@ -569,7 +522,7 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: theme.text.note,
     color: theme.colors.body,
   },
-  /** Teslim satırı — kartın içinde kum zeminli şerit (tasarım `teslimYazi`). */
+  /** Teslim satırı: kartın içinde kum zeminli bant (tasarım `teslimYazi`). */
   delivery: {
     marginTop: theme.space['2xs'],
     paddingHorizontal: theme.space.lg,

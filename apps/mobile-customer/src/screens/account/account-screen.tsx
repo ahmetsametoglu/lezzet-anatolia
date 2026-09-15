@@ -45,30 +45,8 @@ import { usePoints } from './use-points.hook';
 import messages from '@lezzet/i18n/customer/account';
 
 /*
-  HESABIM (v3 `vHesap`) — profil, profesyonel künye, puanlar, referans kodu, menü, adresler,
-  dil tercihi, kampanya iletişimi, veri notu ve çıkış.
-
-  ── UI-ONLY (21.14 ilk etap) ────────────────────────────────────────────────
-  `/api/v1/me` sözleşmesi VAR ama bu ekran ona BAĞLANMADI (görevin açık kısıtı); veri fixture'dan
-  ve tercihler ekranın kendi durumunda yaşıyor — anahtarlar, dil seçimi ve puan çevirme GERÇEKTEN
-  çalışıyor, yalnız kalıcı değiller. Bağlanma günü değişecek olan okuma ve üç yazma çağrısıdır.
-
-  ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────
-  1. **Profil ve adres düzenleme AYRI SAYFADA** (`/account/edit`, 21.14 ikinci dilim). Şablon
-     ikisini de yüzen sayfada açıyor; gerekçe o ekranın künyesinde. Buradaki üç giriş (profil
-     "Düzenle", adres "Düzenle", "＋ Yeni adres ekle") artık oraya gider — ilk etapta doğrulama
-     kapısına bağlıydılar.
-  2. **Dil seçimi kitin `Chip`i ile.** Şablon üç eşit genişlikte kutu çiziyor; kitte tam bu rolde
-     bir öğe var (seçili/boş çip) ve ikinci bir seçim kutusu türü açmak kitin sözlüğünü büyütürdü.
-  3. **Dil listesi `LOCALES`ten türer**, elle yazılmaz: yeni bir dil açıldığında bu ekran
-     kendiliğinden öğrenir (CLAUDE §1). Seçim UYGULAMANIN DİLİNİ ANINDA DEĞİŞTİRİR (kullanıcı
-     kararı 09.08): çipler `useAppLocale()`i gösterir — yani ekranda okunan dilin kendisini.
-     Girişli kullanıcıda o değer ZATEN profilden gelir (`/me`.preferredLanguage, `use-me.hook`
-     uygular), o yüzden çip ile kart hiçbir zaman ayrışmaz; ekran ayrıca `data.preferredLanguage`
-     TAŞIMAZ (ikinci yol = ayrışma kapısı). Değişiklik önce yerele, sonra `PATCH /me/preferences`e
-     gider — dil bir görünüm ayarı değil, müşteriyle yazışma dilidir (zincir: `lib/i18n/app-locale`).
-  4. **Puan çevirme eşiğin altında ENGELLİ**, şablonda ise basılınca hiçbir şey olmuyor. Engelli
-     düğme + eksik puan satırı, kuralı basmadan önce söylüyor.
+  Profil, künye, puanlar, davet, adresler, dil ve izinler tek ekranda; profil ve adres düzenleme bu ekranın çekmecelerinde açılır.
+  Dil seçimi uygulamanın dilini anında değiştirir ve profile yazılır, çünkü dil yazışmanın dilidir.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -77,25 +55,9 @@ interface AccountScreenProps {
   data?: AccountData;
   /** Oturum durumu — misafirde doğrulama kapısı çıkar. */
   signedIn?: boolean;
-  /**
-   * Aşağı çekildiğinde KİMLİĞİ tazeleyen kapı (21.29c). Ekran `/me`yi kendi okumaz; rota okur ve
-   * `data` olarak verir, o yüzden tazeleme de rotanın elinde. Verilmezse yenileme yalnız puan ve
-   * adresleri kapsar — testlerin ve demo hâllerinin çağırdığı yol.
-   */
+  /** Ekran `/me`yi kendi okumaz, rota okur; bu yüzden kimliği tazeleyen kapı da rotanın elinde. */
   onRefreshIdentity?: () => void;
-  /**
-   * ONAYLI ŞİRKET HESABI MI — fatura adresi rolünün TEK ölçütü (kullanıcı kararı 08.09).
-   *
-   * ── NEDEN `data.company` DEĞİL (ölçüldü 09.09, cihazda) ─────────────────────
-   * Rol ilk yazıldığında ölçüt `data.company !== null`du ve o kapı UYGULAMADA HİÇ AÇILMIYOR:
-   * `company` künyesinin (ad · SIRET · KDV) okuma ucu yok, rota onu SABİT `null` geçiyor
-   * (`(tabs)/account.tsx`). Yani fatura rozeti ve "fatura adresi yap" eylemi yazıldıkları günden
-   * beri çizilemiyordu; testler geçiyordu çünkü `company`yi prop'tan enjekte ediyorlar.
-   *
-   * Doğrusu ikisini AYIRMAK: künye KARTI gerçekten bir uca muhtaç, ama rolün sorduğu soru yalnız
-   * "bu hesap şirket mi" ve cevabı `/me` ZATEN taşıyor (`type`). `type: 'company'` B2B ONAY
-   * anında yazılıyor (`application/customer/b2b.ts`), yani onaylanmamış başvuru bu kapıyı açmaz.
-   */
+  /** Fatura adresi rolünün tek ölçütü `/me`nin `type`ı; `company` künyesinin okuma ucu yok ve rota onu `null` geçiyor. */
   companyAccount?: boolean;
 }
 
@@ -110,17 +72,11 @@ export function AccountScreen({
   const { theme } = useUnistyles();
   const router = useRouter();
 
-  /* DİL + KAMPANYA İZİNLERİ GERÇEK (21.16): başlangıç değeri profilden gelir (`/me`), değişim
-     anında `PATCH /me/preferences`e gider ve dönen profil yayınlanır (`publishMe` — vitrin
-     selamlaması ve kart aynı anda döner). İYİMSER yazım: anahtar hemen kayar, ret gelirse
-     ESKİ değere döner ve satır altında söylenir — kaydedilmemiş bir seçimi kaydedilmiş
-     göstermek, kullanıcıya olmayan bir izni vermiş gibi okutur. */
+  /* Dil ve kampanya izinleri iyimser yazılır: anahtar hemen kayar, ret gelirse eski değere döner ve satır altında söylenir, çünkü
+     kaydedilmemiş seçimi kaydedilmiş göstermek olmayan bir izni vermiş gibi okutur. */
   const [prefsFailed, setPrefsFailed] = useState(false);
 
-  /* Yenileme halkasının durumu (21.29c). BURADA, ekranın en üstünde: aşağıda misafir/boş hâller
-     için erken `return`lar var ve hook'un onların ALTINDA kalması render'lar arasında hook sayısını
-     değiştiriyordu — cihazda ölçüldü (11.08): *"Rendered more hooks than during the previous
-     render"*. Hook'lar koşulsuz ve en üstte durur; kullanıldığı yerin yakınında değil. */
+  /* Hook'lar koşulsuz ve en üstte durur: aşağıdaki erken `return`ların altında kalsalar render'lar arasında hook sayısı değişirdi. */
   const [refreshing, setRefreshing] = useState(false);
 
   const savePreference = (patch: { preferredLanguage?: Locale; marketingConsent?: Record<string, boolean> }, revert: () => void) => {
@@ -135,35 +91,15 @@ export function AccountScreen({
     });
   };
 
-  /* Davet paylaşımı — v3 iki satırlık ÖZEL çekmece çiziyor (WhatsApp · bağlantıyı kopyala);
-     native'de karşılığı SİSTEM paylaşım sayfasıdır ve ikisini de zaten içerir (üstelik müşterinin
-     kendi seçtiği uygulamayı). Kendi çekmecemizi çizmek panoya kopyalama için ikinci bir paket
-     (rebuild) isterdi ve sistemin seçeneklerini daraltırdı — sapma bilinçli. */
-  /* PAYLAŞILAN ŞEY KOD DEĞİL BAĞLANTIDIR (21.43). Eskiden mesaja çıplak kod yazılıyordu
-     ("Davet kodum: AB12CD34") ve o kodun girilebileceği bir yer HİÇBİR ekranda yoktu — davetli
-     kodu eline alıp yapacak bir şey bulamıyordu, zincir orada kopuyordu. Kullanıcı kararı 11.08:
-     *"kod göndermek gibi bir yöntem istemiyorum, her hâlükârda link gönderilsin"*.
-
-     ADRESİ EKRAN KURMAZ, SUNUCU VERİR (`wallet.inviteUrl`): rota adı üç dilde ayrı ve web'de
-     yaşıyor; burada birleştirilseydi bir gün 404'e düşen ikinci bir bağlantı taşırdık. */
+  /* Davet sistem paylaşım sayfasıyla paylaşılır; kendi çekmecemiz ikinci bir paket ister ve müşterinin seçeneklerini daraltırdı.
+     Paylaşılan şey kod değil sunucunun verdiği bağlantıdır, çünkü kodun girilebileceği bir ekran yok. */
   const shareReferral = () => {
     if (wallet?.inviteUrl == null) return;
     void Share.share({ message: t.referral.shareMessage.replace('{url}', wallet.inviteUrl) });
   };
 
-  /* PUAN KAZANMA YOLLARININ DÜĞMELERİ — liste, ikonlar ve metinler artık KİTTE
-     (`customer-kit/points-earn-list.tsx`, kullanıcı kararı 12.08); burada kalan tek şey "bu
-     yüzeyde bu satıra basınca nereye gidilir" sorusunun cevabı, çünkü hedefler ekranın kendi
-     gezinme ağacına ait.
-
-     `Partial` ve bu bilinçli: `visit` kendiliğinden yazılır, `feedback_purchase` zaten teslim
-     edilmiş siparişin ekranında yapılır — ikisi de müşterinin gidebileceği bir yere işaret etmez
-     ve düğme koymak basınca hiçbir şey olmayan bir yüzey demekti. Tanımadığı anahtar sessizce
-     düşer: kit satırı düğmesiz çizer, çökmez.
-
-     (Tarihçe: burada eskiden `discovery` yazıyordu, uç ise `feedback_candidate` gönderiyordu ve
-     keşif satırı hiç ÇİZİLMİYORDU — ölçüldü 09.08. Sözlük o günden beri `MePointsEarnWayKey`e
-     bağlı; ekrana özel ikinci bir ad açmak sözlüğü ayrıştırır.) */
+  /* Liste kitte; burada yalnız bu yüzeyde hangi satırın nereye gittiği var. `Partial`: kendiliğinden yazılan ya da başka ekranda
+     yapılan yol düğmesiz kalır, tanınmayan anahtar sessizce düşer. */
   const earnActions: PointsEarnActions = {
     referral: shareReferral,
     neighbor: () => router.push('/orders'),
@@ -171,10 +107,7 @@ export function AccountScreen({
     feedback_candidate: () => router.push('/discover'),
   };
 
-  /* Dil seçimi ÖNCE yerele (anında, tüm ekranlar), SONRA karta (`PATCH /me/preferences` — asıl
-     kaynak orası; dil yazışmanın dilidir). Başarıda dönen profil `publishMe` ile yayınlanır ve
-     aynı değeri geri uygular (sıçrama yok); RET gelirse arayüz de eski dile döner —
-     kaydedilmemiş bir seçimi kaydedilmiş göstermek, izinlerdeki hükümle aynı sebeple yasak. */
+  /* Dil önce yerelde anında, sonra profilde değişir; ret gelirse arayüz de eski dile döner. */
   const pickLanguage = (next: Locale) => {
     const previous = locale;
     void setAppLocale(next);
@@ -187,8 +120,7 @@ export function AccountScreen({
     savePreference({ marketingConsent: { [channel]: next } }, () => apply(!next));
   };
 
-  /* Yazı boyutu (kullanıcı kararı 09.08) — cihaz ayarı, hesaptan bağımsız GERÇEK: açılışta
-     kayıtlı seçim okunur, seçim anında uygulanıp saklanır (onboarding'in aynı deposu). */
+  /* Yazı boyutu hesaptan bağımsız cihaz ayarıdır: açılışta okunur, seçim anında uygulanıp saklanır. */
   const [fontScale, setFontScale] = useState<FontScale>('normal');
   useEffect(() => {
     void readFontScale().then(setFontScale);
@@ -199,27 +131,21 @@ export function AccountScreen({
   };
   const [marketingEmail, setMarketingEmail] = useState(data.marketingEmail);
   const [marketingWhatsApp, setMarketingWhatsApp] = useState(data.marketingWhatsApp);
-  /* PUAN CÜZDANI GERÇEK (21.17): bakiye · eşik · kuponlar uçtan. Kartın çizilme koşulu tek
-     yerde — `wallet` null ise (B2B ya da düşen okuma) bölüm hiç görünmez. */
+  /* `wallet` `null` ise (B2B ya da düşen okuma) puan bölümü hiç görünmez. */
   const pointsWallet = usePoints(signedIn);
   const wallet = pointsWallet.view?.points ?? null;
   const coupons = pointsWallet.view?.coupons ?? [];
   const [redeeming, setRedeeming] = useState(false);
   const [redeemFailed, setRedeemFailed] = useState(false);
-  /* "Nasıl puan kazanılır" çekmecesi (kullanıcı isteği 12.08) — kartın merak sorusuna cevabı. */
+  /* "Nasıl puan kazanılır" çekmecesi: kartın merak sorusuna cevabı. */
   const [earnSheetOpen, setEarnSheetOpen] = useState(false);
 
-  /* Hesabı silme çekmecesi (GDPR md. 17 · App Store 5.1.1(v)) — iki adım, gerekçesi çekmecenin
-     kendi künyesinde. `deleting` düğmeyi kilitler: `anonymize` idempotent ama ikinci çağrı
-     silinmiş bir profili arayıp 404 döner ve müşteri "olmadı" sanır. */
+  /* `deleting` düğmeyi kilitler: `anonymize` tekrarlanabilir ama ikinci çağrı silinmiş profili bulamaz ve müşteri "olmadı" sanır. */
   const [deleteSheetOpen, setDeleteSheetOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteFailed, setDeleteFailed] = useState(false);
 
-  /* Profil çekmecesi (v3 `shPf`) — GERÇEK kayıt (21.14c): taslak alanlar açılışta karttan dolar,
-     Kaydet `PATCH /me`ye gider; başarı `publishMe` ile yayınlanır (kart ve vitrin selamlaması
-     aynı anda döner), adlı retler (`name_required` · `phone_invalid`) cümleye
-     çevrilip çekmecede söylenir. */
+  /* Profil çekmecesi gerçek kayıt yapar; adlı retler cümleye çevrilip çekmecede söylenir. */
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [draftName, setDraftName] = useState('');
   const [draftPhone, setDraftPhone] = useState('');
@@ -227,23 +153,11 @@ export function AccountScreen({
   const [profileError, setProfileError] = useState<string | null>(null);
 
   /*
-    KART ADSIZ KALMAZ — ama yedeğe düştüğünü BİLİR (MB-66). `name` rotadan olduğu gibi geliyor
-    (boşsa boş), yedek burada seçiliyor. Karar tek yerde durduğu için taslak da onu okuyor —
-    eskiden `data.name === data.email` karşılaştırmasıyla yedeğe düşüldüğü TAHMİN ediliyordu;
-    adı e-postasıyla aynı olan bir hesapta o tahmin yanlış cevap verirdi.
-
-    YEDEK E-POSTAYI BÜYÜK YUVAYA YAZMAZ (MB-73, cihazda görüldü 18.08). İlk hâl e-postayı ad
-    satırına koyuyordu ve uzun adres başlık boyunda ortadan bölünüyordu:
-    *"yamansehzade@gmail"* / *".com"*. Kırılma tesadüf değil — o yuva KISA BİR AD için ayrılmış
-    (şablon oraya hep bir ad koyuyor), e-posta ise sığmadığı için ilk yasal kırılma noktasından,
-    alan adının ortasından bölünüyor.
-
-    Doğrusu rolleri yerine oturtmak: büyük satır ya adı söyler ya adın eksik olduğunu; e-postanın
-    yeri zaten künye satırıdır ve orada tam hâliyle okunur. Yan kazanç, kod da sadeleşti — artık
-    "hangi satır neyi gösterecek" diye ikinci bir dallanma yok, e-posta TEK yerde yazılıyor.
+    Ad yoksa büyük satır adın eksik olduğunu söyler; e-posta orada yazılmaz, çünkü o yuva kısa bir ad için ayrılmış ve uzun adres
+    ortasından bölünür. E-postanın yeri künye satırıdır ve tek yerde yazılır.
   */
   const nameMissing = data.name.trim() === '';
-  /* Avatar harfi KİMLİKTEN gelir: ad yoksa e-postanın ilk harfi — davet cümlesinin "A"sı değil. */
+  /* Avatar harfi kimlikten gelir: ad yoksa e-postanın ilk harfi. */
   const avatarSource = nameMissing ? data.email : data.name;
 
   const openProfileSheet = () => {
@@ -253,18 +167,14 @@ export function AccountScreen({
     setProfileSheetOpen(true);
   };
 
-  /* Adresler GERÇEK (21.15): liste `/me/addresses`ten, yazımlar v3 `shAddr` çekmecesinden.
-     Her yazma cevabı GÜNCEL listedir (sözleşme kararı) — ekran ikinci bir GET atmaz, `publish`ler. */
+  /* Her yazma cevabı güncel listedir; ekran ikinci bir okuma yapmaz, dönen listeyi yayınlar. */
   const addressBook = useAddresses(signedIn);
 
-  /* BÖLGE-DIŞI TALEP BLOĞU (kullanıcı kararı 09.08) — varsayılan adres teslimat rotamızın dışına
-     düşüyorsa kampanya kartı bir SORU sorar: "buraya teslimat açılsın" der misin? Ayrım kasıtlı —
-     posta kodu girmek ZAYIF sinyaldir (belki merak etti), kanal açıp talep bildirmek KUVVETLİ
-     sinyaldir (hattı açarsak müşteri olur) ve ikisi aynı sayılırsa yatırım kararı yanlış veriden
-     çıkar. Yer sorusu gerçek uca gider (`/places/by-postal-code`), tahmin edilmez. */
+  /* Varsayılan adres rota dışındaysa kart "buraya teslimat açılsın" diye sorar. Posta kodu girmek zayıf, talep bırakmak kuvvetli
+     sinyaldir ve ikisi aynı sayılırsa yatırım kararı yanlış veriden çıkar. */
   const defaultAddress = addressBook.addresses.find((a) => a.isDefault) ?? addressBook.addresses[0];
   const zipOfDefault = defaultAddress?.postalCode;
-  /** Varsayılan adresin ÇÖZÜLMÜŞ yeri — yalnız rota DIŞINDAYSA dolu. Kaydın anahtarı: ülke + kod. */
+  /** Yalnız rota dışındaysa dolu; kaydın anahtarı ülke ve kod. */
   const [zonePlace, setZonePlace] = useState<{ country: Country; postalCode: string } | null>(null);
   useEffect(() => {
     if (zipOfDefault === undefined) {
@@ -273,8 +183,7 @@ export function AccountScreen({
     }
     let alive = true;
     void resolvePostalCode(zipOfDefault).then((result) => {
-      // Çözülemeyen kod "bölge dışı" SAYILMAZ: bilinmeyeni olumsuz okumak, ölçemediğimiz şeyi
-      // ölçmüş gibi göstermek olurdu (CLAUDE §1).
+      // Çözülemeyen kod "bölge dışı" sayılmaz: bilinmeyeni olumsuz okumak ölçemediğimizi ölçmüş gibi göstermek olurdu.
       if (!alive || result.error !== null) return;
       const place = result.data.kind === 'resolved' && !result.data.place.inRoute ? result.data.place : null;
       setZonePlace(place === null ? null : { country: place.country, postalCode: place.postalCode });
@@ -286,21 +195,8 @@ export function AccountScreen({
   const outOfZone = zonePlace !== null;
 
   /*
-    KUVVETLİ TALEP ARTIK GERÇEK BİR KAYIT (21.307) — `zone_notice`, vitrin bandının yazdığı kaydın
-    TA KENDİSİ (`POST /places/notice`, kaynak `app-account`).
-
-    10.09'a kadar bu düğme hiçbir şey yazmıyordu: künyesi "tablo YOK" diyordu (`BEKLEYEN(21.15)`) ve
-    tek etkisi e-posta kampanya iznini açmaktı. Tablo ve uç 21.20'de doğmuştu, bu ekran güncellenmemişti
-    — metin "talebiniz sayılır" derken hiçbir şey sayılmıyordu ve bölge açılınca haberi gönderen iş
-    (`zone-available`) yalnız bu kayıtları okuduğu için o müşteriye haber de gitmeyecekti.
-
-    İZİN ARTIK SESSİZCE AÇILMIYOR: kampanya iznini açmak bu düğmenin işi değildi (künyenin kendi
-    itirafı: *"teslimat açılsın diyen müşteri kampanya iznine evet demiş sayılamaz"*). Kaydın kendi
-    e-postası ve bırakma anı zaten o haberin dar kapsamlı iznidir; bölge açıldığında gönderilen tek
-    e-posta ona gider.
-
-    HAFIZA ORTAK DEPODA (`place-notice-store`): katalogda bandı kullanan müşteri buraya geldiğinde
-    aynı yer için düğmeyi yeniden görmez — bandın 11.08 kararıyla aynı gerekçe.
+    Kuvvetli talep bir `zone_notice` kaydıdır ve bölge açılınca haber yalnız bu kayıtlara gider; kampanya izni sessizce açılmaz.
+    Hafıza ortak depoda: katalogda talep bırakan müşteri burada düğmeyi yeniden görmez.
   */
   const zoneRecord = usePlaceNoticeRecord(zonePlace?.country ?? 'FR', zonePlace?.postalCode ?? '');
   const [zoneSending, setZoneSending] = useState(false);
@@ -326,20 +222,12 @@ export function AccountScreen({
     );
   };
 
-  /* Adres yazımının TAMAMI kitin ortak çekmecesinde (`customer-kit/address-sheet`, 10.08): form,
-     doğrulama, BAN önerileri ve üç yazma çağrısı oraya TAŞINDI — checkout de aynı çekmeceyi
-     açıyor, ikinci bir nüsha yok. Bu ekranda kalan tek şey çekmecenin AÇILMASI ve dönen listenin
-     yayınlanmasıdır. */
+  /* Adres yazımı kitin ortak çekmecesinde; burada yalnız çekmecenin açılması ve dönen listenin yayınlanması var. */
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   const [defaultFailed, setDefaultFailed] = useState(false);
   const [billingFailed, setBillingFailed] = useState(false);
 
-  /*
-    FATURA ADRESİ SEÇİMİ (kullanıcı kararı 08.09) — `makeDefault`ün ikizi.
-
-    Ayrı hâlde tutuluyor (`billingFailed`), çünkü iki eylem ayrı: varsayılan seçimi düşerse fatura
-    seçimi hâlâ geçerli olabilir ve tek bir hata bayrağı ikisini birden kırmızıya boyardı.
-  */
+  /* Fatura seçiminin hatası ayrı tutulur: varsayılan seçimi düşse de fatura seçimi geçerli olabilir. */
   const makeBilling = (address: MeAddress) => {
     void makeBillingAddress(address.id).then((result) => {
       if (result.error !== null) return setBillingFailed(true);
@@ -354,7 +242,7 @@ export function AccountScreen({
       if (result.error !== null) return setDefaultFailed(true);
       setDefaultFailed(false);
       addressBook.publish(result.data);
-      // Başlık kartla aynı kural: etiketsiz adreste şehir (v3'ün `a.n+' varsayılan yapıldı'`sı).
+      // Başlık kartla aynı kural: etiketsiz adreste şehir.
       toastSuccess(t.addresses.defaultDone.replace('{label}', address.label ?? address.city));
     });
   };
@@ -376,14 +264,8 @@ export function AccountScreen({
   };
 
   /**
-   * Hesabın silinmesi — SIRA KRİTİK: önce sunucu siler, sonra cihaz çıkış yapar (çekmecenin
-   * künyesi). Düşen bir silmede oturum korunur, yani müşteri hesabıyla kalır ve neden olmadığını
-   * çekmecede okur.
-   *
-   * Çıkış BAŞARI DALINDA yutulmuyor, `signOut` zaten yarım kalmıyor (`clearStoredSession` her
-   * durumda koşar). Çekmece kapatılMAZ ve toast basılmaz: `useMe` dinleyicisi oturum ölünce
-   * ekranı misafir hâline döndürüyor — kapanış zaten geliyor, ayrıca bir "silindi" ekranı
-   * yazmak silinmiş bir hesabın son karesini uzatmak olurdu.
+   * Önce sunucu siler, sonra cihaz çıkış yapar: düşen bir silmede müşteri hesabıyla kalır ve nedenini çekmecede okur. Başarıda
+   * çekmece kapatılmaz ve toast basılmaz, ekran oturum düşünce kendiliğinden misafir hâline döner.
    */
   const confirmDelete = async (): Promise<void> => {
     setDeleting(true);
@@ -395,11 +277,8 @@ export function AccountScreen({
       hapticError();
       return;
     }
-    /* TİTREŞİM BURADA ÖZELLİKLE DEĞERLİ: bu akışın bilinçli olarak toast'ı YOK (yukarıdaki
-       künye) ve ekran misafir hâline dönerek kapanıyor. Yani başarının tek işareti bir
-       KAYBOLMA — dokunsal bir "oldu" olmasa, müşteri silmenin gerçekten işlediğini ancak
-       tahmin ederdi. Kutlama tonu (`hapticSuccess`) DEĞİL: kendi hesabını silen birine
-       "tebrikler" dokunuşu yapmayız; bu kararlı bir eylemin karşılığıdır. */
+    /* Bu akışın toast'ı yok ve başarının tek işareti ekranın kaybolması; dokunsal geri bildirim olmasa müşteri silmenin işlediğini
+       tahmin ederdi. Kutlama tonu değil: kendi hesabını silen birine "tebrikler" denmez. */
     hapticCommit();
     await signOut();
   };
@@ -417,13 +296,7 @@ export function AccountScreen({
           action={<PrimaryButton label={t.guest.cta} shape="pill" onPress={() => router.push('/login')} testID="account-login" />}
           testID="account-guest"
         />
-        {/* MİSAFİRİN BİLGİ KAPISI (MB-76, 19.08) — duvarın ALTINDA, giriş davetinin yerine değil.
-            Duvar hesabı korur; belgeler hesaba ait değil. `EmptyState` kalan yeri doldurduğu için
-            blok ekranın dibine oturuyor.
-            NOT: misafir buraya ancak GİRİŞTEN VAZGEÇEREK ulaşıyor (sekme onu doğrudan `/login`e
-            itiyor — 08.08 kararı, `account-routes.test`). Yine de duruyor: hesabı olmayan birinin
-            belgeleri okuyabildiği tek yer burası. Sözleşme öncesi bilginin yeri BURASI DEĞİL,
-            checkout — misafir zaten hesapsız sipariş veremiyor. */}
+        {/* Misafirin bilgi kapısı: hesabı olmayan birinin belgeleri okuyabildiği tek yer burası. */}
         <View style={styles.guestLegal}>
           <LegalLinks testID="account-legal-guest" />
         </View>
@@ -431,8 +304,7 @@ export function AccountScreen({
     );
   }
 
-  /* Çevirme GERÇEK (21.17): gövde YOK — kaç puanın harcanacağını istemci söylemez, motor
-     bakiyenin tamamını çevirir (sözleşme kararı). Cevap TAM görünüm taşır, ikinci GET atılmaz. */
+  /* Çevirmede gövde yok: kaç puanın harcanacağını istemci söylemez, motor bakiyenin tamamını çevirir. */
   const convertPoints = () => {
     setRedeeming(true);
     setRedeemFailed(false);
@@ -445,18 +317,8 @@ export function AccountScreen({
   };
 
 
-  /* AŞAĞI ÇEKİP YENİLE (21.29c) — bu ekranın üç okuması da ekran açıkken eskiyebiliyor: kimlik
-     (ad/telefon web'den değişmiş olabilir), PUAN (sipariş puanı TESLİMATTA yazılıyor —
-     `rewardCompletedOrder`, yani müşteri beklerken bakiye artar) ve ADRES defteri. Yenileme
-     olmadan üçünü de görmenin tek yolu uygulamayı kapatıp açmaktı (kullanıcı bulgusu 10.08).
-
-     KİMLİK PROP'TAN TAZELENİR: bu ekran `/me`yi kendi okumuyor, rota okuyup `data` olarak veriyor
-     (`app/(tabs)/account.tsx` künyesi) — tazeleme de oradan gelmeli, yoksa ekran kimliği ikinci
-     bir yoldan okur ve iki kaynak ayrışırdı.
-
-     Halka ÜÇÜ BİRDEN bekler ama TEK döner: üç ayrı gösterge, kullanıcıya üç ayrı yükleme varmış
-     izlenimi verirdi (vitrin ekranının aynı kararı). Kimlik beklenmiyor çünkü prop'un arkasındaki
-     okuma bu ekrana bir söz vermiyor — o tazelendiğinde `data` kendiliğinden yenilenir. */
+  /* Kimlik, puan ve adres ekran açıkken eskiyebilir; kimlik rotadan tazelenir ki iki kaynak ayrışmasın. Halka üçünü birlikte
+     bekler ama tek döner, çünkü üç gösterge üç ayrı yükleme izlenimi verirdi. */
   const refreshAll = async (): Promise<void> => {
     setRefreshing(true);
     onRefreshIdentity?.();
@@ -484,12 +346,10 @@ export function AccountScreen({
         <View style={styles.profileCard} testID="account-profile">
           <AvatarThumb initial={avatarSource.slice(0, 1)} accessibilityLabel={avatarSource} size="lg" tone="olive" />
           <View style={styles.profileText}>
-            {/* Büyük satır: ad, yoksa adın eksik olduğu. E-posta AŞAĞIDA, künye satırında — ikisi
-                de aynı adresi yazsaydı kart aynı şeyi iki kez söylerdi (MB-66) ve adres bu yuvaya
-                sığmadığı için ortadan bölünürdü (MB-73). Yukarıdaki künye gerekçeyi taşıyor. */}
+            {/* Büyük satır ad ya da adın eksik olduğudur; e-posta künye satırında, tek yerde. */}
             <Text style={styles.profileName}>{nameMissing ? t.profile.addName : data.name}</Text>
             <Text style={styles.profileMeta}>{data.email}</Text>
-            {/* Telefon girilmemişse satır çizilmez (gerçek hesapta alan boş olabilir — 21.14c). */}
+            {/* Telefon girilmemişse satır çizilmez. */}
             {data.phone === '' ? null : <Text style={styles.profileMeta}>{data.phone}</Text>}
           </View>
           <TextAction
@@ -511,13 +371,8 @@ export function AccountScreen({
           </View>
         )}
 
-        {/* PUAN CÜZDANI GERÇEK (21.17). Bölüm B2B'de ve okuma düştüğünde HİÇ çizilmez (yanlış
-            bakiye göstermektense göstermemek). Bakiye SIFIRSA kart boş kalmaz: kullanıcı kararı
-            09.08 — "burası boş kalmasın, puan kazanacağı yere itelim". Eşik ve kupon değeri
-            SUNUCUDAN gelir (`redeem.minimumPoints`/`valueCents`), ekran sayı uydurmaz. */}
-        {/* Cüzdan OKUNURKEN kartın yeri tutulur (kullanıcı isteği 10.08): bölüm eskiden yüklenirken
-            hiç çizilmiyor, veri gelince ekranın ortasına girip altındaki her şeyi aşağı itiyordu.
-            Okuma DÜŞERSE ya da B2B ise kart yine hiç çizilmez — orada bekleyen bir şey yok. */}
+        {/* Bölüm B2B'de ve okuma düşünce hiç çizilmez; sıfır bakiyede kart boş kalmaz, puan kazanılacak yere iter. Okunurken kartın
+            yeri tutulur ki veri gelince altındakiler zıplamasın. */}
         {pointsWallet.status === 'loading' ? <AccountPointsSkeleton testID="account-points-loading" /> : null}
 
         {wallet === null ? null : (
@@ -530,13 +385,7 @@ export function AccountScreen({
             {wallet.balance === 0 ? (
               <>
                 <Text style={styles.cardBody}>{t.points.emptyBody}</Text>
-                {/* Liste ARTIK KİTTEN (kullanıcı kararı 12.08): aynı anlatım onboarding'in son
-                    adımında ve aşağıdaki çekmecede de çiziliyor. Üç kopya, bir ödül değiştiğinde
-                    ikisinin unutulduğu üç ayrı metin demekti. `wallet` sözleşme gereği kuralın
-                    kendisini de taşıyor (`MePointsCardSchema` = kural + kimlik), o yüzden ayrı bir
-                    okuma turu atılmıyor. */}
-                {/* Bugünkü ziyaret puanı KARTTAN gelir (`MePointsCardSchema.visitClaimedToday`),
-                    ikinci bir okuma turundan değil: `wallet` zaten kimlikli cevabın kendisi. */}
+                {/* Liste kitten gelir; `wallet` kuralı ve bugünkü ziyaret puanını da taşıdığı için ayrı okuma yok. */}
                 <PointsEarnList
                   rules={wallet}
                   actions={earnActions}
@@ -573,26 +422,15 @@ export function AccountScreen({
 
             {redeemFailed ? <Note description={t.points.failed} tone="terracotta" testID="account-points-error" /> : null}
 
-            {/* "NASIL PUAN KAZANIRIM?" — kullanıcı isteği 12.08. Kart bir BAŞVURU YERİ, öğretmen
-                değil (karar seti 2h): öğretme işini bağlam mesajları yapar, burası merak edene
-                cevap verir. Bakiyesi OLAN müşteri de görüyor — eski kurguda liste yalnız bakiye
-                sıfırken çiziliyordu, yani ilk puanını kazanan müşteri geri kalan yolları bir daha
-                hiç göremiyordu. */}
+            {/* Kart merak edene cevap verir; bakiyesi olan müşteri de görür, yoksa ilk puanını kazanan öteki yolları bir daha göremezdi. */}
             <TextAction
               label={t.points.howTo}
               onPress={() => setEarnSheetOpen(true)}
               testID="account-points-howto"
             />
 
-            {/* PUAN GEÇMİŞİ (MB-59 · kullanıcı isteği 15.08) — *"hangi puan nereden geldi."*
-                Kartın YANINDA değil İÇİNDE, çünkü aynı cüzdanın üçüncü yüzü: bakiye (ne kadarım
-                var) · kuponlar (ne harcayabilirim) · geçmiş (nereden geldi). Ayrı bir ekrana
-                gidiyor, kartın içine liste konmuyor: defter veriyle sınırsız büyüyor ve sonsuz
-                kaydırma istiyor (ekranın kendi künyesi).
-
-                Kapı kartın İÇİNDE olduğu için B2B ölçütü ikinci kez yazılmıyor — kart zaten
-                `wallet !== null` koşulunda çiziliyor (`MePointsCardSchema` künyesinin "tek koşul,
-                tek karar" gerekçesi). */}
+            {/* Puan geçmişi ayrı ekranda: defter veriyle sınırsız büyür ve sonsuz kaydırma ister. Kapı kartın içinde ki B2B ölçütü
+                ikinci kez yazılmasın. */}
             <TextAction
               label={t.points.history}
               onPress={() => router.push('/points-history')}
@@ -614,17 +452,13 @@ export function AccountScreen({
           </View>
         )}
 
-        {/* KOŞUL PROFİLDEN DEĞİL CÜZDANDAN OKUNUR (21.43): `data.referralCode` profil satırının HAM
-            aynasıdır ve boş olabilir — kart ise kodu GARANTİLER (yoksa üretir). Eskiden bu blok
-            profile bakıyordu, yani kodu henüz üretilmemiş müşteri davet bölümünü hiç görmüyordu.
-            Bağlantı da aynı yerden geliyor; ikisi tek koşulla düşer (sözleşmenin kendi kararı). */}
+        {/* Koşul profilden değil cüzdandan okunur: kart kodu garantiler, profildeki ham alan boş olabilir. */}
         {wallet?.inviteUrl == null || wallet.referralCode === null ? null : (
           <View style={styles.pointsCard} testID="account-referral">
             <Text style={styles.cardTitle}>{t.referral.title}</Text>
             <Text style={styles.cardBody}>{t.referral.body}</Text>
             <View style={styles.referralRow}>
-              {/* Kod GÖRÜNMEYE devam ediyor ama paylaşılan şey bağlantı: kod telefonda okunur/
-                  söylenir, bağlantı paylaşılır — ikisinin işi ayrı (sözleşmedeki aynı ayrım). */}
+              {/* Kod görünür ama paylaşılan şey bağlantıdır: kod söylenir, bağlantı paylaşılır. */}
               <Text style={styles.referralCode}>{wallet.referralCode}</Text>
               <SecondaryButton
                 label={t.referral.share}
@@ -668,26 +502,16 @@ export function AccountScreen({
           />
         </View>
 
-        {/* Adresler GERÇEK (21.15, v3:857-868): bölüm koşulsuz çizilir — boş listede de başlık ve
-            "＋ Yeni adres ekle" durur, ekleme kapısı adressiz müşteriye de lazım. Yüklenirken kart
-            çizilmez (v3'te iskelet yok); düşen okuma/yazım tek hata satırında söylenir. */}
-        {/* Adresler — "Puanlarım" kartının deseni (kullanıcı kararı 09.08): başlık KARTIN İÇİNDE,
-            satırlar kesikli çizgiyle ayrılır. Adres kartının kendi zemini kalktı; kart zaten yüzey. */}
+        {/* Bölüm koşulsuz çizilir, çünkü ekleme kapısı adressiz müşteriye de lazım; satırlar kart içinde kesikli çizgiyle ayrılır. */}
         <View style={styles.settingsCard}>
           <Text style={styles.cardTitle}>{t.addresses.title}</Text>
-          {/* ROLÜN ADI TEK BAŞINA YETMEZ (kullanıcı kararı 08.09). "varsayılan" bir MEKANİZMANIN
-              adıydı; rol "teslimat adresi" olunca rozet artık ne olduğunu söylüyor ama ne İŞE
-              yaradığını söylemiyor — bu tek satır onu söylüyor, ve iki rozet (teslimat · fatura)
-              yan yana durduğunda hangisinin siparişi etkilediği ancak böyle okunuyor.
-              Adres yokken çizilmez: olmayan bir rozetin açıklaması gürültüdür. */}
+          {/* Rozet rolün adını söyler, bu satır ne işe yaradığını; adres yokken çizilmez, olmayan rozetin açıklaması gürültüdür. */}
           {addressBook.addresses.length === 0 ? null : (
             <Text style={styles.addressesNote} testID="account-addresses-note">
               {t.addresses.note}
             </Text>
           )}
-          {/* Liste OKUNURKEN satırların yeri tutulur (kullanıcı isteği 10.08). Eskiden liste boş
-              dizi olarak başlıyordu ve ekran "hiç adresin yok" ile "adresler yükleniyor"u aynı
-              gösteriyordu — ölçülemeyen değeri sıfır saymanın ta kendisi (CLAUDE §1). */}
+          {/* Okunurken satırların yeri tutulur: "hiç adres yok" ile "yükleniyor" aynı görünmesin. */}
           {addressBook.status === 'loading' ? <AccountAddressesSkeleton testID="account-addresses-loading" /> : null}
           {addressBook.addresses.map((address, index) => (
             <View key={address.id} style={index > 0 ? styles.settingsDivider : undefined}>
@@ -695,9 +519,7 @@ export function AccountScreen({
                 address={address}
                 copy={t.addresses}
                 onMakeDefault={() => makeDefault(address)}
-                /* FATURA ROLÜ YALNIZ ŞİRKET HESABINDA (kullanıcı kararı 08.09): bireysel müşteride
-                   fatura adresi diye ayrı bir kavram yok ve göstermek, cevabı olmayan bir soru
-                   sormak olurdu. Ölçüt `/me`nin `type`ı — gerekçesi `companyAccount` künyesinde. */
+                /* Fatura rolü yalnız şirket hesabında; ölçüt `companyAccount`. */
                 onMakeBilling={companyAccount ? () => makeBilling(address) : null}
                 onEdit={() => setAddressSheet({ editing: address })}
                 testID={`account-address-${address.id}`}
@@ -722,9 +544,7 @@ export function AccountScreen({
           </View>
         </View>
 
-        {/* Dil + yazı boyutu TEK kartta (kullanıcı kararı 09.08): ikisi de "nasıl okuyorum"
-            sorusunun cevabı; ayrı kartlara bölmek aynı konuyu iki kez sorardı. Yazı boyutu
-            seçimi ANINDA uygulanır — bu kart dahil bütün ekran yeniden çizilir. */}
+        {/* Dil ve yazı boyutu tek kartta: ikisi de "nasıl okuyorum" sorusunun cevabı. */}
         <View style={styles.settingsCard}>
           <Text style={styles.cardTitle}>{t.language.title}</Text>
           <View style={styles.languageRow}>
@@ -775,11 +595,10 @@ export function AccountScreen({
             />
           </View>
           <Text style={styles.switchNote}>{t.marketing.note}</Text>
-          {/* Yazılamayan tercih SESSİZ KALMAZ: anahtar eski hâline döndü, sebep burada söylenir —
-              dil ve izin aynı uca gittiği için tek satır ikisini de kapsar. */}
+          {/* Yazılamayan tercih eski hâline döner ve sebep burada söylenir; dil ve izin aynı uca gittiği için tek satır ikisini kapsar. */}
           {prefsFailed ? <Note description={t.marketing.saveFailed} tone="terracotta" testID="account-prefs-error" /> : null}
 
-          {/* Bölge dışı müşteriye SORU (v3'te yok, kullanıcı kararı 09.08): gerekçe hook künyesinde. */}
+          {/* Rota dışı müşteriye talep sorusu; gerekçesi yukarıda. */}
           {outOfZone ? (
             <View style={styles.zoneBox}>
               <Text style={styles.zoneTitle}>{t.marketing.zone.title}</Text>
@@ -790,8 +609,7 @@ export function AccountScreen({
                 <Text style={styles.zoneDone} testID="account-zone-done">{t.marketing.zone.done}</Text>
               ) : (
                 <>
-                  {/* Kayıt `zone_notice`a gider (21.307) — kampanya izni artık sessizce açılmıyor;
-                      "yalnız bu haber" izni kaydın kendisidir (künye yukarıda). */}
+                  {/* Kayıt `zone_notice`a gider; "yalnız bu haber" izni kaydın kendisidir. */}
                   <PrimaryButton
                     label={t.marketing.zone.cta}
                     onPress={sendZoneInterest}
@@ -812,9 +630,7 @@ export function AccountScreen({
             onPress={() => router.push({ pathname: '/legal/[page]', params: { page: 'privacy' } })}
             testID="account-privacy"
           />
-          {/* HESABI SİLME — kartın EN ALTINDA ve terracotta, ama vurgulu düğme DEĞİL: hesap
-              sayfasının işi hesabı yönetmek, silmek onun en uç ucu (web'in aynı kararı). Dolgulu
-              bir düğme sayfanın en güçlü çağrısı olur ve müşteriyi silmeye davet ederdi. */}
+          {/* Hesap silme en altta ve dolgusuz: dolgulu düğme sayfanın en güçlü çağrısı olur ve müşteriyi silmeye davet ederdi. */}
           <TextAction
             label={t.deleteAccount.action}
             onPress={() => {
@@ -826,17 +642,11 @@ export function AccountScreen({
           />
         </View>
 
-        {/* GİRİŞLİ HÂLİN BİLGİ KAPISI (MB-76, 19.08) — çıkıştan hemen önce, web altbilgisinin yeri.
-            Menüdeki "Teslimat & soğuk zincir" satırı ve veri kartındaki gizlilik bağı KALDI: onlar
-            bağlamsal kısayol, bu ise listenin tamamı. Web'de de ikisi bir arada (hesap sayfasının
-            gizlilik bağı + altbilgi) — kaldırsaydık iki yüzey ayrışırdı. */}
+        {/* Girişli hâlin bilgi kapısı: menüdeki kısayollar bağlamsaldır, burası listenin tamamı. */}
         <LegalLinks testID="account-legal" />
 
         <View style={styles.logoutRow}>
-          {/* Gerçek çıkış (21.14c): oturum cihazdan silinir, `useMe` dinleyicisi vitrini misafire
-              döndürür; sekme yerinde kalır ("oturumsuz kullanım = müşteri gezinmesi", 02-mimari §4).
-              Çıkış hatası yutulMAZ ama ekrana da taşınmaz: depo temizliği deterministik
-              (`clearStoredSession`), müşteri için sonuç aynı — çıkmıştır. */}
+          {/* Oturum cihazdan silinir ve vitrin misafire döner; depo temizliği her durumda koştuğu için çıkış hatası ekrana taşınmaz. */}
           <TextAction
             label={t.logout}
             onPress={() => {
@@ -848,14 +658,8 @@ export function AccountScreen({
         </View>
       </ScrollView>
 
-      {/* ── "Nasıl puan kazanılır" çekmecesi (kullanıcı isteği 12.08) ────────────────
-          Kaynağı KART, ayrı bir okuma değil: `wallet` sözleşme gereği kuralın kendisini de taşıyor
-          (`MePointsCardSchema` = kural + kimlik). Çekmece yalnız kart varken açılabildiği için
-          `wallet` burada hiç `null` olmaz — B2B'de düğme de çizilmiyor.
-
-          ÇEKMECE, ayrı bir SAYFA değil: müşteri bir merak sorusu soruyor ve cevabı aldıktan sonra
-          bulunduğu yere dönmek istiyor. Sayfa açsaydık geri tuşuyla dönülen bir gezinme adımı
-          doğardı — kartın "başvuru yeri" rolüne ağır kaçardı. */}
+      {/* Çekmece, ayrı sayfa değil: müşteri merak sorusunun cevabını alıp bulunduğu yere dönmek ister. Çekmece yalnız kart varken
+          açılabildiği için `wallet` burada `null` olmaz. */}
       <BottomSheet
         visible={earnSheetOpen && wallet !== null}
         title={t.points.howToTitle}
@@ -868,8 +672,7 @@ export function AccountScreen({
             visitClaimedToday={wallet.visitClaimedToday}
             actions={{
               ...earnActions,
-              /* Çekmeceden gidilen her hedef ÖNCE çekmeceyi kapatır: altında açık bir modal
-                 bırakıp gezinmek, geri dönüldüğünde ekranı kilitli gösterirdi. */
+              /* Her hedef önce çekmeceyi kapatır: altında açık modal bırakıp gezinmek ekranı kilitli gösterirdi. */
               referral: () => {
                 setEarnSheetOpen(false);
                 shareReferral();
@@ -893,21 +696,8 @@ export function AccountScreen({
         )}
       </BottomSheet>
 
-      {/* ── Hesabı silme çekmecesi (GDPR md. 17 · App Store 5.1.1(v)) ───────────────
-          NEDEN İKİ ADIM: işlem geri alınamaz ve düğmenin kendisi bunu anlatamaz. Çekmece bir
-          "emin misiniz?" değil, NE OLACAĞINI söyleyen bir ekran — web'in `delete-account.tsx`
-          künyesindeki karar, native'de aynen.
-
-          KALANI SÖYLEMEK, GİDENİ SÖYLEMEK KADAR ÖNEMLİ: silme bir `DELETE` değil; sipariş ve
-          fatura kayıtları yasal olarak duruyor, FATURADAKİ AD VE ADRES DÂHİL. Yazmazsak
-          "hesabımı sildim" diyen müşteri bir gün faturasında adını gördüğünde haklı olarak
-          yanıltıldığını düşünür. İki blok da AYNI AĞIRLIKTA çizilir; dipnot olsaydı okunmazdı
-          ve tam da okunmayan yer, sonradan "bana söylenmedi" denilecek yerdir.
-
-          SİLDİKTEN SONRA ÇIKIŞ DA YAPILIR: sunucu `auth.users` satırını siliyor ama cihazdaki
-          jetona dokunamıyor — web'de ÖLÇÜLMÜŞ tuzak (08.08: silme bitince oturum çerezi yerinde
-          kalıyordu). Sıra da oradaki gibi: önce silme başarılı olur, SONRA oturum kapanır.
-          Tersi olsaydı silmenin düştüğü bir koşuda müşteri hem hesabıyla hem çıkışla kalırdı. */}
+      {/* İki adım, çünkü işlem geri alınamaz ve çekmece ne olacağını söyler; kalan kayıtlar (faturadaki ad ve adres dahil) gidenlerle
+          aynı ağırlıkta yazılır ki müşteri yanıltılmasın. Önce silme başarılı olur, sonra oturum kapanır. */}
       <BottomSheet
         visible={deleteSheetOpen}
         title={t.deleteAccount.title}
@@ -930,11 +720,7 @@ export function AccountScreen({
           <Text style={styles.deleteWarning}>{t.deleteAccount.irreversible}</Text>
           {deleteFailed ? <Note description={t.deleteAccount.failed} tone="terracotta" testID="account-delete-error" /> : null}
 
-          {/* HİÇBİRİ DOLGULU DEĞİL (14.08, cihazda görülerek düzeltildi): ilk sürüm onayı
-              `PrimaryButton` ile çiziyordu — dolgulu zeytin, ekranın en güçlü çağrısı — ve
-              çekmecenin kendi künyesiyle çelişiyordu. Web'in aynı diyaloğunun kararı: vazgeç
-              sessiz metin, onay DOLGUSUZ terracotta. Sıra da bilinçli: geri çekilme yolu solda
-              ve ilk okunan, yıkıcı olan sağda. */}
+          {/* Hiçbiri dolgulu değil: vazgeç sessiz metin, onay dolgusuz terracotta; geri çekilme solda ve ilk okunan. */}
           <View style={styles.deleteActions}>
             <TextAction
               label={t.deleteAccount.cancel}
@@ -954,7 +740,7 @@ export function AccountScreen({
         </View>
       </BottomSheet>
 
-      {/* ── Profil çekmecesi (v3 `shPf`, v3:253-260) — üç alan + WhatsApp notu + Kaydet ── */}
+      {/* Profil çekmecesi: üç alan, WhatsApp notu ve Kaydet. */}
       <BottomSheet
         visible={profileSheetOpen}
         title={t.edit.title}
@@ -973,9 +759,7 @@ export function AccountScreen({
             content="name"
             testID="profile-name"
           />
-          {/* E-posta SALT OKUNUR (v3'te yazılabilir görünür): e-posta kimliğin kendisidir (auth
-              anahtarı) — değişimi yeni adrese kod doğrulatan ayrı bir akış ister; sessizce
-              yazılabilir göstermek kaydetmeyecek bir söz olurdu. */}
+          {/* E-posta salt okunur: kimliğin kendisidir ve değişimi yeni adrese kod doğrulatan ayrı bir akış ister. */}
           <TextField
             value={data.email}
             onChangeText={() => undefined}
@@ -1006,14 +790,13 @@ export function AccountScreen({
         </View>
       </BottomSheet>
 
-      {/* ── Adres çekmecesi (v3 `shAddr`) — kitin ortak formu; checkout'la AYNI dosya. Dönen
-          liste doğrudan yayınlanır: her yazma cevabı GÜNCEL listedir (uçların sözleşme kararı). */}
+      {/* Adres çekmecesi kitin ortak formu; dönen güncel liste doğrudan yayınlanır. */}
       <AddressSheet
         target={addressSheet}
         addresses={addressBook.addresses}
         onClose={() => setAddressSheet(null)}
         onSaved={(next) => addressBook.publish(next)}
-        /* Yeni adres hesabın künyesiyle DOLU açılır (22.08) — kaynak ekranın zaten çizdiği veri. */
+        /* Yeni adres hesabın künyesiyle dolu açılır. */
         defaults={addressDefaultsOf({ name: data.name, phone: data.phone })}
         testID="account-address-sheet"
       />
@@ -1137,8 +920,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.helper,
     color: theme.colors.muted,
   },
-  /* Puan KAZANMA yolları — sıfır bakiyede kartın içi (kullanıcı kararı 09.08). Satır düzeni
-     ödeme/teslimat listelerinin aynısı (ikon · metin · eylem), ayraç kart içi kesikli çizgi. */
+  /* Puan kazanma yolları: satır düzeni ödeme ve teslimat listelerinin aynısı, ayraç kart içi kesikli çizgi. */
   earnList: { gap: theme.space.xs },
   earnRow: {
     flexDirection: 'row',
@@ -1214,9 +996,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['card-title-sm'],
     color: theme.colors.ink,
   },
-  /* AYAR KARTI (kullanıcı kararı 09.08 — v3'te yok): adres/dil-yazı/izin bölümleri çıplak zeminde
-     akıyor ve birbirine giriyordu. Yeni bir dil icat edilmedi — "Puanlarım" kartının deseni
-     tekrarlandı (`pointsCard` ile aynı yüzey, yarıçap ve dolgu; başlık kartın İÇİNDE). */
+  /* Ayar kartı "Puanlarım" kartının yüzeyini kullanır: bölümler çıplak zeminde birbirine giriyordu ve yeni bir dil icat edilmedi. */
   settingsCard: {
     backgroundColor: theme.colors['sand-150'],
     borderRadius: theme.radius.card,
@@ -1290,11 +1070,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     padding: theme.space['2xl'],
     gap: theme.space.xs,
   },
-  /* BAŞLIK GÖVDESİNDEN KÜÇÜK KALAMAZ (MB-46, 18.08). Şablonda oran doğru: başlık `700 12,5`,
-     gövde `400 11,5` — başlık bir tık üstte. `(21.38)` süpürmesi gövdeyi 14'e çıkardı (kullanıcı
-     ölçütü: müşterinin karar için okuduğu metin 14'ün altına inmez) ama başlığı 12'de bıraktı ve
-     oran TERSİNE döndü. Başlık gövdeyle aynı durağa alındı; ayrım ağırlıkta duruyor (700 ↔ 400),
-     şablonun da asıl kullandığı ayrım o. */
+  /* Başlık gövdeden küçük kalamaz: gövde 14'e çıkınca başlık da aynı durağa alındı, ayrım ağırlıkta duruyor (700 ↔ 400). */
   dataTitle: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text['body-sm'],
@@ -1311,9 +1087,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingVertical: theme.space.md,
   },
 
-  /* Silme çekmecesi — iki blok AYNI ağırlıkta, yalnız rengi ayrı: giden nötr zeminde, kalan
-     bal renginde (uyarı değil, "dikkat: bu duruyor"). Metinler `body-sm`in altına inmez
-     (MB-46'nın ölçütü): burada okunan her satır müşterinin KARAR için okuduğu metindir. */
+  /* Silme çekmecesinin iki bloğu aynı ağırlıkta, yalnız rengi ayrı; metinler `body-sm`in altına inmez, çünkü müşteri karar için okur. */
   deleteBody: {
     gap: theme.space.lg,
     paddingBottom: theme.space.xl,

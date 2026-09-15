@@ -44,50 +44,13 @@ import { useCheckout } from './use-checkout.hook';
 import messages from '@lezzet/i18n/customer/checkout';
 
 /*
-  SİPARİŞİ TAMAMLA (v3 `vCheckout`) — adres · teslimat ve günü · ödeme yolu · özet · onay.
-
-  ── EKRAN SEÇER, SUNUCU KARAR VERİR (21.14 ikinci etap) ─────────────────────
-  Ekran artık GERÇEK sipariş veriyor. Uygun günler, açık ödeme yolları, kargo ücreti ve toplam
-  `GET /me/checkout`ten gelir (`use-checkout.hook`); ekran kendi listesini UYDURMAZ ve gönderdiği
-  tek şey SEÇİMLERDİR (`POST /me/checkout/order`) — tutar, indirim ve kalem listesi gövdede YOKTUR
-  (sözleşme künyesi: aksi hâlde siparişin parasını uygulama belirlerdi).
-
-  Yerleşim v3'ün kendisi; değişen yalnız verinin kaynağıdır. Fixture (`checkout-fixture.ts`)
-  SİLİNDİ: sahte adresler, uydurma saat aralıklı teslimat günleri ("Yarın 09:00–13:00" — veri
-  modelinde saat YOK) ve sabit kargo ücreti ekranın gerçekle ayrıştığı üç yerdi.
-
-  ── TESLİMAT YOLU BİR SEÇİM DEĞİL, ADRESİN CEVABIDIR ────────────────────────
-  `deliveryType` sunucuda çözülür (rota-içi ⟷ kargo). İki satır yine çiziliyor çünkü tasarım öyle
-  ve öğretici: hangi yolun geçerli olduğunu ve ötekinin NEDEN geçerli olmadığını yan yana söylüyor.
-  Ama dokunuş yolu değiştirmez — değiştirseydi ekranın gösterdiği ile siparişin açıldığı yol
-  ayrışırdı (müşteri kapıda ödeme seçer, kasada reddedilirdi).
-
-  ── ADRES BURADA YAZILIR, EKRAN TERK EDİLMEZ (10.08) ────────────────────────
-  "＋ Yeni adres ekle" eskiden müşteriyi profil sayfasına atıyordu: sipariş akışının ortasında
-  başka bir ekrana gitmek, checkout'tan çıkmaktır. Artık kitin ORTAK adres çekmecesi burada
-  açılıyor (`customer-kit/address-sheet` — hesap ekranıyla aynı dosya, aynı doğrulama, aynı BAN
-  önerileri) ve yazılan adres seçili hâle gelip anlık görüntüyü tazeliyor.
-
-  ── ENGELLER TEK YERDE (`blockReason`) ──────────────────────────────────────
-  Şablonun `confirmBlock`u ile aynı sıra, sunucunun gerçekleriyle genişletilmiş: doğrulama →
-  adres → tazeleme → kargo engeli → asgari sepet → gün → ödeme. Sebep düğmenin ÜSTÜNDE yazılı ve
-  düğme engelli: kuralı basmadan önce göstermek, kullanıcıyı denemeye zorlamaktan iyi.
-
-  ── GELEMEYEN KALEM ENGEL DEĞİL, KAPSAM SORUSUDUR (kullanıcı kararı 10.08) ──
-  Bu adrese hiç gelemeyen kalem (soğuk zincir + rota dışı adres) siparişin DIŞINDA kalır ve sepette
-  bekler; sipariş gelebilecek kalemlerle açılır (`orderableLines`, `@lezzet/application`). Ekranın
-  üç sonucu: kırmızı engel kutusu bilgi satırına indi, özet yalnız siparişe gireni yazar, onay
-  düğmesi AÇIK kalır. Adres değişince anlık görüntü zaten tazeleniyor — bölge içi bir adres
-  seçildiğinde o kalemler kendiliğinden siparişe girer, ayrıca kodlanmadı.
-
-  ── RETLER TEK CÜMLEYE İNDİRGENMEZ ──────────────────────────────────────────
-  On beş adlı ret ayrı ayrı karşılanıyor (`order-result-copy.ts`); her ret sonrası anlık görüntü
-  TAZELENİR, çünkü ret çoğu zaman "ekrandaki resim eskidi" demektir.
+  Ekran seçer, sunucu karar verir: günler, ödeme yolları, kargo ücreti ve toplam sunucudan gelir, ekran yalnız seçimleri gönderir.
+  Teslimat yolu seçim değil adresin cevabıdır; iki satır çizilir ama dokunuş yolu değiştirmez.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/** Ödeme satırı — v3'ün `payOpts()`u; web checkout'unun kurduğu kümenin AYNISI (tek karar iki yüzey). */
+/** Web ödemesinin kurduğu kümenin aynısı. */
 interface PaymentOption {
   /** Satır anahtarı: `bank_transfer` iki kez geçer (peşin havale ⟷ vadeli), yöntem anahtar olamaz. */
   key: string;
@@ -100,13 +63,7 @@ interface PaymentOption {
 }
 
 interface CheckoutScreenProps {
-  /**
-   * Bölünmüş sepetin KARGO yarısı için ayrı sipariş (19.15). Bayrak TÜRETİLMEZ, rotadan gelir.
-   *
-   * Sepet ekranı yolu İKİ yerden açıyor: bölünmüş sepette kargo grubunun kendi düğmesi, salt-kargo
-   * sepette ise yapışkan barın kendisi (`view.shippingOnly`, 27.08). Varsayılan `false` çünkü
-   * parametresiz açılan checkout rota siparişidir.
-   */
+  /** Bölünmüş sepetin kargo yarısı için ayrı sipariş; türetilmez, rotadan gelir ve varsayılanı rota siparişidir. */
   shippingOrder?: boolean;
 }
 
@@ -117,22 +74,16 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const cart = useCart();
   const { status: meStatus, me, refresh: refreshMe } = useMe();
   /**
-   * Doğrulanmış müşteri — YALNIZ `ready` hâlinde dolu.
-   *
-   * `null` olmasının ÜÇ ayrı sebebi var ve bunlar aynı şey DEĞİL: misafir (`guest` — cevap),
-   * okunamadı (`error` — cevapsızlık), henüz okunmadı (`loading` — sorulmamış soru). Ekran üçünü
-   * ayrı karşılar; eskiden hepsi "misafir" sayılıyordu ve arıza buydu (aşağıdaki blok künyesi).
+   * Yalnız `ready` hâlinde dolu: misafir bir cevap, okuma hatası cevapsızlık, yükleme henüz sorulmamış sorudur ve ekran üçünü
+   * ayrı karşılar.
    */
   const customer = meStatus === 'ready' ? me : null;
 
-  /** Seçili adres; `null` = "sunucu karar versin" (varsayılan, yoksa ilk adres — uç künyesi). */
-  /* ADRES SEÇİMİ ORTAK DEPODA (kullanıcı kararı 10.08) — ekran içi `useState` DEĞİL. Sepet de aynı
-     adresi okuyor ve orada da değiştirilebiliyor; iki ekran ayrı state tutsaydı sepette seçilen
-     adres checkout'a taşınmaz ve az önce kapatılan ayrışma (sepette bir gerçek, burada başka) geri
-     açılırdı. `null` = müşteri seçmedi, varsayılan geçerli (deponun künyesi). */
+  /** Seçili adres; `null` sunucunun karar vermesi demektir (varsayılan, yoksa ilk adres). */
+  /* Seçim ortak depoda: sepet de aynı adresi okur ve değiştirebilir, iki ekran ayrı durum tutsaydı ayrışırlardı. */
   const addressId = useSelectedDeliveryAddress();
   const setAddressId = selectDeliveryAddress;
-  /** Adres çekmecesi — kitin ortak formu, hesap ekranıyla AYNI (10.08). Kapalıyken `null`. */
+  /** Hesap ekranıyla aynı ortak form; kapalıyken `null`. */
   const [addressSheet, setAddressSheet] = useState<AddressSheetTarget | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<string | null>(null);
   const [paymentKey, setPaymentKey] = useState<string | null>(null);
@@ -140,43 +91,18 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const [submitting, setSubmitting] = useState(false);
   /** Sunucunun ya da ödeme kartının söylediği son şey. `warm` = hata değil (vazgeçilen ödeme). */
   const [notice, setNotice] = useState<{ tone: 'error' | 'warm'; text: string } | null>(null);
-  /**
-   * ADRES DOĞRULAMASININ SONUCU (11.11 · 21.308) — sipariş anında sorulur, ekranda gösterilir.
-   *
-   * `checkedFor` hangi adres için sorulduğunu tutuyor: müşteri cevabını verdikten sonra AYNI adres
-   * için ikinci kez tutulmuyor (web'in birebir kuralı, `checkout-client.tsx`). Tutulsaydı "Benim
-   * yazdığım doğru" diyen müşteri sonsuz döngüye girerdi — ret bir vazgeçiş değil bir BEYAN ve bir
-   * kez alınır.
-   */
+  /** `checkedFor` hangi adres için sorulduğunu tutar: "benim yazdığım doğru" diyen müşteriye aynı adres için ikinci kez sorulmaz. */
   const [addressNotice, setAddressNotice] = useState<AddressCheckResult | null>(null);
   const checkedFor = useRef<string | null>(null);
 
-  /* ── İLETİŞİM KÜNYESİ: AD + TELEFON, İLK SİPARİŞTE (kullanıcı kararı 15.08) ──────────────────
-     Bu alanlar eskiden GİRİŞTEN hemen sonra zorunlu bir akışta isteniyordu (`/profile-setup`;
-     üç kapı: OTP dönüşü, OAuth dönüşü, sepete giriş). Kullanıcının kararı ikisini de değiştirdi:
-     *"kullanıcı adresini ve adını vermek istemeyebilir giriş yaptığında, bu bizim için problem
-     olmamalı"* ve *"bunu ilk sipariş verdiği zaman talep edelim… sizinle iletişime geçebilmek için
-     telefon numaranıza ihtiyacımız var gibi bir şey diyerekten konuyu açalım."*
-
-     Gerekçe ürünün kendisinde: kimliğini yeni kuran kişiden, ona daha hiçbir şey vermeden künye
-     istemek bir bedeldir; siparişin içinde ise aynı bilgi ANLAMLIDIR ve karşılığı görünür — kurye
-     kapıya gelecek, bildirim gidecek. Metin bunu söylüyor, alanı gerekçesiz istemiyor.
-
-     ALANLAR SEPETTE DEĞİL BURADA: sepet gezinmenin parçası (bakıp vazgeçilebilir), ödeme ekranı
-     ise "siparişi tamamlıyorum" anı — adres, gün ve ödeme de burada seçiliyor.
-
-     Yazım AYRI bir adım (kendi düğmesi), sipariş gönderimine iliştirilmedi: `updateMe`nin adlı
-     retleri var (`phone_invalid`) ve bunlar siparişin değil künyenin sorunudur.
-     Tek çağrıda birleştirilseydi geçersiz bir telefon "siparişiniz açılamadı" diye görünürdü. */
+  /* Ad ve telefon girişte değil ilk siparişte istenir: kimliğini yeni kuran kişiden künye istemek bir bedeldir, siparişte ise
+     karşılığı görünür. Yazım ayrı adım, çünkü `phone_invalid` gibi retler siparişin değil künyenin sorunudur. */
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [savingContact, setSavingContact] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
 
-  /* TEKRAR ANAHTARI EKRAN AÇILIŞINDA BİR KEZ (`useState`in tembel başlatıcısı): seçimler değişse
-     de KORUNUR — çift dokunuş ve ağın yeniden denemesi aynı niyettir. Başarıdan sonra ekran
-     `replace` ile kapanır ve bir sonraki açılış yeni anahtar üretir; sepete dönüp değiştiren
-     müşteride de ekran sökülür. Gerekçenin tamamı `order-key.ts`te. */
+  /* Tekrar anahtarı açılışta bir kez üretilir ve seçimler değişse de korunur: çift dokunuş ve ağın yeniden denemesi aynı niyettir. */
   const [orderKey] = useState(newOrderKey);
 
   const checkout = useCheckout(locale, addressId, cart.couponCode, shippingOrder);
@@ -185,11 +111,10 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const delivery = snapshot?.delivery ?? null;
   const payment = snapshot?.payment ?? null;
 
-  /* Seçili adres SUNUCUYLA AYNI kuralla çözülür (varsayılan → ilk): ekranda işaretli satır ile
-     ücreti hesaplanan adres ancak böyle aynı olur. Ekran açılışta bir seçim YAZMAZ — yazsaydı
-     kullanıcının yapmadığı bir seçim, cevabın gecikmesine bağlı olarak doğardı. */
+  /* Seçili adres sunucuyla aynı kuralla çözülür (varsayılan, yoksa ilk); ekran açılışta seçim yazmaz, yoksa müşterinin
+     yapmadığı bir seçim doğardı. */
   const selectedAddress = addresses.find((a) => a.id === addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
-  /* Adres değişti: önceki doğrulama artık BU adresin cevabı değil (web'in `onSelectAddress` kuralı). */
+  /* Adres değişince önceki doğrulama artık bu adresin cevabı değildir. */
   const selectedAddressId = selectedAddress?.id ?? null;
   useEffect(() => {
     checkedFor.current = null;
@@ -197,14 +122,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   }, [selectedAddressId]);
 
   /**
-   * Çekmece bir adres yazdı (ekleme · düzenleme · silme). İKİ ŞEY birden olmalı: yazılan adres
-   * SEÇİLİ hâle gelir ve anlık görüntü ONUNLA yeniden okunur — teslimat günleri, kargo ücreti ve
-   * ödeme yolları adrese bağlıdır; eski cevapla devam etmek ekranı kendi kendisiyle çelişkiye
-   * düşürürdü (müşteri kapıda ödeme görür, sunucu reddederdi).
-   *
-   * Okuma TEK turda yapılır: `addressId` değişimi hook'un bağımlılığıdır ve zaten yeniden okutur;
-   * seçim değişmiyorsa (aynı adres düzenlendi ya da bir adres silindi) tazeleme AÇIKÇA istenir.
-   * Silinen adres seçiliyse seçim bırakılır — kararı yine sunucu verir (varsayılan → ilk).
+   * Yazılan adres seçilir ve anlık görüntü onunla yeniden okunur, çünkü günler, ücret ve ödeme yolları adrese bağlıdır. Silinen
+   * adres seçiliyse seçim bırakılır ve kararı yine sunucu verir.
    */
   const applyAddressWrite = (list: MeAddress[], savedId: string | null): void => {
     const next = savedId ?? (addressId !== null && list.some((a) => a.id === addressId) ? addressId : null);
@@ -215,22 +134,11 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const isRoute = delivery?.deliveryType === 'route';
   const dates = delivery?.availableDates ?? [];
 
-  /* KOMŞU DAVETİ (21.45) — kabul edilmiş ve seferi hâlâ açık bir davet varsa sunucu buraya koyar.
-     Alan cihazdan değil KİŞİDEN geliyor: davetli web'de kabul edip uygulamayı sonra yüklemiş
-     olabilir (kullanıcı kararı 12.08). Süzgeç de sunucuda — gün `availableDates` içinde değilse
-     alan zaten `null`, yani ekran seçilemeyen bir günü hiç görmüyor. */
+  /* Komşu daveti cihazdan değil kişiden gelir; süzgeç sunucuda, seçilemeyen gün hiç görünmez. */
   const neighborInvites = delivery?.neighborInvites ?? [];
 
-  /* SEÇİLEN GÜN TÜRETİLİR, saklanan değer körü körüne kullanılmaz: adres değişince eski gün artık
-     uygun günlerden biri olmayabilir. Tek gün varsa seçim SUNULMAZ, o gün kullanılır
-     (`requiresDateChoice` — sözleşmenin hükmü: seçeneksiz bir seçim sahte karardır).
-
-     DAVETİN GÜNÜ ÖNSEÇİLİ ama KİLİTLİ DEĞİL: müşteri henüz bir gün seçmediyse komşusunun günü
-     gelir; dokunduğu an kendi seçimi geçerlidir. Davet bir ÇAĞRIDIR — seçimi elinden almak,
-     "komşunla aynı gün" kolaylığını bir kısıtlamaya çevirirdi. Sıra da bu yüzden böyle: müşterinin
-     kendi seçimi (`deliveryDate`) her zaman önce sorulur. */
-  /* Önseçim EN YAKIN davetli gündür: liste sunucudan gün sırasında geliyor (sözleşme künyesi),
-     yani baştaki. Ötekiler kaybolmuyor — her biri kendi satırıyla aşağıda duruyor. */
+  /* Seçilen gün türetilir, çünkü adres değişince saklanan gün uygun olmayabilir; tek gün varsa seçim sunulmaz. Davetin günü
+     önseçilidir ama kilitli değil: müşterinin kendi seçimi her zaman önce gelir, önseçim en yakın davetli gündür. */
   const firstInvitedDate = neighborInvites.find((invite) => dates.includes(invite.deliveryDate))?.deliveryDate ?? null;
   const chosenDate =
     deliveryDate !== null && dates.includes(deliveryDate)
@@ -244,8 +152,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const methods = payment?.methods ?? [];
   const codBlockedReason = payment?.codBlockedReason ?? null;
   const paymentOptions: PaymentOption[] = [
-    // `online` = Stripe yolu (peşin, yerel ödeme kartı). `cash` KAPIDA ödemedir; müşteri burada
-    // "kapıda öderim" der, hangi aracı kullandığını (nakit/kart/çek) kurye kapanışta yazar.
+    // `online` Stripe yoludur; `cash` kapıda ödemedir ve aracı (nakit, kart, çek) kurye kapanışta yazar.
     {
       key: 'online',
       method: 'online',
@@ -290,61 +197,28 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /** Seçim de türetilir: adres değişip yöntem kapanınca seçili kalması "kapalıyı seçtim" olurdu. */
   const selectedPayment = paymentOptions.find((option) => option.key === paymentKey && option.available) ?? null;
 
-  /* ── SEPET GÖRÜNÜMÜ (özet + küçük resimler) ───────────────────────────────
-     Kaynak SUNUCUNUN çözdüğü görünüm — PAKET DAHİL (20.08). Buradaki yerel süzgeç, sunucunun
-     paketi çözemediği döneme aitti: yerel kayıt çiziliyor, sunucunun adsız satırı eleniyordu.
-     Paket sunucuya bağlanınca gerekçe düştü ve süzgeç KALKTI — kalsaydı bu kez paket satırı
-     özetten hiç çizilmez, üstelik toplama giren satırla listelenen satır ayrışırdı. */
-  /* SEPET ADRESLE ÇÖZÜLÜR (kullanıcı kararı 10.08) — ama yer artık DEPOYA bildiriliyor, ekrana
-     ikinci bir okuma eklenerek değil (künye: `cart-store` → `purchasePostalCode`, 20.08). İkinci
-     okuma yazma turlarını duymuyordu ve ekranı dondurmuştu. Adres henüz bilinmiyorsa depo gezinme
-     koduna düşer; ekranı boş bırakmaktansa bir adım eski bir doğru. */
+  /* Özetin kaynağı sunucunun çözdüğü görünüm, paket dahil. Yer depoya bildirilir; adres bilinmiyorsa depo gezinme koduna düşer,
+     çünkü boş ekrandan bir adım eski bir doğru iyidir. */
   useEffect(() => {
     setPurchasePlace(selectedAddress?.postalCode ?? null);
   }, [selectedAddress?.postalCode]);
   const view = cart.view;
   const viewLines = view.lines;
 
-  /* ── BU SİPARİŞİN KAPSAMI (kullanıcı kararı 10.08) ────────────────────────
-     Bu adrese hiç gelemeyen kalem siparişe GİRMEZ ama sepetten de silinmez; sunucu onu kapsam
-     dışında bırakıp siparişi açıyor (`orderableLines`, `@lezzet/application`).
-
-     GRUP ARTIK ADRESİN CEVABI (`addressView`) — eski iki koşullu süzgeç SÖKÜLDÜ ve sebebi ölçüldü
-     (10.08, cihazda): grup gezinme koduyla çözülüyordu, kod rota İÇİ olduğu an hiçbir satır
-     `undeliverable` olmuyor ve süzgeç hiçbir şey düşürmüyordu. Sepet 67000 ile kurulup adres 67380
-     seçilince özet dört kalemi de yazıyordu (76,95 €) — ekranın kendi uyarısı aynı anda "bu
-     kalemler siparişe eklenmiyor" derken. Tek kaynak, tek cevap: satırın grubu.
-
-     Kalem GİZLENMEZ, üstü çizilir (kullanıcı kararı 10.08): özetten sessizce çıkan kalem,
-     müşteriye "herhâlde bunları alıyorum" dedirtiyordu — uyarı özetten uzakta, adresin yanındaydı
-     ve uyarı gibi okunmuyordu. Artık kararın kendisi özetin İÇİNDE yazılı. */
+  /* Bu adrese gelemeyen kalem siparişe girmez ama sepetten silinmez; grup adresin cevabıdır. Kalem gizlenmez, üstü çizilir, yoksa
+     müşteri "herhâlde bunları alıyorum" sanardı. */
   const droppedLines = viewLines.filter((line) => line.group === 'undeliverable');
   const orderedLines = viewLines.filter((line) => line.group !== 'undeliverable');
 
   /**
-   * Özetin ara toplamı — SİPARİŞE GİREN kalemlerin toplamı.
-   *
-   * İki sunucu sayısının farkı; ekranın kendi aritmetiği DEĞİL: matrahı sunucu da tam olarak böyle
-   * kuruyor (`subtotalCents − undeliverableSubtotalCents`, asgari sepet eşiğinin girdisi) ve
-   * sözleşme bu alanı zaten "ekran yazabilir" diye taşıyor. Ham çıkarma yerine listelenen satırları
-   * toplasaydık, fiyatı çözülememiş bir satır (`lineTotalCents: null`) sessizce sıfır sayılırdı.
+   * İki sunucu sayısının farkı, ekranın kendi aritmetiği değil: satırları toplasaydık fiyatı çözülemeyen satır sessizce sıfır
+   * sayılırdı.
    */
   const orderedSubtotalCents = view.subtotalCents - view.undeliverableSubtotalCents;
 
   /*
-    ── DÖKÜM VE TOPLAM AYNI OKUMADAN (kullanıcı kararı 21.08) ──────────────────
-    Buradaki kural TEK CÜMLE: **özet varsa hem satırlar hem toplam ondan gelir; yoksa ikisi de
-    yerel sepetten. Asla karışık.**
-
-    Karışıktı ve cihazda ölçüldü (21.08): satırlar `view`den, toplam `payment`ten geliyordu. Sepet
-    SUNUCUDA yaşayıp iki yüzeyde paylaşıldığı için ikisi ayrışabiliyor — ekran `2× kek + 8× börek`
-    listelerken genel toplam `16,00 €` yazdı (börek o sırada sunucudaki sepetten çıkmıştı). Kalemler
-    63,47 € topluyordu; hangisinin doğru olduğunu söyleyen hiçbir şey yoktu. Doğru olan TOPLAMDI —
-    bayat olan listeydi, ve asgari sepet uyarısı da doğru sayıya göre çıkıp müşteriye anlamsız
-    görünüyordu ("63 €'luk listeye bakıyorum, neden 24 € daha isteniyor?").
-
-    Adres SEÇİLMEDEN özet yoktur (sunucu kapsamı çözemez) ve o hâlde yerel sepete düşmek DOĞRUdur:
-    ekran "sepetin şu, şimdi adres seç" der. Yanlış olan tek şey ikisini aynı anda karıştırmaktı.
+    Özet varsa hem satırlar hem toplam ondan, yoksa ikisi de yerel sepetten gelir; asla karışık, çünkü sepet iki yüzeyde
+    paylaşıldığı için liste ile toplam ayrışabilir. Adres seçilmeden özet yoktur ve yerel sepete düşmek doğrudur.
   */
   const summary = snapshot?.summary ?? null;
   const summaryLines: { key: string; name: string; qty: number; lineTotalCents: number | null }[] =
@@ -368,13 +242,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const shippingFeeLabel =
     payment === null ? t.summary.pending : payment.shippingFeeCents === 0 ? t.summary.free : formatPrice(payment.shippingFeeCents, locale);
   /**
-   * Ödenecek TOPLAM sunucunun kararıdır; adres seçilmeden yalnız kalem toplamı bilinir.
-   *
-   * Anlık görüntü artık siparişin KAPSAMINI matrah alıyor (10.08): `readCheckoutSnapshot` hem
-   * kalemleri `orderableLines` ile süzüyor hem eşiği `totalCents − undeliverableSubtotalCents`
-   * üzerinden ölçüyor — yani bu sayı taslağın tahsil edeceğiyle aynı kapsamdan çıkıyor. Ekran onu
-   * kendi hesaplamaz ve hesaplamamalı: indirim ve kargo ücreti sunucunun kararı, istemci uydurursa
-   * kasada kesilenden başka bir sayı gösterir.
+   * Ödenecek toplam sunucunun kararıdır ve taslağın tahsil edeceğiyle aynı kapsamdan çıkar; adres seçilmeden yalnız kalem toplamı
+   * bilinir. Ekran indirim ve kargoyu kendisi hesaplamaz.
    */
   const grandTotalCents = payment?.orderTotalCents ?? view.totalCents;
 
@@ -383,9 +252,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
      özette başka türlü yazamaz. */
   const discountSummary = summary === null ? discountSummaryOf(view.discount, locale) : orderDiscountSummaryOf(summary.discount, locale);
 
-  /* Paket satırı artık `orderedLines`ın içinde (sunucu çözüyor) — ayrı bir yerel blok YOK.
-     Vardı ve 20.08'de söküldü: yerelden yazılan satır toplamı ekranın kendi çarpımıydı, oysa
-     tahsil edilecek tutarı sunucu hesaplıyor; ikisi bir gün ayrışırdı. */
+  /* Paket satırı sunucunun çözdüğü `orderedLines`ın içinde; yerel satır toplamı ekranın kendi çarpımı olurdu. */
   const summaryRows: SummaryRow[] = [
     ...summaryLines.map((line) => ({
       key: line.key,
@@ -393,11 +260,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       // Fiyatı olmayan satır SIFIR yazılmaz (CLAUDE §1): satışa kapanmış kalem "bedava" değildir.
       value: line.lineTotalCents === null ? t.summary.noPrice : formatPrice(line.lineTotalCents, locale),
     })),
-    /* GELEMEYEN KALEM ÖZETTEN GİZLENMEZ, ÜSTÜ ÇİZİLİR (kullanıcı kararı 10.08).
-       Gizlemek "herhâlde bunları alıyorum" dedirtiyordu: karar özetin uzağında, adresin yanında
-       duruyor ve bir uyarı gibi okunmuyordu. Artık kalem gözün gittiği yerde, kırmızı ve üstü
-       çizili; hemen altında da NEDEN olduğu yazılı. Satırlar ara toplamın ÜSTÜNDE duruyor ki
-       "bunlar bu listenin parçasıydı ama düştü" okunsun. */
+    /* Gelemeyen kalem özetten gizlenmez, üstü çizilir ve altında nedeni yazılır; ara toplamın üstünde durur ki listenin parçası
+       olduğu okunsun. */
     ...droppedRows.map((line) => ({
       key: line.key,
       label: t.summary.line.replace('{quantity}', String(line.qty)).replace('{name}', line.name),
@@ -409,11 +273,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       ? []
       : [{ key: 'undeliverable-note', label: t.summary.undeliverableNote, value: '', tone: 'danger' as const }]),
     { key: 'subtotal', label: t.summary.subtotal, value: formatPrice(summary?.subtotalCents ?? orderedSubtotalCents, locale) },
-    /* İndirimin KÜNYESİ de yazılır, yalnız tutarı değil (kullanıcı kararı 10.08 — web'in aynı
-       hükmü): sepette "İndirim · Baklava haftası" okuyan müşteri burada sadece "İndirim" görürse
-       aynı indirimden bahsedildiğini ancak sayıları karşılaştırarak anlar. Ad çok dilli bir alandan
-       (`discount.public_label`) SUNUCUDA çözülüyor; türetme ise sepetle ORTAK
-       (`discountSummaryOf`) — iki ekranın aynı kampanyaya iki ad vermesi imkânsız olsun. */
+    /* İndirimin adı da yazılır ki sepetteki indirimle aynı olduğu anlaşılsın; türetme sepetle ortak. */
     ...(discountSummary === null
       ? []
       : [
@@ -430,12 +290,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     { key: 'delivery', label: t.summary.delivery, value: shippingFeeLabel },
   ];
 
-  // Küçük resimler de siparişin kendisini gösterir: kapsam dışı bir kalemin fotoğrafı, "bunlar
-  // geliyor" diye okunurdu.
-  /* FOTOĞRAF DA GEÇİLİR (kullanıcı bulgusu 10.08): yuvarlaklar baş harf çiziyordu çünkü fotoğraf
-     hiç verilmiyordu — `AvatarThumb` onu zaten destekliyor. Baş harf yedek olarak kalır: fotoğrafı
-     olmayan ürün boş bir daire değil, adının ilk harfi olur. Görsel katalogdaki hâliyle geçer;
-     daire kendi çapına yeten kare CDN türevini seçer (21.303). */
+  // Küçük resimler siparişin kendisini gösterir; fotoğrafı olmayan ürün adının ilk harfiyle çizilir.
   const thumbs = [
     ...cart.bundles.map((bundle) => ({ key: `bundle-${bundle.id}`, name: bundle.name, image: bundle.image })),
     ...orderedLines.map((line) => ({ key: cartLineId(line), name: line.name, image: line.image })),
@@ -472,9 +327,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /** Onayı engelleyen İLK sebep; yoksa `null`. Sıra şablonun sırası, gerçekler sunucunun. */
   const blockReason = (): string | null => {
     if (customer === null) return t.block.login;
-    /* İLETİŞİM KÜNYESİ ZORUNLU (kullanıcı kararı 15.08): numara olmadan kurye kapıda ulaşamaz ve
-       teslimat bildirimi yalnız e-postadan gider. Engel adres kontrolünden ÖNCE çünkü bölüm de
-       ekranın en üstünde — söylenen sıra ile uygulanan sıra aynı olmalı. */
+    /* İletişim künyesi zorunlu: numara olmadan kurye kapıda ulaşamaz. Engel adres kontrolünden önce, çünkü bölüm de ekranın en
+       üstünde ve söylenen sıra uygulanan sıra olmalı. */
     if (contactMissing) return t.block.contact;
     // Okuma düştüyse onay KAPALI ve sebep açıkça söylenir: "seçenekleriniz güncelleniyor" demek,
     // bitmeyecek bir bekleyiş vaat etmek olurdu (yukarıda ayrıca "yeniden dene" duruyor).
@@ -485,10 +339,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     if (selectedAddress === null) return t.block.address;
     // Adres var ama teslimat/ödeme dilimi yoksa karar VERİLMEMİŞ demektir; tahmin yürütülmez.
     if (payment === null) return t.block.loading;
-    /* GELEMEYEN KALEM ARTIK ONAYI KAPATMAZ (kullanıcı kararı 10.08): sunucu onu siparişin
-       kapsamından çıkarıp siparişi açıyor — tek bir soğuk zincir ürünü yüzünden bütün sepeti
-       kilitlemek, müşteriyi çıkışsız bırakmaktı. Engel YALNIZ kargo siparişinde gerçek: o sipariş
-       soğuk zincir kalemi taşıyamaz ve sunucu onu reddeder (`cold_chain_unshippable`). */
+    /* Gelemeyen kalem onayı kapatmaz, sunucu onu kapsam dışında bırakır; engel yalnız kargo siparişinde gerçek, çünkü o sipariş
+       soğuk zincir kalemi taşıyamaz. */
     if (shippingOrder && delivery?.blocked === true) return t.block.shipping;
     if (!payment.minBasketOk) {
       return t.block.minBasket
@@ -502,23 +354,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   const blocked = blockReason();
 
   /**
-   * Sipariş açıldı: onay ekranına SUNUCUNUN tutarı ve seçilen künyeler taşınır.
-   *
-   * **SİPARİŞ NUMARASI ARTIK TAŞINIYOR (27.08)** — sözleşme `placed` dalında `referenceNo`
-   * döndürüyor ve numara geçişin kendi cevabından geliyor (`transitionOrder`, ek okuma yok).
-   * Önceki hâlde cevapta yalnız uuid vardı; uuid'i "sipariş no" diye yazmak müşteriye telefonda
-   * okuyamayacağı bir numara vermek olurdu, o yüzden satır hiç çizilmiyordu.
-   *
-   * **KART YOLUNDA `null` GEÇER ve bu doğru:** numara ilk kalıcı durumda doğar (`confirmed`) ve
-   * kart yolunda sipariş ödeme kartı kapandığı an hâlâ TASLAKTIR — onayı webhook yazar, saniyeler
-   * sonra. O anda bir numara uydurmak yerine ekran satırı çizmez; müşteri numarayı "Siparişlerim"de
-   * görür. Ölçülemeyen değer boş bırakılır (CLAUDE §1).
-   *
-   * **`orderId` TAŞINIYOR ama gösterilmiyor** (21.45): onay ekranı komşu davetini onunla açıyor
-   * (`POST /me/invite/neighbor`). Müşteriye çizilmiyor — uuid onun kullanabileceği bir numara
-   * değil; ekranın gerekçesi yukarıda. Yalnız ROTA siparişinde anlamlı, ama süzgeç ekranda değil
-   * SUNUCUDA: kargo siparişinde davet zaten açılmıyor ve cevap `null` dönüyor. İki yerde süzmek,
-   * "hangi sipariş komşu çağırabilir" kuralının ikinci kopyası olurdu.
+   * Onay ekranına sunucunun tutarı ve sipariş numarası taşınır; kart yolunda numara `null`dur, çünkü sipariş o anda hâlâ taslaktır
+   * ve onayı webhook yazar. `orderId` gösterilmez, yalnız komşu davetini açmak için taşınır.
    */
   const finish = (
     orderId: string,
@@ -526,15 +363,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     deliveryType: 'route' | 'shipping',
     referenceNo: string | null,
   ): void => {
-    /* SEPET YERELDE BOŞALTILMAZ, SUNUCUDAN TAZELENİR (21.29a): sunucu o siparişin kalemlerini
-       zaten düşürdü (`placeOrder` → `clearOrderedLines`) ve `resetCart()` iki gruplu sepette kargo
-       yarısını da silerdi — müşterinin henüz sipariş etmediği kalemleri.
-
-       Eksik olan tek şey deponun HABERİYDİ: sunucu turunu yalnız dil/yer/oturum değişimi
-       tetikliyordu, sipariş bunların hiçbiri değil. Ölçüldü (kullanıcı bulgusu 10.08): sipariş
-       verildikten sonra rozet eski sayıyı göstermeye devam ediyordu. Kapı artık var. */
-    /* SİPARİŞ OLDU — uygulamanın en çok beklenen anı; ekran değişmeden ÖNCE titrer ki onay,
-       geçiş animasyonunun altında kaybolmasın. */
+    /* Sepet yerelde boşaltılmaz, sunucudan tazelenir: `resetCart()` henüz sipariş edilmemiş kargo yarısını da silerdi. Ekran
+       değişmeden önce titrer ki onay geçiş animasyonunun altında kaybolmasın. */
     hapticSuccess();
     refreshCart();
     router.replace({
@@ -552,12 +382,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   };
 
   /*
-    RET VE ARIZANIN FİZİKSEL KARŞILIĞI TEK YERDE — `setNotice` artık doğrudan çağrılmıyor.
-    Üç ayrı yerde ret kuruluyor (taşıma arızası · ödeme başarısızlığı · sunucu reddi) ve üçüne
-    tek tek titreşim yazmak, dördüncüsü eklendiğinde unutulacak bir desen olurdu.
-
-    `warm` SESSİZ: ödeme kartını müşteri KENDİSİ kapattığında bu bir başarısızlık değil, onun
-    kararıdır — kendi hareketini ona hata gibi geri bildirmeyiz.
+    Ret ve arızanın titreşimi tek yerde, yoksa yeni bir ret türünde unutulurdu. `warm` sessizdir: ödeme kartını müşteri kendisi
+    kapattıysa bu onun kararıdır, hata değil.
   */
   const showNotice = (next: { tone: 'error' | 'warm'; text: string }): void => {
     if (next.tone === 'error') hapticError();
@@ -569,11 +395,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
     setSubmitting(true);
     setNotice(null);
 
-    /* ADRES DOĞRULAMASI SİPARİŞ ANINDA — ve BİR KEZ (11.11 · kullanıcı kararı 02.09). Söylenecek bir
-       şey varsa akış burada DURUR; müşteri görür, kararını verir, ikinci dokunuşta sipariş geçer.
-       `confirmed` ve `unknown` hiç göstermez: birincisinde söylenecek şey yok, ikincisinde söyleyecek
-       bilgimiz yok. Soru DÜŞERSE (ağ) akış da durmaz — FAIL-OPEN: bir dış servisin ya da bizim
-       ucumuzun kesintisi satışı durduramaz (uç künyesi). */
+    /* Adres doğrulaması sipariş anında ve bir kez: söylenecek bir şey varsa akış durur, ikinci dokunuşta sipariş geçer. Soru
+       düşerse akış durmaz, çünkü dış servisin kesintisi satışı durduramaz. */
     if (checkedFor.current !== selectedAddress.id) {
       const check = await checkAddress(selectedAddress.id);
       checkedFor.current = selectedAddress.id;
@@ -594,11 +417,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       idempotencyKey: orderKey,
       marketingConsent: marketing,
       shippingOrder,
-      /* EKRANIN GÖSTERDİĞİ SEPETİN İMZASI (21.08) — sunucunun verdiği değer, olduğu gibi geri
-         gidiyor. Sepet iki yüzeyde paylaşıldığı için son okumamızla bu dokunuş arasında değişmiş
-         olabilir; değiştiyse sunucu `cart_changed` ile reddeder ve müşteri yeni listeyi görüp
-         bilerek onaylar. Özet yoksa imza da yok: o hâlde zaten adres seçilmemiştir ve buraya
-         gelinemez. */
+      /* Ekranın gösterdiği sepetin imzası, sunucunun verdiği gibi geri gider; sepet arada değiştiyse sunucu `cart_changed` ile
+         reddeder ve müşteri yeni listeyi bilerek onaylar. */
       expectedCartFingerprint: summary?.fingerprint ?? null,
     });
 
@@ -650,10 +470,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   };
 
   /**
-   * TEKLİF KABUL EDİLDİ — hem siparişin adresi hem KAYIT düzelir (kullanıcı kararı 02.09). Tek yazım
-   * yeter: sipariş henüz açılmadı ve seçili adres kaydın kendisi. Değişen YALNIZ kod ve şehir —
-   * `wrong_postal_code`ın tanımı bu (sokak ve numara aynı, kapı başka kodda); alıcıya, telefona,
-   * etikete dokunulmaz. Ülke gönderilmez: kapı yeni kodu kendisi çözer (web'in aynı çağrısı).
+   * Teklif kabul edilince hem siparişin adresi hem kayıt düzelir; değişen yalnız kod ve şehirdir. Ülke gönderilmez, kapı yeni kodu
+   * kendisi çözer.
    */
   const acceptAddressFix = async (): Promise<void> => {
     if (selectedAddress === null || addressNotice?.status !== 'wrong_postal_code') return;
@@ -691,20 +509,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="checkout-back" />}
         testID="checkout-appbar"
       />
-      {/*
-        KLAVYE KORUMALI KAP (27.08 · 21.57'nin bekçisi bunu yakaladı).
-
-        Ekran ham `ScrollView` kullanıyordu ve 11.08'de bu DOĞRUYDU — o gün içinde metin alanı
-        yoktu. İletişim künyesi bölümü 15.08'de eklendi (ad + telefon) ve kaydırıcının içine
-        düştü; koruma ise ekranla birlikte gelmedi. Sonuç, müşterinin ödeme yaptığı ekranda iki
-        açık arızaydı: odaklanan alan klavyenin altında kalıyor (MB-02) ve klavye açıkken
-        düğmeye ilk dokunuş yutuluyordu (MB-01). Kimse hata yapmadı — kural o gün makinede
-        değildi; artık `lib/keyboard-scroll-guard.test.ts` onu her koşuda soruyor.
-
-        Kap ikisini birlikte taşıyor ve yerleşim değişmiyor: `FormScroll` da kabuğun kalan
-        yüksekliğini dolduruyor (`flex: 1`), onay düğmesi zaten kaydırıcının içinde — yapışkan
-        bar yok, itilecek bir yerleşim de yok.
-      */}
+      {/* Klavye korumalı kap: odaklanan alan klavyenin altında kalmasın ve klavye açıkken ilk dokunuş yutulmasın. Kural
+          `lib/keyboard-scroll-guard.test.ts`te denetleniyor. */}
       <FormScroll contentContainerStyle={styles.content} testID="checkout-scroll">
         <View style={styles.hero}>
           <Text style={styles.heroTitle} accessibilityRole="header">
@@ -724,21 +530,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           </View>
         </View>
 
-        {/* KİMLİK DÖRT HÂLDİR, İKİ DEĞİL (kullanıcı bulgusu 10.08 — cihazda ölçüldü).
-            Bu blok eskiden `me === null` diye tek soru soruyordu ve `loading`/`error` hâllerini de
-            MİSAFİR sayıyordu: uç kısa süre düştüğünde giriş yapmış müşteri, adresi ekranda dururken
-            "siparişinizi tamamlamak için hızlı doğrulama" davetini görüyordu — sistem, bildiği bir
-            şeyi bilmiyormuş gibi davranıp müşteriyi kendi hesabından şüpheye düşürüyordu.
-            CLAUDE §1'in kuralı: ölçülemeyen değer SIFIR değildir. `guest` bir CEVAPTIR, `error`
-            cevapsızlıktır, `loading` henüz sorulmamış sorudur; üçü aynı şeyi söyleyemez. */}
-        {/* ŞERİT ADSIZ HESABI DA KARŞILAR (ölçüldü cihazda 16.08). Eskiden `{name}` doğrudan
-            basılıyordu ve OTP ile açılan hesapta ad BOŞ DİZGEDİR (`profile-gaps` künyesi: tetik adı
-            sağlayıcı künyesinden okuyor, o yolda orası boş) — ekranda yalnız çıplak bir "✓ "
-            kalıyordu. Kusur eskiydi ama GÖRÜNMEZDİ: künye kapısı adsız müşteriyi ödeme ekranına hiç
-            bırakmıyordu; kapı 15.08'de kalkınca ortaya çıktı.
-            Sıra: ad → e-posta → adsız cümle. Şeridin işi "hangi hesapla buradasın" demek; adı
-            yoksa e-posta o soruyu yanıtlar, o da yoksa cümle kimliksiz kurulur — boş bir işaret
-            müşteriye hiçbir şey söylemez. */}
+        {/* Kimlik dört hâllidir: misafir bir cevap, okuma hatası cevapsızlık, yükleme henüz sorulmamış sorudur. Bant ad, yoksa
+            e-posta, o da yoksa kimliksiz cümle yazar; boş işaret müşteriye bir şey söylemez. */}
         {meStatus === 'ready' && customer !== null ? (
           <View style={styles.signedIn} testID="checkout-signed-in">
             <Text style={styles.signedInLabel}>{signedInLabel(t, customer)}</Text>
@@ -759,12 +552,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         ) : /* `loading`: hiçbir şey çizilmez — cevabı gelmemiş bir soruyu ekrana yazmak, kimliği
               olan müşteriye bir an için "misafirsiniz" demektir. */ null}
 
-        {/* Seçenekler okunamadıysa ekran SESSİZ KALMAZ: hangi hâlde olduğunu söyler ve aynı
-            sorguyu tekrar etme yolunu verir. */}
-        {/* Halka yerine ÜÇ BÖLÜMÜN yeri tutulur (kullanıcı kararı 10.08): burada bekleyen şey bir
-            işlem değil, gelecek olan teslim adresi · teslimat yolu · ödeme yöntemi. Halka
-            hiçbirinin yerini tutmuyor, cevap gelince üçü birden giriyor ve tutar özetiyle onay
-            barı aşağı zıplıyordu (skeleton künyesi). */}
+        {/* Seçenekler okunamadıysa ekran hâlini söyler ve yeniden deneme yolu verir. Yüklenirken üç bölümün yeri tutulur ki cevap
+            gelince tutar özeti ve onay aşağı zıplamasın. */}
         {checkout.status === 'loading' ? <CheckoutSkeleton testID="checkout-loading" /> : null}
         {checkout.status === 'error' ? (
           <View style={styles.section} testID="checkout-failed">
@@ -775,9 +564,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
         {checkout.status === 'ready' ? (
           <>
-            {/* İLETİŞİM — yalnız künyesi eksikken ve EN ÜSTTE (kullanıcı kararı 15.08). Bölüm
-                gerekçesiyle açılıyor: alanı sormadan önce NEDEN sorulduğu yazılı. Künye tamamsa
-                bölüm hiç çizilmez — ikinci siparişte müşteri bunu bir daha görmez. */}
+            {/* İletişim bölümü yalnız künye eksikken ve en üstte; alanı sormadan önce neden sorulduğu yazılı. */}
             {contactMissing ? (
               <View style={styles.section} testID="checkout-contact">
                 <Text style={styles.eyebrow}>{upperIn(t.contact.eyebrow, locale)}</Text>
@@ -825,10 +612,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
             <View style={styles.section}>
               <Text style={styles.eyebrow}>{upperIn(t.address.eyebrow, locale)}</Text>
-              {/* HİÇ ADRES YOKSA burası bir DAVETTİR, bir uyarı değil (10.08): eskiden kuru bir
-                  not ve profil sayfasına atan bir bağlantı vardı — müşteri siparişin ortasında
-                  başka bir ekrana düşüyordu. Kutu misafir bloğunun kalıbı (`DashedInvite`),
-                  düğme aynı çekmeceyi ORADA açar. */}
+              {/* Hiç adres yoksa burası bir davettir, uyarı değil; düğme aynı çekmeceyi burada açar. */}
               {addresses.map((candidate) => (
                 <OptionRow
                   key={candidate.id}
@@ -837,8 +621,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   description={addressLine(candidate)}
                   selected={candidate.id === selectedAddress?.id}
                   onPress={() => setAddressId(candidate.id)}
-                  /* UZUN BASMA DÜZENLER (21.215 · kullanıcı isteği): kayıtlı adresi düzeltmek için
-                     sipariş akışından çıkmak gerekmesin — hesap ekranıyla aynı çekmece, dolu açılır. */
+                  /* Uzun basma düzenler: kayıtlı adresi düzeltmek için sipariş akışından çıkmak gerekmesin. */
                   onLongPress={() => setAddressSheet({ editing: candidate })}
                   hint={t.address.editHint}
                   trailing={candidate.isDefault ? <Text style={styles.defaultBadge}>{t.address.default}</Text> : undefined}
@@ -867,12 +650,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
               )}
             </View>
 
-            {/* ENGEL DEĞİL, BİLGİ (kullanıcı kararı 10.08). Kutu eskiden KIRMIZIYDI ve "bu adrese
-                teslim edemiyoruz, o kalemleri sepetten çıkarın" diyordu — bugün yanlış: sunucu o
-                kalemleri siparişin dışında bırakıyor, siparişi reddetmiyor. Cümle artık ne olduğunu
-                söylüyor: bu siparişe girmiyorlar, SEPETTE bekliyorlar, bölge içi bir adres seçilirse
-                dahil olurlar. Ton `warm`; hata kırmızısı müşteriye düzeltmesi gereken bir yanlış
-                yaptığını söylerdi. */}
+            {/* Engel değil bilgi: bu kalemler siparişe girmez, sepette bekler ve bölge içi bir adres seçilirse dahil olur; ton bu
+                yüzden hata kırmızısı değil. */}
             {droppedRows.length === 0 ? null : (
               <Note tone="warm" title={t.undeliverable.title} description={undeliverableText} testID="checkout-undeliverable" />
             )}
@@ -885,9 +664,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   description={isRoute ? t.delivery.doorBody.replace('{fee}', shippingFeeLabel) : t.delivery.doorUnavailable}
                   selected={isRoute}
                   disabled={!isRoute}
-                  /* SEBEP KIRMIZI (kullanıcı kararı 10.08): soluklaşma "kapalı" der ama NEDEN
-                     kapalı olduğunu söylemez; sebep soluk griyle yazılınca müşteri onu fark
-                     etmiyordu. Yalnız KAPALI hâlde kırmızı — açık seçenekte sebep yok. */
+                  /* Sebep yalnız kapalı hâlde kırmızı: soluk griyle yazılınca müşteri onu fark etmiyordu. */
                   descriptionTone={isRoute ? 'muted' : 'danger'}
                   // Yol adresin cevabı: dokunuş bir şey değiştirmez (dosya künyesi).
                   onPress={keepDelivery}
@@ -902,37 +679,20 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
                   onPress={keepDelivery}
                   testID="checkout-mode-shipping"
                 />
-                {/* KOMŞU DAVETİ — gün seçiminin HEMEN ÜSTÜNDE ve bilerek: cümle o seçimin
-                    gerekçesidir. Aşağıda dursaydı müşteri günü çoktan seçmiş olurdu; kullanıcının
-                    "kaybolmaması lazım" dediği şey tam olarak bu bağ. "Sefer" kelimesi geçmez —
-                    müşteriye gün söylenir. */}
-                {/* HER DAVET KENDİ SATIRINDA (MB-61, kullanıcı kararı 21.08): müşteriyi birden çok
-                    komşusu birden çok güne çağırmış olabilir ve eskiden sunucu yalnız en yakın günü
-                    dönüyordu — ikinci davet ekranda HİÇ görünmüyordu. Aynı gün + aynı bölgeye iki
-                    davet varsa sunucu zaten tekini gönderir (son kabul edilen kazanır), yani burada
-                    gün başına tek satır çizilir. */}
+                {/* Komşu daveti gün seçiminin hemen üstünde, çünkü cümle o seçimin gerekçesidir. Her davet kendi satırında: müşteriyi
+                    birden çok komşu birden çok güne çağırmış olabilir. */}
                 {isRoute
                   ? neighborInvites.map((neighborInvite) => (
                   <Note
                     key={neighborInvite.inviteId}
                     tone="olive"
-                    /* CÜMLE SEÇİME BAĞLI (12.08 · cihazda ölçüldü). Tek metin yazılmıştı ve müşteri
-                       başka güne dokununca *"o gün sizin için seçili"* yalana dönüyordu — üstelik
-                       zararsız değil: davet YALNIZ tam gün eşleşmesinde bağlanıyor
-                       (`matchNeighborInviteForOrder`), yani müşteri komşusunun seferine katıldığını
-                       sanırken ödül hiç yazılmayacaktı. İkinci cümle bir uyarı değil ÇAĞRIDIR:
-                       seçimi geri almıyor, o güne dönmenin ne kazandırdığını söylüyor. */
+                    /* Cümle seçime bağlı: davet yalnız tam gün eşleşmesinde bağlanır, başka güne dokunan müşteriye o güne dönmenin
+                       ne kazandırdığı söylenir. */
                     description={(chosenDate === neighborInvite.deliveryDate ? t.delivery.neighborInvite : t.delivery.neighborInviteOtherDay)
                       .replace('{name}', neighborInvite.inviterName || t.delivery.neighborSomeone)
                       .replace('{day}', formatDeliveryDate(neighborInvite.deliveryDate, locale))}
-                    /* RET KUTUNUN İÇİNDE (kullanıcı kararı 21.08) — dışına konsaydı kutu bir cümleye
-                       inip denetim sayfaya dökülürdü (`Note` yuvasının künyesi). Metin "sil" değil
-                       "kaldır": kayıt silinmiyor, ret geri alınabilir — aynı bağlantıya yeniden
-                       tıklamak daveti geri getirir ve öne alır.
-
-                       Ekran YEREL BİR LİSTE TUTMAZ: ret yazıldıktan sonra anlık görüntü yeniden
-                       okunuyor (`checkout.reload`). İkinci bir doğruluk kaynağı açsaydık, sunucu
-                       reddi kabul etmediğinde ekran onu kabul etmiş gibi görünürdü. */
+                    /* Ret kutunun içinde ve geri alınabilir, bu yüzden "sil" değil "kaldır". Ekran yerel liste tutmaz, anlık görüntü
+                       yeniden okunur. */
                     action={
                       <TextAction
                         label={t.delivery.neighborDecline}
@@ -1030,10 +790,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           <Text style={styles.consentLabel}>{t.marketing}</Text>
         </PressableSurface>
 
-        {/* ADRES TEKLİFİ — onay düğmesinin hemen üstünde: soru "Siparişi onayla"ya basıldığı an doğuyor
-            ve müşterinin gözü orada. İki hâl AYRI YAPI (tasarım `musteri-checkout.md` §4c): kapı başka
-            kodda bulunduysa iki düğme, doğrulanamadıysa tek yumuşak satır — birinde tıklanacak bir
-            şey var, ötekinde yok. Metin SERVİSİN etiketidir (`label`); biz cümle kurmayız. */}
+        {/* Adres teklifi onay düğmesinin hemen üstünde, çünkü soru o anda doğar. İki hâl ayrı yapı: başka kodda bulunan kapıda iki
+            düğme, doğrulanamayan kapıda tek yumuşak satır; metin servisin etiketidir. */}
         {addressNotice === null ? null : addressNotice.status === 'wrong_postal_code' ? (
           <Note
             tone="warm"
@@ -1076,11 +834,8 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
           testID="checkout-confirm"
         />
 
-        {/* SATIŞ KOŞULLARI — düğmenin ALTINDA, web'in birebir yeri ve birebir cümlesi
-            (`checkout-steps.tsx:596`). Native'de yoktu (ölçüldü 19.08, MB-76): müşteri "onaylayarak
-            kabul etmiş olursunuz" cümlesini görmeden sipariş veriyordu ve kabul ettiği metnin
-            okunacağı yer de uygulamada hiç açılmıyordu. Cümle ile bağ AYRI satır: yerelleştirilmiş
-            cümleyi parçalayıp içine bağ gömmek üç dilde de kırılgan olurdu (web künyesinin gerekçesi). */}
+        {/* Satış koşulları düğmenin altında, web'le aynı yerde ve cümlede. Cümle ile bağ ayrı satır: yerelleştirilmiş cümleye bağ
+            gömmek üç dilde kırılgan olurdu. */}
         <View style={styles.termsBlock}>
           <Text style={styles.termsLine}>{t.terms}</Text>
           <TextAction
@@ -1098,7 +853,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         addresses={addresses}
         onClose={() => setAddressSheet(null)}
         onSaved={applyAddressWrite}
-        /* Yeni adres hesabın künyesiyle DOLU açılır (22.08); `me` bu ekranda zaten okunuyor. */
+        /* Yeni adres hesabın künyesiyle dolu açılır; `me` bu ekranda zaten okunuyor. */
         defaults={addressDefaultsOf(me)}
         testID="checkout-address-sheet"
       />
@@ -1106,12 +861,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   );
 }
 
-/**
- * "Hangi hesapla buradasın" şeridinin metni — ad yoksa e-posta, o da yoksa adsız cümle.
- *
- * Ölçütü ekran kendi kurmuyor, `isNameMissing`i çağırıyor: "ad = e-posta" hâli de adsızlıktır ve o
- * kural iki yerde tutulursa bir gün ayrışır (kitin künyesi).
- */
+/** Ölçüt `isNameMissing`ten gelir: "ad = e-posta" hâli de adsızlıktır ve kural iki yerde tutulursa ayrışır. */
 function signedInLabel(t: Messages, customer: Me): string {
   if (!isNameMissing(customer)) return t.signedIn.replace('{name}', customer.name);
   const email = customer.email?.trim() ?? '';
@@ -1242,10 +992,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     gap: theme.space.xs,
   },
-  /* `body-sm` (14), `helper` DEĞİL — MB-46'nın ölçütü: müşterinin KARAR için okuduğu metin 14'ün
-     altına inmez. Hemen üstteki kampanya onayı `helper`da kalıyor çünkü o isteğe bağlı; bu satır
-     siparişin hukuki çerçevesini söylüyor. Web'in `text-micro`su taşınmadı: orada altbilgi ve
-     imleçle büyütülebilen bir yüzey var, burada yok. */
+  /* `body-sm`: müşterinin karar için okuduğu metin 14'ün altına inmez; bu satır siparişin hukuki çerçevesini söyler. */
   termsLine: {
     textAlign: 'center',
     fontFamily: theme.font.body[400],
