@@ -15,25 +15,8 @@ import { Reviews } from './components/reviews';
 import type { ProductViewProps } from './product-types';
 
 /**
- * Ürün detay — TELEFON görünümü: native ürün detayının (`apps/mobile/src/screens/product/product-detail-screen.tsx`)
- * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Sıra
- * native'inki: kahraman (galeri · üst degrade · yüzen ‹ ve paylaş · durum rozeti · sarkan fiyat) → künye
- * (kategori · ad · birim satırı · sınır ve kargo çipleri · çeşit rayı · boy çipleri · açıklama) → beyan
- * akordeonları → değerlendirmeler → "bunları da sevebilirsiniz" → yapışkan satın alma barı. Metin ortak
- * sözlükten (`@lezzet/i18n/customer/product`), kart cümleleri `@lezzet/helper`dan.
- *
- * ── WEB'E ÖZGÜ KORUNANLAR ──────────────────────────────────────────────────
- * · Çerçeve başlık çizmez (fotoğraf ekranın tepesine taşar — native); `h1` ürünün adı, yapısal veri ve paylaşım
- *   kartı `page.tsx`te.
- * · Değerlendirmeler web'in GERÇEK yorumları (`Reviews`): native sözleşme yorum taşımadığı için "yorum yok"
- *   kutusu çiziyor (native sapma 1); web'de veri var, bölüm onu gösterir.
- * · Beyan `<details>` ile — içerik kapalıyken de sayfada (INCO; `phone-declaration.tsx` künyesi).
- * · Boy çipinin adı yapısal alanlardan (`variantNameOf`, kullanıcı kararı 19.08 — "adet mantıklıysa adet,
- *   gramaj mantıklıysa gramaj"); native saklı etiketi yazıyor.
- * · Sepete ekleme ve "haber ver" web'in kapılarından (`phone-purchase-bar.tsx` künyesi); paylaşım ölçülür.
- *
- * ── BİLİNÇLİ, GEÇİCİ FARK ─────────────────────────────────────────────────
- * · Köşe (18 ↔ 20), `sand-300` ve `on-image-soft` tabanın değerinde (08.58 token maddesi).
+ * Sıra native ürün detayınınki. Değerlendirmeler web'in gerçek yorumları; beyan `<details>` ile, içerik kapalıyken de
+ * sayfada durur (INCO).
  */
 export function ProductMobile({ t, locale, product, selected, onSelect, reviews }: ProductViewProps) {
   const copy = productMessages[locale];
@@ -41,13 +24,12 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
   const price = selected?.priceCents ?? null;
   const was = selected?.wasCents;
   const soldOut = selected?.soldOut ?? true;
-  /* YERİN CEVABI kahramanın filigranında (native sapma 8): `info` (kargoyla gelir) elenir — o işaret ekranlardan
-     kalktı (kullanıcı kararı 10.08); fiyatsız ürün susar, "bu adrese gelmiyor" demek cevapsız soruya cevaptır. */
+  /* Filigranda yalnız uyarı konuşur: `info` (kargoyla gelir) gösterilmez, fiyatsız ürün susar. */
   const mark = selected === null || price === null ? null : placeMarkOf(selected.stockStatus, place, placeMessages[locale]);
   const placeMark = mark === null || mark.tone === 'info' ? null : mark;
-  // Fiyatsız benzer çizilmez: satışa kapalı ürün "bunları da sevebilirsiniz" rafında durmaz (native).
+  // Fiyatsız benzer çizilmez: satışa kapalı ürün rafta durmaz.
   const similar = product.similar.filter((item) => item.priceCents !== null);
-  // Galeri hiç gelmediyse tek kapakla (native): ilk öğe zaten kapaktır.
+  // Galeri yoksa tek kapak: ilk öğe zaten kapaktır.
   const heroPhotos = product.gallery.length > 0 ? product.gallery : [product.image];
   const categoryUpper = product.category?.name.toLocaleUpperCase(locale) ?? null;
   const comparison = selected?.comparisonCents ?? null;
@@ -61,17 +43,17 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
 
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
-      {/* Kahraman içeriğin ÜSTÜNE çizilir (`z-10`) — fiyat rozeti alt komşuya sarkıyor (native `zIndex`). */}
+      {/* Kahraman içeriğin üstünde (`z-10`): fiyat rozeti alt komşuya sarkıyor. */}
       <div className="relative z-10 h-[400px] flex-none">
         <PhotoGallery images={heroPhotos} alt={product.name} photoLabel={copy.gallery.photo} initial={product.name.slice(0, 1)} ratio={RATIO_SQUARE} />
         <span aria-hidden className="pointer-events-none absolute inset-0 bg-linear-to-b from-scrim-soft to-ink-deep/0 to-30%" />
-        {/* Yer filigranı galerinin KARDEŞİ, çocuğu değil: kaydırmayla kaymaz, dokunuşu yutmaz (native 10.08). */}
+        {/* Filigran galerinin kardeşi, çocuğu değil: kaydırmayla kaymaz, dokunuşu yutmaz. */}
         {placeMark !== null && (
           <span className="pointer-events-none absolute inset-0 grid place-items-center bg-scrim px-4 text-center">
             <span className="line-clamp-3 font-sans text-body leading-[1.6] font-bold whitespace-pre-line text-on-image">{placeMark.label}</span>
           </span>
         )}
-        {/* Düğmeler üst güvenli alanın 8px altında (native 08.08: saate binmesin). */}
+        {/* Düğmeler üst güvenli alanın 8px altında: saate binmesin. */}
         <div className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+8px)] flex justify-between">
           <BackButton variant="photo" label={copy.back} fallback="/catalog" />
           <ShareButton variant="photo" label={copy.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
@@ -107,7 +89,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
           <PhoneFamilyRail members={product.family} eyebrow={copy.family.browse.replace('{name}', categoryUpper)} currentLabel={copy.family.current} locale={locale} />
         )}
 
-        {/* Boy çipleri yalnız ÇOK boylu üründe: tek boyda seçilecek bir şey yok. */}
+        {/* Boy çipleri yalnız çok boylu üründe: tek boyda seçilecek bir şey yok. */}
         {product.variants.length > 1 && selected !== null && (
           <div className="flex flex-wrap gap-2">
             {product.variants.map((option) => {
@@ -150,6 +132,8 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
               <ProductCircleCard
                 key={item.id}
                 size="sm"
+                // Kardeş ürüne geçiş geçmişi büyütmez: geri, ürün zincirine girilen yere (katalog, ana sayfa, sepet) döner.
+                replace
                 href={{ pathname: '/product/[slug]', params: { slug: item.slug } }}
                 name={item.name}
                 priceLabel={productPriceLabel(item.priceCents, item.variantCount, locale)}
@@ -161,7 +145,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
         </section>
       )}
 
-      {/* Yapışkan barın payı (native `productBarSpace` 108). */}
+      {/* Yapışkan barın payı. */}
       <div aria-hidden className="h-27 flex-none" />
 
       {/* Bar boy değişince yeniden kurulur: adet ve "haber ver" kaydı boya aittir. */}

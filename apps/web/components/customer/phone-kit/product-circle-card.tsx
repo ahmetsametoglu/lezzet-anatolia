@@ -5,18 +5,14 @@ import { CirclePhoto } from './circle-photo';
 import { Tag } from './tag';
 
 /*
-  YUVARLAK ÜRÜN KARTI — native `ProductCircleCard`ın web ikizi (14.09). İki çap, native'in: `lg` 146 (vitrin
-  rayı) · `sm` 120 (ürün detayının "bunları da sevebilirsiniz" rayı — native `circleSm`).
-
-  · Fiyat çipi dairenin sağ alt köşesinden taşan eğik rozettir; fiyat BİLİNMİYORSA çip hiç çizilmez
-    (sıfır yazılmaz — `productPriceLabel` künyesi).
-  · İndirim rozeti yalnız FIRSAT içindir (`cardBadgeOf`): kampanya ürünün değil kesitin özelliği.
-  · Yer işareti (bu adrese gelmeyen ürün) dairenin İÇİNDE, filigranın üstünde yazı olarak durur;
-    solma yalnız fotoğrafa uygulanır ki solmanın SEBEBİ okunur kalsın (native 10.08 kararı).
+  Fiyat bilinmiyorsa çip hiç çizilmez (sıfır yazılmaz); indirim rozeti yalnız fırsat içindir, kampanya kesitin
+  özelliğidir. Solma yalnız fotoğrafa uygulanır ki yer işaretinin cümlesi okunur kalsın.
 */
 
 interface ProductCircleCardProps {
   href: ComponentProps<typeof Link>['href'];
+  /** Geçmişe eklemeden yerine koy: kardeş ürüne geçişte geri, ürün zincirine girilen yere döner. */
+  replace?: boolean;
   name: string;
   /** Biçimlenmiş fiyat ("12,90 €" ya da çok boyluda "12,90 €'dan"); verilmezse çip çizilmez. */
   priceLabel?: string;
@@ -30,17 +26,18 @@ interface ProductCircleCardProps {
   size?: 'lg' | 'sm';
 }
 
-/** Çap ve baş harf kademesi boya göre — native `circleLg`/`circleSm` ile `h1-sm`/`h2-sm`. */
+/** Çap ve baş harf kademesi boya göre: `lg` vitrin rayı, `sm` benzer ürün rayı. */
 const SIZE = {
   lg: { diameter: 146, box: 'w-[146px]', circle: 'size-[146px]', initial: 'text-h1-sm text-muted' },
   sm: { diameter: 120, box: 'w-[120px]', circle: 'size-[120px]', initial: 'text-h2-sm text-muted' },
 } as const;
 
-export function ProductCircleCard({ href, name, priceLabel, image, discountLabel, mark, dimmed = false, size = 'lg' }: ProductCircleCardProps) {
+export function ProductCircleCard({ href, replace = false, name, priceLabel, image, discountLabel, mark, dimmed = false, size = 'lg' }: ProductCircleCardProps) {
   const box = SIZE[size];
   return (
     <Link
       href={href}
+      replace={replace}
       aria-label={[name, priceLabel, mark].filter(Boolean).join(' · ')}
       className={`flex ${box.box} flex-none cursor-pointer flex-col items-center gap-1.5 transition-transform hover:opacity-90 active:scale-[0.97]`}
     >
