@@ -52,7 +52,7 @@ export default async function RecipesPage({ params, searchParams }: RecipesPageP
   ]);
 
   return (
-    <SiteFrame device={device} locale={locale} activeNav="recipes" footer="slim">
+    <SiteFrame device={device} locale={locale} activeNav="recipes">
       <RecipesClient t={t} locale={locale} recipes={recipes} device={device} />
     </SiteFrame>
   );

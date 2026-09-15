@@ -26,8 +26,8 @@ export interface SiteFrameProps {
    */
   mobileChrome?: 'default' | 'bare';
   /**
-   * Footer katmanı (yalnız masaüstü): `full` giriş kapılarında, `slim` liste ve detay sayfalarında,
-   * `none` huni ve girişli yüzeylerde. Verilmezse `fill` ve hesap alanı `none`, kalan `full`.
+   * Footer katmanı (yalnız masaüstü): `full` varsayılan, `slim` ürün/paket/tarif detayında, `none` huni
+   * ve girişli yüzeylerde. Verilmezse `fill` ve hesap alanı `none`, kalan `full`.
    */
   footer?: 'full' | 'slim' | 'none';
   /**

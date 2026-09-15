@@ -105,7 +105,7 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
   }
 
   return (
-    <SiteFrame device={device} locale={locale} activeNav="catalog" footer="slim">
+    <SiteFrame device={device} locale={locale} activeNav="catalog">
       <CatalogClient
         t={t}
         locale={locale}
