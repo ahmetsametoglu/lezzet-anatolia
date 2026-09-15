@@ -2,9 +2,9 @@
  * Coğrafi kodlama fabrikası (11.9) — portu gerçek sağlayıcıya bağlayan tek yer.
  *
  * ── İKİ ÜLKE, İKİ SAĞLAYICI, TEK PORT (13.09) ───────────────────────────────
- * · **FR → BAN** (`packages/address-fr`): anahtarsız, ücretsiz, koordinatı süresiz saklanabilir
+ * · **FR → BAN** (`@lezzet/address`): anahtarsız, ücretsiz, koordinatı süresiz saklanabilir
  *   (Licence Ouverte). Yeni npm paketi girmediği için `STACK §2` beyanı gerekmedi.
- * · **DE → Google Address Validation** (`packages/address-google`; karar 02.09 `INTEGRATIONS.md`,
+ * · **DE → Google Address Validation** (`@lezzet/address/google`; karar 02.09 `INTEGRATIONS.md`,
  *   bağlandı 13.09): tek çağrı geçerliliği, neyin düzeltildiğini, düzeltilmiş adresi VE noktayı
  *   veriyor. Anahtar yoksa ülke "desteklenmiyor" sayılır — adlı yokluk, sessiz bir eksik değil.
  * Çağıran hiç değişmedi: `checkAddress` ve tarama aynı `Geocoder`ı görüyor.
@@ -43,8 +43,8 @@
  * `addressVerdict`in 0,8 eşiği iki kaynakta da aynı anlama gelsin.
  */
 
-import { searchAddresses } from '@lezzet/address-fr';
-import { validateAddress, type AddressValidation } from '@lezzet/address-google';
+import { searchAddresses } from '@lezzet/address';
+import { validateAddress, type AddressValidation } from '@lezzet/address/google';
 import type { Country } from '@lezzet/types';
 import { googleMapsApiKey, traceGoogleFailure } from './google-maps';
 import type { Geocoder, GeocodeElsewhere, GeocodeOutcome, GeocodeQuery } from './geocode-port';

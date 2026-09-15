@@ -1,6 +1,6 @@
 'use client';
 
-import { addressLineOf, type AddressKind } from '@lezzet/address-fr';
+import { addressLineOf, type AddressKind } from '@lezzet/address';
 import type { Country, PlaceOption } from '@lezzet/types';
 import { useState } from 'react';
 
@@ -26,7 +26,7 @@ import { useDeliveryPlace } from './place-context';
 
   Native tarafta aynı ayrım aynı gerekçeyle yapılmıştı (`address-fields.tsx`, MB-06). Kod
   paylaşılmıyor — çizim iki yüzeyde farklı ve olması gereken de bu; paylaşılan şey DAVRANIŞ ve o
-  ortak çekirdekte (`@lezzet/react-hooks`) ile ortak kapıda (`@lezzet/address-fr`) duruyor.
+  ortak çekirdekte (`@lezzet/address/react`) ile ortak kapıda (`@lezzet/address`) duruyor.
 
   ── ÜLKE İÇERİDE TÜRER, DIŞARIYA BİLDİRİLİR ─────────────────────────────────
   Ülke bir alan değil, posta kodundan türeyen bir sonuçtur: **610 kod iki ülkede birden geçerli**

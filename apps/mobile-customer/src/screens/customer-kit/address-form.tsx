@@ -1,5 +1,5 @@
-import { hasHouseNumber, MIN_QUERY_LENGTH } from '@lezzet/address-fr';
-import { addressLabelKind, DIAL_CODE, nationalPhone, normalizePhone, type AddressLabelKind } from '@lezzet/helper';
+import { addressLabelKind, hasHouseNumber, MIN_QUERY_LENGTH, type AddressLabelKind } from '@lezzet/address';
+import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import addressCopy from '@lezzet/i18n/customer/address';
 import placeCopy from '@lezzet/i18n/customer/place';
@@ -76,7 +76,7 @@ import { useDoorCodes } from './use-door-codes.hook';
  * Hesabın künyesinden yeni adresin varsayılanı — kural ortak yardımcıda (web adres penceresiyle aynı,
  * 21.313); dört çağıran (hesap, sepet, ödeme, profil tamamlama) onu buradan okumaya devam ediyor.
  */
-export { addressDefaultsOf } from '@lezzet/helper';
+export { addressDefaultsOf } from '@lezzet/address';
 
 type AddressCopy = LocalizedCopy<typeof addressCopy>;
 type PlaceCopy = LocalizedCopy<typeof placeCopy>;

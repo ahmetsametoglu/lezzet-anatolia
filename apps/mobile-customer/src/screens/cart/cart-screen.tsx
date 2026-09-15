@@ -32,7 +32,7 @@ import {
 } from '@/screens/customer-kit/cart-store';
 import { CustomerIcon } from '@lezzet/mobile-kit/src/components/customer/customer-icon';
 import { discountSummaryOf } from '@/screens/customer-kit/discount-label';
-import { addressLine } from '@/screens/customer-kit/address-format';
+import { addressLine } from '@lezzet/address';
 import { AddressPickerSheet } from '@/screens/customer-kit/address-picker-sheet';
 import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';

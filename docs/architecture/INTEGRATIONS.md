@@ -27,7 +27,7 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 
 ## Adres ve coğrafi kodlama
 
-- **Adres arama (FR): BAN / Géoplateforme** — `packages/address-fr`. Anahtarsız, ücretsiz, açık veri
+- **Adres arama (FR): BAN / Géoplateforme** — `packages/address` (`fr/`). Anahtarsız, ücretsiz, açık veri
   (Etalab 2.0). İki kullanım: müşterinin adres önerisi kutusu (istemciden) ve **koordinat çözümü**
   (sunucudan, 11.9). İkincisi 31.08'de eklendi ve kapsamı genişletti — eskiden yalnız müşterinin
   yazdığı harfler giderdi, şimdi kaydedilen her adres bir kez soruluyor.
@@ -38,7 +38,7 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
   kaydetme yoluna binen bir çağrı kotayı tüm müşterilere ortak yapardı ve akşam saatinde bir 429
   herkese birden çarpardı. Çözüm taramalı bir cron (`geocode_addresses`, on dakikada bir) + müşteri
   öneriyi seçtiğinde zaten cevapta gelen koordinatın taşınması.
-- **Almanya → Google** (`packages/address-google`, bağlandı 13.09 — aşağıdaki bölüm). Anahtar
+- **Almanya → Google** (`packages/address`, `google/` girişi, bağlandı 13.09 — aşağıdaki bölüm). Anahtar
   yokken port `unsupported_country` döner, nokta `null` kalır ve o satırlar tarama kuyruğunda sayaç
   TÜKETMEZ. Anahtarsız DE adresinin noktası beslemede kod merkezi olarak duruyor ve kademesi
   dürüstçe `municipality` yazıyor: kapı değil, yerleşimin ortası.
@@ -63,7 +63,7 @@ Arada 7,2 km. Karar `domain-core/delivery/address-verdict`, kapı
 ### Almanya: Google Maps Platform — BAĞLANDI (13.09; karar 02.09)
 
 BAN yalnız Fransa'ya bakar. Almanya için iki kapı, tek anahtar (`GOOGLE_MAPS_API_KEY`, yalnız
-`delivery/google-maps.ts` okur), paket **`@lezzet/address-google`** (kendi paketimiz, yalnız `zod`;
+`delivery/google-maps.ts` okur), paket **`@lezzet/address/google`** (kendi paketimiz, yalnız `zod`;
 fırlatmaz, her başarısızlık adlı — BAN paketiyle aynı disiplin):
 
 - **Adres önerisi — Places API (New)** `places:autocomplete` + `places/{id}` (alan maskesi

@@ -3,7 +3,6 @@
 // Müşterinin telefon ekranlarının cümle kurucuları — native uygulama ile web telefon görünümünün ortak
 // malı (14.09): kampanya rozeti ve cümlesi, kartın fiyat etiketi, vitrinin selamlaması ve sayaçları.
 // Metinleri `@lezzet/i18n/customer/*`da; burada yalnız hangi cümlenin hangi veriyle kurulacağı.
-export * from './address-label';
 export * from './campaign-label';
 export * from './csv';
 export * from './date';

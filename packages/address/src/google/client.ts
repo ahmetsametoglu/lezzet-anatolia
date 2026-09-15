@@ -1,72 +1,32 @@
+import { MIN_QUERY_LENGTH } from '../min-query-length';
 import { toPrediction, toResolvedAddress, toValidation, type AddressCountry, type AddressPrediction, type AddressValidation, type ResolvedAddress } from './address';
 import { AutocompleteResponseSchema, PlaceDetailsResponseSchema, ValidateAddressResponseSchema } from './google.schema';
 
 /*
-  GOOGLE MAPS PLATFORM İSTEMCİSİ — Almanya adresleri için üç kapı (kullanıcı kararı 13.09; Address
-  Validation kararı 02.09 `INTEGRATIONS.md`).
-
-  ── ANAHTAR ÇAĞIRANDAN GELİR, PAKET ENV OKUMAZ ─────────────────────────────
-  Env'i tek yer okur (uygulama katmanının fabrikası). Bu paket yalnız "şu anahtarla şu soruyu sor"
-  bilir; anahtar yoksa fabrika bu paketi hiç çağırmaz ve **adlı yokluk** döner.
-
-  ── SUNUCUDAN ÇAĞRILIR, TARAYICIDAN DEĞİL ─────────────────────────────────
-  BAN anahtarsız ve kotası IP başına olduğu için tarayıcıdan çağrılıyor; Google'da kota projeye
-  bağlı ve anahtar gizli. Tarayıcıya inen bir anahtar herkesin anahtarıdır — çağrı sunucu eyleminden
-  geçer. Paket yine izomorfik yazıldı (`fetch` + `AbortController`), çünkü mobil arka uç da çağırır.
-
-  ── OTURUM JETONU FİYATIN KENDİSİ ──────────────────────────────────────────
-  Otomatik tamamlama + seçilen yerin detayı aynı `sessionToken` ile giderse oturum olarak
-  fiyatlanır (13.09 fiyat sayfası: oturum kullanımı ücretsiz, tek tek istekler 10.000/ay sonrası
-  ücretli). Jetonu çağıran üretir (yazmaya başlarken bir UUID), seçimle biter, bir daha kullanılmaz.
-
-  ── FIRLATMAZ, HER BAŞARISIZLIK ADLI ──────────────────────────────────────
-  `rate_limited` · `denied` (401/403 — anahtar, kısıt, fatura) · `rejected` (öteki 4xx — isteğimiz
-  sözleşmeye uymuyor) · `unavailable` (ağ, zaman aşımı, 5xx) · `invalid_response`. `denied` ile
-  `rejected` geçici DEĞİL ve `unavailable`dan AYRI ki log bunu söyleyebilsin. Adres önerisi
-  yardımcıdır: servis düşerse müşteri elle yazar, ekran çökmez. Log yazmak çağıranın işi (bu paket
-  `observability` bilmez — BAN paketiyle aynı gerekçe); iz `application/delivery/google-maps.ts`de.
-
-  ── POLİTİKA (okundu 13.09) ────────────────────────────────────────────────
-  · Önerilerin gösterildiği yerde Google logosu (harita yokken) — çizen YÜZEYİN işi.
-  · Places içeriği önbelleğe alınmaz; süresiz saklanabilen tek şey `placeId`. Koordinat 30 gün.
-    Yaşlanma kuralı uygulama katmanında (`geocode-scan`).
+  Google Maps Platform istemcisi: otomatik tamamlama, yer detayı ve adres doğrulama. Anahtarı çağıran verir ve paket env
+  okumaz; fırlatmaz, log yazmaz, her başarısızlık adlı döner (izi `application/delivery/google-maps.ts` tutar).
 */
 
 const PLACES_BASE = 'https://places.googleapis.com/v1';
 const VALIDATION_URL = 'https://addressvalidation.googleapis.com/v1:validateAddress';
 
-/** Ağa çıkmadan önceki en kısa sorgu — BAN paketiyle aynı eşik, aynı gerekçe. */
-export const MIN_QUERY_LENGTH = 3;
-
-/** Ağ beklemesinin tavanı. Öneri yardımcıdır; on saniye bekleyen bir alan yazmayı engeller. */
+/** Öneri yardımcıdır; uzun bekleyen bir alan yazmayı engeller. */
 const DEFAULT_TIMEOUT_MS = 6000;
 
-/** Sınır aşımında servis süre söylemezse. */
+/** Servis sınır aşımında süre söylemezse. */
 const DEFAULT_RETRY_AFTER_MS = 5000;
 
-/**
- * Yakınlık ipucunun yarıçapı (metre) — bir SÜZGEÇ değil, sıralama tercihi (`locationBias`).
- * Müşterinin posta kodu merkezinden 30 km: Strasbourg'dan Kehl'e ve çevre köylere yeter, ülkenin
- * öbür ucundaki aynı adlı sokağı da elemez (BAN'daki `near` ipucuyla aynı davranış).
- */
+/** Yakınlık ipucunun yarıçapı: süzgeç değil sıralama; 30 km Strasbourg'dan Kehl'e ve çevre köylere yeter. */
 const BIAS_RADIUS_METERS = 30_000;
 
-/**
- * Adres türleri — kafe, dükkân gibi yerler değil, KAPILAR istensin: kapı · bina · daire. Sokak (`route`)
- * 14.09'da çıktı: öneri yalnız kapı düzeyinde (kullanıcı kararı — *"biz kapı düzeyinde bir teslimat
- * yapmak zorundayız"*; Fransa'da BAN `type=housenumber`). Beş tavanı Google'ın.
- */
+/** Yer değil kapı istenir, çünkü teslimat kapı düzeyinde: kapı, bina, daire. */
 const ADDRESS_TYPES = ['street_address', 'premise', 'subpremise'];
 
 export type GoogleFailure =
   | { status: 'rate_limited'; retryAfterMs: number }
-  /** 401/403 — anahtar yok, kısıtlı ya da fatura kapalı. Yapılandırma arızası; müşteriye "şu an yok" denir. */
+  /** 401/403: anahtar yok, kısıtlı ya da fatura kapalı; yapılandırma arızası. */
   | { status: 'denied' }
-  /**
-   * Öteki 4xx — isteğimiz Google'ın sözleşmesine uymuyor. BİZİM hatamız ve geçici DEĞİL: `unavailable`a
-   * karışınca "servis düştü" diye okunur, kimse aramaz (yaşandı 13.09: gövdedeki `languageCode` 400
-   * aldı ve paket bunu `unavailable` diye bildirdi).
-   */
+  /** Öteki 4xx: isteğimiz sözleşmeye uymuyor; bizim hatamız ve geçici değil, `unavailable`a karışırsa kimse aramaz. */
   | { status: 'rejected' }
   | { status: 'unavailable' }
   | { status: 'invalid_response' };
@@ -77,7 +37,7 @@ export type ValidationLookup = { status: 'ok'; validation: AddressValidation } |
 
 interface CommonInput {
   apiKey: string;
-  /** Cevabın dili (BCP-47) — müşterinin sitedeki dili; Google adresi o dilde biçimler. */
+  /** Cevabın dili (BCP-47); Google adresi o dilde biçimler. */
   languageCode: string;
   timeoutMs?: number;
   signal?: AbortSignal;
@@ -85,34 +45,31 @@ interface CommonInput {
 
 export interface AutocompleteInput extends CommonInput {
   query: string;
-  /** Sonuçlar bu ülkeyle SINIRLIDIR (`includedRegionCodes`) — "önce ülke" kararının servise yansıması. */
+  /** Sonuçlar bu ülkeyle sınırlı (`includedRegionCodes`). */
   country: AddressCountry;
+  /** Otomatik tamamlama ve yer detayı aynı jetonla giderse oturum fiyatı uygulanır; jetonu çağıran üretir, seçimle biter. */
   sessionToken: string;
-  /** Müşterinin bilinen yeri — öneriler buna yakın olanı öne alır; süzgeç değil. */
+  /** Müşterinin bilinen yeri; yakın olan öne alınır, süzgeç değil. */
   near?: { latitude: number; longitude: number };
 }
 
 export interface PlaceInput extends CommonInput {
   placeId: string;
-  /** Otomatik tamamlamayla AYNI jeton — oturumu kapatır ve fiyatı oturum kademesine bağlar. */
+  /** Otomatik tamamlamayla aynı jeton; oturumu kapatır. */
   sessionToken: string;
 }
 
-/** Dil alanı YOK — bu uç dil parametresi almıyor (`validateAddress` künyesi). */
+/** Bu uç dil parametresi almıyor. */
 export interface ValidateInput extends Omit<CommonInput, 'languageCode'> {
   country: AddressCountry;
-  /** Sokak satırı (numara dâhil). */
+  /** Sokak satırı, numara dâhil. */
   line1: string;
-  /**
-   * Kod ve şehir DAİMA gider: Google yanlış bileşeni bağlamdan düzeltir (`replacedPostalCode`).
-   * Bağlamsız soru rastgele bir kapı seçiyor — ölçüldü 13.09: yalnız "Hauptstraße 1" gönderildi,
-   * Google 84544 Aschau am Inn'i seçti; müşteri 77694 Kehl'deydi.
-   */
+  /** Kod ve şehir daima gider: bağlamsız soruda Google rastgele bir kapı seçiyor. */
   postalCode: string;
   city: string;
 }
 
-/** Serbest metinden adres tahminleri — yalnız `country` içinde. */
+/** Serbest metinden adres tahminleri, yalnız `country` içinde. */
 export async function autocompleteAddresses(input: AutocompleteInput): Promise<AutocompleteLookup> {
   const query = input.query.trim();
   if (query.length < MIN_QUERY_LENGTH) return { status: 'too_short' };
@@ -143,14 +100,13 @@ export async function autocompleteAddresses(input: AutocompleteInput): Promise<A
   return { status: 'ok', suggestions: predictions };
 }
 
-/** Seçilen tahminin adresi — bileşenler, nokta, biçimli adres (Essentials alan maskesi). */
+/** Seçilen tahminin adresi: bileşenler, nokta, biçimli adres. */
 export async function lookupPlace(input: PlaceInput): Promise<PlaceLookup> {
   const params = new URLSearchParams({ languageCode: input.languageCode, sessionToken: input.sessionToken });
   const result = await call(`${PLACES_BASE}/places/${encodeURIComponent(input.placeId)}?${params.toString()}`, {
     method: 'GET',
     apiKey: input.apiKey,
-    // Alan maskesi ZORUNLU (maskesiz istek hata döner) ve DAR: Essentials kademesi — Pro/Enterprise
-    // alanı istenmez, fatura en yüksek istenen kademeden kesilir.
+    // Alan maskesi zorunlu ve dar: fatura istenen en yüksek kademeden kesilir.
     fieldMask: 'addressComponents,formattedAddress,location',
     timeoutMs: input.timeoutMs,
     signal: input.signal,
@@ -164,12 +120,8 @@ export async function lookupPlace(input: PlaceInput): Promise<PlaceLookup> {
 }
 
 /**
- * "Bu kapı var mı" — doğrulama + düzeltilmiş adres + nokta, tek çağrıda (02.09 kararı).
- *
- * Gövdede dil YOK: bu uçta üst düzey `languageCode` alanı tanımlı değil ve gönderilince Google
- * isteğin tamamını 400 ile reddediyor (ölçüldü 13.09, gerçek anahtarla: `Unknown name
- * "languageCode": Cannot find field`). Sahte `fetch`li birim testi bunu göremiyordu — gövdenin
- * alan listesini artık test sabitliyor.
+ * "Bu kapı var mı": doğrulama, düzeltilmiş adres ve nokta tek çağrıda.
+ * Gövdede dil yok: bu uç `languageCode` alanını tanımıyor ve isteğin tamamını 400 ile reddediyor.
  */
 export async function validateAddress(input: ValidateInput): Promise<ValidationLookup> {
   const body = {
@@ -184,12 +136,11 @@ export async function validateAddress(input: ValidateInput): Promise<ValidationL
   return { status: 'ok', validation: toValidation(parsed.data) };
 }
 
-/* Tek okuma yolu: üç uç aynı hata ailesinden geçsin. */
 async function call(
   url: string,
   options: { method: 'GET' | 'POST'; apiKey: string; body?: unknown; fieldMask?: string; timeoutMs?: number; signal?: AbortSignal },
 ): Promise<{ status: 'ok'; json: unknown } | GoogleFailure> {
-  /* Zaman aşımı ELLE kuruluyor: `AbortSignal.timeout`/`AbortSignal.any` her motorda yok. */
+  // Zaman aşımı elle kuruluyor: `AbortSignal.timeout` ve `AbortSignal.any` her motorda yok.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
   const relay = () => controller.abort();
@@ -217,7 +168,7 @@ async function call(
 
     return { status: 'ok', json: await response.json() };
   } catch {
-    /* Ağ hatası, iptal ve zaman aşımı burada birleşir ve hepsi GEÇİCİ sayılır. */
+    // Ağ hatası, iptal ve zaman aşımı geçici sayılır.
     return { status: 'unavailable' };
   } finally {
     clearTimeout(timer);

@@ -27,6 +27,9 @@
     "packages/domain-core": {
       "includeEntryExports": true
     },
+    "packages/address": {
+      "includeEntryExports": true
+    },
     "packages/application": {
       "ignoreDependencies": [
         "@expo-google-fonts/karla"

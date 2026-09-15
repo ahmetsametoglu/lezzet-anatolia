@@ -6,7 +6,7 @@ import { BottomSheet } from '@lezzet/mobile-kit/src/components/ui/bottom-sheet';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { MeAddress } from '@/lib/api/addresses';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import { addressLine } from './address-format';
+import { addressLine } from '@lezzet/address';
 import messages from './address-picker-messages.json';
 import { OptionRow } from './option-row';
 

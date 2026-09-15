@@ -1,5 +1,5 @@
-import { addressLineOf, searchAddresses } from '@lezzet/address-fr';
-import { autocompleteAddresses, lookupPlace, type AutocompleteLookup, type PlaceLookup } from '@lezzet/address-google';
+import { addressLineOf, searchAddresses } from '@lezzet/address';
+import { autocompleteAddresses, lookupPlace, type AutocompleteLookup, type PlaceLookup } from '@lezzet/address/google';
 import type { AddressGeoPrecision, Country } from '@lezzet/types';
 import { googleMapsApiKey, traceGoogleFailure } from './google-maps';
 
@@ -17,7 +17,7 @@ import { googleMapsApiKey, traceGoogleFailure } from './google-maps';
  * ── İKİ ADIM, TEK OTURUM ───────────────────────────────────────────────────
  * `suggestAddresses` yazarken (her tuşta, gecikmeli), `resolveAddressSuggestion` seçince — aynı
  * `sessionToken` ile. Jetonu istemci üretir ve seçimle bırakır; fiyat oturum kademesinden kesilir
- * (`@lezzet/address-google` künyesi).
+ * (`@lezzet/address/google` künyesi).
  *
  * Fırlatmaz; her hâl adlı. `not_configured` anahtar yokluğu — ekran elle girişe düşer, kimseyi
  * durdurmaz. `denied` (yapılandırma) ve `rejected` (sözleşme) geçici DEĞİL: bu kapı iz bırakır
@@ -67,8 +67,8 @@ export async function resolveAddressSuggestion(input: { placeId: string; session
   ── TEK KAPI, ÜLKEYE GÖRE SAĞLAYICI (21.313 · kullanıcı kararı 14.09) ─────────────────────────
   *"Bu ikisi de adrestir. Ülkesine göre farklı bir servis, farklı bir hizmet sağlayıcı devreye
   girebilir. Fakat bunlar aynı paket(te) oluşturulmalı."* Adres çekmecesi öneriyi ve seçimi TEK
-  kapıdan ister; ülke yalnız sağlayıcıyı seçer: Fransa → BAN (`@lezzet/address-fr`), Almanya → Google
-  Places (`@lezzet/address-google`). Elle girilen adresin doğrulaması zaten bu desende (`geocoder()` —
+  kapıdan ister; ülke yalnız sağlayıcıyı seçer: Fransa → BAN (`@lezzet/address`), Almanya → Google
+  Places (`@lezzet/address/google`). Elle girilen adresin doğrulaması zaten bu desende (`geocoder()` —
   aynı iki sağlayıcı, tek port); öneri onun kardeşi.
 
   ── BEDELİ: BAN KOTASI ARTIK SUNUCUNUN IP'SİNDE ─────────────────────────────────────────────

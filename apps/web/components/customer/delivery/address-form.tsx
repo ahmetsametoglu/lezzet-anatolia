@@ -1,9 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { addressLineOf, hasHouseNumber, MIN_QUERY_LENGTH } from '@lezzet/address-fr';
+import { addressLabelKind, addressLineOf, hasHouseNumber, MIN_QUERY_LENGTH, type AddressLabelKind } from '@lezzet/address';
 import { CountryEnum, type Address, type Country } from '@lezzet/types';
-import { addressLabelKind, DIAL_CODE, nationalPhone, normalizePhone, type AddressLabelKind } from '@lezzet/helper';
+import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { Button, focusRingClass } from '@/components/customer/ui/button';
 import { cardClass } from '@/components/customer/ui/card';
@@ -131,12 +131,8 @@ export interface AddressDefaults {
   phone: string;
 }
 
-/**
- * Hesabın künyesinden adres varsayılanı (kullanıcı kararı 22.08) — kural ortak yardımcıda
- * (`@lezzet/helper` `addressLabelKind`ın yanında): native adres çekmecesi de artık ülke kodunu ayırıyor ve
- * aynı işi yapıyor (21.313); iki yüzeyde iki kopya bir gün ayrışırdı. Çağıranlar buradan okumaya devam eder.
- */
-export { addressDefaultsOf } from '@lezzet/helper';
+/** Hesabın künyesinden adres varsayılanı; kural iki yüzeyin ortak adres paketinde, çağıranlar buradan okur. */
+export { addressDefaultsOf } from '@lezzet/address';
 
 /** DB satırı → formun beklediği şekil. Düzenlemede alanlar DOLU açılır; boş form yeniden yazdırırdı. */
 export function toFormInput(address: Address): NewAddressInput {

@@ -17,7 +17,7 @@ ekranı ise yazıyor. Uydurulmuş bir ölçüm (CLAUDE §1).
 
 **Koordinat zemini:** `postal_code_place.lat/lng` var (16.878 satır, `0033`/`0034`) — kod başına **tek
 merkez**, adres değil. `address` ve `warehouse` tablolarında koordinat **yok**. Ama BAN istemcisi zaten
-yazılı (`packages/address-fr`) ve `AddressSuggestion.latitude/longitude` (`address.ts:37-38`) bugün
+yazılı (`packages/address`, `fr/`) ve `AddressSuggestion.latitude/longitude` (`fr/address.ts`) bugün
 **çöpe atılıyor**. Mesafe motoru da yazılı: `domain-core/delivery/distance.ts` (`distanceKm`, haversine).
 
 ## 2. Problemin kalbi — kullanıcının U senaryosu

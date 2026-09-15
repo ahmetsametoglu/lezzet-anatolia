@@ -1,65 +1,30 @@
-import { MIN_QUERY_LENGTH, searchAddresses, type AddressSuggestion } from '@lezzet/address-fr';
+import { MIN_QUERY_LENGTH, searchAddresses, type AddressSuggestion } from '@lezzet/address';
 
-import { useDebouncedLookup, type LookupResult } from '@lezzet/react-hooks';
+import { useDebouncedLookup, type LookupResult } from '@lezzet/address/react';
 
 /*
-  ADRES ÖNERİSİ DURUMU (21.15) — adres çekmecesinin sokak alanını Fransız devletinin adres
-  servisine (BAN) bağlar. Paket (`@lezzet/address-fr`) yalnız kapıyı bilir; GECİKMELİ ÇAĞRI,
-  ÖNBELLEK ve YARIŞ kararları onun dışında ve artık bu dosyanın da dışında: ortak çekirdekte
-  (`use-debounced-lookup.hook`, 21.28). Posta kodu alanı da aynı üç kararı istiyordu; ikinci bir
-  nüsha yazmak, birinin bir gün ötekinden farklı davranması demekti (CLAUDE §1).
-
-  Burada kalan tek şey BU KAYNAĞIN kuralları: nereye sorulacağı, dört başarısızlık hâlinin ne
-  anlama geldiği ve hangisinin hatırlanmaya değer olduğu.
-
-  ── CİHAZDAN ÇAĞRILIYOR, SUNUCUDAN DEĞİL (karar 09.08) ──────────────────────
-  Servisin sınırı İSTEMCİ başına değil **IP başına saniyede 50 istek**. Sunucumuzdan (mobile-api)
-  proxy'lenseydi tüm müşteriler TEK IP'yi paylaşırdı: akşam saatinde eşzamanlı yazan birkaç düzine
-  müşteri ortak kotayı tüketir ve 429 HERKESE birden çarpardı — üstelik suçlu müşteri ile mağdur
-  müşteri ayırt edilemezdi. Cihazdan çağrılınca her müşteri kendi IP'sinin kotasını kullanır ve
-  bir müşterinin hızlı yazması ötekini etkilemez. Bedeli: telefonun doğrudan dış servise çıkması —
-  kabul edildi, çünkü servis anahtarsız ve gönderilen tek şey müşterinin YAZDIĞI adres metnidir
-  (kimlik yok, oturum yok). Ayrıntı: `packages/address-fr/src/ban-client.ts` künyesi.
-
-  ── BAŞARISIZLIKTA NE OLUR (sessiz catch YOK — CLAUDE §1) ───────────────────
-  Paket fırlatmaz, her başarısızlığı ADLANDIRIR ve dördü de burada AYRI AYRI karşılanır:
-  · `too_short`        — ağa hiç çıkılmaz (çekirdek zaten `MIN_QUERY_LENGTH` altını eler)
-  · `rate_limited`     — `throttled` bayrağı kalkar, ekran "biraz sonra" der; ELLE YAZMA AÇIK
-  · `unavailable`      — liste çizilmez, form bugünkü gibi çalışır (servis düşmesi müşteriyi durdurmaz)
-  · `invalid_response` — aynısı; sözleşme değişmişse yanlış veriyi forma basmaktansa hiç önermeyiz
-  Hiçbirinde `console` yok: istemcide teşhis kanalımız yok ve yazılacak tek şey müşterinin adresi
-  olurdu (log'a içerik yazılmaz — CLAUDE §1).
-
-  **Yalnız `ok` hatırlanır.** Kota ve arıza hâlleri GEÇİCİDİR; önbelleğe girselerdi müşteri aynı
-  harfleri yazdığı sürece oturum boyunca aynı arızayı görürdü — servis çoktan düzelmiş olsa bile.
+  Profesyonel başvuru formunun sokak alanı: oturumsuz ziyaretçi adres çekmecesinin tek kapısını kullanamadığı için Fransa
+  adres servisine (BAN) cihazdan sorulur. Servisin sınırı IP başına olduğundan cihazdan sormak her müşteriye kendi kotasını verir.
 */
 
 interface AddressSearchState {
   suggestions: AddressSuggestion[];
-  /** Servis kotayı kapattı — ekran kısa bir satır gösterir, alan yazmaya açık kalır. */
+  /** Servis kotayı kapattı: ekran kısa bir satır gösterir, alan yazmaya açık kalır. */
   throttled: boolean;
 }
 
 const EMPTY: AddressSearchState = { suggestions: [], throttled: false };
 
-/** Sorgu metni → öneriler. Modül düzeyinde: çekmece kapanıp açılınca da yaşar (aynı oturum). */
+/** Sorgudan önerilere; modül düzeyinde, çekmece kapanıp açılınca da yaşar. */
 const cache = new Map<string, AddressSearchState>();
 
-/*
-  YALNIZ KAPI DÜZEYİ (kullanıcı kararı 14.09 — *"sadece kapı numarası olanlar gelsin, çünkü biz kapı
-  düzeyinde bir teslimat yapmak zorundayız"*; `design/KARARLAR.md` "Adres önerisi yalnız KAPI
-  düzeyinde"). Sokak / belediye önerisi seçilince adres "doğrulandı" sayılıyordu, ödeme ve kurye ise aynı
-  adrese "kapı doğrulanmadı" diyordu. Web'in aynı çağrısı: `apps/web/lib/address/use-address-search.hook.ts`.
-
-  BU KANCAYI ARTIK YALNIZ PROFESYONEL BAŞVURU FORMU OKUYOR (`address-fields`, oturumsuz ziyaretçi).
-  Adres çekmecesi öneriyi TEK kapıdan istiyor (`use-address-lookup.hook`, 21.313); o kapı girişli
-  müşteriye açık, başvuru formu ise oturumsuz — ikinci yolun tek sebebi bu.
-*/
 async function lookup(term: string): Promise<LookupResult<AddressSearchState>> {
+  // Yalnız kapı düzeyi istenir: teslimat kapıya yapılıyor.
   const found = await searchAddresses({ query: term, kind: 'housenumber' });
   switch (found.status) {
     case 'ok':
       return { value: { suggestions: found.suggestions, throttled: false }, cache: true };
+    // Kota ve arıza geçicidir, hatırlanmaz.
     case 'rate_limited':
       return { value: { suggestions: [], throttled: true }, cache: false };
     case 'unavailable':
@@ -70,7 +35,7 @@ async function lookup(term: string): Promise<LookupResult<AddressSearchState>> {
 }
 
 interface AddressSearchOptions {
-  /** Kapalıyken hiç ağa çıkılmaz — çekmece kapalı ya da müşteri öneriyi seçmişken. */
+  /** Kapalıyken ağa çıkılmaz: çekmece kapalı ya da öneri seçilmişken. */
   enabled: boolean;
   debounceMs?: number;
 }

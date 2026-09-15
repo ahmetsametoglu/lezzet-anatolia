@@ -1,22 +1,11 @@
 import { z } from 'zod';
 
 /*
-  GOOGLE MAPS PLATFORM'UN TEL ÜSTÜNDEKİ ŞEKLİ — üç uç, üç cevap.
-
-  NEDEN `packages/types`TE DEĞİL: `types` bizim ALAN şemalarımızın tek kaynağı; buradaki şekil
-  dışarıdaki bir servisin sözleşmesi (`@lezzet/address-fr`in `ban.schema.ts`iyle aynı ayrım).
-  Dışarı verdiğimiz şey ham cevap değil, `address.ts`teki NORMALLEŞTİRİLMİŞ öneri/adres/hükümdür.
-
-  ŞEMA NEDEN VAR (kontrol değil, KAPI): Google cevapları yüzlerce alan taşıyabiliyor ve alan
-  maskesine göre bir kısmı hiç gelmiyor. `parse` bir süzgeç — beklemediğimiz şekil geldiğinde
-  ekrana `undefined` sızmasın, adlı bir ret dönsün (`invalid_response`). Yalnız okuduğumuz alanlar
-  yazılı; gerisi zod'un varsayılanıyla düşer.
-
-  KAYNAK (okundu 13.09): Places API (New) `places:autocomplete` · `places/{id}` (alan maskesi
-  `addressComponents,formattedAddress,location`) · Address Validation `v1:validateAddress`.
+  Google Maps Platform'un cevap şekilleri; yalnız okunan alanlar yazılı, gerisi düşer.
+  Şema bir kapıdır: beklenmeyen şekil ekrana `undefined` sızdırmaz, `invalid_response` olarak döner.
 */
 
-/** Otomatik tamamlama — yalnız yer tahminleri; sorgu tahminleri (`queryPrediction`) istenmiyor. */
+/** Otomatik tamamlama; yalnız yer tahminleri istenir. */
 export const PlacePredictionSchema = z.object({
   placeId: z.string(),
   text: z.object({ text: z.string() }),
@@ -30,8 +19,7 @@ export const PlacePredictionSchema = z.object({
 });
 
 export const AutocompleteResponseSchema = z.object({
-  /* Boş sonuçta Google alanı HİÇ göndermiyor — `suggestions` yok. `nullish` bunu "sıfır öneri"
-     olarak okur; şema olmadan boş cevap `invalid_response` sayılırdı. */
+  // Boş sonuçta Google alanı hiç göndermiyor; `nullish` onu sıfır öneri okur.
   suggestions: z
     .array(
       z.object({
@@ -41,7 +29,7 @@ export const AutocompleteResponseSchema = z.object({
     .nullish(),
 });
 
-/** Yer detayı — adres bileşenleri + nokta + biçimli adres (Essentials kademesi). */
+/** Yer detayı: adres bileşenleri, nokta, biçimli adres. */
 export const AddressComponentSchema = z.object({
   longText: z.string(),
   shortText: z.string().nullish(),
@@ -54,12 +42,7 @@ export const PlaceDetailsResponseSchema = z.object({
   addressComponents: z.array(AddressComponentSchema).nullish(),
 });
 
-/**
- * Adres doğrulama — hüküm + düzeltilmiş adres + nokta.
- *
- * `validationGranularity` servisin kendi sözlüğü; bizim dört kademeye çevirisi `address.ts`te.
- * Bilinmeyen bir değer gelirse (sözlük büyürse) `catch`le tanınmayan sayılır, şema düşmez.
- */
+/** Adres doğrulamanın kademesi; servisin sözlüğü büyürse bilinmeyen değer tanınmayan sayılır, şema düşmez. */
 export const GranularitySchema = z
   .enum(['GRANULARITY_UNSPECIFIED', 'SUB_PREMISE', 'PREMISE', 'PREMISE_PROXIMITY', 'BLOCK', 'ROUTE', 'OTHER'])
   .catch('GRANULARITY_UNSPECIFIED');

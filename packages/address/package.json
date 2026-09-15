@@ -1,18 +1,29 @@
 {
-  "name": "@lezzet/react-hooks",
+  "name": "@lezzet/address",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./google": "./src/google/index.ts",
+    "./react": "./src/react/index.ts"
   },
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo node_modules"
   },
+  "dependencies": {
+    "@lezzet/helper": "workspace:*",
+    "zod": "^3.24.1"
+  },
   "peerDependencies": {
     "react": ">=19"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@lezzet/typescript-config": "workspace:*",

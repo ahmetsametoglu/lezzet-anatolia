@@ -22,7 +22,7 @@ import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { useMyAddresses } from '@/components/customer/delivery/use-my-addresses.hook';
 import addressMessages from '@lezzet/i18n/customer/address';
 import placeMessages from '@/components/customer/delivery/place-messages.json';
-import { addressLine } from '@/lib/address/address-line';
+import { addressLine } from '@lezzet/address';
 import { createClient } from '@/lib/supabase/client';
 import { authErrorMessage, type AuthErrorKey } from '@/lib/auth/errors';
 import { sendEmailOtp, verifyEmailOtp } from '@/lib/auth/otp-actions';

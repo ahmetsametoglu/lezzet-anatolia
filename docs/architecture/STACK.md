@@ -45,8 +45,8 @@ Tek markalı, tek veritabanlı, orta ölçekli bir web ürünü: müşteriye aç
 | **Dosya deposu** | **`@aws-sdk/client-s3`** + **`@aws-sdk/s3-request-presigner`** | Cloudflare R2, S3-uyumlu API. Presigner özel kova için süreli okuma/yükleme adresi üretir (§10 "iki kova") |
 | **Harita** | **`leaflet`** | Rota kurulumu haritadan (19.20) — tasarımın kullandığı kütüphane (`Depolar - Bolge Haritasi.html`). Raster karo (`tile.openstreetmap.org`), CSP'de yalnız `img-src`. **MapLibre bir tur denendi ve geri alındı (07.08):** vektör karoyu Web Worker + WebGL zinciriyle çözüyor, zincir kopunca ekranda boş tuval kalıyordu ve tasarımın hiç ihtiyaç duymadığı bir yüzeydi. **Noktalar bizim**: 16.878 posta kodu `postal_code_place`ten; dışarı giden yalnız karo koordinatı. Yalnız `components/operation/ui/zone-map.tsx` |
 | **Banka dosyası (xlsx)** | **`read-excel-file`** (web, yalnız tarayıcı) | Ekstre TARAYICIDA okunur (12.10): xlsx hücre ızgarasına iner, CSV'yi kendi okuyucumuz çözer (`domain-core/bank/file.ts`, bağımlılıksız — ayırıcı, alıntı, BOM, Latin-1). Kütüphane yalnız dosya seçilince yüklenir (dinamik import); sunucuya dosya değil satır sözlüğü gider. SheetJS (`xlsx`) alınmadı: paket ağır, lisansı karışık; bedeli eski `.xls`in desteklenmemesi — pencere sebebini söyler. Yalnız `finance/bank-import-dialog.tsx` |
-| **Adres arama (FR)** | **`@lezzet/address-fr`** — kendi paketimiz, dış bağımlılığı YOK (yalnız `zod`) | Fransız devletinin adres servisi **BAN** (Base Adresse Nationale). **Kapı DEĞİŞTİ (ölçüldü 09.08):** yıllardır bilinen `api-adresse.data.gouv.fr` kullanımdan kaldırıldı — resmî kapanış Ocak 2026 sonu, bugün o tarih GEÇTİ ve kapı hâlâ cevap veriyor, yani ödünç zamanda; üstüne kod yazılmaz. Kullanılan: IGN Géoplateforme `https://data.geopf.fr/geocodage` (`/search` · `/reverse`). **API anahtarı yok**, sınır **IP başına 50 istek/sn** (aşımda 429 + `retry-after`, 5 sn kapalı) — sunucudan çağrılırsa tüm müşteriler tek IP'yi paylaşır, cihazdan çağrılırsa herkes kendininkini; kararı çağıran verir. Paket **node-only hiçbir şey içermez** (logger dahil) çünkü React Native içinde de koşuyor: her başarısızlık ADLI döner (`too_short`/`rate_limited`/`unavailable`/`invalid_response`), fırlatmaz. Gecikmeli çağrı ve önbellek bilerek DIŞARIDA — yüzeyin kararı. Veri **Etalab 2.0**; künye gösteren yüzeyin sorumluluğu |
-| **Adres arama + doğrulama (DE)** | **`@lezzet/address-google`** — kendi paketimiz, dış bağımlılığı YOK (yalnız `zod`) | Google Maps Platform: Places API (New) `places:autocomplete` + `places/{id}` (öneri, sepetteki adres formu) ve Address Validation (sipariş anında "bu kapı var mı", 11.11). **Sunucudan** çağrılır (anahtar `GOOGLE_MAPS_API_KEY`, yalnız `application/delivery/google-maps.ts` okur); BAN'ın tersine kota projeye bağlı, anahtar gizli. Oturum jetonu istemcide üretilir (oturum kademesi ücretsiz). Koordinat 30 günden uzun saklanmaz (`geocode-scan` düşürür), DE taramada sorulmaz. Kaynak gösterimi: Google Maps logosu (`INTEGRATIONS.md`). Bağlandı 13.09 |
+| **Adres arama (FR)** | **`@lezzet/address`** — kendi paketimiz, dış bağımlılığı YOK (yalnız `zod`) | Fransız devletinin adres servisi **BAN** (Base Adresse Nationale). **Kapı DEĞİŞTİ (ölçüldü 09.08):** yıllardır bilinen `api-adresse.data.gouv.fr` kullanımdan kaldırıldı — resmî kapanış Ocak 2026 sonu, bugün o tarih GEÇTİ ve kapı hâlâ cevap veriyor, yani ödünç zamanda; üstüne kod yazılmaz. Kullanılan: IGN Géoplateforme `https://data.geopf.fr/geocodage` (`/search`). **API anahtarı yok**, sınır **IP başına 50 istek/sn** (aşımda 429 + `retry-after`, 5 sn kapalı) — sunucudan çağrılırsa tüm müşteriler tek IP'yi paylaşır, cihazdan çağrılırsa herkes kendininkini; kararı çağıran verir. Paket **node-only hiçbir şey içermez** (logger dahil) çünkü React Native içinde de koşuyor: her başarısızlık ADLI döner (`too_short`/`rate_limited`/`unavailable`/`invalid_response`), fırlatmaz. Gecikmeli çağrı ve önbellek aynı paketin `react` girişinde (`useDebouncedLookup`); sunucu o girişi yüklemez. Veri **Etalab 2.0**; künye gösteren yüzeyin sorumluluğu |
+| **Adres arama + doğrulama (DE)** | **`@lezzet/address/google`** — kendi paketimiz, dış bağımlılığı YOK (yalnız `zod`) | Google Maps Platform: Places API (New) `places:autocomplete` + `places/{id}` (öneri, sepetteki adres formu) ve Address Validation (sipariş anında "bu kapı var mı", 11.11). **Sunucudan** çağrılır (anahtar `GOOGLE_MAPS_API_KEY`, yalnız `application/delivery/google-maps.ts` okur); BAN'ın tersine kota projeye bağlı, anahtar gizli. Oturum jetonu istemcide üretilir (oturum kademesi ücretsiz). Koordinat 30 günden uzun saklanmaz (`geocode-scan` düşürür), DE taramada sorulmaz. Kaynak gösterimi: Google Maps logosu (`INTEGRATIONS.md`). Bağlandı 13.09 |
 | **Lint** | **ESLint flat config** + **`typescript-eslint`** | Kuralı zorlayan yer: `console` yasağı, ölü kod, `any` (`packages/eslint-config`) |
 | **Canlı yenileme** | **Supabase Realtime — yalnız `broadcast`** | **Zil, veri borusu değil** (16.8): sunucu BOŞ bir "değişti" mesajı atar, tarayıcı duyunca `router.refresh()` ile sayfayı SUNUCUDAN ister. `postgres_changes` YASAK — projede RLS yok, tarayıcıyı tabloya abone etmek o duvarda ilk delik olurdu. Yükün boş kalması kanalın güvenlik dayanağıdır; operasyon kanallarının adı sunucudaki sırdan türer (tahmin edilebilir ad, oturumsuz birine trafik sızdırırdı). Tek kapı `@lezzet/application/realtime/bell`; çalan üç süreç: operasyon web'i · mobil arka uç · backend cron |
 | **Yapay zekâ** | **`ai`** (Vercel AI SDK) + **`@ai-sdk/anthropic`** · **`@ai-sdk/google`** | Sağlayıcı-agnostik katman ELLE yazılmaz — kütüphane yapar; seçim env'den (`AI_PROVIDER`). Çıktı **daima** `generateObject` + Zod ile yapısal; serbest metin ayrıştırılmaz. **Araçlı görevde iki faz** (16.9): Google araç çağrısını JSON çıktı kipiyle kabul etmediği için önce `generateText` + araçlar (gerçekleri topla), sonra `generateObject` (şemaya bağla). Araç ilkeli (`tool`) ve `z` porttan geçirilir — araçları TANIMLAYAN uygulama katmanıdır (gövde DB'ye bakar), ama SDK'ya bağlanmaz ve tek zod örneği garanti edilir. Yalnız `packages/ai` (§4 `ai-scope`) → `docs/build/20-yapay-zeka.md` |
@@ -93,13 +93,12 @@ proje/
 │   ├── email/            # mail istemcisi + şablonlar (Auth OTP dahil TÜM mail buradan; Supabase mail yapısı kullanılmaz)
 │   ├── notify/           # soyut OUTBOUND bildirim katmanı (e-posta / wa.me / WhatsApp API / push)
 │   ├── ai/               # sağlayıcı-agnostik AI portu: görev kaydı + tipli çağrı + token ölçümü (yalnız types bilir)
-│   ├── address-fr/       # Fransız ulusal adres servisi (BAN) istemcisi + adres satırı biçimi
+│   ├── address/          # adres araması ve metni: BAN (FR) ve Google (DE) istemcileri, öneri kancası (`/react`)
 │   ├── sendcloud/        # Sendcloud API v3 istemcisi (resmî SDK yok, REST) + webhook
-│   ├── react-hooks/      # ortak React hook'ları (bugün tek dosya: `use-debounced-lookup`)
 │   ├── eslint-config/
 │   └── typescript-config/
 ├── supabase/migrations/  # numaralı SQL — greenfield evresinde doğrudan düzenlenir; ilk üretim dağıtımından sonra yalnız ileri doğru (WORKFLOW.md §2)
-├── scripts/              # seed, docs:check, test koşucusu + kilidi, dev:health, ui:shot … (deploy.sh henüz yok)
+├── scripts/              # seed, repo:check, test koşucusu + kilidi, dev:health, ui:shot … (deploy.sh henüz yok)
 └── docs/                 # bu klasör (ürün, domain, veri modeli, kararlar...)
 ```
 
@@ -114,7 +113,7 @@ packages:
 
 Paketler kaynak dışa verir (`"exports": { ".": "./src/index.ts" }`), ara derleme yok. Node tarafı derleme gereken paket olursa `tsup` + `noExternal` dikkatiyle.
 
-**Genel blueprint'ten fark:** `domain-core` (opsiyonel değil, zorunlu), `application` (birleştirme katmanı, §4), `i18n`, `notify`, `observability`, `design-tokens` ve dış servis paketleri (`address-fr`, `sendcloud`) eklendi. Renk token'ları `design-tokens`ta ve web `globals.css`'te — `brand`'de renk yok.
+**Genel blueprint'ten fark:** `domain-core` (opsiyonel değil, zorunlu), `application` (birleştirme katmanı, §4), `i18n`, `notify`, `observability`, `design-tokens` ve dış servis paketleri (`address`, `sendcloud`) eklendi. Renk token'ları `design-tokens`ta ve web `globals.css`'te — `brand`'de renk yok.
 
 ---
 
@@ -141,8 +140,9 @@ Paketlerin bugün bildiği iç paketler (`package.json`, ölçüldü 10.09):
 | `observability` | `types` · `database` |
 | `email` | `types` · `brand` · `i18n` · `domain-core` · `observability` |
 | `notify` | `types` · `brand` · `email` |
-| `application` | `types` · `helper` · `i18n` · `database` · `domain-core` · `ai` · `brand` · `email` · `notify` · `observability` · `storage` · `address-fr` · `sendcloud` |
-| `brand` · `storage` · `design-tokens` · `address-fr` · `sendcloud` · `react-hooks` | — |
+| `application` | `types` · `helper` · `i18n` · `database` · `domain-core` · `ai` · `brand` · `email` · `notify` · `observability` · `storage` · `address` · `sendcloud` |
+| `address` | `helper` |
+| `brand` · `storage` · `design-tokens` · `sendcloud` | — |
 
 - `types` yalnız `zod`'a bağlı; hiçbir iç pakete değil.
 - `database` yalnız `types` + `helper` bilir.

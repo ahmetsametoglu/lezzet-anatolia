@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.8). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.11). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -342,7 +342,7 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (B.11) Talebin varsayılan modu `human` — AI taslağı hiç üretilmiyor
 - [ ] (B.12) AI cevap yazdı, müşteriye hiçbir bildirim gitmedi — bildirim mailin bastırma kuralına asılı
 
-## Şeritler arası (eski `docs/talep/` — arşiv: `~/dev/lezzet-anatolia-arsiv/2026-09-15/talep/`)
+## Şeritler arası (eski `docs/talep/` — arşiv: `.arsiv/2026-09-15/talep/`)
 
 Talep ve not dosyaları arşive taşındı (95 dosya; yalnız 3'ünde kapanış işareti vardı). Her şerit kendi
 hedefindeki dosyaları BİR KEZ gözden geçirir: hâlâ geçerli olan işi buraya `[hedef: …] ne — neden` satırı
@@ -358,3 +358,9 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   `not-fiyat-*`, `not-bildirim-*`, `bildirim-*`, `inceleme-*`, `koordinasyon-*`, `ekler-*`, `biriken-*`) gözden geçirilecek.
 - [ ] (K.8) [hedef: paket] `mobile-kit` turunda `screens/login/login-notice.ts` tek başına kaldı (giriş ekranı müşteri
   uygulamasına taşındı); iki uygulamanın ortak uyarı tanımı `lib/auth` gibi bir yere alınmalı.
+- [ ] (K.9) [hedef: paket] Posta kodu önek eşiği (kodda 2, adda 3) dört yerde ayrı yazılı: veritabanı `postal-code-place.service`,
+  web `suggestPostalCodesAction` ve iki `usePostalSuggest`; `helper`da posta kodu fonksiyonlarının yanında tek sabit olmalı.
+- [ ] (K.10) [hedef: paket] 300 ms arama gecikmesi üç yerde ayrı: `@lezzet/address/react` çekirdeği, web `use-search-draft`,
+  native operasyon `use-batch-subject`; aynı ölçü, tek sabit olmalı.
+- [ ] (K.11) [hedef: web] Web adres araması iki yoldan gidiyor (Fransa tarayıcıdan, Almanya sunucu eylemiyle), native tek kapıya
+  geçti ve Fransa'yı da sunucudan soruyor; BAN'ın IP başına kota gerekçesiyle çelişiyor, hangisinin doğru olduğu kullanıcı kararı.

@@ -1,4 +1,4 @@
-import { addressLineOf, type AddressKind } from '@lezzet/address-fr';
+import { addressLineOf, type AddressKind } from '@lezzet/address';
 import type { Country } from '@lezzet/types';
 import { useState } from 'react';
 import { View } from 'react-native';

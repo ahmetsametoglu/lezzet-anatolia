@@ -12,7 +12,7 @@ import { captureError, SOURCES } from '@lezzet/observability';
  * geldiği gün (`GOOGLE_MAPS_API_KEY`) yalnız env değişir, kod değişmez.
  *
  * Anahtar SUNUCUDA kalır: paket tarayıcıya inmez, çağrılar sunucu eyleminden geçer
- * (`@lezzet/address-google` künyesi — kota projeye bağlı, anahtar herkesin olurdu).
+ * (`@lezzet/address/google` künyesi — kota projeye bağlı, anahtar herkesin olurdu).
  */
 export function googleMapsApiKey(): string | null {
   const key = process.env.GOOGLE_MAPS_API_KEY?.trim();

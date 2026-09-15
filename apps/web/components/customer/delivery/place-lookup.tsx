@@ -87,7 +87,7 @@ export function usePlaceLookup(locale: Locale, { country: chosen, suggest = true
   }, [chosen]);
 
   /**
-   * Gecikme, önbellek ve yarış koruması ortak çekirdekte (`@lezzet/react-hooks`, 21.08): aynı üç
+   * Gecikme, önbellek ve yarış koruması ortak çekirdekte (`@lezzet/address/react`): aynı üç
    * karar adres formunun iki alanında da veriliyor; üç nüsha, birinin bir gün ötekilerden farklı
    * davranması demekti. `asked` yine devrede: cevaplanmış bir kod tekrar önerilmez.
    */

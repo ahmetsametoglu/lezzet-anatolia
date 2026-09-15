@@ -13,7 +13,7 @@ import { AppBar } from '@/components/customer/ui/app-bar';
 import { BackButton } from '@/components/customer/ui/back-button';
 import { Icon } from '@/components/customer/ui/icons';
 import { summaryCopy } from '@/components/customer/ui/summary-row';
-import { addressLine } from '@/lib/address/address-line';
+import { addressLine } from '@lezzet/address';
 import { cartKey } from '@/lib/cart/cart-types';
 import { discountLabel, orderDiscountLabel } from '@/lib/cart/discount-label';
 import { UNKNOWN_AMOUNT, formatDeliveryDate, formatPrice } from '@/lib/storefront/format';

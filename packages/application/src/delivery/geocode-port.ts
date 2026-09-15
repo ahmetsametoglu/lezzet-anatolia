@@ -6,7 +6,7 @@
  * fabrika (`geocode-provider.ts`) env'i tek yerden okur.
  *
  * ── HİÇBİR YOL FIRLATMAZ, HER BAŞARISIZLIK ADLI ─────────────────────────────
- * `packages/address-fr/src/ban-client.ts`in disiplini aynen: çağıran (tarama işi) her hâl için ayrı
+ * `@lezzet/address` BAN istemcisinin disiplini aynen: çağıran (tarama işi) her hâl için ayrı
  * davranıyor ve ayrım kritik — **`no_match` sayacı tüketir, `unavailable` tüketmez.** Servisin
  * düştüğü bir öğleden sonra sayaç tüketilseydi yüzlerce adres kalıcı olarak "çözülemez" damgası
  * yerdi ve kimse bir daha denemezdi.

@@ -8,7 +8,7 @@ import { AddressForm, toAddressFields, toFormInput, type AddressDefaults } from 
 import { Note } from '@/components/customer/phone-kit/note';
 import { SettingsCard, SettingsDivider } from '@/components/customer/phone-kit/settings-card';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
-import { addressLine } from '@/lib/address/address-line';
+import { addressLine } from '@lezzet/address';
 import { errorText } from '@/lib/customer-error-text';
 import { addAddressAction, deleteAddressAction, setBillingAddressAction, setDefaultAddressAction, updateAddressAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';

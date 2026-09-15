@@ -1,35 +1,29 @@
 import type { Granularity, PlaceDetailsResponse, PlacePrediction, ValidateAddressResponse } from './google.schema';
 
 /*
-  DIŞARIYA VERİLEN ŞEKİL — Google'ın ham cevabı değil, bizim okuduğumuz öneri / adres / hüküm.
-
-  Gerekçe `@lezzet/address-fr/address.ts` ile aynı: servisin alan adları ona ait (`longText`,
-  `structuredFormat`, `validationGranularity`) ve ekranlarımız bunları bilmek zorunda değil; servis
-  değişirse yalnız BU dosya değişsin.
-
-  ÖLÇÜLEMEYEN DEĞER BOŞ DEĞİLDİR (CLAUDE §1): posta kodu gelmeyen bir yer (`route` sonucu) için
-  `postalCode` `null` döner — boş dizge yazılsaydı "kodu olmayan adres" ile "kod gelmedi" aynı şeye inerdi.
+  Google'ın ham cevabı değil, bizim okuduğumuz öneri, adres ve hüküm: servisin alan adları ekranlara taşınmaz, servis
+  değişirse yalnız bu dosya değişir. Gelmeyen bilgi boş dizge değil `null`dır.
 */
 
-/** Kademeler `@lezzet/types`in `AddressGeoPrecisionEnum`ıyla birebir — çeviri tablosu tek yerde. */
+/** Kademeler `@lezzet/types`in `AddressGeoPrecisionEnum`ıyla birebir. */
 export type AddressPrecision = 'housenumber' | 'street' | 'locality' | 'municipality';
 
-/** Hizmet verdiğimiz iki ülke — `CountryEnum` ile aynı küme; paket `types`e bağlanmıyor (yalın kalsın). */
+/** Hizmet verilen iki ülke; `CountryEnum` ile aynı küme, paket `types`e bağlanmasın diye ayrı yazılı. */
 export type AddressCountry = 'FR' | 'DE';
 
-/** Otomatik tamamlamanın bir satırı — seçilince `lookupPlace` ile açılır. */
+/** Otomatik tamamlamanın bir satırı; seçilince `lookupPlace` ile açılır. */
 export interface AddressPrediction {
   placeId: string;
-  /** Tam metin — Google'ın kendi yazımı, biz yeniden kurmayız. */
+  /** Google'ın yazdığı tam metin. */
   label: string;
-  /** Kalın yazılan ana parça (sokak + numara) ve alt satır (kod, şehir). */
+  /** Kalın yazılan ana parça (sokak ve numara) ile alt satır (kod, şehir). */
   main: string;
   secondary: string | null;
 }
 
 /** Yer detayının forma yazılacak hâli. */
 export interface ResolvedAddress {
-  /** Sokak satırı — ülkenin yazımıyla: DE "Hauptstraße 12", FR "12 Rue du Marché". */
+  /** Sokak satırı, ülkenin yazımıyla: DE "Hauptstraße 12", FR "12 Rue du Marché". */
   line1: string;
   postalCode: string | null;
   city: string | null;
@@ -40,18 +34,18 @@ export interface ResolvedAddress {
   precision: AddressPrecision;
 }
 
-/** Adres doğrulamanın hükmü — bizim dört kademe + servisin söylediği üç bayrak. */
+/** Adres doğrulamanın hükmü: bizim dört kademe ve servisin üç bayrağı. */
 export interface AddressValidation {
   precision: AddressPrecision;
-  /** Servisin ham kademesi — `OTHER`/belirsiz hâlleri çağıran ayırt edebilsin. */
+  /** Servisin ham kademesi; belirsiz hâlleri çağıran ayırt edebilsin. */
   granularity: Granularity;
-  /** Adres eksiksiz doğrulandı (servisin `addressComplete`i). */
+  /** Adres eksiksiz doğrulandı. */
   complete: boolean;
-  /** Bir bileşen doğrulanamadı (yeni yapı, tuhaf numara) — yumuşak belirsizlik. */
+  /** Bir bileşen doğrulanamadı (yeni yapı, tuhaf numara); yumuşak belirsizlik. */
   unconfirmed: boolean;
-  /** Posta kodu DEĞİŞTİRİLDİ: müşterinin yazdığı kod bu kapının kodu değil — "yanlış kod" sinyali. */
+  /** Posta kodu değiştirildi: müşterinin yazdığı kod bu kapının kodu değil. */
   replacedPostalCode: boolean;
-  /** Düzeltilmiş adres — teklifin metni servisin yazımıdır. */
+  /** Düzeltilmiş adres; teklifin metni servisin yazımıdır. */
   formattedAddress: string | null;
   postalCode: string | null;
   city: string | null;
@@ -70,7 +64,7 @@ export function toPrediction(prediction: PlacePrediction): AddressPrediction {
   };
 }
 
-/** Bileşen listesinden türe göre metin — ilk eşleşen; yoksa `null`. */
+/** Bileşen listesinden türe göre ilk metin; yoksa `null`. */
 function componentOf(components: readonly { longText: string; shortText?: string | null; types: string[] }[], type: string, short = false): string | null {
   const found = components.find((c) => c.types.includes(type));
   if (!found) return null;
@@ -78,9 +72,8 @@ function componentOf(components: readonly { longText: string; shortText?: string
 }
 
 /**
- * Sokak satırının YAZIMI ülkeye bağlıdır: Almanca sokak-numara ("Hauptstraße 12"), Fransızca
- * numara-sokak ("12 Rue du Marché"). Servisin `formattedAddress`i posta kodunu ve şehri de taşır;
- * formda onların kendi alanları var, etiketi olduğu gibi basmak aynı bilgiyi iki kez yazdırırdı.
+ * Sokak satırının yazımı ülkeye bağlı: Almanca sokak-numara, Fransızca numara-sokak.
+ * Biçimli adres posta kodu ve şehri de taşıdığı için forma olduğu gibi yazılmaz.
  */
 export function streetLineOf(country: AddressCountry | null, route: string | null, number: string | null): string {
   if (route === null) return number ?? '';
@@ -91,7 +84,7 @@ export function streetLineOf(country: AddressCountry | null, route: string | nul
 export function toResolvedAddress(response: PlaceDetailsResponse): ResolvedAddress | null {
   const components = response.addressComponents ?? [];
   const location = response.location ?? null;
-  // Noktasız yer bizim için bir adres değil: koordinat bu kapının varlık sebebi.
+  // Noktasız yer bizim için adres değil: koordinat bu kapının varlık sebebi.
   if (location === null) return null;
 
   const countryCode = componentOf(components, 'country', true);
@@ -102,8 +95,7 @@ export function toResolvedAddress(response: PlaceDetailsResponse): ResolvedAddre
   return {
     line1: streetLineOf(country, route, number),
     postalCode: componentOf(components, 'postal_code'),
-    /* Şehir `locality`; İngiliz tipi `postal_town` ve Fransız arrondissement'ı için `sublocality`
-       yedek — hiçbiri yoksa `null` kalır, uydurulmaz. */
+    // Şehir `locality`; yedekleri `postal_town` ve arrondissement için `sublocality`, hiçbiri yoksa `null` kalır.
     city: componentOf(components, 'locality') ?? componentOf(components, 'postal_town') ?? componentOf(components, 'sublocality_level_1'),
     country,
     formattedAddress: response.formattedAddress ?? null,
@@ -113,8 +105,8 @@ export function toResolvedAddress(response: PlaceDetailsResponse): ResolvedAddre
   };
 }
 
-/** Servisin kademesi → bizim dört kademe (`AddressGeoPrecisionEnum`). */
-export function precisionOf(granularity: Granularity | null | undefined): AddressPrecision {
+/** Servisin kademesinden bizim dört kademeye. */
+function precisionOf(granularity: Granularity | null | undefined): AddressPrecision {
   switch (granularity) {
     case 'SUB_PREMISE':
     case 'PREMISE':

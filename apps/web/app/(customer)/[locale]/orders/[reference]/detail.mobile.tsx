@@ -9,7 +9,7 @@ import { Note } from '@/components/customer/phone-kit/note';
 import { OrderTimeline } from '@/components/customer/phone-kit/order-timeline';
 import { SummaryPanel, type SummaryRow } from '@/components/customer/phone-kit/summary-panel';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
-import { addressLine } from '@/lib/address/address-line';
+import { addressLine } from '@lezzet/address';
 import type { CustomerOrderDetailLine } from '@/lib/order/customer-orders';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { ReorderButton } from '../components/reorder-button';
