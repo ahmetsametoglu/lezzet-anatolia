@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-// Kayıt kapıları 21.08'de `@lezzet/application`a terfi etti (`messaging/record.ts`); açılış webde.
 import { recordInboundMessage, recordOutboundMessage } from '@lezzet/application';
 import { ConversationService, CustomerPhoneService, MessageService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
@@ -11,19 +10,8 @@ import {
 } from '@lezzet/domain-core';
 import { openWhatsappConversation } from './conversation';
 
-/**
- * Telefon kimlik çözümünün GERÇEK akışa bağlanması (15.2) — DOMAIN §10, CHANNELS §3.
- *
- * Kararın kendisi motorun birim testinde (`domain-core/identity/resolve-identity`); burada sorulan
- * şey **kapının doğru bağlanıp bağlanmadığı**: bilinen numara mevcut müşteriye mi gidiyor, yeni
- * numara taslak mı açıyor, aynı numara ikinci kez kayıt ya da konuşma açıyor mu.
- *
- * **04.10 bu dosyanın iddiasını DEĞİŞTİRDİ.** Bu kapı operatörün elle işlediği DM'i açıyor ve
- * operatörün klavyesinden geçen numara KANIT değildir — o yüzden kapı `phoneProven` geçirmiyor.
- * Sonucu iki yeni ölçüt: kanıtsız numara artık taslak müşteri AÇMAZ (sohbet kimliksiz açılır) ve
- * `user_profiles.phone`ta duran bir numara eşleşme SAYILMAZ (o kolon iletişim numarası). Eşleşen
- * tek şey kanıt defteridir: `customer_phone`.
- */
+// Karar motorun birim testinde; burada sorulan kapının doğru bağlanıp bağlanmadığı. Eşleşen tek şey kanıt defteridir
+// (`customer_phone`): iletişim numarası kimlik kurmaz.
 const db = serviceDb();
 const profiles = new UserProfileService(db);
 const phones = new CustomerPhoneService(db);
@@ -41,10 +29,7 @@ function numara(): string {
   return `+336${String(stamp).slice(-6)}${String(sira).padStart(2, '0')}`;
 }
 
-/**
- * Zaman damgası ANLARLA karşılaştırılır, DİZEYLE değil: PostgREST `…+00:00` döndürüyor, JS `…000Z`
- * üretiyor — aynı an, farklı yazım.
- */
+/** Anlarla karşılaştırılır, dizeyle değil: PostgREST `…+00:00`, JS `…000Z` yazar. */
 const an = (value: string | null | undefined): string | null => (value ? new Date(value).toISOString() : null);
 
 async function ac(input: Parameters<typeof openWhatsappConversation>[0]) {
@@ -56,12 +41,7 @@ async function ac(input: Parameters<typeof openWhatsappConversation>[0]) {
   return sonuc;
 }
 
-/**
- * KANIT satırı kurar — "bu numara bu müşteride, ve bunu webhook'tan biliyoruz".
- *
- * Test bunu doğrudan yazıyor çünkü gerçek yazıcı imzalı webhook'tur (`meta-webhook`) ve o zincirin
- * kendi testi var; burada sorulan şey kapının kanıt defterini OKUYUP okumadığı.
- */
+/** Gerçek yazıcı imzalı webhook'tur ve kendi testi var; burada sorulan kapının kanıt defterini okuyup okumadığı. */
 async function kanitla(customerId: string, phone: string): Promise<void> {
   await phones.recordProof(customerId, phone);
 }
@@ -70,10 +50,7 @@ afterAll(async () => {
   await purgeTestData(db, { conversationIds, profileIds });
 });
 
-/*
-  YENİ SOHBETİN VARSAYILAN YÜRÜTÜCÜSÜ (15.30) — ayar okunuyor mu, ve yalnız YENİ sohbete mi.
-  Ayar küresel tek satır (`CLAUDE §4b`: testler tekil satırı kirletmez): önce okunur, sonra geri konur.
-*/
+// Ayar küresel tek satır: önce okunur, sonra geri konur.
 describe('yeni sohbetin yürütücüsü ayardan (15.30)', () => {
   const settings = new SettingsService(db);
   let onceki: unknown;
@@ -111,8 +88,6 @@ describe('yeni sohbetin yürütücüsü ayardan (15.30)', () => {
 
 describe('numaradan konuşmaya (15.2)', () => {
   it('KANITSIZ numara müşteri AÇMAZ — sohbet kimliksiz açılır, mesaj yine de yazılabilir (04.10)', async () => {
-    // Eski davranış taslak müşteri açmaktı ve o gün doğruydu: kanıt numaranın kendisi sayılıyordu.
-    // Bugün operatörün klavyesinden geçen dize kanıt değil — kimlik uydurmaktansa boş bırakılıyor.
     const telefon = numara();
     const sonuc = await ac({ phone: telefon, name: 'Yeni WhatsApp müşterisi' });
 
@@ -139,13 +114,12 @@ describe('numaradan konuşmaya (15.2)', () => {
 
     expect(sonuc.customerCreated).toBe(false);
     expect(sonuc.customer.id).toBe(mevcut.id);
-    // Müşterinin kendi adı EZİLMEZ: WhatsApp profil adı otomatik bir veridir, düzeltme değil.
+    // Müşterinin kendi adı ezilmez: WhatsApp profil adı otomatik bir veridir, düzeltme değil.
     expect(sonuc.customer.name).toBe(mevcut.name);
   });
 
   it('İLETİŞİM numarası eşleşme SAYILMAZ — önceden sahiplenme kapısı budur (04.10)', async () => {
-    // Açığın tam senaryosu: biri başkasının numarasını hesap kartına yazıyor. O kayıt artık kimlik
-    // kurmuyor; gerçek sahibi yazdığında sohbeti yabancı hesaba düşmüyor.
+    // Biri başkasının numarasını hesap kartına yazıyor; o kayıt kimlik kurmamalı.
     const telefon = numara();
     const sahiplenen = await profiles.insert({ name: `Numarayı yazan ${stamp}`, phone: telefon });
     profileIds.push(sahiplenen.id);
@@ -241,15 +215,13 @@ describe('mesaj kaydı ve servis penceresi', () => {
       direction: 'outbound',
       kind: 'template',
       templateName: 'order_confirm',
-      // Ücret sınıfı defterde duruyor: "bu ay ne ödedik" sorusu ancak bu kolonla cevaplanır.
+      // Ücret sınıfı defterde durur: "bu ay ne ödedik" sorusu ancak bu kolonla cevaplanır.
       templateCategory: 'utility',
     });
   });
 
   it('pencere AÇIKKEN gönderilen şablon kaydı REDDEDİLMEZ — nöbetin işi gerçeği susturmak değil', async () => {
-    // Adım 1'de mesaj zaten gönderilmiş oluyor (admin telefonundan yazıyor, biz deftere işliyoruz).
-    // Olmuş bir şeyi kaydetmeyi reddetmek defteri yalancı yapardı; israf log'a düşer, deftere değil.
-    // Gönderimi ENGELLEYEN kapı, gönderimin kendisi doğduğunda kurulur (15.11).
+    // Kayıt olmuş bir gönderimi yazar: reddetmek defteri yalancı yapardı, israf log'a düşer.
     const sonuc = await ac({ phone: numara() });
     expect(sonuc.status).toBe('ok');
     if (sonuc.status !== 'ok') return;
@@ -263,12 +235,12 @@ describe('mesaj kaydı ve servis penceresi', () => {
       conversationId: sonuc.conversation.id,
       text: 'Bu hafta mantıda %20 indirim!',
       templateName: 'weekly_promo',
-      // Pazarlama şablonu + açık pencere = israf; nöbet bunu log'a yazar ama KAYDI reddetmez.
+      // Pazarlama kalıbı + açık pencere = israf; nöbet log'a yazar ama kaydı reddetmez.
       templateCategory: 'marketing',
     });
 
     expect(kayit).toMatchObject({ kind: 'template', templateName: 'weekly_promo', templateCategory: 'marketing' });
-    // Pencere de kaymadı: giden mesaj onu ne uzatır ne kısaltır.
+    // Giden mesaj pencereyi ne uzatır ne kısaltır.
     const acik = await conversations.getById(sonuc.conversation.id);
     expect(serviceWindowState(acik?.windowExpiresAt).open).toBe(true);
   });
