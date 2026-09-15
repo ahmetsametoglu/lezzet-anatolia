@@ -26,7 +26,7 @@ import { customerMetrics } from '../../components/customer/customer-metrics';
 import { publishMe } from '../../lib/me/use-me.hook';
 import { CodeField } from './code-field';
 import { SESSION_ENDED_NOTICE, type LoginNotice } from './login-notice';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/login';
 
 /*
   HIZLI DOĞRULAMA (v3 `vLogin`, v3:757-796) — şifresiz giriş: üç yol (Google · WhatsApp · e-posta),

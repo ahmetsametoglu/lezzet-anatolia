@@ -9,7 +9,7 @@ import { exchangeOAuthCode } from '../../lib/auth/oauth';
 import { useAppLocale } from '../../lib/i18n/app-locale';
 import { toastSuccess } from '../../lib/toast/toast-store';
 import { publishMe } from '../../lib/me/use-me.hook';
-import messages from './messages.json';
+import messages from '@lezzet/i18n/customer/login';
 
 /*
   OAUTH DÖNÜŞ EKRANI (`/auth/callback`) — Google'dan dönen derin bağlantının İNDİĞİ yer.
