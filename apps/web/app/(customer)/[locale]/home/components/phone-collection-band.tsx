@@ -1,8 +1,8 @@
 import type { ComponentProps } from 'react';
 import type { CatalogImage } from '@lezzet/types';
 import { Link } from '@/i18n/navigation';
-import { CirclePhoto } from './circle-photo';
-import { Tag } from './tag';
+import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
+import { Tag } from '@/components/customer/phone-kit/tag';
 
 /*
   KOLEKSİYON BANDI — vitrinin kenardan kenara uzanan renkli şeridi; kesitin adını ve kaç çeşit
@@ -27,7 +27,7 @@ const TONE: Record<(typeof TONES)[number], { band: string; accent: string; title
   terracotta: { band: 'bg-terracotta', accent: 'text-terracotta-line', title: 'text-card' },
 };
 
-interface CollectionBandProps {
+interface PhoneCollectionBandProps {
   href: ComponentProps<typeof Link>['href'];
   name: string;
   /** Adın altındaki cümle; `null` = yazılmamış → satır çizilmez (yedek metin uydurulmaz). */
@@ -41,7 +41,7 @@ interface CollectionBandProps {
   image: CatalogImage;
 }
 
-export function CollectionBand({ href, name, subtitle, countLabel, discountLabel, index, image }: CollectionBandProps) {
+export function PhoneCollectionBand({ href, name, subtitle, countLabel, discountLabel, index, image }: PhoneCollectionBandProps) {
   const tone = TONE[TONES[index % TONES.length] ?? 'olive'];
   const mirrored = index % 2 === 1;
   const align = mirrored ? 'text-right' : '';

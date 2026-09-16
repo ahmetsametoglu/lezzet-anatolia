@@ -11,7 +11,7 @@ import {
 import homeMessages from '@lezzet/i18n/customer/home';
 import { useAccount, useWholesale } from '@/components/customer/account/account-context';
 import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
-import { CollectionBand } from '@/components/customer/phone-kit/collection-band';
+import { PhoneCollectionBand } from './components/phone-collection-band';
 import { DashedInvite } from '@/components/customer/phone-kit/dashed-invite';
 import { PhotoTile } from '@/components/customer/phone-kit/photo-tile';
 import { ProductCircleCard } from '@/components/customer/phone-kit/product-circle-card';
@@ -113,7 +113,7 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
         <section className="overflow-x-clip">
           <p className="px-5.5 pb-2 font-sans text-eyebrow-xs text-terracotta uppercase">{copy.collections.eyebrow}</p>
           {home.bands.map((band, index) => (
-            <CollectionBand
+            <PhoneCollectionBand
               key={band.slug}
               // Her iki tür de katalogu KENDİ süzgeciyle açar; parametre adları katalogunkiyle aynı.
               href={

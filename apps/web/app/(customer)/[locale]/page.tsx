@@ -14,9 +14,9 @@ import { loadHomeView } from '@/lib/storefront/home-view';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
-import { HomeClient } from './home-client';
-import type { Messages } from './home-types';
-import messages from './messages.json';
+import { HomeClient } from './home/home-client';
+import type { Messages } from './home/home-types';
+import messages from './home/messages.json';
 
 interface HomeProps {
   params: Promise<{ locale: string }>;
