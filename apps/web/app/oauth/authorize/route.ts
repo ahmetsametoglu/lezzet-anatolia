@@ -43,8 +43,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     // Oturum yoksa girişe gönderip buraya geri getiriyoruz; personel olmayan kullanıcı ise
     // girişi tekrarlamanın faydası yok, cevabı düz metin.
     if (err instanceof AuthError && err.code === 'auth_required') {
+      // Vekil arkasında `nextUrl.origin` iç adresi (`localhost:3000`) verir ve connector'dan gelen
+      // kullanıcı oraya savrulurdu; gerçek origin forwarded başlıklarından kurulur (`auth/callback` deseni).
+      const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? request.nextUrl.host;
+      const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
       const login = `${localizedPath('/login', DEFAULT_LOCALE)}?next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`;
-      return NextResponse.redirect(new URL(`/${DEFAULT_LOCALE}${login}`, request.nextUrl.origin));
+      return NextResponse.redirect(`${proto}://${host}/${DEFAULT_LOCALE}${login}`);
     }
     return new Response('Bu bağlantıyı yalnız yönetici kurabilir.', { status: 403 });
   }
