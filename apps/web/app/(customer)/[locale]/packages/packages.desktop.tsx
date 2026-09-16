@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { RATIO_SOURCE } from '@lezzet/types';
 import { CROP_CENTER } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
-import { PackageListCard } from '@/components/customer/ui/package-card';
+import { DesktopPackageCard } from './components/desktop-package-card';
 import { Button, buttonClass } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
 import { Link } from '@/i18n/navigation';
@@ -89,11 +89,11 @@ export function PackagesDesktop({ t, locale, packages, hero }: PackagesViewProps
             {/* TEK paket kaldığında ızgara kurulmaz, yatay kart gelir (tasarım "Durumlar"):
                 1/3 genişlikte yalnız kalan kart zayıf görünüyor ve sayfanın sözünü zayıflatıyor. */}
             {packages.length === 1 && packages[0] ? (
-              <PackageListCard pack={packages[0]} locale={locale} labels={t} wide />
+              <DesktopPackageCard pack={packages[0]} locale={locale} labels={t} wide />
             ) : (
               <div className="grid grid-cols-3 gap-5.5">
                 {visible.map((pack) => (
-                  <PackageListCard key={pack.id} pack={pack} locale={locale} labels={t} />
+                  <DesktopPackageCard key={pack.id} pack={pack} locale={locale} labels={t} />
                 ))}
               </div>
             )}

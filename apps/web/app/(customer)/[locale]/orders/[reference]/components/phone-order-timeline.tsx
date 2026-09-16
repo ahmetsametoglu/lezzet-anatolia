@@ -2,7 +2,7 @@ import type { OrderMilestone, OrderTimelineStep } from '@lezzet/types';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 
 /*
-  Sipariş zaman çizgisi, native `OrderTimeline`ın web telefon ikizi: adımları motor verir (`orderTimeline`), ekran durumdan çıkarım
+  Sipariş zaman çizgisi, native sipariş detayının çizgisiyle aynı: adımları motor verir (`orderTimeline`), ekran durumdan çıkarım
   yapmaz ve iptal ile iade çizgide yer tutmaz. Saat yalnız kaydı olan adımda yazılır ve ray çizgisinin rengini sonraki adım belirler,
   çünkü yaşanmamış yol yaşanmış gibi boyanmamalı.
 */
@@ -15,7 +15,7 @@ const STEP_ICON = {
   delivered: 'home',
 } as const satisfies Record<OrderMilestone, string>;
 
-interface OrderTimelineProps {
+interface PhoneOrderTimelineProps {
   steps: readonly OrderTimelineStep[];
   /** Durak adları — çeviri çağıranda çözülür. */
   labels: Record<OrderMilestone, string>;
@@ -25,7 +25,7 @@ interface OrderTimelineProps {
   formatAt: (iso: string) => string;
 }
 
-export function OrderTimeline({ steps, labels, notes, formatAt }: OrderTimelineProps) {
+export function PhoneOrderTimeline({ steps, labels, notes, formatAt }: PhoneOrderTimelineProps) {
   return (
     <ol className="flex flex-col rounded-card bg-sand-250 px-4 pt-4 pb-1">
       {steps.map((step, index) => {

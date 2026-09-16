@@ -4,9 +4,9 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import ordersMessages from '@lezzet/i18n/customer/orders';
 import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
 import { DashedInvite } from '@/components/customer/phone-kit/dashed-invite';
-import { DeliveryMap } from '@/components/customer/phone-kit/delivery-map';
+import { PhoneDeliveryMap } from './components/phone-delivery-map';
 import { Note } from '@/components/customer/phone-kit/note';
-import { OrderTimeline } from '@/components/customer/phone-kit/order-timeline';
+import { PhoneOrderTimeline } from './components/phone-order-timeline';
 import { SummaryPanel, type SummaryRow } from '@/components/customer/phone-kit/summary-panel';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { addressLine } from '@lezzet/address';
@@ -81,13 +81,13 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
     <div className="flex flex-col gap-4 px-4.5 pt-4.5 pb-7.5">
       {/* Harita YALNIZ kurye yoldayken: durmuş bir siparişin üstünde hareketli bir takip görüntüsü, olmayan bir şeyi
           oluyormuş gibi gösterirdi. */}
-      {order.status === 'on_the_way' && <DeliveryMap trackingLabel={d.tracking} liveLabel={d.trackingLive} />}
+      {order.status === 'on_the_way' && <PhoneDeliveryMap trackingLabel={d.tracking} liveLabel={d.trackingLive} />}
 
       {/* Çizgi mi tek blok mu — kararı MOTOR veriyor (`timeline === null` ⇒ iptal/iade). */}
       {order.timeline === null ? (
         <Note tone={order.status === 'cancelled' ? 'error' : 'terracotta'} description={order.status === 'cancelled' ? d.cancelled : d.returning} />
       ) : (
-        <OrderTimeline steps={order.timeline} labels={d.milestone} notes={d.note} formatAt={(iso) => formatStamp(iso, locale)} />
+        <PhoneOrderTimeline steps={order.timeline} labels={d.milestone} notes={d.note} formatAt={(iso) => formatStamp(iso, locale)} />
       )}
 
       <section className="flex flex-col gap-2">

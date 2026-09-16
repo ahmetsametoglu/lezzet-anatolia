@@ -9,14 +9,14 @@
   Çizim bir RESİMDİR: ekran okuyucuya üstündeki iki metin konuşur, SVG gizlidir.
 */
 
-interface DeliveryMapProps {
+interface PhoneDeliveryMapProps {
   /** Sol üstteki künye ("Livreur en route") — çeviri çağıranda çözülür. */
   trackingLabel: string;
   /** Sağ alttaki künye ("Suivi en direct"). */
   liveLabel: string;
 }
 
-export function DeliveryMap({ trackingLabel, liveLabel }: DeliveryMapProps) {
+export function PhoneDeliveryMap({ trackingLabel, liveLabel }: PhoneDeliveryMapProps) {
   return (
     <div className="relative h-[195px] overflow-hidden rounded-card bg-olive-bg">
       <svg aria-hidden viewBox="0 0 340 195" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" fill="none">

@@ -6,8 +6,8 @@ import { StockMark } from '@/components/customer/delivery/stock-mark';
 import { Link } from '@/i18n/navigation';
 import { formatPrice, formatWeight } from '@/lib/storefront/format';
 import type { StorefrontPackage } from '@/lib/storefront/storefront-types';
-import { buttonClass } from './button';
-import { Icon } from './icons';
+import { buttonClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 
 /**
  * Paket liste kartı — Paketler sayfasının tek yapı taşı.
@@ -35,7 +35,7 @@ interface PackageCardLabels {
   cta: string;
 }
 
-interface PackageListCardProps {
+interface DesktopPackageCardProps {
   pack: StorefrontPackage;
   locale: Locale;
   labels: PackageCardLabels;
@@ -48,7 +48,7 @@ interface PackageListCardProps {
   wide?: boolean;
 }
 
-export function PackageListCard({ pack, locale, labels, compact = false, wide = false }: PackageListCardProps) {
+export function DesktopPackageCard({ pack, locale, labels, compact = false, wide = false }: DesktopPackageCardProps) {
   if (wide) return <WidePackageCard pack={pack} locale={locale} labels={labels} />;
   // Paketin YOLU → ürün kartının stok dili: ortak kural (`@lezzet/helper` `packageRouteStatusOf`, gerekçesi
   // orada) — detay sayfaları ve native uygulama aynı eşlemeyi okur. `null` = yer bilinmiyor ya da yerelden
@@ -182,7 +182,7 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
 }
 
 /** Tek paket kaldığında kullanılan yatay kart — ızgaranın tek elemanlı hâli yerine (tasarım). */
-function WidePackageCard({ pack, locale, labels }: Omit<PackageListCardProps, 'compact' | 'wide'>) {
+function WidePackageCard({ pack, locale, labels }: Omit<DesktopPackageCardProps, 'compact' | 'wide'>) {
   const stockStatus = packageRouteStatusOf(pack.route);
   // Künye tek satırda birleşir; hesaplanamayan parça sessizce düşer, ayraç ondan sonra kurulur.
   const meta = [
@@ -218,7 +218,7 @@ function WidePackageCard({ pack, locale, labels }: Omit<PackageListCardProps, 'c
         <span className="font-serif text-h2-sm text-ink">{pack.name}</span>
         <span className="font-sans text-note text-muted">{meta}</span>
         {pack.description && <p className="flex-1 font-sans text-note leading-relaxed text-body">{pack.description}</p>}
-        {/* Çip kuralı DAR KARTIN aynısı (`PackageListCard`): yer biliniyorsa yola bağlı işaret,
+        {/* Çip kuralı DAR KARTIN aynısı: yer biliniyorsa yola bağlı işaret,
             bilinmiyorsa kargo kısıtı çipi. İki dal aynı soruyu iki türlü cevaplayamaz — sayfanın
             ilk kartı geniş, gerisi dar ve müşteri ikisini yan yana görüyor. */}
         <div className="flex items-center gap-1.5">
