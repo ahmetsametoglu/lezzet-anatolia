@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import productMessages from '@lezzet/i18n/customer/product';
 import { formatDecimal } from '@/lib/storefront/format';
 import { Icon } from '@/components/customer/ui/icons';
 import type { Messages, ReviewsData } from '../product-types';
@@ -68,7 +69,9 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-serif text-card-title-sm text-ink">{t.reviews.title}</h2>
+        {/* Başlık ORTAK sözlükten: telefon yüzü ile native uygulama aynı tasarım ve referans kare
+            "Değerlendirmeler" diyor; masaüstünün kendi karesi "Yorumlar" — sayfa sözlüğü onundur. */}
+        <h2 className="font-serif text-card-title-sm text-ink">{productMessages[locale].reviews.title}</h2>
         {canReview && !alreadyWrote && !submitted && (
           <button
             type="button"

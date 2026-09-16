@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { KeysetCursor } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
+import productMessages from '@lezzet/i18n/customer/product';
 import type { PublishedReview } from '@/lib/feedback/product-feedback';
 import { SectionHeader } from '@/components/customer/phone-kit/section-header';
 import type { Messages } from '../product-types';
@@ -133,7 +134,8 @@ export function PhoneAllReviews({ t, locale, productId, productName, breakdown, 
         >
           <Icon name="arrowLeft" size={20} />
         </button>
-        <SectionHeader eyebrow={productName} title={t.reviews.title} />
+        {/* Başlık ORTAK sözlükten — seçki bölümüyle aynı kelime; gerekçesi `phone-reviews`te. */}
+        <SectionHeader eyebrow={productName} title={productMessages[locale].reviews.title} />
       </header>
 
       {/* `min-h-0`: flex çocuğu içeriğinden küçülmez — o olmadan liste taşar ve başlık kayar. */}
