@@ -73,6 +73,7 @@ export const customerSand = {
   'sand-400': '#d8cfb6', // belirgin çerçeve
   'sand-500': '#cdc4a8', // kesikli çerçeve, boş durum
   'sand-600': '#b3ab97', // pasif ikon, pasif metin
+  'sand-650': '#9a958a', // bu adrese gitmeyen ürünün fiyat çipi (600 ile muted arasındaki boş durak)
   'neutral-400': '#c9cdc2', // kapanmış/pasif rozet çerçevesi (soğuk)
 } as const satisfies Record<string, string>;
 

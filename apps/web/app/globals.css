@@ -51,6 +51,7 @@
   --color-sand-400: #d8cfb6; /* belirgin çerçeve */
   --color-sand-500: #cdc4a8; /* kesikli çerçeve, boş durum */
   --color-sand-600: #b3ab97; /* pasif ikon, pasif metin */
+  --color-sand-650: #9a958a; /* bu adrese gitmeyen ürünün fiyat çipi — skalada 600 ile muted arasında boş duraktı */
   --color-neutral-400: #c9cdc2; /* kapanmış/pasif rozet çerçevesi (soğuk) */
 
   /* ── §0.3 Semantik aileler — her biri metin · koyu · zemin · kenarlık ──────
