@@ -18,7 +18,7 @@ export function elsewhereReasonOf(place: { inRoute: boolean } | null): Elsewhere
 }
 
 /** Yer işaretinin cümleleri — ortak sözlükten türer (`@lezzet/i18n/customer/place`), elle yazılmaz. */
-export type PlaceMarkCopy = Pick<LocalizedCopy<typeof placeMessages>, 'shipMark' | 'awayMark' | 'lineBlocked'>;
+export type PlaceMarkCopy = Pick<LocalizedCopy<typeof placeMessages>, 'shipMark' | 'awayMark' | 'lineBlocked' | 'cardBlocked'>;
 
 /** İşaretin tonu — native kitin `StockMark` sözlüğü: kargo (bilgi) · bekleyen bölge · kapalı kapı. */
 export type PlaceMarkTone = 'info' | 'pending' | 'blocked';
@@ -43,8 +43,11 @@ export function placeMarkOf(status: string | null, place: { inRoute: boolean } |
  * Kartın yer notu: "Kargoyla gelir" kartta yazılmaz, çünkü rota dışı müşterinin neredeyse bütün kartlarında yazan bilgi bilgi
  * olmaktan çıkar ve cümle listenin başındaki bantta tek yerde durur. Kapalı kapı kartı soldurur, bekleyen bölge soldurmaz, çünkü
  * ürün gelebilir.
+ *
+ * Kapalı kapının KART cümlesi kısadır (`cardBlocked`): kart şeridi fotoğrafın üstünde tek satırlık bir işarettir, ürün detayının
+ * iki satırlık gerekçesi (`lineBlocked`) oraya sığmaz ve fotoğrafı yutardı.
  */
-export function cardPlaceNoteOf(mark: PlaceMark | null): { note: string | undefined; dimmed: boolean } {
+export function cardPlaceNoteOf(mark: PlaceMark | null, t: PlaceMarkCopy): { note: string | undefined; dimmed: boolean } {
   if (mark === null || mark.tone === 'info') return { note: undefined, dimmed: false };
-  return { note: mark.label, dimmed: mark.tone === 'blocked' };
+  return { note: mark.tone === 'blocked' ? t.cardBlocked : mark.label, dimmed: mark.tone === 'blocked' };
 }

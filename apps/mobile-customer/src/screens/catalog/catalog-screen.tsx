@@ -21,6 +21,8 @@ import { campaignValueOf, cardBadgeOf, cardPlaceNoteOf, productPriceLabel } from
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
+// Kartın yer cümlesi ortak sözlükten; aynı metni web'in telefon görünümü de okuyor.
+import placeMessages from '@lezzet/i18n/customer/place';
 import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -111,7 +113,7 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
     const stockMark = stockMarkOf(product.stockStatus, place, locale);
     /* "Kargoyla gelir" karta yazılmaz, her kartta yazan bilgi bilgi olmaktan çıkar; cümlesi listenin başındaki bantta. Kartta
        yalnız gönderemediğimiz ya da bölgede olmayan ürünün notu kalır. */
-    const { note: placeNote, dimmed } = cardPlaceNoteOf(stockMark);
+    const { note: placeNote, dimmed } = cardPlaceNoteOf(stockMark, placeMessages[locale]);
     return {
       name: product.name,
       image: product.image,

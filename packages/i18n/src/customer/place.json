@@ -3,6 +3,7 @@
     "shipMark": "📦 Kargoyla gelir",
     "awayMark": "Bölgenizde şu an yok",
     "lineBlocked": "Soğuk zincir ürün —\nbu adrese teslim edemiyoruz",
+    "cardBlocked": "Bu adrese gelmiyor",
     "onlyShippable": "📍 Adresime gönderilebilir",
     "placeNotice": {
       "title": "Bu bölgeye aracımız gitmiyor",
@@ -60,6 +61,7 @@
     "shipMark": "📦 Envoyé par transporteur",
     "awayMark": "Indisponible dans votre zone",
     "lineBlocked": "Produit chaîne du froid —\nnon livrable à cette adresse",
+    "cardBlocked": "Non livrable ici",
     "onlyShippable": "📍 Livrable chez moi",
     "placeNotice": {
       "title": "Notre camion ne dessert pas cette zone",
@@ -117,6 +119,7 @@
     "shipMark": "📦 Wird versandt",
     "awayMark": "In Ihrer Region derzeit nicht da",
     "lineBlocked": "Kühlkettenprodukt —\nan diese Adresse nicht lieferbar",
+    "cardBlocked": "Hierher nicht lieferbar",
     "onlyShippable": "📍 An meine Adresse",
     "placeNotice": {
       "title": "Unser Fahrzeug fährt diese Region nicht an",

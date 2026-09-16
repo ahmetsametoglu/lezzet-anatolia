@@ -33,7 +33,7 @@ function itemLabelOf(item: StorefrontPackageItem, copy: PackagesCopy): string {
 export function PhonePackageCard({ pack, copy, locale, place }: PhonePackageCardProps) {
   // Tükenmiş pakette adres sorusu anlamsız: yalnız paketin kendi gerçeği konuşur.
   const mark = pack.soldOut ? null : placeMarkOf(packageRouteStatusOf(pack.route), place, placeMessages[locale]);
-  const { dimmed } = cardPlaceNoteOf(mark);
+  const { dimmed } = cardPlaceNoteOf(mark, placeMessages[locale]);
   const note = packageNoteOf(pack, mark?.tone ?? null, copy.note, locale);
 
   return (

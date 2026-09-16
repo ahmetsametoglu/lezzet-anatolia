@@ -53,18 +53,18 @@ describe('placeMarkOf', () => {
 
 describe('cardPlaceNoteOf', () => {
   it('"kargoyla gelir" kartta YAZILMAZ ve soldurmaz', () => {
-    expect(cardPlaceNoteOf(placeMarkOf('shipping', outOfRoute, tr))).toEqual({ note: undefined, dimmed: false });
+    expect(cardPlaceNoteOf(placeMarkOf('shipping', outOfRoute, tr), tr)).toEqual({ note: undefined, dimmed: false });
   });
 
   it('kapalı kapı yazar VE soldurur', () => {
-    expect(cardPlaceNoteOf(placeMarkOf('elsewhere', outOfRoute, tr))).toEqual({ note: tr.lineBlocked, dimmed: true });
+    expect(cardPlaceNoteOf(placeMarkOf('elsewhere', outOfRoute, tr), tr)).toEqual({ note: tr.cardBlocked, dimmed: true });
   });
 
   it('bekleyen bölge yazar ama soldurmaz — ürün gelebilir', () => {
-    expect(cardPlaceNoteOf(placeMarkOf('elsewhere', inRoute, tr))).toEqual({ note: tr.awayMark, dimmed: false });
+    expect(cardPlaceNoteOf(placeMarkOf('elsewhere', inRoute, tr), tr)).toEqual({ note: tr.awayMark, dimmed: false });
   });
 
   it('işaret yoksa not da yok', () => {
-    expect(cardPlaceNoteOf(null)).toEqual({ note: undefined, dimmed: false });
+    expect(cardPlaceNoteOf(null, tr)).toEqual({ note: undefined, dimmed: false });
   });
 });

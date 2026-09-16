@@ -70,7 +70,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
 
   /** Sözleşme satırı → kart — native `cardOf`un karşılığı; cümleler ortak kuruculardan. */
   const cardOf = (product: StorefrontProduct) => {
-    const { note: placeNote, dimmed } = cardPlaceNoteOf(placeMarkOf(product.stockStatus, place, placeCopy));
+    const { note: placeNote, dimmed } = cardPlaceNoteOf(placeMarkOf(product.stockStatus, place, placeCopy), placeCopy);
     return {
       name: product.name,
       image: product.image,
