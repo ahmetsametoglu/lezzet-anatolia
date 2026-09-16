@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Space_Grotesk, IBM_Plex_Mono, Karla } from 'next/font/google';
 import { brand } from '@lezzet/brand';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { conversationsChannelName, staffNotificationsChannelName } from '@lezzet/application';
@@ -18,15 +17,8 @@ import { OpsShellProvider } from '@/components/operation/ui/ops-shell';
 import { buttonClass } from '@/components/operation/ui/button';
 import { ErrorState } from '@/components/operation/ui/error-state';
 import { AlertIcon } from '@/components/operation/ui/icons';
+import { opsFontVars } from '@/components/operation/ui/fonts';
 import { SocialMessengerProvider } from './social/messenger/social-messenger';
-
-// Operasyon evreni ("Veri Masası") fontları. latin-ext → Türkçe (ş ğ ı) doğru gösterilir.
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin', 'latin-ext'], variable: '--font-space-grotesk', display: 'swap' });
-const ibmPlexMono = IBM_Plex_Mono({ subsets: ['latin', 'latin-ext'], weight: ['400', '500', '600'], variable: '--font-ibm-plex-mono', display: 'swap' });
-const karla = Karla({ subsets: ['latin', 'latin-ext'], variable: '--font-karla', display: 'swap' });
-
-/** İki kabuk da (uygulama + yetki ekranı) aynı font değişkenlerini taşır — tek yerde tanımlı. */
-const fontVars = `${spaceGrotesk.variable} ${ibmPlexMono.variable} ${karla.variable}`;
 
 export const metadata: Metadata = {
   title: `Operasyon — ${brand.name}`,
@@ -87,7 +79,7 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
   const { facilities, activeWarehouseId, scope } = await readWarehouseContext();
 
   return (
-    <RootShell lang="tr" surface="operations" className={fontVars}>
+    <RootShell lang="tr" surface="operations" className={opsFontVars}>
       {/* Uygulama kabuğu: viewport yüksekliği sabit; sidebar ve içerik kendi içinde kaydırılır (Veri Masası). */}
       <div className="flex h-screen overflow-hidden bg-ops-bg font-ops-body text-ops-ink">
         {/* Kabuk bağlamı: kim bağlandı + hangi depo evreni. Başlık barı (`PageHeader`) bunları
@@ -130,7 +122,7 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
  */
 function NotStaffScreen() {
   return (
-    <RootShell lang="tr" surface="operations" className={fontVars}>
+    <RootShell lang="tr" surface="operations" className={opsFontVars}>
       <div className="flex h-screen flex-col overflow-hidden bg-ops-bg font-ops-body text-ops-ink">
         <ErrorState
           tone="amber"

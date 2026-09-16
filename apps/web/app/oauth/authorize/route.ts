@@ -4,19 +4,34 @@ import { isAllowedRedirectUri } from '@lezzet/domain-core';
 import { DEFAULT_LOCALE, localizedPath } from '@lezzet/i18n';
 import { AuthError, requireAdmin } from '@/lib/guard';
 import { randomToken, sha256hex } from '@/lib/oauth';
+import type { OauthFailureDetail } from '../error/failure';
 
 /**
  * Yetkilendirme ucu (RFC 6749 + PKCE).
  *
  * **Onay ekranı YOK ve bu bilinçli:** onayın kendisi admin girişidir — bu kapıdan geçebilen tek
- * kişi zaten sistemin sahibi. İstek parametreleri hatalıysa dönüş adresine YÖNLENDİRİLMEZ, 400
- * döner: kullanıcıyı kötü bir adrese sürüklemek, hatayı orada göstermekten tehlikelidir.
+ * kişi zaten sistemin sahibi. İstek hatalıysa dönüş adresine YÖNLENDİRİLMEZ: kullanıcıyı kötü bir
+ * adrese sürüklemek, hatayı orada göstermekten tehlikelidir. Hata KENDİ ekranımızda çizilir
+ * (`/oauth/error`) — bu uç tarayıcıda açılıyor, düz metin gövdenin okuru yok.
  */
 
 /** Kod ömrü kısa tutulur: tarayıcıdan sunucuya tek sıçrama için yeter, çalınırsa pencere dardır. */
 const CODE_TTL_MS = 60_000;
 
-const badRequest = (message: string): Response => new Response(message, { status: 400 });
+/**
+ * Vekil arkasında `nextUrl.origin` İÇ adresi (`localhost:3000`) verir ve connector'dan gelen
+ * kullanıcı oraya savrulurdu; gerçek origin forwarded başlıklarından kurulur (`auth/callback` deseni).
+ */
+function publicOrigin(request: NextRequest): string {
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? request.nextUrl.host;
+  const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
+  return `${proto}://${host}`;
+}
+
+function failure(request: NextRequest, reason: 'not_admin' | 'invalid_request', detail?: OauthFailureDetail): Response {
+  const suffix = detail ? `&detail=${detail}` : '';
+  return NextResponse.redirect(`${publicOrigin(request)}/oauth/error?reason=${reason}${suffix}`);
+}
 
 export async function GET(request: NextRequest): Promise<Response> {
   const p = request.nextUrl.searchParams;
@@ -25,32 +40,31 @@ export async function GET(request: NextRequest): Promise<Response> {
   const codeChallenge = p.get('code_challenge');
   const state = p.get('state');
 
-  if (p.get('response_type') !== 'code') return badRequest('response_type=code zorunlu');
-  if (p.get('code_challenge_method') !== 'S256') return badRequest('PKCE zorunlu (code_challenge_method=S256)');
-  if (!codeChallenge) return badRequest('code_challenge zorunlu');
-  if (!clientId) return badRequest('client_id zorunlu');
-  if (!redirectUri || !isAllowedRedirectUri(redirectUri)) return badRequest('İzin verilmeyen redirect_uri');
+  if (p.get('response_type') !== 'code') return failure(request, 'invalid_request', 'response_type');
+  if (p.get('code_challenge_method') !== 'S256') return failure(request, 'invalid_request', 'pkce');
+  if (!codeChallenge) return failure(request, 'invalid_request', 'code_challenge');
+  if (!clientId) return failure(request, 'invalid_request', 'client_id');
+  if (!redirectUri || !isAllowedRedirectUri(redirectUri)) return failure(request, 'invalid_request', 'redirect_uri');
 
   const db = serviceDb();
   const client = await new OauthClientService(db).findByClientId(clientId);
-  if (!client) return badRequest('client_id tanınmadı');
-  if (!client.redirectUris.includes(redirectUri)) return badRequest('redirect_uri bu istemcide kayıtlı değil');
+  if (!client) return failure(request, 'invalid_request', 'unknown_client');
+  if (!client.redirectUris.includes(redirectUri)) return failure(request, 'invalid_request', 'redirect_not_registered');
 
   let adminProfileId: string;
   try {
     adminProfileId = (await requireAdmin()).profileId;
   } catch (err) {
-    // Oturum yoksa girişe gönderip buraya geri getiriyoruz; personel olmayan kullanıcı ise
-    // girişi tekrarlamanın faydası yok, cevabı düz metin.
-    if (err instanceof AuthError && err.code === 'auth_required') {
-      // Vekil arkasında `nextUrl.origin` iç adresi (`localhost:3000`) verir ve connector'dan gelen
-      // kullanıcı oraya savrulurdu; gerçek origin forwarded başlıklarından kurulur (`auth/callback` deseni).
-      const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? request.nextUrl.host;
-      const proto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
+    // Yetki dışı hata YUTULMAZ: veritabanı düşmesini "yetkiniz yok" diye göstermek, arızayı
+    // kullanıcının hesabına yıkar ve kimse aramaz.
+    if (!(err instanceof AuthError)) throw err;
+    // Oturum yoksa girişe gönderip buraya geri getiriyoruz; yetkisi olmayan kullanıcı için girişi
+    // tekrarlamanın faydası yok — o dal hata ekranında biter.
+    if (err.code === 'auth_required') {
       const login = `${localizedPath('/login', DEFAULT_LOCALE)}?next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`;
-      return NextResponse.redirect(`${proto}://${host}/${DEFAULT_LOCALE}${login}`);
+      return NextResponse.redirect(`${publicOrigin(request)}/${DEFAULT_LOCALE}${login}`);
     }
-    return new Response('Bu bağlantıyı yalnız yönetici kurabilir.', { status: 403 });
+    return failure(request, 'not_admin');
   }
 
   const code = randomToken(32);
