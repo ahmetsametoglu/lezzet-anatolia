@@ -26,37 +26,10 @@ const lora = Lora({ subsets: ['latin', 'latin-ext'], variable: '--font-lora', di
 const karla = Karla({ subsets: ['latin', 'latin-ext'], variable: '--font-karla', display: 'swap' });
 
 /**
- * `metadataBase` (08.1) — göreli `alternates` adreslerini mutlak hâle getiren kök.
- *
- * `hreflang` ve `canonical` MUTLAK adres ister; olmadan Next göreli değerleri olduğu gibi basar ve
- * tarayıcı onları "geçersiz" sayıp yok sayar. Yani bu satır olmadan bütün hreflang işi sessizce
- * çalışmaz — hata da vermez, sadece etkisiz kalır.
- *
- * Köken tek kaynaktan (`siteOrigin`): mailin gösterdiği adres ile sayfanın kanonik adresi aynı
- * olmalı, yoksa arama motoru mailden gelen bağı ayrı bir sayfa sanar.
- */
-/**
- * ── BAŞLIK ŞABLONU (08.1) ────────────────────────────────────────────────────
- * Sayfalar kendi başlığını yazıyor ("Baklava Fıstıklı") ve sekmede marka adı HİÇ görünmüyordu —
- * paylaşılan bir sekme ya da yer imi kimin sayfası olduğunu söylemiyordu. Şablon markayı ekliyor;
- * `default` ise başlığı olmayan sayfaların hâli.
- *
- * **Şablon layout'ta olmalı, sayfalarda değil:** her sayfanın kendi başlığına marka eklemesi aynı
- * dizginin onlarca kopyası olurdu ve biri mutlaka unutulurdu — unutulduğu da fark edilmezdi.
- *
- * ── AÇIKLAMA DİLE GÖRE ───────────────────────────────────────────────────────
- * Buradaki `description` Türkçe SABİTTİ ve bu sessiz bir hataydı: Next onu kendi açıklaması
- * olmayan HER sayfaya basıyor, yani Fransız ziyaretçinin gördüğü sayfa arama motoruna Türkçe
- * açıklama beyan ediyordu. Artık dile göre çözülüyor; `layout-messages.json` de aynı kural
- * (`CLAUDE §2`: global JSON yok, metin onu kullanan yerin yanında).
- *
- * `metadataBase` — göreli `alternates` ve `og:url` adreslerini mutlak hâle getiren kök.
- * `hreflang` ve `canonical` MUTLAK adres ister; olmadan Next göreli değerleri olduğu gibi basar ve
- * tarayıcı onları "geçersiz" sayıp yok sayar. Yani bu satır olmadan bütün hreflang işi sessizce
- * çalışmaz — hata da vermez, sadece etkisiz kalır.
- *
- * Köken tek kaynaktan (`siteOrigin`): mailin gösterdiği adres ile sayfanın kanonik adresi aynı
- * olmalı, yoksa arama motoru mailden gelen bağı ayrı bir sayfa sanar.
+ * `metadataBase` MUTLAK olmalı: `hreflang` ve `canonical` göreli adresi kabul etmez, Next onu olduğu gibi
+ * basar ve tarayıcı sessizce yok sayar — hata da vermez. Başlık şablonu ile açıklama sayfalarda değil
+ * burada, çünkü her sayfa markayı kendi başlığına eklerse biri unutulur ve açıklama dile göre
+ * çözülmezse Fransız ziyaretçinin sayfası Türkçe açıklama beyan eder.
  */
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -69,10 +42,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 }
 
 /**
- * iPhone'da sayfa ekranın güvenli alanına kadar uzanır (`viewport-fit=cover`, 14.09): telefon
- * görünümünün alt sekme çubuğu kendi alt boşluğunu `env(safe-area-inset-bottom)`dan hesaplıyor ve
- * bu ayar olmadan iPhone o değeri 0 verir. Yatay tutuşta çentik payını telefon çerçevesinin kökü
- * alıyor (`site-frame.mobile.tsx`); dikey tutuşta ve masaüstünde yan paylar 0'dır.
+ * `viewport-fit=cover`: telefon görünümünün alt sekme çubuğu kendi payını `env(safe-area-inset-bottom)`
+ * değerinden hesaplıyor, bu ayar olmadan iPhone o değeri 0 verir. Yatay tutuşta çentik payını telefon
+ * çerçevesinin kökü alır (`site-frame.mobile.tsx`).
  */
 export const viewport: Viewport = { viewportFit: 'cover' };
 
@@ -91,17 +63,9 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
 
-  // Teslimat bölgeleri BURADA, sunucuda okunur ve bağlama başlangıç verisi olarak iner: panel
-  // açıldığında liste zaten elinde olur, istemciden ikinci bir tur atılmaz. Okuma önbellekli ve
-  // etiketli (`lib/delivery/read.ts`) — her sayfa render'ında sorgu gitmez.
-  // Oturum künyesi de KÖKTE okunur ve bağlama iner: başlıktaki hesap girişi bir istemci bileşeni
-  // (`SiteFrame` hata sayfasında da kullanılıyor, orası `'use client'`) ve kendi başına sunucuya
-  // soramaz. Her sayfada ayrı bir tur atmak yerine burada tek sorgu.
-  // Yerin İLK KARESİ de burada (13.09): adres ya da çerezden çözülmüş hâliyle iner; istemci artık
-  // çerezi okuyup yeniden çözmüyor (`PlaceProvider` künyesi).
-  // Cihaz ipucu bildirimin yeri için: mobil webde hap sekme çubuğunun üstünde durur (`ToastProvider`).
-  // Onaylı toptancı bilgisi de burada (14.09): telefon görünümünün sekme çubuğu kişiye göre değişiyor.
-  // Kaynak vitrinin fiyat kapısı — istek başına tek çözüm (`cache`), vitrin sayfaları aynı cevabı okur.
+  // Bölgeler, oturum künyesi, yerin ilk karesi, cihaz ipucu ve fiyat kapısı KÖKTE okunur: başlık ve
+  // çerçeve birer istemci bileşeni, sunucuya kendileri soramaz. Her sayfanın ayrı tur atması aynı
+  // cevabı tekrarlardı — okumalar önbellekli, istek başına tek çözüm.
   const [zones, account, placeSnapshot, device, viewer] = await Promise.all([
     getDeliveryZones(),
     currentCustomer(),
@@ -114,19 +78,15 @@ export default async function CustomerLayout({ children, params }: CustomerLayou
     <RootShell lang={locale} surface="customer" className={`${lora.variable} ${karla.variable}`}>
       {/* Client component'ler (Link vb.) için locale bağlamı; mesajlar boş — metinler sayfa JSON'undan. */}
       <NextIntlClientProvider>
-        {/* Sepet KÖKTE: sayaç başlıkta, aksiyonlar kartlarda ve ürün detayda — üçü de aynı durumu
-            görmeli. Sayfa başına ayrı sağlayıcı, ekle-çıkar sonrası sayaç ile sayfayı ayrıştırırdı. */}
-        {/* Teslimat yeri de KÖKTE ve sepetin dışında: başlıktaki hap, ürün/paket detayının
-            teslimat satırı ve sepetteki kısıt bloğu aynı cevabı görmeli. Sepetin içine konsaydı
-            ürün sayfası onu okumak için sepete bağımlı olurdu — oysa ikisi ayrı sorular. */}
-        {/* Hesap künyesi de kökte: başlıktaki giriş her sayfada aynı kişiyi göstermeli. */}
+        {/* Sepet, teslimat yeri ve hesap künyesi KÖKTE ve birbirinden ayrı: sayaç başlıkta, kısıt
+            sepette, teslimat satırı ürün detayında — hepsi aynı durumu görmeli. Yer sepetin içine
+            konsaydı ürün sayfası onu okumak için sepete bağımlı olurdu, oysa ikisi ayrı sorular. */}
         <AccountProvider account={account} wholesale={viewer.channel === 'b2b'}>
-          {/* Günlük ziyaret puanı (17.4) — hiçbir şey çizmez, oturum başına bir kez "geldi" der.
-              Yalnız GİRİŞLİ müşteride monte edilir: kimlik zaten yukarıda okundu, ziyaretçi için
-              boşuna sunucu turu atılmaz. Yazma burada DEĞİL istemci efektinde olur — render yan
-              etkisizdir ve buraya bir defter yazımı koymak her prefetch'te tetiklenirdi. */}
+          {/* Günlük ziyaret puanı yalnız girişli müşteride monte edilir, ziyaretçi için boşuna sunucu
+              turu atılmaz. Yazmayı istemci efekti yapar — render yan etkisiz olmalı, buraya konan
+              defter yazımı her prefetch'te tetiklenirdi. */}
           {account && <VisitPing />}
-          {/* Bildirim de kökte (v1 `bildir`): kim çıkarırsa çıkarsın tek hap, aynı yerde. */}
+          {/* Bildirim kökte: kim çıkarırsa çıkarsın tek hap, aynı yerde. */}
           <ToastProvider device={device}>
             <PlaceProvider
               zones={zones}
