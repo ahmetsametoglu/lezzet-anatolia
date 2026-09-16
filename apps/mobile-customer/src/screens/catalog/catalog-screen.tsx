@@ -340,9 +340,11 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
         ListHeaderComponent={
           noticePlace === null ? null : (
             <PlaceNoticeBand
+              country={noticePlace.country}
               postalCode={noticePlace.postalCode}
               /* Şehir çözümden gelir; `null` ise bant yalnız kodu basar. */
               placeName={noticePlace.placeName}
+              source="app-catalog"
               /* Koşulu ayrıca yazılmaz: bant zaten `chipVisible` ile aynı hâlde (çözülmüş, rota dışı) çiziliyor. */
               shippableFilter={{ value: catalog.onlyShippable, onChange: catalog.setOnlyShippable }}
               testID="catalog-place-notice"
