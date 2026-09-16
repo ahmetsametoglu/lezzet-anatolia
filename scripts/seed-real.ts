@@ -4,6 +4,7 @@ import { receivePurchase } from '@lezzet/application';
 import {
   CategoryImageService,
   CategoryService,
+  CollectionService,
   createServiceRoleClient,
   DeliveryZoneService,
   PriceService,
@@ -25,9 +26,12 @@ import { canPublishProduct, purchaseOrderReferenceNo } from '@lezzet/domain-core
 import { toCents } from '@lezzet/helper';
 
 import { brand } from '../packages/brand/src/index';
-import { seedLezzaProducts } from './seed/catalog-lezza';
+import { lezzaGorselUrlByDosya, seedLezzaProducts } from './seed/catalog-lezza';
 import { r2Keys, uploadImageFromPath, uploadImageFromUrl } from './seed/shared';
 import {
+  CATEGORIES,
+  COLLECTIONS,
+  DRAFT_CATEGORY,
   FICTION_ALLERGENS,
   FICTION_INGREDIENTS,
   FICTION_NUTRITION,
@@ -49,6 +53,9 @@ type Line = Purchase['catalog'][number] | Draft['variants'][number];
 
 /** Katalogda görünen ad Türkçesidir; faturadaki ad tedarikçinin dilinde kalır (eşleştirme onun üstünden). */
 const draftName = (draft: Draft): string => draft.nameTr ?? draft.name;
+
+/** Faturadaki ad → katalogdaki Türkçe ad; koleksiyon üyeliği faturadaki adla yazılı. */
+const TASLAK_ADI = new Map(PURCHASES.flatMap((p) => p.drafts).map((d) => [d.name, draftName(d)]));
 
 type Db = ReturnType<typeof createServiceRoleClient>;
 
@@ -225,7 +232,61 @@ function checkInvoiceTotals(): void {
   }
 }
 
-async function seedCatalog(db: Db): Promise<void> {
+/** Kategorisiz ürün olmamalı: eşlemesi yazılmamış taslak beslemeyi DURDURUR, sessizce kategorisiz doğmaz. */
+function checkDraftCategories(): void {
+  const gecerli = new Set(CATEGORIES.map((c) => c.key));
+  const eksik = PURCHASES.flatMap((p) => p.drafts)
+    .map((d) => d.name)
+    .filter((ad) => !gecerli.has(DRAFT_CATEGORY[ad] ?? ''));
+  if (eksik.length > 0) {
+    throw new Error(`kategorisi yazılmamış taslak (${eksik.length}): ${eksik.join(' · ')} — DRAFT_CATEGORY'ye ekle`);
+  }
+}
+
+/** Kategori kapağı: katalogdaki kare · depodaki usta · markanın mağazası. R2 ayarsızsa null döner. */
+async function kategoriKapagi(cat: (typeof CATEGORIES)[number], slug: string, lezzaUrl: Map<string, string>) {
+  if (!cat.image) return null;
+  if (cat.image.file) return uploadImageFromPath(cat.image.file, r2Keys.categoryImage(slug, cat.image.file));
+  const url = cat.image.url ?? (cat.image.lezza ? lezzaUrl.get(cat.image.lezza) : undefined);
+  if (!url) {
+    console.log(`  ⚠ ${cat.name.tr} — kapak kaynağı katalogda yok; kategori kapaksız kuruldu`);
+    return null;
+  }
+  return uploadImageFromUrl(url, r2Keys.categoryImage(slug, url.split('/').pop() || 'cover.webp'));
+}
+
+/**
+ * Vitrin kategorileri. Dönen harita kendi anahtarımın yanında KAYNAĞIN anahtarlarını da taşır: dolu
+ * `catId` ile çağrılan `seedLezzaProducts` kendi kategorisini kurmaz, ürünlerini buraya düşürür.
+ * Kapağı da bu yüzden burası yüklüyor — kaynağın kategori bloğu atlanınca kapak yüklemesi de atlanır.
+ */
+async function seedCategories(db: Db): Promise<Map<string, string>> {
+  console.log('▸ kategoriler');
+  const categories = new CategoryService(db);
+  const existing = await categories.list();
+  const lezzaUrl = lezzaGorselUrlByDosya();
+  const catId = new Map<string, string>();
+  for (const [i, cat] of CATEGORIES.entries()) {
+    const anahtarlar = [cat.key, ...(cat.lezza ?? [])];
+    const bulunan = existing.find((c) => c.name.tr === cat.name.tr);
+    if (bulunan) {
+      done(cat.name.tr);
+      for (const key of anahtarlar) catId.set(key, bulunan.id);
+      continue;
+    }
+    plan(`${cat.name.tr} · ${cat.featured ? 'vitrinde' : 'vitrin dışı'}${cat.image ? ' · kapaklı' : ''}`);
+    if (DRY_RUN) continue;
+    const created = await categories.create({ name: cat.name, tagline: cat.tagline, sortOrder: i + 1 });
+    // Vitrin işareti ayrı bir karardır ve servis onu ayrı metotla yazar (`setFeatured` künyesi).
+    if (cat.featured) await categories.setFeatured(created.id, true);
+    const kapak = await kategoriKapagi(cat, created.slug, lezzaUrl);
+    if (kapak) await categories.update({ id: created.id, ...kapak });
+    for (const key of anahtarlar) catId.set(key, created.id);
+  }
+  return catId;
+}
+
+async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   console.log('▸ katalog — faturadaki Lezza varyantları');
   const variants = new ProductVariantService(db);
   const lines = PURCHASES.flatMap((p) => p.catalog);
@@ -250,7 +311,7 @@ async function seedCatalog(db: Db): Promise<void> {
     new ProductService(db),
     new ProductImageService(db),
     new ProductFamilyService(db),
-    new Map(),
+    catId,
     0,
     { sku: new Set(secim.keys()), slug: new Set() },
     'base',
@@ -259,7 +320,7 @@ async function seedCatalog(db: Db): Promise<void> {
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
 }
 
-async function seedDrafts(db: Db): Promise<void> {
+async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
   console.log('▸ taslak ürünler');
   const products = new ProductService(db);
   const existing = new Set((await products.listAll()).map((p) => p.name.tr));
@@ -294,6 +355,8 @@ async function seedDrafts(db: Db): Promise<void> {
         // Dil alanı YAZILMAZSA boş kalır: `{fr: ''}` yazmak "alan dolu ama boş" anlamına gelir ve
         // `resolveLocalizedText` onu sessizce Türkçeye düşürür — eksik dil görünmez olurdu.
         name,
+        // Kategori doğuşta yazılır; eşlemenin tamlığı `checkDraftCategories` ile koşudan önce sınandı.
+        categoryId: catId.get(DRAFT_CATEGORY[draft.name] ?? '') ?? null,
         status: yayina ? 'active' : 'candidate',
         // Beyanlar: katman 1 ölçülmüşü, katman 3 uydurmayı verdi — seçim yukarıda yapıldı.
         ...(description ? { description } : {}),
@@ -307,6 +370,40 @@ async function seedDrafts(db: Db): Promise<void> {
         variants: draft.variants.map((v) => ({ label: v.label ? allLocales(v.label) : undefined, netWeightG: v.netWeightG, sku: v.sku })),
       });
     }
+  }
+}
+
+async function seedCollections(db: Db): Promise<void> {
+  console.log('▸ koleksiyonlar');
+  const collections = new CollectionService(db);
+  const variants = new ProductVariantService(db);
+  const existing = await collections.list();
+  const urunler = await new ProductService(db).listAll();
+  for (const [i, col] of COLLECTIONS.entries()) {
+    if (existing.some((c) => c.name.tr === col.name.tr)) {
+      done(col.name.tr);
+      continue;
+    }
+    // Üyelik kataloğun kendi kimliğinden çözülür. Bulunamayan üye SESSİZ GEÇMEZ: seçki eksik kurulur
+    // ve eksikliği ancak vitrine bakan biri fark ederdi.
+    const ids: string[] = [];
+    const eksik: string[] = [];
+    for (const sku of col.skus) {
+      const variant = await variants.findBySku(sku);
+      if (variant) ids.push(variant.productId);
+      else eksik.push(sku);
+    }
+    for (const fatura of col.drafts) {
+      const urun = urunler.find((p) => p.name.tr === TASLAK_ADI.get(fatura));
+      if (urun) ids.push(urun.id);
+      else eksik.push(fatura);
+    }
+    // Kuru koşuda ürünler HENÜZ YAZILMADIĞI için hiçbiri bulunamaz; orada uyarı basmak yanlış alarm
+    // olur ve gerçek eksikliği içinde kaybederdi (`seedPurchases` aynı ayrımı yapıyor).
+    if (eksik.length > 0 && !DRY_RUN) console.log(`  ⚠ ${col.name.tr} — ${eksik.length} üye bulunamadı: ${eksik.join(' · ')}`);
+    plan(`${col.name.tr} · ${DRY_RUN ? col.skus.length + col.drafts.length : new Set(ids).size} ürün`);
+    if (DRY_RUN) continue;
+    await collections.create({ name: col.name, description: col.description, sortOrder: i + 1, productIds: [...new Set(ids)] });
   }
 }
 
@@ -449,6 +546,7 @@ async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
 
 async function main(): Promise<void> {
   checkInvoiceTotals();
+  checkDraftCategories();
   const db = createServiceRoleClient();
   console.log(`▸ GERÇEK BESLEME${DRY_RUN ? ' · KURU KOŞU (yazılmaz)' : ''} · ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? '(adres yok)'}`);
   await waitForRest(db);
@@ -458,8 +556,10 @@ async function main(): Promise<void> {
   await seedZones(db, facilityId);
   await seedSettings(db);
   await seedSuppliers(db);
-  await seedCatalog(db);
-  await seedDrafts(db);
+  const catId = await seedCategories(db);
+  await seedCatalog(db, catId);
+  await seedDrafts(db, catId);
+  await seedCollections(db);
   await seedPurchases(db);
   // Mal kabulü katman 3: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır.
   if (LAYERS >= 3) await seedTestIntake(db, facilityId);
