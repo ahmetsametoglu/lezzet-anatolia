@@ -43,10 +43,11 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 /**
  * `viewport-fit=cover`: telefon görünümünün alt sekme çubuğu kendi payını `env(safe-area-inset-bottom)`
- * değerinden hesaplıyor, bu ayar olmadan iPhone o değeri 0 verir. Yatay tutuşta çentik payını telefon
- * çerçevesinin kökü alır (`site-frame.mobile.tsx`).
+ * değerinden hesaplıyor, bu ayar olmadan iPhone o değeri 0 verir. Ölçek kilidi telefon yüzünü uygulamaya
+ * benzetir — native ekranda sayfa parmakla büyütülmez; masaüstü forkuna dokunmaz, çünkü viewport meta'sını
+ * yalnız mobil tarayıcılar okur.
  */
-export const viewport: Viewport = { viewportFit: 'cover' };
+export const viewport: Viewport = { viewportFit: 'cover', maximumScale: 1, userScalable: false };
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
