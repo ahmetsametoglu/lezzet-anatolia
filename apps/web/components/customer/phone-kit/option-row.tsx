@@ -1,17 +1,15 @@
 import type { ReactNode } from 'react';
 
 /*
-  SEÇENEK SATIRI — native müşteri kitinin `OptionRow`unun (`apps/mobile/src/screens/customer-kit/option-row.tsx`) web
-  telefon ikizi (14.09): başlık + alt satır; seçiliyken kum zemin (`sand-150`) ve mürekkep çerçeve, boştayken kart kumu
-  (`sand-250`) ve kum çerçeve. Ödeme ekranının listeleri (teslimat yolu · ödeme yolu · kargo servisi) aynı satırı çizer.
+  SEÇENEK SATIRI — ödeme ekranının listeleri (teslimat yolu · ödeme yolu · kargo servisi) aynı satırı çizer; native
+  müşteri kitinin seçenek satırıyla aynı ölçüler.
 
-  KAPALI SEÇENEK SOLDURULUR ama GİZLENMEZ (native'in kalıbı): kapalı yolun SEBEBİ alt satırda, hata kırmızısıyla
-  (`descriptionTone="danger"`) — soluk gri bir cümleyi müşteri fark etmiyordu (native 10.08).
+  KAPALI SEÇENEK SOLDURULUR ama GİZLENMEZ: kapalı yolun SEBEBİ alt satırda, hata kırmızısıyla
+  (`descriptionTone="danger"`) — soluk gri bir cümleyi müşteri fark etmiyor.
 
-  Eylemsiz satır DÜĞME DEĞİLDİR: teslimat yolu adresin cevabıdır ve ona dokunmak bir şey değiştirmez (native'de dokunuş
-  boş bir işleve bağlı). Web'de basılabilir görünen ama bir şey yapmayan öğe yazılmaz — `onClick` verilmezse satır düz
-  kutu çizilir. Seçililik ekran okuyucuya `aria-pressed` ile gider; renk ve çerçeve farkı ulaşmaz. Native'in uzun
-  basmayla düzenleme yolu (21.215) web'de yok: adres burada seçilmiyor, sepette seçiliyor (13.09).
+  Eylemsiz satır DÜĞME DEĞİLDİR: teslimat yolu adresin cevabıdır, ona dokunmak bir şey değiştirmez ve basılabilir
+  görünüp iş yapmayan öğe yazılmaz — `onClick` verilmezse satır düz kutu çizilir. Seçililik ekran okuyucuya
+  `aria-pressed` ile gider; renk ve çerçeve farkı ulaşmaz.
 */
 
 interface OptionRowProps {
