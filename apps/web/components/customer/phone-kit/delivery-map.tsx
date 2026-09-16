@@ -1,10 +1,10 @@
 /*
-  CANLI TAKİP ŞERİDİ — native `DeliveryMap`in (`apps/mobile/src/screens/orders/delivery-map.tsx`) web telefon ikizi
-  (14.09): kurye yoldayken sipariş detayının başında duran 195'lik şerit.
+  CANLI TAKİP ŞERİDİ — kurye yoldayken sipariş detayının başında duran 195'lik şerit; native
+  uygulamanın şeridiyle aynı geometri, renkler token'dan.
 
-  Harita TEMSİLÎDİR, gerçek değil — native'de de öyle: elle çizilmiş yollar, bir nehir, kesikli rota, kuryenin konumu ve
-  teslim iğnesi. Geometri native'den (o da tasarımdan) BİREBİR; renkler token'dan. Nabız halkası native'deki gibi statik.
-  Tahmini süre YAZILMAZ: kuryenin varış tahmini diye bir ölçüm yok, şerit yalnız "yolda" der.
+  Harita TEMSİLÎDİR, gerçek değil: elle çizilmiş yollar, bir nehir, kesikli rota, kuryenin konumu ve
+  teslim iğnesi. Tahmini süre YAZILMAZ — kuryenin varış tahmini diye bir ölçümümüz yok, şerit yalnız
+  "yolda" der.
 
   Çizim bir RESİMDİR: ekran okuyucuya üstündeki iki metin konuşur, SVG gizlidir.
 */

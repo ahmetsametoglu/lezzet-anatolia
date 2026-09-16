@@ -10,19 +10,17 @@ import { buttonClass } from './button';
 import { Icon } from './icons';
 
 /**
- * K28 · Paket Liste Kartı — Paketler sayfasının tek yapı taşı (tasarım: `Musteri - Paketler.dc.html`).
+ * Paket liste kartı — Paketler sayfasının tek yapı taşı.
  *
- * **Kartın TAMAMI bağlantıdır** ve detaya gider; listede "sepete ekle" YOKTUR. Sebep tasarımda
- * yazılı: paket bütün olarak satılıyor, karar detayda veriliyor — listeden tek dokunuşla sepete
- * atmak, içeriğini görmeden 50 €'luk bir sofra almak demek.
+ * **Kartın TAMAMI bağlantıdır** ve detaya gider; listede "sepete ekle" yok, çünkü paket bütün
+ * olarak satılıyor ve listeden tek dokunuşla sepete atmak içeriğini görmeden 50 €'luk bir sofra
+ * almak demek.
  *
- * Künye satırları TÜRETİLMİŞ bilgilerdir ve **hesaplanamıyorsa hiç basılmaz** (uydurulmaz):
- * "kaç kişilik" girilmemişse rozet yok, bir kalemin ağırlığı bilinmiyorsa ağırlık satırı yok.
- * Kalem sayısı ve ağırlık AYRI satırlardır (tasarım) — tek satırda birleştirilince kartın dikey
- * ritmi kayboluyor ve uzun adlı dilde (DE) sarıp iki satıra düşüyor.
+ * Künye satırları TÜRETİLMİŞ bilgidir ve hesaplanamıyorsa hiç basılmaz; kalem sayısı ile ağırlık
+ * ayrı satırlarda durur, tek satırda birleşince uzun adlı dilde (DE) sarıp kartın ritmini bozuyor.
  *
- * Tükendi hâli kartı GİZLEMEZ, soluklaştırır: paket bir pazarlama aracı — sosyal medyada dolaşan
- * link boşa düşmemeli, "yakında yeniden" beklentisi sürmeli. Kart tıklanabilir kalır.
+ * Tükendi hâli kartı GİZLEMEZ, soluklaştırır: sosyal medyada dolaşan link boşa düşmemeli ve
+ * "yakında yeniden" beklentisi sürmeli.
  */
 interface PackageCardLabels {
   serves: string;
@@ -44,9 +42,8 @@ interface PackageListCardProps {
   /** Mobil ızgara: iki sütun, dolayısıyla kart yarı genişlikte — açıklama ve düğme düşer. */
   compact?: boolean;
   /**
-   * TEK paket kaldığında (tasarım "Durumlar" bölümü): ızgara yerine tam genişlikte YATAY kart.
-   * Gerekçesi tasarımda yazılı — 1/3 genişlikte yalnız kalan kart zayıf görünür. Künye tek satıra
-   * iner ("6 kişilik · 8 ürün · 4,2 kg"), açıklama kartın içinde uzun hâliyle yer alır.
+   * TEK paket kaldığında: ızgara yerine tam genişlikte YATAY kart, çünkü 1/3 genişlikte yalnız
+   * kalan kart zayıf görünür (tasarımın "Durumlar" bölümü).
    */
   wide?: boolean;
 }
@@ -94,10 +91,8 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
       <div className={['flex flex-1 flex-col gap-1', compact ? 'px-3 pt-2.5 pb-3' : 'gap-2 px-4.5 pt-4 pb-4.5'].join(' ')}>
         <span className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2-sm'].join(' ')}>{pack.name}</span>
 
-        {/* Künye satırları tükenmiş kartta da KALIR (tasarım): müşteri paketin ne olduğunu görmeli,
-            "yakında yeniden" beklentisi ancak içerik bilinirse anlam taşır. Mobilde ise düşer —
-            yarı genişlikteki kartta beş satır sığmıyor, orada tek şey söylenir: tükendi.
-            Ağırlık hesaplanamadıysa satır HİÇ basılmaz; "bilinmiyor" yazılmaz. */}
+        {/* Künye tükenmiş kartta da KALIR: "yakında yeniden" beklentisi ancak içerik bilinirse
+            anlam taşır. Mobilde düşer — yarı genişlikteki kartta beş satır sığmıyor. */}
         {!(compact && pack.soldOut) && (
           <>
             <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>
@@ -117,10 +112,9 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
           </>
         )}
 
-        {/* Durum çipleri. Tükenmişte TEK çip kalır — satın alınamayan pakette "stokta/kargoya uygun"
-            bilgisi kendi kendini yalanlar. Stokta olanda masaüstü stok + kargoyu yan yana verir;
-            mobilde yalnız KISIT gösterilir, dar kartta iki çip alt alta düşüp fiyatı aşağı itiyor
-            ve "stokta" zaten varsayılan. */}
+        {/* Tükenmişte TEK çip kalır: satın alınamayan pakette "stokta/kargoya uygun" bilgisi kendi
+            kendini yalanlar. Mobilde yalnız KISIT gösterilir — dar kartta iki çip fiyatı aşağı
+            itiyor ve "stokta" zaten varsayılan. */}
         <div className={['flex flex-wrap items-center gap-1.5', compact ? '' : 'mt-0.5'].join(' ')}>
           {pack.soldOut ? (
             <span className="rounded-soft bg-closed-bg px-2.5 py-1 font-sans text-micro font-semibold text-ink">
@@ -143,10 +137,9 @@ export function PackageListCard({ pack, locale, labels, compact = false, wide = 
               {!stockStatus && (
                 <span
                   className={[
-                    // `whitespace-nowrap` YOK (kullanıcı bulgusu 20.08): FR metin ("Livraison en
-                    // zone uniquement") dar kartta çipten uzun ve nowrap ile kartın
-                    // `overflow-hidden` kenarında KIRPILIYORDU — yarım kelime, yanlış bilgi.
-                    // Sarmak çirkin değil, kesilmek yanlış.
+                    // `whitespace-nowrap` YOK: FR metin ("Livraison en zone uniquement") dar kartta
+                    // çipten uzun ve nowrap ile kartın kenarında kırpılıyor — sarmak çirkin değil,
+                    // kesilmek yanlış.
                     'inline-flex items-center gap-1 rounded-soft px-2.5 py-0.5 font-sans text-micro font-semibold',
                     pack.inRouteOnly ? 'border border-honey-line bg-honey-bg text-honey' : 'bg-olive-bg text-olive-dark',
                   ].join(' ')}
