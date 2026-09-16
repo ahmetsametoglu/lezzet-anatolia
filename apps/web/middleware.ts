@@ -45,6 +45,8 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   // Müşteri yüzeyi locale yönlendirmesi + operasyon üstbilgileri. HARİÇ: api, auth (OAuth callback
-  // sabit URL), next iç yolları ve uzantılı dosyalar.
-  matcher: ['/((?!api|_next|_vercel|auth|.*\\..*).*)'],
+  // sabit URL), `oauth` (MCP yetkilendirme uçları — adresleri keşif belgesinde YAZILI ve dil öneki
+  // almaz; matcher'a girseydi istemci 307 ile `/fr/oauth/…`e savrulur, kayıt ve jeton POST'u düşerdi),
+  // next iç yolları ve uzantılı dosyalar.
+  matcher: ['/((?!api|_next|_vercel|auth|oauth|.*\\..*).*)'],
 };
