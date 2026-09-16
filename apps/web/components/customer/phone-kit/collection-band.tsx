@@ -5,19 +5,18 @@ import { CirclePhoto } from './circle-photo';
 import { Tag } from './tag';
 
 /*
-  KOLEKSİYON BANDI — native `screens/home/collection-band.tsx`in web ikizi (14.09): vitrinin kenardan
-  kenara uzanan renkli şeridi. Kesitin adını, kaç çeşit olduğunu söyler ve katalogda o süzgeci açar.
+  KOLEKSİYON BANDI — vitrinin kenardan kenara uzanan renkli şeridi; kesitin adını ve kaç çeşit
+  olduğunu söyler, katalogda o süzgeci açar. Native vitrinin bandıyla aynı tasarım.
 
   · Ton ve yön SIRADAN türer, veriden değil: zeytin → kum → terracotta; tek sırada metin solda/daire
-    sağda, çift sırada tersi (şablonun `BS[i%3]` kalıbı).
-  · Daire (148) banttan (132) yukarı ve aşağı TAŞAR, yatayda şeridin dışına sarkar — tasarımın imzası.
-    Native bunu bantların üstünde ayrı bir katmanla çiziyor (RN'de kardeş sırası z-sırasıdır); web'de
-    daire kendi bandının içinde `z-10` ile komşu bandın üstüne çıkar. Yatay taşmayı sayfa kaydırmasına
-    çevirmemek çağıranın işi (`overflow-x-clip`).
-  · Basılı geri bildirim YALNIZ metne uygulanır: bandın kendisine opaklık vermek bir yığın bağlamı
-    açar ve dairesi komşu bandın altında kalırdı.
-  · Kampanya rozeti dairenin BANDA BAKAN köşesinde (27.08); eşikli kampanya rozete girmez, sayaç
-    satırında tam cümlesiyle durur (`bandCountLabel`).
+    sağda, çift sırada tersi.
+  · Daire (148) banttan (132) taşar ve şeridin dışına sarkar — tasarımın imzası. Daire kendi bandının
+    içinde `z-10` ile komşu bandın üstüne çıkıyor; yatay taşmayı sayfa kaydırmasına çevirmemek
+    çağıranın işi (`overflow-x-clip`).
+  · Basılı geri bildirim YALNIZ metne uygulanır: banda opaklık vermek bir yığın bağlamı açar ve
+    dairesi komşu bandın altında kalırdı.
+  · Kampanya rozeti dairenin BANDA BAKAN köşesinde; eşikli kampanya rozete girmez, sayaç satırında
+    tam cümlesiyle durur (`bandCountLabel`).
 */
 
 const TONES = ['olive', 'sand', 'terracotta'] as const;
