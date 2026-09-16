@@ -8,21 +8,17 @@ import type { PublishedReview } from '@/lib/feedback/product-feedback';
 import { formatShortDate } from '@/lib/storefront/format';
 
 /**
- * Tek yorum kartı — ürün detayındaki seçki ve "tüm yorumlar" paneli AYNI kartı çizer.
+ * Tek yorum kartı — ürün detayındaki seçki ve "tüm yorumlar" paneli AYNI kartı çizer; ayrı
+ * yazılsalardı müşteri panelden sayfaya dönünce okuduğu satırın aynı satır olduğunu tanıyamazdı.
  *
- * Ayrı yazılsalardı aynı yorum iki yerde farklı görünürdü: müşteri panelden çıkıp sayfaya
- * döndüğünde okuduğu satırın aynı satır olduğunu tanıyamazdı. Kart ayrıca `Stars`'ı da taşıyor —
- * yıldız gösterimi bu ailenin ortak parçası (`CLAUDE.md §1`: hiçbir türde duplication yok).
- *
- * Sunucu bileşeni: kendi durumu yok, yalnız veriyi çiziyor. `'use client'` yazan çağıranların
- * içinde de çalışır.
+ * `Stars` da burada yaşıyor: yıldız gösterimi bu ailenin ortak parçası (`CLAUDE.md §1`).
  */
 interface ReviewCardProps {
   review: PublishedReview;
   locale: Locale;
   /** "onaylı alışveriş" ibaresi — komponent metin taşımaz, çağıranın sözlüğünden gelir. */
   verifiedLabel: string;
-  /** Çeviri şeridinin metinleri: rozet + iki yönlü bağlantı (20.2). */
+  /** Çeviri şeridinin metinleri: rozet + iki yönlü bağlantı. */
   translation: { badge: string; showOriginal: string; showTranslation: string };
   /**
    * Panelin kart zemini (tasarım): panelde kartlar `cream` zeminde beyaz/krem kutular, sayfada
@@ -33,12 +29,10 @@ interface ReviewCardProps {
 
 export function ReviewCard({ review, locale, verifiedLabel, translation, boxed = false }: ReviewCardProps) {
   /**
-   * Müşteri orijinali görmek istedi mi (20.2).
+   * Müşteri orijinali görmek istedi mi — varsayılan ÇEVİRİ, çünkü okunabilirlik asıl amaç.
    *
-   * Varsayılan ÇEVİRİ, çünkü okunabilirlik asıl amaç — ama orijinal bir tık uzakta duruyor ve
-   * **çeviri onun yerine GEÇMİYOR**: makine çevirisi bir yorumu yumuşatabilir ya da sertleştirebilir
-   * (20.2'nin en kritik kuralı: "şikâyet şikâyet kalır"). Müşteri neyi okuduğunu bilmeli ve
-   * gerektiğinde yazarın kendi cümlesine ulaşabilmeli.
+   * Orijinal yine de bir tık uzakta: makine çevirisi bir yorumu yumuşatabilir ya da
+   * sertleştirebilir, müşteri gerektiğinde yazarın kendi cümlesine ulaşabilmeli.
    */
   const [showingOriginal, setShowingOriginal] = useState(false);
   // Rozet ve bağlantı YALNIZ gerçekten çevrilmiş metinde: aynı dilde yazılmış bir yoruma "otomatik

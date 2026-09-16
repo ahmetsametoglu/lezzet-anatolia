@@ -2,20 +2,12 @@ import { formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 
 /**
- * Vitrin biçimleri — sözleşme HAM cent taşır (`storefront-types`), gösterim burada kurulur.
- * Ayrı durmasının sebebi: aynı değer masaüstü ve mobil web dosyasında iki kez biçimlendirilmesin.
+ * Vitrin biçimleri — sözleşme HAM cent taşır (`storefront-types`), gösterim burada kurulur; ayrı
+ * durması aynı değerin masaüstü ve mobil web dosyasında iki kez biçimlendirilmesini önler.
  *
- * `formatPrice` gövdesi BURADA DEĞİL: `@lezzet/helper`a terfi etti (21.7 — native uygulama da aynı
- * kaynaktan tüketiyor; "webde 75,53 €, mobilde €75,53" ayrışmasını tek kaynak kapatır). Simge-sonda
- * kararının gerekçesi de artık o dosyanın künyesinde. Web çağıranları için buradan yeniden dışa
- * verilir — 32 dosya import yolunu değiştirmeden tek kaynağa bağlı (web ikizi silindi, 07.08).
- *
- * `formatShortDate` AYNI yolu 21.21'de izledi: sipariş bildiriminin verisi `@lezzet/application`a
- * terfi edince ikinci tüketen doğdu ve gövde `@lezzet/helper`a taşındı (o dosyanın künyesi bu adımı
- * zaten söz vermişti). Web çağıranları yine buradan alır.
- *
- * `formatTime` da 16.08'de aynı yoldan geçti: talep bildiriminin kurucusu `@lezzet/application`a
- * taşındı (AI cevabı da mail doğuruyor, 16.5) ve saat damgası ikinci tüketenini buldu.
+ * `formatPrice`, `formatShortDate` ve `formatTime` gövdeleri `@lezzet/helper`da — üçünün de web
+ * dışında tüketeni var (native uygulama, `@lezzet/application`) ve o paketler `apps/web`ten import
+ * edemez; buradan yeniden dışa veriliyorlar ki web çağıranları tek yolu kullansın.
  */
 export { formatPrice, formatShortDate, formatTime };
 
@@ -23,19 +15,17 @@ export { formatPrice, formatShortDate, formatTime };
 const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
 
 /**
- * Tutarı BİLİNMEYEN satırın değeri — sıfır DEĞİL, cevapsızlık (`CLAUDE §1`).
+ * Tutarı BİLİNMEYEN satırın değeri — sıfır değil, cevapsızlık.
  *
- * Burada duruyor çünkü tutarın nasıl yazıldığını bilen modül bu: "bilinmiyor" da bir yazım
- * biçimidir ve `formatPrice`ın yanında olmazsa çağıranlar kendi işaretini uydurur — biri "—",
- * biri "?", biri sessizce `formatPrice(0)`. Sepetin kalem satırları zaten "—" yazıyordu; sabit
- * onların idiyomunu paylaşılabilir hâle getiriyor.
+ * Burada duruyor çünkü "bilinmiyor" da bir yazım biçimidir: `formatPrice`ın yanında olmazsa her
+ * çağıran kendi işaretini uydurur (biri "—", biri "?", biri sessizce `formatPrice(0)`).
  */
 export const UNKNOWN_AMOUNT = '—';
 
 /**
- * Ondalıklı sayı — ayraç DİLE göre değişir (tr/fr/de: virgül). Elle `String(value)` yazmak Türkçe
- * bir sayfaya "0.3" basıyordu; besin beyanı gibi yasal bir tabloda bu, okuyanın alışık olmadığı
- * bir gösterimdir. Basamak sayısı çağıran yerde kararlaştırılır (INCO'nun yuvarlama kuralı).
+ * Ondalıklı sayı — ayraç DİLE göre değişir (tr/fr/de: virgül), çünkü elle `String(value)` yazmak
+ * besin beyanı gibi yasal bir tabloya okuyanın alışık olmadığı bir gösterim basar ("0.3").
+ * Basamak sayısı çağıran yerde kararlaştırılır (INCO'nun yuvarlama kuralı).
  */
 export function formatDecimal(value: number, locale: Locale, fractionDigits: number): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], {
@@ -67,16 +57,12 @@ export function formatComparison(cents: number, locale: Locale): string {
 }
 
 /**
- * Sipariş GEÇMİŞİNİN tarihi — `formatShortDate`'ten farkı **yıl taşımasıdır**.
+ * Sipariş GEÇMİŞİNİN tarihi — `formatShortDate`'ten farkı **yıl taşımasıdır**: burası bir arşiv ve
+ * liste yıllara yayılır, yılsız "22 Temmuz" iki farklı siparişi ayırt edemez.
  *
- * O helper'ın künyesi "yıl yazılmaz" diyor ve kendi bağlamında haklı: sipariş onay sayfasında
- * müşteri az önce verdiği siparişe bakıyordur. Burası ise bir ARŞİV — liste yıllara yayılır ve
- * yılsız "22 Temmuz" iki farklı siparişi ayırt edemez.
- *
- * `compact` mobil satır içindir: kart tek satıra "22 Tem 2026 · 3 kalem · 103,20 €" sığdırıyor,
- * uzun ay adı taşardı. Tasarımın mobil karesinde yıl yok ("22 Tem"); yılı yine de yazıyoruz çünkü
- * o kare yalnız bu ayın siparişleriyle çizilmiş — eski siparişte yılsız tarih yanlış bilgidir.
- * Sapma `design/BACKLOG` §1'de kayıtlı.
+ * `compact` mobil satır içindir (kart tek satıra "22 Tem 2026 · 3 kalem · 103,20 €" sığdırıyor);
+ * tasarımın mobil karesi yılsız olsa da yıl yazılır, çünkü o kare yalnız bu ayın siparişleriyle
+ * çizilmiş ve eski siparişte yılsız tarih yanlış bilgidir.
  */
 export function formatOrderDate(iso: string, locale: Locale, compact = false): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
@@ -85,5 +71,3 @@ export function formatOrderDate(iso: string, locale: Locale, compact = false): s
     year: 'numeric',
   }).format(new Date(iso));
 }
-
-// `formatTime` gövdesi @lezzet/helper'a terfi etti (16.08) — üstteki künye; buradan yeniden dışa veriliyor.

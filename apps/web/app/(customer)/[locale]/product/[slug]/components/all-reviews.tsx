@@ -10,7 +10,7 @@ import { loadMoreReviewsAction } from '../actions';
 import { ReviewCard } from './review-card';
 import { Icon } from '@/components/customer/ui/icons';
 
-/** Süzgeç etiketindeki `{star}` yer tutucusu yıldız ikonuna döner (14.09: sözlükteki ★ yerine). */
+/** Süzgeç etiketindeki `{star}` yer tutucusu yıldız ikonuna döner — sözlükte ★ karakteri taşınmaz. */
 function withStar(label: string) {
   const [head, tail] = label.split('{star}');
   if (tail === undefined) return label;
@@ -24,40 +24,31 @@ function withStar(label: string) {
 }
 
 /**
- * **Tüm yorumlar paneli** (08.11 · tasarım `Musteri - Urun Detay.dc.html` → `Tum Yorumlar
- * Web/Mobil`) — ürün detayındaki üç yorumluk seçkinin arkasındaki tam liste.
+ * **Tüm yorumlar paneli** — ürün detayındaki üç yorumluk seçkinin arkasındaki tam liste.
  *
  * ── PANEL SAYFAYI TERK ETMEZ ─────────────────────────────────────────────────
- * Tasarımın kuralı: *"web'de modal, mobilde tam ekran sayfa; geri tuşu paneli kapatır, sayfa
- * konumu korunur."* Bu yüzden ayrı bir ROTA değil — ayrı rota olsaydı geri dönüşte ürün sayfası
- * baştan çizilir, müşteri galeriyi ve seçtiği boyu kaybederdi.
+ * Web'de modal, mobilde tam ekran sayfa; ayrı bir ROTA değil, çünkü ayrı rotadan dönüşte ürün
+ * sayfası baştan çizilir ve müşteri galeriyi ile seçtiği boyu kaybederdi. Açık/kapalı hâli
+ * `history` üzerinden yürüyor (`?reviews=1`), geri tuşu kaydı düşürür ve `popstate` paneli kapatır.
  *
- * Açık/kapalı hâli `history` üzerinden yürüyor (`?reviews=1`): panel açılırken bir kayıt eklenir,
- * geri tuşu onu düşürür ve `popstate` paneli kapatır. Next'in yönlendiricisi KULLANILMIYOR ve
- * sebebi bu — `router.push` sunucu bileşenini yeniden çalıştırır, yani "sayfa konumu korunur"
- * sözü tutulamazdı. Adres çubuğundaki anahtar İNGİLİZCE (`reviews`), tasarımın `?yorumlar=1`
- * yazması Türkçe ekranın gösterimi; sorgu anahtarları bu projede dile göre çevrilmiyor
- * (`?offers=1` ile aynı kural).
+ * Adres çubuğundaki anahtar İNGİLİZCE (`reviews`): sorgu anahtarları bu projede dile göre
+ * çevrilmiyor (`?offers=1` ile aynı kural).
  *
  * ── LİSTE PANELDE ÇEKİLİR, SAYFADA DEĞİL ────────────────────────────────────
- * İlk on yorum panel AÇILINCA isteniyor. Ürün sayfasına gömmek, panelin hiç açılmadığı her
- * ziyarette on satırı boşuna okumak olurdu — sayfanın en çok ziyaret edilen kısmı bu değil.
+ * İlk on yorum panel AÇILINCA isteniyor; sayfaya gömmek, panelin hiç açılmadığı her ziyarette on
+ * satırı boşuna okumak olurdu.
  *
  * ── HİSTOGRAM VE ÇİPLER: SAYILAR DAĞILIMDAN, SATIRLAR SORGUDAN ──────────────
- * Çubuklar ve çip sayıları `score.ratingBreakdown`'dan okunuyor — yani ürünün TAMAMINDAN, o an
- * yüklenmiş sayfadan değil. Sayfalanmış listeden sayılan bir dağılım yanlış olurdu ve yanlışlığı
- * GÖRÜNMEZDİ: çubuklar hep bir şey gösterir.
- *
- * Süzgeç sunucuda uygulanıyor (`rating` aralığı). Arka ucun uyarısı burada karşılandı: süzgeç
- * verildiğinde yıldızsız (yalnız metinli) yorumlar düşer, o yüzden çip sayıları `ratingBreakdown`
- * ile okunuyor — "Tümü" sayısıyla çip toplamlarının farkı bir hata değil, iki farklı kümedir.
+ * Çubuklar ve çip sayıları `score.ratingBreakdown`'dan, yani ürünün TAMAMINDAN okunuyor;
+ * sayfalanmış listeden sayılan bir dağılım yanlış olur ve yanlışlığı görünmezdi (çubuklar hep bir
+ * şey gösterir). Süzgeç sunucuda uygulandığı için yıldızsız yorumlar süzgeçli çağrıda düşer —
+ * "Tümü" sayısıyla çip toplamlarının farkı bir hata değil, iki ayrı kümedir.
  */
 /**
- * Süzgeç çipleri — tasarımın dört seçeneği. `range` doğrudan sorguya gider; `null` = tümü.
+ * Süzgeç çipleri — tasarımın dört seçeneği; `range` doğrudan sorguya gider, `null` = tümü.
  *
- * "3★ ve altı" tek bir yıldız değil ARALIK: düşük puanları tek çipte toplamak tasarımın kararı ve
- * doğru olanı — 2★ ile 1★ arasındaki ayrım müşteriye bir şey söylemez, "kötü yorumları göster"
- * söyler.
+ * "3★ ve altı" tek yıldız değil ARALIK: 2★ ile 1★ arasındaki ayrım müşteriye bir şey söylemez,
+ * "kötü yorumları göster" söyler.
  */
 const FILTERS = [
   { key: 'all', range: null },
@@ -208,9 +199,10 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
   );
 
   /**
-   * Masaüstü: paylaşılan `Dialog` kabuğu. Escape, odak tuzağı ve gövde kaydırma kilidi oradan
-   * geliyor — ikinci bir kabuk yazmak, K3'te kapatılan kopya sınıfını geri açardı. Genişlik 720
-   * tasarımın ölçüsü (`Dialog` varsayılanı 420, listeli panel için dar).
+   * Masaüstü: paylaşılan `Dialog` kabuğu — Escape, odak tuzağı ve gövde kaydırma kilidi oradan
+   * geliyor, ikinci bir kabuk yazmak aynı davranışı iki yerde bakıma bırakırdı.
+   *
+   * Genişlik 720 tasarımın ölçüsü; `Dialog` varsayılanı 420 ve listeli panel için dar.
    */
   if (!fullScreen) {
     return (
@@ -224,9 +216,10 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
   }
 
   /**
-   * Mobil: TAM EKRAN, modal değil. Tasarımın kararı ve gerekçesi dar ekranda görünür — ortalanmış
-   * bir panel, altındaki sayfanın kenarlarını göstererek listeyi bir kutunun içine hapsederdi.
-   * Kendi başlığı var (← geri · başlık · sayı) çünkü `Dialog`'un başlığı modal içindir.
+   * Mobil: TAM EKRAN, modal değil — ortalanmış bir panel, altındaki sayfanın kenarlarını
+   * göstererek listeyi bir kutunun içine hapsederdi.
+   *
+   * Kendi başlığını çiziyor çünkü `Dialog`'un başlığı modal içindir.
    */
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-cream">

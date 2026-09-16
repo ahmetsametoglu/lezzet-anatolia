@@ -10,22 +10,19 @@ import { AllReviews } from './all-reviews';
 import { ReviewCard, Stars } from './review-card';
 
 /**
- * Yorumlar bölümü (17.1 müşteri yüzü) — puan kartı, ilk yorumlar ve "yorum yaz".
+ * Yorumlar bölümü — puan kartı, ilk yorumlar ve "yorum yaz".
  *
  * **Sayfa yalnız ONAYLI yorumu gösterir** ve bu kural burada değil kapıda yaşıyor: yayın okuması
- * durum parametresi almıyor (`listProductReviews`), yani ekranın "onaysızı da göster" diyebileceği
- * bir yol yok. Aynı şekilde "kim yazabilir" sorusunu da ekran cevaplamıyor — kapı siparişleri
- * okuyup karar veriyor (`getReviewEligibility`).
+ * durum parametresi almıyor (`listProductReviews`), "kim yazabilir" sorusunu da kapı cevaplıyor
+ * (`getReviewEligibility`) — ekranın bu iki kararı esnetebileceği bir yol yok.
  *
  * Tasarımın üç kuralı:
- *   · **Puan alanı GİZLENİR** — "0,0" gösterilmez; sıfır puan kötü ürün demek değildir, "henüz
- *     kimse yazmadı" demektir ve ikisi aynı ekranla anlatılamaz.
- *   · **İlk üç yorum** görünür; üçten fazlası varsa "tümü" bağlantısı çıkar, üç ve altındaysa
- *     bağlantı HİÇ görünmez (tıklayınca aynı listeyi gösteren bir bağ, bir vaat ihlalidir).
+ *   · **Puan alanı GİZLENİR** — "0,0" gösterilmez; sıfır puan kötü ürün değil "henüz kimse
+ *     yazmadı" demektir ve ikisi aynı ekranla anlatılamaz.
+ *   · **İlk üç yorum** görünür; bağlantı ancak fazlası varken çizilir (tıklayınca aynı listeyi
+ *     gösteren bir bağ, bir vaat ihlalidir).
  *   · **"Yorum yaz" yalnız satın almış girişli müşteride** — göstermek, yazamayacak kişiye
  *     kapalı bir kapı açmaktır.
- *
- * Bölüm ayrıca sayfanın dengesini kurar: masaüstünde beyan sütununun yanında durur.
  */
 interface ReviewsProps {
   t: Messages;
@@ -49,9 +46,8 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
   /**
    * Panel GERİ TUŞUYLA kapanır (tasarımın kuralı) — bu yüzden açılış bir `history` kaydı bırakır.
    *
-   * `router.push` KULLANILMIYOR: Next'in yönlendiricisi sunucu bileşenini yeniden çalıştırır ve
-   * tasarımın "sayfa konumu korunur" sözü tutulamazdı — müşteri galeriyi ve seçtiği boyu kaybederdi.
-   * `history.pushState` adresi değiştirir, ağaca dokunmaz.
+   * `router.push` KULLANILMIYOR çünkü Next'in yönlendiricisi sunucu bileşenini yeniden çalıştırır
+   * ve müşteri galeriyi ile seçtiği boyu kaybederdi; `history.pushState` yalnız adresi değiştirir.
    */
   const openPanel = () => {
     window.history.pushState({ reviews: 1 }, '', `${window.location.pathname}?reviews=1`);
@@ -125,9 +121,8 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
         <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
       ))}
 
-      {/* Satır ARTIK GERÇEK BİR KONTROL (08.11). Uzun süre düz metindi ve künyesi doğruydu:
-          "tıklayınca hiçbir yere gitmeyen bir bağ, olmayan bir kapı gösterirdi." Panel indi, kapı
-          açıldı. Kural değişmedi — bağlantı ancak gösterilenden FAZLA yorum varken çizilir. */}
+      {/* Bağlantı ancak gösterilenden FAZLA yorum varken çizilir: aynı listeyi açan bir bağ,
+          olmayan bir kapı gösterirdi. */}
       {total > reviews.length && (
         <button
           type="button"
