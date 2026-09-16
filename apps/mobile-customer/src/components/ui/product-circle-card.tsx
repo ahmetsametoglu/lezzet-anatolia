@@ -4,12 +4,11 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { CirclePhoto } from '@lezzet/mobile-kit/src/components/ui/circle-photo';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
-import type { StockMarkView } from './stock-mark';
 import { Tag } from './tag';
 
 /*
-  Yuvarlak ürün kartı: vitrin rayı (`lg`, 146) ve benzer ürünler rayı (`sm`, 96). Tükenmiş ya da bu adrese gitmeyen ürünün
-  dairesi solar ama gizlenmez, çünkü "yok" bilgisi de bir bilgidir.
+  Yuvarlak ürün kartı: vitrin rayı (`lg`, 146) ve benzer ürünler rayı (`sm`, 96). Tükenmiş ürünün dairesi solar ama gizlenmez,
+  çünkü "yok" bilgisi de bir bilgidir. Yer işareti bu kartta YOK (tasarım): adresin gerçeğini katalog bandı ile kart şeridi söyler.
 */
 
 interface ProductCircleCardProps {
@@ -29,10 +28,6 @@ interface ProductCircleCardProps {
   soldOutLabel?: string;
   /** "İndirim" etiketi; verilirse indirim rozeti çıkar. */
   discountLabel?: string;
-  /** Yer işareti; kare katalog kartıyla aynı cümle ve ton, çünkü vitrin ve katalog aynı ürüne bakar. */
-  stockMark?: StockMarkView | null;
-  /** Bu adrese hiç gitmeyen ürün — daire tükendiyle aynı değerde solar (gerekçe: kare kart künyesi). */
-  dimmed?: boolean;
   /** "3 seçenek" gibi çeşit satırı. */
   optionsLabel?: string;
   /** Ekran okuyucu adı; verilmezse ad + fiyattan kurulur. */
@@ -50,8 +45,6 @@ export function ProductCircleCard({
   soldOut = false,
   soldOutLabel,
   discountLabel,
-  stockMark,
-  dimmed = false,
   optionsLabel,
   accessibilityLabel,
   testID,
@@ -59,17 +52,12 @@ export function ProductCircleCard({
   const { theme } = useUnistyles();
   const diameter = { sm: theme.size.circleSm, lg: theme.size.circleLg }[size];
   const initialFontSize = { sm: theme.text['h2-sm'], lg: theme.text['h1-sm'] }[size];
-  // Tükendide yer işareti basılmaz (gerekçe: kare kart künyesi — cevabı olmayan soru sorulmaz).
-  const mark = soldOut ? null : (stockMark ?? null);
-  const faded = soldOut || dimmed;
-
   return (
     <PressableSurface
       onPress={onPress}
       feedback="scale"
       style={styles.card}
-      // Yer işareti erişilebilir ada da girer: gören ve duyan müşteri aynı bilgiyi almalı.
-      accessibilityLabel={accessibilityLabel ?? [name, priceLabel, mark?.label].filter((part) => part !== undefined).join(' · ')}
+      accessibilityLabel={accessibilityLabel ?? [name, priceLabel].filter((part) => part !== undefined).join(' · ')}
       testID={testID}
     >
       <View style={[styles.photoFrame, { width: diameter, height: diameter }]}>
@@ -78,7 +66,7 @@ export function ProductCircleCard({
           initial={initial ?? name.slice(0, 1)}
           initialFontSize={initialFontSize}
           image={image}
-          style={faded ? styles.soldOutPhoto : undefined}
+          style={soldOut ? styles.soldOutPhoto : undefined}
         />
         {/* Durum rozeti TEK yuvadadır: tasarımda tükendi ve indirim aynı köşede duruyor ve bir
             ürün ikisini birden taşıyamaz — tükendiyse indirim bilgisi anlamsızdır. */}
@@ -93,19 +81,6 @@ export function ProductCircleCard({
             <Tag label={discountLabel} tone="cream" rotate={-7} shadow shape="pill" />
           </View>
         ) : null}
-        {/* Yer işareti dairenin içinde, solmuş görselin üstünde: kartın altına satır eklemek şeridin boyunu uzatırdı.
-            `pointerEvents="none"`: örtü dokunuşu yutmaz, kart yine açılır. */}
-        {mark === null ? null : (
-          <View
-            style={[styles.markVeil, { width: diameter, height: diameter, borderRadius: diameter / 2 }]}
-            pointerEvents="none"
-            testID={testID === undefined ? undefined : `${testID}-stock-mark`}
-          >
-            <Text style={styles.markLabel} numberOfLines={3}>
-              {mark.label}
-            </Text>
-          </View>
-        )}
         {priceLabel === undefined ? null : (
           <View style={styles.priceBadge}>
             <Tag label={priceLabel} rotate={4} shadow />
@@ -130,28 +105,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   soldOutPhoto: {
     opacity: theme.soldOutOpacity,
-  },
-  /**
-   * Yer işaretinin filigranı: solma tek başına sebebi söylemez, filigran onu yazacak zemini verir. Örtü fotoğrafın kardeşi, çünkü
-   * yazı fotoğrafla birlikte solsaydı okunması gereken cümle okunaksızlaşırdı.
-   */
-  markVeil: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.space.lg,
-    backgroundColor: theme.colors.scrim,
-  },
-  markLabel: {
-    fontFamily: theme.font.body[theme.text['badge--font-weight']],
-    // Daire dar: kademe `badge-sm`, satır yüksekliği ölçünün kendi durağından (`space.xl`) —
-    // token sözlüğünde bu kademenin ayrı bir satır yüksekliği yok, uydurulmuş bir sayı yazılmadı.
-    fontSize: theme.text['badge-sm'],
-    lineHeight: theme.space.xl,
-    color: theme.colors.cream,
-    textAlign: 'center',
   },
   // Fiyat çipi dairenin sağ alt köşesinden taşar.
   priceBadge: {

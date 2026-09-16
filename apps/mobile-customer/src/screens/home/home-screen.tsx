@@ -27,7 +27,6 @@ import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
-import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { rememberPlaceName, useRememberedPlaceName } from '@/lib/places/place-name-memory';
 import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
@@ -427,29 +426,20 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
               <SectionHeader eyebrow={t.featured.eyebrow} title={t.featured.title} testID="home-featured-header" />
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.circleRail}>
-              {featured.map((product) => {
-                /* Yer işareti katalog kartıyla aynı cümle ve aynı bileşen, çünkü iki ekran aynı ürüne bakar ve işaret yalnız birinde
-                   çizilseydi rota dışı müşteri iki farklı gerçek okurdu. */
-                const stockMark = stockMarkOf(product.stockStatus, savedPlace, locale);
-                /* "Kargoyla gelir" kartta çizilmez, cümlesi listenin başındaki bantta tek yerde durur; kartta yalnız kapalı kapı
-                   konuşur. */
-                const placeMark = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark;
-                return (
-                  <ProductCircleCard
-                    key={product.slug}
-                    name={product.name}
-                    priceLabel={productPriceLabel(product.priceCents, locale)}
-                    /* Yalnız fırsat rozeti: kapsam kampanyası kesitin kendi kartında, ürün başına yazılsa vaat gibi okunurdu. */
-                    discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
-                    image={product.image}
-                    stockMark={placeMark}
-                    // Solma yalnız kapalı kapıda, katalogdaki kuralla aynı.
-                    dimmed={stockMark?.tone === 'blocked'}
-                    onPress={() => openProduct(product.slug)}
-                    testID={`home-featured-${product.slug}`}
-                  />
-                );
-              })}
+              {/* Vitrin kartı yer işareti TAŞIMAZ (tasarım): ilk ekranda her soğuk zincir ürününe not düşmek rafı bir uyarı
+                  duvarına çevirirdi. Adresin gerçeği katalogda bant ve kart şeridiyle, ürün detayında büyük puntoyla söyleniyor. */}
+              {featured.map((product) => (
+                <ProductCircleCard
+                  key={product.slug}
+                  name={product.name}
+                  priceLabel={productPriceLabel(product.priceCents, locale)}
+                  /* Yalnız fırsat rozeti: kapsam kampanyası kesitin kendi kartında, ürün başına yazılsa vaat gibi okunurdu. */
+                  discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
+                  image={product.image}
+                  onPress={() => openProduct(product.slug)}
+                  testID={`home-featured-${product.slug}`}
+                />
+              ))}
               {/* Rayın sonundaki katalog kartı ürün dairesinin ikizi ama ürün değil; `ProductCircleCard` fiyatı zorunlu tuttuğu için
                   kullanılmadı. */}
               <PressableSurface
@@ -527,22 +517,15 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
           <Text style={styles.sectionEyebrow}>{upperIn(t.packages.eyebrow, locale)}</Text>
         </View>
         <View style={styles.packages}>
+          {/* Paket kartı da yer işareti taşımaz; solma yalnız tükendide kalır (ürün rafıyla aynı gerekçe). */}
           {packages.map((pack) => {
-            /* Paketin yer işareti ürün dairesiyle aynı kapıdan: paketin hâli önce ürün sözlüğüne çevrilir (`packageStockStatus`), cümleyi
-               `stockMarkOf` kurar. */
-            const stockMark = stockMarkOf(packageStockStatus(pack), savedPlace, locale);
-            /* "Kargoyla gelir" (`info`) yazılmaz — cümlesi listelerin başındaki bantta (ürün
-               dairesinin aynı satırı). Kartta yalnız kapalı kapı ve bekleyen bölge konuşur. */
-            const placeNote = stockMark === null || stockMark.tone === 'info' ? undefined : stockMark.label;
-            const note = pack.soldOut ? undefined : placeNote;
-            const faded = pack.soldOut || stockMark?.tone === 'blocked';
             return (
               <PhotoTile
                 key={pack.slug}
                 height={customerMetrics.packageCardHeight}
                 image={pack.image}
                 initial={pack.name.slice(0, 1)}
-                dimmed={faded}
+                dimmed={pack.soldOut}
                 topBadge={
                   pack.soldOut ? (
                     <View style={styles.packageSoldOut}>
@@ -551,7 +534,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   ) : undefined
                 }
                 onPress={() => router.push({ pathname: '/package/[slug]', params: { slug: pack.slug } })}
-                accessibilityLabel={[pack.name, pack.soldOut ? t.packages.soldOut : undefined, note]
+                accessibilityLabel={[pack.name, pack.soldOut ? t.packages.soldOut : undefined]
                   .filter((part) => part !== undefined)
                   .join(' · ')}
                 testID={`home-package-${pack.slug}`}
@@ -562,13 +545,6 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                     <Text style={styles.tileTitle} numberOfLines={1}>
                       {pack.name}
                     </Text>
-                    {/* YER NOTU zeminsiz, künyenin son satırı — kare kartın ve paket listesinin
-                        aynı kararı (rozet değil, yazı). */}
-                    {note === undefined ? null : (
-                      <Text style={styles.packagePlaceNote} numberOfLines={2} testID={`home-package-note-${pack.slug}`}>
-                        {note}
-                      </Text>
-                    )}
                   </View>
                   <View style={styles.packagePriceTilt}>
                     <View style={styles.packagePrice}>
@@ -1019,14 +995,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.eyebrow,
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors['olive-light'],
-  },
-  /* Yer notu zeminsiz yazı, künyenin son satırı ve vurgu tonunda, çünkü taşıdığı şey künye değil uyarı; paket listesindeki
-     kardeşiyle aynı karar. */
-  packagePlaceNote: {
-    fontFamily: theme.font.body[theme.text['field-label--font-weight']],
-    fontSize: theme.text['body-sm'],
-    lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
-    color: theme.colors.terracotta,
   },
   /* Tükendi rozeti — kare ürün kartının tükendi rozetiyle aynı geometri ve örtü tonu. */
   packageSoldOut: {
