@@ -13,8 +13,8 @@ import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
-// Metin YER AİLESİNİN ortak sözlüğünde (14.09 — web'in telefon görünümü de aynı bandı çiziyor): bandı
-// iki liste birden çiziyor (katalog · paketler) ve cümle tek nüsha durmalı.
+// Metin yer ailesinin ortak sözlüğünde: bandı iki liste birden çiziyor (katalog · paketler), web'in
+// telefon görünümü de aynısını — cümle tek nüsha durmalı.
 import messages from '@lezzet/i18n/customer/place';
 import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-notice-store';
 import { shippableChipLabel } from '@/lib/places/place-view';
@@ -25,63 +25,29 @@ import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { useSheet } from './use-sheet.hook';
 
 /*
-  BÖLGE DIŞI BİLGİ BANDI (kullanıcı kararı 10.08) — müşteri listelerinin BAŞINDA tek bir blok.
+  BÖLGE DIŞI BİLGİ BANDI — müşteri listelerinin BAŞINDA tek blok: "kamyonumuz buraya gelmiyor,
+  gönderebildiklerimiz kargoyla gelir". Kart başına tekrarlanan "Kargoyla gelir" işareti bu yüzden
+  kalktı; kartta kalan tek yer işareti gönderemediğimiz ürünün şeridi (o da solmayla birlikte).
 
-  NEDEN VAR: kart başına tekrarlanan "Kargoyla gelir" işareti kaldırıldı çünkü rota dışı
-  müşterinin kartlarının neredeyse tamamı onu taşıyordu — her kartta yazan bir bilgi, bilgi
-  olmaktan çıkıp gürültü olur. Aynı cümle buraya, TEK yere taşındı: "kendi aracımız buraya
-  gitmiyor, gönderebildiklerimiz kargoyla gelir". Kartlarda kalan tek yer işareti, GÖNDEREMEDİĞİMİZ
-  ürünün notudur (o da solmayla birlikte).
+  İKİ LİSTE ÇİZER (katalog · paketler): paketler sekmesine alt çubuktan doğrudan gelinebiliyor ve
+  katalogdan geçmeyen müşteri, adresinin gerçeğini hiç okumadan bir listeye bakıyordu. Bandın ikinci
+  nüshası yazılmadı — ekranın adı bir prop oldu (`source`).
 
-  KATALOGDAN KİTE TAŞINDI (10.08): ikinci çağıranı doğdu — paketler sekmesi. O sekmeye alt
-  çubuktan DOĞRUDAN gelinebiliyor, yani katalogdan geçmeyen bir müşteri adresinin gerçeğini hiç
-  okumadan bir paket listesine bakıyordu. Bandın ikinci nüshası yazılmadı; ekranın adı bir prop
-  oldu (`source`) ve kaydın hangi listeden geldiği yine izlenebiliyor.
+  KUTU KİTİN, DÜZEN TASARIMIN: tasarım bandı artık kendisi çiziyor (kod satırı · başlık + cümle ·
+  kesik çizgiyle ayrılmış anahtar satırı). Kutu için yeni bileşen yazılmadı — kitin bilgi kutusunun
+  terracotta tonu tasarımın zemini ve çerçevesiyle aynı değerleri taşıyor.
 
-  TASARIMDA YOK, KİTİN DİLİYLE KURULDU: v3'te bölge dışı katalog bandı çizilmemiş. Yeni bir görsel
-  dil üretilmedi — kitin bilgi kutusu (`Note`) kullanıldı; sıcak nötr ton (`warm`) çünkü bu bir
-  hata da bir fırsat da değil, adresin gerçeği. Sapma `design/KARARLAR.md` sonunda kayıtlı.
+  BANT TEK BLOKTUR: eylem de anahtar da kutunun İÇİNDE durur, çünkü kutunun altına taşan parçalar
+  ürün kartlarını ekranın yarısına itiyordu (ölçülmüş arıza). Eylem yuvası bu iş için kite eklendi;
+  banda tek kullanımlık ikinci bir kutu çizilmedi, kitin öteki çağıranları değişmedi.
 
-  ── BANT TEK BLOKTUR: EYLEMLER KUTUNUN İÇİNDE (kullanıcı kararı 10.08, ölçüm sonrası) ───────
-  Eylemler önce kutunun ALTINA konmuştu ve cihazda şu çıktı: kutu bitiyor, altında yan yana iki
-  yeşil bağlantı, onların da altında açılan bir e-posta formu — ürün kartları ekranın yarısına
-  iniyordu (kullanıcının sözü: "üç metin butonu alt alta, gerçekten kötü görünüyor"). Şimdi bandın
-  altına taşan hiçbir parça yok: kutunun içinde cümle ve İKİ metin eylemi var, o kadar.
+  BANDIN İKİ EYLEMİ: kod hapı yanlış kodu bandın gördüğü yerde düzelttirir (`PostalCodeSheet`, vitrin
+  başlığındaki çekmecenin ta kendisi), "Buraya da gelin" ise bölgeyi talep olarak kaydeder — girişlide
+  tek dokunuş, misafirde kendi çekmecesi (e-posta + kodla doğrulanmış hesap).
 
-  İKİ EŞİT SÜTUN, İÇERİKLERİ ORTALANMIŞ (kullanıcının seçtiği yerleşim): "Buraya da gelin" ·
-  "Posta kodunu değiştir". Birincil düğme KULLANILMADI — ikisi de aynı ağırlıkta birer öneri;
-  biri düğme olsaydı bant, bilgi levhası olmaktan çıkıp bir çağrıya dönerdi. Etiket dar ekranda
-  iki satıra sarabilir, sütun hizası bozulmaz (`TextAction align="center"`).
-
-  Kutunun eylem yuvası bu iş için KİTE eklendi (`Note action`), banda tek kullanımlık ikinci bir
-  kutu çizilmedi — kitin öteki on çağıranı değişmedi.
-
-  Cümle de KISALDI: iki cümlelik açıklama tek cümleye indi. Başlık zaten "aracımız gitmiyor"
-  diyor; aynı bilgiyi gövdede tekrar etmek, altındaki eylemleri okunmaz hâle getiren bir metin
-  duvarı kuruyordu.
-
-  ── İKİ EYLEMİN İKİSİ DE BİR SORUYA CEVAP ───────────────────────────────────
-  Bant eskiden yalnız kapıyı kapatıyordu ("aracımız gelmiyor") ve müşterinin elinde tek hareket
-  kalıyordu: talep bırakmak. Ölçülen şikâyet şuydu — *"on posta kodu denedim, hiçbirine
-  gitmiyorsunuz; siz nereye gidiyorsunuz?"*.
-    · **Posta kodunu değiştir** — aynı çekmece (`PostalCodeSheet`), vitrin başlığındakinin TA
-      KENDİSİ; 10.08'de kite taşındı, ikinci nüsha yazılmadı. Yanlış kod girmiş müşteri bandı
-      gördüğü yerde düzeltir, vitrine geri dönmez. *"Nerelere gidiyorsunuz?"* bağlantısı da
-      BANTTAN ORAYA taşındı (kullanıcı kararı): kendi kodunu denemekle "siz nereye gidiyorsunuz"
-      aynı sorunun iki yüzü, ikisi aynı yerde durur — bantta üçüncü bir eylem kalmadı.
-    · **Buraya da gelin** — talebi bırakma akışı. İKİ DALI VAR (kullanıcı kararı 10.08):
-      **girişli** müşteride hiçbir katman açılmaz, talep tek dokunuşta bırakılır ve sonuç toast'la
-      söylenir (e-posta cümlede geçer: haber nereye gidecek); **misafirde** kendi çekmecesi
-      (`PlaceNoticeSheet`) açılır ve e-posta + tek kullanımlık kodla DOĞRULANMIŞ hesap kurulur.
-      Girişliye e-posta sormak, sunucunun ZATEN bildiği bir şeyi sormaktır — çekmece açıp tek
-      düğmeye bastırmak da tek dokunuşluk işi üç dokunuşa çıkarırdı. Çekmecenin kendi kararları o
-      dosyanın künyesinde.
-
-  KAYIT ALINDIĞINDA DÜĞME KALKAR: alınmış bir kaydı ikinci kez isteten düğme, "sayılmadım mı?"
-  sorusunu doğururdu — yerine sonucun tek satırı geçer. **Bu söz 11.08'e kadar YALNIZ bandın kendi
-  örneği içinde tutuluyordu** (`useState`) ve iki liste iki ayrı örnek olduğu için katalogda kaydını
-  bırakan müşteri paketler sekmesinde aynı düğmeyi yeniden görüyordu; hafıza `lib/places/
-  place-notice-store`a taşındı — cümle de, kararı da tek nüsha.
+  KAYIT ALINDIĞINDA DÜĞME KALKAR: alınmış kaydı ikinci kez isteten düğme "sayılmadım mı?" sorusunu
+  doğururdu. Hafıza bandın kendi örneğinde değil depoda (`lib/places/place-notice-store`), çünkü iki
+  liste iki ayrı örnektir: katalogda kaydını bırakan müşteri paketler sekmesinde düğmeyi yeniden görürdü.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -103,31 +69,16 @@ interface PlaceNoticeBandProps {
   /** Normalize posta kodu (çözümden gelir, müşterinin yazdığı ham metin değil). */
   postalCode: string;
   /**
-   * Kodun ŞEHRİ — kutudaki hapta kodun yanında yazılır (kullanıcı isteği 11.08), vitrin
-   * başlığındaki gibi: *"75001 PARIS ▾"*. Çözümden gelir ve `null` OLABİLİR (sözleşme öyle diyor:
-   * tanınan bir kodun adı bilinmeyebilir); o hâlde yalnız kod yazılır — boş bir yer tutucu ya da
-   * uydurma bir şehir basmak, müşteriye olmayan bir yeri göstermek olurdu.
+   * Kodun ŞEHRİ — hapta kodun yanında, vitrin başlığındaki biçimle ("75001 PARIS ▾"). `null` olabilir
+   * (tanınan bir kodun adı bilinmeyebilir) ve o hâlde yalnız kod yazılır; uydurma şehir basılmaz.
    */
   placeName?: string | null;
   /** Talebin hangi listeden bırakıldığı — denetim izi; ekran adı, cümleyi değiştirmez. */
   source: PlaceNoticeSource;
   /**
-   * **"Adresime gönderilebilir" süzgeci** — verilirse bandın içinde bir anahtar satırı çizilir.
-   *
-   * Süzgeç 11.08'e kadar "Sırala & filtrele" sayfasının içindeydi ve kullanıcı onu oradan aldı:
-   * *"zaten bu ancak teslimat noktalarımızın dışında çıkan bir filtreleme özelliği, bu sebepten
-   * doğrudan katalog sayfasının içine, uyarı kartının içerisine koyabiliriz."* Karar yalnız
-   * yerleşim değil, bir DOĞRULUK düzeltmesi: anahtar kapalı bir sayfanın içinde dururken açık
-   * kalıp listeyi ekranda hiçbir iz bırakmadan kısabiliyordu.
-   *
-   * **KOŞULU YOK, ÇÜNKÜ BANDIN KOŞULUYLA AYNI:** süzgeç yalnız rota dışında anlamlı
-   * (`shippableChipVisible` → `mode === 'shipping'`) ve bant da tam o hâlde çiziliyor (çağıranın
-   * kapısı: çözülmüş + rota dışı). İki ayrı kapı yazmak, bir gün birinin ötekinden ayrılması
-   * demekti — burada tek kapı var ve o çağıranın kapısıdır.
-   *
-   * Tek nesne, iki ayrı prop DEĞİL: değer ile onu değiştiren yol birbirsiz anlamsızdır; ikiye
-   * bölünseydi yalnız birini geçen bir çağıran derlenir ve anahtar sessizce ölü kalırdı.
-   * Verilmezse satır hiç çizilmez — paketler listesinde süzülecek bir şey yok.
+   * **"Gelemeyenleri gizle" anahtarı** — kutunun en altında, kesik çizginin altında; süzgeç sayfasının
+   * içindeyken açık kalıp listeyi ekranda hiçbir iz bırakmadan kısabiliyordu. Değer ile onu değiştiren yol
+   * tek nesnede, çünkü biri ötekisiz anlamsız; verilmezse satır hiç çizilmez (paketler listesi).
    */
   shippableFilter?: { value: boolean; onChange: (next: boolean) => void };
   /** Alt öğelerin test kimlikleri bundan TÜREtilir — iki liste aynı bandı çiziyor, id'ler ayrışmalı. */
@@ -147,22 +98,16 @@ export function PlaceNoticeBand({
 
   const zipSheet = useSheet();
   const noticeSheet = useSheet();
-  /* Kayıt alındı mı — `null` = henüz istenmedi ya da tamamlanmadı.
-
-     HAFIZA BANTTA DEĞİL DEPODA (kullanıcı bulgusu 11.08): bu bilgi iki listenin ORTAK gerçeği ve
-     `useState` bileşene aittir — katalogda kaydını bırakan müşteri paketler sekmesinde aynı düğmeyi
-     yeniden görüyordu, aşağıdaki "kayıt alındığında düğme kalkar" sözü tam da orada bozuluyordu.
-     Anahtarın neden YER olduğu ve neden diske yazılmadığı deponun künyesinde. */
+  /* Kayıt alındı mı — `null` = henüz istenmedi ya da tamamlanmadı. Hafıza bandın kendi örneğinde değil
+     depoda, çünkü iki liste iki ayrı örnektir: katalogda kaydını bırakan müşteri paketler sekmesinde
+     aynı düğmeyi yeniden görürdü. */
   const recorded = usePlaceNoticeRecord(country, postalCode);
   const setRecorded = (record: 'ok' | 'already') => rememberPlaceNotice(country, postalCode, record);
   /** İstek uçuşta: çift dokunuş aynı talebi iki kez göndermesin. */
   const [sending, setSending] = useState(false);
 
-  /* GİRİŞLİ MÜŞTERİ ÇEKMECE GÖRMEZ (kullanıcı kararı 10.08): e-postasını sormak, sunucunun ZATEN
-     bildiği bir şeyi sormaktır — ve bir çekmece açıp tek düğmeye bastırmak, tek dokunuşluk bir işi
-     üç dokunuşa çıkarır. Girişlide talep DOĞRUDAN bırakılır, sonuç toast'la söylenir; e-posta
-     cümlede geçer ki müşteri haberin nereye gideceğini bilsin. Misafirde akış değişmedi:
-     çekmece açılır (e-posta → kod → hesap → talep). */
+  /* GİRİŞLİ MÜŞTERİ ÇEKMECE GÖRMEZ: e-postasını sormak sunucunun zaten bildiğini sormaktır ve tek
+     dokunuşluk işi üçe çıkarırdı. Misafirde çekmece açılır (e-posta → kod → hesap → talep). */
   const meState = useMe();
   const me = meState.status === 'ready' ? meState.me : null;
 
@@ -178,9 +123,8 @@ export function PlaceNoticeBand({
   /**
    * Girişli müşterinin tek dokunuşu — e-posta GÖVDEYE KONMAZ, sunucu Bearer'dan çözer.
    *
-   * @param email Yalnız CÜMLE için (haber nereye gidecek). `null` olabilir (profilde adres
-   *   yoksa) ve o zaman adressiz cümle kurulur — boş bir yer tutucu basmak, müşteriye var
-   *   olmayan bir adresi göstermek olurdu.
+   * @param email Yalnız cümle için (haber nereye gidecek); `null` ise adressiz cümle kurulur, boş bir
+   *   yer tutucu basılmaz.
    */
   const recordSignedIn = (email: string | null) => {
     setSending(true);
@@ -221,19 +165,15 @@ export function PlaceNoticeBand({
     recordSignedIn(me.email);
   };
 
-  /* HAPIN ETİKETİ: kod + ŞEHİR, vitrin başlığındaki biçimin aynısı (`{postal} {ŞEHİR} ▾`). Şehir
-     BÜYÜK HARFE dilin kendi kuralıyla çevrilir (`upperIn`) — Türkçenin i/İ ayrımı `toUpperCase()`
-     ile bozulur ve vitrin başlığı da bunu böyle yapıyor. Ad yoksa yalnız kod kalır.
-     *(Kural 17.08'de `lib/i18n/locale`a taşındı: burada ve vitrinde doğru uygulanıyordu ama 17
-     çağrı yereli SABİT `tr-TR` yazmıştı ve öteki iki dilde `MEİN KONTO` üretiyordu — MB-71.)* */
+  /* HAPIN ETİKETİ: kod + ŞEHİR, vitrin başlığındaki biçimin aynısı. Şehir büyük harfe dilin kendi
+     kuralıyla çevrilir (`upperIn`), çünkü Türkçenin i/İ ayrımını `toUpperCase()` bozar; ad yoksa yalnız
+     kod kalır. */
   const postalLabel =
     placeName === undefined || placeName === null ? postalCode : `${postalCode} ${upperIn(placeName, locale)}`;
 
-  /* SÜZGEÇ EN ALTTA (kullanıcı kararı 11.08): kutunun içindeki sıra bilginin sırasıdır — önce
-     "aracımız gelmiyor" (başlık + cümle), sonra yerle ilgili iki eylem, EN SONDA listeyi daraltan
-     anahtar. Anahtar bir bilgi değil bir denetimdir; cümlenin arasına girseydi kutuyu okumak
-     eylemle kesilirdi. Etiket kendi sözlüğünden gelir (`shippableChipLabel`), banda ikinci bir
-     metin yazılmadı. */
+  /* SÜZGEÇ EN ALTTA: kutunun içindeki sıra bilginin sırasıdır — önce hüküm, sonra yerle ilgili eylem, en
+     sonda listeyi daraltan anahtar. Anahtar bilgi değil denetimdir; cümlenin arasına girseydi kutuyu
+     okumak eylemle kesilirdi. */
   const filterRow =
     shippableFilter === undefined ? null : (
       <View style={styles.switchRow}>
@@ -247,15 +187,9 @@ export function PlaceNoticeBand({
       </View>
     );
 
-  /* POSTA KODU KUTUNUN EN ÜSTÜNDE, BAŞLIKTAN ÖNCE (kullanıcı kararı 11.08, ikinci tur). Sıra
-     cümlenin mantığı: önce "hangi yer için konuşuyoruz", sonra o yer hakkındaki hüküm ("bu bölgeye
-     aracımız gitmiyor"). Hap eylem yuvasındayken hükümden SONRA geliyordu ve kartı okuyan, hangi
-     kodun konuşulduğunu ancak sonda öğreniyordu.
-
-     Hap VİTRİNDEKİNİN TA KENDİSİ (aynı biçim, aynı ton, aynı çekmece — ikinci nüsha yazılmadı):
-     *"tıpkı vitrinde olduğu gibi posta kodu yazarız, daha anlaşılır ve görsel olur."* Eski "Posta
-     kodunu değiştir" cümlesi silinmedi, ekran okuyucunun adı oldu — dokunulan şeyin ne yaptığı
-     yine söyleniyor. */
+  /* POSTA KODU KUTUNUN EN ÜSTÜNDE, BAŞLIKTAN ÖNCE: sıra cümlenin mantığıdır — önce "hangi yer için
+     konuşuyoruz", sonra o yer hakkındaki hüküm. Hap vitrindekinin ta kendisidir (aynı biçim, aynı
+     çekmece); eski "Posta kodunu değiştir" cümlesi ekran okuyucunun adı oldu. */
   const codeChip = (
     <PressableSurface
       onPress={zipSheet.open}
@@ -268,9 +202,8 @@ export function PlaceNoticeBand({
     </PressableSurface>
   );
 
-  /* KAYIT ALINDIYSA DÜĞME KOMPLE KALKAR (kullanıcı kararı 11.08) — yerine "kaydınız zaten var"
-     satırı GEÇMEZ. O cümle bir bilgi gibi görünüp yer kaplıyordu; müşteri kaydını bıraktığını zaten
-     toast'ta okudu. Cümlenin kendisi sözlükte duruyor: toast'ın metni odur. */
+  /* KAYIT ALINDIYSA DÜĞME KOMPLE KALKAR — yerine "kaydınız zaten var" satırı geçmez, çünkü o cümle bilgi
+     gibi görünüp yer kaplıyordu ve müşteri kaydını bıraktığını zaten toast'ta okudu. */
   const cta =
     recorded !== null ? null : (
       <TextAction
@@ -357,10 +290,6 @@ const styles = StyleSheet.create((theme) => ({
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.ink,
   },
-  /* İKİ EŞİT SÜTUN KALKTI (11.08): hap kutunun üst yuvasına, "Buraya da gelin" tek başına yığına
-     geçti — yan yana iki eylem kalmayınca satırı bölecek bir şey de kalmadı. Sola yaslama artık
-     kutunun kendi hizasından geliyor (`Note` yuvaları `flex-start`), ayrı bir sütun stiline gerek
-     yok. */
   /** Posta kodu hapı — vitrin başlığındaki `location` stilinin BİREBİR aynısı (aynı görsel dil:
       vurgu tonu, kalın, hafif harf aralığı, sonunda açılır işareti). Kademe orada `micro`; burada
       kutunun içinde tek başına duran bir denetim olduğu için `body-sm`e çıkıyor — müşterinin

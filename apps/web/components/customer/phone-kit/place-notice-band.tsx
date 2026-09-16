@@ -14,23 +14,15 @@ import { Note } from './note';
 import { ToggleSwitch } from './toggle-switch';
 
 /*
-  BÖLGE DIŞI BİLGİ BANDI — native `PlaceNoticeBand`ın (`apps/mobile/src/screens/customer-kit/place-notice-band.tsx`)
-  web telefon ikizi (14.09): liste başında TEK blok — "aracımız buraya gitmiyor, gönderebildiklerimiz kargoyla
-  gelir". Kartlarda "kargoyla gelir" işareti bu yüzden yok (native 10.08: her kartta yazan bilgi gürültüdür).
+  BÖLGE DIŞI BİLGİ BANDI — native `PlaceNoticeBand`ın web telefon ikizi: liste başında TEK blok, kutusu
+  tasarımın terracotta kutusu, en üstte posta kodu hapı, en altta kesik çizgiyle ayrılmış "Gelemeyenleri
+  gizle" anahtarı. Kartlarda "kargoyla gelir" işareti bu yüzden yok — rota dışı müşterinin her kartında
+  yazan bilgi, bilgi olmaktan çıkar.
 
-  Görünüş native'in: sıcak bilgi kutusu (`Note`), en üstte posta kodu hapı (vitrin başlığının biçimi,
-  `{kod} {ŞEHİR} ▾`), başlık + tek cümle, altında "Buraya da gelin" ve — verildiyse — "Adresime
-  gönderilebilir" anahtarı. Süzgeç bandın içinde (native 11.08): süzgeç yalnız rota dışında anlamlı ve bant
-  tam o hâlde çiziliyor — iki ayrı kapı bir gün ayrışırdı.
-
-  ── WEB'E ÖZGÜ AKIŞLAR (native'le bilinçli ayrışma) ──────────────────────────
-  · Hap web'in yer çekmecesini açar (`PlaceSheet`; başlıktaki hapla aynı durum — `setPanelOpen`).
-  · "Buraya da gelin" web'in kaydını bırakır (`recordZoneNoticeAction`). E-postası bilinen girişli müşteri
-    TEK dokunuşla (native 10.08: sunucunun bildiğini sormak üç dokunuş), sonuç bildirim hapında; öteki herkes
-    web'in e-posta penceresinde (`NoticeDialog`). Native misafirde kodla hesap açıyor, web kaydı hesapsız
-    alıyor (`notice-actions` künyesi) — iki sözleşme, ortak görünüş.
-  · Kayıt hafızası `ZoneNoticeButton`ınkiyle AYNI (`useZoneNoticeNoted`): kartta ya da sepette not bırakan
-    müşteri burada daveti yeniden görmez; kayıt alınınca düğme kalkar (native 11.08).
+  WEB'E ÖZGÜ AKIŞLAR (native'le bilinçli ayrışma): hap web'in yer çekmecesini açar (`PlaceSheet`), "Buraya da
+  gelin" web'in kaydını bırakır — girişli müşteri tek dokunuşla, öteki herkes e-posta penceresiyle
+  (`NoticeDialog`); native misafirde kodla hesap açar, web kaydı hesapsız alır. Kayıt hafızası
+  `ZoneNoticeButton`ınkiyle aynı: kartta ya da sepette not bırakan müşteri daveti yeniden görmez.
 */
 
 interface PlaceNoticeBandProps {
