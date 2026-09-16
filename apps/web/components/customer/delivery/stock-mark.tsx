@@ -78,8 +78,13 @@ export function StockMark({ status, locale, size = 'sm' }: StockMarkProps) {
       </span>
     ) : (
       <Badge tone={tone === 'blocked' ? 'pending' : 'closed'} variant="outline">
-        {icon && <Icon name={icon} size={12} />}
-        {text}
+        {/* Boşluğu ÇAĞIRAN taşır: `Badge` yalnız kabuk ve tonu verir, içeriğin yerleşimine
+            karışmaz — kabuğa `gap` eklemek onun "çağıran ANLAM seçer, sınıf değil" sözleşmesini
+            bozardı. Ölçü büyük hâlle aynı (`gap-1.5`) ki iki boy yan yana aynı aileden okunsun. */}
+        <span className="inline-flex items-center gap-1.5">
+          {icon && <Icon name={icon} size={12} />}
+          {text}
+        </span>
       </Badge>
     );
 
