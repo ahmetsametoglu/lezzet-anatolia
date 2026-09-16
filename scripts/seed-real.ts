@@ -1,5 +1,6 @@
 // Gerçek başlangıç beslemesi: `seed-real/data.ts`'te yazanı ekler, hiçbir değer üretmez ve katmanlı
 // `seed.ts`ten ayrıdır. Var olan kayda dokunmaz ki panelden yapılan düzeltme yeniden çalıştırmada ezilmesin.
+import { receivePurchase } from '@lezzet/application';
 import {
   CategoryImageService,
   CategoryService,
@@ -12,6 +13,7 @@ import {
   ProductVariantService,
   PurchaseOrderService,
   SettingsService,
+  StockIntakeService,
   StorageAreaService,
   SupplierProductService,
   SupplierService,
@@ -24,7 +26,7 @@ import { toCents } from '@lezzet/helper';
 
 import { brand } from '../packages/brand/src/index';
 import { seedLezzaProducts } from './seed/catalog-lezza';
-import { PURCHASES, SETTINGS, STORAGE_AREAS, SUPPLIERS, VEHICLE, WAREHOUSE, ZONES } from './seed-real/data';
+import { PURCHASES, SETTINGS, STORAGE_AREAS, SUPPLIERS, TEST_INTAKE, VEHICLE, WAREHOUSE, ZONES } from './seed-real/data';
 
 type Purchase = (typeof PURCHASES)[number];
 type Line = Purchase['catalog'][number] | Purchase['drafts'][number]['variants'][number];
@@ -38,6 +40,8 @@ try {
 }
 
 const DRY_RUN = process.argv.includes('--dry-run');
+// Uydurma lot ve son kullanma taşıdığı için ayrı bayrak ister; düz çalıştırma stok yazmaz.
+const WITH_INTAKE = process.argv.includes('--with-intake');
 // Kuru koşuda henüz yazılmamış kaydın kimliği yerine geçer; yalnız sonraki adımların listelenmesi için.
 const PLANNED = 'planlandı';
 
@@ -328,6 +332,55 @@ async function seedPurchases(db: Db): Promise<void> {
   }
 }
 
+/** Siparişlerin tamamını tek partide teslim alır — arayüz denemesi için, gerçek sayım değil. */
+async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
+  console.log(`▸ test kabulü · lot ${TEST_INTAKE.lotNumber} · SKT ${TEST_INTAKE.expiryDate} — uydurma değer, arayüz denemesi`);
+  const areas = facilityId === PLANNED ? [] : await new StorageAreaService(db).listByWarehouses([facilityId]);
+  const intakes = new StockIntakeService(db);
+  const orders = new PurchaseOrderService(db);
+  const suppliers = await new SupplierService(db).list();
+  for (const purchase of PURCHASES) {
+    const supplierId = suppliers.find((s) => s.name === purchase.supplier)?.id;
+    const order = supplierId
+      ? (await orders.listBySupplier(supplierId)).find((row) => row.note === `Fatura ${purchase.invoice}`)
+      : undefined;
+    const rows = await purchaseLines(db, purchase);
+    const missing = rows.filter((row) => row.variantId === null).length;
+    if (!order || missing > 0) {
+      console.log(`  ${DRY_RUN ? '○' : '⚠'} ${purchase.invoice} — ${order ? `${missing} kalemin varyantı` : 'sipariş'} yok${DRY_RUN ? '; önceki adımlar yazılınca kurulur' : ', kabul yazılmadı'}`);
+      continue;
+    }
+    if ((await intakes.listByPurchaseOrder(order.id)).length > 0) {
+      done(`kabul · ${purchase.invoice}`);
+      continue;
+    }
+    const areaName = TEST_INTAKE.areaBySupplier[purchase.supplier];
+    const storageAreaId = areas.find((area) => area.name === areaName)?.id ?? null;
+    plan(`kabul · ${purchase.invoice} · ${rows.length} kalem · ${areaName ?? 'alansız'}`);
+    if (DRY_RUN) continue;
+    const outcome = await receivePurchase(db, {
+      warehouseId: facilityId,
+      purchaseOrderId: order.id,
+      supplierId,
+      note: `Test kabulü — ${purchase.invoice}`,
+      // Fiyat verilmez: kabul çekirdeği siparişteki birim fiyatı kullanır.
+      lines: rows.map(({ line, variantId }) => ({
+        variantId: variantId as string,
+        qty: line.qty,
+        expiryDate: TEST_INTAKE.expiryDate,
+        lotNumber: TEST_INTAKE.lotNumber,
+        storageAreaId,
+        unitCostCents: null,
+      })),
+    });
+    if (outcome.status !== 'ok') {
+      console.log(`  ⚠ ${purchase.invoice} — kabul yazılamadı (${outcome.status})`);
+      continue;
+    }
+    console.log(`  ✓ ${outcome.result.stockIds.length} parti yazıldı`);
+  }
+}
+
 async function main(): Promise<void> {
   checkInvoiceTotals();
   const db = createServiceRoleClient();
@@ -342,6 +395,7 @@ async function main(): Promise<void> {
   await seedCatalog(db);
   await seedDrafts(db);
   await seedPurchases(db);
+  if (WITH_INTAKE) await seedTestIntake(db, facilityId);
   console.log(DRY_RUN ? '✓ kuru koşu bitti' : '✓ gerçek besleme bitti');
 }
 

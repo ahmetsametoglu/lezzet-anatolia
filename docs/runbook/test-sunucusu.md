@@ -162,3 +162,6 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    `cd /opt/lezzet/current && runuser -u lezzet -- env HOME=/home/lezzet pnpm db:seed:real`
    `--dry-run` ile önce ne yazacağını listeler. Var olan kayda dokunmaz, tekrar çalıştırılabilir; stok
    yazmaz — stok paneldeki tedarikçi siparişlerine karşı mal kabulüyle girer.
+5. Yalnız TEST sunucusunda, arayüzü denemek için: `pnpm db:seed:real --with-intake` siparişlerin tamamını
+   tek partide teslim alınmış yazar. Lot ve son kullanma uydurmadır (`TEST_INTAKE`); üretim kurulumunda
+   ne bu bayrak kullanılır ne de o blok dosyada kalır.

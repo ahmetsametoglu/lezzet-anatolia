@@ -74,6 +74,17 @@ export const SUPPLIERS = [
   },
 ] as const;
 
+/**
+ * Test kabulü — ARAYÜZ DENEMESİ İÇİNDİR, gerçek veri değildir: lot ve son kullanma uydurmadır ve mal
+ * fiilen sayılmamıştır. Yalnız `--with-intake` ile yazılır; üretim kurulumundan önce bu blok silinir.
+ */
+export const TEST_INTAKE = {
+  lotNumber: 'TEST-001',
+  expiryDate: '2026-12-31',
+  /** Tedarikçiye göre saklama alanı: Lezza donuk, Behotrade kuru. */
+  areaBySupplier: { 'Lezza Foods BV': 'Dondurucu 1', 'Behotrade BV': 'Raf' } as Record<string, string>,
+};
+
 interface PurchaseLine {
   /** Faturadaki ad; tedarikçi siparişinde ve eşlemede tedarikçinin diliyle görünür. */
   nameAtSupplier: string;
