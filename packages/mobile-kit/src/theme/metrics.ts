@@ -207,6 +207,13 @@ export const appMetrics = {
     headerIcon: 20,
     /** Girdi/düğme içinde satıra giren ikon (tasarım: arama büyüteci 17 · süzgeç çizgileri 19×17). */
     inlineIcon: 17,
+    /**
+     * ROZET İÇİNDEKİ ikon — kart şeridinin "bu adrese gelmiyor" işareti (tasarım: 11).
+     *
+     * `inlineIcon`(17) ile aynı durağa konmadı: o girdi/düğme satırının ikonudur ve yanındaki yazı gövde
+     * kademesindedir; bu ise rozet yazısının (`badge-sm`, 10) komşusu — 17 dp orada satırı ikiye böler.
+     */
+    badgeIcon: 11,
     /** Yüzen sayfanın tutamağı (tasarım: 44×5). */
     sheetHandle: 44,
     /**

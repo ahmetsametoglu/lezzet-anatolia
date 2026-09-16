@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react';
 import type { CatalogImage } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
+import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { Link } from '@/i18n/navigation';
 import { Tag } from './tag';
 
@@ -40,9 +41,11 @@ export function ProductPhotoCard({
   dimmed = false,
   optionsLabel,
 }: ProductPhotoCardProps) {
-  const statusLabel = soldOut ? soldOutLabel : discountLabel;
   // Hiçbir yerde olmayan üründe "bu adrese gelmez" demek, cevabı olmayan bir soruya cevap vermek olurdu.
   const note = soldOut ? undefined : placeNote;
+  /* Şerit varken indirim rozeti çizilmez (tasarım): ikisi de fotoğrafın üst şeridinde durur ve bu adrese gelmeyen
+     üründe indirim, alınamayacak bir şeyin vaadidir. */
+  const statusLabel = soldOut ? soldOutLabel : note !== undefined ? undefined : discountLabel;
   const faded = soldOut || dimmed;
 
   return (
@@ -76,15 +79,20 @@ export function ProductPhotoCard({
         {optionsLabel !== undefined && <span className="truncate font-sans text-micro font-semibold text-on-image-soft">{optionsLabel}</span>}
       </span>
 
+      {/* Şerit fotoğrafın ÜSTÜNDE ince bir satır (tasarım): kartın tamamını örten filigran, adı ve fiyatı — yani
+          kartın kimliğini — okunmaz kılıyordu. */}
       {note !== undefined && (
-        <span className="absolute inset-0 grid place-items-center rounded-card bg-scrim px-3 text-center">
-          <span className="line-clamp-3 font-sans text-body leading-[1.6] font-bold whitespace-pre-line text-on-image">{note}</span>
+        <span className="absolute inset-x-2.5 top-2.5 flex items-center gap-1.5 rounded-badge bg-sand-50/94 px-2 py-1">
+          <MobileIcon name="delivery-off" size={11} className="flex-none text-terracotta" />
+          <span className="truncate font-sans text-badge-sm font-bold tracking-(--text-badge--letter-spacing) text-terracotta uppercase">
+            {note}
+          </span>
         </span>
       )}
 
       {priceLabel !== undefined && (
         <span className="absolute -top-2 -right-1.5">
-          <Tag label={priceLabel} rotate={4} shadow />
+          <Tag label={priceLabel} tone={note === undefined ? 'terracotta' : 'blocked'} rotate={4} shadow />
         </span>
       )}
     </Link>

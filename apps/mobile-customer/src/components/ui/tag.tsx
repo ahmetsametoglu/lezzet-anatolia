@@ -9,8 +9,8 @@ import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
   "TOPTAN" · geri sayım · takip çipi hep budur. İmzası hafif dönüştür (tasarımda −7°…+6°);
   açı içeriğe göre değişir, o yüzden PROP — sabit bir açı rozetleri birbirinin kopyası yapardı.
 
-  Dört ton, hepsi token: terracotta (fiyat/fırsat) · ink (koyu vurgu) · cream (fotoğraf ve koyu
-  blok üstünde) · sand (puan, yumuşak vurgu).
+  Beş ton, hepsi token: terracotta (fiyat/fırsat) · ink (koyu vurgu) · cream (fotoğraf ve koyu
+  blok üstünde) · sand (puan, yumuşak vurgu) · blocked (bu adrese gitmeyen ürünün fiyat çipi).
 
   YAZI VE GÖLGE ARTIK KENDİ KADEMESİNDE (Token Kararlari #16): daha önce ölçü `field-label`den,
   ağırlık `button`dan devşiriliyor ve gölge `shadow.soft`la kuruluyordu — üç ayrı kademeden
@@ -22,7 +22,7 @@ import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
   üst üste biner (tasarımdaki `transform:scale(.9) rotate(-2deg)` ile aynı sonuç).
 */
 
-type TagTone = 'terracotta' | 'ink' | 'cream' | 'sand';
+type TagTone = 'terracotta' | 'ink' | 'cream' | 'sand' | 'blocked';
 
 interface TagProps {
   /** Rozet metni — i18n üstte çözülür, komponent metin gömmez. */
@@ -110,4 +110,7 @@ const styles = StyleSheet.create((theme) => ({
   creamLabel: { color: theme.colors.ink },
   sand: { backgroundColor: theme.colors['sand-150'] },
   sandLabel: { color: theme.colors['olive-dark'] },
+  /* Fiyat çipi bu adrese gitmeyen üründe susar: aynı çip terracottayken "al" diyen bir vurgudur. */
+  blocked: { backgroundColor: theme.colors['sand-650'] },
+  blockedLabel: { color: theme.colors.card },
 }));

@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { FrameImage } from '@lezzet/mobile-kit/src/components/ui/frame-image';
+import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { PressableSurface } from '@lezzet/mobile-kit/src/components/ui/pressable-surface';
 import { Tag } from './tag';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
@@ -23,7 +24,8 @@ import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
           ├ fotoğraf (yoksa kum zemin — baş harf YOK, ad zaten fotoğrafın üstünde duruyor)
           └ alt gradyan (yazının okunması için)
       └ durum rozeti (sol üst, tükendi/indirim) — SOLMAZ
-      └ künye (sol alt): ad + çeşit satırı + YER NOTU — SOLMAZ
+      └ yer şeridi (üst, fotoğrafın içinde) — SOLMAZ
+      └ künye (sol alt): ad + çeşit satırı — SOLMAZ
       └ fiyat çipi — kartın DIŞINA taşar (sağ üst), o yüzden fotoğraf katmanının kardeşidir:
         kırpılan katmanın içinde olsaydı taşan kısmı kesilirdi.
 
@@ -76,19 +78,11 @@ interface ProductPhotoCardProps {
   /** "İndirim" etiketi; verilirse indirim rozeti çıkar. */
   discountLabel?: string;
   /**
-   * YER NOTU (21.20 · kullanıcı kararı 10.08) — "bu ürün BANA nasıl gelir" sorusunun cevabı, ama
-   * yalnız SÖYLENECEK bir şey varken: "Bu adrese gönderemiyoruz" / "Bölgenizde şu an yok".
-   * Cümleyi çağıran kurmaz, `stockMarkOf` kurar (`lib/places/place-view.ts`); kart yalnız çizer.
+   * YER ŞERİDİNİN cümlesi — "bu ürün bana gelir mi" sorusunun kart üstündeki kısa cevabı ("Bu adrese
+   * gelmiyor" / "Bölgenizde şu an yok"). Cümleyi çağıran kurmaz, ortak kurucu seçer (`cardPlaceNoteOf`).
    *
-   * **ROZET DEĞİL, YAZI** (kullanıcı kararı 10.08): `StockMark` kabuğu (zemin · kenarlık · dolgu)
-   * bu kartta KULLANILMAZ — "her şey rozet içindeymiş gibi görünüyordu". Metin doğrudan alt
-   * gradyanın üstüne yazılır; okunurluk gradyandan gelir, ayrıca zemin EKLENMEZ. Bu yüzden notun
-   * yeri de değişti: rozet yığını sol ÜST köşedeydi, gradyan ise ALTTA — zeminsiz bir yazı üst
-   * köşede fotoğrafın üstünde okunmazdı. Not artık künyenin son satırı.
-   *
-   * "Kargoyla gelir" hâli BURAYA HİÇ GELMEZ (aynı karar): rota dışı müşterinin kartlarının
-   * neredeyse tamamı onu taşıyordu, yani bilgi olmaktan çıkıp gürültü oluyordu. Gönderemediğimizi
-   * zaten solmayla ayırıyoruz; geri kalanın kargoyla geleceğini listenin başındaki bant söylüyor.
+   * "Kargoyla gelir" hâli BURAYA HİÇ GELMEZ: rota dışı müşterinin kartlarının neredeyse tamamı onu
+   * taşıyordu ve bilgi olmaktan çıkıp gürültü oluyordu; o cümle listenin başındaki bantta tek yerde durur.
    */
   placeNote?: string;
   /**
@@ -126,9 +120,10 @@ export function ProductPhotoCard({
   const { theme } = useUnistyles();
   const locale = useAppLocale();
 
-  /* Durum rozeti TEK yuvadadır (şablonda ikisi de sol üst köşede): tükendi indirimin önüne geçer,
-     çünkü tükenmiş bir üründe indirim bilgisi alınabilir bir şey söylemez. */
-  const statusLabel = soldOut ? soldOutLabel : discountLabel;
+  /* Durum rozeti TEK yuvadadır (şablonda ikisi de sol üst köşede): tükendi indirimin önüne geçer, çünkü tükenmiş
+     bir üründe indirim bilgisi alınabilir bir şey söylemez. Şerit varken de indirim çizilmez (tasarım) — bu adrese
+     gelmeyen üründe indirim, alınamayacak bir şeyin vaadidir. */
+  const statusLabel = soldOut ? soldOutLabel : placeNote !== undefined ? undefined : discountLabel;
   /* Yer notu TÜKENDİDE basılmaz: ürün hiçbir yerde yokken "bu adrese gelmez" demek, cevabı
      olmayan bir soruya cevap vermek olurdu. Sözleşme bunu zaten garanti ediyor (`soldOut` yalnız
      `out_of_stock` hâlinde, `stockMarkOf` da o hâlde `null` dönüyor) — ikinci kapı yine de burada,
@@ -192,16 +187,13 @@ export function ProductPhotoCard({
           </Text>
         )}
       </View>
-      {/* YER NOTU KARTIN ORTASINDA (kullanıcı kararı 10.08, üçüncü tur) — künyenin içinde DEĞİL.
-          Künyeye konduğunda ürünün başlığının yerini alıyordu: iki satırlık bir cümle adın hemen
-          altına binince kartın kimliği (ad + fiyat) ikinci plana düşüyordu.
-          Artık kartın TAMAMINI örten filigranın üstünde, ortalanmış ve künye kademesinden BÜYÜK:
-          bu bir dipnot değil, kartın o müşteri için verdiği cevabın kendisi.
-          `pointerEvents="none"`: örtü dokunuşu yutmaz — kart yine ürün detayına açılır. */}
+      {/* YER ŞERİDİ fotoğrafın ÜSTÜNDE ince bir satır (tasarım): kartın tamamını örten filigran, kartın kimliğini
+          (ad + fiyat) okunmaz kılıyordu. `pointerEvents="none"`: şerit dokunuşu yutmaz, kart yine detaya açılır. */}
       {note === undefined ? null : (
-        <View style={styles.noteVeil} pointerEvents="none">
-          <Text style={styles.placeNote} numberOfLines={3} testID={testID === undefined ? undefined : `${testID}-place-note`}>
-            {note}
+        <View style={styles.noteBand} pointerEvents="none">
+          <Icon name="delivery-off" size={theme.size.badgeIcon} color={theme.colors.terracotta} />
+          <Text style={styles.noteLabel} numberOfLines={1} testID={testID === undefined ? undefined : `${testID}-place-note`}>
+            {upperIn(note, locale)}
           </Text>
         </View>
       )}
@@ -211,7 +203,8 @@ export function ProductPhotoCard({
           Fiyatı olmayan üründe çip HİÇ ÇİZİLMEZ (bkz. prop künyesi). */}
       {priceLabel === undefined ? null : (
         <View style={styles.priceBadge}>
-          <Tag label={priceLabel} rotate={4} shadow />
+          {/* Şerit varken çip griye döner (tasarım): terracotta "al" diyen bir vurgudur, gelmeyen üründe yanıltır. */}
+          <Tag label={priceLabel} tone={note === undefined ? 'terracotta' : 'blocked'} rotate={4} shadow />
         </View>
       )}
     </PressableSurface>
@@ -298,30 +291,32 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors['on-image-soft'],
   },
   /**
-   * YER NOTUNUN FİLİGRANI — kartın tamamını örten yarı saydam katman (daire kartın ikizi).
+   * YER ŞERİDİ — fotoğrafın üst kenarında duran, SOLMAYAN katman (fotoğraf katmanının kardeşi).
    *
-   * Solma tek başına SESSİZ bir işarettir: müşteri kartın neden soluk olduğunu bilemez. Filigran
-   * hem cümleyi taşıyacak zemini verir hem de sebebi görselin kendisine bıraktırmaz. Örtü fotoğraf
-   * katmanının KARDEŞİ, çocuğu değil — solma fotoğrafa uygulanıyor ve yazı onunla birlikte
-   * solsaydı, tam da okunması gereken cümle okunaksızlaşırdı (kullanıcı bildirimi 10.08).
+   * Solma tek başına sessizdir: müşteri kartın neden soluk olduğunu ancak bu satırdan okur. Zemin opak krem,
+   * çünkü yazı fotoğrafın hangi karesine denk gelirse gelsin okunmak zorunda; dolgu ve köşe durum rozetiyle
+   * aynı duraklarda, ikisi kartın aynı rozet ailesinden.
    */
-  noteVeil: {
+  noteBand: {
     position: 'absolute',
-    inset: 0,
+    top: theme.space.lg,
+    left: theme.space.lg,
+    right: theme.space.lg,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.space.xl,
-    borderRadius: theme.radius.card,
-    backgroundColor: theme.colors.scrim,
+    gap: theme.space.xs,
+    paddingVertical: theme.space.xs,
+    paddingHorizontal: theme.space.lg,
+    borderRadius: theme.radius.badge,
+    backgroundColor: theme.colors['sand-50'],
   },
-  /* Kademe künyeden BÜYÜK (`micro` → `body`, adın kademesi): cümle bir dipnot değil, kartın o
-     müşteri için verdiği cevap. Zemin/kenarlık YOK — okunurluğu filigran veriyor. */
-  placeNote: {
+  /* Kademe durum rozetiyle aynı (`badge-sm`): şerit bir cümle değil işaret, kartın köşe rozetleri ailesinden. */
+  noteLabel: {
+    flexShrink: 1,
     fontFamily: theme.font.body[theme.text['badge--font-weight']],
-    fontSize: theme.text.body,
-    lineHeight: theme.text.body * theme.text['lead--line-height'],
-    color: theme.colors['on-image'],
-    textAlign: 'center',
+    fontSize: theme.text['badge-sm'],
+    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
+    color: theme.colors.terracotta,
   },
   /* Fiyat çipi kartın SAĞ ÜST köşesinden taşar (şablon: `top:-8px;right:-5px`). Yatay ofset
      ölçekte ara değer, yukarı yuvarlandı (5 → 6). */

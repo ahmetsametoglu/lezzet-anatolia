@@ -186,6 +186,8 @@ export const ICON_PATHS = {
     ],
     viewBox: '0 0 24 19',
   },
+  /** Üstü çapraz çizilmiş yol: kartın "bu adrese gelmiyor" şeridi. */
+  'delivery-off': { paths: ['M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9'] },
   /** Kilit: ödemenin "GÜVENLİ" künyesi. */
   lock: { paths: ['M8 10V7a4 4 0 0 1 8 0v3'], rects: [[4, 10, 16, 10, 2]] },
   /** Banka kartı: "Kartla öde". */
