@@ -26,10 +26,26 @@ import { toCents } from '@lezzet/helper';
 
 import { brand } from '../packages/brand/src/index';
 import { seedLezzaProducts } from './seed/catalog-lezza';
-import { PURCHASES, SETTINGS, STORAGE_AREAS, SUPPLIERS, TEST_INTAKE, VEHICLE, WAREHOUSE, ZONES } from './seed-real/data';
+import { r2Keys, uploadImageFromPath, uploadImageFromUrl } from './seed/shared';
+import {
+  FICTION_ALLERGENS,
+  FICTION_NUTRITION,
+  PURCHASES,
+  SETTINGS,
+  STORAGE_AREAS,
+  SUPPLIERS,
+  TEST_INTAKE,
+  VEHICLE,
+  WAREHOUSE,
+  ZONES,
+} from './seed-real/data';
 
 type Purchase = (typeof PURCHASES)[number];
-type Line = Purchase['catalog'][number] | Purchase['drafts'][number]['variants'][number];
+type Draft = Purchase['drafts'][number];
+type Line = Purchase['catalog'][number] | Draft['variants'][number];
+
+/** Katalogda görünen ad Türkçesidir; faturadaki ad tedarikçinin dilinde kalır (eşleştirme onun üstünden). */
+const draftName = (draft: Draft): string => draft.nameTr ?? draft.name;
 
 type Db = ReturnType<typeof createServiceRoleClient>;
 
@@ -40,8 +56,20 @@ try {
 }
 
 const DRY_RUN = process.argv.includes('--dry-run');
-// Uydurma lot ve son kullanma taşıdığı için ayrı bayrak ister; düz çalıştırma stok yazmaz.
-const WITH_INTAKE = process.argv.includes('--with-intake');
+
+/**
+ * Hangi katmana kadar yazılacağı (`--layers=2`, `--layers=3`; varsayılan 1).
+ *
+ * Katmanlar KÜMELENİR: 2 birinciyi de yazar, 3 ikisini de. Varsayılanın 1 olması bilinçli — üretim
+ * kurulumu bayraksız koşar ve o koşuda uydurma tek bir değer bile yazılamaz. Katmanların ne olduğu
+ * `seed-real/data.ts` künyesinde.
+ */
+const LAYERS = (() => {
+  const arg = process.argv.find((a) => a.startsWith('--layers='))?.split('=')[1];
+  const n = Number(arg ?? 1);
+  if (!Number.isInteger(n) || n < 1 || n > 3) throw new Error(`--layers 1, 2 ya da 3 olmalı (verilen: ${arg})`);
+  return n;
+})();
 // Kuru koşuda henüz yazılmamış kaydın kimliği yerine geçer; yalnız sonraki adımların listelenmesi için.
 const PLANNED = 'planlandı';
 
@@ -234,15 +262,37 @@ async function seedDrafts(db: Db): Promise<void> {
   const existing = new Set((await products.listAll()).map((p) => p.name.tr));
   for (const purchase of PURCHASES) {
     for (const draft of purchase.drafts) {
-      if (existing.has(draft.name)) {
-        done(draft.name);
+      const ad = draftName(draft);
+      if (existing.has(ad)) {
+        done(ad);
         continue;
       }
-      plan(`${draft.name} · ${draft.variants.map((v) => v.label ?? 'boysuz').join(' + ')} · ${purchase.supplier}`);
+      plan(
+        `${ad} · ${draft.variants.map((v) => v.label ?? 'boysuz').join(' + ')} · ${purchase.supplier}${draft.image ? ' · kapaklı' : ''}`,
+      );
       if (DRY_RUN) continue;
+      // Kapak: tedarikçinin gönderdiği usta ya da markanın mağazasındaki çekim. R2 ayarsızsa null
+      // döner ve ürün görselsiz açılır — besleme durmaz (`catalog-lezza` ile aynı davranış).
+      const kapak = draft.image
+        ? await (draft.image.file
+            ? uploadImageFromPath(draft.image.file, r2Keys.productImage(draft.image.slug, draft.image.file))
+            : uploadImageFromUrl(draft.image.url ?? '', r2Keys.productImage(draft.image.slug, draft.image.url ?? 'cover.webp')))
+        : null;
       await products.create({
-        name: { tr: draft.name },
+        // Dil alanı YAZILMAZSA boş kalır: `{fr: ''}` yazmak "alan dolu ama boş" anlamına gelir ve
+        // `resolveLocalizedText` onu sessizce Türkçeye düşürür — eksik dil görünmez olurdu.
+        name: { tr: ad, ...(draft.nameFr ? { fr: draft.nameFr } : {}), ...(draft.nameDe ? { de: draft.nameDe } : {}) },
         status: 'candidate',
+        // Katman 1 — üreticinin künyesinden ölçülmüş beyanlar.
+        ...(draft.ingredients ? { ingredients: draft.ingredients } : {}),
+        ...(draft.storage ? { storageInstructions: draft.storage } : {}),
+        ...(draft.shelfLifeDays ? { shelfLifeDays: draft.shelfLifeDays } : {}),
+        // Katman 2 — gerçek ürün sayfasına dayanan açıklama.
+        ...(LAYERS >= 2 && draft.description ? { description: draft.description } : {}),
+        // Katman 3 — UYDURMA: kaynağı yok, yalnız test sunucusunun arayüzünü doldurur.
+        ...(LAYERS >= 3 && FICTION_NUTRITION[draft.name] ? { nutrition: FICTION_NUTRITION[draft.name] } : {}),
+        ...(LAYERS >= 3 && FICTION_ALLERGENS[draft.name] ? { allergens: FICTION_ALLERGENS[draft.name] } : {}),
+        ...(kapak ?? {}),
         variants: draft.variants.map((v) => ({ label: v.label ? allLocales(v.label) : undefined, netWeightG: v.netWeightG, sku: v.sku })),
       });
     }
@@ -256,7 +306,7 @@ async function purchaseLines(db: Db, purchase: Purchase): Promise<{ line: Line; 
   const rows: { line: Line; variantId: string | null }[] = [];
   for (const line of purchase.catalog) rows.push({ line, variantId: (await variants.findBySku(line.sku))?.id ?? null });
   for (const draft of purchase.drafts) {
-    const product = products.find((p) => p.name.tr === draft.name);
+    const product = products.find((p) => p.name.tr === draftName(draft));
     const own = product ? await variants.listByProduct(product.id) : [];
     for (const line of draft.variants) {
       const match = own.find((v) => (line.sku ? v.sku === line.sku : v.label.tr === line.label));
@@ -395,7 +445,8 @@ async function main(): Promise<void> {
   await seedCatalog(db);
   await seedDrafts(db);
   await seedPurchases(db);
-  if (WITH_INTAKE) await seedTestIntake(db, facilityId);
+  // Mal kabulü katman 3: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır.
+  if (LAYERS >= 3) await seedTestIntake(db, facilityId);
   console.log(DRY_RUN ? '✓ kuru koşu bitti' : '✓ gerçek besleme bitti');
 }
 

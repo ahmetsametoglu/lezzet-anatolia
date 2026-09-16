@@ -162,6 +162,12 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    `cd /opt/lezzet/current && runuser -u lezzet -- env HOME=/home/lezzet pnpm db:seed:real`
    `--dry-run` ile önce ne yazacağını listeler. Var olan kayda dokunmaz, tekrar çalıştırılabilir; stok
    yazmaz — stok paneldeki tedarikçi siparişlerine karşı mal kabulüyle girer.
-5. Yalnız TEST sunucusunda, arayüzü denemek için: `pnpm db:seed:real --with-intake` siparişlerin tamamını
-   tek partide teslim alınmış yazar. Lot ve son kullanma uydurmadır (`TEST_INTAKE`); üretim kurulumunda
-   ne bu bayrak kullanılır ne de o blok dosyada kalır.
+5. Besleme ÜÇ KATMANLIDIR ve katmanı `--layers` seçer (varsayılan 1, kümelenir):
+   - **1 · kesin** — faturadan ve üreticinin künyesinden ölçülmüş olan (ad, ölçü, maliyet, gerçek ürün
+     çekimi, içindekiler, saklama, raf ömrü). **Üretim kurulumu budur; bayraksız koşar.**
+   - **2 · dayanaklı** — gerçek ürün sayfasına dayanan, resmî belgeye dayanmayan açıklamalar.
+   - **3 · uydurma** — besin tablosu, alerjen ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026).
+     Yalnız TEST sunucusunda: `pnpm db:seed:real --layers=3`.
+
+   Katman 3'ün verisi `seed-real/data.ts` sonunda AYRI durur (`FICTION_NUTRITION`, `FICTION_ALLERGENS`,
+   `TEST_INTAKE`); üretime geçerken o blok bütün hâlinde silinir, kalan dosya zaten katman 1'dir.
