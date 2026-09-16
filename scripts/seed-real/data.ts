@@ -725,13 +725,179 @@ export const FICTION_NUTRITION: Record<string, Nutrition> = {
 };
 
 /**
- * Alerjen — UYDURMA sayılır, çünkü kaynağı ürünün ADI, tedarikçinin beyanı değil. Yalnız adın kendisi
- * söylüyorsa yazıldı (tahin→susam gibi); "içermez" bilgisi ise hiç yazılmadı: bir alerjenin YOKLUĞU
- * ancak belgeyle beyan edilir.
+ * Alerjen — yalnız ürünün ADI söylüyorsa yazıldı; gerisi BİLEREK boş.
+ *
+ * **Boş bırakmak yayını engellemez** (ölçüldü): ne veritabanı kısıtı `product_publish_requires_all_locales`
+ * ne de `productPublishGaps` alerjene bakıyor; ikisi de ad, açıklama, içindekiler ve saklama arıyor.
+ * Boş listenin tek etkisi `is_incomplete` üretilmiş kolonu, o da operasyon panelindeki "beyan eksik"
+ * rozeti ve süzgeci. Müşteri sayfası da bozulmuyor: içindekiler kartı `ingredients` varsa çiziliyor,
+ * yalnız uyarı rozetleri doğmuyor (`declaration.tsx`).
+ *
+ * Bu yüzden sirkeye ve zeytinyağına uydurma bir alerjen YAZILMADI: yasal beyanda "olmayanı var
+ * göstermek", eksik bırakmakla aynı ağırlıkta değil. Kalan "beyan eksik" listesi zaten işletmecinin
+ * tedarikçi belgesiyle kapatacağı gündemdir.
  */
 export const FICTION_ALLERGENS: Record<string, ProductAllergen[]> = {
   Tahini: ['susam'],
-  'Pestil met Hazinoten Muska': ['sert_kabuklu'],
   Pistache: ['sert_kabuklu'],
-  'LEZZA Manti with Minced Meat (Kiymali)': ['gluten'],
+  'Pestil met Hazinoten Muska': ['sert_kabuklu', 'gluten'],
+  'LEZZA Manti with Minced Meat (Kiymali)': ['gluten', 'yumurta'],
+  'LEZZA Traditional Meet Doner': ['hardal'],
+  'LEZZA Traditional Chicken Doner': ['hardal'],
+};
+
+/** UYDURMA içindekiler. Ölçülmüş listesi olan iki ürün (Kekre, Propolis) burada YOK — katman 1 kazanır. */
+export const FICTION_INGREDIENTS: Record<string, UcDil> = {
+  Druivenmelasse: { tr: 'Üzüm şırası.', fr: 'Moût de raisin.', de: 'Traubenmost.' },
+  Johannesbroodmelasse: { tr: 'Keçiboynuzu özütü, su.', fr: 'Extrait de caroube, eau.', de: 'Johannisbrotextrakt, Wasser.' },
+  Tahini: { tr: 'Kabuğu soyulmuş susam (%100).', fr: 'Sésame décortiqué (100 %).', de: 'Geschälter Sesam (100 %).' },
+  'Meidoorn azijn': { tr: 'Alıç, su, sülfit.', fr: 'Aubépine, eau, sulfites.', de: 'Weißdorn, Wasser, Sulfite.' },
+  'Ananas azijn': { tr: 'Ananas, su, sülfit.', fr: 'Ananas, eau, sulfites.', de: 'Ananas, Wasser, Sulfite.' },
+  'Enginar azijn': { tr: 'Enginar, su, sülfit.', fr: 'Artichaut, eau, sulfites.', de: 'Artischocke, Wasser, Sulfite.' },
+  'Appel azijn': { tr: 'Elma, su, sülfit.', fr: 'Pomme, eau, sulfites.', de: 'Apfel, Wasser, Sulfite.' },
+  'Isgin azijn': { tr: 'Işkın kökü, su, sülfit.', fr: 'Racine de rhubarbe, eau, sulfites.', de: 'Rhabarberwurzel, Wasser, Sulfite.' },
+  'Honing azijn': { tr: 'Bal, su, sülfit.', fr: 'Miel, eau, sulfites.', de: 'Honig, Wasser, Sulfite.' },
+  Granaatappelextraat: { tr: 'Nar suyu konsantresi.', fr: 'Concentré de jus de grenade.', de: 'Granatapfelsaftkonzentrat.' },
+  'Sifamix Kozalak extract': {
+    tr: 'Çam kozalağı özütü, üzüm pekmezi.',
+    fr: 'Extrait de pomme de pin, mélasse de raisin.',
+    de: 'Kiefernzapfenextrakt, Traubenmelasse.',
+  },
+  'Sifamix Johannesbrood extract': { tr: 'Keçiboynuzu özütü, su.', fr: 'Extrait de caroube, eau.', de: 'Johannisbrotextrakt, Wasser.' },
+  'Sifamix Andiz extract': { tr: 'Andız özütü, su.', fr: 'Extrait de genévrier, eau.', de: 'Wacholderextrakt, Wasser.' },
+  'Coconut mix': {
+    tr: 'Hindistan cevizi, kinoa, sandaloz sakızı, biberiye, yeşil çay, chia, su.',
+    fr: 'Noix de coco, quinoa, gomme de sandaraque, romarin, thé vert, chia, eau.',
+    de: 'Kokosnuss, Quinoa, Sandarakharz, Rosmarin, Grüntee, Chia, Wasser.',
+  },
+  Olijfolie: { tr: 'Naturel sızma zeytinyağı (%100).', fr: 'Huile d’olive vierge extra (100 %).', de: 'Natives Olivenöl extra (100 %).' },
+  Pistache: { tr: 'Antep fıstığı (%100).', fr: 'Pistaches (100 %).', de: 'Pistazien (100 %).' },
+  'Bromelain siroop': {
+    tr: 'Ananas suyu konsantresi, bromelain, akasya gamı, su.',
+    fr: 'Concentré de jus d’ananas, broméline, gomme d’acacia, eau.',
+    de: 'Ananassaftkonzentrat, Bromelain, Akaziengummi, Wasser.',
+  },
+  'Form pasta': {
+    tr: 'Bal, keçiboynuzu pekmezi, L-karnitin, yeşil çay özütü.',
+    fr: 'Miel, mélasse de caroube, L-carnitine, extrait de thé vert.',
+    de: 'Honig, Johannisbrotmelasse, L-Carnitin, Grüntee-Extrakt.',
+  },
+  'Dennenappel pasta': {
+    tr: 'Çam kozalağı, çam sakızı, zerdeçal, zencefil, keçiboynuzu tozu, bal.',
+    fr: 'Pomme de pin, résine de pin, curcuma, gingembre, poudre de caroube, miel.',
+    de: 'Kiefernzapfen, Kiefernharz, Kurkuma, Ingwer, Johannisbrotpulver, Honig.',
+  },
+  'Igde cekirdegi pasta': {
+    tr: 'İğde çekirdeği tozu, bal, üzüm pekmezi, kalsiyum, D3 vitamini.',
+    fr: 'Poudre de noyaux d’olivier de Bohême, miel, mélasse de raisin, calcium, vitamine D3.',
+    de: 'Ölweidenkernpulver, Honig, Traubenmelasse, Kalzium, Vitamin D3.',
+  },
+  'Zwarte moerbei extrat': {
+    tr: 'Karadut suyu konsantresi.',
+    fr: 'Concentré de jus de mûre noire.',
+    de: 'Schwarzer Maulbeersaftkonzentrat.',
+  },
+  'Pestil met Hazinoten Muska': {
+    tr: 'Dut pestili (dut, su, buğday nişastası), fındık ezmesi.',
+    fr: 'Pâte de mûre (mûre, eau, amidon de blé), pâte de noisette.',
+    de: 'Maulbeer-Fruchtleder (Maulbeere, Wasser, Weizenstärke), Haselnussmus.',
+  },
+  'Gedroogde aronya': { tr: 'Kurutulmuş aronya, sülfit.', fr: 'Aronia séchée, sulfites.', de: 'Getrocknete Aronia, Sulfite.' },
+  'Gedroogde appel': { tr: 'Kurutulmuş elma, sülfit.', fr: 'Pomme séchée, sulfites.', de: 'Getrockneter Apfel, Sulfite.' },
+  'Gedroogde Kaki cips': { tr: 'Kurutulmuş Trabzon hurması, sülfit.', fr: 'Kaki séché, sulfites.', de: 'Getrocknete Kaki, Sulfite.' },
+  'Gedroogde perzik': { tr: 'Kurutulmuş şeftali, sülfit.', fr: 'Pêche séchée, sulfites.', de: 'Getrockneter Pfirsich, Sulfite.' },
+  'Gedroogde meloen': { tr: 'Kurutulmuş kavun, sülfit.', fr: 'Melon séché, sulfites.', de: 'Getrocknete Melone, Sulfite.' },
+  'LEZZA Traditional Meet Doner': {
+    tr: 'Dana eti, soğan, baharat karışımı (hardal), tuz.',
+    fr: 'Viande de bœuf, oignon, mélange d’épices (moutarde), sel.',
+    de: 'Rindfleisch, Zwiebel, Gewürzmischung (Senf), Salz.',
+  },
+  'LEZZA Traditional Chicken Doner': {
+    tr: 'Tavuk eti, soğan, baharat karışımı (hardal), tuz.',
+    fr: 'Viande de poulet, oignon, mélange d’épices (moutarde), sel.',
+    de: 'Hähnchenfleisch, Zwiebel, Gewürzmischung (Senf), Salz.',
+  },
+  'LEZZA Manti with Minced Meat (Kiymali)': {
+    tr: 'Buğday unu, su, kıyma, soğan, yumurta, tuz.',
+    fr: 'Farine de blé, eau, viande hachée, oignon, œuf, sel.',
+    de: 'Weizenmehl, Wasser, Hackfleisch, Zwiebel, Ei, Salz.',
+  },
+};
+
+/** UYDURMA saklama koşulu. Üreticinin künyesinden ölçülmüş olan yedi ürün burada YOK — katman 1 kazanır. */
+const KURU_SERIN: UcDil = {
+  tr: 'Kuru ve serin yerde, güneş ışığından uzakta saklayınız.',
+  fr: 'À conserver au sec et au frais, à l’abri du soleil.',
+  de: 'Trocken, kühl und vor Sonnenlicht geschützt lagern.',
+};
+const DONMUS: UcDil = {
+  tr: '-18 °C’de saklayınız; çözülmüş ürünü yeniden dondurmayınız.',
+  fr: 'À conserver à -18 °C ; ne pas recongeler après décongélation.',
+  de: 'Bei -18 °C lagern; nach dem Auftauen nicht wieder einfrieren.',
+};
+
+export const FICTION_STORAGE: Record<string, UcDil> = {
+  'Meidoorn azijn': KURU_SERIN,
+  'Ananas azijn': KURU_SERIN,
+  'Enginar azijn': KURU_SERIN,
+  'Appel azijn': KURU_SERIN,
+  'Isgin azijn': KURU_SERIN,
+  'Honing azijn': KURU_SERIN,
+  Granaatappelextraat: KURU_SERIN,
+  'Sifamix Kozalak extract': KURU_SERIN,
+  'Sifamix Johannesbrood extract': KURU_SERIN,
+  'Sifamix Andiz extract': KURU_SERIN,
+  'Coconut mix': KURU_SERIN,
+  Olijfolie: KURU_SERIN,
+  Pistache: KURU_SERIN,
+  'Bromelain siroop': KURU_SERIN,
+  'Igde cekirdegi pasta': KURU_SERIN,
+  'Zwarte moerbei extrat': KURU_SERIN,
+  'Pestil met Hazinoten Muska': KURU_SERIN,
+  'Gedroogde aronya': KURU_SERIN,
+  'Gedroogde appel': KURU_SERIN,
+  'Gedroogde Kaki cips': KURU_SERIN,
+  'Gedroogde perzik': KURU_SERIN,
+  'Gedroogde meloen': KURU_SERIN,
+  'LEZZA Traditional Meet Doner': DONMUS,
+  'LEZZA Traditional Chicken Doner': DONMUS,
+  'LEZZA Manti with Minced Meat (Kiymali)': DONMUS,
+};
+
+/**
+ * UYDURMA satış fiyatı — anahtar TEDARİKÇİDEKİ ad, çünkü fiyat varyanta bağlı ve bir üründe iki
+ * varyant olabiliyor (zeytinyağı 5 l ve 750 ml). Maliyetten türetildi: perakende ≈ ×2,2 (KDV dahil),
+ * toptan ≈ ×1,35 (KDV hariç). Gerçek fiyat politikası işletmecinindir; bu yalnız ekranı doldurur.
+ */
+export const FICTION_PRICES: Record<string, { b2c: number; b2b: number }> = {
+  'Druivenmelasse 650gr': { b2c: 12.1, b2b: 7.45 },
+  'Johannesbroodmelasse 650gr': { b2c: 12.1, b2b: 7.45 },
+  'Tahini 500gr': { b2c: 10.45, b2b: 6.4 },
+  'Meidoorn azijn 500ml': { b2c: 6.6, b2b: 4.05 },
+  'Ananas azijn 500ml': { b2c: 6.6, b2b: 4.05 },
+  'Enginar azijn 500ml': { b2c: 6.6, b2b: 4.05 },
+  'Appel azijn 500ml': { b2c: 6.6, b2b: 4.05 },
+  'Isgin azijn 500ml': { b2c: 6.6, b2b: 4.05 },
+  'Honing azijn 500ml': { b2c: 6.6, b2b: 4.05 },
+  'Granaatappelextraat 250ml': { b2c: 7.6, b2b: 4.65 },
+  'Sifamix Kozalak extract 670gr': { b2c: 9.35, b2b: 5.75 },
+  'Sifamix Johannesbrood extract 700ml': { b2c: 8.25, b2b: 5.05 },
+  'Sifamix Andiz extract 350gr': { b2c: 8.8, b2b: 5.4 },
+  'Coconut mix 250ml': { b2c: 10.9, b2b: 6.7 },
+  'Olijfolie 5lt': { b2c: 65.8, b2b: 40.35 },
+  'Olijfolie 750ml': { b2c: 12.1, b2b: 7.45 },
+  'Pistache 700gr': { b2c: 36.3, b2b: 22.3 },
+  'Bromelain siroop 250ml': { b2c: 17.6, b2b: 10.8 },
+  'Zuhre Ana Kekre 250ml': { b2c: 18.6, b2b: 11.4 },
+  'Propolis pasta 240gr': { b2c: 18.7, b2b: 11.5 },
+  'Form pasta 240gr': { b2c: 17.6, b2b: 10.8 },
+  'Dennenappel pasta 240gr': { b2c: 17.6, b2b: 10.8 },
+  'Igde cekirdegi pasta 240gr': { b2c: 17.6, b2b: 10.8 },
+  'Zwarte moerbei extrat 670gr': { b2c: 15.95, b2b: 9.8 },
+  'Pestil met Hazinoten Muska 300gr': { b2c: 8.7, b2b: 5.35 },
+  'Gedroogde aronya 150gr': { b2c: 8.8, b2b: 5.4 },
+  'Gedroogde appel 180gr': { b2c: 6.05, b2b: 3.7 },
+  'Gedroogde Kaki cips 180gr': { b2c: 4.4, b2b: 2.7 },
+  'Gedroogde perzik': { b2c: 8.8, b2b: 5.4 },
+  'Gedroogde meloen 100gr': { b2c: 4.95, b2b: 3.05 },
 };

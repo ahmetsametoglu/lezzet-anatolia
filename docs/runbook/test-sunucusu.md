@@ -166,8 +166,14 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    - **1 · kesin** — faturadan ve üreticinin künyesinden ölçülmüş olan (ad, ölçü, maliyet, gerçek ürün
      çekimi, içindekiler, saklama, raf ömrü). **Üretim kurulumu budur; bayraksız koşar.**
    - **2 · dayanaklı** — gerçek ürün sayfasına dayanan, resmî belgeye dayanmayan açıklamalar.
-   - **3 · uydurma** — besin tablosu, alerjen ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026).
+   - **3 · uydurma** — kaynağı OLMAYAN her şey: içindekiler, saklama, besin tablosu, alerjen, satış
+     fiyatı ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026). Bu katmanda taslakların beyanı
+     tamamlanır ve ürünler `active` olur, yani katalogda görünürler — arayüzü dolu görmek içindir.
      Yalnız TEST sunucusunda: `pnpm db:seed:real --layers=3`.
 
    Katman 3'ün verisi `seed-real/data.ts` sonunda AYRI durur (`FICTION_NUTRITION`, `FICTION_ALLERGENS`,
-   `TEST_INTAKE`); üretime geçerken o blok bütün hâlinde silinir, kalan dosya zaten katman 1'dir.
+   `FICTION_INGREDIENTS`, `FICTION_STORAGE`, `FICTION_PRICES`, `TEST_INTAKE`); üretime geçerken o blok
+   bütün hâlinde silinir, kalan dosya zaten katman 1'dir.
+
+   **Katman değiştirmek için veritabanı sıfırlanır:** besleme var olan kaydı ADINA bakıp atlar, üstüne
+   yazmaz. Katman 1 ile beslenmiş bir veritabanına `--layers=3` koşmak hiçbir şeyi tamamlamaz.

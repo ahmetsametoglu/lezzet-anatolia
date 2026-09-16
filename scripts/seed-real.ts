@@ -21,7 +21,7 @@ import {
   WarehouseService,
   waitForRest,
 } from '@lezzet/database';
-import { purchaseOrderReferenceNo } from '@lezzet/domain-core';
+import { canPublishProduct, purchaseOrderReferenceNo } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 
 import { brand } from '../packages/brand/src/index';
@@ -29,7 +29,10 @@ import { seedLezzaProducts } from './seed/catalog-lezza';
 import { r2Keys, uploadImageFromPath, uploadImageFromUrl } from './seed/shared';
 import {
   FICTION_ALLERGENS,
+  FICTION_INGREDIENTS,
   FICTION_NUTRITION,
+  FICTION_PRICES,
+  FICTION_STORAGE,
   PURCHASES,
   SETTINGS,
   STORAGE_AREAS,
@@ -267,8 +270,17 @@ async function seedDrafts(db: Db): Promise<void> {
         done(ad);
         continue;
       }
+      // Katman 3 uydurması ÖNCE hesaplanır, katman 1 onu EZER: ölçülmüş beyan uydurmayı her zaman yener.
+      const kurgu = LAYERS >= 3;
+      const name = { tr: ad, ...(draft.nameFr ? { fr: draft.nameFr } : {}), ...(draft.nameDe ? { de: draft.nameDe } : {}) };
+      const description = LAYERS >= 2 ? draft.description : undefined;
+      const ingredients = draft.ingredients ?? (kurgu ? FICTION_INGREDIENTS[draft.name] : undefined);
+      const storageInstructions = draft.storage ?? (kurgu ? FICTION_STORAGE[draft.name] : undefined);
+      // Yayına hazır mı sorusunu MOTOR cevaplar (`canPublishProduct`) — besleme kendi ölçütünü
+      // uydurmaz ve veritabanı kısıtıyla aynı cümleyi kurar; ayrışsalardı insert sessizce patlardı.
+      const yayina = kurgu && canPublishProduct({ name, description, ingredients, storageInstructions });
       plan(
-        `${ad} · ${draft.variants.map((v) => v.label ?? 'boysuz').join(' + ')} · ${purchase.supplier}${draft.image ? ' · kapaklı' : ''}`,
+        `${ad} · ${draft.variants.map((v) => v.label ?? 'boysuz').join(' + ')} · ${purchase.supplier}${draft.image ? ' · kapaklı' : ''}${yayina ? ' · AKTİF' : ''}`,
       );
       if (DRY_RUN) continue;
       // Kapak: tedarikçinin gönderdiği usta ya da markanın mağazasındaki çekim. R2 ayarsızsa null
@@ -281,17 +293,16 @@ async function seedDrafts(db: Db): Promise<void> {
       await products.create({
         // Dil alanı YAZILMAZSA boş kalır: `{fr: ''}` yazmak "alan dolu ama boş" anlamına gelir ve
         // `resolveLocalizedText` onu sessizce Türkçeye düşürür — eksik dil görünmez olurdu.
-        name: { tr: ad, ...(draft.nameFr ? { fr: draft.nameFr } : {}), ...(draft.nameDe ? { de: draft.nameDe } : {}) },
-        status: 'candidate',
-        // Katman 1 — üreticinin künyesinden ölçülmüş beyanlar.
-        ...(draft.ingredients ? { ingredients: draft.ingredients } : {}),
-        ...(draft.storage ? { storageInstructions: draft.storage } : {}),
+        name,
+        status: yayina ? 'active' : 'candidate',
+        // Beyanlar: katman 1 ölçülmüşü, katman 3 uydurmayı verdi — seçim yukarıda yapıldı.
+        ...(description ? { description } : {}),
+        ...(ingredients ? { ingredients } : {}),
+        ...(storageInstructions ? { storageInstructions } : {}),
         ...(draft.shelfLifeDays ? { shelfLifeDays: draft.shelfLifeDays } : {}),
-        // Katman 2 — gerçek ürün sayfasına dayanan açıklama.
-        ...(LAYERS >= 2 && draft.description ? { description: draft.description } : {}),
         // Katman 3 — UYDURMA: kaynağı yok, yalnız test sunucusunun arayüzünü doldurur.
-        ...(LAYERS >= 3 && FICTION_NUTRITION[draft.name] ? { nutrition: FICTION_NUTRITION[draft.name] } : {}),
-        ...(LAYERS >= 3 && FICTION_ALLERGENS[draft.name] ? { allergens: FICTION_ALLERGENS[draft.name] } : {}),
+        ...(kurgu && FICTION_NUTRITION[draft.name] ? { nutrition: FICTION_NUTRITION[draft.name] } : {}),
+        ...(kurgu && FICTION_ALLERGENS[draft.name] ? { allergens: FICTION_ALLERGENS[draft.name] } : {}),
         ...(kapak ?? {}),
         variants: draft.variants.map((v) => ({ label: v.label ? allLocales(v.label) : undefined, netWeightG: v.netWeightG, sku: v.sku })),
       });
@@ -334,15 +345,20 @@ async function seedPurchases(db: Db): Promise<void> {
     const ready = rows.map(({ line, variantId }) => ({ line, variantId: variantId as string }));
 
     for (const { line, variantId } of ready) {
-      if (line.b2c === undefined || line.b2b === undefined) continue;
+      // Faturada satış fiyatı yoksa katman 3'ün uydurmasına düşülür. Katman 1'de o kalem FİYATSIZ
+      // kalır ve katalogda "satışa kapalı" görünür — bilinçli: fiyat işletmecinin kararıdır.
+      const kurguFiyat = LAYERS >= 3 ? FICTION_PRICES[line.nameAtSupplier] : undefined;
+      const b2c = line.b2c ?? kurguFiyat?.b2c;
+      const b2b = line.b2b ?? kurguFiyat?.b2b;
+      if (b2c === undefined || b2b === undefined) continue;
       if ((await prices.listByVariant(variantId)).length > 0) {
         done(`fiyat · ${line.nameAtSupplier}`);
         continue;
       }
-      plan(`fiyat · ${line.nameAtSupplier} · ${line.b2c} € / ${line.b2b} €`);
+      plan(`fiyat · ${line.nameAtSupplier} · ${b2c} € / ${b2b} €${line.b2c === undefined ? ' · uydurma' : ''}`);
       if (DRY_RUN) continue;
-      await prices.setPrice({ variantId, channel: 'b2c', amountCents: toCents(line.b2c) });
-      await prices.setPrice({ variantId, channel: 'b2b', amountCents: toCents(line.b2b) });
+      await prices.setPrice({ variantId, channel: 'b2c', amountCents: toCents(b2c) });
+      await prices.setPrice({ variantId, channel: 'b2b', amountCents: toCents(b2b) });
     }
 
     const mapped = new Set((await mappings.listBySupplier(supplierId)).map((m) => m.variantId));
