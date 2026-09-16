@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
@@ -39,11 +39,16 @@ export function CatalogClient({ t, locale, data, active, placeMode, device, sear
   const [cursor, setCursor] = useState(data.nextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
   const [tailFailed, setTailFailed] = useState(false);
-  useEffect(() => {
+  /* Sunucudan YENİ ilk sayfa geldiğinde kuyruk sayfaları RENDER SIRASINDA atılır, efektte değil: efekt bir
+     render geç koşuyor ve o tek karede eski süzgecin ürünleri yeni listeyle birleşiyordu (React "aynı anahtar"
+     uyarısı; bandın "Gelemeyenleri gizle" anahtarıyla üretildi). */
+  const [shown, setShown] = useState(data);
+  if (shown !== data) {
+    setShown(data);
     setExtraPages([]);
     setCursor(data.nextCursor);
     setTailFailed(false);
-  }, [data.products, data.nextCursor]);
+  }
 
   const products = [...data.products, ...extraPages];
 
