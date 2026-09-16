@@ -1,15 +1,10 @@
 import { getR2Private } from './r2.service';
 
 /**
- * Private kovadan **süreli okuma adresi** — `publicImageUrl`'in ikizi ve zıddı (16.2).
- *
- * Public tarafta adres kalıcıdır ve öyle olmalı (katalog görseli paylaşılır, cache'lenir,
- * Google'a girer). Burada tam tersi istenir: adres kısa ömürlüdür, sunucu onu ancak yetkiyi
- * doğruladıktan sonra üretir ve kopyalanıp bırakılsa bile birkaç dakikada ölür.
- *
- * **Yetki kontrolü BURADA DEĞİL, çağıranda.** Bu işlev "adres üret" der, "kim görebilir" demez —
- * o soruyu talebin sahibini bilen kapı yanıtlar (`lib/ticket/read.ts`). Yetkiyi buraya koymak,
- * her yeni dosya türünde (belge, kanıt) aynı kararı yeniden yazmak olurdu.
+ * Public adres kalıcıdır ve öyle olmalı; burada tam tersi istenir — adres kısa ömürlüdür, kopyalanıp
+ * bırakılsa bile birkaç dakikada ölür. **Yetki kontrolü BURADA DEĞİL, çağıranda:** bu işlev "adres
+ * üret" der, "kim görebilir" demez; yetkiyi buraya koymak her yeni dosya türünde aynı kararı yeniden
+ * yazmak olurdu.
  */
 
 /** Varsayılan ömür: bir ekranı açıp fotoğrafı incelemeye yeter, paylaşılan bir bağlantı olmaya yetmez. */
@@ -38,11 +33,9 @@ export async function privateReadUrls(keys: readonly string[], ttlSeconds = DEFA
 }
 
 /**
- * Tarayıcının dosyayı doğrudan R2'ye göndermesi için süreli yükleme adresi (16.2).
- *
- * Fotoğraf sunucumuza hiç uğramaz — telefonda çekilen 4 MB'lık kare ne action gövde sınırını ne de
- * sunucu belleğini meşgul eder. Çağıran, adresi üretmeden ÖNCE dosya türünü ve boyutunu kendi
- * kurallarıyla süzer: imzalı adres bir izindir, izni verecek olan kapıdır.
+ * Fotoğraf sunucumuza hiç uğramaz: telefonda çekilen 4 MB'lık kare ne action gövde sınırını ne de
+ * sunucu belleğini meşgul eder. Çağıran dosya türünü ve boyutunu adres üretilmeden ÖNCE süzer —
+ * imzalı adres bir izindir, izni verecek olan kapıdır.
  */
 export async function privateUploadUrl(key: string, contentType: string, ttlSeconds?: number): Promise<string | null> {
   const r2 = getR2Private();

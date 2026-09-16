@@ -1,11 +1,7 @@
 /**
- * R2 object key üreticileri — tek noktada path standardı (referans: petitcigogne r2-keys).
- * DB RELATIVE key tutar; prefix (dev/prod) R2 çağrısında eklenir. Artımlı: yeni klasörler
- * (temalar, siparişler, kargo etiketi…) ilgili özellikleriyle eklenir.
- *
- *   catalog/products/{slug}.{ext}      ürün katalog görseli (ürüne bağlı TEK görsel)
- *   catalog/collections/{slug}.{ext}   koleksiyon kapak görseli (paylaşım/OG kartı)
- *   catalog/categories/{slug}.{ext}    kategori görseli (anasayfa kategori şeridi)
+ * Anahtar biçimini bilen TEK yer: biçim ikinci bir yere yazılsaydı, biri değişince öteki sessizce
+ * yanlış anahtar üretir ya da yanlış anahtarı kabul ederdi. DB relative anahtar tutar, prefix R2
+ * çağrısında eklenir.
  */
 const sanitize = (s: string): string =>
   s.replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').toLowerCase();
@@ -18,9 +14,8 @@ const extOf = (filename: string): string => {
 
 export const r2Keys = {
   /**
-   * Ürün katalog görseli — ürüne (slug) bağlı deterministik key; TIMESTAMP YOK. Slug benzersiz
-   * olduğundan çakışma olmaz; görsel değişince aynı obje üzerine yazılır (yetim obje kalmaz) ve
-   * seed idempotent olur. `sourceFilename` yalnız uzantı içindir.
+   * Slug'a bağlı deterministik anahtar, timestamp YOK: görsel değişince aynı objenin üstüne yazılır,
+   * kovada yetim obje birikmez ve seed idempotent olur. `sourceFilename` yalnız uzantı içindir.
    */
   productImage: (slug: string, sourceFilename: string): string =>
     `catalog/products/${sanitize(slug)}.${extOf(sourceFilename)}`,
@@ -42,9 +37,8 @@ export const r2Keys = {
     `catalog/categories/${sanitize(slug)}.${extOf(sourceFilename)}`,
 
   /**
-   * Kategori havuzundaki ek fotoğraf (05.23) — ürün galerisiyle AYNI gerekçe: kategori başına ÇOK
-   * dosya var, dolayısıyla anahtar yalnız slug'dan türeyemez. `photoToken` fotoğrafa özgü tek
-   * kullanımlık bir kimliktir; silinince nesnesi de silinir → yetim obje kalmaz.
+   * Kategori başına ÇOK dosya var, dolayısıyla anahtar yalnız slug'dan türeyemez. `photoToken`
+   * fotoğrafa özgü tek kullanımlık kimliktir; silinince nesnesi de silinir, yetim obje kalmaz.
    */
   categoryGalleryImage: (slug: string, photoToken: string, sourceFilename: string): string =>
     `catalog/categories/${sanitize(slug)}-${sanitize(photoToken)}.${extOf(sourceFilename)}`,
@@ -54,104 +48,66 @@ export const r2Keys = {
     `catalog/bundles/${sanitize(slug)}.${extOf(sourceFilename)}`,
 
   /**
-   * Tarif görseli (05.16 · 09.21) — **16:10 kaynak, min 1600×1000**; aynı deterministik desen.
-   *
-   * Tek kare yeter: web kartı, web detayı ve mobil hero bu kareden türetilir (tasarım kararı,
-   * `Operasyon - Tarifler.dc.html`) — ayrı yükleme yok. Kırpma oranı ekranın işi, anahtar burada.
-   *
-   * Slug'a bağlı ve timestamp'siz olması bir SİLME kararıdır: görsel değişince aynı objenin üstüne
-   * yazılır, yani kovada yetim obje birikmez. Kardeşlerinin hepsi aynı sebeple böyle.
+   * Kaynak **16:10, en az 1600×1000** ve tek kare yeter: web kartı, web detayı ve mobil hero aynı
+   * kareden türer, kırpma oranı ekranın işidir. Slug'a bağlı ve timestamp'siz olması bir silme
+   * kararıdır — görsel değişince aynı objenin üstüne yazılır, kovada yetim obje birikmez.
    */
   recipeImage: (slug: string, sourceFilename: string): string =>
     `catalog/recipes/${sanitize(slug)}.${extOf(sourceFilename)}`,
 
   /**
-   * **Sayfa görseli** (09.16) — ana sayfa kahramanı, boş sepet çizimi… Bir varlığa değil bir SAYFA
-   * YERİNE ait olduğu için `catalog/` altında değil kendi klasöründe.
-   *
-   * Anahtar SLOT'tan türer, kimlikten değil: slot kapalı bir kümedir ve her slot tek görsel taşır
-   * (`site_image_slot_idx`). Yeni yükleme aynı objenin üzerine yazar → kovada yetim obje birikmez;
-   * kardeşlerinin hepsi aynı sebeple deterministik.
+   * Bir varlığa değil bir SAYFA YERİNE ait olduğu için `catalog/` altında değil kendi klasöründe.
+   * Anahtar slottan türer, kimlikten değil: slot kapalı bir kümedir ve her slot tek görsel taşır
+   * (`site_image_slot_idx`), yeni yükleme aynı objenin üstüne yazar.
    */
   siteImage: (slot: string, sourceFilename: string): string => `site/${sanitize(slot)}.${extOf(sourceFilename)}`,
 
   /**
-   * **Şikâyet fotoğrafı** (16.2) — PRIVATE kovaya yazılır (`getR2Private`), public adresi yoktur.
-   *
-   * Katalog anahtarlarının tersine **deterministik DEĞİL**: aynı talebe birden çok fotoğraf
-   * eklenebilir ve hiçbiri diğerinin üzerine yazmamalı — bozuk ürünün ikinci açısı, birincisinin
-   * yerine geçmez. `photoToken` çağıranın ürettiği tek kullanımlık kimliktir.
-   *
-   * Talep kimliğine göre klasörlenir: talep silinirse `support/tickets/{id}/` tek seferde temizlenir.
+   * PRIVATE kova, public adresi YOK; talep kimliğine göre klasörlenir ki talep silinince ekleri tek
+   * seferde temizlensin. Katalogun tersine **deterministik DEĞİL**: bozuk ürünün ikinci açısı
+   * birincisinin üstüne yazmamalı, `photoToken` çağıranın ürettiği tek kullanımlık kimliktir.
    */
   ticketAttachment: (ticketId: string, photoToken: string, sourceFilename: string): string =>
     `support/tickets/${sanitize(ticketId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 
   /**
-   * **Talep AÇILMADAN önce yüklenen fotoğraf** — henüz bir talep kimliği yok.
-   *
-   * Müşteri formu doldururken fotoğrafı seçer; talep ancak "Gönder"de doğar. Bu yüzden taslak
-   * ekler MÜŞTERİ klasörüne yazılır. Yan faydası: müşteri silindiğinde (GDPR) taslak klasörü tek
-   * seferde temizlenir — kimsenin talebine bağlanmamış dosyalar ortada kalmaz.
+   * Talep ancak "Gönder"de doğar, fotoğraf ondan önce seçilir: henüz bir talep kimliği olmadığı için
+   * taslak ekler MÜŞTERİ klasörüne yazılır. Yan faydası, müşteri silindiğinde taslak klasörü de tek
+   * seferde gider — kimsenin talebine bağlanmamış dosya ortada kalmaz.
    */
   ticketDraftAttachment: (customerId: string, photoToken: string, sourceFilename: string): string =>
     `support/tickets/drafts/${sanitize(customerId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 
   /**
-   * **Teslim kanıtı** (11.2) — imza çizimi ya da kapı fotoğrafı. Şikâyet fotoğrafıyla aynı aile:
-   * PRIVATE kova, public adresi YOK.
-   *
-   * Deterministik DEĞİL ve sebebi katalogunkinden farklı: bir teslimatta hem imza hem fotoğraf
-   * olabilir, üstelik ikinci deneme (ilk teslimatta bulunulamadı) da aynı siparişe yazar. Anahtar
-   * yalnız sipariş kimliğinden türeseydi ikincisi **birincisinin üzerine yazardı** — ve üzerine
-   * yazılan şey, "eksik geldi" ihtilafının tek sigortasıdır.
-   *
-   * Sipariş kimliğine göre klasörlenir: sipariş kaydı GDPR ile anonimleştirilirse (0037)
-   * `delivery/proofs/{orderId}/` tek seferde temizlenebilir. Kanıt, siparişin kendisi gibi yasal
-   * saklamaya tabidir — silme kararı buranın değil, saklama süresinin işidir.
-   */
-  /**
-   * KARGO ETİKETİ (07.12) — sağlayıcıdan gelen PDF, **ÖZEL kovada**.
-   *
-   * Etiketin üstünde alıcının adı ve adresi yazıyor: herkese açık bir adreste durursa, kutu
-   * kimliğini bilen biri müşterinin adresini okur. `deliveryProof` ile aynı gerekçe.
-   *
-   * Anahtar KUTUYA çıpalı ve deterministik: bir kutunun bir etiketi vardır ve etiket yeniden
-   * alınırsa (iptal + yeniden duyuru) eskisinin üstüne yazılır — yetim obje kalmaz.
+   * Sağlayıcıdan gelen PDF, ÖZEL kovada: etiketin üstünde alıcının adı ve adresi yazar, public bir
+   * adreste dursaydı kutu kimliğini bilen biri müşterinin adresini okurdu. Kutuya çıpalı ve
+   * deterministik — etiket yeniden alınırsa eskisinin üstüne yazılır, yetim obje kalmaz.
    */
   shippingLabel: (boxId: string): string => `shipping-labels/${sanitize(boxId)}.pdf`,
 
   /**
-   * **Sohbetten gelen medya** (15.x) — müşterinin WhatsApp/Messenger/IG'den gönderdiği fotoğraf,
-   * ses ya da belge. `ticketAttachment` ile aynı aile: PRIVATE kova, public adresi YOK. İçeriği
-   * müşterinin kendi mesajıdır; herkese açık bir adreste durursa anahtarı bilen okur.
-   *
-   * **Neden İNDİRİYORUZ, adresi saklamıyoruz:** Meta'nın verdiği medya adresi dakikalar içinde
-   * ölüyor ve medyanın kendisi de ~30 gün sonra siliniyor. Adres saklansaydı ekran ertesi gün boş
-   * açılırdı; hiç saklanmasaydı ezik ürün fotoğrafı — yani şikâyetin tek kanıtı — talep
-   * sonuçlanmadan yok olurdu.
-   *
-   * Deterministik DEĞİL, `ticketAttachment` ile aynı gerekçe: bir sohbete sınırsız medya düşer ve
-   * hiçbiri ötekinin üstüne yazmamalı. `mediaToken` çağıranın ürettiği tek kullanımlık kimliktir
-   * (sağlayıcının medya kimliği KULLANILMAZ: kanal değiştiğinde biçimi değişir ve anahtar
-   * sağlayıcının adlandırmasına bağlanırdı).
-   *
-   * Konuşma kimliğine göre klasörlenir: müşteri GDPR ile anonimleştirildiğinde konuşma ve mesajlar
-   * zaten siliniyor (0037) — `messaging/conversations/{id}/` tek seferde onlarla gider.
+   * **Adresi değil medyanın KENDİSİNİ saklıyoruz:** sağlayıcının verdiği adres dakikalar içinde,
+   * medyanın kendisi de yaklaşık bir ay sonra ölüyor; adres saklansaydı şikâyetin tek kanıtı talep
+   * sonuçlanmadan kaybolurdu. Deterministik DEĞİL — bir sohbete sınırsız medya düşer ve `mediaToken`
+   * çağıranın ürettiği tek kullanımlık kimliktir (sağlayıcının kimliği kanal değişince biçim
+   * değiştirir, anahtar ona bağlanamaz).
    */
   conversationMedia: (conversationId: string, mediaToken: string, sourceFilename: string): string =>
     `messaging/conversations/${sanitize(conversationId)}/${sanitize(mediaToken)}.${extOf(sourceFilename)}`,
 
+  /**
+   * İmza çizimi ya da kapı fotoğrafı; PRIVATE kova, public adresi YOK. Deterministik DEĞİL: bir
+   * teslimatta hem imza hem fotoğraf olabilir ve ikinci deneme de aynı siparişe yazar — anahtar
+   * yalnız sipariş kimliğinden türeseydi ikincisi, "eksik geldi" ihtilafının tek sigortasının
+   * üstüne yazardı.
+   */
   deliveryProof: (orderId: string, photoToken: string, sourceFilename: string): string =>
     `delivery/proofs/${sanitize(orderId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 
   /**
-   * **Muhasebe belgesi** (12.12 · 13.09) — fatura, fiş, bordro PDF'i ya da fotoğrafı. Şikâyet
-   * fotoğrafıyla aynı aile: PRIVATE kova, public adresi YOK — belgede karşı tarafın adı, tutar ve
-   * çoğu zaman banka bilgisi yazar.
-   *
-   * Belge kimliğine göre klasörlenir ve deterministik: bir belgenin bir dosyası vardır, yeniden
-   * yüklenirse eskisinin üstüne yazılır (yetim obje kalmaz). Dosya adı uzantı dışında kullanılmaz.
+   * PRIVATE kova, public adresi YOK: belgede karşı tarafın adı, tutarı ve çoğu zaman banka bilgisi
+   * yazar. Belge kimliğine göre klasörlenir ve deterministik — yeniden yüklenirse eskisinin üstüne
+   * yazılır, yetim obje kalmaz; dosya adı uzantı dışında kullanılmaz.
    */
   financeDocument: (documentId: string, sourceFilename: string): string =>
     `finance/documents/${sanitize(documentId)}/belge.${extOf(sourceFilename)}`,
@@ -168,13 +124,9 @@ export function financeDocumentScope(key: string): string | null {
 }
 
 /**
- * Bir ek anahtarının **kime ait olduğu** — yetki kapısının sorduğu tek soru.
- *
- * Neden gerekli: imzalı okuma adresi, sahipliği doğrulanmış bir TALEP üzerinden üretiliyordu; ama
- * anahtarın o talebe ait olduğu hiç kontrol edilmiyordu. Müşteri kendi talebine private kovadaki
- * başka bir anahtarı ek diye yazıp okutabilirdi — yetki doğrulanıyor ama YANLIŞ nesnenin.
- *
- * Anahtar biçimini bilen tek yer burasıdır; kapı biçimi yeniden ayrıştırmaz.
+ * Bir ek anahtarının **kime ait olduğu** — yetki kapısının sorduğu tek soru. Sahiplik yalnız TALEP
+ * üzerinde doğrulanıp ANAHTAR üzerinde doğrulanmasaydı, müşteri private kovadaki herhangi bir dosyayı
+ * kendi talebine iliştirip okutabilirdi: yetki doğrulanmış olurdu ama yanlış nesnenin.
  */
 export type TicketAttachmentScope = { kind: 'ticket'; ticketId: string } | { kind: 'draft'; customerId: string } | null;
 

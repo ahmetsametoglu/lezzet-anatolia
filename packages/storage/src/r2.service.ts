@@ -12,26 +12,12 @@ interface R2Config {
 }
 
 /**
- * Cloudflare R2 (S3-uyumlu) dosya deposu — referans proje (petitcigogne) R2Service deseni. Supabase
- * Storage YERİNE R2 kullanılır. DB her yerde RELATIVE key tutar; prefix (dev/prod izolasyonu) yalnız
- * R2 çağrısında uygulanır.
- *
- * ── İKİ KOVA, İKİ OKUMA YOLU ────────────────────────────────────────────────
- *
- * **Public kova** (`getR2()`): katalog, koleksiyon, paket görselleri. Okuma imzasızdır — saf string
- * birleştirmeyle (`publicImageUrl`, 05.11). İmza katalogda ZARARLIDIR: her render'da değişen adres
- * tarayıcı/CDN cache'ini öldürür, paylaşım (OG) kartı süre dolunca görselsiz kalır, Google Görseller
- * devreye giremez. O görsel zaten birazdan anonim ziyaretçiye gösterilecek şeydir.
- *
- * **Private kova** (`getR2Private()`): müşterinin YÜKLEDİĞİ dosyalar — şikâyet fotoğrafı (16.2),
- * ileride teslim onayı ve B2B belgesi. Bunların public adresi YOKTUR; okuma süreli imzalı adresle
- * yapılır (`getSignedReadUrl`) ve adresi sunucu ancak yetkiyi doğruladıktan sonra üretir.
- * SEO gerekçesi burada tersine döner: bu dosyaların aranabilir olması istenmez.
- *
- * R2'de "herkese açık" ayarı **kova düzeyindedir** — aynı kovanın içinde "şu klasör gizli"
- * denemez. İki kova bu yüzden zorunlu, tercih değil.
+ * **İKİ KOVA ZORUNLU, tercih değil:** R2'de "herkese açık" ayarı kova düzeyindedir, aynı kovanın
+ * içinde "şu klasör gizli" denemez — public kova (`getR2`) katalogundur ve imzasız okunur, private
+ * kova (`getR2Private`) müşterinin yüklediği dosyalarındır ve yalnız yetki doğrulandıktan sonra
+ * üretilen süreli imzalı adresle okunur.
  */
-// Dışa yalnız getR2() verilir; R2Service tipi ihtiyaç doğunca export edilir (artımlı).
+// Sınıf dışa açılmaz; tipe ihtiyaç doğduğunda export edilir (artımlı).
 class R2Service {
   private readonly client: S3Client;
   private readonly bucket: string;
@@ -55,9 +41,9 @@ class R2Service {
   }
 
   /**
-   * Nesneyi yükler. Anahtar deterministik (slug'a bağlı) → aynı görsel yenilenince ÜZERİNE yazılır,
-   * yetim obje kalmaz. `immutable` uzun cache buna rağmen güvenlidir: okuma URL'i `?v=<damga>` ile
-   * sürümlenir (`publicImageUrl`), dosya değişince adres değişir.
+   * Anahtar deterministik olduğu için aynı görsel yenilenince ÜZERİNE yazılır, yetim obje kalmaz.
+   * `immutable` uzun önbellek buna rağmen güvenli: okuma adresi `?v=<damga>` ile sürümlenir, dosya
+   * değişince adres de değişir.
    */
   async uploadFile(key: string, body: Buffer | Uint8Array, contentType: string): Promise<void> {
     await this.client.send(
@@ -77,11 +63,8 @@ class R2Service {
   }
 
   /**
-   * Nesnenin ETag'i — HEAD isteği, gövde inmez; nesne yoksa `null`.
-   *
-   * Tek parça yüklemede (`uploadFile`) ETag içeriğin MD5'idir: dosyanın özetini elinde tutan çağıran
-   * "aynısı zaten depoda mı" sorusunu dosyayı indirmeden cevaplar. İlk tüketen seed (14.09): her
-   * `db:refresh` bütün görselleri yeniden yükleyip sürüm damgasını yeniliyordu (`scripts/seed/image-manifest.ts`).
+   * HEAD isteği, gövde inmez; nesne yoksa `null`. Tek parça yüklemede ETag içeriğin MD5'idir, yani
+   * dosyanın özetini elinde tutan çağıran "aynısı zaten depoda mı" sorusunu indirmeden cevaplar.
    */
   async fileEtag(key: string): Promise<string | null> {
     try {
@@ -95,11 +78,8 @@ class R2Service {
   }
 
   /**
-   * Süreli okuma adresi — **private kovanın tek okuma yolu** (referans proje `getSignedReadUrl`).
-   *
-   * Varsayılan 15 dakika: dosya bir ekranda açılıp okunacak kadar uzun, kopyalanıp paylaşılan bir
-   * adres olarak yaşayacak kadar kısa. Bu, public kovanın `?v=` sürümlü kalıcı adresinin tam
-   * tersidir — ve öyle olmalı: biri gösterilmek için vardır, öbürü gösterilmemek için.
+   * Private kovanın **tek okuma yolu**. Varsayılan 15 dakika: dosya bir ekranda açılıp okunacak
+   * kadar uzun, kopyalanıp paylaşılan bir adres olarak yaşayacak kadar kısa.
    */
   async getSignedReadUrl(key: string, expiresInSeconds = 900): Promise<string> {
     return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: this.resolveKey(key) }), {
@@ -108,14 +88,9 @@ class R2Service {
   }
 
   /**
-   * Tarayıcının dosyayı DOĞRUDAN R2'ye göndermesi için süreli yükleme adresi.
-   *
-   * Fotoğraf sunucumuza hiç uğramaz: telefonda çekilen 4 MB'lık kare, Next.js action gövde
-   * sınırını da sunucu belleğini de meşgul etmez. Varsayılan 10 dakika — formu doldurup göndermeye
-   * fazlasıyla yeter, çalınan bir adresin ömrü olamayacak kadar kısadır.
-   *
-   * `contentType` imzaya DAHİLDİR: adres bir kez üretildikten sonra başka türde bir dosya
-   * yüklenemez (imzalı "jpeg" adresine script gönderilemez).
+   * Dosya sunucumuza hiç uğramaz; varsayılan 10 dakika, formu doldurup göndermeye yeter ve çalınan
+   * bir adresin yaşayamayacağı kadar kısadır. `contentType` imzaya DAHİLDİR: imzalı bir "jpeg"
+   * adresine başka türde dosya yüklenemez.
    */
   async getSignedUploadUrl(key: string, contentType: string, expiresInSeconds = 600): Promise<string> {
     return getSignedUrl(
@@ -157,12 +132,9 @@ export function getR2(): R2Service | null {
 }
 
 /**
- * **Private kova** — müşterinin yüklediği dosyalar (şikâyet fotoğrafı, ileride belge/kanıt).
- * Ayarsızsa `null`: yerelde ek olmadan da çalışılır, ekran fotoğrafsız çizer, çökmez.
- *
- * Kimlik bilgisi public kovayla AYNIDIR (aynı R2 hesabı); ayrışan tek şey kova adıdır
- * (`R2_PRIVATE_BUCKET_NAME`). İkinci bir API token'ı gerekmez — ama istenirse ayrı token da
- * kullanılabilir, o zaman yalnız env değişir.
+ * Ayarsızsa `null`: yerelde ek olmadan da çalışılır, ekran fotoğrafsız çizer, çökmez. Kimlik bilgisi
+ * public kovayla AYNIDIR, ayrışan tek şey kova adıdır (`R2_PRIVATE_BUCKET_NAME`) — ikinci bir API
+ * jetonu gerekmez, istenirse yalnız env değişir.
  */
 export function getR2Private(): R2Service | null {
   if (cachedPrivate !== undefined) return cachedPrivate;

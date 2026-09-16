@@ -1,9 +1,7 @@
 /**
- * Prefix çözümü — DB her yerde RELATIVE anahtar tutar (`catalog/products/x.jpeg`), dev/prod
- * izolasyonu için gerçek bucket anahtarına `R2_PATH_PREFIX` eklenir.
- *
- * Kural TEK YERDE: yazma yolu (`R2Service`) ve okuma yolu (`publicImageUrl`) aynı çözümü kullanır.
- * İkisi ayrı yazılsaydı biri prefix'i atlar, yazılan ile okunan anahtar sessizce ayrışırdı.
+ * DB relative anahtar tutar; dev/prod izolasyonu için `R2_PATH_PREFIX` yalnız R2 çağrısında eklenir.
+ * Yazma (`R2Service`) ve okuma (`publicImageUrl`) aynı çözümü çağırır: ayrı yazılsalardı biri
+ * prefix'i atlar, yazılan ile okunan anahtar sessizce ayrışırdı.
  */
 
 /** Env varsayılanı — R2 kurulumu 'dev' prefix'iyle gelir (kök `.env.example`). */

@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cdnImageUrl, publicImageUrl } from './r2-public';
 
 /**
- * Public okuma URL'i saf mantıktır (ağ yok) → birim test. Önemi: bu birleştirme yanlışsa hata
- * SESSİZDİR — tip denetimi geçer, ekran patlamaz, yalnız bütün görseller 404 olur. Sürüm damgası da
- * aynı şekilde sessiz: eksikse operatör görseli değiştirdiğinde CDN bir yıl eskiyi servis eder.
+ * Bu birleştirme yanlışsa hata SESSİZDİR: tip denetimi geçer, ekran patlamaz, yalnız bütün görseller
+ * 404 olur. Sürüm damgası da aynı şekilde sessiz — eksikse operatör görseli değiştirdiğinde CDN bir
+ * yıl eskiyi servis eder.
  */
 const ENV_KEYS = ['R2_PUBLIC_BASE_URL', 'R2_PATH_PREFIX'] as const;
 const saved: Record<string, string | undefined> = {};
