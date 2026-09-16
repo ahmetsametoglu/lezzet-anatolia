@@ -75,20 +75,19 @@ export function ProductPhotoCard({
 
       {/* İki satır kırpması kare kartta zorunlu: ad fotoğrafın üstünde yukarı büyür. */}
       <span className="absolute inset-x-3 bottom-2.5 flex flex-col gap-0.5">
+        {/* Şerit KÜNYENİN ÜSTÜNDE (kullanıcı kararı): kartın tepesinde dururken fiyat çipiyle çakışıyordu —
+            çip kartın sağ üst köşesinden dışarı taşar ve şeridin sağ ucuna biner. */}
+        {note !== undefined && (
+          <span className="mb-1 flex items-center gap-1.5 rounded-badge bg-sand-50/94 px-2 py-1">
+            <MobileIcon name="delivery-off" size={11} className="flex-none text-terracotta" />
+            <span className="truncate font-sans text-badge-sm font-bold tracking-(--text-badge--letter-spacing) text-terracotta uppercase">
+              {note}
+            </span>
+          </span>
+        )}
         <span className="line-clamp-2 font-serif text-body leading-[1.15] font-semibold text-on-image">{name}</span>
         {optionsLabel !== undefined && <span className="truncate font-sans text-micro font-semibold text-on-image-soft">{optionsLabel}</span>}
       </span>
-
-      {/* Şerit fotoğrafın ÜSTÜNDE ince bir satır (tasarım): kartın tamamını örten filigran, adı ve fiyatı — yani
-          kartın kimliğini — okunmaz kılıyordu. */}
-      {note !== undefined && (
-        <span className="absolute inset-x-2.5 top-2.5 flex items-center gap-1.5 rounded-badge bg-sand-50/94 px-2 py-1">
-          <MobileIcon name="delivery-off" size={11} className="flex-none text-terracotta" />
-          <span className="truncate font-sans text-badge-sm font-bold tracking-(--text-badge--letter-spacing) text-terracotta uppercase">
-            {note}
-          </span>
-        </span>
-      )}
 
       {priceLabel !== undefined && (
         <span className="absolute -top-2 -right-1.5">

@@ -176,6 +176,16 @@ export function ProductPhotoCard({
         </View>
       )}
       <View style={styles.caption}>
+        {/* YER ŞERİDİ künyenin ÜSTÜNDE (kullanıcı kararı): kartın tepesinde dururken fiyat çipiyle çakışıyordu —
+            çip kartın sağ üst köşesinden dışarı taşar ve şeridin sağ ucuna biner. */}
+        {note === undefined ? null : (
+          <View style={styles.noteBand}>
+            <Icon name="delivery-off" size={theme.size.badgeIcon} color={theme.colors.terracotta} />
+            <Text style={styles.noteLabel} numberOfLines={1} testID={testID === undefined ? undefined : `${testID}-place-note`}>
+              {upperIn(note, locale)}
+            </Text>
+          </View>
+        )}
         {/* İki satır kırpması şablonda yok ama kare kartta ZORUNLU: ad fotoğrafın üstünde
             yukarı doğru büyüyor, kırpılmazsa uzun bir ad kartın fotoğrafını yutar. */}
         <Text style={styles.name} numberOfLines={2}>
@@ -187,16 +197,6 @@ export function ProductPhotoCard({
           </Text>
         )}
       </View>
-      {/* YER ŞERİDİ fotoğrafın ÜSTÜNDE ince bir satır (tasarım): kartın tamamını örten filigran, kartın kimliğini
-          (ad + fiyat) okunmaz kılıyordu. `pointerEvents="none"`: şerit dokunuşu yutmaz, kart yine detaya açılır. */}
-      {note === undefined ? null : (
-        <View style={styles.noteBand} pointerEvents="none">
-          <Icon name="delivery-off" size={theme.size.badgeIcon} color={theme.colors.terracotta} />
-          <Text style={styles.noteLabel} numberOfLines={1} testID={testID === undefined ? undefined : `${testID}-place-note`}>
-            {upperIn(note, locale)}
-          </Text>
-        </View>
-      )}
       {/* Fiyat çipi `Tag` ile BİREBİR örtüşür: terracotta zemin · beyaz metin · rozet kademesi
           (12,5/700 · .06em) · yarıçap `badge` · gölge `shadow.badge` · +4°. Token Kararlari #16
           ile gölge farkı da kapandı — kitte artık şablonun kendi değeri (`0 3px 8px …/.22`) var.
@@ -298,10 +298,8 @@ const styles = StyleSheet.create((theme) => ({
    * aynı duraklarda, ikisi kartın aynı rozet ailesinden.
    */
   noteBand: {
-    position: 'absolute',
-    top: theme.space.lg,
-    left: theme.space.lg,
-    right: theme.space.lg,
+    alignSelf: 'flex-start',
+    marginBottom: theme.space['2xs'],
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.xs,
