@@ -36,7 +36,7 @@ describe('PlaceNoticeBand · süzgeç yuvası', () => {
     );
 
     expect(view.queryByTestId('pkg-shippable-toggle')).toBeNull();
-    expect(view.queryByText(messages.tr.onlyShippable)).toBeNull();
+    expect(view.queryByText(messages.tr.placeNotice.hideUndeliverable)).toBeNull();
   });
 
   it('süzgeç prop VERİLİRSE anahtar bandın içinde çizilir ve dokunuş çağırana gider', async () => {
@@ -51,8 +51,8 @@ describe('PlaceNoticeBand · süzgeç yuvası', () => {
       />,
     );
 
-    // Etiket YER AİLESİNİN sözlüğünden gelir (`shippableChipLabel`), banda ikinci nüsha yazılmadı.
-    expect(view.getByText(messages.tr.onlyShippable)).toBeOnTheScreen();
+    // Etiket bandın kendi sözlüğünden gelir (`placeNotice.hideUndeliverable`), banda ikinci nüsha yazılmadı.
+    expect(view.getByText(messages.tr.placeNotice.hideUndeliverable)).toBeOnTheScreen();
 
     await fireEvent.press(view.getByTestId('cat-shippable-toggle'));
     // Değer BANTTA tutulmuyor: kaynağı katalog kancası (`onlyShippable`) — bant çizer ve iletir.

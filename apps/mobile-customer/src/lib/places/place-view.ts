@@ -62,12 +62,6 @@ export function shippableChipVisible(mode: PlaceMode): boolean {
   return mode === 'shipping';
 }
 
-/** Çip metni — web'inkiyle AYNI cümle, üç dilde (`catalog/messages.json` → `onlyShippable`). */
-export function shippableChipLabel(locale: Locale): string {
-  const t: Messages = messages[locale];
-  return t.onlyShippable;
-}
-
 /**
  * Kartın YER işareti — dört stok hâlinin üçünde cümle, birinde sessizlik.
  *

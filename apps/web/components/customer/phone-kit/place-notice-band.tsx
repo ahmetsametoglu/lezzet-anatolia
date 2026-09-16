@@ -37,7 +37,7 @@ interface PlaceNoticeBandProps {
 
 export function PlaceNoticeBand({ locale, postalCode, placeName, shippableFilter }: PlaceNoticeBandProps) {
   const t = placeMessages[locale].placeNotice;
-  const shippableLabel = placeMessages[locale].onlyShippable;
+  const shippableLabel = t.hideUndeliverable;
   const restriction = restrictionMessages[locale];
   const { setPanelOpen } = useDeliveryPlace();
   const account = useAccount();
@@ -93,7 +93,8 @@ export function PlaceNoticeBand({ locale, postalCode, placeName, shippableFilter
 
   const filterRow =
     shippableFilter === undefined ? null : (
-      <div className="flex items-center justify-between gap-2.5">
+      // Anahtar satırı kesik çizgiyle ayrılır (tasarım): üstü bilgi, bu satır denetim.
+      <div className="flex items-center justify-between gap-2.5 border-t-[1.5px] border-dashed border-terracotta-line pt-2">
         <span className="font-sans text-body-sm leading-[1.6] font-semibold text-ink">{shippableLabel}</span>
         <ToggleSwitch checked={shippableFilter.value} onChange={shippableFilter.onChange} label={shippableLabel} />
       </div>
@@ -102,6 +103,7 @@ export function PlaceNoticeBand({ locale, postalCode, placeName, shippableFilter
   return (
     <>
       <Note
+        tone="warm-accent"
         header={codeChip}
         title={t.title}
         description={t.body}

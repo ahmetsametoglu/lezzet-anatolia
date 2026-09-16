@@ -11,6 +11,9 @@ import { StyleSheet } from 'react-native-unistyles';
                    katılmadı çünkü terracotta "fırsat" demek ve aynı ailede iki zıt anlam
                    rozetin bilgi değerini sıfırlar (customer-app.ts kararı)
   · `warm`       — nötr sıcak panel (`sand-150`), çerçevesiz
+  · `warm-accent`— vurgulu zemin (`terracotta-bg`) ama NÖTR yazı: bölge dışı bandının kutusu.
+                   Zemin dikkat çeker, cümle bir uyarı değil adresin gerçeğidir — yazıyı da
+                   terracottaya boyamak kutuyu fırsat rozetiyle aynı sesle konuşturuyordu.
 
   HATA tonu ekran okuyucuya `alert` rolüyle gider: hata görsel bir renk değil, duyurulması
   gereken bir olaydır.
@@ -29,7 +32,7 @@ import { StyleSheet } from 'react-native-unistyles';
   kendi başına odaklanabilmeli — sarmalayıcı onu yutarsa ekran okuyucu eylemi hiç göremez.
 */
 
-type NoteTone = 'olive' | 'terracotta' | 'error' | 'warm';
+type NoteTone = 'olive' | 'terracotta' | 'error' | 'warm' | 'warm-accent';
 
 interface NoteProps {
   /** Kutu metni — i18n üstte çözülür. */
@@ -109,6 +112,11 @@ const styles = StyleSheet.create((theme) => ({
     borderColor: 'transparent',
   },
   warmText: { color: theme.colors.ink },
+  'warm-accent': {
+    backgroundColor: theme.colors['terracotta-bg'],
+    borderColor: theme.colors['terracotta-line'],
+  },
+  'warm-accentText': { color: theme.colors.ink },
   title: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.note,

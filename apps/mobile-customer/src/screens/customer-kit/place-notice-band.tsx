@@ -17,7 +17,6 @@ import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast
 // telefon görünümü de aynısını — cümle tek nüsha durmalı.
 import messages from '@lezzet/i18n/customer/place';
 import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-notice-store';
-import { shippableChipLabel } from '@/lib/places/place-view';
 import { PlaceNoticeSheet } from './place-notice-sheet';
 import { ToggleSwitch } from './toggle-switch';
 import { PostalCodeSheet } from './postal-code-sheet';
@@ -177,11 +176,11 @@ export function PlaceNoticeBand({
   const filterRow =
     shippableFilter === undefined ? null : (
       <View style={styles.switchRow}>
-        <Text style={styles.switchLabel}>{shippableChipLabel(locale)}</Text>
+        <Text style={styles.switchLabel}>{t.placeNotice.hideUndeliverable}</Text>
         <ToggleSwitch
           value={shippableFilter.value}
           onToggle={() => shippableFilter.onChange(!shippableFilter.value)}
-          accessibilityLabel={shippableChipLabel(locale)}
+          accessibilityLabel={t.placeNotice.hideUndeliverable}
           testID={idOf('shippable-toggle')}
         />
       </View>
@@ -228,7 +227,7 @@ export function PlaceNoticeBand({
   return (
     <View style={styles.band} testID={testID}>
       <Note
-        tone="warm"
+        tone="warm-accent"
         header={codeChip}
         title={t.placeNotice.title}
         description={t.placeNotice.body}
@@ -276,11 +275,17 @@ const styles = StyleSheet.create((theme) => ({
   },
   /** Süzgeç satırı: etiket solda, anahtar sağda — süzgeç sayfasındaki satırın ta kendisi, oradan
       taşındı (ikinci bir yerleşim uydurulmadı). */
+  /* Anahtar satırı kutunun içinde KESİK bir çizgiyle ayrılır (tasarım): üstündeki iki satır bilgidir, bu satır
+     denetim — ayraç olmadan ikisi tek blok gibi okunuyordu. */
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     columnGap: theme.space.lg,
+    borderTopWidth: theme.border.base,
+    borderTopColor: theme.colors['terracotta-line'],
+    borderStyle: 'dashed',
+    paddingTop: theme.space.md,
   },
   switchLabel: {
     // Kutunun kendi açıklama kademesiyle aynı aile: satır bir başlık değil, cümlenin devamı.

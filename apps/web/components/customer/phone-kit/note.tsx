@@ -3,9 +3,10 @@ import type { ReactNode } from 'react';
 /*
   BİLGİ KUTUSU — native `Note`un (`apps/mobile/src/components/ui/note.tsx`) web telefon ikizi (14.09).
 
-  Dört ton native'in dördü: `olive` olumlu / yolunda (zeytin bant) · `terracotta` fırsat ve uyarı (asgari tutar) ·
+  Beş ton native'in beşi: `olive` olumlu / yolunda (zeytin bant) · `terracotta` fırsat ve uyarı (asgari tutar) ·
   `error` hata — native'in kendi ailesi (`error` + `error-bg`, çerçeve terracotta çizgisiyle) ve ekran okuyucuya
-  duyurulur (`role="alert"`) · `warm` nötr sıcak panel (`sand-150`, saydam çerçeve). Çerçeve her tonda ince (native
+  duyurulur (`role="alert"`) · `warm` nötr sıcak panel (`sand-150`, saydam çerçeve) · `warm-accent` vurgulu zemin
+  ama nötr yazı (bölge dışı bandı). Çerçeve her tonda ince (native
   `hairline`). Varsayılan `warm`: telefonun ilk çağıranları (bölge dışı bandı) nötr paneldi; native'in varsayılanı
   zeytindir — ton her çağrıda açıkça yazılırsa fark kalmaz. Başlık `note` (13/700), açıklama `body-sm` (14, satır
   1,6) — MB-46: müşterinin karar için okuduğu metin 14'ün altına inmez.
@@ -15,13 +16,15 @@ import type { ReactNode } from 'react';
   web'e özgü: başlıkla açıklama arasına giren liste (sepetin yer değişimi kalemleri — native'de o kutu yok).
 */
 
-type NoteTone = 'olive' | 'terracotta' | 'error' | 'warm';
+type NoteTone = 'olive' | 'terracotta' | 'error' | 'warm' | 'warm-accent';
 
 const TONE: Record<NoteTone, string> = {
   olive: 'border-olive-line bg-olive-bg text-olive-dark',
   terracotta: 'border-terracotta-line bg-terracotta-bg text-terracotta',
   error: 'border-terracotta-line bg-error-bg text-error',
   warm: 'border-transparent bg-sand-150 text-ink',
+  // Vurgulu zemin, nötr yazı — bölge dışı bandı: zemin dikkat çeker ama cümle uyarı değil, adresin gerçeği.
+  'warm-accent': 'border-terracotta-line bg-terracotta-bg text-ink',
 };
 
 interface NoteProps {
