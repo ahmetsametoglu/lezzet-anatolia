@@ -1,14 +1,12 @@
 import { Skeleton, SkeletonRegion } from '@/components/customer/ui/skeleton';
 
 /*
-  ÖDEME SEÇENEKLERİNİN İSKELETİ — TELEFON: native `CheckoutSkeleton`ın (`apps/mobile/src/screens/checkout/checkout-skeleton.tsx`)
-  web ikizi. Seçenekler sunucudan gelirken ÜÇ bölümün yerini tutar — teslimat adresi · teslimat yolu · ödeme yolu; her
-  bölüm üstbaşlık + iki seçenek satırı ("en az makul": teslimatta iki yol, ödemede en az iki yöntem — fazlasını çizmek
-  cevap gelince satır kaybettirirdi). Satırın KABUĞU gerçek (`OptionRow`un dolgusu, köşesi, boştaki çerçevesi); çubuklar
-  gerçek satır kutuları (başlık `control`, alt satır `body-sm`). Tutar özeti burada DEĞİL: ekran onu beklerken de çiziyor.
+  ÖDEME SEÇENEKLERİNİN İSKELETİ — TELEFON: seçenekler sunucudan gelirken üç bölümün yerini tutar (teslimat adresi ·
+  teslimat yolu · ödeme yolu), her biri üstbaşlık + iki satır. "En az makul" sayı çiziliyor çünkü fazlasını çizmek
+  cevap gelince satır kaybettirir; tutar özeti burada yok, ekran onu beklerken de çiziyor.
 
-  Rota iskeleti (`loading.tsx`) ile ekranın kendi bekleme karesi AYNI parçayı çizer — sepetin iskeletiyle aynı karar:
-  sunucudan istemciye, istemciden içeriğe geçişte bölümler kaymaz.
+  Kabuk `PhoneOptionRow`un gerçek ölçüleri (dolgu, köşe, boştaki çerçeve) — rota iskeleti (`loading.tsx`) ile ekranın
+  kendi bekleme karesi aynı parçayı çizsin ki geçişte bölümler kaymasın.
 */
 export function PhoneCheckoutSkeleton({ label }: { label?: string }) {
   return (

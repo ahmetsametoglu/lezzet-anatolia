@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
   `aria-pressed` ile gider; renk ve çerçeve farkı ulaşmaz.
 */
 
-interface OptionRowProps {
+interface PhoneOptionRowProps {
   label: string;
   /** Alt satır — açıklama, ücret notu ya da kapalı yolun sebebi. */
   description?: string;
@@ -26,7 +26,7 @@ interface OptionRowProps {
   trailing?: ReactNode;
 }
 
-export function OptionRow({ label, description, selected, onClick, disabled = false, descriptionTone = 'muted', trailing }: OptionRowProps) {
+export function PhoneOptionRow({ label, description, selected, onClick, disabled = false, descriptionTone = 'muted', trailing }: PhoneOptionRowProps) {
   const className = [
     'flex w-full flex-col gap-0.5 rounded-control border-[1.5px] px-4 py-3 text-left',
     selected ? 'border-ink bg-sand-150' : 'border-sand-400 bg-sand-250',

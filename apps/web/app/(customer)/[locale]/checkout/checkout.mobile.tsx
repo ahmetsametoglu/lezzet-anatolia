@@ -5,7 +5,7 @@ import checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { Chip } from '@/components/customer/phone-kit/chip';
 import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
 import { Note } from '@/components/customer/phone-kit/note';
-import { OptionRow } from '@/components/customer/phone-kit/option-row';
+import { PhoneOptionRow } from './components/phone-option-row';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SummaryPanel, type SummaryRow } from '@/components/customer/phone-kit/summary-panel';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
@@ -176,7 +176,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
             <section className="flex flex-col gap-2">
               <Eyebrow text={copy.address.eyebrow} />
               {selectedAddress ? (
-                <OptionRow
+                <PhoneOptionRow
                   label={addressTitle(selectedAddress)}
                   description={addressLine(selectedAddress)}
                   selected
@@ -202,14 +202,14 @@ export function CheckoutMobile(props: CheckoutViewProps) {
                 <Eyebrow text={copy.delivery.eyebrow} />
                 {/* Yol ADRESİN CEVABIDIR, seçim değil: iki satır da çizilir (hangisi geçerli, öteki NEDEN değil) ama
                     dokunuş bir şey değiştirmez — satırlar düğme değil. Kapalı yolun sebebi kırmızı. */}
-                <OptionRow
+                <PhoneOptionRow
                   label={copy.delivery.door}
                   description={isRoute ? copy.delivery.doorBody.replace('{fee}', feeLabel) : copy.delivery.doorUnavailable}
                   selected={isRoute}
                   disabled={!isRoute}
                   descriptionTone={isRoute ? 'muted' : 'danger'}
                 />
-                <OptionRow
+                <PhoneOptionRow
                   label={copy.delivery.shipping}
                   description={isRoute ? copy.delivery.shippingUnavailable : copy.delivery.shippingBody.replace('{fee}', feeLabel)}
                   selected={!isRoute}
@@ -253,7 +253,7 @@ export function CheckoutMobile(props: CheckoutViewProps) {
               <section className="flex flex-col gap-2">
                 <Eyebrow text={copy.payment.eyebrow} />
                 {paymentOptions.map((option) => (
-                  <OptionRow
+                  <PhoneOptionRow
                     key={option.key}
                     label={option.label}
                     description={option.body}
@@ -378,7 +378,7 @@ function CarrierChoice({ t, locale, snapshot, state, onSelectShipping }: Checkou
           option.tracked ? t.delivery.carrierTracked : null,
         ].filter((part): part is string => part !== null);
         return (
-          <OptionRow
+          <PhoneOptionRow
             key={option.code}
             label={option.carrierName}
             description={details.length > 0 ? details.join(' · ') : undefined}
