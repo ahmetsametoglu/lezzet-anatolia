@@ -28,10 +28,13 @@ import { toCents } from '@lezzet/helper';
 import { brand } from '../packages/brand/src/index';
 import { lezzaGorselUrlByDosya, seedLezzaProducts } from './seed/catalog-lezza';
 import { r2Keys, uploadImageFromPath, uploadImageFromUrl } from './seed/shared';
+import { SAKLAMA } from './seed/storage-regime';
 import {
+  ADAY_SKULARI,
   CATEGORIES,
   COLLECTIONS,
   DRAFT_CATEGORY,
+  DRAFT_FAMILIES,
   FICTION_ALLERGENS,
   FICTION_INGREDIENTS,
   FICTION_NUTRITION,
@@ -300,11 +303,15 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     console.log(`  ⚠ ${present}/${lines.length} varyant zaten var — katalog yarım kurulmuş, yazılmadı`);
     return;
   }
-  plan(`${lines.length} varyant · ürün, metin, görsel ve kategori katalog kaynağından`);
+  plan(`${lines.length} fatura varyantı + ${ADAY_SKULARI.length} aday · ürün, metin, görsel ve kategori katalog kaynağından`);
   if (DRY_RUN) return;
   const secim = new Map(
     lines.map((l) => [l.sku, l.unit ? { label: allLocales(l.unit.label), netWeightG: l.unit.netWeightG, piecesCount: l.unit.piecesCount } : {}]),
   );
+  // Faturada olmayan aday kalemler aynı seçime girer ki ürünleri kurulsun — ama `kurgu.sku`ya
+  // GİRMEZLER (aşağıda yalnız fatura satırları veriliyor): o küme "satış kurgusuna girmiş" demek ve
+  // ürünü aktif olmaya zorlar. Adayın alış maliyeti yok, fiyatsız ve satışa kapalı kalması karar.
+  for (const sku of ADAY_SKULARI) if (!secim.has(sku)) secim.set(sku, {});
   const made = await seedLezzaProducts(
     new CategoryService(db),
     new CategoryImageService(db),
@@ -313,8 +320,10 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     new ProductFamilyService(db),
     catId,
     0,
-    { sku: new Set(secim.keys()), slug: new Set() },
-    'base',
+    { sku: new Set(lines.map((l) => l.sku)), slug: new Set() },
+    // Katman KATALOĞU DA kapsar: `base`te türetme kapalı olduğu için üretici belgesi olmayan 14 ürün
+    // beyansız doğuyor ve aday kalıyordu — bayrağın katalog tarafında karşılığı yoktu (ölçüldü 16.09).
+    LAYERS >= 3 ? 'extend' : 'base',
     { variants: secim },
   );
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
@@ -363,12 +372,52 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
         ...(ingredients ? { ingredients } : {}),
         ...(storageInstructions ? { storageInstructions } : {}),
         ...(draft.shelfLifeDays ? { shelfLifeDays: draft.shelfLifeDays } : {}),
+        // Saklama rejimi İKİ kolonu birden yazar. Yazılmazsa kolonların varsayılanı kalır ve o
+        // varsayılan donuk: pekmez dondurucuya düşer, hiçbir ürün kargoya çıkamaz (ölçüldü 16.09).
+        ...(draft.rejim ? { storageType: SAKLAMA[draft.rejim].storageType, shippable: SAKLAMA[draft.rejim].shippable } : {}),
         // Katman 3 — UYDURMA: kaynağı yok, yalnız test sunucusunun arayüzünü doldurur.
         ...(kurgu && FICTION_NUTRITION[draft.name] ? { nutrition: FICTION_NUTRITION[draft.name] } : {}),
         ...(kurgu && FICTION_ALLERGENS[draft.name] ? { allergens: FICTION_ALLERGENS[draft.name] } : {}),
         ...(kapak ?? {}),
         variants: draft.variants.map((v) => ({ label: v.label ? allLocales(v.label) : undefined, netWeightG: v.netWeightG, sku: v.sku })),
       });
+    }
+  }
+}
+
+/**
+ * Taslakların çeşit blokları. Tek üyeli aile KURULMAZ — katalog tarafındaki kuralın aynısı: bir
+ * çeşit bloğu en az iki kart ister, tek kart "seçenek" değil tekrardır.
+ */
+async function seedDraftFamilies(db: Db): Promise<void> {
+  console.log('▸ taslak aileleri');
+  const families = new ProductFamilyService(db);
+  const products = new ProductService(db);
+  const mevcut = new Set((await families.list()).map((f) => f.name));
+  // Kuru koşuda ürünler henüz yazılmadığı için üyelik aranmaz; plan listedeki çeşit sayısını gösterir.
+  const urunler = DRY_RUN ? [] : await products.listAll();
+  for (const aile of DRAFT_FAMILIES) {
+    if (mevcut.has(aile.ad)) {
+      done(aile.ad);
+      continue;
+    }
+    if (DRY_RUN) {
+      plan(`${aile.ad} · ${aile.uyeler.length} çeşit`);
+      continue;
+    }
+    const uyeler: Array<{ id: string; etiket: (typeof DRAFT_FAMILIES)[number]['uyeler'][number]['etiket'] }> = [];
+    for (const uye of aile.uyeler) {
+      const id = urunler.find((p) => p.name.tr === TASLAK_ADI.get(uye.draft))?.id;
+      if (id) uyeler.push({ id, etiket: uye.etiket });
+    }
+    if (uyeler.length < 2) {
+      console.log(`  ⚠ ${aile.ad} — ${uyeler.length} üye bulundu, aile kurulmadı`);
+      continue;
+    }
+    plan(`${aile.ad} · ${uyeler.length} çeşit`);
+    const created = await families.insert({ name: aile.ad });
+    for (const [sira, uye] of uyeler.entries()) {
+      await products.update({ id: uye.id, familyId: created.id, familyLabel: uye.etiket, familyPosition: sira });
     }
   }
 }
@@ -559,6 +608,7 @@ async function main(): Promise<void> {
   const catId = await seedCategories(db);
   await seedCatalog(db, catId);
   await seedDrafts(db, catId);
+  await seedDraftFamilies(db);
   await seedCollections(db);
   await seedPurchases(db);
   // Mal kabulü katman 3: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır.

@@ -15,6 +15,7 @@
 // Katman 3 blokları şemanın tipleriyle yazılır: besin tablosunun sekiz kalemi ve alerjenin kapalı
 // kümesi orada tanımlı — yazım hatası derlenme anında patlasın, koşuda sessizce düşmesin.
 import type { Nutrition, ProductAllergen } from '@lezzet/types';
+import type { SaklamaRejimi } from '../seed/storage-regime';
 
 // Adres künyeden okunur (`@lezzet/brand`); nokta, adresin BAN karşılığı ve işletmeci onayladı.
 export const WAREHOUSE = {
@@ -154,6 +155,12 @@ interface Draft {
   nameTr?: string;
   nameFr?: string;
   nameDe?: string;
+  /**
+   * Saklama rejimi — `storage_type` ve `shippable` kolonlarının İKİSİNİ BİRDEN belirler
+   * (`seed/storage-regime.ts`). Yazılmazsa kolonların varsayılanı kalır ve o varsayılan DONUK:
+   * pekmez dondurucuya yazılır, hiçbir ürün kargoya çıkamaz (ölçüldü 16.09).
+   */
+  rejim?: SaklamaRejimi;
   /** Üreticinin kendi künyesinden okunan beyanlar; kaynağı olmayan alan hiç yazılmaz. */
   ingredients?: UcDil;
   storage?: UcDil;
@@ -192,6 +199,9 @@ const behotrade = (
   ek: Omit<Draft, 'name' | 'variants'> = {},
 ): Draft => ({
   name,
+  // Behotrade'in faturasında donuk kalem YOK: pekmez, sirke, öz, macun ve kuru meyve rafta durur ve
+  // kargolanır. `ek` sonra geldiği için istisna gerekirse kalem kendi rejimini yazabilir.
+  rejim: 'raf',
   ...ek,
   variants: [{ label, netWeightG, nameAtSupplier, qty, unitCost }],
 });
@@ -249,6 +259,7 @@ export const PURCHASES: Purchase[] = [
       // elimizdeki tek karesi ambalaj değil tabakta servis çekimi.
       {
         name: 'LEZZA Traditional Meet Doner',
+        rejim: 'donuk',
         nameTr: 'LEZZA Geleneksel Et Döner',
         nameFr: 'LEZZA döner de viande traditionnel',
         nameDe: 'LEZZA traditioneller Fleischdöner',
@@ -261,6 +272,7 @@ export const PURCHASES: Purchase[] = [
       },
       {
         name: 'LEZZA Traditional Chicken Doner',
+        rejim: 'donuk',
         nameTr: 'LEZZA Geleneksel Tavuk Döner',
         nameFr: 'LEZZA döner de poulet traditionnel',
         nameDe: 'LEZZA traditioneller Hähnchendöner',
@@ -273,6 +285,7 @@ export const PURCHASES: Purchase[] = [
       },
       {
         name: 'LEZZA Manti with Minced Meat (Kiymali)',
+        rejim: 'donuk',
         nameTr: 'LEZZA Kıymalı Mantı',
         nameFr: 'LEZZA mantı à la viande hachée',
         nameDe: 'LEZZA Mantı mit Hackfleisch',
@@ -696,12 +709,28 @@ export const CATEGORIES: SeedCategory[] = [
     lezza: ['bakery'],
   },
   {
+    key: 'pasta',
+    name: { tr: 'Pasta', fr: 'Gâteaux', de: 'Torten' },
+    tagline: { tr: 'Yaş pasta, cheesecake ve kek', fr: 'Gâteaux, cheesecakes et cakes', de: 'Torten, Cheesecakes und Kuchen' },
+    featured: true,
+    image: { lezza: 'Artisan-Lemon-Cake-90g.webp' },
+    lezza: ['cake'],
+  },
+  {
     key: 'tatli',
     name: { tr: 'Tatlı', fr: 'Desserts', de: 'Süßes' },
-    tagline: { tr: 'Künefe, kek ve pestil', fr: 'Künefe, gâteaux et pestil', de: 'Künefe, Kuchen und Pestil' },
+    tagline: { tr: 'Baklava, künefe ve pestil', fr: 'Baklava, künefe et pestil', de: 'Baklava, Künefe und Pestil' },
     featured: true,
     image: { lezza: 'Baklava-with-Pistachio-225g.webp' },
-    lezza: ['dessert', 'cake', 'ice-cream'],
+    lezza: ['dessert'],
+  },
+  {
+    key: 'dondurma',
+    name: { tr: 'Dondurma', fr: 'Glaces', de: 'Eis' },
+    tagline: { tr: 'Maraş usulü dondurma', fr: 'Glace façon Maraş', de: 'Eis nach Maraş-Art' },
+    featured: true,
+    image: { lezza: 'MARAS-ICE-CREAM-slice-plain-70g.webp' },
+    lezza: ['ice-cream'],
   },
   {
     key: 'et-tavuk',
@@ -720,26 +749,126 @@ export const CATEGORIES: SeedCategory[] = [
     featured: true,
     image: { file: 'scripts/seed-real/images/sifamix-andiz-extract.webp' },
   },
+  // Vitrin ızgarası altı kart çiziyor ve yukarıdaki altı kategori onu dolduruyor. Aşağıdaki ikisi
+  // katalogda kalır: ikisi de "arayarak bulunan" raflardır, vitrinde bir kartı hak edecek kadar
+  // çekici değil.
   {
-    key: 'sirke',
-    name: { tr: 'Sirke', fr: 'Vinaigres', de: 'Essige' },
-    tagline: { tr: 'Doğal fermente sirkeler', fr: 'Vinaigres de fermentation naturelle', de: 'Natürlich vergorene Essige' },
-    featured: true,
-    image: { file: 'scripts/seed-real/images/appel-azijn.webp' },
+    key: 'kiler',
+    name: { tr: 'Kiler', fr: 'Épicerie', de: 'Vorrat' },
+    tagline: { tr: 'Pekmez, tahin, sirke ve yağ', fr: 'Mélasse, tahin, vinaigres et huile', de: 'Melasse, Tahin, Essig und Öl' },
+    featured: false,
+    image: { url: 'https://www.besegida.com/wp-content/uploads/2025/04/Bese-Helva-Pekmez-650.jpg' },
   },
   {
     key: 'kuru-meyve',
     name: { tr: 'Kuru Meyve', fr: 'Fruits séchés', de: 'Trockenfrüchte' },
     tagline: { tr: 'Aronya, elma, kaki ve kavun', fr: 'Aronia, pomme, kaki et melon', de: 'Aronia, Apfel, Kaki und Melone' },
-    featured: true,
+    featured: false,
     // Kapak YOK: depodaki dokuz ustanın hiçbiri kuru meyve değil ve yapay zekâ üretimi görsel elendi.
   },
+];
+
+/**
+ * Faturada OLMAYAN ama katalogda duran kalemler — ADAY olarak kurulurlar (kullanıcı kararı 16.09).
+ *
+ * Fiyatsız kalmaları eksiklik değil KARAR: alış maliyeti olmayan ürüne satış fiyatı yazmak uydurma
+ * olurdu. `teklifSkulari` kümesinin dışında oldukları için `satilabilirDurum` onları aday tutuyor;
+ * katalogda "satışa kapalı" görünürler ve işletmeci bir sonraki siparişte hangisini alacağına bakar.
+ *
+ * Seçim ÇEŞİT BLOĞUNU tamamlayacak şekilde yapıldı: aynı ailenin iki üyesi birden gelsin ki vitrinde
+ * "hangisini alayım" sorusu kurulabilsin (`ELLE_AILELER` — baklava · bütün pasta · cheesecake ·
+ * Maraş dondurması).
+ */
+export const ADAY_SKULARI: string[] = [
+  // Bütün pastalar ve cheesecake'ler → Pasta
+  '900401',
+  '900201',
+  '902301',
+  '900801',
+  '900901',
+  '900105',
+  '900808',
+  '900308',
+  '901813',
+  '901809',
+  '901804',
+  '901807',
+  // Baklava çeşitleri → Tatlı
+  '601201',
+  '600101',
+  '600201',
+  '600903',
+  '601402',
+  '600802',
+  '600601',
+  '601102',
+  '600807',
+  '600402',
+  // Maraş dondurmaları → Dondurma
+  '111107',
+  '111112',
+  '111106',
+  '111141',
+  '111131',
+  '111121',
+  '111113',
+];
+
+/**
+ * Taslakların ürün aileleri — ÇEŞİT ekseni: müşteri "hangi sirkeyi alayım" diye sorduğunda kartlar
+ * yan yana dursun. Katalog tarafındaki `ELLE_AILELER` ile aynı kural: tek üyeli aile kurulmaz,
+ * çünkü bir çeşit bloğu en az iki kart ister.
+ *
+ * Anahtar faturadaki addır (`Draft.name`); etiket çeşidin üç dilli adıdır ve ürün adının TEKRARI
+ * değildir — blok zaten aile adını yazıyor, kart yalnız çeşidi söyler.
+ */
+export const DRAFT_FAMILIES: Array<{ ad: string; uyeler: Array<{ draft: string; etiket: UcDil }> }> = [
   {
-    key: 'kiler',
-    name: { tr: 'Kiler', fr: 'Épicerie', de: 'Vorrat' },
-    tagline: { tr: 'Pekmez, tahin ve zeytinyağı', fr: 'Mélasse, tahin et huile d’olive', de: 'Melasse, Tahin und Olivenöl' },
-    featured: false,
-    image: { url: 'https://www.besegida.com/wp-content/uploads/2025/04/Bese-Helva-Pekmez-650.jpg' },
+    ad: 'Sirke',
+    uyeler: [
+      { draft: 'Appel azijn', etiket: { tr: 'Elma', fr: 'Pomme', de: 'Apfel' } },
+      { draft: 'Ananas azijn', etiket: { tr: 'Ananas', fr: 'Ananas', de: 'Ananas' } },
+      { draft: 'Meidoorn azijn', etiket: { tr: 'Alıç', fr: 'Aubépine', de: 'Weißdorn' } },
+      { draft: 'Enginar azijn', etiket: { tr: 'Enginar', fr: 'Artichaut', de: 'Artischocke' } },
+      { draft: 'Isgin azijn', etiket: { tr: 'Işkın', fr: 'Rhubarbe', de: 'Rhabarber' } },
+      { draft: 'Honing azijn', etiket: { tr: 'Bal', fr: 'Miel', de: 'Honig' } },
+    ],
+  },
+  {
+    ad: 'Pekmez',
+    uyeler: [
+      { draft: 'Druivenmelasse', etiket: { tr: 'Üzüm', fr: 'Raisin', de: 'Traube' } },
+      { draft: 'Johannesbroodmelasse', etiket: { tr: 'Keçiboynuzu', fr: 'Caroube', de: 'Johannisbrot' } },
+    ],
+  },
+  {
+    ad: 'Bitki Özü',
+    uyeler: [
+      { draft: 'Sifamix Kozalak extract', etiket: { tr: 'Kozalak', fr: 'Pomme de pin', de: 'Kiefernzapfen' } },
+      { draft: 'Sifamix Johannesbrood extract', etiket: { tr: 'Keçiboynuzu', fr: 'Caroube', de: 'Johannisbrot' } },
+      { draft: 'Sifamix Andiz extract', etiket: { tr: 'Andız', fr: 'Genévrier', de: 'Wacholder' } },
+      { draft: 'Granaatappelextraat', etiket: { tr: 'Nar', fr: 'Grenade', de: 'Granatapfel' } },
+      { draft: 'Zwarte moerbei extrat', etiket: { tr: 'Karadut', fr: 'Mûre noire', de: 'Maulbeere' } },
+    ],
+  },
+  {
+    ad: 'Macun',
+    uyeler: [
+      { draft: 'Propolis pasta', etiket: { tr: 'Propolis', fr: 'Propolis', de: 'Propolis' } },
+      { draft: 'Dennenappel pasta', etiket: { tr: 'Kozalak', fr: 'Pomme de pin', de: 'Kiefernzapfen' } },
+      { draft: 'Igde cekirdegi pasta', etiket: { tr: 'İğde çekirdeği', fr: 'Noyau de chalef', de: 'Ölweidenkern' } },
+      { draft: 'Form pasta', etiket: { tr: 'L-karnitinli', fr: 'À la L-carnitine', de: 'Mit L-Carnitin' } },
+    ],
+  },
+  {
+    ad: 'Kuru Meyve',
+    uyeler: [
+      { draft: 'Gedroogde appel', etiket: { tr: 'Elma', fr: 'Pomme', de: 'Apfel' } },
+      { draft: 'Gedroogde aronya', etiket: { tr: 'Aronya', fr: 'Aronia', de: 'Aronia' } },
+      { draft: 'Gedroogde Kaki cips', etiket: { tr: 'Trabzon hurması', fr: 'Kaki', de: 'Kaki' } },
+      { draft: 'Gedroogde perzik', etiket: { tr: 'Şeftali', fr: 'Pêche', de: 'Pfirsich' } },
+      { draft: 'Gedroogde meloen', etiket: { tr: 'Kavun', fr: 'Melon', de: 'Melone' } },
+    ],
   },
 ];
 
@@ -759,12 +888,13 @@ export const DRAFT_CATEGORY: Record<string, string> = {
   Tahini: 'kiler',
   Olijfolie: 'kiler',
   Pistache: 'kiler',
-  'Meidoorn azijn': 'sirke',
-  'Ananas azijn': 'sirke',
-  'Enginar azijn': 'sirke',
-  'Appel azijn': 'sirke',
-  'Isgin azijn': 'sirke',
-  'Honing azijn': 'sirke',
+  // Sirkeler kilerde: mutfak malzemesi rafı, kendi başına bir kategoriyi taşıyacak kadar ayrı değil.
+  'Meidoorn azijn': 'kiler',
+  'Ananas azijn': 'kiler',
+  'Enginar azijn': 'kiler',
+  'Appel azijn': 'kiler',
+  'Isgin azijn': 'kiler',
+  'Honing azijn': 'kiler',
   Granaatappelextraat: 'oz-macun',
   'Sifamix Kozalak extract': 'oz-macun',
   'Sifamix Johannesbrood extract': 'oz-macun',
