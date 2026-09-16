@@ -106,6 +106,8 @@ export { SystemHealthService } from './services/system-health.service';
 // ikisi de "sistem kendi hakkında ne biliyor" sorusunun parçası.
 export { McpConnectionKeyService } from './services/mcp-connection-key.service';
 export { McpCallLogService } from './services/mcp-call-log.service';
+export { OauthClientService } from './services/oauth-client.service';
+export { OauthCodeService } from './services/oauth-code.service';
 export {
   AnalyticsDailyService,
   AnalyticsEventService,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { LOCALES, localizedPath } from '@lezzet/i18n';
+import { authServerMetadata, protectedResourceMetadata } from '@/lib/oauth';
 
 /**
  * **Mobil uygulama ilişkilendirme dosyaları** (17.9) — `/.well-known/apple-app-site-association`
@@ -82,6 +83,15 @@ export async function GET(_request: Request, context: { params: Promise<{ file: 
   if (file === 'assetlinks.json') {
     if (!ANDROID_PACKAGE || !ANDROID_FINGERPRINT) return new NextResponse(null, { status: 404 });
     return NextResponse.json(androidAssociation(ANDROID_PACKAGE, ANDROID_FINGERPRINT));
+  }
+
+  // MCP OAuth keşfi (RFC 8414 · RFC 9728) — istemci yetkilendirme uçlarını buradan öğrenir, hiçbir
+  // adresi elle yapılandırmaz. İkisi de açık ve kişiselleştirilmemiş belgedir; CORS serbest.
+  if (file === 'oauth-authorization-server') {
+    return NextResponse.json(authServerMetadata(), { headers: { 'Access-Control-Allow-Origin': '*' } });
+  }
+  if (file === 'oauth-protected-resource') {
+    return NextResponse.json(protectedResourceMetadata(), { headers: { 'Access-Control-Allow-Origin': '*' } });
   }
 
   return new NextResponse(null, { status: 404 });

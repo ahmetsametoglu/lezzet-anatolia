@@ -10,12 +10,19 @@ import { createMcpServer } from './server-factory';
  * oturumsuzdur, her istek kendi sunucusunu kurar. Guard en önde, `401` kimlik ile `429` oran sınırını ayırır (istemci "yanlış
  * anahtar" ile "çok hızlısın"ı ayırt edebilmeli) ve kapsamı sunucuya verir ki sunucu aynı soruyu ikinci kez sormasın.
  */
+/**
+ * Keşif adresi (RFC 9728) — web ile aynı alan adı, `/mcp` yalnız yolda ayrışıyor. Jetonsuz gelen
+ * istemci jetonu nereden alacağını bu başlıktan öğrenir; olmadan connector ekranı akışı başlatamaz.
+ */
+const resourceMetadataUrl = (): string =>
+  `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://lezzetanatolie.com'}/.well-known/oauth-protected-resource`;
+
 export async function mcpHandler(c: Context<AppEnv>): Promise<Response> {
   const auth = await mcpGuard(c.req.header('authorization'));
   if (!auth.ok) {
-    return auth.status === 429
-      ? c.json({ error: 'rate limit' }, 429)
-      : c.json({ error: 'unauthorized' }, 401);
+    if (auth.status === 429) return c.json({ error: 'rate limit' }, 429);
+    c.header('WWW-Authenticate', `Bearer resource_metadata="${resourceMetadataUrl()}"`);
+    return c.json({ error: 'unauthorized' }, 401);
   }
 
   // Body yalnız POST'ta var; GET/DELETE (SSE aboneliği, oturum kapama) gövdesiz gelir.

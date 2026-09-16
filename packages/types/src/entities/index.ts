@@ -72,4 +72,5 @@ export * from './assistant-proposal.schema';
 // MCP kapısı (22.4) — bağlantı anahtarı + çağrı izi. Kuyruğun (`assistant-proposal`) yanında
 // duruyor çünkü ikisi aynı zincirin uçları: anahtar kapıyı açar, kuyruk yazımı denetler.
 export * from './mcp.schema';
+export * from './mcp-oauth.schema';
 export * from './postal-code-demand.schema';
