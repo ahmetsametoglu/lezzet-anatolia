@@ -6,18 +6,12 @@ import { iconHitClass } from './button';
 import { Icon } from './icons';
 
 /**
- * K4 · Arama Alanı — site başlığındaki ürün araması.
+ * Arama alanı — site başlığındaki ürün araması; gerçek bir form, gönderim kataloğa yönlendirir.
  *
- * GERÇEK bir form: gönderim kataloğa yönlendirir, sorgu URL'de yaşar (`?q=`). Uzun süre `<div>`
- * olarak durdu — arama kutusuna benziyor ama içine yazılamıyordu; oysa arka uç hazırdı (ad araması
- * üç dilde birden, SQL'de). "Görünüyor ama çalışmıyor" en pahalı hâldir: kullanıcı denemesini
- * kendinde arar.
+ * **Sorgu URL'de yaşar** (`?q=`) çünkü aranan liste paylaşılabilir olmalı, geri tuşu çalışmalı ve
+ * ilk boya sunucudan tam gelmeli; buradaki state yalnız yazarkenki metni tutar, gerçek kaynak adres.
  *
- * Sorgu neden URL'de: aranan liste PAYLAŞILABİLİR olmalı, geri tuşu çalışmalı ve ilk boya sunucudan
- * tam gelmeli. Bu yüzden state burada sadece yazarkenki metni tutar; gerçek kaynak adrestir.
- *
- * Masaüstünde sabit genişlikli hap, mobilde başlığın altında tam genişlik — aynı komponent, iki
- * yerleşim (`fullWidth`). İki yerde ayrı ayrı yazılmaz.
+ * Masaüstünde sabit genişlikli hap, mobilde tam genişlik — tek komponent, iki yerleşim (`fullWidth`).
  */
 interface SearchFieldProps {
   placeholder: string;

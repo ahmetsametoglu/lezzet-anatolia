@@ -75,8 +75,8 @@ export function ProductPhotoCard({
 
       {/* İki satır kırpması kare kartta zorunlu: ad fotoğrafın üstünde yukarı büyür. */}
       <span className="absolute inset-x-3 bottom-2.5 flex flex-col gap-0.5">
-        {/* Şerit KÜNYENİN ÜSTÜNDE (kullanıcı kararı): kartın tepesinde dururken fiyat çipiyle çakışıyordu —
-            çip kartın sağ üst köşesinden dışarı taşar ve şeridin sağ ucuna biner. */}
+        {/* Şerit KÜNYENİN ÜSTÜNDE: fiyat çipi kartın sağ üst köşesinden dışarı taşıyor ve şerit
+            tepede dursaydı çip onun sağ ucuna binerdi. */}
         {note !== undefined && (
           <span className="mb-1 flex items-center gap-1.5 rounded-badge bg-sand-50/94 px-2 py-1">
             <MobileIcon name="delivery-off" size={11} className="flex-none text-terracotta" />

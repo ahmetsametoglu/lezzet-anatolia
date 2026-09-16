@@ -5,14 +5,14 @@ import { Link } from '@/i18n/navigation';
 import { useDismiss } from './use-dismiss.hook';
 
 /**
- * K18 · Sıralama Seçici — tasarımdaki tek açılır düğme ("Sırala: Öne çıkanlar ▾").
+ * Sıralama seçici — tasarımdaki tek açılır düğme ("Sırala: Öne çıkanlar ▾").
  *
- * Client bileşen olmak ZORUNDA: `details/summary` ile denendi ama o öğe yalnız kendi başlığına
- * tıklanınca kapanır — menü açıkken sayfanın boşluğuna basmak onu kapatmaz ve kullanıcı menüyü
- * "üstüne yapışmış" bulur. Dışarı tıklama ve Escape gerçek dinleyici ister (`useDismiss`, kitte ortak).
+ * Client bileşen olmak ZORUNDA: `details/summary` yalnız kendi başlığına tıklanınca kapanır, menü
+ * açıkken sayfanın boşluğuna basmak onu kapatmaz; dışarı tıklama ve Escape gerçek dinleyici ister
+ * (`useDismiss`).
  *
- * Seçeneklerin kendisi yine `<Link>`: sıralama sunucuda çözülür, seçim URL'de yaşar. `scroll={false}`
- * — süzgeç değiştirmek sayfayı başa fırlatmamalı; kullanıcı listenin ortasındaysa orada kalır.
+ * Seçenekler `<Link>`: sıralama sunucuda çözülür, seçim URL'de yaşar. `scroll={false}` çünkü süzgeç
+ * değiştirmek sayfayı başa fırlatmamalı.
  */
 interface SortOption {
   label: string;
