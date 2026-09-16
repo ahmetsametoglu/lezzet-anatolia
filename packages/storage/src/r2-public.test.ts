@@ -60,7 +60,7 @@ describe('publicImageUrl', () => {
   });
 });
 
-describe('cdnImageUrl — dönüşümlü adres (05.37 · 09.09)', () => {
+describe('cdnImageUrl — dönüşümlü adres', () => {
   it('r2.dev tabanında dönüşüm YOK → null; çağıran özgün adrese düşer', () => {
     expect(cdnImageUrl(KEY, null, { width: 200, format: 'jpeg' })).toBeNull();
   });
@@ -83,7 +83,7 @@ describe('cdnImageUrl — dönüşümlü adres (05.37 · 09.09)', () => {
   });
 });
 
-describe('cdnImageUrl — kadraj (`trim`, 05.37)', () => {
+describe('cdnImageUrl — kadraj (`trim`)', () => {
   it('kesir dört kenar üst;sağ;alt;sol sırasıyla ve ölçekten ÖNCE; dört sıfırsa parametre yazılmaz', () => {
     process.env.R2_PUBLIC_BASE_URL = 'https://cdn.lezzetanatolie.com';
     expect(cdnImageUrl(KEY, null, { width: 800, format: 'jpeg', trim: { top: 0.1667, right: 0, bottom: 0.1667, left: 0 } })).toBe(

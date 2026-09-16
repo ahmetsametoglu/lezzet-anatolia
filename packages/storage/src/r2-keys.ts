@@ -130,19 +130,6 @@ export function financeDocumentScope(key: string): string | null {
  */
 export type TicketAttachmentScope = { kind: 'ticket'; ticketId: string } | { kind: 'draft'; customerId: string } | null;
 
-/**
- * Sohbet medyasının **hangi konuşmaya ait olduğu** — `ticketAttachmentScope` ile aynı iş, aynı
- * gerekçe: imzalı okuma adresi sahipliği doğrulanmış bir konuşma üzerinden üretiliyor, ama
- * anahtarın gerçekten O konuşmaya ait olduğu ayrıca kontrol edilmezse, yetkisi olan biri private
- * kovadaki başka bir anahtarı okutabilir. Yetki doğrulanır ama yanlış nesnenin.
- *
- * Anahtar biçimini bilen tek yer burasıdır; kapı biçimi yeniden ayrıştırmaz.
- */
-export function conversationMediaScope(key: string): string | null {
-  const m = /^messaging\/conversations\/([^/]+)\/[^/]+$/.exec(key);
-  return m ? m[1]! : null;
-}
-
 export function ticketAttachmentScope(key: string): TicketAttachmentScope {
   const draft = /^support\/tickets\/drafts\/([^/]+)\/[^/]+$/.exec(key);
   if (draft) return { kind: 'draft', customerId: draft[1]! };

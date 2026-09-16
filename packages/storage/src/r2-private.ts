@@ -7,15 +7,11 @@ import { getR2Private } from './r2.service';
  * yazmak olurdu.
  */
 
-/** Varsayılan ömür: bir ekranı açıp fotoğrafı incelemeye yeter, paylaşılan bir bağlantı olmaya yetmez. */
-const DEFAULT_TTL_SECONDS = 900;
-
 /**
- * Anahtarı süreli okuma adresine çevirir. `null` döner: anahtar yoksa **ya da** private kova
- * ayarlı değilse — yerelde R2'siz çalışırken ekran fotoğrafsız çizer, çökmez (public yoldaki
- * `publicImageUrl` ile aynı nezaket).
+ * `null` döner: anahtar yoksa **ya da** private kova ayarlı değilse — R2'siz yerelde ekran
+ * fotoğrafsız çizer, çökmez. Süre verilmezse imzayı üreten servisin varsayılanı geçerlidir.
  */
-export async function privateReadUrl(key: string | null | undefined, ttlSeconds = DEFAULT_TTL_SECONDS): Promise<string | null> {
+export async function privateReadUrl(key: string | null | undefined, ttlSeconds?: number): Promise<string | null> {
   if (!key) return null;
   const r2 = getR2Private();
   if (!r2) return null;
@@ -26,7 +22,7 @@ export async function privateReadUrl(key: string | null | undefined, ttlSeconds 
  * Birden çok anahtar — tek turda. Ayrı ayrı `await` edilseydi 5 fotoğraflı bir talep 5 turluk
  * gecikme yerdi; imzalama yerel bir hesap olduğu için hepsi paralel koşabilir.
  */
-export async function privateReadUrls(keys: readonly string[], ttlSeconds = DEFAULT_TTL_SECONDS): Promise<string[]> {
+export async function privateReadUrls(keys: readonly string[], ttlSeconds?: number): Promise<string[]> {
   if (keys.length === 0) return [];
   const urls = await Promise.all(keys.map((key) => privateReadUrl(key, ttlSeconds)));
   return urls.filter((url): url is string => url !== null);
