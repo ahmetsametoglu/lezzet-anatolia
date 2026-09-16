@@ -118,7 +118,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
       )}
 
       {reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
+        <ReviewCard key={review.id} review={review} locale={locale} translation={t.reviews.translation} />
       ))}
 
       {/* Bağlantı ancak gösterilenden FAZLA yorum varken çizilir: aynı listeyi açan bir bağ,

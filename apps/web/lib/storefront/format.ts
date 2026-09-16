@@ -51,6 +51,27 @@ export function formatDeliveryDate(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(iso));
 }
 
+/**
+ * Geçen süre ("3 dk önce" · "2 hafta önce" · "geçen yıl") — bir olayın TAZELİĞİNİ söyler, gününü
+ * değil; yorum ve bildirim satırında okuyan "ne zamandı" değil "yeni mi" diye bakar.
+ *
+ * Eşik çağıranındır: bu işlev her uzaklığı göreli yazar, takvim gününe geçme kararını (bildirim
+ * satırı bir haftadan sonra geçiyor) veren taraf kendi bağlamını bilir.
+ */
+export function formatRelativeTime(iso: string, locale: Locale, now: number): string {
+  const at = new Date(iso).getTime();
+  const rtf = new Intl.RelativeTimeFormat(INTL_LOCALE[locale], { numeric: 'auto', style: 'short' });
+  const minutes = Math.round((now - at) / 60_000);
+  if (minutes < 60) return rtf.format(-Math.max(1, minutes), 'minute');
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return rtf.format(-hours, 'hour');
+  const days = Math.round(hours / 24);
+  if (days < 7) return rtf.format(-days, 'day');
+  if (days < 30) return rtf.format(-Math.round(days / 7), 'week');
+  if (days < 365) return rtf.format(-Math.round(days / 30), 'month');
+  return rtf.format(-Math.round(days / 365), 'year');
+}
+
 /** Karşılaştırma fiyatı ("12,90 €/kg") — INCO gereği raf fiyatının yanında bulunur. */
 export function formatComparison(cents: number, locale: Locale): string {
   return `${formatPrice(cents, locale)}/kg`;

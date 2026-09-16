@@ -4,21 +4,21 @@ import { EmptyState } from '@/components/customer/phone-kit/empty-state';
 import { Icon } from '@/components/customer/ui/icons';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
+import { formatRelativeTime } from '@/lib/storefront/format';
 import { Link } from '@/i18n/navigation';
 import { notificationTarget } from './notification-target';
 import { TONE_BG, TONE_TEXT } from './notification-tone';
 import type { NotificationsViewProps } from './notifications-types';
 
-/** "3 dk önce" · "2 sa önce" · "dün"; bir haftadan eskisi takvim günüyle ("12 Temmuz"). */
+/**
+ * "3 dk önce" · "2 sa önce" · "dün"; bir haftadan eskisi takvim günüyle ("12 Temmuz").
+ *
+ * Bildirim AKIŞTIR: yeni satırlar tazeliğiyle okunur, eskiler ise artık bir kayıt — göreli
+ * "9 hafta önce" onları tarihlendirmez, takvim günü tarihlendirir.
+ */
 function relativeTime(iso: string, locale: Locale, now: number): string {
   const at = new Date(iso);
-  const minutes = Math.round((now - at.getTime()) / 60_000);
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
-  if (minutes < 60) return rtf.format(-Math.max(1, minutes), 'minute');
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return rtf.format(-hours, 'hour');
-  const days = Math.round(hours / 24);
-  if (days < 7) return rtf.format(-days, 'day');
+  if (now - at.getTime() < 7 * 24 * 60 * 60_000) return formatRelativeTime(iso, locale, now);
   const sameYear = at.getFullYear() === new Date(now).getFullYear();
   return new Intl.DateTimeFormat(locale, sameYear ? { day: 'numeric', month: 'long' } : { day: 'numeric', month: 'long', year: 'numeric' }).format(at);
 }
