@@ -1,7 +1,7 @@
 import { CATALOG_SORTS } from '@lezzet/types';
 import { EmptyState, FilterChip } from '@/components/customer/ui/filter-controls';
-import { SearchField } from '@/components/customer/ui/search-field';
-import { SortSelect } from '@/components/customer/ui/sort-select';
+import { SearchField } from './components/search-field';
+import { SortSelect } from './components/sort-select';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import { Icon } from '@/components/customer/ui/icons';

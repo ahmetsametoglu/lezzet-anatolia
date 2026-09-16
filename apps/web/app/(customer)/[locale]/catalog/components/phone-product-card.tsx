@@ -3,14 +3,14 @@ import type { CatalogImage } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { Link } from '@/i18n/navigation';
-import { Tag } from './tag';
+import { Tag } from '@/components/customer/phone-kit/tag';
 
 /*
-  Kare ürün kartı, native `ProductPhotoCard`ın web ikizi: ad fotoğrafın içinde, fiyat çipi sağ üst köşeden taşar ve bu yüzden
+  Kare ürün kartı, native kataloğun kart ikizi: ad fotoğrafın içinde, fiyat çipi sağ üst köşeden taşar ve bu yüzden
   yalnız fotoğraf katmanı kırpılır. Solma fotoğrafa uygulanır, bilgiye değil: rozet, künye ve yer notu okunur kalır.
 */
 
-interface ProductPhotoCardProps {
+interface PhoneProductCardProps {
   href: ComponentProps<typeof Link>['href'];
   name: string;
   image: CatalogImage;
@@ -29,7 +29,7 @@ interface ProductPhotoCardProps {
   optionsLabel?: string;
 }
 
-export function ProductPhotoCard({
+export function PhoneProductCard({
   href,
   name,
   image,
@@ -40,7 +40,7 @@ export function ProductPhotoCard({
   placeNote,
   dimmed = false,
   optionsLabel,
-}: ProductPhotoCardProps) {
+}: PhoneProductCardProps) {
   // Hiçbir yerde olmayan üründe "bu adrese gelmez" demek, cevabı olmayan bir soruya cevap vermek olurdu.
   const note = soldOut ? undefined : placeNote;
   /* Şerit varken indirim rozeti çizilmez (tasarım): ikisi de fotoğrafın üst şeridinde durur ve bu adrese gelmeyen

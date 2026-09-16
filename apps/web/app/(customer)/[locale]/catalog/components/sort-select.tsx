@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ComponentProps } from 'react';
 import { Link } from '@/i18n/navigation';
-import { useDismiss } from './use-dismiss.hook';
+import { useDismiss } from '@/components/customer/ui/use-dismiss.hook';
 
 /**
  * Sıralama seçici — tasarımdaki tek açılır düğme ("Sırala: Öne çıkanlar ▾").

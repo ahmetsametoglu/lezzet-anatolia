@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from '@/i18n/navigation';
-import { iconHitClass } from './button';
-import { Icon } from './icons';
+import { iconHitClass } from '@/components/customer/ui/button';
+import { Icon } from '@/components/customer/ui/icons';
 
 /**
  * Arama alanı — site başlığındaki ürün araması; gerçek bir form, gönderim kataloğa yönlendirir.

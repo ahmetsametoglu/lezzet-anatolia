@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/customer/phone-kit/empty-state';
 import { LoadingState } from '@/components/customer/phone-kit/loading-state';
 import { PlaceNoticeBand } from '@/components/customer/phone-kit/place-notice-band';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
-import { ProductPhotoCard } from '@/components/customer/phone-kit/product-photo-card';
+import { PhoneProductCard } from './components/phone-product-card';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { useRouter } from '@/i18n/navigation';
 import { campaignNote } from '@/lib/storefront/campaign-note';
@@ -208,7 +208,7 @@ export function CatalogMobile({ t, locale, data, products, hasMore, loadingMore,
             </div>
           ) : (
             products.map((product) => (
-              <ProductPhotoCard key={product.id} href={{ pathname: '/product/[slug]', params: { slug: product.slug } }} {...cardOf(product)} />
+              <PhoneProductCard key={product.id} href={{ pathname: '/product/[slug]', params: { slug: product.slug } }} {...cardOf(product)} />
             ))
           )}
         </div>
