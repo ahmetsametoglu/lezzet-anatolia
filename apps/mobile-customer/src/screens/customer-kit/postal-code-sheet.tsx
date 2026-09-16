@@ -11,11 +11,15 @@ import { SuggestionList } from '@/components/ui/suggestion-list';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import { TextField } from '@lezzet/mobile-kit/src/components/ui/text-field';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
+import { submitPlaceNotice } from '@/lib/api/places';
 import { saveOnboarding } from '@/lib/onboarding/onboarding-store';
 import messages from '@lezzet/i18n/customer/place';
 import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
-import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
+import { rememberPlaceNotice, usePlaceNoticeRecord } from '@/lib/places/place-notice-store';
+import { toastError, toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { useMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
+import { PlaceNoticeSheet } from './place-notice-sheet';
+import { useSheet } from './use-sheet.hook';
 import { usePostalSuggest } from './use-postal-suggest.hook';
 
 /*
@@ -84,7 +88,8 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
      Girişlide kayıtlı bir adres de var, o yüzden hangi bilginin ne zaman kullanıldığı söylenir;
      söylenmezse müşteri buradan girdiği kodu teslimat adresi sanır. */
   const meState = useMe();
-  const signedIn = meState.status === 'ready' && meState.me !== null;
+  const me = meState.status === 'ready' ? meState.me : null;
+  const signedIn = me !== null;
 
   const [draft, setDraft] = useState(code ?? '');
   /* ÖNERİ LİSTESİ YALNIZ YAZARKEN VE YALNIZ EKSİK KODDA (kullanıcı kararı 26.08 — web
@@ -141,6 +146,52 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
             : copy.unresolvedNote;
 
   const idOf = (part: string) => (testID === undefined ? undefined : `${testID}-${part}`);
+
+  /* "BURAYA DA GELİN" BURADA SORULUR (kullanıcı kararı): müşteri kodu giriyor, hüküm ekrana geliyor ve talep
+     tam o anda — Kaydet'ten önce — bırakılabiliyor. Bant artık sormuyor; aynı davet iki yerde durursa
+     müşteriye gürültü, bize mükerrer sinyal olurdu.
+
+     Kayıt YERE anahtarlı ve ortak depoda: aynı kod için bir kez bırakan müşteri düğmeyi bir daha görmez
+     (sunucu da mükerrer basışta `already` döner, yani sayı şişmez). */
+  const resolved = place?.kind === 'resolved' ? place.place : null;
+  const outOfRoute = resolved !== null && !resolved.inRoute;
+  const zoneRecord = usePlaceNoticeRecord(resolved?.country ?? 'FR', resolved?.postalCode ?? '');
+  const noticeSheet = useSheet();
+  /** İstek uçuşta: çift dokunuş aynı talebi iki kez göndermesin. */
+  const [sending, setSending] = useState(false);
+
+  /* GİRİŞLİ MÜŞTERİ ÇEKMECE GÖRMEZ: e-postasını sormak sunucunun zaten bildiğini sormaktır ve tek
+     dokunuşluk işi üçe çıkarırdı. Misafirde kendi çekmecesi açılır (e-posta → kod → hesap → talep). */
+  const requestZone = () => {
+    if (resolved === null) return;
+    if (me === null) {
+      noticeSheet.open();
+      return;
+    }
+    setSending(true);
+    void submitPlaceNotice(locale, { postalCode: resolved.postalCode, country: resolved.country, source: 'app-zip' }).then((result) => {
+      setSending(false);
+      /* Dört hâlin dördü de SÖYLENİR; sessiz geçilen hâl müşteriye "sayıldım mı?" diye sordururdu. */
+      if (result.error !== null) {
+        toastError(t.placeNotice.failed);
+        return;
+      }
+      if (result.data.status === 'place_unknown' || result.data.status === 'email_required') {
+        toastError(result.data.status === 'place_unknown' ? t.placeNotice.placeUnknown : t.placeNotice.emailRequired);
+        return;
+      }
+      rememberPlaceNotice(resolved.country, resolved.postalCode, result.data.status);
+      const ok = result.data.status === 'ok';
+      const email = me.email;
+      toastSuccess(
+        email === null
+          ? ok
+            ? t.placeNotice.recorded
+            : t.placeNotice.alreadyRecorded
+          : (ok ? t.placeNotice.toastRecorded : t.placeNotice.toastAlready).replace('{email}', email),
+      );
+    });
+  };
 
   const save = () => {
     onClose();
@@ -213,6 +264,18 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
           {note}
         </Text>
       )}
+      {/* Talep KAYDET'TEN ÖNCE: hükmü okuyan müşteri, kodu kaydetmeden de bölgesini talep olarak bırakabilir.
+          Kayıt alınmışsa düğme komple kalkar — alınmış kaydı ikinci kez isteten düğme "sayılmadım mı?" sorusunu
+          doğururdu. */}
+      {outOfRoute && zoneRecord === null ? (
+        <TextAction
+          label={t.placeNotice.cta}
+          onPress={requestZone}
+          disabled={sending}
+          accessibilityHint={t.placeNotice.ctaHint}
+          testID={idOf('zone-cta')}
+        />
+      ) : null}
       <PrimaryButton
         label={copy.save}
         onPress={save}
@@ -224,6 +287,18 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
           <TextAction label={t.placeNotice.zones} onPress={openZones} testID={idOf('zones')} />
         </View>
       )}
+      {/* Misafirin talep çekmecesi: ilk açılışta kurulur, kapanınca sökülMEZ (gerekçe `use-sheet.hook`ta). */}
+      {noticeSheet.mounted && resolved !== null ? (
+        <PlaceNoticeSheet
+          visible={noticeSheet.visible}
+          country={resolved.country}
+          postalCode={resolved.postalCode}
+          source="app-zip"
+          onClose={noticeSheet.close}
+          onRecorded={(record) => rememberPlaceNotice(resolved.country, resolved.postalCode, record)}
+          testID={idOf('notice')}
+        />
+      ) : null}
     </BottomSheet>
   );
 }

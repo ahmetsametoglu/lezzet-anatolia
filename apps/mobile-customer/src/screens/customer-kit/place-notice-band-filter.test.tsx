@@ -32,7 +32,7 @@ jest.mock('@lezzet/mobile-kit/src/lib/me/use-me.hook', () => ({ useMe: () => ({ 
 describe('PlaceNoticeBand · süzgeç yuvası', () => {
   it('süzgeç prop VERİLMEZSE anahtar çizilmez — paketler listesinin hâli', async () => {
     const view = await render(
-      <PlaceNoticeBand country="FR" postalCode="75001" source="app-packages" testID="pkg" />,
+      <PlaceNoticeBand postalCode="75001" testID="pkg" />,
     );
 
     expect(view.queryByTestId('pkg-shippable-toggle')).toBeNull();
@@ -42,13 +42,7 @@ describe('PlaceNoticeBand · süzgeç yuvası', () => {
   it('süzgeç prop VERİLİRSE anahtar bandın içinde çizilir ve dokunuş çağırana gider', async () => {
     const onChange = jest.fn();
     const view = await render(
-      <PlaceNoticeBand
-        country="FR"
-        postalCode="75001"
-        source="app-catalog"
-        shippableFilter={{ value: false, onChange }}
-        testID="cat"
-      />,
+      <PlaceNoticeBand postalCode="75001" shippableFilter={{ value: false, onChange }} testID="cat" />,
     );
 
     // Etiket bandın kendi sözlüğünden gelir (`placeNotice.hideUndeliverable`), banda ikinci nüsha yazılmadı.
@@ -63,7 +57,7 @@ describe('PlaceNoticeBand · süzgeç yuvası', () => {
      hâlde uydurma bir ad basılmaz — iki iddia da bu ayrımı tutuyor. */
   it('hapta posta kodunun yanında şehir de yazar', async () => {
     const view = await render(
-      <PlaceNoticeBand country="FR" postalCode="67000" placeName="Strasbourg" source="app-catalog" testID="cat" />,
+      <PlaceNoticeBand postalCode="67000" placeName="Strasbourg" testID="cat" />,
     );
 
     expect(view.getByText(messages.tr.placeNotice.code.replace('{postal}', '67000 STRASBOURG'))).toBeOnTheScreen();
@@ -71,7 +65,7 @@ describe('PlaceNoticeBand · süzgeç yuvası', () => {
 
   it('şehir bilinmiyorsa hapta YALNIZ kod kalır — yer tutucu uydurulmaz', async () => {
     const view = await render(
-      <PlaceNoticeBand country="FR" postalCode="75001" placeName={null} source="app-catalog" testID="cat" />,
+      <PlaceNoticeBand postalCode="75001" placeName={null} testID="cat" />,
     );
 
     expect(view.getByText(messages.tr.placeNotice.code.replace('{postal}', '75001'))).toBeOnTheScreen();
