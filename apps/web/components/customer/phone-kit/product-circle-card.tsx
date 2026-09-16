@@ -6,7 +6,8 @@ import { Tag } from './tag';
 
 /*
   Fiyat bilinmiyorsa çip hiç çizilmez (sıfır yazılmaz); indirim rozeti yalnız fırsat içindir, kampanya kesitin
-  özelliğidir. Solma yalnız fotoğrafa uygulanır ki yer işaretinin cümlesi okunur kalsın.
+  özelliğidir. Yer işareti bu kartta YOK (tasarım): vitrin rafı adresin gerçeğini söylemez, onu katalog bandı ile
+  kart şeridi söyler.
 */
 
 interface ProductCircleCardProps {
@@ -19,10 +20,6 @@ interface ProductCircleCardProps {
   image: CatalogImage;
   /** "Fırsat" rozeti — verilirse sol üstte hap köşe. */
   discountLabel?: string;
-  /** Yer işaretinin cümlesi — yalnız kapalı kapı ve bekleyen bölge konuşur. */
-  mark?: string;
-  /** Bu adrese hiç gitmeyen ürün — daire solar. */
-  dimmed?: boolean;
   size?: 'lg' | 'sm';
 }
 
@@ -32,31 +29,20 @@ const SIZE = {
   sm: { diameter: 120, box: 'w-[120px]', circle: 'size-[120px]', initial: 'text-h2-sm text-muted' },
 } as const;
 
-export function ProductCircleCard({ href, replace = false, name, priceLabel, image, discountLabel, mark, dimmed = false, size = 'lg' }: ProductCircleCardProps) {
+export function ProductCircleCard({ href, replace = false, name, priceLabel, image, discountLabel, size = 'lg' }: ProductCircleCardProps) {
   const box = SIZE[size];
   return (
     <Link
       href={href}
       replace={replace}
-      aria-label={[name, priceLabel, mark].filter(Boolean).join(' · ')}
+      aria-label={[name, priceLabel].filter(Boolean).join(' · ')}
       className={`flex ${box.box} flex-none cursor-pointer flex-col items-center gap-1.5 transition-transform hover:opacity-90 active:scale-[0.97]`}
     >
       <span className={`relative block ${box.circle}`}>
-        <CirclePhoto
-          image={image}
-          initial={name.slice(0, 1)}
-          size={box.diameter}
-          initialClassName={box.initial}
-          className={dimmed ? 'opacity-45' : undefined}
-        />
+        <CirclePhoto image={image} initial={name.slice(0, 1)} size={box.diameter} initialClassName={box.initial} />
         {discountLabel !== undefined && (
           <span className="absolute top-2.5 left-0">
             <Tag label={discountLabel} tone="cream" rotate={-7} shadow shape="pill" />
-          </span>
-        )}
-        {mark !== undefined && (
-          <span className="absolute inset-0 grid place-items-center rounded-full bg-scrim px-2.5 text-center font-sans text-badge-sm leading-3 font-bold whitespace-pre-line text-cream">
-            {mark}
           </span>
         )}
         {priceLabel !== undefined && (

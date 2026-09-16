@@ -1,20 +1,15 @@
 import {
   bandCountLabel,
   cardBadgeOf,
-  cardPlaceNoteOf,
   formatPrice,
   offerDiscountLabel,
   offerLimitOf,
-  packageRouteStatusOf,
-  placeMarkOf,
   productPriceLabel,
   scopeBadgeOf,
   type HomeCopy,
 } from '@lezzet/helper';
 import homeMessages from '@lezzet/i18n/customer/home';
-import placeMessages from '@lezzet/i18n/customer/place';
 import { useAccount, useWholesale } from '@/components/customer/account/account-context';
-import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
 import { CollectionBand } from '@/components/customer/phone-kit/collection-band';
 import { DashedInvite } from '@/components/customer/phone-kit/dashed-invite';
@@ -37,10 +32,8 @@ const RAIL = 'flex overflow-x-auto px-5.5 pt-2.5 pb-1 [scrollbar-width:none] [&:
 
 export function HomeMobile({ t, locale, data }: HomeMobileProps) {
   const copy: HomeCopy = homeMessages[locale];
-  const placeCopy = placeMessages[locale];
   const signedIn = useAccount() !== null;
   const wholesale = useWholesale();
-  const { place } = useDeliveryPlace();
   const { home, orders, b2bPending } = data;
   // Süren sipariş varken "tekrarla" bandı çizilmez: aktif teslimatın üstüne "geçen siparişi tekrarla" demek olan biteni gizlerdi.
   const live = orders.live;
@@ -145,21 +138,18 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
             <SectionHeader eyebrow={copy.featured.eyebrow} title={copy.featured.title} />
           </div>
           <div className={`${RAIL} gap-4.5`}>
-            {home.featured.map((product) => {
-              const { note, dimmed } = cardPlaceNoteOf(placeMarkOf(product.stockStatus, place, placeCopy));
-              return (
-                <ProductCircleCard
-                  key={product.slug}
-                  href={{ pathname: '/product/[slug]', params: { slug: product.slug } }}
-                  name={product.name}
-                  priceLabel={productPriceLabel(product.priceCents, locale)}
-                  discountLabel={cardBadgeOf(product, { offer: copy.card.offer })}
-                  image={product.image}
-                  mark={note}
-                  dimmed={dimmed}
-                />
-              );
-            })}
+            {/* Vitrin kartı yer işareti TAŞIMAZ (tasarım): ilk ekranda her soğuk zincir ürününe not düşmek rafı bir uyarı
+                duvarına çevirirdi. Adresin gerçeği katalogda bant ve kart şeridiyle, ürün detayında büyük puntoyla söyleniyor. */}
+            {home.featured.map((product) => (
+              <ProductCircleCard
+                key={product.slug}
+                href={{ pathname: '/product/[slug]', params: { slug: product.slug } }}
+                name={product.name}
+                priceLabel={productPriceLabel(product.priceCents, locale)}
+                discountLabel={cardBadgeOf(product, { offer: copy.card.offer })}
+                image={product.image}
+              />
+            ))}
             {/* Rayın sonundaki KATALOG kartı — ürün dairesinin ikizi ama ürün değil: fiyat çipi yerine
                 ok rozeti, fotoğraf yerine katalog ikonu. */}
             <Link
@@ -232,44 +222,37 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
         <>
           <p className="px-5.5 font-sans text-eyebrow-xs text-terracotta uppercase">{copy.packages.eyebrow}</p>
           <div className="flex flex-col gap-3 px-5.5">
-            {home.packages.map((pack) => {
-              // Paketin yer ekseni paket kartlarıyla AYNI eşlemeden (`packageRouteStatusOf`, native ile ortak).
-              const mark = cardPlaceNoteOf(placeMarkOf(packageRouteStatusOf(pack.route), place, placeCopy));
-              const note = pack.soldOut ? undefined : mark.note;
-              return (
-                <PhotoTile
-                  key={pack.slug}
-                  href={{ pathname: '/package/[slug]', params: { slug: pack.slug } }}
-                  label={[pack.name, pack.soldOut ? copy.packages.soldOut : undefined, note].filter(Boolean).join(' · ')}
-                  image={pack.image}
-                  initial={pack.name.slice(0, 1)}
-                  className="h-[172px] w-full"
-                  ratio={2}
-                  sizes="100vw"
-                  dimmed={pack.soldOut || mark.dimmed}
-                  topBadge={
-                    pack.soldOut ? (
-                      <span className="block rounded-badge bg-scrim-72 px-2.5 py-1 font-sans text-badge-sm font-bold tracking-(--text-badge--letter-spacing) text-sand-50 uppercase">
-                        {copy.packages.soldOut}
-                      </span>
-                    ) : undefined
-                  }
-                >
-                  <span className="flex items-end justify-between gap-2.5">
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="font-sans text-eyebrow-xs text-olive-light">{copy.packages.badge.replace('{n}', String(pack.itemCount))}</span>
-                      <span className="truncate font-serif text-card-title-sm text-on-image">{pack.name}</span>
-                      {note !== undefined && (
-                        <span className="line-clamp-2 font-sans text-body-sm leading-[1.6] font-semibold whitespace-pre-line text-terracotta">{note}</span>
-                      )}
+            {/* Paket kartı da yer işareti taşımaz; solma yalnız tükendide kalır (ürün rafıyla aynı gerekçe). */}
+            {home.packages.map((pack) => (
+              <PhotoTile
+                key={pack.slug}
+                href={{ pathname: '/package/[slug]', params: { slug: pack.slug } }}
+                label={[pack.name, pack.soldOut ? copy.packages.soldOut : undefined].filter(Boolean).join(' · ')}
+                image={pack.image}
+                initial={pack.name.slice(0, 1)}
+                className="h-[172px] w-full"
+                ratio={2}
+                sizes="100vw"
+                dimmed={pack.soldOut}
+                topBadge={
+                  pack.soldOut ? (
+                    <span className="block rounded-badge bg-scrim-72 px-2.5 py-1 font-sans text-badge-sm font-bold tracking-(--text-badge--letter-spacing) text-sand-50 uppercase">
+                      {copy.packages.soldOut}
                     </span>
-                    <span className="flex-none rotate-3 rounded-badge bg-terracotta px-3.5 py-2 font-serif text-screen-title text-card shadow-badge">
-                      {formatPrice(pack.priceCents, locale)}
-                    </span>
+                  ) : undefined
+                }
+              >
+                <span className="flex items-end justify-between gap-2.5">
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="font-sans text-eyebrow-xs text-olive-light">{copy.packages.badge.replace('{n}', String(pack.itemCount))}</span>
+                    <span className="truncate font-serif text-card-title-sm text-on-image">{pack.name}</span>
                   </span>
-                </PhotoTile>
-              );
-            })}
+                  <span className="flex-none rotate-3 rounded-badge bg-terracotta px-3.5 py-2 font-serif text-screen-title text-card shadow-badge">
+                    {formatPrice(pack.priceCents, locale)}
+                  </span>
+                </span>
+              </PhotoTile>
+            ))}
           </div>
         </>
       )}
