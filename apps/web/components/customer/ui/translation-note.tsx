@@ -8,10 +8,9 @@
  * **Okuyucu neyi okuduğunu bilmeli:** makine çevirisi bir cümleyi yumuşatabilir ya da
  * sertleştirebilir, bu yüzden çeviri sessizce orijinalin yerine geçmez.
  *
- * **Rozet ve bağlantı BİRBİRİNİN YERİNE geçer, yan yana durmaz:** "Orijinali göster" zaten okunanın
- * çeviri olduğunu söylüyor, yanına bir de "otomatik çevrildi" rozeti koymak aynı bilgiyi iki kez
- * yazmaktır. Bağlantı verilemeyen yerde (B2B ret gerekçesinin orijinali Türkçedir, Fransız başvuru
- * sahibinin onunla yapabileceği bir şey yoktur) bilgiyi rozet taşır.
+ * **Bağlantı ZORUNLU DEĞİL:** orijinali göstermek her metinde anlamlı değil — B2B ret gerekçesinin
+ * orijinali Türkçedir ve Fransız başvuru sahibinin onunla yapabileceği bir şey yoktur, orası yalnız
+ * rozet ister (geçersiz ara hâl temsil edilemez: metinler `toggle`ın içinde).
  */
 interface TranslationNoteProps {
   /** "otomatik çevrildi" — komponent metin taşımaz, çağıranın sözlüğünden gelir. */
@@ -33,16 +32,14 @@ interface TranslationNoteProps {
 export function TranslationNote({ badge, toggle, onDark = false }: TranslationNoteProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {!toggle && (
-        <span
-          className={[
-            'rounded-pill px-2 py-0.5 font-sans text-micro',
-            onDark ? 'bg-white/15 text-on-image-soft' : 'bg-sand-100 text-muted',
-          ].join(' ')}
-        >
-          {badge}
-        </span>
-      )}
+      <span
+        className={[
+          'rounded-pill px-2 py-0.5 font-sans text-micro',
+          onDark ? 'bg-white/15 text-on-image-soft' : 'bg-sand-100 text-muted',
+        ].join(' ')}
+      >
+        {badge}
+      </span>
       {toggle && (
         <button
           type="button"

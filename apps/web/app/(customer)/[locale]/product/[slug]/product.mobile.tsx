@@ -11,7 +11,7 @@ import { variantNameOf } from '@/lib/storefront/variant-name';
 import { PhoneDeclaration } from './components/phone-declaration';
 import { PhoneFamilyRail } from './components/phone-family-rail';
 import { PhonePurchaseBar } from './components/phone-purchase-bar';
-import { Reviews } from './components/reviews';
+import { PhoneReviews } from './components/phone-reviews';
 import type { ProductViewProps } from './product-types';
 
 /**
@@ -121,7 +121,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
       <PhoneDeclaration copy={copy} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} />
 
       <div className="px-3 pt-2.5">
-        <Reviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} compact />
+        <PhoneReviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} />
       </div>
 
       {similar.length > 0 && (

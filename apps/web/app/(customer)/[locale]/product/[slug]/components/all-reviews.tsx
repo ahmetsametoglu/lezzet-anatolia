@@ -5,7 +5,6 @@ import type { KeysetCursor } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { PublishedReview } from '@/lib/feedback/product-feedback';
 import { Dialog } from '@/components/customer/ui/dialog';
-import { SectionHeader } from '@/components/customer/phone-kit/section-header';
 import type { Messages } from '../product-types';
 import { loadMoreReviewsAction } from '../actions';
 import { ReviewCard } from './review-card';
@@ -135,10 +134,10 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
             <div key={star} className="flex items-center gap-2.5">
               <span className="flex w-6 flex-none items-center gap-0.5 font-sans text-micro text-body">
                 {star}
-                <Icon name="star" size={10} className="text-star" />
+                <Icon name="star" size={10} className="text-honey" />
               </span>
               <span className="block h-2 flex-1 overflow-hidden rounded-pill bg-sand-100">
-                <span className="block h-2 rounded-pill bg-star" style={{ width: max > 0 ? `${(count / max) * 100}%` : '0%' }} />
+                <span className="block h-2 rounded-pill bg-honey" style={{ width: max > 0 ? `${(count / max) * 100}%` : '0%' }} />
               </span>
               <span className="w-6 flex-none text-right font-sans text-micro text-muted">{count}</span>
             </div>
@@ -165,7 +164,7 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
       </div>
 
       {reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} locale={locale} translation={t.reviews.translation} />
+        <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} boxed />
       ))}
 
       {/* Boş durum yalnız İLK SAYFA geldikten sonra: yükleme sırasında "yorum yok" demek, bir saniye
@@ -220,25 +219,28 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
    * Mobil: TAM EKRAN, modal değil — ortalanmış bir panel, altındaki sayfanın kenarlarını
    * göstererek listeyi bir kutunun içine hapsederdi.
    *
-   * Başlık hesap alt ekranlarının deseni (`SectionHeader`): üstte terracotta ÜRÜN ADI, altında
-   * bölümün adı. Panel ayrı bir sayfa gibi açılıyor ve ürün adını taşımasaydı hangi ürünün
-   * yorumlarına bakıldığı ekranda hiç yazmazdı.
+   * Kendi başlığını çiziyor çünkü `Dialog`'un başlığı modal içindir.
    */
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-sand-50">
-      <header className="flex flex-none items-center gap-1.5 border-b border-sand-200 px-4.5 py-2.5">
+    <div className="fixed inset-0 z-50 flex flex-col bg-cream">
+      <header className="flex flex-none items-center gap-3 border-b border-sand-300 bg-white px-4 py-3.5">
         <button
           type="button"
           onClick={onClose}
           aria-label={t.reviews.close}
-          className="-ml-2 flex size-10 flex-none cursor-pointer items-center justify-center rounded-full text-ink transition-colors hover:bg-sand-200"
+          className="flex size-11 flex-none cursor-pointer items-center justify-center font-sans text-body font-bold text-olive"
         >
-          <Icon name="arrowLeft" size={20} />
+          ←
         </button>
-        <SectionHeader eyebrow={productName} title={t.reviews.title} />
+        <span className="truncate font-serif text-lead font-semibold text-ink">{t.reviews.title}</span>
       </header>
       {/* `min-h-0`: flex çocuğu içeriğinden küçülmez — o olmadan liste taşar ve başlık kayar. */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4.5 py-4">{body}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <p className="mb-3 font-sans text-micro text-muted">
+          {productName} · {t.reviews.shownCount.replace('{shown}', String(reviews.length))}
+        </p>
+        {body}
+      </div>
     </div>
   );
 }

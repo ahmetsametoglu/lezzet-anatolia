@@ -6,15 +6,16 @@ import { formatDecimal } from '@/lib/storefront/format';
 import { Icon } from '@/components/customer/ui/icons';
 import type { Messages, ReviewsData } from '../product-types';
 import { ReviewForm } from './review-form';
-import { AllReviews } from './all-reviews';
-import { ReviewCard, Stars } from './review-card';
+import { PhoneAllReviews } from './phone-all-reviews';
+import { PhoneReviewCard, PhoneStars } from './phone-review-card';
 
 /**
- * Yorumlar bölümü — puan kartı, ilk yorumlar ve "yorum yaz".
+ * Telefon yorumlar bölümü — referansın "Değerlendirmeler" bloğu: başlık, kartlar, altında özet.
+ * Masaüstünün `Reviews`'ından ayrı dosya (iki tasarım ayrıldı, ortak komponent yok).
  *
  * **Sayfa yalnız ONAYLI yorumu gösterir** ve bu kural burada değil kapıda yaşıyor: yayın okuması
  * durum parametresi almıyor (`listProductReviews`), "kim yazabilir" sorusunu da kapı cevaplıyor
- * (`getReviewEligibility`) — ekranın bu iki kararı esnetebileceği bir yol yok.
+ * (`getReviewEligibility`).
  *
  * Tasarımın üç kuralı:
  *   · **Puan alanı GİZLENİR** — "0,0" gösterilmez; sıfır puan kötü ürün değil "henüz kimse
@@ -24,17 +25,16 @@ import { ReviewCard, Stars } from './review-card';
  *   · **"Yorum yaz" yalnız satın almış girişli müşteride** — göstermek, yazamayacak kişiye
  *     kapalı bir kapı açmaktır.
  */
-interface ReviewsProps {
+interface PhoneReviewsProps {
   t: Messages;
   locale: Locale;
   productId: string;
-  /** Panel başlığındaki alt satır ("Antep Fıstıklı Baklava · N yorum") — tasarımın künyesi. */
+  /** Panelin başlığındaki üst satır — hangi ürünün yorumlarına bakıldığını orası söyler. */
   productName: string;
   data: ReviewsData;
-  compact?: boolean;
 }
 
-export function Reviews({ t, locale, productId, productName, data, compact = false }: ReviewsProps) {
+export function PhoneReviews({ t, locale, productId, productName, data }: PhoneReviewsProps) {
   const [writing, setWriting] = useState(false);
   // Gönderimden sonra liste TAZELENMEZ ve tazelenmemeli: yorum moderasyondan geçmeden yayına
   // girmiyor. "Kaydedildi" demek yeterli; listede aramak müşteriyi kendi yorumunu ararken bırakırdı.
@@ -68,7 +68,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
   return (
     <section className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{t.reviews.title}</h2>
+        <h2 className="font-serif text-card-title-sm text-ink">{t.reviews.title}</h2>
         {canReview && !alreadyWrote && !submitted && (
           <button
             type="button"
@@ -83,7 +83,9 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
       {submitted && (
         // Moderasyon gerçeği SÖYLENİR: "yayınlandı" demek yalan olurdu, sessiz kalmak da müşteriye
         // yorumunun kaybolduğunu düşündürürdü.
-        <p className="rounded-soft bg-olive-bg px-4 py-3 font-sans text-note leading-relaxed font-semibold text-olive">{t.reviews.submitted}</p>
+        <p className="rounded-soft bg-olive-bg px-4 py-3 font-sans text-note leading-relaxed font-semibold text-olive">
+          {t.reviews.submitted}
+        </p>
       )}
 
       {writing && !submitted && (
@@ -98,6 +100,10 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
         />
       )}
 
+      {reviews.map((review) => (
+        <PhoneReviewCard key={review.id} review={review} locale={locale} translation={t.reviews.translation} />
+      ))}
+
       {score.average === null ? (
         <div className="flex flex-col items-center gap-1.5 rounded-soft border border-dashed border-sand-400 px-6 py-6 text-center">
           <Icon name="star" size={24} className="text-sand-400" />
@@ -105,51 +111,44 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
           <span className="font-sans text-note text-muted">{t.reviews.emptyBody}</span>
         </div>
       ) : (
-        <div className="flex items-center gap-4.5 rounded-card border border-sand-200 bg-card px-5.5 py-4.5">
-          {/* Ortalama TEK ve iri: tasarımın bu kartta söylediği tek şey "bu ürün kaç alıyor". */}
-          <span className={['font-serif leading-tight text-ink', compact ? 'text-h1-sm' : 'text-h1-sm'].join(' ')}>
-            {formatDecimal(score.average, locale, 1)}
-          </span>
-          <div className="flex flex-col gap-0.5">
-            <Stars value={score.stars ?? score.average} />
-            <span className="font-sans text-note text-muted">{t.reviews.count.replace('{count}', String(total))}</span>
+        /* Özet kart LİSTENİN ALTINDA ve BEYAZ: okunacak şey yorumların kendisi, kart onların
+           toplamını söylüyor. Kum zemine alınsaydı dördüncü bir yorum gibi okunurdu. */
+        <div className="flex flex-col gap-3 rounded-card border border-sand-200 bg-card px-5.5 py-4.5">
+          <div className="flex items-center gap-4.5">
+            {/* Ortalama TEK ve iri: kartın söylediği tek şey "bu ürün kaç alıyor". */}
+            <span className="font-serif text-h1-sm leading-tight text-ink">{formatDecimal(score.average, locale, 1)}</span>
+            <div className="flex flex-col gap-0.5">
+              <PhoneStars value={score.stars ?? score.average} />
+              <span className="font-sans text-note text-muted">{t.reviews.count.replace('{count}', String(total))}</span>
+            </div>
           </div>
+          {/* Kapı özetin İÇİNDE: "hepsi şu kadar" ile "tamamına bak" aynı cümlenin iki yarısı.
+              Bağlantı ancak gösterilenden fazla yorum varken çizilir. */}
+          {total > reviews.length && (
+            <button
+              type="button"
+              onClick={openPanel}
+              className="cursor-pointer border-t border-sand-200 pt-3 text-left font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
+            >
+              {t.reviews.all.replace('{count}', String(total))}
+            </button>
+          )}
         </div>
-      )}
-
-      {reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
-      ))}
-
-      {/* Bağlantı ancak gösterilenden FAZLA yorum varken çizilir: aynı listeyi açan bir bağ,
-          olmayan bir kapı gösterirdi. */}
-      {total > reviews.length && (
-        <button
-          type="button"
-          onClick={openPanel}
-          className="cursor-pointer text-left font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
-        >
-          {t.reviews.all.replace('{count}', String(total))}
-        </button>
       )}
 
       {!canReview && <span className="font-sans text-micro leading-relaxed text-muted">{t.reviews.onlyBuyers}</span>}
 
       {panelOpen && (
-        <AllReviews
+        <PhoneAllReviews
           t={t}
           locale={locale}
           productId={productId}
           productName={productName}
           breakdown={score.ratingBreakdown}
           total={total}
-          fullScreen={compact}
           onClose={closePanel}
         />
       )}
     </section>
   );
 }
-
-// `Stars` ve `initialOf` buradan `review-card.tsx`'e taşındı: panel de aynı kartı ve aynı yıldız
-// satırını çiziyor, iki kopya aynı yorumu iki ekranda farklı gösterirdi (`CLAUDE.md §1`).
