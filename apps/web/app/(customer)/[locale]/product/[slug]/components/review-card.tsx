@@ -91,14 +91,28 @@ export function ReviewCard({ review, locale, verifiedLabel, translation, boxed =
   );
 }
 
-/** Yıldız satırı — dolu/boş, yarım yıldız yuvarlanmış hâliyle (skor onu zaten yuvarlıyor). */
+/**
+ * Yıldız satırı — dolu, yarım ya da boş. Skor yarım adıma yuvarlanmış gelir (4,33 → 4,5); yarım yıldız, boş yıldızın üstüne
+ * yarısına kadar kırpılmış dolu yıldızla çizilir. Tam sayıya yuvarlamak 4,5'i beş dolu yıldız gösteriyordu.
+ */
 export function Stars({ value, small = false }: { value: number; small?: boolean }) {
-  const full = Math.round(value);
+  const size = small ? 13 : 16;
   return (
     <span aria-label={`${value} / 5`} className="inline-flex items-center gap-0.5">
-      {[0, 1, 2, 3, 4].map((i) => (
-        <Icon key={i} name="star" size={small ? 13 : 16} className={i < full ? 'text-star' : 'text-sand-400'} />
-      ))}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const rest = value - i;
+        const fill = rest >= 0.75 ? 100 : rest >= 0.25 ? 50 : 0;
+        return (
+          <span key={i} className="relative inline-flex">
+            <Icon name="star" size={size} className="text-sand-400" />
+            {fill > 0 && (
+              <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${fill}%` }}>
+                <Icon name="star" size={size} className="text-star" />
+              </span>
+            )}
+          </span>
+        );
+      })}
     </span>
   );
 }
