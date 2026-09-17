@@ -1,18 +1,7 @@
-// Gerçek başlangıç verisi. Test sunucusu ve üretimin ilk kurulumu AYNI dosyadan beslenir
-// (`scripts/seed-real.ts`) — ayrımı bayrak yapar, ayrı dosya değil.
-//
-// ── ÜÇ KATMAN ────────────────────────────────────────────────────────────────────────────────────
-//  1 · KESİN     — faturadan ve üreticinin kendi künyesinden ölçülmüş: ad, ölçü, maliyet, gerçek ürün
-//                  çekimi, içindekiler, saklama, raf ömrü; ve işletmecinin fiyat politikası
-//                  (`SALE_PRICES`). Bayraksız koşar; üretim kurulumu budur.
-//  2 · DAYANAKLI — gerçek ürün sayfasına dayanan ama resmî belgeye dayanmayan metin (açıklama).
-//                  `--layers=2` ile yazılır.
-//  3 · UYDURMA   — kaynağı OLMAYAN değerler: içindekiler, saklama, besin tablosu, alerjen, test mal
-//                  kabulü (lot/SKT) ve katalogda belgesi olmayan ürünlerin türetilmiş beyanı.
-//                  `--layers=3` ile yazılır; blokları aşağıda AYRI durur (`FICTION_*`, `TEST_INTAKE`)
-//                  ki üretime geçerken tek parça hâlinde silinebilsin.
-//
-// Katman numarası alanın kendisindedir: hangi alanın hangi katmana ait olduğu `Draft` tipinde yazılı.
+// Gerçek başlangıç verisi; test sunucusu ve üretimin ilk kurulumu bu dosyadan beslenir, katmanı `--layers` seçer:
+// 1 kesin (fatura, üreticinin künyesi, `SALE_PRICES`; üretim bayraksız koşar), 2 dayanaklı (ürün sayfasına dayanan
+// açıklama), 3 uydurma (kaynağı olmayan beyan ve test mal kabulü). Katman 3 blokları ayrı durur ki üretime geçerken
+// tek parça silinebilsin; hangi alanın hangi katmana ait olduğu `Draft` tipinde yazılı.
 
 // Katman 3 blokları şemanın tipleriyle yazılır: besin tablosunun sekiz kalemi ve alerjenin kapalı
 // kümesi orada tanımlı — yazım hatası derlenme anında patlasın, koşuda sessizce düşmesin.
@@ -93,8 +82,8 @@ export const SUPPLIERS = [
 ] as const;
 
 /**
- * Test kabulü — ARAYÜZ DENEMESİ İÇİNDİR, gerçek veri değildir: lot ve son kullanma uydurmadır ve mal
- * fiilen sayılmamıştır. Yalnız `--with-intake` ile yazılır; üretim kurulumundan önce bu blok silinir.
+ * Test kabulü: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır. Yalnız `--layers=3` ile yazılır ki arayüz
+ * denenebilsin; üretim kurulumundan önce bu blok silinir.
  */
 export const TEST_INTAKE = {
   lotNumber: 'TEST-001',
@@ -126,11 +115,8 @@ interface DraftVariant extends PurchaseLine {
 }
 
 /**
- * Taslağın kapak görseli. Anahtar tabanı (`slug`) ÜRÜNÜN slug'ından ayrı tutulur: ürün slug'ı adından
- * türüyor ve ad düzeltilince kayıyor — görselin adresi kaymamalı.
- *
- * `file` depodaki usta dosyadır (tedarikçinin gönderdiği ambalaj çekimi), `url` uzak kaynaktır; biri
- * verilir. `source` ise "bu resim nereden geldi" sorusunun cevabıdır ve kayıtta durur.
+ * Anahtar tabanı (`slug`) ürünün slug'ından ayrı tutulur: ürün slug'ı addan türer ve ad düzeltilince kayar, görselin
+ * adresi kaymamalı. `file` depodaki usta, `url` uzak kaynaktır ve biri verilir; `source` görselin kaynağını kayıtta tutar.
  */
 interface DraftImage {
   slug: string;
@@ -680,13 +666,9 @@ export const PURCHASES: Purchase[] = [
 ];
 
 /**
- * Satış fiyatı — işletmecinin fiyat politikası. Anahtar tedarikçideki ad, çünkü fiyat varyanta bağlı
- * (zeytinyağının iki boyu iki fiyat).
- *
- * Profesyonel (b2b, HT) = alış × 1,40. Son tüketici (b2c, TTC) = alış × piyasa katsayısı; katsayı
- * rakiplerin indirimsiz liste fiyatlarının medyanından gelir, yöntemi `docs/architecture/COMPETITORS.md`.
- * `taban` işaretli kalemde piyasa fiyatı profesyonel fiyatın KDV'li hâlinin altında kaldı ve son
- * tüketici fiyatı o tabana çekildi: bu kalemlerde alışımız piyasaya göre yüksek.
+ * Anahtar tedarikçideki ad, çünkü fiyat varyanta bağlıdır (zeytinyağının iki boyu iki fiyat). Yöntem
+ * `docs/architecture/COMPETITORS.md`'de; `taban` işaretli kalemde piyasa fiyatı profesyonel fiyatın KDV'li hâlinin
+ * altında kaldığı için son tüketici fiyatı tabana çekildi.
  */
 export const SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
   'LEZZA Kol Borek with Cheese Uncooked (Peynirli) 200 gr': { b2c: 1.17, b2b: 0.73 },
@@ -743,12 +725,9 @@ export const SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
 };
 
 /**
- * Vitrin kategorileri. Ad üç dilde aynı rafı çağırmalı; iyileştirme çağrışımlı sözcük ("şifa") AB
- * 1169/2011 md. 7/3 gereği ada girmez, "Doğadan" bir çay markası olduğu için kullanılmaz.
- *
- * `lezza` alanı KAYNAĞIN kategori anahtarlarını buraya bağlar. O anahtarlar `catId`ye önceden
- * yazılınca `seedLezzaProducts` kendi kategorisini kurmaz, ürünlerini buraya düşürür — yoksa
- * kaynağın altı kategorisi benimkilerin yanına ikinci bir sıra olarak açılırdı.
+ * İyileştirme çağrışımlı sözcük ("şifa") AB 1169/2011 madde 7/3 gereği kategori adına girmez; "Doğadan" bir çay
+ * markası olduğu için kullanılmaz. `lezza` kaynağın kategori anahtarlarını buraya bağlar, yoksa `seedLezzaProducts`
+ * kaynağın altı kategorisini ikinci bir sıra olarak açardı.
  */
 interface SeedCategory {
   key: string;
@@ -815,15 +794,9 @@ export const CATEGORIES: SeedCategory[] = [
 ];
 
 /**
- * Faturada OLMAYAN ama katalogda duran kalemler — ADAY olarak kurulurlar.
- *
- * Fiyatsız kalmaları eksiklik değil KARAR: alış maliyeti olmayan ürüne satış fiyatı yazmak uydurma
- * olurdu. `teklifSkulari` kümesinin dışında oldukları için `satilabilirDurum` onları aday tutuyor;
- * katalogda "satışa kapalı" görünürler ve işletmeci bir sonraki siparişte hangisini alacağına bakar.
- *
- * Tatlıda seçim ÇEŞİT BLOĞUNU tamamlar: aynı ailenin iki üyesi birden gelsin ki vitrinde "hangisini
- * alayım" sorusu kurulabilsin (`ELLE_AILELER`). Mezede kaynağın bütün rafı gelir; satıştaki tek meze
- * çiğ köfte ve kategori sayfası tek kartla kalmasın.
+ * Faturada olmayan katalog kalemleri aday kurulur ve fiyatsız kalır: alış maliyeti olmayan ürüne satış fiyatı yazmak
+ * uydurma olurdu. Tatlıda ailenin iki üyesi birden gelir ki çeşit bloğu kurulabilsin (`ELLE_AILELER`); mezede
+ * kaynağın bütün rafı gelir ki satıştaki tek meze olan çiğ köfte kategori sayfasında yalnız kalmasın.
  */
 export const ADAY_SKULARI: string[] = [
   // Bütün pastalar ve cheesecake'ler → Tatlı
@@ -872,12 +845,8 @@ export const ADAY_SKULARI: string[] = [
 ];
 
 /**
- * Taslakların ürün aileleri — ÇEŞİT ekseni: müşteri "hangi sirkeyi alayım" diye sorduğunda kartlar
- * yan yana dursun. Katalog tarafındaki `ELLE_AILELER` ile aynı kural: tek üyeli aile kurulmaz,
- * çünkü bir çeşit bloğu en az iki kart ister.
- *
- * Anahtar faturadaki addır (`Draft.name`); etiket çeşidin üç dilli adıdır ve ürün adının TEKRARI
- * değildir — blok zaten aile adını yazıyor, kart yalnız çeşidi söyler.
+ * Tek üyeli aile kurulmaz (`ELLE_AILELER` ile aynı kural), çünkü çeşit bloğu en az iki kart ister. Anahtar
+ * faturadaki addır (`Draft.name`); etiket yalnız çeşidi söyler, çünkü blok aile adını zaten yazıyor.
  */
 export const DRAFT_FAMILIES: Array<{ ad: string; uyeler: Array<{ draft: string; etiket: UcDil }> }> = [
   {
@@ -930,11 +899,9 @@ export const DRAFT_FAMILIES: Array<{ ad: string; uyeler: Array<{ draft: string; 
 ];
 
 /**
- * Taslağın kategorisi. Anahtar FATURADAKİ ad (`Draft.name`) — katalog adı düzeltilse de eşleşme
- * kaymaz; aynı gerekçe `FICTION_*` sözlüklerinde de yazılı.
- *
- * Eksik bırakılan taslak beslemeyi DURDURUR (`checkDraftCategories`): kategorisiz ürün vitrinde
- * hiçbir şeridin altına düşmez ve eksiklik ancak siteye bakınca fark edilirdi.
+ * Anahtar faturadaki addır (`Draft.name`) ki katalog adı düzeltilse de eşleşme kaymasın. Eksik taslak beslemeyi
+ * durdurur (`checkDraftCategories`): kategorisiz ürün vitrinde hiçbir kategorinin altında görünmez ve eksiklik ancak
+ * siteye bakınca fark edilirdi.
  */
 export const DRAFT_CATEGORY: Record<string, string> = {
   'LEZZA Traditional Meet Doner': 'et-tavuk',
@@ -1026,13 +993,9 @@ export const COLLECTIONS: SeedCollection[] = [
 ];
 
 /* ─── KATMAN 3 · UYDURMA ─────────────────────────────────────────────────────────────────────────
- *
- * Aşağıdaki bloklar GERÇEK DEĞİLDİR. Hiçbiri üreticinin belgesinden gelmiyor; ürün tipine bakılarak
- * makul görünsün diye yazıldılar ve tek işleri test sunucusunun ekranlarını dolu göstermek.
- * `--layers=3` olmadan yazılmazlar. **Üretim kurulumundan önce bu blok bütün hâlinde silinir**;
- * gerçek değerler tedarikçinin teknik künyesinden gelir ve işletmeci panelden onaylar.
- *
- * Anahtar faturadaki addır (`Draft.name`) — katalog adı düzeltilse bile eşleşme kaymaz.
+ * Bu bloklar yalnız test sunucusunun ekranlarını doldurur: `--layers=3` olmadan yazılmaz, gerçek değerler
+ * tedarikçinin künyesinden gelir ve üretim kurulumundan önce blok bütün hâlinde silinir. Anahtar faturadaki addır
+ * (`Draft.name`) ki katalog adı düzeltilse de eşleşme kaymasın.
  */
 
 /** kJ, kcal'den türer: iki kalemin birbiriyle çelişmesi imkânsız olsun (INCO ikisini birden ister). */
@@ -1083,17 +1046,9 @@ export const FICTION_NUTRITION: Record<string, Nutrition> = {
 };
 
 /**
- * Alerjen — yalnız ürünün ADI söylüyorsa yazıldı; gerisi BİLEREK boş.
- *
- * **Boş bırakmak yayını engellemez:** ne veritabanı kısıtı `product_publish_requires_all_locales`
- * ne de `productPublishGaps` alerjene bakıyor; ikisi de ad, açıklama, içindekiler ve saklama arıyor.
- * Boş listenin tek etkisi `is_incomplete` üretilmiş kolonu, o da operasyon panelindeki "beyan eksik"
- * rozeti ve süzgeci. Müşteri sayfası da bozulmuyor: içindekiler kartı `ingredients` varsa çiziliyor,
- * yalnız uyarı rozetleri doğmuyor (`declaration.tsx`).
- *
- * Bu yüzden sirkeye ve zeytinyağına uydurma bir alerjen YAZILMADI: yasal beyanda "olmayanı var
- * göstermek", eksik bırakmakla aynı ağırlıkta değil. Kalan "beyan eksik" listesi zaten işletmecinin
- * tedarikçi belgesiyle kapatacağı gündemdir.
+ * Alerjen yalnız ürünün adı söylüyorsa yazıldı; boş liste yayını engellemez, yalnız paneldeki "beyan eksik" rozetini
+ * yakar (`is_incomplete`). Sirkeye ve zeytinyağına uydurma alerjen yazılmadı, çünkü yasal beyanda olmayanı var
+ * göstermek eksik bırakmakla aynı ağırlıkta değildir.
  */
 export const FICTION_ALLERGENS: Record<string, ProductAllergen[]> = {
   Tahini: ['susam'],
