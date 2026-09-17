@@ -5,17 +5,8 @@ import { buttonClass } from '@/components/customer/ui/button';
 import type { Messages, ReorderNotice as Notice } from '../orders-types';
 
 /**
- * Tekrar sipariş sonucu — tasarımın "bazı kalemler eklenemedi" kartı, ilgili SATIRIN altında açılır.
- *
- * İki ayrı kutu (yeşil "eklendi" / bal rengi "eklenemedi") tasarımın kararı: müşteri iyi haberi de
- * kötü haberi de ayrı ayrı görmeli. Tek satırda birleştirilseydi ("10 eklendi, 2 eklenemedi") göz
- * ikincisini atlardı.
- *
- * **Fiyat farkı için ayrı uyarı YOK** (tasarım açıkça söylüyor): fark zaten sepette görünüyor,
- * burada tekrarlamak müşteriyi iki kez düşündürürdü. Alt satır yalnız "güncel fiyatlarla" der.
- *
- * Hiçbir kalem eklenemediyse "Sepete git" ÇİZİLMEZ — boş bir vaade götüren düğme, tıklandığında
- * müşteriyi kandırmış olur.
+ * Eklenen ve eklenemeyen kalemler ayrı kutuda, çünkü tek satırda birleşince göz kötü haberi atlar. Hiçbir kalem eklenemediyse
+ * "Sepete git" çizilmez, çünkü boş sepete götüren düğme müşteriyi kandırır.
  */
 interface ReorderNoticeProps {
   t: Messages;
