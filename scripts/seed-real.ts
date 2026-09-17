@@ -1,5 +1,6 @@
 // Gerçek başlangıç beslemesi: `seed-real/data.ts`'te yazanı ekler, hiçbir değer üretmez ve katmanlı
-// `seed.ts`ten ayrıdır. Var olan kayda dokunmaz ki panelden yapılan düzeltme yeniden çalıştırmada ezilmesin.
+// `seed.ts`ten ayrıdır. Var olan kayda dokunmaz — yalnız hâlâ boş ya da varsayılanında duran alanı tamamlar — ki panelden
+// yapılan düzeltme yeniden çalıştırmada ezilmesin.
 import { receivePurchase } from '@lezzet/application';
 import {
   BundleService,
@@ -43,6 +44,7 @@ import {
   FICTION_ALLERGENS,
   FICTION_INGREDIENTS,
   FICTION_NUTRITION,
+  FICTION_SIZES,
   FICTION_STORAGE,
   PURCHASES,
   RECIPES,
@@ -228,6 +230,10 @@ async function seedSuppliers(db: Db): Promise<void> {
 // Boy etiketi dilden bağımsızdır ("650 g", "5 l").
 const allLocales = (text: string) => ({ tr: text, fr: text, de: text });
 
+/** Taslak varyantının boyu: faturadaki, yoksa katman 3'ün uydurması; ikisi de yoksa varyant boysuz doğar. */
+const draftSize = (draft: Draft, variant: Draft['variants'][number]) =>
+  variant.label ? { label: variant.label, netWeightG: variant.netWeightG } : LAYERS >= 3 ? FICTION_SIZES[draft.name] : undefined;
+
 function checkInvoiceTotals(): void {
   for (const purchase of PURCHASES) {
     if (purchase.invoiceTotal === undefined) continue;
@@ -273,7 +279,8 @@ function checkBundleAndRecipeLines(): void {
         if (!skus.has(line.sku)) bozuk.push(`${name.tr}: ${line.sku}`);
         continue;
       }
-      const boylar = drafts.get(line.draft)?.variants.map((v) => v.label) ?? [];
+      const taslak = drafts.get(line.draft);
+      const boylar = taslak?.variants.map((v) => draftSize(taslak, v)?.label) ?? [];
       const bulundu = line.label ? boylar.includes(line.label) : boylar.length === 1;
       if (!bulundu) bozuk.push(`${name.tr}: ${line.draft}${line.label ? ` (${line.label})` : ''}`);
     }
@@ -366,12 +373,14 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
 async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
   console.log('▸ taslak ürünler');
   const products = new ProductService(db);
-  const existing = new Set((await products.listAll()).map((p) => p.name.tr));
+  const variants = new ProductVariantService(db);
+  const existing = new Map((await products.listAll()).map((p) => [p.name.tr, p.id]));
   for (const purchase of PURCHASES) {
     for (const draft of purchase.drafts) {
       const ad = draftName(draft);
-      if (existing.has(ad)) {
-        done(ad);
+      const mevcut = existing.get(ad);
+      if (mevcut) {
+        await fillDraftSize(variants, mevcut, draft);
         continue;
       }
       // Katman 3 uydurması ÖNCE hesaplanır, katman 1 onu EZER: ölçülmüş beyan uydurmayı her zaman yener.
@@ -385,7 +394,7 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
       // uydurmaz ve veritabanı kısıtıyla aynı cümleyi kurar; ayrışsalardı insert sessizce patlardı.
       const yayina = kurgu && canPublishProduct({ name, description, ingredients, storageInstructions, allergens });
       plan(
-        `${ad} · ${draft.variants.map((v) => v.label ?? 'boysuz').join(' + ')} · ${purchase.supplier}${draft.image ? ' · kapaklı' : ''}${yayina ? ' · AKTİF' : ''}`,
+        `${ad} · ${draft.variants.map((v) => draftSize(draft, v)?.label ?? 'boysuz').join(' + ')} · ${purchase.supplier}${draft.image ? ' · kapaklı' : ''}${yayina ? ' · AKTİF' : ''}`,
       );
       if (DRY_RUN) continue;
       // Kapak: tedarikçinin gönderdiği usta ya da markanın mağazasındaki çekim. R2 ayarsızsa null
@@ -414,10 +423,35 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
         ...(kurgu && FICTION_NUTRITION[draft.name] ? { nutrition: FICTION_NUTRITION[draft.name] } : {}),
         ...(allergens ? { allergens } : {}),
         ...(kapak ?? {}),
-        variants: draft.variants.map((v) => ({ label: v.label ? allLocales(v.label) : undefined, netWeightG: v.netWeightG, sku: v.sku })),
+        variants: draft.variants.map((v) => {
+          const boy = draftSize(draft, v);
+          return { label: boy ? allLocales(boy.label) : undefined, netWeightG: boy?.netWeightG, sku: v.sku };
+        }),
       });
     }
   }
+}
+
+/**
+ * Faturası boy yazmayan varyant boysuz doğar; boy dosyaya sonradan girince yalnız hâlâ boş olan satıra yazılır, elle
+ * girilmiş boy ezilmez (`seedSettings` ile aynı ölçü).
+ */
+async function fillDraftSize(variants: ProductVariantService, productId: string, draft: Draft): Promise<void> {
+  const ad = draftName(draft);
+  const [tek, ...diger] = draft.variants;
+  const boy = tek && diger.length === 0 ? draftSize(draft, tek) : undefined;
+  const satirlar = boy ? await variants.listByProduct(productId) : [];
+  const [satir] = satirlar;
+  if (!boy || !satir || satirlar.length > 1 || satir.label.tr === boy.label) {
+    done(ad);
+    return;
+  }
+  if (satir.label.tr) {
+    console.log(`  ⚠ ${ad} — varyantta "${satir.label.tr}" yazılı; ${boy.label} yazılmadı`);
+    return;
+  }
+  plan(`${ad} · boy ${boy.label}`);
+  if (!DRY_RUN) await variants.update({ id: satir.id, label: allLocales(boy.label), netWeightG: boy.netWeightG });
 }
 
 /**
@@ -501,7 +535,8 @@ async function purchaseLines(db: Db, purchase: Purchase): Promise<{ line: Line; 
     const product = products.find((p) => p.name.tr === draftName(draft));
     const own = product ? await variants.listByProduct(product.id) : [];
     for (const line of draft.variants) {
-      const match = own.find((v) => (line.sku ? v.sku === line.sku : v.label.tr === line.label));
+      const boy = draftSize(draft, line)?.label;
+      const match = own.find((v) => (line.sku ? v.sku === line.sku : v.label.tr === boy));
       rows.push({ line, variantId: match?.id ?? null });
     }
   }
@@ -626,16 +661,15 @@ async function seedBundles(db: Db): Promise<void> {
       paketHedefi(listeCents),
     );
     if (paylar.residualCents !== 0) console.log(`  ⚠ paket · ${paket.name.tr} — paylar hedefi ${paylar.residualCents} kuruşla tutturamadı`);
-    plan(
-      `paket · ${paket.name.tr} · ${hazir.length} kalem · ${euro(listeCents)} → ${euro(paylar.achievedTotalCents)}${paket.isActive === false ? ' · pasif' : ''}`,
-    );
+    plan(`paket · ${paket.name.tr} · ${hazir.length} kalem · ${euro(listeCents)} → ${euro(paylar.achievedTotalCents)}`);
     if (DRY_RUN) continue;
     await bundles.create({
       name: paket.name,
       description: paket.description,
       totalPrice: paylar.achievedTotalCents / 100,
       serves: paket.serves ?? null,
-      isActive: paket.isActive ?? true,
+      // Alan işletmecinin niyetidir; kalemin ürünü satışta değilse paketi vitrinden motor düşürür (`listSellable`).
+      isActive: true,
       isFeatured: paket.isFeatured ?? false,
       sortOrder: i + 1,
       items: hazir.map((k, n) => ({ variantId: k.variantId, qty: k.qty, allocatedUnitPrice: (paylar.unitPricesCents[n] ?? 0) / 100 })),

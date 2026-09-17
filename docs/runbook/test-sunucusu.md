@@ -163,23 +163,25 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
 3. `bash scripts/deploy.sh` — migration'lar baştan uygulanır.
 4. Gerçek başlangıç verisi (`scripts/seed-real/data.ts`), sunucuda:
    `cd /opt/lezzet/current && runuser -u lezzet -- env HOME=/home/lezzet pnpm db:seed:real`
-   `--dry-run` ile önce ne yazacağını listeler. Var olan kayda dokunmaz, tekrar çalıştırılabilir; stok
-   yazmaz — stok paneldeki tedarikçi siparişlerine karşı mal kabulüyle girer.
+   `--dry-run` ile önce ne yazacağını listeler. Var olan kayda dokunmaz (yalnız hâlâ boş ya da varsayılanında
+   duran alanı tamamlar), tekrar çalıştırılabilir; stok yazmaz — stok paneldeki tedarikçi siparişlerine karşı
+   mal kabulüyle girer.
 5. Besleme ÜÇ KATMANLIDIR ve katmanı `--layers` seçer (varsayılan 1, kümelenir):
    - **1 · kesin** — faturadan ve üreticinin künyesinden ölçülmüş olan (ad, ölçü, maliyet, gerçek ürün
      çekimi, içindekiler, saklama, raf ömrü) ve işletmecinin fiyat politikası (`SALE_PRICES`:
      profesyonel alış + %40, son tüketici piyasa katsayısıyla — `docs/architecture/COMPETITORS.md`).
      **Üretim kurulumu budur; bayraksız koşar.**
    - **2 · dayanaklı** — gerçek ürün sayfasına dayanan, resmî belgeye dayanmayan açıklamalar.
-   - **3 · uydurma** — kaynağı OLMAYAN her şey: içindekiler, saklama, besin tablosu, alerjen ve test
-     mal kabulü (lot `TEST-001`, SKT 31.12.2026). Bu katmanda taslakların ve katalogdaki belgesiz
-     ürünlerin beyanı tamamlanır ve ürünler `active` olur, yani katalogda görünürler — arayüzü dolu
-     görmek içindir. Aday kalemler (`ADAY_SKULARI`) her katmanda aday kalır.
+   - **3 · uydurma** — kaynağı OLMAYAN her şey: içindekiler, saklama, besin tablosu, alerjen, faturanın
+     yazmadığı boy ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026). Bu katmanda taslakların ve
+     katalogdaki belgesiz ürünlerin beyanı tamamlanır ve ürünler `active` olur, yani katalogda görünürler —
+     arayüzü dolu görmek içindir. Aday kalemler (`ADAY_SKULARI`) her katmanda aday kalır.
      Yalnız TEST sunucusunda: `pnpm db:seed:real --layers=3`.
 
-   Katman 3'ün verisi `seed-real/data.ts` sonunda AYRI durur (`FICTION_NUTRITION`, `FICTION_ALLERGENS`,
-   `FICTION_INGREDIENTS`, `FICTION_STORAGE`, `TEST_INTAKE`); üretime geçerken o blok
+   Katman 3'ün verisi `seed-real/data.ts` sonunda AYRI durur (`FICTION_SIZES`, `FICTION_NUTRITION`,
+   `FICTION_ALLERGENS`, `FICTION_INGREDIENTS`, `FICTION_STORAGE`, `TEST_INTAKE`); üretime geçerken o blok
    bütün hâlinde silinir, kalan dosya zaten katman 1'dir.
 
    **Katman değiştirmek için veritabanı sıfırlanır:** besleme var olan kaydı ADINA bakıp atlar, üstüne
-   yazmaz. Katman 1 ile beslenmiş bir veritabanına `--layers=3` koşmak hiçbir şeyi tamamlamaz.
+   yazmaz. Katman 1 ile beslenmiş bir veritabanına `--layers=3` koşmak beyanları tamamlamaz; yalnız boş
+   kalmış boy yazılır.

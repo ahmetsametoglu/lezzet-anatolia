@@ -1008,8 +1008,6 @@ interface SeedBundle {
   serves?: number;
   /** Ana sayfanın paket bandında iki yuva var. */
   isFeatured?: boolean;
-  /** Kalemlerinden birinin künyesi eksikse paket pasif doğar. */
-  isActive?: boolean;
   items: SeedLine[];
 }
 
@@ -1086,8 +1084,6 @@ export const BUNDLES: SeedBundle[] = [
       de: 'Pistazien, Pestil-Dreiecke mit Haselnüssen und drei Trockenfrüchte: für Gäste zum Tee bei den Bayram-Besuchen.',
     },
     serves: 8,
-    // Kurutulmuş şeftalinin gramajı faturada yok; boyu girilene kadar satışa açılmaz.
-    isActive: false,
     items: [
       { draft: 'Pistache', qty: 1 },
       { draft: 'Pestil met Hazinoten Muska', qty: 1 },
@@ -1164,8 +1160,6 @@ export const BUNDLES: SeedBundle[] = [
       de: 'Su Börek, zwei Künefe sowie getrocknete Pfirsiche und Äpfel für Hoşaf: ein Tisch für sechs an Ramadan-Abenden.',
     },
     serves: 6,
-    // Kurutulmuş şeftalinin gramajı faturada yok; boyu girilene kadar satışa açılmaz.
-    isActive: false,
     items: [
       { sku: '700402', qty: 1 },
       { sku: '500103', qty: 2 },
@@ -1519,6 +1513,11 @@ export const RECIPES: SeedRecipe[] = [
  * tedarikçinin künyesinden gelir ve üretim kurulumundan önce blok bütün hâlinde silinir. Anahtar faturadaki addır
  * (`Draft.name`) ki katalog adı düzeltilse de eşleşme kaymasın.
  */
+
+/** UYDURMA boy — faturası gramaj yazmayan tek boylu taslağın; boysuz ürün müşteriye miktarsız görünür. */
+export const FICTION_SIZES: Record<string, { label: string; netWeightG: number }> = {
+  'Gedroogde perzik': { label: '200 g', netWeightG: 200 },
+};
 
 /** kJ, kcal'den türer: iki kalemin birbiriyle çelişmesi imkânsız olsun (INCO ikisini birden ister). */
 const besin = (
