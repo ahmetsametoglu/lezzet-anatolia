@@ -67,6 +67,7 @@ const OWN_HEADER: readonly string[] = [
   '/legal/privacy',
   '/legal/delivery',
   '/legal/faq',
+  '/support/[ticket]',
 ] satisfies Route[];
 /** Eylemsiz bölüm sayfaları — native'in "sayfa başlığı" durağı. */
 const SECTION_PAGES: readonly string[] = ['/orders', '/account/points', '/account/notifications'] satisfies Route[];

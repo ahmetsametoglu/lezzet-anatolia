@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import { LoadMore } from '@/components/customer/ui/load-more';
 import type { CustomerTicketView } from '@/lib/ticket/ticket-types';
-import { TicketCard } from './components/ticket-card';
-import { TicketStatusBadge } from './components/ticket-status-badge';
-import { TicketThread } from './components/ticket-thread';
-import { ReplyBox } from './components/reply-box';
-import { EmptyTickets } from './components/empty-tickets';
+import { DesktopEmptyTickets } from './components/desktop-empty-tickets';
+import { DesktopReplyBox } from './components/desktop-reply-box';
+import { DesktopTicketCard } from './components/desktop-ticket-card';
+import { DesktopTicketStatusBadge } from './components/desktop-ticket-status-badge';
+import { DesktopTicketThread } from './components/desktop-ticket-thread';
 import { ticketTitle } from './components/ticket-labels';
 import type { SupportViewProps } from './support-types';
 
@@ -21,7 +21,7 @@ export function SupportDesktop({ t, locale, tickets, nextCursor, loadingMore, on
   const [ticket, setTicket] = useState<CustomerTicketView | null>(selected);
   const open = ticket?.id === selected?.id ? ticket : selected;
 
-  if (tickets.length === 0) return <EmptyTickets t={t} />;
+  if (tickets.length === 0) return <DesktopEmptyTickets t={t} />;
 
   // Yükseklik ZİNCİRİ: `h-full` + her katmanda `min-h-0` — biri unutulursa kaydırma en dışa kaçar
   // ve cevap kutusu yine dipte durmaz. Tasarımın `min-height:420px`i bir maket ölçüsüydü; gerçek
@@ -30,7 +30,7 @@ export function SupportDesktop({ t, locale, tickets, nextCursor, loadingMore, on
     <div className="grid h-full min-h-0 grid-cols-[340px_1fr]">
       <div className="flex flex-col gap-2.5 overflow-y-auto border-r border-sand-300 p-4.5">
         {tickets.map((row) => (
-          <TicketCard key={row.id} t={t} locale={locale} ticket={row} active={row.id === open?.id} />
+          <DesktopTicketCard key={row.id} t={t} locale={locale} ticket={row} active={row.id === open?.id} />
         ))}
         <LoadMore
           hasMore={nextCursor !== null}
@@ -52,17 +52,17 @@ export function SupportDesktop({ t, locale, tickets, nextCursor, loadingMore, on
                 </span>
               )}
             </span>
-            <TicketStatusBadge t={t} status={open.status} />
+            <DesktopTicketStatusBadge t={t} status={open.status} />
           </div>
 
           {/* Yazışma kendi içinde kayar; kutu kaymaz. Kutunun sabit kalması bir konfor değil bir
               beklenti: mesaj yazarken kaydırma yaparsanız yazdığınız kutu ekrandan çıkmamalı. */}
           <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto py-2.5">
-            <TicketThread t={t} locale={locale} ticket={open} wide />
+            <DesktopTicketThread t={t} locale={locale} ticket={open} />
           </div>
 
           <div className="flex-none">
-            <ReplyBox t={t} locale={locale} ticketId={open.id} onReplied={setTicket} />
+            <DesktopReplyBox t={t} locale={locale} ticketId={open.id} onReplied={setTicket} />
           </div>
         </div>
       )}

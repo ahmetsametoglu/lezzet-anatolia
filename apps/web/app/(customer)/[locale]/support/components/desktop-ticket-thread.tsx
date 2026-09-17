@@ -15,23 +15,17 @@ import type { Messages } from '../support-types';
  * Yazışma, basit bir mesaj dizisi: müşterinin balonu sağda ve zeytin, işletmeninki solda ve beyaz; iç not yoktur, personelin her
  * mesajı müşteriye aynen görünür. İade bandı mesaj değil sonuç olduğu için yazışmanın sonunda durur.
  */
-interface TicketThreadProps {
+interface DesktopTicketThreadProps {
   t: Messages;
   locale: Locale;
   ticket: CustomerTicketView;
-  /**
-   * Balonun azami genişliği masaüstünde 380px, mobilde 280px (tasarım). Ekran genişliğine bakan bir
-   * `lg:` sınıfıyla DEĞİL, cihaz çatalından gelen bir bayrakla — bu yüzeyin kuralı akışkan responsive
-   * değil, iki ayrı görünüm (ADR Sapma 3).
-   */
-  wide?: boolean;
 }
 
-export function TicketThread({ t, locale, ticket, wide = false }: TicketThreadProps) {
+export function DesktopTicketThread({ t, locale, ticket }: DesktopTicketThreadProps) {
   return (
     <>
       {ticket.messages.map((message) => (
-        <MessageBubble key={message.id} t={t} locale={locale} message={message} wide={wide} />
+        <MessageBubble key={message.id} t={t} locale={locale} message={message} />
       ))}
 
       {ticket.returnOutcome && ticket.returnOutcome.refundedCents > 0 && (
@@ -43,24 +37,18 @@ export function TicketThread({ t, locale, ticket, wide = false }: TicketThreadPr
 
       {/* Çözülmüş talep yazınca kendiliğinden açılır; ayrı bir "yeniden aç" düğmesi, yazıp basmayı unutanın mesajını kapalı talepte
           bırakırdı. */}
-      {ticket.status === 'resolved' && (
-        <span className="font-sans text-note leading-relaxed text-muted">{t.reopenNote}</span>
-      )}
+      {ticket.status === 'resolved' && <span className="font-sans text-note leading-relaxed text-muted">{t.reopenNote}</span>}
     </>
   );
 }
 
-function MessageBubble({
-  t,
-  locale,
-  message,
-  wide,
-}: {
+interface MessageBubbleProps {
   t: Messages;
   locale: Locale;
   message: TicketMessageView;
-  wide: boolean;
-}) {
+}
+
+function MessageBubble({ t, locale, message }: MessageBubbleProps) {
   // `ai` gönderici de işletmedir: müşteri kimin değil işletmenin yazdığını görür.
   const mine = message.sender === 'customer';
 
@@ -72,8 +60,7 @@ function MessageBubble({
   return (
     <div
       className={[
-        'flex flex-col gap-1.5 px-3.5 py-2.75',
-        wide ? 'max-w-[380px]' : 'max-w-[280px]',
+        'flex max-w-[380px] flex-col gap-1.5 px-3.5 py-2.75',
         mine
           ? 'self-end rounded-[16px] rounded-br-[4px] bg-olive text-cream'
           : 'self-start rounded-[16px] rounded-bl-[4px] border border-sand-200 bg-card',
@@ -106,13 +93,7 @@ function MessageBubble({
         // Ek daima fotoğraftır (`checkAttachment` yalnız görsel uzantı geçiriyor); ham `<img>`
         // bilerek — adres R2'nin imzalı ve SÜRELİ adresi, `next/image` onu önbelleğe alıp süresi
         // dolduktan sonra kırık gösterirdi.
-        <img
-          key={url}
-          src={url}
-          alt={t.photoAlt}
-          className="h-16 w-[90px] rounded-[8px] object-cover"
-          loading="lazy"
-        />
+        <img key={url} src={url} alt={t.photoAlt} className="h-16 w-[90px] rounded-[8px] object-cover" loading="lazy" />
       ))}
 
       <span className={`self-end font-sans text-micro ${mine ? 'text-on-image-soft' : 'text-sand-600'}`}>

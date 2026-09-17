@@ -14,16 +14,14 @@ import type { Messages } from '../support-types';
  * Cevap kutusu, hap biçimli besteci şeridi: form kiti bilerek kullanılmadı, çünkü tek satır içi alan etiket ve doğrulama istemiyor.
  * Fotoğraf imzalı adresle doğrudan depoya gider ve yükleme düşse de mesaj yazılabilir; Enter gönderir, Shift+Enter satır atlar.
  */
-interface ReplyBoxProps {
+interface DesktopReplyBoxProps {
   t: Messages;
   locale: Locale;
   ticketId: string;
   onReplied: (view: CustomerTicketView) => void;
-  /** Masaüstünde şerit sağ bölmenin dibine yapışır; mobilde ekranın altında durur. */
-  compact?: boolean;
 }
 
-export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: ReplyBoxProps) {
+export function DesktopReplyBox({ t, locale, ticketId, onReplied }: DesktopReplyBoxProps) {
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,8 +54,6 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
     event.preventDefault();
     send();
   };
-
-  const size = compact ? 'size-9.5' : 'size-9';
 
   return (
     <div className="flex flex-col gap-2">
@@ -107,7 +103,7 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
           onClick={send}
           disabled={busy || body.trim().length === 0}
           aria-label={t.reply.send}
-          className={`grid ${size} flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-cream transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:bg-disabled-fill`}
+          className="grid size-9 flex-none cursor-pointer place-items-center rounded-full bg-olive font-sans text-body font-bold text-cream transition-colors hover:bg-olive-dark disabled:cursor-not-allowed disabled:bg-disabled-fill"
         >
           ↑
         </button>

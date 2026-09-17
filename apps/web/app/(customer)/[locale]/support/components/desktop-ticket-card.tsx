@@ -5,27 +5,24 @@ import { Link } from '@/i18n/navigation';
 import type { CustomerTicketSummary } from '@/lib/ticket/ticket-types';
 import { formatOrderDate } from '@/lib/storefront/format';
 import { lastMessageLabel, ticketContext, ticketTitle } from './ticket-labels';
-import { TicketStatusBadge } from './ticket-status-badge';
+import { DesktopTicketStatusBadge } from './desktop-ticket-status-badge';
 import type { Messages } from '../support-types';
 
 /**
  * Masaüstü liste kartı: seçili kart kalın zeytin çerçeveli, ötekiler ince kum. Alt satır sipariş, açılış ve son mesajdır; çözülmüş
  * talepte son mesaj yazılmaz, çünkü kapanmış talebin son mesajı bir davet değil kayıttır.
  */
-interface TicketCardProps {
+interface DesktopTicketCardProps {
   t: Messages;
   locale: Locale;
   ticket: CustomerTicketSummary;
   active: boolean;
-  /** Mobil kart: daha geniş, açılış tarihini de taşır. */
-  compact?: boolean;
 }
 
-export function TicketCard({ t, locale, ticket, active, compact = false }: TicketCardProps) {
+export function DesktopTicketCard({ t, locale, ticket, active }: DesktopTicketCardProps) {
   const parts = [ticketContext(ticket.orderReferenceNo, t)];
-  if (compact) parts.push(formatOrderDate(ticket.createdAt, locale, true));
   if (ticket.status === 'resolved') {
-    if (!compact) parts.push(formatOrderDate(ticket.createdAt, locale, true));
+    parts.push(formatOrderDate(ticket.createdAt, locale, true));
   } else {
     parts.push(t.lastMessage.replace('{when}', lastMessageLabel(ticket.lastMessageAt, locale, t)));
   }
@@ -34,16 +31,13 @@ export function TicketCard({ t, locale, ticket, active, compact = false }: Ticke
     <Link
       href={{ pathname: '/support/[ticket]', params: { ticket: ticket.id } }}
       className={[
-        'flex cursor-pointer flex-col gap-1 bg-card transition-colors hover:border-olive-line',
-        compact ? 'rounded-[16px] p-3.5' : 'rounded-[14px] px-3.5 py-3',
+        'flex cursor-pointer flex-col gap-1 rounded-[14px] bg-card px-3.5 py-3 transition-colors hover:border-olive-line',
         active ? 'border-[1.5px] border-olive' : 'border border-sand-200',
       ].join(' ')}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className={`truncate font-sans font-bold leading-tight text-ink ${compact ? 'text-body-sm' : 'text-note'}`}>
-          {ticketTitle(ticket, t)}
-        </span>
-        <TicketStatusBadge t={t} status={ticket.status} compact />
+        <span className="truncate font-sans text-note leading-tight font-bold text-ink">{ticketTitle(ticket, t)}</span>
+        <DesktopTicketStatusBadge t={t} status={ticket.status} compact />
       </div>
       <span className="font-sans text-micro leading-relaxed text-muted">{parts.join(' · ')}</span>
     </Link>

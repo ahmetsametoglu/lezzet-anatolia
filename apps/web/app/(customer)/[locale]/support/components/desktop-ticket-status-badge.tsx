@@ -12,12 +12,12 @@ const BADGE_CLASS: Record<TicketStatus, string> = {
   resolved: 'bg-closed-bg text-ink',
 };
 
-interface TicketStatusBadgeProps {
+interface DesktopTicketStatusBadgeProps {
   t: Messages;
   status: TicketStatus;
   compact?: boolean;
 }
 
-export function TicketStatusBadge({ t, status, compact = false }: TicketStatusBadgeProps) {
+export function DesktopTicketStatusBadge({ t, status, compact = false }: DesktopTicketStatusBadgeProps) {
   return <span className={statusPillClass(compact ? 'sm' : 'md', BADGE_CLASS[status])}>{t.status[status]}</span>;
 }

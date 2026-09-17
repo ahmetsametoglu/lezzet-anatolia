@@ -1,23 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { ticketTitle } from '@lezzet/helper';
 import supportMessages from '@lezzet/i18n/customer/support';
 import { EmptyState } from '@/components/customer/phone-kit/empty-state';
 import { LoadingState } from '@/components/customer/phone-kit/loading-state';
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
+import { AppBar } from '@/components/customer/ui/app-bar';
+import { BackButton } from '@/components/customer/ui/back-button';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import type { CustomerTicketView } from '@/lib/ticket/ticket-types';
 import { useLoadMore } from '@/lib/use-load-more.hook';
-import { TicketStatusBadge } from './components/ticket-status-badge';
-import { TicketThread } from './components/ticket-thread';
-import { ReplyBox } from './components/reply-box';
-import { EmptyTickets } from './components/empty-tickets';
+import { PhoneReplyBox } from './components/phone-reply-box';
 import { PhoneTicketCard } from './components/phone-ticket-card';
+import { PhoneTicketStatusTag } from './components/phone-ticket-status-tag';
+import { PhoneTicketThread } from './components/phone-ticket-thread';
 import type { SupportViewProps } from './support-types';
 
 /**
- * Taleplerim telefon görünümü: liste ve yazışma iki ayrı ekran ve hangisinin çizileceğini rota söyler. Liste native talep listesinin
- * ikizi; metin iki yüzeyin ortak sözlüğünden.
+ * Taleplerim telefon görünümü: liste ve yazışma iki ayrı ekran ve hangisinin çizileceğini rota söyler. İkisi de native talep
+ * ekranlarının ikizi; metin iki yüzeyin ortak sözlüğünden.
  */
 export function SupportMobile({ t, locale, mode, tickets, nextCursor, loadingMore, tailFailed, onLoadMore, selected }: SupportViewProps) {
   const copy = supportMessages[locale];
@@ -25,26 +27,41 @@ export function SupportMobile({ t, locale, mode, tickets, nextCursor, loadingMor
   const open = ticket?.id === selected?.id ? ticket : selected;
   // Düşen devam kendiliğinden yinelenmez; "tekrar dene" müşterinin elinde.
   const { ref } = useLoadMore({ hasMore: nextCursor !== null && !tailFailed, loading: loadingMore, onLoadMore });
+  const threadRef = useRef<HTMLDivElement>(null);
+  const messageCount = open?.messages.length ?? 0;
+
+  // En yeni mesaj en altta: açılışta ve her yeni mesajda kaydırıcı sona iner, müşteri kendi baloncuğunu görür.
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }, [messageCount]);
 
   if (mode === 'detail') {
-    // Rota bir talebe işaret ediyor ama kapı boş döndü (silinmiş ya da başkasının) — sayfa zaten
-    // `notFound()` veriyor, buraya düşmek yalnız cihaz kararı istemcide değişirse mümkün.
-    if (!open) return <EmptyTickets t={t} />;
+    // Sayfa bulunamayan talepte zaten `notFound()` veriyor; buraya yalnız cihaz kararı istemcide değişirse düşülür.
+    if (!open) {
+      return (
+        <EmptyState
+          fill
+          icon={<MobileIcon name="whatsapp" size={80} className="text-sand-600" />}
+          title={copy.detail.notFound}
+          description={copy.detail.notFoundBody}
+          action={<PrimaryButton label={copy.detail.notFoundCta} shape="pill" href="/support" />}
+        />
+      );
+    }
 
-    // Ekranı DOLDURUR (`SiteFrame fill`): yazışma kendi içinde kayar, cevap kutusu ekranın dibinde
-    // sabit durur. Kısa bir yazışmada kutu ortada asılı kalıyordu — mesajlaşma bir sayfa değil,
-    // bir alandır.
+    // Ekranı doldurur (`SiteFrame fill`): yazışma kendi içinde kayar, yazma çubuğu dipte sabit durur.
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto px-4 py-3.5">
-          <div className="flex flex-none justify-center">
-            <TicketStatusBadge t={t} status={open.status} />
-          </div>
-          <TicketThread t={t} locale={locale} ticket={open} />
+        <AppBar
+          title={ticketTitle(copy.type[open.type], open.subject, copy.list.withSubject)}
+          left={<BackButton label={copy.back} fallback="/support" />}
+          right={<PhoneTicketStatusTag status={open.status} label={copy.status[open.status]} />}
+        />
+        <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto">
+          <PhoneTicketThread copy={copy} t={t} locale={locale} ticket={open} />
         </div>
-        <div className="flex-none px-3 pb-3">
-          <ReplyBox t={t} locale={locale} ticketId={open.id} onReplied={setTicket} compact />
-        </div>
+        <PhoneReplyBox copy={copy} t={t} locale={locale} ticketId={open.id} onReplied={setTicket} />
       </div>
     );
   }
