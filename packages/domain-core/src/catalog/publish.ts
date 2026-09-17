@@ -1,29 +1,13 @@
 import { hasAllLocales, missingLocales, type LocalizedText } from '@lezzet/types';
 
 /**
- * **ÜRÜN YAYINA HAZIR MI** (05.36 · mobil şeridin talebi 25.08).
- *
- * Ölçülmüş arıza: Fransızcası olmayan ürün Fransız müşteriye SESSİZCE Türkçe gösteriliyordu.
- * Hiçbir yerde hata yok, hiçbir işaret yok — `resolveLocalizedText` yedek zinciri (seçili → TR →
- * FR → DE) eksikliği kendiliğinden kapatıyor ve kapattığı için de kimse fark etmiyor.
- *
- * **Kuralın SON SÖZÜ veritabanındadır** (`product_publish_requires_all_locales`, `0005`): üründe en
- * az üç yazan var — operasyon formu, asistan dilekçesi ve seed — ve *"yüzeyde durdurulan bir kuralın
- * ikinci bir yazma yolu varsa, kural yok demektir"* (`MB-22a`/`09.6`). Burası o kuralı TEKRAR
- * UYGULAMIYOR; aynı soruyu yazma anından ÖNCE sorup operatöre **hangi alanın hangi dilde** eksik
- * olduğunu söylüyor. Kısıt bunu söyleyemez: tek bir ihlal mesajı döner ve operatör altı alandan
- * hangisine bakacağını bilemez.
- *
- * Motor DB'siz ve saf: girdi ürünün alanları, çıktı eksiklerin listesi (`STACK §4`).
+ * Ürün yayına hazır mı — kuralın son sözü veritabanındaki `product_publish_requires_all_locales` kısıtında; burası yazmadan önce aynı soruyu sorup hangi alanın hangi dilde eksik olduğunu söyler, kısıt bunu söyleyemez.
+ * Motor veritabanısız ve saftır (STACK §4): girdi ürünün alanları, çıktı eksiklerin listesi.
  */
 
 /**
- * Yayın kontrolüne giren ürün alanları — `Product`un dar bir görünümü (tam varlığa bağlanmaz).
- *
- * **Alanların hepsi OPSİYONEL ve bu bilinçli:** çağıran ürünün yazım sonrası hâlini kuruyor ve o
- * hâl çoğu zaman iki parçadan birleşiyor (`{...mevcut, ...fields}`) — form kısmi gönderebiliyor
- * (`ProductDetailsUpdate` `.partial()`). Eksik alan zaten "yayına engel" demek, yani `undefined`
- * ile `null` aynı cevabı veriyor; zorunlu tutmak çağıranı anlamsız dolgu yazmaya iterdi.
+ * Yayın kontrolüne giren ürün alanları — `Product`un dar bir görünümü.
+ * Alanların hepsi opsiyonel: çağıran formun kısmi gönderimini mevcut kayıtla birleştirir ve eksik alan zaten "yayına engel" demektir.
  */
 export interface PublishCandidate {
   name?: LocalizedText | null;
@@ -41,12 +25,7 @@ export interface PublishGap {
   missing: Array<'tr' | 'fr' | 'de'>;
 }
 
-/**
- * Yayına engel olan eksikler. Boş dizi = ürün `active` yapılabilir.
- *
- * **Sıra ekranın işine yarayacak biçimde**: adı olmayan üründe önce ad söylenir. Operatör listeyi
- * yukarıdan aşağı doldurur.
- */
+/** Yayına engel olan eksikler, formdaki sırayla; boş dizi = ürün `active` yapılabilir. */
 export function productPublishGaps(product: PublishCandidate): PublishGap[] {
   const gaps: PublishGap[] = [];
   const check = (field: PublishGap['field'], value: LocalizedText | null | undefined) => {
@@ -57,14 +36,8 @@ export function productPublishGaps(product: PublishCandidate): PublishGap[] {
   check('description', product.description);
   check('ingredients', product.ingredients);
   check('storageInstructions', product.storageInstructions);
-  // Koşullu alan — kısıttaki `family_id is null or …` ile birebir. Koşulu burada tekrar yazmak
-  // yerine kısıtla aynı cümleyi kurmak şart: ayrışırlarsa ekran "eksik yok" derken veritabanı
-  // yayını reddeder ve operatör sebebi hiçbir yerde göremez.
-  //
-  // **`imageAlt` BURADA YOK ve bu ölçülmüş bir karar** (27.08): alan ürün formunda hiç yok ve
-  // bilerek yok — boşsa müşteride ürün ADINA düşüyor. Kısıta konsaydı operatörün dolduramadığı
-  // bir alan yüzünden hiçbir ürün yayınlanamazdı. Ad zaten üç dilde zorunlu, yani yedek de doğru
-  // dile düşüyor. Gerekçenin tamamı `0005_catalog_product.sql` kısıt künyesinde.
+  // Koşullu alan — kısıttaki `family_id is null or …` ile birebir; ayrışırlarsa ekran "eksik yok" derken veritabanı yayını reddeder.
+  // Görsel alt metni aranmaz: formda yok ve boşsa müşteride üç dilde zorunlu olan ürün adına düşer.
   if (product.familyId) check('familyLabel', product.familyLabel);
 
   return gaps;

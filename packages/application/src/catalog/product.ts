@@ -18,35 +18,25 @@ import type {
 } from './storefront-types';
 
 /**
- * Ürün detay okuması (08.11; terfi 21.6 — kaynağı `apps/web/lib/storefront/product.ts`).
- *
- * Sayfanın TAMAMI tek turda gelir: ürün + varyantlar, fiyat/stok/teklif bağlamı, galeri, kategori,
- * aile ve benzer ürünler. Bölüm başına ayrı çağrı yapılmaz — bu sayfa sosyal/WhatsApp trafiğinin
- * ilk dokunuşu olabilir, ilk boya eksiksiz gelmelidir.
- *
- * **Yorum ve puan bu kapıdan GEÇMEZ** (17.1): yorum vitrinin değil geri bildirim modülünün
- * verisi, moderasyon durumu ve "kim yazabilir" kararı orada yaşıyor. Buraya taşınsaydı vitrin
- * sözleşmesi moderasyonu bilmek zorunda kalırdı.
+ * Ürün detay okuması — sayfanın tamamı (varyant, fiyat/stok bağlamı, galeri, kategori, aile, benzerler) tek turda gelir,
+ * çünkü bu sayfa sosyal trafiğin ilk dokunuşu olabilir ve ilk boya eksiksiz gelmeli.
+ * Yorum ve puan bu kapıdan geçmez: moderasyon kararı geri bildirim modülünde; buraya gelse vitrin sözleşmesi
+ * moderasyonu bilmek zorunda kalırdı.
  */
 
-/** Benzer ürün şeridinde kaç kart — tasarımda dörtlü ızgara. */
+/** Benzer ürün bölümünde kaç kart — tasarımda dörtlü ızgara. */
 const SIMILAR_LIMIT = 4;
 
 /**
- * Seçkinin taradığı aday havuzu — **sabit sınır, sayfalama değil** (`CLAUDE §1`: editoryal seçki
- * sayfalanmaz ama sınırı olur).
- *
- * Dörtten büyük olmak zorunda çünkü aile kuralı adayları eliyor: yedi üyeli bir ailenin altısı
- * yedeğe düşer ve havuz dar olsaydı bölüm ailenin tek temsilcisiyle yarım kalırdı. 40, bugünkü
- * kategorilerin (~15 ürün) tamamını rahatça kapsıyor; büyüyen bir kategoride seçki havuzun ilk
- * 40'ından yapılır ve bu bilinçli — "benzer" bir keşif daveti, kategorinin tam taraması değil.
+ * Seçkinin taradığı aday havuzu — editoryal seçki sayfalanmaz, sabit sınırı olur (CLAUDE §1).
+ * Dörtten büyük olmalı, çünkü alınabilirlik süzgeci ve aile kuralı adayları eliyor; büyüyen kategoride seçkinin ilk 40 adaydan
+ * yapılması bilinçli: "benzer" bir keşif davetidir, kategorinin tam taraması değil.
  */
 const SIMILAR_POOL = 40;
 
 /**
- * Çeşit kartı TAVANI (05.15). Aile operatörün elle kurduğu bir kümedir ve brief 2 ile 10+ arası bir
- * boy öngörüyor — sayfalanmaz. Tavan bir tasarım sınırı değil bir EMNİYET sınırıdır: elle kurulan
- * kümenin de bir gün yanlışlıkla yüz üyeye çıkması mümkün ve o sayfa ilk boyada açılmazdı.
+ * Çeşit kartı tavanı — aile operatörün elle kurduğu küme olduğu için sayfalanmaz.
+ * Tavan bir emniyet sınırıdır: elle kurulan küme yanlışlıkla yüz üyeye çıkarsa sayfa ilk boyada açılmazdı.
  */
 const FAMILY_LIMIT = 24;
 
@@ -74,9 +64,8 @@ function galleryOf(cover: StorefrontImage, extras: StorefrontImage[]): Storefron
 }
 
 /**
- * Beyan bloğu. Net ağırlık BURADA YOK: paket ağırlığı boya göre değişir, dolayısıyla varyanta aittir
- * ve seçimle birlikte güncellenir (`StorefrontVariant.netWeightG`). Beyanın kendisi 100 g üzerinden
- * sabittir — ürüne aittir, boya değil.
+ * Beyan bloğu — 100 g üzerinden sabit olduğu için ürüne aittir.
+ * Net ağırlık burada yok: boya göre değişir, seçimle birlikte varyanttan gelir (`StorefrontVariant.netWeightG`).
  */
 function declarationOf(
   product: {
@@ -98,14 +87,7 @@ function declarationOf(
   };
 }
 
-/**
- * Aynı kategoriden başka ürünler. Ürünün kendisi listeden düşer; kategorisiz üründe bölüm boş kalır
- * (rastgele ürün önerilmez — "benzer" iddiası karşılanamıyorsa hiç iddia edilmez).
- *
- * Seçim kuralı burada DEĞİL, `@lezzet/domain-core`'un `pickSimilar`ında: kendi ailesi tamamen
- * dışarıda, öteki ailelerden birer temsilci, dörtlü dolmazsa yalnız ikinci kural kalkar (kullanıcı
- * kararları 04.08). Saf olduğu için testi de DB'siz.
- */
+/** Aynı kategoriden başka ürünler; kategorisiz üründe bölüm boş kalır, çünkü "benzer" iddiası karşılanamıyorsa rastgele ürün önerilmez. */
 async function readSimilar(
   db: SupabaseClient,
   product: Pick<ProductWithRelations, 'id' | 'categoryId' | 'familyId'>,
@@ -119,40 +101,11 @@ async function readSimilar(
     limit: SIMILAR_POOL,
   });
 
-  /**
-   * ── SEÇKİ ARTIK ALINAMAYAN ÜRÜNÜ ÖNERMİYOR (kullanıcı kararı 19.08, ekran turuyla) ──────────
-   *
-   * Ekranda görüldü: 67400'e bakan müşteriye "Bunları da sevebilirsiniz" şeridinde **"Haber ver"**
-   * düğmeli kartlar çıkıyordu — yani sisteme göre o adrese gidemeyen ürünler. Sistem bunu ZATEN
-   * biliyordu (kartın üstüne yazıyordu), ama seçime hiç sokmuyordu: süzgeç yalnız kategori +
-   * `status`tü, `place` sadece kartı ETİKETLEMEK için kullanılıyordu.
-   *
-   * En keskin gerekçe sayfanın kendi içindeydi: teslimat kutusunun birincil düğmesi *"Kargolanabilir
-   * benzerleri gör"* diyor, iki blok aşağıdaki şerit alınamayanları sıralıyordu. Sayfa kendi
-   * kendisiyle çelişiyordu.
-   *
-   * **Düşen iki hâl:** `elsewhere` (bu adrese gidemez) ve `out_of_stock` (hiçbir yerde yok). Kalan
-   * `shipping` DÜŞMEZ — kargoyla da olsa müşteri onu alabiliyor.
-   *
-   * **Bu kural yalnız ÖNERİ şeridinindir.** Ailenin çeşit kartları (`readFamily`) süzülmez ve
-   * süzülmemeli: orası bir öneri değil, bakılan ürünün kendi seçicisidir — adrese göre süzmek,
-   * ürünü kendi çeşitlerinden gizlemek olurdu. Katalog listesi de ayrı: orada "Haber ver" bilinçli
-   * bir talep toplama aracı (tasarımda çizili).
-   *
-   * ── BAĞLAM ARTIK HAVUZUN TAMAMI İÇİN OKUNUYOR ─────────────────────────────────────────────
-   * Önce 4 aday seçilip bağlam onlar için okunuyordu; alınabilirlik seçimden ÖNCE bilinmek zorunda
-   * olduğu için sıra tersine döndü. Bedeli yok ve bu ölçüldü: `loadProductContext` satır sayısından
-   * BAĞIMSIZ olarak 5 paralel sorgu atıyor (kimlikler `in(...)` listesine giriyor) — 40 aday, 4
-   * adayla aynı tur sayısı demek.
-   *
-   * Aile kuralı (her aileden tek temsilci) süzgeçten SONRA uygulanıyor: önce uygulasaydık, elenen
-   * bir temsilcinin yerine ailenin alınabilir üyesi geçemezdi.
-   */
+  // Öneri alınamayan ürünü önermez: bu adrese gidemeyen (`elsewhere`) ve hiçbir yerde olmayan (`out_of_stock`) düşer,
+  // kargoyla alınabilen (`shipping`) kalır.
   const candidates = page.rows.filter((p) => p.id !== product.id);
-  /* Öneri şeridi KARIŞIK bir listedir — kartları farklı kategori ve koleksiyonlardan gelir ve
-     üstünde kampanyayı söyleyecek bir başlık yoktur. Kullanıcı kararı 23.08 tam bu yeri tarif
-     ediyor: "rozet, başlığın söyleyemediği yerde". Bağlam okumasıyla PARALEL koşuyor; ek sorgu
-     doğmuyor, çünkü kapsam kimlikleri zaten elimizdeki satırlarda (`categoryId` + `collections`). */
+  // Alınabilirlik seçimden önce bilinmeli, bu yüzden bağlam havuzun tamamı için okunur; tur sayısı aday sayısından bağımsız.
+  // Kartlar farklı kategori ve koleksiyonlardan gelir ve üstünde kampanyayı söyleyecek başlık yoktur, rozet kapsamı bu yüzden okunur.
   const [context, scopeCampaigns] = await Promise.all([
     loadProductContext(db, candidates, place, viewer),
     readScopeCampaigns(db, {
@@ -172,20 +125,16 @@ async function readSimilar(
     ]),
   );
 
-  /* Alınabilirlik İKİ soru: stokta mı, ve BU KANALDA satılıyor mu (08.46).
-     İkincisi 24.08'de eklendi — şerit fiyatsız kart çizebiliyordu. Süzgeç burada, SQL'de değil ve
-     bu bilinçli: öneri şeridi SAYFALANMAZ (doğal tavanlı, `SIMILAR_LIMIT`), yani okuduktan sonra
-     elemek keyset'i bozmaz. Katalogda tersi geçerliydi ve kural oraya SQL'de yazıldı (0032) —
-     ölçüt liste olmak değil, imleçle sayfalanıyor olmak.
-     Cevabı MOTOR veriyor (`priceCents`, `resolvePrice` üzerinden): kuralın ikinci bir evi açılmıyor. */
+  // Alınabilirlik iki soru: stokta mı ve bu kanalda fiyatı var mı; ikincisini motor cevaplar (`priceCents`), kuralın ikinci evi açılmaz.
+  // Süzgeç SQL'de değil burada, çünkü öneri sayfalanmaz; imleçle sayfalanan katalogda aynı kural SQL'dedir (0032).
   const buyable = candidates.filter((p) => {
     const view = views.get(p.id);
     if (view?.priceCents == null) return false;
     return deliversHere(view.stockStatus);
   });
 
-  // Hiçbiri kalmazsa bölüm HİÇ ÇİZİLMEZ (`product.desktop`: `similar.length > 0`) — alakasız bir
-  // şerit göstermektense hiç göstermemek doğru.
+  // Aile kuralı süzgeçten sonra uygulanır ki elenen temsilcinin yerine ailenin alınabilir üyesi geçebilsin.
+  // Hiçbiri kalmazsa bölüm çizilmez (`similar.length > 0`); alakasız öneri göstermektense hiç göstermemek doğru.
   return pickSimilar(buyable, SIMILAR_LIMIT, product.familyId).flatMap((p) => {
     const view = views.get(p.id);
     return view ? [view] : [];
@@ -193,20 +142,8 @@ async function readSimilar(
 }
 
 /**
- * **Ailenin çeşit kartları** (05.15).
- *
- * ── ÜÇ SÜZGEÇ, ÜÇÜ DE BRIEF'İN KENDİ KURALI ────────────────────────────────
- * `status = 'active'` (aday ve pasif üye satılamaz, kartı da olmaz) · TÜKENEN üye düşer ·
- * aile tek üyeye inmişse blok hiç çizilmez.
- *
- * ── BAKILAN ÇEŞİT TÜKENDİYSE KARTI DA DÜŞER ────────────────────────────────
- * Çizimin etkileşim sözleşmesi: *"Bakılan çeşidin kendisi tükendiyse sayfa açılmaya devam eder,
- * blok başlığı 'Alınabilir çeşitler' olur ve **aktif işaret basılmaz**."* Yani tükenmiş üye hiçbir
- * kartta görünmez — kendisi bile. Sayfa yine açılır (`getProductDetail` `null` dönmez), kardeşleri
- * de görünür; müşteriye çıkış yolu kartların KENDİSİDİR.
- *
- * Ekran başlığı bundan türetir: listede `isCurrent` YOKSA bakılan çeşit satılmıyor demektir →
- * "Alınabilir çeşitler". Ayrı bir bayrak göndermeye gerek yok.
+ * Ailenin çeşit kartları — tükenen üye bakılan çeşit dahil düşer; adrese göre süzülmez, çünkü orası öneri değil ürünün kendi
+ * çeşit seçicisidir. Ekran başlığını bundan türetir: listede `isCurrent` yoksa bakılan çeşit satılmıyordur ("Alınabilir çeşitler").
  */
 async function readFamily(
   db: SupabaseClient,
@@ -226,16 +163,11 @@ async function readFamily(
 
   const context = await loadProductContext(db, page.rows, place, viewer);
   const cards = page.rows
-    // Hem "tükendi mi" hem BAŞLANGIÇ FİYATI `toProduct`tan okunur, ikinci bir hesap yazılmaz: kart,
-    // katalog ve detay aynı ürün için farklı sayı gösterirse müşteri hangisine inanacağını bilemez.
-    // `toProduct`un fiyatı EN UCUZ aktif boyunki (09.08), yani çizimdeki "…'dan" tam olarak o.
-    // Düzeltmeden önce "ilk boyun fiyatı"ydı ve "…'dan" eki o hâlde YANLIŞ bir vaatti: en ucuz
-    // olmayan bir sayının önüne "…'dan" yazmak, olmayan bir alt sınır sözü vermekti.
+    // "Tükendi mi" ve başlangıç fiyatı `toProduct`tan okunur: kart, katalog ve detay aynı ürün için farklı sayı göstermemeli.
+    // Fiyat en ucuz aktif boyunki olduğu için çizimdeki "…'dan" eki doğru bir alt sınırdır.
     .map((row) => ({ row, card: toProduct(row, locale, context.get(row.id) ?? EMPTY_PRODUCT_CONTEXT) }))
-    // Tükenen HER üye düşer — bakılan çeşit dâhil (çizimin etkileşim sözleşmesi).
-    // **Kanalında satılmayan üye de düşer** (08.46, 24.08): "Alınabilir çeşitler" başlığının altına
-    // alınamayan bir çeşit koymak, başlığın kendi sözünü bozar. Ölçüt motorun cevabı (`priceCents`),
-    // aile doğal tavanlı olduğu için süzgeç okuma sonrasında — `similar` ile aynı gerekçe.
+    // Kanalında fiyatı olmayan üye de düşer: "Alınabilir çeşitler" başlığının altında alınamayan çeşit başlığın sözünü bozar.
+    // Aile tavanlı olduğu için süzgeç okumadan sonra koşar, `readSimilar` ile aynı gerekçe.
     .filter(({ card }) => !card.soldOut && card.priceCents != null)
     .map(({ row, card }) => ({
       slug: row.slug,
@@ -247,11 +179,8 @@ async function readFamily(
       isCurrent: row.id === product.id,
     }));
 
-  // **Eşik, bakılan çeşidin listede olup olmamasına göre DEĞİŞİR** ve ikisi farklı sorular:
-  //  · Bakılan çeşit alınabiliyorsa (`isCurrent` var) tek kart bir SEÇİM sunmaz — blok çizilmez.
-  //  · Bakılan çeşit tükendiyse (`isCurrent` yok) tek kart bile bir ÇIKIŞ YOLUDUR: müşteri bu
-  //    ürünü alamıyor, alabileceği bir kardeşi var. Burada gizlemek onu çıkışsız bırakırdı — ki
-  //    kuralın var olma sebebi tam olarak buydu.
+  // Eşik bakılan çeşide göre değişir: o alınabiliyorsa tek kart seçim sunmaz ve blok çizilmez;
+  // alınamıyorsa tek kardeş bile müşterinin çıkış yoludur.
   const bakilanVar = cards.some((c) => c.isCurrent);
   const yeter = bakilanVar ? cards.length > 1 : cards.length > 0;
   return yeter ? cards : [];
@@ -270,12 +199,10 @@ export interface ProductDetailInput {
 }
 
 /**
- * Slug ile ürün detayı; ürün yoksa ya da satışta değilse `null` → çağıran 404'e çevirir.
+ * Slug ile ürün detayı; ürün yoksa ya da satışta değilse `null` (çağıran 404'e çevirir), çünkü katalogda görünmeyen ürünün
+ * linkle alınabilmesi `status` kararını boşa çıkarırdı (DOMAIN §13).
  *
- * Aday ve pasif ürün müşteriye AÇILMAZ: katalogda görünmeyen bir ürünün doğrudan linkle satın
- * alınabilir olması, `status`'ün taşıdığı kararı boşa çıkarırdı (DOMAIN §13).
- *
- * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
+ * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`).
  */
 export async function getProductDetail(
   db: SupabaseClient,
@@ -285,9 +212,6 @@ export async function getProductDetail(
   const product = await new ProductService(db).findBySlug(slug);
   if (!product || product.status !== 'active') return null;
 
-  // Aile ve benzer-listesi PARALEL okunur. Sıra bir zamanlar zorunluydu: benzer-listesi ailenin
-  // kimliklerini eleyeceği için önce onları bilmek gerekiyordu. Kural değişti (04.08 — eleme yok,
-  // aile başına bir temsilci var) ve bağımlılık da onunla birlikte düştü.
   const [family, context, images, category, similar] = await Promise.all([
     readFamily(db, product, locale, place, viewer),
     loadProductContext(db, [product], place, viewer),
@@ -311,8 +235,7 @@ export async function getProductDetail(
     gallery: galleryOf(cover, images.map(imageOf)),
     category: category ? toCategory(category, locale) : null,
     variants: variants.map((v) => toVariant(v, locale, ctx, product.shippable)),
-    // Açılışta seçili boy — ölçüt kartla BİREBİR aynı (`primaryVariantOf`). Sıra DEĞİŞMİYOR:
-    // `variants` yine `sortOrder`'da, yalnız hangisinin seçili açılacağı buradan geliyor.
+    // Açılışta seçili boy kartla aynı ölçütten gelir (`primaryVariantOf`); `variants` sırası `sortOrder`da kalır.
     primaryVariantId: primaryVariantOf(variants, ctx)?.id ?? null,
     declaration: declarationOf(product, locale),
     shippable: product.shippable,

@@ -15,7 +15,7 @@ import { pickFeatured } from './featured';
 import type { PlaceWarehouses, StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './storefront-types';
 
 /**
- * Paket okuması — vitrinin paket kapısı. Kartın bilgileri kalemlerden türetilir, operatörden istenmez: elle tazelenseydi ilk unutulanda ekran yalan söylerdi.
+ * Paket okuması — vitrinin paket kapısı; kartın bilgileri kalemlerden türetilir, operatörden istenmez: elle tazelenseydi ilk unutulanda ekran yalan söylerdi.
  * Paket kümesi operatörün kurduğu bir seçkidir, tek turda okunur; `db` çağırandan gelir ki mobil uç da aynı okumayı kullansın.
  */
 

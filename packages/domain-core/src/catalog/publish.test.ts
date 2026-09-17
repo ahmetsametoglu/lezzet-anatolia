@@ -2,11 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { canPublishProduct, productPublishGaps, type PublishCandidate } from './publish';
 
 /**
- * Yayın kapısı (05.36). Korunan şey bir sayı değil, **sessizliğin bitmesi**: Fransızcası olmayan
- * ürün Fransız müşteriye Türkçe gösteriliyordu ve hiçbir yerde işaret yoktu.
- *
- * Motorun kısıtla AYNI cümleyi kurması kritik (`product_publish_requires_all_locales`): ayrışırlarsa
- * ekran "eksik yok" derken veritabanı yayını reddeder ve operatör sebebi hiçbir yerde göremez.
+ * Yayın kapısı — Fransızcası olmayan ürünün Fransız müşteriye sessizce Türkçe gösterilmesini önler.
+ * Motor kısıtla aynı cümleyi kurmalı: ayrışırlarsa ekran "eksik yok" derken veritabanı yayını reddeder.
  */
 const ucDil = { tr: 'Su böreği', fr: 'Börek à l’eau', de: 'Wasserbörek' };
 
@@ -45,13 +42,8 @@ describe('ürün yayın kapısı', () => {
   });
 
   /**
-   * **GÖRSEL ALT METNİ ARANMAZ** (ölçüldü 27.08) — kapsam kararının en kolay yanlış yapılacak yeri.
-   *
-   * Alan ürün formunda YOK ve bilerek yok: boşsa müşteride ürün ADINA düşüyor. Kısıta konsaydı
-   * operatörün dolduramadığı bir alan yüzünden hiçbir ürün yayınlanamazdı — çıkmaz sokak. Ad zaten
-   * üç dilde zorunlu, yani yedek de doğru dile düşüyor.
-   *
-   * Test bunu SABİTLİYOR: bir gün "alt metni de zorunlu yapalım" denirse önce formda alan açılmalı.
+   * Görsel alt metni aranmaz: formda yok ve boşsa müşteride ürün adına düşer, zorunlu olsa hiçbir ürün yayınlanamazdı.
+   * Test bunu sabitliyor; alt metin zorunlu olacaksa önce formda alanı açılmalı.
    */
   it('görsel ALT METNİ yayına engel DEĞİLDİR — yedeği ürün adıdır', () => {
     const gaps = productPublishGaps({ ...tam, ...({ imageKey: 'urun/kapak.webp', imageAlt: null } as PublishCandidate) });

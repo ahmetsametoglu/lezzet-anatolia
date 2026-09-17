@@ -1,45 +1,20 @@
--- Modül 05 — Katalog: ürün + varyant + ürün-koleksiyon bağı.
--- Paylaşılan alanlar Product'ta; satılabilir birim ProductVariant (DATA_MODEL, DOMAIN §13).
--- product_collections = task 1'de ertelenen çoklu bağ (artık Product FK'si var). RLS deny-by-default.
--- Incremental: ingredients/nutrition alanları ilgili özellikleriyle sonra.
+-- Katalog: ürün + varyant + galeri + paket + ürün-koleksiyon bağı + fiyat.
+-- Paylaşılan alanlar üründe, satılabilir birim varyantta (DOMAIN §13); RLS deny-by-default.
 
 create type product_date_type as enum ('DLC', 'DDM');
 
--- ── SAKLAMA REJİMİ (kullanıcı kararı 16.08) ─────────────────────────────────
--- Soğuk zincir bugüne kadar SAKLANMIYORDU: `shippable = false` onun yerine geçiyordu ve DOMAIN §250
--- bunu açıkça yazıyordu ("bazı ürünler soğuk zincir nedeniyle kargoyla gönderilemez"). Yani sistem
--- SEBEBİ değil SONUCU tutuyordu — teslimat kararı için yeterliydi, ama bir kural sebebi istiyor:
---
---   `DOMAIN §8` + `ReturnDispositionEnum`: *"teslim edilmiş ve sonra iade edilen DONUK ürün, soğuk
---   zinciri belgelenemediği için varsayılan olarak imha edilir."*
---
--- O kural yazılamıyordu, çünkü hangi ürünün donuk olduğunu söyleyen bir alan yoktu; iade ekranı da
--- her kalemde `restock`tan başlıyordu — kuralın tam tersi. `shippable` yerine geçemez: o bir
--- TESLİMAT olgusudur ("kargoya verilemez"), bu bir SAKLAMA olgusu. Soğutulmuş bir ürün de kargoya
--- verilemeyebilir; kural ise özellikle donuktan bahsediyor.
---
--- ÜÇ DEĞER, çünkü ikisi yetmiyor: "soğuk zincir" hem soğutulmuşu hem donuğu kapsıyor (vitrin işareti
--- ikisinde de çıkar), ama imha varsayılanı YALNIZ donukta doğar. Boolean bir alan, doğduğu kuralı
--- yine yazamaz hâlde bırakırdı.
---   ambient → oda sıcaklığı; soğuk zincir gerekmez
---   chilled → soğutulmuş (0–4 °C); soğuk zincir gerekir
---   frozen  → donuk (−18 °C); soğuk zincir gerekir VE iade varsayılanı imhadır
---
--- **VARSAYILAN `frozen`** ve gerekçesi `shippable`ınkiyle aynı ailedendir (08.08 kararı): unutulan
--- alanın bedeli güvenli tarafta kalmalı. Yanlış `ambient` işaretlenmiş bir donuk ürünün iadesi rafa
--- döner ve yeniden satılır — bedeli gıda güvenliğidir. Yanlış `frozen` işaretlenmiş bir kuru ürünün
--- bedeli ise fazladan imha ve vitrinde temkinli bir işaret. İkisi arasında seçim tartışmasızdır.
+-- Saklama rejimi — soğuk zincirin kendisi: `shippable` teslimat olgusudur, bu saklama olgusu; donuk ürünün iadesi
+-- varsayılan olarak imha edilir (DOMAIN §8). Üç değer, çünkü soğuk zincir işareti chilled ve frozen'da çıkar ama imha
+-- varsayılanı yalnız frozen'da doğar; varsayılan `frozen`, çünkü unutulan alanın bedeli gıda güvenliği tarafında kalmalı.
 create type product_storage_type as enum ('ambient', 'chilled', 'frozen');
 
--- Ürün satış durumu TEK alanda. Önce iki bayrak (is_candidate + is_active) vardı; üç durum için dört
--- kombinasyon doğuruyordu ve ikisi ("aday + aktif", "aday + pasif") davranışta AYNI şeydi — imkânsız
--- durum temsil edilebilir kalıyordu. Enum bunu kapatır: her satır tam olarak bir durumdadır.
+-- Satış durumu tek alanda: iki bayrak (aday + aktif) davranışta aynı olan imkânsız kombinasyonlara yer açardı.
 --   active    → satışta
---   passive   → satışta değil (arşiv değil; katalogda gizli)
+--   passive   → satışta değil, katalogda gizli
 --   candidate → aday: satılamaz, yalnız keşif akışında görünür (DOMAIN §13)
 create type product_status as enum ('active', 'passive', 'candidate');
 
--- AB 14 alerjeni (FR/DE'de yasal beyan zorunlu). Enum anahtarı ASCII; görünen ad (TR/FR/DE) UI'da.
+-- AB'nin 14 alerjeni (FR/DE'de yasal beyan zorunlu); anahtar ASCII, görünen ad arayüzde.
 create type product_allergen as enum (
   'gluten', 'kabuklu', 'yumurta', 'balik', 'yer_fistigi', 'soya', 'sut',
   'sert_kabuklu', 'kereviz', 'hardal', 'susam', 'sulfit', 'aci_bakla', 'yumusaka'
@@ -51,42 +26,25 @@ create table public.product (
   description jsonb,                                 -- LocalizedText, opsiyonel
   slug text not null,                                -- dil-bağımsız (SEO_I18N)
   category_id uuid references public.category (id) on delete set null,
-  -- Görsel künyesi (Komponent Envanteri §0B): tek kaynak 3:2 dosya + odak noktası; her müşteri
-  -- çerçevesi (3:2 kart, 1:1 sepet, daire) buradan object-position ile türer, kırpılmış kopya yok.
+  -- Görsel künyesi: tek 3:2 kaynak + odak; müşteri çerçeveleri buradan object-position ile türer, kırpılmış kopya tutulmaz.
   image_key text,                                    -- depo anahtarı, tam URL değil (STACK §5)
   image_focal_x smallint not null default 50,        -- odak %, 0-100 (object-position X)
   image_focal_y smallint not null default 50,        -- odak %, 0-100 (object-position Y)
   image_zoom smallint not null default 100,          -- zoom %, 100-400 (dikey/kare kaynağı yatay banda kırpar)
-  -- LocalizedText; erişilebilirlik + SEO. **Boşsa ürün ADINA düşer** (kategori satırındaki desenin
-  -- aynısı) ve o yüzden ürün formunda alanı YOK (`product-form/schema.ts` `.omit()`). Künye bir
-  -- zamanlar "kart görselinde zorunlu" diyordu; yedek zinciri kurulunca o cümle geçerliliğini
-  -- yitirdi ve yayın kısıtına da bu yüzden alınmadı (27.08 künyesi aşağıda).
+  -- LocalizedText; boşsa ürün adına düşer, bu yüzden ürün formunda ve yayın kısıtında yok.
   image_alt jsonb,
   image_updated_at timestamptz,                      -- görsel dosyasının sürüm damgası (gerekçe: 0004 kategori satırı)
   image_width smallint,                              -- kaynak ölçüsü (gerekçe: 0004 kategori satırı)
   image_height smallint,
-  -- Yasal beyan (INCO) — müşteri ürün sayfasının zorunlu bölümleri.
-  -- ingredients/storage_instructions DÜZ METİN'dir; içinde yalnız `**vurgu**` işareti taşır. HTML
-  -- SAKLANMAZ: temizleme (sanitize) yükü, XSS yüzeyi ve AI çevirinin etiketleri bozması buradan gelirdi.
-  -- Vurgu otomatik türetilemez — INCO alerjenin listede YAZILDIĞI hâlinin ("buğday unu") vurgulanmasını
-  -- ister, kategori adının ("Gluten") değil; üstelik saklama metnindeki vurgu hiçbir alerjene bağlı değil.
+  -- Yasal beyan (INCO). Metinler düz metin + `**vurgu**` işaretidir, HTML saklanmaz (temizleme yükü, XSS, çevirinin
+  -- etiket bozması); vurgu türetilemez, çünkü INCO alerjenin listede yazıldığı hâlinin vurgulanmasını ister.
   ingredients jsonb,                                 -- LocalizedText, çok dilli içindekiler
   nutrition jsonb,                                   -- SABİT kalemli (100 g başına) — NutritionSchema
   storage_instructions jsonb,                        -- LocalizedText; saklama/hazırlama metni
   allergens product_allergen[] not null default '{}', -- AB 14 yasal beyan (manuel seçim)
-  -- "BEYAN EKSİK" TEK KAYNAKTA. Aynı ölçüt daha önce sorgu kurucusunda bir `or` dizesi olarak
-  -- yaşıyordu ve sayaç için ayrı, süzgeç için ayrı kuruluyordu — ikisi ayrışırsa ekran "24 beyan
-  -- eksik" yazıp süzgeçte 12 satır gösterir. Üretilmiş kolon: yazarken hesaplanır, indekslenebilir,
-  -- hem süzgeç hem sayaç aynı gerçeği okur. HANGİ beyanın eksik olduğu (rozet ayrıntısı) uygulamada
-  -- kalır; burada yalnız "eksik var mı" sorusu var.
-  --
-  -- **ÖLÇÜT `has_all_locales` (05.36, 27.08).** Eskiden `name ->> 'fr' is null` yazıyordu ve BOŞ
-  -- DİZEYİ dolu sayıyordu: operatör alanı açıp boş bırakınca `{"fr": ""}` yazılıyor, rozet
-  -- "tamam" diyor, müşteri Fransızca yerine Türkçe görüyordu (`resolveLocalizedText` yedek
-  -- zinciri sessiz). Aynı ölçüt aşağıdaki yayın kısıtında da geçiyor — ikisi ayrışırsa ekran
-  -- "eksik yok" derken veritabanı yayını reddeder ve operatör sebebi hiçbir yerde göremez.
-  -- Çok dilli beyan alanları da (`ingredients`, `storage_instructions`) artık varlığa değil
-  -- DOLULUĞA bakıyor: Fransızcası boş bir içindekiler listesi, INCO açısından yok hükmündedir.
+  -- "Beyan eksik" tek kaynakta: süzgeç ve sayaç aynı üretilmiş kolonu okur, hangi beyanın eksik olduğunu uygulama söyler
+  -- (`missingDeclarations`). Çok dilli alanlar varlığa değil doluluğa bakar (`has_all_locales`), çünkü boş dize dolu
+  -- sayılırsa müşteri sessizce yedek dili görür.
   is_incomplete boolean generated always as (
     not public.has_all_locales(name)
     or not public.has_all_locales(ingredients)
@@ -95,100 +53,40 @@ create table public.product (
     or allergens = '{}'
   ) stored,
   traces product_allergen[] not null default '{}',   -- çapraz bulaşma; cümle i18n şablonuyla kurulur
-  -- Fransa gıda oranları: **5,5** (dondurulmuş/paketli) · **10** (hazır tüketim — "consommation
-  -- immédiate", dondurma/porsiyon kalemler) · **20** (gıda dışı). Künye uzun süre "5.5 / 20"
-  -- diyordu ve eksikti — seed 08.08'den beri %10 yazıyor (kapsam denetimi 09.08 ile ölçüldü).
-  -- Kısıt KONMUYOR: oran mali bir karardır ve mevzuat değişince kolon kısıtı migration ister.
+  -- Fransa gıda oranları 5,5 (paketli/donuk) · 10 (hazır tüketim) · 20 (gıda dışı); kısıt yok, oran mali bir karardır
+  -- ve mevzuatla değişir.
   vat_rate numeric(4, 2) not null default 5.5,
   date_type product_date_type not null default 'DDM',
   shelf_life_days int,                               -- toplam raf ömrü (gün); kalan % = (parti.dlc − bugün) ÷ bu
-  -- **VARSAYILAN `false` — kullanıcı kararı 08.08.** Önce `true`ydu: işaretlenmemiş her ürün
-  -- "evet, kargola" sayılıyordu. Donuk gıdada o varsayımın bedeli ekranda bir sayı değil, müşteriye
-  -- çözülmüş ulaşan bir pakettir. Unutulan alanın bedeli **"satılamadı"** olmalı, "bozuk gitti" değil.
-  -- Not: bu bir güvenlik kısıtı değil bir varsayılan — `false` = yalnız rota/kapı (soğuk zincir).
+  -- Varsayılan `false` (yalnız rota/kapı): unutulan kargo izninin bedeli "satılamadı" olmalı, "çözülmüş ulaştı" değil.
   shippable boolean not null default false,
-  -- Saklama rejimi — soğuk zincirin KENDİSİ (enum künyesi yukarıda). `shippable` ile KARIŞTIRILMAZ:
-  -- o "kargoya verilir mi", bu "nasıl saklanır". İkisi çoğu üründe birlikte hareket eder ama aynı
-  -- şey değildir ve ayrı kararlardır — biri satış kanalını, öteki iade/imha ve vitrin işaretini
-  -- belirler.
+  -- Saklama rejimi — `shippable` ile karıştırılmaz: o satış kanalını, bu iade/imha ve vitrin işaretini belirler.
   storage_type product_storage_type not null default 'frozen',
-  -- satışta / pasif / aday (tek alan, yukarıdaki enum)
-  --
-  -- **VARSAYILAN `candidate` — kolon `active` diyordu ve bu yaşanmış bir arızaydı** (05.36, 27.08).
-  -- Form zaten `candidate` gönderiyor ve künyesi sebebini yazmış: *"doğan iki ürün SATIŞTA doğdu,
-  -- üstelik beyanları eksikti — oysa ekran 'ADAY olarak doğar, vitrinde görünmez' diye söz
-  -- veriyordu."* Düzeltme yüzeyde yapılmış, veride yapılmamıştı: formu atlayan her yazan (asistan
-  -- dilekçesi, servis çağrısı, ileride bir uç) kolonun varsayılanını alıyor ve ürün fiyatsız,
-  -- stoksuz, beyansız hâlde SATIŞA doğuyordu. `MB-22a`/`09.6`in dersi birebir: *"yüzeyde
-  -- durdurulan bir kuralın ikinci bir yazma yolu varsa, kural yok demektir"*.
-  --
-  -- Aşağıdaki yayın kısıtının da ön şartı: `active` varsayılanıyla, üç dili henüz dolmamış her yeni
-  -- ürün doğar doğmaz kısıta çarpardı — oysa doğru davranış aday doğup üç dil dolunca yayına
-  -- alınmaktır (tarif emsali `0038`: `is_active` varsayılanı `false`).
+  -- Varsayılan `candidate`: formu atlayan her yazan (asistan, servis, seed) kolonun varsayılanını alır ve ürün beyansız
+  -- satışa doğmamalı; yayın kısıtının da ön şartı, çünkü yeni ürün üç dili dolmadan doğar.
   status product_status not null default 'candidate',
   target_margin_percent numeric(5, 2),              -- hedef kâr marjı (markup %); marj uyarısı / oto-fiyat
-  target_margin_b2b_percent numeric(5, 2),          -- B2B'ye ÖZEL hedef (15.08); boş = ortak hedef geçerli
-  auto_price boolean not null default false,         -- açıksa fiyat hedef marja göre otomatik (motor sonraki modül)
+  target_margin_b2b_percent numeric(5, 2),          -- B2B'ye özel hedef; boş = ortak hedef geçerli
+  auto_price boolean not null default false,         -- açıksa fiyat hedef marja göre otomatik
   sort_order int not null default 0,
 
-  -- ── ÜRÜN AİLESİ — ÇEŞİT EKSENİ (05.15) ────────────────────────────────────
-  -- `on delete set null`: aile silinirse üyeler ürün olarak yaşamaya devam eder. Aşağıdaki kısıt
-  -- etiketin de aileyle birlikte düşmesini zorluyor — ailesiz bir üründe duran "Limonlu" etiketi,
-  -- hiçbir yerde okunmayan ve bir gün yanlış aileye taşınacak ölü veridir.
+  -- Ürün ailesi — çeşit ekseni; aile silinirse üyeler ürün olarak yaşar, etiket kısıtı etiketin de aileyle düşmesini zorlar.
   family_id uuid references public.product_family (id) on delete set null,
 
-  -- **AİLE İÇİ ETİKET — ürün adından AYRI ve ÜÇ DİLLİ** (kullanıcı kararı 04.08).
-  -- Ürün adı "Limonlu kek", kart etiketi "Limonlu". Kartta okunan ikincisidir: kartlar yan yana
-  -- dururken her birinde "kek" kelimesini tekrar etmek seçimi zorlaştırır.
-  -- **Türetilemez:** ortak eki kırpmak "Çilekli Kek" ile "Kek Dilimi" yan yana gelince bozulur.
+  -- Aile içi kart etiketi ("Limonlu") — ürün adından ayrı ve üç dilli; ortak eki kırparak türetmek "Kek Dilimi" gibi
+  -- adlarda bozulur.
   family_label jsonb,                                -- LocalizedText {tr?,fr?,de?}
 
-  -- **SIRA AİLE İÇİNDEDİR** ve operatörün sürüklediği sıradır. `sort_order` KULLANILMAZ: o katalog
-  -- sırasıdır ve iki kararı tek kolona bağlamak, ailedeki sırayı değiştiren operatöre katalog
-  -- sırasını da farkında olmadan değiştirtirdi. Yazma tüm aileyi birden değiştirir, o yüzden
-  -- (family_id, family_position) tekilliği ARANMAZ: toplu güncellemenin ara hâli geçici olarak
-  -- çakışır ve ertelenmiş bir kısıt bu kadar küçük bir küme için fazla makine olurdu.
+  -- Aile içindeki sıra (operatörün sürüklediği); `sort_order` katalog sırasıdır, iki karar tek kolona bağlanmaz.
+  -- Tekillik aranmaz: toplu yeniden sıralamanın ara hâli geçici olarak çakışır.
   family_position int not null default 0,
 
-  -- **Ailedeki üyenin etiketi ZORUNLU.** Kural veride duruyor çünkü ekranda unutulduğunda hata
-  -- vermez: kart ürün adına düşer, "Limonlu kek" yazar ve DOĞRU GÖRÜNÜR — kısa etiketin bütün
-  -- amacı sessizce kaybolur. Gürültülü bir kayıt hatası, sessiz bir tasarım kaybından iyidir.
+  -- Aile üyesinin etiketi zorunlu: ekranda unutulduğunda kart sessizce ürün adına düşer ve doğru görünür.
   constraint product_family_label_required check (family_id is null or family_label is not null),
 
-  -- ── YAYIN ÜÇ DİL İSTER (05.36 · mobil şeridin talebi 25.08, tarif emsali 07.08) ─────────────
-  --
-  -- **Ölçülmüş arıza:** Fransızcası olmayan ürün Fransız müşteriye SESSİZCE Türkçe gösteriliyordu.
-  -- Hiçbir yerde hata yok, hiçbir işaret yok — `resolveLocalizedText` yedek zinciri
-  -- (seçili → TR → FR → DE) eksikliği kendiliğinden kapatıyor. Talep mesajlarında bunun bir
-  -- karşılığı var (*"Traduit automatiquement"*), katalogda yok: ürün adı satın alma kararının
-  -- metnidir ve burada "otomatik çevrildi" demek de yetmez, üstelik gıda.
-  --
-  -- **Neden VERİDE, formda değil** (`MB-22a`/`09.6`in dersi): üründe en az üç yazan var — operasyon
-  -- formu, asistan dilekçesi (`product_draft`/`product_create`) ve seed. Kural yalnız yüzeyde
-  -- dururken ikinci bir yazma yolu kalıyor, ve *"yüzeyde durdurulan bir kuralın ikinci bir yazma
-  -- yolu varsa, kural yok demektir"*. Veride durunca kaç yazan olduğu önemsizleşir.
-  --
-  -- **YAZMA anına değil YAYIN anına bağlı** (tarif deseni): ürün `candidate`/`passive` olarak doğar,
-  -- üç dil dolunca `active` olur. Aksi hâlde operatör ürünü hiç oluşturamazdı — form da zaten tek
-  -- turda üç dil yazmıyor, "✦ AI çeviri" düğmesiyle dolduruluyor.
-  --
-  -- **Zorlama ÇEVİRİYE değil DOLULUĞA:** kısıt "AI çevirdi mi" diye sorsaydı kota bittiği gün ürün
-  -- yayınlanamaz olurdu (`20.1`: AI anahtarsızken özellik düşmez). Operatör üç dili elle de yazar.
-  --
-  -- **Kapsam kararı (talep bunu katalog şeridine bıraktı):** ölçüt "müşteriye görünen metin" değil,
-  -- **YEDEĞİ OLMAYAN metin**. `description` içeride: yedeği yok, boşsa ürün açıklamasız kalır ve
-  -- satın alma kararının metni odur. `ingredients`/`storage_instructions` yasal beyandır (INCO),
-  -- yedeği olamaz ve zaten `is_incomplete`in ölçütü. `family_label` aile üyesindeyken içeride:
-  -- kartta okunan odur ve boşsa sessizce ürün adına düşer — kısa etiketin bütün amacı kaybolur
-  -- (`product_family_label_required` künyesi).
-  --
-  -- **`image_alt` DIŞARIDA ve bu ölçülerek karara bağlandı (27.08):** alan ürün formunda YOK ve
-  -- bilerek yok — `product-form/schema.ts` onu `.omit()` ediyor, gerekçesi *"boşsa müşteride ürün
-  -- adına düşer"*. Kısıta konsaydı çıkmaz sokak olurdu: operatörün dolduramadığı bir alan yüzünden
-  -- hiçbir ürün yayınlanamazdı. Üstelik gerek de yok — yedek ürün ADIdır ve ad bu kısıtla üç dilde
-  -- zorunlu hâle geliyor, yani alt metin de kendiliğinden doğru dile düşüyor. Kolonun kendi künyesi
-  -- bir zamanlar "kart görselinde zorunlu" diyordu; form kararı ondan yenidir ve yedek zincirini
-  -- kurmuştur. `nutrition` da dışarıda — çok dilli değil, sabit kalemli sayı tablosu.
+  -- Yayın üç dil ister — yedek dil zinciri eksik çeviriyi sessizce kapattığı için kural veride, yazma anında değil yayın
+  -- anında (ürün aday doğar, üç dil dolunca satışa alınır). Kapsam yedeği olmayan metindir: `image_alt` ürün adına düştüğü,
+  -- `nutrition` sabit kalemli olduğu için dışarıda.
   constraint product_publish_requires_all_locales check (
     status <> 'active'
     or (
@@ -214,48 +112,18 @@ create type portion_kind as enum ('item', 'slice');
 create table public.product_variant (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.product (id) on delete cascade,
-  -- Müşteriye GÖRÜNEN boy etiketi ("700 g tepsi" / "plateau 700 g") → çok dilli. Üç dilli vitrinde
-  -- tek dil kalamazdı: ürünün adı/açıklaması/beyanı çevriliyken boy seçicisi Türkçe kalıyordu.
-  -- Boş olabilir ({}): tek boylu üründe etiket yoktur, müşteri seçici görmez. Birden çok varyantta
-  -- en az bir dilin dolu olması FORM kuralıdır (boy'ları ayırt edilemez bırakmamak için).
+  -- Müşteriye görünen boy etiketi ("700 g tepsi") — çok dilli; tek boylu üründe boş olabilir, birden çok varyantta en az
+  -- bir dilin dolu olması form kuralıdır.
   label jsonb not null default '{}'::jsonb,          -- LocalizedText
   net_weight_g int,
-  -- ── PAKET İÇİ ADET (05.14 · besleme notu 08.08) ─────────────────────────────
-  -- "12'li baklava" ile "36'lı baklava" aynı ÜRÜNÜN iki boyudur; adet ürünü ayırmaz, varyantı
-  -- ayırır. Kolonu olmadığı için üreteç adedi adın içinde bırakıyordu (`… (12 Pieces)`) ve slug
-  -- ayrıştığı için tek baklava dört ayrı ürüne bölünüyordu — ölçüldü: 33 kayıt, 14 taban.
-  --
-  -- Gramajın YERİNE değil YANINA: bir varyant hem 36 adet hem 2500 g olabilir ve ikisi ayrı
-  -- soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar"). null = adet bilgisi yok (dökme
-  -- ürün) — sıfır DEĞİL: sıfır "içinde hiç parça yok" demek olurdu (CLAUDE §1).
+  -- Paket içi adet ("12'li" ile "36'lı" aynı ürünün iki boyu) — gramajın yanında, ayrı soruya cevap verir;
+  -- null = adet bilgisi yok (dökme ürün), sıfır değil.
   pieces_count int,
-  -- ── PORSİYON TÜRÜ: "4 adet" ile "12 dilim" AYNI ŞEY DEĞİLDİR (kullanıcı kararı 19.08) ────────
-  -- `pieces_count` tek başına "kaç kişilik"i söylüyor ama vitrinin yazacağı KELİMEYİ söylemiyordu:
-  -- 4'lü simit paketi 4 AYRI simittir, 12 dilimlik cheesecake ise TEK pastadır. Ekran ikisine de
-  -- "12 adet" yazınca müşteri 12 cheesecake aldığını sanıyor (ölçüldü: 10 üründe böyle okunuyordu).
-  --
-  -- Ayrım kaynakta duruyor ve TAHMİN EDİLMİYOR: basılı katalog adında `(12 slice)` diyor, üreteç
-  -- onu `catalog-pdf.json` → `unit.portionKind` alanına küratelenmiş olarak taşıyor.
-  --
-  -- `null` = tek parça ürün; porsiyon sorusu hiç doğmuyor (`pieces_count` de null olur).
+  -- Porsiyon türü: 4'lü simit dört ayrı parçadır, 12 dilimlik cheesecake tek pasta; ekran doğru kelimeyi ancak böyle yazar.
+  -- Kaynaktan gelir, tahmin edilmez; null = tek parça ürün.
   portion_kind portion_kind,
-  -- ── AMBALAJLI ÜRÜN ÖLÇÜSÜ — kargo kanalının girdisi (07.12) ─────────────────
-  -- `net_weight_g` ile KARIŞTIRILMAZ ve o yüzden adı sıfatlı: net ağırlık INCO beyanıdır ve
-  -- €/kg gösterimini besler (içindeki GIDANIN ağırlığı); bu ise taşınan şeyin ağırlığıdır —
-  -- ürün + kendi ambalajı. 810 g'lık bir kek kutusu ambalajıyla 1,1 kg olabilir ve taşıyıcıya
-  -- söylenecek sayı ikincisidir. Çıplak `weight_g` adı ilk tasarımda yazılmıştı; `net_weight_g`
-  -- ile yan yana durunca hangisi olduğu okunmuyordu (28.08 sapma kaydı).
-  --
-  -- **MİLİMETRE, santimetre değil:** ondalık kalınlık (1,5 cm) tam sayı alanında sessizce
-  -- yuvarlanır. Sağlayıcı `mm` birimini doğrudan kabul ediyor (canlı ölçüm 28.08) — saklanan
-  -- sayı dönüşümsüz tele giriyor.
-  --
-  -- **GRAM, kilogram değil:** aynı gerekçe + sağlayıcı `g` kabul ediyor. Kilogramı ondalıkla
-  -- taşımak kayan nokta artefaktı üretiyordu (referans projede `toFixed(3)` yaması bu yüzden var).
-  --
-  -- **null = ÖLÇÜLMEDİ, sıfır DEĞİL** (CLAUDE §1). Ölçüsüz varyant için canlı teklif alınmaz;
-  -- ekran "ölçüsü eksik" der. Sıfır yazsaydık koli planı onu "hiç yer kaplamıyor" diye okurdu.
-  -- Kısıt pozitiflik zorluyor: ölçülmüş bir ambalaj sıfır olamaz.
+  -- Ambalajlı ürün ölçüsü — kargonun girdisi; `net_weight_g` gıdanın INCO ağırlığıdır, bu taşınan kutunun.
+  -- Milimetre ve gram, çünkü tam sayı alanı ondalığı sessizce yuvarlar; null = ölçülmedi, ölçülmüş ambalaj sıfır olamaz.
   packed_weight_g int check (packed_weight_g is null or packed_weight_g > 0),
   packed_length_mm int check (packed_length_mm is null or packed_length_mm > 0),
   packed_width_mm int check (packed_width_mm is null or packed_width_mm > 0),
@@ -266,10 +134,8 @@ create table public.product_variant (
   sort_order int not null default 0,
   created_at timestamptz not null default now(),
 
-  -- ÜÇ ÖLÇÜ BİRLİKTE YAŞAR ya da hiç yaşamaz. İkisi dolu biri boş bir kutu hiçbir soruya cevap
-  -- vermez: hacim hesaplanamaz, taşıyıcıya gönderilemez, ama ekran "ölçüsü var" diye okur.
-  -- Ağırlık BU KURALIN DIŞINDA ve bilerek: kimi tarife yalnız ağırlığa bakar, üstelik operatör
-  -- önce tartıp sonra ölçebilir — yarım ilerlemeyi engellemek kimseye hizmet etmez.
+  -- Üç ölçü birlikte yaşar ya da hiç: yarım kutu hacim vermez ama "ölçüsü var" diye okunurdu.
+  -- Ağırlık kuralın dışında: kimi tarife yalnız ağırlığa bakar ve operatör önce tartıp sonra ölçebilir.
   constraint product_variant_packed_dims_all_or_none check (
     (packed_length_mm is null and packed_width_mm is null and packed_height_mm is null)
     or (packed_length_mm is not null and packed_width_mm is not null and packed_height_mm is not null)
@@ -277,13 +143,8 @@ create table public.product_variant (
 );
 create index product_variant_product_idx on public.product_variant (product_id);
 
--- Ürün galerisi — detay sayfasındaki EK fotoğraflar. Kapak burada TEKRARLANMAZ: o
--- `product.image_key`'de durur, çünkü liste/kart/paylaşım kartı kapağı ürünle aynı satırda okur
--- (ayrı sorgu doğurmasın). Bu tablo yalnız 2., 3., … fotoğrafı tutar.
---
--- Kırpma künyesi kapaktakiyle AYNI alanlar: her fotoğrafın kendi odağı vardır (tasarım her slota ayrı
--- odak veriyor). Ama galeri fotoğrafı tek çerçevede görünür (detay galerisi, 3:2) — kapak gibi dört
--- ayrı çerçeveye türemez; fark veride değil, editörün gösterdiği önizlemede.
+-- Ürün galerisi — detaydaki ek fotoğraflar; kapak burada tekrarlanmaz, liste ve kart onu ürün satırından okur.
+-- Her fotoğrafın kendi odağı var ama tek çerçevede (detay 3:2) görünür.
 create table public.product_image (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.product (id) on delete cascade,
@@ -302,23 +163,15 @@ create table public.product_image (
 create index product_image_product_idx on public.product_image (product_id, sort_order);
 
 -- ── Paket (bundle) ───────────────────────────────────────────────────────────────────────────────
--- Birden çok ürünü TEK fiyata sunan katalog kısayolu (DOMAIN §13). Yeni ürün YARATMAZ: sepete
--- eklenince içindeki her kalem ayrı `order_item` olur, sistem müşteri hepsini tek tek almış gibi akar
--- (stok, hazırlık, kâr, fatura kalem kalem). Bu yüzden paketin varyantı, stoğu ve KDV'si yoktur.
---
--- Burada, ürün migration'ında duruyor çünkü kalemleri `product_variant`'a bağlı ve `0012`'teki
--- `order_item.bundle_id` bu tabloya FK verecek — paket ondan ÖNCE var olmak zorunda.
---
--- Paket YALNIZ B2C'dedir: `total_price` tek sayıdır ve **KDV dahil (TTC)** — b2c kanal tabanı. Kanal
--- listesi, müşteriye özel fiyatı ve `price` satırı YOKTUR. Toptan müşteri paketi görmez; pazarlık
--- kalem üzerinden yürür, paket ise sosyal medyaya yönelik bir pazarlama kısayoludur.
+-- Birden çok ürünü tek fiyata sunan katalog kısayolu (DOMAIN §13): sepette her kalem ayrı `order_item` olur, bu yüzden
+-- paketin varyantı, stoğu ve KDV'si yok. Yalnız B2C'dedir ve `total_price` KDV dahil tek sayıdır; `0012`deki
+-- `order_item.bundle_id` bu tabloya bağlandığı için ürün migration'ında durur.
 create table public.bundle (
   id uuid primary key default gen_random_uuid(),
   name jsonb not null,                               -- LocalizedText
   description jsonb,                                 -- LocalizedText; listede kısa, detayda tam
   slug text not null,                                -- sosyal paylaşımın tek bağlantısı (dil-bağımsız)
-  -- Görsel künyesi ürünle AYNI alanlar (Komponent Envanteri §0B): tek 3:2 kaynak + odak; müşteri
-  -- çerçeveleri (liste kartı 3:2, detay 3:2, anasayfa koyu kart 1:1) buradan türer.
+  -- Görsel künyesi ürünle aynı alanlar: tek 3:2 kaynak + odak, müşteri çerçeveleri buradan türer.
   image_key text,
   image_focal_x smallint not null default 50,
   image_focal_y smallint not null default 50,
@@ -328,29 +181,23 @@ create table public.bundle (
   image_width smallint,                              -- kaynak ölçüsü (gerekçe: 0004 kategori satırı)
   image_height smallint,
   total_price numeric(10, 2) not null,               -- müşterinin gördüğü TEK fiyat, TTC
-  -- "6 kişilik" — tasarımda ad üstü künyede duruyor (Paket Detay + Paketler listesi). Serbest metne
-  -- gömülemez: künye olarak tutarlı basılması ve boş olduğunda satırın HİÇ çizilmemesi gerekiyor.
+  -- "6 kişilik" künyesi — serbest metne gömülmez: boşsa satır hiç çizilmez.
   serves int,
   is_active boolean not null default true,
   sort_order int not null default 0,                 -- kürelenmiş vitrin sırası (müşteri sıralamaz)
-  -- Vitrinde göster (05.18) — ana sayfa tasarımı pakete 2 slot çiziyor; kod bugün seçimsiz ilk
-  -- üçünü kesiyor (`HOME_PACKAGE_LIMIT`). İşaret SEÇİMDİR, sıra `sort_order`'dan gelir.
-  -- `is_active` ile karıştırılmaz: aktiflik "satışta mı", bu "ana sayfada mı".
+  -- Ana sayfada göster — seçimdir, sıra `sort_order`dan; `is_active` "satışta mı", bu "ana sayfada mı".
   is_featured boolean not null default false,
   created_at timestamptz not null default now()
 );
 create unique index bundle_slug_key on public.bundle (slug);
 create index bundle_featured_idx on public.bundle (sort_order) where is_featured;
 
--- Paket kalemi. `allocated_unit_price` MÜŞTERİYE GÖRÜNMEZ: iç muhasebe aracıdır — faturada her
--- kalemin KDV'si kendi ürününün oranından işlensin diye gerekli (baklava %5,5, malzeme %20).
--- Σ(allocated × qty) = bundle.total_price kuralını uygulama katmanı doğrular (motor: domain-core);
--- SQL check'e konamaz, çünkü kural satır değil KÜME üzerindedir.
+-- Paket kalemi. `allocated_unit_price` müşteriye görünmez: faturada her kalemin KDV'si kendi ürününün oranından işlensin diye var.
+-- Σ(allocated × qty) = total_price kuralı küme üzerinde olduğu için SQL check'te değil, uygulamada (domain-core) doğrulanır.
 create table public.bundle_item (
   id uuid primary key default gen_random_uuid(),
   bundle_id uuid not null references public.bundle (id) on delete cascade,
-  -- `restrict`: pakette duran varyant silinemez. Varyant silme zaten okunabilir hataya çevriliyor
-  -- (ProductVariantService.deleteVariant) — paket de o cümlenin kaynaklarından biri olur.
+  -- `restrict`: pakette duran varyant silinemez; silme hatası okunur cümleye çevrilir (`ProductVariantService.deleteVariant`).
   variant_id uuid not null references public.product_variant (id) on delete restrict,
   qty int not null check (qty > 0),
   allocated_unit_price numeric(10, 2) not null check (allocated_unit_price >= 0), -- 0 = hediye kalem
@@ -359,12 +206,10 @@ create table public.bundle_item (
 );
 -- Kalemler paket başına ve SIRALI okunur.
 create index bundle_item_bundle_idx on public.bundle_item (bundle_id, sort_order);
--- Aynı varyant bir pakete iki kez giremez — "iki tane" demek için adet artırılır. İki satır olsaydı
--- müşteri aynı ürünü listede iki kez görürdü ve toplam doğrulaması sessizce iki yerden beslenirdi.
+-- Aynı varyant bir pakete iki kez giremez — "iki tane" adetle söylenir, iki satır toplam doğrulamasını iki yerden beslerdi.
 create unique index bundle_item_variant_key on public.bundle_item (bundle_id, variant_id);
 
--- Ürün ↔ koleksiyon çoklu bağı (bir ürün birçok koleksiyona girer).
--- position: koleksiyon İÇİNDEKİ vitrin sırası — admin sürükle-bırakla kürasyon yapar.
+-- Ürün ↔ koleksiyon çoklu bağı; `position` koleksiyon içindeki vitrin sırasıdır (sürükle-bırak).
 create table public.product_collections (
   product_id uuid not null references public.product (id) on delete cascade,
   collection_id uuid not null references public.collection (id) on delete cascade,
@@ -383,33 +228,23 @@ alter table public.product_collections enable row level security;
 alter table public.product_image enable row level security;
 
 
--- ═══ FİYAT (03.4) ═══
--- Buraya AYRI BİR MIGRATION dosyasından taşındı (02.11 · denetim P2 — aile içi
--- birleştirme). İçerik değişmedi; eski dosya numarasıyla anılmıyor, çünkü o numara artık yok.
+-- ═══ FİYAT ═══
+-- Fiyat varyant seviyesindedir ve tek tablo üç işi görür: kanal listesi (customer_id boş), müşteriye özel fiyat, tarihli
+-- geçerlilik. Çözüm sırası ve KDV tabanı DOMAIN §5, motor `packages/domain-core/src/pricing`; erişim service_role ile.
 
--- Modül 05 — Katalog: fiyat (05.4). Fiyat VARYANT seviyesindedir; aynı tablo üç işi görür:
--- kanal listesi (customer_id boş), müşteriye özel fiyat (customer_id dolu), tarihli geçerlilik.
--- Çözüm sırası ve KDV tabanı: DOMAIN §5, motor: packages/domain-core/src/pricing.
--- RLS deny-by-default (0001 deseni); erişim sunucudan service_role ile.
-
--- Kanal — *kim* alıyor. Order ve Customer türetimi de bu tipi kullanacak (DATA_MODEL enum listesi).
+-- Kanal — kim alıyor; sipariş ve müşteri türetimi de bu tipi kullanır.
 create type channel as enum ('b2b', 'b2c');
 
--- Tek pazar → tek para birimi; çoklu döviz Faz 1'de yok (tip yine de açık, ileride genişler).
+-- Tek pazar, tek para birimi; tip genişlemeye açık.
 create type currency as enum ('EUR');
 
--- MÜŞTERİ FİYAT GRUBU (kullanıcı kararı 20.08) — B2B'nin alt kademeleri: market aylık yüksek
--- hacim alır, restoran/pastane düşük; aradaki fark bir İNDİRİM değil FİYATTIR (kampanya havuzuyla
--- yarışmaz, müşteri "kendi fiyatını" görür). Grup, B2B liste fiyatı üstünden yüzde taşır; çözüm
--- sırası motorda: müşteriye özel → grup → liste (`domain-core/resolve-price`). Satır bazlı grup
--- listesi BİLEREK yok — katalog bakımı grup sayısıyla çarpılırdı; varyant istisnası zaten
--- müşteriye özel fiyatla veriliyor.
+-- Müşteri fiyat grubu — B2B'nin alt kademeleri; fark indirim değil fiyattır, kampanyayla yarışmaz. Çözüm müşteriye özel →
+-- grup → liste (`domain-core/resolve-price`); satır bazlı grup listesi yok, katalog bakımı grup sayısıyla çarpılırdı.
 create table public.price_group (
   id uuid primary key default gen_random_uuid(),
   -- Operatörün tanıyacağı ad ("Market", "Restoran / Pastane") — iç etiket, müşteriye görünmez.
   name text not null,
-  -- B2B listeden düşülen yüzde. 0 meşru DEĞİL (grubu listeyle eş yapar — o zaman grup gereksiz);
-  -- 100 bedava demek, o da meşru değil.
+  -- B2B listeden düşülen yüzde; 0 grubu listeyle eşitler, 100 bedava demektir, ikisi de anlamsız.
   percent_off numeric(5, 2) not null check (percent_off > 0 and percent_off < 100),
   created_at timestamptz not null default now()
 );
@@ -420,8 +255,7 @@ create table public.price (
   id uuid primary key default gen_random_uuid(),
   variant_id uuid not null references public.product_variant (id) on delete cascade,
   channel channel not null,
-  -- Dolu → o müşteriye özel fiyat. FK YOK: `customer` tablosu henüz açılmadı (modül 04);
-  -- tablo gelince bu kolona FK eklenir (greenfield — bu dosya o gün yerinde düzenlenir).
+  -- Dolu → o müşteriye özel fiyat; FK `0011_customer_fields.sql`te eklenir, `customer` tablosu bu dosyadan sonra açılıyor.
   customer_id uuid,
   -- KANAL TABANINDA tutulur: b2c satırları KDV dahil (TTC), b2b satırları hariç (HT) — DOMAIN §5.
   amount numeric(10, 2) not null check (amount >= 0),
