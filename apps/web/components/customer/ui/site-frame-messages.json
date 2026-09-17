@@ -16,7 +16,7 @@
       "packages": "Paketler",
       "recipes": "Tarifler",
       "discover": "Keşif",
-      "pro": "Professionnels"
+      "pro": "Profesyoneller"
     },
     "footer": {
       "address": "Strasbourg, Fransa · lezzetanatolie.com",
@@ -25,7 +25,10 @@
       "corporate": "Kurumsal",
       "language": "Dil",
       "about": "Hakkımızda",
-      "faq": "SSS"
+      "faq": "SSS",
+      "imprint": "Künye ve iletişim",
+      "help": "Yardım",
+      "writeUs": "Bize yazın"
     },
     "legal": {
       "terms": "Yasal bilgiler",
@@ -70,7 +73,10 @@
       "corporate": "À propos",
       "language": "Langue",
       "about": "Qui sommes-nous",
-      "faq": "FAQ"
+      "faq": "FAQ",
+      "imprint": "Mentions légales et contact",
+      "help": "Aide",
+      "writeUs": "Nous écrire"
     },
     "legal": {
       "terms": "Mentions légales",
@@ -106,7 +112,7 @@
       "packages": "Pakete",
       "recipes": "Rezepte",
       "discover": "Entdecken",
-      "pro": "Professionnels"
+      "pro": "Geschäftskunden"
     },
     "footer": {
       "address": "Straßburg, Frankreich · lezzetanatolie.com",
@@ -115,7 +121,10 @@
       "corporate": "Unternehmen",
       "language": "Sprache",
       "about": "Über uns",
-      "faq": "FAQ"
+      "faq": "FAQ",
+      "imprint": "Impressum und Kontakt",
+      "help": "Hilfe",
+      "writeUs": "Schreiben Sie uns"
     },
     "legal": {
       "terms": "Impressum",

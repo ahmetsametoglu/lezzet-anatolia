@@ -273,10 +273,10 @@ export const customerText = {
   'eyebrow-xs': '10px',
   'eyebrow-xs--font-weight': '700',
   'eyebrow-xs--letter-spacing': '0.18em',
-  /* Fotoğraf üstündeki kart etiketi ("KOLEKSİYON") — kontrol öğesi, yuvarlanmaz. */
-  'photo-tag': '12px',
-  'photo-tag--font-weight': '600',
-  'photo-tag--letter-spacing': '0.12em',
+  /* Büyük harfli küçük etiket — fotoğraf üstü kart etiketi, bölüm rozeti; kontrol öğesi, yuvarlanmaz. */
+  'caps-label': '12px',
+  'caps-label--font-weight': '600',
+  'caps-label--letter-spacing': '0.12em',
 
   /* ROZET kademesi — Token Kararlari #16 · (telefon, 14.09). Native v3'ün en çok yinelenen öğesinin
      (fiyat çipi · TÜKENDİ · İNDİRİM · TOPTAN · TAKİP) kendi kademesi; önce üç ayrı kademeden

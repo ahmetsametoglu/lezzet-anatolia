@@ -1,6 +1,6 @@
 import { RATIO_BAND } from '@lezzet/types';
 import { FramedImage } from '@/components/media/framed-image';import { buttonClass } from '@/components/customer/ui/button';
-import { CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
+import { Band, CtaBand, InviteBand, SectionHeading } from '@/components/customer/ui/section';
 import { CategoryCard, CollectionCard, OfferCard, PackageCard, ProductCard } from '@/components/customer/ui/storefront-cards';
 import { RecipeTeaserCard } from '@/components/customer/ui/recipe-card';
 import { campaignValue } from '@/lib/storefront/campaign-note';
@@ -59,19 +59,19 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
       </section>
 
       {/* Kategoriler */}
-      <section className="flex flex-col gap-5.5 border-t border-sand-275 px-12 pt-10 pb-12">
+      <Band surface="border-t border-sand-275" className="flex flex-col gap-5.5 px-12 pt-10 pb-12">
         <SectionHeading title={t.categories.title} action={{ label: t.categories.all, href: '/catalog' }} />
         <div className="grid grid-cols-6 gap-[18px]">
           {data.categories.map((c) => (
             <CategoryCard key={c.id} category={c} itemsLabel={t.categories.items} />
           ))}
         </div>
-      </section>
+      </Band>
 
       {/* Koleksiyonlar — koleksiyon yoksa başlık da ızgara da çizilmez. Telefon görünümü koleksiyonları
           kendi bandında gösterir (`home.mobile`). */}
       {data.collections.length > 0 && (
-        <section className="flex flex-col gap-[18px] border-t border-sand-275 px-12 pt-11 pb-12">
+        <Band surface="border-t border-sand-275" className="flex flex-col gap-[18px] px-12 pt-11 pb-12">
           <SectionHeading
             eyebrow={t.collections.eyebrow}
             title={t.collections.title}
@@ -82,24 +82,24 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
               <CollectionCard key={c.id} collection={c} labels={t.collections} campaignValue={c.campaign && campaignValue(c.campaign, t.campaign, locale)} />
             ))}
           </div>
-        </section>
+        </Band>
       )}
 
       {/* Vitrindekiler */}
-      <section className="flex flex-col gap-[18px] border-t border-sand-275 px-12 pt-11 pb-12">
+      <Band surface="border-t border-sand-275" className="flex flex-col gap-[18px] px-12 pt-11 pb-12">
         <SectionHeading title={t.featured.title} action={{ label: t.featured.all, href: '/catalog' }} />
         <div className="grid grid-cols-4 gap-[18px]">
           {data.featured.map((p) => (
             <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.featured, limit: null }} />
           ))}
         </div>
-      </section>
+      </Band>
 
       {/* Fırsatlar — teklif yoksa bölüm hiç çizilmez. */}
       {data.offers.length > 0 && (
-        <section className="flex flex-col gap-[18px] border-t border-terracotta-line bg-terracotta-bg px-12 pt-11 pb-12">
+        <section className="mx-12 my-11 flex flex-col gap-[18px] rounded-card border-[1.5px] border-terracotta-line bg-terracotta-bg px-8.5 pt-7.5 pb-8.5">
           <SectionHeading
-            eyebrow={t.offers.note}
+            badge={t.offers.note}
             title={t.offers.title}
             tone="terracotta"
             action={{ label: t.offers.all, href: { pathname: '/catalog', query: { offers: '1' } } }}
@@ -120,7 +120,7 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
 
       {/* Paketler — koyu bant; paket yoksa bölüm çizilmez. */}
       {data.packages.length > 0 && (
-        <section className="flex flex-col gap-5 bg-ink px-12 pt-11 pb-12">
+        <Band surface="bg-ink" className="flex flex-col gap-5 px-12 pt-11 pb-12">
           <SectionHeading
             eyebrow={t.packages.eyebrow}
             title={t.packages.title}
@@ -139,12 +139,12 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
               />
             ))}
           </div>
-        </section>
+        </Band>
       )}
 
       {/* Sofradan Fikirler — tarif yoksa bölüm çizilmez. Telefon görünümünde bu şerit yok. */}
       {data.recipes.length > 0 && (
-        <section className="flex flex-col gap-[18px] border-b border-sand-300 bg-cream-deep px-12 pt-11 pb-12">
+        <Band surface="border-b border-sand-275" className="flex flex-col gap-[18px] px-12 pt-11 pb-12">
           <SectionHeading
             eyebrow={t.recipes.eyebrow}
             title={t.recipes.title}
@@ -155,7 +155,7 @@ export function HomeDesktop({ t, locale, data, hero }: HomeViewProps) {
               <RecipeTeaserCard key={r.id} recipe={r} labels={t.recipes} />
             ))}
           </div>
-        </section>
+        </Band>
       )}
 
       <div className="mx-12 mt-11 mb-5">

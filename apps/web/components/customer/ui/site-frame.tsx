@@ -64,7 +64,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
   const footerTier = footer ?? (account ? 'slim' : 'full');
 
   return (
-    <div className={`flex flex-col bg-cream text-ink ${fill ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`flex flex-col overflow-x-clip bg-cream text-ink ${fill ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
       {/* Duyuru bandı — hesap alanında yok. */}
       {!account && (
       <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-sand-50">
@@ -188,6 +188,15 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
                 { label: t.footer.about },
                 { label: t.nav.pro, href: '/professionals' },
                 { label: t.footer.faq, href: '/legal/faq' },
+                { label: t.footer.imprint, href: '/legal/terms' },
+              ]}
+            />
+            <FooterColumn
+              title={t.footer.help}
+              items={[
+                { label: t.accountNav.support, href: '/support' },
+                { label: t.footer.writeUs, href: '/support/new' },
+                { label: t.legal.privacy, href: '/legal/privacy' },
               ]}
             />
             <div className="flex flex-col gap-1.5">

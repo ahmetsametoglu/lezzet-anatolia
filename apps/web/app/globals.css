@@ -196,10 +196,10 @@
   --text-eyebrow-xs: 10px; /* (telefon, 14.09) native'in üstbaşlığı; masaüstü `eyebrow`u yeni ada geçince taban `eyebrow` bu değeri alır */
   --text-eyebrow-xs--font-weight: 700;
   --text-eyebrow-xs--letter-spacing: 0.18em;
-  /* Fotoğraf üstündeki kart etiketi ("KOLEKSİYON") — bir kontrol öğesi, yuvarlanmaz. */
-  --text-photo-tag: 12px;
-  --text-photo-tag--font-weight: 600;
-  --text-photo-tag--letter-spacing: 0.12em;
+  /* Büyük harfli küçük etiket — fotoğraf üstü kart etiketi, bölüm rozeti; kontrol öğesi, yuvarlanmaz. */
+  --text-caps-label: 12px;
+  --text-caps-label--font-weight: 600;
+  --text-caps-label--letter-spacing: 0.12em;
 
   /* (telefon, 14.09) Native'in rozet kademesi (Token Kararlari #16): küçük rozet yalnız ölçü farkı,
      ağırlık ve aralık `badge`inkinden okunur. Yardımcı satır 12 ve ekran başlığı 17 de native
@@ -498,7 +498,7 @@ body {
   --text-eyebrow: 15px;
   --text-eyebrow-sm: 12px;
   --text-eyebrow-xs: 11px;
-  --text-photo-tag: 13px;
+  --text-caps-label: 13px;
   --text-badge: 13.5px;
   --text-badge-sm: 11px;
   --text-helper: 13px;

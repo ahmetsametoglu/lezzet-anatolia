@@ -77,8 +77,11 @@ export function CategoryCard({ category, itemsLabel }: CategoryCardProps) {
   );
 }
 
-/** Koleksiyon kartı kataloğun bir kesitine kapı açar, satın alma sunmaz: fiyat, stok ve sepet yok. */
-const COLLECTION_SCRIM = 'linear-gradient(180deg, transparent 34%, color-mix(in srgb, var(--color-ink-deep) 80%, transparent) 100%)';
+/**
+ * Koleksiyon kartı kataloğun bir kesitine kapı açar, satın alma sunmaz: fiyat, stok ve sepet yok. Kapaklar çoğunlukla beyaz zeminli
+ * ürün çekimi olduğundan örtü tasarımdakinden erken başlar ve etiket krem çizilir; açık yeşil etiket orta griye karşı okunmuyordu.
+ */
+const COLLECTION_SCRIM = 'linear-gradient(180deg, transparent 15%, color-mix(in srgb, var(--color-ink-deep) 88%, transparent) 100%)';
 
 interface CollectionCardProps {
   collection: StorefrontCollection;
@@ -112,7 +115,7 @@ export function CollectionCard({ collection, labels, campaignValue = null }: Col
       />
       <span className="pointer-events-none absolute inset-0" style={{ background: COLLECTION_SCRIM }} />
       <span className="pointer-events-none absolute inset-x-6 bottom-5.5 flex flex-col gap-1.5">
-        <span className="font-sans text-photo-tag text-olive-light uppercase">{labels.tag}</span>
+        <span className="font-sans text-caps-label text-on-image uppercase">{labels.tag}</span>
         <span className="font-serif text-h2 leading-tight text-on-image">{collection.name}</span>
         {collection.description && (
           <span className="font-sans text-body-sm leading-normal text-on-image-soft">{collection.description}</span>
@@ -342,19 +345,22 @@ export function OfferCard({ offer, locale, limitLabel, actionLabels }: OfferCard
           className="size-[92px] !rounded-[12px] bg-sand-100"
         />
       </Link>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      {/* Satırlar sıkı: token satır yükseklikleri (1.5–1.6) paragraf içindir, kartı tasarımdan ~11px uzatıyordu. */}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.25">
         <Link
           href={productHref(offer.slug)}
-          className="cursor-pointer font-sans text-body font-bold text-ink transition-colors hover:text-olive"
+          className="cursor-pointer font-sans text-body leading-tight font-bold text-ink transition-colors hover:text-olive"
         >
           {offer.name}
         </Link>
-        <span className="font-sans text-note text-muted">
+        <span className="font-sans text-note leading-tight text-muted">
           {[offer.unitLabel, offer.comparisonCents !== null ? formatComparison(offer.comparisonCents, locale) : null]
             .filter(Boolean)
             .join(' · ')}
         </span>
-        <Price cents={offer.priceCents} wasCents={offer.wasCents} locale={locale} size="lg" />
+        <span className="[&_span]:leading-tight">
+          <Price cents={offer.priceCents} wasCents={offer.wasCents} locale={locale} size="lg" />
+        </span>
         <div className="mt-0.5 flex items-center justify-between gap-2.5">
           <Badge tone="offer" variant="tint">
             {limitLabel}
