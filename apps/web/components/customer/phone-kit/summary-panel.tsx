@@ -40,7 +40,8 @@ export function SummaryPanel({ rows, totalLabel, totalValue, totalTone = 'ink', 
           className={['flex justify-between gap-2.5 font-sans text-note', ROW_TONE[row.tone ?? 'muted'], row.strike ? 'line-through' : ''].join(' ')}
         >
           <span>{row.label}</span>
-          {row.value !== '' && <span className="flex-none">{row.value}</span>}
+          {/* Değer daralabilir ve sağa yaslı kırılır; uzun adres satırı paneli taşırmamalı. */}
+          {row.value !== '' && <span className="min-w-0 text-right">{row.value}</span>}
         </div>
       ))}
       {/* Kesikli çizgi tasarımın imzası: "burada bir kupon koparılır" hissi (native künyesi). */}
