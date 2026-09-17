@@ -10,7 +10,7 @@ import type { ReactNode } from 'react';
 import type { CustomerAwaitingPayment, CustomerOrderSummary } from '@/lib/order/customer-orders';
 import { orderProductNames } from '@/lib/order/order-names';
 import { OrderStatusBadge } from './components/order-status-badge';
-import { ReorderNotice } from './components/reorder-notice';
+import { DesktopReorderNotice } from './components/desktop-reorder-notice';
 // Liste `ReorderButton`ı kullanmıyor, çünkü meşgul durumunu bütün satırlar için tek yerde tutuyor; kelimeler yine ortak.
 import reorderCopy from './components/reorder-messages.json';
 import type { OrdersViewProps } from './orders-types';
@@ -89,7 +89,7 @@ export function OrdersDesktop({
             </Link>
           </div>
 
-          {notice?.orderId === order.id && <ReorderNotice t={t} notice={notice} onDismiss={onDismissNotice} />}
+          {notice?.orderId === order.id && <DesktopReorderNotice t={t} notice={notice} onDismiss={onDismissNotice} />}
         </div>
       ))}
 

@@ -2,18 +2,17 @@ import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
-import ordersMessages from '@lezzet/i18n/customer/orders';
 import { readOrderFeedbackInvite } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getCustomerOrderDetail } from '@/lib/order/customer-orders';
 import { orderIdOrNull } from '@/lib/order/order-id';
-import { OrderStatusTag } from '@/components/customer/phone-kit/order-status-tag';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
 import { routing } from '@/i18n/routing';
 import { ReorderButton } from '../components/reorder-button';
+import { PhoneReorderAction } from './components/phone-reorder-action';
 import { DetailClient } from './detail-client';
 import type { Messages } from './detail-types';
 import type { Messages as ListMessages } from '../orders-types';
@@ -57,11 +56,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       accountChrome={{
         back: { label: t.back, href: '/orders' },
         title: order.referenceNo ?? '—',
-        // Masaüstünde tekrar sipariş başlığın sağ ucunda (tasarım). Telefonda sağ uçta native'in durum rozeti; tekrar
-        // sipariş sayfanın altında, tam genişlikte.
+        // Tekrar sipariş iki yüzeyde de başlığın sağında; telefonda durum rozeti yok, çünkü durumu hemen altındaki zaman çizgisi söylüyor.
         right:
           device === 'mobile' ? (
-            <OrderStatusTag status={order.status} label={ordersMessages[locale as Locale].status[order.status]} />
+            <PhoneReorderAction locale={locale as Locale} orderId={order.id} />
           ) : (
             <ReorderButton locale={locale as Locale} orderId={order.id} />
           ),

@@ -8,14 +8,10 @@ import { OrderStatusTag } from '@/components/customer/phone-kit/order-status-tag
 import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
 import { DASHED_TOP } from '@/components/customer/phone-kit/settings-card';
-import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { ThumbStack } from '@/components/customer/phone-kit/thumb-stack';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import { useLoadMore } from '@/lib/use-load-more.hook';
-import { ReorderNotice } from './components/reorder-notice';
-// Tekrar sipariş düğmesinin kelimeleri masaüstüyle ortak.
-import reorderCopy from './components/reorder-messages.json';
 import { metaOf } from './orders.desktop';
 import type { OrdersViewProps } from './orders-types';
 
@@ -23,20 +19,7 @@ import type { OrdersViewProps } from './orders-types';
  * Siparişlerim'in telefon görünümü, native sipariş listesinin ikizi; kartın tamamı detaya gider, çünkü native'de de tek dokunma
  * hedefi. Ödemesi beklenen kart siparişi ve otomatik tur sınırından sonraki "daha eski siparişler" düğmesi web'e özgü.
  */
-export function OrdersMobile({
-  t,
-  locale,
-  orders,
-  awaitingPayment,
-  nextCursor,
-  loadingMore,
-  onLoadMore,
-  tailFailed,
-  busyOrderId,
-  onReorder,
-  notice,
-  onDismissNotice,
-}: OrdersViewProps) {
+export function OrdersMobile({ t, locale, orders, awaitingPayment, nextCursor, loadingMore, onLoadMore, tailFailed }: OrdersViewProps) {
   const copy = ordersMessages[locale];
   // Kuyruk düştüyse otomatik yol kapanır: aynı düşen sayfa art arda istenmesin, söz "tekrar dene"ye geçer.
   const { ref, autoActive, loadMore } = useLoadMore({ hasMore: nextCursor !== null && !tailFailed, loading: loadingMore, onLoadMore });
@@ -80,52 +63,42 @@ export function OrdersMobile({
       {orders.map((order) => {
         const reference = order.referenceNo ?? '—';
         return (
-          <div key={order.id} className="flex flex-col gap-2">
-            <article className="relative flex flex-col gap-2.5 rounded-card bg-sand-250 px-4 py-3.5 transition-opacity active:opacity-80">
-              <div className="flex items-center justify-between gap-2.5">
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  {/* Kartın tamamı bu bağın dokunma alanı (`after` katmanı); ekran okuyucuya tek satır gider. */}
-                  <Link
-                    href={{ pathname: '/orders/[reference]', params: { reference: order.id } }}
-                    aria-label={copy.row.open.replace('{reference}', reference)}
-                    className="cursor-pointer font-sans text-body-sm font-bold text-ink after:absolute after:inset-0 after:rounded-card after:content-['']"
-                  >
-                    {reference}
-                  </Link>
-                  <span className="font-sans text-helper text-muted">
-                    {copy.row.meta.replace('{date}', formatOrderDate(order.createdAt, locale, true)).replace('{count}', String(order.itemCount))}
-                  </span>
-                </div>
-                <OrderStatusTag status={order.status} label={copy.status[order.status]} />
+          <article
+            key={order.id}
+            className="relative flex flex-col gap-2.5 rounded-card bg-sand-250 px-4 py-3.5 transition-opacity active:opacity-80"
+          >
+            <div className="flex items-center justify-between gap-2.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                {/* Kartın tamamı bu bağın dokunma alanı (`after` katmanı); ekran okuyucuya tek satır gider. */}
+                <Link
+                  href={{ pathname: '/orders/[reference]', params: { reference: order.id } }}
+                  aria-label={copy.row.open.replace('{reference}', reference)}
+                  className="cursor-pointer font-sans text-body-sm font-bold text-ink after:absolute after:inset-0 after:rounded-card after:content-['']"
+                >
+                  {reference}
+                </Link>
+                <span className="font-sans text-helper text-muted">
+                  {copy.row.meta.replace('{date}', formatOrderDate(order.createdAt, locale, true)).replace('{count}', String(order.itemCount))}
+                </span>
               </div>
+              <OrderStatusTag status={order.status} label={copy.status[order.status]} />
+            </div>
 
-              {order.thumbs.length > 0 && (
-                <ThumbStack
-                  items={order.thumbs.map((thumb, index) => ({ key: `${thumb.name}-${index}`, name: thumb.name, image: thumb.image }))}
-                  more={order.moreCount > 0 ? copy.row.more.replace('{n}', String(order.moreCount)) : undefined}
-                />
-              )}
+            {order.thumbs.length > 0 && (
+              <ThumbStack
+                items={order.thumbs.map((thumb, index) => ({ key: `${thumb.name}-${index}`, name: thumb.name, image: thumb.image }))}
+                more={order.moreCount > 0 ? copy.row.more.replace('{n}', String(order.moreCount)) : undefined}
+              />
+            )}
 
-              <div className={`flex items-center justify-between gap-2.5 pt-2.5 ${DASHED_TOP}`}>
-                <span className="font-sans text-step-sm text-ink">{formatPrice(order.totalCents, locale)}</span>
-                <div className="flex items-center gap-3.5">
-                  {/* Tekrar sipariş web'e özgü; kartın bağının ÜSTÜNDE durur (`z-10`), bağın katmanı onu yutmasın. */}
-                  <span className="relative z-10">
-                    <TextAction
-                      label={busyOrderId === order.id ? reorderCopy[locale].reordering : reorderCopy[locale].reorder}
-                      onClick={() => onReorder(order.id)}
-                    />
-                  </span>
-                  {/* Kart zaten basılabilir; bu yazı düğme değil, nereye gidileceğini söyleyen işaret (native). */}
-                  <span aria-hidden className="font-sans text-control text-terracotta">
-                    {copy.row.detail}
-                  </span>
-                </div>
-              </div>
-            </article>
-
-            {notice?.orderId === order.id && <ReorderNotice t={t} notice={notice} onDismiss={onDismissNotice} compact />}
-          </div>
+            <div className={`flex items-center justify-between gap-2.5 pt-2.5 ${DASHED_TOP}`}>
+              <span className="font-sans text-step-sm text-ink">{formatPrice(order.totalCents, locale)}</span>
+              {/* Kart zaten basılabilir; bu yazı düğme değil, nereye gidileceğini söyleyen işaret. */}
+              <span aria-hidden className="font-sans text-control text-terracotta">
+                {copy.row.detail}
+              </span>
+            </div>
+          </article>
         );
       })}
 
