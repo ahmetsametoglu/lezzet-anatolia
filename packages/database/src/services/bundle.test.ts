@@ -37,6 +37,8 @@ let productId: string;
 let variantA: string;
 let variantB: string;
 const bundleIds: string[] = [];
+/** Tek testin kendi ürünü — beforeAll'daki ana üründen ayrı, silmesi de ayrı. */
+const extraProductIds: string[] = [];
 
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'PKT' })).id;
@@ -67,7 +69,7 @@ afterAll(async () => {
   // Paketler ÜRÜNDEN ÖNCE gider: kalemler varyanta `restrict` ile bağlı, ürün silme cascade'i orada
   // reddedilirdi. (Ortak `purgeTestData` ürün grafiğini toplar; paket onun kapsamında değil.)
   for (const id of bundleIds) await bundles.delete(id);
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
+  await purgeTestData(db, { productIds: [productId, ...extraProductIds], categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 
 async function createBundle(name: string, totalPrice: number, items: Array<{ variantId: string; qty: number; allocatedUnitPrice: number }>) {
@@ -185,6 +187,22 @@ describe('BundleService', () => {
     // ekran yarım toplamı tam sanmasın.
     expect(row!.missingPriceCount).toBe(2);
     expect(row!.missingCostCount).toBe(2);
+  });
+
+  /**
+   * Tek boylu üründe etiket BOŞTUR ve bu doğru cevaptır (müşteri boy seçici görmez). Liste satırı bir tur
+   * etiketten "en az bir dil" istiyordu: etiketsiz boyu olan tek bir paket, ürün listesinin TAMAMINI
+   * düşürüyordu (ölçüldü 17.09 — `/operations/products` 500).
+   */
+  it('ETİKETSİZ boyu olan paket listeyi düşürmez', async () => {
+    // Varyant verilmezse kapı varsayılan boyu ETİKETSİZ açar (`DEFAULT_VARIANT_LABEL`) — aranan hâl bu.
+    const { product, variants } = await products.create({ name: { tr: `Etiketsiz boy ${stamp}` }, categoryId });
+    extraProductIds.push(product.id);
+    const boysuz = variants[0]!;
+    const bundle = await createBundle(`Etiketsiz ${stamp}`, 10, [{ variantId: boysuz.id, qty: 1, allocatedUnitPrice: 10 }]);
+
+    const row = (await bundles.listRows()).find((r) => r.id === bundle.id);
+    expect(row?.itemNames).toEqual([{ p: { tr: `Etiketsiz boy ${stamp}` }, v: {} }]);
   });
 
   it('fiyat ve parti girilince toplamlar dolar; KDV KALEM KALEM iner ve pasif ürün sayılır', async () => {

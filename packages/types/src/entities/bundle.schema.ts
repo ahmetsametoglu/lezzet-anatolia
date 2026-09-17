@@ -105,8 +105,13 @@ export const BundleListRowSchema = BundleSchema.extend({
   itemCount: z.number().int(),
   /** Kalemlerin varyant kimlikleri — ürün formundaki "bu ürün N pakette kullanılıyor" bağı. */
   variantIds: z.array(z.string().uuid()),
-  /** Kalem adları ham hâlde: dil çözümü (TR→FR→DE) uygulamada, tek yerde. */
-  itemNames: z.array(z.object({ p: LocalizedTextSchema, v: LocalizedTextSchema.nullable() })),
+  /**
+   * Kalem adları ham hâlde: dil çözümü (TR→FR→DE) uygulamada, tek yerde. Boy etiketi TASLAK şemayla
+   * okunur, çünkü tek boylu üründe etiket BOŞTUR (`ProductVariantSchema.label` künyesi) ve boşluk bir
+   * eksiklik değil, doğru cevaptır: "en az bir dil" istemek, etiketsiz bir boyu paketine koyan
+   * operatörün ÜRÜN LİSTESİNİ tamamen düşürüyordu (ölçüldü 17.09, `/operations/products` 500 verdi).
+   */
+  itemNames: z.array(z.object({ p: LocalizedTextSchema, v: LocalizedTextDraftSchema.nullable() })),
   allocatedTotal: dbNumeric,
   listTotal: dbNumericNullable,
   missingPriceCount: z.number().int(),
