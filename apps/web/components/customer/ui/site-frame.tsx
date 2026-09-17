@@ -84,7 +84,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       {account ? (
         <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4.5`}>
           <Link href="/" className="cursor-pointer">
-            <img src="/logo.jpg" alt={brand.name} className="h-[52px] mix-blend-multiply" />
+            <img src="/logo-yatay.png" alt={brand.name} className="h-[42px]" />
           </Link>
           {account.nav ? (
             <nav className="flex gap-6 font-sans text-body-sm font-semibold text-muted">
@@ -115,7 +115,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
           <header className="sticky top-0 z-30 border-b border-sand-275 bg-cream/97 backdrop-blur-sm">
             <div className={`${SHELL} flex items-center gap-8.5 px-12 py-3.5`}>
               <Link href="/" className="flex-none cursor-pointer">
-                <img src="/logo.jpg" alt={brand.name} className="h-[52px] mix-blend-multiply" />
+                <img src="/logo-yatay.png" alt={brand.name} className="h-[42px]" />
               </Link>
               <nav className="flex gap-6.5 font-sans text-body font-semibold text-ink">
                 <Link href="/catalog" className={navClass('catalog', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
@@ -128,8 +128,8 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
                 <Link href="/recipes" className={navClass('recipes', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
                   {t.nav.recipes}
                 </Link>
-                {/* Fırsatlar ve keşif menüde yok: yolları ana sayfanın kahraman düğmesi, fırsat bandı
-                    (`/catalog?offers=1`) ve keşif bandı. */}
+                {/* Fırsatlar ve keşif menüde yok: yolları ana sayfanın fırsat bandı (`/catalog?offers=1`)
+                    ve keşif bandı. */}
                 <Link href="/professionals" className={navClass('pro', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>
                   {t.nav.pro}
                 </Link>

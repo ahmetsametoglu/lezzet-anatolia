@@ -193,7 +193,7 @@ function Welcome({ t, locale, invite, compact, onStart }: { t: Messages; locale:
 
   return (
     <div className="flex flex-col items-center gap-3.5 py-6 text-center">
-      <Image src="/logo.jpg" alt="" width={120} height={46} className="h-[46px] w-auto mix-blend-multiply" />
+      <Image src="/logo-yatay.png" alt="" width={146} height={38} className="h-[38px] w-auto" />
       <h1 className={`font-serif ${compact ? 'text-page-title-sm' : 'text-card-title'} leading-tight text-ink`}>{t.welcomeTitle}</h1>
       <p className="font-sans text-body-sm leading-relaxed text-body">
         {t.welcomeBody
