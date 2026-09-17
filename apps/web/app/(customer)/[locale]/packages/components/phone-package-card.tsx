@@ -33,14 +33,17 @@ function itemLabelOf(item: StorefrontPackageItem, copy: PackagesCopy): string {
 export function PhonePackageCard({ pack, copy, locale, place }: PhonePackageCardProps) {
   // Tükenmiş pakette adres sorusu anlamsız: yalnız paketin kendi gerçeği konuşur.
   const mark = pack.soldOut ? null : placeMarkOf(packageRouteStatusOf(pack.route), place, placeMessages[locale]);
-  const { dimmed } = cardPlaceNoteOf(mark, placeMessages[locale]);
+  // Kart tam genişlikte: kapalı kapının kısa işareti yerine gerekçesinin tamamı sığıyor (`wide`).
+  const { note: placeNote, dimmed } = cardPlaceNoteOf(mark, placeMessages[locale], { wide: true });
   const note = packageNoteOf(pack, mark?.tone ?? null, copy.note, locale);
 
   return (
     <Link
       href={{ pathname: '/package/[slug]', params: { slug: pack.slug } }}
       // Ekran okuyucu görenle aynı bilgiyi alır: ad · durum · teslim notu.
-      aria-label={[copy.open.replace('{name}', pack.name), pack.soldOut ? copy.card.soldOut : undefined, note].filter(Boolean).join(' · ')}
+      aria-label={[copy.open.replace('{name}', pack.name), pack.soldOut ? copy.card.soldOut : undefined, placeNote, note]
+        .filter(Boolean)
+        .join(' · ')}
       className={[
         'block cursor-pointer overflow-hidden rounded-[24px] border-[1.5px] border-sand-200 bg-card shadow-[0_4px_18px_color-mix(in_srgb,var(--color-ink)_7%,transparent)] transition-transform hover:opacity-95 active:scale-[0.985]',
         pack.soldOut ? 'opacity-70' : '',
@@ -55,7 +58,7 @@ export function PhonePackageCard({ pack, copy, locale, place }: PhonePackageCard
           ratio={RATIO_BAND}
           sizes="100vw"
           scrim
-          // Paket bu adrese hiç gelmiyorsa fotoğraf solar; sebebi alt satırda okunur.
+          // Paket bu adrese hiç gelmiyorsa fotoğraf solar; sebebi künyenin son satırında okunur.
           className={['absolute inset-0', dimmed ? 'opacity-45' : ''].filter(Boolean).join(' ')}
         />
         {pack.soldOut && (
@@ -69,6 +72,11 @@ export function PhonePackageCard({ pack, copy, locale, place }: PhonePackageCard
         <span className="absolute inset-x-4 bottom-3.5 flex flex-col gap-0.75">
           <span className="font-serif text-card-title leading-[1.1] text-on-image">{pack.name}</span>
           <span className="font-sans text-eyebrow-xs text-olive-light">{copy.meta.replace('{n}', String(pack.itemCount))}</span>
+          {/* Yer notu künyenin son satırı ve ZEMİNSİZ: okunurluğu gradyan veriyor. Rengi vurgu tonu, çünkü taşıdığı şey
+              künye değil uyarı — krem olsaydı adın ve altyazının arasında üçüncü bir künye satırı gibi okunurdu. */}
+          {placeNote !== undefined && (
+            <span className="line-clamp-2 font-sans text-body-sm font-semibold text-terracotta">{placeNote}</span>
+          )}
         </span>
       </span>
       <span className="flex flex-col gap-2.75 px-4 pt-3.5 pb-4">

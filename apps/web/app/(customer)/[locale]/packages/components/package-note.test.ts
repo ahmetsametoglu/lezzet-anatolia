@@ -6,9 +6,12 @@ const copy = packagesMessages.tr.note;
 const regionOnly = { coldChain: true, inRouteOnly: true };
 
 describe('packageNoteOf', () => {
-  it('paket seçili adrese gelemiyorsa genel kargo cümlesi yerine o adresin cevabını yazar', () => {
-    expect(packageNoteOf(regionOnly, 'blocked', copy, 'tr')).toBe(`${copy.coldChain} · ${copy.blocked}`);
-    expect(packageNoteOf(regionOnly, 'pending', copy, 'tr')).toBe(`${copy.coldChain} · ${copy.away}`);
+  it('kapalı kapıda susar — cümleyi künyedeki yer notu söylüyor', () => {
+    expect(packageNoteOf(regionOnly, 'blocked', copy, 'tr')).toBe('');
+  });
+
+  it('bekleyen bölgede paketin kendi gerçeği kalır — yer notu onu söylemiyor', () => {
+    expect(packageNoteOf(regionOnly, 'pending', copy, 'tr')).toBe(`${copy.coldChain} · ${copy.regionOnly}`);
   });
 
   it('adres bilinmiyorsa ya da paket geliyorsa kargoya uygunluğu yazar', () => {

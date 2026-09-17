@@ -8,9 +8,7 @@
     "note": {
       "coldChain": "❄ Soğuk zincir",
       "shippable": "kargoya uygun",
-      "regionOnly": "yalnız bölge içi teslimat",
-      "blocked": "bu adrese teslim edemiyoruz",
-      "away": "bölgenizde şu an yok"
+      "regionOnly": "yalnız bölge içi teslimat"
     },
     "cta": "Paketi incele ›",
     "open": "{name} paketini aç",
@@ -37,9 +35,7 @@
     "note": {
       "coldChain": "❄ Chaîne du froid",
       "shippable": "expédiable par transporteur",
-      "regionOnly": "livraison dans la zone uniquement",
-      "blocked": "non livrable à cette adresse",
-      "away": "indisponible dans votre zone"
+      "regionOnly": "livraison dans la zone uniquement"
     },
     "cta": "Voir le coffret ›",
     "open": "Ouvrir le coffret {name}",
@@ -66,9 +62,7 @@
     "note": {
       "coldChain": "❄ Kühlkette",
       "shippable": "versandfähig",
-      "regionOnly": "nur Lieferung in der Region",
-      "blocked": "an diese Adresse nicht lieferbar",
-      "away": "in Ihrer Region derzeit nicht verfügbar"
+      "regionOnly": "nur Lieferung in der Region"
     },
     "cta": "Paket ansehen ›",
     "open": "Paket {name} öffnen",

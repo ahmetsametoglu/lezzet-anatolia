@@ -6,8 +6,8 @@ import type { StorefrontPackage } from '@/lib/storefront/storefront-types';
 type NoteCopy = LocalizedCopy<typeof packagesMessages>['note'];
 
 /**
- * Paket kartının alt satırı: soğuk zincir + teslim yolu.
- * Seçili adrese gelmeyen pakette genel kargo cümlesinin yerini o adresin cevabı alır; kartın başka yerinde yer notu yok.
+ * Paket kartının alt satırı: paketin KENDİ kalıcı gerçeği (soğuk zincir + teslim yolu). Seçili adresin cevabı bu satırın
+ * değil, künyedeki yer notunun işi; kapalı kapıda o cümle soğuk zinciri de söylediği için alt satır susar (`''`).
  */
 export function packageNoteOf(
   pack: Pick<StorefrontPackage, 'coldChain' | 'inRouteOnly'>,
@@ -15,7 +15,8 @@ export function packageNoteOf(
   copy: NoteCopy,
   locale: string,
 ): string {
-  const where = tone === 'blocked' ? copy.blocked : tone === 'pending' ? copy.away : pack.inRouteOnly ? copy.regionOnly : copy.shippable;
+  if (tone === 'blocked') return '';
+  const where = pack.inRouteOnly ? copy.regionOnly : copy.shippable;
   if (pack.coldChain) return `${copy.coldChain} · ${where}`;
   // Önek yoksa parça cümlenin başıdır.
   return where.charAt(0).toLocaleUpperCase(locale) + where.slice(1);

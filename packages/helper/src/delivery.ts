@@ -44,8 +44,14 @@ export function placeMarkOf(status: string | null, place: { inRoute: boolean } |
  * olmaktan çıkar ve cümle listenin başındaki bantta tek yerde durur. Kapalı kapı kartı soldurur, bekleyen bölge soldurmaz, çünkü
  * ürün gelebilir.
  */
-export function cardPlaceNoteOf(mark: PlaceMark | null, t: PlaceMarkCopy): { note: string | undefined; dimmed: boolean } {
+export function cardPlaceNoteOf(
+  mark: PlaceMark | null,
+  t: PlaceMarkCopy,
+  { wide = false }: { wide?: boolean } = {},
+): { note: string | undefined; dimmed: boolean } {
   if (mark === null || mark.tone === 'info') return { note: undefined, dimmed: false };
-  // Kare kartın şeridi tek satırlık bir işarettir ve iki satırlık gerekçe (`lineBlocked`) fotoğrafı yutardı.
-  return { note: mark.tone === 'blocked' ? t.cardBlocked : mark.label, dimmed: mark.tone === 'blocked' };
+  // Kare kartın şeridi tek satırlık bir işarettir ve iki satırlık gerekçe (`lineBlocked`) fotoğrafı yutardı; tam genişlikteki
+  // kartta (`wide`) gerekçe sığar ve kısa işaret nedenini söylemeden bırakırdı.
+  const blockedNote = wide ? t.lineBlocked : t.cardBlocked;
+  return { note: mark.tone === 'blocked' ? blockedNote : mark.label, dimmed: mark.tone === 'blocked' };
 }

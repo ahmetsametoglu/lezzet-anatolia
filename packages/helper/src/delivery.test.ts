@@ -67,4 +67,16 @@ describe('cardPlaceNoteOf', () => {
   it('işaret yoksa not da yok', () => {
     expect(cardPlaceNoteOf(null, tr)).toEqual({ note: undefined, dimmed: false });
   });
+
+  it('geniş kart kapalı kapının GEREKÇESİNİ yazar, kısa işareti değil', () => {
+    expect(cardPlaceNoteOf(placeMarkOf('elsewhere', outOfRoute, tr), tr, { wide: true })).toEqual({
+      note: tr.lineBlocked,
+      dimmed: true,
+    });
+    // Bekleyen bölgenin cümlesi kart ölçüsüne bağlı değil: tek cümlesi var.
+    expect(cardPlaceNoteOf(placeMarkOf('elsewhere', inRoute, tr), tr, { wide: true })).toEqual({
+      note: tr.awayMark,
+      dimmed: false,
+    });
+  });
 });
