@@ -42,6 +42,7 @@ export default async function PointsHistoryPage({ params }: PointsPageProps) {
       <PointsHistoryClient
         t={t}
         locale={locale}
+        device={device}
         first={{ entries: history.entries, nextCursor: history.nextCursor ?? null }}
         rules={rules}
       />

@@ -25,7 +25,8 @@
     "./customer/orders": "./src/customer/orders.json",
     "./customer/support": "./src/customer/support.json",
     "./customer/login": "./src/customer/login.json",
-    "./customer/discover": "./src/customer/discover.json"
+    "./customer/discover": "./src/customer/discover.json",
+    "./customer/points-history": "./src/customer/points-history.json"
   },
   "types": "./src/index.ts",
   "scripts": {

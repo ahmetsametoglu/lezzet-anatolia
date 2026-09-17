@@ -1,4 +1,6 @@
+import { groupPointsHistory, type PointsHistoryGroup } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
+import messages from '@lezzet/i18n/customer/points-history';
 import type { PointsReason } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
@@ -13,8 +15,7 @@ import { pullRefreshColors } from '@lezzet/mobile-kit/src/components/ui/pull-ref
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import messages from './messages.json';
-import { groupPointsHistory, type PointsHistoryGroup } from './points-history-group';
+import { formatOrderDate } from '@/screens/orders/order-format';
 import { usePoints } from '@/screens/account/use-points.hook';
 import { usePointsHistory } from './use-points-history.hook';
 
@@ -165,10 +166,9 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
     );
   }
 
-  /* Birleştirme ÇİZİM anında, veri katmanında değil (dosyanın künyesi): hook defterin ham
-     satırlarını taşır, ekran onları okunur hâle getirir. Kuyruk geldikçe TÜM birikmiş liste
-     yeniden gruplanır — sayfa sınırına düşen bir grup böylece kendiliğinden tamamlanır. */
-  const groups = groupPointsHistory(history.entries, locale);
+  /* Birleştirme çizim anında: hook defterin ham satırlarını taşır ve kuyruk geldikçe bütün liste yeniden gruplanır, böylece sayfa
+     sınırına düşen bir grup kendiliğinden tamamlanır. */
+  const groups = groupPointsHistory(history.entries, (entry) => formatOrderDate(entry.at, locale));
 
   /** Kuyruk: yükleniyor · düştü · bitti — üçü ayrı şey (sipariş listesinin kararı). */
   const listFooter = () => {
@@ -189,7 +189,7 @@ export function PointsHistoryScreen({ locale: forcedLocale }: PointsHistoryScree
     return null;
   };
 
-  const renderGroup = (group: PointsHistoryGroup) => {
+  const renderGroup = (group: PointsHistoryGroup<PointsReason>) => {
     const earned = group.points >= 0;
     return (
       <View style={styles.row} testID={`points-history-row-${group.id}`}>
