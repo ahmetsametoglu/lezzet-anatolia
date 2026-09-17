@@ -10,20 +10,13 @@ export const ProductDateTypeEnum = z.enum(['DLC', 'DDM']);
 export type ProductDateType = z.infer<typeof ProductDateTypeEnum>;
 
 /**
- * **Saklama rejimi — soğuk zincirin KENDİSİ** (kullanıcı kararı 16.08; migration `0005` künyesi).
- *
- * Bugüne kadar saklanmıyordu: `shippable = false` onun yerine geçiyordu. Teslimat kararı için
- * yeterliydi ama bir kural SEBEBİ istiyor — `ReturnDispositionEnum`: *"teslim edilmiş ve sonra iade
- * edilen DONUK ürün … varsayılan olarak imha edilir."* O kural yazılamıyordu.
- *
- * `shippable` yerine geçemez: o bir TESLİMAT olgusudur ("kargoya verilemez"), bu bir SAKLAMA
- * olgusu. Üç değer, çünkü ikisi yetmiyor — vitrin işareti `chilled` ve `frozen`de birden çıkar,
- * imha varsayılanı ise yalnız `frozen`de doğar.
+ * Saklama rejimi — soğuk zincirin kendisi; iade edilen donuk ürünün imha varsayılanı bu değere bakar.
+ * `shippable` yerine geçmez: o teslimat olgusu, bu saklama olgusu.
  */
 export const ProductStorageTypeEnum = z.enum(['ambient', 'chilled', 'frozen']);
 export type ProductStorageType = z.infer<typeof ProductStorageTypeEnum>;
 
-// AB 14 alerjeni (FR/DE yasal beyan). Enum anahtarı ASCII; görünen ad (TR/FR/DE) UI'da. DATA_MODEL §Enum.
+// AB'nin 14 alerjeni (yasal beyan); enum anahtarı ASCII, görünen ad `ALLERGEN_LABELS`ta.
 export const ProductAllergenEnum = z.enum([
   'gluten',
   'kabuklu',
@@ -42,8 +35,7 @@ export const ProductAllergenEnum = z.enum([
 ]);
 export type ProductAllergen = z.infer<typeof ProductAllergenEnum>;
 
-// Alerjenin görünen adı — çok dilli (FR/DE yasal beyan). Enum'la TEK KAYNAK; her iki yüzey (operasyon +
-// müşteri) buradan çözer (resolveLocalizedText). Liste enum'dan türer: ProductAllergenEnum.options.
+// Alerjenin çok dilli görünen adı — operasyon ve müşteri yüzeyi buradan çözer; enum'un yanında ki yeni değer adsız kalmasın.
 export const ALLERGEN_LABELS: Record<ProductAllergen, LocalizedText> = {
   gluten: { tr: 'Gluten', fr: 'Gluten', de: 'Gluten' },
   kabuklu: { tr: 'Kabuklu deniz ürünleri', fr: 'Crustacés', de: 'Krebstiere' },
@@ -62,30 +54,15 @@ export const ALLERGEN_LABELS: Record<ProductAllergen, LocalizedText> = {
 };
 
 /**
- * Ürünün satış durumu — DB'de TEK kolon (`product_status` enum'u), türetme yok.
- *
- * Önce `is_candidate` + `is_active` ikilisiyle tutuluyordu: üç durum için dört kombinasyon doğuruyor,
- * ikisi ("aday+aktif", "aday+pasif") davranışta aynı şeye çıkıyordu. Bu yüzden formda "Satışta"yı
- * açmak aday üründe hiçbir şeyi değiştirmiyordu — imkânsız durum temsil edilebilir kaldığı sürece
- * arayüz de tutarsız kalıyor. Tek alan bunu kapatır; süzgeç de artık düz bir eşitlik.
- *
+ * Ürünün satış durumu — tek kolon, çünkü iki bayrak üç durum için dört birleşim üretir ve ikisi aynı davranışa çıkar.
  * Aday satılamaz, yalnız keşif akışında görünür (DOMAIN §13).
  */
 export const ProductStatusEnum = z.enum(['active', 'passive', 'candidate']);
 export type ProductStatus = z.infer<typeof ProductStatusEnum>;
 
 /**
- * Durumun OPERASYON yüzeyindeki adı — `ORDER_STATUS_LABELS` ile aynı gerekçe (bkz. `enums.schema`):
- * enum'la AYNI dosyada durur ki yeni bir durum eklenince karşılığının yazılması unutulmasın
- * (`Record` eksik anahtarda derlemeyi durdurur), ve tek yerde durur ki ekranlar ayrışmasın.
- *
- * Ayrışma yaşandı: ürün ekranında üç kopya vardı ve `active` iki farklı kelimeyle yazılıyordu —
- * rozette "Aktif", durum seçicisinde "Satışta". Aynı ürün aynı ekranda iki ad taşıyordu. Kazanan
- * "Satışta": tasarımın kendi dili de öyle (*"aday ürün / **satılabilir** ürün"*), ve "Aktif" neyin
- * aktif olduğunu söylemiyor.
- *
- * Personel ekranları yalnız Türkçedir (CLAUDE.md §2), o yüzden düz metin. Müşteri yüzeyi bu haritayı
- * KULLANMAZ — orada ürün durumu bir etiket değil, görünürlük kuralıdır.
+ * Durumun operasyon yüzeyindeki adı — enum'un yanında durur ki yeni durum adsız kalmasın (`Record` derlemeyi durdurur).
+ * Personel ekranları yalnız Türkçe; müşteri yüzeyi bu haritayı kullanmaz, orada durum bir görünürlük kuralıdır.
  */
 export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {
   active: 'Satışta',
@@ -94,9 +71,8 @@ export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {
 };
 
 /**
- * Besin değerleri — INCO'nun zorunlu beyan seti, **100 g başına**, SABİT kalemli. Serbest anahtarlı
- * jsonb değil: müşteri tablosu, operasyon formu ve çeviri aynı listeden üretilir (satır adları arayüz
- * i18n'inde, veride değil). Kalem `null` bırakılabilir → bilinmiyor, o satır gösterilmez.
+ * Besin değerleri — INCO'nun zorunlu seti, 100 g başına ve sabit kalemli ki tablo, form ve çeviri aynı listeden üretilsin.
+ * `null` kalem "bilinmiyor" demektir ve o satır gösterilmez.
  */
 export const NutritionSchema = z.object({
   energyKj: z.number().nullable(),
@@ -114,14 +90,8 @@ export type Nutrition = z.infer<typeof NutritionSchema>;
 export const NUTRITION_KEYS = Object.keys(NutritionSchema.shape) as Array<keyof Nutrition>;
 
 /**
- * Kalemlerin operatöre görünen adı ve birimi — sıranın yanında, TEK KAYNAK.
- *
- * `Record<keyof Nutrition, …>` olduğu için şemaya yeni kalem eklenirse okuyan her yüzey derlenmez;
- * yani yeni alan sessizce ekransız kalamaz. İki yüzey okuyor (ürün formunun künye tablosu ve
- * asistan kuyruğunun önizlemesi) — ayrı yazılsalardı aynı satır iki ekranda iki ad taşırdı.
- *
- * Enerjinin iki kalemi de "Enerji" adını taşır ve bu doğru: aynı büyüklüğün iki birimi (kJ · kcal),
- * ayrı satır değil. Okuyan yüzeyler ikisini tek satırda birleştirir.
+ * Kalemlerin operatöre görünen adı ve birimi — `Record` olduğu için şemaya eklenen kalem adsız kalamaz.
+ * Enerjinin iki kalemi aynı büyüklüğün iki birimidir (kJ · kcal); okuyan yüzeyler onları tek satırda birleştirir.
  */
 export const NUTRITION_LABELS: Record<keyof Nutrition, { label: string; unit: string }> = {
   energyKj: { label: 'Enerji', unit: 'kJ' },
@@ -146,14 +116,8 @@ export function hasNutrition(n: Nutrition | null): boolean {
 export type DeclarationGap = 'lang' | 'ingredients' | 'nutrition' | 'storage' | 'allergens';
 
 /**
- * Eksik beyanın operatöre görünen adı (`PRODUCT_STATUS_LABELS` emsali).
- *
- * Enum'un yanında duruyor çünkü aynı eksiği İKİ ekran yazıyor: ürün önizlemesinin uyarı kutusu ve
- * asistan kuyruğunun "onaylasan da şu alanlar eksik kalacak" satırı. İki yerde yazılsalardı aynı
- * eksik iki ekranda iki ad taşırdı.
- *
- * `lang` ötekilerden farklı — hangi DİLİN eksik olduğunu ekran kendi bağlamından söyler
- * ("FR, DE içeriği"), bu yüzden buradaki karşılık genel kalır.
+ * Eksik beyanın operatöre görünen adı — ürün önizlemesi ve asistan kuyruğu aynı eksiği aynı adla yazsın diye burada.
+ * `lang` genel kalır; hangi dilin eksik olduğunu ekran kendi bağlamından söyler.
  */
 export const DECLARATION_GAP_LABELS: Record<DeclarationGap, string> = {
   lang: 'dil içeriği',
@@ -164,12 +128,8 @@ export const DECLARATION_GAP_LABELS: Record<DeclarationGap, string> = {
 };
 
 /**
- * Yasal beyanın hangi parçaları eksik. TEK KAYNAK: operasyon önizlemesindeki uyarı kutusu bunu
- * kullanır; `ProductService.buildQuery` aynı ölçütü PostgREST süzgecine çevirir (ikisi ayrışırsa
- * "24 beyan eksik" yazıp süzgeçte 12 satır gösteren ekran doğar — orada bu fonksiyona atıf var).
- *
- * Ölçüt: müşteri ürün sayfasının ZORUNLU bölümlerinden biri boşsa eksiktir. `traces` (çapraz bulaşma)
- * bilerek dışarıda — boş olması "risk yok" demektir, eksik beyan değil.
+ * Yasal beyanın hangi parçaları eksik — `product.is_incomplete` üretilmiş kolonunun karşılığı; süzgeç ve sayaç kolonu, ekran ve asistan bu fonksiyonu okur.
+ * `traces` bilerek dışarıda: boş olması "risk yok" demektir, eksik beyan değil.
  */
 export function missingDeclarations(
   p: Pick<Product, 'name' | 'ingredients' | 'nutrition' | 'storageInstructions' | 'allergens'>,
@@ -199,9 +159,8 @@ export const ProductSchema = z.object({
   traces: z.array(ProductAllergenEnum),
   vatRate: dbNumeric,
   /**
-   * "Beyan eksik" — üretilmiş kolon (0005): ad dillerinden biri yok, içindekiler/besin/saklama hiç
-   * girilmemiş ya da alerjen listesi boş. Süzgeç ve sayaç AYNI gerçeği okusun diye veritabanında
-   * hesaplanır. HANGİ beyanın eksik olduğu `missingDeclarations` ile (rozet ayrıntısı).
+   * "Beyan eksik" — üretilmiş kolon; süzgeç ve sayaç aynı gerçeği okusun diye veritabanında hesaplanır.
+   * Hangi beyanın eksik olduğunu `missingDeclarations` söyler.
    */
   isIncomplete: z.boolean(),
   dateType: ProductDateTypeEnum,
@@ -209,28 +168,22 @@ export const ProductSchema = z.object({
   shippable: z.boolean(),
   /** Saklama rejimi — soğuk zincirin kendisi; `shippable` ile karıştırılmaz (bkz. ProductStorageTypeEnum). */
   storageType: ProductStorageTypeEnum,
-  /** Satış durumu — TEK alan (DB'de `product_status` enum'u). Bkz. ProductStatusEnum. */
+  /** Satış durumu — tek alan (DB'de `product_status` enum'u), ayrıntı `ProductStatusEnum`da. */
   status: ProductStatusEnum,
   targetMarginPercent: dbNumericNullable,
-  /**
-   * B2B'ye ÖZEL hedef marj (15.08, kullanıcı kararı): toptan marjı perakendeden farklı kurulabilir.
-   * `null` = ortak hedef (`targetMarginPercent`) B2B'de de geçerli — çözüm `targetMarginFor` (motor).
-   */
+  /** B2B'ye özel hedef marj; `null` = ortak hedef B2B'de de geçerli (çözüm `targetMarginFor`). */
   targetMarginB2bPercent: dbNumericNullable,
   autoPrice: z.boolean(),
   sortOrder: z.number().int(),
 
   /**
-   * **ÇEŞİT EKSENİ** (05.15) — ürün bir ailenin üyesi mi. `null` = ailesiz, çeşit bloğu HİÇ çizilmez.
-   *
-   * Varyanttan ayrı: varyant aynı ürünün boyudur (500 g / 1 kg), aile kimlik seçimidir
-   * (limonlu / mangolu). Üye = tam bir ürün — kendi sayfası, beyanı, görseli, fiyatı var.
+   * Çeşit ekseni — ürün bir ailenin üyesi mi; `null` = ailesiz, çeşit bloğu çizilmez.
+   * Varyant aynı ürünün boyudur, aile kimlik seçimidir: üye kendi sayfası ve beyanı olan tam bir üründür.
    */
   familyId: z.string().uuid().nullable(),
   /**
-   * Ailedeki kart etiketi — ürün adından AYRI ve üç dilli. Ürün "Limonlu kek", etiket "Limonlu";
-   * kartta okunan ikincisidir. Ürün adından türetilemez (ortak eki kırpmak "Çilekli Kek" ile
-   * "Kek Dilimi" yan yana gelince bozulur). `familyId` doluyken **veri kısıtı zorunlu kılıyor**.
+   * Ailedeki kart etiketi — üç dilli ve ürün adından ayrı; ortak eki kırparak türetmek "Kek Dilimi" gibi adlarda bozulur.
+   * `familyId` doluyken veri kısıtı onu zorunlu kılar.
    */
   familyLabel: LocalizedTextSchema.nullable(),
   /** Aile İÇİNDEKİ sıra (operatörün sürüklediği). `sortOrder` katalog sırasıdır, karışmaz. */
@@ -270,11 +223,8 @@ export const ProductInsertSchema = z.object({
 export type ProductInsert = z.infer<typeof ProductInsertSchema>;
 
 /**
- * **ÜRÜN AİLESİ** (05.15) — çeşit ekseninin kendisi.
- *
- * `name` TEK DİLLİ ve bu bilinçli: aile adı müşteriye görünmez (kullanıcı kararı 04.08).
- * Müşterinin gördüğü başlık arayüz metnidir ("Çeşitler"); bu ad yalnız operatörün panelde aileyi
- * tanımasına yarar ve operasyon yüzeyi zaten tek dillidir (`CLAUDE §2`).
+ * Ürün ailesi — çeşit ekseninin kendisi.
+ * `name` tek dillidir: aile adı müşteriye görünmez, müşteri arayüz metnini ("Çeşitler") görür.
  */
 export const ProductFamilySchema = z.object({
   id: z.string().uuid(),
@@ -292,12 +242,7 @@ export type ProductFamilyInsert = z.infer<typeof ProductFamilyInsertSchema>;
 export const ProductFamilyUpdateSchema = ProductFamilySchema.partial().required({ id: true });
 export type ProductFamilyUpdate = z.infer<typeof ProductFamilyUpdateSchema>;
 
-/**
- * Ailedeki bir üyenin sırası — **tüm aile birden yazılır** (`replacePostalCodes` deseni).
- *
- * Kısmi güncelleme yazsaydık iki eşzamanlı sürükleme sıralamada delik bırakırdı ve hiçbir yer hata
- * vermezdi: kartlar bir gün kendiliğinden başka sırada görünürdü.
- */
+/** Ailedeki üyelerin sırası — tüm aile birden yazılır; kısmi güncellemede iki eşzamanlı sürükleme sırada sessiz bir delik bırakır. */
 export const ProductFamilyOrderSchema = z.object({
   productId: z.string().uuid(),
   position: z.number().int(),
@@ -310,10 +255,8 @@ export const ProductUpdateSchema = ProductSchema.omit({ isIncomplete: true }).pa
 export type ProductUpdate = z.infer<typeof ProductUpdateSchema>;
 
 /**
- * Ürün + TEK sorguda gelen ilişkileri. Varyantlar ve koleksiyon üyelikleri ürün başına ayrı sorguyla
- * çekilirse N+1 doğar; gömülü `select` ile aynı turda gelirler (STACK §13). Şema `ProductSchema`'yı
- * TÜRETİR — alanlar yeniden yazılmaz. Anahtar adları sorgudaki takma adlarla eşleşir (`variants:…`,
- * `collections:…`), böylece PostgREST tablo adları domain tipine sızmaz.
+ * Ürün ve tek sorguda gelen ilişkileri — gömülü `select` N+1'i önler; şema `ProductSchema`'dan türer.
+ * Anahtarlar sorgudaki takma adlarla eşleşir ki PostgREST tablo adları domain tipine sızmasın.
  */
 export const ProductWithRelationsSchema = ProductSchema.extend({
   variants: z.array(ProductVariantSchema),
@@ -322,34 +265,13 @@ export const ProductWithRelationsSchema = ProductSchema.extend({
 export type ProductWithRelations = z.infer<typeof ProductWithRelationsSchema>;
 
 /**
- * **`product_listing` görünümünün satırı** (08.10 · 21.6 · 08.54) — ürün + ilişkiler + görünümün
- * kapsamı (kanal) ve HESAPLADIĞI kolonlar.
- *
- * Ayrı şema olmasının sebebi bir arıza: servis cevabı `ProductWithRelationsSchema` ile parse
- * ediyordu ve Zod tanımadığı alanları düşürüyor — **görünüm hesaplıyor, servis çöpe atıyordu.**
- * Hiçbir yerde hata vermiyordu; yalnız ziyaretçi fiyatı okumanın ucuna hiç varmıyordu ve her
- * tüketici onu ikinci kez hesaplamak zorunda kalıyordu (mobil şeridin ölçümü, 07.08).
- *
- * `product` TABLOSUNDA bu kolonlar YOK ve olmamalı: fiyat kanaldan, müşteriden, depodan ve
- * yaklaşan son tarihli partiden türer — saklanan bir "geçerli fiyat" ilk gün yalan söyler. Görünüm
- * o türetimi tek yerde yapıyor (`0032`), bu şema da onun çıktısını tarif ediyor.
+ * `product_listing` görünümünün satırı — görünümün hesapladığı kolonlar ayrı şemada, yoksa Zod onları tanımadan düşürür.
+ * Bu kolonlar `product` tablosunda yok: fiyat kanal, müşteri, depo ve partiden türer; saklanan bir "geçerli fiyat" bayatlar.
  */
 export const ProductListingRowSchema = ProductWithRelationsSchema.extend({
-  /**
-   * Satırın KANALI (08.54) — görünümün grain'i `(depo × kanal × ürün)`.
-   *
-   * Şemada durması şart: süzgeci unutan bir okuma aynı ürünü kanal sayısı kadar döndürür ve keyset
-   * imleci bozulur (depo ekseninin 01.08'deki aynı tuzağı). Alan burada olunca hata tip düzeyinde
-   * değil ama satırda GÖRÜNÜR olur.
-   */
+  /** Satırın kanalı — görünümün taneciği depo × kanal × ürün; süzgeci unutan okuma ürünü kanal sayısı kadar döndürür. */
   channel: ChannelEnum,
-  /**
-   * Birincil boyun bu kanaldaki birim fiyatı.
-   *
-   * **`null` OLAMAZ** (08.54): görünüm artık o kanalda fiyatı olmayan ürünü hiç listelemiyor
-   * (08.46), yani satır varsa fiyat da vardır. Eskiden nullable'dı ve `null` "satışa kapalı ama
-   * listede" demekti — o hâl artık yok.
-   */
+  /** Birincil boyun bu kanaldaki birim fiyatı — `null` olamaz: görünüm o kanalda fiyatı olmayan ürünü listelemez. */
   effectivePrice: dbNumeric,
   /** Fiyat yaklaşan son tarihli parti teklifinden mi geliyor — kartta "fırsat" rozeti. */
   hasNearExpiryOffer: z.boolean(),
@@ -357,16 +279,13 @@ export const ProductListingRowSchema = ProductWithRelationsSchema.extend({
 export type ProductListingRow = z.infer<typeof ProductListingRowSchema>;
 
 /**
- * Paket seçicisinin HAVUZU — ürünün yalnız kimlik/fiyat/durum alanları + boyların adı.
- *
- * Tam ürün okumak bu iş için 113 KB taşıyordu (besin değerleri, beyan metinleri, alerjenler,
- * saklama koşulları…) ve hepsi çöpe gidiyordu: havuz yedi alan kullanıyor. Dar okuma aynı listeyi
- * ~15 KB'a indiriyor — satır sayısı değil, SATIR GENİŞLİĞİ pahalıydı.
+ * Paket seçicisinin havuzu — ürünün yalnız kimlik, fiyat ve durum alanları ile boy adları.
+ * Dar okuma bilinçli: tam ürünün beyan metinleri ve besin değerleri bu listede kullanılmaz, yalnız satırı genişletir.
  */
 export const ProductPoolSchema = ProductSchema.pick({
   id: true,
   name: true,
-  // Görseli çizmek için gereken yedi alan (05.37): seçici listesi küçük resmi CDN kadrajıyla alır.
+  // Görseli çizmek için gereken alanlar: seçici listesi küçük resmi CDN kadrajıyla alır.
   ...IMAGE_RENDER_FIELDS,
   status: true,
   vatRate: true,
@@ -377,18 +296,8 @@ export const ProductPoolSchema = ProductSchema.pick({
 export type ProductPool = z.infer<typeof ProductPoolSchema>;
 
 /**
- * Stok ekranının ürün SATIRI — havuzun kardeşi, aynı gerekçeyle dar (09.13).
- *
- * Stok listesi ürünün beyanını ve fiyat alanlarını hiç kullanmaz; ihtiyacı dört şeydir: kimin stoğu
- * (ad, kategori, **görsel**), hangi tarih rejimi (`dateType` + `shelfLifeDays` — raf ömrü
- * kararlarının girdisi) ve hangi boylar. Tarih alanları ÜRÜNDE durduğu için parti satırı tek başına
- * "yaklaşan mı" sorusunu yanıtlayamaz; bu okuma o eksiği kapatır.
- *
- * **Görsel 22.30'da eklendi** (kullanıcı tespiti 14.08: *"ürünlerin resmi ile beraber görmek daha
- * kalıcı olur"*). Adla birlikte gelen küçük görsel, uzun listede satırı okumadan tanımayı sağlıyor —
- * depoda ürünler adlarıyla değil görünüşleriyle hatırlanır. Ek sorgu değil: iki kolon, aynı okumada.
- *
- * `minStockQty` boyla gelir: "eşiğin altına düştü" göstergesi ayrı bir sorgu istemesin.
+ * Stok ekranının ürün satırı — havuzun kardeşi, aynı gerekçeyle dar: ad, kategori, görsel, tarih rejimi ve boylar.
+ * Tarih alanları üründe durduğu için parti satırı "yaklaşan mı" sorusunu tek başına yanıtlayamaz; bu okuma o eksiği kapatır.
  */
 export const ProductStockRowSchema = ProductSchema.pick({
   id: true,
@@ -397,7 +306,7 @@ export const ProductStockRowSchema = ProductSchema.pick({
   dateType: true,
   shelfLifeDays: true,
   status: true,
-  // Görsel künyesi 22.30'dan; kadraj ve ölçü 05.37'den — küçük resim CDN'den, operatörün karesiyle.
+  // Küçük resim CDN'den, operatörün kadrajıyla çizilir.
   ...IMAGE_RENDER_FIELDS,
 }).extend({
   variants: z.array(
@@ -407,15 +316,8 @@ export const ProductStockRowSchema = ProductSchema.pick({
 export type ProductStockRow = z.infer<typeof ProductStockRowSchema>;
 
 /**
- * Fiyat ekranının ürün SATIRI — havuzun/stok satırının kardeşi, aynı gerekçeyle dar (09.5).
- *
- * Fiyat kararının ürün tarafından istediği dört şey var: kimin fiyatı (ad, kategori), hangi KDV
- * tabanı (`vatRate` — b2c fiyatı KDV DAHİL, maliyet hariç; marj bu oran bilinmeden hesaplanamaz),
- * hedef marj ve otomatik fiyat anahtarı. Son ikisi ÜRÜNDE durur, fiyat ise varyantta: satır tek
- * başına "marj-altında mı" sorusunu yanıtlayamaz, bu okuma o eksiği kapatır.
- *
- * `status` gelir çünkü aday ürünün de fiyatı girilebilir (satışa açılmadan hazırlanır); ekran bunu
- * söyler, saklamaz.
+ * Fiyat ekranının ürün satırı — dar: ad, kategori, KDV oranı, hedef marj ve otomatik fiyat anahtarı.
+ * Marj bu oran ve hedef bilinmeden hesaplanamaz; `status` da gelir çünkü aday ürünün fiyatı satışa açılmadan hazırlanabilir.
  */
 export const ProductPriceRowSchema = ProductSchema.pick({
   id: true,
@@ -426,23 +328,17 @@ export const ProductPriceRowSchema = ProductSchema.pick({
   targetMarginB2bPercent: true,
   autoPrice: true,
   status: true,
-  // Görsel künyesi (15.08): fiyat satırının başında ürün görseli var — operatör listeyi ürünle
-  // eşleştirerek okur. `imageUpdatedAt` önbellek kırıcıdır; kadraj ve ölçü (05.37) küçük resmin CDN
-  // adresini kurar (`thumbnailImageUrl`).
+  // Satırın başındaki ürün görseli için; `imageUpdatedAt` önbellek kırıcıdır, kadraj ve ölçü küçük resmin CDN adresini kurar.
   ...IMAGE_RENDER_FIELDS,
 }).extend({
-  // `sortOrder` boyla gelir: fiyat tablosunda aynı ürünün boyları alt alta ve HER ZAMAN aynı sırada
-  // durmalı. Gömülü seçim sırayı garanti etmez — iki yenilemede satırların yer değiştirdiği bir
-  // fiyat listesi, karşılaştırma yapılamayan bir listedir.
+  // `sortOrder` boyla gelir: gömülü seçim sırayı garanti etmez, oysa aynı ürünün boyları her yenilemede aynı sırada durmalı.
   variants: z.array(ProductVariantSchema.pick({ id: true, label: true, isActive: true, sortOrder: true })),
 });
 export type ProductPriceRow = z.infer<typeof ProductPriceRowSchema>;
 
 
-// Ürün düzenleme formunun yazdığı alanlar (Temel + içerik + beyan + görsel künyesi) — id/slug/
-// imageKey/sortOrder/createdAt hariç, hepsi opsiyonel (yalnız verilenler yazılır). ProductSchema'dan
-// TÜRETİLİR (tek kaynak; alan tekrarı yok). Dosyanın kendisi ayrı yükleme akışında (imageKey), ama
-// ODAK ve ALT METİN forma aittir: "kaydeden yayınlar" (envanter §0B kaydetme kapısı).
+// Ürün düzenleme formunun yazdığı alanlar — `ProductSchema`'dan türer, hepsi opsiyonel, yalnız verilenler yazılır.
+// Dosya ayrı yükleme akışında; odak ve alt metin ise forma aittir ("kaydeden yayınlar").
 export const ProductDetailsUpdateSchema = ProductSchema.pick({
   name: true,
   description: true,

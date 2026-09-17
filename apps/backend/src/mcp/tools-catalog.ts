@@ -14,17 +14,8 @@ import { missingDeclarations, resolveLocalizedText } from '@lezzet/types';
 import { LOCALES } from '@lezzet/i18n';
 
 /**
- * Katalog ve stok gözü (22.1 · Faz A) — asistanın "neyi tamamlamam gerekiyor" ve "neyin ömrü
- * doluyor" sorularına cevabı.
- *
- * **Kural KOPYALANMAZ, motordan okunur** (STACK §4): beyanın eksik olup olmadığına
- * `missingDeclarations` karar verir — ekran, sunucu süzgeci ve bu araç aynı listeyi izler.
- * Sayaçlar da uydurulmaz: `ProductService.counts()` RPC'si zaten "kaç ürün eksik beyanlı"yı
- * söylüyor, burada yeniden sayılmaz.
- *
- * **Vitrin doluluğu SAYI olarak döner, YORUM olarak değil:** "6 kategori işaretli" denir,
- * "6/6 dolu" denmez — slot sayıları müşteri yüzeyinin tasarım kararıdır (`HOME_PACKAGE_LIMIT`
- * gibi) ve buraya kopyalansa iki yerde iki farklı doğru olurdu.
+ * Katalog ve stok okumaları — asistanın "neyi tamamlamalıyım" ve "neyin ömrü doluyor" sorularının cevabı.
+ * Eksik beyan kuralı ve sayaçlar motordan okunur; vitrin doluluğu yorumsuz sayı döner, çünkü slot sayısı müşteri yüzeyinin kararıdır.
  */
 
 /** Katalogun tamamlanmışlık tablosu + vitrin işaretleri. */
@@ -35,8 +26,7 @@ export async function catalogHealth(limit: number) {
 
   const [counts, incomplete, featured] = await Promise.all([
     products.counts(),
-    // Süzgeç SUNUCUDA (`onlyIncomplete`) — tüm katalogu çekip uygulamada elemek, katalog
-    // büyüdükçe sessizce yavaşlayan bir okuma olurdu.
+    // Süzgeç sunucuda — tüm kataloğu çekip uygulamada elemek katalog büyüdükçe sessizce yavaşlardı.
     products.list({ filters: { onlyIncomplete: true, status: 'active' }, limit: clamped }),
     featuredOverview(),
   ]);
@@ -60,16 +50,8 @@ export async function catalogHealth(limit: number) {
 }
 
 /**
- * Vitrin — işaretliler VE adaylar (22.7).
- *
- * ── NEDEN ADAYLAR DA (yapılmayan öneri sorunu) ──────────────────────────────
- * Önceki hâl yalnız İŞARETLİ kayıtları veriyordu ve bu, asistanın ufkunu sessizce kesiyordu:
- * *"şu koleksiyonu vitrine çıkaralım"* cümlesi hiç kurulamıyordu, çünkü o koleksiyonun varlığından
- * haberi yoktu. Görünmeyen boşluk buydu — **hata değil, hiç yapılmayan öneri.** Model bir kaydı
- * ancak `propose_featured_flag`ı kör deneyip hata alarak keşfedebiliyordu.
- *
- * Aday = aktif ama vitrinde olmayan kayıt. Kümeler küçük ve operatörün elle kurduğu cinsten
- * (`CLAUDE §1`), yani sayfalama gerekmiyor; yine de tavan var ve **kesildiğinde söyleniyor**.
+ * Vitrin — işaretliler ve adaylar (aktif ama işaretsiz); adaylar olmadan asistan varlığını bilmediği kaydı öneremez.
+ * Kümeler operatörün kurduğu cinsten, sayfalanmaz; tavan kesince bunu söyler.
  */
 async function featuredOverview() {
   const db = serviceDb();
@@ -99,18 +81,8 @@ async function featuredOverview() {
 }
 
 /**
- * Ömrü dolan partiler + tarihi geçmiş stok. Depo ekseni KORUNUR (DOMAIN §17): parti bir depoda
- * durur, "toplam 12 kutu" diye bir gerçek yoktur — satırlar depo koduyla gelir.
- *
- * ── SATIR KİMLİĞİYLE GELİR (harici denetim turu 3, 09.08) ───────────────────
- * Önceki hâli parti ADINI söylüyordu, kimliğini değil: asistan "şu keklerin ömrü doluyor" diyebiliyor
- * ama o partiyi bir yazma aracına besleyemiyordu — okuma ile yazma arasında köprü yoktu. Artık her
- * satır `batchId` + `variantId` taşıyor; `propose_batch_offer`ın girdisi doğrudan buradan çıkıyor.
- *
- * ── KARAR MOTORDAN OKUNUR (STACK §4) ────────────────────────────────────────
- * "Bu partiye teklif açılabilir mi" sorusunu araç kendi eşiğiyle cevaplamaz — `offerDecisionOf`
- * cevaplar; operasyon ekranı da aynı motoru okuyor. Önerilen fiyat da öyle: `suggestedOfferPriceCents`
- * (%30 varsayılan, parametrik). İki yerde iki farklı doğru olmasın.
+ * Ömrü dolan ve tarihi geçmiş partiler — depo ekseni korunur (DOMAIN §17); satırlar depo koduyla ve yazma araçlarının istediği kimliklerle gelir.
+ * Teklif kararı ve önerilen fiyat motordan (`offerDecisionOf`) okunur ki ekranla aynı cevap çıksın.
  */
 export async function stockWatch(days: number) {
   const clamped = Math.max(1, Math.min(90, Math.floor(days)));
@@ -151,16 +123,8 @@ export async function stockWatch(days: number) {
       // Tarihi GEÇMİŞ mi yoksa yaklaşıyor mu — ikisi ayrı iş: geçen DLC imha, yaklaşan teklif.
       expired: b.expiryDate < today,
       /**
-       * ── KDV TABANI ALAN ADINDA DURUR (kullanıcı kararı 10.08) ───────────────
-       * Kural asistana ÜÇ yerde yazılıydı (sistem promptu · araç açıklaması · bu künye) ve
-       * `vatRate` de satırdaydı. Yine de KDV'siz çıkardı: teklif fiyatından alışı doğrudan düşüp
-       * "marj +0,35 €" yazdı, gerçeği 0,25 €. Ekran doğru hesaplıyordu — operatör çelişen iki
-       * sayıyı yan yana gördü.
-       *
-       * **Hazır marj vermek çözüm değil** (kullanıcı itirazı): o yalnız BU hesabı kurtarır, ajan
-       * kavramı anlamadığı sürece paket/indirim/tedarik tarafında aynı hatayı yapar. Taban artık
-       * **alan adının kendisinde**: ajan her okumada görür, talimat okumasa bile. `IncVat`/`ExVat`
-       * son ekleri bu yüzden var ve **kaldırılmamalı** — uzunluk bedeli, sessiz yanlış hesaptan ucuz.
+       * KDV tabanı alan adında durur (`IncVat`/`ExVat`): talimatı okumayan model de her okumada görür ve teklif fiyatından alışı doğrudan düşmez.
+       * Son ekler kaldırılmamalı; uzunluk, sessiz yanlış marj hesabından ucuzdur.
        */
       listPriceCentsIncVat: listPriceCents,
       purchasePriceCentsExVat: b.purchasePriceCents,
@@ -176,24 +140,15 @@ export async function stockWatch(days: number) {
     horizonDays: clamped,
     expiredCount: rows.filter((r) => r.expired).length,
     upcomingCount: rows.filter((r) => !r.expired).length,
-    // Parti sayısı katalogla büyür; liste kesilir ve KESİLDİĞİ SÖYLENİR (sessiz kesme, "hepsi bu"
-    // diye okunur ve bir gün imha edilmeyen parti buradan doğar).
+    // Parti sayısı katalogla büyür; liste kesilir ve kesildiği söylenir, yoksa "hepsi bu" diye okunur.
     truncated: rows.length > 40,
     batches: rows.slice(0, 40),
   };
 }
 
 /**
- * Katalogda ARAMA — **okuma ile yazma arasındaki kimlik köprüsü** (harici denetim turu 3, 09.08).
- *
- * Boşluk şuydu: okuma araçları ürünü ADIYLA anlatıyordu, öneri araçları ise `variantId` istiyordu.
- * Asistan "şu üç kekten bir paket kur" diyebiliyor ama kalemleri gösteremiyordu — iki ucu bağlayan
- * hiçbir araç yoktu. Bu araç o bağı kurar: isimden varyant kimliğine.
- *
- * **Fiyat da burada** ve iki yüzüyle: liste fiyatı (b2c, KDV DAHİL) satış tarafı, son alış maliyeti
- * (KDV HARİÇ) maliyet tarafı. İkisini doğrudan çıkarmak marjı KDV oranı kadar şişirir, o yüzden
- * oran da satırda. Maliyet bilinmiyorsa `null` döner — SIFIR DEĞİL (`CLAUDE §1`): sıfır maliyet,
- * kârı olduğundan büyük gösterir ve o hatanın sonu yanlış fiyatlanmış bir pakettir.
+ * Katalogda arama — okuma araçlarının adla anlattığı ürünü öneri araçlarının istediği kimliğe bağlar.
+ * Liste fiyatı KDV dahil, maliyet hariç ve oran satırda; bilinmeyen maliyet `null` döner, sıfır maliyet kârı şişirirdi.
  */
 export async function catalogLookup(query: string, limit: number) {
   const term = query.trim();
@@ -201,8 +156,7 @@ export async function catalogLookup(query: string, limit: number) {
 
   const clamped = Math.max(1, Math.min(25, Math.floor(limit)));
   const db = serviceDb();
-  // Arama ÜRÜN ADINDA ve üç dilde birden (`buildProductQuery`) — asistan Türkçe sorar, katalogda
-  // Fransızca ad durabilir.
+  // Arama ürün adında ve üç dilde birden — asistan Türkçe sorar, katalogda Fransızca ad durabilir.
   const page = await new ProductService(db).list({ filters: { query: term }, limit: clamped });
   if (page.rows.length === 0) return { query: term, found: 0, products: [] };
 
@@ -213,8 +167,7 @@ export async function catalogLookup(query: string, limit: number) {
     new StockService(db).listInStockDetailed(variantIds),
   ]);
 
-  // Son alış maliyeti = elde duran EN YENİ partinin alış fiyatı. "Ortalama" bilerek değil: paket
-  // fiyatı bugünkü yenileme maliyetine göre kurulur, geçmişin ortalamasına göre değil.
+  // Maliyet elde duran en yeni partinin alış fiyatıdır, ortalama değil: paket fiyatı bugünkü yenileme maliyetine göre kurulur.
   const costByVariant = new Map<string, number>();
   for (const b of [...batches].sort((a, z) => a.createdAt.localeCompare(z.createdAt))) {
     if (b.purchasePriceCents !== null) costByVariant.set(b.variantId, b.purchasePriceCents);
@@ -241,24 +194,8 @@ export async function catalogLookup(query: string, limit: number) {
             isActive: v.isActive,
             listPriceCentsIncVat: listIncVat,
             /**
-             * **ADI DEĞİŞTİ: `lastPurchasePriceCents` → `stockBatchCostCents`** (MCP §3.1 · 15.08).
-             *
-             * ── ÜÇ TUR BOYUNCA "KRİTİK ARIZA" DİYE BİLDİRİLDİ, ARIZA YOKTU ────
-             * Bu alan **elde duran en yeni PARTİNİN** maliyeti (`stock.purchase_price`).
-             * `propose_purchase_order`ın satırlarındaki `lastPurchasePriceCents` ise bambaşka bir
-             * şey: **tedarikçi eşlemesindeki** son alış fiyatı (`supplier_product`). İki ayrı
-             * soru — *"stoktaki malı kaça almışız"* ile *"bu tedarikçi bu kalemi kaça veriyor"* —
-             * ve farklı çıkmaları normaldir (parti başka tedarikçiden gelmiş olabilir, fiyat
-             * değişmiş olabilir).
-             *
-             * İkisi de `lastPurchasePriceCents` adını taşıdığı için asistan onları aynı sayı sandı,
-             * tutmayınca **kritik bir arıza bildirdi ve üç turda tekrarladı** (Tur 8, 9, 10). Ölçüm
-             * çürüttü: kod doğru çalışıyor, ad yanlış.
-             *
-             * Bu, `§3.5`in (sessiz kırpma) birebir aynı sınıfı: **araç yanlış bir şey söylemiyor,
-             * söylediğinin NE olduğunu söylemiyor.** Çözüm de aynı — alanı adıyla ayırmak. Ad artık
-             * kaynağını taşıyor; `note` da hangi soruya cevap verdiğini yazıyor ki model iki sayıyı
-             * bir daha karşılaştırmasın.
+             * Elde duran en yeni partinin maliyeti — `propose_purchase_order` satırlarındaki tedarikçi fiyatıyla aynı soru değil, farklı çıkması normal.
+             * Ad kaynağını taşır; iki alan aynı adı taşısa model onları karşılaştırıp olmayan bir arıza bildirir.
              */
             stockBatchCostCents: costExVat,
             ...(costExVat === null
@@ -267,16 +204,8 @@ export async function catalogLookup(query: string, limit: number) {
                   stockBatchCostNote:
                     'Bu, elde duran EN YENİ PARTİNİN alış maliyeti (KDV hariç) — tedarikçinin bugünkü fiyatı DEĞİL. propose_purchase_order satırlarındaki lastPurchasePriceCents tedarikçi eşlemesinden gelir ve bu sayıdan farklı olması normaldir; ikisini karşılaştırıp arıza çıkarmayın.',
                 }),
-            // ── ALIŞ SATIŞTAN PAHALIYSA BU BİR VERİ ŞÜPHESİDİR ─────────────
-            //
-            // (11.08 · denetim raporu madde 10.) Model kârlılık hesabı yaparken bu satırı gerçek
-            // sanıp "zararına satıyoruz" diye rapor ediyordu; ölçülen sebep başkaydı — eksik ya da
-            // yanlış girilmiş bir alış fiyatı. İkisi bambaşka cevap gerektirir: biri fiyat kararı,
-            // öteki veri düzeltmesi.
-            //
-            // Karşılaştırma KDV TABANI EŞİTLENEREK yapılır: liste KDV dahil, alış hariç — çıplak
-            // karşılaştırma her ürünü %5,5 daha kârsız gösterirdi (`STACK §8`). Bayrak bir KARAR
-            // değil bir SORU: "bu veriye güvenme, önce doğrula".
+            // Alış satıştan pahalıysa bu bir kârlılık sonucu değil veri şüphesidir; bayrak karar değil, "önce doğrula" sorusudur.
+            // Karşılaştırma KDV tabanı eşitlenerek yapılır, yoksa her ürün %5,5 daha kârsız görünürdü.
             ...(listIncVat !== null && costExVat !== null && costExVat > Math.round(listIncVat / (1 + p.vatRate / 100))
               ? {
                   dataDoubt:
@@ -307,27 +236,8 @@ export async function soldOutWatch(limit: number) {
 }
 
 /**
- * **ÜRÜN DETAYI — ÜÇ DİLDE, ALAN ALAN** (MCP tur 8 raporu §3.8 · ölçüldü 15.08).
- *
- * ── NEDEN VAR: KÖR YAZMAYI BİTİRMEK İÇİN ────────────────────────────────────
- * `propose_product_draft` bir ürünün beyan alanlarını DOLDURUYOR ve kendi tanımı uyarıyor: *"üzerine
- * yazmak kalıcıdır, sürüm geçmişi yok."* Ama asistanın mevcut metni okuyabileceği hiçbir araç yoktu:
- * `catalog_health` yalnız "lang eksik" diyor, `catalog_lookup` isim/açıklama çevirilerini hiç
- * döndürmüyor. Yani model dolu bir açıklamayı ezip ezmediğini BİLEMEDEN gönderiyordu — raporun
- * kendi turunda iki öneri bu belirsizlikle açıldı.
- *
- * Bu, öteki bulguların aksine bir kalite sorunu değil **geri alınamaz veri kaybı riskidir**; o yüzden
- * eksik araçların ilki bu kapandı.
- *
- * ── NE DÖNER: DOLULUK, İÇERİĞİN KENDİSİ DEĞİL ───────────────────────────────
- * Metnin TAMAMI değil, dil başına DOLU MU + kısa bir önizleme dönüyor. Sebep bağlam maliyeti değil
- * karar ekonomisi: modelin cevaplaması gereken soru *"buraya yazabilir miyim, yoksa birinin emeğini
- * mi silerim"*dır ve o soruyu doluluk cevaplar. Önizleme ise "ne tür bir metin duruyor" sorusunu
- * karşılar — üç dilde tam metin çekmek, on ürünlük bir taramada bağlamı gereksiz doldururdu.
- *
- * ── BEYANLAR DA BURADA ──────────────────────────────────────────────────────
- * `missingDeclarations` motorunun gördüğü eksikler (`lang` · içindekiler · besin · saklama ·
- * alerjen) aynı yanıtta: `catalog_health`e ikinci bir tur atmadan "bu üründe ne eksik" cevaplanır.
+ * Tek ürünün bugünkü hâli, dil dil — `propose_product_draft` üzerine yazar ve sürüm tutmaz; bu okuma kör yazmayı önler.
+ * Metnin tamamı değil doluluk ve kısa önizleme döner, çünkü sorulan "buraya yazabilir miyim" sorusudur; beyan eksikleri de aynı yanıtta.
  */
 export async function productDetail(productIdOrName: string) {
   const wanted = productIdOrName.trim();
@@ -340,8 +250,7 @@ export async function productDetail(productIdOrName: string) {
     : (await new ProductService(db).list({ filters: { query: wanted }, limit: 5 })).rows;
 
   if (rows.length === 0) return { error: `Ürün bulunamadı: '${wanted}'. catalog_lookup ile arayın.` };
-  // Birden çok eşleşme: SEÇİM MODELE BIRAKILMAZ, adlar döner. Rastgele birini açmak, yanlış ürünün
-  // açıklamasını ezmenin en kısa yolu olurdu.
+  // Birden çok eşleşmede seçim modele bırakılmaz, adlar döner; rastgele birini açmak yanlış ürünün açıklamasını ezerdi.
   if (rows.length > 1) {
     return {
       ambiguous: true,
@@ -353,7 +262,7 @@ export async function productDetail(productIdOrName: string) {
   const product = rows[0]!;
   const variants = await new ProductVariantService(db).listByProducts([product.id]);
 
-  /** Dil başına doluluk + kısa önizleme — metnin kendisi değil, KARARIN girdisi (künye). */
+  /** Dil başına doluluk ve kısa önizleme — metnin kendisi değil, kararın girdisi. */
   const fields = (text: Record<string, string | undefined> | null | undefined) =>
     Object.fromEntries(
       LOCALES.map((locale) => {
@@ -369,12 +278,11 @@ export async function productDetail(productIdOrName: string) {
     description: fields(product.description as Record<string, string | undefined> | null),
     ingredients: fields(product.ingredients as Record<string, string | undefined> | null),
     storageInstructions: fields(product.storageInstructions as Record<string, string | undefined> | null),
-    // Alerjen bir METİN değil kapalı bir küme (`ProductAllergenEnum`) — dil başına doluluk sorusu
-    // burada anlamsız; listenin kendisi dönüyor.
+    // Alerjen kapalı bir küme, metin değil — dil başına doluluk sorusu anlamsız, listenin kendisi döner.
     allergens: product.allergens,
     hasNutrition: product.nutrition !== null && product.nutrition !== undefined,
     variants: variants.map((v) => ({ variantId: v.id, unit: resolveLocalizedText(v.label, 'tr'), isActive: v.isActive })),
-    /** Motorun gördüğü eksikler — `catalog_health`e ikinci tur atmadan (künye). */
+    /** Motorun gördüğü eksikler — `catalog_health`e ikinci tur atmadan. */
     declarationGaps: missingDeclarations(product),
     note: 'Dolu bir alana yazmak ONU SİLER — sürüm geçmişi yok. filled:true olan alanı ancak bilerek değiştirin.',
   };

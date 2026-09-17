@@ -11,18 +11,8 @@ import { referenceData } from './tools-reference';
 import { customerPulse, demandSignals } from './tools-signals';
 
 /**
- * MCP deneme dilimi (22.1) — kapı + araçların ŞEKLİ ve maskeleme sözleşmesi.
- *
- * Sayıların DEĞERİ assert edilmez (paylaşılan DB'de küresel sayıya bakan test başka ajanın
- * verisiyle oynar — CLAUDE §4b); doğrulanan şey alanların varlığı/tipi ve YASAKLI alanların
- * YOKLUĞU. Maskeleme testi güvenlik iddiasının kendisidir.
- *
- * ── SINIR 22.5'te İNCELDİ, KALKMADI (kullanıcı kararı 09.08) ────────────────
- * Maliyet artık katalog ve stok araçlarında GÖRÜNÜR (kârlılık hesabı yapılabilsin diye). Kapalı
- * kalan şey **tedarikçi bağlamıdır**: brifingin tedarik önerisinde `lastPurchasePriceCents` +
- * `supplierCode` yan yana durur ve o ikili "hangi tedarikçiden kaça alıyoruz" sorusunu cevaplar —
- * bu, bir partinin maliyetini bilmekten başka bir şeydir (AI_ADMIN_ASSISTANT §6, hassas ticari
- * veri). Ayrım bilinçli: açılan şey MALİYET, açılmayan şey TEDARİKÇİ İLİŞKİSİ.
+ * MCP kapısı ve araçların şekli — sayıların değeri değil alanların varlığı ve yasaklı alanların yokluğu sınanır; paylaşılan veritabanında küresel sayıya bakılmaz.
+ * Maliyet katalog ve stok araçlarında görünür, tedarikçi ilişkisi görünmez: alış fiyatı ile tedarikçi kodu yan yana hassas ticari veridir.
  */
 
 const KEY_ENV = 'MCP_CONNECTION_KEY';
@@ -72,7 +62,7 @@ describe('mcpGuard — fail-closed kapı (env artçısı)', () => {
   });
 });
 
-// ─── Kapı: tablo anahtarı (22.4) ─────────────────────────────────────────────
+// ─── Kapı: tablo anahtarı ─────────────────────────────────────────────────────
 
 const db = serviceDb();
 const keys = new McpConnectionKeyService(db);
@@ -113,10 +103,7 @@ describe('mcpGuard — tablo anahtarı', () => {
   it('SÜRESİ dolmuş anahtar reddedilir', async () => {
     delete process.env[KEY_ENV];
     const { token, row } = await makeKey();
-    // **İKİ damga birlikte geriye çekilir.** Yalnız `expires_at`i geçmişe almak `expires_at >
-    // created_at` kısıtını çiğniyor — ve bu kısıt doğru: süresi bitişi doğuşundan önce olan bir
-    // anahtar hiç doğmamış demektir. Geçmişte üretilip süresi dolmuş bir anahtarın gerçek hâli
-    // ikisinin de geride olmasıdır.
+    // İki damga birlikte geriye çekilir: süresi doğuşundan önce biten anahtar hiç doğmamıştır ve `expires_at > created_at` kısıtı bunu reddeder.
     const twoHoursAgo = new Date(Date.now() - 2 * 3600_000).toISOString();
     await keys.update({ id: row.id, createdAt: twoHoursAgo, expiresAt: new Date(Date.now() - 3600_000).toISOString() });
     expect(await mcpGuard(`Bearer ${token}`)).toEqual({ ok: false, status: 401 });
@@ -167,7 +154,6 @@ describe('kapsam sözleşmesi', () => {
       expect(toolScope(tool.name)).toBe(tool.name.startsWith('propose_') ? 'propose' : 'read');
     }
     // Sözleşmenin sayısal hâli — yeni araç eklenince bu satır düşer ve kapsam ailesi bilinçli seçilir.
-    // 22.44: belge ve tedarikçi önerileri (propose_money_document · propose_supplier_create) — ikisi de yazar.
     expect(TOOLS.filter((t) => toolScope(t.name) === 'propose')).toHaveLength(13);
     expect(TOOLS.filter((t) => toolScope(t.name) === 'read')).toHaveLength(15);
   });
@@ -180,9 +166,7 @@ describe('kapsam sözleşmesi', () => {
   });
 
   it('kuyruğa yazan araç adı `propose_` ÖNEKİ olmadan var olamaz', () => {
-    // Kural gizli değil, ama gizlice bozulabilir: kuyruğa yazan bir araç `queue_x` diye eklenirse
-    // `toolScope` onu OKUMA sayar ve dar kapsamlı bir anahtar onunla yazabilir. Handler adları
-    // tek kaynak olduğu için sözleşme burada kilitleniyor.
+    // Kuyruğa yazan araç `propose_` önekini taşımazsa `toolScope` onu okuma sayar ve dar kapsamlı anahtar onunla yazabilir.
     const writers = Object.keys(HANDLERS).filter((name) => name.includes('propose'));
     for (const name of writers) expect(name.startsWith('propose_')).toBe(true);
   });
@@ -204,11 +188,7 @@ describe('araçlar — şekil + maskeleme (DB okur)', () => {
     expect(serialized).not.toContain('supplierCode');
   });
 
-  /**
-   * KRİTİK KAYIT LİSTELENMEZ (22.42 · kullanıcı kararı 14.09): tedarikçi ve cari hiçbir okuma
-   * aracından dönmez; yazma araçları onları faturadaki kimlikle nokta atışı bulur. Tür sözlüğü ise
-   * kritik değil ve `propose_money_movement.nature`ın tek kaynağı — üç alanla, fazlası olmadan.
-   */
+  /** Tedarikçi ve cari hiçbir okuma aracından dönmez (yazma araçları onları faturadaki kimlikle bulur); tür sözlüğü üç alanıyla döner. */
   it('reference_data tedarikçi ve cari LİSTELEMEZ, tür sözlüğünü verir', async () => {
     const reference = await referenceData();
     expect('suppliers' in reference).toBe(false);
@@ -248,8 +228,7 @@ describe('katalog ve stok araçları', () => {
       expect(p.missing.length).toBeGreaterThan(0);
       for (const gap of p.missing) expect(allowed.has(gap)).toBe(true);
     }
-    // Vitrin İKİ kümeyle gelir (22.7): işaretliler VE adaylar. Adaylar olmadan asistan hiç
-    // denemediği bir kaydı öneremiyordu — boşluğun ölçülemeyen kısmı "yapılmayan öneri"ydi.
+    // Vitrin iki kümeyle gelir, işaretliler ve adaylar: adaylar olmadan asistan varlığını bilmediği kaydı öneremez.
     expect(Array.isArray(health.featured.categories.featured)).toBe(true);
     expect(Array.isArray(health.featured.categories.candidates)).toBe(true);
     // Bir kayıt iki kümede birden olamaz: aday tanımı "aktif AMA işaretsiz".
@@ -263,19 +242,8 @@ describe('katalog ve stok araçları', () => {
     expect(watch.batches.length).toBeLessThanOrEqual(40);
     expect(typeof watch.truncated).toBe('boolean');
     for (const b of watch.batches) {
-      // Depo boyutu DÜŞMEZ: parti bir depoda durur (DOMAIN §17).
-      //
-      // ── SATIRIN ŞEKLİ 22.5'te DEĞİŞTİ (kullanıcı kararı 09.08) ─────────────
-      // Eklenen iki küme ve gerekçeleri ayrı:
-      // ① `batchId`/`variantId` — okuma ile yazma arasındaki KİMLİK KÖPRÜSÜ. Yokken asistan
-      //    ömrü dolan partiyi görüyor ama hiçbir öneri aracına besleyemiyordu.
-      // ② `purchasePriceCents` — **maskeleme sözleşmesi bilinçli olarak GEVŞETİLDİ.** 22.1'de
-      //    alış fiyatı araç yüzeyine çıkmıyordu (finans sınırı §6); kullanıcı 09.08'de kârlılık
-      //    hesabı yapılabilsin diye açtı. Sınırın kendisi kalkmadı: bu bir PARTİ maliyetidir ve
-      //    liste fiyatı KDV dahilken bu hariçtir — `vatRate` de o yüzden satırda.
-      // ③ **KDV tabanı ARTIK ADIN İÇİNDE** (`126e2e1`): `listPriceCentsIncVat` ·
-      //    `purchasePriceCentsExVat`. Test bunu görmeden bayatladı ve bir koşu boyunca kırmızı
-      //    kaldı — sözleşmeyi doğrulayan test, sözleşme değişince onunla birlikte güncellenir.
+      // Depo boyutu düşmez: parti bir depoda durur (DOMAIN §17).
+      // Satır yazma araçlarının kimliklerini ve parti maliyetini taşır; KDV tabanı alan adındadır ve sözleşme değişince test de onunla değişir.
       expect(Object.keys(b).sort()).toEqual([
         'batchId', 'dateType', 'decision', 'expired', 'expiryDate', 'listPriceCentsIncVat',
         'offerPriceCentsIncVat', 'physicalQty', 'product', 'purchasePriceCentsExVat',
@@ -311,8 +279,7 @@ describe('talep sinyalleri ve müşteri nabzı', () => {
 
     expect(typeof pulse.pendingReviews).toBe('number');
     expect(typeof pulse.conversations.awaitingReply).toBe('number');
-    // Gövdede yalnız sayılar olmalı: metin taşıyan bir alan eklenirse bu test düşer ve
-    // "gözlemci rolü" (AI_ADMIN_ASSISTANT §7) sessizce genişlemiş olmaz.
+    // Gövdede yalnız sayılar olmalı: metin taşıyan bir alan eklenirse test düşer ve gözlemci rolü sessizce genişlemez.
     const values = [...Object.values(pulse.tickets), pulse.pendingReviews, pulse.conversations.awaitingReply];
     for (const v of values) expect(typeof v).toBe('number');
   });

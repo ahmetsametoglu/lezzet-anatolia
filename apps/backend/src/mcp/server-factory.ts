@@ -26,15 +26,8 @@ import {
 } from './tools-propose';
 
 /**
- * İstek-başına MCP Server (22.1 deneme dilimi) — stateless: durum yok, her istek kendi örneğini
- * kurar (2026-07-28 spec'inin stateless çekirdeğiyle uyumlu; petit `server-factory.ts` emsali).
- *
- * LOW-LEVEL `Server` API bilinçli (üst-seviye `McpServer` değil): araç şemaları düz JSON Schema
- * olarak tanımlı ve `tools/list`e AYNEN geçer — üretim turunda oturum-anahtarı parametresi her
- * şemaya tek yerden enjekte edilecek (petit `withSessionKey` deseni), sarmalayıcı buna izin verir.
- *
- * Araç açıklamaları İNGİLİZCE (model yüzeyi — petit kararıyla aynı); asistanın patronla konuşma
- * dili talimatta Türkçe'ye bağlanır.
+ * İstek başına MCP sunucusu — durumsuz, her istek kendi örneğini kurar; düşük seviyeli `Server` API'si araç şemalarını `tools/list`e aynen geçirir.
+ * Araç açıklamaları İngilizce (model yüzeyi); asistanın patronla konuşma dili talimatta Türkçeye bağlanır.
  */
 
 const INSTRUCTIONS = [
@@ -49,20 +42,13 @@ const INSTRUCTIONS = [
   "Numbers ending in 'Cents' are euro cents — divide by 100 and format as €.",
   "Start-of-day habit: when the admin greets you or asks what's up, call morning_briefing first, and lead your answer with its `attention` list.",
   'Ground every proposal in a tool result. For a weekly route/zone proposal call delivery_map FIRST (it tells you which zones exist, which warehouse and weekdays they run on, and how far an uncovered code is from each) — demand_signals alone only tells you a code was asked for, not where it belongs. For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
-  // ── `reason` PATRONUN OKUDUĞU CÜMLEDİR (kullanıcı tespiti 11.08) ───────────
-  // Ekranda çıkan gerekçe şuydu: *"catalog_health: lang eksik. İsim ve açıklama 3 dile
-  // tamamlandı."* Kullanıcının sorusu tek kelimeydi — *"neden alt çizgi var?"*. Model gerekçeyi
-  // dayandırırken KAYNAK ARACIN ADINI ve okuduğu alan anahtarını olduğu gibi yapıştırıyordu:
-  // `catalog_health` bizim okuma aracımızın adı, `lang` da onun döndürdüğü eksik-parça anahtarı.
-  // İkisi de makine kimliği; patronun ekranında yeri yok ve cümleyi yarı Türkçe yarı İngilizce
-  // bırakıyor. Kural araç açıklamalarına TEK TEK yazılmadı (on tane propose aracı var, biri mutlaka
-  // ayrışırdı) — talimat metnine bir kez yazılıyor.
+  // `reason` patronun onay ekranında okuduğu cümledir; araç adı ve alan anahtarı ona sızmasın diye kural her araca değil talimata bir kez yazılır.
   'The `reason` you pass to a propose_* tool is shown to the admin VERBATIM on the approval screen, right under the title. Write it as one plain Turkish sentence he can read out loud: what you saw and why it matters. Never paste tool names, field keys or snake_case identifiers into it (write "adı yalnız Türkçe girilmiş" — not "catalog_health: lang eksik"). Cite the numbers you grounded it on; those are what make it credible.',
   'FOOD SAFETY: you may record allergen and storage declarations ONLY from a document the admin gave you (label photo, supplier sheet) — never from what a product name suggests. Allergens are a closed set: pick values, never phrase a sentence. When a line is blurred or cut off, list that field in uncertainFields instead of guessing; the approval screen puts those in front of the admin. Saying "I could not read it" is always the better answer.',
   'You are NOT the customer-facing agent: you never write to customers and you never see conversation content. customer_pulse gives you counts so you can tell the admin how the inbox stands — that is the extent of your role in messaging.',
 ].join('\n');
 
-/** Araç kataloğu — Faz A okumaları (AI_ADMIN_ASSISTANT §7). Testte HANDLERS ile eşliği doğrulanır. */
+/** Araç kataloğu — testte HANDLERS ile eşliği doğrulanır. */
 export const TOOLS = [
   {
     name: 'morning_briefing',
@@ -613,8 +599,7 @@ export const TOOLS = [
         code: { type: 'string', description: 'Suggested coupon code (trigger=coupon only).' },
         reason: { type: 'string' },
       },
-      // `publicLabel` ZORUNLU (26.08): etiketsiz indirim artık veritabanınca reddediliyor
-      // (`discount_public_label_filled`). Eksik gelen öneri UYGULAMA anında değil, burada durur.
+      // `publicLabel` zorunlu: veritabanı etiketsiz indirimi reddeder ve eksik öneri uygulama anında değil burada durmalı.
       required: ['name', 'publicLabel', 'trigger', 'type', 'scope'],
       additionalProperties: false,
     },
@@ -693,11 +678,7 @@ function num(value: unknown, fallback: number): number {
   return typeof n === 'number' && Number.isFinite(n) ? n : fallback;
 }
 
-/**
- * Araç → uygulama eşlemesi. Zincirli koşul yerine sözlük: araç eklemek TEK satır ve unutulan bir
- * dal derlenmeden kalmaz (`ListTools`'daki ad ile buradaki anahtar ayrışırsa çağrı "bilinmeyen
- * araç" döner — testte yakalanır).
- */
+/** Araç → uygulama eşlemesi — sözlükte araç eklemek tek satırdır; listedeki adla ayrışan anahtar "bilinmeyen araç" döner ve testte yakalanır. */
 export const HANDLERS: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {
   morning_briefing: () => morningBriefing(),
   sales_summary: (a) => salesSummary(num(a.days, 7)),
@@ -736,11 +717,8 @@ function text(payload: unknown, isError = false) {
 }
 
 /**
- * Bağlantının kimliği ve yetkisi — kapıdan (`mcpGuard`) gelir, sunucu kendisi çözmez.
- *
- * Ayrım STACK §4'ün aynısı: kapı kimlik doğrular, sunucu yalnız kendisine söyleneni uygular.
- * Sunucu bir kez daha DB'ye gitseydi aynı soru iki yerden sorulmuş olurdu — ve iki yer bir gün
- * farklı cevap verirdi.
+ * Bağlantının kimliği ve yetkisi — kapıdan (`mcpGuard`) gelir, sunucu kendisi çözmez (STACK §4).
+ * Sunucu bir kez daha veritabanına gitseydi aynı soru iki yerde sorulur ve bir gün iki farklı cevap çıkardı.
  */
 interface McpAuthContext {
   /** `null` = env artçısıyla girildi; çağrı izi anahtarsız yazılır. */
@@ -749,15 +727,8 @@ interface McpAuthContext {
 }
 
 /**
- * Çağrı izi (§8) — FIRE-AND-FORGET.
- *
- * Beklenmez ve düşmesine izin verilir: iz tutma yolunda fırlayan bir hata, izi tutulan asıl işi
- * maskeler (`capture_error`ın kendi künyesindeki gerekçenin aynısı). Ama sessiz de değil —
- * `captureError`a gider.
- *
- * **ARGÜMAN YAZILMAZ.** Araç argümanı müşteri adı, adres, tutar taşıyabilir; teşhis için hangi
- * aracın hangi hatayla düştüğü yeter. Hata mesajı `scrubMessage`den geçer çünkü en tehlikeli
- * sızıntı bizim yazdığımız bağlam değil, veritabanının kısıt ihlaline gömdüğü değerdir.
+ * Çağrı izi — beklenmez ve düşebilir, çünkü iz yolundaki hata asıl işi maskelememeli; düşerse `captureError`a gider.
+ * Argüman yazılmaz (müşteri adı, adres, tutar taşıyabilir); hata mesajı `scrubMessage`den geçer, çünkü kısıt ihlali değeri gömer.
  */
 function recordCall(auth: McpAuthContext, tool: string, ok: boolean, startedAt: number, error?: string): void {
   const row = {
@@ -779,11 +750,8 @@ export function createMcpServer(auth: McpAuthContext): Server {
   );
 
   /**
-   * Liste KAPSAMLA SÜZÜLÜR — okuma yetkisi olan bir anahtar `propose_*` araçlarını GÖRMEZ.
-   *
-   * Gizlemek değil, doğru söylemek: çağrıldığında reddedilecek bir aracı listelemek modele
-   * yapamayacağı işi vaat etmektir ve o vaat, denenip reddedildikten sonra "sistem bozuk" diye
-   * okunur (tur 8'in yanlış teşhis dersi).
+   * Liste kapsamla süzülür — okuma anahtarı `propose_*` araçlarını görmez.
+   * Reddedilecek aracı listelemek modele yapamayacağı işi vaat eder ve ret "sistem bozuk" diye okunur.
    */
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS.filter((t) => scopeAllows(auth.scope, toolScope(t.name))),
@@ -794,7 +762,7 @@ export function createMcpServer(auth: McpAuthContext): Server {
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
     const started = Date.now();
 
-    // Kapsam denetimi handler'dan ÖNCE: yetkisiz çağrı hiçbir sorgu doğurmadan döner.
+    // Kapsam handler'dan önce sınanır: yetkisiz çağrı hiçbir sorgu doğurmadan döner.
     if (!scopeAllows(auth.scope, toolScope(toolName))) {
       const message = `'${toolName}' bu bağlantının kapsamı dışında. Anahtar yalnız OKUMA yetkisiyle üretilmiş; öneri araçları için yöneticiden 'propose' kapsamlı anahtar iste (Ayarlar → MCP).`;
       recordCall(auth, toolName, false, started, 'scope_denied');
@@ -813,10 +781,9 @@ export function createMcpServer(auth: McpAuthContext): Server {
       recordCall(auth, toolName, true, started);
       return text(result);
     } catch (err) {
-      // `String(err)` Supabase hatasında `[object Object]` üretiyordu ve model neyi düzelteceğini
-      // anlayamıyordu (harici MCP denetiminin bulgusu, 09.08).
+      // `String(err)` Supabase hatasında `[object Object]` üretir ve model neyi düzelteceğini anlayamaz.
       const message = errorMessageOf(err);
-      // Altyapı hatası admin hata ekranına da düşer — asistanın kendi arızası görünmez kalmasın (§8).
+      // Altyapı hatası yönetici hata ekranına da düşer — asistanın kendi arızası görünmez kalmasın.
       void captureError(err, { source: SOURCES.mcp, context: { tool: toolName } });
       recordCall(auth, toolName, false, started, message);
       return text(`Araç hatası: ${message}`, true);
