@@ -10,7 +10,8 @@ interface SecondaryButtonProps {
   label: string;
   onClick?: () => void;
   href?: ComponentProps<typeof Link>['href'];
-  tone?: 'sand' | 'olive';
+  /** `terracotta` yıkıcı onay içindir (hesap silme). */
+  tone?: 'sand' | 'olive' | 'terracotta';
   shape?: 'block' | 'pill';
   disabled?: boolean;
 }
@@ -18,6 +19,7 @@ interface SecondaryButtonProps {
 const TONE: Record<NonNullable<SecondaryButtonProps['tone']>, string> = {
   sand: 'border-sand-400 text-ink',
   olive: 'border-olive-line text-olive-dark',
+  terracotta: 'border-terracotta-line text-terracotta',
 };
 
 const SHAPE: Record<NonNullable<SecondaryButtonProps['shape']>, string> = {

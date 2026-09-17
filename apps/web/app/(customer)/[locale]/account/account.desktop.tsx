@@ -8,8 +8,8 @@ import { setConsentAction } from './actions';
 import { AddressesCard } from './components/addresses-card';
 import { ChatLinkNoticeBanner, LinkedChatsCard } from './components/linked-chats-card';
 import { addressDefaultsOf } from '@/components/customer/delivery/address-form';
-import { CouponsCard } from './components/coupons-card';
-import { DeleteAccount } from './components/delete-account';
+import { DesktopCouponsCard } from './components/desktop-coupons-card';
+import { DesktopDeleteAccount } from './components/desktop-delete-account';
 import { ProfileCard } from './components/profile-card';
 
 /**
@@ -87,7 +87,7 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
               {t.dataLink}
             </Link>
             {/* Silme veri kartının içinde: ayrı kart olsa hesabın sıradan işlerinden biri gibi okunurdu. */}
-            <DeleteAccount t={t} />
+            <DesktopDeleteAccount t={t} />
           </Card>
         </div>
 
@@ -107,7 +107,7 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
           {/* Kupon kartı boşken de durur ki puan zincirinin nereye çıktığı görünsün. */}
           <Card compact={compact}>
             <CardHead title={t.couponsTitle} compact={compact} />
-            <CouponsCard t={t} locale={locale} coupons={account.coupons} />
+            <DesktopCouponsCard t={t} locale={locale} coupons={account.coupons} />
           </Card>
 
           <Card compact={compact}>

@@ -123,11 +123,11 @@ export function WhatsappRow({ t, numbers, stacked = false }: WhatsappRowProps) {
 interface ProfileEditFormProps {
   t: Messages;
   profile: AccountView['profile'];
-  /** Kayıttan ya da vazgeçişten sonra — kart okuma hâline döner, telefonda çekmece kapanır. */
+  /** Kayıttan ya da vazgeçişten sonra kart okuma hâline döner. */
   onDone: () => void;
 }
 
-export function ProfileEditForm({ t, profile, onDone }: ProfileEditFormProps) {
+function ProfileEditForm({ t, profile, onDone }: ProfileEditFormProps) {
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone ?? '');
   const [error, setError] = useState<string | null>(null);

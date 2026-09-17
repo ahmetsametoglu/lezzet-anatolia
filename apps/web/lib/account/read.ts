@@ -37,7 +37,7 @@ export interface AccountView {
    */
   whatsappNumbers: string[];
   /** Doluysa profil B2B — puan/kupon bölümleri hiç çizilmez, şirket bölümü çizilir. */
-  company: CompanyInfo | null;
+  company: (CompanyInfo & { vatNumber: string | null }) | null;
   addresses: Address[];
   /** Bu hesaba bağlı sohbetler, en yeni bağ başta. Salt okunur, çünkü bağı çözmek bir birleştirme kararıdır. */
   chats: LinkedChat[];
@@ -77,7 +77,8 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   const profile = await new UserProfileService(db).getById(customerId);
   if (!profile) return null;
 
-  const company = profile.companyInfo ?? null;
+  // KDV numarası künyede değil profilin kendi sütununda; kart ikisini birlikte yazar.
+  const company = profile.companyInfo ? { ...profile.companyInfo, vatNumber: profile.vatNumber } : null;
   const [addresses, cart, zoneNotices, phones, conversations] = await Promise.all([
     new AddressService(db).listByCustomer(customerId),
     new CartService(db).get(customerId),

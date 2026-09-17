@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { formatCompactEuro } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import accountMessages from '@lezzet/i18n/customer/account';
@@ -12,7 +12,6 @@ import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
 import { DASHED_TOP, SettingsCard } from '@/components/customer/phone-kit/settings-card';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
-import { Dialog } from '@/components/customer/ui/dialog';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import type { AccountView } from '@/lib/account/read';
 import { useShareLink } from '@/lib/use-share-link.hook';
@@ -20,12 +19,12 @@ import { setConsentAction } from './actions';
 import type { AccountCopy, AccountViewProps, Messages } from './account-types';
 import { ConsentSwitch, SavedAddAll, SavedList, ZoneNoticeList } from './components/account-cards';
 import { AddressesCard } from './components/addresses-card';
-import { CouponsCard } from './components/coupons-card';
-import { DeleteAccount } from './components/delete-account';
 import { LanguageCard } from './components/language-card';
 import { LegalDirectory } from './components/legal-directory';
 import { ChatLinkNoticeBanner, LinkedChatsCard } from './components/linked-chats-card';
-import { ProfileEditForm, WhatsappRow } from './components/profile-card';
+import { PhoneCouponList } from './components/phone-coupon-list';
+import { PhoneDeleteAccount } from './components/phone-delete-account';
+import { PhoneProfileSheet } from './components/phone-profile-sheet';
 import { RedeemPoints } from './components/redeem-points';
 
 /**
@@ -35,6 +34,7 @@ import { RedeemPoints } from './components/redeem-points';
 export function AccountMobile({ t, locale, account, chatNotice, legal }: AccountViewProps) {
   const copy = accountMessages[locale];
   const { points, company } = account;
+  const identifiers = company && companyIdentifiers(company, copy.company.identifiers);
   return (
     <div className="flex flex-col gap-3.5 px-4.5 pt-3.5 pb-5">
       {/* Sohbet bağlantısının sonucu girişten döner dönmez okunmalı; bu yüzden en üstte. */}
@@ -46,8 +46,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
         <section className="flex flex-col gap-1 rounded-control bg-ink p-4">
           <span className="font-sans text-eyebrow-xs font-semibold tracking-normal text-olive-light uppercase">{copy.company.eyebrow}</span>
           <span className="font-sans text-button text-sand-50">{company.legalName}</span>
-          {/* Native "SIRET · KDV" yazıyor; web künyesi KDV numarasını taşımıyor (`CompanyInfoSchema`). */}
-          {company.siret && <span className="font-sans text-helper text-neutral-400">{company.siret}</span>}
+          {identifiers && <span className="font-sans text-helper text-neutral-400">{identifiers}</span>}
           <p className="mt-1 font-sans text-body-sm text-neutral-400">{copy.company.note}</p>
         </section>
       )}
@@ -119,7 +118,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
           <TextAction href="/legal/privacy" label={copy.data.privacy} />
         </span>
         {/* Silme dolgusuz metin eylemi: dolgulu düğme sayfanın en güçlü çağrısı olur ve silmeye davet ederdi. */}
-        <DeleteAccount t={t} compact />
+        <PhoneDeleteAccount copy={copy.deleteAccount} locale={locale} />
       </section>
 
       {/* Telefon görünümünde altbilgi yok; belgelerin kalıcı kapısı burası. */}
@@ -131,6 +130,13 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
   );
 }
 
+/** Native "SIRET · KDV" kalıbı; ikisinden biri eksikse yalnız olan yazılır. */
+function companyIdentifiers(company: NonNullable<AccountView['company']>, template: string): string | null {
+  const { siret, vatNumber } = company;
+  if (siret && vatNumber) return template.replace('{siret}', siret).replace('{vat}', vatNumber);
+  return siret || vatNumber || null;
+}
+
 interface ProfileSectionProps {
   t: Messages;
   copy: AccountCopy;
@@ -139,6 +145,7 @@ interface ProfileSectionProps {
 
 function ProfileSection({ t, copy, account }: ProfileSectionProps) {
   const [editing, setEditing] = useState(false);
+  const closeEditing = useCallback(() => setEditing(false), []);
   const { profile } = account;
   // E-posta ad yuvasına yazılmaz: o yuva kısa ad için ve uzun adres ortasından bölünür.
   const nameMissing = profile.name.trim() === '';
@@ -151,23 +158,14 @@ function ProfileSection({ t, copy, account }: ProfileSectionProps) {
         <CirclePhoto image={null} initial={avatarSource.slice(0, 1)} size={56} emptyClassName="bg-olive-bg" initialClassName="text-h2-sm text-olive-dark" />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="font-sans text-step-sm text-ink">{nameMissing ? copy.profile.addName : profile.name}</span>
-          {profile.email && <span className="truncate font-sans text-helper text-muted">{profile.email}</span>}
+          {profile.email && <span className="font-sans text-helper break-all text-muted">{profile.email}</span>}
           {/* Boş telefon için satır çizilmez; olmayan bilgiye yer ayırmak gürültüdür. */}
           {profile.phone && <span className="font-sans text-helper text-muted">{profile.phone}</span>}
         </div>
         <TextAction label={copy.profile.edit} ariaLabel={copy.profile.editLabel} onClick={() => setEditing(true)} />
       </section>
 
-      {editing && (
-        <Dialog title={copy.edit.title} closeLabel={t.cancel} onClose={() => setEditing(false)} placement="sheet">
-          <div className="flex flex-col gap-4">
-            <ProfileEditForm t={t} profile={profile} onDone={() => setEditing(false)} />
-            <div className="border-t border-sand-200 pt-3">
-              <WhatsappRow t={t} numbers={account.whatsappNumbers} stacked />
-            </div>
-          </div>
-        </Dialog>
-      )}
+      {editing && <PhoneProfileSheet t={t} copy={copy.edit} account={account} onClose={closeEditing} />}
     </>
   );
 }
@@ -209,7 +207,7 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
         <TextAction href="/account/points" label={copy.points.history} />
       </span>
       {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
-      <CouponsCard t={t} locale={locale} coupons={coupons} phoneCopy={copy.points} />
+      <PhoneCouponList t={t} copy={copy.points} locale={locale} coupons={coupons} />
     </SettingsCard>
   );
 }

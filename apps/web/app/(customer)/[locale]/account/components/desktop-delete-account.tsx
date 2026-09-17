@@ -4,7 +4,6 @@ import { useState, useTransition } from 'react';
 import { useLocale } from 'next-intl';
 import { Button } from '@/components/customer/ui/button';
 import { Dialog } from '@/components/customer/ui/dialog';
-import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { errorText } from '@/lib/customer-error-text';
 import { signOutAction } from '@/lib/auth/actions';
 import { deleteAccountAction } from '../actions';
@@ -14,13 +13,11 @@ import type { Messages } from '../account-types';
  * Silme iki adımlıdır, çünkü işlem geri alınamaz ve diyalog neyin gittiğini de neyin yasal olarak kaldığını da ayrı ayrı söyler.
  * Silmeden sonra tam yenilemeyle çıkış yapılır, çünkü `anonymize` tarayıcıdaki oturum çerezine dokunmaz.
  */
-interface DeleteAccountProps {
+interface DesktopDeleteAccountProps {
   t: Messages;
-  /** Telefon görünümünün metin eylemi. */
-  compact?: boolean;
 }
 
-export function DeleteAccount({ t, compact = false }: DeleteAccountProps) {
+export function DesktopDeleteAccount({ t }: DesktopDeleteAccountProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -45,15 +42,9 @@ export function DeleteAccount({ t, compact = false }: DeleteAccountProps) {
   return (
     <>
       {/* Dolgulu değil: dolgulu kırmızı düğme sayfanın en güçlü çağrısı olur ve müşteriyi silmeye davet ederdi. */}
-      {compact ? (
-        <span className="self-start">
-          <TextAction label={t.deleteAccount.action} tone="terracotta" onClick={() => setOpen(true)} />
-        </span>
-      ) : (
-        <Button variant="ghost" size="sm" className="!px-0 !text-terracotta-bright hover:!text-terracotta" onClick={() => setOpen(true)}>
-          {t.deleteAccount.action}
-        </Button>
-      )}
+      <Button variant="ghost" size="sm" className="!px-0 !text-terracotta-bright hover:!text-terracotta" onClick={() => setOpen(true)}>
+        {t.deleteAccount.action}
+      </Button>
 
       {open && (
         <Dialog title={t.deleteAccount.title} closeLabel={t.deleteAccount.cancel} onClose={() => setOpen(false)} maxWidth={460}>

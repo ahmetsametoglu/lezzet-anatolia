@@ -4,31 +4,25 @@ import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 import type { CustomerCoupon } from '@lezzet/application';
 import { formatPrice } from '@/lib/storefront/format';
-import { MobileIcon } from '@/components/customer/ui/mobile-icon';
-import { TextAction } from '@/components/customer/phone-kit/text-action';
-import type { AccountCopy, Messages } from '../account-types';
+import type { Messages } from '../account-types';
 
 /**
  * Kod seçilebilir metin olarak durur ve ayrıca kopyalanabilir, çünkü panoya yazma her ortamda çalışmaz. Değer motordan gelir,
  * ekranda hesaplanmaz.
  */
-interface CouponsCardProps {
+interface DesktopCouponsCardProps {
   t: Messages;
   locale: Locale;
   coupons: CustomerCoupon[];
-  /** Verilince boş liste hiçbir şey çizmez, çünkü puan kartının içinde "kuponunuz yok" cümlesi gürültü olur. */
-  phoneCopy?: AccountCopy['points'];
 }
 
-export function CouponsCard({ t, locale, coupons, phoneCopy }: CouponsCardProps) {
-  if (coupons.length === 0) {
-    return phoneCopy ? null : <span className="font-sans text-note text-muted">{t.couponsEmpty}</span>;
-  }
+export function DesktopCouponsCard({ t, locale, coupons }: DesktopCouponsCardProps) {
+  if (coupons.length === 0) return <span className="font-sans text-note text-muted">{t.couponsEmpty}</span>;
 
   return (
-    <div className={['flex flex-col', phoneCopy ? 'gap-2' : 'gap-2.5'].join(' ')}>
+    <div className="flex flex-col gap-2.5">
       {coupons.map((coupon) => (
-        <CouponRow key={coupon.id} t={t} locale={locale} coupon={coupon} phoneCopy={phoneCopy} />
+        <CouponRow key={coupon.id} t={t} locale={locale} coupon={coupon} />
       ))}
     </div>
   );
@@ -38,15 +32,15 @@ interface CouponRowProps {
   t: Messages;
   locale: Locale;
   coupon: CustomerCoupon;
-  phoneCopy: AccountCopy['points'] | undefined;
 }
 
-function CouponRow({ t, locale, coupon, phoneCopy }: CouponRowProps) {
+function CouponRow({ t, locale, coupon }: CouponRowProps) {
   const [copied, setCopied] = useState(false);
 
   // Asgari sepet koşulu ancak VARSA yazılır: "koşulsuz" diye bir satır eklemek, olmayan bir kuralı
   // müşterinin aklına sokardı.
-  const minBasket = coupon.minBasketCents === null ? null : t.couponMinBasket.replace('{amount}', formatPrice(coupon.minBasketCents, locale));
+  const minBasket =
+    coupon.minBasketCents === null ? null : t.couponMinBasket.replace('{amount}', formatPrice(coupon.minBasketCents, locale));
 
   const copy = async () => {
     try {
@@ -59,24 +53,6 @@ function CouponRow({ t, locale, coupon, phoneCopy }: CouponRowProps) {
       setCopied(false);
     }
   };
-
-  if (phoneCopy) {
-    // Asgari sepet yazılır, çünkü sepette reddedilecek kuponu koşulsuz göstermek yanıltır.
-    const phoneValue =
-      coupon.amountCents !== null
-        ? phoneCopy.couponValue.replace('{value}', formatPrice(coupon.amountCents, locale))
-        : phoneCopy.couponPercent.replace('{n}', String(coupon.percent ?? 0));
-    return (
-      <div className="flex items-center gap-2.5 rounded-badge border border-dashed border-olive-line bg-card px-3.5 py-2.5">
-        <MobileIcon name="coupon" size={17} className="text-terracotta" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate font-sans text-note font-bold text-terracotta">{coupon.code}</span>
-          <span className="font-sans text-helper text-muted">{minBasket === null ? phoneValue : `${phoneValue} · ${minBasket}`}</span>
-        </div>
-        <TextAction label={copied ? t.couponCopied : t.couponCopy} onClick={() => void copy()} />
-      </div>
-    );
-  }
 
   const value = coupon.amountCents !== null ? formatPrice(coupon.amountCents, locale) : `%${coupon.percent ?? 0}`;
   const lines = [t.couponValue.replace('{amount}', value)];
