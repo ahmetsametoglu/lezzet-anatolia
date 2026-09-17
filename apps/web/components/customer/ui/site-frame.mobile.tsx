@@ -62,6 +62,11 @@ const OWN_HEADER: readonly string[] = [
   '/discover',
   '/checkout',
   '/checkout/[reference]',
+  '/legal/terms',
+  '/legal/sales',
+  '/legal/privacy',
+  '/legal/delivery',
+  '/legal/faq',
 ] satisfies Route[];
 /** Eylemsiz bölüm sayfaları — native'in "sayfa başlığı" durağı. */
 const SECTION_PAGES: readonly string[] = ['/orders', '/account/points', '/account/notifications'] satisfies Route[];
@@ -83,8 +88,6 @@ const TITLES: Partial<Record<Route, (t: Copy) => string>> = {
 };
 
 function titleOf(route: string, t: Copy): string {
-  // Beş yasal sayfanın başlığı tek ("Bilgi"); sayfanın kendi adı içeriğin başlığında.
-  if (route.startsWith('/legal/')) return t.info;
   return TITLES[route as Route]?.(t) ?? '';
 }
 

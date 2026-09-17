@@ -1,7 +1,7 @@
 'use client';
 
-import { LegalBody, LegalHeader, LegalNoticeBand } from './legal-sections';
-import { LegalFaq } from './legal-faq';
+import { LegalBody, LegalHeader, LegalNoticeBand } from './desktop-legal-sections';
+import { DesktopLegalFaq } from './desktop-legal-faq';
 import { useActiveSection } from './use-active-section.hook';
 import type { LegalViewProps } from './legal-view-types';
 
@@ -40,7 +40,7 @@ export function LegalPageDesktop({ document: doc, t, updatedLine }: LegalViewPro
       <div className="flex max-w-170 flex-1 flex-col gap-5.5">
         <LegalHeader title={doc.title} updatedLine={updatedLine} />
         <LegalBody sections={doc.sections} />
-        {doc.questions && <LegalFaq questions={doc.questions} t={t} />}
+        {doc.questions && <DesktopLegalFaq questions={doc.questions} t={t} />}
         {doc.notice && <LegalNoticeBand notice={doc.notice} />}
       </div>
     </div>

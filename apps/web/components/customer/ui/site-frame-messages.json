@@ -42,8 +42,7 @@
       "backToCatalog": "← Kataloğa dön"
     },
     "menu": "Menü",
-    "back": "Geri",
-    "info": "Bilgi"
+    "back": "Geri"
   },
   "fr": {
     "announcement": {
@@ -88,8 +87,7 @@
       "backToCatalog": "← Retour au catalogue"
     },
     "menu": "Menu",
-    "back": "Retour",
-    "info": "Informations"
+    "back": "Retour"
   },
   "de": {
     "announcement": {
@@ -134,7 +132,6 @@
       "backToCatalog": "← Zurück zum Katalog"
     },
     "menu": "Menü",
-    "back": "Zurück",
-    "info": "Informationen"
+    "back": "Zurück"
   }
 }
