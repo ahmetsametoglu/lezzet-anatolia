@@ -1,15 +1,6 @@
 /*
-  TUTAR ÖZETİ — native `SummaryPanel`in (`apps/mobile/src/screens/customer-kit/summary-panel.tsx`) web telefon ikizi:
-  kum (`sand-150`) panel, alt alta "etiket ⟷ tutar" satırları, kesikli çizgiden sonra −2° eğik toplam rozeti, altında
-  isteğe bağlı açıklama. Sepet, checkout ve sipariş onayı AYNI paneli çizer — kesikli çizginin kalınlığı ya da rozetin
-  açısı birinde ayrışmasın.
-
-  Rozetin yazısı Lora `screen-title` (native 17): para burada bir etiket değil, ekranın en büyük sayısı. İki ton
-  native'in ayrımı: sepette MÜREKKEP rozet (henüz karar verilmedi, bilgi), ödeme kararının verildiği ekranlarda
-  TERRACOTTA + gölge (ödenecek tutar, ekranın odağı).
-
-  Satır tonları: `olive` indirim (kazanç, gidere benzemesin) · `danger` bu siparişe GİRMEYEN kalem (üstü çizilir,
-  kırmızı — gizlemek "herhâlde bunları alıyorum" dedirtiyordu, native 10.08).
+  Native tutar özetinin web ikizi; sepet, ödeme ve sipariş aynı paneli çizer ki kesikli çizgi ya da rozet birinde ayrışmasın. Rozet
+  sepette mürekkep (henüz bilgi), ödeme kararı verilen ekranlarda terracotta; siparişe girmeyen kalem gizlenmez, üstü çizilir.
 */
 
 /** Panelin ara satırı — "Ara toplam · 24,90 €". */
