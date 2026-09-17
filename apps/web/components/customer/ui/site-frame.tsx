@@ -84,9 +84,9 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       {/* Site başlığı — hesap alanında kendi başlığı, ince başlıkta yalnız logo · ad · geri. */}
       {thinChrome ? (
         <header className="border-b border-sand-275">
-          <div className={`${SHELL} flex items-center gap-7.5 px-12 py-4`}>
+          <div className={`${SHELL} flex items-center gap-7.5 px-12 py-3`}>
             <Link href="/" className="flex-none cursor-pointer">
-              <img src="/logo-yatay.png" alt={brand.name} className="h-[40px]" />
+              <img src="/logo-dikey.png" alt={brand.name} className="h-[48px]" />
             </Link>
             <span className="font-serif text-h2-sm text-ink">{thinChrome.title}</span>
             <span className="ml-auto">
@@ -95,9 +95,9 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
           </div>
         </header>
       ) : account ? (
-        <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4.5`}>
+        <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-3.25`}>
           <Link href="/" className="cursor-pointer">
-            <img src="/logo-yatay.png" alt={brand.name} className="h-[42px]" />
+            <img src="/logo-dikey.png" alt={brand.name} className="h-[52px]" />
           </Link>
           {account.nav ? (
             <nav className="flex gap-6 font-sans text-body-sm font-semibold text-muted">
@@ -126,9 +126,9 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
         <>
           {/* Başlık yapışkan: kaydırırken yer hapı ve sepet elin altında kalır. */}
           <header className="sticky top-0 z-30 border-b border-sand-275 bg-cream/97 backdrop-blur-sm">
-            <div className={`${SHELL} flex items-center gap-8.5 px-12 py-3.5`}>
+            <div className={`${SHELL} flex items-center gap-8.5 px-12 py-2.25`}>
               <Link href="/" className="flex-none cursor-pointer">
-                <img src="/logo-yatay.png" alt={brand.name} className="h-[42px]" />
+                <img src="/logo-dikey.png" alt={brand.name} className="h-[52px]" />
               </Link>
               <nav className="flex gap-6.5 font-sans text-body font-semibold text-ink">
                 <Link href="/catalog" className={navClass('catalog', activeNav, 'cursor-pointer transition-colors hover:text-olive')}>

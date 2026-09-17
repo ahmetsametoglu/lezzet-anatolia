@@ -42,7 +42,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
           <Button variant="ghost" size="sm" onClick={onBack}>
             {t.back}
           </Button>
-          <img src="/logo-yatay.png" alt={brand.name} className="h-[38px]" />
+          <img src="/logo-dikey.png" alt={brand.name} className="h-[48px]" />
           <span className="w-11" />
         </div>
 

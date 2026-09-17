@@ -153,7 +153,7 @@ export function LocalBusinessJsonLd({ url }: { url: string }) {
         legalName: brand.company.legalName,
         vatID: brand.company.vatId,
         url,
-        image: `${siteOrigin()}/logo-yatay.png`,
+        image: `${siteOrigin()}/logo-dikey.png`,
         email: brand.contact.email,
         telephone: brand.contact.phoneE164,
         address: {
