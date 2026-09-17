@@ -20,31 +20,8 @@ import type { ProductFormValues } from './schema';
 import type { ProductFormFields, ProductFormTab } from './types';
 
 /**
- * ÜRÜN FORMUNUN GÖVDESİ — İKİ yüzeyin ortak komponenti (ürün ekranı · asistan kuyruğu, 22.14).
- *
- * ── NEDEN DİYALOGDAN ÇIKARILDI ──────────────────────────────────────────────
- * Kuyruğun ürün önerisi için bir tur AYRI bir form yazılmıştı: alan alan seçim, kendi kutuları,
- * kendi düzeni. Kullanıcının tespiti kısaydı — *"bizim ürün formumuz bu değil ki."* Doğruydu ve
- * duplication'ın ta kendisiydi (`CLAUDE §1`): aynı ürün iki ekranda iki farklı formla düzenlenirse,
- * bir gün biri KDV seçeneğini, öteki alerjen vurgusunu ya da varyant etiketinin zorunluluğunu
- * kaybeder. Aynı devir indirim formunda zaten yaşanmıştı (`DiscountFormBody`, 22.10) — desen o.
- *
- * ── KAPTA NE KALIR, BURAYA NE GELİR ─────────────────────────────────────────
- * Burası yalnız ALANLARI kurar ve yerleştirir. Dışarıda kalanlar: RHF örneği, kaydeden eylem,
- * `Dialog` kabuğu, alt bar (durum seçici, paket uyarısı). İkisi de kendi kabuğunu kurar çünkü
- * kararları farklı: ürün ekranı "ürünü kaydet" der, kuyruk "öneriyi uygula" der ve kuyruk satırını
- * da kapatır.
- *
- * ── GALERİ SLOT, ALAN DEĞİL — AMA İKİ YÜZEYDE DE VAR ────────────────────────
- * Fotoğraf bloğu (`ProductPhotos`) CANLI yazar — yükleme, sıralama, kapak seçimi anında kaydedilir
- * ve formun "kaydet"ine bağlı değildir. Bu yüzden alan olarak değil SLOT olarak geliyor: kabı
- * kuran taraf onu kendi verileriyle (ürün kimliği, kapak adresi, yükleme kapısı) örüyor.
- *
- * Bir tur kuyruk bu slotu `null` veriyordu — "onay beklemeyen bir yazma yolu kuyruğun vaadini
- * deler" diye. Kullanıcı ekranda gördü ve kaldırttı (11.08): *"eğer ben sistemde bir form
- * kullanıyorsam o formu mümkünse bire bir kopyala. Code duplication olmasın, ama görüntüde bazı
- * şeyleri kırpma."* Vaat de zarar görmüyor: galeri ÖNERİYİ uygulamıyor, ürünün fotoğraflarını
- * yönetiyor — operatörün kendi elinin işi. Kuyruğun onaya bağladığı şey asistanın DİLEKÇESİ.
+ * Ürün formunun gövdesi — ürün ekranı ile asistan kuyruğunun ortak komponenti; aynı ürün iki ekranda iki formla düzenlenseydi biri bir gün bir kuralı kaybederdi.
+ * Yalnız alanları kurar; RHF örneği, kaydeden eylem ve kabuk kabın işi, canlı yazan galeri de alan değil slot olarak gelir.
  */
 
 interface ProductFormFieldsOptions {
@@ -53,29 +30,18 @@ interface ProductFormFieldsOptions {
   watch: UseFormWatch<ProductFormValues>;
   /** Kategori seçenekleri — adı ÇÖZÜLMÜŞ gelir; hangi dilde okunacağı kabın kararı. */
   categories: Array<{ id: string; name: string }>;
-  // `onAiTranslate` KALKTI (12.08): çeviri düğmesi çok dilli alanın kendi yeteneği; buradan dört
-  // alana + varyant editörüne dağıtılan zincir, düğmeyi "yazmayı unutulabilir" bir şey yapıyordu
-  // (`localized-text-field` künyesi).
-  /** Kapak + galeri bloğu — canlı yazdığı için SLOT (yukarıdaki künye). Kuyrukta `null`. */
+  /** Kapak + galeri bloğu — canlı yazdığı için slot. */
   photosSlot?: ReactNode;
   /**
-   * ASİSTANIN DOKUNDUĞU alanlar — kutunun başlığında işaretlenir (22.14).
-   *
-   * Kuyruğun içinde form ürünün BUGÜNKÜ hâliyle açılıyor ve asistanın önerisi üzerine yazılmış
-   * geliyor. İşaret olmasa operatör hangi kutunun kendi kaydı, hangisinin öneri olduğunu
-   * ayıramazdı — formun tamamı "zaten böyleydi" gibi okunurdu. `DiscountFormBody`nin `filled`
-   * prop'uyla aynı gerekçe ve aynı ad.
+   * Asistanın dokunduğu alanlar — kutunun başlığında işaretlenir.
+   * Kuyrukta form ürünün bugünkü hâline öneri yazılmış olarak açılır; işaret olmasa operatör öneriyi kendi kaydından ayıramazdı.
    */
   filled?: ReadonlySet<keyof ProductFormValues>;
 }
 
 /**
- * Formun ALANLARINI kurar — çizmez, yerleştirmez.
- *
- * Hook, çünkü dönen şey bir görünüm değil bir SÖZLÜK (`ProductFormFields`): yerleşimi kabın seçtiği
- * düzen yapar (`ProductFormPanels`). Sekme durumu da burada TUTULMAZ — barı nereye koyacağına kap
- * karar veriyor (ürün diyaloğunda `Dialog` başlığı, kuyrukta panelin kendi satırı), o yüzden durumu
- * da kap tutar.
+ * Formun alanlarını kurar, çizmez ve yerleştirmez: dönen şey bir sözlüktür (`ProductFormFields`), yerleşimi kabın seçtiği düzen yapar.
+ * Sekme durumu da kapta tutulur, çünkü barın yerine kap karar verir.
  */
 export function useProductFormFields({
   control,
@@ -232,18 +198,11 @@ export function useProductFormFields({
     ),
     // Varyant adı bir ÜRÜN ADIDIR ("1 kg kutu"), açıklama değil.
     variants: <VariantEditor control={control} />,
-    // DURUM SEÇİCİ BURADA DEĞİL (kullanıcı kararı 11.08). Bir tur ortak alana taşınmıştı; kullanıcı
-    // geri aldırdı ve gerekçe kurgunun kendisi: **kuyruk ürünün İÇERİĞİNİ yazar, satış eksenine
-    // dokunmaz.** Ürün pasifse pasif, aktifse aktif kalır — form mevcut durumu okuyup aynısını geri
-    // gönderir. Seçici ürün ekranının alt barında kalıyor; yayına almak oranın kararı.
+    // Durum seçici bu sözlükte yok: kuyruk ürünün içeriğini yazar, satış eksenine dokunmaz; seçici ürün ekranının alt barında.
     shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
     /**
-     * **Saklama rejimi** (16.08) — soğuk zincirin kendisi, `shippable`in yanında ama ondan AYRI.
-     *
-     * Kargo izni "gönderilebilir mi", bu "nasıl saklanır" der. İkisi çoğu üründe birlikte hareket
-     * eder ama aynı şey değildir: rejim vitrinin soğuk zincir işaretini ve teslim sonrası iadenin
-     * varsayılan akıbetini (donukta imha, `DOMAIN §8`) belirler — ikisi de kargo iznine bağlı değil.
-     * Yan yana duruyorlar ki operatör ikisini bir arada kararlaştırsın.
+     * Saklama rejimi — soğuk zincirin kendisi; vitrinin soğuk zincir işaretini ve iade sonrası akıbeti belirler, kargo izninden ayrıdır.
+     * Yan yana duruyorlar ki operatör ikisine birlikte karar versin.
      */
     storage: (
       <FormSelect
@@ -263,13 +222,7 @@ export function useProductFormFields({
   };
 }
 
-/**
- * Sekme barı — form gövdesinin başlığında durur, gövde kaydırılırken kaybolmasın.
- *
- * Ayrı dışa verilmesinin sebebi kabın yerleşimi: ürün diyaloğunda `Dialog`ın `headerAside`ına,
- * kuyrukta panelin kendi başlık satırına giriyor. Barı gövdenin içine gömseydik iki kap da onu
- * istediği yere koyamazdı.
- */
+/** Sekme barı — ayrı dışa verilir, çünkü ürün diyaloğunda başlığa, kuyrukta panelin kendi satırına girer. */
 export function ProductFormTabs({ value, onChange }: { value: ProductFormTab; onChange: (tab: ProductFormTab) => void }) {
   return (
     <UnderlineTabs
@@ -285,11 +238,8 @@ export function ProductFormTabs({ value, onChange }: { value: ProductFormTab; on
 }
 
 /**
- * İki sekmenin gövdesi — AYNI ızgara hücresinde üst üste.
- *
- * Kabın yüksekliği UZUN olana göre sabitlenir, sekme değişince ekran zıplamaz. Pasif sekme
- * `invisible`: DOM'da KALIR (sökülürse RHF kayıtları düşer ve "Beyan"da yazılan metin sekme
- * değişince kaybolur) ama tıklanamaz ve sekme sırasına girmez.
+ * İki sekmenin gövdesi aynı ızgara hücresinde üst üste: kap uzun olana göre sabitlenir, sekme değişince ekran zıplamaz.
+ * Pasif sekme `invisible` kalır; sökülse RHF kayıtları düşer ve yazılan metin kaybolurdu.
  */
 export function ProductFormPanels({ fields, tab }: { fields: ProductFormFields; tab: ProductFormTab }) {
   return (

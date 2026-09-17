@@ -1,15 +1,8 @@
 import type { PublishGap } from '@lezzet/domain-core';
 
 /**
- * Yayın eksiklerinin OPERATÖR CÜMLESİ (05.36).
- *
- * **Kural veride, cümle burada** — `constraint-message.ts`in künyesindeki ayrımın aynısı. Motor
- * (`productPublishGaps`) hangi alanın hangi dilde eksik olduğunu söyler; onu Türkçeye çeviren ve
- * operatörün formda GÖRDÜĞÜ kelimeyle eşleştiren yer burasıdır.
- *
- * **Etiketler formun kendi etiketleriyle AYNI olmalı** ve bu yüzden tek sözlükte duruyor: cümle
- * "Saklama ve hazırlama eksik" derken formda "Saklama talimatı" yazsaydı operatör aradığı alanı
- * bulamazdı. Form da buradan okuyor (`product-form/index.tsx`).
+ * Yayın eksiklerinin operatör cümlesi — kural veride ve motorda, onu Türkçeye çeviren yer burası.
+ * Etiketler formun kendi etiketleriyle aynı olmalı ki operatör cümledeki alanı formda bulsun; form da buradan okur.
  */
 export const PUBLISH_FIELD_LABEL: Record<PublishGap['field'], string> = {
   name: 'Ürün adı',
@@ -25,11 +18,8 @@ export const PUBLISH_FIELD_LABEL: Record<PublishGap['field'], string> = {
 const LOCALE_LABEL: Record<'tr' | 'fr' | 'de', string> = { tr: 'TR', fr: 'FR', de: 'DE' };
 
 /**
- * Eksikleri tek cümleye çevirir. Boş liste `null` döner — çağıran "eksik yok"u bir cümleyle değil
- * yokluğuyla okusun.
- *
- * Cümle NE YAPILACAĞINI söylüyor ("şu alanları doldurun"), ne olmadığını değil: operatör hata
- * mesajını okuduğunda formda gideceği yeri bilmeli.
+ * Eksikleri ne yapılacağını söyleyen tek cümleye çevirir.
+ * Boş liste `null` döner: çağıran "eksik yok"u bir cümleyle değil yokluğuyla okur.
  */
 export function publishGapMessage(gaps: PublishGap[]): string | null {
   if (gaps.length === 0) return null;

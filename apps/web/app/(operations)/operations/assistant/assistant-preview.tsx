@@ -30,15 +30,8 @@ import { money, num, percent, shortDate } from '@/components/operation/ui/format
 import { DECLARATION_FIELD_LABEL, splitVariantName } from './assistant-labels';
 
 /**
- * ÖNİZLEME — çizimin "tipe göre değişen tek bölüm"ü (`Operasyon - Asistan Kuyrugu.dc.html`).
- *
- * Kuralı brief yazıyor (`design/pages/admin-asistan-kuyrugu.md §2`): **ham JSON asla ana yüzey
- * değildir.** Operatöre `{"items":[{"variantId":"a3f…"}]}` göstermek, onaydan anlam beklemeyi
- * bırakmaktır — üç kez sonra herkes okumadan onaylar. Burada gösterilen şey işlemin SONUCUDUR:
- * paket önerisinde müşterinin göreceği kart, stok girişinde parti tablosu, para hareketinde
- * muhasebe satırının kendisi. JSON, kartın altındaki katlanmış "Teknik döküm"de durur.
- *
- * **Çerçeve her tipte AYNI, değişen yalnız gövde:** öğrenilecek tek bir ekran olsun diye (brief §2).
+ * Önizleme — kuyruk kartının tipe göre değişen tek bölümü; ham JSON yerine işlemin sonucunu gösterir (müşterinin göreceği kart,
+ * parti tablosu, muhasebe satırı), çünkü anlamı okunmayan onay okunmadan verilir. Çerçeve her tipte aynı, JSON "Teknik döküm"de.
  */
 
 /** Önizleme kabuğu — başlık bandı + gövde. Her tip aynı kabuğa girer. */
@@ -57,12 +50,8 @@ function PreviewBody({ note, children }: { note: string; children: ReactNode }) 
 }
 
 /**
- * Önizlemenin mini tablosu — çizimin beş kalem tablosunun ortak iskeleti.
- *
- * `ui/table` DEĞİL ve olmamalı: o bileşen bir EKRAN tablosudur (kaydırılan gövde, sabit başlık,
- * iskelet satırlar, boş hâl, sonsuz kaydırma). Buradaki tablo bir kartın içine gömülü, sabit
- * yükseklikte ve daima dolu bir özet — o yeteneklerin hiçbirine ihtiyacı yok, hepsinin ağırlığına
- * ise ihtiyacı hiç yok (kart içinde `flex-1` bir tablo kartı büyütürdü).
+ * Önizlemenin mini tablosu — `ui/table` değil, çünkü o kaydırma, iskelet ve sonsuz kaydırma taşıyan bir ekran tablosu;
+ * burada kartın içine gömülü, daima dolu bir özet var ve `flex-1` tablo kartı büyütürdü.
  */
 interface PreviewColumn<Row> {
   key: string;
@@ -111,10 +100,8 @@ function PreviewTable<Row>({
             .filter(Boolean)
             .join(' ')}
         >
-          {/* Hücre SARAR, kırpmaz. Kırpılan bir önizleme onayın işini görmez: ürün farkı tablosunda
-              asistanın yazdığı cümlenin yarısı "…" olunca operatör tam da onaylayacağı metni
-              göremiyor (ölçüldü). Sayı/tarih sütunları tek satırda kalır — onlar zaten kısa ve
-              sarmaları hizayı bozar. */}
+          {/* Hücre sarar, kırpmaz: yarısı "…" olan cümle operatöre onaylayacağı metni göstermez.
+              Sayı ve tarih sütunları tek satırda kalır, sarmaları hizayı bozar. */}
           {columns.map((c) => (
             <span
               key={c.key}
@@ -137,18 +124,8 @@ function PreviewTable<Row>({
 }
 
 /**
- * **KÂR SATIRI** — "bu karar bize ne kazandırıyor" (22.7 · harici denetimin bulgusu).
- *
- * ── NEDEN ROZET DEĞİL DE CÜMLE ──────────────────────────────────────────────
- * Zarar bir ARIZA değil, bilinçli verilebilecek bir karardır: elde kalıp imha edilecek maldan
- * zararına satış iyidir. Kırmızı bir rozet operatörü düşünmeden geri adım attırırdı; bu yüzden
- * `offer-dialog`un kâr satırıyla aynı dil kullanılıyor — **tutarıyla söyle, yolu kapatma.**
- * İki ekran aynı karara iki farklı cevap vermemeli.
- *
- * ── MALİYET BİLİNMİYORSA HESAP YAPILMAZ ─────────────────────────────────────
- * `null` maliyet "sıfır maliyet" değildir (`CLAUDE §1`). Sıfır sayılsaydı ekran **"%100 kâr"**
- * gösterirdi — yanlışın en tehlikelisi, çünkü ikna edici. O hâlde cümle neyin eksik olduğunu
- * söylüyor ve kararı liste fiyatına bırakıyor.
+ * Kâr satırı — zarar bilinçli verilebilecek bir karar olduğu için rozet değil cümle, `offer-dialog`la aynı dilde: tutarıyla söyle,
+ * yolu kapatma. Maliyet bilinmiyorsa hesap yapılmaz, çünkü sıfır sayılsa ikna edici bir "%100 kâr" çıkardı.
  */
 function MarginLine({
   marginCents,
@@ -229,15 +206,9 @@ function PreviewNotice({ tone, title, children }: { tone: 'red' | 'amber'; title
 // ── Tip başına gövdeler ──────────────────────────────────────────────────────
 
 /**
- * Paket taslağı — çizimin "müşterinin göreceği kart" + kalem tablosu + mutabakat rozeti.
- *
- * Fiyatlar EURO'dur, cent değil (`BundleDraftPayloadSchema`: paket ailesi henüz cent'e göçmedi) —
- * bu yüzden gösterime `toCents` ile girer: biçimlendirme tek kaynaktan (`format.money`) geçsin ve
- * burada ikinci bir "virgüllü yazma" kararı doğmasın.
- *
- * **Mutabakat rozeti ekranın kendi hesabı DEĞİL, motorun kuralının aynası:** paylar toplamı paket
- * fiyatını tutmuyorsa motor zaten reddedecek (`applyProposal`), ve operatörün bunu ONAYDAN ÖNCE
- * görmesi gerekir — yoksa "uygula" der, "uygulanamadı" alır ve sebebi aramaya gider.
+ * Paket taslağı — müşterinin göreceği kart + kalem tablosu + mutabakat rozeti; fiyatlar euro geldiği için (`BundleDraftPayloadSchema`)
+ * gösterime `toCents` ile girer. Rozet motorun kuralının aynasıdır: paylar paket fiyatını tutmuyorsa `applyProposal` reddeder,
+ * operatör bunu onaydan önce görmeli.
  */
 function BundlePreview({
   payload,
@@ -261,8 +232,7 @@ function BundlePreview({
   return (
     <PreviewBody note="katalog · paket kartı">
       <div className="flex items-center gap-3.5 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
-        {/* Görsel YOK ve olmayacak: asistan görsel yüklemiyor, paket pasif doğuyor. Kutu bunu
-            söylüyor — boş bir çerçeve bırakmak "görsel yüklenemedi" diye okunurdu. */}
+        {/* Görsel yok: asistan görsel yüklemez, paket pasif doğar; boş çerçeve "görsel yüklenemedi" diye okunurdu. */}
         <span className="grid h-[78px] w-[78px] flex-none place-items-center rounded-ops-card border-[1.5px] border-dashed border-ops-gray-500 p-1.5 text-center font-ops-body text-ops-micro leading-tight text-ops-faint">
           görsel yok
           <br />
@@ -319,9 +289,7 @@ function BundlePreview({
         rowKey={(l) => l.variantId}
       />
 
-      {/* **KÂRLILIK — mutabakat rozetiyle AYNI ağırlıkta** (denetimin talebi): ikisi de "bu paket
-          kurulmalı mı" sorusunun parçası. Paylar tutuyor olabilir ve paket yine zararına olabilir;
-          bir tur bu ekran yalnız ilkini söylüyordu ve zararına bir paket sessizce onaylanabiliyordu. */}
+      {/* Kârlılık mutabakat rozetiyle aynı ağırlıkta: paylar tutup paket yine zararına olabilir. */}
       {economics ? (
         <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3">
           <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">
@@ -357,17 +325,8 @@ function BundlePreview({
 }
 
 /**
- * Stok girişi — çizimin parti tablosu.
- *
- * **Riskli satır YALNIZ ölçülebilen risktir:** tarihi geçmiş ya da bugün dolan parti kırmızı
- * yazılır, çünkü bu payload'dan doğrudan okunur. Çizimin "8 gün içinde SKT'ye giriyor" uyarısı
- * ise ölçülemiyor — "yaklaşan son tarih" kararı bizde MUTLAK GÜNLE değil kalan raf ömrü YÜZDESİYLE
- * veriliyor (`domain-core/stock/shelf-life.ts`: 3 gün taze börekte normal, uzun ömürlü üründe
- * alarm) ve payload ürünün toplam raf ömrünü taşımıyor. Uydurma bir gün eşiği, alan kuralıyla
- * çelişen bir alarm üretirdi.
- *
- * Payload'a `shelfLifeDays` (ya da hazır `expiryFlag`) eklenirse yakın-SKT vurgusu buraya döner;
- * kayıt `BEKLEYEN(22.13)`te (payload alan eksikleri orada toplanıyor).
+ * Stok girişi — parti tablosu; kırmızı yalnız tarihi geçmiş ya da bugün dolan partidir, çünkü yakın-SKT kararı kalan raf ömrü
+ * yüzdesiyle verilir (`domain-core/stock/shelf-life.ts`) ve payload toplam raf ömrünü taşımaz (kayıt `BEKLEYEN(22.13)`te).
  */
 function StockIntakePreview({ payload }: { payload: StockIntakePayload }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -381,8 +340,7 @@ function StockIntakePreview({ payload }: { payload: StockIntakePayload }) {
           { label: 'Hedef depo', value: payload.warehouseCode },
           ...(payload.supplierName ? [{ label: 'Tedarikçi', value: payload.supplierName }] : []),
           ...(payload.documentNo ? [{ label: 'Belge no', value: payload.documentNo, mono: true }] : []),
-          // Belge tarihi (11.08): verilmediyse kabul BUGÜNE yazılacak ve bu SÖYLENİR — sessiz
-          // varsayım onaylanmaz, çünkü fatura genelde dünküdür.
+          // Belge tarihi verilmediyse kabul bugüne yazılır ve bu söylenir: fatura genelde dünküdür, sessiz varsayım onaylanmaz.
           { label: 'Belge tarihi', value: payload.date ? shortDate(payload.date) : 'yok — bugüne yazılacak' },
           ...(payload.totalAmountCents === null ? [] : [{ label: 'Fatura toplamı', value: money(payload.totalAmountCents), mono: true }]),
         ]}
@@ -424,11 +382,8 @@ function MoneyPreview({ payload }: { payload: MoneyMovementPayload }) {
   const incoming = payload.direction === 'in';
   const rows: Array<{ k: string; v: string; mono?: boolean; className?: string }> = [
     { k: 'Hesap', v: payload.accountName },
-    // "Tür" satırı YÖNDEN gelir (çizimin iki hâli: Gider ↔ Tahsilat). Hareketin iç tipi
-    // (`purchase`/`transfer`…) burada yazılmaz: onun sözlüğü Para ekranının kendi sözlüğüdür ve
-    // ikinci kez yazılması kaçınılmaz olarak ayrışırdı; ayrımı zaten özet cümlesi taşıyor.
-    // Transfer ÜÇÜNCÜ bir hâl: para şirketten çıkmıyor, hesap değiştiriyor. "Gider" demek onu
-    // kaybedilmiş para gibi okutur ve kırmızıya boyardı (11.08).
+    // "Tür" satırı yönden gelir (Gider ↔ Tahsilat); iç tip yazılmaz, sözlüğü Para ekranınındır. Transfer üçüncü hâldir:
+    // para şirketten çıkmaz, hesap değiştirir; "Gider" demek onu kaybedilmiş para gibi okuturdu.
     {
       k: 'Tür',
       v: payload.counterAccountName ? 'Transfer' : incoming ? 'Tahsilat' : 'Gider',
@@ -469,12 +424,8 @@ function MoneyPreview({ payload }: { payload: MoneyMovementPayload }) {
 }
 
 /**
- * Bölge genişletme — çizimin posta kodu tablosu + **turuncu geri-alınamaz kutusu**.
- *
- * Kutu dekor değil: kod bölgeye girince `zone_available` uzlaştırması haber bekleyenlere bildirim
- * gönderir (`ZoneExtendPayloadSchema` künyesi) ve bu tek yönlüdür — bölge kapatılsa bile mesaj
- * gitmiş olur. Sayı payload'dan gelir; bekleyen yoksa cümle de küçülür, çünkü o zaman geri
- * alınamayan bir şey de yoktur.
+ * Bölge genişletme — posta kodu tablosu + turuncu geri alınamaz kutusu: kod bölgeye girince haber bekleyenlere bildirim gider
+ * ve bölge kapatılsa bile geri alınamaz. Bekleyen yoksa cümle de küçülür, çünkü geri alınamayan bir şey kalmaz.
  */
 function ZonePreview({ payload }: { payload: ZoneExtendPayload }) {
   const waiting = payload.postalCodes.reduce((sum, c) => sum + c.waitingCount, 0);
@@ -516,37 +467,15 @@ function ZonePreview({ payload }: { payload: ZoneExtendPayload }) {
 }
 
 /**
- * Ürün taslağı — "alan bazında fark" tablosu (üç dil yan yana) + **üzerine yazma uyarısı**.
- *
- * ── EN ÖNEMLİ SATIR: DOLU ALANIN ÜZERİNE YAZILIYOR (22.5 · denetim taraması) ─
- * `updateDetails` düz bir `update` ve sürüm tutmuyor: dolu bir açıklama onaylandığı an kaybolur,
- * geri getirilemez. Önizleme bir tur "boş alanlara asistanın yazdıkları" diyordu ama
- * karşılaştıracak eski değeri hiç almıyordu — yani vaadi doğrulanmamış bir varsayımdı. Payload
- * artık `currentFields` taşıyor ve tablo eski hâli de gösteriyor.
- *
- * Üç hâl AYRI ve üçü ayrı şey söylüyor: alan doluysa **kayıp uyarısı** (amber, geri alınamaz) ·
- * alan boşsa sessizce doldurulur · `currentFields` HİÇ yoksa "eski hâl okunamadı" denir ve
- * varsayılmaz — "boştu" demek, dolu bir alanı sessizce ezmenin en kolay yolu olurdu.
- *
- * ── ALERJEN DUVARI ŞEMADAN EKRANA TAŞINDI (kullanıcı kararı 09.08 · 22.6) ────
- * `allergens`/`storageInstructions` bir tur payload'da YOKTU (fiziksel engel). Ambalajın
- * fotoğrafını patron verdiği için bilgi artık uydurma değil belgeden okuma; duvar da kullanıcının
- * kendi cümlesiyle onay ekranına taşındı: *"en net duvarımız onay ekranımız."* Ekranın işi bu
- * yüzden doğrulama değil **inceleme** — eksik ve şüpheli olanı öne çıkarmak, doğru olanı sessizce
- * geçmek (brief `design/pages/admin-asistan-kuyrugu.md §5b`).
+ * Ürün taslağı — alan bazında fark tablosu (üç dil yan yana) ve üzerine yazma uyarısı: `updateDetails` sürüm tutmadığı için
+ * dolu alan onaylandığı an kaybolur. Eski hâl (`currentFields`) yoksa "okunamadı" denir, "boştu" varsayılmaz.
  */
 function ProductDraftPreview({ payload }: { payload: ProductDraftPayload }) {
   const rows = declarationRows(payload.fields, payload.currentFields);
   const currentKnown = payload.currentFields !== undefined;
 
-  /**
-   * Ezilen alanlar: hem yazılıyor hem eski hâli DOLU. Sayı değil ADLARI gerekiyor — operatör "neyi
-   * kaybediyorum" diye soruyor, "kaç tanesini" diye değil.
-   *
-   * Metin alanları tablodan, liste/künye alanları ayrıca: alerjen ve besin künyesi tabloda değil
-   * kendi bloklarında çiziliyor (aşağıdaki gerekçe), ama üzerine yazılıyorlarsa uyarı yine onları
-   * saymalı — yoksa dolu bir alerjen listesinin sessizce değiştiği bir yol açılırdı.
-   */
+  // Ezilen alanların adları (sayısı değil): operatör neyi kaybettiğini sorar. Alerjen ve besin künyesi tabloda değil
+  // kendi bloklarında çizilir ama üzerine yazılıyorsa uyarı onları da sayar.
   const overwritten = [
     ...rows.flatMap((r) => (r.overwrites ? [r.label] : [])),
     ...(currentKnown && payload.fields.allergens && (payload.currentFields?.allergens?.length ?? 0) > 0
@@ -600,15 +529,8 @@ function ProductDraftPreview({ payload }: { payload: ProductDraftPayload }) {
 }
 
 /**
- * Yeni ürün — ambalajdan (22.6).
- *
- * Tamamlama önizlemesiyle aynı gövdeyi paylaşır (`DeclarationBlocks` · `UncertainNotice`) ve bu bilinçli:
- * ikisi de aynı soruya cevap veriyor — *"sisteme ne yazılıyor, neyi eksik bırakıyor?"*. Fark
- * kimlikte: yeni kayıt kategorisini, tarih tipini, raf ömrünü, KDV'sini ve en az bir boyunu da
- * getiriyor; karşılaştıracak "bugünkü hâl" ise yok (ortada henüz kayıt yok).
- *
- * **Fiyat · stok · görsel bu ekranda YOK ve yer tutucusu bile çizilmiyor** (brief): ayrı kararlar,
- * ayrı yetki sınıfları. Olmayan bir şeyi vaat etmemek için boş bir kutu bile konmuyor.
+ * Yeni ürün — ambalajdan; tamamlama önizlemesiyle aynı gövdeyi paylaşır (`DeclarationBlocks`, `UncertainNotice`), çünkü ikisi de
+ * "sisteme ne yazılıyor" sorusunu cevaplar. Fiyat, stok ve görsel ayrı birer karar olduğu için burada yer tutucuları bile yok.
  */
 function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
   const rows = declarationRows({ name: payload.name, ...pickDeclaration(payload) }, undefined);
@@ -625,26 +547,21 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
             label: 'Raf ömrü',
             value: payload.shelfLifeDays === null ? 'belirtilmedi' : `${num(payload.shelfLifeDays)} gün`,
           },
-          // **Oran YÜZDEDİR, kesir değil** — `product.vat_rate` veride `5.50` duruyor ve motor da
-          // öyle okuyor (`removeVat`: `1 + vatRate/100`). Bir tur burada 100 ile çarpılıyordu ve
-          // canlı bir öneride ekrana **%550** yazdı (ölçüldü). Ondalık ŞART: Fransa'nın gıda oranı
-          // %5,5 ve tam sayıya yuvarlansaydı "%6" görünürdü — var olmayan bir oran.
+          // Oran yüzdedir, kesir değil (`product.vat_rate` veride 5,5); ondalık şart, çünkü Fransa'nın gıda oranı %5,5
+          // ve yuvarlanınca var olmayan bir %6 görünürdü.
           { label: 'KDV', value: percent(payload.vatRate, 1) },
-          // Kargolanabilirlik ambalajdan okunan bir karar (11.08) ve okunamadıysa öyle YAZILIR:
-          // "Hayır" ile "bilinmiyor" arasındaki fark, donmuş bir ürünün kargoya çıkıp çıkmamasıdır.
+          // Kargolanabilirlik okunamadıysa öyle yazılır: "Hayır" ile "bilinmiyor" arasındaki fark,
+          // donmuş ürünün kargoya çıkıp çıkmamasıdır.
           {
             label: 'Kargo',
             value: payload.shippable === null ? 'okunmadı — varsayılan: gönderilebilir' : payload.shippable ? 'Gönderilebilir' : 'Gönderilemez',
           },
-          // Boy satırı artık ETİKETİ ve ÖLÇÜYÜ birlikte okur: "500 g" metni müşterinin gördüğü,
-          // ölçü ise kilo başı fiyatın ve kargo hesabının tabanı — biri yazılıp öteki boş kalırsa
-          // aynı bilgi yarım kaydedilmiş olur.
+          // Boy satırı etiketi ve ölçüyü birlikte okur: etiket müşterinin gördüğü, ölçü kilo başı fiyatın ve kargo hesabının tabanı.
           {
             label: 'Boylar',
             value: payload.variants
               .map((v) => {
-                // Ambalaj ölçüsü de künyeye giriyor (28.08): operatör onaylamadan önce asistanın
-                // TAHMİN etmediğini görebilmeli — boşsa "ölçülmedi" yazar, uydurma sayı yazmaz.
+                // Ambalaj ölçüsü de künyeye girer ki operatör asistanın tahmin etmediğini görsün; hiç ölçü yoksa "ölçü yok" yazar.
                 const dims =
                   v.packedLengthMm && v.packedWidthMm && v.packedHeightMm
                     ? `${num(v.packedLengthMm)}×${num(v.packedWidthMm)}×${num(v.packedHeightMm)} mm`
@@ -678,8 +595,7 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
       <DeclarationBlocks fields={pickDeclaration(payload)} />
       <UncertainNotice uncertain={payload.uncertainFields} />
 
-      {/* ⑦ Emniyet bir UYARI değil, bir RAHATLAMA (brief): kayıt aday doğuyor, satışa çıkarmak bu
-          ekranın işi değil. Kutuya konsaydı riskle aynı ağırlıkta okunurdu. */}
+      {/* Emniyet bir uyarı değil rahatlama: kayıt aday doğar; kutuya konsa riskle aynı ağırlıkta okunurdu. */}
       <span className="font-ops-body text-ops-sm leading-relaxed text-ops-muted">
         Ürün <strong className="font-semibold text-ops-body">aday</strong> olarak doğar — vitrinde görünmez,
         satılamaz. Satışa çıkarmak ayrı bir karar ve asistanın hiçbir yoldan erişimi yok; yanlış okunmuş bir
@@ -702,11 +618,8 @@ function pickDeclaration(payload: ProductCreatePayload) {
 }
 
 /**
- * Alerjen ızgarası + besin künyesi — **iki tipin ortak gövdesi**.
- *
- * Bunlar metin tablosuna KONMUYOR ve sebebi brief'in kendi kuralı: *"her alanı eşit ağırlıkta
- * gösteren bir tablo gözü kalabalıkta gezdirir"*. Alerjen bir metin değil kapalı kümedir ve
- * kararı da başka bir şekilde verilir — okunacak şey yazılanlar değil, **yazılmayanlar**.
+ * Alerjen ızgarası + besin künyesi — iki tipin ortak gövdesi; metin tablosuna konmaz, çünkü alerjen kapalı bir kümedir
+ * ve okunacak şey yazılanlar değil yazılmayanlardır.
  */
 function DeclarationBlocks({
   fields,
@@ -724,14 +637,8 @@ function DeclarationBlocks({
 }
 
 /**
- * **On dört AB alerjeninin TAMAMI** — işaretlenmeyenler de görünür (brief ③).
- *
- * Gerekçe kaynak denetimi değil: *en tehlikeli hata fazladan alerjen değil, EKSİK alerjendir* ve
- * yalnız seçilenleri gösteren bir liste tam da onu görünmez kılar. Patron ürünü tanıyor — "fındık
- * işaretlenmemiş" diyebilmesi için fındığın orada, işaretsiz durması yeter.
- *
- * İşaretsizler SÖNÜK ama okunur: silik gri, üstü çizili değil. Üstünü çizmek "yok" iddiası olurdu;
- * oysa söylenen şey "asistan işaretlemedi" — ikisi ayrı şey.
+ * On dört AB alerjeninin tamamı görünür, işaretlenmeyenler de: en tehlikeli hata eksik alerjendir ve yalnız seçilenleri
+ * gösteren liste onu görünmez kılar. İşaretsizler sönük ama üstü çizili değil, çünkü söylenen "yok" değil "işaretlenmedi".
  */
 function AllergenGrid({ title, selected }: { title: string; selected: readonly ProductAllergen[] }) {
   const marked = new Set(selected);
@@ -759,24 +666,18 @@ function AllergenGrid({ title, selected }: { title: string; selected: readonly P
 }
 
 /**
- * Besin künyesi (100 g başına) — **aranan şey ambalajla aynılık değil, künyenin KENDİ İÇİNDE
- * tutarlılığı** (brief ④).
- *
- * İki tuhaflık işaretleniyor ve ikisi de ölçülebilir: ① boş bırakılmış kalem (o satır beyanı eksik
- * bırakır) ② toplamı 100 g'ı aşan makro dağılım (yağ + karbonhidrat + protein + tuz) — fizikî
- * olarak imkânsız, yani okuma hatası. "Sıfır enerji" ayrıca işaretlenmiyor: 0 kcal bir içecekte
- * meşru olabilir ve her makul değeri uyarıya çevirmek uyarıyı değersizleştirir.
- */
-/**
- * Besin kalemi biçimi — **ondalık ancak varsa**. Sabit bir basamak sayısı iki yönde de yanlış
- * olurdu: `digits=0` "16,4 g yağ"ı 16'ya yuvarlar (beyanı değiştirmek), `digits=1` ise enerjiyi
- * "1.650,0 kJ" diye yazar (ambalajda olmayan bir hassasiyet iddiası).
+ * Besin kalemi biçimi — ondalık ancak varsa: sabit basamak ya "16,4 g"ı yuvarlayıp beyanı değiştirir
+ * ya da enerjiye ",0 kJ" ekleyip ambalajda olmayan bir hassasiyet iddia ederdi.
  */
 function gram(value: number | null): string {
   if (value === null) return '—';
   return num(value, Number.isInteger(value) ? 0 : 1);
 }
 
+/**
+ * Besin künyesi (100 g başına) — aranan şey ambalajla aynılık değil, künyenin kendi içinde tutarlılığı: boş kalem ve toplamı
+ * 100 g'ı aşan makro dağılım işaretlenir. Sıfır enerji işaretlenmez, 0 kcal bir içecekte meşrudur.
+ */
 function NutritionTable({ nutrition }: { nutrition: Nutrition }) {
   const macros = (['fatG', 'carbohydrateG', 'proteinG', 'saltG'] as const).map((k) => nutrition[k] ?? 0);
   const macroSum = macros.reduce((a, b) => a + b, 0);
@@ -809,8 +710,7 @@ function NutritionTable({ nutrition }: { nutrition: Nutrition }) {
       <PreviewTable
         columns={[
           { key: 'kalem', header: 'Kalem', width: '1fr', cell: (r) => r.label },
-          // 200px: enerji satırı iki birimi birlikte taşıyor ("1.650 kJ · 394 kcal") ve dar sütunda
-          // kesiliyordu — kesilen bir sayı, yanlış bir sayıdır.
+          // 200px: enerji satırı iki birimi birlikte taşır; dar sütunda kesilen sayı yanlış sayıdır.
           { key: 'deger', header: 'Değer', width: '200px', align: 'right', mono: true, cell: (r) => r.value },
         ]}
         rows={rows}
@@ -842,9 +742,8 @@ interface DeclarationRow {
 }
 
 /**
- * Beyan alanlarının ÇOK DİLLİ METİN olanlarını tabloya çevirir (ad · açıklama · içindekiler ·
- * saklama). Alerjen · iz · besin künyesi burada YOK: onlar dilden bağımsız ve kararı da başka
- * şekilde veriliyor — kendi bloklarında çiziliyorlar (`DeclarationBlocks` künyesi).
+ * Beyanın çok dilli metin alanlarını tabloya çevirir (ad, açıklama, içindekiler, saklama); alerjen, iz ve besin künyesi dilden
+ * bağımsız olduğu için kendi bloklarında çizilir (`DeclarationBlocks`).
  */
 function declarationRows(
   fields: Record<string, unknown>,
@@ -883,17 +782,8 @@ function localizedSummary(value: unknown): string {
 }
 
 /**
- * Asistanın **emin olmadığı** alanlar (22.6'nın ikinci karar girdisi).
- *
- * ── TAMLIK BURADA YAZILMIYOR, VE BU BİLİNÇLİ ────────────────────────────────
- * Bir tur burada da "onaylasanız da şu beyanlar eksik kalacak" kutusu vardı; ölçünce aynı cümlenin
- * kartın "Uygulanınca ne olur" bölümünde zaten kurulduğu görüldü (`kind-meta.impactFor`, tamlık
- * ölçütü motordan). İki kutu aynı şeyi söylüyordu — ve her yerde uyaran bir ekran hiçbir yerde
- * uyarmamış olur. Tek kaynak künyede kaldı; ekran onu yeniden hesaplamıyor.
- *
- * Belirsizlik ise künyenin söylemediği şey: hangi alanı net okuyamadığı modelin kendi beyanı ve
- * ekranın gözü oraya yönlendirmesi bütün alanları tek tek okutmaktan değerli — patron ürünü zaten
- * biliyor, ona "şuraya bak" demek yeter.
+ * Asistanın emin olmadığı alanlar — gözü oraya yönlendirmek bütün alanları tek tek okutmaktan değerli.
+ * Tamlık burada yazılmaz: kartın "Uygulanınca ne olur" bölümü (`kind-meta.impactFor`) onu motordan zaten söylüyor.
  */
 function UncertainNotice({ uncertain }: { uncertain: readonly string[] }) {
   if (uncertain.length === 0) return null;
@@ -906,11 +796,8 @@ function UncertainNotice({ uncertain }: { uncertain: readonly string[] }) {
 }
 
 /**
- * Vitrin işareti — **çizimde YOK**, sözleşmenin tarif ettiği desen (§2a): tek satırlık
- * "öncesi → sonrası", Bölge önizlemesindeki künye satırı deseniyle.
- *
- * `name` payload'da saklı ve bu bilinçli (`FeaturedFlagPayloadSchema` künyesi): kayıt sonradan
- * yeniden adlandırılırsa geçmişte "neyi onaylamıştım" sorusunun cevabı o günkü ad olmalı.
+ * Vitrin işareti — tek satırlık "öncesi → sonrası" (sözleşme §2a); `name` payload'da saklıdır ki kayıt sonradan
+ * yeniden adlandırılsa da geçmişte neyin onaylandığı o günkü adla okunsun.
  */
 function FeaturedFlagPreview({ payload }: { payload: FeaturedFlagPayload }) {
   const TARGET: Record<FeaturedFlagPayload['target'], string> = {
@@ -918,16 +805,8 @@ function FeaturedFlagPreview({ payload }: { payload: FeaturedFlagPayload }) {
     collection: 'Koleksiyon',
     bundle: 'Paket',
   };
-  /**
-   * **Izgara doluluğu — kararın ikinci girdisi** (22.5 · denetim taraması 09.08).
-   *
-   * "Vitrine ekle" tek başına karar edilemiyordu: vitrin bir liste değil SEÇKİdir ve doluysa
-   * eklenen ötekini aşağı iter. Sayı önerinin kurulduğu andaki hâldir — uygulama anında değişmiş
-   * olabilir, o yüzden bir kural değil karar girdisidir ve cümlesi de öyle kuruluyor.
-   *
-   * Sayı gelmediyse SATIR HİÇ ÇİZİLMEZ: "0 kayıt vitrinde" demek, ölçülemeyen değeri sıfıra
-   * düşürmek olurdu (`CLAUDE §1`) ve boş bir ızgara varmış gibi okunurdu.
-   */
+  // Izgara doluluğu kararın ikinci girdisi: vitrin bir seçkidir ve doluysa eklenen ötekini aşağı iter; sayı önerinin
+  // kurulduğu andaki hâldir. Sayı gelmediyse satır çizilmez, "0 kayıt" ölçülemeyeni sıfıra düşürürdü.
   const current = payload.currentlyFeaturedCount;
   const slots = FEATURED_SLOTS[payload.target];
   const targetLabel = TARGET[payload.target].toLowerCase();
@@ -942,9 +821,7 @@ function FeaturedFlagPreview({ payload }: { payload: FeaturedFlagPayload }) {
           {payload.isFeatured ? 'Vitrinde' : 'Vitrinde değil'}
         </span>
       </div>
-      {/* Izgaranın bugünkü doluluğu — "bir tane daha eklemek" ile "sekizinciyi eklemek" arasındaki
-          farkı gösteren tek satır. Ekleme yönünde ve ızgara zaten doluysa amber: yeni kayıt
-          görünecek ama sıradaki biri aşağı düşecek. */}
+      {/* Ekleme yönünde ve ızgara doluysa amber: yeni kayıt görünecek ama sıradaki biri aşağı düşecek. */}
       {current !== undefined ? (
         <span
           className={`font-ops-body text-ops-xs ${
@@ -958,8 +835,7 @@ function FeaturedFlagPreview({ payload }: { payload: FeaturedFlagPayload }) {
         </span>
       ) : null}
 
-      {/* Vitrin YAYIN DEĞİLDİR (isFeatured ≠ isActive): işaret yalnız anasayfadaki seçkiyi değiştirir,
-          kaydı satışa açmaz/kapatmaz. İkisi bir kez karıştırılırsa pasif bir kayıt vitrine alınabilir. */}
+      {/* Vitrin yayın değildir: işaret yalnız anasayfa seçkisini değiştirir, kaydı satışa açıp kapatmaz. */}
       <span className="font-ops-body text-ops-xs text-ops-muted">
         Vitrin işareti yayın durumu değildir — kayıt satışta değilse vitrine alınsa da müşteriye görünmez.
       </span>
@@ -968,13 +844,8 @@ function FeaturedFlagPreview({ payload }: { payload: FeaturedFlagPayload }) {
 }
 
 /**
- * Tedarik siparişi — **çizimde YOK**, sözleşmenin tarif ettiği desen (§2a): Stok tablosunun
- * deseni (Ürün · Boy · Adet), üstünde tedarikçi satırı.
- *
- * Hedef depo künyede YOK ve uydurulmuyor: payload deponun yalnız kimliğini taşıyor
- * (`PurchaseOrderPayloadSchema.warehouseId`), okunur kodunu değil — stok girişinin payload'ı ise
- * `warehouseCode`'u da taşıyor. Uuid yazmak operatöre hiçbir şey söylemez.
- * Kayıt `BEKLEYEN(22.13)`te: payload'a `warehouseCode` eklenirse künye depoyu adıyla yazar.
+ * Tedarik siparişi — stok tablosunun deseni (Ürün · Boy · Adet), üstünde tedarikçi satırı; hedef depo yazılmaz, çünkü payload
+ * yalnız kimliğini taşır ve uuid operatöre bir şey söylemez (kayıt `BEKLEYEN(22.13)`te).
  */
 function PurchaseOrderPreview({ payload }: { payload: PurchaseOrderPayload }) {
   const lines = payload.lines.map((line) => ({ ...line, ...splitVariantName(line.productName) }));
@@ -998,11 +869,8 @@ function PurchaseOrderPreview({ payload }: { payload: PurchaseOrderPayload }) {
 }
 
 /**
- * Tarif taslağı — üç dilin DOLULUĞU + malzeme bağları.
- *
- * Yayın kuralı veride: üç dil dolmadan tarif yayınlanamaz (`DOMAIN §13`). Önizlemenin en yararlı
- * bilgisi bu yüzden metnin kendisi değil, hangi dilin eksik olduğu — onaylayan kişi tarifin
- * bugün yayına giremeyeceğini bilerek onaylıyor.
+ * Tarif taslağı — üç dilin doluluğu + malzeme bağları; üç dil dolmadan tarif yayınlanamadığı için (DOMAIN §13) önizlemenin
+ * en yararlı bilgisi hangi dilin eksik olduğudur.
  */
 function RecipeDraftPreview({ payload }: { payload: RecipeDraftPayload }) {
   const LANGS = [
@@ -1020,9 +888,7 @@ function RecipeDraftPreview({ payload }: { payload: RecipeDraftPayload }) {
         <span className="font-ops-display text-ops-lead font-semibold text-ops-ink">
           {resolveLocalizedText(payload.name, OPERATIONS_LOCALE)}
         </span>
-        {/* Süre · porsiyon · öğün TEK satırda: üçü de tarif formunun kutusu ve üçü de kısa metin.
-            Doldurulmayan BOŞ GEÇİLMEZ, "yazılmadı" diye yazılır — verilmemiş bir kararı gizlemek,
-            onu verilmiş gibi gösterir (22.10 ilkesi). */}
+        {/* Doldurulmayan boş geçilmez, "yazılmadı" diye yazılır: verilmemiş kararı gizlemek onu verilmiş gibi gösterir. */}
         <span className="font-ops-body text-ops-sm text-ops-body">
           {[
             payload.duration ? resolveLocalizedText(payload.duration, OPERATIONS_LOCALE) : 'süre yazılmadı',
@@ -1075,13 +941,8 @@ function RecipeDraftPreview({ payload }: { payload: RecipeDraftPayload }) {
 // ── Dağıtıcı ─────────────────────────────────────────────────────────────────
 
 /**
- * Ham `payload` → tipin önizlemesi.
- *
- * **Şekil burada bir kez DOĞRULANIR** (`safeParse`), `as` ile kesilmez. Okuma kapısı zaten
- * doğrulanmış veri veriyor; buradaki denetim ona güvensizlikten değil, güvenin bir gün yanlış
- * çıkma ihtimalinden: kesilseydi bozuk bir dilekçe ekranı beyaza düşürürdü — onay kuyruğunun
- * yapabileceği en kötü şey. Doğrulama düşerse kart yaşar, önizleme yerine sebebini söyler ve
- * operatör "Teknik döküm"den ham JSON'a bakabilir.
+ * Ham `payload` → tipin önizlemesi; şekil burada `safeParse` ile doğrulanır, `as` ile kesilmez: bozuk bir dilekçe ekranı
+ * beyaza düşürmesin, kart yaşasın ve sebebini söylesin (ham JSON "Teknik döküm"de).
  */
 export function ProposalPreview({
   kind,
@@ -1091,11 +952,8 @@ export function ProposalPreview({
   kind: AssistantProposalKind;
   payload: unknown;
   /**
-   * Kâr künyesi — okuma kapısından hazır gelir (`lib/assistant/economics`), ekran hesaplamaz.
-   *
-   * `null` üç şey demek olabilir ve üçü de aynı davranışı gerektirir (blok çizilmez): bu tipte
-   * kârlılık kavramı yok · hesaplanamadı · satır eski. Ekran hesabı kendi yapsaydı aynı sayı iki
-   * yerde çıkar ve bir gün ayrışırdı — ayrışan sayı burada "kâr" diye okunur.
+   * Kâr künyesi — okuma kapısından hazır gelir (`lib/assistant/economics`), ekran hesaplamaz ki aynı sayı iki yerde ayrışmasın.
+   * `null` (kavram yok, hesaplanamadı ya da satır eski) üçünde de blok çizilmez.
    */
   economics?: ProposalEconomics | null;
 }) {
@@ -1134,26 +992,15 @@ export function ProposalPreview({
       return <FeaturedFlagPreview payload={data as FeaturedFlagPayload} />;
     case 'purchase_order':
       return <PurchaseOrderPreview payload={data as PurchaseOrderPayload} />;
-    // `batch_offer` burada YOK ve boşluğu bilinçli (22.8): o tipin kararı artık kuyruğun içinde,
-    // kendi form gövdesiyle veriliyor (`bodies/batch-offer-body`). Önizlemesi de silindi — ikisi
-    // birden dursaydı aynı fiyat iki yerde iki farklı hâlde okunurdu (biri asistanın önerdiği,
-    // öteki operatörün yazdığı). Karar verilmiş satırda gövde çizilmez ama form da gerekmez:
-    // kartın künyesi (özet · tutar · "ne olacaktı") olan biteni zaten söylüyor.
-    // `discount_draft` de burada YOK, aynı gerekçeyle (22.10): kural artık kuyruğun içinde GERÇEK
-    // indirim formuyla kuruluyor (`bodies/discount-draft-body` → `prices/discount-form`). Önizleme
-    // korunsaydı aynı kampanya iki dilde anlatılırdı ve forma bir alan eklendiğinde önizleme bunu
-    // bilmez, öneri ekranı sessizce eksik gösterirdi — talebin birinci amacı bu ikiliği bitirmekti.
+    // `batch_offer` ve `discount_draft` burada yok: o tiplerin kararı kuyruğun içinde kendi form gövdeleriyle verilir
+    // (`bodies/batch-offer-body`, `bodies/discount-draft-body`); önizleme de dursa aynı karar iki hâlde okunurdu.
     case 'recipe_draft':
       return <RecipeDraftPreview payload={data as RecipeDraftPayload} />;
     case 'product_create':
       return <ProductCreatePreview payload={data as ProductCreatePayload} />;
     default:
-      // **Bugün buraya HİÇBİR tip düşmüyor** — on bir tipin on biri çizili. Dal yine de duruyor
-      // çünkü enum bir gün yeni bir tip kazanacak ve o gün panel beyaza düşmemeli.
-      //
-      // Cümle bunu dosdoğru söylüyor: bir tur önce burada "uygulanamıyor, reddedin" yazıyordu ve o
-      // cümle yeni tipler eklendiği an YALAN oldu — öneri pekâlâ uygulanabiliyordu. Onay ekranının
-      // söyleyebileceği en kötü şey, doğru olmayan bir şey.
+      // Bugün buraya hiçbir tip düşmez; dal, enum yeni bir tip kazandığında panel beyaza düşmesin diye durur.
+      // Cümle öneriyi uygulanamaz ilan etmez, yalnız önizlemenin çizilmediğini söyler.
       return (
         <PreviewBody note="önizleme çizilmedi">
           <PreviewNotice tone="amber" title="Bu tipin önizlemesi henüz yok">

@@ -14,20 +14,13 @@ import {
   type ProductVariant,
 } from '@lezzet/types';
 /**
- * Formun okuduğu ürün — **şemadan türer, sayfa view-model'ine bağlanmaz.**
- *
- * Bir tur girdi `ProductView` idi ve form ürün sayfasının klasöründeyken bu doğruydu. Form ortak
- * komponente taşınınca (22.14) o bağ ters yön olurdu: `components/` `app/`'e bakamaz (`STACK §4`,
- * bağımlılık tek yönlü). Zaten kullanılan alanlar da `Product` + varyantlar; görsel URL'i, kategori
- * adı ve koleksiyon adları formun hiç dokunmadığı türevlerdi.
+ * Formun okuduğu ürün — şemadan türer, sayfa view-model'ine bağlanmaz.
+ * Form ortak komponentte durduğu için `app/`'e bakamaz (STACK §4, bağımlılık tek yönlü).
  */
 export type ProductFormSource = Product & { variants: ProductVariant[] };
 
-// Ürün formu şeması — ProductInsertSchema'dan TÜRETİLİR (referans deseni: .omit().extend()). Formda
-// olmayan alanlar çıkarılır (slug servis türetir; imageKey ayrı yükleme; isCandidate/sortOrder yok;
-// imageAlt boşsa müşteride ürün adına düşer → formda yok). vatRate segment için string'e daraltılır;
-// görsel ODAK/ZOOM forma aittir ("kaydeden yayınlar", §0B) → ortak ImageCropFieldsSchema MERGE edilir
-// (odak/zoom alanları elle yazılmaz, tek kaynak). Tip elle yazılmaz — z.infer.
+// Ürün formu şeması — `ProductInsertSchema`'dan türer; formda olmayan alanlar çıkarılır, görsel odak/zoom ortak kırpma şemasından birleşir.
+// `vatRate` segment kontrolü için dizgeye daraltılır; tip elle yazılmaz (`z.infer`).
 export const ProductFormSchema = ProductInsertSchema.omit({
   slug: true,
   imageKey: true,
@@ -83,25 +76,13 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
       vatRate: '5.5',
       dateType: 'DDM',
       shelfLifeDays: null,
-      // **`false` — veriyle AYNI (28.08 düzeltmesi).** Kolon `0005`te bilerek `false` doğuyor
-      // (kullanıcı kararı 08.08: *"unutulan alanın bedeli 'satılamadı' olmalı, 'bozuk gitti'
-      // değil"*), ama form `true` ile doğuruyordu — üstelik aynı formda `storageType: 'frozen'`.
-      // Yani formdan açılan her yeni ürün "donuk ama kargolanabilir" doğuyordu. `status`
-      // varsayılanının 05.36'da düzeltilen arızasının birebir aynısı: yüzeyde verilmiş bir karar
-      // veride verilmemişti — burada tersiydi, veride verilmiş karar yüzeyde eziliyordu.
+      // Veriyle aynı: kolon `false` doğar, çünkü unutulan kargo izninin bedeli "satılamadı" olmalı, "bozuk gitti" değil.
       shippable: false,
       // Yeni ürün DONUK doğar — migration `0005` künyesindeki gerekçe: unutulan alanın bedeli
       // güvenli tarafta kalmalı. Yanlış `ambient` işaretlenmiş donuk ürünün iadesi rafa döner.
       storageType: 'frozen',
-      // ── YENİ ÜRÜN **ADAY** DOĞAR (kullanıcı kararı 11.08) ─────────────────
-      // Varsayılan bir tur `active` idi ve iki yüzeyde birden yanlıştı. Ölçüm: asistan önerisinden
-      // doğan iki ürün SATIŞTA doğdu, üstelik beyanları eksikti — oysa ekran "ADAY olarak doğar,
-      // vitrinde görünmez" diye söz veriyordu. Elle oluşturmada da aynı: yeni bir ürün doğduğu anda
-      // satılabilir olmamalı, çünkü fiyatı ve stoğu HENÜZ YOK ve beyanı çoğu zaman eksik.
-      // Yayına almak ayrı bir karar ve o karar durum seçicisinden veriliyor.
-      //
-      // "Pasif" değil "Aday": pasif geri çekilmiş bir kaydın hâli (arşiv değil, gizlenmiş), aday
-      // ise HENÜZ tamamlanmamış olanın. İkisi ayrı şey ve `catalog_health` adayları ayrı sayıyor.
+      // Yeni ürün aday doğar: fiyatı ve stoğu henüz yok, beyanı çoğu zaman eksik; satışa almak durum seçicisinden verilen ayrı karar.
+      // "Pasif" geri çekilmiş kaydın hâlidir, "aday" henüz tamamlanmamış olanın.
       status: 'candidate',
       targetMarginPercent: null,
       autoPrice: false,
@@ -166,9 +147,8 @@ export function toActionPayload(values: ProductFormValues) {
     targetMarginPercent: values.targetMarginPercent ?? null,
     autoPrice: values.autoPrice ?? false,
     ...pickCropFields(values),
-    // KAYITLI satır (id'li) her zaman gider: listeden çıkmasının TEK yolu silme düğmesidir. Eskiden
-    // ölçüt "etiketi boş olanı at"tı — etiketi silinen kayıtlı varyant sessizce silinirdi. Yeni satır
-    // (id'siz) ise hiçbir alanı doldurulmamışsa atılır: "+ varyant"a basıp vazgeçmek boş satır bırakmaz.
+    // Kayıtlı satır (id'li) her zaman gider, listeden çıkmasının tek yolu silme düğmesidir.
+    // Yeni satır (id'siz) hiçbir alanı doldurulmamışsa atılır: "+ varyant"a basıp vazgeçmek boş satır bırakmaz.
     variants: values.variants
       .filter(
         (v) =>

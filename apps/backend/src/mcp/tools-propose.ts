@@ -37,9 +37,7 @@ import {
   supplierItemKeyOf,
   vatRegimeProblem,
 } from '@lezzet/domain-core';
-// Para biçimi TEK YERDEN (`formatPrice`): özet cümleleri operasyon yüzeyinde okunuyor ve elle
-// kurulan `(cents / 100).toFixed(2)` Türkçede yanlış ayraç veriyordu — "150.00 €" değil "150,00 €"
-// (kullanıcı tespiti 12.08, onay ekranının başlığında görüldü).
+// Para biçimi tek yerden (`formatPrice`): elle `toFixed(2)` Türkçede yanlış ayraç verir ("150,00 €" yerine "150.00 €").
 import { formatPrice, stripLineOrdinals, toCents } from '@lezzet/helper';
 import {
   CountryEnum,
@@ -71,30 +69,14 @@ import {
 } from '@lezzet/types';
 
 /**
- * MCP'nin YAZMA araçları (22.3) — ve hiçbiri bir tabloya yazmaz.
- *
- * Her araç `assistant_proposal` kuyruğuna bir DİLEKÇE bırakır; patron operasyon panelinden onaylar,
- * uygulama ondan sonra ve normal servis/motor yolundan koşar (`AI_ADMIN_ASSISTANT §5`). Onay aracı
- * BİLEREK YOKTUR: asistan kendi önerisini onaylayamaz — kuyruğun tek vaadi budur.
- *
- * ── ÖNERİ ÜRETİLİRKEN GERÇEK OKUNUR ─────────────────────────────────────────
- * Araçlar payload'ı modelin verdiği kimliklerle KÖRÜ KÖRÜNE kurmaz: kaydın var olduğunu ve adını
- * veritabanından doğrular. Sebebi somut — model bir uuid'yi yanlış hatırlarsa kuyruğa panelde
- * "(silinmiş kayıt)" diye çizilecek bir kalem düşer ve patron neyi onayladığını göremez.
- *
- * ── ÖZET CÜMLESİ ARACIN SORUMLULUĞU ─────────────────────────────────────────
- * `summary` panelin gösterdiği tek cümledir. Modelin serbest metnine bırakılmaz, BURADA kurulur:
- * aynı tip her zaman aynı biçimde okunsun ve cümle gerçekten yapılacak işi anlatsın.
+ * MCP'nin yazma araçları — hiçbiri tabloya yazmaz: her araç `assistant_proposal` kuyruğuna dilekçe bırakır, patron onaylayınca
+ * normal servis yolu koşar; onay aracı bilerek yok. Araç kimlikleri veritabanından doğrular ve özet cümlesini kendisi kurar ki
+ * panel silinmiş bir kalem ya da modelin serbest cümlesini çizmesin.
  */
 
 /**
- * Kimlik BİÇİMİ — veritabanına gitmeden (harici MCP denetiminin önerisi, 09.08 · tur 2).
- *
- * Bozuk bir kimliği Postgres'e sormanın iki bedeli var: boşa bir sorgu, ve operatöre modelin
- * anlamadığı bir cümle (`invalid input syntax for type uuid … 22P02`). Asıl bedel ise TOPLU HATA
- * DÖNÜŞÜNÜN ÇÖKMESİYDİ: `listByIds` tek bozuk kimlikle komple patlıyor, o yüzden öteki dört satırın
- * sorunu hiç ölçülemeden istisna dönüyordu. Biçim burada süzülünce sorgu ayakta kalır ve model
- * bütün sorunları tek turda görür.
+ * Kimlik biçimi veritabanına gitmeden süzülür: `listByIds` tek bozuk kimlikle komple patlar ve öteki satırların sorunu
+ * görülemezdi; biçim burada elenince model bütün sorunları tek turda görür.
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isUuid(value: string): boolean {
@@ -102,9 +84,8 @@ function isUuid(value: string): boolean {
 }
 
 /**
- * Dil başına metin argümanı (`{ "tr": "…", "fr": "…" }`). Model tek dil de verebilir — eksik dili
- * operatör formda tamamlar. Metin OLMAYAN değerler ve boş dizeler ayıklanır: boş bir dil "metin var"
- * gibi okunup yüzeyde boş bir etiket bırakırdı; hiçbir dil kalmazsa alan `null`.
+ * Dil başına metin argümanı (`{ "tr": "…", "fr": "…" }`); tek dil de kabul edilir, eksiği operatör formda tamamlar.
+ * Metin olmayan ve boş değerler ayıklanır, çünkü boş dil yüzeyde boş etiket bırakırdı; hiç dil kalmazsa `null`.
  */
 function localizedArg(raw: unknown): Record<string, string> | null {
   if (typeof raw !== 'object' || raw === null) return null;
@@ -117,13 +98,8 @@ function localizedArg(raw: unknown): Record<string, string> | null {
 }
 
 /**
- * MADDE LİSTESİ taşıyan çok dilli alan (tarif adımları · "Evinizden") — satır başındaki sıra
- * işareti SÖKÜLÜR.
- *
- * Sırayı ekran veriyor (`stripLineOrdinals` künyesi): metinde de numara olursa müşteri sayfasında
- * "1. 1. Baklavayı ısıtın" çıkıyor — ölçüldü 12.08. Araç açıklaması artık numarasız satır istiyor
- * ama kırpma yine de burada duruyor: modelin biçim alışkanlığına güvenip veriyi ona bırakmak,
- * düzeltilmesi imkânsız bir yerde (kayıtta) hata biriktirir.
+ * Madde listesi taşıyan çok dilli alan (tarif adımları, "Evinizden") — satır başındaki sıra işareti sökülür, çünkü sırayı ekran
+ * verir ve metindeki numara müşteri sayfasında "1. 1." diye çıkar; modelin biçim alışkanlığına güvenilmez.
  */
 function linesArg(raw: unknown): Record<string, string> | null {
   const value = localizedArg(raw);
@@ -132,18 +108,9 @@ function linesArg(raw: unknown): Record<string, string> | null {
 }
 
 /**
- * Tedarikçiyi FATURADAKİ KİMLİKLE bulur — iki aracın ortak kapısı (`stock_intake` · `purchase_order`).
- *
- * ── NOKTA ATIŞI (22.42 · kullanıcı kararı 14.09) ────────────────────────────
- * Bir tur ad PARÇASIYLA aranıyordu (`includes`) ve bulunamayınca hata MEVCUT TEDARİKÇİLERİN HEPSİNİ
- * yazıyordu; `reference_data` da listeyi zaten veriyordu. Kullanıcı ikisini de reddetti: *"yapay zekâ
- * tüm tedarikçileri ben çekeyim, veya birkaç karakterle isimde arama yapayım — bunlar doğru değil;
- * vergi numarası, telefon ya da tam ad faturanın üzerinde olur, nokta atışı arama yapması gerekir."*
- * Kimlik artık üç anahtardan biri — vergi numarası · telefon · tam ad — ve eşitlik tamdır
- * (`pinpointSupplier`). Bulunamayan kimlik HATADIR ama aday listesi DÖNMEZ: model faturaya bakar ya
- * da yöneticiye sorar; tahminle ikinci bir deneme yapmaz.
- *
- * Kimlik verilmediyse hata değil `null`: tedarikçi ikisinde de isteğe bağlı — plansız alım meşrudur.
+ * Tedarikçiyi faturadaki kimlikle bulur (vergi no, telefon ya da tam ad; eşitlik tam, `pinpointSupplier`) — mal kabul ve
+ * tedarik siparişinin ortak kapısı; kimlik verilmediyse `null`, plansız alım meşrudur.
+ * Bulunamazsa hata döner ama aday listesi dönmez: tedarikçiler hiçbir araçtan listelenmez, model tahminle yeniden denemez.
  */
 async function resolveSupplier(
   db: ReturnType<typeof serviceDb>,
@@ -183,10 +150,7 @@ function textArg(raw: unknown): string | null {
   return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
 }
 
-/**
- * Varyantların kaydı ve okunur adı ("Ürün · Boy") — tek sorgu çifti. Tedarik siparişinin iki kipi ve mal
- * kabul aynı adı kuruyor (22.44); üç kopya, bir gün üç ayrı biçim olurdu.
- */
+/** Varyantların kaydı ve okunur adı ("Ürün · Boy") — tedarik siparişinin iki kipi ve mal kabul aynı adı buradan kurar. */
 async function variantsWithNames(db: ReturnType<typeof serviceDb>, variantIds: readonly string[]) {
   const variants = await new ProductVariantService(db).listByIds([...variantIds]);
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
@@ -200,9 +164,8 @@ async function variantsWithNames(db: ReturnType<typeof serviceDb>, variantIds: r
 }
 
 /**
- * Cariyi NOKTA ATIŞI bulur (22.42 · kullanıcı kararı 14.09) — tam ad ya da eşleşme kelimesi
- * (`pinpointCounterparty`); cari listesi hiçbir araçtan dönmez. Para hareketi ve belge önerisinin (22.44)
- * ortak kapısı. Bulunamaması hata DEĞİL: ad kartta kalır, kimliği operatör seçer ya da Sözlük'ten açar.
+ * Cariyi nokta atışı bulur — tam ad ya da eşleşme kelimesi (`pinpointCounterparty`); cari listesi hiçbir araçtan dönmez.
+ * Bulunamaması hata değil: ad kartta kalır, kimliği operatör seçer ya da Sözlük'ten açar.
  */
 async function resolveCounterparty(
   db: ReturnType<typeof serviceDb>,
@@ -215,9 +178,8 @@ async function resolveCounterparty(
 }
 
 /**
- * Türü SÖZLÜKTEN doğrular (22.42) — slug ya da ad, yönüne uymalı (`matchNature`). Tanınmayan kelime HATADIR:
- * model `reference_data.natures`ten birini verir ya da alanı boş bırakır, türü operatör seçer. Para hareketi
- * ve belge önerisinin (22.44) ortak kapısı.
+ * Türü sözlükten doğrular — slug ya da ad, yönüne uymalı (`matchNature`); tanınmayan kelime hatadır ki model
+ * `reference_data.natures`ten birini versin ya da alanı boş bıraksın.
  */
 async function resolveNature(
   db: ReturnType<typeof serviceDb>,
@@ -250,18 +212,8 @@ async function queue(kind: AssistantProposalKind, payload: unknown, summary: str
   // Şema kapısı BURADA da geçilir: kuyruğa şekli bozuk bir dilekçe girerse panel onu çizemez.
   parseProposalPayload(kind, payload);
 
-  /**
-   * **BENZER ÖNERİ UYARISI** (MCP tur 8 raporu §3.3 · 15.08).
-   *
-   * Kuyrukta bekleyen bir öneri varken aynı içerikli ikincisi sorunsuz kabul ediliyordu — raporun
-   * kendi turunda "Gaziantep — STR" siparişi iki kez açıldı. Model kendi geçmişini hatırlamıyor ve
-   * `list_proposals`'ı her yazımdan önce çağırmıyor; sonuç, patronun önüne çıkan mükerrer kalemler.
-   *
-   * **ENGEL DEĞİL UYARI ve bu bilinçli:** aynı özetli ikinci bir öneri meşru olabilir (ilki bayat
-   * kaldı, koşullar değişti, ilki reddedilmek üzere). Reddetseydik doğru bir öneriyi de keserdik.
-   * Sayım YAZMADAN ÖNCE yapılıyor ki cümle "senden önce N tane bekliyordu" olsun — kendini saymak
-   * her öneriyi mükerrer gösterirdi.
-   */
+  // Aynı özetli bekleyen öneri engel değil uyarıdır: ikinci öneri meşru olabilir (ilki bayatladı), ama model kendi geçmişini
+  // hatırlamaz. Sayım yazmadan önce yapılır ki öneri kendini saymasın.
   const service = new AssistantProposalService(serviceDb());
   const waiting = (await service.listPending()).filter((row) => row.kind === kind);
   const identical = waiting.filter((row) => row.summary === summary).length;
@@ -299,21 +251,9 @@ async function queue(kind: AssistantProposalKind, payload: unknown, summary: str
 }
 
 /**
- * Parti teklifi önerisi — SKT'si yaklaşan malı eritmenin DOĞRU aracı (kullanıcı kararı 09.08).
- *
- * ── NEDEN İNDİRİM DEĞİL, PARTİ TEKLİFİ ──────────────────────────────────────
- * Harici denetim "indirime ürün bazlı kapsam ekleyin" demişti; teşhis doğruydu (koleksiyona açılan
- * indirim tarihi uzak malı da ucuzlatıyor) ama çözüm yanlıştı. İndirim ürünün TAMAMINI kapsar;
- * oysa ucuzlaması gereken şey ürün değil **o parti**. Aynı ürünün taze partisi tam fiyatta kalmalı.
- * `stock.offer_price` tam bunun için var ve vitrinin fırsat bandı zaten onu okuyor.
- *
- * ── KARARI MOTOR VERİR, MODEL DEĞİL ─────────────────────────────────────────
- * "Bu partiye teklif açılabilir mi" sorusunu `offerDecisionOf` cevaplar: DLC'si geçmiş partiye
- * teklif YAZILAMAZ (satılamaz, tek yol imha) ve araç bunu reddeder. Model ısrar edemez — kural
- * motorda, prompt'ta değil.
- *
- * Fiyatı model verebilir ama vermek zorunda değil: boş bırakılırsa motorun önerdiği fiyat
- * (%30 indirim, parametrik) kullanılır.
+ * Parti teklifi önerisi — SKT'si yaklaşan malı eritmenin aracı: indirim ürünün tamamını ucuzlatır, teklif yalnız o partiyi
+ * (`stock.offer_price`). Teklif açılabilir mi kararını motor verir (`offerDecisionOf`; DLC'si geçmiş parti reddedilir), fiyat
+ * verilmezse motorun önerdiği kullanılır.
  */
 export async function proposeBatchOffer(args: Record<string, unknown>) {
   const db = serviceDb();
@@ -376,23 +316,8 @@ export async function proposeBatchOffer(args: Record<string, unknown>) {
 }
 
 /**
- * Vitrin işareti önerisi — hedef **ADIYLA** bulunur (11.08 · MCP denetim raporu, madde 12).
- *
- * ── ARAÇ ALTI TUR BOYUNCA KULLANILAMADI ─────────────────────────────────────
- * Girdi `id: uuid` istiyordu ve o kimliği veren HİÇBİR okuma aracı yoktu: `catalog_health` ürün
- * ve varyant kimliği veriyor, `reference_data` kategori/koleksiyonu yalnız ADIYLA listeliyordu.
- * Yani model "Dondurma kategorisini vitrine al" isteğine karşılık gelecek öneriyi **fiziksel
- * olarak yazamıyordu** — denetim raporunda altı turun altısında `0/2` ile düştü ve on bir öneri
- * tipinden biri tamamen kapalı kaldı.
- *
- * Kopukluk bir güvenlik kuralı değildi, bir eksikti: veri vardı, asistana verilmiyordu. Çözüm de
- * projenin kendi deseni — `zone_extend` (zoneName), `money_movement` (accountName),
- * `discount_draft` (scopeName), `product_create` (categoryName) hepsi adla çözüyor. Kimlik isteyen
- * tek araç buydu.
- *
- * **Ad bulunamazsa mevcutlar YAZILIR:** model doğrusunu seçebilsin diye (öteki araçların hepsi
- * böyle yapıyor). Kimlik hâlâ payload'a yazılıyor — uygulama kimlikle çalışır, çünkü kayıt onay
- * beklerken yeniden adlandırılabilir.
+ * Vitrin işareti önerisi — hedef adıyla bulunur, çünkü model kimliği hiçbir okuma aracından alamaz; bulunamazsa mevcutlar yazılır.
+ * Payload'a kimlik yazılır: kayıt onay beklerken yeniden adlandırılabilir.
  */
 export async function proposeFeaturedFlag(args: Record<string, unknown>) {
   const target = String(args.target ?? '');
@@ -404,8 +329,7 @@ export async function proposeFeaturedFlag(args: Record<string, unknown>) {
   if (!wanted) return { error: 'name zorunlu — hangi kayıt? (örn. "Dondurma"). Mevcutları reference_data verir.' };
 
   const db = serviceDb();
-  // Vitrinin BUGÜNKÜ doluluğu da okunur: "bir tane daha ekle" ile "sekizinciyi ekle" aynı karar
-  // değil — vitrin bir liste değil seçkidir, dolu olan aşağı iter (denetim taraması 09.08).
+  // Vitrinin bugünkü doluluğu da okunur: vitrin bir seçkidir, dolu ızgaraya ekleme sıradakini aşağı iter.
   const rows =
     target === 'category'
       ? await new CategoryService(db).list({ activeOnly: true })
@@ -437,21 +361,8 @@ export async function proposeFeaturedFlag(args: Record<string, unknown>) {
   const verb = isFeatured ? 'vitrine çıkarılsın' : 'vitrinden çıkarılsın';
   const queued = await queue('featured_flag', payload, `${match.label} ${verb} (${target})`, args.reason);
 
-  /**
-   * **IZGARANIN DOLULUĞU YANITTA** (MCP tur 8 raporu §3.9 · ölçüldü 15.08).
-   *
-   * Araç tanımı *"the reply tells you how many are on it today"* diye söz veriyordu ve tutmuyordu:
-   * sayı `payload.currentlyFeaturedCount`a yazılıp orada kalıyor, model onu hiç görmüyordu. Vitrin
-   * bir SEÇKİ — dolu bir ızgaraya ekleme yapmak sıradaki birini aşağı iter; bunu bilmeden verilen
-   * öneri, etkisini bilmeden verilmiş demektir.
-   *
-   * **Kuyrukta bekleyen vitrin önerileri de sayılıyor** ve bu ikinci yarısı: model kendi açtığı
-   * önerileri hatırlamıyor, aynı ızgaraya üst üste öneri yığabiliyordu (raporun kendi vakası — dört
-   * vitrin önerisi biriktirdi). Bekleyenler henüz uygulanmadı, yani ızgarada GÖRÜNMÜYORLAR; ayrı
-   * söyleniyor ki toplamla karıştırılmasın.
-   *
-   * Sayı ONAY ANININ değil ÖNERİNİN kurulduğu anın gerçeğidir — panel kendi hesabını yeniden yapar.
-   */
+  // Izgaranın doluluğu ve aynı hedefe bekleyen vitrin önerileri yanıtta: model etkisini bilmeden öneri vermesin ve kendi
+  // açtıklarını üst üste yığmasın. Sayı önerinin kurulduğu anın gerçeğidir, panel kendi hesabını yeniden yapar.
   const pendingSameTarget = (await new AssistantProposalService(db).listPending()).filter(
     (row) => row.kind === 'featured_flag' && (row.payload as { target?: string }).target === target,
   ).length;
@@ -462,9 +373,7 @@ export async function proposeFeaturedFlag(args: Record<string, unknown>) {
     ...queued,
     showcase: {
       target,
-      // **HANGİ BÖLÜM ve HANGİ KURAL** (kullanıcı düzeltmesi 15.08): üçüne de "vitrin" deniyor ama
-      // üçü ayrı yerde, ayrı mantıkla çiziliyor. Bunu söylemeyen bir yanıt, modeli koleksiyon için
-      // "biri düşecek" diye yanlış uyarır — orada düşme yok, rotasyon var.
+      // Hangi bölüm ve hangi kural: üç yere de "vitrin" deniyor ama çizimleri ayrı; koleksiyonda düşme yok, rotasyon var.
       section: placement.where,
       rule: placement.note,
       onShowcaseNow: payload.currentlyFeaturedCount,
@@ -482,28 +391,22 @@ export async function proposeFeaturedFlag(args: Record<string, unknown>) {
 }
 
 /**
- * Tedarik siparişi önerisi — kalemler eşik-altı ÖNERİSİNDEN gelir, modelden değil.
- *
- * Model yalnız "hangi depo, hangi tedarikçi" der; adetleri motor hesaplar (`ReorderService`).
- * Adedi modele bıraksaydık, eşiğin altındaki gerçek açığı değil modelin tahminini sipariş ederdik.
+ * Tedarik siparişi önerisi — model depo ve tedarikçiyi söyler, adetleri motor hesaplar (`ReorderService`): eşiğin altındaki
+ * gerçek açık sipariş edilsin, modelin tahmini değil. Faturadan sipariş aynı araçla gelir (`proposeInvoicePurchaseOrder`).
  */
 export async function proposePurchaseOrder(args: Record<string, unknown>) {
   const db = serviceDb();
   const warehouseCode = String(args.warehouseCode ?? '').trim();
   if (!warehouseCode) return { error: 'warehouseCode zorunlu (örn. "STR").' };
 
-  // TESİS aranır (02.09): satın alma önerisi "bu deponun rafı boşalıyor" demektir, araçta raf yok.
-  // Araç kodu verilirse cevap "bulunamadı" olur — doğrusu bu, çünkü orada sipariş edilecek bir şey
-  // gerçekten yok; sessizce boş öneri dönmek asistanı "eşik yok" diye yanıltırdı.
+  // Tesis aranır: satın alma "bu deponun rafı boşalıyor" demektir, araçta raf yok; araç kodu verilirse "bulunamadı" doğru cevaptır.
   const warehouse = (await new WarehouseService(db).list({ activeOnly: true, kind: 'facility' })).find(
     (w) => w.code === warehouseCode,
   );
   if (!warehouse) return { error: `Depo bulunamadı: ${warehouseCode}` };
 
-  // ── FATURA KİPİ (22.44 · kullanıcı kararı 14.09) ──────────────────────────
-  // Kalemleri faturanın kendisi taşıyor: eşik altı motoru devreye girmez, adet ve fiyat faturadan.
-  // İki kip TEK araçta, çünkü ikisi de "bu depoya bu tedarikçiden mal gelecek" diyor — ayrı araç,
-  // modelin hangisini seçeceğini tahmin etmesini isterdi. Kalemsiz fatura bir kip değil, eksik çağrıdır.
+  // Fatura kipi: kalemleri fatura taşır, eşik altı motoru devreye girmez. İki kip tek araçta, çünkü ikisi de "bu depoya bu
+  // tedarikçiden mal gelecek" der; kalemsiz fatura bir kip değil eksik çağrıdır.
   const invoiceLines = Array.isArray(args.lines) ? (args.lines as Record<string, unknown>[]) : [];
   if (invoiceLines.length > 0) return proposeInvoicePurchaseOrder(db, args, warehouse, invoiceLines);
   if (args.invoice !== undefined) return { error: 'invoice verildi ama lines boş — faturadan siparişte faturadaki kalemleri de verin.' };
@@ -514,13 +417,7 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
     return { error: `${warehouseCode} deposunda tedarikçisi eşlenmiş, eşik altı kalem yok — sipariş önerisi kurulamıyor.` };
   }
 
-  // Tedarikçi seçilmediyse EN BÜYÜK grup; birden çok tedarikçi varsa modele söylenir ki
-  // patrona "hangisi" diye sorabilsin — sessizce birini seçmek, öbür eksiği görünmez kılardı.
-  //
-  // Seçim ADLA (11.08): burada da `supplierId: uuid` isteniyordu ve model o kimliği hiçbir okuma
-  // aracından alamıyordu — yani "Anadolu Gıda'ya sipariş aç" isteği karşılanamıyor, araç her
-  // seferinde en büyük gruba düşüyordu. Alan opsiyonel olduğu için arıza sessizdi: öneri kuruluyor
-  // ama istenen tedarikçiye değil.
+  // Tedarikçi adıyla seçilir; seçilmediyse en büyük grup alınır ve başka tedarikçi varsa modele söylenir ki patrona sorabilsin.
   const { supplier: wantedSupplier, error: supplierError } = await resolveSupplier(db, args);
   if (supplierError) return { error: supplierError };
   const group = wantedSupplier
@@ -535,9 +432,7 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
   const supplier = group.supplierId ? await new SupplierService(db).getById(group.supplierId) : null;
   const named = await variantsWithNames(db, group.lines.map((l) => l.variantId));
 
-  // Tedarikçinin kataloğu: "bu kalem bu tedarikçiden en son kaça alınmıştı". Sipariş tutarı buradan
-  // TAHMİN ediliyor — kesin fiyat mal kabulde doğuyor, ama patron kasadan ne çıkacağını görmeden
-  // sipariş onaylamamalı.
+  // Tutar tedarikçinin kataloğundaki son alıştan tahmin edilir: kesin fiyat mal kabulde doğar ama patron kasadan ne çıkacağını görmeli.
   const lastPriceByVariant = lastPriceByVariantOf(group.supplierId ? await new SupplierProductService(db).listBySupplier(group.supplierId) : []);
 
   const payload: PurchaseOrderPayload = {
@@ -550,11 +445,9 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
       variantId: line.variantId,
       productName: named.get(line.variantId)?.name ?? line.variantId,
       qty: line.suggestedQty,
-      // Son alış fiyatı TEK sorguda (tedarikçinin kataloğu): satır başına sorgu, on dört kalemlik
-      // bir siparişte on dört gidiş dönüş demekti. Eşlemesi olmayan kalemde `null` — uydurulmuyor.
+      // Son alış fiyatı tedarikçinin kataloğundan tek sorguda gelir; eşlemesi olmayan kalemde `null`, uydurulmaz.
       lastPurchasePriceCents: lastPriceByVariant.get(line.variantId) ?? null,
-      // Eşik altı önerisinde fatura yok (22.44): birim fiyatı eşlemedeki son alış söyler, tedarikçinin
-      // kalem adı ve eşleme önerisi de yok — kalemler zaten eşlemeden geliyor.
+      // Eşik altı kipinde fatura yok: birim fiyatı eşlemedeki son alış söyler, kalemler zaten eşlemeden gelir.
       unitPriceCents: null,
       supplierItemKey: null,
       supplierItemName: null,
@@ -576,11 +469,8 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
 }
 
 /**
- * Bölgeye posta kodu ekleme önerisi — kodlar TALEP PANOSUNDAN doğrulanır, modelin listesinden değil.
- *
- * Model "şu kodları ekle" der; araç her kodun gerçekten sorulmuş olduğunu (`postal_code_demand`)
- * ve HENÜZ KAPSANMADIĞINI doğrular. Doğrulamasaydık asistan rastgele bir kod ekletebilirdi ve
- * uygulandığı an oraya teslimat sözü verilmiş olurdu — geri alınamaz dış etki.
+ * Bölgeye posta kodu ekleme önerisi — kodlar talep panosundan doğrulanır (sorulmuş ve henüz kapsanmamış), çünkü uygulandığı an
+ * oraya teslimat sözü verilir ve bu geri alınamaz.
  */
 export async function proposeZoneExtend(args: Record<string, unknown>) {
   const db = serviceDb();
@@ -600,17 +490,9 @@ export async function proposeZoneExtend(args: Record<string, unknown>) {
   const fresh = codes.filter((c) => !already.has(c));
   if (fresh.length === 0) return { error: 'Verilen kodların hepsi bu bölgede zaten var.' };
 
-  // ── ÜLKE: önce MODELİN dediği, sonra bölgenin kodları, en sonda DEPONUN ülkesi ──
-  //
-  // Posta kodu sınır ötesi benzersiz DEĞİL (`DeliveryZonePostalCode` künyesi: 67000 hem Fransa'da
-  // hem Almanya'da var), yani ülke kararın parçası. Araç bunu hiç sormuyordu ve bölgenin İLK
-  // kodundan türetiyordu — kodu olmayan yeni bir bölgede sabit `'FR'`e düşüyordu. Bir Alman
-  // bölgesinin ilk kodu böyle yanlış ülkeye yazılırdı ve hata sessiz olurdu: kod görünür, kapsama
-  // girmez. Sabit yerine deponun ülkesi son çare — bölge tek depoya bağlı (`DOMAIN §17`), yani
-  // dayanağı olan bir cevap.
-  //
-  // BEKLEYEN(BACKLOG §8): `postal_code_demand` ülke taşımıyor (anahtarı yalnız `postal_code`),
-  // o yüzden `demand_signals` çıktısı da ülkesiz — model ülkeyi ancak patrondan öğrenir.
+  // Ülke: önce modelin dediği, sonra bölgenin kodları, en son bölgenin deposunun ülkesi (DOMAIN §17) — posta kodu sınır ötesi
+  // benzersiz değil (67000 hem FR hem DE) ve yanlış ülkeye yazılan kod görünür ama kapsama girmez.
+  // BEKLEYEN(BACKLOG §8): `postal_code_demand` ülke taşımıyor, `demand_signals` çıktısı da ülkesiz — model ülkeyi patrondan öğrenir.
   const askedCountry = String(args.country ?? '').toUpperCase();
   if (askedCountry && !CountryEnum.safeParse(askedCountry).success) {
     return { error: `country geçersiz: '${askedCountry}'. Geçerli değerler: ${CountryEnum.options.join(' | ')}.` };
@@ -646,11 +528,8 @@ export async function proposeZoneExtend(args: Record<string, unknown>) {
 }
 
 /**
- * Ambalajdan okunan beyan alanlarının ortak ayrıştırıcısı (22.6) — iki ürün aracı da bunu kullanır.
- *
- * **Alerjen SERBEST METİN DEĞİL**: 14'lük kapalı kümeden seçilir. Model "süt içerebilir" diye bir
- * cümle yazamaz; ya listedeki değeri işaretler ya hiç. Tanınmayan değer sessizce atılmaz, HATA
- * döner — gıdada sessiz atlama, eksik alerjenin ta kendisidir.
+ * Ambalajdan okunan beyan alanlarının ortak ayrıştırıcısı — iki ürün aracı da kullanır.
+ * Alerjen kapalı kümeden seçilir; tanınmayan değer sessizce atılmaz, hata döner, çünkü gıdada sessiz atlama eksik alerjenin kendisidir.
  */
 function readDeclarations(args: Record<string, unknown>): { fields: Record<string, unknown>; problems: string[] } {
   const fields: Record<string, unknown> = {};
@@ -681,17 +560,14 @@ function readDeclarations(args: Record<string, unknown>): { fields: Record<strin
 
 const ALLERGEN_VALUES = ProductAllergenEnum.options;
 
-/** Modelin "net okuyamadım" dediği alanlar — ekran gözü oraya çeker (`AI_ADMIN_ASSISTANT §5`). */
+/** Modelin "net okuyamadım" dediği alanlar — ekran gözü oraya çeker. */
 function readUncertain(args: Record<string, unknown>): string[] {
   return Array.isArray(args.uncertainFields) ? args.uncertainFields.map((f) => String(f)).filter(Boolean) : [];
 }
 
 /**
- * Ürün taslağının doldurulması — 22.6'da **ambalaj fotoğrafından** okuma senaryosuna açıldı.
- *
- * Alerjen ve saklama artık YAZILABİLİR (22.3'te şemayla yasaklıydı): ambalajın fotoğrafını patron
- * veriyorsa bilgi uydurma değil belgeden okumadır — fatura senaryosunda aynı karar verilmişti.
- * Duvar ekrana taşındı; veri tarafındaki ayak (yayın kararı asistana kapalı) yerinde duruyor.
+ * Ürün taslağının doldurulması — ambalaj fotoğrafından okunan beyan dahil; alerjen ve saklama yazılabilir, çünkü bilgi belgeden
+ * okunur. Denetim onay ekranında, yayın kararı asistana kapalı.
  */
 export async function proposeProductDraft(args: Record<string, unknown>) {
   const productId = String(args.productId ?? '').trim();
@@ -707,15 +583,13 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
     return { error: 'Hiçbir alan verilmedi — ad, açıklama, içindekiler, saklama, besin künyesi, alerjen ya da iz.' };
   }
 
-  // TAMLIK MOTORDAN: "bu öneri uygulanırsa hangi beyanlar hâlâ eksik kalır". Araç kendi ölçütünü
-  // uydurmuyor — `missingDeclarations` ekranın, sunucu süzgecinin ve sayacın da okuduğu sözlük.
+  // Tamlık motordan (`missingDeclarations`, `is_incomplete` kolonunun aynası); araç kendi ölçütünü uydurmaz.
   const merged = { ...product, ...fields } as Parameters<typeof missingDeclarations>[0];
   const payload: ProductDraftPayload = {
     productId,
     productName: resolveLocalizedText(product.name, 'tr'),
     fields: fields as ProductDraftPayload['fields'],
-    // Bugünkü hâl ÖNERİYLE BİRLİKTE taşınır: uygulama üzerine yazıyor ve sürüm tutmuyor, yani
-    // dolu bir açıklama onaylandığı an kayboluyor. Patron neyi kaybedeceğini görerek onaylasın.
+    // Bugünkü hâl öneriyle birlikte taşınır: uygulama sürüm tutmadan üzerine yazar, patron neyi kaybedeceğini görerek onaylasın.
     currentFields: {
       name: product.name,
       description: product.description,
@@ -734,18 +608,8 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
 }
 
 /**
- * YENİ ÜRÜN önerisi — ambalajın fotoğrafından (22.6, kullanıcı senaryosu).
- *
- * Öteki tiplerden farkı: katalogda olmayan bir şeyi doğurur. Bu yüzden iki emniyet burada
- * BİRLİKTE duruyor ve ikisi de kod tarafında:
- *
- * - **Ürün ADAY doğar** — `status` payload'da yok, uygulayıcı `candidate` yazıyor. Asistan beyanı
- *   doldurabilir ama ürünü satışa çıkaramaz; yanlış okunmuş bir alerjen vitrine düşmez.
- * - **Kategori addan ÇÖZÜLÜR ve gerçekten var olmalı.** Uydurma bir kategori adı, ürünü hiçbir
- *   yerde görünmeyen bir kovaya atardı — model kategori uuid'si de ezberlemez.
- *
- * Fiyat ve stok BİLEREK YOK: ikisi de ayrı karar, ayrı ekran. Varyant en az bir tane (şema
- * zorluyor) — varyantsız ürün satılamaz, çünkü fiyat ve stok varyanta bağlıdır.
+ * Yeni ürün önerisi — ambalaj fotoğrafından; ürün aday doğar (`status` payload'da yok), yanlış okunmuş alerjen vitrine düşmez.
+ * Kategori addan çözülür ve var olmalı; fiyat ve stok ayrı karar olduğu için yok, en az bir boy şart çünkü fiyat ve stok boya bağlı.
  */
 export async function proposeProductCreate(args: Record<string, unknown>) {
   const db = serviceDb();
@@ -758,13 +622,8 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
   if (rawVariants.length === 0) {
     return { error: 'variants boş — en az bir boy gerekir ("500 g", "1 kg"). Varyantsız ürün satılamaz: fiyat ve stok boya bağlıdır.' };
   }
-  // Etiket ("500 g") ile ölçü (500) AYRI alanlar: biri müşterinin okuduğu metin, öteki kilo başı
-  // fiyatın tabanı. İkisi de ambalajda yazıyor (11.08).
-  //
-  // **AMBALAJ ÖLÇÜSÜ AYRI BİR SINIF (28.08):** `packed*` alanları ambalajın üstünde YAZMAZ —
-  // tartılıp ölçülür. Araç künyesi modele "bilmiyorsan boş bırak" diyor; buradaki okuma da
-  // savunmacı: pozitif tam sayı değilse `null`, yani "ölçülmedi". Tahmin edilmiş bir sayı kargo
-  // tarifesine girer ve yanlış tarife faturada düzeltilir.
+  // Etiket ("500 g") ile ölçü (500) ayrı alanlar: biri müşterinin okuduğu metin, öteki kilo başı fiyatın tabanı.
+  // Ambalaj ölçüsü (`packed*`) etikette yazmaz, tartılır: pozitif tam sayı değilse `null`, çünkü tahmini sayı kargo tarifesine girer.
   const variants = rawVariants.flatMap((v) =>
     v.label && typeof v.label === 'object'
       ? [
@@ -821,8 +680,7 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
     dateType,
     shelfLifeDays,
     vatRate,
-    // Kargolanabilirlik ambalajdan okunur ama emin olmadan yazılmaz: `undefined` bırakmak
-    // "bilmiyorum"dur ve ürün kapının varsayılanıyla doğar (11.08).
+    // Kargolanabilirlik emin olmadan yazılmaz: `null` "bilmiyorum"dur ve ürün kapının varsayılanıyla doğar.
     shippable: typeof args.shippable === 'boolean' ? args.shippable : null,
     variants,
     uncertainFields: readUncertain(args),
@@ -834,7 +692,6 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
   return queue('product_create', payload, summary, args.reason);
 }
 
-/** Fatura kalemi → varyant: eşlemeden mi geldi, öneri mi, sorun mu (22.43 · 22.44). */
 /** Tedarikçinin kalem eşlemesi — `supplier_product` satırı. */
 type SupplierMapping = Awaited<ReturnType<SupplierProductService['listBySupplier']>>[number];
 
@@ -847,6 +704,7 @@ function lastPriceByVariantOf(mappings: readonly SupplierMapping[]): Map<string,
   );
 }
 
+/** Fatura kalemi → varyant: eşlemeden mi geldi, eşleme önerisi mi, sorunu var mı. */
 interface ResolvedInvoiceLine {
   variantId: string;
   key: string | null;
@@ -856,18 +714,9 @@ interface ResolvedInvoiceLine {
 }
 
 /**
- * FATURA KALEMLERİ TEDARİKÇİNİN ADIYLA ÇÖZÜLÜR (22.43 · kullanıcı kararı 14.09) — mal kabul ve faturadan
- * sipariş (22.44) aynı çözümü kullanır; ikinci bir kopya iki ayrı eşleşme kuralı demekti.
- *
- * Fatura kalemi tedarikçinin diliyle yazılıdır ("Druivenmelasse 650gr"); bizim varyantımıza bağ tedarikçi
- * eşlemesidir (`supplier_product`). Anahtar kod, kod yoksa adın slug'ı — motor `supplierItemKeyOf`;
- * eşitlik tamdır (`matchSupplierItem`), parça ad yok. Eşleme yoksa model katalogda bulduğu varyantı adla
- * BİRLİKTE gönderir: kalem "eşleme önerisi" olarak işaretlenir, onayda eşleme kaydedilir ve sonraki fatura
- * tam eşleşir. Model tek başına uydurmaz: adsız kalem için variantId zaten şart; adlı ama eşlemesiz kalem
- * için variantId yoksa cevap "eşleme yok".
- *
- * Eşlemeler ÇAĞIRANDAN gelir: faturadan sipariş son alış fiyatını da aynı listeden okuyor, ikinci sorgu
- * açılmaz. Tedarikçi yoksa liste boştur.
+ * Fatura kalemlerini tedarikçinin adıyla çözer — mal kabul ve faturadan siparişin ortak yolu: bağ tedarikçi eşlemesidir
+ * (`supplier_product`; anahtar kod, yoksa adın slug'ı; eşitlik tam). Eşleme yoksa modelin katalogda bulduğu varyant "eşleme
+ * önerisi" olur ve onayda kaydedilir; adlı ama eşlemesiz kalem varyantsız gelirse cevap "eşleme yok".
  */
 function resolveInvoiceLines(
   mappings: readonly SupplierMapping[],
@@ -917,16 +766,9 @@ function isIsoDay(value: unknown): boolean {
 }
 
 /**
- * FATURANIN KDV'Sİ, REJİMİ VE VADESİ (22.44 · 12.26) — mal kabul, faturadan sipariş ve belge önerisinin
- * ORTAK doğrulaması; üç kopya üç ayrı kural olurdu.
- *
- * Rejim verilmediyse tedarikçinin ülkesinden ÖNERİLİR (`suggestVatRegime`: Fransa dışındaki tedarikçinin
- * KDV'siz faturası ters yüklemedir). Verilen rejim KDV'yle çelişiyorsa RET (`vatRegimeProblem`): ters
- * yüklemede ve muafiyette belgede KDV olmaz. KDV toplamı aşamaz ve vade belge gününden önce olamaz — belge
- * kapısının (`createMoneyDocument`) kuralları; burada yakalanmasa öneri onay anında düşerdi.
- *
- * Vade yalnız belgede yazıyorsa: model hesaplamaz. Bozuk KDV ya da vade RET — bir tur sessizce süzülüyordu
- * ve süzülen değer "belgede yok" diye okunuyordu (`CLAUDE §1`: ölçülemeyen değer sıfır değildir).
+ * Faturanın KDV'si, rejimi ve vadesi — mal kabul, faturadan sipariş ve belge önerisinin ortak doğrulaması; rejim verilmediyse
+ * tedarikçinin ülkesinden önerilir (`suggestVatRegime`), KDV'yle çelişen rejim, toplamı aşan KDV ve belgeden önceki vade reddedilir.
+ * Bozuk değer süzülmez, reddedilir: süzülen değer "belgede yok" diye okunurdu (CLAUDE §1).
  */
 async function invoiceTermsFrom(
   db: ReturnType<typeof serviceDb>,
@@ -963,11 +805,8 @@ async function invoiceTermsFrom(
 }
 
 /**
- * FATURANIN TOPLAMI İLE SATIRLARIN TOPLAMI — mal kabul ve faturadan siparişin ortak kontrolü (22.44).
- *
- * Karşılaştırma KDV HARİÇ: satır fiyatları KDV hariçtir, faturanın toplamı KDV dâhil — KDV biliniyorsa
- * düşülür. Bir tur düşülmüyordu ve her KDV'li faturada "fark" KDV'nin kendisi çıkıyordu. Fark varsa MODEL
- * ÖĞRENSİN: düzeltmenin ucuz anı onaydan öncesidir, sonra parti maliyetleri ve borç yazılmış olur.
+ * Faturanın toplamı ile satırların toplamı — mal kabul ve faturadan siparişin ortak kontrolü; satırlar KDV hariç olduğu için
+ * KDV biliniyorsa toplamdan düşülür. Fark modele söylenir, çünkü düzeltmenin ucuz anı onaydan öncesidir.
  */
 function invoiceTotalCheck(input: { totalAmountCents: number; vatAmountCents: number | null; vatRegime: DocumentVatRegime; linesCents: number }) {
   const gap = input.totalAmountCents - (input.vatAmountCents ?? 0) - input.linesCents;
@@ -985,10 +824,7 @@ function invoiceTotalCheck(input: { totalAmountCents: number; vatAmountCents: nu
   };
 }
 
-/**
- * Eşleme sayıları (22.43) — model kaç kalemin tedarikçi eşlemesinden geldiğini, kaçının onayda eşleme olarak
- * kaydedileceğini görsün; "hepsini ben buldum" sanmasın. Mal kabul ve faturadan siparişin ortak cevabı.
- */
+/** Eşleme sayıları — model kaç kalemin eşlemeden geldiğini, kaçının onayda eşleme olarak kaydedileceğini görsün. */
 function mappingCountsOf(lines: ReadonlyArray<{ supplierItemKey: string | null; mappingProposed: boolean }>, approval: string) {
   const mappedFromSupplier = lines.filter((line) => line.supplierItemKey && !line.mappingProposed).length;
   const proposals = lines.filter((line) => line.mappingProposed).length;
@@ -1001,11 +837,8 @@ function mappingCountsOf(lines: ReadonlyArray<{ supplierItemKey: string | null; 
 }
 
 /**
- * Mal kabul önerisi — **patronun verdiği faturadan**. Görseli MODEL okur (istemci yeteneği),
- * araç okunanı DOĞRULAR: her varyant gerçekten var mı, depo kodu geçerli mi, SKT yazılmış mı.
- *
- * Doğrulama şart çünkü buradaki hata gıdada pahalı: uydurma bir SKT ile giren parti, raftaki
- * gerçek malın tarihini yanlış gösterir. Eksik alanı araç REDDEDER — asistan patrona sorar.
+ * Mal kabul önerisi — faturayı model okur, araç doğrular (varyant var mı, depo kodu geçerli mi, SKT yazılmış mı).
+ * Eksik alan reddedilir ve asistan patrona sorar, çünkü uydurma SKT ile giren parti raftaki malın tarihini yanlış gösterir.
  */
 export async function proposeStockIntake(args: Record<string, unknown>) {
   const db = serviceDb();
@@ -1014,37 +847,23 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   if (!warehouseCode) return { error: 'warehouseCode zorunlu — mal hangi depoya girdi?' };
   if (rawLines.length === 0) return { error: 'lines boş — faturadaki kalemleri verin.' };
 
-  // TESİS aranır (02.09): mal kabulün hedefi bir tesistir — araca tedarikçiden mal girmez, araç
-  // transferle dolar. Web'deki kabul seçicisiyle aynı kural; asistan yolundan da atlanamamalı.
+  // Tesis aranır: araca tedarikçiden mal girmez, araç transferle dolar; web'deki kabul seçicisiyle aynı kural.
   const warehouse = (await new WarehouseService(db).list({ activeOnly: true, kind: 'facility' })).find(
     (w) => w.code === warehouseCode,
   );
   if (!warehouse) return { error: `Depo bulunamadı: ${warehouseCode}` };
 
-  // ── TEDARİKÇİ FATURADAKİ KİMLİKLE BULUNUR (11.08 adla · 22.42 nokta atışı, `resolveSupplier`) ──
-  //
-  // Önce `supplierId: uuid` isteniyordu ve o kimliği veren hiçbir okuma aracı yoktu — `reference_data`
-  // o gün tedarikçileri adlarıyla listeliyordu (22.42'de listeleme kalktı). Sonuç ÖLÇÜLDÜ: son turdaki
-  // iki mal kabulün ikisi de tedarikçisiz yazılmıştı. Bedeli görünmez ve zincirleme: `receive_intake`
-  // son alış fiyatını `where supplier_id = p_supplier_id` ile tazeliyor, yani tedarikçi boşken HİÇBİR
-  // satır güncellenmiyor (0010_supply.sql:236). Fiyat tazelenmeyince `propose_purchase_order` da
-  // "yaklaşık ne kadara mal olacak" sorusunu cevaplayamıyor — 22.12'de açılan alan hep boş kalırdı.
-  //
-  // Tedarikçi KALEMLERDEN ÖNCE çözülür (22.43): kalemler onun eşlemesinden geçiyor.
+  // Tedarikçi faturadaki kimlikle ve kalemlerden önce çözülür (kalemler onun eşlemesinden geçer). Tedarikçisiz kabul son alış
+  // fiyatını tazelemez (`receive_intake`), sonraki tedarik siparişi de tahmini tutar veremez.
   const { supplier, error: supplierError } = await resolveSupplier(db, args);
   if (supplierError) return { error: supplierError };
 
-  // ── KALEMLER TEDARİKÇİNİN ADIYLA ÇÖZÜLÜR (22.43) — ortak yardımcıda (`resolveInvoiceLines`):
-  // faturadan sipariş de aynı çözümü kullanır (22.44), iki kopya iki ayrı eşleşme kuralı olurdu.
   // Eşlemeler bir kez okunur; kalem çözümü onlardan geçer (`resolveInvoiceLines`).
   const mappings = supplier ? await new SupplierProductService(db).listBySupplier(supplier.id) : [];
   const resolved = resolveInvoiceLines(mappings, supplier, rawLines);
   const named = await variantsWithNames(db, resolved.map((line) => line.variantId).filter(isUuid));
 
-  // ── KALEM HATALARI TOPLU DÖNER (harici MCP denetiminin önerisi, 09.08) ────
-  // İlk hatada dönmek "short-circuit"tü ve teknik olarak doğruydu; ama her araç çağrısı modelin
-  // bağlam bütçesinden yiyor. Beş bozuk satırı beş turda öğrenmek yerine tek turda öğrensin:
-  // bunlar birbirinden BAĞIMSIZ doğrulamalar, sıralamanın bir anlamı yok.
+  // Kalem hataları toplu döner: doğrulamalar birbirinden bağımsız ve model bozuk satırların hepsini tek turda görmeli.
   const lines: StockIntakePayload['lines'] = [];
   const problems: string[] = [];
   for (const [i, raw] of rawLines.entries()) {
@@ -1074,16 +893,8 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   }
   if (problems.length > 0) return { error: `${problems.length} kalem sorunu — hepsini düzeltip tekrar gönderin:`, problems };
 
-  // ── AÇIK SİPARİŞ TEDARİKÇİDEN BULUNUR, MODEL UUID TAŞIMAZ ─────────────────
-  //
-  // `purchaseOrderId` de elde edilemeyen bir kimlikti: açık siparişleri listeleyen okuma aracı yok.
-  // Ölçüldü — son turdaki iki kabulün ikisi de siparişsizdi, yani hiçbir sipariş kapanmıyordu ve
-  // "yolda" sayılan mal sonsuza dek yolda kalıyordu.
-  //
-  // Bağ MODELE SORULMUYOR, tedarikçiden türetiliyor: tek açık sipariş varsa bağlanır. Birden
-  // fazlaysa SEÇİM MODELİNDİR ama kimlikle değil referans numarasıyla — ve seçilmezse kabul
-  // bağsız yazılır (plansız alım meşrudur), ama açık siparişler cevapta SAYILIR ki bağ sessizce
-  // düşmesin.
+  // Açık sipariş tedarikçiden bulunur, model kimlik taşımaz: tek açık sipariş varsa bağlanır, birden fazlaysa model referans
+  // numarasıyla seçer. Seçilmezse kabul bağsız yazılır (plansız alım meşru) ama açık siparişler cevapta sayılır.
   const openOrders = supplier ? await new PurchaseOrderService(db).listOpenBySupplier(supplier.id) : [];
   const wantedRef = typeof args.purchaseOrderRef === 'string' ? args.purchaseOrderRef.trim() : '';
   const linkedOrder = wantedRef
@@ -1096,12 +907,8 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
     return { error: `Açık sipariş bulunamadı: '${wantedRef}'. ${supplier?.name} için açık olanlar: ${refs || 'yok'}` };
   }
 
-  // ── FATURANIN KDV'Sİ, REJİMİ VE VADESİ (22.44 · 12.26) ───────────────────
-  // Toplam okunduysa fatura onayda kabule bağlı bir BELGE olarak doğar ve tedarikçi borcu o belgeden
-  // türer. Rejim verilmediyse tedarikçinin ülkesinden önerilir; verilen rejim KDV'yle çelişiyorsa RET.
-  // Belgenin tarihi ve toplamı (11.08). Tarih biçimi burada süzülüyor: bozuk bir tarihi geçirmek,
-  // kabulü sessizce bugüne yazdırmaktan farksız olurdu. İkisi faturanın koşullarını da sınıyor —
-  // KDV toplamı aşamaz, vade kabulün gününden önce olamaz (`invoiceTermsFrom`).
+  // Belgenin tarihi ve toplamı: bozuk tarih süzülür, çünkü geçirmek kabulü sessizce bugüne yazdırırdı. Toplam okunduysa fatura
+  // onayda kabule bağlı belge olarak doğar ve tedarikçi borcu ondan türer; koşulları `invoiceTermsFrom` sınar.
   const date = isIsoDay(args.date) ? String(args.date) : null;
   const totalAmountCents =
     Number.isInteger(args.totalAmountCents) && (args.totalAmountCents as number) >= 0 ? (args.totalAmountCents as number) : null;
@@ -1157,7 +964,7 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
           }
         : {}),
     ...(totalCheck ? { totalCheck } : {}),
-    // Faturanın belgesi (22.44): toplam ve tedarikçi varsa onayda kabule bağlı belge olarak doğar.
+    // Faturanın belgesi: toplam ve tedarikçi varsa onayda kabule bağlı belge olarak doğar.
     ...(payload.totalAmountCents === null
       ? {}
       : {
@@ -1181,8 +988,7 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   if (!accountName) return { error: 'accountName zorunlu (örn. "Kasa").' };
   if (!Number.isInteger(amountCents) || amountCents <= 0) return { error: 'amountCents pozitif tam sayı olmalı (cent).' };
   if (!['in', 'out'].includes(direction)) return { error: "direction 'in' | 'out' olmalı." };
-  // `purchase` KÜMEDEN ÇIKTI (22.5): stok alımı mal kabule bağlıdır, motor bağsız satırı
-  // `supply_link_missing` ile reddediyor — kuyruğa uygulanamayacak kalem yazmanın anlamı yok.
+  // `purchase` kümede yok: stok alımı mal kabule bağlıdır ve motor bağsız satırı reddeder (`supply_link_missing`).
   if (!['expense', 'transfer', 'capital', 'misc'].includes(type)) {
     return {
       error:
@@ -1194,11 +1000,7 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   const account = accounts.find((a) => a.name.toLowerCase().includes(accountName.toLowerCase()));
   if (!account) return { error: `Hesap bulunamadı: '${accountName}'. Mevcutlar: ${accounts.map((a) => a.name).join(' · ')}` };
 
-  // ── HEDEF HESAP DA ADLA ÇÖZÜLÜR (11.08 · alan denkliği taraması) ──────────
-  // Önce yalnız `counterAccountId` okunuyordu ve o alan araç girdisinde HİÇ TANIMLI DEĞİLDİ: kod
-  // hedefi bekliyor, model onu göndermeyi bilmiyordu. Sonuç sessiz — transfer önerisi kuruluyor,
-  // paranın nereye gittiği hep boş kalıyordu. Kaynağı adla bulup hedefi uuid'ye bağlamak zaten
-  // yarım bir kolaylıktı; ikisi de aynı listeden, aynı biçimde çözülüyor.
+  // Hedef hesap da kaynakla aynı listeden adla çözülür; model uuid bilmez.
   const counterName = typeof args.counterAccountName === 'string' ? args.counterAccountName.trim() : '';
   const counterAccount = counterName ? (accounts.find((a) => a.name.toLowerCase().includes(counterName.toLowerCase())) ?? null) : null;
   if (counterName && !counterAccount) {
@@ -1215,10 +1017,7 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
     };
   }
 
-  // ── TÜR SÖZLÜKTEN, ÖNERİ ANINDA DOĞRULANIR (22.42) ──────────────────────
-  // Bir tur serbest `category` kelimesiydi ve sözlükle ancak onay ekranında karşılaştırılıyordu:
-  // eşleşmeyince hareket türsüz açılıyor, giderde kaydet düğmesi kilitleniyordu. Kelime artık
-  // burada sözlükle eşlenir (`resolveNature`); tanınmayan kelime HATADIR.
+  // Tür öneri anında sözlükle eşlenir (`resolveNature`): onay ekranına kadar beklese türsüz hareket açılır, giderde kayıt kilitlenirdi.
   const natureWord = textArg(args.nature);
   if (natureWord && !acceptsNature(type as MoneyMovementPayload['type'])) {
     return { error: 'Transfer tür almaz — onu karşı hesap açıklar. nature alanını kaldırın.' };
@@ -1226,11 +1025,8 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   const { nature, error: natureError } = await resolveNature(db, natureWord, direction as MoneyMovementPayload['direction']);
   if (natureError) return { error: natureError };
 
-  // ── CARİ NOKTA ATIŞI (22.42 · kullanıcı kararı 14.09) ─────────────────────
-  // Kime ödendiği tam ad ya da eşleşme kelimesiyle bulunur (`resolveCounterparty`). Bulunamazsa öneri
-  // YİNE kurulur: ad kartta yazılı kalır, kimlik boş ve seçimi operatör yapar — fiş fotoğrafındaki
-  // "TotalEnergies" sözlükte yoksa bu bir hata değil, sözlüğe eklenecek yeni bir caridir. Tedarikçi bu
-  // tipte YOK (payload künyesi): mal bedelinin ödemesi tedarikçinin belgesine bağlanır (12.26).
+  // Kime ödendiği nokta atışı bulunur (`resolveCounterparty`); bulunamazsa öneri yine kurulur, ad kartta kalır — sözlüğe eklenecek
+  // yeni bir caridir. Tedarikçi bu tipte yok: mal bedelinin ödemesi tedarikçinin belgesine bağlanır.
   const counterpartyText = textArg(args.counterpartyName);
   const { counterparty, error: counterpartyError } = await resolveCounterparty(db, counterpartyText);
   if (counterpartyError) return { error: counterpartyError };
@@ -1265,7 +1061,7 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   };
 }
 
-/** Bulunamayan carinin notu — ad kartta kalır; para hareketi ve belge önerisinin (22.44) ortak cümlesi. */
+/** Bulunamayan carinin notu — ad kartta kalır; para hareketi ve belge önerisinin ortak cümlesi. */
 function counterpartyNoteOf(text: string): string {
   return `Cari bulunamadı: '${text}' — ad kartta duracak, kimliği yönetici seçer ya da Sözlük'ten açar. Tam adı ya da eşleşme kelimesini biliyorsanız onunla tekrar gönderin.`;
 }
@@ -1289,16 +1085,9 @@ function invoiceLineProblems(i: number, line: ResolvedInvoiceLine, known: boolea
 }
 
 /**
- * FATURADAN TEDARİK SİPARİŞİ (22.44 · kullanıcı kararı 14.09) — tedarikçi faturayı mal gelmeden kesti.
- *
- * Tipik vaka e-postayla önden gelen fatura: mal yolda, SKT ve lot henüz görülmedi. Mal kabul önerisi burada
- * YANLIŞ araçtır — SKT'siz kalem kabule giremez ve uydurulamaz. Sipariş onayda GÖNDERİLMİŞ açılır
- * (`sendPurchaseOrder`; tedarikçiye mesaj gitmez), fatura siparişe bağlı bir belge olarak doğar ve tedarikçi
- * borcu o belgeden türer; mal gelince rampa bu siparişi sayar, SKT ve lotu orada girer.
- *
- * Kalemler mal kabulle AYNI yoldan çözülür (`resolveInvoiceLines`): tedarikçinin adıyla eşlemeden; eşleme
- * yoksa modelin katalogda bulduğu varyant eşleme önerisi olur. Tedarikçi ZORUNLU — faturanın sahibi o. Aynı
- * numaralı fatura aynı tedarikçiye ikinci kez yazılmaz.
+ * Faturadan tedarik siparişi — tedarikçi faturayı mal gelmeden kesti; SKT ve lot henüz görülmediği için mal kabul yanlış araçtır.
+ * Sipariş onayda gönderilmiş açılır (tedarikçiye mesaj gitmez), fatura siparişe bağlı belge olarak doğar ve mal gelince rampa
+ * bu siparişi sayar; tedarikçi zorunlu, aynı numaralı fatura aynı tedarikçiye ikinci kez yazılmaz.
  */
 async function proposeInvoicePurchaseOrder(
   db: ReturnType<typeof serviceDb>,
@@ -1405,14 +1194,8 @@ async function proposeInvoicePurchaseOrder(
 }
 
 /**
- * BELGE ÖNERİSİ — mal dışı fatura ya da fiş (22.44 · kullanıcı kararı 14.09): kira, muhasebeci, sigorta,
- * telefon, akaryakıt fişi. Borç ŞİMDİ doğar; ödemesi sonra hareket olarak gelir ve belgeye bağlanır.
- *
- * Asistan belgeyi okur, araç okunanı DOĞRULAR: karşı taraf nokta atışı (tedarikçi faturadaki kimlikle, cari
- * tam ad ya da kelimeyle), tür sözlükten, rejim KDV'yle çelişmez, aynı numara aynı tarafa ikinci kez
- * yazılmaz. Mal faturası bu yoldan GİRMEZ: mal geldiyse mal kabul, gelmediyse faturadan sipariş — ikisi de
- * belgeyi stok bağıyla doğurur ve borç o bağla doğru okunur. Dosya MCP'den geçmez; yönetici onay ekranında
- * bırakır.
+ * Belge önerisi — mal dışı fatura ya da fiş (kira, muhasebeci, sigorta, akaryakıt); borç şimdi doğar, ödemesi sonra hareket
+ * olarak gelip belgeye bağlanır. Mal faturası bu yoldan girmez: mal kabul ya da faturadan sipariş belgeyi stok bağıyla doğurur.
  */
 export async function proposeMoneyDocument(args: Record<string, unknown>) {
   const db = serviceDb();
@@ -1429,10 +1212,7 @@ export async function proposeMoneyDocument(args: Record<string, unknown>) {
     return { error: 'amountCents belgenin yazdığı KDV dâhil toplam olmalı (cent, pozitif tam sayı).' };
   }
 
-  // ── KARŞI TARAF: TEDARİKÇİ YA DA CARİ, İKİSİ BİRDEN DEĞİL ─────────────────
-  // Belge kapısının kuralı (`createMoneyDocument`): karşı taraf en çok bir tanedir. Tedarikçi faturadaki
-  // kimlikle bulunur ve bulunamaması HATADIR; cari bulunamazsa ad kartta kalır — sözlüğe eklenecek yeni
-  // bir caridir.
+  // Karşı taraf en çok bir tanedir (`createMoneyDocument`): tedarikçi bulunamazsa hata, cari bulunamazsa ad kartta kalır.
   const counterpartyText = textArg(args.counterpartyName);
   const { supplier, error: supplierError } = await resolveSupplier(db, args);
   if (supplierError) return { error: supplierError };
@@ -1499,12 +1279,8 @@ export async function proposeMoneyDocument(args: Record<string, unknown>) {
 }
 
 /**
- * TEDARİKÇİ ÖNERİSİ — faturanın başlığından yeni kart (22.44 · kullanıcı kararı 14.09).
- *
- * Tedarikçiler hiçbir araçtan listelenmez (22.42); yeni biri yalnız bu yoldan girer. Araç kayıtlı bir
- * tedarikçiye NOKTA ATIŞI gitmediğini doğrular: aynı vergi no, telefon ya da tam adla kayıt varsa RET ve
- * kaydın adı söylenir — pasif kayıt da sayılır, ikinci kart borcu ikiye bölerdi. Kapı onayda bir kez daha
- * sorar (`saveSupplierAction`).
+ * Tedarikçi önerisi — faturanın başlığından yeni kart; tedarikçiler hiçbir araçtan listelenmediği için yeni biri yalnız buradan girer.
+ * Aynı vergi no, telefon ya da tam adla kayıt varsa (pasif de) ret ve kaydın adı söylenir, çünkü ikinci kart borcu ikiye bölerdi.
  */
 export async function proposeSupplierCreate(args: Record<string, unknown>) {
   const db = serviceDb();
@@ -1548,16 +1324,8 @@ export async function proposeSupplierCreate(args: Record<string, unknown>) {
 }
 
 /**
- * Paket taslağı önerisi — **payları MODEL DEĞİL MOTOR dağıtır.**
- *
- * Model kalemleri ve paketin tek fiyatını verir; kaleme düşen birim fiyatı `rebalanceAllocations`
- * hesaplar (liste fiyatlarına oransal — `DOMAIN §13`). Modele bıraksaydık toplamı tutmayan paylar
- * üretirdi ve mutabakat uygulama anında patlardı; üstelik "pahalı kalem indirimin çoğunu taşır"
- * kuralı da kaybolurdu.
- *
- * **Mutabakat tutmazsa öneri YİNE kurulur ama fark SÖYLENİR:** birim fiyatlar tam kuruş olduğu
- * için bazı hedefler matematiksel olarak tutturulamaz (motorun künyesi). Sessizce yuvarlamak,
- * faturayı bir kuruş kaydırıp kimsenin bulamayacağı bir fark bırakmak olurdu.
+ * Paket taslağı önerisi — model kalemleri ve tek fiyatı verir, payları motor dağıtır (`rebalanceAllocations`, liste fiyatlarına
+ * oransal), çünkü modelin payları toplamı tutturmaz. Tam kuruş yüzünden tutmayan hedefte öneri yine kurulur ama fark söylenir.
  */
 export async function proposeBundleDraft(args: Record<string, unknown>) {
   const db = serviceDb();
@@ -1605,8 +1373,7 @@ export async function proposeBundleDraft(args: Record<string, unknown>) {
 
   const payload: BundleDraftPayload = {
     name,
-    // Açıklama da ÜÇ DİL (11.08): araç yalnız Türkçesini alıyordu ve paket formunun fr/de kutuları
-    // hep boş açılıyordu. Paket müşteri yüzeyine çıkan bir kayıt — vitrini Fransa.
+    // Açıklama üç dilde: paket müşteri yüzeyine çıkar ve vitrin Fransa.
     description: localizedArg(args.description),
     totalPrice,
     serves: Number.isInteger(args.serves) ? (args.serves as number) : null,
@@ -1685,11 +1452,8 @@ export async function proposeDiscountDraft(args: Record<string, unknown>) {
     scopeName = resolveLocalizedText(found.name, 'tr');
   }
 
-  // Müşteri metni ÜÇ DİLDE beklenir ama TEK DİL de kabul edilir: eksik dili operatör formda
-  // tamamlar (çeviri düğmesi orada). **Hiç gelmezse öneri DOĞMAZ (26.08)** — etiketsiz indirim
-  // veritabanınca reddediliyor (`discount_public_label_filled`), yani böyle bir öneri kuyruğa
-  // düşse bile uygulanamazdı. Reddi buraya almak, operatörü uygulanamayacak bir öneriyi
-  // incelemekten kurtarıyor; hata mesajı da ajanın neyi eksik bıraktığını söylüyor.
+  // Müşteri metni tek dilde de kabul edilir, eksik dili operatör formda tamamlar; hiç gelmezse öneri doğmaz, çünkü etiketsiz
+  // indirimi veritabanı reddeder (`discount_public_label_filled`) ve kuyruğa uygulanamayacak kalem düşerdi.
   const publicLabel = localizedArg(args.publicLabel);
   if (!publicLabel) {
     return { error: 'publicLabel gerekli — müşterinin sepette okuyacağı ad. En az bir dil dolu olmalı.' };
@@ -1760,7 +1524,7 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
     description: localizedArg(args.description),
     steps,
     serves: localizedArg(args.serves),
-    // Üçü de tarif formunun kutusu (11.08): sorulmadıkları için boş kalıyorlardı.
+    // Süre, porsiyon ve öğün tarif formunun kutuları; sorulmazlarsa boş kalırlar.
     duration: localizedArg(args.duration),
     meal: localizedArg(args.meal),
     // "Evinizden" de MADDE listesi (ekran her satırın başına • basar) — adımlarla aynı kırpma.
@@ -1769,9 +1533,7 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
   };
 
   const langs = ['tr', name.fr ? 'fr' : null, name.de ? 'de' : null].filter(Boolean);
-  // Doldurulmayan kutular SAYILIR ve modele geri söylenir: tarif formunda karşılığı olan her alan
-  // boş kalırsa operatörün elle dolduracağı bir kutuya dönüşür. Model neyi atladığını görmeden
-  // düzeltemez — cevap "kuyruğa yazıldı" deyip susarsa eksik sessizce operatöre devrolur.
+  // Doldurulmayan kutular sayılıp modele söylenir: model neyi atladığını görmezse eksik sessizce operatöre devrolur.
   const blanks = (
     [
       ['description', payload.description],
@@ -1822,10 +1584,8 @@ export async function listProposals(limit: number) {
 }
 
 /**
- * Pozitif tam sayı ya da `null` — ambalaj ölçülerinin savunmacı okuması.
- *
- * Sıfır ve negatif de `null`'a düşer: "0 mm" bir ölçü değil, ölçülmemişliğin yanlış yazılmış
- * hâlidir (`CLAUDE §1`). Ondalık da düşer — alan milimetre ve gram, ikisi de tam sayı.
+ * Pozitif tam sayı ya da `null` — ambalaj ölçülerinin savunmacı okuması; sıfır ve negatif de `null`, çünkü "0 mm" ölçülmemişliğin
+ * yanlış yazılmış hâlidir. Ondalık da düşer: alan milimetre ve gram.
  */
 function pozitifTam(value: unknown): number | null {
   return Number.isInteger(value) && (value as number) > 0 ? (value as number) : null;
