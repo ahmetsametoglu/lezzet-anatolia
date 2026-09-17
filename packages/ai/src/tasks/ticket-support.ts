@@ -8,35 +8,10 @@ import {
 import type { AiTask } from '../types';
 
 /**
- * **MÜŞTERİ DESTEĞİ GÖREVLERİ** (16.5 · 20.4) — hibrit taslak (sınıf 1) ve özerk ajan (sınıf 4).
- *
- * ── TİCARİ DEĞER İKİ YOLDAN GELİR: GİRDİ VE ARAÇ ────────────────────────────
- * Sınıf 4'ün kırmızı çizgisi "stok/fiyat/durum domain-core'dan" (20 §sınıflar) ve iki mekanizmayla
- * korunuyor:
- *  1. **Kapalı girdi** — talebin kendi bağlamı (sipariş durumu, teslim günü, kalemler, ödeme)
- *     uygulama katmanında deterministik okunup girdiye yazılır. Girdide olmayan sayı cevapta olamaz.
- *  2. **Dar araç seti** (16.9) — girdiye önceden yazılamayacak sorular için: müşteri "hangi günler
- *     geliyorsunuz" diye sorabilir ve bunun cevabı talebin bağlamında DEĞİL, adresinin bölgesinde
- *     durur. Bu bir zayıflama değil kapsam genişlemesi: araçlar salt okur, kimlikleri çağıran
- *     kapatır, gövdeleri yine domain-core motorlarına dayanır (`ticket/support-tools.ts` künyesi).
- *
- * **Fiziksel engel ilkesi araçla birlikte yer değiştirdi ve bunu bilerek yazıyorum:** eskiden
- * "girdide yok, o hâlde soramaz" idi; artık "yalnız beyaz listedeki araçlar var, kimlik argüman
- * değil kapanış, adım tavanı sonlu". Modelin uydurmasını ENGELLEYEN şey hâlâ prompt değil, yüzeyin
- * kendisi.
- *
- * ── İKİ GÖREV NEDEN AYRI ────────────────────────────────────────────────────
- * Taslak operatöre yazar (onaysız hiçbir şey gitmez), ajan MÜŞTERİYE yazar (onay yok). Aynı prompt
- * ikisine birden hizmet edemez: taslak "emin değilsen operatörün dolduracağı boşluğu bırak"
- * diyebilir, ajan "emin değilsen SUS ve devret" demek zorunda. Riskleri farklı, talimatları ayrı.
- *
- * ── CEVAP DİLİ TÜRKÇE ───────────────────────────────────────────────────────
- * Personel cevabıyla aynı yoldan gider: müşteri kendi dilinde OKUR, çeviri sistemin işidir —
- * talepte 20.2'nin kuyruğu (`translate_user_text`, iki yönlü), sohbette gönderim kapısı
- * (`sendOutboundMessage`, 15.28: gönderimden ÖNCE çevirir, müşteriye giden metni deftere yazar).
- * Modelden müşteri dilinde yazmasını istemek çeviri kuralını ikinci bir yerde, denetimsiz
- * yaşatmak olurdu; üstelik operatör ajanın ne dediğini Türkçe okumak zorunda — Türkçe yazılıp
- * çevrilen cevap iki ihtiyacı tek turda karşılıyor.
+ * Müşteri desteği görevleri — hibrit taslak (operatöre yazar) ve özerk ajan (müşteriye yazar) ayrı talimat taşır, çünkü riskleri
+ * farklı; ticari gerçek girdiye yazılan talep bağlamından ya da salt okur, kimliği kapatılmış dar araç setinden gelir
+ * (`ticket/support-tools.ts`). Cevap Türkçe yazılır: müşteri kendi dilinde okur, çeviri gönderim kapısının işidir ve operatör
+ * ajanın ne dediğini Türkçe okur.
  */
 
 /** Yazışmanın bir satırı — kim söyledi, ne söyledi. Kimlik yok, ad yok: modele kimlik gitmez. */
@@ -46,30 +21,19 @@ export interface SupportMessageInput {
 }
 
 /**
- * Görevin ortak bağlamı. Her alan UYGULAMANIN doğruladığı gerçektir; model bunların dışına çıkamaz.
- * `order: null` = talep siparişsiz — model sipariş hakkında hiçbir şey söyleyemez.
+ * Görevin ortak bağlamı — her alan uygulamanın doğruladığı gerçektir, model bunların dışına çıkamaz; `order: null` talep
+ * siparişsiz demektir ve model sipariş hakkında bir şey söyleyemez.
  */
 export interface SupportContextInput {
   /**
-   * Konuşmanın geçtiği yüzey. Sosyal kanallar `ConversationSource`tan TÜRER, elle sayılmaz (15.15):
-   * dördüncü bir kanal eklendiği gün bu tip kendiliğinden büyür ve prompt'un eşlemesi derlemede
-   * kırılır — sessizce yanlış kanal adı söyleyen bir ajan yerine durmuş bir derleme.
-   *
-   * Kanal adı modele SÖYLENİYOR çünkü müşteri onu görüyor: "WhatsApp'tan yazdığınız için…" gibi bir
-   * cümle Messenger'da yanlış olur. 21.08'e kadar konuşma yolu sabit `'whatsapp'` geçiyordu ve
-   * Messenger'dan yazan müşteriye ajan WhatsApp diyordu.
+   * Konuşmanın geçtiği yüzey — modele söylenir, çünkü müşteri kanalı görür ("WhatsApp'tan yazdığınız için" Messenger'da yanlıştır).
+   * Sosyal kanallar `ConversationSource`tan türer: yeni kanal eklendiğinde prompt eşlemesi derlemede kırılır.
    */
   channel: 'ticket' | ConversationSource;
   /**
-   * İşletmenin DEĞİŞMEYEN künyesi — ARAÇ DEĞİL, GİRDİ.
-   *
-   * Statik bilgi için araç açmak, hiç değişmeyen bir veriyi her soruda bir tur attırmaktı: araç
-   * çağrısı gecikme ve jeton demek, karşılığında da hep aynı iki satır. Ayrım net — **değişen şey
-   * araca, değişmeyen şey girdiye**: fiyat ve rota günü araçtan gelir (bugün başka, yarın başka),
-   * WhatsApp numarası prompt'a yazılır.
-   *
-   * Değerler `@lezzet/brand`ten UYGULAMA katmanında doldurulur; bu paket marka sabitini bilmez
-   * (bağımlılık tek yönlü — `@lezzet/ai` taşımasız bir görev kütüphanesidir).
+   * İşletmenin değişmeyen künyesi — araç değil girdi: değişen şey (fiyat, rota günü) araca, değişmeyen şey girdiye gider, yoksa
+   * her soru aynı iki satır için bir araç turu öderdi. Değerler `@lezzet/brand`ten uygulama katmanında doldurulur, bu paket
+   * markayı bilmez.
    */
   business: {
     /** Okunaklı biçim ("+33 (0)6 …") — müşteriye söylenecek hâli; makine biçimi burada işe yaramaz. */
@@ -77,21 +41,14 @@ export interface SupportContextInput {
     email: string;
   };
   /**
-   * **Bekleyen kimlik sorusu** (04.10, DOMAIN §10) — yoksa alan hiç verilmez.
-   *
-   * Uzun sessizlik sonrası dönüşte ya da taşıyıcı "ulaşamadım" dediğinde, geçmişe açılan kapılar
-   * kapanır ve müşteriden çapasını göstermesi istenir. **Bu alan yalnız SORUYU taşır, kapıyı
-   * DEĞİL:** kapı araç setinin verilip verilmemesiyle kapanıyor (uygulama katmanı), yani model bu
-   * satırı yok saysa bile geçmişi okuyamaz. Prompt'a güvenerek kurulan bir kapı, kapı değildir.
-   *
-   * `email` → kod müşterinin posta kutusuna GÖNDERİLDİ, sohbete geri yazması istenecek.
-   * `code`  → e-posta bağlamamış müşteri; elindeki 6 haneli güvenlik kodunu yazması istenecek.
+   * Bekleyen kimlik sorusu (DOMAIN §10) — yoksa alan hiç verilmez; alan yalnız soruyu taşır, geçmişe açılan kapıyı araç setinin
+   * verilmemesi kapatır, yani model satırı yok saysa da geçmişi okuyamaz.
+   * `email` → kod posta kutusuna gönderildi, sohbete yazması istenir · `code` → e-postasız müşteri, elindeki 6 haneli kodu yazar.
    */
   identity?: { ask: 'email' | 'code' };
   /**
-   * **Karşılamayı sistem veriyor** (10.09) — cevabın başına deterministik tanıtım cümlesi eklenecek
-   * (selam + "yapay zekâ asistanıyım", uygulama katmanının beyanı). Model selam vermez ve kendini
-   * tanıtmaz; vermeseydik iki "Merhaba" üst üste giderdi. Beyan eklenmeyecekse alan hiç verilmez.
+   * Karşılamayı sistem verir — cevabın başına deterministik tanıtım cümlesi eklenir (selam + "yapay zekâ asistanıyım");
+   * model selam vermez, yoksa iki "Merhaba" üst üste giderdi. Beyan eklenmeyecekse alan hiç verilmez.
    */
   greeting?: true;
   /** Yazışma, ESKİDEN YENİYE. Uygulama katmanı kırpar (son N mesaj) — sınır kapıda, prompt'ta değil. */
@@ -110,27 +67,13 @@ export interface SupportContextInput {
 /** İşletmenin değişmeyen kimliği — iki görevin ortak ilk cümlesi. */
 const IDENTITY =
   "Strazburg'da Türk mutfağından donmuş gıda satan bir e-ticaret işletmesinin müşteri destek hattındasın. Müşteriler B2C (ev) ve B2B (restoran/dükkân) olabilir. " +
-  // Kullanıcı kararı 22.08: mağaza YOK. Bilgi olarak veriliyor ki ajan devretmek yerine
-  // CEVAPLASIN — devir, bilinmeyen sorular içindir; bu soru artık biliniyor.
+  // Mağaza yok; bilgi olarak verilir ki ajan bilinen bir soruyu devretmek yerine cevaplasın.
   'Fiziksel mağaza, şube ya da gel-al noktası YOK: ürünler kapıya teslim edilir ya da kargoyla gönderilir.';
 
 /**
- * İki görevin ortak dil/üslup kuralları.
- *
- * ── BİÇİMLENDİRME KANALA GÖRE DALLANMIYOR — VE BU BİLİNÇLİ (06.09) ──────────
- * İlk tasarım "WhatsApp'ta yıldız kullan, talepte kullanma" diye prompt'u dallandırmaktı.
- * Vazgeçildi: bu, modelin unutabileceği ya da yanlış kanalda uygulayabileceği bir TALİMAT olurdu
- * ve arıza sessiz olurdu (müşteri düz metin içinde yıldız görür). Bunun yerine model HER ZAMAN
- * biçimlendirilmiş yazıyor, kanal kararı **gönderim/çizim sınırında** deterministik veriliyor
- * (`stripChatFormatting`): WhatsApp'ta işaretler geçer, Messenger/IG ve talepte sökülür.
- *
- * Kazancı ileriye dönük: talep ekranı biçimlendirmeyi çizmeyi öğrendiği gün sökme yerini çizmeye
- * bırakır ve **bu prompt'a hiç dokunulmaz**. Kural yüzeyde durduğu için de model onu çiğneyemez —
- * "modelin uydurmasını engelleyen şey prompt değil, yüzeyin kendisi" (`support-tools` künyesi).
- *
- * ── UZUNLUK ÖLÇÜLEBİLİR OLMALI ──────────────────────────────────────────────
- * Eskiden yalnız "kısa ve net" yazıyordu ve ölçülemezdi; ölçülen ilk gerçek cevap dört uzun cümle,
- * ~380 karakterdi. Mesajlaşmada bu uzun: müşteri telefonda okuyor. Sayı verildi.
+ * İki görevin ortak dil/üslup kuralları — biçimlendirme kanala göre dallanmaz: model her zaman biçimli yazar, kanal kararı
+ * gönderim sınırında deterministik verilir (`stripChatFormatting`), çünkü kanala göre talimat unutulabilir ve arıza sessiz olurdu.
+ * Uzunluk sayıyla verilir, çünkü "kısa ve net" ölçülemez ve müşteri telefonda okur.
  */
 const STYLE = `ÜSLUP:
 - TÜRKÇE yaz — müşteri kendi dilinde okur, çeviriyi sistem yapar; sen dil seçme. Bağlamda kendi eski mesajların da Türkçe görünür ama müşteri onları KENDİ dilinde okudu; "anlamadım" bir dil sorunu değildir, cümlenin sorunudur.
@@ -165,13 +108,8 @@ const FACTS = `GERÇEKLİK KURALLARI:
 - YAPMADIĞIN HİÇBİR İŞLEMİ YAPILMIŞ GİBİ ANLATMA — kayıt, abonelik, iptal, güncelleme, rezervasyon. Elinde o işlemi yapan bir araç yoksa işlem OLMAMIŞTIR; "ilettim/kaydettim" demek yerine müşterinin kendi yapabileceği yolu söyle ya da yetkiliye devret.`;
 
 /**
- * Araç kuralları (16.9) — **araç verilmediğinde de zararsız**, çünkü hepsi "araç varsa" diye
- * kurulu. İki metni ayırmak (araçlı/araçsız iki prompt) aynı kuralların iki kopyası olurdu ve biri
- * güncellenmeyi unuturdu (CLAUDE §1).
- *
- * Kuralların hepsi tek cümleye çıkıyor: **araç GERÇEĞİN kaynağıdır, ilhamın değil.** Model aracı
- * çağırmadan gün söylerse uydurmuş olur; araç `bilinmiyor` derken gün söylerse aracı ezmiş olur.
- * İkisi de yasak ve ikisi de ayrı ayrı yazılı — "dikkatli ol" demek bir kural değildir.
+ * Araç kuralları — araç verilmediğinde de zararsız, çünkü hepsi "araç varsa" diye kurulu; iki ayrı prompt aynı kuralların iki
+ * kopyası olurdu. Araç gerçeğin kaynağıdır: çağırmadan gün söyleyen model uydurur, araç `bilinmiyor` derken gün söyleyen onu ezer.
  */
 const TOOLS = `ARAÇLAR:
 - Teslimat günü, rota günü, "ne zaman gelirsiniz" sorularında teslimat_gunleri aracını ÇAĞIR. Tahmin etme.
@@ -289,11 +227,8 @@ export const ticketAgentTask: AiTask<SupportContextInput, TicketAgentDecision> =
 };
 
 /**
- * Kanalın modele söylenen adı. `Record` KİLİTTİR: `ConversationSource` büyüdüğünde eksik anahtar
- * derlemeyi durdurur — kanal adı sessizce yanlış söylenmez (`SupportContextInput.channel` künyesi).
- *
- * Talep kanalının parantezi bilinçli: müşteri cevabı e-postadan okuyacak, yani ajan "hemen
- * dönüyoruz" derken sohbet hızını değil posta hızını vaat ediyor.
+ * Kanalın modele söylenen adı — `Record` eksik anahtarı derlemede durdurur. Talep kanalının parantezi bilinçli: müşteri cevabı
+ * e-postadan okur, ajan sohbet hızını değil posta hızını vaat eder.
  */
 const CHANNEL_LABELS: Record<'ticket' | ConversationSource, string> = {
   ticket: 'destek talebi (e-posta ile bildirilir)',
@@ -303,18 +238,9 @@ const CHANNEL_LABELS: Record<'ticket' | ConversationSource, string> = {
 };
 
 /**
- * **Kimlik sorusunun modele söylenen hâli** (04.10) — DOMAIN §10.
- *
- * ── SUÇLAMA YOK, KAPI YOK, SORU VAR ─────────────────────────────────────────
- * Boşluğun kendisi teşhis değildir: yılda bir bayramda sipariş veren sadık müşteri ile devredilmiş
- * hat aynı şekli üretir. Bu yüzden metin *"kimliğinizi doğrulayın"* demiyor, *"teyit alalım"* diyor
- * ve sipariş almayı hiçbir yerde durdurmuyor — cevaplanamayan dönüşte kaybedilen tek şey geçmişe
- * erişimdir.
- *
- * ── AJAN GEÇMİŞİ SÖYLEMEZ, SORAR ────────────────────────────────────────────
- * *"Her zamanki adrese mi göndereyim?"* sızıntının kendisidir — soru gibi görünür, cevabı ele verir.
- * Model bu hâldeyken zaten araçsız koşuyor (geçmişi okuyamaz); metin de ona neyi söylememesi
- * gerektiğini açıkça yazıyor, çünkü yazışmanın içinde geçmişten izler kalmış olabilir.
+ * Kimlik sorusunun modele söylenen hâli (DOMAIN §10) — boşluk teşhis değildir (bayramda bir sipariş veren sadık müşteri de aynı
+ * izi bırakır), bu yüzden metin suçlamaz, "teyit alalım" der ve sipariş almayı durdurmaz. Ajan geçmişi söylemez, sorar: "her
+ * zamanki adrese mi?" sorusu cevabı ele verir ve yazışmada izler kalabildiği için metin bunu açıkça yasaklar.
  */
 const IDENTITY_ASK: Record<'email' | 'code', string> = {
   email:
@@ -328,8 +254,8 @@ const IDENTITY_ASK: Record<'email' | 'code', string> = {
 };
 
 /**
- * Karşılama sistemde (10.09) — beyan cümlesi selamla açılıyor; modelin kendi selamı ikinci
- * "Merhaba" olurdu. Talimat değil BAĞLAM: yalnız beyanın ekleneceği turda verilir.
+ * Karşılama sistemde — beyan selamla açılır, modelin selamı ikinci "Merhaba" olurdu.
+ * Talimat değil bağlam: yalnız beyanın ekleneceği turda verilir.
  */
 const GREETING_NOTE =
   'KARŞILAMA SİSTEMDE: cevabının başına sistem kısa bir selam ve tanıtım cümlesi ekliyor ("Merhaba! Ben … yapay zekâ asistanıyım …"). ' +
