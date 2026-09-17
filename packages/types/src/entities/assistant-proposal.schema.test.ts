@@ -22,6 +22,20 @@ describe('ProductDraftPayload — en az bir alan dolu', () => {
     expect(ProductDraftPayloadSchema.safeParse({ ...temel, fields: { allergens: ['gluten'] } }).success).toBe(true);
   });
 
+  /**
+   * Beyan olmayan künye ve boy da ALANDIR: gramajı okunmuş bir teklifin tek beyan taşımadığı için reddedilmesi,
+   * ürünün eksik boyunun elde kalması demekti.
+   */
+  it('yalnız künye ya da yalnız boy taşıyan teklif geçer', () => {
+    expect(ProductDraftPayloadSchema.safeParse({ ...temel, identity: { storageType: 'ambient' } }).success).toBe(true);
+    expect(
+      ProductDraftPayloadSchema.safeParse({
+        ...temel,
+        variants: [{ variantId: '88888888-8888-4888-8888-888888888888', variantLabel: '200 g', netWeightG: 200 }],
+      }).success,
+    ).toBe(true);
+  });
+
   /** `name` çok dilli ve kendi kuralını taşır — boş bir ad teklifi ALAN sayılmaz. */
   it('adı boş çok dilli metinle doldurmak geçmez', () => {
     expect(ProductDraftPayloadSchema.safeParse({ ...temel, fields: { name: { tr: '  ' } } }).success).toBe(false);

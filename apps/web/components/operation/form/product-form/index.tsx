@@ -195,23 +195,18 @@ export function useProductFormFields({
      * Saklama rejimi — soğuk zincirin kendisi; vitrinin soğuk zincir işaretini ve iade sonrası akıbeti belirler, kargo izninden ayrıdır.
      * Yan yana duruyorlar ki operatör ikisine birlikte karar versin.
      */
-    storage: (
-      <FormSelect
-        control={control}
-        name="storageType"
-        label="Saklama"
-        required
-        options={[
-          { value: 'ambient', label: 'Oda sıcaklığı' },
-          { value: 'chilled', label: 'Soğutulmuş (0–4 °C)' },
-          { value: 'frozen', label: 'Donuk (−18 °C)' },
-        ]}
-      />
-    ),
+    storage: <FormSelect control={control} name="storageType" label="Saklama" required options={STORAGE_TYPE_OPTIONS} />,
     autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
     margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,
   };
 }
+
+/** Rejimin ekrandaki karşılığı — sıcaklığı da yazar, "donuk" tek başına −18 demez. Onay kuyruğu da bu sözlükten okur. */
+export const STORAGE_TYPE_OPTIONS = [
+  { value: 'ambient', label: 'Oda sıcaklığı' },
+  { value: 'chilled', label: 'Soğutulmuş (0–4 °C)' },
+  { value: 'frozen', label: 'Donuk (−18 °C)' },
+];
 
 /** Sekme barı — ayrı dışa verilir, çünkü ürün diyaloğunda başlığa, kuyrukta panelin kendi satırına girer. */
 export function ProductFormTabs({ value, onChange }: { value: ProductFormTab; onChange: (tab: ProductFormTab) => void }) {

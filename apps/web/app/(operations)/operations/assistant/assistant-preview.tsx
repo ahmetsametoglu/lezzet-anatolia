@@ -24,6 +24,7 @@ import {
 } from '@lezzet/types';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
 import { FEATURED_SLOTS } from '@lezzet/types';
+import { STORAGE_TYPE_OPTIONS } from '@/components/operation/form/product-form';
 import { AlertIcon } from '@/components/operation/ui/icons';
 import { OPERATIONS_LOCALE } from '@/components/operation/ui/labels';
 import { money, num, percent, shortDate } from '@/components/operation/ui/format';
@@ -472,12 +473,15 @@ function ZonePreview({ payload }: { payload: ZoneExtendPayload }) {
  */
 function ProductDraftPreview({ payload }: { payload: ProductDraftPayload }) {
   const rows = declarationRows(payload.fields, payload.currentFields);
+  const kunye = identityRows(payload);
+  const boylar = sizeRows(payload);
   const currentKnown = payload.currentFields !== undefined;
 
   // Ezilen alanların adları (sayısı değil): operatör neyi kaybettiğini sorar. Alerjen ve besin künyesi tabloda değil
   // kendi bloklarında çizilir ama üzerine yazılıyorsa uyarı onları da sayar; boş alerjen listesi de bir beyandır.
   const overwritten = [
     ...rows.flatMap((r) => (r.overwrites ? [r.label] : [])),
+    ...kunye.flatMap((r) => (r.overwrites ? [r.label] : [])),
     ...(currentKnown && payload.fields.allergens && payload.currentFields?.allergens != null ? [DECLARATION_FIELD_LABEL.allergens!] : []),
     ...(currentKnown && payload.fields.nutrition && payload.currentFields?.nutrition
       ? [DECLARATION_FIELD_LABEL.nutrition!]
@@ -506,6 +510,31 @@ function ProductDraftPreview({ payload }: { payload: ProductDraftPayload }) {
       ) : null}
 
       <DeclarationBlocks fields={payload.fields} />
+
+      {/* Künye ve boy AYRI tablolarda: ikisinin de dili yok, beyan tablosunun "TR/FR/DE" hücresine girselerdi
+          okunmaz olurlardı. Boy satırı hangi boyun neyi alacağını söyler — kimlik değil ad yazılır. */}
+      {kunye.length > 0 ? (
+        <PreviewTable
+          columns={[
+            { key: 'alan', header: 'Künye', width: '118px', cell: (r) => r.label },
+            { key: 'now', header: 'Bugün', width: '1fr', cell: (r) => r.current },
+            { key: 'next', header: 'Yazılacak', width: '1fr', cell: (r) => r.next },
+          ]}
+          rows={kunye}
+          rowKey={(r) => r.key}
+        />
+      ) : null}
+
+      {boylar.length > 0 ? (
+        <PreviewTable
+          columns={[
+            { key: 'boy', header: 'Boy', width: '118px', cell: (r) => r.boy },
+            { key: 'yaz', header: 'Yazılacak', width: '1fr', cell: (r) => r.next },
+          ]}
+          rows={boylar}
+          rowKey={(r) => r.key}
+        />
+      ) : null}
 
       {overwritten.length > 0 ? (
         <PreviewNotice tone="amber" title="Üzerine yazılacak">
@@ -764,6 +793,62 @@ function declarationRows(
       },
     ];
   });
+}
+
+/**
+ * Künye değerinin okunur hâli — kapalı kümeler kendi sözlüğünden, kategori ADIYLA (uuid ekrana yazılmaz).
+ * `undefined` "eski hâl okunamadı", `null` "boştu" demektir ve ikisi ayrı cevaptır.
+ */
+function identityText(key: string, value: unknown, categoryName?: string | null): string {
+  if (value === undefined) return '?';
+  if (value === null) return '—';
+  if (key === 'categoryId') return categoryName ?? 'kategori atanmış';
+  if (key === 'shippable') return value ? 'açık' : 'kapalı';
+  if (key === 'storageType') return STORAGE_TYPE_OPTIONS.find((o) => o.value === value)?.label ?? String(value);
+  if (key === 'shelfLifeDays') return `${String(value)} gün`;
+  return String(value);
+}
+
+/** Künye satırları — beyandan ayrı çizilir çünkü dili yok; ölçüt aynı: dolu bir değerin üzerine yazmak geri alınamaz. */
+function identityRows(payload: ProductDraftPayload): DeclarationRow[] {
+  const current = payload.currentIdentity as Record<string, unknown> | undefined;
+  return Object.entries(payload.identity).flatMap(([key, value]) => {
+    if (key === 'categoryName' || value === undefined) return [];
+    const before = identityText(key, current === undefined ? undefined : current[key], payload.currentIdentity?.categoryName);
+    return [
+      {
+        key,
+        label: DECLARATION_FIELD_LABEL[key] ?? key,
+        current: before,
+        next: identityText(key, value, payload.identity.categoryName),
+        overwrites: before !== '?' && before !== '—',
+      },
+    ];
+  });
+}
+
+/** Boy satırının hangi alanının yazılacağı — ölçü birimleri adın içinde, çünkü "200" tek başına gram mı adet mi demez. */
+const SIZE_FIELD_LABEL: Record<string, string> = {
+  label: 'etiket',
+  netWeightG: 'gramaj (g)',
+  piecesCount: 'adet',
+  portionKind: 'porsiyon türü',
+  packedWeightG: 'kargo ağırlığı (g)',
+  packedLengthMm: 'uzunluk (mm)',
+  packedWidthMm: 'genişlik (mm)',
+  packedHeightMm: 'yükseklik (mm)',
+};
+
+/** Boy satırları — okunur ad dilekçede taşınır (`variantLabel`), kimlik ekrana çıkmaz. */
+function sizeRows(payload: ProductDraftPayload): { key: string; boy: string; next: string }[] {
+  return payload.variants.map((variant) => ({
+    key: variant.variantId,
+    boy: variant.variantLabel,
+    next: Object.entries(variant)
+      .filter(([key, value]) => key !== 'variantId' && key !== 'variantLabel' && value !== undefined)
+      .map(([key, value]) => `${SIZE_FIELD_LABEL[key] ?? key}: ${key === 'label' ? localizedSummary(value) : String(value)}`)
+      .join(' · '),
+  }));
 }
 
 /** Çok dilli metnin tek hücrelik özeti; metin değilse ya da boşsa `''` (satır hiç çizilmez). */

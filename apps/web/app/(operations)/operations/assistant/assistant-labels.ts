@@ -207,6 +207,7 @@ export const DECLARATION_FIELD_LABEL: Record<string, string> = {
   shelfLifeDays: 'Raf ömrü',
   vatRate: 'KDV',
   shippable: 'Kargo izni',
+  storageType: 'Saklama rejimi',
   variants: 'Boylar',
 };
 
@@ -225,12 +226,21 @@ export const DECLARATION_FIELD_LABEL: Record<string, string> = {
 export function draftFieldSummary(payload: {
   fields: Record<string, unknown>;
   currentFields?: Record<string, unknown>;
+  /** Beyan olmayan künye (kategori, tarih türü, raf ömrü, kargo izni, saklama rejimi) — aynı satırda sayılır, aynı riski taşır. */
+  identity?: Record<string, unknown>;
+  currentIdentity?: Record<string, unknown>;
+  variants?: readonly unknown[];
 }): { labels: string[]; overwrites: number | null } {
-  const written = Object.entries(payload.fields).filter(([, value]) => value !== undefined && value !== null);
+  const written = [
+    ...Object.entries(payload.fields),
+    // `categoryName` kimliğin okunur ikizidir; ayrı alan gibi sayılsaydı künyede "Kategori" iki kez yazardı.
+    ...Object.entries(payload.identity ?? {}).filter(([key]) => key !== 'categoryName'),
+  ].filter(([, value]) => value !== undefined && value !== null);
   const labels = written.map(([key]) => DECLARATION_FIELD_LABEL[key] ?? key);
+  if (payload.variants && payload.variants.length > 0) labels.push(`${payload.variants.length} boy`);
   if (!payload.currentFields) return { labels, overwrites: null };
 
-  const current = payload.currentFields;
+  const current = { ...payload.currentFields, ...(payload.currentIdentity ?? {}) };
   const overwrites = written.filter(([key]) => {
     const value = current[key];
     if (value === undefined || value === null) return false;

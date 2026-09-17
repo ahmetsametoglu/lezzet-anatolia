@@ -1,4 +1,12 @@
-import { AssistantProposalService, CategoryService, MoneyDocumentService, SupplierService, serviceDb } from '@lezzet/database';
+import {
+  AssistantProposalService,
+  CategoryService,
+  MoneyDocumentService,
+  ProductService,
+  ProductVariantService,
+  SupplierService,
+  serviceDb,
+} from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { APPLIERS, KIND_META, amountCentsOf, applyProposal, impactOf, modeOf, type ProposalMode } from '@lezzet/application';
 import {
@@ -9,6 +17,7 @@ import {
   resolveLocalizedText,
   type FeaturedFlagPayload,
   type MoneyDocumentPayload,
+  type ProductDraftPayload,
   type SupplierCreatePayload,
 } from '@lezzet/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -26,6 +35,7 @@ const db = serviceDb();
 const proposals = new AssistantProposalService(db);
 const stamp = Date.now();
 const created: string[] = [];
+const createdProducts: string[] = [];
 let categoryId: string;
 
 beforeAll(async () => {
@@ -34,7 +44,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { assistantProposalIds: created, categoryIds: [categoryId] });
+  await purgeTestData(db, { assistantProposalIds: created, categoryIds: [categoryId], productIds: createdProducts });
 });
 
 /** Damgalı öneri — küresel sayıya bakmadan kendi satırlarımızı izleyebilmek için. */
@@ -126,6 +136,50 @@ describe('uygulama — normal servis yolundan', () => {
 
     expect(failed.status).toBe('failed');
     expect(failed.error).toContain('motor reddetti');
+  });
+});
+
+describe('ürün künyesi dilekçesi', () => {
+  /**
+   * Dilekçe var olan boyu TAMAMLAR, listeyi yeniden yazmaz. Uygulama varyantları `syncVariants` ile yazsaydı
+   * dilekçede geçmeyen boy silinirdi: tek onay, ürünün öteki boylarını (ve onlara bağlı fiyat/stoku) götürürdü.
+   */
+  it('boy kimlikle güncellenir, öteki boy yerinde kalır; künye ürüne yazılır', async () => {
+    const products = new ProductService(db);
+    const { product, variants } = await products.create({
+      name: { tr: `Künye testi ${stamp}` },
+      variants: [{ label: { tr: '200 g' } }, { label: { tr: '500 g' }, netWeightG: 500 }],
+    });
+    createdProducts.push(product.id);
+    const [bos, oteki] = variants;
+
+    const payload: ProductDraftPayload = {
+      productId: product.id,
+      productName: `Künye testi ${stamp}`,
+      fields: {},
+      identity: { storageType: 'ambient', shelfLifeDays: 180 },
+      variants: [{ variantId: bos!.id, variantLabel: '200 g', netWeightG: 200 }],
+      uncertainFields: [],
+      remainingGaps: [],
+    };
+    const row = await proposals.create({
+      kind: 'product_draft',
+      payload,
+      summary: `Künye testi ${stamp} — boy + künye`,
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      sourceSession: `test-${stamp}`,
+    });
+    created.push(row.id);
+    await applyProposal(db, (await proposals.claimForApply(row.id, null as unknown as string))!);
+
+    const sonrasi = await new ProductVariantService(db).listByProducts([product.id]);
+    expect(sonrasi).toHaveLength(2);
+    expect(sonrasi.find((v) => v.id === bos!.id)?.netWeightG).toBe(200);
+    expect(sonrasi.find((v) => v.id === oteki!.id)?.netWeightG).toBe(500);
+    // Künye ürünün kendi satırına gitti: rejim yazılmasaydı ürün kolonun varsayılanıyla DONUK kalırdı.
+    const guncel = await products.getById(product.id);
+    expect(guncel?.storageType).toBe('ambient');
+    expect(guncel?.shelfLifeDays).toBe(180);
   });
 });
 
@@ -434,17 +488,31 @@ describe('alan denkliği — dilekçedeki her alan ya modelden gelir ya gerekçe
     product_draft: {
       productName: 'ürün kaydından okunur',
       fields: 'araçta düz alanlar olarak sorulur (name · description · ingredients · …)',
+      identity: 'araçta düz alanlar olarak sorulur (categoryName · dateType · shelfLifeDays · shippable · storageType)',
       currentFields: 'ALANLARIN BUGÜNKÜ HÂLİ — veritabanından, üzerine yazılanı göstermek için',
+      currentIdentity: 'KÜNYENİN BUGÜNKÜ HÂLİ — veritabanından, aynı gerekçe',
       remainingGaps: 'tamlık ölçütü MOTORDAN',
     },
     discount_draft: { categoryId: 'scopeName ile bulunur', collectionId: 'scopeName ile bulunur' },
     recipe_draft: { items: 'kalem listesi araçta var; ad ve boy katalogdan yazılır' },
   };
 
+  /**
+   * Şemanın alan listesi — kuralını `.refine` ile taşıyan şemada (ör. "en az bir alan dolu") alanlar bir sarmalın
+   * altında durur. Sarmal açılmazsa liste boş gelir ve test hiçbir şey ölçmeden yeşil kalırdı.
+   */
+  function shapeOf(schema: unknown): Record<string, unknown> {
+    let current = schema as { shape?: Record<string, unknown>; _def?: { schema?: unknown } };
+    while (current._def?.schema && !current.shape) current = current._def.schema as typeof current;
+    const shape = current.shape;
+    expect(shape, 'şemanın alan listesi okunamadı — sarmal açılmıyor').toBeTruthy();
+    return shape ?? {};
+  }
+
   for (const kind of Object.keys(PROPOSAL_PAYLOAD_SCHEMAS)) {
     it(`${kind}: modele sorulmayan her alanın gerekçesi var`, () => {
       const schema = PROPOSAL_PAYLOAD_SCHEMAS[kind as keyof typeof PROPOSAL_PAYLOAD_SCHEMAS];
-      const payloadFields = Object.keys((schema as unknown as { shape: Record<string, unknown> }).shape);
+      const payloadFields = Object.keys(shapeOf(schema));
 
       const tool = TOOLS.find((t) => t.name === `propose_${kind}`);
       expect(tool, `propose_${kind} aracı yok`).toBeTruthy();

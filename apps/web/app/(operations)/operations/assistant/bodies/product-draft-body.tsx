@@ -51,9 +51,12 @@ import { DECLARATION_FIELD_LABEL } from '../assistant-labels';
  * okunurdu. Eski değer de görünür kalıyor: rozetin ipucunda değil, `ProposalAside`ın künyesinde.
  */
 
-/** Dilekçenin dokunabildiği alanlar — `filled` işareti ve künye bu sırayla okunur. */
+/** Dilekçenin dokunabildiği BEYAN alanları — `filled` işareti ve künye bu sırayla okunur. */
 const DRAFT_FIELDS = ['name', 'description', 'ingredients', 'storageInstructions', 'allergens', 'traces', 'nutrition'] as const;
 type DraftField = (typeof DRAFT_FIELDS)[number];
+
+/** Beyan olmayan künye alanları; `categoryName` forma girmez, kartın okunur karşılığıdır. */
+const IDENTITY_FIELDS = ['categoryId', 'dateType', 'shelfLifeDays', 'shippable', 'storageType'] as const;
 
 /**
  * Formun açılış değeri: ürünün bugünkü hâli + asistanın önerisi.
@@ -68,13 +71,37 @@ export function productDraftValuesFrom(payload: ProductDraftPayload, product: Pr
   for (const key of DRAFT_FIELDS) {
     if (written[key] !== undefined) patch[key] = written[key];
   }
+  // Künyede de kural aynı: yalnız GELEN alan yazılır, kalanı kaydın bugünkü hâliyle kalır.
+  for (const key of IDENTITY_FIELDS) {
+    const value = payload.identity[key];
+    if (value !== undefined) patch[key] = value;
+  }
+  /*
+    Boy satırı KİMLİKLE eşleşir; liste yeniden YAZILMAZ. Form varyantların tamamını kaydediyor ve
+    eksik gelen satır siliniyor (`syncVariants`): dilekçeden gelen listeyi olduğu gibi koymak, tek
+    onayla ürünün öteki boylarını götürürdü.
+  */
+  if (payload.variants.length > 0) {
+    const edits = new Map(payload.variants.map((v) => [v.variantId, v]));
+    patch.variants = base.variants.map((row) => {
+      const edit = row.id ? edits.get(row.id) : undefined;
+      if (!edit) return row;
+      // Kimlik ve okunur ad forma girmez: satırın kendi kimliği zaten var, ad kartın işi.
+      const patch = Object.entries(edit).filter(([key, value]) => key !== 'variantId' && key !== 'variantLabel' && value !== undefined);
+      return { ...row, ...Object.fromEntries(patch) };
+    });
+  }
   return { ...base, ...patch } as ProductFormValues;
 }
 
 /** Asistanın DOKUNDUĞU alanlar — kutu başlıklarındaki rozet bundan çıkar. */
 function productDraftFilled(payload: ProductDraftPayload): ReadonlySet<keyof ProductFormValues> {
   const written = payload.fields as Partial<Record<DraftField, unknown>>;
-  return new Set(DRAFT_FIELDS.filter((key) => written[key] !== undefined) as Array<keyof ProductFormValues>);
+  return new Set([
+    ...DRAFT_FIELDS.filter((key) => written[key] !== undefined),
+    ...IDENTITY_FIELDS.filter((key) => payload.identity[key] !== undefined),
+    ...(payload.variants.length > 0 ? (['variants'] as const) : []),
+  ] as Array<keyof ProductFormValues>);
 }
 
 /**
@@ -133,6 +160,7 @@ const CREATE_FIELDS = [
   'dateType',
   'shelfLifeDays',
   'shippable',
+  'storageType',
   'ingredients',
   'storageInstructions',
   'nutrition',

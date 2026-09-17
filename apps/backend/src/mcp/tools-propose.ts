@@ -61,6 +61,7 @@ import {
   type MoneyMovementPayload,
   type ProductCreatePayload,
   type ProductDraftPayload,
+  type ProductIdentityPayload,
   type PurchaseOrderPayload,
   type RecipeDraftPayload,
   type StockIntakePayload,
@@ -140,7 +141,10 @@ async function resolveSupplier(
   };
 }
 
-/** Pozitif tam sayı argümanı; verilmediyse ya da anlamsızsa `null` ("sınır yok"). */
+/**
+ * Pozitif tam sayı argümanı; verilmediyse ya da anlamsızsa `null`. Sıfır ve negatif de `null`, çünkü "0 mm" ölçülmemişliğin
+ * yanlış yazılmış hâlidir; ondalık da düşer, alanlar milimetre ve gram.
+ */
 function positiveIntArg(raw: unknown): number | null {
   return Number.isInteger(raw) && (raw as number) > 0 ? (raw as number) : null;
 }
@@ -565,9 +569,119 @@ function readUncertain(args: Record<string, unknown>): string[] {
   return Array.isArray(args.uncertainFields) ? args.uncertainFields.map((f) => String(f)).filter(Boolean) : [];
 }
 
+/** Tarih türü — kapalı küme; kümenin dışındaki değer sessizce DDM'ye düşmez, çünkü DLC geçince ürün imha edilir. */
+function dateTypeArg(value: unknown): 'DLC' | 'DDM' | null {
+  const upper = String(value ?? '').toUpperCase();
+  return upper === 'DLC' || upper === 'DDM' ? upper : null;
+}
+
+/** Saklama rejimi — kapalı küme; `shippable` ile aynı cümleden okunur ama iade/imha kuralını bu belirler. */
+function storageTypeArg(value: unknown): 'ambient' | 'chilled' | 'frozen' | null {
+  return value === 'ambient' || value === 'chilled' || value === 'frozen' ? value : null;
+}
+
+/** Kategori ADLA bulunur; bulunamazsa mevcutlar yazılır ki model doğrusunu seçebilsin. */
+async function pickCategory(name: unknown): Promise<{ category: { id: string; name: string } | null } | { error: string }> {
+  const wanted = textArg(name);
+  if (!wanted) return { category: null };
+  const categories = await new CategoryService(serviceDb()).list({ activeOnly: true });
+  const found = categories.find((c) => resolveLocalizedText(c.name, 'tr').toLowerCase().includes(wanted.toLowerCase()));
+  if (!found) {
+    return {
+      error: `Kategori bulunamadı: '${wanted}'. Mevcutlar: ${categories.map((c) => resolveLocalizedText(c.name, 'tr')).join(' · ')}`,
+    };
+  }
+  return { category: { id: found.id, name: resolveLocalizedText(found.name, 'tr') } };
+}
+
+/**
+ * Beyan OLMAYAN künye argümanları — kategori, tarih türü, raf ömrü, kargo izni, saklama rejimi. Verilmeyen alan hiç
+ * yazılmaz; kapalı kümenin dışındaki değer sessizce düşmez, hata döner: yanlış rejim ürünün imha kuralını değiştirir.
+ */
+async function readIdentity(args: Record<string, unknown>): Promise<{ identity: ProductIdentityPayload } | { error: string }> {
+  const identity: ProductIdentityPayload = {};
+  const picked = await pickCategory(args.categoryName);
+  if ('error' in picked) return picked;
+  if (picked.category) {
+    identity.categoryId = picked.category.id;
+    identity.categoryName = picked.category.name;
+  }
+  if (args.dateType !== undefined) {
+    const dateType = dateTypeArg(args.dateType);
+    if (!dateType) {
+      return { error: "dateType 'DLC' | 'DDM' olmalı. DLC = güvenlik tarihi (geçince imha), DDM = kalite tarihi (geçince hâlâ satılabilir)." };
+    }
+    identity.dateType = dateType;
+  }
+  if (args.shelfLifeDays !== undefined) {
+    const days = positiveIntArg(args.shelfLifeDays);
+    if (days === null) return { error: 'shelfLifeDays pozitif tam sayı olmalı — ambalajdaki toplam raf ömrü, gün.' };
+    identity.shelfLifeDays = days;
+  }
+  if (args.shippable !== undefined) {
+    if (typeof args.shippable !== 'boolean') return { error: 'shippable true/false olmalı — emin değilsen hiç verme.' };
+    identity.shippable = args.shippable;
+  }
+  if (args.storageType !== undefined) {
+    const storageType = storageTypeArg(args.storageType);
+    if (!storageType) return { error: "storageType 'ambient' | 'chilled' | 'frozen' olmalı — ambalajın saklama sıcaklığından." };
+    identity.storageType = storageType;
+  }
+  return { identity };
+}
+
+/**
+ * Var olan boyların künyesi — satır KİMLİKLE eşleşir ve kimliğin kaynağı okuma araçlarıdır (`catalog_lookup` ·
+ * `product_detail`). Başka ürünün boyu ya da uydurma kimlik reddedilir: dilekçe ürünün kendi listesini tamamlar.
+ */
+async function readVariantEdits(
+  args: Record<string, unknown>,
+  productId: string,
+): Promise<{ variants: ProductDraftPayload['variants'] } | { error: string }> {
+  const raw = Array.isArray(args.variants) ? args.variants : [];
+  if (raw.length === 0) return { variants: [] };
+
+  const own = await new ProductVariantService(serviceDb()).listByProducts([productId]);
+  const adByaId = new Map(own.map((v) => [v.id, resolveLocalizedText(v.label, 'tr') || 'etiketsiz']));
+  const liste = [...adByaId].map(([id, ad]) => `${id} (${ad})`).join(' · ');
+  const variants: ProductDraftPayload['variants'] = [];
+
+  for (const [i, entry] of raw.entries()) {
+    const row = (entry ?? {}) as Record<string, unknown>;
+    const variantId = textArg(row.variantId) ?? '';
+    const variantLabel = adByaId.get(variantId);
+    if (!variantLabel) return { error: `variants[${i}].variantId bu ürünün boyu değil. Ürünün boyları: ${liste}` };
+
+    const label = localizedArg(row.label);
+    const olcu: Record<string, number> = {};
+    for (const key of ['netWeightG', 'piecesCount', 'packedWeightG', 'packedLengthMm', 'packedWidthMm', 'packedHeightMm'] as const) {
+      if (row[key] === undefined) continue;
+      const value = positiveIntArg(row[key]);
+      if (value === null) return { error: `variants[${i}].${key} pozitif tam sayı olmalı (gram ya da milimetre).` };
+      olcu[key] = value;
+    }
+    const portionKind = row.portionKind === undefined ? undefined : porsiyonTuru(row.portionKind);
+    if (row.portionKind !== undefined && portionKind === null) return { error: `variants[${i}].portionKind 'item' | 'slice' olmalı.` };
+
+    const edit = {
+      variantId,
+      variantLabel,
+      ...(label ? { label } : {}),
+      ...olcu,
+      ...(portionKind ? { portionKind } : {}),
+    } as ProductDraftPayload['variants'][number];
+    if (Object.keys(edit).length === 2) {
+      return { error: `variants[${i}] boş — etiket, gramaj, adet, porsiyon türü ya da ambalaj ölçüsünden en az biri verilmeli.` };
+    }
+    variants.push(edit);
+  }
+  return { variants };
+}
+
 /**
  * Ürün taslağının doldurulması — ambalaj fotoğrafından okunan beyan dahil; alerjen ve saklama yazılabilir, çünkü bilgi belgeden
- * okunur. Denetim onay ekranında, yayın kararı asistana kapalı.
+ * okunur. Beyan olmayan künye ve var olan boyun ölçüsü de buradan gider: yeni üründe yazılabilen alan var olan üründe de
+ * yazılabilmeli, yoksa eksik künye elde kalırdı. Denetim onay ekranında, yayın kararı asistana kapalı.
  */
 export async function proposeProductDraft(args: Record<string, unknown>) {
   const productId = String(args.productId ?? '').trim();
@@ -579,9 +693,29 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
 
   const { fields, problems } = readDeclarations(args);
   if (problems.length > 0) return { error: `${problems.length} alan sorunu:`, problems };
-  if (Object.keys(fields).length === 0) {
-    return { error: 'Hiçbir alan verilmedi — ad, açıklama, içindekiler, saklama, besin künyesi, alerjen ya da iz.' };
+  const okunanKunye = await readIdentity(args);
+  if ('error' in okunanKunye) return okunanKunye;
+  const okunanBoy = await readVariantEdits(args, productId);
+  if ('error' in okunanBoy) return okunanBoy;
+
+  // Aynı değeri yeniden yazan künye alanı dilekçeye GİRMEZ: onay ekranı onu da "değişecek" diye
+  // gösterir ve patronun dikkatini değişmeyen bir satırda harcardı.
+  const kayit = product as unknown as Record<string, unknown>;
+  const identity = Object.fromEntries(
+    Object.entries(okunanKunye.identity).filter(([key, value]) => key === 'categoryName' || value !== kayit[key]),
+  ) as ProductIdentityPayload;
+  if (identity.categoryId === undefined) delete identity.categoryName;
+  const { variants } = okunanBoy;
+  if (Object.keys(fields).length === 0 && Object.keys(identity).length === 0 && variants.length === 0) {
+    return {
+      error:
+        'Hiçbir alan verilmedi — beyan (ad, açıklama, içindekiler, saklama, besin künyesi, alerjen, iz), künye (kategori, tarih türü, raf ömrü, kargo izni, saklama rejimi) ya da boy (gramaj, adet, ambalaj ölçüsü).',
+    };
   }
+
+  // Kategorinin ESKİ adı yalnız kategori yazılıyorsa okunur: her öneride bir sorgu, sorulmayan bir soruya cevap olurdu.
+  const mevcutKategori =
+    identity.categoryId !== undefined && product.categoryId ? await new CategoryService(serviceDb()).getById(product.categoryId) : null;
 
   // Tamlık motordan (`missingDeclarations`, `is_incomplete` kolonunun aynası); araç kendi ölçütünü uydurmaz.
   const merged = { ...product, ...fields } as Parameters<typeof missingDeclarations>[0];
@@ -589,6 +723,8 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
     productId,
     productName: resolveLocalizedText(product.name, 'tr'),
     fields: fields as ProductDraftPayload['fields'],
+    identity,
+    variants,
     // Bugünkü hâl öneriyle birlikte taşınır: uygulama sürüm tutmadan üzerine yazar, patron neyi kaybedeceğini görerek onaylasın.
     currentFields: {
       name: product.name,
@@ -599,10 +735,20 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
       allergens: product.allergens,
       traces: product.traces,
     },
+    // Künyenin bugünkü hâli — kategori ADIYLA, çünkü kart uuid göstermez; ad yalnız kategori yazılıyorsa okunur.
+    currentIdentity: {
+      categoryId: product.categoryId,
+      ...(mevcutKategori ? { categoryName: resolveLocalizedText(mevcutKategori.name, 'tr') } : {}),
+      dateType: product.dateType,
+      shelfLifeDays: product.shelfLifeDays,
+      shippable: product.shippable,
+      storageType: product.storageType,
+    },
     uncertainFields: readUncertain(args),
     remainingGaps: missingDeclarations(merged),
   };
-  const filled = Object.keys(fields);
+  const filled = [...Object.keys(fields), ...Object.keys(identity).filter((k) => k !== 'categoryId')];
+  if (variants.length > 0) filled.push(`${variants.length} boy`);
   const summary = `"${payload.productName}" ürününde ${filled.join(' + ')} alanı dolduruldu`;
   return queue('product_draft', payload, summary, args.reason);
 }
@@ -612,7 +758,6 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
  * Kategori addan çözülür ve var olmalı; fiyat ve stok ayrı karar olduğu için yok, en az bir boy şart çünkü fiyat ve stok boya bağlı.
  */
 export async function proposeProductCreate(args: Record<string, unknown>) {
-  const db = serviceDb();
   const name = args.name;
   if (!name || typeof name !== 'object' || !(name as Record<string, unknown>).tr) {
     return { error: 'name zorunlu ve en az Türkçesi dolu olmalı — { "tr": "…", "fr": "…", "de": "…" }.' };
@@ -632,36 +777,30 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
             netWeightG: typeof v.netWeightG === 'number' && v.netWeightG > 0 ? v.netWeightG : null,
             piecesCount: Number.isInteger(v.piecesCount) && (v.piecesCount as number) > 0 ? (v.piecesCount as number) : null,
             portionKind: porsiyonTuru(v.portionKind),
-            packedWeightG: pozitifTam(v.packedWeightG),
-            packedLengthMm: pozitifTam(v.packedLengthMm),
-            packedWidthMm: pozitifTam(v.packedWidthMm),
-            packedHeightMm: pozitifTam(v.packedHeightMm),
+            packedWeightG: positiveIntArg(v.packedWeightG),
+            packedLengthMm: positiveIntArg(v.packedLengthMm),
+            packedWidthMm: positiveIntArg(v.packedWidthMm),
+            packedHeightMm: positiveIntArg(v.packedHeightMm),
           },
         ]
       : [],
   );
   if (variants.length !== rawVariants.length) return { error: 'Her varyantın `label` alanı olmalı — { "tr": "500 g" }.' };
 
-  const dateType = String(args.dateType ?? '').toUpperCase();
-  if (dateType !== 'DLC' && dateType !== 'DDM') {
+  const dateType = dateTypeArg(args.dateType);
+  if (!dateType) {
     return { error: "dateType 'DLC' | 'DDM' olmalı. DLC = güvenlik tarihi (geçince imha), DDM = kalite tarihi (geçince hâlâ satılabilir)." };
   }
 
   const { fields, problems } = readDeclarations(args);
   if (problems.length > 0) return { error: `${problems.length} alan sorunu:`, problems };
 
-  // Kategori ADLA bulunur; bulunamazsa mevcutlar yazılır ki model doğrusunu seçebilsin.
-  const categoryName = typeof args.categoryName === 'string' ? args.categoryName.trim() : '';
-  const categories = await new CategoryService(db).list({ activeOnly: true });
-  const category = categoryName
-    ? categories.find((c) => resolveLocalizedText(c.name, 'tr').toLowerCase().includes(categoryName.toLowerCase()))
-    : null;
-  if (categoryName && !category) {
-    return { error: `Kategori bulunamadı: '${categoryName}'. Mevcutlar: ${categories.map((c) => resolveLocalizedText(c.name, 'tr')).join(' · ')}` };
-  }
+  const picked = await pickCategory(args.categoryName);
+  if ('error' in picked) return picked;
+  const category = picked.category;
 
   const vatRate = typeof args.vatRate === 'number' ? args.vatRate : 5.5;
-  const shelfLifeDays = Number.isInteger(args.shelfLifeDays) && (args.shelfLifeDays as number) > 0 ? (args.shelfLifeDays as number) : null;
+  const shelfLifeDays = positiveIntArg(args.shelfLifeDays);
 
   // Tamlık MOTORDAN — yeni kayıtta karşılaştırılacak eski hâl yok, payload'ın kendisi ölçülür.
   const remainingGaps = missingDeclarations({
@@ -676,12 +815,14 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
     ...fields,
     name: name as ProductCreatePayload['name'],
     categoryId: category?.id ?? null,
-    categoryName: category ? resolveLocalizedText(category.name, 'tr') : null,
+    categoryName: category?.name ?? null,
     dateType,
     shelfLifeDays,
     vatRate,
     // Kargolanabilirlik emin olmadan yazılmaz: `null` "bilmiyorum"dur ve ürün kapının varsayılanıyla doğar.
     shippable: typeof args.shippable === 'boolean' ? args.shippable : null,
+    // Saklama rejimi de öyle; ama burada varsayılan DONUK olduğu için okunabiliyorsa yazılması önemli (`0005`).
+    storageType: storageTypeArg(args.storageType),
     variants,
     uncertainFields: readUncertain(args),
     remainingGaps,
@@ -1581,14 +1722,6 @@ export async function listProposals(limit: number) {
       error: p.error,
     })),
   };
-}
-
-/**
- * Pozitif tam sayı ya da `null` — ambalaj ölçülerinin savunmacı okuması; sıfır ve negatif de `null`, çünkü "0 mm" ölçülmemişliğin
- * yanlış yazılmış hâlidir. Ondalık da düşer: alan milimetre ve gram.
- */
-function pozitifTam(value: unknown): number | null {
-  return Number.isInteger(value) && (value as number) > 0 ? (value as number) : null;
 }
 
 /** Porsiyon türü — kümenin dışındaki her şey `null` ("tek parça / dökme"). */

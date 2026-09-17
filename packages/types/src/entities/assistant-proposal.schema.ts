@@ -4,7 +4,7 @@ import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
 import { PostalCodeSchema } from '../primitives/postal-code.schema';
 import { DocumentKindEnum, DocumentVatRegimeEnum, MovementDirectionEnum } from './money.schema';
-import { ProductDateTypeEnum, ProductSchema } from './product.schema';
+import { ProductDateTypeEnum, ProductSchema, ProductStorageTypeEnum } from './product.schema';
 
 /**
  * Asistanın onay kuyruğu (`0042_assistant_proposal.sql`): `payload` bir komut değil dilekçedir, uygulama onaydan sonra normal
@@ -273,6 +273,25 @@ const ProductReviewSignalsSchema = z.object({
   remainingGaps: z.array(DeclarationGapEnum).default([]),
 });
 
+/**
+ * Ambalajdan okunan ama BEYAN olmayan künye: saklama rejimi, tarih türü, raf ömrü, kargo izni ve kategori. Dili yoktur,
+ * bu yüzden beyan alanlarının yanında ayrı durur. Saklama rejimi sorulmazsa kolonun varsayılanı kalır ve o varsayılan
+ * DONUK'tur (`0005`): rafta duran sirke dondurucuya yazılırdı, üstelik onay ekranında görünmeden.
+ */
+const ProductIdentitySchema = z
+  .object({
+    /** Kategori kimlikten ÇÖZÜLÜR ama adı da taşınır — panel uuid göstermez. */
+    categoryId: z.string().uuid().nullable(),
+    categoryName: z.string().nullable(),
+    dateType: ProductDateTypeEnum,
+    /** Toplam raf ömrü (gün); parti tarihiyle birlikte "kalan %" bundan çıkar. */
+    shelfLifeDays: z.number().int().positive().nullable(),
+    shippable: z.boolean(),
+    storageType: ProductStorageTypeEnum,
+  })
+  .partial();
+export type ProductIdentityPayload = z.infer<typeof ProductIdentitySchema>;
+
 /** Yeni ürün — ambalajdan. `status` YOK: ürün aday doğar, satışa çıkarmak ayrı karardır. */
 export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(ProductReviewSignalsSchema).extend({
   name: LocalizedTextSchema,
@@ -280,6 +299,11 @@ export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(Product
   categoryId: z.string().uuid().nullable(),
   categoryName: z.string().nullable(),
   dateType: ProductDateTypeEnum,
+  /**
+   * Saklama rejimi — `shippable` ile aynı kaynaktan ("-18 °C'de saklayınız") okunur ama ayrı soruya cevap verir: bu
+   * iade/imha kuralını ve vitrin işaretini belirler. `null` okunamadı demektir, kapının varsayılanı geçerli kalır.
+   */
+  storageType: ProductStorageTypeEnum.nullable().default(null),
   /** Toplam raf ömrü (gün); parti tarihiyle birlikte "kalan %" bundan çıkar. */
   shelfLifeDays: z.number().int().positive().nullable(),
   vatRate: z.number().positive(),
@@ -325,16 +349,43 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
    * Asistanın YAZDIĞI alanlar. `currentFields` ile aynı şekilde — simetri bilinçli: ekran iki
    * nesneyi alan alan yan yana koyabilsin, kendi eşleme tablosunu kurmak zorunda kalmasın.
    */
-  fields: ProductDeclarationSchema.extend({ name: LocalizedTextSchema.optional() }).refine(
-    (f) => Object.values(f).some((v) => v !== undefined),
-    { message: 'En az bir alan doldurulmalı' },
-  ),
+  fields: ProductDeclarationSchema.extend({ name: LocalizedTextSchema.optional() }).default({}),
+  /** Beyan olmayan künye — yeni üründe yazılabilen alanlar var olan üründe de yazılabilmeli, yoksa eksik künye elde kalırdı. */
+  identity: ProductIdentitySchema.default({}),
+  /**
+   * VAR OLAN boyların künyesi; satır `variantId` ile bulunur. Dilekçe yeni boy AÇMAZ ve var olanı SİLMEZ: onay formu
+   * varyant listesinin tamamını kaydeder, eksik gelen satır silinirdi — bir onay ürünün boylarını götürürdü.
+   */
+  variants: z
+    .array(
+      z.object({
+        variantId: z.string().uuid(),
+        /** Boyun BUGÜNKÜ okunur adı — kategoriyle aynı gerekçe: panel uuid göstermez. */
+        variantLabel: z.string().min(1),
+        label: LocalizedTextSchema.optional(),
+        netWeightG: z.number().int().positive().nullable().optional(),
+        piecesCount: z.number().int().positive().nullable().optional(),
+        portionKind: PortionKindEnum.nullable().optional(),
+        /** Ambalajlı ürün ölçüsü ambalajda YAZMAZ, tartılır: model tahmin etmez, operatör ya da tedarikçi künyesi söyler. */
+        packedWeightG: z.number().int().positive().nullable().optional(),
+        packedLengthMm: z.number().int().positive().nullable().optional(),
+        packedWidthMm: z.number().int().positive().nullable().optional(),
+        packedHeightMm: z.number().int().positive().nullable().optional(),
+      }),
+    )
+    .default([]),
   /**
    * Alanların bugünkü hâli, çünkü uygulama üzerine yazar ve sürüm tutmaz: patron neyi kaybedeceğini görerek onaylar. Alanın `null`
    * gelmesi "boştu", `currentFields`in hiç gelmemesi "eski hâl okunamadı" demektir ve ekran o zaman varsaymaz.
    */
   currentFields: ProductDeclarationSchema.extend({ name: LocalizedTextSchema.nullable().optional() }).optional(),
-});
+  /** Künyenin bugünkü hâli — `currentFields` ile aynı gerekçe: değişen alanın öncesi ekranda görünsün. */
+  currentIdentity: ProductIdentitySchema.optional(),
+}).refine(
+  (p) =>
+    Object.values(p.fields).some((v) => v !== undefined) || Object.values(p.identity).some((v) => v !== undefined) || p.variants.length > 0,
+  { message: 'En az bir alan doldurulmalı' },
+);
 
 /**
  * Kampanya ya da indirim tanımı; kupon her zaman sepet düzeyindedir (`DOMAIN §5`), kategori ve koleksiyon kapsamı yalnız otomatik

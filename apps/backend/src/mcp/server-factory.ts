@@ -232,6 +232,11 @@ export const TOOLS = [
           description:
             'Can this go out by parcel post? Read it off the storage line: a product that says "keep at -18 °C" cannot be shipped. Omit when you are not sure — omitting means "unknown", and the product is created shippable by default; false means you read a reason it cannot ship.',
         },
+        storageType: {
+          type: 'string',
+          description:
+            "How the product is kept: 'frozen' (-18 °C), 'chilled' (fridge, 0-4 °C) or 'ambient' (shelf). It comes from the same storage line as shippable but answers a different question — it drives returns, disposal and the storefront badge. Omit only when the package says nothing: a product left unset is created FROZEN, so a shelf-stable jar would be filed in the freezer.",
+        },
         vatRate: { type: 'number', description: 'French food VAT: 5.5 (packaged/frozen) or 10 (immediate consumption). Default 5.5.' },
         description: { type: 'object', description: 'Per language.' },
         ingredients: { type: 'object', description: 'Per language, as printed on the label.' },
@@ -515,7 +520,7 @@ export const TOOLS = [
   {
     name: 'propose_product_draft',
     description:
-      "PROPOSE (does not apply): complete or correct an EXISTING product — name, description, ingredients, storage instructions, nutrition, allergens and traces, each in three languages where it applies. Use it to fill gaps reported by catalog_health, to translate a field that exists in one language only, or to write what the admin's label photos show. ALLERGENS ARE A CLOSED SET (pick values, never write a sentence; unknown values are rejected, not dropped). Say what you could not read clearly in uncertainFields. WRITING OVER EXISTING TEXT IS PERMANENT — there is no version history, so only overwrite a filled field when you mean to, and say so in reason. The product STAYS as it is: this tool never puts anything on sale.",
+      "PROPOSE (does not apply): complete or correct an EXISTING product. Three groups of fields: the DECLARATIONS (name, description, ingredients, storage instructions, nutrition, allergens, traces — three languages where it applies); the RECORD's own facts (categoryName, dateType, shelfLifeDays, shippable, storageType); and the SIZES (variants: weight, piece count, packaging measurements of a size that already exists). Use it to fill gaps reported by catalog_health, to translate a field that exists in one language only, or to write what the admin's label photos show. ALLERGENS ARE A CLOSED SET (pick values, never write a sentence; unknown values are rejected, not dropped). Say what you could not read clearly in uncertainFields. WRITING OVER EXISTING TEXT IS PERMANENT — there is no version history, so only overwrite a filled field when you mean to, and say so in reason. Read product_detail first: it shows which sizes have no weight yet. The product STAYS as it is: this tool never puts anything on sale.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -537,6 +542,25 @@ export const TOOLS = [
             'Closed set of the 14 EU allergens — values only. [] declares that the label shows none; leave it out when you could not read it.',
         },
         traces: { type: 'array', description: 'Cross-contamination, same closed set.' },
+        categoryName: {
+          type: 'string',
+          description: 'Category by NAME (resolved server-side); omit if unsure — the tool lists the existing ones.',
+        },
+        dateType: {
+          type: 'string',
+          description: "'DLC' (safety date, destroy when passed) or 'DDM' (quality date) — read it off the label.",
+        },
+        shelfLifeDays: { type: 'number', description: 'Total shelf life in days, if the label states it.' },
+        shippable: { type: 'boolean', description: 'Can it go out by parcel post? Read it off the storage line; omit when unsure.' },
+        storageType: {
+          type: 'string',
+          description: "'frozen' (-18 °C), 'chilled' (fridge) or 'ambient' (shelf) — drives returns, disposal and the storefront badge.",
+        },
+        variants: {
+          type: 'array',
+          description:
+            'Sizes that ALREADY EXIST on this product: [{ "variantId": "…", "netWeightG": 200, "label": { "tr": "200 g" } }]. variantId comes from product_detail or catalog_lookup — this tool never creates a size and never deletes one, it only fills in what a size is missing (label, netWeightG, piecesCount, portionKind). A size whose netWeightG is null shows the customer no quantity at all, which the law requires before purchase, so it is worth filling. packedWeightG and packedLengthMm/packedWidthMm/packedHeightMm are the SHIPPING box: never estimated from a photo, only passed on when someone measured them.',
+        },
         uncertainFields: { type: 'array', description: 'Field names you could not read clearly.' },
         reason: { type: 'string' },
       },

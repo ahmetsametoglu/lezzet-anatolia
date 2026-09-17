@@ -357,6 +357,7 @@ export const ProductDetailsUpdateSchema = ProductSchema.pick({
   dateType: true,
   shelfLifeDays: true,
   shippable: true,
+  storageType: true,
   status: true,
   targetMarginPercent: true,
   targetMarginB2bPercent: true,

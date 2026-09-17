@@ -7,6 +7,7 @@ import {
   MoneyMovementService,
   MovementNatureService,
   ProductService,
+  ProductVariantService,
   PurchaseOrderService,
   RecipeService,
   StockIntakeService,
@@ -225,9 +226,31 @@ const applyProductDraft: Applier = async (db, raw) => {
   const payload = parseProposalPayload('product_draft', raw) as ProductDraftPayload;
   // Yalnız GELEN alanlar yazılır: payload'da olmayan alanı `undefined` geçmek, dolu bir beyanı
   // sessizce `null`a çevirirdi. `status` hiç geçilmiyor — yayın kararı bu kapıdan verilmez (22.6).
-  await new ProductService(db).updateDetails(payload.productId, declarationUpdate(payload.fields));
+  await new ProductService(db).updateDetails(payload.productId, {
+    ...declarationUpdate(payload.fields),
+    ...identityUpdate(payload.identity),
+  });
+  // Boy satırı KİMLİKLE güncellenir, liste yeniden yazılmaz (`syncVariants` eksik satırı silerdi):
+  // dilekçe yalnız var olan boyun boş alanını doldurur, ürünün öteki boyları yerinde kalır.
+  const variants = new ProductVariantService(db);
+  for (const edit of payload.variants) {
+    // `variantLabel` boyun OKUNUR adı (kartın işi), kolon değil: patch'e girerse yazma reddedilirdi.
+    const patch = Object.fromEntries(
+      Object.entries(edit).filter(([key, value]) => key !== 'variantId' && key !== 'variantLabel' && value !== undefined),
+    );
+    if (Object.keys(patch).length > 0) await variants.update({ id: edit.variantId, ...patch });
+  }
   return { productId: payload.productId };
 };
+
+/** Künye alanları — beyanla aynı kural: verilmeyen alan hiç yazılmaz, kategori `null` "kategorisiz"tir. */
+function identityUpdate(identity: ProductDraftPayload['identity']): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of ['categoryId', 'dateType', 'shelfLifeDays', 'shippable', 'storageType'] as const) {
+    if (identity[key] !== undefined) out[key] = identity[key];
+  }
+  return out;
+}
 
 /**
  * Payload'ın beyan alanlarını `updateDetails` girdisine çevirir — **verilmeyen alan hiç yazılmaz**.
@@ -277,6 +300,9 @@ const applyProductCreate: Applier = async (db, raw) => {
     // kendisi `false`'tur, 08.08 kararı: unutulan alanın bedeli "satılamadı" olmalı, "bozuk
     // gitti" değil. Yani bilinmeyen zaten güvenli tarafa düşüyor.)
     ...(payload.shippable === null ? {} : { shippable: payload.shippable }),
+    // Saklama rejimi de yalnız BİLİNİYORSA yazılır; bilinmeyende kapının varsayılanı (donuk) kalır ve
+    // operatör formda düzeltir — uydurma bir rejim, ürünün iade/imha kuralını sessizce değiştirirdi.
+    ...(payload.storageType === null ? {} : { storageType: payload.storageType }),
     variants: payload.variants.map((v, index) => ({
       label: v.label,
       // Ambalajdan okunan ölçüler (11.08): etiketi yazıp ağırlığı boş bırakmak aynı bilgiyi yarım
