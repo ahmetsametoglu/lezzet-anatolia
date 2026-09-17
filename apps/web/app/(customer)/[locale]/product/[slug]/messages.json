@@ -41,6 +41,7 @@
     "reviews": {
       "title": "Yorumlar",
       "count": "{count} onaylı müşteri yorumu",
+      "countShort": "{count} yorum",
       "all": "{count} yorumun tümü →",
       "verified": "onaylı alışveriş",
       "write": "Yorum yaz",
@@ -149,6 +150,7 @@
     "reviews": {
       "title": "Avis",
       "count": "{count} avis clients vérifiés",
+      "countShort": "{count} avis",
       "all": "Voir les {count} avis →",
       "verified": "achat vérifié",
       "write": "Écrire un avis",
@@ -257,6 +259,7 @@
     "reviews": {
       "title": "Bewertungen",
       "count": "{count} geprüfte Kundenbewertungen",
+      "countShort": "{count} Bewertungen",
       "all": "Alle {count} Bewertungen →",
       "verified": "geprüfter Kauf",
       "write": "Bewertung schreiben",

@@ -13,7 +13,7 @@ import messages from './place-messages.json';
  *
  * Dört hâli vardır:
  *   yer yok           → genel vaatler ("soğuk zincirle gelir · bölge içi teslim · kargoya uygun")
- *   yer var, rota içi → "67000 Strasbourg — en yakın teslimat: Perşembe, 24 Temmuz"
+ *   yer var, rota içi → "67000 — en erken 24 Temmuz Perşembe kapınızda"
  *   yer var, rota dışı, ürün gidebiliyor → "Bu ürünü buraya gönderebiliriz"
  *   yer var, rota dışı, ürün gidemiyor   → kısıt uyarısı (amber) + çıkışlar
  *
@@ -33,9 +33,8 @@ import messages from './place-messages.json';
  * "gelebilir mi": teslimat yöntemi checkout'ta gerçek adresten zaten çıkacak, burada söylenmesi
  * hem erken hem de verilmemiş bir karar gibi okunuyor (28.07 · kullanıcı geri bildirimi).
  *
- * **Gün bir VAAT değil BİLGİdir.** Tasarımın taslağı "Perşembe kapınızda" diyordu; sepette stok
- * ayrılmadığı için (DOMAIN §4) o cümle tutulamayacak bir söz veriyordu. "En yakın teslimat"
- * dendiğinde aynı bilgi veriliyor ama bir rezervasyon ima edilmiyor.
+ * **Gün bir VAAT değil BİLGİdir.** Sepette stok ayrılmadığı için (DOMAIN §4) "Perşembe kapınızda" tutulamayacak bir
+ * söz olurdu; cümle "en erken" der.
  *
  * Gün SUNUCUDA sayfaya gömülmez, buradan (istemciden) gelir: kesim saati 16:00'da geçtiğinde "en
  * yakın gün" kayar ve önbelleklenmiş bir sayfa saatlerce yanlış tarihi gösterirdi.
@@ -188,34 +187,15 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
           </>
         ) : place.inRoute ? (
           /**
-           * ── YER ADI KALKTI, GÜN KALDI (16.08, kullanıcı bildirimi) ─────────────
-           * Kutu `📍 67380 Strasbourg Merkez` yazıyordu ve iki kusuru vardı:
-           *
-           *   1. **Yanlış adı yazıyordu.** `zoneName` BİZİM rota bölgemizin adı, `placeName` ise
-           *      yerin adı — 67380 Lingolsheim'dır, "Strasbourg Merkez" o kodu kapsayan bölgemizin
-           *      adı. Header bu ayrımı zaten doğru kurmuş (`place-chip`: *"yazılan ad bölgemizin
-           *      adı değil, yerin adı"*), kural buraya uygulanmamıştı: aynı ekranda üstte
-           *      "Lingolsheim", altta "Strasbourg Merkez" yazıyordu.
-           *   2. **Zaten gereksizdi.** Yer bilgisi header'da duruyor ve değiştirme bağı da burada;
-           *      müşterinin bu kutudan öğreneceği şey NE ZAMAN geleceği.
-           *
-           * Onarım adı düzeltmek değil, KALDIRMAK oldu: aynı gerçeği iki yerde yazmak, ikisinin bir
-           * gün ayrışması demek — nitekim ayrışmıştı.
-           *
-           * Kalan iki cümle: **nasıl geliyor** (kargoya verilemeyen ürün bunu burada söyler) ve
-           * **en yakın gün**. Soğuk zincir işareti stok rozetinin yanına taşındı — ürünün kısıtı
-           * teslimat kutusunun değil, ürünün künyesidir.
+           * "67100 — en erken 18 Eylül Cuma kapınızda": kod ve gün tasarımın dilinde, "en erken" ile bir söz değil bilgi
+           * (sepette stok ayrılmaz). Yerin adı yazılmaz, başlıktaki yer hapı söylüyor; soğuk zincir ürünün rozetinde.
            */
           <>
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-olive-dark">
               <Icon name="truck" size={compact ? 13 : 15} />
-              {shippable ? t.lineInRoute : t.routeOnlyLine}
+              {place.postalCode} — {place.nextDate ? t.atDoorBy.replace('{date}', formatDeliveryDate(place.nextDate, locale)) : t.atDoor}
             </span>
-            {place.nextDate && (
-              <span className="font-semibold text-olive-dark">
-                {t.nextDate.replace('{date}', formatDeliveryDate(place.nextDate, locale))}
-              </span>
-            )}
+            {!shippable && <span>{t.routeOnlyLine}</span>}
             <span>{change}</span>
           </>
         ) : (

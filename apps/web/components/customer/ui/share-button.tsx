@@ -91,13 +91,13 @@ export function ShareButton({ label, subject, variant = 'inline' }: ShareButtonP
   }
 
   return (
-    // Görsel küçük, dokunma alanı 44px (steppers'la aynı desen: görünmez `after` katmanı).
+    // Masaüstü detaylarında adın yanındaki beyaz, çerçeveli 44px daire (tasarım).
     <button
       type="button"
       onClick={onShare}
       aria-label={label}
       title={label}
-      className="relative flex size-9 flex-none cursor-pointer items-center justify-center rounded-full text-ink transition-colors after:absolute after:-inset-1 after:content-[''] hover:bg-sand-200"
+      className="flex size-11 flex-none cursor-pointer items-center justify-center rounded-full border border-sand-300 bg-card text-ink transition-colors hover:border-olive hover:text-olive"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="size-5" aria-hidden>
         <path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />

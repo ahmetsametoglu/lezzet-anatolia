@@ -3,12 +3,15 @@ import { buttonClass } from '@/components/customer/ui/button';
 import { DeliveryLine } from '@/components/customer/delivery/delivery-line';
 import { ColdChainMark, StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
 import { Badge } from '@/components/customer/ui/badge';
+import { ShareButton } from '@/components/customer/ui/share-button';
+import { formatDecimal } from '@/lib/storefront/format';
 import { SectionHeading } from '@/components/customer/ui/section';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { Declaration } from './components/declaration';
 import { FamilyBlock } from './components/family-block';
 import { Gallery } from './components/gallery';
 import { PurchaseBar, VariantPicker } from './components/purchase-panel';
+import { Stars } from './components/review-card';
 import { Reviews } from './components/reviews';
 import type { ProductViewProps } from './product-types';
 
@@ -51,6 +54,64 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
    */
   const away = selected?.stockStatus === 'elsewhere';
 
+  /**
+   * Teslimat satırı boy seçiminin ÜSTÜNDE durur (çeşitlerin altı, çeşit yoksa açıklamanın altı): kargo kısıtı sepete eklemeden
+   * önce görünür. Bu adrese gönderilemeyen üründe kutu "yine de sepete ekle" düğmesini taşıdığı için boy seçiminin altına iner.
+   */
+  const delivery = (
+    <DeliveryLine
+      locale={locale}
+      shippable={product.shippable}
+      status={selected?.stockStatus}
+      fallback={t.assurance}
+      blockedActions={
+        away && selected ? (
+          /**
+           * **ÜÇ EYLEM, ÜÇ AĞIRLIK** — tasarımın kendi sırası (`Musteri - Urun Detay.dc.html`),
+           * kullanıcı kararı 19.08 ile uygulandı.
+           *
+           * Uygulama bu sıradan sapmıştı: "Sepete ekle" yukarıda tam ağırlıkta duruyor,
+           * "haber ver" de birincile terfi ettirilmişti — ekranda **iki dolu yeşil düğme**
+           * yan yana çıkıyor ve hiçbiri birincil olmuyordu (kullanıcı bildirimi, ekran
+           * görüntüsüyle). Tasarım sorunu zaten çözmüştü.
+           *
+           * Sıra bir yargıdır: müşteri bu ürünü BU ADRESE alamıyor, o yüzden ekranın en
+           * güçlü teklifi alabileceği bir alternatiftir. Satın alma yolu yine de KAPANMAZ
+           * (tasarımın kendi notu: *"müşteri bölge içindeki birine gönderiyor olabilir"*)
+           * — ama adı değişir, çünkü artık farklı bir şey yapıyor: uyarıya rağmen devam.
+           */
+          <span className="flex w-full flex-col gap-2">
+            <Link
+              href={{ pathname: '/catalog', query: { shippable: '1' } }}
+              className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true, className: '!text-note' })}
+            >
+              {t.assurance.seeShippable}
+            </Link>
+            <StockNoticeButton variantId={selected.id} productName={product.name} locale={locale} emphasis="panel" />
+            {/* Üçüncül: nötr çerçeve + "Yine de sepete ekle". `w-full` sarmalayıcı, düğmenin
+                kendi `w-1/2` kutusunu kutunun genişliğine açıyor. */}
+            <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} deemphasized />
+          </span>
+        ) : selected?.stockStatus === 'shipping' ? undefined : (
+          /**
+           * **`shipping` hâlinde çıkış düğmesi YOK** (ölçüldü 19.08, ekran turunda).
+           *
+           * O hâlde ürün zaten kargoyla gidiyor — çözülecek bir sorun yok. "Kargolanabilir
+           * benzerleri gör" demek karşılıksız bir teklifti: müşteri bakmakta olduğu ürünü
+           * ZATEN kargoyla alabiliyor. Üstelik düğme dolu yeşildi ve hemen üstündeki
+           * "Sepete ekle" ile ikinci bir çift-yeşil çarpışması üretiyordu.
+           *
+           * Burada kalan tek hâl gerçek çıkmaz: yer rota dışında VE ürün kargolanamıyor
+           * (`blocked`). Orada teklif anlamlı, çünkü müşterinin alabileceği bir şey yok.
+           */
+          <Link href={{ pathname: '/catalog', query: { shippable: '1' } }} className={buttonClass({ size: 'sm', className: '!text-note' })}>
+            {t.assurance.seeShippable}
+          </Link>
+        )
+      }
+    />
+  );
+
   return (
     <div className="flex flex-col">
       <nav className="flex gap-1.5 px-12 pt-5 font-sans text-body-sm text-muted">
@@ -79,7 +140,10 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
           <div className="flex flex-col gap-4.5">
             <div className="flex flex-col gap-2">
               {product.category && <span className="font-sans text-eyebrow text-olive uppercase">{product.category.name}</span>}
-              <h1 className="font-serif text-page-title text-ink">{product.name}</h1>
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="font-serif text-page-title text-ink">{product.name}</h1>
+                <ShareButton label={t.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
+              </div>
               {/* Stok rozeti SEÇİLİ boyu anlatır: bir boy tükenmişken "Stokta" yazmak, butonu
                 "Tükendi" gösteren aynı ekranda kendi kendini yalanlar.
                 Yere bağlı iki hâlde (kargoyla / bölgenizde yok) rozetin yerini YER İŞARETİ alır:
@@ -90,6 +154,16 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
                 proxy'si değil: o bir teslimat olgusuydu ve kargolanabilen ürüne de "soğuk zincirle
                 gelir" yazdırıyordu. */}
               <div className="flex flex-wrap items-center gap-2">
+                {/* Puan adın altında (tasarım); yorumu olmayan üründe satır rozetlerle başlar. Sayı yorumlar bölümüne götürür. */}
+                {reviews.score.average !== null && (
+                  <a href="#reviews" className="mr-1.5 inline-flex cursor-pointer items-center gap-2.5 font-sans">
+                    <Stars value={reviews.score.stars ?? reviews.score.average} small />
+                    <span className="text-body font-bold text-ink">{formatDecimal(reviews.score.average, locale, 1)}</span>
+                    <span className="text-body-sm text-muted transition-colors hover:text-olive">
+                      · {t.reviews.countShort.replace('{count}', String(reviews.total))}
+                    </span>
+                  </a>
+                )}
                 {selected &&
                   (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
                     <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
@@ -104,6 +178,8 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
 
             {/* Çeşit bloğu boy seçicinin ÜSTÜNDE: karar sırası "hangisi? → hangi boy?" (`§1b`). */}
             <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} />
+
+            {!away && delivery}
 
             {selected && (
               <>
@@ -120,63 +196,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
                 {!away && <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} />}
               </>
             )}
-
-            {/* Kargo kısıtı sepete eklemeden ÖNCE görünür (`musteri-urun-detay.md §2`). Teslimat yeri
-              biliniyorsa somut konuşur; bilinmiyorsa tasarımın genel vaatleri kalır. */}
-            <DeliveryLine
-              locale={locale}
-              shippable={product.shippable}
-              status={selected?.stockStatus}
-              fallback={t.assurance}
-              blockedActions={
-                away && selected ? (
-                  /**
-                   * **ÜÇ EYLEM, ÜÇ AĞIRLIK** — tasarımın kendi sırası (`Musteri - Urun Detay.dc.html`),
-                   * kullanıcı kararı 19.08 ile uygulandı.
-                   *
-                   * Uygulama bu sıradan sapmıştı: "Sepete ekle" yukarıda tam ağırlıkta duruyor,
-                   * "haber ver" de birincile terfi ettirilmişti — ekranda **iki dolu yeşil düğme**
-                   * yan yana çıkıyor ve hiçbiri birincil olmuyordu (kullanıcı bildirimi, ekran
-                   * görüntüsüyle). Tasarım sorunu zaten çözmüştü.
-                   *
-                   * Sıra bir yargıdır: müşteri bu ürünü BU ADRESE alamıyor, o yüzden ekranın en
-                   * güçlü teklifi alabileceği bir alternatiftir. Satın alma yolu yine de KAPANMAZ
-                   * (tasarımın kendi notu: *"müşteri bölge içindeki birine gönderiyor olabilir"*)
-                   * — ama adı değişir, çünkü artık farklı bir şey yapıyor: uyarıya rağmen devam.
-                   */
-                  <span className="flex w-full flex-col gap-2">
-                    <Link
-                      href={{ pathname: '/catalog', query: { shippable: '1' } }}
-                      className={buttonClass({ variant: 'primary', size: 'md', fullWidth: true, className: '!text-note' })}
-                    >
-                      {t.assurance.seeShippable}
-                    </Link>
-                    <StockNoticeButton variantId={selected.id} productName={product.name} locale={locale} emphasis="panel" />
-                    {/* Üçüncül: nötr çerçeve + "Yine de sepete ekle". `w-full` sarmalayıcı, düğmenin
-                        kendi `w-1/2` kutusunu kutunun genişliğine açıyor. */}
-                    <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} deemphasized />
-                  </span>
-                ) : selected?.stockStatus === 'shipping' ? undefined : (
-                  /**
-                   * **`shipping` hâlinde çıkış düğmesi YOK** (ölçüldü 19.08, ekran turunda).
-                   *
-                   * O hâlde ürün zaten kargoyla gidiyor — çözülecek bir sorun yok. "Kargolanabilir
-                   * benzerleri gör" demek karşılıksız bir teklifti: müşteri bakmakta olduğu ürünü
-                   * ZATEN kargoyla alabiliyor. Üstelik düğme dolu yeşildi ve hemen üstündeki
-                   * "Sepete ekle" ile ikinci bir çift-yeşil çarpışması üretiyordu.
-                   *
-                   * Burada kalan tek hâl gerçek çıkmaz: yer rota dışında VE ürün kargolanamıyor
-                   * (`blocked`). Orada teklif anlamlı, çünkü müşterinin alabileceği bir şey yok.
-                   */
-                  <Link
-                    href={{ pathname: '/catalog', query: { shippable: '1' } }}
-                    className={buttonClass({ size: 'sm', className: '!text-note' })}
-                  >
-                    {t.assurance.seeShippable}
-                  </Link>
-                )
-              }
-            />
+            {away && delivery}
           </div>
           {/* Yorumlar bir SATIN ALMA girdisidir — kararın yanında durur, sayfanın dibinde değil. */}
           <Reviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} />

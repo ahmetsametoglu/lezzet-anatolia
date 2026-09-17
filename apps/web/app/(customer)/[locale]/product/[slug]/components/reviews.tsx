@@ -66,7 +66,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
   }, [panelOpen]);
 
   return (
-    <section className="flex flex-col gap-4">
+    <section id="reviews" className="flex scroll-mt-24 flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{t.reviews.title}</h2>
         {canReview && !alreadyWrote && !submitted && (

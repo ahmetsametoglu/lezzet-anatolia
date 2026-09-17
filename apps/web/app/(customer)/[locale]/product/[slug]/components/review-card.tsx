@@ -97,7 +97,7 @@ export function Stars({ value, small = false }: { value: number; small?: boolean
   return (
     <span aria-label={`${value} / 5`} className="inline-flex items-center gap-0.5">
       {[0, 1, 2, 3, 4].map((i) => (
-        <Icon key={i} name="star" size={small ? 13 : 16} className={i < full ? 'text-honey' : 'text-sand-400'} />
+        <Icon key={i} name="star" size={small ? 13 : 16} className={i < full ? 'text-star' : 'text-sand-400'} />
       ))}
     </span>
   );

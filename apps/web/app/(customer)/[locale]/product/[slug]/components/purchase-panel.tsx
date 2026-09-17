@@ -123,10 +123,13 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   v.soldOut ? 'opacity-55' : '',
                 ].join(' ')}
               >
-                <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body'].join(' ')}>{variantNameOf(v, t.size, locale)}</span>
+                {/* Masaüstünde satırlar sıkı: token satır yükseklikleri kartı tasarımdan 14px uzatıyordu. */}
+                <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body leading-tight'].join(' ')}>
+                  {variantNameOf(v, t.size, locale)}
+                </span>
                 {/* Fırsat rozeti FİYATIN YANINDA (tasarım): hangi boyun indirimli olduğu ancak o
                     boyun fiyatının yanında görünür — kartların altındaki ortak satır bunu söyleyemez. */}
-                <span className="flex flex-wrap items-center gap-2">
+                <span className={['flex flex-wrap items-center gap-2', compact ? '' : '[&_span]:leading-tight'].join(' ')}>
                   <Price cents={v.priceCents} wasCents={v.wasCents} locale={locale} size="md" />
                   {v.wasCents !== undefined && (
                     <Badge tone="offer" variant="filled">
@@ -135,7 +138,9 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   )}
                 </span>
                 {v.comparisonCents !== null && (
-                  <span className="font-sans text-micro text-muted">{formatPrice(v.comparisonCents, locale)}/kg</span>
+                  <span className={['font-sans text-micro text-muted', compact ? '' : 'leading-tight'].join(' ')}>
+                    {formatPrice(v.comparisonCents, locale)}/kg
+                  </span>
                 )}
               </button>
             ))}
