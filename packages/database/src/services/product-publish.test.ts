@@ -5,16 +5,9 @@ import { CategoryService } from './category.service';
 import { ProductFamilyService, ProductService } from './product.service';
 
 /**
- * **YAYIN ÜÇ DİL İSTER** (05.36 · mobil şeridin talebi 25.08) — `product_publish_requires_all_locales`.
- *
- * Ölçülmüş arıza: Fransızcası olmayan ürün Fransız müşteriye SESSİZCE Türkçe gösteriliyordu.
- * `resolveLocalizedText` yedek zinciri (seçili → TR → FR → DE) eksikliği kendiliğinden kapatıyor ve
- * kapattığı için de kimse fark etmiyor — ne ekranda hata var ne logda iz.
- *
- * **Bu dosya kuralın VERİDE durduğunu sınıyor**, formda değil. Sebep `MB-22a`/`09.6`in dersi:
- * üründe en az üç yazan var (operasyon formu, asistan dilekçesi, seed) ve *"yüzeyde durdurulan bir
- * kuralın ikinci bir yazma yolu varsa, kural yok demektir"*. Motorun kendi testi ayrı
- * (`domain-core/catalog/publish.test.ts`); orada cümlenin doğruluğu, burada kapının varlığı sınanır.
+ * Yayın kısıtı veride — `product_publish_requires_all_locales`: yedek dil zinciri eksik çeviriyi sessizce kapattığı için kural
+ * yazan her yolu (form, asistan, seed) kapsamalı. Cümlenin doğruluğu motorun testinde (`domain-core/catalog/publish.test.ts`),
+ * burada kapının varlığı sınanır.
  */
 const db = serviceDb();
 const products = new ProductService(db);
@@ -55,12 +48,8 @@ async function kur(fields: Parameters<ProductService['create']>[0]) {
 
 describe('ürün yayın kısıtı — veride', () => {
   /**
-   * **ADAY DOĞAR** — kolonun varsayılanı da bunu söylüyor (`candidate`).
-   *
-   * Bu, kısıtın ön şartı: varsayılan `active` olsaydı üç dili henüz dolmamış her yeni ürün doğar
-   * doğmaz kısıta çarpardı ve operatör ürünü hiç oluşturamazdı. Form zaten `candidate` gönderiyordu
-   * ama kolon `active` diyordu — formu atlayan yazan (asistan dilekçesi, servis çağrısı) ürünü
-   * fiyatsız ve beyansız hâlde SATIŞA doğuruyordu (05.36'da düzeltildi).
+   * Yeni ürün aday doğar (kolonun varsayılanı) — kısıtın ön şartı: varsayılan `active` olsaydı üç dili dolmamış her yeni ürün
+   * kısıta çarpar, formu atlayan yazan da ürünü beyansız satışa doğururdu.
    */
   it('yeni ürün ADAY doğar — tek dilli ad yeter, kısıt aranmaz', async () => {
     const product = await kur({ name: { tr: `Aday ürün ${stamp}` }, categoryId });
@@ -81,9 +70,8 @@ describe('ürün yayın kısıtı — veride', () => {
   });
 
   /**
-   * **BOŞ DİZE dolu sayılmaz** — arızanın çekirdeği ve `has_all_locales`ın var oluş sebebi.
-   * `{fr: ''}` bir anahtar TAŞIR, yani `? 'fr'` ile soran bir kontrol onu dolu sayardı; okuma
-   * katmanı ise onu atlayıp Türkçeye düşer. Sessiz sapma tam olarak bu aralıkta doğuyordu.
+   * Boş dize dolu sayılmaz: `{fr: ''}` bir anahtar taşır ve varlığa bakan kontrol onu dolu sayardı, okuma katmanı ise onu atlayıp
+   * Türkçeye düşer — `has_all_locales` bu aralık için var.
    */
   it('BOŞ DİZE yayını açmaz — anahtarın varlığı yetmez', async () => {
     await expect(kur({ ...tamGovde(), description: { tr: 'Var', fr: '   ', de: 'Da' }, status: 'active' })).rejects.toThrow();
@@ -108,12 +96,8 @@ describe('ürün yayın kısıtı — veride', () => {
   });
 
   /**
-   * **GÖRSEL ALT METNİ yayına engel DEĞİL** ve bu ölçülerek karara bağlandı (27.08).
-   *
-   * Alan ürün formunda hiç yok, bilerek yok: boşsa müşteride ürün ADINA düşüyor. Kısıta konsaydı
-   * operatörün dolduramadığı bir alan yüzünden hiçbir ürün yayınlanamazdı. Ad zaten üç dilde
-   * zorunlu, yani yedek de doğru dile düşüyor. Test bunu SABİTLİYOR: bir gün alt metni zorunlu
-   * yapmak istenirse önce formda alan açılmalı.
+   * Görsel alt metni yayına engel değil: formda alanı yok ve boşsa müşteride üç dilde zorunlu ürün adına düşer.
+   * Test bunu sabitler; alt metin zorunlu olacaksa önce formda alanı açılmalı.
    */
   it('görselli ama ALT METİNSİZ ürün yayına alınabilir — yedeği ürün adıdır', async () => {
     const product = await kur({ ...tamGovde(), imageKey: `urun/${stamp}.webp`, imageAlt: null, status: 'active' });

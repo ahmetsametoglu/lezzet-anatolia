@@ -19,21 +19,9 @@ import { chatPlaceMemory, type ChatPlaceMemory } from './chat-place';
 import type { ChatLink } from './link-text';
 
 /**
- * AJANIN SEPET ARAÇLARI (15.20 · 15.22) — ilk YAZAN araçlar.
- *
- * ── ARAÇLAR ŞEMADAN GEÇİRİLEREK ÇAĞRILIYOR (`support-tools.test.ts` dersi) ──
- * Modelin gerçek yolu şemadır; elle çağrıda parametre adı kaçınca olmayan bir arıza bildirilir.
- *
- * ── SINANAN DEĞİŞMEZLER ─────────────────────────────────────────────────────
- *   · Kimlik ARGÜMAN değil: beş aracın hiçbirinin girdisinde müşteri/sohbet kimliği yok.
- *   · Ürün ADIYLA çözülür; belirsizlikte araç SEÇMEZ, SORDURUR (`secenekler` / `boylar`).
- *   · Paket de adıyla eklenir — tek satır, tek fiyat (DOMAIN §13).
- *   · EKLEMEK ile EŞİTLEMEK ayrı: "bir tane daha" üstüne koyar, "iki tane olsun" adedi eşitler.
- *   · Satışa kapalı ürün sepete girmez ve sebebi söylenir.
- *   · Kimliksiz sohbette sepet SOHBETE yazılır; müşterili sohbette müşterinin gerçek sepetine.
- *   · Bağlantı aracı kabı doldurur — model bağlantıyı yazmaz, `ai.ts` ekler.
- *   · YER ŞARTI (10.09): sepete yazan araç posta kodu bilinmeden yazmaz; gerçek kod sohbete yazılır,
- *     bu adrese gidemeyen kalem eklenmez.
+ * Ajanın sepet araçları — modelin gerçek yolu olan şemadan geçirilerek çağrılır; sınanan değişmezler: girdide kimlik yok, ürün
+ * ve paket adıyla çözülür (belirsizlikte araç sordurur), eklemek ile eşitlemek ayrı, satışa kapalı ve bu adrese gidemeyen kalem
+ * sepete girmez. Kimliksiz sohbette sepet sohbete, müşterili sohbette müşterinin sepetine yazılır; bağlantıyı `ai.ts` ekler.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -178,8 +166,8 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
     const sonuc = await cagir(araclar(messenger), 'sepete_ekle', { urun: AD('Fıstıklı Sarma'), adet: 2 });
     expect(sonuc).toMatchObject({ eklendi: { urun: AD('Fıstıklı Sarma'), adet: 2 } });
     const sepet = sonuc.sepet as { kalemler: Array<{ birimFiyat: string; adet: number }>; toplam: string; kargo: string };
-    /* Kargo ve ödenecek tutar AÇIK söylenir (08.09): ajan ürün toplamını söyleyip kargoyu susmuştu,
-       müşteri sitede farklı bir tutar gördü. Yer biliniyor ve kalem rota deposunda: kapıya teslim. */
+    /* Kargo ve ödenecek tutar açık söylenir: ürün toplamını söyleyip kargoyu susan ajan müşteriye sitedekinden farklı tutar verir.
+       Yer biliniyor ve kalem rota deposunda: kapıya teslim. */
     expect(sepet.kargo).toMatch(/kapıya teslim/);
     // Yeri BİLİNMEYEN okumada da eşik söylenir (satış cümlesi) — okumak yer istemez, yazmak ister.
     expect((await cagir(araclarHafizayla(messenger, null), 'sepetim')).kargo).toMatch(/ÜCRETSİZ/);
@@ -265,8 +253,8 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
   });
 
   it('TALEP bağlantısı jetonsuz talep açma sayfasıdır; kabı "support" amacıyla doldurur (15.14)', async () => {
-    /* Kullanıcı kararı (10.09): şikâyette ajan talep açmaz — hesabı var mı, hangi sipariş, hangi ürün,
-       sohbet bilemez; sayfa bilir. Adres sohbetin dilinde talep açma sayfası; jeton yok. */
+    /* Şikâyette ajan talep açmaz: hesap, sipariş ve ürün bilgisini sohbet değil sayfa bilir; bağlantı sohbetin dilindeki talep
+       sayfasıdır, jeton taşımaz. */
     let alinan: ChatLink | null = null;
     const sonuc = await cagir(araclar(messenger, (link) => (alinan = link)), 'talep_baglantisi');
     expect(sonuc).toHaveProperty('hazir');
@@ -288,10 +276,8 @@ describe('müşterili sohbette (WhatsApp) sepet MÜŞTERİNİN gerçek sepetidir
 
 describe('cartLinkIfDue — sepete yazıldıysa ya da söz verildiyse bağlantı sistemce üretilir (08.09)', () => {
   it('dolu sepet + söz ya da yazım → bağlantı; boş sepet ya da (söz yok ve yazım yok) → yok', async () => {
-    /* Canlı Messenger turunda iki kez ölçüldü: model "aşağıdaki bağlantıdan…" yazıp aracı çağırmadı;
-       ertesi turda 👍'a "afiyet olsun" deyip bağlantısız kapattı. Kural araçla yan yana: söz VEYA bu
-       turda yazım + dolu sepet → bağlantı; boş sepet → yok (07.09 kuralı); ikisi de yoksa → yok.
-       Sıra önemli: WhatsApp sohbetinin müşteri sepeti önceki testte doldu. */
+    /* Model bağlantıyı yazıp aracı çağırmayabilir; kural araçla yan yana: söz ya da bu turda yazım + dolu sepet → bağlantı,
+       boş sepet → yok. Sıra önemli: WhatsApp sohbetinin müşteri sepeti önceki testte doldu. */
     const bos = await new ConversationService(db).open({ source: 'messenger', externalRef: `psid-bos-${stamp}` });
     conversationIds.push(bos.id);
     expect(await cartLinkIfDue(db, bos, { reply: 'Sepetiniz hazır, aşağıdaki bağlantıdan onaylayabilirsiniz.', cartWritten: true })).toBeNull();
@@ -321,9 +307,7 @@ describe('hesap bağlantısı (15.16) — yalnız verildiğinde var, kabı HESAP
 });
 
 describe('yer ŞARTI (10.09 · kullanıcı kararı) — posta kodu bilinmeden sepete yazılmaz', () => {
-  /* Canlı Messenger turunda ölçüldü: müşteri posta kodu söylemeden baklava ve yaş pasta istedi, ajan
-     ikisini de sepete koydu ve toplamı söyledi — o adrese gidip gitmediğimizi bilmeden. Araç "posta
-     kodunu sor" diyordu ama bu bir ricaydı; model başka bir soru sordu. Kural artık araçta. */
+  /* Posta kodu bilinmeden sepete yazılmaz: araçtaki "posta kodunu sor" ricasını model atlayabilir, kural bu yüzden aracın içinde. */
   const sohbetAc = async (ek: string): Promise<Conversation> => {
     const row = await new ConversationService(db).open({ source: 'messenger', externalRef: `psid-yer-${ek}-${stamp}` });
     conversationIds.push(row.id);
@@ -366,9 +350,8 @@ describe('yer ŞARTI (10.09 · kullanıcı kararı) — posta kodu bilinmeden se
   });
 
   it('"sipariş verilebilir mi" ÖZETLE tutarlı — asgari sepet eksikse bağlantı kendiliğinden gitmez', async () => {
-    /* 16.05'te 22,84 €'luk sepete (asgari 40 €) "Sepetiniz hazır… ödemek için" düğmesi gitti. Hazırlık
-       özetin söylediğiyle aynı hesaptan: asgari sepet satırı varsa hazır DEĞİL. Eşik bir ayar olduğu
-       için iddia tutara değil TUTARLILIĞA yazıldı. */
+    /* Sepet hazırlığı özetin söylediğiyle aynı hesaptan gelir: asgari sepet satırı varsa sepet hazır değildir, ödeme düğmesi
+       gitmez. Eşik bir ayar olduğu için iddia tutara değil tutarlılığa yazıldı. */
     const sohbet = await sohbetAc('hazir');
     const hazirlar: boolean[] = [];
     const sonuc = await cagir(araclar(sohbet, () => {}, false, (hazir) => hazirlar.push(hazir)), 'sepete_ekle', { urun: AD('Cevizli Sarma') });

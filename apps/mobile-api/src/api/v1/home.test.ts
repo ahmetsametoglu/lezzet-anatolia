@@ -15,20 +15,9 @@ import { app } from '../../app';
 import { composeHomeBands } from '@lezzet/application';
 
 /**
- * Vitrin ucu uçtan uca — `app.request()` ile PORT AÇMADAN.
- *
- * Paylaşılan-DB disiplini (CLAUDE §4b) burada İKİ katmanla kurulur, çünkü uç KÜRESEL listeden
- * seçiyor ve seçimin bir yarısı RASTGELE:
- *
- *   · POZİTİF iddialar (kim girer, altyazı/sayaç nereden) `composeHomeBands`a KENDİ kurduğumuz
- *     havuzlar + SABİTLENMİŞ rastgelelik (`rng` parametre — `Rng` künyesi) verilerek atılır: başka
- *     ajanın işaretlediği bir kategori seçimi değiştiremez, sabit üreteç aynı diziyi verir.
- *   · Uç düzeyinde yalnız DEĞİŞMEZLER ve NEGATİFLER ölçülür: işaretsiz/boş kaynak kurala göre
- *     HİÇBİR seçimde giremez, sayaç asla 0 taşımaz — bunlar küresel veriden bağımsız doğrudur.
- *
- * Tarif şeridi küresel sıradan okur (rastgelelik yok): damgalı tarif `sortOrder: -1_000_000` ile
- * listenin başına ÇİVİLENİR — öteki dosyalar tarif sırasını hep varsayılandan (kuyruğa ekleme)
- * açar, negatif sıra yalnız bu dosyanın tekniğidir.
+ * Vitrin ucu uçtan uca, port açmadan — uç küresel listeden kısmen rastgele seçtiği için pozitif iddialar `composeHomeBands`a
+ * kendi havuzlarımız ve sabit rastgelelikle (`rng`) atılır, uç düzeyinde yalnız küresel veriden bağımsız değişmezler ölçülür.
+ * Tarif bandı küresel sıradan okur: damgalı tarif `sortOrder: -1_000_000` ile başa çivilenir, negatif sıra bu dosyanın tekniğidir.
  */
 const stamp = Date.now();
 const db = serviceDb();
@@ -62,10 +51,8 @@ async function dataOf<T>(res: Response): Promise<T> {
 
 const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 
-/* YAYIN KISITININ ŞARTI (05.36): `status: 'active'` ürün ad · açıklama · içindekiler · saklama
-   metnini ÜÇ DİLDE dolu ister (`product_publish_requires_all_locales`). Bu dosyanın adı zaten üç
-   dilliydi; eksik olan öteki üç metindi. Kısıt karşılanmazsa `beforeAll` düşer ve testler DÜŞMEZ,
-   ATLANIR — sebebi dosyanın konusuyla (vitrin ucu) ilgisiz göründüğü için en zor okunan kırılma. */
+/* Yayın kısıtının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu olmalı
+   (`product_publish_requires_all_locales`); karşılanmazsa `beforeAll` düşer ve testler ilgisiz görünen bir sebeple atlanır. */
 const yayinaHazir = {
   description: tr3('Vitrin testi ürünü', 'Produit de test', 'Testprodukt'),
   ingredients: tr3('Un, su, tuz', 'Farine, eau, sel', 'Mehl, Wasser, Salz'),
@@ -77,7 +64,7 @@ beforeAll(async () => {
   warehouseIds.push(wa.id);
 
   const categories = new CategoryService(db);
-  // İşaretli kategori ALTYAZILI: bant altyazısının `tagline`dan (05.17) geldiği burada ölçülür.
+  // İşaretli kategori altyazılı: bant altyazısının `tagline`dan geldiği burada ölçülür.
   const createdCat = await categories.create({
     name: tr3(`VHOME Kat ${stamp}`, `VHOME Cat FR ${stamp}`, `VHOME Kat DE ${stamp}`),
     tagline: tr3('El açması', 'Fait main', 'Handgemacht'),
@@ -141,8 +128,7 @@ beforeAll(async () => {
   collectionIds.push(colWithMembers.id, colEmpty.id, colPlain.id);
 
   const recipes = new RecipeService(db);
-  // Yayın kısıtı (0038 `recipe_publish_requires_all_locales`): YEDİ metin alanının YEDİSİ de üç
-  // dilde dolu olmadan `isActive: true` yazılamaz — `meal` dahil, eksiği kısıt keser.
+  // Yayın kısıtı (`recipe_publish_requires_all_locales`): yedi metin alanı da üç dilde dolmadan `isActive: true` yazılamaz.
   const r1 = await recipes.createWithItems({
     name: tr3(`VHOME Tarif ${stamp}`, `VHOME Tarif FR ${stamp}`, `VHOME Tarif DE ${stamp}`),
     description: tr3('Açıklama', 'Description', 'Beschreibung'),
@@ -207,11 +193,8 @@ describe('GET /api/v1/home', () => {
   });
 
   it('FIRSATLAR: açık teklifli parti VARKEN bile dizi boş — yer bilinmezken indirim gösterilmez sözü', async () => {
-    // Karar `catalog.ts` UNKNOWN_PLACE künyesinde: teklif partiye, parti depoya bağlı; yeri
-    // bilinmeyen ziyaretçiye indirimli fiyat gösterip ödemede yükseltmek verilmiş sözü bozmaktır.
-    // `wasCents` yer çözülmeden HİÇBİR ürün için doğamaz → dizi küresel olarak boştur; başka bir
-    // ajanın verisi bu iddiayı oynatamaz. Yer çözümü terfi edince (21.6 B) bu test bilinçle kırılır
-    // ve pozitif eşiyle değiştirilir.
+    // Teklif partiye, parti depoya bağlı: yeri bilinmeyen ziyaretçiye indirimli fiyat gösterip ödemede yükseltmek sözü bozar
+    // (`catalog.ts` UNKNOWN_PLACE). Yer çözülmeden `wasCents` hiçbir ürün için doğamaz, bu yüzden dizi küresel olarak boştur.
     const { offers } = await dataOf<Home>(await app.request('/api/v1/home?locale=fr'));
     expect(offers).toEqual([]);
   });
@@ -219,12 +202,11 @@ describe('GET /api/v1/home', () => {
   it('TARİFLER: yayındaki tarif seçili dilde, rozet serbest METİN, sayılar satırdan; taslak sızmaz', async () => {
     const { recipes } = await dataOf<Home>(await app.request('/api/v1/home?locale=fr'));
 
-    // `sortOrder: -1_000_000` tarifi listenin başına çiviler (kurulum notu) — şerit 3 kartlık,
-    // "var mı" diye aramak yetmez, BAŞTA olması sıralamanın kanıtıdır.
+    // Tarif başa çivili (`sortOrder: -1_000_000`); bant 3 kartlık, başta olması sıralamanın kanıtıdır.
     const card = recipes[0];
     expect(card?.slug).toBe(recipeSlug);
     expect(card?.name).toBe(`VHOME Tarif FR ${stamp}`);
-    // Rozet parçaları veri modelindeki gibi SERBEST METİN — sayı türetilmez (05.16).
+    // Rozet parçaları veri modelindeki gibi serbest metin — sayı türetilmez.
     expect(card?.duration).toBe('45 min');
     expect(card?.serves).toBe('3–4 personnes');
     // Kalem SATIR sayısıdır (qty 2 olsa da 1 satır); pantry "satır = madde".
@@ -249,8 +231,8 @@ describe('composeHomeBands — kendi havuzumuzla deterministik kompozisyon', () 
       ],
     };
 
-    // rng=0: işaretli iki koleksiyon (dolu + boş) seçilir, boş olan SAYIMDA düşer; kalan koleksiyon
-    // 0. konuma yerleşir → beklenen dizi [koleksiyon, kategori]. Tohum sabit, iddia tam sıra.
+    // rng=0: işaretli iki koleksiyon (dolu + boş) seçilir, boş olan sayımda düşer ve kalan koleksiyon başa yerleşir.
+    // Beklenen dizi [koleksiyon, kategori]; tohum sabit olduğu için iddia tam sıradır.
     const bands = await composeHomeBands(db, 'fr', pools, () => 0);
     expect(bands.map((b) => [b.kind, b.slug])).toEqual([
       ['collection', colWithMembers.slug],
@@ -258,8 +240,7 @@ describe('composeHomeBands — kendi havuzumuzla deterministik kompozisyon', () 
     ]);
 
     const [collectionBand, categoryBand] = bands;
-    // Kategori kartı: altyazı `tagline`dan (05.17), sayaç 2 — pasif üçüncü ürün SAYILMAZ (kart
-    // kataloğun göstereceğinden fazlasını söyleyemez).
+    // Kategori kartı: altyazı `tagline`dan, sayaç 2 — pasif üçüncü ürün sayılmaz, kart kataloğun göstereceğinden fazlasını söylemez.
     expect(categoryBand?.name).toBe(`VHOME Cat FR ${stamp}`);
     expect(categoryBand?.subtitle).toBe('Fait main');
     expect(categoryBand?.productCount).toBe(2);

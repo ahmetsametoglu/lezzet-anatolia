@@ -11,26 +11,14 @@ import { ProductService } from './product.service';
 import { StockService } from './stock.service';
 
 /**
- * Paket (05.5) — DB üstünde. Paket bir katalog kısayoludur: yeni ürün yaratmaz, kalemleri varyantlara
- * bağlıdır ve müşteriye TEK fiyat gösterir. Sınananlar riskli olanlar:
- *
- *   · kalemler TEK sorquda gelir (liste her satırda "N kalem" + mutabakat rozeti hesaplıyor → N+1 olmaz)
- *   · aynı varyant iki kez EKLENEMEZ (adet artırılır) ve hata okunabilir
- *   · senkron sırayı yazar (müşterinin paket içeriğinde gördüğü sıra)
- *   · hediye kalem = 0 fiyat, kaydedilebilir
- *   · mutabakat: Σ(atanmış × adet) = paket fiyatı — servisin yazdığı satır bu eşitliği tutuyor mu
+ * Paket — DB üstünde; paket yeni ürün yaratmaz, kalemleri varyantlara bağlıdır ve tek fiyat gösterir. Sınananlar: kalemlerin
+ * tek sorguda gelmesi, aynı varyantın iki kez eklenememesi, senkronun sırayı yazması, 0 fiyatlı hediye kalem ve mutabakat.
  */
 
 /**
- * Kalem paylarının toplamı (cent) — **bilerek burada, `bundleBalance` motoru ÇAĞRILMADAN.**
- *
- * İki sebep. Birincisi sınır: `database` motoru bilmez (`STACK §4`) ve bu dosya tek ihlalimizdi —
- * `pnpm boundaries` 26.08'e kadar kalıp hatası yüzünden göremiyordu. İkincisi testin kendi
- * dürüstlüğü: beklenen değeri motora hesaplatmak, servisin yazdığını motorun kendi tanımıyla
- * onaylatmaktı. Eşitlik burada elle yazılır ki iddia servisten de motordan da BAĞIMSIZ olsun —
- * motorun kuralı bozulsa bile bu test servisin satırını sınamaya devam eder.
- *
- * Motorun kendi doğruluğu kendi testinde: `domain-core/src/pricing/bundle-allocation.test.ts`.
+ * Kalem paylarının toplamı (cent) — bilerek `bundleBalance` motoru çağrılmadan: `database` motoru bilmez (STACK §4) ve beklenen
+ * değeri motora hesaplatmak servisin satırını motorun kendi tanımıyla onaylatmak olurdu. Motorun doğruluğu kendi testinde
+ * (`domain-core/src/pricing/bundle-allocation.test.ts`).
  */
 function paylarinToplami(items: readonly { qty: number; allocatedUnitPrice: number }[]): number {
   return items.reduce((sum, i) => sum + toCents(i.allocatedUnitPrice) * i.qty, 0);
@@ -53,11 +41,8 @@ const bundleIds: string[] = [];
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'PKT' })).id;
   const category = await categories.create({ name: { tr: `Paket testi ${stamp}` } });
-  // **YAYINA HAZIR kurulur** (05.36): bu dosyanın bütün iddiaları paketin SATILABİLİRLİĞİ üzerine
-  // ve o, kalemlerinin satılabilirliğinden türüyor. Ürün aday doğarsa (kolonun yeni varsayılanı)
-  // paket hiç satılabilir olmaz ve testler kendi konularıyla ilgisiz bir sebeple düşer. Üç dilli
-  // metinler de bu yüzden: yayın kısıtı (`product_publish_requires_all_locales`) onları arıyor ve
-  // testler ürünü `active`e geri çekiyor (pasife alma senaryoları).
+  // Yayına hazır kurulur: dosyanın iddiaları paketin satılabilirliği üzerine ve o kalemlerin satılabilirliğinden türer; aday ürünle
+  // paket hiç satılabilir olmazdı. Üç dilli metinler yayın kısıtının şartı, çünkü testler ürünü `active`e geri çeker.
   const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const { product, variants } = await products.create({
     name: ucDil(`Paket ürünü ${stamp}`),
@@ -226,7 +211,7 @@ describe('BundleService', () => {
     expect((await bundles.listRows()).find((r) => r.id === bundle.id)!.blockedItemCount).toBe(1);
     await products.update({ id: productId, status: 'active' });
 
-    // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+    // Parti sırasıyla gider: önce hareket defteri, sonra parti.
     await purgeVariantStock(db, [variantA]);
   });
 

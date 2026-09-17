@@ -5,17 +5,9 @@ import { getRecipeDetail, listStorefrontRecipes } from './recipe';
 import { VISITOR } from './read-viewer';
 
 /**
- * **Tarif okuması** (08.24) — "Sofradan Fikirler"in fiyat ve tükenme kuralları.
- *
- * Bu dosyanın çivilediği şey tek bir cümle: **tükenen malzeme toplamdan düşer.** Tasarımın açık
- * kuralı bu ve tek başına okunduğunda zararsız görünüyor — oysa yanlış yönü sessiz: tükenmiş
- * kalemi toplama katan bir okuma, müşteriye sepete geçtiğinde açıklanamayan bir fark gösterir ve
- * hiçbir yerde hata vermez.
- *
- * İkinci çivi **yayın kapısı**: taslak tarif ne listede ne de doğrudan bağlantıyla açılabilir.
- * Kısıt veritabanında (üç dil dolmadan `is_active` olmaz, 05.16) ama o kısıt yalnız yayına GEÇMEYİ
- * engelliyor; okumanın da aynı kararı vermesi gerekiyor, yoksa yarım çevrilmiş bir tarif
- * paylaşılan bir linkle okunurdu.
+ * Tarif okuması — "Sofradan Fikirler"in fiyat ve tükenme kuralları: tükenen malzeme toplamdan düşer, yoksa müşteri sepete
+ * geçtiğinde açıklanamayan bir fark görür. Taslak tarif ne listede ne doğrudan bağlantıyla açılır; veri kısıtı yalnız yayına
+ * geçmeyi engeller, okumanın da aynı kararı vermesi gerekir.
  */
 const db = serviceDb();
 const recipes = new RecipeService(db);
@@ -34,8 +26,7 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 async function makeVariant(label: string, priceCents: number) {
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `${label} ${stamp}`, fr: `${label} ${stamp}`, de: `${label} ${stamp}` },
-    // Yayın kısıtı (05.36) adın yanında açıklama ve yasal beyanı da üç dilde arıyor. Adı zaten üç
-    // dilliydi — tarif fikstürü kendi kısıtı için o alışkanlığı kurmuştu; şimdi ürün de aynı kapıdan.
+    // Yayın kısıtı ürünün açıklamasını ve yasal beyanını da üç dilde arar.
     description: { tr: 'Tarif malzemesi', fr: 'Ingrédient de recette', de: 'Rezeptzutat' },
     ingredients: { tr: 'Un, su, tuz', fr: 'Farine, eau, sel', de: 'Mehl, Wasser, Salz' },
     storageInstructions: { tr: 'Serin yerde saklayın', fr: 'Conserver au frais', de: 'Kühl lagern' },
@@ -64,9 +55,8 @@ beforeAll(async () => {
   tereyagi = await makeVariant('Tereyağı', 360);
 
   /**
-   * **Yayındaki tarifin HER metin alanı üç dilde dolu olmalı** — `recipe_publish_requires_all_locales`
-   * yalnız ada değil, açıklama/süre/porsiyon/öğün/adımlar/evden maddelerin tamamına bakıyor (0038).
-   * Fikstür bunu bilerek karşılıyor: yayına giremeyen bir tarifle vitrin okuması sınanamaz.
+   * Yayındaki tarifin her metin alanı üç dilde dolu olmalı (`recipe_publish_requires_all_locales`) — fikstür bunu karşılar,
+   * çünkü yayına giremeyen tarifle vitrin okuması sınanamaz.
    */
   const uc_dil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const acilan = await recipes.createWithItems({
@@ -99,8 +89,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Parti her testte İLK HÂLİNE döner. Yarısını geri koymak, adı geçmeyen bir sebeple boş partiyle
-  // koşan testler doğurur (`catalog-sort.test.ts` künyesi — yaşandı).
+  // Parti her testte ilk hâline döner; yarısını geri koymak başka testleri sessizce boş partiyle koşturur.
   for (const v of [peynir, tereyagi]) {
     await db.from('stock').update({ physical_qty: 10, offer_price: null }).eq('variant_id', v.variantId);
   }
@@ -195,15 +184,8 @@ describe('tarif detayı', () => {
 });
 
 /**
- * **SATIŞTAN KALKMIŞ MALZEME** — `05.16`nın tek kapıya taşınmasıyla web'de DEĞİŞEN davranış (28.08).
- *
- * Web eskiden bu satırı "tükendi" diye çiziyordu; mobil-api aynı durumda satırı düşürüyordu. İki
- * nüsha aynı soruya farklı cevap veriyordu ve doğrusu mobilinkiydi (`DOMAIN §13`): **"tükendi"
- * yeniden geleceğini söyler**, satıştan kalkan gelmeyecek — üstelik ürünün detay sayfası zaten 404,
- * yani müşteri tıklayınca boşluğa düşerdi. Kural `readRecipeItems`te birleştirildi.
- *
- * Ayrım korunmalı ve üstteki *"satır listede KALIR ve tükenmiş işaretlenir"* testiyle birlikte
- * okunmalı: **stoğu biten** malzeme listede kalır (geri gelecek), **satıştan kalkan** düşer.
+ * Satıştan kalkmış malzeme listeden düşer (DOMAIN §13): "tükendi" yeniden geleceğini söyler, satıştan kalkan gelmez ve detay
+ * sayfası 404'tür. Stoğu biten malzeme ise listede kalır — üstteki "satır listede KALIR" testiyle birlikte okunmalı.
  */
 describe('satıştan kalkmış malzeme', () => {
   const products = new ProductService(db);

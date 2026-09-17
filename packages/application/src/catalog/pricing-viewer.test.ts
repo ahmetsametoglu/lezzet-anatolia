@@ -5,17 +5,9 @@ import { getProductDetail } from './product';
 import { VISITOR, effectiveChannelOf, pricingViewerOf } from './pricing-viewer';
 
 /**
- * **Fiyatın "kim soruyor" ekseni** (DOMAIN §5, §10) — terfi 21.6 (C).
- *
- * Vitrin fiyatı uzun süre `channel: 'b2c'` ve `b2bApproved: false` SABİTLERİYLE çözülüyordu.
- * Hiçbir şey patlamıyordu, çünkü sabitler geçerli değerlerdi — yalnız iki özellik sessizce ölüydü:
- * onaylanmış B2B müşteri toptan fiyat görmüyordu ve müşteriye özel fiyat hiç okunuyordu. Bu sınıf
- * hatanın testi de bu yüzden yazılıyor: kod okunarak değil, **fiyatın kendisi sorularak** doğrulanır.
- *
- * **Web'deki eşleniğinden farkı sınama YÜZEYİ:** orası `getCartView` üzerinden geçiyordu (sepet web
- * lib'inde, terfi etmedi). Burada zincir vitrinin kendi kapısından geçiyor —
- * kimlik → `pricingViewerOf` → fiyat satırlarının okunması → motor → detay kartı. Ara katmandan
- * biri sabitlense test yine kırmızıya döner; üstelik ölçüm artık müşterinin GÖRDÜĞÜ sayıda.
+ * Fiyatın "kim soruyor" ekseni (DOMAIN §5, §10) — sabit bir görüntüleyici geçerli değerlerle hiçbir şeyi patlatmadan onaylı B2B
+ * fiyatını ve müşteriye özel fiyatı öldürür; kural bu yüzden vitrinin kendi kapısından fiyat sorularak sınanır:
+ * kimlik → `pricingViewerOf` → fiyat satırları → motor → detay kartı.
  */
 const db = serviceDb();
 const stamp = Date.now();
@@ -69,7 +61,7 @@ async function birimFiyat(customerId: string | null): Promise<number | null> {
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Görüntüleyen ${stamp}` } })).id;
-  // Yayın kısıtının (05.36) şartı: `active` ürün üç dilde dolu olmalı — metinler fikstürün konusu değil.
+  // Yayın kısıtının şartı: `active` ürün üç dilde dolu olmalı; metinler fikstürün konusu değil.
   const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const created = await new ProductService(db).create({
     name: ucDil(`Görüntüleyen ürünü ${stamp}`),
@@ -113,9 +105,8 @@ describe('pricingViewerOf', () => {
   });
 
   it('ONAYSIZ şirket künyesi b2c\'ye DARALTILIR ama onay bayrağı olduğu gibi taşınır', async () => {
-    // İki alan ayrı sorulara cevap veriyor: `channel` fiyatın okunacağı liste, `b2bApproved` motorun
-    // kendi daraltmasını yaparken bakacağı gerçek. İkincisini de b2c'ye çevirmek bilgiyi silerdi.
-    // `groupPercentOff` burada iki kez null: müşterinin grubu yok, ve onaysız şirkette kademe zaten kapalı.
+    // `channel` fiyatın okunacağı liste, `b2bApproved` motorun daraltmada bakacağı gerçek; ikincisini b2c'ye çevirmek bilgiyi silerdi.
+    // `groupPercentOff` iki kez null: müşterinin grubu yok ve onaysız şirkette kademe zaten kapalı.
     const customerId = await newCustomer({ company: true, approved: false });
     expect(await pricingViewerOf(db, customerId)).toEqual({ channel: 'b2c', b2bApproved: false, customerId, groupPercentOff: null });
   });
@@ -168,15 +159,8 @@ describe('fiyatın görüntüleyen ekseni — vitrin kapısından', () => {
 });
 
 /**
- * KANAL KURALININ KENDİSİ — DB'siz, çünkü ikinci çağıranı fiyat sormuyor (24.08 · MB-63).
- *
- * Yukarıdaki testler kuralı **fiyat üzerinden** doğruluyor ve doğru olan da oydu: kod okunarak
- * değil, müşterinin gördüğü sayı sorularak. Ama `effectiveChannelOf` artık ayrı bir kapı ve ikinci
- * çağıranı **analitik kapısı** — o hiç fiyat okumuyor, yalnız olayın kanalını yazıyor.
- *
- * Yani bu kural bozulduğunda fiyat testleri hâlâ yeşil kalabilir ve tek belirti, defterde onaysız
- * şirketlerin `b2b` diye sayılması olur — hiçbir yerde hata vermeden, üstelik kanal kırılımına
- * bakan herkesi yanıltarak. Aynı dosyada duruyorlar çünkü konu tek: "kim soruyor".
+ * Kanal kuralının kendisi, DB'siz — `effectiveChannelOf`un ikinci çağıranı analitik kapısıdır ve fiyat okumaz; kural bozulursa
+ * fiyat testleri yeşil kalırken defter onaysız şirketleri sessizce `b2b` sayardı.
  */
 describe('effectiveChannelOf', () => {
   it('birey B2C', () => {

@@ -27,11 +27,8 @@ import {
 } from './product-feedback';
 
 /**
- * Ürün geri bildirimi (17.1 + 17.3 zemini) — uçtan uca.
- *
- * Sınanan şey üç kapı: **satın almayan yazamaz**, **onaylanmayan görünmez**, **moderasyon metnin
- * işidir**. Skor da bunlardan türer; onaylanmamış bir yorumun ortalamayı oynatması sistemin en
- * sessiz yalanı olurdu.
+ * Ürün geri bildirimi uçtan uca — üç kapı: satın almayan yazamaz, onaylanmayan görünmez, moderasyon metnin işidir.
+ * Skor bunlardan türer; onaylanmamış yorumun ortalamayı oynatması sistemin en sessiz yalanı olurdu.
  */
 const db = serviceDb();
 const feedback = new ProductFeedbackService(db);
@@ -57,10 +54,8 @@ beforeAll(async () => {
   categoryId = (await new CategoryService(db).create({ name: { tr: `Geri bildirim ${stamp}` } })).id;
 
   /**
-   * **SATIŞTAKİ ürünler AÇIKÇA yayına alınıyor** (05.36): kolonun varsayılanı `active`ti,
-   * `candidate` oldu. Bu dosyanın ayrımı tam olarak "aday mı değil mi" üzerine kurulu — varsayılan
-   * değişince *"aday olmayan ürün keşif kartlarına düşmez"* iddiası kendi fikstürü yüzünden
-   * düşüyordu. Üç dilli metinler yayın kısıtının şartı (`product_publish_requires_all_locales`).
+   * Satıştaki ürünler açıkça yayına alınır, çünkü dosyanın ayrımı "aday mı değil mi" üzerine kurulu ve kolonun varsayılanı aday.
+   * Üç dilli metinler yayın kısıtının şartı (`product_publish_requires_all_locales`).
    */
   const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const yayinaHazir = { description: ucDil('Test ürünü'), ingredients: ucDil('Un, su'), storageInstructions: ucDil('Serin yerde'), status: 'active' as const };

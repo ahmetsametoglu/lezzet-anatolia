@@ -2,21 +2,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, FeedbackRequestService, OrderService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
 import { feedbackToken } from '@lezzet/domain-core';
-// Testin beklediği şekil ELLE YAZILMAZ, sözleşmeden gelir (`packages.test.ts` emsali).
-// NOT: bu ihraçlar `contracts/index.ts`e ana şeridin ekleyeceği satırlarla açılır; uçlar da
-// `router.ts`e mount edilene dek 404 verir — dosya, bağlantı tamamlandıktan SONRA koşulmak üzere
-// yazıldı (denetmenin kilitli tam paketi).
+// Testin beklediği şekil elle yazılmaz, sözleşmeden gelir: uç bir alanı düşürürse derleme kırılır.
 import { FeedbackCompletionSchema, FeedbackInviteSchema, type FeedbackInvite } from '@lezzet/types';
 import { app } from '../../app';
 
 /**
- * Geri bildirim uçları uçtan uca — `app.request()` ile PORT AÇMADAN.
- *
- * Akış kuralları paketin kendi testinde (`@lezzet/application/feedback`); burada sınanan TAŞIMA:
- * zarf şekli, durum kodları, adlı retler ve sözleşme süzgeci (kimlik alanları zarfa sızmaz).
- *
- * Paylaşılan-DB disiplini (CLAUDE §4b): iddiaların hepsi bu dosyanın KENDİ kurduğu satırlara
- * bakar (damgalı adlar, kendi token'ı); küresel sayım yok.
+ * Geri bildirim uçları uçtan uca, `app.request()` ile port açmadan — akış kuralları `@lezzet/application/feedback`te,
+ * burada taşıma sınanır: zarf, durum kodları, adlı retler ve kimlik alanlarını süzen sözleşme.
+ * İddialar yalnız bu dosyanın kurduğu satırlara bakar (CLAUDE §4b).
  */
 const stamp = Date.now();
 const db = serviceDb();
@@ -38,10 +31,8 @@ async function dataOf<T>(res: Response): Promise<T> {
 const postJson = (path: string, body: unknown) =>
   app.request(path, { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' } });
 
-/* YAYIN KISITININ ŞARTI (05.36): `status: 'active'` ürün ad · açıklama · içindekiler · saklama
-   metnini ÜÇ DİLDE dolu ister (`product_publish_requires_all_locales`) — ölçüt anahtarın varlığı
-   değil DOLULUĞU, yani buradaki eski `{tr, fr}` adı da yetmiyordu. Kısıt karşılanmazsa `beforeAll`
-   düşer ve testler DÜŞMEZ, ATLANIR: sebebi dosyanın konusuyla (geri bildirim ucu) ilgisiz görünür. */
+/* Yayın kısıtının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu olmalı
+   (`product_publish_requires_all_locales`); karşılanmazsa `beforeAll` düşer ve testler ilgisiz görünen bir sebeple atlanır. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
   description: ucDil('Geri bildirim testi ürünü'),
@@ -53,9 +44,7 @@ beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'FB' })).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `VFB Kat ${stamp}` } })).id;
   const seeded = await new ProductService(db).create({
-    /* Ad ÜÇ DİLDE ama üçü AYRI metin: aşağıdaki test kartın adında "FR" arıyor (dil çözümü sunucuda
-       yapılıyor mu sorusu). `ucDil` ile eşitlemek kısıtı karşılar ama o iddiayı sessizce boşa
-       çıkarırdı — ölçüldü, tam paket bu yüzden düştü ve düzeltmesi burada. */
+    /* Ad üç dilde ama üçü ayrı metin: aşağıdaki test kartın adında "FR" arar, eşit metin o iddiayı sessizce boşa çıkarırdı. */
     name: { tr: `VFB Börek ${stamp}`, fr: `VFB Börek FR ${stamp}`, de: `VFB Börek DE ${stamp}` },
     categoryId,
     status: 'active',
@@ -80,9 +69,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Davet satırı AYRICA silinmez: `feedback_request.order_id` FK'si `cascade` — sipariş gidince o
-  // da gidiyor (ölçüldü 14.08). Elle yazılan bu satır teardown'ı öldürüyordu; `beforeEach`teki
-  // silme başka iş görür: testler arası izolasyon.
+  // Davet satırı ayrıca silinmez: `feedback_request.order_id` `cascade` olduğu için sipariş gidince o da gider.
+  // `beforeEach`teki silme başka iş görür: testler arası izolasyon.
   await purgeTestData(db, {
     orderIds: [orderId],
     productIds: [productId],

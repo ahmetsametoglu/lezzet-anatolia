@@ -22,25 +22,15 @@ import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
 import { createCheckoutDraft } from './checkout-draft';
 
 /**
- * Sepet → taslak sipariş (07.4'ün eksik halkası).
- *
- * Burada sınanan şey "sipariş yazıldı mı" değil — **istemciden gelen seçimlerin yeniden
- * doğrulandığı** ve **paketin doğru parçalandığı**. İkisi de sessizce yanlış olabilecek türden:
- * ekran doğru davrandığı sürece hata hiç görünmez, ama tarayıcı konsolundan gönderilen bir gün ya
- * da yanlış paylaştırılmış bir paket siparişi bozar.
+ * Sepet → taslak sipariş — sınanan şey istemciden gelen seçimlerin yeniden doğrulanması ve paketin doğru parçalanması.
+ * İkisi de ekran doğru davrandıkça görünmez; konsoldan gönderilen bir gün ya da yanlış paylaştırılmış paket siparişi bozar.
  */
 const db = serviceDb();
 const stamp = Date.now();
 /**
- * Test rota kodu — **önek 99, çünkü FR referansında 99 ile başlayan kod YOK** (ölçüldü: 0 satır;
- * boş önekler 96 · 97 · 99 · 00).
- *
- * Eskiden `67` önekliydi ve 19.17 ile bu bir TUZAĞA dönüştü: `createCheckoutDraft` artık rota
- * siparişinde "şehir bu kodun yerleşimlerinden biri mi" diye soruyor ve 67xxx aralığında 96 gerçek
- * kod var. Damga onlardan birine denk geldiği koşuda buradaki sabit "Strasbourg" şehri uymaz ve
- * dosya, kodunda hiçbir şey değişmeden düşerdi — yani ~%10 ihtimalle tekrarlanmayan bir hata.
- * Referansın tanımadığı kod gerçekçi de bir hâldir: kendi bölge tablomuz o kodlar için otoritedir
- * (19.16a) ve kapı ölçüm yokken engellemez.
+ * Test rota kodu — önek 99, çünkü FR referansında 99 ile başlayan kod yok.
+ * Gerçek bir kod olsaydı kapının "şehir bu kodun yerleşimlerinden biri mi" sorusu sabit "Strasbourg"la çelişir
+ * ve test rastgele düşerdi.
  */
 const rotaKodu = testPostalCode();
 
@@ -61,10 +51,8 @@ let minBasket: SettingsSnapshot;
 const createdProfiles: string[] = [];
 
 /**
- * **Satılacak ürün YAYINA HAZIR kurulur** (05.36): kolonun varsayılanı `active`ti, `candidate` oldu
- * ve aday ürün sepete giremiyor — paket kalemi `blocked_lines` alıyordu, yani testler kendi
- * konularıyla (teslimat/ödeme doğrulaması) ilgisiz bir sebeple düşüyordu. Üç dilli metinler yayın
- * kısıtının şartı (`product_publish_requires_all_locales`).
+ * Satılacak ürün yayına hazır kurulur: aday ürün sepete giremez ve testler konularıyla ilgisiz bir sebeple düşerdi.
+ * Üç dilli metinler yayın kısıtının şartı (`product_publish_requires_all_locales`).
  */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
@@ -123,12 +111,8 @@ beforeAll(async () => {
   });
   bundleId = bundle.bundle.id;
 
-  // Gerçek bir auth kullanıcısı: `user_profiles.auth_user_id` ona yabancı anahtarla bağlı ve kapı
-  // müşteriyi OTURUMDAN çözüyor — uydurma bir kimlikle o yol hiç sınanmazdı.
-  //
-  // Profili BURADA AÇMIYORUZ: auth kullanıcısı doğunca tetikleyici (04.4) `user_profiles` satırını
-  // kendisi kuruyor. İkinci bir insert benzersizlik kısıtına takılır — testin gerçek akışı taklit
-  // etmesi de zaten bunu gerektirir.
+  // Gerçek bir auth kullanıcısı: kapı müşteriyi oturumdan çözer, uydurma kimlikle o yol sınanmazdı.
+  // Profil burada açılmaz; auth kullanıcısı doğunca tetikleyici `user_profiles` satırını kurar, ikinci insert tekilliğe takılır.
   const authUser = await db.auth.admin.createUser({ email: `checkout${stamp}@ornek.fr`, email_confirm: true });
   authUserId = authUser.data.user!.id;
   const profile = await new UserProfileService(db).findByAuthUserId(authUserId);
@@ -139,7 +123,7 @@ beforeAll(async () => {
   const zoneSvc = new DeliveryZoneService(db);
   zoneId = (await zoneSvc.insert({ name: `Test bölgesi ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5] })).id;
   await zoneSvc.replacePostalCodes(zoneId, [{ country: 'FR', postalCode: rotaKodu }]);
-  // Alıcı + telefon 22.08'den beri ZORUNLU — sipariş kopyasına da bu ikisi giriyor.
+  // Alıcı ve telefon zorunlu — sipariş kopyasına da bu ikisi girer.
   addressId = (
     await new AddressService(db).addForCustomer({
       customerId, recipient: 'Ayşe Yılmaz', phone: '+33612345678',
@@ -148,22 +132,9 @@ beforeAll(async () => {
   ).id;
 
   /**
-   * **ASGARİ SEPET BU DOSYANIN KONUSU DEĞİL — susturuluyor** (10.08 kural değişimi · düzeltildi 15.08).
-   *
-   * 10.08'de kapıya teslime **40 € lojistik taban** geldi ve taban KÜRESEL satıra yazıldı
-   * (`0013_settings.sql`, kullanıcı kararı). Buradaki sepetler 10–40 € arası — çünkü ölçtükleri şey
-   * kupon kotası, gün doğrulaması ve fiyat sabitlemesi; tutarın büyüklüğü hiçbirinin konusu değil.
-   * Sonuç: sekiz test beş gündür kırmızıydı ve **kod haklıydı**, testler eski eşikte kalmıştı.
-   *
-   * **Tutarları büyütmek YANLIŞ düzeltme olurdu:** iddiaların bir kısmı sayıya çivili
-   * (`unitPriceCents` 2000, paket payı 2700) ve onları da büyütmek testin ölçtüğü şeyi değiştirirdi
-   * — eşiği geçmek için yazılmış bir aritmetik, bir gün eşik yine değişince yine kırılır.
-   *
-   * Eşik bu yüzden dosya boyunca sıfırlanıp `afterAll`da GERİ KONUYOR (`settingsSnapshot`, CLAUDE
-   * §4b: küresel tekil satır kirletilmez — okunan değer geri konur, sabit yeniden yazılmaz).
-   * Küresel satırı bir dosya boyunca tutmak entegrasyon projesinde güvenli: `fileParallelism: false`
-   * (vitest.config künyesi), yani aynı anda başka bir dosya bu satırı okumuyor. Kuralın KENDİSİ
-   * `checkout-options.test.ts`te sınanıyor — eşiğin varlığı ve yokluğu oranın konusu.
+   * Asgari sepet bu dosyanın konusu değil: eşik dosya boyunca sıfırlanır ve `afterAll`da geri konur (`settingsSnapshot`, CLAUDE §4b).
+   * Tutarları büyütmek yanlış olurdu, iddiaların bir kısmı sayıya çivili; küresel satırı tutmak `fileParallelism: false` ile
+   * güvenli ve kuralın kendisi `checkout-options.test.ts`te sınanır.
    */
   minBasket = settingsSnapshot(db);
   await minBasket.override('min_basket_cents', 0);
@@ -171,8 +142,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Parti BURADA SİLİNMEZ (`beforeAll`da bir kez kuruluyor). Silme `mustDelete` ile — künye
-  // `packages/application/src/courier/day.test.ts`te (06.14).
+  // Parti burada silinmez (`beforeAll`da bir kez kurulur); silme `mustDelete` ile.
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
 });
 
@@ -195,11 +165,8 @@ afterAll(async () => {
 });
 
 /**
- * O bölgenin yaklaşan ilk günü — testin tarihi elle yazması, günü geçince testi çürütürdü.
- *
- * Kod PARAMETRİK, çünkü tutarlılık testleri bölgenin kodunu geçici olarak referans bir kodla
- * değiştiriyor: sabit `rotaKodu` ile sorsaydık o blokta bölge dışı bir koda gün sorulur, cevap boş
- * döner ve rota siparişi `date_unavailable`e düşerdi — testin ölçtüğü şeyle ilgisiz bir sebeple.
+ * O bölgenin yaklaşan ilk günü — elle yazılan tarih günü geçince testi çürütürdü.
+ * Kod parametrik, çünkü tutarlılık testleri bölgenin kodunu geçici olarak değiştirir ve sabit kodla sorulan gün boş dönerdi.
  */
 async function ilkUygunGun(postalCode: string = rotaKodu): Promise<string> {
   const { resolveDelivery } = await import('./delivery');
@@ -232,8 +199,7 @@ describe('sepet → taslak sipariş', () => {
   });
 
   it('SOHBETİN dokunduğu sepetin siparişi sohbetin KANALINI taşır; izsiz sepet `web` (15.23)', async () => {
-    /* Kullanıcı kararı 07.09: sepet Messenger'da kuruldu, ödeme sitede — sipariş `web` YAZMAMALI.
-       İz sepette (`source_conversation_id`), kaynak oradan okunur; sohbet kanalıyla aynı sözcük. */
+    // Sepet Messenger'da kurulup ödeme sitede yapılırsa sipariş `web` yazmaz; kaynak sepetteki izden (`source_conversation_id`) okunur.
     const conversations = new ConversationService(db);
     const carts = new CartService(db);
     const sohbet = await conversations.open({ source: 'messenger', externalRef: `psid-checkout-${stamp}` });
@@ -276,14 +242,9 @@ describe('sepet → taslak sipariş', () => {
   });
 
   /**
-   * İndirimin kalem PAYI yazılmazsa sipariş kendi parasıyla çelişir: başlıkta "3 € indirim" yazar,
-   * kalemler indirimsiz toplamı taşır ve ödeme motoru farkı **ödenmemiş bakiye** sanar. Yaşandı
-   * (29.07): tamamı online ödenmiş sipariş `partial` göründü ve müşteriye giden mail *"kapıda
-   * ödenecek: 3,00 €"* dedi.
-   *
-   * İndirim KATEGORİ kapsamlı kurulur, sepet kapsamlı değil: yerel veritabanı paylaşılıyor ve
-   * sepet kapsamlı aktif bir kampanya, o sırada koşan başka bir ajanın siparişine de inerdi
-   * (CLAUDE.md §4b). Kategori bu testin kendi damgalı kategorisi.
+   * İndirimin kalem payı yazılmazsa sipariş kendi parasıyla çelişir: kalemler indirimsiz toplamı taşır ve ödeme motoru farkı
+   * ödenmemiş bakiye sanar. İndirim kategori kapsamlı kurulur, çünkü sepet kapsamlı aktif kampanya paylaşılan veritabanında
+   * başka bir koşunun siparişine de inerdi (CLAUDE §4b).
    */
   it('indirimin kalem PAYI yazılır — sipariş kendi toplamıyla çelişmez', async () => {
     const kampanya = await new DiscountService(db).insert({
@@ -319,16 +280,8 @@ describe('sepet → taslak sipariş', () => {
   });
 
   /**
-   * REDDEDİLEN KUPON + YERİNE İNEN KAMPANYA (denetim A1).
-   *
-   * `checkout-draft`'ta `discountAmountOf`'un yerel bir kopyası vardı ve `rejected` hâlinde **0**
-   * dönüyordu; paylaşılan sürüm ise `appliedInsteadCents` döndürüyor. Sepet toplamı paylaşılanı
-   * kullandığı için tahsilat DOĞRUYDU — ama siparişe "indirim verilmedi" yazılıyordu. Müşteri
-   * indirimli ödüyor, defter sıfır gösteriyordu: marj ve kampanya raporu ikisi de yanlış okunur.
-   *
-   * Kurulum: geçersiz bir kupon kodu (`unknown_code` → `rejected`) + kategorisi bu testin kendi
-   * damgalı kategorisi olan otomatik kampanya (kazanan). Kategori kapsamı bilinçli — sepet kapsamlı
-   * aktif bir kampanya, o sırada koşan başka bir ajanın siparişine de inerdi (`CLAUDE.md §4b`).
+   * Reddedilen kupon + yerine inen kampanya — sipariş kaydı da indirimi göstermeli; tahsilat doğru olsa bile "indirim verilmedi"
+   * yazılırsa marj ve kampanya raporu yanlış okunur. Kampanya testin kendi kategorisine kurulur (CLAUDE §4b).
    */
   it('kupon reddedilip yerine kampanya inince KAYIT da indirimi gösterir', async () => {
     const kampanya = await new DiscountService(db).insert({
@@ -351,9 +304,9 @@ describe('sepet → taslak sipariş', () => {
       if (outcome.status !== 'ok') return;
       const { order } = (await new OrderService(db).getWithItems(outcome.orderId))!;
 
-      // 2 × 20 €'nun %10'u. Yerel kopya buraya 0 yazıyordu.
+      // 2 × 20 €'nun %10'u.
       expect(order.discountAmountCents).toBe(400);
-      // Ve tahsilat zaten doğruydu — ikisinin AYNI sayı olması sözleşmenin kendisi.
+      // Tahsilat ile kayıttaki indirim aynı sayıdan türer — sözleşmenin kendisi.
       expect(order.orderedTotalCents).toBe(3600);
     } finally {
       await db.from('discount').delete().eq('id', kampanya.id);
@@ -361,18 +314,14 @@ describe('sepet → taslak sipariş', () => {
   });
 
   /**
-   * KOTA GERÇEKTEN TÜKENİYOR MU (09.6 nöbeti).
-   *
-   * Açık aylarca yaşadı çünkü zincirin her halkası tek tek doğruydu: tanım ekranı sınırı yazıyor,
-   * motor `isApplicable` sınırı kontrol ediyor, `usageCounts` kaydı sayıyor. Yalnız YAZAN yoktu ve
-   * bunu hiçbir test göremezdi — hepsi kendi halkasına bakıyordu. Nöbet bu yüzden uçtan uca:
-   * gerçek checkout, gerçek kupon, sonra sayaç.
+   * Kupon kotası gerçekten tükeniyor mu — uçtan uca: zincirin her halkası (tanım, `isApplicable`, `usageCounts`) tek başına
+   * doğruyken kaydı yazan taraf eksik kalabilir ve bunu yalnız gerçek checkout görür.
    */
   it('indirim inen sipariş kupon KOTASINI tüketir — kayıt siparişten türer', async () => {
     const discounts = new DiscountService(db);
     const kampanya = await discounts.insert({
       name: `Kota testi ${stamp}`,
-      // Etiket 26.08'den beri ZORUNLU (kısıt veride) — bu testin konusu değil, bir ad yeter.
+      // Etiket veride zorunlu — bu testin konusu değil, bir ad yeter.
       publicLabel: { tr: `Kota testi ${stamp}` },
       trigger: 'automatic',
       type: 'percent',
@@ -381,7 +330,7 @@ describe('sepet → taslak sipariş', () => {
       categoryId,
     });
     try {
-      // Yazan taraf HİÇ YOKKEN sayaç sıfırdı ve kupon sonsuz haklı görünüyordu.
+      // Kupon kullanılmadan önce sayaç sıfır.
       expect((await discounts.usageCounts([kampanya.id])).get(kampanya.id)?.total ?? 0).toBe(0);
 
       const outcome = await createCheckoutDraft({
@@ -408,15 +357,14 @@ describe('sepet → taslak sipariş', () => {
   });
 
   /**
-   * Kupon yolunda ayrıca HANGİ KAPI yazılır. Kota yine kuralın: üç dilli bir kuponun üç kodu tek
-   * kotadan harcar (`byCode` bölmez, kırılım verir — 0031). Bu ayrım yazan tarafta bozulursa ekran
-   * "hangi dil karşılık buldu" sorusuna yanlış cevap verir ve kimse fark etmez.
+   * Kupon yolunda hangi kapıdan girildiği de yazılır; kota kuralındır, üç dilli kuponun üç kodu tek kotadan harcar (`byCode` kırılımdır).
+   * Yazan taraf bu ayrımı bozarsa ekran "hangi dil karşılık buldu" sorusuna sessizce yanlış cevap verir.
    */
   it('kuponla açılan siparişte hangi KAPIDAN girildiği de yazılır', async () => {
     const discounts = new DiscountService(db);
     const kupon = await discounts.insert({
       name: `Kapı testi ${stamp}`,
-      // Etiket 26.08'den beri ZORUNLU (kısıt veride) — bu testin konusu değil, bir ad yeter.
+      // Etiket veride zorunlu — bu testin konusu değil, bir ad yeter.
       publicLabel: { tr: `Kapı testi ${stamp}` },
       trigger: 'coupon',
       type: 'percent',
@@ -452,7 +400,7 @@ describe('sepet → taslak sipariş', () => {
     const discounts = new DiscountService(db);
     const kampanya = await discounts.insert({
       name: `Idempotency testi ${stamp}`,
-      // Etiket 26.08'den beri ZORUNLU (kısıt veride) — bu testin konusu değil, bir ad yeter.
+      // Etiket veride zorunlu — bu testin konusu değil, bir ad yeter.
       publicLabel: { tr: `Idempotency testi ${stamp}` },
       trigger: 'automatic',
       type: 'percent',
@@ -528,14 +476,8 @@ describe('sepet → taslak sipariş', () => {
   });
 
   /**
-   * **İstenen adet depodakinden fazla (19.7).** Kontrol edilmezse taslak açılıyor ve iş
-   * REZERVASYONDA patlıyordu — yani müşteri adresini ve ödeme yöntemini seçip "onayla"ya bastıktan
-   * sonra, üstelik hangi ürün olduğunu söylemeyen bir cümleyle ("bir ürün tükendi"; oysa tükenen
-   * bir şey yok, o adrese o adet gitmiyor).
-   *
-   * Ret `blocked_lines`ten AYRI: orası "kalem alınamıyor" der, burası "azı alınabiliyor". Tek
-   * mesaja indirilseydi müşteri kalemi büsbütün silmeye kalkardı. Sayı da taşınır — sepetin
-   * düzeltme düğmesiyle aynı sayı olmak zorunda.
+   * İstenen adet depodakinden fazlaysa taslak açılmaz ve mümkün olan adet söylenir; yoksa iş onaydan sonra rezervasyonda patlardı.
+   * Ret `blocked_lines`ten ayrı: orası "alınamıyor", burası "azı alınabiliyor" der ve sayı sepetin düzeltme düğmesiyle aynı olmalı.
    */
   it('istenen adet depodakinden fazlaysa sipariş AÇILMAZ ve mümkün olan adet söylenir', async () => {
     const outcome = await createCheckoutDraft({
@@ -550,16 +492,9 @@ describe('sepet → taslak sipariş', () => {
   });
 
   /**
-   * Adres kendiyle tutarsız (19.17) — **yaşanmış arıza.**
-   *
-   * `LA-26-RFRWKK`: `67000` + `LINGOLSHEIM`, rota + kapıda ödeme. Lingolsheim'ın kodu 67380 ve o kod
-   * rotamızda yok; kurye kapıya gidemez, operasyon müşteriyi aramak zorunda kalır. Yolu belirleyen
-   * tek şey posta koduydu ve hiçbir yerde adresle karşılaştırılmıyordu.
-   *
-   * Referans kodu olarak `51300` seçildi: gerçek bir FR kodu (46 köy kapsıyor) ve başka hiçbir test
-   * onu kullanmıyor — bağ tablosunun anahtarı `(ülke, kod)` yani küresel, çakışan iki koşu birbirini
-   * PK hatasıyla düşürürdü (`CLAUDE.md §4b`). Bölge testin kendi bölgesidir, kodu geçici olarak
-   * değiştirilip geri konuyor.
+   * Adres kendiyle tutarlı mı — rota yolunu yalnız posta kodu belirlediği için şehir kodla karşılaştırılır (67000 + Lingolsheim,
+   * oysa Lingolsheim 67380). Referans `51300` başka testin kullanmadığı gerçek bir FR kodu, çünkü bağ tablosunun anahtarı küreseldir;
+   * bölgenin kodu geçici olarak değiştirilip geri konur.
    */
   describe('adres kendiyle tutarlı mı', () => {
     const referansKodu = '51300';
@@ -597,8 +532,7 @@ describe('sepet → taslak sipariş', () => {
     });
 
     it('koda AİT şehirle açılır — çok yerleşimli kodda yanlış alarm ötmez', async () => {
-      // 51300'ün 46 köyünden biri. Eski veri tek ada indirgiyordu ve Marolles "kodun şehri değil"
-      // görünürdü — yanlış öten bir uyarı, bir süre sonra hiç okunmayan bir uyarıdır.
+      // 51300'ün 46 köyünden biri; kodu tek şehre indirgemek doğru adresi de "kodun şehri değil" diye uyarırdı.
       const tutarli = await new AddressService(db).addForCustomer({
         customerId,
         recipient: 'Ayşe Yılmaz',
@@ -622,15 +556,8 @@ describe('sepet → taslak sipariş', () => {
 });
 
 /**
- * **Zam ONAY İSTER — bağlayıcı fiyat sabitlenirken** (07.13 · DOMAIN §5).
- *
- * Kural sepette işliyordu ve testliydi (`lib/cart/price-change.test.ts`) ama fiyatın BAĞLAYICI
- * olduğu anda hiç sorulmuyordu: taslak sepeti `previousPrices` geçmeden okuyordu. Yani checkout
- * ekranı açıkken teklif partisi tükenirse sipariş tam fiyattan sessizce açılıyordu.
- *
- * "Önceki" fiyat SUNUCU SEPETİNDE saklanan değerdir — müşterinin sepette en son gördüğü ve
- * yazılmış olan. Testler onu doğrudan yazıyor (`cart` satırı), çünkü ölçülen şey taslağın
- * karşılaştırmayı yapıp yapmadığı; sepetin o değeri nasıl yazdığı ayrı bir testin işi.
+ * Bağlayıcı fiyat sabitlenirken zam onay ister (DOMAIN §5) — taslak önceki fiyatla karşılaştırmazsa checkout açıkken teklif
+ * partisi tükendiğinde sipariş tam fiyattan sessizce açılır. Önceki fiyat sunucu sepetindekidir; testler onu doğrudan yazar.
  */
 describe('bağlayıcı fiyat sabitlenirken ZAM onay ister', () => {
   /** Sunucu sepetine kalemi VERİLEN fiyatla yazar — "müşterinin gördüğü fiyat" budur. */
@@ -663,12 +590,8 @@ describe('bağlayıcı fiyat sabitlenirken ZAM onay ister', () => {
   });
 
   /**
-   * ⚠ **Bu testin varlık sebebi bir SONSUZ DÖNGÜ riski.**
-   *
-   * Karşılaştırmanın "önceki"si sunucu sepetindeki fiyattır ve onu yalnız `writeCartAction`
-   * tazeliyor. Taslak reddederken saklanan fiyatı GÜNCELLEMESEYDİ müşteri uyarıyı okuyup tekrar
-   * "onayla"ya bastığında aynı reddi alırdı — ve hiçbir yerde hata görünmezdi, yalnız sipariş
-   * verilemezdi. Kural sepettekiyle aynı: **bir kez bildir, sonra sakla.**
+   * İkinci deneme geçmeli: taslak reddederken saklanan fiyatı güncellemeseydi müşteri her onayda aynı reddi alırdı.
+   * Kural sepettekiyle aynı — bir kez bildir, sonra sakla.
    */
   it('İKİNCİ deneme geçer — bildirilen fiyat saklandı, döngü yok', async () => {
     await sepeteYaz(15);

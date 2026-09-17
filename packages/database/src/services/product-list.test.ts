@@ -7,15 +7,9 @@ import { CollectionService } from './collection.service';
 import { ProductService } from './product.service';
 
 /**
- * Ürün listesi: SUNUCU-TARAFLI süzme + keyset sayfalama (05.12) — DB üstünde.
- *
- * Bu test özellikle gereklidir: süzgeçler PostgREST filtre DİZESİ olarak kurulur (jsonb `name->>tr`,
- * `ilike` joker `*`, boş dizi `allergens.eq.{}`, keyset `or(...and(...))`). Bu dizeler TypeScript'ten
- * geçer ama yanlışsa yalnız DB reddeder — tip denetimi yakalamaz. Sayfalamanın kaymadığı da
- * (satır atlama/tekrar) ancak gerçek sorguyla görülür.
- *
- * Veri izolasyonu: tablo başka testlerin/seed'in satırlarını taşıyor → tüm doğrulamalar BU testin
- * yarattığı kayıtlar üzerinden yapılır (benzersiz ad damgası + kendi kategorisi).
+ * Ürün listesi: sunucu tarafında süzme + keyset sayfalama, DB üstünde — süzgeçler PostgREST filtre dizesi olarak kurulur ve
+ * yanlışsa yalnız DB reddeder; sayfalamanın kaymadığı da ancak gerçek sorguda görülür. Doğrulamalar yalnız bu testin kayıtlarına
+ * bakar (damgalı ad + kendi kategorisi).
  */
 const db = serviceDb();
 const products = new ProductService(db);
@@ -38,20 +32,10 @@ beforeAll(async () => {
   otherCategoryId = other.id;
   createdCategoryIds.push(cat.id, other.id);
 
-  // Bilinçli çeşitlilik: beyanı TAM olan iki kayıt + her biri TEK bir eksikliği örnekleyen kayıtlar.
-  // "Tam" olmak artık ad dilleri + alerjen DEĞİL; içindekiler, besin değerleri ve saklama da gerekiyor
-  // (05.10 — ölçüt `missingDeclarations`'ta). Bu yüzden tam kayıtlar dörtlüyü de taşır.
-  /**
-   * **DURUM ARTIK AÇIKÇA YAZILIYOR** (05.36): kolonun varsayılanı `active`ti, `candidate` oldu ve
-   * bu fikstür eski varsayılana bel bağlamıştı — `status` vermeyen beş satır sessizce aktif
-   * doğuyordu. Değişiklik bilinçli (yeni ürün fiyatsız/stoksuz/beyansız hâlde satışa doğmasın);
-   * fikstür ona uyduruldu.
-   *
-   * **`description` DECL'e girdi**, çünkü yayın kısıtı (`product_publish_requires_all_locales`)
-   * onu da arıyor: aktif olacak satır üç dilde dolu olmak ZORUNDA. Eksik künyeli satırlar bu
-   * yüzden aday kalıyor — testin ölçtüğü şey (`is_incomplete`) durumdan bağımsız olduğu için
-   * "beyan eksik" kovası aynen yaşıyor.
-   */
+  // Bilinçli çeşitlilik: beyanı tam iki kayıt + her biri tek bir eksikliği örnekleyen kayıtlar; "tam" dil, içindekiler, besin,
+  // saklama ve alerjen demektir (`missingDeclarations`).
+  // Durum açıkça yazılır ve `description` DECL'de, çünkü aktif satır yayın kısıtını karşılamalı; eksik künyeli satırlar aday kalır
+  // ve `is_incomplete` durumdan bağımsız olduğu için "beyan eksik" kovası yaşar.
   const DECL = {
     description: { tr: 'Üç dilde dolu açıklama.', fr: 'Description complète.', de: 'Vollständige Beschreibung.' },
     ingredients: { tr: 'Un, su, tuz.', fr: 'Farine, eau, sel.', de: 'Mehl, Wasser, Salz.' },
@@ -81,10 +65,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // **`.catch(() => {})` KALDIRILDI** (02.16): susturulmuş silme, teardown'ın yalan söylemesidir —
-  // ürünler hiç silinmese de test yeşil kalırdı. `stock.test`te aynı sessizlik 02.12'de bulunmuştu,
-  // burası atlanmış. Silme sırası tek yerde (`cleanup.ts`), üstelik doğru sırayla: koleksiyon bağı
-  // ürünle CASCADE gider, kategori en sonda.
+  // Silme susturulmaz, susturulmuş silme teardown'ın yalan söylemesidir.
+  // Sıra tek yerde (`cleanup.ts`): koleksiyon bağı ürünle cascade gider, kategori en son.
   await purgeTestData(db, {
     productIds: createdProductIds,
     collectionIds: createdCollectionIds,
@@ -121,10 +103,7 @@ describe('ProductService.list — süzme', () => {
 
     expect(mine(passive.rows)).toHaveLength(1);
     expect(mine(passive.rows)[0]?.name.tr).toContain('pasif');
-    // **Durum TEK alan; 8 kaydın dağılımı: 3 aktif · 1 pasif · 4 aday.** Aday sayısı 1'den 4'e
-    // çıktı ve sebebi kolonun varsayılanının `candidate` olması (05.36) — ama asıl anlamlı olan
-    // ÜÇÜNÜN AYNI SEBEPLE aday olması: adı/beyanı eksik ürün yayın kısıtından geçemez, yani
-    // "yayınlanamayan ürün aday kalır" kuralı bu listede de görünüyor.
+    // Durum tek alan; 8 kaydın dağılımı 3 aktif · 1 pasif · 4 aday. Adı ya da beyanı eksik ürün yayın kısıtından geçemediği için adaydır.
     expect(mine(candidate.rows).map((p) => p.name.tr ?? '').sort()).toEqual(
       [`${STAMP} aday`, `${STAMP} baska kategori`, `${STAMP} dil eksik`, `${STAMP} icindekiler yok`].sort(),
     );
@@ -170,14 +149,8 @@ describe('ProductService.list — keyset sayfalama', () => {
 });
 
 /**
- * DAR PROJEKSİYONLARIN İMLECİ (09.17 nöbeti).
- *
- * Fiyat ve stok listeleri `getPageAs` ile dar bir şemadan okunuyor ve Zod tanımadığı alanı düşürüyor.
- * Sıralama alanı (`sort_order`) select'ten çıktığında imleç `{ value: undefined }` doğuyor, ikinci
- * sayfa PostgREST'te `invalid input syntax for type integer: "undefined"` ile düşüyor ve çağıran
- * hatayı yuttuğu için liste sessizce birinci sayfada kalıyor — ekranda "Daha fazla yükle" sonsuza
- * kadar duruyor. Tip denetimi bunu göremez (`value` tipi doğru, DEĞERİ yok) ve tek sayfalık veriyle
- * hiç görünmez; o yüzden nöbet burada, gerçek sorguda.
+ * Dar projeksiyonların imleci — `getPageAs` Zod'un tanımadığı alanı düşürür; sıralama alanı select'ten çıkarsa imleç değersiz doğar
+ * ve ikinci sayfa düşer, çağıran hatayı yutarsa liste sessizce ilk sayfada kalır. Tip denetimi bunu göremez, bu yüzden gerçek sorguda.
  */
 describe.each([
   ['listPriceRows', (o: { limit: number; cursor?: KeysetCursor }) => products.listPriceRows({ filters: { query: STAMP }, ...o })],
@@ -255,10 +228,8 @@ describe('ProductService.counts (tek okuma)', () => {
     expect(c.total).toBe(8);
     // Aday: "dil eksik" · "icindekiler yok" · "aday" · "baska kategori" → 4 (künye durum testinde)
     expect(c.candidate).toBe(4);
-    // beyanı eksik: "dil eksik", "alerjen yok", "icindekiler yok", "baska kategori" → 4.
-    // **Sayı aynı kaldı ve bu anlamlı:** `is_incomplete` durumdan BAĞIMSIZ — aday da olsa eksik
-    // beyan eksiktir. İki ölçüt kesişiyor ama aynı soruyu sormuyorlar ("alerjen yok" aktif ama
-    // eksik; "aday" üç dilde dolu ama aday).
+    // Beyanı eksik: "dil eksik", "alerjen yok", "icindekiler yok", "baska kategori" → 4; `is_incomplete` durumdan bağımsızdır,
+    // aday da olsa eksik beyan eksiktir ("alerjen yok" aktif ama eksik, "aday" dolu ama aday).
     expect(c.incomplete).toBe(4);
   });
 

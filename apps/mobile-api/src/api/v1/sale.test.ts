@@ -8,23 +8,15 @@ import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
 
 /**
- * YERİNDE SATIŞ UCU (21.119) — çivilenen üç KAPI kararı (satışın kendisi `on-site-sale.test`te).
- *
- *  1. **Rol kümesi depo ucundan FARKLI.** Kurye buradan satar ama depo yönlendiricisine giremez —
- *     `DOMAIN §17` satışı malın yanındaki personele veriyor, hazırlık kuyruğunu vermiyor.
- *  2. **Depo GÖVDEDEN gelmiyor**, personelin künyesinden çözülüyor. Kapsam dışı depo istenirse 403;
- *     yani kurye başka bir deponun malını satmayı deneyemiyor.
- *  3. **Kapının kararı ne olursa olsun 200.** Yetersiz stok bir HTTP hatası değil, bir cevaptır:
- *     kalan sayı gövdede gelir ki personel müşteriye "üçü var" diyebilsin.
+ * Yerinde satış ucu — üç kapı kararı (satışın kendisi `on-site-sale.test`te): rol kümesi depo ucundan farklıdır (kurye satar
+ * ama hazırlık kuyruğuna giremez), depo gövdeden değil personelin künyesinden çözülür (kapsam dışı 403) ve kapının kararı ne
+ * olursa olsun cevap 200'dür. Yetersiz stok bir HTTP hatası değil cevaptır: kalan sayı gövdede gelir.
  */
 const db = serviceDb();
 const stamp = Date.now();
 
-/* YAYIN KISITININ ŞARTI (05.36): `status: 'active'` ürün ad · açıklama · içindekiler · saklama
-   metnini ÜÇ DİLDE dolu ister (`product_publish_requires_all_locales`). Metinlerin kendisi bu
-   testin konusu değil — konusu yerinde satış; ürünün yayında olması ise şart, çünkü katalog yalnız
-   aktif ürünü listeliyor. Kısıt karşılanmazsa `beforeAll` düşer ve testler DÜŞMEZ, ATLANIR:
-   sebebi dosyanın konusuyla ilgisiz göründüğü için en zor okunan kırılma budur. */
+/* Yayın kısıtının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu olmalı
+   (`product_publish_requires_all_locales`); katalog yalnız aktif ürünü listelediği için şart, karşılanmazsa testler atlanır. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
   description: ucDil('Yerinde satış testi ürünü'),
@@ -38,7 +30,7 @@ let depocu: SignedInUser;
 let aracsizKurye: SignedInUser;
 let facilityId: string;
 let vehicleId: string;
-/** Araç deposunun RUHSAT kimliği (21.249) — sefer aracı bununla seçilir, depo kimliğiyle değil. */
+/** Araç deposunun ruhsat kimliği — sefer aracı bununla seçilir, depo kimliğiyle değil. */
 let vanVehicleId: string | null;
 let zoneId: string;
 let baskaDepoId: string;
@@ -56,8 +48,7 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 beforeAll(async () => {
   facilityId = (await createTestWarehouse(db)).id;
   baskaDepoId = (await createTestWarehouse(db)).id;
-  // Araç deposu ARACINI söylemek zorunda (21.249 · `warehouse_vehicle_identity`); yardımcı damgalı
-  // aracı kendisi açıyor ve teardown'da depoyla birlikte topluyor.
+  // Araç deposu aracını söylemek zorunda (`warehouse_vehicle_identity`); yardımcı damgalı aracı açar ve teardown'da depoyla toplar.
   const van = await createTestWarehouse(db, { label: 'VEHU', kind: 'vehicle' });
   vehicleId = van.id;
   vanVehicleId = van.vehicleId;
@@ -87,15 +78,14 @@ beforeAll(async () => {
   await new PriceService(db).insert({ variantId: sadeceTesisVariantId, channel: 'b2c', amountCents: 300 });
   await new ProductService(db).update({ id: sadeceTesisProductId, status: 'active' });
 
-  // Kapsam BİLEREK çift: tesis + araç (seed kuryesinin gerçeği — rota seçimi tesislere bakar,
-  // 19.25). Kurye satış yerini `?place=van` ile SÖYLER; söylemezse depo çözümü guard'ındır.
+  // Kapsam bilerek çift (tesis + araç), çünkü rota seçimi tesislere bakar.
+  // Kurye satış yerini `?place=van` ile söyler; söylemezse depo çözümü guard'ındır.
   kurye = await createSignedInUser({ prefix: 'sale', label: 'kurye', roles: ['courier'], warehouseIds: [facilityId, vehicleId] });
   depocu = await createSignedInUser({ prefix: 'sale', label: 'depocu', roles: ['warehouse'], warehouseIds: [facilityId] });
   aracsizKurye = await createSignedInUser({ prefix: 'sale', label: 'aracsiz', roles: ['courier'], warehouseIds: [facilityId] });
 
-  /* KURYENİN SEFERİ (21.249): kapıda satış artık malı kapsamdan değil kuryenin SEFERİNİN aracından
-     düşüyor. Fikstürün seferi olması bir tören değil, gerçeğin kendisi — mal araca ancak seferle
-     biner. `aracsizKurye` bilerek sefersiz kalıyor: `no_vehicle` dalını o sınıyor. */
+  /* Kapıda satış malı kuryenin seferinin aracından düşer, bu yüzden fikstürün seferi var; `aracsizKurye` bilerek sefersiz,
+     `no_vehicle` dalını o sınar. */
   zoneId = (await new DeliveryZoneService(db).insert({
     name: `Kapı satışı rotası ${stamp}`, warehouseId: facilityId, weekdays: [1, 2, 3, 4, 5, 6, 7],
   })).id;
@@ -105,24 +95,9 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   /*
-    SİLME GÜRÜLTÜLÜ OLMAK ZORUNDA (27.08 · 06.14). Bu iki satır `db.from(...).delete()` idi ve o
-    çağrı hatayı FIRLATMAZ, sonuç nesnesinde döndürür. Defter gelmeden önce çalışıyorlardı; artık
-    her yerinde satış partiye bir `stock_movement` çıpalıyor ve o satır partiyi de siparişi de
-    `restrict` ile tutuyor — yani ikisi de silinemiyor ve kimse bakmadığı için teardown sessizce
-    yarım kalıyordu.
-
-    Belirtisi düşen teardown DEĞİL, ÇİFT SAYIMDI: kalan adet `4` yerine `17` ölçüldü — her test bir
-    öncekinin malını da sayıyordu. Sıra zorunlu: parti önce (purge bütün hareketleri toplar), sipariş
-    sonra.
-
-    ── SİLME BU DOSYANIN DEPOLARIYLA SINIRLI (03.09) ─────────────────────────
-    Süzgeç bir tur yalnız `customer_id = ANONYMOUS_BUYER_ID` idi ve anonim alıcı KÜRESEL TEKİL bir
-    satırdır: silme, veritabanındaki BÜTÜN kapı satışlarını kapsıyordu — başka dosyanınkini de,
-    cihazdan yapılanı da. Ölçüldü (depo şeridinin notu + kurye cihaz turu, 03.09): kurye ekranda tek
-    bir yerinde satış yapınca (`VAN-1`, hareketi SEED partisine çıpalı) `stock_movement_order_fk`
-    silmeyi reddediyor, `mustDelete` görevi gereği fırlıyor ve dosyanın 12 testi birden kırmızıya
-    dönüyor — kod değişmeden. CLAUDE §4b'nin kuralı bu: *"kendi kurduğun satırları say."*
-    Depo süzgeci fikstürün kendi üç deposu; bu dosyanın yazdığı her anonim sipariş onların içinde.
+    Silme gürültülü olmalı: satış partiye `stock_movement` çıpalar ve o satır partiyi de siparişi de `restrict` ile tutar;
+    sessiz silme teardown'ı yarım bırakıp sonraki testte çift sayım doğurur. Sıra parti önce, sipariş sonra; silme bu dosyanın
+    depolarıyla sınırlı, çünkü anonim alıcı küresel tekil bir satır ve süzgeçsiz silme başka satışlara uzanır (CLAUDE §4b).
   */
   await purgeVariantStock(db, [variantId, sadeceTesisVariantId]);
   await mustDelete(db, 'order', (q) =>
@@ -135,8 +110,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Aynı gerekçe (`beforeEach` künyesi): parti önce, sipariş sonra — ikisi de GÜRÜLTÜLÜ ve silme
-  // bu dosyanın depolarıyla SINIRLI (küresel anonim silmesinin bedeli orada yazılı).
+  // Aynı gerekçe (`beforeEach` künyesi): parti önce, sipariş sonra; silme bu dosyanın depolarıyla sınırlı.
   await purgeVariantStock(db, [variantId, sadeceTesisVariantId]);
   await mustDelete(db, 'order', (q) =>
     q.eq('customer_id', ANONYMOUS_BUYER_ID).in('warehouse_id', [facilityId, vehicleId, baskaDepoId]),
@@ -149,14 +123,8 @@ afterAll(async () => {
 });
 
 /**
- * **BU DOSYANIN yazdığı anonim sipariş sayısı** — "veritabanındaki bütün kapı satışları" DEĞİL.
- *
- * İki test "reddedilen istek sipariş bırakmaz" diye sayıyor ve sayaç bir tur küreseldi
- * (`eq('customer_id', ANONYMOUS_BUYER_ID)`). Anonim alıcı küresel tekil bir satır: başka bir
- * dosyanın ya da CİHAZDAN yapılmış gerçek bir yerinde satışın sipariş(ler)i sayaca giriyor ve
- * `0` beklentisi kod değişmeden kırmızıya dönüyordu (ölçüldü 03.09: 4 satır sayıldı, ikisi
- * cihaz turundan). CLAUDE §4b: *"Küresel sayıya bakan test yazma … kendi kurduğun satırları say."*
- * Süzgeç silmenin süzgeciyle AYNI (fikstürün üç deposu) — ikisi ayrışırsa biri bir gün yanlış olur.
+ * Bu dosyanın yazdığı anonim sipariş sayısı — anonim alıcı küresel tekil bir satır olduğu için sayaç fikstürün üç deposuyla
+ * süzülür, yoksa başka dosyanın ya da cihazın satışları `0` beklentisini bozar (CLAUDE §4b). Süzgeç silmeninkiyle aynı olmalı.
  */
 const anonimSiparisSayisi = async (): Promise<number> => {
   const { data } = await db
@@ -176,9 +144,7 @@ const post = (user: SignedInUser, body: unknown, query = '') =>
 
 describe('POST /sale/on-site', () => {
   it('KURYE satabiliyor — ve sipariş ARACIN deposuna, anonim alıcıya yazılıyor', async () => {
-    /* `?place=van` AÇIK BEYANDIR (01.09): eskiden sinyal "parametre yokluğu"ydu ve istemci depo
-       seçimini yazmaya başlayınca kural sessizce öldü. Beyan yetki değil: aracı sunucu kapsamdan
-       çözüyor, istemci hangi aracı istediğini SEÇEMİYOR. */
+    /* `?place=van` açık beyandır, yetki değil: aracı sunucu kapsamdan çözer, istemci hangi aracı istediğini seçemez. */
     const res = await post(kurye, { lines: [{ variantId, qty: 2 }], paymentMethod: 'cash' }, '?place=van');
     const data = await envelopeData<OnSiteSaleResponse>(res);
 
@@ -217,22 +183,15 @@ describe('POST /sale/on-site', () => {
 
   it('KATALOG ucu kuryeye de açık ve DEPOYU künyeden çözüyor', async () => {
     /*
-      Bu dosyanın konusu KAPI kararlarıdır; katalogun depoya süzülmesi `getCatalogData`nın kendi
-      sözleşmesidir ve orada sınanır (`place.warehouseId`). Burada çivilenen iki şey var: ucun rol
-      kümesi (kurye de okur — satacağı şeyi görmek zorunda) ve deponun GÖVDEDEN değil künyeden
-      gelmesi.
-
-      Ayrı bir "araç stoğu" okuması YAZILMADI: katalog okumasının ta kendisi, yalnız `place`
-      değişiyor. İkinci bir okuma, vitrinle satış ekranının aynı ürün için farklı "tükendi"
-      demesine açık kapı bırakırdı.
+      Katalogun depoya süzülmesi `getCatalogData`nın sözleşmesi ve orada sınanır; burada ucun rol kümesi (kurye de okur) ve
+      deponun künyeden gelmesi çivilenir. Ayrı "araç stoğu" okuması yok: vitrin ve satış ekranı aynı ürüne farklı "tükendi" derdi.
     */
     const res = await app.request('/api/v1/sale/catalog?locale=tr&place=van', { headers: bearer(kurye.token) });
     const data = await envelopeData<SaleCatalogPage>(res);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(data.products)).toBe(true);
-    // 21.119'un kapanan boşluğu: her kart kalan adet YUVASINI taşır (sayının doğruluğu boy
-    // çekmecesi testinde ölçülür — liste, sayfalama/kesit süzgeçleri yüzünden fikstürü içermeyebilir).
+    // Her kart kalan adet yuvasını taşır; sayının doğruluğu boy çekmecesi testinde ölçülür, çünkü liste fikstürü içermeyebilir.
     expect(data.products.every((p) => 'availableHere' in p)).toBe(true);
 
     // Kapsam dışı depo BURADA da reddediliyor — okuma da yazma da aynı kapıdan geçiyor.
@@ -248,9 +207,8 @@ describe('POST /sale/on-site', () => {
 
   it('BOY ÇEKMECESİ kalan adedi HERKESİN KENDİ deposundan söylüyor', async () => {
     /*
-      21.119'un kapanan boşluğu: personel "kaç tane var" sorusunu satmayı DENEMEDEN okuyabilmeli.
-      Aynı uç, aynı ürün — kurye ARACIN sayısını (4), depocu TESİSİN sayısını (9) görür; sayı
-      sepet doğrulamasının okuduğu görünümden gelir, ikinci bir stok gerçeği yoktur.
+      Personel "kaç tane var" sorusunu satmayı denemeden okuyabilmeli: kurye aracın sayısını (4), depocu tesisin sayısını (9) görür.
+      Sayı sepet doğrulamasının okuduğu görünümden gelir, ikinci bir stok gerçeği yok.
     */
     const varyantlar = async (user: SignedInUser) => {
       const res = await app.request(`/api/v1/sale/catalog/${productSlug}/variants?locale=tr${user === kurye ? '&place=van' : ''}`, {
@@ -270,9 +228,8 @@ describe('POST /sale/on-site', () => {
 
   it('KURYE parametre verirse kapsamındaki TESİSTEN de satabilir — araç önceliği yalnız belirsizlikte', async () => {
     /*
-      `place=van` demeyen istek eskisi gibi guard'a gider. Depo kapısında duran kurye
-      `?warehouseId=` ile tesisi söylerse kapsam kontrolü aynen koşar ve satış o tesisin stoğundan
-      yazılır — araç bir KİLİT değil, kuryenin BEYAN ettiği yerdir (`DOMAIN §17`).
+      `place=van` demeyen istek guard'a gider: depo kapısında duran kurye `?warehouseId=` ile tesisi söylerse satış o tesisin
+      stoğundan yazılır. Araç bir kilit değil, kuryenin beyan ettiği yerdir (DOMAIN §17).
     */
     const res = await post(kurye, { lines: [{ variantId, qty: 1 }], paymentMethod: 'cash' }, `?warehouseId=${facilityId}`);
     const data = await envelopeData<OnSiteSaleResponse>(res);
@@ -311,15 +268,8 @@ describe('POST /sale/on-site', () => {
 
   it('ARAÇ KATALOĞU ARACIN İÇERİĞİDİR — tesiste olup araçta olmayan mal listede YOK', async () => {
     /*
-      ── 01.09'DA ÖLÇÜLEN ARIZANIN TESTİ ──────────────────────────────────────
-      Kurye kendi ekranında ANA DEPONUN kataloğunu görüyordu: araçta dört kalem varken listede
-      tesisin 154 partisi vardı ("kalan 23" birebir Strasbourg'un stoğuydu). İki sebep üst üste
-      binmişti: (1) istemci cihazdaki depo seçimini satış isteğine de yazıyordu, (2) vitrin kuralı
-      "katalog süzülmez, işaretlenir" araca da uygulanıyordu.
-
-      İkisi de kapandı ve ikisi de burada çivili: yer BEYANLA geliyor, araç ise bir vitrin değil —
-      kurye elinde ne varsa onu satar. Sipariş için yüklenen kutu da listede olmaz, o mal hâlâ
-      tesisin stoğudur (`DOMAIN §17`).
+      Kurye kendi ekranında aracının malını görür, tesisin kataloğunu değil: yer beyanla gelir ve araç bir vitrin değildir.
+      Sipariş için yüklenen kutu da listede olmaz, o mal hâlâ tesisin stoğudur (DOMAIN §17).
     */
     const araclaBakis = await envelopeData<SaleCatalogPage>(
       await app.request('/api/v1/sale/catalog?locale=tr&place=van', { headers: bearer(kurye.token) }),

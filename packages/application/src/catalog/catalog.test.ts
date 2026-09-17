@@ -16,12 +16,8 @@ import { VISITOR, type PricingViewer } from './pricing-viewer';
 import type { PlaceWarehouses } from './storefront-types';
 
 /**
- * Katalogda fiyat sıralaması (08.10; terfi 21.6 — kaynağı `apps/web/lib/storefront/catalog-sort.test.ts`).
- *
- * **Bu dosyanın asıl işi bir ÇİFTİ çivilemek:** `product_listing` görünümü (0043), motorun
- * (`resolvePrice`) ziyaretçi dalını SQL'de yeniden ifade eder. Ödünleşme bilinçli — sıralama +
- * keyset yalnız SQL'de yapılabilir — ama ayrışırsa katalog kendi kartıyla çelişir: sıralamanın
- * kullandığı fiyat, kartta YAZAN fiyat olmalı. Testler ikisini yan yana koyar.
+ * Katalogda fiyat sıralaması — `product_listing` görünümü motorun (`resolvePrice`) fiyat dalını SQL'de yeniden ifade eder, çünkü
+ * sıralama + keyset yalnız SQL'de yapılabilir. Ayrışırlarsa katalog kendi kartıyla çelişir; testler ikisini yan yana koyar.
  */
 const db = serviceDb();
 const prices = new PriceService(db);
@@ -40,14 +36,7 @@ const YERSIZ: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null }
 /** Yer BELLİ — teklif tutarının gösterilebildiği tek hâl. */
 const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null });
 
-/**
- * Fiyatlı, stoklu, satışta bir ürün — katalogda görünmesi için gereken en az şey.
- *
- * **İki kanalın fiyatı da yazılır ve SIRALARI BİLEREK ÇELİŞİR** (08.54): b2c'de Ucuz→Orta→Pahalı,
- * b2b'de Orta→Ucuz→Pahalı. Aynı oranla türetilmiş fiyatlar sıralamayı korur, yani kanal ekseni
- * kırılsa bile test yeşil kalırdı — çelişen sıra, kusuru görebilen tek fikstürdür.
- */
-/** Yayın kısıtının (05.36) şartı: `active` ürün üç dilde dolu olmalı. Metinler fikstürün konusu değil. */
+/** Yayın kısıtının şartı: `active` ürün üç dilde dolu olmalı; metinler fikstürün konusu değil. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
   description: ucDil('Katalog testi ürünü'),
@@ -56,6 +45,11 @@ const yayinaHazir = {
   status: 'active' as const,
 };
 
+/**
+ * Fiyatlı, stoklu, satışta bir ürün — katalogda görünmesi için gereken en az şey.
+ * İki kanalın sırası bilerek çelişir (b2c Ucuz→Orta→Pahalı, b2b Orta→Ucuz→Pahalı): aynı oranlı fiyatlarla kanal ekseni
+ * kırılsa bile test yeşil kalırdı.
+ */
 async function makeProduct(label: string, priceCents: number, b2bCents: number) {
   const { product, variants } = await new ProductService(db).create({
     name: ucDil(`${label} ${stamp}`),
@@ -71,12 +65,8 @@ async function makeProduct(label: string, priceCents: number, b2bCents: number) 
 }
 
 /**
- * **Onaylı toptan müşteri** — künye elle kuruluyor, gerçek bir müşteri kaydı gerekmiyor: kapı
- * `PricingViewer`i ÇAĞIRANDAN alıyor (`getCatalogData` künyesi) ve fiyat okuması yalnız `channel`
- * ile `customerId`ye bakıyor. Müşteriye özel (pazarlıklı) fiyat sınanmıyor (`customerId: null`) ve
- * bu bir eksik DEĞİL: pazarlıklı fiyatın sıralamaya girmemesi **verilmiş bir karardır** (kullanıcı
- * 24.08) — gerekçesi ve yeniden açılma koşulu `design/KARARLAR.md §1a`'da, uygulaması `0032`
- * künyesinde. Buraya bir gün pazarlıklı fiyat testi yazılacaksa önce o karar açılmalı.
+ * Onaylı toptan müşteri — künye elle kurulur, çünkü kapı `PricingViewer`i çağırandan alır ve fiyat okuması yalnız `channel` ile
+ * `customerId`ye bakar. Müşteriye özel fiyat bilerek sınanmaz: pazarlıklı fiyat sıralamaya girmez (`0032` künyesi).
  */
 const TOPTANCI: PricingViewer = { channel: 'b2b', b2bApproved: true, customerId: null, groupPercentOff: null };
 
@@ -105,10 +95,7 @@ afterAll(async () => {
 
 /**
  * Kendi ürünlerimizin adları — katalogda seed verisi de var, damga onları ayırır.
- *
- * `viewer` PARAMETRE (08.54): dosyanın on testi de `VISITOR` ile koşuyordu ve görünüm zaten yalnız
- * ziyaretçi dalını ifade ediyordu — yani bekçi, koruduğu çiftin tek yarısını ölçüyordu ve toptan
- * müşterinin dört ay boyunca yanlış sıralanmasını yapısal olarak göremezdi.
+ * `viewer` parametredir: görünümün iki kanal dalı da ölçülmezse bekçi koruduğu çiftin yalnız yarısını görür.
  */
 async function sortedNames(sort: 'priceAsc' | 'priceDesc', viewer: PricingViewer = VISITOR) {
   const data = await getCatalogData(db, { locale: 'tr', query: { sort, search: String(stamp) }, place: YERSIZ, viewer });
@@ -140,13 +127,8 @@ describe('fiyat sıralaması', () => {
 });
 
 /**
- * **Sıralama SORANIN kanalından okunur** (08.54 — ölçülmüş kusur, 24.08).
- *
- * Görünüm `where p.channel = 'b2c'`e çakılıydı: onaylı B2B müşteri kartlarda kendi toptan fiyatını
- * görüyor, listeyi ise son müşteri fiyatlarına göre sıralanmış alıyordu. Ölçüldü (Strasbourg deposu,
- * onaylı B2B müşteri, `sort=priceAsc`): **97 üründen 68'i yanlış yerdeydi**, en büyük kayma 22 sıra;
- * aynı sayfa ziyaretçi gözüyle kusursuzdu. Veri kazası değildi — b2b/b2c oranı %48,9–%84,2 arasında
- * 58 farklı değer alıyor, yani sıra tesadüfen bile denk gelemezdi.
+ * Sıralama soranın kanalından okunur: onaylı B2B müşteri kartta toptan fiyatını gördüğü için liste de o fiyatla sıralanmalı.
+ * b2b/b2c oranı ürüne göre değiştiğinden tek kanala çakılmış sıra öteki kanalda tesadüfen bile doğru çıkmaz.
  */
 describe('sıralama SORANIN kanalından okunur', () => {
   it('onaylı toptan müşteri KENDİ fiyat sırasını görür — perakende sırasını değil', async () => {
@@ -190,9 +172,8 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
   });
 
   it('YER BİLİNMİYORKEN teklif tutarı sıralamaya girmez — söz verilmeyen fiyat sıralamaz', async () => {
-    // Karar (01.08, kullanıcı): teklif bir PARTİYE bağlıdır, parti bir depodadır. Ziyaretçinin
-    // posta kodu o depoya düşmeyebilir; indirimli fiyatı gösterip checkout'ta yükseltmek verilmiş
-    // bir sözü bozmak olurdu. Yer bilinmezken liste fiyatı sıralar.
+    // Teklif bir partiye, parti bir depoya bağlı; ziyaretçinin posta kodu o depoya düşmeyebilir ve indirimli fiyatı gösterip
+    // checkout'ta yükseltmek sözü bozardı. Yer bilinmezken liste fiyatı sıralar.
     await db.from('stock').update({ offer_price: 3 }).eq('variant_id', pahali.variantId);
 
     const data = await getCatalogData(db, {
@@ -257,14 +238,8 @@ describe('sıralama ile KART aynı fiyatı kullanır', () => {
 });
 
 /**
- * **Birincil boy = EN UCUZ boy** (düzeltme 09.08) — kartın da görünümün de aynı boyu seçtiği pinlenir.
- *
- * Kusurun şekli sessizdi: birincil boy `sort_order`'dan seçiliyordu ve o sıra fiyatı bilmiyor.
- * Ölçüldü — 32 çok boylu ürünün 24'ünde kartta yazan fiyat en ucuz boyunki değildi. Hiçbir yerde
- * hata vermiyor, yalnız müşteri pahalı fiyatı görüp geçiyordu.
- *
- * Kendi damgası var: üstteki `sortedNames` testleri `stamp`'e göre süzüyor ve buraya eklenen ürünler
- * o kümeyi (ve `total`ı) oynatırdı.
+ * Birincil boy en ucuz boydur — kart ve görünüm aynı boyu seçmeli; `sort_order` fiyatı bilmediği için ondan seçilen boy kartta
+ * sessizce pahalı fiyat gösterirdi. Kendi damgası var, çünkü üstteki `sortedNames` testleri `stamp`e göre süzer.
  */
 describe('çok boylu üründe birincil boy EN UCUZ olandır', () => {
   const damga = stamp + 1;
@@ -324,16 +299,8 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
   });
 
   /**
-   * **KARAR TERSİNE DÖNDÜ** (08.46, kullanıcı kararı 19.08 · uygulandı 24.08).
-   *
-   * Eski hâl: *"fiyatı olmayan ürün listeden DÜŞMEZ, sonda durur"* (`sort_price = Infinity`) —
-   * K2'nin "katalog süzülmez, işaretlenir" ilkesi. Kullanıcı bunun tersine karar verdi: kanalında
-   * satılamayan ürün vitrinde HİÇ listelenmesin.
-   *
-   * Ve eski hâl B2B'de kendi sözünü de tutmuyordu (ölçüldü 24.08): kanal ekseni yokken "fiyatsız"
-   * ürün B2C fiyatıyla sıralanıyor, yani toptan müşteride listenin ORTASINDA duruyordu — sonda
-   * değil. İki ölçüm tam ters yerleşiyordu: b2b fiyatı silinen ürün 7/97'de (ilk ekranda, alınamaz),
-   * b2c fiyatı silinen ürün 97/97'de (en sonda, oysa o müşterinin en ucuzu).
+   * Kanalında fiyatı olmayan ürün o kanalın vitrininde hiç listelenmez, öteki kanalda durur — satılamayan ürünü göstermek
+   * toptan müşteride listenin ortasına alınamaz bir kart koyardı.
    */
   it('kanalında fiyatı olmayan ürün o kanalda HİÇ listelenmez, ötekinde durur', async () => {
     const { product, variants } = await new ProductService(db).create({
@@ -370,8 +337,7 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
       // Listelenen her satırın fiyatı VARDIR — `sort_price` artık null olamaz.
       expect(toptanci.products.every((p) => p.priceCents != null)).toBe(true);
     } finally {
-      // Ürün sonraki testlerin sayımına girmesin — hatası FIRLATILAN silme (`CLAUDE §4b`).
-      // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+      // Ürün sonraki testlerin sayımına girmesin — hatası fırlatılan silme (CLAUDE §4b); önce hareket defteri, sonra parti.
       await purgeVariantStock(db, [variants[0]!.id]);
       await mustDelete(db, 'price', (q) => q.eq('variant_id', variants[0]!.id));
     }
