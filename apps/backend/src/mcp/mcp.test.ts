@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { McpConnectionKeyService, serviceDb } from '@lezzet/database';
+import { McpConnectionKeyService, ProductService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mcpGuard, scopeAllows, toolScope } from './guard';
@@ -67,6 +67,7 @@ describe('mcpGuard — fail-closed kapı (env artçısı)', () => {
 const db = serviceDb();
 const keys = new McpConnectionKeyService(db);
 const createdKeys: string[] = [];
+const createdProductIds: string[] = [];
 
 /** Damgalı anahtar — küresel sayıya bakmadan kendi satırımızı izleyebilmek için. */
 async function makeKey(opts: { scope?: 'read' | 'propose'; expiresInMs?: number } = {}) {
@@ -82,7 +83,7 @@ async function makeKey(opts: { scope?: 'read' | 'propose'; expiresInMs?: number 
 }
 
 afterAll(async () => {
-  await purgeTestData(db, { mcpConnectionKeyIds: createdKeys });
+  await purgeTestData(db, { mcpConnectionKeyIds: createdKeys, productIds: createdProductIds });
 });
 
 describe('mcpGuard — tablo anahtarı', () => {
@@ -234,6 +235,26 @@ describe('katalog ve stok araçları', () => {
     // Bir kayıt iki kümede birden olamaz: aday tanımı "aktif AMA işaretsiz".
     const overlap = health.featured.collections.featured.filter((n) => health.featured.collections.candidates.includes(n));
     expect(overlap).toEqual([]);
+  });
+
+  it('catalog_health yayına çıkamayan adayı engeliyle listeler', async () => {
+    const { product } = await new ProductService(db).create({
+      name: { tr: `Aday ${stamp}`, fr: `Candidat ${stamp}`, de: `Kandidat ${stamp}` },
+      description: { tr: 'Yalnız Türkçe açıklama.' },
+      ingredients: { tr: 'Un.', fr: 'Farine.', de: 'Mehl.' },
+      storageInstructions: { tr: 'Serin yerde.', fr: 'Au frais.', de: 'Kühl lagern.' },
+      nutrition: { energyKj: 1600, energyKcal: 380, fatG: 18, saturatedFatG: 7, carbohydrateG: 45, sugarsG: 22, proteinG: 6, saltG: 0.3 },
+      allergens: ['gluten'],
+      // Adaylar katalog sırasıyla okunur ve paylaşılan veritabanında başkaları da var; bu satır listenin başında dursun.
+      sortOrder: -1_000_000,
+    });
+    createdProductIds.push(product.id);
+
+    const health = await catalogHealth(50);
+    const row = health.candidatesNotReady.find((p) => p.productId === product.id);
+    // Beyanı tam ama açıklaması tek dilde: eksik beyan listesi onu görmez, yayın kuralı görür.
+    expect(row?.missing).toEqual([]);
+    expect(row?.publishGaps).toEqual([{ field: 'description', missing: ['fr', 'de'] }]);
   });
 
   it('stock_watch parti satırlarını depo koduyla verir ve kesmeyi SÖYLER', async () => {

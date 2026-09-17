@@ -89,10 +89,12 @@ export const TOOLS = [
   {
     name: 'catalog_health',
     description:
-      'Catalog completeness: totals (products, candidates, products with incomplete legal declarations) + the incomplete products themselves with EXACTLY which parts are missing (lang/ingredients/nutrition/storage/allergens), whether they have an image, and shelf life — plus the homepage showcase in two buckets: what is already flagged AND what is eligible but not flagged (active records you could propose). Use the candidates list — without it you can only ever discuss records you happened to hear about. Use this when the admin asks what needs finishing in the catalog. NOTE: allergen and storage declarations must never be invented — report them as missing and let the admin supply the supplier document.',
+      'Catalog completeness in one call. totals: products, candidates, products with incomplete legal declarations. incompleteProducts: products ON SALE whose legal declarations are incomplete, with EXACTLY which parts are missing (lang/ingredients/nutrition/storage/allergens — a text counts as filled only when tr, fr and de are all filled). candidatesNotReady: products NOT on sale that cannot be put on sale yet — publishGaps names each blocking field with the languages it still lacks (going on sale needs name, description, ingredients and storage instructions in tr, fr and de, plus the family label for a family member), missing lists the declaration gaps as above; candidatesNotReadyTotal is the full count when the list is cut. Every product row carries productId (feed it to product_detail and propose_product_draft), whether it has an image, and shelf life. Filling the gaps is yours to propose; putting a product on sale never is. Also the homepage showcase in two buckets: what is already flagged AND what is eligible but not flagged (active records you could propose) — use it, otherwise you can only discuss records you happened to hear about. Use this when the admin asks what needs finishing in the catalog. NOTE: allergen and storage declarations must never be invented — report them as missing and let the admin supply the supplier document.',
     inputSchema: {
       type: 'object',
-      properties: { limit: { type: 'number', description: 'Max incomplete products to list, 1-50. Default 15.' } },
+      properties: {
+        limit: { type: 'number', description: 'Max rows per product list (incompleteProducts, candidatesNotReady), 1-50. Default 15.' },
+      },
       additionalProperties: false,
     },
   },
@@ -123,7 +125,7 @@ export const TOOLS = [
   {
     name: 'product_detail',
     description:
-      'Read ONE product as it stands today — per language. Call this BEFORE propose_product_draft: that tool OVERWRITES and there is no version history, so writing blind can erase someone\'s work. For name, description, ingredients and storage you get, per locale (tr/fr/de), whether the field is filled and a short preview — enough to decide "may I write here, or would I be deleting something". Allergens come back as the list itself (a closed set, not text) and nutrition as a yes/no. declarationGaps repeats what the engine sees missing, so you do not need a second catalog_health call. Accepts a productId or part of a name; if several products match it returns the matches instead of guessing one.',
+      'Read ONE product as it stands today — per language. Call this BEFORE propose_product_draft: that tool OVERWRITES and there is no version history, so writing blind can erase someone\'s work. For name, description, ingredients and storage you get, per locale (tr/fr/de), whether the field is filled and a short preview — enough to decide "may I write here, or would I be deleting something". Allergens come back as the list itself (a closed set, not text) and nutrition as a yes/no. declarationGaps repeats what the engine sees missing, so you do not need a second catalog_health call; publishGaps lists what still blocks putting the product on sale, each field with the languages it lacks. Accepts a productId or part of a name; if several products match it returns the matches instead of guessing one.',
     inputSchema: {
       type: 'object',
       properties: {

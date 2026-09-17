@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { dbNumeric, dbNumericNullable } from '../primitives/db-numeric';
 import { ChannelEnum } from '../primitives/enums.schema';
-import { LOCALIZED_TEXT_KEYS, LocalizedTextSchema, type LocalizedText } from '../primitives/localized-text.schema';
+import { hasAllLocales, LocalizedTextSchema, type LocalizedText } from '../primitives/localized-text.schema';
 import { IMAGE_RENDER_FIELDS, ImageMetaInsertSchema, ImageMetaSchema } from '../primitives/image.schema';
 import { ProductVariantSchema } from './product-variant.schema';
 
@@ -135,10 +135,10 @@ export function missingDeclarations(
   p: Pick<Product, 'name' | 'ingredients' | 'nutrition' | 'storageInstructions' | 'allergens'>,
 ): DeclarationGap[] {
   const gaps: DeclarationGap[] = [];
-  if (LOCALIZED_TEXT_KEYS.some((l) => !p.name[l]?.trim())) gaps.push('lang');
-  if (!p.ingredients || !LOCALIZED_TEXT_KEYS.some((l) => p.ingredients?.[l]?.trim())) gaps.push('ingredients');
+  if (!hasAllLocales(p.name)) gaps.push('lang');
+  if (!hasAllLocales(p.ingredients)) gaps.push('ingredients');
   if (!hasNutrition(p.nutrition)) gaps.push('nutrition');
-  if (!p.storageInstructions || !LOCALIZED_TEXT_KEYS.some((l) => p.storageInstructions?.[l]?.trim())) gaps.push('storage');
+  if (!hasAllLocales(p.storageInstructions)) gaps.push('storage');
   if (p.allergens.length === 0) gaps.push('allergens');
   return gaps;
 }

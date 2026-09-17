@@ -9,8 +9,8 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
-import { offerDecisionOf, suggestedOfferPriceCents } from '@lezzet/domain-core';
-import { missingDeclarations, resolveLocalizedText } from '@lezzet/types';
+import { offerDecisionOf, productPublishGaps, suggestedOfferPriceCents } from '@lezzet/domain-core';
+import { missingDeclarations, resolveLocalizedText, type Product } from '@lezzet/types';
 import { LOCALES } from '@lezzet/i18n';
 
 /**
@@ -24,12 +24,19 @@ export async function catalogHealth(limit: number) {
   const db = serviceDb();
   const products = new ProductService(db);
 
-  const [counts, incomplete, featured] = await Promise.all([
+  const [counts, incomplete, candidates, featured] = await Promise.all([
     products.counts(),
     // Süzgeç sunucuda — tüm kataloğu çekip uygulamada elemek katalog büyüdükçe sessizce yavaşlardı.
     products.list({ filters: { onlyIncomplete: true, status: 'active' }, limit: clamped }),
+    // Yayın kuralının kolonu yok, adaylar burada süzülür; aday kümesini operatör kurar ve tek turda okunur.
+    products.listCandidates(),
     featuredOverview(),
   ]);
+
+  // Beyanı eksik aday da yayına çıkamaz, ama yayın kuralı açıklamayı da arar; iki liste birlikte bakılır.
+  const notReady = candidates
+    .map((p) => ({ p, publishGaps: productPublishGaps(p), missing: missingDeclarations(p) }))
+    .filter((c) => c.publishGaps.length > 0 || c.missing.length > 0);
 
   return {
     totals: {
@@ -37,15 +44,22 @@ export async function catalogHealth(limit: number) {
       candidates: counts.candidate,
       incompleteDeclarations: counts.incomplete,
     },
-    // Hangi ürünün NEYİ eksik — asistan "ürün detayını tamamla" işine buradan başlar.
-    incompleteProducts: incomplete.rows.map((p) => ({
-      name: resolveLocalizedText(p.name, 'tr'),
-      slug: p.slug,
-      missing: missingDeclarations(p),
-      hasImage: p.imageKey !== null,
-      shelfLifeDays: p.shelfLifeDays,
-    })),
+    // Satıştaki üründe hangi beyan eksik — asistan "ürün detayını tamamla" işine buradan başlar.
+    incompleteProducts: incomplete.rows.map((p) => ({ ...productRef(p), missing: missingDeclarations(p) })),
+    candidatesNotReady: notReady.slice(0, clamped).map(({ p, publishGaps, missing }) => ({ ...productRef(p), publishGaps, missing })),
+    candidatesNotReadyTotal: notReady.length,
     featured,
+  };
+}
+
+/** Satırın kimliği — öneri araçları `productId` ister, asistan adı ve görsel durumunu okur. */
+function productRef(p: Product) {
+  return {
+    productId: p.id,
+    name: resolveLocalizedText(p.name, 'tr'),
+    slug: p.slug,
+    hasImage: p.imageKey !== null,
+    shelfLifeDays: p.shelfLifeDays,
   };
 }
 
@@ -284,6 +298,8 @@ export async function productDetail(productIdOrName: string) {
     variants: variants.map((v) => ({ variantId: v.id, unit: resolveLocalizedText(v.label, 'tr'), isActive: v.isActive })),
     /** Motorun gördüğü eksikler — `catalog_health`e ikinci tur atmadan. */
     declarationGaps: missingDeclarations(product),
+    /** Satışa almayı engelleyen alanlar ve eksik dilleri — veritabanının yayın kısıtıyla aynı kural. */
+    publishGaps: productPublishGaps(product),
     note: 'Dolu bir alana yazmak ONU SİLER — sürüm geçmişi yok. filled:true olan alanı ancak bilerek değiştirin.',
   };
 }
