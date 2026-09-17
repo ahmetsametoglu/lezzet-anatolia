@@ -45,6 +45,11 @@
     "imageWidth": null,
     "imageHeight": null
   },
+  "catalog/categories/dogal-geleneksel.jpg": {
+    "imageUpdatedAt": "2026-09-17T10:15:16.343+00:00",
+    "imageWidth": 1000,
+    "imageHeight": 1000
+  },
   "catalog/categories/dondurma-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:48.052+00:00",
     "imageWidth": null,
@@ -97,6 +102,11 @@
   },
   "catalog/categories/firin.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:42.126+00:00",
+    "imageWidth": 1500,
+    "imageHeight": 1500
+  },
+  "catalog/categories/meze.webp": {
+    "imageUpdatedAt": "2026-09-17T10:15:15.8+00:00",
     "imageWidth": 1500,
     "imageHeight": 1500
   },
@@ -367,8 +377,8 @@
   },
   "catalog/products/carrot-tarator.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/cheese-calzone.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -612,8 +622,13 @@
   },
   "catalog/products/eggplant-with-yogurt.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
+  },
+  "catalog/products/falafel-hummus-filled.webp": {
+    "imageUpdatedAt": "2026-09-17T10:15:30.96+00:00",
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/form-pasta.webp": {
     "imageUpdatedAt": "2026-09-17T06:23:18.745+00:00",
@@ -647,8 +662,8 @@
   },
   "catalog/products/hummus.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/igde-cekirdegi-pasta.webp": {
     "imageUpdatedAt": "2026-09-17T06:23:20.126+00:00",
@@ -1047,8 +1062,8 @@
   },
   "catalog/products/saksuka.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/san-sebastian-cheesecake-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1172,8 +1187,8 @@
   },
   "catalog/products/spicy-turkish-tomato-dip.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/spiral-pie-borek-with-cheese-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1262,13 +1277,13 @@
   },
   "catalog/products/stuffed-vine-leaves-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/stuffed-vine-leaves.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/sweet-turkish-bagel-simit-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1402,28 +1417,28 @@
   },
   "catalog/products/vegan-cig-kofte.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/vegan-falafel-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/vegan-falafel.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/vegan-kibbeh-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/vegan-kibbeh.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": null,
-    "imageHeight": null
+    "imageWidth": 1500,
+    "imageHeight": 1500
   },
   "catalog/products/vegan-raw-meatballs-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
