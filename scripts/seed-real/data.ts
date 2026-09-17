@@ -992,6 +992,528 @@ export const COLLECTIONS: SeedCollection[] = [
   },
 ];
 
+/**
+ * Paket ve tarif kalemi — koleksiyon üyesi gibi Lezza ürünü varyant koduyla, taslak faturadaki adla bağlanır.
+ * Birden çok boyu olan taslakta `label` hangi boyun alındığını söyler; tek boylu taslakta gerekmez.
+ */
+type SeedLine = { qty: number } & ({ sku: string } | { draft: string; label?: string });
+
+/** Paket fiyatı liste toplamının bu oranda altıdır ve 90 kuruşa yuvarlanır; fiyat değişince besleme yeniden hesaplar. */
+export const BUNDLE_DISCOUNT = 0.1;
+
+/** Paketler müşterinin gündelik anlarına göre kuruldu: kahvaltı, çay saati, maç akşamı, bayram, yılbaşı hediyesi, iftar. */
+interface SeedBundle {
+  name: UcDil;
+  description: UcDil;
+  serves?: number;
+  /** Ana sayfanın paket bandında iki yuva var. */
+  isFeatured?: boolean;
+  /** Kalemlerinden birinin künyesi eksikse paket pasif doğar. */
+  isActive?: boolean;
+  items: SeedLine[];
+}
+
+export const BUNDLES: SeedBundle[] = [
+  {
+    name: { tr: 'Pazar Kahvaltısı', fr: 'Petit-déjeuner du dimanche', de: 'Sonntagsfrühstück' },
+    description: {
+      tr: 'Fırından simit ve açma, peynirli kol böreği, yanında tahin ve üzüm pekmezi: dört kişilik bir pazar sofrası.',
+      fr: 'Simits et açmas tout juste sortis du four, börek roulé au fromage, tahin et mélasse de raisin : une table du dimanche pour quatre.',
+      de: 'Simit und Açma frisch aus dem Ofen, Käse-Börekschnecke, dazu Tahin und Traubenmelasse: ein Sonntagstisch für vier.',
+    },
+    serves: 4,
+    isFeatured: true,
+    items: [
+      { sku: '700101', qty: 1 },
+      { sku: '700301', qty: 1 },
+      { sku: '700501', qty: 1 },
+      { draft: 'Tahini', qty: 1 },
+      { draft: 'Druivenmelasse', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Çay Saati', fr: 'L’heure du goûter', de: 'Kaffee und Kuchen' },
+    description: {
+      tr: 'Dört çeşit artisan kek, poğaça ve Trabzon hurması cipsi: öğleden sonra çayının yanına hazır bir tabak.',
+      fr: 'Quatre cakes artisanaux, des poğaças et des chips de kaki : de quoi garnir le goûter de l’après-midi.',
+      de: 'Vier Artisan-Kuchen, Poğaça und Kaki-Chips: alles für die Kaffeetafel am Nachmittag.',
+    },
+    serves: 4,
+    items: [
+      { sku: '901027B', qty: 1 },
+      { sku: '901028B', qty: 1 },
+      { sku: '901026B', qty: 1 },
+      { sku: '901025B', qty: 1 },
+      { sku: '700201', qty: 1 },
+      { draft: 'Gedroogde Kaki cips', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Döner Akşamı', fr: 'Soirée döner', de: 'Döner-Abend' },
+    description: {
+      tr: 'Et ve tavuk döner, yanında acılı kanat: maç ya da dost akşamı için çabucak kurulan bir sofra.',
+      fr: 'Döner à la viande et au poulet, avec des ailes épicées : une table vite dressée pour un match ou une soirée entre amis.',
+      de: 'Fleisch- und Hähnchendöner, dazu scharfe Chicken Wings: schnell gedeckt für den Fußballabend oder Freunde.',
+    },
+    serves: 5,
+    isFeatured: true,
+    items: [
+      { draft: 'LEZZA Traditional Meet Doner', qty: 1 },
+      { draft: 'LEZZA Traditional Chicken Doner', qty: 1 },
+      { sku: '312442', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Hafta İçi Dondurucu Paketi', fr: 'Box congélateur de la semaine', de: 'Tiefkühlbox für die Woche' },
+    description: {
+      tr: 'Kıymalı mantı, tavuk fileto ve dört börek: yoğun hafta içi akşamlarında dondurucudan çıkıp yarım saatte sofraya.',
+      fr: 'Mantı à la viande, filets de poulet et quatre böreks : du congélateur à la table en une demi-heure, les soirs de semaine chargés.',
+      de: 'Mantı mit Hackfleisch, Hähnchenfilets und vier Börek: an vollen Wochentagen in einer halben Stunde vom Gefrierfach auf den Tisch.',
+    },
+    serves: 4,
+    items: [
+      { draft: 'LEZZA Manti with Minced Meat (Kiymali)', qty: 1 },
+      { sku: '312241', qty: 1 },
+      { sku: '700911', qty: 2 },
+      { sku: '700904', qty: 2 },
+    ],
+  },
+  {
+    name: { tr: 'Bayram İkramı', fr: 'Coffret de l’Aïd', de: 'Bayram-Box für Gäste' },
+    description: {
+      tr: 'Antep fıstığı, fındıklı muska pestil ve üç kurutulmuş meyve: bayram ziyaretinde misafire çayın yanında ikram için.',
+      fr: 'Pistaches, pestil en triangles aux noisettes et trois fruits séchés : à offrir aux invités avec le thé pendant les visites de l’Aïd.',
+      de: 'Pistazien, Pestil-Dreiecke mit Haselnüssen und drei Trockenfrüchte: für Gäste zum Tee bei den Bayram-Besuchen.',
+    },
+    serves: 8,
+    // Kurutulmuş şeftalinin gramajı faturada yok; boyu girilene kadar satışa açılmaz.
+    isActive: false,
+    items: [
+      { draft: 'Pistache', qty: 1 },
+      { draft: 'Pestil met Hazinoten Muska', qty: 1 },
+      { draft: 'Gedroogde meloen', qty: 1 },
+      { draft: 'Gedroogde perzik', qty: 1 },
+      { draft: 'Gedroogde appel', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Anadolu Kiler Kutusu', fr: 'Coffret garde-manger d’Anatolie', de: 'Anatolische Vorratsbox' },
+    description: {
+      tr: 'Üzüm ve keçiboynuzu pekmezi, tahin, pestil ve iki kurutulmuş meyve: yılbaşı ve özel günler için oda sıcaklığında saklanan bir hediye kutusu.',
+      fr: 'Mélasses de raisin et de caroube, tahin, pestil et deux fruits séchés : un coffret cadeau pour les fêtes, qui se conserve à température ambiante.',
+      de: 'Trauben- und Johannisbrotmelasse, Tahin, Pestil und zwei Trockenfrüchte: eine Geschenkbox für die Feiertage, die bei Zimmertemperatur hält.',
+    },
+    items: [
+      { draft: 'Druivenmelasse', qty: 1 },
+      { draft: 'Johannesbroodmelasse', qty: 1 },
+      { draft: 'Tahini', qty: 1 },
+      { draft: 'Pestil met Hazinoten Muska', qty: 1 },
+      { draft: 'Gedroogde aronya', qty: 1 },
+      { draft: 'Gedroogde Kaki cips', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Sirke Tadım Seti', fr: 'Coffret dégustation de vinaigres', de: 'Essig-Probierset' },
+    description: {
+      tr: 'Altı meyve sirkesi: elma, alıç, ananas, bal, enginar ve ışkın kökü. Salata sosunda ya da suyla seyreltilerek denemek için.',
+      fr: 'Six vinaigres de fruits : pomme, aubépine, ananas, miel, artichaut et racine de rhubarbe. À goûter en vinaigrette ou dilués dans l’eau.',
+      de: 'Sechs Fruchtessige: Apfel, Weißdorn, Ananas, Honig, Artischocke und Rhabarberwurzel. Zum Probieren im Dressing oder mit Wasser verdünnt.',
+    },
+    items: [
+      { draft: 'Appel azijn', qty: 1 },
+      { draft: 'Meidoorn azijn', qty: 1 },
+      { draft: 'Ananas azijn', qty: 1 },
+      { draft: 'Honing azijn', qty: 1 },
+      { draft: 'Enginar azijn', qty: 1 },
+      { draft: 'Isgin azijn', qty: 1 },
+    ],
+  },
+  {
+    // Metin sağlık beyanı taşımaz (AB 1924/2006): ürünler tat ve gelenek üzerinden anlatılır.
+    name: { tr: 'Kış Kilerinden', fr: 'Le garde-manger d’hiver', de: 'Aus der Wintervorratskammer' },
+    description: {
+      tr: 'Karadut özü, propolis ve kozalak macunu, keçiboynuzu pekmezi: kış akşamlarında kaşıkla ya da sıcak suyla tüketilen Anadolu tatları.',
+      fr: 'Extrait de mûre noire, pâtes au propolis et aux pommes de pin, mélasse de caroube : les saveurs anatoliennes des soirs d’hiver, à la cuillère ou dans l’eau chaude.',
+      de: 'Schwarzer Maulbeerextrakt, Propolis- und Kiefernzapfenpaste, Johannisbrotmelasse: anatolische Aromen für Winterabende, löffelweise oder in warmem Wasser.',
+    },
+    items: [
+      { draft: 'Zwarte moerbei extrat', qty: 1 },
+      { draft: 'Propolis pasta', qty: 1 },
+      { draft: 'Dennenappel pasta', qty: 1 },
+      { draft: 'Johannesbroodmelasse', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Çiğ Köfte Sofrası', fr: 'Table de çiğ köfte', de: 'Çiğ-Köfte-Tafel' },
+    description: {
+      tr: 'Bir kilo vegan çiğ köfte ve nar özü: marul yaprağına ya da lavaşa sarıp limonla, altı kişilik bir akşam.',
+      fr: 'Un kilo de çiğ köfte vegan et de l’extrait de grenade : à rouler dans une feuille de laitue ou un lavash avec du citron, pour six personnes.',
+      de: 'Ein Kilo veganes Çiğ Köfte und Granatapfelextrakt: in Salatblätter oder Lavash gerollt, mit Zitrone – ein Abend für sechs.',
+    },
+    serves: 6,
+    items: [
+      { sku: '201301', qty: 1 },
+      { draft: 'Granaatappelextraat', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'İftar Sofrası', fr: 'Table d’iftar', de: 'Iftar-Tafel' },
+    description: {
+      tr: 'Su böreği, iki kutu künefe ve hoşaf için kurutulmuş şeftali ile elma: Ramazan akşamlarında altı kişilik bir sofra.',
+      fr: 'Su börek, deux künefe, et des pêches et pommes séchées pour la compote hoşaf : une table pour six, les soirs de Ramadan.',
+      de: 'Su Börek, zwei Künefe sowie getrocknete Pfirsiche und Äpfel für Hoşaf: ein Tisch für sechs an Ramadan-Abenden.',
+    },
+    serves: 6,
+    // Kurutulmuş şeftalinin gramajı faturada yok; boyu girilene kadar satışa açılmaz.
+    isActive: false,
+    items: [
+      { sku: '700402', qty: 1 },
+      { sku: '500103', qty: 2 },
+      { draft: 'Gedroogde perzik', qty: 1 },
+      { draft: 'Gedroogde appel', qty: 1 },
+    ],
+  },
+];
+
+/**
+ * Tarif sıfırdan pişirme değil sofra fikridir: hangi ürünümüz bir araya gelip nasıl servis edilir, yanına evden ne konur.
+ * Ürünlerimizin pişirme süresi uydurulmaz, adım paketteki talimata yönlendirir.
+ */
+interface SeedRecipe {
+  name: UcDil;
+  description: UcDil;
+  duration: UcDil;
+  serves: UcDil;
+  meal: UcDil;
+  /** Satır = adım; numarayı ekran verir, biçim işareti çizilmez. */
+  steps: UcDil;
+  /** Satır = madde; bizim ürünümüz değildir, sepete eklenmez. */
+  pantry: UcDil;
+  items: SeedLine[];
+}
+
+const OGUN = {
+  kahvalti: { tr: 'Kahvaltı', fr: 'Petit-déjeuner', de: 'Frühstück' },
+  aksam: { tr: 'Akşam yemeği', fr: 'Dîner', de: 'Abendessen' },
+  meze: { tr: 'Meze', fr: 'Mezze', de: 'Meze' },
+  iftar: { tr: 'İftar', fr: 'Iftar', de: 'Iftar' },
+  tatli: { tr: 'Tatlı', fr: 'Dessert', de: 'Dessert' },
+  herOgun: { tr: 'Her öğün', fr: 'À chaque repas', de: 'Zu jeder Mahlzeit' },
+  paylasim: { tr: 'Paylaşımlık', fr: 'À partager', de: 'Zum Teilen' },
+} satisfies Record<string, UcDil>;
+
+const sure = (dk: number): UcDil => ({ tr: `${dk} dk`, fr: `${dk} min`, de: `${dk} Min.` });
+const kisilik = (n: number): UcDil => ({ tr: `${n} kişilik`, fr: `Pour ${n} personnes`, de: `Für ${n} Personen` });
+
+export const RECIPES: SeedRecipe[] = [
+  {
+    name: { tr: 'Tahin-Pekmezli Kahvaltı', fr: 'Petit-déjeuner tahin et mélasse', de: 'Frühstück mit Tahin und Melasse' },
+    description: {
+      tr: 'Anadolu kahvaltısının kaşıkla yenen tatlısı: tahin ile üzüm pekmezi, yanında sıcak simit.',
+      fr: 'La douceur du petit-déjeuner anatolien, qui se mange à la cuillère : tahin et mélasse de raisin, avec un simit chaud.',
+      de: 'Die süße Seite des anatolischen Frühstücks, die man löffelt: Tahin und Traubenmelasse, dazu ein warmer Simit.',
+    },
+    duration: sure(15),
+    serves: kisilik(4),
+    meal: OGUN.kahvalti,
+    steps: {
+      tr: 'Simitleri paketteki talimata göre, dondurucudan çıktığı gibi fırında pişirin.\nTahin ile pekmezi eşit ölçüde küçük bir kaseye koyun.\nKarıştırmadan kaşıkla bir iki kez çevirin; iki renk ayrı kalsın, her lokmada ikisi birden gelsin.\nSimitleri sıcak servis edin; tahin-pekmezi kaşıkla ya da simite sürerek yiyin.',
+      fr: 'Faites cuire les simits au four, directement sortis du congélateur, selon les indications de l’emballage.\nVersez le tahin et la mélasse à parts égales dans un petit bol.\nTournez une ou deux fois à la cuillère sans mélanger : les deux couleurs restent séparées et chaque bouchée a les deux.\nServez les simits chauds ; le tahin-mélasse se mange à la cuillère ou tartiné sur le simit.',
+      de: 'Backen Sie die Simit direkt aus dem Gefrierfach nach der Anleitung auf der Packung im Ofen.\nGeben Sie Tahin und Melasse zu gleichen Teilen in eine kleine Schale.\nEin- bis zweimal mit dem Löffel durchziehen, nicht verrühren: Die Farben bleiben getrennt, jeder Bissen hat beides.\nServieren Sie die Simit warm; Tahin-Melasse löffeln oder auf den Simit streichen.',
+    },
+    pantry: {
+      tr: 'Tereyağı\nCeviz içi (isteğe bağlı)\nDemlik çay',
+      fr: 'Beurre\nCerneaux de noix (facultatif)\nThé en théière',
+      de: 'Butter\nWalnusskerne (nach Belieben)\nTee aus der Kanne',
+    },
+    items: [
+      { sku: '700101', qty: 1 },
+      { draft: 'Tahini', qty: 1 },
+      { draft: 'Druivenmelasse', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Yoğurtlu Mantı', fr: 'Mantı au yaourt à l’ail', de: 'Mantı mit Knoblauchjoghurt' },
+    description: {
+      tr: 'Kayseri usulü sunum: sarımsaklı yoğurt, pul biberli tereyağı, üstüne nane ve sumak.',
+      fr: 'Servi à la mode de Kayseri : yaourt à l’ail, beurre au piment, menthe séchée et sumac.',
+      de: 'Nach Kayseri-Art serviert: Knoblauchjoghurt, Butter mit Paprikaflocken, getrocknete Minze und Sumach.',
+    },
+    duration: sure(25),
+    serves: kisilik(4),
+    meal: OGUN.aksam,
+    steps: {
+      tr: 'Mantıyı çözdürmeden, paketteki süreye göre bol tuzlu suda haşlayın.\nBu sırada yoğurdu ezilmiş sarımsak ve bir tutam tuzla çırpın; oda sıcaklığında kalsın.\nTavada tereyağını eritin; köpürünce pul biber ve kuru naneyi ekleyip ocaktan alın.\nSüzülen mantıyı tabaklara alın; üzerine yoğurdu, en son sıcak tereyağını gezdirin ve sumak serpin.',
+      fr: 'Faites cuire les mantı sans les décongeler dans beaucoup d’eau salée, le temps indiqué sur l’emballage.\nPendant ce temps, fouettez le yaourt avec l’ail écrasé et une pincée de sel ; laissez-le à température ambiante.\nFaites fondre le beurre dans une poêle ; quand il mousse, ajoutez le piment et la menthe séchée, puis retirez du feu.\nDressez les mantı égouttés, nappez de yaourt, versez le beurre chaud en dernier et parsemez de sumac.',
+      de: 'Kochen Sie die Mantı ungetaut in reichlich Salzwasser nach der Zeit auf der Packung.\nVerquirlen Sie inzwischen den Joghurt mit zerdrücktem Knoblauch und einer Prise Salz; bei Zimmertemperatur stehen lassen.\nButter in einer Pfanne schmelzen; wenn sie schäumt, Paprikaflocken und getrocknete Minze zugeben und vom Herd nehmen.\nDie abgetropften Mantı anrichten, mit Joghurt bedecken, zuletzt die heiße Butter darübergeben und mit Sumach bestreuen.',
+    },
+    pantry: {
+      tr: 'Süzme yoğurt\nSarımsak\nTereyağı\nPul biber\nKuru nane\nSumak',
+      fr: 'Yaourt égoutté\nAil\nBeurre\nPiment en flocons\nMenthe séchée\nSumac',
+      de: 'Abgetropfter Joghurt\nKnoblauch\nButter\nPaprikaflocken\nGetrocknete Minze\nSumach',
+    },
+    items: [{ draft: 'LEZZA Manti with Minced Meat (Kiymali)', qty: 1 }],
+  },
+  {
+    name: { tr: 'Evde Döner Dürüm', fr: 'Dürüm au döner maison', de: 'Döner-Dürüm zu Hause' },
+    description: {
+      tr: 'Dilimlenmiş döner tavada çıtırlanır, sumaklı soğan ve domatesle lavaşa sarılır.',
+      fr: 'Le döner tranché est saisi à la poêle, puis roulé dans un lavash avec des oignons au sumac et des tomates.',
+      de: 'Der geschnittene Döner wird in der Pfanne knusprig gebraten und mit Sumach-Zwiebeln und Tomaten in Lavash gerollt.',
+    },
+    duration: sure(20),
+    serves: kisilik(4),
+    meal: OGUN.aksam,
+    steps: {
+      tr: 'Döneri paketteki talimata göre ısıtın; kızgın tavada parti parti, kenarları çıtırlaşana dek çevirin.\nSoğanı ince doğrayın; sumak ve bir tutam tuzla ovup maydanozla karıştırın.\nLavaşı kuru tavada birkaç saniye ısıtıp yumuşatın.\nLavaşa döner, sumaklı soğan, domates ve marul dizin; isterseniz yoğurt gezdirip sıkıca sarın.',
+      fr: 'Réchauffez le döner selon l’emballage, puis saisissez-le par petites quantités dans une poêle très chaude jusqu’à ce que les bords croustillent.\nÉmincez l’oignon, frottez-le avec le sumac et une pincée de sel, puis mélangez au persil.\nRéchauffez le lavash quelques secondes à la poêle sèche pour l’assouplir.\nGarnissez le lavash de döner, d’oignons au sumac, de tomate et de laitue ; ajoutez du yaourt si vous le souhaitez et roulez bien serré.',
+      de: 'Erwärmen Sie den Döner nach der Packungsanleitung und braten Sie ihn portionsweise in einer heißen Pfanne, bis die Ränder knusprig sind.\nZwiebel fein schneiden, mit Sumach und einer Prise Salz einreiben und mit Petersilie mischen.\nLavash einige Sekunden in der trockenen Pfanne erwärmen, damit es geschmeidig wird.\nLavash mit Döner, Sumach-Zwiebeln, Tomate und Salat belegen, nach Belieben Joghurt darübergeben und fest aufrollen.',
+    },
+    pantry: {
+      tr: 'Lavaş ya da tortilla\nSoğan, domates, marul\nSumak, maydanoz\nYoğurt',
+      fr: 'Lavash ou tortillas\nOignon, tomate, laitue\nSumac, persil\nYaourt',
+      de: 'Lavash oder Tortillas\nZwiebel, Tomate, Salat\nSumach, Petersilie\nJoghurt',
+    },
+    items: [{ draft: 'LEZZA Traditional Meet Doner', qty: 1 }],
+  },
+  {
+    name: { tr: 'İskender Usulü Döner', fr: 'Döner façon İskender', de: 'Döner nach İskender-Art' },
+    description: {
+      tr: 'Bursa’nın ünlü tabağının ev hâli: kızarmış pide, döner, domates sosu, yoğurt ve kızgın tereyağı.',
+      fr: 'La version maison du célèbre plat de Bursa : pain pide grillé, döner, sauce tomate, yaourt et beurre grésillant.',
+      de: 'Die Hausvariante des berühmten Tellers aus Bursa: geröstetes Pide, Döner, Tomatensauce, Joghurt und heiße Butter.',
+    },
+    duration: sure(25),
+    serves: kisilik(3),
+    meal: OGUN.aksam,
+    steps: {
+      tr: 'Pideyi küp doğrayın, fırında ya da tavada hafifçe kızartıp tabağın dibine yayın.\nDöneri paketteki talimata göre ısıtın, tavada çıtırlatıp pidelerin üzerine dizin.\nTereyağında salçayı biraz suyla açıp iki dakika pişirin; döner ve pidenin üzerine gezdirin.\nYanına yoğurt koyun; en son köpürene dek ısıttığınız tereyağını döküp hemen servis edin.',
+      fr: 'Coupez le pide en cubes, faites-les dorer au four ou à la poêle et étalez-les au fond de l’assiette.\nRéchauffez le döner selon l’emballage, faites-le croustiller à la poêle et disposez-le sur le pain.\nDiluez le concentré de tomate dans un peu d’eau avec du beurre et laissez cuire deux minutes ; nappez le döner et le pain.\nAjoutez le yaourt à côté, versez en dernier le beurre chauffé jusqu’à ce qu’il mousse et servez aussitôt.',
+      de: 'Pide in Würfel schneiden, im Ofen oder in der Pfanne leicht rösten und auf dem Teller verteilen.\nDöner nach der Packungsanleitung erwärmen, in der Pfanne knusprig braten und auf das Brot legen.\nTomatenmark mit etwas Wasser in Butter zwei Minuten köcheln lassen und über Döner und Brot geben.\nJoghurt danebengeben, zuletzt die bis zum Schäumen erhitzte Butter darübergießen und sofort servieren.',
+    },
+    pantry: {
+      tr: 'Pide ya da bayat ekmek\nDomates salçası\nTereyağı\nSüzme yoğurt\nSivri biber (isteğe bağlı)',
+      fr: 'Pain pide ou pain rassis\nConcentré de tomate\nBeurre\nYaourt égoutté\nPiments verts (facultatif)',
+      de: 'Pide oder altbackenes Brot\nTomatenmark\nButter\nAbgetropfter Joghurt\nGrüne Spitzpaprika (nach Belieben)',
+    },
+    items: [{ draft: 'LEZZA Traditional Meet Doner', qty: 1 }],
+  },
+  {
+    name: { tr: 'Nar Ekşili Gavurdağı Salatası', fr: 'Salade Gavurdağı à la grenade', de: 'Gavurdağı-Salat mit Granatapfel' },
+    description: {
+      tr: 'Gaziantep’in ince kıyılmış salatası: domates, soğan, ceviz ve maydanoz, nar özü ve zeytinyağıyla.',
+      fr: 'La salade finement hachée de Gaziantep : tomates, oignon, noix et persil, avec extrait de grenade et huile d’olive.',
+      de: 'Der fein gehackte Salat aus Gaziantep: Tomaten, Zwiebel, Walnüsse und Petersilie mit Granatapfelextrakt und Olivenöl.',
+    },
+    duration: sure(15),
+    serves: kisilik(4),
+    meal: OGUN.meze,
+    steps: {
+      tr: 'Domatesleri, soğanı ve yeşil biberi çok küçük doğrayın; soğanı tuzla ovup suyunu süzün.\nCevizi iri kırın, maydanozu ince kıyın.\nZeytinyağı, nar özü, limon suyu, sumak ve tuzu bir kasede çırpın.\nHepsini karıştırıp sosu gezdirin; on dakika bekletip servis edin.',
+      fr: 'Coupez les tomates, l’oignon et le poivron vert en tout petits dés ; frottez l’oignon avec du sel et égouttez-le.\nConcassez grossièrement les noix et hachez finement le persil.\nFouettez dans un bol l’huile d’olive, l’extrait de grenade, le jus de citron, le sumac et le sel.\nMélangez le tout, arrosez de sauce, laissez reposer dix minutes et servez.',
+      de: 'Tomaten, Zwiebel und grüne Paprika sehr fein würfeln; die Zwiebel mit Salz einreiben und abtropfen lassen.\nWalnüsse grob hacken, Petersilie fein schneiden.\nOlivenöl, Granatapfelextrakt, Zitronensaft, Sumach und Salz in einer Schüssel verquirlen.\nAlles mischen, das Dressing darübergeben, zehn Minuten ziehen lassen und servieren.',
+    },
+    pantry: {
+      tr: 'Domates, soğan, yeşil biber\nCeviz içi\nMaydanoz\nLimon, sumak, tuz',
+      fr: 'Tomates, oignon, poivron vert\nCerneaux de noix\nPersil\nCitron, sumac, sel',
+      de: 'Tomaten, Zwiebel, grüne Paprika\nWalnusskerne\nPetersilie\nZitrone, Sumach, Salz',
+    },
+    items: [
+      { draft: 'Granaatappelextraat', qty: 1 },
+      { draft: 'Olijfolie', label: '750 ml', qty: 1 },
+    ],
+  },
+  {
+    name: {
+      tr: 'Çiğ Köfte Dürüm ve Marul Sarma',
+      fr: 'Çiğ köfte en wrap et en feuilles de laitue',
+      de: 'Çiğ Köfte im Wrap und im Salatblatt',
+    },
+    description: {
+      tr: 'Vegan çiğ köfte, nar özü ve limonla: bir kısmı lavaşa, bir kısmı marul yaprağına.',
+      fr: 'Çiğ köfte vegan, extrait de grenade et citron : une partie roulée dans un lavash, l’autre dans des feuilles de laitue.',
+      de: 'Veganes Çiğ Köfte mit Granatapfelextrakt und Zitrone: teils im Lavash, teils im Salatblatt.',
+    },
+    duration: sure(10),
+    serves: kisilik(6),
+    meal: OGUN.aksam,
+    steps: {
+      tr: 'Çiğ köfteyi paketteki talimata göre çözdürün; avucunuzda sıkarak parmak biçiminde köfteler yapın.\nMarul yapraklarını yıkayıp kurulayın, lavaşları hazırlayın.\nMarul yaprağına köfte koyun, limon sıkıp nar özü gezdirin, nane ekleyip sarın.\nLavaşa marul, turşu ve köfte dizin; nar özü gezdirip sıkıca sarın ve soğuk ayranla servis edin.',
+      fr: 'Décongelez le çiğ köfte selon l’emballage, puis façonnez des boulettes allongées en le serrant dans la main.\nLavez et séchez les feuilles de laitue, préparez les lavashs.\nPosez une boulette sur une feuille de laitue, pressez du citron, ajoutez de l’extrait de grenade et de la menthe, puis roulez.\nGarnissez un lavash de laitue, de pickles et de çiğ köfte, arrosez d’extrait de grenade, roulez serré et servez avec un ayran bien frais.',
+      de: 'Çiğ Köfte nach der Packungsanleitung auftauen und in der Hand zu länglichen Bällchen drücken.\nSalatblätter waschen und trocknen, Lavash bereitlegen.\nEin Bällchen auf ein Salatblatt legen, Zitrone darüberpressen, Granatapfelextrakt und Minze zugeben und einrollen.\nLavash mit Salat, eingelegtem Gemüse und Çiğ Köfte belegen, mit Granatapfelextrakt beträufeln, fest rollen und mit kaltem Ayran servieren.',
+    },
+    pantry: {
+      tr: 'Marul\nLavaş\nLimon\nTaze nane\nTurşu\nAyran',
+      fr: 'Laitue\nLavash\nCitron\nMenthe fraîche\nPickles\nAyran',
+      de: 'Salat\nLavash\nZitrone\nFrische Minze\nEingelegtes Gemüse\nAyran',
+    },
+    items: [
+      { sku: '201301', qty: 1 },
+      { draft: 'Granaatappelextraat', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Pekmezli Hoşaf', fr: 'Compote hoşaf à la mélasse', de: 'Hoşaf mit Traubenmelasse' },
+    description: {
+      tr: 'Ramazan sofralarının soğuk kuru meyve kompostosu; şeker yerine üzüm pekmeziyle tatlandırılır.',
+      fr: 'La compote froide de fruits séchés des tables de Ramadan, sucrée à la mélasse de raisin plutôt qu’au sucre.',
+      de: 'Das kalte Trockenfrüchte-Kompott der Ramadan-Tafeln, mit Traubenmelasse statt Zucker gesüßt.',
+    },
+    duration: { tr: '15 dk + bir gece bekleme', fr: '15 min + une nuit de repos', de: '15 Min. + eine Nacht Ruhezeit' },
+    serves: kisilik(6),
+    meal: OGUN.iftar,
+    steps: {
+      tr: 'Kuru meyveleri yıkayın, büyük olanları ikiye bölün.\nBir buçuk litre suyu tarçın ve karanfille kaynatın.\nMeyveleri ekleyip beş dakika pişirin; ocaktan alıp üç yemek kaşığı pekmezi karıştırın.\nSoğuyunca buzdolabına koyun; bir gece bekletip soğuk servis edin.',
+      fr: 'Rincez les fruits séchés et coupez les plus gros en deux.\nPortez à ébullition un litre et demi d’eau avec la cannelle et les clous de girofle.\nAjoutez les fruits et laissez cuire cinq minutes ; hors du feu, incorporez trois cuillères à soupe de mélasse.\nUne fois refroidie, placez la compote au réfrigérateur ; laissez reposer une nuit et servez froid.',
+      de: 'Trockenfrüchte waschen und größere Stücke halbieren.\nAnderthalb Liter Wasser mit Zimt und Nelken aufkochen.\nFrüchte zugeben und fünf Minuten köcheln lassen; vom Herd nehmen und drei Esslöffel Melasse einrühren.\nAbgekühlt in den Kühlschrank stellen, über Nacht ziehen lassen und kalt servieren.',
+    },
+    pantry: {
+      tr: 'Su\nTarçın çubuğu\nKaranfil',
+      fr: 'Eau\nBâton de cannelle\nClous de girofle',
+      de: 'Wasser\nZimtstange\nGewürznelken',
+    },
+    items: [
+      { draft: 'Gedroogde perzik', qty: 1 },
+      { draft: 'Gedroogde appel', qty: 1 },
+      { draft: 'Gedroogde aronya', qty: 1 },
+      { draft: 'Druivenmelasse', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Künefe Keyfi', fr: 'Künefe à la glace et aux pistaches', de: 'Künefe mit Eis und Pistazien' },
+    description: {
+      tr: 'Sıcak künefe, üstünde dondurma ya da kaymak ve dövülmüş antep fıstığı.',
+      fr: 'Un künefe brûlant, surmonté de glace ou de kaymak et de pistaches concassées.',
+      de: 'Heißes Künefe mit Eis oder Kaymak und gehackten Pistazien.',
+    },
+    duration: sure(20),
+    serves: kisilik(2),
+    meal: OGUN.tatli,
+    steps: {
+      tr: 'Künefeyi paketteki talimata göre tepsisiyle fırında pişirin.\nBu sırada bir avuç antep fıstığını dövün.\nKutudaki şerbeti sıcak künefenin üzerine gezdirin ve birkaç dakika çekmesini bekleyin.\nÜzerine bir top dondurma ya da kaymak koyun, fıstık serpip sıcak servis edin.',
+      fr: 'Faites cuire le künefe au four dans son plat, selon les indications de l’emballage.\nPendant ce temps, concassez une poignée de pistaches.\nVersez le sirop fourni sur le künefe brûlant et laissez-le s’imbiber quelques minutes.\nAjoutez une boule de glace ou du kaymak, parsemez de pistaches et servez chaud.',
+      de: 'Backen Sie das Künefe in seiner Form nach der Packungsanleitung im Ofen.\nInzwischen eine Handvoll Pistazien hacken.\nDen beiliegenden Sirup über das heiße Künefe gießen und einige Minuten einziehen lassen.\nEine Kugel Eis oder Kaymak daraufsetzen, mit Pistazien bestreuen und heiß servieren.',
+    },
+    pantry: {
+      tr: 'Vanilyalı dondurma ya da kaymak',
+      fr: 'Glace à la vanille ou kaymak',
+      de: 'Vanilleeis oder Kaymak',
+    },
+    items: [
+      { sku: '500103', qty: 1 },
+      { draft: 'Pistache', qty: 1 },
+    ],
+  },
+  {
+    name: {
+      tr: 'Pekmezli Tahinli Yulaf Kasesi',
+      fr: 'Bol d’avoine au tahin et à la caroube',
+      de: 'Haferbowl mit Tahin und Johannisbrotmelasse',
+    },
+    description: {
+      tr: 'Sıcak yulaf, keçiboynuzu pekmezi, tahin ve kurutulmuş elma: kahvaltıya ya da okul çıkışına.',
+      fr: 'Des flocons d’avoine chauds, de la mélasse de caroube, du tahin et de la pomme séchée : pour le petit-déjeuner ou le goûter.',
+      de: 'Warmer Haferbrei mit Johannisbrotmelasse, Tahin und getrockneten Äpfeln: zum Frühstück oder nach der Schule.',
+    },
+    duration: sure(10),
+    serves: kisilik(2),
+    meal: OGUN.kahvalti,
+    steps: {
+      tr: 'Yulafı sütle orta ateşte, kıvam alana dek pişirin.\nKurutulmuş elmayı küçük doğrayıp son dakikada ekleyin.\nKaselere paylaştırın; üzerine birer kaşık tahin ve keçiboynuzu pekmezi gezdirin.\nDilimlenmiş muzla sıcak servis edin.',
+      fr: 'Faites cuire les flocons d’avoine dans le lait à feu moyen jusqu’à ce qu’ils épaississent.\nCoupez la pomme séchée en petits morceaux et ajoutez-la à la dernière minute.\nRépartissez dans les bols ; arrosez chacun d’une cuillère de tahin et de mélasse de caroube.\nServez chaud avec des rondelles de banane.',
+      de: 'Haferflocken mit Milch bei mittlerer Hitze köcheln, bis der Brei eindickt.\nGetrocknete Äpfel klein schneiden und in der letzten Minute zugeben.\nAuf Schalen verteilen und je einen Löffel Tahin und Johannisbrotmelasse darüberträufeln.\nMit Bananenscheiben warm servieren.',
+    },
+    pantry: {
+      tr: 'Yulaf ezmesi\nSüt ya da bitkisel içecek\nMuz',
+      fr: 'Flocons d’avoine\nLait ou boisson végétale\nBanane',
+      de: 'Haferflocken\nMilch oder Pflanzendrink\nBanane',
+    },
+    items: [
+      { draft: 'Johannesbroodmelasse', qty: 1 },
+      { draft: 'Tahini', qty: 1 },
+      { draft: 'Gedroogde appel', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Kalabalık Pazar Sofrası', fr: 'Grand brunch du dimanche', de: 'Großer Sonntagsbrunch' },
+    description: {
+      tr: 'Su böreği, peynirli kol böreği, E börekleri ve poğaça aynı fırında: sekiz kişilik bir pazar kahvaltısı.',
+      fr: 'Su börek, börek roulé au fromage, petits böreks et poğaças dans le même four : un brunch du dimanche pour huit.',
+      de: 'Su Börek, Käse-Börekschnecke, kleine Börek und Poğaça im selben Ofen: ein Sonntagsbrunch für acht.',
+    },
+    duration: sure(40),
+    serves: kisilik(8),
+    meal: OGUN.kahvalti,
+    steps: {
+      tr: 'Börekleri ve poğaçaları dondurucudan çıktığı gibi, paketlerindeki talimata göre tepsilere dizin.\nPişme süresi en uzun olanı önce fırına verin, ötekileri sırayla ekleyin ki hepsi birlikte çıksın.\nBu sırada sofrayı kurun: peynir, zeytin, domates, salatalık ve demlik çay.\nBörekleri dilimleyip sıcak servis edin.',
+      fr: 'Disposez les böreks et les poğaças sur les plaques, directement sortis du congélateur, selon leurs emballages.\nEnfournez d’abord celui qui cuit le plus longtemps et ajoutez les autres au fur et à mesure pour que tout sorte ensemble.\nPendant ce temps, dressez la table : fromage, olives, tomates, concombre et thé en théière.\nCoupez les böreks et servez-les chauds.',
+      de: 'Börek und Poğaça direkt aus dem Gefrierfach nach den Packungsanleitungen auf die Bleche legen.\nDas mit der längsten Backzeit zuerst in den Ofen schieben und die anderen nacheinander dazugeben, damit alles gleichzeitig fertig ist.\nInzwischen den Tisch decken: Käse, Oliven, Tomaten, Gurke und Tee aus der Kanne.\nBörek aufschneiden und heiß servieren.',
+    },
+    pantry: {
+      tr: 'Beyaz peynir\nSiyah ve yeşil zeytin\nDomates, salatalık\nDemlik çay',
+      fr: 'Fromage blanc en saumure\nOlives noires et vertes\nTomates, concombre\nThé en théière',
+      de: 'Weißer Salzlakenkäse\nSchwarze und grüne Oliven\nTomaten, Gurke\nTee aus der Kanne',
+    },
+    items: [
+      { sku: '700402', qty: 1 },
+      { sku: '700501', qty: 1 },
+      { sku: '700904', qty: 2 },
+      { sku: '700905', qty: 2 },
+      { sku: '700201', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Sirkeli Ev Salata Sosu', fr: 'Vinaigrette maison', de: 'Hausgemachtes Essig-Dressing' },
+    description: {
+      tr: 'Üç ölçü zeytinyağına bir ölçü meyve sirkesi: her salataya uyan temel sos.',
+      fr: 'Trois mesures d’huile d’olive pour une de vinaigre de fruit : la vinaigrette de base de toutes les salades.',
+      de: 'Drei Teile Olivenöl auf einen Teil Fruchtessig: das Grunddressing für jeden Salat.',
+    },
+    duration: sure(5),
+    serves: kisilik(4),
+    meal: OGUN.herOgun,
+    steps: {
+      tr: 'Bir kavanoza bir ölçü sirke, birer çay kaşığı hardal ve bal, bir tutam tuz koyun.\nÜç ölçü zeytinyağı ekleyin.\nKapağı kapatıp kıvam alana dek sallayın.\nSalatayı servis etmeden hemen önce soslayın; kalan sosu buzdolabında saklayın.',
+      fr: 'Dans un bocal, mettez une mesure de vinaigre, une cuillère à café de moutarde, une cuillère à café de miel et une pincée de sel.\nAjoutez trois mesures d’huile d’olive.\nFermez et secouez jusqu’à ce que la sauce émulsionne.\nAssaisonnez la salade juste avant de servir ; gardez le reste au réfrigérateur.',
+      de: 'In ein Schraubglas einen Teil Essig, je einen Teelöffel Senf und Honig und eine Prise Salz geben.\nDrei Teile Olivenöl dazugeben.\nVerschließen und schütteln, bis das Dressing bindet.\nDen Salat erst kurz vor dem Servieren anmachen; den Rest im Kühlschrank aufbewahren.',
+    },
+    pantry: {
+      tr: 'Hardal\nBal\nTuz',
+      fr: 'Moutarde\nMiel\nSel',
+      de: 'Senf\nHonig\nSalz',
+    },
+    items: [
+      { draft: 'Olijfolie', label: '750 ml', qty: 1 },
+      { draft: 'Meidoorn azijn', qty: 1 },
+    ],
+  },
+  {
+    name: { tr: 'Fırında Acılı Kanat Tabağı', fr: 'Plateau d’ailes épicées au four', de: 'Scharfe Chicken Wings aus dem Ofen' },
+    description: {
+      tr: 'Acılı kanat ve fileto, yanında sarımsaklı yoğurt ve çıtır patates: maç akşamı için paylaşımlık tabak.',
+      fr: 'Ailes et filets épicés, sauce yaourt à l’ail et pommes de terre croustillantes : le plateau à partager des soirs de match.',
+      de: 'Scharfe Wings und Filets mit Knoblauchjoghurt und knusprigen Kartoffeln: die Teilplatte für den Fußballabend.',
+    },
+    duration: sure(30),
+    serves: kisilik(4),
+    meal: OGUN.paylasim,
+    steps: {
+      tr: 'Kanatları ve filetoları paketlerindeki talimata göre fırında ya da hava fritözünde pişirin.\nPatatesleri elma dilimi kesip zeytinyağı ve tuzla ayrı bir tepside kızartın.\nYoğurdu ezilmiş sarımsak ve tuzla çırpın.\nHepsini büyük bir tabağa dizip sosla birlikte sıcak servis edin.',
+      fr: 'Faites cuire les ailes et les filets au four ou à la friteuse à air, selon leurs emballages.\nCoupez les pommes de terre en quartiers et faites-les rôtir sur une autre plaque avec huile d’olive et sel.\nFouettez le yaourt avec l’ail écrasé et du sel.\nDressez le tout sur un grand plateau et servez chaud avec la sauce.',
+      de: 'Wings und Filets nach den Packungsanleitungen im Ofen oder in der Heißluftfritteuse zubereiten.\nKartoffeln in Spalten schneiden und auf einem zweiten Blech mit Olivenöl und Salz rösten.\nJoghurt mit zerdrücktem Knoblauch und Salz verquirlen.\nAlles auf einer großen Platte anrichten und heiß mit der Sauce servieren.',
+    },
+    pantry: {
+      tr: 'Patates\nSüzme yoğurt\nSarımsak\nZeytinyağı, tuz',
+      fr: 'Pommes de terre\nYaourt égoutté\nAil\nHuile d’olive, sel',
+      de: 'Kartoffeln\nAbgetropfter Joghurt\nKnoblauch\nOlivenöl, Salz',
+    },
+    items: [
+      { sku: '312442', qty: 1 },
+      { sku: '312341', qty: 1 },
+    ],
+  },
+];
+
 /* ─── KATMAN 3 · UYDURMA ─────────────────────────────────────────────────────────────────────────
  * Bu bloklar yalnız test sunucusunun ekranlarını doldurur: `--layers=3` olmadan yazılmaz, gerçek değerler
  * tedarikçinin künyesinden gelir ve üretim kurulumundan önce blok bütün hâlinde silinir. Anahtar faturadaki addır
@@ -1084,17 +1606,24 @@ export const FICTION_ALLERGENS: Record<string, ProductAllergen[]> = {
   'Gedroogde meloen': ['sulfit'],
 };
 
-/** UYDURMA içindekiler. Ölçülmüş listesi olan iki ürün (Kekre, Propolis) burada YOK — katman 1 kazanır. */
+/**
+ * UYDURMA içindekiler; ölçülmüş listesi olan iki ürün (Kekre, Propolis) burada yok, katman 1 kazanır.
+ * Alerjen `**…**` ile vurgulanır: INCO ister ve ürün sayfası yalnız bu işareti çizer.
+ */
 export const FICTION_INGREDIENTS: Record<string, UcDil> = {
   Druivenmelasse: { tr: 'Üzüm şırası.', fr: 'Moût de raisin.', de: 'Traubenmost.' },
   Johannesbroodmelasse: { tr: 'Keçiboynuzu özütü, su.', fr: 'Extrait de caroube, eau.', de: 'Johannisbrotextrakt, Wasser.' },
-  Tahini: { tr: 'Kabuğu soyulmuş susam (%100).', fr: 'Sésame décortiqué (100 %).', de: 'Geschälter Sesam (100 %).' },
-  'Meidoorn azijn': { tr: 'Alıç, su, sülfit.', fr: 'Aubépine, eau, sulfites.', de: 'Weißdorn, Wasser, Sulfite.' },
-  'Ananas azijn': { tr: 'Ananas, su, sülfit.', fr: 'Ananas, eau, sulfites.', de: 'Ananas, Wasser, Sulfite.' },
-  'Enginar azijn': { tr: 'Enginar, su, sülfit.', fr: 'Artichaut, eau, sulfites.', de: 'Artischocke, Wasser, Sulfite.' },
-  'Appel azijn': { tr: 'Elma, su, sülfit.', fr: 'Pomme, eau, sulfites.', de: 'Apfel, Wasser, Sulfite.' },
-  'Isgin azijn': { tr: 'Işkın kökü, su, sülfit.', fr: 'Racine de rhubarbe, eau, sulfites.', de: 'Rhabarberwurzel, Wasser, Sulfite.' },
-  'Honing azijn': { tr: 'Bal, su, sülfit.', fr: 'Miel, eau, sulfites.', de: 'Honig, Wasser, Sulfite.' },
+  Tahini: { tr: 'Kabuğu soyulmuş **susam** (%100).', fr: '**Sésame** décortiqué (100 %).', de: 'Geschälter **Sesam** (100 %).' },
+  'Meidoorn azijn': { tr: 'Alıç, su, **sülfit**.', fr: 'Aubépine, eau, **sulfites**.', de: 'Weißdorn, Wasser, **Sulfite**.' },
+  'Ananas azijn': { tr: 'Ananas, su, **sülfit**.', fr: 'Ananas, eau, **sulfites**.', de: 'Ananas, Wasser, **Sulfite**.' },
+  'Enginar azijn': { tr: 'Enginar, su, **sülfit**.', fr: 'Artichaut, eau, **sulfites**.', de: 'Artischocke, Wasser, **Sulfite**.' },
+  'Appel azijn': { tr: 'Elma, su, **sülfit**.', fr: 'Pomme, eau, **sulfites**.', de: 'Apfel, Wasser, **Sulfite**.' },
+  'Isgin azijn': {
+    tr: 'Işkın kökü, su, **sülfit**.',
+    fr: 'Racine de rhubarbe, eau, **sulfites**.',
+    de: 'Rhabarberwurzel, Wasser, **Sulfite**.',
+  },
+  'Honing azijn': { tr: 'Bal, su, **sülfit**.', fr: 'Miel, eau, **sulfites**.', de: 'Honig, Wasser, **Sulfite**.' },
   Granaatappelextraat: { tr: 'Nar suyu konsantresi.', fr: 'Concentré de jus de grenade.', de: 'Granatapfelsaftkonzentrat.' },
   'Sifamix Kozalak extract': {
     tr: 'Çam kozalağı özütü, üzüm pekmezi.',
@@ -1109,7 +1638,7 @@ export const FICTION_INGREDIENTS: Record<string, UcDil> = {
     de: 'Kokosnuss, Quinoa, Sandarakharz, Rosmarin, Grüntee, Chia, Wasser.',
   },
   Olijfolie: { tr: 'Naturel sızma zeytinyağı (%100).', fr: 'Huile d’olive vierge extra (100 %).', de: 'Natives Olivenöl extra (100 %).' },
-  Pistache: { tr: 'Antep fıstığı (%100).', fr: 'Pistaches (100 %).', de: 'Pistazien (100 %).' },
+  Pistache: { tr: '**Antep fıstığı** (%100).', fr: '**Pistaches** (100 %).', de: '**Pistazien** (100 %).' },
   'Bromelain siroop': {
     tr: 'Ananas suyu konsantresi, bromelain, akasya gamı, su.',
     fr: 'Concentré de jus d’ananas, broméline, gomme d’acacia, eau.',
@@ -1136,29 +1665,37 @@ export const FICTION_INGREDIENTS: Record<string, UcDil> = {
     de: 'Schwarzer Maulbeersaftkonzentrat.',
   },
   'Pestil met Hazinoten Muska': {
-    tr: 'Dut pestili (dut, su, buğday nişastası), fındık ezmesi.',
-    fr: 'Pâte de mûre (mûre, eau, amidon de blé), pâte de noisette.',
-    de: 'Maulbeer-Fruchtleder (Maulbeere, Wasser, Weizenstärke), Haselnussmus.',
+    tr: 'Dut pestili (dut, su, **buğday nişastası**), **fındık ezmesi**.',
+    fr: 'Pâte de mûre (mûre, eau, **amidon de blé**), **pâte de noisette**.',
+    de: 'Maulbeer-Fruchtleder (Maulbeere, Wasser, **Weizenstärke**), **Haselnussmus**.',
   },
-  'Gedroogde aronya': { tr: 'Kurutulmuş aronya, sülfit.', fr: 'Aronia séchée, sulfites.', de: 'Getrocknete Aronia, Sulfite.' },
-  'Gedroogde appel': { tr: 'Kurutulmuş elma, sülfit.', fr: 'Pomme séchée, sulfites.', de: 'Getrockneter Apfel, Sulfite.' },
-  'Gedroogde Kaki cips': { tr: 'Kurutulmuş Trabzon hurması, sülfit.', fr: 'Kaki séché, sulfites.', de: 'Getrocknete Kaki, Sulfite.' },
-  'Gedroogde perzik': { tr: 'Kurutulmuş şeftali, sülfit.', fr: 'Pêche séchée, sulfites.', de: 'Getrockneter Pfirsich, Sulfite.' },
-  'Gedroogde meloen': { tr: 'Kurutulmuş kavun, sülfit.', fr: 'Melon séché, sulfites.', de: 'Getrocknete Melone, Sulfite.' },
+  'Gedroogde aronya': { tr: 'Kurutulmuş aronya, **sülfit**.', fr: 'Aronia séchée, **sulfites**.', de: 'Getrocknete Aronia, **Sulfite**.' },
+  'Gedroogde appel': { tr: 'Kurutulmuş elma, **sülfit**.', fr: 'Pomme séchée, **sulfites**.', de: 'Getrockneter Apfel, **Sulfite**.' },
+  'Gedroogde Kaki cips': {
+    tr: 'Kurutulmuş Trabzon hurması, **sülfit**.',
+    fr: 'Kaki séché, **sulfites**.',
+    de: 'Getrocknete Kaki, **Sulfite**.',
+  },
+  'Gedroogde perzik': {
+    tr: 'Kurutulmuş şeftali, **sülfit**.',
+    fr: 'Pêche séchée, **sulfites**.',
+    de: 'Getrockneter Pfirsich, **Sulfite**.',
+  },
+  'Gedroogde meloen': { tr: 'Kurutulmuş kavun, **sülfit**.', fr: 'Melon séché, **sulfites**.', de: 'Getrocknete Melone, **Sulfite**.' },
   'LEZZA Traditional Meet Doner': {
-    tr: 'Dana eti, soğan, baharat karışımı (hardal), tuz.',
-    fr: 'Viande de bœuf, oignon, mélange d’épices (moutarde), sel.',
-    de: 'Rindfleisch, Zwiebel, Gewürzmischung (Senf), Salz.',
+    tr: 'Dana eti, soğan, baharat karışımı (**hardal**), tuz.',
+    fr: 'Viande de bœuf, oignon, mélange d’épices (**moutarde**), sel.',
+    de: 'Rindfleisch, Zwiebel, Gewürzmischung (**Senf**), Salz.',
   },
   'LEZZA Traditional Chicken Doner': {
-    tr: 'Tavuk eti, soğan, baharat karışımı (hardal), tuz.',
-    fr: 'Viande de poulet, oignon, mélange d’épices (moutarde), sel.',
-    de: 'Hähnchenfleisch, Zwiebel, Gewürzmischung (Senf), Salz.',
+    tr: 'Tavuk eti, soğan, baharat karışımı (**hardal**), tuz.',
+    fr: 'Viande de poulet, oignon, mélange d’épices (**moutarde**), sel.',
+    de: 'Hähnchenfleisch, Zwiebel, Gewürzmischung (**Senf**), Salz.',
   },
   'LEZZA Manti with Minced Meat (Kiymali)': {
-    tr: 'Buğday unu, su, kıyma, soğan, yumurta, tuz.',
-    fr: 'Farine de blé, eau, viande hachée, oignon, œuf, sel.',
-    de: 'Weizenmehl, Wasser, Hackfleisch, Zwiebel, Ei, Salz.',
+    tr: '**Buğday unu**, su, kıyma, soğan, **yumurta**, tuz.',
+    fr: '**Farine de blé**, eau, viande hachée, oignon, **œuf**, sel.',
+    de: '**Weizenmehl**, Wasser, Hackfleisch, Zwiebel, **Ei**, Salz.',
   },
 };
 
@@ -1169,9 +1706,9 @@ const KURU_SERIN: UcDil = {
   de: 'Trocken, kühl und vor Sonnenlicht geschützt lagern.',
 };
 const DONMUS: UcDil = {
-  tr: '-18 °C’de saklayınız; çözülmüş ürünü yeniden dondurmayınız.',
-  fr: 'À conserver à -18 °C ; ne pas recongeler après décongélation.',
-  de: 'Bei -18 °C lagern; nach dem Auftauen nicht wieder einfrieren.',
+  tr: '-18 °C’de saklayınız; **çözülmüş ürünü yeniden dondurmayınız**.',
+  fr: 'À conserver à -18 °C ; **ne pas recongeler après décongélation**.',
+  de: 'Bei -18 °C lagern; **nach dem Auftauen nicht wieder einfrieren**.',
 };
 
 export const FICTION_STORAGE: Record<string, UcDil> = {

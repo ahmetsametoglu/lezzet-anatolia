@@ -2,6 +2,7 @@
 // `seed.ts`ten ayrıdır. Var olan kayda dokunmaz ki panelden yapılan düzeltme yeniden çalıştırmada ezilmesin.
 import { receivePurchase } from '@lezzet/application';
 import {
+  BundleService,
   CategoryImageService,
   CategoryService,
   CollectionService,
@@ -13,6 +14,7 @@ import {
   ProductService,
   ProductVariantService,
   PurchaseOrderService,
+  RecipeService,
   SettingsService,
   StockIntakeService,
   StorageAreaService,
@@ -22,8 +24,9 @@ import {
   WarehouseService,
   waitForRest,
 } from '@lezzet/database';
-import { canPublishProduct, purchaseOrderReferenceNo } from '@lezzet/domain-core';
+import { canPublishProduct, purchaseOrderReferenceNo, rebalanceAllocations } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
+import type { Product } from '@lezzet/types';
 
 import { brand } from '../packages/brand/src/index';
 import { lezzaGorselUrlByDosya, seedLezzaProducts } from './seed/catalog-lezza';
@@ -31,6 +34,8 @@ import { gorselOzeti, r2Keys, uploadImageFromPath, uploadImageFromUrl } from './
 import { SAKLAMA } from './seed/storage-regime';
 import {
   ADAY_SKULARI,
+  BUNDLE_DISCOUNT,
+  BUNDLES,
   CATEGORIES,
   COLLECTIONS,
   DRAFT_CATEGORY,
@@ -40,6 +45,7 @@ import {
   FICTION_NUTRITION,
   FICTION_STORAGE,
   PURCHASES,
+  RECIPES,
   SALE_PRICES,
   SETTINGS,
   STORAGE_AREAS,
@@ -53,6 +59,7 @@ import {
 type Purchase = (typeof PURCHASES)[number];
 type Draft = Purchase['drafts'][number];
 type Line = Purchase['catalog'][number] | Draft['variants'][number];
+type SeedLine = (typeof BUNDLES)[number]['items'][number];
 
 /** Katalogda görünen ad Türkçesidir; faturadaki ad tedarikçinin dilinde kalır (eşleştirme onun üstünden). */
 const draftName = (draft: Draft): string => draft.nameTr ?? draft.name;
@@ -253,6 +260,25 @@ function checkSalePrices(): void {
       `fiyat sözlüğü faturayla tutmuyor — fiyatsız: ${unpriced.join(' · ') || 'yok'} · faturada olmayan: ${orphan.join(' · ') || 'yok'}`,
     );
   }
+}
+
+/** Paket ve tarif kalemi faturadaki bir kaleme bağlanmalı; yazım hatası yazmaya başlamadan yakalanır. */
+function checkBundleAndRecipeLines(): void {
+  const skus = new Set(PURCHASES.flatMap((p) => p.catalog.map((line) => line.sku)));
+  const drafts = new Map(PURCHASES.flatMap((p) => p.drafts).map((d) => [d.name, d]));
+  const bozuk: string[] = [];
+  for (const { name, items } of [...BUNDLES, ...RECIPES]) {
+    for (const line of items) {
+      if ('sku' in line) {
+        if (!skus.has(line.sku)) bozuk.push(`${name.tr}: ${line.sku}`);
+        continue;
+      }
+      const boylar = drafts.get(line.draft)?.variants.map((v) => v.label) ?? [];
+      const bulundu = line.label ? boylar.includes(line.label) : boylar.length === 1;
+      if (!bulundu) bozuk.push(`${name.tr}: ${line.draft}${line.label ? ` (${line.label})` : ''}`);
+    }
+  }
+  if (bozuk.length > 0) throw new Error(`faturada karşılığı olmayan paket/tarif kalemi: ${bozuk.join(' · ')}`);
 }
 
 /** Kategori kapağı: katalogdaki kare · depodaki usta · markanın mağazası. R2 ayarsızsa null döner. */
@@ -550,6 +576,110 @@ async function seedPurchases(db: Db): Promise<void> {
   }
 }
 
+/** Kalemi varyanta çözer: Lezza ürünü varyant koduyla, taslak faturadaki adla ve birden çok boyu varsa etiketle. */
+async function lineVariantId(line: SeedLine, variants: ProductVariantService, urunler: Product[]): Promise<string | null> {
+  if ('sku' in line) return (await variants.findBySku(line.sku))?.id ?? null;
+  const urun = urunler.find((p) => p.name.tr === TASLAK_ADI.get(line.draft));
+  if (!urun) return null;
+  const boylar = await variants.listByProduct(urun.id);
+  const boy = line.label ? boylar.find((v) => v.label.tr === line.label) : boylar.length === 1 ? boylar[0] : undefined;
+  return boy?.id ?? null;
+}
+
+/** Liste toplamının `BUNDLE_DISCOUNT` altı, 90 kuruşa yuvarlanmış — işletmecinin paket fiyatı kuralı. */
+const paketHedefi = (listeCents: number) => Math.round((listeCents * (1 - BUNDLE_DISCOUNT)) / 100) * 100 - 10;
+
+const euro = (cents: number) => `${(cents / 100).toFixed(2)} €`;
+
+async function seedBundles(db: Db): Promise<void> {
+  console.log('▸ paketler');
+  const bundles = new BundleService(db);
+  const variants = new ProductVariantService(db);
+  const prices = new PriceService(db);
+  const existing = await bundles.listAll();
+  const urunler = await new ProductService(db).listAll();
+  for (const [i, paket] of BUNDLES.entries()) {
+    if (existing.some((b) => b.name.tr === paket.name.tr)) {
+      done(`paket · ${paket.name.tr}`);
+      continue;
+    }
+    const ids = await Promise.all(paket.items.map((line) => lineVariantId(line, variants, urunler)));
+    const bulunan = ids.filter((id): id is string => id !== null);
+    const fiyatlar = await prices.findApplicableMap(bulunan, 'b2c');
+    const kalemler = paket.items.map((line, k) => {
+      const variantId = ids[k] ?? null;
+      return { variantId, qty: line.qty, listeCents: variantId ? (fiyatlar.get(variantId)?.channelPrice?.amountCents ?? null) : null };
+    });
+    const eksik = kalemler.filter((k) => k.variantId === null || k.listeCents === null).length;
+    // Kuru koşuda ürün ve fiyat henüz yazılmadığı için eksik görünür; uyarı gerçek eksikliği gizlemesin (`seedPurchases` aynı ayrımı yapıyor).
+    if (eksik > 0) {
+      console.log(
+        `  ${DRY_RUN ? '○' : '⚠'} paket · ${paket.name.tr} — ${eksik} kalemin varyantı ya da fiyatı ${DRY_RUN ? 'henüz yok; önceki adımlar yazılınca kurulur' : 'yok, yazılmadı'}`,
+      );
+      continue;
+    }
+    const hazir = kalemler.map((k) => ({ variantId: k.variantId as string, qty: k.qty, listeCents: k.listeCents as number }));
+    const listeCents = hazir.reduce((toplam, k) => toplam + k.listeCents * k.qty, 0);
+    // Paylar liste fiyatlarına oransal dağılır; adetli kalemde hedef kuruşuna tutmayabilir, o zaman fiyat ulaşılan toplamdır.
+    const paylar = rebalanceAllocations(
+      hazir.map((k) => ({ qty: k.qty, allocatedUnitPriceCents: k.listeCents })),
+      paketHedefi(listeCents),
+    );
+    if (paylar.residualCents !== 0) console.log(`  ⚠ paket · ${paket.name.tr} — paylar hedefi ${paylar.residualCents} kuruşla tutturamadı`);
+    plan(
+      `paket · ${paket.name.tr} · ${hazir.length} kalem · ${euro(listeCents)} → ${euro(paylar.achievedTotalCents)}${paket.isActive === false ? ' · pasif' : ''}`,
+    );
+    if (DRY_RUN) continue;
+    await bundles.create({
+      name: paket.name,
+      description: paket.description,
+      totalPrice: paylar.achievedTotalCents / 100,
+      serves: paket.serves ?? null,
+      isActive: paket.isActive ?? true,
+      isFeatured: paket.isFeatured ?? false,
+      sortOrder: i + 1,
+      items: hazir.map((k, n) => ({ variantId: k.variantId, qty: k.qty, allocatedUnitPrice: (paylar.unitPricesCents[n] ?? 0) / 100 })),
+    });
+  }
+}
+
+async function seedRecipes(db: Db): Promise<void> {
+  console.log('▸ tarifler');
+  const recipes = new RecipeService(db);
+  const variants = new ProductVariantService(db);
+  const existing = await recipes.listAll();
+  const urunler = await new ProductService(db).listAll();
+  for (const [i, tarif] of RECIPES.entries()) {
+    if (existing.some((r) => r.name.tr === tarif.name.tr)) {
+      done(`tarif · ${tarif.name.tr}`);
+      continue;
+    }
+    const ids = await Promise.all(tarif.items.map((line) => lineVariantId(line, variants, urunler)));
+    const eksik = ids.filter((id) => id === null).length;
+    // Malzemesi eksik tarif yarım kurulmaz: ekranda "3 ürün" yazıp iki satır göstermesi fark edilmezdi.
+    if (eksik > 0) {
+      console.log(
+        `  ${DRY_RUN ? '○' : '⚠'} tarif · ${tarif.name.tr} — ${eksik} malzemenin ürünü ${DRY_RUN ? 'henüz yok; önceki adımlar yazılınca kurulur' : 'yok, yazılmadı'}`,
+      );
+      continue;
+    }
+    plan(`tarif · ${tarif.name.tr} · ${ids.length} ürün`);
+    if (DRY_RUN) continue;
+    await recipes.createWithItems({
+      name: tarif.name,
+      description: tarif.description,
+      duration: tarif.duration,
+      serves: tarif.serves,
+      meal: tarif.meal,
+      steps: tarif.steps,
+      pantry: tarif.pantry,
+      isActive: true,
+      sortOrder: i + 1,
+      items: tarif.items.map((line, k) => ({ variantId: ids[k] as string, qty: line.qty })),
+    });
+  }
+}
+
 /** Siparişlerin tamamını tek partide teslim alır — arayüz denemesi için, gerçek sayım değil. */
 async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
   console.log(`▸ test kabulü · lot ${TEST_INTAKE.lotNumber} · SKT ${TEST_INTAKE.expiryDate} — uydurma değer, arayüz denemesi`);
@@ -603,6 +733,7 @@ async function main(): Promise<void> {
   checkInvoiceTotals();
   checkDraftCategories();
   checkSalePrices();
+  checkBundleAndRecipeLines();
   const db = createServiceRoleClient();
   console.log(`▸ GERÇEK BESLEME${DRY_RUN ? ' · KURU KOŞU (yazılmaz)' : ''} · ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? '(adres yok)'}`);
   await waitForRest(db);
@@ -618,6 +749,9 @@ async function main(): Promise<void> {
   await seedDraftFamilies(db);
   await seedCollections(db);
   await seedPurchases(db);
+  // Paket fiyatı liste fiyatlarından türediği için fiyatlardan sonra.
+  await seedBundles(db);
+  await seedRecipes(db);
   // Mal kabulü katman 3: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır.
   if (LAYERS >= 3) await seedTestIntake(db, facilityId);
   // Künyesi olmayan görsel her koşuda yeniden yüklenir; sayı basılmazsa dönüşüm kotası sessizce erir.
