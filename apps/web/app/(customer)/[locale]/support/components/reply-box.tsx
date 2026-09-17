@@ -11,23 +11,8 @@ import { useTicketPhoto } from '../use-ticket-photo.hook';
 import type { Messages } from '../support-types';
 
 /**
- * Cevap kutusu — tasarımın hap biçimli besteci şeridi: `[metin] 📷 [↑]`.
- *
- * **Form kiti kullanılmadı ve bu bilinçli bir "son çare"** (`CLAUDE.md §2`): kit etiketli, kenarlıklı
- * ve `react-hook-form` bağlı bir alan kabuğu çiziyor — gerçek formlar için doğru, ama burada tasarım
- * tek bir hapın içine gömülü satır içi bir besteci istiyor. Etiket yok (yer tutucu metnin kendisi),
- * doğrulama yok (boş mesaj zaten gönderilmez), alan tek.
- *
- * ── FOTOĞRAF SUNUCUDAN GEÇMEZ ────────────────────────────────────────────────
- * Sunucudan imzalı bir adres alınır, dosya doğrudan R2'ye yüklenir (`lib/ticket/attachments`).
- * Ekranın elinde yalnız ANAHTAR kalır; mesaj gönderilirken o anahtar iletilir ve kapı anahtarın
- * müşterinin kendi alanından geldiğini doğrular.
- *
- * Yükleme başarısızsa mesaj yine yazılabilir: fotoğraf isteğe bağlıdır ve bir kova yapılandırma
- * sorunu yüzünden müşterinin şikâyetini yazamaması saçma olurdu.
- *
- * ── ENTER GÖNDERİR, SHIFT+ENTER SATIR ATLAR ─────────────────────────────────
- * Yazışma alışkanlığı bu. Mobilde sanal klavye kendi "gönder" tuşunu verir; orada da aynı yol.
+ * Cevap kutusu, hap biçimli besteci şeridi: form kiti bilerek kullanılmadı, çünkü tek satır içi alan etiket ve doğrulama istemiyor.
+ * Fotoğraf imzalı adresle doğrudan depoya gider ve yükleme düşse de mesaj yazılabilir; Enter gönderir, Shift+Enter satır atlar.
  */
 interface ReplyBoxProps {
   t: Messages;
@@ -43,9 +28,8 @@ export function ReplyBox({ t, locale, ticketId, onReplied, compact = false }: Re
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  // Yükleme akışı ortak hook'ta (denetim M4): yeni talep formuyla gövdesi birebir aynıydı.
-  // Sebep anahtarı hook'tan geliyor, cümle burada kuruluyor (denetim H1/H2): "dosya türü kabul
-  // edilmiyor" ile "şu an yükleyemedik" farklı şeyler — ikincisi tekrar denemeye değer, birincisi değil.
+  // Sebep anahtarı hook'tan, cümle burada kurulur: "tür kabul edilmiyor" ile "şu an yükleyemedik" farklı şeyler, ikincisi tekrar
+  // denemeye değer.
   const photo = useTicketPhoto({ ticketId, busy, onFailed: (key) => setError(errorText(t.errors, key)) });
 
   const send = () => {

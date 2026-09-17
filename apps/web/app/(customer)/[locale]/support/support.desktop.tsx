@@ -12,14 +12,8 @@ import { ticketTitle } from './components/ticket-labels';
 import type { SupportViewProps } from './support-types';
 
 /**
- * Taleplerim — masaüstü (tasarım: "Talep Web · iki bölme"). Sol 340px liste, sağda yazışma.
- *
- * **Seçim URL'de yaşar, istemci durumunda değil:** her kart `/support/[ticket]`'a bağ verir. Sebep
- * tasarımın kendi sözleşmesinde yazılı — cevap bildirimi e-postasındaki bağlantı "doğrudan bu
- * talebin yazışmasına" açılmalı. Seçim yalnız istemcide yaşasaydı o bağ diye bir şey olmazdı.
- *
- * `/support` de bir yazışma gösterir (listenin ilki): iki bölmeli bir düzende sağ bölmeyi boş
- * bırakmak, ekranın yarısını "önce soldan bir şey seç" diye bekletmek olurdu.
+ * Taleplerim masaüstü: solda liste, sağda yazışma. Seçim URL'de yaşar ki cevap e-postasındaki bağlantı doğrudan yazışmaya açılsın;
+ * `/support` da listenin ilkini gösterir, sağ bölme boş beklemesin.
  */
 export function SupportDesktop({ t, locale, tickets, nextCursor, loadingMore, onLoadMore, selected }: SupportViewProps) {
   // Cevap yazıldığında yazışma ANINDA tazelenir; liste satırının "son mesaj"ı sunucudan gelir

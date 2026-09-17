@@ -3,18 +3,8 @@ import { statusPillClass } from '@/components/customer/ui/badge';
 import type { Messages } from '../support-types';
 
 /**
- * Talep durumu rozeti — tasarımın "kapalı liste"si (üç hâl, başkası yok).
- *
- * **İç adlar ekrana çıkmaz** (`design/pages/musteri-talep.md §6`): `open` "Aldık, sıradayız",
- * `in_progress` "İlgileniyoruz", `resolved` "Çözüldü" olur. Çeviri `messages.json`'da; burada
- * yalnız hangi ailenin rengini giydiği yazılı.
- *
- * Renk seçimi sipariş rozetiyle aynı mantığı izliyor ve envanterin tarifleriyle örtüşüyor:
- * `olive-*` "olumlu/işleyen", `honey-*` "bekleyen durum etiketi", `closed-*` "kapanmış durum
- * etiketi". Ayrım renkle YALNIZ değil metinle de var.
- *
- * `resolved` metni `text-ink`: tasarım kapanmış rozette koyu mürekkep kullanıyor (soluk gri değil) —
- * çözülmüş bir talep pasif değil, sonuçlanmıştır.
+ * Talep durumu rozeti: iç adlar ekrana çıkmaz, müşteri "Aldık, sıradayız / İlgileniyoruz / Çözüldü" görür. Çözülmüş rozette koyu
+ * mürekkep var, çünkü çözülmüş talep pasif değil sonuçlanmıştır.
  */
 const BADGE_CLASS: Record<TicketStatus, string> = {
   open: 'bg-olive-bg text-olive',

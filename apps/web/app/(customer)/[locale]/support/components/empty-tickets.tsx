@@ -2,14 +2,8 @@ import { ListEmpty } from '@/components/customer/ui/list-empty';
 import type { Messages } from '../support-types';
 
 /**
- * Boş liste (tasarım: "Talebiniz yok"). Masaüstü ve mobil aynı parçayı kullanır — metin de ölçü de
- * tasarımda tek bir kare olarak çizili, iki kopya yazmanın gerekçesi yok.
- *
- * Çıkışı olan bir boş hâl: emoji + iki cümle + davet. "Hiç talebiniz yok" bir eksiklik değil, iyi
- * haberdir; ekran onu bir hata gibi göstermez.
- *
- * İç dizilim paylaşılan `ListEmpty`den gelir (K1); buranın işi yalnız ekranı dolduran kabuk —
- * boş hâl tepeye yapışıp altını boş bırakmamalı.
+ * Boş talep listesi: bir eksiklik değil iyi haber, bu yüzden çıkışı olan bir davet. Kabuk ekranı doldurur ki boş hâl tepeye yapışıp
+ * altını boş bırakmasın.
  */
 interface EmptyTicketsProps {
   t: Messages;

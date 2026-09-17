@@ -9,19 +9,8 @@ import { TicketStatusBadge } from './ticket-status-badge';
 import type { Messages } from '../support-types';
 
 /**
- * Liste kartı — masaüstünün sol bölmesi ve mobil listesi AYNI parçayı kullanır. İki kopya, bir gün
- * ayrışan iki alt satır demekti.
- *
- * **Seçili kart kalın zeytin çerçeveli** (tasarım: `1.5px #5f7a2c`), ötekiler ince kum. Mobilde
- * "seçili" diye bir hâl yok — orada liste ile yazışma ayrı ekranlar — ama aynı çerçeve açık talebi
- * işaretlemek için orada da kullanılıyor (tasarımın mobil listesinde ilk kart öyle çizili).
- *
- * ── ALT SATIRIN ÜÇ PARÇASI ──────────────────────────────────────────────────
- * `{sipariş no ya da "siparişsiz"} · {açılış tarihi} · son mesaj: {ne zaman}`
- *
- * **"Son mesaj" çözülmüş talepte yazılmaz** (tasarım): kapanmış bir talebin son mesajı bir davet
- * değil, bir kayıttır — orada anlamlı olan açılış tarihidir. Masaüstünde açılış tarihi de düşer:
- * yazışma zaten sağ bölmede duruyor, kart yalnız tanımaya yetmeli.
+ * Masaüstü liste kartı: seçili kart kalın zeytin çerçeveli, ötekiler ince kum. Alt satır sipariş, açılış ve son mesajdır; çözülmüş
+ * talepte son mesaj yazılmaz, çünkü kapanmış talebin son mesajı bir davet değil kayıttır.
  */
 interface TicketCardProps {
   t: Messages;

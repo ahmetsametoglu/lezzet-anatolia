@@ -12,18 +12,8 @@ import { messageStamp } from './ticket-labels';
 import type { Messages } from '../support-types';
 
 /**
- * Yazışma — **basit bir mesaj dizisi** (tasarım). Müşterinin balonu sağda ve zeytin, işletmeninki
- * solda ve beyaz; kuyruk köşesi (4px) balonun sahibini rengi okumadan da söyler.
- *
- * **İç not diye bir şey YOKTUR** (`DOMAIN §15`): personelin yazdığı her mesaj müşteriye aynen
- * görünür. Bu yüzden burada "hangi mesajı göstereyim" diye bir süzgeç yok — kapı ne getirdiyse o.
- *
- * İşletmenin adı `@lezzet/brand`'den geliyor, `messages.json`'dan değil: marka adı çeviri değildir
- * ve üç dilde de aynıdır; sözlüğe koymak onu bir gün ayrışabilir hale getirirdi.
- *
- * **İade bandı yazışmanın SONUNDA duruyor, mesaj olarak değil** — çünkü iade bir mesaj değil, bir
- * sonuçtur ve tutarı talepte değil siparişin para hareketlerinde yaşıyor (`returnOutcome`). Aynı
- * bilgi sipariş detayında da görünür; band bunu açıkça söylüyor.
+ * Yazışma, basit bir mesaj dizisi: müşterinin balonu sağda ve zeytin, işletmeninki solda ve beyaz; iç not yoktur, personelin her
+ * mesajı müşteriye aynen görünür. İade bandı mesaj değil sonuç olduğu için yazışmanın sonunda durur.
  */
 interface TicketThreadProps {
   t: Messages;
@@ -51,10 +41,8 @@ export function TicketThread({ t, locale, ticket, wide = false }: TicketThreadPr
         </div>
       )}
 
-      {/* Çözülmüş talep: yeniden açmak AYRI bir düğme değil — yazmak yeter (motorun kararı,
-          `statusAfterCustomerReply`). Tasarımın "Yeniden aç ve yaz" düğmesi bu yüzden bir düğme
-          değil bir CÜMLE: müşteri yazar, talep kendiliğinden açılır. Ayrı düğme olsaydı yazıp
-          basmayı unutan müşterinin mesajı kapalı bir talepte kalırdı. */}
+      {/* Çözülmüş talep yazınca kendiliğinden açılır; ayrı bir "yeniden aç" düğmesi, yazıp basmayı unutanın mesajını kapalı talepte
+          bırakırdı. */}
       {ticket.status === 'resolved' && (
         <span className="font-sans text-note leading-relaxed text-muted">{t.reopenNote}</span>
       )}
@@ -73,18 +61,11 @@ function MessageBubble({
   message: TicketMessageView;
   wide: boolean;
 }) {
-  // `ai` gönderici de işletmedir: müşteriye kimin yazdığı değil, İŞLETMENİN yazdığı görünür
-  // (16.5 geldiğinde bile müşteri "bir robotla mı konuşuyorum" sorusuyla baş başa bırakılmaz).
+  // `ai` gönderici de işletmedir: müşteri kimin değil işletmenin yazdığını görür.
   const mine = message.sender === 'customer';
 
-  /**
-   * Müşteri orijinali görmek istedi mi (20.2) — ürün yorumundaki kararın aynısı ve bilerek aynısı.
-   *
-   * Varsayılan ÇEVİRİ: yazışmanın işi anlaşılmaktır. Ama **çeviri orijinalin yerine GEÇMEZ** —
-   * makine çevirisi bir şikâyeti yumuşatabilir; müşteri kendi cümlesine de personelinkine de
-   * ulaşabilmeli. Rozet yalnız gerçekten çevrilmiş metinde çizilir: aynı dilde yazılmış bir
-   * mesaja "otomatik çevrildi" demek, olmayan bir işlemi bildirmek olurdu.
-   */
+  /* Çeviri varsayılan, çünkü yazışmanın işi anlaşılmaktır; ama makine çevirisi bir şikâyeti yumuşatabilir ve müşteri orijinale
+     ulaşabilmeli. Rozet yalnız gerçekten çevrilmiş metinde çizilir. */
   const [showingOriginal, setShowingOriginal] = useState(false);
   const shown = message.bodyTranslated && showingOriginal ? message.originalBody : message.body;
 
@@ -99,12 +80,8 @@ function MessageBubble({
       ].join(' ')}
     >
       {!mine && <span className="font-sans text-micro font-bold text-olive">{brand.name}</span>}
-      {/* `lang` GERÇEK dili söyler: orijinal gösteriliyorsa metnin kendi dili, çeviri
-          gösteriliyorsa okuyucunun dili. Ekran okuyucuları ve tarayıcı çevirisi buna bakar.
-
-          Metin BİÇİMLİ çizilir (06.09) ve çizici operasyonla ORTAK (`ChatText`): müşteriye giden
-          vurgu iki yüzeyde de aynı görünmeli, yoksa personel "ben böyle yazmamıştım" der. Vurgusuz
-          bir mesajda hiçbir şey değişmez — ayrıştırıcı tek paragraf döndürür. */}
+      {/* `lang` gerçek dili söyler, ekran okuyucu ve tarayıcı çevirisi buna bakar. Metin biçimli çizilir ve çizici operasyonla ortak,
+          çünkü müşteriye giden vurgu iki yüzeyde aynı görünmeli. */}
       <ChatText
         lang={showingOriginal ? (message.language ?? undefined) : locale}
         className={`font-sans text-note leading-relaxed ${mine ? '' : 'text-ink'}`}
