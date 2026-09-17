@@ -34,7 +34,7 @@ import { publishMe } from '@lezzet/mobile-kit/src/lib/me/use-me.hook';
 import { addressDefaultsOf } from '@/screens/customer-kit/address-form';
 import { AddressSheet, type AddressSheetTarget } from '@/screens/customer-kit/address-sheet';
 import { NavRow } from '@/screens/customer-kit/nav-row';
-import { PointsEarnList, type PointsEarnActions } from '@/screens/customer-kit/points-earn-list';
+import { PointsEarnList } from '@/screens/customer-kit/points-earn-list';
 import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { LegalLinks } from '@/screens/legal/legal-links';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
@@ -97,15 +97,6 @@ export function AccountScreen({
   const shareReferral = () => {
     if (wallet?.inviteUrl == null) return;
     void Share.share({ message: t.referral.shareMessage.replace('{url}', wallet.inviteUrl) });
-  };
-
-  /* Liste kitte; burada yalnız bu yüzeyde hangi satırın nereye gittiği var. `Partial`: kendiliğinden yazılan ya da başka ekranda
-     yapılan yol düğmesiz kalır, tanınmayan anahtar sessizce düşer. */
-  const earnActions: PointsEarnActions = {
-    referral: shareReferral,
-    neighbor: () => router.push('/orders'),
-    review: () => router.push('/orders'),
-    feedback_candidate: () => router.push('/discover'),
   };
 
   /* Dil önce yerelde anında, sonra profilde değişir; ret gelirse arayüz de eski dile döner. */
@@ -384,47 +375,33 @@ export function AccountScreen({
               <Text style={styles.pointsValue}>{t.points.value.replace('{n}', String(wallet.balance))}</Text>
             </View>
 
-            {wallet.balance === 0 ? (
-              <>
-                <Text style={styles.cardBody}>{t.points.emptyBody}</Text>
-                {/* Liste kitten gelir; `wallet` kuralı ve bugünkü ziyaret puanını da taşıdığı için ayrı okuma yok. */}
-                <PointsEarnList
-                  rules={wallet}
-                  actions={earnActions}
-                  visitClaimedToday={wallet.visitClaimedToday}
-                  testID="account-earn-list"
-                />
-              </>
-            ) : (
-              <>
-                <Text style={styles.cardBody}>
-                  {t.points.body
-                    .replace('{threshold}', String(wallet.redeem.minimumPoints))
-                    .replace('{value}', formatCompactEuro(wallet.redeem.valueCents, locale))}
-                </Text>
-                {wallet.balance < wallet.redeem.minimumPoints ? (
-                  <Text style={styles.pointsGap}>
-                    {t.points.gap.replace('{n}', String(wallet.redeem.minimumPoints - wallet.balance))}
-                  </Text>
-                ) : null}
-                <PrimaryButton
-                  label={
-                    redeeming
-                      ? t.points.converting
-                      : t.points.convert
-                          .replace('{threshold}', String(wallet.redeem.minimumPoints))
-                          .replace('{value}', formatCompactEuro(wallet.redeem.valueCents, locale))
-                  }
-                  onPress={convertPoints}
-                  disabled={redeeming || wallet.balance < wallet.redeem.minimumPoints}
-                  testID="account-convert"
-                />
-              </>
-            )}
+            {/* Kazanma yolları kartta değil yalnız çekmecede; kart her bakiyede eşiği ve kalan puanı söyler. */}
+            <Text style={styles.cardBody}>
+              {t.points.body
+                .replace('{threshold}', String(wallet.redeem.minimumPoints))
+                .replace('{value}', formatCompactEuro(wallet.redeem.valueCents, locale))}
+            </Text>
+            {wallet.balance < wallet.redeem.minimumPoints ? (
+              <Text style={styles.pointsGap}>
+                {t.points.gap.replace('{n}', String(wallet.redeem.minimumPoints - wallet.balance))}
+              </Text>
+            ) : null}
+            <PrimaryButton
+              label={
+                redeeming
+                  ? t.points.converting
+                  : t.points.convert
+                      .replace('{threshold}', String(wallet.redeem.minimumPoints))
+                      .replace('{value}', formatCompactEuro(wallet.redeem.valueCents, locale))
+              }
+              onPress={convertPoints}
+              disabled={redeeming || wallet.balance < wallet.redeem.minimumPoints}
+              testID="account-convert"
+            />
 
             {redeemFailed ? <Note description={t.points.failed} tone="terracotta" testID="account-points-error" /> : null}
 
-            {/* Kart merak edene cevap verir; bakiyesi olan müşteri de görür, yoksa ilk puanını kazanan öteki yolları bir daha göremezdi. */}
+            {/* Kazanma yolları yalnız bu çekmecede; kart onlara buradan açılır. */}
             <TextAction
               label={t.points.howTo}
               onPress={() => setEarnSheetOpen(true)}
@@ -708,7 +685,6 @@ export function AccountScreen({
             rules={wallet}
             visitClaimedToday={wallet.visitClaimedToday}
             actions={{
-              ...earnActions,
               /* Her hedef önce çekmeceyi kapatır: altında açık modal bırakıp gezinmek ekranı kilitli gösterirdi. */
               referral: () => {
                 setEarnSheetOpen(false);

@@ -196,55 +196,41 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
   const { share } = useShareLink();
   const inviteUrl = points.inviteUrl;
   // Kazanma yolu müşteriyi o işin yapıldığı yere götürür; davet bağlantısı yoksa paylaşma satırı düğmesiz kalır.
-  const earnActions = (close: () => void): PhoneEarnActions => ({
+  const earnActions: PhoneEarnActions = {
     referral:
       inviteUrl === null
         ? undefined
         : {
             onClick: () => {
-              close();
+              closeEarn();
               void share(inviteUrl);
             },
           },
     neighbor: { href: '/orders' },
     review: { href: '/orders' },
     feedback_candidate: { href: '/discover' },
-  });
+  };
 
   return (
     <SettingsCard
       title={copy.points.title}
       aside={<span className="font-sans text-h2-sm font-bold text-olive-dark">{copy.points.value.replace('{n}', String(points.balance))}</span>}
     >
-      {points.balance === 0 ? (
-        <>
-          <p className="font-sans text-body-sm leading-[1.6] text-body">{copy.points.emptyBody}</p>
-          <PhonePointsEarnList
-            locale={locale}
-            rules={points}
-            visitClaimedToday={points.visitClaimedToday}
-            actions={earnActions(() => undefined)}
-          />
-        </>
-      ) : (
-        <>
-          <p className="font-sans text-body-sm leading-[1.6] text-body">{fill(copy.points.body)}</p>
-          {!enough && (
-            <p className="font-sans text-helper font-semibold text-muted">
-              {copy.points.gap.replace('{n}', String(minimumPoints - points.balance))}
-            </p>
-          )}
-          <RedeemPoints
-            t={t}
-            locale={locale}
-            redeem={points.redeem}
-            enough={enough}
-            compact
-            renderTrigger={(open) => <PrimaryButton shape="block" label={fill(copy.points.convert)} onClick={open} disabled={!enough} />}
-          />
-        </>
+      <p className="font-sans text-body-sm leading-[1.6] text-body">{fill(copy.points.body)}</p>
+      {!enough && (
+        <p className="font-sans text-helper font-semibold text-muted">
+          {copy.points.gap.replace('{n}', String(minimumPoints - points.balance))}
+        </p>
       )}
-      {/* Bakiyesi olan da görür, yoksa ilk puanını kazanan müşteri öteki yolları bir daha göremezdi. */}
+      <RedeemPoints
+        t={t}
+        locale={locale}
+        redeem={points.redeem}
+        enough={enough}
+        compact
+        renderTrigger={(open) => <PrimaryButton shape="block" label={fill(copy.points.convert)} onClick={open} disabled={!enough} />}
+      />
+      {/* Kazanma yolları kartta değil yalnız çekmecede; kart onlara buradan açılır. */}
       <span className="self-start">
         <TextAction label={copy.points.howTo} onClick={() => setEarnOpen(true)} />
       </span>
@@ -261,7 +247,7 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
             locale={locale}
             rules={points}
             visitClaimedToday={points.visitClaimedToday}
-            actions={earnActions(closeEarn)}
+            actions={earnActions}
             showRules
           />
         </Dialog>
