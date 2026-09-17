@@ -13,15 +13,8 @@ import { POINTS_PAGE_SIZE, type Messages } from './points-types';
 import messages from './messages.json';
 
 /**
- * Puan geçmişi (20.08) — hesap kartındaki "Son kazanımlar"ın tam dökümü + "nasıl puan kazanırım"
- * cevabı. Native uygulamada bu ekran vardı, webde yoktu (kullanıcı bulgusu): müşteri kartta "0
- * puan" görüyor ama nedenini ve nasıl kazanacağını hiçbir yerden okuyamıyordu.
- *
- * Kazanma yolları AYARDAN gelir (`readPointsRules` — onboarding ve mobil kartla AYNI kapı):
- * ekrana gömülü sayı, motorun uyguladığı sayıdan bir gün ayrışır ve ikisi de "doğru" görünürdü.
- *
- * Girişsiz ziyaretçi girişe yönlenir (hesap sayfasının aynı kuralı); program dışı profil (B2B)
- * hesaba döner — onun hesabında puan bölümü DOM'da hiç yok, bu sayfa da yokmuş gibi davranır.
+ * Puan geçmişi: kazanma yolları ayardan gelir (`readPointsRules`), çünkü ekrana gömülü sayı motorun uyguladığından bir gün
+ * ayrışırdı. Girişsiz ziyaretçi girişe, program dışı (B2B) profil hesaba döner; onun hesabında puan bölümü hiç yok.
  */
 interface PointsPageProps {
   params: Promise<{ locale: string }>;

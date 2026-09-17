@@ -10,11 +10,8 @@ import { loadMorePointsAction } from './actions';
 import type { Messages, PointsHistoryPage } from './points-types';
 
 /**
- * Puan dökümü + kazanma yolları. İki cihazda AYNI düzen (tek sütun liste) — fork açılmadı çünkü
- * ayrışan bir yerleşim kararı yok; `md:` de kullanılmıyor (CLAUDE §2).
- *
- * Sebep etiketi hesap kartıyla aynı kural: bilinmeyen sebep HAM dizeye düşer, satır kaybolmaz;
- * eksi işaretli ödül ters etiket alır ("… — iptal edildi", ★ karar 7d).
+ * Puan dökümü ve kazanma yolları, iki cihazda tek sütun liste. Bilinmeyen sebep ham dizeye düşer ki satır kaybolmasın; eksi
+ * işaretli ödül ters etiket alır.
  */
 interface PointsHistoryClientProps {
   t: Messages;
