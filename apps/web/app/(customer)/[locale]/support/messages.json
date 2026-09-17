@@ -4,7 +4,6 @@
     "backToAccount": "← Hesabım",
     "backToList": "← Taleplerim",
     "newTicket": "+ Bize yazın",
-    "newTicketShort": "+ Yeni",
     "empty": {
       "title": "Talebiniz yok",
       "body": "Bir sorunuz ya da sorununuz olursa buradayız.",
@@ -80,7 +79,6 @@
     "backToAccount": "← Mon compte",
     "backToList": "← Mes demandes",
     "newTicket": "+ Écrivez-nous",
-    "newTicketShort": "+ Nouvelle",
     "empty": {
       "title": "Aucune demande",
       "body": "Si vous avez une question ou un souci, nous sommes là.",
@@ -156,7 +154,6 @@
     "backToAccount": "← Mein Konto",
     "backToList": "← Meine Anfragen",
     "newTicket": "+ Schreiben Sie uns",
-    "newTicketShort": "+ Neu",
     "empty": {
       "title": "Keine Anfragen",
       "body": "Wenn Sie eine Frage oder ein Problem haben, sind wir für Sie da.",

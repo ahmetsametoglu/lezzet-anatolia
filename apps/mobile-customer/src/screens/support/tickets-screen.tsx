@@ -1,3 +1,4 @@
+import { ticketMeta, ticketScope, ticketTitle } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -16,8 +17,8 @@ import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { TicketSummary } from '@/lib/api/tickets';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
+import { formatOrderDate } from '@/screens/orders/order-format';
 import { NewTicketSheet } from './new-ticket-sheet';
-import { ticketMeta, ticketScope, ticketTitle } from './ticket-format';
 import { TicketStatusTag } from './ticket-status-tag';
 import { TicketsSkeleton } from './tickets-skeleton';
 import messages from '@lezzet/i18n/customer/support';
@@ -196,7 +197,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
           <Text style={styles.type} numberOfLines={1}>
             {title}
           </Text>
-          <Text style={styles.meta}>{ticketMeta(ticket, scope, t.list.lastMessage, locale)}</Text>
+          <Text style={styles.meta}>{ticketMeta(ticket, scope, t.list.lastMessage, (iso) => formatOrderDate(iso, locale))}</Text>
         </View>
         <TicketStatusTag status={ticket.status} label={t.status[ticket.status]} testID={`ticket-${ticket.id}-status`} />
         {/* İşaret METİNDİR (kitteki `NavRow` ile aynı): satırın kendisi zaten düğme. */}

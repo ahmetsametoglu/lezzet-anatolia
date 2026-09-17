@@ -1,5 +1,5 @@
 import { brand } from '@lezzet/brand';
-import { formatPrice } from '@lezzet/helper';
+import { formatPrice, ticketScope, ticketTitle } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -21,7 +21,6 @@ import type { TicketMessage } from '@/lib/api/tickets';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { toastSuccess } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { formatOrderDate } from '@/screens/orders/order-format';
-import { ticketScope, ticketTitle } from './ticket-format';
 import { TicketDetailSkeleton } from './ticket-detail-skeleton';
 import { TicketStatusTag } from './ticket-status-tag';
 import messages from '@lezzet/i18n/customer/support';

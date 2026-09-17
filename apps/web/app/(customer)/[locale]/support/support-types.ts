@@ -22,6 +22,8 @@ export interface SupportViewProps {
   tickets: readonly CustomerTicketSummary[];
   nextCursor: KeysetCursor | null;
   loadingMore: boolean;
+  /** Son devam isteği düştü; telefon native'deki gibi "tekrar dene" gösterir, liste yerinde kalır. */
+  tailFailed: boolean;
   onLoadMore: () => void;
   /** Sağ bölmede (mobilde tam ekranda) açık olan talep; liste boşsa null. */
   selected: CustomerTicketView | null;

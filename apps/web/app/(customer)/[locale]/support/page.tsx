@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
+import supportMessages from '@lezzet/i18n/customer/support';
+import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { detectDevice } from '@/lib/device';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
 import { recordPageView } from '@/lib/analytics/page-view';
@@ -24,6 +26,7 @@ export default async function SupportPage({ params }: SupportPageProps) {
   void recordPageView('/support');
 
   const t: Messages = messages[locale];
+  const phone = supportMessages[locale].list;
   const [device, data] = await Promise.all([detectDevice(), loadSupport(locale as Locale)]);
 
   return (
@@ -34,8 +37,13 @@ export default async function SupportPage({ params }: SupportPageProps) {
         nav: 'support',
         back: { label: t.backToAccount, href: '/account' },
         title: t.title,
-        // Mobilde kısa etiket: uzun hâl başlık satırında iki satıra sarıp başlığı kırpar; masaüstünde yer var.
-        right: <NewTicketLink label={device === 'mobile' ? t.newTicketShort : t.newTicket} />,
+        // Telefonda native'in metin eylemi; boş listede çizilmez, çünkü ortadaki düğme aynı işi farklı adla yapardı.
+        right:
+          device !== 'mobile' ? (
+            <NewTicketLink label={t.newTicket} />
+          ) : data.tickets.rows.length === 0 ? undefined : (
+            <TextAction label={phone.new} ariaLabel={phone.newLabel} href="/support/new" />
+          ),
       }}
       // Masaüstünde bu rota da bir yazışma gösteriyor (iki bölme), mobilde bir gelen kutusu —
       // ikisi de ekranı doldurur, ikisi de kendi içinde kayar.

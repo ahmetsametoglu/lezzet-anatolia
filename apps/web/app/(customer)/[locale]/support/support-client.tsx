@@ -28,14 +28,19 @@ export function SupportClient({ t, locale, device, mode, first, selected }: Supp
   const [extra, setExtra] = useState<CustomerTicketSummary[]>([]);
   const [cursor, setCursor] = useState<KeysetCursor | null>(first.nextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [tailFailed, setTailFailed] = useState(false);
 
   const onLoadMore = () => {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
+    setTailFailed(false);
     void loadMoreTicketsAction(cursor)
       .then(({ data, errorKey }) => {
-        // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
-        if (errorKey || !data) return;
+        // Düşen devam listeyi bozmaz: satırlar yerinde kalır, tetikleyici yeniden denenebilir.
+        if (errorKey || !data) {
+          setTailFailed(true);
+          return;
+        }
         setExtra((prev) => [...prev, ...data.rows]);
         setCursor(data.nextCursor);
       })
@@ -49,6 +54,7 @@ export function SupportClient({ t, locale, device, mode, first, selected }: Supp
     tickets: [...first.rows, ...extra],
     nextCursor: cursor,
     loadingMore,
+    tailFailed,
     onLoadMore,
     selected,
   };

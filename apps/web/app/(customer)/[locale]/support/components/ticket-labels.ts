@@ -1,3 +1,4 @@
+import { ticketTitle as ticketTitleOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { formatOrderDate, formatShortDate, formatTime } from '@/lib/storefront/format';
 import type { Messages } from '../support-types';
@@ -15,9 +16,7 @@ export function ticketTitle(
   ticket: { type: keyof Messages['type']; subject: string | null },
   t: Messages,
 ): string {
-  const type = t.type[ticket.type];
-  const subject = ticket.subject?.trim();
-  return subject ? `${type} · ${subject}` : type;
+  return ticketTitleOf(t.type[ticket.type], ticket.subject, '{type} · {subject}');
 }
 
 /**
