@@ -787,14 +787,6 @@ export const CATEGORIES: SeedCategory[] = [
     lezza: ['dessert'],
   },
   {
-    key: 'dondurma',
-    name: { tr: 'Dondurma', fr: 'Glaces', de: 'Eis' },
-    tagline: { tr: 'Maraş usulü dondurma', fr: 'Glace façon Maraş', de: 'Eis nach Maraş-Art' },
-    featured: true,
-    image: { lezza: 'MARAS-ICE-CREAM-slice-plain-70g.webp' },
-    lezza: ['ice-cream'],
-  },
-  {
     key: 'et-tavuk',
     name: { tr: 'Et & Tavuk', fr: 'Viande & volaille', de: 'Fleisch & Geflügel' },
     tagline: { tr: 'Döner, mantı ve tavuk', fr: 'Döner, mantı et volaille', de: 'Döner, Mantı und Geflügel' },
@@ -811,15 +803,22 @@ export const CATEGORIES: SeedCategory[] = [
     featured: true,
     image: { file: 'scripts/seed-real/images/sifamix-andiz-extract.webp' },
   },
-  // Vitrin ızgarası altı kart çiziyor ve yukarıdaki altı kategori onu dolduruyor. Aşağıdaki ikisi
-  // katalogda kalır: ikisi de "arayarak bulunan" raflardır, vitrinde bir kartı hak edecek kadar
-  // çekici değil.
   {
     key: 'kiler',
     name: { tr: 'Kiler', fr: 'Épicerie', de: 'Vorrat' },
     tagline: { tr: 'Pekmez, tahin, sirke ve yağ', fr: 'Mélasse, tahin, vinaigres et huile', de: 'Melasse, Tahin, Essig und Öl' },
-    featured: false,
+    featured: true,
     image: { url: 'https://www.besegida.com/wp-content/uploads/2025/04/Bese-Helva-Pekmez-650.jpg' },
+  },
+  // Vitrin ızgarası altı kart çiziyor ve yukarıdaki altı kategori onu dolduruyor; aşağıdakiler
+  // katalogda kalır. Dondurmanın bütün kalemleri aday: vitrin kartı ürünsüz bir sayfaya giderdi.
+  {
+    key: 'dondurma',
+    name: { tr: 'Dondurma', fr: 'Glaces', de: 'Eis' },
+    tagline: { tr: 'Maraş usulü dondurma', fr: 'Glace façon Maraş', de: 'Eis nach Maraş-Art' },
+    featured: false,
+    image: { lezza: 'MARAS-ICE-CREAM-slice-plain-70g.webp' },
+    lezza: ['ice-cream'],
   },
   {
     key: 'kuru-meyve',
