@@ -14,23 +14,14 @@ import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { formatOrderDate, formatPrice } from '@/lib/storefront/format';
 import { useLoadMore } from '@/lib/use-load-more.hook';
 import { ReorderNotice } from './components/reorder-notice';
-// Tekrar sipariş düğmesinin kelimeleri masaüstüyle ortak (08.20).
+// Tekrar sipariş düğmesinin kelimeleri masaüstüyle ortak.
 import reorderCopy from './components/reorder-messages.json';
 import { metaOf } from './orders.desktop';
 import type { OrdersViewProps } from './orders-types';
 
 /**
- * Siparişlerim — telefon görünümü, native "Siparişlerim" ekranının (`apps/mobile/src/screens/orders/orders-screen.tsx`)
- * web ikizi (14.09 · 08.58 Faz 1). Başlık çerçevede (‹ · HESABIM · büyük başlık, native'in yığın ekranı başlığı); gövde
- * native'in kartı: kum zemin · numara + künye (tarih · kalem) · eğik durum rozeti · küçük resim yığını ve "+N" · kesikli
- * ayraç · tutar ve "Detay ›". Kartın tamamı detaya gider (native'de de tek dokunma hedefi). Metin ortak sipariş
- * sözlüğünden (`@lezzet/i18n/customer/orders`).
- *
- * Kuyruk native'in üç hâli: yükleniyor · devamı gelmedi (tekrar dene) · hepsi gösterildi. Sona yaklaşınca kendiliğinden
- * yükler (`useLoadMore`); otomatik tur sınırı dolunca web'in "daha eski siparişler" düğmesi çıkar.
- *
- * Web'e özgü korunanlar: ödemesi beklenen kart siparişi (07.18, listenin başında, liste boşken de) · tekrar sipariş
- * (native'de ucu yok, web'de var — kartın alt satırında metin eylemi; sonucu kartın altında açılır).
+ * Siparişlerim'in telefon görünümü, native sipariş listesinin ikizi; kartın tamamı detaya gider, çünkü native'de de tek dokunma
+ * hedefi. Ödemesi beklenen kart siparişi ve otomatik tur sınırından sonraki "daha eski siparişler" düğmesi web'e özgü.
  */
 export function OrdersMobile({
   t,
@@ -50,7 +41,7 @@ export function OrdersMobile({
   // Kuyruk düştüyse otomatik yol kapanır: aynı düşen sayfa art arda istenmesin, söz "tekrar dene"ye geçer.
   const { ref, autoActive, loadMore } = useLoadMore({ hasMore: nextCursor !== null && !tailFailed, loading: loadingMore, onLoadMore });
 
-  // Ödemesi beklenen kart siparişi (07.18) — dikkat tonu (bal), tek eylemi ödemenin sayfası.
+  // Ödemesi beklenen kart siparişi dikkat tonunda, tek eylemi ödemenin sayfası.
   const awaiting = awaitingPayment && (
     <section className="flex flex-col gap-2.5 rounded-card border border-honey-line bg-honey-bg px-4 py-3.5">
       <div className="flex items-center justify-between gap-2.5">
