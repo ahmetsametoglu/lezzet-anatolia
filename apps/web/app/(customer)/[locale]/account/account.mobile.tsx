@@ -42,7 +42,6 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
       {chatNotice && <ChatLinkNoticeBanner t={t} notice={chatNotice} />}
 
       <ProfileSection t={t} copy={copy} account={account} />
-      <PhoneWhatsappCard t={t} copy={copy.whatsapp} numbers={account.whatsappNumbers} />
 
       {company && (
         <section className="flex flex-col gap-1 rounded-control bg-ink p-4">
@@ -87,6 +86,8 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
       )}
 
       <LanguageCard copy={copy.language} locale={locale} stored={account.profile.preferredLanguage} />
+
+      <PhoneWhatsappCard t={t} copy={copy.whatsapp} numbers={account.whatsappNumbers} />
 
       <SettingsCard title={copy.marketing.title}>
         {/* Kanal burada bağlanır, çünkü anahtar hangi kapıya yazdığını bilmez. */}

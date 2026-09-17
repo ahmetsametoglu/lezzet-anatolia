@@ -37,7 +37,7 @@
     },
     "whatsapp": {
       "title": "WhatsApp",
-      "body": "Numaranızı bağlayın, WhatsApp'tan yazdığınızda sizi tanıyalım.",
+      "body": "WhatsApp'tan sipariş vermek ve siparişinizin durumunu WhatsApp mesajıyla öğrenmek için numaranızı bağlayın.",
       "cta": "WhatsApp'ımı bağla",
       "busy": "Hazırlanıyor…",
       "hint": "WhatsApp açılır; hazır mesajı göndermeniz yeterli.",
@@ -183,7 +183,7 @@
     },
     "whatsapp": {
       "title": "WhatsApp",
-      "body": "Reliez votre numéro pour que nous vous reconnaissions sur WhatsApp.",
+      "body": "Pour commander sur WhatsApp et suivre vos commandes par message WhatsApp, reliez votre numéro.",
       "cta": "Rattacher mon WhatsApp",
       "busy": "Préparation…",
       "hint": "WhatsApp s'ouvre ; il suffit d'envoyer le message pré-rempli.",
@@ -329,7 +329,7 @@
     },
     "whatsapp": {
       "title": "WhatsApp",
-      "body": "Verknüpfen Sie Ihre Nummer, damit wir Sie auf WhatsApp erkennen.",
+      "body": "Verknüpfen Sie Ihre Nummer, um über WhatsApp zu bestellen und den Stand Ihrer Bestellungen per WhatsApp-Nachricht zu erfahren.",
       "cta": "Mein WhatsApp verknüpfen",
       "busy": "Wird vorbereitet…",
       "hint": "WhatsApp öffnet sich; senden Sie einfach die vorbereitete Nachricht.",

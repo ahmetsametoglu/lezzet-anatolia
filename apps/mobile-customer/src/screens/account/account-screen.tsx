@@ -362,41 +362,6 @@ export function AccountScreen({
           />
         </View>
 
-        {/* Bağlı numaralar salt okunur: müşterinin tercihi değil, kendi hattından gönderdiği mesajın kanıtıdır. */}
-        <View style={styles.settingsCard} testID="account-whatsapp">
-          <View style={styles.pointsHead}>
-            <Text style={styles.cardTitle}>{t.whatsapp.title}</Text>
-            {whatsappLinked ? <Text style={styles.whatsappVerified}>{t.whatsapp.verified}</Text> : null}
-          </View>
-          <Text style={styles.cardBody}>{t.whatsapp.body}</Text>
-          {(whatsapp.numbers ?? []).map((number) => (
-            <Text key={number} style={styles.whatsappNumber}>
-              {number}
-            </Text>
-          ))}
-          {whatsappLinked ? (
-            <TextAction
-              label={whatsapp.busy ? t.whatsapp.busy : t.whatsapp.relink}
-              onPress={() => void whatsapp.start()}
-              disabled={whatsapp.busy}
-              testID="account-whatsapp-relink"
-            />
-          ) : (
-            <>
-              <SecondaryButton
-                label={whatsapp.busy ? t.whatsapp.busy : t.whatsapp.cta}
-                onPress={() => void whatsapp.start()}
-                disabled={whatsapp.busy}
-                tone="olive"
-                shape="pill"
-                testID="account-whatsapp-link"
-              />
-              <Text style={styles.helperNote}>{t.whatsapp.hint}</Text>
-            </>
-          )}
-          {whatsapp.failed ? <Note description={t.whatsapp.failed} tone="terracotta" testID="account-whatsapp-error" /> : null}
-        </View>
-
         {data.company === null ? null : (
           <View style={styles.companyCard} testID="account-company">
             <Text style={styles.companyEyebrow}>{upperIn(t.company.eyebrow, locale)}</Text>
@@ -609,6 +574,41 @@ export function AccountScreen({
               />
             ))}
           </View>
+        </View>
+
+        {/* Bağlı numaralar salt okunur: müşterinin tercihi değil, kendi hattından gönderdiği mesajın kanıtıdır. */}
+        <View style={styles.settingsCard} testID="account-whatsapp">
+          <View style={styles.pointsHead}>
+            <Text style={styles.cardTitle}>{t.whatsapp.title}</Text>
+            {whatsappLinked ? <Text style={styles.whatsappVerified}>{t.whatsapp.verified}</Text> : null}
+          </View>
+          <Text style={styles.cardBody}>{t.whatsapp.body}</Text>
+          {(whatsapp.numbers ?? []).map((number) => (
+            <Text key={number} style={styles.whatsappNumber}>
+              {number}
+            </Text>
+          ))}
+          {whatsappLinked ? (
+            <TextAction
+              label={whatsapp.busy ? t.whatsapp.busy : t.whatsapp.relink}
+              onPress={() => void whatsapp.start()}
+              disabled={whatsapp.busy}
+              testID="account-whatsapp-relink"
+            />
+          ) : (
+            <>
+              <SecondaryButton
+                label={whatsapp.busy ? t.whatsapp.busy : t.whatsapp.cta}
+                onPress={() => void whatsapp.start()}
+                disabled={whatsapp.busy}
+                tone="olive"
+                shape="pill"
+                testID="account-whatsapp-link"
+              />
+              <Text style={styles.helperNote}>{t.whatsapp.hint}</Text>
+            </>
+          )}
+          {whatsapp.failed ? <Note description={t.whatsapp.failed} tone="terracotta" testID="account-whatsapp-error" /> : null}
         </View>
 
         <View style={styles.settingsCard}>
