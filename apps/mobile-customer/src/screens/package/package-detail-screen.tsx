@@ -1,4 +1,4 @@
-import { formatPrice, PACKAGE_QUANTITY_MAX } from '@lezzet/helper';
+import { formatPrice, PACKAGE_QUANTITY_MAX, showsNoShipChip } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PackageItem } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -196,11 +196,11 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
           <Text style={styles.price} testID="package-price">
             {formatPrice(detail.priceCents, locale)} <Text style={styles.priceSuffix}>{t.priceSuffix}</Text>
           </Text>
-          {detail.shippable ? null : (
+          {showsNoShipChip(detail.shippable, placeMark?.tone ?? null) ? (
             <Text style={styles.noShipChip} testID="package-noship">
               {t.noShip}
             </Text>
-          )}
+          ) : null}
           {/* YER İŞARETİ — kitin ortak rozeti (`StockMark`), cümlesi katalogla AYNI. Sarmalayıcı
               onu SOLA yaslar: rozetin kendi hizası daire kartın ortalı ekseni içindir, bu sayfa
               ise sola hizalı bir gövde (kısıt çipiyle aynı sütun). */}

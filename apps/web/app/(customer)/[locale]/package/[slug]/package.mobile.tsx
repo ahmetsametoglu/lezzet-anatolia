@@ -1,4 +1,4 @@
-import { formatPrice, packageRouteStatusOf, placeMarkOf } from '@lezzet/helper';
+import { formatPrice, packageRouteStatusOf, placeMarkOf, showsNoShipChip } from '@lezzet/helper';
 import packageDetailMessages from '@lezzet/i18n/customer/package-detail';
 import placeMessages from '@lezzet/i18n/customer/place';
 import { RATIO_SOURCE } from '@lezzet/types';
@@ -52,7 +52,7 @@ export function PackageMobile({ locale, pack }: PackageViewProps) {
         <p className="font-sans text-card-title font-bold text-ink">
           {formatPrice(pack.priceCents, locale)} <span className="text-helper font-normal text-muted">{copy.priceSuffix}</span>
         </p>
-        {pack.inRouteOnly && (
+        {showsNoShipChip(!pack.inRouteOnly, placeMark?.tone ?? null) && (
           <span className="self-start rounded-badge bg-olive-bg px-2 py-1 font-sans text-micro font-semibold text-olive-dark">{copy.noShip}</span>
         )}
         {placeMark !== null && <StockMark label={placeMark.label} tone={placeMark.tone} />}

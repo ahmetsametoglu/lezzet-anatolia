@@ -1,4 +1,4 @@
-import { cardBadgeOf, formatPrice, placeMarkOf, productPriceLabel } from '@lezzet/helper';
+import { cardBadgeOf, formatPrice, placeMarkOf, productPriceLabel, showsNoShipChip } from '@lezzet/helper';
 import placeMessages from '@lezzet/i18n/customer/place';
 import productMessages from '@lezzet/i18n/customer/product';
 import { RATIO_SQUARE } from '@lezzet/types';
@@ -81,7 +81,7 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
             {copy.limit.replace('{n}', selected.limitLabel)}
           </span>
         )}
-        {!product.shippable && (
+        {showsNoShipChip(product.shippable, placeMark?.tone ?? null) && (
           <span className="self-start rounded-badge bg-olive-bg px-2 py-1 font-sans text-micro font-semibold text-olive-dark">{copy.noShip}</span>
         )}
 

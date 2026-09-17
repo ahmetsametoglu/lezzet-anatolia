@@ -55,3 +55,11 @@ export function cardPlaceNoteOf(
   const blockedNote = wide ? t.lineBlocked : t.cardBlocked;
   return { note: mark.tone === 'blocked' ? blockedNote : mark.label, dimmed: mark.tone === 'blocked' };
 }
+
+/**
+ * Kargo kısıtı çipi ("yalnız bölge içi, kargoya verilmez") kapalı kapıda çizilmez: işaret sebebi ve sonucu birlikte söylüyor,
+ * çip aynı kısıtı daha belirsiz tekrarlardı. Yer bilinmezken ya da bekleyen bölgede çip tek başına bilgi taşır.
+ */
+export function showsNoShipChip(shippable: boolean, tone: PlaceMarkTone | null): boolean {
+  return !shippable && tone !== 'blocked';
+}

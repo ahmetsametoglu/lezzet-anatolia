@@ -1,5 +1,5 @@
 // Kart rozeti ve fiyat etiketi web telefon görünümüyle ortak kuruculardan.
-import { cardBadgeOf, formatPrice, fromPriceLabel, openingVariantOf, productPriceLabel } from '@lezzet/helper';
+import { cardBadgeOf, formatPrice, fromPriceLabel, openingVariantOf, productPriceLabel, showsNoShipChip } from '@lezzet/helper';
 import type { TextSegment } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/types';
@@ -339,11 +339,11 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
           {variant?.limitLabel == null ? null : (
             <Text style={styles.limitChip}>{fill(t.limit, 'n', variant.limitLabel)}</Text>
           )}
-          {detail.shippable ? null : (
+          {showsNoShipChip(detail.shippable, placeMark?.tone ?? null) ? (
             <Text style={styles.noShipChip} testID="product-noship">
               {t.noShip}
             </Text>
-          )}
+          ) : null}
 
           {detail.family.length === 0 || detail.category === null ? null : (
             <View style={styles.familyBlock}>

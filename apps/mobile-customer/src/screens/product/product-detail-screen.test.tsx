@@ -180,6 +180,31 @@ describe('ürün detayı', () => {
   });
 });
 
+describe('ürün detayı — kargo kısıtı çipi', () => {
+  const OUT_OF_ROUTE = {
+    kind: 'resolved',
+    place: { country: 'FR', postalCode: '67380', placeName: 'Lingolsheim', places: ['Lingolsheim'], inRoute: false },
+  };
+
+  beforeEach(() => {
+    mockOnboarding = { postalCode: '67380' };
+  });
+
+  afterEach(() => {
+    mockOnboarding = null;
+  });
+
+  it('bu adrese gelmeyen üründe çizilmez — işaret aynı kısıtı daha kesin söylüyor', async () => {
+    const elsewhere = { stockStatus: 'elsewhere' as const };
+    const detail = productDetail({ shippable: false, variants: [productVariant(1, elsewhere), productVariant(2, elsewhere)] });
+    fetchMock.mockImplementation(async (input) => (String(input).includes('/places/by-postal-code') ? ok(OUT_OF_ROUTE) : ok(detail)));
+    await render(<ProductDetailScreen slug="el-acmasi-kol-boregi" />);
+
+    expect(await screen.findByTestId('product-place-veil')).toBeOnTheScreen();
+    expect(screen.queryByTestId('product-noship')).toBeNull();
+  });
+});
+
 /*
   "Gelince haber ver" gerçek bir kayıt bırakır (`POST /me/stock-notices`); ekran yalnız sunucunun cevabını gösterir. Bar yalnız
   olguyu söyler: arkasında veri olmayan "yakında yeniden gelecek" sözü verilmez.

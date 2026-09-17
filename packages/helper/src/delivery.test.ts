@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import placeMessages from '@lezzet/i18n/customer/place';
-import { cardPlaceNoteOf, elsewhereReasonOf, placeMarkOf } from './delivery';
+import { cardPlaceNoteOf, elsewhereReasonOf, placeMarkOf, showsNoShipChip } from './delivery';
 
 /*
   YER İŞARETİ — "bu ürün BANA nasıl gelir" sorusunun cevabı; native katalog, vitrin ve web telefon görünümü
@@ -78,5 +78,20 @@ describe('cardPlaceNoteOf', () => {
       note: tr.awayMark,
       dimmed: false,
     });
+  });
+});
+
+describe('showsNoShipChip', () => {
+  it('kapalı kapıda kısıt çipi çizilmez — işaret aynı kısıtı daha kesin söylüyor', () => {
+    expect(showsNoShipChip(false, 'blocked')).toBe(false);
+  });
+
+  it('yer bilinmezken ya da bekleyen bölgede kısıt çipi kalır', () => {
+    expect(showsNoShipChip(false, null)).toBe(true);
+    expect(showsNoShipChip(false, 'pending')).toBe(true);
+  });
+
+  it('kargolanabilen üründe çip yok', () => {
+    expect(showsNoShipChip(true, null)).toBe(false);
   });
 });
