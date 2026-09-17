@@ -4,7 +4,7 @@ import { cardPlaceNoteOf, elsewhereReasonOf, placeMarkOf } from './delivery';
 
 /*
   YER İŞARETİ — "bu ürün BANA nasıl gelir" sorusunun cevabı; native katalog, vitrin ve web telefon görünümü
-  aynı kuralı okur (terfi 14.09). Native'in `place-view.test.ts`i aynı iddiaları kendi yer nesnesiyle
+  aynı kuralı okur. Native'in `place-view.test.ts`i aynı iddiaları kendi yer nesnesiyle
   sürdürüyor; buradaki iki çivi kuralın KENDİSİ:
     · bilmemek "gönderemiyoruz" değildir — yer bilinmiyorsa not GEÇİCİDİR;
     · "kargoyla gelir" kartta yazılmaz — kartın notu yalnız kapalı kapı ve bekleyen bölgedir.

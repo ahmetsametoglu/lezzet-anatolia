@@ -10,7 +10,7 @@ export type ElsewhereReason = 'stock' | 'out_of_route';
 
 /**
  * **Yer bilinmiyorsa `stock`** ve bu bilinçli: "gönderemiyoruz" demek için rota dışında olduğunu
- * BİLMEK gerekir. Bilinmeyeni kalıcı bir olumsuzluğa çevirmek uydurma olurdu (`CLAUDE §1`) — ve
+ * BİLMEK gerekir. Bilinmeyeni kalıcı bir olumsuzluğa çevirmek uydurma olurdu — ve
  * pratikte bu hâl zaten oluşmaz, `elsewhere` ancak yer biliniyorken doğar.
  */
 export function elsewhereReasonOf(place: { inRoute: boolean } | null): ElsewhereReason {
@@ -43,11 +43,9 @@ export function placeMarkOf(status: string | null, place: { inRoute: boolean } |
  * Kartın yer notu: "Kargoyla gelir" kartta yazılmaz, çünkü rota dışı müşterinin neredeyse bütün kartlarında yazan bilgi bilgi
  * olmaktan çıkar ve cümle listenin başındaki bantta tek yerde durur. Kapalı kapı kartı soldurur, bekleyen bölge soldurmaz, çünkü
  * ürün gelebilir.
- *
- * Kapalı kapının KART cümlesi kısadır (`cardBlocked`): kart şeridi fotoğrafın üstünde tek satırlık bir işarettir, ürün detayının
- * iki satırlık gerekçesi (`lineBlocked`) oraya sığmaz ve fotoğrafı yutardı.
  */
 export function cardPlaceNoteOf(mark: PlaceMark | null, t: PlaceMarkCopy): { note: string | undefined; dimmed: boolean } {
   if (mark === null || mark.tone === 'info') return { note: undefined, dimmed: false };
+  // Kare kartın şeridi tek satırlık bir işarettir ve iki satırlık gerekçe (`lineBlocked`) fotoğrafı yutardı.
   return { note: mark.tone === 'blocked' ? t.cardBlocked : mark.label, dimmed: mark.tone === 'blocked' };
 }
