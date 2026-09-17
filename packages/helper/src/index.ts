@@ -14,3 +14,4 @@ export * from './price-label';
 export * from './recipe';
 export * from './rich-text';
 export * from './slug';
+export * from './variant';

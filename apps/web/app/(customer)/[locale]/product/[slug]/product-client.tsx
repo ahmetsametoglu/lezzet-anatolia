@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { openingVariantOf } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import type { Device } from '@/lib/device';
 import { useDevice } from '@/lib/use-device.hook';
@@ -19,14 +20,18 @@ interface ProductClientProps {
   locale: Locale;
   product: StorefrontProductDetail;
   device: Device;
+  /** Bağlantının istediği boy (paket kalemi); `null` = kartın boyu. */
+  initialVariantId: string | null;
   reviews: ReviewsData;
 }
 
-export function ProductClient({ t, locale, product, device, reviews }: ProductClientProps) {
+export function ProductClient({ t, locale, product, device, initialVariantId, reviews }: ProductClientProps) {
   const resolved = useDevice(device);
-  /* Açılış boyu sunucudan gelir (`primaryVariantId`, fiyatı olan en ucuz boy): kart o boyun fiyatını gösteriyor ve detay başka
-     boyla açılırsa müşteri gördüğü fiyatı bulamaz. Alan `null` ise (fiyatlı boy yok) sıranın ilkine düşülür. */
-  const [selectedId, setSelectedId] = useState(() => product.primaryVariantId ?? product.variants[0]?.id ?? '');
+  /* Açılış boyu ortak kuraldan: bağlantının istediği boy, yoksa sunucunun birincil boyu — kart o boyun fiyatını gösteriyor ve
+     detay başka boyla açılırsa müşteri gördüğü fiyatı bulamaz. */
+  const [selectedId, setSelectedId] = useState(
+    () => openingVariantOf(product.variants, initialVariantId, product.primaryVariantId)?.id ?? '',
+  );
   const selected = product.variants.find((v) => v.id === selectedId) ?? product.variants[0] ?? null;
 
   // Aile bağlamı burada türetilir, iki görünümde ayrı ayrı değil: ikisi aynı iki cevabı istiyor ve iki yerde hesaplansaydı biri

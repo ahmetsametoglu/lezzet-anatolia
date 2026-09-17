@@ -15,6 +15,8 @@ import { HomePackageSchema } from './home-api.schema';
  * satın alma ÖNCESİ erişilebilir olmalı; paket sayfası yalnız kapı açar).
  */
 export const PackageItemSchema = ProductSchema.pick({ slug: true }).extend({
+  /** Kalemin boyu: ürün sayfası bu boyla açılır, çünkü paketteki boy ürünün en ucuz boyu olmayabilir. */
+  variantId: BundleItemSchema.shape.variantId,
   /** Ürün adı, seçili dilde çözülmüş (dil yedek zinciri sunucuda — istemci dil bilmez). */
   name: z.string(),
   /** Boy etiketi ("500 g"); tek boylu üründe boş. Addan ayrı alan, çünkü kalem bir boya bağlı ve cümleyi ekran kurar. */

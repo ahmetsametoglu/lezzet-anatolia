@@ -21,6 +21,8 @@ const bundleIds: string[] = [];
 let sellableSlug = '';
 let coldChainSlug = '';
 let passiveSlug = '';
+/** Satılabilir paketin kalem boyları, paketteki sırayla. */
+let sellableVariantIds: string[] = [];
 
 const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 
@@ -82,6 +84,7 @@ beforeAll(async () => {
     ],
   });
   sellableSlug = sellable.bundle.slug;
+  sellableVariantIds = [half.id, kilo.id];
 
   const coldBundle = await bundles.create({
     name: tr3(`VPKG Soguk ${stamp}`, `VPKG Froid ${stamp}`, `VPKG Kalt ${stamp}`),
@@ -129,6 +132,8 @@ describe('GET /api/v1/packages/:slug', () => {
       [`VPKG Baklava FR ${stamp}`, '500 g', 2],
       [`VPKG Baklava FR ${stamp}`, '1 kg', 1],
     ]);
+    // Kalem kendi boyunu taşır: ürün sayfası paketteki boyla açılır, en ucuz boyla değil.
+    expect(data.items.map((i) => i.variantId)).toEqual(sellableVariantIds);
     // Satır ürün DETAYINA açılır — slug ürünün slug'ıdır, paketinki değil.
     for (const item of data.items) expect(item.slug).not.toBe(sellableSlug);
   });

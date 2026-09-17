@@ -110,11 +110,15 @@ describe('paket detayı', () => {
     expect(screen.getByTestId('cart-probe')).toHaveTextContent(`${packageDetail().id}:4:4990`);
   });
 
-  it('içerik satırına basınca ürün detayına gidilir (v3 `it.open`)', async () => {
+  it('içerik satırına basınca ürün detayı paketteki boyla açılır', async () => {
     await renderPackage();
 
     await fireEvent.press(screen.getByTestId('package-item-su-boregi'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/product/su-boregi');
+    const item = packageDetail().items.find((i) => i.slug === 'su-boregi');
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      pathname: '/product/[slug]',
+      params: { slug: 'su-boregi', variant: item?.variantId },
+    });
   });
 
   it('kargolanamayan paket bölge-içi uyarısını taşır; kargolanan taşımaz', async () => {

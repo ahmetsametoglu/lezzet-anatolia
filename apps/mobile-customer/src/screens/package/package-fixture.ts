@@ -10,6 +10,7 @@ import type { PackageDetail, PackageItem } from '@lezzet/types';
 /** İçerik satırı — ürün adı + boy etiketi + adet; slug ürün detayına açılan kapı. */
 function packageItem(index: number, overrides: Partial<PackageItem> = {}): PackageItem {
   return {
+    variantId: `0f1c4a20-6b1e-4d3a-9f2c-0a5b7c8d1e${String(index).padStart(2, '0')}`,
     slug: `paket-urunu-${index}`,
     name: `Paket Ürünü ${index}`,
     unitLabel: `${index * 250} g`,

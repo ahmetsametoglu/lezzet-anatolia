@@ -107,6 +107,15 @@ describe('ürün detayı', () => {
     expect(screen.getByTestId('product-add')).toHaveTextContent(`Sepete ekle · ${formatPrice(1780, 'tr')}`);
   });
 
+  it('paket kaleminden gelen boy seçili açılır', async () => {
+    fetchMock.mockResolvedValue(ok(productDetail()));
+    await render(<ProductDetailScreen slug="el-acmasi-kol-boregi" initialVariantId={productVariant(2).id} />);
+    await waitFor(() => expect(screen.queryByTestId('product-loading')).toBeNull());
+
+    // Birincil boy 8,90 €; bağlantının istediği ikinci boy 17,80 €.
+    expect(screen.getByTestId('product-price')).toHaveTextContent(formatPrice(1780, 'tr'));
+  });
+
   it('sepete ekle seçili boyu ve adedi depoya yazar', async () => {
     fetchMock.mockResolvedValue(ok(productDetail()));
     await render(

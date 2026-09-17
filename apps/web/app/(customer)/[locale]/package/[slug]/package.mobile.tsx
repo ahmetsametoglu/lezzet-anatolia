@@ -62,9 +62,10 @@ export function PackageMobile({ locale, pack }: PackageViewProps) {
         <ul className="flex flex-col gap-2">
           {pack.items.map((item) => (
             <li key={item.variantId}>
-              {/* Satır ürün detayına gider: alerjen ve içindekiler her kalemin kendi sayfasında (yasal beyan). */}
+              {/* Satır ürün detayına gider, çünkü alerjen ve içindekiler her kalemin kendi sayfasında (yasal beyan). Boy da
+                  taşınır: paketteki boy ürünün en ucuz boyu olmayabilir. */}
               <Link
-                href={{ pathname: '/product/[slug]', params: { slug: item.slug } }}
+                href={{ pathname: '/product/[slug]', params: { slug: item.slug }, query: { variant: item.variantId } }}
                 aria-label={copy.contents.open.replace('{name}', item.name)}
                 className="flex cursor-pointer items-center gap-3 rounded-card bg-sand-250 px-3 py-2.5 transition-opacity hover:opacity-80 active:opacity-70"
               >

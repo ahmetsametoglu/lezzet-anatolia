@@ -70,7 +70,7 @@ packages.get('/packages/:slug', async (c) => {
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR: şekil sözleşmeden saparsa burası DERLENMEZ; `parse` da
   // süzgeçtir — kapının ürettiği ama ekranın işi olmayan alanlar (KDV oranı, tavan, ağırlık, alerjen,
-  // raf ömrü, kalem varyant kimliği) zarfa sızamaz.
+  // raf ömrü) zarfa sızamaz.
   const body: z.input<typeof PackageDetailSchema> = {
     // `id` sepetin ihtiyacı, ekranın değil: sunucu sepetinde paket satırının adresi `bundleId`dir.
     id: pack.id,
@@ -91,6 +91,7 @@ packages.get('/packages/:slug', async (c) => {
     // Satır sırası paketin kendi sırasıdır; ürünü çözülemeyen kalem sessizce DÜŞMEZ (kapının son
     // çaresi: bağsız ve adsız kalır) — paket "4 ürün" diyorsa dördü de görünür.
     items: pack.items.map((item) => ({
+      variantId: item.variantId,
       slug: item.slug,
       name: item.name,
       unitLabel: item.unitLabel,

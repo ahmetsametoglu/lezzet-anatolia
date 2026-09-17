@@ -1,5 +1,5 @@
 // Kart rozeti ve fiyat etiketi web telefon görünümüyle ortak kuruculardan.
-import { cardBadgeOf, formatPrice, fromPriceLabel, productPriceLabel } from '@lezzet/helper';
+import { cardBadgeOf, formatPrice, fromPriceLabel, openingVariantOf, productPriceLabel } from '@lezzet/helper';
 import type { TextSegment } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import { ALLERGEN_LABELS, NUTRITION_KEYS, resolveLocalizedText } from '@lezzet/types';
@@ -98,9 +98,11 @@ function nutritionLine(nutrition: Nutrition, t: Messages): string {
 
 interface ProductDetailScreenProps {
   slug: string;
+  /** Bağlantının istediği boy (paket kalemi); verilmezse sayfa kartın boyuyla açılır. */
+  initialVariantId?: string | null;
 }
 
-export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
+export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDetailScreenProps) {
   const router = useRouter();
   const { theme } = useUnistyles();
   const locale = useAppLocale();
@@ -164,12 +166,10 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
   }
 
   const variants = detail.variants;
-  /* Açılış boyu sunucudan (`primaryVariantId`): kartta yazan fiyat en ucuz boyunkidir, `variants[0]` ise operatörün sırası ve
-     ikisi ayrışınca kart ile detay farklı fiyat gösterirdi. Ölçüt ekranda hesaplanmaz ki web ile ayrışmasın. */
+  /* Müşteri boy seçmediyse açılış boyu ortak kuraldan: bağlantının istediği boy, yoksa kartın fiyatını taşıyan birincil boy.
+     Kural ekranda yazılmaz ki web ile ayrışmasın. */
   const variant: CatalogVariant | undefined =
-    variants.find((v) => v.id === variantId) ??
-    variants.find((v) => v.id === detail.primaryVariantId) ??
-    variants[0];
+    variants.find((v) => v.id === variantId) ?? openingVariantOf(variants, initialVariantId, detail.primaryVariantId);
   const price = variant?.priceCents ?? null;
   const was = variant?.wasCents;
   const soldOut = variant?.soldOut ?? true;

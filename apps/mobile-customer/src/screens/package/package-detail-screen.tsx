@@ -218,7 +218,8 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
               <PressableSurface
                 /* Aynı ürünün iki boyu iki satır olabilir — slug tek başına anahtar olamaz. */
                 key={`${item.slug}-${index}`}
-                onPress={() => router.push(`/product/${item.slug}`)}
+                // Boy da taşınır: paketteki boy ürünün en ucuz boyu olmayabilir.
+                onPress={() => router.push({ pathname: '/product/[slug]', params: { slug: item.slug, variant: item.variantId } })}
                 feedback="opacity"
                 style={styles.itemRow}
                 accessibilityLabel={fill(t.contents.open, 'name', item.name)}

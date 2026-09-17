@@ -27,7 +27,7 @@ const REVIEW_PAGE_SIZE = 3;
 
 interface ProductPageProps {
   params: Promise<{ locale: string; slug: string }>;
-  /** Yalnız kampanya etiketleri için: reklam bağlantısı sıkça doğrudan ürünü açar. */
+  /** Kampanya etiketleri (reklam bağlantısı sıkça doğrudan ürünü açar) ve paket kaleminin istediği boy (`variant`). */
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
@@ -64,7 +64,8 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   const { locale, slug } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  void recordPageView('/product/[slug]', await searchParams);
+  const query = await searchParams;
+  void recordPageView('/product/[slug]', query);
 
   const t: Messages = messages[locale];
   const [product, device] = await Promise.all([
@@ -111,6 +112,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         locale={locale}
         product={product}
         device={device}
+        initialVariantId={typeof query.variant === 'string' ? query.variant : null}
         reviews={{
           score,
           reviews: page.rows,
