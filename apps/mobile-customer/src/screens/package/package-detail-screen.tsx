@@ -25,64 +25,27 @@ import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { addBundle, cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { customerMetrics } from '@lezzet/mobile-kit/src/components/customer/customer-metrics';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
-// Metin ortak pakette (14.09): web'in telefon paket detayı aynı sözlüğü okur.
+// Metin ortak pakette: web'in telefon paket detayı aynı sözlüğü okur.
 import messages from '@lezzet/i18n/customer/package-detail';
 import { PackageSkeleton } from './package-skeleton';
 import { usePackage } from './use-package.hook';
 
 /*
-  PAKET DETAY (v3 `vPackage`, v3:318-349 + yapışkan bar v3:1254-1270) — GERÇEK UÇTAN okur
-  (`GET /api/v1/packages/:slug`): vitrinin "Hazır paketler" kartı gerçek slug'la geliyor ve
-  fixture göstermek müşteriye başka bir paketi satmak olurdu (ürün detayının aynı gerekçesi).
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **"Tükendi" hâli ARTIK ÇİZİLİYOR (10.08)** — eski sapma kapandı. Künye 10.08'e kadar şöyle
-     diyordu: *"sözleşme `soldOut` bilerek taşımıyor … karar terfi edince bar iki hâlini şablondaki
-     sırayla kazanır."* Karar 09.08'de terfi etti, sözleşme 10.08'de alanı kazandı: foto rozeti
-     (v3:16) ve barın tükendi kutusu (v3:53-55) yerinde. Ürün detayının "haber ver" anahtarı
-     ALINMADI: pakette öyle bir kayıt yolu yok ve olmayan bir söz verilmez.
-
-     **YER EKSENİ DE AYNI TURDA GELDİ** (kullanıcı kararı 10.08): sayfa artık posta kodunu
-     gönderiyor ve "bu adrese gönderemiyoruz / bölgenizde şu an yok" cümlesini kataloğun kendi
-     kapısından kuruyor (`stockMarkOf` + `packageStockStatus`). Kart listesinde olan solma burada
-     da var ve yalnız KAHRAMANA uygulanır: yazı katmanı tam opak kalır, yoksa solmanın sebebini
-     açıklayan cümle okunaksızlaşırdı. **"Tükendi" ile "buraya gelemez" AYRI şeylerdir:** birincisi
-     sepete eklemeyi kapatır (karşılayamayacağımız şey teklif edilmez), ikincisi KAPATMAZ — yer bir
-     söz, bir filtre değil; sepet ve ödeme adımı o kararı kendi kapısında veriyor.
-  2. **Yapışkan başlık kaydırma alanının DIŞINDA** (katalog sapma 1'in aynısı): RN'de `position:
-     sticky` yok; başlık üstte sabit durur, içerik altından akar — görsel sonuç aynı.
-  3. **Kargo kısıtı çipinin kamyon ikonu ÇİZİLMEDİ** (v3:21'deki svg): ürün detayının aynı çipi
-     ikonsuz kurulmuştu ve kitte kamyon ikonu yok — iki ekranda iki farklı çip olmasın diye
-     ürününki birebir alındı (ikon ihtiyacı raporlu).
-  4. **Satır etiketi addan + boy etiketinden KURULUR** ("Fıstıklı Baklava · 500 g"): şablonun el
-     yazısı etiketi boyu ada gömüyor ("500 g fıstıklı baklava") ama gerçek veride ikisi ayrı
-     alandır (`PackageItemSchema` künyesi); tek boylu üründe ayraç uydurulmaz, yalnız ad kalır.
-  5. **Paylaş, sistem paylaşım kağıdını açar** (ürün detayı sapma 5'in aynısı): RN'de doğal
-     karşılık `Share.share`; bugün paket adı paylaşılıyor.
-  6. **Sepete ekleme onayı sessiz** (şablon `addPkg` toast basıyor): küresel toast katmanı
-     bilinen borç (21.14a raporu) — katman gelince buradaki `add` da onu çağırır.
-  7. **İskelet şablonda tanımlı değil**; ürün detayının bekleme diliyle asgari bloklar çizildi
-     (foto + başlık + satırlar). Foto iskeleti 16:10 oranını ekran gerçek genişliğinden hesaplar.
-  8. **Kahraman GALERİ oldu** (kullanıcı isteği 09.08, `design/KARARLAR.md`): tek foto yerine
-     kaydırılabilir şerit (`PhotoGallery`) — önce paketin kapağı, sonra kalemlerin ana görselleri.
-     16:10 kutu, konum ve başlık DEĞİŞMEDİ; görselsiz kalem atlanır, tek görselli pakette şerit
-     de gösterge de çizilmez.
+  Paket detayı gerçek uçtan okur (`GET /api/v1/packages/:slug`); fixture göstermek müşteriye başka bir paketi satmak olurdu.
+  "Tükendi" sepete eklemeyi kapatır, "bu adrese gelemez" kapatmaz: yer bir söz, filtre değil — kararı sepet ve ödeme adımı verir.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
 
-/*
-  İçerik satırının küçük karesi KİTE TERFİ ETTİ (10.08): `customerMetrics.packageItemPhoto`. Bu
-  dosyanın künyesi zaten "terfi ihtiyacı raporlandı" diyordu; terfiyi zorunlu kılan skeleton oldu —
-  aynı ölçüye o da ihtiyaç duyunca ekran dosyasından import etmek dairesel bağımlılık olurdu.
-*/
+/* İçerik satırının küçük karesi kitte (`customerMetrics.packageItemPhoto`): iskelet de aynı ölçüyü kullanıyor ve ekran
+   dosyasından almak dairesel bağımlılık olurdu. */
 
 /** `{name}` gibi tekil yer tutucuları doldurur — sayfanın tüm şablonları tek anahtarlı. */
 function fill(template: string, key: string, value: string): string {
   return template.replace(`{${key}}`, value);
 }
 
-/** Satır etiketi: ad + boy (sapma 4). Tek boylu üründe etiket boş gelir, ayraç uydurulmaz. */
+/** Satır etiketi ad ve boydan kurulur, çünkü gerçek veride ikisi ayrı alandır; tek boylu üründe ayraç uydurulmaz. */
 function itemLabel(item: PackageItem): string {
   return item.unitLabel.length > 0 ? `${item.name} · ${item.unitLabel}` : item.name;
 }
@@ -117,7 +80,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
       </Text>
       <PressableSurface
         onPress={() => {
-          // Ad + adres birlikte gider; gerekçe ürün detayının `share` künyesinde (08.45).
+          // Ad ve adres birlikte gider; gerekçe ürün detayının `share` künyesinde.
           if (detail !== null) void Share.share({ message: `${detail.name}\n${detail.shareUrl}` });
         }}
         feedback="tint"
@@ -131,10 +94,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
     </View>
   );
 
-  /* İLK YÜK: başlık GERÇEK kalır (geri yolu açık — yukarıdaki künye), sayfanın geri kalanının
-     yerini skeleton tutar (`package-skeleton`; ölçülerin kaynağı ve neyin çizilip çizilmediği o
-     dosyanın künyesinde). Ekranın içine gömülü dört çubuk sökülüp oraya taşındı: ölçüleri ham
-     sayıydı ve bölüm başlığı, alt not, yapışkan bar hiç temsil edilmiyordu. */
+  /* İlk yükte başlık gerçek kalır ki geri yolu açık olsun; sayfanın geri kalanının yerini iskelet tutar (`package-skeleton`). */
   if (status === 'loading') {
     return (
       <View style={styles.screen}>
@@ -180,21 +140,15 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
   /* Solma yalnız KAHRAMANA: kart listesindeki kararla aynı — bilgi katmanı tam opak kalır. */
   const heroFaded = detail.soldOut || placeMark?.tone === 'blocked';
 
-  /* Kahraman şeridi: ÖNCE paketin kendi kapağı, SONRA kalemlerin ana görselleri. Sıra kararın
-     kendisidir — satılan şey pakettir, kalemler onun içeriği; kapağı araya karıştırmak paketi
-     kalemlerinden biri gibi gösterirdi. Adressiz kalemi ve tekrarlanan adresi galeri komponenti
-     eler (boş kare çizilmez). Paket sözleşmesinde ayrı bir `gallery` alanı YOK — şerit
-     kalemlerin kendi kapaklarından kurulur (`PackageDetailSchema.items[].image`). */
+  /* Kahraman şeridi önce paketin kapağı, sonra kalemlerin görselleri: satılan şey pakettir, kapağı araya karıştırmak paketi
+     kalemlerinden biri gibi gösterirdi. Sözleşmede ayrı `gallery` alanı yok; adressiz ve tekrarlanan görseli galeri eler. */
   const heroPhotos = [detail.image, ...detail.items.map((item) => item.image)];
 
   const addToCart = () => {
     addBundle(
       {
-        /* Satırın kimliği paketin UUID'sidir, slug'ı değil (21.21): sunucu sepetinde paket satırının
-           adresi `bundleId`dir (`cart.items[].bundle_id`) ve görünüm satırı da onunla anılıyor
-           (`cartLineId`). Slug bir GÖRÜNTÜ kimliğidir — yeniden adlandırılabilir ve sepetteki satırı
-           sessizce ikizler. Sözleşme uuid'yi 21.21'de kazandı; ondan önce elimizde yalnız slug vardı
-           ve paket bu yüzden sunucuya hiç yazılamıyordu. */
+        /* Satırın kimliği paketin UUID'sidir: sunucu sepetinde paket satırının adresi `bundleId`dir. Slug bir görüntü kimliği;
+           yeniden adlandırılabilir ve sepetteki satırı sessizce ikizlerdi. */
         id: detail.id,
         name: detail.name,
         // Sepet satırının içerik özeti — kalem adları orta noktayla (sepet fixture'ının dili).
@@ -211,9 +165,9 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
     <View style={styles.screen} testID="package-detail">
       {header}
       <ScrollView contentContainerStyle={styles.content} testID="package-scroll">
-        {/* ── Foto 16:10 (v3:14-17), galeri şeridi olarak; tükendi rozeti v3:16 ── */}
+        {/* ── Galeri ve tükendi rozeti ── */}
         <View style={styles.hero}>
-          {/* SOLAN GRUP yalnız galeri; rozet onun kardeşi ve tam opak (sapma 1). */}
+          {/* Solan grup yalnız galeri; rozet onun kardeşi ve tam opak kalır, yoksa solmanın sebebi okunaksızlaşırdı. */}
           <View style={[styles.heroPhotos, heroFaded ? styles.heroFaded : undefined]}>
             <PhotoGallery
               images={heroPhotos}
@@ -228,14 +182,13 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
           </View>
           {detail.soldOut ? (
             <View style={styles.heroBadge} testID="package-soldout-badge">
-              {/* Büyük harf dilin kuralıyla; stilin `textTransform`u Android'de CİHAZIN dilini
-                  kullanıyor (ölçüldü 28.08 — `cart-line-row` künyesi). */}
+              {/* Büyük harf dilin kuralıyla: stilin `textTransform`u Android'de cihazın dilini kullanır. */}
               <Text style={styles.heroBadgeLabel}>{upperIn(t.badge.soldOut, locale)}</Text>
             </View>
           ) : null}
         </View>
 
-        {/* ── Künye: ad · fiyat + ek · kargo kısıtı · açıklama (v3:18-22) ── */}
+        {/* ── Künye: ad · fiyat + ek · kargo kısıtı · açıklama ── */}
         <View style={styles.body}>
           <Text style={styles.title} accessibilityRole="header">
             {detail.name}
@@ -258,7 +211,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
           )}
           {detail.description === null ? null : <Text style={styles.description}>{detail.description}</Text>}
 
-          {/* ── İçerik listesi (v3:23-33): satıra basınca ürün detayı ── */}
+          {/* ── İçerik listesi: satıra basınca ürün detayı ── */}
           <Text style={styles.sectionTitle}>{t.contents.title}</Text>
           <View style={styles.items}>
             {detail.items.map((item, index) => (
@@ -291,17 +244,15 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
           <Text style={styles.note}>{t.contents.note}</Text>
         </View>
 
-        {/* Yapışkan barın payı (v3:36 — 108, ürün detayıyla aynı durak). */}
+        {/* Yapışkan barın payı, ürün detayıyla aynı durak. */}
         <View style={styles.barSpace} />
       </ScrollView>
 
-      {/* ── Yapışkan alt bar (v3:1254-1270) — krem cam, ürün barıyla aynı yüzey kararı ── */}
+      {/* ── Yapışkan alt bar: krem cam, ürün barıyla aynı yüzey ── */}
       <BlurView intensity={theme.glassBlurIntensity} tint="light" style={styles.bar} testID="package-bar">
         <View style={styles.barGlass} pointerEvents="none" />
-        {/* TÜKENDİ BARI (v3:53-55) — sayaç ve ekleme düğmesi HİÇ çizilmez: karşılayamayacağımız
-            bir şeyi teklif eden bir düğme, müşteriyi sepette ya da ödemede duvara götürürdü.
-            "Bu adrese gönderemiyoruz" hâli burayı DEĞİŞTİRMEZ (sapma 1): paket bir yerde var,
-            yalnız bu adrese o yoldan gitmiyor — kararı sepet ve ödeme adımı veriyor. */}
+        {/* Tükendi barında sayaç ve ekleme düğmesi hiç çizilmez: karşılayamayacağımız bir teklif müşteriyi sepette ya da
+            ödemede duvara götürürdü. "Bu adrese gönderemiyoruz" burayı değiştirmez, kararı sepet ve ödeme adımı verir. */}
         {detail.soldOut ? (
           <Text style={styles.barSoldOut} testID="package-soldout">
             {t.soldOutBar.text}
@@ -340,8 +291,7 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
         )}
       </BlurView>
 
-      {/* Sepet FAB'ı — v3:602: sepet doluyken vitrin·katalog·ürün·paket dörtlüsünde; barın
-          ÜSTÜNDE durur (ürün detayının yerleşimi birebir). Boş sepette komponent kendini çizmez. */}
+      {/* Sepet FAB'ı barın üstünde durur, ürün detayının yerleşimiyle aynı; boş sepette komponent kendini çizmez. */}
       <View style={styles.fabSlot} pointerEvents="box-none">
         <CartFab
           count={fabCount}
@@ -362,7 +312,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: rt.insets.top,
   },
 
-  /* Başlık (v3:9): 8px 14px dolgu, 10 aralık, altta 1,5 mürekkep çizgi; zemin sayfanın kremi. */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -378,7 +327,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['screen-title'],
     color: theme.colors.ink,
   },
-  /** Paylaş dairesi geri düğmesinin `bar` varyantıyla AYNI ölçü/geri bildirim (v3 ikisi tek stil). */
+  /** Paylaş dairesi geri düğmesinin `bar` varyantıyla aynı ölçüde; tasarım ikisini tek stille çiziyor. */
   shareButton: {
     width: theme.size.iconButton,
     height: theme.size.iconButton,
@@ -403,7 +352,7 @@ const styles = StyleSheet.create((theme, rt) => ({
   heroPhotos: { flex: 1 },
   /* Solma durağı kart listesiyle AYNI (`soldOutOpacity`): iki yüzey aynı şeyi söylemeli. */
   heroFaded: { opacity: theme.soldOutOpacity },
-  /* Tükendi rozeti (v3:16) — ürün detayının kahraman rozetiyle aynı yuva ve aynı mürekkep zemin. */
+  /* Tükendi rozeti ürün detayının kahraman rozetiyle aynı yuvada ve aynı mürekkep zeminde. */
   heroBadge: {
     position: 'absolute',
     top: theme.space.xl,
@@ -435,13 +384,12 @@ const styles = StyleSheet.create((theme, rt) => ({
     color: theme.colors['on-image-soft'],
   },
 
-  /* Gövde (v3:18): 16px 18px dolgu, 10 aralık. */
   body: {
     paddingVertical: theme.space['3xl'],
     paddingHorizontal: theme.space['4xl'],
     gap: theme.space.lg,
   },
-  /* v3 28px Lora — token durağı yok, ürün başlığının kademesi (`h1-sm`) birebir alındı. */
+  /* Tasarımın 28px'inin token durağı yok; ürün başlığının kademesi (`h1-sm`) alındı. */
   title: {
     fontFamily: theme.font.display[theme.text['h1-sm--font-weight']],
     fontSize: theme.text['h1-sm'],
@@ -459,7 +407,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.helper,
     color: theme.colors.muted,
   },
-  /* Ürün detayının çipiyle TEK stil (sapma 3) — iki ekranda iki farklı kısıt çipi olmasın. */
+  /* Ürün detayının kısıt çipiyle tek stil: iki ekranda iki farklı kısıt çipi olmasın. */
   noShipChip: {
     alignSelf: 'flex-start',
     fontFamily: theme.font.body[600],
@@ -476,7 +424,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.body,
   },
-  /* v3 16px Lora 600 — en yakın durak `screen-title` (17, aynı yazı/ağırlık; ±1 yuvarlama kuralı). */
+  /* Tasarımın 16px'ine en yakın durak `screen-title` (17, ±1 yuvarlama kuralı). */
   sectionTitle: {
     marginTop: theme.space.sm,
     fontFamily: theme.font.display[theme.text['screen-title--font-weight']],
@@ -522,9 +470,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text.helper,
     color: theme.colors.muted,
   },
-  /* Aile AÇIK yazılır (18.08): bu satır tek başına kullanılıyor (`styles.itemChevron`), yani
-     ailesini komşu bir stilden miras almıyor — verilmediğinde "›" işareti Karla'yla değil CİHAZIN
-     sistem fontuyla çizilirdi. Ok işareti de bir harftir; ailesiz kalan tek yerdi. */
+  /* Aile açık yazılır: bu stil tek başına kullanılıyor ve verilmezse "›" işareti cihazın sistem fontuyla çizilirdi. */
   itemChevron: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.body,
@@ -540,7 +486,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     height: customerMetrics.productBarSpace,
   },
 
-  /* Bar ve FAB yerleşimi ürün detayınınkiyle AYNI karar (v3 iki ekranda tek kalıp çiziyor). */
+  /* Bar ve FAB yerleşimi ürün detayınınkiyle aynı karar. */
   bar: {
     position: 'absolute',
     left: 0,
@@ -562,7 +508,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     gap: theme.space.lg,
   },
-  /** Tükendi barının tek satırı — ürün detayının aynı kademesi ve rengi (v3:53-55). */
+  /** Tükendi barının tek satırı, ürün detayının aynı kademesi ve rengiyle. */
   barSoldOut: {
     textAlign: 'center',
     fontFamily: theme.font.body[theme.text['chip--font-weight']],
@@ -582,8 +528,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  /* İM, BAŞLIK DEĞİL (18.08) — ürün detayındaki adet seçicinin aynı kararı, gerekçesi orada yazılı
-     (`product-detail-screen`, `stepGlyph`). Boy aynı (20), değişen ölçekte kullanılan rol. */
+  /* İm, başlık değil: ürün detayındaki adet seçicinin aynı kararı, gerekçesi orada (`product-detail-screen`, `stepGlyph`). */
   stepGlyph: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['icon-sm'],

@@ -12,54 +12,15 @@ import { optionalCustomerId } from './auth';
 import { readPlace } from './catalog';
 
 /**
- * Paket detay ucu (21.14) — vitrinin "Hazır paketler" kartının açtığı sayfa. Katalog kümesindendir:
- * **oturumsuz gezilir** (`router.ts`te `bearerAuth`tan ÖNCE bağlı — 02-mimari §4 "oturumsuz
- * kullanım = müşteri gezinmesi") ve kimlik OKUNMAZ bile: paket YALNIZ B2C'dedir ve tek fiyat taşır
- * (`bundle.totalPrice`, veri modelinin kendi hükmü) — kişiselleşecek bir fiyat yok, `readViewer`
- * çağırmak boşa bir tur olurdu.
- *
- * ── BU DOSYA KURAL HESAPLAMAZ ────────────────────────────────────────────────
- * Yaptığı şey taşımadır: dili doğrular, terfi etmiş paket kapısını çağırır, dönen görünümü sözleşme
- * şekline indirger ve zarflar.
- *
- * ── SATILABİLİRLİK ARTIK ORTAK KAPIDAN (09.08) ──────────────────────────────
- * Bu uç 09.08'e kadar kendi okumasını yazıyordu (`listWithItems` + kalem→ürün köprüsü + kargo
- * kısıtı türetmesi) çünkü web'in paket kapısı `server-only`di ve kopyalaması yasaktı. Kapı
- * `@lezzet/application`a terfi etti; uç artık `getPackageDetail`i çağırıyor ve satılabilirlik
- * ölçütü webinkiyle AYNI: pasif paket, kalemsiz paket ve **kalemi satıştan kalkmış paket** 404
- * (`listSellable` — DOMAIN §13). Eski hâlinde son madde eksikti: boyu pasife alınmış bir ürünün
- * paketi mobilde hâlâ satılabilir görünüyordu. 21.14 işareti kapandı.
- *
- * ── YER ARTIK KAPIYA GEÇİYOR (10.08) ────────────────────────────────────────
- * Bu künye 09.08'de şöyle diyordu: *"`soldOut` hâlâ sözleşmede YOK … yer (posta kodu) bu yüzden
- * kapıya GEÇİLMİYOR: sözleşmenin yere bağlı tek bir alanı yok, geçmek ölçülemeyen bir bedel
- * olurdu."* **Değişen şey sözleşmedir:** kart ve detay artık `soldOut` · `route` taşıyor
- * (`package-api.schema.ts` künyesi — iki eksen neden ayrı). Bedelin karşılığı doğdu, yani her iki
- * uç da `?postalCode=` okuyup `readPlace` ile çözüyor ve kapıya `place` geçiyor.
- *
- * **LİSTE ve DETAY AYNI ÖLÇÜTÜ KULLANIR** ve bu iki katmanda birden zorunlu: satılabilirlik
- * (`listSellable`) ve artık YER de. Detayda çözülen yerin listede çözülmemesi, kartında "bu adrese
- * gönderemiyoruz" yazmayan bir paketin detayında yazması demekti.
- *
- * Posta kodu bir SORUDUR, cevabı sunucu verir (`readPlace` künyesi): istemcinin yazabildiği bir
- * değer hangi deponun stoğunu göstereceğimizi belirleyemez. Kod yoksa/çözülemezse iki `null` döner
- * ve okuma ağ-genelinde kalır — `route: null`, yani "yol bilinmiyor".
+ * Paket uçları oturumsuz gezilir ve fiyat kimliğe göre okunmaz, çünkü paket yalnız B2C'dedir ve tek fiyat taşır. Uç kural
+ * hesaplamaz: satılabilirlik ve yer ölçütü web ile aynı kapıdan gelir, liste ile detay ayrı ölçseydi kartında yazmayan "bu
+ * adrese gönderemiyoruz" detayda çıkardı.
  */
 export const packages = new Hono<AppEnv>();
 
 /**
- * PAKET LİSTESİ — "Fikirler" sekmesinin paket bölümü (09.08 bilgi mimarisi kararı).
- *
- * **VİTRİNDEN FARKI SÜZGEÇTİR, KART DEĞİL** (ortak kapı `@lezzet/application` `catalog/ideas.ts`): vitrin yalnız İŞARETLİ
- * paketleri taşır (işaret bir seçimdir), bu liste ise yayındaki paketlerin TAMAMIDIR — sayfa
- * "hepsi" sorusunun cevabı, seçki değil.
- *
- * Sayfalama yok: paket kataloğu doğal tavanlı, operatörün elle kurduğu bir kümedir (CLAUDE §1 "tek
- * turda" dalı) ve okuma zaten TEK sorgudur. `limit` sorgusu da yok — istemcinin belirlediği sınır,
- * sınır değildir.
- *
- * Kimlik OKUNMAZ: paket tek fiyatlıdır (B2C), Bearer'ın kişiselleştireceği bir şey yok — detay
- * ucunun aynı kısa devresi (dosya başlığı).
+ * Paket listesi: vitrinden farkı süzgeçtir — vitrin işaretli paketleri, bu liste yayındakilerin tamamını taşır. Sayfalama ve
+ * `limit` yok, çünkü operatörün elle kurduğu küçük bir küme tek sorguda okunur.
  */
 packages.get('/packages', async (c) => {
   const locale = PreferredLanguageEnum.safeParse(c.req.query('locale'));
@@ -94,9 +55,8 @@ packages.get('/packages/:slug', async (c) => {
   const pack = await getPackageDetail(db, c.req.param('slug'), locale.data, place);
   if (!pack) return fail(c, 'package_not_found', 404);
 
-  /* PAKET GÖRÜNTÜLEMESİ — ürün detayının aynı olayı, yalnız öznesi `bundle`. Enum'da `bundle`
-     ZATEN vardı, yeni bir olay türü icat edilmedi. `productId` YAZILMAZ: paket bir ürün değil,
-     ürünlerin demeti — birine atfetmek günlük ürün özetini yanlış beslerdi. */
+  /* Paket görüntülemesi ürün detayının olayıdır, öznesi `bundle`. `productId` yazılmaz: paket ürünlerin demeti, birine atfetmek
+     günlük ürün özetini yanlış beslerdi. */
   void recordNativeEvent(
     { db, channel: 'b2c', customerId, place, locale: locale.data, country: null },
     {
@@ -109,12 +69,10 @@ packages.get('/packages/:slug', async (c) => {
 
   // ── SÖZLEŞMENİN KİLİDİ (`catalog.ts` emsali) ──────────────────────────────
   // Gövde `z.input<…>` ile TİPLENİR: şekil sözleşmeden saparsa burası DERLENMEZ; `parse` da
-  // süzgeçtir — kapının ürettiği ama ekranın işi olmayan alanlar (KDV oranı, tükendi, yol, tavan,
-  // ağırlık, alerjen, raf ömrü, kalem varyant kimliği) zarfa sızamaz.
+  // süzgeçtir — kapının ürettiği ama ekranın işi olmayan alanlar (KDV oranı, tavan, ağırlık, alerjen,
+  // raf ömrü, kalem varyant kimliği) zarfa sızamaz.
   const body: z.input<typeof PackageDetailSchema> = {
-    // `id` SEPETİN ihtiyacı, ekranın değil (21.21): sunucu sepetinde paket satırının adresi
-    // `bundleId`dir ve sözleşme yalnız `slug` taşıdığı sürece mobilden paket EKLENEMİYORDU —
-    // satır cihazda kalıyor, sunucunun çözdüğü toplama hiç girmiyordu.
+    // `id` sepetin ihtiyacı, ekranın değil: sunucu sepetinde paket satırının adresi `bundleId`dir.
     id: pack.id,
     slug: pack.slug,
     name: pack.name,

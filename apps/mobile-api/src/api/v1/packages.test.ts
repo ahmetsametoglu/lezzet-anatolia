@@ -7,11 +7,8 @@ import { PackageDetailSchema, type PackageDetail } from '@lezzet/types';
 import { app } from '../../app';
 
 /**
- * Paket detay ucu uçtan uca — `app.request()` ile PORT AÇMADAN.
- *
- * Paylaşılan-DB disiplini (CLAUDE §4b): iddiaların hepsi bu dosyanın KENDİ kurduğu satırlara
- * bakar (damgalı adlar, slug üzerinden nokta atışı okuma); küresel sayım/karşılaştırma yok —
- * başka bir ajanın paketi hiçbir iddiayı oynatamaz.
+ * Paket detay ucu uçtan uca, port açmadan (`app.request()`). İddialar yalnız bu dosyanın kurduğu damgalı satırlara bakar;
+ * başka bir koşunun paketi hiçbir iddiayı oynatamaz.
  */
 const stamp = Date.now();
 const db = serviceDb();
@@ -27,10 +24,8 @@ let passiveSlug = '';
 
 const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 
-/* YAYIN KISITININ ŞARTI (05.36): `status: 'active'` ürün ad · açıklama · içindekiler · saklama
-   metnini ÜÇ DİLDE dolu ister (`product_publish_requires_all_locales`). Kısıt karşılanmazsa
-   `beforeAll` düşer ve testler DÜŞMEZ, ATLANIR — dosyanın konusu (paket ucu) ile ilgisiz görünen
-   bir sebeple sessizce. */
+/* Yayındaki ürün ad, açıklama, içindekiler ve saklama metnini üç dilde dolu ister (`product_publish_requires_all_locales`).
+   Kısıt karşılanmazsa `beforeAll` düşer ve testler paket ucuyla ilgisiz bir sebeple sessizce atlanır. */
 const yayinaHazir = {
   description: tr3('Paket testi ürünü', 'Produit de test', 'Testprodukt'),
   ingredients: tr3('Un, su, tuz', 'Farine, eau, sel', 'Mehl, Wasser, Salz'),

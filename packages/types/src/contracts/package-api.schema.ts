@@ -5,31 +5,8 @@ import { CatalogImageSchema } from './catalog-api.schema';
 import { HomePackageSchema } from './home-api.schema';
 
 /**
- * PAKET DETAY SÖZLEŞMESİ (21.14) — mobil `GET /api/v1/packages/:slug` ucunun ve onu tüketen Expo
- * paket ekranının ORTAK dili. Terfi gerekçesi `home-api.schema.ts` ile aynı (02-mimari §3.2
- * "sözleşme tek kaynak"): üreten ve tüketen aynı şemayı çağırır, alan adı değişirse iki taraf
- * birden DERLEME anında kırılır.
- *
- * Alanlar v3 tasarımının paket ekranından (04-vPackage): ad · açıklama · TEK fiyat · görsel ·
- * kargo kısıtı · içerik satırları. "İçerik değiştirilemez" notu SÖZLEŞMEDE YOK: statik metindir,
- * ekranın kendi sözlüğünde yaşar — API biçimli/sabit cümle göndermez (katalog kartının kuralı).
- *
- * ── STOK/YER EKSENİ 10.08'DE AÇILDI (eski 21.14 işareti kapandı) ────────────
- * Bu künye 10.08'e kadar "`soldOut`/stok zinciri BİLEREK YOK" diyordu ve gerekçesi şuydu: kural
- * web'de yaşıyor (`apps/web/lib/storefront/packages.ts`), kopyalamak yasak, hep `false` basmak ise
- * "tükendi yok" ile "bilinmiyor"u ayırt edilemez yapardı. **Gerekçenin ilk yarısı 09.08'de düştü:**
- * okuma `@lezzet/application`a terfi etti ve kapı `soldOut` · `route`u ZATEN üretiyor. İkinci
- * yarısı hâlâ geçerli ve bu yüzden alanlar uydurulmadan taşınıyor: `route` yer bilinmezken `null`
- * kalır, "bilinmiyor" bir hâl olarak sözleşmede durur.
- *
- * Alanların künyesi ve iki eksenin neden AYRI olduğu tek yerde: `HomePackageSchema` (liste kartı).
- * Detayın farkı, kısıtın kendisini de taşımasıdır (`shippable` — aşağıda): kart müşterinin adresine
- * ne olduğunu söyler, detay ayrıca paketin KENDİ kuralını ("yalnız bölge içi") ilan eder.
- *
- * ── TEK FİYAT KURALI ─────────────────────────────────────────────────────────
- * Kalem fiyatı TAŞINMAZ (web `StorefrontPackageItem`in aynı kararı): "toplam değeri X, sen Y
- * ödüyorsun" kırılımı gösterilmez, hediye kalem "0 €" olarak görünmez. Alan sözleşmede hiç
- * olmayınca ekran onu yanlışlıkla basamaz.
+ * Mobil paket ucunun (`GET /api/v1/packages/:slug`) ve native paket ekranının ortak şeması: alan değişirse iki taraf da derlemede
+ * kırılır. Kalem fiyatı bilerek taşınmaz — paket tek fiyattır ve alan hiç yokken ekran kırılımı yanlışlıkla basamaz.
  */
 
 /**
@@ -40,12 +17,7 @@ import { HomePackageSchema } from './home-api.schema';
 export const PackageItemSchema = ProductSchema.pick({ slug: true }).extend({
   /** Ürün adı, seçili dilde çözülmüş (dil yedek zinciri sunucuda — istemci dil bilmez). */
   name: z.string(),
-  /**
-   * Boy etiketi ("500 g" · "12'li kutu"); tek boylu üründe BOŞ olabilir. Ayrı alan çünkü kalem bir
-   * VARYANTA bağlıdır ve boyu düşürmek yanlış bilgi olurdu ("1 kg su böreği"ni "Su Böreği" diye
-   * göstermek). v3'ün satır etiketi boyu ada gömülü yazıyor ("500 g fıstıklı baklava") — o el
-   * yazısı bir kurgu; gerçek veride iki alandır, cümleyi ekran kurar.
-   */
+  /** Boy etiketi ("500 g"); tek boylu üründe boş. Addan ayrı alan, çünkü kalem bir boya bağlı ve cümleyi ekran kurar. */
   unitLabel: z.string(),
   qty: BundleItemSchema.shape.qty,
   image: CatalogImageSchema,
@@ -87,29 +59,17 @@ export const PackageDetailSchema = BundleSchema.pick({ id: true, slug: true }).e
    */
   items: z.array(PackageItemSchema).min(1),
   /**
-   * **Paylaşılacak TAM web adresi** (08.45) — dil öneki ve dile göre çevrilmiş yol dâhil
-   * (`/tr/paket/…` · `/fr/coffret/…` · `/de/paket/…`). Gerekçesi ürün sözleşmesindeki ikiziyle
-   * aynı ve orada yazılı: adres web rotasının kuralıdır, mobilde kurmak o kuralın ikinci kopyası
-   * olurdu (`CatalogProductDetailSchema.shareUrl` künyesi).
+   * Paylaşılacak tam web adresi, dil öneki ve çevrilmiş yol dâhil. Adres web rotasının kuralıdır; mobilde kurmak o kuralın
+   * ikinci kopyası olurdu.
    */
   shareUrl: z.string().url(),
 });
 export type PackageDetail = z.infer<typeof PackageDetailSchema>;
 
 /**
- * PAKET LİSTE SÖZLEŞMESİ (Fikirler sekmesi) — `GET /api/v1/packages`.
- *
- * Satır şeması `HomePackageSchema`ın KENDİSİDİR (gerekçe `recipe-api.schema.ts`in liste künyesinde,
- * tek yerde): vitrindeki "Hazır paketler" kartı ile liste sayfasının kartı aynı karttır ve aynı
- * okuma kapısından çıkar — ikinci bir tanım, iki şeklin sessizce ayrışmasına kapı olurdu.
- *
- * ── LİSTE İŞARETLİYLE SINIRLI DEĞİL ──────────────────────────────────────────
- * Vitrin YALNIZ `isFeatured` paketleri taşır (işaret seçimdir — `HomePackageSchema` künyesi); bu
- * liste ise YAYINDAKİ paketlerin tamamıdır. Fark sözleşmede değil okumada: kart aynı, süzgeç
- * farklı. Vitrin bir seçki, bu sayfa ise "hepsi" sorusunun cevabı.
- *
- * Sayfalama yok: paket kataloğu doğal tavanlı, operatörün elle kurduğu bir kümedir (CLAUDE §1 "tek
- * turda" dalı) — `BundleService.listWithItems` zaten tek sorgudur ve sınırı yoktur.
+ * Paket listesi (`GET /api/v1/packages`): satır vitrinin paket kartıyla aynı şema, çünkü iki yer aynı kartı aynı okumadan çizer.
+ * Vitrinden farkı süzgeçtir, burada yayındaki paketlerin tamamı var; sayfalama yok, çünkü operatörün elle kurduğu küçük bir
+ * küme tek turda okunur.
  */
 export const PackageListSchema = z.object({ packages: z.array(HomePackageSchema) });
 export type PackageList = z.infer<typeof PackageListSchema>;

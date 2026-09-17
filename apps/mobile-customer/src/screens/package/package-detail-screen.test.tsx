@@ -60,7 +60,7 @@ describe('paket detayı', () => {
 
     expect(screen.getByRole('header', { name: 'Hazır Paket' })).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: 'Bayram Sofrası Paketi' })).toBeOnTheScreen();
-    // Fiyat satırı tek Text: tutar + "tek paket fiyatı · KDV dahil" eki (v3:20) birlikte okunur.
+    // Fiyat satırı tek Text: tutar ve "tek paket fiyatı · KDV dahil" eki birlikte okunur.
     expect(screen.getByTestId('package-price')).toHaveTextContent(`${formatPrice(4990, 'tr')} tek paket fiyatı · KDV dahil`);
     expect(screen.getByTestId('package-add')).toHaveTextContent(`Paketi sepete ekle · ${formatPrice(4990, 'tr')}`);
 
@@ -102,7 +102,7 @@ describe('paket detayı', () => {
 
     await fireEvent.press(screen.getByTestId('package-qty-increase'));
     await fireEvent.press(screen.getByTestId('package-add'));
-    // Satırın kimliği paketin UUID'si — slug DEĞİL (21.21): sunucu sepetindeki adresi budur.
+    // Satırın kimliği paketin UUID'si, slug değil: sunucu sepetindeki adresi budur.
     expect(screen.getByTestId('cart-probe')).toHaveTextContent(`${packageDetail().id}:2:4990`);
 
     // Aynı paket ikinci kez eklenince satır ÇOĞALMAZ, adet toplanır (`addBundle` kuralı).

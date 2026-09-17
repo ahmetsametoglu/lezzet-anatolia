@@ -13,33 +13,17 @@ import { PhonePackageBar } from './components/phone-package-bar';
 import type { PackageViewProps } from './package-types';
 
 /**
- * Paket detay — TELEFON görünümü: native paket detayının (`apps/mobile/src/screens/package/package-detail-screen.tsx`)
- * web ikizi (kullanıcı kararı 14.09 — müşterinin telefon tasarımı iki yüzeyde aynı, referans native). Sıra
- * native'inki: başlık çubuğu (‹ · "Hazır Paket" · paylaş) → 16:10 galeri (önce paketin kapağı, sonra kalemlerin
- * görselleri; tükendi rozeti) → künye (ad · fiyat + ek · kargo kısıtı · yer işareti · açıklama) → "Pakette neler
- * var?" satırları (her satır ürün detayına) → not → yapışkan bar. Metin ortak sözlükten
- * (`@lezzet/i18n/customer/package-detail`), yer işareti ortak kurallardan (`@lezzet/helper`).
- *
- * ── WEB'E ÖZGÜ KORUNANLAR ──────────────────────────────────────────────────
- * · `h1` paketin adı; paylaşım kartı ve `hreflang` `page.tsx`te. Paylaşım ölçülür (`bundle` konusu — paket bir ürün
- *   değil, ölçüm bir kaleme yazılmaz).
- * · Çerçeve bu rotada başlık çizmez; başlık çubuğu sayfanın (native'de de ekranın kendisinde). Web'de çubuk
- *   YAPIŞKAN ve içerik altından akar, bu yüzden zemini tasarımın krem camı (`sand-50/96` + bulanıklık — web'in
- *   `AppBar`ıyla aynı yüzey); native'de çubuk kaydırma alanının dışında durduğu için camın bir işi yok.
- * · Sepete ekleme web'in sepetine (`phone-package-bar.tsx` künyesi).
- *
- * ── NATIVE'İN KARARLARI (aynen) ────────────────────────────────────────────
- * · Solma yalnız galeriye: tükendi ya da bu adrese gitmeyen paket. Yazı katmanı tam opak kalır.
- * · "Kargoyla gelir" burada yazılmaz: kargo kısıtı kendi çipiyle konuşuyor, rota dışı cümlesi listelerin bandında.
- *   Tükenmiş pakette yer işareti de yok — hiçbir yerde yokken "bu adrese gelmez" cevapsız soruya cevaptır.
- * · Satır etiketi ad + boy etiketinden kurulur ("Fıstıklı Baklava · 500 g"); tek boylu üründe ayraç uydurulmaz.
- *   Fiyat kırılımı yok: paket tek fiyattır.
+ * Paket detayının telefon görünümü, native paket detayının web ikizi: sıra, metin ve yer işareti kuralı native ile aynı. Web'e
+ * özgü olan, içerik altından aktığı için yapışkan başlık çubuğunun krem camı ve sepete eklemenin web sepetine gitmesidir.
  */
 export function PackageMobile({ locale, pack }: PackageViewProps) {
   const copy = packageDetailMessages[locale];
   const { place } = useDeliveryPlace();
+  // Tükenmiş pakette yer işareti yok: hiçbir yerde yokken "bu adrese gelmez" demek cevapsız soruya cevap vermektir.
   const mark = pack.soldOut ? null : placeMarkOf(packageRouteStatusOf(pack.route), place, placeMessages[locale]);
+  // "Kargoyla gelir" burada yazılmaz: kargo kısıtı kendi çipiyle konuşuyor, rota dışı cümlesi listelerin bandında.
   const placeMark = mark === null || mark.tone === 'info' ? null : mark;
+  // Solma yalnız galeriye uygulanır; yazı katmanı tam opak kalır ki solmanın sebebi okunsun.
   const heroFaded = pack.soldOut || placeMark?.tone === 'blocked';
   // Kapak önce, kalemler sonra: satılan şey paket, kalemler içeriği. Adressiz ve tekrarlanan görseli galeri eler.
   const heroPhotos = [pack.image, ...pack.items.map((item) => item.image)];

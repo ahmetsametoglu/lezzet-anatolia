@@ -18,8 +18,8 @@ jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-TR
 const mockRouter = { back: jest.fn(), push: jest.fn(), setParams: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 
-/* KİMLİK ve YER testten kurulur (21.306): "gelince haber ver" yalnız ÇÖZÜLMÜŞ bir yerde çizilir ve
-   girişli/misafir iki ayrı yol izler. Adlar `mock` ile başlamak ZORUNDA (jest hoisting). */
+/* Kimlik ve yer testten kurulur: "gelince haber ver" yalnız çözülmüş bir yerde çizilir ve girişli/misafir iki ayrı yol izler.
+   Adlar `mock` ile başlamak zorunda (jest hoisting). */
 let mockMe: { status: 'ready'; me: { id: string; email: string } } | { status: 'guest'; me: null } = {
   status: 'guest',
   me: null,
@@ -140,7 +140,7 @@ describe('ürün detayı', () => {
     expect(mockRouter.setParams).toHaveBeenCalledWith({ slug: 'ispanakli-kol-boregi' });
     expect(mockRouter.push).not.toHaveBeenCalled();
 
-    // Bakılan çeşidin çipi ise HİÇBİR yere götürmez (v3: fiyat yerine "Bakıyorsunuz").
+    // Bakılan çeşidin çipi bir bağlantı değil, işarettir: hiçbir yere götürmez.
     await fireEvent.press(screen.getByTestId('product-family-el-acmasi-kol-boregi'));
     expect(mockRouter.setParams).toHaveBeenCalledTimes(1);
   });
@@ -172,9 +172,8 @@ describe('ürün detayı', () => {
 });
 
 /*
-  "GELİNCE HABER VER" (21.306) — düğme artık GERÇEK bir kayıt bırakıyor (`POST /me/stock-notices`).
-  Eskiden yerel bir anahtardı: "✓ Haber verilecek" diyor, hiçbir şey yazmıyordu (ölçüldü 10.09).
-  Bar da yalnız olguyu söylüyor: "yakında yeniden gelecek" sözünün arkasında hiçbir veri yoktu.
+  "Gelince haber ver" gerçek bir kayıt bırakır (`POST /me/stock-notices`); ekran yalnız sunucunun cevabını gösterir. Bar yalnız
+  olguyu söyler: arkasında veri olmayan "yakında yeniden gelecek" sözü verilmez.
 */
 describe('ürün detayı — gelince haber ver', () => {
   const PLACE = {
