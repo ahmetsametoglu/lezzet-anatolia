@@ -9,7 +9,6 @@ import type { AccountView } from '@/lib/account/read';
 import { errorText } from '@/lib/customer-error-text';
 import { updateProfileAction } from '../actions';
 import type { AccountCopy, Messages } from '../account-types';
-import { WhatsappRow } from './profile-card';
 
 /**
  * Profil düzenlemenin telefon hâli, native profil çekmecesinin ikizi. Form çekmecenin içinde ayrı bileşen, çünkü panel her yeni
@@ -18,18 +17,15 @@ import { WhatsappRow } from './profile-card';
 interface PhoneProfileSheetProps {
   t: Messages;
   copy: AccountCopy['edit'];
-  account: AccountView;
+  profile: AccountView['profile'];
   /** Kararlı olmalı; gerekçesi künyede. */
   onClose: () => void;
 }
 
-export function PhoneProfileSheet({ t, copy, account, onClose }: PhoneProfileSheetProps) {
+export function PhoneProfileSheet({ t, copy, profile, onClose }: PhoneProfileSheetProps) {
   return (
     <Dialog title={copy.title} closeLabel={t.cancel} onClose={onClose} placement="sheet">
-      <ProfileForm t={t} copy={copy} profile={account.profile} onSaved={onClose} />
-      <div className="border-t border-sand-200 pt-3">
-        <WhatsappRow t={t} numbers={account.whatsappNumbers} stacked />
-      </div>
+      <ProfileForm t={t} copy={copy} profile={profile} onSaved={onClose} />
     </Dialog>
   );
 }

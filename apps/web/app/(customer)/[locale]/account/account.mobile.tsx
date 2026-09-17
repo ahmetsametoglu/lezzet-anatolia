@@ -165,7 +165,7 @@ function ProfileSection({ t, copy, account }: ProfileSectionProps) {
         <TextAction label={copy.profile.edit} ariaLabel={copy.profile.editLabel} onClick={() => setEditing(true)} />
       </section>
 
-      {editing && <PhoneProfileSheet t={t} copy={copy.edit} account={account} onClose={closeEditing} />}
+      {editing && <PhoneProfileSheet t={t} copy={copy.edit} profile={profile} onClose={closeEditing} />}
     </>
   );
 }

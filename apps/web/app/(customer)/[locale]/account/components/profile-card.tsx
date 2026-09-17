@@ -65,7 +65,7 @@ function LanguagePill({ locale, value, compact }: { locale: Locale; value: Prefe
  * Bağlantıdaki hazır mesajı müşteri kendisi gönderir: gönderen numara zilyetliği, jeton hesabı kanıtlar ve biz mesaj göndermediğimiz
  * için şablon ücreti yok. Jeton tıklamada üretilir, çünkü her ziyarette üretmek hiç kullanılmayacak kısa ömürlü sırlar biriktirir.
  */
-function WhatsappLinkButton({ t, align }: { t: Messages; align: 'start' | 'end' }) {
+function WhatsappLinkButton({ t }: { t: Messages }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +79,7 @@ function WhatsappLinkButton({ t, align }: { t: Messages; align: 'start' | 'end' 
   };
 
   return (
-    <span className={['inline-flex flex-col gap-0.5', align === 'end' ? 'items-end text-right' : 'items-start'].join(' ')}>
+    <span className="inline-flex flex-col items-end gap-0.5 text-right">
       <button
         type="button"
         disabled={busy}
@@ -97,26 +97,16 @@ function WhatsappLinkButton({ t, align }: { t: Messages; align: 'start' | 'end' 
 interface WhatsappRowProps {
   t: Messages;
   numbers: string[];
-  /** Etiket üstte, çünkü dar çekmecede etiket ↔ değer satırı değeri sağdan kırpar. */
-  stacked?: boolean;
 }
 
-export function WhatsappRow({ t, numbers, stacked = false }: WhatsappRowProps) {
+function WhatsappRow({ t, numbers }: WhatsappRowProps) {
   const verified = numbers.length > 0 && (
     <span className="inline-flex items-center gap-1.5">
       <span className="truncate">{numbers.join(' · ')}</span>
       <span className="flex-none font-sans text-micro font-semibold text-olive">{t.whatsappVerified}</span>
     </span>
   );
-  if (stacked) {
-    return (
-      <div className="flex flex-col gap-1">
-        <span className="font-sans text-micro text-muted">{t.whatsappLabel}</span>
-        {verified ? <span className="font-sans text-body-sm font-bold text-ink">{verified}</span> : <WhatsappLinkButton t={t} align="start" />}
-      </div>
-    );
-  }
-  return <Row label={t.whatsappLabel} value={verified || <WhatsappLinkButton t={t} align="end" />} />;
+  return <Row label={t.whatsappLabel} value={verified || <WhatsappLinkButton t={t} />} />;
 }
 
 /** Her açılışta yeniden kurulur ve sunucudaki değerle doğar, çünkü vazgeçilen düzenlemenin artığı kaydedilmiş sanılır. */
