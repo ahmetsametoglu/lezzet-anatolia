@@ -19,17 +19,8 @@ import type { DetailViewProps } from './detail-types';
 type OrdersCopy = LocalizedCopy<typeof ordersMessages>;
 
 /**
- * Sipariş detay — telefon görünümü, native sipariş detayının (`apps/mobile/src/screens/orders/order-detail-screen.tsx`)
- * web ikizi (14.09 · 08.58 Faz 1). Başlık çerçevede: ‹ · sipariş numarası · durum rozeti (`page.tsx`). Gövde native'in
- * sırası: canlı takip şeridi (yalnız kurye yoldayken) · zaman çizgisi ya da iptal/iade bloğu · kalemler · tutar özeti
- * (para, teslimat, adres, ödeme, kargo künyesi) · yorum daveti · kargo takibi · "bir sorun mu?" bağı. Metin ortak sipariş
- * sözlüğünden (`@lezzet/i18n/customer/orders`).
- *
- * Web'e özgü korunanlar: tekrar sipariş (en altta, tam genişlik — native'de ucu yok) · eksik karşılamanın iade notu
- * (özetin altında) · talep bağı talep formuna siparişin kimliğiyle gider (web'in rotası).
- *
- * Bilinçli farklar: damga web'in kısa biçimiyle ("22 juil., 09:14"); tezgâh alımında teslim türü yazılmaz (iki sözlükte de
- * karşılığı yok — "kargoyla" demek yanlış olurdu); yorum daveti web kitinin satır kutusu (native alt alta düğmeli kutu).
+ * Sipariş detayının telefon görünümü, native sipariş detayının ikizi; tekrar sipariş ve eksik karşılamanın iade notu web'e özgü.
+ * Gel-al siparişinde teslim türü yazılmaz, çünkü iki sözlükte de karşılığı yok ve "kargoyla" demek yanlış olur.
  */
 export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewProps) {
   const copy = ordersMessages[locale];
@@ -154,7 +145,7 @@ function ItemRow({ copy, locale, line }: ItemRowProps) {
         ) : line.unit.length > 0 || line.shortfall ? (
           <span className="font-sans text-body-sm leading-[1.6] text-muted">
             {line.unit}
-            {/* Eksik gramajın YANINDA, kendi kutusu yok (native 01.09): satırın ikinci sesi. */}
+            {/* Eksik ayrı kutu değil, gramajın yanında: satır düzeyindeki bilgi satırın ikinci sesidir. */}
             {line.shortfall && (
               <span className="font-bold text-honey">
                 {`${line.unit.length === 0 ? '' : ' · '}${d.shortfallLine.replace('{missing}', String(line.qty - line.billedQty))}`}

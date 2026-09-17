@@ -2,13 +2,8 @@ import type { ComponentProps } from 'react';
 import { Link } from '@/i18n/navigation';
 
 /*
-  KESİKLİ DAVET KUTUSU — native `DashedInvite`ın web ikizi, SATIR yerleşimi (metin solda, işaret sağda,
-  kutunun tamamı basılır · 14.09). "Bu bir liste öğesi değil, bir DAVET" kalıbı: vitrinin keşif ve
-  profesyonel hesap davetleri. Native'in öteki iki yerleşimi (alt alta · ortalı) başka ekranlarda;
-  o ekranlar web'e gelince buraya eklenir.
-
-  İKİ TON, iki ayrı yer (native 15.08 kullanıcı kararı): `terracotta` yeni bir şey teklif eder, `olive`
-  başka bir yüzeye çağırır — ayrım "biri sönük" diye değil "ikisi ayrı yere götürüyor" diye kurulu.
+  Native kesikli davet kutusunun web ikizi: liste öğesi değil davet. `terracotta` yeni bir şey teklif eder, `olive` başka bir
+  yüzeye çağırır; ayrım "biri sönük" diye değil "ikisi ayrı yere götürüyor" diye kurulu.
 */
 
 type InviteTone = 'terracotta' | 'olive';
