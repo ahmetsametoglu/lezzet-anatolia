@@ -6,14 +6,8 @@ import { useActiveSection } from './use-active-section.hook';
 import type { LegalViewProps } from './legal-view-types';
 
 /**
- * Statik sayfa — masaüstü (tasarım: "Statik Web").
- *
- * Diziliş `260px + 1fr`: solda yapışkan "Bu sayfada" kartı, sağda 680px'i geçmeyen metin sütunu.
- * Genişlik sınırı bir üslup tercihi değil okunabilirlik kuralı — 1100px'lik kabuğun tamamına yayılan
- * satırlar gözü satır başına döndürmekte zorlar ve uzun hukuki metin zaten en zor okunan içerik.
- *
- * SSS'de gezinme sütunu ÇİZİLMEZ: o sayfanın gezinmesi arama kutusudur, akordeon başlıkları da
- * zaten listenin kendisi. İkisini yan yana koymak aynı işi iki kez sunmak olurdu.
+ * Statik sayfanın masaüstü dizilişi: solda yapışkan "Bu sayfada" kartı, sağda 680px'i geçmeyen metin sütunu, çünkü geniş
+ * satırlar uzun hukuki metni okunmaz yapar. SSS'de gezinme sütunu yok; orada gezinme arama kutusu ve akordeonun kendisi.
  */
 export function LegalPageDesktop({ document: doc, t, updatedLine }: LegalViewProps) {
   const active = useActiveSection(doc.sections.map((section) => section.id));
