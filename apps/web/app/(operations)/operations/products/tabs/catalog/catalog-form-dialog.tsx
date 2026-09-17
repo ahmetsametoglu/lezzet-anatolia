@@ -52,14 +52,14 @@ import type { CatalogKind } from '../../products-types';
 // İKİSİ DE çok dilli İKİ alan taşır → içerik bir DİL KARTINDA toplanır: kartın içi seçili dilin
 // alanları, dışı dilden bağımsız (slug/kapak/aktiflik). Kip görünür olur.
 //   KATEGORİ: ad + ALT YAZI (05.17) — alt yazı vitrindeki kategori bandının ikinci satırı.
-//   KOLEKSİYON: ad + açıklama — açıklama paylaşım (OG) kartında okunur.
+//   KOLEKSİYON: ad + açıklama — açıklama paylaşım (OG) kartında ve ana sayfa kartında okunur.
 // Kategori eskiden tek alanlıydı ve diller alt alta duruyordu (sekmesiz); alt yazı gelince o
 // ayrım anlamını yitirdi ve çatal kalktı (kullanıcı kararı 08.08).
 //
-// Kategori görseli anasayfa kategori şeridinde görünür (masaüstü web 3:2 kart, mobil webde daire)
-// → kaynak 3:2 (`role="category"`).
+// Kategori görseli anasayfada görünür (masaüstü web 4:5 kart, mobil web ve native daire)
+// → kaynak 4:5 (`role="category"`).
 // Koleksiyon ayrıca paylaşılabilir bir vitrin sayfasıdır (DOMAIN §13): slug + kapak + açıklama OG
-// kartını besler — kapak müşteri SAYFASINDA render edilmez (`role="collection"`, 16:9).
+// kartını ve masaüstü ana sayfa kartını besler (`role="collection"`, 16:9).
 // Üyeler sağ bölmede GÖRSELLİ ve SÜRÜKLE-SIRALANIR liste — sıra vitrin kürasyonudur.
 // GÖRSEL her iki türde de aynı bileşenle yönetilir; yalnız `role` (oran) ve bağlam etiketi değişir.
 
@@ -213,16 +213,11 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
   });
 
   // Görsel alanı TEK yerde kurulur; yerleşim `kind`'a göre farklı yere koyar (tekrar yok). Rol oranı
-  // belirler: kategori 3:2 (anasayfa şeridi · mobil webde daire), koleksiyon 16:9.
+  // belirler: kategori 4:5 (masaüstü kart · mobil daire), koleksiyon 16:9.
   // Yükleme kayıt gerektirir (R2 anahtarı slug'a bağlı) → oluşturmada istem gösterilir.
   //
-  // **Koleksiyon etiketi 08.08'de genişledi.** Eskiden "paylaşım kartı (OG)" yazıyordu ve o gün
-  // doğruydu — 05.7 kararı koleksiyon görselinin müşteri sayfasında HİÇ render edilmediğini,
-  // yalnız OG kartını beslediğini söylüyordu. `Musteri - Anasayfa.dc.html`'in 08.08 senkronu ana
-  // sayfaya iki slotluk Koleksiyonlar bölümü ekledi ve kapak orada 16:7 band olarak çizim yüzeyine
-  // çıktı (`design/KARARLAR.md`). Aynı kapak iki yerde iki kırpımla kullanılıyor; yeni bir görsel
-  // alanı AÇILMADI. Etiket dar kalsaydı operatör kapağı "kimsenin görmediği bir paylaşım
-  // detayı" sanır ve kadrajına özen göstermezdi — oysa artık vitrinin ilk ekranında duruyor.
+  // Koleksiyon kapağı hem ana sayfa kartında hem paylaşım kartında görünür; etiket ikisini de söyler ki
+  // operatör kadrajı yalnız paylaşım ayrıntısı sanmasın.
   //
   // **KATEGORİDE ALAN DEĞİL BLOK (05.23):** kategori artık birden çok fotoğraf taşıyor ve kart her
   // gün havuzdan başka bir kare gösteriyor — "Börekler" bir ürün değil bir raftır, tek fotoğraf o
@@ -238,12 +233,12 @@ export function CatalogFormDialog({ kind, edit, withMembers, onClose }: CatalogF
       onCropChange={setCrop}
       upload={isEdit ? (fd) => uploadCatalogImageAction(kind, edit.id, fd) : undefined}
       uploadDisabledHint="Kaydedince eklenebilir — depo anahtarı slug'a bağlı."
-      caption="ana sayfa bandı + paylaşım kartı"
+      caption="ana sayfa kartı + paylaşım kartı"
     />
   ) : (
     <ImageGallery
       parentId={isEdit ? edit.id : null}
-      // Kapak da havuzun bir üyesi, kart onu da gösteriyor → iki rol de `category` (3:2 kaynak,
+      // Kapak da havuzun bir üyesi, kart onu da gösteriyor → iki rol de `category` (4:5 kaynak,
       // türevleri kart ve mobil daire). Ürün formunda ikisi ayrışıyordu çünkü orada galeri
       // fotoğrafı yalnız detay galerisinde çiziliyor.
       coverRole="category"

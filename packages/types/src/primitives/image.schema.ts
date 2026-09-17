@@ -56,11 +56,7 @@ export const RATIO_CHAT = 1.91;
  * besleniyordu: rafta genişliğin %21'i kesiliyor, 280 dp'lik yükseklik için 1200'lük basamak iniyordu.
  */
 export const RATIO_PORTRAIT = 4 / 5;
-/**
- * Geniş kart 2:1 (10.09, aynı karar). Native tarif listesi (350 × 168 = 2,08) ve vitrin paket kartı
- * (350 × 172 = 2,03) sohbet kartından (1,91), web vitrinin koleksiyon kartı (16:7 = 2,29) de sohbet
- * kartından besleniyordu.
- */
+/** Geniş kart 2:1: native tarif listesi (350 × 168 = 2,08) ve vitrin paket kartı (350 × 172 = 2,03). */
 export const RATIO_WIDE = 2;
 
 /** Kaynaktan türeyen görünüm çerçevesi — odak panelinin canlı önizlemesi bunları gösterir. */
@@ -82,7 +78,6 @@ const OBJECT_FRAMES: ImageFrame[] = [
   { ratio: RATIO_CHAT, label: '1.91:1', where: 'sohbet kartı (WhatsApp · Messenger · Instagram)' },
 ];
 
-// Vitrin kartı ve bandı 10.09'dan beri geniş (2:1) çerçeveden (`COLLECTION_FRAMES`); 16:9'u paylaşım kartı kullanıyor.
 const BAND_FRAMES: ImageFrame[] = [{ ratio: RATIO_BAND, label: '16:9', where: 'paylaşım kartı' }];
 
 /**
@@ -121,9 +116,13 @@ const PACKAGE_FRAMES: ImageFrame[] = [
   { ratio: RATIO_BAND, label: '16:9', where: 'paket listesi (native)' },
   { ratio: RATIO_WIDE, label: '2:1', where: 'vitrin paket kartı (native)' },
 ];
+const CATEGORY_FRAMES: ImageFrame[] = [
+  { ratio: RATIO_PORTRAIT, label: '4:5', where: 'kategori kartı (masaüstü web)' },
+  { ratio: RATIO_SQUARE, label: '1:1', where: 'kategori dairesi (mobil web · native)', circle: true },
+];
 const COLLECTION_FRAMES: ImageFrame[] = [
-  ...BAND_FRAMES,
-  { ratio: RATIO_WIDE, label: '2:1', where: 'vitrin kartı (web) · vitrin bandı (native)' },
+  { ratio: RATIO_BAND, label: '16:9', where: 'ana sayfa kartı (masaüstü web) · paylaşım kartı' },
+  { ratio: RATIO_WIDE, label: '2:1', where: 'vitrin bandı (native)' },
   { ratio: RATIO_SQUARE, label: '1:1', where: 'koleksiyon dairesi (native vitrin)', circle: true },
 ];
 
@@ -160,7 +159,8 @@ const GALLERY_SPEC: ImageRoleSpec = { ...OBJECT_SPEC, frames: GALLERY_FRAMES };
 export const IMAGE_ROLES: Record<ImageRole, ImageRoleSpec> = {
   product: { ...OBJECT_SPEC, frames: PRODUCT_FRAMES },
   gallery: GALLERY_SPEC,
-  category: OBJECT_SPEC,
+  // Kategori görseli bir ürünün değil rafın yüzü; yalnız dikey kartta ve dairede çizilir.
+  category: { ratio: RATIO_PORTRAIT, label: '4:5', minWidth: 1200, minHeight: 1500, frames: CATEGORY_FRAMES },
   package: { ...OBJECT_SPEC, frames: PACKAGE_FRAMES },
   collection: { ...BAND_SPEC, frames: COLLECTION_FRAMES },
   // Sayfa kahramanı bantla AYNI kaynağı ister, yalnız türev çerçevesi tek → BAND_SPEC'ten türer.

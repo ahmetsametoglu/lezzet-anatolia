@@ -45,6 +45,8 @@ export const customerSurface = {
   /* (telefon, 14.09) Örtü mürekkebinin KATI hâli (rgb 21,23,15) — Token Kararlari #19. `ink` yerine
      seçildi çünkü açık yeşil zeminde #343b41 mavimsi duruyor. */
   'ink-deep': '#15170f', // "TAKİP" çipinin metni
+  'ink-raised': '#3f474e', // koyu bant üstündeki kart zemini
+  'ink-raised-line': '#565f66', // koyu bant üstündeki kartın çerçevesi
   body: '#6d7261', // gövde açıklaması, kart alt satırı
   muted: '#8a8270', // etiket, yardımcı satır, placeholder
   card: '#ffffff', // kart, dialog, girdi zemini
@@ -271,6 +273,10 @@ export const customerText = {
   'eyebrow-xs': '10px',
   'eyebrow-xs--font-weight': '700',
   'eyebrow-xs--letter-spacing': '0.18em',
+  /* Fotoğraf üstündeki kart etiketi ("KOLEKSİYON") — kontrol öğesi, yuvarlanmaz. */
+  'photo-tag': '12px',
+  'photo-tag--font-weight': '600',
+  'photo-tag--letter-spacing': '0.12em',
 
   /* ROZET kademesi — Token Kararlari #16 · (telefon, 14.09). Native v3'ün en çok yinelenen öğesinin
      (fiyat çipi · TÜKENDİ · İNDİRİM · TOPTAN · TAKİP) kendi kademesi; önce üç ayrı kademeden

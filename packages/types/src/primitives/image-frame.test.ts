@@ -65,12 +65,14 @@ describe('çerçeve kümesi ve merdiven', () => {
     expect(FRAME_RATIOS.wide).toBe(RATIO_WIDE);
   });
 
-  it('önizleme native kutuları da gösteriyor: ürün dikey, paket geniş, koleksiyon daire (10.09)', () => {
+  it('önizleme çizilen kutuları gösteriyor: ürün dikey, paket geniş, koleksiyon daire, kategori dikey kart + daire', () => {
     expect(IMAGE_ROLES.product.frames.some((f) => f.ratio === RATIO_PORTRAIT)).toBe(true);
     expect(IMAGE_ROLES.package.frames.some((f) => f.ratio === RATIO_WIDE)).toBe(true);
     expect(IMAGE_ROLES.collection.frames.some((f) => f.circle === true)).toBe(true);
-    // Kategori ürünle aynı kaynak beklentisini paylaşıyor ama native keşif kartı yalnız ürünün.
-    expect(IMAGE_ROLES.category.frames.some((f) => f.ratio === RATIO_PORTRAIT)).toBe(false);
+    // Kategori görseli yalnız masaüstü 4:5 kartta ve dairede çizilir; kaynak da kartın oranıdır.
+    expect(IMAGE_ROLES.category.ratio).toBe(RATIO_PORTRAIT);
+    expect(IMAGE_ROLES.category.frames.some((f) => f.ratio === RATIO_PORTRAIT)).toBe(true);
+    expect(IMAGE_ROLES.category.frames.some((f) => f.circle === true)).toBe(true);
   });
 
   it('merdiven artan ve tek yerde', () => {
