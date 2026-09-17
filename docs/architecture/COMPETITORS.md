@@ -58,10 +58,10 @@ Kendi eşleşmesi olmayan kalemin katsayısı sırasıyla **ailesinden**, **kate
 | Aile · Zeytinyağı | 1 | 2,01 | — |
 | Aile · Tavuk Fileto | 1 | 2,00 | — |
 | Aile · Pekmez | 2 | 1,48 | 1,48–1,48 |
-| Kategori · Kiler | 10 | 2,50 | 1,24–3,97 |
 | Kategori · Fırın | 2 | 2,26 | 1,67–2,85 |
-| Kategori · Öz & Macun | 6 | 2,12 | 1,65–2,55 |
-| Kategori · Et & Tavuk | 5 | 1,38 | 1,31–2,00 |
+| Kategori · Doğal & Geleneksel | 15 | 2,19 | 1,46–3,97 |
+| Kategori · Kuru Meyve & Kuruyemiş | 2 | 1,97 | 1,24–2,70 |
+| Kategori · Et & Tavuk | 4 | 1,37 | 1,31–2,00 |
 | **Genel medyan** | **25** | **2,01** | 1,24–3,97 |
 
 ### Kalem kalem
@@ -106,7 +106,7 @@ Partinin tamamı tek kanaldan satılırsa:
 
 | | Ödenen HT | Ciro HT | Kâr | Alış üzerinden |
 |---|---|---|---|---|
-| Son tüketici | 2.769,49 € | 5.491,46 € | +2.721,97 € | %98 |
+| Son tüketici | 2.769,49 € | 5.511,81 € | +2.742,32 € | %99 |
 | Profesyonel | 2.769,49 € | 3.878,03 € | +1.108,54 € | %40 |
 
 Profesyonel kâr tam %40 değil; fiyatlar kalem başına kuruşa yuvarlandığı için 74 kuruş fazla çıkıyor.
@@ -119,7 +119,7 @@ Profesyonel kâr tam %40 değil; fiyatlar kalem başına kuruşa yuvarlandığı
 | Et döner | 1,31 | rakip |
 | Kıymalı mantı | 1,36 | rakip |
 | Tavuk döner | 1,38 | rakip |
-| Acılı tavuk kanat | 1,38 | kategori |
+| Acılı tavuk kanat | 1,37 | kategori |
 | Tahin | 1,46 | rakip |
 
 Bu kalemlerde ya tedarikçiyle pazarlık yapılmalı ya da ürün gamdan çıkarılmalı. Kalemlerin üçünü aynı bölgede, aynı modelle çalışan gurmeavrupa satıyor.
