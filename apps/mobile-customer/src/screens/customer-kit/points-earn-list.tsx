@@ -8,7 +8,7 @@ import { Icon } from '@lezzet/mobile-kit/src/components/ui/icon';
 import { TextAction } from '@lezzet/mobile-kit/src/components/ui/text-action';
 import type { PointsRules } from '@/lib/api/points';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
-import messages from './points-earn-messages.json';
+import messages from '@lezzet/i18n/customer/points-earn';
 import { formatCompactEuro } from '@lezzet/helper';
 
 /*

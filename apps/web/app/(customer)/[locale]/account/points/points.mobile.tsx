@@ -10,16 +10,15 @@ import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { formatOrderDate } from '@/lib/storefront/format';
 import { useLoadMore } from '@/lib/use-load-more.hook';
-import { EarnWays } from './components/earn-ways';
 import type { PointsViewProps } from './points-types';
 
 type PointsCopy = LocalizedCopy<typeof pointsMessages>;
 
 /**
  * Puan geçmişinin telefon görünümü, native puan ekranının ikizi: aynı gün ve sebepteki hareketler tek satırda, kutusuz liste,
- * sona yaklaşınca kendiliğinden devam. Kazanma yolları bölümü yalnız web'de, listenin altında.
+ * sona yaklaşınca kendiliğinden devam. Kazanma yolları burada değil hesap kartının çekmecesinde, native'deki gibi.
  */
-export function PointsMobile({ t, locale, rules, entries, hasMore, loading, failed, loadMore }: PointsViewProps) {
+export function PointsMobile({ t, locale, entries, hasMore, loading, failed, loadMore }: PointsViewProps) {
   const copy: PointsCopy = pointsMessages[locale];
   // Düşen istek kendiliğinden yinelenmez; devam "tekrar dene" ile müşterinin elinde.
   const { ref } = useLoadMore({ hasMore: hasMore && !failed, loading, onLoadMore: loadMore });
@@ -65,10 +64,6 @@ export function PointsMobile({ t, locale, rules, entries, hasMore, loading, fail
       <div ref={ref} className="flex justify-center py-4 empty:py-0">
         {loading && <LoadingState label={t.loading} />}
         {failed && !loading && <PrimaryButton label={copy.tailRetry} shape="pill" onClick={loadMore} />}
-      </div>
-
-      <div className="mt-3">
-        <EarnWays t={t} locale={locale} rules={rules} />
       </div>
     </div>
   );

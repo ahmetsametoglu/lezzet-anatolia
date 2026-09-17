@@ -2,7 +2,7 @@
 
 import type { PointsEntry } from '@lezzet/types';
 import { LoadMore } from '@/components/customer/ui/load-more';
-import { EarnWays } from './components/earn-ways';
+import { DesktopEarnWays } from './components/desktop-earn-ways';
 import type { Messages, PointsViewProps } from './points-types';
 
 /**
@@ -39,7 +39,7 @@ export function PointsDesktop({ t, locale, rules, entries, hasMore, loading, loa
 
       <LoadMore hasMore={hasMore} loading={loading} onLoadMore={loadMore} label={t.loadMore} loadingLabel={t.loading} />
 
-      <EarnWays t={t} locale={locale} rules={rules} />
+      <DesktopEarnWays t={t} locale={locale} rules={rules} />
     </div>
   );
 }

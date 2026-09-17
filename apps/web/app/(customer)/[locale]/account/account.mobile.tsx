@@ -12,6 +12,7 @@ import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { SecondaryButton } from '@/components/customer/phone-kit/secondary-button';
 import { DASHED_TOP, SettingsCard } from '@/components/customer/phone-kit/settings-card';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
+import { Dialog } from '@/components/customer/ui/dialog';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import type { AccountView } from '@/lib/account/read';
 import { useShareLink } from '@/lib/use-share-link.hook';
@@ -24,6 +25,7 @@ import { LegalDirectory } from './components/legal-directory';
 import { ChatLinkNoticeBanner, LinkedChatsCard } from './components/linked-chats-card';
 import { PhoneCouponList } from './components/phone-coupon-list';
 import { PhoneDeleteAccount } from './components/phone-delete-account';
+import { PhonePointsEarnList, type PhoneEarnActions } from './components/phone-points-earn-list';
 import { PhoneProfileSheet } from './components/phone-profile-sheet';
 import { PhoneWhatsappCard } from './components/phone-whatsapp-card';
 import { RedeemPoints } from './components/redeem-points';
@@ -189,28 +191,81 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
   const { minimumPoints, valueCents } = points.redeem;
   const enough = points.balance >= minimumPoints;
   const fill = (text: string) => text.replace('{threshold}', String(minimumPoints)).replace('{value}', formatCompactEuro(valueCents, locale));
+  const [earnOpen, setEarnOpen] = useState(false);
+  const closeEarn = useCallback(() => setEarnOpen(false), []);
+  const { share } = useShareLink();
+  const inviteUrl = points.inviteUrl;
+  // Kazanma yolu müşteriyi o işin yapıldığı yere götürür; davet bağlantısı yoksa paylaşma satırı düğmesiz kalır.
+  const earnActions = (close: () => void): PhoneEarnActions => ({
+    referral:
+      inviteUrl === null
+        ? undefined
+        : {
+            onClick: () => {
+              close();
+              void share(inviteUrl);
+            },
+          },
+    neighbor: { href: '/orders' },
+    review: { href: '/orders' },
+    feedback_candidate: { href: '/discover' },
+  });
 
   return (
     <SettingsCard
       title={copy.points.title}
       aside={<span className="font-sans text-h2-sm font-bold text-olive-dark">{copy.points.value.replace('{n}', String(points.balance))}</span>}
     >
-      <p className="font-sans text-body-sm leading-[1.6] text-body">{fill(copy.points.body)}</p>
-      {!enough && <p className="font-sans text-helper font-semibold text-muted">{copy.points.gap.replace('{n}', String(minimumPoints - points.balance))}</p>}
-      <RedeemPoints
-        t={t}
-        locale={locale}
-        redeem={points.redeem}
-        enough={enough}
-        compact
-        renderTrigger={(open) => <PrimaryButton shape="block" label={fill(copy.points.convert)} onClick={open} disabled={!enough} />}
-      />
+      {points.balance === 0 ? (
+        <>
+          <p className="font-sans text-body-sm leading-[1.6] text-body">{copy.points.emptyBody}</p>
+          <PhonePointsEarnList
+            locale={locale}
+            rules={points}
+            visitClaimedToday={points.visitClaimedToday}
+            actions={earnActions(() => undefined)}
+          />
+        </>
+      ) : (
+        <>
+          <p className="font-sans text-body-sm leading-[1.6] text-body">{fill(copy.points.body)}</p>
+          {!enough && (
+            <p className="font-sans text-helper font-semibold text-muted">
+              {copy.points.gap.replace('{n}', String(minimumPoints - points.balance))}
+            </p>
+          )}
+          <RedeemPoints
+            t={t}
+            locale={locale}
+            redeem={points.redeem}
+            enough={enough}
+            compact
+            renderTrigger={(open) => <PrimaryButton shape="block" label={fill(copy.points.convert)} onClick={open} disabled={!enough} />}
+          />
+        </>
+      )}
+      {/* Bakiyesi olan da görür, yoksa ilk puanını kazanan müşteri öteki yolları bir daha göremezdi. */}
+      <span className="self-start">
+        <TextAction label={copy.points.howTo} onClick={() => setEarnOpen(true)} />
+      </span>
       {/* Tam döküm ayrı sayfada, çünkü defter veriyle sınırsız büyür. */}
       <span className="self-start">
         <TextAction href="/account/points" label={copy.points.history} />
       </span>
       {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
       <PhoneCouponList t={t} copy={copy.points} locale={locale} coupons={coupons} />
+
+      {earnOpen && (
+        <Dialog title={copy.points.howToTitle} closeLabel={t.cancel} onClose={closeEarn} placement="sheet">
+          <PhonePointsEarnList
+            locale={locale}
+            rules={points}
+            visitClaimedToday={points.visitClaimedToday}
+            actions={earnActions(closeEarn)}
+            showRules
+          />
+        </Dialog>
+      )}
     </SettingsCard>
   );
 }

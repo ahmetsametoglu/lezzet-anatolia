@@ -23,7 +23,7 @@
         "cta": "Siparişlerim"
       },
       "visit": {
-        "title": "Uygulamayı açın",
+        "title": "Her gün uğrayın",
         "cadence": "her gün",
         "claimedToday": "bugün alındı",
         "body": "Günde bir kez, siz hiçbir şey yapmadan hesabınıza yazılır."
@@ -65,7 +65,7 @@
         "cta": "Mes commandes"
       },
       "visit": {
-        "title": "Ouvrez l'application",
+        "title": "Passez nous voir chaque jour",
         "cadence": "chaque jour",
         "claimedToday": "obtenu aujourd’hui",
         "body": "Une fois par jour, crédités sans rien avoir à faire."
@@ -107,7 +107,7 @@
         "cta": "Meine Bestellungen"
       },
       "visit": {
-        "title": "Öffnen Sie die App",
+        "title": "Schauen Sie täglich vorbei",
         "cadence": "täglich",
         "claimedToday": "heute erhalten",
         "body": "Einmal am Tag, ohne dass Sie etwas tun müssen."

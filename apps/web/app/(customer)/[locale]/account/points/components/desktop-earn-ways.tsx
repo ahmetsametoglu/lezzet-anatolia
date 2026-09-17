@@ -4,13 +4,13 @@ import { formatPrice } from '@/lib/storefront/format';
 import type { Messages } from '../points-types';
 
 /** Kazanma yolları ayardan gelir; ekrana gömülü sayı motorun uyguladığından bir gün ayrışırdı. */
-interface EarnWaysProps {
+interface DesktopEarnWaysProps {
   t: Messages;
   locale: Locale;
   rules: CustomerPointsRules;
 }
 
-export function EarnWays({ t, locale, rules }: EarnWaysProps) {
+export function DesktopEarnWays({ t, locale, rules }: DesktopEarnWaysProps) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="font-serif text-card-title-sm text-ink">{t.earnTitle}</h2>

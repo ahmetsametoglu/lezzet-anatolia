@@ -4,7 +4,7 @@ import type { Address, CompanyInfo, ConversationSource, PointsEntry, PreferredLa
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
-import { readCustomerPoints, type CustomerCoupon, type PendingNeighborAward } from '@lezzet/application';
+import { readCustomerPoints, type CustomerCoupon, type CustomerPointsRules, type PendingNeighborAward } from '@lezzet/application';
 import { listPointsHistory } from '@/lib/feedback/points';
 
 /**
@@ -48,6 +48,11 @@ export interface AccountView {
     history: PointsEntry[];
     /** Kural ayardan gelir, çünkü ekranın eşiği motorunkinden ayrışırsa müşteri reddedilecek düğmeye basar. */
     redeem: { minimumPoints: number; valueCents: number };
+    /** Kazanma yolları ve para karşılıkları; telefon kartı native'in kazanma listesini bunlarla çizer. */
+    earnWays: CustomerPointsRules['earnWays'];
+    centValue: number;
+    neighborMaxUses: number;
+    visitClaimedToday: boolean;
     /** Ödemesi bekleyen komşu ödülleri; deftere karışmaz, çünkü defter olanı, bu olacak olanı tutar. */
     pendingNeighborAwards: PendingNeighborAward[];
     /** Komşu ödülünün puanı; `null` ise kural okunamamıştır ve blok çizilmez, çünkü bilinmeyen sayıyla söz verilmez. */
@@ -145,6 +150,10 @@ async function readPointsAndCoupons(
       balance: card.balance,
       history: history.rows,
       redeem: card.redeem,
+      earnWays: card.earnWays,
+      centValue: card.centValue,
+      neighborMaxUses: card.neighborMaxUses,
+      visitClaimedToday: card.visitClaimedToday,
       pendingNeighborAwards: card.pendingNeighborAwards,
       neighborPoints: card.earnWays.find((way) => way.key === 'neighbor')?.points ?? null,
       inviteUrl: card.inviteUrl,
