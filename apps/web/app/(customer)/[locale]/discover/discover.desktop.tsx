@@ -23,13 +23,6 @@ export function DiscoverDesktop({ t, cards, current, decisions, earned, signedIn
   return (
     <Band surface="bg-olive-bg" className="flex min-h-[520px] flex-1 flex-col gap-6 px-12 pt-7.5 pb-11">
       <div className="flex items-center gap-5.5">
-        <Link
-          href="/catalog"
-          className="inline-flex flex-none cursor-pointer items-center gap-1.75 font-sans text-control text-olive transition-colors hover:text-olive-dark"
-        >
-          <Icon name="close" size={12} />
-          {t.close}
-        </Link>
         {total > 0 && (
           <div className="flex max-w-[520px] flex-1 flex-col gap-1.75">
             <div className="flex items-baseline gap-2.5">

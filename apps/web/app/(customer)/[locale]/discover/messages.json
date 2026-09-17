@@ -5,7 +5,6 @@
       "description": "Henüz satışta olmayan aday ürünleri değerlendirin; beğenileriniz ne getireceğimize karar verirken bize yol gösterir."
     },
     "title": "Keşif",
-    "close": "Kapat",
     "counter": "{index} / {total}",
     "points": "+{points} puan",
     "like": "Beğen",
@@ -57,7 +56,6 @@
       "description": "Donnez votre avis sur des produits pas encore en vente ; vos préférences nous guident sur ce que nous allons proposer."
     },
     "title": "Découverte",
-    "close": "Fermer",
     "counter": "{index} / {total}",
     "points": "+{points} points",
     "like": "J'aime",
@@ -109,7 +107,6 @@
       "description": "Bewerten Sie Produkte, die noch nicht im Sortiment sind; Ihre Vorlieben helfen uns bei der Auswahl."
     },
     "title": "Entdecken",
-    "close": "Schließen",
     "counter": "{index} / {total}",
     "points": "+{points} Punkte",
     "like": "Gefällt mir",
