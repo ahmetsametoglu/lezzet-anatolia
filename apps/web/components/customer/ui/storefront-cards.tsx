@@ -1,12 +1,12 @@
 'use client';
 
-import { RATIO_SOURCE } from '@lezzet/types';
+import { RATIO_BAND, RATIO_PORTRAIT, RATIO_SOURCE } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { FramedImage } from '@/components/media/framed-image';
 import { Link } from '@/i18n/navigation';
 import { formatComparison } from '@/lib/storefront/format';
-import type { StorefrontCategory, StorefrontProduct } from '@lezzet/application';
-import type { StorefrontCollection, StorefrontOffer, StorefrontPackage } from '@/lib/storefront/storefront-types';
+import type { StorefrontProduct } from '@lezzet/application';
+import type { StorefrontCollection, StorefrontHomeCategory, StorefrontOffer, StorefrontPackage } from '@/lib/storefront/storefront-types';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { StockMark, StockNoticeButton } from '@/components/customer/delivery/stock-mark';
 import { Badge } from './badge';
@@ -38,47 +38,47 @@ function InitialMark({ name }: { name: string }) {
   );
 }
 
+/** Adın okunması için fotoğrafın alt kısmını karartan örtü; ton `--color-ink-deep` üzerinden kurulur. */
+const CATEGORY_SCRIM = 'linear-gradient(180deg, transparent 38%, color-mix(in srgb, var(--color-ink-deep) 78%, transparent) 100%)';
+
 interface CategoryCardProps {
-  category: StorefrontCategory;
-  /** Mobil şeritte kategori dairesi; kırpma yine kare. */
-  circle?: boolean;
+  category: StorefrontHomeCategory;
+  /** Sayaç satırı şablonu ("{n} ürün") — komponent metin taşımaz. */
+  itemsLabel: string;
 }
 
-export function CategoryCard({ category, circle = false }: CategoryCardProps) {
+export function CategoryCard({ category, itemsLabel }: CategoryCardProps) {
   return (
     <Link
       // Kategori kartı kataloğu SÜZGEÇLİ açar; seçim URL'de yaşar (paylaşılabilir, geri tuşu çalışır).
       href={{ pathname: '/catalog', query: { category: category.slug } }}
-      className={[
-        'flex cursor-pointer flex-col items-center gap-2.5 text-center transition-colors',
-        circle ? 'w-[86px] flex-none' : 'rounded-card border border-sand-200 bg-card p-3.5 hover:border-olive-line',
-      ].join(' ')}
+      className="relative block cursor-pointer overflow-hidden rounded-card bg-sand-250 transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-menu"
+      style={{ aspectRatio: RATIO_PORTRAIT }}
     >
       <FramedImage
         src={category.image.url}
         alt={category.name}
-        ratio={RATIO_SOURCE}
+        ratio={RATIO_PORTRAIT}
         crop={category.image.crop}
         frames={category.image.frames}
-        // Daire mobil şeritte 86 px; kart masaüstünde 6 sütunlu ızgarada ~167 px (içerik 1360 px'te durur).
-        sizes={circle ? '86px' : '170px'}
-        circle={circle}
-        className={circle ? 'w-[86px]' : 'w-full'}
+        // 6 sütunlu ızgarada ~197 px (içerik 1360 px'te durur).
+        sizes="200px"
+        className="absolute inset-0 h-full w-full !rounded-none"
         placeholder={<InitialMark name={category.name} />}
       />
-      <span className={['font-sans font-bold text-ink', circle ? 'text-micro' : 'text-body'].join(' ')}>{category.name}</span>
+      <span className="pointer-events-none absolute inset-0" style={{ background: CATEGORY_SCRIM }} />
+      <span className="pointer-events-none absolute inset-x-3.5 bottom-3.5 flex flex-col gap-0.5">
+        <span className="font-serif text-card-title-sm leading-tight text-on-image">{category.name}</span>
+        <span className="font-sans text-micro font-bold tracking-[0.08em] text-olive-light uppercase">
+          {itemsLabel.replace('{n}', String(category.productCount))}
+        </span>
+      </span>
     </Link>
   );
 }
 
-/**
- * Koleksiyon bandı yalnız kataloğun bir kesitine kapı açar, satın alma sunmaz: fiyat, stok ve sepet yok. Tasarımın 16:7 çerçevesi
- * 16:9 kayıtlı kapaktan odak ve zoomla türer; gradyan `--color-ink` üzerinden `color-mix` ile kurulur ki marka tonuyla dönsün.
- */
-const RATIO_COLLECTION_BAND = 16 / 7;
-const BAND_SCRIM =
-  'linear-gradient(90deg, color-mix(in srgb, var(--color-ink) 78%, transparent) 0%,' +
-  ' color-mix(in srgb, var(--color-ink) 35%, transparent) 55%, transparent 100%)';
+/** Koleksiyon kartı kataloğun bir kesitine kapı açar, satın alma sunmaz: fiyat, stok ve sepet yok. */
+const COLLECTION_SCRIM = 'linear-gradient(180deg, transparent 34%, color-mix(in srgb, var(--color-ink-deep) 80%, transparent) 100%)';
 
 interface CollectionCardProps {
   collection: StorefrontCollection;
@@ -86,44 +86,39 @@ interface CollectionCardProps {
   labels: { tag: string; go: string; items: string };
   /**
    * Kampanyanın kısa hâli ("%15" · "3,00 €") — `null`/verilmemiş = kampanya yok, rozet çizilmez.
-   * Cümlenin türetmesi çağıranda (`lib/storefront/campaign-note`): komponent metin taşımaz ve
-   * para biçimini de bilmez.
+   * Cümlenin türetmesi çağıranda (`lib/storefront/campaign-note`): komponent para biçimini bilmez.
    */
   campaignValue?: string | null;
-  compact?: boolean;
 }
 
-export function CollectionCard({ collection, labels, campaignValue = null, compact = false }: CollectionCardProps) {
+export function CollectionCard({ collection, labels, campaignValue = null }: CollectionCardProps) {
   return (
     <Link
       // Koleksiyon ayrı bir sayfa değil, katalogun bir hâli: süzgeç URL'de yaşar ve bağlantı paylaşılabilir kalır.
       href={{ pathname: '/catalog', query: { collection: collection.slug } }}
-      // Yarıçap `rounded-card` (18px): tasarım 22px çiziyor ama envanterde o kademe YOK ve dört
-      // piksel için ölçeği bölmek, sayfadaki her kartın köşesini birbirinden ayırmak olurdu.
-      className="relative block cursor-pointer overflow-hidden rounded-card transition-opacity hover:opacity-95"
-      style={{ aspectRatio: RATIO_COLLECTION_BAND }}
+      className="relative block cursor-pointer overflow-hidden rounded-card bg-sand-250 transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-menu"
+      style={{ aspectRatio: RATIO_BAND }}
     >
       <FramedImage
         src={collection.image.url}
         alt={collection.name}
-        ratio={RATIO_COLLECTION_BAND}
+        ratio={RATIO_BAND}
         crop={collection.image.crop}
         frames={collection.image.frames}
-        // Masaüstü iki sütun (~623 px, içerik 1360 px'te durur); kompakt hâlde ekran eni.
-        sizes={compact ? '100vw' : '630px'}
-        className="absolute inset-0 h-full w-full"
+        // İki sütunlu ızgarada ~623 px (içerik 1360 px'te durur).
+        sizes="630px"
+        className="absolute inset-0 h-full w-full !rounded-none"
         placeholder={<InitialMark name={collection.name} />}
       />
-      {/* Örtü ŞART, süs değil: başlık fotoğrafın üstünde duruyor ve kapağın açık bir bölgesine
-          denk gelen bir koleksiyon adı okunamaz hâle gelirdi. */}
-      <span className="absolute inset-0" style={{ background: BAND_SCRIM }} />
-      <span className={['absolute flex flex-col gap-1.5', compact ? 'bottom-4 left-4' : 'bottom-6 left-7'].join(' ')}>
-        <span className="font-sans text-micro font-semibold uppercase tracking-wider text-olive-light">{labels.tag}</span>
-        <span className={['font-serif font-medium text-on-image', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>
-          {collection.name}
-        </span>
-        <span className="font-sans text-note font-bold text-on-image">
-          {/* Kampanya sayaçla aynı satırda: kartın ölçüsü fotoğraf oranına bağlı ve yeni satır bandı uzatırdı. */}
+      <span className="pointer-events-none absolute inset-0" style={{ background: COLLECTION_SCRIM }} />
+      <span className="pointer-events-none absolute inset-x-6 bottom-5.5 flex flex-col gap-1.5">
+        <span className="font-sans text-photo-tag text-olive-light uppercase">{labels.tag}</span>
+        <span className="font-serif text-h2 leading-tight text-on-image">{collection.name}</span>
+        {collection.description && (
+          <span className="font-sans text-body-sm leading-normal text-on-image-soft">{collection.description}</span>
+        )}
+        <span className="mt-0.5 font-sans text-control text-sand-50">
+          {/* Kampanya sayaçla aynı satırda: kartın ölçüsü fotoğraf oranına bağlı ve yeni satır kartı uzatırdı. */}
           {labels.items.replace('{n}', String(collection.productCount))}
           {campaignValue === null ? null : ` · ${campaignValue}`} · {labels.go}
         </span>
@@ -137,8 +132,8 @@ interface ProductCardLabels {
   addToCart: string;
   /** Çok varyantlı ürün: listeden eklenemez, detayda seçilir. */
   options: string;
-  /** Çok varyantlıda fiyatın altındaki not ("başlangıç fiyatı — boy detayda seçilir"). */
-  priceFrom: string;
+  /** Çok varyantlıda fiyatın altındaki not ("başlangıç fiyatı — boy detayda seçilir"); verilmezse satır çizilmez. */
+  priceFrom?: string;
   offer: string;
   soldOut: string;
   /** "En fazla {n} adet" — sayısı yerleştirilmiş hâli. */
@@ -159,19 +154,9 @@ interface ProductCardProps {
  */
 export function ProductCard({ product, locale, labels, compact = false }: ProductCardProps) {
   const isOffer = product.wasCents !== undefined;
-  const { add, setQty, lineOf } = useCart();
   // "Bölgenizde şu an yok": ürün ağda var, müşterinin yerine ulaşamıyor. Tükendi DEĞİL — görsel
   // yarı solar (tamamen değil: ürün gerçek ve geri gelecek), fiyat sessizleşir, ad ink kalır.
   const away = product.stockStatus === 'elsewhere';
-  /* Sepete eklenebilirlik iki şarta bağlı: eklenecek bir boy var ve o boy bu kanalda satılıyor. Bayrak değil kimlik tutulur ki
-     tek kaynak hem iki düğmeyi hem eylemi beslesin. */
-  const buyableVariantId = product.priceCents != null ? product.variantId : null;
-  // Tek boylu ürün listeden eklenir; teklif kalemi ÇIPALI PARTİSİYLE girer (DOMAIN §5).
-  const addToCart = () => {
-    if (!buyableVariantId) return;
-    add({ kind: 'variant', variantId: buyableVariantId, qty: 1, stockId: product.stockId });
-  };
-  const inCart = product.variantId ? lineOf({ variantId: product.variantId }) : null;
   return (
     <div className="flex flex-col overflow-hidden rounded-card border border-sand-200 bg-card">
       <Link href={productHref(product.slug)} className="relative cursor-pointer">
@@ -233,76 +218,11 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
             tone={away ? 'muted' : 'default'}
             stacked={compact}
           />
-          {product.soldOut ? (
-            <span
-              aria-disabled
-              className={buttonClass({
-                size: compact ? 'cardSm' : 'card',
-                fullWidth: compact,
-                className: '!bg-disabled-fill !text-white cursor-not-allowed',
-              })}
-            >
-              {labels.addToCart}
-            </span>
-          ) : away ? (
-            /* Kartta tek eylem "haber ver": dar kartta iki düğme sığmaz ve müşterinin sorusu "ne zaman alabilirim". Haberin kalem
-               mi bölge mi olduğunu düğme kendisi seçer. */
-            <StockNoticeButton
-              variantId={product.variantId}
-              productName={product.name}
-              locale={locale}
-              /* Bölge notu alındıktan sonra düğmenin yerine detay köprüsü geçer, uzun onay cümlesi kartta taşardı. */
-              productHref={productHref(product.slug)}
-            />
-          ) : product.purchaseMode === 'options' ? (
-            /* `nowrap` şart: "Seçenekler" ile "→" iki satıra bölünürse düğme kartı dikey olarak şişirir. */
-            <Link
-              href={productHref(product.slug)}
-              className={buttonClass({
-                variant: 'secondary',
-                size: compact ? 'cardSm' : 'card',
-                fullWidth: compact,
-                className: `!border-olive !text-olive whitespace-nowrap ${compact ? '' : 'flex-none'}`,
-              })}
-            >
-              {labels.options}
-            </Link>
-          ) : inCart ? (
-            /* Buton yerine adet seçici: 1'deyken "−" ürünü sepetten çıkarır ve düğme geri gelir; tavan sunucunun çözdüğü fırsat
-               sınırı. */
-            <QtyStepper
-              value={inCart.qty}
-              onChange={(next) => product.variantId && setQty({ kind: 'variant', variantId: product.variantId, stockId: inCart.stockId }, next)}
-              min={0}
-              max={inCart.limitCap}
-              size={compact ? 'xs' : 'md'}
-              fullWidth={compact}
-            />
-          ) : compact ? (
-            /* Dar kartta eylem satırın tamamı: adlı düğme okunur ve 44px'i iki eksende sağlar; eklemede aynı kutuyu dolduran
-               seçiciye döner, kart zıplamaz. */
-            <button
-              type="button"
-              onClick={addToCart}
-              disabled={!buyableVariantId}
-              className={buttonClass({ size: 'cardSm', fullWidth: true, className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
-            >
-              {labels.addToCart}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={addToCart}
-              disabled={!buyableVariantId}
-              className={buttonClass({ size: 'card', className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
-            >
-              {labels.addToCart}
-            </button>
-          )}
+          <ProductCardAction product={product} locale={locale} labels={labels} compact={compact} />
         </div>
         {/* "başlangıç fiyatı" notu tasarımda YALNIZ masaüstü kartında var: mobilde kart zaten dar,
             iki satırlık bir açıklama ızgarayı düzensizleştirir ve "Seçenekler →" aynı şeyi söyler. */}
-        {!compact && product.purchaseMode === 'options' && !product.soldOut && (
+        {!compact && labels.priceFrom && product.purchaseMode === 'options' && !product.soldOut && (
           <span className="font-sans text-micro text-muted">{labels.priceFrom}</span>
         )}
       </div>
@@ -310,42 +230,139 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
   );
 }
 
-interface OfferCardProps {
-  offer: StorefrontOffer;
+interface ProductCardActionProps {
+  product: StorefrontProduct;
   locale: Locale;
-  /** "En fazla {n} adet" — sayı yerleştirilmiş hâli çağırandan gelir (i18n şablonu sayfada çözülür). */
-  limitLabel: string | null;
+  labels: Pick<ProductCardLabels, 'addToCart' | 'options'>;
   compact?: boolean;
 }
 
-export function OfferCard({ offer, locale, limitLabel, compact = false }: OfferCardProps) {
-  return (
-    <Link
-      href={productHref(offer.slug)}
-      className={['flex cursor-pointer items-center bg-card', compact ? 'gap-3 rounded-soft p-3' : 'gap-4 rounded-card p-4'].join(' ')}
+/**
+ * Kartın sepet eylemi — ürün ve fırsat kartı aynı denetimi kullanır: tükendi · haber ver · seçenekler · adet seçici · sepete ekle.
+ */
+function ProductCardAction({ product, locale, labels, compact = false }: ProductCardActionProps) {
+  const { add, setQty, lineOf } = useCart();
+  const away = product.stockStatus === 'elsewhere';
+  /* Sepete eklenebilirlik iki şarta bağlı: eklenecek bir boy var ve o boy bu kanalda satılıyor. Bayrak değil kimlik tutulur ki
+     tek kaynak hem iki düğmeyi hem eylemi beslesin. */
+  const buyableVariantId = product.priceCents != null ? product.variantId : null;
+  // Tek boylu ürün listeden eklenir; teklif kalemi ÇIPALI PARTİSİYLE girer (DOMAIN §5).
+  const addToCart = () => {
+    if (!buyableVariantId) return;
+    add({ kind: 'variant', variantId: buyableVariantId, qty: 1, stockId: product.stockId });
+  };
+  const inCart = product.variantId ? lineOf({ variantId: product.variantId }) : null;
+  return product.soldOut ? (
+    <span
+      aria-disabled
+      className={buttonClass({
+        size: compact ? 'cardSm' : 'card',
+        fullWidth: compact,
+        className: '!bg-disabled-fill !text-white cursor-not-allowed',
+      })}
     >
-      <FramedImage
-        src={offer.image.url}
-        alt={offer.name}
-        ratio={1}
-        crop={offer.image.crop}
-        frames={offer.image.frames}
-        sizes={compact ? '72px' : '96px'}
-        className={compact ? 'size-[72px] flex-none' : 'size-24 flex-none'}
-      />
-      <div className="flex flex-col gap-1">
-        <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body'].join(' ')}>
-          {compact ? `${offer.name} · ${offer.unitLabel}` : offer.name}
+      {labels.addToCart}
+    </span>
+  ) : away ? (
+    /* Kartta tek eylem "haber ver": dar kartta iki düğme sığmaz ve müşterinin sorusu "ne zaman alabilirim". Haberin kalem
+         mi bölge mi olduğunu düğme kendisi seçer. */
+    <StockNoticeButton
+      variantId={product.variantId}
+      productName={product.name}
+      locale={locale}
+      /* Bölge notu alındıktan sonra düğmenin yerine detay köprüsü geçer, uzun onay cümlesi kartta taşardı. */
+      productHref={productHref(product.slug)}
+    />
+  ) : product.purchaseMode === 'options' ? (
+    /* `nowrap` şart: "Seçenekler" ile "→" iki satıra bölünürse düğme kartı dikey olarak şişirir. */
+    <Link
+      href={productHref(product.slug)}
+      className={buttonClass({
+        variant: 'secondary',
+        size: compact ? 'cardSm' : 'card',
+        fullWidth: compact,
+        className: `!border-olive !text-olive whitespace-nowrap ${compact ? '' : 'flex-none'}`,
+      })}
+    >
+      {labels.options}
+    </Link>
+  ) : inCart ? (
+    /* Buton yerine adet seçici: 1'deyken "−" ürünü sepetten çıkarır ve düğme geri gelir; tavan sunucunun çözdüğü fırsat
+         sınırı. */
+    <QtyStepper
+      value={inCart.qty}
+      onChange={(next) => product.variantId && setQty({ kind: 'variant', variantId: product.variantId, stockId: inCart.stockId }, next)}
+      min={0}
+      max={inCart.limitCap}
+      size={compact ? 'xs' : 'md'}
+      fullWidth={compact}
+    />
+  ) : compact ? (
+    /* Dar kartta eylem satırın tamamı: adlı düğme okunur ve 44px'i iki eksende sağlar; eklemede aynı kutuyu dolduran
+         seçiciye döner, kart zıplamaz. */
+    <button
+      type="button"
+      onClick={addToCart}
+      disabled={!buyableVariantId}
+      className={buttonClass({ size: 'cardSm', fullWidth: true, className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
+    >
+      {labels.addToCart}
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={addToCart}
+      disabled={!buyableVariantId}
+      className={buttonClass({ size: 'card', className: 'disabled:cursor-not-allowed disabled:opacity-50' })}
+    >
+      {labels.addToCart}
+    </button>
+  );
+}
+
+interface OfferCardProps {
+  offer: StorefrontOffer;
+  locale: Locale;
+  /** Rozet metni — sınır varsa "En fazla {n} adet", yoksa bölümün "Stokla sınırlı" notu; çağıran çözer. */
+  limitLabel: string;
+  actionLabels: Pick<ProductCardLabels, 'addToCart' | 'options'>;
+}
+
+export function OfferCard({ offer, locale, limitLabel, actionLabels }: OfferCardProps) {
+  return (
+    <div className="flex items-center gap-3.5 rounded-card border border-terracotta-line bg-card p-3.5 transition-shadow hover:shadow-menu">
+      <Link href={productHref(offer.slug)} className="flex-none cursor-pointer">
+        <FramedImage
+          src={offer.image.url}
+          alt={offer.name}
+          ratio={1}
+          crop={offer.image.crop}
+          frames={offer.image.frames}
+          sizes="92px"
+          className="size-[92px] !rounded-[12px] bg-sand-100"
+        />
+      </Link>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <Link
+          href={productHref(offer.slug)}
+          className="cursor-pointer font-sans text-body font-bold text-ink transition-colors hover:text-olive"
+        >
+          {offer.name}
+        </Link>
+        <span className="font-sans text-note text-muted">
+          {[offer.unitLabel, offer.comparisonCents !== null ? formatComparison(offer.comparisonCents, locale) : null]
+            .filter(Boolean)
+            .join(' · ')}
         </span>
-        {!compact && <span className="font-sans text-note text-muted">{offer.unitLabel}</span>}
-        <Price cents={offer.priceCents} wasCents={offer.wasCents} locale={locale} size={compact ? 'sm' : 'lg'} />
-        {limitLabel && (
-          <Badge tone="offer" variant={compact ? 'plain' : 'tint'}>
+        <Price cents={offer.priceCents} wasCents={offer.wasCents} locale={locale} size="lg" />
+        <div className="mt-0.5 flex items-center justify-between gap-2.5">
+          <Badge tone="offer" variant="tint">
             {limitLabel}
           </Badge>
-        )}
+          <ProductCardAction product={offer} locale={locale} labels={actionLabels} />
+        </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -360,7 +377,12 @@ interface PackageCardProps {
 
 export function PackageCard({ pack, locale, badgeLabel, itemsLabel, ctaLabel, compact = false }: PackageCardProps) {
   return (
-    <div className={['flex items-center rounded-card bg-ink text-cream', compact ? 'gap-3.5 p-4' : 'gap-5 p-6'].join(' ')}>
+    <div
+      className={[
+        'flex items-center rounded-card border border-ink-raised-line bg-ink-raised text-cream',
+        compact ? 'gap-3.5 p-4' : 'gap-5 p-6',
+      ].join(' ')}
+    >
       <FramedImage
         src={pack.image.url}
         alt={pack.name}

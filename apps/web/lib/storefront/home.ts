@@ -58,7 +58,7 @@ const OFFER_POOL_LIMIT = 24;
 /** Kategori ızgarası — tasarım altılı tek sıra (`repeat(6,1fr)`). Seçim `is_featured`, sıra `sort_order`. */
 const HOME_CATEGORY_LIMIT = 6;
 
-/** Koleksiyon bandı — tasarım ikili ızgara, 16:7 kapak. Havuz büyükse güne göre döner. */
+/** Koleksiyon bölümü — tasarım ikili ızgara, 16:9 kapak. Havuz büyükse güne göre döner. */
 const HOME_COLLECTION_LIMIT = 2;
 
 /**
@@ -88,19 +88,15 @@ function isOffer(p: StorefrontProduct): p is StorefrontOffer {
  * İndirimin gerçekten uygulanıp uygulanmadığına burada karar VERİLMEZ: `toProduct` fiyatı motora
  * çözdürür, teklif normal fiyatı yenemezse ürün fırsat sayılmaz ve banda girmez. Bant boş kalırsa
  * sayfa bölümü tamamen kaldırır — boş hâl gösterilmez (komponent envanteri K8).
- *
- * **`total` GÖSTERİLENİ DEĞİL, ELDEKİNİ sayar** (09.08): "Daha fazla gör" bağı ancak banda
- * sığmayan fırsat varken çizilir. Gösterilen sayıyı saymak bağı HER ZAMAN çizerdi ve tıklayan
- * müşteri aynı üç ürünü bulurdu — kapı olmayan bir kapı.
  */
 async function readOffers(
   db: SupabaseClient,
   locale: Locale,
   place: PlaceWarehouses,
   viewer: PricingViewer,
-): Promise<{ shown: StorefrontOffer[]; total: number }> {
+): Promise<StorefrontOffer[]> {
   const productIds = await listOfferProductIds(db, place.warehouseId);
-  if (!productIds.length) return { shown: [], total: 0 };
+  if (!productIds.length) return [];
 
   const page = await new ProductService(db).listWithRelations({ filters: { ids: productIds, status: 'active' }, limit: OFFER_POOL_LIMIT });
   const context = await loadProductContext(db, page.rows, place, viewer);
@@ -108,7 +104,7 @@ async function readOffers(
   // ürün fırsat değildir) ve elenen bir ürünü seçime sokmak, bandın bazı yenilemelerde iki kartla
   // çizilmesi demekti — "üçü rastgele" sözü ancak üçü de gerçek fırsatken tutulur.
   const pool = page.rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT)).filter(isOffer);
-  return { shown: pickRandom(pool, OFFER_LIMIT), total: pool.length };
+  return pickRandom(pool, OFFER_LIMIT);
 }
 
 /**
@@ -144,6 +140,7 @@ async function readCollections(db: SupabaseClient, locale: Locale): Promise<Stor
         id: c.id,
         slug: c.slug,
         name: resolveLocalizedText(c.name, locale),
+        description: c.description ? resolveLocalizedText(c.description, locale) || null : null,
         image: imageOf(c),
         // Kampanya kartın YANINDA duyurulur, fiyatta değil (künye `lib/storefront/campaign-note`).
         campaign: campaigns.byCollection.get(c.id) ?? null,
@@ -194,8 +191,13 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
   const shown = categoryRows.length ? pickFeatured(categoryRows, HOME_CATEGORY_LIMIT) : FIXTURE_CATEGORIES;
   // Fotoğraf havuzu (05.23) TEK turda ve YALNIZ vitrine çıkanlar için: seçki `pickFeatured`ten sonra
   // okunuyor, yoksa on kategorinin havuzu çekilip altısı kullanılırdı. Kart başına sorgu yok.
-  const pools = await new CategoryImageService(db).listByCategories(shown.map((c) => c.id));
-  const categories = shown.map((c) => toCategory(c, locale, pools.get(c.id)));
+  const products = new ProductService(db);
+  const [pools, counts] = await Promise.all([
+    new CategoryImageService(db).listByCategories(shown.map((c) => c.id)),
+    // Native vitrinin sayacıyla aynı çağrı (`@lezzet/application` catalog/home).
+    Promise.all(shown.map((c) => products.countMatching({ categoryId: c.id, status: 'active' }))),
+  ]);
+  const categories = shown.map((c, i) => ({ ...toCategory(c, locale, pools.get(c.id)), productCount: counts[i] ?? 0 }));
 
-  return { categories, featured, offers: offers.shown, offersTotal: offers.total, packages, collections, recipes };
+  return { categories, featured, offers, packages, collections, recipes };
 }

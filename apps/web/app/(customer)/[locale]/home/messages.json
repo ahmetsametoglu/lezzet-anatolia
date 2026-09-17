@@ -10,11 +10,13 @@
       "titleAccent": "kapınızda.",
       "body": "El emeğiyle hazırlanan Türk lezzetleri, soğuk zincir bozulmadan taptaze evinize gelir. Tıpkı anne sofrasından çıkmış gibi.",
       "ctaCatalog": "Kataloğa göz at",
-      "ctaDeals": "Bu haftanın fırsatları",
+      "ctaPackages": "Hazır paketlere bak",
       "imageAlt": "Buğusu üstünde börek ve dolu bir aile sofrası"
     },
     "categories": {
-      "title": "Ne arıyorsunuz?"
+      "title": "Ne arıyorsunuz?",
+      "all": "Tüm kategoriler →",
+      "items": "{n} ürün"
     },
     "campaign": {
       "percent": "%{n}",
@@ -22,8 +24,8 @@
       "withMinimum": "{minimum} üzeri {value}"
     },
     "collections": {
-      "title": "Koleksiyonlar",
-      "note": "Döneme özel temalar — göz atın, dilediğinizi tek tek seçin",
+      "eyebrow": "Koleksiyonlar",
+      "title": "Döneme özel seçkiler",
       "tag": "Koleksiyon",
       "items": "{n} ürün",
       "go": "Koleksiyona git →"
@@ -39,11 +41,13 @@
       "all": "Tüm katalog →",
       "addToCart": "Sepete ekle",
       "options": "Seçenekler →",
-      "priceFrom": "başlangıç fiyatı — boy detayda seçilir",
       "offer": "Fırsat",
       "soldOut": "Tükendi — yakında yeniden"
     },
     "packages": {
+      "eyebrow": "Hazır Paketler",
+      "title": "Tek fiyata kurulmuş sofralar",
+      "all": "Tüm paketler →",
       "badge": "Hazır Paket",
       "items": "{n} ürün",
       "cta": "Paketi incele",
@@ -80,10 +84,12 @@
       "titleAccent": "à votre porte.",
       "body": "Des spécialités turques préparées à la main, livrées chez vous en toute fraîcheur grâce à la chaîne du froid. Comme sorties de la table familiale.",
       "ctaCatalog": "Découvrir le catalogue",
-      "ctaDeals": "Les offres de la semaine",
+      "ctaPackages": "Voir les coffrets",
       "imageAlt": "Böreks fumants et une table familiale généreuse"
     },
     "categories": {
+      "all": "Toutes les catégories →",
+      "items": "{n} produits",
       "title": "Que cherchez-vous ?"
     },
     "campaign": {
@@ -92,8 +98,8 @@
       "withMinimum": "dès {minimum} : {value}"
     },
     "collections": {
-      "title": "Collections",
-      "note": "Des thèmes de saison — parcourez, choisissez ce qui vous plaît",
+      "eyebrow": "Collections",
+      "title": "Sélections de saison",
       "tag": "Collection",
       "items": "{n} produits",
       "go": "Voir la collection →"
@@ -109,11 +115,13 @@
       "all": "Tout le catalogue →",
       "addToCart": "Ajouter",
       "options": "Options →",
-      "priceFrom": "prix de départ — le format se choisit en détail",
       "offer": "Offre",
       "soldOut": "Épuisé — bientôt de retour"
     },
     "packages": {
+      "eyebrow": "Coffrets",
+      "title": "Des tables composées à prix unique",
+      "all": "Tous les coffrets →",
       "badge": "Coffret",
       "items": "{n} produits",
       "cta": "Voir le coffret",
@@ -150,11 +158,13 @@
       "titleAccent": "vor Ihrer Tür.",
       "body": "Handgemachte türkische Spezialitäten, dank durchgehender Kühlkette taufrisch bei Ihnen zu Hause. Wie von Mutters Tisch.",
       "ctaCatalog": "Zum Katalog",
-      "ctaDeals": "Angebote der Woche",
+      "ctaPackages": "Fertige Pakete ansehen",
       "imageAlt": "Dampfender Börek und eine reich gedeckte Familientafel"
     },
     "categories": {
-      "title": "Wonach suchen Sie?"
+      "title": "Wonach suchen Sie?",
+      "all": "Alle Kategorien →",
+      "items": "{n} Produkte"
     },
     "campaign": {
       "percent": "{n} %",
@@ -162,8 +172,8 @@
       "withMinimum": "ab {minimum}: {value}"
     },
     "collections": {
-      "title": "Kollektionen",
-      "note": "Saisonale Themen — stöbern Sie und wählen Sie einzeln aus",
+      "eyebrow": "Kollektionen",
+      "title": "Saisonale Auswahl",
       "tag": "Kollektion",
       "items": "{n} Produkte",
       "go": "Zur Kollektion →"
@@ -179,11 +189,13 @@
       "all": "Ganzer Katalog →",
       "addToCart": "In den Korb",
       "options": "Optionen →",
-      "priceFrom": "Startpreis — Größe wird im Detail gewählt",
       "offer": "Angebot",
       "soldOut": "Ausverkauft — bald wieder da"
     },
     "packages": {
+      "eyebrow": "Fertige Pakete",
+      "title": "Gedeckte Tische zum Festpreis",
+      "all": "Alle Pakete →",
       "badge": "Paket",
       "items": "{n} Produkte",
       "cta": "Paket ansehen",

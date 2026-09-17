@@ -35,18 +35,19 @@ export interface StorefrontOffer extends StorefrontProduct {
 }
 
 /**
- * **KOLEKSİYON BANDI** — ana sayfanın "Koleksiyonlar" bölümü (08.26).
+ * **KOLEKSİYON KARTI** — ana sayfanın "Koleksiyonlar" bölümü (08.26).
  *
  * Koleksiyon bir SATIŞ BİRİMİ DEĞİL, paketle karıştırılmamalı: kendi fiyatı, kendi sipariş kalemi
  * yoktur; yalnız kataloğun bir kesitine açılan kapıdır (`/catalog?collection=<slug>`). Kartın
- * taşıdığı her alan tasarımın o banttan istediği kadarı — `description` burada YOK çünkü bantta
- * yazmıyor; paylaşım kartının (OG) metnini katalog sayfası kendi okur.
+ * taşıdığı her alan tasarımın o karttan istediği kadarıdır.
  */
 export interface StorefrontCollection {
   id: string;
   slug: string;
   name: string;
-  /** 16:7 kapak bandı; kapaksız koleksiyon da çizilir (kart adını taşır — boş bant değil). */
+  /** Kartın alt satırı; açıklaması girilmemiş koleksiyonda `null`, satır çizilmez. */
+  description: string | null;
+  /** 16:9 kapak; kapaksız koleksiyon da çizilir (kart adını taşır — boş kart değil). */
   image: StorefrontImage;
   /**
    * Kaç ürün — **kataloğun sayacağıyla AYNI ölçüt** (aktif ürün). Üyelik sayısını basmak kolay
@@ -61,9 +62,12 @@ export interface StorefrontCollection {
   campaign: ScopeCampaign | null;
 }
 
+/** Anasayfa kategori kartı; sayaç kataloğun ölçütüyle aynıdır (aktif ürün), koleksiyon bandındaki gibi. */
+export type StorefrontHomeCategory = StorefrontCategory & { productCount: number };
+
 /** Anasayfanın tek okuma sonucu — bölümler ayrı ayrı çağrılmaz (tek turda toplanır). */
 export interface StorefrontHome {
-  categories: StorefrontCategory[];
+  categories: StorefrontHomeCategory[];
   /** Vitrin seçkisi. */
   featured: StorefrontProduct[];
   /**
@@ -72,11 +76,6 @@ export interface StorefrontHome {
    * var olmamalı").
    */
   offers: StorefrontOffer[];
-  /**
-   * ELDEKİ toplam fırsat sayısı — gösterilen değil. "Daha fazla gör" bağı yalnız
-   * `offersTotal > offers.length` iken çizilir; aksi hâlde tıklayan müşteri aynı üç ürünü bulurdu.
-   */
-  offersTotal: number;
   packages: StorefrontPackage[];
   /** Boşsa koleksiyon bölümü HİÇ çizilmez (tasarımın `hasCollections` koşulu) — boş hâl gösterilmez. */
   collections: StorefrontCollection[];

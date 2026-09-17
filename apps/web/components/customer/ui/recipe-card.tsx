@@ -83,13 +83,21 @@ export function RecipeTeaserCard({ recipe, labels }: RecipeTeaserCardProps) {
       className="group flex cursor-pointer flex-col gap-2.5"
     >
       {/* Yalnız masaüstü ana sayfada, 3 sütunlu ızgarada (~409 px). */}
-      <FramedImage src={recipe.image.url} alt={recipe.name} ratio={RATIO_SOURCE} crop={recipe.image.crop} frames={recipe.image.frames} sizes="410px" />
-      <div className="flex flex-col gap-0.5">
+      <FramedImage
+        src={recipe.image.url}
+        alt={recipe.name}
+        ratio={RATIO_SOURCE}
+        crop={recipe.image.crop}
+        frames={recipe.image.frames}
+        sizes="410px"
+        className="!rounded-card border border-sand-300 bg-sand-200"
+      />
+      <div className="flex flex-col gap-0.75">
         <span className="font-serif text-h2-sm text-ink">{recipe.name}</span>
-        <span className="font-sans text-note text-muted">{meta}</span>
+        <span className="font-sans text-control font-normal text-muted">{meta}</span>
         {/* Çağrı kartın İÇİNDE bir bağ değil, kartın kendi bağının etiketi — kart zaten tıklanabilir.
             Bağ içinde bağ erişilebilirlikte geçersiz (liste kartıyla aynı karar). */}
-        <span className="mt-0.5 font-sans text-note font-bold text-olive transition-colors group-hover:text-olive-dark">
+        <span className="font-sans text-control text-olive transition-colors group-hover:text-olive-dark">
           {labels.cta}
         </span>
       </div>

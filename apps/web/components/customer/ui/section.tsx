@@ -20,49 +20,36 @@ interface SectionAction {
 
 interface SectionHeadingProps {
   title: string;
-  /**
-   * Başlığın ÜSTÜNDEKİ küçük etiket ("SOFRADAN FİKİRLER") — bölümün adı, başlık ise onun sorusu
-   * (tasarım 09.08, tarif şeridi). Verilince başlık bloğu dikey akar; verilmeyince bugünkü tek
-   * satırlık hâl aynen korunur, yani mevcut bölümlerin hiçbiri değişmez.
-   */
+  /** Başlığın üstündeki küçük etiket ("SOFRADAN FİKİRLER"); verilmezse başlık tek satırdır. */
   eyebrow?: string;
-  /** Başlığın yanındaki kısa not ("Stokla sınırlı") — vurgu rengiyle, ikincil ağırlıkta. */
-  note?: string;
+  /** Renk tonu — fırsat bölümü turuncu, koyu bant (`onDark`) açık yeşil etiket ve krem başlıkla konuşur. */
+  tone?: 'olive' | 'terracotta' | 'onDark';
   /** Sağa yaslı bağlantı ("Tüm katalog →"). */
   action?: SectionAction;
   compact?: boolean;
 }
 
-/**
- * K13 · Bölüm Başlığı — (etiket +) başlık + yan not, sağda aksiyon.
- *
- * **Not ile aksiyon ARTIK BİRLİKTE verilebilir (09.08).** Önce "ikisi aynı anda verilmez" diyordu
- * ve bu, fırsat bandının "Tüm fırsatlar →" bağını başlıktan dışarı itmişti — bant "Stokla sınırlı"
- * notunu taşıdığı için bağ ızgaranın altında kalmış, öteki iki bölümün ("Tüm katalog →" · "Tüm
- * tarifler →") deseninden ayrışmıştı (kullanıcı gördü). Ayrışmanın sebebi bir tasarım kararı değil,
- * bu bileşenin kendi kısıtıydı.
- *
- * Yerleşim: **başlık ve not tek grup halinde solda**, aksiyon sağda. Üçünü tek `justify-between`
- * satırına dizmek notu ortaya sürüklerdi — not başlığın niteleyicisidir, bağımsız bir sütun değil.
- */
-export function SectionHeading({ title, eyebrow, note, action, compact = false }: SectionHeadingProps) {
-  const heading = <h2 className={['font-serif text-ink', compact ? 'text-h2-sm' : 'text-h2'].join(' ')}>{title}</h2>;
+/** K13 · Bölüm Başlığı — (üst etiket +) başlık solda, bağlantı sağda. */
+export function SectionHeading({ title, eyebrow, tone = 'olive', action, compact = false }: SectionHeadingProps) {
+  const accent = tone === 'terracotta' ? 'text-terracotta' : tone === 'onDark' ? 'text-olive-light' : 'text-olive';
+  const actionTone =
+    tone === 'terracotta' ? '!text-terracotta hover:!text-terracotta-bright' : tone === 'onDark' ? '!text-olive-light hover:!text-sand-50' : '';
+  const heading = (
+    <h2 className={['font-serif', tone === 'onDark' ? 'text-sand-50' : 'text-ink', compact ? 'text-h2-sm' : 'text-h2'].join(' ')}>{title}</h2>
+  );
 
   return (
     <div className="flex items-baseline justify-between gap-3.5">
-      <div className="flex items-baseline gap-3.5">
-        {eyebrow ? (
-          <div className="flex flex-col gap-1">
-            <span className="font-sans text-micro font-semibold tracking-wider text-olive uppercase">{eyebrow}</span>
-            {heading}
-          </div>
-        ) : (
-          heading
-        )}
-        {note && <span className={['font-sans font-semibold text-terracotta', compact ? 'text-micro' : 'text-note'].join(' ')}>{note}</span>}
-      </div>
+      {eyebrow ? (
+        <div className="flex flex-col gap-1">
+          <span className={`font-sans text-note font-semibold tracking-[0.12em] uppercase ${accent}`}>{eyebrow}</span>
+          {heading}
+        </div>
+      ) : (
+        heading
+      )}
       {action && (
-        <Link href={action.href} className={buttonClass({ variant: 'ghost', size: compact ? 'sm' : 'md', className: '!font-bold' })}>
+        <Link href={action.href} className={buttonClass({ variant: 'ghost', size: compact ? 'sm' : 'md', className: `!font-bold ${actionTone}` })}>
           {action.label}
         </Link>
       )}
