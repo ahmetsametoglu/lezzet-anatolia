@@ -10,7 +10,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { offerDecisionOf, productPublishGaps, suggestedOfferPriceCents } from '@lezzet/domain-core';
-import { missingDeclarations, resolveLocalizedText, type Product } from '@lezzet/types';
+import { missingDeclarations, resolveLocalizedText, type KeysetCursor, type Product } from '@lezzet/types';
 import { LOCALES } from '@lezzet/i18n';
 
 /**
@@ -24,12 +24,13 @@ export async function catalogHealth(limit: number) {
   const db = serviceDb();
   const products = new ProductService(db);
 
-  const [counts, incomplete, candidates, featured] = await Promise.all([
+  const [counts, incomplete, candidates, onSale, featured] = await Promise.all([
     products.counts(),
     // Süzgeç sunucuda — tüm kataloğu çekip uygulamada elemek katalog büyüdükçe sessizce yavaşlardı.
     products.list({ filters: { onlyIncomplete: true, status: 'active' }, limit: clamped }),
-    // Yayın kuralının kolonu yok, adaylar burada süzülür; aday kümesini operatör kurar ve tek turda okunur.
+    // Yayın kuralının ve görselin süzgeci yok; aday ve satış kümelerini operatör kurar, uygulamada süzülürler.
     products.listCandidates(),
+    listActive(products),
     featuredOverview(),
   ]);
 
@@ -37,6 +38,10 @@ export async function catalogHealth(limit: number) {
   const notReady = candidates
     .map((p) => ({ p, publishGaps: productPublishGaps(p), missing: missingDeclarations(p) }))
     .filter((c) => c.publishGaps.length > 0 || c.missing.length > 0);
+  const shown = notReady.slice(0, clamped);
+  const priced = await pricedProductIds(shown.map((c) => c.p.id));
+  const activeWithoutImage = onSale.filter((p) => p.imageKey === null);
+  const candidatesWithoutImage = candidates.filter((p) => p.imageKey === null);
 
   return {
     totals: {
@@ -46,10 +51,45 @@ export async function catalogHealth(limit: number) {
     },
     // Satıştaki üründe hangi beyan eksik — asistan "ürün detayını tamamla" işine buradan başlar.
     incompleteProducts: incomplete.rows.map((p) => ({ ...productRef(p), missing: missingDeclarations(p) })),
-    candidatesNotReady: notReady.slice(0, clamped).map(({ p, publishGaps, missing }) => ({ ...productRef(p), publishGaps, missing })),
+    candidatesNotReady: shown.map(({ p, publishGaps, missing }) => ({
+      ...productRef(p),
+      hasPrice: priced.has(p.id),
+      publishGaps,
+      missing,
+    })),
     candidatesNotReadyTotal: notReady.length,
+    withoutImage: {
+      activeTotal: activeWithoutImage.length,
+      active: activeWithoutImage.slice(0, clamped).map(productRef),
+      candidateTotal: candidatesWithoutImage.length,
+      candidates: candidatesWithoutImage.slice(0, clamped).map(productRef),
+    },
     featured,
   };
+}
+
+/** Satıştaki ürünlerin tamamı, sayfa sayfa. */
+async function listActive(products: ProductService): Promise<Product[]> {
+  const rows: Product[] = [];
+  let cursor: KeysetCursor | undefined;
+  do {
+    const page = await products.list({ filters: { status: 'active' }, limit: 200, cursor });
+    rows.push(...page.rows);
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor);
+  return rows;
+}
+
+/** Müşteri (b2c) fiyatı olan ürünler — fiyatsız aday, eksiği kalmasa da satışa çıkamaz. */
+async function pricedProductIds(productIds: string[]): Promise<Set<string>> {
+  if (productIds.length === 0) return new Set();
+  const db = serviceDb();
+  const variants = await new ProductVariantService(db).listByProducts(productIds);
+  const prices = await new PriceService(db).findApplicableMap(
+    variants.map((v) => v.id),
+    'b2c',
+  );
+  return new Set(variants.filter((v) => prices.get(v.id)?.channelPrice).map((v) => v.productId));
 }
 
 /** Satırın kimliği — öneri araçları `productId` ister, asistan adı ve görsel durumunu okur. */

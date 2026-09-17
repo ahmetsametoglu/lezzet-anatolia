@@ -255,6 +255,9 @@ describe('katalog ve stok araçları', () => {
     // Beyanı tam ama açıklaması tek dilde: eksik beyan listesi onu görmez, yayın kuralı görür.
     expect(row?.missing).toEqual([]);
     expect(row?.publishGaps).toEqual([{ field: 'description', missing: ['fr', 'de'] }]);
+    // Fiyatı ve görseli yok: asistan "tek eksik açıklama" diyemesin.
+    expect(row?.hasPrice).toBe(false);
+    expect(health.withoutImage.candidates.some((p) => p.productId === product.id)).toBe(true);
   });
 
   it('stock_watch parti satırlarını depo koduyla verir ve kesmeyi SÖYLER', async () => {
