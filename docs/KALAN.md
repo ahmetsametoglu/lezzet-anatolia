@@ -367,3 +367,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   Meta da kişisel veri işliyor (tam liste `docs/architecture/INTEGRATIONS.md`).
 - [ ] (K.14) [hedef: web] Gerçek test besleme dosyası — test sunucusunun ve üretimin ilk başlangıç verisi olacak;
   bugünkü `base` katmanıyla ilişkisi (yerine mi, üstüne mi) kullanıcıyla birlikte kararlaştırılır.
+- [ ] (K.18) [hedef: mobil] Profesyoneller ekranının başlığı her dilin kendi sözcüğü olsun: TR "Profesyoneller", DE
+  "Geschäftskunden" (FR "Professionnels" kalır) — web menüsü ve sayfası bu sözcüklere geçti, native
+  `screens/professionals/messages.json` üç dilde hâlâ "Professionnels" diyor.

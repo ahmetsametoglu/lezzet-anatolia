@@ -124,13 +124,8 @@ export const PATHNAMES = {
    * "keşfet" diye arar, "aday ürün" diye değil (tasarım §6: iç kavramlar görünmez).
    */
   '/discover': { fr: '/decouverte', de: '/entdecken', tr: '/kesfet' },
-  /**
-   * B2B tanıtım + self-servis kayıt (08.7). **Menüdeki etiket üç dilde de "Professionnels"**
-   * (tasarımın kararı: marka sözcüğü), ama ADRES dile göre çevrilir ve bu ikisi çelişmez —
-   * etiket bir marka işareti, URL bir ARAMA sözcüğüdür. Alman restoran sahibi "Professionnels"
-   * diye aramaz; yasal sayfalarda verilen kararın aynısı (aşağıdaki künye).
-   */
-  '/professionals': { fr: '/professionnels', de: '/geschaeftskunden', tr: '/kurumsal' },
+  /** B2B tanıtım + self-servis kayıt (08.7). Etiket ve adres her dilde aynı sözcük: Profesyoneller · Professionnels · Geschäftskunden. */
+  '/professionals': { fr: '/professionnels', de: '/geschaeftskunden', tr: '/profesyoneller' },
   '/legal/terms': { fr: '/mentions-legales', de: '/impressum', tr: '/yasal-bilgiler' },
   '/legal/sales': { fr: '/conditions-generales-de-vente', de: '/agb', tr: '/satis-kosullari' },
   '/legal/privacy': { fr: '/confidentialite', de: '/datenschutz', tr: '/gizlilik' },

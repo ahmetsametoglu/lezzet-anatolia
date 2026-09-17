@@ -24,9 +24,6 @@ import messages from './messages.json';
  *
  * **Toptan fiyat bu sayfada HİÇ geçmez** — ne liste, ne aralık, ne "şu kadardan başlayan"
  * (tasarım §6). Onaysız açılan bir fiyat listesi, rakibe açılmış bir fiyat listesidir.
- *
- * Menüdeki etiket üç dilde de "Professionnels", adres dile göre çevriliyor: etiket marka
- * sözcüğü, URL arama sözcüğü (gerekçe `PATHNAMES`te).
  */
 interface ProfessionalsPageProps {
   params: Promise<{ locale: string }>;

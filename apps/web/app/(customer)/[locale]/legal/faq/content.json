@@ -30,7 +30,7 @@
       {
         "id": "toptan",
         "question": "Restoranım için toptan fiyat alabilir miyim?",
-        "answer": "Evet. \"Professionnels\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ve çekle ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
+        "answer": "Evet. \"Profesyoneller\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ve çekle ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
       },
       {
         "id": "alerjen",
@@ -130,7 +130,7 @@
       {
         "id": "toptan",
         "question": "Bekomme ich Großhandelspreise für mein Restaurant?",
-        "answer": "Ja. Sie können sich über die Seite „Professionnels“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt. Geschäftskonten können zusätzlich per Überweisung und Scheck bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
+        "answer": "Ja. Sie können sich über die Seite „Geschäftskunden“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt. Geschäftskonten können zusätzlich per Überweisung und Scheck bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
       },
       {
         "id": "alerjen",
