@@ -1,4 +1,5 @@
 import 'server-only';
+import { productIdOfCode } from '@lezzet/application';
 import {
   ProductService,
   ProductVariantService,
@@ -13,7 +14,6 @@ import {
 import type { serviceDb } from '@lezzet/database';
 import { summarizePurchaseOrder } from '@lezzet/domain-core';
 import { resolveLocalizedText, type KeysetCursor, type PurchaseOrderRow, type PurchaseOrderStatus } from '@lezzet/types';
-import { productIdOfCode } from '@/lib/catalog/code-search';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseContext } from '@/lib/warehouse/context';
 import type {

@@ -1,3 +1,4 @@
+import { productIdOfCode } from '@lezzet/application';
 import {
   BundleService,
   CategoryService,
@@ -6,11 +7,19 @@ import {
   ProductService,
   ProductVariantService,
   StockService,
+  VariantBarcodeService,
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
 import { offerDecisionOf, productPublishGaps, suggestedOfferPriceCents } from '@lezzet/domain-core';
-import { missingDeclarations, resolveLocalizedText, type KeysetCursor, type Product } from '@lezzet/types';
+import {
+  missingDeclarations,
+  resolveLocalizedText,
+  type KeysetCursor,
+  type Product,
+  type ProductVariant,
+  type VariantBarcode,
+} from '@lezzet/types';
 import { LOCALES } from '@lezzet/i18n';
 
 /**
@@ -90,6 +99,19 @@ async function pricedProductIds(productIds: string[]): Promise<Set<string>> {
     'b2c',
   );
   return new Set(variants.filter((v) => prices.get(v.id)?.channelPrice).map((v) => v.productId));
+}
+
+/**
+ * Boyun ölçülebilir kimliği — etiket müşterinin okuduğu, bunlar öneri araçlarının girdisi: gramajı boş
+ * varyant tamamlanacak olandır, kodu dönen varyanta ikinci kez barkod önerilmez.
+ */
+function variantIdentity(variant: ProductVariant, codes: readonly VariantBarcode[]) {
+  return {
+    sku: variant.sku,
+    netWeightG: variant.netWeightG,
+    piecesCount: variant.piecesCount,
+    barcodes: codes.filter((c) => c.variantId === variant.id).map((c) => ({ code: c.code, kind: c.kind, qtyPerCode: c.qtyPerCode })),
+  };
 }
 
 /** Satırın kimliği — öneri araçları `productId` ister, asistan adı ve görsel durumunu okur. */
@@ -206,19 +228,28 @@ export async function stockWatch(days: number) {
  */
 export async function catalogLookup(query: string, limit: number) {
   const term = query.trim();
-  if (!term) return { error: 'query zorunlu — ürün adının bir parçası yeter ("kek", "baklava").' };
+  if (!term) return { error: 'query zorunlu — ürün adı, barkod, SKU ya da tedarikçi kodu.' };
 
   const clamped = Math.max(1, Math.min(25, Math.floor(limit)));
   const db = serviceDb();
-  // Arama ürün adında ve üç dilde birden — asistan Türkçe sorar, katalogda Fransızca ad durabilir.
-  const page = await new ProductService(db).list({ filters: { query: term }, limit: clamped });
-  if (page.rows.length === 0) return { query: term, found: 0, products: [] };
+  const products = new ProductService(db);
+  // Terim bir KODSA ad araması hiç koşmaz (`productIdOfCode` künyesi): elindeki ambalajı okutan asistan
+  // kesin kimliği verir, adın belirsizliğiyle harmanlamak tek koda iki ürün döndürürdü.
+  const codeProductId = await productIdOfCode(db, term);
+  /** Eşleşme adla mı kodla mı kuruldu — kodla gelen tek ürün kesin kimliktir, ada benzeyen bir tahmin değil. */
+  const matchedBy = codeProductId === null ? ('name' as const) : ('code' as const);
+  const rows = codeProductId
+    ? await products.listByIds([codeProductId])
+    : (await products.list({ filters: { query: term }, limit: clamped })).rows;
+  const page = { rows, truncated: codeProductId === null && rows.length >= clamped };
+  if (page.rows.length === 0) return { query: term, matchedBy, found: 0, products: [] };
 
   const variants = await new ProductVariantService(db).listByProducts(page.rows.map((p) => p.id));
   const variantIds = variants.map((v) => v.id);
-  const [priceMap, batches] = await Promise.all([
+  const [priceMap, batches, codes] = await Promise.all([
     new PriceService(db).findApplicableMap(variantIds, 'b2c'),
     new StockService(db).listInStockDetailed(variantIds),
+    new VariantBarcodeService(db).listByVariants(variantIds),
   ]);
 
   // Maliyet elde duran en yeni partinin alış fiyatıdır, ortalama değil: paket fiyatı bugünkü yenileme maliyetine göre kurulur.
@@ -229,8 +260,9 @@ export async function catalogLookup(query: string, limit: number) {
 
   return {
     query: term,
+    matchedBy,
     found: page.rows.length,
-    truncated: page.rows.length >= clamped,
+    truncated: page.truncated,
     products: page.rows.map((p) => ({
       productId: p.id,
       name: resolveLocalizedText(p.name, 'tr'),
@@ -245,6 +277,7 @@ export async function catalogLookup(query: string, limit: number) {
           return {
             variantId: v.id,
             unit: resolveLocalizedText(v.label, 'tr'),
+            ...variantIdentity(v, codes),
             isActive: v.isActive,
             listPriceCentsIncVat: listIncVat,
             /**
@@ -315,6 +348,7 @@ export async function productDetail(productIdOrName: string) {
 
   const product = rows[0]!;
   const variants = await new ProductVariantService(db).listByProducts([product.id]);
+  const codes = await new VariantBarcodeService(db).listByVariants(variants.map((v) => v.id));
 
   /** Dil başına doluluk ve kısa önizleme — metnin kendisi değil, kararın girdisi. */
   const fields = (text: Record<string, string | undefined> | null | undefined) =>
@@ -335,7 +369,12 @@ export async function productDetail(productIdOrName: string) {
     // Alerjen kapalı bir küme, metin değil — dil başına doluluk sorusu anlamsız, listenin kendisi döner.
     allergens: product.allergens,
     hasNutrition: product.nutrition !== null && product.nutrition !== undefined,
-    variants: variants.map((v) => ({ variantId: v.id, unit: resolveLocalizedText(v.label, 'tr'), isActive: v.isActive })),
+    variants: variants.map((v) => ({
+      variantId: v.id,
+      unit: resolveLocalizedText(v.label, 'tr'),
+      ...variantIdentity(v, codes),
+      isActive: v.isActive,
+    })),
     /** Motorun gördüğü eksikler — `catalog_health`e ikinci tur atmadan. */
     declarationGaps: missingDeclarations(product),
     /** Satışa almayı engelleyen alanlar ve eksik dilleri — veritabanının yayın kısıtıyla aynı kural. */

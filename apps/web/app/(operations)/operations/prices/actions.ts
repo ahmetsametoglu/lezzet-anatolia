@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { productIdOfCode } from '@lezzet/application';
 import { CategoryService, DiscountService, PriceGroupService, PriceService, ProductService, serviceDb } from '@lezzet/database';
 import { costOf } from '@lezzet/domain-core';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText, type Channel, type KeysetCursor, type Price } from '@lezzet/types';
@@ -11,7 +12,6 @@ import { repriceAllAuto } from '@/lib/pricing/auto-price';
 import { readCostBasis } from '@/lib/pricing/cost-basis';
 import { toPriceRows, type ChannelPriceMaps } from '@/lib/pricing/price-rows';
 import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
-import { productIdOfCode } from '@/lib/catalog/code-search';
 import { titleOf } from '@/lib/catalog/title';
 import { type PriceRow, type VariantOption } from './prices-types';
 

@@ -111,11 +111,14 @@ export const TOOLS = [
   {
     name: 'catalog_lookup',
     description:
-      'Search the catalog by product name (matches all three languages) and get the IDENTIFIERS the propose_* tools need: productId, variantId per size, plus list price (b2c, VAT-INCLUSIVE) and stockBatchCostCents (VAT-EXCLUSIVE, null when unknown — never treat null as zero). This is the bridge between reading tools (which speak names) and writing tools (which need ids). Use it before proposing a bundle, a recipe or a product draft. NOTE ON COST: stockBatchCostCents is what we paid for the NEWEST BATCH WE ARE HOLDING. It is NOT the supplier\'s current price. The purchase-order lines returned by propose_purchase_order carry lastPurchasePriceCents, which comes from the SUPPLIER MAPPING — a different question, and the two legitimately differ (the batch may have come from another supplier, or the price moved). Do not compare them and do not report a discrepancy between them as a fault; that mistake was made three rounds running.',
+      'Search the catalog by product name (matches all three languages) OR by a code printed on the package — barcode, our SKU, or a supplier code, in that order. A code is an exact identity: when it matches, you get that one product and matchedBy says "code"; otherwise the name search runs and matchedBy says "name". Returns the IDENTIFIERS the propose_* tools need: productId, variantId per size, plus each size\'s sku, netWeightG (null = the size has no weight recorded yet), piecesCount and the barcodes already bound to it (code, kind unit/case, qtyPerCode), and list price (b2c, VAT-INCLUSIVE) and stockBatchCostCents (VAT-EXCLUSIVE, null when unknown — never treat null as zero). This is the bridge between reading tools (which speak names) and writing tools (which need ids). Use it before proposing a bundle, a recipe or a product draft, and whenever the admin reads you a code off a package. NOTE ON COST: stockBatchCostCents is what we paid for the NEWEST BATCH WE ARE HOLDING. It is NOT the supplier\'s current price. The purchase-order lines returned by propose_purchase_order carry lastPurchasePriceCents, which comes from the SUPPLIER MAPPING — a different question, and the two legitimately differ (the batch may have come from another supplier, or the price moved). Do not compare them and do not report a discrepancy between them as a fault; that mistake was made three rounds running.',
     inputSchema: {
       type: 'object',
       properties: {
-        query: { type: 'string', description: 'Part of a product name, e.g. "kek", "baklava".' },
+        query: {
+          type: 'string',
+          description: 'Part of a product name ("kek", "baklava") or a code off the package: barcode, SKU or supplier code.',
+        },
         limit: { type: 'number', description: 'Max products, 1-25. Default 10.' },
       },
       required: ['query'],
@@ -125,7 +128,7 @@ export const TOOLS = [
   {
     name: 'product_detail',
     description:
-      'Read ONE product as it stands today — per language. Call this BEFORE propose_product_draft: that tool OVERWRITES and there is no version history, so writing blind can erase someone\'s work. For name, description, ingredients and storage you get, per locale (tr/fr/de), whether the field is filled and a short preview — enough to decide "may I write here, or would I be deleting something". Allergens come back as the list itself (a closed set, not text): null means never declared, an empty list means declared allergen-free; nutrition comes back as a yes/no. declarationGaps repeats what the engine sees missing, so you do not need a second catalog_health call; publishGaps lists what still blocks putting the product on sale, each field with the languages it lacks. Accepts a productId or part of a name; if several products match it returns the matches instead of guessing one.',
+      'Read ONE product as it stands today — per language. Call this BEFORE propose_product_draft: that tool OVERWRITES and there is no version history, so writing blind can erase someone\'s work. For name, description, ingredients and storage you get, per locale (tr/fr/de), whether the field is filled and a short preview — enough to decide "may I write here, or would I be deleting something". Allergens come back as the list itself (a closed set, not text): null means never declared, an empty list means declared allergen-free; nutrition comes back as a yes/no. declarationGaps repeats what the engine sees missing, so you do not need a second catalog_health call; publishGaps lists what still blocks putting the product on sale, each field with the languages it lacks. Each size comes back with its label, sku, netWeightG (null = no weight recorded), piecesCount and the barcodes bound to it, so you can see what is still missing on the size itself. Accepts a productId or part of a name; if several products match it returns the matches instead of guessing one.',
     inputSchema: {
       type: 'object',
       properties: {

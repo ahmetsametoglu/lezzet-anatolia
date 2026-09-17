@@ -318,6 +318,7 @@ export { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } f
 // taşındı. Web kopyaları geçiş köprüsüdür, benimsemesi ayrı talep dosyasıyla gider.
 export { getCatalogData, readCollectionHead } from './catalog/catalog';
 export type { CatalogInput, CatalogQuery } from './catalog/catalog';
+export { productIdOfCode } from './catalog/code-search';
 export { getProductDetail } from './catalog/product';
 export type { ProductDetailInput } from './catalog/product';
 export { loadProductContext, listOfferProductIds } from './catalog/product-context';

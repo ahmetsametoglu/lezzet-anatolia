@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
-import { McpConnectionKeyService, ProductService, serviceDb } from '@lezzet/database';
+import { McpConnectionKeyService, ProductService, VariantBarcodeService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mcpGuard, scopeAllows, toolScope } from './guard';
 import { resetRateLimit } from './rate-limit';
 import { HANDLERS, TOOLS } from './server-factory';
 import { morningBriefing, salesSummary, systemErrors } from './tools';
-import { catalogHealth, soldOutWatch, stockWatch } from './tools-catalog';
+import { catalogHealth, catalogLookup, soldOutWatch, stockWatch } from './tools-catalog';
 import { referenceData } from './tools-reference';
 import { customerPulse, demandSignals } from './tools-signals';
 
@@ -258,6 +258,26 @@ describe('katalog ve stok araçları', () => {
     // Fiyatı ve görseli yok: asistan "tek eksik açıklama" diyemesin.
     expect(row?.hasPrice).toBe(false);
     expect(health.withoutImage.candidates.some((p) => p.productId === product.id)).toBe(true);
+  });
+
+  it('catalog_lookup ürünü BARKODDAN bulur; boy satırı gramajı ve bağlı kodu taşır', async () => {
+    const { product, variants } = await new ProductService(db).create({
+      name: { tr: `Kodlu ürün ${stamp}`, fr: `Produit codé ${stamp}`, de: `Kodiertes Produkt ${stamp}` },
+      variants: [{ label: { tr: '450 g', fr: '450 g', de: '450 g' }, netWeightG: 450, sku: `SKU-${stamp}` }],
+    });
+    createdProductIds.push(product.id);
+    const code = `2${String(stamp).slice(-12)}`;
+    await new VariantBarcodeService(db).insert({ variantId: variants[0]!.id, code, kind: 'case', qtyPerCode: 12 });
+
+    const found = await catalogLookup(code, 10);
+    if ('error' in found) throw new Error(found.error);
+    // Kod zinciri aramadan düşerse elinde koli olan asistan ürünü bulamaz — ad araması koliyi tanımaz.
+    expect(found.matchedBy).toBe('code');
+    expect(found.products.map((p) => p.productId)).toEqual([product.id]);
+    // Gramaj ve kod olmadan asistan boyu tamamlanacak varyantı ayırt edemez, bağlı kodu ikinci kez önerir.
+    const size = found.products[0]?.variants[0];
+    expect(size?.netWeightG).toBe(450);
+    expect(size?.barcodes).toEqual([{ code, kind: 'case', qtyPerCode: 12 }]);
   });
 
   it('stock_watch parti satırlarını depo koduyla verir ve kesmeyi SÖYLER', async () => {
