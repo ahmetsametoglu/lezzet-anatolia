@@ -1,4 +1,4 @@
-import { brand } from '@lezzet/brand';
+import { BrandLogo } from '@/components/customer/ui/brand-logo';
 import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { Button } from '@/components/customer/ui/button';
@@ -42,7 +42,7 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
           <Button variant="ghost" size="sm" onClick={onBack}>
             {t.back}
           </Button>
-          <img src="/logo-dikey.png" alt={brand.name} className="h-[48px]" />
+          <BrandLogo size="compact" />
           <span className="w-11" />
         </div>
 

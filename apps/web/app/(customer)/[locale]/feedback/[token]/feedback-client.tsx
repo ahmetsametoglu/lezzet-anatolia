@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/customer/ui/brand-logo';
 import type { Locale } from '@lezzet/i18n';
 import type { FeedbackVote } from '@lezzet/types';
 import type { Device } from '@/lib/device';
@@ -193,7 +193,7 @@ function Welcome({ t, locale, invite, compact, onStart }: { t: Messages; locale:
 
   return (
     <div className="flex flex-col items-center gap-3.5 py-6 text-center">
-      <Image src="/logo-dikey.png" alt="" width={92} height={48} className="h-[48px] w-auto" />
+      <BrandLogo size="compact" alt="" />
       <h1 className={`font-serif ${compact ? 'text-page-title-sm' : 'text-card-title'} leading-tight text-ink`}>{t.welcomeTitle}</h1>
       <p className="font-sans text-body-sm leading-relaxed text-body">
         {t.welcomeBody
