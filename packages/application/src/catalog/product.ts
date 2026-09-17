@@ -72,14 +72,14 @@ function declarationOf(
     ingredients: LocalizedText | null;
     storageInstructions: LocalizedText | null;
     nutrition: StorefrontDeclaration['nutrition'];
-    allergens: StorefrontDeclaration['allergens'];
+    allergens: StorefrontDeclaration['allergens'] | null;
     traces: StorefrontDeclaration['traces'];
   },
   locale: PreferredLanguage,
 ): StorefrontDeclaration {
   return {
     ingredients: segmentsOf(product.ingredients, locale),
-    allergens: product.allergens,
+    allergens: product.allergens ?? [],
     traces: product.traces,
     // Hiçbir kalemi girilmemiş künye boş tablo çizdirmesin — "beyan var" izlenimi yanlış olur.
     nutrition: hasNutrition(product.nutrition) ? product.nutrition : null,

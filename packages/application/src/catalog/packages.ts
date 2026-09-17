@@ -6,7 +6,6 @@ import {
   type BundleItem,
   type PreferredLanguage,
   type Product,
-  type ProductAllergen,
   type ProductVariant,
 } from '@lezzet/types';
 import { decideBundleAgainstWarehouse } from '@lezzet/domain-core';
@@ -92,7 +91,7 @@ function toDetail(bundle: BundleRow, locale: PreferredLanguage, context: Package
     .filter((p): p is Product => p !== undefined);
 
   // Alerjen birleşimi: aynı alerjen bir kez yazılır, sıra ilk görüldüğü kalemden (alfabetik sıra dile göre değişirdi).
-  const allergens = [...new Set(products.flatMap((p) => p.allergens))] as ProductAllergen[];
+  const allergens = [...new Set(products.flatMap((p) => p.allergens ?? []))];
 
   // Paketin ömrü en kısa ömürlü kalemidir; bilgisi olmayan sayılmaz, hiçbirinde yoksa null — varsayılan uydurmak gıdada yanlış söz olurdu.
   const lives = products.map((p) => p.shelfLifeDays).filter((d): d is number => d !== null);

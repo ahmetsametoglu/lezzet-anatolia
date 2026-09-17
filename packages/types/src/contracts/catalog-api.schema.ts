@@ -186,7 +186,8 @@ const TextSegmentSchema = z.object({ text: z.string(), strong: z.boolean() });
  * `null` metin ya da besin tablosu girilmemiş demektir, çünkü boş başlık ve boş tablo "beyan var" izlenimi verirdi;
  * net ağırlık boyun alanıdır.
  */
-const CatalogDeclarationSchema = ProductSchema.pick({ allergens: true, traces: true, nutrition: true }).extend({
+const CatalogDeclarationSchema = ProductSchema.pick({ traces: true, nutrition: true }).extend({
+  allergens: ProductSchema.shape.allergens.unwrap(),
   ingredients: z.array(TextSegmentSchema).nullable(),
   storage: z.array(TextSegmentSchema).nullable(),
 });

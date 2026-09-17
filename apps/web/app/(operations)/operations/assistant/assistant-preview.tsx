@@ -624,7 +624,7 @@ function pickDeclaration(payload: ProductCreatePayload) {
 function DeclarationBlocks({
   fields,
 }: {
-  fields: { allergens?: readonly ProductAllergen[]; traces?: readonly ProductAllergen[]; nutrition?: unknown };
+  fields: { allergens?: readonly ProductAllergen[] | null; traces?: readonly ProductAllergen[]; nutrition?: unknown };
 }) {
   const nutrition = (fields.nutrition ?? null) as Nutrition | null;
   return (
