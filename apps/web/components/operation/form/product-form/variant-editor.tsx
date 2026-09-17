@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { barcodeProblem } from '@lezzet/domain-core';
 import { resolveLocalizedText, type BarcodeKind, type LocalizedText, type VariantBarcode } from '@lezzet/types';
@@ -56,8 +56,6 @@ function BarcodeCell({
   onUnlearn: (code: VariantBarcode) => void;
 }) {
   const [draft, setDraft] = useState('');
-  const [kind, setKind] = useState<BarcodeKind>('unit');
-  const [qty, setQty] = useState(12);
   const [problem, setProblem] = useState<string | null>(null);
 
   return (
@@ -74,101 +72,128 @@ function BarcodeCell({
             setProblem(sorun);
             return;
           }
-          // `unit` kodun çarpanı DAİMA 1 — kısıt veride de (`variant_barcode_unit_is_one`).
-          field.onChange([...pending, { code, kind, qtyPerCode: kind === 'case' ? qty : 1 }]);
+          // Buradan yazılan kod PAKETİN kodudur; `unit` kodun çarpanı daima 1 (kısıt veride de).
+          field.onChange([...pending, { code, kind: 'unit' as const, qtyPerCode: 1 }]);
           setDraft('');
           setProblem(null);
         };
 
         return (
-          <div className="flex flex-wrap items-center gap-1.5 px-[13px] pb-2 pl-[31px]">
-            <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">Barkod</span>
+          <SubRow label="Barkod">
             {saved.map((code) => (
-              <span
+              <BarcodeChip
                 key={code.id}
-                className="inline-flex items-center gap-1 rounded-[6px] border border-ops-line bg-ops-subtle px-1.5 py-0.5 font-ops-mono text-ops-micro text-ops-body"
+                code={code.code}
+                kind={code.kind}
+                qtyPerCode={code.qtyPerCode}
                 title={code.createdBy ? 'Mal kabulde öğretilmiş kod' : 'Sistem kaydı'}
-              >
-                {code.code}
-                <span className="text-ops-faint">{code.kind === 'case' ? `koli ×${code.qtyPerCode}` : 'paket'}</span>
-                <button
-                  type="button"
-                  onClick={() => onUnlearn(code)}
-                  className="cursor-pointer text-ops-faint hover:text-ops-red"
-                  aria-label={`${code.code} kodunu sil`}
-                  title="Eşlemeyi geri al — kod bir sonraki kabulde yeniden sorulur"
-                >
-                  ×
-                </button>
-              </span>
+                removeTitle="Eşlemeyi geri al — kod bir sonraki kabulde yeniden sorulur"
+                onRemove={() => onUnlearn(code)}
+              />
             ))}
             {pending.map((code) => (
-              <span
+              <BarcodeChip
                 key={code.code}
-                className="inline-flex items-center gap-1 rounded-[6px] border border-ops-violet-line bg-ops-violet-bg px-1.5 py-0.5 font-ops-mono text-ops-micro text-ops-violet"
+                code={code.code}
+                kind={code.kind}
+                qtyPerCode={code.qtyPerCode}
+                pending
                 title="Kaydedilince bağlanacak"
-              >
-                {code.code}
-                <span className="opacity-70">{code.kind === 'case' ? `koli ×${code.qtyPerCode}` : 'paket'}</span>
-                <button
-                  type="button"
-                  onClick={() => field.onChange(pending.filter((p) => p.code !== code.code))}
-                  className="cursor-pointer hover:text-ops-red"
-                  aria-label={`${code.code} kodunu listeden çıkar`}
-                  title="Listeden çıkar — henüz yazılmadı"
-                >
-                  ×
-                </button>
-              </span>
+                removeTitle="Listeden çıkar — henüz yazılmadı"
+                onRemove={() => field.onChange(pending.filter((p) => p.code !== code.code))}
+              />
             ))}
             <Input
               inputSize="sm"
               mono
-              className="w-[150px]"
+              className="w-[168px]"
+              fullWidth={false}
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
                 setProblem(null);
               }}
-              placeholder="kod ekle"
+              onKeyDown={(e) => {
+                // Enter kodu EKLER, formu göndermez: satırı bitiren tuş, sayfayı kaydeden tuş değil.
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                ekle();
+              }}
+              placeholder="ambalajdaki kod"
               aria-label="Yeni barkod"
               error={problem ?? undefined}
-              title={problem ?? 'Ambalajın üstündeki kod — okutulan kod da yazılabilir'}
+              title={problem ?? 'Ambalajın üstündeki kod. Koli barkodu buradan yazılmaz: kolinin kaç paket saydığını mal kabul sorar.'}
             />
-            <Select
-              size="sm"
-              className="w-[92px]"
-              value={kind}
-              onChange={(value) => setKind(value as BarcodeKind)}
-              ariaLabel="Kodun türü"
-              options={[
-                { value: 'unit', label: 'paket' },
-                { value: 'case', label: 'koli' },
-              ]}
-            />
-            {kind === 'case' ? (
-              <NumberCell
-                value={qty}
-                onChange={(v) => setQty(v ?? 1)}
-                onBlur={() => undefined}
-                className="w-[64px]"
-                title="Bu koli okutulunca kaç paket sayılacak"
-                placeholder="adet"
-              />
-            ) : null}
             <button
               type="button"
               onClick={ekle}
               disabled={draft.trim().length === 0}
-              className="cursor-pointer rounded-[6px] border border-ops-line px-1.5 py-0.5 font-ops-display text-ops-micro text-ops-muted hover:border-ops-violet hover:text-ops-violet disabled:cursor-default disabled:opacity-40"
+              className="cursor-pointer rounded-[6px] border border-ops-line px-2 py-1 font-ops-display text-ops-micro text-ops-muted hover:border-ops-violet hover:text-ops-violet disabled:cursor-default disabled:opacity-40"
               title="Kaydedilince bu boya bağlanır"
             >
               Ekle
             </button>
-          </div>
+          </SubRow>
         );
       }}
     />
+  );
+}
+
+/**
+ * Kod çipi — kayıtlı ve bekleyen kod aynı gövdeyi paylaşır, ayrım yalnız renkte. Tür yalnız KOLİ
+ * kodunda yazılır ("koli ×12"): paket kodu olağan hâldir, her çipe "paket" yazmak satırı sayı değil
+ * kelime yığınına çevirirdi.
+ */
+function BarcodeChip({
+  code,
+  kind,
+  qtyPerCode,
+  pending = false,
+  title,
+  removeTitle,
+  onRemove,
+}: {
+  code: string;
+  kind: BarcodeKind;
+  qtyPerCode: number;
+  pending?: boolean;
+  title: string;
+  removeTitle: string;
+  onRemove: () => void;
+}) {
+  const tone = pending ? 'border-ops-violet-line bg-ops-violet-bg text-ops-violet' : 'border-ops-line bg-ops-subtle text-ops-body';
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-[6px] border px-1.5 py-0.5 font-ops-mono text-ops-micro ${tone}`}
+      title={title}
+    >
+      {code}
+      {kind === 'case' ? <span className="opacity-70">koli ×{qtyPerCode}</span> : null}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="cursor-pointer opacity-60 hover:text-ops-red hover:opacity-100"
+        aria-label={`${code} kodunu kaldır`}
+        title={removeTitle}
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
+/**
+ * Varyant satırının ALT ŞERİTLERİ (ambalaj · barkod) — etiketler sabit bir sütunda hizalanır, içerik
+ * tek sıra akar. Etiket de içerik de aynı sarmalın içinde serbest bırakılınca satır üçe bölünüyordu:
+ * "brüt" bir satırda, kutusu ötekinde kalıyordu (kullanıcı bulgusu 17.09).
+ */
+function SubRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[62px_minmax(0,1fr)] items-start gap-x-2 px-[13px] pb-2 pl-[31px]">
+      <span className="pt-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">{label}</span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">{children}</div>
+    </div>
   );
 }
 
@@ -199,6 +224,9 @@ function NumberCell({
       onBlur={onBlur}
       placeholder={placeholder}
       className={className}
+      // Genişlik VERİLDİYSE kabuğun `w-full`'ü çizilmez: satır içinde duran kutu yoksa satırı kaplar ve
+      // komşularını alt satıra iter (ölçüldü — ambalaj satırı üç satıra dağılmıştı).
+      fullWidth={className ? false : undefined}
       title={title}
     />
   );
@@ -229,9 +257,7 @@ const PORTION_OPTIONS = [
 function PackingRow({ control, index }: { control: Control<ProductFormValues>; index: number }) {
   const box = 'w-[58px]';
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-[13px] pb-2 pl-[31px]">
-      <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">Ambalaj</span>
-
+    <SubRow label="Ambalaj">
       <span className="font-ops-body text-ops-micro text-ops-muted">porsiyon</span>
       <Controller
         control={control}
@@ -246,7 +272,7 @@ function PackingRow({ control, index }: { control: Control<ProductFormValues>; i
         )}
       />
 
-      <span className="ml-1 font-ops-body text-ops-micro text-ops-muted">brüt</span>
+      <span className="ml-1 font-ops-body text-ops-micro text-ops-muted">brüt ağırlık</span>
       <Controller
         control={control}
         name={`variants.${index}.packedWeightG`}
@@ -283,7 +309,7 @@ function PackingRow({ control, index }: { control: Control<ProductFormValues>; i
         </span>
       ))}
       <span className="font-ops-body text-ops-micro text-ops-faint">mm</span>
-    </div>
+    </SubRow>
   );
 }
 
