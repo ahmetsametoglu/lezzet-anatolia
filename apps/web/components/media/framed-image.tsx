@@ -44,6 +44,10 @@ type FramedImageProps = FramedImageBase &
 
 function framedImageStyle(crop: ImageCrop = CROP_CENTER): CSSProperties {
   return {
+    // Kutuya mutlak sabitlenir: ızgara satırı içerikle büyüdüğü için akıştaki görselin %100 yüksekliği kutuya değil taşan
+    // satıra çözülüyordu; kare fotoğraf 3:2 kutuda kırpılmadan alttan taşıyordu.
+    position: 'absolute',
+    inset: 0,
     width: '100%',
     height: '100%',
     objectFit: 'cover',
