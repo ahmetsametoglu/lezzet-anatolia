@@ -49,7 +49,7 @@ export async function updateProfileAction(input: { name?: string; phone?: string
  * Bağlamanın ilk yarısı: kodu üretip hazır mesajlı bağlantıyı döner, ikinci yarısı gelen mesajı işleyen webhook'tadır. Mesaj
  * metni istemciden gelir, çünkü müşteriye görünen cümle sözlükte yaşar.
  */
-export async function startWhatsappLinkAction(message: string): Promise<CustomerResult<{ href: string }>> {
+export async function startWhatsappLinkAction(message: string): Promise<CustomerResult<{ href: string; expiresAt: string }>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
@@ -59,7 +59,7 @@ export async function startWhatsappLinkAction(message: string): Promise<Customer
     // öteki jeton çakışmasının tükenmesi — ikisi de onun düzeltebileceği bir şey değil.
     if (sonuc.status !== 'ok') throw new CustomerError('unexpected');
 
-    return { data: { href: whatsappHref(`${message.trim()} ${sonuc.code}`) }, errorKey: null };
+    return { data: { href: whatsappHref(`${message.trim()} ${sonuc.code}`), expiresAt: sonuc.expiresAt }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

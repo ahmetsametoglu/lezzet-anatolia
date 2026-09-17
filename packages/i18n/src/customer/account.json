@@ -10,7 +10,7 @@
       "emailPlaceholder": "E-posta",
       "phoneLabel": "Telefon",
       "phonePlaceholder": "Telefon (WhatsApp)",
-      "phoneNote": "Telefon numaranız WhatsApp bildirimleri için kullanılır.",
+      "phoneNote": "Yeni adres eklerken bu numara önerilir. WhatsApp'ı hesap sayfasındaki WhatsApp kartından bağlarsınız.",
       "save": "Kaydet",
       "saved": "Profil güncellendi ✓",
       "errors": {
@@ -34,6 +34,17 @@
       "edit": "Düzenle",
       "editLabel": "Profil bilgilerini düzenle",
       "addName": "Adınızı ekleyin"
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "body": "Numaranızı hesabınıza bağlayın: WhatsApp'tan yazdığınızda sizi tanırız, orada verdiğiniz siparişler hesabınızda görünür.",
+      "cta": "WhatsApp'ımı bağla",
+      "busy": "Hazırlanıyor…",
+      "hint": "WhatsApp açılır; hazır mesajı göndermeniz yeterli.",
+      "message": "Merhaba! Hesabımı WhatsApp numarama bağlamak istiyorum.",
+      "verified": "Doğrulandı",
+      "relink": "Başka bir numara bağla",
+      "failed": "Bağlantı hazırlanamadı — tekrar deneyin."
     },
     "company": {
       "eyebrow": "Onaylı profesyonel hesap",
@@ -145,7 +156,7 @@
       "emailPlaceholder": "E-mail",
       "phoneLabel": "Téléphone",
       "phonePlaceholder": "Téléphone (WhatsApp)",
-      "phoneNote": "Votre numéro sert aux notifications WhatsApp.",
+      "phoneNote": "Ce numéro est proposé lors de l'ajout d'une adresse. Pour WhatsApp, utilisez la carte WhatsApp de votre compte.",
       "save": "Enregistrer",
       "saved": "Profil mis à jour ✓",
       "errors": {
@@ -169,6 +180,17 @@
       "edit": "Modifier",
       "editLabel": "Modifier les informations du profil",
       "addName": "Ajoutez votre nom"
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "body": "Reliez votre numéro à votre compte : nous vous reconnaissons quand vous nous écrivez sur WhatsApp, et les commandes passées là-bas apparaissent dans votre compte.",
+      "cta": "Rattacher mon WhatsApp",
+      "busy": "Préparation…",
+      "hint": "WhatsApp s'ouvre ; il suffit d'envoyer le message pré-rempli.",
+      "message": "Bonjour ! Je souhaite rattacher mon compte à mon numéro WhatsApp.",
+      "verified": "Vérifié",
+      "relink": "Rattacher un autre numéro",
+      "failed": "Le lien n'a pas pu être préparé — réessayez."
     },
     "company": {
       "eyebrow": "Compte professionnel validé",
@@ -280,7 +302,7 @@
       "emailPlaceholder": "E-Mail",
       "phoneLabel": "Telefon",
       "phonePlaceholder": "Telefon (WhatsApp)",
-      "phoneNote": "Ihre Nummer wird für WhatsApp-Benachrichtigungen genutzt.",
+      "phoneNote": "Diese Nummer wird beim Anlegen einer Adresse vorgeschlagen. WhatsApp verknüpfen Sie über die WhatsApp-Karte in Ihrem Konto.",
       "save": "Speichern",
       "saved": "Profil aktualisiert ✓",
       "errors": {
@@ -304,6 +326,17 @@
       "edit": "Bearbeiten",
       "editLabel": "Profildaten bearbeiten",
       "addName": "Fügen Sie Ihren Namen hinzu"
+    },
+    "whatsapp": {
+      "title": "WhatsApp",
+      "body": "Verknüpfen Sie Ihre Nummer mit Ihrem Konto: Wir erkennen Sie, wenn Sie uns auf WhatsApp schreiben, und dort aufgegebene Bestellungen erscheinen in Ihrem Konto.",
+      "cta": "Mein WhatsApp verknüpfen",
+      "busy": "Wird vorbereitet…",
+      "hint": "WhatsApp öffnet sich; senden Sie einfach die vorbereitete Nachricht.",
+      "message": "Hallo! Ich möchte mein Konto mit meiner WhatsApp-Nummer verknüpfen.",
+      "verified": "Bestätigt",
+      "relink": "Andere Nummer verknüpfen",
+      "failed": "Der Link konnte nicht vorbereitet werden — bitte erneut versuchen."
     },
     "company": {
       "eyebrow": "Bestätigtes Geschäftskonto",

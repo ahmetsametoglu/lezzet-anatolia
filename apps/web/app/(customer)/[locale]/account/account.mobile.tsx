@@ -25,6 +25,7 @@ import { ChatLinkNoticeBanner, LinkedChatsCard } from './components/linked-chats
 import { PhoneCouponList } from './components/phone-coupon-list';
 import { PhoneDeleteAccount } from './components/phone-delete-account';
 import { PhoneProfileSheet } from './components/phone-profile-sheet';
+import { PhoneWhatsappCard } from './components/phone-whatsapp-card';
 import { RedeemPoints } from './components/redeem-points';
 
 /**
@@ -41,6 +42,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
       {chatNotice && <ChatLinkNoticeBanner t={t} notice={chatNotice} />}
 
       <ProfileSection t={t} copy={copy} account={account} />
+      <PhoneWhatsappCard t={t} copy={copy.whatsapp} numbers={account.whatsappNumbers} />
 
       {company && (
         <section className="flex flex-col gap-1 rounded-control bg-ink p-4">

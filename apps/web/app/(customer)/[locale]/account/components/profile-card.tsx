@@ -2,16 +2,18 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import accountMessages from '@lezzet/i18n/customer/account';
 import type { PreferredLanguage } from '@lezzet/types';
 import { Button } from '@/components/customer/ui/button';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { errorText } from '@/lib/customer-error-text';
 import type { AccountView } from '@/lib/account/read';
-import { startWhatsappLinkAction, updateProfileAction } from '../actions';
+import { updateProfileAction } from '../actions';
 import { Card } from '@/components/customer/ui/card';
 import { CardHead, Row } from './account-cards';
 import { useLanguageChoice } from './use-language-choice.hook';
-import type { Messages } from '../account-types';
+import type { AccountCopy, Messages } from '../account-types';
+import { useWhatsappLink } from '../use-whatsapp-link.hook';
 
 /**
  * Profil satır içinde düzenlenir, çünkü değişen üç alanı başka yere taşımak bağlamı da taşır. E-posta düzenlenmez, çünkü kimliğin
@@ -65,18 +67,9 @@ function LanguagePill({ locale, value, compact }: { locale: Locale; value: Prefe
  * Bağlantıdaki hazır mesajı müşteri kendisi gönderir: gönderen numara zilyetliği, jeton hesabı kanıtlar ve biz mesaj göndermediğimiz
  * için şablon ücreti yok. Jeton tıklamada üretilir, çünkü her ziyarette üretmek hiç kullanılmayacak kısa ömürlü sırlar biriktirir.
  */
-function WhatsappLinkButton({ t }: { t: Messages }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const start = async () => {
-    setBusy(true);
-    setError(null);
-    const { data, errorKey } = await startWhatsappLinkAction(t.whatsappLinkMessage);
-    setBusy(false);
-    if (errorKey || !data) return setError(errorText(t.errors, errorKey ?? 'unexpected'));
-    window.open(data.href, '_blank', 'noopener,noreferrer');
-  };
+function WhatsappLinkButton({ t, copy }: { t: Messages; copy: AccountCopy['whatsapp'] }) {
+  // Düğme yalnız bağ yokken çizilir; bağ görününce kaybolur ve dinleyicisini de götürür.
+  const { busy, errorKey, start } = useWhatsappLink(copy.message, []);
 
   return (
     <span className="inline-flex flex-col items-end gap-0.5 text-right">
@@ -86,9 +79,11 @@ function WhatsappLinkButton({ t }: { t: Messages }) {
         onClick={() => void start()}
         className="cursor-pointer font-sans text-note font-bold text-olive hover:text-olive-dark disabled:cursor-default disabled:opacity-60"
       >
-        {busy ? t.whatsappLinkBusy : t.whatsappLinkCta}
+        {busy ? copy.busy : copy.cta}
       </button>
-      <span className="font-sans text-micro font-normal leading-relaxed text-muted">{error ?? t.whatsappLinkHint}</span>
+      <span className="font-sans text-micro font-normal leading-relaxed text-muted">
+        {errorKey === null ? copy.hint : errorText(t.errors, errorKey)}
+      </span>
     </span>
   );
 }
@@ -96,17 +91,18 @@ function WhatsappLinkButton({ t }: { t: Messages }) {
 /** Doğrulanmış numaralar ya da bağlama düğmesi; native'de karşılığı olmayan, web'e özgü kimlik bağı. */
 interface WhatsappRowProps {
   t: Messages;
+  copy: AccountCopy['whatsapp'];
   numbers: string[];
 }
 
-function WhatsappRow({ t, numbers }: WhatsappRowProps) {
+function WhatsappRow({ t, copy, numbers }: WhatsappRowProps) {
   const verified = numbers.length > 0 && (
     <span className="inline-flex items-center gap-1.5">
       <span className="truncate">{numbers.join(' · ')}</span>
-      <span className="flex-none font-sans text-micro font-semibold text-olive">{t.whatsappVerified}</span>
+      <span className="flex-none font-sans text-micro font-semibold text-olive">{copy.verified}</span>
     </span>
   );
-  return <Row label={t.whatsappLabel} value={verified || <WhatsappLinkButton t={t} />} />;
+  return <Row label={copy.title} value={verified || <WhatsappLinkButton t={t} copy={copy} />} />;
 }
 
 /** Her açılışta yeniden kurulur ve sunucudaki değerle doğar, çünkü vazgeçilen düzenlemenin artığı kaydedilmiş sanılır. */
@@ -192,7 +188,7 @@ export function ProfileCard({ t, locale, profile, whatsappNumbers, compact }: Pr
         <Row label={t.email} value={profile.email ?? '—'} />
         {/* İletişim numarası ile WhatsApp kimliği ayrı satır: tek satırda müşteri kuryenin arayacağı numarayı kimliğiyle aynı sanıyor. */}
         <Row label={t.phone} value={profile.phone ?? t.noPhone} />
-        <WhatsappRow t={t} numbers={whatsappNumbers} />
+        <WhatsappRow t={t} copy={accountMessages[locale].whatsapp} numbers={whatsappNumbers} />
         {/* Dil düzenleme kipinin arkasında değil: seçim anında etkili ve kip onu iki tıklama uzatırdı. */}
         <Row label={t.language} value={<LanguagePill locale={locale} value={profile.preferredLanguage} compact={compact} />} />
       </Card>
