@@ -12,18 +12,8 @@ import { redeemPoints } from '@/lib/feedback/points';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 
 /**
- * Hesap sayfasının YAZMA kapıları (08.5) — okuma tarafı `lib/account/read.ts`.
- *
- * **Kimlik her eylemde SUNUCUDA çözülür** (`currentCustomerId`), istemciden hiç alınmaz. Adres
- * kimliği istemciden geliyor ve bu kaçınılmaz; o yüzden her adres eylemi önce "bu adres bu
- * müşterinin mi" diye sorar. Sormasaydı tarayıcı konsolundan gönderilen bir kimlikle başkasının
- * adresi silinebilirdi.
- *
- * **Guard ilk, dönüş `{ data, error }`** (CLAUDE.md §2): action throw etmez.
- *
- * `revalidatePath` her yazmadan sonra: sayfa sunucuda çözülüyor (`getAccountView`) ve istemci
- * tarafında ikinci bir kopya tutulmuyor — tazeleme tek doğruluk kaynağını yeniden okutur. Yerel
- * state ile aynı veriyi bir de istemcide tutmak, iki kaynağın ayrışabildiği bir yol açardı.
+ * Müşteri kimliği her eylemde oturumdan çözülür; istemciden gelen adres kimliği ise önce o müşterinin mi diye sorulur, yoksa
+ * başkasının adresi silinebilirdi. Her yazmadan sonra sayfa sunucudan yeniden okunur, çünkü istemcide ikinci kopya ayrışabilir.
  */
 
 /** Sayfanın kendi yolu — dile göre değişir, o yüzden layout değil SAYFA tazelenir. */
@@ -35,34 +25,16 @@ function revalidateAccount(): void {
 }
 
 /**
- * Profil künyesi — ad ve telefon.
- *
- * E-posta BURADA DEĞİŞMEZ ve bu bilinçli: e-posta kimliğin anahtarı (`user_profiles` benzersiz
- * indeksi, `auth.users` bağı). Değiştirmek hesabı taşımaktır — doğrulama, birleştirme ve oturum
- * sorularını birlikte açar (`04.7` müşteri birleştirme). Ekran onu okur, düzenlemez.
- *
- * **Dil BURADA DEĞİL** (`lib/identity/language-actions.ts`): dil tektir — sitenin dili ile
- * bildirimlerin dili aynı şey — ve onu değiştiren yer dil seçicisidir, profil formu değil.
+ * E-posta burada değişmez, çünkü kimliğin anahtarıdır ve değişimi doğrulama ile birleştirme sorularını açar. Dil de burada değil,
+ * çünkü sitenin ve bildirimlerin dili tektir ve onu dil seçici yazar.
  */
 export async function updateProfileAction(input: { name?: string; phone?: string | null }): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
 
-    /**
-     * ── KURAL ARTIK PAKETTE, BURASI KÖPRÜ (21.14c'nin borcu kapandı) ───────────────────────────
-     * Ad/telefon kuralları bir tur burada VE `@lezzet/application/customer/profile`ta iki kopya
-     * hâlinde duruyordu; paket künyesi de *"benimsemesi web şeridinin işi"* diye bekliyordu.
-     * 04.10 ikisine birden dokunduğu için borcu şimdi kapatmak, aynı değişikliği iki yere yazmaktan
-     * ucuz — ve bir sonraki değişiklikte ayrışmalarını da imkânsız kılıyor (CLAUDE §1).
-     *
-     * ── "NUMARA BAŞKA HESAPTA" RETİ ARTIK YOK (04.10) ──────────────────────────────────────────
-     * Eylem bir tur `user_profiles_phone_key` ihlalini `phone_taken` cümlesine çeviriyordu (07.08).
-     * O düzeltme doğruydu ama bir BELİRTİYİ görünür kılıyordu, sebebini değil: numara tekildi çünkü
-     * kimlik anahtarıydı, ve kimlik anahtarıydı çünkü ayrım yapılmamıştı. Ayrım yapıldı, indeks
-     * kalktı, çarpışma ortadan kalktı — aynı iletişim numarasını iki müşterinin taşıması artık
-     * meşru (aile telefonu, işyeri hattı) ve kimseye "bu numara alınmış" denmiyor.
-     */
+    // Kural native uçla ortak kapıda. Numara çakışması reddedilmez: iletişim numarası kimlik değildir ve iki müşteri aynı hattı
+    // taşıyabilir.
     const sonuc = await updateCustomerProfile(serviceDb(), { profileId: customerId, name: input.name, phone: input.phone });
     if (sonuc.status !== 'ok') throw new CustomerError(sonuc.status);
 
@@ -74,20 +46,8 @@ export async function updateProfileAction(input: { name?: string; phone?: string
 }
 
 /**
- * **WhatsApp'ımı bağla** (04.10) — hesabı müşterinin kendi numarasına bağlayan akışın ilk yarısı.
- *
- * Jetonu üretir ve müşteriye **açacağı bağlantıyı** döner. İkinci yarısı webhook'ta: müşteri hazır
- * mesajı gönderince gelen mesaj hem numarayı kanıtlar hem jetonla hesabı söyler
- * (`consumeWhatsappLink`).
- *
- * **Mesaj metni BURADA kuruluyor** ve olması gereken yer burası: müşteriye görünen bir cümle, yani
- * sayfanın i18n kopyası (`whatsappHref` künyesinin kuralı). Paket yalnız `code` döner; üç dilin
- * sözlüğünü marka paketine ya da uygulama katmanına taşımak, metni değiştirecek kişinin onu
- * bulamaması demekti.
- *
- * **Bağlantıyı SUNUCU üretir, istemci değil:** jeton üretimi bir yazma işlemidir ve bağlantının
- * kendisi jetonu taşıyor. İstemcide kurulsaydı önce jetonu ona göndermek gerekirdi — aynı sırrın
- * bir tur fazladan dolaşması.
+ * Bağlamanın ilk yarısı: kodu üretip hazır mesajlı bağlantıyı döner, ikinci yarısı gelen mesajı işleyen webhook'tadır. Mesaj
+ * metni istemciden gelir, çünkü müşteriye görünen cümle sözlükte yaşar.
  */
 export async function startWhatsappLinkAction(message: string): Promise<CustomerResult<{ href: string }>> {
   try {
@@ -106,16 +66,8 @@ export async function startWhatsappLinkAction(message: string): Promise<Customer
 }
 
 /**
- * Kampanya izni — kanal başına aç/kapat.
- *
- * **Anında yazılır, ayrı "Kaydet" yok** (tasarımın etkileşim sözleşmesi) ve kapatma onay istemez:
- * izni geri almak müşterinin en doğal hakkı, önüne diyalog koymak onu caydırmak olurdu.
- *
- * Kayıt yalnız "açık mı" değil, **ne zaman ve nereden** verildiğini de tutar (`granted/at/source`):
- * pazarlama izni bir gün sorulduğunda kanıtı budur (GDPR). Bu yüzden alan bir bayrak değil, nesne.
- *
- * Sipariş bildirimleri bundan BAĞIMSIZDIR: siparişin kendi maili bir sözleşme gereği, pazarlama
- * izni değil — kapatan müşteri de siparişinin yola çıktığını öğrenir.
+ * İzin ne zaman ve nereden verildiğiyle birlikte yazılır, çünkü pazarlama izni sorulduğunda kanıt budur. Kapatma onay istemez:
+ * izni geri almanın önüne diyalog koymak caydırmak olur.
  */
 export async function setConsentAction(channel: 'email' | 'whatsapp', granted: boolean): Promise<CustomerResult<true>> {
   try {
@@ -150,7 +102,7 @@ export async function setConsentAction(channel: 'email' | 'whatsapp', granted: b
  */
 export async function addAddressAction(
   input: Omit<AddressInsert, 'customerId'>,
-  /* Seçilen önerinin koordinatı (11.9) — bir ADAY, beyan değil; kapı süzgeçten geçirir. Ayrı
+  /* Seçilen önerinin koordinatı bir aday, beyan değil; kapı süzgeçten geçirir. Ayrı
      parametre çünkü `input` üzerinden ham `lat`/`lng` gelmesi süzgeci atlayan ikinci bir yol olurdu. */
   point?: AddressPointCandidate | null,
 ): Promise<CustomerResult<true>> {
@@ -169,7 +121,6 @@ export async function setDefaultAddressAction(addressId: string): Promise<Custom
   return guarded((customerId) => setDefaultAddress(customerId, addressId));
 }
 
-/** Fatura adresi seçimi (08.09) — varsayılanın ikizi, ayrı eylem; gerekçesi kapının künyesinde. */
 export async function setBillingAddressAction(addressId: string): Promise<CustomerResult<true>> {
   return guarded((customerId) => setBillingAddress(customerId, addressId));
 }
@@ -193,21 +144,13 @@ async function guarded(task: (customerId: string) => Promise<unknown>): Promise<
 }
 
 /**
- * "Bölgeye gelince haber ver" kaydından VAZGEÇME.
- *
- * Kayıt e-posta + posta koduyla benzersiz ve müşteriye bağlı (`recordZoneNoticeAction`). Silme
- * müşterinin kendi kaydıyla sınırlı: `customer_id` eşiti sorgunun içinde — kimlik istemciden
- * gelen posta koduyla değil oturumdan gelir.
- *
- * Tek seferlik bir bekleyiştir: bölge açıldığında da silinir (tetikleyici, 14). İki yol aynı
- * satırı kaldırır, ikinci bir "vazgeçti" durumu tutulmaz — tutulsaydı aynı gerçek iki alanda
- * yaşardı.
+ * Bölge haberinden vazgeçme satırı siler ve yalnız müşterinin kendi kaydına dokunur; ayrı bir "vazgeçti" durumu tutulmaz, çünkü
+ * bölge açılınca da aynı satır silinir.
  */
 export async function cancelZoneNoticeAction(postalCode: string): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    // Servis üzerinden (denetim A4) — ham tablo erişimi ad dönüşümünün ve doğrulamanın dışında kalır.
     await new ZoneNoticeService(serviceDb()).removeForCustomer(customerId, postalCode);
     revalidateAccount();
     return { data: true, errorKey: null };
@@ -217,17 +160,8 @@ export async function cancelZoneNoticeAction(postalCode: string): Promise<Custom
 }
 
 /**
- * Puanı kişisel kupona ÇEVİRME (17.5) — motorun kapısı aylardır hazırdı, çağıranı yoktu.
- *
- * Kaç puanın harcanacağını İSTEMCİ SÖYLEMEZ: `redeemPoints` parametresiz çağrılıyor ve eşiği,
- * karşılığı, bakiyeyi motor kendi okuyor (`canRedeem` + ayarlar). İstemciden bir sayı kabul
- * etseydik ekranın gördüğü eşik ile motorun uyguladığı eşik ayrışabilirdi — hesap kartındaki
- * "300 puan = 5 €" cümlesinin ayardan okunmasının sebebi de aynı denetimdi (29.07).
- *
- * Motorun iç sebepleri müşteri ANAHTARINA çevriliyor: `insufficient_balance` gibi adlar sistemin
- * iç yapısını anlatır ve üç dilde karşılığı olmayan bir metin ekrana düşerdi. Üç sebep de tek bir
- * anahtara iniyor, çünkü müşterinin görebileceği tek gerçek hâl "şu an çevrilemiyor"dur: bakiye
- * yetmiyorsa kart zaten kalan puanı yazıyor, uygun değilse (B2B) bölüm hiç çizilmiyor.
+ * Kaç puanın harcanacağını istemci söylemez, çünkü ekranın eşiği motorunkinden ayrışabilir. Motorun üç ret sebebi tek anahtara
+ * iner, çünkü müşterinin görebileceği tek hâl "şu an çevrilemiyor"dur.
  */
 export async function redeemPointsAction(): Promise<CustomerResult<{ code: string }>> {
   try {
@@ -247,24 +181,8 @@ export async function redeemPointsAction(): Promise<CustomerResult<{ code: strin
 }
 
 /**
- * **Hesabı silme** (08.21 · GDPR md. 17) — geri alınamaz.
- *
- * ── KİMLİK İSTEMCİDEN HİÇ ALINMAZ ────────────────────────────────────────────
- * Eylem parametre almıyor ve bu bilinçli bir kalkan: `anonymize` kime ait olduğuna BAKMAZ, verilen
- * kimliği anonimleştirir (arka ucun künyesi bunu açıkça söylüyor). Bir kimlik parametresi olsaydı
- * guard'ın "bu benim hesabım mı" sorusunu doğru sorması gerekirdi; hiç sormamanın tek güvenli yolu
- * soruyu ortadan kaldırmak — silinecek hesap, oturumun kendisidir.
- *
- * ── SİLME BİR `DELETE` DEĞİL ─────────────────────────────────────────────────
- * Kimlik alanları boşalır, sipariş ve fatura kayıtları YASAL OLARAK kalır (faturadaki ad ve adres
- * dâhil — `order.address_snapshot` Fransız hukukunda zorunlu). Ürün puanı da kimliksiz kalır:
- * silmek başka müşterilerin gördüğü skoru geriye dönük değiştirirdi. Ekran bunu onay diyaloğunda
- * AÇIKÇA söyler; söylemezse "hesabımı sildim" diyen müşteri faturasında adını gördüğü gün haklı
- * olarak yanıltıldığını düşünür.
- *
- * `revalidateAccount` ÇAĞRILMAZ: oturum bu çağrıyla ölüyor, tazelenecek bir hesap sayfası yok.
- * Yönlendirmeyi istemci yapar — sunucudan `redirect` atmak, eylemin sonucunu ekrana söyleme
- * fırsatını da kapatırdı.
+ * Eylem kimlik parametresi almaz, çünkü `anonymize` verilen kimliği sorgusuz siler; silinecek hesap oturumun kendisidir. Sayfa
+ * tazelenmez, çünkü oturum bu çağrıyla biter ve yönlendirmeyi istemci yapar.
  */
 export async function deleteAccountAction(): Promise<CustomerResult<true>> {
   try {

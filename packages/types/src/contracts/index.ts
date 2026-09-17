@@ -1,11 +1,5 @@
-// SÖZLEŞMELER — bir tablonun aynası DEĞİL, iki tarafın konuştuğu ortak dil (01.12). Üreten ile
-// tüketen aynı şemayı çağırsın diye buradadır: alan adı değişirse iki taraf birden DERLEME anında
-// kırılır, üretimde değil.
-//
-// Ölçüt: dosya "şu uç / şu şablon ne alır, ne döndürür" sorusunu yanıtlıyorsa buraya girer; "şu
-// tablo hangi kolonları taşır" sorusunu yanıtlıyorsa `../entities`e.
-//
-// Bu katman en üsttedir: `entities` + `primitives` okur, buradan aşağıya kimse bakmaz.
+// Sözleşmeler burada, çünkü üreten ile tüketen aynı şemayı çağırınca alan adı değişikliği iki tarafı derlemede kırar. Uç ya da
+// şablonun ne alıp ne döndürdüğü buraya, tablonun kolonları `../entities`e girer.
 export * from './auth.schema';
 // `/me` — profil VARLIK şemasından türer.
 export * from './me-api.schema';
@@ -38,7 +32,7 @@ export * from './delivery-terms-api.schema';
 // Katalog — kategori/ürün/varyant/stok varlık şemalarından türer.
 export * from './catalog-api.schema';
 // Vitrin (ana ekran) — katalog kartını ve kategori/koleksiyon/tarif varlık şemalarını türetir;
-// yalnız müşteriden bağımsız bölümler (kullanıcı kararı 08.08).
+// yalnız müşteriden bağımsız bölümler.
 export * from './home-api.schema';
 // Tarif detayı — tarif varlık şemasından türer; satır fiyat/stok alanları motorun vitrin
 // indirgemesinin aynasıdır (gerekçe dosya başlığında).
@@ -53,11 +47,8 @@ export * from './courier-return-api.schema';
 // Depo — hazırlık kuyruğu/onayı, mal kabul, sayım-düzeltme, transfer, kurye dönüşü (D1–D6).
 // Kaynağı `@lezzet/application`ın depo kapıları; parti/kabul/transfer varlık şemalarından türer.
 export * from './warehouse-api.schema';
-// Sepet (müşteri) — sunucu sepetinin mobil yüzü; `cart` varlık şemasından türer. Sepet iki yüzeyde
-// PAYLAŞILIR (kullanıcı kararı 09.08), kabı `customerId` anahtarlı `cart` tablosu. Gövde fiyat
-// TAŞIMAZ — istemcinin yazabildiği tutar siparişin parasını belirleyemez; cevap SATIRDIR, görünüm
-// değil (ad/fiyat/indirim/kargo `getCartView` kuralınındır — iki yerde hesaplanan toplam bir gün
-// iki farklı sayı gösterir).
+// Sepet gövdesi fiyat taşımaz, çünkü istemcinin yazabildiği tutar siparişin parasını belirleyemez. Cevap görünüm değil satırdır:
+// toplam iki yerde hesaplanırsa bir gün iki farklı sayı gösterir.
 export * from './cart-api.schema';
 // Checkout — "Siparişi tamamla" ekranının anlık görüntüsü (adres · teslimat · ödeme) + siparişi
 // açan gövde ve ADLI retleri. Gövde yalnız SEÇİM taşır: tutar, kargo ücreti, indirim ve teslimat
@@ -76,11 +67,11 @@ export * from './realtime.contract';
 // Sosyal gelen kutusu — üç Meta kanalının mobil operasyon yüzü (kuyruk · sohbet · cevap · mod ·
 // taslak). Varlık şemasından `pick` ile türer; ham alan taşır, hesaplanmış etiket taşımaz.
 export * from './social-api.schema';
-// Yerinde satış — depo kapısı ve kuryenin aracı (21.119). Depo ve müşteri gövdede YOK: ilki
+// Yerinde satış — depo kapısı ve kuryenin aracı. Depo ve müşteri gövdede YOK: ilki
 // personelin künyesinden, ikincisi anonim alıcıdan gelir; ikisini de istemciye sormak, kararı
 // istemciye vermek olurdu.
 export * from './sale-api.schema';
-// Yönetim + Para bölümleri (21.12) — karar kuyruğu, gün özeti, tahsilat izleme, gün sonu mutabakatı.
+// Yönetim + Para bölümleri — karar kuyruğu, gün özeti, tahsilat izleme, gün sonu mutabakatı.
 export * from './management-api.schema';
 export * from './money-api.schema';
 // Operasyon KABUĞU — bölümlerin değil, kabuğun kendi künyesi (personelin çalıştığı tesis).
