@@ -11,22 +11,13 @@ import type { CustomerAwaitingPayment, CustomerOrderSummary } from '@/lib/order/
 import { orderProductNames } from '@/lib/order/order-names';
 import { OrderStatusBadge } from './components/order-status-badge';
 import { ReorderNotice } from './components/reorder-notice';
-// Liste `ReorderButton`ı KULLANMIYOR (kendi meşgul durumunu tüm satırlar için tek yerde tutuyor),
-// ama kelimeler ortak — düğmeyle aynı kaynaktan okunuyor (08.20).
+// Liste `ReorderButton`ı kullanmıyor, çünkü meşgul durumunu bütün satırlar için tek yerde tutuyor; kelimeler yine ortak.
 import reorderCopy from './components/reorder-messages.json';
 import type { OrdersViewProps } from './orders-types';
 
 /**
- * Siparişlerim — masaüstü (tasarım: `Musteri - Siparisler.dc.html`, "Siparisler Web").
- *
- * Satır TEK BİR ŞERİTTİR: solda kimlik + özet, sağda tutar → tekrar sipariş → detay. Tasarım kart
- * ızgarası değil liste seçmiş, çünkü müşteri buraya "hangisiydi" diye bakar — dikey tarama yatay
- * ızgaradan hızlıdır.
- *
- * **Aktif sipariş yeşil çerçeveyle ayrışır** ve listenin başındadır. Sıralamayı ekran YAPMAZ:
- * sorgu zaten en yeniyi öne alıyor ve aktif sipariş doğası gereği en yenidir. Ekranda ayrıca
- * sıralasaydık, sayfalanan listede ikinci sayfadaki bir "aktif" sipariş birinci sayfanın üstüne
- * zıplar ve kaydırma sırası bozulurdu.
+ * Siparişler kart ızgarası değil liste, çünkü müşteri buraya "hangisiydi" diye bakar ve dikey tarama daha hızlıdır. Sıralamayı ekran
+ * yapmaz: sayfalanan listede ekranda sıralamak ikinci sayfadaki aktif siparişi birincinin üstüne zıplatırdı.
  */
 export function OrdersDesktop({
   t,
@@ -48,8 +39,7 @@ export function OrdersDesktop({
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 px-12 py-10">
       <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
 
-      {/* Ödemesi beklenen kart siparişi listenin BAŞINDA (07.18) — sıralamanın parçası değil, ayrı alan:
-          numarası yok ve sayfalanan listeye karışmaz. */}
+      {/* Ödemesi beklenen sipariş listenin başında ayrı alan, çünkü numarası yok ve sayfalanan listeye karışmamalı. */}
       {awaiting}
 
       {orders.map((order) => (
@@ -77,8 +67,7 @@ export function OrdersDesktop({
               {formatPrice(order.totalCents, locale)}
             </span>
 
-            {/* İptal edilmiş sipariş de tekrar edilebilir (tasarımın etkileşim sözleşmesi): müşteri
-                iptal ettiği siparişi çoğu zaman yeniden vermek ister. */}
+            {/* İptal edilmiş sipariş de tekrar edilebilir, çünkü müşteri iptal ettiği siparişi çoğu zaman yeniden vermek ister. */}
             <Button
               variant="outlineOlive"
               size="sm"
@@ -117,7 +106,7 @@ export function OrdersDesktop({
 
 interface EmptyOrdersProps {
   t: OrdersViewProps['t'];
-  /** Ödemesi beklenen siparişin satırı (07.18) — liste boşken de başlığın altında durur; yoksa `null`. */
+  /** Ödemesi beklenen siparişin satırı; liste boşken de başlığın altında durur. */
   awaiting: ReactNode;
 }
 
@@ -134,12 +123,7 @@ function EmptyOrders({ t, awaiting }: EmptyOrdersProps) {
   );
 }
 
-/**
- * Satırın alt yazısı: "22 Temmuz 2026 · 3 kalem · Baklava, Gözleme, Bayram Sofrası".
- *
- * Ürün adı YOKSA o parça hiç yazılmaz — "3 kalem · " diye biten bir satır, eksik veriyi eksik
- * gösterir. Ürün silinmiş olabilir; kalem sayısı yine doğrudur.
- */
+/** Ürün adı yoksa o parça yazılmaz, çünkü "3 kalem · " diye biten satır eksik veriyi eksik gösterir; ürün silinmiş olabilir. */
 export function summaryOf(order: CustomerOrderSummary, t: OrdersViewProps['t'], locale: OrdersViewProps['locale'], compact = false): string {
   const parts = metaOf(order, t, locale, compact);
   const names = orderProductNames(order);
@@ -147,10 +131,7 @@ export function summaryOf(order: CustomerOrderSummary, t: OrdersViewProps['t'], 
   return parts.join(' · ');
 }
 
-/**
- * Özetin ilk iki parçası — tarih ve kalem sayısı. Ödemesi beklenen siparişin satırı da bu ikisiyle
- * başlıyor (07.18); ürün adı orada yok, çünkü o satırın sorusu "hangisiydi" değil "ödemem ne oldu".
- */
+/** Ödemesi beklenen siparişin satırı da bu iki parçayla başlar ama ürün adı taşımaz, çünkü onun sorusu "ödemem ne oldu". */
 export function metaOf(
   order: Pick<CustomerOrderSummary, 'createdAt' | 'itemCount'>,
   t: OrdersViewProps['t'],
@@ -167,10 +148,8 @@ interface AwaitingPaymentRowProps {
 }
 
 /**
- * **Ödemesi beklenen kart siparişi** (07.18) — DİKKAT tonunda (bal zemin + bal kenar: v1'in dikkat dili,
- * sepetteki eksik adım kartıyla aynı). Sipariş satırı değil: numarası yok, tekrar sipariş edilemez; tek
- * eylemi ödemenin sayfası — ödemenin canlı durumu orada okunur. Tasarım paketinde çizili değil, işlev
- * isteği; kabuk listenin satırı (KARARLAR 14.09).
+ * Ödemesi beklenen kart siparişi dikkat tonunda ve sipariş satırı değil: numarası yok, tekrar edilemez. Tek eylemi ödemenin sayfası,
+ * çünkü ödemenin canlı durumu orada okunur.
  */
 function AwaitingPaymentRow({ t, locale, awaiting }: AwaitingPaymentRowProps) {
   return (

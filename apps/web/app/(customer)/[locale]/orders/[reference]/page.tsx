@@ -21,16 +21,8 @@ import messages from './messages.json';
 import listMessages from '../messages.json';
 
 /**
- * Sipariş detay (08.5) — sipariş onay sayfasındaki "sipariş takip" düğmesinin ve onay mailindeki
- * bağın varış noktası. İkisi de bugüne kadar ölüydü.
- *
- * **Yolda taşınan kimlik SİPARİŞ KİMLİĞİDİR**, referans numarası değil — segment adı `[reference]`
- * ama `/checkout/[reference]` ile aynı karar: numara ancak onayla doğuyor ve `getWithItems` kimlikle
- * okuyor. Segment adını değiştirmek `routing.ts`'teki üç dilli yolu da oynatırdı; kazanç yok.
- *
- * **Durum metinleri LİSTEDEN geliyor** (`listMessages`): rozet aynı altı hâli yazıyor ve iki mesaj
- * dosyasında iki "Teslim edildi" tutmak, bir gün ayrışan iki çeviri demekti. Telefonun başlık rozeti
- * native'in sözlüğünden (`@lezzet/i18n/customer/orders`) — telefon görünümünün bütün metni oradan.
+ * Yolda taşınan kimlik sipariş kimliği, referans numarası değil, çünkü numara ancak onayla doğuyor. Durum metinleri listenin
+ * sözlüğünden gelir ki iki dosyada tutulan iki çeviri bir gün ayrışmasın.
  */
 interface OrderDetailPageProps {
   params: Promise<{ locale: string; reference: string }>;
@@ -47,10 +39,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);
   if (!customerId) redirect(`/${locale}${LOGIN_SEGMENT[locale]}`);
 
-  // Bulunamayan · başkasına ait · BİÇİMİ GEÇERSİZ — üçü de AYNI cevabı alır. İlk ikisi bir güvenlik
-  // kararıydı (ayrım söylenirse deneme yanılmayla başkasının sipariş kimliği doğrulatılabilirdi);
-  // üçüncüsü 09.08'de ölçülerek eklendi — UUID olmayan segment servise kadar gidip veritabanı
-  // hatasına düşüyor ve müşteriye 500 gösteriyordu (`order-id.ts` künyesi).
+  // Bulunamayan, başkasına ait ve biçimi geçersiz aynı cevabı alır: ayrım başkasının sipariş kimliğini doğrulatır, geçersiz biçim
+  // de veritabanı hatasına düşüp 500 gösterirdi.
   const orderId = orderIdOrNull(reference);
   const order = orderId ? await getCustomerOrderDetail(locale as Locale, customerId, orderId) : null;
   if (!order) notFound();

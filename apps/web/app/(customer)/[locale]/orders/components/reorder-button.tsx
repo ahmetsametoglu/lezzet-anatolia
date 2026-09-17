@@ -10,24 +10,8 @@ import { reorderAction } from '../actions';
 import reorderCopy from './reorder-messages.json';
 
 /**
- * "↻ Tekrar sipariş" — **kendi durumunu taşıyan** düğme.
- *
- * Ayrı bir bileşen olmasının sebebi konum: tasarımda bu düğme sipariş detayında **başlığın içinde**
- * (`SiteFrame accountChrome.right`), mobilde ise sayfanın en altında tam genişlikte. Başlık sunucuda
- * çiziliyor, yani düğmenin durumu sayfanın client bileşeninde tutulamıyor — kendi içinde tutuyor.
- *
- * **Sepete yazan yer istemci** (`addMany`): sepet ziyaretçide tarayıcıda, girişli müşteride sunucuda
- * yaşıyor ve ikisini `CartProvider` birleştiriyor. Sunucu doğrudan yazsaydı ekrandaki sepet sayısı
- * eski kalırdı. Eklenemeyen kalem sayısı da sepete geçiyor — uyarı orada karşılıyor.
- *
- * Hiçbir kalem eklenemezse sepete GİDİLMEZ: boş bir sepete götürmek, müşteriye olmayan bir başarı
- * göstermek olurdu. Hata da sessiz — sayfa yerinde kalır, düğme yeniden denenebilir.
- *
- * ── METİNLERİ KENDİ TAŞIR (08.20) ────────────────────────────────────────────
- * Etiketler prop olarak geliyordu ve aynı iki kelime İKİ sözlükte birden duruyordu (`orders` ve
- * `orders/[reference]`) — üstelik üç yerde çiziliyorlar. Kelimeler onları çizen komponente ait
- * (`site-frame` emsali): tek kaynak, sıfır plumbing. Ekleme sırasındaki etiket de burada, çünkü
- * "meşgul" hâli düğmenin kendi hâli — çağıranın bilmesi gereken bir şey değil.
+ * Düğme durumunu kendi taşır, çünkü detay sayfasında sunucuda çizilen başlığın içinde duruyor. Kelimeler de burada, çünkü aynı iki
+ * kelime birden çok yerde çiziliyor ve tek kaynaktan okunmalı.
  */
 interface ReorderButtonProps {
   locale: Locale;
@@ -55,7 +39,6 @@ export function ReorderButton({ locale, orderId, fullWidth }: ReorderButtonProps
 
   return (
     <Button variant="outlineOlive" size="sm" fullWidth={fullWidth} disabled={busy} onClick={onClick} className={fullWidth ? '' : 'flex-none'}>
-      {/* v1: "Tekrar sipariş"in önünde `refresh` ikonu (14.09: sözlükteki ↻ yerine). */}
       {!busy && <Icon name="refresh" size={14} />}
       {busy ? t.reordering : t.reorder}
     </Button>
