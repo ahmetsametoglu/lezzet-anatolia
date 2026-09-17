@@ -51,8 +51,14 @@ export default async function DiscoverPage({ params, searchParams }: DiscoverPag
   ]);
 
   return (
-    // Keşif kapalı bir kabuk: mobilde site başlığı çizilmez, "X Kapat" sayfanın kendi satırında.
-    <SiteFrame device={device} locale={locale as Locale} activeNav="discover" mobileChrome="bare">
+    // Keşif kapalı bir kabuk: mobilde site başlığı çizilmez, masaüstünde ince başlık; "× Kapat" sayfanın kendi satırında.
+    <SiteFrame
+      device={device}
+      locale={locale as Locale}
+      activeNav="discover"
+      mobileChrome="bare"
+      thinChrome={{ title: t.title, fallback: '/catalog' }}
+    >
       <DiscoverClient
         t={t}
         locale={locale as Locale}

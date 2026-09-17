@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { LOCALES } from '@lezzet/i18n';
 import { brand, whatsappHref } from '@lezzet/brand';
 import { Link } from '@/i18n/navigation';
+import { BackButton } from './back-button';
 import { Icon } from './icons';
 import { LocaleLinks } from './locale-switch';
 import { SiteFrameMobile } from './site-frame.mobile';
@@ -49,7 +50,7 @@ function tabClass(key: AccountTab, active: AccountTab | undefined, base = ''): s
   return [base, 'border-b-2 pb-0.5', active === key ? 'border-olive text-olive' : 'border-transparent'].filter(Boolean).join(' ');
 }
 
-export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', accountChrome, fill, footer, children }: SiteFrameProps) {
+export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default', accountChrome, thinChrome, fill, footer, children }: SiteFrameProps) {
   if (device === 'mobile') {
     return (
       <SiteFrameMobile locale={locale} mobileChrome={mobileChrome} accountChrome={accountChrome} fill={fill}>
@@ -65,8 +66,8 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
 
   return (
     <div className={`flex flex-col overflow-x-clip bg-cream text-ink ${fill ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
-      {/* Duyuru bandı — hesap alanında yok. */}
-      {!account && (
+      {/* Duyuru bandı — hesap alanında ve ince başlıkta yok. */}
+      {!account && !thinChrome && (
       <div className="bg-olive px-4 py-2 font-sans text-note font-medium text-sand-50">
         <div className={`${SHELL} flex justify-center gap-7 text-center`}>
           {[t.announcement.cold, t.announcement.local, t.announcement.shipping].map((item, i) => (
@@ -80,8 +81,20 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
       </div>
       )}
 
-      {/* Site başlığı — hesap alanında kendi başlığı. */}
-      {account ? (
+      {/* Site başlığı — hesap alanında kendi başlığı, ince başlıkta yalnız logo · ad · geri. */}
+      {thinChrome ? (
+        <header className="border-b border-sand-275">
+          <div className={`${SHELL} flex items-center gap-7.5 px-12 py-4`}>
+            <Link href="/" className="flex-none cursor-pointer">
+              <img src="/logo-yatay.png" alt={brand.name} className="h-[40px]" />
+            </Link>
+            <span className="font-serif text-h2-sm text-ink">{thinChrome.title}</span>
+            <span className="ml-auto">
+              <BackButton variant="text" label={t.back} fallback={thinChrome.fallback} />
+            </span>
+          </div>
+        </header>
+      ) : account ? (
         <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4.5`}>
           <Link href="/" className="cursor-pointer">
             <img src="/logo-yatay.png" alt={brand.name} className="h-[42px]" />
@@ -151,7 +164,8 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
           kaydırılabilir alan taşar ve sayfanın kendisi kaydırılır (yani kutu yine dipte durmaz). */}
       <main className={`${SHELL} flex flex-1 flex-col ${fill ? 'min-h-0' : ''}`}>{children}</main>
 
-      {/* Footer zemini tam genişlikte, içerik kabuk içinde; katmanı `footerTier` seçer. */}
+      {/* Footer zemini tam genişlikte, içerik kabuk içinde; katmanı `footerTier` seçer. İnce başlıkta footer yok. */}
+      {!thinChrome && (
       <footer className="bg-ink text-neutral-400">
         {footerTier === 'slim' ? (
           <div className={`${SHELL} flex items-center justify-between px-12 py-4 font-sans text-micro`}>
@@ -215,6 +229,7 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
           ))}
         </div>
       </footer>
+      )}
     </div>
   );
 }

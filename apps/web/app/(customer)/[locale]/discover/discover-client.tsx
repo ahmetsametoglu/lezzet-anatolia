@@ -9,8 +9,7 @@ import { addSwipeId, clearSwipeIds, readSwipeIds } from '@/lib/feedback/discover
 import { claimSwipesAction, swipeAction } from './actions';
 import { DiscoverDesktop } from './discover.desktop';
 import { DiscoverMobile } from './discover.mobile';
-import { DiscoverOutcome } from './components/discover-outcome';
-import type { Messages } from './discover-types';
+import type { DiscoverVote, Messages } from './discover-types';
 
 /**
  * Keşif turunun durumu — deste, konum, puan, beğeni sayısı ve giriş dönüşündeki talep; cihaz çatalı yalnız yerleşimde.
@@ -29,15 +28,16 @@ interface DiscoverClientProps {
 }
 
 export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCard, moneyOf }: DiscoverClientProps) {
-  const [index, setIndex] = useState(0);
+  const [decisions, setDecisions] = useState<DiscoverVote[]>([]);
   const [earned, setEarned] = useState(0);
-  const [likes, setLikes] = useState(0);
   /** Cevabı beklenen yazım sayısı: sıfır olmadan puan toplamı tam değildir. */
   const [pending, setPending] = useState(0);
   const [claimed, setClaimed] = useState<number | null>(null);
   /** Kartın ekrana geldiği an — `dwell_ms` sinyal kalitesinin girdisi. */
   const shownAt = useRef(Date.now());
 
+  const index = decisions.length;
+  const likes = decisions.filter((d) => d === 'like').length;
   const card = cards[index] ?? null;
   const resolved = useDevice(device);
 
@@ -58,12 +58,11 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
   }, [signedIn]);
 
   const vote = useCallback(
-    (choice: 'like' | 'dislike') => {
+    (choice: DiscoverVote) => {
       if (!card) return;
       const dwellMs = Date.now() - shownAt.current;
       // Kart yazımı beklemeden ilerler: kaydırma bir jest, ağ beklemesi akışı keser; düşen yazım yalnız bir sinyal kaybıdır.
-      setIndex((i) => i + 1);
-      if (choice === 'like') setLikes((n) => n + 1);
+      setDecisions((d) => [...d, choice]);
       setPending((n) => n + 1);
       void swipeAction(card.productId, choice, dwellMs)
         .then((res) => {
@@ -108,39 +107,18 @@ export function DiscoverClient({ t, locale, device, cards, signedIn, pointsPerCa
     );
   }
 
-  if (!card) {
-    // Son oyun yazımı bitmeden puan toplamı eksiktir; bitiş yazım bitince çizilir.
-    if (pending > 0) return null;
-    return (
-      <>
-        {claimed !== null && (
-          <p className="mx-auto mt-6 w-max rounded-pill bg-olive-bg px-4 py-2 font-sans text-note font-semibold text-olive-dark" role="status">
-            {t.claimed.replace('{points}', String(claimed))}
-          </p>
-        )}
-        <DiscoverOutcome
-          t={t}
-          signedIn={signedIn}
-          earned={earned}
-          earnedMoney={moneyOf}
-          // Hiç kart gelmediyse tur BİTMEDİ, hiç başlamadı — iki hâl ayrı cümle ister.
-          emptyDeck={cards.length === 0}
-          compact={false}
-        />
-      </>
-    );
-  }
-
   return (
     <DiscoverDesktop
       t={t}
-      locale={locale}
-      card={card}
-      position={{ index: index + 1, total: cards.length }}
+      cards={cards}
+      current={index}
+      decisions={decisions}
       earned={earned}
       signedIn={signedIn}
       onVote={vote}
       busy={pending > 0}
+      claimed={claimed}
+      earnedMoney={moneyOf}
     />
   );
 }

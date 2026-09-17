@@ -46,6 +46,15 @@ export interface SiteFrameProps {
     right?: ReactNode;
   };
   /**
+   * Masaüstünün ince başlığı (keşif): logo, sayfa adı ve "← Geri"; duyuru bandı, menü ve footer çizilmez.
+   * Verilince vitrin başlığının yerine geçer.
+   */
+  thinChrome?: {
+    title: string;
+    /** Geçmiş siteden çıkaracaksa gidilecek yer (`BackButton` sözleşmesi). */
+    fallback: ComponentProps<typeof BackButton>['fallback'];
+  };
+  /**
    * Sayfa ekranı doldurur (yazışma yüzeyleri): cevap kutusu içeriğin bittiği yerde değil ekranın
    * dibinde durur. `main` kendi içinde kayar, footer ekranın dibinde kalır.
    */

@@ -11,8 +11,8 @@ interface BackButtonProps {
   label: string;
   /** Geri siteden çıkaracaksa (geçmiş yok ya da öncesi başka site) gidilecek yer. */
   fallback: PushHref;
-  /** `bar` başlık çubuğunun zeminsiz dairesi; `photo` fotoğraf üstündeki kum daire. */
-  variant?: 'bar' | 'photo';
+  /** `bar` başlık çubuğunun zeminsiz dairesi; `photo` fotoğraf üstündeki kum daire; `text` masaüstü ince başlığın "← Geri" yazısı. */
+  variant?: 'bar' | 'photo' | 'text';
 }
 
 /**
@@ -33,6 +33,17 @@ export function BackButton({ label, fallback, variant = 'bar' }: BackButtonProps
     if (stays) router.back();
     else router.push(fallback);
   };
+  if (variant === 'text') {
+    return (
+      <button
+        type="button"
+        onClick={goBack}
+        className="cursor-pointer font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
+      >
+        ← {label}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
