@@ -4,6 +4,7 @@ import {
   EMPTY_NUTRITION,
   hasNutrition,
   ImageCropFieldsSchema,
+  NewVariantBarcodeSchema,
   pickCropFields,
   ProductInsertSchema,
   ProductStatusEnum,
@@ -33,7 +34,12 @@ export const ProductFormSchema = ProductInsertSchema.omit({
     // Durum ZORUNLU'ya daraltılır: insert şemasında opsiyonel (DB default'u var), formda ise her zaman
     // bir seçim vardır — alt bardaki üçlü seçici. DB'de de tek kolon (`product_status`).
     status: ProductStatusEnum,
-    variants: z.array(ProductVariantEntrySchema),
+    /**
+     * Varyant satırı + o satıra BAĞLANACAK yeni kodlar. Kod varyantın kolonu değil ayrı bir eşleme kaydıdır
+     * (`variant_barcode`); kayıtlı kodlar editörün kendi okuması, buradaki liste yalnız kaydetmede bağlanacak
+     * olanlardır. Yeni açılan boyda satırın kimliği henüz yok, eşleme satır sırasından kurulur.
+     */
+    variants: z.array(ProductVariantEntrySchema.extend({ newBarcodes: z.array(NewVariantBarcodeSchema).optional() })),
   })
   .merge(ImageCropFieldsSchema)
   // Boy etiketi TEK varyantta boş kalabilir (müşteri seçici görmez), ama İKİ boydan sonra ayırt edici
@@ -163,7 +169,9 @@ export function toActionPayload(values: ProductFormValues) {
           // operatörün satırı atılırsa girdiği sayı sessizce kaybolur.
           v.portionKind != null ||
           v.packedWeightG != null ||
-          v.packedLengthMm != null,
+          v.packedLengthMm != null ||
+          // Yalnız kod girilmiş satır da DOKUNULMUŞ sayılır: atılırsa yazılan kod sessizce kaybolurdu.
+          (v.newBarcodes?.length ?? 0) > 0,
       )
       .map((v) => ({
         id: v.id,
@@ -178,6 +186,8 @@ export function toActionPayload(values: ProductFormValues) {
         minStockQty: v.minStockQty,
         sku: v.sku?.trim() || null,
         isActive: v.isActive,
+        // Kod varyantın kolonu değil: kapı satırı yazdıktan sonra eşlemeyi ayrıca kurar.
+        newBarcodes: (v.newBarcodes ?? []).map((b) => ({ ...b, code: b.code.trim() })),
       })),
   };
 }

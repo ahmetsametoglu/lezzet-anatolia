@@ -48,6 +48,19 @@ export const VariantBarcodeInsertSchema = VariantBarcodeSchema.pick({
 });
 export type VariantBarcodeInsert = z.infer<typeof VariantBarcodeInsertSchema>;
 
+/**
+ * FORMDAN gelen yeni kod — varyant satırının altına yazılır ve ürün KAYDEDİLİRKEN bağlanır.
+ *
+ * Kayıtlı kodun kendi satırı (`VariantBarcode`) zaten var; bu, henüz bağlanmamış olandır ve varyant
+ * kimliği taşımaz: yeni açılan boy kaydedilene kadar kimliği yoktur, eşleme satır sırasından kurulur.
+ */
+export const NewVariantBarcodeSchema = z.object({
+  code: z.string().min(1),
+  kind: BarcodeKindEnum,
+  qtyPerCode: z.number().int().positive(),
+});
+export type NewVariantBarcode = z.infer<typeof NewVariantBarcodeSchema>;
+
 /** Güncellenebilir alanlar — kodun kendisi güncellenmez: yanlış kod düzeltilmez, SİLİNİP yeniden
     öğrenilir (eşleme tarihçesiz bir beyandır, künye migration'da). */
 export const VariantBarcodeUpdateSchema = VariantBarcodeSchema.pick({})

@@ -1,5 +1,6 @@
+import { gtinCheckDigit } from '@lezzet/domain-core';
 import { describe, expect, it } from 'vitest';
-import { assertCheckDigit, ean13CheckDigit, ean13Modules, gtin14CheckDigit, itf14Modules, modulesToSvg } from './barcode-svg';
+import { assertCheckDigit, ean13Modules, itf14Modules, modulesToSvg } from './barcode-svg';
 import { TEST_LABELS } from './seed/test-labels';
 
 /*
@@ -10,19 +11,9 @@ import { TEST_LABELS } from './seed/test-labels';
   Testin asıl işi bu yüzden iki şey: kodlamanın doğruluğu ve SETİN basılabilirliği.
 */
 
+// Hesabın kendisi motorda sınanıyor (`domain-core/catalog/barcode.test.ts`); burada sınanan, basma
+// kapısının geçersiz kodu KÂĞIDA götürmemesi.
 describe('sağlama basamağı', () => {
-  it('EAN-13 ağırlıkları soldan 1,3,1,3… ile sayar', () => {
-    // Elle doğrulanmış: 8+18+9+3+0+0+0+0+0+21+9+3 = 71 → (10 − 1) = 9.
-    expect(ean13CheckDigit('869100000791')).toBe(9);
-    // Toplam 10'un katıysa basamak 0'dır — (10 − 0) % 10 kuralı burada ölçülüyor.
-    expect(ean13CheckDigit('000000000000')).toBe(0);
-  });
-
-  it('GTIN-14 ağırlıkları soldan 3,1,3,1… ile sayar (EAN ile TERS)', () => {
-    // Ters ağırlık kritik: EAN kuralını GTIN'e uygulamak 24.08'de geçersiz bir koli kodu üretmişti.
-    expect(gtin14CheckDigit('1869100004751')).toBe(6);
-  });
-
   it('geçersiz kodu FIRLATIR ve doğrusunu söyler — sessiz kâğıt israfı olmasın', () => {
     // 24.08'de elde basılı olan kod: son hane 4, doğrusu 6.
     expect(() => assertCheckDigit('18691000047514', 'itf14')).toThrow(/18691000047516/);
@@ -61,7 +52,7 @@ describe('EAN-13 modülleri', () => {
       EAN-13'ün en kolay yanlış yazılan yeri burası: 12 haneyi çizip 13.'yü unutmak, OKUNAN ama
       YANLIŞ ürünü gösteren bir kod üretir — kâğıtta da ekranda da hata görünmez.
     */
-    const kod = (govde12: string): string => `${govde12}${ean13CheckDigit(govde12)}`;
+    const kod = (govde12: string): string => `${govde12}${gtinCheckDigit(govde12)}`;
     const ilkHane0 = ean13Modules(kod('069100000791'));
     const ilkHane8 = ean13Modules(kod('869100000791'));
 

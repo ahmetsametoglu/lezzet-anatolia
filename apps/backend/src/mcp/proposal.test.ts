@@ -5,6 +5,7 @@ import {
   ProductService,
   ProductVariantService,
   SupplierService,
+  VariantBarcodeService,
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
@@ -152,13 +153,14 @@ describe('ürün künyesi dilekçesi', () => {
     });
     createdProducts.push(product.id);
     const [bos, oteki] = variants;
+    const kod = `2${String(stamp).slice(-12)}`;
 
     const payload: ProductDraftPayload = {
       productId: product.id,
       productName: `Künye testi ${stamp}`,
       fields: {},
       identity: { storageType: 'ambient', shelfLifeDays: 180 },
-      variants: [{ variantId: bos!.id, variantLabel: '200 g', netWeightG: 200 }],
+      variants: [{ variantId: bos!.id, variantLabel: '200 g', netWeightG: 200, barcode: { code: kod, kind: 'case', qtyPerCode: 12 } }],
       uncertainFields: [],
       remainingGaps: [],
     };
@@ -180,6 +182,44 @@ describe('ürün künyesi dilekçesi', () => {
     const guncel = await products.getById(product.id);
     expect(guncel?.storageType).toBe('ambient');
     expect(guncel?.shelfLifeDays).toBe(180);
+    // Kod varyantın kolonu değil ayrı eşleme: çarpanıyla birlikte bağlandı, ikinci kabulde tanınacak.
+    const kodlar = await new VariantBarcodeService(db).listByVariant(bos!.id);
+    expect(kodlar.map((c) => [c.code, c.kind, c.qtyPerCode])).toEqual([[kod, 'case', 12]]);
+  });
+
+  /**
+   * Bir kod İKİ boya bağlanamaz (`variant_barcode_code_uq`). Uygulama sessizce atlasaydı patron kodu
+   * yazıldı sanırdı ve arıza ilk kez depoda, koli yanlış ürüne sayıldığında görünürdü.
+   */
+  it('kod başka boya bağlıysa uygulama SEBEBİYLE düşer', async () => {
+    const products = new ProductService(db);
+    const { product, variants } = await products.create({
+      name: { tr: `Kod çakışması ${stamp}` },
+      variants: [{ label: { tr: '1 kg' } }, { label: { tr: '2 kg' } }],
+    });
+    createdProducts.push(product.id);
+    const kod = `3${String(stamp).slice(-12)}`;
+    await new VariantBarcodeService(db).insert({ variantId: variants[0]!.id, code: kod });
+
+    const payload: ProductDraftPayload = {
+      productId: product.id,
+      productName: `Kod çakışması ${stamp}`,
+      fields: {},
+      identity: {},
+      variants: [{ variantId: variants[1]!.id, variantLabel: '2 kg', barcode: { code: kod, kind: 'unit', qtyPerCode: 1 } }],
+      uncertainFields: [],
+      remainingGaps: [],
+    };
+    const row = await proposals.create({
+      kind: 'product_draft',
+      payload,
+      summary: `Kod çakışması ${stamp}`,
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      sourceSession: `test-${stamp}`,
+    });
+    created.push(row.id);
+
+    await expect(applyProposal(db, (await proposals.claimForApply(row.id, null as unknown as string))!)).rejects.toThrow(kod);
   });
 });
 

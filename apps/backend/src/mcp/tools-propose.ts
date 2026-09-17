@@ -18,12 +18,14 @@ import {
   StockService,
   SupplierProductService,
   SupplierService,
+  VariantBarcodeService,
   WarehouseService,
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
 import {
   acceptsNature,
+  barcodeProblem,
   discountPercentOf,
   hasSupplierIdentity,
   matchNature,
@@ -59,6 +61,7 @@ import {
   type InvoiceTermsPayload,
   type MoneyDocumentPayload,
   type MoneyMovementPayload,
+  type NewVariantBarcode,
   type ProductCreatePayload,
   type ProductDraftPayload,
   type ProductIdentityPayload,
@@ -580,6 +583,30 @@ function storageTypeArg(value: unknown): 'ambient' | 'chilled' | 'frozen' | null
   return value === 'ambient' || value === 'chilled' || value === 'frozen' ? value : null;
 }
 
+/**
+ * Ambalajın üstündeki kod — sağlaması tutmayan kod ÖNERİYE hiç girmez, bağlı kod ikinci kez önerilmez.
+ *
+ * İkisi de yazma anında değil ÖNERİ anında sorulur: modelin fotoğraftan yanlış okuduğu tek hane, onay
+ * ekranında doğru görünen bir kod olarak geçerdi ve arıza ilk kez depoda görünürdü.
+ */
+async function readBarcode(raw: unknown, yer: string): Promise<{ barcode?: NewVariantBarcode } | { error: string }> {
+  if (raw === undefined || raw === null) return {};
+  const row = (typeof raw === 'string' ? { code: raw } : raw) as Record<string, unknown>;
+  const code = textArg(row.code);
+  if (!code) return { error: `${yer}.barcode: kod boş — ambalajdaki rakamları olduğu gibi verin.` };
+  const problem = barcodeProblem(code);
+  if (problem) return { error: `${yer}.barcode: ${problem}` };
+
+  const kind = row.kind === 'case' ? 'case' : 'unit';
+  // Koli kodunun çarpanı KODUN kendi bilgisidir; verilmezse kod hep 1 sayar ve depocu adedi her kabulde elle düzeltir.
+  const qtyPerCode = kind === 'case' ? positiveIntArg(row.qtyPerCode) : 1;
+  if (qtyPerCode === null) return { error: `${yer}.barcode.qtyPerCode koli kodunda zorunlu — bir okutma kaç paket sayacak.` };
+
+  const bound = await new VariantBarcodeService(serviceDb()).getByCode(code);
+  if (bound) return { error: `${yer}.barcode: "${code}" zaten bir boya bağlı. Eşleme panelden silinmeden aynı kod ikinci kez bağlanamaz.` };
+  return { barcode: { code, kind, qtyPerCode } };
+}
+
 /** Kategori ADLA bulunur; bulunamazsa mevcutlar yazılır ki model doğrusunu seçebilsin. */
 async function pickCategory(name: unknown): Promise<{ category: { id: string; name: string } | null } | { error: string }> {
   const wanted = textArg(name);
@@ -662,6 +689,8 @@ async function readVariantEdits(
     }
     const portionKind = row.portionKind === undefined ? undefined : porsiyonTuru(row.portionKind);
     if (row.portionKind !== undefined && portionKind === null) return { error: `variants[${i}].portionKind 'item' | 'slice' olmalı.` };
+    const okunanKod = await readBarcode(row.barcode, `variants[${i}]`);
+    if ('error' in okunanKod) return okunanKod;
 
     const edit = {
       variantId,
@@ -669,9 +698,10 @@ async function readVariantEdits(
       ...(label ? { label } : {}),
       ...olcu,
       ...(portionKind ? { portionKind } : {}),
+      ...(okunanKod.barcode ? { barcode: okunanKod.barcode } : {}),
     } as ProductDraftPayload['variants'][number];
     if (Object.keys(edit).length === 2) {
-      return { error: `variants[${i}] boş — etiket, gramaj, adet, porsiyon türü ya da ambalaj ölçüsünden en az biri verilmeli.` };
+      return { error: `variants[${i}] boş — etiket, gramaj, adet, porsiyon türü, ambalaj ölçüsü ya da barkoddan en az biri verilmeli.` };
     }
     variants.push(edit);
   }
@@ -769,23 +799,25 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
   }
   // Etiket ("500 g") ile ölçü (500) ayrı alanlar: biri müşterinin okuduğu metin, öteki kilo başı fiyatın tabanı.
   // Ambalaj ölçüsü (`packed*`) etikette yazmaz, tartılır: pozitif tam sayı değilse `null`, çünkü tahmini sayı kargo tarifesine girer.
-  const variants = rawVariants.flatMap((v) =>
-    v.label && typeof v.label === 'object'
-      ? [
-          {
-            label: v.label as ProductCreatePayload['variants'][number]['label'],
-            netWeightG: typeof v.netWeightG === 'number' && v.netWeightG > 0 ? v.netWeightG : null,
-            piecesCount: Number.isInteger(v.piecesCount) && (v.piecesCount as number) > 0 ? (v.piecesCount as number) : null,
-            portionKind: porsiyonTuru(v.portionKind),
-            packedWeightG: positiveIntArg(v.packedWeightG),
-            packedLengthMm: positiveIntArg(v.packedLengthMm),
-            packedWidthMm: positiveIntArg(v.packedWidthMm),
-            packedHeightMm: positiveIntArg(v.packedHeightMm),
-          },
-        ]
-      : [],
-  );
-  if (variants.length !== rawVariants.length) return { error: 'Her varyantın `label` alanı olmalı — { "tr": "500 g" }.' };
+  if (rawVariants.some((v) => !v.label || typeof v.label !== 'object')) {
+    return { error: 'Her varyantın `label` alanı olmalı — { "tr": "500 g" }.' };
+  }
+  const variants: ProductCreatePayload['variants'] = [];
+  for (const [i, v] of rawVariants.entries()) {
+    const okunanKod = await readBarcode(v.barcode, `variants[${i}]`);
+    if ('error' in okunanKod) return okunanKod;
+    variants.push({
+      label: v.label as ProductCreatePayload['variants'][number]['label'],
+      netWeightG: typeof v.netWeightG === 'number' && v.netWeightG > 0 ? v.netWeightG : null,
+      piecesCount: Number.isInteger(v.piecesCount) && (v.piecesCount as number) > 0 ? (v.piecesCount as number) : null,
+      portionKind: porsiyonTuru(v.portionKind),
+      packedWeightG: positiveIntArg(v.packedWeightG),
+      packedLengthMm: positiveIntArg(v.packedLengthMm),
+      packedWidthMm: positiveIntArg(v.packedWidthMm),
+      packedHeightMm: positiveIntArg(v.packedHeightMm),
+      ...(okunanKod.barcode ? { barcode: okunanKod.barcode } : {}),
+    });
+  }
 
   const dateType = dateTypeArg(args.dateType);
   if (!dateType) {

@@ -829,6 +829,7 @@ function identityRows(payload: ProductDraftPayload): DeclarationRow[] {
 
 /** Boy satırının hangi alanının yazılacağı — ölçü birimleri adın içinde, çünkü "200" tek başına gram mı adet mi demez. */
 const SIZE_FIELD_LABEL: Record<string, string> = {
+  barcode: 'barkod',
   label: 'etiket',
   netWeightG: 'gramaj (g)',
   piecesCount: 'adet',
@@ -839,6 +840,16 @@ const SIZE_FIELD_LABEL: Record<string, string> = {
   packedHeightMm: 'yükseklik (mm)',
 };
 
+/** Boy alanının okunur değeri — etiket çok dilli, barkod kendi türünü söyler ("koli ×12"), kalanı sayı. */
+function sizeValueText(key: string, value: unknown): string {
+  if (key === 'label') return localizedSummary(value);
+  if (key === 'barcode') {
+    const code = value as { code: string; kind: string; qtyPerCode: number };
+    return `${code.code} (${code.kind === 'case' ? `koli ×${code.qtyPerCode}` : 'paket'})`;
+  }
+  return String(value);
+}
+
 /** Boy satırları — okunur ad dilekçede taşınır (`variantLabel`), kimlik ekrana çıkmaz. */
 function sizeRows(payload: ProductDraftPayload): { key: string; boy: string; next: string }[] {
   return payload.variants.map((variant) => ({
@@ -846,7 +857,7 @@ function sizeRows(payload: ProductDraftPayload): { key: string; boy: string; nex
     boy: variant.variantLabel,
     next: Object.entries(variant)
       .filter(([key, value]) => key !== 'variantId' && key !== 'variantLabel' && value !== undefined)
-      .map(([key, value]) => `${SIZE_FIELD_LABEL[key] ?? key}: ${key === 'label' ? localizedSummary(value) : String(value)}`)
+      .map(([key, value]) => `${SIZE_FIELD_LABEL[key] ?? key}: ${sizeValueText(key, value)}`)
       .join(' · '),
   }));
 }

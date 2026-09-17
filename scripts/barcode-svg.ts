@@ -16,6 +16,8 @@
   da taranabilir) — buradaki katılık yalnız KÂĞIDA basılan simgeye ait, veriye değil.
 */
 
+import { gtinCheckDigit } from '@lezzet/domain-core';
+
 /** EAN-13 sol yarının L kodlaması; R = tümleyeni, G = L'nin ters okunuşu (aşağıda türetiliyor). */
 const L_CODES = [
   '0001101', '0011001', '0010011', '0111101', '0100011',
@@ -37,21 +39,10 @@ const ITF_CODES = [
   '10100', '01100', '00011', '10010', '01010',
 ] as const;
 
-/** EAN-13 sağlama basamağı — ağırlıklar soldan 1,3,1,3… */
-export function ean13CheckDigit(body12: string): number {
-  const sum = [...body12].reduce((acc, d, i) => acc + Number(d) * (i % 2 === 0 ? 1 : 3), 0);
-  return (10 - (sum % 10)) % 10;
-}
-
-/** GTIN-14 (ITF-14) sağlama basamağı — ağırlıklar soldan 3,1,3,1… */
-export function gtin14CheckDigit(body13: string): number {
-  const sum = [...body13].reduce((acc, d, i) => acc + Number(d) * (i % 2 === 0 ? 3 : 1), 0);
-  return (10 - (sum % 10)) % 10;
-}
-
 /**
  * Kodun basılabilir olduğunu doğrular. Fırlatır — çünkü alternatifi, okuyucunun sessizce yok
- * saydığı bir kâğıdı basmak ve sebebini cihazda aramaktır.
+ * saydığı bir kâğıdı basmak ve sebebini cihazda aramaktır. Hesap motorda (`gtinCheckDigit`):
+ * aynı sağlama panelde kod yazılırken de sorulur, iki kopya bir gün ayrışırdı.
  */
 export function assertCheckDigit(code: string, kind: 'ean13' | 'itf14'): void {
   const uzunluk = kind === 'ean13' ? 13 : 14;
@@ -59,7 +50,7 @@ export function assertCheckDigit(code: string, kind: 'ean13' | 'itf14'): void {
     throw new Error(`${kind}: kod ${uzunluk} haneli rakam olmalı — "${code}"`);
   }
   const govde = code.slice(0, -1);
-  const beklenen = kind === 'ean13' ? ean13CheckDigit(govde) : gtin14CheckDigit(govde);
+  const beklenen = gtinCheckDigit(govde);
   if (Number(code.at(-1)) !== beklenen) {
     throw new Error(`${kind}: "${code}" sağlama basamağı tutmuyor — doğrusu ${govde}${beklenen}`);
   }

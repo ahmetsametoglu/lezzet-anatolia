@@ -24,6 +24,7 @@ import {
   type FeaturedFlagPayload,
   type MoneyDocumentPayload,
   type MoneyMovementPayload,
+  type NewVariantBarcode,
   type ProductCreatePayload,
   type ProductDraftPayload,
   type PurchaseOrderPayload,
@@ -33,6 +34,7 @@ import {
   type ZoneExtendPayload,
 } from '@lezzet/types';
 import { createMoneyDocument } from '../accounting/document';
+import { learnCode } from '../warehouse/scan';
 import { createSupplier, duplicateSupplierMessage } from '../warehouse/supplier';
 
 /**
@@ -226,22 +228,37 @@ const applyProductDraft: Applier = async (db, raw) => {
   const payload = parseProposalPayload('product_draft', raw) as ProductDraftPayload;
   // Yalnız GELEN alanlar yazılır: payload'da olmayan alanı `undefined` geçmek, dolu bir beyanı
   // sessizce `null`a çevirirdi. `status` hiç geçilmiyor — yayın kararı bu kapıdan verilmez (22.6).
-  await new ProductService(db).updateDetails(payload.productId, {
-    ...declarationUpdate(payload.fields),
-    ...identityUpdate(payload.identity),
-  });
+  // Ürün satırına yalnız DOLU bir yama gider: alansız `update` hiçbir satır döndürmez ve kapı
+  // "tek kayıt bekleniyordu" diye düşer — oysa dilekçe yalnız boy ya da kod taşıyor olabilir.
+  const productPatch = { ...declarationUpdate(payload.fields), ...identityUpdate(payload.identity) };
+  if (Object.keys(productPatch).length > 0) await new ProductService(db).updateDetails(payload.productId, productPatch);
   // Boy satırı KİMLİKLE güncellenir, liste yeniden yazılmaz (`syncVariants` eksik satırı silerdi):
   // dilekçe yalnız var olan boyun boş alanını doldurur, ürünün öteki boyları yerinde kalır.
   const variants = new ProductVariantService(db);
   for (const edit of payload.variants) {
-    // `variantLabel` boyun OKUNUR adı (kartın işi), kolon değil: patch'e girerse yazma reddedilirdi.
+    // `variantLabel` boyun OKUNUR adı (kartın işi), `barcode` ayrı bir eşleme kaydı: ikisi de kolon
+    // değil, patch'e girerlerse yazma reddedilirdi.
     const patch = Object.fromEntries(
-      Object.entries(edit).filter(([key, value]) => key !== 'variantId' && key !== 'variantLabel' && value !== undefined),
+      Object.entries(edit).filter(([key, value]) => !['variantId', 'variantLabel', 'barcode'].includes(key) && value !== undefined),
     );
     if (Object.keys(patch).length > 0) await variants.update({ id: edit.variantId, ...patch });
+    if (edit.barcode) await bindBarcode(db, edit.variantId, edit.barcode);
   }
   return { productId: payload.productId };
 };
+
+/**
+ * Ambalajın kodunu boya bağlar. Kod başkasına bağlıysa FIRLATIR: öneri `failed` olur ve sebebi satırda
+ * kalır — sessizce atlansaydı patron kodu yazıldı sanırdı ve arıza ilk kez depoda görünürdü.
+ */
+async function bindBarcode(db: SupabaseClient, variantId: string, barcode: NewVariantBarcode): Promise<void> {
+  const outcome = await learnCode(db, { ...barcode, variantId, actorId: null });
+  if (outcome.status === 'already_bound') {
+    throw new Error(
+      `"${barcode.code}" kodu «${outcome.productName} ${outcome.variantLabel}» boyuna bağlı — eşleme silinmeden yeniden bağlanamaz.`,
+    );
+  }
+}
 
 /** Künye alanları — beyanla aynı kural: verilmeyen alan hiç yazılmaz, kategori `null` "kategorisiz"tir. */
 function identityUpdate(identity: ProductDraftPayload['identity']): Record<string, unknown> {
@@ -287,7 +304,7 @@ function declarationUpdate(p: {
  */
 const applyProductCreate: Applier = async (db, raw) => {
   const payload = parseProposalPayload('product_create', raw) as ProductCreatePayload;
-  const { product } = await new ProductService(db).create({
+  const { product, variants } = await new ProductService(db).create({
     ...declarationUpdate(payload),
     name: payload.name,
     categoryId: payload.categoryId,
@@ -319,6 +336,11 @@ const applyProductCreate: Applier = async (db, raw) => {
       sortOrder: index,
     })),
   } as Parameters<ProductService['create']>[0]);
+  // Kod eşlemesi boylar doğduktan sonra kurulur; sıra korunur, `create` girdiyi olduğu gibi yazar.
+  for (const [index, v] of payload.variants.entries()) {
+    const variantId = variants[index]?.id;
+    if (v.barcode && variantId) await bindBarcode(db, variantId, v.barcode);
+  }
   return { productId: product.id };
 };
 

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
-import { resolveLocalizedText, type LocalizedText, type VariantBarcode } from '@lezzet/types';
+import { barcodeProblem } from '@lezzet/domain-core';
+import { resolveLocalizedText, type BarcodeKind, type LocalizedText, type VariantBarcode } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
@@ -32,6 +33,144 @@ import type { ProductFormValues } from './schema';
 // kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer
 // kaplar"). Genişliği 52px — başlığı kısa, değeri iki haneli.
 const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_104px_64px_52px_60px_38px_26px] items-center gap-x-2';
+
+/**
+ * Satırın BARKODLARI — kayıtlı olanlar ve kaydedilince bağlanacak olanlar bir arada.
+ *
+ * Kod EKLEMEK bir tur bilerek yoktu (öğrenme mal kabulde, karar §1.3); işletmeci kararıyla açıldı:
+ * ambalaj fotoğrafından okunan kodu asistan buraya yazar, operatör görerek onaylar. Yazma yine
+ * kaydetme anında (`bindNewBarcodes`) — kutu açıkken hiçbir şey bağlanmaz.
+ *
+ * Sağlama hanesi BURADA da sorulur: yanlış yazılan hane yazıldığı an görünür, üç hafta sonra depoda
+ * okutulmayan bir kolide değil.
+ */
+function BarcodeCell({
+  control,
+  index,
+  saved,
+  onUnlearn,
+}: {
+  control: Control<ProductFormValues>;
+  index: number;
+  saved: VariantBarcode[];
+  onUnlearn: (code: VariantBarcode) => void;
+}) {
+  const [draft, setDraft] = useState('');
+  const [kind, setKind] = useState<BarcodeKind>('unit');
+  const [qty, setQty] = useState(12);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  return (
+    <Controller
+      control={control}
+      name={`variants.${index}.newBarcodes`}
+      render={({ field }) => {
+        const pending = field.value ?? [];
+        const ekle = () => {
+          const code = draft.trim();
+          const varOlan = pending.some((p) => p.code === code) || saved.some((s) => s.code === code);
+          const sorun = barcodeProblem(code) ?? (varOlan ? 'Bu kod bu boyda zaten var.' : null);
+          if (sorun) {
+            setProblem(sorun);
+            return;
+          }
+          // `unit` kodun çarpanı DAİMA 1 — kısıt veride de (`variant_barcode_unit_is_one`).
+          field.onChange([...pending, { code, kind, qtyPerCode: kind === 'case' ? qty : 1 }]);
+          setDraft('');
+          setProblem(null);
+        };
+
+        return (
+          <div className="flex flex-wrap items-center gap-1.5 px-[13px] pb-2 pl-[31px]">
+            <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">Barkod</span>
+            {saved.map((code) => (
+              <span
+                key={code.id}
+                className="inline-flex items-center gap-1 rounded-[6px] border border-ops-line bg-ops-subtle px-1.5 py-0.5 font-ops-mono text-ops-micro text-ops-body"
+                title={code.createdBy ? 'Mal kabulde öğretilmiş kod' : 'Sistem kaydı'}
+              >
+                {code.code}
+                <span className="text-ops-faint">{code.kind === 'case' ? `koli ×${code.qtyPerCode}` : 'paket'}</span>
+                <button
+                  type="button"
+                  onClick={() => onUnlearn(code)}
+                  className="cursor-pointer text-ops-faint hover:text-ops-red"
+                  aria-label={`${code.code} kodunu sil`}
+                  title="Eşlemeyi geri al — kod bir sonraki kabulde yeniden sorulur"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            {pending.map((code) => (
+              <span
+                key={code.code}
+                className="inline-flex items-center gap-1 rounded-[6px] border border-ops-violet-line bg-ops-violet-bg px-1.5 py-0.5 font-ops-mono text-ops-micro text-ops-violet"
+                title="Kaydedilince bağlanacak"
+              >
+                {code.code}
+                <span className="opacity-70">{code.kind === 'case' ? `koli ×${code.qtyPerCode}` : 'paket'}</span>
+                <button
+                  type="button"
+                  onClick={() => field.onChange(pending.filter((p) => p.code !== code.code))}
+                  className="cursor-pointer hover:text-ops-red"
+                  aria-label={`${code.code} kodunu listeden çıkar`}
+                  title="Listeden çıkar — henüz yazılmadı"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <Input
+              inputSize="sm"
+              mono
+              className="w-[150px]"
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                setProblem(null);
+              }}
+              placeholder="kod ekle"
+              aria-label="Yeni barkod"
+              error={problem ?? undefined}
+              title={problem ?? 'Ambalajın üstündeki kod — okutulan kod da yazılabilir'}
+            />
+            <Select
+              size="sm"
+              className="w-[92px]"
+              value={kind}
+              onChange={(value) => setKind(value as BarcodeKind)}
+              ariaLabel="Kodun türü"
+              options={[
+                { value: 'unit', label: 'paket' },
+                { value: 'case', label: 'koli' },
+              ]}
+            />
+            {kind === 'case' ? (
+              <NumberCell
+                value={qty}
+                onChange={(v) => setQty(v ?? 1)}
+                onBlur={() => undefined}
+                className="w-[64px]"
+                title="Bu koli okutulunca kaç paket sayılacak"
+                placeholder="adet"
+              />
+            ) : null}
+            <button
+              type="button"
+              onClick={ekle}
+              disabled={draft.trim().length === 0}
+              className="cursor-pointer rounded-[6px] border border-ops-line px-1.5 py-0.5 font-ops-display text-ops-micro text-ops-muted hover:border-ops-violet hover:text-ops-violet disabled:cursor-default disabled:opacity-40"
+              title="Kaydedilince bu boya bağlanır"
+            >
+              Ekle
+            </button>
+          </div>
+        );
+      }}
+    />
+  );
+}
 
 /** Sayı hücresi — Net (g) ve Min. stok aynı davranışı paylaşır (boş = bilinmiyor / eşik yok). */
 function NumberCell({
@@ -368,34 +507,7 @@ export function VariantEditor({ control }: VariantEditorProps) {
                 )}
               </div>
               <PackingRow control={control} index={i} />
-              {/* Barkodlar (23.3): mal kabulde ÖĞRETİLEN kodlar — yanlış öğretilenin geri alma
-                  yeri burası. Kod eklenmez (öğrenme kabuldedir, karar §1.3); yalnız silinir. */}
-              {rowCodes.length === 0 ? null : (
-                <div className="flex flex-wrap items-center gap-1.5 px-[13px] pb-2 pl-[31px]">
-                  <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">
-                    Barkod
-                  </span>
-                  {rowCodes.map((code) => (
-                    <span
-                      key={code.id}
-                      className="inline-flex items-center gap-1 rounded-[6px] border border-ops-line bg-ops-subtle px-1.5 py-0.5 font-ops-mono text-ops-micro text-ops-body"
-                      title={code.createdBy ? 'Mal kabulde öğretilmiş kod' : 'Sistem kaydı'}
-                    >
-                      {code.code}
-                      <span className="text-ops-faint">{code.kind === 'case' ? `koli ×${code.qtyPerCode}` : 'paket'}</span>
-                      <button
-                        type="button"
-                        onClick={() => unlearnCode(code)}
-                        className="cursor-pointer text-ops-faint hover:text-ops-red"
-                        aria-label={`${code.code} kodunu sil`}
-                        title="Eşlemeyi geri al — kod bir sonraki kabulde yeniden sorulur"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+              <BarcodeCell control={control} index={i} saved={rowCodes} onUnlearn={unlearnCode} />
               </div>
             );
           }}

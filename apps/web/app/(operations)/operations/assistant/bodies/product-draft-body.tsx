@@ -86,9 +86,12 @@ export function productDraftValuesFrom(payload: ProductDraftPayload, product: Pr
     patch.variants = base.variants.map((row) => {
       const edit = row.id ? edits.get(row.id) : undefined;
       if (!edit) return row;
-      // Kimlik ve okunur ad forma girmez: satırın kendi kimliği zaten var, ad kartın işi.
-      const patch = Object.entries(edit).filter(([key, value]) => key !== 'variantId' && key !== 'variantLabel' && value !== undefined);
-      return { ...row, ...Object.fromEntries(patch) };
+      // Kimlik ve okunur ad forma girmez: satırın kendi kimliği zaten var, ad kartın işi. Kod da
+      // varyantın kolonu değil: form onu "kaydedilince bağlanacak" listesinde taşır.
+      const patch = Object.entries(edit).filter(
+        ([key, value]) => !['variantId', 'variantLabel', 'barcode'].includes(key) && value !== undefined,
+      );
+      return { ...row, ...Object.fromEntries(patch), ...(edit.barcode ? { newBarcodes: [edit.barcode] } : {}) };
     });
   }
   return { ...base, ...patch } as ProductFormValues;
@@ -140,6 +143,8 @@ export function productCreateValuesFrom(payload: ProductCreatePayload): ProductF
       minStockQty: null,
       sku: null,
       isActive: true,
+      // Ambalajın kodu ürün kaydedilince bağlanır; formda "kaydedilince eklenecek" çipi olarak durur.
+      ...(v.barcode ? { newBarcodes: [v.barcode] } : {}),
     }));
   }
   return { ...base, ...patch } as ProductFormValues;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PortionKindEnum } from './product-variant.schema';
+import { NewVariantBarcodeSchema } from './variant-barcode.schema';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
 import { PostalCodeSchema } from '../primitives/postal-code.schema';
@@ -332,6 +333,8 @@ export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(Product
         packedLengthMm: z.number().int().positive().nullable().default(null),
         packedWidthMm: z.number().int().positive().nullable().default(null),
         packedHeightMm: z.number().int().positive().nullable().default(null),
+        /** Ambalajın üstünde basılı kod — ürün kaydedilince bu boya bağlanır (`bindNewBarcodes`). */
+        barcode: NewVariantBarcodeSchema.optional(),
       }),
     )
     .min(1),
@@ -371,6 +374,8 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
         packedLengthMm: z.number().int().positive().nullable().optional(),
         packedWidthMm: z.number().int().positive().nullable().optional(),
         packedHeightMm: z.number().int().positive().nullable().optional(),
+        /** Ambalajın üstünde basılı kod — onaylanınca bu boya bağlanır; kod ZATEN başkasındaysa araç önermez. */
+        barcode: NewVariantBarcodeSchema.optional(),
       }),
     )
     .default([]),

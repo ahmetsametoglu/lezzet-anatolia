@@ -1,9 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { learnCode } from '@lezzet/application';
 import { ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
-import { productPublishGaps } from '@lezzet/domain-core';
-import { resolveLocalizedText, type LocalizedText, type ProductDetailsUpdate, type ProductVariantEntry } from '@lezzet/types';
+import { barcodeProblem, productPublishGaps } from '@lezzet/domain-core';
+import {
+  resolveLocalizedText,
+  type LocalizedText,
+  type NewVariantBarcode,
+  type ProductDetailsUpdate,
+  type ProductVariantEntry,
+} from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { constraintMessage } from '@/lib/constraint-message';
@@ -24,8 +31,43 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
 
 // Ürün yazma yolu — ürün ekranı ile asistan kuyruğunun ortak eylemi; tek sayfaya ait olmadığı için `lib/`'te (CLAUDE §2).
 
-/** Formun gönderdiği tam girdi: düzenlenebilir ürün alanları (şemadan türer) + varyant satırları. */
-type ProductFormInput = ProductDetailsUpdate & { variants: ProductVariantEntry[] };
+/** Formun gönderdiği tam girdi: düzenlenebilir ürün alanları (şemadan türer) + varyant satırları (yazılacak kodlarıyla). */
+type ProductFormInput = ProductDetailsUpdate & { variants: (ProductVariantEntry & { newBarcodes?: NewVariantBarcode[] })[] };
+
+/**
+ * Formda yazılan yeni kodların ÖN denetimi — sağlaması tutmayan kod yazmadan önce elenir.
+ *
+ * Kod okutulduğunda cihaz kendi doğrular; formda doğrulayan yoktur ve yanlış bir hane sessizce
+ * kaydedilir: arıza ilk kez depoda, koli okutulup hiçbir şey olmayınca görünür (`gtinCheckDigit`).
+ */
+function barcodeProblems(variants: ProductFormInput['variants']): string | null {
+  const problems = variants.flatMap((v) => (v.newBarcodes ?? []).flatMap((b) => barcodeProblem(b.code) ?? []));
+  return problems.length > 0 ? problems.join(' · ') : null;
+}
+
+/**
+ * Yazılan kodları varyantlara bağlar — satır SIRASIYLA eşleşir, çünkü yeni açılan boyun kimliği ancak
+ * kaydedildikten sonra doğar. Kod başka bir boya bağlıysa `learnCode` onu söyler: ikinci kayıt açılmaz,
+ * cümle operatöre döner (ürünün kendisi zaten kaydedilmiştir).
+ */
+async function bindNewBarcodes(
+  db: ReturnType<typeof serviceDb>,
+  rows: readonly { variantId: string; codes: readonly NewVariantBarcode[] }[],
+  actorId: string | null,
+): Promise<string | null> {
+  const problems: string[] = [];
+  for (const row of rows) {
+    for (const code of row.codes) {
+      const outcome = await learnCode(db, { ...code, variantId: row.variantId, actorId });
+      if (outcome.status === 'already_bound') {
+        problems.push(
+          `"${code.code}" zaten «${outcome.productName} ${outcome.variantLabel}» boyuna bağlı — eşlemeyi oradan silmeden buraya yazılamaz.`,
+        );
+      }
+    }
+  }
+  return problems.length > 0 ? problems.join(' · ') : null;
+}
 
 function requireName(name: LocalizedText | undefined): LocalizedText {
   if (!name || !resolveLocalizedText(name)) throw new Error('Ürün adı gerekli.');
@@ -43,6 +85,7 @@ export async function createProductAction(
 ): Promise<ActionResult> {
   try {
     const staff = await requireStaff();
+    const db = serviceDb();
     const { variants, ...fields } = input;
     const name = requireName(fields.name);
 
@@ -51,30 +94,50 @@ export async function createProductAction(
       const engel = publishGapMessage(productPublishGaps({ ...fields, name }));
       if (engel) return { data: null, error: engel };
     }
+    const kodSorunu = barcodeProblems(variants);
+    if (kodSorunu) return { data: null, error: kodSorunu };
 
+    let acilanBoylar: { id: string }[] = [];
     await withProposal(
       proposalId,
       staff.profileId,
-      () =>
-        new ProductService(serviceDb()).create({
+      async () => {
+        const created = await new ProductService(db).create({
           ...fields,
           name,
           variants: variants.map((v) => ({
             label: v.label,
             netWeightG: v.netWeightG,
             piecesCount: v.piecesCount,
+            // Porsiyon türü ve ambalaj ölçüsü BU KAPIDAN da geçer: formda girdisi var ve ambalaj
+            // fotoğrafından da okunuyor, burada düşürülünce yeni ürün onları kaybediyordu.
+            portionKind: v.portionKind,
+            packedWeightG: v.packedWeightG,
+            packedLengthMm: v.packedLengthMm,
+            packedWidthMm: v.packedWidthMm,
+            packedHeightMm: v.packedHeightMm,
             minStockQty: v.minStockQty,
             sku: v.sku,
             isActive: v.isActive,
           })),
-        }),
+        });
+        acilanBoylar = created.variants;
+        return created;
+      },
       // DOĞAN kaydın kimliği künyeye yazılır: "bu ürünü hangi öneri kurdu" sorusunun cevabı ve
       // arşivdeki köprünün dayanağı (`KIND_META.product_create.resultKey`).
       ({ product }) => ({ productId: product.id }),
     );
 
+    // Kod eşlemesi ürün YAZILDIKTAN sonra kurulur: yeni boyun kimliği ancak burada vardır.
+    const kodHatasi = await bindNewBarcodes(
+      db,
+      acilanBoylar.map((v, i) => ({ variantId: v.id, codes: variants[i]?.newBarcodes ?? [] })),
+      staff.profileId,
+    );
+
     revalidatePath(PRODUCTS_PATH);
-    return { data: null, error: null };
+    return { data: null, error: kodHatasi };
   } catch (err) {
     return { data: null, error: constraintMessage(err, CONSTRAINT_MESSAGES) };
   }
@@ -102,14 +165,17 @@ export async function updateProductAction(
       const engel = publishGapMessage(productPublishGaps({ ...mevcut, ...fields }));
       if (engel) return { data: null, error: engel };
     }
+    const kodSorunu = barcodeProblems(variants);
+    if (kodSorunu) return { data: null, error: kodSorunu };
 
+    let yazilanBoylar: { id: string }[] = [];
     await withProposal(
       proposalId,
       // Profil kimliği: `assistant_proposal.decided_by` `user_profiles`'a bağlı, auth kimliği geçmek yabancı anahtar ihlali verir.
       staff.profileId,
       async () => {
         await new ProductService(db).updateDetails(id, fields);
-        await new ProductVariantService(db).syncVariants(id, variants);
+        yazilanBoylar = await new ProductVariantService(db).syncVariants(id, variants);
       },
       // ── HANGİ ALANLARIN YAZILDIĞI KAYITTA DURUR ──────────────────────────
       // Operatör formda asistanın önerisini değiştirmiş olabilir; arşiv "öneri uygulandı" derken
@@ -117,8 +183,16 @@ export async function updateProductAction(
       () => ({ productId: id, fields: Object.keys(fields).join(',') }),
     );
 
+    // Kod eşlemesi satırlar yazıldıktan sonra: `syncVariants` girdi SIRASINI koruyarak döner, yeni
+    // açılan boyun kimliği de buradan gelir.
+    const kodHatasi = await bindNewBarcodes(
+      db,
+      yazilanBoylar.map((v, i) => ({ variantId: v.id, codes: variants[i]?.newBarcodes ?? [] })),
+      staff.profileId,
+    );
+
     revalidatePath(PRODUCTS_PATH);
-    return { data: null, error: null };
+    return { data: null, error: kodHatasi };
   } catch (err) {
     return { data: null, error: constraintMessage(err, CONSTRAINT_MESSAGES) };
   }
