@@ -22,7 +22,8 @@ export function ContentCard({ t, item, compact = false }: ContentCardProps) {
 
   return (
     <Link
-      href={{ pathname: '/product/[slug]', params: { slug: item.slug } }}
+      // Boy da taşınır: paketteki boy ürünün en ucuz boyu olmayabilir.
+      href={{ pathname: '/product/[slug]', params: { slug: item.slug }, query: { variant: item.variantId } }}
       className={[
         'flex cursor-pointer items-center gap-3 rounded-soft border border-sand-100 bg-card transition-colors hover:border-olive-line',
         compact ? 'px-3 py-2.5' : 'p-3',
