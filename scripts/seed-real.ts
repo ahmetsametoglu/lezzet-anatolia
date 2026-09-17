@@ -71,11 +71,8 @@ try {
 const DRY_RUN = process.argv.includes('--dry-run');
 
 /**
- * Hangi katmana kadar yazılacağı (`--layers=2`, `--layers=3`; varsayılan 1).
- *
- * Katmanlar KÜMELENİR: 2 birinciyi de yazar, 3 ikisini de. Varsayılanın 1 olması bilinçli — üretim
- * kurulumu bayraksız koşar ve o koşuda uydurma tek bir değer bile yazılamaz. Katmanların ne olduğu
- * `seed-real/data.ts` künyesinde.
+ * Hangi katmana kadar yazılacağı (`--layers=2`, `--layers=3`; varsayılan 1) — katmanlar birikir, katmanların anlamı `seed-real/data.ts` künyesinde.
+ * Varsayılan 1, çünkü üretim kurulumu bayraksız koşar ve orada tek bir uydurma değer yazılamaz.
  */
 const LAYERS = (() => {
   const arg = process.argv.find((a) => a.startsWith('--layers='))?.split('=')[1];
@@ -271,9 +268,8 @@ async function kategoriKapagi(cat: (typeof CATEGORIES)[number], slug: string, le
 }
 
 /**
- * Vitrin kategorileri. Dönen harita kendi anahtarımın yanında KAYNAĞIN anahtarlarını da taşır: dolu
- * `catId` ile çağrılan `seedLezzaProducts` kendi kategorisini kurmaz, ürünlerini buraya düşürür.
- * Kapağı da bu yüzden burası yüklüyor — kaynağın kategori bloğu atlanınca kapak yüklemesi de atlanır.
+ * Vitrin kategorileri — dönen harita kaynağın kategori anahtarlarını da taşır ki `seedLezzaProducts` kendi kategorisini kurmasın, ürünlerini buraya düşürsün.
+ * Kapak da bu yüzden burada yüklenir: kaynağın kategori bloğu atlanınca onun kapak yüklemesi de atlanır.
  */
 async function seedCategories(db: Db): Promise<Map<string, string>> {
   console.log('▸ kategoriler');
