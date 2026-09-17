@@ -290,8 +290,10 @@ const KATEGORI_TAGLINE: Record<string, LocalizedText> = {
  * Dondurma her zaman soğuk zincirdir (iş kuralı); öteki kategorilerde `i` ile deterministik dağıtılır ki
  * her kategoride kargolanan ve kargolanmayan kalem bulunsun.
  */
-function saklamaRejimi(kategori: string | null, i: number): SaklamaRejimi {
+function saklamaRejimi(kategori: string | null, i: number, serpistir: boolean): SaklamaRejimi {
   if (kategori === 'ice-cream') return 'soguk-zincir';
+  // Serpiştirme bir sahnedir; gerçek katalogda Lezza'nın ürünleri donuk gelir ve donuk kalır.
+  if (!serpistir) return 'donuk';
   // Bölenler kargo dışı payı ~%36'da tutar ve her kategoride iki yönü de doğurur.
   if (i % 7 === 0) return 'soguk-zincir';
   if (i % 8 === 3) return 'sogutulmus';
@@ -304,6 +306,8 @@ function saklamaRejimi(kategori: string | null, i: number): SaklamaRejimi {
  * katman, sonra kusurlar. Aile üyesi aday olamaz: yarım çeşit bloğu bozuk raftır.
  */
 function satilabilirDurum(o: {
+  /** Seçimle aday işaretlenmiş: teklif de aile üyeliği de bu kararı ezmez. */
+  aday: boolean;
   teklifli: boolean;
   kurguda: boolean;
   zayifVeri: boolean;
@@ -313,6 +317,7 @@ function satilabilirDurum(o: {
   yayinaHazirDegil: boolean;
   i: number;
 }): ProductStatus {
+  if (o.aday) return 'candidate';
   // Alış fiyatı olan ya da satış kurgusuna giren ürün satıştadır; metni eksikse kısıt reddettiği için aday kalır.
   if (o.teklifli || o.kurguda) return o.yayinaHazirDegil ? 'candidate' : 'active';
   // Görseli, açıklaması ya da çevirisi olmayan ürün satışa sunulamaz: pasiftir, aday değil. Yayın
@@ -334,6 +339,13 @@ function satilabilirDurum(o: {
 /** Faturadaki varyantlar; değer, satış biriminin faturaya göre düzeltilmiş etiketi ve gramajıdır. */
 export interface LezzaSecim {
   variants: ReadonlyMap<string, { label?: LocalizedText; netWeightG?: number; piecesCount?: number }>;
+  /**
+   * Belgesiz ürünün beyanı türetilsin mi — `extend`in türetmesi, ama onun sahnelediği kusurlar (aday ve
+   * pasif sahnesi, serpiştirilmiş saklama rejimi, eksik dil) olmadan: gerçek kataloğa kusur yazılmaz.
+   */
+  derive?: boolean;
+  /** Bu kodları taşıyan ürün, teklifte alış fiyatı olsa da ADAY doğar: satışa açmak işletmecinin kararı. */
+  candidates?: ReadonlySet<string>;
 }
 
 /** Kataloğu kurar; çağıran servisleri ve başlangıç sırasını verir, sonuç sayıları döner. */
@@ -361,7 +373,7 @@ export async function seedLezzaProducts(
    * `base` hiçbir alanı türetmez: addan alerjen, kategoriden besin künyesi ya da addan KDV üretimde
    * yanlış yasal beyan olurdu. Belgesi olan ürünlerin beyanı gerçektir ve her katmanda yazılır.
    */
-  const turetmeSerbest = kusurlu;
+  const turetmeSerbest = kusurlu || Boolean(secim?.derive);
   if (!turetmeSerbest) console.log('  · türetilmiş alan YAZILMAYACAK: alerjen · iz · içindekiler · saklama · besin künyesi · raf ömrü · KDV tahmini · hedef marj. Belgesi olan 6 ürün etkilenmez.');
   const katalog = readLezzaCatalog();
   const secili = (sku: string | number | null | undefined): boolean => !secim || (sku != null && secim.variants.has(String(sku)));
@@ -467,7 +479,7 @@ export async function seedLezzaProducts(
     // **Beyansız ürün kargolanmaz** ve bu, kolonun yeni varsayılanının (`false`) tam olarak
     // anlatmak istediği şey: beyanı olmayan bir üründe "kargolanabilir mi" sorusunun cevabı
     // "bilmiyoruz"dur ve donuk gıdada bilinmeyen, "evet" değil "hayır" sayılır.
-    const rejim = SAKLAMA[saklamaRejimi(p.category ?? null, i)];
+    const rejim = SAKLAMA[saklamaRejimi(p.category ?? null, i, kusurlu)];
 
     // Görünen ad ve açıklama ÇEVİRİDEN; çeviri yoksa kaynağın İngilizcesine düşülür (yukarıda uyarı
     // basıldı). `dilEksik` sahnesi yalnız TÜRKÇEyi bırakır — operatörün yeni eklediği, henüz
@@ -484,7 +496,8 @@ export async function seedLezzaProducts(
     // Yayına hazırlık `has_all_locales` kısıtının TS karşılığıyla ölçülür, elle yeniden yazılmaz.
     const yayinaHazirDegil =
       !hasAllLocales(name) || !hasAllLocales(aciklama) || beyanEksik || (!beyan && !turetmeSerbest);
-    const durum: ProductStatus = satilabilirDurum({ teklifli, kurguda, zayifVeri, aileli, kusurlu, yayinaHazirDegil, i });
+    const aday = p.variants.some((v) => v.sku != null && Boolean(secim?.candidates?.has(String(v.sku))));
+    const durum: ProductStatus = satilabilirDurum({ aday, teklifli, kurguda, zayifVeri, aileli, kusurlu, yayinaHazirDegil, i });
 
     const { product, variants } = await products.create({
       name,
@@ -527,8 +540,9 @@ export async function seedLezzaProducts(
         : turetmeSerbest
           ? rejim.storageType
           : undefined,
-      targetMarginPercent: marjYok || !turetmeSerbest ? undefined : 30 + (i % 6) * 3,
-      autoPrice: turetmeSerbest && i % 4 === 0,
+      // Hedef marj ve otomatik fiyat beyan değil fiyat KARARIDIR: türetilmez, yalnız sahnede serpiştirilir.
+      targetMarginPercent: marjYok || !kusurlu ? undefined : 30 + (i % 6) * 3,
+      autoPrice: kusurlu && i % 4 === 0,
       status: durum,
       sortOrder: startOrder + i,
       variants: p.variants

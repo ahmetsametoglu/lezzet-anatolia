@@ -66,6 +66,11 @@ done
 # Derleme önbelleği sürümler arasında ortak; `next build` klasörü silerken `cache`e dokunmaz.
 mkdir -p apps/web/.next
 ln -sfn "$SHARED/next-cache" apps/web/.next/cache
+# Beslemenin indirdiği uzak görseller de ortak: sürüm klasöründe kalsalar her dağıtımdan sonraki ilk
+# besleme hepsini yeniden indirirdi.
+install -d -o "$APP_USER" -g "$APP_USER" "$SHARED/lezza-cache"
+mkdir -p temp
+ln -sfn "$SHARED/lezza-cache" temp/lezza-cache
 chown -R "$APP_USER:$APP_USER" "$REL"
 
 # Derlemeden önce: sitemap derleme sırasında veritabanını okur, tablolar hazır olmalı. Yayına geçişten

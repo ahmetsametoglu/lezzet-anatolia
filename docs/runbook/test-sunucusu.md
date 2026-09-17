@@ -155,7 +155,10 @@ Kod geri döner, şema dönmez.
 
 Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration değişmiş" diye durur (WORKFLOW §2).
 
-1. Uzak veritabanını sıfırla — yıkıcı; kararı ve işlemi veritabanının sahibi yapar.
+1. Uzak veritabanını sıfırla — yıkıcı; kararı veritabanının sahibi verir. Sunucuda tek komut:
+   `cd /opt/lezzet/current && supabase db reset --db-url "<shared/app.env'deki SUPABASE_DB_URL>" --no-seed --yes`
+   şemayı boşaltır ve o sürümün migration'larını baştan uygular. `--no-seed` şart: yoksa CLI kendi
+   `supabase/seed.sql`'ini de koşar.
 2. Sunucuda `rm /opt/lezzet/shared/migrations.sha256`.
 3. `bash scripts/deploy.sh` — migration'lar baştan uygulanır.
 4. Gerçek başlangıç verisi (`scripts/seed-real/data.ts`), sunucuda:
@@ -164,15 +167,18 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    yazmaz — stok paneldeki tedarikçi siparişlerine karşı mal kabulüyle girer.
 5. Besleme ÜÇ KATMANLIDIR ve katmanı `--layers` seçer (varsayılan 1, kümelenir):
    - **1 · kesin** — faturadan ve üreticinin künyesinden ölçülmüş olan (ad, ölçü, maliyet, gerçek ürün
-     çekimi, içindekiler, saklama, raf ömrü). **Üretim kurulumu budur; bayraksız koşar.**
+     çekimi, içindekiler, saklama, raf ömrü) ve işletmecinin fiyat politikası (`SALE_PRICES`:
+     profesyonel alış + %40, son tüketici piyasa katsayısıyla — `docs/architecture/COMPETITORS.md`).
+     **Üretim kurulumu budur; bayraksız koşar.**
    - **2 · dayanaklı** — gerçek ürün sayfasına dayanan, resmî belgeye dayanmayan açıklamalar.
-   - **3 · uydurma** — kaynağı OLMAYAN her şey: içindekiler, saklama, besin tablosu, alerjen, satış
-     fiyatı ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026). Bu katmanda taslakların beyanı
-     tamamlanır ve ürünler `active` olur, yani katalogda görünürler — arayüzü dolu görmek içindir.
+   - **3 · uydurma** — kaynağı OLMAYAN her şey: içindekiler, saklama, besin tablosu, alerjen ve test
+     mal kabulü (lot `TEST-001`, SKT 31.12.2026). Bu katmanda taslakların ve katalogdaki belgesiz
+     ürünlerin beyanı tamamlanır ve ürünler `active` olur, yani katalogda görünürler — arayüzü dolu
+     görmek içindir. Aday kalemler (`ADAY_SKULARI`) her katmanda aday kalır.
      Yalnız TEST sunucusunda: `pnpm db:seed:real --layers=3`.
 
    Katman 3'ün verisi `seed-real/data.ts` sonunda AYRI durur (`FICTION_NUTRITION`, `FICTION_ALLERGENS`,
-   `FICTION_INGREDIENTS`, `FICTION_STORAGE`, `FICTION_PRICES`, `TEST_INTAKE`); üretime geçerken o blok
+   `FICTION_INGREDIENTS`, `FICTION_STORAGE`, `TEST_INTAKE`); üretime geçerken o blok
    bütün hâlinde silinir, kalan dosya zaten katman 1'dir.
 
    **Katman değiştirmek için veritabanı sıfırlanır:** besleme var olan kaydı ADINA bakıp atlar, üstüne

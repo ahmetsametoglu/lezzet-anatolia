@@ -27,7 +27,7 @@ import { toCents } from '@lezzet/helper';
 
 import { brand } from '../packages/brand/src/index';
 import { lezzaGorselUrlByDosya, seedLezzaProducts } from './seed/catalog-lezza';
-import { r2Keys, uploadImageFromPath, uploadImageFromUrl } from './seed/shared';
+import { gorselOzeti, r2Keys, uploadImageFromPath, uploadImageFromUrl } from './seed/shared';
 import { SAKLAMA } from './seed/storage-regime';
 import {
   ADAY_SKULARI,
@@ -38,9 +38,9 @@ import {
   FICTION_ALLERGENS,
   FICTION_INGREDIENTS,
   FICTION_NUTRITION,
-  FICTION_PRICES,
   FICTION_STORAGE,
   PURCHASES,
+  SALE_PRICES,
   SETTINGS,
   STORAGE_AREAS,
   SUPPLIERS,
@@ -246,6 +246,18 @@ function checkDraftCategories(): void {
   }
 }
 
+/** Fiyat sözlüğü faturayla birebir olmalı: fiyatsız kalem de faturada olmayan fiyat da sessizce geçmez. */
+function checkSalePrices(): void {
+  const lines = new Set(PURCHASES.flatMap((p) => [...p.catalog, ...p.drafts.flatMap((d) => d.variants)]).map((l) => l.nameAtSupplier));
+  const unpriced = [...lines].filter((name) => !SALE_PRICES[name]);
+  const orphan = Object.keys(SALE_PRICES).filter((name) => !lines.has(name));
+  if (unpriced.length > 0 || orphan.length > 0) {
+    throw new Error(
+      `fiyat sözlüğü faturayla tutmuyor — fiyatsız: ${unpriced.join(' · ') || 'yok'} · faturada olmayan: ${orphan.join(' · ') || 'yok'}`,
+    );
+  }
+}
+
 /** Kategori kapağı: katalogdaki kare · depodaki usta · markanın mağazası. R2 ayarsızsa null döner. */
 async function kategoriKapagi(cat: (typeof CATEGORIES)[number], slug: string, lezzaUrl: Map<string, string>) {
   if (!cat.image) return null;
@@ -321,10 +333,10 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     catId,
     0,
     { sku: new Set(lines.map((l) => l.sku)), slug: new Set() },
-    // Katman KATALOĞU DA kapsar: `base`te türetme kapalı olduğu için üretici belgesi olmayan 14 ürün
-    // beyansız doğuyor ve aday kalıyordu — bayrağın katalog tarafında karşılığı yoktu (ölçüldü 16.09).
-    LAYERS >= 3 ? 'extend' : 'base',
-    { variants: secim },
+    // Katalog hep `base` kurulur: `extend` türetmenin yanında bilinçli kusurlar da sahneler ve gerçek
+    // kataloğa kusur yazılmaz. Katman 3 yalnız türetmeyi açar ki belgesiz ürün satışa çıkabilsin.
+    'base',
+    { variants: secim, derive: LAYERS >= 3, candidates: new Set(ADAY_SKULARI) },
   );
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
 }
@@ -373,7 +385,7 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
         ...(storageInstructions ? { storageInstructions } : {}),
         ...(draft.shelfLifeDays ? { shelfLifeDays: draft.shelfLifeDays } : {}),
         // Saklama rejimi İKİ kolonu birden yazar. Yazılmazsa kolonların varsayılanı kalır ve o
-        // varsayılan donuk: pekmez dondurucuya düşer, hiçbir ürün kargoya çıkamaz (ölçüldü 16.09).
+        // varsayılan donuk: pekmez dondurucuya düşer, hiçbir ürün kargoya çıkamaz.
         ...(draft.rejim ? { storageType: SAKLAMA[draft.rejim].storageType, shippable: SAKLAMA[draft.rejim].shippable } : {}),
         // Katman 3 — UYDURMA: kaynağı yok, yalnız test sunucusunun arayüzünü doldurur.
         ...(kurgu && FICTION_NUTRITION[draft.name] ? { nutrition: FICTION_NUTRITION[draft.name] } : {}),
@@ -491,20 +503,17 @@ async function seedPurchases(db: Db): Promise<void> {
     const ready = rows.map(({ line, variantId }) => ({ line, variantId: variantId as string }));
 
     for (const { line, variantId } of ready) {
-      // Faturada satış fiyatı yoksa katman 3'ün uydurmasına düşülür. Katman 1'de o kalem FİYATSIZ
-      // kalır ve katalogda "satışa kapalı" görünür — bilinçli: fiyat işletmecinin kararıdır.
-      const kurguFiyat = LAYERS >= 3 ? FICTION_PRICES[line.nameAtSupplier] : undefined;
-      const b2c = line.b2c ?? kurguFiyat?.b2c;
-      const b2b = line.b2b ?? kurguFiyat?.b2b;
-      if (b2c === undefined || b2b === undefined) continue;
+      // Sözlüğün faturayla birebir olduğu koşudan önce sınandı (`checkSalePrices`).
+      const price = SALE_PRICES[line.nameAtSupplier];
+      if (!price) continue;
       if ((await prices.listByVariant(variantId)).length > 0) {
         done(`fiyat · ${line.nameAtSupplier}`);
         continue;
       }
-      plan(`fiyat · ${line.nameAtSupplier} · ${b2c} € / ${b2b} €${line.b2c === undefined ? ' · uydurma' : ''}`);
+      plan(`fiyat · ${line.nameAtSupplier} · ${price.b2c} € / ${price.b2b} €`);
       if (DRY_RUN) continue;
-      await prices.setPrice({ variantId, channel: 'b2c', amountCents: toCents(b2c) });
-      await prices.setPrice({ variantId, channel: 'b2b', amountCents: toCents(b2b) });
+      await prices.setPrice({ variantId, channel: 'b2c', amountCents: toCents(price.b2c) });
+      await prices.setPrice({ variantId, channel: 'b2b', amountCents: toCents(price.b2b) });
     }
 
     const mapped = new Set((await mappings.listBySupplier(supplierId)).map((m) => m.variantId));
@@ -596,6 +605,7 @@ async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
 async function main(): Promise<void> {
   checkInvoiceTotals();
   checkDraftCategories();
+  checkSalePrices();
   const db = createServiceRoleClient();
   console.log(`▸ GERÇEK BESLEME${DRY_RUN ? ' · KURU KOŞU (yazılmaz)' : ''} · ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? '(adres yok)'}`);
   await waitForRest(db);
@@ -613,6 +623,8 @@ async function main(): Promise<void> {
   await seedPurchases(db);
   // Mal kabulü katman 3: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır.
   if (LAYERS >= 3) await seedTestIntake(db, facilityId);
+  // Künyesi olmayan görsel her koşuda yeniden yüklenir; sayı basılmazsa dönüşüm kotası sessizce erir.
+  if (!DRY_RUN) gorselOzeti();
   console.log(DRY_RUN ? '✓ kuru koşu bitti' : '✓ gerçek besleme bitti');
 }
 
