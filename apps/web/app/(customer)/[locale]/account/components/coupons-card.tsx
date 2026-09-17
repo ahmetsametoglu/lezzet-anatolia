@@ -9,19 +9,14 @@ import { TextAction } from '@/components/customer/phone-kit/text-action';
 import type { AccountCopy, Messages } from '../account-types';
 
 /**
- * Kuponlarım listesi, puan çeviriminin varış noktası: kod seçilebilir metin olarak durur ve ayrıca kopyalanabilir, çünkü panoya
- * yazma her ortamda çalışmaz ve müşteri kodu gözüyle okuyabilmeli. Değer motordan gelir (tutar ya da yüzde), ekranda hesaplanmaz;
- * `phoneCopy` verilince satır native'in kupon satırı olarak çizilir.
+ * Kod seçilebilir metin olarak durur ve ayrıca kopyalanabilir, çünkü panoya yazma her ortamda çalışmaz. Değer motordan gelir,
+ * ekranda hesaplanmaz.
  */
 interface CouponsCardProps {
   t: Messages;
   locale: Locale;
   coupons: CustomerCoupon[];
-  /**
-   * Telefon görünümünün kupon cümleleri (ortak sözlüğün `points` bloğu). Verilince satır native kupon
-   * satırı olarak çizilir ve boş liste HİÇBİR ŞEY çizmez: native kart kuponsuz hâlde satır göstermez,
-   * puan kartının içinde "kuponunuz yok" cümlesi gürültü olurdu.
-   */
+  /** Verilince boş liste hiçbir şey çizmez, çünkü puan kartının içinde "kuponunuz yok" cümlesi gürültü olur. */
   phoneCopy?: AccountCopy['points'];
 }
 
@@ -66,8 +61,7 @@ function CouponRow({ t, locale, coupon, phoneCopy }: CouponRowProps) {
   };
 
   if (phoneCopy) {
-    // Değer native'in kısa cümlesiyle; asgari sepet web'in eki — veri burada var ve sepette reddedilecek
-    // bir kuponu koşulsuz gibi göstermek yanıltırdı.
+    // Asgari sepet yazılır, çünkü sepette reddedilecek kuponu koşulsuz göstermek yanıltır.
     const phoneValue =
       coupon.amountCents !== null
         ? phoneCopy.couponValue.replace('{value}', formatPrice(coupon.amountCents, locale))

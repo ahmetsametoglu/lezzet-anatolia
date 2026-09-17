@@ -14,34 +14,14 @@ import { useLanguageChoice } from './use-language-choice.hook';
 import type { Messages } from '../account-types';
 
 /**
- * Profil kartı — **satır içi düzenleme** (tasarım: "alan girişe dönüşür + Kaydet/Vazgeç; sayfa
- * değişmez"). Ayrı bir sayfa ya da modal DEĞİL: değiştirilecek şey üç alan, onları başka bir yere
- * taşımak bağlamı da taşımak olurdu. (Telefon görünümü native'in kartını çizer ve formu çekmecede
- * açar — form aynı bileşen, `ProfileEditForm`.)
- *
- * **E-posta okunur, düzenlenmez.** Kimliğin anahtarı: `user_profiles` benzersiz indeksi ve
- * `auth.users` bağı ondan geçiyor. Değiştirmek hesabı taşımaktır — doğrulama ve birleştirme
- * sorularını birlikte açar (04.7). Alanın yanında sebebi yazılı; gri bir kutu bırakıp müşteriyi
- * "neden basamıyorum" diye düşündürmek daha kötüydü.
- *
- * **Dil TEK bir şeydir** (30.07 · kullanıcı kararı): sitenin dili ile bildirimlerin dili aynı.
- * Footer'daki dil listesi de, buradaki hap da aynı kapıyı çağırır (`setPreferredLanguageAction`) ve
- * aynı anda sayfayı o dile götürür. Bir ara "site dili ayrı, bildirim dili ayrı" diye kurgulanmıştı
- * — müşteri için anlamsız bir ayrımdı: siteyi Türkçe gezen biri maillerinin Fransızca gelmesini
- * beklemez.
- *
- * Hap DÜZENLEME KİPİNİN ARKASINDA DEĞİL: tasarımda satır "Türkçe ▾" ve sözleşme "anında etkili"
- * diyor. Üç alanın ikisi için doğru olan kip, bu biri için fazladan iki tıklamaydı.
+ * Profil satır içinde düzenlenir, çünkü değişen üç alanı başka yere taşımak bağlamı da taşır. E-posta düzenlenmez, çünkü kimliğin
+ * anahtarıdır ve değişimi doğrulama ile birleştirme sorularını açar.
  */
 interface ProfileCardProps {
   t: Messages;
   locale: Locale;
   profile: AccountView['profile'];
-  /**
-   * Doğrulanmış WhatsApp numaraları (04.10) — **salt okunur** ve olmak zorunda: bu değerler bir
-   * KANITTIR (`customer_phone`), müşterinin yazdığı bir tercih değil. Düzenlenebilir olsaydı kanıt
-   * olmaktan çıkardı.
-   */
+  /** Salt okunur, çünkü bu numaralar müşterinin tercihi değil kanıtıdır. */
   whatsappNumbers: string[];
   compact: boolean;
 }
@@ -49,17 +29,8 @@ interface ProfileCardProps {
 const LANGUAGE_LABEL: Record<PreferredLanguage, string> = { tr: 'Türkçe', fr: 'Français', de: 'Deutsch' };
 
 /**
- * Dil hapı — tasarımda "Türkçe ▾", yani satırın kendi açılır listesi.
- *
- * **Ham `<select>` bilinçli** (CLAUDE.md §2 "son çare"): kitin alan kabuğu (`FieldShell` +
- * `controlClass`) etiketli, `48px` sabit yükseklikte, tam genişlikte bir kutu verir — tasarımın
- * istediği şey satır içinde duran kompakt bir hap. Kiti zorlamak tasarımı bozardı. (Kitte bir de
- * saf `FormSelectField` duruyordu; hiç tüketilmemişti ve `bg-card` yerine hâlâ `bg-white` yazıyordu
- * — K4 · 02.08 ile silindi. Kitin bekleyen satır-içi ekseni: `design/BACKLOG §2`.)
- * Kutu tasarımın künyesiyle birebir: 1,5px kum-400 kenar, beyaz zemin, hap köşe.
- *
- * Ok işareti ayrı bir düğüm: `appearance-none` yerel oku kaldırıyor, tasarımın "▾"si onun yerine
- * geçiyor — üç tarayıcıda üç farklı ok çizilmesin.
+ * Ham `<select>`, çünkü kitin alanı etiketli ve tam genişlikte; burada satır içi kompakt hap gerekiyor ve seçim düzenleme kipini
+ * beklemeden etkili. Ok ayrı düğüm, çünkü yerel ok üç tarayıcıda üç farklı çizilir.
  */
 function LanguagePill({ locale, value, compact }: { locale: Locale; value: PreferredLanguage; compact: boolean }) {
   // Gösterilen değer AKTİF SAYFA DİLİDİR, kart farklıysa sessizce hizalanır — gerekçesi hook'un künyesinde.
@@ -91,20 +62,8 @@ function LanguagePill({ locale, value, compact }: { locale: Locale; value: Prefe
 }
 
 /**
- * **WhatsApp'ımı bağla** (04.10) — hesabı müşterinin numarasına bağlayan akışın müşteri tarafı.
- *
- * Yaptığı şey görünenden daha az: bir bağlantı açıyor. Ama o bağlantının içindeki hazır mesaj iki
- * şeyi birden taşıyor — gönderen numara (zilyetlik kanıtı) ve jeton (hangi hesap). Müşteri
- * "gönder"e bastığında bağ kuruluyor; **biz hiçbir mesaj göndermiyoruz**, dolayısıyla şablon ücreti
- * de yok (DOMAIN §11).
- *
- * **Jeton tıklama ANINDA üretiliyor, sayfa çizilirken değil.** Sayfayı açan herkese peşin jeton
- * yazmak, hiç kullanılmayacak binlerce kısa ömürlü sır üretmek olurdu (`referral_code`ün "istek
- * üzerine üretilir" kuralının aynısı) — ve o jetonlar tekillik indeksinde birikirdi.
- *
- * `window.open` yerine gizli bir `<a>`: mobil tarayıcılarda `window.open` açılır-pencere engeline
- * takılabiliyor ve `wa.me` uygulamaya devrediliyor; kullanıcı hareketiyle tetiklenen bir bağlantı
- * her iki yüzeyde de aynı davranıyor.
+ * Bağlantıdaki hazır mesajı müşteri kendisi gönderir: gönderen numara zilyetliği, jeton hesabı kanıtlar ve biz mesaj göndermediğimiz
+ * için şablon ücreti yok. Jeton tıklamada üretilir, çünkü her ziyarette üretmek hiç kullanılmayacak kısa ömürlü sırlar biriktirir.
  */
 function WhatsappLinkButton({ t, align }: { t: Messages; align: 'start' | 'end' }) {
   const [busy, setBusy] = useState(false);
@@ -134,17 +93,11 @@ function WhatsappLinkButton({ t, align }: { t: Messages; align: 'start' | 'end' 
   );
 }
 
-/**
- * WhatsApp satırı — doğrulanmış numaralar ya da bağlama düğmesi. Masaüstü kartın satırı ve telefonun profil çekmecesi
- * (native'de bu blok yok; web'e özgü kimlik bağı, 04.10) aynı içeriği çizer.
- */
+/** Doğrulanmış numaralar ya da bağlama düğmesi; native'de karşılığı olmayan, web'e özgü kimlik bağı. */
 interface WhatsappRowProps {
   t: Messages;
   numbers: string[];
-  /**
-   * Çekmece düzeni — etiket üstte, içerik altında (formdaki e-posta bloğunun düzeni). Dar çekmecede etiket ↔ değer
-   * satırı değeri sağdan kırpıyordu: "Rattacher m…" (görüldü 14.09).
-   */
+  /** Etiket üstte, çünkü dar çekmecede etiket ↔ değer satırı değeri sağdan kırpar. */
   stacked?: boolean;
 }
 
@@ -166,12 +119,7 @@ export function WhatsappRow({ t, numbers, stacked = false }: WhatsappRowProps) {
   return <Row label={t.whatsappLabel} value={verified || <WhatsappLinkButton t={t} align="end" />} />;
 }
 
-/**
- * Profil düzenleme formu — masaüstünde kartın yerinde, telefonda çekmecede açılır (14.09).
- *
- * Her açılışta YENİDEN KURULUR ve durumu sunucudaki değerle doğar: bir önceki vazgeçilen düzenlemenin
- * artığı kalırsa müşteri kaydetmediği bir şeyi kaydetmiş sanır.
- */
+/** Her açılışta yeniden kurulur ve sunucudaki değerle doğar, çünkü vazgeçilen düzenlemenin artığı kaydedilmiş sanılır. */
 interface ProfileEditFormProps {
   t: Messages;
   profile: AccountView['profile'];
@@ -190,8 +138,7 @@ export function ProfileEditForm({ t, profile, onDone }: ProfileEditFormProps) {
     setError(null);
     const { errorKey } = await updateProfileAction({ name, phone });
     setBusy(false);
-    // Cümle EKRANDA kurulur (denetim H1/H2): sunucu anahtar döner, sözlük burada. Bilinmeyen bir
-    // anahtar gelirse jenerik cümleye düşeriz — ekran asla boş kalmaz.
+    // Sunucu anahtar döner, cümle burada kurulur; bilinmeyen anahtar genel cümleye düşer.
     if (errorKey) return setError(errorText(t.errors, errorKey));
     onDone();
   };
@@ -199,10 +146,7 @@ export function ProfileEditForm({ t, profile, onDone }: ProfileEditFormProps) {
   return (
     <div className="flex flex-col gap-3">
       <FormInputField label={t.name} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-      {/* Alanın NE İŞE YARADIĞI altında yazılı (04.10). Etiket bir tur "Telefon (WhatsApp)" idi
-          ve müşteriye tutamayacağımız bir söz veriyordu — burada yazılan numara WhatsApp kimliği
-          kurmuyor, adres formuna öneri olarak gidiyor. Alanın gerekçesini söylemek, onu
-          kaldırmaktan iyi: gerçekten bir işi var ve o iş her adres eklemede görünüyor. */}
+      {/* Numara WhatsApp kimliği kurmaz, adres formuna öneri olur; bunu altında söylemek yanlış söz vermeyi önler. */}
       <div className="flex flex-col gap-1">
         <FormInputField
           label={t.phoneWhatsapp}
@@ -216,16 +160,14 @@ export function ProfileEditForm({ t, profile, onDone }: ProfileEditFormProps) {
         <span className="font-sans text-micro leading-relaxed text-muted">{t.phoneHint}</span>
       </div>
 
-      {/* E-posta neden düzenlenemiyor, ORADA yazılı: pasif bir alan bırakıp sebebi söylememek
-          müşteriyi kendi hatasını arar hâlde bırakır. */}
+      {/* Sebep alanın yanında yazılı: sebepsiz pasif alan müşteriyi kendi hatasını arar hâlde bırakır. */}
       <div className="flex flex-col gap-1">
         <span className="font-sans text-micro text-muted">{t.email}</span>
         <span className="font-sans text-body-sm font-bold text-ink">{profile.email ?? '—'}</span>
         <span className="font-sans text-micro leading-relaxed text-muted">{t.emailLocked}</span>
       </div>
 
-      {/* Dil BURADA YOK: kendi denetimi var ve düzenleme kipini beklemiyor (yukarıya bak).
-          İki yerde birden olması, hangisinin geçerli olduğunu sordururdu. */}
+      {/* Dil formda yok: iki yerde olsa hangisinin geçerli olduğu sorulurdu. */}
 
       {error && <span className="font-sans text-note font-semibold text-terracotta">{error}</span>}
 
@@ -258,20 +200,10 @@ export function ProfileCard({ t, locale, profile, whatsappNumbers, compact }: Pr
         />
         <Row label={t.name} value={profile.name || '—'} />
         <Row label={t.email} value={profile.email ?? '—'} />
-        {/* ── İKİ AYRI TELEFON, İKİ AYRI SATIR (04.10 · kullanıcı bulgusu 25.08) ────────────────
-            Bu satır bir tur "Telefon (WhatsApp)" diyordu ve müşteriye YANLIŞ söz veriyordu: kutu
-            serbest metindi, WhatsApp kimliğiyle hiçbir ilgisi yoktu. Gerçekte iki ayrı şey var ve
-            her birinin kendi tüketicisi:
-              · İletişim numarası → `addressDefaultsOf`, yeni adres formunun önerdiği numara
-              · WhatsApp numarası → kimlik anahtarı; yalnız müşteri bize yazınca doğar
-            Tek satıra sıkıştırmak, kuryenin çalacağı numara ile bizi tanıdığımız numarayı aynı şey
-            sanmaya yol açıyordu. Ayrıldılar. */}
+        {/* İletişim numarası ile WhatsApp kimliği ayrı satır: tek satırda müşteri kuryenin arayacağı numarayı kimliğiyle aynı sanıyor. */}
         <Row label={t.phone} value={profile.phone ?? t.noPhone} />
         <WhatsappRow t={t} numbers={whatsappNumbers} />
-        {/* Dil DÜZENLEME KİPİNİN ARKASINDA DEĞİL: tasarımda satır "Türkçe ▾" — kendi başına bir
-            açılır liste ve etkileşim sözleşmesi "anında etkili" diyor. Bir süre "Düzenle"nin
-            ardına konmuştu; üç alanın ikisi için doğru olan kip, bu biri için fazladan iki tıklama
-            demekti (30.07 kullanıcı geri bildirimi). */}
+        {/* Dil düzenleme kipinin arkasında değil: seçim anında etkili ve kip onu iki tıklama uzatırdı. */}
         <Row label={t.language} value={<LanguagePill locale={locale} value={profile.preferredLanguage} compact={compact} />} />
       </Card>
     );

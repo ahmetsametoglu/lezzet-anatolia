@@ -29,17 +29,15 @@ import { ProfileEditForm, WhatsappRow } from './components/profile-card';
 import { RedeemPoints } from './components/redeem-points';
 
 /**
- * Hesabım'ın telefon görünümü, native hesap ekranının web ikizi: sıra native'in, metin ortak sözlükten
- * (`@lezzet/i18n/customer/account`), web'e özgü bloklar kum kartın kabuğuyla araya yerleşir; yazı boyutu kartı yok, çünkü tarayıcının
- * kendi yakınlaştırması var. Sonraya kaydedilenler ve bölge haberleri yalnız içerik varken çizilir, çünkü boş kart olmayan bir özelliği
- * varmış gibi gösterir.
+ * Hesabım'ın telefon görünümü, native hesap ekranının ikizi; web'e özgü bloklar aynı kum kartla araya girer. Sonraya kaydedilenler
+ * ve bölge haberleri yalnız içerik varken çizilir, çünkü boş kart olmayan bir özelliği varmış gibi gösterir.
  */
 export function AccountMobile({ t, locale, account, chatNotice, legal }: AccountViewProps) {
   const copy = accountMessages[locale];
   const { points, company } = account;
   return (
     <div className="flex flex-col gap-3.5 px-4.5 pt-3.5 pb-5">
-      {/* Sohbet bağlantısının sonucu girişten hemen sonra, en üstte, bir kez. */}
+      {/* Sohbet bağlantısının sonucu girişten döner dönmez okunmalı; bu yüzden en üstte. */}
       {chatNotice && <ChatLinkNoticeBanner t={t} notice={chatNotice} />}
 
       <ProfileSection t={t} copy={copy} account={account} />
@@ -54,7 +52,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
         </section>
       )}
 
-      {/* Puan bölümü B2B'de hiç çizilmez (DOMAIN §14) — koşulu okumanın kendisi taşıyor (`points` null). */}
+      {/* Puan B2B'de yok: okuma B2B hesapta `points`i hiç doldurmaz. */}
       {points && <PointsSection t={t} copy={copy} locale={locale} points={points} coupons={account.coupons} />}
       {points?.inviteUrl && points.referralCode && (
         <ReferralSection t={t} copy={copy} code={points.referralCode} url={points.inviteUrl} />
@@ -67,7 +65,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
         <NavRow label={copy.menu.delivery} href="/legal/delivery" icon={<MobileIcon name="truck" size={17} className="text-muted" />} divider />
       </nav>
 
-      {/* Bağlı sohbetler menünün hemen altında; salt okunur, gerekçesi kartta. */}
+      {/* Bağlı sohbetler salt okunur; gerekçesi kartın künyesinde. */}
       <LinkedChatsCard t={t} locale={locale} chats={account.chats} compact />
 
       <AddressesCard
@@ -90,7 +88,7 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
       <LanguageCard copy={copy.language} locale={locale} stored={account.profile.preferredLanguage} />
 
       <SettingsCard title={copy.marketing.title}>
-        {/* `bind`: kanal sabit, anahtar hangi kapıya yazdığını bilmez (`ConsentSwitch` künyesi). */}
+        {/* Kanal burada bağlanır, çünkü anahtar hangi kapıya yazdığını bilmez. */}
         <ConsentSwitch
           compact
           label={copy.marketing.email}
@@ -120,11 +118,11 @@ export function AccountMobile({ t, locale, account, chatNotice, legal }: Account
         <span className="self-start">
           <TextAction href="/legal/privacy" label={copy.data.privacy} />
         </span>
-        {/* Silme kartın EN ALTINDA ve terracotta metin — dolgulu düğme sayfanın en güçlü çağrısı olur (native · web). */}
+        {/* Silme dolgusuz metin eylemi: dolgulu düğme sayfanın en güçlü çağrısı olur ve silmeye davet ederdi. */}
         <DeleteAccount t={t} compact />
       </section>
 
-      {/* Bilgi ve koşullar — native'in çıkıştan hemen önceki bilgi kapısı; telefon görünümünde footer yok. */}
+      {/* Telefon görünümünde altbilgi yok; belgelerin kalıcı kapısı burası. */}
       <LegalDirectory directory={legal} />
       <div className="flex justify-center py-2">
         <SignOutLink locale={locale} variant="text" />
@@ -139,16 +137,12 @@ interface ProfileSectionProps {
   account: AccountView;
 }
 
-/**
- * Profil kartı (native `profileCard`): "Düzenle" formu çekmecede açar, form masaüstü kartıyla aynı bileşen (`ProfileEditForm`);
- * WhatsApp kimlik bağı çekmecede formun altında.
- */
 function ProfileSection({ t, copy, account }: ProfileSectionProps) {
   const [editing, setEditing] = useState(false);
   const { profile } = account;
-  // Büyük satır ya adı söyler ya adın eksik olduğunu; e-posta künye satırında.
+  // E-posta ad yuvasına yazılmaz: o yuva kısa ad için ve uzun adres ortasından bölünür.
   const nameMissing = profile.name.trim() === '';
-  // Avatar harfi KİMLİKTEN: ad yoksa e-postanın ilk harfi (native'in kuralı).
+  // Ad yoksa harf e-postadan gelir ki avatar boş kalmasın.
   const avatarSource = nameMissing ? (profile.email ?? '') : profile.name;
 
   return (
@@ -158,7 +152,7 @@ function ProfileSection({ t, copy, account }: ProfileSectionProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="font-sans text-step-sm text-ink">{nameMissing ? copy.profile.addName : profile.name}</span>
           {profile.email && <span className="truncate font-sans text-helper text-muted">{profile.email}</span>}
-          {/* Telefon girilmemişse satır çizilmez (native). */}
+          {/* Boş telefon için satır çizilmez; olmayan bilgiye yer ayırmak gürültüdür. */}
           {profile.phone && <span className="font-sans text-helper text-muted">{profile.phone}</span>}
         </div>
         <TextAction label={copy.profile.edit} ariaLabel={copy.profile.editLabel} onClick={() => setEditing(true)} />
@@ -187,8 +181,8 @@ interface PointsSectionProps {
 }
 
 /**
- * Puan kartı (native `pointsCard`): eşik ve karşılık ayardan gelir (`redeem`), ekran sayı uydurmaz. Çevirme düğmesi eşiğin altında
- * pasif ve kalan puan yazılı, çünkü pasif bir düğmenin sebebi görünmeli.
+ * Eşik ve karşılık ayardan gelir, çünkü ekranın eşiği motorunkinden ayrışırsa müşteri reddedilecek düğmeye basar. Eşiğin altında
+ * düğme pasif ve kalan puan yazılı, çünkü pasif düğmenin sebebi görünmeli.
  */
 function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps) {
   const { minimumPoints, valueCents } = points.redeem;
@@ -210,7 +204,7 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
         compact
         renderTrigger={(open) => <PrimaryButton shape="block" label={fill(copy.points.convert)} onClick={open} disabled={!enough} />}
       />
-      {/* Tam döküm ayrı sayfada (`/account/points`) — kazanma yolları da orada. */}
+      {/* Tam döküm ayrı sayfada, çünkü defter veriyle sınırsız büyür. */}
       <span className="self-start">
         <TextAction href="/account/points" label={copy.points.history} />
       </span>
@@ -227,10 +221,7 @@ interface ReferralSectionProps {
   url: string;
 }
 
-/**
- * Davet kartı (native `referral`) — kod görünür (telefonda okunur, söylenir), paylaşılan şey bağlantıdır; adresi
- * ekran kurmaz, okuma verir (`inviteUrl`). Paylaşım sistem menüsü, yoksa panoya kopyalama (`useShareLink`).
- */
+/** Kod görünür, çünkü telefonda okunur ve söylenir; paylaşılan ise bağlantıdır, çünkü kodun girildiği bir ekran yok. */
 function ReferralSection({ t, copy, code, url }: ReferralSectionProps) {
   const { share, copied } = useShareLink();
   return (

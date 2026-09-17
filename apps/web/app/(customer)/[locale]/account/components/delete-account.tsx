@@ -11,40 +11,12 @@ import { deleteAccountAction } from '../actions';
 import type { Messages } from '../account-types';
 
 /**
- * **Hesabı silme** (08.21 · GDPR md. 17) — veri kartının içinde, en altta.
- *
- * ── NEDEN İKİ ADIM ───────────────────────────────────────────────────────────
- * İşlem geri alınamaz ve düğmenin kendisi bunu anlatamaz. Diyalog bir "emin misiniz?" değil,
- * **ne olacağını söyleyen** bir ekran: neyin gittiği ve neyin KALDIĞI ayrı ayrı yazılı.
- *
- * ── KALANI SÖYLEMEK, GİDENİ SÖYLEMEK KADAR ÖNEMLİ ────────────────────────────
- * Silme bir `DELETE` değil: sipariş ve fatura kayıtları yasal olarak duruyor — **faturadaki ad ve
- * adres dâhil** (Fransız hukuku faturanın bunları içermesini zorunlu kılıyor). Bunu yazmazsak
- * "hesabımı sildim" diyen müşteri bir gün faturasında adını gördüğünde haklı olarak yanıltıldığını
- * düşünür ve o an haklı olan o olur. Ürün puanı da kimliksiz kalır: silmek, başka müşterilerin
- * gördüğü ürün skorunu geriye dönük değiştirirdi.
- *
- * ── SİLDİKTEN SONRA: ÇIKIŞ DA YAPILIR ────────────────────────────────────────
- * `anonymize` `auth.users` satırını siliyor, ama tarayıcıdaki oturum ÇEREZİNE dokunmuyor — onu
- * ancak çerezi yazan taraf (Supabase istemcisi) silebilir. İlk sürüm bunu atlıyordu ve **ölçüldü** (08.08,
- * tarayıcıda koşuldu): silme bittikten sonra `sb-…-auth-token` çerezi yerinde duruyordu. Sunucu
- * onunla kimlik çözemediği için erişim açılmıyordu — yani sızıntı değil, ama ölü bir kimlik
- * artefaktı paylaşılan bir cihazda kalıyor ve her istek boşa bir auth turu ödüyordu.
- *
- * Projenin oturumu bitirme yolu ZATEN yazılı ve tek: `signOutAction()` + **TAM YENİLEME**
- * (`use-sign-out.hook.ts`). Gerekçesi orada anlatılıyor ve burada daha da güçlü: yumuşak
- * tazeleme, oturuma göre kurulmuş istemci durumunu ekranda bırakır. Hesabını silmiş birinin
- * ekranında kendi verisinin bir anı bile kalmamalı.
- *
- * Yerel yol ELDE TUTULUR (`useLocale`): çıplak `/`'a gitmek dili çereze/tarayıcıya sordurur ve
- * müşteri bir anda başka dilde bir anasayfada bulunabilirdi.
+ * Silme iki adımlıdır, çünkü işlem geri alınamaz ve diyalog neyin gittiğini de neyin yasal olarak kaldığını da ayrı ayrı söyler.
+ * Silmeden sonra tam yenilemeyle çıkış yapılır, çünkü `anonymize` tarayıcıdaki oturum çerezine dokunmaz.
  */
 interface DeleteAccountProps {
   t: Messages;
-  /**
-   * Telefon görünümü — tetikleyici native'in terracotta METİN eylemi (`TextAction`; native veri kartının son satırı).
-   * Diyalog iki hâlde de aynı: ne gittiği ve ne kaldığı ayrı ayrı yazılı.
-   */
+  /** Telefon görünümünün metin eylemi. */
   compact?: boolean;
 }
 
@@ -65,15 +37,14 @@ export function DeleteAccount({ t, compact = false }: DeleteAccountProps) {
       // Çerez SİLME BAŞARILI OLDUKTAN SONRA temizlenir: sıra tersine olsaydı silme düşen bir
       // koşuda müşteri hem hesabıyla hem oturumuyla kalır, ne olduğunu anlamazdı.
       await signOutAction();
+      // Dil yolda tutulur: çıplak `/` dili tarayıcıya sordurur ve müşteri başka dilde bir anasayfaya düşebilir.
       window.location.assign(`/${locale}`);
     });
   };
 
   return (
     <>
-      {/* Ton terracotta, dolgulu DEĞİL: bu bir birincil eylem değil — hesap sayfasının işi hesabı
-          yönetmek, silmek onun en uç ucu. Dolgulu kırmızı bir düğme, sayfanın en güçlü çağrısı
-          olurdu ve müşteriyi silmeye davet ederdi. */}
+      {/* Dolgulu değil: dolgulu kırmızı düğme sayfanın en güçlü çağrısı olur ve müşteriyi silmeye davet ederdi. */}
       {compact ? (
         <span className="self-start">
           <TextAction label={t.deleteAccount.action} tone="terracotta" onClick={() => setOpen(true)} />
@@ -94,8 +65,8 @@ export function DeleteAccount({ t, compact = false }: DeleteAccountProps) {
               <span className="font-sans text-note leading-relaxed text-body">{t.deleteAccount.goes}</span>
             </div>
 
-            {/* KALAN, gidenle aynı ağırlıkta çizilir — küçük bir dipnot olsaydı okunmazdı ve tam da
-                okunmayan yer, sonradan "bana söylenmedi" denilecek yerdir. */}
+            {/* Kalan, gidenle aynı ağırlıkta çizilir: dipnot olsaydı okunmazdı ve okunmayan yer sonradan "bana söylenmedi"
+                denilecek yerdir. */}
             <div className="flex flex-col gap-1.5 rounded-soft border border-honey-line bg-honey-bg px-4 py-3">
               <span className="font-sans text-note font-bold text-honey">{t.deleteAccount.staysTitle}</span>
               <span className="font-sans text-note leading-relaxed text-body">{t.deleteAccount.stays}</span>

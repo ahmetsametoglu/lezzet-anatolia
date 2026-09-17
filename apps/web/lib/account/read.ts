@@ -4,25 +4,15 @@ import type { Address, CompanyInfo, ConversationSource, PointsEntry, PreferredLa
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
 import { entryOfItem, type CartLine } from '@/lib/cart/cart-types';
-// Kupon köprüsü (`./coupons`) 20.08'de söküldü: kupon da puan kartıyla AYNI kapıdan geliyor
-// (`readCustomerPoints`), ayrı bir okuma kapısı çağrılmıyordu ve ölü koddu (knip).
 import { readCustomerPoints, type CustomerCoupon, type PendingNeighborAward } from '@lezzet/application';
 import { listPointsHistory } from '@/lib/feedback/points';
 
 /**
- * Hesap sayfasının TEK okuma kapısı (08.5).
- *
- * **Kanal saklanmaz, TÜRETİLİR** (`user_profiles` notu): şirket künyesi doluysa profil B2B'dir.
- * Tasarımın kuralı da buna bağlı — B2C'de şirket bölümü, B2B'de puan/kupon bölümü **DOM'da hiç
- * yoktur**; gri gösterilmez, gizlenmez, hiç doğmaz.
- *
- * **Puan yalnız B2C'de okunur.** B2B için sorgu atmak, sonucu hiç çizilmeyecek bir veriyi
- * getirmekti; üstelik oyunlaştırma B2C-only bir karardır (DOMAIN §14).
+ * Hesap sayfasının tek okuma kapısı; kanal saklanmaz, şirket künyesinden türer. Puan yalnız B2C'de okunur, çünkü B2B'de hiç
+ * çizilmeyecek veriyi getirmek boşa sorgudur.
  */
 /**
- * Hesaba bağlı bir sohbetin müşteriye gösterilen hâli: kanal + "ne zamandan beri". `since`
- * bağlanma anı, o yoksa sohbetin açılışı — WhatsApp sohbeti müşterisiyle doğar ve ayrıca
- * "bağlanmaz"; müşteri için ikisi de "tanıştığımız gün"dür.
+ * `since` bağlanma anı, yoksa sohbetin açılışı: WhatsApp sohbeti müşterisiyle doğar ve ayrıca bağlanmaz.
  */
 export interface LinkedChat {
   id: string;
@@ -35,78 +25,49 @@ export interface AccountView {
     name: string;
     email: string | null;
     /**
-     * **İLETİŞİM numarası** — kimlik anahtarı DEĞİL (04.10). Serbest metindir, doğrulanmamıştır ve
-     * asıl işi `addressDefaultsOf`: yeni adres formuna önerilen numara. Kimlik anahtarı ayrı yaşıyor
-     * (`whatsappNumbers`) ve ekran ikisini AYRI göstermek zorunda — tek kutuda toplandığında
-     * müşteri, kurye numarasıyla WhatsApp kimliğini aynı şey sanıyor (kullanıcı bulgusu 25.08).
+     * İletişim numarası, kimlik anahtarı değil: doğrulanmamış serbest metindir ve yeni adres formuna öneri olur. Kimlik
+     * `whatsappNumbers`ta ayrı durur, çünkü tek kutuda müşteri kurye numarasıyla WhatsApp kimliğini aynı sanıyor.
      */
     phone: string | null;
     preferredLanguage: PreferredLanguage;
   };
   /**
-   * **Doğrulanmış WhatsApp numaraları** (04.10 · `customer_phone`). Boş dizi = hiç kanıt yok.
-   *
-   * Ekranda salt okunurdur ve olmak zorunda: bu satırlar bir KANITTIR, bir tercih değil — elle
-   * yazılabilseydi kanıt olmaktan çıkardı. Müşterinin buraya numara eklemesinin tek yolu bize
-   * WhatsApp'tan yazmasıdır.
+   * Doğrulanmış WhatsApp numaraları; boş dizi hiç kanıt yok demektir. Salt okunurdur, çünkü elle yazılabilen satır kanıt olmaktan
+   * çıkar.
    */
   whatsappNumbers: string[];
   /** Doluysa profil B2B — puan/kupon bölümleri hiç çizilmez, şirket bölümü çizilir. */
   company: CompanyInfo | null;
   addresses: Address[];
-  /**
-   * **Bu hesaba bağlı sohbetler** (15.16) — Messenger/Instagram/WhatsApp; en yeni bağ başta.
-   * Salt okunur: bağ sohbetten gönderilen bağlantıyla kurulur, çözülmesi bir birleştirme kararıdır.
-   */
+  /** Bu hesaba bağlı sohbetler, en yeni bağ başta. Salt okunur, çünkü bağı çözmek bir birleştirme kararıdır. */
   chats: LinkedChat[];
   /** Kampanya izinleri; kanal başına "verildi mi". Sipariş bildirimleri bundan BAĞIMSIZDIR. */
   consent: { email: boolean; whatsapp: boolean };
   points: {
     balance: number;
     history: PointsEntry[];
-    /**
-     * Kupona çevirme kuralı AYARDAN gelir, ekrana gömülmez: ekranın söylediği eşik ile motorun
-     * uyguladığı eşik ayrıştığında müşteri reddedilecek bir düğmeye basar (29.07 denetimi).
-     */
+    /** Kural ayardan gelir, çünkü ekranın eşiği motorunkinden ayrışırsa müşteri reddedilecek düğmeye basar. */
     redeem: { minimumPoints: number; valueCents: number };
-    /**
-     * Komşu sipariş verdi ama parası henüz alınmadı — ödül `paid` geçişinde doğacak (★ karar 3,
-     * 21.73'ün web yarısı). Deftere KARIŞMAZ: defter "ne oldu"yu tutar, bu "ne olacak"tır;
-     * ekranda geçmişin ÜSTÜNDE ayrı blok olarak durur. Okuma application'dan (tek kaynak).
-     */
+    /** Ödemesi bekleyen komşu ödülleri; deftere karışmaz, çünkü defter olanı, bu olacak olanı tutar. */
     pendingNeighborAwards: PendingNeighborAward[];
-    /**
-     * Bir komşu ödülünün puan değeri — `earnWays`ten (kural kapısı KOPYALANMAZ, çağrılır).
-     * `null` = kural okunamadı; blok o hâlde hiç çizilmez — bilinmeyen sayıyla söz verilmez.
-     */
+    /** Komşu ödülünün puanı; `null` ise kural okunamamıştır ve blok çizilmez, çünkü bilinmeyen sayıyla söz verilmez. */
     neighborPoints: number | null;
     /**
-     * Davet bağlantısı (20.08 — native hesabın web'de olmayan bloğu). Adresi EKRAN KURMAZ,
-     * application verir (`inviteUrl` künyesi: üç yüzey kendi adresini kursaydı rota adı değişince
-     * ikisi sessizce 404'e düşerdi). `null` = kod üretilemedi; blok hiç çizilmez.
+     * Davet bağlantısı; adresi application verir, çünkü her yüzey kendi kursa rota adı değişince davetler sessizce kırılır. `null`
+     * ise kod üretilememiştir ve blok çizilmez.
      */
     inviteUrl: string | null;
-    /**
-     * Davet kodu — telefon görünümünün davet kartı native'deki gibi kodu gösterir (telefonda okunur, söylenir);
-     * paylaşılan şey yine bağlantıdır (`inviteUrl`). İkisi puan kartının aynı okumasından gelir (14.09).
-     */
+    /** Davet kodu; telefonda okunup söylendiği için gösterilir, paylaşılan yine bağlantıdır. */
     referralCode: string | null;
     /** Davet ödülünün puan değeri — `neighborPoints` ile aynı kural: `null` ise söz verilmez. */
     referralPoints: number | null;
   } | null;
-  /**
-   * Kullanılabilir kişisel kuponlar (17.5). B2B'de her zaman boş — puanla aynı koşula bağlı.
-   * Liste sayfalanmaz: tek kullanımlık kuponların doğal tavanı var, sınırsız büyüyen bir küme değil.
-   */
+  /** Kullanılabilir kişisel kuponlar; B2B'de her zaman boş. Sayfalanmaz, çünkü tek kullanımlık kuponların doğal tavanı var. */
   coupons: CustomerCoupon[];
   /** "Sonraya kaydedilenler" — sepetteki listeyle AYNI veri, ikinci bir yer yok. */
   saved: CartLine[];
   /**
-   * Bekleyen bölge haberi kayıtları (0030) — "şu posta koduna gelince haber ver".
-   *
-   * Pazarlama izinlerinden BAĞIMSIZ ve o anahtarlarla karışmaz (tasarımın sözleşmesi): biri
-   * "bana kampanya yaz", bu ise tek seferlik bir bekleyiş. Ekranda kendi bloğunda durur ve tek
-   * eylemi vazgeçmektir.
+   * Bekleyen bölge haberi kayıtları. Pazarlama izinlerinden bağımsızdır, çünkü biri kampanya izni, bu tek seferlik bir bekleyiştir.
    */
   zoneNotices: { postalCode: string }[];
 }
@@ -121,10 +82,9 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
     new AddressService(db).listByCustomer(customerId),
     new CartService(db).get(customerId),
     readZoneNotices(db, customerId),
-    // Kanıtlanmış numaralar (04.10). Emekli olanlar gelmez — müşteriye "bu numara sizde" demeyi
-    // bıraktığımız satırı ona hâlâ göstermek, en kafa karıştırıcı hâl olurdu.
+    // Emekli numaralar gelmez: artık bizde olmayan numarayı "sizde" diye göstermek en kafa karıştırıcı hâl olurdu.
     new CustomerPhoneService(db).listActiveByCustomer(customerId),
-    // Bağlı sohbetler (15.16) — kaynak sayısı kadar satır, sayfalanmaz (servisin künyesi).
+    // Kaynak sayısı kadar satır; sayfalanmaz.
     new ConversationService(db).listByCustomer(customerId),
   ]);
 
@@ -136,10 +96,7 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   // orada zaten hesaplanıyor. İkinci bir çözüm yazmak, aynı satırın iki görünümü demekti.
   const savedView = await getCartView(locale, cart.savedItems.map(entryOfItem), { customerId });
 
-  // Puan ve kupon AYNI koşula bağlı: B2B'de ikisi de yok (tasarım — "B2B'de puan/kupon bölümü
-  // DOM'da hiç yoktur"). İkisi TEK kapıdan gelir (`readCustomerPoints` — 20.08'de buraya geçildi:
-  // eski `readPoints` aynı beş sorguyu parça parça atıyordu ve davet kodunu hiç getirmiyordu;
-  // native ile web'in kartı böylece aynı kaynaktan doğuyor).
+  // Puan ve kupon aynı koşula bağlı ve tek kapıdan gelir, böylece native ile web'in kartı aynı kaynaktan doğar.
   const [points, coupons] = company ? [null, [] as CustomerCoupon[]] : await readPointsAndCoupons(db, customerId);
 
   return {
@@ -164,27 +121,13 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   };
 }
 
-/**
- * Bekleyen bölge haberi kayıtları.
- *
- * Eskiden burada ham `db.from('zone_notice')` vardı ve künyesi *"kendi servisi gerekmiyor, iş
- * kuralı taşımıyor"* diyordu. Gerekçe eksikti (denetim A4): mesele iş kuralı değil **sözleşme** —
- * ham okuma `postal_code`'u elle `as string` diye çeviriyordu, yani kolon adı değişse derleyici
- * değil çalışma zamanı haber verirdi (`STACK §6`).
- *
- * Ziyaretçinin kaydı da olabilir (hesap zorunlu değil); burada YALNIZ müşteriye bağlı olanlar
- * okunur — kimlik oturumdan gelir.
- */
+/** Yalnız müşteriye bağlı kayıtlar okunur; ziyaretçinin kaydı hesapsız da olabilir. */
 async function readZoneNotices(db: ReturnType<typeof serviceDb>, customerId: string): Promise<{ postalCode: string }[]> {
   const rows = await new ZoneNoticeService(db).listForCustomer(customerId);
   return rows.map((row) => ({ postalCode: row.postalCode }));
 }
 
-/**
- * Puan bölümü + kuponlar — **yalnız B2C'de çağrılır**: B2B'de sonucu hiç çizilmeyecek sorgular
- * atmanın anlamı yok. Kart application'dan gelir (bakiye, eşik, kupon, davet kodu/adresi, kazanma
- * yolları TEK turda); web yalnız "son kazanımlar" dökümünü ekler.
- */
+/** Yalnız B2C'de çağrılır. Kart application'dan tek turda gelir; web yalnız son kazanımlar dökümünü ekler. */
 async function readPointsAndCoupons(
   db: ReturnType<typeof serviceDb>,
   customerId: string,
