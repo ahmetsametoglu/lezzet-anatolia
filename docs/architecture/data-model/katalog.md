@@ -36,7 +36,7 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 - **`tagline`** — **kısa tanıtım — vitrin bandının ALTYAZISI** (05.17). Başlık değil: başlık kategori adıdır; ikinci bir başlık alanı açılsaydı aynı şeyin iki kaynağı olurdu. Boş bırakılabilir ve öyle kalmalı — altyazısız kategori altyazısız çizilir, **yedek metin uydurulmaz** (ada düşmek "Börekler / Börekler" tekrarı üretirdi). Doğuş sebebi ölçüldü: mobil vitrin bandının altyazısı tasarımın içinde SABİT bir sözlüktü (`CSUB`), yani yeni kategori altyazısız doğuyor ve cümle operatörün elinde değildi
 - **`slug`** — dil-bağımsız URL parçası; benzersiz
 - **`image_key`** — kategori KAPAĞI; depo anahtarı, tam URL değil (STACK §5). Anasayfa kategori şeridinde görünür: **masaüstü web 4:5 kart, mobil web ve native daire** (kaynak 4:5; daire kare kırpma + yuvarlak maske). **Artık tek yüz değil** (05.23): kart görseli `category_image` havuzundan güne göre seçilir ve kapak o havuzun bir üyesidir — havuz boşsa kart eskisi gibi yalnız bunu gösterir
-- **`image_focal_x`** — odak %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B)
+- **`image_focal_x`** — odak %, 0-100 (object-position X); tek kaynak 4:5'ten kart ve daire bununla türer (Komponent Envanteri §0B)
 - **`image_focal_y`** — odak %, 0-100 (object-position Y)
 - **`image_zoom`** — zoom %, 100-400; dikey/kare kaynağı yatay çerçeveye kırpar (yeniden çektirmeden)
 - **`image_alt`** — alternatif metin; **boşsa müşteride kategori adına düşer** (kopya tutulmaz)
@@ -117,7 +117,7 @@ Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksi
 
 - **`description`** — koleksiyon tanıtım metni — paylaşım/OG açıklaması
 - **`slug`** — sosyal paylaşım/direkt bağlantı
-- **`image_key`** — kapak = paylaşım (OG) kartı görseli (16:9); depo anahtarı, tam URL değil (STACK §5). **Müşteri sayfasında render edilmez** — yalnız link önizleme kartını besler
+- **`image_key`** — kapak = masaüstü ana sayfa kartı ve paylaşım (OG) kartı görseli (16:9); depo anahtarı, tam URL değil (STACK §5)
 - **`image_focal_x`** — OG kartı odak %, 0-100 (object-position X); dikey/kare kaynak odak+zoom ile 16:9'a kırpılır (§0B)
 - **`image_focal_y`** — OG kartı odak %, 0-100 (object-position Y)
 - **`image_zoom`** — OG kartı zoom %, 100-400
