@@ -11,11 +11,8 @@ import { EmptyTickets } from './components/empty-tickets';
 import type { SupportViewProps } from './support-types';
 
 /**
- * Taleplerim — mobil. Masaüstünün dar hâli DEĞİL: orada iki bölme yan yana, burada **iki ayrı
- * ekran** (liste · yazışma) ve hangisinin çizileceğini rota söyler (`mode`).
- *
- * Yazışma ekranında durum rozeti ORTADA duruyor (tasarım), masaüstünde ise başlık satırının
- * sağında — mobilde başlık zaten üst barda ve rozete yer yok; ortada bir çapa olarak duruyor.
+ * Taleplerim telefon görünümü: liste ve yazışma iki ayrı ekran ve hangisinin çizileceğini rota söyler. Yazışmada durum rozeti
+ * ortada durur, çünkü başlık üst çubukta ve rozete orada yer yok.
  */
 export function SupportMobile({ t, locale, mode, tickets, nextCursor, loadingMore, onLoadMore, selected }: SupportViewProps) {
   const [ticket, setTicket] = useState<CustomerTicketView | null>(selected);

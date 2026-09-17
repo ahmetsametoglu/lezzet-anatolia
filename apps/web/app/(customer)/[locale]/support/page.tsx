@@ -12,12 +12,7 @@ import { loadSupport } from './load';
 import type { Messages } from './support-types';
 import messages from './messages.json';
 
-/**
- * Taleplerim (08.6) — hesap alanının üçüncü bölümü. Buraya üç yerden gelinir: hesap sekmesi,
- * sipariş detayındaki "Sorun bildir" ve cevap bildirimi e-postasındaki bağlantı.
- *
- * Rota `/support`; dile göre karşılıkları `routing.ts`'te (`/assistance` · `/anfrage` · `/talep`).
- */
+/** Taleplerim: hesap sekmesinden, sipariş detayındaki "Sorun bildir"den ve cevap e-postasındaki bağlantıdan gelinir. */
 interface SupportPageProps {
   params: Promise<{ locale: string }>;
 }
@@ -39,9 +34,7 @@ export default async function SupportPage({ params }: SupportPageProps) {
         nav: 'support',
         back: { label: t.backToAccount, href: '/account' },
         title: t.title,
-        // Mobilde KISA etiket (20.08): "+ Écrivez-nous" / "+ Schreiben Sie uns" başlık satırında
-        // iki satıra sarıp başlığı "Mes deman…" diye kırpıyordu (ölçüldü). Tasarımın yapışkan
-        // çubuğu da eylemi kısa çiziyor ("＋ Yeni"). Masaüstünde yer var, davetkâr uzun hâl kalır.
+        // Mobilde kısa etiket: uzun hâl başlık satırında iki satıra sarıp başlığı kırpar; masaüstünde yer var.
         right: <NewTicketLink label={device === 'mobile' ? t.newTicketShort : t.newTicket} />,
       }}
       // Masaüstünde bu rota da bir yazışma gösteriyor (iki bölme), mobilde bir gelen kutusu —

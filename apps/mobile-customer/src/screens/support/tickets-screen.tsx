@@ -24,36 +24,11 @@ import messages from '@lezzet/i18n/customer/support';
 import { useTickets } from './use-tickets.hook';
 
 /*
-  TALEPLERİM (v3 `vTalepler`) — GERÇEK UÇTAN okur (`GET /api/v1/me/tickets`): misafir kapısı,
-  iskelet, ağ hatası, boş durum ve talep kartları.
-
-  ── SONSUZ KAYDIRMA ─────────────────────────────────────────────────────────
-  Talep sayısı veriyle SINIRSIZ büyür → keyset + sonsuz kaydırma; imleç hiçbir yere yazılmaz
-  (CLAUDE §1). Kuyruk hatası listeyi DÜŞÜRMEZ: satırlar yerinde kalır, sona tekrar-dene çıkar
-  (siparişler listesinin aynı ayrımı — "hiç veri yok" ≠ "devamı gelmedi").
-
-  ── YENİ TALEP BURADA AÇILIR (kullanıcı kararı 09.08) ───────────────────────
-  "Bize yazın" ayrı bir sayfa DEĞİL, bu ekranın ÇEKMECESİDİR (`NewTicketSheet`): hem başlıktaki
-  "＋ Yeni" hem boş durumun birincil düğmesi aynı çekmeceyi açar. Gönderim başarılıysa çekmece
-  kapanır, liste tazelenir (uç yalnız kimlik döndürüyor — yeni talep ancak tazelemeyle görünür) ve
-  onay toast'la söylenir. Sipariş detayından gelen `?order=` da buraya düşer ve çekmeceyi doğrudan
-  o siparişle açar (rota kabuğu `app/support/new.tsx` yönlendiriyor).
-
-  ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **Kart adı "tür · konu"** (v3 yalnız türü yazıyor): `subject` personelin elle açtığı talepte
-     dolu gelir ve o zaman üç satırın üçü de "Eksik ürün" derdi. Kural tek yerde (`ticket-format`).
-  2. **Alt satırda "son mesaj"** — gerekçe `ticketMeta` künyesinde (liste son mesaja göre sıralı).
-  3. **İskelet ve ağ hatası ÇİZİLDİ** (şablonda yok/kutulu): önceki etapta bu ekranda ağ yoktu,
-     bugün var. Hata bloğu katalog/sipariş ekranlarının `EmptyState` + `connection-off` kalıbı —
-     aynı arıza üç ekranda üç ayrı görünüme sahip olmasın.
-  4. **Kart bütünüyle basılabilir** (şablon üç ayrı bloğu tek tek bağlıyor): ekran okuyucuya tek
-     satır olarak gider.
+  Taleplerim gerçek uçtan okur; liste veriyle büyüdüğü için keyset ve sonsuz kaydırma, kuyruk hatası listeyi düşürmez. "Bize
+  yazın" ayrı sayfa değil bu ekranın çekmecesidir: başlıktaki "＋ Yeni" de boş hâlin düğmesi de aynı çekmeceyi açar.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
-
-/* Skeleton kart sayısı artık `tickets-skeleton`ın kendi sabiti; yükseklik ise hiç yazılmıyor —
-   kartın yapısı kurulunca kendiliğinden çıkıyor (o dosyanın künyesi). */
 
 interface TicketsScreenProps {
   /**
@@ -76,19 +51,8 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
   const tickets = useTickets();
   const [sheetOpen, setSheetOpen] = useState(openNew || orderReference !== undefined);
 
-  /*
-    ÜST ÇUBUK — "Yeni talep" bağlantısı HER HÂLDE ÇİZİLMEZ (MB-68, 18.08).
-
-    İki ayrı kusuru birden kapatıyor, ikisi de aynı kökten: çubuk ekranın hâlinden habersizdi.
-    · BOŞ HÂLDE İKİ ÇAĞRI, İKİ AD: çubukta "＋ Yeni", ortadaki boş hâlde "Bize yazın" — ikisi aynı
-      çekmeceyi açıyor ama farklı adlandığı için iki ayrı şey sanılıyordu (cihazda ölçüldü 17.08).
-      Boş hâlde ortadaki kalır: ekranın o anki TEK işi odur ve gerekçesini de yazar.
-    · MİSAFİRDE ÖLÜ DÜĞME: misafir dalında çekmece hiç çizilmiyor (talep açmak oturum ister — aşağıdaki
-      künye), yani bağlantıya basınca GÖRÜNÜR hiçbir şey olmuyordu. Basılınca bir şey yapmayan
-      bağlantı, olmayan bir arıza gibi okunur.
-
-    Yükleme ve hata hâllerinde KALIR: ikisinde de ortada rakip bir çağrı yok ve çekmece çiziliyor.
-  */
+  /* "Yeni" bağlantısı boş listede ve misafirde çizilmez: boş hâlde ortadaki düğmeyle aynı işi farklı adla yapardı, misafirde
+     çekmece hiç açılmadığı için ölü bir bağlantı olurdu. */
   const bar = (withNew = true) => (
     <AppBar
       title={t.list.title}
@@ -144,9 +108,7 @@ export function TicketsScreen({ orderReference, openNew = false, locale: forcedL
     );
   }
 
-  /* İLK YÜK: başlık GERÇEK kalır (geri düğmesi ve "Yeni talep" bağlantısı çalışır), kartların
-     yerini skeleton tutar. Blok ekrandan `tickets-skeleton`a taşındı: kartın içi tanınmıyordu ve
-     yüksekliği tek ham sayıydı. Çekmece yine çizilir — açık gelmiş olabilir (`openNew`). */
+  /* İlk yükte başlık gerçek kalır ki geri ve "Yeni" çalışsın; çekmece de çizilir, çünkü açık gelinmiş olabilir. */
   if (tickets.status === 'loading') {
     return (
       <View style={styles.screen}>

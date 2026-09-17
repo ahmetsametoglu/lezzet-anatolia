@@ -12,13 +12,8 @@ import { SupportDesktop } from './support.desktop';
 import { SupportMobile } from './support.mobile';
 
 /**
- * Talep sayfasının cihaz çatalı (ADR Sapma 3) ve **durum sahibi**: yalnız sayfalama imleci.
- *
- * Seçili talep burada TUTULMAZ — o rotanın işi (`/support/[ticket]`). İstemci durumunda yaşasaydı
- * yazışmaya doğrudan bağlantı veren cevap e-postası çalışmazdı; ayrıca geri tuşu listeye değil
- * sayfadan çıkışa giderdi.
- *
- * İmleç URL'e yazılmaz (`CLAUDE.md §1`): burada paylaşılabilecek bir süzgeç yok, liste yalnız uzuyor.
+ * Talep sayfasının cihaz çatalı ve sayfalama imlecinin sahibi. Seçili talep rotanın işidir: istemci durumunda yaşasaydı cevap
+ * e-postasındaki doğrudan bağlantı çalışmaz, geri tuşu listeye dönmezdi.
  */
 interface SupportClientProps {
   t: Messages;

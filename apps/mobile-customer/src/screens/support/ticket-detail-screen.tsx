@@ -3,7 +3,7 @@ import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-// `ScrollView` artık yalnız TİP: kaydırıcıyı `ChatLayout` çiziyor, ekran ona yalnız ref veriyor.
+// `ScrollView` yalnız tip: kaydırıcıyı `ChatLayout` çiziyor, ekran ona yalnız ref veriyor.
 import { Image, Text, View, type ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -28,37 +28,8 @@ import messages from '@lezzet/i18n/customer/support';
 import { useTicket } from './use-ticket.hook';
 
 /*
-  TALEP DETAYI (v3 `vTalepD`) — GERÇEK UÇTAN okur (`GET /api/v1/me/tickets/:id`) ve cevap GERÇEK
-  UCA gider (`POST …/messages`): sonuç bloğu, baloncuklar, bilgi satırı ve yapışkan mesaj kutusu.
-
-  ── GÖNDERİM SONUCU SUNUCUDAN GELİR, EKRANDA UYDURULMAZ ─────────────────────
-  Cevap ucu GÜNCEL DETAYI döndürüyor; ekranın yerel "iyimser mesaj" listesi YOK. Kapanmış talebe
-  yazmak onu yeniden açar (motorun kararı) ve yeni durum da o cevapla gelir — ekran tahmin etseydi
-  bir gün sunucudan ayrışırdı. Düşen gönderim TASLAĞI SİLMEZ (hook künyesi): yazılan şikâyet metni
-  kaybolmaz.
-
-  ── ŞABLONDAN SAPMALAR ─────────────────────────────────────────────────────
-  1. **Başlığın ikinci satırı çubuğun ALTINDA.** Şablon başlık çubuğuna iki satır koyuyor; kitin
-     `AppBar`ı TEK satır başlık taşır ve çubuğu değiştirmek bu görevin yazma alanı dışında (kit
-     ihtiyacı rapor edildi). Bilgi kaybı yok, yeri bir kademe aşağıda.
-  2. **Yeniden açılan talebin durumu `open`.** Şablon "Yeniden açıldı" diye dördüncü bir durak
-     çiziyor; şemada böyle bir durak YOK (`resolved → open`) ve uydurmak ekranı, şemanın bilmediği
-     bir gerçeğin kaynağı yapardı.
-  3. **Sonucun tutarı PARA ALANINDAN gelir**, elle yazılmış bir cümleden değil: sözleşme iadeyi
-     `triggeredAt` + `refundedCents` olarak taşıyor ve bant yalnız `refundedCents > 0` iken çizilir
-     (web bandının aynı ölçütü — "tetiklendi ama ödenmedi" gerçek bir ara hâl, 0 € iade "iade yok"
-     demek değildir).
-  4. **Çeviri İŞARETLENİR** (şablonda yok): mesaj okuyucunun dilinde geliyor (20.2) ve makine
-     çevirisi bir şikâyeti yumuşatabilir — hangi baloncuğun çeviri olduğu söylenmeden gösterilmesi,
-     personelin ağzına kurmadığı bir cümleyi koymak olurdu.
-  5. **Ekli fotoğraflar çizilir** (şablonda yok): web'den ek gönderen müşteri kendi fotoğrafını
-     burada da görmeli; adresler SÜRELİ imzalı (sözleşme künyesi), ekran onları yalnız gösterir.
-  6. **Gönderim onayı TOAST** (v3 `tSend` → "Mesajınız iletildi"): önceki UI-only etapta toast
-     katmanı yoktu, bugün var — şablonun kendi davranışı geri geldi. Mesajın yazışmada belirmesi
-     de sürüyor; toast onu ezmiyor, süreliyor.
-
-  BALONCUĞUN KİMLİĞİ EKRAN OKUYUCUYA DA GİDER: hizalama ve renk "kim yazdı"yı yalnız GÖRENE
-  söyler; her baloncuk `Siz:` / marka adı (`brand.name`) önekiyle tek parça okunur.
+  Talep detayı: gönderimin sonucu sunucudan gelir, ekran iyimser mesaj uydurmaz ve düşen gönderim taslağı silmez. Her baloncuk
+  ekran okuyucuya "Siz:" ya da marka adı önekiyle tek parça okunur, çünkü hizalama ve renk yazanı yalnız görene söyler.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -90,9 +61,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
     />
   );
 
-  /* İLK YÜK: başlık GERÇEK kalır (geri yolu açık), sayfanın geri kalanının yerini skeleton tutar.
-     Blok ekrandan `ticket-detail-skeleton`a taşındı: üç ortalanmış çubuk buranın bir SOHBET
-     ekranı olduğunu hiç göstermiyordu (o dosyanın künyesi). */
+  /* İlk yükte başlık gerçek kalır ki geri yolu açık olsun; sayfanın geri kalanının yerini iskelet tutar. */
   if (ticket.status === 'loading') {
     return (
       <View style={styles.screen}>
@@ -137,6 +106,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   const detail = ticket.detail;
   const scope = ticketScope(detail.orderReference, t.list.orderScope, t.detail.generalScope);
   const title = ticketTitle(t.type[detail.type], detail.subject, t.list.withSubject);
+  // İade ancak ödenmişse söylenir: tetiklenmiş ama ödenmemiş iade gerçek bir ara hâldir.
   const refunded = detail.returnOutcome !== null && detail.returnOutcome.refundedCents > 0
     ? formatPrice(detail.returnOutcome.refundedCents, locale)
     : null;
@@ -152,8 +122,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   const canSend = draft.trim().length > 0 && !ticket.sending;
 
   const renderMessage = (message: TicketMessage) => {
-    // Ekip etiketi marka adıdır ve çevrilmez — tek kaynağı `@lezzet/brand` (sözlükte üç dilde aynı
-    // kopya duruyordu ve marka yazımı düzeltilince biri eskide kalırdı).
+    // Ekip etiketi marka adıdır ve çevrilmez; tek kaynağı `@lezzet/brand`.
     const who = message.fromCustomer ? t.detail.fromCustomer : brand.name;
 
     return (
@@ -165,9 +134,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
         testID={`ticket-message-${message.id}`}
       >
         <View style={[styles.bubbleColumn, message.fromCustomer ? styles.mineColumn : styles.theirsColumn]}>
-          {/* GÖVDE SOHBET METNİ (06.09): işletmenin cevabı — insanın ya da ajanın — biçimlendirme
-              işaretleriyle yazılıyor ve müşteri onu operasyonun gördüğü gibi görmeli. Aynı çizici
-              operasyon yazışmalarında da çalışıyor (`components/ui/chat-text`). */}
+          {/* Gövde sohbet metni: işletmenin cevabı biçimlendirme işaretleriyle yazılır ve müşteri onu operasyonun gördüğü gibi görmeli. */}
           <ChatText style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}>
             {message.body}
           </ChatText>
@@ -191,13 +158,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
     );
   };
 
-  /**
-   * Altta SABİT duran yazma çubuğu — kaydırılmaz.
-   *
-   * Kaydırma alanının DIŞINDA (RN'de `position: sticky` yok) ama AKIŞTA: kaydırıcı kalanı
-   * doldurduğu için kutu zaten en altta oturuyor, mutlak konuma gerek yok. Gereksiz de değil,
-   * ZARARLIYDI — gerekçesi `composer` stilinin künyesinde.
-   */
+  /** Altta sabit yazma çubuğu: kaydırma alanının dışında ama akışta; gerekçesi `composer` stilinde. */
   const composer = (
     <View style={styles.composer}>
       {/* Düşen gönderim SESSİZ DEĞİL: tek satırlık ret, taslak yerinde. */}
@@ -235,40 +196,14 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
   );
 
   return (
-    /*
-      KLAVYE KAÇINMASI KİTİN YAZIŞMA KABINDA (kullanıcı bulgusu 16.08, iki cihazda birden ölçüldü;
-      kap 27.08'de doğdu).
-
-      Yazma çubuğu klavyenin ALTINDA kalıyordu: müşteri yazdığını göremiyordu. Çözüm ÖNCE burada
-      yazıldı — kaçınma kabı + kaydırıcıya `flex: 1` + kardeş çubuk. 27.08'de aynı arıza iki
-      operasyon ekranında daha bulununca çözüm oralara kopyalandı ve tekrar üçe çıktı; kural o gün
-      kite taşındı (`components/ui/chat-layout.tsx`). Ölçümün, `FormScroll`dan neden ayrıldığının ve
-      açık kalan platform sorusunun tamamı orada — bu ekran artık yalnız üç parçayı veriyor.
-
-      Başlık çubuğu KAPIN DIŞINDA ve bu ölçülmüş bir karar: içeride dururken iOS'ta hiçbir kaçınma
-      olmuyordu (simülatörde kare ile ölçüldü 16.08). Kullanıcının turu emsalin çalıştığını
-      doğrulamıştı — kusur kaçınmada değil, bu ekranın kabındaydı.
-    */
+    /* Klavye kaçınması kitin yazışma kabında (`ChatLayout`); başlık çubuğu kabın dışında, çünkü içeride dururken iOS'ta kaçınma
+       olmaz. */
     <View style={styles.screen}>
       {appBar(title, <TicketStatusTag status={detail.status} label={t.status[detail.status]} testID="ticket-status" />)}
-      {/* Yazışma eskiden yeniye dizili: SON mesaj en altta. Kaydırma her içerik değişiminde sona
-          çekilir — açılışta müşteri en yeni cevabı görür, kendi mesajını gönderince de baloncuğu
-          ekranda belirir (onayın kendisi budur; toast yalnız onu süreler). */}
-      {/*
-        ELLE YENİLEME YOK — ne aşağı ne yukarı çekme (kullanıcı kararı 17.08).
-
-        Yukarı çekip yenileme yazılmıştı (yazışmada en yeni mesaj en altta olduğu için yön
-        doğruydu) ama **Android'de çalışamayacağı ölçüldü**: RN'in Android `ScrollView`'ü taşma
-        ofseti üretmiyor (`ReactScrollView.java` `overScrollBy`ı ezmiyor, Android'in
-        `overscrollDistance`ı fiilen 0), yani `contentOffset` liste sonunda kilitleniyor ve
-        ölçülecek bir taşma hiç doğmuyor. Cihazda kanıtlandı: çekişten sonraki altı karenin beşi
-        öncekiyle bit bit aynı.
-
-        Yerine platformun izin verdiği bir numara aramak yerine özellik KALDIRILDI: canlı zil
-        zaten yazışmayı kendiliğinden tazeliyor, kullanıcı kararı bu yönde — *"sistem çalışıyor,
-        gerek yok, kullanıcı en kötü çıkıp yeniden girer."* Ekrandan çıkıp girmek zaten tam bir
-        okuma yapıyor.
-      */}
+      {/* En yeni mesaj en altta ve kaydırıcı her içerik değişiminde sona kayar, böylece en yeni cevap ve müşterinin kendi baloncuğu
+          ekranda kalır. */}
+      {/* Elle yenileme yok: Android'de kaydırıcı liste sonunda taşma üretmediği için çekerek yenileme çalışmaz; canlı zil yazışmayı
+          zaten tazeliyor. */}
       <ChatLayout
         composer={composer}
         scrollRef={threadRef}
@@ -291,20 +226,8 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
 
         {detail.messages.map(renderMessage)}
 
-        {/*
-          ÇEVİRİ İŞARETİ BALONCUKTA DEĞİL, EKRANDA — BİR KEZ (kullanıcı kararı 17.08).
-
-          İşaret baloncuk başına çiziliyordu ve gerekçesi sağlamdı: makine çevirisi bir şikâyeti
-          yumuşatabilir ya da bir sözü kaydırabilir; müşteri okuduğu cümlenin personelin YAZDIĞI
-          cümle olduğunu sanmamalı. **Ama ölçüm gerekçenin varsayımını çürüttü:** yazışmanın iki
-          yönü de çevriliyor (müşteri Fransızca yazar personel Türkçe okur, tersi de öyle), yani
-          çeviri istisna değil VARSAYILAN. Cihazda dokuz mesajın yedisinde çıkıyordu — her zaman
-          görünen bir işaret bilgi taşımaz, okuyucu ikinci mesajdan sonra bakmayı bırakır ve geriye
-          yalnız gürültü kalır.
-
-          Bu yüzden güvence atılmadı, YERİ DEĞİŞTİ. Koşullu: hiç çeviri yoksa satır da yok —
-          tek dilli bir yazışmaya "çevrildi" demek, olmayan bir şeyi haber vermek olurdu.
-        */}
+        {/* Çeviri işareti baloncukta değil ekranda, bir kez: yazışmanın iki yönü de çevrildiği için baloncuk başına işaret gürültü
+            olur. Hiç çeviri yoksa satır da yok. */}
         {detail.messages.some((message) => message.translated) ? (
           <Text style={styles.notice}>{t.detail.translatedNotice}</Text>
         ) : null}
@@ -319,44 +242,17 @@ const styles = StyleSheet.create((theme, rt) => ({
   screen: {
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
-    /*
-      ALT GÜVENLİ ALAN KAÇINMA KABININ DIŞINDA — TEK ANİMASYON KALSIN DİYE (kullanıcı bulgusu 17.08).
-
-      Bu dolgu yazma çubuğunun kendi üstündeydi ve klavye açılınca fazlalık yapıyordu: iOS'ta klavye
-      ekranın ta dibine kadar uzanır, yani ana ekran çubuğunun yerini zaten o kaplar. "Klavye açıksa
-      sıfırla" diye koşul yazmak kusuru İKİYE çıkardı: `KeyboardAvoidingView` kendi dolgusunu
-      klavyenin süresinde yumuşatarak kaldırırken koşul 34pt'yi bir anda geri koyuyordu — çubuk önce
-      aşağı kayıp sonra yukarı zıplıyordu.
-
-      Dolgu KÖKTE durunca koşula gerek kalmıyor: kabın alt kenarı zaten güvenli alan kadar yukarıda
-      başlar ve `KeyboardAvoidingView` klavyeyle ÖRTÜŞMEYİ ölçtüğü için o farkı kendiliğinden düşer.
-      Tek hareket, tek süre.
-
-      PAY GÜVENLİ ALANIN TAMAMI DEĞİL, ÇUBUĞUN KENDİSİ KADAR (kullanıcı kararı 17.08).
-
-      İşletim sisteminin bildirdiği 34pt, yukarı KAYDIRMA hareketi için ayrılmış cömert bir şerit.
-      Bu ekranda o hareket yok: çubuğun üstündeki tek etkileşim DOKUNMAKTIR ve dokunuş, kaydırma
-      hareketiyle yarışmaz — parmak basıp çekmediği sürece olay yazı alanına gider. Şeridin tamamını
-      boş tutmak, ekranın altında hiçbir şey anlatmayan geniş bir bant bırakıyordu.
-
-      Bu yüzden pay `insets.bottom` ile SINIRLI ama ondan küçük: ana ekran çubuğunun çizgisi açıkta
-      kalsın yeter — yazı alanının yuvarlak kenarı onun üstüne binmesin. Alt güvenli alanı olmayan
-      cihazda (`insets.bottom === 0`) sıfıra iner, kutunun kendi payı zaten var.
-    */
+    /* Alt güvenli alan kökte, çünkü yazma çubuğunun üstünde olsaydı klavye açılırken iki ayrı animasyon doğardı. Pay güvenli alanın
+       tamamı değil, ana ekran çizgisi açıkta kalacak kadar: bu ekranda çubuğun üstünde kaydırma hareketi yok. */
     paddingBottom: Math.min(rt.insets.bottom, theme.space['3xl']),
   },
   /* Kaçınma kabının ve kaydırıcının ölçüleri BURADA DEĞİL: ikisi de `ChatLayout`ın kuralı
      (`chat-layout.tsx` künyesi). Ekran yalnız yazışmanın kendi dolgusunu söylüyor. */
   content: {
-    /* Yatay dolgu yazışmada DAHA DAR (kullanıcı bulgusu 17.08). Ekranın geri kalanında `4xl` (18)
-       doğru ölçü, ama orada kutunun içinde tek bir metin var; burada metin ikinci bir kabın
-       (baloncuk) içinde ve o kabın kendi dolgusu var — ikisi üst üste binince satır iki kez
-       daralıyor. Ölçüldü (OPPO CPH1907, 1080 px): metne kalan genişlik ekranın %64'üydü. */
+    /* Yazışmada yatay dolgu daha dar: metin baloncuğun kendi dolgusuyla ikinci kez daralıyor. */
     paddingHorizontal: theme.space['3xl'],
     paddingVertical: theme.space['4xl'],
-    /* Çubuğun altında AYRILMIŞ ALAN YOK ve olmamalı: çubuk artık akışta, kendi yerini kendi
-       kaplıyor. Mutlak konumluyken buraya bir kutu boyu dolgu konuyordu — o dolgu bugün
-       yazışmanın sonunda kocaman bir boşluk olurdu. */
+    /* Çubuğun altında ayrılmış alan yok: çubuk akışta, kendi yerini kendisi kaplıyor. */
     gap: theme.space.lg,
   },
   meta: {
@@ -367,17 +263,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   bubbleRow: { flexDirection: 'row' },
   mineRow: { justifyContent: 'flex-end' },
   theirsRow: { justifyContent: 'flex-start' },
-  /*
-    BALONCUK TAVANI %78 → %88 (kullanıcı bulgusu 17.08, ölçümle).
-
-    Şablonun kendi sınırı %78'di ve tek başına makul bir sohbet ölçüsü. Ama cihazda ölçünce
-    yatayın **%36'sı** metin dışı çıktı: 48 px dış dolgu + 42 px baloncuk iç dolgusu (iki yan) +
-    tavandan doğan **262 px** kalıcı boşluk. Uzun bir cevap bu yüzden yedi satıra kırılıyordu.
-
-    Tavan tamamen kaldırılMADI ve kaldırılmamalı: karşılıklı hizalanan baloncuklarda kimin yazdığı
-    bilgisini taşıyan şey o boşluktur — kenardan kenara uzayan baloncuk hizasını kaybeder ve
-    yazışma tek sütuna döner. %88, "kim yazdı" görünürlüğünü koruyan en geniş değer.
-  */
+  /* Baloncuk tavanı %88: kaldırılmaz, çünkü kimin yazdığını karşılıklı hizadaki boşluk söyler; daha dar tavan uzun cevabı gereksiz
+     satırlara böler. */
   bubbleColumn: { maxWidth: '88%', gap: theme.space.sm },
   mineColumn: { alignItems: 'flex-end' },
   theirsColumn: { alignItems: 'flex-start' },
@@ -421,24 +308,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     paddingTop: theme.space.md,
   },
 
-  /*
-    ÇUBUK AKIŞTA DURUR — `position: absolute` DEĞİL (iOS klavye arızasının kökü, ölçüldü 16.08).
-
-    Mutlak konumlu çocuk kabının ALT KENARINA asılıdır. iOS'ta `KeyboardAvoidingView` kabın altına
-    klavye kadar DOLGU koyuyor; kabın alt kenarı yerinde kaldığı için çubuk da yerinde kalıyor,
-    yani klavyenin altında. Android'de aynı kod ÇALIŞIYORDU çünkü oradaki `height` davranışı kabı
-    kısaltıyor — alt kenar yukarı geliyor, çubuk onunla geliyor. "Android düzeldi, iOS düzelmedi"
-    gözleminin tek sebebi buydu; kusur `behavior` seçiminde ya da ofsette değildi.
-
-    Akışta duran çubuk iki davranışta da doğru: kaydırıcı `flex: 1` ile kalanı doldurduğu için
-    kutu zaten en alta oturur, dolgu eklendiğinde de dolgunun ÜSTÜNDE kalır.
-  */
+  /* Çubuk akışta durur: mutlak konumlu çocuk kabın alt kenarına asılı kalır ve iOS'ta klavye dolgusu eklenince klavyenin altında
+     kalır. */
   composer: {
     gap: theme.space.sm,
     paddingTop: theme.space.lg,
     paddingHorizontal: theme.space['4xl'],
-    /* Kutunun KENDİ dolgusu simetrik: güvenli alan artık ekranın kökünde (künyesi orada), burada
-       yalnız çubuğun çerçevesiyle arasındaki nefes payı kalır. */
+    /* Kutunun kendi dolgusu simetrik; güvenli alan ekranın kökünde. */
     paddingBottom: theme.space.lg,
     borderTopWidth: theme.border.hairline,
     borderTopColor: theme.colors['sand-200'],
@@ -450,13 +326,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space.md,
   },
   composerField: { flex: 1 },
-  /* HATA, İPUCUYLA AYNI SESTE OLAMAZ (MB-46, 18.08). Bu satır `micro`daydı (11,5) — yani hemen
-     yukarıdaki iki pasif künyeyle (*"Cevap geldiğinde e-posta ile haber veririz"*, *"mesajlar
-     otomatik çevriliyor"*) BİREBİR aynı boyda. Oysa o ikisi bilgi, bu satır müşteriden bir şey
-     istiyor: mesaj gitmedi, tekrar denemeli. Şablonda karşılığı yok (hata hâlleri bizim), o yüzden
-     ölçüt `(21.38)`in kullanıcı kararından geliyor — `helper`/`micro` yalnız gerçek yardımcı role
-     kalır. `note` (13) seçildi, `body-sm` değil: satır yazma alanının ALTINDA duruyor ve alanın
-     kendisi 13,5 — ondan büyük bir hata satırı bağırırdı. */
+  /* Gönderim hatası ipucu satırlarından büyük (`note`), çünkü müşteriden bir şey istiyor; yazma alanından büyük değil ki bağırmasın. */
   sendError: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text.note,

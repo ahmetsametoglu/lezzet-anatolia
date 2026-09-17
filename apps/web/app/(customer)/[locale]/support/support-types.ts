@@ -10,15 +10,8 @@ import messages from './messages.json';
 export type Messages = LocalizedCopy<typeof messages>;
 
 /**
- * Ekranın hangi rotadan geldiği. Cihaz çatalıyla KARIŞMAZ, onunla çarpılır:
- *
- * | | `list` (`/support`) | `detail` (`/support/[ticket]`) |
- * | mobil | liste ekranı | yazışma ekranı (tam sayfa) |
- * | masaüstü | iki bölme, ilk talep seçili | iki bölme, o talep seçili |
- *
- * Masaüstü iki bölme olduğu için `/support` de bir yazışma gösterir — bu yüzden sunucu her iki
- * rotada da bir detay çözer. Mobil o detayı çizmez ama okuma yine yapılır: cihaz kararı istemcide
- * kesinleşiyor (`useDevice`) ve sunucunun tahmini yanılırsa masaüstünün sağ bölmesi boş kalırdı.
+ * Ekranın hangi rotadan geldiği; cihaz çatalıyla çarpılır: telefonda liste ya da yazışma ekranı, masaüstünde iki bölme. Masaüstü
+ * `/support`ta da bir yazışma gösterdiği için sunucu iki rotada da bir detay çözer.
  */
 export type SupportMode = 'list' | 'detail';
 

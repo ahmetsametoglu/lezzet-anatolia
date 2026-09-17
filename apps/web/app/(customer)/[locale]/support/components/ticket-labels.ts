@@ -8,10 +8,8 @@ import type { Messages } from '../support-types';
  */
 
 /**
- * Talebin ekrandaki adı: **tip · konu** (tasarım: "Eksik geldi · Gözleme").
- *
- * `subject` boş olabilir ve bu normaldir — müşteri başlık yazmaz, anlatısını yazar (`ticket.schema`).
- * O zaman geriye tipin kendisi kalır; "Soru ·" gibi asılı bir ayraç bırakılmaz.
+ * Talebin ekrandaki adı: tür · konu. Konu boş olabilir (müşteri başlık değil anlatım yazar); o zaman "Soru ·" gibi asılı bir
+ * ayraç bırakılmaz.
  */
 export function ticketTitle(
   ticket: { type: keyof Messages['type']; subject: string | null },
@@ -33,12 +31,7 @@ export function messageStamp(iso: string, locale: Locale, t: Messages): string {
   return `${day}, ${formatTime(iso, locale)}`;
 }
 
-/**
- * Liste kartının "son mesaj: …" değeri. Bugünse "bugün", değilse **yıllı** tarih.
- *
- * Yıl bilerek var: talep listesi bir arşivdir ve yıllara yayılır — yılsız "24 Tem" iki farklı
- * talebi ayırt edemez. Siparişler listesinde verilen kararın aynısı (`design/BACKLOG §3`).
- */
+/** Liste kartının "son mesaj" değeri: bugünse "bugün", değilse yıllı tarih, çünkü talep listesi yıllara yayılan bir arşiv. */
 export function lastMessageLabel(iso: string, locale: Locale, t: Messages): string {
   return isToday(iso) ? t.today : formatOrderDate(iso, locale, true);
 }
