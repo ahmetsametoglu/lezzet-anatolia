@@ -191,13 +191,13 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           href={productHref(product.slug)}
           className={[
             'cursor-pointer font-sans font-bold transition-colors hover:text-olive',
-            compact ? 'text-note' : 'text-body',
+            compact ? 'text-note' : 'text-body leading-tight',
             product.soldOut ? 'text-muted' : 'text-ink',
           ].join(' ')}
         >
           {product.name}
         </Link>
-        <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note'].join(' ')}>
+        <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note leading-tight'].join(' ')}>
           {[product.unitLabel, product.comparisonCents !== null ? formatComparison(product.comparisonCents, locale) : null]
             .filter(Boolean)
             .join(' · ')}
