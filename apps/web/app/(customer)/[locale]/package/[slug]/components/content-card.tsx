@@ -4,14 +4,8 @@ import type { StorefrontPackageItem } from '@/lib/storefront/storefront-types';
 import type { Messages } from '../package-types';
 
 /**
- * Paket içeriğinin tek kartı — "Pakette neler var?".
- *
- * **Kartın tamamı ürün detayına bağdır.** Sebebi yasal: alerjen ve içindekiler her üründe farklıdır,
- * müşteri satın almadan ÖNCE her kaleme ulaşabilmeli (`musteri-paket-detay.md §2`). Aynı sekmede
- * açılır — yeni sekme akışı koparır, geri dönüş pakete olmalı.
- *
- * **Fiyat YOK.** Tek fiyat kuralı (§6): kalem kırılımı gösterilmez, hediye kalem "0 €" olarak
- * görünmez. Sözleşmede alan zaten yok (`StorefrontPackageItem`), burada da basılacak bir şey yok.
+ * Paket içeriğinin tek kartı ve tamamı ürün detayına bağdır, çünkü alerjen ve içindekiler her kalemde farklıdır ve müşteri
+ * satın almadan önce her kaleme ulaşabilmeli. Fiyat yok: paket tek fiyattır, kalem kırılımı gösterilmez.
  */
 interface ContentCardProps {
   t: Messages;
