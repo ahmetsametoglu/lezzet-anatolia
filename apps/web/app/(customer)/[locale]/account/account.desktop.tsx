@@ -13,18 +13,15 @@ import { DeleteAccount } from './components/delete-account';
 import { ProfileCard } from './components/profile-card';
 
 /**
- * Hesabım — masaüstü (tasarım: `Musteri - Hesap.dc.html`, "Hesap Web").
- *
- * Düzen tasarımın kendisi: **iki eşit sütun**. Solda kimliğe ve tercihe ait olan (profil, adresler,
- * izinler, veri notu), sağda hesabın kendisine ait olan (puan, kaydedilenler, gezinme). Ayrım
- * keyfi değil — sol sütun "ben kimim", sağ sütun "hesabımda ne var" sorusunu cevaplıyor.
+ * Hesabım masaüstünde iki eşit sütun: sol sütun "ben kimim" (profil, adresler, izinler, veri), sağ sütun "hesabımda ne var"
+ * (puan, kaydedilenler, gezinme) sorusunu cevaplar.
  */
 export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewProps) {
   const compact = false;
   return (
     <div className="flex flex-col gap-5 px-12 pt-8 pb-12">
       <h1 className="font-serif text-page-title leading-tight text-ink">{t.title}</h1>
-      {/* Sohbet bağlantısının sonucu (15.16): girişten hemen sonra, başlığın altında, bir kez. */}
+      {/* Sohbet bağlantısının sonucu girişten döner dönmez okunmalı; bu yüzden başlığın hemen altında. */}
       {chatNotice && <ChatLinkNoticeBanner t={t} notice={chatNotice} />}
 
       <div className="grid grid-cols-2 items-start gap-5">
@@ -62,9 +59,8 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
 
           <Card compact={compact}>
             <CardHead title={t.consentTitle} compact={compact} />
-            {/* `bind` — kapanış DEĞİL: bu dosya sunucu bileşeni ve istemciye ancak bir server
-                action geçebilir. Yerinde yazılmış bir ok fonksiyonu sıradan bir fonksiyondur ve
-                serileştirilemez; `bind` üretilen şeyi yine server action olarak bırakır. */}
+            {/* Ok fonksiyonu değil `bind`: sunucu bileşeni istemciye yalnız server action geçirebilir ve `bind` sonucu yine
+                server action bırakır. */}
             <ConsentSwitch
               label={t.consentEmail}
               icon={<Icon name="mail" size={17} />}
@@ -86,19 +82,11 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
 
           <Card compact={compact}>
             <CardHead title={t.dataTitle} compact={compact} />
-            {/* Bağ 08.8 ile AÇILDI: metin bir süredir "gizlilik politikasında bulabilirsiniz"
-                diyordu ama gidilecek sayfa yoktu; şimdi var.
-                **E-posta adresi 08.21'de DÜŞTÜ** (ekranda görülerek bulundu): metin "silmek için
-                bize yazın" diyordu ve tam altında çalışan bir silme düğmesi duruyordu. Politika
-                metni düğme yazıldığında güncellenmişti, bu kart unutulmuştu — müşteriye aynı
-                ekranda iki farklı yol anlatılıyordu. */}
             <span className="font-sans text-note leading-relaxed text-body">{t.dataBody}</span>
             <Link href="/legal/privacy" className="cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark">
               {t.dataLink}
             </Link>
-            {/* Silme BU kartın içinde: veri kartı "verilerinize ne oluyor" sorusunun evi ve
-                silme o sorunun en uç cevabı. Ayrı bir kart olsaydı sayfada kendi başına bir
-                bölüm gibi durur, hesabın normal işlerinden biri gibi okunurdu (08.21). */}
+            {/* Silme veri kartının içinde: ayrı kart olsa hesabın sıradan işlerinden biri gibi okunurdu. */}
             <DeleteAccount t={t} />
           </Card>
         </div>
@@ -112,13 +100,11 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
             <span className="font-sans text-micro leading-relaxed text-muted">{t.savedNote}</span>
             <SavedList t={t} locale={locale} saved={account.saved} compact={compact} />
 
-            {/* Bölge haberi, kaydedilenlerin ALT BLOĞU (tasarım) — ayrı kart değil: ikisi de
-                "bugün alamadığım şey" başlığı altında yaşıyor. Bekleyen kayıt yoksa hiç çizilmez. */}
+            {/* Bölge haberi ayrı kart değil, kaydedilenlerin alt bloğu: ikisi de "bugün alamadığım şey". */}
             <ZoneNoticeList t={t} notices={account.zoneNotices} />
           </Card>
 
-          {/* Kişisel kuponlar — puanın varış noktası. 17.5 ile doldu; kart o güne kadar boş ama
-              YERİNDE durmuştu ki puan zincirinin nereye çıktığı görünsün. */}
+          {/* Kupon kartı boşken de durur ki puan zincirinin nereye çıktığı görünsün. */}
           <Card compact={compact}>
             <CardHead title={t.couponsTitle} compact={compact} />
             <CouponsCard t={t} locale={locale} coupons={account.coupons} />
@@ -142,8 +128,7 @@ export function AccountDesktop({ t, locale, account, chatNotice }: AccountViewPr
             </Link>
           </Card>
 
-          {/* Bağlı sohbetler (15.16) — "hesabımda ne var" sütununun son kartı: sohbetten gelen
-              siparişlerin neden burada göründüğünü anlatan bağ. Salt okunur, gerekçesi kartta. */}
+          {/* Bağlı sohbetler, sohbetten gelen siparişlerin neden burada göründüğünü anlatır. */}
           <LinkedChatsCard t={t} locale={locale} chats={account.chats} compact={compact} />
         </div>
       </div>
