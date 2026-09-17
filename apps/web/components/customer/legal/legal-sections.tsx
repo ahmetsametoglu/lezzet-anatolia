@@ -2,16 +2,8 @@ import { Link } from '@/i18n/navigation';
 import type { LegalDocument, LegalSection } from './legal-types';
 
 /**
- * Statik sayfanın ORTAK blokları — masaüstü ve mobil dizilişin ikisi de buradan besleniyor.
- *
- * Ayrım şu: **ne yazdığı ortak, nasıl dizildiği ayrı.** Başlık, bölüm gövdesi ve bilgi bandı iki
- * cihazda aynı şeyi söyler (yalnız punto kademesi değişir); farklılaşan tek yapı gezinmedir —
- * masaüstünde solda yapışkan bir sütun, mobilde sayfa başında yatay çip dizisi. O yüzden gezinme
- * `.desktop`/`.mobile` dosyalarında, gövde burada.
- *
- * `compact` bayrağı tasarımın mobil punto kademesini taşır (h1 38→26, h2 24→20, gövde 15.5→14).
- * Arama tablosu değil düz koşul, çünkü tek eksen ve iki değer var — tablo burada fazladan bir
- * dolaylılık olurdu.
+ * Statik sayfanın ortak blokları: iki dizilişte de başlık, gövde ve çıkış bandı aynı şeyi söyler, farklılaşan yalnız gezinme.
+ * `compact` telefonun punto kademesini taşır.
  */
 
 interface LegalHeaderProps {
@@ -68,11 +60,8 @@ interface LegalNoticeBandProps {
 }
 
 /**
- * Çıkış bandı — *"statik sayfa çıkmaz sokak olmamalı"* (içerik envanteri §2).
- *
- * Buraya belirli bir soruyla gelen ziyaretçi cevabı bulamadığında gidecek bir yer görmeli. Başta
- * emoji yok (14.09, 💡 kalktı); metin ile bağlar tek cümlede akıyor,
- * ayrı bir düğme değil — bant bir çağrı değil, bir hatırlatma.
+ * Çıkış bandı: statik sayfa çıkmaz sokak olmamalı, cevabı bulamayan ziyaretçi gidecek bir yer görmeli. Bağlar cümlenin içinde
+ * akar, çünkü bant bir çağrı değil bir hatırlatma.
  */
 export function LegalNoticeBand({ notice, compact = false }: LegalNoticeBandProps) {
   return (

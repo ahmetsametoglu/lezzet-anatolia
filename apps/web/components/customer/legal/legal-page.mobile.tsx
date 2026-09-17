@@ -7,14 +7,8 @@ import { useActiveSection } from './use-active-section.hook';
 import type { LegalViewProps } from './legal-view-types';
 
 /**
- * Statik sayfa — mobil (tasarım: "Statik Mobil").
- *
- * Masaüstünün dar hâli DEĞİL: gezinme yapışkan bir sütun olmaktan çıkıp **sayfa başındaki yatay çip
- * dizisi** oluyor (tasarımın etkileşim sözleşmesi bunu açıkça söylüyor). Dar ekranda 260px'lik bir
- * sütuna yer yok; alta atılsaydı da "bu sayfada" gezinmesi metnin ARDINDAN gelirdi, yani işe
- * yaramazdı — gezinme okumadan önce görünmeli.
- *
- * Çipler yatay kayar ve kaydırdıkça aktif olan işaretlenir; masaüstüyle aynı kanca, farklı kabuk.
+ * Statik sayfanın telefon dizilişi: gezinme sayfa başında yatay çip dizisidir, çünkü dar ekranda sütuna yer yok ve okumadan
+ * önce görünmeli. Çipler kaydırdıkça aktif bölümü işaretler.
  */
 export function LegalPageMobile({ document: doc, t, updatedLine }: LegalViewProps) {
   const active = useActiveSection(doc.sections.map((section) => section.id));

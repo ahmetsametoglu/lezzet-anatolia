@@ -20,42 +20,8 @@ type Route = keyof typeof routing.pathnames;
 type TabKey = keyof (typeof tabBarCopy)['tr']['tabs'];
 
 /**
- * Müşteri çerçevesinin TELEFON yüzü — native uygulamanın kabuğu (kullanıcı kararları 14.09: müşterinin
- * telefon tasarımı uygulamada ve web'de aynı, referans native). Masaüstü çerçevesi `site-frame.tsx`te;
- * bu dosyayı yalnız cihaz mobilken o çağırır.
- *
- * ── BAŞLIK: NATIVE'İN SİSTEMİ ───────────────────────────────────────────────────────
- * Native'de tek bir başlık yok; ekranın türü seçer (`design/KARARLAR.md` "üç header", 16.08) ve
- * burada da öyle. Seçim ROTADAN (`usePathname` locale'siz şablonu verir: `/product/[slug]`) —
- * sayfalar `SiteFrame`i bugünkü gibi çağırıyor, 25 çağrı yerine dokunulmadı:
- *   · vitrin → selamlama + konum satırı + zil (`HomeHeader`, native vitrin başlığı)
- *   · hesap → yalnız başlık (native'de sekme kökü, geri yolu yok)
- *   · eylemsiz bölüm sayfaları → ‹ + "HESABIM" + büyük başlık (`FunnelHeader`; native siparişler ·
- *     puan geçmişi · bildirimler)
- *   · başlığını kendisi kuran ekranlar → çerçeve çizmez: katalog, paketler (ikisi de sekme kökü),
- *     tarifler (yığın ekranı: ‹ + başlık sayfanın içinde — native), ürün ve tarif detayı (fotoğraf
- *     ekranın tepesine taşar, ‹ üstünde yüzer — native), paket detayı (‹ · "Hazır Paket" · paylaş
- *     çubuğu ekranın kendisinde — native), sepet ve checkout (`bare`), giriş, keşif, sipariş onayı
- *   · geri kalanı → yapışkan `AppBar` (‹ · başlık · ekranın eylemi)
- *
- * ── SEKME ÇUBUĞU VE SEPET: NATIVE'İN MODELİ ─────────────────────────────────────────
- * Dört sekme: Vitrin · Katalog · Paketler|Siparişler · Hesap (native `(tabs)/_layout.tsx`). Üçüncü
- * yuva kişiye göre: onaylı toptancı Siparişler'i görür (perakendenin paket listesi toptancıda boş),
- * yuva `/orders`'ı açar. Etiketler iki yüzeyin ortak metninden (`@lezzet/i18n/customer/tab-bar`),
- * ikonlar native'in (`@lezzet/design-tokens/icons`).
- * Çubuk YALNIZ sekme köklerinde: native'de öteki her ekran yığında, çubuğun üstünde açılır. Sepet
- * sekme DEĞİL: yüzen düğme, native'in beş ekranında (vitrin · katalog · ürün · paket · tarif
- * detayı) — sekme köklerinde çubuğun 20px üstünde, detayda alttan 112px (native ölçüleri).
- *
- * ── YASAL BAĞLANTILAR VE DİL ────────────────────────────────────────────────────────
- * Mobilde footer yok. Yasal sayfalar hesap ekranının en altında, native'in "bilgi ve koşullar" kartı
- * (`account/components/legal-directory.tsx`, 14.09 — v1'in ince bağlantı satırının yerine); dil seçimi
- * hesabın dil kartında (`account/components/language-card.tsx`). Hesap bir sekme kökü, her kökten tek
- * dokunuş — misafir de görür.
- *
- * ── ZEMİN VE ÇENTİK ─────────────────────────────────────────────────────────────────
- * Zemin native'in ekran yüzeyi (`sand-50`). Yatay tutuşta çentik payı kökte (`viewport-fit=cover`,
- * müşteri yerleşimi); dikey tutuşta yan paylar 0'dır.
+ * Müşteri çerçevesinin telefon yüzü, native uygulamanın kabuğu: başlığı ekranın türü seçer ve sekme çubuğu yalnız sekme
+ * köklerinde durur, çünkü native'de öteki her ekran yığında açılır. Footer yok; yasal bağlantılar ve dil seçimi hesap ekranında.
  */
 type SiteFrameMobileProps = Pick<SiteFrameProps, 'locale' | 'mobileChrome' | 'accountChrome' | 'fill' | 'children'>;
 
@@ -81,7 +47,7 @@ const TAB_ROOTS: readonly string[] = ['/', '/catalog', '/packages', '/account'] 
 const FAB_ON_TAB_BAR: readonly string[] = ['/', '/catalog'] satisfies Route[];
 const FAB_ON_DETAIL: readonly string[] = ['/product/[slug]', '/package/[slug]', '/recipe/[slug]'] satisfies Route[];
 
-/** Hangi başlık — künyedeki eşleme (`none`: sayfa kendi kuruyor). */
+/** Hangi başlık: vitrin selamlaması, hesabın yalnız başlığı, bölüm sayfasının büyük başlığı, yapışkan çubuk ya da hiçbiri. */
 type HeaderKind = 'home' | 'title' | 'page' | 'bar' | 'none';
 
 /** Başlığını KENDİSİ kuran ekranlar — çerçeve bunlarda başlık çizmez. */
@@ -133,8 +99,8 @@ export function SiteFrameMobile({ locale, mobileChrome, accountChrome, fill, chi
 
   return (
     <div
-      // Telefon yazı ölçeği (14.09): müşteri yazı kademeleri native'deki gibi bir adım büyük okunur;
-      // değişkenler `globals.css`te bu öznitelikle yeniden tanımlanıyor (kaynak: design-tokens).
+      // Telefon yazı ölçeği: müşteri yazı kademeleri native'deki gibi bir adım büyük okunur; değişkenler `globals.css`te bu
+      // öznitelikle yeniden tanımlanıyor. Yatay tutuşta çentik payı kökte, dikey tutuşta yan paylar 0.
       data-type-scale="phone"
       className={[
         'flex flex-col bg-sand-50 pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] text-ink',
@@ -176,11 +142,8 @@ interface TabBarProps {
 }
 
 /**
- * Native'in alt sekme çubuğu (`components/ui/bottom-tab-bar.tsx`, müşteri tonu) — krem cam
- * (`sand-50` %96 + 8px bulanıklık), 1,5px mürekkep üst çizgi, 8px üst/yan dolgu; alt dolgu güvenli
- * alanla 6px'in BÜYÜĞÜ (native'in kuralı: ikisi toplanmaz). Seçili sekme terracotta, ikonu 2px
- * kalkar ve 1,12 büyür; seçilmeyen soluk. Rozet yok — sepet sekme değil. Akışın sonunda ve
- * yapışkan: kısa sayfada ekranın dibinde, uzun sayfada kaydırırken de dipte kalır.
+ * Native'in alt sekme çubuğu: alt dolgu güvenli alanla 6px'in büyüğüdür, çünkü native'de ikisi toplanmaz. Rozet yok, sepet
+ * sekme değil yüzen düğme.
  */
 function TabBar({ locale, route, tabs, menuLabel, cartLabel, fab }: TabBarProps) {
   const copy = tabBarCopy[locale].tabs;

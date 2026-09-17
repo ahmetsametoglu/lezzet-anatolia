@@ -8,20 +8,8 @@ import { pillInputClass } from '@/components/customer/form/pill-input';
 import type { LegalQuestion } from './legal-types';
 
 /**
- * SSS dokusu — arama + akordeon + çıkış kutusu (tasarım: "SSS dokusu (aynı şablon, soru-cevap
- * içerik)").
- *
- * **Arama URL'e YAZILMAZ**, katalogun aksine. Katalogda süzgeç adreste yaşar çünkü süzülmüş bir
- * liste paylaşılabilir bir şeydir; SSS'de arama ise bir gezinme hareketidir — ziyaretçi "iade"
- * yazıp cevabı okur ve o adresi kimseye göndermez. Adrese yazmak her tuşta geçmişe bir kayıt
- * bırakırdı ve geri düğmesi harf harf geri saymaya başlardı.
- *
- * **Süzme istemcide ve bu bilinçli:** soru sayısının doğal bir tavanı var (operatörün elle kurduğu
- * küme — `CLAUDE.md §1`'in "sayfalama ölçütü sınırsız büyümek" ayrımı), tamamı zaten sayfada.
- * Sunucuya sormak, elimizde duran veriyi ikinci kez istemek olurdu.
- *
- * **İçine form GÖMÜLMEZ** (içerik envanteri §6): cevabı bulunamayan soru talebe yönlendirilir, SSS
- * destek talebinin yerine geçirilmez.
+ * SSS dokusu: arama, akordeon ve çıkış kutusu. Arama adrese yazılmaz (her tuş geçmişe kayıt bırakırdı) ve istemcide süzer,
+ * çünkü soru kümesi operatörün elle kurduğu, tamamı sayfada duran küçük bir küme.
  */
 interface LegalFaqProps {
   questions: LegalQuestion[];
@@ -50,9 +38,7 @@ export function LegalFaq({ questions, t, compact = false }: LegalFaqProps) {
 
   return (
     <div className="flex flex-col gap-3.5">
-      {/* `SearchField` KULLANILMIYOR ve sebebi işlevsel: o bileşen katalogun arama kutusu, gönderimde
-          `/catalog`a yönlendiriyor. Buradaki arama bir gezinme değil canlı bir süzme — aynı ada
-          sahip iki farklı davranış. Kitin hap girdisi (`pillInputClass`) doğru zemin. */}
+      {/* `SearchField` kullanılmıyor: o katalogun arama kutusu ve gönderimde `/catalog`a yönlendirir, burada ise canlı süzme var. */}
       <label className={`flex items-center gap-2 ${pillInputClass(compact ? 'w-full py-2.5' : 'w-[340px] py-2.5')}`}>
         <Icon name="search" size={16} strokeWidth={2.1} className="text-muted" />
         <input
@@ -92,7 +78,7 @@ export function LegalFaq({ questions, t, compact = false }: LegalFaqProps) {
         })
       )}
 
-      {/* Kesikli çerçeve tasarımın kararı: bu bir cevap kartı DEĞİL, listenin bittiği yerdeki çıkış. */}
+      {/* Kesikli çerçeve: bu bir cevap kartı değil, listenin bittiği yerdeki çıkış; cevabı bulunamayan soru talebe gider, form gömülmez. */}
       <div
         className={`flex items-center justify-between gap-3 rounded-card border-[1.5px] border-dashed border-sand-500 ${compact ? 'px-4 py-3' : 'px-5 py-3.5'}`}
       >
