@@ -1,5 +1,5 @@
 {
-  "tr": { "reorder": "Tekrar sipariş", "reordering": "Ekleniyor…" },
-  "fr": { "reorder": "Recommander", "reordering": "Ajout en cours…" },
-  "de": { "reorder": "Erneut bestellen", "reordering": "Wird hinzugefügt…" }
+  "tr": { "reorder": "Tekrar sipariş", "placeAgain": "↻ Tekrar sipariş ver", "reordering": "Ekleniyor…" },
+  "fr": { "reorder": "Recommander", "placeAgain": "↻ Recommander", "reordering": "Ajout en cours…" },
+  "de": { "reorder": "Erneut bestellen", "placeAgain": "↻ Erneut bestellen", "reordering": "Wird hinzugefügt…" }
 }

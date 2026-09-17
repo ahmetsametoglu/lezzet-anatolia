@@ -32,6 +32,7 @@
     },
     "reorderResult": {
       "added": "{count} kalem sepete eklendi",
+      "addedToast": "Kalemler güncel fiyatlarla sepete eklendi ✓",
       "skipped": "{count} kalem eklenemedi: {names}.",
       "none": "Bu siparişteki ürünlerin hiçbiri şu an satışta değil.",
       "goToCart": "Sepete git",
@@ -72,6 +73,7 @@
     },
     "reorderResult": {
       "added": "{count} articles ajoutés au panier",
+      "addedToast": "Articles ajoutés au panier aux prix actuels ✓",
       "skipped": "{count} articles non ajoutés : {names}.",
       "none": "Aucun produit de cette commande n'est disponible actuellement.",
       "goToCart": "Aller au panier",
@@ -112,6 +114,7 @@
     },
     "reorderResult": {
       "added": "{count} Artikel in den Warenkorb gelegt",
+      "addedToast": "Artikel zu aktuellen Preisen in den Warenkorb gelegt ✓",
       "skipped": "{count} Artikel nicht hinzugefügt: {names}.",
       "none": "Derzeit ist keines der Produkte dieser Bestellung verfügbar.",
       "goToCart": "Zum Warenkorb",

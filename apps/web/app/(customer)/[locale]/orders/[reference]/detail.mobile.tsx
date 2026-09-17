@@ -14,13 +14,14 @@ import { addressLine } from '@lezzet/address';
 import type { CustomerOrderDetailLine } from '@/lib/order/customer-orders';
 import { formatDeliveryDate, formatPrice } from '@/lib/storefront/format';
 import { carrierLabel, formatStamp, paymentKeyOf } from './components/detail-sections';
+import { PhoneReorderButton } from './components/phone-reorder-button';
 import type { DetailViewProps } from './detail-types';
 
 type OrdersCopy = LocalizedCopy<typeof ordersMessages>;
 
 /**
- * Sipariş detayının telefon görünümü, native sipariş detayının ikizi; başlıktaki tekrar sipariş ve eksik karşılamanın iade notu
- * web'e özgü. Gel-al siparişinde teslim türü yazılmaz, çünkü iki sözlükte de karşılığı yok ve "kargoyla" demek yanlış olur.
+ * Sipariş detayının telefon görünümü, native sipariş detayının ikizi; tekrar sipariş ve eksik karşılamanın iade notu web'e
+ * özgü. Gel-al siparişinde teslim türü yazılmaz, çünkü iki sözlükte de karşılığı yok ve "kargoyla" demek yanlış olur.
  */
 export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewProps) {
   const copy = ordersMessages[locale];
@@ -91,6 +92,8 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
       </section>
 
       <SummaryPanel rows={rows} totalLabel={d.total} totalValue={formatPrice(order.totalCents, locale)} totalTone="terracotta" note={refundNote} />
+
+      <PhoneReorderButton locale={locale} orderId={order.id} />
 
       {/* Yorum daveti YALNIZ açık davet varken (`readOrderFeedbackInvite` üç hâlde de `null`); puan sunucudan. */}
       {feedbackInvite && (
