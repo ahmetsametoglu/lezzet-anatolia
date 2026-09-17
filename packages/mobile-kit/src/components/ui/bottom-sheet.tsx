@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Dimensions, Keyboard, Text, View } from 'react-native';
+import { BackHandler, Dimensions, Keyboard, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -14,6 +14,9 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@g
   Yüzen sayfa: içerik yuvadır, çekmece yalnız örtüyü, tutamağı, başlığı ve kapanma yollarını garanti eder. Gövde kütüphaneye
   olabildiğince az şey ekler, çünkü eklenen her makine (örtü, açma muhasebesi, kapanış sinyali) cihazda ayrı bir arıza çıkardı.
 */
+
+/** Panel ekranın en çok bu kadarını kaplar: üstte örtü görünmezse metni uzun dillerde çekmece olduğu anlaşılmaz. */
+const MAX_HEIGHT_RATIO = 0.82;
 
 interface BottomSheetProps {
   visible: boolean;
@@ -53,6 +56,7 @@ export function BottomSheet({
   const wanted = useRef(false);
   /** Klavyenin ekran dibinden ölçülen örtme payı — künyesi aşağıdaki dinleyicide. */
   const [keyboardPad, setKeyboardPad] = useState(0);
+  const { height: windowHeight } = useWindowDimensions();
 
   useEffect(() => {
     if (visible) {
@@ -127,7 +131,8 @@ export function BottomSheet({
     <BottomSheetModal
       ref={sheet}
       enableDynamicSizing={!fill}
-      snapPoints={fill ? ['82%'] : undefined}
+      snapPoints={fill ? [`${MAX_HEIGHT_RATIO * 100}%`] : undefined}
+      maxDynamicContentSize={Math.round(windowHeight * MAX_HEIGHT_RATIO)}
       enablePanDownToClose
       // Sürükleme yalnız tutamaktan, çünkü panelin her yerinden sürüklemek içerideki kaydırma alanlarıyla yarışır.
       enableContentPanningGesture={false}
