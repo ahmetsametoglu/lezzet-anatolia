@@ -91,6 +91,7 @@ function toDetail(bundle: BundleRow, locale: PreferredLanguage, context: Package
     .filter((p): p is Product => p !== undefined);
 
   // Alerjen birleşimi: aynı alerjen bir kez yazılır, sıra ilk görüldüğü kalemden (alfabetik sıra dile göre değişirdi).
+  // Satılabilir paketin ürünleri satışta, beyanları veri kısıtıyla dolu; `?? []` tipi daraltır.
   const allergens = [...new Set(products.flatMap((p) => p.allergens ?? []))];
 
   // Paketin ömrü en kısa ömürlü kalemidir; bilgisi olmayan sayılmaz, hiçbirinde yoksa null — varsayılan uydurmak gıdada yanlış söz olurdu.

@@ -9,6 +9,7 @@ export const PUBLISH_FIELD_LABEL: Record<PublishGap['field'], string> = {
   description: 'Ürün açıklaması',
   ingredients: 'İçindekiler',
   storageInstructions: 'Saklama ve hazırlama',
+  allergens: 'Alerjenler',
   // Aile etiketi ürün formunda değil, ÜRÜNLER ekranının aile bölümünde düzenleniyor — cümle o
   // yüzden alanın adını değil işlevini söylüyor.
   familyLabel: 'Aile etiketi',
@@ -23,6 +24,10 @@ const LOCALE_LABEL: Record<'tr' | 'fr' | 'de', string> = { tr: 'TR', fr: 'FR', d
  */
 export function publishGapMessage(gaps: PublishGap[]): string | null {
   if (gaps.length === 0) return null;
-  const parts = gaps.map((gap) => `${PUBLISH_FIELD_LABEL[gap.field]} (${gap.missing.map((l) => LOCALE_LABEL[l]).join(', ')})`);
-  return `Ürün yayına alınamıyor — şu alanlar üç dilde de dolu olmalı: ${parts.join(' · ')}.`;
+  const parts = gaps.map((gap) =>
+    gap.missing.length > 0
+      ? `${PUBLISH_FIELD_LABEL[gap.field]} (${gap.missing.map((l) => LOCALE_LABEL[l]).join(', ')})`
+      : `${PUBLISH_FIELD_LABEL[gap.field]} (girilmedi)`,
+  );
+  return `Ürün yayına alınamıyor — eksik: ${parts.join(' · ')}. Metinler üç dilde dolu olmalı, alerjen beyanı ("içermez" dahil) girilmeli.`;
 }

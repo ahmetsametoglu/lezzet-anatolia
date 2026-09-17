@@ -15,13 +15,14 @@ import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../
 const db = serviceDb();
 const stamp = Date.now();
 
-/* Yayın kısıtının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu olmalı
-   (`product_publish_requires_all_locales`); katalog yalnız aktif ürünü listelediği için şart, karşılanmazsa testler atlanır. */
+/* Yayın kısıtlarının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu, alerjen beyanı girilmiş olmalı
+   (`product_publish_requires_*`); katalog yalnız aktif ürünü listelediği için şart, karşılanmazsa testler atlanır. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
   description: ucDil('Yerinde satış testi ürünü'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('Serin yerde saklayın'),
+  allergens: [],
 };
 
 let kurye: SignedInUser;

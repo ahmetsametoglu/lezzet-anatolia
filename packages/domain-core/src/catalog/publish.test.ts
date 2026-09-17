@@ -12,6 +12,7 @@ const tam: PublishCandidate = {
   description: ucDil,
   ingredients: ucDil,
   storageInstructions: ucDil,
+  allergens: ['gluten'],
   familyId: null,
   familyLabel: null,
 };
@@ -41,6 +42,11 @@ describe('ürün yayın kapısı', () => {
     expect(gaps[0]!.missing).toEqual(['tr', 'fr', 'de']); // hiç yazılmamış alan üç dilde de eksiktir
   });
 
+  it('alerjen beyanı GİRİLMEMİŞ ürün yayınlanamaz; boş liste "içermez" beyanıdır ve yeter', () => {
+    expect(productPublishGaps({ ...tam, allergens: null })).toEqual([{ field: 'allergens', missing: [] }]);
+    expect(productPublishGaps({ ...tam, allergens: [] })).toEqual([]);
+  });
+
   /**
    * Görsel alt metni aranmaz: formda yok ve boşsa müşteride ürün adına düşer, zorunlu olsa hiçbir ürün yayınlanamazdı.
    * Test bunu sabitliyor; alt metin zorunlu olacaksa önce formda alanı açılmalı.
@@ -63,7 +69,7 @@ describe('ürün yayın kapısı', () => {
 
   it('birden çok eksik SIRAYLA döner — operatör listeyi yukarıdan aşağı doldurur', () => {
     const gaps = productPublishGaps({});
-    expect(gaps.map((g) => g.field)).toEqual(['name', 'description', 'ingredients', 'storageInstructions']);
+    expect(gaps.map((g) => g.field)).toEqual(['name', 'description', 'ingredients', 'storageInstructions', 'allergens']);
     expect(canPublishProduct(tam)).toBe(true);
   });
 });

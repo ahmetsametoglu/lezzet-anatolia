@@ -63,7 +63,8 @@ const CATEGORY_HITS = 20;
 
 /**
  * Yasal beyanın modele giden hâli — alerjen, olası bulaşma, içindekiler ve 100 g besin değerleri, Türkçe adlarla.
- * Boş alerjen listesi katalogda eksik beyan demektir, "içermez" değil; kayıt yoksa model tahmin etmez, yetkiliye yönlendirir.
+ * Detay yalnız satıştaki ürün için gelir ve onun alerjen beyanı veri kısıtıyla zorunludur: boş liste "içermez" beyanıdır.
+ * Besin ya da içindekiler kaydı yoksa model tahmin etmez, yetkiliye yönlendirir.
  */
 function beyanOf(d: StorefrontDeclaration): Record<string, unknown> {
   const ad = (a: ProductAllergen): string => resolveLocalizedText(ALLERGEN_LABELS[a], 'tr');
@@ -73,10 +74,7 @@ function beyanOf(d: StorefrontDeclaration): Record<string, unknown> {
       )
     : null;
   return {
-    alerjenler:
-      d.allergens.length > 0
-        ? d.allergens.map(ad).join(', ')
-        : 'BEYAN YOK — bu ürün için alerjen kaydı girilmemiş; "içermez" DEME, yetkili teyit etmeli',
+    alerjenler: d.allergens.length > 0 ? d.allergens.map(ad).join(', ') : 'yok — ürünün 14 alerjenden hiçbirini içermediği beyan edilmiş',
     ...(d.traces.length > 0 ? { olasiBulasma: d.traces.map(ad).join(', ') } : {}),
     icindekiler: d.ingredients ? d.ingredients.map((s) => s.text).join('') : 'sistemde kayıtlı değil',
     besinDegerleri100g: besin ?? 'sistemde kayıtlı değil — uydurma; müşteri isterse yetkili iletir',

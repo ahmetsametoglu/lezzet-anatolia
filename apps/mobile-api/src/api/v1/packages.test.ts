@@ -26,12 +26,13 @@ let sellableVariantIds: string[] = [];
 
 const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 
-/* Yayındaki ürün ad, açıklama, içindekiler ve saklama metnini üç dilde dolu ister (`product_publish_requires_all_locales`).
+/* Yayındaki ürün ad, açıklama, içindekiler ve saklama metnini üç dilde dolu, alerjen beyanını girilmiş ister (`product_publish_requires_*`).
    Kısıt karşılanmazsa `beforeAll` düşer ve testler paket ucuyla ilgisiz bir sebeple sessizce atlanır. */
 const yayinaHazir = {
   description: tr3('Paket testi ürünü', 'Produit de test', 'Testprodukt'),
   ingredients: tr3('Un, su, tuz', 'Farine, eau, sel', 'Mehl, Wasser, Salz'),
   storageInstructions: tr3('Serin yerde saklayın', 'Conserver au frais', 'Kühl lagern'),
+  allergens: [],
 };
 
 /** Zarfı açar; `error` doluysa iddia orada patlasın diye ayrıca kontrol edilir. */

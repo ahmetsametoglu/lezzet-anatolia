@@ -52,13 +52,14 @@ const createdProfiles: string[] = [];
 
 /**
  * Satılacak ürün yayına hazır kurulur: aday ürün sepete giremez ve testler konularıyla ilgisiz bir sebeple düşerdi.
- * Üç dilli metinler yayın kısıtının şartı (`product_publish_requires_all_locales`).
+ * Üç dilli metinler ve alerjen beyanı yayın kısıtlarının şartı (`product_publish_requires_*`).
  */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
   description: ucDil('Checkout testinin ürünü'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('Serin yerde saklayın'),
+  allergens: [],
   status: 'active' as const,
 };
 

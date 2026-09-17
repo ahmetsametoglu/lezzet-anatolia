@@ -475,12 +475,10 @@ function ProductDraftPreview({ payload }: { payload: ProductDraftPayload }) {
   const currentKnown = payload.currentFields !== undefined;
 
   // Ezilen alanların adları (sayısı değil): operatör neyi kaybettiğini sorar. Alerjen ve besin künyesi tabloda değil
-  // kendi bloklarında çizilir ama üzerine yazılıyorsa uyarı onları da sayar.
+  // kendi bloklarında çizilir ama üzerine yazılıyorsa uyarı onları da sayar; boş alerjen listesi de bir beyandır.
   const overwritten = [
     ...rows.flatMap((r) => (r.overwrites ? [r.label] : [])),
-    ...(currentKnown && payload.fields.allergens && (payload.currentFields?.allergens?.length ?? 0) > 0
-      ? [DECLARATION_FIELD_LABEL.allergens!]
-      : []),
+    ...(currentKnown && payload.fields.allergens && payload.currentFields?.allergens != null ? [DECLARATION_FIELD_LABEL.allergens!] : []),
     ...(currentKnown && payload.fields.nutrition && payload.currentFields?.nutrition
       ? [DECLARATION_FIELD_LABEL.nutrition!]
       : []),
@@ -629,8 +627,8 @@ function DeclarationBlocks({
   const nutrition = (fields.nutrition ?? null) as Nutrition | null;
   return (
     <>
-      {fields.allergens ? <AllergenGrid title="Alerjenler" selected={fields.allergens} /> : null}
-      {fields.traces ? <AllergenGrid title="İzler (çapraz bulaşma)" selected={fields.traces} /> : null}
+      {fields.allergens ? <AllergenGrid title="Alerjenler" selected={fields.allergens} emptyLabel="alerjen içermez" /> : null}
+      {fields.traces ? <AllergenGrid title="İzler (çapraz bulaşma)" selected={fields.traces} emptyLabel="hiçbiri işaretlenmedi" /> : null}
       {nutrition ? <NutritionTable nutrition={nutrition} /> : null}
     </>
   );
@@ -638,14 +636,15 @@ function DeclarationBlocks({
 
 /**
  * On dört AB alerjeninin tamamı görünür, işaretlenmeyenler de: en tehlikeli hata eksik alerjendir ve yalnız seçilenleri
- * gösteren liste onu görünmez kılar. İşaretsizler sönük ama üstü çizili değil, çünkü söylenen "yok" değil "işaretlenmedi".
+ * gösteren liste onu görünmez kılar. İşaretsizler sönük ama üstü çizili değil; boş listenin anlamını başlık söyler
+ * (alerjende "içermez" beyanı, izde "işaretlenmedi").
  */
-function AllergenGrid({ title, selected }: { title: string; selected: readonly ProductAllergen[] }) {
+function AllergenGrid({ title, selected, emptyLabel }: { title: string; selected: readonly ProductAllergen[]; emptyLabel: string }) {
   const marked = new Set(selected);
   return (
     <div className="flex flex-col gap-1.5">
       <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.1em] text-ops-muted">
-        {title} · {marked.size > 0 ? `${num(marked.size)} işaretli` : 'hiçbiri işaretlenmedi'}
+        {title} · {marked.size > 0 ? `${num(marked.size)} işaretli` : emptyLabel}
       </span>
       <div className="flex flex-wrap gap-1.5">
         {ProductAllergenEnum.options.map((code) => (

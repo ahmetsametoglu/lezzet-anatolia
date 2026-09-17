@@ -139,7 +139,7 @@ export function missingDeclarations(
   if (!hasAllLocales(p.ingredients)) gaps.push('ingredients');
   if (!hasNutrition(p.nutrition)) gaps.push('nutrition');
   if (!hasAllLocales(p.storageInstructions)) gaps.push('storage');
-  if (!p.allergens?.length) gaps.push('allergens');
+  if (p.allergens == null) gaps.push('allergens');
   return gaps;
 }
 
@@ -154,6 +154,7 @@ export const ProductSchema = z.object({
   ingredients: LocalizedTextSchema.nullable(),
   nutrition: NutritionSchema.nullable(),
   storageInstructions: LocalizedTextSchema.nullable(),
+  /** Alerjen beyanı — `null` girilmedi, boş liste "alerjen içermez"; satıştaki üründe veri kısıtıyla zorunlu. */
   allergens: z.array(ProductAllergenEnum).nullable(),
   /** Çapraz bulaşma — cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz. */
   traces: z.array(ProductAllergenEnum),

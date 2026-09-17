@@ -51,12 +51,13 @@ async function dataOf<T>(res: Response): Promise<T> {
 
 const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 
-/* Yayın kısıtının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu olmalı
-   (`product_publish_requires_all_locales`); karşılanmazsa `beforeAll` düşer ve testler ilgisiz görünen bir sebeple atlanır. */
+/* Yayın kısıtlarının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu, alerjen beyanı girilmiş olmalı
+   (`product_publish_requires_*`); karşılanmazsa `beforeAll` düşer ve testler ilgisiz görünen bir sebeple atlanır. */
 const yayinaHazir = {
   description: tr3('Vitrin testi ürünü', 'Produit de test', 'Testprodukt'),
   ingredients: tr3('Un, su, tuz', 'Farine, eau, sel', 'Mehl, Wasser, Salz'),
   storageInstructions: tr3('Serin yerde saklayın', 'Conserver au frais', 'Kühl lagern'),
+  allergens: [],
 };
 
 beforeAll(async () => {

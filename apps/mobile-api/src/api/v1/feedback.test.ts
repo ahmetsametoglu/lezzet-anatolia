@@ -31,13 +31,14 @@ async function dataOf<T>(res: Response): Promise<T> {
 const postJson = (path: string, body: unknown) =>
   app.request(path, { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' } });
 
-/* Yayın kısıtının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu olmalı
-   (`product_publish_requires_all_locales`); karşılanmazsa `beforeAll` düşer ve testler ilgisiz görünen bir sebeple atlanır. */
+/* Yayın kısıtlarının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu, alerjen beyanı girilmiş olmalı
+   (`product_publish_requires_*`); karşılanmazsa `beforeAll` düşer ve testler ilgisiz görünen bir sebeple atlanır. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
   description: ucDil('Geri bildirim testi ürünü'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('Serin yerde saklayın'),
+  allergens: [],
 };
 
 beforeAll(async () => {

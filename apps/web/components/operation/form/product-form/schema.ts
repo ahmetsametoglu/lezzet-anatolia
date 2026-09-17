@@ -68,7 +68,8 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
       name: {},
       description: null,
       categoryId: null,
-      allergens: [],
+      // Beyan girilmemiş doğar; "içermez" yalnız formdaki anahtarla verilir.
+      allergens: null,
       traces: [],
       ingredients: null,
       nutrition: EMPTY_NUTRITION,
@@ -131,7 +132,7 @@ export function toActionPayload(values: ProductFormValues) {
     name: cleanLocalized(values.name),
     description: values.description ? cleanLocalized(values.description) : null,
     categoryId: values.categoryId ?? null,
-    allergens: values.allergens ?? [],
+    allergens: values.allergens ?? null,
     traces: values.traces ?? [],
     // Beyan metinleri `**vurgu**` işaretini KORUYARAK gider — düz metin, HTML değil (rich-text).
     ingredients: values.ingredients ? cleanLocalized(values.ingredients) : null,

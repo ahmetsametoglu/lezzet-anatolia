@@ -175,7 +175,7 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 | `ingredients` | jsonb | • |  |
 | `nutrition` | jsonb | • |  |
 | `storage_instructions` | jsonb | • |  |
-| `allergens` | product_allergen[] |  | `'{}'` |
+| `allergens` | product_allergen[] | • |  |
 | `is_incomplete` | boolean | • | *üretilmiş* |
 | `traces` | product_allergen[] |  | `'{}'` |
 | `vat_rate` | numeric(4, 2) |  | `5.5` |
@@ -199,8 +199,8 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 - **`slug`** — dil-bağımsız URL parçası (ör. `su-boregi`); benzersiz — path öneki dili taşır (`/fr/produits/su-boregi`), slug taşımaz (bkz. `SEO_I18N.md`)
 - **`ingredients`** — içindekiler (çok dilli) — INCO: alerjenler metin içinde vurgulanır
 - **`nutrition`** — besin değerleri, **100 g başına** — sabit kalemli (aşağıda); uzaktan satışta ürün sayfasında beyan (INCO)
-- **`allergens`** — AB 14 alerjeninden ürünün **içerdikleri** (FR/DE yasal beyan)
-- **`is_incomplete`** — **Üretilmiş kolon** — beyan eksik mi (ad · içindekiler · saklama metni üç dilde dolu değil · besin değeri girilmemiş · alerjen listesi boş). Süzgeç ve sayaç AYNI gerçeği okusun diye DB'de hesaplanır; hangi beyanın eksik olduğu uygulamada (`missingDeclarations`). **Ölçüt `has_all_locales`** (05.36): eskiden `name ->> 'fr' is null` yazıyordu ve boş dizeyi dolu sayıyordu — operatör alanı açıp boş bırakınca rozet "tamam" diyor, müşteri Türkçe görüyordu. Aynı ölçüt yayın kısıtında da geçer; ikisi ayrışırsa ekran "eksik yok" derken veritabanı yayını reddeder
+- **`allergens`** — AB 14 alerjeninden ürünün **içerdikleri** (FR/DE yasal beyan). **`null` = beyan girilmedi, boş liste = alerjen içermez**; varsayılan yok, çünkü boş dizi varsayılanı beyansız her ürünü sessizce "içermez" ilan ederdi. Satıştaki üründe zorunlu (aşağıdaki kısıt)
+- **`is_incomplete`** — **Üretilmiş kolon** — beyan eksik mi (ad · içindekiler · saklama metni üç dilde dolu değil · besin değeri girilmemiş · alerjen beyanı girilmemiş). Süzgeç ve sayaç AYNI gerçeği okusun diye DB'de hesaplanır; hangi beyanın eksik olduğu uygulamada (`missingDeclarations`). **Ölçüt `has_all_locales`:** boş dize dolu sayılmaz, yoksa rozet "tamam" derken müşteri yedek dili görür. Aynı ölçüt yayın kısıtında da geçer; ikisi ayrışırsa ekran "eksik yok" derken veritabanı yayını reddeder
 - **`traces`** — AB 14'ten **çapraz bulaşma** riski olanlar ("aynı tesiste … işlenir"); cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz
 - **`storage_instructions`** — saklama ve hazırlama metni (çözdürme, yeniden dondurmama, ısıtma) — müşteri ürün sayfasında ayrı bölüm; `shelf_life_days` sayısaldır, bu ise müşteriye gösterilen metindir
 - **`image_key`** — kapak görseli; depo anahtarı, tam URL değil (blueprint STACK §5)
@@ -241,6 +241,10 @@ etiketi** de) üç dilde de DOLU olmalı. Ölçüt `has_all_locales(jsonb)` — 
 - **Ölçüt tek yerde:** `has_all_locales` `0004`te tanımlı (tarif de onu kullanır), TS karşılığı
   `hasAllLocales` (`@lezzet/types`), yayına engelleri sayan motor `productPublishGaps`
   (`domain-core/catalog/publish.ts`) — o, kısıtın söyleyemediğini söyler: hangi alan hangi dilde eksik.
+
+**Yayın kısıtı — `product_publish_requires_allergens`:** `status = 'active'` olan üründe alerjen beyanı
+girilmiş olmalı (`allergens is not null`); "alerjen içermez" (boş liste) bir beyandır ve yeter. Motor
+karşılığı `productPublishGaps`'in `allergens` eksiği; operasyon formunda beyan "Alerjen içermez" anahtarıyla verilir.
 
 Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre değişir.
 

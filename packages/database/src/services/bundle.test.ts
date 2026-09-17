@@ -42,13 +42,14 @@ beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'PKT' })).id;
   const category = await categories.create({ name: { tr: `Paket testi ${stamp}` } });
   // Yayına hazır kurulur: dosyanın iddiaları paketin satılabilirliği üzerine ve o kalemlerin satılabilirliğinden türer; aday ürünle
-  // paket hiç satılabilir olmazdı. Üç dilli metinler yayın kısıtının şartı, çünkü testler ürünü `active`e geri çeker.
+  // paket hiç satılabilir olmazdı. Üç dilli metinler ve alerjen beyanı yayın kısıtlarının şartı, çünkü testler ürünü `active`e geri çeker.
   const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const { product, variants } = await products.create({
     name: ucDil(`Paket ürünü ${stamp}`),
     description: ucDil('Paket testinin ürünü'),
     ingredients: ucDil('Un, su, tuz'),
     storageInstructions: ucDil('Serin yerde saklayın'),
+    allergens: [],
     status: 'active',
     categoryId: category.id,
     variants: [

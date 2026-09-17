@@ -79,6 +79,7 @@ function declarationOf(
 ): StorefrontDeclaration {
   return {
     ingredients: segmentsOf(product.ingredients, locale),
+    // Detay yalnız satıştaki ürünü okur ve onun beyanı veri kısıtıyla dolu; `?? []` tipi daraltır.
     allergens: product.allergens ?? [],
     traces: product.traces,
     // Hiçbir kalemi girilmemiş künye boş tablo çizdirmesin — "beyan var" izlenimi yanlış olur.

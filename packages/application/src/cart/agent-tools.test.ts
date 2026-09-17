@@ -67,6 +67,7 @@ async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>
     description: ucDil('Sepet aracı testi ürünü'),
     ingredients: ucDil('Un, su, tuz'),
     storageInstructions: ucDil('Serin yerde saklayın'),
+    allergens: [],
     categoryId,
     status: 'active',
     ...(opts.soguk ? { shippable: false } : {}),

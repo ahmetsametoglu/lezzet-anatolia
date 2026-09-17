@@ -17,7 +17,8 @@ import { PRODUCTS_PATH } from './paths';
  */
 const CONSTRAINT_MESSAGES: Record<string, string> = {
   product_publish_requires_all_locales:
-    'Ürün yayına alınamıyor: ad, açıklama, içindekiler ve saklama metni (görsel/aile varsa alt metin ve aile etiketi) üç dilde de dolu olmalı.',
+    'Ürün yayına alınamıyor: ad, açıklama, içindekiler ve saklama metni (aile üyesinde aile etiketi de) üç dilde de dolu olmalı.',
+  product_publish_requires_allergens: 'Ürün yayına alınamıyor: alerjen beyanı girilmeli ("Alerjen içermez" de bir beyandır).',
   product_family_label_required: 'Aileye bağlı üründe aile etiketi zorunlu.',
 };
 

@@ -13,6 +13,7 @@ import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormMultiSelect } from '@/components/operation/form/form-multi-select';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { FormNutrition } from '@/components/operation/form/form-nutrition';
+import { AllergenField } from './allergen-field';
 import { VariantEditor } from './variant-editor';
 import { ProductFormDeclaration } from './declaration';
 import { ProductFormDesktop } from './layout.desktop';
@@ -137,17 +138,7 @@ export function useProductFormFields({
       />
     ),
     shelfLife: <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />,
-    allergens: (
-      <FormMultiSelect
-        control={control}
-        name="allergens"
-        label="Alerjenler"
-        labelAside={mark('allergens') ?? 'ürünün İÇERDİKLERİ'}
-        options={allergenOptions}
-        addLabel="+ alerjen seç"
-        searchPlaceholder="Alerjen ara…"
-      />
-    ),
+    allergens: <AllergenField control={control} options={allergenOptions} labelAside={mark('allergens') ?? 'ürünün İÇERDİKLERİ'} />,
     traces: (
       <FormMultiSelect
         control={control}

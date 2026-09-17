@@ -44,7 +44,7 @@ const INSTRUCTIONS = [
   'Ground every proposal in a tool result. For a weekly route/zone proposal call delivery_map FIRST (it tells you which zones exist, which warehouse and weekdays they run on, and how far an uncovered code is from each) — demand_signals alone only tells you a code was asked for, not where it belongs. For bundle or new-product ideas use demand_signals (zero-result searches, product interest) plus catalog_health. Never invent demand, prices, or stock.',
   // `reason` patronun onay ekranında okuduğu cümledir; araç adı ve alan anahtarı ona sızmasın diye kural her araca değil talimata bir kez yazılır.
   'The `reason` you pass to a propose_* tool is shown to the admin VERBATIM on the approval screen, right under the title. Write it as one plain Turkish sentence he can read out loud: what you saw and why it matters. Never paste tool names, field keys or snake_case identifiers into it (write "adı yalnız Türkçe girilmiş" — not "catalog_health: lang eksik"). Cite the numbers you grounded it on; those are what make it credible.',
-  'FOOD SAFETY: you may record allergen and storage declarations ONLY from a document the admin gave you (label photo, supplier sheet) — never from what a product name suggests. Allergens are a closed set: pick values, never phrase a sentence. When a line is blurred or cut off, list that field in uncertainFields instead of guessing; the approval screen puts those in front of the admin. Saying "I could not read it" is always the better answer.',
+  'FOOD SAFETY: you may record allergen and storage declarations ONLY from a document the admin gave you (label photo, supplier sheet) — never from what a product name suggests. Allergens are a closed set: pick values, never phrase a sentence. An empty allergen list is a declaration too (the product contains none of the 14) — send it only when the document says so, and leave the field out when you cannot tell. When a line is blurred or cut off, list that field in uncertainFields instead of guessing; the approval screen puts those in front of the admin. Saying "I could not read it" is always the better answer.',
   'You are NOT the customer-facing agent: you never write to customers and you never see conversation content. customer_pulse gives you counts so you can tell the admin how the inbox stands — that is the extent of your role in messaging.',
 ].join('\n');
 
@@ -89,7 +89,7 @@ export const TOOLS = [
   {
     name: 'catalog_health',
     description:
-      'Catalog completeness in one call. totals: products, candidates, products with incomplete legal declarations. incompleteProducts: products ON SALE whose legal declarations are incomplete, with EXACTLY which parts are missing (lang/ingredients/nutrition/storage/allergens — a text counts as filled only when tr, fr and de are all filled). candidatesNotReady: products NOT on sale that are not ready yet — publishGaps names each blocking field with the languages it still lacks (going on sale needs name, description, ingredients and storage instructions in tr, fr and de, plus the family label for a family member), missing lists the declaration gaps as above, and hasPrice says whether the product has a customer price: a candidate without one cannot be sold even when nothing else is missing, and pricing is a separate decision that is not yours. candidatesNotReadyTotal is the full count when the list is cut. An empty allergen list means the allergens were NEVER DECLARED — never read it as "contains no allergens", and it does not block going on sale. withoutImage lists every product without a photo, on sale and candidates separately, each with its total. Every product row carries productId (feed it to product_detail and propose_product_draft), whether it has an image, and shelf life. Filling the gaps is yours to propose; putting a product on sale never is. Also the homepage showcase in two buckets: what is already flagged AND what is eligible but not flagged (active records you could propose) — use it, otherwise you can only discuss records you happened to hear about. Use this when the admin asks what needs finishing in the catalog. NOTE: allergen and storage declarations must never be invented — report them as missing and let the admin supply the supplier document.',
+      'Catalog completeness in one call. totals: products, candidates, products with incomplete legal declarations. incompleteProducts: products ON SALE whose legal declarations are incomplete, with EXACTLY which parts are missing (lang/ingredients/nutrition/storage/allergens — a text counts as filled only when tr, fr and de are all filled). candidatesNotReady: products NOT on sale that are not ready yet — publishGaps names each blocking field with the languages it still lacks (going on sale needs name, description, ingredients and storage instructions in tr, fr and de, an allergen declaration, plus the family label for a family member), missing lists the declaration gaps as above, and hasPrice says whether the product has a customer price: a candidate without one cannot be sold even when nothing else is missing, and pricing is a separate decision that is not yours. candidatesNotReadyTotal is the full count when the list is cut. "allergens" in missing or publishGaps means the allergen declaration was NEVER ENTERED, and it blocks going on sale; an empty allergen list is a real declaration (contains none of the 14) and is not a gap. withoutImage lists every product without a photo, on sale and candidates separately, each with its total. Every product row carries productId (feed it to product_detail and propose_product_draft), whether it has an image, and shelf life. Filling the gaps is yours to propose; putting a product on sale never is. Also the homepage showcase in two buckets: what is already flagged AND what is eligible but not flagged (active records you could propose) — use it, otherwise you can only discuss records you happened to hear about. Use this when the admin asks what needs finishing in the catalog. NOTE: allergen and storage declarations must never be invented — report them as missing and let the admin supply the supplier document.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -125,7 +125,7 @@ export const TOOLS = [
   {
     name: 'product_detail',
     description:
-      'Read ONE product as it stands today — per language. Call this BEFORE propose_product_draft: that tool OVERWRITES and there is no version history, so writing blind can erase someone\'s work. For name, description, ingredients and storage you get, per locale (tr/fr/de), whether the field is filled and a short preview — enough to decide "may I write here, or would I be deleting something". Allergens come back as the list itself (a closed set, not text) and nutrition as a yes/no. declarationGaps repeats what the engine sees missing, so you do not need a second catalog_health call; publishGaps lists what still blocks putting the product on sale, each field with the languages it lacks. Accepts a productId or part of a name; if several products match it returns the matches instead of guessing one.',
+      'Read ONE product as it stands today — per language. Call this BEFORE propose_product_draft: that tool OVERWRITES and there is no version history, so writing blind can erase someone\'s work. For name, description, ingredients and storage you get, per locale (tr/fr/de), whether the field is filled and a short preview — enough to decide "may I write here, or would I be deleting something". Allergens come back as the list itself (a closed set, not text): null means never declared, an empty list means declared allergen-free; nutrition comes back as a yes/no. declarationGaps repeats what the engine sees missing, so you do not need a second catalog_health call; publishGaps lists what still blocks putting the product on sale, each field with the languages it lacks. Accepts a productId or part of a name; if several products match it returns the matches instead of guessing one.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -237,7 +237,11 @@ export const TOOLS = [
           type: 'object',
           description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.',
         },
-        allergens: { type: 'array', description: 'Closed set of the 14 EU allergens — values only, no free text.' },
+        allergens: {
+          type: 'array',
+          description:
+            'Closed set of the 14 EU allergens — values only, no free text. [] declares that the label shows none; leave it out when you could not read it.',
+        },
         traces: { type: 'array', description: 'Cross-contamination ("may contain"), same closed set.' },
         uncertainFields: { type: 'array', description: 'Field names you could not read clearly (blurred, cut off, glare).' },
         reason: { type: 'string', description: 'Where this came from — e.g. "label photos sent by the admin, 3 images".' },
@@ -524,7 +528,11 @@ export const TOOLS = [
           type: 'object',
           description: 'Per 100 g: energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG.',
         },
-        allergens: { type: 'array', description: 'Closed set of the 14 EU allergens — values only.' },
+        allergens: {
+          type: 'array',
+          description:
+            'Closed set of the 14 EU allergens — values only. [] declares that the label shows none; leave it out when you could not read it.',
+        },
         traces: { type: 'array', description: 'Cross-contamination, same closed set.' },
         uncertainFields: { type: 'array', description: 'Field names you could not read clearly.' },
         reason: { type: 'string' },

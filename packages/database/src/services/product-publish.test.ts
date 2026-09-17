@@ -5,9 +5,9 @@ import { CategoryService } from './category.service';
 import { ProductFamilyService, ProductService } from './product.service';
 
 /**
- * Yayın kısıtı veride — `product_publish_requires_all_locales`: yedek dil zinciri eksik çeviriyi sessizce kapattığı için kural
- * yazan her yolu (form, asistan, seed) kapsamalı. Cümlenin doğruluğu motorun testinde (`domain-core/catalog/publish.test.ts`),
- * burada kapının varlığı sınanır.
+ * Yayın kısıtları veride — `product_publish_requires_*`: kural yazan her yolu (form, asistan, seed) kapsamalı, çünkü yedek dil
+ * zinciri eksik çeviriyi, boş dizi varsayılanı da girilmemiş alerjeni sessizce kapatırdı. Cümlenin doğruluğu motorun testinde
+ * (`domain-core/catalog/publish.test.ts`), burada kapının varlığı sınanır.
  */
 const db = serviceDb();
 const products = new ProductService(db);
@@ -25,6 +25,7 @@ const tamGovde = () => ({
   description: ucDil('Üç dilde dolu açıklama'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('-18°C saklayın'),
+  allergens: [],
   nutrition: null,
   categoryId,
 });
@@ -54,6 +55,8 @@ describe('ürün yayın kısıtı — veride', () => {
   it('yeni ürün ADAY doğar — tek dilli ad yeter, kısıt aranmaz', async () => {
     const product = await kur({ name: { tr: `Aday ürün ${stamp}` }, categoryId });
     expect(product.status).toBe('candidate');
+    // Alerjen girilmeden doğan ürünün beyanı `null`dur; boş liste varsayılanı onu "içermez" ilan ederdi.
+    expect(product.allergens).toBeNull();
   });
 
   it('üç dili TAM ürün yayına alınabilir', async () => {
@@ -93,6 +96,12 @@ describe('ürün yayın kısıtı — veride', () => {
 
     const uye = await kur({ ...tamGovde(), familyId, familyLabel: ucDil('Limonlu'), status: 'active' });
     expect(uye.status).toBe('active');
+  });
+
+  it('ALERJEN beyanı girilmemişken yayına ALINAMAZ; "içermez" (boş liste) beyandır ve yeter', async () => {
+    await expect(kur({ ...tamGovde(), allergens: null, status: 'active' })).rejects.toThrow();
+    const icermez = await kur({ ...tamGovde(), allergens: [], status: 'active' });
+    expect(icermez.allergens).toEqual([]);
   });
 
   /**

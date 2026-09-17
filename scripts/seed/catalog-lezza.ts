@@ -313,7 +313,7 @@ function satilabilirDurum(o: {
   zayifVeri: boolean;
   aileli: boolean;
   kusurlu: boolean;
-  /** Üç dil ya da yasal beyan eksikse ürün yayınlanamaz (`product_publish_requires_all_locales`). */
+  /** Üç dil ya da yasal beyan eksikse ürün yayınlanamaz (`product_publish_requires_*` kısıtları). */
   yayinaHazirDegil: boolean;
   i: number;
 }): ProductStatus {
@@ -449,8 +449,9 @@ export async function seedLezzaProducts(
     const ceviri = ceviriler[p.slug];
     // Belgesi olan üründe beyan belgeden gelir, addan tahmin çalışmaz.
     const beyan = p.declarations;
-    // Belgesiz üründe tahmin yalnız `extend`te yazılır; tahmin edilmiş yasal beyan yanlış beyandır.
-    const alerjenler = beyan ? spekAlerjen(beyan.allergens) : turetmeSerbest ? alerjenTuret(`${ad} ${p.description ?? ''}`) : [];
+    // Belgesiz üründe tahmin yalnız `extend`te yazılır; tahmin edilmiş yasal beyan yanlış beyandır. Tahmin yoksa beyan
+    // girilmemiştir (`null`) — boş liste "alerjen içermez" beyanı olurdu.
+    const alerjenler = beyan ? spekAlerjen(beyan.allergens) : turetmeSerbest ? alerjenTuret(`${ad} ${p.description ?? ''}`) : null;
 
     // Serpiştirilen boşluklar yalnız `extend`ten itibaren ve seyrek: `base` açılış günü kataloğudur.
     const dilEksik = kusurlu && i % 41 === 0; // fr/de düşer → "çevirisi tamamlanmamış ürün" hâli
@@ -505,14 +506,18 @@ export async function seedLezzaProducts(
       categoryId: catId.get(p.category ?? '') ?? null,
       // Anahtar + sürüm + ölçü birlikte (künyeden — `shared.ts`); kapaksız üründe alanlar yazılmaz.
       ...kapak,
-      allergens: beyanEksik ? [] : alerjenler,
+      allergens: beyanEksik ? null : alerjenler,
       // Ürünün zaten içerdiği alerjen ize yazılmaz; belgesi olan üründe iz de belgeden gelir.
       traces: beyan
-        ? spekAlerjen(beyan.traces).filter((a) => !alerjenler.includes(a))
+        ? spekAlerjen(beyan.traces).filter((a) => !alerjenler?.includes(a))
         : beyanEksik || !turetmeSerbest
           ? []
-          : (NADIR_IZLER[i % NADIR_IZLER.length] ?? []).filter((a) => !alerjenler.includes(a)),
-      ingredients: beyan?.ingredientsEU ? ucDile(beyan.ingredientsEU) : beyanEksik || !turetmeSerbest ? null : icindekiler(alerjenler),
+          : (NADIR_IZLER[i % NADIR_IZLER.length] ?? []).filter((a) => !alerjenler?.includes(a)),
+      ingredients: beyan?.ingredientsEU
+        ? ucDile(beyan.ingredientsEU)
+        : beyanEksik || !turetmeSerbest
+          ? null
+          : icindekiler(alerjenler ?? []),
       // Hazırlama önerisi varsa saklama metnine EKLENİR: kolon zaten ikisini birden taşıyor
       // ("saklama/hazırlama metni") ve belgede ayrı duran iki cümlenin ekranda ayrı yeri yok.
       storageInstructions: beyan?.storage

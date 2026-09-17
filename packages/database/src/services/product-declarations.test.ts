@@ -27,6 +27,9 @@ const CASES: Array<{ key: string; patch: Record<string, unknown>; gaps: Declarat
   { key: 'tam', patch: {}, gaps: [] },
   { key: 'icindekiler yalniz tr', patch: { ingredients: { tr: 'Un, su.' } }, gaps: ['ingredients'] },
   { key: 'saklama fr bosluk', patch: { storageInstructions: { tr: 'Serin yerde.', fr: ' ', de: 'Kühl lagern.' } }, gaps: ['storage'] },
+  { key: 'alerjen girilmedi', patch: { allergens: null }, gaps: ['allergens'] },
+  // Boş liste "alerjen içermez" beyanıdır, eksik değil.
+  { key: 'alerjen icermez', patch: { allergens: [] }, gaps: [] },
 ];
 
 beforeAll(async () => {

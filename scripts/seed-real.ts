@@ -354,9 +354,10 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
       const description = LAYERS >= 2 ? draft.description : undefined;
       const ingredients = draft.ingredients ?? (kurgu ? FICTION_INGREDIENTS[draft.name] : undefined);
       const storageInstructions = draft.storage ?? (kurgu ? FICTION_STORAGE[draft.name] : undefined);
+      const allergens = kurgu ? (FICTION_ALLERGENS[draft.name] ?? null) : null;
       // Yayına hazır mı sorusunu MOTOR cevaplar (`canPublishProduct`) — besleme kendi ölçütünü
       // uydurmaz ve veritabanı kısıtıyla aynı cümleyi kurar; ayrışsalardı insert sessizce patlardı.
-      const yayina = kurgu && canPublishProduct({ name, description, ingredients, storageInstructions });
+      const yayina = kurgu && canPublishProduct({ name, description, ingredients, storageInstructions, allergens });
       plan(
         `${ad} · ${draft.variants.map((v) => v.label ?? 'boysuz').join(' + ')} · ${purchase.supplier}${draft.image ? ' · kapaklı' : ''}${yayina ? ' · AKTİF' : ''}`,
       );
@@ -385,7 +386,7 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
         ...(draft.rejim ? { storageType: SAKLAMA[draft.rejim].storageType, shippable: SAKLAMA[draft.rejim].shippable } : {}),
         // Katman 3 — UYDURMA: kaynağı yok, yalnız test sunucusunun arayüzünü doldurur.
         ...(kurgu && FICTION_NUTRITION[draft.name] ? { nutrition: FICTION_NUTRITION[draft.name] } : {}),
-        ...(kurgu && FICTION_ALLERGENS[draft.name] ? { allergens: FICTION_ALLERGENS[draft.name] } : {}),
+        ...(allergens ? { allergens } : {}),
         ...(kapak ?? {}),
         variants: draft.variants.map((v) => ({ label: v.label ? allLocales(v.label) : undefined, netWeightG: v.netWeightG, sku: v.sku })),
       });

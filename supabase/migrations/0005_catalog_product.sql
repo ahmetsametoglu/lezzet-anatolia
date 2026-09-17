@@ -41,7 +41,9 @@ create table public.product (
   ingredients jsonb,                                 -- LocalizedText, çok dilli içindekiler
   nutrition jsonb,                                   -- SABİT kalemli (100 g başına) — NutritionSchema
   storage_instructions jsonb,                        -- LocalizedText; saklama/hazırlama metni
-  allergens product_allergen[] not null default '{}', -- AB 14 yasal beyan (manuel seçim)
+  -- AB 14 alerjen beyanı: null = girilmedi, '{}' = alerjen içermez. Varsayılan yok, çünkü boş dizi varsayılanı beyanı
+  -- girilmemiş her ürünü sessizce "içermez" ilan ederdi.
+  allergens product_allergen[],
   -- "Beyan eksik" tek kaynakta: süzgeç ve sayaç aynı üretilmiş kolonu okur, hangi beyanın eksik olduğunu uygulama söyler
   -- (`missingDeclarations`). Çok dilli alanlar varlığa değil doluluğa bakar (`has_all_locales`), çünkü boş dize dolu
   -- sayılırsa müşteri sessizce yedek dili görür.
@@ -50,7 +52,7 @@ create table public.product (
     or not public.has_all_locales(ingredients)
     or not public.has_all_locales(storage_instructions)
     or nutrition is null
-    or allergens = '{}'
+    or allergens is null
   ) stored,
   traces product_allergen[] not null default '{}',   -- çapraz bulaşma; cümle i18n şablonuyla kurulur
   -- Fransa gıda oranları 5,5 (paketli/donuk) · 10 (hazır tüketim) · 20 (gıda dışı); kısıt yok, oran mali bir karardır
@@ -97,6 +99,9 @@ create table public.product (
       and (family_id is null or public.has_all_locales(family_label))
     )
   ),
+
+  -- Alerjen beyanı girilmemiş ürün satışa çıkamaz (INCO); "içermez" ('{}') bir beyandır ve yeter.
+  constraint product_publish_requires_allergens check (status <> 'active' or allergens is not null),
 
   created_at timestamptz not null default now()
 );

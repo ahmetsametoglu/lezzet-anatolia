@@ -61,13 +61,14 @@ async function birimFiyat(customerId: string | null): Promise<number | null> {
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `Görüntüleyen ${stamp}` } })).id;
-  // Yayın kısıtının şartı: `active` ürün üç dilde dolu olmalı; metinler fikstürün konusu değil.
+  // Yayın kısıtlarının şartı: `active` ürün üç dilde dolu, alerjen beyanı girilmiş olmalı; bunlar fikstürün konusu değil.
   const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const created = await new ProductService(db).create({
     name: ucDil(`Görüntüleyen ürünü ${stamp}`),
     description: ucDil('Fiyat görünürlüğü testi'),
     ingredients: ucDil('Un, su, tuz'),
     storageInstructions: ucDil('Serin yerde saklayın'),
+    allergens: [],
     categoryId,
     status: 'active',
     variants: [{ label: { tr: '1 kg' } }],

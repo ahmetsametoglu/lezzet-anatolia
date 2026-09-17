@@ -1046,9 +1046,8 @@ export const FICTION_NUTRITION: Record<string, Nutrition> = {
 };
 
 /**
- * Alerjen yalnız ürünün adı söylüyorsa yazıldı; boş liste yayını engellemez, yalnız paneldeki "beyan eksik" rozetini
- * yakar (`is_incomplete`). Sirkeye ve zeytinyağına uydurma alerjen yazılmadı, çünkü yasal beyanda olmayanı var
- * göstermek eksik bırakmakla aynı ağırlıkta değildir.
+ * UYDURMA alerjen beyanı — beyansız ürün satışa çıkamadığı için katman 3'te satışa çıkan her taslağın kaydı var; boş liste
+ * "alerjen içermez" beyanıdır. Değer içindekiler metnindeki alerjenden türer (sirke ve kuru meyvede sülfit), metinde olmayan yazılmaz.
  */
 export const FICTION_ALLERGENS: Record<string, ProductAllergen[]> = {
   Tahini: ['susam'],
@@ -1057,6 +1056,32 @@ export const FICTION_ALLERGENS: Record<string, ProductAllergen[]> = {
   'LEZZA Manti with Minced Meat (Kiymali)': ['gluten', 'yumurta'],
   'LEZZA Traditional Meet Doner': ['hardal'],
   'LEZZA Traditional Chicken Doner': ['hardal'],
+  Druivenmelasse: [],
+  Johannesbroodmelasse: [],
+  'Meidoorn azijn': ['sulfit'],
+  'Ananas azijn': ['sulfit'],
+  'Enginar azijn': ['sulfit'],
+  'Appel azijn': ['sulfit'],
+  'Isgin azijn': ['sulfit'],
+  'Honing azijn': ['sulfit'],
+  Granaatappelextraat: [],
+  'Sifamix Kozalak extract': [],
+  'Sifamix Johannesbrood extract': [],
+  'Sifamix Andiz extract': [],
+  'Coconut mix': [],
+  Olijfolie: [],
+  'Bromelain siroop': [],
+  'Zuhre Ana Kekre': [],
+  'Propolis pasta': [],
+  'Form pasta': [],
+  'Dennenappel pasta': [],
+  'Igde cekirdegi pasta': [],
+  'Zwarte moerbei extrat': [],
+  'Gedroogde aronya': ['sulfit'],
+  'Gedroogde appel': ['sulfit'],
+  'Gedroogde Kaki cips': ['sulfit'],
+  'Gedroogde perzik': ['sulfit'],
+  'Gedroogde meloen': ['sulfit'],
 };
 
 /** UYDURMA içindekiler. Ölçülmüş listesi olan iki ürün (Kekre, Propolis) burada YOK — katman 1 kazanır. */

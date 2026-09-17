@@ -36,12 +36,13 @@ const YERSIZ: PlaceWarehouses = { warehouseId: null, shippingWarehouseId: null }
 /** Yer BELLİ — teklif tutarının gösterilebildiği tek hâl. */
 const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null });
 
-/** Yayın kısıtının şartı: `active` ürün üç dilde dolu olmalı; metinler fikstürün konusu değil. */
+/** Yayın kısıtlarının şartı: `active` ürün üç dilde dolu, alerjen beyanı girilmiş olmalı; bunlar fikstürün konusu değil. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
   description: ucDil('Katalog testi ürünü'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('Serin yerde saklayın'),
+  allergens: [],
   status: 'active' as const,
 };
 

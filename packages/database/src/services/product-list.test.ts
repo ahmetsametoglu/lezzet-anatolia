@@ -44,11 +44,12 @@ beforeAll(async () => {
   };
   const seed: Array<{ name: Record<string, string>; extra?: Record<string, unknown> }> = [
     { name: { tr: `${STAMP} tam bir`, fr: `${STAMP} complet un`, de: `${STAMP} voll eins` }, extra: { allergens: ['gluten'], status: 'active', ...DECL } },
-    { name: { tr: `${STAMP} tam iki`, fr: `${STAMP} complet deux`, de: `${STAMP} voll zwei` }, extra: { allergens: ['sut'], status: 'active', ...DECL } },
+    // Boş liste "alerjen içermez" beyanıdır: tam sayılır ve yayına alınabilir.
+    { name: { tr: `${STAMP} tam iki`, fr: `${STAMP} complet deux`, de: `${STAMP} voll zwei` }, extra: { allergens: [], status: 'active', ...DECL } },
     // fr/de YOK → beyan eksik. **Aday kalmak ZORUNDA:** adı üç dilde dolu olmayan ürün yayına alınamaz.
     { name: { tr: `${STAMP} dil eksik` }, extra: { allergens: ['gluten'], ...DECL } },
-    // allergens boş → beyan eksik; ama METİNLERİ tam, yani yayına alınabilir (iki ölçüt ayrı).
-    { name: { tr: `${STAMP} alerjen yok`, fr: `${STAMP} sans`, de: `${STAMP} ohne` }, extra: { status: 'active', ...DECL } },
+    // Alerjen beyanı girilmedi (`null`) → beyan eksik; metinleri tam olsa da yayın kısıtı onu tutar, aday kalır.
+    { name: { tr: `${STAMP} alerjen girilmedi`, fr: `${STAMP} sans`, de: `${STAMP} ohne` }, extra: { ...DECL } },
     // İçindekiler YOK: yeni ölçütün kendi başına yakalaması gereken durum (diller ve alerjen tam).
     // Yasal beyan eksik olduğu için yayın kısıtı da onu tutuyor → aday.
     { name: { tr: `${STAMP} icindekiler yok`, fr: `${STAMP} sans compo`, de: `${STAMP} ohne zutaten` }, extra: { allergens: ['soya'], description: DECL.description, storageInstructions: DECL.storageInstructions, nutrition: DECL.nutrition } },
@@ -103,11 +104,11 @@ describe('ProductService.list — süzme', () => {
 
     expect(mine(passive.rows)).toHaveLength(1);
     expect(mine(passive.rows)[0]?.name.tr).toContain('pasif');
-    // Durum tek alan; 8 kaydın dağılımı 3 aktif · 1 pasif · 4 aday. Adı ya da beyanı eksik ürün yayın kısıtından geçemediği için adaydır.
+    // Durum tek alan; 8 kaydın dağılımı 2 aktif · 1 pasif · 5 aday. Adı ya da beyanı eksik ürün yayın kısıtından geçemediği için adaydır.
     expect(mine(candidate.rows).map((p) => p.name.tr ?? '').sort()).toEqual(
-      [`${STAMP} aday`, `${STAMP} baska kategori`, `${STAMP} dil eksik`, `${STAMP} icindekiler yok`].sort(),
+      [`${STAMP} aday`, `${STAMP} alerjen girilmedi`, `${STAMP} baska kategori`, `${STAMP} dil eksik`, `${STAMP} icindekiler yok`].sort(),
     );
-    expect(mine(active.rows)).toHaveLength(3);
+    expect(mine(active.rows)).toHaveLength(2);
     expect(mine(active.rows).every((p) => p.status === 'active')).toBe(true);
   });
 
@@ -116,7 +117,7 @@ describe('ProductService.list — süzme', () => {
     const names = mine(incomplete.rows).map((p) => p.name.tr ?? '');
     // Her biri FARKLI bir eksiklikle listeye girer — süzgeç dördünü de görmeli.
     expect(names.some((n) => n.includes('dil eksik'))).toBe(true);
-    expect(names.some((n) => n.includes('alerjen yok'))).toBe(true);
+    expect(names.some((n) => n.includes('alerjen girilmedi'))).toBe(true);
     expect(names.some((n) => n.includes('icindekiler yok'))).toBe(true);
     expect(names.some((n) => n.includes('baska kategori'))).toBe(true);
     // Beyanı TAM olanlar listede OLMAMALI.
@@ -226,10 +227,10 @@ describe('ProductService.counts (tek okuma)', () => {
   it('sayaçlar listeyle AYNI süzgeci kullanır', async () => {
     const c = await products.counts({ query: STAMP });
     expect(c.total).toBe(8);
-    // Aday: "dil eksik" · "icindekiler yok" · "aday" · "baska kategori" → 4 (künye durum testinde)
-    expect(c.candidate).toBe(4);
-    // Beyanı eksik: "dil eksik", "alerjen yok", "icindekiler yok", "baska kategori" → 4; `is_incomplete` durumdan bağımsızdır,
-    // aday da olsa eksik beyan eksiktir ("alerjen yok" aktif ama eksik, "aday" dolu ama aday).
+    // Aday: "dil eksik" · "alerjen girilmedi" · "icindekiler yok" · "aday" · "baska kategori" → 5 (künye durum testinde)
+    expect(c.candidate).toBe(5);
+    // Beyanı eksik: "dil eksik", "alerjen girilmedi", "icindekiler yok", "baska kategori" → 4; `is_incomplete` durumdan
+    // bağımsızdır: "aday" beyanı tam olduğu hâlde adaydır.
     expect(c.incomplete).toBe(4);
   });
 
@@ -243,7 +244,7 @@ describe('ProductService.counts (tek okuma)', () => {
 
   it('aday sayacı DURUM süzgecini yok sayar (aday kuyruğu görünmeye devam eder)', async () => {
     const c = await products.counts({ query: STAMP, status: 'active' });
-    expect(c.candidate).toBe(4);
+    expect(c.candidate).toBe(5);
     expect(c.total).toBeLessThan(8); // toplam süzgeçten etkilenir
   });
 

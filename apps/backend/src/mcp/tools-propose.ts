@@ -669,7 +669,7 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
     ingredients: (fields.ingredients ?? null) as Parameters<typeof missingDeclarations>[0]['ingredients'],
     nutrition: (fields.nutrition ?? null) as Parameters<typeof missingDeclarations>[0]['nutrition'],
     storageInstructions: (fields.storageInstructions ?? null) as Parameters<typeof missingDeclarations>[0]['storageInstructions'],
-    allergens: (fields.allergens ?? []) as Parameters<typeof missingDeclarations>[0]['allergens'],
+    allergens: (fields.allergens ?? null) as Parameters<typeof missingDeclarations>[0]['allergens'],
   });
 
   const payload: ProductCreatePayload = {

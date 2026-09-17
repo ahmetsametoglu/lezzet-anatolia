@@ -55,10 +55,16 @@ beforeAll(async () => {
 
   /**
    * Satıştaki ürünler açıkça yayına alınır, çünkü dosyanın ayrımı "aday mı değil mi" üzerine kurulu ve kolonun varsayılanı aday.
-   * Üç dilli metinler yayın kısıtının şartı (`product_publish_requires_all_locales`).
+   * Üç dilli metinler ve alerjen beyanı yayın kısıtlarının şartı (`product_publish_requires_*`).
    */
   const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
-  const yayinaHazir = { description: ucDil('Test ürünü'), ingredients: ucDil('Un, su'), storageInstructions: ucDil('Serin yerde'), status: 'active' as const };
+  const yayinaHazir = {
+    description: ucDil('Test ürünü'),
+    ingredients: ucDil('Un, su'),
+    storageInstructions: ucDil('Serin yerde'),
+    allergens: [],
+    status: 'active' as const,
+  };
 
   const { product, variants } = await products.create({
     name: ucDil(`Değerlendirilen ürün ${stamp}`),
