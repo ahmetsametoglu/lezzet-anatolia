@@ -6,6 +6,7 @@ import { CirclePhoto } from '@/components/customer/phone-kit/circle-photo';
 import { DashedInvite } from '@/components/customer/phone-kit/dashed-invite';
 import { PhoneDeliveryMap } from './components/phone-delivery-map';
 import { Note } from '@/components/customer/phone-kit/note';
+import { PrimaryButton } from '@/components/customer/phone-kit/primary-button';
 import { PhoneOrderTimeline } from './components/phone-order-timeline';
 import { SummaryPanel, type SummaryRow } from '@/components/customer/phone-kit/summary-panel';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
@@ -32,8 +33,8 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
   const address = order.address === null ? '' : addressLine(order.address);
   const carrier = order.shipment === null ? '' : carrierLabel(t, order.shipment.carrierName);
 
-  // Önce PARA (toplamı açıklayan üçlü), sonra LOJİSTİK, en sonda kargo künyesi. İndirim yoksa satırı çizilmez —
-  // "0,00 €" bir indirim değildir. Koli başına takip numarası; sıra yalnız birden çok kolide yazılır.
+  // Para satırları toplamı açıkladığı için önce gelir ve sıfır indirim indirim olmadığı için çizilmez. Koli sırası yalnız birden
+  // çok kolide yazılır.
   const rows: SummaryRow[] = [
     { key: 'subtotal', label: d.subtotal, value: formatPrice(order.subtotalCents, locale) },
     ...(order.discountCents > 0
@@ -96,9 +97,15 @@ export function DetailMobile({ t, locale, order, feedbackInvite }: DetailViewPro
       {feedbackInvite && (
         <DashedInvite
           tone="olive"
-          href={{ pathname: '/feedback/[token]', params: { token: feedbackInvite.token } }}
           title={d.feedback.title}
           description={d.feedback.body.replace('{points}', String(feedbackInvite.completionPoints))}
+          action={
+            <PrimaryButton
+              shape="pill"
+              label={d.feedback.cta}
+              href={{ pathname: '/feedback/[token]', params: { token: feedbackInvite.token } }}
+            />
+          }
         />
       )}
 
