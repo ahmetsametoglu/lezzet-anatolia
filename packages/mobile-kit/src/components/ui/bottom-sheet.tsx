@@ -5,43 +5,14 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 /*
-  İÇERİKTEKİ BOŞLUK ÖRTÜYE DÜŞMESİN (ölçüldü 02.09 · cihazda, kullanıcı bulgusu).
-
-  Tuş takımının "00" tuşunun sağındaki boş hücreye dokununca çekmece KAPANIYORDU. Ölçüm (uiautomator,
-  dokunulan noktanın altındaki görünümler): boşlukta dokunuşu sahiplenen hiçbir öğe yok, ve
-  kütüphanenin örtüsü tam ekran, tıklanabilir bir düğme — dokunuş içerikten geçip ona düşüyor ve
-  örtü "dışarı dokunuldu" sanıp kapatıyor. Jest kütüphanesi (gesture-handler) dokunuşu ağaçta EN
-  ÖNDEN arkaya doğru bir jest bulana kadar arıyor; içerikte jest yoksa arkadaki örtünün dokunma
-  jestine varıyor.
-
-  Çare içeriğe kendi jestini vermek: hiçbir şey yapmayan bir dokunma jesti. İçerikteki boşluk artık
-  dokunuşu sahipleniyor, örtüye yalnız gerçekten örtüye dokunulunca ulaşılıyor. Kaydırma ve
-  içerideki düğmeler etkilenmez — dokunma jesti yalnız hareketsiz, kısa dokunuşta biter ve içeride
-  bir düğme varsa o zaten daha önde. Jest nesnesi ÇEKMECE BAŞINA üretilir (`useMemo`): tek nesneyi
-  kırk çekmecenin paylaşması kütüphanenin "aynı jest birden çok algılayıcıda" uyarısıdır.
+  İçerikteki boşluğa dokunuş örtüye düşüp çekmeceyi kapatmasın diye içeriğe hiçbir şey yapmayan bir dokunma jesti verilir: jest
+  kütüphanesi dokunuşu önden arkaya ilk jeste teslim eder. Jest çekmece başına üretilir, çünkü tek nesneyi paylaşan çekmeceler
+  kütüphanenin "aynı jest birden çok algılayıcıda" uyarısını alır.
 */
 
 /*
-  YÜZEN SAYFA (bottom sheet) — v3'ün tek katman-üstü kalıbı (`shOn`). İçerik YUVADIR: sheet hangi
-  içeriğin geleceğini bilmez, yalnız örtüyü, tutamağı, başlığı ve kapanma yollarını garanti eder.
-  42 çağrı bu dokuz prop'la geliyor; kütüphaneyi hiçbiri görmüyor.
-
-  ── GÖVDE `@gorhom/bottom-sheet`, VE MÜMKÜN OLAN EN SADE HÂLİYLE (kullanıcı kararı 01.09) ────
-  Bir önceki deneme cihazda dört arıza çıkardı ve DÖRDÜ DE kütüphaneye eklediğim makinelerdendi:
-  kendi örtüm dokunuşları yutuyordu (`pointerEvents` sabitti), kendi açma/kapama muhasebem çekmeceyi
-  daha doğmadan portaldan söküyordu, kapanış kancasını kütüphanenin `onDismiss`ine bağlamıştım ve
-  o sinyal gelmiyordu, panelin sürükleme jesti içerideki listelerle yarışıyordu.
-
-  Ders: **kütüphaneye ne kadar az şey eklersem o kadar az yerde yanılırım.** Bu yüzden burada
-  örtü kütüphanenin, açılma/kapanma kütüphanenin, ölçü kütüphanenin. Bize ait olan yalnız GÖRÜNÜŞ
-  (tutamak + başlık + renkler) ve iki DAVRANIŞ: Android'in geri tuşu ve kapanış kancası — ikisi de
-  kütüphanede yok ve ikisi de sözleşmemizde var.
-
-  ── NEDEN KÜTÜPHANE ─────────────────────────────────────────────────────────
-  Kendi gövdemizin açılışı bir ÖLÇÜME bağlıydı (`onLayout`) ve ölçüm gelmediğinde panel ekranın
-  dışında kalıyordu — üç turda üç ekranda (10.08 · 30.08 · 31.08). `BottomSheetModal` RN `Modal`ını
-  kullanmıyor, kendi portalına asılıyor; "iOS kapanmakta olanın üstüne sunmaz" sınırlaması da
-  böylece ortadan kalkıyor.
+  Yüzen sayfa: içerik yuvadır, çekmece yalnız örtüyü, tutamağı, başlığı ve kapanma yollarını garanti eder. Gövde kütüphaneye
+  olabildiğince az şey ekler, çünkü eklenen her makine (örtü, açma muhasebesi, kapanış sinyali) cihazda ayrı bir arıza çıkardı.
 */
 
 interface BottomSheetProps {
@@ -51,16 +22,12 @@ interface BottomSheetProps {
   /** Başlık satırının SAĞ yuvası — panelin tamamına ait bir eylem ("sıfırla"). */
   titleAction?: ReactNode;
   /**
-   * **SABİT BOYLU PANEL** — yalnız içeriği SIFIRDAN büyüyen çekmecelerde (kullanıcı bulgusu 30.08).
-   * Arama çekmecesi boşken bir avuç kadar açılıyor, her harfte büyüyor ve parmağın altındaki satır
-   * yer değiştiriyordu. Verilmezse yükseklik içerikten gelir.
+   * Sabit boylu panel; yalnız içeriği sıfırdan büyüyen çekmeceler için, çünkü boy içerikten gelirse her harfte büyür ve parmağın
+   * altındaki satır yer değiştirir.
    */
   fill?: boolean;
   onClose: () => void;
-  /**
-   * Çekmece kapandıktan SONRA çağrılır — çekmeceden çıkıp başka bir köke gidecek eylemler
-   * yönlendirmeyi buna bağlar (21.121). `onClose` NİYETİN kancasıdır, bu KAPANIŞIN.
-   */
+  /** Çekmece kapandıktan sonra çağrılır; başka köke giden yönlendirme buna bağlanır. `onClose` niyetin, bu kapanışın kancası. */
   onClosed?: () => void;
   /** `onClosed`ın eş anlamlısı — geçiş dönemi kancası, yeni çağıran kullanmasın. */
   onDismissed?: () => void;
@@ -92,20 +59,8 @@ export function BottomSheet({
       shown.current = true;
       wanted.current = true;
       /*
-        AÇILAN ÇEKMECE KLAVYEYİ KAPATIR (kullanıcı bulgusu 07.09 · talep ekranı).
-
-        O anda açık olan klavye ARKADAKİ ekranın kutusuna aittir — cevap yazarken aksiyon
-        çekmecesi açılınca klavye yerinde kalıyor, alttaki pay (aşağıdaki künye) çekmeceyi
-        klavye boyunca uzatıyor ve panel ekranı dolduruyordu. Pay yanlış değil; yanlış olan
-        BAŞKASININ klavyesini çekmecenin sırtına yüklemek. Çekmece öne geçtiği anda arkadaki
-        kutunun yazma sırası bitmiştir.
-
-        Kendi kutusu OLAN çekmece etkilenmez: içerik `present()`ten SONRA monte olur, oradaki
-        `autoFocus` klavyeyi kendi adına yeniden açar (satış aramasında cihazda doğrulandı).
-
-        Pay burada da elle sıfırlanır: `keyboardDidHide` klavye kapanma animasyonunun ARDINDAN
-        gelir ve o çeyrek saniye tam da panelin açıldığı andır — beklenirse çekmece uzun açılıp
-        gözün önünde kısalır.
+        Açılan çekmece arkadaki ekranın klavyesini kapatır, yoksa alt pay çekmeceyi başkasının klavyesi boyunca uzatır. Pay da elle
+        sıfırlanır, çünkü kapanma olayı panel açıldıktan sonra gelir ve çekmece gözün önünde kısalırdı.
       */
       Keyboard.dismiss();
       setKeyboardPad(0);
@@ -113,30 +68,18 @@ export function BottomSheet({
       return;
     }
     /*
-      İKİ BAYRAK, ÇÜNKÜ İKİ AYRI SORU (ölçüldü 01.09):
-        · `shown` — kütüphane bunu ekranda tutuyor mu? `dismiss()` yalnız buna bakar.
-        · `wanted` — çağıran açmak istemiş miydi? `onClosed` yalnız buna bakar.
-      Kullanıcı tutamaktan kapattığında çekmece KENDİ kapanır (`shown` düşer) ama çağıranın
-      `visible`ı bir tur sonra düşer; tek bayrak olsaydı o turda `onClosed` hiç çağrılmazdı —
-      ona kök yönlendirmesi bağlı (prop künyesi).
+      İki bayrak, çünkü iki ayrı soru: `shown` kütüphanenin çekmeceyi tutup tutmadığı, `wanted` çağıranın açmak isteyip istemediği.
+      Kullanıcı tutamaktan kapatınca `visible` bir tur sonra düşer; tek bayrakla o turda `onClosed` hiç çağrılmazdı.
     */
     if (!wanted.current) return;
     wanted.current = false;
-    /*
-      HİÇ SUNULMAMIŞ ÇEKMECE KAPATILMAZ — kütüphanenin en pahalı davranışı.
-
-      `dismiss()`, panel zaten kapalı konumdaysa çekmeceyi PORTALDAN SÖKÜYOR (`BottomSheetModal`
-      kaynağı: `unmount()`), ve sökülen çekmece bir daha açılmıyor. Çekmecelerimizin çoğu
-      `visible={false}` ile monte olduğu için korumasız bir efekt hepsini doğar doğmaz öldürüyordu
-      (cihazda ölçüldü 01.09: SKT çekmecesi ve ürün araması hiç açılmadı).
-    */
+    // Hiç sunulmamış çekmece kapatılmaz: `dismiss()` kapalı paneli portaldan söker ve o çekmece bir daha açılmaz.
     if (shown.current) {
       shown.current = false;
       sheet.current?.dismiss();
     }
 
-    /* Kapanış kancası BİZDEN: kütüphanenin `onDismiss`i her koşulda gelmiyor (ölçüldü — plansız
-       kabulde seçilen ürün hiç eklenmedi). Bir kare erteleme sözleşmenin kendi gerekçesi (21.121). */
+    // Kapanış kancası bizden, çünkü kütüphanenin `onDismiss`i her koşulda gelmiyor; bir karelik erteleme yönlendirmeye yer açar.
     const frame = requestAnimationFrame(() => {
       onClosed?.();
       onDismissed?.();
@@ -144,9 +87,7 @@ export function BottomSheet({
     return () => cancelAnimationFrame(frame);
   }, [onClosed, onDismissed, visible]);
 
-  /* ANDROID'İN GERİ HAREKETİ — kütüphanede `BackHandler` yok (kaynağı okundu). Eski gövdede
-     `Modal.onRequestClose` bedavaydı ve künyesi *"Android'de geri tuşuyla kapanmamak ARIZADIR"*
-     diyordu; söz kitte tutuluyor. iOS'ta `BackHandler` zaten sessiz. */
+  // Kütüphanede Android'in geri hareketi yok; geri tuşuyla kapanmayan çekmece arızadır. iOS'ta `BackHandler` zaten sessiz.
   useEffect(() => {
     if (!visible) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -157,30 +98,9 @@ export function BottomSheet({
   }, [onClose, visible]);
 
   /*
-    KLAVYE PAYI İÇERİĞE VERİLİR — ölçüldü, dört yol denendi (01.09 · cihazda).
-
-    Panel klavye açılınca yerinde kalıyor ve giriş alanı arkada kalıyordu. Sırayla denenenler:
-
-      · `keyboardBehavior` (kütüphanenin kendisi) — çalışmıyor. Klavye kaçınması çekmecedeki
-        alanların KAYITLI olmasını istiyor (`textInputNodesRef`, yalnız `BottomSheetTextInput`
-        doldurur) ve üstüne `react-native-edge-to-edge` işletim sisteminin varsayılan
-        mekanizmasını devre dışı bırakıyor. Kaydı kurdum, yine kıpırdamadı.
-      · `rt.insets.ime` — cihazda SIFIR geliyor (ölçüldü); pay hiç uygulanmıyordu.
-      · `bottomInset` — etkisiz. Dokümanı da yüzdeli snap point hesabı için tarif ediyor;
-        `enableDynamicSizing` ile duruş konumuna dokunmuyor.
-      · **İÇERİĞE ALT PAY — ÇALIŞAN TEK YOL.** `enableDynamicSizing` panel boyunu içerikten
-        alıyor: içerik klavye kadar uzayınca panel de o kadar yukarı büyüyor.
-
-    Yükseklik RN'in `keyboardDidShow` olayından; cihazda ölçüldü ve doğru geliyor (320).
-
-    ── ÖRTME `height`TEN DEĞİL EKRAN DİBİNDEN HESAPLANIR (ölçüldü 01.09 · cihazda) ────────────
-    `endCoordinates.height` klavyenin KENDİ boyudur ve Android'de altındaki hareket çubuğunu
-    saymaz. Cihazda ölçüldü: `height` 320 derken klavyenin gerçekten kapattığı yükseklik 336'ydı
-    (ekran 904 − `screenY` 568). Aradaki 16, çekmecenin en alt satırını yutmaya yetiyordu — ilk
-    turda "çalıştı" dediğim pay, son satırı klavyenin arkasında bırakıyordu ve bunu ancak
-    kullanıcı gördü. Ekran DİBİNDEN ölçmek iOS'ta da doğrudur: orada hareket çubuğu zaten
-    klavyenin içinde sayılır, iki hesap aynı sayıyı verir. Ekran ölçüsü `screen`den alınır,
-    `window`dan değil — `screenY` ekran koordinatıdır.
+    Klavye payı içeriğe verilir, çünkü panel boyunu içerikten aldığı için içerik uzayınca yukarı büyüyen tek yol bu; kütüphanenin
+    klavye davranışı ve güvenli alan payları cihazda etkisiz kaldı. Örtme ekran dibinden hesaplanır, çünkü klavyenin kendi boyu
+    Android'de altındaki hareket çubuğunu saymaz ve son satırı yutar.
   */
   useEffect(() => {
     const acildi = Keyboard.addListener('keyboardDidShow', (e) =>
@@ -193,11 +113,10 @@ export function BottomSheet({
     };
   }, []);
 
-  /* Kullanıcı kapattı (sürükleme): çekmece kendi kapandığını söylüyor, bayrak burada düşer ki
-     çağıranın `visible`ı düşünce ikinci bir `dismiss()` gitmesin — o çağrı çekmeceyi söker. */
   /** İçerikteki boşluğun dokunuşunu sahiplenen, hiçbir şey yapmayan jest (dosya başındaki künye). */
   const contentTap = useMemo(() => Gesture.Tap(), []);
 
+  // Sürüklemeyle kapanışta bayrak burada düşer ki `visible` düşünce ikinci bir `dismiss()` çekmeceyi sökmesin.
   const handleDismiss = useCallback(() => {
     if (!shown.current) return;
     shown.current = false;
@@ -210,9 +129,7 @@ export function BottomSheet({
       enableDynamicSizing={!fill}
       snapPoints={fill ? ['82%'] : undefined}
       enablePanDownToClose
-      /* SÜRÜKLEME YALNIZ TUTAMAKTAN — eski gövdenin davranışının aynısı (jest `GestureDetector` ile
-         tutamağa bağlıydı). Panelin her yerinden sürüklemek, içerideki her kaydırma alanıyla
-         yarışmak demek: SKT tekerlekleri bu yüzden hiç kaymıyordu (ölçüldü 01.09). */
+      // Sürükleme yalnız tutamaktan, çünkü panelin her yerinden sürüklemek içerideki kaydırma alanlarıyla yarışır.
       enableContentPanningGesture={false}
       onDismiss={handleDismiss}
       backdropComponent={Backdrop}
@@ -234,33 +151,19 @@ export function BottomSheet({
       android_keyboardInputMode="adjustResize"
     >
       <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID={testID}>
-        {/*
-          Boşluk dokunuşu burada biter, örtüye düşmez (dosya başındaki künye).
-
-          ARALIK SARMALAYICININ İÇİNDE (kullanıcı bulgusu 03.09): jest kutusu eklendiğinde
-          çekmecenin çocukları TEK bir görünüme indi ve kaydırma kabının `gap`i artık onların
-          arasına düşmüyordu — sebep çekmecesinin seçenekleri bitişik çizildi. Aralık çocukların
-          gerçek ebeveyninde durmalı; kabın `gap`i tek çocuğa hiçbir şey yapmaz.
-        */}
+        {/* Aralık sarmalayıcının içinde, çünkü jest kutusu çocukları tek görünüme indirir ve kabın `gap`i tek çocuğa işlemez. */}
         <GestureDetector gesture={contentTap}>
           <View style={styles.contentInner}>{children}</View>
         </GestureDetector>
-        {/*
-          PAY AYRI BİR BOŞLUKTUR, `paddingBottom` DEĞİL (ölçüldü 01.09 · cihazda).
-          `contentContainerStyle` dizisine ikinci bir `paddingBottom` yazmak tabandakini TOPLAMAZ,
-          EZER: klavye açılınca içeriğin alt nefesi (`8xl` + güvenli alan) sıfırlanıyor ve son satır
-          klavyeye yapışıyordu (içerik 251 → 525 ölçüldü; 46'lık taban 320'yle değişmişti, oysa
-          571 olmalıydı). Boşluk olarak eklenince taban yerinde kalır.
-        */}
+        {/* Pay ayrı bir boşluk, çünkü ikinci bir `paddingBottom` tabandakini toplamaz, ezer ve son satır klavyeye yapışır. */}
         {keyboardPad > 0 ? <View style={{ height: keyboardPad }} /> : null}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
 }
 
-/* ÖRTÜ KÜTÜPHANENİN: dokunuş geçirgenliğini konumdan kendisi hesaplıyor. Kendi örtümü yazdığımda
-   `pointerEvents="auto"` sabit kalmış ve kapanan çekmecenin ardında görünmez bir cam bırakmıştı —
-   ekran hiçbir dokunuşa cevap vermiyordu (kullanıcı bulgusu 01.09). Bize ait olan yalnız renk. */
+/* Örtü kütüphanenin, çünkü dokunuş geçirgenliğini konumdan kendisi hesaplıyor; elle yazılan örtü kapanan çekmecenin ardında
+   dokunuşları yutan görünmez bir cam bırakmıştı. Bize ait olan yalnız renk. */
 function Backdrop(props: React.ComponentProps<typeof BottomSheetBackdrop>) {
   return <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} style={[props.style, styles.scrim]} />;
 }
@@ -296,12 +199,10 @@ const styles = StyleSheet.create((t, rt) => ({
     fontSize: t.text['sheet-title'],
     color: t.colors.ink,
   },
-  /* Şablonun alt nefesi + cihazın alt güvenli alanı. KLAVYE AÇIKKEN güvenli alan EKLENMEZ
-     (kullanıcı bulgusu 11.08): o pay ana ekran çubuğunun üstü içindir, klavye zaten orayı kapatır. */
+  /* Alt nefes cihazın alt güvenli alanını da taşır; klavye payı burada değil içeriğin sonundaki boşlukta, böylece bu nefes klavye
+     açıkken de korunur. */
   content: {
     paddingHorizontal: t.space['5xl'],
-    /* Klavye payı BURADA DEĞİL, içeriğin sonundaki boşlukta — gerekçesi orada. Buradaki pay
-       klavyesiz hâlin nefesi + cihazın alt güvenli alanıdır ve klavye açıkken de KORUNUR. */
     paddingBottom: t.space['8xl'] + rt.insets.bottom,
   },
   /** Çocuklar arasındaki nefes — kabın değil, GERÇEK ebeveynin işi (yukarıdaki künye). */
