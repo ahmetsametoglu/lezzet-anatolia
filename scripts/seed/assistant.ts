@@ -339,8 +339,8 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
       allergens: ['gluten', 'sut', 'sert_kabuklu'],
       // Boy en az bir tane ZORUNLU: ürün varyantsız açılamaz (kayıt satılabilir bir şey olmalı).
       variants: [
-        { label: { tr: '250 g', fr: '250 g', de: '250 g' }, netWeightG: 250, piecesCount: null },
-        { label: { tr: '500 g', fr: '500 g', de: '500 g' }, netWeightG: 500, piecesCount: null },
+        { label: { tr: '250 g', fr: '250 g', de: '250 g' }, netQuantity: 250, netUnit: 'g', piecesCount: null },
+        { label: { tr: '500 g', fr: '500 g', de: '500 g' }, netQuantity: 500, netUnit: 'g', piecesCount: null },
       ],
       uncertainFields: ['nutrition'],
       remainingGaps: ['nutrition', 'ingredients'],

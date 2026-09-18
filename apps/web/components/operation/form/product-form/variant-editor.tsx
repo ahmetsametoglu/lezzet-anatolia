@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { barcodeProblem } from '@lezzet/domain-core';
-import { resolveLocalizedText, type BarcodeKind, type LocalizedText, type VariantBarcode } from '@lezzet/types';
+import { resolveLocalizedText, type BarcodeKind, type LocalizedText, type NetUnit, type VariantBarcode } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
@@ -32,7 +32,7 @@ import type { ProductFormValues } from './schema';
 // "Adet" sütunu `Net (g)`in HEMEN YANINA girdi (arka-uc talebi 09.08) ve yerine değil: 72'lik bir
 // kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer
 // kaplar"). Genişliği 52px — başlığı kısa, değeri iki haneli.
-const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_104px_64px_52px_60px_38px_26px] items-center gap-x-2';
+const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_104px_112px_52px_60px_38px_26px] items-center gap-x-2';
 
 /**
  * Satırın BARKODLARI — kayıtlı olanlar ve kaydedilince bağlanacak olanlar bir arada.
@@ -197,7 +197,51 @@ function SubRow({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Sayı hücresi — Net (g) ve Min. stok aynı davranışı paylaşır (boş = bilinmiyor / eşik yok). */
+/**
+ * NET MİKTAR hücresi — sayı ve birim yan yana, tek kolonda.
+ *
+ * Birim sayının YANINDA duruyor çünkü ikisi bir bilgidir: "500" tek başına hiçbir şey demez ve gramla
+ * sınırlı eski kutu sirkeyi, zeytinyağını, özleri hiç yazamıyordu. Kıyas fiyatı da buradan seçilir
+ * (g → €/kg, ml → €/L). Miktar silinince birim de düşer: kısıt ikisini birlikte ister.
+ */
+function NetQuantityCell({ control, index }: { control: Control<ProductFormValues>; index: number }) {
+  return (
+    <div className="flex items-center gap-1">
+      <Controller
+        control={control}
+        name={`variants.${index}.netQuantity`}
+        render={({ field }) => (
+          <NumberCell
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            className="w-[62px]"
+            title="Ambalajda yazan net miktar — satışa çıkmanın şartı"
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name={`variants.${index}.netUnit`}
+        render={({ field }) => (
+          <Select
+            size="sm"
+            className="w-[46px]"
+            value={field.value ?? 'g'}
+            onChange={(v) => field.onChange(v as NetUnit)}
+            ariaLabel="Net miktarın birimi"
+            options={[
+              { value: 'g', label: 'g' },
+              { value: 'ml', label: 'ml' },
+            ]}
+          />
+        )}
+      />
+    </div>
+  );
+}
+
+/** Sayı hücresi — Net miktar ve Min. stok aynı davranışı paylaşır (boş = bilinmiyor / eşik yok). */
 function NumberCell({
   value,
   onChange,
@@ -250,7 +294,7 @@ const PORTION_OPTIONS = [
  * **Neden tabloya kolon olarak girmiyor:** satır zaten sekiz kolon. Dört kolon daha eklemek her
  * girdiyi okunmaz genişliğe düşürürdü.
  *
- * **`netWeightG` ile karışmasın diye BRÜT yazıyor** ve ipucu farkı açıklıyor: biri beyan (içindeki
+ * **`netQuantity` ile karışmasın diye BRÜT yazıyor** ve ipucu farkı açıklıyor: biri beyan (içindeki
  * gıda), öteki taşınan (ürün + ambalaj). İkisi aynı satırda görünmüyor ki operatör hangisini
  * doldurduğunu bilsin.
  */
@@ -379,7 +423,7 @@ export function VariantEditor({ control }: VariantEditorProps) {
         <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-[0.1em] text-ops-muted">Varyantlar</span>
         <button
           type="button"
-          onClick={() => append({ label: {}, netWeightG: null, piecesCount: null, portionKind: null, packedWeightG: null, packedLengthMm: null, packedWidthMm: null, packedHeightMm: null, minStockQty: null, sku: null, isActive: true })}
+          onClick={() => append({ label: {}, netQuantity: null, netUnit: 'g', piecesCount: null, portionKind: null, packedWeightG: null, packedLengthMm: null, packedWidthMm: null, packedHeightMm: null, minStockQty: null, sku: null, isActive: true })}
           className="cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-olive hover:text-ops-olive-dark"
         >
           + varyant
@@ -400,7 +444,7 @@ export function VariantEditor({ control }: VariantEditorProps) {
           <span />
           <span>Etiket ({lang.toUpperCase()})</span>
           <span>SKU</span>
-          <span>Net (g)</span>
+          <span title="Ambalajdaki net miktar ve birimi — katıda gram, sıvıda mililitre">Net miktar</span>
           <span title="Kutudaki parça sayısı — 12'li baklava kutusu → 12. Dökme üründe boş bırakın.">Adet</span>
           <span title="Bu eşiğin altına düşünce stok uyarısı çıkar">Min. stok</span>
           <span className="text-center">Aktif</span>
@@ -478,11 +522,9 @@ export function VariantEditor({ control }: VariantEditorProps) {
                     />
                   )}
                 />
-                <Controller
-                  control={control}
-                  name={`variants.${i}.netWeightG`}
-                  render={({ field }) => <NumberCell value={field.value} onChange={field.onChange} onBlur={field.onBlur} />}
-                />
+                {/* Net miktar SAYI + BİRİM: gramla sınırlı bir kutu sıvıyı hiç yazamıyordu ve birim
+                    fiyat da buradan seçiliyor (g → €/kg, ml → €/L). Satışa çıkmanın şartı (0005). */}
+                <NetQuantityCell control={control} index={i} />
                 {/* Paket içi adet — BOŞ bırakılabilir ve boş `null` demektir: "adet bildirilmemiş"
                     (dökme ürün). Sıfır DEĞİL; sıfır "içinde hiç parça yok" derdi (`CLAUDE §1`).
                     `NumberCell` zaten boşu `null`a çeviriyor, o yüzden ayrı bir kural yok. */}

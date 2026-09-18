@@ -39,6 +39,8 @@ const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null }
 /** Yayın kısıtlarının şartı: `active` ürün üç dilde dolu, alerjen beyanı girilmiş olmalı; bunlar fikstürün konusu değil. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
+  // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`): "yayına hazır" gövde onu da taşır.
+  variants: [{ netQuantity: 500, netUnit: 'g' as const }],
   description: ucDil('Katalog testi ürünü'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('Serin yerde saklayın'),
@@ -56,7 +58,7 @@ async function makeProduct(label: string, priceCents: number, b2bCents: number) 
     name: ucDil(`${label} ${stamp}`),
     categoryId,
     ...yayinaHazir,
-    variants: [{ label: { tr: '1 kg' } }],
+    variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
   });
   productIds.push(product.id);
   await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: priceCents });
@@ -252,7 +254,10 @@ describe('çok boylu üründe birincil boy EN UCUZ olandır', () => {
       ...yayinaHazir,
       // Sıra operatörün: 2 kg önce (sortOrder 0). Fiyat tersine — düzeltmeden önceki hâlde kart
       // 33,82 € yazar ve ürün sıralamada 33,82 €'ya göre yerleşirdi.
-      variants: [{ label: { tr: '2 kg' } }, { label: { tr: '1 kg' } }],
+      variants: [
+        { label: { tr: '2 kg' }, netQuantity: 2000, netUnit: 'g' },
+        { label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' },
+      ],
     });
     productIds.push(product.id);
     await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: 3382 });
@@ -265,7 +270,7 @@ describe('çok boylu üründe birincil boy EN UCUZ olandır', () => {
       name: ucDil(`Kiyas ${damga}`),
       categoryId,
       ...yayinaHazir,
-      variants: [{ label: { tr: '1 kg' } }],
+      variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
     });
     productIds.push(kiyas.product.id);
     await prices.insert({ variantId: kiyas.variants[0]!.id, channel: 'b2c', amountCents: 2000 });
@@ -308,7 +313,7 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
       name: ucDil(`Yalnız toptan ${stamp}`),
       categoryId,
       ...yayinaHazir,
-      variants: [{ label: { tr: '1 kg' } }],
+      variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
     });
     productIds.push(product.id);
     // YALNIZ toptan fiyatı var — perakendede satışa kapalı (DOMAIN §5).
@@ -400,7 +405,7 @@ describe('yalnız burada duran mal', () => {
         name: ucDil(`Vagon${vagonStamp} ${ad}`),
         categoryId,
         ...yayinaHazir,
-        variants: [{ label: { tr: '1 kg' } }],
+        variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
       });
       productIds.push(product.id);
       await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: 500 });

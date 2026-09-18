@@ -36,8 +36,8 @@ describe('ProductService', () => {
     const { product, variants } = await products.create({
       name: { tr: 'Maraş Dondurma' },
       variants: [
-        { label: { tr: '70 gr', fr: '70 g' }, netWeightG: 70 },
-        { label: { tr: '500 gr', fr: '500 g' }, netWeightG: 500 },
+        { label: { tr: '70 gr', fr: '70 g' }, netQuantity: 70, netUnit: 'g' },
+        { label: { tr: '500 gr', fr: '500 g' }, netQuantity: 500, netUnit: 'g' },
       ],
     });
     productIds.push(product.id);

@@ -39,7 +39,7 @@ beforeAll(async () => {
   const { product } = await products.create({
     name: { tr: `Varyant ürünü ${stamp}` },
     categoryId: category.id,
-    variants: [{ label: { tr: '500 g', fr: '500 g' }, netWeightG: 500, minStockQty: 10 }],
+    variants: [{ label: { tr: '500 g', fr: '500 g' }, netQuantity: 500, netUnit: 'g', minStockQty: 10 }],
   });
   categoryId = category.id;
   productId = product.id;
@@ -66,7 +66,8 @@ afterAll(async () => {
 function entry(over: Partial<ProductVariantEntry> = {}): ProductVariantEntry {
   return {
     label: {},
-    netWeightG: null,
+    netQuantity: null,
+    netUnit: null,
     piecesCount: null,
     portionKind: null,
     packedWeightG: null,
@@ -87,7 +88,8 @@ describe('ProductVariantService.syncVariants', () => {
       entry({
         id: mevcut?.id,
         label: { tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' },
-        netWeightG: 700,
+        netQuantity: 700,
+        netUnit: 'g',
         // Adet gramajın YANINDA yaşıyor (05.14): aynı varyant hem 12 parça hem 700 g olabilir.
         piecesCount: 12,
         minStockQty: 6,
@@ -99,7 +101,7 @@ describe('ProductVariantService.syncVariants', () => {
     expect(outcome[0]?.label).toEqual({ tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' });
     expect(outcome[0]?.minStockQty).toBe(6);
     expect(outcome[0]?.piecesCount).toBe(12);
-    expect(outcome[0]?.netWeightG).toBe(700);
+    expect(outcome[0]?.netQuantity).toBe(700);
     // Yedek zinciri: Almanca istenince Almanca gelir (tek dile düşmüyor).
     expect(resolveLocalizedText(outcome[0]!.label, 'de')).toBe('Platte 700 g');
   });
@@ -107,7 +109,7 @@ describe('ProductVariantService.syncVariants', () => {
   it('etiketi yalnız bir dilde dolu bırakılabilir — eksik dil kayda engel değil', async () => {
     const [mevcut] = await variants.listByProduct(productId);
     const outcome = await variants.syncVariants(productId, [
-      entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, minStockQty: 6, sku: 'TST-700' }),
+      entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, netQuantity: 700, netUnit: 'g', minStockQty: 6, sku: 'TST-700' }),
     ]);
     expect(outcome[0]?.label).toEqual({ tr: 'Tepsi' });
     // Adet BİLDİRİLMEMİŞ (dökme ürün) — `null` sıfıra çevrilmez.
@@ -116,8 +118,8 @@ describe('ProductVariantService.syncVariants', () => {
 
   it('sıra form dizisinin KONUMUNDAN yazılır (müşterinin gördüğü boy sırası)', async () => {
     const [mevcut] = await variants.listByProduct(productId);
-    const first = entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, minStockQty: 6, sku: 'TST-700' });
-    const created = entry({ label: { tr: '1 kg' }, netWeightG: 1000, sku: 'TST-1000' });
+    const first = entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, netQuantity: 700, netUnit: 'g', minStockQty: 6, sku: 'TST-700' });
+    const created = entry({ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g', sku: 'TST-1000' });
 
     const added = await variants.syncVariants(productId, [first, created]);
     expect(added.map((v) => resolveLocalizedText(v.label))).toEqual(['Tepsi', '1 kg']);
@@ -156,7 +158,8 @@ describe('ProductVariantService.syncVariants', () => {
         id: mevcut?.id,
         label: { tr: 'Tepsi' },
         // Net ağırlık BEYAN, brüt ağırlık TAŞINAN — ikisi ayrı alanda ve ayrı sayı.
-        netWeightG: 700,
+        netQuantity: 700,
+        netUnit: 'g',
         packedWeightG: 780,
         packedLengthMm: 240,
         packedWidthMm: 165,
@@ -164,7 +167,8 @@ describe('ProductVariantService.syncVariants', () => {
       }),
     ]);
     expect(outcome[0]).toMatchObject({
-      netWeightG: 700,
+      netQuantity: 700,
+      netUnit: 'g',
       packedWeightG: 780,
       packedLengthMm: 240,
       packedWidthMm: 165,
@@ -214,8 +218,8 @@ describe('ProductVariantService.syncVariants', () => {
 
   it('stok partisi olan varyant silinemez — hata OKUNABİLİR cümleye çevrilir', async () => {
     const added = await variants.syncVariants(productId, [
-      entry({ id: (await variants.listByProduct(productId))[0]?.id, label: { tr: '1 kg' }, netWeightG: 1000 }),
-      entry({ label: { tr: 'Kutu' }, netWeightG: 250 }),
+      entry({ id: (await variants.listByProduct(productId))[0]?.id, label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }),
+      entry({ label: { tr: 'Kutu' }, netQuantity: 250, netUnit: 'g' }),
     ]);
     const withStock = added[1]!;
     await stocks.insert({ variantId: withStock.id, warehouseId, physicalQty: 4, expiryDate: '2030-01-01' });

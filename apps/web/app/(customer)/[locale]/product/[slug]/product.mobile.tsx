@@ -118,7 +118,13 @@ export function ProductMobile({ t, locale, product, selected, onSelect, reviews 
         {product.description && <p className="font-sans text-body-sm leading-[1.6] text-body">{product.description}</p>}
       </div>
 
-      <PhoneDeclaration copy={copy} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} />
+      <PhoneDeclaration
+        copy={copy}
+        locale={locale}
+        declaration={product.declaration}
+        netQuantity={selected?.netQuantity ?? null}
+        netUnit={selected?.netUnit ?? null}
+      />
 
       <div className="px-3 pt-2.5">
         <PhoneReviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} />

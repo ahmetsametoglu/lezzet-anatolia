@@ -64,7 +64,8 @@ function b2cCarpan(kgMaliyet: number, vatRate: number): number {
   return Math.max(piyasa * PIYASA_ALTI, taban);
 }
 
-const kiloMaliyeti = (birimHt: number, netWeightG: number): number => birimHt / (netWeightG / 1000);
+// Katıda kilo, sıvıda litre: ölçek ikisinde de 1000, değişen yalnız birimin ADI (`comparisonPrice`).
+const kiloMaliyeti = (birimHt: number, netQuantity: number): number => birimHt / (netQuantity / 1000);
 
 /**
  * TAHMİNİ maliyet — teklifte olmayan varyantın kategorisinden ölçülür (`supplier-prices.ts` künyesi).
@@ -84,18 +85,18 @@ function fiyatlar(
   const gercekAlis = v.sku ? kaynak.purchase[v.sku]?.unitHt : undefined;
   // Tahminî maliyet kategorinin ölçülmüş medyanından; gramaj yoksa fiyat da yok (aşağıdaki nöbet).
   const tahminKg = v.sku ? tahmin.get(v.sku) : undefined;
-  const alisHt = gercekAlis ?? (v.netWeightG && tahminKg ? euro(tahminKg * (v.netWeightG / 1000)) : undefined);
+  const alisHt = gercekAlis ?? (v.netQuantity && tahminKg ? euro(tahminKg * (v.netQuantity / 1000)) : undefined);
   if (alisHt === undefined) return null;
   const gercek = gercekAlis !== undefined;
   // GRAMAJSIZ VARYANTA GERÇEK FİYAT YAZILMAZ — uydurma bir referans boy KONMAZ (`CLAUDE §1`:
   // ölçülemeyen değer sıfır/varsayılan değildir). Bugün böyle bir varyant YOK: basılı katalogda
   // duran 12 gramaj üretece bağlandı (19.08) ve 175 varyantın hepsi boyunu aldı. Nöbet yine de
   // duruyor — kaynak bir gün eksilirse fiyat sessizce yanlış çıkmasın, gürültü yapsın.
-  if (v.netWeightG === null) {
+  if (v.netQuantity === null) {
     console.log(`  ⚠ ${v.ad}: alış fiyatı var ama GRAMAJ yok — fiyat hesaplanamadı, varyant fiyatsız kaldı`);
     return null;
   }
-  const kg = kiloMaliyeti(alisHt, v.netWeightG);
+  const kg = kiloMaliyeti(alisHt, v.netQuantity);
   // TOPTAN — bant TABANDIR, TAVAN DEĞİL (kullanıcı kararı 19.08). Kendi satış listemizdeki fiyat
   // bandın üstündeyse KORUNUR; altındaysa banda yükselir. Şikâyet "marjlar düşük" idi, "yüksek"
   // değil: bandı tavan gibi uygulamak en kârlı kalemlerimizi ucuzlatırdı (ör. su böreği %33 → %27).

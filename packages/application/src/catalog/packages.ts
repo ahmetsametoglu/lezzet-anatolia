@@ -164,7 +164,10 @@ function toCard(bundle: BundleRow, locale: PreferredLanguage, context: PackageCo
   });
 
   // Ağırlık: bir kalem bile bilinmiyorsa toplam yok; eksiği 0 saymak paketi olduğundan hafif gösterirdi.
-  const weights = items.map(({ item, variant }) => (variant?.netWeightG != null ? variant.netWeightG * item.qty : null));
+  // Yalnız GRAM toplanır: mililitre başka bir büyüklüktür ve ikisini toplamak "700" gibi anlamsız bir sayı verirdi.
+  const weights = items.map(({ item, variant }) =>
+    variant?.netUnit === 'g' && variant.netQuantity != null ? variant.netQuantity * item.qty : null,
+  );
   const totalWeightG = weights.every((w) => w !== null) ? weights.reduce((sum: number, w) => sum + (w ?? 0), 0) : null;
 
   // Kargo kısıtı ÜRÜNÜN alanı (`shippable`), varyantın değil.

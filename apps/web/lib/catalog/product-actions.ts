@@ -26,6 +26,8 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   product_publish_requires_all_locales:
     'Ürün yayına alınamıyor: ad, açıklama, içindekiler ve saklama metni (aile üyesinde aile etiketi de) üç dilde de dolu olmalı.',
   product_publish_requires_allergens: 'Ürün yayına alınamıyor: alerjen beyanı girilmeli ("Alerjen içermez" de bir beyandır).',
+  product_publish_requires_net_quantity:
+    'Ürün yayına alınamıyor: satıştaki her boyun net miktarı (gram ya da mililitre) girilmeli — müşteri miktarı satın almadan önce görmeli.',
   product_family_label_required: 'Aileye bağlı üründe aile etiketi zorunlu.',
 };
 
@@ -91,7 +93,7 @@ export async function createProductAction(
 
     // Yayın kapısı yazmadan önce: yeni üründe birleştirilecek kayıt yok, formda ne varsa ürün odur; kural yalnız `active`e bakar.
     if (fields.status === 'active') {
-      const engel = publishGapMessage(productPublishGaps({ ...fields, name }));
+      const engel = publishGapMessage(productPublishGaps({ ...fields, name, variants }));
       if (engel) return { data: null, error: engel };
     }
     const kodSorunu = barcodeProblems(variants);
@@ -107,7 +109,8 @@ export async function createProductAction(
           name,
           variants: variants.map((v) => ({
             label: v.label,
-            netWeightG: v.netWeightG,
+            netQuantity: v.netQuantity,
+            netUnit: v.netUnit,
             piecesCount: v.piecesCount,
             // Porsiyon türü ve ambalaj ölçüsü BU KAPIDAN da geçer: formda girdisi var ve ambalaj
             // fotoğrafından da okunuyor, burada düşürülünce yeni ürün onları kaybediyordu.
@@ -162,7 +165,7 @@ export async function updateProductAction(
     // Yayın kapısı mevcut kayıtla birleştirilerek sorulur: form kısmi gönderebilir, kısıt ise satırın yazım sonrası hâline bakar.
     if (fields.status === 'active') {
       const mevcut = await new ProductService(db).getById(id);
-      const engel = publishGapMessage(productPublishGaps({ ...mevcut, ...fields }));
+      const engel = publishGapMessage(productPublishGaps({ ...mevcut, ...fields, variants }));
       if (engel) return { data: null, error: engel };
     }
     const kodSorunu = barcodeProblems(variants);
@@ -174,8 +177,11 @@ export async function updateProductAction(
       // Profil kimliği: `assistant_proposal.decided_by` `user_profiles`'a bağlı, auth kimliği geçmek yabancı anahtar ihlali verir.
       staff.profileId,
       async () => {
-        await new ProductService(db).updateDetails(id, fields);
+        // BOYLAR ÖNCE: ürün satışa alınırken veri tarafındaki tetikleyici her satılan boyun net
+        // miktarını arar. Ürün satırı önce yazılsaydı, aynı kayıtta miktarı doldurup satışa çıkaran
+        // operatör kendi doldurduğu alan yüzünden reddedilirdi.
         yazilanBoylar = await new ProductVariantService(db).syncVariants(id, variants);
+        await new ProductService(db).updateDetails(id, fields);
       },
       // ── HANGİ ALANLARIN YAZILDIĞI KAYITTA DURUR ──────────────────────────
       // Operatör formda asistanın önerisini değiştirmiş olabilir; arşiv "öneri uygulandı" derken

@@ -307,8 +307,10 @@ const KAPSAM: KapsamAlani[] = [
       // Pasif varyant paketi `listSellable`'dan DÜŞÜRÜR — o kural bu kova olmadan hiç koşmaz.
       { ad: 'pasif', zorunlu: true, filtre: (q) => q.eq('is_active', false) },
       { ad: 'SKU yok', filtre: (q) => q.is('sku', null) },
-      // Ağırlıksız varyant: paketin toplam ağırlığı hesaplanamaz, satır basılmamalı.
-      { ad: 'ağırlıksız', zorunlu: true, filtre: (q) => q.is('net_weight_g', null) },
+      // Miktarsız varyant: paketin toplam ağırlığı hesaplanamaz, satır basılmamalı — ve o boy satışa çıkamaz.
+      { ad: 'miktarsız', zorunlu: true, filtre: (q) => q.is('net_quantity', null) },
+      // Sıvı boy: birim fiyatı LİTRE başına yazılır; gramla aynı gövdeden geçtiği için kovası ayrı.
+      { ad: 'mililitreli', filtre: (q) => q.eq('net_unit', 'ml') },
       /*
         AMBALAJ ÖLÇÜSÜ — ÜÇ HÂL, üçü de zorunlu (28.08). Kargo kanalının girdisi ve her hâlin
         ekranda ayrı bir karşılığı var; biri hiç doğmazsa o karşılık sınanmamış olur:

@@ -108,7 +108,8 @@ async function pricedProductIds(productIds: string[]): Promise<Set<string>> {
 function variantIdentity(variant: ProductVariant, codes: readonly VariantBarcode[]) {
   return {
     sku: variant.sku,
-    netWeightG: variant.netWeightG,
+    netQuantity: variant.netQuantity,
+    netUnit: variant.netUnit,
     piecesCount: variant.piecesCount,
     barcodes: codes.filter((c) => c.variantId === variant.id).map((c) => ({ code: c.code, kind: c.kind, qtyPerCode: c.qtyPerCode })),
   };

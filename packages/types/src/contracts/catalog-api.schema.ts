@@ -78,8 +78,10 @@ const CatalogSellingSchema = z.object({
    * Alan hiç yoksa indirim de yoktur; indirimin sebebi (partinin tarihi) taşınmaz.
    */
   wasCents: z.number().int().optional(),
-  /** Kilogram başına fiyat (ham cent) — INCO gereği raf fiyatının yanında; `null` = net ağırlık ya da fiyat yok, kıyas satırı çizilmez. */
+  /** Birim fiyat (ham cent) — raf fiyatının yanında; `null` = net miktar ya da fiyat yok, kıyas satırı çizilmez. */
   comparisonCents: z.number().int().nullable(),
+  /** Kıyasın birimi — katıda `kg`, sıvıda `L`; sıvıyı kilo başına yazmak kıyası yanlış yapar. `null` = kıyas yok. */
+  comparisonUnit: z.enum(['kg', 'L']).nullable(),
   /**
    * Teklifin adet tavanı ("En fazla 5 adet" şablonunun sayısı); `null` sınırsız değil, bu satışta tavan doğmadı demektir.
    * Tavan yalnız teklifte vardır: teklif fiyatı bir partiye bağlıdır, partide kalandan fazlası normal fiyata taşar (DOMAIN §5).
@@ -103,7 +105,7 @@ const CatalogSellingSchema = z.object({
  * Satılabilir boy — detaydaki "Boy seçin" kartı (`StorefrontVariant` aynası).
  * Fiyat boy düzeyinde taşınır ki seçim değişince fiyat, kıyas fiyatı ve düğmedeki toplam aynı satırdan güncellensin.
  */
-export const CatalogVariantSchema = ProductVariantSchema.pick({ id: true, netWeightG: true })
+export const CatalogVariantSchema = ProductVariantSchema.pick({ id: true, netQuantity: true, netUnit: true })
   .merge(CatalogSellingSchema)
   .extend({
     /** Boy etiketi ("700 g tepsi"), seçili dilde; tek boylu üründe boş olabilir. */

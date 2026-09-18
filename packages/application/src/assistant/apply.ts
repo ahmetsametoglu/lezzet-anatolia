@@ -324,7 +324,8 @@ const applyProductCreate: Applier = async (db, raw) => {
       label: v.label,
       // Ambalajdan okunan ölçüler (11.08): etiketi yazıp ağırlığı boş bırakmak aynı bilgiyi yarım
       // kaydetmek olurdu — kilo başı fiyat ve kargo hesabı bu alandan çıkar.
-      netWeightG: v.netWeightG,
+      netQuantity: v.netQuantity,
+      netUnit: v.netUnit,
       piecesCount: v.piecesCount,
       portionKind: v.portionKind,
       // Ambalajlı ürün ölçüsü — ambalajda YAZMAZ, ölçülür (şema künyesi). Model tahmin etmesin

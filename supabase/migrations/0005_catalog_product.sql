@@ -114,20 +114,28 @@ create index product_category_idx on public.product (category_id);
 
 create type portion_kind as enum ('item', 'slice');
 
+-- Net miktarın birimi — KAPALI küme: katı gram, sıvı mililitre. Üçüncü bir birim ("adet") burada yok, çünkü adet ayrı
+-- kolonda (`pieces_count`) ve ayrı soruya cevap verir. Birim fiyat da buradan seçilir: g → €/kg, ml → €/L.
+create type net_unit as enum ('g', 'ml');
+
 create table public.product_variant (
   id uuid primary key default gen_random_uuid(),
   product_id uuid not null references public.product (id) on delete cascade,
   -- Müşteriye görünen boy etiketi ("700 g tepsi") — çok dilli; tek boylu üründe boş olabilir, birden çok varyantta en az
   -- bir dilin dolu olması form kuralıdır.
   label jsonb not null default '{}'::jsonb,          -- LocalizedText
-  net_weight_g int,
+  -- NET MİKTAR = sayı + BİRİM. Gramla sınırlı bir kolon sıvıyı hiç yazamıyordu: sirkenin, zeytinyağının ve özlerin
+  -- ambalajında mililitre yazar ve birim fiyatı da litre başına verilir (98/6/EC). "500 ml" etiketi serbest metindir,
+  -- kodun hesap yapabildiği bir sayı değil — bu yüzden ölçü kendi birimiyle taşınır.
+  net_quantity int check (net_quantity is null or net_quantity > 0),
+  net_unit net_unit,
   -- Paket içi adet ("12'li" ile "36'lı" aynı ürünün iki boyu) — gramajın yanında, ayrı soruya cevap verir;
   -- null = adet bilgisi yok (dökme ürün), sıfır değil.
   pieces_count int,
   -- Porsiyon türü: 4'lü simit dört ayrı parçadır, 12 dilimlik cheesecake tek pasta; ekran doğru kelimeyi ancak böyle yazar.
   -- Kaynaktan gelir, tahmin edilmez; null = tek parça ürün.
   portion_kind portion_kind,
-  -- Ambalajlı ürün ölçüsü — kargonun girdisi; `net_weight_g` gıdanın INCO ağırlığıdır, bu taşınan kutunun.
+  -- Ambalajlı ürün ölçüsü — kargonun girdisi; `net_quantity` gıdanın INCO miktarıdır, bu taşınan kutunun.
   -- Milimetre ve gram, çünkü tam sayı alanı ondalığı sessizce yuvarlar; null = ölçülmedi, ölçülmüş ambalaj sıfır olamaz.
   packed_weight_g int check (packed_weight_g is null or packed_weight_g > 0),
   packed_length_mm int check (packed_length_mm is null or packed_length_mm > 0),
@@ -139,6 +147,9 @@ create table public.product_variant (
   sort_order int not null default 0,
   created_at timestamptz not null default now(),
 
+  -- Sayı ve birim BİRLİKTE yaşar: birimsiz sayı "500 ne?" demektir, sayısız birim hiçbir şey söylemez.
+  constraint product_variant_net_quantity_pair check ((net_quantity is null) = (net_unit is null)),
+
   -- Üç ölçü birlikte yaşar ya da hiç: yarım kutu hacim vermez ama "ölçüsü var" diye okunurdu.
   -- Ağırlık kuralın dışında: kimi tarife yalnız ağırlığa bakar ve operatör önce tartıp sonra ölçebilir.
   constraint product_variant_packed_dims_all_or_none check (
@@ -147,6 +158,51 @@ create table public.product_variant (
   )
 );
 create index product_variant_product_idx on public.product_variant (product_id);
+
+/*
+  SATIŞTAKİ BOYUN NET MİKTARI ZORUNLU (işletmeci kararı 17.09).
+
+  Kural iki tabloya birden bakar (ürünün durumu · boyun miktarı), bu yüzden `check` ile yazılamaz: kısıt tek satırı görür.
+  Öteki yayın kuralları (`product_publish_requires_*`) ürünün kendi kolonlarında durduğu için kısıt olarak yazılabiliyordu;
+  bu, tetikleyiciyle yazılıyor ve aynı adı taşıyor — uygulama kısıt adına göre cümle kuruyor (`CONSTRAINT_MESSAGES`).
+
+  Neden veride: miktar müşteriye satın almadan ÖNCE gösterilmek zorunda (INCO md. 9/1-e, uzaktan satış md. 14) ve birim
+  fiyat ondan çıkar. Yalnız uygulamada kalsaydı ikinci bir yazma yolu (seed, betik, panel dışı) kuralı atlayabilirdi.
+
+  Ölçüt "SATILAN boy": pasif varyant müşteriye görünmez, miktarsız durabilir.
+*/
+create or replace function public.assert_product_net_quantity() returns trigger
+language plpgsql as $$
+begin
+  if new.status = 'active' and exists (
+    select 1 from public.product_variant v
+    where v.product_id = new.id and v.is_active and v.net_quantity is null
+  ) then
+    raise exception 'product_publish_requires_net_quantity' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+
+create trigger product_publish_requires_net_quantity
+  before insert or update of status on public.product
+  for each row execute function public.assert_product_net_quantity();
+
+-- Öteki yön: satıştaki ürünün boyu miktarsız AÇILAMAZ ve miktarı sonradan boşaltılamaz. Yalnız ürün tarafına bakan bir
+-- tetikleyici, ürün satışa çıktıktan sonra eklenen boyu kaçırırdı.
+create or replace function public.assert_variant_net_quantity() returns trigger
+language plpgsql as $$
+begin
+  if new.is_active and new.net_quantity is null and exists (
+    select 1 from public.product p where p.id = new.product_id and p.status = 'active'
+  ) then
+    raise exception 'product_publish_requires_net_quantity' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+
+create trigger product_variant_requires_net_quantity
+  before insert or update on public.product_variant
+  for each row execute function public.assert_variant_net_quantity();
 
 -- Ürün galerisi — detaydaki ek fotoğraflar; kapak burada tekrarlanmaz, liste ve kart onu ürün satırından okur.
 -- Her fotoğrafın kendi odağı var ama tek çerçevede (detay 3:2) görünür.

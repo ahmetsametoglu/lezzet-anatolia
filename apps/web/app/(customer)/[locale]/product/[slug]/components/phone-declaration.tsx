@@ -4,7 +4,7 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import type productMessages from '@lezzet/i18n/customer/product';
 import { NUTRITION_KEYS, type Nutrition } from '@lezzet/types';
 import type { StorefrontDeclaration } from '@lezzet/application';
-import { formatDecimal } from '@/lib/storefront/format';
+import { formatDecimal, formatNetQuantity } from '@/lib/storefront/format';
 import { allergenNames, gram } from './declaration';
 
 /*
@@ -97,10 +97,11 @@ interface PhoneDeclarationProps {
   locale: Locale;
   declaration: StorefrontDeclaration;
   /** SEÇİLİ boyun net ağırlığı — beyan 100 g üzerinden sabit, paketin ağırlığı boya göre değişir. */
-  netWeightG: number | null;
+  netQuantity: number | null;
+  netUnit: 'g' | 'ml' | null;
 }
 
-export function PhoneDeclaration({ copy, locale, declaration, netWeightG }: PhoneDeclarationProps) {
+export function PhoneDeclaration({ copy, locale, declaration, netQuantity, netUnit }: PhoneDeclarationProps) {
   const text = 'font-sans text-note leading-[1.6] text-body';
   return (
     <div className="mx-3 my-1 border-y-[1.5px] border-ink">
@@ -121,8 +122,10 @@ export function PhoneDeclaration({ copy, locale, declaration, netWeightG }: Phon
         {declaration.nutrition !== null && (
           <p className={text}>{copy.accordion.per100.replace('{rows}', nutritionLine(declaration.nutrition, copy.nutrition, locale))}</p>
         )}
-        {netWeightG !== null && (
-          <p className="font-sans text-micro font-semibold text-ink">{copy.accordion.netWeight.replace('{grams}', formatDecimal(netWeightG, locale, 0))}</p>
+        {netQuantity !== null && netUnit !== null && (
+          <p className="font-sans text-micro font-semibold text-ink">
+            {copy.accordion.netQuantity.replace('{quantity}', formatNetQuantity(netQuantity, netUnit, locale))}
+          </p>
         )}
       </Accordion>
       <Accordion title={copy.accordion.storage} divided>

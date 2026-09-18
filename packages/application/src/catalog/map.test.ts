@@ -90,7 +90,8 @@ const BOS_VARYANT: ProductVariant = {
   id: '',
   productId: 'p1',
   label: {},
-  netWeightG: null,
+  netQuantity: null,
+  netUnit: null,
   piecesCount: null,
   // Tek parça ürün: porsiyon sorusu hiç doğmuyor (`pieces_count` de null).
   portionKind: null,

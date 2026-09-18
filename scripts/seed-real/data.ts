@@ -105,12 +105,13 @@ interface CatalogLine extends PurchaseLine {
   /** Katalog kaynağındaki varyant kodu; ürün, görsel ve metin oradan gelir. */
   sku: string;
   /** Satış birimi katalogdakinden farklıysa faturadaki birim. */
-  unit?: { label: string; netWeightG: number; piecesCount: number };
+  unit?: { label: string; netQuantity: number; piecesCount: number };
 }
 
 interface DraftVariant extends PurchaseLine {
   label?: string;
-  netWeightG?: number;
+  /** Ambalajdaki net miktar; BİRİMİ etiketten okunur ("500 ml" → ml, "240 g" → g). */
+  netQuantity?: number;
   sku?: string;
 }
 
@@ -175,7 +176,7 @@ interface Purchase {
 const behotrade = (
   name: string,
   label: string | undefined,
-  netWeightG: number | undefined,
+  netQuantity: number | undefined,
   nameAtSupplier: string,
   qty: number,
   unitCost: number,
@@ -188,7 +189,7 @@ const behotrade = (
   // kargolanır. `ek` sonra geldiği için istisna gerekirse kalem kendi rejimini yazabilir.
   rejim: 'raf',
   ...ek,
-  variants: [{ label, netWeightG, nameAtSupplier, qty, unitCost }],
+  variants: [{ label, netQuantity, nameAtSupplier, qty, unitCost }],
 });
 
 /** Tedarikçinin gönderdiği ambalaj ustaları (`temp/beho`) — depoya küçültülmüş kopyaları girdi. */
@@ -222,7 +223,7 @@ export const PURCHASES: Purchase[] = [
         nameAtSupplier: 'LEZZA Kunefah (Included plate and syrup) 2*145 gr– 420g',
         qty: 12,
         unitCost: 3.05,
-        unit: { label: '2 × 145 g', netWeightG: 290, piecesCount: 2 },
+        unit: { label: '2 × 145 g', netQuantity: 290, piecesCount: 2 },
       },
       { sku: '700101', supplierCode: '700101', nameAtSupplier: 'LEZZA Turkish Bagel-Simit (% 80 Cooked) 4x105 gr', qty: 12, unitCost: 1.75 },
       { sku: '700402', supplierCode: '700402', nameAtSupplier: 'LEZZA Cheese Pastry Rond (Peynirli Su Boregi Yuvarlak Tepsi) 800 gr', qty: 12, unitCost: 4.5 },
@@ -251,7 +252,7 @@ export const PURCHASES: Purchase[] = [
           fr: 'Döner de viande traditionnel surgelé ; à cuire à la poêle ou au four.',
           de: 'Tiefgekühlter traditioneller Fleischdöner; in der Pfanne oder im Ofen zuzubereiten.',
         },
-        variants: [{ label: '700 g', netWeightG: 700, sku: '312701', supplierCode: '312701', nameAtSupplier: 'LEZZA Traditional Meet Doner 10x700gr', qty: 10, unitCost: 8 }],
+        variants: [{ label: '700 g', netQuantity: 700, sku: '312701', supplierCode: '312701', nameAtSupplier: 'LEZZA Traditional Meet Doner 10x700gr', qty: 10, unitCost: 8 }],
       },
       {
         name: 'LEZZA Traditional Chicken Doner',
@@ -264,7 +265,7 @@ export const PURCHASES: Purchase[] = [
           fr: 'Döner de poulet traditionnel surgelé ; à cuire à la poêle ou au four.',
           de: 'Tiefgekühlter traditioneller Hähnchendöner; in der Pfanne oder im Ofen zuzubereiten.',
         },
-        variants: [{ label: '700 g', netWeightG: 700, sku: '312702', supplierCode: '312702', nameAtSupplier: 'LEZZA Traditional Chicken Doner 10x700gr', qty: 10, unitCost: 6.1 }],
+        variants: [{ label: '700 g', netQuantity: 700, sku: '312702', supplierCode: '312702', nameAtSupplier: 'LEZZA Traditional Chicken Doner 10x700gr', qty: 10, unitCost: 6.1 }],
       },
       {
         name: 'LEZZA Manti with Minced Meat (Kiymali)',
@@ -277,7 +278,7 @@ export const PURCHASES: Purchase[] = [
           fr: 'Mantı farcis à la viande hachée ; à pocher, servis avec du yaourt et une sauce.',
           de: 'Mantı mit Hackfleischfüllung; nach dem Garen mit Joghurt und Sauce serviert.',
         },
-        variants: [{ label: '1000 g', netWeightG: 1000, sku: '200503', supplierCode: '200503', nameAtSupplier: 'LEZZA Manti with Minced Meat (Kiymali )1000 gr', qty: 10, unitCost: 5.15 }],
+        variants: [{ label: '1000 g', netQuantity: 1000, sku: '200503', supplierCode: '200503', nameAtSupplier: 'LEZZA Manti with Minced Meat (Kiymali )1000 gr', qty: 10, unitCost: 5.15 }],
       },
     ],
   },
@@ -333,7 +334,7 @@ export const PURCHASES: Purchase[] = [
       }),
       // Sirkelerin ortak künyesi: doğal fermantasyon, katkı ve koruyucu içermez — ambalajın ön yüzünde
       // yazılı (`temp/beho` ustaları). Saklama, içindekiler ve besin değeri hiçbir kaynakta YOK.
-      behotrade('Meidoorn azijn', '500 ml', undefined, 'Meidoorn azijn 500ml', 12, 3, {
+      behotrade('Meidoorn azijn', '500 ml', 500, 'Meidoorn azijn 500ml', 12, 3, {
         nameTr: 'Alıç Sirkesi',
         nameFr: "Vinaigre d'aubépine",
         nameDe: 'Weißdornessig',
@@ -344,7 +345,7 @@ export const PURCHASES: Purchase[] = [
         },
         image: usta('meidoorn-azijn', 'alıç.jpg'),
       }),
-      behotrade('Ananas azijn', '500 ml', undefined, 'Ananas azijn 500ml', 12, 3, {
+      behotrade('Ananas azijn', '500 ml', 500, 'Ananas azijn 500ml', 12, 3, {
         nameTr: 'Ananas Sirkesi',
         nameFr: "Vinaigre d'ananas",
         nameDe: 'Ananasessig',
@@ -355,7 +356,7 @@ export const PURCHASES: Purchase[] = [
         },
         image: usta('ananas-azijn', 'ananas_sirkesi_şifamix_G03.pdf'),
       }),
-      behotrade('Enginar azijn', '500 ml', undefined, 'Enginar azijn 500ml', 12, 3, {
+      behotrade('Enginar azijn', '500 ml', 500, 'Enginar azijn 500ml', 12, 3, {
         nameTr: 'Enginar Sirkesi',
         nameFr: "Vinaigre d'artichaut",
         nameDe: 'Artischockenessig',
@@ -365,7 +366,7 @@ export const PURCHASES: Purchase[] = [
           de: 'Artischockenessig aus natürlicher Gärung, ohne Zusatz- und Konservierungsstoffe.',
         },
       }),
-      behotrade('Appel azijn', '500 ml', undefined, 'Appel azijn 500ml', 12, 3, {
+      behotrade('Appel azijn', '500 ml', 500, 'Appel azijn 500ml', 12, 3, {
         nameTr: 'Elma Sirkesi',
         nameFr: 'Vinaigre de cidre',
         nameDe: 'Apfelessig',
@@ -376,7 +377,7 @@ export const PURCHASES: Purchase[] = [
         },
         image: usta('appel-azijn', 'elma_y02.jpg'),
       }),
-      behotrade('Isgin azijn', '500 ml', undefined, 'Isgin azijn 500ml', 12, 3, {
+      behotrade('Isgin azijn', '500 ml', 500, 'Isgin azijn 500ml', 12, 3, {
         nameTr: 'Işkın Kökü Sirkesi',
         nameFr: 'Vinaigre de racine de rhubarbe',
         nameDe: 'Rhabarberwurzelessig',
@@ -389,7 +390,7 @@ export const PURCHASES: Purchase[] = [
       }),
       // Elimizdeki Şifamix ustası "Nar Ekşisi (Granaatappelsiroop)" diyor, fatura "extraat" — şurup mu öz
       // mü belirsiz olduğu için kapak BAĞLANMADI (`nar-eksisi.webp` depoda hazır bekliyor).
-      behotrade('Granaatappelextraat', '250 ml', undefined, 'Granaatappelextraat 250ml', 12, 3.45, {
+      behotrade('Granaatappelextraat', '250 ml', 250, 'Granaatappelextraat 250ml', 12, 3.45, {
         nameTr: 'Nar Özü',
         nameFr: 'Extrait de grenade',
         nameDe: 'Granatapfelextrakt',
@@ -409,7 +410,7 @@ export const PURCHASES: Purchase[] = [
           de: 'Dickflüssiger Kiefernzapfenextrakt; löffelweise oder mit Wasser verdünnt.',
         },
       }),
-      behotrade('Sifamix Johannesbrood extract', '700 ml', undefined, 'Sifamix Johannesbrood extract 700ml', 12, 3.75, {
+      behotrade('Sifamix Johannesbrood extract', '700 ml', 700, 'Sifamix Johannesbrood extract 700ml', 12, 3.75, {
         nameTr: 'Şifamix Keçiboynuzu Özü',
         nameFr: 'Extrait de caroube Şifamix',
         nameDe: 'Şifamix Johannisbrotextrakt',
@@ -431,7 +432,7 @@ export const PURCHASES: Purchase[] = [
         },
         image: usta('sifamix-andiz-extract', 'andız.zip/andız_01.jpg'),
       }),
-      behotrade('Coconut mix', '250 ml', undefined, 'Coconut mix 250ml', 12, 4.95, {
+      behotrade('Coconut mix', '250 ml', 250, 'Coconut mix 250ml', 12, 4.95, {
         nameTr: 'Coconut Mix',
         nameFr: 'Coconut Mix',
         nameDe: 'Coconut Mix',
@@ -443,7 +444,7 @@ export const PURCHASES: Purchase[] = [
         },
         image: usta('coconut-mix', 'coconut_trendyol.zip/coconut_01.jpg'),
       }),
-      behotrade('Honing azijn', '500 ml', undefined, 'Honing azijn 500ml', 12, 3, {
+      behotrade('Honing azijn', '500 ml', 500, 'Honing azijn 500ml', 12, 3, {
         nameTr: 'Bal Sirkesi',
         nameFr: 'Vinaigre de miel',
         nameDe: 'Honigessig',
@@ -467,8 +468,8 @@ export const PURCHASES: Purchase[] = [
           de: 'Speiseolivenöl; für Salate, zum Braten und Kochen.',
         },
         variants: [
-          { label: '5 l', nameAtSupplier: 'Olijfolie 5lt', qty: 4, unitCost: 29.9 },
-          { label: '750 ml', nameAtSupplier: 'Olijfolie 750ml', qty: 12, unitCost: 5.5 },
+          { label: '5 l', netQuantity: 5000, nameAtSupplier: 'Olijfolie 5lt', qty: 4, unitCost: 29.9 },
+          { label: '750 ml', netQuantity: 750, nameAtSupplier: 'Olijfolie 750ml', qty: 12, unitCost: 5.5 },
         ],
       },
       behotrade('Pistache', '700 g', 700, 'Pistache 700gr', 20, 16.5, {
@@ -481,7 +482,7 @@ export const PURCHASES: Purchase[] = [
           de: 'Pistazien; als Snack oder zum Backen.',
         },
       }),
-      behotrade('Bromelain siroop', '250 ml', undefined, 'Bromelain siroop 250ml', 18, 8, {
+      behotrade('Bromelain siroop', '250 ml', 250, 'Bromelain siroop 250ml', 18, 8, {
         nameTr: 'Bromelain Şurubu',
         nameFr: 'Sirop de broméline',
         nameDe: 'Bromelain-Sirup',
@@ -499,7 +500,7 @@ export const PURCHASES: Purchase[] = [
       // Kekre ve Propolis: içindekiler listesi markanın kendi mağazasında YAZILI, olduğu gibi alındı.
       // Sağlık iddiası taşıyan cümleler (bağışıklık, iltihap, ağrı) bilerek taşınmadı — AB'de beyan
       // düzenlemeye tabi (1924/2006) ve kaynağı bir satış sayfası.
-      behotrade('Zuhre Ana Kekre', '250 ml', undefined, 'Zuhre Ana Kekre 250ml', 18, 8.45, {
+      behotrade('Zuhre Ana Kekre', '250 ml', 250, 'Zuhre Ana Kekre 250ml', 18, 8.45, {
         nameTr: 'Zühre Ana Kekre Termojenik Mix',
         nameFr: 'Zühre Ana Kekre, concentré aux fruits',
         nameDe: 'Zühre Ana Kekre, Fruchtkonzentrat',
@@ -1515,8 +1516,8 @@ export const RECIPES: SeedRecipe[] = [
  */
 
 /** UYDURMA boy — faturası gramaj yazmayan tek boylu taslağın; boysuz ürün müşteriye miktarsız görünür. */
-export const FICTION_SIZES: Record<string, { label: string; netWeightG: number }> = {
-  'Gedroogde perzik': { label: '200 g', netWeightG: 200 },
+export const FICTION_SIZES: Record<string, { label: string; netQuantity: number }> = {
+  'Gedroogde perzik': { label: '200 g', netQuantity: 200 },
 };
 
 /** kJ, kcal'den türer: iki kalemin birbiriyle çelişmesi imkânsız olsun (INCO ikisini birden ister). */

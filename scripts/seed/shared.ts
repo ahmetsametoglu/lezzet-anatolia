@@ -203,7 +203,8 @@ export interface VaryantRef {
    * yana duruyor; ağırlıksız bir fiyat ikisini aynı banda koyar ve ekrandaki her fiyat listesi
    * bariz yanlış görünür. `null` = boysuz ürün (bütün pastalar) — çağıran kendi tabanını kullanır.
    */
-  netWeightG: number | null;
+  netQuantity: number | null;
+  netUnit: 'g' | 'ml' | null;
   /**
    * Ürünün hedef marjı (%). Alış fiyatı buradan TÜRER (09.08) — sabit yazılmaz.
    * `null` = hedef belirlenmemiş; çağıran kendi varsayılanını kullanır.
@@ -231,7 +232,8 @@ export async function katalogVaryantlari(db: Db): Promise<VaryantRef[]> {
       vatRate: p.vatRate,
       status: p.status,
       shelfLifeDays: p.shelfLifeDays,
-      netWeightG: v.netWeightG ?? null,
+      netQuantity: v.netQuantity ?? null,
+      netUnit: v.netUnit ?? null,
       targetMarginPercent: p.targetMarginPercent ?? null,
       sku: v.sku ?? null,
     })),

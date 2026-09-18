@@ -210,7 +210,15 @@ export function ProductPreview({ product, onEdit, families, onSelectProduct }: P
             <Spec label="Tarih tipi" value={product.dateType === 'DLC' ? 'DLC (güvenlik)' : 'DDM (kalite)'} />
             <Spec label="Raf ömrü" value={product.shelfLifeDays != null ? `${product.shelfLifeDays} gün` : '—'} />
             <Spec label="Kargo izni" value={product.shippable ? 'Açık' : 'Kapalı · soğuk zincir'} warn={!product.shippable} />
-            <Spec label="Net ağırlık" value={product.variants[0]?.netWeightG != null ? `${product.variants[0].netWeightG} g` : '—'} />
+            {/* Birim değerin İÇİNDE: "500" tek başına gram mı mililitre mi söylemez. */}
+            <Spec
+              label="Net miktar"
+              value={
+                product.variants[0]?.netQuantity != null && product.variants[0].netUnit
+                  ? `${product.variants[0].netQuantity} ${product.variants[0].netUnit}`
+                  : '—'
+              }
+            />
             <Spec label="Koleksiyon" value={product.collectionNames.length > 0 ? product.collectionNames.join(', ') : '—'} />
           </div>
 

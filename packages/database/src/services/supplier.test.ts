@@ -26,8 +26,8 @@ beforeAll(async () => {
     name: { tr: `Eşleme ürünü ${stamp}` },
     categoryId,
     variants: [
-      { label: { tr: '500 g' }, netWeightG: 500, minStockQty: 0 },
-      { label: { tr: '1 kg' }, netWeightG: 1000, minStockQty: 0 },
+      { label: { tr: '500 g' }, netQuantity: 500, netUnit: 'g', minStockQty: 0 },
+      { label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g', minStockQty: 0 },
     ],
   });
   productId = product.id;

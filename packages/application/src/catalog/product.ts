@@ -65,7 +65,7 @@ function galleryOf(cover: StorefrontImage, extras: StorefrontImage[]): Storefron
 
 /**
  * Beyan bloğu — 100 g üzerinden sabit olduğu için ürüne aittir.
- * Net ağırlık burada yok: boya göre değişir, seçimle birlikte varyanttan gelir (`StorefrontVariant.netWeightG`).
+ * Net miktar burada yok: boya göre değişir, seçimle birlikte varyanttan gelir (`StorefrontVariant.netQuantity`).
  */
 function declarationOf(
   product: {

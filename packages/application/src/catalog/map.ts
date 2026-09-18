@@ -1,6 +1,6 @@
 import { percentOffCents, resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
-import { pricePerKg } from '@lezzet/helper';
+import { comparisonPrice } from '@lezzet/helper';
 import { cdnImageUrl, publicImageUrl } from '@lezzet/storage';
 import {
   CROP_CENTER,
@@ -255,6 +255,15 @@ export const EMPTY_PRODUCT_CONTEXT: ProductContext = {
 };
 
 /**
+ * Kıyas fiyatı ve BİRİMİ birlikte doğar — sayıyı birimsiz taşımak, sıvıyı "€/kg" diye yazan bir ekranı mümkün kılardı.
+ * Miktar, birim ya da fiyat yoksa ikisi de `null` olur ve satır hiç çizilmez (uydurma kıyas, kıyassızlıktan kötüdür).
+ */
+function comparisonOf(priceCents: number | null, variant: Pick<ProductVariant, 'netQuantity' | 'netUnit'>) {
+  const comparison = priceCents === null ? null : comparisonPrice(priceCents, variant.netQuantity, variant.netUnit);
+  return { comparisonCents: comparison?.cents ?? null, comparisonUnit: comparison?.per ?? null };
+}
+
+/**
  * Tek varyantın satış künyesi — fiyat, kıyas fiyatı, indirim referansı, adet tavanı ve tükendi.
  *
  * Kart da (ilk varyanttan) detay sayfası da (her varyant için) BU indirgemeyi kullanır. Ayrı
@@ -296,8 +305,8 @@ export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
     // Teklif kazandıysa üstü çizilen, teklifin YERİNE GEÇTİĞİ fiyattır.
     wasCents: resolved.sellable && resolved.source === 'offer' ? (withoutOffer ?? undefined) : undefined,
     // Kıyas fiyatı ÖDENEN fiyattan hesaplanır (teklif kazandıysa indirimli olandan) — müşteri
-    // karşılaştırırken bugün ödeyeceği tutarı kıyaslar. Net ağırlık girilmemişse satır düşer.
-    comparisonCents: priceCents != null ? pricePerKg(priceCents, variant.netWeightG) : null,
+    // karşılaştırırken bugün ödeyeceği tutarı kıyaslar. Net miktar girilmemişse satır düşer.
+    ...comparisonOf(priceCents, variant),
     // Adet tavanı yalnız teklifte vardır (partide kalan miktar); normal satışta tavan yoktur.
     limitLabel: resolved.sellable && resolved.quantityCap != null ? String(resolved.quantityCap) : null,
     // Teklif kazandıysa kalem O PARTİYE çıpalanır: indirimin sebebi partinin tarihidir, başka
@@ -364,10 +373,12 @@ export function toVariant(
     label: resolveLocalizedText(variant.label, locale),
     piecesCount: variant.piecesCount ?? null,
     portionKind: variant.portionKind ?? null,
-    netWeightG: variant.netWeightG,
+    netQuantity: variant.netQuantity,
+    netUnit: variant.netUnit,
     priceCents: selling.priceCents,
     wasCents: selling.wasCents,
     comparisonCents: selling.comparisonCents,
+    comparisonUnit: selling.comparisonUnit,
     limitLabel: selling.limitLabel,
     stockId: selling.stockId,
     stockStatus,
@@ -445,6 +456,7 @@ export function toProduct(
     // Satırdan aynen geçiyor — `stockStatusOf` de aynı değeri okuyor, ikinci bir kaynak yok.
     shippable: row.shippable,
     comparisonCents: selling?.comparisonCents ?? null,
+    comparisonUnit: selling?.comparisonUnit ?? null,
     priceCents: selling?.priceCents ?? null,
     wasCents: selling?.wasCents,
     limitLabel: selling?.limitLabel ?? null,

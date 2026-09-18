@@ -71,7 +71,8 @@ async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>
     categoryId,
     status: 'active',
     ...(opts.soguk ? { shippable: false } : {}),
-    variants: boylar.map((b) => ({ label: { tr: b.label } })),
+    // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`); ölçü testin konusu değil, varlığı şart.
+    variants: boylar.map((b) => ({ label: { tr: b.label }, netQuantity: 500, netUnit: 'g' as const })),
   });
   productIds.push(product.id);
   for (const [i, boy] of boylar.entries()) {

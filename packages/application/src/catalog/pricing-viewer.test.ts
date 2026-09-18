@@ -71,7 +71,7 @@ beforeAll(async () => {
     allergens: [],
     categoryId,
     status: 'active',
-    variants: [{ label: { tr: '1 kg' } }],
+    variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
   });
   productId = created.product.id;
   productSlug = created.product.slug;

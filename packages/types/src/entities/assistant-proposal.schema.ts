@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PortionKindEnum } from './product-variant.schema';
+import { NetUnitEnum, PortionKindEnum } from './product-variant.schema';
 import { NewVariantBarcodeSchema } from './variant-barcode.schema';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
@@ -322,7 +322,9 @@ export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(Product
     .array(
       z.object({
         label: LocalizedTextSchema,
-        netWeightG: z.number().positive().nullable().default(null),
+        /** Net miktar ve BİRİMİ — ambalajda yazan miktar; birimsiz sayı "500 ne?" demektir (`0005`). */
+        netQuantity: z.number().int().positive().nullable().default(null),
+        netUnit: NetUnitEnum.nullable().default(null),
         piecesCount: z.number().int().positive().nullable().default(null),
         portionKind: PortionKindEnum.nullable().default(null),
         /**
@@ -366,7 +368,8 @@ export const ProductDraftPayloadSchema = ProductReviewSignalsSchema.extend({
         /** Boyun BUGÜNKÜ okunur adı — kategoriyle aynı gerekçe: panel uuid göstermez. */
         variantLabel: z.string().min(1),
         label: LocalizedTextSchema.optional(),
-        netWeightG: z.number().int().positive().nullable().optional(),
+        netQuantity: z.number().int().positive().nullable().optional(),
+        netUnit: NetUnitEnum.nullable().optional(),
         piecesCount: z.number().int().positive().nullable().optional(),
         portionKind: PortionKindEnum.nullable().optional(),
         /** Ambalajlı ürün ölçüsü ambalajda YAZMAZ, tartılır: model tahmin etmez, operatör ya da tedarikçi künyesi söyler. */

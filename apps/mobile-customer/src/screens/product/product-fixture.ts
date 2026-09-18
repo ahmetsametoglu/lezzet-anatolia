@@ -21,9 +21,11 @@ export function productVariant(index: number, overrides: Partial<CatalogVariant>
   return {
     id: uuid(1100 + index),
     label: `${index * 500} g tepsi`,
-    netWeightG: index * 500,
+    netQuantity: index * 500,
+    netUnit: 'g',
     priceCents: 890 * index,
     comparisonCents: 1780,
+    comparisonUnit: 'kg',
     limitLabel: null,
     stockId: uuid(1200 + index),
     stockStatus: 'available',

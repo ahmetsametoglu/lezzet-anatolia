@@ -94,7 +94,22 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
       targetMarginPercent: null,
       autoPrice: false,
       ...DEFAULT_CROP_FIELDS,
-      variants: [{ label: {}, netWeightG: null, piecesCount: null, portionKind: null, packedWeightG: null, packedLengthMm: null, packedWidthMm: null, packedHeightMm: null, minStockQty: null, sku: null, isActive: true }],
+      variants: [
+        {
+          label: {},
+          netQuantity: null,
+          netUnit: 'g',
+          piecesCount: null,
+          portionKind: null,
+          packedWeightG: null,
+          packedLengthMm: null,
+          packedWidthMm: null,
+          packedHeightMm: null,
+          minStockQty: null,
+          sku: null,
+          isActive: true,
+        },
+      ],
     };
   }
   return {
@@ -118,7 +133,8 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
     variants: p.variants.map((v) => ({
       id: v.id,
       label: v.label,
-      netWeightG: v.netWeightG,
+      netQuantity: v.netQuantity,
+      netUnit: v.netUnit,
       piecesCount: v.piecesCount,
       portionKind: v.portionKind,
       packedWeightG: v.packedWeightG,
@@ -162,7 +178,7 @@ export function toActionPayload(values: ProductFormValues) {
           v.id ||
           resolveLocalizedText(v.label) ||
           v.sku?.trim() ||
-          v.netWeightG != null ||
+          v.netQuantity != null ||
           v.piecesCount != null ||
           v.minStockQty != null ||
           // Ambalaj bölmesi de "dokunulmuş satır" sayılır: yalnız ölçü girip etiketi boş bırakan
@@ -176,7 +192,10 @@ export function toActionPayload(values: ProductFormValues) {
       .map((v) => ({
         id: v.id,
         label: cleanLocalized(v.label),
-        netWeightG: v.netWeightG,
+        // Sayı ve birim BİRLİKTE yaşar (kısıt veride): miktarsız satırda birim de yazılmaz, miktar
+        // varken birim boş kalmışsa gram sayılır — seçici zaten gramla açılıyor.
+        netQuantity: v.netQuantity ?? null,
+        netUnit: v.netQuantity == null ? null : (v.netUnit ?? 'g'),
         piecesCount: v.piecesCount,
         portionKind: v.portionKind,
         packedWeightG: v.packedWeightG,

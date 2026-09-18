@@ -8,6 +8,13 @@ import { LocalizedTextDraftSchema } from '../primitives/localized-text.schema';
 export const PortionKindEnum = z.enum(['item', 'slice']);
 export type PortionKind = z.infer<typeof PortionKindEnum>;
 
+/**
+ * Net miktarın birimi — KAPALI küme: katı gram, sıvı mililitre (`0005` künyesi). "Adet" burada yok,
+ * çünkü adet `piecesCount` kolonunda ve ayrı soruya cevap verir. Birim fiyat da buradan seçilir.
+ */
+export const NetUnitEnum = z.enum(['g', 'ml']);
+export type NetUnit = z.infer<typeof NetUnitEnum>;
+
 // ProductVariant — satılabilir birim (fiyat/stok varyant seviyesinde). 0005 migration, DATA_MODEL.
 // Varyantsız görünen ürün de tek (varsayılan) varyant taşır → fiyat/stok mantığı her yerde aynı.
 //
@@ -18,7 +25,14 @@ export const ProductVariantSchema = z.object({
   id: z.string().uuid(),
   productId: z.string().uuid(),
   label: LocalizedTextDraftSchema,
-  netWeightG: z.number().int().nullable(),
+  /**
+   * NET MİKTAR — ambalajın üstünde yazan gıda miktarı, kendi BİRİMİYLE (`netUnit`): katı gram, sıvı
+   * mililitre. Gramla sınırlı tek kolon sirkeyi, zeytinyağını ve özleri hiç yazamıyordu; "500 ml"
+   * etiketi ise serbest metin, hesaplanabilir bir sayı değil. Birim fiyat da buradan seçilir
+   * (g → €/kg, ml → €/L) ve satıştaki boyda ZORUNLUDUR (veride tetikleyici).
+   */
+  netQuantity: z.number().int().nullable(),
+  netUnit: NetUnitEnum.nullable(),
   /**
    * Paket içi adet ("12'li baklava"). Gramajın YERİNE değil YANINA: bir varyant hem 36 adet hem
    * 2500 g olabilir, ikisi ayrı soruya cevap verir. `null` = adet bilgisi yok (dökme ürün) —
@@ -35,7 +49,7 @@ export const ProductVariantSchema = z.object({
   portionKind: PortionKindEnum.nullable(),
   /**
    * ── AMBALAJLI ÜRÜN ÖLÇÜSÜ (07.12) ─────────────────────────────────────────
-   * Taşınan şeyin ağırlığı: ürün + KENDİ ambalajı. `netWeightG` ile karıştırılmaz — o INCO
+   * Taşınan şeyin ağırlığı: ürün + KENDİ ambalajı. `netQuantity` ile karıştırılmaz — o INCO
    * beyanıdır ve €/kg gösterimini besler (içindeki gıdanın ağırlığı). Kargo tarifesi bunu ister.
    *
    * `null` = ÖLÇÜLMEDİ, sıfır DEĞİL: ölçüsüz varyant için canlı teklif alınmaz ve ekran "ölçüsü
@@ -63,7 +77,8 @@ export type ProductVariant = z.infer<typeof ProductVariantSchema>;
 export const ProductVariantInsertSchema = z.object({
   productId: z.string().uuid(),
   label: LocalizedTextDraftSchema.optional(),
-  netWeightG: z.number().int().nullish(),
+  netQuantity: z.number().int().nullish(),
+  netUnit: NetUnitEnum.nullish(),
   piecesCount: z.number().int().nullish(),
   portionKind: PortionKindEnum.nullish(),
   packedWeightG: z.number().int().positive().nullish(),
@@ -85,7 +100,8 @@ export type ProductVariantUpdate = z.infer<typeof ProductVariantUpdateSchema>;
 // öyle — sıra satırın form dizisindeki KONUMUDUR (sürükle-bırak diziyi taşır, servis indeksi yazar).
 export const ProductVariantEntrySchema = ProductVariantSchema.pick({
   label: true,
-  netWeightG: true,
+  netQuantity: true,
+  netUnit: true,
   /**
    * Paket içi adet. **Bir tur OPSİYONEL kaldı ve sebebi kayıt olarak duruyor:** kolon geldiğinde
    * (05.14) formda girdisi yoktu; zorunlu yapmak hem operasyon formunun derlemesini kırar hem de

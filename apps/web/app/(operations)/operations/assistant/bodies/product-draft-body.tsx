@@ -133,7 +133,8 @@ export function productCreateValuesFrom(payload: ProductCreatePayload): ProductF
   if (payload.variants.length > 0) {
     patch.variants = payload.variants.map((v) => ({
       label: v.label,
-      netWeightG: v.netWeightG,
+      netQuantity: v.netQuantity,
+      netUnit: v.netUnit,
       piecesCount: v.piecesCount,
       portionKind: v.portionKind,
       packedWeightG: v.packedWeightG,

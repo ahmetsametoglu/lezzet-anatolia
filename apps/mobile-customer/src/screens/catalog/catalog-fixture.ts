@@ -26,6 +26,7 @@ export function catalogProduct(index: number, overrides: Partial<CatalogProduct>
     purchaseMode: 'quick',
     priceCents: 1290,
     comparisonCents: 1290,
+    comparisonUnit: 'kg',
     limitLabel: null,
     stockId: uuid(2000 + index),
     stockStatus: 'available',

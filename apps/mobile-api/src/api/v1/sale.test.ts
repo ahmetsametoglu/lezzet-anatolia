@@ -19,6 +19,8 @@ const stamp = Date.now();
    (`product_publish_requires_*`); katalog yalnız aktif ürünü listelediği için şart, karşılanmazsa testler atlanır. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
+  // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`): "yayına hazır" gövde onu da taşır.
+  variants: [{ netQuantity: 500, netUnit: 'g' as const }],
   description: ucDil('Yerinde satış testi ürünü'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('Serin yerde saklayın'),

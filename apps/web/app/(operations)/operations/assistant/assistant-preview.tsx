@@ -594,7 +594,7 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
                     ? `${num(v.packedLengthMm)}×${num(v.packedWidthMm)}×${num(v.packedHeightMm)} mm`
                     : null;
                 const size = [
-                  v.netWeightG ? `${num(v.netWeightG)} g` : null,
+                  v.netQuantity ? `${num(v.netQuantity)} ${v.netUnit ?? 'g'}` : null,
                   v.piecesCount ? `${num(v.piecesCount)} ${v.portionKind === 'slice' ? 'dilim' : 'ad.'}` : null,
                   v.packedWeightG ? `brüt ${num(v.packedWeightG)} g` : null,
                   dims,
@@ -831,7 +831,8 @@ function identityRows(payload: ProductDraftPayload): DeclarationRow[] {
 const SIZE_FIELD_LABEL: Record<string, string> = {
   barcode: 'barkod',
   label: 'etiket',
-  netWeightG: 'gramaj (g)',
+  netQuantity: 'net miktar',
+  netUnit: 'birim',
   piecesCount: 'adet',
   portionKind: 'porsiyon türü',
   packedWeightG: 'kargo ağırlığı (g)',

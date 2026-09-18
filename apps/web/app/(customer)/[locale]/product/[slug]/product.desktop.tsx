@@ -132,7 +132,13 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
         {/* SOL — ürünün kendisi: ne göründüğü, sonra içinde ne olduğu. */}
         <div className="flex min-w-0 flex-1 flex-col gap-11">
           <Gallery images={product.gallery} alt={product.name} />
-          <Declaration t={t} locale={locale} declaration={product.declaration} netWeightG={selected?.netWeightG ?? null} />
+          <Declaration
+            t={t}
+            locale={locale}
+            declaration={product.declaration}
+            netQuantity={selected?.netQuantity ?? null}
+            netUnit={selected?.netUnit ?? null}
+          />
         </div>
 
         {/* SAĞ — satın alma kararı: çeşit → boy → fiyat → sepet → teslimat, altında yorumlar. */}

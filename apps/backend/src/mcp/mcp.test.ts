@@ -263,7 +263,7 @@ describe('katalog ve stok araçları', () => {
   it('catalog_lookup ürünü BARKODDAN bulur; boy satırı gramajı ve bağlı kodu taşır', async () => {
     const { product, variants } = await new ProductService(db).create({
       name: { tr: `Kodlu ürün ${stamp}`, fr: `Produit codé ${stamp}`, de: `Kodiertes Produkt ${stamp}` },
-      variants: [{ label: { tr: '450 g', fr: '450 g', de: '450 g' }, netWeightG: 450, sku: `SKU-${stamp}` }],
+      variants: [{ label: { tr: '450 g', fr: '450 g', de: '450 g' }, netQuantity: 450, netUnit: 'g', sku: `SKU-${stamp}` }],
     });
     createdProductIds.push(product.id);
     const code = `2${String(stamp).slice(-12)}`;
@@ -276,7 +276,7 @@ describe('katalog ve stok araçları', () => {
     expect(found.products.map((p) => p.productId)).toEqual([product.id]);
     // Gramaj ve kod olmadan asistan boyu tamamlanacak varyantı ayırt edemez, bağlı kodu ikinci kez önerir.
     const size = found.products[0]?.variants[0];
-    expect(size?.netWeightG).toBe(450);
+    expect(size?.netQuantity).toBe(450);
     expect(size?.barcodes).toEqual([{ code, kind: 'case', qtyPerCode: 12 }]);
   });
 

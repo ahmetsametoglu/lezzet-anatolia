@@ -14,7 +14,8 @@ function variant(over: Partial<StorefrontVariant>): StorefrontVariant {
   return {
     id: 'v1',
     label: '500 g',
-    netWeightG: 500,
+    netQuantity: 500,
+    netUnit: 'g',
     priceCents: 1200,
     comparisonCents: null,
     limitLabel: null,

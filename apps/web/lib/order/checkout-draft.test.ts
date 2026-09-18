@@ -56,6 +56,8 @@ const createdProfiles: string[] = [];
  */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
+  // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`): "yayına hazır" gövde onu da taşır.
+  variants: [{ netQuantity: 500, netUnit: 'g' as const }],
   description: ucDil('Checkout testinin ürünü'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('Serin yerde saklayın'),
@@ -73,7 +75,7 @@ beforeAll(async () => {
     categoryId,
     vatRate: 5.5,
     ...yayinaHazir,
-    variants: [{ label: { tr: '1 kg' }, sku: `CHK-B-${stamp}` }],
+    variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' as const, sku: `CHK-B-${stamp}` }],
   });
   productId = kargolanir.product.id;
   variantId = kargolanir.variants[0]!.id;
@@ -85,7 +87,7 @@ beforeAll(async () => {
     vatRate: 5.5,
     shippable: false,
     ...yayinaHazir,
-    variants: [{ label: { tr: '2 kişilik' }, sku: `CHK-K-${stamp}` }],
+    variants: [{ label: { tr: '2 kişilik' }, netQuantity: 800, netUnit: 'g' as const, sku: `CHK-K-${stamp}` }],
   });
   coldProductId = soguk.product.id;
   coldVariantId = soguk.variants[0]!.id;

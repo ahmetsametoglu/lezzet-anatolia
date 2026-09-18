@@ -3,7 +3,7 @@ import type { TextSegment } from '@lezzet/helper';
 import { ALLERGEN_LABELS, resolveLocalizedText } from '@lezzet/types';
 import type { Nutrition, ProductAllergen } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
-import { formatDecimal } from '@/lib/storefront/format';
+import { formatDecimal, formatNetQuantity } from '@/lib/storefront/format';
 import { Icon } from '@/components/customer/ui/icons';
 import type { StorefrontDeclaration } from '@lezzet/application';
 import type { Messages } from '../product-types';
@@ -93,11 +93,12 @@ interface DeclarationProps {
    * paketin ağırlığı boya göre değişir. Sabit kalsaydı 1 kg'lık boyu seçen müşteri tabloda hâlâ
    * "Net ağırlık: 700 g" görürdü.
    */
-  netWeightG: number | null;
+  netQuantity: number | null;
+  netUnit: 'g' | 'ml' | null;
   compact?: boolean;
 }
 
-export function Declaration({ t, locale, declaration, netWeightG, compact = false }: DeclarationProps) {
+export function Declaration({ t, locale, declaration, netQuantity, netUnit, compact = false }: DeclarationProps) {
   const { ingredients, allergens, traces, nutrition, storage } = declaration;
   const hasIngredientsBlock = ingredients !== null || allergens.length > 0 || traces.length > 0;
 
@@ -130,9 +131,14 @@ export function Declaration({ t, locale, declaration, netWeightG, compact = fals
       {nutrition && (
         <DeclarationCard
           title={t.declaration.nutrition}
-          // Net ağırlık da DİLE göre biçimlenir: 1500 g Türkçe/Fransızca'da binlik ayracı ister.
-          // Ham şablon değişkeni tablonun içindeki sayılarla tutarsız kalıyordu.
-          note={[t.declaration.per100g, netWeightG ? t.declaration.netWeight.replace('{weight}', gram(netWeightG, locale)) : null]
+          // Net miktar da DİLE göre biçimlenir: 1500 g Türkçe/Fransızca'da binlik ayracı ister.
+          // Birim değerin içinde gelir (g/kg ya da ml/L) — şablon birim yazmaz, yoksa sıvıya "g" derdi.
+          note={[
+            t.declaration.per100g,
+            netQuantity !== null && netUnit !== null
+              ? t.declaration.netQuantity.replace('{quantity}', formatNetQuantity(netQuantity, netUnit, locale))
+              : null,
+          ]
             .filter(Boolean)
             .join(' · ')}
           compact={compact}

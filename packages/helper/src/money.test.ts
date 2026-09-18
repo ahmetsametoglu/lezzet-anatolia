@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addVat, distributeDiscount, fromCents, percentOf, pricePerKg, removeVat, toCents, vatPortion } from './money';
+import { addVat, comparisonPrice, distributeDiscount, fromCents, percentOf, removeVat, toCents, vatPortion } from './money';
 
 describe('cent dönüşümü', () => {
   it('kayan nokta sapmasını yutar', () => {
@@ -72,15 +72,18 @@ describe('percentOf', () => {
   });
 });
 
-describe('pricePerKg — kıyas fiyatı', () => {
-  it('gramajı kilograma ölçekler', () => {
-    expect(pricePerKg(1690, 700)).toBe(2414); // 16,90 € / 700 g → 24,14 €/kg (tasarımdaki değer)
-    expect(pricePerKg(2290, 1000)).toBe(2290); // 1 kg'lık pakette kıyas fiyatı fiyatın kendisidir
+describe('comparisonPrice — kıyas fiyatı', () => {
+  it('katıyı kilograma, sıvıyı LİTREYE ölçekler', () => {
+    expect(comparisonPrice(1690, 700, 'g')).toEqual({ cents: 2414, per: 'kg' }); // 16,90 € / 700 g → 24,14 €/kg
+    expect(comparisonPrice(2290, 1000, 'g')).toEqual({ cents: 2290, per: 'kg' }); // 1 kg'lık pakette kıyas fiyatın kendisi
+    // Sıvıda birim LİTREDİR: aynı sayıyı "€/kg" diye yazmak kıyası yanlış yapar (500 ml sirke 9,49 € → 18,98 €/L).
+    expect(comparisonPrice(949, 500, 'ml')).toEqual({ cents: 1898, per: 'L' });
   });
 
-  it('net ağırlık yoksa kıyas KURULMAZ', () => {
+  it('miktar ya da birim yoksa kıyas KURULMAZ', () => {
     // Uydurma bir kıyas, hiç kıyas olmamasından kötüdür: müşteri yanlış paketi ucuz sanır.
-    expect(pricePerKg(1690, null)).toBeNull();
-    expect(pricePerKg(1690, 0)).toBeNull();
+    expect(comparisonPrice(1690, null, 'g')).toBeNull();
+    expect(comparisonPrice(1690, 0, 'g')).toBeNull();
+    expect(comparisonPrice(1690, 700, null)).toBeNull();
   });
 });

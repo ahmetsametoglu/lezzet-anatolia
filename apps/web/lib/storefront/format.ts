@@ -44,6 +44,16 @@ export function formatWeight(grams: number, locale: Locale): string {
 }
 
 /**
+ * Net miktar ("850 g" · "4,2 kg" · "500 ml" · "1,5 L") — BİRİMİYLE birlikte, çünkü sayı tek başına
+ * "500 ne?" demektir. Büyük değer üst birime çıkar: 4200 g okunmaz, 0,5 L ise küçük şişeyi süsler.
+ */
+export function formatNetQuantity(quantity: number, unit: 'g' | 'ml', locale: Locale): string {
+  if (unit === 'g') return formatWeight(quantity, locale);
+  if (quantity < 1000) return `${formatDecimal(quantity, locale, 0)} ml`;
+  return `${formatDecimal(quantity / 1000, locale, Number.isInteger(quantity / 1000) ? 0 : 1)} L`;
+}
+
+/**
  * Teslimat günü ("Perşembe, 24 Temmuz") — gün ADI yazılır çünkü müşteri teslimatı haftanın gününe
  * göre planlar, ayın kaçı olduğuna göre değil. Yıl yok: teslimat günleri hep birkaç gün içinde.
  */
@@ -72,9 +82,12 @@ export function formatRelativeTime(iso: string, locale: Locale, now: number): st
   return rtf.format(-Math.round(days / 365), 'year');
 }
 
-/** Karşılaştırma fiyatı ("12,90 €/kg") — INCO gereği raf fiyatının yanında bulunur. */
-export function formatComparison(cents: number, locale: Locale): string {
-  return `${formatPrice(cents, locale)}/kg`;
+/**
+ * Karşılaştırma fiyatı ("12,90 €/kg" · "18,98 €/L") — raf fiyatının yanında bulunur (98/6/EC).
+ * Birim ÇAĞIRANDAN gelir: katı kiloyla, sıvı litreyle kıyaslanır ve ikisini aynı harfle yazmak kıyası bozar.
+ */
+export function formatComparison(cents: number, unit: 'kg' | 'L', locale: Locale): string {
+  return `${formatPrice(cents, locale)}/${unit}`;
 }
 
 /**

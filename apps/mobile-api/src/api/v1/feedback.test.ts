@@ -35,6 +35,8 @@ const postJson = (path: string, body: unknown) =>
    (`product_publish_requires_*`); karşılanmazsa `beforeAll` düşer ve testler ilgisiz görünen bir sebeple atlanır. */
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 const yayinaHazir = {
+  // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`): "yayına hazır" gövde onu da taşır.
+  variants: [{ netQuantity: 500, netUnit: 'g' as const }],
   description: ucDil('Geri bildirim testi ürünü'),
   ingredients: ucDil('Un, su, tuz'),
   storageInstructions: ucDil('Serin yerde saklayın'),
@@ -50,7 +52,7 @@ beforeAll(async () => {
     categoryId,
     status: 'active',
     ...yayinaHazir,
-    variants: [{ label: { tr: '500 g' } }],
+    variants: [{ label: { tr: '500 g' }, netQuantity: 500, netUnit: 'g' }],
   });
   productId = seeded.product.id;
   customerId = (await new UserProfileService(db).insert({ name: 'Fatma Demir', email: `vfb-${stamp}@example.test` })).id;

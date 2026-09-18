@@ -87,6 +87,7 @@ function saleProduct(overrides: Partial<SaleCatalogProduct>): SaleCatalogProduct
     variantCount: 1,
     priceCents: 450,
     comparisonCents: null,
+    comparisonUnit: null,
     limitLabel: null,
     stockId: null,
     stockStatus: 'available',
@@ -99,10 +100,11 @@ function saleProduct(overrides: Partial<SaleCatalogProduct>): SaleCatalogProduct
 function saleVariant(overrides: Partial<SaleVariant>): SaleVariant {
   return {
     id: COK_VARYANT_1,
-    netWeightG: 500,
+    netQuantity: 500, netUnit: 'g',
     label: '500 g',
     priceCents: 900,
     comparisonCents: null,
+    comparisonUnit: null,
     limitLabel: null,
     stockId: null,
     stockStatus: 'available',
@@ -126,7 +128,7 @@ const COK = saleProduct({
 
 const BOYLAR = [
   saleVariant({}),
-  saleVariant({ id: COK_VARYANT_2, netWeightG: 1000, label: '1 kg', priceCents: 1700, availableHere: 2 }),
+  saleVariant({ id: COK_VARYANT_2, netQuantity: 1000, netUnit: 'g', label: '1 kg', priceCents: 1700, availableHere: 2 }),
 ];
 
 /** Ağın senaryosu: katalog + boylar + satış cevabı. Satış cevabı testin kendisi belirler. */

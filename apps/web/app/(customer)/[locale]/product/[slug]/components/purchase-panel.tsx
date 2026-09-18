@@ -1,7 +1,7 @@
 'use client';
 
 import type { Locale } from '@lezzet/i18n';
-import { formatPrice } from '@/lib/storefront/format';
+import { formatComparison } from '@/lib/storefront/format';
 import { variantNameOf } from '@/lib/storefront/variant-name';
 import type { StorefrontVariant } from '@lezzet/application';
 import { Badge } from '@/components/customer/ui/badge';
@@ -88,7 +88,12 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
   const multi = variants.length > 1;
 
   /** "500 g · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
-  const unitLine = [variantNameOf(selected, t.size, locale), selected.comparisonCents !== null ? `${formatPrice(selected.comparisonCents, locale)}/kg` : null]
+  const unitLine = [
+    variantNameOf(selected, t.size, locale),
+    selected.comparisonCents !== null && selected.comparisonUnit !== null
+      ? formatComparison(selected.comparisonCents, selected.comparisonUnit, locale)
+      : null,
+  ]
     .filter(Boolean)
     .join(' · ');
 
@@ -137,9 +142,9 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                     </Badge>
                   )}
                 </span>
-                {v.comparisonCents !== null && (
+                {v.comparisonCents !== null && v.comparisonUnit !== null && (
                   <span className={['font-sans text-micro text-muted', compact ? '' : 'leading-tight'].join(' ')}>
-                    {formatPrice(v.comparisonCents, locale)}/kg
+                    {formatComparison(v.comparisonCents, v.comparisonUnit, locale)}
                   </span>
                 )}
               </button>

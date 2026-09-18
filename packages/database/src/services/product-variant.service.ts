@@ -75,7 +75,8 @@ export class ProductVariantService extends BaseDbService<ProductVariant, Product
     for (const [i, e] of entries.entries()) {
       const fields = {
         label: e.label,
-        netWeightG: e.netWeightG,
+        netQuantity: e.netQuantity,
+        netUnit: e.netUnit,
         // Adet artık koşulsuz yazılıyor: formda girdisi var (09.08). Bir tur koşullu kalmıştı —
         // alanı göstermeyen bir ekran, üretecin bulduğu değeri her kayıtta `null`'a ezerdi.
         piecesCount: e.piecesCount,

@@ -3,6 +3,7 @@ import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { ProductFamilyService, ProductService } from './product.service';
+import { ProductVariantService } from './product-variant.service';
 
 /**
  * Yayın kısıtları veride — `product_publish_requires_*`: kural yazan her yolu (form, asistan, seed) kapsamalı, çünkü yedek dil
@@ -28,6 +29,8 @@ const tamGovde = () => ({
   allergens: [],
   nutrition: null,
   categoryId,
+  // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`): gövde "yayına hazır" demekse miktarı da taşımalı.
+  variants: [{ netQuantity: 500, netUnit: 'g' as const }],
 });
 
 beforeAll(async () => {
@@ -62,6 +65,25 @@ describe('ürün yayın kısıtı — veride', () => {
   it('üç dili TAM ürün yayına alınabilir', async () => {
     const product = await kur({ ...tamGovde(), status: 'active' });
     expect(product.status).toBe('active');
+  });
+
+  /**
+   * Net miktar satışın şartı (işletmeci kararı 17.09): müşteri miktarı satın almadan önce görür ve birim fiyat ondan çıkar.
+   * Kural İKİ tabloya birden bakıyor (ürünün durumu · boyun miktarı), o yüzden kısıt değil tetikleyici — testi de iki yönlü.
+   */
+  it('MİKTARSIZ boyla yayına ALINAMAZ; miktar girilince açılır', async () => {
+    await expect(kur({ ...tamGovde(), variants: [{ label: { tr: 'tek boy' } }], status: 'active' })).rejects.toThrow();
+    const product = await kur({
+      ...tamGovde(),
+      variants: [{ label: { tr: 'tek boy' }, netQuantity: 750, netUnit: 'ml' as const }],
+      status: 'active',
+    });
+    expect(product.status).toBe('active');
+  });
+
+  it('satıştaki ürüne MİKTARSIZ boy EKLENEMEZ — sonradan açılan kapı da kapalı', async () => {
+    const product = await kur({ ...tamGovde(), status: 'active' });
+    await expect(new ProductVariantService(db).insert({ productId: product.id, label: { tr: '1 kg' } })).rejects.toThrow();
   });
 
   it('ADI tek dilliyken yayına ALINAMAZ', async () => {

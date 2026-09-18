@@ -127,7 +127,7 @@ async function urunAc(ad: string, opts: { b2c?: number; b2b?: number; stok?: boo
     categoryId,
     status: 'active',
     ...(opts.kargolanamaz ? { shippable: false } : {}),
-    variants: [{ label: { tr: '1 kg' } }],
+    variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' as const }],
   });
   productIds.push(product.id);
   sluglar[ad] = product.slug;

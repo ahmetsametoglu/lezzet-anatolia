@@ -198,7 +198,10 @@ export function ProductCard({ product, locale, labels, compact = false }: Produc
           {product.name}
         </Link>
         <span className={['font-sans text-muted', compact ? 'text-micro' : 'text-note leading-tight'].join(' ')}>
-          {[product.unitLabel, product.comparisonCents !== null ? formatComparison(product.comparisonCents, locale) : null]
+          {[
+            product.unitLabel,
+            product.comparisonCents !== null ? formatComparison(product.comparisonCents, product.comparisonUnit ?? 'kg', locale) : null,
+          ]
             .filter(Boolean)
             .join(' · ')}
         </span>
@@ -354,7 +357,10 @@ export function OfferCard({ offer, locale, limitLabel, actionLabels }: OfferCard
           {offer.name}
         </Link>
         <span className="font-sans text-note leading-tight text-muted">
-          {[offer.unitLabel, offer.comparisonCents !== null ? formatComparison(offer.comparisonCents, locale) : null]
+          {[
+            offer.unitLabel,
+            offer.comparisonCents !== null ? formatComparison(offer.comparisonCents, offer.comparisonUnit ?? 'kg', locale) : null,
+          ]
             .filter(Boolean)
             .join(' · ')}
         </span>

@@ -149,7 +149,7 @@ describe('ürün künyesi dilekçesi', () => {
     const products = new ProductService(db);
     const { product, variants } = await products.create({
       name: { tr: `Künye testi ${stamp}` },
-      variants: [{ label: { tr: '200 g' } }, { label: { tr: '500 g' }, netWeightG: 500 }],
+      variants: [{ label: { tr: '200 g' } }, { label: { tr: '500 g' }, netQuantity: 500, netUnit: 'g' }],
     });
     createdProducts.push(product.id);
     const [bos, oteki] = variants;
@@ -160,7 +160,9 @@ describe('ürün künyesi dilekçesi', () => {
       productName: `Künye testi ${stamp}`,
       fields: {},
       identity: { storageType: 'ambient', shelfLifeDays: 180 },
-      variants: [{ variantId: bos!.id, variantLabel: '200 g', netWeightG: 200, barcode: { code: kod, kind: 'case', qtyPerCode: 12 } }],
+      variants: [
+        { variantId: bos!.id, variantLabel: '200 g', netQuantity: 200, netUnit: 'g', barcode: { code: kod, kind: 'case', qtyPerCode: 12 } },
+      ],
       uncertainFields: [],
       remainingGaps: [],
     };
@@ -176,8 +178,8 @@ describe('ürün künyesi dilekçesi', () => {
 
     const sonrasi = await new ProductVariantService(db).listByProducts([product.id]);
     expect(sonrasi).toHaveLength(2);
-    expect(sonrasi.find((v) => v.id === bos!.id)?.netWeightG).toBe(200);
-    expect(sonrasi.find((v) => v.id === oteki!.id)?.netWeightG).toBe(500);
+    expect(sonrasi.find((v) => v.id === bos!.id)?.netQuantity).toBe(200);
+    expect(sonrasi.find((v) => v.id === oteki!.id)?.netQuantity).toBe(500);
     // Künye ürünün kendi satırına gitti: rejim yazılmasaydı ürün kolonun varsayılanıyla DONUK kalırdı.
     const guncel = await products.getById(product.id);
     expect(guncel?.storageType).toBe('ambient');

@@ -41,6 +41,8 @@ beforeAll(async () => {
     ingredients: { tr: 'Un, su, tuz.', fr: 'Farine, eau, sel.', de: 'Mehl, Wasser, Salz.' },
     storageInstructions: { tr: 'Serin yerde saklayın.', fr: 'Conserver au frais.', de: 'Kühl lagern.' },
     nutrition: { energyKj: 1600, energyKcal: 380, fatG: 18, saturatedFatG: 7, carbohydrateG: 45, sugarsG: 22, proteinG: 6, saltG: 0.3 },
+    // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`) — "tam" gövde onu da taşır.
+    variants: [{ netQuantity: 500, netUnit: 'g' as const }],
   };
   const seed: Array<{ name: Record<string, string>; extra?: Record<string, unknown> }> = [
     { name: { tr: `${STAMP} tam bir`, fr: `${STAMP} complet un`, de: `${STAMP} voll eins` }, extra: { allergens: ['gluten'], status: 'active', ...DECL } },

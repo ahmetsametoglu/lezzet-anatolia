@@ -33,7 +33,7 @@ async function makeVariant(label: string, priceCents: number) {
     allergens: [],
     categoryId,
     status: 'active',
-    variants: [{ label: { tr: '350 g' } }],
+    variants: [{ label: { tr: '350 g' }, netQuantity: 350, netUnit: 'g' }],
   });
   productIds.push(product.id);
   const variantId = variants[0]!.id;

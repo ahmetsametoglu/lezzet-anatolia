@@ -29,6 +29,8 @@ const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 /* Yayındaki ürün ad, açıklama, içindekiler ve saklama metnini üç dilde dolu, alerjen beyanını girilmiş ister (`product_publish_requires_*`).
    Kısıt karşılanmazsa `beforeAll` düşer ve testler paket ucuyla ilgisiz bir sebeple sessizce atlanır. */
 const yayinaHazir = {
+  // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`): "yayına hazır" gövde onu da taşır.
+  variants: [{ netQuantity: 500, netUnit: 'g' as const }],
   description: tr3('Paket testi ürünü', 'Produit de test', 'Testprodukt'),
   ingredients: tr3('Un, su, tuz', 'Farine, eau, sel', 'Mehl, Wasser, Salz'),
   storageInstructions: tr3('Serin yerde saklayın', 'Conserver au frais', 'Kühl lagern'),
@@ -55,8 +57,8 @@ beforeAll(async () => {
     ...yayinaHazir,
     shippable: true,
     variants: [
-      { label: tr3('500 g', '500 g', '500 g'), netWeightG: 500, sortOrder: 0 },
-      { label: tr3('1 kg', '1 kg', '1 kg'), netWeightG: 1000, sortOrder: 1 },
+      { label: tr3('500 g', '500 g', '500 g'), netQuantity: 500, netUnit: 'g', sortOrder: 0 },
+      { label: tr3('1 kg', '1 kg', '1 kg'), netQuantity: 1000, netUnit: 'g', sortOrder: 1 },
     ],
   });
   // Soğuk zincir ürünü: BİR kalemi bile kargolanamayan paket bütünüyle bölge-içine kilitlenir.
@@ -66,7 +68,7 @@ beforeAll(async () => {
     status: 'active',
     ...yayinaHazir,
     shippable: false,
-    variants: [{ label: tr3('1 L', '1 L', '1 L'), netWeightG: 900, sortOrder: 0 }],
+    variants: [{ label: tr3('1 L', '1 L', '1 L'), netQuantity: 900, netUnit: 'g', sortOrder: 0 }],
   });
   productIds.push(shippableSeed.product.id, coldSeed.product.id);
   const [half, kilo] = shippableSeed.variants;

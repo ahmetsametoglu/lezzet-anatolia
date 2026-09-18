@@ -681,7 +681,7 @@ async function readVariantEdits(
 
     const label = localizedArg(row.label);
     const olcu: Record<string, number> = {};
-    for (const key of ['netWeightG', 'piecesCount', 'packedWeightG', 'packedLengthMm', 'packedWidthMm', 'packedHeightMm'] as const) {
+    for (const key of ['netQuantity', 'piecesCount', 'packedWeightG', 'packedLengthMm', 'packedWidthMm', 'packedHeightMm'] as const) {
       if (row[key] === undefined) continue;
       const value = positiveIntArg(row[key]);
       if (value === null) return { error: `variants[${i}].${key} pozitif tam sayı olmalı (gram ya da milimetre).` };
@@ -808,7 +808,8 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
     if ('error' in okunanKod) return okunanKod;
     variants.push({
       label: v.label as ProductCreatePayload['variants'][number]['label'],
-      netWeightG: typeof v.netWeightG === 'number' && v.netWeightG > 0 ? v.netWeightG : null,
+      netQuantity: positiveIntArg(v.netQuantity),
+      netUnit: v.netUnit === 'ml' ? 'ml' : v.netQuantity === undefined ? null : 'g',
       piecesCount: Number.isInteger(v.piecesCount) && (v.piecesCount as number) > 0 ? (v.piecesCount as number) : null,
       portionKind: porsiyonTuru(v.portionKind),
       packedWeightG: positiveIntArg(v.packedWeightG),

@@ -459,8 +459,10 @@ export function ProductDetailScreen({ slug, initialVariantId = null }: ProductDe
               {declaration.nutrition === null ? null : (
                 <Text style={styles.accordionText}>{fill(t.accordion.per100, 'rows', nutritionLine(declaration.nutrition, t))}</Text>
               )}
-              {variant?.netWeightG == null ? null : (
-                <Text style={styles.netWeight}>{fill(t.accordion.netWeight, 'grams', String(variant.netWeightG))}</Text>
+              {variant?.netQuantity == null || variant.netUnit === null ? null : (
+                <Text style={styles.netWeight}>
+                  {fill(t.accordion.netQuantity, 'quantity', `${variant.netQuantity} ${variant.netUnit}`)}
+                </Text>
               )}
             </View>
           ) : null}

@@ -232,7 +232,13 @@ const allLocales = (text: string) => ({ tr: text, fr: text, de: text });
 
 /** Taslak varyantının boyu: faturadaki, yoksa katman 3'ün uydurması; ikisi de yoksa varyant boysuz doğar. */
 const draftSize = (draft: Draft, variant: Draft['variants'][number]) =>
-  variant.label ? { label: variant.label, netWeightG: variant.netWeightG } : LAYERS >= 3 ? FICTION_SIZES[draft.name] : undefined;
+  variant.label ? { label: variant.label, netQuantity: variant.netQuantity } : LAYERS >= 3 ? FICTION_SIZES[draft.name] : undefined;
+
+/**
+ * Net miktarın BİRİMİ etiketten okunur: "500 ml" ve "5 l" sıvı, kalanı katı. Etiketin kendisi zaten
+ * ambalajdan geliyor — birimi ikinci kez yazmak, iki yerde iki farklı gerçek bırakırdı.
+ */
+const birimOf = (label: string | undefined): 'g' | 'ml' => (label && /\d\s*(ml|l)\b/i.test(label) ? 'ml' : 'g');
 
 function checkInvoiceTotals(): void {
   for (const purchase of PURCHASES) {
@@ -347,7 +353,17 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   plan(`${lines.length} fatura varyantı + ${ADAY_SKULARI.length} aday · ürün, metin, görsel ve kategori katalog kaynağından`);
   if (DRY_RUN) return;
   const secim = new Map(
-    lines.map((l) => [l.sku, l.unit ? { label: allLocales(l.unit.label), netWeightG: l.unit.netWeightG, piecesCount: l.unit.piecesCount } : {}]),
+    lines.map((l) => [
+      l.sku,
+      l.unit
+        ? {
+            label: allLocales(l.unit.label),
+            netQuantity: l.unit.netQuantity,
+            netUnit: birimOf(l.unit.label),
+            piecesCount: l.unit.piecesCount,
+          }
+        : {},
+    ]),
   );
   // Faturada olmayan aday kalemler aynı seçime girer ki ürünleri kurulsun — ama `kurgu.sku`ya
   // GİRMEZLER (aşağıda yalnız fatura satırları veriliyor): o küme "satış kurgusuna girmiş" demek ve
@@ -425,7 +441,12 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
         ...(kapak ?? {}),
         variants: draft.variants.map((v) => {
           const boy = draftSize(draft, v);
-          return { label: boy ? allLocales(boy.label) : undefined, netWeightG: boy?.netWeightG, sku: v.sku };
+          return {
+            label: boy ? allLocales(boy.label) : undefined,
+            netQuantity: boy?.netQuantity,
+            netUnit: boy?.netQuantity == null ? undefined : birimOf(boy.label),
+            sku: v.sku,
+          };
         }),
       });
     }
@@ -451,7 +472,14 @@ async function fillDraftSize(variants: ProductVariantService, productId: string,
     return;
   }
   plan(`${ad} · boy ${boy.label}`);
-  if (!DRY_RUN) await variants.update({ id: satir.id, label: allLocales(boy.label), netWeightG: boy.netWeightG });
+  if (!DRY_RUN) {
+    await variants.update({
+      id: satir.id,
+      label: allLocales(boy.label),
+      netQuantity: boy.netQuantity,
+      netUnit: boy.netQuantity == null ? null : birimOf(boy.label),
+    });
+  }
 }
 
 /**

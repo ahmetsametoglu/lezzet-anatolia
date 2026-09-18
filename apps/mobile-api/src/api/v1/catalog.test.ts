@@ -101,10 +101,10 @@ async function seedProduct(
     // olsaydı (PostgREST gömülü ilişki sırası garantisiz) bu iddia rastgele kırılırdı.
     variants: opts.multiSize
       ? [
-          { label: { tr: '1 kg', fr: '1 kg', de: '1 kg' }, netWeightG: 1000, sortOrder: 0 },
-          { label: { tr: '500 g', fr: '500 g', de: '500 g' }, netWeightG: 500, sortOrder: 1 },
+          { label: { tr: '1 kg', fr: '1 kg', de: '1 kg' }, netQuantity: 1000, netUnit: 'g', sortOrder: 0 },
+          { label: { tr: '500 g', fr: '500 g', de: '500 g' }, netQuantity: 500, netUnit: 'g', sortOrder: 1 },
         ]
-      : [{ label: { tr: '1 kg', fr: '1 kg', de: '1 kg' }, netWeightG: 1000, sortOrder: 0 }],
+      : [{ label: { tr: '1 kg', fr: '1 kg', de: '1 kg' }, netQuantity: 1000, netUnit: 'g', sortOrder: 0 }],
   });
   productIds.push(product.id);
 
@@ -388,7 +388,7 @@ describe('GET /api/v1/products/:slug', () => {
     const detail = await dataOf<CatalogProductDetail>(res);
 
     expect(detail.variants.map((v) => v.label)).toEqual(['1 kg', '500 g']);
-    expect(detail.variants.map((v) => v.netWeightG)).toEqual([1000, 500]);
+    expect(detail.variants.map((v) => v.netQuantity)).toEqual([1000, 500]);
 
     const [buyuk, kucuk] = detail.variants;
     // Fiyat ve parti BİRİNCİL boya yazıldı.

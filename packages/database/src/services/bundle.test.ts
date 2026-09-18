@@ -55,8 +55,8 @@ beforeAll(async () => {
     status: 'active',
     categoryId: category.id,
     variants: [
-      { label: { tr: '500 g' }, netWeightG: 500 },
-      { label: { tr: '1 kg' }, netWeightG: 1000 },
+      { label: { tr: '500 g' }, netQuantity: 500, netUnit: 'g' },
+      { label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' },
     ],
   });
   categoryId = category.id;

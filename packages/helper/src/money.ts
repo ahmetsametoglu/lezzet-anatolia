@@ -19,15 +19,22 @@ export function fromCents(cents: number): number {
 }
 
 /**
- * Kilogram başına karşılaştırma fiyatı (cent). Farklı gramajlı paketleri kıyaslanabilir kılar ve
- * uzaktan satışta raf fiyatının yanında bulunması beklenir (INCO birim fiyat iyi uygulaması).
+ * Birim fiyat (cent) — katıda KİLOGRAM, sıvıda LİTRE başına. Farklı boydaki paketleri kıyaslanabilir kılar ve
+ * uzaktan satışta raf fiyatının yanında bulunur (98/6/EC birim fiyat; INCO net miktarı zaten zorunlu kılıyor).
  *
- * Net ağırlık yoksa ya da sıfırsa `null` — uydurma bir kıyas, hiç kıyas olmamasından kötüdür.
- * Sonuç gösterim içindir; hiçbir tahsilat bu sayıdan hesaplanmaz, bu yüzden en yakına yuvarlanır.
+ * Ölçek ikisinde de 1000 (g→kg, ml→L) ama BİRİM ADI değişir ve bu gösterimin kendisidir: "12,90 €/kg" ile
+ * "12,90 €/L" aynı cümle değildir, sıvıyı kilo başına yazmak kıyası yanlış yapar.
+ *
+ * Miktar ya da birim yoksa `null` — uydurma bir kıyas, hiç kıyas olmamasından kötüdür. Sonuç gösterim içindir;
+ * hiçbir tahsilat bu sayıdan hesaplanmaz, bu yüzden en yakına yuvarlanır.
  */
-export function pricePerKg(cents: number, netWeightG: number | null): number | null {
-  if (!netWeightG || netWeightG <= 0) return null;
-  return Math.round((cents * 1000) / netWeightG);
+export function comparisonPrice(
+  cents: number,
+  netQuantity: number | null,
+  netUnit: 'g' | 'ml' | null,
+): { cents: number; per: 'kg' | 'L' } | null {
+  if (!netQuantity || netQuantity <= 0 || !netUnit) return null;
+  return { cents: Math.round((cents * 1000) / netQuantity), per: netUnit === 'ml' ? 'L' : 'kg' };
 }
 
 /**

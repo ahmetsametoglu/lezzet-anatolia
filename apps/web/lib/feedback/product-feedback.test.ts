@@ -70,19 +70,19 @@ beforeAll(async () => {
     name: ucDil(`Değerlendirilen ürün ${stamp}`),
     categoryId,
     ...yayinaHazir,
-    variants: [{ label: { tr: '1 kg' } }],
+    variants: [{ label: { tr: '1 kg' }, netQuantity: 1000, netUnit: 'g' }],
   });
   productId = product.id;
   variantId = variants[0]!.id;
 
   otherProductId = (
-    await products.create({ name: ucDil(`Değerlendirilmeyen ${stamp}`), categoryId, ...yayinaHazir, variants: [{ label: { tr: '500 g' } }] })
+    await products.create({ name: ucDil(`Değerlendirilmeyen ${stamp}`), categoryId, ...yayinaHazir, variants: [{ label: { tr: '500 g' }, netQuantity: 500, netUnit: 'g' }] })
   ).product.id;
 
   // Aday ürün: satılmıyor, yalnız keşif kartlarında görünür. Durumu artık kolonun varsayılanı
   // veriyor, ama NİYET açık yazılıyor — bu satırın kalkması testin konusunu görünmez kılardı.
   const candidate = await products.create({
-    name: ucDil(`Aday ürün ${stamp}`), categoryId, status: 'candidate', variants: [{ label: { tr: '250 g' } }],
+    name: ucDil(`Aday ürün ${stamp}`), categoryId, status: 'candidate', variants: [{ label: { tr: '250 g' }, netQuantity: 250, netUnit: 'g' }],
   });
   candidateId = candidate.product.id;
 

@@ -338,7 +338,7 @@ function satilabilirDurum(o: {
 
 /** Faturadaki varyantlar; değer, satış biriminin faturaya göre düzeltilmiş etiketi ve gramajıdır. */
 export interface LezzaSecim {
-  variants: ReadonlyMap<string, { label?: LocalizedText; netWeightG?: number; piecesCount?: number }>;
+  variants: ReadonlyMap<string, { label?: LocalizedText; netQuantity?: number; netUnit?: 'g' | 'ml'; piecesCount?: number }>;
   /**
    * Belgesiz ürünün beyanı türetilsin mi — `extend`in türetmesi, ama onun sahnelediği kusurlar (aday ve
    * pasif sahnesi, serpiştirilmiş saklama rejimi, eksik dil) olmadan: gerçek kataloğa kusur yazılmaz.
@@ -554,24 +554,33 @@ export async function seedLezzaProducts(
         .filter((v) => secili(v.sku))
         .map((v) => ({ ...v, ...(secim && v.sku != null ? secim.variants.get(String(v.sku)) : undefined) }))
         .map((v, n) => ({
-        // Boysuz ürün tek varsayılan varyant taşır — modelin kendi kuralı.
-        label: v.label ?? { tr: 'Tek boy', fr: 'Taille unique', de: 'Einheitsgröße' },
-        // Gramajsız varyant gerçek bir hâl (operatör boş bırakabilir); yalnız `extend`te ve aday üründe
-        // sahnelenir ki vitrine fiyatsız kart düşmesin.
-        netWeightG: kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0 ? undefined : (v.netWeightG ?? undefined),
-        piecesCount: v.piecesCount ?? undefined,
-        portionKind: v.portionKind ?? undefined,
-        sku: v.sku ?? undefined,
-        // Ambalaj ölçüsü net ağırlıktan türetilir (gerçeği tartılmadı); `extend` tam, yarım ve yok
-        // hâllerini kurar, `base`te hepsi tam.
-        ...ambalajAlanlari(
-          kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0 ? null : (v.netWeightG ?? null),
-          olcuHali(i + n, kusurlu),
-        ),
-        // Pasif boy onu taşıyan paketi satıştan düşürür; yalnız çok boylu üründe son boy kapatılır ki
-        // ürün satılamaz kalmasın.
-        isActive: kusurlu && p.variants.length > 1 && n === p.variants.length - 1 && i % 11 === 0 ? false : undefined,
-      })),
+          // Boysuz ürün tek varsayılan varyant taşır — modelin kendi kuralı.
+          label: v.label ?? { tr: 'Tek boy', fr: 'Taille unique', de: 'Einheitsgröße' },
+          // Gramajsız varyant gerçek bir hâl (operatör boş bırakabilir); yalnız `extend`te ve aday üründe
+          // sahnelenir ki vitrine fiyatsız kart düşmesin.
+          // Miktarsız varyant gerçek bir hâl (operatör boş bırakabilir) ve birim onunla birlikte düşer:
+          // kısıt ikisini birlikte ister. Katalog kaynağı gram yazar, sıvı ürün bu kaynakta yok.
+          netQuantity:
+            kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0 ? undefined : (v.netQuantity ?? v.netWeightG ?? undefined),
+          netUnit:
+            kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0
+              ? undefined
+              : (v.netQuantity ?? v.netWeightG) == null
+                ? undefined
+                : (v.netUnit ?? 'g'),
+          piecesCount: v.piecesCount ?? undefined,
+          portionKind: v.portionKind ?? undefined,
+          sku: v.sku ?? undefined,
+          // Ambalaj ölçüsü net ağırlıktan türetilir (gerçeği tartılmadı); `extend` tam, yarım ve yok
+          // hâllerini kurar, `base`te hepsi tam.
+          ...ambalajAlanlari(
+            kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0 ? null : (v.netQuantity ?? v.netWeightG ?? null),
+            olcuHali(i + n, kusurlu),
+          ),
+          // Pasif boy onu taşıyan paketi satıştan düşürür; yalnız çok boylu üründe son boy kapatılır ki
+          // ürün satılamaz kalmasın.
+          isActive: kusurlu && p.variants.length > 1 && n === p.variants.length - 1 && i % 11 === 0 ? false : undefined,
+        })),
     });
     made += 1;
     varyantSayisi += variants.length;

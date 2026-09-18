@@ -1,5 +1,5 @@
 import type { Locale } from '@lezzet/i18n';
-import { formatWeight } from './format';
+import { formatNetQuantity } from './format';
 
 /** Boy adının kelimeleri — ürün sayfasının sözlüğünden (`size` bloğu). */
 interface VariantNameCopy {
@@ -28,11 +28,18 @@ interface VariantNameCopy {
  * ikinci çağıran olunca buraya taşındı (14.09) — iki görünüm aynı boyu aynı adla yazar.
  */
 export function variantNameOf(
-  v: { piecesCount: number | null; portionKind: 'item' | 'slice' | null; netWeightG: number | null; label: string },
+  v: {
+    piecesCount: number | null;
+    portionKind: 'item' | 'slice' | null;
+    netQuantity: number | null;
+    netUnit: 'g' | 'ml' | null;
+    label: string;
+  },
   t: VariantNameCopy,
   locale: Locale,
 ): string {
-  const weight = v.netWeightG !== null ? formatWeight(v.netWeightG, locale) : null;
+  // Miktar BİRİMİYLE yazılır: "500" tek başına gram mı mililitre mi söylemez.
+  const weight = v.netQuantity !== null && v.netUnit !== null ? formatNetQuantity(v.netQuantity, v.netUnit, locale) : null;
   if (v.piecesCount !== null && v.piecesCount > 1) {
     const n = String(v.piecesCount);
     // KELİME porsiyon TÜRÜNDEN gelir: 4'lü simit paketi "4 adet", 12 dilimlik cheesecake "12 dilim".

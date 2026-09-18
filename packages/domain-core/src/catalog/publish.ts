@@ -19,11 +19,16 @@ export interface PublishCandidate {
   /** Aile etiketi YALNIZ aile üyesinde aranır (kartta okunan odur). */
   familyId?: string | null;
   familyLabel?: LocalizedText | null;
+  /**
+   * Boyların net miktarı — ürünün kolonu değil ama yayın ölçütü. Verilmezse ölçüt hiç sorulmaz (kısmi gönderim);
+   * pasif boy aranmaz, müşteriye görünmez.
+   */
+  variants?: readonly { isActive?: boolean; netQuantity?: number | null }[];
 }
 
 /** Bir alanın eksiği: hangi alan, hangi diller. */
 export interface PublishGap {
-  field: 'name' | 'description' | 'ingredients' | 'storageInstructions' | 'allergens' | 'familyLabel';
+  field: 'name' | 'description' | 'ingredients' | 'storageInstructions' | 'allergens' | 'netQuantity' | 'familyLabel';
   /** Eksik diller; dilden bağımsız alanda (alerjen) boş. */
   missing: Array<'tr' | 'fr' | 'de'>;
 }
@@ -40,6 +45,12 @@ export function productPublishGaps(product: PublishCandidate): PublishGap[] {
   check('ingredients', product.ingredients);
   check('storageInstructions', product.storageInstructions);
   if (product.allergens == null) gaps.push({ field: 'allergens', missing: [] });
+  // SATILAN boyun net miktarı (işletmeci kararı 17.09): miktar müşteriye satın almadan önce gösterilir ve birim fiyat
+  // ondan çıkar. Ürünün kendi kolonu olmadığı için veri tarafında kısıt değil TETİKLEYİCİ karşılığı var (`0005`).
+  // Boy listesi verilmediyse ölçüt sorulmaz: form kısmi gönderebilir, o hâlde son sözü veritabanı söyler.
+  if (product.variants?.some((v) => v.isActive !== false && v.netQuantity == null)) {
+    gaps.push({ field: 'netQuantity', missing: [] });
+  }
   // Koşullu alan — kısıttaki `family_id is null or …` ile birebir; ayrışırlarsa ekran "eksik yok" derken veritabanı yayını reddeder.
   // Görsel alt metni aranmaz: formda yok ve boşsa müşteride üç dilde zorunlu olan ürün adına düşer.
   if (product.familyId) check('familyLabel', product.familyLabel);

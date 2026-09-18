@@ -61,8 +61,10 @@ export interface StorefrontProduct {
    * Ölçüt `purchaseMode` ile aynı kümedir (`variantCount > 1` ⇔ `options`); 0 ve 1'de satır çizilmez.
    */
   variantCount: number;
-  /** Kilogram başına fiyat (ham cent) — INCO gereği raf fiyatının yanında; net ağırlık yoksa null. */
+  /** Birim fiyat (ham cent) — raf fiyatının yanında; net miktar yoksa null. */
   comparisonCents: number | null;
+  /** Kıyasın birimi — katıda `kg`, sıvıda `L`; sayı birimsiz taşınsa sıvı kilo başına yazılırdı. */
+  comparisonUnit: 'kg' | 'L' | null;
   /** null = bu kanalda fiyatı yok → ürün SATIŞA KAPALI (DOMAIN §5); kart fiyat göstermez. */
   priceCents: number | null;
   /** İndirim öncesi fiyat — verilirse "Fırsat" rozeti + üstü çizili eski fiyat. */
@@ -88,8 +90,9 @@ export interface StorefrontVariant {
   id: string;
   /** Boy etiketi ("700 g tepsi"); tek boylu üründe boş olabilir — gösterilecek bir boy adı yoktur. */
   label: string;
-  /** Net ağırlık (g) — besin tablosunun başlığı seçili boyunkini yazar, çünkü paketin ağırlığı boya göre değişir. */
-  netWeightG: number | null;
+  /** Net miktar ve BİRİMİ — seçili boyunki yazılır; katıda gram, sıvıda mililitre. */
+  netQuantity: number | null;
+  netUnit: 'g' | 'ml' | null;
   /** Paketteki adet — boy seçici adet anlamlıysa adeti, değilse gramajı yazar; `null` = tek parça, gösterim gramaja düşer. */
   piecesCount: number | null;
   /** Porsiyon türü — `item` ayrı ürünler, `slice` dilimler; gösterimdeki KELİMEYİ bu belirler. */
@@ -99,6 +102,7 @@ export interface StorefrontVariant {
   /** Teklif kazandıysa üstü çizilecek referans; yoksa tanımsız. */
   wasCents?: number;
   comparisonCents: number | null;
+  comparisonUnit: 'kg' | 'L' | null;
   /** Teklifin adet tavanı ("En fazla 5 adet"); tavan yoksa null. */
   limitLabel: string | null;
   /** Teklif kazandıysa çıpalı parti — sepete o parti ile girer (DOMAIN §5). */
@@ -119,7 +123,7 @@ export interface StorefrontDeclaration {
   traces: ProductAllergen[];
   /** Beyan tablosu; hiçbir kalemi girilmemişse null (boş tablo gösterilmez). */
   nutrition: Nutrition | null;
-  /** Net ağırlık burada değil: varyanta aittir (`StorefrontVariant.netWeightG`), seçime göre değişir. */
+  /** Net miktar burada değil: varyanta aittir (`StorefrontVariant.netQuantity`), seçime göre değişir. */
   storage: TextSegment[] | null;
 }
 

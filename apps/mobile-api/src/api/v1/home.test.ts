@@ -54,6 +54,8 @@ const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 /* Yayın kısıtlarının şartı: aktif ürünün ad, açıklama, içindekiler ve saklama metni üç dilde dolu, alerjen beyanı girilmiş olmalı
    (`product_publish_requires_*`); karşılanmazsa `beforeAll` düşer ve testler ilgisiz görünen bir sebeple atlanır. */
 const yayinaHazir = {
+  // Satıştaki boyun net miktarı zorunlu (tetikleyici, `0005`): "yayına hazır" gövde onu da taşır.
+  variants: [{ netQuantity: 500, netUnit: 'g' as const }],
   description: tr3('Vitrin testi ürünü', 'Produit de test', 'Testprodukt'),
   ingredients: tr3('Un, su, tuz', 'Farine, eau, sel', 'Mehl, Wasser, Salz'),
   storageInstructions: tr3('Serin yerde saklayın', 'Conserver au frais', 'Kühl lagern'),
@@ -95,7 +97,7 @@ beforeAll(async () => {
     categoryId: catPlain.id,
     status: 'active',
     ...yayinaHazir,
-    variants: [{ label: tr3('1 kg', '1 kg', '1 kg'), netWeightG: 1000, sortOrder: 0 }],
+    variants: [{ label: tr3('1 kg', '1 kg', '1 kg'), netQuantity: 1000, netUnit: 'g', sortOrder: 0 }],
   });
   productIds.push(offerSeed.product.id);
   const offerVariant = offerSeed.variants[0];

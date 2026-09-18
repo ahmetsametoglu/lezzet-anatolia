@@ -28,7 +28,7 @@
       "traces": "Aynı tesiste {list} işlenmektedir.",
       "nutrition": "Besin değerleri & net ağırlık",
       "per100": "100 g için: {rows}",
-      "netWeight": "Net ağırlık: {grams} g",
+      "netQuantity": "Net miktar: {quantity}",
       "storage": "Saklama & tazelik"
     },
     "nutrition": {
@@ -111,7 +111,7 @@
       "traces": "Fabriqué dans un atelier qui manipule également {list}.",
       "nutrition": "Valeurs nutritionnelles & poids net",
       "per100": "pour 100 g : {rows}",
-      "netWeight": "Poids net : {grams} g",
+      "netQuantity": "Quantité nette : {quantity}",
       "storage": "Conservation & fraîcheur"
     },
     "nutrition": {
@@ -194,7 +194,7 @@
       "traces": "Wird im selben Betrieb verarbeitet wie {list}.",
       "nutrition": "Nährwerte & Nettogewicht",
       "per100": "pro 100 g: {rows}",
-      "netWeight": "Nettogewicht: {grams} g",
+      "netQuantity": "Nettofüllmenge: {quantity}",
       "storage": "Aufbewahrung & Frische"
     },
     "nutrition": {

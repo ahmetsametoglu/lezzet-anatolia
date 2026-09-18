@@ -10,6 +10,7 @@ export const PUBLISH_FIELD_LABEL: Record<PublishGap['field'], string> = {
   ingredients: 'İçindekiler',
   storageInstructions: 'Saklama ve hazırlama',
   allergens: 'Alerjenler',
+  netQuantity: 'Net miktar',
   // Aile etiketi ürün formunda değil, ÜRÜNLER ekranının aile bölümünde düzenleniyor — cümle o
   // yüzden alanın adını değil işlevini söylüyor.
   familyLabel: 'Aile etiketi',

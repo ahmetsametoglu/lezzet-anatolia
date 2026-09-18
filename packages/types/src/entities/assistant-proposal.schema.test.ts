@@ -31,7 +31,7 @@ describe('ProductDraftPayload — en az bir alan dolu', () => {
     expect(
       ProductDraftPayloadSchema.safeParse({
         ...temel,
-        variants: [{ variantId: '88888888-8888-4888-8888-888888888888', variantLabel: '200 g', netWeightG: 200 }],
+        variants: [{ variantId: '88888888-8888-4888-8888-888888888888', variantLabel: '200 g', netQuantity: 200, netUnit: 'g' }],
       }).success,
     ).toBe(true);
   });
