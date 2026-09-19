@@ -168,15 +168,22 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    mal kabulüyle girer.
 5. Besleme ÜÇ KATMANLIDIR ve katmanı `--layers` seçer (varsayılan 1, kümelenir):
    - **1 · kesin** — faturadan ve üreticinin künyesinden ölçülmüş olan (ad, ölçü, maliyet, gerçek ürün
-     çekimi, içindekiler, saklama, raf ömrü) ve işletmecinin fiyat politikası (`SALE_PRICES`:
+     çekimi, içindekiler, saklama, raf ömrü, besin künyesi, alerjen, ambalajdaki barkod ve tartılmış brüt
+     ağırlık, ambalajın üstünden okunan tanıtım metni) ve işletmecinin fiyat politikası (`SALE_PRICES`:
      profesyonel alış + %40, son tüketici piyasa katsayısıyla — `docs/architecture/COMPETITORS.md`).
      **Üretim kurulumu budur; bayraksız koşar.**
-   - **2 · dayanaklı** — gerçek ürün sayfasına dayanan, resmî belgeye dayanmayan açıklamalar.
+   - **2 · dayanaklı** — markanın ürün sayfasından derlenen, resmî belgeye dayanmayan açıklamalar
+     (`descriptionFromLabel` işaretsiz olanlar).
    - **3 · uydurma** — kaynağı OLMAYAN her şey: içindekiler, saklama, besin tablosu, alerjen, faturanın
-     yazmadığı boy ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026). Bu katmanda taslakların ve
-     katalogdaki belgesiz ürünlerin beyanı tamamlanır ve ürünler `active` olur, yani katalogda görünürler —
-     arayüzü dolu görmek içindir. Aday kalemler (`ADAY_SKULARI`) her katmanda aday kalır.
-     Yalnız TEST sunucusunda: `pnpm db:seed:real --layers=3`.
+     yazmadığı boy ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026). Beyanı hâlâ eksik olan taslakların ve
+     katalogdaki belgesiz ürünlerin künyesi bu katmanda tamamlanır — arayüzü dolu görmek içindir.
+     Aday kalemler (`ADAY_SKULARI`) her katmanda aday kalır. Yalnız TEST sunucusunda:
+     `pnpm db:seed:real --layers=3`.
+
+   **Satışa çıkma katmandan değil BEYANDAN çıkar:** beyanı tam (üç dil + içindekiler + saklama + alerjen +
+   satıştaki boyun net miktarı) ve fiyatı olan ürün katman 1'de de `active` doğar — kapıyı motorun kendisi
+   açar (`canPublishProduct`), besleme kendi ölçütünü uydurmaz. Faturasız taslak (`EK_TASLAKLAR`) fiyatsız
+   olduğu için aday kalır.
 
    Katman 3'ün verisi `seed-real/data.ts` sonunda AYRI durur (`FICTION_SIZES`, `FICTION_NUTRITION`,
    `FICTION_ALLERGENS`, `FICTION_INGREDIENTS`, `FICTION_STORAGE`, `TEST_INTAKE`); üretime geçerken o blok

@@ -3,8 +3,8 @@
 // açıklama), 3 uydurma (kaynağı olmayan beyan ve test mal kabulü). Katman 3 blokları ayrı durur ki üretime geçerken
 // tek parça silinebilsin; hangi alanın hangi katmana ait olduğu `Draft` tipinde yazılı.
 
-// Katman 3 blokları şemanın tipleriyle yazılır: besin tablosunun sekiz kalemi ve alerjenin kapalı
-// kümesi orada tanımlı — yazım hatası derlenme anında patlasın, koşuda sessizce düşmesin.
+// Beyanlar şemanın tipleriyle yazılır: besin tablosunun sekiz kalemi ve alerjenin kapalı kümesi
+// orada tanımlı — yazım hatası derlenme anında patlasın, koşuda sessizce düşmesin.
 import type { Nutrition, ProductAllergen } from '@lezzet/types';
 import type { SaklamaRejimi } from '../seed/storage-regime';
 
@@ -108,12 +108,22 @@ interface CatalogLine extends PurchaseLine {
   unit?: { label: string; netQuantity: number; piecesCount: number };
 }
 
-interface DraftVariant extends PurchaseLine {
+/** Faturadan gelmeyen, ambalajın kendisinden okunan/ölçülen boy künyesi. */
+interface DraftSize {
   label?: string;
   /** Ambalajdaki net miktar; BİRİMİ etiketten okunur ("500 ml" → ml, "240 g" → g). */
   netQuantity?: number;
   sku?: string;
+  /** Ambalajın üstündeki EAN — mal kabulünde okutulan kod; küresel tekil. */
+  barcode?: string;
+  /** TARTILMIŞ brüt ağırlık ve ÖLÇÜLMÜŞ kutu: kargo teklifi bunlara bakar, net miktara değil. */
+  packedWeightG?: number;
+  packedLengthMm?: number;
+  packedWidthMm?: number;
+  packedHeightMm?: number;
 }
+
+interface DraftVariant extends DraftSize, PurchaseLine {}
 
 /**
  * Anahtar tabanı (`slug`) ürünün slug'ından ayrı tutulur: ürün slug'ı addan türer ve ad düzeltilince kayar, görselin
@@ -151,6 +161,16 @@ interface Draft {
   ingredients?: UcDil;
   storage?: UcDil;
   shelfLifeDays?: number;
+  /** Ambalajdaki besin künyesi (100 g/ml) — okunamayan tek kalem varsa künye hiç yazılmaz, yarısı yazılmaz. */
+  nutrition?: Nutrition;
+  /** Künyede vurgulanan alerjenler; BOŞ dizi "içermez" beyanıdır, alan yokluğu "beyan girilmedi". */
+  allergens?: ProductAllergen[];
+  traces?: ProductAllergen[];
+  /**
+   * Açıklama ambalajın üstünden okunduysa işaretlenir ve KATMAN 1'de yazılır; işaretsiz açıklama
+   * markanın ürün sayfasından derlenmiştir ve katman 2'yi bekler.
+   */
+  descriptionFromLabel?: boolean;
   /** Gerçek ürün çekimi: tedarikçinin gönderdiği usta ya da markanın mağazası. */
   image?: DraftImage;
   variants: DraftVariant[];
@@ -173,6 +193,79 @@ interface Purchase {
   drafts: Draft[];
 }
 
+/** Türkçe harflerin ASCII karşılığı — `toLowerCase` kullanılmaz: "İ" onda noktayı ayrı bir imle taşır. */
+const ASCII: Record<string, string> = {
+  ı: 'i',
+  İ: 'I',
+  ş: 's',
+  Ş: 'S',
+  ğ: 'g',
+  Ğ: 'G',
+  ü: 'u',
+  Ü: 'U',
+  ö: 'o',
+  Ö: 'O',
+  ç: 'c',
+  Ç: 'C',
+  â: 'a',
+  î: 'i',
+  û: 'u',
+};
+
+/**
+ * SKU tedarikçinin ürün kodudur; Lezza kataloğu kod veriyor, Behotrade faturası VERMİYOR ve kodsuz
+ * varyant aramanın ikinci kapısını kapatıyor (`findByCode`: barkod → sku → tedarikçi kodu). Kod bu
+ * yüzden FATURADAKİ KALEM ADINDAN türetilir: katalogdaki Türkçe addan değil, çünkü kod tedarikçiyle
+ * konuşurken kullanılır ve katalog adı düzeltilince kaymamalı. Boy zaten fatura adının içinde
+ * ("Olijfolie 5lt" ↔ "Olijfolie 750ml"), ayrıca eklenmez.
+ */
+export function draftSku(nameAtSupplier: string): string {
+  return nameAtSupplier
+    .replace(/[ıİşŞğĞüÜöÖçÇâîû]/g, (harf) => ASCII[harf] ?? harf)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Ambalajda yazan besin künyesi (100 g/ml). kJ ve kcal İKİSİ DE etiketten okunur — katman 3'teki
+ * `besin()` kJ'yi kcal'den türetir, burada türetme YASAK: etiket neyse o yazılır, yuvarlaması dâhil.
+ */
+const kunye = (
+  energyKj: number,
+  energyKcal: number,
+  fatG: number,
+  saturatedFatG: number,
+  carbohydrateG: number,
+  sugarsG: number,
+  proteinG: number,
+  saltG: number,
+): Nutrition => ({ energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG });
+
+/**
+ * Şifamix sirke şişelerinin ORTAK uyarıları — altı üründe kelimesi kelimesine aynı; ürüne özgü olan
+ * yalnız ilk cümle. Altı kez yazılsaydı biri düzelince beşi eskirdi.
+ */
+const sirkeMetni = (ilk: UcDil, sekersiz = false): UcDil => ({
+  tr: `${ilk.tr} ${sekersiz ? 'Şeker ilavesi, katkı' : 'Katkı'} maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya "sirke anası" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.`,
+  fr: `${ilk.fr} ${sekersiz ? 'Sans sucres ajoutés, sans' : 'Sans'} additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.`,
+  de: `${ilk.de} ${sekersiz ? 'Ohne Zuckerzusatz, ohne' : 'Ohne'} Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren.`,
+});
+
+/** Şişelerin çoğunda yazan saklama cümlesi; alıç, elma ve enginarın ambalajı başka yazdığı için onlar kendi metnini taşır. */
+const SIRKE_SAKLAMA: UcDil = {
+  tr: 'Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.',
+  fr: "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
+  de: 'Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen.',
+};
+
+/** Şifamix özlerinin ortak saklama cümlesi. */
+const OZ_SAKLAMA: UcDil = {
+  tr: 'Serin ve kuru yerde bulundurunuz.',
+  fr: 'Conserver dans un endroit frais et sec.',
+  de: 'Kühl und trocken lagern.',
+};
+
 const behotrade = (
   name: string,
   label: string | undefined,
@@ -182,14 +275,15 @@ const behotrade = (
   unitCost: number,
   // Faturadan gelmeyen her alan: ad çevirileri, metinler, beyanlar ve kapak. `Omit` ile yazıldı ki
   // `Draft`e alan eklendiğinde burası da kendiliğinden kabul etsin — liste iki yerde tutulmaz.
-  ek: Omit<Draft, 'name' | 'variants'> = {},
+  // `boy` ise varyantın kendi künyesi (barkod, tartım, ölçü): tek boylu kalemde ayrı satır açmaya değmez.
+  { boy, ...ek }: Omit<Draft, 'name' | 'variants'> & { boy?: Omit<DraftSize, 'label' | 'netQuantity'> } = {},
 ): Draft => ({
   name,
   // Behotrade'in faturasında donuk kalem YOK: pekmez, sirke, öz, macun ve kuru meyve rafta durur ve
   // kargolanır. `ek` sonra geldiği için istisna gerekirse kalem kendi rejimini yazabilir.
   rejim: 'raf',
   ...ek,
-  variants: [{ label, netQuantity, nameAtSupplier, qty, unitCost }],
+  variants: [{ label, netQuantity, ...boy, nameAtSupplier, qty, unitCost }],
 });
 
 /** Tedarikçinin gönderdiği ambalaj ustaları (`temp/beho`) — depoya küçültülmüş kopyaları girdi. */
@@ -204,6 +298,17 @@ const usta = (slug: string, kaynak: string): DraftImage => ({
  * adına hem `extOf` uzantı tespitine karışır ve anahtar `…webp?v=123` olur.
  */
 const magaza = (slug: string, url: string, kaynak: string): DraftImage => ({ slug, url, source: `${kaynak} ürün çekimi` });
+
+/**
+ * YAPAY ZEKÂ ile üretilmiş stüdyo karesi (`temp/Resim Calismalari`, işletmecinin çalışması). Ambalajın
+ * ön yüzü gerçek etiketi izler, küçük yazıları izlemez — kaynak alanı bunu kayda geçirir ki gerçek
+ * çekim geldiğinde hangi kapakların değişeceği tek sorguyla bulunsun.
+ */
+const studyo = (slug: string): DraftImage => ({
+  slug,
+  file: `scripts/seed-real/images/${slug}.webp`,
+  source: 'Yapay zekâ stüdyo karesi — gerçek ürün çekimi bekleniyor',
+});
 
 // Lezza'dan her kalemden bir kutu alındı: adet kutudaki parça sayısıdır. Kekler tek 90 g satılır (fatura
 // kodu 9'lu paketin, birim fiyat tek kekin); künefe faturadaki 2 × 145 g paket olarak satılır.
@@ -293,44 +398,57 @@ export const PURCHASES: Purchase[] = [
         nameTr: 'Üzüm Pekmezi',
         nameFr: 'Mélasse de raisin',
         nameDe: 'Traubenmelasse',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Koyu kıvamlı geleneksel üzüm pekmezi; kahvaltıda tahinle, tatlı ve hamur işlerinde kullanılır.',
-          fr: 'Mélasse de raisin traditionnelle et épaisse ; au petit-déjeuner avec du tahin, en pâtisserie et en dessert.',
-          de: 'Traditionelle, dickflüssige Traubenmelasse; zum Frühstück mit Tahin, für Gebäck und Desserts.',
+          tr: 'Beşe "Eski Usül" üzüm pekmezi, geleneksel yöntemle hazırlanır. Şeker ilavesizdir; doğal olarak şeker içerir. 650 g.',
+          fr: 'Mélasse de raisin Beşe « Eski Usül », préparée selon la méthode traditionnelle. Sans sucres ajoutés – contient des sucres naturellement présents. 650 g.',
+          de: 'Beşe Traubenmelasse „Eski Usül“, nach traditioneller Art hergestellt. Ohne Zuckerzusatz – enthält von Natur aus Zucker. 650 g.',
         },
+        ingredients: { tr: 'Üzüm pekmezi.', fr: 'Mélasse de raisin.', de: 'Traubenmelasse.' },
+        nutrition: kunye(1225, 293, 0, 0, 70.6, 69.9, 0.6, 0),
+        allergens: [],
         storage: { tr: 'Kuru ve serin yerde saklayınız.', fr: 'À conserver au sec et au frais.', de: 'Trocken und kühl lagern.' },
-        shelfLifeDays: 365,
-        image: magaza('druivenmelasse', 'https://www.besegida.com/wp-content/uploads/2025/04/Bese-Helva-Pekmez-650.jpg', 'Beşe 1885'),
+        shelfLifeDays: 730,
+        image: studyo('druivenmelasse'),
+        boy: { barcode: '8681910226456', packedWeightG: 920, packedLengthMm: 165, packedWidthMm: 70, packedHeightMm: 70 },
       }),
       behotrade('Johannesbroodmelasse', '650 g', 650, 'Johannesbroodmelasse 650gr', 12, 5.5, {
         nameTr: 'Keçiboynuzu Pekmezi',
         nameFr: 'Mélasse de caroube',
         nameDe: 'Johannisbrotmelasse',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Keçiboynuzundan elde edilen koyu pekmez; kendine has karamelimsi tadıyla kahvaltıda ve tatlılarda.',
-          fr: 'Mélasse foncée de caroube, au goût caramélisé caractéristique, pour le petit-déjeuner et les desserts.',
-          de: 'Dunkle Johannisbrotmelasse mit typischem Karamellgeschmack, für Frühstück und Desserts.',
+          tr: 'Beşe "Eski Usül" keçiboynuzu pekmezi, geleneksel yöntemle hazırlanır. Şeker ilavesizdir; doğal olarak şeker içerir. 650 g.',
+          fr: 'Mélasse de caroube Beşe « Eski Usül », préparée selon la méthode traditionnelle. Sans sucres ajoutés – contient des sucres naturellement présents. 650 g.',
+          de: 'Beşe Johannisbrotsirup „Eski Usül“, nach traditioneller Art hergestellt. Ohne Zuckerzusatz – enthält von Natur aus Zucker. 650 g.',
         },
+        ingredients: { tr: 'Keçiboynuzu (harnup) pekmezi.', fr: 'Sirop de caroube.', de: 'Johannisbrotsirup.' },
+        nutrition: kunye(1184, 283, 0, 0, 69.3, 69.3, 1.4, 0),
+        allergens: [],
         storage: { tr: 'Kuru ve serin yerde saklayınız.', fr: 'À conserver au sec et au frais.', de: 'Trocken und kühl lagern.' },
-        shelfLifeDays: 365,
-        image: magaza(
-          'johannesbroodmelasse',
-          'https://www.besegida.com/wp-content/uploads/2025/04/Bese-Helva-Harput-Pekmezi-650.jpg',
-          'Beşe 1885',
-        ),
+        shelfLifeDays: 730,
+        image: studyo('johannesbroodmelasse'),
+        boy: { barcode: '8681910226654', packedWeightG: 900, packedLengthMm: 165, packedWidthMm: 70, packedHeightMm: 70 },
       }),
       behotrade('Tahini', '500 g', 500, 'Tahini 500gr', 12, 4.75, {
         nameTr: 'Tahin',
         nameFr: 'Tahin (purée de sésame)',
         nameDe: 'Tahin (Sesampaste)',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Sade susam ezmesi; pekmezle kahvaltıda, tatlılarda ve soslarda kullanılır.',
-          fr: 'Purée de sésame nature ; avec de la mélasse au petit-déjeuner, en pâtisserie et dans les sauces.',
-          de: 'Reine Sesampaste; mit Melasse zum Frühstück, für Desserts und Saucen.',
+          tr: 'Beşe "Eski Usül" tahin, susam ezmesi. Glutensiz ve vegan. Susam içerir.',
+          fr: 'Tahin Beşe « Eski Usül », pâte de sésame. Sans gluten et vegan. Contient du sésame.',
+          de: 'Beşe Tahin „Eski Usül“, Sesampaste. Glutenfrei und vegan. Enthält Sesam.',
         },
+        // Alerjen İÇİNDEKİLER LİSTESİNDE yazıldığı hâliyle vurgulanır (INCO); künyedeki büyük harf
+        // yerine deponun işareti kullanılır (`parseEmphasis`).
+        ingredients: { tr: '**Susam** ezmesi (tahin).', fr: 'Pâte de **sésame**.', de: '**Sesam**paste.' },
+        nutrition: kunye(2816, 674, 58, 10.8, 10.5, 0, 22.7, 0.4),
+        allergens: ['susam'],
         storage: { tr: 'Kuru ve serin yerde saklayınız.', fr: 'À conserver au sec et au frais.', de: 'Trocken und kühl lagern.' },
         shelfLifeDays: 730,
-        image: magaza('tahini', 'https://www.besegida.com/wp-content/uploads/2025/04/Bese-Helva-Tahin-Susam-650.jpg', 'Beşe 1885'),
+        image: studyo('tahini'),
+        boy: { barcode: '8681910226319', packedWeightG: 780, packedLengthMm: 165, packedWidthMm: 75, packedHeightMm: 75 },
       }),
       // Sirkelerin ortak künyesi: doğal fermantasyon, katkı ve koruyucu içermez — ambalajın ön yüzünde
       // yazılı (`temp/beho` ustaları). Saklama, içindekiler ve besin değeri hiçbir kaynakta YOK.
@@ -338,164 +456,327 @@ export const PURCHASES: Purchase[] = [
         nameTr: 'Alıç Sirkesi',
         nameFr: "Vinaigre d'aubépine",
         nameDe: 'Weißdornessig',
-        description: {
-          tr: 'Doğal fermantasyonla üretilmiş alıç sirkesi; katkı ve koruyucu içermez.',
-          fr: "Vinaigre d'aubépine issu d'une fermentation naturelle, sans additif ni conservateur.",
-          de: 'Weißdornessig aus natürlicher Gärung, ohne Zusatz- und Konservierungsstoffe.',
-        },
-        image: usta('meidoorn-azijn', 'alıç.jpg'),
+        descriptionFromLabel: true,
+        description: sirkeMetni({
+          tr: 'Şifamix alıç sirkesi, geleneksel doğal fermantasyonla üretilmiştir.',
+          fr: "Vinaigre d'aubépine Şifamix, obtenu par fermentation naturelle traditionnelle.",
+          de: 'Şifamix Weißdorn-Essig, durch traditionelle natürliche Fermentation hergestellt.',
+        }),
+        ingredients: { tr: 'Alıç sirkesi.', fr: "Vinaigre d'aubépine.", de: 'Weißdorn-Essig.' },
+        nutrition: kunye(50, 12, 0, 0, 3.1, 0, 0, 0),
+        allergens: [],
+        storage: { ...SIRKE_SAKLAMA, tr: 'Serin yerde kapak kapalı olarak muhafaza ediniz.' },
+        image: studyo('meidoorn-azijn'),
+        boy: { barcode: '8683649156806', packedWeightG: 945, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Ananas azijn', '500 ml', 500, 'Ananas azijn 500ml', 12, 3, {
         nameTr: 'Ananas Sirkesi',
         nameFr: "Vinaigre d'ananas",
         nameDe: 'Ananasessig',
-        description: {
-          tr: 'Doğal fermantasyonla üretilmiş ananas sirkesi; katkı ve koruyucu içermez.',
-          fr: "Vinaigre d'ananas issu d'une fermentation naturelle, sans additif ni conservateur.",
-          de: 'Ananasessig aus natürlicher Gärung, ohne Zusatz- und Konservierungsstoffe.',
-        },
-        image: usta('ananas-azijn', 'ananas_sirkesi_şifamix_G03.pdf'),
+        descriptionFromLabel: true,
+        description: sirkeMetni({
+          tr: 'Şifamix ananas sirkesi, geleneksel doğal fermantasyonla üretilmiştir.',
+          fr: "Vinaigre d'ananas Şifamix, obtenu par fermentation naturelle traditionnelle.",
+          de: 'Şifamix Ananas-Essig, durch traditionelle natürliche Fermentation hergestellt.',
+        }),
+        ingredients: { tr: 'Ananas sirkesi.', fr: "Vinaigre d'ananas.", de: 'Ananas-Essig.' },
+        nutrition: kunye(18, 4.3, 0.02, 0.02, 1.2, 0.1, 0, 0.03),
+        allergens: [],
+        storage: SIRKE_SAKLAMA,
+        shelfLifeDays: 1096,
+        image: studyo('ananas-azijn'),
+        boy: { barcode: '8683649157070', packedWeightG: 880, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Enginar azijn', '500 ml', 500, 'Enginar azijn 500ml', 12, 3, {
         nameTr: 'Enginar Sirkesi',
         nameFr: "Vinaigre d'artichaut",
         nameDe: 'Artischockenessig',
-        description: {
-          tr: 'Doğal fermantasyonla üretilmiş enginar sirkesi; katkı ve koruyucu içermez.',
-          fr: "Vinaigre d'artichaut issu d'une fermentation naturelle, sans additif ni conservateur.",
-          de: 'Artischockenessig aus natürlicher Gärung, ohne Zusatz- und Konservierungsstoffe.',
+        descriptionFromLabel: true,
+        description: sirkeMetni(
+          {
+            tr: 'Şifamix enginar sirkesi, geleneksel doğal fermantasyonla üretilmiştir.',
+            fr: "Vinaigre d'artichaut Şifamix, obtenu par fermentation naturelle traditionnelle.",
+            de: 'Şifamix Artischockenessig, durch traditionelle natürliche Fermentation hergestellt.',
+          },
+          true,
+        ),
+        // Künye "enginar elma sirkesi" diyor: taban elma sirkesi, enginar aromalandırıcı.
+        ingredients: { tr: 'Enginar elma sirkesi.', fr: "Vinaigre de cidre de pomme à l'artichaut.", de: 'Artischocken-Apfelessig.' },
+        nutrition: kunye(79.5, 19, 0, 0, 4.8, 0, 0, 0),
+        allergens: [],
+        storage: {
+          tr: 'Serin ve kuru bir yerde, kapağı sıkıca kapalı olarak muhafaza ediniz. Doğrudan güneş ışığından koruyunuz.',
+          fr: "À conserver dans un endroit frais et sec, bien fermé et à l'abri de la lumière directe du soleil.",
+          de: 'Kühl und trocken lagern, gut verschlossen aufbewahren und vor direkter Sonneneinstrahlung schützen.',
         },
+        shelfLifeDays: 1826,
+        boy: { barcode: '8683649157803', packedWeightG: 930, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Appel azijn', '500 ml', 500, 'Appel azijn 500ml', 12, 3, {
         nameTr: 'Elma Sirkesi',
         nameFr: 'Vinaigre de cidre',
         nameDe: 'Apfelessig',
-        description: {
-          tr: 'Doğal fermantasyonla üretilmiş elma sirkesi; katkı ve koruyucu içermez.',
-          fr: "Vinaigre de cidre issu d'une fermentation naturelle, sans additif ni conservateur.",
-          de: 'Apfelessig aus natürlicher Gärung, ohne Zusatz- und Konservierungsstoffe.',
-        },
+        descriptionFromLabel: true,
+        description: sirkeMetni({
+          tr: 'Şifamix elma sirkesi, geleneksel doğal fermantasyonla üretilmiştir.',
+          fr: 'Vinaigre de cidre de pomme Şifamix, obtenu par fermentation naturelle traditionnelle.',
+          de: 'Şifamix Apfelessig, durch traditionelle natürliche Fermentation hergestellt.',
+        }),
+        ingredients: { tr: 'Elma sirkesi.', fr: 'Vinaigre de cidre de pomme.', de: 'Apfelessig.' },
+        nutrition: kunye(59, 14, 0.09, 0.09, 3.6, 0, 0, 0),
+        allergens: [],
+        storage: { ...SIRKE_SAKLAMA, tr: 'Serin yerde kapak kapalı olarak muhafaza ediniz.' },
         image: usta('appel-azijn', 'elma_y02.jpg'),
+        boy: { barcode: '8683649156790', packedWeightG: 900, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Isgin azijn', '500 ml', 500, 'Isgin azijn 500ml', 12, 3, {
         nameTr: 'Işkın Kökü Sirkesi',
         nameFr: 'Vinaigre de racine de rhubarbe',
         nameDe: 'Rhabarberwurzelessig',
-        description: {
-          tr: 'Işkın kökünden doğal fermantasyonla üretilmiş sirke; katkı ve koruyucu içermez.',
-          fr: "Vinaigre de racine de rhubarbe issu d'une fermentation naturelle, sans additif ni conservateur.",
-          de: 'Rhabarberwurzelessig aus natürlicher Gärung, ohne Zusatz- und Konservierungsstoffe.',
+        descriptionFromLabel: true,
+        description: sirkeMetni({
+          tr: 'Şifamix ışkın kökü sirkesi; elma sirkesi ve ışkın köküyle, geleneksel doğal fermantasyonla üretilmiştir.',
+          fr: 'Vinaigre de cidre de pomme Şifamix à la racine de rhubarbe, obtenu par fermentation naturelle traditionnelle.',
+          de: 'Şifamix Apfelessig mit Rhabarberwurzel, durch traditionelle natürliche Fermentation hergestellt.',
+        }),
+        ingredients: {
+          tr: 'Elma sirkesi, ışkın kökü.',
+          fr: 'Vinaigre de cidre de pomme, racine de rhubarbe.',
+          de: 'Apfelessig, Rhabarberwurzel.',
         },
-        image: usta('isgin-azijn', 'ışkın_sirkesi_şifamix_G03.pdf'),
+        nutrition: kunye(13, 3, 0.04, 0.04, 0.5, 0.01, 0, 0.1),
+        allergens: [],
+        storage: SIRKE_SAKLAMA,
+        shelfLifeDays: 1461,
+        image: studyo('isgin-azijn'),
+        boy: { barcode: '8683649157063', packedWeightG: 950, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
-      // Elimizdeki Şifamix ustası "Nar Ekşisi (Granaatappelsiroop)" diyor, fatura "extraat" — şurup mu öz
-      // mü belirsiz olduğu için kapak BAĞLANMADI (`nar-eksisi.webp` depoda hazır bekliyor).
+      // Fatura "extraat" (öz) diyordu, ambalaj "Nar Ekşisi / Sirop de grenade" yazıyor: ad künyeden
+      // düzeltildi ve depoda bekleyen kapak bağlandı.
       behotrade('Granaatappelextraat', '250 ml', 250, 'Granaatappelextraat 250ml', 12, 3.45, {
-        nameTr: 'Nar Özü',
-        nameFr: 'Extrait de grenade',
-        nameDe: 'Granatapfelextrakt',
+        nameTr: 'Nar Ekşisi',
+        nameFr: 'Sirop de grenade',
+        nameDe: 'Granatapfelsirup',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Nardan elde edilen yoğun öz; suyla seyreltilerek ya da salata ve tatlılarda kullanılır.',
-          fr: 'Extrait concentré de grenade ; à diluer dans l’eau ou à utiliser en salade et en dessert.',
-          de: 'Konzentrierter Granatapfelextrakt; mit Wasser verdünnt oder für Salate und Desserts.',
+          tr: 'Şifamix nar ekşisi. Katkı maddesi ve koruyucu içermez. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.',
+          fr: 'Sirop de grenade Şifamix. Sans additifs ni conservateurs. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.',
+          de: 'Şifamix Granatapfelsirup. Ohne Zusatz- und Konservierungsstoffe. Schwangeren und stillenden Müttern wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren.',
         },
+        ingredients: { tr: 'Nar ekşisi.', fr: 'Sirop de grenade.', de: 'Granatapfelsirup.' },
+        nutrition: kunye(1174, 273, 0, 0, 66.9, 64.9, 1, 0.1),
+        allergens: [],
+        storage: SIRKE_SAKLAMA,
+        image: studyo('nar-eksisi'),
+        boy: { barcode: '8683649156813', packedWeightG: 605, packedLengthMm: 45, packedWidthMm: 45, packedHeightMm: 230 },
       }),
       behotrade('Sifamix Kozalak extract', '670 g', 670, 'Sifamix Kozalak extract 670gr', 12, 4.25, {
         nameTr: 'Şifamix Kozalak Özü',
         nameFr: 'Extrait de pomme de pin Şifamix',
         nameDe: 'Şifamix Kiefernzapfenextrakt',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Çam kozalağından elde edilen koyu kıvamlı öz; kaşıkla ya da suyla seyreltilerek.',
-          fr: 'Extrait épais de pomme de pin ; à la cuillère ou dilué dans l’eau.',
-          de: 'Dickflüssiger Kiefernzapfenextrakt; löffelweise oder mit Wasser verdünnt.',
+          tr: 'Şifamix kozalak özü; kozalak özü, keçiboynuzu pekmezi ve andız pekmezinden hazırlanır. İnfüzyon ve soğuk pres yöntemiyle üretilmiştir. Katkı maddesi ve koruyucu içermez.',
+          fr: "Extrait de pomme de pin Şifamix, préparé à partir d'extrait de pomme de pin, de mélasse de caroube et de mélasse de genévrier. Obtenu par infusion et pressage à froid. Sans additifs ni conservateurs.",
+          de: 'Şifamix Kiefernzapfenextrakt aus Kiefernzapfenextrakt, Johannisbrotmelasse und Wacholdermelasse. Durch Infusion und Kaltpressung hergestellt. Ohne Zusatz- und Konservierungsstoffe.',
         },
+        ingredients: {
+          tr: 'Kozalak özü, keçiboynuzu pekmezi, andız pekmezi.',
+          fr: 'Extrait de pomme de pin, mélasse de caroube, mélasse de genévrier.',
+          de: 'Kiefernzapfenextrakt, Johannisbrotmelasse, Wacholdermelasse.',
+        },
+        nutrition: kunye(1352, 318, 0.01, 0, 78.81, 44.61, 0.69, 0),
+        allergens: [],
+        storage: { ...OZ_SAKLAMA, tr: 'Serin ve kuru yerde bulundurunuz. Serin ve güneş görmeyen yerde saklayınız.' },
+        boy: { barcode: '8683649157735', packedWeightG: 1095, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
-      behotrade('Sifamix Johannesbrood extract', '700 ml', 700, 'Sifamix Johannesbrood extract 700ml', 12, 3.75, {
+      // Fatura "700ml" yazıyor ama ambalajda GRAM yazılı: boy etiketi künyeden düzeltildi (birim etiketten okunur).
+      behotrade('Sifamix Johannesbrood extract', '700 g', 700, 'Sifamix Johannesbrood extract 700ml', 12, 3.75, {
         nameTr: 'Şifamix Keçiboynuzu Özü',
         nameFr: 'Extrait de caroube Şifamix',
         nameDe: 'Şifamix Johannisbrotextrakt',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Soğuk pres infüzyonla üretilen keçiboynuzu özü; şeker ilavesi içermez.',
-          fr: 'Extrait de caroube obtenu par infusion à froid, sans sucre ajouté.',
-          de: 'Johannisbrotextrakt aus Kaltpress-Infusion, ohne Zuckerzusatz.',
+          tr: 'Şifamix keçiboynuzu özü, doğal keçiboynuzu meyvesinden infüzyon ve soğuk pres yöntemiyle elde edilir. Şeker ilavesizdir; doğal olarak şeker içerir. Katkı maddesi ve koruyucu içermez.',
+          fr: 'Extrait de caroube Şifamix, obtenu à partir de gousses de caroube naturelles par infusion et pressage à froid. Sans sucres ajoutés – contient des sucres naturellement présents. Sans additifs ni conservateurs.',
+          de: 'Şifamix Johannisbrot-Extrakt aus natürlichen Johannisbrotschoten, durch Infusion und Kaltpressung gewonnen. Ohne Zuckerzusatz – enthält von Natur aus Zucker. Ohne Zusatz- und Konservierungsstoffe.',
         },
+        ingredients: {
+          tr: 'Doğal keçiboynuzu meyvesinin özü.',
+          fr: 'Extrait de gousses de caroube.',
+          de: 'Extrakt aus Johannisbrotschoten.',
+        },
+        nutrition: kunye(1360, 320, 0, 0, 79.31, 44, 0.68, 0),
+        allergens: [],
+        storage: OZ_SAKLAMA,
+        shelfLifeDays: 730,
         image: usta('sifamix-johannesbrood-extract', 'keçiboynuzu.zip/keçiboynuzu_01.jpg'),
+        boy: { barcode: '8683649157292', packedWeightG: 1120, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Sifamix Andiz extract', '350 g', 350, 'Sifamix Andiz extract 350gr', 12, 3.99, {
         nameTr: 'Şifamix Andız Özü',
         nameFr: 'Extrait de genévrier Şifamix',
         nameDe: 'Şifamix Wacholderextrakt',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Soğuk pres infüzyonla üretilen andız özü; şeker ilavesi içermez.',
-          fr: 'Extrait de genévrier obtenu par infusion à froid, sans sucre ajouté.',
-          de: 'Wacholderextrakt aus Kaltpress-Infusion, ohne Zuckerzusatz.',
+          tr: 'Şifamix andız özü, doğal andız meyvesinden infüzyon ve soğuk pres yöntemiyle elde edilir. Şeker ilavesizdir; doğal olarak şeker içerir. Katkı maddesi ve koruyucu içermez.',
+          fr: 'Extrait de genièvre Şifamix, obtenu à partir de baies de genévrier par infusion et pressage à froid. Sans sucres ajoutés – contient des sucres naturellement présents. Sans additifs ni conservateurs.',
+          de: 'Şifamix Wacholderextrakt aus Wacholderbeeren, durch Infusion und Kaltpressung gewonnen. Ohne Zuckerzusatz – enthält von Natur aus Zucker. Ohne Zusatz- und Konservierungsstoffe.',
         },
-        image: usta('sifamix-andiz-extract', 'andız.zip/andız_01.jpg'),
+        ingredients: { tr: 'Doğal andız meyvesinin özü.', fr: 'Extrait de baies de genévrier.', de: 'Extrakt aus Wacholderbeeren.' },
+        nutrition: kunye(1279.7, 301.1, 0.1, 0, 74.29, 50.13, 0.77, 0.014),
+        allergens: [],
+        storage: OZ_SAKLAMA,
+        shelfLifeDays: 730,
+        image: studyo('sifamix-andiz-extract'),
+        boy: { barcode: '8683649157285', packedWeightG: 620, packedLengthMm: 45, packedWidthMm: 45, packedHeightMm: 230 },
       }),
       behotrade('Coconut mix', '250 ml', 250, 'Coconut mix 250ml', 12, 4.95, {
         nameTr: 'Coconut Mix',
         nameFr: 'Coconut Mix',
         nameDe: 'Coconut Mix',
-        // Bileşenler ambalajın ön yüzünde yazılı; yasal içindekiler beyanı değil, o yüzden açıklamada.
+        descriptionFromLabel: true,
         description: {
-          tr: 'Hindistan cevizi, kinoa, sandaloz sakızı, biberiye, yeşil çay ve chia içeren karışım; suyla seyreltilerek içilir.',
-          fr: 'Mélange à la noix de coco, quinoa, gomme de sandaraque, romarin, thé vert et chia ; à diluer dans l’eau.',
-          de: 'Mischung aus Kokosnuss, Quinoa, Sandarakharz, Rosmarin, Grüntee und Chia; mit Wasser verdünnt zu trinken.',
+          tr: 'Şifamix Coconut Mix – hindistan cevizi sirkesi ve şurubu bazlı konsantre içecek; yeşil çay, biberiye, chia ve kinoa tohumu içerir. İçmeden önce çalkalayınız, soğuk içiniz. Açıldıktan sonra buzdolabında saklayıp 1 ay içinde tüketiniz.',
+          fr: "Şifamix Coconut Mix – boisson concentrée à base de vinaigre et de sirop de coco, avec thé vert, romarin, graines de chia et de quinoa. Bien agiter avant de boire, boire froid. Après ouverture, conserver au réfrigérateur et consommer dans un délai d'un mois.",
+          de: 'Şifamix Coconut Mix – Getränkekonzentrat auf Basis von Kokosnussessig und Kokosnusssirup, mit grünem Tee, Rosmarin, Chia- und Quinoasamen. Vor dem Trinken gut schütteln, kalt trinken. Nach dem Öffnen im Kühlschrank aufbewahren und innerhalb von 1 Monat verbrauchen.',
+        },
+        ingredients: {
+          tr: 'Hindistan cevizi sirkesi, hindistan cevizi şurubu, sandaloz sakızı, yeşil çay, biberiye, chia tohumu, kinoa tohumu, kitre sakızı, funda yaprağı, L-karnitin, potasyum sorbat, sodyum benzoat, akasya gamı.',
+          fr: 'Vinaigre de coco, sirop de coco, résine de sandaraque, thé vert, romarin, graines de chia (Salvia hispanica), graines de quinoa, gomme adragante, feuille de bruyère, L-carnitine, sorbate de potassium, benzoate de sodium, gomme arabique.',
+          de: 'Kokosnussessig, Kokosnusssirup, Sandarakharz, Grüner Tee, Rosmarin, Chia-Samen (Salvia hispanica), Quinoasamen, Tragantgummi, Heidekrautblatt, L-Carnitin, Kaliumsorbat, Natriumbenzoat, Gummi Arabicum.',
+        },
+        nutrition: kunye(77.7, 18.6, 0, 0, 4.3, 2.6, 0.32, 0.37),
+        allergens: [],
+        storage: {
+          tr: 'Çocukların ulaşamayacağı, serin ve kuru bir yerde muhafaza ediniz. Açıldıktan sonra buzdolabında muhafaza edilmeli ve 1 ay içerisinde tüketilmelidir.',
+          fr: "Conserver dans un endroit frais et sec, hors de portée des enfants. Après ouverture, conserver au réfrigérateur et consommer dans un délai d'un mois.",
+          de: 'Außerhalb der Reichweite von Kindern an einem kühlen und trockenen Ort aufbewahren. Nach dem Öffnen im Kühlschrank aufbewahren und innerhalb von 1 Monat verbrauchen.',
         },
         image: usta('coconut-mix', 'coconut_trendyol.zip/coconut_01.jpg'),
+        boy: { barcode: '8683649157537', packedWeightG: 525, packedLengthMm: 45, packedWidthMm: 45, packedHeightMm: 230 },
       }),
       behotrade('Honing azijn', '500 ml', 500, 'Honing azijn 500ml', 12, 3, {
         nameTr: 'Bal Sirkesi',
         nameFr: 'Vinaigre de miel',
         nameDe: 'Honigessig',
-        description: {
-          tr: 'Doğal fermantasyonla üretilmiş bal sirkesi; katkı ve koruyucu içermez.',
-          fr: 'Vinaigre de miel issu d’une fermentation naturelle, sans additif ni conservateur.',
-          de: 'Honigessig aus natürlicher Gärung, ohne Zusatz- und Konservierungsstoffe.',
-        },
-        image: usta('honing-azijn', 'bal_sirkesi_şifamix_G03.pdf'),
+        descriptionFromLabel: true,
+        description: sirkeMetni({
+          tr: 'Şifamix bal sirkesi, tarçınlı; geleneksel doğal fermantasyonla üretilmiştir.',
+          fr: 'Vinaigre de miel Şifamix à la cannelle, obtenu par fermentation naturelle traditionnelle.',
+          de: 'Şifamix Honigessig mit Zimt, durch traditionelle natürliche Fermentation hergestellt.',
+        }),
+        ingredients: { tr: 'Bal sirkesi, tarçın.', fr: 'Vinaigre de miel, cannelle.', de: 'Honigessig, Zimt.' },
+        nutrition: kunye(25.14, 6, 0.02, 0.02, 1.58, 0.12, 0, 0.06),
+        allergens: [],
+        storage: SIRKE_SAKLAMA,
+        image: studyo('honing-azijn'),
+        boy: { barcode: '8683649157056', packedWeightG: 880, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       {
         name: 'Olijfolie',
         // Elle yazılmış kayıt: `behotrade()`ın raf varsayılanı buraya uğramaz.
         rejim: 'raf',
-        nameTr: 'Zeytinyağı',
-        nameFr: 'Huile d’olive',
-        nameDe: 'Olivenöl',
+        // Fatura yalnız "Olijfolie" diyor; ambalaj sınıfı yazıyor ve sınıf ADIN PARÇASI: "natürel sızma"
+        // hukuken ayrı bir kalite (AB 2022/2104), rafta yanındaki riviera ile aynı ürün değil.
+        nameTr: 'Natürel Sızma Zeytinyağı',
+        nameFr: "Huile d'olive vierge extra",
+        nameDe: 'Natives Olivenöl extra',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Yemeklik zeytinyağı; salatada, kızartmada ve pişirmede kullanılır.',
-          fr: 'Huile d’olive de table ; pour les salades, les fritures et la cuisson.',
-          de: 'Speiseolivenöl; für Salate, zum Braten und Kochen.',
+          tr: 'Şifamix natürel sızma zeytinyağı, Yunanistan ürünü. Soğuk sıkım. Doğrudan zeytinden, yalnızca mekanik yöntemlerle elde edilen üstün kalite zeytinyağı.',
+          fr: "Huile d'olive vierge extra Şifamix, produit de Grèce. Extraction à froid. Huile d'olive de catégorie supérieure obtenue directement des olives et uniquement par des procédés mécaniques.",
+          de: 'Natives Olivenöl extra von Şifamix, Erzeugnis aus Griechenland. Kaltextraktion. Olivenöl der höchsten Güteklasse, direkt aus Oliven ausschließlich mit mechanischen Verfahren gewonnen.',
         },
+        ingredients: { tr: 'Natürel sızma zeytinyağı.', fr: "Huile d'olive vierge extra.", de: 'Natives Olivenöl extra.' },
+        nutrition: kunye(3470.6, 837.5, 93.8, 13.4, 0, 0, 0, 0),
+        allergens: [],
+        storage: {
+          tr: 'Serin ve karanlık bir yerde saklayınız.',
+          fr: 'Conserver dans un endroit sombre et frais.',
+          de: 'An einem dunklen und kühlen Ort aufbewahren.',
+        },
+        image: studyo('olijfolie'),
         variants: [
-          { label: '5 l', netQuantity: 5000, nameAtSupplier: 'Olijfolie 5lt', qty: 4, unitCost: 29.9 },
-          { label: '750 ml', netQuantity: 750, nameAtSupplier: 'Olijfolie 750ml', qty: 12, unitCost: 5.5 },
+          {
+            label: '5 l',
+            netQuantity: 5000,
+            nameAtSupplier: 'Olijfolie 5lt',
+            qty: 4,
+            unitCost: 29.9,
+            barcode: '5205657007524',
+            packedWeightG: 5000,
+            packedLengthMm: 330,
+            packedWidthMm: 120,
+            packedHeightMm: 150,
+          },
+          {
+            label: '750 ml',
+            netQuantity: 750,
+            nameAtSupplier: 'Olijfolie 750ml',
+            qty: 12,
+            unitCost: 5.5,
+            barcode: '5205657007531',
+            packedWeightG: 1125,
+            packedLengthMm: 290,
+            packedWidthMm: 70,
+            packedHeightMm: 70,
+          },
         ],
       },
       behotrade('Pistache', '700 g', 700, 'Pistache 700gr', 20, 16.5, {
         nameTr: 'Antep Fıstığı',
         nameFr: 'Pistaches',
         nameDe: 'Pistazien',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Antep fıstığı; atıştırmalık olarak ve tatlı yapımında kullanılır.',
-          fr: 'Pistaches ; à grignoter ou à utiliser en pâtisserie.',
-          de: 'Pistazien; als Snack oder zum Backen.',
+          tr: 'Şifamix kabuklu Antep fıstığı, tuzlu. Dikkat: Küçük çocuklar taneleri yutarak boğulabilir.',
+          fr: "Pistaches Şifamix en coque, salées. Attention : les enfants en bas âge peuvent s'étouffer avec les graines.",
+          de: 'Şifamix Pistazien in der Schale, gesalzen. Achtung: Kleine Kinder können an Kernen ersticken.',
         },
+        ingredients: { tr: '**Antep fıstığı**, tuz.', fr: '**Pistache**, sel.', de: '**Pistazien**, Salz.' },
+        // Besin künyesi YAZILMADI: elimizdeki okumada doymuş yağ 51,02 g görünüyor ve 58,69 g yağın
+        // neredeyse tamamı demek — fıstıkta yağın büyük kısmı doymamıştır, yani satır yanlış okunmuş.
+        // Künye yarım yazılmaz; doğrusu ambalajdan yeniden okunacak.
+        allergens: ['sert_kabuklu'],
+        traces: ['yer_fistigi', 'sert_kabuklu', 'susam'],
+        storage: {
+          tr: 'Kuru yerde, sıcaktan koruyarak saklayınız.',
+          fr: "Conserver au sec et à l'abri de la chaleur.",
+          de: 'Trocken lagern und vor Wärme schützen.',
+        },
+        image: studyo('pistache'),
+        boy: { barcode: '8699237145442', packedWeightG: 710, packedLengthMm: 50, packedWidthMm: 150, packedHeightMm: 230 },
       }),
-      behotrade('Bromelain siroop', '250 ml', 250, 'Bromelain siroop 250ml', 18, 8, {
+      // Faturada "250ml", ambalajda GRAM yazılı (keçiboynuzu özüyle aynı durum): boy etiketi künyeden düzeltildi.
+      behotrade('Bromelain siroop', '250 g', 250, 'Bromelain siroop 250ml', 18, 8, {
         nameTr: 'Bromelain Şurubu',
         nameFr: 'Sirop de broméline',
         nameDe: 'Bromelain-Sirup',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Ananastan elde edilen bromelain içeren şurup; suyla seyreltilerek ya da doğrudan alınır.',
-          fr: 'Sirop à la broméline issue de l’ananas ; à diluer dans l’eau ou à prendre tel quel.',
-          de: 'Sirup mit Bromelain aus Ananas; mit Wasser verdünnt oder pur einzunehmen.',
+          tr: 'Ananas ve bromelain içeren şurup formunda gıda takviyesi (Zühre Ana). 1 porsiyonda: bromelain 350 mg, koenzim Q10 100 mg, mate yaprağı ekstresi 100 mg, L-karnitin 100 mg, C vitamini 80 mg (%100 BRD), ananas ekstresi 50 mg. Kullanım: yetişkinler ve 11 yaş üzeri için sabah 1, akşam 1 doz olmak üzere günde toplam 2 doz (10 ml). Kullanmadan önce çalkalayınız. İlaç değildir; hastalıkları önleme veya tedavi amacıyla kullanılamaz. Gıda takviyeleri normal beslenmenin yerine geçemez. Hastalık veya ilaç kullanımı durumunda doktorunuza danışınız. Çocukların ulaşamayacağı yerde saklayınız.',
+          fr: "Complément alimentaire au sirop contenant de l'ananas et de la bromélaïne (Zühre Ana). Pour 1 portion : bromélaïne 350 mg, coenzyme Q10 100 mg, extrait de feuille de maté 100 mg, L-carnitine 100 mg, vitamine C 80 mg (100 % VNR), extrait d'ananas 50 mg. Portion journalière : adultes et personnes de 11 ans et plus, 1 dose le matin et 1 dose le soir, soit 2 doses (10 ml) par jour. Bien agiter avant utilisation. Ce n'est pas un médicament ; il ne peut pas être utilisé pour prévenir ou traiter des maladies. Les compléments alimentaires ne peuvent pas remplacer une alimentation normale. Consultez votre médecin en cas de maladie ou de prise de médicaments. Tenir hors de portée des enfants.",
+          de: 'Nahrungsergänzungsmittel in Sirupform mit Ananas und Bromelain (Zühre Ana). Pro Portion: Bromelain 350 mg, Coenzym Q10 100 mg, Mate-Blattextrakt 100 mg, L-Carnitin 100 mg, Vitamin C 80 mg (100 % NRV), Ananasextrakt 50 mg. Verzehrempfehlung: Erwachsene und Personen ab 11 Jahren 1 Dosis morgens und 1 Dosis abends, insgesamt 2 Dosen (10 ml) pro Tag. Vor Gebrauch gut schütteln. Es ist kein Arzneimittel und kann nicht zur Vorbeugung oder Behandlung von Krankheiten eingesetzt werden. Nahrungsergänzungsmittel können die normale Ernährung nicht ersetzen. Bei Krankheit oder Medikamenteneinnahme Arzt konsultieren. Außerhalb der Reichweite von Kindern aufbewahren.',
+        },
+        ingredients: {
+          tr: 'Deiyonize su, bromelain, koenzim Q10, mate yaprağı ekstresi, L-karnitin, arap zamkı (E414), L-askorbik asit (C vitamini), ananas ekstresi, doğal ananas aroması, stevya (Stevia rebaudiana).',
+          fr: "Eau désionisée, bromélaïne, coenzyme Q10, extrait de feuille de maté, L-carnitine, gomme arabique (E414), acide L-ascorbique (vitamine C), extrait d'ananas, arôme naturel d'ananas, stévia (Stevia Rebaudiana).",
+          de: 'Entionisiertes Wasser, Bromelain, Coenzym Q10, Mate-Blattextrakt, L-Carnitin, Gummi Arabicum (E414), L-Ascorbinsäure (Vitamin C), Ananasextrakt, natürliches Ananasaroma, Stevia (Stevia Rebaudiana).',
+        },
+        // Besin künyesi ambalajda YOK: gıda takviyesi porsiyon başına etkin madde yazar, 100 ml künyesi vermez.
+        allergens: [],
+        storage: {
+          tr: "25 °C'nin altında oda sıcaklığında, nem ve ışıktan korunarak saklayınız. Çocukların ulaşamayacağı yerde saklayınız.",
+          fr: "Conserver à température ambiante inférieure à 25 °C, à l'abri de l'humidité et de la lumière. Tenir hors de portée des enfants.",
+          de: 'Bei Raumtemperatur unter 25 °C, vor Feuchtigkeit und Licht geschützt lagern. Außerhalb der Reichweite von Kindern aufbewahren.',
         },
         image: magaza(
           'bromelain-siroop',
           'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/ZuhreAnaBromelainSurubu250ml_587ebfd0-bba8-42f4-9145-3df204a028ca.webp',
           'Zühre Ana',
         ),
+        boy: { barcode: '8683655363212', packedWeightG: 460, packedLengthMm: 45, packedWidthMm: 45, packedHeightMm: 230 },
       }),
       // Kekre ve Propolis: içindekiler listesi markanın kendi mağazasında YAZILI, olduğu gibi alındı.
       // Sağlık iddiası taşıyan cümleler (bağışıklık, iltihap, ağrı) bilerek taşınmadı — AB'de beyan
@@ -504,22 +785,26 @@ export const PURCHASES: Purchase[] = [
         nameTr: 'Zühre Ana Kekre Termojenik Mix',
         nameFr: 'Zühre Ana Kekre, concentré aux fruits',
         nameDe: 'Zühre Ana Kekre, Fruchtkonzentrat',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Meyve ve bitki özlerinden hazırlanmış içecek konsantresi; suyla seyreltilerek içilir.',
-          fr: 'Concentré de boisson aux extraits de fruits et de plantes ; à diluer dans l’eau.',
-          de: 'Getränkekonzentrat aus Frucht- und Pflanzenauszügen; mit Wasser verdünnt zu trinken.',
+          tr: "Zühre Ana Kekre Mix, hibisküs ve papayalı; bitki ekstreleri içeren içecek konsantresi. Hazırlanışı: bardağın 1/4'üne kadar doldurup üzerine su ekleyerek iyice karıştırınız. Tüketmeden önce çalkalayınız. Koruyucu ve renklendirici içermez.",
+          fr: "Zühre Ana Kekre Mix à l'hibiscus et à la papaye – concentré de boisson aux extraits de plantes. Préparation : remplir un verre au quart, compléter avec de l'eau et bien mélanger. Agiter avant utilisation. Sans conservateurs ni colorants.",
+          de: 'Zühre Ana Kekre Mix mit Hibiskus und Papaya – Getränkekonzentrat mit Pflanzenextrakten. Zubereitung: ein Glas zu 1/4 füllen, mit Wasser auffüllen und gut umrühren. Vor Gebrauch schütteln. Ohne Konservierungs- und Farbstoffe.',
         },
+        nutrition: kunye(753, 180, 3, 1.5, 32.5, 17, 6, 0.05),
+        allergens: [],
+        boy: { barcode: '8683655363984', packedWeightG: 513, packedLengthMm: 45, packedWidthMm: 45, packedHeightMm: 230 },
         ingredients: {
           tr: 'Yaban mersini, su, mate, zencefil, papaya, mango, açai, sandaloz sakızı, hindistan cevizi, hibiskus, avokado, ananas, tarçın, L-karnitin, stevia, ksantan gam.',
           fr: 'Myrtille, eau, maté, gingembre, papaye, mangue, açaï, gomme de sandaraque, noix de coco, hibiscus, avocat, ananas, cannelle, L-carnitine, stévia, gomme xanthane.',
           de: 'Heidelbeere, Wasser, Mate, Ingwer, Papaya, Mango, Açaí, Sandarakharz, Kokosnuss, Hibiskus, Avocado, Ananas, Zimt, L-Carnitin, Stevia, Xanthan.',
         },
         storage: {
-          tr: 'Güneş ışığından uzak, serin ve kuru yerde saklayınız.',
-          fr: 'À conserver à l’abri du soleil, au sec et au frais.',
-          de: 'Vor Sonnenlicht geschützt, kühl und trocken lagern.',
+          tr: 'Güneş ışığından uzak, serin ve kuru, kendi ambalajı içerisinde saklayınız. Açıldıktan sonra buzdolabında muhafaza ediniz.',
+          fr: "À conserver à l'abri de la lumière du soleil, dans un endroit frais et sec, dans son emballage d'origine. Après ouverture, conserver au réfrigérateur.",
+          de: 'Vor Sonnenlicht geschützt, kühl und trocken in der Originalverpackung aufbewahren. Nach dem Öffnen im Kühlschrank aufbewahren.',
         },
-        image: magaza('zuhre-ana-kekre', 'https://cdn.shopify.com/s/files/1/0631/1326/5378/files/zuhre-ana-kekre-mix.png', 'Zühre Ana'),
+        image: studyo('zuhre-ana-kekre'),
       }),
       behotrade('Propolis pasta', '240 g', 240, 'Propolis pasta 240gr', 2, 8.5, {
         nameTr: 'Propolis Macunu',
@@ -542,64 +827,100 @@ export const PURCHASES: Purchase[] = [
         nameTr: 'Form Macunu',
         nameFr: 'Pâte Form (à la L-carnitine)',
         nameDe: 'Form-Paste (mit L-Carnitin)',
+        descriptionFromLabel: true,
         description: {
-          tr: 'L-karnitin destekli bitkisel macun; kaşıkla tüketilir.',
-          fr: 'Pâte végétale enrichie en L-carnitine ; à la cuillère.',
-          de: 'Pflanzliche Paste mit L-Carnitin; löffelweise zu genießen.',
+          tr: 'Zühre Ana L-karnitin içeren macun. Meyve ve bitki karışımı; L-karnitin (%4,16) ve krom pikolinat içerir. Türkiye ürünü. Hamile kadınlar ve çocuklar için uygun değildir.',
+          fr: 'Pâte Zühre Ana contenant de la L-carnitine. Mélange de fruits et de plantes, avec L-carnitine (4,16 %) et picolinate de chrome. Produit de Turquie. Ne convient pas aux femmes enceintes ni aux enfants.',
+          de: 'Zühre Ana Paste mit L-Carnitin. Mischung aus Früchten und Kräutern, mit L-Carnitin (4,16 %) und Chrompicolinat. Hergestellt in der Türkei. Für Schwangere und Kinder nicht geeignet.',
         },
+        ingredients: {
+          tr: 'Yaban mersini, biberiye, funda, kiraz meyve sapı, mısır püskülü, akdiken, enginar, L-karnitin (%4,16), sandaloz sakızı, kitre, tarçın, krom pikolinat, yeşil çay, nar ekşisi, kayısı aroması.',
+          fr: 'Myrtille, romarin, bruyère, queue de cerise, barbe de maïs, nerprun, artichaut, L-carnitine (4,16 %), gomme de sandaraque, gomme adragante, cannelle, picolinate de chrome, thé vert, mélasse de grenade, arôme abricot.',
+          de: 'Heidelbeere, Rosmarin, Heidekraut, Kirschstiel, Maisseide, Weissdorn, Artischocke, L-Carnitin (4,16 %), Sandarak, Traganth, Zimt, Chrompicolinat, Grüner Tee, Granatapfelsirup, Aprikosenaroma.',
+        },
+        nutrition: kunye(1395, 334, 0.3, 0.1, 82.8, 51.6, 0, 0),
+        allergens: [],
         storage: {
           tr: 'Güneş ışığından uzak, serin ve kuru yerde saklayınız.',
           fr: 'À conserver à l’abri du soleil, au sec et au frais.',
           de: 'Vor Sonnenlicht geschützt, kühl und trocken lagern.',
         },
         image: magaza('form-pasta', 'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/ZuhreAnaFormMacunu240Gram.webp', 'Zühre Ana'),
+        boy: { barcode: '8683655363014', packedWeightG: 423, packedLengthMm: 100, packedWidthMm: 80, packedHeightMm: 80 },
       }),
       behotrade('Dennenappel pasta', '240 g', 240, 'Dennenappel pasta 240gr', 2, 8, {
         nameTr: 'Kozalak Macunu',
         nameFr: 'Pâte de pomme de pin',
         nameDe: 'Kiefernzapfen-Paste',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Çam kozalağı ve bitki özlerinden hazırlanmış macun; kaşıkla tüketilir.',
-          fr: 'Pâte préparée à partir de pomme de pin et d’extraits de plantes ; à la cuillère.',
-          de: 'Paste aus Kiefernzapfen und Pflanzenauszügen; löffelweise zu genießen.',
+          tr: 'Zühre Ana kozalak macunu. Keçiboynuzu ve andız pekmezi bazlı; servi kozağı (%24), reçine, baharatlar, çinko, C ve D3 vitamini içerir. Türkiye ürünü.',
+          fr: 'Pâte Zühre Ana à base de mélasse de caroube et de genévrier, avec cônes de cyprès (24 %), résine, épices, zinc et vitamines C et D3. Produit de Turquie.',
+          de: 'Zühre Ana Paste auf Basis von Johannisbrot- und Wacholdermelasse, mit Zypressenzapfen (24 %), Harz, Gewürzen, Zink sowie Vitamin C und D3. Hergestellt in der Türkei.',
         },
+        ingredients: {
+          tr: 'Keçiboynuzu pekmezi, servi kozağı (%24), andız pekmezi, nane, zencefil, günlük (boswellia), çam sakızı (%2), zerdeçal, havlıcan, beta-glukan, çinko glukonat (%2), askorbik asit (C vitamini), kübabe, karanfil, keçiboynuzu tozu, kolekalsiferol (D3 vitamini) (%0,006).',
+          fr: 'Mélasse de caroube, cônes de cyprès (24 %), mélasse de genévrier de Syrie, menthe poivrée, gingembre, encens (boswellia), résine de pin (2 %), curcuma, galanga, bêta-glucane, gluconate de zinc (2 %), acide ascorbique (vitamine C), cubèbe, clou de girofle, poudre de caroube, cholécalciférol (vitamine D3) (0,006 %).',
+          de: 'Johannesbrotmelasse, Zypressenzapfen (24 %), Syrische Wacholdermelasse, Pfefferminz, Ingwer, Weihrauch, Tannenharz (Mastix) (2 %), Kurkuma, Galgant, Beta-Glucan, Zinkgluconat (2 %), Ascorbinsäure (Vitamin C), Kubebe, Nelke, Johannisbrotpulver, Cholecalciferol (Vitamin D3) (0,006 %).',
+        },
+        nutrition: kunye(1463, 350, 0.3, 0, 86.8, 60.5, 0, 0),
         storage: { tr: 'Serin ve kuru yerde saklayınız.', fr: 'À conserver au sec et au frais.', de: 'Kühl und trocken lagern.' },
         image: magaza(
           'dennenappel-pasta',
           'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/Zuhre_Ana_Kozalak_Macunu.webp',
           'Zühre Ana',
         ),
+        boy: { barcode: '8681144604990', packedWeightG: 435, packedLengthMm: 80, packedWidthMm: 80, packedHeightMm: 105 },
       }),
       behotrade('Igde cekirdegi pasta', '240 g', 240, 'Igde cekirdegi pasta 240gr', 2, 8, {
         nameTr: 'İğde Çekirdeği Macunu',
         nameFr: 'Pâte aux noyaux d’olivier de Bohême',
         nameDe: 'Paste aus Ölweidenkernen',
-        // Künye ambalajın üstünde yazılı: bal + pekmez katkılı, iğde çekirdeği tozu, kalsiyum, D3.
+        descriptionFromLabel: true,
         description: {
-          tr: 'İğde çekirdeği tozundan, bal ve pekmez katkısıyla hazırlanmış macun; kaşıkla tüketilir.',
-          fr: 'Pâte aux noyaux d’olivier de Bohême, additionnée de miel et de mélasse ; à la cuillère.',
-          de: 'Paste aus Ölweidenkernen mit Honig und Melasse; löffelweise zu genießen.',
+          tr: 'Zühre Ana iğde çekirdeği macunu. Keçiboynuzu pekmezi ve bal katkılı; iğde çekirdeği tozu (%32), kalsiyum ve D3 vitamini içerir. Tavuk kaynaklı kolajen ve yumurta kabuğu tozu içerir. Türkiye ürünü. Ürün içeriğine alerjisi olanlar doktora danışmalıdır.',
+          fr: "Pâte Zühre Ana aux noyaux d'olivier de Bohême, avec mélasse de caroube et miel ; contient de la poudre de noyaux d'olivier de Bohême (32 %), du calcium et de la vitamine D3. Contient du collagène de poulet et de la poudre de coquille d'œuf. Produit de Turquie. Les personnes allergiques à l'un des ingrédients doivent consulter un médecin.",
+          de: 'Zühre Ana Ölweidenkern-Paste mit Johannisbrotmelasse und Honig; enthält Ölweidenkernpulver (32 %), Calcium und Vitamin D3. Enthält Kollagen aus Huhn und Eierschalenpulver. Hergestellt in der Türkei. Personen mit Allergien gegen einen der Inhaltsstoffe sollten einen Arzt konsultieren.',
+        },
+        ingredients: {
+          tr: 'Keçiboynuzu pekmezi, iğde çekirdeği tozu (%32), akgünlük, kalsiyum glukonat, **yumurta** kabuğu tozu, çiçek balı, kolajen peptit (tip 2, tavuk kaynaklı), D3 vitamini preparatı (maltodekstrin, kolekalsiferol).',
+          fr: "Mélasse de caroube, poudre de noyaux d'olivier de Bohême (32 %), encens (oliban), gluconate de calcium, poudre de coquille d'**œuf**, miel de fleurs, peptides de collagène (type 2, d'origine poulet), préparation de vitamine D3 (maltodextrine, cholécalciférol).",
+          de: 'Johannisbrotmelasse, Ölweidenkernpulver (32 %), Weihrauch, Calciumgluconat, **Eier**schalenpulver, Blütenhonig, Kollagenpeptide (Typ 2, aus Huhn), Vitamin-D3-Zubereitung (Maltodextrin, Cholecalciferol).',
+        },
+        nutrition: kunye(1490, 350, 0.24, 0.16, 88.59, 40.92, 0, 0),
+        allergens: ['yumurta'],
+        storage: {
+          tr: 'Güneş ışığından uzak tutunuz. Serin ve kuru yerde muhafaza ediniz. Çocukların ulaşamayacağı yerde ve kendi ambalajı içerisinde saklayınız.',
+          fr: "Tenir à l'abri de la lumière du soleil. Conserver dans un endroit frais et sec. Conserver hors de portée des enfants et dans son emballage d'origine.",
+          de: 'Vor Sonnenlicht schützen. Kühl und trocken lagern. Außerhalb der Reichweite von Kindern und in der Originalverpackung aufbewahren.',
         },
         image: magaza(
           'igde-cekirdegi-pasta',
           'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/ZuhreAnaIgdeCekirdegiMacunu.webp',
           'Zühre Ana',
         ),
+        boy: { barcode: '8683655363427', packedWeightG: 420, packedLengthMm: 105, packedWidthMm: 75, packedHeightMm: 75 },
       }),
       behotrade('Zwarte moerbei extrat', '670 g', 670, 'Zwarte moerbei extrat 670gr', 12, 7.25, {
         nameTr: 'Karadut Özü',
-        nameFr: 'Extrait de mûre noire',
+        nameFr: 'Extrait de mûrier noir',
         nameDe: 'Schwarzer Maulbeerextrakt',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Karadutan elde edilen yoğun öz; bir ölçü öze beş ölçü su eklenerek içilir.',
-          fr: 'Extrait concentré de mûre noire ; une mesure d’extrait pour cinq mesures d’eau.',
-          de: 'Konzentrierter schwarzer Maulbeerextrakt; ein Teil Extrakt auf fünf Teile Wasser.',
+          tr: 'Zühre Ana karadut özü. 1+5 oranında suyla sulanabilir (damak tadına göre artırılıp azaltılabilir). Şeker meyvenin kendi şekeridir, ilave şeker eklenmemiştir. Kıvam artırıcı içermez.',
+          fr: "Extrait de mûrier noir Zühre Ana. Peut être dilué dans un rapport de 1+5 avec de l'eau (selon votre goût). Le sucre contenu provient du fruit lui-même, aucun sucre n'est ajouté. Ne contient pas d'épaississants.",
+          de: 'Zühre Ana Schwarzer Maulbeer-Extrakt. Kann im Verhältnis 1+5 mit Wasser verdünnt werden (je nach Geschmack mehr oder weniger). Der Zucker stammt aus der Frucht selbst, es wird kein zusätzlicher Zucker zugesetzt. Enthält keine Verdickungsmittel.',
         },
-        image: magaza(
-          'zwarte-moerbei-extrat',
-          'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/ZuhreAnaKaradutOzu.webp',
-          'Zühre Ana',
-        ),
+        ingredients: { tr: 'Karadut özü.', fr: 'Extrait de mûrier noir.', de: 'Schwarzer Maulbeer Extrakt.' },
+        nutrition: kunye(896, 214.1, 0.3, 0.12, 51.2, 37.16, 1.92, 0.03),
+        allergens: [],
+        storage: {
+          tr: 'Güneş ışığından uzak, serin ve kuru, kendi ambalajı içerisinde saklayınız.',
+          fr: "Conserver dans son emballage d'origine, dans un endroit frais et sec, à l'abri de la lumière du soleil.",
+          de: 'In der Originalverpackung an einem kühlen, trockenen und vor Sonnenlicht geschützten Ort aufbewahren.',
+        },
+        image: studyo('zwarte-moerbei-extrat'),
+        boy: { barcode: '8683655363151', packedWeightG: 1040, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Pestil met Hazinoten Muska', '300 g', 300, 'Pestil met Hazinoten Muska 300gr', 25, 3.95, {
         nameTr: 'Fındıklı Muska Pestil',
@@ -610,6 +931,7 @@ export const PURCHASES: Purchase[] = [
           fr: 'En-cas traditionnel : pâte de fruits pliée en triangle et garnie de noisettes.',
           de: 'Traditioneller Snack: Fruchtleder mit Haselnüssen, dreieckig gefaltet.',
         },
+        image: studyo('pestil-muska'),
       }),
       behotrade('Gedroogde aronya', '150 g', 150, 'Gedroogde aronya 150gr', 6, 3.99, {
         nameTr: 'Kurutulmuş Aronya',
@@ -625,11 +947,16 @@ export const PURCHASES: Purchase[] = [
         nameTr: 'Kurutulmuş Elma',
         nameFr: 'Pommes séchées',
         nameDe: 'Getrocknete Äpfel',
+        descriptionFromLabel: true,
         description: {
-          tr: 'Dilimlenip kurutulmuş elma; atıştırmalık olarak ve kompostoda.',
-          fr: 'Pommes séchées en tranches ; à grignoter ou en compote.',
-          de: 'In Scheiben getrocknete Äpfel; als Snack oder für Kompott.',
+          tr: 'Şifamix kurutulmuş elma dilimleri.',
+          fr: 'Rondelles de pommes séchées Şifamix.',
+          de: 'Şifamix getrocknete Apfelringe.',
         },
+        ingredients: { tr: 'Kurutulmuş elma.', fr: 'Pomme séchée.', de: 'Getrockneter Apfel.' },
+        nutrition: kunye(1736, 415, 0.3, 0, 65.3, 57.2, 1.3, 0),
+        // Saklama ve alerjen beyanı ambalajdan HENÜZ okunmadı; yazılmadan ürün satışa çıkamaz.
+        boy: { barcode: '8699237145527', packedWeightG: 210, packedLengthMm: 190, packedWidthMm: 130, packedHeightMm: 75 },
       }),
       behotrade('Gedroogde Kaki cips', '180 g', 180, 'Gedroogde Kaki cips 180gr', 6, 2, {
         nameTr: 'Kurutulmuş Trabzon Hurması Cipsi',
@@ -661,8 +988,38 @@ export const PURCHASES: Purchase[] = [
           fr: 'Melon séché ; à grignoter ou dans les mélanges de fruits secs.',
           de: 'Getrocknete Melone; als Snack oder in Trockenfruchtmischungen.',
         },
+        image: studyo('gedroogde-meloen'),
       }),
     ],
+  },
+];
+
+/**
+ * FATURASIZ taslaklar — ambalajı ve barkodu elimizde olan, ama alış kaydına bağlayamadığımız ürünler.
+ * `Purchase`e konulamazlar: fatura satırı adet ve alış fiyatı ister, ikisi de yok. Aday doğarlar;
+ * fiyat ve maliyet alış faturası gelince yazılır, o gün kalem faturasının altına taşınır.
+ */
+export const EK_TASLAKLAR: Array<Omit<Draft, 'variants'> & { variants: DraftSize[] }> = [
+  {
+    name: 'Lychnos Natürel Sızma Zeytinyağı',
+    nameFr: "Huile d'olive vierge extra Lychnos",
+    nameDe: 'Lychnos Natives Olivenöl extra',
+    rejim: 'raf',
+    descriptionFromLabel: true,
+    description: {
+      tr: "Lychnos natürel sızma zeytinyağı, Koroneiki çeşidi zeytinlerden. Yunanistan'da (Kandiye, Girit) üretilip paketlenmiştir. Doğrudan zeytinden, yalnızca mekanik yöntemlerle elde edilen üstün kalite zeytinyağı.",
+      fr: "Huile d'olive vierge extra Lychnos, variété Koroneiki. Produite et conditionnée en Grèce (Héraklion, Crète). Huile d'olive de catégorie supérieure obtenue directement des olives et uniquement par des procédés mécaniques.",
+      de: 'Lychnos Natives Olivenöl extra aus der Sorte Koroneiki. In Griechenland hergestellt und abgefüllt (Heraklion, Kreta). Olivenöl der höchsten Güteklasse, direkt aus Oliven ausschließlich mit mechanischen Verfahren gewonnen.',
+    },
+    ingredients: { tr: 'Natürel sızma zeytinyağı.', fr: "Huile d'olive vierge extra.", de: 'Natives Olivenöl extra.' },
+    nutrition: kunye(3700, 900, 92, 13, 0, 0, 0, 0),
+    allergens: [],
+    storage: {
+      tr: 'Serin (en fazla 25 °C) ve ışıktan korunan bir yerde saklayınız. Buzdolabına koymayınız.',
+      fr: "À conserver au frais (max. 25 °C) et à l'abri de la lumière. Ne pas réfrigérer.",
+      de: 'Bitte kühl (max. 25 °C) und lichtgeschützt aufbewahren. Nicht kühlen.',
+    },
+    variants: [{ label: '5 l', netQuantity: 5000, barcode: '5200106450180' }],
   },
 ];
 
@@ -789,8 +1146,8 @@ export const CATEGORIES: SeedCategory[] = [
     name: { tr: 'Kuru Meyve & Kuruyemiş', fr: 'Fruits secs', de: 'Nüsse & Trockenfrüchte' },
     tagline: { tr: 'Kuru meyve ve Antep fıstığı', fr: 'Fruits séchés et pistaches', de: 'Trockenfrüchte und Pistazien' },
     featured: true,
-    // Kapak yok: depodaki ustaların hiçbiri kuru meyve ya da fıstık değil ve yapay zekâ üretimi görsel
-    // kullanılmaz. Kart kapak gelene kadar baş harfle çizilir.
+    // Kapak, kuruyemiş rafının stüdyo karesinden: depodaki ustaların hiçbiri kuru meyve ya da fıstık değil.
+    image: { file: 'scripts/seed-real/images/pistache.webp' },
   },
 ];
 
@@ -912,6 +1269,7 @@ export const DRAFT_CATEGORY: Record<string, string> = {
   Johannesbroodmelasse: 'dogal-geleneksel',
   Tahini: 'dogal-geleneksel',
   Olijfolie: 'dogal-geleneksel',
+  'Lychnos Natürel Sızma Zeytinyağı': 'dogal-geleneksel',
   'Meidoorn azijn': 'dogal-geleneksel',
   'Ananas azijn': 'dogal-geleneksel',
   'Enginar azijn': 'dogal-geleneksel',
@@ -1536,32 +1894,10 @@ export const FICTION_NUTRITION: Record<string, Nutrition> = {
   'LEZZA Traditional Meet Doner': besin(250, 18, 7.5, 3, 0.5, 19, 1.6),
   'LEZZA Traditional Chicken Doner': besin(190, 11, 3.2, 3.5, 0.6, 20, 1.4),
   'LEZZA Manti with Minced Meat (Kiymali)': besin(245, 6.5, 2.4, 34, 1.5, 11, 0.9),
-  Druivenmelasse: besin(293, 0.2, 0.1, 70, 65, 1.2, 0.05),
-  Johannesbroodmelasse: besin(285, 0.3, 0.1, 68, 60, 1.5, 0.1),
-  Tahini: besin(595, 53, 7.5, 10, 0.5, 17, 0.02),
-  'Meidoorn azijn': besin(20, 0, 0, 4.5, 3.5, 0.1, 0.01),
-  'Ananas azijn': besin(21, 0, 0, 4.8, 3.8, 0.1, 0.01),
-  'Enginar azijn': besin(19, 0, 0, 4.2, 3.2, 0.1, 0.01),
-  'Appel azijn': besin(21, 0, 0, 4.6, 3.6, 0.1, 0.01),
-  'Isgin azijn': besin(18, 0, 0, 4, 3, 0.1, 0.01),
-  Granaatappelextraat: besin(280, 0.1, 0, 68, 62, 1, 0.03),
-  'Sifamix Kozalak extract': besin(300, 0.2, 0.1, 73, 60, 0.8, 0.04),
-  'Sifamix Johannesbrood extract': besin(290, 0.2, 0.1, 70, 58, 1, 0.04),
-  'Sifamix Andiz extract': besin(305, 0.2, 0.1, 74, 62, 0.7, 0.04),
-  'Coconut mix': besin(45, 1.2, 1, 7.5, 5, 0.3, 0.02),
-  'Honing azijn': besin(26, 0, 0, 6, 5, 0.1, 0.01),
-  Olijfolie: besin(824, 91.6, 13.5, 0, 0, 0, 0),
   Pistache: besin(562, 45, 5.6, 16, 7.7, 20, 0.01),
-  'Bromelain siroop': besin(120, 0, 0, 29, 26, 0.2, 0.02),
-  'Zuhre Ana Kekre': besin(95, 0.1, 0, 22, 18, 0.3, 0.03),
   'Propolis pasta': besin(330, 1.5, 0.4, 74, 65, 2.5, 0.05),
-  'Form pasta': besin(315, 1.2, 0.3, 72, 60, 2, 0.05),
-  'Dennenappel pasta': besin(320, 1.4, 0.4, 73, 62, 2.2, 0.05),
-  'Igde cekirdegi pasta': besin(325, 2, 0.5, 72, 58, 3, 0.05),
-  'Zwarte moerbei extrat': besin(290, 0.2, 0.1, 70, 63, 1, 0.03),
   'Pestil met Hazinoten Muska': besin(390, 12, 1.2, 62, 48, 6, 0.05),
   'Gedroogde aronya': besin(320, 1.5, 0.2, 66, 48, 3, 0.02),
-  'Gedroogde appel': besin(245, 0.3, 0.1, 57, 49, 1, 0.03),
   'Gedroogde Kaki cips': besin(290, 0.5, 0.1, 68, 55, 1.5, 0.02),
   'Gedroogde perzik': besin(240, 0.6, 0.1, 55, 42, 3, 0.02),
   'Gedroogde meloen': besin(310, 0.3, 0.1, 74, 66, 1, 0.05),
@@ -1572,33 +1908,12 @@ export const FICTION_NUTRITION: Record<string, Nutrition> = {
  * "alerjen içermez" beyanıdır. Değer içindekiler metnindeki alerjenden türer (sirke ve kuru meyvede sülfit), metinde olmayan yazılmaz.
  */
 export const FICTION_ALLERGENS: Record<string, ProductAllergen[]> = {
-  Tahini: ['susam'],
-  Pistache: ['sert_kabuklu'],
   'Pestil met Hazinoten Muska': ['sert_kabuklu', 'gluten'],
   'LEZZA Manti with Minced Meat (Kiymali)': ['gluten', 'yumurta'],
   'LEZZA Traditional Meet Doner': ['hardal'],
   'LEZZA Traditional Chicken Doner': ['hardal'],
-  Druivenmelasse: [],
-  Johannesbroodmelasse: [],
-  'Meidoorn azijn': ['sulfit'],
-  'Ananas azijn': ['sulfit'],
-  'Enginar azijn': ['sulfit'],
-  'Appel azijn': ['sulfit'],
-  'Isgin azijn': ['sulfit'],
-  'Honing azijn': ['sulfit'],
-  Granaatappelextraat: [],
-  'Sifamix Kozalak extract': [],
-  'Sifamix Johannesbrood extract': [],
-  'Sifamix Andiz extract': [],
-  'Coconut mix': [],
-  Olijfolie: [],
-  'Bromelain siroop': [],
-  'Zuhre Ana Kekre': [],
   'Propolis pasta': [],
-  'Form pasta': [],
   'Dennenappel pasta': [],
-  'Igde cekirdegi pasta': [],
-  'Zwarte moerbei extrat': [],
   'Gedroogde aronya': ['sulfit'],
   'Gedroogde appel': ['sulfit'],
   'Gedroogde Kaki cips': ['sulfit'],
@@ -1611,66 +1926,12 @@ export const FICTION_ALLERGENS: Record<string, ProductAllergen[]> = {
  * Alerjen `**…**` ile vurgulanır: INCO ister ve ürün sayfası yalnız bu işareti çizer.
  */
 export const FICTION_INGREDIENTS: Record<string, UcDil> = {
-  Druivenmelasse: { tr: 'Üzüm şırası.', fr: 'Moût de raisin.', de: 'Traubenmost.' },
-  Johannesbroodmelasse: { tr: 'Keçiboynuzu özütü, su.', fr: 'Extrait de caroube, eau.', de: 'Johannisbrotextrakt, Wasser.' },
-  Tahini: { tr: 'Kabuğu soyulmuş **susam** (%100).', fr: '**Sésame** décortiqué (100 %).', de: 'Geschälter **Sesam** (100 %).' },
-  'Meidoorn azijn': { tr: 'Alıç, su, **sülfit**.', fr: 'Aubépine, eau, **sulfites**.', de: 'Weißdorn, Wasser, **Sulfite**.' },
-  'Ananas azijn': { tr: 'Ananas, su, **sülfit**.', fr: 'Ananas, eau, **sulfites**.', de: 'Ananas, Wasser, **Sulfite**.' },
-  'Enginar azijn': { tr: 'Enginar, su, **sülfit**.', fr: 'Artichaut, eau, **sulfites**.', de: 'Artischocke, Wasser, **Sulfite**.' },
-  'Appel azijn': { tr: 'Elma, su, **sülfit**.', fr: 'Pomme, eau, **sulfites**.', de: 'Apfel, Wasser, **Sulfite**.' },
-  'Isgin azijn': {
-    tr: 'Işkın kökü, su, **sülfit**.',
-    fr: 'Racine de rhubarbe, eau, **sulfites**.',
-    de: 'Rhabarberwurzel, Wasser, **Sulfite**.',
-  },
-  'Honing azijn': { tr: 'Bal, su, **sülfit**.', fr: 'Miel, eau, **sulfites**.', de: 'Honig, Wasser, **Sulfite**.' },
-  Granaatappelextraat: { tr: 'Nar suyu konsantresi.', fr: 'Concentré de jus de grenade.', de: 'Granatapfelsaftkonzentrat.' },
-  'Sifamix Kozalak extract': {
-    tr: 'Çam kozalağı özütü, üzüm pekmezi.',
-    fr: 'Extrait de pomme de pin, mélasse de raisin.',
-    de: 'Kiefernzapfenextrakt, Traubenmelasse.',
-  },
-  'Sifamix Johannesbrood extract': { tr: 'Keçiboynuzu özütü, su.', fr: 'Extrait de caroube, eau.', de: 'Johannisbrotextrakt, Wasser.' },
-  'Sifamix Andiz extract': { tr: 'Andız özütü, su.', fr: 'Extrait de genévrier, eau.', de: 'Wacholderextrakt, Wasser.' },
-  'Coconut mix': {
-    tr: 'Hindistan cevizi, kinoa, sandaloz sakızı, biberiye, yeşil çay, chia, su.',
-    fr: 'Noix de coco, quinoa, gomme de sandaraque, romarin, thé vert, chia, eau.',
-    de: 'Kokosnuss, Quinoa, Sandarakharz, Rosmarin, Grüntee, Chia, Wasser.',
-  },
-  Olijfolie: { tr: 'Naturel sızma zeytinyağı (%100).', fr: 'Huile d’olive vierge extra (100 %).', de: 'Natives Olivenöl extra (100 %).' },
-  Pistache: { tr: '**Antep fıstığı** (%100).', fr: '**Pistaches** (100 %).', de: '**Pistazien** (100 %).' },
-  'Bromelain siroop': {
-    tr: 'Ananas suyu konsantresi, bromelain, akasya gamı, su.',
-    fr: 'Concentré de jus d’ananas, broméline, gomme d’acacia, eau.',
-    de: 'Ananassaftkonzentrat, Bromelain, Akaziengummi, Wasser.',
-  },
-  'Form pasta': {
-    tr: 'Bal, keçiboynuzu pekmezi, L-karnitin, yeşil çay özütü.',
-    fr: 'Miel, mélasse de caroube, L-carnitine, extrait de thé vert.',
-    de: 'Honig, Johannisbrotmelasse, L-Carnitin, Grüntee-Extrakt.',
-  },
-  'Dennenappel pasta': {
-    tr: 'Çam kozalağı, çam sakızı, zerdeçal, zencefil, keçiboynuzu tozu, bal.',
-    fr: 'Pomme de pin, résine de pin, curcuma, gingembre, poudre de caroube, miel.',
-    de: 'Kiefernzapfen, Kiefernharz, Kurkuma, Ingwer, Johannisbrotpulver, Honig.',
-  },
-  'Igde cekirdegi pasta': {
-    tr: 'İğde çekirdeği tozu, bal, üzüm pekmezi, kalsiyum, D3 vitamini.',
-    fr: 'Poudre de noyaux d’olivier de Bohême, miel, mélasse de raisin, calcium, vitamine D3.',
-    de: 'Ölweidenkernpulver, Honig, Traubenmelasse, Kalzium, Vitamin D3.',
-  },
-  'Zwarte moerbei extrat': {
-    tr: 'Karadut suyu konsantresi.',
-    fr: 'Concentré de jus de mûre noire.',
-    de: 'Schwarzer Maulbeersaftkonzentrat.',
-  },
   'Pestil met Hazinoten Muska': {
     tr: 'Dut pestili (dut, su, **buğday nişastası**), **fındık ezmesi**.',
     fr: 'Pâte de mûre (mûre, eau, **amidon de blé**), **pâte de noisette**.',
     de: 'Maulbeer-Fruchtleder (Maulbeere, Wasser, **Weizenstärke**), **Haselnussmus**.',
   },
   'Gedroogde aronya': { tr: 'Kurutulmuş aronya, **sülfit**.', fr: 'Aronia séchée, **sulfites**.', de: 'Getrocknete Aronia, **Sulfite**.' },
-  'Gedroogde appel': { tr: 'Kurutulmuş elma, **sülfit**.', fr: 'Pomme séchée, **sulfites**.', de: 'Getrockneter Apfel, **Sulfite**.' },
   'Gedroogde Kaki cips': {
     tr: 'Kurutulmuş Trabzon hurması, **sülfit**.',
     fr: 'Kaki séché, **sulfites**.',
@@ -1712,22 +1973,6 @@ const DONMUS: UcDil = {
 };
 
 export const FICTION_STORAGE: Record<string, UcDil> = {
-  'Meidoorn azijn': KURU_SERIN,
-  'Ananas azijn': KURU_SERIN,
-  'Enginar azijn': KURU_SERIN,
-  'Appel azijn': KURU_SERIN,
-  'Isgin azijn': KURU_SERIN,
-  'Honing azijn': KURU_SERIN,
-  Granaatappelextraat: KURU_SERIN,
-  'Sifamix Kozalak extract': KURU_SERIN,
-  'Sifamix Johannesbrood extract': KURU_SERIN,
-  'Sifamix Andiz extract': KURU_SERIN,
-  'Coconut mix': KURU_SERIN,
-  Olijfolie: KURU_SERIN,
-  Pistache: KURU_SERIN,
-  'Bromelain siroop': KURU_SERIN,
-  'Igde cekirdegi pasta': KURU_SERIN,
-  'Zwarte moerbei extrat': KURU_SERIN,
   'Pestil met Hazinoten Muska': KURU_SERIN,
   'Gedroogde aronya': KURU_SERIN,
   'Gedroogde appel': KURU_SERIN,

@@ -21,6 +21,7 @@ import {
   StorageAreaService,
   SupplierProductService,
   SupplierService,
+  VariantBarcodeService,
   VehicleService,
   WarehouseService,
   waitForRest,
@@ -39,8 +40,10 @@ import {
   BUNDLES,
   CATEGORIES,
   COLLECTIONS,
+  draftSku,
   DRAFT_CATEGORY,
   DRAFT_FAMILIES,
+  EK_TASLAKLAR,
   FICTION_ALLERGENS,
   FICTION_INGREDIENTS,
   FICTION_NUTRITION,
@@ -60,11 +63,22 @@ import {
 
 type Purchase = (typeof PURCHASES)[number];
 type Draft = Purchase['drafts'][number];
+/** Faturasız taslak: aynı beyanları taşır, varyantında fatura satırı yoktur. */
+type AnyDraft = Draft | (typeof EK_TASLAKLAR)[number];
 type Line = Purchase['catalog'][number] | Draft['variants'][number];
 type SeedLine = (typeof BUNDLES)[number]['items'][number];
 
+/** Bütün taslaklar tek listede — faturalı olanlar tedarikçisiyle, faturasızlar tedarikçisiz. */
+const TASLAKLAR: Array<{ draft: AnyDraft; supplier: string | null }> = [
+  ...PURCHASES.flatMap((p) => p.drafts.map((draft) => ({ draft: draft as AnyDraft, supplier: p.supplier }))),
+  ...EK_TASLAKLAR.map((draft) => ({ draft: draft as AnyDraft, supplier: null })),
+];
+
 /** Katalogda görünen ad Türkçesidir; faturadaki ad tedarikçinin dilinde kalır (eşleştirme onun üstünden). */
-const draftName = (draft: Draft): string => draft.nameTr ?? draft.name;
+const draftName = (draft: AnyDraft): string => draft.nameTr ?? draft.name;
+
+/** Varyant bir fatura satırı mı — faturasız taslakta adet ve alış fiyatı yoktur, fiyat sözlüğü de onu tanımaz. */
+const faturaSatiri = (v: AnyDraft['variants'][number]): v is Draft['variants'][number] => 'nameAtSupplier' in v;
 
 /** Faturadaki ad → katalogdaki Türkçe ad; koleksiyon üyeliği faturadaki adla yazılı. */
 const TASLAK_ADI = new Map(PURCHASES.flatMap((p) => p.drafts).map((d) => [d.name, draftName(d)]));
@@ -231,7 +245,7 @@ async function seedSuppliers(db: Db): Promise<void> {
 const allLocales = (text: string) => ({ tr: text, fr: text, de: text });
 
 /** Taslak varyantının boyu: faturadaki, yoksa katman 3'ün uydurması; ikisi de yoksa varyant boysuz doğar. */
-const draftSize = (draft: Draft, variant: Draft['variants'][number]) =>
+const draftSize = (draft: AnyDraft, variant: AnyDraft['variants'][number]) =>
   variant.label ? { label: variant.label, netQuantity: variant.netQuantity } : LAYERS >= 3 ? FICTION_SIZES[draft.name] : undefined;
 
 /**
@@ -254,9 +268,7 @@ function checkInvoiceTotals(): void {
 /** Kategorisiz ürün olmamalı: eşlemesi yazılmamış taslak beslemeyi DURDURUR, sessizce kategorisiz doğmaz. */
 function checkDraftCategories(): void {
   const gecerli = new Set(CATEGORIES.map((c) => c.key));
-  const eksik = PURCHASES.flatMap((p) => p.drafts)
-    .map((d) => d.name)
-    .filter((ad) => !gecerli.has(DRAFT_CATEGORY[ad] ?? ''));
+  const eksik = TASLAKLAR.map(({ draft }) => draft.name).filter((ad) => !gecerli.has(DRAFT_CATEGORY[ad] ?? ''));
   if (eksik.length > 0) {
     throw new Error(`kategorisi yazılmamış taslak (${eksik.length}): ${eksik.join(' · ')} — DRAFT_CATEGORY'ye ekle`);
   }
@@ -391,64 +403,91 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
   const products = new ProductService(db);
   const variants = new ProductVariantService(db);
   const existing = new Map((await products.listAll()).map((p) => [p.name.tr, p.id]));
-  for (const purchase of PURCHASES) {
-    for (const draft of purchase.drafts) {
-      const ad = draftName(draft);
-      const mevcut = existing.get(ad);
-      if (mevcut) {
-        await fillDraftSize(variants, mevcut, draft);
-        continue;
-      }
-      // Katman 3 uydurması ÖNCE hesaplanır, katman 1 onu EZER: ölçülmüş beyan uydurmayı her zaman yener.
-      const kurgu = LAYERS >= 3;
-      const name = { tr: ad, ...(draft.nameFr ? { fr: draft.nameFr } : {}), ...(draft.nameDe ? { de: draft.nameDe } : {}) };
-      const description = LAYERS >= 2 ? draft.description : undefined;
-      const ingredients = draft.ingredients ?? (kurgu ? FICTION_INGREDIENTS[draft.name] : undefined);
-      const storageInstructions = draft.storage ?? (kurgu ? FICTION_STORAGE[draft.name] : undefined);
-      const allergens = kurgu ? (FICTION_ALLERGENS[draft.name] ?? null) : null;
-      // Yayına hazır mı sorusunu MOTOR cevaplar (`canPublishProduct`) — besleme kendi ölçütünü
-      // uydurmaz ve veritabanı kısıtıyla aynı cümleyi kurar; ayrışsalardı insert sessizce patlardı.
-      const yayina = kurgu && canPublishProduct({ name, description, ingredients, storageInstructions, allergens });
-      plan(
-        `${ad} · ${draft.variants.map((v) => draftSize(draft, v)?.label ?? 'boysuz').join(' + ')} · ${purchase.supplier}${draft.image ? ' · kapaklı' : ''}${yayina ? ' · AKTİF' : ''}`,
-      );
-      if (DRY_RUN) continue;
-      // Kapak: tedarikçinin gönderdiği usta ya da markanın mağazasındaki çekim. R2 ayarsızsa null
-      // döner ve ürün görselsiz açılır — besleme durmaz (`catalog-lezza` ile aynı davranış).
-      const kapak = draft.image
-        ? await (draft.image.file
-            ? uploadImageFromPath(draft.image.file, r2Keys.productImage(draft.image.slug, draft.image.file))
-            : uploadImageFromUrl(draft.image.url ?? '', r2Keys.productImage(draft.image.slug, draft.image.url ?? 'cover.webp')))
-        : null;
-      await products.create({
-        // Dil alanı YAZILMAZSA boş kalır: `{fr: ''}` yazmak "alan dolu ama boş" anlamına gelir ve
-        // `resolveLocalizedText` onu sessizce Türkçeye düşürür — eksik dil görünmez olurdu.
+  const barcodes = new VariantBarcodeService(db);
+  for (const { draft, supplier } of TASLAKLAR) {
+    const ad = draftName(draft);
+    const mevcut = existing.get(ad);
+    if (mevcut) {
+      await fillDraftSize(variants, mevcut, draft);
+      continue;
+    }
+    // Katman 3 uydurması ÖNCE hesaplanır, katman 1 onu EZER: ölçülmüş beyan uydurmayı her zaman yener.
+    const kurgu = LAYERS >= 3;
+    const name = { tr: ad, ...(draft.nameFr ? { fr: draft.nameFr } : {}), ...(draft.nameDe ? { de: draft.nameDe } : {}) };
+    // Ambalajdan okunan açıklama BELGEDİR, katman 1'dedir; markanın sayfasından derlenmiş olan katman 2'yi bekler.
+    const description = draft.descriptionFromLabel || LAYERS >= 2 ? draft.description : undefined;
+    const ingredients = draft.ingredients ?? (kurgu ? FICTION_INGREDIENTS[draft.name] : undefined);
+    const storageInstructions = draft.storage ?? (kurgu ? FICTION_STORAGE[draft.name] : undefined);
+    const allergens = draft.allergens ?? (kurgu ? (FICTION_ALLERGENS[draft.name] ?? null) : null);
+    const nutrition = draft.nutrition ?? (kurgu ? FICTION_NUTRITION[draft.name] : undefined);
+    // Yayına hazır mı sorusunu MOTOR cevaplar (`canPublishProduct`) — besleme kendi ölçütünü
+    // uydurmaz ve veritabanı kısıtıyla aynı cümleyi kurar; ayrışsalardı insert sessizce patlardı.
+    // Katmana bakmaz: beyanı TAM olan ürün katman 1'de de satışa çıkar, eksik olan hiçbir katmanda çıkmaz.
+    // Boy listesi de verilir: miktarsız boyu olan ürünü veritabanı zaten reddeder, kapı aynı cümleyi önce kurar.
+    // FİYAT ayrı bir şart ve motorun sorusu değil: fiyatsız ürün vitrine fiyatsız kart olarak düşerdi
+    // (faturasız kalemde alış maliyeti yok, satış fiyatı yazmak uydurma olurdu — katalog tarafıyla aynı kural).
+    const fiyatli = draft.variants.every((v) => faturaSatiri(v) && SALE_PRICES[v.nameAtSupplier] !== undefined);
+    const yayina =
+      fiyatli &&
+      canPublishProduct({
         name,
-        // Kategori doğuşta yazılır; eşlemenin tamlığı `checkDraftCategories` ile koşudan önce sınandı.
-        categoryId: catId.get(DRAFT_CATEGORY[draft.name] ?? '') ?? null,
-        status: yayina ? 'active' : 'candidate',
-        // Beyanlar: katman 1 ölçülmüşü, katman 3 uydurmayı verdi — seçim yukarıda yapıldı.
-        ...(description ? { description } : {}),
-        ...(ingredients ? { ingredients } : {}),
-        ...(storageInstructions ? { storageInstructions } : {}),
-        ...(draft.shelfLifeDays ? { shelfLifeDays: draft.shelfLifeDays } : {}),
-        // Saklama rejimi İKİ kolonu birden yazar. Yazılmazsa kolonların varsayılanı kalır ve o
-        // varsayılan donuk: pekmez dondurucuya düşer, hiçbir ürün kargoya çıkamaz.
-        ...(draft.rejim ? { storageType: SAKLAMA[draft.rejim].storageType, shippable: SAKLAMA[draft.rejim].shippable } : {}),
-        // Katman 3 — UYDURMA: kaynağı yok, yalnız test sunucusunun arayüzünü doldurur.
-        ...(kurgu && FICTION_NUTRITION[draft.name] ? { nutrition: FICTION_NUTRITION[draft.name] } : {}),
-        ...(allergens ? { allergens } : {}),
-        ...(kapak ?? {}),
-        variants: draft.variants.map((v) => {
-          const boy = draftSize(draft, v);
-          return {
-            label: boy ? allLocales(boy.label) : undefined,
-            netQuantity: boy?.netQuantity,
-            netUnit: boy?.netQuantity == null ? undefined : birimOf(boy.label),
-            sku: v.sku,
-          };
-        }),
+        description,
+        ingredients,
+        storageInstructions,
+        allergens,
+        variants: draft.variants.map((v) => ({ netQuantity: draftSize(draft, v)?.netQuantity })),
       });
+    plan(
+      `${ad} · ${draft.variants.map((v) => draftSize(draft, v)?.label ?? 'boysuz').join(' + ')} · ${supplier ?? 'faturasız'}${draft.image ? ' · kapaklı' : ''}${yayina ? ' · AKTİF' : ''}`,
+    );
+    if (DRY_RUN) continue;
+    // Kapak: tedarikçinin gönderdiği usta ya da markanın mağazasındaki çekim. R2 ayarsızsa null
+    // döner ve ürün görselsiz açılır — besleme durmaz (`catalog-lezza` ile aynı davranış).
+    const kapak = draft.image
+      ? await (draft.image.file
+          ? uploadImageFromPath(draft.image.file, r2Keys.productImage(draft.image.slug, draft.image.file))
+          : uploadImageFromUrl(draft.image.url ?? '', r2Keys.productImage(draft.image.slug, draft.image.url ?? 'cover.webp')))
+      : null;
+    const { variants: yazilan } = await products.create({
+      // Dil alanı YAZILMAZSA boş kalır: `{fr: ''}` yazmak "alan dolu ama boş" anlamına gelir ve
+      // `resolveLocalizedText` onu sessizce Türkçeye düşürür — eksik dil görünmez olurdu.
+      name,
+      // Kategori doğuşta yazılır; eşlemenin tamlığı `checkDraftCategories` ile koşudan önce sınandı.
+      categoryId: catId.get(DRAFT_CATEGORY[draft.name] ?? '') ?? null,
+      status: yayina ? 'active' : 'candidate',
+      // Beyanlar: katman 1 ölçülmüşü, katman 3 uydurmayı verdi — seçim yukarıda yapıldı.
+      ...(description ? { description } : {}),
+      ...(ingredients ? { ingredients } : {}),
+      ...(storageInstructions ? { storageInstructions } : {}),
+      ...(draft.shelfLifeDays ? { shelfLifeDays: draft.shelfLifeDays } : {}),
+      // Saklama rejimi İKİ kolonu birden yazar. Yazılmazsa kolonların varsayılanı kalır ve o
+      // varsayılan donuk: pekmez dondurucuya düşer, hiçbir ürün kargoya çıkamaz.
+      ...(draft.rejim ? { storageType: SAKLAMA[draft.rejim].storageType, shippable: SAKLAMA[draft.rejim].shippable } : {}),
+      ...(nutrition ? { nutrition } : {}),
+      ...(allergens ? { allergens } : {}),
+      ...(draft.traces?.length ? { traces: draft.traces } : {}),
+      ...(kapak ?? {}),
+      variants: draft.variants.map((v) => {
+        const boy = draftSize(draft, v);
+        return {
+          label: boy ? allLocales(boy.label) : undefined,
+          netQuantity: boy?.netQuantity,
+          netUnit: boy?.netQuantity == null ? undefined : birimOf(boy.label),
+          // Faturada ürün kodu yoksa SKU fatura satırının ADINDAN türer; faturasız kalemde kod da yoktur.
+          sku: v.sku ?? (faturaSatiri(v) ? draftSku(v.nameAtSupplier) : undefined),
+          // Tartılmış brüt ve ölçülmüş kutu — kargo teklifi bunlara bakar.
+          packedWeightG: v.packedWeightG,
+          packedLengthMm: v.packedLengthMm,
+          packedWidthMm: v.packedWidthMm,
+          packedHeightMm: v.packedHeightMm,
+        };
+      }),
+    });
+    // Barkod varyantın kolonu değil ayrı eşleme kaydı: satır yazıldıktan sonra sırayla bağlanır.
+    for (const [i, v] of draft.variants.entries()) {
+      const satir = yazilan[i];
+      if (!v.barcode || !satir) continue;
+      await barcodes.insert({ variantId: satir.id, code: v.barcode, kind: 'unit', qtyPerCode: 1 });
     }
   }
 }
@@ -457,7 +496,7 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
  * Faturası boy yazmayan varyant boysuz doğar; boy dosyaya sonradan girince yalnız hâlâ boş olan satıra yazılır, elle
  * girilmiş boy ezilmez (`seedSettings` ile aynı ölçü).
  */
-async function fillDraftSize(variants: ProductVariantService, productId: string, draft: Draft): Promise<void> {
+async function fillDraftSize(variants: ProductVariantService, productId: string, draft: AnyDraft): Promise<void> {
   const ad = draftName(draft);
   const [tek, ...diger] = draft.variants;
   const boy = tek && diger.length === 0 ? draftSize(draft, tek) : undefined;
