@@ -5,8 +5,9 @@
 // girildi ve çelişkide kazanan onlardır (`kunye.ts`). Bu dosya faturanın söylediğini (kalem, adet, alış
 // fiyatı), işletmecinin kararlarını (kategori, koleksiyon, paket, tarif, satış fiyatı) ve kapakları taşır.
 //
-// `--layers` yalnız iki şeyi açar: 2 = markanın sayfasından derlenmiş metinler, 3 = test mal kabulü
-// (lot, SKT) ve katalog kaynağının türetmeleri. Beyan uydurması KALKTI; eksik beyan eksik kalır.
+// `--layers` yalnız TEST verisini açar ve ölçüt ürünün BEYANINA dokunup dokunmadığıdır: 2 = test mal
+// kabulü (lot, SKT) — stok açar, beyana dokunmaz; 3 = katalog kaynağının beyan türetmesi. Bizim
+// ürünlerimizde beyan uydurması KALKTI; eksik beyan eksik kalır.
 
 import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -86,7 +87,7 @@ export const SUPPLIERS = [
 ] as const;
 
 /**
- * Test kabulü: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır. Yalnız `--layers=3` ile yazılır ki arayüz
+ * Test kabulü: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır. Yalnız `--layers=2` ile yazılır ki arayüz
  * denenebilsin; üretim kurulumundan önce bu blok silinir.
  */
 export const TEST_INTAKE = {
@@ -1170,8 +1171,8 @@ export const RECIPES: SeedRecipe[] = [
   },
 ];
 
-/* ─── KATMAN 3 · UYDURMA ─────────────────────────────────────────────────────────────────────────
- * Bu bloklar yalnız test sunucusunun ekranlarını doldurur: `--layers=3` olmadan yazılmaz, gerçek değerler
+/* ─── KATMAN 2 · UYDURMA ─────────────────────────────────────────────────────────────────────────
+ * Bu bloklar yalnız test sunucusunun ekranlarını doldurur: `--layers=2` olmadan yazılmaz, gerçek değerler
  * tedarikçinin künyesinden gelir ve üretim kurulumundan önce blok bütün hâlinde silinir. Anahtar faturadaki addır
  * (`Draft.name`) ki katalog adı düzeltilse de eşleşme kaymasın.
  */

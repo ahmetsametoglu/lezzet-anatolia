@@ -96,9 +96,17 @@ try {
 const DRY_RUN = process.argv.includes('--dry-run');
 
 /**
- * `--layers=3` yalnız TEST verisini açar: katalog kaynağının türetmeleri ve test mal kabulü (lot, SKT).
+ * Katmanlar yalnız TEST verisini açar; ölçütleri ÜRÜNÜN BEYANINA DOKUNUP DOKUNMADIKLARI:
+ *
+ * - **1** (varsayılan) gerçek veri — stok yok, tedarikçi siparişleri mal kabulü bekler.
+ * - **2** test mal kabulü (lot `TEST-001`, SKT uydurma): stok açar, ürünler alınabilir olur.
+ *   Beyana dokunmaz, bu yüzden vitrin denemesi bu katmanda yapılır.
+ * - **3** katalog kaynağının BEYAN TÜRETMESİ: belgesiz ürünün alerjeni addan tahmin edilir.
+ *   Tahmin edilmiş beyan yanlış beyandır — ayrı katman, çünkü stok görmek için buna razı olmak
+ *   gerekmemeli (işletmeci kararı 19.09).
+ *
  * Varsayılan 1, çünkü üretim kurulumu bayraksız koşar ve orada tek bir uydurma değer yazılamaz.
- * Ürün beyanları katmansızdır: kaynakları veritabanı aynasıdır, eksikleri hiçbir katmanda doldurulmaz.
+ * Bizim 39 ürünümüzün beyanı katmansızdır: kaynağı veritabanı aynasıdır, hiçbir katmanda doldurulmaz.
  */
 const LAYERS = (() => {
   const arg = process.argv.find((a) => a.startsWith('--layers='))?.split('=')[1];
@@ -860,8 +868,10 @@ async function main(): Promise<void> {
   // Paket fiyatı liste fiyatlarından türediği için fiyatlardan sonra.
   await seedBundles(db);
   await seedRecipes(db);
-  // Mal kabulü katman 3: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır.
-  if (LAYERS >= 3) await seedTestIntake(db, facilityId);
+  // Mal kabulü KATMAN 2 (işletmeci kararı 19.09): lot ve son kullanma uydurmadır, mal fiilen
+  // sayılmamıştır — ama ürünün BEYANINA dokunmaz, yalnız stok açar. Beyanı tahminle dolduran
+  // türetme katman 3'te kaldı; ikisi aynı kapıda olsaydı stok görmek için beyan bozmak gerekirdi.
+  if (LAYERS >= 2) await seedTestIntake(db, facilityId);
   // Künyesi olmayan görsel her koşuda yeniden yüklenir; sayı basılmazsa dönüşüm kotası sessizce erir.
   if (!DRY_RUN) gorselOzeti();
   console.log(DRY_RUN ? '✓ kuru koşu bitti' : '✓ gerçek besleme bitti');

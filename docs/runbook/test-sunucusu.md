@@ -180,11 +180,16 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    boyun net miktarı) ve fiyatı olan ürün `active` doğar — kapıyı motorun kendisi açar
    (`canPublishProduct`). Faturasız taslak (`EK_TASLAKLAR`) fiyatsız olduğu için aday kalır.
 
-6. `--layers` yalnız TEST verisini açar (varsayılan 1; üretim kurulumu bayraksız koşar):
-   - **2** — markanın ürün sayfasından derlenmiş metinler (bugün kullanılmıyor).
-   - **3** — katalog kaynağının türetmeleri ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026);
-     yalnız TEST sunucusunda: `pnpm db:seed:real --layers=3`. Aday kalemler (`ADAY_SKULARI`) her
-     katmanda aday kalır.
+6. `--layers` yalnız TEST verisini açar (varsayılan 1; üretim kurulumu bayraksız koşar). Ölçüt
+   ürünün BEYANINA dokunup dokunmadığıdır:
+   - **2** — test mal kabulü (lot `TEST-001`, SKT 31.12.2026): stok açar, ürünler alınabilir olur
+     ve aile/çeşit blokları dolar. Beyana DOKUNMAZ; vitrin denemesi bu katmanda yapılır:
+     `pnpm db:seed:real --layers=2`.
+   - **3** — katalog kaynağının BEYAN TÜRETMESİ: belgesiz ürünün alerjeni addan tahmin edilir.
+     Tahmin edilmiş beyan yanlış beyandır, bu yüzden ayrı katman — stok görmek için buna razı
+     olmak gerekmez (işletmeci kararı 19.09).
+
+   Aday kalemler (`ADAY_SKULARI`) her katmanda aday kalır.
 
    **Besleme var olan kaydı ADINA bakıp atlar**, üstüne yazmaz: künyenin kaynağı zaten veritabanı
    olduğu için üstüne yazmak dairesel olurdu. Künye değişince veritabanı sıfırlanıp yeniden beslenir.
