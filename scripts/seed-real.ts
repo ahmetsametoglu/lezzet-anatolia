@@ -30,6 +30,9 @@ import { canPublishProduct, purchaseOrderReferenceNo, rebalanceAllocations } fro
 import { toCents } from '@lezzet/helper';
 import { PRODUCT_GALLERY_MAX, type Product } from '@lezzet/types';
 
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { brand } from '../packages/brand/src/index';
 import { lezzaGorselUrlByDosya, seedLezzaProducts } from './seed/catalog-lezza';
 import { gorselOzeti, r2Keys, uploadImageFromPath, uploadImageFromUrl } from './seed/shared';
@@ -54,6 +57,12 @@ import {
   ZONES,
 } from './seed-real/data';
 import { KUNYELER, type UrunKunyesi } from './seed-real/kunye';
+
+const KOK = dirname(fileURLToPath(import.meta.url));
+/** Katalog kaynağının slug'ı → beslemedeki ürün görsel klasörü (`katalogKareleri`). */
+const KATALOG_GORSEL_KLASORU: Record<string, string> = JSON.parse(
+  readFileSync(join(KOK, 'seed-real/data/katalog-gorsel-klasoru.json'), 'utf8'),
+) as Record<string, string>;
 
 type Purchase = (typeof PURCHASES)[number];
 type Draft = Purchase['drafts'][number];
@@ -360,6 +369,27 @@ async function seedCategories(db: Db): Promise<Map<string, string>> {
   return catId;
 }
 
+/**
+ * Katalog ürününün YEREL kareleri — kapak `0`, kalanlar ada göre galeriye. Klasörün adı ÜRÜNÜN
+ * slug'ı, kaynağın İngilizce slug'ı değil; köprü `data/katalog-gorsel-klasoru.json`da durur.
+ *
+ * Neden bir köprü dosyası: katalog kaynağı kendi adlandırmasından (`turkish-bagel-simit`) başkasını
+ * bilmez, işletmeci ise klasörü sitede gördüğü adla (`simit`) arar. İkisini kodda eşlemek, iki
+ * adlandırmayı da koda gömmek olurdu.
+ */
+function katalogKareleri(catalogSlug: string): string[] | null {
+  const klasor = KATALOG_GORSEL_KLASORU[catalogSlug];
+  if (!klasor) return null;
+  const dizin = join(KOK, 'seed-real/images', klasor);
+  if (!existsSync(dizin)) return null;
+  const kareler = readdirSync(dizin)
+    .filter((f) => /\.(webp|png|jpe?g)$/i.test(f))
+    .sort();
+  const kapak = kareler.find((f) => f.startsWith('0.'));
+  if (!kapak) throw new Error(`${klasor}: kapak yok — klasördeki bir kareyi "0" diye adlandır`);
+  return [kapak, ...kareler.filter((f) => f !== kapak)].map((f) => join('scripts/seed-real/images', klasor, f));
+}
+
 async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   console.log('▸ katalog — faturadaki Lezza varyantları');
   const variants = new ProductVariantService(db);
@@ -405,7 +435,7 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     // Katalog hep `base` kurulur: `extend` türetmenin yanında bilinçli kusurlar da sahneler ve gerçek
     // kataloğa kusur yazılmaz. Katman 3 yalnız türetmeyi açar ki belgesiz ürün satışa çıkabilsin.
     'base',
-    { variants: secim, derive: LAYERS >= 3, candidates: new Set(ADAY_SKULARI) },
+    { variants: secim, derive: LAYERS >= 3, candidates: new Set(ADAY_SKULARI), localFrames: katalogKareleri },
   );
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
 }

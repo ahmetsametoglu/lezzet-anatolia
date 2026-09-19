@@ -171,12 +171,6 @@ const behotrade = (
   gorsel: Pick<Draft, 'image' | 'gallery'> = {},
 ): Draft => ({ name, nameTr, ...gorsel, variants: [{ nameAtSupplier, qty, unitCost }] });
 
-/**
- * Markanın kendi mağazasındaki ürün çekimi. Adres SORGUSUZ yazılır: `?v=…` eki hem önbellek dosya
- * adına hem `extOf` uzantı tespitine karışır ve anahtar `…webp?v=123` olur.
- */
-const magaza = (slug: string, url: string, kaynak: string): DraftImage => ({ slug, url, source: `${kaynak} ürün çekimi` });
-
 /** Ürünün görsel klasörü: `images/<ürün slug'ı>/`. Klasör adı ÜRÜNÜN slug'ı, tedarikçinin adı değil. */
 const GORSEL_KOKU = join(dirname(fileURLToPath(import.meta.url)), 'images');
 
@@ -291,18 +285,10 @@ export const PURCHASES: Purchase[] = [
       behotrade('Pistache', 'Pistache 700gr', 20, 16.5, 'Antep Fıstığı', studyoSeti('antep-fistigi')),
       behotrade('Bromelain siroop', 'Bromelain siroop 250ml', 18, 8, 'Bromelain Şurubu', studyoSeti('bromelain-surubu')),
       behotrade('Zuhre Ana Kekre', 'Zuhre Ana Kekre 250ml', 18, 8.45, 'Zühre Ana Kekre Termojenik Mix', studyoSeti('zuhre-ana-kekre-termojenik-mix')),
-      behotrade('Propolis pasta', 'Propolis pasta 240gr', 2, 8.5, 'Propolis Macunu', {
-        image: magaza('propolis-pasta', 'https://cdn.shopify.com/s/files/1/0631/1326/5378/products/Propolis-min.jpg', 'Zühre Ana'),
-      }),
-      behotrade('Form pasta', 'Form pasta 240gr', 2, 8, 'Form Macunu', {
-        image: magaza('form-pasta', 'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/ZuhreAnaFormMacunu240Gram.webp', 'Zühre Ana'),
-      }),
-      behotrade('Dennenappel pasta', 'Dennenappel pasta 240gr', 2, 8, 'Kozalak Macunu', {
-        image: magaza('dennenappel-pasta', 'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/Zuhre_Ana_Kozalak_Macunu.webp', 'Zühre Ana'),
-      }),
-      behotrade('Igde cekirdegi pasta', 'Igde cekirdegi pasta 240gr', 2, 8, 'İğde Çekirdeği Macunu', {
-        image: magaza('igde-cekirdegi-pasta', 'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/ZuhreAnaIgdeCekirdegiMacunu.webp', 'Zühre Ana'),
-      }),
+      behotrade('Propolis pasta', 'Propolis pasta 240gr', 2, 8.5, 'Propolis Macunu', studyoSeti('propolis-macunu')),
+      behotrade('Form pasta', 'Form pasta 240gr', 2, 8, 'Form Macunu', studyoSeti('form-macunu')),
+      behotrade('Dennenappel pasta', 'Dennenappel pasta 240gr', 2, 8, 'Kozalak Macunu', studyoSeti('kozalak-macunu')),
+      behotrade('Igde cekirdegi pasta', 'Igde cekirdegi pasta 240gr', 2, 8, 'İğde Çekirdeği Macunu', studyoSeti('igde-cekirdegi-macunu')),
       behotrade('Zwarte moerbei extrat', 'Zwarte moerbei extrat 670gr', 12, 7.25, 'Karadut Özü', studyoSeti('karadut-ozu')),
       behotrade('Pestil met Hazinoten Muska', 'Pestil met Hazinoten Muska 300gr', 25, 3.95, 'Fındıklı Muska Pestil', studyoSeti('findikli-muska-pestil')),
       behotrade('Gedroogde aronya', 'Gedroogde aronya 150gr', 6, 3.99, 'Kurutulmuş Aronya', studyoSeti('kurutulmus-aronya')),

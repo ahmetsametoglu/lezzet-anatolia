@@ -5,7 +5,7 @@ import type { CategoryImageService, CategoryService, ProductFamilyService, Produ
 import { PRODUCT_GALLERY_MAX, hasAllLocales } from '@lezzet/types';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus } from '@lezzet/types';
 import { ambalajAlanlari, olcuHali } from './packing';
-import { r2Keys, uploadImageFromUrl } from './shared';
+import { r2Keys, uploadImageFromPath, uploadImageFromUrl } from './shared';
 import { BEYAN_DONUK, SAKLAMA, type SaklamaRejimi } from './storage-regime';
 import { teklifSkulari } from './supplier-prices';
 import { enAz, type Katman } from './tier';
@@ -346,6 +346,15 @@ export interface LezzaSecim {
   derive?: boolean;
   /** Bu kodları taşıyan ürün, teklifte alış fiyatı olsa da ADAY doğar: satışa açmak işletmecinin kararı. */
   candidates?: ReadonlySet<string>;
+  /**
+   * Kaynağın adresi yerine YEREL kareler — gerçek besleme kendi görsel deposunu verir
+   * (`seed-real/images/<ürün slug'ı>/`, kapak `0`). Verilmezse ya da bir ürün için boş dönerse
+   * kaynağın `imageUrls`'i kullanılır: kurgu beslemesi yerel depoyu taşımıyor.
+   *
+   * Neden çözücü, neden harita: karşılık KATALOG slug'ından ÜRÜN slug'ına gidiyor ve o köprü
+   * beslemenin bilgisi; katalog kaynağı kendi adlandırmasından başkasını bilmez.
+   */
+  localFrames?: (catalogSlug: string) => string[] | null;
 }
 
 /** Kataloğu kurar; çağıran servisleri ve başlangıç sırasını verir, sonuç sayıları döner. */
@@ -491,8 +500,15 @@ export async function seedLezzaProducts(
     const aciklama: LocalizedText | null = tamAciklama ? (dilEksik ? { tr: tamAciklama.tr } : tamAciklama) : null;
 
     // Kapak GERÇEK görselden; R2 ayarsızsa null döner ve kayıt görselsiz oluşur (graceful).
+    // Yerel kare varsa adresten indirilmez: besleme çevrimdışı koşabilmeli ve işletmeci kapağı
+    // klasördeki `0` ile seçtiği için kaynağın sırası artık bağlayıcı değil.
+    const yerel = kapaksiz ? null : secim?.localFrames?.(p.slug);
     const kapakUrl = kapaksiz ? null : p.imageUrls[0];
-    const kapak = kapakUrl ? await uploadImageFromUrl(kapakUrl, r2Keys.productImage(p.slug, kapakUrl.split('/').pop() || 'cover.webp')) : null;
+    const kapak = yerel?.[0]
+      ? await uploadImageFromPath(yerel[0], r2Keys.productImage(p.slug, yerel[0]))
+      : kapakUrl
+        ? await uploadImageFromUrl(kapakUrl, r2Keys.productImage(p.slug, kapakUrl.split('/').pop() || 'cover.webp'))
+        : null;
 
     // Yayına hazırlık `has_all_locales` kısıtının TS karşılığıyla ölçülür, elle yeniden yazılmaz.
     const yayinaHazirDegil =
@@ -586,8 +602,12 @@ export async function seedLezzaProducts(
     varyantSayisi += variants.length;
 
     // Galeri tavanı uygulamanın sabitinden (`PRODUCT_GALLERY_MAX`): form tavanı aşan kaydı kaydedemez.
-    for (const [n, url] of p.imageUrls.slice(1, 1 + PRODUCT_GALLERY_MAX).entries()) {
-      const gorsel = await uploadImageFromUrl(url, r2Keys.productImage(`${p.slug}-${n + 2}`, url.split('/').pop() || 'g.webp'));
+    // Kapakla aynı kaynak: yerel klasör varsa onun kalan kareleri, yoksa adresteki sıra.
+    const galeriKaynak = yerel ? yerel.slice(1) : p.imageUrls.slice(1);
+    for (const [n, url] of galeriKaynak.slice(0, PRODUCT_GALLERY_MAX).entries()) {
+      const gorsel = yerel
+        ? await uploadImageFromPath(url, r2Keys.productImage(`${p.slug}-${n + 2}`, url))
+        : await uploadImageFromUrl(url, r2Keys.productImage(`${p.slug}-${n + 2}`, url.split('/').pop() || 'g.webp'));
       if (!gorsel) continue;
       await images.insert({ productId: product.id, sortOrder: n, ...gorsel, imageFocalX: 50, imageFocalY: 50, imageZoom: 100 });
       photos += 1;
