@@ -58,6 +58,24 @@ export function QueueEmpty({ tab, filtered = false }: { tab: QueueTab; filtered?
   return <EmptyBlock title={title} description={description} />;
 }
 
+/**
+ * KARARIN SONUCU — tek cümle, iki adres: ızgaranın üstü ve (karardan sonra sıradaki öneri aynı
+ * pencerede açıldıysa) diyaloğun tepesi.
+ *
+ * İki adres, pencerenin artık kapanmamasının doğrudan sonucu: ızgaradaki cümle o an diyaloğun
+ * arkasında kalıyor ve görünmeyen bir onay, operatöre kaydın yazılıp yazılmadığını sorduruyor.
+ */
+export function OutcomeNotice({ text }: { text: string }) {
+  return (
+    <p
+      role="status"
+      className="m-0 rounded-ops-card border border-ops-line border-l-[3px] border-l-ops-olive bg-ops-subtle px-3.5 py-2.5 font-ops-body text-ops-base leading-relaxed text-ops-strong"
+    >
+      {text}
+    </p>
+  );
+}
+
 // Ortak `EmptyState` DEĞİL, çizimin kendi bloğu: sola yaslı ve sütunun ÜSTÜNDE. Ortak bileşen
 // metni dikeyde ortalıyor ve uzun bir alanın tam ortasında duran bir cümle, kuyruğun boş olduğunu
 // değil ekranın yüklenmediğini düşündürüyor.
@@ -166,6 +184,7 @@ export function ProposalDialog({
   options,
   busy,
   error,
+  outcome,
   onClose,
   onDecision,
 }: {
@@ -174,6 +193,8 @@ export function ProposalDialog({
   options: AssistantFormOptions;
   busy: boolean;
   error: string | null;
+  /** BİR ÖNCEKİ önerinin sonucu — bu pencere karardan sonra sıradakiyle açıldıysa tepede yazar. */
+  outcome: string | null;
   onClose: () => void;
   onDecision: (kind: DecisionKind, draft?: unknown) => void;
 }) {
@@ -245,7 +266,15 @@ export function ProposalDialog({
             <span className="mr-auto min-w-0 flex-1 font-ops-body text-ops-xs leading-relaxed text-ops-muted">
               {error ? <span className="font-semibold text-ops-red">{error}</span> : decisionFooterNote(mode)}
             </span>
-            <Button variant="secondary" onClick={() => onDecision('later')} disabled={busy}>
+            {/* "Sonra bak" HİÇBİR ŞEY YAZMAZ, o yüzden onay da sormaz: öneri kuyrukta kalır ve
+                pencere sıradakine geçer. Bir tur onay penceresi açıyordu ve o pencerede "Vazgeç"
+                ile "Kuyrukta bırak" aynı şeyi yapıyordu — iki tık, sıfır sonuç. */}
+            <Button
+              variant="secondary"
+              onClick={() => onDecision('later')}
+              disabled={busy}
+              title="Öneri kuyrukta kalır; sıradaki öneri açılır"
+            >
               Sonra bak
             </Button>
             <Button variant="danger" onClick={() => onDecision('reject')} disabled={busy}>
@@ -320,6 +349,10 @@ export function ProposalDialog({
         )
       }
     >
+      {/* Önceki kararın sonucu pencerenin TEPESİNDE: göz zaten oraya bakıyor ve sıradaki önerinin
+          konusuna geçmeden önce "bir önceki ne oldu" sorusunu kapatıyor. */}
+      {outcome ? <OutcomeNotice text={outcome} /> : null}
+
       {/* Gövde varsa ÖNİZLEME ÇİZİLMEZ — ikisi birden dururdu ve aynı sayı iki yerde iki farklı
           hâlde okunurdu (önizleme asistanın önerdiği fiyatı, form operatörün yazdığını). İki
           gösterim dili bakımı da ikiye böler; talebin birinci amacı bunu azaltmaktı. */}

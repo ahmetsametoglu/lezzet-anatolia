@@ -8,8 +8,9 @@ import { appliedNoteOf, inlineBodyOf } from './assistant-body';
 import { notifyCountOf } from './assistant-labels';
 import { AssistantDecisionDialog } from './assistant-decision-dialog';
 import { AssistantDesktop } from './assistant.desktop';
+import { nextProposalId, visibleRowsOf } from './assistant-queue';
 import { assistantUrl, type AssistantUrlState, type KindFilter } from './assistant-url';
-import type { AssistantData, DecisionKind } from './assistant-types';
+import type { AssistantData, ConfirmKind, DecisionKind } from './assistant-types';
 
 // Asistan onay kuyruğu client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız.
 //
@@ -24,37 +25,62 @@ interface AssistantClientProps {
 export function AssistantClient({ data, urlState }: AssistantClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
-  const [decision, setDecision] = useState<DecisionKind | null>(null);
+  const [decision, setDecision] = useState<ConfirmKind | null>(null);
   const [busy, setBusy] = useState(false);
-  /** Karardan SONRA söylenecek söz — hata da olabilir, bilgi de ("başka yerde karar verilmiş"). */
-  const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * İki ayrı söz, çünkü iki ayrı şeye bakıyorlar: `error` AÇIK öneriye ait (yazılamadı, diyalog
+   * orada kalır), `outcome` ise kararı verilmiş ÖNCEKİ öneriye. Tek alanda taşınsalardı sıradaki
+   * öneri, kendisiyle ilgisi olmayan bir hata cümlesiyle açılırdı.
+   */
+  const [error, setError] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<string | null>(null);
 
   const go = (patch: Partial<AssistantUrlState>) => {
     startNav(() => router.replace(assistantUrl({ ...urlState, ...patch }), { scroll: false }));
   };
 
   const selected = data.selected;
+  const visibleRows = visibleRowsOf(data.rows, urlState.kind);
+
+  /** Elle gezinince iki söz de düşer: başka bir sekmeye geçen operatör eski cümleyi taşımamalı. */
+  const clearNotices = () => {
+    setError(null);
+    setOutcome(null);
+  };
+
+  /**
+   * Bu öneriyle iş bitti: sıradaki öneri AYNI pencerede açılır, sıradaki yoksa pencere kapanır.
+   *
+   * Kuyruk arka arkaya işlenen bir iştir; her karardan sonra ızgaraya dönüp yeni bir kart aramak
+   * operatörü sırayı elle takip etmeye zorluyordu. Sıra ekranda görünen sıradır (`assistant-queue`).
+   */
+  const goNext = () => {
+    setDecision(null);
+    setError(null);
+    go({ p: selected ? nextProposalId(visibleRows, selected.id) : '' });
+  };
 
   /**
    * Kararın yürütülmesi.
    *
    * **Karar verilen öneri bu sekmeden DÜŞER** (uygulandı/reddedildi/uygulanamadı hepsi karar
-   * geçmişine gider), yani seçim de düşer. Bu yüzden sonuç cümlesi karttan bağımsız tutuluyor:
-   * kartta gösterilseydi, kart o an başka bir öneriye geçmiş olacağı için cümle YANLIŞ satırın
-   * altında görünürdü.
+   * geçmişine gider), yani sonuç cümlesi kartın değil KARARIN yanında durur: kart o an sıradaki
+   * öneriye geçmiş olur ve cümle yanlış satırın altında görünürdü.
    *
-   * "Sonra bak" sunucuya hiç gitmez — öneri zaten kuyrukta kalıyor; pencerenin işi o kararın
-   * sonucunu söylemek, bir şey yapmak değil.
+   * **"Sonra bak" sunucuya HİÇ gitmez** ve gitmemeli — öneri zaten kuyrukta kalıyor. Yaptığı tek
+   * şey sırayı ilerletmek, yani "bunu şimdi karara bağlamıyorum" demenin ekrandaki karşılığı.
    */
   const runDecision = async (kind: DecisionKind, note?: string, draft?: unknown) => {
     if (!selected || busy) return;
     if (kind === 'later') {
-      setDecision(null);
+      // Atlanan öneri bir sonuç doğurmadı; önceki kararın cümlesi de artık geride kaldı.
+      setOutcome(null);
+      goNext();
       return;
     }
 
     setBusy(true);
-    setNotice(null);
+    setError(null);
     try {
       /**
        * ── KUYRUĞUN İÇİNDE VERİLEN KARAR (22.8) ──────────────────────────────
@@ -68,11 +94,11 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
       if (body && payload !== null) {
         const { error: bodyError } = await body.submit(payload, draft, selected.id);
         if (bodyError) {
-          setNotice(bodyError);
+          setError(bodyError);
           return;
         }
-        setNotice(appliedNoteOf(body, payload));
-        setDecision(null);
+        setOutcome(appliedNoteOf(body, payload));
+        goNext();
         router.refresh();
         return;
       }
@@ -81,24 +107,24 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
         kind === 'apply' ? await applyProposalAction(selected.id) : await rejectProposalAction(selected.id, note);
 
       if (result.error !== null || result.data === null) {
-        setNotice(result.error ?? 'Karar yazılamadı.');
+        setError(result.error ?? 'Karar yazılamadı.');
         return;
       }
 
-      const outcome = result.data;
-      if (outcome.status === 'gone') {
+      const written = result.data;
+      if (written.status === 'gone') {
         // Hata DEĞİL bilgi: başka bir sekmede ya da başka bir personelde karar verilmiş.
-        setNotice('Bu öneriye bu arada başka bir yerde karar verilmiş — kuyruk tazelendi.');
-      } else if (outcome.status === 'failed') {
+        setOutcome('Bu öneriye bu arada başka bir yerde karar verilmiş — kuyruk tazelendi.');
+      } else if (written.status === 'failed') {
         // Motorun reddi patronun kararı değildir; cümlesi de öyle kurulur.
-        setNotice(`Motor uygulamayı reddetti: ${outcome.error} — öneri "uygulanamadı" olarak geçmişe düştü.`);
-      } else if (outcome.status === 'applied') {
-        setNotice('Uygulandı. Öneri karar geçmişine düştü; oluşan kayıtların kimlikleri teknik dökümde.');
+        setOutcome(`Motor uygulamayı reddetti: ${written.error} — öneri "uygulanamadı" olarak geçmişe düştü.`);
+      } else if (written.status === 'applied') {
+        setOutcome('Uygulandı. Öneri karar geçmişine düştü; oluşan kayıtların kimlikleri teknik dökümde.');
       } else {
-        setNotice('Reddedildi. Öneri silinmedi, ret notuyla karar geçmişine düştü.');
+        setOutcome('Reddedildi. Öneri silinmedi, ret notuyla karar geçmişine düştü.');
       }
 
-      setDecision(null);
+      goNext();
       // Action zaten `revalidatePath` çağırdı; `refresh` o taze RSC çıktısını ekrana getirir.
       router.refresh();
     } finally {
@@ -113,11 +139,13 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
         urlState={urlState}
         navPending={navPending}
         busy={busy}
-        error={notice}
+        error={error}
+        outcome={outcome}
+        visibleRows={visibleRows}
         // Sekme değişince SEÇİM düşer: başka sekmede olmayan bir önerinin kimliği adreste kalırsa
         // kart "bulunamadı" der ve operatör sekmeyi değiştirdiğini değil bir şeyin bozulduğunu sanır.
         onTab={(tab: QueueTab) => {
-          setNotice(null);
+          clearNotices();
           go({ tab, p: '' });
         }}
         // Sekme değişince tip süzgeci DURUR (yukarıdaki `p: ''` ile karıştırılmasın): süzgeç "hangi
@@ -126,18 +154,26 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
         // Tanınmayan bir tip zaten adres ayrıştırmasında düşüyor; boş kalan bir ızgaranın da kendi
         // cümlesi var ("bu süzgeçte öneri yok").
         onKind={(kind: KindFilter) => {
-          setNotice(null);
+          clearNotices();
           go({ kind });
         }}
         onSelect={(p: string) => {
-          setNotice(null);
+          clearNotices();
           go({ p });
         }}
         // Gövdesi olan tipte onay penceresi AÇILMAZ: form zaten onay yüzeyi ve operatör değeri
         // gözüyle görüp değiştirdi. Modal koymak aynı kararı iki kez sordurmak olurdu — üstelik
         // "dialog açılmaz, konteynere gömülür" kuralının tam karşısında.
+        //
+        // "Sonra bak" da pencere açmaz ve bu düzeltmenin kendisi: hiçbir şey YAZMAYAN bir karara
+        // onay sormak, penceredeki iki düğmeyi ("Vazgeç" ile "Kuyrukta bırak") aynı şeyi yapar
+        // hâle getiriyordu — operatör iki tık sonunda başladığı yerde kalıyordu.
         onDecision={(kind, draft) => {
-          setNotice(null);
+          setError(null);
+          if (kind === 'later') {
+            void runDecision('later');
+            return;
+          }
           if (kind === 'apply' && selected && inlineBodyOf(selected.kind)) {
             void runDecision('apply', undefined, draft);
             return;
@@ -154,7 +190,7 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
           impact={selected.impact}
           undoHint={selected.undoHint ?? undefined}
           busy={busy}
-          error={busy ? null : notice}
+          error={busy ? null : error}
           onClose={() => setDecision(null)}
           onConfirm={(note) => void runDecision(decision, note)}
         />

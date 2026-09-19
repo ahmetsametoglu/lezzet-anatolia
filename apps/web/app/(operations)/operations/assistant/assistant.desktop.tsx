@@ -6,15 +6,16 @@ import { SegmentedNav } from '@/components/operation/ui/segmented-nav';
 import { agoLabel, num } from '@/components/operation/ui/format';
 import { ProposalCard } from './assistant-card';
 import { cardBodyOf } from './assistant-card-bodies';
-import { ProposalDialog, QueueEmpty } from './assistant-sections';
+import { OutcomeNotice, ProposalDialog, QueueEmpty } from './assistant-sections';
 import { QUEUE_TABS, QUEUE_TAB_LABELS, type KindFilter } from './assistant-url';
 import type { AssistantRowView, AssistantViewProps } from './assistant-types';
 
 /**
  * Asistan Onay Kuyruğu — web (22.3). `Operasyon - Asistan Kuyrugu.dc.html`.
  *
- * İKİ SÜTUN, TEK EKRAN: kuyruk · karar çerçevesi. Kuyruğu ayrı bir sayfaya koymak operatörü her
- * karardan sonra listeye geri döndürürdü; öneriler arka arkaya işlenen bir iştir.
+ * KART IZGARASI + KARAR PENCERESİ, TEK EKRAN. Kuyruğu ayrı bir sayfaya koymak operatörü her
+ * karardan sonra listeye geri döndürürdü; öneriler arka arkaya işlenen bir iştir — pencere de bu
+ * yüzden karardan sonra kapanmıyor, sıradaki öneriyle doluyor.
  *
  * **Çerçeve her tipte AYNI, değişen tek şey önizleme bloğu** (brief §2): kuyruktaki kalemler
  * birbirine benzemez (altı kalemlik bir paket ↔ tek satırlık bir para hareketi) ama öğrenilecek
@@ -32,6 +33,8 @@ export function AssistantDesktop({
   navPending,
   busy,
   error,
+  outcome,
+  visibleRows,
   onTab,
   onKind,
   onSelect,
@@ -48,8 +51,9 @@ export function AssistantDesktop({
   const oldest = pendingRows[0];
   const newest = pendingRows.length > 1 ? pendingRows[pendingRows.length - 1] : undefined;
 
+  // Süzgeçli liste DIŞARIDAN gelir: aynı sıradan hem ızgara çiziliyor hem karardan sonra açılacak
+  // öneri seçiliyor (`assistant-queue`). Burada ikinci kez hesaplansaydı iki sıra bir gün ayrışırdı.
   const kinds = kindCountsOf(data.rows);
-  const visibleRows = urlState.kind ? data.rows.filter((row) => row.kind === urlState.kind) : data.rows;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -140,15 +144,16 @@ export function AssistantDesktop({
           Artan boşluk sorun değil — durum satırı `mt-auto` ile dibe yaslı, yani kart dolu duruyor. */}
       <div className="min-h-0 flex-1 overflow-y-auto bg-ops-card px-6 py-5" aria-busy={navPending || undefined}>
         {/* KARARIN SONUCU IZGARANIN ÜSTÜNDE, kartın içinde değil (10.08). Karar verilen öneri
-            kuyruktan düşer ve diyalog kapanır — cümle karta yazılsaydı o an başka bir önerinin
-            kartında görünürdü, yani yanlış satırın altında. Üstte durunca hangi öneriye ait olduğu
-            değil NE OLDUĞU okunuyor ve o yeter ("Teklif açıldı", "Motor reddetti: …"). */}
-        {error ? (
-          <div
-            role="status"
-            className="mb-3.5 rounded-ops-card border border-ops-line border-l-[3px] border-l-ops-olive bg-ops-subtle px-3.5 py-2.5 font-ops-body text-ops-base text-ops-strong"
-          >
-            {error}
+            kuyruktan düşer — cümle karta yazılsaydı o an başka bir önerinin kartında görünürdü,
+            yani yanlış satırın altında. Üstte durunca hangi öneriye ait olduğu değil NE OLDUĞU
+            okunuyor ve o yeter ("Teklif açıldı", "Motor reddetti: …").
+
+            Kuyruğun SONUNDA görünen yer burasıdır: karardan sonra sıradaki öneri açılıyorsa cümle
+            onun penceresinin tepesinde de yazılı (`ProposalDialog`), çünkü ızgara o an diyaloğun
+            arkasında kalıyor. */}
+        {outcome ? (
+          <div className="mb-3.5">
+            <OutcomeNotice text={outcome} />
           </div>
         ) : null}
 
@@ -176,6 +181,7 @@ export function AssistantDesktop({
           options={data.options}
           busy={busy}
           error={error}
+          outcome={outcome}
           onClose={() => onSelect('')}
           onDecision={onDecision}
         />

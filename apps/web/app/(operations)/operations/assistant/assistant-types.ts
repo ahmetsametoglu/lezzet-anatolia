@@ -49,8 +49,14 @@ export interface AssistantData {
   options: AssistantFormOptions;
 }
 
-/** Karar penceresinin hâli — çizimdeki tek modal kabuğu üç karara hizmet ediyor. */
+/**
+ * Alt bardaki üç düğme. Üçü de aynı cümleyi kurar — "bu öneriyle işim bitti, sıradakine geç" — ama
+ * yalnız ikisi sunucuya gider: `later` hiçbir şey yazmaz, öneriyi kuyrukta bırakıp sırayı ilerletir.
+ */
 export type DecisionKind = 'apply' | 'reject' | 'later';
+
+/** Onay penceresi açabilen kararlar; `later` bir şey yazmadığı için onay da sormaz. */
+export type ConfirmKind = Exclude<DecisionKind, 'later'>;
 
 export interface AssistantViewProps {
   data: AssistantData;
@@ -59,7 +65,15 @@ export interface AssistantViewProps {
   navPending: boolean;
   /** Karar yazılıyor — düğmeler kilitli. */
   busy: boolean;
+  /** AÇIK önerinin yazılamadığı: diyalog o öneride kalır, cümle alt barda durur. */
   error: string | null;
+  /**
+   * KARARI VERİLEN önerinin sonucu ("Uygulandı…", "Motor reddetti: …"). Karardan sonra sıradaki
+   * öneri aynı pencerede açıldığı için cümlenin iki adresi var: ızgara ve yeni diyaloğun tepesi.
+   */
+  outcome: string | null;
+  /** Tip süzgecinden geçen satırlar — sıradaki öneri de bu sıradan seçilir (`assistant-queue`). */
+  visibleRows: readonly AssistantRowView[];
   onTab: (tab: QueueTab) => void;
   /** Tip süzgeci; boş dize = süzgeç kalkar. */
   onKind: (kind: KindFilter) => void;

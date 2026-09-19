@@ -6,23 +6,25 @@ import { Dialog } from '@/components/operation/ui/dialog';
 import { FieldShell } from '@/components/operation/form/field-shell';
 import { Textarea } from '@/components/operation/form/input';
 import { num } from '@/components/operation/ui/format';
-import type { DecisionKind } from './assistant-types';
+import type { ConfirmKind } from './assistant-types';
 
 /**
- * Karar penceresi — çizimdeki **tek modal kabuğu** üç karara hizmet ediyor (`modalKind`:
- * `uygula` · `ret` · `sonra`).
+ * Karar penceresi — tek modal kabuğu **YAZAN iki karara** hizmet eder (`uygula` · `ret`).
  *
- * Üçünün de onay istemesi bir nezaket değil: uygulama normal servis yolundan koşar ve bir kısmı
- * geri alınmaz (bölge bildirimi), ret öneriyi geçmişe düşürür, "sonra bak" ise hiçbir şey yapmaz —
- * ve tam da bu yüzden söylenmesi gerekir, yoksa operatör bir şey yaptığını sanır.
+ * İkisinin de onay istemesi bir nezaket değil: uygulama normal servis yolundan koşar ve bir kısmı
+ * geri alınmaz (bölge bildirimi), ret ise öneriyi geçmişe düşürür.
+ *
+ * **"Sonra bak" buraya GİRMEZ ve girmemeli:** hiçbir şey yazmayan bir kararın onayı, penceredeki
+ * iki düğmeyi ("Vazgeç" ile "Kuyrukta bırak") aynı işi yapar hâle getiriyordu. O karar artık tek
+ * tıkla sırayı ilerletiyor (`assistant-client`).
  *
  * **Ret notu isteğe bağlı ve öyle kalmalı:** zorunlu yapmak, ret'i pahalılaştırıp operatörü
- * "sonra bak"a iter — kuyruğun en sık görülen çürüme yolu. Ama not kutusu görünür duruyor, çünkü
+ * atlamaya iter — kuyruğun en sık görülen çürüme yolu. Ama not kutusu görünür duruyor, çünkü
  * *"bunu neden reddetmişiz"* sorusu er geç soruluyor (B2B onay ekranının dersi).
  */
 
 interface AssistantDecisionDialogProps {
-  kind: DecisionKind;
+  kind: ConfirmKind;
   summary: string;
   /** Uygulanınca bildirim gidecek müşteri sayısı; `null` ise dış etki yok. */
   notifyCount: number | null;
@@ -57,14 +59,12 @@ export function AssistantDecisionDialog({
   const [note, setNote] = useState('');
   const noteId = useId();
 
-  const title = kind === 'apply' ? 'Öneriyi uygula' : kind === 'reject' ? 'Öneriyi reddet' : 'Sonra bak';
+  const title = kind === 'apply' ? 'Öneriyi uygula' : 'Öneriyi reddet';
 
   const body =
     kind === 'apply'
       ? `${summary} — işlem normal servis yolundan koşar.`
-      : kind === 'reject'
-        ? `${summary} reddedilecek. Öneri silinmez; ret notuyla geçmişe düşer.`
-        : `${summary} kuyrukta kalır; tazeliği dolarsa kendiliğinden “süresi geçti” görünümüne düşer.`;
+      : `${summary} reddedilecek. Öneri silinmez; ret notuyla geçmişe düşer.`;
 
   // Not kutusunun tonu kararın doğasını söylüyor: geri alınamaz dış etki amber, motorun son sözü
   // mor (bu yüzeyde mor = makine konuşuyor), ret nötr.
@@ -79,17 +79,14 @@ export function AssistantDecisionDialog({
             text: 'Motor reddederse öneri “uygulanamadı” hâline geçer ve sebebi ekranda yazar.',
             skin: 'border-ops-violet-line bg-ops-violet-bg text-ops-violet',
           }
-      : kind === 'reject'
-        ? {
-            text: '“Bunu neden reddetmişiz” sorusunun cevabı bu nottur — kısa bir cümle bile yeter.',
-            skin: 'border-ops-line-strong bg-ops-gray-100 text-ops-body',
-          }
-        : null;
+      : {
+          text: '“Bunu neden reddetmişiz” sorusunun cevabı bu nottur — kısa bir cümle bile yeter.',
+          skin: 'border-ops-line-strong bg-ops-gray-100 text-ops-body',
+        };
 
-  const ctaLabel =
-    kind === 'apply' ? (notifyCount !== null ? 'Uygula ve gönder' : 'Uygula') : kind === 'reject' ? 'Reddet' : 'Kuyrukta bırak';
+  const ctaLabel = kind === 'apply' ? (notifyCount !== null ? 'Uygula ve gönder' : 'Uygula') : 'Reddet';
 
-  const ctaVariant = kind === 'apply' ? (notifyCount !== null ? 'warning' : 'primary') : kind === 'reject' ? 'destructive' : 'primary';
+  const ctaVariant = kind === 'apply' ? (notifyCount !== null ? 'warning' : 'primary') : 'destructive';
 
   return (
     <Dialog
@@ -115,7 +112,7 @@ export function AssistantDecisionDialog({
     >
       <p className="font-ops-body text-ops-base leading-relaxed text-ops-strong">{body}</p>
 
-      {/* Uygulama kararında ne olacağı burada söylenir; ret/erteleme kararında olacak bir şey yok. */}
+      {/* Uygulama kararında ne olacağı burada söylenir; ret kararında olacak bir şey yok. */}
       {kind === 'apply' ? (
         <div className="flex flex-col gap-1 rounded-ops-card border border-ops-gray-300 bg-ops-gray-100 px-3.5 py-2.5">
           <span className="font-ops-body text-ops-sm leading-relaxed text-ops-strong">{impact}</span>
@@ -123,11 +120,9 @@ export function AssistantDecisionDialog({
         </div>
       ) : null}
 
-      {notice ? (
-        <p className={`rounded-ops-card border px-3 py-2.5 font-ops-body text-ops-xs font-medium leading-relaxed ${notice.skin}`}>
-          {notice.text}
-        </p>
-      ) : null}
+      <p className={`rounded-ops-card border px-3 py-2.5 font-ops-body text-ops-xs font-medium leading-relaxed ${notice.skin}`}>
+        {notice.text}
+      </p>
 
       {kind === 'reject' ? (
         <FieldShell fieldId={noteId} label="Ret notu" labelAside="isteğe bağlı">
