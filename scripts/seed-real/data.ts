@@ -184,6 +184,10 @@ const magaza = (slug: string, url: string, kaynak: string): DraftImage => ({ slu
  * YAPAY ZEKÂ ile üretilmiş stüdyo karesi (`temp/Resim Calismalari`, işletmecinin çalışması). Ambalajın
  * ön yüzü gerçek etiketi izler, küçük yazıları izlemez — kaynak alanı bunu kayda geçirir ki gerçek
  * çekim geldiğinde hangi kapakların değişeceği tek sorguyla bulunsun.
+ *
+ * **Slug ÜRÜNÜN slug'ıdır**, tedarikçinin faturasındaki Hollandaca ad değil: kaynak klasör, depodaki
+ * dosya ve CDN anahtarı aynı adı taşısın. Hollandaca adla iki ürün karışmıştı — "harput pekmezi"
+ * klasörü aslında Keçiboynuzu (HARNUP) Pekmezi'ydi, iki rulo pestil de birbirinin yerine geçmişti.
  */
 const studyo = (slug: string): DraftImage => ({
   slug,
@@ -238,7 +242,14 @@ export const PURCHASES: Purchase[] = [
       // Faturadaki döner ve mantı katalog kaynağında YOK; künyeleri veritabanı aynasından gelir.
       behotrade('LEZZA Traditional Meet Doner', 'LEZZA Traditional Meet Doner 10x700gr', 10, 8, 'LEZZA Geleneksel Et Döner'),
       behotrade('LEZZA Traditional Chicken Doner', 'LEZZA Traditional Chicken Doner 10x700gr', 10, 6.1, 'LEZZA Geleneksel Tavuk Döner'),
-      behotrade('LEZZA Manti with Minced Meat (Kiymali)', 'LEZZA Manti with Minced Meat (Kiymali )1000 gr', 10, 5.15, 'LEZZA Kıymalı Mantı'),
+      behotrade(
+        'LEZZA Manti with Minced Meat (Kiymali)',
+        'LEZZA Manti with Minced Meat (Kiymali )1000 gr',
+        10,
+        5.15,
+        'LEZZA Kıymalı Mantı',
+        studyoSeti('lezza-kiymali-manti', 2),
+      ),
     ],
   },
   {
@@ -247,41 +258,40 @@ export const PURCHASES: Purchase[] = [
     invoiceTotal: 1802.07,
     catalog: [],
     drafts: [
-      behotrade('Druivenmelasse', 'Druivenmelasse 650gr', 12, 5.5, 'Üzüm Pekmezi', studyoSeti('druivenmelasse', 2)),
-      behotrade('Johannesbroodmelasse', 'Johannesbroodmelasse 650gr', 12, 5.5, 'Keçiboynuzu Pekmezi', studyoSeti('johannesbroodmelasse', 2)),
-      behotrade('Tahini', 'Tahini 500gr', 12, 4.75, 'Tahin', studyoSeti('tahini', 2)),
-      behotrade('Meidoorn azijn', 'Meidoorn azijn 500ml', 12, 3, 'Alıç Sirkesi', studyoSeti('meidoorn-azijn', 2)),
-      behotrade('Ananas azijn', 'Ananas azijn 500ml', 12, 3, 'Ananas Sirkesi', studyoSeti('ananas-azijn', 2)),
+      behotrade('Druivenmelasse', 'Druivenmelasse 650gr', 12, 5.5, 'Üzüm Pekmezi', studyoSeti('uzum-pekmezi', 2)),
+      behotrade('Johannesbroodmelasse', 'Johannesbroodmelasse 650gr', 12, 5.5, 'Keçiboynuzu Pekmezi', studyoSeti('keciboynuzu-pekmezi', 2)),
+      behotrade('Tahini', 'Tahini 500gr', 12, 4.75, 'Tahin', studyoSeti('tahin', 2)),
+      behotrade('Meidoorn azijn', 'Meidoorn azijn 500ml', 12, 3, 'Alıç Sirkesi', studyoSeti('alic-sirkesi', 2)),
+      behotrade('Ananas azijn', 'Ananas azijn 500ml', 12, 3, 'Ananas Sirkesi', studyoSeti('ananas-sirkesi', 2)),
       behotrade('Enginar azijn', 'Enginar azijn 500ml', 12, 3, 'Enginar Sirkesi'),
       behotrade('Appel azijn', 'Appel azijn 500ml', 12, 3, 'Elma Sirkesi', { image: usta('appel-azijn', 'elma_y02.jpg') }),
-      behotrade('Isgin azijn', 'Isgin azijn 500ml', 12, 3, 'Işkın Kökü Sirkesi', studyoSeti('isgin-azijn', 2)),
+      behotrade('Isgin azijn', 'Isgin azijn 500ml', 12, 3, 'Işkın Kökü Sirkesi', studyoSeti('iskin-koku-sirkesi', 2)),
       behotrade('Granaatappelextraat', 'Granaatappelextraat 250ml', 12, 3.45, 'Nar Ekşisi', studyoSeti('nar-eksisi', 2)),
-      behotrade('Sifamix Kozalak extract', 'Sifamix Kozalak extract 670gr', 12, 4.25, 'Şifamix Kozalak Özü'),
-      behotrade('Sifamix Johannesbrood extract', 'Sifamix Johannesbrood extract 700ml', 12, 3.75, 'Şifamix Keçiboynuzu Özü', {
-        image: usta('sifamix-johannesbrood-extract', 'keçiboynuzu.zip/keçiboynuzu_01.jpg'),
-      }),
-      behotrade('Sifamix Andiz extract', 'Sifamix Andiz extract 350gr', 12, 3.99, 'Şifamix Andız Özü', studyoSeti('sifamix-andiz-extract', 2)),
-      behotrade('Coconut mix', 'Coconut mix 250ml', 12, 4.95, 'Coconut Mix', { image: usta('coconut-mix', 'coconut_trendyol.zip/coconut_01.jpg') }),
-      behotrade('Honing azijn', 'Honing azijn 500ml', 12, 3, 'Bal Sirkesi', studyoSeti('honing-azijn', 2)),
+      behotrade('Sifamix Kozalak extract', 'Sifamix Kozalak extract 670gr', 12, 4.25, 'Şifamix Kozalak Özü', studyoSeti('sifamix-kozalak-ozu', 2)),
+      behotrade(
+        'Sifamix Johannesbrood extract',
+        'Sifamix Johannesbrood extract 700ml',
+        12,
+        3.75,
+        'Şifamix Keçiboynuzu Özü',
+        studyoSeti('sifamix-keciboynuzu-ozu', 2),
+      ),
+      behotrade('Sifamix Andiz extract', 'Sifamix Andiz extract 350gr', 12, 3.99, 'Şifamix Andız Özü', studyoSeti('sifamix-andiz-ozu', 2)),
+      behotrade('Coconut mix', 'Coconut mix 250ml', 12, 4.95, 'Coconut Mix', studyoSeti('coconut-mix', 2)),
+      behotrade('Honing azijn', 'Honing azijn 500ml', 12, 3, 'Bal Sirkesi', studyoSeti('bal-sirkesi', 2)),
       {
         // Elle yazılmış kayıt: iki boy da aynı faturadan geliyor ve sıraları künyedeki sırayla aynıdır.
         name: 'Olijfolie',
         nameTr: 'Natürel Sızma Zeytinyağı',
-        ...studyoSeti('olijfolie', 5),
+        ...studyoSeti('naturel-sizma-zeytinyagi', 2),
         variants: [
           { nameAtSupplier: 'Olijfolie 5lt', qty: 4, unitCost: 29.9 },
           { nameAtSupplier: 'Olijfolie 750ml', qty: 12, unitCost: 5.5 },
         ],
       },
-      behotrade('Pistache', 'Pistache 700gr', 20, 16.5, 'Antep Fıstığı', studyoSeti('pistache', 2)),
-      behotrade('Bromelain siroop', 'Bromelain siroop 250ml', 18, 8, 'Bromelain Şurubu', {
-        image: magaza(
-          'bromelain-siroop',
-          'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/ZuhreAnaBromelainSurubu250ml_587ebfd0-bba8-42f4-9145-3df204a028ca.webp',
-          'Zühre Ana',
-        ),
-      }),
-      behotrade('Zuhre Ana Kekre', 'Zuhre Ana Kekre 250ml', 18, 8.45, 'Zühre Ana Kekre Termojenik Mix', studyoSeti('zuhre-ana-kekre', 2)),
+      behotrade('Pistache', 'Pistache 700gr', 20, 16.5, 'Antep Fıstığı', studyoSeti('antep-fistigi', 2)),
+      behotrade('Bromelain siroop', 'Bromelain siroop 250ml', 18, 8, 'Bromelain Şurubu', studyoSeti('bromelain-surubu', 2)),
+      behotrade('Zuhre Ana Kekre', 'Zuhre Ana Kekre 250ml', 18, 8.45, 'Zühre Ana Kekre Termojenik Mix', studyoSeti('zuhre-ana-kekre-termojenik-mix', 2)),
       behotrade('Propolis pasta', 'Propolis pasta 240gr', 2, 8.5, 'Propolis Macunu', {
         image: magaza('propolis-pasta', 'https://cdn.shopify.com/s/files/1/0631/1326/5378/products/Propolis-min.jpg', 'Zühre Ana'),
       }),
@@ -294,13 +304,14 @@ export const PURCHASES: Purchase[] = [
       behotrade('Igde cekirdegi pasta', 'Igde cekirdegi pasta 240gr', 2, 8, 'İğde Çekirdeği Macunu', {
         image: magaza('igde-cekirdegi-pasta', 'https://cdn.shopify.com/s/files/1/0851/8153/0446/files/ZuhreAnaIgdeCekirdegiMacunu.webp', 'Zühre Ana'),
       }),
-      behotrade('Zwarte moerbei extrat', 'Zwarte moerbei extrat 670gr', 12, 7.25, 'Karadut Özü', studyoSeti('zwarte-moerbei-extrat', 2)),
-      behotrade('Pestil met Hazinoten Muska', 'Pestil met Hazinoten Muska 300gr', 25, 3.95, 'Fındıklı Muska Pestil', studyoSeti('pestil-muska', 2)),
-      behotrade('Gedroogde aronya', 'Gedroogde aronya 150gr', 6, 3.99, 'Kurutulmuş Aronya'),
-      behotrade('Gedroogde appel', 'Gedroogde appel 180gr', 6, 2.75, 'Kurutulmuş Elma'),
-      behotrade('Gedroogde Kaki cips', 'Gedroogde Kaki cips 180gr', 6, 2, 'Kurutulmuş Trabzon Hurması Cipsi'),
-      behotrade('Gedroogde perzik', 'Gedroogde perzik', 6, 4, 'Kurutulmuş Şeftali'),
-      behotrade('Gedroogde meloen', 'Gedroogde meloen 100gr', 6, 2.25, 'Kurutulmuş Kavun', studyoSeti('gedroogde-meloen', 2)),
+      behotrade('Zwarte moerbei extrat', 'Zwarte moerbei extrat 670gr', 12, 7.25, 'Karadut Özü', studyoSeti('karadut-ozu', 2)),
+      behotrade('Pestil met Hazinoten Muska', 'Pestil met Hazinoten Muska 300gr', 25, 3.95, 'Fındıklı Muska Pestil', studyoSeti('findikli-muska-pestil', 2)),
+      behotrade('Gedroogde aronya', 'Gedroogde aronya 150gr', 6, 3.99, 'Kurutulmuş Aronya', studyoSeti('kurutulmus-aronya', 2)),
+      behotrade('Gedroogde appel', 'Gedroogde appel 180gr', 6, 2.75, 'Kurutulmuş Elma', studyoSeti('kurutulmus-elma', 2)),
+      behotrade('Gedroogde Kaki cips', 'Gedroogde Kaki cips 180gr', 6, 2, 'Kurutulmuş Trabzon Hurması Cipsi', studyoSeti('kurutulmus-trabzon-hurmasi-cipsi', 2)),
+      // Şeftalinin İKİ takımı var (ham paket çekimi + kurgulu kare): altı karenin beşi galeriye sığıyor.
+      behotrade('Gedroogde perzik', 'Gedroogde perzik', 6, 4, 'Kurutulmuş Şeftali', studyoSeti('kurutulmus-seftali', 5)),
+      behotrade('Gedroogde meloen', 'Gedroogde meloen 100gr', 6, 2.25, 'Kurutulmuş Kavun', studyoSeti('kurutulmus-kavun', 2)),
     ],
   },
 ];
@@ -315,12 +326,13 @@ type LooseDraft = Omit<Draft, 'variants'>;
  */
 export const EK_TASLAKLAR: LooseDraft[] = [
   { name: 'Lychnos Natürel Sızma Zeytinyağı' },
-  { name: 'Böreklik Yufka' },
-  { name: 'Lahmacun' },
-  { name: 'Cevizli Pestil Tatlısı', ...studyoSeti('cevizli-pestil', 2) },
+  { name: 'Böreklik Yufka', ...studyoSeti('boreklik-yufka', 2) },
+  // Lahmacun'un tek karesi var: kapak yazılır, galerisi boş kalır.
+  { name: 'Lahmacun', image: studyo('lahmacun') },
+  { name: 'Cevizli Pestil Tatlısı', ...studyoSeti('cevizli-pestil-tatlisi', 2) },
   { name: 'Rulo Fındıklı Pestil', ...studyoSeti('rulo-findikli-pestil', 2) },
-  { name: 'Fındıklı Kadayıf Rulo Pestil', ...studyoSeti('kadayif-rulo-pestil', 2) },
-  { name: 'Fındıklı Sultan Sarma', ...studyoSeti('sultan-sarma', 2) },
+  { name: 'Fındıklı Kadayıf Rulo Pestil', ...studyoSeti('findikli-kadayif-rulo-pestil', 2) },
+  { name: 'Fındıklı Sultan Sarma', ...studyoSeti('findikli-sultan-sarma', 2) },
 ];
 
 /**
