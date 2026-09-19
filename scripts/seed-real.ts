@@ -124,6 +124,12 @@ const LAYERS = (() => {
 const ALIMLAR = LAYERS >= 2 ? [...PURCHASES, ...TEST_PURCHASES] : PURCHASES;
 const FIYATLAR: Record<string, { b2c: number; b2b: number }> = LAYERS >= 2 ? { ...SALE_PRICES, ...TEST_SALE_PRICES } : SALE_PRICES;
 
+/**
+ * Aday kalan katalog kalemleri. `ADAY_SKULARI`nın gerekçesi "faturada yok, alış maliyeti yok"tu;
+ * uydurma fatura o kaleme maliyet yazdığı an gerekçe düşer ve ürün satışa çıkabilir.
+ */
+const ADAYLAR = LAYERS >= 2 ? ADAY_SKULARI.filter((sku) => !TEST_PURCHASES.some((p) => p.catalog.some((l) => l.sku === sku))) : ADAY_SKULARI;
+
 /** Katalogdaki Türkçe ad → o ürünün fatura satırları; uydurma fatura taslağa ADINDAN bağlanır. */
 const SATIRLAR_ADA_GORE = new Map<string, Draft['variants']>();
 for (const alim of ALIMLAR) {
@@ -431,7 +437,7 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     console.log(`  ⚠ ${present}/${lines.length} varyant zaten var — katalog yarım kurulmuş, yazılmadı`);
     return;
   }
-  plan(`${lines.length} fatura varyantı + ${ADAY_SKULARI.length} aday · ürün, metin, görsel ve kategori katalog kaynağından`);
+  plan(`${lines.length} fatura varyantı + ${ADAYLAR.length} aday · ürün, metin, görsel ve kategori katalog kaynağından`);
   if (DRY_RUN) return;
   const secim = new Map(
     lines.map((l) => [
@@ -449,7 +455,7 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   // Faturada olmayan aday kalemler aynı seçime girer ki ürünleri kurulsun — ama `kurgu.sku`ya
   // GİRMEZLER (aşağıda yalnız fatura satırları veriliyor): o küme "satış kurgusuna girmiş" demek ve
   // ürünü aktif olmaya zorlar. Adayın alış maliyeti yok, fiyatsız ve satışa kapalı kalması karar.
-  for (const sku of ADAY_SKULARI) if (!secim.has(sku)) secim.set(sku, {});
+  for (const sku of ADAYLAR) if (!secim.has(sku)) secim.set(sku, {});
   const made = await seedLezzaProducts(
     new CategoryService(db),
     new CategoryImageService(db),
@@ -462,7 +468,7 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     // Katalog hep `base` kurulur: `extend` türetmenin yanında bilinçli kusurlar da sahneler ve gerçek
     // kataloğa kusur yazılmaz. Katman 3 yalnız türetmeyi açar ki belgesiz ürün satışa çıkabilsin.
     'base',
-    { variants: secim, derive: LAYERS >= 3, candidates: new Set(ADAY_SKULARI), localFrames: katalogKareleri },
+    { variants: secim, derive: LAYERS >= 3, candidates: new Set(ADAYLAR), localFrames: katalogKareleri },
   );
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
 }
