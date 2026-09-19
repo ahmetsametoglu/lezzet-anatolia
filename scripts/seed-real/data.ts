@@ -237,11 +237,13 @@ const kunye = (
   energyKj: number,
   energyKcal: number,
   fatG: number,
-  saturatedFatG: number,
+  // Ambalajda OKUNAMAYAN kalem `null` yazılır, sıfır değil: sıfır bir beyandır ("içermez"), null
+  // "bilinmiyor" demektir ve o satır müşteriye hiç gösterilmez.
+  saturatedFatG: number | null,
   carbohydrateG: number,
-  sugarsG: number,
+  sugarsG: number | null,
   proteinG: number,
-  saltG: number,
+  saltG: number | null,
 ): Nutrition => ({ energyKj, energyKcal, fatG, saturatedFatG, carbohydrateG, sugarsG, proteinG, saltG });
 
 /**
@@ -1006,12 +1008,47 @@ export const PURCHASES: Purchase[] = [
   },
 ];
 
+/** Faturasız taslak: aynı beyanları taşır, varyantında fatura satırı (adet, alış fiyatı) yoktur. */
+type LooseDraft = Omit<Draft, 'variants'> & { variants: DraftSize[] };
+
+/**
+ * Gümüşhane pestil ailesi — dört ürünün ambalajı, künyesi, saklama cümlesi ve boyu AYNI; ayrışan
+ * yalnız ad, içindekiler oranları, barkod ve brüt ağırlık. Ortak alanlar dört kez yazılsaydı biri
+ * düzelince üçü eskirdi.
+ */
+const pestil = (
+  name: string,
+  ad: { fr: string; de: string },
+  ingredients: UcDil,
+  description: UcDil,
+  ambalaj: { barkod: string; brut: number; slug: string },
+): LooseDraft => ({
+  name,
+  nameFr: ad.fr,
+  nameDe: ad.de,
+  rejim: 'raf',
+  descriptionFromLabel: true,
+  description,
+  ingredients,
+  // Ambalajın künyesi dört kalem yazıyor; kJ kcal'den türetildi (369 × 4,184), ötekiler okunamadı.
+  nutrition: kunye(1544, 369, 5.29, null, 77.55, null, 3.01, null),
+  allergens: ['sert_kabuklu', 'gluten'],
+  storage: {
+    tr: 'Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.',
+    fr: "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
+    de: 'Kühl und trocken lagern.',
+  },
+  shelfLifeDays: 365,
+  ...studyoSeti(ambalaj.slug, 2),
+  variants: [{ label: '300 g', netQuantity: 300, barcode: ambalaj.barkod, packedWeightG: ambalaj.brut }],
+});
+
 /**
  * FATURASIZ taslaklar — ambalajı ve barkodu elimizde olan, ama alış kaydına bağlayamadığımız ürünler.
  * `Purchase`e konulamazlar: fatura satırı adet ve alış fiyatı ister, ikisi de yok. Aday doğarlar;
  * fiyat ve maliyet alış faturası gelince yazılır, o gün kalem faturasının altına taşınır.
  */
-export const EK_TASLAKLAR: Array<Omit<Draft, 'variants'> & { variants: DraftSize[] }> = [
+export const EK_TASLAKLAR: LooseDraft[] = [
   {
     name: 'Lychnos Natürel Sızma Zeytinyağı',
     nameFr: "Huile d'olive vierge extra Lychnos",
@@ -1033,6 +1070,69 @@ export const EK_TASLAKLAR: Array<Omit<Draft, 'variants'> & { variants: DraftSize
     },
     variants: [{ label: '5 l', netQuantity: 5000, barcode: '5200106450180' }],
   },
+  // Gümüşhane pestilleri — dördü aynı üreticinin aynı ailesi: künye, saklama ve ambalaj ortak, yalnız
+  // içindekiler oranları ve barkod ayrışıyor. Ambalajda kJ, doymuş yağ, şeker ve tuz satırları YOK;
+  // kJ kcal'den türetilebilir (369 × 4,184 ≈ 1544) ama ötekiler okunamadığı için `null` yazılı.
+  pestil(
+    'Cevizli Pestil Tatlısı',
+    { fr: 'Pulpe de fruits secs aux noix', de: 'Walnusspestil' },
+    {
+      tr: 'Üzüm pekmezi (%30), **ceviz** (%25), **buğday** unu (%20), şeker (%15).',
+      fr: 'Mélasse de raisin (30 %), **noix** (25 %), farine de **blé** (20 %), sucre (15 %).',
+      de: 'Traubenmelasse (30 %), **Walnuss** (25 %), **Weizen**mehl (20 %), Zucker (15 %).',
+    },
+    {
+      tr: 'Gümüşhane usulü cevizli pestil tatlısı; üzüm pekmezi, ceviz, buğday unu ve şekerle hazırlanır.',
+      fr: 'Pestil aux noix, spécialité de Gümüşhane (Turquie), à base de mélasse de raisin, de noix, de farine de blé et de sucre.',
+      de: 'Walnusspestil nach Art von Gümüşhane (Türkei) aus Traubenmelasse, Walnüssen, Weizenmehl und Zucker.',
+    },
+    { barkod: '8699237142632', brut: 320, slug: 'cevizli-pestil' },
+  ),
+  pestil(
+    'Rulo Fındıklı Pestil',
+    { fr: 'Rouleau aux noisettes', de: 'Haselnuss-Rolle' },
+    {
+      tr: '**Fındık** (%33), üzüm pekmezi (%32), **buğday** unu (%20), şeker (%15).',
+      fr: '**Noisette** (33 %), mélasse de raisin (32 %), farine de **blé** (20 %), sucre (15 %).',
+      de: '**Haselnuss** (33 %), Traubenmelasse (32 %), **Weizen**mehl (20 %), Zucker (15 %).',
+    },
+    {
+      tr: 'Gümüşhane usulü rulo fındıklı pestil; üzüm pekmezi, fındık, buğday unu ve şekerle hazırlanır.',
+      fr: 'Rouleau aux noisettes, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre.',
+      de: 'Haselnuss-Rolle nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker.',
+    },
+    { barkod: '8699237142601', brut: 320, slug: 'rulo-findikli-pestil' },
+  ),
+  pestil(
+    'Fındıklı Kadayıf Rulo Pestil',
+    { fr: 'Rouleau aux noisettes avec nouilles kadaif', de: 'Kadayif Haselnuss Roll' },
+    {
+      tr: '**Fındık** (%33), üzüm pekmezi (%32), **buğday** unu (%15), şeker (%15), kadayıf (%5).',
+      fr: '**Noisette** (33 %), mélasse de raisin (32 %), farine de **blé** (15 %), sucre (15 %), kadaif (5 %).',
+      de: '**Haselnuss** (33 %), Traubenmelasse (32 %), **Weizen**mehl (15 %), Zucker (15 %), Kadayif (5 %).',
+    },
+    {
+      tr: 'Gümüşhane usulü fındıklı kadayıf rulo pestil; üzüm pekmezi, fındık, buğday unu, şeker ve kadayıfla hazırlanır.',
+      fr: 'Rouleau aux noisettes avec nouilles kadaif, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre, avec du kadaif.',
+      de: 'Kadayif-Haselnuss-Rolle nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker, mit Kadayif.',
+    },
+    { barkod: '8699237142625', brut: 320, slug: 'kadayif-rulo-pestil' },
+  ),
+  pestil(
+    'Fındıklı Sultan Sarma',
+    { fr: 'Rouleau de sultan', de: 'Sultan Rolle' },
+    {
+      tr: '**Fındık** (%35), üzüm pekmezi (%30), **buğday** unu (%20), şeker (%15).',
+      fr: '**Noisette** (35 %), mélasse de raisin (30 %), farine de **blé** (20 %), sucre (15 %).',
+      de: '**Haselnuss** (35 %), Traubenmelasse (30 %), **Weizen**mehl (20 %), Zucker (15 %).',
+    },
+    {
+      tr: 'Gümüşhane usulü fındıklı sultan sarma; üzüm pekmezi, fındık, buğday unu ve şekerle hazırlanan rulo pestil.',
+      fr: 'Rouleau de sultan aux noisettes, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre.',
+      de: 'Sultan Rolle mit Haselnüssen nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker.',
+    },
+    { barkod: '8699237142618', brut: 330, slug: 'sultan-sarma' },
+  ),
 ];
 
 /**
@@ -1282,6 +1382,11 @@ export const DRAFT_CATEGORY: Record<string, string> = {
   Tahini: 'dogal-geleneksel',
   Olijfolie: 'dogal-geleneksel',
   'Lychnos Natürel Sızma Zeytinyağı': 'dogal-geleneksel',
+  // Pestil ailesi muska pestille aynı rafta: tatlı olarak yenir ama raf ürünüdür.
+  'Cevizli Pestil Tatlısı': 'dogal-geleneksel',
+  'Rulo Fındıklı Pestil': 'dogal-geleneksel',
+  'Fındıklı Kadayıf Rulo Pestil': 'dogal-geleneksel',
+  'Fındıklı Sultan Sarma': 'dogal-geleneksel',
   'Meidoorn azijn': 'dogal-geleneksel',
   'Ananas azijn': 'dogal-geleneksel',
   'Enginar azijn': 'dogal-geleneksel',
