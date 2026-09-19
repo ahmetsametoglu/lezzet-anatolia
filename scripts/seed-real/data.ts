@@ -305,6 +305,52 @@ export const PURCHASES: Purchase[] = [
   },
 ];
 
+/* ─── KATMAN 2 · UYDURMA FATURA ──────────────────────────────────────────────────────────────────
+ * Faturasız taslaklar vitrinde görünmüyordu: fiyatları yok, `canPublishProduct` onları aday
+ * bırakıyor (işletmeci kararı 19.09 — "bunları açalım"). Alış belgeleri henüz elimizde olmadığı
+ * için UYDURMA bir fatura yazıldı; gerçek faturalara (`PURCHASES`) dokunulmadı, çünkü Behotrade
+ * belgesinin toplamı yazılı ve oraya kalem eklemek gerçek bir kaydı bozardı.
+ *
+ * Yalnız `--layers=2` ile yazılır; gerçek fatura geldiği gün ürün buradan silinip `PURCHASES`e taşınır.
+ * Taslaklar EK_TASLAKLAR'da kalmaya devam eder: ürünü o kurar, burası yalnız fiyatı, tedarikçi
+ * siparişini ve mal kabulünü açar (`purchaseLines` taslağı ADINA bakarak eşler).
+ */
+export const TEST_PURCHASES: Purchase[] = [
+  {
+    supplier: 'Behotrade BV',
+    invoice: 'TEST-2026-01',
+    catalog: [],
+    drafts: [
+      { name: 'Cevizli Pestil Tatlısı', variants: [{ nameAtSupplier: 'Cevizli pestil 300gr', qty: 25, unitCost: 3.95 }] },
+      { name: 'Rulo Fındıklı Pestil', variants: [{ nameAtSupplier: 'Rulo findikli pestil 300gr', qty: 25, unitCost: 3.95 }] },
+      { name: 'Fındıklı Kadayıf Rulo Pestil', variants: [{ nameAtSupplier: 'Kadayif rulo pestil 300gr', qty: 25, unitCost: 4.25 }] },
+      { name: 'Fındıklı Sultan Sarma', variants: [{ nameAtSupplier: 'Findikli sultan sarma 300gr', qty: 25, unitCost: 4.15 }] },
+      { name: 'Lychnos Natürel Sızma Zeytinyağı', variants: [{ nameAtSupplier: 'Lychnos olijfolie 5lt', qty: 4, unitCost: 28.5 }] },
+    ],
+  },
+  {
+    supplier: 'Lezza Foods BV',
+    invoice: 'TEST-2026-02',
+    catalog: [{ sku: '200301', supplierCode: '200301', nameAtSupplier: 'LEZZA Vegan Kibbeh 5x70 gr', qty: 24, unitCost: 2.35 }],
+    drafts: [
+      { name: 'Böreklik Yufka', variants: [{ nameAtSupplier: 'LEZZA Boreklik Yufka 8x125 gr', qty: 20, unitCost: 1.45 }] },
+      { name: 'Lahmacun', variants: [{ nameAtSupplier: 'LEZZA Lahmacun 5x170 gr', qty: 20, unitCost: 2.65 }] },
+    ],
+  },
+];
+
+/** Uydurma faturanın satış fiyatları — `SALE_PRICES` ile aynı biçim, ayrı sözlük ki gerçek fiyatlarla karışmasın. */
+export const TEST_SALE_PRICES: Record<string, { b2c: number; b2b: number }> = {
+  'Cevizli pestil 300gr': { b2c: 8.23, b2b: 5.53 },
+  'Rulo findikli pestil 300gr': { b2c: 8.23, b2b: 5.53 },
+  'Kadayif rulo pestil 300gr': { b2c: 8.85, b2b: 5.95 },
+  'Findikli sultan sarma 300gr': { b2c: 8.65, b2b: 5.81 },
+  'Lychnos olijfolie 5lt': { b2c: 52.9, b2b: 39.9 },
+  'LEZZA Vegan Kibbeh 5x70 gr': { b2c: 4.95, b2b: 3.45 },
+  'LEZZA Boreklik Yufka 8x125 gr': { b2c: 2.95, b2b: 2.15 },
+  'LEZZA Lahmacun 5x170 gr': { b2c: 5.45, b2b: 3.95 },
+};
+
 /** Faturasız taslak: aynı beyanları taşır, varyantında fatura satırı (adet, alış fiyatı) yoktur. */
 type LooseDraft = Omit<Draft, 'variants'>;
 

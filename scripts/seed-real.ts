@@ -52,6 +52,8 @@ import {
   STORAGE_AREAS,
   SUPPLIERS,
   TEST_INTAKE,
+  TEST_PURCHASES,
+  TEST_SALE_PRICES,
   VEHICLE,
   WAREHOUSE,
   ZONES,
@@ -114,6 +116,23 @@ const LAYERS = (() => {
   if (!Number.isInteger(n) || n < 1 || n > 3) throw new Error(`--layers 1, 2 ya da 3 olmalı (verilen: ${arg})`);
   return n;
 })();
+/**
+ * Katman 2'nin uydurma faturası gerçeklerin YANINA eklenir — fiyat, tedarikçi siparişi ve mal
+ * kabulü için. Ürünü kurmaz: taslaklar `EK_TASLAKLAR`ta kalır ve `TASLAKLAR` listesi değişmez,
+ * yoksa aynı ürün iki kez açılırdı.
+ */
+const ALIMLAR = LAYERS >= 2 ? [...PURCHASES, ...TEST_PURCHASES] : PURCHASES;
+const FIYATLAR: Record<string, { b2c: number; b2b: number }> = LAYERS >= 2 ? { ...SALE_PRICES, ...TEST_SALE_PRICES } : SALE_PRICES;
+
+/** Katalogdaki Türkçe ad → o ürünün fatura satırları; uydurma fatura taslağa ADINDAN bağlanır. */
+const SATIRLAR_ADA_GORE = new Map<string, Draft['variants']>();
+for (const alim of ALIMLAR) {
+  for (const draft of alim.drafts) {
+    const ad = draftName(draft);
+    SATIRLAR_ADA_GORE.set(ad, [...(SATIRLAR_ADA_GORE.get(ad) ?? []), ...draft.variants]);
+  }
+}
+
 // Kuru koşuda henüz yazılmamış kaydın kimliği yerine geçer; yalnız sonraki adımların listelenmesi için.
 const PLANNED = 'planlandı';
 
@@ -269,7 +288,7 @@ const kunyeOf = (draft: AnyDraft): UrunKunyesi => {
 const birimOf = (label: string | undefined): 'g' | 'ml' => (label && /\d\s*(ml|l)\b/i.test(label) ? 'ml' : 'g');
 
 function checkInvoiceTotals(): void {
-  for (const purchase of PURCHASES) {
+  for (const purchase of ALIMLAR) {
     if (purchase.invoiceTotal === undefined) continue;
     const lines = [...purchase.catalog, ...purchase.drafts.flatMap((d) => d.variants)];
     const total = lines.reduce((sum, line) => sum + toCents(line.qty * line.unitCost), 0);
@@ -305,9 +324,9 @@ function checkDraftCategories(): void {
 
 /** Fiyat sözlüğü faturayla birebir olmalı: fiyatsız kalem de faturada olmayan fiyat da sessizce geçmez. */
 function checkSalePrices(): void {
-  const lines = new Set(PURCHASES.flatMap((p) => [...p.catalog, ...p.drafts.flatMap((d) => d.variants)]).map((l) => l.nameAtSupplier));
-  const unpriced = [...lines].filter((name) => !SALE_PRICES[name]);
-  const orphan = Object.keys(SALE_PRICES).filter((name) => !lines.has(name));
+  const lines = new Set(ALIMLAR.flatMap((p) => [...p.catalog, ...p.drafts.flatMap((d) => d.variants)]).map((l) => l.nameAtSupplier));
+  const unpriced = [...lines].filter((name) => !FIYATLAR[name]);
+  const orphan = Object.keys(FIYATLAR).filter((name) => !lines.has(name));
   if (unpriced.length > 0 || orphan.length > 0) {
     throw new Error(
       `fiyat sözlüğü faturayla tutmuyor — fiyatsız: ${unpriced.join(' · ') || 'yok'} · faturada olmayan: ${orphan.join(' · ') || 'yok'}`,
@@ -401,7 +420,7 @@ function katalogKareleri(catalogSlug: string): string[] | null {
 async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   console.log('▸ katalog — faturadaki Lezza varyantları');
   const variants = new ProductVariantService(db);
-  const lines = PURCHASES.flatMap((p) => p.catalog);
+  const lines = ALIMLAR.flatMap((p) => p.catalog);
   const present = (await Promise.all(lines.map((l) => variants.findBySku(l.sku)))).filter((v) => v !== null).length;
   if (present === lines.length) {
     done(`${lines.length} varyant`);
@@ -465,8 +484,9 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
     // Yayına hazır mı sorusunu MOTOR cevaplar (`canPublishProduct`) — besleme kendi ölçütünü
     // uydurmaz ve veritabanı kısıtıyla aynı cümleyi kurar; ayrışsalardı insert sessizce patlardı.
     // FİYAT ayrı bir şart ve motorun sorusu değil: fiyatsız ürün vitrine fiyatsız kart olarak düşerdi.
-    const satirlar = faturaSatirlari(draft);
-    const fiyatli = satirlar.length > 0 && satirlar.every((v) => SALE_PRICES[v.nameAtSupplier] !== undefined);
+    // Uydurma fatura taslağa ADINDAN bağlanır; faturalı taslakta iki kaynak da aynı satırı verir.
+    const satirlar = SATIRLAR_ADA_GORE.get(ad) ?? faturaSatirlari(draft);
+    const fiyatli = satirlar.length > 0 && satirlar.every((v) => FIYATLAR[v.nameAtSupplier] !== undefined);
     const yayina =
       fiyatli &&
       canPublishProduct({
@@ -630,7 +650,7 @@ async function seedPurchases(db: Db): Promise<void> {
   const prices = new PriceService(db);
   const mappings = new SupplierProductService(db);
   const orders = new PurchaseOrderService(db);
-  for (const purchase of PURCHASES) {
+  for (const purchase of ALIMLAR) {
     const rows = await purchaseLines(db, purchase);
     const supplierId = suppliers.find((s) => s.name === purchase.supplier)?.id;
     const missing = rows.filter((r) => r.variantId === null).length;
@@ -643,7 +663,7 @@ async function seedPurchases(db: Db): Promise<void> {
 
     for (const { line, variantId } of ready) {
       // Sözlüğün faturayla birebir olduğu koşudan önce sınandı (`checkSalePrices`).
-      const price = SALE_PRICES[line.nameAtSupplier];
+      const price = FIYATLAR[line.nameAtSupplier];
       if (!price) continue;
       if ((await prices.listByVariant(variantId)).length > 0) {
         done(`fiyat · ${line.nameAtSupplier}`);
@@ -802,7 +822,7 @@ async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
   const intakes = new StockIntakeService(db);
   const orders = new PurchaseOrderService(db);
   const suppliers = await new SupplierService(db).list();
-  for (const purchase of PURCHASES) {
+  for (const purchase of ALIMLAR) {
     const supplierId = suppliers.find((s) => s.name === purchase.supplier)?.id;
     const order = supplierId
       ? (await orders.listBySupplier(supplierId)).find((row) => row.note === `Fatura ${purchase.invoice}`)
