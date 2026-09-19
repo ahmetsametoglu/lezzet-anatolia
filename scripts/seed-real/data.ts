@@ -9,7 +9,7 @@
 // kabulü (lot, SKT) — stok açar, beyana dokunmaz; 3 = katalog kaynağının beyan türetmesi. Bizim
 // ürünlerimizde beyan uydurması KALKTI; eksik beyan eksik kalır.
 
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -191,9 +191,12 @@ const studyo = (slug: string, dosya: string): DraftImage => ({
  * işletmecinin seçmediği bir kareyi vitrine koymak olurdu.
  */
 const studyoSeti = (slug: string): Pick<Draft, 'image' | 'gallery'> => {
-  const kareler = readdirSync(join(GORSEL_KOKU, slug))
+  const dizin = join(GORSEL_KOKU, slug);
+  if (!existsSync(dizin)) throw new Error(`${slug}: görsel klasörü yok — "images/${slug}/" açıp içine kareleri koy, kapağın adı "0" olsun`);
+  const kareler = readdirSync(dizin)
     .filter((f) => /\.(webp|png|jpe?g)$/i.test(f))
     .sort();
+  if (kareler.length === 0) throw new Error(`${slug}: klasör BOŞ — kareleri koy, kapağın adı "0" olsun`);
   const kapak = kareler.find((f) => f.startsWith('0.'));
   if (!kapak) throw new Error(`${slug}: kapak yok — klasördeki bir kareyi "0" diye adlandır`);
   return { image: studyo(slug, kapak), gallery: kareler.filter((f) => f !== kapak).map((f) => studyo(slug, f)) };
@@ -257,7 +260,7 @@ export const PURCHASES: Purchase[] = [
       behotrade('Tahini', 'Tahini 500gr', 12, 4.75, 'Tahin', studyoSeti('tahin')),
       behotrade('Meidoorn azijn', 'Meidoorn azijn 500ml', 12, 3, 'Alıç Sirkesi', studyoSeti('alic-sirkesi')),
       behotrade('Ananas azijn', 'Ananas azijn 500ml', 12, 3, 'Ananas Sirkesi', studyoSeti('ananas-sirkesi')),
-      behotrade('Enginar azijn', 'Enginar azijn 500ml', 12, 3, 'Enginar Sirkesi'),
+      behotrade('Enginar azijn', 'Enginar azijn 500ml', 12, 3, 'Enginar Sirkesi', studyoSeti('enginar-sirkesi')),
       behotrade('Appel azijn', 'Appel azijn 500ml', 12, 3, 'Elma Sirkesi', studyoSeti('elma-sirkesi')),
       behotrade('Isgin azijn', 'Isgin azijn 500ml', 12, 3, 'Işkın Kökü Sirkesi', studyoSeti('iskin-koku-sirkesi')),
       behotrade('Granaatappelextraat', 'Granaatappelextraat 250ml', 12, 3.45, 'Nar Ekşisi', studyoSeti('nar-eksisi')),
