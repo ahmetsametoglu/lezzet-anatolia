@@ -233,6 +233,26 @@
                 <span style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:11px 22px;border-radius:20px;margin-top:6px" onClick="{{ clearSearch }}">Tüm katalog</span>
               </div>
             </sc-if>
+            <sc-if value="{{ zoneBand }}">
+              <div style="margin:16px 22px 0;background:#f9ede2;border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;gap:8px" onClick="{{ zoneBand.editZip }}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"></path><circle cx="12" cy="10" r="2.4"></circle></svg>
+                  <span style="font:700 12px 'Karla';letter-spacing:.06em;color:#b05c2e;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ zoneBand.zip }}</span>
+                  <span style="font:700 11.5px 'Karla';color:#b05c2e;text-decoration:underline;flex:none">değiştir</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <span style="font:600 15px/1.25 'Lora';color:#343b41">{{ zoneBand.t }}</span>
+                  <span style="font:400 12.5px/1.5 'Karla';color:#6d7261">{{ zoneBand.b }}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;border-top:1.5px dashed #e6d4bf;padding-top:9px" onClick="{{ zoneBand.toggle }}">
+                  <span style="font:600 12.5px 'Karla';color:#343b41;flex:1">Gelemeyenleri gizle</span>
+                  <span style="font:400 11px 'Karla';color:#9a917c;flex:none">{{ zoneBand.cnt }}</span>
+                  <span style="position:relative;width:38px;height:22px;border-radius:11px;background:{{ zoneBand.trackBg }};flex:none;transition:background .16s">
+                    <span style="position:absolute;top:3px;left:{{ zoneBand.knobX }};width:16px;height:16px;border-radius:50%;background:#fff;transition:left .16s"></span>
+                  </span>
+                </div>
+              </div>
+            </sc-if>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px 14px;padding:20px 22px 12px">
               <sc-for list="{{ catProds }}" as="p" hint-placeholder-count="6">
                 <div style="position:relative;aspect-ratio:1;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ p.open }}">
@@ -241,12 +261,18 @@
                     <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 40%,rgba(21,23,15,.82));pointer-events:none"></div>
                     <sc-if value="{{ p.so }}"><span style="position:absolute;top:10px;left:10px;background:rgba(21,23,15,.72);color:#f3efe2;font:700 10px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:9px">TÜKENDİ</span></sc-if>
                     <sc-if value="{{ p.disc }}"><span style="position:absolute;top:10px;left:10px;background:rgba(243,239,226,.94);color:#b05c2e;font:700 10px 'Karla';letter-spacing:.06em;padding:4px 9px;border-radius:9px">İNDİRİM</span></sc-if>
-                    <div style="position:absolute;left:12px;right:12px;bottom:10px;display:flex;flex-direction:column;gap:2px">
+                    <div style="position:absolute;left:12px;right:12px;bottom:10px;display:flex;flex-direction:column;gap:4px">
                       <span style="font:600 15px/1.15 'Lora';color:#f5f1e6">{{ p.n }}</span>
                       <sc-if value="{{ p.opts }}"><span style="font:600 11.5px 'Karla';color:#d5d0c2">{{ p.opts }}</span></sc-if>
                     </div>
                   </div>
-                  <span style="position:absolute;top:-8px;right:-5px;background:#b05c2e;color:#fff;font:700 12.5px 'Karla';padding:6px 11px;border-radius:12px;transform:rotate(4deg);box-shadow:0 3px 8px rgba(21,23,15,.25)">{{ p.priceF }}</span>
+                  <sc-if value="{{ p.noZone }}">
+                    <span style="position:absolute;top:10px;left:10px;right:10px;display:flex;align-items:center;gap:5px;background:rgba(243,239,226,.94);border-radius:9px;padding:4px 8px">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="2.2" stroke-linecap="round" style="flex:none"><path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"></path></svg>
+                      <span style="font:700 9.5px 'Karla';letter-spacing:.05em;color:#b05c2e">BU ADRESE GELMİYOR</span>
+                    </span>
+                  </sc-if>
+                  <span style="position:absolute;top:-8px;right:-5px;background:{{ p.prBg }};color:#fff;font:700 12.5px 'Karla';padding:6px 11px;border-radius:12px;transform:rotate(4deg);box-shadow:0 3px 8px rgba(21,23,15,.25)">{{ p.priceF }}</span>
                 </div>
               </sc-for>
               <sc-if value="{{ catEnd }}"><span style="grid-column:1/-1;text-align:center;font:600 11.5px 'Karla';color:#b3ab97;padding:8px 0 2px">— hepsi bu kadar —</span></sc-if>
@@ -862,7 +888,7 @@
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ lg.cancel }}">‹</div>
             </div>
             <div style="padding:20px 26px;display:flex;flex-direction:column;gap:16px">
-              <img src="../00-marka/logo-yatay.png" style="height:42px;align-self:flex-start" alt="Lezzet Anatolie">
+              <img src="../00-marka/logo-isaret.png" style="height:76px;align-self:flex-start" alt="Lezzet Anatolie">
               <h1 style="margin:0;font:600 26px/1.25 'Lora';color:#343b41">Birkaç saniyede<br>doğrulanın</h1>
               <span style="font:400 13.5px/1.5 'Karla';color:#6d7261">Şifre yok, form yok. İster yeni ister dönen müşteri olun — aynı yoldan devam edersiniz.</span>
               <sc-if value="{{ lg.mNull }}">
@@ -1784,7 +1810,7 @@ class Component extends DCLogic {
   ];
   state = {
     splash:true, splashHide:false, tab:'home', stack:[], li:null, lang:'TR',
-    q:'', cat:'Tümü', sort:'onerilen', onlyDisc:false,
+    q:'', cat:'Tümü', sort:'onerilen', onlyDisc:false, gizleGelmeyen:false,
     pv:{}, pq:1, acc:{d:true},
     cart:[{pid:'sub',vid:'s5',qty:1},{pid:'bak',vid:'b1',qty:1}], cartPkgs:[],
     couponIn:'', coupon:null, cMsg:null,
@@ -2006,8 +2032,11 @@ class Component extends DCLogic {
     const top=this.top(); const cur=top?top.n:s.tab;
     const F=n=>cur===n;
     const cartCount=s.cart.reduce((a,l)=>a+l.qty,0)+s.cartPkgs.reduce((a,l)=>a+l.qty,0);
-    const card=p=>{ const v=p.vs[0]; const d=this.discOf(p,v);
-      return {n:p.n,img:'m-prd-'+p.id,photo:this.PHOTO[p.id]||'',opts:p.vs.length>1?p.vs.length+' seçenek':null,w:p.vs.map(x=>x.l).join(' · '),priceF:this.fmt(this.uPrice(p,v)),wasF:d?this.fmt(d.was):null,disc:!!d&&p.stk,prCol:d?'#b05c2e':'#343b41',so:!p.stk,imgOp:p.stk?1:.45,canAdd:p.stk,add:()=>this.quickAdd(p),open:()=>this.go({n:'product',id:p.id})}; };
+    const zA0=this.logged()?this.addrSel():null;
+    const zipOut=(()=>{ const z=zA0?zA0.zip:this.state.onbZip; const u=zA0?zA0.ulke:'FR';
+      return !!(z&&String(z).length>=2)&&!this.kapiBolge(z,u); })();
+    const card=p=>{ const v=p.vs[0]; const d=this.discOf(p,v); const nz=zipOut&&!p.ship;
+      return {n:p.n,img:'m-prd-'+p.id,photo:this.PHOTO[p.id]||'',opts:p.vs.length>1?p.vs.length+' seçenek':null,w:p.vs.map(x=>x.l).join(' · '),priceF:this.fmt(this.uPrice(p,v)),wasF:d?this.fmt(d.was):null,disc:!!d&&p.stk&&!nz,prCol:d?'#b05c2e':'#343b41',so:!p.stk,noZone:nz&&p.stk,prBg:nz?'#9a958a':'#b05c2e',imgOp:(!p.stk||nz)?.45:1,canAdd:p.stk&&!nz,add:()=>this.quickAdd(p),open:()=>this.go({n:'product',id:p.id})}; };
     const V={};
     // chrome
     V.fab=null;
@@ -2113,6 +2142,17 @@ const obOn=(this.props.introActive??true)&&!s.onbDone;
     if(s.sort==='artan')list=[...list].sort((a,b)=>this.uPrice(a,a.vs[0])-this.uPrice(b,b.vs[0]));
     if(s.sort==='azalan')list=[...list].sort((a,b)=>this.uPrice(b,b.vs[0])-this.uPrice(a,a.vs[0]));
     V.catSkel=s.skelCat&&!demoNet; V.netErr=netErrObj;
+    if(zipOut&&s.gizleGelmeyen) list=list.filter(p=>p.ship);
+    const zA=zA0; const zZip=(zA?(zA.zip+' '+zA.city):s.onbZip)||'';
+    V.zoneBand=zipOut?{
+      zip:zZip,
+      t:'Kamyonumuz bu bölgeye gelmiyor',
+      b:'Soğuk zincir ürünlerimiz buraya gönderilemiyor; diğer ürünler kargoyla 2–4 iş gününde gelir.',
+      cnt:this.P.filter(p=>!p.ship).length+' ürün gönderilemiyor',
+      hide:s.gizleGelmeyen, knobX:s.gizleGelmeyen?'19px':'3px', trackBg:s.gizleGelmeyen?'#5f7a2c':'#d8cfb6',
+      toggle:()=>this.setState(x=>({gizleGelmeyen:!x.gizleGelmeyen})),
+      editZip:()=>{ if(this.logged()&&s.addresses.length){ this.toastM('Adreslerinizi Hesap bölümünden değiştirebilirsiniz'); } else { this.openSheet({t:'zip'}); } },
+    }:null;
     V.catProds=(demoNet||s.skelCat)?[]:list.map(card); V.zeroRes=!demoNet&&!s.skelCat&&list.length===0; V.catEnd=!demoNet&&!s.skelCat&&list.length>3;
     const fAct=s.onlyDisc||s.sort!=='onerilen';
     V.filterBg=fAct?'#efdfc2':'transparent'; V.filterBd='#343b41'; V.filterFg=fAct?'#4a6121':'#343b41';

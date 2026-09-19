@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px;overflow-x:auto">
+
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Sosyal Mesajlar · web</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">WhatsApp, Messenger ve Instagram tek gelen kutusunda. Liste müşteri bazlı; kanallar müşterinin içinde sekme. AI ajanı yürütür, admin izler/devralır.</span>
+    </div>
+
+    <div data-screen-label="Sosyal Mesajlar Web" style="width:100%;max-width:1360px;min-width:1180px;box-sizing:border-box;height:660px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="sosyal" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+        <!-- FİLTRE ŞERİDİ -->
+        <div style="padding:11px 18px;border-bottom:1px solid #e6e7e1;background:#fbfbf9;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:none">
+          <sc-for list="{{ statusChips }}" as="s" hint-placeholder-count="2">
+            <span onClick="{{ s.pick }}" style="font:600 11.5px 'Space Grotesk';color:{{ s.fg }};background:{{ s.bg }};border:1px solid {{ s.bd }};border-radius:999px;padding:6px 13px;cursor:pointer">{{ s.label }}</span>
+          </sc-for>
+          <span style="width:1px;height:20px;background:#e2e3dd;margin:0 4px"></span>
+          <sc-for list="{{ channelChips }}" as="k" hint-placeholder-count="4">
+            <span onClick="{{ k.pick }}" style="font:600 11.5px 'Space Grotesk';color:{{ k.fg }};background:{{ k.bg }};border:1px solid {{ k.bd }};border-radius:999px;padding:6px 13px;cursor:pointer;display:flex;align-items:center;gap:6px">{{ k.label }}<span style="font:500 10px 'IBM Plex Mono';opacity:.75">{{ k.count }}</span></span>
+          </sc-for>
+          <span style="margin-left:auto;font:400 11px 'Karla';color:#8b9086">{{ inboxMeta }}</span>
+        </div>
+
+        <div style="flex:1;display:flex;min-width:0;min-height:0">
+          <!-- MÜŞTERİ LİSTESİ -->
+          <div style="width:236px;border-right:1px solid #e6e7e1;display:flex;flex-direction:column;min-height:0;flex:none">
+            <div style="overflow-y:auto;flex:1;min-height:0">
+              <sc-for list="{{ convos }}" as="c" hint-placeholder-count="6">
+                <div onClick="{{ c.select }}" style="padding:12px 16px;border-bottom:1px solid #f0f1ec;display:flex;flex-direction:column;gap:5px;cursor:pointer;background:{{ c.rowBg }};border-left:3px solid {{ c.edge }}">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="font:600 13px 'Karla';color:#22251f;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font:400 10px 'IBM Plex Mono';color:#9aa094;flex:none">{{ c.time }}</span></div>
+                  <span style="font:400 11.5px 'Karla';color:#6a7065;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.preview }}</span>
+                  <div style="display:flex;align-items:center;gap:5px">
+                    <sc-for list="{{ c.chDots }}" as="d" hint-placeholder-count="1">
+                      <span style="color:{{ d.fg }};background:{{ d.bg }};border-radius:5px;padding:3px 5px;display:flex;align-items:center">{{ d.icon }}</span>
+                    </sc-for>
+                    <sc-if value="{{ c.ai }}" hint-placeholder-val="{{ false }}"><span style="font:600 9px 'Space Grotesk';color:#5a4a8a;background:#ece8f5;border-radius:5px;padding:2px 6px">AI</span></sc-if>
+                    <sc-if value="{{ c.waiting }}" hint-placeholder-val="{{ false }}"><span style="font:600 9px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:5px;padding:2px 6px">• cevap bekliyor</span></sc-if>
+                    <span style="margin-left:auto;font:500 9px 'Space Grotesk';color:{{ c.winFg }};background:{{ c.winBg }};border-radius:5px;padding:2px 6px">{{ c.win }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- KONUŞMA -->
+          <div style="flex:1;display:flex;flex-direction:column;min-width:380px;min-height:0;background:#f1f2ee">
+            <div style="padding:11px 20px;border-bottom:1px solid #e6e7e1;background:#fbfbf9;display:flex;flex-direction:column;gap:9px;flex:none">
+              <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+                <span style="font:600 15px 'Space Grotesk';color:#22251f">{{ det.name }}</span>
+                <span style="font:600 9.5px 'Space Grotesk';color:{{ det.ctxFg }};background:{{ det.ctxBg }};border-radius:6px;padding:3px 8px">{{ det.ctxLabel }}</span>
+                <span style="font:400 10.5px 'Karla';color:#9aa094">{{ det.lang }}</span>
+                <span style="margin-left:auto;font:500 10.5px 'Space Grotesk';color:{{ det.winFg }};background:{{ det.winBg }};border-radius:6px;padding:5px 9px">{{ det.winBadge }}</span>
+                <span onClick="{{ openSiparis }}" style="font:600 11.5px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:7px;padding:7px 12px;cursor:pointer">Sipariş oluştur</span>
+                <div style="position:relative;flex:none">
+                  <span onClick="{{ toggleMenu }}" style="font:600 13px 'Space Grotesk';color:#6a7065;border:1px solid #d9dbd2;border-radius:7px;padding:5px 10px;cursor:pointer;display:block;line-height:1.3">⋯</span>
+                  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:34px;right:0;width:186px;background:#fbfbf9;border:1px solid #dcded5;border-radius:10px;box-shadow:0 12px 30px rgba(20,22,18,.18);padding:5px;z-index:8;display:flex;flex-direction:column">
+                      <sc-for list="{{ menuItems }}" as="i" hint-placeholder-count="3">
+                        <span onClick="{{ i.go }}" style="font:500 12px 'Karla';color:{{ i.fg }};padding:8px 10px;border-radius:7px;cursor:pointer">{{ i.label }}</span>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+              <!-- KANAL SEKMELERİ (yalnız bağlı ve mesajı olan kanallar) -->
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ det.tabs }}" as="t" hint-placeholder-count="2">
+                  <span onClick="{{ t.pick }}" style="font:600 11px 'Space Grotesk';color:{{ t.fg }};background:{{ t.bg }};border:1px solid {{ t.bd }};border-radius:7px;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:6px">{{ t.icon }}{{ t.label }}<span style="font:500 9.5px 'IBM Plex Mono';opacity:.8">{{ t.count }}</span><sc-if value="{{ t.unread }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:50%;background:#9a6416"></span></sc-if></span>
+                </sc-for>
+                <span style="font:400 10.5px 'Karla';color:#9aa094;margin:0 auto 0 4px">{{ det.sub }}</span>
+                <div style="display:flex;align-items:center;gap:2px;background:#eef0ea;border-radius:8px;padding:3px;flex:none">
+                  <sc-for list="{{ modes }}" as="m" hint-placeholder-count="3">
+                    <span onClick="{{ m.pick }}" style="font:600 10.5px 'Space Grotesk';color:{{ m.fg }};background:{{ m.bg }};border-radius:6px;padding:4px 9px;cursor:pointer">{{ m.label }}</span>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ det.ai }}" hint-placeholder-val="{{ false }}"><span onClick="{{ openDevral }}" style="font:600 11px 'Space Grotesk';color:#fff;background:#5a4a8a;border-radius:7px;padding:6px 11px;cursor:pointer;flex:none">Devral</span></sc-if>
+              </div>
+            </div>
+
+            <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;justify-content:flex-end">
+              <sc-for list="{{ det.messages }}" as="m" hint-placeholder-count="4">
+                <div style="align-self:{{ m.align }};max-width:74%;display:flex;flex-direction:column;gap:3px">
+                  <div style="display:flex;align-items:center;gap:6px;padding:0 4px;align-self:{{ m.align }}">
+                    <sc-if value="{{ m.who }}" hint-placeholder-val="{{ false }}"><span style="font:600 9px 'Space Grotesk';color:{{ m.whoFg }}">{{ m.who }}</span></sc-if>
+                    <span style="font:400 9.5px 'IBM Plex Mono';color:#9aa094">{{ m.ts }}</span>
+                  </div>
+                  <div style="background:{{ m.bg }};border:1px solid {{ m.bd }};border-radius:11px;padding:9px 13px;font:400 12.5px/1.5 'Karla';color:#22251f">{{ m.text }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="padding:12px 20px;border-top:1px solid #e6e7e1;background:#fbfbf9;flex:none">
+              <sc-if value="{{ det.windowOpen }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="flex:1;border:1px solid #d9dbd2;border-radius:10px;padding:10px 14px;font:400 13px 'Karla';color:#9aa094;background:#fff">{{ det.placeholder }}</div>
+                  <span style="width:40px;height:40px;border-radius:10px;background:#5f7a2c;color:#fff;display:grid;place-items:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"></path></svg></span>
+                </div>
+                <span style="font:400 10.5px 'Karla';color:#8b9086;margin-top:6px;display:block">{{ det.windowNote }}</span>
+              </sc-if>
+              <sc-if value="{{ det.windowClosed }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px">
+                  <span style="color:#9a6416;flex:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 2"></path></svg></span>
+                  <span style="font:500 11.5px/1.5 'Karla';color:#8a6410;flex:1">{{ det.closedText }}</span>
+                  <sc-if value="{{ det.hasTemplate }}" hint-placeholder-val="{{ false }}"><span style="font:600 11.5px 'Space Grotesk';color:#9a6416;border:1px solid #ecd9b4;border-radius:7px;padding:7px 11px;flex:none">Kalıp mesaj</span></sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <!-- MÜŞTERİ BAĞLAMI -->
+          <div style="width:200px;border-left:1px solid #e6e7e1;background:#f8f9f5;display:flex;flex-direction:column;min-height:0;overflow-y:auto;flex:none">
+            <div style="padding:14px 16px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:600 14px 'Space Grotesk';color:#22251f">{{ det.name }}</span>
+                <span style="font:600 9.5px 'Space Grotesk';color:{{ det.ctxFg }};background:{{ det.ctxBg }};border-radius:6px;padding:2px 8px;align-self:flex-start">{{ det.ctxLabel }}</span>
+              </div>
+              <sc-if value="{{ det.isDraft }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fdf1e3;border:1px solid #ecd9b4;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><span style="font:500 11px/1.5 'Karla';color:#8a6410">{{ det.draftText }}</span><span style="font:600 11px 'Space Grotesk';color:#9a6416">Müşteriye bağla →</span></div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Son siparişler</span>
+                <sc-if value="{{ det.noOrders }}" hint-placeholder-val="{{ false }}"><span style="font:400 11.5px 'Karla';color:#8b9086">Henüz sipariş yok.</span></sc-if>
+                <sc-for list="{{ det.orders }}" as="o" hint-placeholder-count="2"><div style="background:#fff;border:1px solid #e6e7e1;border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font:500 11px 'IBM Plex Mono';color:#8b9086">{{ o.no }}</span><span style="font:500 11.5px 'IBM Plex Mono';color:#22251f">{{ o.amt }}</span></div></sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Kampanya izni</span>
+                <span style="font:600 10.5px 'Space Grotesk';color:{{ det.optFg }};background:{{ det.optBg }};border-radius:6px;padding:3px 9px;align-self:flex-start">{{ det.opt }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font:500 10px 'Space Grotesk';text-transform:uppercase;letter-spacing:.06em;color:#8b9086">Kimlik çapası</span>
+                <sc-for list="{{ det.anchors }}" as="a" hint-placeholder-count="1"><div style="display:flex;align-items:center;gap:6px"><span style="font:600 9px 'Space Grotesk';color:{{ a.fg }};background:{{ a.bg }};border-radius:5px;padding:2px 6px;flex:none">{{ a.label }}</span><span style="font:400 10.5px 'IBM Plex Mono';color:#6a7065;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.handle }}</span></div></sc-for>
+                <sc-if value="{{ det.needsAnchor }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:8px"><span style="font:600 10.5px 'Space Grotesk';color:#8b9086;background:#eef0ea;border-radius:6px;padding:3px 9px">Kurulmadı</span><span onClick="{{ openAnchor }}" style="font:600 10.5px 'Space Grotesk';color:#5f7a2c;cursor:pointer">Kur →</span></div></sc-if>
+              </div>
+              <span onClick="{{ openTalep }}" style="font:600 11.5px 'Space Grotesk';color:#a5443c;border:1px solid #e2c4c0;border-radius:7px;padding:8px;text-align:center;cursor:pointer">Talep (şikâyet) aç</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POP-UP / FAB -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Mesaj balonu · her ekranda pop-up</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Sağ altta sabit balon. Sipariş detayından müşteriye yazmak için sayfa değişmez; balon açılır, sipariş bağlamı üstte taşınır.</span>
+    </div>
+
+    <div data-screen-label="Mesaj Balonu" style="position:relative;width:100%;max-width:1360px;min-width:1180px;box-sizing:border-box;height:520px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:8px;overflow:hidden;display:flex;color:#22251f">
+      <dc-import name="AdminSidebar" active="siparisler" hint-size="214px,100%" style="width:214px;flex:none;align-self:stretch"></dc-import>
+
+      <!-- arka plan: sipariş detay -->
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:#f6f7f3">
+        <div style="padding:16px 24px;border-bottom:1px solid #e6e7e1;background:#fbfbf9;display:flex;align-items:center;gap:12px">
+          <span style="font:600 16px 'Space Grotesk'">LZA-2451</span>
+          <span style="font:600 10px 'Space Grotesk';color:#4a6121;background:#eef4e2;border-radius:6px;padding:3px 9px">Hazırlıkta</span>
+          <span style="font:400 12px 'Karla';color:#6a7065">Épicerie Madame · Strasbourg · perşembe teslim</span>
+        </div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px;max-width:620px">
+          <div style="background:#fbfbf9;border:1px solid #e6e7e1;border-radius:10px;overflow:hidden">
+            <sc-for list="{{ orderLines }}" as="l" hint-placeholder-count="3">
+              <div style="padding:11px 14px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:12px"><span style="font:400 12.5px 'Karla';flex:1;min-width:0">{{ l.name }}</span><span style="font:500 11.5px 'IBM Plex Mono';color:#8b9086">{{ l.qty }}</span><span style="font:500 12px 'IBM Plex Mono'">{{ l.amt }}</span></div>
+            </sc-for>
+            <div style="padding:11px 14px;display:flex;align-items:center;gap:12px;background:#f8f9f5"><span style="font:600 12.5px 'Space Grotesk';flex:1">Toplam</span><span style="font:600 12.5px 'IBM Plex Mono'">92,40 €</span></div>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#8b9086">Müşteri tepsi boyunu sormuş. Sipariş ekranından çıkmadan cevap vermek için sağ alttaki balonu kullanın.</span>
+        </div>
+      </div>
+
+      <!-- FAB -->
+      <sc-if value="{{ fabClosed }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ toggleFab }}" style="position:absolute;right:22px;bottom:22px;width:54px;height:54px;border-radius:50%;background:#5f7a2c;color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 26px rgba(34,37,31,.28)">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z"></path></svg>
+          <span style="position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;box-sizing:border-box;border-radius:999px;background:#a5443c;color:#fff;font:600 10.5px 'Space Grotesk';display:grid;place-items:center;padding:0 5px;border:2px solid #fbfbf9">2</span>
+        </div>
+      </sc-if>
+
+      <!-- POP-UP PANEL -->
+      <sc-if value="{{ fabOpen }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;right:22px;bottom:22px;width:352px;height:456px;background:#fbfbf9;border:1px solid #dcded5;border-radius:14px;box-shadow:0 18px 50px rgba(20,22,18,.26);display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:11px 14px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:8px;background:#fbfbf9">
+            <sc-if value="{{ pop.isThread }}" hint-placeholder-val="{{ true }}">
+              <span onClick="{{ popBack }}" style="width:24px;height:24px;border-radius:7px;background:#eef0ea;color:#4a5147;display:grid;place-items:center;cursor:pointer;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0"><span style="font:600 13px 'Space Grotesk';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pop.title }}</span><span style="font:400 10px 'Karla';color:#8b9086">{{ pop.sub }}</span></div>
+            <sc-if value="{{ pop.isThread }}" hint-placeholder-val="{{ true }}"><a href="#" style="font:600 10.5px 'Space Grotesk';color:#5f7a2c;flex:none">Tam ekran ↗</a></sc-if>
+            <span onClick="{{ toggleFab }}" style="width:24px;height:24px;border-radius:7px;background:#eef0ea;color:#6a7065;font:500 13px 'Space Grotesk';display:grid;place-items:center;cursor:pointer;flex:none">✕</span>
+          </div>
+
+          <!-- LİSTE GÖRÜNÜMÜ -->
+          <sc-if value="{{ pop.isList }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column">
+              <sc-for list="{{ pop.list }}" as="c" hint-placeholder-count="5">
+                <div onClick="{{ c.open }}" style="padding:10px 14px;border-bottom:1px solid #f0f1ec;display:flex;flex-direction:column;gap:4px;cursor:pointer;background:{{ c.rowBg }}">
+                  <div style="display:flex;align-items:center;gap:7px"><span style="font:600 12px 'Karla';flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font:400 9px 'IBM Plex Mono';color:#9aa094;flex:none">{{ c.time }}</span></div>
+                  <span style="font:400 10.5px 'Karla';color:#6a7065;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.preview }}</span>
+                  <div style="display:flex;align-items:center;gap:5px">
+                    <sc-for list="{{ c.chDots }}" as="d" hint-placeholder-count="1">
+                      <span style="color:{{ d.fg }};background:{{ d.bg }};border-radius:5px;padding:2px 5px;display:flex;align-items:center">{{ d.icon }}</span>
+                    </sc-for>
+                    <sc-if value="{{ c.waiting }}" hint-placeholder-val="{{ false }}"><span style="font:600 8.5px 'Space Grotesk';color:#9a6416;background:#fdf1e3;border-radius:5px;padding:2px 6px">• cevap bekliyor</span></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <!-- KONUŞMA GÖRÜNÜMÜ -->
+          <sc-if value="{{ pop.isThread }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+              <div style="padding:8px 14px;border-bottom:1px solid #f0f1ec;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                <sc-for list="{{ pop.tabs }}" as="t" hint-placeholder-count="2">
+                  <span onClick="{{ t.pick }}" style="color:{{ t.fg }};background:{{ t.bg }};border:1px solid {{ t.bd }};border-radius:6px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px">{{ t.icon }}<span style="font:500 9px 'IBM Plex Mono'">{{ t.count }}</span></span>
+                </sc-for>
+                <span style="font:400 9.5px 'Karla';color:#9aa094;margin-left:auto">{{ pop.chName }}</span>
+              </div>
+              <div style="padding:7px 14px;background:#eef4e2;border-bottom:1px solid #e0e9cf;display:flex;align-items:center;gap:7px">
+                <span style="font:600 9.5px 'Space Grotesk';color:#4a6121">BAĞLAM</span>
+                <span style="font:400 10.5px 'Karla';color:#4a6121;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">LZA-2451 · 92,40 € · perşembe teslim</span>
+                <span style="font:600 9.5px 'Space Grotesk';color:#5f7a2c;border:1px solid #cdd8b6;border-radius:5px;padding:2px 7px;background:#fbfbf9">Ekle</span>
+              </div>
+              <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;justify-content:flex-end;background:#f1f2ee">
+                <sc-for list="{{ pop.messages }}" as="m" hint-placeholder-count="3">
+                  <div style="align-self:{{ m.align }};max-width:82%;display:flex;flex-direction:column;gap:3px">
+                    <div style="display:flex;align-items:center;gap:6px;padding:0 3px;align-self:{{ m.align }}">
+                      <sc-if value="{{ m.who }}" hint-placeholder-val="{{ false }}"><span style="font:600 8.5px 'Space Grotesk';color:{{ m.whoFg }}">{{ m.who }}</span></sc-if>
+                      <span style="font:400 9px 'IBM Plex Mono';color:#9aa094">{{ m.ts }}</span>
+                    </div>
+                    <div style="background:{{ m.bg }};border:1px solid {{ m.bd }};border-radius:10px;padding:8px 11px;font:400 11.5px/1.5 'Karla'">{{ m.text }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="padding:10px 14px;border-top:1px solid #e6e7e1;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="flex:1;border:1px solid #d9dbd2;border-radius:9px;padding:8px 11px;font:400 11.5px 'Karla';color:#9aa094;background:#fff">{{ pop.placeholder }}</div>
+                  <span style="width:34px;height:34px;border-radius:9px;background:#5f7a2c;color:#fff;display:grid;place-items:center;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"></path></svg></span>
+                </div>
+                <span style="font:400 9.5px 'Karla';color:#8b9086">{{ pop.note }}</span>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- KURALLAR -->
+  <div style="max-width:700px;background:#fff;border:1.5px dashed #b9b4a4;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+    <span style="font:700 14px 'Space Grotesk';color:#3a4147">Kurallar</span>
+    <ul style="margin:0;padding-left:18px;font:400 12.5px/1.7 'Karla';color:#6a7065">
+      <li>Liste müşteri bazlı: aynı kişinin üç kanaldaki yazışması tek kayıtta toplanır, kanal sekmesiyle gezilir.</li>
+      <li>Sekme yalnız kanal bağlıysa ve o müşteriyle mesajı varsa görünür; boş kanal sekmesi çıkmaz.</li>
+      <li>Pencere kapalıyken serbest mesaj yok (WhatsApp'ta onaylı kalıp, Instagram/Messenger'da gönderim yok).</li>
+      <li>Stok/fiyat sohbette elle uydurulmaz — sipariş köprüsünden geçer. Toplu kampanya gönderimi yok.</li>
+      <li>Balon her ekranda aynı konuşmayı açar; sayfa değişmez, taslak mesaj kaybolmaz.</li>
+    </ul>
+  </div>
+
+  <!-- ŞABLONLAR -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;max-width:1360px">
+      <span style="font:700 20px 'Space Grotesk';color:#22251f">Sipariş bildirim şablonları · onaylı kalıp mesajlar</span>
+      <span style="font:400 13.5px 'Karla';color:#6a7065">Sipariş yaşam döngüsünde otomatik gider; içerik platform tarafından onaylı, admin serbest metin ekleyemez.</span>
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <sc-for list="{{ notifTemplates }}" as="n" hint-placeholder-count="3">
+        <div style="width:320px;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:14px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="padding:12px 16px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:8px">
+            <span style="font:600 10.5px 'Space Grotesk';color:{{ n.fg }};background:{{ n.bg }};border-radius:7px;padding:3px 9px">{{ n.tag }}</span>
+            <span style="font:600 13.5px 'Space Grotesk';color:#22251f">{{ n.title }}</span>
+          </div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="background:#eef2e2;border-radius:11px;border-top-left-radius:2px;padding:10px 13px;font:400 12.5px/1.6 'Karla';color:#22251f">{{ n.body }}</div>
+            <span style="font:400 11px 'Karla';color:#8b9086">Tetik: {{ n.trigger }} · Kanal: {{ n.channels }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- DIALOG -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeModal }}" style="position:fixed;inset:0;background:rgba(34,37,31,.42);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px">
+      <div onClick="{{ stop }}" style="width:100%;max-width:430px;background:#fbfbf9;border-radius:14px;box-shadow:0 24px 70px rgba(20,22,18,.4);display:flex;flex-direction:column;overflow:hidden;color:#22251f">
+        <div style="padding:18px 24px;border-bottom:1px solid #e6e7e1;display:flex;align-items:center;gap:12px"><span style="font:600 18px 'Space Grotesk';margin-right:auto">{{ modalTitle }}</span><span onClick="{{ closeModal }}" style="width:30px;height:30px;border-radius:8px;background:#eef0ea;color:#6a7065;font:500 16px 'Space Grotesk';display:grid;place-items:center;cursor:pointer">✕</span></div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:400 13px/1.6 'Karla';color:#3a3f37">{{ modalBody }}</span>
+          <span style="font:500 11.5px/1.5 'Karla';color:#5a4a8a;background:#ece8f5;border:1px solid #d8d0ec;border-radius:8px;padding:10px 12px">{{ modalNote }}</span>
+        </div>
+        <div style="padding:14px 24px;border-top:1px solid #e6e7e1;display:flex;align-items:center;gap:10px;background:#f8f9f5"><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#3a3f37;border:1px solid #d9dbd2;border-radius:8px;padding:10px 18px;cursor:pointer;margin-left:auto">Vazgeç</span><span onClick="{{ closeModal }}" style="font:600 13px 'Space Grotesk';color:#fbfbf9;background:{{ modalBtn }};border-radius:8px;padding:10px 20px;cursor:pointer">{{ modalCta }}</span></div>
+      </div>
+    </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;instagramConnected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Bağlı kanallar&quot;},&quot;messengerConnected&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Bağlı kanallar&quot;},&quot;fabDemoOpen&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Mesaj balonu&quot;}}">
+const CH = {
+  whatsapp:  { label:'WhatsApp',  fg:'#1f7a45', bg:'#e7f3ea', bd:'#c7e3d1', hold:'Mesaj yaz… (24 saat penceresi açık)', closed:'Cevap süresi doldu — serbest mesaj gönderilemez. Yalnız onaylı kalıp mesaj (ücretli) gider.', tpl:true },
+  messenger: { label:'Messenger', fg:'#2f6285', bg:'#e8eff4', bd:'#c9dce8', hold:'Mesaj yaz… (24 saat penceresi açık)', closed:'24 saat geçti — Messenger serbest mesaja kapalı. Müşterinin yeniden yazması gerekir.', tpl:false },
+  instagram: { label:'Instagram', fg:'#8a4a6b', bg:'#f6e9f0', bd:'#e6cddb', hold:'DM yaz… (24 saat penceresi açık)', closed:'24 saat geçti — Instagram DM serbest mesaja kapalı. Kalıp mesaj yok.', tpl:false },
+};
+const ORDER = (no,amt) => ({ no, amt });
+
+class Component extends DCLogic {
+  state = { sel:1, ch:null, status:'all', chFilter:'all', mode:'ai', fab:null, menu:false, popSel:1, popView:'thread', popCh:null, modalOpen:false, modalKind:'devral' };
+
+  chIcon(k, size) {
+    const E = React.createElement;
+    const p = (d,i) => E('path', { d, key:'p'+i });
+    const shapes = {
+      whatsapp: [p('M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z',0)],
+      messenger: [p('M12 3c-4.97 0-9 3.7-9 8.27 0 2.6 1.3 4.9 3.35 6.43V21l3.06-1.68c.83.23 1.7.35 2.59.35 4.97 0 9-3.7 9-8.4S16.97 3 12 3z',0), p('m7.6 13.9 2.9-3.1 2.2 1.7 2.1-2.4-2.9 3.1-2.2-1.7z',1)],
+      instagram: [E('rect',{ x:3, y:3, width:18, height:18, rx:5, key:'r' }), E('circle',{ cx:12, cy:12, r:4.2, key:'c' }), E('circle',{ cx:17.2, cy:6.9, r:1, fill:'currentColor', stroke:'none', key:'d' })],
+    };
+    return E('svg', { width:size, height:size, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.8, strokeLinecap:'round', strokeLinejoin:'round', style:{ flex:'none' } }, ...shapes[k]);
+  }
+
+  customers() {
+    return [
+      { name:'Ayşe Kaya', b2c:true, lang:'Türkçe', ai:true, waiting:false, time:'2 dk', win:'open',
+        anchors:{ whatsapp:'+33 6 71 22 04', instagram:'@ayse.kaya' },
+        threads:{
+          whatsapp:{ count:12, unread:false, msgs:[
+            ['in',null,'11 Eyl 22:14','Merhaba, bayram için 2 kg fıstıklı baklava alabilir miyim?'],
+            ['ai','AI ajanı','11 Eyl 22:15','Tabii! 2 kg Fıstıklı Baklava 36,00 €. Teslimat mı kargo mu olsun?'],
+            ['in',null,'11 Eyl 22:18','Teslimat, perşembe olur mu?'],
+          ]},
+          instagram:{ count:4, unread:true, msgs:[
+            ['in',null,'9 Eyl 13:02','Hikâyedeki tepsi hangisi?'],
+            ['me','Siz','9 Eyl 13:20','Karışık tepsi, 1 kg. İsterseniz WhatsApp\'tan detay gönderelim.'],
+          ]},
+        }, orders:[ORDER('#2451','48,00 €'),ORDER('#2418','34,00 €')] },
+
+      { name:'Épicerie Madame', b2c:false, lang:'Türkçe', ai:true, waiting:false, time:'3 gün', win:'closed',
+        anchors:{},
+        threads:{
+          whatsapp:{ count:3, unread:false, msgs:[
+            ['in',null,'11 Eyl 22:27','Baklava kaç kişilik geliyor?'],
+            ['ai','AI ajanı','11 Eyl 22:28','1 kg tepsi yaklaşık 8-10 kişiliktir.'],
+            ['me','Siz','11 Eyl 22:29','Dilerseniz yarım tepsi de hazırlayabiliriz.'],
+          ]},
+          messenger:{ count:2, unread:false, msgs:[
+            ['in',null,'6 Eyl 10:41','Sayfadan sipariş verebiliyor muyuz?'],
+            ['me','Siz','6 Eyl 10:55','Evet, B2B fiyat listesini gönderiyorum.'],
+          ]},
+        }, orders:[] },
+
+      { name:'Restaurant Oberjaegerhof', b2c:false, lang:'Almanca', ai:false, waiting:true, time:'dün', win:'closed',
+        anchors:{ whatsapp:'+49 151 88 20 11' },
+        threads:{ whatsapp:{ count:8, unread:true, msgs:[
+          ['in',null,'14 Eyl 18:40','Süper, akşam yazarım listeyi.'],
+        ]} }, orders:[ORDER('#2402','218,00 €')] },
+
+      { name:'Sofia R.', b2c:true, lang:'Fransızca', ai:true, waiting:false, time:'40 dk', win:'open',
+        anchors:{ instagram:'@sofia.rmd' },
+        threads:{ instagram:{ count:9, unread:true, msgs:[
+          ['in',null,'15 Eyl 09:12','Kargo ne zaman gelir?'],
+          ['ai','AI ajanı','15 Eyl 09:13','Siparişiniz bugün kargoya verilecek, yarın elinizde olur.'],
+        ]} }, orders:[ORDER('#2447','26,00 €')] },
+
+      { name:'+33 7 88 34 …', b2c:true, lang:'Fransızca', ai:false, waiting:true, time:'1 saat', win:'soon', draft:true,
+        anchors:{},
+        threads:{ whatsapp:{ count:2, unread:true, msgs:[
+          ['in',null,'15 Eyl 08:30','Merhaba, sipariş vermek istiyorum'],
+          ['me','Siz','15 Eyl 08:44','Merhaba! Hangi ürünlerle ilgileniyorsunuz?'],
+        ]} }, orders:[] },
+
+      { name:'M. Leroy', b2c:true, lang:'Fransızca', ai:false, waiting:false, time:'2 gün', win:'open',
+        anchors:{ messenger:'Michel Leroy', whatsapp:'+33 6 40 12 88' },
+        threads:{
+          messenger:{ count:6, unread:false, msgs:[
+            ['in',null,'13 Eyl 19:02','Teşekkürler!'],
+          ]},
+          whatsapp:{ count:2, unread:false, msgs:[
+            ['in',null,'2 Eyl 11:10','Fatura adresimi güncelledim.'],
+          ]},
+        }, orders:[ORDER('#2380','62,50 €')] },
+    ];
+  }
+
+  connected(k) {
+    if (k === 'whatsapp') return true;
+    if (k === 'messenger') return this.props.messengerConnected ?? true;
+    return this.props.instagramConnected ?? true;
+  }
+
+  available(c) {
+    return Object.keys(CH).filter(k => this.connected(k) && c.threads[k] && c.threads[k].count > 0);
+  }
+
+  bubble(kind) {
+    if (kind === 'ai') return { bg:'#ece8f5', bd:'#d8d0ec', align:'flex-end', whoFg:'#5a4a8a' };
+    if (kind === 'me') return { bg:'#dcf0c8', bd:'#c3e39f', align:'flex-end', whoFg:'#4a6121' };
+    return { bg:'#fff', bd:'#e6e7e1', align:'flex-start', whoFg:'#8b9086' };
+  }
+
+  msgs(list) {
+    return list.map(([kind, who, ts, text], i) => ({ ...this.bubble(kind), who, ts, text, key:i }));
+  }
+
+  renderVals() {
+    const all = this.customers();
+    const st = this.state;
+
+    const visible = all.filter(c => {
+      if (st.status === 'waiting' && !c.waiting) return false;
+      if (st.chFilter !== 'all' && !this.available(c).includes(st.chFilter)) return false;
+      return true;
+    });
+
+    const selName = (all[st.sel] || all[0]).name;
+    const curIdx = Math.max(0, visible.findIndex(c => c.name === selName));
+    const cur = visible[curIdx] || visible[0] || all[0];
+
+    const winTone = k => k === 'open' ? { win:'23s', winFg:'#4a6121', winBg:'#eef4e2', badge:'23 saat açık' }
+      : k === 'soon' ? { win:'2s', winFg:'#9a6416', winBg:'#fdf1e3', badge:'2 saat kaldı' }
+      : { win:'kapalı', winFg:'#a5443c', winBg:'#fbe9e7', badge:'kapalı' };
+
+    const convos = visible.map((c) => {
+      const chs = this.available(c);
+      return { name:c.name, preview:(c.threads[chs[0]] || {msgs:[[,,'','']]}).msgs.slice(-1)[0][3], time:c.time,
+        ai:c.ai, waiting:c.waiting, ...winTone(c.win),
+        chDots: chs.map(k => ({ label:CH[k].label, fg:CH[k].fg, bg:CH[k].bg, icon:this.chIcon(k, 11) })),
+        edge: c.name === cur.name ? '#5f7a2c' : 'transparent', rowBg: c.name === cur.name ? '#eef4e2' : 'transparent',
+        select: () => this.setState({ sel: all.findIndex(x => x.name === c.name), ch:null }) };
+    });
+
+    const chs = this.available(cur);
+    const activeCh = chs.includes(st.ch) ? st.ch : chs[0];
+    const thread = cur.threads[activeCh];
+    const C = CH[activeCh];
+    const tone = winTone(cur.win);
+
+    const tab = (k, active) => ({ label:CH[k].label, count:cur.threads[k].count, unread:cur.threads[k].unread && k !== activeCh,
+      icon: this.chIcon(k, 12),
+      fg: active ? '#fbfbf9' : CH[k].fg, bg: active ? CH[k].fg : CH[k].bg, bd: active ? CH[k].fg : CH[k].bd,
+      pick: () => this.setState({ ch:k }) });
+
+    const det = {
+      name: cur.name,
+      sub: thread.count + ' mesaj · ' + (cur.ai ? 'AI yürütüyor' : (cur.waiting ? 'cevap bekliyor' : 'insan yürütüyor')),
+      ai: cur.ai, lang: cur.lang, winBadge: tone.badge, winFg: tone.winFg, winBg: tone.winBg,
+      tabs: chs.map(k => tab(k, k === activeCh)),
+      messages: this.msgs(thread.msgs),
+      windowOpen: cur.win !== 'closed', windowClosed: cur.win === 'closed',
+      placeholder: C.hold, windowNote: 'Cevap süresi açık · ' + (cur.win === 'soon' ? '2 saat' : '23 saat') + ' kaldı · ' + C.label,
+      closedText: C.closed, hasTemplate: C.tpl,
+      ctxLabel: cur.draft ? 'Taslak kayıt' : (cur.b2c ? 'B2C müşteri' : 'B2B müşteri'),
+      ctxFg: cur.draft ? '#9a6416' : '#4a6121', ctxBg: cur.draft ? '#fdf1e3' : '#eef4e2',
+      isDraft: !!cur.draft, draftText: 'Numara kayıtlı müşteriyle eşleşmedi — taslak kayıt.',
+      orders: cur.orders, noOrders: cur.orders.length === 0,
+      opt: cur.b2c ? 'Açık' : (cur.draft ? 'Sorulmadı' : '—'),
+      optFg: cur.b2c ? '#4a6121' : '#6a7065', optBg: cur.b2c ? '#eef4e2' : '#eef0ea',
+      anchors: Object.keys(cur.anchors).map(k => ({ label:CH[k].label, fg:CH[k].fg, bg:CH[k].bg, handle:cur.anchors[k] })),
+      needsAnchor: Object.keys(cur.anchors).length === 0,
+    };
+
+    const chip = (label, on, pick, count) => ({ label, count, pick,
+      fg: on ? '#fbfbf9' : '#3a3f37', bg: on ? '#4a6121' : '#fbfbf9', bd: on ? '#4a6121' : '#d9dbd2' });
+
+    const statusChips = [
+      chip('Tümü', st.status === 'all', () => this.setState({ status:'all' })),
+      chip('Cevap bekliyor', st.status === 'waiting', () => this.setState({ status:'waiting' })),
+    ];
+    const countFor = k => all.filter(c => this.available(c).includes(k)).length;
+    const channelChips = [
+      chip('Tüm kanallar', st.chFilter === 'all', () => this.setState({ chFilter:'all' }), all.length),
+      ...Object.keys(CH).filter(k => this.connected(k)).map(k =>
+        chip(CH[k].label, st.chFilter === k, () => this.setState({ chFilter:k }), countFor(k))),
+    ];
+
+    const modes = [['insan','İnsan'],['hibrit','Hibrit'],['ai','AI']].map(([k,label]) => ({ label,
+      fg: st.mode === k ? '#fbfbf9' : '#6a7065', bg: st.mode === k ? '#5f7a2c' : 'transparent',
+      pick: () => this.setState({ mode:k }) }));
+
+    const waitingCount = all.filter(c => c.waiting).length;
+    const aiCount = all.filter(c => c.ai).length;
+
+    const pc = all[st.popSel] || all[1];
+    const pChs = this.available(pc);
+    const pActive = pChs.includes(st.popCh) ? st.popCh : pChs[0];
+    const fabOpen = this.state.fab === null ? (this.props.fabDemoOpen ?? true) : this.state.fab;
+    const isList = st.popView === 'list';
+
+    const mk = st.modalKind;
+    const cfg = mk === 'devral' ? { title:'Sohbeti devral', body:cur.name + ' sohbetini üstleniyorsunuz. AI susar, cevaplar sizden gider.', note:'İş bitince tek dokunuşla ajana geri bırakabilirsiniz.', cta:'Devral', btn:'#5a4a8a' }
+      : mk === 'siparis' ? { title:'Sohbetten sipariş oluştur', body:'Müşteri eşleşmiş halde elle sipariş girişi açılır; kaynak ' + C.label + ' olarak işlenir.', note:'Ticari gerçek sipariş akışından gelir — stok/fiyat sohbette elle uydurulmaz.', cta:'Sipariş girişini aç', btn:'#5f7a2c' }
+      : mk === 'isle' ? { title:'Gelen mesajı işle', body:'Son mesaj özetlenir, niyet etiketlenir (sipariş / fiyat / şikâyet) ve önerilen adım kuyruğa düşer.', note:'Öneri uygulanmadan hiçbir mesaj müşteriye gitmez.', cta:'İşle ve kuyruğa al', btn:'#5f7a2c' }
+      : mk === 'capa' ? { title:'Kimlik çapası kur', body:'Bu kanaldaki hesabı müşteri kaydına bağlarsınız; üç kanaldaki yazışma aynı kayıtta birleşir.', note:'Çapa kurulmadan kanallar arası geçmiş birleştirilmez.', cta:'Çapayı kur', btn:'#5f7a2c' }
+      : { title:'Talep (şikâyet) aç', body:'Bu konuşmadan talep kaydı açılır; müşteri ve varsa sipariş bağlanır.', note:'Talep, Talepler ekranından yürütülür ve iadeye bağlanabilir.', cta:'Talep oluştur', btn:'#a5443c' };
+
+    return {
+      convos, det, statusChips, channelChips, modes,
+      inboxMeta: visible.length + ' müşteri · ' + waitingCount + ' cevap bekliyor · ' + aiCount + ' AI yürütüyor',
+      orderLines: [
+        { name:'Fıstıklı Baklava · 1 kg tepsi', qty:'×2', amt:'36,00 €' },
+        { name:'Kuru Baklava · 500 g', qty:'×1', amt:'14,40 €' },
+        { name:'Şöbiyet · 1 kg', qty:'×2', amt:'42,00 €' },
+      ],
+      fabOpen, fabClosed: !fabOpen, toggleFab: () => this.setState({ fab: !fabOpen }),
+      popBack: () => this.setState({ popView:'list' }),
+      pop: {
+        isList, isThread: !isList,
+        title: isList ? 'Sosyal Mesajlar' : pc.name,
+        sub: isList ? all.length + ' müşteri · ' + waitingCount + ' cevap bekliyor' : 'Sipariş detayından · ' + CH[pActive].label,
+        chName: CH[pActive].label,
+        list: all.map((c, i) => {
+          const cc = this.available(c);
+          return { name:c.name, time:c.time, waiting:c.waiting,
+            preview: c.threads[cc[0]].msgs.slice(-1)[0][3],
+            chDots: cc.map(k => ({ fg:CH[k].fg, bg:CH[k].bg, icon:this.chIcon(k, 11) })),
+            rowBg: i === st.popSel ? '#f4f6f0' : 'transparent',
+            open: () => this.setState({ popSel:i, popCh:null, popView:'thread' }) };
+        }),
+        tabs: pChs.map(k => ({ label:CH[k].label, count:pc.threads[k].count, icon:this.chIcon(k, 12),
+          fg: k === pActive ? '#fbfbf9' : CH[k].fg, bg: k === pActive ? CH[k].fg : CH[k].bg, bd: k === pActive ? CH[k].fg : CH[k].bd,
+          pick: () => this.setState({ popCh:k }) })),
+        messages: this.msgs(pc.threads[pActive].msgs),
+        placeholder: CH[pActive].tpl ? 'Kalıp mesaj seç…' : 'Mesaj yaz…',
+        note: pc.win === 'closed' ? 'Pencere kapalı — yalnız onaylı kalıp mesaj gider.' : 'Sayfa değişmez; taslak mesaj ekranlar arası korunur.',
+      },
+      notifTemplates: [
+        { tag:'ONAY', fg:'#4a6121', bg:'#eef4e2', title:'Sipariş onaylandı', body:'Merhaba Ayşe, LZA-2451 numaralı siparişiniz alındı ✓ Perşembe günü Strasbourg\'da kapınızda olacak. Detaylar: [bağlantı]', trigger:'Sipariş oluşturulunca, anında', channels:'WhatsApp + e-posta' },
+        { tag:'YOLDA', fg:'#9a6416', bg:'#fdf1e3', title:'Yola çıktı', body:'Siparişiniz LZA-2451 yola çıktı 🚚 Bugün 13:00–18:00 arası kapınızda, soğuk zincir korunuyor. Takip: [bağlantı]', trigger:'Rota kurye ile eşleşince', channels:'WhatsApp + e-posta' },
+        { tag:'TESLİM', fg:'#4a6121', bg:'#eef4e2', title:'Teslim edildi', body:'Afiyet olsun Ayşe! LZA-2451 bugün 14:20\'de teslim edildi. Bir sorun mu var? [bağlantı] · Deneyiminizi puanlayın: [bağlantı]', trigger:'Kurye teslim onayı verince', channels:'WhatsApp + e-posta' },
+      ],
+      menuOpen: st.menu, toggleMenu: () => this.setState({ menu: !st.menu }),
+      menuItems: [
+        { label:'Gelen mesaj işle', fg:'#3a3f37', go: () => this.setState({ menu:false, modalOpen:true, modalKind:'isle' }) },
+        { label:'Kalıp mesaj gönder', fg:'#3a3f37', go: () => this.setState({ menu:false, modalOpen:true, modalKind:'isle' }) },
+        { label:'Talep (şikâyet) aç', fg:'#a5443c', go: () => this.setState({ menu:false, modalOpen:true, modalKind:'talep' }) },
+      ],
+      modalOpen: st.modalOpen, modalTitle:cfg.title, modalBody:cfg.body, modalNote:cfg.note, modalCta:cfg.cta, modalBtn:cfg.btn,
+      openDevral: () => this.setState({ modalOpen:true, modalKind:'devral' }),
+      openSiparis: () => this.setState({ modalOpen:true, modalKind:'siparis' }),
+      openIsle: () => this.setState({ modalOpen:true, modalKind:'isle' }),
+      openAnchor: () => this.setState({ modalOpen:true, modalKind:'capa' }),
+      openTalep: () => this.setState({ modalOpen:true, modalKind:'talep' }),
+      closeModal: () => this.setState({ modalOpen:false }), stop: (e) => e.stopPropagation(),
+    };
+  }
+}
+</script>
+</body>
+</html>

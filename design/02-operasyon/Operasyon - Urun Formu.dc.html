@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Karla:wght@400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; }
+  a { color:#5f7a2c; text-decoration:none; }
+  a:hover { color:#4a6121; }
+</style>
+</helmet>
+
+<section style="padding:48px;display:flex;flex-direction:column;gap:44px;color:#22251f">
+
+  <div style="display:flex;flex-direction:column;gap:4px;max-width:1180px">
+    <span style="font:700 20px 'Space Grotesk';color:#22251f">Ürün formu — varyant satırı ve asistan sütunu</span>
+    <span style="font:400 13.5px/1.6 'Karla';color:#6a7065">İki talep. Aynı form iki yerde kullanılır (ürün ekranı · asistan kuyruğu), masaüstü-yalnız, satır tam genişlik. Renkler operasyon paletinin token'larıdır; sabit değer yazılmaz.</span>
+  </div>
+
+  <!-- ==================== TALEP 1 ==================== -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px;max-width:1180px">
+      <span style="font:700 15px 'Space Grotesk';color:#22251f">Talep 1 — Varyant satırı</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">tablo satırı + altındaki iki şerit · 1180px diyalog içinde</span>
+    </div>
+
+    <div data-screen-label="Varyant satiri" style="width:1180px;box-sizing:border-box;background:#fbfbf9;border:1px solid #e2e3dd;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:12px">
+
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8b9086">Varyantlar</span>
+        <div style="display:flex;align-items:center;gap:14px">
+          <span style="font:400 11px 'Karla';color:#a7ac9f">boy etiketi · TR</span>
+          <span style="font:600 11.5px 'Karla';color:#5f7a2c;cursor:pointer">+ varyant</span>
+        </div>
+      </div>
+
+      <div style="border:1px solid #e6e7e1;border-radius:10px;overflow:hidden;background:#fff">
+
+        <div style="display:grid;grid-template-columns:22px minmax(0,1fr) 116px 150px 138px 96px 56px 26px;gap:0 14px;align-items:center;padding:9px 14px;background:#f8f9f5;border-bottom:1px solid #e6e7e1;font:500 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8b9086">
+          <span></span>
+          <span>Etiket (TR)</span>
+          <span>SKU</span>
+          <span>Net miktar</span>
+          <span>İçindeki</span>
+          <span>Min. stok</span>
+          <span style="text-align:center">Aktif</span>
+          <span></span>
+        </div>
+
+        <!-- ---------- varyant 1 ---------- -->
+        <div style="display:grid;grid-template-columns:22px minmax(0,1fr) 116px 150px 138px 96px 56px 26px;gap:0 14px;align-items:center;padding:11px 14px">
+          <span style="font:400 13px 'Karla';color:#c2c6ba;cursor:grab">⠿</span>
+          <span style="border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'Karla';color:#3a3f37">700 g</span>
+          <span style="border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">312241</span>
+          <span style="display:flex;align-items:stretch;border:1px solid #d9dbd2;border-radius:7px;background:#fff;overflow:hidden">
+            <span style="flex:1;padding:8px 10px;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">700</span>
+            <span style="display:flex;align-items:center;gap:6px;padding:8px 9px;border-left:1px solid #e6e7e1;background:#f8f9f5;font:500 12px 'Karla';color:#6a7065">g <span style="font-size:9px;color:#a7ac9f">▾</span></span>
+          </span>
+          <span style="display:flex;align-items:stretch;border:1px solid #d9dbd2;border-radius:7px;background:#fff;overflow:hidden">
+            <span style="width:46px;padding:8px 10px;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">10</span>
+            <span style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 9px;border-left:1px solid #e6e7e1;background:#f8f9f5;font:500 12px 'Karla';color:#6a7065">adet <span style="font-size:9px;color:#a7ac9f">▾</span></span>
+          </span>
+          <span style="border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'IBM Plex Mono';color:#a7ac9f">—</span>
+          <span style="justify-self:center;width:34px;height:20px;border-radius:10px;background:#5f7a2c;position:relative;cursor:pointer"><span style="position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#fff"></span></span>
+          <span style="font:400 13px 'Karla';color:#c2c6ba;text-align:right;cursor:pointer">🗑</span>
+        </div>
+
+        <div style="background:#f8f9f5;border-top:1px solid #f0f1ec;padding:13px 14px 14px 36px;display:flex;flex-direction:column;gap:13px">
+
+          <div style="display:grid;grid-template-columns:78px minmax(0,1fr);gap:0 14px;align-items:start">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8b9086;padding-top:17px">Ambalaj</span>
+            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:400 10.5px 'Karla';color:#8b9086">brüt ağırlık</span>
+                <span style="display:flex;align-items:center;justify-content:space-between;width:118px;box-sizing:border-box;border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">720 <span style="font:400 11.5px 'Karla';color:#a7ac9f">g</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:400 10.5px 'Karla';color:#8b9086">ölçü · en × boy × yükseklik</span>
+                <span style="display:flex;align-items:center;gap:9px;width:230px;box-sizing:border-box;border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">260 <span style="color:#c2c6ba">×</span> 220 <span style="color:#c2c6ba">×</span> 80 <span style="margin-left:auto;font:400 11.5px 'Karla';color:#a7ac9f">mm</span></span>
+              </div>
+              <span style="font:400 11px/1.5 'Karla';color:#8b9086;max-width:320px;padding-bottom:9px">Kargonun girdisi: brüt ağırlık ürünün kendi paketiyle birlikte ağırlığıdır, net ağırlık beyanda durur.</span>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:78px minmax(0,1fr);gap:0 14px;align-items:start">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8b9086;padding-top:17px">Barkod</span>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:400 10.5px 'Karla';color:#8b9086">kayıtlı kodlar · kaydedilince varyanta bağlanır</span>
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;border:1px solid #d9dbd2;border-radius:7px;padding:6px 8px;background:#fff">
+                <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #e0e2da;background:#f8f9f5;border-radius:6px;padding:3px 6px 3px 6px">
+                  <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#6a7065;background:#e4e6de;border-radius:4px;padding:2px 5px">birim</span>
+                  <span style="font:500 12px 'IBM Plex Mono';color:#3a3f37">8696425024695</span>
+                  <span style="font:400 12px 'Karla';color:#a7ac9f;cursor:pointer">✕</span>
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #e0e2da;background:#f8f9f5;border-radius:6px;padding:3px 6px">
+                  <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#6a7065;background:#e4e6de;border-radius:4px;padding:2px 5px">koli ×6</span>
+                  <span style="font:500 12px 'IBM Plex Mono';color:#3a3f37">18696425024692</span>
+                  <span style="font:400 12px 'Karla';color:#a7ac9f;cursor:pointer">✕</span>
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #d8d0ec;background:#f4f1fa;border-radius:6px;padding:3px 6px">
+                  <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#5a4a8a;background:#ece8f5;border-radius:4px;padding:2px 5px">birim</span>
+                  <span style="font:500 12px 'IBM Plex Mono';color:#463a70">8696425027695</span>
+                  <span style="font:400 12px 'Karla';color:#9b90c0;cursor:pointer">✕</span>
+                </span>
+                <span style="font:400 12px 'Karla';color:#a7ac9f;padding:4px 2px">kod yaz, Enter ile ekle</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ---------- varyant 2 · eksik ölçü, pasif ---------- -->
+        <div style="border-top:1px solid #e6e7e1;display:grid;grid-template-columns:22px minmax(0,1fr) 116px 150px 138px 96px 56px 26px;gap:0 14px;align-items:center;padding:11px 14px;background:#fff">
+          <span style="font:400 13px 'Karla';color:#c2c6ba;cursor:grab">⠿</span>
+          <span style="border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'Karla';color:#6a7065">1,4 kg · çift paket</span>
+          <span style="border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'IBM Plex Mono';color:#6a7065">312242</span>
+          <span style="display:flex;align-items:stretch;border:1px solid #d9dbd2;border-radius:7px;background:#fff;overflow:hidden">
+            <span style="flex:1;padding:8px 10px;font:500 12.5px 'IBM Plex Mono';color:#6a7065">1400</span>
+            <span style="display:flex;align-items:center;gap:6px;padding:8px 9px;border-left:1px solid #e6e7e1;background:#f8f9f5;font:500 12px 'Karla';color:#8b9086">g <span style="font-size:9px;color:#c2c6ba">▾</span></span>
+          </span>
+          <span style="display:flex;align-items:stretch;border:1px solid #d9dbd2;border-radius:7px;background:#fff;overflow:hidden">
+            <span style="width:46px;padding:8px 10px;font:500 12.5px 'IBM Plex Mono';color:#6a7065">2</span>
+            <span style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 9px;border-left:1px solid #e6e7e1;background:#f8f9f5;font:500 12px 'Karla';color:#8b9086">paket <span style="font-size:9px;color:#c2c6ba">▾</span></span>
+          </span>
+          <span style="border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">4</span>
+          <span style="justify-self:center;width:34px;height:20px;border-radius:10px;background:#d2d4cb;position:relative;cursor:pointer"><span style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff"></span></span>
+          <span style="font:400 13px 'Karla';color:#c2c6ba;text-align:right;cursor:pointer">🗑</span>
+        </div>
+
+        <div style="background:#f8f9f5;border-top:1px solid #f0f1ec;padding:13px 14px 14px 36px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:grid;grid-template-columns:78px minmax(0,1fr);gap:0 14px;align-items:start">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8b9086;padding-top:17px">Ambalaj</span>
+            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:400 10.5px 'Karla';color:#8b9086">brüt ağırlık</span>
+                <span style="display:flex;align-items:center;justify-content:space-between;width:118px;box-sizing:border-box;border:1px solid #d9dbd2;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'IBM Plex Mono';color:#3a3f37">1460 <span style="font:400 11.5px 'Karla';color:#a7ac9f">g</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:400 10.5px 'Karla';color:#8b9086">ölçü · en × boy × yükseklik</span>
+                <span style="display:flex;align-items:center;gap:9px;width:230px;box-sizing:border-box;border:1px dashed #d2d4cb;border-radius:7px;padding:8px 11px;background:#fff;font:500 12.5px 'IBM Plex Mono';color:#c2c6ba">— <span>×</span> — <span>×</span> — <span style="margin-left:auto;font:400 11.5px 'Karla';color:#c2c6ba">mm</span></span>
+              </div>
+              <span style="display:flex;align-items:center;gap:7px;font:500 11px 'Karla';color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:7px;padding:6px 10px;margin-bottom:1px">Ölçü boş — bu varyant için canlı kargo teklifi alınamaz.</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:78px minmax(0,1fr);gap:0 14px;align-items:start">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8b9086;padding-top:17px">Barkod</span>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:400 10.5px 'Karla';color:#8b9086">kayıtlı kodlar · kaydedilince varyanta bağlanır</span>
+              <div style="display:flex;align-items:center;gap:7px;border:1px solid #d9dbd2;border-radius:7px;padding:6px 8px;background:#fff">
+                <span style="font:400 12px 'Karla';color:#a7ac9f;padding:4px 2px">kod yaz, Enter ile ekle · kayıtlı kod yok</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <span style="font:400 11.5px/1.6 'Karla';color:#8b9086">Sıra, müşterinin gördüğü boy sırasıdır — satırları tutamaktan sürükleyerek değiştirin. Min. stok altına düşünce uyarı çıkacak eşiktir; boş bırakılırsa uyarı üretilmez.</span>
+    </div>
+
+    <!-- karanlık mod karşılığı -->
+    <div style="width:1180px;box-sizing:border-box;background:#1b1e19;border:1px solid #2f342c;border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font:600 11px 'Space Grotesk';letter-spacing:.1em;text-transform:uppercase;color:#8d9385">Aynı satır · karanlık mod</span>
+        <span style="font:400 11px 'Karla';color:#6f7568">yüzey · kenar · mürekkep token'ları takas edilir, düzen aynı kalır</span>
+      </div>
+      <div style="border:1px solid #333830;border-radius:10px;overflow:hidden;background:#232720">
+        <div style="display:grid;grid-template-columns:22px minmax(0,1fr) 116px 150px 138px 96px 56px 26px;gap:0 14px;align-items:center;padding:9px 14px;background:#1f231d;border-bottom:1px solid #333830;font:500 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8d9385">
+          <span></span><span>Etiket (TR)</span><span>SKU</span><span>Net miktar</span><span>İçindeki</span><span>Min. stok</span><span style="text-align:center">Aktif</span><span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:22px minmax(0,1fr) 116px 150px 138px 96px 56px 26px;gap:0 14px;align-items:center;padding:11px 14px">
+          <span style="font:400 13px 'Karla';color:#555b4e">⠿</span>
+          <span style="border:1px solid #3d4339;border-radius:7px;padding:8px 11px;background:#1b1e19;font:500 12.5px 'Karla';color:#e7e9e0">700 g</span>
+          <span style="border:1px solid #3d4339;border-radius:7px;padding:8px 11px;background:#1b1e19;font:500 12.5px 'IBM Plex Mono';color:#e7e9e0">312241</span>
+          <span style="display:flex;align-items:stretch;border:1px solid #3d4339;border-radius:7px;background:#1b1e19;overflow:hidden">
+            <span style="flex:1;padding:8px 10px;font:500 12.5px 'IBM Plex Mono';color:#e7e9e0">700</span>
+            <span style="display:flex;align-items:center;gap:6px;padding:8px 9px;border-left:1px solid #333830;background:#272c24;font:500 12px 'Karla';color:#a3a99a">g <span style="font-size:9px;color:#6f7568">▾</span></span>
+          </span>
+          <span style="display:flex;align-items:stretch;border:1px solid #3d4339;border-radius:7px;background:#1b1e19;overflow:hidden">
+            <span style="width:46px;padding:8px 10px;font:500 12.5px 'IBM Plex Mono';color:#e7e9e0">10</span>
+            <span style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 9px;border-left:1px solid #333830;background:#272c24;font:500 12px 'Karla';color:#a3a99a">adet <span style="font-size:9px;color:#6f7568">▾</span></span>
+          </span>
+          <span style="border:1px solid #3d4339;border-radius:7px;padding:8px 11px;background:#1b1e19;font:500 12.5px 'IBM Plex Mono';color:#6f7568">—</span>
+          <span style="justify-self:center;width:34px;height:20px;border-radius:10px;background:#7d9b41;position:relative"><span style="position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#1b1e19"></span></span>
+          <span style="font:400 13px 'Karla';color:#555b4e;text-align:right">🗑</span>
+        </div>
+        <div style="background:#1f231d;border-top:1px solid #2d3229;padding:13px 14px 14px 36px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:grid;grid-template-columns:78px minmax(0,1fr);gap:0 14px;align-items:start">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8d9385;padding-top:17px">Ambalaj</span>
+            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:400 10.5px 'Karla';color:#8d9385">brüt ağırlık</span>
+                <span style="display:flex;align-items:center;justify-content:space-between;width:118px;box-sizing:border-box;border:1px solid #3d4339;border-radius:7px;padding:8px 11px;background:#1b1e19;font:500 12.5px 'IBM Plex Mono';color:#e7e9e0">720 <span style="font:400 11.5px 'Karla';color:#6f7568">g</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:400 10.5px 'Karla';color:#8d9385">ölçü · en × boy × yükseklik</span>
+                <span style="display:flex;align-items:center;gap:9px;width:230px;box-sizing:border-box;border:1px solid #3d4339;border-radius:7px;padding:8px 11px;background:#1b1e19;font:500 12.5px 'IBM Plex Mono';color:#e7e9e0">260 <span style="color:#555b4e">×</span> 220 <span style="color:#555b4e">×</span> 80 <span style="margin-left:auto;font:400 11.5px 'Karla';color:#6f7568">mm</span></span>
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:78px minmax(0,1fr);gap:0 14px;align-items:start">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.09em;text-transform:uppercase;color:#8d9385;padding-top:17px">Barkod</span>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:400 10.5px 'Karla';color:#8d9385">kayıtlı kodlar · kaydedilince varyanta bağlanır</span>
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;border:1px solid #3d4339;border-radius:7px;padding:6px 8px;background:#1b1e19">
+                <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #3d4339;background:#272c24;border-radius:6px;padding:3px 6px">
+                  <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#a3a99a;background:#333830;border-radius:4px;padding:2px 5px">birim</span>
+                  <span style="font:500 12px 'IBM Plex Mono';color:#e7e9e0">8696425024695</span>
+                  <span style="font:400 12px 'Karla';color:#6f7568">✕</span>
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:7px;border:1px solid #4b4372;background:#2b2740;border-radius:6px;padding:3px 6px">
+                  <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#c3b8e8;background:#3a3459;border-radius:4px;padding:2px 5px">birim</span>
+                  <span style="font:500 12px 'IBM Plex Mono';color:#ddd6f2">8696425027695</span>
+                  <span style="font:400 12px 'Karla';color:#8c83b3">✕</span>
+                </span>
+                <span style="font:400 12px 'Karla';color:#6f7568;padding:4px 2px">kod yaz, Enter ile ekle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:1180px;box-sizing:border-box;background:#fff;border:1.5px dashed #b9b4a4;border-radius:12px;padding:18px 22px;display:flex;flex-direction:column;gap:8px">
+      <span style="font:700 13.5px 'Space Grotesk';color:#3a4147">Ne değişti</span>
+      <ul style="margin:0;padding-left:18px;font:400 12.5px/1.75 'Karla';color:#6a7065">
+        <li><strong>Porsiyon yukarı taşındı.</strong> "Adet" ve "porsiyon" ikizdi — tek hücrede birleşti: <strong>İçindeki</strong> = [10] [adet ▾]. Değer artık "10 adet" diye okunur, ambalaj şeridinden çıktı.</li>
+        <li><strong>Ambalaj şeridi beş kutudan ikiye indi</strong> ve yalnız kutunun kendisini anlatır: brüt ağırlık tek alan, üç ölçü <em>tek</em> alanın içinde × ile ayrılır. Her alanın başlığı üstünde durur, satır içinde değil — dağınıklık buradaydı.</li>
+        <li><strong>Barkod artık etiket + çip dizisi bileşeni.</strong> Çip kodu, türünü (birim · koli) ve çarpanını taşır; kaldırma çipin içindedir. Ayrı "Ekle" düğmesi yok — kutunun içine yazılıp Enter'a basılır.</li>
+        <li><strong>İki şerit ortak bir zeminde</strong> (satırın altında, girinti tutamak kolonuyla hizalı) — satır ile şeritleri tek varyant bloğu olarak okutur, üst üste binen iki ayrı tablo gibi değil.</li>
+        <li><strong>Mor zemin asistanın doldurduğu değerdir</strong>, çip düzeyinde de geçerli. Operatör değeri düzeltince mor kalkar.</li>
+        <li><strong>Boş ölçü bir hâldir</strong>, boş kutu değil: kesikli çerçeve + tek cümlelik sonucu ("canlı kargo teklifi alınamaz"). Uzun açıklama paragrafı satırdan kalktı.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ==================== TALEP 2 ==================== -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:baseline;gap:12px;max-width:1180px">
+      <span style="font:700 15px 'Space Grotesk';color:#22251f">Talep 2 — Öneri diyaloğunun sağ sütunu</span>
+      <span style="font:400 12.5px 'Karla';color:#8b9086">320px · sekme yok, tek akış · on öneri tipinin hepsi aynı iskelet</span>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:22px;flex-wrap:wrap">
+
+      <div data-screen-label="Asistan oneri sutunu" style="width:320px;flex:none;background:#fff;border:1px solid #e6e7e1;border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+
+        <div style="padding:12px 14px;border-bottom:1px solid #e6e7e1;background:#f8f9f5;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">Asistanın önerisi</span>
+            <span style="font:500 10.5px 'IBM Plex Mono';color:#a7ac9f">13ECF3B3</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:42px;height:42px;flex:none;border-radius:7px;background:#e4e6de;border:1px solid #d9dbd2;display:flex;align-items:center;justify-content:center;font:500 9px 'IBM Plex Mono';color:#a7ac9f">foto</span>
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="font:600 14px 'Space Grotesk';color:#22251f">Tavuk Fileto</span>
+              <span style="font:500 10.5px 'IBM Plex Mono';color:#8b9086">SKU 312241 · 700 g</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.06em;text-transform:uppercase;color:#5a4a8a;background:#ece8f5;border:1px solid #d8d0ec;border-radius:5px;padding:2px 7px">ürün alanları</span>
+            <span style="font:400 10.5px 'Karla';color:#8b9086">4 etiket fotoğrafından · 19 Eyl 15:50</span>
+          </div>
+        </div>
+
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:5px;background:#eef4e2;border-bottom:1px solid #e6e7e1;border-left:3px solid #5f7a2c">
+          <span style="font:600 9.5px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Neden bu öneri</span>
+          <span style="font:400 12px/1.6 'Karla';color:#3a3f37">Lezita Çıtır Piliç Bonfile 700 g etiketi, katalogdaki "Tavuk Fileto" ile eşleşti. Etiket veritabanından güvenilirdir: açıklama, içindekiler, saklama, alerjen, iz ve besin alanları doğrudan etiketten alındı.</span>
+        </div>
+
+        <div style="padding:13px 14px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid #e6e7e1">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">Onaylamadan önce</span>
+            <span style="font:600 9.5px 'Space Grotesk';color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:9px;padding:1px 7px">3</span>
+          </div>
+
+          <div style="border:1px solid #ecd9b4;border-left:3px solid #9a6416;background:#fdf7ec;border-radius:7px;padding:9px 11px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:600 11.5px 'Space Grotesk';color:#8a6410">İçindekiler net okunamadı</span>
+            <span style="font:400 11.5px/1.55 'Karla';color:#6a7065">Etikette satır başları kısmen kesik ve parlak; en net metin DE. TR karşılığı çeviriyle tamamlandı — onaylamadan önce okuyun.</span>
+          </div>
+
+          <div style="border:1px solid #bcd0e0;border-left:3px solid #3a6b8a;background:#eef4f9;border-radius:7px;padding:9px 11px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:600 11.5px 'Space Grotesk';color:#2f5a78">Açıklama dolu, üzerine yazılacak</span>
+            <span style="font:400 11.5px/1.55 'Karla';color:#6a7065">Şimdiki metin operatör yazımı. Yeni metin yasal adı ve dört pişirme yöntemini içeriyor.</span>
+            <span style="font:600 11px 'Karla';color:#2f5a78;cursor:pointer">eski metni gör</span>
+          </div>
+
+          <div style="border:1.5px dashed #d2d4cb;border-radius:7px;padding:9px 11px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:600 11.5px 'Space Grotesk';color:#6a7065">Adet etikette yazmıyor</span>
+            <span style="font:400 11.5px/1.55 'Karla';color:#8b9086">Boy etiketi "10 × 70 g" değil "700 g" diyor. İçindeki adet kayıttaki 10 değeriyle bırakıldı, öneri bu alana dokunmuyor.</span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:7px;font:500 11px 'Karla';color:#4a6121">
+            <span style="width:5px;height:5px;border-radius:50%;background:#5f7a2c;flex:none"></span>
+            Onaydan sonra eksik kalan alan yok.
+          </div>
+        </div>
+
+        <sc-if value="{{ sapmaVar }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:13px 14px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid #e6e7e1;background:#fbfbf9">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">Formda değiştirdiniz</span>
+              <span style="font:600 9.5px 'Space Grotesk';color:#6a7065;background:#e4e6de;border-radius:9px;padding:1px 7px">2</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:400 10.5px 'Karla';color:#8b9086">Son tarih tipi</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font:500 11.5px 'Karla';color:#a7ac9f;text-decoration:line-through">DLC · güvenlik</span>
+                <span style="font:400 11px 'Karla';color:#c2c6ba">→</span>
+                <span style="font:600 11.5px 'Karla';color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:5px;padding:2px 7px">DDM · kalite</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:400 10.5px 'Karla';color:#8b9086">Toplam raf ömrü (gün)</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font:500 11.5px 'IBM Plex Mono';color:#a7ac9f;text-decoration:line-through">730</span>
+                <span style="font:400 11px 'Karla';color:#c2c6ba">→</span>
+                <span style="font:600 11.5px 'IBM Plex Mono';color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:5px;padding:2px 7px">540</span>
+              </div>
+            </div>
+            <span style="font:400 10.5px/1.5 'Karla';color:#8b9086">Uygulanacak değer sağdakidir; asistanın önerisi kayıtta iz olarak kalır.</span>
+          </div>
+        </sc-if>
+
+        <div style="padding:13px 14px 4px;display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font:600 10px 'Space Grotesk';letter-spacing:.12em;text-transform:uppercase;color:#8b9086">Önerinin tamamı</span>
+            <span style="font:400 10.5px 'Karla';color:#a7ac9f">7 alan</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;gap:4px">
+              <span style="font:600 11px 'Space Grotesk';color:#22251f;border-bottom:2px solid #5f7a2c;padding:3px 7px;cursor:pointer">TR</span>
+              <span style="font:600 11px 'Space Grotesk';color:#8b9086;padding:3px 7px;cursor:pointer">FR</span>
+              <span style="font:600 11px 'Space Grotesk';color:#8b9086;padding:3px 7px;cursor:pointer">DE</span>
+            </div>
+            <span style="font:400 10px 'Karla';color:#a7ac9f">yalnız metin alanlarını değiştirir</span>
+          </div>
+        </div>
+
+        <div style="padding:0 14px 6px;display:flex;flex-direction:column">
+
+          <div style="padding:10px 0;border-top:1px solid #f0f1ec;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#3a3f37">Açıklama</span>
+              <span style="margin-left:auto;font:600 9px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#2f5a78;background:#e6eef3;border:1px solid #bcd0e0;border-radius:4px;padding:1px 6px">üzerine yazılır</span>
+            </div>
+            <span style="font:400 11.5px/1.6 'Karla';color:#4a4f45">Lezita pane kaplı, pişirilmiş, derin dondurulmuş tavuk iç bonfile, 700 g. Pişirme önerisi: fırın — önceden ısıtılmış fırında (180 °C) 10–12 dakika…</span>
+            <span style="font:600 11px 'Karla';color:#5f7a2c;cursor:pointer">tamamını gör</span>
+          </div>
+
+          <div style="padding:10px 0;border-top:1px solid #f0f1ec;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#3a3f37">İçindekiler</span>
+              <span style="margin-left:auto;font:600 9px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#8a6410;background:#fdf1e3;border:1px solid #ecd9b4;border-radius:4px;padding:1px 6px">net değil</span>
+            </div>
+            <span style="font:400 11.5px/1.6 'Karla';color:#4a4f45">Tavuk göğüs eti (%54), kaplama malzemesi (BUĞDAY unu (gluten), modifiye mısır nişastası, patates nişastası, tuz, baharat aroması…</span>
+            <span style="font:600 11px 'Karla';color:#5f7a2c;cursor:pointer">tamamını gör</span>
+          </div>
+
+          <div style="padding:10px 0;border-top:1px solid #f0f1ec;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#3a3f37">Saklama</span>
+              <span style="margin-left:auto;font:600 9px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:4px;padding:1px 6px">yeni</span>
+            </div>
+            <span style="font:400 11.5px/1.6 'Karla';color:#4a4f45">Son tüketim tarihine kadar derin dondurucuda (−18 °C) saklayınız. Çözdürdükten sonra tekrar dondurmayınız.</span>
+          </div>
+
+          <div style="padding:10px 0;border-top:1px solid #f0f1ec;display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#3a3f37">Besin künyesi</span>
+              <span style="margin-left:auto;font:600 9px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:4px;padding:1px 6px">yeni · 8</span>
+            </div>
+            <span style="font:400 10.5px 'Karla';color:#8b9086">100 g donmuş ürün başına</span>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:4px 10px;font:400 11.5px 'Karla';color:#4a4f45">
+              <span>Enerji</span><span style="font-family:'IBM Plex Mono';text-align:right">813 kJ</span>
+              <span></span><span style="font-family:'IBM Plex Mono';text-align:right">194 kcal</span>
+              <span>Yağ</span><span style="font-family:'IBM Plex Mono';text-align:right">8,5 g</span>
+              <span style="padding-left:10px;color:#8b9086">doymuş</span><span style="font-family:'IBM Plex Mono';text-align:right;color:#8b9086">3,7 g</span>
+              <span>Karbonhidrat</span><span style="font-family:'IBM Plex Mono';text-align:right">13,3 g</span>
+              <span style="padding-left:10px;color:#8b9086">şeker</span><span style="font-family:'IBM Plex Mono';text-align:right;color:#8b9086">0 g</span>
+              <span>Protein</span><span style="font-family:'IBM Plex Mono';text-align:right">16 g</span>
+              <span>Tuz</span><span style="font-family:'IBM Plex Mono';text-align:right">1,4 g</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 0;border-top:1px solid #f0f1ec;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#3a3f37">Alerjenler</span>
+              <span style="margin-left:auto;font:600 9px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:4px;padding:1px 6px">yeni</span>
+            </div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <span style="font:600 11px 'Karla';color:#a5443c;background:#fbe9e7;border:1px solid #e2c4c0;border-radius:11px;padding:3px 9px">Gluten</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 0;border-top:1px solid #f0f1ec;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#3a3f37">İzler</span>
+              <span style="font:400 10.5px 'Karla';color:#8b9086">aynı hatta üretim</span>
+              <span style="margin-left:auto;font:600 9px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:4px;padding:1px 6px">yeni</span>
+            </div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <span style="font:500 11px 'Karla';color:#6a7065;background:#eef0ea;border:1px solid #e0e2da;border-radius:11px;padding:3px 9px">Yumurta</span>
+              <span style="font:500 11px 'Karla';color:#6a7065;background:#eef0ea;border:1px solid #e0e2da;border-radius:11px;padding:3px 9px">Süt</span>
+              <span style="font:500 11px 'Karla';color:#6a7065;background:#eef0ea;border:1px solid #e0e2da;border-radius:11px;padding:3px 9px">Soya</span>
+              <span style="font:500 11px 'Karla';color:#6a7065;background:#eef0ea;border:1px solid #e0e2da;border-radius:11px;padding:3px 9px">Kereviz</span>
+            </div>
+          </div>
+
+          <div style="padding:10px 0;border-top:1px solid #f0f1ec;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:7px">
+              <span style="font:600 11.5px 'Space Grotesk';color:#3a3f37">Boy alanı</span>
+              <span style="margin-left:auto;font:600 9px 'Space Grotesk';letter-spacing:.05em;text-transform:uppercase;color:#4a6121;background:#eef4e2;border:1px solid #cdd8b6;border-radius:4px;padding:1px 6px">yeni</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font:500 11.5px 'IBM Plex Mono';color:#4a4f45">700 g</span>
+              <span style="font:400 10.5px 'Karla';color:#8b9086">· paketli ağırlık 720 g · 260×220×80 mm</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="border-top:1px solid #e6e7e1;background:#f8f9f5">
+          <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer">
+            <span style="font:600 10.5px 'Space Grotesk';color:#6a7065">{{ teknikCaret }} Teknik künye</span>
+            <span style="font:400 10px 'Karla';color:#a7ac9f">kimlik · tablolar · JSON</span>
+          </div>
+          <sc-if value="{{ teknikAcik }}" hint-placeholder-val="{{ true }}">
+            <div style="padding:0 14px 13px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font:400 10.5px 'Karla';color:#8b9086">
+                <span>öneri</span><span style="font-family:'IBM Plex Mono';color:#3a3f37">13ECF3B3</span>
+                <span>ürün</span><span style="font-family:'IBM Plex Mono';color:#3a3f37;word-break:break-all">4a1a1faf-73a4-4be1-b5af-a4b2bd1b7cfe</span>
+                <span>hedef</span><span style="font-family:'IBM Plex Mono';color:#3a3f37">product · product_i18n · product_nutrition</span>
+                <span>doğan</span><span style="font-family:'IBM Plex Mono';color:#3a3f37">3 i18n satırı · 8 besin satırı</span>
+              </div>
+              <pre style="margin:0;max-height:150px;overflow:auto;background:#fff;border:1px solid #e6e7e1;border-radius:7px;padding:9px 10px;font:400 10px/1.6 'IBM Plex Mono';color:#3a3f37;white-space:pre-wrap;word-break:break-word">{
+  "uncertainFields": ["ingredients"],
+  "remainingGaps": [],
+  "warnings": [
+    { "field": "ingredients", "level": "unclear",
+      "note": "satır başları kesik/parlak" },
+    { "field": "description", "level": "overwrite" }
+  ]
+}</pre>
+            </div>
+          </sc-if>
+        </div>
+
+      </div>
+
+      <div style="width:520px;flex:none;background:#fff;border:1.5px dashed #b9b4a4;border-radius:12px;padding:18px 22px;display:flex;flex-direction:column;gap:8px;align-self:flex-start">
+        <span style="font:700 13.5px 'Space Grotesk';color:#3a4147">Ne değişti</span>
+        <ul style="margin:0;padding-left:18px;font:400 12.5px/1.75 'Karla';color:#6a7065">
+          <li><strong>Sekmeler kalktı.</strong> Tek akış: kimlik → gerekçe → uyarılar → sizin değişiklikleriniz → önerinin tamamı → teknik künye. Eski "Metadata" sekmesi en alttaki katlanır künyeye indi; operatör gidip gelmiyor.</li>
+          <li><strong>Uyarılar madde madde ve üstte.</strong> Üç şiddet, üç renk: <em>net okunamadı</em> (kehribar), <em>üzerine yazılır</em> (mavi), <em>dokunulmuyor / eksik kalır</em> (kesikli nötr). Şemaya <span style="font-family:'IBM Plex Mono';font-size:11.5px">warnings[]</span> olarak eklenir; sütun listeyi olduğu gibi basar.</li>
+          <li><strong>"Eksik kalacak alan yok" da bir cevaptır</strong> — boş bırakılmaz, tek satır yeşil onay olarak yazılır.</li>
+          <li><strong>Alan ağacı iki kolon değil.</strong> 20rem'de sağa yaslı değerler kesiliyordu: ad üstte rozetiyle, değer altında tam genişlik, üç satırda kırpılıp "tamamını gör". Sayısal künye tek istisna — orada iki kolon doğru.</li>
+          <li><strong>Dil seçici "Önerinin tamamı" başlığının içinde</strong>, sütunun tepesinde değil: yalnız metin alanlarını değiştirdiğini orada görüyorsunuz.</li>
+          <li><strong>Operatör sapmaları ayrı bölüm.</strong> Üstü çizili asistan değeri → uygulanacak değer. Sapma yoksa bölüm hiç çizilmez.</li>
+          <li><strong>On tipin hepsi bu iskeleti kullanır.</strong> Tipe özel olan tek şey "Önerinin tamamı" içindeki alan listesidir; kimlik kartı, gerekçe, uyarılar, sapmalar ve künye her tipte aynı.</li>
+          <li><strong>Başlık bloğu yapışkandır</strong> (kimlik + gerekçe); altı kayar. Uzun önerilerde neyin üstünde çalıştığınız kaybolmaz.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;teknikAcik&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Öneri sütunu&quot;},&quot;sapmaVar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Öneri sütunu&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const teknikAcik = this.props.teknikAcik ?? true;
+    return {
+      teknikAcik,
+      teknikCaret: teknikAcik ? '⌄' : '›',
+      sapmaVar: this.props.sapmaVar ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

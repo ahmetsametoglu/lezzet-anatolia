@@ -188,6 +188,32 @@
           </div>
         </div>
 
+        <sc-if value="{{ koleksiyonVar }}" hint-placeholder-val="{{ true }}">
+          <div style="border-top:1px solid #e6dfcd;padding:44px 48px 48px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:600 13px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Koleksiyonlar</span>
+                <h2 style="margin:0;font:600 28px 'Lora';color:#343b41">Döneme özel seçkiler</h2>
+              </div>
+              <span onClick="{{ git.katalog }}" style="font:700 15px 'Karla';color:#5f7a2c;cursor:pointer">Tüm katalog →</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+              <sc-for list="{{ koleksiyonlar }}" as="k" hint-placeholder-count="2">
+                <div onClick="{{ k.ac }}" style="position:relative;aspect-ratio:16/9;border-radius:22px;overflow:hidden;cursor:pointer;background:#e2d8bd;transition:transform .18s,box-shadow .18s" style-hover="transform:translateY(-4px);box-shadow:0 12px 26px rgba(58,65,71,.18)">
+                  <image-slot id="w-kol-{{ k.id }}" shape="rect" placeholder="{{ k.n }} koleksiyonu — 16:9 bant görseli"></image-slot>
+                  <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 34%,rgba(21,23,15,.8) 100%);pointer-events:none"></div>
+                  <div style="position:absolute;left:24px;right:24px;bottom:22px;display:flex;flex-direction:column;gap:5px;pointer-events:none">
+                    <span style="font:600 12px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#c6d49a">Koleksiyon</span>
+                    <span style="font:600 28px/1.15 'Lora';color:#f7f4ea">{{ k.n }}</span>
+                    <span style="font:400 14px/1.5 'Karla';color:#e3ded0">{{ k.d }}</span>
+                    <span style="font:700 13.5px 'Karla';color:#f3efe2;margin-top:3px">{{ k.sayi }} ürün · Koleksiyona git →</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
         <div style="border-top:1px solid #e6dfcd;padding:44px 48px 48px;display:flex;flex-direction:column;gap:18px">
           <div style="display:flex;align-items:baseline;justify-content:space-between">
             <h2 style="margin:0;font:600 28px 'Lora';color:#343b41">Vitrindekiler</h2>
@@ -209,6 +235,37 @@
             </sc-for>
           </div>
         </div>
+
+        <sc-if value="{{ firsatVar }}" hint-placeholder-val="{{ true }}">
+          <div style="margin:44px 48px;background:#f9ede2;border:1.5px solid #e8c9b3;border-radius:22px;padding:30px 34px 34px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:20px">
+              <div style="display:flex;align-items:center;gap:16px">
+                <span style="background:#b05c2e;color:#fff;font:700 12px 'Karla';letter-spacing:.1em;text-transform:uppercase;padding:6px 13px;border-radius:12px;flex:none">Stokla sınırlı</span>
+                <h2 style="margin:0;font:600 28px 'Lora';color:#343b41">Bu haftanın fırsatları</h2>
+              </div>
+              <span onClick="{{ git.firsatlar }}" style="font:700 15px 'Karla';color:#b05c2e;cursor:pointer;flex:none">Tüm fırsatlar →</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+              <sc-for list="{{ firsatlar }}" as="f" hint-placeholder-count="3">
+                <div style="background:#fff;border:1px solid #e8c9b3;border-radius:18px;padding:14px;display:flex;gap:14px;align-items:center;transition:box-shadow .14s" style-hover="box-shadow:0 8px 22px rgba(58,65,71,.12)">
+                  <div onClick="{{ f.ac }}" style="width:92px;height:92px;flex:none;background:#f0e9d6;border-radius:12px;overflow:hidden;cursor:pointer"><image-slot id="w-frs-{{ f.id }}" shape="rect" placeholder="{{ f.n }}"></image-slot></div>
+                  <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
+                    <span onClick="{{ f.ac }}" style="font:700 16px 'Karla';color:#3a4147;cursor:pointer">{{ f.n }}</span>
+                    <span style="font:400 13px 'Karla';color:#8a8270">{{ f.w }} · {{ f.u }}</span>
+                    <div style="display:flex;align-items:baseline;gap:8px">
+                      <span style="font:700 18px 'Karla';color:#b05c2e">{{ f.prF }}</span>
+                      <span style="font:400 14px 'Karla';color:#b3ab97;text-decoration:line-through">{{ f.wasF }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px">
+                      <span style="font:600 12px 'Karla';color:#b05c2e;background:#f9ede2;border-radius:10px;padding:3px 9px">{{ f.lim }}</span>
+                      <span onClick="{{ f.ekle }}" style="background:#5f7a2c;color:#fff;font:700 13px 'Karla';padding:8px 14px;border-radius:18px;cursor:pointer;flex:none;transition:background .15s" style-hover="background:#4a6121">{{ f.ekleYazi }}</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
 
         <div style="background:#343b41;padding:44px 48px 48px;display:flex;flex-direction:column;gap:20px">
           <div style="display:flex;align-items:baseline;justify-content:space-between">
@@ -236,7 +293,7 @@
           </div>
         </div>
 
-        <div style="background:#f0e9d6;border-bottom:1px solid #e0d8c2;padding:44px 48px 48px;display:flex;flex-direction:column;gap:18px">
+        <div style="border-bottom:1px solid #e6dfcd;padding:44px 48px 48px;display:flex;flex-direction:column;gap:18px">
           <div style="display:flex;align-items:baseline;justify-content:space-between">
             <div style="display:flex;flex-direction:column;gap:4px">
               <span style="font:600 13px 'Karla';letter-spacing:.12em;text-transform:uppercase;color:#5f7a2c">Sofradan Fikirler</span>
@@ -1683,12 +1740,12 @@ class Component extends DCLogic {
     {id:'suborek', n:'Su Böreği', c:'Börekler', w:'1,2 kg tepsi', u:'10,42 €/kg', pr:12.5, b2b:9.9, rt:'4,9', rc:57, zone:'bolge', d:'Haşlanmış yufka, bol tereyağı ve peynir. Fırında 25 dakika — üstü çıtır, içi yumuşak.', al:['Gluten','Süt','Yumurta']},
     {id:'manti', n:'Kayseri Mantısı', c:'Hamur İşleri', w:'1 kg', u:'9,90 €/kg', pr:9.9, b2b:7.9, rt:'4,6', rc:34, zone:'bolge', d:'Elde kapatılmış küçük mantı. Kaynayan suda 8 dakika, üstüne sarımsaklı yoğurt ve kızgın tereyağı.', al:['Gluten','Yumurta']},
     {id:'iclikofte', n:'İçli Köfte', c:'Et Ürünleri', w:'10 adet', u:'1,19 €/adet', pr:11.9, b2b:9.5, rt:'4,5', rc:19, zone:'bolge', d:'İnce bulgur kabuk, bol soğanlı kıyma. Kızgın yağda 5 dakika.', al:['Gluten','Yumurta']},
-    {id:'sigara', n:'Sigara Böreği', c:'Börekler', w:'20 adet', u:'0,38 €/adet', pr:7.5, b2b:5.9, rt:'4,7', rc:28, zone:'her', d:'Beyaz peynir ve maydanozla sarılmış el yapımı sigara böreği. Fritözde 3 dakika.', al:['Gluten','Süt']},
+    {id:'sigara', n:'Sigara Böreği', c:'Börekler', w:'20 adet', u:'0,38 €/adet', pr:7.5, was:9.2, b2b:5.9, lim:'Bu fiyattan en fazla 4 paket', rt:'4,7', rc:28, zone:'her', d:'Beyaz peynir ve maydanozla sarılmış el yapımı sigara böreği. Fritözde 3 dakika.', al:['Gluten','Süt']},
     {id:'acma', n:'Zeytinli Açma', c:'Kahvaltılık', w:'6 adet', u:'0,82 €/adet', pr:4.9, b2b:3.9, rt:'4,4', rc:12, zone:'her', d:'Siyah zeytin ezmesiyle yoğrulmuş yumuşak açma. Isıtıp çayın yanına.', al:['Gluten','Süt','Yumurta']},
     {id:'ezine', n:'Ezine Peyniri', c:'Kahvaltılık', w:'500 g', u:'26,80 €/kg', pr:13.4, b2b:10.9, rt:'4,8', rc:22, zone:'her', d:'Tam yağlı koyun-keçi karışımı, salamurada olgunlaşmış Ezine peyniri.', al:['Süt']},
     {id:'ezme', n:'Acılı Ezme', c:'Kahvaltılık', w:'450 g kavanoz', u:'12,00 €/kg', pr:5.4, b2b:4.3, rt:'4,6', rc:15, zone:'her', d:'Taş dövme usulü, közlenmiş biberli ezme. Kebabın ve kahvaltının yanında.', al:[]},
     {id:'fistik', n:'Antep Fıstığı', c:'Çerezler', w:'500 g', u:'37,80 €/kg', pr:18.9, b2b:15.4, rt:'4,9', rc:31, zone:'kargo', d:'Yeni mahsul, iri boy Antep fıstığı. Kavrulmuş, tuzsuz.', al:['Fıstık']},
-    {id:'sucuktatlisi', n:'Sucuk Tatlısı', c:'Tatlılar', w:'350 g', u:'19,71 €/kg', pr:6.9, b2b:5.5, rt:'4,3', rc:9, zone:'her', d:'Ceviz dizili, pekmezli sucuk tatlısı. Dilimleyip ikram edin.', al:['Kuruyemiş']},
+    {id:'sucuktatlisi', n:'Sucuk Tatlısı', c:'Tatlılar', w:'350 g', u:'19,71 €/kg', pr:6.9, was:8.4, b2b:5.5, rt:'4,3', rc:9, zone:'her', d:'Ceviz dizili, pekmezli sucuk tatlısı. Dilimleyip ikram edin.', al:['Kuruyemiş']},
     {id:'kadayif', n:'Tel Kadayıf', c:'Tatlılar', w:'500 g', u:'17,80 €/kg', pr:8.9, b2b:7.1, sold:true, rt:'4,5', rc:11, zone:'her', d:'Elde çekilmiş tel kadayıf. Tereyağıyla kavurup şerbetleyin.', al:['Gluten']}
   ];
 
@@ -1699,6 +1756,11 @@ class Component extends DCLogic {
   PKG = [
     {id:'bayram', n:'Bayram Sofrası', adet:'8 ürün · 6 kişilik', pr:49.9, b2b:41.9, d:'Börekten baklavaya, bayram sabahı telaşsız olsun.', kg:'4,2 kg', ic:['Su Böreği','Baklava','Sarma','İçli Köfte','Mantı','Gözleme','Sucuk Tatlısı','Antep Fıstığı'], al:['Gluten','Süt','Yumurta','Fıstık']},
     {id:'kahvalti', n:'Pazar Kahvaltısı', adet:'6 ürün · 4 kişilik', pr:34.9, b2b:28.9, d:'Açma, börek, peynir ve ezmelerle kalabalık kahvaltı.', kg:'2,8 kg', ic:['Zeytinli Açma','Sigara Böreği','Ezine Peyniri','Acılı Ezme','Gözleme','Su Böreği'], al:['Gluten','Süt','Yumurta']}
+  ];
+
+  KOL = [
+    {id:'bayram', n:'Bayram', d:'Bayram sabahına yakışan börek ve tatlılar', urun:['baklava','suborek','sucuktatlisi','fistik','kadayif']},
+    {id:'yeni', n:'Yeni Gelenler', d:'Rafa bu ay giren ürünler', urun:['ezme','acma','iclikofte']}
   ];
 
   RCP = [
@@ -1753,7 +1815,7 @@ class Component extends DCLogic {
 
   state = {
     route:null, param:null, stack:[],
-    q:'', cat:'Tümü', sort:'onerilen', onlyDisc:false, onlyZone:false,
+    q:'', cat:'Tümü', kol:'', sort:'onerilen', onlyDisc:false, onlyZone:false,
     sepet:[{id:'baklava',qty:2},{id:'gozleme',qty:5},{id:'pkg:bayram',qty:1}],
     kupon:'HOSGELDIN10', dil:'TR', yerPanel:false, yerKod:'67000', yerUlke:'FR',
     udAdet:1, udBoy:0, toast:null, haberVerilen:[],
@@ -1862,6 +1924,7 @@ class Component extends DCLogic {
     const r = s.route || this.props.baslangicEkran || 'anasayfa';
     const git = {};
     ['anasayfa','katalog','urun','paketler','paketDetay','tarifler','tarif','kesif','sepet','checkout','onay','siparisler','siparisDetay','talepler','talepDetay','yeniTalep','geriBildirim','hesap','giris','pro','statik','hata'].forEach(k => { git[k] = () => self.nav(k); });
+    git.firsatlar = () => self.setState({ cat:'Tümü', kol:'', q:'', onlyDisc:true }, () => self.nav('katalog'));
 
     const yollar = { anasayfa:'/', katalog:'/katalog', urun:'/urun/' + (s.param || ''), paketler:'/paketler', paketDetay:'/paket/' + (s.param || ''), tarifler:'/tarifler', tarif:'/tarif/' + (s.param || ''), kesif:'/kesif', sepet:'/sepet', checkout:'/checkout', onay:'/siparis-alindi', siparisler:'/hesap/siparisler', siparisDetay:'/hesap/siparis/' + (s.param || ''), talepler:'/hesap/talepler', talepDetay:'/hesap/talep/' + (s.param || ''), yeniTalep:'/destek/yeni', geriBildirim:'/geri-bildirim', hesap:'/hesap', giris:'/giris', pro:'/professionnels', statik:'/' + s.statikSayfa, hata:'/404' };
     const adlar = { anasayfa:'ANASAYFA', katalog:'KATALOG', urun:'ÜRÜN', paketler:'PAKETLER', paketDetay:'PAKET', tarifler:'TARİFLER', tarif:'TARİF', kesif:'KEŞİF', sepet:'SEPET', checkout:'CHECKOUT', onay:'ONAY', siparisler:'SİPARİŞLER', siparisDetay:'SİPARİŞ', talepler:'TALEPLER', talepDetay:'TALEP', yeniTalep:'DESTEK', geriBildirim:'GERİ BİLDİRİM', hesap:'HESAP', giris:'GİRİŞ', pro:'PRO', statik:'BİLGİ', hata:'HATA' };
@@ -1894,13 +1957,21 @@ class Component extends DCLogic {
     else if (persona === 'b2bOnayli') b2bSerit = { etiket:'TOPTAN', yazi:'Restaurant Anatolie SARL · toptan fiyat listeniz açık, KDV hariç fiyatlar gösterilir.', link:'Hesabım', ac:() => self.nav('hesap') };
 
     const tumUrun = this.P.map(p => this.kart(p));
-    const firsatlar = this.P.filter(p => p.was).map(p => this.kart(p)).slice(0, 3);
+    const firsatlar = this.P.filter(p => p.was && !p.sold).map(p => this.kart(p))
+      .map(k => Object.assign({}, k, { lim: k.lim || 'Stokla sınırlı' })).slice(0, 3);
 
-    const kesilenler = this.CATS.map(c => ({ n:c, sayi: self.P.filter(p => p.c === c).length, ac:() => self.setState({ cat:c, q:'', onlyDisc:false }, () => self.nav('katalog')) }));
+    const kesilenler = this.CATS.map(c => ({ n:c, sayi: self.P.filter(p => p.c === c).length, ac:() => self.setState({ cat:c, kol:'', q:'', onlyDisc:false }, () => self.nav('katalog')) }));
+
+    const koleksiyonlar = this.KOL.map(k => ({
+      id:k.id, n:k.n, d:k.d, sayi:k.urun.length,
+      ac:() => self.setState({ kol:k.id, cat:'Tümü', q:'', onlyDisc:false }, () => self.nav('katalog'))
+    }));
+    const aktifKol = this.KOL.find(k => k.id === s.kol) || null;
 
     const sr = { onerilen:'Öne çıkanlar', artan:'Fiyat: artan', azalan:'Fiyat: azalan', yeni:'Yeniler' };
     let liste = this.P.filter(p => {
       if (s.cat !== 'Tümü' && p.c !== s.cat) return false;
+      if (aktifKol && aktifKol.urun.indexOf(p.id) < 0) return false;
       if (s.q && p.n.toLocaleLowerCase('tr').indexOf(s.q.toLocaleLowerCase('tr')) < 0) return false;
       if (s.onlyDisc && !p.was) return false;
       if (s.onlyZone && p.zone === 'kargo' && bolgeIci) return false;
@@ -1910,15 +1981,15 @@ class Component extends DCLogic {
     if (s.sort === 'azalan') liste = liste.slice().sort((a, b) => this.fiyat(b) - this.fiyat(a));
 
     const cipler = ['Tümü'].concat(this.CATS).map(c => ({
-      n:c, ac:() => self.setState({ cat:c }),
+      n:c, ac:() => self.setState({ cat:c, kol:'' }),
       bg: s.cat === c ? '#5f7a2c' : '#fff', fg: s.cat === c ? '#fff' : '#3a4147', bd: s.cat === c ? '#5f7a2c' : '#d8cfb6'
     }));
 
     const kat = {
-      baslik: s.q ? 'Arama: ' + s.q : (s.onlyDisc ? 'Fırsatlar' : (s.cat === 'Tümü' ? 'Katalog' : s.cat)),
+      baslik: s.q ? 'Arama: ' + s.q : (aktifKol ? aktifKol.n : (s.onlyDisc ? 'Fırsatlar' : (s.cat === 'Tümü' ? 'Katalog' : s.cat))),
       aramaVar: !!s.q, sayi: liste.length, bos: liste.length === 0,
       cipler, urunler: liste.map(p => self.kart(p)), siralaAd: sr[s.sort],
-      sifirla: () => self.setState({ cat:'Tümü', q:'', onlyDisc:false, onlyZone:false }),
+      sifirla: () => self.setState({ cat:'Tümü', kol:'', q:'', onlyDisc:false, onlyZone:false }),
       bolgeFg: s.onlyZone ? '#fff' : '#4a6121', bolgeBg: s.onlyZone ? '#5f7a2c' : '#eef2e2', bolgeBd: s.onlyZone ? '#5f7a2c' : '#cddbb0',
       indFg: s.onlyDisc ? '#fff' : '#b05c2e', indBg: s.onlyDisc ? '#b05c2e' : '#f9ede2', indBd: s.onlyDisc ? '#b05c2e' : '#e8c9b3'
     };
@@ -1981,7 +2052,9 @@ class Component extends DCLogic {
       sepetSayi: sepetSayi || null,
       b2bSerit,
       toast: s.toast ? { yazi: s.toast.yazi, link: s.toast.link, ac: () => { self.setState({ toast:null }); self.nav(s.toast.hedef); } } : null,
-      kategoriler: kesilenler, firsatlar, vitrin: tumUrun.slice(0, 4),
+      kategoriler: kesilenler, firsatlar, firsatVar: firsatlar.length > 0,
+      koleksiyonlar, koleksiyonVar: koleksiyonlar.length > 0,
+      vitrin: tumUrun.slice(0, 4),
       paketler: this.PKG.map(pk => ({ n:pk.n, adet:pk.adet, d:pk.d, prF: E(this.b2b() ? pk.b2b : pk.pr), ac:() => self.nav('paketDetay', pk.id) })),
       tarifler: this.RCP.map(rc => ({ n:rc.n, meta:rc.meta, ac:() => self.nav('tarif', rc.id) })),
       statik: { sss:() => self.setState({ statikSayfa:'sss' }, () => self.nav('statik')), hakkinda:() => self.setState({ statikSayfa:'hakkinda' }, () => self.nav('statik')), gizlilik:() => self.setState({ statikSayfa:'gizlilik' }, () => self.nav('statik')), kunye:() => self.setState({ statikSayfa:'kunye' }, () => self.nav('statik')) },

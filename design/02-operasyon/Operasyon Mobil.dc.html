@@ -2677,7 +2677,7 @@
         <div style="padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div onClick="{{ go.sosyal }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-height:96px">
             <span style="font:600 22px 'Lora'">3</span>
-            <span style="font:700 13px 'Karla';margin-top:auto">Sosyal gelen kutusu</span>
+            <span style="font:700 13px 'Karla';margin-top:auto">Sosyal Mesajlar</span>
             <span style="font:400 10.5px 'Karla';color:#b05c2e">1 taslak onay bekliyor</span>
           </div>
           <div onClick="{{ go.gunOzeti }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-height:96px">
@@ -2898,102 +2898,100 @@
         <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
           <div onClick="{{ go.karar }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
           <div style="display:flex;flex-direction:column;flex:1">
-            <span style="font:600 20px 'Lora'">Gelen Kutusu</span>
-            <span style="font:400 11.5px 'Karla';color:#8a8270">WhatsApp · Messenger · Instagram</span>
+            <span style="font:600 20px 'Lora'">Sosyal Mesajlar</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">{{ sos.baslik }}</span>
           </div>
         </div>
-        <div style="padding:0 20px 12px;display:flex;gap:7px">
-          <span onClick="{{ pick.kanal_tum }}" style="height:38px;padding:0 14px;border-radius:13px;border:1.5px solid {{ c.kanal_tum.bd }};background:{{ c.kanal_tum.bg }};color:{{ c.kanal_tum.fg }};display:flex;align-items:center;font:700 12px 'Karla';cursor:pointer">tümü</span>
-          <span onClick="{{ pick.kanal_wa }}" style="height:38px;padding:0 14px;border-radius:13px;border:1.5px solid {{ c.kanal_wa.bd }};background:{{ c.kanal_wa.bg }};color:{{ c.kanal_wa.fg }};display:flex;align-items:center;font:700 12px 'Karla';cursor:pointer">WhatsApp</span>
-          <span onClick="{{ pick.kanal_ms }}" style="height:38px;padding:0 14px;border-radius:13px;border:1.5px solid {{ c.kanal_ms.bd }};background:{{ c.kanal_ms.bg }};color:{{ c.kanal_ms.fg }};display:flex;align-items:center;font:700 12px 'Karla';cursor:pointer">Messenger</span>
+        <div style="padding:0 20px 12px;display:flex;align-items:center;gap:6px;overflow-x:auto">
+          <sc-for list="{{ sos.durumCipleri }}" as="d" hint-placeholder-count="2">
+            <span onClick="{{ d.bas }}" style="height:36px;padding:0 12px;border-radius:13px;border:1.5px solid {{ d.bd }};background:{{ d.bg }};color:{{ d.fg }};display:flex;align-items:center;font:700 12px 'Karla';cursor:pointer;flex:none">{{ d.etiket }}</span>
+          </sc-for>
+          <span style="width:1.5px;height:22px;background:#e7e2d2;flex:none"></span>
+          <sc-for list="{{ sos.kanalCipleri }}" as="k" hint-placeholder-count="4">
+            <span onClick="{{ k.bas }}" style="height:36px;padding:0 11px;border-radius:13px;border:1.5px solid {{ k.bd }};background:{{ k.bg }};color:{{ k.fg }};display:flex;align-items:center;justify-content:center;font:700 12px 'Karla';cursor:pointer;flex:none">{{ k.ikon }}</span>
+          </sc-for>
         </div>
         <div style="padding:0 20px 24px;display:flex;flex-direction:column;gap:8px">
-          <div onClick="{{ go.konusma }}" style="background:#fbfaf4;border:1.5px solid #5f7a2c;border-radius:18px;padding:14px 15px;display:flex;align-items:flex-start;gap:11px;cursor:pointer">
-            <span style="width:34px;height:34px;border-radius:11px;background:#e3ecd2;color:#46601f;font:800 12px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">MA</span>
-            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font:700 13.5px 'Karla';flex:1">Mehmet Aydın</span>
-                <span style="font:400 10.5px 'Karla';color:#8a8270">13:22</span>
+          <sc-for list="{{ sos.liste }}" as="m" hint-placeholder-count="4">
+            <div onClick="{{ m.ac }}" style="background:#fbfaf4;border:1.5px solid {{ m.bd }};border-radius:18px;padding:14px 15px;display:flex;align-items:flex-start;gap:11px;cursor:pointer">
+              <span style="width:34px;height:34px;border-radius:11px;background:#e7e2d2;color:#6d7261;font:800 12px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">{{ m.bas }}</span>
+              <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="font:700 13.5px 'Karla';flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.ad }}</span>
+                  <span style="color:{{ m.penFg }};background:{{ m.penBg }};font:700 9.5px 'Karla';border-radius:8px;padding:3px 7px;flex:none">{{ m.pencere }}</span>
+                  <span style="font:400 10.5px 'Karla';color:#8a8270;flex:none">{{ m.saat }}</span>
+                </div>
+                <span style="font:400 11.5px/1.45 'Karla';color:#6d7261;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.onizleme }}</span>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+                  <sc-for list="{{ m.ikonlar }}" as="i" hint-placeholder-count="1">
+                    <span style="color:{{ i.fg }};background:{{ i.bg }};border-radius:8px;padding:4px 6px;display:flex;align-items:center;flex:none">{{ i.ikon }}</span>
+                  </sc-for>
+                  <sc-if value="{{ m.taslakVar }}" hint-placeholder-val="{{ false }}"><span style="background:#f6e6d6;color:#b05c2e;font:800 9px 'Karla';letter-spacing:.1em;border-radius:8px;padding:4px 7px">TASLAK ONAY BEKLİYOR</span></sc-if>
+                  <sc-if value="{{ m.bekleyen }}" hint-placeholder-val="{{ false }}"><span style="background:#f6e6d6;color:#b05c2e;font:800 9px 'Karla';letter-spacing:.1em;border-radius:8px;padding:4px 7px">CEVAP BEKLİYOR</span></sc-if>
+                </div>
               </div>
-              <span style="font:400 11.5px/1.45 'Karla';color:#6d7261">Bu sabah gelen iki tepsi su böreği kokuyordu…</span>
-              <span style="background:#f6e6d6;color:#b05c2e;font:800 9px 'Karla';letter-spacing:.1em;border-radius:8px;padding:4px 7px;align-self:flex-start;margin-top:3px">TASLAK ONAY BEKLİYOR</span>
             </div>
-          </div>
-          <div onClick="{{ go.konusma }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 15px;display:flex;align-items:flex-start;gap:11px;cursor:pointer">
-            <span style="width:34px;height:34px;border-radius:11px;background:#e7e2d2;color:#6d7261;font:800 12px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">CW</span>
-            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font:700 13.5px 'Karla';flex:1">Claire Weber</span>
-                <span style="font:400 10.5px 'Karla';color:#8a8270">11:48</span>
-              </div>
-              <span style="font:400 11.5px/1.45 'Karla';color:#6d7261">Cumartesi teslimi mümkün mü?</span>
-            </div>
-          </div>
-          <div onClick="{{ go.konusma }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 15px;display:flex;align-items:flex-start;gap:11px;cursor:pointer">
-            <span style="width:34px;height:34px;border-radius:11px;background:#e7e2d2;color:#6d7261;font:800 12px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">SK</span>
-            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span style="font:700 13.5px 'Karla';flex:1">Sabine Krüger</span>
-                <span style="font:400 10.5px 'Karla';color:#8a8270">dün</span>
-              </div>
-              <span style="font:400 11.5px/1.45 'Karla';color:#6d7261">Teşekkürler, her şey yolunda geldi.</span>
-            </div>
-          </div>
+          </sc-for>
+          <sc-if value="{{ sos.bos }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 12px/1.6 'Karla';color:#8a8270;padding:18px 2px">Bu süzgeçte konuşma yok.</span>
+          </sc-if>
         </div>
       </div>
     </sc-if>
 
     <sc-if value="{{ is.konusma }}">
       <div data-screen-label="Yönetim · Konuşma" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
-        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 14px;border-bottom:1.5px solid #e7e2d2">
+        <div style="display:flex;align-items:center;gap:8px;padding:18px 16px 14px;border-bottom:1.5px solid #e7e2d2">
           <div onClick="{{ go.sosyal }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
-          <span style="width:38px;height:38px;border-radius:50%;background:#e0b487;color:#7a4a1e;display:flex;align-items:center;justify-content:center;font:800 13px 'Karla';flex:none">MA</span>
-          <div style="display:flex;flex-direction:column;flex:1;min-width:0">
-            <span style="font:700 15px 'Karla';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Mehmet Aydın</span>
-            <span style="font:400 11px 'Karla';color:#8a8270;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">WhatsApp · B2B · Oberjaegerhof</span>
+          <span style="width:38px;height:38px;border-radius:50%;background:#e0b487;color:#7a4a1e;display:flex;align-items:center;justify-content:center;font:800 13px 'Karla';flex:none">{{ sos.bas }}</span>
+          <div style="display:flex;flex-direction:column;flex:1;min-width:0;gap:2px">
+            <span style="font:700 15px 'Karla';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ sos.ad }}</span>
+            <div style="display:flex;align-items:center;gap:6px;min-width:0">
+              <span style="color:{{ sos.penFg }};background:{{ sos.penBg }};font:700 9px 'Karla';border-radius:6px;padding:2px 5px;flex:none">{{ sos.pencereKisa }}</span>
+              <span style="font:400 11px 'Karla';color:#8a8270;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">{{ sos.alt }}</span>
+            </div>
           </div>
+          <sc-if value="{{ sos.cokKanal }}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{ sos.sekmeler }}" as="k" hint-placeholder-count="2">
+              <span onClick="{{ k.sec }}" style="width:26px;height:26px;border-radius:8px;border:1.5px solid {{ k.bd }};background:{{ k.bg }};color:{{ k.fg }};display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none">{{ k.ikon }}</span>
+            </sc-for>
+          </sc-if>
           <div onClick="{{ openAksiyon }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="#2f353a" stroke="none"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg></div>
         </div>
 
-        <div onClick="{{ openAksiyon }}" style="margin:8px 20px 0;background:#fbf3e8;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:8px;cursor:pointer">
-          <span style="width:7px;height:7px;border-radius:50%;background:#b05c2e;flex:none"></span>
-          <span style="font:700 11px 'Karla';color:#8a5a22;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">22 saat penceresi · asistan modu: {{ modEtiketi }}</span>
-          <span style="font:700 10.5px 'Karla';color:#8a5a22">aksiyon ›</span>
-        </div>
 
         <div style="padding:12px 20px 4px;display:flex;flex-direction:column;gap:10px">
-          <span style="align-self:center;font:700 10px 'Karla';letter-spacing:.14em;color:#a8a191;background:#e7e2d2;border-radius:9px;padding:5px 11px">28 AĞUSTOS</span>
+          <span style="align-self:center;font:700 10px 'Karla';letter-spacing:.14em;color:#a8a191;background:#e7e2d2;border-radius:9px;padding:5px 11px">{{ sos.tarih }}</span>
 
-          <div style="align-self:flex-start;max-width:82%;display:flex;flex-direction:column;gap:4px">
-            <div style="background:#fff;border:1.5px solid #e7e2d2;border-radius:16px 16px 16px 5px;padding:11px 13px">
-              <span style="font:400 12.5px/1.5 'Karla'">Bu sabah gelen iki tepsi su böreği kokuyordu, kuryeye geri verdik.</span>
+          <sc-for list="{{ sos.mesajlar }}" as="m" hint-placeholder-count="3">
+            <div style="align-self:{{ m.hiza }};max-width:84%;display:flex;flex-direction:column;gap:4px">
+              <div style="background:{{ m.bg }};border:1.5px solid {{ m.bd }};border-radius:{{ m.kose }};padding:11px 13px">
+                <span style="font:400 12.5px/1.5 'Karla';color:{{ m.fg }}">{{ m.text }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:0 3px;align-self:{{ m.hiza }}">
+                <sc-if value="{{ m.ceviri }}" hint-placeholder-val="{{ false }}">
+                  <span style="font:700 10px 'Karla';letter-spacing:.08em;color:#8a8270">ÇEVİRİ · {{ m.ceviri }}</span>
+                  <span style="font:700 10px 'Karla';color:#5f7a2c;text-decoration:underline;cursor:pointer">orijinali gör</span>
+                </sc-if>
+                <span style="font:400 10px 'Karla';color:#a8a191">{{ m.imza }}</span>
+              </div>
             </div>
-            <div style="display:flex;align-items:center;gap:7px;padding-left:3px">
-              <span style="font:700 10px 'Karla';letter-spacing:.08em;color:#8a8270">ÇEVİRİ · DE → TR</span>
-              <span style="font:700 10px 'Karla';color:#5f7a2c;text-decoration:underline;cursor:pointer">orijinali gör</span>
-              <span style="font:400 10px 'Karla';color:#a8a191">13:22</span>
-            </div>
-          </div>
+          </sc-for>
 
-          <div style="align-self:flex-end;max-width:82%;background:#2f353a;border-radius:16px 16px 5px 16px;padding:11px 13px">
-            <span style="font:400 12.5px/1.5 'Karla';color:#f5f1e6">Çok üzgünüz Mehmet Bey. Kaydı açtık, bugün içinde dönüş yapıyoruz.</span>
-          </div>
-          <span style="font:400 10.5px 'Karla';color:#a8a191;align-self:flex-end">operatör · Elif · 13:31</span>
-
-          <sc-if value="{{ taslakYok }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ sos.taslakVar }}" hint-placeholder-val="{{ true }}">
             <div style="align-self:flex-end;max-width:86%;display:flex;flex-direction:column;gap:5px;align-items:flex-end">
               <div style="background:#f2f7e8;border:1.5px dashed #a9bf84;border-radius:16px 16px 5px 16px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
                 <div style="display:flex;align-items:center;gap:10px">
                   <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#46601f;flex:1">ASİSTAN TASLAĞI · GÖNDERİLMEDİ</span>
                   <span onClick="{{ act.taslakAl }}" style="width:20px;height:20px;border-radius:7px;background:#e3ecd2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6d7261" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
                 </div>
-                <span style="font:400 12.5px/1.5 'Karla';color:#2f353a">İki tepsi için bedelsiz yeniden gönderim planladık, yarın 09:00'da kapınızda. Yaşadığınız aksaklık için özür dileriz.</span>
+                <span style="font:400 12.5px/1.5 'Karla';color:#2f353a">{{ sos.taslakText }}</span>
               </div>
               <div style="display:flex;align-items:center;gap:12px">
                 <span onClick="{{ act.taslakAl }}" style="font:700 10.5px 'Karla';color:#5f7a2c;cursor:pointer">düzenle</span>
                 <span style="height:32px;border-radius:11px;background:#5f7a2c;color:#f5f1e6;display:flex;align-items:center;padding:0 14px;font:700 11.5px 'Karla';cursor:pointer">Gönder</span>
               </div>
-              <span style="font:400 10px 'Karla';color:#a8a191">Hibrit modda asistan kendi başına göndermez.</span>
+              <span style="font:400 10px 'Karla';color:#a8a191">{{ sos.taslakNotu }}</span>
             </div>
           </sc-if>
           <sc-if value="{{ taslakAlindi }}" hint-placeholder-val="{{ false }}">
@@ -3002,11 +3000,24 @@
         </div>
 
         <div style="flex:1;min-height:10px"></div>
-        <div style="position:sticky;bottom:0;z-index:20;padding:10px 16px 14px;display:flex;flex-direction:column;gap:7px;border-top:1.5px solid #e7e2d2;background:#f6f4ec">
-          <div style="display:flex;gap:8px;align-items:flex-end">
-            <textarea rows="1" placeholder="Cevap yaz…" style="flex:1;min-height:46px;max-height:96px;border:1.5px solid #ddd6c4;border-radius:15px;background:#fff;padding:13px 14px;font:400 13px/1.45 'Karla';outline:none;resize:none"></textarea>
-            <span style="width:46px;height:46px;border-radius:14px;background:#2f353a;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></span>
-          </div>
+        <div style="position:sticky;bottom:0;z-index:20;padding:10px 16px 14px;display:flex;flex-direction:column;gap:8px;border-top:1.5px solid #e7e2d2;background:#f6f4ec">
+          <sc-if value="{{ sos.pencereAcik }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <textarea rows="1" placeholder="{{ sos.yazAlani }}" style="flex:1;min-height:46px;max-height:96px;border:1.5px solid #ddd6c4;border-radius:15px;background:#fff;padding:13px 14px;font:400 13px/1.45 'Karla';outline:none;resize:none"></textarea>
+              <span style="width:46px;height:46px;border-radius:14px;background:#2f353a;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg></span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sos.pencereKapali }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#f6e6d6;border:1.5px solid #e6cdb0;border-radius:15px;padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:flex-start;gap:9px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="2" stroke-linecap="round" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+                <span style="font:500 11.5px/1.5 'Karla';color:#8a5a22;flex:1">{{ sos.kapaliMetin }}</span>
+              </div>
+              <sc-if value="{{ sos.kalipVar }}" hint-placeholder-val="{{ false }}">
+                <span style="height:42px;border-radius:13px;background:#b05c2e;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 12px 'Karla';cursor:pointer">Kalıp mesaj seç</span>
+              </sc-if>
+            </div>
+          </sc-if>
         </div>
       </div>
     </sc-if>
@@ -3878,6 +3889,28 @@
           <div style="display:flex;gap:7px">
             <span onClick="{{ pick.mod_insan }}" style="flex:1;height:38px;border-radius:12px;border:1.5px solid {{ c.mod_insan.bd }};background:{{ c.mod_insan.bg }};color:{{ c.mod_insan.fg }};display:flex;align-items:center;justify-content:center;font:700 11.5px 'Karla';cursor:pointer">insan</span>
             <span onClick="{{ pick.mod_hibrit }}" style="flex:1;height:38px;border-radius:12px;border:1.5px solid {{ c.mod_hibrit.bd }};background:{{ c.mod_hibrit.bg }};color:{{ c.mod_hibrit.fg }};display:flex;align-items:center;justify-content:center;font:700 11.5px 'Karla';cursor:pointer">hibrit</span>
+            <span onClick="{{ pick.mod_ai }}" style="flex:1;height:38px;border-radius:12px;border:1.5px solid {{ c.mod_ai.bd }};background:{{ c.mod_ai.bg }};color:{{ c.mod_ai.fg }};display:flex;align-items:center;justify-content:center;font:700 11.5px 'Karla';cursor:pointer">AI</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#8a8270">MÜŞTERİ BAĞLAMI</span>
+          <div style="background:#fff;border:1.5px solid #e7e2d2;border-radius:14px;padding:11px 13px;display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font:400 11px 'Karla';color:#8a8270;flex:1">Son sipariş</span><span style="font:700 11.5px 'Karla'">{{ sos.siparis }}</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="font:400 11px 'Karla';color:#8a8270;flex:1">Kampanya izni</span><span style="font:700 11.5px 'Karla'">{{ sos.izin }}</span></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font:400 11px 'Karla';color:#8a8270;flex:1">Kimlik çapası</span>
+              <sc-for list="{{ sos.capalar }}" as="a" hint-placeholder-count="1">
+                <span style="color:{{ a.fg }};background:{{ a.bg }};font:700 10px 'Karla';border-radius:8px;padding:3px 7px">{{ a.etiket }} · {{ a.kod }}</span>
+              </sc-for>
+              <sc-if value="{{ sos.capaYok }}" hint-placeholder-val="{{ false }}">
+                <span style="font:700 10.5px 'Karla';color:#b05c2e">kurulmadı · kur →</span>
+              </sc-if>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span onClick="{{ closeAksiyon }}" style="flex:1;height:46px;border-radius:14px;border:1.5px solid #c8d9ae;background:#f2f7e8;color:#46601f;display:flex;align-items:center;justify-content:center;font:700 12px 'Karla';cursor:pointer">Sipariş oluştur</span>
+            <span onClick="{{ closeAksiyon }}" style="flex:1;height:46px;border-radius:14px;border:1.5px solid #e2c4c0;background:#fff;color:#a44a3f;display:flex;align-items:center;justify-content:center;font:700 12px 'Karla';cursor:pointer">Talep aç</span>
           </div>
         </div>
 
@@ -3993,7 +4026,7 @@ const GROUPS = {
   tahsilat: ['nakit','kart'],
   kanal: ['tum','wa','ms','ig'],
   durum: ['tumu','bekleyen'],
-  mod: ['insan','hibrit'],
+  mod: ['insan','hibrit','ai'],
   boy: ['tek','dokuz'],
   akibet: ['stok','imha','jest']
 };
@@ -4170,6 +4203,8 @@ class Component extends DCLogic {
     kargoVerildi: false,
     kasa: { nakit: '0,00', kart: '0,00', cek: '0,00' },
     taslakAlindi: false,
+    sosyalSel: 0,
+    sosyalCh: null,
     cubukGizli: false,
     mikroAcik: false,
     cek: { m: 0, calisiyor: false, saat: null }
@@ -4621,8 +4656,124 @@ class Component extends DCLogic {
     const teslimHazir = st.durakOkunan >= 3 && (kanitZorunlu ? t.imzaAlindi : true) && mal === 'ok' && !!sel.yontem;
     c.teslimCta = teslimHazir ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
 
+    // --- SOSYAL MESAJLAR: müşteri bazlı liste + kanal sekmesi (WhatsApp · Messenger · Instagram) ---
+    const SK = {
+      wa: { ad:'WhatsApp', fg:'#46601f', bg:'#e3ecd2', bd:'#c8d9ae', kalip:true,
+            kapali:'Cevap süresi doldu — serbest mesaj gitmez. Yalnız onaylı kalıp mesaj (ücretli) gönderilebilir.' },
+      ms: { ad:'Messenger', fg:'#2f5f7a', bg:'#dbe7ee', bd:'#bcd3df', kalip:false,
+            kapali:'24 saat geçti — Messenger serbest mesaja kapalı. Müşterinin yeniden yazması gerekir.' },
+      ig: { ad:'Instagram', fg:'#8a4a6b', bg:'#f2e2ea', bd:'#e0c6d4', kalip:false,
+            kapali:'24 saat geçti — Instagram DM serbest mesaja kapalı. Kalıp mesaj yok.' },
+    };
+    const sIkon = (k, boy) => {
+      const E = React.createElement;
+      const sekil = {
+        wa: [E('path',{ key:'a', d:'M21 11.5a8.38 8.38 0 0 1-11.6 7.7L3 21l1.9-6.4A8.5 8.5 0 1 1 21 11.5z' })],
+        ms: [E('path',{ key:'a', d:'M12 3c-4.97 0-9 3.7-9 8.27 0 2.6 1.3 4.9 3.35 6.43V21l3.06-1.68c.83.23 1.7.35 2.59.35 4.97 0 9-3.7 9-8.4S16.97 3 12 3z' }), E('path',{ key:'b', d:'m7.6 13.9 2.9-3.1 2.2 1.7 2.1-2.4-2.9 3.1-2.2-1.7z' })],
+        ig: [E('rect',{ key:'a', x:3, y:3, width:18, height:18, rx:5 }), E('circle',{ key:'b', cx:12, cy:12, r:4.2 }), E('circle',{ key:'c', cx:17.2, cy:6.9, r:1, fill:'currentColor', stroke:'none' })],
+      };
+      return E('svg', { width:boy, height:boy, viewBox:'0 0 24 24', fill:'none', stroke:'currentColor', strokeWidth:1.9, strokeLinecap:'round', strokeLinejoin:'round', style:{ flex:'none' } }, ...sekil[k]);
+    };
+    const MUSTERI = [
+      { ad:'Mehmet Aydın', bas:'MA', alt:'B2B · Oberjaegerhof', dil:'DE', bekleyen:true, saat:'13:22',
+        siparis:'#2402 · 218,00 €', izin:'—', capa:{ wa:'+49 151 88 20 11' }, talep:'SK-26-8H2P',
+        kanallar:{
+          wa:{ sayi:3, pencere:'acik', kalan:'22 sa', tarih:'28 AĞUSTOS', taslak:'İki tepsi için bedelsiz yeniden gönderim planladık, yarın 09:00\'da kapınızda. Yaşadığınız aksaklık için özür dileriz.', m:[
+            { yon:'gelen', text:'Bu sabah gelen iki tepsi su böreği kokuyordu, kuryeye geri verdik.', imza:'13:22', ceviri:'DE → TR' },
+            { yon:'giden', text:'Çok üzgünüz Mehmet Bey. Kaydı açtık, bugün içinde dönüş yapıyoruz.', imza:'operatör · Elif · 13:31' },
+          ]},
+          ms:{ sayi:2, pencere:'acik', kalan:'19 sa', tarih:'28 AĞUSTOS', m:[
+            { yon:'gelen', text:'Sayfadan da yazıyorum, henüz dönüş olmadı.', imza:'11:02', ceviri:'DE → TR' },
+          ]},
+        } },
+      { ad:'Claire Weber', bas:'CW', alt:'B2C · Strasbourg', dil:'FR', bekleyen:true, saat:'11:48',
+        siparis:'#2447 · 26,00 €', izin:'Açık', capa:{ wa:'+33 6 40 12 88' },
+        kanallar:{ wa:{ sayi:5, pencere:'acik', kalan:'23 sa', tarih:'BUGÜN', m:[
+          { yon:'gelen', text:'Cumartesi teslimi mümkün mü?', imza:'11:48', ceviri:'FR → TR' },
+        ]} } },
+      { ad:'Épicerie Madame', bas:'EM', alt:'B2B · Colmar', dil:'TR', bekleyen:false, saat:'09:52',
+        siparis:'Henüz sipariş yok', izin:'Sorulmadı', capa:{ ig:'@epicerie.madame' },
+        kanallar:{
+          ig:{ sayi:4, pencere:'acik', kalan:'20 sa', tarih:'BUGÜN', m:[
+            { yon:'gelen', text:'Hikâyedeki tepsi hangisi?', imza:'09:40' },
+            { yon:'giden', text:'Karışık tepsi, 1 kg. İsterseniz fiyat listesini gönderelim.', imza:'operatör · Selim · 09:52' },
+          ]},
+          ms:{ sayi:2, pencere:'kapali', tarih:'6 EYLÜL', m:[
+            { yon:'gelen', text:'B2B fiyat listesi gelir mi?', imza:'6 Eyl 10:41' },
+          ]},
+        } },
+      { ad:'Sabine Krüger', bas:'SK', alt:'B2C · Kehl', dil:'DE', bekleyen:false, saat:'dün',
+        siparis:'#2380 · 62,50 €', izin:'Açık', capa:{ wa:'+49 160 55 21 09' },
+        kanallar:{ wa:{ sayi:8, pencere:'kapali', tarih:'DÜN', m:[
+          { yon:'gelen', text:'Teşekkürler, her şey yolunda geldi.', imza:'dün 18:04', ceviri:'DE → TR' },
+          { yon:'giden', text:'Afiyet olsun! İyi günler dileriz.', imza:'operatör · Elif · dün 18:20' },
+        ]} } },
+      { ad:'Léa Bonnet', bas:'LB', alt:'B2C · taslak kayıt', dil:'FR', bekleyen:true, saat:'2 gün',
+        siparis:'Henüz sipariş yok', izin:'Sorulmadı', capa:{},
+        kanallar:{ ig:{ sayi:6, pencere:'kapali', tarih:'13 EYLÜL', m:[
+          { yon:'gelen', text:'Kargo ne zaman gelir?', imza:'13 Eyl 15:20', ceviri:'FR → TR' },
+        ]} } },
+    ];
+    const sVar = m => Object.keys(m.kanallar);
+    const sPen = p => p === 'kapali' ? { et:'kapalı', fg:'#a44a3f', bg:'#f4e3e0' } : { et:'açık', fg:'#46601f', bg:'#e3ecd2' };
+    const sListe = MUSTERI.filter(m => (sel.durum !== 'bekleyen' || m.bekleyen) && (sel.kanal === 'tum' || sVar(m).includes(sel.kanal)));
+    const sIdx = Math.min(st.sosyalSel || 0, MUSTERI.length - 1);
+    const sMus = MUSTERI[sIdx];
+    const sKanallar = sVar(sMus);
+    const sAktif = sKanallar.indexOf(st.sosyalCh) >= 0 ? st.sosyalCh : sKanallar[0];
+    const sTr = sMus.kanallar[sAktif];
+    const sK = SK[sAktif];
+    const sAcik = sTr.pencere !== 'kapali';
+    const sCip = (etiket, secili, bas, ikon) => ({ etiket, ikon, bas,
+      fg: secili ? '#f5f1e6' : '#6d7261', bg: secili ? '#2f353a' : '#fff', bd: secili ? '#2f353a' : '#ddd6c4' });
+    const sKullanilan = ['wa','ms','ig'].filter(k => MUSTERI.some(m => m.kanallar[k]));
+
+    const sos = {
+      baslik: MUSTERI.length + ' müşteri · ' + MUSTERI.filter(m => m.bekleyen).length + ' cevap bekliyor',
+      durumCipleri: [
+        sCip('tümü', sel.durum !== 'bekleyen', () => this.setSel('durum', 'tumu')),
+        sCip('cevap bekliyor', sel.durum === 'bekleyen', () => this.setSel('durum', 'bekleyen')),
+      ],
+      kanalCipleri: sKullanilan.map(k => ({ ikon: sIkon(k, 16),
+        bas: () => this.setSel('kanal', sel.kanal === k ? 'tum' : k),
+        fg: sel.kanal === k ? '#f5f1e6' : SK[k].fg, bg: sel.kanal === k ? SK[k].fg : SK[k].bg, bd: sel.kanal === k ? SK[k].fg : SK[k].bd })),
+      liste: sListe.map(m => {
+        const kk = sVar(m); const i = MUSTERI.indexOf(m); const ilk = m.kanallar[kk[0]];
+        return { ad:m.ad, bas:m.bas, saat:m.saat, onizleme: ilk.m[ilk.m.length - 1].text,
+          ikonlar: kk.map(k => ({ fg:SK[k].fg, bg:SK[k].bg, ikon:sIkon(k, 12) })),
+          taslakVar: !!ilk.taslak && !st.taslakAlindi, bekleyen: m.bekleyen && !ilk.taslak,
+          pencere: sPen(ilk.pencere).et, penFg: sPen(ilk.pencere).fg, penBg: sPen(ilk.pencere).bg,
+          bd: i === sIdx ? '#5f7a2c' : '#ddd6c4',
+          ac: () => this.setState({ screen:'konusma', sosyalSel:i, sosyalCh:null }) };
+      }),
+      bos: sListe.length === 0,
+      ad: sMus.ad, bas: sMus.bas, alt: sMus.alt + ' · ' + sMus.dil,
+      sekmeler: sKanallar.map(k => ({ etiket:SK[k].ad, sayi:sMus.kanallar[k].sayi, ikon:sIkon(k, 13),
+        fg: k === sAktif ? '#f5f1e6' : SK[k].fg, bg: k === sAktif ? SK[k].fg : SK[k].bg, bd: k === sAktif ? SK[k].fg : SK[k].bd,
+        sec: () => this.setState({ sosyalCh:k }) })),
+      tekKanal: sKanallar.length === 1 ? 'Diğer kanallarda bu müşteriyle yazışma yok' : '',
+      cokKanal: sKanallar.length > 1,
+      tarih: sTr.tarih, kanalAd: sK.ad,
+      pencereAcik: sAcik, pencereKapali: !sAcik,
+      pencereMetni: sAcik ? (sTr.kalan + ' penceresi · asistan modu: ' + (sel.mod === 'insan' ? 'insan' : sel.mod === 'ai' ? 'AI' : 'hibrit')) : 'Pencere kapalı · ' + sK.ad,
+      pencereKisa: sAcik ? sTr.kalan : 'kapalı',
+      penFg: sPen(sTr.pencere).fg, penBg: sPen(sTr.pencere).bg,
+      kapaliMetin: sK.kapali, kalipVar: sK.kalip,
+      yazAlani: sK.ad + '\'a cevap yaz…',
+      siparis: sMus.siparis, izin: sMus.izin,
+      capaVar: Object.keys(sMus.capa).length > 0, capaYok: Object.keys(sMus.capa).length === 0,
+      capalar: Object.keys(sMus.capa).map(k => ({ etiket:SK[k].ad, fg:SK[k].fg, bg:SK[k].bg, kod:sMus.capa[k] })),
+      mesajlar: sTr.m.map((x, i) => ({ key:i, text:x.text, imza:x.imza, ceviri:x.ceviri || null, cevYok: !x.ceviri,
+        hiza: x.yon === 'gelen' ? 'flex-start' : 'flex-end',
+        bg: x.yon === 'gelen' ? '#fff' : '#2f353a', bd: x.yon === 'gelen' ? '#e7e2d2' : '#2f353a',
+        fg: x.yon === 'gelen' ? '#2f353a' : '#f5f1e6',
+        kose: x.yon === 'gelen' ? '16px 16px 16px 5px' : '16px 16px 5px 16px' })),
+      taslakVar: !!sTr.taslak && !st.taslakAlindi, taslakText: sTr.taslak || '',
+      taslakNotu: sel.mod === 'ai' ? 'AI modunda asistan kendi gönderir; pencere kapalıysa göndermez.' : 'Hibrit modda asistan kendi başına göndermez.',
+    };
+
     return {
-      is, go, tg, pick, c, t,
+      is, go, tg, pick, c, t, sos,
       adet: st.adet,
       sel,
       taslakAlindi: st.taslakAlindi,
@@ -4815,7 +4966,7 @@ class Component extends DCLogic {
       cekYazi: st.cek.calisiyor ? 'yenileniyor' : (st.cek.saat && st.cek.m > 6 && st.cek.m < 46) ? ('yenilendi · ' + st.cek.saat) : st.cek.m >= 48 ? 'bırak, yenilenecek' : 'aşağı çek',
       ekranAdi: ADLAR[cur] || 'Operasyon',
       mikroKunye: (tab === 'yon' ? 'YÖNETİM' : tab === 'kurye' ? 'KURYE' : tab === 'para' ? 'PARA' : 'DEPO') + (NUMARA[cur] ? ' · ' + NUMARA[cur] : ''),
-      modEtiketi: sel.mod === 'insan' ? 'insan' : 'hibrit',
+      modEtiketi: sel.mod === 'insan' ? 'insan' : sel.mod === 'ai' ? 'AI' : 'hibrit',
       mikroTransform: st.mikroAcik ? 'none' : 'translateY(-102%)',
       mikroOpacity: st.mikroAcik ? 1 : 0,
       cubukYuk: st.cubukGizli ? '0px' : '86px',
