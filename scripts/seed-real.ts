@@ -52,6 +52,7 @@ import {
   STORAGE_AREAS,
   SUPPLIERS,
   TEST_INTAKE,
+  TEST_KATALOG_FIYATI,
   TEST_PURCHASES,
   TEST_SALE_PRICES,
   VEHICLE,
@@ -103,8 +104,10 @@ const DRY_RUN = process.argv.includes('--dry-run');
  * - **1** (varsayılan) gerçek veri — stok yok, tedarikçi siparişleri mal kabulü bekler.
  * - **2** test mal kabulü (lot `TEST-001`, SKT uydurma): stok açar, ürünler alınabilir olur.
  *   Beyana dokunmaz, bu yüzden vitrin denemesi bu katmanda yapılır.
- * - **3** katalog kaynağının BEYAN TÜRETMESİ: belgesiz ürünün alerjeni addan tahmin edilir.
- *   Tahmin edilmiş beyan yanlış beyandır — ayrı katman, çünkü stok görmek için buna razı olmak
+ * - **3** VİTRİNİ UÇTAN UCA AÇAR ve bunun için üç şey uydurur: belgesiz ürünün beyanını addan
+ *   türetir, her kalemi "satış kurgusunda" sayar (motorun kapısı `teklifli || kurguda`) ve fiyatı
+ *   olmayan varyanta kilo başına tek oranla fiyat yazar. Tahmin edilmiş beyan yanlış beyandır ve
+ *   uydurma fiyat gerçek fiyat değildir — bu yüzden ayrı katman: stok görmek için buna razı olmak
  *   gerekmemeli (işletmeci kararı 19.09).
  *
  * Varsayılan 1, çünkü üretim kurulumu bayraksız koşar ve orada tek bir uydurma değer yazılamaz.
@@ -456,6 +459,9 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   // GİRMEZLER (aşağıda yalnız fatura satırları veriliyor): o küme "satış kurgusuna girmiş" demek ve
   // ürünü aktif olmaya zorlar. Adayın alış maliyeti yok, fiyatsız ve satışa kapalı kalması karar.
   for (const sku of ADAYLAR) if (!secim.has(sku)) secim.set(sku, {});
+  // KATMAN 3: her kalem "satış kurgusunda" sayılır. Motorun kapısı `teklifli || kurguda`; alış
+  // fiyatı olmayan kalem aksi hâlde aday kalırdı. Fiyatı `seedTestCatalogPrices` üretir.
+  const kurguSku = LAYERS >= 3 ? new Set(secim.keys()) : new Set(lines.map((l) => l.sku));
   const made = await seedLezzaProducts(
     new CategoryService(db),
     new CategoryImageService(db),
@@ -464,11 +470,11 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     new ProductFamilyService(db),
     catId,
     0,
-    { sku: new Set(lines.map((l) => l.sku)), slug: new Set() },
+    { sku: kurguSku, slug: new Set() },
     // Katalog hep `base` kurulur: `extend` türetmenin yanında bilinçli kusurlar da sahneler ve gerçek
     // kataloğa kusur yazılmaz. Katman 3 yalnız türetmeyi açar ki belgesiz ürün satışa çıkabilsin.
     'base',
-    { variants: secim, derive: LAYERS >= 3, candidates: new Set(ADAYLAR), localFrames: katalogKareleri },
+    { variants: secim, derive: LAYERS >= 3, candidates: LAYERS >= 3 ? new Set() : new Set(ADAYLAR), localFrames: katalogKareleri },
   );
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
 }
@@ -821,6 +827,32 @@ async function seedRecipes(db: Db): Promise<void> {
   }
 }
 
+/**
+ * KATMAN 3: fiyatı olmayan varyanta UYDURMA fiyat yazar (`TEST_KATALOG_FIYATI` — kilo başına tek
+ * oran). Gerçek fiyatın üstüne yazmaz: teklifi ya da faturası olan varyant zaten fiyatlıdır ve
+ * atlanır. Ölçüsü olmayan varyant tabana düşer.
+ */
+async function seedTestCatalogPrices(db: Db): Promise<void> {
+  console.log(`▸ test fiyatı · ${TEST_KATALOG_FIYATI.b2cPerKg} €/kg — uydurma değer, vitrin denemesi`);
+  const prices = new PriceService(db);
+  const variants = new ProductVariantService(db);
+  const urunler = await new ProductService(db).listAll();
+  let yazilan = 0;
+  for (const urun of urunler) {
+    for (const v of await variants.listByProduct(urun.id)) {
+      if ((await prices.listByVariant(v.id)).length > 0) continue;
+      const kg = (v.netQuantity ?? 0) / 1000;
+      const b2c = Math.max(TEST_KATALOG_FIYATI.minB2c, Math.round(kg * TEST_KATALOG_FIYATI.b2cPerKg * 100) / 100);
+      const b2b = Math.round(b2c * TEST_KATALOG_FIYATI.b2bRate * 100) / 100;
+      if (DRY_RUN) continue;
+      await prices.setPrice({ variantId: v.id, channel: 'b2c', amountCents: toCents(b2c) });
+      await prices.setPrice({ variantId: v.id, channel: 'b2b', amountCents: toCents(b2b) });
+      yazilan++;
+    }
+  }
+  console.log(`  ${DRY_RUN ? '○' : '✓'} ${yazilan} varyanta fiyat ${DRY_RUN ? 'yazılacak' : 'yazıldı'}`);
+}
+
 /** Siparişlerin tamamını tek partide teslim alır — arayüz denemesi için, gerçek sayım değil. */
 async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
   console.log(`▸ test kabulü · lot ${TEST_INTAKE.lotNumber} · SKT ${TEST_INTAKE.expiryDate} — uydurma değer, arayüz denemesi`);
@@ -891,6 +923,8 @@ async function main(): Promise<void> {
   await seedDraftFamilies(db);
   await seedCollections(db);
   await seedPurchases(db);
+  // Uydurma fiyat gerçeklerden SONRA: var olan fiyatın üstüne yazmaz.
+  if (LAYERS >= 3) await seedTestCatalogPrices(db);
   // Paket fiyatı liste fiyatlarından türediği için fiyatlardan sonra.
   await seedBundles(db);
   await seedRecipes(db);

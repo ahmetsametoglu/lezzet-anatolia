@@ -87,6 +87,23 @@ export const SUPPLIERS = [
 ] as const;
 
 /**
+ * KATMAN 3 · UYDURMA FİYAT. Belgesiz katalog kaleminin alış maliyeti yok ve motor onu satışa
+ * çıkarmıyor ("alış fiyatı olmayan her ürün ADAY", `satilabilirDurum`). Vitrini uçtan uca
+ * gezebilmek için fiyat ÜRETİLİR: tek kural, kilo başına sabit oran.
+ *
+ * Değerler UYDURMADIR, yalnız `--layers=3` ile yazılır ve gerçek fiyatın ÜSTÜNE YAZMAZ — teklifi
+ * ya da faturası olan kalem bu kuralı hiç görmez. Üretim kurulumundan önce blok silinir.
+ */
+export const TEST_KATALOG_FIYATI = {
+  /** Perakende, kilo başına € (KDV dahil). */
+  b2cPerKg: 14,
+  /** Toptan fiyat perakendenin bu oranı. */
+  b2bRate: 0.72,
+  /** Küçük gramajlı kalem bu tabanın altına inmez. */
+  minB2c: 2.49,
+};
+
+/**
  * Test kabulü: lot ve son kullanma uydurmadır, mal fiilen sayılmamıştır. Yalnız `--layers=2` ile yazılır ki arayüz
  * denenebilsin; üretim kurulumundan önce bu blok silinir.
  */

@@ -185,9 +185,12 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
    - **2** — test mal kabulü (lot `TEST-001`, SKT 31.12.2026): stok açar, ürünler alınabilir olur
      ve aile/çeşit blokları dolar. Beyana DOKUNMAZ; vitrin denemesi bu katmanda yapılır:
      `pnpm db:seed:real --layers=2`.
-   - **3** — katalog kaynağının BEYAN TÜRETMESİ: belgesiz ürünün alerjeni addan tahmin edilir.
-     Tahmin edilmiş beyan yanlış beyandır, bu yüzden ayrı katman — stok görmek için buna razı
-     olmak gerekmez (işletmeci kararı 19.09).
+   - **3** — VİTRİNİ UÇTAN UCA AÇAR, üç şey uydurarak: (a) belgesiz ürünün beyanını addan türetir,
+     (b) her katalog kalemini "satış kurgusunda" sayar — motorun kapısı `teklifli || kurguda`,
+     (c) fiyatı olmayan varyanta kilo başına tek oranla fiyat yazar (`TEST_KATALOG_FIYATI`).
+     Tahmin edilmiş beyan yanlış beyandır ve uydurma fiyat gerçek fiyat değildir, bu yüzden ayrı
+     katman — stok görmek için buna razı olmak gerekmez (işletmeci kararı 19.09).
+     Gerçek fiyatın üstüne YAZMAZ: teklifi ya da faturası olan varyant atlanır.
 
    Aday kalemler (`ADAY_SKULARI`) her katmanda aday kalır.
 
