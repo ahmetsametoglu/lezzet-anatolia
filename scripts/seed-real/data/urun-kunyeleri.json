@@ -6,9 +6,9 @@
       "de": "Traubenmelasse"
     },
     "description": {
-      "tr": "Beşe \"Eski Usül\" üzüm pekmezi, geleneksel yöntemle hazırlanır. Şeker ilavesizdir; doğal olarak şeker içerir. 650 g.",
-      "fr": "Mélasse de raisin Beşe « Eski Usül », préparée selon la méthode traditionnelle. Sans sucres ajoutés – contient des sucres naturellement présents. 650 g.",
-      "de": "Beşe Traubenmelasse „Eski Usül“, nach traditioneller Art hergestellt. Ohne Zuckerzusatz – enthält von Natur aus Zucker. 650 g."
+      "tr": "Beşe'nin \"Eski Usül\" üzüm pekmezi; tatlılığı üzümün kendinden gelir. Tahinle karıştırılır, kahvaltıya ve sütlü tatlılara gider.",
+      "fr": "La mélasse de raisin « Eski Usül » de Beşe : sa douceur vient du raisin lui-même. À mélanger au tahin, au petit-déjeuner ou sur un dessert au lait.",
+      "de": "Beşes Traubenmelasse „Eski Usül\": Die Süße kommt allein aus der Traube. Mit Tahin verrührt, zum Frühstück oder über Milchdesserts."
     },
     "ingredients": {
       "tr": "Üzüm pekmezi.",
@@ -28,9 +28,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Kuru ve serin yerde saklayınız.",
-      "fr": "À conserver au sec et au frais.",
-      "de": "Trocken und kühl lagern."
+      "tr": "Kuru ve serin yerde saklayın.\nKavanozun **ağzını sıkıca kapatın** ve her seferinde kuru bir kaşık kullanın.\nSoğukta şekerlenip kristalleşebilir; kavanozu ılık suda bekletince eski kıvamına döner.\nTahinle yarı yarıya karıştırılır, yoğurda ve sütlaca gezdirilir.",
+      "fr": "Conservez au sec et au frais.\n**Refermez bien le bocal** et utilisez toujours une cuillère sèche.\nElle peut cristalliser au froid ; un bain-marie tiède lui rend sa texture.\nÀ mélanger moitié-moitié avec du tahin, ou à verser sur un yaourt et un riz au lait.",
+      "de": "Trocken und kühl lagern.\n**Glas gut verschließen** und stets einen trockenen Löffel benutzen.\nIn der Kälte kann sie kristallisieren; ein lauwarmes Wasserbad macht sie wieder geschmeidig.\nHalb und halb mit Tahin verrührt, über Joghurt oder Milchreis."
     },
     "shelfLifeDays": 730,
     "storageType": "ambient",
@@ -66,9 +66,9 @@
       "de": "Johannisbrotmelasse"
     },
     "description": {
-      "tr": "Beşe \"Eski Usül\" keçiboynuzu pekmezi, geleneksel yöntemle hazırlanır. Şeker ilavesizdir; doğal olarak şeker içerir. 650 g.",
-      "fr": "Mélasse de caroube Beşe « Eski Usül », préparée selon la méthode traditionnelle. Sans sucres ajoutés – contient des sucres naturellement présents. 650 g.",
-      "de": "Beşe Johannisbrotsirup „Eski Usül“, nach traditioneller Art hergestellt. Ohne Zuckerzusatz – enthält von Natur aus Zucker. 650 g."
+      "tr": "Beşe'nin \"Eski Usül\" keçiboynuzu — harnup — pekmezi. Kakaoyu andıran koyu bir tat; tahinle ve sabah ekmeğiyle.",
+      "fr": "La mélasse de caroube « Eski Usül » de Beşe. Un goût profond qui rappelle le cacao — avec du tahin, sur le pain du matin.",
+      "de": "Beşes Johannisbrotmelasse „Eski Usül\". Ein dunkler Geschmack, der an Kakao erinnert — mit Tahin, aufs Morgenbrot."
     },
     "ingredients": {
       "tr": "Keçiboynuzu (harnup) pekmezi.",
@@ -88,9 +88,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Kuru ve serin yerde saklayınız.",
-      "fr": "À conserver au sec et au frais.",
-      "de": "Trocken und kühl lagern."
+      "tr": "Kuru ve serin yerde saklayın.\nKavanozun **ağzını sıkıca kapatın** ve her seferinde kuru bir kaşık kullanın.\nKoyu kıvamı doğaldır; soğukta daha da yoğunlaşır.\nTahinle yarı yarıya karıştırılır, sıcak süte bir kaşık katılır.",
+      "fr": "Conservez au sec et au frais.\n**Refermez bien le bocal** et utilisez toujours une cuillère sèche.\nSa texture épaisse est naturelle ; au froid, elle s'épaissit encore.\nÀ mélanger moitié-moitié avec du tahin, ou une cuillère dans un lait chaud.",
+      "de": "Trocken und kühl lagern.\n**Glas gut verschließen** und stets einen trockenen Löffel benutzen.\nDie dickflüssige Konsistenz ist natürlich; in der Kälte wird sie fester.\nHalb und halb mit Tahin verrührt oder ein Löffel in warme Milch."
     },
     "shelfLifeDays": 730,
     "storageType": "ambient",
@@ -126,9 +126,9 @@
       "de": "Tahin (Sesampaste)"
     },
     "description": {
-      "tr": "Beşe \"Eski Usül\" tahin, susam ezmesi. Glutensiz ve vegan. Susam içerir.",
-      "fr": "Tahin Beşe « Eski Usül », pâte de sésame. Sans gluten et vegan. Contient du sésame.",
-      "de": "Beşe Tahin „Eski Usül“, Sesampaste. Glutenfrei und vegan. Enthält Sesam."
+      "tr": "Beşe'nin \"Eski Usül\" tahini: tek içindekisi susam. Pekmezle karıştırılır; humusun ve helvanın temelidir.",
+      "fr": "Le tahin « Eski Usül » de Beşe : un seul ingrédient, le sésame. À mélanger à la mélasse ; c'est la base du houmous et du halva.",
+      "de": "Beşes Tahin „Eski Usül\": eine einzige Zutat — Sesam. Mit Melasse verrührt, und die Basis von Hummus und Halva."
     },
     "ingredients": {
       "tr": "**Susam** ezmesi (tahin).",
@@ -150,9 +150,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "Kuru ve serin yerde saklayınız.",
-      "fr": "À conserver au sec et au frais.",
-      "de": "Trocken und kühl lagern."
+      "tr": "Kuru ve serin yerde saklayın.\nÜstünde yağ toplanması doğaldır; kullanmadan önce **iyice karıştırın**.\nKavanozun ağzını sıkıca kapatın ve her seferinde kuru bir kaşık kullanın.\nPekmezle yarı yarıya karıştırılır; humusa, salata sosuna ve tatlıya girer.",
+      "fr": "Conservez au sec et au frais.\nUne couche d'huile se forme en surface : **mélangez bien avant emploi**.\nRefermez bien le bocal et utilisez toujours une cuillère sèche.\nÀ mélanger moitié-moitié avec de la mélasse ; entre aussi dans le houmous, les sauces et les desserts.",
+      "de": "Trocken und kühl lagern.\nÖl setzt sich oben ab — vor Gebrauch **gut durchrühren**.\nGlas gut verschließen und stets einen trockenen Löffel benutzen.\nHalb und halb mit Melasse verrührt; auch für Hummus, Dressings und Desserts."
     },
     "shelfLifeDays": 730,
     "storageType": "ambient",
@@ -188,9 +188,9 @@
       "de": "Weißdornessig"
     },
     "description": {
-      "tr": "Şifamix alıç sirkesi, geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
-      "fr": "Vinaigre d'aubépine Şifamix, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
-      "de": "Şifamix Weißdorn-Essig, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+      "tr": "Anadolu'nun sonbahar meyvesi alıçtan, doğal fermantasyonla. Tatlımsı ve yuvarlak bir sirke; salatada ve kış turşularında.",
+      "fr": "Un vinaigre d'aubépine, le fruit d'automne d'Anatolie, obtenu par fermentation naturelle. Doux et rond, pour les salades et les conserves d'hiver.",
+      "de": "Weißdornessig aus der anatolischen Herbstfrucht, natürlich vergoren. Mild und rund — für Salate und eingelegtes Wintergemüse."
     },
     "ingredients": {
       "tr": "Alıç sirkesi.",
@@ -210,9 +210,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin yerde kapak kapalı olarak muhafaza ediniz.",
-      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
-      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak, kapağı kapalı saklayın.\nKullanmadan önce **şişeyi çalkalayın** — dipteki tortu ve \"sirke anası\" doğaldır, bozulma değildir.\nZamanla rengi koyulaşabilir; tadı ve kullanımı değişmez.\nHamilelik ve emzirme döneminde tüketmeden önce doktorunuza danışın.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière, bouteille bien fermée.\n**Agitez avant emploi** : le dépôt et la « mère de vinaigre » au fond sont naturels, ce n'est pas une altération.\nLa couleur peut foncer avec le temps ; le goût et l'usage restent les mêmes.\nPendant la grossesse et l'allaitement, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Kühl, trocken und lichtgeschützt lagern, Flasche gut verschlossen.\n**Vor Gebrauch schütteln** — Bodensatz und „Essigmutter\" sind natürlich und kein Zeichen von Verderb.\nDie Farbe kann mit der Zeit dunkler werden; Geschmack und Verwendung bleiben gleich.\nIn Schwangerschaft und Stillzeit vor dem Verzehr ärztlichen Rat einholen."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -247,9 +247,9 @@
       "de": "Ananasessig"
     },
     "description": {
-      "tr": "Şifamix ananas sirkesi, geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
-      "fr": "Vinaigre d'ananas Şifamix, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
-      "de": "Şifamix Ananas-Essig, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+      "tr": "Doğal fermantasyonla olgunlaşmış, katkısız ananas sirkesi. Yumuşak ve tropik bir ekşilik; tavuk marinatında ve yeşil salatada.",
+      "fr": "Un vinaigre d'ananas affiné par fermentation naturelle, sans additifs. Une acidité douce et tropicale, pour mariner le poulet ou relever une salade verte.",
+      "de": "Ananasessig, natürlich vergoren, ohne Zusätze. Eine milde, tropische Säure — für Hähnchenmarinaden und grüne Salate."
     },
     "ingredients": {
       "tr": "Ananas sirkesi.",
@@ -269,9 +269,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.",
-      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
-      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak, kapağı kapalı saklayın.\nKullanmadan önce **şişeyi çalkalayın** — dipteki tortu ve \"sirke anası\" doğaldır, bozulma değildir.\nZamanla rengi koyulaşabilir; tadı ve kullanımı değişmez.\nHamilelik ve emzirme döneminde tüketmeden önce doktorunuza danışın.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière, bouteille bien fermée.\n**Agitez avant emploi** : le dépôt et la « mère de vinaigre » au fond sont naturels, ce n'est pas une altération.\nLa couleur peut foncer avec le temps ; le goût et l'usage restent les mêmes.\nPendant la grossesse et l'allaitement, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Kühl, trocken und lichtgeschützt lagern, Flasche gut verschlossen.\n**Vor Gebrauch schütteln** — Bodensatz und „Essigmutter\" sind natürlich und kein Zeichen von Verderb.\nDie Farbe kann mit der Zeit dunkler werden; Geschmack und Verwendung bleiben gleich.\nIn Schwangerschaft und Stillzeit vor dem Verzehr ärztlichen Rat einholen."
     },
     "shelfLifeDays": 1096,
     "storageType": "ambient",
@@ -307,9 +307,9 @@
       "de": "Artischockenessig"
     },
     "description": {
-      "tr": "Şifamix enginar sirkesi, geleneksel doğal fermantasyonla üretilmiştir. Şeker ilavesi, katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
-      "fr": "Vinaigre d'artichaut Şifamix, obtenu par fermentation naturelle traditionnelle. Sans sucres ajoutés, sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
-      "de": "Şifamix Artischockenessig, durch traditionelle natürliche Fermentation hergestellt. Ohne Zuckerzusatz, ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+      "tr": "Elma sirkesine enginar katılarak, doğal fermantasyonla hazırlandı. Toprağımsı ve hafif acımsı; zeytinyağlı sebzelerin yanında.",
+      "fr": "Du vinaigre de cidre travaillé avec de l'artichaut, par fermentation naturelle. Un goût terreux, légèrement amer — parfait avec les légumes à l'huile d'olive.",
+      "de": "Apfelessig mit Artischocke, natürlich vergoren. Erdig und leicht bitter — ideal zu Gemüse in Olivenöl."
     },
     "ingredients": {
       "tr": "Enginar elma sirkesi.",
@@ -329,9 +329,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru bir yerde, kapağı sıkıca kapalı olarak muhafaza ediniz. Doğrudan güneş ışığından koruyunuz.",
-      "fr": "À conserver dans un endroit frais et sec, bien fermé et à l'abri de la lumière directe du soleil.",
-      "de": "Kühl und trocken lagern, gut verschlossen aufbewahren und vor direkter Sonneneinstrahlung schützen."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak, kapağı sıkıca kapalı saklayın.\nKullanmadan önce **şişeyi çalkalayın** — dipteki tortu ve \"sirke anası\" doğaldır, bozulma değildir.\nZamanla rengi koyulaşabilir; tadı ve kullanımı değişmez.\nHamilelik ve emzirme döneminde tüketmeden önce doktorunuza danışın.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière, bouteille bien fermée.\n**Agitez avant emploi** : le dépôt et la « mère de vinaigre » au fond sont naturels, ce n'est pas une altération.\nLa couleur peut foncer avec le temps ; le goût et l'usage restent les mêmes.\nPendant la grossesse et l'allaitement, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Kühl, trocken und lichtgeschützt lagern, Flasche fest verschlossen.\n**Vor Gebrauch schütteln** — Bodensatz und „Essigmutter\" sind natürlich und kein Zeichen von Verderb.\nDie Farbe kann mit der Zeit dunkler werden; Geschmack und Verwendung bleiben gleich.\nIn Schwangerschaft und Stillzeit vor dem Verzehr ärztlichen Rat einholen."
     },
     "shelfLifeDays": 1826,
     "storageType": "ambient",
@@ -367,9 +367,9 @@
       "de": "Apfelessig"
     },
     "description": {
-      "tr": "Şifamix elma sirkesi, geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
-      "fr": "Vinaigre de cidre de pomme Şifamix, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
-      "de": "Şifamix Apfelessig, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+      "tr": "Doğal fermantasyonla olgunlaşmış, katkısız elma sirkesi. Salata sosunun temeli; turşuda, marinatta ve sebze sotesinde.",
+      "fr": "Un vinaigre de cidre affiné par fermentation naturelle, sans additifs. La base de la vinaigrette ; pour les marinades, les conserves et les légumes sautés.",
+      "de": "Apfelessig, durch natürliche Gärung gereift, ohne Zusätze. Die Basis jeder Vinaigrette — auch für Marinaden, Eingelegtes und Schmorgemüse."
     },
     "ingredients": {
       "tr": "Elma sirkesi.",
@@ -389,9 +389,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin yerde kapak kapalı olarak muhafaza ediniz.",
-      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
-      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak, kapağı kapalı saklayın.\nKullanmadan önce **şişeyi çalkalayın** — dipteki tortu ve \"sirke anası\" doğaldır, bozulma değildir.\nZamanla rengi koyulaşabilir; tadı ve kullanımı değişmez.\nHamilelik ve emzirme döneminde tüketmeden önce doktorunuza danışın.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière, bouteille bien fermée.\n**Agitez avant emploi** : le dépôt et la « mère de vinaigre » au fond sont naturels, ce n'est pas une altération.\nLa couleur peut foncer avec le temps ; le goût et l'usage restent les mêmes.\nPendant la grossesse et l'allaitement, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Kühl, trocken und lichtgeschützt lagern, Flasche gut verschlossen.\n**Vor Gebrauch schütteln** — Bodensatz und „Essigmutter\" sind natürlich und kein Zeichen von Verderb.\nDie Farbe kann mit der Zeit dunkler werden; Geschmack und Verwendung bleiben gleich.\nIn Schwangerschaft und Stillzeit vor dem Verzehr ärztlichen Rat einholen."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -426,9 +426,9 @@
       "de": "Rhabarberwurzelessig"
     },
     "description": {
-      "tr": "Şifamix ışkın kökü sirkesi; elma sirkesi ve ışkın köküyle, geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
-      "fr": "Vinaigre de cidre de pomme Şifamix à la racine de rhubarbe, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
-      "de": "Şifamix Apfelessig mit Rhabarberwurzel, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+      "tr": "Doğu Anadolu dağlarının yabani ışkın kökü ve elma sirkesiyle. Mayhoş, keskin bir tat — salata sosunda ve et marinatında azıcık.",
+      "fr": "Vinaigre de cidre à la racine de rhubarbe sauvage des montagnes d'Anatolie orientale. Vif et acidulé — à doser avec parcimonie dans vinaigrettes et marinades.",
+      "de": "Apfelessig mit der Wurzel des wilden Rhabarbers aus den Bergen Ostanatoliens. Kräftig und säuerlich — sparsam in Vinaigrettes und Fleischmarinaden."
     },
     "ingredients": {
       "tr": "Elma sirkesi, ışkın kökü.",
@@ -448,9 +448,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.",
-      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
-      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak, kapağı kapalı saklayın.\nKullanmadan önce **şişeyi çalkalayın** — dipteki tortu ve \"sirke anası\" doğaldır, bozulma değildir.\nTadı keskindir; sosa azar azar ekleyip tadarak ilerleyin.\nHamilelik ve emzirme döneminde tüketmeden önce doktorunuza danışın.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière, bouteille bien fermée.\n**Agitez avant emploi** : le dépôt et la « mère de vinaigre » au fond sont naturels, ce n'est pas une altération.\nSon goût est vif : ajoutez-le peu à peu en goûtant.\nPendant la grossesse et l'allaitement, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Kühl, trocken und lichtgeschützt lagern, Flasche gut verschlossen.\n**Vor Gebrauch schütteln** — Bodensatz und „Essigmutter\" sind natürlich und kein Zeichen von Verderb.\nDer Geschmack ist kräftig: nach und nach zugeben und abschmecken.\nIn Schwangerschaft und Stillzeit vor dem Verzehr ärztlichen Rat einholen."
     },
     "shelfLifeDays": 1461,
     "storageType": "ambient",
@@ -486,9 +486,9 @@
       "de": "Honigessig"
     },
     "description": {
-      "tr": "Şifamix bal sirkesi, tarçınlı; geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
-      "fr": "Vinaigre de miel Şifamix à la cannelle, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
-      "de": "Şifamix Honigessig mit Zimt, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+      "tr": "Bal sirkesine tarçın katıldı; doğal fermantasyonla, katkısız. Tatlıya çalan yumuşak bir ekşilik — salatada ve kış içeceklerinde.",
+      "fr": "Un vinaigre de miel à la cannelle, issu d'une fermentation naturelle, sans additifs. Une acidité douce, presque sucrée — en salade et dans les boissons d'hiver.",
+      "de": "Honigessig mit Zimt, natürlich vergoren, ohne Zusätze. Eine milde, fast süße Säure — für Salate und winterliche Getränke."
     },
     "ingredients": {
       "tr": "Bal sirkesi, tarçın.",
@@ -508,9 +508,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.",
-      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
-      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak, kapağı kapalı saklayın.\nKullanmadan önce **şişeyi çalkalayın** — dipteki tortu, tarçın ve \"sirke anası\" doğaldır, bozulma değildir.\nZamanla rengi koyulaşabilir; tadı ve kullanımı değişmez.\nHamilelik ve emzirme döneminde tüketmeden önce doktorunuza danışın.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière, bouteille bien fermée.\n**Agitez avant emploi** : le dépôt, la cannelle et la « mère de vinaigre » au fond sont naturels, ce n'est pas une altération.\nLa couleur peut foncer avec le temps ; le goût et l'usage restent les mêmes.\nPendant la grossesse et l'allaitement, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Kühl, trocken und lichtgeschützt lagern, Flasche gut verschlossen.\n**Vor Gebrauch schütteln** — Bodensatz, Zimt und „Essigmutter\" sind natürlich und kein Zeichen von Verderb.\nDie Farbe kann mit der Zeit dunkler werden; Geschmack und Verwendung bleiben gleich.\nIn Schwangerschaft und Stillzeit vor dem Verzehr ärztlichen Rat einholen."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -545,9 +545,9 @@
       "de": "Granatapfelsirup"
     },
     "description": {
-      "tr": "Şifamix nar ekşisi. Katkı maddesi ve koruyucu içermez. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
-      "fr": "Sirop de grenade Şifamix. Sans additifs ni conservateurs. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
-      "de": "Şifamix Granatapfelsirup. Ohne Zusatz- und Konservierungsstoffe. Schwangeren und stillenden Müttern wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+      "tr": "Nar suyunun kıvam alana dek kaynatılmış hâli, katkısız. Gavurdağı salatasının, piyazın ve közlenmiş patlıcanın vazgeçilmezi.",
+      "fr": "Du jus de grenade réduit jusqu'à la consistance d'un sirop, sans additifs. L'indispensable des salades de tomates, des haricots et des aubergines grillées.",
+      "de": "Granatapfelsaft, bis zur Sirupdicke eingekocht, ohne Zusätze. Unverzichtbar für Tomatensalat, Bohnensalat und gegrillte Auberginen."
     },
     "ingredients": {
       "tr": "Nar ekşisi.",
@@ -567,9 +567,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.",
-      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
-      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak, kapağı kapalı saklayın.\nAçtıktan sonra **buzdolabında** saklayın.\nSalataya yemeğin sonunda ekleyin; ısıyla tadı keskinleşir.\nHamilelik ve emzirme döneminde tüketmeden önce doktorunuza danışın.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière, bouteille bien fermée.\nAprès ouverture, **conservez au réfrigérateur**.\nAjoutez-le en fin de préparation : la chaleur accentue son acidité.\nPendant la grossesse et l'allaitement, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Kühl, trocken und lichtgeschützt lagern, Flasche gut verschlossen.\nNach dem Öffnen **im Kühlschrank** aufbewahren.\nErst zum Schluss zugeben — Hitze macht den Geschmack schärfer.\nIn Schwangerschaft und Stillzeit vor dem Verzehr ärztlichen Rat einholen."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -604,9 +604,9 @@
       "de": "Şifamix Kiefernzapfenextrakt"
     },
     "description": {
-      "tr": "Şifamix kozalak özü; kozalak özü, keçiboynuzu pekmezi ve andız pekmezinden hazırlanır. İnfüzyon ve soğuk pres yöntemiyle üretilmiştir. Katkı maddesi ve koruyucu içermez.",
-      "fr": "Extrait de pomme de pin Şifamix, préparé à partir d'extrait de pomme de pin, de mélasse de caroube et de mélasse de genévrier. Obtenu par infusion et pressage à froid. Sans additifs ni conservateurs.",
-      "de": "Şifamix Kiefernzapfenextrakt aus Kiefernzapfenextrakt, Johannisbrotmelasse und Wacholdermelasse. Durch Infusion und Kaltpressung hergestellt. Ohne Zusatz- und Konservierungsstoffe."
+      "tr": "Kozalak özü, keçiboynuzu ve andız pekmeziyle; infüzyon ve soğuk pres. Reçineli, koyu bir tat — bir kaşık, sabah ekmeğinin üstüne.",
+      "fr": "Extrait de pomme de pin adouci de mélasse de caroube et de genévrier ; infusion et pression à froid. Résineux et profond, une cuillère sur le pain du matin.",
+      "de": "Kiefernzapfen-Extrakt mit Johannisbrot- und Wacholdermelasse; Infusion und Kaltpressung. Harzig und dunkel — ein Löffel aufs Morgenbrot."
     },
     "ingredients": {
       "tr": "Kozalak özü, keçiboynuzu pekmezi, andız pekmezi.",
@@ -626,9 +626,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde bulundurunuz. Serin ve güneş görmeyen yerde saklayınız.",
-      "fr": "Conserver dans un endroit frais et sec.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin ve kuru yerde, güneş görmeyen bir rafta saklayın.\nKavanozun **ağzını sıkıca kapatın** ve her seferinde kuru bir kaşık kullanın.\nKoyu kıvamı doğaldır; soğukta daha da yoğunlaşır.\nEkmeğe sürülür, tahinle karıştırılır, sıcak süte bir kaşık katılır.",
+      "fr": "Conservez au frais et au sec, sur une étagère à l'abri du soleil.\n**Refermez bien le bocal** et utilisez toujours une cuillère sèche.\nSa texture épaisse est naturelle ; au froid, elle s'épaissit encore.\nÀ tartiner, à mélanger au tahin ou à délayer dans un lait chaud.",
+      "de": "Kühl und trocken lagern, im Regal vor Sonne geschützt.\n**Glas gut verschließen** und stets einen trockenen Löffel benutzen.\nDie dickflüssige Konsistenz ist natürlich; in der Kälte wird sie noch fester.\nAufs Brot, mit Tahin verrührt oder einen Löffel in warme Milch."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -663,9 +663,9 @@
       "de": "Şifamix Johannisbrotextrakt"
     },
     "description": {
-      "tr": "Şifamix keçiboynuzu özü, doğal keçiboynuzu meyvesinden infüzyon ve soğuk pres yöntemiyle elde edilir. Şeker ilavesizdir; doğal olarak şeker içerir. Katkı maddesi ve koruyucu içermez.",
-      "fr": "Extrait de caroube Şifamix, obtenu à partir de gousses de caroube naturelles par infusion et pressage à froid. Sans sucres ajoutés – contient des sucres naturellement présents. Sans additifs ni conservateurs.",
-      "de": "Şifamix Johannisbrot-Extrakt aus natürlichen Johannisbrotschoten, durch Infusion und Kaltpressung gewonnen. Ohne Zuckerzusatz – enthält von Natur aus Zucker. Ohne Zusatz- und Konservierungsstoffe."
+      "tr": "Keçiboynuzu meyvesinden, infüzyon ve soğuk presle. Tatlılığı meyvenin kendinden; kakaoyu andıran koyu tadıyla tahinin ve sütün yanında.",
+      "fr": "De la caroube, par infusion et pression à froid. Sa douceur vient du fruit lui-même ; un goût profond, proche du cacao, à marier au tahin et au lait.",
+      "de": "Aus der Johannisbrotfrucht, durch Infusion und Kaltpressung. Die Süße kommt aus der Frucht selbst — dunkel und kakaoähnlich, zu Tahin und Milch."
     },
     "ingredients": {
       "tr": "Doğal keçiboynuzu meyvesinin özü.",
@@ -685,9 +685,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde bulundurunuz.",
-      "fr": "Conserver dans un endroit frais et sec.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin ve kuru yerde, güneş görmeyen bir rafta saklayın.\nKavanozun **ağzını sıkıca kapatın** ve her seferinde kuru bir kaşık kullanın.\nKoyu kıvamı doğaldır; soğukta daha da yoğunlaşır.\nTahinle yarı yarıya karıştırılır, sıcak süte ve yulaf kasesine katılır.",
+      "fr": "Conservez au frais et au sec, sur une étagère à l'abri du soleil.\n**Refermez bien le bocal** et utilisez toujours une cuillère sèche.\nSa texture épaisse est naturelle ; au froid, elle s'épaissit encore.\nÀ mélanger moitié-moitié avec du tahin, dans un lait chaud ou un porridge.",
+      "de": "Kühl und trocken lagern, im Regal vor Sonne geschützt.\n**Glas gut verschließen** und stets einen trockenen Löffel benutzen.\nDie dickflüssige Konsistenz ist natürlich; in der Kälte wird sie noch fester.\nHalb und halb mit Tahin verrührt, in warme Milch oder ins Porridge."
     },
     "shelfLifeDays": 730,
     "storageType": "ambient",
@@ -723,9 +723,9 @@
       "de": "Şifamix Wacholderextrakt"
     },
     "description": {
-      "tr": "Şifamix andız özü, doğal andız meyvesinden infüzyon ve soğuk pres yöntemiyle elde edilir. Şeker ilavesizdir; doğal olarak şeker içerir. Katkı maddesi ve koruyucu içermez.",
-      "fr": "Extrait de genièvre Şifamix, obtenu à partir de baies de genévrier par infusion et pressage à froid. Sans sucres ajoutés – contient des sucres naturellement présents. Sans additifs ni conservateurs.",
-      "de": "Şifamix Wacholderextrakt aus Wacholderbeeren, durch Infusion und Kaltpressung gewonnen. Ohne Zuckerzusatz – enthält von Natur aus Zucker. Ohne Zusatz- und Konservierungsstoffe."
+      "tr": "Toroslar'ın andız kozalağından, saatlerce kaynatılarak. Kendine özgü acımtırak bir tadı var; geleneği tahinle karıştırıp yemektir.",
+      "fr": "Issu des cônes de genévrier des monts Taurus, longuement mijotés. Un goût amer très particulier — la tradition veut qu'on le mélange au tahin.",
+      "de": "Aus den Zapfen des Wacholders im Taurusgebirge, stundenlang eingekocht. Eigenwillig bitter — traditionell mit Tahin verrührt."
     },
     "ingredients": {
       "tr": "Doğal andız meyvesinin özü.",
@@ -745,9 +745,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde bulundurunuz.",
-      "fr": "Conserver dans un endroit frais et sec.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin ve kuru yerde, güneş görmeyen bir rafta saklayın.\nKavanozun **ağzını sıkıca kapatın** ve her seferinde kuru bir kaşık kullanın.\nAcımtırak tadı kendine özgüdür; ilk kez deniyorsanız tahinle yarı yarıya karıştırın.\nKoyu kıvamı doğaldır, soğukta daha da yoğunlaşır.",
+      "fr": "Conservez au frais et au sec, sur une étagère à l'abri du soleil.\n**Refermez bien le bocal** et utilisez toujours une cuillère sèche.\nSon amertume lui est propre : pour un premier essai, mélangez-le moitié-moitié avec du tahin.\nSa texture épaisse est naturelle ; au froid, elle s'épaissit encore.",
+      "de": "Kühl und trocken lagern, im Regal vor Sonne geschützt.\n**Glas gut verschließen** und stets einen trockenen Löffel benutzen.\nDie Bitterkeit gehört dazu: beim ersten Mal halb und halb mit Tahin verrühren.\nDie dickflüssige Konsistenz ist natürlich; in der Kälte wird sie noch fester."
     },
     "shelfLifeDays": 730,
     "storageType": "ambient",
@@ -783,9 +783,9 @@
       "de": "Coconut Mix"
     },
     "description": {
-      "tr": "Şifamix Coconut Mix – hindistan cevizi sirkesi ve şurubu bazlı konsantre içecek; yeşil çay, biberiye, chia ve kinoa tohumu içerir. İçmeden önce çalkalayınız, soğuk içiniz. Açıldıktan sonra buzdolabında saklayıp 1 ay içinde tüketiniz.",
-      "fr": "Şifamix Coconut Mix – boisson concentrée à base de vinaigre et de sirop de coco, avec thé vert, romarin, graines de chia et de quinoa. Bien agiter avant de boire, boire froid. Après ouverture, conserver au réfrigérateur et consommer dans un délai d'un mois.",
-      "de": "Şifamix Coconut Mix – Getränkekonzentrat auf Basis von Kokosnussessig und Kokosnusssirup, mit grünem Tee, Rosmarin, Chia- und Quinoasamen. Vor dem Trinken gut schütteln, kalt trinken. Nach dem Öffnen im Kühlschrank aufbewahren und innerhalb von 1 Monat verbrauchen."
+      "tr": "Hindistan cevizi sirkesi ve şurubu üzerine yeşil çay, biberiye, chia ve kinoa. Soğuk suyla açılan bir içecek konsantresi.",
+      "fr": "Sur une base de vinaigre et de sirop de coco : thé vert, romarin, chia et quinoa. Un concentré à diluer dans de l'eau fraîche.",
+      "de": "Auf Kokosessig und Kokossirup: Grüntee, Rosmarin, Chia und Quinoa. Ein Konzentrat, das mit kaltem Wasser aufgegossen wird."
     },
     "ingredients": {
       "tr": "Hindistan cevizi sirkesi, hindistan cevizi şurubu, sandaloz sakızı, yeşil çay, biberiye, chia tohumu, kinoa tohumu, kitre sakızı, funda yaprağı, L-karnitin, potasyum sorbat, sodyum benzoat, akasya gamı.",
@@ -805,9 +805,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Çocukların ulaşamayacağı, serin ve kuru bir yerde muhafaza ediniz. Açıldıktan sonra buzdolabında muhafaza edilmeli ve 1 ay içerisinde tüketilmelidir.",
-      "fr": "Conserver dans un endroit frais et sec, hors de portée des enfants. Après ouverture, conserver au réfrigérateur et consommer dans un délai d'un mois.",
-      "de": "Außerhalb der Reichweite von Kindern an einem kühlen und trockenen Ort aufbewahren. Nach dem Öffnen im Kühlschrank aufbewahren und innerhalb von 1 Monat verbrauchen."
+      "tr": "Çocukların ulaşamayacağı, serin ve kuru bir yerde saklayın.\nAçtıktan sonra **buzdolabında saklayın ve bir ay içinde tüketin**.\nİçmeden önce şişeyi çalkalayın; soğuk içilir.\nBardağa bir ölçü konsantre koyup üzerine soğuk su ekleyin.",
+      "fr": "Conservez au frais et au sec, hors de portée des enfants.\nAprès ouverture, **gardez au réfrigérateur et consommez dans le mois**.\nAgitez la bouteille avant de servir ; se boit frais.\nVersez une mesure de concentré dans le verre et complétez avec de l'eau fraîche.",
+      "de": "Kühl und trocken lagern, außerhalb der Reichweite von Kindern.\nNach dem Öffnen **im Kühlschrank aufbewahren und innerhalb eines Monats verbrauchen**.\nVor dem Trinken schütteln; kalt genießen.\nEin Maß Konzentrat ins Glas geben und mit kaltem Wasser auffüllen."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -842,9 +842,9 @@
       "de": "Natives Olivenöl extra"
     },
     "description": {
-      "tr": "Şifamix natürel sızma zeytinyağı, Yunanistan ürünü. Soğuk sıkım. Doğrudan zeytinden, yalnızca mekanik yöntemlerle elde edilen üstün kalite zeytinyağı.",
-      "fr": "Huile d'olive vierge extra Şifamix, produit de Grèce. Extraction à froid. Huile d'olive de catégorie supérieure obtenue directement des olives et uniquement par des procédés mécaniques.",
-      "de": "Natives Olivenöl extra von Şifamix, Erzeugnis aus Griechenland. Kaltextraktion. Olivenöl der höchsten Güteklasse, direkt aus Oliven ausschließlich mit mechanischen Verfahren gewonnen."
+      "tr": "Doğrudan zeytinden, yalnızca mekanik yöntemlerle: Yunanistan'dan soğuk sıkım üstün kalite sızma zeytinyağı. Salataya çiğ gezdirin.",
+      "fr": "Obtenue directement des olives et uniquement par des procédés mécaniques : une huile d'olive vierge extra de Grèce, extraite à froid. À filer crue sur une salade.",
+      "de": "Direkt aus Oliven, ausschließlich mit mechanischen Verfahren: natives Olivenöl extra aus Griechenland, kalt gepresst. Roh über den Salat."
     },
     "ingredients": {
       "tr": "Natürel sızma zeytinyağı.",
@@ -864,9 +864,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve karanlık bir yerde saklayınız.",
-      "fr": "Conserver dans un endroit sombre et frais.",
-      "de": "An einem dunklen und kühlen Ort aufbewahren."
+      "tr": "Serin ve karanlık bir yerde saklayın.\nIşık ve ısı **tadını bozar** — şişeyi ocağın yanında tutmayın.\nSoğukta bulanıklaşıp katılaşabilir; oda sıcaklığında berraklığına döner.\nBeş litrelik tenekeden küçük bir şişeye aktarıp günlük kullanın.",
+      "fr": "Conservez dans un endroit frais et sombre.\nLa lumière et la chaleur **altèrent son goût** — ne laissez pas la bouteille près des plaques.\nAu froid, elle peut se troubler et figer ; à température ambiante, elle redevient limpide.\nTransvasez du bidon de cinq litres dans une petite bouteille pour l'usage quotidien.",
+      "de": "Kühl und dunkel lagern.\nLicht und Hitze **verderben den Geschmack** — die Flasche nicht neben den Herd stellen.\nIn der Kälte kann es trüb und fest werden; bei Raumtemperatur wird es wieder klar.\nAus dem Fünf-Liter-Kanister in eine kleine Flasche umfüllen und täglich verwenden."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -922,9 +922,9 @@
       "de": "Pistazien"
     },
     "description": {
-      "tr": "Şifamix kabuklu Antep fıstığı, tuzlu. Dikkat: Küçük çocuklar taneleri yutarak boğulabilir.",
-      "fr": "Pistaches Şifamix en coque, salées. Attention : les enfants en bas âge peuvent s'étouffer avec les graines.",
-      "de": "Şifamix Pistazien in der Schale, gesalzen. Achtung: Kleine Kinder können an Kernen ersticken."
+      "tr": "Kabuğunda, tuzlu Antep fıstığı. Çay sofrasının ve akşam sohbetinin en uzun süren ikramı.",
+      "fr": "Des pistaches d'Antep salées, en coque. L'en-cas qui dure le plus longtemps autour du thé et des longues conversations.",
+      "de": "Antep-Pistazien, gesalzen, in der Schale. Der Knabberspaß, der am längsten hält — zum Tee und zum langen Abend."
     },
     "ingredients": {
       "tr": "**Antep fıstığı**, tuz.",
@@ -950,9 +950,9 @@
       "susam"
     ],
     "storage": {
-      "tr": "Kuru yerde, sıcaktan koruyarak saklayınız.",
-      "fr": "Conserver au sec et à l'abri de la chaleur.",
-      "de": "Trocken lagern und vor Wärme schützen."
+      "tr": "Kuru yerde, sıcaktan koruyarak saklayın.\n**Küçük çocuklar taneleri yutarak boğulabilir** — onların erişemeyeceği yerde tutun.\nAmbalajı açtıktan sonra ağzını kapalı tutun; nem alırsa kıtırlığı azalır.\nKıtırlığı geri gelsin diye 150 °C fırında beş dakika ısıtabilirsiniz.",
+      "fr": "Conservez au sec, à l'abri de la chaleur.\n**Les jeunes enfants peuvent s'étouffer en avalant les grains** — tenir hors de leur portée.\nAprès ouverture, refermez bien l'emballage : l'humidité leur fait perdre leur croquant.\nPour le retrouver, passez-les cinq minutes au four à 150 °C.",
+      "de": "Trocken und vor Hitze geschützt lagern.\n**Kleine Kinder können an den Kernen ersticken** — außerhalb ihrer Reichweite aufbewahren.\nNach dem Öffnen gut verschließen; Feuchtigkeit nimmt ihnen die Knusprigkeit.\nFünf Minuten bei 150 °C im Ofen bringt sie zurück."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -987,9 +987,9 @@
       "de": "Bromelain-Sirup"
     },
     "description": {
-      "tr": "Ananas ve bromelain içeren şurup formunda gıda takviyesi (Zühre Ana). 1 porsiyonda: bromelain 350 mg, koenzim Q10 100 mg, mate yaprağı ekstresi 100 mg, L-karnitin 100 mg, C vitamini 80 mg (%100 BRD), ananas ekstresi 50 mg. Kullanım: yetişkinler ve 11 yaş üzeri için sabah 1, akşam 1 doz olmak üzere günde toplam 2 doz (10 ml). Kullanmadan önce çalkalayınız. İlaç değildir; hastalıkları önleme veya tedavi amacıyla kullanılamaz. Gıda takviyeleri normal beslenmenin yerine geçemez. Hastalık veya ilaç kullanımı durumunda doktorunuza danışınız. Çocukların ulaşamayacağı yerde saklayınız.",
-      "fr": "Complément alimentaire au sirop contenant de l'ananas et de la bromélaïne (Zühre Ana). Pour 1 portion : bromélaïne 350 mg, coenzyme Q10 100 mg, extrait de feuille de maté 100 mg, L-carnitine 100 mg, vitamine C 80 mg (100 % VNR), extrait d'ananas 50 mg. Portion journalière : adultes et personnes de 11 ans et plus, 1 dose le matin et 1 dose le soir, soit 2 doses (10 ml) par jour. Bien agiter avant utilisation. Ce n'est pas un médicament ; il ne peut pas être utilisé pour prévenir ou traiter des maladies. Les compléments alimentaires ne peuvent pas remplacer une alimentation normale. Consultez votre médecin en cas de maladie ou de prise de médicaments. Tenir hors de portée des enfants.",
-      "de": "Nahrungsergänzungsmittel in Sirupform mit Ananas und Bromelain (Zühre Ana). Pro Portion: Bromelain 350 mg, Coenzym Q10 100 mg, Mate-Blattextrakt 100 mg, L-Carnitin 100 mg, Vitamin C 80 mg (100 % NRV), Ananasextrakt 50 mg. Verzehrempfehlung: Erwachsene und Personen ab 11 Jahren 1 Dosis morgens und 1 Dosis abends, insgesamt 2 Dosen (10 ml) pro Tag. Vor Gebrauch gut schütteln. Es ist kein Arzneimittel und kann nicht zur Vorbeugung oder Behandlung von Krankheiten eingesetzt werden. Nahrungsergänzungsmittel können die normale Ernährung nicht ersetzen. Bei Krankheit oder Medikamenteneinnahme Arzt konsultieren. Außerhalb der Reichweite von Kindern aufbewahren."
+      "tr": "Ananas ve bromelain içeren, şurup formunda gıda takviyesi. Stevya ile tatlandırılmış, ananas aromalı.",
+      "fr": "Un complément alimentaire sous forme de sirop, à l'ananas et à la bromélaïne. Sucré à la stévia, parfumé à l'ananas.",
+      "de": "Ein Nahrungsergänzungsmittel in Sirupform mit Ananas und Bromelain. Mit Stevia gesüßt, mit Ananasaroma."
     },
     "ingredients": {
       "tr": "Deiyonize su, bromelain, koenzim Q10, mate yaprağı ekstresi, L-karnitin, arap zamkı (E414), L-askorbik asit (C vitamini), ananas ekstresi, doğal ananas aroması, stevya (Stevia rebaudiana).",
@@ -999,9 +999,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "25 °C'nin altında oda sıcaklığında, nem ve ışıktan korunarak saklayınız. Çocukların ulaşamayacağı yerde saklayınız.",
-      "fr": "Conserver à température ambiante inférieure à 25 °C, à l'abri de l'humidité et de la lumière. Tenir hors de portée des enfants.",
-      "de": "Bei Raumtemperatur unter 25 °C, vor Feuchtigkeit und Licht geschützt lagern. Außerhalb der Reichweite von Kindern aufbewahren."
+      "tr": "25 °C'nin altında, nem ve ışıktan korunarak saklayın.\n**Çocukların ulaşamayacağı yerde saklayın.**\nKullanmadan önce şişeyi çalkalayın.\nYetişkinler ve 11 yaş üzeri için sabah bir, akşam bir doz — günde toplam iki doz (10 ml).\nİlaç değildir; hastalıkları önleme veya tedavi amacıyla kullanılamaz.\nGıda takviyeleri normal beslenmenin yerine geçemez.\nHastalık veya ilaç kullanımı durumunda doktorunuza danışın.",
+      "fr": "Conservez à moins de 25 °C, à l'abri de l'humidité et de la lumière.\n**Tenir hors de portée des enfants.**\nAgitez le flacon avant emploi.\nPour les adultes et les plus de 11 ans : une dose le matin, une le soir, soit deux doses (10 ml) par jour.\nCe n'est pas un médicament ; il ne peut pas être utilisé pour prévenir ou traiter des maladies.\nLes compléments alimentaires ne remplacent pas une alimentation variée.\nEn cas de maladie ou de prise de médicaments, consultez votre médecin.",
+      "de": "Unter 25 °C, vor Feuchtigkeit und Licht geschützt lagern.\n**Außerhalb der Reichweite von Kindern aufbewahren.**\nVor Gebrauch gut schütteln.\nFür Erwachsene und Personen ab 11 Jahren: eine Dosis morgens, eine abends — zwei Dosen (10 ml) täglich.\nEs ist kein Arzneimittel und kann nicht zur Vorbeugung oder Behandlung von Krankheiten eingesetzt werden.\nNahrungsergänzungsmittel ersetzen keine ausgewogene Ernährung.\nBei Krankheit oder Medikamenteneinnahme den Arzt konsultieren."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1036,9 +1036,9 @@
       "de": "Propolis-Paste"
     },
     "description": {
-      "tr": "Zühre Ana beta glukan katkılı propolis macunu. Çiçek balı ve keçiboynuzu pekmezi bazlı; polen, arı sütü, propolis (%2,5), Kore ginsengi ve damla sakızı içerir. Türkiye ürünü. Metal kaşık kullanmayınız, tahta veya plastik kaşık kullanınız. Ürün içeriğine alerjisi olanlar doktora danışmalıdır.",
-      "fr": "Pâte au propolis Zühre Ana, avec bêta-glucane. À base de miel de fleurs et de mélasse de caroube, avec pollen, gelée royale, propolis (2,5 %), ginseng coréen et mastic. Produit de Turquie. Utiliser une cuillère en bois ou en plastique, pas de cuillère en métal. Les personnes allergiques à l'un des ingrédients doivent consulter un médecin.",
-      "de": "Zühre Ana Propolis-Paste mit Beta-Glucan. Auf Basis von Blütenhonig und Johannisbrotmelasse, mit Pollen, Gelée Royale, Propolis (2,5 %), koreanischem Ginseng und Mastix. Hergestellt in der Türkei. Keinen Metalllöffel verwenden, sondern einen Holz- oder Kunststofflöffel. Personen mit Allergien gegen einen der Inhaltsstoffe sollten einen Arzt konsultieren."
+      "tr": "Çiçek balı ve keçiboynuzu pekmezi üzerine polen, arı sütü ve %2,5 propolis. Kışın sabah kahvaltısına bir tatlı kaşığı.",
+      "fr": "Sur une base de miel de fleurs et de mélasse de caroube : pollen, gelée royale et 2,5 % de propolis. Une cuillère au petit-déjeuner d'hiver.",
+      "de": "Auf Blütenhonig und Johannisbrotmelasse: Pollen, Gelée royale und 2,5 % Propolis. Ein Teelöffel zum Winterfrühstück."
     },
     "ingredients": {
       "tr": "Çiçek balı, keçiboynuzu pekmezi, polen, arı sütü, propolis (%2,5), Kore ginsengi, damla sakızı, beta glukan.",
@@ -1058,9 +1058,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde saklayınız.",
-      "fr": "À conserver au sec et au frais.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin ve kuru yerde saklayın.\nKavanoza **metal kaşık daldırmayın** — tahta ya da plastik kaşık kullanın.\nKoyu kıvamı doğaldır; soğukta sertleşir, oda sıcaklığında yumuşar.\nİçeriğindeki maddelere alerjisi olanlar tüketmeden önce doktoruna danışmalıdır.",
+      "fr": "Conservez au frais et au sec.\n**N'utilisez pas de cuillère en métal** : préférez le bois ou le plastique.\nSa texture épaisse est naturelle ; elle durcit au froid et s'assouplit à température ambiante.\nEn cas d'allergie à l'un des ingrédients, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Kühl und trocken lagern.\n**Keinen Metalllöffel verwenden** — Holz oder Kunststoff ist besser.\nDie dicke Konsistenz ist natürlich; in der Kälte wird sie fest, bei Raumtemperatur weich.\nBei Allergie gegen einen der Bestandteile vor dem Verzehr ärztlichen Rat einholen."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1095,9 +1095,9 @@
       "de": "Form-Paste (mit L-Carnitin)"
     },
     "description": {
-      "tr": "Zühre Ana L-karnitin içeren macun. Meyve ve bitki karışımı; L-karnitin (%4,16) ve krom pikolinat içerir. Türkiye ürünü. Hamile kadınlar ve çocuklar için uygun değildir.",
-      "fr": "Pâte Zühre Ana contenant de la L-carnitine. Mélange de fruits et de plantes, avec L-carnitine (4,16 %) et picolinate de chrome. Produit de Turquie. Ne convient pas aux femmes enceintes ni aux enfants.",
-      "de": "Zühre Ana Paste mit L-Carnitin. Mischung aus Früchten und Kräutern, mit L-Carnitin (4,16 %) und Chrompicolinat. Hergestellt in der Türkei. Für Schwangere und Kinder nicht geeignet."
+      "tr": "Yaban mersini, biberiye, funda ve kiraz sapı gibi bitkilerden kurulu bir macun; kayısı aromalı. Bir tatlı kaşığı, günün başında.",
+      "fr": "Une pâte composée de myrtille, romarin, bruyère et queues de cerise, parfumée à l'abricot. Une cuillère au début de la journée.",
+      "de": "Eine Paste aus Heidelbeere, Rosmarin, Heidekraut und Kirschstielen, mit Aprikosenaroma. Ein Teelöffel zum Start in den Tag."
     },
     "ingredients": {
       "tr": "Yaban mersini, biberiye, funda, kiraz meyve sapı, mısır püskülü, akdiken, enginar, L-karnitin (%4,16), sandaloz sakızı, kitre, tarçın, krom pikolinat, yeşil çay, nar ekşisi, kayısı aroması.",
@@ -1117,9 +1117,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Güneş ışığından uzak, serin ve kuru yerde saklayınız.",
-      "fr": "À conserver à l’abri du soleil, au sec et au frais.",
-      "de": "Vor Sonnenlicht geschützt, kühl und trocken lagern."
+      "tr": "Güneş ışığından uzak, serin ve kuru yerde saklayın.\n**Hamileler ve çocuklar için uygun değildir.**\nKavanozun ağzını sıkıca kapatın ve her seferinde kuru bir kaşık kullanın.\nKoyu kıvamı doğaldır; soğukta sertleşir, oda sıcaklığında yumuşar.",
+      "fr": "Conservez à l'abri de la lumière, au frais et au sec.\n**Ne convient pas aux femmes enceintes ni aux enfants.**\nRefermez bien le bocal et utilisez toujours une cuillère sèche.\nSa texture épaisse est naturelle ; elle durcit au froid et s'assouplit à température ambiante.",
+      "de": "Lichtgeschützt, kühl und trocken lagern.\n**Nicht geeignet für Schwangere und Kinder.**\nGlas gut verschließen und stets einen trockenen Löffel benutzen.\nDie dicke Konsistenz ist natürlich; in der Kälte wird sie fest, bei Raumtemperatur weich."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1154,9 +1154,9 @@
       "de": "Kiefernzapfen-Paste"
     },
     "description": {
-      "tr": "Zühre Ana kozalak macunu. Keçiboynuzu ve andız pekmezi bazlı; servi kozağı (%24), reçine, baharatlar, çinko, C ve D3 vitamini içerir. Türkiye ürünü.",
-      "fr": "Pâte Zühre Ana à base de mélasse de caroube et de genévrier, avec cônes de cyprès (24 %), résine, épices, zinc et vitamines C et D3. Produit de Turquie.",
-      "de": "Zühre Ana Paste auf Basis von Johannisbrot- und Wacholdermelasse, mit Zypressenzapfen (24 %), Harz, Gewürzen, Zink sowie Vitamin C und D3. Hergestellt in der Türkei."
+      "tr": "Keçiboynuzu ve andız pekmezi üzerine %24 servi kozalağı, çam sakızı ve baharatlar. Reçineli, koyu bir tat; bir kaşık ekmekle.",
+      "fr": "Sur une base de mélasse de caroube et de genévrier : 24 % de cônes de cyprès, résine de pin et épices. Résineux et dense, une cuillère avec du pain.",
+      "de": "Auf Johannisbrot- und Wacholdermelasse: 24 % Zypressenzapfen, Kiefernharz und Gewürze. Harzig und dicht — ein Löffel zum Brot."
     },
     "ingredients": {
       "tr": "Keçiboynuzu pekmezi, servi kozağı (%24), andız pekmezi, nane, zencefil, günlük (boswellia), çam sakızı (%2), zerdeçal, havlıcan, beta-glukan, çinko glukonat (%2), askorbik asit (C vitamini), kübabe, karanfil, keçiboynuzu tozu, kolekalsiferol (D3 vitamini) (%0,006).",
@@ -1176,9 +1176,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde saklayınız.",
-      "fr": "À conserver au sec et au frais.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin ve kuru yerde saklayın.\nKavanozun **ağzını sıkıca kapatın** ve her seferinde kuru bir kaşık kullanın.\nKoyu kıvamı doğaldır; soğukta sertleşir, oda sıcaklığında yumuşar.\nEkmeğe sürülür ya da sıcak süte bir kaşık katılır.",
+      "fr": "Conservez au frais et au sec.\n**Refermez bien le bocal** et utilisez toujours une cuillère sèche.\nSa texture épaisse est naturelle ; elle durcit au froid et s'assouplit à température ambiante.\nÀ tartiner sur du pain ou à délayer dans un lait chaud.",
+      "de": "Kühl und trocken lagern.\n**Glas gut verschließen** und stets einen trockenen Löffel benutzen.\nDie dicke Konsistenz ist natürlich; in der Kälte wird sie fest, bei Raumtemperatur weich.\nAufs Brot streichen oder einen Löffel in warme Milch rühren."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1213,9 +1213,9 @@
       "de": "Paste aus Ölweidenkernen"
     },
     "description": {
-      "tr": "Zühre Ana iğde çekirdeği macunu. Keçiboynuzu pekmezi ve bal katkılı; iğde çekirdeği tozu (%32), kalsiyum ve D3 vitamini içerir. Tavuk kaynaklı kolajen ve yumurta kabuğu tozu içerir. Türkiye ürünü. Ürün içeriğine alerjisi olanlar doktora danışmalıdır.",
-      "fr": "Pâte Zühre Ana aux noyaux d'olivier de Bohême, avec mélasse de caroube et miel ; contient de la poudre de noyaux d'olivier de Bohême (32 %), du calcium et de la vitamine D3. Contient du collagène de poulet et de la poudre de coquille d'œuf. Produit de Turquie. Les personnes allergiques à l'un des ingrédients doivent consulter un médecin.",
-      "de": "Zühre Ana Ölweidenkern-Paste mit Johannisbrotmelasse und Honig; enthält Ölweidenkernpulver (32 %), Calcium und Vitamin D3. Enthält Kollagen aus Huhn und Eierschalenpulver. Hergestellt in der Türkei. Personen mit Allergien gegen einen der Inhaltsstoffe sollten einen Arzt konsultieren."
+      "tr": "Keçiboynuzu pekmezi ve bal üzerine %32 iğde çekirdeği tozu. İğdenin un gibi yumuşak tadı, bir tatlı kaşığında.",
+      "fr": "Sur une base de mélasse de caroube et de miel : 32 % de poudre de noyau d'olivier de Bohême. Le goût farineux et doux du chalef, en une cuillère.",
+      "de": "Auf Johannisbrotmelasse und Honig: 32 % Pulver aus Ölweidenkernen. Der mehlig-milde Geschmack der Ölweide, in einem Löffel."
     },
     "ingredients": {
       "tr": "Keçiboynuzu pekmezi, iğde çekirdeği tozu (%32), akgünlük, kalsiyum glukonat, **yumurta** kabuğu tozu, çiçek balı, kolajen peptit (tip 2, tavuk kaynaklı), D3 vitamini preparatı (maltodekstrin, kolekalsiferol).",
@@ -1237,9 +1237,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "Güneş ışığından uzak tutunuz. Serin ve kuru yerde muhafaza ediniz. Çocukların ulaşamayacağı yerde ve kendi ambalajı içerisinde saklayınız.",
-      "fr": "Tenir à l'abri de la lumière du soleil. Conserver dans un endroit frais et sec. Conserver hors de portée des enfants et dans son emballage d'origine.",
-      "de": "Vor Sonnenlicht schützen. Kühl und trocken lagern. Außerhalb der Reichweite von Kindern und in der Originalverpackung aufbewahren."
+      "tr": "Güneş ışığından uzak, serin ve kuru yerde, kendi ambalajında saklayın.\n**Çocukların ulaşamayacağı yerde saklayın.**\nKavanozun ağzını sıkıca kapatın ve her seferinde kuru bir kaşık kullanın.\nİçeriğindeki maddelere alerjisi olanlar tüketmeden önce doktoruna danışmalıdır.",
+      "fr": "Conservez à l'abri de la lumière, au frais et au sec, dans son emballage d'origine.\n**Tenir hors de portée des enfants.**\nRefermez bien le bocal et utilisez toujours une cuillère sèche.\nEn cas d'allergie à l'un des ingrédients, demandez conseil à votre médecin avant d'en consommer.",
+      "de": "Lichtgeschützt, kühl und trocken in der Originalverpackung lagern.\n**Außerhalb der Reichweite von Kindern aufbewahren.**\nGlas gut verschließen und stets einen trockenen Löffel benutzen.\nBei Allergie gegen einen der Bestandteile vor dem Verzehr ärztlichen Rat einholen."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1274,9 +1274,9 @@
       "de": "Schwarzer Maulbeerextrakt"
     },
     "description": {
-      "tr": "Zühre Ana karadut özü. 1+5 oranında suyla sulanabilir (damak tadına göre artırılıp azaltılabilir). Şeker meyvenin kendi şekeridir, ilave şeker eklenmemiştir. Kıvam artırıcı içermez.",
-      "fr": "Extrait de mûrier noir Zühre Ana. Peut être dilué dans un rapport de 1+5 avec de l'eau (selon votre goût). Le sucre contenu provient du fruit lui-même, aucun sucre n'est ajouté. Ne contient pas d'épaississants.",
-      "de": "Zühre Ana Schwarzer Maulbeer-Extrakt. Kann im Verhältnis 1+5 mit Wasser verdünnt werden (je nach Geschmack mehr oder weniger). Der Zucker stammt aus der Frucht selbst, es wird kein zusätzlicher Zucker zugesetzt. Enthält keine Verdickungsmittel."
+      "tr": "Karadutun kendi şekeriyle koyulaştırılmış özü; kıvam artırıcı yok. Beş ölçü suyla açılır, koyu mor bir şurup olur.",
+      "fr": "Un extrait de mûre noire épaissi par le seul sucre du fruit, sans épaississant. Dilué dans cinq mesures d'eau, il donne un sirop d'un violet profond.",
+      "de": "Maulbeer-Extrakt, allein durch den Zucker der Frucht eingedickt, ohne Verdickungsmittel. Mit fünf Teilen Wasser ergibt er einen tiefvioletten Sirup."
     },
     "ingredients": {
       "tr": "Karadut özü.",
@@ -1296,9 +1296,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Güneş ışığından uzak, serin ve kuru, kendi ambalajı içerisinde saklayınız.",
-      "fr": "Conserver dans son emballage d'origine, dans un endroit frais et sec, à l'abri de la lumière du soleil.",
-      "de": "In der Originalverpackung an einem kühlen, trockenen und vor Sonnenlicht geschützten Ort aufbewahren."
+      "tr": "Güneş ışığından uzak, serin ve kuru yerde, kendi ambalajında saklayın.\nAçtıktan sonra **buzdolabında** saklayın.\nBir ölçü öze beş ölçü su; damak tadınıza göre azaltıp artırabilirsiniz.\nYoğurda, dondurmaya ve sütlü tatlılara da gezdirilir.",
+      "fr": "Conservez à l'abri du soleil, au frais et au sec, dans son emballage d'origine.\nAprès ouverture, **conservez au réfrigérateur**.\nUne mesure d'extrait pour cinq mesures d'eau, à ajuster selon votre goût.\nIl se verse aussi sur un yaourt, une glace ou un dessert au lait.",
+      "de": "Vor Sonne geschützt, kühl und trocken in der Originalverpackung lagern.\nNach dem Öffnen **im Kühlschrank** aufbewahren.\nEin Teil Extrakt auf fünf Teile Wasser — nach Geschmack mehr oder weniger.\nAuch über Joghurt, Eis und Milchdesserts."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1333,9 +1333,9 @@
       "de": "Zühre Ana Kekre, Fruchtkonzentrat"
     },
     "description": {
-      "tr": "Zühre Ana Kekre Mix, hibisküs ve papayalı; bitki ekstreleri içeren içecek konsantresi. Hazırlanışı: bardağın 1/4'üne kadar doldurup üzerine su ekleyerek iyice karıştırınız. Tüketmeden önce çalkalayınız. Koruyucu ve renklendirici içermez.",
-      "fr": "Zühre Ana Kekre Mix à l'hibiscus et à la papaye – concentré de boisson aux extraits de plantes. Préparation : remplir un verre au quart, compléter avec de l'eau et bien mélanger. Agiter avant utilisation. Sans conservateurs ni colorants.",
-      "de": "Zühre Ana Kekre Mix mit Hibiskus und Papaya – Getränkekonzentrat mit Pflanzenextrakten. Zubereitung: ein Glas zu 1/4 füllen, mit Wasser auffüllen und gut umrühren. Vor Gebrauch schütteln. Ohne Konservierungs- und Farbstoffe."
+      "tr": "Yaban mersini, mate, zencefil, papaya ve hibiskusla bir içecek konsantresi. Bardağın dörtte birine konup üstüne su eklenir.",
+      "fr": "Un concentré de boisson à la myrtille, au maté, au gingembre, à la papaye et à l'hibiscus. Remplissez le quart du verre, puis complétez avec de l'eau.",
+      "de": "Ein Getränkekonzentrat aus Heidelbeere, Mate, Ingwer, Papaya und Hibiskus. Das Glas zu einem Viertel füllen, dann mit Wasser auffüllen."
     },
     "ingredients": {
       "tr": "Yaban mersini, su, mate, zencefil, papaya, mango, açai, sandaloz sakızı, hindistan cevizi, hibiskus, avokado, ananas, tarçın, L-karnitin, stevia, ksantan gam.",
@@ -1355,9 +1355,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Güneş ışığından uzak, serin ve kuru, kendi ambalajı içerisinde saklayınız. Açıldıktan sonra buzdolabında muhafaza ediniz.",
-      "fr": "À conserver à l'abri de la lumière du soleil, dans un endroit frais et sec, dans son emballage d'origine. Après ouverture, conserver au réfrigérateur.",
-      "de": "Vor Sonnenlicht geschützt, kühl und trocken in der Originalverpackung aufbewahren. Nach dem Öffnen im Kühlschrank aufbewahren."
+      "tr": "Güneş ışığından uzak, serin ve kuru yerde, kendi ambalajında saklayın.\nAçtıktan sonra **buzdolabında** saklayın.\nTüketmeden önce şişeyi çalkalayın.\nBardağın dörtte birine kadar doldurup üzerine su ekleyin ve iyice karıştırın.",
+      "fr": "Conservez à l'abri du soleil, au frais et au sec, dans son emballage d'origine.\nAprès ouverture, **gardez au réfrigérateur**.\nAgitez la bouteille avant de servir.\nRemplissez le verre au quart, complétez avec de l'eau et mélangez bien.",
+      "de": "Vor Sonne geschützt, kühl und trocken in der Originalverpackung lagern.\nNach dem Öffnen **im Kühlschrank** aufbewahren.\nVor dem Verzehr schütteln.\nDas Glas zu einem Viertel füllen, mit Wasser auffüllen und gut verrühren."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1392,9 +1392,9 @@
       "de": "Muska-Pestil mit Haselnüssen"
     },
     "description": {
-      "tr": "Gümüşhane usulü fındıklı muska; üçgen katlanmış pestil, üzüm pekmezi, fındık, buğday unu ve şekerle hazırlanır.",
-      "fr": "Amulette aux noisettes, spécialité de Gümüşhane (Turquie) : pestil plié en triangle à base de mélasse de raisin, de noisettes, de farine de blé et de sucre.",
-      "de": "Haselnuss-Amulett nach Art von Gümüşhane (Türkei) – dreieckig gefalteter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker."
+      "tr": "Üçgen katlanmış fındıklı pestil — adını muskadan alır. %33 fındık ve üzüm pekmezi, tek lokmalık.",
+      "fr": "Du pestil aux noisettes plié en triangle — il doit son nom à l'amulette. 33 % de noisettes et de la mélasse de raisin, en une bouchée.",
+      "de": "Haselnuss-Pestil, dreieckig gefaltet — benannt nach dem Amulett. 33 % Haselnüsse und Traubenmelasse, ein Bissen."
     },
     "ingredients": {
       "tr": "**Fındık** (%33), üzüm pekmezi (%32), **buğday** unu (%20), şeker (%15).",
@@ -1417,9 +1417,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
-      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin yerde; ısıdan, kokudan ve nemden uzakta saklayın.\n**Buzdolabına koymayın** — soğukta sertleşir ve terler.\nAmbalajı açtıktan sonra ağzını kapalı tutun.\nTek lokmalıktır; oda sıcaklığında olduğu gibi ikram edilir.",
+      "fr": "Conservez au frais, à l'abri de la chaleur, des odeurs et de l'humidité.\n**Ne pas mettre au réfrigérateur** : le froid le durcit et le fait transpirer.\nAprès ouverture, refermez bien l'emballage.\nÀ servir tel quel, à température ambiante — une bouchée suffit.",
+      "de": "Kühl lagern, fern von Hitze, Gerüchen und Feuchtigkeit.\n**Nicht in den Kühlschrank** — Kälte macht es hart und schwitzig.\nNach dem Öffnen gut verschlossen halten.\nEin Bissen: bei Raumtemperatur so servieren, wie es ist."
     },
     "shelfLifeDays": 365,
     "storageType": "ambient",
@@ -1455,9 +1455,9 @@
       "de": "Getrocknete Aronia"
     },
     "description": {
-      "tr": "Şifamix kurutulmuş aronya meyvesi.",
-      "fr": "Baies d'aronia séchées Şifamix.",
-      "de": "Şifamix getrocknete Aroniabeeren."
+      "tr": "Bütün tanesiyle kurutulmuş aronya; tek içindekisi meyvenin kendisi. Koyu ve buruk bir tat — yoğurda, granolaya ya da kek harcına bir avuç.",
+      "fr": "Des baies d'aronia entières, séchées ; un seul ingrédient : le fruit. Un goût sombre et âpre — une poignée dans un yaourt, un granola ou une pâte à gâteau.",
+      "de": "Ganze Aroniabeeren, getrocknet; eine einzige Zutat: die Frucht. Dunkel und herb — eine Handvoll in Joghurt, Granola oder Kuchenteig."
     },
     "ingredients": {
       "tr": "Kurutulmuş aronya.",
@@ -1477,9 +1477,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
-      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
-      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak saklayın.\nAçtıktan sonra **ağzını kapalı tutun**.\nBuruk tadı yumuşasın isterseniz bir avucu ılık suda 10 dakika bekletin.\nYoğurda, granolaya ve kek harcına doğrudan da katabilirsiniz.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière.\nAprès ouverture, **refermez bien l'emballage**.\nPour adoucir l'âpreté, laissez tremper une poignée 10 minutes dans de l'eau tiède.\nVous pouvez aussi les ajouter telles quelles au yaourt, au granola ou à une pâte à gâteau.",
+      "de": "Kühl und trocken lagern, vor Licht geschützt.\nNach dem Öffnen **gut verschließen**.\nWer es milder mag, weicht eine Handvoll 10 Minuten in lauwarmem Wasser ein.\nSie passen aber auch direkt in Joghurt, Granola oder Kuchenteig."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1514,9 +1514,9 @@
       "de": "Getrocknete Äpfel"
     },
     "description": {
-      "tr": "Şifamix kurutulmuş elma dilimleri.",
-      "fr": "Rondelles de pommes séchées Şifamix.",
-      "de": "Şifamix getrocknete Apfelringe."
+      "tr": "Kabuğuyla kurutulmuş elma halkaları; tek içindekisi meyvenin kendisi. Çayın yanında, müslinin içinde ya da tarçınla fırınlanan bir hamurda.",
+      "fr": "Des rondelles de pomme séchées avec la peau ; un seul ingrédient : le fruit. À côté du thé, dans un muesli ou dans une pâte parfumée à la cannelle.",
+      "de": "Apfelringe mit Schale, getrocknet; eine einzige Zutat: die Frucht. Zum Tee, ins Müsli oder in einen Teig mit Zimt."
     },
     "ingredients": {
       "tr": "Kurutulmuş elma.",
@@ -1536,9 +1536,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
-      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
-      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak saklayın.\nAçtıktan sonra **ağzını kapalı tutun**.\nHoşaf için bir avucu ılık suda 20 dakika bekletin.\nKek ve kurabiye harcına doğrudan doğrayabilirsiniz.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière.\nAprès ouverture, **refermez bien l'emballage**.\nPour une compote, laissez tremper une poignée 20 minutes dans de l'eau tiède.\nVous pouvez aussi les couper directement dans une pâte à gâteau ou à biscuits.",
+      "de": "Kühl und trocken lagern, vor Licht geschützt.\nNach dem Öffnen **gut verschließen**.\nFür ein Kompott eine Handvoll 20 Minuten in lauwarmem Wasser einweichen.\nIn Kuchen- oder Keksteig können sie auch direkt geschnitten werden."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1573,9 +1573,9 @@
       "de": "Kaki-Chips"
     },
     "description": {
-      "tr": "Şifamix kurutulmuş cennet elması (Trabzon hurması) dilimleri.",
-      "fr": "Tranches de kaki séché Şifamix.",
-      "de": "Şifamix getrocknete Kakischeiben."
+      "tr": "İnce dilimlenip kurutulmuş cennet elması — her dilimin ortasında bir yıldız deseni. Tek içindekisi meyvenin kendisi, bal gibi tatlı.",
+      "fr": "Du kaki séché en fines tranches — une étoile au cœur de chacune. Un seul ingrédient : le fruit, et une douceur de miel.",
+      "de": "Kaki in feine Scheiben geschnitten und getrocknet — in jeder ein Stern. Eine einzige Zutat: die Frucht, honigsüß."
     },
     "ingredients": {
       "tr": "Kurutulmuş cennet elması.",
@@ -1595,9 +1595,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
-      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
-      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak saklayın.\nAçtıktan sonra **ağzını kapalı tutun**.\nNem aldığında kıtırlığı azalır; kapalı bir kavanozda daha uzun dayanır.\nÇayın yanında olduğu gibi yenir, yulafa ve tatlılara da doğranır.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière.\nAprès ouverture, **refermez bien l'emballage**.\nL'humidité leur fait perdre leur croquant : un bocal bien fermé les garde plus longtemps.\nElles se mangent telles quelles avec le thé, ou se coupent dans un porridge et des desserts.",
+      "de": "Kühl und trocken lagern, vor Licht geschützt.\nNach dem Öffnen **gut verschließen**.\nFeuchtigkeit nimmt ihnen die Knusprigkeit; im geschlossenen Glas halten sie länger.\nSie schmecken pur zum Tee und lassen sich in Porridge und Desserts schneiden."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1632,9 +1632,9 @@
       "de": "Getrocknete Pfirsiche"
     },
     "description": {
-      "tr": "Şifamix kurutulmuş şeftali dilimleri.",
-      "fr": "Tranches de pêches séchées Şifamix.",
-      "de": "Şifamix getrocknete Pfirsichscheiben."
+      "tr": "Dilim dilim kurutulmuş şeftali; tek içindekisi meyvenin kendisi. Yumuşak dokusu ve yoğun tadıyla çay saatinin sade bir tatlısı.",
+      "fr": "Des pêches séchées en tranches ; un seul ingrédient : le fruit. Tendres et intenses, une douceur toute simple pour l'heure du thé.",
+      "de": "Pfirsiche in Scheiben, getrocknet; eine einzige Zutat: die Frucht. Weich und intensiv — eine schlichte Süßigkeit zur Teestunde."
     },
     "ingredients": {
       "tr": "Kurutulmuş şeftali.",
@@ -1654,9 +1654,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
-      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
-      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak saklayın.\nAçtıktan sonra **ağzını kapalı tutun**.\nKomposto için bir avucu ılık suda 20 dakika bekletin.\nYulaf kasesine ve kek harcına doğrudan doğranır.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière.\nAprès ouverture, **refermez bien l'emballage**.\nPour une compote, laissez tremper une poignée 20 minutes dans de l'eau tiède.\nElles se coupent aussi directement dans un porridge ou une pâte à gâteau.",
+      "de": "Kühl und trocken lagern, vor Licht geschützt.\nNach dem Öffnen **gut verschließen**.\nFür ein Kompott eine Handvoll 20 Minuten in lauwarmem Wasser einweichen.\nSie lassen sich auch direkt in Porridge oder Kuchenteig schneiden."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1691,9 +1691,9 @@
       "de": "Getrocknete Melone"
     },
     "description": {
-      "tr": "Şifamix kurutulmuş kavun dilimleri.",
-      "fr": "Tranches de melon séché Şifamix.",
-      "de": "Şifamix getrocknete Melonenscheiben."
+      "tr": "Bal renginde, hilal hilal kurutulmuş kavun; tek içindekisi meyvenin kendisi. Kahvaltı tabağında peynirin yanında şaşırtıcı durur.",
+      "fr": "Du melon séché en croissants, couleur miel ; un seul ingrédient : le fruit. Sur un plateau de petit-déjeuner, à côté du fromage, il surprend.",
+      "de": "Honigfarbene Melonensicheln, getrocknet; eine einzige Zutat: die Frucht. Auf dem Frühstücksteller neben dem Käse überrascht sie."
     },
     "ingredients": {
       "tr": "Kurutulmuş kavun.",
@@ -1713,9 +1713,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
-      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
-      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+      "tr": "Serin ve kuru yerde, güneş ışığından uzak saklayın.\nAçtıktan sonra **ağzını kapalı tutun**.\nDilimler birbirine yapışırsa birkaç dakika açıkta bekletin, kolayca ayrılır.\nPeynir tabağına, salataya ve yoğurda doğrudan katılır.",
+      "fr": "Conservez au frais et au sec, à l'abri de la lumière.\nAprès ouverture, **refermez bien l'emballage**.\nSi les tranches collent entre elles, laissez-les quelques minutes à l'air : elles se détachent.\nElles s'ajoutent telles quelles au plateau de fromages, aux salades et au yaourt.",
+      "de": "Kühl und trocken lagern, vor Licht geschützt.\nNach dem Öffnen **gut verschließen**.\nKleben die Scheiben aneinander, hilft es, sie ein paar Minuten offen liegen zu lassen.\nSie passen direkt auf die Käseplatte, in Salate und in Joghurt."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1750,9 +1750,9 @@
       "de": "LEZZA traditioneller Fleischdöner"
     },
     "description": {
-      "tr": "LEZZA geleneksel et döner (dana eti %25, hindi eti %60), 700 g, dondurucuda saklanır. Tüketmeden önce iyice ısıtılmalıdır.",
-      "fr": "Döner traditionnel LEZZA (veau 25 %, dinde 60 %), 700 g, à conserver au congélateur. Doit être chauffé à cœur avant consommation.",
-      "de": "LEZZA traditioneller Döner (Kalbfleisch 25 %, Pute 60 %), 700 g, tiefgekühlt zu lagern. Vor dem Verzehr vollständig durcherhitzen."
+      "tr": "Dana ve hindi etiyle hazırlanmış geleneksel döner, dilimlenip şoklandı. Tavada birkaç dakikada; dürüme, pilav üstüne, İskender'e.",
+      "fr": "Un döner traditionnel au bœuf et à la dinde, tranché puis surgelé. Quelques minutes à la poêle : en dürüm, sur du riz ou en İskender.",
+      "de": "Traditioneller Döner aus Rind und Pute, in Scheiben geschnitten und schockgefroren. Ein paar Minuten in der Pfanne — im Dürüm, auf Reis oder als İskender."
     },
     "ingredients": {
       "tr": "Dana eti (%25), hindi eti (%60), içme suyu, tuz, kekik, karışık baharat (**hardal**, **kereviz** içerir), dekstroz, peynir altı suyu tozu (**süt**, laktoz), maltodekstrin, baharat ekstraktı, asitlik düzenleyici (E331, E262), aroma, et suyu (hidrolize bitkisel protein, tuz, ayçiçek yağı), patates nişastası, duman aroması, stabilizör (E451, E450), fosfat bağlayıcı, **süt** proteini (laktoz), transglutaminaz, ayçiçek lesitini.",
@@ -1768,9 +1768,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "-18 °C veya altında saklayınız. Çözüldükten sonra tekrar dondurmayınız.",
-      "fr": "Conserver à -18 °C ou moins. Ne pas recongeler après décongélation.",
-      "de": "Bei -18 °C oder kälter lagern. Nach dem Auftauen nicht wieder einfrieren."
+      "tr": "−18 °C ve altında, dondurucuda saklayın.\nÇözüldükten sonra **tekrar dondurmayın**.\nTüketmeden önce iyice ısıtın.\nDonuk hâlde tavaya alın; orta ateşte birkaç dakikada kızarır.",
+      "fr": "Conservez au congélateur, à −18 °C ou moins.\nNe **jamais recongeler** après décongélation.\nRéchauffez bien avant de consommer.\nJetez les tranches encore gelées dans la poêle : quelques minutes à feu moyen suffisent.",
+      "de": "Bei −18 °C oder kälter tiefgekühlt lagern.\nNach dem Auftauen **nicht wieder einfrieren**.\nVor dem Verzehr gut durcherhitzen.\nGefroren in die Pfanne geben; bei mittlerer Hitze in wenigen Minuten knusprig."
     },
     "shelfLifeDays": 365,
     "storageType": "frozen",
@@ -1806,9 +1806,9 @@
       "de": "LEZZA traditioneller Hähnchendöner"
     },
     "description": {
-      "tr": "LEZZA geleneksel tavuk döner (tavuk eti %85), 700 g, dondurucuda saklanır. Tüketmeden önce iyice ısıtılmalıdır.",
-      "fr": "Döner de poulet traditionnel LEZZA (viande de poulet 85 %), 700 g, à conserver au congélateur. Doit être chauffé à cœur avant consommation.",
-      "de": "LEZZA traditioneller Hähnchendöner (Hähnchenfleisch 85 %), 700 g, tiefgekühlt zu lagern. Vor dem Verzehr vollständig durcherhitzen."
+      "tr": "Köri baharatıyla terbiyelenmiş tavuk döner, dilimlenip şoklandı. Tavada birkaç dakikada; dürüme ve salata tabağına.",
+      "fr": "Un döner de poulet mariné au curry, tranché puis surgelé. Quelques minutes à la poêle : en dürüm ou sur une salade.",
+      "de": "Hähnchendöner mit Curry gewürzt, in Scheiben geschnitten und schockgefroren. Ein paar Minuten in der Pfanne — im Dürüm oder auf dem Salat."
     },
     "ingredients": {
       "tr": "Tavuk eti (%85), su, tuz, köri tozu [baharat karışımı (**hardal**, **kereviz** içerir), paprika ekstraktı, asitlik düzenleyici (E331, E262), maltodekstrin, **buğday** unu (gluten), peynir altı suyu tozu (**süt**), nişasta, dekstroz, et suyu (hidrolize bitkisel protein (mısır), tuz, ayçiçek yağı), aroma, baharat ekstraktı, **soya**, stabilizörler (E451, E450), kıvam artırıcı (E460), **süt** proteini, transglutaminaz, ayçiçek lesitini, kekik].",
@@ -1824,9 +1824,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "-18 °C veya altında saklayınız. Çözüldükten sonra tekrar dondurmayınız.",
-      "fr": "Conserver à -18 °C ou moins. Ne pas recongeler après décongélation.",
-      "de": "Bei -18 °C oder kälter lagern. Nach dem Auftauen nicht wieder einfrieren."
+      "tr": "−18 °C ve altında, dondurucuda saklayın.\nÇözüldükten sonra **tekrar dondurmayın**.\nTüketmeden önce iyice ısıtın.\nDonuk hâlde tavaya alın; orta ateşte birkaç dakikada kızarır.",
+      "fr": "Conservez au congélateur, à −18 °C ou moins.\nNe **jamais recongeler** après décongélation.\nRéchauffez bien avant de consommer.\nJetez les tranches encore gelées dans la poêle : quelques minutes à feu moyen suffisent.",
+      "de": "Bei −18 °C oder kälter tiefgekühlt lagern.\nNach dem Auftauen **nicht wieder einfrieren**.\nVor dem Verzehr gut durcherhitzen.\nGefroren in die Pfanne geben; bei mittlerer Hitze in wenigen Minuten knusprig."
     },
     "shelfLifeDays": 365,
     "storageType": "frozen",
@@ -1862,9 +1862,9 @@
       "de": "LEZZA Mantı mit Hackfleisch"
     },
     "description": {
-      "tr": "LEZZA derin dondurulmuş taze kıymalı Kayseri mantısı, orta boy, 1000 g (4 kişilik). Hazırlanışı: Donuk haldeki mantıyı poşetinden çıkarıp kaynayan tuzlu suya atınız. Hamur kokusu kaybolana kadar yaklaşık 10 dakika haşlayınız, ardından suyunu süzünüz. Tabağa alıp sarımsaklı yoğurt ve üzerine salçalı sos ile servis ediniz.",
-      "fr": "Manti surgelés LEZZA, spécialité turque fourrée à la viande de bœuf, taille moyenne, 1000 g (4 personnes). Préparation : retirer les manti congelés de leur emballage et les plonger dans de l'eau bouillante salée. Cuire environ 10 minutes, jusqu'à ce que l'odeur de pâte disparaisse, puis égoutter. Servir dans une assiette avec du yaourt à l'ail et une sauce à base de concentré de tomate par-dessus.",
-      "de": "LEZZA tiefgefrorene türkische Tortellini (Mantı) mit Rindfleischfüllung, mittlere Größe, 1000 g (für 4 Personen). Zubereitung: Die gefrorenen Mantı aus der Verpackung nehmen und in kochendes Salzwasser geben. Etwa 10 Minuten kochen, bis der Teiggeruch verschwunden ist, dann das Wasser abgießen. Auf einem Teller mit Knoblauchjoghurt und einer Soße aus Tomatenmark servieren."
+      "tr": "Kayseri usulü kıymalı mantı, orta boy — dört kişilik. Donuk hâlde kaynar suya atılır, on dakikada sofraya gelir.",
+      "fr": "Des mantı de Kayseri à la viande hachée, taille moyenne — pour quatre. Se jettent surgelés dans l'eau bouillante : dix minutes et c'est prêt.",
+      "de": "Kayseri-Mantı mit Hackfleisch, mittlere Größe — für vier. Gefroren ins kochende Wasser: nach zehn Minuten auf dem Tisch."
     },
     "ingredients": {
       "tr": "Dana eti, soğan, su, **buğday** unu, **yumurta**, bitkisel yağ, tuz, baharat.",
@@ -1887,9 +1887,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "-18 °C'de donuk olarak saklayınız.",
-      "fr": "Conserver congelé à -18 °C.",
-      "de": "Tiefgefroren bei -18 °C lagern."
+      "tr": "−18 °C'de, donuk olarak saklayın.\nÇözüldükten sonra **tekrar dondurmayın**.\nDonuk mantıyı poşetinden çıkarıp kaynayan tuzlu suya atın.\nHamur kokusu kaybolana dek yaklaşık on dakika haşlayıp suyunu süzün.\nSarımsaklı yoğurt ve üzerine salçalı sosla servis edin.",
+      "fr": "Conservez à −18 °C, bien congelés.\nNe **jamais recongeler** après décongélation.\nSortez-les du sachet encore gelés et jetez-les dans l'eau bouillante salée.\nComptez une dizaine de minutes, jusqu'à ce que l'odeur de pâte crue disparaisse, puis égouttez.\nServez avec un yaourt à l'ail et une sauce tomate par-dessus.",
+      "de": "Bei −18 °C tiefgekühlt lagern.\nNach dem Auftauen **nicht wieder einfrieren**.\nGefroren aus dem Beutel nehmen und in kochendes Salzwasser geben.\nEtwa zehn Minuten garen, bis der Teiggeruch verschwindet, dann abgießen.\nMit Knoblauchjoghurt und Tomatensauce servieren."
     },
     "storageType": "frozen",
     "shippable": false,
@@ -1924,9 +1924,9 @@
       "de": "Lychnos Natives Olivenöl extra"
     },
     "description": {
-      "tr": "Lychnos natürel sızma zeytinyağı, Koroneiki çeşidi zeytinlerden. Yunanistan'da (Kandiye, Girit) üretilip paketlenmiştir. Doğrudan zeytinden, yalnızca mekanik yöntemlerle elde edilen üstün kalite zeytinyağı.",
-      "fr": "Huile d'olive vierge extra Lychnos, variété Koroneiki. Produite et conditionnée en Grèce (Héraklion, Crète). Huile d'olive de catégorie supérieure obtenue directement des olives et uniquement par des procédés mécaniques.",
-      "de": "Lychnos Natives Olivenöl extra aus der Sorte Koroneiki. In Griechenland hergestellt und abgefüllt (Heraklion, Kreta). Olivenöl der höchsten Güteklasse, direkt aus Oliven ausschließlich mit mechanischen Verfahren gewonnen."
+      "tr": "Girit'in Koroneiki zeytinlerinden; doğrudan zeytinden, yalnızca mekanik yöntemlerle. Üstün kalite sızma — mutfağın her gününe, beş litre.",
+      "fr": "Des olives Koroneiki de Crète, obtenue directement des olives et uniquement par des procédés mécaniques. Huile de catégorie supérieure, en bidon de cinq litres.",
+      "de": "Aus Koroneiki-Oliven von Kreta, direkt aus Oliven und ausschließlich mit mechanischen Verfahren gewonnen. Natives Olivenöl extra im Fünf-Liter-Kanister."
     },
     "ingredients": {
       "tr": "Natürel sızma zeytinyağı.",
@@ -1946,9 +1946,9 @@
     "allergens": [],
     "traces": [],
     "storage": {
-      "tr": "Serin (en fazla 25 °C) ve ışıktan korunan bir yerde saklayınız. Buzdolabına koymayınız.",
-      "fr": "À conserver au frais (max. 25 °C) et à l'abri de la lumière. Ne pas réfrigérer.",
-      "de": "Bitte kühl (max. 25 °C) und lichtgeschützt aufbewahren. Nicht kühlen."
+      "tr": "Serin (en fazla 25 °C) ve ışıktan korunan bir yerde saklayın.\n**Buzdolabına koymayın.**\nIşık ve ısı tadını bozar; tenekeyi ocağın yanında tutmayın.\nGünlük kullanım için küçük bir şişeye aktarın, tenekenin kapağını kapalı tutun.",
+      "fr": "Conservez au frais (25 °C maximum), à l'abri de la lumière.\n**Ne pas mettre au réfrigérateur.**\nLa lumière et la chaleur altèrent son goût ; ne laissez pas le bidon près des plaques.\nTransvasez dans une petite bouteille pour l'usage quotidien et refermez bien le bidon.",
+      "de": "Kühl (höchstens 25 °C) und lichtgeschützt lagern.\n**Nicht in den Kühlschrank.**\nLicht und Hitze verderben den Geschmack; den Kanister nicht neben den Herd stellen.\nFür den täglichen Gebrauch in eine kleine Flasche umfüllen und den Kanister gut verschließen."
     },
     "storageType": "ambient",
     "shippable": true,
@@ -1982,9 +1982,9 @@
       "de": "Tiefgefrorener Yufkateig"
     },
     "description": {
-      "tr": "LEZZA derin dondurulmuş böreklik yufka, 8 × 125 g. Hazır yufkayla birkaç dakikada lezzetli börekler hazırlayabilirsiniz.",
-      "fr": "Pâte filo surgelée LEZZA (yufka pour börek), 8 × 125 g. Avec cette pâte prête à l'emploi, vous préparez de délicieux feuilletés en quelques minutes.",
-      "de": "LEZZA tiefgefrorener Yufkateig für Börek, 8 × 125 g. Mit dem fertigen Yufkateig lassen sich leckere Teigtaschen in wenigen Minuten zubereiten."
+      "tr": "Sekiz kat böreklik yufka, açılmış ve şoklanmış. İçini siz koyarsınız: peynir, ıspanak, kıyma — yarım saatte börek.",
+      "fr": "Huit feuilles de pâte à börek, étalées puis surgelées. La garniture est à vous : fromage, épinards, viande — un börek en une demi-heure.",
+      "de": "Acht Blätter Börek-Teig, ausgerollt und schockgefroren. Die Füllung bestimmen Sie: Käse, Spinat, Hackfleisch — ein Börek in einer halben Stunde."
     },
     "ingredients": {
       "tr": "**Buğday** unu, içme suyu, tuz.",
@@ -2006,9 +2006,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "Son kullanım tarihine kadar -18 °C'de soğuk zincir kırılmadan muhafaza edilmelidir.",
-      "fr": "Conserver à -18 °C en maintenant la chaîne du froid jusqu'à la date de durabilité minimale.",
-      "de": "Bei -18 °C mit ununterbrochener Kühlkette bis zum Mindesthaltbarkeitsdatum lagern."
+      "tr": "Son kullanma tarihine kadar −18 °C'de, soğuk zincir kırılmadan saklayın.\nÇalışmadan önce buzdolabında **yavaşça çözdürün** — oda sıcaklığında kenarları kurur.\nÇözülen yufkayı aynı gün kullanın, tekrar dondurmayın.\nHarcı koyup sarın; 180 °C fırında altı üstü kızarana dek pişirin.",
+      "fr": "Conservez à −18 °C sans rupture de la chaîne du froid, jusqu'à la date indiquée.\n**Décongelez lentement au réfrigérateur** : à température ambiante, les bords se dessèchent.\nUtilisez les feuilles décongelées le jour même, sans les recongeler.\nGarnissez, roulez, puis enfournez à 180 °C jusqu'à ce que le dessus et le dessous soient dorés.",
+      "de": "Bis zum angegebenen Datum bei −18 °C ohne Unterbrechung der Kühlkette lagern.\nVor der Verarbeitung im Kühlschrank **langsam auftauen** — bei Raumtemperatur trocknen die Ränder aus.\nAufgetaute Blätter am selben Tag verarbeiten, nicht wieder einfrieren.\nFüllen, rollen und bei 180 °C backen, bis sie oben und unten goldbraun sind."
     },
     "storageType": "frozen",
     "shippable": false,
@@ -2044,9 +2044,9 @@
       "de": "Lahmacun – türkische Pizza, tiefgekühlt"
     },
     "description": {
-      "tr": "Lezza lahmacun (Türk pizzası), önceden pişirilmiş ve derin dondurulmuş, 5 × 170 g. Tüketmeden önce iyice ısıtınız.",
-      "fr": "Lahmacun Lezza, pizza turque précuite et surgelée, 5 × 170 g. Bien réchauffer avant consommation.",
-      "de": "Lezza Lahmacun, vorgebackene und tiefgekühlte türkische Pizza, 5 × 170 g. Vor dem Verzehr vollständig erhitzen."
+      "tr": "Önceden pişirilmiş lahmacun, beşli paket. Fırında birkaç dakika; üstüne maydanoz, limon ve bir dilim domates.",
+      "fr": "Des lahmacun précuits, en lot de cinq. Quelques minutes au four, puis du persil, un filet de citron et une tranche de tomate.",
+      "de": "Vorgebackene Lahmacun, Fünferpackung. Ein paar Minuten im Ofen, dann Petersilie, Zitrone und eine Scheibe Tomate."
     },
     "ingredients": {
       "tr": "**Buğday** unu, su, soğan, dana kıyma, biber (kırmızı ve yeşil), domates, domates püresi, sarımsak, tuz, otlar ve baharatlar, şeker, bitkisel yağ (ayçiçek, kolza), **buğday** nişastası, **buğday** lifi, dekstroz, kabartıcı (E450i, E500ii), toz maya.",
@@ -2068,9 +2068,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "-18 °C'de saklayınız. Çözüldükten sonra tekrar dondurmayınız. Çözüldükten sonra buzdolabında (+7 °C) 2 gün dayanır.",
-      "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation. Après décongélation, se conserve 2 jours au réfrigérateur (+7 °C).",
-      "de": "Bei -18 °C lagern. Nach dem Auftauen nicht wieder einfrieren. Nach dem Auftauen 2 Tage im Kühlschrank bei +7 °C haltbar."
+      "tr": "−18 °C'de saklayın.\nÇözüldükten sonra **tekrar dondurmayın**; buzdolabında (+7 °C) iki gün dayanır.\nTüketmeden önce iyice ısıtın.\nDonuk hâlde 200 °C fırında beş-altı dakika; kenarları kıtırlaşınca çıkarın.",
+      "fr": "Conservez à −18 °C.\nNe **jamais recongeler** après décongélation ; se garde deux jours au réfrigérateur (+7 °C).\nRéchauffez bien avant de consommer.\nEnfournez-les encore gelés à 200 °C, cinq à six minutes, jusqu'à ce que les bords croustillent.",
+      "de": "Bei −18 °C lagern.\nNach dem Auftauen **nicht wieder einfrieren**; im Kühlschrank (+7 °C) zwei Tage haltbar.\nVor dem Verzehr gut durcherhitzen.\nGefroren bei 200 °C fünf bis sechs Minuten backen, bis die Ränder knusprig sind."
     },
     "storageType": "frozen",
     "shippable": false,
@@ -2106,9 +2106,9 @@
       "de": "Walnusspestil"
     },
     "description": {
-      "tr": "Gümüşhane usulü cevizli pestil tatlısı; üzüm pekmezi, ceviz, buğday unu ve şekerle hazırlanır.",
-      "fr": "Pestil aux noix, spécialité de Gümüşhane (Turquie), à base de mélasse de raisin, de noix, de farine de blé et de sucre.",
-      "de": "Walnusspestil nach Art von Gümüşhane (Türkei) aus Traubenmelasse, Walnüssen, Weizenmehl und Zucker."
+      "tr": "Gümüşhane'nin pestili: üzüm pekmezi, %25 ceviz ve incecik yufka. Çayın yanında bir dilim, ağızda yavaş yavaş dağılır.",
+      "fr": "Le pestil de Gümüşhane : mélasse de raisin, 25 % de noix et de fines feuilles de pâte. Une tranche avec le thé, qui fond lentement en bouche.",
+      "de": "Pestil aus Gümüşhane: Traubenmelasse, 25 % Walnuss und hauchdünne Teigblätter. Ein Stück zum Tee, das langsam im Mund zergeht."
     },
     "ingredients": {
       "tr": "Üzüm pekmezi (%30), **ceviz** (%25), **buğday** unu (%20), şeker (%15).",
@@ -2131,9 +2131,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
-      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin yerde; ısıdan, kokudan ve nemden uzakta saklayın.\n**Buzdolabına koymayın** — soğukta sertleşir ve terler.\nAmbalajı açtıktan sonra ağzını kapalı tutun.\nOda sıcaklığında dilimlenip çayın yanında ikram edilir.",
+      "fr": "Conservez au frais, à l'abri de la chaleur, des odeurs et de l'humidité.\n**Ne pas mettre au réfrigérateur** : le froid le durcit et le fait transpirer.\nAprès ouverture, refermez bien l'emballage.\nSe tranche à température ambiante et s'offre avec le thé.",
+      "de": "Kühl lagern, fern von Hitze, Gerüchen und Feuchtigkeit.\n**Nicht in den Kühlschrank** — Kälte macht es hart und schwitzig.\nNach dem Öffnen gut verschlossen halten.\nBei Raumtemperatur aufschneiden und zum Tee reichen."
     },
     "shelfLifeDays": 365,
     "storageType": "ambient",
@@ -2168,9 +2168,9 @@
       "de": "Haselnuss-Rolle"
     },
     "description": {
-      "tr": "Gümüşhane usulü rulo fındıklı pestil; üzüm pekmezi, fındık, buğday unu ve şekerle hazırlanır.",
-      "fr": "Rouleau aux noisettes, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre.",
-      "de": "Haselnuss-Rolle nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker."
+      "tr": "Gümüşhane'den: %33 fındık, üzüm pekmezine sarılmış rulolar. Kesince içteki bütün fındıklar görünür.",
+      "fr": "De Gümüşhane : 33 % de noisettes roulées dans la mélasse de raisin. À la coupe, les noisettes entières apparaissent au cœur du rouleau.",
+      "de": "Aus Gümüşhane: 33 % Haselnüsse, in Traubenmelasse gerollt. Beim Anschneiden kommen die ganzen Nüsse im Inneren zum Vorschein."
     },
     "ingredients": {
       "tr": "**Fındık** (%33), üzüm pekmezi (%32), **buğday** unu (%20), şeker (%15).",
@@ -2193,9 +2193,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
-      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin yerde; ısıdan, kokudan ve nemden uzakta saklayın.\n**Buzdolabına koymayın** — soğukta sertleşir ve terler.\nAmbalajı açtıktan sonra ağzını kapalı tutun.\nOda sıcaklığında, parmak kalınlığında dilimlenerek ikram edilir.",
+      "fr": "Conservez au frais, à l'abri de la chaleur, des odeurs et de l'humidité.\n**Ne pas mettre au réfrigérateur** : le froid le durcit et le fait transpirer.\nAprès ouverture, refermez bien l'emballage.\nÀ température ambiante, coupez des tranches de l'épaisseur d'un doigt.",
+      "de": "Kühl lagern, fern von Hitze, Gerüchen und Feuchtigkeit.\n**Nicht in den Kühlschrank** — Kälte macht es hart und schwitzig.\nNach dem Öffnen gut verschlossen halten.\nBei Raumtemperatur fingerdick aufschneiden und servieren."
     },
     "shelfLifeDays": 365,
     "storageType": "ambient",
@@ -2230,9 +2230,9 @@
       "de": "Kadayif Haselnuss Roll"
     },
     "description": {
-      "tr": "Gümüşhane usulü fındıklı kadayıf rulo pestil; üzüm pekmezi, fındık, buğday unu, şeker ve kadayıfla hazırlanır.",
-      "fr": "Rouleau aux noisettes avec nouilles kadaif, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre, avec du kadaif.",
-      "de": "Kadayif-Haselnuss-Rolle nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker, mit Kadayif."
+      "tr": "Fındıklı pestil rulosu, dışı kadayıfla kaplanmış. Kadayıfın kıtırlığı pestilin yumuşaklığıyla birlikte gelir.",
+      "fr": "Un rouleau de pestil aux noisettes, enrobé de kadaïf. Le croquant des cheveux d'ange rencontre le moelleux du pestil.",
+      "de": "Eine Pestil-Rolle mit Haselnüssen, außen in Kadayif gewickelt. Das Knuspern der Engelshaar-Fäden trifft auf weiches Pestil."
     },
     "ingredients": {
       "tr": "**Fındık** (%33), üzüm pekmezi (%32), **buğday** unu (%15), şeker (%15), kadayıf (%5).",
@@ -2255,9 +2255,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
-      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin yerde; ısıdan, kokudan ve nemden uzakta saklayın.\n**Buzdolabına koymayın** — soğukta kadayıf yumuşar, pestil sertleşir.\nAmbalajı açtıktan sonra ağzını kapalı tutun.\nOda sıcaklığında dilimlenerek ikram edilir.",
+      "fr": "Conservez au frais, à l'abri de la chaleur, des odeurs et de l'humidité.\n**Ne pas mettre au réfrigérateur** : le kadaïf ramollit et le pestil durcit.\nAprès ouverture, refermez bien l'emballage.\nSe tranche et se sert à température ambiante.",
+      "de": "Kühl lagern, fern von Hitze, Gerüchen und Feuchtigkeit.\n**Nicht in den Kühlschrank** — der Kadayif wird weich, das Pestil hart.\nNach dem Öffnen gut verschlossen halten.\nBei Raumtemperatur aufschneiden und servieren."
     },
     "shelfLifeDays": 365,
     "storageType": "ambient",
@@ -2292,9 +2292,9 @@
       "de": "Sultan Rolle"
     },
     "description": {
-      "tr": "Gümüşhane usulü fındıklı sultan sarma; üzüm pekmezi, fındık, buğday unu ve şekerle hazırlanan rulo pestil.",
-      "fr": "Rouleau de sultan aux noisettes, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre.",
-      "de": "Sultan Rolle mit Haselnüssen nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker."
+      "tr": "Pestilin en dolusu: %35 fındık, üzüm pekmezine sarılmış. Bayram sofrasının ve misafir tabağının tatlısı.",
+      "fr": "Le plus généreux des pestils : 35 % de noisettes roulées dans la mélasse de raisin. La douceur des jours de fête et des plateaux d'invités.",
+      "de": "Das üppigste Pestil: 35 % Haselnüsse in Traubenmelasse gerollt. Die Süßigkeit für Festtage und Gästeteller."
     },
     "ingredients": {
       "tr": "**Fındık** (%35), üzüm pekmezi (%30), **buğday** unu (%20), şeker (%15).",
@@ -2317,9 +2317,9 @@
     ],
     "traces": [],
     "storage": {
-      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
-      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
-      "de": "Kühl und trocken lagern."
+      "tr": "Serin yerde; ısıdan, kokudan ve nemden uzakta saklayın.\n**Buzdolabına koymayın** — soğukta sertleşir ve terler.\nAmbalajı açtıktan sonra ağzını kapalı tutun.\nOda sıcaklığında, parmak kalınlığında dilimlenerek ikram edilir.",
+      "fr": "Conservez au frais, à l'abri de la chaleur, des odeurs et de l'humidité.\n**Ne pas mettre au réfrigérateur** : le froid le durcit et le fait transpirer.\nAprès ouverture, refermez bien l'emballage.\nÀ température ambiante, coupez des tranches de l'épaisseur d'un doigt.",
+      "de": "Kühl lagern, fern von Hitze, Gerüchen und Feuchtigkeit.\n**Nicht in den Kühlschrank** — Kälte macht es hart und schwitzig.\nNach dem Öffnen gut verschlossen halten.\nBei Raumtemperatur fingerdick aufschneiden und servieren."
     },
     "shelfLifeDays": 365,
     "storageType": "ambient",
