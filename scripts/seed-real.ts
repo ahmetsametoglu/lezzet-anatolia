@@ -28,7 +28,7 @@ import {
 } from '@lezzet/database';
 import { canPublishProduct, purchaseOrderReferenceNo, rebalanceAllocations } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import type { Product } from '@lezzet/types';
+import { PRODUCT_GALLERY_MAX, type Product } from '@lezzet/types';
 
 import { brand } from '../packages/brand/src/index';
 import { lezzaGorselUrlByDosya, seedLezzaProducts } from './seed/catalog-lezza';
@@ -404,6 +404,7 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
   const variants = new ProductVariantService(db);
   const existing = new Map((await products.listAll()).map((p) => [p.name.tr, p.id]));
   const barcodes = new VariantBarcodeService(db);
+  const images = new ProductImageService(db);
   for (const { draft, supplier } of TASLAKLAR) {
     const ad = draftName(draft);
     const mevcut = existing.get(ad);
@@ -448,7 +449,7 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
           ? uploadImageFromPath(draft.image.file, r2Keys.productImage(draft.image.slug, draft.image.file))
           : uploadImageFromUrl(draft.image.url ?? '', r2Keys.productImage(draft.image.slug, draft.image.url ?? 'cover.webp')))
       : null;
-    const { variants: yazilan } = await products.create({
+    const { product, variants: yazilan } = await products.create({
       // Dil alanı YAZILMAZSA boş kalır: `{fr: ''}` yazmak "alan dolu ama boş" anlamına gelir ve
       // `resolveLocalizedText` onu sessizce Türkçeye düşürür — eksik dil görünmez olurdu.
       name,
@@ -483,6 +484,15 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
         };
       }),
     });
+    // Galeri kapaktan SONRA yazılır ve tavanı uygulamanın sabitinden gelir: formun kaydedemeyeceği
+    // kadar kare yazmak, operatörün açıp kaydettiği ilk anda sessizce kırpılırdı.
+    for (const [n, kare] of (draft.gallery ?? []).slice(0, PRODUCT_GALLERY_MAX).entries()) {
+      const gorsel = kare.file
+        ? await uploadImageFromPath(kare.file, r2Keys.productImage(kare.slug, kare.file))
+        : await uploadImageFromUrl(kare.url ?? '', r2Keys.productImage(kare.slug, kare.url ?? 'galeri.webp'));
+      if (!gorsel) continue;
+      await images.insert({ productId: product.id, sortOrder: n, ...gorsel, imageFocalX: 50, imageFocalY: 50, imageZoom: 100 });
+    }
     // Barkod varyantın kolonu değil ayrı eşleme kaydı: satır yazıldıktan sonra sırayla bağlanır.
     for (const [i, v] of draft.variants.entries()) {
       const satir = yazilan[i];

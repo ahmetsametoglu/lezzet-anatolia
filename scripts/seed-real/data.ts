@@ -173,6 +173,8 @@ interface Draft {
   descriptionFromLabel?: boolean;
   /** Gerçek ürün çekimi: tedarikçinin gönderdiği usta ya da markanın mağazası. */
   image?: DraftImage;
+  /** Kapak dışındaki kareler; sırayla galeriye girer, tavanı uygulamanın sabiti (`PRODUCT_GALLERY_MAX`). */
+  gallery?: DraftImage[];
   variants: DraftVariant[];
 
   // ── KATMAN 2 · dayanaklı ────────────────────────────────────────────────────────────────────
@@ -310,6 +312,16 @@ const studyo = (slug: string): DraftImage => ({
   source: 'Yapay zekâ stüdyo karesi — gerçek ürün çekimi bekleniyor',
 });
 
+/**
+ * Bir ürünün stüdyo takımı: KAPAK klasörün ikinci karesidir (işletmeci kararı), kalanlar galeriye
+ * `-2`, `-3` … diye girer — katalogdaki adlandırmanın aynısı. Sayı dosya sayısından okunmaz, burada
+ * yazılır: eksik kalan kare beslemede sessizce atlanmasın, eksikliği dosyada görünsün.
+ */
+const studyoSeti = (slug: string, galeri: number): Pick<Draft, 'image' | 'gallery'> => ({
+  image: studyo(slug),
+  gallery: Array.from({ length: galeri }, (_, i) => studyo(`${slug}-${i + 2}`)),
+});
+
 // Lezza'dan her kalemden bir kutu alındı: adet kutudaki parça sayısıdır. Kekler tek 90 g satılır (fatura
 // kodu 9'lu paketin, birim fiyat tek kekin); künefe faturadaki 2 × 145 g paket olarak satılır.
 export const PURCHASES: Purchase[] = [
@@ -409,7 +421,7 @@ export const PURCHASES: Purchase[] = [
         allergens: [],
         storage: { tr: 'Kuru ve serin yerde saklayınız.', fr: 'À conserver au sec et au frais.', de: 'Trocken und kühl lagern.' },
         shelfLifeDays: 730,
-        image: studyo('druivenmelasse'),
+        ...studyoSeti('druivenmelasse', 2),
         boy: { barcode: '8681910226456', packedWeightG: 920, packedLengthMm: 165, packedWidthMm: 70, packedHeightMm: 70 },
       }),
       behotrade('Johannesbroodmelasse', '650 g', 650, 'Johannesbroodmelasse 650gr', 12, 5.5, {
@@ -427,7 +439,7 @@ export const PURCHASES: Purchase[] = [
         allergens: [],
         storage: { tr: 'Kuru ve serin yerde saklayınız.', fr: 'À conserver au sec et au frais.', de: 'Trocken und kühl lagern.' },
         shelfLifeDays: 730,
-        image: studyo('johannesbroodmelasse'),
+        ...studyoSeti('johannesbroodmelasse', 2),
         boy: { barcode: '8681910226654', packedWeightG: 900, packedLengthMm: 165, packedWidthMm: 70, packedHeightMm: 70 },
       }),
       behotrade('Tahini', '500 g', 500, 'Tahini 500gr', 12, 4.75, {
@@ -447,7 +459,7 @@ export const PURCHASES: Purchase[] = [
         allergens: ['susam'],
         storage: { tr: 'Kuru ve serin yerde saklayınız.', fr: 'À conserver au sec et au frais.', de: 'Trocken und kühl lagern.' },
         shelfLifeDays: 730,
-        image: studyo('tahini'),
+        ...studyoSeti('tahini', 2),
         boy: { barcode: '8681910226319', packedWeightG: 780, packedLengthMm: 165, packedWidthMm: 75, packedHeightMm: 75 },
       }),
       // Sirkelerin ortak künyesi: doğal fermantasyon, katkı ve koruyucu içermez — ambalajın ön yüzünde
@@ -466,7 +478,7 @@ export const PURCHASES: Purchase[] = [
         nutrition: kunye(50, 12, 0, 0, 3.1, 0, 0, 0),
         allergens: [],
         storage: { ...SIRKE_SAKLAMA, tr: 'Serin yerde kapak kapalı olarak muhafaza ediniz.' },
-        image: studyo('meidoorn-azijn'),
+        ...studyoSeti('meidoorn-azijn', 2),
         boy: { barcode: '8683649156806', packedWeightG: 945, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Ananas azijn', '500 ml', 500, 'Ananas azijn 500ml', 12, 3, {
@@ -484,7 +496,7 @@ export const PURCHASES: Purchase[] = [
         allergens: [],
         storage: SIRKE_SAKLAMA,
         shelfLifeDays: 1096,
-        image: studyo('ananas-azijn'),
+        ...studyoSeti('ananas-azijn', 2),
         boy: { barcode: '8683649157070', packedWeightG: 880, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Enginar azijn', '500 ml', 500, 'Enginar azijn 500ml', 12, 3, {
@@ -548,7 +560,7 @@ export const PURCHASES: Purchase[] = [
         allergens: [],
         storage: SIRKE_SAKLAMA,
         shelfLifeDays: 1461,
-        image: studyo('isgin-azijn'),
+        ...studyoSeti('isgin-azijn', 2),
         boy: { barcode: '8683649157063', packedWeightG: 950, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       // Fatura "extraat" (öz) diyordu, ambalaj "Nar Ekşisi / Sirop de grenade" yazıyor: ad künyeden
@@ -567,7 +579,7 @@ export const PURCHASES: Purchase[] = [
         nutrition: kunye(1174, 273, 0, 0, 66.9, 64.9, 1, 0.1),
         allergens: [],
         storage: SIRKE_SAKLAMA,
-        image: studyo('nar-eksisi'),
+        ...studyoSeti('nar-eksisi', 2),
         boy: { barcode: '8683649156813', packedWeightG: 605, packedLengthMm: 45, packedWidthMm: 45, packedHeightMm: 230 },
       }),
       behotrade('Sifamix Kozalak extract', '670 g', 670, 'Sifamix Kozalak extract 670gr', 12, 4.25, {
@@ -628,7 +640,7 @@ export const PURCHASES: Purchase[] = [
         allergens: [],
         storage: OZ_SAKLAMA,
         shelfLifeDays: 730,
-        image: studyo('sifamix-andiz-extract'),
+        ...studyoSeti('sifamix-andiz-extract', 2),
         boy: { barcode: '8683649157285', packedWeightG: 620, packedLengthMm: 45, packedWidthMm: 45, packedHeightMm: 230 },
       }),
       behotrade('Coconut mix', '250 ml', 250, 'Coconut mix 250ml', 12, 4.95, {
@@ -670,7 +682,7 @@ export const PURCHASES: Purchase[] = [
         nutrition: kunye(25.14, 6, 0.02, 0.02, 1.58, 0.12, 0, 0.06),
         allergens: [],
         storage: SIRKE_SAKLAMA,
-        image: studyo('honing-azijn'),
+        ...studyoSeti('honing-azijn', 2),
         boy: { barcode: '8683649157056', packedWeightG: 880, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       {
@@ -696,7 +708,7 @@ export const PURCHASES: Purchase[] = [
           fr: 'Conserver dans un endroit sombre et frais.',
           de: 'An einem dunklen und kühlen Ort aufbewahren.',
         },
-        image: studyo('olijfolie'),
+        ...studyoSeti('olijfolie', 5),
         variants: [
           {
             label: '5 l',
@@ -745,7 +757,7 @@ export const PURCHASES: Purchase[] = [
           fr: "Conserver au sec et à l'abri de la chaleur.",
           de: 'Trocken lagern und vor Wärme schützen.',
         },
-        image: studyo('pistache'),
+        ...studyoSeti('pistache', 2),
         boy: { barcode: '8699237145442', packedWeightG: 710, packedLengthMm: 50, packedWidthMm: 150, packedHeightMm: 230 },
       }),
       // Faturada "250ml", ambalajda GRAM yazılı (keçiboynuzu özüyle aynı durum): boy etiketi künyeden düzeltildi.
@@ -804,7 +816,7 @@ export const PURCHASES: Purchase[] = [
           fr: "À conserver à l'abri de la lumière du soleil, dans un endroit frais et sec, dans son emballage d'origine. Après ouverture, conserver au réfrigérateur.",
           de: 'Vor Sonnenlicht geschützt, kühl und trocken in der Originalverpackung aufbewahren. Nach dem Öffnen im Kühlschrank aufbewahren.',
         },
-        image: studyo('zuhre-ana-kekre'),
+        ...studyoSeti('zuhre-ana-kekre', 2),
       }),
       behotrade('Propolis pasta', '240 g', 240, 'Propolis pasta 240gr', 2, 8.5, {
         nameTr: 'Propolis Macunu',
@@ -919,7 +931,7 @@ export const PURCHASES: Purchase[] = [
           fr: "Conserver dans son emballage d'origine, dans un endroit frais et sec, à l'abri de la lumière du soleil.",
           de: 'In der Originalverpackung an einem kühlen, trockenen und vor Sonnenlicht geschützten Ort aufbewahren.',
         },
-        image: studyo('zwarte-moerbei-extrat'),
+        ...studyoSeti('zwarte-moerbei-extrat', 2),
         boy: { barcode: '8683655363151', packedWeightG: 1040, packedLengthMm: 290, packedWidthMm: 60, packedHeightMm: 60 },
       }),
       behotrade('Pestil met Hazinoten Muska', '300 g', 300, 'Pestil met Hazinoten Muska 300gr', 25, 3.95, {
@@ -931,7 +943,7 @@ export const PURCHASES: Purchase[] = [
           fr: 'En-cas traditionnel : pâte de fruits pliée en triangle et garnie de noisettes.',
           de: 'Traditioneller Snack: Fruchtleder mit Haselnüssen, dreieckig gefaltet.',
         },
-        image: studyo('pestil-muska'),
+        ...studyoSeti('pestil-muska', 2),
       }),
       behotrade('Gedroogde aronya', '150 g', 150, 'Gedroogde aronya 150gr', 6, 3.99, {
         nameTr: 'Kurutulmuş Aronya',
@@ -988,7 +1000,7 @@ export const PURCHASES: Purchase[] = [
           fr: 'Melon séché ; à grignoter ou dans les mélanges de fruits secs.',
           de: 'Getrocknete Melone; als Snack oder in Trockenfruchtmischungen.',
         },
-        image: studyo('gedroogde-meloen'),
+        ...studyoSeti('gedroogde-meloen', 2),
       }),
     ],
   },
