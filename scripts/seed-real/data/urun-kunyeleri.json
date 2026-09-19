@@ -597,11 +597,11 @@
       }
     ]
   },
-  "Şifamix Kozalak Özü": {
+  "Kozalak Özü": {
     "name": {
-      "tr": "Şifamix Kozalak Özü",
-      "fr": "Extrait de pomme de pin Şifamix",
-      "de": "Şifamix Kiefernzapfenextrakt"
+      "tr": "Kozalak Özü",
+      "fr": "Extrait de pomme de pin",
+      "de": "Kiefernzapfenextrakt"
     },
     "description": {
       "tr": "Kozalak özü, keçiboynuzu ve andız pekmeziyle; infüzyon ve soğuk pres. Reçineli, koyu bir tat — bir kaşık, sabah ekmeğinin üstüne.",
@@ -656,11 +656,11 @@
       }
     ]
   },
-  "Şifamix Keçiboynuzu Özü": {
+  "Keçiboynuzu Özü": {
     "name": {
-      "tr": "Şifamix Keçiboynuzu Özü",
-      "fr": "Extrait de caroube Şifamix",
-      "de": "Şifamix Johannisbrotextrakt"
+      "tr": "Keçiboynuzu Özü",
+      "fr": "Extrait de caroube",
+      "de": "Johannisbrotextrakt"
     },
     "description": {
       "tr": "Keçiboynuzu meyvesinden, infüzyon ve soğuk presle. Tatlılığı meyvenin kendinden; kakaoyu andıran koyu tadıyla tahinin ve sütün yanında.",
@@ -716,11 +716,11 @@
       }
     ]
   },
-  "Şifamix Andız Özü": {
+  "Andız Özü": {
     "name": {
-      "tr": "Şifamix Andız Özü",
-      "fr": "Extrait de genévrier Şifamix",
-      "de": "Şifamix Wacholderextrakt"
+      "tr": "Andız Özü",
+      "fr": "Extrait de genévrier",
+      "de": "Wacholderextrakt"
     },
     "description": {
       "tr": "Toroslar'ın andız kozalağından, saatlerce kaynatılarak. Kendine özgü acımtırak bir tadı var; geleneği tahinle karıştırıp yemektir.",
@@ -1326,9 +1326,9 @@
       }
     ]
   },
-  "Zühre Ana Kekre Termojenik Mix": {
+  "Zühre Ana Kekre": {
     "name": {
-      "tr": "Zühre Ana Kekre Termojenik Mix",
+      "tr": "Zühre Ana Kekre",
       "fr": "Zühre Ana Kekre, concentré aux fruits",
       "de": "Zühre Ana Kekre, Fruchtkonzentrat"
     },
@@ -1743,11 +1743,11 @@
       }
     ]
   },
-  "LEZZA Geleneksel Et Döner": {
+  "Et Döner": {
     "name": {
-      "tr": "LEZZA Geleneksel Et Döner",
-      "fr": "LEZZA döner de viande traditionnel",
-      "de": "LEZZA traditioneller Fleischdöner"
+      "tr": "Et Döner",
+      "fr": "Döner de viande",
+      "de": "Fleischdöner"
     },
     "description": {
       "tr": "Dana ve hindi etiyle hazırlanmış geleneksel döner, dilimlenip şoklandı. Tavada birkaç dakikada; dürüme, pilav üstüne, İskender'e.",
@@ -1799,11 +1799,11 @@
       }
     ]
   },
-  "LEZZA Geleneksel Tavuk Döner": {
+  "Tavuk Döner": {
     "name": {
-      "tr": "LEZZA Geleneksel Tavuk Döner",
-      "fr": "LEZZA döner de poulet traditionnel",
-      "de": "LEZZA traditioneller Hähnchendöner"
+      "tr": "Tavuk Döner",
+      "fr": "Döner de poulet",
+      "de": "Hähnchendöner"
     },
     "description": {
       "tr": "Köri baharatıyla terbiyelenmiş tavuk döner, dilimlenip şoklandı. Tavada birkaç dakikada; dürüme ve salata tabağına.",
@@ -1855,11 +1855,11 @@
       }
     ]
   },
-  "LEZZA Kıymalı Mantı": {
+  "Kıymalı Mantı": {
     "name": {
-      "tr": "LEZZA Kıymalı Mantı",
-      "fr": "LEZZA mantı à la viande hachée",
-      "de": "LEZZA Mantı mit Hackfleisch"
+      "tr": "Kıymalı Mantı",
+      "fr": "Mantı à la viande hachée",
+      "de": "Mantı mit Hackfleisch"
     },
     "description": {
       "tr": "Kayseri usulü kıymalı mantı, orta boy — dört kişilik. Donuk hâlde kaynar suya atılır, on dakikada sofraya gelir.",
@@ -1917,11 +1917,11 @@
       }
     ]
   },
-  "Lychnos Natürel Sızma Zeytinyağı": {
+  "Girit Natürel Sızma Zeytinyağı": {
     "name": {
-      "tr": "Lychnos Natürel Sızma Zeytinyağı",
-      "fr": "Huile d'olive vierge extra Lychnos",
-      "de": "Lychnos Natives Olivenöl extra"
+      "tr": "Girit Natürel Sızma Zeytinyağı",
+      "fr": "Huile d'olive vierge extra de Crète",
+      "de": "Natives Olivenöl extra aus Kreta"
     },
     "description": {
       "tr": "Girit'in Koroneiki zeytinlerinden; doğrudan zeytinden, yalnızca mekanik yöntemlerle. Üstün kalite sızma — mutfağın her gününe, beş litre.",

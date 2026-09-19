@@ -436,11 +436,11 @@
     }
   },
   "lotus-caramel-cake-with-nutella": {
-    "name": { "tr": "Lotus Karamelli Pasta", "fr": "Gâteau caramel Lotus", "de": "Lotus-Karamell-Torte" },
+    "name": { "tr": "Karamelli Bisküvili Pasta", "fr": "Gâteau caramel et biscuit", "de": "Karamell-Keks-Torte" },
     "description": {
-      "tr": "Lotus bisküvili karamelli pasta — çözdürüp servis edilir.",
-      "fr": "Gâteau au caramel et biscuits Lotus : décongeler et servir.",
-      "de": "Karamelltorte mit Lotus-Keks: auftauen und servieren."
+      "tr": "Karamelize bisküviyle karamelli pasta — çözdürüp servis edilir.",
+      "fr": "Gâteau au caramel et biscuits caramélisés : décongeler et servir.",
+      "de": "Karamelltorte mit karamellisiertem Keks: auftauen und servieren."
     }
   },
   "pistachio-cake-cup": {
@@ -699,7 +699,7 @@
     }
   },
   "sobiyet-baklava": {
-    "name": { "tr": "Sobiyet Baklava", "fr": "Baklava sobiyet", "de": "Sobiyet-Baklava" },
+    "name": { "tr": "Şöbiyet Baklava", "fr": "Baklava şöbiyet", "de": "Şöbiyet-Baklava" },
     "description": {
       "tr": "Büyük tepside 40 adet kaymaklı ve fıstıklı sobiyet.",
       "fr": "Quarante sobiyet à la crème et à la pistache sur grand plateau.",
@@ -707,7 +707,7 @@
     }
   },
   "special-antep-baklava": {
-    "name": { "tr": "Özel Antep Baklavası", "fr": "Baklava spécial d'Antep", "de": "Antep-Baklava Spezial" },
+    "name": { "tr": "Antep Baklavası", "fr": "Baklava d'Antep", "de": "Antep-Baklava" },
     "description": {
       "tr": "Yetmiş altı adet küçük, bol fıstıklı Antep baklavası.",
       "fr": "Soixante-seize petits baklavas d'Antep, généreux en pistache.",
@@ -718,7 +718,7 @@
     "name": { "tr": "Özel Künefe", "fr": "Künefe spécial", "de": "Künefe Spezial" }
   },
   "special-square-baklava": {
-    "name": { "tr": "Özel Kare Baklava", "fr": "Baklava carré spécial", "de": "Quadrat-Baklava Spezial" },
+    "name": { "tr": "Kare Baklava", "fr": "Baklava carré", "de": "Quadrat-Baklava" },
     "description": {
       "tr": "Yirmi sekiz adet kare kesim baklava — özenli sunum.",
       "fr": "Vingt-huit baklavas carrés, présentation soignée.",
@@ -839,7 +839,7 @@
     }
   },
   "vegan-cig-kofte": {
-    "name": { "tr": "Vegan Çiğ Köfte", "fr": "Çiğ köfte végane", "de": "Veganes Çiğ Köfte" },
+    "name": { "tr": "Soslu Çiğ Köfte", "fr": "Çiğ köfte en sauce", "de": "Çiğ Köfte mit Sauce" },
     "description": {
       "tr": "Nar ekşisi ve acı sosuyla, yemeye hazır bitkisel çiğ köfte.",
       "fr": "Çiğ köfte végane prêt à consommer, mélasse de grenade et sauce piquante.",
@@ -847,7 +847,7 @@
     }
   },
   "vegan-falafel": {
-    "name": { "tr": "Vegan Falafel", "fr": "Falafel végane", "de": "Veganes Falafel" },
+    "name": { "tr": "Falafel", "fr": "Falafel", "de": "Falafel" },
     "description": {
       "tr": "Yirmi adet 25 g'lık pişmiş falafel — ısıtıp servis edilir.",
       "fr": "Vingt falafels cuits de 25 g : réchauffer et servir.",
@@ -855,7 +855,7 @@
     }
   },
   "vegan-kibbeh": {
-    "name": { "tr": "Vegan İçli Köfte", "fr": "Kibbeh végane", "de": "Veganes Kibbeh" },
+    "name": { "tr": "İçli Köfte", "fr": "Kibbeh", "de": "Kibbeh" },
     "description": {
       "tr": "Beş adet 70 g'lık bitkisel içli köfte — hızlı öğün için.",
       "fr": "Cinq kibbeh végétaux de 70 g, pour un repas rapide.",
@@ -863,7 +863,7 @@
     }
   },
   "vegan-raw-meatballs": {
-    "name": { "tr": "Vegan Çiğ Köfte Topu", "fr": "Boulettes de çiğ köfte véganes", "de": "Vegane Çiğ-Köfte-Bällchen" },
+    "name": { "tr": "Çiğ Köfte", "fr": "Çiğ köfte", "de": "Çiğ Köfte" },
     "description": {
       "tr": "Yemeye hazır bitkisel çiğ köfte — bulgurlu ve baharatlı.",
       "fr": "Çiğ köfte végane prêt à consommer, à base de boulgour épicé.",
@@ -993,7 +993,7 @@
     }
   },
   "maras-ice-cream-trio-mix": {
-    "name": { "tr": "Üçlü Maraş Dondurması", "fr": "Glace de Maraş trio", "de": "Maraş-Eis Trio" },
+    "name": { "tr": "Karışık Maraş Dondurması", "fr": "Glace de Maraş assortie", "de": "Maraş-Eis gemischt" },
     "description": {
       "tr": "Sade, kakaolu ve fıstıklı salepli dondurma bir arada.",
       "fr": "Glace au salep : nature, cacao et pistache réunis.",

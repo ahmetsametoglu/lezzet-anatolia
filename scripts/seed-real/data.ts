@@ -114,6 +114,27 @@ export const TEST_INTAKE = {
   areaBySupplier: { 'Lezza Foods BV': 'Dondurucu 1', 'Behotrade BV': 'Raf' } as Record<string, string>,
 };
 
+/** Katalog kalemlerinin tedarikçisi — kaynağın sahibi (`seed/data/lezza-catalog.json`). */
+export const KATALOG_TEDARIKCISI = SUPPLIERS[0].name;
+
+/**
+ * KATMAN 3 · UYDURMA STOK. Faturası olmayan kalemin mal kabulü de yoktur; partisi olmayan varyant
+ * vitrinde "Tükendi" görünür (`stockStatusOf`) ve ürün gezilemez. Parti ÜRETİLİR: tedarikçi başına
+ * tek sipariş, tek kabul, boy başına sabit adet.
+ *
+ * Değerler UYDURMADIR, yalnız `--layers=3` ile yazılır ve gerçek partinin üstüne yazmaz — kabulü
+ * olan varyant bu kuralı hiç görmez. Üretim kurulumundan önce blok silinir.
+ */
+export const TEST_KURGU_STOGU = {
+  /** Uydurma faturanın numarası — panelde gerçek belgelerden ayrılsın diye ayrı seri. */
+  invoice: 'TEST-2026-03',
+  lotNumber: 'TEST-003',
+  /** Boy başına giren adet. */
+  qty: 12,
+  /** Alış maliyeti bilinmiyor; siparişe satış fiyatının bu oranı yazılır. */
+  costRate: 0.6,
+};
+
 interface PurchaseLine {
   /** Faturadaki ad; tedarikçi siparişinde ve eşlemede tedarikçinin diliyle görünür. */
   nameAtSupplier: string;
@@ -254,14 +275,14 @@ export const PURCHASES: Purchase[] = [
     ],
     drafts: [
       // Faturadaki döner ve mantı katalog kaynağında YOK; künyeleri veritabanı aynasından gelir.
-      behotrade('LEZZA Traditional Meet Doner', 'LEZZA Traditional Meet Doner 10x700gr', 10, 8, 'LEZZA Geleneksel Et Döner'),
-      behotrade('LEZZA Traditional Chicken Doner', 'LEZZA Traditional Chicken Doner 10x700gr', 10, 6.1, 'LEZZA Geleneksel Tavuk Döner'),
+      behotrade('LEZZA Traditional Meet Doner', 'LEZZA Traditional Meet Doner 10x700gr', 10, 8, 'Et Döner'),
+      behotrade('LEZZA Traditional Chicken Doner', 'LEZZA Traditional Chicken Doner 10x700gr', 10, 6.1, 'Tavuk Döner'),
       behotrade(
         'LEZZA Manti with Minced Meat (Kiymali)',
         'LEZZA Manti with Minced Meat (Kiymali )1000 gr',
         10,
         5.15,
-        'LEZZA Kıymalı Mantı',
+        'Kıymalı Mantı',
         studyoSeti('lezza-kiymali-manti'),
       ),
     ],
@@ -281,16 +302,16 @@ export const PURCHASES: Purchase[] = [
       behotrade('Appel azijn', 'Appel azijn 500ml', 12, 3, 'Elma Sirkesi', studyoSeti('elma-sirkesi')),
       behotrade('Isgin azijn', 'Isgin azijn 500ml', 12, 3, 'Işkın Kökü Sirkesi', studyoSeti('iskin-koku-sirkesi')),
       behotrade('Granaatappelextraat', 'Granaatappelextraat 250ml', 12, 3.45, 'Nar Ekşisi', studyoSeti('nar-eksisi')),
-      behotrade('Sifamix Kozalak extract', 'Sifamix Kozalak extract 670gr', 12, 4.25, 'Şifamix Kozalak Özü', studyoSeti('sifamix-kozalak-ozu')),
+      behotrade('Sifamix Kozalak extract', 'Sifamix Kozalak extract 670gr', 12, 4.25, 'Kozalak Özü', studyoSeti('sifamix-kozalak-ozu')),
       behotrade(
         'Sifamix Johannesbrood extract',
         'Sifamix Johannesbrood extract 700ml',
         12,
         3.75,
-        'Şifamix Keçiboynuzu Özü',
+        'Keçiboynuzu Özü',
         studyoSeti('sifamix-keciboynuzu-ozu'),
       ),
-      behotrade('Sifamix Andiz extract', 'Sifamix Andiz extract 350gr', 12, 3.99, 'Şifamix Andız Özü', studyoSeti('sifamix-andiz-ozu')),
+      behotrade('Sifamix Andiz extract', 'Sifamix Andiz extract 350gr', 12, 3.99, 'Andız Özü', studyoSeti('sifamix-andiz-ozu')),
       behotrade('Coconut mix', 'Coconut mix 250ml', 12, 4.95, 'Coconut Mix', studyoSeti('coconut-mix')),
       behotrade('Honing azijn', 'Honing azijn 500ml', 12, 3, 'Bal Sirkesi', studyoSeti('bal-sirkesi')),
       {
@@ -305,7 +326,7 @@ export const PURCHASES: Purchase[] = [
       },
       behotrade('Pistache', 'Pistache 700gr', 20, 16.5, 'Antep Fıstığı', studyoSeti('antep-fistigi')),
       behotrade('Bromelain siroop', 'Bromelain siroop 250ml', 18, 8, 'Bromelain Şurubu', studyoSeti('bromelain-surubu')),
-      behotrade('Zuhre Ana Kekre', 'Zuhre Ana Kekre 250ml', 18, 8.45, 'Zühre Ana Kekre Termojenik Mix', studyoSeti('zuhre-ana-kekre-termojenik-mix')),
+      behotrade('Zuhre Ana Kekre', 'Zuhre Ana Kekre 250ml', 18, 8.45, 'Zühre Ana Kekre', studyoSeti('zuhre-ana-kekre-termojenik-mix')),
       behotrade('Propolis pasta', 'Propolis pasta 240gr', 2, 8.5, 'Propolis Macunu', studyoSeti('propolis-macunu')),
       behotrade('Form pasta', 'Form pasta 240gr', 2, 8, 'Form Macunu', studyoSeti('form-macunu')),
       behotrade('Dennenappel pasta', 'Dennenappel pasta 240gr', 2, 8, 'Kozalak Macunu', studyoSeti('kozalak-macunu')),
@@ -342,7 +363,7 @@ export const TEST_PURCHASES: Purchase[] = [
       { name: 'Rulo Fındıklı Pestil', variants: [{ nameAtSupplier: 'Rulo findikli pestil 300gr', qty: 25, unitCost: 3.95 }] },
       { name: 'Fındıklı Kadayıf Rulo Pestil', variants: [{ nameAtSupplier: 'Kadayif rulo pestil 300gr', qty: 25, unitCost: 4.25 }] },
       { name: 'Fındıklı Sultan Sarma', variants: [{ nameAtSupplier: 'Findikli sultan sarma 300gr', qty: 25, unitCost: 4.15 }] },
-      { name: 'Lychnos Natürel Sızma Zeytinyağı', variants: [{ nameAtSupplier: 'Lychnos olijfolie 5lt', qty: 4, unitCost: 28.5 }] },
+      { name: 'Girit Natürel Sızma Zeytinyağı', variants: [{ nameAtSupplier: 'Lychnos olijfolie 5lt', qty: 4, unitCost: 28.5 }] },
     ],
   },
   {
@@ -377,7 +398,7 @@ type LooseDraft = Omit<Draft, 'variants'>;
  * fiyat ve maliyet alış faturası gelince yazılır, o gün kalem faturasının altına taşınır.
  */
 export const EK_TASLAKLAR: LooseDraft[] = [
-  { name: 'Lychnos Natürel Sızma Zeytinyağı' },
+  { name: 'Girit Natürel Sızma Zeytinyağı' },
   { name: 'Böreklik Yufka', ...studyoSeti('boreklik-yufka') },
   { name: 'Lahmacun', ...studyoSeti('lahmacun') },
   { name: 'Cevizli Pestil Tatlısı', ...studyoSeti('cevizli-pestil-tatlisi') },
@@ -617,6 +638,24 @@ export const DRAFT_FAMILIES: Array<{ ad: string; uyeler: Array<{ draft: string; 
       { draft: 'Gedroogde meloen', etiket: { tr: 'Kavun', fr: 'Melon', de: 'Melone' } },
     ],
   },
+  {
+    // Aynı üreticinin pestil rafı: taban aynı, ayrım sarım biçimi ve içi.
+    ad: 'Pestil',
+    uyeler: [
+      { draft: 'Pestil met Hazinoten Muska', etiket: { tr: 'Muska', fr: 'Triangle', de: 'Dreieck' } },
+      { draft: 'Rulo Fındıklı Pestil', etiket: { tr: 'Rulo', fr: 'Roulé', de: 'Rolle' } },
+      { draft: 'Fındıklı Kadayıf Rulo Pestil', etiket: { tr: 'Kadayıflı rulo', fr: 'Roulé kadayıf', de: 'Kadayıf-Rolle' } },
+      { draft: 'Fındıklı Sultan Sarma', etiket: { tr: 'Sultan sarma', fr: 'Sultan sarma', de: 'Sultan Sarma' } },
+      { draft: 'Cevizli Pestil Tatlısı', etiket: { tr: 'Cevizli', fr: 'Noix', de: 'Walnuss' } },
+    ],
+  },
+  {
+    ad: 'Döner',
+    uyeler: [
+      { draft: 'LEZZA Traditional Meet Doner', etiket: { tr: 'Et', fr: 'Viande', de: 'Fleisch' } },
+      { draft: 'LEZZA Traditional Chicken Doner', etiket: { tr: 'Tavuk', fr: 'Poulet', de: 'Hähnchen' } },
+    ],
+  },
 ];
 
 /**
@@ -632,7 +671,7 @@ export const DRAFT_CATEGORY: Record<string, string> = {
   Johannesbroodmelasse: 'dogal-geleneksel',
   Tahini: 'dogal-geleneksel',
   Olijfolie: 'dogal-geleneksel',
-  'Lychnos Natürel Sızma Zeytinyağı': 'dogal-geleneksel',
+  'Girit Natürel Sızma Zeytinyağı': 'dogal-geleneksel',
   'Böreklik Yufka': 'firin',
   Lahmacun: 'firin',
   // Pestil ailesi muska pestille aynı rafta: tatlı olarak yenir ama raf ürünüdür.

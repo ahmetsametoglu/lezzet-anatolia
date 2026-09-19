@@ -653,14 +653,20 @@ const DOLGU_SOZLUK: Record<string, LocalizedText> = {
   assorted: { tr: 'Karışık', fr: 'Assorti', de: 'Gemischt' },
   mussel: { tr: 'Midye', fr: 'Moule', de: 'Muschel' },
   square: { tr: 'Kare', fr: 'Carré', de: 'Quadrat' },
-  sobiyet: { tr: 'Sobiyet', fr: 'Sobiyet', de: 'Sobiyet' },
+  sobiyet: { tr: 'Şöbiyet', fr: 'Şöbiyet', de: 'Şöbiyet' },
   antep: { tr: 'Antep', fr: 'Antep', de: 'Antep' },
   'pistachio rolls': { tr: 'Fıstık sarma', fr: 'Roulé pistache', de: 'Pistazienrolle' },
+  'carrot slice': { tr: 'Havuç dilimi', fr: 'Part carotte', de: 'Karottenscheibe' },
   // ── Künefe · börek · fırın çeşitleri ───────────────────────────────────────
   classic: { tr: 'Klasik', fr: 'Classique', de: 'Klassisch' },
   plated: { tr: 'Tabaklı', fr: 'En assiette', de: 'Mit Teller' },
   special: { tr: 'Özel', fr: 'Spécial', de: 'Spezial' },
   wreathing: { tr: 'Burma', fr: 'Torsadé', de: 'Gedreht' },
+  // Bütün börek: biçim ve dolgu birlikte, çünkü seçim ekseni "hangi bütün böreği keseyim".
+  'su borek': { tr: 'Su böreği', fr: 'Su böreği', de: 'Su Böreği' },
+  'cheese roll': { tr: 'Peynirli kol', fr: 'Roulé au fromage', de: 'Käse-Rolle' },
+  'potato roll': { tr: 'Patatesli kol', fr: 'Roulé pomme de terre', de: 'Kartoffel-Rolle' },
+  'spinach roll': { tr: 'Ispanaklı peynirli kol', fr: 'Roulé épinards & fromage', de: 'Spinat-Käse-Rolle' },
   acma: { tr: 'Açma', fr: 'Açma', de: 'Açma' },
   sweet: { tr: 'Tatlı', fr: 'Sucré', de: 'Süß' },
   fermented: { tr: 'Ekşi mayalı', fr: 'Au levain', de: 'Sauerteig' },
@@ -672,6 +678,13 @@ const DOLGU_SOZLUK: Record<string, LocalizedText> = {
   'red velvet': { tr: 'Kırmızı kadife', fr: 'Velours rouge', de: 'Roter Samt' },
   'pistachio garden': { tr: 'Fıstık bahçesi', fr: 'Jardin de pistaches', de: 'Pistaziengarten' },
   tiramisu: { tr: 'Tiramisu', fr: 'Tiramisu', de: 'Tiramisu' },
+  'blueberry peach': { tr: 'Yaban mersinli şeftalili', fr: 'Myrtille & pêche', de: 'Heidelbeere & Pfirsich' },
+  'caramel biscuit': { tr: 'Karamelli bisküvili', fr: 'Caramel & biscuit', de: 'Karamell & Keks' },
+  // ── Cheesecake ─────────────────────────────────────────────────────────────
+  'san sebastian': { tr: 'San Sebastian', fr: 'San Sebastian', de: 'San Sebastian' },
+  // ── Çiğ köfte · falafel ────────────────────────────────────────────────────
+  sauced: { tr: 'Soslu', fr: 'En sauce', de: 'Mit Sauce' },
+  'hummus filled': { tr: 'Humus dolgulu', fr: 'Fourré au houmous', de: 'Mit Hummus' },
   // ── Meze ───────────────────────────────────────────────────────────────────
   hummus: { tr: 'Humus', fr: 'Houmous', de: 'Hummus' },
   saksuka: { tr: 'Şakşuka', fr: 'Şakşuka', de: 'Şakşuka' },
@@ -722,11 +735,15 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
     ],
   },
   {
-    ad: 'Kol Böreği',
+    // Sofrada KESİLEN börekler: su böreği bir tepsi, kol böreği bir rulo — ikisi de bütün satılır
+    // ve dilimlenir. Porsiyonlu börekler (E · çubuk · gül · mini rulo) kendi dolgu ailelerinde;
+    // su böreği tek başına kaldığı için ailesizdi ve vitrinde akrabasız duruyordu.
+    ad: 'Bütün Börek',
     uyeler: [
-      { slug: 'spiral-pie-borek-with-cheese', dolgu: 'Cheese' },
-      { slug: 'spiral-pie-borek-with-potato', dolgu: 'Potato' },
-      { slug: 'spiral-pie-borek-with-spinach-cheese', dolgu: 'Spinach & Cheese' },
+      { slug: 'cheese-pastry-su-borek', dolgu: 'Su Borek' },
+      { slug: 'spiral-pie-borek-with-cheese', dolgu: 'Cheese Roll' },
+      { slug: 'spiral-pie-borek-with-potato', dolgu: 'Potato Roll' },
+      { slug: 'spiral-pie-borek-with-spinach-cheese', dolgu: 'Spinach Roll' },
     ],
   },
   {
@@ -789,14 +806,15 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
     ],
   },
   {
-    // Özel baklavalar şekil ve tarifle ayrışıyor (sobiyet kaymaklı, midye kıvrımlı, kare dilimli).
-    // Klasiklerle aynı blokta gösterilseler seçim on bir kartlık bir listeye dönerdi.
+    // Özel baklavalar ŞEKİLLE ayrışıyor (şöbiyet kaymaklı, midye kıvrımlı, kare ve havuç dilimi
+    // kesimli). Klasiklerle aynı blokta gösterilseler seçim on iki kartlık bir listeye dönerdi.
     ad: 'Özel Baklava',
     uyeler: [
       { slug: 'sobiyet-baklava', dolgu: 'Sobiyet' },
       { slug: 'mussel-baklava', dolgu: 'Mussel' },
       { slug: 'special-antep-baklava', dolgu: 'Antep' },
       { slug: 'special-square-baklava', dolgu: 'Square' },
+      { slug: 'carrot-slice-baklava', dolgu: 'Carrot Slice' },
       { slug: 'pistachio-rolls-baklava', dolgu: 'Pistachio Rolls' },
     ],
   },
@@ -848,6 +866,9 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
       { slug: 'red-velvet-whole-cake', dolgu: 'Red Velvet' },
       { slug: 'special-pistachio-garden-whole-cake', dolgu: 'Pistachio Garden' },
       { slug: 'tiramisu-whole-cake', dolgu: 'Tiramisu' },
+      // Slug'ı `-whole-cake` ile bitmiyor ama ikisi de bütün pasta: dilimlenerek servis edilir.
+      { slug: 'blueberry-peach-cake', dolgu: 'Blueberry Peach' },
+      { slug: 'lotus-caramel-cake-with-nutella', dolgu: 'Caramel Biscuit' },
     ],
   },
   // `… Mono Pack` ürünleri aile değil: aynı kekin paket boyudur, ayrı aile olunca aynı kekler iki kez görünür.
@@ -861,17 +882,33 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
   },
   {
     // `raspberry-cheesecake-cup` ve `lemon-cheesecake-slice` BİLEREK YOK: ikisi de format
-    // (boy) ekseni, çeşit değil. `san-sebastian-cheesecake` de yok — o bir çeşit değil ayrı bir
-    // tarif, aynı ailede göstermek "limonlu/frambuazlı" seçimini bozardı.
+    // (boy) ekseni, çeşit değil. San Sebastian ise üçüncü bir ÇEŞİT — müşteri "hangi cheesecake"
+    // diye sorarken onu da tartıyor ve ailesiz kalınca vitrinde ötekilerden kopuk duruyordu.
     ad: 'Cheesecake',
     uyeler: [
       { slug: 'lemon-cheesecake', dolgu: 'Lemon' },
       { slug: 'raspberry-cheesecake', dolgu: 'Raspberry' },
+      { slug: 'san-sebastian-cheesecake', dolgu: 'San Sebastian' },
     ],
   },
   // ── ANADOLU MUTFAĞI ────────────────────────────────────────────────────────
   {
-    // Aynı masada, aynı kullanımda beş meze. Vegan ürünler aile değil: vegan bir özelliktir, çeşit değil.
+    // Aynı çiğ köftenin iki hâli: soslu paket yemeye hazır, sade paket sofrada soslanır.
+    ad: 'Çiğ Köfte',
+    uyeler: [
+      { slug: 'vegan-raw-meatballs', dolgu: 'Plain' },
+      { slug: 'vegan-cig-kofte', dolgu: 'Sauced' },
+    ],
+  },
+  {
+    ad: 'Falafel',
+    uyeler: [
+      { slug: 'vegan-falafel', dolgu: 'Plain' },
+      { slug: 'falafel-hummus-filled', dolgu: 'Hummus Filled' },
+    ],
+  },
+  {
+    // Aynı masada, aynı kullanımda beş meze.
     ad: 'Meze',
     uyeler: [
       { slug: 'hummus', dolgu: 'Hummus' },
@@ -913,6 +950,9 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
       { slug: 'maras-ice-cream-plain', dolgu: 'Plain' },
       { slug: 'maras-ice-cream-cocoa', dolgu: 'Cocoa' },
       { slug: 'maras-ice-cream-pistachio', dolgu: 'Pistachio' },
+      // Üç tadın bir arada olduğu paket, ötekilerle aynı eksende bir seçenektir — ailesiz kalınca
+      // "dondurma alayım" diyen müşteri onu blokta göremiyordu.
+      { slug: 'maras-ice-cream-trio-mix', dolgu: 'Assorted' },
     ],
   },
   {

@@ -18,6 +18,7 @@ import {
   RecipeService,
   SettingsService,
   StockIntakeService,
+  StockService,
   StorageAreaService,
   SupplierProductService,
   SupplierService,
@@ -45,6 +46,7 @@ import {
   DRAFT_CATEGORY,
   DRAFT_FAMILIES,
   EK_TASLAKLAR,
+  KATALOG_TEDARIKCISI,
   PURCHASES,
   RECIPES,
   SALE_PRICES,
@@ -53,6 +55,7 @@ import {
   SUPPLIERS,
   TEST_INTAKE,
   TEST_KATALOG_FIYATI,
+  TEST_KURGU_STOGU,
   TEST_PURCHASES,
   TEST_SALE_PRICES,
   VEHICLE,
@@ -85,8 +88,11 @@ const TASLAKLAR: Array<{ draft: AnyDraft; supplier: string | null }> = [
 /** Katalogda görünen ad Türkçesidir; faturadaki ad tedarikçinin dilinde kalır (eşleştirme onun üstünden). */
 const draftName = (draft: AnyDraft): string => draft.nameTr ?? draft.name;
 
-/** Faturadaki ad → katalogdaki Türkçe ad; koleksiyon üyeliği faturadaki adla yazılı. */
-const TASLAK_ADI = new Map(PURCHASES.flatMap((p) => p.drafts).map((d) => [d.name, draftName(d)]));
+/**
+ * Faturadaki ad → katalogdaki Türkçe ad; koleksiyon, paket ve aile üyeliği faturadaki adla yazılı.
+ * Faturasız taslak kendi Türkçe adıyla anılır, o yüzden eşleme onda birim (`draftName` aynısını döner).
+ */
+const TASLAK_ADI = new Map(TASLAKLAR.map(({ draft }) => [draft.name, draftName(draft)]));
 
 type Db = ReturnType<typeof createServiceRoleClient>;
 
@@ -104,11 +110,11 @@ const DRY_RUN = process.argv.includes('--dry-run');
  * - **1** (varsayılan) gerçek veri — stok yok, tedarikçi siparişleri mal kabulü bekler.
  * - **2** test mal kabulü (lot `TEST-001`, SKT uydurma): stok açar, ürünler alınabilir olur.
  *   Beyana dokunmaz, bu yüzden vitrin denemesi bu katmanda yapılır.
- * - **3** VİTRİNİ UÇTAN UCA AÇAR ve bunun için üç şey uydurur: belgesiz ürünün beyanını addan
- *   türetir, her kalemi "satış kurgusunda" sayar (motorun kapısı `teklifli || kurguda`) ve fiyatı
- *   olmayan varyanta kilo başına tek oranla fiyat yazar. Tahmin edilmiş beyan yanlış beyandır ve
- *   uydurma fiyat gerçek fiyat değildir — bu yüzden ayrı katman: stok görmek için buna razı olmak
- *   gerekmemeli (işletmeci kararı 19.09).
+ * - **3** VİTRİNİ UÇTAN UCA AÇAR ve bunun için dört şey uydurur: belgesiz ürünün beyanını addan
+ *   türetir, her kalemi "satış kurgusunda" sayar (motorun kapısı `teklifli || kurguda`), fiyatı
+ *   olmayan varyanta kilo başına tek oranla fiyat yazar ve partisi olmayana kurgu stoğu açar.
+ *   Tahmin edilmiş beyan yanlış beyandır ve uydurma fiyat gerçek fiyat değildir — bu yüzden ayrı
+ *   katman: stok görmek için buna razı olmak gerekmemeli (işletmeci kararı 19.09).
  *
  * Varsayılan 1, çünkü üretim kurulumu bayraksız koşar ve orada tek bir uydurma değer yazılamaz.
  * Bizim 39 ürünümüzün beyanı katmansızdır: kaynağı veritabanı aynasıdır, hiçbir katmanda doldurulmaz.
@@ -135,10 +141,13 @@ const ADAYLAR = LAYERS >= 2 ? ADAY_SKULARI.filter((sku) => !TEST_PURCHASES.some(
 
 /** Katalogdaki Türkçe ad → o ürünün fatura satırları; uydurma fatura taslağa ADINDAN bağlanır. */
 const SATIRLAR_ADA_GORE = new Map<string, Draft['variants']>();
+/** Katalogdaki Türkçe ad → taslağın tedarikçisi; kurgu stoğu partiyi doğru tedarikçiye yazsın diye. */
+const TEDARIKCI_ADA_GORE = new Map<string, string>();
 for (const alim of ALIMLAR) {
   for (const draft of alim.drafts) {
     const ad = draftName(draft);
     SATIRLAR_ADA_GORE.set(ad, [...(SATIRLAR_ADA_GORE.get(ad) ?? []), ...draft.variants]);
+    TEDARIKCI_ADA_GORE.set(ad, alim.supplier);
   }
 }
 
@@ -902,6 +911,76 @@ async function seedTestIntake(db: Db, facilityId: string): Promise<void> {
   }
 }
 
+/**
+ * KATMAN 3: partisi olmayan varyanta UYDURMA stok açar (`TEST_KURGU_STOGU`) — tedarikçi başına tek
+ * sipariş ve tek mal kabulü. Gerçek kabulden SONRA koşar ve onun yazdığına dokunmaz: eldekisi olan
+ * varyant atlanır. Kabul kapısından geçer, doğrudan parti yazmaz — stok bir belgeden doğar (K6).
+ */
+async function seedTestStock(db: Db, facilityId: string): Promise<void> {
+  console.log(`▸ kurgu stoğu · boy başına ${TEST_KURGU_STOGU.qty} adet — uydurma değer, vitrin denemesi`);
+  const urunler = await new ProductService(db).listAll();
+  const boylar = await new ProductVariantService(db).listByProducts(urunler.map((u) => u.id));
+  const kimlikler = boylar.map((v) => v.id);
+  const eldeki = await new StockService(db).getAvailableMap(facilityId, kimlikler);
+  const fiyatlar = await new PriceService(db).findApplicableMap(kimlikler, 'b2c');
+  const tedarikciByUrun = new Map(urunler.map((u) => [u.id, TEDARIKCI_ADA_GORE.get(u.name.tr ?? '') ?? KATALOG_TEDARIKCISI]));
+
+  // Tedarikçiye göre kümelenir: parti kabulden, kabul siparişten, sipariş tek bir tedarikçiden doğar.
+  const kalemler = new Map<string, Array<{ variantId: string; unitPriceCents: number }>>();
+  for (const boy of boylar) {
+    if ((eldeki.get(boy.id)?.availableQty ?? 0) > 0) continue;
+    const tedarikci = tedarikciByUrun.get(boy.productId) ?? KATALOG_TEDARIKCISI;
+    const satisCents = fiyatlar.get(boy.id)?.channelPrice?.amountCents ?? toCents(TEST_KATALOG_FIYATI.minB2c);
+    const satir = { variantId: boy.id, unitPriceCents: Math.round(satisCents * TEST_KURGU_STOGU.costRate) };
+    kalemler.set(tedarikci, [...(kalemler.get(tedarikci) ?? []), satir]);
+  }
+
+  const suppliers = await new SupplierService(db).list();
+  const orders = new PurchaseOrderService(db);
+  const areas = facilityId === PLANNED ? [] : await new StorageAreaService(db).listByWarehouses([facilityId]);
+  const note = `Fatura ${TEST_KURGU_STOGU.invoice}`;
+  for (const [tedarikci, satirlar] of kalemler) {
+    const supplierId = suppliers.find((s) => s.name === tedarikci)?.id;
+    if (!supplierId) {
+      console.log(`  ${DRY_RUN ? '○' : '⚠'} ${tedarikci} — tedarikçi yok, kurgu stoğu yazılmadı`);
+      continue;
+    }
+    if ((await orders.listBySupplier(supplierId)).some((o) => o.note === note)) {
+      done(`kurgu stoğu · ${tedarikci}`);
+      continue;
+    }
+    const areaName = TEST_INTAKE.areaBySupplier[tedarikci];
+    plan(`kurgu stoğu · ${tedarikci} · ${satirlar.length} boy · ${areaName ?? 'alansız'}`);
+    if (DRY_RUN) continue;
+    const { order } = await orders.createDraft(
+      supplierId,
+      satirlar.map((s) => ({ ...s, qty: TEST_KURGU_STOGU.qty })),
+      note,
+    );
+    await orders.markSent(order.id, purchaseOrderReferenceNo(new Date().getFullYear()));
+    const storageAreaId = areas.find((area) => area.name === areaName)?.id ?? null;
+    const outcome = await receivePurchase(db, {
+      warehouseId: facilityId,
+      purchaseOrderId: order.id,
+      supplierId,
+      note: `Kurgu stoğu — ${TEST_KURGU_STOGU.invoice}`,
+      lines: satirlar.map(({ variantId }) => ({
+        variantId,
+        qty: TEST_KURGU_STOGU.qty,
+        expiryDate: TEST_INTAKE.expiryDate,
+        lotNumber: TEST_KURGU_STOGU.lotNumber,
+        storageAreaId,
+        unitCostCents: null,
+      })),
+    });
+    if (outcome.status !== 'ok') {
+      console.log(`  ⚠ ${tedarikci} — kabul yazılamadı (${outcome.status})`);
+      continue;
+    }
+    console.log(`  ✓ ${outcome.result.stockIds.length} parti yazıldı`);
+  }
+}
+
 async function main(): Promise<void> {
   checkInvoiceTotals();
   checkKunyeler();
@@ -932,6 +1011,8 @@ async function main(): Promise<void> {
   // sayılmamıştır — ama ürünün BEYANINA dokunmaz, yalnız stok açar. Beyanı tahminle dolduran
   // türetme katman 3'te kaldı; ikisi aynı kapıda olsaydı stok görmek için beyan bozmak gerekirdi.
   if (LAYERS >= 2) await seedTestIntake(db, facilityId);
+  // Kurgu stoğu gerçek kabulden SONRA: eldekisi olan varyantı görüp atlaması için.
+  if (LAYERS >= 3) await seedTestStock(db, facilityId);
   // Künyesi olmayan görsel her koşuda yeniden yüklenir; sayı basılmazsa dönüşüm kotası sessizce erir.
   if (!DRY_RUN) gorselOzeti();
   console.log(DRY_RUN ? '✓ kuru koşu bitti' : '✓ gerçek besleme bitti');
