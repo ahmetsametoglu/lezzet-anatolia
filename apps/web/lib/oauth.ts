@@ -39,6 +39,9 @@ export function authServerMetadata(): Record<string, unknown> {
     code_challenge_methods_supported: ['S256'],
     token_endpoint_auth_methods_supported: ['none'],
     scopes_supported: ['mcp'],
+    // Yanıtın `iss` taşıdığını ilan etmek (RFC 9207) istemciye hangi sunucudan döndüğünü kanıtlar;
+    // ChatGPT bunu görmezse bağlantıya özel, değişken bir dönüş adresine düşüyor.
+    authorization_response_iss_parameter_supported: true,
   };
 }
 

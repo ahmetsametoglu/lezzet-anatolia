@@ -3,7 +3,7 @@ import { OauthClientService, OauthCodeService, serviceDb } from '@lezzet/databas
 import { isAllowedRedirectUri } from '@lezzet/domain-core';
 import { DEFAULT_LOCALE, localizedPath } from '@lezzet/i18n';
 import { AuthError, requireAdmin } from '@/lib/guard';
-import { randomToken, sha256hex } from '@/lib/oauth';
+import { issuer, randomToken, sha256hex } from '@/lib/oauth';
 import type { OauthFailureDetail } from '../error/failure';
 
 /**
@@ -80,5 +80,8 @@ export async function GET(request: NextRequest): Promise<Response> {
   const back = new URL(redirectUri);
   back.searchParams.set('code', code);
   if (state) back.searchParams.set('state', state);
+  // Kimliğimiz metadata'daki `issuer` ile BİREBİR aynı olmalı: istemci dizgiyi karşılaştırıyor,
+  // normalleştirmiyor — bu yüzden isteğin kendi adresi değil ilan edilen değer yazılıyor.
+  back.searchParams.set('iss', issuer());
   return NextResponse.redirect(back);
 }
