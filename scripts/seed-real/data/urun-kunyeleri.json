@@ -1,0 +1,2350 @@
+{
+  "Üzüm Pekmezi": {
+    "name": {
+      "tr": "Üzüm Pekmezi",
+      "fr": "Mélasse de raisin",
+      "de": "Traubenmelasse"
+    },
+    "description": {
+      "tr": "Beşe \"Eski Usül\" üzüm pekmezi, geleneksel yöntemle hazırlanır. Şeker ilavesizdir; doğal olarak şeker içerir. 650 g.",
+      "fr": "Mélasse de raisin Beşe « Eski Usül », préparée selon la méthode traditionnelle. Sans sucres ajoutés – contient des sucres naturellement présents. 650 g.",
+      "de": "Beşe Traubenmelasse „Eski Usül“, nach traditioneller Art hergestellt. Ohne Zuckerzusatz – enthält von Natur aus Zucker. 650 g."
+    },
+    "ingredients": {
+      "tr": "Üzüm pekmezi.",
+      "fr": "Mélasse de raisin.",
+      "de": "Traubenmelasse."
+    },
+    "nutrition": {
+      "energyKj": 1225,
+      "energyKcal": 293,
+      "fatG": 0,
+      "saturatedFatG": 0,
+      "carbohydrateG": 70.6,
+      "sugarsG": 69.9,
+      "proteinG": 0.6,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Kuru ve serin yerde saklayınız.",
+      "fr": "À conserver au sec et au frais.",
+      "de": "Trocken und kühl lagern."
+    },
+    "shelfLifeDays": 730,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "650 g",
+          "fr": "650 g",
+          "de": "650 g"
+        },
+        "netQuantity": 650,
+        "netUnit": "g",
+        "packedWeightG": 920,
+        "packedLengthMm": 165,
+        "packedWidthMm": 70,
+        "packedHeightMm": 70,
+        "sku": "DRUIVENMELASSE-650GR",
+        "barcodes": [
+          {
+            "code": "8681910226456",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Keçiboynuzu Pekmezi": {
+    "name": {
+      "tr": "Keçiboynuzu Pekmezi",
+      "fr": "Mélasse de caroube",
+      "de": "Johannisbrotmelasse"
+    },
+    "description": {
+      "tr": "Beşe \"Eski Usül\" keçiboynuzu pekmezi, geleneksel yöntemle hazırlanır. Şeker ilavesizdir; doğal olarak şeker içerir. 650 g.",
+      "fr": "Mélasse de caroube Beşe « Eski Usül », préparée selon la méthode traditionnelle. Sans sucres ajoutés – contient des sucres naturellement présents. 650 g.",
+      "de": "Beşe Johannisbrotsirup „Eski Usül“, nach traditioneller Art hergestellt. Ohne Zuckerzusatz – enthält von Natur aus Zucker. 650 g."
+    },
+    "ingredients": {
+      "tr": "Keçiboynuzu (harnup) pekmezi.",
+      "fr": "Sirop de caroube.",
+      "de": "Johannisbrotsirup."
+    },
+    "nutrition": {
+      "energyKj": 1184,
+      "energyKcal": 283,
+      "fatG": 0,
+      "saturatedFatG": 0,
+      "carbohydrateG": 69.3,
+      "sugarsG": 69.3,
+      "proteinG": 1.4,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Kuru ve serin yerde saklayınız.",
+      "fr": "À conserver au sec et au frais.",
+      "de": "Trocken und kühl lagern."
+    },
+    "shelfLifeDays": 730,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "650 g",
+          "fr": "650 g",
+          "de": "650 g"
+        },
+        "netQuantity": 650,
+        "netUnit": "g",
+        "packedWeightG": 900,
+        "packedLengthMm": 165,
+        "packedWidthMm": 70,
+        "packedHeightMm": 70,
+        "sku": "JOHANNESBROODMELASSE-650GR",
+        "barcodes": [
+          {
+            "code": "8681910226654",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Tahin": {
+    "name": {
+      "tr": "Tahin",
+      "fr": "Tahin (purée de sésame)",
+      "de": "Tahin (Sesampaste)"
+    },
+    "description": {
+      "tr": "Beşe \"Eski Usül\" tahin, susam ezmesi. Glutensiz ve vegan. Susam içerir.",
+      "fr": "Tahin Beşe « Eski Usül », pâte de sésame. Sans gluten et vegan. Contient du sésame.",
+      "de": "Beşe Tahin „Eski Usül“, Sesampaste. Glutenfrei und vegan. Enthält Sesam."
+    },
+    "ingredients": {
+      "tr": "**Susam** ezmesi (tahin).",
+      "fr": "Pâte de **sésame**.",
+      "de": "**Sesam**paste."
+    },
+    "nutrition": {
+      "energyKj": 2816,
+      "energyKcal": 674,
+      "fatG": 58,
+      "saturatedFatG": 10.8,
+      "carbohydrateG": 10.5,
+      "sugarsG": 0,
+      "proteinG": 22.7,
+      "saltG": 0.4
+    },
+    "allergens": [
+      "susam"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "Kuru ve serin yerde saklayınız.",
+      "fr": "À conserver au sec et au frais.",
+      "de": "Trocken und kühl lagern."
+    },
+    "shelfLifeDays": 730,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "500 g",
+          "fr": "500 g",
+          "de": "500 g"
+        },
+        "netQuantity": 500,
+        "netUnit": "g",
+        "packedWeightG": 780,
+        "packedLengthMm": 165,
+        "packedWidthMm": 75,
+        "packedHeightMm": 75,
+        "sku": "TAHINI-500GR",
+        "barcodes": [
+          {
+            "code": "8681910226319",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Alıç Sirkesi": {
+    "name": {
+      "tr": "Alıç Sirkesi",
+      "fr": "Vinaigre d'aubépine",
+      "de": "Weißdornessig"
+    },
+    "description": {
+      "tr": "Şifamix alıç sirkesi, geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
+      "fr": "Vinaigre d'aubépine Şifamix, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
+      "de": "Şifamix Weißdorn-Essig, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+    },
+    "ingredients": {
+      "tr": "Alıç sirkesi.",
+      "fr": "Vinaigre d'aubépine.",
+      "de": "Weißdorn-Essig."
+    },
+    "nutrition": {
+      "energyKj": 50,
+      "energyKcal": 12,
+      "fatG": 0,
+      "saturatedFatG": 0,
+      "carbohydrateG": 3.1,
+      "sugarsG": 0,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin yerde kapak kapalı olarak muhafaza ediniz.",
+      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
+      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "500 ml",
+          "fr": "500 ml",
+          "de": "500 ml"
+        },
+        "netQuantity": 500,
+        "netUnit": "ml",
+        "packedWeightG": 945,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "MEIDOORN-AZIJN-500ML",
+        "barcodes": [
+          {
+            "code": "8683649156806",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Ananas Sirkesi": {
+    "name": {
+      "tr": "Ananas Sirkesi",
+      "fr": "Vinaigre d'ananas",
+      "de": "Ananasessig"
+    },
+    "description": {
+      "tr": "Şifamix ananas sirkesi, geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
+      "fr": "Vinaigre d'ananas Şifamix, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
+      "de": "Şifamix Ananas-Essig, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+    },
+    "ingredients": {
+      "tr": "Ananas sirkesi.",
+      "fr": "Vinaigre d'ananas.",
+      "de": "Ananas-Essig."
+    },
+    "nutrition": {
+      "energyKj": 18,
+      "energyKcal": 4.3,
+      "fatG": 0.02,
+      "saturatedFatG": 0.02,
+      "carbohydrateG": 1.2,
+      "sugarsG": 0.1,
+      "proteinG": 0,
+      "saltG": 0.03
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.",
+      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
+      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+    },
+    "shelfLifeDays": 1096,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "500 ml",
+          "fr": "500 ml",
+          "de": "500 ml"
+        },
+        "netQuantity": 500,
+        "netUnit": "ml",
+        "packedWeightG": 880,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "ANANAS-AZIJN-500ML",
+        "barcodes": [
+          {
+            "code": "8683649157070",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Enginar Sirkesi": {
+    "name": {
+      "tr": "Enginar Sirkesi",
+      "fr": "Vinaigre d'artichaut",
+      "de": "Artischockenessig"
+    },
+    "description": {
+      "tr": "Şifamix enginar sirkesi, geleneksel doğal fermantasyonla üretilmiştir. Şeker ilavesi, katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
+      "fr": "Vinaigre d'artichaut Şifamix, obtenu par fermentation naturelle traditionnelle. Sans sucres ajoutés, sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
+      "de": "Şifamix Artischockenessig, durch traditionelle natürliche Fermentation hergestellt. Ohne Zuckerzusatz, ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+    },
+    "ingredients": {
+      "tr": "Enginar elma sirkesi.",
+      "fr": "Vinaigre de cidre de pomme à l'artichaut.",
+      "de": "Artischocken-Apfelessig."
+    },
+    "nutrition": {
+      "energyKj": 79.5,
+      "energyKcal": 19,
+      "fatG": 0,
+      "saturatedFatG": 0,
+      "carbohydrateG": 4.8,
+      "sugarsG": 0,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru bir yerde, kapağı sıkıca kapalı olarak muhafaza ediniz. Doğrudan güneş ışığından koruyunuz.",
+      "fr": "À conserver dans un endroit frais et sec, bien fermé et à l'abri de la lumière directe du soleil.",
+      "de": "Kühl und trocken lagern, gut verschlossen aufbewahren und vor direkter Sonneneinstrahlung schützen."
+    },
+    "shelfLifeDays": 1826,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "500 ml",
+          "fr": "500 ml",
+          "de": "500 ml"
+        },
+        "netQuantity": 500,
+        "netUnit": "ml",
+        "packedWeightG": 930,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "ENGINAR-AZIJN-500ML",
+        "barcodes": [
+          {
+            "code": "8683649157803",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Elma Sirkesi": {
+    "name": {
+      "tr": "Elma Sirkesi",
+      "fr": "Vinaigre de cidre",
+      "de": "Apfelessig"
+    },
+    "description": {
+      "tr": "Şifamix elma sirkesi, geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
+      "fr": "Vinaigre de cidre de pomme Şifamix, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
+      "de": "Şifamix Apfelessig, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+    },
+    "ingredients": {
+      "tr": "Elma sirkesi.",
+      "fr": "Vinaigre de cidre de pomme.",
+      "de": "Apfelessig."
+    },
+    "nutrition": {
+      "energyKj": 59,
+      "energyKcal": 14,
+      "fatG": 0.09,
+      "saturatedFatG": 0.09,
+      "carbohydrateG": 3.6,
+      "sugarsG": 0,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin yerde kapak kapalı olarak muhafaza ediniz.",
+      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
+      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "500 ml",
+          "fr": "500 ml",
+          "de": "500 ml"
+        },
+        "netQuantity": 500,
+        "netUnit": "ml",
+        "packedWeightG": 900,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "APPEL-AZIJN-500ML",
+        "barcodes": [
+          {
+            "code": "8683649156790",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Işkın Kökü Sirkesi": {
+    "name": {
+      "tr": "Işkın Kökü Sirkesi",
+      "fr": "Vinaigre de racine de rhubarbe",
+      "de": "Rhabarberwurzelessig"
+    },
+    "description": {
+      "tr": "Şifamix ışkın kökü sirkesi; elma sirkesi ve ışkın köküyle, geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
+      "fr": "Vinaigre de cidre de pomme Şifamix à la racine de rhubarbe, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
+      "de": "Şifamix Apfelessig mit Rhabarberwurzel, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+    },
+    "ingredients": {
+      "tr": "Elma sirkesi, ışkın kökü.",
+      "fr": "Vinaigre de cidre de pomme, racine de rhubarbe.",
+      "de": "Apfelessig, Rhabarberwurzel."
+    },
+    "nutrition": {
+      "energyKj": 13,
+      "energyKcal": 3,
+      "fatG": 0.04,
+      "saturatedFatG": 0.04,
+      "carbohydrateG": 0.5,
+      "sugarsG": 0.01,
+      "proteinG": 0,
+      "saltG": 0.1
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.",
+      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
+      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+    },
+    "shelfLifeDays": 1461,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "500 ml",
+          "fr": "500 ml",
+          "de": "500 ml"
+        },
+        "netQuantity": 500,
+        "netUnit": "ml",
+        "packedWeightG": 950,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "ISGIN-AZIJN-500ML",
+        "barcodes": [
+          {
+            "code": "8683649157063",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Bal Sirkesi": {
+    "name": {
+      "tr": "Bal Sirkesi",
+      "fr": "Vinaigre de miel",
+      "de": "Honigessig"
+    },
+    "description": {
+      "tr": "Şifamix bal sirkesi, tarçınlı; geleneksel doğal fermantasyonla üretilmiştir. Katkı maddesi ve koruyucu içermez. Açıldıktan sonra doğal tortu, renk değişimi veya \"sirke anası\" oluşabilir; bunlar bozulma belirtisi değildir. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
+      "fr": "Vinaigre de miel Şifamix à la cannelle, obtenu par fermentation naturelle traditionnelle. Sans additifs ni conservateurs. Après ouverture, un dépôt naturel, un changement de couleur ou une « mère de vinaigre » peuvent apparaître : ce ne sont pas des signes d'altération. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
+      "de": "Şifamix Honigessig mit Zimt, durch traditionelle natürliche Fermentation hergestellt. Ohne Zusatz- und Konservierungsstoffe. Nach dem Öffnen können natürliche Ablagerungen, Farbveränderungen oder eine „Essigmutter“ auftreten – kein Zeichen von Verderb. Schwangeren und stillenden Frauen wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+    },
+    "ingredients": {
+      "tr": "Bal sirkesi, tarçın.",
+      "fr": "Vinaigre de miel, cannelle.",
+      "de": "Honigessig, Zimt."
+    },
+    "nutrition": {
+      "energyKj": 25.14,
+      "energyKcal": 6,
+      "fatG": 0.02,
+      "saturatedFatG": 0.02,
+      "carbohydrateG": 1.58,
+      "sugarsG": 0.12,
+      "proteinG": 0,
+      "saltG": 0.06
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.",
+      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
+      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "500 ml",
+          "fr": "500 ml",
+          "de": "500 ml"
+        },
+        "netQuantity": 500,
+        "netUnit": "ml",
+        "packedWeightG": 880,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "HONING-AZIJN-500ML",
+        "barcodes": [
+          {
+            "code": "8683649157056",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Nar Ekşisi": {
+    "name": {
+      "tr": "Nar Ekşisi",
+      "fr": "Sirop de grenade",
+      "de": "Granatapfelsirup"
+    },
+    "description": {
+      "tr": "Şifamix nar ekşisi. Katkı maddesi ve koruyucu içermez. Hamile ve emziren kadınların tüketmeden önce doktora danışması tavsiye edilir.",
+      "fr": "Sirop de grenade Şifamix. Sans additifs ni conservateurs. Il est conseillé aux femmes enceintes et allaitantes de consulter un médecin avant consommation.",
+      "de": "Şifamix Granatapfelsirup. Ohne Zusatz- und Konservierungsstoffe. Schwangeren und stillenden Müttern wird empfohlen, vor dem Verzehr einen Arzt zu konsultieren."
+    },
+    "ingredients": {
+      "tr": "Nar ekşisi.",
+      "fr": "Sirop de grenade.",
+      "de": "Granatapfelsirup."
+    },
+    "nutrition": {
+      "energyKj": 1174,
+      "energyKcal": 273,
+      "fatG": 0,
+      "saturatedFatG": 0,
+      "carbohydrateG": 66.9,
+      "sugarsG": 64.9,
+      "proteinG": 1,
+      "saltG": 0.1
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, kapağı kapalı ve güneş ışığından korunarak saklayınız.",
+      "fr": "À conserver dans un endroit frais et sec, couvercle fermé, à l'abri de la lumière.",
+      "de": "Kühl, trocken und mit geschlossenem Deckel lagern und vor Sonnenlicht schützen."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "250 ml",
+          "fr": "250 ml",
+          "de": "250 ml"
+        },
+        "netQuantity": 250,
+        "netUnit": "ml",
+        "packedWeightG": 605,
+        "packedLengthMm": 45,
+        "packedWidthMm": 45,
+        "packedHeightMm": 230,
+        "sku": "GRANAATAPPELEXTRAAT-250ML",
+        "barcodes": [
+          {
+            "code": "8683649156813",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Şifamix Kozalak Özü": {
+    "name": {
+      "tr": "Şifamix Kozalak Özü",
+      "fr": "Extrait de pomme de pin Şifamix",
+      "de": "Şifamix Kiefernzapfenextrakt"
+    },
+    "description": {
+      "tr": "Şifamix kozalak özü; kozalak özü, keçiboynuzu pekmezi ve andız pekmezinden hazırlanır. İnfüzyon ve soğuk pres yöntemiyle üretilmiştir. Katkı maddesi ve koruyucu içermez.",
+      "fr": "Extrait de pomme de pin Şifamix, préparé à partir d'extrait de pomme de pin, de mélasse de caroube et de mélasse de genévrier. Obtenu par infusion et pressage à froid. Sans additifs ni conservateurs.",
+      "de": "Şifamix Kiefernzapfenextrakt aus Kiefernzapfenextrakt, Johannisbrotmelasse und Wacholdermelasse. Durch Infusion und Kaltpressung hergestellt. Ohne Zusatz- und Konservierungsstoffe."
+    },
+    "ingredients": {
+      "tr": "Kozalak özü, keçiboynuzu pekmezi, andız pekmezi.",
+      "fr": "Extrait de pomme de pin, mélasse de caroube, mélasse de genévrier.",
+      "de": "Kiefernzapfenextrakt, Johannisbrotmelasse, Wacholdermelasse."
+    },
+    "nutrition": {
+      "energyKj": 1352,
+      "energyKcal": 318,
+      "fatG": 0.01,
+      "saturatedFatG": 0,
+      "carbohydrateG": 78.81,
+      "sugarsG": 44.61,
+      "proteinG": 0.69,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde bulundurunuz. Serin ve güneş görmeyen yerde saklayınız.",
+      "fr": "Conserver dans un endroit frais et sec.",
+      "de": "Kühl und trocken lagern."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "670 g",
+          "fr": "670 g",
+          "de": "670 g"
+        },
+        "netQuantity": 670,
+        "netUnit": "g",
+        "packedWeightG": 1095,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "SIFAMIX-KOZALAK-EXTRACT-670GR",
+        "barcodes": [
+          {
+            "code": "8683649157735",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Şifamix Keçiboynuzu Özü": {
+    "name": {
+      "tr": "Şifamix Keçiboynuzu Özü",
+      "fr": "Extrait de caroube Şifamix",
+      "de": "Şifamix Johannisbrotextrakt"
+    },
+    "description": {
+      "tr": "Şifamix keçiboynuzu özü, doğal keçiboynuzu meyvesinden infüzyon ve soğuk pres yöntemiyle elde edilir. Şeker ilavesizdir; doğal olarak şeker içerir. Katkı maddesi ve koruyucu içermez.",
+      "fr": "Extrait de caroube Şifamix, obtenu à partir de gousses de caroube naturelles par infusion et pressage à froid. Sans sucres ajoutés – contient des sucres naturellement présents. Sans additifs ni conservateurs.",
+      "de": "Şifamix Johannisbrot-Extrakt aus natürlichen Johannisbrotschoten, durch Infusion und Kaltpressung gewonnen. Ohne Zuckerzusatz – enthält von Natur aus Zucker. Ohne Zusatz- und Konservierungsstoffe."
+    },
+    "ingredients": {
+      "tr": "Doğal keçiboynuzu meyvesinin özü.",
+      "fr": "Extrait de gousses de caroube.",
+      "de": "Extrakt aus Johannisbrotschoten."
+    },
+    "nutrition": {
+      "energyKj": 1360,
+      "energyKcal": 320,
+      "fatG": 0,
+      "saturatedFatG": 0,
+      "carbohydrateG": 79.31,
+      "sugarsG": 44,
+      "proteinG": 0.68,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde bulundurunuz.",
+      "fr": "Conserver dans un endroit frais et sec.",
+      "de": "Kühl und trocken lagern."
+    },
+    "shelfLifeDays": 730,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "700 g",
+          "fr": "700 g",
+          "de": "700 g"
+        },
+        "netQuantity": 700,
+        "netUnit": "g",
+        "packedWeightG": 1120,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "SIFAMIX-JOHANNESBROOD-EXTRACT-700ML",
+        "barcodes": [
+          {
+            "code": "8683649157292",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Şifamix Andız Özü": {
+    "name": {
+      "tr": "Şifamix Andız Özü",
+      "fr": "Extrait de genévrier Şifamix",
+      "de": "Şifamix Wacholderextrakt"
+    },
+    "description": {
+      "tr": "Şifamix andız özü, doğal andız meyvesinden infüzyon ve soğuk pres yöntemiyle elde edilir. Şeker ilavesizdir; doğal olarak şeker içerir. Katkı maddesi ve koruyucu içermez.",
+      "fr": "Extrait de genièvre Şifamix, obtenu à partir de baies de genévrier par infusion et pressage à froid. Sans sucres ajoutés – contient des sucres naturellement présents. Sans additifs ni conservateurs.",
+      "de": "Şifamix Wacholderextrakt aus Wacholderbeeren, durch Infusion und Kaltpressung gewonnen. Ohne Zuckerzusatz – enthält von Natur aus Zucker. Ohne Zusatz- und Konservierungsstoffe."
+    },
+    "ingredients": {
+      "tr": "Doğal andız meyvesinin özü.",
+      "fr": "Extrait de baies de genévrier.",
+      "de": "Extrakt aus Wacholderbeeren."
+    },
+    "nutrition": {
+      "energyKj": 1279.7,
+      "energyKcal": 301.1,
+      "fatG": 0.1,
+      "saturatedFatG": 0,
+      "carbohydrateG": 74.29,
+      "sugarsG": 50.13,
+      "proteinG": 0.77,
+      "saltG": 0.014
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde bulundurunuz.",
+      "fr": "Conserver dans un endroit frais et sec.",
+      "de": "Kühl und trocken lagern."
+    },
+    "shelfLifeDays": 730,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "350 g",
+          "fr": "350 g",
+          "de": "350 g"
+        },
+        "netQuantity": 350,
+        "netUnit": "g",
+        "packedWeightG": 620,
+        "packedLengthMm": 45,
+        "packedWidthMm": 45,
+        "packedHeightMm": 230,
+        "sku": "SIFAMIX-ANDIZ-EXTRACT-350GR",
+        "barcodes": [
+          {
+            "code": "8683649157285",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Coconut Mix": {
+    "name": {
+      "tr": "Coconut Mix",
+      "fr": "Coconut Mix",
+      "de": "Coconut Mix"
+    },
+    "description": {
+      "tr": "Şifamix Coconut Mix – hindistan cevizi sirkesi ve şurubu bazlı konsantre içecek; yeşil çay, biberiye, chia ve kinoa tohumu içerir. İçmeden önce çalkalayınız, soğuk içiniz. Açıldıktan sonra buzdolabında saklayıp 1 ay içinde tüketiniz.",
+      "fr": "Şifamix Coconut Mix – boisson concentrée à base de vinaigre et de sirop de coco, avec thé vert, romarin, graines de chia et de quinoa. Bien agiter avant de boire, boire froid. Après ouverture, conserver au réfrigérateur et consommer dans un délai d'un mois.",
+      "de": "Şifamix Coconut Mix – Getränkekonzentrat auf Basis von Kokosnussessig und Kokosnusssirup, mit grünem Tee, Rosmarin, Chia- und Quinoasamen. Vor dem Trinken gut schütteln, kalt trinken. Nach dem Öffnen im Kühlschrank aufbewahren und innerhalb von 1 Monat verbrauchen."
+    },
+    "ingredients": {
+      "tr": "Hindistan cevizi sirkesi, hindistan cevizi şurubu, sandaloz sakızı, yeşil çay, biberiye, chia tohumu, kinoa tohumu, kitre sakızı, funda yaprağı, L-karnitin, potasyum sorbat, sodyum benzoat, akasya gamı.",
+      "fr": "Vinaigre de coco, sirop de coco, résine de sandaraque, thé vert, romarin, graines de chia (Salvia hispanica), graines de quinoa, gomme adragante, feuille de bruyère, L-carnitine, sorbate de potassium, benzoate de sodium, gomme arabique.",
+      "de": "Kokosnussessig, Kokosnusssirup, Sandarakharz, Grüner Tee, Rosmarin, Chia-Samen (Salvia hispanica), Quinoasamen, Tragantgummi, Heidekrautblatt, L-Carnitin, Kaliumsorbat, Natriumbenzoat, Gummi Arabicum."
+    },
+    "nutrition": {
+      "energyKj": 77.7,
+      "energyKcal": 18.6,
+      "fatG": 0,
+      "saturatedFatG": 0,
+      "carbohydrateG": 4.3,
+      "sugarsG": 2.6,
+      "proteinG": 0.32,
+      "saltG": 0.37
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Çocukların ulaşamayacağı, serin ve kuru bir yerde muhafaza ediniz. Açıldıktan sonra buzdolabında muhafaza edilmeli ve 1 ay içerisinde tüketilmelidir.",
+      "fr": "Conserver dans un endroit frais et sec, hors de portée des enfants. Après ouverture, conserver au réfrigérateur et consommer dans un délai d'un mois.",
+      "de": "Außerhalb der Reichweite von Kindern an einem kühlen und trockenen Ort aufbewahren. Nach dem Öffnen im Kühlschrank aufbewahren und innerhalb von 1 Monat verbrauchen."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "250 ml",
+          "fr": "250 ml",
+          "de": "250 ml"
+        },
+        "netQuantity": 250,
+        "netUnit": "ml",
+        "packedWeightG": 525,
+        "packedLengthMm": 45,
+        "packedWidthMm": 45,
+        "packedHeightMm": 230,
+        "sku": "COCONUT-MIX-250ML",
+        "barcodes": [
+          {
+            "code": "8683649157537",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Natürel Sızma Zeytinyağı": {
+    "name": {
+      "tr": "Natürel Sızma Zeytinyağı",
+      "fr": "Huile d'olive vierge extra",
+      "de": "Natives Olivenöl extra"
+    },
+    "description": {
+      "tr": "Şifamix natürel sızma zeytinyağı, Yunanistan ürünü. Soğuk sıkım. Doğrudan zeytinden, yalnızca mekanik yöntemlerle elde edilen üstün kalite zeytinyağı.",
+      "fr": "Huile d'olive vierge extra Şifamix, produit de Grèce. Extraction à froid. Huile d'olive de catégorie supérieure obtenue directement des olives et uniquement par des procédés mécaniques.",
+      "de": "Natives Olivenöl extra von Şifamix, Erzeugnis aus Griechenland. Kaltextraktion. Olivenöl der höchsten Güteklasse, direkt aus Oliven ausschließlich mit mechanischen Verfahren gewonnen."
+    },
+    "ingredients": {
+      "tr": "Natürel sızma zeytinyağı.",
+      "fr": "Huile d'olive vierge extra.",
+      "de": "Natives Olivenöl extra."
+    },
+    "nutrition": {
+      "energyKj": 3470.6,
+      "energyKcal": 837.5,
+      "fatG": 93.8,
+      "saturatedFatG": 13.4,
+      "carbohydrateG": 0,
+      "sugarsG": 0,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve karanlık bir yerde saklayınız.",
+      "fr": "Conserver dans un endroit sombre et frais.",
+      "de": "An einem dunklen und kühlen Ort aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "5 l",
+          "fr": "5 l",
+          "de": "5 l"
+        },
+        "netQuantity": 5000,
+        "netUnit": "ml",
+        "packedWeightG": 5000,
+        "packedLengthMm": 330,
+        "packedWidthMm": 120,
+        "packedHeightMm": 150,
+        "sku": "OLIJFOLIE-5LT",
+        "barcodes": [
+          {
+            "code": "5205657007524",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      },
+      {
+        "label": {
+          "tr": "750 ml",
+          "fr": "750 ml",
+          "de": "750 ml"
+        },
+        "netQuantity": 750,
+        "netUnit": "ml",
+        "packedWeightG": 1125,
+        "packedLengthMm": 290,
+        "packedWidthMm": 70,
+        "packedHeightMm": 70,
+        "sku": "OLIJFOLIE-750ML",
+        "barcodes": [
+          {
+            "code": "5205657007531",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Antep Fıstığı": {
+    "name": {
+      "tr": "Antep Fıstığı",
+      "fr": "Pistaches",
+      "de": "Pistazien"
+    },
+    "description": {
+      "tr": "Şifamix kabuklu Antep fıstığı, tuzlu. Dikkat: Küçük çocuklar taneleri yutarak boğulabilir.",
+      "fr": "Pistaches Şifamix en coque, salées. Attention : les enfants en bas âge peuvent s'étouffer avec les graines.",
+      "de": "Şifamix Pistazien in der Schale, gesalzen. Achtung: Kleine Kinder können an Kernen ersticken."
+    },
+    "ingredients": {
+      "tr": "**Antep fıstığı**, tuz.",
+      "fr": "**Pistache**, sel.",
+      "de": "**Pistazien**, Salz."
+    },
+    "nutrition": {
+      "energyKj": 2629,
+      "energyKcal": 629,
+      "fatG": 58.69,
+      "saturatedFatG": 51.02,
+      "carbohydrateG": 4.41,
+      "sugarsG": 3,
+      "proteinG": 20.63,
+      "saltG": 0.1
+    },
+    "allergens": [
+      "sert_kabuklu"
+    ],
+    "traces": [
+      "yer_fistigi",
+      "sert_kabuklu",
+      "susam"
+    ],
+    "storage": {
+      "tr": "Kuru yerde, sıcaktan koruyarak saklayınız.",
+      "fr": "Conserver au sec et à l'abri de la chaleur.",
+      "de": "Trocken lagern und vor Wärme schützen."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "700 g",
+          "fr": "700 g",
+          "de": "700 g"
+        },
+        "netQuantity": 700,
+        "netUnit": "g",
+        "packedWeightG": 710,
+        "packedLengthMm": 50,
+        "packedWidthMm": 150,
+        "packedHeightMm": 230,
+        "sku": "PISTACHE-700GR",
+        "barcodes": [
+          {
+            "code": "8699237145442",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Bromelain Şurubu": {
+    "name": {
+      "tr": "Bromelain Şurubu",
+      "fr": "Sirop de broméline",
+      "de": "Bromelain-Sirup"
+    },
+    "description": {
+      "tr": "Ananas ve bromelain içeren şurup formunda gıda takviyesi (Zühre Ana). 1 porsiyonda: bromelain 350 mg, koenzim Q10 100 mg, mate yaprağı ekstresi 100 mg, L-karnitin 100 mg, C vitamini 80 mg (%100 BRD), ananas ekstresi 50 mg. Kullanım: yetişkinler ve 11 yaş üzeri için sabah 1, akşam 1 doz olmak üzere günde toplam 2 doz (10 ml). Kullanmadan önce çalkalayınız. İlaç değildir; hastalıkları önleme veya tedavi amacıyla kullanılamaz. Gıda takviyeleri normal beslenmenin yerine geçemez. Hastalık veya ilaç kullanımı durumunda doktorunuza danışınız. Çocukların ulaşamayacağı yerde saklayınız.",
+      "fr": "Complément alimentaire au sirop contenant de l'ananas et de la bromélaïne (Zühre Ana). Pour 1 portion : bromélaïne 350 mg, coenzyme Q10 100 mg, extrait de feuille de maté 100 mg, L-carnitine 100 mg, vitamine C 80 mg (100 % VNR), extrait d'ananas 50 mg. Portion journalière : adultes et personnes de 11 ans et plus, 1 dose le matin et 1 dose le soir, soit 2 doses (10 ml) par jour. Bien agiter avant utilisation. Ce n'est pas un médicament ; il ne peut pas être utilisé pour prévenir ou traiter des maladies. Les compléments alimentaires ne peuvent pas remplacer une alimentation normale. Consultez votre médecin en cas de maladie ou de prise de médicaments. Tenir hors de portée des enfants.",
+      "de": "Nahrungsergänzungsmittel in Sirupform mit Ananas und Bromelain (Zühre Ana). Pro Portion: Bromelain 350 mg, Coenzym Q10 100 mg, Mate-Blattextrakt 100 mg, L-Carnitin 100 mg, Vitamin C 80 mg (100 % NRV), Ananasextrakt 50 mg. Verzehrempfehlung: Erwachsene und Personen ab 11 Jahren 1 Dosis morgens und 1 Dosis abends, insgesamt 2 Dosen (10 ml) pro Tag. Vor Gebrauch gut schütteln. Es ist kein Arzneimittel und kann nicht zur Vorbeugung oder Behandlung von Krankheiten eingesetzt werden. Nahrungsergänzungsmittel können die normale Ernährung nicht ersetzen. Bei Krankheit oder Medikamenteneinnahme Arzt konsultieren. Außerhalb der Reichweite von Kindern aufbewahren."
+    },
+    "ingredients": {
+      "tr": "Deiyonize su, bromelain, koenzim Q10, mate yaprağı ekstresi, L-karnitin, arap zamkı (E414), L-askorbik asit (C vitamini), ananas ekstresi, doğal ananas aroması, stevya (Stevia rebaudiana).",
+      "fr": "Eau désionisée, bromélaïne, coenzyme Q10, extrait de feuille de maté, L-carnitine, gomme arabique (E414), acide L-ascorbique (vitamine C), extrait d'ananas, arôme naturel d'ananas, stévia (Stevia Rebaudiana).",
+      "de": "Entionisiertes Wasser, Bromelain, Coenzym Q10, Mate-Blattextrakt, L-Carnitin, Gummi Arabicum (E414), L-Ascorbinsäure (Vitamin C), Ananasextrakt, natürliches Ananasaroma, Stevia (Stevia Rebaudiana)."
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "25 °C'nin altında oda sıcaklığında, nem ve ışıktan korunarak saklayınız. Çocukların ulaşamayacağı yerde saklayınız.",
+      "fr": "Conserver à température ambiante inférieure à 25 °C, à l'abri de l'humidité et de la lumière. Tenir hors de portée des enfants.",
+      "de": "Bei Raumtemperatur unter 25 °C, vor Feuchtigkeit und Licht geschützt lagern. Außerhalb der Reichweite von Kindern aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "250 g",
+          "fr": "250 g",
+          "de": "250 g"
+        },
+        "netQuantity": 250,
+        "netUnit": "g",
+        "packedWeightG": 460,
+        "packedLengthMm": 45,
+        "packedWidthMm": 45,
+        "packedHeightMm": 230,
+        "sku": "BROMELAIN-SIROOP-250ML",
+        "barcodes": [
+          {
+            "code": "8683655363212",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Propolis Macunu": {
+    "name": {
+      "tr": "Propolis Macunu",
+      "fr": "Pâte au propolis",
+      "de": "Propolis-Paste"
+    },
+    "description": {
+      "tr": "Zühre Ana beta glukan katkılı propolis macunu. Çiçek balı ve keçiboynuzu pekmezi bazlı; polen, arı sütü, propolis (%2,5), Kore ginsengi ve damla sakızı içerir. Türkiye ürünü. Metal kaşık kullanmayınız, tahta veya plastik kaşık kullanınız. Ürün içeriğine alerjisi olanlar doktora danışmalıdır.",
+      "fr": "Pâte au propolis Zühre Ana, avec bêta-glucane. À base de miel de fleurs et de mélasse de caroube, avec pollen, gelée royale, propolis (2,5 %), ginseng coréen et mastic. Produit de Turquie. Utiliser une cuillère en bois ou en plastique, pas de cuillère en métal. Les personnes allergiques à l'un des ingrédients doivent consulter un médecin.",
+      "de": "Zühre Ana Propolis-Paste mit Beta-Glucan. Auf Basis von Blütenhonig und Johannisbrotmelasse, mit Pollen, Gelée Royale, Propolis (2,5 %), koreanischem Ginseng und Mastix. Hergestellt in der Türkei. Keinen Metalllöffel verwenden, sondern einen Holz- oder Kunststofflöffel. Personen mit Allergien gegen einen der Inhaltsstoffe sollten einen Arzt konsultieren."
+    },
+    "ingredients": {
+      "tr": "Çiçek balı, keçiboynuzu pekmezi, polen, arı sütü, propolis (%2,5), Kore ginsengi, damla sakızı, beta glukan.",
+      "fr": "Miel de fleurs, mélasse de caroube, pollen, gelée royale, propolis (2,5 %), ginseng coréen, mastic, bêta-glucane.",
+      "de": "Blütenhonig, Johannisbrotmelasse, Pollen, Gelée Royale, Propolis (2,5 %), koreanischer Ginseng, Mastix, Beta-Glucan."
+    },
+    "nutrition": {
+      "energyKj": 1538,
+      "energyKcal": 368,
+      "fatG": 0.3,
+      "saturatedFatG": 0.1,
+      "carbohydrateG": 91.4,
+      "sugarsG": 54,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde saklayınız.",
+      "fr": "À conserver au sec et au frais.",
+      "de": "Kühl und trocken lagern."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "240 g",
+          "fr": "240 g",
+          "de": "240 g"
+        },
+        "netQuantity": 240,
+        "netUnit": "g",
+        "packedWeightG": 440,
+        "packedLengthMm": 105,
+        "packedWidthMm": 75,
+        "packedHeightMm": 75,
+        "sku": "PROPOLIS-PASTA-240GR",
+        "barcodes": [
+          {
+            "code": "8681144605263",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Form Macunu": {
+    "name": {
+      "tr": "Form Macunu",
+      "fr": "Pâte Form (à la L-carnitine)",
+      "de": "Form-Paste (mit L-Carnitin)"
+    },
+    "description": {
+      "tr": "Zühre Ana L-karnitin içeren macun. Meyve ve bitki karışımı; L-karnitin (%4,16) ve krom pikolinat içerir. Türkiye ürünü. Hamile kadınlar ve çocuklar için uygun değildir.",
+      "fr": "Pâte Zühre Ana contenant de la L-carnitine. Mélange de fruits et de plantes, avec L-carnitine (4,16 %) et picolinate de chrome. Produit de Turquie. Ne convient pas aux femmes enceintes ni aux enfants.",
+      "de": "Zühre Ana Paste mit L-Carnitin. Mischung aus Früchten und Kräutern, mit L-Carnitin (4,16 %) und Chrompicolinat. Hergestellt in der Türkei. Für Schwangere und Kinder nicht geeignet."
+    },
+    "ingredients": {
+      "tr": "Yaban mersini, biberiye, funda, kiraz meyve sapı, mısır püskülü, akdiken, enginar, L-karnitin (%4,16), sandaloz sakızı, kitre, tarçın, krom pikolinat, yeşil çay, nar ekşisi, kayısı aroması.",
+      "fr": "Myrtille, romarin, bruyère, queue de cerise, barbe de maïs, nerprun, artichaut, L-carnitine (4,16 %), gomme de sandaraque, gomme adragante, cannelle, picolinate de chrome, thé vert, mélasse de grenade, arôme abricot.",
+      "de": "Heidelbeere, Rosmarin, Heidekraut, Kirschstiel, Maisseide, Weissdorn, Artischocke, L-Carnitin (4,16 %), Sandarak, Traganth, Zimt, Chrompicolinat, Grüner Tee, Granatapfelsirup, Aprikosenaroma."
+    },
+    "nutrition": {
+      "energyKj": 1395,
+      "energyKcal": 334,
+      "fatG": 0.3,
+      "saturatedFatG": 0.1,
+      "carbohydrateG": 82.8,
+      "sugarsG": 51.6,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Güneş ışığından uzak, serin ve kuru yerde saklayınız.",
+      "fr": "À conserver à l’abri du soleil, au sec et au frais.",
+      "de": "Vor Sonnenlicht geschützt, kühl und trocken lagern."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "240 g",
+          "fr": "240 g",
+          "de": "240 g"
+        },
+        "netQuantity": 240,
+        "netUnit": "g",
+        "packedWeightG": 423,
+        "packedLengthMm": 100,
+        "packedWidthMm": 80,
+        "packedHeightMm": 80,
+        "sku": "FORM-PASTA-240GR",
+        "barcodes": [
+          {
+            "code": "8683655363014",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Kozalak Macunu": {
+    "name": {
+      "tr": "Kozalak Macunu",
+      "fr": "Pâte de pomme de pin",
+      "de": "Kiefernzapfen-Paste"
+    },
+    "description": {
+      "tr": "Zühre Ana kozalak macunu. Keçiboynuzu ve andız pekmezi bazlı; servi kozağı (%24), reçine, baharatlar, çinko, C ve D3 vitamini içerir. Türkiye ürünü.",
+      "fr": "Pâte Zühre Ana à base de mélasse de caroube et de genévrier, avec cônes de cyprès (24 %), résine, épices, zinc et vitamines C et D3. Produit de Turquie.",
+      "de": "Zühre Ana Paste auf Basis von Johannisbrot- und Wacholdermelasse, mit Zypressenzapfen (24 %), Harz, Gewürzen, Zink sowie Vitamin C und D3. Hergestellt in der Türkei."
+    },
+    "ingredients": {
+      "tr": "Keçiboynuzu pekmezi, servi kozağı (%24), andız pekmezi, nane, zencefil, günlük (boswellia), çam sakızı (%2), zerdeçal, havlıcan, beta-glukan, çinko glukonat (%2), askorbik asit (C vitamini), kübabe, karanfil, keçiboynuzu tozu, kolekalsiferol (D3 vitamini) (%0,006).",
+      "fr": "Mélasse de caroube, cônes de cyprès (24 %), mélasse de genévrier de Syrie, menthe poivrée, gingembre, encens (boswellia), résine de pin (2 %), curcuma, galanga, bêta-glucane, gluconate de zinc (2 %), acide ascorbique (vitamine C), cubèbe, clou de girofle, poudre de caroube, cholécalciférol (vitamine D3) (0,006 %).",
+      "de": "Johannesbrotmelasse, Zypressenzapfen (24 %), Syrische Wacholdermelasse, Pfefferminz, Ingwer, Weihrauch, Tannenharz (Mastix) (2 %), Kurkuma, Galgant, Beta-Glucan, Zinkgluconat (2 %), Ascorbinsäure (Vitamin C), Kubebe, Nelke, Johannisbrotpulver, Cholecalciferol (Vitamin D3) (0,006 %)."
+    },
+    "nutrition": {
+      "energyKj": 1463,
+      "energyKcal": 350,
+      "fatG": 0.3,
+      "saturatedFatG": 0,
+      "carbohydrateG": 86.8,
+      "sugarsG": 60.5,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde saklayınız.",
+      "fr": "À conserver au sec et au frais.",
+      "de": "Kühl und trocken lagern."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "240 g",
+          "fr": "240 g",
+          "de": "240 g"
+        },
+        "netQuantity": 240,
+        "netUnit": "g",
+        "packedWeightG": 435,
+        "packedLengthMm": 80,
+        "packedWidthMm": 80,
+        "packedHeightMm": 105,
+        "sku": "DENNENAPPEL-PASTA-240GR",
+        "barcodes": [
+          {
+            "code": "8681144604990",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "İğde Çekirdeği Macunu": {
+    "name": {
+      "tr": "İğde Çekirdeği Macunu",
+      "fr": "Pâte aux noyaux d’olivier de Bohême",
+      "de": "Paste aus Ölweidenkernen"
+    },
+    "description": {
+      "tr": "Zühre Ana iğde çekirdeği macunu. Keçiboynuzu pekmezi ve bal katkılı; iğde çekirdeği tozu (%32), kalsiyum ve D3 vitamini içerir. Tavuk kaynaklı kolajen ve yumurta kabuğu tozu içerir. Türkiye ürünü. Ürün içeriğine alerjisi olanlar doktora danışmalıdır.",
+      "fr": "Pâte Zühre Ana aux noyaux d'olivier de Bohême, avec mélasse de caroube et miel ; contient de la poudre de noyaux d'olivier de Bohême (32 %), du calcium et de la vitamine D3. Contient du collagène de poulet et de la poudre de coquille d'œuf. Produit de Turquie. Les personnes allergiques à l'un des ingrédients doivent consulter un médecin.",
+      "de": "Zühre Ana Ölweidenkern-Paste mit Johannisbrotmelasse und Honig; enthält Ölweidenkernpulver (32 %), Calcium und Vitamin D3. Enthält Kollagen aus Huhn und Eierschalenpulver. Hergestellt in der Türkei. Personen mit Allergien gegen einen der Inhaltsstoffe sollten einen Arzt konsultieren."
+    },
+    "ingredients": {
+      "tr": "Keçiboynuzu pekmezi, iğde çekirdeği tozu (%32), akgünlük, kalsiyum glukonat, **yumurta** kabuğu tozu, çiçek balı, kolajen peptit (tip 2, tavuk kaynaklı), D3 vitamini preparatı (maltodekstrin, kolekalsiferol).",
+      "fr": "Mélasse de caroube, poudre de noyaux d'olivier de Bohême (32 %), encens (oliban), gluconate de calcium, poudre de coquille d'**œuf**, miel de fleurs, peptides de collagène (type 2, d'origine poulet), préparation de vitamine D3 (maltodextrine, cholécalciférol).",
+      "de": "Johannisbrotmelasse, Ölweidenkernpulver (32 %), Weihrauch, Calciumgluconat, **Eier**schalenpulver, Blütenhonig, Kollagenpeptide (Typ 2, aus Huhn), Vitamin-D3-Zubereitung (Maltodextrin, Cholecalciferol)."
+    },
+    "nutrition": {
+      "energyKj": 1490,
+      "energyKcal": 350,
+      "fatG": 0.24,
+      "saturatedFatG": 0.16,
+      "carbohydrateG": 88.59,
+      "sugarsG": 40.92,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [
+      "yumurta"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "Güneş ışığından uzak tutunuz. Serin ve kuru yerde muhafaza ediniz. Çocukların ulaşamayacağı yerde ve kendi ambalajı içerisinde saklayınız.",
+      "fr": "Tenir à l'abri de la lumière du soleil. Conserver dans un endroit frais et sec. Conserver hors de portée des enfants et dans son emballage d'origine.",
+      "de": "Vor Sonnenlicht schützen. Kühl und trocken lagern. Außerhalb der Reichweite von Kindern und in der Originalverpackung aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "240 g",
+          "fr": "240 g",
+          "de": "240 g"
+        },
+        "netQuantity": 240,
+        "netUnit": "g",
+        "packedWeightG": 420,
+        "packedLengthMm": 105,
+        "packedWidthMm": 75,
+        "packedHeightMm": 75,
+        "sku": "IGDE-CEKIRDEGI-PASTA-240GR",
+        "barcodes": [
+          {
+            "code": "8683655363427",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Karadut Özü": {
+    "name": {
+      "tr": "Karadut Özü",
+      "fr": "Extrait de mûrier noir",
+      "de": "Schwarzer Maulbeerextrakt"
+    },
+    "description": {
+      "tr": "Zühre Ana karadut özü. 1+5 oranında suyla sulanabilir (damak tadına göre artırılıp azaltılabilir). Şeker meyvenin kendi şekeridir, ilave şeker eklenmemiştir. Kıvam artırıcı içermez.",
+      "fr": "Extrait de mûrier noir Zühre Ana. Peut être dilué dans un rapport de 1+5 avec de l'eau (selon votre goût). Le sucre contenu provient du fruit lui-même, aucun sucre n'est ajouté. Ne contient pas d'épaississants.",
+      "de": "Zühre Ana Schwarzer Maulbeer-Extrakt. Kann im Verhältnis 1+5 mit Wasser verdünnt werden (je nach Geschmack mehr oder weniger). Der Zucker stammt aus der Frucht selbst, es wird kein zusätzlicher Zucker zugesetzt. Enthält keine Verdickungsmittel."
+    },
+    "ingredients": {
+      "tr": "Karadut özü.",
+      "fr": "Extrait de mûrier noir.",
+      "de": "Schwarzer Maulbeer Extrakt."
+    },
+    "nutrition": {
+      "energyKj": 896,
+      "energyKcal": 214.1,
+      "fatG": 0.3,
+      "saturatedFatG": 0.12,
+      "carbohydrateG": 51.2,
+      "sugarsG": 37.16,
+      "proteinG": 1.92,
+      "saltG": 0.03
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Güneş ışığından uzak, serin ve kuru, kendi ambalajı içerisinde saklayınız.",
+      "fr": "Conserver dans son emballage d'origine, dans un endroit frais et sec, à l'abri de la lumière du soleil.",
+      "de": "In der Originalverpackung an einem kühlen, trockenen und vor Sonnenlicht geschützten Ort aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "670 g",
+          "fr": "670 g",
+          "de": "670 g"
+        },
+        "netQuantity": 670,
+        "netUnit": "g",
+        "packedWeightG": 1040,
+        "packedLengthMm": 290,
+        "packedWidthMm": 60,
+        "packedHeightMm": 60,
+        "sku": "ZWARTE-MOERBEI-EXTRAT-670GR",
+        "barcodes": [
+          {
+            "code": "8683655363151",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Zühre Ana Kekre Termojenik Mix": {
+    "name": {
+      "tr": "Zühre Ana Kekre Termojenik Mix",
+      "fr": "Zühre Ana Kekre, concentré aux fruits",
+      "de": "Zühre Ana Kekre, Fruchtkonzentrat"
+    },
+    "description": {
+      "tr": "Zühre Ana Kekre Mix, hibisküs ve papayalı; bitki ekstreleri içeren içecek konsantresi. Hazırlanışı: bardağın 1/4'üne kadar doldurup üzerine su ekleyerek iyice karıştırınız. Tüketmeden önce çalkalayınız. Koruyucu ve renklendirici içermez.",
+      "fr": "Zühre Ana Kekre Mix à l'hibiscus et à la papaye – concentré de boisson aux extraits de plantes. Préparation : remplir un verre au quart, compléter avec de l'eau et bien mélanger. Agiter avant utilisation. Sans conservateurs ni colorants.",
+      "de": "Zühre Ana Kekre Mix mit Hibiskus und Papaya – Getränkekonzentrat mit Pflanzenextrakten. Zubereitung: ein Glas zu 1/4 füllen, mit Wasser auffüllen und gut umrühren. Vor Gebrauch schütteln. Ohne Konservierungs- und Farbstoffe."
+    },
+    "ingredients": {
+      "tr": "Yaban mersini, su, mate, zencefil, papaya, mango, açai, sandaloz sakızı, hindistan cevizi, hibiskus, avokado, ananas, tarçın, L-karnitin, stevia, ksantan gam.",
+      "fr": "Myrtille, eau, maté, gingembre, papaye, mangue, açaï, gomme de sandaraque, noix de coco, hibiscus, avocat, ananas, cannelle, L-carnitine, stévia, gomme xanthane.",
+      "de": "Heidelbeere, Wasser, Mate, Ingwer, Papaya, Mango, Açaí, Sandarakharz, Kokosnuss, Hibiskus, Avocado, Ananas, Zimt, L-Carnitin, Stevia, Xanthan."
+    },
+    "nutrition": {
+      "energyKj": 753,
+      "energyKcal": 180,
+      "fatG": 3,
+      "saturatedFatG": 1.5,
+      "carbohydrateG": 32.5,
+      "sugarsG": 17,
+      "proteinG": 6,
+      "saltG": 0.05
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Güneş ışığından uzak, serin ve kuru, kendi ambalajı içerisinde saklayınız. Açıldıktan sonra buzdolabında muhafaza ediniz.",
+      "fr": "À conserver à l'abri de la lumière du soleil, dans un endroit frais et sec, dans son emballage d'origine. Après ouverture, conserver au réfrigérateur.",
+      "de": "Vor Sonnenlicht geschützt, kühl und trocken in der Originalverpackung aufbewahren. Nach dem Öffnen im Kühlschrank aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "250 ml",
+          "fr": "250 ml",
+          "de": "250 ml"
+        },
+        "netQuantity": 250,
+        "netUnit": "ml",
+        "packedWeightG": 513,
+        "packedLengthMm": 45,
+        "packedWidthMm": 45,
+        "packedHeightMm": 230,
+        "sku": "ZUHRE-ANA-KEKRE-250ML",
+        "barcodes": [
+          {
+            "code": "8683655363984",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Fındıklı Muska Pestil": {
+    "name": {
+      "tr": "Fındıklı Muska Pestil",
+      "fr": "Muska pestil aux noisettes",
+      "de": "Muska-Pestil mit Haselnüssen"
+    },
+    "description": {
+      "tr": "Gümüşhane usulü fındıklı muska; üçgen katlanmış pestil, üzüm pekmezi, fındık, buğday unu ve şekerle hazırlanır.",
+      "fr": "Amulette aux noisettes, spécialité de Gümüşhane (Turquie) : pestil plié en triangle à base de mélasse de raisin, de noisettes, de farine de blé et de sucre.",
+      "de": "Haselnuss-Amulett nach Art von Gümüşhane (Türkei) – dreieckig gefalteter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker."
+    },
+    "ingredients": {
+      "tr": "**Fındık** (%33), üzüm pekmezi (%32), **buğday** unu (%20), şeker (%15).",
+      "fr": "**Noisette** (33 %), mélasse de raisin (32 %), farine de **blé** (20 %), sucre (15 %).",
+      "de": "**Haselnuss** (33 %), Traubenmelasse (32 %), **Weizen**mehl (20 %), Zucker (15 %)."
+    },
+    "nutrition": {
+      "energyKj": 1544,
+      "energyKcal": 369,
+      "fatG": 5.29,
+      "saturatedFatG": 0,
+      "carbohydrateG": 77.55,
+      "sugarsG": 0,
+      "proteinG": 3.01,
+      "saltG": 0
+    },
+    "allergens": [
+      "sert_kabuklu",
+      "gluten"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
+      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
+      "de": "Kühl und trocken lagern."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "300 g",
+          "fr": "300 g",
+          "de": "300 g"
+        },
+        "netQuantity": 300,
+        "netUnit": "g",
+        "packedWeightG": 325,
+        "packedLengthMm": 190,
+        "packedWidthMm": 140,
+        "packedHeightMm": 25,
+        "sku": "PESTIL-MET-HAZINOTEN-MUSKA-300GR",
+        "barcodes": [
+          {
+            "code": "8699237142595",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Kurutulmuş Aronya": {
+    "name": {
+      "tr": "Kurutulmuş Aronya",
+      "fr": "Aronia séchée",
+      "de": "Getrocknete Aronia"
+    },
+    "description": {
+      "tr": "Şifamix kurutulmuş aronya meyvesi.",
+      "fr": "Baies d'aronia séchées Şifamix.",
+      "de": "Şifamix getrocknete Aroniabeeren."
+    },
+    "ingredients": {
+      "tr": "Kurutulmuş aronya.",
+      "fr": "Baie d'aronia séchée.",
+      "de": "Getrocknete Aroniabeere."
+    },
+    "nutrition": {
+      "energyKj": 1268,
+      "energyKcal": 303,
+      "fatG": 0.5,
+      "saturatedFatG": 0,
+      "carbohydrateG": 60.1,
+      "sugarsG": 22,
+      "proteinG": 5.4,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
+      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
+      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "150 g",
+          "fr": "150 g",
+          "de": "150 g"
+        },
+        "netQuantity": 150,
+        "netUnit": "g",
+        "packedWeightG": 151,
+        "packedLengthMm": 130,
+        "packedWidthMm": 185,
+        "packedHeightMm": 40,
+        "sku": "GEDROOGDE-ARONYA-150GR",
+        "barcodes": [
+          {
+            "code": "8699237145558",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Kurutulmuş Elma": {
+    "name": {
+      "tr": "Kurutulmuş Elma",
+      "fr": "Pommes séchées",
+      "de": "Getrocknete Äpfel"
+    },
+    "description": {
+      "tr": "Şifamix kurutulmuş elma dilimleri.",
+      "fr": "Rondelles de pommes séchées Şifamix.",
+      "de": "Şifamix getrocknete Apfelringe."
+    },
+    "ingredients": {
+      "tr": "Kurutulmuş elma.",
+      "fr": "Pomme séchée.",
+      "de": "Getrockneter Apfel."
+    },
+    "nutrition": {
+      "energyKj": 1736,
+      "energyKcal": 415,
+      "fatG": 0.3,
+      "saturatedFatG": 0,
+      "carbohydrateG": 65.3,
+      "sugarsG": 57.2,
+      "proteinG": 1.3,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
+      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
+      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "180 g",
+          "fr": "180 g",
+          "de": "180 g"
+        },
+        "netQuantity": 180,
+        "netUnit": "g",
+        "packedWeightG": 210,
+        "packedLengthMm": 190,
+        "packedWidthMm": 130,
+        "packedHeightMm": 75,
+        "sku": "GEDROOGDE-APPEL-180GR",
+        "barcodes": [
+          {
+            "code": "8699237145527",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Kurutulmuş Trabzon Hurması Cipsi": {
+    "name": {
+      "tr": "Kurutulmuş Trabzon Hurması Cipsi",
+      "fr": "Chips de kaki séché",
+      "de": "Kaki-Chips"
+    },
+    "description": {
+      "tr": "Şifamix kurutulmuş cennet elması (Trabzon hurması) dilimleri.",
+      "fr": "Tranches de kaki séché Şifamix.",
+      "de": "Şifamix getrocknete Kakischeiben."
+    },
+    "ingredients": {
+      "tr": "Kurutulmuş cennet elması.",
+      "fr": "Kaki séché.",
+      "de": "Getrocknete Kaki."
+    },
+    "nutrition": {
+      "energyKj": 1138,
+      "energyKcal": 272,
+      "fatG": 1.15,
+      "saturatedFatG": 0,
+      "carbohydrateG": 60.21,
+      "sugarsG": 54,
+      "proteinG": 1.4,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
+      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
+      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "180 g",
+          "fr": "180 g",
+          "de": "180 g"
+        },
+        "netQuantity": 180,
+        "netUnit": "g",
+        "packedWeightG": 200,
+        "packedLengthMm": 130,
+        "packedWidthMm": 185,
+        "packedHeightMm": 40,
+        "sku": "GEDROOGDE-KAKI-CIPS-180GR",
+        "barcodes": [
+          {
+            "code": "8699237145534",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Kurutulmuş Şeftali": {
+    "name": {
+      "tr": "Kurutulmuş Şeftali",
+      "fr": "Pêches séchées",
+      "de": "Getrocknete Pfirsiche"
+    },
+    "description": {
+      "tr": "Şifamix kurutulmuş şeftali dilimleri.",
+      "fr": "Tranches de pêches séchées Şifamix.",
+      "de": "Şifamix getrocknete Pfirsichscheiben."
+    },
+    "ingredients": {
+      "tr": "Kurutulmuş şeftali.",
+      "fr": "Pêches séchées.",
+      "de": "Getrocknete Pfirsiche."
+    },
+    "nutrition": {
+      "energyKj": 1402,
+      "energyKcal": 335,
+      "fatG": 0.3,
+      "saturatedFatG": 0,
+      "carbohydrateG": 61.33,
+      "sugarsG": 59.2,
+      "proteinG": 5.4,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
+      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
+      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "180 g",
+          "fr": "180 g",
+          "de": "180 g"
+        },
+        "netQuantity": 180,
+        "netUnit": "g",
+        "packedWeightG": 196,
+        "packedLengthMm": 130,
+        "packedWidthMm": 185,
+        "packedHeightMm": 40,
+        "sku": "GEDROOGDE-PERZIK",
+        "barcodes": [
+          {
+            "code": "8699237145510",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Kurutulmuş Kavun": {
+    "name": {
+      "tr": "Kurutulmuş Kavun",
+      "fr": "Melon séché",
+      "de": "Getrocknete Melone"
+    },
+    "description": {
+      "tr": "Şifamix kurutulmuş kavun dilimleri.",
+      "fr": "Tranches de melon séché Şifamix.",
+      "de": "Şifamix getrocknete Melonenscheiben."
+    },
+    "ingredients": {
+      "tr": "Kurutulmuş kavun.",
+      "fr": "Melon séché.",
+      "de": "Getrocknete Melone."
+    },
+    "nutrition": {
+      "energyKj": 1509,
+      "energyKcal": 360.69,
+      "fatG": 0.85,
+      "saturatedFatG": 0,
+      "carbohydrateG": 73.6,
+      "sugarsG": 70.5,
+      "proteinG": 5.79,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin ve kuru yerde, doğrudan güneş ışığından uzak saklayınız. Açıldıktan sonra ağzını kapalı tutunuz.",
+      "fr": "À conserver dans un endroit frais et sec, à l'abri de la lumière directe du soleil. Bien refermer l'emballage après ouverture.",
+      "de": "Kühl und trocken lagern, vor direkter Sonneneinstrahlung schützen. Nach dem Öffnen gut verschlossen aufbewahren."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "100 g",
+          "fr": "100 g",
+          "de": "100 g"
+        },
+        "netQuantity": 100,
+        "netUnit": "g",
+        "packedWeightG": 118,
+        "packedLengthMm": 130,
+        "packedWidthMm": 185,
+        "packedHeightMm": 40,
+        "sku": "GEDROOGDE-MELOEN-100GR",
+        "barcodes": [
+          {
+            "code": "8699237145497",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "LEZZA Geleneksel Et Döner": {
+    "name": {
+      "tr": "LEZZA Geleneksel Et Döner",
+      "fr": "LEZZA döner de viande traditionnel",
+      "de": "LEZZA traditioneller Fleischdöner"
+    },
+    "description": {
+      "tr": "LEZZA geleneksel et döner (dana eti %25, hindi eti %60), 700 g, dondurucuda saklanır. Tüketmeden önce iyice ısıtılmalıdır.",
+      "fr": "Döner traditionnel LEZZA (veau 25 %, dinde 60 %), 700 g, à conserver au congélateur. Doit être chauffé à cœur avant consommation.",
+      "de": "LEZZA traditioneller Döner (Kalbfleisch 25 %, Pute 60 %), 700 g, tiefgekühlt zu lagern. Vor dem Verzehr vollständig durcherhitzen."
+    },
+    "ingredients": {
+      "tr": "Dana eti (%25), hindi eti (%60), içme suyu, tuz, kekik, karışık baharat (**hardal**, **kereviz** içerir), dekstroz, peynir altı suyu tozu (**süt**, laktoz), maltodekstrin, baharat ekstraktı, asitlik düzenleyici (E331, E262), aroma, et suyu (hidrolize bitkisel protein, tuz, ayçiçek yağı), patates nişastası, duman aroması, stabilizör (E451, E450), fosfat bağlayıcı, **süt** proteini (laktoz), transglutaminaz, ayçiçek lesitini.",
+      "fr": "Veau (25 %), dinde (60 %), eau potable, sel, thym, mélange d'épices (contient **moutarde**, **céleri**), dextrose, lactosérum en poudre (**lait**, lactose), maltodextrine, extrait d'épices, régulateur d'acidité (E331, E262), arôme, bouillon (protéines végétales hydrolysées, sel, huile de tournesol), fécule de pomme de terre, arôme de fumée, stabilisant (E451, E450), liant phosphate, protéines de **lait** (lactose), transglutaminase, lécithine de tournesol.",
+      "de": "Kalbfleisch (25 %), Pute (60 %), Trinkwasser, Salz, Thymian, Gewürzmischung (enthält **Senf**, **Sellerie**), Dextrose, Molkenpulver (**Milch**, Laktose), Maltodextrin, Gewürzextrakt, Säureregulator (E331, E262), Aroma, Brühe (hydrolysiertes Pflanzeneiweiß, Salz, Sonnenblumenöl), Kartoffelstärke, Raucharoma, Stabilisator (E451, E450), Phosphatbindemittel, **Milch**eiweiß (Laktose), Transglutaminase, Sonnenblumenlecithin."
+    },
+    "allergens": [
+      "gluten",
+      "sut",
+      "kereviz",
+      "soya",
+      "hardal"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "-18 °C veya altında saklayınız. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver à -18 °C ou moins. Ne pas recongeler après décongélation.",
+      "de": "Bei -18 °C oder kälter lagern. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "700 g",
+          "fr": "700 g",
+          "de": "700 g"
+        },
+        "netQuantity": 700,
+        "netUnit": "g",
+        "packedWeightG": 720,
+        "packedLengthMm": 280,
+        "packedWidthMm": 240,
+        "packedHeightMm": 40,
+        "sku": "312701",
+        "barcodes": [
+          {
+            "code": "8720892409423",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "LEZZA Geleneksel Tavuk Döner": {
+    "name": {
+      "tr": "LEZZA Geleneksel Tavuk Döner",
+      "fr": "LEZZA döner de poulet traditionnel",
+      "de": "LEZZA traditioneller Hähnchendöner"
+    },
+    "description": {
+      "tr": "LEZZA geleneksel tavuk döner (tavuk eti %85), 700 g, dondurucuda saklanır. Tüketmeden önce iyice ısıtılmalıdır.",
+      "fr": "Döner de poulet traditionnel LEZZA (viande de poulet 85 %), 700 g, à conserver au congélateur. Doit être chauffé à cœur avant consommation.",
+      "de": "LEZZA traditioneller Hähnchendöner (Hähnchenfleisch 85 %), 700 g, tiefgekühlt zu lagern. Vor dem Verzehr vollständig durcherhitzen."
+    },
+    "ingredients": {
+      "tr": "Tavuk eti (%85), su, tuz, köri tozu [baharat karışımı (**hardal**, **kereviz** içerir), paprika ekstraktı, asitlik düzenleyici (E331, E262), maltodekstrin, **buğday** unu (gluten), peynir altı suyu tozu (**süt**), nişasta, dekstroz, et suyu (hidrolize bitkisel protein (mısır), tuz, ayçiçek yağı), aroma, baharat ekstraktı, **soya**, stabilizörler (E451, E450), kıvam artırıcı (E460), **süt** proteini, transglutaminaz, ayçiçek lesitini, kekik].",
+      "fr": "Viande de poulet (85 %), eau, sel, poudre de curry [mélange d'épices (contient **moutarde**, **céleri**), extrait de paprika, correcteur d'acidité (E331, E262), maltodextrine, farine de **blé** (gluten), poudre de **lactosérum**, amidon, dextrose, bouillon (protéine végétale hydrolysée (maïs), sel, huile de tournesol), arôme, extrait d'épice, **soja**, stabilisants (E451, E450), épaississant (E460), protéine de **lait**, transglutaminase, lécithine de tournesol, origan].",
+      "de": "Hähnchenfleisch (85 %), Wasser, Salz, Currypulver [Gewürzmischung (enthält **Senf**, **Sellerie**), Paprikaextrakt, Säureregulator (E331, E262), Maltodextrin, **Weizen**mehl (Gluten), **Molken**pulver, Stärke, Dextrose, Brühe (hydrolysiertes Pflanzeneiweiß (Mais), Salz, Sonnenblumenöl), Aroma, Gewürzextrakt, **Soja**, Stabilisatoren (E451, E450), Verdickungsmittel (E460), **Milch**eiweiß, Transglutaminase, Sonnenblumenlecithin, Oregano]."
+    },
+    "allergens": [
+      "gluten",
+      "sut",
+      "kereviz",
+      "soya",
+      "hardal"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "-18 °C veya altında saklayınız. Çözüldükten sonra tekrar dondurmayınız.",
+      "fr": "Conserver à -18 °C ou moins. Ne pas recongeler après décongélation.",
+      "de": "Bei -18 °C oder kälter lagern. Nach dem Auftauen nicht wieder einfrieren."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "700 g",
+          "fr": "700 g",
+          "de": "700 g"
+        },
+        "netQuantity": 700,
+        "netUnit": "g",
+        "packedWeightG": 720,
+        "packedLengthMm": 280,
+        "packedWidthMm": 240,
+        "packedHeightMm": 40,
+        "sku": "312702",
+        "barcodes": [
+          {
+            "code": "8720892409409",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "LEZZA Kıymalı Mantı": {
+    "name": {
+      "tr": "LEZZA Kıymalı Mantı",
+      "fr": "LEZZA mantı à la viande hachée",
+      "de": "LEZZA Mantı mit Hackfleisch"
+    },
+    "description": {
+      "tr": "LEZZA derin dondurulmuş taze kıymalı Kayseri mantısı, orta boy, 1000 g (4 kişilik). Hazırlanışı: Donuk haldeki mantıyı poşetinden çıkarıp kaynayan tuzlu suya atınız. Hamur kokusu kaybolana kadar yaklaşık 10 dakika haşlayınız, ardından suyunu süzünüz. Tabağa alıp sarımsaklı yoğurt ve üzerine salçalı sos ile servis ediniz.",
+      "fr": "Manti surgelés LEZZA, spécialité turque fourrée à la viande de bœuf, taille moyenne, 1000 g (4 personnes). Préparation : retirer les manti congelés de leur emballage et les plonger dans de l'eau bouillante salée. Cuire environ 10 minutes, jusqu'à ce que l'odeur de pâte disparaisse, puis égoutter. Servir dans une assiette avec du yaourt à l'ail et une sauce à base de concentré de tomate par-dessus.",
+      "de": "LEZZA tiefgefrorene türkische Tortellini (Mantı) mit Rindfleischfüllung, mittlere Größe, 1000 g (für 4 Personen). Zubereitung: Die gefrorenen Mantı aus der Verpackung nehmen und in kochendes Salzwasser geben. Etwa 10 Minuten kochen, bis der Teiggeruch verschwunden ist, dann das Wasser abgießen. Auf einem Teller mit Knoblauchjoghurt und einer Soße aus Tomatenmark servieren."
+    },
+    "ingredients": {
+      "tr": "Dana eti, soğan, su, **buğday** unu, **yumurta**, bitkisel yağ, tuz, baharat.",
+      "fr": "Viande de bœuf, oignons, eau, farine de **blé**, **œufs**, huile, sel, épices.",
+      "de": "Rindfleisch, Zwiebeln, Wasser, **Weizen**mehl, **Eier**, Pflanzenöl, Salz, Gewürze."
+    },
+    "nutrition": {
+      "energyKj": 1010,
+      "energyKcal": 240,
+      "fatG": 9.44,
+      "saturatedFatG": 3.55,
+      "carbohydrateG": 20.66,
+      "sugarsG": 1.11,
+      "proteinG": 13.25,
+      "saltG": 1.65
+    },
+    "allergens": [
+      "gluten",
+      "yumurta"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "-18 °C'de donuk olarak saklayınız.",
+      "fr": "Conserver congelé à -18 °C.",
+      "de": "Tiefgefroren bei -18 °C lagern."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "1000 g",
+          "fr": "1000 g",
+          "de": "1000 g"
+        },
+        "netQuantity": 1000,
+        "netUnit": "g",
+        "packedWeightG": 1000,
+        "packedLengthMm": 280,
+        "packedWidthMm": 180,
+        "packedHeightMm": 70,
+        "sku": "200503",
+        "barcodes": [
+          {
+            "code": "8682815635824",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Lychnos Natürel Sızma Zeytinyağı": {
+    "name": {
+      "tr": "Lychnos Natürel Sızma Zeytinyağı",
+      "fr": "Huile d'olive vierge extra Lychnos",
+      "de": "Lychnos Natives Olivenöl extra"
+    },
+    "description": {
+      "tr": "Lychnos natürel sızma zeytinyağı, Koroneiki çeşidi zeytinlerden. Yunanistan'da (Kandiye, Girit) üretilip paketlenmiştir. Doğrudan zeytinden, yalnızca mekanik yöntemlerle elde edilen üstün kalite zeytinyağı.",
+      "fr": "Huile d'olive vierge extra Lychnos, variété Koroneiki. Produite et conditionnée en Grèce (Héraklion, Crète). Huile d'olive de catégorie supérieure obtenue directement des olives et uniquement par des procédés mécaniques.",
+      "de": "Lychnos Natives Olivenöl extra aus der Sorte Koroneiki. In Griechenland hergestellt und abgefüllt (Heraklion, Kreta). Olivenöl der höchsten Güteklasse, direkt aus Oliven ausschließlich mit mechanischen Verfahren gewonnen."
+    },
+    "ingredients": {
+      "tr": "Natürel sızma zeytinyağı.",
+      "fr": "Huile d'olive vierge extra.",
+      "de": "Natives Olivenöl extra."
+    },
+    "nutrition": {
+      "energyKj": 3700,
+      "energyKcal": 900,
+      "fatG": 92,
+      "saturatedFatG": 13,
+      "carbohydrateG": 0,
+      "sugarsG": 0,
+      "proteinG": 0,
+      "saltG": 0
+    },
+    "allergens": [],
+    "traces": [],
+    "storage": {
+      "tr": "Serin (en fazla 25 °C) ve ışıktan korunan bir yerde saklayınız. Buzdolabına koymayınız.",
+      "fr": "À conserver au frais (max. 25 °C) et à l'abri de la lumière. Ne pas réfrigérer.",
+      "de": "Bitte kühl (max. 25 °C) und lichtgeschützt aufbewahren. Nicht kühlen."
+    },
+    "storageType": "ambient",
+    "shippable": true,
+    "variants": [
+      {
+        "label": {
+          "tr": "5 l",
+          "fr": "5 l",
+          "de": "5 l"
+        },
+        "netQuantity": 5000,
+        "netUnit": "ml",
+        "packedWeightG": 5000,
+        "packedLengthMm": 330,
+        "packedWidthMm": 120,
+        "packedHeightMm": 150,
+        "barcodes": [
+          {
+            "code": "5200106450180",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Böreklik Yufka": {
+    "name": {
+      "tr": "Böreklik Yufka",
+      "fr": "Pâte filo surgelée",
+      "de": "Tiefgefrorener Yufkateig"
+    },
+    "description": {
+      "tr": "LEZZA derin dondurulmuş böreklik yufka, 8 × 125 g. Hazır yufkayla birkaç dakikada lezzetli börekler hazırlayabilirsiniz.",
+      "fr": "Pâte filo surgelée LEZZA (yufka pour börek), 8 × 125 g. Avec cette pâte prête à l'emploi, vous préparez de délicieux feuilletés en quelques minutes.",
+      "de": "LEZZA tiefgefrorener Yufkateig für Börek, 8 × 125 g. Mit dem fertigen Yufkateig lassen sich leckere Teigtaschen in wenigen Minuten zubereiten."
+    },
+    "ingredients": {
+      "tr": "**Buğday** unu, içme suyu, tuz.",
+      "fr": "Farine de **blé**, eau potable, sel.",
+      "de": "**Weizen**mehl, Trinkwasser, Salz."
+    },
+    "nutrition": {
+      "energyKj": 1264,
+      "energyKcal": 302,
+      "fatG": 0.83,
+      "saturatedFatG": 0.1,
+      "carbohydrateG": 62,
+      "sugarsG": 0,
+      "proteinG": 0.83,
+      "saltG": 1.5
+    },
+    "allergens": [
+      "gluten"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "Son kullanım tarihine kadar -18 °C'de soğuk zincir kırılmadan muhafaza edilmelidir.",
+      "fr": "Conserver à -18 °C en maintenant la chaîne du froid jusqu'à la date de durabilité minimale.",
+      "de": "Bei -18 °C mit ununterbrochener Kühlkette bis zum Mindesthaltbarkeitsdatum lagern."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "8 × 125 g",
+          "fr": "8 × 125 g",
+          "de": "8 × 125 g"
+        },
+        "netQuantity": 1000,
+        "netUnit": "g",
+        "piecesCount": 8,
+        "portionKind": "item",
+        "packedWeightG": 1000,
+        "packedLengthMm": 350,
+        "packedWidthMm": 260,
+        "packedHeightMm": 20,
+        "barcodes": [
+          {
+            "code": "8682815623289",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Lahmacun": {
+    "name": {
+      "tr": "Lahmacun",
+      "fr": "Lahmacun – pizza turque surgelée",
+      "de": "Lahmacun – türkische Pizza, tiefgekühlt"
+    },
+    "description": {
+      "tr": "Lezza lahmacun (Türk pizzası), önceden pişirilmiş ve derin dondurulmuş, 5 × 170 g. Tüketmeden önce iyice ısıtınız.",
+      "fr": "Lahmacun Lezza, pizza turque précuite et surgelée, 5 × 170 g. Bien réchauffer avant consommation.",
+      "de": "Lezza Lahmacun, vorgebackene und tiefgekühlte türkische Pizza, 5 × 170 g. Vor dem Verzehr vollständig erhitzen."
+    },
+    "ingredients": {
+      "tr": "**Buğday** unu, su, soğan, dana kıyma, biber (kırmızı ve yeşil), domates, domates püresi, sarımsak, tuz, otlar ve baharatlar, şeker, bitkisel yağ (ayçiçek, kolza), **buğday** nişastası, **buğday** lifi, dekstroz, kabartıcı (E450i, E500ii), toz maya.",
+      "fr": "Farine de **blé**, eau, oignon, bœuf haché, poivron (rouge et vert), tomate, purée de tomates, ail, sel, herbes et épices, sucre, huile végétale (tournesol, colza), amidon de **blé**, fibres de **blé**, dextrose, poudre à lever (E450i, E500ii), levure en poudre.",
+      "de": "**Weizen**mehl, Wasser, Zwiebeln, Rinderhackfleisch, Paprika (rot, grün), Tomaten, Tomatenpüree, Knoblauch, Salz, Kräuter und Gewürze, Zucker, Pflanzenöl (Sonnenblume, Raps), **Weizen**stärke, **Weizen**faser, Dextrose, Backtriebmittel (E450i, E500ii), Hefepulver."
+    },
+    "nutrition": {
+      "energyKj": 702,
+      "energyKcal": 168,
+      "fatG": 2.2,
+      "saturatedFatG": 0.8,
+      "carbohydrateG": 28,
+      "sugarsG": 2.7,
+      "proteinG": 8.1,
+      "saltG": 1.2
+    },
+    "allergens": [
+      "gluten"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "-18 °C'de saklayınız. Çözüldükten sonra tekrar dondurmayınız. Çözüldükten sonra buzdolabında (+7 °C) 2 gün dayanır.",
+      "fr": "Conserver à -18 °C. Ne pas recongeler après décongélation. Après décongélation, se conserve 2 jours au réfrigérateur (+7 °C).",
+      "de": "Bei -18 °C lagern. Nach dem Auftauen nicht wieder einfrieren. Nach dem Auftauen 2 Tage im Kühlschrank bei +7 °C haltbar."
+    },
+    "storageType": "frozen",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "5 × 170 g",
+          "fr": "5 × 170 g",
+          "de": "5 × 170 g"
+        },
+        "netQuantity": 850,
+        "netUnit": "g",
+        "piecesCount": 5,
+        "portionKind": "item",
+        "packedWeightG": 870,
+        "packedLengthMm": 300,
+        "packedWidthMm": 280,
+        "packedHeightMm": 40,
+        "barcodes": [
+          {
+            "code": "8682815621988",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Cevizli Pestil Tatlısı": {
+    "name": {
+      "tr": "Cevizli Pestil Tatlısı",
+      "fr": "Pulpe de fruits secs aux noix",
+      "de": "Walnusspestil"
+    },
+    "description": {
+      "tr": "Gümüşhane usulü cevizli pestil tatlısı; üzüm pekmezi, ceviz, buğday unu ve şekerle hazırlanır.",
+      "fr": "Pestil aux noix, spécialité de Gümüşhane (Turquie), à base de mélasse de raisin, de noix, de farine de blé et de sucre.",
+      "de": "Walnusspestil nach Art von Gümüşhane (Türkei) aus Traubenmelasse, Walnüssen, Weizenmehl und Zucker."
+    },
+    "ingredients": {
+      "tr": "Üzüm pekmezi (%30), **ceviz** (%25), **buğday** unu (%20), şeker (%15).",
+      "fr": "Mélasse de raisin (30 %), **noix** (25 %), farine de **blé** (20 %), sucre (15 %).",
+      "de": "Traubenmelasse (30 %), **Walnuss** (25 %), **Weizen**mehl (20 %), Zucker (15 %)."
+    },
+    "nutrition": {
+      "energyKj": 1544,
+      "energyKcal": 369,
+      "fatG": 5.29,
+      "saturatedFatG": 0,
+      "carbohydrateG": 77.55,
+      "sugarsG": 0,
+      "proteinG": 3.01,
+      "saltG": 0
+    },
+    "allergens": [
+      "sert_kabuklu",
+      "gluten"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
+      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
+      "de": "Kühl und trocken lagern."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "ambient",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "300 g",
+          "fr": "300 g",
+          "de": "300 g"
+        },
+        "netQuantity": 300,
+        "netUnit": "g",
+        "packedWeightG": 320,
+        "packedLengthMm": 190,
+        "packedWidthMm": 150,
+        "packedHeightMm": 20,
+        "barcodes": [
+          {
+            "code": "8699237142632",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Rulo Fındıklı Pestil": {
+    "name": {
+      "tr": "Rulo Fındıklı Pestil",
+      "fr": "Rouleau aux noisettes",
+      "de": "Haselnuss-Rolle"
+    },
+    "description": {
+      "tr": "Gümüşhane usulü rulo fındıklı pestil; üzüm pekmezi, fındık, buğday unu ve şekerle hazırlanır.",
+      "fr": "Rouleau aux noisettes, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre.",
+      "de": "Haselnuss-Rolle nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker."
+    },
+    "ingredients": {
+      "tr": "**Fındık** (%33), üzüm pekmezi (%32), **buğday** unu (%20), şeker (%15).",
+      "fr": "**Noisette** (33 %), mélasse de raisin (32 %), farine de **blé** (20 %), sucre (15 %).",
+      "de": "**Haselnuss** (33 %), Traubenmelasse (32 %), **Weizen**mehl (20 %), Zucker (15 %)."
+    },
+    "nutrition": {
+      "energyKj": 1544,
+      "energyKcal": 369,
+      "fatG": 5.29,
+      "saturatedFatG": 0,
+      "carbohydrateG": 77.55,
+      "sugarsG": 0,
+      "proteinG": 3.01,
+      "saltG": 0
+    },
+    "allergens": [
+      "sert_kabuklu",
+      "gluten"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
+      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
+      "de": "Kühl und trocken lagern."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "ambient",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "300 g",
+          "fr": "300 g",
+          "de": "300 g"
+        },
+        "netQuantity": 300,
+        "netUnit": "g",
+        "packedWeightG": 320,
+        "packedLengthMm": 185,
+        "packedWidthMm": 145,
+        "packedHeightMm": 25,
+        "barcodes": [
+          {
+            "code": "8699237142601",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Fındıklı Kadayıf Rulo Pestil": {
+    "name": {
+      "tr": "Fındıklı Kadayıf Rulo Pestil",
+      "fr": "Rouleau aux noisettes avec nouilles kadaif",
+      "de": "Kadayif Haselnuss Roll"
+    },
+    "description": {
+      "tr": "Gümüşhane usulü fındıklı kadayıf rulo pestil; üzüm pekmezi, fındık, buğday unu, şeker ve kadayıfla hazırlanır.",
+      "fr": "Rouleau aux noisettes avec nouilles kadaif, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre, avec du kadaif.",
+      "de": "Kadayif-Haselnuss-Rolle nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker, mit Kadayif."
+    },
+    "ingredients": {
+      "tr": "**Fındık** (%33), üzüm pekmezi (%32), **buğday** unu (%15), şeker (%15), kadayıf (%5).",
+      "fr": "**Noisette** (33 %), mélasse de raisin (32 %), farine de **blé** (15 %), sucre (15 %), kadaif (5 %).",
+      "de": "**Haselnuss** (33 %), Traubenmelasse (32 %), **Weizen**mehl (15 %), Zucker (15 %), Kadayif (5 %)."
+    },
+    "nutrition": {
+      "energyKj": 1544,
+      "energyKcal": 369,
+      "fatG": 5.29,
+      "saturatedFatG": 0,
+      "carbohydrateG": 77.55,
+      "sugarsG": 0,
+      "proteinG": 3.01,
+      "saltG": 0
+    },
+    "allergens": [
+      "sert_kabuklu",
+      "gluten"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
+      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
+      "de": "Kühl und trocken lagern."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "ambient",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "300 g",
+          "fr": "300 g",
+          "de": "300 g"
+        },
+        "netQuantity": 300,
+        "netUnit": "g",
+        "packedWeightG": 320,
+        "packedLengthMm": 190,
+        "packedWidthMm": 145,
+        "packedHeightMm": 25,
+        "barcodes": [
+          {
+            "code": "8699237142625",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  },
+  "Fındıklı Sultan Sarma": {
+    "name": {
+      "tr": "Fındıklı Sultan Sarma",
+      "fr": "Rouleau de sultan",
+      "de": "Sultan Rolle"
+    },
+    "description": {
+      "tr": "Gümüşhane usulü fındıklı sultan sarma; üzüm pekmezi, fındık, buğday unu ve şekerle hazırlanan rulo pestil.",
+      "fr": "Rouleau de sultan aux noisettes, spécialité de Gümüşhane (Turquie) : pestil roulé à base de mélasse de raisin, de noisettes, de farine de blé et de sucre.",
+      "de": "Sultan Rolle mit Haselnüssen nach Art von Gümüşhane (Türkei) – gerollter Pestil aus Traubenmelasse, Haselnüssen, Weizenmehl und Zucker."
+    },
+    "ingredients": {
+      "tr": "**Fındık** (%35), üzüm pekmezi (%30), **buğday** unu (%20), şeker (%15).",
+      "fr": "**Noisette** (35 %), mélasse de raisin (30 %), farine de **blé** (20 %), sucre (15 %).",
+      "de": "**Haselnuss** (35 %), Traubenmelasse (30 %), **Weizen**mehl (20 %), Zucker (15 %)."
+    },
+    "nutrition": {
+      "energyKj": 1544,
+      "energyKcal": 369,
+      "fatG": 5.29,
+      "saturatedFatG": 0,
+      "carbohydrateG": 77.55,
+      "sugarsG": 0,
+      "proteinG": 3.01,
+      "saltG": 0
+    },
+    "allergens": [
+      "sert_kabuklu",
+      "gluten"
+    ],
+    "traces": [],
+    "storage": {
+      "tr": "Buzdolabına koymayınız. Serin yerde muhafaza ediniz. Isıdan, kokudan, nemden uzakta depolayınız.",
+      "fr": "Ne pas mettre au réfrigérateur. Conserver dans un endroit frais et sec, à l'abri de la chaleur, des odeurs et de l'humidité.",
+      "de": "Kühl und trocken lagern."
+    },
+    "shelfLifeDays": 365,
+    "storageType": "ambient",
+    "shippable": false,
+    "variants": [
+      {
+        "label": {
+          "tr": "300 g",
+          "fr": "300 g",
+          "de": "300 g"
+        },
+        "netQuantity": 300,
+        "netUnit": "g",
+        "packedWeightG": 330,
+        "packedLengthMm": 190,
+        "packedWidthMm": 145,
+        "packedHeightMm": 30,
+        "barcodes": [
+          {
+            "code": "8699237142618",
+            "kind": "unit",
+            "qtyPerCode": 1
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -163,32 +163,28 @@ Uzakta uygulanmış bir migration dosyası düzenlendiyse dağıtım "migration 
 3. `bash scripts/deploy.sh` — migration'lar baştan uygulanır.
 4. Gerçek başlangıç verisi (`scripts/seed-real/data.ts`), sunucuda:
    `cd /opt/lezzet/current && runuser -u lezzet -- env HOME=/home/lezzet pnpm db:seed:real`
-   `--dry-run` ile önce ne yazacağını listeler. Var olan kayda dokunmaz (yalnız hâlâ boş ya da varsayılanında
-   duran alanı tamamlar), tekrar çalıştırılabilir; stok yazmaz — stok paneldeki tedarikçi siparişlerine karşı
-   mal kabulüyle girer.
-5. Besleme ÜÇ KATMANLIDIR ve katmanı `--layers` seçer (varsayılan 1, kümelenir):
-   - **1 · kesin** — faturadan ve üreticinin künyesinden ölçülmüş olan (ad, ölçü, maliyet, gerçek ürün
-     çekimi, içindekiler, saklama, raf ömrü, besin künyesi, alerjen, ambalajdaki barkod ve tartılmış brüt
-     ağırlık, ambalajın üstünden okunan tanıtım metni) ve işletmecinin fiyat politikası (`SALE_PRICES`:
-     profesyonel alış + %40, son tüketici piyasa katsayısıyla — `docs/architecture/COMPETITORS.md`).
-     **Üretim kurulumu budur; bayraksız koşar.**
-   - **2 · dayanaklı** — markanın ürün sayfasından derlenen, resmî belgeye dayanmayan açıklamalar
-     (`descriptionFromLabel` işaretsiz olanlar).
-   - **3 · uydurma** — kaynağı OLMAYAN her şey: içindekiler, saklama, besin tablosu, alerjen, faturanın
-     yazmadığı boy ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026). Beyanı hâlâ eksik olan taslakların ve
-     katalogdaki belgesiz ürünlerin künyesi bu katmanda tamamlanır — arayüzü dolu görmek içindir.
-     Aday kalemler (`ADAY_SKULARI`) her katmanda aday kalır. Yalnız TEST sunucusunda:
-     `pnpm db:seed:real --layers=3`.
+   `--dry-run` ile önce ne yazacağını listeler. Var olan kayda DOKUNMAZ, tekrar çalıştırılabilir; stok
+   yazmaz — stok paneldeki tedarikçi siparişlerine karşı mal kabulüyle girer.
+5. **Ürün künyesinin kaynağı VERİTABANIDIR** (işletmeci kararı 19.09). Beyanlar — ad, açıklama,
+   içindekiler, besin künyesi, alerjen, saklama, raf ömrü, boy, barkod, ambalaj ölçüsü, SKU — test
+   veritabanına etiket fotoğrafıyla, asistanın dilekçesi panelden onaylanarak girer; besleme onları
+   `scripts/seed-real/data/urun-kunyeleri.json` AYNASINDAN okur (`seed-real/kunye.ts`). Ayna elle
+   yazılmaz, veritabanından çekilir; çelişkide kazanan veritabanıdır. `data.ts` yalnız faturayı
+   (kalem, adet, alış fiyatı), işletmecinin kararlarını (kategori, koleksiyon, paket, tarif,
+   `SALE_PRICES`) ve kapakları taşır. Künyesi aynada olmayan taslak beslemeyi DURDURUR.
 
-   **Satışa çıkma katmandan değil BEYANDAN çıkar:** beyanı tam (üç dil + içindekiler + saklama + alerjen +
-   satıştaki boyun net miktarı) ve fiyatı olan ürün katman 1'de de `active` doğar — kapıyı motorun kendisi
-   açar (`canPublishProduct`), besleme kendi ölçütünü uydurmaz. Faturasız taslak (`EK_TASLAKLAR`) fiyatsız
-   olduğu için aday kalır.
+   **Yeni ürün sırası:** önce panelde/asistanla veritabanına girilir → sonra ayna tazelenir → sonra
+   beslemeye taslak satırı eklenir. Ters sıra yok: besleme beyan uydurmaz.
 
-   Katman 3'ün verisi `seed-real/data.ts` sonunda AYRI durur (`FICTION_SIZES`, `FICTION_NUTRITION`,
-   `FICTION_ALLERGENS`, `FICTION_INGREDIENTS`, `FICTION_STORAGE`, `TEST_INTAKE`); üretime geçerken o blok
-   bütün hâlinde silinir, kalan dosya zaten katman 1'dir.
+   **Satışa çıkma BEYANDAN çıkar:** beyanı tam (üç dil + içindekiler + saklama + alerjen + satıştaki
+   boyun net miktarı) ve fiyatı olan ürün `active` doğar — kapıyı motorun kendisi açar
+   (`canPublishProduct`). Faturasız taslak (`EK_TASLAKLAR`) fiyatsız olduğu için aday kalır.
 
-   **Katman değiştirmek için veritabanı sıfırlanır:** besleme var olan kaydı ADINA bakıp atlar, üstüne
-   yazmaz. Katman 1 ile beslenmiş bir veritabanına `--layers=3` koşmak beyanları tamamlamaz; yalnız boş
-   kalmış boy yazılır.
+6. `--layers` yalnız TEST verisini açar (varsayılan 1; üretim kurulumu bayraksız koşar):
+   - **2** — markanın ürün sayfasından derlenmiş metinler (bugün kullanılmıyor).
+   - **3** — katalog kaynağının türetmeleri ve test mal kabulü (lot `TEST-001`, SKT 31.12.2026);
+     yalnız TEST sunucusunda: `pnpm db:seed:real --layers=3`. Aday kalemler (`ADAY_SKULARI`) her
+     katmanda aday kalır.
+
+   **Besleme var olan kaydı ADINA bakıp atlar**, üstüne yazmaz: künyenin kaynağı zaten veritabanı
+   olduğu için üstüne yazmak dairesel olurdu. Künye değişince veritabanı sıfırlanıp yeniden beslenir.
