@@ -131,6 +131,17 @@ function spekAlerjen(liste: string[]): ProductAllergen[] {
 const ucDile = (metin: string): LocalizedText => ({ tr: metin, fr: metin, de: metin });
 
 /**
+ * Belgedeki hazırlama önerisini adımlara böler: nokta + boşluk. Kısaltma yüzünden yanlış bölmesin
+ * diye ayırıcıdan sonra BÜYÜK harf aranır ("230°C'ye ... pişirin. Önceden hazırladığınız ..." ikiye
+ * ayrılır, "15 dakika" bütün kalır). Tek cümlelik öneri tek adım olur.
+ */
+const cumlelereBol = (metin: string): string[] =>
+  metin
+    .split(/(?<=\.)\s+(?=[A-ZÇĞİÖŞÜ])/)
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
+
+/**
  * Addan türeyemeyen nadir alerjenler iz (`traces`) olarak dağıtılır ki alerjen süzgeci on dördünde de
  * sonuç versin; "içerir" yazmak gerçek ürüne yanlış beyan olurdu, "bulunabilir" savunulabilir.
  */
@@ -534,13 +545,15 @@ export async function seedLezzaProducts(
         : beyanEksik || !turetmeSerbest
           ? null
           : icindekiler(alerjenler ?? []),
-      // Hazırlama önerisi varsa saklama metnine EKLENİR: kolon zaten ikisini birden taşıyor
-      // ("saklama/hazırlama metni") ve belgede ayrı duran iki cümlenin ekranda ayrı yeri yok.
       storageInstructions: beyan?.storage
-        ? ucDile(beyan.cookingTips ? `${beyan.storage} ${beyan.cookingTips}` : beyan.storage)
+        ? ucDile(beyan.storage)
         : beyanEksik || !turetmeSerbest
           ? null
           : rejim.metin,
+      // Hazırlama ARTIK KENDİ KOLONUNDA (`preparation_steps`, 20.09): saklama kolonu yalnız koşulun
+      // beyanı ve ekranın adımlar için ayrı, numaralı bir yeri var. Belgedeki öneri cümle cümle
+      // bölünür — numarayı ekran basar, metin sıra işareti taşımaz (`stripOrdinal` gerekçesi).
+      ...(beyan?.cookingTips ? { preparationSteps: cumlelereBol(beyan.cookingTips).map(ucDile) } : {}),
       nutrition: beyan?.nutritionPer100g ?? (beyanEksik || !turetmeSerbest ? null : besinDegeri(p.category, i)),
       // Vergi sınıflandırması tahmin edilmez; türetme kapalıyken kolonun varsayılanı (%5,5) geçerlidir.
       vatRate: turetmeSerbest ? (HAZIR_TUKETIM.test(ad) ? KDV_HAZIR : KDV_GIDA) : undefined,
