@@ -75,6 +75,15 @@ const HOME_COLLECTION_LIMIT = 2;
  */
 export const SHOWCASE_LIMIT = 4;
 
+/**
+ * ANA SAYFANIN vitrini iki satır: dört sütun × iki satır (tasarım 20.09). Boş sepetin bandı tek
+ * satırda kalır (`SHOWCASE_LIMIT`) — orada vitrin bir tekliftir, sayfanın kendisi değil.
+ *
+ * Telefon görünümü seçkiyi kendi içinde dörde indirir: orada kartlar iki sütun ve tasarımın kendi
+ * kararı tek satır + "tüm katalog" kapısı.
+ */
+export const HOME_SHOWCASE_LIMIT = 8;
+
 
 /** Kartın fırsat hâline geçtiğinin tek ölçütü: motor teklifi kazandırdı → üstü çizili referans var. */
 function isOffer(p: StorefrontProduct): p is StorefrontOffer {
@@ -173,7 +182,7 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
   const [categoryRows, featured, offers, packages, collections, recipes] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
     // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`, artık pakette).
-    readShowcase(db, locale, place, viewer, { limit: SHOWCASE_LIMIT }),
+    readShowcase(db, locale, place, viewer, { limit: HOME_SHOWCASE_LIMIT }),
     readOffers(db, locale, place, viewer),
     // Yer paket bandına da geçer (19.22): kart yol işaretini ancak yeri bilirse basabilir.
     listStorefrontPackages(locale, HOME_PACKAGE_LIMIT, place),

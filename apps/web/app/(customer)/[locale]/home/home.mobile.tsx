@@ -140,7 +140,9 @@ export function HomeMobile({ t, locale, data }: HomeMobileProps) {
           <div className={`${RAIL} gap-4.5`}>
             {/* Vitrin kartı yer işareti TAŞIMAZ (tasarım): ilk ekranda her soğuk zincir ürününe not düşmek rafı bir uyarı
                 duvarına çevirirdi. Adresin gerçeği katalogda bant ve kart şeridiyle, ürün detayında büyük puntoyla söyleniyor. */}
-            {home.featured.map((product) => (
+            {/* Telefonda seçki DÖRT kart (sunucu ana sayfa için sekiz okur): tasarım burada tek
+                satır + "tüm katalog" kapısı gösteriyor. */}
+            {home.featured.slice(0, 4).map((product) => (
               <ProductCircleCard
                 key={product.slug}
                 href={{ pathname: '/product/[slug]', params: { slug: product.slug } }}
