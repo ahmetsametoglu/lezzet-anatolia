@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.17). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.23). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -371,6 +371,9 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.4) [hedef: web/denetim] Arşivdeki 15 dosya (`not-web-*`, `not-denetim-*`) gözden geçirilecek.
 - [ ] (K.5) [hedef: arka uç] Arşivdeki 9 dosya (`not-arka-uc-*`, `arka-uc-*`) gözden geçirilecek.
 - [ ] (K.6) [hedef: sosyal] Arşivdeki 2 dosya (`sosyal-*`) gözden geçirilecek.
+- [ ] (K.23) [hedef: operasyon] Ürün formuna **hazırlama adımları** (`product.preparation_steps`), kategori formuna
+  **yapay zekâ sorusu** (`category.ai_question`) alanı — iki kolon 20.09'da açıldı ve müşteri ürün sayfası ikisini de
+  çiziyor, ama operatörün doldurabileceği bir yer yok; adımlar sıralı üç dilli liste, soru `{n}`/`{w}` yer tutuculu tek metin.
 - [ ] (K.7) [hedef: web] Arşivdeki hedefi belirsiz 13 dosya (`not-yonetim-*`, `not-kargo-*`, `not-sepet-*`,
   `not-fiyat-*`, `not-bildirim-*`, `bildirim-*`, `inceleme-*`, `koordinasyon-*`, `ekler-*`, `biriken-*`) gözden geçirilecek.
 - [ ] (K.8) [hedef: paket] `mobile-kit` turunda `screens/login/login-notice.ts` tek başına kaldı (giriş ekranı müşteri
