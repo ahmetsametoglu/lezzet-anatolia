@@ -480,6 +480,14 @@ interface SeedCategory {
   /** Kapak: katalogdaki dosya adı (`lezza`) · depodaki usta (`file`) · markanın mağazası (`url`). */
   image?: { lezza?: string; file?: string; url?: string };
   lezza?: string[];
+  /**
+   * "Yapay zekâya sorun" kutusunun hazır sorusu (`category.ai_question`); `{n}` ürün adı, `{w}` seçili boy.
+   *
+   * Soru KİMLİK ya da SERVİS sorar, AMAÇ sormaz: "ne işe yarar / neden kullanılır" gıdayla sağlık arasında
+   * ilişki ima eder ve 1924/2006 md. 2(1) imayı da beyan sayar ("hangi biçimde olursa olsun"). Metin bir kez
+   * yazılır ve "daha iyi cevap alsın diye" AYARLANMAZ — ayarlandığı an içeriği biz seçmiş oluruz.
+   */
+  aiQuestion?: UcDil;
 }
 
 export const CATEGORIES: SeedCategory[] = [
@@ -490,6 +498,11 @@ export const CATEGORIES: SeedCategory[] = [
     featured: true,
     image: { lezza: 'Cheese-Pastry-Su-Borek-2500g.webp' },
     lezza: ['bakery'],
+    aiQuestion: {
+      tr: '{n} ({w}) nasıl pişirilir — fırın mı tava mı, kaç derecede ve ne kadar? Yanına ne yakışır?',
+      fr: 'Comment cuire {n} ({w}) — au four ou à la poêle, à quelle température et combien de temps ? Avec quoi le servir ?',
+      de: 'Wie wird {n} ({w}) zubereitet — Ofen oder Pfanne, bei welcher Temperatur und wie lange? Wozu passt es?',
+    },
   },
   {
     key: 'tatli',
@@ -498,6 +511,11 @@ export const CATEGORIES: SeedCategory[] = [
     featured: true,
     image: { lezza: 'Baklava-with-Pistachio-225g.webp' },
     lezza: ['cake', 'dessert', 'ice-cream'],
+    aiQuestion: {
+      tr: '{n} ({w}) için servis önerileri ver: yanına ne gider, nasıl sunulur, kaç kişilik masada yeter?',
+      fr: 'Donne des idées de service pour {n} ({w}) : avec quoi l\'accompagner, comment le présenter, pour combien de personnes ?',
+      de: 'Gib Serviervorschläge für {n} ({w}): wozu passt es, wie wird es angerichtet, für wie viele Personen reicht es?',
+    },
   },
   {
     key: 'et-tavuk',
@@ -506,6 +524,11 @@ export const CATEGORIES: SeedCategory[] = [
     featured: true,
     image: { lezza: 'Chicken-Tender-Fillet-700g.webp' },
     lezza: ['chicken'],
+    aiQuestion: {
+      tr: '{n} ({w}) nasıl pişirilir ve neyle servis edilir? Yanına hangi garnitür, hangi sos gider?',
+      fr: 'Comment cuire {n} ({w}) et avec quoi le servir ? Quel accompagnement, quelle sauce l\'accompagne ?',
+      de: 'Wie wird {n} ({w}) gegart und womit serviert? Welche Beilage, welche Sauce passt dazu?',
+    },
   },
   {
     key: 'meze',
@@ -516,6 +539,11 @@ export const CATEGORIES: SeedCategory[] = [
     // Kaynağın bu kategorisinde kıymalı mantı da var; o kalem seçime girerse buraya düşer, oysa rafı
     // Et & Tavuk'tur (faturadaki mantı taslak olarak oraya yazılıyor).
     lezza: ['anatolian'],
+    aiQuestion: {
+      tr: '{n} ({w}) nasıl servis edilir? Meze sofrasında yanına ne gider, hangi ana yemekle uyar?',
+      fr: 'Comment servir {n} ({w}) ? Que mettre à côté sur un plateau de mezze, avec quel plat principal ?',
+      de: 'Wie serviert man {n} ({w})? Was passt daneben auf die Mezze-Platte, zu welchem Hauptgericht?',
+    },
   },
   {
     key: 'dogal-geleneksel',
@@ -523,6 +551,11 @@ export const CATEGORIES: SeedCategory[] = [
     tagline: { tr: 'Pekmez, sirke, öz ve macun', fr: 'Mélasse, vinaigres, extraits et pâtes', de: 'Melasse, Essig, Extrakte und Pasten' },
     featured: true,
     image: { url: 'https://www.besegida.com/wp-content/uploads/2025/04/Bese-Helva-Pekmez-650.jpg' },
+    aiQuestion: {
+      tr: '{n} nedir, nasıl üretilir ve mutfakta nasıl kullanılır? Tadı neye benzer, neyle birlikte tüketilir?',
+      fr: 'Qu\'est-ce que {n}, comment est-il produit et comment l\'utilise-t-on en cuisine ? Quel goût a-t-il, avec quoi se consomme-t-il ?',
+      de: 'Was ist {n}, wie wird es hergestellt und wie verwendet man es in der Küche? Wonach schmeckt es, wozu isst man es?',
+    },
   },
   {
     key: 'kuru-meyve-kuruyemis',
@@ -532,6 +565,11 @@ export const CATEGORIES: SeedCategory[] = [
     featured: true,
     // Kapak, kuruyemiş rafının stüdyo karesinden: depodaki ustaların hiçbiri kuru meyve ya da fıstık değil.
     image: { file: 'scripts/seed-real/images/antep-fistigi/0.webp' },
+    aiQuestion: {
+      tr: '{n} ({w}) mutfakta nasıl kullanılır? Tadı neye benzer, hangi tariflerde işe yarar?',
+      fr: 'Comment utiliser {n} ({w}) en cuisine ? Quel goût a-t-il, dans quelles recettes l\'employer ?',
+      de: 'Wie verwendet man {n} ({w}) in der Küche? Wonach schmeckt es, für welche Rezepte eignet es sich?',
+    },
   },
 ];
 

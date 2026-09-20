@@ -402,9 +402,16 @@ async function seedCategories(db: Db): Promise<Map<string, string>> {
       for (const key of anahtarlar) catId.set(key, bulunan.id);
       continue;
     }
-    plan(`${cat.name.tr} · ${cat.featured ? 'vitrinde' : 'vitrin dışı'}${cat.image ? ' · kapaklı' : ''}`);
+    plan(
+      `${cat.name.tr} · ${cat.featured ? 'vitrinde' : 'vitrin dışı'}${cat.image ? ' · kapaklı' : ''}${cat.aiQuestion ? ' · yapay zekâ sorusu' : ''}`,
+    );
     if (DRY_RUN) continue;
-    const created = await categories.create({ name: cat.name, tagline: cat.tagline, sortOrder: i + 1 });
+    const created = await categories.create({
+      name: cat.name,
+      tagline: cat.tagline,
+      sortOrder: i + 1,
+      ...(cat.aiQuestion ? { aiQuestion: cat.aiQuestion } : {}),
+    });
     // Vitrin işareti ayrı bir karardır ve servis onu ayrı metotla yazar (`setFeatured` künyesi).
     if (cat.featured) await categories.setFeatured(created.id, true);
     const kapak = await kategoriKapagi(cat, created.slug, lezzaUrl);
@@ -538,6 +545,8 @@ async function seedDrafts(db: Db, catId: Map<string, string>): Promise<void> {
       ...(kunye.description ? { description: kunye.description } : {}),
       ...(kunye.ingredients ? { ingredients: kunye.ingredients } : {}),
       ...(kunye.storage ? { storageInstructions: kunye.storage } : {}),
+      // Hazırlaması olmayan rafta boş dizi yazılır, alan atlanmaz: "adım girilmedi" kolonun varsayılanıdır.
+      ...(kunye.preparationSteps ? { preparationSteps: kunye.preparationSteps } : {}),
       ...(kunye.shelfLifeDays ? { shelfLifeDays: kunye.shelfLifeDays } : {}),
       // Saklama rejimi İKİ kolon: ikisi de aynadan gelir, biri ötekinden türetilmez.
       ...(kunye.storageType ? { storageType: kunye.storageType } : {}),

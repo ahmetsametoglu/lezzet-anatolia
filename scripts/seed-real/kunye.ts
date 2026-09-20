@@ -45,7 +45,14 @@ export interface UrunKunyesi {
   nutrition?: Nutrition;
   allergens?: ProductAllergen[];
   traces?: ProductAllergen[];
+  /** Saklama KOŞULUNUN beyanı — sıcaklık, kap, uyarı ve "doğaldır" gözlemi. Hazırlama buraya girmez. */
   storage?: LocalizedText;
+  /**
+   * Hazırlama adımları — müşterinin SIRAYLA yaptığı hareketler; sıra dizinin kendisidir, numarayı ekran basar.
+   * Raf ürününün çoğunda boş: pekmezin, sirkenin, macunun hazırlanması yoktur ve boş dizi "adım girilmedi" demektir.
+   * Zorunlu takviye ibareleri (doz, "ilaç değildir") adım DEĞİL beyandır; `storage`ta kalır.
+   */
+  preparationSteps?: LocalizedText[];
   shelfLifeDays?: number;
   /** `storage_type` ve `shippable` beraber gelir: ikisi de veritabanının kararı, türetilmez. */
   storageType?: 'ambient' | 'chilled' | 'frozen';

@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.14). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.17). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -56,6 +56,23 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [x] (08.44) **KAMPANYA VİTRİNDE VE FİLTRELENMİŞ KATALOGDA GÖRÜNSÜN — rozet ve cümle, FİYAT DEĞİL** *(kullanıcı kararı 19.08; ölçüm ve karşılaştırma aynı gün yapıldı)* · `touches (planlanan): packages/application/src/catalog/**, apps/web/lib/storefront/home.ts, apps/web/app/(customer)/[locale]/catalog/**, apps/mobile-api/src/lib/home.ts, apps/mobile-customer/src/screens/home/**`
   - Görev kapandı; koddaki `BEKLEYEN(08.44)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
 - [~] (08.58) ~~**MOBİL WEB v1 — kabuk birebir, ekranlar sırayla**~~ → **MOBİL WEB — telefon görünümü native uygulamanın tasarımına (kullanıcı kararı 14.09)** *(kullanıcı isteği 13.09: öteki şerit masaüstünü `Musteri Web v1.dc.html`'e taşırken mobil web `Musteri Mobil v1.dc.html`'e; sıra ve dosya ayrımı kullanıcıyla konuşuldu)*
+  - Kalan ekranlar — kare adı `design/01-musteri/Musteri Mobil.dc.html`'in `data-screen-label`'ı; tur bu sırayla, biten satır silinir:
+    - [ ] Keşif `discover` ↔ native `discover`
+    - [ ] Sepet `cart` ↔ native `cart`
+    - [ ] Checkout + Ödeme `checkout` ↔ native `checkout`
+    - [ ] Sipariş Onayı `checkout/[reference]` ↔ native `checkout`
+    - [ ] Siparişler `orders` ↔ native `orders`
+    - [ ] Sipariş Detay `orders/[reference]` ↔ native `orders`
+    - [ ] Hesap `account` ↔ native `account`
+    - [ ] Bildirimler `account/notifications` ↔ native `notifications`
+    - [ ] Tarifler `recipes` ↔ native `recipes-list`
+    - [ ] Tarif `recipe/[slug]` ↔ native `recipe`
+    - [ ] Geri Bildirim `feedback/[token]` ↔ native `feedback`
+    - [ ] Professionnels `professionals` ↔ native `professionals`
+    - [ ] Bilgi Sayfası `legal/*` ↔ native `legal`
+    - [ ] Tasarımda karesi yok, ölçü native ikizinden: `account/points` (native `points-history`) · `account/preferences` · `invite/[code]` (native `invite`) · `neighbor/[token]` (native `neighbor`)
+    - [ ] En son, kullanıcı inceler (müşteriyle yoğun etkileşen sayfalar): Talepler `support` · Talep Detay `support/[ticket]` · Yeni Talep `support/new` ↔ native `support`
+  - Şu sayfaların ayrı telefon gövdesi yok, telefonda masaüstü gövdesinin `compact` dalı çiziliyor: `support/new` · `feedback/[token]` · `account/preferences` · `invite/[code]` · `neighbor/[token]`. Sırası gelen ekranda ilk iş fork.
 - [~] (08.59) **MASAÜSTÜ WEB v1 — başlık, yer paneli ve adres penceresi `Musteri Web v1.dc.html`'in birebir aynısı; ikon seti müşterinin gördüğü her ekranda** *(kullanıcı isteği 13.09: "Tasarımın bire bir aynısını yapmanı istiyorum… Kod güncel, doküman bayat olabilir."; ikon seti kullanıcı kararı 14.09 — ikon deseni her yerde aynı; mobil web aynı anda `08.58`, iki şeridin işi birbirine bağlı olduğu için tek commit — kullanıcı kararı 13.09 + 14.09)*
 
 ## 09 · Admin Yüzeyi: Komponentler ve Sayfalar
@@ -331,7 +348,10 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (B.2) Rota, teslim günü ve posta kodu olmadan kaydedilebiliyor
 - [ ] (B.3) Native uygulama · sipariş tamamlama — mevcut adres düzenlenemiyor ⟶ MOBİL ŞERİT
 - [ ] (B.4) Native uygulama · dokunmatik geri bildirim (haptic) kapsamı dar ⟶ MOBİL ŞERİT
-- [ ] (B.5) WhatsApp ile giriş — hiç yazılmadı, görev satırı da yok
+- [ ] (B.5) WhatsApp ile giriş — hiç yazılmadı; iki yüzeyde düğme "yakında" diyor. Kapsamı: oturumun WhatsApp kanıtıyla
+  açılması (web + native), e-postası olmayan hesap. Kullanıcı notu 17.09: WhatsApp'la giren müşteride hesap sayfasında
+  "e-postamı bağla" olmalı ve profil çekmecesindeki e-posta alanı salt okunur boş alan olarak kalmamalı. Numara bağlama
+  (`/me/whatsapp`, hesap kartı) hazır; giriş aynı kanıtı kullanır.
 - [ ] (B.6) Native uygulamada online ödeme "henüz açık değil" — anahtar eksik, kod değil
 - [ ] (B.7) Native uygulama · kapsam bilgisi bayat kalıyor — uygulama kapatılmadan tazelenmiyor ⟶ MOBİL ŞERİT
 - [ ] (B.8) Ödeme çekmecesi iptal edilince ikinci deneme kırılıyor — anahtar "yanmış" oluyor
@@ -365,8 +385,25 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   `legal/privacy/content.json` ve native ortak `packages/i18n/src/customer/legal.json` bugün yalnız Hetzner'i anıyor;
   veritabanı barındırılan Supabase'de (AB bölgesi) duracak, Stripe · Resend · Cloudflare R2 · Sendcloud · Google Maps ·
   Meta da kişisel veri işliyor (tam liste `docs/architecture/INTEGRATIONS.md`).
-- [ ] (K.14) [hedef: web] Gerçek test besleme dosyası — test sunucusunun ve üretimin ilk başlangıç verisi olacak;
-  bugünkü `base` katmanıyla ilişkisi (yerine mi, üstüne mi) kullanıcıyla birlikte kararlaştırılır.
+- [~] (K.14) [hedef: web] Gerçek başlangıç beslemesi kuruldu (`scripts/seed-real.ts` + `seed-real/data.ts`, `pnpm db:seed:real`);
+  eksikler: aracın geçici plakası (`AA-000-AA`), taslak ürünlerin künyesi ve yeni faturaların kalemleri.
+- [ ] (K.15) [hedef: web] Mal kabulde "birim alış" alanı kaldırılsın ya da salt okunur gösterilsin — fiyat siparişin ve
+  faturanın kaydıdır, kabul ekranında değiştirilmesi maliyeti ve otomatik fiyatı sessizce kaydırır (işletmeci kararı:
+  "anlamsız, hatta problemli"). Bugün boş bırakılınca zaten siparişteki fiyat yazılıyor (`application/warehouse/intake.ts`).
 - [ ] (K.18) [hedef: mobil] Profesyoneller ekranının başlığı her dilin kendi sözcüğü olsun: TR "Profesyoneller", DE
   "Geschäftskunden" (FR "Professionnels" kalır) — web menüsü ve sayfası bu sözcüklere geçti, native
   `screens/professionals/messages.json` üç dilde hâlâ "Professionnels" diyor.
+- [ ] (K.19) [hedef: mobil] Hesap ekranının şirket kartı gerçek kullanımda hiç çizilmiyor: rota `company: null` geçiyor
+  (`app/(tabs)/account.tsx`), çünkü `/me` şirket künyesini taşımıyor. Web telefon görünümü kartı "SIRET · KDV" ile
+  çiziyor (`companyInfo` + `vatNumber`); native de aynı veriyi okumalı.
+- [ ] (K.20) [hedef: mobil] Sipariş detayı gel-al (`pickup`) siparişinde teslim satırına "kargoyla" yazıyor
+  (`order-detail-screen.tsx`: `route` değilse `deliveryShipping`). Web bu türde teslim türünü hiç yazmıyor; native de
+  yalnız `route` ve `shipping` için yazmalı.
+- [ ] (K.21) [hedef: web] Sipariş durumu WhatsApp'tan gitmeli — canlıya çıkmadan önce. Hesap sayfasındaki WhatsApp kartı
+  müşteriye "WhatsApp'tan sipariş vermek ve siparişinizin durumunu WhatsApp mesajıyla öğrenmek için numaranızı bağlayın"
+  diyor; bugün `packages/notify` WhatsApp API sürücüsü her gönderimi `skipped` döndürüyor. İş `15.11`in sürücü yarısı.
+- [ ] (K.22) [hedef: web] Künye aynası `preparation_steps`e bölünecek (`15da29f9` alanı açtı). Aynadaki 39 ürünün
+  hazırlaması bugün `storage` metninin satırlarında duruyor; satırlar KOŞUL ve ADIM diye ayrılıp adımlar diziye
+  taşınacak. Ayrım ölçütü: koşul, uyarı ve "doğaldır" gözlemi saklamada kalır; yalnız müşterinin SIRAYLA yaptığı
+  hareket adım olur. Raf ürünlerinin çoğunda (pekmez, sirke, macun) dizi boş kalır — beklenen hâl, kutu çizilmez.
+  Zorunlu takviye ibareleri (Bromelain: "ilaç değildir", doz) adım YAPILMAZ: onlar beyan, `storage`ta kalır.
