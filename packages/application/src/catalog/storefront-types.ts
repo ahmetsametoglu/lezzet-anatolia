@@ -95,8 +95,8 @@ export interface StorefrontVariant {
   netUnit: 'g' | 'ml' | null;
   /** Paketteki adet — boy seçici adet anlamlıysa adeti, değilse gramajı yazar; `null` = tek parça, gösterim gramaja düşer. */
   piecesCount: number | null;
-  /** Porsiyon türü — `item` ayrı ürünler, `slice` dilimler; gösterimdeki KELİMEYİ bu belirler. */
-  portionKind: 'item' | 'slice' | null;
+  /** Porsiyon türü — `item` ayrı ürünler, `slice` dilimler, `package` paketler; gösterimdeki KELİMEYİ bu belirler. */
+  portionKind: 'item' | 'slice' | 'package' | null;
   /** null = bu kanalda fiyatı yok → varyant seçilebilir ama satın alınamaz (DOMAIN §5). */
   priceCents: number | null;
   /** Teklif kazandıysa üstü çizilecek referans; yoksa tanımsız. */

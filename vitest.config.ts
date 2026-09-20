@@ -150,6 +150,8 @@ const WEB_LIB_DBSIZ = [
   // Paylaşım kartının görseli (05.37) — saf: künye alır, adres verir.
   'apps/web/lib/seo/open-graph.test.ts',
   'apps/web/lib/storefront/featured.test.ts',
+  // Boyun müşteriye görünen adı — saf türetme (alanlar + sözlük → dize), DB'ye gitmiyor.
+  'apps/web/lib/storefront/variant-name.test.ts',
   'apps/web/lib/use-load-more.hook.test.ts',
   // Bağlam kapısı (27.08) — DB'siz ama §3i'nin STATİK İZİ bunu göremez: dosya `@lezzet/database`
   // dizgesini taşıyor, çünkü depo servisini `vi.mock` ile TAKLİT ediyor. Yani iz "DB'ye vuruyor"

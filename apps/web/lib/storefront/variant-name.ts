@@ -7,6 +7,8 @@ interface VariantNameCopy {
   piecesOf: string;
   slices: string;
   slicesOf: string;
+  packs: string;
+  packsOf: string;
 }
 
 /**
@@ -30,7 +32,7 @@ interface VariantNameCopy {
 export function variantNameOf(
   v: {
     piecesCount: number | null;
-    portionKind: 'item' | 'slice' | null;
+    portionKind: 'item' | 'slice' | 'package' | null;
     netQuantity: number | null;
     netUnit: 'g' | 'ml' | null;
     label: string;
@@ -42,11 +44,17 @@ export function variantNameOf(
   const weight = v.netQuantity !== null && v.netUnit !== null ? formatNetQuantity(v.netQuantity, v.netUnit, locale) : null;
   if (v.piecesCount !== null && v.piecesCount > 1) {
     const n = String(v.piecesCount);
-    // KELİME porsiyon TÜRÜNDEN gelir: 4'lü simit paketi "4 adet", 12 dilimlik cheesecake "12 dilim".
-    // İkisine de "adet" yazmak müşteriye 12 cheesecake aldığını söylerdi (künye `portion_kind`, 0005).
-    const slice = v.portionKind === 'slice';
-    const bare = (slice ? t.slices : t.pieces).replace('{n}', n);
-    const withWeight = (slice ? t.slicesOf : t.piecesOf).replace('{n}', n);
+    // KELİME porsiyon TÜRÜNDEN gelir: 4'lü simit paketi "4 adet", 12 dilimlik cheesecake "12 dilim",
+    // çift paket "2 paket". Üçüne de "adet" yazmak müşteriye 12 cheesecake aldığını söylerdi
+    // (künye `portion_kind`, 0005).
+    const kelime =
+      v.portionKind === 'slice'
+        ? { bare: t.slices, withWeight: t.slicesOf }
+        : v.portionKind === 'package'
+          ? { bare: t.packs, withWeight: t.packsOf }
+          : { bare: t.pieces, withWeight: t.piecesOf };
+    const bare = kelime.bare.replace('{n}', n);
+    const withWeight = kelime.withWeight.replace('{n}', n);
     return weight ? withWeight.replace('{weight}', weight) : bare;
   }
   return weight ?? v.label;

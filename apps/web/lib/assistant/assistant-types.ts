@@ -1,4 +1,4 @@
-import type { AssistantProposalKind, AssistantProposalStatus } from '@lezzet/types';
+import type { AssistantProposalKind, AssistantProposalStatus, AssistantWarning } from '@lezzet/types';
 import type { ProposalEconomics } from './economics';
 import type { ProposalSubject } from './subject';
 
@@ -35,6 +35,11 @@ export interface AssistantQueueRow {
   summary: string;
   /** "Neden bu öneri". `null` ise tasarımın soluk/kesikli hâli çizilir — uydurulmaz. */
   reason: string | null;
+  /**
+   * "Onaylamadan önce" maddeleri (`0042`). Boş dizi bir CEVAPTIR ("uyarı yok") ve ekran onu da
+   * yazar; `null` aracın hiç konuşmadığı hâldir ve o zaman bölüm hiç çizilmez.
+   */
+  warnings: AssistantWarning[] | null;
   /** "Uygulanınca ne olur" — `kind`'dan türer, sabit metin. Yeri KART değil onay diyaloğu (10.08). */
   impact: string;
   /**

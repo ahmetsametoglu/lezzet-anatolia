@@ -42,6 +42,7 @@ import {
 // Para biçimi tek yerden (`formatPrice`): elle `toFixed(2)` Türkçede yanlış ayraç verir ("150,00 €" yerine "150.00 €").
 import { formatPrice, stripLineOrdinals, toCents } from '@lezzet/helper';
 import {
+  AssistantWarningSchema,
   CountryEnum,
   DocumentKindEnum,
   DocumentVatRegimeEnum,
@@ -52,6 +53,7 @@ import {
   ProductAllergenEnum,
   resolveLocalizedText,
   type AssistantProposalKind,
+  type AssistantWarning,
   type BatchOfferPayload,
   type BundleDraftPayload,
   type DiscountDraftPayload,
@@ -209,15 +211,33 @@ function badIdError(field: string, value: string) {
   };
 }
 
+/**
+ * Uyarı listesinin kapısı — şekli tutmayan girdi ATILMAZ, REDDEDİLİR (alerjen kümesiyle aynı kural).
+ *
+ * Sessizce düşürmek en kötü seçenek olurdu: araç "uyardım" sanır, ekran hiçbir şey göstermez ve
+ * operatör uyarılmadığı bir şeyi onaylar. Verilmemiş olması ise meşru — o hâlde `null` döner.
+ */
+function parseWarnings(value: unknown): AssistantWarning[] | null {
+  if (value === undefined || value === null) return null;
+  const parsed = AssistantWarningSchema.array().safeParse(value);
+  if (!parsed.success) {
+    throw new Error(
+      'warnings şekli tutmuyor — her madde { field?, level, note? } olmalı ve level şunlardan biri: unclear · overwrite · untouched · irreversible.',
+    );
+  }
+  return parsed.data;
+}
+
 /** Önerinin ömrü — ayarlanabilir (`DOMAIN §6`: eşik/süre parametriktir), varsayılan 24 saat. */
 async function expiryIso(): Promise<string> {
   const hours = await new SettingsService(serviceDb()).getNumber('assistant_proposal_ttl_hours', 24);
   return new Date(Date.now() + hours * 3600_000).toISOString();
 }
 
-async function queue(kind: AssistantProposalKind, payload: unknown, summary: string, reason?: unknown) {
+async function queue(kind: AssistantProposalKind, payload: unknown, summary: string, reason?: unknown, warnings?: unknown) {
   // Şema kapısı BURADA da geçilir: kuyruğa şekli bozuk bir dilekçe girerse panel onu çizemez.
   parseProposalPayload(kind, payload);
+  const uyarilar = parseWarnings(warnings);
 
   // Aynı özetli bekleyen öneri engel değil uyarıdır: ikinci öneri meşru olabilir (ilki bayatladı), ama model kendi geçmişini
   // hatırlamaz. Sayım yazmadan önce yapılır ki öneri kendini saymasın.
@@ -232,6 +252,7 @@ async function queue(kind: AssistantProposalKind, payload: unknown, summary: str
     // Gerekçe ZORUNLU DEĞİL ve öyle kalmalı: zorunlu olsaydı model gerekçe uydururdu. Boş
     // bırakılabilmesi dürüstlüğün ucuz yolu — panel onu ayrı (soluk) bir hâlle gösteriyor.
     reason: typeof reason === 'string' && reason.trim() ? reason.trim() : null,
+    warnings: uyarilar,
     expiresAt: await expiryIso(),
     sourceSession: 'mcp',
   });
@@ -319,7 +340,7 @@ export async function proposeBatchOffer(args: Record<string, unknown>) {
   const percent = discountPercentOf(listPriceCents, offerPriceCents);
   const off = listPriceCents ? ` (liste ${formatPrice(listPriceCents, 'tr')}, %${percent === null ? '?' : Math.round(percent)} indirim)` : '';
   const summary = `${productName} — ${batch.physicalQty} adet ${formatPrice(offerPriceCents, 'tr')} fırsat fiyatına${off}; SKT ${batch.expiryDate}`;
-  return queue('batch_offer', payload, summary, args.reason);
+  return queue('batch_offer', payload, summary, args.reason, args.warnings);
 }
 
 /**
@@ -366,7 +387,7 @@ export async function proposeFeaturedFlag(args: Record<string, unknown>) {
     currentlyFeaturedCount: named.filter((r) => r.isFeatured).length,
   };
   const verb = isFeatured ? 'vitrine çıkarılsın' : 'vitrinden çıkarılsın';
-  const queued = await queue('featured_flag', payload, `${match.label} ${verb} (${target})`, args.reason);
+  const queued = await queue('featured_flag', payload, `${match.label} ${verb} (${target})`, args.reason, args.warnings);
 
   // Izgaranın doluluğu ve aynı hedefe bekleyen vitrin önerileri yanıtta: model etkisini bilmeden öneri vermesin ve kendi
   // açtıklarını üst üste yığmasın. Sayı önerinin kurulduğu anın gerçeğidir, panel kendi hesabını yeniden yapar.
@@ -466,7 +487,7 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
   };
 
   const summary = `${supplier?.name ?? 'tedarikçi'} — ${payload.lines.length} kalemlik tedarik siparişi taslağı (${warehouseCode})`;
-  const queued = await queue('purchase_order', payload, summary, args.reason);
+  const queued = await queue('purchase_order', payload, summary, args.reason, args.warnings);
   return {
     ...queued,
     // Öbür tedarikçilerin eksiği SESSİZCE düşmesin: model patrona söyleyebilsin.
@@ -523,7 +544,7 @@ export async function proposeZoneExtend(args: Record<string, unknown>) {
   };
   const waiting = payload.postalCodes.reduce((sum, c) => sum + c.waitingCount, 0);
   const summary = `${zone.name} bölgesine ${fresh.length} posta kodu eklensin (${fresh.join(' · ')})`;
-  const queued = await queue('zone_extend', payload, summary, args.reason);
+  const queued = await queue('zone_extend', payload, summary, args.reason, args.warnings);
   return {
     ...queued,
     waitingCustomers: waiting,
@@ -780,7 +801,7 @@ export async function proposeProductDraft(args: Record<string, unknown>) {
   const filled = [...Object.keys(fields), ...Object.keys(identity).filter((k) => k !== 'categoryId')];
   if (variants.length > 0) filled.push(`${variants.length} boy`);
   const summary = `"${payload.productName}" ürününde ${filled.join(' + ')} alanı dolduruldu`;
-  return queue('product_draft', payload, summary, args.reason);
+  return queue('product_draft', payload, summary, args.reason, args.warnings);
 }
 
 /**
@@ -863,7 +884,7 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
 
   const boy = variants.map((v) => resolveLocalizedText(v.label, 'tr')).join(' · ');
   const summary = `Yeni ürün: "${resolveLocalizedText(payload.name, 'tr')}" (${boy})${category ? ` — ${payload.categoryName}` : ''}`;
-  return queue('product_create', payload, summary, args.reason);
+  return queue('product_create', payload, summary, args.reason, args.warnings);
 }
 
 /** Tedarikçinin kalem eşlemesi — `supplier_product` satırı. */
@@ -1104,7 +1125,13 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
     lines,
   };
   const doc = payload.documentNo ? ` — irsaliye ${payload.documentNo}` : '';
-  const queued = await queue('stock_intake', payload, `${warehouse.code} deposuna ${lines.length} parti stok girişi${doc}`, args.reason);
+  const queued = await queue(
+    'stock_intake',
+    payload,
+    `${warehouse.code} deposuna ${lines.length} parti stok girişi${doc}`,
+    args.reason,
+    args.warnings,
+  );
 
   // Belgenin toplamı ile bizimki (`invoiceTotalCheck`) — ancak bir kalemin bile maliyeti okunduysa.
   const anyCost = lines.some((line) => line.unitCostCents !== null);
@@ -1227,7 +1254,7 @@ export async function proposeMoneyMovement(args: Record<string, unknown>) {
   const summary = payload.counterAccountName
     ? `${account.name} → ${payload.counterAccountName}: ${euro} transfer`
     : `${account.name}: ${euro} ${direction === 'out' ? 'gider' : 'tahsilat'}${payload.counterpartyName ? ` — ${payload.counterpartyName}` : ''}`;
-  const queued = await queue('money_movement', payload, summary, args.reason);
+  const queued = await queue('money_movement', payload, summary, args.reason, args.warnings);
   return {
     ...queued,
     ...(nature ? { nature: nature.label } : {}),
@@ -1346,7 +1373,7 @@ async function proposeInvoicePurchaseOrder(
     invoice,
   };
   const summary = `${supplier.name} — fatura${number ? ` ${number}` : ''}: ${lines.length} kalemlik sipariş, mal bekleniyor (${warehouse.code})`;
-  const queued = await queue('purchase_order', payload, summary, args.reason);
+  const queued = await queue('purchase_order', payload, summary, args.reason, args.warnings);
 
   const anyPrice = lines.some((line) => line.unitPriceCents !== null);
   return {
@@ -1440,7 +1467,7 @@ export async function proposeMoneyDocument(args: Record<string, unknown>) {
   };
   const party = payload.supplierName ?? payload.counterpartyName ?? '';
   const summary = `Belge — ${party}: ${formatPrice(payload.amountCents, 'tr')}${nature ? ` (${nature.label})` : ''}`;
-  const queued = await queue('money_document', payload, summary, args.reason);
+  const queued = await queue('money_document', payload, summary, args.reason, args.warnings);
   return {
     ...queued,
     ...(supplier ? { supplier: supplier.name } : {}),
@@ -1489,7 +1516,13 @@ export async function proposeSupplierCreate(args: Record<string, unknown>) {
     paymentTermDays: termGiven ? (term as number) : null,
     note: textArg(args.note),
   };
-  const queued = await queue('supplier_create', payload, `Yeni tedarikçi — ${name}${country ? ` (${country})` : ''}`, args.reason);
+  const queued = await queue(
+    'supplier_create',
+    payload,
+    `Yeni tedarikçi — ${name}${country ? ` (${country})` : ''}`,
+    args.reason,
+    args.warnings,
+  );
   return {
     ...queued,
     nextStep:
@@ -1655,7 +1688,7 @@ export async function proposeDiscountDraft(args: Record<string, unknown>) {
 
   const value = type === 'percent' ? `%${percent}` : formatPrice(amountCents ?? 0, 'tr');
   const where = scopeName ? ` (${scopeName})` : '';
-  return queue('discount_draft', payload, `${name}: ${value} indirim${where}`, args.reason);
+  return queue('discount_draft', payload, `${name}: ${value} indirim${where}`, args.reason, args.warnings);
 }
 
 /** Sofra tarifi taslağı — malzeme bağı VARYANTA; üç dil dolmadan yayınlanamaz (kural veride). */
@@ -1720,7 +1753,7 @@ export async function proposeRecipeDraft(args: Record<string, unknown>) {
     .filter(([, value]) => !value)
     .map(([field]) => field);
 
-  const queued = await queue('recipe_draft', payload, `"${name.tr}" tarifi — ${items.length} malzeme`, args.reason);
+  const queued = await queue('recipe_draft', payload, `"${name.tr}" tarifi — ${items.length} malzeme`, args.reason, args.warnings);
   return {
     ...queued,
     languages: langs,
@@ -1758,6 +1791,6 @@ export async function listProposals(limit: number) {
 }
 
 /** Porsiyon türü — kümenin dışındaki her şey `null` ("tek parça / dökme"). */
-function porsiyonTuru(value: unknown): 'item' | 'slice' | null {
-  return value === 'item' || value === 'slice' ? value : null;
+function porsiyonTuru(value: unknown): 'item' | 'slice' | 'package' | null {
+  return value === 'item' || value === 'slice' || value === 'package' ? value : null;
 }

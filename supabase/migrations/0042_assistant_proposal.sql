@@ -70,6 +70,19 @@ create table public.assistant_proposal (
   -- UYDURMAYA iter; boş bırakabilmek dürüstlüğün ucuz yolu.
   reason text,
 
+  -- ── ASİSTANIN MADDE MADDE UYARILARI (tasarım: "Onaylamadan önce") ─────────
+  -- `reason` önerinin NEDEN doğduğunu söyler; bu kolon onaylamadan ÖNCE bilinmesi gerekenleri
+  -- sayar ve çoğuldur: "içindekiler net okunamadı", "açıklama dolu, üzerine yazılacak", "adet
+  -- etikette yazmıyor, dokunulmadı". Tek cümleye sıkıştırıldıklarında üçü birden okunmuyordu.
+  --
+  -- Şekil `[{ field, level, note? }]` ve doğrulama uygulamada (Zod, `payload` ile aynı desen).
+  -- `level` dört sınıf: `unclear` okunamadı · `overwrite` dolu alanın üstüne yazılacak ·
+  -- `untouched` asistan bu alana dokunmadı · `irreversible` uygulanınca geri alınamaz dış etki.
+  -- Sınıf EKRANDAKİ AĞIRLIĞI belirler; kırmızı yalnız sonuncusunundur.
+  --
+  -- Boş dizi bir cevaptır ("uyarı yok") ve ekran onu da yazar; `null` ise araç hiç konuşmamıştır.
+  warnings jsonb,
+
   status public.assistant_proposal_status not null default 'pending',
 
   -- ── TAZELİK: ÖNERİNİN SON KULLANMA TARİHİ VARDIR ──────────────────────────

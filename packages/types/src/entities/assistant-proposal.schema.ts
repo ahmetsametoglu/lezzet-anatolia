@@ -568,6 +568,33 @@ export function parseProposalPayload(kind: AssistantProposalKind, raw: unknown) 
   return schema.parse(raw);
 }
 
+/**
+ * Uyarının AĞIRLIĞI — ekrandaki rengi ve sırası bundan çıkar (`0042` künyesi).
+ *
+ * `irreversible` tek başına kırmızıdır ve bilinçli: kehribar "dikkat et", kırmızı "bundan dönüş
+ * yok" demek. İkisi aynı tonda çizilseydi gerçekten geri alınamaz olanı (bölge bildirimi, para
+ * hareketi) ötekilerin arasında kaybolurdu.
+ */
+export const AssistantWarningLevelEnum = z.enum(['unclear', 'overwrite', 'untouched', 'irreversible']);
+export type AssistantWarningLevel = z.infer<typeof AssistantWarningLevelEnum>;
+
+/**
+ * Asistanın "onaylamadan önce bunu bil" maddesi.
+ *
+ * `reason` önerinin neden DOĞDUĞUNU söyler, bu ise onaydan önce bilinmesi gerekeni — ve çoğuldur:
+ * tek cümleye sıkıştırılınca üç uyarının üçü birden okunmuyordu (kullanıcı ölçümü).
+ *
+ * `field` dilekçedeki alanın adıdır ve ekranda okunur karşılığına çevrilir; alana bağlı olmayan
+ * uyarıda (bölge bildirimi gibi) boş kalır. `note` yoksa başlık tek başına yeter.
+ */
+export const AssistantWarningSchema = z.object({
+  field: z.string().optional(),
+  level: AssistantWarningLevelEnum,
+  /** Operatöre söylenen tek cümle — başlık zaten `level` + `field`ten kuruluyor. */
+  note: z.string().optional(),
+});
+export type AssistantWarning = z.infer<typeof AssistantWarningSchema>;
+
 export const AssistantProposalSchema = z.object({
   id: z.string().uuid(),
   kind: AssistantProposalKindEnum,
@@ -579,6 +606,13 @@ export const AssistantProposalSchema = z.object({
   summary: z.string(),
   /** Öneri neye dayanıyor — panelde ayrı kutu; null ise "gerekçe yazılmadı" hâli çizilir. */
   reason: z.string().nullable(),
+  /**
+   * Onaylamadan önce bilinmesi gerekenler, madde madde.
+   *
+   * **Boş dizi ile `null` ayrı şeyler:** boş dizi "uyarı yok" demektir ve ekran bunu yazar
+   * ("eksik kalan alan yok"), `null` ise aracın hiç konuşmadığı — o hâlde bir şey vaat edilmez.
+   */
+  warnings: z.array(AssistantWarningSchema).nullable(),
   status: AssistantProposalStatusEnum,
   expiresAt: z.string(),
   createdAt: z.string(),
@@ -598,6 +632,7 @@ export const AssistantProposalInsertSchema = AssistantProposalSchema.pick({
   summary: true,
 }).extend({
   reason: z.string().nullish(),
+  warnings: z.array(AssistantWarningSchema).nullish(),
   sourceSession: z.string().nullish(),
   expiresAt: z.string(),
 });

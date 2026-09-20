@@ -2,10 +2,11 @@ import { z } from 'zod';
 import { LocalizedTextDraftSchema } from '../primitives/localized-text.schema';
 
 /**
- * Porsiyon türü — `item` ayrı ayrı ürünler, `slice` tek ürünün dilimleri. Künyesi
- * `ProductVariantSchema.portionKind`de; kaynağı basılı katalogun kendi beyanı (`(12 slice)`).
+ * Porsiyon türü — `item` ayrı ayrı ürünler, `slice` tek ürünün dilimleri, `package` kendi içinde
+ * paketlenmiş birimler (çift paket). Künyesi `ProductVariantSchema.portionKind`de; kaynağı basılı
+ * katalogun kendi beyanı (`(12 slice)`).
  */
-export const PortionKindEnum = z.enum(['item', 'slice']);
+export const PortionKindEnum = z.enum(['item', 'slice', 'package']);
 export type PortionKind = z.infer<typeof PortionKindEnum>;
 
 /**

@@ -116,7 +116,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `payment_status`: pending, paid, partial, refunded
 - `points_reason`: review, feedback_purchase, feedback_candidate, order, referral, neighbor, visit, redemption, manual
 - `net_unit`: g, ml *(net miktarın birimi — katı gram, sıvı mililitre; birim fiyat buradan seçilir)*
-- `portion_kind`: item, slice *(satış birimi — bütün mü dilim mi)*
+- `portion_kind`: item, slice, package *(içindekinin birimi — ayrı parça mı, dilim mi, paket mi)*
 - `preferred_language`: tr, fr, de
 - `product_allergen`: gluten, kabuklu, yumurta, balik, yer_fistigi, soya, sut, sert_kabuklu, kereviz, hardal, susam, sulfit, aci_bakla, yumusaka *(AB 14 listesi; değerler ASCII (`balik`, `sut`) — veri anahtarıdır, ekran metni değil)*
 - `product_date_type`: DLC, DDM

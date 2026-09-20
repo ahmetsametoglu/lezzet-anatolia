@@ -112,7 +112,10 @@ create unique index product_slug_key on public.product (slug);
 create index product_incomplete_idx on public.product (is_incomplete) where is_incomplete;
 create index product_category_idx on public.product (category_id);
 
-create type portion_kind as enum ('item', 'slice');
+-- Porsiyonun TÜRÜ — `pieces_count` "kaç" der, bu "neyin kaçı" der. `item` ayrı ayrı ürünler (4'lü simit),
+-- `slice` tek gövdenin dilimleri (12 dilimlik cheesecake), `package` kendi içinde paketlenmiş birimler
+-- (çift paket 1,4 kg). Vitrin üçüne aynı kelimeyi yazamaz: "2 adet" ile "2 paket" aynı şeyi satmaz.
+create type portion_kind as enum ('item', 'slice', 'package');
 
 -- Net miktarın birimi — KAPALI küme: katı gram, sıvı mililitre. Üçüncü bir birim ("adet") burada yok, çünkü adet ayrı
 -- kolonda (`pieces_count`) ve ayrı soruya cevap verir. Birim fiyat da buradan seçilir: g → €/kg, ml → €/L.

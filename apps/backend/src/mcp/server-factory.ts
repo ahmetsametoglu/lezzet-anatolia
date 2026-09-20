@@ -30,6 +30,20 @@ import {
  * Araç açıklamaları İngilizce (model yüzeyi); asistanın patronla konuşma dili talimatta Türkçeye bağlanır.
  */
 
+/**
+ * "Onaylamadan önce bunu bil" maddeleri — HER propose_* aracında aynı alan, tarifi TEK yerde.
+ *
+ * `reason` önerinin neden doğduğunu söyler; bu alan onaydan önce bilinmesi gerekeni sayar ve
+ * çoğuldur. Tarif on üç araca elle kopyalansaydı biri bir gün seviyelerden birini kaybederdi.
+ */
+const WARNINGS_PROP = {
+  warnings: {
+    type: 'array',
+    description:
+      'Things the admin must know BEFORE approving — one entry each, never squeezed into reason. [{ "field": "ingredients", "level": "unclear", "note": "satır başları kesik ve parlak" }]. level is one of four: "unclear" = you could not read it confidently; "overwrite" = a filled field will be replaced, so say what is being lost; "untouched" = you deliberately left a field alone and the admin might expect otherwise; "irreversible" = applying sends a notification, moves money, or otherwise cannot be undone. field names the payload field the warning is about — leave it out when the warning is about the proposal as a whole. note is ONE short sentence in TURKISH and the admin reads it verbatim, so write it to them, not about them. An empty list is a real answer ("nothing to flag") and the screen prints it as such; leave the field out only when you did not consider the question at all.',
+  },
+} as const;
+
 const INSTRUCTIONS = [
   'You are the admin assistant for Lezzet Anatolie (Turkish food e-commerce, Strasbourg). You talk to the OWNER, never to customers.',
   'Always answer the admin in TURKISH. Keep answers short and concrete; lead with what needs attention.',
@@ -185,6 +199,7 @@ export const TOOLS = [
         name: { type: 'string', description: 'Record name or part of it, e.g. "Dondurma" (see reference_data).' },
         isFeatured: { type: 'boolean', description: 'true = put on the showcase (default), false = remove.' },
         reason: { type: 'string', description: 'Why this one, why now.' },
+        ...WARNINGS_PROP,
       },
       required: ['target', 'name'],
       additionalProperties: false,
@@ -203,6 +218,7 @@ export const TOOLS = [
           description: 'Optional offer price in cents (VAT-inclusive). Omit to use the engine suggestion.',
         },
         reason: { type: 'string', description: 'Why now — e.g. "14 units, 4 days left, no other stock of this size".' },
+        ...WARNINGS_PROP,
       },
       required: ['batchId'],
       additionalProperties: false,
@@ -253,6 +269,7 @@ export const TOOLS = [
         traces: { type: 'array', description: 'Cross-contamination ("may contain"), same closed set.' },
         uncertainFields: { type: 'array', description: 'Field names you could not read clearly (blurred, cut off, glare).' },
         reason: { type: 'string', description: 'Where this came from — e.g. "label photos sent by the admin, 3 images".' },
+        ...WARNINGS_PROP,
       },
       required: ['name', 'variants', 'dateType'],
       additionalProperties: false,
@@ -311,6 +328,7 @@ export const TOOLS = [
         },
         note: { type: 'string', description: 'Optional note carried onto the order.' },
         reason: { type: 'string', description: 'One line: what this is based on (e.g. "invoice e-mailed by the supplier, goods not yet delivered").' },
+        ...WARNINGS_PROP,
       },
       required: ['warehouseCode'],
       additionalProperties: false,
@@ -390,6 +408,7 @@ export const TOOLS = [
           description: "The invoice's due date, YYYY-MM-DD, only if printed ('Vervaldatum', 'Échéance', 'Due date'). Never computed by you.",
         },
         reason: { type: 'string', description: 'One line: what this is based on (e.g. "invoice photo sent by the admin").' },
+        ...WARNINGS_PROP,
       },
       required: ['warehouseCode', 'lines'],
       additionalProperties: false,
@@ -427,6 +446,7 @@ export const TOOLS = [
         },
         valueDate: { type: 'string', description: 'YYYY-MM-DD; defaults to today.' },
         reason: { type: 'string' },
+        ...WARNINGS_PROP,
       },
       required: ['accountName', 'direction', 'amountCents', 'type'],
       additionalProperties: false,
@@ -465,6 +485,7 @@ export const TOOLS = [
         },
         note: { type: 'string', description: 'Short note, e.g. "September rent".' },
         reason: { type: 'string', description: 'One line for the admin: what this is based on (e.g. "invoice photo sent by the admin").' },
+        ...WARNINGS_PROP,
       },
       required: ['kind', 'issuedOn', 'direction', 'amountCents'],
       additionalProperties: false,
@@ -492,6 +513,7 @@ export const TOOLS = [
         },
         note: { type: 'string' },
         reason: { type: 'string', description: 'One line for the admin: what this is based on.' },
+        ...WARNINGS_PROP,
       },
       required: ['name'],
       additionalProperties: false,
@@ -512,6 +534,7 @@ export const TOOLS = [
             "Two-letter country of these codes ('FR' | 'DE'), from demand_signals. A postal code is NOT unique across borders — 67000 exists in both France and Germany — so the country decides which place gets covered. Omit only for a single-country zone: it then follows the codes already in that zone.",
         },
         reason: { type: 'string', description: 'Why these codes — cite the demand numbers.' },
+        ...WARNINGS_PROP,
       },
       required: ['zoneName', 'postalCodes'],
       additionalProperties: false,
@@ -563,6 +586,7 @@ export const TOOLS = [
         },
         uncertainFields: { type: 'array', description: 'Field names you could not read clearly.' },
         reason: { type: 'string' },
+        ...WARNINGS_PROP,
       },
       required: ['productId'],
       additionalProperties: false,
@@ -592,6 +616,7 @@ export const TOOLS = [
           },
         },
         reason: { type: 'string', description: 'Ground it — e.g. "these six were bought together in 41 orders last month".' },
+        ...WARNINGS_PROP,
       },
       required: ['name', 'totalPrice', 'items'],
       additionalProperties: false,
@@ -635,6 +660,7 @@ export const TOOLS = [
         validTo: { type: 'string', description: 'ISO date.' },
         code: { type: 'string', description: 'Suggested coupon code (trigger=coupon only).' },
         reason: { type: 'string' },
+        ...WARNINGS_PROP,
       },
       // `publicLabel` zorunlu: veritabanı etiketsiz indirimi reddeder ve eksik öneri uygulama anında değil burada durmalı.
       required: ['name', 'publicLabel', 'trigger', 'type', 'scope'],
@@ -676,6 +702,7 @@ export const TOOLS = [
           },
         },
         reason: { type: 'string' },
+        ...WARNINGS_PROP,
       },
       required: ['name', 'steps', 'items'],
       additionalProperties: false,

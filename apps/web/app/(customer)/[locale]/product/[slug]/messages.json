@@ -104,7 +104,9 @@
       "piecesOf": "{n} adet · {weight}",
       "perPiece": "{price}/adet",
       "slices": "{n} dilim",
-      "slicesOf": "{n} dilim · {weight}"
+      "slicesOf": "{n} dilim · {weight}",
+      "packs": "{n} paket",
+      "packsOf": "{n} paket · {weight}"
     },
     "backLabel": "Geri"
   },
@@ -213,7 +215,9 @@
       "piecesOf": "{n} pièces · {weight}",
       "perPiece": "{price}/pièce",
       "slices": "{n} parts",
-      "slicesOf": "{n} parts · {weight}"
+      "slicesOf": "{n} parts · {weight}",
+      "packs": "{n} paquets",
+      "packsOf": "{n} paquets · {weight}"
     },
     "backLabel": "Retour"
   },
@@ -322,7 +326,9 @@
       "piecesOf": "{n} Stück · {weight}",
       "perPiece": "{price}/Stück",
       "slices": "{n} Scheiben",
-      "slicesOf": "{n} Scheiben · {weight}"
+      "slicesOf": "{n} Scheiben · {weight}",
+      "packs": "{n} Packungen",
+      "packsOf": "{n} Packungen · {weight}"
     },
     "backLabel": "Zurück"
   }

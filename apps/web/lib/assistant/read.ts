@@ -64,6 +64,7 @@ export async function readAssistantQueue(tab: QueueTab, limit = 50): Promise<Ass
       kindLabel: meta.label,
       summary: proposal.summary,
       reason: proposal.reason,
+      warnings: proposal.warnings,
       // Etki cümlesi öneriye ÖZGÜ (bekleyen müşteri sayısı, kalem sayısı) — operasyon şeridinin
       // itirazıyla sabit metinden şablona geçti (09.08).
       impact: impactOf(proposal.kind, proposal.payload),

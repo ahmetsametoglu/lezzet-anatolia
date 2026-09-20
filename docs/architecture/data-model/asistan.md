@@ -32,6 +32,7 @@ fiyat kanalları) atlanabilen bir kapı doğardı.
 | `payload` | jsonb |  |  |
 | `summary` | text |  |  |
 | `reason` | text | • |  |
+| `warnings` | jsonb | • |  |
 | `status` | public |  | `'pending'` |
 | `expires_at` | timestamptz |  |  |
 | `created_at` | timestamptz |  | `now()` |
