@@ -154,6 +154,12 @@ export const ProductSchema = z.object({
   ingredients: LocalizedTextSchema.nullable(),
   nutrition: NutritionSchema.nullable(),
   storageInstructions: LocalizedTextSchema.nullable(),
+  /**
+   * Hazırlama adımları — sıralı kısa cümleler; sıra dizinin kendisidir, ayrı bir numara alanı tutulmaz.
+   * Saklama metninden ayrı: o koşulun beyanı, bu numaralanarak çizilen yol tarifi. Yasal beyan değil,
+   * `missingDeclarations` buna bakmaz; boş dizi "adım girilmedi".
+   */
+  preparationSteps: z.array(LocalizedTextSchema),
   /** Alerjen beyanı — `null` girilmedi, boş liste "alerjen içermez"; satıştaki üründe veri kısıtıyla zorunlu. */
   allergens: z.array(ProductAllergenEnum).nullable(),
   /** Çapraz bulaşma — cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz. */
@@ -203,6 +209,7 @@ export const ProductInsertSchema = z.object({
   ingredients: LocalizedTextSchema.nullish(),
   nutrition: NutritionSchema.nullish(),
   storageInstructions: LocalizedTextSchema.nullish(),
+  preparationSteps: z.array(LocalizedTextSchema).optional(),
   allergens: z.array(ProductAllergenEnum).nullish(),
   traces: z.array(ProductAllergenEnum).optional(),
   vatRate: z.number().optional(),

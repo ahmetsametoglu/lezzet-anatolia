@@ -40,7 +40,13 @@ create table public.product (
   -- etiket bozması); vurgu türetilemez, çünkü INCO alerjenin listede yazıldığı hâlinin vurgulanmasını ister.
   ingredients jsonb,                                 -- LocalizedText, çok dilli içindekiler
   nutrition jsonb,                                   -- SABİT kalemli (100 g başına) — NutritionSchema
-  storage_instructions jsonb,                        -- LocalizedText; saklama/hazırlama metni
+  storage_instructions jsonb,                        -- LocalizedText; saklama koşulunun beyanı
+  -- Hazırlama adımları — SIRALI kısa cümleler ("Buzdolabında 4 saat çözdürün"), her öğe LocalizedText; sıra dizinin
+  -- kendisidir. `storage_instructions`ın içine yazılamaz: o beyan, bu yol tarifi — tek metne sıkışsa ekran adımları
+  -- ayıramaz ve numarayı uyduramazdı. Yasal beyan DEĞİL, bu yüzden `is_incomplete` ölçütüne girmez; boş dizi
+  -- "adım girilmedi" demektir ve bölüm çizilmez.
+  preparation_steps jsonb not null default '[]'::jsonb
+    constraint product_preparation_steps_is_array check (jsonb_typeof(preparation_steps) = 'array'),
   -- AB 14 alerjen beyanı: null = girilmedi, '{}' = alerjen içermez. Varsayılan yok, çünkü boş dizi varsayılanı beyanı
   -- girilmemiş her ürünü sessizce "içermez" ilan ederdi.
   allergens product_allergen[],

@@ -57,6 +57,10 @@ create table public.category (
   -- **Boş bırakılabilir ve öyle kalmalı:** altyazısı olmayan kategori altyazısız çizilir — yedek
   -- metin UYDURULMAZ (ada düşmek "Börekler / Börekler" gibi bir tekrar üretirdi).
   tagline jsonb,                                -- LocalizedText {tr?,fr?,de?}
+  -- Ürün sayfasındaki "bu ürünü yapay zekâya sorun" kutusunun HAZIR sorusu; `{n}` ürün adının, `{w}` seçili boyun
+  -- yerine geçer. KATEGORİYE ait, çünkü soru ürünün kendisini değil TÜRÜNÜ sorar: tatlıda servis, börekte pişirme.
+  -- Boşsa kutu hiç çizilmez — uydurulmuş bir soru üçüncü taraf modeline yanlış bağlam gönderirdi.
+  ai_question jsonb,                            -- LocalizedText {tr?,fr?,de?}
   sort_order int not null default 0,
   is_active boolean not null default true,
   -- **Vitrinde göster** (05.18) — ana sayfanın ızgarası sınırlı (tasarım: kategoride 6 slot), kod

@@ -25,6 +25,7 @@ Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.
 | `image_width` | smallint | • |  |
 | `image_height` | smallint | • |  |
 | `tagline` | jsonb | • |  |
+| `ai_question` | jsonb | • |  |
 | `sort_order` | int |  | `0` |
 | `is_active` | boolean |  | `true` |
 | `is_featured` | boolean |  | `false` |
@@ -175,6 +176,7 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 | `ingredients` | jsonb | • |  |
 | `nutrition` | jsonb | • |  |
 | `storage_instructions` | jsonb | • |  |
+| `preparation_steps` | jsonb |  | `'[]'::jsonb` |
 | `allergens` | product_allergen[] | • |  |
 | `is_incomplete` | boolean | • | *üretilmiş* |
 | `traces` | product_allergen[] |  | `'{}'` |

@@ -15,6 +15,13 @@ export const CategorySchema = z
      * UYDURULMAZ (ada düşmek "Börekler / Börekler" gibi bir tekrar üretirdi).
      */
     tagline: LocalizedTextSchema.nullable(),
+    /**
+     * Ürün sayfasındaki "yapay zekâya sorun" kutusunun hazır sorusu; `{n}` ürün adının, `{w}` seçili boyun yerine geçer.
+     *
+     * Kategoride duruyor çünkü soru ürünün kendisini değil TÜRÜNÜ sorar: tatlıda servis, börekte pişirme. `null` =
+     * soru girilmedi, kutu çizilmez — uydurulmuş bir soru üçüncü taraf modeline yanlış bağlam gönderirdi.
+     */
+    aiQuestion: LocalizedTextSchema.nullable(),
     slug: z.string(),
     sortOrder: z.number().int(),
     isActive: z.boolean(),
@@ -34,6 +41,7 @@ export const CategoryInsertSchema = z
   .object({
     name: LocalizedTextSchema,
     tagline: LocalizedTextSchema.nullish(),
+    aiQuestion: LocalizedTextSchema.nullish(),
     slug: z.string(),
     sortOrder: z.number().int().optional(),
     isActive: z.boolean().optional(),
