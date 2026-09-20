@@ -118,6 +118,37 @@ export const TEST_INTAKE = {
 export const KATALOG_TEDARIKCISI = SUPPLIERS[0].name;
 
 /**
+ * Kaynağın ayrı kalem yazdığı, bizim tek ilan gösterdiğimiz ürünler: `kaynak slug → hedef slug`.
+ *
+ * Dondurmanın DİLİMİ kalıbın çeşidi değil BOYUdur (işletmeci kararı 20.09): müşteri önce "hangi
+ * dondurma" sonra "kalıp mı dilim mi" diye seçer — ikincisi satın alma içindeki karar, yani varyant.
+ * Kaynak katalog ikisini ayrı kalem yazmış; o kendi raf düzeni, bizimki farklı.
+ *
+ * Limonlu ve karışık birleşmiyor çünkü karşılıkları yok: limonlunun kalıbı, karışığın dilimi
+ * katalogda hiç yok. İkisi de tek boylu ilan olarak aynı ailede durur.
+ */
+export const KATALOG_BIRLESIK: Record<string, string> = {
+  'maras-ice-cream-slice-plain': 'maras-ice-cream-plain',
+  'maras-ice-cream-slice-cocoa': 'maras-ice-cream-cocoa',
+};
+
+/**
+ * Boy adı — kaynağın etiketi yalnız gramaj yazıyor ("250 g", "70 g"). Kalıpla dilim aynı ilanda
+ * buluşunca gramaj tek başına hangisinin ne olduğunu söylemiyor; ad ambalajın biçimini de taşır.
+ *
+ * Anahtar varyant kodu, çünkü etiket boya aittir: aynı ürünün iki boyu iki ayrı satır ister.
+ */
+export const KATALOG_BOY_ADI: Record<string, UcDil> = {
+  '111106': { tr: '250 g kalıp', fr: 'Pain 250 g', de: '250 g Block' },
+  '111107': { tr: '250 g kalıp', fr: 'Pain 250 g', de: '250 g Block' },
+  '111112': { tr: '250 g kalıp', fr: 'Pain 250 g', de: '250 g Block' },
+  '111113': { tr: '500 g kalıp', fr: 'Pain 500 g', de: '500 g Block' },
+  '111121': { tr: '70 g dilim', fr: 'Tranche 70 g', de: 'Scheibe 70 g' },
+  '111131': { tr: '70 g dilim', fr: 'Tranche 70 g', de: 'Scheibe 70 g' },
+  '111141': { tr: '70 g dilim', fr: 'Tranche 70 g', de: 'Scheibe 70 g' },
+};
+
+/**
  * KATMAN 3 · UYDURMA STOK. Faturası olmayan kalemin mal kabulü de yoktur; partisi olmayan varyant
  * vitrinde "Tükendi" görünür (`stockStatusOf`) ve ürün gezilemez. Parti ÜRETİLİR: tedarikçi başına
  * tek sipariş, tek kabul, boy başına sabit adet.

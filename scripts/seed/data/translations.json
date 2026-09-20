@@ -839,7 +839,7 @@
     }
   },
   "vegan-cig-kofte": {
-    "name": { "tr": "Soslu Çiğ Köfte", "fr": "Çiğ köfte en sauce", "de": "Çiğ Köfte mit Sauce" },
+    "name": { "tr": "Çiğ Köfte + Sos", "fr": "Çiğ köfte + sauce", "de": "Çiğ Köfte + Sauce" },
     "description": {
       "tr": "Bulgur ve baharatla yoğrulmuş bitkisel çiğ köfte; nar ekşisi ve acı sosu yanında geliyor. Marul yaprağına sarın, limon sıkın — sofra hazır.",
       "fr": "Çiğ köfte végétal au boulgour et aux épices, livré avec sa mélasse de grenade et sa sauce piquante. Dans une feuille de laitue, un filet de citron — prêt.",
@@ -863,7 +863,7 @@
     }
   },
   "vegan-raw-meatballs": {
-    "name": { "tr": "Çiğ Köfte", "fr": "Çiğ köfte", "de": "Çiğ Köfte" },
+    "name": { "tr": "Sıkımlık Çiğ Köfte", "fr": "Çiğ köfte à façonner", "de": "Çiğ Köfte zum Formen" },
     "description": {
       "tr": "İnce bulgurla yoğrulmuş, baharatlı bitkisel çiğ köfte. Marul yaprağına sarıp limon sıkın — sosunu kendiniz seçmek isteyenler için sade hâli.",
       "fr": "Çiğ köfte végétal, pétri au boulgour fin et aux épices. Roulez-le dans une feuille de laitue, pressez un citron — la version nature, à assaisonner selon vous.",
@@ -977,7 +977,7 @@
     }
   },
   "maras-ice-cream-slice-lemon": {
-    "name": { "tr": "Limonlu Maraş Dondurma Dilimi", "fr": "Tranche de glace de Maraş au citron", "de": "Maraş-Eisscheibe mit Zitrone" },
+    "name": { "tr": "Limonlu Maraş Dondurması", "fr": "Glace de Maraş au citron", "de": "Maraş-Eis mit Zitrone" },
     "description": {
       "tr": "Limonlu Maraş dondurmasının porsiyonlanmış dilimi. Salebin yoğunluğu limonun ekşisiyle hafifliyor — yaz akşamlarının dilimi.",
       "fr": "La glace de Maraş au citron, tranchée en portions. La densité du salep s'allège avec l'acidité — la part des soirs d'été.",

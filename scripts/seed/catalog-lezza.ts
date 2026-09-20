@@ -66,6 +66,27 @@ function readLezzaCatalog(): LezzaCatalog {
   return JSON.parse(readFileSync(DATA, 'utf8')) as LezzaCatalog;
 }
 
+/**
+ * Birleştirilecek kalemleri döngüden ÖNCE katlar: kaynağın boyları hedefin ardına eklenir, kaynak
+ * listeden düşer. Ürün döngüsü tek kalem görür, akışı değişmez — beyan, görsel ve aile hedefin.
+ *
+ * Tutmayan slug SESSİZ geçmez: kaynak ya da hedef seçime girmemişse boylar sessizce kaybolur ve
+ * eksiklik ancak vitrine bakınca fark edilirdi.
+ */
+function katla(urunler: LezzaProduct[], merge: Readonly<Record<string, string>> | undefined): LezzaProduct[] {
+  if (!merge) return urunler;
+  const eklenecek = new Map<string, LezzaVariant[]>();
+  for (const [kaynak, hedef] of Object.entries(merge)) {
+    const k = urunler.find((u) => u.slug === kaynak);
+    if (!k) continue;
+    if (!urunler.some((u) => u.slug === hedef)) throw new Error(`birleşme hedefi seçimde yok: ${kaynak} → ${hedef}`);
+    eklenecek.set(hedef, [...(eklenecek.get(hedef) ?? []), ...k.variants]);
+  }
+  return urunler
+    .filter((u) => !(u.slug in merge))
+    .map((u) => (eklenecek.has(u.slug) ? { ...u, variants: [...u.variants, ...(eklenecek.get(u.slug) ?? [])] } : u));
+}
+
 
 /**
  * Ürün adı ve açıklamasının elle yazılmış üç dilli karşılığı (`data/translations.json`); kaynak yalnız
@@ -358,6 +379,15 @@ export interface LezzaSecim {
   /** Bu kodları taşıyan ürün, teklifte alış fiyatı olsa da ADAY doğar: satışa açmak işletmecinin kararı. */
   candidates?: ReadonlySet<string>;
   /**
+   * Kaynağın AYRI kalem yazdığı ama tek ilan olması gereken ürünler: `kaynak slug → hedef slug`.
+   * Kaynağın boyları hedefin boylarının ardına eklenir, kendisi hiç kurulmaz.
+   *
+   * Gerekçe (işletmeci kararı 20.09): dondurmanın dilimi kalıbın ÇEŞİDİ değil BOYUdur — müşteri
+   * "hangi dondurma" diye seçtikten sonra "kalıp mı dilim mi" diye seçer. Kaynak katalog ikisini
+   * ayrı kalem yazmış; bu, satış biçimi değil raf düzeni kararıdır ve bizim rafımız farklı.
+   */
+  merge?: Readonly<Record<string, string>>;
+  /**
    * Kaynağın adresi yerine YEREL kareler — gerçek besleme kendi görsel deposunu verir
    * (`seed-real/images/<ürün slug'ı>/`, kapak `0`). Verilmezse ya da bir ürün için boş dönerse
    * kaynağın `imageUrls`'i kullanılır: kurgu beslemesi yerel depoyu taşımıyor.
@@ -452,7 +482,10 @@ export async function seedLezzaProducts(
   let photos = 0;
   let varyantSayisi = 0;
 
-  const urunler = katalog.products.filter((p) => p.variants.some((v) => secili(v.sku)));
+  const urunler = katla(
+    katalog.products.filter((p) => p.variants.some((v) => secili(v.sku))),
+    secim?.merge,
+  );
 
   const ceviriler = readCeviriler();
   const cevirisizler = urunler.filter((p) => !ceviriler[p.slug]).map((p) => p.slug);
@@ -697,6 +730,7 @@ const DOLGU_SOZLUK: Record<string, LocalizedText> = {
   'san sebastian': { tr: 'San Sebastian', fr: 'San Sebastian', de: 'San Sebastian' },
   // ── Çiğ köfte · falafel ────────────────────────────────────────────────────
   sauced: { tr: 'Soslu', fr: 'En sauce', de: 'Mit Sauce' },
+  'to shape': { tr: 'Sıkımlık', fr: 'À façonner', de: 'Zum Formen' },
   'hummus filled': { tr: 'Humus dolgulu', fr: 'Fourré au houmous', de: 'Mit Hummus' },
   // ── Meze ───────────────────────────────────────────────────────────────────
   hummus: { tr: 'Humus', fr: 'Houmous', de: 'Hummus' },
@@ -906,10 +940,12 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
   },
   // ── ANADOLU MUTFAĞI ────────────────────────────────────────────────────────
   {
-    // Aynı çiğ köftenin iki hâli: soslu paket yemeye hazır, sade paket sofrada soslanır.
+    // Aynı çiğ köftenin iki HÂLİ: kutudaki sıkılmış ve sos poşetli, poşetteki sıkılmamış hamur.
+    // Tek ilan olamazlar — hazırlamaları ayrı (biri sıkılıyor, öteki açılıp yeniyor) ve hazırlama
+    // üründe duruyor; sos poşetlerinin beyanı da yalnız kutuda geçerli.
     ad: 'Çiğ Köfte',
     uyeler: [
-      { slug: 'vegan-raw-meatballs', dolgu: 'Plain' },
+      { slug: 'vegan-raw-meatballs', dolgu: 'To Shape' },
       { slug: 'vegan-cig-kofte', dolgu: 'Sauced' },
     ],
   },
@@ -958,22 +994,18 @@ const ELLE_AILELER: Array<{ ad: string; uyeler: Array<{ slug: string; dolgu: str
   },
   // ── DONDURMA ───────────────────────────────────────────────────────────────
   {
+    // Dilim AYRI AİLE DEĞİL: sade ve kakaolunun dilimi kalıbıyla aynı ilanda boy olarak duruyor
+    // (`KATALOG_BIRLESIK`). Limonlunun kalıbı katalogda hiç yok, o yüzden tek boylu ilan olarak
+    // burada — çeşit ekseni tada göre, ambalaja göre değil.
     ad: 'Maraş Dondurması',
     uyeler: [
       { slug: 'maras-ice-cream-plain', dolgu: 'Plain' },
       { slug: 'maras-ice-cream-cocoa', dolgu: 'Cocoa' },
       { slug: 'maras-ice-cream-pistachio', dolgu: 'Pistachio' },
+      { slug: 'maras-ice-cream-slice-lemon', dolgu: 'Lemon' },
       // Üç tadın bir arada olduğu paket, ötekilerle aynı eksende bir seçenektir — ailesiz kalınca
       // "dondurma alayım" diyen müşteri onu blokta göremiyordu.
       { slug: 'maras-ice-cream-trio-mix', dolgu: 'Assorted' },
-    ],
-  },
-  {
-    ad: 'Maraş Dondurma Dilimi',
-    uyeler: [
-      { slug: 'maras-ice-cream-slice-plain', dolgu: 'Plain' },
-      { slug: 'maras-ice-cream-slice-cocoa', dolgu: 'Cocoa' },
-      { slug: 'maras-ice-cream-slice-lemon', dolgu: 'Lemon' },
     ],
   },
 ];

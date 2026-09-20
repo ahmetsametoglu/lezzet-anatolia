@@ -29,7 +29,7 @@ import {
 } from '@lezzet/database';
 import { canPublishProduct, purchaseOrderReferenceNo, rebalanceAllocations } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import { PRODUCT_GALLERY_MAX, type Product } from '@lezzet/types';
+import { PRODUCT_GALLERY_MAX, type LocalizedText, type Product } from '@lezzet/types';
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -46,6 +46,8 @@ import {
   DRAFT_CATEGORY,
   DRAFT_FAMILIES,
   EK_TASLAKLAR,
+  KATALOG_BIRLESIK,
+  KATALOG_BOY_ADI,
   KATALOG_TEDARIKCISI,
   PURCHASES,
   RECIPES,
@@ -469,7 +471,9 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   }
   plan(`${lines.length} fatura varyantı + ${ADAYLAR.length} aday · ürün, metin, görsel ve kategori katalog kaynağından`);
   if (DRY_RUN) return;
-  const secim = new Map(
+  /** Boy künyesi: kaynağın değerlerinin üstüne yazılan düzeltmeler (fatura birimi, boy adı). */
+  type BoyKunyesi = { label?: LocalizedText; netQuantity?: number; netUnit?: 'g' | 'ml'; piecesCount?: number };
+  const secim = new Map<string, BoyKunyesi>(
     lines.map((l) => [
       l.sku,
       l.unit
@@ -486,6 +490,12 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
   // GİRMEZLER (aşağıda yalnız fatura satırları veriliyor): o küme "satış kurgusuna girmiş" demek ve
   // ürünü aktif olmaya zorlar. Adayın alış maliyeti yok, fiyatsız ve satışa kapalı kalması karar.
   for (const sku of ADAYLAR) if (!secim.has(sku)) secim.set(sku, {});
+  // Boy adı kaynağın gramajının ÜSTÜNE yazılır: birleşen ilanda "250 g" ile "70 g" hangisinin kalıp
+  // hangisinin dilim olduğunu söylemiyordu. Seçimde olmayan koda dokunulmaz — o boy zaten kurulmuyor.
+  for (const [sku, ad] of Object.entries(KATALOG_BOY_ADI)) {
+    const boy = secim.get(sku);
+    if (boy) secim.set(sku, { ...boy, label: ad });
+  }
   // KATMAN 3: her kalem "satış kurgusunda" sayılır. Motorun kapısı `teklifli || kurguda`; alış
   // fiyatı olmayan kalem aksi hâlde aday kalırdı. Fiyatı `seedTestCatalogPrices` üretir.
   const kurguSku = LAYERS >= 3 ? new Set(secim.keys()) : new Set(lines.map((l) => l.sku));
@@ -501,7 +511,13 @@ async function seedCatalog(db: Db, catId: Map<string, string>): Promise<void> {
     // Katalog hep `base` kurulur: `extend` türetmenin yanında bilinçli kusurlar da sahneler ve gerçek
     // kataloğa kusur yazılmaz. Katman 3 yalnız türetmeyi açar ki belgesiz ürün satışa çıkabilsin.
     'base',
-    { variants: secim, derive: LAYERS >= 3, candidates: LAYERS >= 3 ? new Set() : new Set(ADAYLAR), localFrames: katalogKareleri },
+    {
+      variants: secim,
+      derive: LAYERS >= 3,
+      candidates: LAYERS >= 3 ? new Set() : new Set(ADAYLAR),
+      localFrames: katalogKareleri,
+      merge: KATALOG_BIRLESIK,
+    },
   );
   console.log(`  ✓ ${made.made} ürün · ${made.variants} varyant · ${made.photos} galeri görseli · ${made.families} aile`);
 }
