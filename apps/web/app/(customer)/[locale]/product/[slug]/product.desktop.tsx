@@ -6,6 +6,7 @@ import { Badge } from '@/components/customer/ui/badge';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { formatDecimal } from '@/lib/storefront/format';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
+import { Band } from '@/components/customer/ui/section';
 import { Icon } from '@/components/customer/ui/icons';
 import { variantNameOf } from '@/lib/storefront/variant-name';
 import { AiAsk } from './components/ai-ask';
@@ -202,7 +203,9 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
 
       {/* Künye kendi bandında ve üç eşit kart: sol sütunda dururken sayfanın en uzun bloğuydu ve
           rafın bittiği yerde sayfayı tek sütuna düşürüyordu (tasarım 20.09). */}
-      <section className="flex flex-col gap-4.5 border-t border-sand-300 bg-sand-100 px-12 py-8.5">
+      {/* Zemin ve çizgi EKRANIN İKİ KENARINA uzanır (`Band`), içerik kabukta kalır: geniş ekranda
+          kabuk genişliğinde kesilen kum blok, bandın yarıda bittiği izlenimi veriyordu. */}
+      <Band surface="border-t border-sand-300 bg-sand-100" className="flex flex-col gap-4.5 px-12 py-8.5">
         <div className="flex items-baseline gap-3">
           <h2 className="font-serif text-page-title-sm text-ink">{t.declaration.title}</h2>
           <span className="font-sans text-note text-muted">{t.declaration.note}</span>
@@ -215,14 +218,14 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
           netUnit={selected?.netUnit ?? null}
         />
         {aiQuestion && <AiAsk t={t.ai} question={aiQuestion} />}
-      </section>
+      </Band>
 
       <div className="px-12 py-9">
         <Reviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} />
       </div>
 
       {product.similar.length > 0 && (
-        <section className="flex flex-col gap-4 border-t border-sand-275 bg-sand-50 px-12 pt-8.5 pb-10.5">
+        <Band surface="border-t border-sand-275 bg-sand-50" className="flex flex-col gap-4 px-12 pt-8.5 pb-10.5">
           {/* Açıklama satırı YOK. Bir süre "aile üyeleri burada tekrar edilmez" yazıyordu; kural
               değişti (04.08 — her aileden bir temsilci gelebilir) ve cümle yalan oldu. Yerine
               yenisi konmadı: karışık bir liste kendini anlatır, kuralını anlatmasına gerek yok. */}
@@ -242,7 +245,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
               <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.card, priceFrom: undefined }} />
             ))}
           </div>
-        </section>
+        </Band>
       )}
     </div>
   );
