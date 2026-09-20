@@ -36,6 +36,11 @@ interface Dilekce {
   summary: string;
   reason: string | null;
   payload: Record<string, unknown>;
+  /**
+   * "Onaylamadan önce" maddeleri (`0042`). Fikstürde DOLU olmak zorunda: ekranın dört uyarı sınıfı
+   * da (okunamadı · üzerine yazılır · dokunulmadı · geri alınamaz) ancak gerçek bir satırla sınanır.
+   */
+  warnings?: Array<{ field?: string; level: 'unclear' | 'overwrite' | 'untouched' | 'irreversible'; note?: string }>;
   status?: AssistantProposalStatus;
   /** Kaç gün sonra sönecek; `expired` dilekçede GEÇMİŞ bir değer verilir. */
   ttlGun?: number;
@@ -294,27 +299,90 @@ export function dilekceler(c: Capalar, kalemler: VaryantRef[], varyantlar: Varya
     },
   });
 
+  /*
+    ÜRÜN TASLAĞI — kuyruğun EN DOLU dilekçesi ve bilinçli öyle: öneri sütununun altı bölümü de
+    (kimlik · gerekçe · uyarılar · sapmalar · önerinin tamamı · künye) ancak her alanı dolu bir
+    satırla ekranda görülebiliyor. Beyanlar üç dilde, künye alanları, bir boyun ölçüleri ve
+    ambalaj kodu bir arada; `currentFields` de dolu, yoksa "üzerine yazılacak" uyarısı test
+    edilemezdi.
+  */
   liste.push({
     kind: 'product_draft',
     summary: `Beyan tamamlama — ${ucuncu!.ad}`,
-    reason: 'Ambalaj fotoğrafından okunan alanlar kayıtta boş.',
+    reason: 'Ambalaj fotoğrafları okundu; açıklama, içindekiler, saklama, alerjen ve besin alanları doğrudan etiketten alındı.',
+    warnings: [
+      {
+        field: 'ingredients',
+        level: 'unclear',
+        note: 'Etikette satır başları kesik ve parlak; en net metin DE. TR karşılığı çeviriyle tamamlandı.',
+      },
+      {
+        field: 'description',
+        level: 'overwrite',
+        note: 'Şimdiki metin operatör yazımı. Yeni metin yasal adı ve pişirme yöntemini içeriyor.',
+      },
+      { field: 'piecesCount', level: 'untouched', note: 'Boy etiketi adet yazmıyor; kayıttaki değer olduğu gibi bırakıldı.' },
+    ],
     payload: {
       productId: ucuncu!.productId,
       productName: ucuncu!.ad,
       fields: {
+        name: { tr: ucuncu!.ad, fr: ucuncu!.ad, de: ucuncu!.ad },
+        description: {
+          tr: 'Tereyağlı hamurun içine ceviz konularak elde açılan, fırında pişirilmiş geleneksel kurabiye.',
+          fr: 'Biscuit traditionnel à la pâte au beurre garnie de noix, étalé à la main et cuit au four.',
+          de: 'Traditionelles Gebäck aus handgezogenem Butterteig mit Walnussfüllung, im Ofen gebacken.',
+        },
         ingredients: {
-          tr: 'Un, tereyağı, şeker, ceviz, su, tuz.',
-          fr: 'Farine, beurre, sucre, noix, eau, sel.',
-          de: 'Mehl, Butter, Zucker, Walnüsse, Wasser, Salz.',
+          tr: 'Buğday unu (GLUTEN), tereyağı (SÜT), şeker, ceviz (SERT KABUKLU), su, tuz.',
+          fr: 'Farine de blé (GLUTEN), beurre (LAIT), sucre, noix (FRUITS À COQUE), eau, sel.',
+          de: 'Weizenmehl (GLUTEN), Butter (MILCH), Zucker, Walnüsse (SCHALENFRÜCHTE), Wasser, Salz.',
         },
         storageInstructions: {
-          tr: 'Serin ve kuru yerde saklayın.',
-          fr: 'Conserver au frais et au sec.',
-          de: 'Kühl und trocken lagern.',
+          tr: 'Serin ve kuru yerde saklayın. Ambalajı açtıktan sonra ağzı kapalı kapta tüketin.',
+          fr: 'Conserver au frais et au sec. Après ouverture, garder dans un récipient hermétique.',
+          de: 'Kühl und trocken lagern. Nach dem Öffnen in einem verschlossenen Behälter aufbewahren.',
+        },
+        allergens: ['gluten', 'sut', 'sert_kabuklu'],
+        traces: ['yumurta', 'susam'],
+        nutrition: {
+          energyKj: 1980,
+          energyKcal: 473,
+          fatG: 26.4,
+          saturatedFatG: 13.1,
+          carbohydrateG: 52.3,
+          sugarsG: 18.7,
+          proteinG: 6.2,
+          saltG: 0.42,
         },
       },
-      uncertainFields: ['nutrition'],
-      remainingGaps: ['nutrition'],
+      identity: {
+        dateType: 'DDM',
+        shelfLifeDays: 180,
+        shippable: true,
+        storageType: 'ambient',
+      },
+      variants: [
+        {
+          variantId: ucuncu!.id,
+          variantLabel: '500 g',
+          netQuantity: 500,
+          netUnit: 'g',
+          piecesCount: 2,
+          portionKind: 'package',
+          packedWeightG: 540,
+          packedLengthMm: 240,
+          packedWidthMm: 160,
+          packedHeightMm: 70,
+        },
+      ],
+      // Eski hâl OKUNDU ve dolu: "üzerine yazılacak" uyarısının dayanağı bu. Gelmeseydi ekran
+      // neyin kaybolacağını söyleyemez, "eski hâl okunamadı" derdi (`ProductDraftPayloadSchema`).
+      currentFields: {
+        description: { tr: 'Cevizli kurabiye.', fr: '', de: '' },
+      },
+      uncertainFields: ['ingredients'],
+      remainingGaps: [],
     },
   });
 
@@ -596,6 +664,9 @@ export async function seedAssistantProposals(db: Db, varyantlar: VaryantRef[], k
       payload: d.payload,
       summary: d.summary,
       reason: d.reason,
+      // Boş dizi ile `null` ayrı şeyler: boş dizi "işaretlenen bir şey yok" der ve ekran onu yazar,
+      // `null` aracın hiç konuşmadığı hâldir. Fikstür ikisini de üretmeli ki iki hâl de görünsün.
+      warnings: d.warnings ?? null,
       status: d.status ?? 'pending',
       // Doğum TTL'den yedi gün öncesi. Sabit `now()` bırakılamazdı: sönmüş dilekçenin `expires_at`i
       // geçmişte ve veri `expires_at > created_at` istiyor (`assistant_proposal_ttl`) — kısıt haklı,
