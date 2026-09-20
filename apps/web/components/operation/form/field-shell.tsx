@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AssistantField } from './assistant-field';
 import { CONTROL_H, type ControlSize } from '../ui/control';
 
 /**
@@ -15,25 +16,33 @@ interface FieldShellProps {
   error?: string;
   children: ReactNode;
   className?: string;
+  /**
+   * Kutuyu ASİSTAN doldurdu — zemini mor olur (`AssistantField`). İşaret buraya bağlı çünkü kutunun
+   * etiket satırı zaten dolu: oraya sıkışan bir rozet taranırken atlanıyordu, üstelik kutunun kendi
+   * açıklamasının yerini alıyordu.
+   */
+  assistant?: boolean;
 }
 
-export function FieldShell({ fieldId, label, required, labelAside, error, children, className }: FieldShellProps) {
+export function FieldShell({ fieldId, label, required, labelAside, error, children, className, assistant }: FieldShellProps) {
   return (
-    <div className={['flex flex-col gap-1.5', className].filter(Boolean).join(' ')}>
-      <label htmlFor={fieldId} className="flex items-center justify-between font-ops-body text-ops-xs text-ops-body">
-        <span>
-          {label}
-          {required ? <span className="text-ops-red-dot"> *</span> : null}
-        </span>
-        {labelAside ? <span className="font-ops-body text-ops-xs text-ops-faint">{labelAside}</span> : null}
-      </label>
-      {children}
-      {error ? (
-        <p id={fieldId ? `${fieldId}-error` : undefined} role="alert" className="font-ops-body text-ops-xs font-semibold text-ops-red">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    <AssistantField on={assistant ?? false}>
+      <div className={['flex flex-col gap-1.5', className].filter(Boolean).join(' ')}>
+        <label htmlFor={fieldId} className="flex items-center justify-between font-ops-body text-ops-xs text-ops-body">
+          <span>
+            {label}
+            {required ? <span className="text-ops-red-dot"> *</span> : null}
+          </span>
+          {labelAside ? <span className="font-ops-body text-ops-xs text-ops-faint">{labelAside}</span> : null}
+        </label>
+        {children}
+        {error ? (
+          <p id={fieldId ? `${fieldId}-error` : undefined} role="alert" className="font-ops-body text-ops-xs font-semibold text-ops-red">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </AssistantField>
   );
 }
 
@@ -67,10 +76,35 @@ const CONTROL_SIZE: Record<ControlSize, { base: string; multiline: string; trail
  */
 export function controlClass(
   error?: string,
-  opts?: { size?: ControlSize; mono?: boolean; extra?: string; trailing?: boolean; multiline?: boolean; fullWidth?: boolean },
+  opts?: {
+    size?: ControlSize;
+    mono?: boolean;
+    extra?: string;
+    trailing?: boolean;
+    multiline?: boolean;
+    fullWidth?: boolean;
+    /**
+     * ÇIPLAK: kendi kenarlığı ve köşesi YOK — kutu bir `JoinedField`in içinde yaşıyor ve çerçeveyi
+     * o çiziyor. Sınıfı `extra` ile ezmek denenemez: `border-0` ile `border` aynı utility'yi
+     * yazıyor ve kazananı kaynak sırası belirliyor (`fullWidth` künyesindeki arızanın aynısı).
+     */
+    bare?: boolean;
+  },
 ): string {
   const key = opts?.size ?? 'md';
   const size = CONTROL_SIZE[key];
+  if (opts?.bare) {
+    return [
+      'min-w-0 bg-transparent text-ops-ink outline-none disabled:cursor-not-allowed disabled:opacity-60',
+      opts.fullWidth === false ? undefined : 'w-full',
+      key === 'sm' ? 'px-2 text-ops-sm' : 'px-[13px] text-ops-base',
+      opts.multiline ? size.multiline : CONTROL_H[key],
+      opts.mono ? 'font-ops-mono' : 'font-ops-body',
+      opts.extra,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
   return [
     'border bg-ops-white text-ops-ink outline-none transition-colors focus:border-ops-olive disabled:cursor-not-allowed disabled:opacity-60',
     opts?.fullWidth === false ? undefined : 'w-full',

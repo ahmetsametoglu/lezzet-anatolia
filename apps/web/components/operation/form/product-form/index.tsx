@@ -13,6 +13,7 @@ import { FormSwitch } from '@/components/operation/form/form-switch';
 import { FormMultiSelect } from '@/components/operation/form/form-multi-select';
 import { FormLocalizedText } from '@/components/operation/form/form-localized-text';
 import { FormNutrition } from '@/components/operation/form/form-nutrition';
+import { AssistantField } from '@/components/operation/form/assistant-field';
 import { AllergenField } from './allergen-field';
 import { VariantEditor } from './variant-editor';
 import { ProductFormDeclaration } from './declaration';
@@ -54,41 +55,29 @@ export function useProductFormFields({
   // Alerjen listesi İKİ alanda birden kullanılır (içerdikleri + çapraz bulaşma) → tek yerde kurulur.
   const allergenOptions = ProductAllergenEnum.options.map((a) => ({ value: a, label: resolveLocalizedText(ALLERGEN_LABELS[a]) }));
 
-  /** Asistanın yazdığı alanın başlığına düşen işaret — yoksa `undefined` (etiket sade kalır). */
-  const mark = (key: keyof ProductFormValues): ReactNode =>
-    filled?.has(key) ? (
-      <span
-        title="Bu kutuyu asistan doldurdu"
-        className="rounded-ops-card border border-ops-violet-line bg-ops-violet-bg px-1.5 py-[1px] font-ops-body text-ops-micro font-medium text-ops-violet"
-      >
-        asistan
-      </span>
-    ) : undefined;
+  /**
+   * Asistanın yazdığı alan mor zemine oturur (`AssistantField`).
+   *
+   * **On üç alanın on üçü de işaretlenir** ve bu bir düzeltmedir: işaret bir tur yalnız altı alanda
+   * vardı (ad · açıklama · içindekiler · saklama · alerjen · iz), oysa dilekçe besin künyesini,
+   * kategoriyi, tarih türünü, raf ömrünü, kargo iznini, saklama rejimini ve boyları da yazıyor.
+   * İşaretsiz gelen yedi alan operatöre kendi kaydı gibi görünüyordu.
+   */
+  const byAssistant = (key: keyof ProductFormValues, node: ReactNode): ReactNode => (
+    <AssistantField on={filled?.has(key) ?? false}>{node}</AssistantField>
+  );
 
   // Çok dilli alan tanımları TEK yerde; dilini dışarıdan alır (dil kartının içi).
-  const nameField = (lang?: Locale) => (
-    <FormLocalizedText
-      control={control}
-      name="name"
-      label="Ürün adı"
-      labelAside={mark('name')}
-      required
-      placeholder="Ürün adı"
-      lang={lang}
-      field="ad"
-    />
-  );
-  const descriptionField = (lang?: Locale) => (
-    <FormLocalizedText
-      control={control}
-      name="description"
-      label="Ürün açıklaması"
-      labelAside={mark('description')}
-      multiline
-      placeholder="Açıklama"
-      lang={lang}
-    />
-  );
+  const nameField = (lang?: Locale) =>
+    byAssistant(
+      'name',
+      <FormLocalizedText control={control} name="name" label="Ürün adı" required placeholder="Ürün adı" lang={lang} field="ad" />,
+    );
+  const descriptionField = (lang?: Locale) =>
+    byAssistant(
+      'description',
+      <FormLocalizedText control={control} name="description" label="Ürün açıklaması" multiline placeholder="Açıklama" lang={lang} />,
+    );
 
   // Alan elemanları tek kez kurulur; sunum yalnız YERLEŞTİRİR (ad + açıklama `content` kartında).
   return {
@@ -103,7 +92,8 @@ export function useProductFormFields({
         )}
       </LocaleCard>
     ),
-    category: (
+    category: byAssistant(
+      'categoryId',
       <FormSelect
         control={control}
         name="categoryId"
@@ -111,7 +101,7 @@ export function useProductFormFields({
         required
         placeholder="Kategori seç"
         options={categories.map((c) => ({ value: c.id, label: c.name }))}
-      />
+      />,
     ),
     vat: (
       <FormMultiToggle
@@ -125,7 +115,8 @@ export function useProductFormFields({
         ]}
       />
     ),
-    dateType: (
+    dateType: byAssistant(
+      'dateType',
       <FormMultiToggle
         control={control}
         name="dateType"
@@ -135,67 +126,80 @@ export function useProductFormFields({
           { key: 'DLC', label: 'DLC · güvenlik' },
           { key: 'DDM', label: 'DDM · kalite' },
         ]}
-      />
+      />,
     ),
-    shelfLife: <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />,
-    allergens: <AllergenField control={control} options={allergenOptions} labelAside={mark('allergens') ?? 'ürünün İÇERDİKLERİ'} />,
-    traces: (
+    shelfLife: byAssistant(
+      'shelfLifeDays',
+      <FormNumber control={control} name="shelfLifeDays" label="Toplam raf ömrü (gün)" integer placeholder="ör. 180" />,
+    ),
+    // Kutunun kendi açıklaması artık HER ZAMAN görünür: işaret `labelAside`i işgal ettiği için
+    // asistan yazdığında "ürünün İÇERDİKLERİ" kayboluyordu ve alerjen ile iz listesi ayırt edilemez oluyordu.
+    allergens: byAssistant('allergens', <AllergenField control={control} options={allergenOptions} labelAside="ürünün İÇERDİKLERİ" />),
+    traces: byAssistant(
+      'traces',
       <FormMultiSelect
         control={control}
         name="traces"
         label="Çapraz bulaşma"
-        labelAside={mark('traces') ?? 'aynı tesiste işlenenler'}
+        labelAside="aynı tesiste işlenenler"
         options={allergenOptions}
         addLabel="+ alerjen seç"
         searchPlaceholder="Alerjen ara…"
-      />
+      />,
     ),
-    nutrition: <FormNutrition control={control} name="nutrition" />,
+    nutrition: byAssistant('nutrition', <FormNutrition control={control} name="nutrition" />),
     // İçindekiler + saklama TEK dil kartında (ad/açıklama ile aynı desen): ikisi de çok dilli, dil bir
     // kez seçilir. Ayrı ayrı sekme taşımaları hem üç sekme barı hem iki AI düğmesi doğuruyordu.
     declarationTexts: (
       <LocaleCard title="Beyan metinleri" completenessOf={watch('ingredients') ?? undefined}>
         {(lang) => (
           <>
-            <FormLocalizedText
-              control={control}
-              name="ingredients"
-              label="İçindekiler"
-              labelAside={mark('ingredients')}
-              multiline
-              rows={5}
-              emphasis
-              emphasisHint="Alerjeni listede yazdığı hâliyle vurgula"
-              placeholder="Un, su, tuz…"
-              lang={lang}
-              field="icindekiler"
-            />
-            <FormLocalizedText
-              control={control}
-              name="storageInstructions"
-              label="Saklama ve hazırlama"
-              labelAside={mark('storageInstructions')}
-              multiline
-              rows={4}
-              emphasis
-              emphasisHint="Önemli uyarıyı vurgula"
-              placeholder="Saklama ve hazırlama"
-              lang={lang}
-              field="saklama"
-            />
+            {byAssistant(
+              'ingredients',
+              <FormLocalizedText
+                control={control}
+                name="ingredients"
+                label="İçindekiler"
+                multiline
+                rows={5}
+                emphasis
+                emphasisHint="Alerjeni listede yazdığı hâliyle vurgula"
+                placeholder="Un, su, tuz…"
+                lang={lang}
+                field="icindekiler"
+              />,
+            )}
+            {byAssistant(
+              'storageInstructions',
+              <FormLocalizedText
+                control={control}
+                name="storageInstructions"
+                label="Saklama ve hazırlama"
+                multiline
+                rows={4}
+                emphasis
+                emphasisHint="Önemli uyarıyı vurgula"
+                placeholder="Saklama ve hazırlama"
+                lang={lang}
+                field="saklama"
+              />,
+            )}
           </>
         )}
       </LocaleCard>
     ),
     // Varyant adı bir ÜRÜN ADIDIR ("1 kg kutu"), açıklama değil.
-    variants: <VariantEditor control={control} />,
+    variants: byAssistant('variants', <VariantEditor control={control} />),
     // Durum seçici bu sözlükte yok: kuyruk ürünün içeriğini yazar, satış eksenine dokunmaz; seçici ürün ekranının alt barında.
-    shippable: <FormSwitch control={control} name="shippable" label="Kargo izni" />,
+    shippable: byAssistant('shippable', <FormSwitch control={control} name="shippable" label="Kargo izni" />),
     /**
      * Saklama rejimi — soğuk zincirin kendisi; vitrinin soğuk zincir işaretini ve iade sonrası akıbeti belirler, kargo izninden ayrıdır.
      * Yan yana duruyorlar ki operatör ikisine birlikte karar versin.
      */
-    storage: <FormSelect control={control} name="storageType" label="Saklama" required options={STORAGE_TYPE_OPTIONS} />,
+    storage: byAssistant(
+      'storageType',
+      <FormSelect control={control} name="storageType" label="Saklama" required options={STORAGE_TYPE_OPTIONS} />,
+    ),
     autoPrice: <FormSwitch control={control} name="autoPrice" label="Otomatik fiyat" />,
     margin: <FormNumber control={control} name="targetMarginPercent" label="Hedef marj (%)" placeholder="ör. 42" />,
   };

@@ -180,6 +180,10 @@ export function AssistantDesktop({
           row={data.selected}
           options={data.options}
           busy={busy}
+          // Gezinme beklemesi PENCEREYE de geçer: karar sonrası sıradaki öneri bu turla geliyor ve
+          // bekleme yalnız ızgaraya söylenirse (eski hâl) diyalog "hazır" görünüp eski öneriyi
+          // gösterir — operatör kaydın yazılmadığını sanır.
+          switching={navPending}
           error={error}
           outcome={outcome}
           onClose={() => onSelect('')}

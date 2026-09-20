@@ -9,7 +9,12 @@
 import { CONTROL_H } from '../ui/control';
 
 /** `cell` (13.09) — tablo hücresindeki seçici: satır yüksekliğine uyar (bkz. `CELL_BASE`). */
-export type TriggerVariant = 'field' | 'chip' | 'cell';
+/**
+ * `joined` — BİRLEŞİK kutunun sağ yarısı (`JoinedField`): kendi çerçevesi yok, soluk zemini ve tek
+ * bir sol ayracı var. Sayı ile birimi/türü tek kutuda tutmanın karşılığı; ayrı iki kutuya
+ * bölündüğünde satır parçalanıyor ve hangi sayının neye ait olduğu kayboluyordu (tasarım kaydı).
+ */
+export type TriggerVariant = 'field' | 'chip' | 'cell' | 'joined';
 
 /**
  * Dolu çipin rengi — ANLAM taşır, süs değil.
@@ -65,6 +70,16 @@ const CHIP_BASE =
 // TABLO HÜCRESİ (13.09, Para defteri): satırın ortasındaki tür/cari seçicisi satır yüksekliğine
 // uyar — `StepButton`ın (26px) ve `Chip` `cell` ölçüsünün gerekçesi. Bar ölçüsü (32px) satırı
 // şişirirdi. Genişlik hücreye bağlı: uzun ad kesilir, hücreyi taşırmaz.
+// BİRLEŞİK kutunun sağ yarısı: çerçeveyi dıştaki `JoinedField` çiziyor, buraya yalnız ayraç ve
+// zemin kalıyor. Odak halkası da dışarıda (`focus-within`) — iki çerçeve iç içe görünürdü.
+const JOINED_BASE =
+  'flex flex-none cursor-pointer items-center justify-between border-l border-ops-line bg-ops-subtle font-ops-body font-medium outline-none transition-colors';
+
+const JOINED_SIZE: Record<'md' | 'sm', string> = {
+  md: `gap-2 px-[11px] text-ops-base ${CONTROL_H.md}`,
+  sm: `gap-1.5 px-2 text-ops-sm ${CONTROL_H.sm}`,
+};
+
 const CELL_BASE =
   'inline-flex h-6 min-w-0 max-w-full cursor-pointer items-center gap-1 rounded-ops-chip border px-2 font-ops-body text-ops-xs font-medium outline-none transition-colors';
 
@@ -81,7 +96,9 @@ export function triggerClass({
   invite = true,
 }: TriggerState): string {
   const parts =
-    variant !== 'field'
+    variant === 'joined'
+      ? [JOINED_BASE, JOINED_SIZE[size], filled ? 'text-ops-body' : 'text-ops-faint']
+      : variant !== 'field'
       ? [
           variant === 'cell' ? CELL_BASE : CHIP_BASE,
           filled

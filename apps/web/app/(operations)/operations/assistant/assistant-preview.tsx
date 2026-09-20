@@ -595,7 +595,7 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
                     : null;
                 const size = [
                   v.netQuantity ? `${num(v.netQuantity)} ${v.netUnit ?? 'g'}` : null,
-                  v.piecesCount ? `${num(v.piecesCount)} ${v.portionKind === 'slice' ? 'dilim' : 'ad.'}` : null,
+                  v.piecesCount ? `${num(v.piecesCount)} ${PORTION_SHORT[v.portionKind ?? 'item']}` : null,
                   v.packedWeightG ? `brüt ${num(v.packedWeightG)} g` : null,
                   dims,
                 ]
@@ -835,6 +835,13 @@ const SIZE_FIELD_LABEL: Record<string, string> = {
   netUnit: 'birim',
   piecesCount: 'adet',
   portionKind: 'porsiyon türü',
+};
+
+/** Porsiyon türünün KISA hâli — kartta yer dar, tam kelime satırı taşırıyor. */
+const PORTION_SHORT: Record<string, string> = {
+  item: 'ad.',
+  slice: 'dilim',
+  package: 'paket',
   packedWeightG: 'kargo ağırlığı (g)',
   packedLengthMm: 'uzunluk (mm)',
   packedWidthMm: 'genişlik (mm)',

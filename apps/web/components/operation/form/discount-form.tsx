@@ -16,6 +16,7 @@ import { MoneyField, PercentField } from './money-input';
 import { DateRangeField } from './date-field';
 import { parseDay, toDay } from './calendar-math';
 import { MultiToggle } from './multi-toggle';
+import { AssistantField } from './assistant-field';
 import { LocaleCard } from './locale-card';
 import { LocalizedTextField } from './localized-text-field';
 import { Select } from './select';
@@ -397,17 +398,6 @@ export function DiscountFormBody({
     return codeUsage?.find((c) => c.code.toUpperCase() === typed)?.usedCount ?? 0;
   };
 
-  /** Etiketin sağ ucu: asistan o kutuyu doldurduysa işaret, yoksa kutunun kendi açıklaması. */
-  const aside = (field: DiscountField, base?: ReactNode): ReactNode =>
-    filled?.has(field) ? (
-      <span className="flex items-center gap-1.5">
-        <FilledMark />
-        {base}
-      </span>
-    ) : (
-      base
-    );
-
   // Bölüm gövdeleri DEĞİŞKENDE: iki yerleşim (tek/çift sütun) aynı JSX'i dizer — alanları yerleşim
   // başına ikinci kez yazmak, bir gün yalnız birinde güncellenen bir kutu demekti (no-duplication).
   const tanimSection = (
@@ -416,7 +406,7 @@ export function DiscountFormBody({
         {/* Tetik TANIM'DA (15.08 üçüncü tur, kullanıcı kararı — başlık barı denendi, geri alındı):
             kupon/kampanya seçimi kuralın kimliği ve kimliğin kartı Tanım. Her kabukta aynı yerde
             durur; diyalog artık başlığına ayrı bir anahtar koymaz. */}
-        <FieldShell label="Tetik" labelAside={aside('trigger')}>
+        <FieldShell label="Tetik" assistant={filled?.has('trigger')}>
           <MultiToggle
             value={values.trigger}
             onChange={(next) => set('trigger', next)}
@@ -428,7 +418,7 @@ export function DiscountFormBody({
           />
         </FieldShell>
 
-        <FieldShell label="Ad" labelAside={aside('name', 'Yalnız sizin listeniz için — müşteri görmez')}>
+        <FieldShell label="Ad" labelAside="Yalnız sizin listeniz için — müşteri görmez" assistant={filled?.has('name')}>
           <Input value={values.name} onChange={(e) => set('name', e.target.value)} placeholder="ör. Bayram indirimi" />
         </FieldShell>
       </SectionCard>
@@ -446,21 +436,26 @@ export function DiscountFormBody({
           <>
             {/* Çeviri alan türü `ad`: indirim etiketi sepette tek satır ve kısa. Açıklama tonunda
                 çevrilse "Hoş geldin indirimi" bir cümleye dönüşür ve satıra sığmaz. */}
-            <LocalizedTextField
-              value={values.publicLabel}
-              onChange={(next) => set('publicLabel', next)}
-              lang={lang}
-              label="Ad"
-              placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
-              maxLength={PUBLIC_LABEL_MAX}
-              field="ad"
-              hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
-            />
+            {/* Müşteriye görünen ad da asistanın yazdığı bir alan ve işareti YOKTU — kutu şemada
+                var, `filled` onu sayıyor, ama ekranda hiçbir şey söylemiyordu. */}
+            <AssistantField on={filled?.has('publicLabel') ?? false}>
+              <LocalizedTextField
+                value={values.publicLabel}
+                onChange={(next) => set('publicLabel', next)}
+                lang={lang}
+                label="Ad"
+                placeholder={(l) => `${PUBLIC_LABEL_PLACEHOLDER[l]}…`}
+                maxLength={PUBLIC_LABEL_MAX}
+                field="ad"
+                hint="Sepette ve mailde indirim satırının yanına yazılır (“İndirim — Hoş geldin indirimi”) — kısa tutun. Boş bırakılırsa müşteri yalnız “İndirim” görür."
+              />
+            </AssistantField>
 
             {values.trigger === 'coupon' ? (
               <FieldShell
                 label="Kupon kodu"
-                labelAside={aside('code', usedCountOf(lang) > 0 ? `${usedCountOf(lang)} kez kullanıldı` : 'boş = bu dilde kod yok')}
+                labelAside={usedCountOf(lang) > 0 ? `${usedCountOf(lang)} kez kullanıldı` : 'boş = bu dilde kod yok'}
+                assistant={filled?.has('code')}
               >
                 {/* Kod HER ZAMAN büyük harfe çevrilir: müşteri "bayram10" yazsa da aynı kupon bulunur
                     (arama harf ayrımsız), ama listede tek bir yazım görünsün. */}
@@ -487,7 +482,7 @@ export function DiscountFormBody({
   const indirimSection = (
     <SectionCard title="İndirim">
       <div className="grid grid-cols-2 gap-3">
-        <FieldShell label="Kapsam" labelAside={aside('scope')}>
+        <FieldShell label="Kapsam" assistant={filled?.has('scope')}>
           <Select
             value={values.scope}
             onChange={(next) => onChange({ ...values, scope: next as DiscountScope, targetId: '' })}
@@ -498,7 +493,7 @@ export function DiscountFormBody({
             ]}
           />
         </FieldShell>
-        <FieldShell label="İndirim tipi" labelAside={aside('type')}>
+        <FieldShell label="İndirim tipi" assistant={filled?.has('type')}>
           <MultiToggle
             value={values.type}
             onChange={(next) => set('type', next)}
@@ -513,7 +508,7 @@ export function DiscountFormBody({
       {/* Hedef seçici kapsam daraldığında TAM genişlikte açılır: kategori/koleksiyon adları uzun,
           yarım hücrede kırpılıyordu. */}
       {values.scope !== 'cart' ? (
-        <FieldShell label={values.scope === 'category' ? 'Kategori' : 'Koleksiyon'} labelAside={aside('target')}>
+        <FieldShell label={values.scope === 'category' ? 'Kategori' : 'Koleksiyon'} assistant={filled?.has('target')}>
           <Select
             value={values.targetId}
             onChange={(next) => set('targetId', next)}
@@ -522,26 +517,29 @@ export function DiscountFormBody({
           />
         </FieldShell>
       ) : null}
-      {values.type === 'percent' ? (
-        <PercentField
-          label="Değer (%)"
-          labelAside={aside('value', 'zorunlu')}
-          id="discount-value"
-          value={values.value}
-          onChange={(next) => set('value', next)}
-          placeholder="ör. 10"
-        />
-      ) : (
-        <MoneyField
-          label="Değer (€)"
-          required
-          labelAside={aside('value')}
-          id="discount-value"
-          value={values.value}
-          onChange={(next) => set('value', next)}
-          placeholder="ör. 5,00"
-        />
-      )}
+      {/* Para ve yüzde kutuları `FieldShell`i kendi içlerinde sarıyor ve işareti dışarıdan almıyor;
+          bu yüzden zemin DIŞTAN veriliyor. Görsel sonuç aynı — ikisi de `AssistantField`. */}
+      <AssistantField on={filled?.has('value') ?? false}>
+        {values.type === 'percent' ? (
+          <PercentField
+            label="Değer (%)"
+            labelAside="zorunlu"
+            id="discount-value"
+            value={values.value}
+            onChange={(next) => set('value', next)}
+            placeholder="ör. 10"
+          />
+        ) : (
+          <MoneyField
+            label="Değer (€)"
+            required
+            id="discount-value"
+            value={values.value}
+            onChange={(next) => set('value', next)}
+            placeholder="ör. 5,00"
+          />
+        )}
+      </AssistantField>
     </SectionCard>
   );
 
@@ -551,28 +549,32 @@ export function DiscountFormBody({
           kısa kutular. Kenar notları yarım hücreye göre kısaldı; "hemen başlar" bilgisini
           placeholder ("Süresiz") zaten taşıyor. */}
       <div className="grid grid-cols-2 gap-3">
-        <MoneyField
-          label="Asgari sepet (€)"
-          labelAside={aside('minBasket', 'boş = yok')}
-          id="discount-min-basket"
-          value={values.minBasket}
-          onChange={(next) => set('minBasket', next)}
-          placeholder="ör. 50,00"
-        />
+        <AssistantField on={filled?.has('minBasket') ?? false}>
+          <MoneyField
+            label="Asgari sepet (€)"
+            labelAside="boş = yok"
+            id="discount-min-basket"
+            value={values.minBasket}
+            onChange={(next) => set('minBasket', next)}
+            placeholder="ör. 50,00"
+          />
+        </AssistantField>
         {/* Geçerlilik TEK alan: başlangıç ve bitiş ayrı kutularda dururken ikisi arasındaki ilişki
             (ters aralık) ancak kaydederken görülüyordu. Aralık seçicide ters seçim zaten kurulamaz. */}
-        <DateRangeField
-          label="Geçerlilik"
-          labelAside={aside('validity', 'boş = süresiz')}
-          from={values.validFrom}
-          to={values.validTo}
-          onChange={(nextFrom, nextTo) => onChange({ ...values, validFrom: nextFrom, validTo: nextTo })}
-          placeholder="Süresiz"
-        />
+        <AssistantField on={filled?.has('validity') ?? false}>
+          <DateRangeField
+            label="Geçerlilik"
+            labelAside="boş = süresiz"
+            from={values.validFrom}
+            to={values.validTo}
+            onChange={(nextFrom, nextTo) => onChange({ ...values, validFrom: nextFrom, validTo: nextTo })}
+            placeholder="Süresiz"
+          />
+        </AssistantField>
       </div>
       {/* Kitin kartlı anahtarı (`ToggleField`) — elle kutu yazılmaz (kullanıcı düzeltmesi 15.08);
           etiket anahtarın HÂLİNİ söyler, karar FieldShell başlığında. */}
-      <FieldShell label="Yalnız ilk sipariş" labelAside={aside('firstOrderOnly')}>
+      <FieldShell label="Yalnız ilk sipariş" assistant={filled?.has('firstOrderOnly')}>
         <ToggleField
           label={values.firstOrderOnly ? 'Yalnız ilk siparişte' : 'Her siparişte geçerli'}
           on={values.firstOrderOnly}
@@ -583,7 +585,7 @@ export function DiscountFormBody({
       {/* Kenar notu tek kutuya sığmıyordu ("boş = sınırsız" ikiye kırılıyordu) — iki kutunun ortak
           kuralı tek ipucu satırına indi (aşağıda); işaret (`aside`) etikette kaldı. */}
       <div className="grid grid-cols-2 gap-3">
-        <FieldShell label="Toplam kullanım" labelAside={aside('limits')}>
+        <FieldShell label="Toplam kullanım" assistant={filled?.has('limits')}>
           <Input
             value={values.maxUses}
             mono
@@ -592,7 +594,7 @@ export function DiscountFormBody({
             placeholder="ör. 100"
           />
         </FieldShell>
-        <FieldShell label="Müşteri başına" labelAside={aside('limits')}>
+        <FieldShell label="Müşteri başına" assistant={filled?.has('limits')}>
           <Input
             value={values.perCustomerLimit}
             mono
@@ -681,15 +683,6 @@ function SectionCard({ title, children }: { title: string; children: ReactNode }
  * okumayı engellemez ve kutu düzenlenince de yerinde kalır (asistanın nereye dokunduğu, operatörün
  * sonra ne yazdığından bağımsız bir olgudur).
  */
-function FilledMark() {
-  return (
-    <span className="flex items-center gap-1 font-ops-body text-ops-micro font-semibold text-ops-violet">
-      <span aria-hidden className="size-1.5 rounded-full bg-ops-violet" />
-      asistan
-    </span>
-  );
-}
-
 /**
  * Kayıttaki kod satırlarını formun dil kutularına dağıtır.
  *

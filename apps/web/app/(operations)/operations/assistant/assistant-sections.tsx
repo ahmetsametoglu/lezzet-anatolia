@@ -183,6 +183,7 @@ export function ProposalDialog({
   row,
   options,
   busy,
+  switching,
   error,
   outcome,
   onClose,
@@ -192,6 +193,12 @@ export function ProposalDialog({
   /** Gövdedeki formların seçenek havuzu — çerçeve içeriğini bilmez, olduğu gibi geçirir. */
   options: AssistantFormOptions;
   busy: boolean;
+  /**
+   * Karar yazıldı, SIRADAKİ öneri geliyor — pencere kapanmadığı için bu bekleme ekranda görünmek
+   * zorunda (kullanıcı ölçümü): düğme bir anda tıklanabilir hâle dönüyor, içerik hâlâ eski öneri
+   * oluyor ve operatör kaydın yazılmadığını sanıyordu.
+   */
+  switching: boolean;
   error: string | null;
   /** BİR ÖNCEKİ önerinin sonucu — bu pencere karardan sonra sıradakiyle açıldıysa tepede yazar. */
   outcome: string | null;
@@ -218,6 +225,11 @@ export function ProposalDialog({
   const body = inlineBodyOf(row.kind);
   const bodyPayload = body ? body.parse(row.payload) : null;
   const inline = body && bodyPayload !== null ? body : null;
+  /**
+   * Pencerenin MEŞGUL hâli tek hesap: karar yazılıyor ya da sıradaki öneri geliyor. İkisi ayrı
+   * ayrı kilitlenseydi geçişin ortasında düğmeler açılır, operatör kararı ikinci kez verirdi.
+   */
+  const pending = busy || switching;
 
   // Taslak ÇERÇEVEDE durur, gövdede değil: kararı yürüten, hatayı gösteren ve kuyruğu tazeleyen
   // taraf burası. Kart `key={row.id}` ile sarılı olduğu için öneri değişince taslak da sıfırlanır.
@@ -242,12 +254,16 @@ export function ProposalDialog({
       // ve yerini kararın dayanağına bıraktı: *"asistan notunu asistan metninin yerine alalım; saat
       // kalsın, bunun yanına yazalım ve fontunu da büyütelim — çünkü bu aslında bize asistanın bir
       // mesajı."* Gerekçe bu yüzden bir punto büyük ve amber; saat sönük kalıyor.
+      // ── GEREKÇE NEREDE DURUR ────────────────────────────────────────────
+      // Gövdesi olan tipte dilekçe SÜTUNU var ve gerekçe orada, kendi bloğunda duruyor (tasarım
+      // kaydı: kimlik → gerekçe → uyarılar). Başlıkta bir kez daha yazmak aynı cümleyi iki yerde
+      // okutmak olurdu. Gövdesiz tipte sütun çizilmiyor — orada gerekçenin tek adresi burası.
       subtitle={
         <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className="flex-none">
-            {`${shortDateTime(row.createdAt)}${live && row.freshness === 'soon' ? ' · tazeliği doluyor' : ''} ·`}
+            {`${shortDateTime(row.createdAt)}${live && row.freshness === 'soon' ? ' · tazeliği doluyor' : ''}${inline ? '' : ' ·'}`}
           </span>
-          <ReasonLine reason={row.reason} />
+          {inline ? null : <ReasonLine reason={row.reason} />}
         </span>
       }
       headerAside={
@@ -264,7 +280,14 @@ export function ProposalDialog({
         live ? (
           <>
             <span className="mr-auto min-w-0 flex-1 font-ops-body text-ops-xs leading-relaxed text-ops-muted">
-              {error ? <span className="font-semibold text-ops-red">{error}</span> : decisionFooterNote(mode)}
+              {error ? (
+                <span className="font-semibold text-ops-red">{error}</span>
+              ) : switching ? (
+                // Bu yüzeyde mor = makine konuşuyor; bekleme de onun işi.
+                <span className="font-semibold text-ops-violet">Sıradaki öneri açılıyor…</span>
+              ) : (
+                decisionFooterNote(mode)
+              )}
             </span>
             {/* "Sonra bak" HİÇBİR ŞEY YAZMAZ, o yüzden onay da sormaz: öneri kuyrukta kalır ve
                 pencere sıradakine geçer. Bir tur onay penceresi açıyordu ve o pencerede "Vazgeç"
@@ -272,12 +295,12 @@ export function ProposalDialog({
             <Button
               variant="secondary"
               onClick={() => onDecision('later')}
-              disabled={busy}
+              disabled={pending}
               title="Öneri kuyrukta kalır; sıradaki öneri açılır"
             >
               Sonra bak
             </Button>
-            <Button variant="danger" onClick={() => onDecision('reject')} disabled={busy}>
+            <Button variant="danger" onClick={() => onDecision('reject')} disabled={pending}>
               Reddet
             </Button>
             {/* ── KARARIN CİNSİNE GÖRE ÜÇÜNCÜ DÜĞME ──────────────────────────────
@@ -303,10 +326,10 @@ export function ProposalDialog({
                 <Button
                   variant="primary"
                   onClick={() => onDecision('apply', draft)}
-                  disabled={busy || blocked !== null}
+                  disabled={pending || blocked !== null}
                   title={blocked ?? undefined}
                 >
-                  {busy ? 'Kaydediliyor…' : applyLabelOf(inline, bodyPayload)}
+                  {busy ? 'Kaydediliyor…' : switching ? 'Açılıyor…' : applyLabelOf(inline, bodyPayload)}
                 </Button>
               </>
             ) : mode === 'inline' ? (
@@ -319,7 +342,7 @@ export function ProposalDialog({
                 </Link>
               ) : null
             ) : (
-              <Button variant={notifyCount === null ? 'primary' : 'warning'} onClick={() => onDecision('apply')} disabled={busy}>
+              <Button variant={notifyCount === null ? 'primary' : 'warning'} onClick={() => onDecision('apply')} disabled={pending}>
                 {notifyCount === null ? 'Uygula' : 'Uygula ve bildirimi gönder'}
               </Button>
             )}
@@ -362,11 +385,22 @@ export function ProposalDialog({
           economics: row.economics,
           subject: row.subject,
           options,
-          // Teknik künye gövdeye ORTAK geçiyor; dilekçe sütununun "Metadata" görünümü onu basıyor.
-          meta: { id: row.id, targetTables: row.targetTables, result: row.result },
+          // Künye gövdeye ORTAK geçiyor ve sütunun kimlik bloğunu da o besliyor: gerekçe ile
+          // uyarılar için ayrı proplar açılsaydı on üç gövdenin on üçü birden düzenlenecekti.
+          meta: {
+            id: row.id,
+            targetTables: row.targetTables,
+            result: row.result,
+            kindLabel: row.kindLabel,
+            createdAt: row.createdAt,
+            reason: row.reason,
+            warnings: row.warnings,
+          },
           draft,
           onDraft: setDraft,
-          disabled: busy || !live,
+          // Geçiş boyunca da kilitli: içerik hâlâ ESKİ öneri ve o forma yazılan bir değerin
+          // gideceği yer yok — birazdan sıradaki öneriyle değişecek.
+          disabled: pending || !live,
           readOnly: !live,
         })
       ) : (

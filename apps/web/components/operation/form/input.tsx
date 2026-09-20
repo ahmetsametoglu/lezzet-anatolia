@@ -25,12 +25,14 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
    * `group-hover` / `group-focus-within` ile kutunun hâline bağlayabilir.
    */
   trailing?: ReactNode;
+  /** Çerçevesiz hâl — kutu bir `JoinedField`in içinde yaşıyor, kenarlığı o çiziyor. */
+  bare?: boolean;
 }
 
-export function Input({ inputSize = 'md', mono = false, error, trailing, fullWidth, className, ...rest }: InputProps) {
+export function Input({ inputSize = 'md', mono = false, error, trailing, fullWidth, bare, className, ...rest }: InputProps) {
   const input = (
     <input
-      className={controlClass(error, { size: inputSize, mono, extra: className, trailing: Boolean(trailing), fullWidth })}
+      className={controlClass(error, { size: inputSize, mono, extra: className, trailing: Boolean(trailing), fullWidth, bare })}
       aria-invalid={error ? 'true' : undefined}
       {...rest}
     />

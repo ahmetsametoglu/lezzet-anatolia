@@ -1,12 +1,21 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { barcodeProblem } from '@lezzet/domain-core';
-import { resolveLocalizedText, type BarcodeKind, type LocalizedText, type NetUnit, type VariantBarcode } from '@lezzet/types';
+import {
+  resolveLocalizedText,
+  type BarcodeKind,
+  type LocalizedText,
+  type NetUnit,
+  type PortionKind,
+  type VariantBarcode,
+} from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
+import { JoinedField, JoinedSeparator, JoinedSuffix } from '@/components/operation/form/joined-field';
+import { TagBox } from '@/components/operation/form/tag-box';
 import { LocaleTabs } from '@/components/operation/form/locale-tabs';
 import { Toggle } from '@/components/operation/form/toggle';
 import { TranslateInput } from '@/components/operation/form/translate-input';
@@ -28,11 +37,13 @@ import type { ProductFormValues } from './schema';
 // seçicisinin sırasıdır → sürüklenebilir. Tutamak AYRI (`grab="handle"`): satır girdi dolu, satırın
 // kendisinden sürüklemek metin seçmeyi bozardı.
 
-// Tutamak · Etiket (esner) · SKU · Net · Min · Aktif · sil
-// "Adet" sütunu `Net (g)`in HEMEN YANINA girdi (arka-uc talebi 09.08) ve yerine değil: 72'lik bir
-// kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer
-// kaplar"). Genişliği 52px — başlığı kısa, değeri iki haneli.
-const CELL = 'grid grid-cols-[18px_minmax(0,1fr)_104px_112px_52px_60px_38px_26px] items-center gap-x-2';
+// Tutamak · Etiket (esner) · SKU · Net miktar · İçindeki · Min · Aktif · sil
+//
+// "Adet" sütunu `İÇİNDEKİ` oldu ve porsiyon TÜRÜNÜ de o taşıyor (tasarım kaydı · kullanıcı sorusu):
+// sayı ile türü ayrı yerlerde duruyordu — "10" tabloda, "adet mi dilim mi" ambalaj şeridinde. İkisi
+// tek soruya cevap veriyor ("neyin kaçı") ve ayrıldıklarında ikisi de yarım okunuyordu. Porsiyon
+// ambalaj şeridine yer darlığından konmuştu, ambalajla ilgisi yok: içindekini anlatıyor.
+const CELL = 'grid grid-cols-[22px_minmax(0,1fr)_116px_150px_138px_96px_56px_26px] items-center gap-x-2.5';
 
 /**
  * Satırın BARKODLARI — kayıtlı olanlar ve kaydedilince bağlanacak olanlar bir arada.
@@ -80,6 +91,9 @@ function BarcodeCell({
 
         return (
           <SubRow label="Barkod">
+            <span className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className="font-ops-body text-ops-micro text-ops-muted">kayıtlı kodlar · kaydedilince varyanta bağlanır</span>
+              <TagBox>
             {saved.map((code) => (
               <BarcodeChip
                 key={code.id}
@@ -106,7 +120,8 @@ function BarcodeCell({
             <Input
               inputSize="sm"
               mono
-              className="w-[168px]"
+              bare
+              className="w-[186px] px-1"
               fullWidth={false}
               value={draft}
               onChange={(e) => {
@@ -119,20 +134,23 @@ function BarcodeCell({
                 e.preventDefault();
                 ekle();
               }}
-              placeholder="ambalajdaki kod"
+              // Yokluk PLACEHOLDER'da söylenir: boş bir kutunun yanına "kayıtlı kod yok" diye ayrı
+              // bir satır yazmak, olmayan bir şeyi iki kez anlatmak olurdu.
+              placeholder={
+                saved.length + pending.length === 0 ? 'kod yaz, Enter ile ekle · kayıtlı kod yok' : 'kod yaz, Enter ile ekle'
+              }
               aria-label="Yeni barkod"
-              error={problem ?? undefined}
               title={problem ?? 'Ambalajın üstündeki kod. Koli barkodu buradan yazılmaz: kolinin kaç paket saydığını mal kabul sorar.'}
             />
-            <button
-              type="button"
-              onClick={ekle}
-              disabled={draft.trim().length === 0}
-              className="cursor-pointer rounded-[6px] border border-ops-line px-2 py-1 font-ops-display text-ops-micro text-ops-muted hover:border-ops-violet hover:text-ops-violet disabled:cursor-default disabled:opacity-40"
-              title="Kaydedilince bu boya bağlanır"
-            >
-              Ekle
-            </button>
+              </TagBox>
+              {/* Hata kutunun ALTINDA: çiplerin arasına kırmızı bir çerçeve koymak, hangi çipin
+                  sorunlu olduğunu söylüyormuş gibi okunurdu — oysa sorun yazılan kodda. */}
+              {problem ? (
+                <span role="alert" className="font-ops-body text-ops-micro font-semibold text-ops-red">
+                  {problem}
+                </span>
+              ) : null}
+            </span>
           </SubRow>
         );
       }}
@@ -190,9 +208,11 @@ function BarcodeChip({
  */
 function SubRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[62px_minmax(0,1fr)] items-start gap-x-2 px-[13px] pb-2 pl-[31px]">
-      <span className="pt-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">{label}</span>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">{children}</div>
+    <div className="grid grid-cols-[62px_minmax(0,1fr)] items-start gap-x-2 px-[13px] pb-2.5 pl-[31px]">
+      {/* Etiket kutuların değil KUTU BAŞLIKLARININ hizasında: alanlar artık iki satırlı (üstte ne
+          olduğu, altında kutusu) ve etiket tepeye yapışınca şerit sola devrilmiş görünüyordu. */}
+      <span className="pt-[19px] font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">{label}</span>
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">{children}</div>
     </div>
   );
 }
@@ -206,16 +226,16 @@ function SubRow({ label, children }: { label: string; children: ReactNode }) {
  */
 function NetQuantityCell({ control, index }: { control: Control<ProductFormValues>; index: number }) {
   return (
-    <div className="flex items-center gap-1">
+    <JoinedField>
       <Controller
         control={control}
         name={`variants.${index}.netQuantity`}
         render={({ field }) => (
           <NumberCell
+            bare
             value={field.value}
             onChange={field.onChange}
             onBlur={field.onBlur}
-            className="w-[62px]"
             title="Ambalajda yazan net miktar — satışa çıkmanın şartı"
           />
         )}
@@ -226,7 +246,8 @@ function NetQuantityCell({ control, index }: { control: Control<ProductFormValue
         render={({ field }) => (
           <Select
             size="sm"
-            className="w-[46px]"
+            variant="joined"
+            className="flex"
             value={field.value ?? 'g'}
             onChange={(v) => field.onChange(v as NetUnit)}
             ariaLabel="Net miktarın birimi"
@@ -237,12 +258,13 @@ function NetQuantityCell({ control, index }: { control: Control<ProductFormValue
           />
         )}
       />
-    </div>
+    </JoinedField>
   );
 }
 
 /** Sayı hücresi — Net miktar ve Min. stok aynı davranışı paylaşır (boş = bilinmiyor / eşik yok). */
 function NumberCell({
+  bare,
   value,
   onChange,
   onBlur,
@@ -253,6 +275,8 @@ function NumberCell({
   value: number | null | undefined;
   onChange: (v: number | null) => void;
   onBlur: () => void;
+  /** Çerçevesiz hâl — kutu bir `JoinedField`in içinde, kenarlığı o çiziyor. */
+  bare?: boolean;
   /** Ambalaj satırındaki dar kutular için — tablo hücresinde verilmez (ızgara genişliği yönetir). */
   className?: string;
   title?: string;
@@ -262,6 +286,7 @@ function NumberCell({
     <Input
       inputSize="sm"
       mono
+      bare={bare}
       inputMode="numeric"
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
@@ -281,7 +306,55 @@ const PORTION_OPTIONS = [
   { value: '', label: '—' },
   { value: 'item', label: 'adet' },
   { value: 'slice', label: 'dilim' },
+  { value: 'package', label: 'paket' },
 ];
+
+/**
+ * İÇİNDEKİ hücresi — kaç parça ve NEYİN kaçı, tek kutuda (tasarım kaydı).
+ *
+ * `piecesCount` "kaç" der, `portionKind` "neyin kaçı": 4'lü simit paketi "4 adet", 12 dilimlik
+ * cheesecake "12 dilim", çift paket "2 paket". Vitrin üçüne aynı kelimeyi yazamaz — "12 adet
+ * cheesecake" 12 pasta demek olurdu (`portion_kind` künyesi, 0005).
+ *
+ * İkisi bir tur AYRI YERLERDEYDİ: sayı tabloda, tür ambalaj şeridinde. Tür oraya yer darlığından
+ * konmuştu ve ambalajla hiç ilgisi yok — ambalajın İÇİNDEKİNİ anlatıyor. Ayrıldıkları sürece ikisi
+ * de yarım okunuyordu: "10" neyin onu, "dilim" neyin dilimi.
+ */
+function ContentsCell({ control, index }: { control: Control<ProductFormValues>; index: number }) {
+  return (
+    <JoinedField>
+      <Controller
+        control={control}
+        name={`variants.${index}.piecesCount`}
+        render={({ field }) => (
+          <NumberCell
+            bare
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            className="w-[46px]"
+            title="Kutudaki parça sayısı — dökme üründe boş bırakın"
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name={`variants.${index}.portionKind`}
+        render={({ field }) => (
+          <Select
+            size="sm"
+            variant="joined"
+            className="flex min-w-0 flex-1"
+            value={field.value ?? ''}
+            onChange={(v) => field.onChange(v === '' ? null : (v as PortionKind))}
+            ariaLabel="Porsiyon türü"
+            options={PORTION_OPTIONS}
+          />
+        )}
+      />
+    </JoinedField>
+  );
+}
 
 /**
  * **AMBALAJ SATIRI** (07.12) — varyantın fiziksel gerçeği: kutuda ne var, kutu ne kadar yer kaplar.
@@ -297,62 +370,66 @@ const PORTION_OPTIONS = [
  * **`netQuantity` ile karışmasın diye BRÜT yazıyor** ve ipucu farkı açıklıyor: biri beyan (içindeki
  * gıda), öteki taşınan (ürün + ambalaj). İkisi aynı satırda görünmüyor ki operatör hangisini
  * doldurduğunu bilsin.
+ *
+ * **Porsiyon türü BURADAN ÇIKTI** (tasarım kaydı): ambalajın değil İÇİNDEKİNİN bilgisiydi ve buraya
+ * yalnız tabloda yer kalmadığı için konmuştu. Artık sayısının yanında, "İçindeki" kolonunda.
  */
 function PackingRow({ control, index }: { control: Control<ProductFormValues>; index: number }) {
-  const box = 'w-[58px]';
   return (
     <SubRow label="Ambalaj">
-      <span className="font-ops-body text-ops-micro text-ops-muted">porsiyon</span>
-      <Controller
-        control={control}
-        name={`variants.${index}.portionKind`}
-        render={({ field }) => (
-          <Select
-            value={field.value ?? ''}
-            onChange={(v) => field.onChange(v === '' ? null : (v as 'item' | 'slice'))}
-            options={PORTION_OPTIONS}
-            className="w-[86px]"
-          />
-        )}
-      />
-
-      <span className="ml-1 font-ops-body text-ops-micro text-ops-muted">brüt ağırlık</span>
-      <Controller
-        control={control}
-        name={`variants.${index}.packedWeightG`}
-        render={({ field }) => (
-          <NumberCell
-            value={field.value}
-            onChange={field.onChange}
-            onBlur={field.onBlur}
-            className={box}
-            title="Ambalajıyla birlikte ağırlık (g) — kargo tarifesi bunu okur. Net ağırlıkla karıştırmayın: o beyan, bu taşınan."
-          />
-        )}
-      />
-      <span className="font-ops-body text-ops-micro text-ops-faint">g</span>
-
-      <span className="ml-1 font-ops-body text-ops-micro text-ops-muted">ölçü</span>
-      {(['packedLengthMm', 'packedWidthMm', 'packedHeightMm'] as const).map((name, n) => (
-        <span key={name} className="flex items-center gap-1">
-          {n > 0 && <span className="font-ops-body text-ops-micro text-ops-faint">×</span>}
+      <span className="flex flex-col gap-1">
+        <span className="font-ops-body text-ops-micro text-ops-muted">brüt ağırlık</span>
+        <JoinedField className="w-[118px]">
           <Controller
             control={control}
-            name={`variants.${index}.${name}`}
+            name={`variants.${index}.packedWeightG`}
             render={({ field }) => (
               <NumberCell
+                bare
                 value={field.value}
                 onChange={field.onChange}
                 onBlur={field.onBlur}
-                className={box}
-                placeholder={['boy', 'en', 'yük.'][n]}
-                title="Kutunun dış ölçüsü (mm). Üçü birlikte doldurulur — ikisi dolu biri boş bir kutu hesaplanamaz."
+                title="Ambalajıyla birlikte ağırlık (g) — kargo tarifesi bunu okur. Net miktarla karıştırmayın: o beyan, bu taşınan."
               />
             )}
           />
-        </span>
-      ))}
-      <span className="font-ops-body text-ops-micro text-ops-faint">mm</span>
+          <JoinedSuffix>g</JoinedSuffix>
+        </JoinedField>
+      </span>
+
+      {/* ÜÇ ÖLÇÜ TEK KUTUDA (tasarım kaydı): üçü BİR ölçüdür ve ayrı kutulara bölündüğünde satır
+          üçe dağılıyordu. Kutu ayrıca birlikte doldurulma kuralını da söylüyor — ikisi dolu biri
+          boş bir koli hesaplanamaz, canlı kargo teklifi alınamaz. */}
+      <span className="flex flex-col gap-1">
+        <span className="font-ops-body text-ops-micro text-ops-muted">ölçü · en × boy × yükseklik</span>
+        <JoinedField className="w-[230px] px-[9px]">
+          {(['packedLengthMm', 'packedWidthMm', 'packedHeightMm'] as const).map((name, n) => (
+            <Fragment key={name}>
+              {n > 0 ? <JoinedSeparator /> : null}
+              <Controller
+                control={control}
+                name={`variants.${index}.${name}`}
+                render={({ field }) => (
+                  <NumberCell
+                    bare
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    className="px-1 text-center"
+                    placeholder="—"
+                    title="Kutunun dış ölçüsü (mm). Üçü birlikte doldurulur — ikisi dolu biri boş bir kutu hesaplanamaz."
+                  />
+                )}
+              />
+            </Fragment>
+          ))}
+          <JoinedSuffix>mm</JoinedSuffix>
+        </JoinedField>
+      </span>
+
+      <span className="max-w-[300px] self-end pb-1.5 font-ops-body text-ops-micro leading-relaxed text-ops-muted">
+        Kargonun girdisi: brüt ağırlık ürünün kendi paketiyle birlikte ağırlığıdır, net miktar beyanda durur.
+      </span>
     </SubRow>
   );
 }
@@ -445,7 +522,9 @@ export function VariantEditor({ control }: VariantEditorProps) {
           <span>Etiket ({lang.toUpperCase()})</span>
           <span>SKU</span>
           <span title="Ambalajdaki net miktar ve birimi — katıda gram, sıvıda mililitre">Net miktar</span>
-          <span title="Kutudaki parça sayısı — 12'li baklava kutusu → 12. Dökme üründe boş bırakın.">Adet</span>
+          <span title="Kutunun İÇİNDEKİ: kaç parça ve neyin kaçı — 12'li baklava → 12 adet, dilimli pasta → 12 dilim. Dökme üründe boş bırakın.">
+            İçindeki
+          </span>
           <span title="Bu eşiğin altına düşünce stok uyarısı çıkar">Min. stok</span>
           <span className="text-center">Aktif</span>
           <span />
@@ -525,14 +604,10 @@ export function VariantEditor({ control }: VariantEditorProps) {
                 {/* Net miktar SAYI + BİRİM: gramla sınırlı bir kutu sıvıyı hiç yazamıyordu ve birim
                     fiyat da buradan seçiliyor (g → €/kg, ml → €/L). Satışa çıkmanın şartı (0005). */}
                 <NetQuantityCell control={control} index={i} />
-                {/* Paket içi adet — BOŞ bırakılabilir ve boş `null` demektir: "adet bildirilmemiş"
-                    (dökme ürün). Sıfır DEĞİL; sıfır "içinde hiç parça yok" derdi (`CLAUDE §1`).
-                    `NumberCell` zaten boşu `null`a çeviriyor, o yüzden ayrı bir kural yok. */}
-                <Controller
-                  control={control}
-                  name={`variants.${i}.piecesCount`}
-                  render={({ field }) => <NumberCell value={field.value} onChange={field.onChange} onBlur={field.onBlur} />}
-                />
+                {/* İÇİNDEKİ: sayı + neyin sayısı. Boş bırakılabilir ve boş `null` demektir ("adet
+                    bildirilmemiş", dökme ürün) — sıfır DEĞİL; sıfır "içinde hiç parça yok" derdi
+                    (`CLAUDE §1`). */}
+                <ContentsCell control={control} index={i} />
                 <Controller
                   control={control}
                   name={`variants.${i}.minStockQty`}

@@ -53,11 +53,23 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
    *
    * Kuyruk arka arkaya işlenen bir iştir; her karardan sonra ızgaraya dönüp yeni bir kart aramak
    * operatörü sırayı elle takip etmeye zorluyordu. Sıra ekranda görünen sıradır (`assistant-queue`).
+   *
+   * ── TAZELEME İLE GEZİNME AYNI GEÇİŞTE, VE BU SIRAYLA (kullanıcı ölçümü) ───
+   * `router.refresh()` bir tur geçişin DIŞINDA çağrılıyordu ve ikisi yarışıyordu: tazeleme hâlâ
+   * ESKİ adresi (eski `p`) yeniliyor, dönen çıktı da gezinmenin getirdiği yeni seçimi eziyordu —
+   * ekranda sıradaki öneri hiç açılmıyordu. Aynı geçişe alınınca sıra belli oluyor (önce veriyi
+   * tazele, sonra adrese git) ve `navPending` ikisini birden kapsıyor: pencere geçiş boyunca
+   * meşgul kalabiliyor.
    */
-  const goNext = () => {
+  const goNext = ({ refresh }: { refresh: boolean }) => {
     setDecision(null);
     setError(null);
-    go({ p: selected ? nextProposalId(visibleRows, selected.id) : '' });
+    const next = selected ? nextProposalId(visibleRows, selected.id) : '';
+    startNav(() => {
+      // Atlamada tazelemeye gerek yok: hiçbir kayıt değişmedi, yalnız sıra ilerliyor.
+      if (refresh) router.refresh();
+      router.replace(assistantUrl({ ...urlState, p: next }), { scroll: false });
+    });
   };
 
   /**
@@ -75,7 +87,7 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
     if (kind === 'later') {
       // Atlanan öneri bir sonuç doğurmadı; önceki kararın cümlesi de artık geride kaldı.
       setOutcome(null);
-      goNext();
+      goNext({ refresh: false });
       return;
     }
 
@@ -98,8 +110,7 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
           return;
         }
         setOutcome(appliedNoteOf(body, payload));
-        goNext();
-        router.refresh();
+        goNext({ refresh: true });
         return;
       }
 
@@ -124,9 +135,8 @@ export function AssistantClient({ data, urlState }: AssistantClientProps) {
         setOutcome('Reddedildi. Öneri silinmedi, ret notuyla karar geçmişine düştü.');
       }
 
-      goNext();
-      // Action zaten `revalidatePath` çağırdı; `refresh` o taze RSC çıktısını ekrana getirir.
-      router.refresh();
+      // Action zaten `revalidatePath` çağırdı; tazeleme o taze RSC çıktısını ekrana getirir.
+      goNext({ refresh: true });
     } finally {
       setBusy(false);
     }
