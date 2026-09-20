@@ -51,6 +51,11 @@ export interface UrunKunyesi {
    * Hazırlama adımları — müşterinin SIRAYLA yaptığı hareketler; sıra dizinin kendisidir, numarayı ekran basar.
    * Raf ürününün çoğunda boş: pekmezin, sirkenin, macunun hazırlanması yoktur ve boş dizi "adım girilmedi" demektir.
    * Zorunlu takviye ibareleri (doz, "ilaç değildir") adım DEĞİL beyandır; `storage`ta kalır.
+   *
+   * **EN ÇOK ÜÇ ADIM** (işletmeci kararı 20.09): tasarımın saklama kartı üç satır çiziyor ve kart, künyenin
+   * öteki iki kartıyla aynı ızgarada (`repeat(3,1fr)`) duruyor — dördüncü satır ötekileri de uzatırdı.
+   * Etiket daha çok adım yazıyorsa İÇERİK KORUNUR, sınır kaydırılır: birbirini izleyen iki hareket virgülle
+   * tek adıma alınır ("10 dakika haşlayın, sonra suyunu süzün"). Etiketten cümle ATILMAZ.
    */
   preparationSteps?: LocalizedText[];
   shelfLifeDays?: number;

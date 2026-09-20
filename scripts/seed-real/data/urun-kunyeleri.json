@@ -2174,19 +2174,19 @@
     ],
     "preparationSteps": [
       {
-        "tr": "Donuk mantıyı poşetinden çıkarıp kaynayan tuzlu suya atın.",
-        "fr": "Sortez les mantı du sachet et jetez-les surgelés dans l'eau bouillante salée.",
-        "de": "Die Mantı aus der Tüte nehmen und gefroren in kochendes Salzwasser geben."
+        "tr": "Donuk haldeki mantınızı poşetinden çıkarıp tencerede kaynayan tuzlu suyun içine atın.",
+        "fr": "Retirez les mantı congelés de leur emballage et mettez-les dans de l'eau bouillante salée.",
+        "de": "Die gefrorenen Mantı aus der Verpackung nehmen und in kochendes Salzwasser geben."
       },
       {
-        "tr": "Hamur kokusu kaybolana dek yaklaşık on dakika haşlayın.",
-        "fr": "Laissez cuire une dizaine de minutes, jusqu'à disparition du goût de pâte crue.",
-        "de": "Etwa zehn Minuten kochen, bis der Teiggeschmack verschwindet."
+        "tr": "Hamur kokusu kaybolana kadar 10 dakika haşlayın, sonra suyunu süzün.",
+        "fr": "Faites-les cuire environ 10 minutes, jusqu'à ce que l'odeur de pâte disparaisse, puis égouttez.",
+        "de": "Etwa 10 Minuten kochen lassen, bis der Teiggeruch verschwunden ist, dann abgießen."
       },
       {
-        "tr": "Suyunu süzüp sarımsaklı yoğurt ve salçalı sosla servis edin.",
-        "fr": "Égouttez et servez avec un yaourt à l'ail et une sauce tomate.",
-        "de": "Abgießen und mit Knoblauchjoghurt und Tomatensauce servieren."
+        "tr": "Tabağa alıp sarımsaklı yoğurt ve üzerine salçalı sosla servis edin.",
+        "fr": "Servez-les dans une assiette avec du yaourt à l'ail et une sauce au concentré de tomate.",
+        "de": "Auf einen Teller geben und mit Knoblauchjoghurt und Tomatenmarksoße servieren."
       }
     ]
   },

@@ -154,6 +154,9 @@ for (const alim of ALIMLAR) {
 // Kuru koşuda henüz yazılmamış kaydın kimliği yerine geçer; yalnız sonraki adımların listelenmesi için.
 const PLANNED = 'planlandı';
 
+/** Ürün detayının saklama kartının taşıdığı adım satırı sayısı (`Musteri - Urun Detay.dc.html`). */
+const ADIM_SINIRI = 3;
+
 const done = (label: string) => console.log(`  · ${label} — var, dokunulmadı`);
 const plan = (label: string) => console.log(`  ${DRY_RUN ? '○' : '✓'} ${label}${DRY_RUN ? ' — eklenecek' : ' — eklendi'}`);
 
@@ -329,6 +332,14 @@ function checkKunyeler(): void {
     throw new Error(
       `künye aynası taslaklarla tutmuyor — künyesiz: ${eksik.join(' · ') || 'yok'} · taslağı olmayan künye: ${fazla.join(' · ') || 'yok'}`,
     );
+  }
+  // Dördüncü adım ekranda çizilmez: kart üç satır taşıyor ve künyenin öteki iki kartıyla aynı ızgarada.
+  // Sığmayan adım silinmez, komşusuyla virgülle birleştirilir (`UrunKunyesi.preparationSteps`).
+  const tasan = Object.entries(KUNYELER)
+    .filter(([, k]) => (k.preparationSteps?.length ?? 0) > ADIM_SINIRI)
+    .map(([ad, k]) => `${ad} (${k.preparationSteps?.length})`);
+  if (tasan.length > 0) {
+    throw new Error(`hazırlama adımı ${ADIM_SINIRI}'ü aşıyor: ${tasan.join(' · ')} — komşu adımları virgülle birleştir`);
   }
 }
 
