@@ -28,6 +28,12 @@ export interface CreateCategoryInput {
    * alt yazısıyla kaydeder, alt yazı sessizce düşer ve ancak müşteri sayfasına bakınca fark ederdi.
    */
   tagline?: LocalizedText | null;
+  /**
+   * "Yapay zekâya sorun" kutusunun hazır sorusu. Doğuşta yazılabilir olması `tagline` ile AYNI
+   * gerekçe: yalnız `edit()`te olsaydı besleme kategoriyi sorusuyla kurar, soru sessizce düşer ve
+   * eksiklik ancak ürün sayfasında kutunun hiç çizilmemesiyle fark edilirdi.
+   */
+  aiQuestion?: LocalizedText | null;
   sortOrder?: number;
   isActive?: boolean;
 }
@@ -37,6 +43,8 @@ interface EditCategoryInput extends Partial<ImageCropFields> {
   name?: LocalizedText;
   /** Alt yazı — gerekçe `CreateCategoryInput.tagline` künyesinde. `null` = alt yazıyı KALDIR. */
   tagline?: LocalizedText | null;
+  /** Hazır soru — `null` = soruyu KALDIR, kutu çizilmez. */
+  aiQuestion?: LocalizedText | null;
   isActive?: boolean;
 }
 
@@ -79,7 +87,14 @@ export class CategoryService extends BaseDbService<Category, CategoryInsert, Cat
   async create(input: CreateCategoryInput): Promise<Category> {
     const slug = await uniqueSlugForTable(this.supabase, this.tableName, resolveLocalizedText(input.name));
     const sortOrder = input.sortOrder ?? (await this.count());
-    return this.insert({ name: input.name, tagline: input.tagline, slug, sortOrder, isActive: input.isActive });
+    return this.insert({
+      name: input.name,
+      tagline: input.tagline,
+      aiQuestion: input.aiQuestion,
+      slug,
+      sortOrder,
+      isActive: input.isActive,
+    });
   }
 
   /** Aktif/pasif (soft). */

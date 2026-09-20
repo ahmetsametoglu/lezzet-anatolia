@@ -306,8 +306,8 @@ export const PURCHASES: Purchase[] = [
     ],
     drafts: [
       // Faturadaki döner ve mantı katalog kaynağında YOK; künyeleri veritabanı aynasından gelir.
-      behotrade('LEZZA Traditional Meet Doner', 'LEZZA Traditional Meet Doner 10x700gr', 10, 8, 'Et Döner'),
-      behotrade('LEZZA Traditional Chicken Doner', 'LEZZA Traditional Chicken Doner 10x700gr', 10, 6.1, 'Tavuk Döner'),
+      behotrade('LEZZA Traditional Meet Doner', 'LEZZA Traditional Meet Doner 10x700gr', 10, 8, 'Et Döner', studyoSeti('et-doner')),
+      behotrade('LEZZA Traditional Chicken Doner', 'LEZZA Traditional Chicken Doner 10x700gr', 10, 6.1, 'Tavuk Döner', studyoSeti('tavuk-doner')),
       behotrade(
         'LEZZA Manti with Minced Meat (Kiymali)',
         'LEZZA Manti with Minced Meat (Kiymali )1000 gr',

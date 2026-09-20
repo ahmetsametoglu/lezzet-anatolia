@@ -890,6 +890,11 @@
     "imageWidth": 1254,
     "imageHeight": 836
   },
+  "catalog/products/et-doner.webp": {
+    "imageUpdatedAt": "2026-09-20T20:23:56.753Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
   "catalog/products/falafel-hummus-filled-2.webp": {
     "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
@@ -2144,6 +2149,11 @@
     "imageUpdatedAt": "2026-09-17T06:23:09.39+00:00",
     "imageWidth": 1000,
     "imageHeight": 1000
+  },
+  "catalog/products/tavuk-doner.webp": {
+    "imageUpdatedAt": "2026-09-20T20:23:56.753Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
   },
   "catalog/products/tiramisu-2.webp": {
     "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
