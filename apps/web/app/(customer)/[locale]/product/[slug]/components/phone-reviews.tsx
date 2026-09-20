@@ -44,6 +44,9 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
 
   const { score, reviews, total, canReview, alreadyWrote } = data;
 
+  /** Telefon seçkisi: sayfa masaüstü için altı yorum okuyor, dar ekranda üçü gösterilir. */
+  const shown = reviews.slice(0, 3);
+
   /**
    * Panel GERİ TUŞUYLA kapanır (tasarımın kuralı) — bu yüzden açılış bir `history` kaydı bırakır.
    *
@@ -103,7 +106,9 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
         />
       )}
 
-      {reviews.map((review) => (
+      {/* Telefonda seçki ÜÇ karttır (sayfa altı okur, masaüstü hepsini çizer): dar ekranda alt alta
+          altı yorum, sayfanın kalanını görünmez kılıyordu. */}
+      {shown.map((review) => (
         <PhoneReviewCard key={review.id} review={review} locale={locale} translation={t.reviews.translation} />
       ))}
 
@@ -127,7 +132,7 @@ export function PhoneReviews({ t, locale, productId, productName, data }: PhoneR
           </div>
           {/* Kapı özetin İÇİNDE: "hepsi şu kadar" ile "tamamına bak" aynı cümlenin iki yarısı.
               Bağlantı ancak gösterilenden fazla yorum varken çizilir. */}
-          {total > reviews.length && (
+          {total > shown.length && (
             <button
               type="button"
               onClick={openPanel}

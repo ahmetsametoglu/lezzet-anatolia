@@ -22,8 +22,12 @@ import { ProductClient } from './product-client';
 import type { Messages } from './product-types';
 import messages from './messages.json';
 
-/** Tasarım: ürün detayda ilk üç yorum; fazlası "tümü" panelinde. */
-const REVIEW_PAGE_SIZE = 3;
+/**
+ * Sayfadaki yorum seçkisi — masaüstü tasarımı ALTI kart gösteriyor (üç sütun, iki satır); fazlası
+ * "tümü" panelinde. Telefon görünümü seçkiyi kendi içinde üçe indirir: orada kartlar alt alta ve
+ * altı yorum, benzer ürünleri ekranlarca aşağı iterdi.
+ */
+const REVIEW_PAGE_SIZE = 6;
 
 interface ProductPageProps {
   params: Promise<{ locale: string; slug: string }>;
