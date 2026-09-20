@@ -216,17 +216,22 @@
     "imageHeight": null
   },
   "catalog/products/alic-sirkesi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/alic-sirkesi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/alic-sirkesi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/alic-sirkesi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -236,32 +241,42 @@
     "imageHeight": 804
   },
   "catalog/products/ananas-sirkesi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/ananas-sirkesi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/ananas-sirkesi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/ananas-sirkesi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/antep-fistigi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/antep-fistigi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/antep-fistigi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/antep-fistigi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -271,79 +286,104 @@
     "imageHeight": 1400
   },
   "catalog/products/artisan-lemon-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/artisan-lemon-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/artisan-lemon-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/artisan-mango-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/artisan-mango-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/artisan-mango-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/artisan-mango-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/artisan-pistachio-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/artisan-pistachio-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/artisan-pistachio-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/artisan-pistachio-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/artisan-strawberry-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/artisan-strawberry-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/artisan-strawberry-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/artisan-strawberry-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/assorted-baklava-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/assorted-baklava-3.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/assorted-baklava-4.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/assorted-baklava.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/baklava-with-pistachio-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/baklava-with-pistachio-3.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/baklava-with-pistachio-4.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/baklava-with-pistachio-5.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/products/baklava-with-pistachio-6.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -351,77 +391,97 @@
     "imageHeight": 1500
   },
   "catalog/products/baklava-with-pistachio.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/baklava-with-walnut-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/baklava-with-walnut-3.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/baklava-with-walnut-4.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/baklava-with-walnut-5.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
-  },
-  "catalog/products/baklava-with-walnut.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
+  "catalog/products/baklava-with-walnut.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
   "catalog/products/bal-sirkesi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/bal-sirkesi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/bal-sirkesi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/bal-sirkesi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/black-forest-whole-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/black-forest-whole-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/black-forest-whole-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/blueberry-peach-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/blueberry-peach-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/boreklik-yufka-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/boreklik-yufka-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/boreklik-yufka-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/boreklik-yufka.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -431,34 +491,39 @@
     "imageHeight": 911
   },
   "catalog/products/bromelain-surubu-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/bromelain-surubu-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/bromelain-surubu-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/bromelain-surubu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/carrot-slice-baklava-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/carrot-slice-baklava-3.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/carrot-slice-baklava-4.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/products/carrot-slice-baklava-5.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -466,27 +531,37 @@
     "imageHeight": 1500
   },
   "catalog/products/carrot-slice-baklava.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/carrot-tarator-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/carrot-tarator.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/cevizli-pestil-tatlisi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/cevizli-pestil-tatlisi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/cevizli-pestil-tatlisi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/cevizli-pestil-tatlisi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -511,19 +586,19 @@
     "imageHeight": null
   },
   "catalog/products/cheese-pastry-su-borek-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/cheese-pastry-su-borek-3.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/cheese-pastry-su-borek-4.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
   },
   "catalog/products/cheese-pastry-su-borek-5.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -536,7 +611,7 @@
     "imageHeight": 1500
   },
   "catalog/products/cheese-pastry-su-borek.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -550,20 +625,25 @@
     "imageWidth": null,
     "imageHeight": null
   },
-  "catalog/products/chicken-tender-fillet.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/chicken-tender-fillet-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
+  "catalog/products/chicken-tender-fillet.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
   "catalog/products/chocolate-baklava-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/chocolate-baklava-3.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/products/chocolate-baklava-4.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -571,9 +651,9 @@
     "imageHeight": 1500
   },
   "catalog/products/chocolate-baklava.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/chocolate-cake-cup.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -586,29 +666,39 @@
     "imageHeight": null
   },
   "catalog/products/coconut-mix-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/coconut-mix-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/coconut-mix-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/coconut-mix.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/cold-baklava-with-pistachio-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/cold-baklava-with-pistachio-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/cold-baklava-with-pistachio.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/cold-baklava-with-walnut-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -676,24 +766,34 @@
     "imageHeight": null
   },
   "catalog/products/dark-chocolate-profiterol-whole-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/dark-chocolate-profiterol-whole-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/dark-chocolate-profiterol-whole-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/dark-chocolate-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/dark-chocolate-whole-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/dark-chocolate-whole-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/dark-chocolate-whole-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/dennenappel-pasta.webp": {
     "imageUpdatedAt": "2026-09-17T06:23:19.399+00:00",
@@ -721,114 +821,154 @@
     "imageHeight": 1000
   },
   "catalog/products/e-shaped-borek-with-cheese.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/e-shaped-borek-with-meat.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/e-shaped-borek-with-potato.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/e-shaped-borek-with-spinach-cheese.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/eggplant-with-yogurt-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/eggplant-with-yogurt.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/elma-sirkesi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/elma-sirkesi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/elma-sirkesi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/elma-sirkesi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/enginar-sirkesi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/enginar-sirkesi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/enginar-sirkesi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/enginar-sirkesi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
-  "catalog/products/falafel-hummus-filled.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/falafel-hummus-filled-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
+  "catalog/products/falafel-hummus-filled.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
   "catalog/products/findikli-kadayif-rulo-pestil-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/findikli-kadayif-rulo-pestil-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/findikli-kadayif-rulo-pestil-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/findikli-kadayif-rulo-pestil.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/findikli-muska-pestil-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/findikli-muska-pestil-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/findikli-muska-pestil-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/findikli-muska-pestil.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/findikli-sultan-sarma-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/findikli-sultan-sarma-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/findikli-sultan-sarma-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/findikli-sultan-sarma.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
-  "catalog/products/form-macunu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+  "catalog/products/form-macunu-1.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 920,
     "imageHeight": 911
+  },
+  "catalog/products/form-macunu.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
   },
   "catalog/products/form-pasta.webp": {
     "imageUpdatedAt": "2026-09-17T06:23:18.745+00:00",
@@ -860,15 +1000,25 @@
     "imageWidth": 599,
     "imageHeight": 804
   },
-  "catalog/products/hummus.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/hummus-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/igde-cekirdegi-macunu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+  "catalog/products/hummus.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/igde-cekirdegi-macunu-1.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 920,
     "imageHeight": 911
+  },
+  "catalog/products/igde-cekirdegi-macunu.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
   },
   "catalog/products/igde-cekirdegi-pasta.webp": {
     "imageUpdatedAt": "2026-09-17T06:23:20.126+00:00",
@@ -881,17 +1031,22 @@
     "imageHeight": 804
   },
   "catalog/products/iskin-koku-sirkesi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/iskin-koku-sirkesi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/iskin-koku-sirkesi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/iskin-koku-sirkesi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -911,37 +1066,47 @@
     "imageHeight": 1000
   },
   "catalog/products/karadut-ozu-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/karadut-ozu-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/karadut-ozu-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/karadut-ozu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/keciboynuzu-pekmezi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/keciboynuzu-pekmezi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/keciboynuzu-pekmezi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/keciboynuzu-pekmezi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kozalak-macunu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 920,
     "imageHeight": 911
   },
@@ -956,132 +1121,187 @@
     "imageHeight": null
   },
   "catalog/products/kunefe-including-syrup-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/kunefe-including-syrup-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/kunefe-including-syrup.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/kurutulmus-aronya-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-aronya-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/kurutulmus-aronya-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/kurutulmus-aronya-4.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-aronya.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-elma-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-elma-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/kurutulmus-elma-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/kurutulmus-elma-4.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-elma.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-kavun-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-kavun-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/kurutulmus-kavun-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/kurutulmus-kavun-4.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-kavun.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-seftali-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-seftali-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-seftali-3.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-seftali-4.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-seftali-5.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-seftali.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-trabzon-hurmasi-cipsi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-trabzon-hurmasi-cipsi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/kurutulmus-trabzon-hurmasi-cipsi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/kurutulmus-trabzon-hurmasi-cipsi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/lahmacun-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/lahmacun-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/lahmacun-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/lahmacun.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/latte-whole-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/latte-whole-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/latte-whole-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/lemon-cheesecake-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/lemon-cheesecake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/lemon-cheesecake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
@@ -1096,77 +1316,122 @@
     "imageHeight": null
   },
   "catalog/products/lemon-cheesecake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/lezza-kiymali-manti-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/lezza-kiymali-manti-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/lezza-kiymali-manti-3.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/lezza-kiymali-manti-4.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/lezza-kiymali-manti-5.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/lezza-kiymali-manti.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/lotus-caramel-cake-with-nutella-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/lotus-caramel-cake-with-nutella-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/lotus-caramel-cake-with-nutella.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/maras-ice-cream-cocoa-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/maras-ice-cream-cocoa-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/maras-ice-cream-cocoa-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/maras-ice-cream-cocoa-4.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/maras-ice-cream-cocoa-5.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/maras-ice-cream-cocoa-6.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/maras-ice-cream-cocoa.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/maras-ice-cream-pistachio-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/maras-ice-cream-pistachio-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/maras-ice-cream-pistachio-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/maras-ice-cream-pistachio.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/maras-ice-cream-plain-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/maras-ice-cream-plain-3.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/maras-ice-cream-plain-4.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/maras-ice-cream-plain-5.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/maras-ice-cream-plain.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
@@ -1181,14 +1446,19 @@
     "imageHeight": 1254
   },
   "catalog/products/maras-ice-cream-slice-lemon-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/maras-ice-cream-slice-lemon-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/maras-ice-cream-slice-lemon.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/maras-ice-cream-slice-plain-2.webp": {
     "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
@@ -1201,12 +1471,12 @@
     "imageHeight": 1254
   },
   "catalog/products/maras-ice-cream-trio-mix-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/maras-ice-cream-trio-mix.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
@@ -1266,14 +1536,14 @@
     "imageHeight": null
   },
   "catalog/products/mussel-baklava-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/mussel-baklava-3.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/products/mussel-baklava-4.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1281,37 +1551,47 @@
     "imageHeight": 1500
   },
   "catalog/products/mussel-baklava.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/nar-eksisi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/nar-eksisi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/nar-eksisi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/nar-eksisi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/naturel-sizma-zeytinyagi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/naturel-sizma-zeytinyagi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/naturel-sizma-zeytinyagi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/naturel-sizma-zeytinyagi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -1386,19 +1666,19 @@
     "imageHeight": null
   },
   "catalog/products/plain-pastry-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/plain-pastry-3.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
-  },
-  "catalog/products/plain-pastry.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
+  },
+  "catalog/products/plain-pastry.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
   },
   "catalog/products/potato-filled-pastry.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1406,7 +1686,7 @@
     "imageHeight": null
   },
   "catalog/products/propolis-macunu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1080,
     "imageHeight": 1080
   },
@@ -1426,7 +1706,12 @@
     "imageHeight": null
   },
   "catalog/products/raspberry-cheesecake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/raspberry-cheesecake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
@@ -1441,9 +1726,9 @@
     "imageHeight": null
   },
   "catalog/products/raspberry-cheesecake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/red-velvet-cake-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1461,57 +1746,82 @@
     "imageHeight": null
   },
   "catalog/products/red-velvet-whole-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/red-velvet-whole-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/red-velvet-whole-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/rulo-findikli-pestil-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/rulo-findikli-pestil-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/rulo-findikli-pestil-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/rulo-findikli-pestil.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
-  "catalog/products/saksuka.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/saksuka-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
+  "catalog/products/saksuka.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
   "catalog/products/san-sebastian-cheesecake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/san-sebastian-cheesecake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/san-sebastian-cheesecake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/savoury-bun-acma-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/savoury-bun-acma-3.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/savoury-bun-acma-4.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/savoury-bun-acma.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -1531,17 +1841,22 @@
     "imageHeight": 1400
   },
   "catalog/products/sifamix-andiz-ozu-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/sifamix-andiz-ozu-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/sifamix-andiz-ozu-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/sifamix-andiz-ozu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -1551,44 +1866,54 @@
     "imageHeight": 1400
   },
   "catalog/products/sifamix-keciboynuzu-ozu-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/sifamix-keciboynuzu-ozu-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/sifamix-keciboynuzu-ozu-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/sifamix-keciboynuzu-ozu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/sifamix-kozalak-ozu-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/sifamix-kozalak-ozu-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/sifamix-kozalak-ozu-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/sifamix-kozalak-ozu.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/sobiyet-baklava-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/sobiyet-baklava-3.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/products/sobiyet-baklava-4.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1596,19 +1921,19 @@
     "imageHeight": 1500
   },
   "catalog/products/sobiyet-baklava.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/special-antep-baklava-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/special-antep-baklava-3.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/products/special-antep-baklava-4.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1616,29 +1941,34 @@
     "imageHeight": 1500
   },
   "catalog/products/special-antep-baklava.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/special-pistachio-garden-whole-cake-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
-  "catalog/products/special-pistachio-garden-whole-cake-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/special-pistachio-garden-whole-cake-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/special-pistachio-garden-whole-cake.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/special-square-baklava-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/special-square-baklava-3.webp": {
-    "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
-    "imageWidth": 1500,
-    "imageHeight": 1500
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
   },
   "catalog/products/special-square-baklava-4.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1646,37 +1976,47 @@
     "imageHeight": 1500
   },
   "catalog/products/special-square-baklava.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/spicy-chicken-tender-fillet-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/spicy-chicken-tender-fillet.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/spicy-chicken-wings-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/spicy-chicken-wings.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/spicy-turkish-tomato-dip.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/spiral-pie-borek-with-cheese-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/spiral-pie-borek-with-cheese-3.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/spiral-pie-borek-with-cheese.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -1756,14 +2096,19 @@
     "imageHeight": null
   },
   "catalog/products/stuffed-vine-leaves-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/stuffed-vine-leaves-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/stuffed-vine-leaves.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/sweet-turkish-bagel-simit-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1776,17 +2121,22 @@
     "imageHeight": null
   },
   "catalog/products/tahin-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/tahin-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/tahin-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/tahin.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
@@ -1796,7 +2146,12 @@
     "imageHeight": 1000
   },
   "catalog/products/tiramisu-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/tiramisu-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
@@ -1816,9 +2171,9 @@
     "imageHeight": null
   },
   "catalog/products/tiramisu.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/toffee-caramel-cake-cup.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1866,14 +2221,19 @@
     "imageHeight": null
   },
   "catalog/products/turkish-bagel-simit-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/turkish-bagel-simit-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/turkish-bagel-simit.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/turkish-fermented-bagel-2.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -1911,74 +2271,99 @@
     "imageHeight": null
   },
   "catalog/products/uzum-pekmezi-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/uzum-pekmezi-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/uzum-pekmezi-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/uzum-pekmezi.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
-  "catalog/products/vegan-cig-kofte.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+  "catalog/products/vegan-cig-kofte-2.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
+  "catalog/products/vegan-cig-kofte.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
   "catalog/products/vegan-falafel-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/vegan-falafel-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/vegan-falafel.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/vegan-kibbeh-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/vegan-kibbeh-3.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/vegan-kibbeh-4.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/vegan-kibbeh-5.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
+  "catalog/products/vegan-kibbeh-6.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
   "catalog/products/vegan-kibbeh.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/vegan-raw-meatballs-2.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/vegan-raw-meatballs-3.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 1254
+  },
+  "catalog/products/vegan-raw-meatballs-4.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 1254
   },
   "catalog/products/vegan-raw-meatballs.webp": {
-    "imageUpdatedAt": "2026-09-19T23:57:17.191Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
-    "imageHeight": 1254
+    "imageHeight": 836
   },
   "catalog/products/vegetable-calzone.webp": {
     "imageUpdatedAt": "2026-09-14T12:57:41.437+00:00",
@@ -2001,17 +2386,22 @@
     "imageHeight": null
   },
   "catalog/products/zuhre-ana-kekre-termojenik-mix-1.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/zuhre-ana-kekre-termojenik-mix-2.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
+    "imageWidth": 1254,
+    "imageHeight": 836
+  },
+  "catalog/products/zuhre-ana-kekre-termojenik-mix-3.webp": {
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
   "catalog/products/zuhre-ana-kekre-termojenik-mix.webp": {
-    "imageUpdatedAt": "2026-09-20T00:05:25.145Z",
+    "imageUpdatedAt": "2026-09-20T20:02:21.396Z",
     "imageWidth": 1254,
     "imageHeight": 836
   },
