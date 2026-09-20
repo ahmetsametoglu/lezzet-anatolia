@@ -8,6 +8,7 @@ import { Badge } from '@/components/customer/ui/badge';
 import { Price } from '@/components/customer/ui/price';
 import { buttonClass } from '@/components/customer/ui/button';
 import { QtyStepper } from '@/components/customer/ui/qty-stepper';
+import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { useCart } from '@/components/customer/cart/cart-context';
 import { useDeliveryPlace } from '@/components/customer/delivery/place-context';
 import { PlaceGate } from '@/components/customer/delivery/place-gate';
@@ -51,6 +52,24 @@ import type { Messages } from '../product-types';
  * sn'lik bir etiketten güçlü bir onaydır, ikisi birlikte gürültü olurdu.
  */
 
+/**
+ * Boy kartlarının sütun sayısı — masaüstü (kullanıcı kararı 20.09).
+ *
+ * İki kural: seçim EN FAZLA İKİ SATIR sürer ve bir satırda ÜÇTEN fazla kart olmaz. Dört boy bu
+ * yüzden ikiye iki bölünür — üçlü ızgarada son kart tek başına kalıyor ve dolmamış bir seçim
+ * hücresi gibi duruyordu. Beş boy 3+2, altı boy 3+3 olur.
+ *
+ * Yediden itibaren ızgara üçüncü satıra taşardı; orada seçim tek satırlık yatay şeride geçer
+ * (kartlar sabit genişlikte, kesilen kart "devamı var" der).
+ */
+function sizeColumns(count: number): number {
+  if (count <= 3) return count;
+  return count === 4 ? 2 : 3;
+}
+
+/** Izgaranın iki satıra sığdığı son sayı; üstünde şerit. */
+const SIZE_SCROLL_AT = 7;
+
 /** Adet tavanı: teklifte partide kalan miktar, aksi halde makul bir üst sınır (B2B hacmi sığar). */
 const MAX_QTY = 99;
 
@@ -86,6 +105,8 @@ interface VariantPickerProps {
  */
 export function VariantPicker({ t, locale, variants, selected, onSelect, familyLabel = null, compact = false }: VariantPickerProps) {
   const multi = variants.length > 1;
+  // Şerit YALNIZ masaüstünde: mobil zaten iki sütunlu ızgarada akıyor ve orada satır sayısı serbest.
+  const scrolls = !compact && variants.length >= SIZE_SCROLL_AT;
 
   /** "500 g · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
   const unitLine = [
@@ -113,10 +134,11 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
               20.08, cevizli-baklava). Izgara kıyası bozmaz: komşu kartlar yine yan yana, fazlası
               alt satıra iner. */}
           <div
-            className={compact ? 'grid grid-cols-2 gap-2.5' : 'grid gap-2.25'}
-            // Masaüstünde sarmalanan ızgara (tasarım 20.09): iki boyda satır tam dolar, üç-dörtte
-            // alt satıra iner — `flex-wrap`te son kart yarım kalıyor ve seçim hücresi gibi duruyordu.
-            style={compact ? undefined : { gridTemplateColumns: 'repeat(auto-fit, minmax(138px, 1fr))' }}
+            className={compact ? 'grid grid-cols-2 gap-2.5' : scrolls ? `${SCROLL_STRIP} gap-2.25` : 'grid gap-2.25'}
+            // Sütun sayısı kart sayısından türer (`sizeColumns`): satır sayısı ikiyi, satırdaki kart
+            // sayısı üçü geçmez. `auto-fit` bunu yapamıyordu — genişlik yettiği sürece dördüncü kartı
+            // da aynı satıra alıyor, yetmediğinde tek kartlık ikinci satır bırakıyordu.
+            style={compact || scrolls ? undefined : { gridTemplateColumns: `repeat(${sizeColumns(variants.length)}, minmax(0, 1fr))` }}
           >
             {variants.map((v) => (
               <button
@@ -129,6 +151,10 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   // 194 = tasarımın 150px İÇERİK genişliği + 40 ped + 4 çerçeve. Tasarım `content-box`,
                   // Tailwind `border-box` — aynı sayıyı yazmak kartı 44 px dar bırakıyordu (yaşandı).
                   compact ? 'rounded-soft px-3.5 py-2.5' : 'rounded-soft px-3.25 py-2.75',
+                  // Şeritte kart sabit 158 px ve bu ölçü KASITLI: 470 px'lik rafta üçüncü kart
+                  // kenarda kesilir, yani "devamı var" görünür. 150 px'te üç kart rafı tam
+                  // dolduruyor ve şerit kaydırılabilir olduğunu hiçbir şeyle söylemiyordu.
+                  scrolls ? 'w-[158px] flex-none' : '',
                   v.id === selected.id ? 'border-2 border-olive' : 'border-2 border-sand-200 hover:border-sand-400',
                   v.soldOut ? 'opacity-55' : '',
                 ].join(' ')}
