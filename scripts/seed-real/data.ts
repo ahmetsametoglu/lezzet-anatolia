@@ -531,7 +531,7 @@ export const CATEGORIES: SeedCategory[] = [
     tagline: { tr: 'Kuru meyve ve Antep fıstığı', fr: 'Fruits séchés et pistaches', de: 'Trockenfrüchte und Pistazien' },
     featured: true,
     // Kapak, kuruyemiş rafının stüdyo karesinden: depodaki ustaların hiçbiri kuru meyve ya da fıstık değil.
-    image: { file: 'scripts/seed-real/images/pistache.webp' },
+    image: { file: 'scripts/seed-real/images/antep-fistigi/0.webp' },
   },
 ];
 
