@@ -63,9 +63,18 @@ interface DeliveryLineProps {
   /** Kısıt hâlinde gösterilecek çıkışlar — ürün ve pakette farklı (benzer ürün / benzer paket). */
   blockedActions?: React.ReactNode;
   compact?: boolean;
+  /**
+   * **Kutu biçimi** — masaüstü ürün detayının karar rafı (tasarım 20.09): renkli kutu, kalın başlık
+   * satırı ("Kapıya gelir · 67100") ve altında tek cümle.
+   *
+   * Aynı hâlleri aynı ölçütlerle çizer, YALNIZ görünüm değişir: tasarım bu bölümü yalnız ürün
+   * detayında yeniledi, paket detayı ve telefon görünümü satır biçiminde kaldı. Bileşen
+   * kopyalanmadı, çünkü kopyalanan şey görünüm değil KARAR OLURDU (rota · kargo · yok).
+   */
+  box?: boolean;
 }
 
-export function DeliveryLine({ locale, shippable, status, fallback, blockedActions, compact = false }: DeliveryLineProps) {
+export function DeliveryLine({ locale, shippable, status, fallback, blockedActions, compact = false, box = false }: DeliveryLineProps) {
   const t = messages[locale];
   const { place, ready, setPanelOpen } = useDeliveryPlace();
 
@@ -91,14 +100,15 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
     </button>
   );
 
-  const box = ['flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-soft font-sans text-body', compact ? 'px-3.5 py-2.5 text-micro' : 'px-4.5 py-3.5 text-note'];
+  // Satır biçiminin ortak kutusu (`box` prop'u ayrı bir biçimdir, bu onun sınıf listesi değil).
+  const rowBox = ['flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-soft font-sans text-body', compact ? 'px-3.5 py-2.5 text-micro' : 'px-4.5 py-3.5 text-note'];
 
   // Yer sorulmamış (ya da henüz okunmadı): tasarımın özgün genel vaatleri. Kısıt "muhtemel"
   // tonundadır — kime gönderileceğini bilmeden "gönderemiyoruz" demek yanlış olurdu.
   if (!ready || !place) {
     return (
       <>
-        <div className={[...box, 'bg-sand-100'].join(' ')}>
+        <div className={[...rowBox, 'bg-sand-100'].join(' ')}>
           {shippable ? (
             <>
               <span className="inline-flex items-center gap-1.5">
@@ -118,6 +128,58 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
           )}
           <span>{change}</span>
         </div>      </>
+    );
+  }
+
+  /**
+   * Kutu biçimi — hâller yukarıdakiyle AYNI ölçütlerden çıkar, yalnız başlık + cümle olarak yazılır.
+   * Cümlelerin kendi biçimi var (büyük harfle başlar, noktayla biter): satır biçiminde bunlar bir
+   * cümlenin parçasıydı ("67100 — en erken 22 Eylül kapınızda"), burada kendi başına duruyorlar.
+   */
+  if (box && ready && place) {
+    const shipping = status === 'shipping';
+    const awayStock = status === 'elsewhere' && elsewhereReasonOf(place) === 'stock';
+    const blockedHere = status === 'elsewhere' ? elsewhereReasonOf(place) === 'out_of_route' : !place.inRoute && !shippable;
+    const door = !shipping && !awayStock && !blockedHere && place.inRoute;
+
+    const tone = awayStock || blockedHere ? 'border-honey-line bg-honey-bg' : door ? 'border-olive-line bg-olive-bg' : 'border-sand-300 bg-sand-100';
+    const dot = awayStock || blockedHere ? 'bg-terracotta' : door ? 'bg-olive' : 'bg-muted';
+    const markTone = awayStock || blockedHere ? 'text-honey' : door ? 'text-olive-dark' : 'text-body';
+
+    const mark = shipping ? t.shipMark : awayStock ? t.awayMark : blockedHere ? t.lineBlocked : door ? t.doorMark : t.lineShipping;
+    const body = shipping
+      ? t.shipBody.replace('{code}', place.postalCode)
+      : awayStock
+        ? t.awayBody.replace('{code}', place.postalCode)
+        : blockedHere
+          ? t.blockedHere.replace('{code}', place.postalCode)
+          : door
+            ? place.nextDate
+              ? t.doorBody.replace('{date}', formatDeliveryDate(place.nextDate, locale))
+              : t.doorBodyPlain
+            : t.canShipHere;
+
+    return (
+      <div className={`flex items-start gap-2.5 rounded-soft border px-4 py-3 ${tone}`}>
+        <span aria-hidden className={`mt-1.75 size-2 flex-none rounded-full ${dot}`} />
+        <span className="flex flex-col gap-1">
+          <span className="flex flex-wrap items-baseline gap-2.5">
+            <span className={`font-sans text-note font-bold ${markTone}`}>
+              {mark} · {place.postalCode}
+            </span>
+            <span className="font-sans text-micro">{change}</span>
+          </span>
+          <span className="font-sans text-note leading-normal text-body">
+            {body}
+            {/* Kargolanamayan ürünün kısıtı rota İÇİNDE de söylenir: müşteri bu adrese aldırabiliyor
+                ama başka bir adrese gönderemez ve bunu sepete atmadan bilmeli. */}
+            {door && !shippable && ` ${t.routeOnlyLine}.`}
+          </span>
+          {/* Çıkışlar YALNIZ engelli hâllerde: rota içindeki üründe çözülecek bir şey yok, oraya
+              "kargolanabilir benzerleri gör" koymak olmayan bir sorunu varmış gibi gösterirdi. */}
+          {(awayStock || blockedHere) && blockedActions}
+        </span>
+      </div>
     );
   }
 
@@ -175,7 +237,7 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
     <>
       <div
         className={[
-          ...box,
+          ...rowBox,
           blocked ? 'flex-col !items-start border border-honey-line bg-honey-bg font-semibold text-honey' : 'bg-sand-100',
         ].join(' ')}
       >

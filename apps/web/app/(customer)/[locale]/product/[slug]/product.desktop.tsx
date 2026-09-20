@@ -7,44 +7,30 @@ import { ShareButton } from '@/components/customer/ui/share-button';
 import { formatDecimal } from '@/lib/storefront/format';
 import { SectionHeading } from '@/components/customer/ui/section';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
+import { Icon } from '@/components/customer/ui/icons';
+import { variantNameOf } from '@/lib/storefront/variant-name';
+import { AiAsk } from './components/ai-ask';
 import { Declaration } from './components/declaration';
 import { FamilyBlock } from './components/family-block';
 import { Gallery } from './components/gallery';
-import { PurchaseBar, VariantPicker } from './components/purchase-panel';
+import { LimitNote, PriceBox, PurchaseBar, VariantPicker } from './components/purchase-panel';
 import { Stars } from './components/review-card';
 import { Reviews } from './components/reviews';
 import type { ProductViewProps } from './product-types';
 
 /**
- * Ürün detay — masaüstü düzeni (tasarım: `Musteri - Urun Detay.dc.html`, "Web").
- * Breadcrumb → **iki bağımsız sütun** (solda ürünün kendisi, sağda satın alma kararı) → benzer ürünler.
+ * Ürün detay — masaüstü düzeni (tasarım: `Musteri Web.dc.html`, "Web · Ürün detay", 20.09).
  *
- * ── NEDEN TEK BİR AKIŞ (kullanıcı kararı 19.08, ölçülerek) ──────────────────
- * Sayfa İKİ ayrı ızgaraydı — üstte galeri | satın alma (`1fr 1fr`, 48px), altta beyan | yorumlar
- * (`1.2fr 1fr`, 40px) — ve bu iki kusur üretiyordu:
+ * Breadcrumb → **galeri + yapışkan karar rafı** (1fr / 470 px) → ürün künyesi bandı → yorumlar → benzer ürünler.
  *
- * 1. **Solda ölü alan.** Üst ızgaranın satır yüksekliğini UZUN olan sağ sütun belirliyordu.
- *    Ölçüldü (1460px): sol sütunun içeriği 710px'de bitiyor, hücre 838'e kadar uzatılıyor, bölüm
- *    dolgusuyla birlikte "İçindekiler" ancak 882'de başlıyordu → **172px** boşluk, yalnız solda.
- * 2. **Dikiş kayması.** Sütunları ayıran dikey çizgi iki blok arasında **60px** sağa kayıyordu
- *    (706 → 766), çünkü oranlar ve aradaki boşluk farklıydı.
+ * ── İKİ SÜTUNUN BOYU NEDEN TUTUYOR ──────────────────────────────────────────
+ * Sayfa uzun süre iki bağımsız sütundu ve sağ sütun sürekli aşağı sarkıyordu: içerik toplamı sabit,
+ * mesele hangi sütuna düştüğü. Tasarım üç taşımayla dengeledi — küçük görsel şeridi ana görselin
+ * İÇİNE girdi (sol sütun ~134 px kısaldı), çeşit kartları boy seçicisi olan üründe SOLA indi,
+ * yasal künye sütundan çıkıp tam genişlik banda taşındı.
  *
- * **Kusur tasarımda da vardı ve daha büyüktü** (`.dc.html` tarayıcıda ölçüldü: kayma 132px, ölü
- * alan 263px). Yani bu bir uygulama sapması değil; sebebi de görünüyor — "Çeşitler" bloğu sonradan
- * eklendi (§1b, 04.08 kararı) ve sağ sütunu uzattı; iki bağımsız ızgara o boy farkını deliğe
- * çeviriyordu.
- *
- * ── IZGARA DEĞİL, İKİ SÜTUN — ve fark ölçüldü ───────────────────────────────
- * İlk denemede iki bölüm TEK ızgaraya alınmıştı. Dikiş kayması bitti ama **delik yerinde kaldı**
- * (yeniden ölçüldü: galeri 710, beyan hâlâ 882): ızgarada satırlar ORTAKTIR, ikinci satır uzun
- * hücrenin bitmesini bekler. Dikey akışın her sütunda kendi başına ilerlemesi gerekiyordu; bunu
- * yapan şey flex sütunudur.
- *
- * Sol sütun **ürünün kendisi** (görseller → içindekiler ve alerjenler), sağ sütun **satın alma
- * kararı** (çeşit → boy → fiyat → sepet → teslimat) ve altında yorumlar.
- *
- * Yorum bölümü bugün yalnız boş hâliyle var ama YİNE DE çizilir: kaldırılırsa sağ sütun beyanın
- * karşısında erken biter ve denge bu kez öteki tarafa kayar.
+ * Kalan fark kaydırmada kaybolur, çünkü raf yapışkandır: müşteri künyeyi okurken boy, fiyat ve
+ * sepet düğmesi ekranda kalır.
  */
 export function ProductDesktop({ t, locale, product, selected, onSelect, familyLabel, unavailable, reviews }: ProductViewProps) {
   /**
@@ -55,11 +41,28 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
   const away = selected?.stockStatus === 'elsewhere';
 
   /**
+   * Çeşit kartları SOL sütuna iner — ama yalnız boy seçicisi de olan üründe (tasarımın denge
+   * kararı 20.09): iki seçici birden rafta dururken raf galeriden ~280 px uzuyordu. Boyu olmayan
+   * üründe çeşit rafta kalır, çünkü orada tek karar odur ve sol sütun zaten kısa.
+   */
+  const familyOnLeft = product.family.length > 0 && product.variants.length > 1;
+
+  /**
+   * Yapay zekâ sorusu kategoriden gelir, cümle BURADA kurulur: `{w}` seçili boydur ve seçim
+   * ekranda değişiyor. Boy çözülemezse bölüm çizilmez — yarım bir soru göndermektense hiç sormamak.
+   */
+  const aiQuestion =
+    product.aiQuestion && selected
+      ? product.aiQuestion.replace('{n}', product.name).replace('{w}', variantNameOf(selected, t.size, locale))
+      : null;
+
+  /**
    * Teslimat satırı boy seçiminin ÜSTÜNDE durur (çeşitlerin altı, çeşit yoksa açıklamanın altı): kargo kısıtı sepete eklemeden
    * önce görünür. Bu adrese gönderilemeyen üründe kutu "yine de sepete ekle" düğmesini taşıdığı için boy seçiminin altına iner.
    */
   const delivery = (
     <DeliveryLine
+      box
       locale={locale}
       shippable={product.shippable}
       status={selected?.stockStatus}
@@ -122,106 +125,105 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
         <span>· {product.name}</span>
       </nav>
 
-      {/* **IZGARA DEĞİL, İKİ BAĞIMSIZ SÜTUN** — ve bu ayrım ölçülerek seçildi.
-          Izgarada satırlar ORTAKTIR: beyanı ikinci satıra koymak, onu sağdaki uzun hücrenin
-          bitmesini beklemeye zorluyordu (ölçüldü: galeri 710'da bitiyor, beyan 882'de başlıyor →
-          delik olduğu yerde kalıyordu). Dikey akış her sütunda kendi başına ilerlemeli; bunu
-          yapan şey flex sütunudur. `min-w-0`: uzun kelime/URL sütunu şişirmesin (ızgaranın
-          `minmax(0,1fr)` güvencesinin flex karşılığı). */}
-      <div className="flex gap-12 px-12 pt-6 pb-11">
-        {/* SOL — ürünün kendisi: ne göründüğü, sonra içinde ne olduğu. */}
-        <div className="flex min-w-0 flex-1 flex-col gap-11">
+      {/* Solda ürünün kendisi, sağda 470 px'lik YAPIŞKAN karar rafı — ölçü tasarımın (20.09). */}
+      <div className="grid grid-cols-[1fr_470px] items-start gap-11 px-12 pt-8 pb-9.5">
+        <div className="flex min-w-0 flex-col gap-3.5">
           <Gallery images={product.gallery} alt={product.name} />
-          <Declaration
-            t={t}
-            locale={locale}
-            declaration={product.declaration}
-            netQuantity={selected?.netQuantity ?? null}
-            netUnit={selected?.netUnit ?? null}
-          />
+          {familyOnLeft && (
+            <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} layout="grid" />
+          )}
         </div>
 
-        {/* SAĞ — satın alma kararı: çeşit → boy → fiyat → sepet → teslimat, altında yorumlar. */}
-        <div className="flex min-w-0 flex-1 flex-col gap-11">
-          <div className="flex flex-col gap-4.5">
-            <div className="flex flex-col gap-2">
-              {product.category && <span className="font-sans text-eyebrow text-olive uppercase">{product.category.name}</span>}
-              <div className="flex items-start justify-between gap-4">
-                <h1 className="font-serif text-page-title text-ink">{product.name}</h1>
-                <ShareButton label={t.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
-              </div>
-              {/* Stok rozeti SEÇİLİ boyu anlatır: bir boy tükenmişken "Stokta" yazmak, butonu
-                "Tükendi" gösteren aynı ekranda kendi kendini yalanlar.
-                Yere bağlı iki hâlde (kargoyla / bölgenizde yok) rozetin yerini YER İŞARETİ alır:
-                orada da yeşil "Stokta" yazmak, hemen altındaki kutuyla çelişirdi (19.7). */}
-              {/* Soğuk zincir işareti ROZETİN YANINDA (16.08, kullanıcı isteği): teslimat kutusunun
-                içindeyken bir teslimat ayrıntısı gibi okunuyordu, oysa ÜRÜNÜN künyesi.
-                Dayanağı ARTIK KENDİ ALANI (`product.storage_type` → `coldChain`), `!shippable`
-                proxy'si değil: o bir teslimat olgusuydu ve kargolanabilen ürüne de "soğuk zincirle
-                gelir" yazdırıyordu. */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Puan adın altında (tasarım); yorumu olmayan üründe satır rozetlerle başlar. Sayı yorumlar bölümüne götürür. */}
-                {reviews.score.average !== null && (
-                  <a href="#reviews" className="mr-1.5 inline-flex cursor-pointer items-center gap-2.5 font-sans">
-                    <Stars value={reviews.score.stars ?? reviews.score.average} small />
-                    <span className="text-body font-bold text-ink">{formatDecimal(reviews.score.average, locale, 1)}</span>
-                    <span className="text-body-sm text-muted transition-colors hover:text-olive">
-                      · {t.reviews.countShort.replace('{count}', String(reviews.total))}
-                    </span>
-                  </a>
-                )}
-                {selected &&
-                  (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
-                    <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
-                  ) : (
-                    <StockMark status={selected.stockStatus} locale={locale} size="lg" />
-                  ))}
-                {product.coldChain && <ColdChainMark label={t.assurance.coldChainShort} />}
-              </div>
-            </div>
-
-            {product.description && <p className="font-sans text-lead text-body">{product.description}</p>}
-
-            {/* Çeşit bloğu boy seçicinin ÜSTÜNDE: karar sırası "hangisi? → hangi boy?" (`§1b`). */}
-            <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} />
-
-            {!away && delivery}
-
-            {selected && (
-              <>
-                <VariantPicker
-                  t={t}
-                  locale={locale}
-                  variants={product.variants}
-                  selected={selected}
-                  onSelect={onSelect}
-                  familyLabel={familyLabel}
-                />
-                {/* Satın alma düğmesi `elsewhere` hâlinde BURADA DEĞİL, karar kutusunun içinde —
-                    ve orada üçüncül. Gerekçesi kutunun `blockedActions`ında. */}
-                {!away && <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} />}
-              </>
-            )}
-            {away && delivery}
+        {/* Raf kaydırmada ekranda kalır: karar (boy · fiyat · sepet) künyeyi okurken de elin altında. */}
+        <div className="sticky top-24 flex min-w-0 flex-col gap-4">
+          {product.category && <span className="font-sans text-eyebrow text-olive uppercase">{product.category.name}</span>}
+          <div className="flex items-start justify-between gap-3.5">
+            <h1 className="font-serif text-page-title leading-tight text-ink">{product.name}</h1>
+            <ShareButton label={t.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
           </div>
-          {/* Yorumlar bir SATIN ALMA girdisidir — kararın yanında durur, sayfanın dibinde değil. */}
-          <Reviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} />
+
+          {/* Stok rozeti SEÇİLİ boyu anlatır: bir boy tükenmişken "Stokta" yazmak, düğmesi "Tükendi"
+              olan aynı ekranda kendi kendini yalanlar. Yere bağlı iki hâlde rozetin yerini yer
+              işareti alır — orada yeşil "Stokta" hemen altındaki teslimat kutusuyla çelişirdi.
+              Soğuk zincir işareti rozetin yanında (16.08): teslimatın değil ÜRÜNÜN künyesi. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Puan adın altında; yorumu olmayan üründe satır rozetlerle başlar. Sayı yorumlara götürür. */}
+            {reviews.score.average !== null && (
+              <a href="#reviews" className="mr-1.5 inline-flex cursor-pointer items-center gap-2.5 font-sans">
+                <Stars value={reviews.score.stars ?? reviews.score.average} small />
+                <span className="text-body font-bold text-ink">{formatDecimal(reviews.score.average, locale, 1)}</span>
+                <span className="text-body-sm text-muted transition-colors hover:text-olive">
+                  · {t.reviews.countShort.replace('{count}', String(reviews.total))}
+                </span>
+              </a>
+            )}
+            {selected &&
+              (selected.stockStatus === 'available' || selected.stockStatus === 'out_of_stock' ? (
+                <Badge tone={selected.soldOut ? 'closed' : 'positive'}>{selected.soldOut ? t.soldOut : t.inStock}</Badge>
+              ) : (
+                <StockMark status={selected.stockStatus} locale={locale} size="lg" />
+              ))}
+            {product.coldChain && <ColdChainMark label={t.assurance.coldChainShort} />}
+          </div>
+
+          {product.description && <p className="font-sans text-lead text-body">{product.description}</p>}
+
+          {/* Çeşit bloğu boy seçicisi YOKKEN rafta kalır; varken sola iner (yukarıdaki `familyOnLeft`). */}
+          {!familyOnLeft && <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} />}
+
+          {/* Boy seçicisi yalnız seçilecek bir şey varken çizilir; tek boyda fiyat kutusu zaten fiyatı söyler. */}
+          {selected && product.variants.length > 1 && (
+            <VariantPicker t={t} locale={locale} variants={product.variants} selected={selected} onSelect={onSelect} familyLabel={familyLabel} />
+          )}
+
+          {!away && delivery}
+
+          {selected && (
+            <>
+              <PriceBox t={t} locale={locale} selected={selected}>
+                {/* `elsewhere` hâlinde düğme kutuda DEĞİL, teslimat kutusunun içinde ve orada üçüncül. */}
+                {!away && <PurchaseBar t={t} locale={locale} selected={selected} routeOnly={!product.shippable} flow />}
+              </PriceBox>
+              <LimitNote t={t} selected={selected} />
+            </>
+          )}
+
+          {away && delivery}
+
+          <span className="flex items-center gap-1.5 border-t border-sand-200 pt-3.25 font-sans text-note text-muted">
+            <Icon name="box" size={14} />
+            {t.assurance.sturdyBox}
+          </span>
         </div>
       </div>
 
+      {/* Künye kendi bandında ve üç eşit kart: sol sütunda dururken sayfanın en uzun bloğuydu ve
+          rafın bittiği yerde sayfayı tek sütuna düşürüyordu (tasarım 20.09). */}
+      <section className="flex flex-col gap-4.5 border-t border-sand-300 bg-sand-100 px-12 py-8.5">
+        <div className="flex items-baseline gap-3">
+          <h2 className="font-serif text-h2 text-ink">{t.declaration.title}</h2>
+          <span className="font-sans text-body-sm text-muted">{t.declaration.note}</span>
+        </div>
+        <Declaration
+          t={t}
+          locale={locale}
+          declaration={product.declaration}
+          netQuantity={selected?.netQuantity ?? null}
+          netUnit={selected?.netUnit ?? null}
+        />
+        {aiQuestion && <AiAsk t={t.ai} question={aiQuestion} />}
+      </section>
+
+      <div className="px-12 py-9">
+        <Reviews t={t} locale={locale} productId={product.id} productName={product.name} data={reviews} />
+      </div>
+
       {product.similar.length > 0 && (
-        <section className="flex flex-col gap-5 bg-cream-deep px-12 py-11">
+        <section className="flex flex-col gap-5 border-t border-sand-275 bg-cream-deep px-12 py-8.5 pb-10.5">
           {/* Açıklama satırı YOK. Bir süre "aile üyeleri burada tekrar edilmez" yazıyordu; kural
               değişti (04.08 — her aileden bir temsilci gelebilir) ve cümle yalan oldu. Yerine
               yenisi konmadı: karışık bir liste kendini anlatır, kuralını anlatmasına gerek yok. */}
-          <SectionHeading
-            title={t.similar}
-            action={
-              product.category
-                ? { label: `${product.category.name} →`, href: { pathname: '/catalog', query: { category: product.category.slug } } }
-                : undefined
-            }
-          />
+          <SectionHeading title={t.similar} action={{ label: t.similarAll, href: '/catalog' }} />
           <div className="grid grid-cols-4 gap-6">
             {product.similar.map((p) => (
               <ProductCard key={p.id} product={p} locale={locale} labels={t.card} />

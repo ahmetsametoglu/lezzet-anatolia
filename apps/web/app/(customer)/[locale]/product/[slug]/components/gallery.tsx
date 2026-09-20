@@ -17,11 +17,10 @@ import type { StorefrontImage } from '@lezzet/application';
  *   mobil    → yatay KAYDIRMA + nokta göstergesi; parmak zaten kaydırıyor, ayrıca küçük görsele
  *              basmak dokunmatikte hem küçük hedef hem gereksiz bir adım
  *
- * Masaüstü şeridi tek sıra ve dört sütundur; sığmayan görseller son kutuda "+N" olarak toplanır.
- * O kutu bir SAYAÇ DEĞİL, DÜĞMEdir: basınca kalan görseller açılır. Sayaç olarak bırakılmıştı ve
- * altı görselli üründe üç görsel hiçbir şekilde açılamıyordu — "+3" yazan ama içini gösteremeyen
- * bir kutu, olmayan bir vaat. Tasarım bu kutunun davranışını yazmıyor; sığdığı yerde kalan en sade
- * çözüm şeridi büyütmek (yeni bir katman/ışık kutusu açmak değil).
+ * Masaüstü şeridi ana görselin İÇİNDE, sol altta durur (tasarım 20.09) ve beş slotludur; sığmayan
+ * görseller son kutuda "+N" olarak toplanır. O kutu bir SAYAÇ DEĞİL, DÜĞMEdir: basınca kalan
+ * görseller açılır. Sayaç olarak bırakılmıştı ve altı görselli üründe üç görsel hiçbir şekilde
+ * açılamıyordu — "+3" yazan ama içini gösteremeyen bir kutu, olmayan bir vaat.
  */
 interface GalleryProps {
   images: StorefrontImage[];
@@ -101,47 +100,52 @@ export function Gallery({ images, alt, compact = false, flush = false }: Gallery
   }
 
   const active = images[activeIndex] ?? images[0]!;
-  const columns = 4;
-  // Tam sığıyorsa sayaç kutusuna gerek yok — dört görsel dört slota girer, "+0" diye bir şey olmaz.
-  // Sığmıyorsa son slot düğmeye ayrılır, o yüzden bir eksik görsel gösterilir.
-  const fits = images.length <= columns;
-  const thumbs = expanded || fits ? images : images.slice(0, columns - 1);
+  // Şerit ana görselin İÇİNDE (tasarım, 20.09): görselin altındaki satır sol sütunu ~134 px uzatıyor
+  // ve iki sütunun boyunu ayırıyordu. Beş slot sığar; tam sığıyorsa sayaç kutusuna gerek yok
+  // ("+0" diye bir şey olmaz), sığmıyorsa son slot düğmeye ayrılır ve bir eksik görsel gösterilir.
+  const slots = 5;
+  const fits = images.length <= slots;
+  const thumbs = expanded || fits ? images : images.slice(0, slots - 1);
   const hidden = images.length - thumbs.length;
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Masaüstünde galeri iki eşit sütunun solunda: ~608 px; şerit dört sütun (~145 px). İçerik
-          1360 px'te durur (`SiteFrame`). */}
-      <FramedImage src={active.url} alt={alt} ratio={RATIO_SOURCE} crop={active.crop} frames={active.frames} sizes="610px" className="!rounded-card" />
+    // Sol sütun 750 px (1360 içerik − 48×2 ped − 470 raf − 44 boşluk); şerit karesi 64 px.
+    <div className="relative overflow-hidden rounded-card">
+      <FramedImage src={active.url} alt={alt} ratio={RATIO_SOURCE} crop={active.crop} frames={active.frames} sizes="750px" className="!rounded-card" />
       {images.length > 1 && (
-        <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
-          {thumbs.map((img, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setActiveIndex(i)}
-              aria-label={`${alt} ${i + 1}`}
-              aria-pressed={i === activeIndex}
-              className={[
-                'cursor-pointer overflow-hidden rounded-soft transition-colors',
-                i === activeIndex ? 'border-2 border-olive' : 'border-2 border-transparent hover:border-sand-400',
-              ].join(' ')}
-            >
-              <FramedImage src={img.url} alt="" ratio={RATIO_SOURCE} crop={img.crop} frames={img.frames} sizes="150px" />
-            </button>
-          ))}
-          {hidden > 0 && (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              aria-label={`${alt} +${hidden}`}
-              className="cursor-pointer rounded-soft border-2 border-transparent bg-sand-100 font-sans text-body-sm font-bold text-muted transition-colors hover:border-sand-400 hover:text-ink"
-              style={{ aspectRatio: RATIO_SOURCE }}
-            >
-              +{hidden}
-            </button>
-          )}
-        </div>
+        <>
+          {/* Karartma yalnız şeridin arkasında: açık zeminli bir fotoğrafta beyaz çerçeveli küçük
+              görseller yok oluyordu. Tıklamayı yutmaması için işaretsiz. */}
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-30 bg-gradient-to-b from-transparent to-ink-deep/45" />
+          <div className="absolute bottom-3.5 left-3.5 flex items-center gap-2">
+            {thumbs.map((img, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setActiveIndex(i)}
+                aria-label={`${alt} ${i + 1}`}
+                aria-pressed={i === activeIndex}
+                className={[
+                  'w-16 flex-none cursor-pointer overflow-hidden rounded-[8px] border-2 shadow-badge transition-colors',
+                  i === activeIndex ? 'border-card ring-2 ring-olive' : 'border-card/50 hover:border-card',
+                ].join(' ')}
+              >
+                <FramedImage src={img.url} alt="" ratio={RATIO_SOURCE} crop={img.crop} frames={img.frames} sizes="64px" className="!rounded-none" />
+              </button>
+            ))}
+            {hidden > 0 && (
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                aria-label={`${alt} +${hidden}`}
+                className="w-16 flex-none cursor-pointer rounded-[8px] border-2 border-card/50 bg-ink-deep/78 font-sans text-note font-bold text-cream backdrop-blur-[3px] transition-colors hover:border-card"
+                style={{ aspectRatio: RATIO_SOURCE }}
+              >
+                +{hidden}
+              </button>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

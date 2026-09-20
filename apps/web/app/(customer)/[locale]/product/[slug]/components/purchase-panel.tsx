@@ -112,7 +112,12 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
               katalog dört boyla geldi ve sarmasız satır 390px viewport'ta 410'a TAŞIYORDU (ölçüldü
               20.08, cevizli-baklava). Izgara kıyası bozmaz: komşu kartlar yine yan yana, fazlası
               alt satıra iner. */}
-          <div className={compact ? 'grid grid-cols-2 gap-2.5' : 'flex flex-wrap gap-3'}>
+          <div
+            className={compact ? 'grid grid-cols-2 gap-2.5' : 'grid gap-2.25'}
+            // Masaüstünde sarmalanan ızgara (tasarım 20.09): iki boyda satır tam dolar, üç-dörtte
+            // alt satıra iner — `flex-wrap`te son kart yarım kalıyor ve seçim hücresi gibi duruyordu.
+            style={compact ? undefined : { gridTemplateColumns: 'repeat(auto-fit, minmax(138px, 1fr))' }}
+          >
             {variants.map((v) => (
               <button
                 key={v.id}
@@ -123,7 +128,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   'flex cursor-pointer flex-col gap-0.5 bg-card text-left transition-colors',
                   // 194 = tasarımın 150px İÇERİK genişliği + 40 ped + 4 çerçeve. Tasarım `content-box`,
                   // Tailwind `border-box` — aynı sayıyı yazmak kartı 44 px dar bırakıyordu (yaşandı).
-                  compact ? 'rounded-soft px-3.5 py-2.5' : 'min-w-[194px] rounded-card px-5 py-3.5',
+                  compact ? 'rounded-soft px-3.5 py-2.5' : 'rounded-card px-3.25 py-2.75',
                   v.id === selected.id ? 'border-2 border-olive' : 'border-2 border-sand-200 hover:border-sand-400',
                   v.soldOut ? 'opacity-55' : '',
                 ].join(' ')}
@@ -166,9 +171,56 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
       )}
 
       {/* Adet sınırı KENDİ SATIRINDA durur (tasarım "İndirimli teklif" durumu): fiyatın altında tek
-          bir çip. Fırsat rozetiyle yan yana dizilince iki kırmızı etiket birbirini bastırıyordu. */}
-      {selected.limitLabel && <Badge tone="offer">{t.limit.replace('{n}', selected.limitLabel)}</Badge>}
+          bir çip. Fırsat rozetiyle yan yana dizilince iki kırmızı etiket birbirini bastırıyordu.
+          Masaüstünde çip fiyat kutusunun altındadır (`LimitNote`) — fiyat da orada. */}
+      {compact && selected.limitLabel && <Badge tone="offer">{t.limit.replace('{n}', selected.limitLabel)}</Badge>}
     </div>
+  );
+}
+
+/**
+ * **Fiyat kutusu** (tasarım 20.09) — fiyat, birim satırı ve satın alma kontrolü TEK kutuda.
+ *
+ * Fiyat eskiden boy seçicisinin içinde yaşıyordu ve tek boylu üründe seçici yalnız fiyat göstermek
+ * için çiziliyordu. Kutu ikisini ayırdı: seçici yalnız SEÇİLECEK bir şey varken çizilir, fiyat her
+ * hâlde burada durur ve yanındaki kontrolle aynı hizada kalır.
+ */
+export function PriceBox({ t, locale, selected, children }: { t: Messages; locale: Locale; selected: StorefrontVariant; children?: React.ReactNode }) {
+  /** "500 g tepsi · 15,00 €/kg" — boy adı ve kıyas fiyatı; ikisi de yoksa satır hiç çizilmez. */
+  const unitLine = [
+    variantNameOf(selected, t.size, locale),
+    selected.comparisonCents !== null && selected.comparisonUnit !== null
+      ? formatComparison(selected.comparisonCents, selected.comparisonUnit, locale)
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <div className="flex items-center gap-4 rounded-card border border-sand-200 bg-card px-4 py-3.5">
+      <span className="flex flex-none flex-col gap-0.5 [&_span]:leading-tight">
+        <span className="flex flex-wrap items-center gap-2">
+          <Price cents={selected.priceCents} wasCents={selected.wasCents} locale={locale} size="xl" />
+          {selected.wasCents !== undefined && (
+            <Badge tone="offer" variant="filled">
+              {t.offer}
+            </Badge>
+          )}
+        </span>
+        {unitLine && <span className="font-sans text-micro text-muted">{unitLine}</span>}
+      </span>
+      {children && <div className="min-w-0 flex-1">{children}</div>}
+    </div>
+  );
+}
+
+/** Adet sınırı çipi — kutunun ALTINDA, kendi satırında (iki uyarı yan yana birbirini bastırıyordu). */
+export function LimitNote({ t, selected }: { t: Messages; selected: StorefrontVariant }) {
+  if (!selected.limitLabel) return null;
+  return (
+    <span className="w-max">
+      <Badge tone="offer">{t.limit.replace('{n}', selected.limitLabel)}</Badge>
+    </span>
   );
 }
 

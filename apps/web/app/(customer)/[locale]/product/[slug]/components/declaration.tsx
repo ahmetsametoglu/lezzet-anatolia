@@ -69,8 +69,8 @@ function DeclarationCard({ title, note, warn = false, compact = false, children 
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-card border border-sand-100 bg-card px-7 py-6">
-      <div className="flex items-baseline justify-between gap-3">{heading}</div>
+    <section className="flex h-full flex-col gap-2.75 rounded-card border border-sand-100 bg-card px-6 py-5.5">
+      <div className="flex items-baseline justify-between gap-2">{heading}</div>
       {children}
     </section>
   );
@@ -99,11 +99,12 @@ interface DeclarationProps {
 }
 
 export function Declaration({ t, locale, declaration, netQuantity, netUnit, compact = false }: DeclarationProps) {
-  const { ingredients, allergens, traces, nutrition, storage } = declaration;
+  const { ingredients, allergens, traces, nutrition, storage, preparationSteps } = declaration;
   const hasIngredientsBlock = ingredients !== null || allergens.length > 0 || traces.length > 0;
 
   return (
-    <div className={['flex flex-col', compact ? 'gap-2' : 'gap-5.5'].join(' ')}>
+    // Masaüstünde üç eşit kart (tasarım 20.09, künye bandı); mobilde akordeonlar alt alta.
+    <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-3 items-stretch gap-4.5'}>
       {hasIngredientsBlock && (
         <DeclarationCard title={t.declaration.ingredients} warn={allergens.length > 0} compact={compact}>
           {ingredients && (
@@ -123,7 +124,16 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
           )}
           {/* Çapraz bulaşma cümlesi ŞABLONDAN kurulur — serbest metin saklanmaz, dil tutarlı kalır. */}
           {traces.length > 0 && (
-            <span className="font-sans text-note text-muted">{t.declaration.traces.replace('{list}', allergenNames(traces, locale))}</span>
+            <span
+              className={[
+                'font-sans text-note leading-normal text-muted',
+                // Kartın DİBİNE yapışır ve ayraçla ayrılır: beyan değil dipnot, kartın gövdesiyle
+                // aynı ağırlıkta okunmamalı. Mobil akordeonda yer yok, orada akışta kalır.
+                compact ? '' : 'mt-auto border-t border-sand-50 pt-2.5',
+              ].join(' ')}
+            >
+              {t.declaration.traces.replace('{list}', allergenNames(traces, locale))}
+            </span>
           )}
         </DeclarationCard>
       )}
@@ -133,14 +143,9 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
           title={t.declaration.nutrition}
           // Net miktar da DİLE göre biçimlenir: 1500 g Türkçe/Fransızca'da binlik ayracı ister.
           // Birim değerin içinde gelir (g/kg ya da ml/L) — şablon birim yazmaz, yoksa sıvıya "g" derdi.
-          note={[
-            t.declaration.per100g,
-            netQuantity !== null && netUnit !== null
-              ? t.declaration.netQuantity.replace('{quantity}', formatNetQuantity(netQuantity, netUnit, locale))
-              : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
+          // Başlığın yanında yalnız beyanın ÖLÇEĞİ durur; net miktar tablonun altına indi (tasarım
+          // 20.09), çünkü o beyanın değil SEÇİLEN BOYUN bilgisi ve tablo okunduktan sonra anlam kazanır.
+          note={t.declaration.per100g}
           compact={compact}
         >
           <dl className="flex flex-col">
@@ -151,14 +156,33 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
               </div>
             ))}
           </dl>
+          {netQuantity !== null && netUnit !== null && (
+            <span className={['font-sans text-note text-muted', compact ? '' : 'mt-auto'].join(' ')}>
+              {t.declaration.netQuantity.replace('{quantity}', formatNetQuantity(netQuantity, netUnit, locale))}
+            </span>
+          )}
         </DeclarationCard>
       )}
 
-      {storage && (
+      {(storage || preparationSteps.length > 0) && (
         <DeclarationCard title={t.declaration.storage} compact={compact}>
-          <p className="font-sans text-body-sm leading-relaxed text-body">
-            <Emphasized segments={storage} />
-          </p>
+          {storage && (
+            <p className="font-sans text-body-sm leading-relaxed text-body">
+              <Emphasized segments={storage} />
+            </p>
+          )}
+          {/* Adımlar SAKLAMA METNİNDEN AYRI: o koşulun beyanı, bu yapılacak işler. Numara listenin
+              sırasından gelir — veride ayrı bir sıra alanı yok (`product.preparation_steps`). */}
+          {preparationSteps.length > 0 && (
+            <ol className={['flex flex-col gap-2.25', compact ? '' : 'mt-auto border-t border-sand-50 pt-3'].join(' ')}>
+              {preparationSteps.map((step, i) => (
+                <li key={i} className="flex items-start gap-2.75">
+                  <span className="grid size-6 flex-none place-items-center rounded-full bg-olive font-sans text-micro font-bold text-white">{i + 1}</span>
+                  <span className="font-sans text-body-sm leading-normal text-body">{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
         </DeclarationCard>
       )}
     </div>

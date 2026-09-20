@@ -125,6 +125,11 @@ export interface StorefrontDeclaration {
   nutrition: Nutrition | null;
   /** Net miktar burada değil: varyanta aittir (`StorefrontVariant.netQuantity`), seçime göre değişir. */
   storage: TextSegment[] | null;
+  /**
+   * Hazırlama adımları — sırayla numaralanır; boş dizi "adım girilmedi" demektir ve liste çizilmez.
+   * Saklama metninden ayrı yaşar: o koşulun beyanı, bu yapılacak işler.
+   */
+  preparationSteps: string[];
 }
 
 /** Ailedeki bir çeşit kartı: görsel + etiket + başlangıç fiyatı; tükenmiş çeşit listeye hiç girmez. */
@@ -159,6 +164,11 @@ export interface StorefrontProductDetail {
    */
   primaryVariantId: string | null;
   declaration: StorefrontDeclaration;
+  /**
+   * Kategorinin yapay zekâ sorusu, HAM şablon olarak (`{n}` ürün adı, `{w}` boy): boy ekranda
+   * seçiliyor, cümle de o yüzden ekranda kurulur. `null` = kategoride soru yok, bölüm çizilmez.
+   */
+  aiQuestion: string | null;
   /** false → "yalnız bölge içi kapıya teslim" uyarısı, sepete eklemeden ÖNCE görünür. */
   shippable: boolean;
   /** Soğuk zincir gerekiyor mu — `product.storage_type`tan gelir, `shippable`den türetilmez; kargolanabilen üründe de soğuk zincir olabilir. */

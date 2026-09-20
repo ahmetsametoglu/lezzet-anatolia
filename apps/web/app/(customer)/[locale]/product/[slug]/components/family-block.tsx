@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
-import { RATIO_SQUARE } from '@lezzet/types';
+import { RATIO_SOURCE } from '@lezzet/types';
 import { Dialog } from '@/components/customer/ui/dialog';
 import { SCROLL_STRIP } from '@/components/customer/ui/scroll-strip';
 import { Icon } from '@/components/customer/ui/icons';
@@ -108,7 +108,9 @@ function FamilyCard({ member, size, subLine }: FamilyCardProps) {
     <FramedImage
       src={member.image.url}
       alt={member.label}
-      ratio={RATIO_SQUARE}
+      // Kart görseli 3:2 (tasarım 20.09): kare kart, adın altındaki satırla birlikte üç satırlık bir
+      // kutu yapıyordu ve çeşit şeridi boy seçicisinden uzun duruyordu.
+      ratio={RATIO_SOURCE}
       crop={member.image.crop}
       frames={member.image.frames}
       sizes={CARD_IMAGE_SIZES[size]}
@@ -149,9 +151,15 @@ interface FamilyBlockProps {
   currentUnavailable: boolean;
   /** Mobil kabuk: daha küçük kartlar, "Bakıyorsunuz" satırı yok. */
   compact?: boolean;
+  /**
+   * `rail` — karar rafında, kendi kutusunda ve tek satır kaydırmalı (boy seçicisi olmayan ürün).
+   * `grid` — galerinin altında, kutusuz ve sarmalanan ızgara: orada blok sütunun tamamına yayılır
+   * ve kaydırılacak bir şey bırakmaz (tasarım 20.09).
+   */
+  layout?: 'rail' | 'grid';
 }
 
-export function FamilyBlock({ t, locale, members, currentUnavailable, compact = false }: FamilyBlockProps) {
+export function FamilyBlock({ t, locale, members, currentUnavailable, compact = false, layout = 'rail' }: FamilyBlockProps) {
   const [allOpen, setAllOpen] = useState(false);
 
   // Sözleşme boş listede bloğu hiç çizmemeyi söylüyor (ailesiz ürün ve tek üyeye inmiş aile) — kapı
@@ -162,7 +170,9 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
   // "İki üyede kartlar genişler, kaydırma yoktur" CİHAZDAN BAĞIMSIZ bir kural: mobilde de 84 px'lik
   // kaydırma kartı kullanmak, kaydıracak bir şey yokken kartı daraltmak olurdu — ölçüldü (04.08,
   // "Épinards & fromage" 84 px'te üç satıra bölünüyordu).
-  const size: CardSize = members.length <= WIDE_AT ? 'wide' : compact ? 'mobile' : crowded ? 'crowded' : 'normal';
+  // Izgarada kart daima SABİT ölçüdedir: satırı paylaşan `wide` kart, sarmalanan ızgarada iki
+  // üyeyi sütunun yarısına kadar şişirirdi.
+  const size: CardSize = layout === 'grid' ? (crowded ? 'crowded' : 'normal') : members.length <= WIDE_AT ? 'wide' : compact ? 'mobile' : crowded ? 'crowded' : 'normal';
 
   // Bakılan çeşit alınamıyorken aktif işaret BASILMAZ: yeşil çerçeve ve ✓ "seçtiğiniz bu" der,
   // oysa müşteri onu seçemiyor. Kart yine listede kalır (çıkış yolu kardeşlerdedir, tasarım §1b).
@@ -187,7 +197,7 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
     // çerçeve onu komşularından ayırıyor.
     <div
       className={
-        compact
+        compact || layout === 'grid'
           ? 'flex flex-col gap-2.5'
           : 'flex flex-col gap-2.5 rounded-card border border-sand-200 bg-sand-50 px-4 py-3.5'
       }
@@ -221,8 +231,11 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
         className={
           compact
             ? '-mx-4 flex gap-2 overflow-x-auto px-4 pt-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
-            : `${SCROLL_STRIP} gap-2 pt-2.5`
+            : layout === 'grid'
+              ? 'grid gap-2 pt-2.5'
+              : `${SCROLL_STRIP} gap-2 pt-2.5`
         }
+        style={layout === 'grid' && !compact ? { gridTemplateColumns: `repeat(auto-fill, ${size === 'crowded' ? 66 : 106}px)` } : undefined}
       >
         {cards.map((m) => (
           <FamilyCard key={m.slug} member={m} size={size} subLine={subLineOf(m, size === 'normal')} />

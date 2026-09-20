@@ -67,15 +67,38 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
 
   return (
     <section id="reviews" className="flex scroll-mt-24 flex-col gap-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-card-title'].join(' ')}>{t.reviews.title}</h2>
+      {/* Masaüstünde başlık, puan ve bağlantılar TEK SATIR (tasarım 20.09): bölüm tam genişlik banda
+          çıkınca ayrı bir puan kartı satırın altında yetim kalıyordu. */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <h2 className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2'].join(' ')}>{t.reviews.title}</h2>
+        {!compact && score.average !== null && (
+          <span className="inline-flex items-baseline gap-2">
+            <span className="font-sans text-lead font-bold text-ink">{formatDecimal(score.average, locale, 1)}</span>
+            <span className="self-center">
+              <Stars value={score.stars ?? score.average} small />
+            </span>
+            <span className="font-sans text-note text-muted">{t.reviews.countShort.replace('{count}', String(total))}</span>
+          </span>
+        )}
+        {!compact && !canReview && <span className="ml-auto font-sans text-note text-muted">{t.reviews.onlyBuyers}</span>}
         {canReview && !alreadyWrote && !submitted && (
           <button
             type="button"
             onClick={() => setWriting((v) => !v)}
-            className="cursor-pointer font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
+            className="ml-auto cursor-pointer font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
           >
             {t.reviews.write}
+          </button>
+        )}
+        {/* Bağlantı ancak gösterilenden FAZLA yorum varken çizilir: aynı listeyi açan bir bağ,
+            olmayan bir kapı gösterirdi. */}
+        {!compact && total > reviews.length && (
+          <button
+            type="button"
+            onClick={openPanel}
+            className="cursor-pointer font-sans text-body-sm font-semibold text-olive underline transition-colors hover:text-olive-dark"
+          >
+            {t.reviews.all.replace('{count}', String(total))}
           </button>
         )}
       </div>
@@ -99,41 +122,44 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
       )}
 
       {score.average === null ? (
-        <div className="flex flex-col items-center gap-1.5 rounded-soft border border-dashed border-sand-400 px-6 py-6 text-center">
+        <div className="flex flex-col items-center gap-1.5 rounded-card border-[1.5px] border-dashed border-sand-300 bg-card px-6 py-8.5 text-center">
           <Icon name="star" size={24} className="text-sand-400" />
           <span className="font-sans text-body font-bold text-ink">{t.reviews.emptyTitle}</span>
-          <span className="font-sans text-note text-muted">{t.reviews.emptyBody}</span>
+          <span className="font-sans text-note leading-normal text-muted">{t.reviews.emptyBody}</span>
         </div>
-      ) : (
-        <div className="flex items-center gap-4.5 rounded-card border border-sand-200 bg-card px-5.5 py-4.5">
-          {/* Ortalama TEK ve iri: tasarımın bu kartta söylediği tek şey "bu ürün kaç alıyor". */}
-          <span className={['font-serif leading-tight text-ink', compact ? 'text-h1-sm' : 'text-h1-sm'].join(' ')}>
-            {formatDecimal(score.average, locale, 1)}
-          </span>
-          <div className="flex flex-col gap-0.5">
-            <Stars value={score.stars ?? score.average} />
-            <span className="font-sans text-note text-muted">{t.reviews.count.replace('{count}', String(total))}</span>
+      ) : compact ? (
+        <>
+          <div className="flex items-center gap-4.5 rounded-card border border-sand-200 bg-card px-5.5 py-4.5">
+            {/* Ortalama TEK ve iri: tasarımın bu kartta söylediği tek şey "bu ürün kaç alıyor". */}
+            <span className="font-serif text-h1-sm leading-tight text-ink">{formatDecimal(score.average, locale, 1)}</span>
+            <div className="flex flex-col gap-0.5">
+              <Stars value={score.stars ?? score.average} />
+              <span className="font-sans text-note text-muted">{t.reviews.count.replace('{count}', String(total))}</span>
+            </div>
           </div>
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
+          ))}
+          {total > reviews.length && (
+            <button
+              type="button"
+              onClick={openPanel}
+              className="cursor-pointer text-left font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
+            >
+              {t.reviews.all.replace('{count}', String(total))}
+            </button>
+          )}
+          {!canReview && <span className="font-sans text-micro leading-relaxed text-muted">{t.reviews.onlyBuyers}</span>}
+        </>
+      ) : (
+        /* Üç SÜTUNLU akış (`columns`), ızgara değil: yorumlar farklı boyda ve ızgarada satırın
+           yüksekliğini en uzun kart belirliyor — kısa yorumların altında boşluk kalırdı. */
+        <div className="columns-3 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
+          ))}
         </div>
       )}
-
-      {reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
-      ))}
-
-      {/* Bağlantı ancak gösterilenden FAZLA yorum varken çizilir: aynı listeyi açan bir bağ,
-          olmayan bir kapı gösterirdi. */}
-      {total > reviews.length && (
-        <button
-          type="button"
-          onClick={openPanel}
-          className="cursor-pointer text-left font-sans text-body-sm font-bold text-olive transition-colors hover:text-olive-dark"
-        >
-          {t.reviews.all.replace('{count}', String(total))}
-        </button>
-      )}
-
-      {!canReview && <span className="font-sans text-micro leading-relaxed text-muted">{t.reviews.onlyBuyers}</span>}
 
       {panelOpen && (
         <AllReviews

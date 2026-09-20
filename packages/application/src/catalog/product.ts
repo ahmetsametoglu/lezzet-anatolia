@@ -71,6 +71,7 @@ function declarationOf(
   product: {
     ingredients: LocalizedText | null;
     storageInstructions: LocalizedText | null;
+    preparationSteps: LocalizedText[];
     nutrition: StorefrontDeclaration['nutrition'];
     allergens: StorefrontDeclaration['allergens'] | null;
     traces: StorefrontDeclaration['traces'];
@@ -85,6 +86,12 @@ function declarationOf(
     // Hiçbir kalemi girilmemiş künye boş tablo çizdirmesin — "beyan var" izlenimi yanlış olur.
     nutrition: hasNutrition(product.nutrition) ? product.nutrition : null,
     storage: segmentsOf(product.storageInstructions, locale),
+    // Çevirisi eksik kalan adım listeden DÜŞER, boş satır olarak çizilmez: numaralı bir listede
+    // boş bir madde, atlanmış bir iş gibi okunur.
+    preparationSteps: product.preparationSteps.flatMap((step) => {
+      const text = textOf(step, locale);
+      return text ? [text] : [];
+    }),
   };
 }
 
@@ -239,6 +246,7 @@ export async function getProductDetail(
     // Açılışta seçili boy kartla aynı ölçütten gelir (`primaryVariantOf`); `variants` sırası `sortOrder`da kalır.
     primaryVariantId: primaryVariantOf(variants, ctx)?.id ?? null,
     declaration: declarationOf(product, locale),
+    aiQuestion: category ? textOf(category.aiQuestion, locale) : null,
     shippable: product.shippable,
     coldChain: requiresColdChain(product.storageType),
     family,
