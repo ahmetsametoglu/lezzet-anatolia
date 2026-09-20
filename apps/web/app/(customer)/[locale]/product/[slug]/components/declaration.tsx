@@ -49,10 +49,10 @@ function DeclarationCard({ title, note, warn = false, compact = false, children 
   const heading = (
     <>
       <span className="flex items-baseline gap-2">
-        <h2 className={['font-serif text-ink', compact ? 'text-body font-bold' : 'text-card-title'].join(' ')}>{title}</h2>
+        <h2 className={['font-serif text-ink', compact ? 'text-body font-bold' : 'text-card-title-sm'].join(' ')}>{title}</h2>
         {warn && <Icon name="warning" size={16} className="self-center text-terracotta" />}
       </span>
-      {note && <span className="font-sans text-note text-muted">{note}</span>}
+      {note && <span className="font-sans text-field-label font-normal text-muted">{note}</span>}
     </>
   );
 
@@ -115,7 +115,10 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
           {allergens.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {allergens.map((a) => (
-                <span key={a} className="inline-flex w-max items-center gap-1.5 rounded-soft bg-terracotta-bg px-3.5 py-1.5 font-sans text-note font-bold text-terracotta">
+                <span
+                  key={a}
+                  className="inline-flex w-max items-center gap-1.5 rounded-badge border border-terracotta-line bg-terracotta-bg px-2.75 py-1 font-sans text-field-label font-bold text-terracotta"
+                >
                   <Icon name="warning" size={13} />
                   {resolveLocalizedText(ALLERGEN_LABELS[a], locale)}
                 </span>
@@ -126,7 +129,7 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
           {traces.length > 0 && (
             <span
               className={[
-                'font-sans text-note leading-normal text-muted',
+                'font-sans text-field-label font-normal leading-relaxed text-muted',
                 // Kartın DİBİNE yapışır ve ayraçla ayrılır: beyan değil dipnot, kartın gövdesiyle
                 // aynı ağırlıkta okunmamalı. Mobil akordeonda yer yok, orada akışta kalır.
                 compact ? '' : 'mt-auto border-t border-sand-50 pt-2.5',
@@ -150,14 +153,14 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
         >
           <dl className="flex flex-col">
             {nutritionRows(nutrition, t, locale).map((row) => (
-              <div key={row.label} className="flex justify-between gap-4 border-b border-sand-100 py-2 font-sans text-body-sm text-ink last:border-b-0">
+              <div key={row.label} className="flex justify-between gap-3 border-b border-sand-100 py-2 font-sans text-control font-normal text-body last:border-b-0">
                 <dt>{row.label}</dt>
-                <dd className="text-right font-bold">{row.value}</dd>
+                <dd className="text-right font-bold text-ink">{row.value}</dd>
               </div>
             ))}
           </dl>
           {netQuantity !== null && netUnit !== null && (
-            <span className={['font-sans text-note text-muted', compact ? '' : 'mt-auto'].join(' ')}>
+            <span className={['font-sans text-field-label font-normal text-muted', compact ? '' : 'mt-auto'].join(' ')}>
               {t.declaration.netQuantity.replace('{quantity}', formatNetQuantity(netQuantity, netUnit, locale))}
             </span>
           )}
@@ -178,7 +181,7 @@ export function Declaration({ t, locale, declaration, netQuantity, netUnit, comp
               {preparationSteps.map((step, i) => (
                 <li key={i} className="flex items-start gap-2.75">
                   <span className="grid size-6 flex-none place-items-center rounded-full bg-olive font-sans text-micro font-bold text-white">{i + 1}</span>
-                  <span className="font-sans text-body-sm leading-normal text-body">{step}</span>
+                  <span className="font-sans text-control font-normal leading-relaxed text-body">{step}</span>
                 </li>
               ))}
             </ol>

@@ -164,12 +164,12 @@ export function DeliveryLine({ locale, shippable, status, fallback, blockedActio
         <span aria-hidden className={`mt-1.75 size-2 flex-none rounded-full ${dot}`} />
         <span className="flex flex-col gap-1">
           <span className="flex flex-wrap items-baseline gap-2.5">
-            <span className={`font-sans text-note font-bold ${markTone}`}>
+            <span className={`font-sans text-control ${markTone}`}>
               {mark} · {place.postalCode}
             </span>
-            <span className="font-sans text-micro">{change}</span>
+            <span className="font-sans text-field-label">{change}</span>
           </span>
-          <span className="font-sans text-note leading-normal text-body">
+          <span className="font-sans text-field-label font-normal leading-relaxed text-body">
             {body}
             {/* Kargolanamayan ürünün kısıtı rota İÇİNDE de söylenir: müşteri bu adrese aldırabiliyor
                 ama başka bir adrese gönderemez ve bunu sepete atmadan bilmeli. */}

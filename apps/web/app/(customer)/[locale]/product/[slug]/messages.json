@@ -46,7 +46,6 @@
       "count": "{count} onaylı müşteri yorumu",
       "countShort": "{count} yorum",
       "all": "{count} yorumun tümü →",
-      "verified": "onaylı alışveriş",
       "write": "Yorum yaz",
       "rating": "Puanınız",
       "placeholder": "Deneyiminizi birkaç cümleyle anlatın (isteğe bağlı)",
@@ -74,7 +73,8 @@
         "badge": "otomatik çevrildi",
         "showOriginal": "Orijinali göster",
         "showTranslation": "Çeviriyi göster"
-      }
+      },
+      "purchased": "Satın aldı"
     },
     "family": {
       "title": "Çeşitler",
@@ -165,7 +165,6 @@
       "count": "{count} avis clients vérifiés",
       "countShort": "{count} avis",
       "all": "Voir les {count} avis →",
-      "verified": "achat vérifié",
       "write": "Écrire un avis",
       "rating": "Votre note",
       "placeholder": "Décrivez votre expérience en quelques mots (facultatif)",
@@ -193,7 +192,8 @@
         "badge": "traduit automatiquement",
         "showOriginal": "Voir l'original",
         "showTranslation": "Voir la traduction"
-      }
+      },
+      "purchased": "Achat vérifié"
     },
     "family": {
       "title": "Variétés",
@@ -284,7 +284,6 @@
       "count": "{count} geprüfte Kundenbewertungen",
       "countShort": "{count} Bewertungen",
       "all": "Alle {count} Bewertungen →",
-      "verified": "geprüfter Kauf",
       "write": "Bewertung schreiben",
       "rating": "Ihre Bewertung",
       "placeholder": "Beschreiben Sie Ihre Erfahrung in wenigen Sätzen (optional)",
@@ -312,7 +311,8 @@
         "badge": "automatisch übersetzt",
         "showOriginal": "Original anzeigen",
         "showTranslation": "Übersetzung anzeigen"
-      }
+      },
+      "purchased": "Gekauft"
     },
     "family": {
       "title": "Sorten",

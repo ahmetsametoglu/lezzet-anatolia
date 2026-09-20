@@ -65,7 +65,7 @@ type CardSize = 'wide' | 'normal' | 'crowded' | 'mobile';
  */
 const CARD_WIDTH: Record<CardSize, string> = {
   wide: 'flex-1 max-w-[140px]',
-  normal: 'w-[106px] flex-none',
+  normal: 'w-[104px] flex-none',
   crowded: 'w-[66px] flex-none',
   mobile: 'w-[84px] flex-none',
 };
@@ -74,7 +74,7 @@ const CARD_WIDTH: Record<CardSize, string> = {
  * Görselin `sizes`i — kartın genişliği (iç boşluk düşülmedi: birkaç piksel fazlası basamağı
  * değiştirmez). Genişlikle AYNI tabloda değil ama AYNI anahtarlarla; biri değişirse öteki yanında.
  */
-const CARD_IMAGE_SIZES: Record<CardSize, string> = { wide: '140px', normal: '106px', crowded: '66px', mobile: '84px' };
+const CARD_IMAGE_SIZES: Record<CardSize, string> = { wide: '140px', normal: '104px', crowded: '66px', mobile: '84px' };
 
 interface FamilyCardProps {
   member: StorefrontFamilyMember;
@@ -85,7 +85,7 @@ interface FamilyCardProps {
 
 function FamilyCard({ member, size, subLine }: FamilyCardProps) {
   const box = [
-    'flex flex-col gap-1.5 rounded-soft bg-card p-1.5',
+    'flex flex-col gap-1 rounded-soft bg-card p-1',
     CARD_WIDTH[size],
     member.isCurrent ? 'relative border-2 border-olive' : 'border-[1.5px] border-sand-300',
   ].join(' ');
@@ -94,9 +94,7 @@ function FamilyCard({ member, size, subLine }: FamilyCardProps) {
     <span className="flex flex-col gap-px px-1 pb-1">
       {/* Etiket uzun olabilir ("Épinards & fromage") ve dar kartta sarar — sıkı satır aralığı kartı
           gereksiz uzatmaz. Kırpılmaz: çeşidin adı, kartın taşıdığı TEK ayırt edici bilgi. */}
-      <span className={['font-sans leading-tight font-bold text-ink', size === 'crowded' ? 'text-micro' : 'text-note'].join(' ')}>
-        {member.label}
-      </span>
+      <span className="font-sans text-micro leading-tight font-bold text-ink">{member.label}</span>
       {/* Bakılan çeşitte satır YEŞİL ("Bakıyorsunuz" bir durum), ötekilerde soluk (fiyat bir bilgi). */}
       {subLine && (
         <span className={['font-sans text-micro', member.isCurrent ? 'text-olive' : 'text-muted'].join(' ')}>{subLine}</span>
@@ -206,10 +204,10 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
         <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body-sm'].join(' ')}>
           {currentUnavailable ? t.titleUnavailable : t.title}
         </span>
-        <span className="font-sans text-micro text-muted">{t.count.replace('{n}', String(members.length))}</span>
+        <span className="font-sans text-field-label font-normal text-muted">{t.count.replace('{n}', String(members.length))}</span>
         {/* İpucu YALNIZ masaüstünde: dar ekranda başlık satırını ikinci satıra taşırıyor ve
             "sayfa değişir" bilgisini zaten ilk tıklama veriyor. */}
-        {!compact && !crowded && <span className="font-sans text-micro text-muted">· {t.hint}</span>}
+        {!compact && !crowded && <span className="font-sans text-field-label font-normal text-muted">· {t.hint}</span>}
         {crowded && (
           <button
             type="button"
@@ -235,7 +233,7 @@ export function FamilyBlock({ t, locale, members, currentUnavailable, compact = 
               ? 'grid gap-2 pt-2.5'
               : `${SCROLL_STRIP} gap-2 pt-2.5`
         }
-        style={layout === 'grid' && !compact ? { gridTemplateColumns: `repeat(auto-fill, ${size === 'crowded' ? 66 : 106}px)` } : undefined}
+        style={layout === 'grid' && !compact ? { gridTemplateColumns: `repeat(auto-fill, ${size === 'crowded' ? 66 : 104}px)` } : undefined}
       >
         {cards.map((m) => (
           <FamilyCard key={m.slug} member={m} size={size} subLine={subLineOf(m, size === 'normal')} />

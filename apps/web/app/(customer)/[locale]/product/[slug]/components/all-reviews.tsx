@@ -164,7 +164,7 @@ export function AllReviews({ t, locale, productId, productName, breakdown, total
       </div>
 
       {reviews.map((review) => (
-        <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} boxed />
+        <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={t.reviews.translation} boxed />
       ))}
 
       {/* Boş durum yalnız İLK SAYFA geldikten sonra: yükleme sırasında "yorum yok" demek, bir saniye

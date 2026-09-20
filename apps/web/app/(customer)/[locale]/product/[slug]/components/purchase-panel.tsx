@@ -103,7 +103,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
       {multi ? (
         <div className="flex flex-col gap-2.5">
           <span className="flex flex-col gap-0.5">
-            <span className={['font-sans font-bold text-ink', compact ? 'text-body-sm' : 'text-body'].join(' ')}>{t.chooseSize}</span>
+            <span className={['font-sans font-bold text-ink', compact ? 'text-body-sm' : 'text-body-sm'].join(' ')}>{t.chooseSize}</span>
             {familyLabel && (
               <span className="font-sans text-micro text-muted">{t.family.sizesOf.replace('{label}', familyLabel)}</span>
             )}
@@ -128,13 +128,13 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
                   'flex cursor-pointer flex-col gap-0.5 bg-card text-left transition-colors',
                   // 194 = tasarımın 150px İÇERİK genişliği + 40 ped + 4 çerçeve. Tasarım `content-box`,
                   // Tailwind `border-box` — aynı sayıyı yazmak kartı 44 px dar bırakıyordu (yaşandı).
-                  compact ? 'rounded-soft px-3.5 py-2.5' : 'rounded-card px-3.25 py-2.75',
+                  compact ? 'rounded-soft px-3.5 py-2.5' : 'rounded-soft px-3.25 py-2.75',
                   v.id === selected.id ? 'border-2 border-olive' : 'border-2 border-sand-200 hover:border-sand-400',
                   v.soldOut ? 'opacity-55' : '',
                 ].join(' ')}
               >
                 {/* Masaüstünde satırlar sıkı: token satır yükseklikleri kartı tasarımdan 14px uzatıyordu. */}
-                <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-body leading-tight'].join(' ')}>
+                <span className={['font-sans font-bold text-ink', compact ? 'text-note' : 'text-control leading-tight'].join(' ')}>
                   {variantNameOf(v, t.size, locale)}
                 </span>
                 {/* Fırsat rozeti FİYATIN YANINDA (tasarım): hangi boyun indirimli olduğu ancak o
@@ -159,7 +159,7 @@ export function VariantPicker({ t, locale, variants, selected, onSelect, familyL
       ) : (
         <div className="flex flex-col gap-0.5">
           <span className="flex flex-wrap items-center gap-2.5">
-            <Price cents={selected.priceCents} wasCents={selected.wasCents} locale={locale} size="xl" />
+            <Price cents={selected.priceCents} wasCents={selected.wasCents} locale={locale} size="hero" />
             {selected.wasCents !== undefined && (
               <Badge tone="offer" variant="filled">
                 {t.offer}
@@ -197,7 +197,7 @@ export function PriceBox({ t, locale, selected, children }: { t: Messages; local
     .join(' · ');
 
   return (
-    <div className="flex items-center gap-4 rounded-card border border-sand-200 bg-card px-4 py-3.5">
+    <div className="flex items-center gap-4 rounded-control border border-sand-200 bg-card px-4 py-3.5">
       <span className="flex flex-none flex-col gap-0.5 [&_span]:leading-tight">
         <span className="flex flex-wrap items-center gap-2">
           <Price cents={selected.priceCents} wasCents={selected.wasCents} locale={locale} size="xl" />
@@ -207,7 +207,7 @@ export function PriceBox({ t, locale, selected, children }: { t: Messages; local
             </Badge>
           )}
         </span>
-        {unitLine && <span className="font-sans text-micro text-muted">{unitLine}</span>}
+        {unitLine && <span className="font-sans text-field-label font-normal text-muted">{unitLine}</span>}
       </span>
       {children && <div className="min-w-0 flex-1">{children}</div>}
     </div>

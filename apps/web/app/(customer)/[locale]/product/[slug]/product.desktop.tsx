@@ -5,7 +5,6 @@ import { ColdChainMark, StockMark, StockNoticeButton } from '@/components/custom
 import { Badge } from '@/components/customer/ui/badge';
 import { ShareButton } from '@/components/customer/ui/share-button';
 import { formatDecimal } from '@/lib/storefront/format';
-import { SectionHeading } from '@/components/customer/ui/section';
 import { ProductCard } from '@/components/customer/ui/storefront-cards';
 import { Icon } from '@/components/customer/ui/icons';
 import { variantNameOf } from '@/lib/storefront/variant-name';
@@ -136,7 +135,9 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
 
         {/* Raf kaydırmada ekranda kalır: karar (boy · fiyat · sepet) künyeyi okurken de elin altında. */}
         <div className="sticky top-24 flex min-w-0 flex-col gap-4">
-          {product.category && <span className="font-sans text-eyebrow text-olive uppercase">{product.category.name}</span>}
+          {product.category && (
+            <span className="font-sans text-caps-label tracking-[0.14em] text-olive uppercase">{product.category.name}</span>
+          )}
           <div className="flex items-start justify-between gap-3.5">
             <h1 className="font-serif text-page-title leading-tight text-ink">{product.name}</h1>
             <ShareButton label={t.share} subject={{ subjectType: 'product', subjectId: product.id, productId: product.id }} />
@@ -151,8 +152,8 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
             {reviews.score.average !== null && (
               <a href="#reviews" className="mr-1.5 inline-flex cursor-pointer items-center gap-2.5 font-sans">
                 <Stars value={reviews.score.stars ?? reviews.score.average} small />
-                <span className="text-body font-bold text-ink">{formatDecimal(reviews.score.average, locale, 1)}</span>
-                <span className="text-body-sm text-muted transition-colors hover:text-olive">
+                <span className="text-button text-ink">{formatDecimal(reviews.score.average, locale, 1)}</span>
+                <span className="text-control font-normal text-muted transition-colors hover:text-olive">
                   · {t.reviews.countShort.replace('{count}', String(reviews.total))}
                 </span>
               </a>
@@ -166,7 +167,9 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
             {product.coldChain && <ColdChainMark label={t.assurance.coldChainShort} />}
           </div>
 
-          {product.description && <p className="font-sans text-lead text-body">{product.description}</p>}
+          {/* Açıklama 15 px (tasarım 15,5): rafın genişliği 470 px ve 18 px'lik satır orada üç yerine
+              beş satıra çıkıyordu. */}
+          {product.description && <p className="font-sans text-body leading-relaxed text-body">{product.description}</p>}
 
           {/* Çeşit bloğu boy seçicisi YOKKEN rafta kalır; varken sola iner (yukarıdaki `familyOnLeft`). */}
           {!familyOnLeft && <FamilyBlock t={t.family} locale={locale} members={product.family} currentUnavailable={unavailable} />}
@@ -190,7 +193,7 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
 
           {away && delivery}
 
-          <span className="flex items-center gap-1.5 border-t border-sand-200 pt-3.25 font-sans text-note text-muted">
+          <span className="flex items-center gap-1.5 border-t border-sand-200 pt-3.25 font-sans text-field-label font-normal text-muted">
             <Icon name="box" size={14} />
             {t.assurance.sturdyBox}
           </span>
@@ -201,8 +204,8 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
           rafın bittiği yerde sayfayı tek sütuna düşürüyordu (tasarım 20.09). */}
       <section className="flex flex-col gap-4.5 border-t border-sand-300 bg-sand-100 px-12 py-8.5">
         <div className="flex items-baseline gap-3">
-          <h2 className="font-serif text-h2 text-ink">{t.declaration.title}</h2>
-          <span className="font-sans text-body-sm text-muted">{t.declaration.note}</span>
+          <h2 className="font-serif text-page-title-sm text-ink">{t.declaration.title}</h2>
+          <span className="font-sans text-note text-muted">{t.declaration.note}</span>
         </div>
         <Declaration
           t={t}
@@ -219,14 +222,24 @@ export function ProductDesktop({ t, locale, product, selected, onSelect, familyL
       </div>
 
       {product.similar.length > 0 && (
-        <section className="flex flex-col gap-5 border-t border-sand-275 bg-cream-deep px-12 py-8.5 pb-10.5">
+        <section className="flex flex-col gap-4 border-t border-sand-275 bg-sand-50 px-12 pt-8.5 pb-10.5">
           {/* Açıklama satırı YOK. Bir süre "aile üyeleri burada tekrar edilmez" yazıyordu; kural
               değişti (04.08 — her aileden bir temsilci gelebilir) ve cümle yalan oldu. Yerine
               yenisi konmadı: karışık bir liste kendini anlatır, kuralını anlatmasına gerek yok. */}
-          <SectionHeading title={t.similar} action={{ label: t.similarAll, href: '/catalog' }} />
-          <div className="grid grid-cols-4 gap-6">
+          {/* Başlık satırı `SectionHeading` DEĞİL: ürün detayın bant başlıkları tasarımda 25 px ve
+              bağlantı altı çizili bir metin — ortak başlık 28 px'lik ana sayfa ölçüsünü taşıyor. */}
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-serif text-page-title-sm text-ink">{t.similar}</h2>
+            <Link href="/catalog" className="cursor-pointer font-sans text-control font-semibold text-olive underline hover:text-olive-dark">
+              {t.similarAll}
+            </Link>
+          </div>
+          <div className="grid grid-cols-4 gap-[18px]">
+            {/* Kart KATALOGLA ORTAK (kullanıcı kararı 20.09) — bandın kendisi tasarımın, kartlar bizim.
+                `priceFrom` notu geçilmez: "boy detayda seçilir" bilgisini kartın kendi "Seçenekler →"
+                düğmesi zaten veriyor. */}
             {product.similar.map((p) => (
-              <ProductCard key={p.id} product={p} locale={locale} labels={t.card} />
+              <ProductCard key={p.id} product={p} locale={locale} labels={{ ...t.card, priceFrom: undefined }} />
             ))}
           </div>
         </section>

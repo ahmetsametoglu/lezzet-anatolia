@@ -7,7 +7,7 @@ import { formatPrice } from '@/lib/storefront/format';
  */
 /** `muted`: "bölgenizde şu an yok" kartında fiyat durur ama sessizleşir; gizlemek ürünü bilinmez, ink alınabilir gösterirdi. */
 type PriceTone = 'default' | 'onDark' | 'muted';
-type PriceSize = 'sm' | 'md' | 'lg' | 'xl';
+type PriceSize = 'sm' | 'md' | 'lg' | 'xl' | 'hero';
 
 const SIZE: Record<PriceSize, string> = {
   sm: 'text-body',
@@ -16,6 +16,9 @@ const SIZE: Record<PriceSize, string> = {
   // Tek boylu üründe fiyat SAYFANIN ÇAPASIDIR: yanında seçilecek bir şey yok, kıyas edilecek ikinci
   // kart yok. Buton etiketiyle aynı kademede kalırsa hiyerarşi kurulmuyor ve göz düğmeye kayıyor.
   xl: 'text-card-title',
+  // Ürün detayın fiyat kutusu: kutunun içindeki TEK sayı ve yanındaki düğmeyle aynı ağırlıkta
+  // olmamalı — tasarımın ölçüsü 29 px, merdivenin en yakın basamağı 30.
+  hero: 'text-h1-sm',
 };
 
 interface PriceProps {

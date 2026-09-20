@@ -16,8 +16,8 @@ import { formatShortDate } from '@/lib/storefront/format';
 interface ReviewCardProps {
   review: PublishedReview;
   locale: Locale;
-  /** "onaylı alışveriş" ibaresi — komponent metin taşımaz, çağıranın sözlüğünden gelir. */
-  verifiedLabel: string;
+  /** "Satın aldı" rozetinin metni — komponent metin taşımaz, çağıranın sözlüğünden gelir. */
+  purchasedLabel: string;
   /** Çeviri şeridinin metinleri: rozet + iki yönlü bağlantı. */
   translation: { badge: string; showOriginal: string; showTranslation: string };
   /**
@@ -27,7 +27,7 @@ interface ReviewCardProps {
   boxed?: boolean;
 }
 
-export function ReviewCard({ review, locale, verifiedLabel, translation, boxed = false }: ReviewCardProps) {
+export function ReviewCard({ review, locale, purchasedLabel, translation, boxed = false }: ReviewCardProps) {
   /**
    * Müşteri orijinali görmek istedi mi — varsayılan ÇEVİRİ, çünkü okunabilirlik asıl amaç.
    *
@@ -43,33 +43,24 @@ export function ReviewCard({ review, locale, verifiedLabel, translation, boxed =
   return (
     <article
       className={[
-        'flex flex-col gap-2 rounded-card border px-5.5 py-4.5',
+        'flex flex-col gap-1.75 rounded-control border px-4.75 py-4',
         boxed ? 'border-sand-200 bg-cream-deep' : 'border-sand-200 bg-card',
       ].join(' ')}
     >
-      <div className="flex items-center gap-2.5">
-        {/* Baş harf, avatar yerine: profil fotoğrafı diye bir alanımız yok ve olmayan bir
-            görselin yer tutucusu her yorumu aynı gri daireyle başlatırdı. */}
-        <span className="grid size-9.5 flex-none place-items-center rounded-full bg-olive-bg font-sans text-body-sm font-bold text-olive">
-          {initialOf(review.authorName)}
-        </span>
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate font-sans text-body-sm font-bold text-ink">{review.authorName}</span>
-          <span className="font-sans text-micro text-muted">
-            {formatShortDate(review.createdAt, locale)} · {verifiedLabel}
-          </span>
-        </div>
-        {review.rating !== null && (
-          <span className="ml-auto flex-none">
-            <Stars value={review.rating} small />
-          </span>
-        )}
+      {/* Satır YILDIZLA başlar (tasarım 20.09): baş harf dairesi kalktı, çünkü kartların asıl bilgisi
+          kimin yazdığı değil kaç verdiği — üç sütunlu akışta göz önce puanı tarıyor. */}
+      <div className="flex flex-wrap items-center gap-2.25">
+        {review.rating !== null && <Stars value={review.rating} small />}
+        <span className="font-sans text-control text-ink">{review.authorName}</span>
+        <span className="font-sans text-field-label font-normal text-muted">· {formatShortDate(review.createdAt, locale)}</span>
+        {/* "Satın aldı" bir ROZET: ibare tarihin yanında soluk bir ek cümleyken okunmuyordu. */}
+        <span className="rounded-badge bg-olive-bg px-2 py-0.5 font-sans text-micro font-semibold text-olive">{purchasedLabel}</span>
       </div>
       {shown && (
         // `lang` GERÇEK dili söyler: orijinal gösteriliyorsa metnin kendi dili, çeviri
         // gösteriliyorsa okuyucunun dili. Ekran okuyucuları ve tarayıcı çevirisi buna bakar —
         // yanlış `lang`, Boşnakça bir cümleyi Fransızca telaffuzla okutur.
-        <p lang={showingOriginal ? (review.language ?? undefined) : locale} className="font-sans text-body-sm leading-relaxed text-body">
+        <p lang={showingOriginal ? (review.language ?? undefined) : locale} className="font-sans text-control font-normal leading-relaxed text-body">
           {shown}
         </p>
       )}
@@ -115,10 +106,4 @@ export function Stars({ value, small = false }: { value: number; small?: boolean
       })}
     </span>
   );
-}
-
-/** Adın baş harfi; ad çözülemediyse (silinmiş profil) nötr bir işaret. */
-function initialOf(name: string): string {
-  const first = name.trim()[0];
-  return first && first !== '—' ? first.toLocaleUpperCase('tr') : '·';
 }

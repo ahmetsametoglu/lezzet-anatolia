@@ -70,17 +70,17 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
       {/* Masaüstünde başlık, puan ve bağlantılar TEK SATIR (tasarım 20.09): bölüm tam genişlik banda
           çıkınca ayrı bir puan kartı satırın altında yetim kalıyordu. */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <h2 className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-h2'].join(' ')}>{t.reviews.title}</h2>
+        <h2 className={['font-serif text-ink', compact ? 'text-card-title-sm' : 'text-page-title-sm'].join(' ')}>{t.reviews.title}</h2>
         {!compact && score.average !== null && (
           <span className="inline-flex items-baseline gap-2">
-            <span className="font-sans text-lead font-bold text-ink">{formatDecimal(score.average, locale, 1)}</span>
+            <span className="font-sans text-h2-sm font-bold text-ink">{formatDecimal(score.average, locale, 1)}</span>
             <span className="self-center">
               <Stars value={score.stars ?? score.average} small />
             </span>
             <span className="font-sans text-note text-muted">{t.reviews.countShort.replace('{count}', String(total))}</span>
           </span>
         )}
-        {!compact && !canReview && <span className="ml-auto font-sans text-note text-muted">{t.reviews.onlyBuyers}</span>}
+        {!compact && !canReview && <span className="ml-auto font-sans text-field-label font-normal text-muted">{t.reviews.onlyBuyers}</span>}
         {canReview && !alreadyWrote && !submitted && (
           <button
             type="button"
@@ -96,7 +96,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
           <button
             type="button"
             onClick={openPanel}
-            className="cursor-pointer font-sans text-body-sm font-semibold text-olive underline transition-colors hover:text-olive-dark"
+            className="cursor-pointer font-sans text-control font-semibold text-olive underline transition-colors hover:text-olive-dark"
           >
             {t.reviews.all.replace('{count}', String(total))}
           </button>
@@ -138,7 +138,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
             </div>
           </div>
           {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
+            <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={t.reviews.translation} />
           ))}
           {total > reviews.length && (
             <button
@@ -156,7 +156,7 @@ export function Reviews({ t, locale, productId, productName, data, compact = fal
            yüksekliğini en uzun kart belirliyor — kısa yorumların altında boşluk kalırdı. */
         <div className="columns-3 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
           {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} locale={locale} verifiedLabel={t.reviews.verified} translation={t.reviews.translation} />
+            <ReviewCard key={review.id} review={review} locale={locale} purchasedLabel={t.reviews.purchased} translation={t.reviews.translation} />
           ))}
         </div>
       )}
