@@ -20,43 +20,8 @@ import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onb
 import { getSupabase } from '@lezzet/mobile-kit/src/lib/auth/supabase';
 
 /*
-  SEPET — NİYET CİHAZDA, GÖRÜNÜM SUNUCUDA.
-
-  Depo iki şey tutar ve ikisi AYNI ŞEY DEĞİLDİR:
-  · NİYET (`products` · `bundles` · `couponCode`) — "ne istendi": varyant + adet + parti, kupon kodu.
-    Misafirde bu liste sepetin TEK kaydıdır (cihazda yaşar, çevrimdışı çalışır); girişli müşteride
-    aynı niyet SUNUCUDA yaşar (`/api/v1/me/cart`) ve iki yüzeyde PAYLAŞILIR (kullanıcı kararı 09.08).
-  · GÖRÜNÜM (`view`) — "o niyetin BUGÜNKÜ karşılığı": ad · fiyat · indirim · asgari sepet · kargo
-    eşiği · tükendi kararı. Bunu HER İKİ HÂLDE DE SUNUCU çözer: girişlide sepet uçlarının cevabı,
-    misafirde `POST /api/v1/cart/view`. Sepetteki fiyat bağlayıcı değildir ve her okumada yeniden
-    çözülür (DOMAIN §5); iki yüzeyde iki ayrı hesap bir gün iki farklı tutar gösterirdi.
-
-  Ekranlar bu ayrımı BİLMEZ: `addProduct`/`setProductQuantity`/`removeProduct` her iki yolda da aynı
-  çağrıdır; hangi deponun konuştuğuna burası karar verir.
-
-  NEDEN BİR DEPO, EKRAN İÇİ `useState` DEĞİL: sepet ÜÇ ekranın ortak gerçeğidir — vitrindeki
-  "Sepete +" sepet ekranını, sepet ekranı da checkout özetini ve yüzen düğmenin sayacını değiştirir.
-  NEDEN CONTEXT DEĞİL: sağlayıcı kök layout'a takılırdı ve orası müşteri ile operasyon kabuklarının
-  ORTAK dosyasıdır. Modül düzeyinde depo + `useSyncExternalStore` aynı sonucu kabuk sözleşmesine
-  dokunmadan verir (React'in resmî dış-depo kapısı; `use-me.hook` de aynı kalıpta).
-
-  ── OKUMA SAF, SUNUCU TURU TEK KAPIDA ───────────────────────────────────────
-  `useCart()` YAN ETKİSİZDİR: abone olmak ağa çıkmaz, oturum okumaz. Sunucu turunu başlatan tek yer
-  `useCartSync()`tir ve o KÖK KABUKTA takılı (`app/_layout`). Ayrım bilinçli: vitrin/ürün/paket
-  ekranları sepeti yalnız SAYMAK için okuyor, o okumanın oturum altyapısına bağlanması gerekmez —
-  ve `useCart`ı yan etkili yapmak, env istemeyen onlarca komponent testini `getSupabase()`e
-  bağlardı (ölçüldü). Görünüm turu da AYNI KAPININ ardındadır: kapı kapalıyken ağa çıkılmaz.
-
-  KAPI SEKME KABUĞUNDAN KÖKE TAŞINDI (ölçüldü 28.08, fiziksel Android): `(tabs)` altındayken
-  yalnız sekmelerden gezilen akışı kapsıyordu, oysa sepet · ürün · paket · tarif · checkout o
-  grubun DIŞINDA. Derin bağlantıyla (bildirim, paylaşılan link) doğrudan açılan müşteri kapıyı
-  hiç açmıyor, dolayısıyla `source` `device`ta kilitleniyordu: yazmaları sunucuya gitmiyor,
-  görünümü çözülmüyordu — ekran "1 ürün · 0,00 €" gösterirken sunucuda başka bir sepet duruyordu
-  ve checkout'un okuduğu O sepetti. Gerekçenin tamamı `app/_layout.tsx` künyesinde.
-
-  ── FİYAT CENT'TİR ──────────────────────────────────────────────────────────
-  Biçimleme okuyan tarafın işi (`formatPrice`), depo ham tam sayı taşır — ondalık aritmetiği sepette
-  kuruş kaybettirir.
+  Sepet: niyet cihazda (misafir) ya da sunucuda (girişli, iki yüzeyde paylaşılır), görünüm her iki hâlde sunucuda çözülür ve
+  ekranlar ayrımı bilmez; `useCart()` yan etkisizdir, sunucu turunun tek kapısı kökteki `useCartSync()`tir.
 */
 
 /** Sepetteki tek ürün satırı — çeşit (varyant) seviyesinde. */
@@ -72,9 +37,7 @@ export interface CartProductLine {
   unitCents: number;
   quantity: number;
   /**
-   * Katalog görseli, katalogdaki hâliyle (21.303) — hazır bir adres DEĞİL: satır iki ayrı boyda
-   * çiziliyor (sepette 56'lık, ödemede küçük daire) ve her çizen kendi kutusuna yeten CDN türevini
-   * seçer. Depo yalnız bellekte yaşar; saklanan bir biçim olmadığı için taşınacak eski kayıt da yok.
+   * Katalog görseli; satır iki boyda çizilir ve her çizen kendi kutusuna yeten türevi seçer.
    */
   image: CatalogImage;
   /** İndirimli fiyattan geliyor — sepette rozetle söylenir. */
@@ -82,11 +45,7 @@ export interface CartProductLine {
   /** Sepete girdikten SONRA tükendi: teslim edilemez, kaldırılması istenir (v3:437). */
   soldOut: boolean;
   /**
-   * SUNUCU SEPETİNDEKİ ADRESİ — varyantın kimliği (uuid). İsteğe bağlı çünkü satırı kuran ekranlar
-   * (`product`/`recipe` detayları) bugün onu ayrı bir alan olarak GEÇMİYOR; kimliği `${slug}-${uuid}`
-   * biçiminde birleşik `id`ye gömüyorlar (`recipe-api.schema.ts` bu biçimi sözleşmede yazıyor).
-   * Çözüm 27.08'e kadar iki adımlıydı (alan varsa o, yoksa `id`nin kuyruğundaki uuid); ekranlar
-   * kimliği açıkça geçmeye başlayınca ikinci adım SİLİNDİ (`variantIdOf` künyesi).
+   * Sunucu sepetindeki adres, varyantın kimliği; satırı kuran ekranlar geçer.
    */
   variantId?: string;
   /** Teklif çıpası (parti) — satırın adresi bir ÇİFTTİR: varyant + parti (DOMAIN §5). */
@@ -112,12 +71,7 @@ export interface CartBundleLine {
 }
 
 /**
- * Sepete İNEN indirim — kod ve tutar (cent). Depo bunu HESAPLAMAZ, sunucunun görünümünden türetir
- * (`view.discount`): kupon geçerliliği, kampanya ve müşteri oranı motorun kararıdır.
- *
- * `code` müşteriye görünen künyedir: kuponda kodun kendisi, kendiliğinden inen indirimde
- * kampanyanın adı (adsız kampanyada boş). Kuponun HÂLİNİ (uygulandı/reddedildi) okuyan ekran
- * `view.discount`a bakar — bu alan yalnız "ne kadar indi" sorusunundur.
+ * Sepete inen indirim, kod ve tutar; depo hesaplamaz, sunucunun görünümünden türetir. Kuponun hâli `view.discount`tadır.
  */
 export interface CartCoupon {
   code: string;
@@ -125,12 +79,7 @@ export interface CartCoupon {
 }
 
 /**
- * Sepetin KAYNAĞI. `device` = misafir (ya da henüz okunmamış oturum): niyet yalnız cihazda.
- * `server` = sunucu sepeti okundu ve yazmalar oraya gidiyor.
- *
- * Bayrak şart, çünkü istemci "kimin sepeti" sorusunu kendi cevaplayamaz. Web'de bu bayrak yokken
- * girişli müşteride tarayıcı deposu da doluyor ve bir sonraki açılışta misafir sepeti sanılıp
- * sunucudakinin ÜSTÜNE ekleniyordu — her yenilemede adetler katlanıyordu (29.07).
+ * Sepetin kaynağı: `device` misafir, `server` sunucu sepeti. Bayrak şart, yoksa girişli sepet misafir sanılıp tekrar eklenirdi.
  */
 type CartSource = 'device' | 'server';
 
@@ -170,9 +119,7 @@ const EMPTY_VIEW: MeCartView = {
   customerDiscountPercent: null,
   isFirstOrder: false,
   hasBlocked: false,
-  /* Teslim edilemeyen kalemlerin tutarı — boş sepette sıfır, çünkü kalem yok. Asgari sepet bu
-     tutarı MATRAHTAN düşüyor (kullanıcı kararı 10.08): sipariş edilemeyecek bir kalemle eşiği
-     geçmiş görünen müşteri, kasada geri düşerdi. */
+  /* Teslim edilemeyen kalemlerin tutarı; boş sepette sıfır, çünkü kalem yok. */
   undeliverableSubtotalCents: 0,
   minBasketOk: false,
   missingForMinBasketCents: 0,
@@ -209,13 +156,8 @@ function publish(next: CartState): void {
 }
 
 /**
- * SUNUCU CEVABI AYNIYSA YAYIN YAPILMAZ (kullanıcı kararı 20.08: *"değişiklik varsa değiştiririz,
- * yoksa gereksiz bir state değişikliği oluşturmayız"*).
- *
- * İyimser yama ekranı zaten doğru değere getirdi; sunucu aynı şeyi söylüyorsa yeni bir nesne
- * yayınlamak bütün aboneleri boşuna yeniden çizdirir ve müşterinin gördüğü sayı iki kez "değişir"
- * (aynı değere). Karşılaştırma GÖRÜNÜMÜN TAMAMI üzerinde: bir alan bile farklıysa sunucunun sözü
- * geçerlidir ve olduğu gibi uygulanır — yani bu bir süzgeç değil, gereksiz turun elenmesi.
+ * Sunucu cevabı aynıysa yayın yapılmaz: iyimser yama ekranı zaten doğru değere getirdi, aynı değeri yeniden yayınlamak
+ * aboneleri boşuna çizdirirdi. Bir alan bile farklıysa sunucunun sözü geçer.
  */
 function sameView(a: MeCartView, b: MeCartView): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -234,18 +176,8 @@ function getSnapshot(): CartState {
 }
 
 /**
- * Sepeti YERELDE boşaltır — testlerin `beforeEach`i ve misafir devrinin temizliği.
- *
- * SUNUCU SEPETİNE DOKUNMAZ ve bu bilinçli — gerekçe 27.08'de değişti, kural değişmedi. Eski
- * gerekçe "checkout henüz sipariş oluşturmuyor"du; artık oluşturuyor ve sepeti SUNUCU kapatıyor
- * (`placeOrder` → `clearOrderedLines`, sipariş yazımıyla aynı pencerede). Yeni gerekçe daha da
- * bağlayıcı: silme SEÇİCİDİR — o siparişin kalemleri düşer, iki gruplu sepette kargo yarısı
- * yerinde kalır. Buradan toptan silmek, müşterinin henüz sipariş etmediği kalemleri silmek
- * olurdu; checkout onayı da bu yüzden `resetCart` değil `refreshCart` çağırıyor
- * (`checkout-screen` → `finish` künyesi, 21.29a).
- *
- * Havadaki turlar GEÇERSİZ kılınır (`revision`): boşaltmadan önce başlamış bir cevabın sepeti geri
- * doldurması, kullanıcının gördüğü boş sepeti sessizce bozardı.
+ * Sepeti yerelde boşaltır; sunucu sepetine dokunmaz, çünkü sipariş sonrası silme seçicidir ve onu sunucu yapar.
+ * Havadaki turlar `revision` ile geçersiz kılınır ki eski cevap boş sepeti doldurmasın.
  */
 export function resetCart(): void {
   revision += 1;
@@ -253,23 +185,8 @@ export function resetCart(): void {
 }
 
 /**
- * SEPETİ SUNUCUDAN TAZELE (21.29a) — silmez, YENİDEN OKUR.
- *
- * ── NEDEN `resetCart` DEĞİL ─────────────────────────────────────────────────
- * Sipariş verildiğinde sunucu sepeti kendisi kapatıyor ve **yalnız siparişe giren kalemleri**
- * düşürüyor (`clearOrderedLines`, `placeOrder` içinden): iki gruplu sepette kargo yarısı yerinde
- * kalır. `resetCart()` çağırmak o yarıyı da silerdi — müşterinin henüz sipariş etmediği kalemleri.
- * Doğru hareket sunucuya sormaktır; cevabı zaten o biliyor.
- *
- * ── NEDEN AYRI BİR KAPI GEREKTİ ─────────────────────────────────────────────
- * Depo sunucu turunu bugüne kadar YALNIZ kendi tetiklediği anlarda atıyordu (dil, yer ya da oturum
- * değişimi). Sipariş bunların hiçbiri değil: sunucudaki sepet değişti ama depo bunu bilmiyor ve
- * ekranın rozeti eski sayıyı göstermeye devam ediyordu (kullanıcı bulgusu 10.08: *"siparişi
- * tamamladığım zaman sepetim temizlenmedi"*). Kayıp sunucuda değil, istemcinin haberinde.
- *
- * `refreshView` misafir sepetini de doğru karşılıyor (yerel çözüm) — bu kapı onun dışa açık yüzü,
- * ikinci bir mantık yazılmadı. Kabuk takılı değilken (`watchers === 0`) sessizce hiçbir şey yapmaz:
- * görünmeyen bir ekranın turu, cevabı kimsenin okumayacağı bir istektir.
+ * Sepeti sunucudan tazeler, silmez: sipariş yalnız kendi kalemlerini düşürdüğü için doğru hareket sunucuya sormaktır.
+ * Kabuk takılı değilken hiçbir şey yapmaz.
  */
 export function refreshCart(): void {
   refreshView();
@@ -290,17 +207,8 @@ interface ViewContext {
 let context: ViewContext | null = null;
 
 /**
- * SATIN ALMA YERİ — kayıtlı teslimat adresinin posta kodu; `null` = bilinmiyor, gezinme kodu geçerli.
- *
- * 10.08'deki karar şuydu: *"satın alma tarafının tamamı ADRESLE çözülür, gezinme kodu vitrinde
- * kalır."* O gün bu, sepet ekranına İKİNCİ bir okuma eklenerek uygulandı (`useAddressCartView`) ve
- * arıza oradan doğdu: yazma turları deponun görünümünü tazeliyor, ekran ise o ikinci okumayı
- * çiziyordu ve o okuma yalnız dil/adres/kupon değişince yenileniyordu. Adet bunlardan hiçbiri —
- * ekran donuyordu (ölçüldü cihazda 20.08: veritabanı 3, ekran 2, başlık "3 ürün"; aynı ekran kendi
- * kendini yalanlıyordu).
- *
- * Doğrusu ikinci bir okuma değil, TEK okumanın doğru yere sorulmasıydı. Yer buraya yazılır, görünüm
- * yine tek yerde çözülür; ekranların seçeceği iki görünüm kalmaz.
+ * Satın alma yeri: kayıtlı teslimat adresinin posta kodu, `null` bilinmiyor. Görünüm tek yerde çözülür, ekranın seçeceği
+ * ikinci bir görünüm yoktur.
  */
 let purchasePostalCode: string | null = null;
 
@@ -315,11 +223,7 @@ function queryNow(): CartViewQuery | null {
 }
 
 /**
- * Satın alma yerini bildirir — sepet ve checkout, kayıtlı adresi çözer çözmez çağırır.
- *
- * Değişince görünüm yeniden çözülür; aynıysa hiçbir şey olmaz (her render'da tur açmamak için).
- * `null` yazmak "adres bilinmiyor"dur ve gezinme koduna döner — müşteri çıkış yaptığında ya da
- * kayıtlı adresi kalmadığında olan budur.
+ * Satın alma yerini bildirir; değişince görünüm yeniden çözülür, `null` gezinme koduna döner.
  */
 export function setPurchasePlace(postalCode: string | null): void {
   if (purchasePostalCode === postalCode) return;
@@ -329,40 +233,20 @@ export function setPurchasePlace(postalCode: string | null): void {
 
 // ── SUNUCU TURU ─────────────────────────────────────────────────────────────
 
-/**
- * `${slug}-${uuid}` biçimli satır kimliğinin kuyruğundaki varyant kimliği. Biçim uydurma değil,
- * bugün iki çağıranın da yazdığı biçim (`product-detail-screen`, `recipe-detail-screen` — sonuncusu
- * sözleşmede de yazılı). Eşleşmezse satır sunucuya GİTMEZ: yanlış bir kimlikle yazmaktansa yerel
- * kalması iyidir (bozuk yazım sessiz değil — `variantIdOf` null döndüğü an satır senkron dışıdır).
- */
-/* NOT: aşağıdaki `UUID` artık YALNIZ adres anahtarının biçimi için — satır kimliğinden çıkarım
-   yapan `TRAILING_UUID` 27.08'de silindi (yukarıdaki `variantIdOf` künyesi). */
+/** Adres anahtarının uuid biçimi. */
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 /** Adres anahtarının biçimi — `variantId` ya da `variantId@stockId` (`cartLineId` üretir). */
 const ADDRESS_KEY = new RegExp(`^(${UUID})(?:@(${UUID}))?$`, 'i');
 
 /**
- * Satırın varyant kimliği — TEK adım (27.08; eski `BEKLEYEN(21.14)`ün kapanışı).
- *
- * İkinci bir adım vardı: alan boşsa kimliği `id`nin kuyruğundaki uuid'den ÇIKARIYORDU. Çıkarım
- * `id`nin biçimine bağlıydı ve biçim değişse satır sessizce adressiz kalırdı. İki çağıranın ikisi
- * de (`product-detail-screen` · `recipe-detail-screen`) artık `variantId`yi açıkça geçiyor, yani
- * künyenin söz verdiği koşul gerçekleşti ve yedek silindi.
- *
- * `null` dönüşü YAŞIYOR ve kalmalı: alan opsiyonel olduğu sürece üçüncü bir çağıran onu geçmeyi
- * unutabilir; o zaman satır sunucuya GİTMEZ, yerelde kalır (`addressOf` künyesi). Sessiz yanlış
- * yazmaktansa görünür biçimde senkron dışı kalması iyidir.
+ * Satırın varyant kimliği; alan opsiyonel olduğu için `null` dönebilir ve o satır sunucuya gitmez, yerelde kalır.
  */
 function variantIdOf(line: CartProductLine): string | null {
   return line.variantId ?? null;
 }
 
 /**
- * Satırın sunucudaki adresi — varyant + parti çifti; varyantı çözülemeyen satırın adresi yoktur.
- *
- * `kind` AÇIKÇA yazılır: gövde artık ayrık bir birlik (varyant ⟷ paket) ve türü kimlik alanının
- * VARLIĞINDAN çıkarmak yasak — `string` birim tip değildir, TypeScript onunla daraltma yapmaz
- * (`MeCartItemWriteSchema` künyesi).
+ * Satırın sunucudaki adresi, varyant + parti; `kind` açıkça yazılır, çünkü `string` alanla daraltma yapılamaz.
  */
 function addressOf(line: CartProductLine): CartItemWrite | null {
   const variantId = variantIdOf(line);
@@ -374,11 +258,7 @@ function addressesOf(lines: readonly CartProductLine[]): CartItemWrite[] {
 }
 
 /**
- * NİYETİN TAMAMI — ürünler VE paketler. Misafirin görünümü ile devrin gövdesi bunu gönderir.
- *
- * Paketler 20.08'e kadar buraya girmiyordu ve bedeli ölçülmüştü: misafirin görünümünde paket hiç
- * çözülmüyor, girişte devrolan sepette paket kayboluyordu. Aynı kök, sepet toplamının paketi
- * saymamasıyla aynı (künye: `setQty` → `CartRef`).
+ * Niyetin tamamı, ürünler ve paketler; misafir görünümü ve devir gövdesi bunu gönderir.
  */
 function intentOf(cart: CartState): CartItemWrite[] {
   return [
@@ -388,13 +268,8 @@ function intentOf(cart: CartState): CartItemWrite[] {
 }
 
 /**
- * GÖRÜNÜM SATIRININ DEPO KİMLİĞİ — yazma kapılarına (`setProductQuantity`/`removeProduct`)
- * verilecek `id`.
- *
- * NEDEN GEREKLİ: sepet ekranı artık YEREL niyet listesini değil SUNUCUNUN görünümünü çiziyor ve o
- * listede bu cihazın hiç görmediği satırlar da var (webden ya da başka bir telefondan eklenmiş).
- * Onların yerel bir `id`si yok; kimlikleri ADRESLERİDİR. Anahtar bu yüzden adresten kurulur ve
- * yazma kapıları iki biçimi de tanır (yerel `id` ⟷ adres anahtarı).
+ * Görünüm satırının depo kimliği: ekran sunucunun görünümünü çizer ve orada bu cihazın görmediği satırlar da vardır,
+ * kimlikleri adresleridir.
  */
 export function cartLineId(line: MeCartViewLine): string {
   if (line.kind === 'bundle') return line.bundleId;
@@ -444,34 +319,8 @@ function couponOf(view: MeCartView): CartCoupon | null {
 }
 
 /**
- * İYİMSER GÖRÜNÜM YAMASI — parmak kalkar kalkmaz ekranda değişen şey (kullanıcı kararı 20.08:
- * *"view-first; önce arayüzü günceller, beklenmedik bir durum olursa eski hâline alırsın"*).
- *
- * Yazma turu zaten iyimserdi (`commit`) ama yamayı YANLIŞ YERE koyuyordu: yalnız yerel niyet
- * listesini (`products`) güncelliyordu, oysa ekran görünümün satırlarını çiziyor. Yani desen
- * "iyimser" adını taşıyıp davranışı bekleyendi; sunucu cevabı ~300 ms sonra gelip düzelttiği için
- * fark edilmiyordu. Yama artık ekranın gerçekten okuduğu yere yazılıyor.
- *
- * ── NE YAMANIR, NE YAMANMAZ ────────────────────────────────────────────────
- * YAMANIR — hepsi sözleşmenin KENDİ alanları üzerinde düz aritmetik, hiçbiri iş kuralı değil:
- * · adet — kullanıcının kendi girdisi
- * · satır toplamı — birim fiyat × adet; birim fiyatı zaten sunucu çözdü
- * · `itemCount` — satır adetlerinin toplamı
- * · ara toplam — satır toplamlarının toplamı
- * · genel toplam — ara toplam eksi İNDİRİM; indirim HESAPLANMAZ, sunucunun son cevabından olduğu
- *   gibi taşınır (`subtotal − total` farkı). Yani istemci kampanya seçmez, oran uygulamaz; yalnız
- *   bir kez öğrendiği tutarı bir sonraki cevaba kadar taşır.
- * · asgari sepet — eşik ve matrah sözleşmeden gelir (`minBasketCents`, `undeliverableSubtotalCents`),
- *   burada yalnız çıkarma yapılır
- *
- * YAMANMAZ: indirimin KENDİSİ (hangi kampanya kazandı, ne kadar), ulaşılabilir kampanya cümlesi ve
- * kargo. Kampanyayı motor tüm sepet üzerinden tek-en-büyük seçip kalemlere oransal dağıtıyor;
- * istemcide tahmin etmek −%15 vaat edip %8 uygulamak olurdu (CLAUDE §1). Onlar sunucunun sözünü
- * bekler — ölçülen tur 207–336 ms — ve cevap geldiğinde tamamı onunla değişir.
- *
- * Fiyatı bilinmeyen satırda (`unitPriceCents === null`, satışa kapalı) toplam `null` KALIR:
- * ölçülemeyen değer sıfır değildir; ara toplama da 0 olarak girer, çünkü tahsil edilecek bir tutarı
- * yoktur.
+ * İyimser görünüm yaması: adet, satır toplamı, sayaç, ara ve genel toplam ile asgari sepet sözleşmenin kendi alanlarıyla düz
+ * aritmetikle yamanır. İndirimin kendisi, ulaşılabilir kampanya ve kargo yamanmaz, sunucunun sözünü bekler.
  */
 function viewWithQty(view: MeCartView, ref: CartLineRef | null, quantity: number): MeCartView {
   if (ref === null) return view;
@@ -490,9 +339,7 @@ function viewWithQty(view: MeCartView, ref: CartLineRef | null, quantity: number
     );
 
   const subtotalCents = lines.reduce((total, line) => total + (line.lineTotalCents ?? 0), 0);
-  /* Eşik kuralı MOTORDAN sorulur, burada yeniden yazılmaz — web'in aynı satırı (`viewWithEntries`)
-     de öyle yapıyor. Elle bir karşılaştırma yazmak, iki yüzeyin eşiği bir gün farklı okuması
-     demekti. Eşik tanımsızsa (`0` = "bilinmiyor") sunucunun kararı korunur. */
+  /* Eşik kuralı motordan sorulur (`meetsMinBasket`), web'in `viewWithEntries`i gibi. */
   const basket = meetsMinBasket(subtotalCents - view.undeliverableSubtotalCents, view.minBasketCents);
   const settled = settleDiscount(view, lines, subtotalCents);
 
@@ -508,23 +355,8 @@ function viewWithQty(view: MeCartView, ref: CartLineRef | null, quantity: number
 }
 
 /**
- * İNDİRİM YENİDEN ÇÖZÜLÜR — SUNUCUNUNKİYLE AYNI MOTORLA (kullanıcı kararı 20.08: *"her basışta
- * fiyatlarda zıplama oluyor, bu hâliyle kabul edilemez"*).
- *
- * Önceki hâl sunucunun TUTARINI taşıyordu ve oran tabanlı bir kampanyada sepet büyüdükçe o tutar
- * eskiyordu: ölçüldü, bar 34,05 € gösterip cevap gelince 33,53 €'ya düşüyordu. İkinci bir hesap
- * yazmak çare değil (iki yüzey ayrışır); çare **motorun kendisini çağırmak** —
- * `applyBestDiscount`, `@lezzet/domain-core`, sunucunun `resolveCartDiscount`u da onu çağırıyor.
- * Kurallar sözleşmeyle taşınıyor (`view.discountRules`; künyesi `MeCartDiscountRuleSchema`).
- *
- * ── KUPON YOLUNDA MOTOR ÇALIŞTIRILMAZ ───────────────────────────────────────
- * Kupon kuralları kodlarını taşır ve o kodlar istemciye GÖNDERİLMEZ; havuz yalnız kendiliğinden
- * inen kampanyaları içeriyor. Kupon uygulanmış (ya da kupon yüzünden bir karar doğmuş) bir sepette
- * motorun eksik havuzla vereceği cevap YANLIŞ olurdu — o hâlde sunucunun son tutarı taşınır ve
- * ~300 ms sonra tazelenir. Kupon nadir, kampanya her sepette.
- *
- * Matrah muafiyetleri (paket kalemi, teklif satırı) motorun kendi kuralı; burada tekrarlanmaz —
- * satırlar olduğu gibi verilir, ayıklamayı `applyBestDiscount` yapar.
+ * İndirim sunucununkiyle aynı motorla (`applyBestDiscount`) yeniden çözülür ki adet değişince toplam zıplamasın. Kupon
+ * yolunda motor çalıştırılmaz, çünkü kupon kuralları istemciye gelmez; sunucunun son tutarı taşınır.
  */
 function settleDiscount(
   view: MeCartView,
@@ -558,9 +390,7 @@ function settleDiscount(
   );
   const cents = winner?.amountCents ?? 0;
 
-  /* İNDİRİM SATIRI DA TAZELENİR — yoksa aynı karede "ara toplam − indirim ≠ toplam" olurdu
-     (ölçüldü cihazda 20.08: toplam anında 64,08 € doğru, indirim satırı hâlâ −4,18 € yazıyordu).
-     Toplamı düzeltip satırı bırakmak, çelişkiyi gizlemek değil GÖRÜNÜR kılmak olurdu. */
+  /* İndirim satırı da tazelenir, yoksa aynı karede "ara toplam − indirim ≠ toplam" olurdu. */
   if (view.discount.status === 'automatic') {
     return cents === 0
       ? { discount: { status: 'none' }, totalCents: subtotalCents }
@@ -594,23 +424,8 @@ function refreshed(known: CartProductLine, line: MeCartViewLine): CartProductLin
 }
 
 /**
- * SUNUCU SEPETİNİN cevabı benimsenir — görünüm olduğu gibi alınır, yerel niyet listesi ona göre
- * kurulur.
- *
- * Eşleşen satır sunucunun değerleriyle tazelenir; yerelde olup sunucuda olmayan satır DÜŞER —
- * sunucu ne diyorsa sepet odur ("iki listeyi birleştirme" yalnız DEVİR anında olur ve onu da sunucu
- * yapar). Adresi çözülemeyen yerel satır KORUNUR: sunucuya hiç gitmediği için sunucunun listesinde
- * olmaması silindiği anlamına gelmez.
- *
- * Sunucuda OLUP yerelde karşılığı olmayan satır artık bir sorun değil: görünüm onun adını da
- * fiyatını da taşıyor, ekran doğrudan `view.lines`ı çiziyor. Yerel liste yalnız devir ve misafir
- * yolu için tutulur.
- *
- * Paket satırları dokunulmadan kalır ve GEREKÇE 27.08'de değişti: eskiden paket sunucuya hiç
- * yazılamıyordu (uuid'si paket detay sözleşmesinde yoktu); 20.08'den beri yazılıyor, çözülüyor ve
- * toplama giriyor. Bugünkü sebep varyant satırındakiyle aynı değil: paketin yerel kaydı ekranın
- * çizdiği şey DEĞİL — ekran `view.lines`ı çiziyor ve paket satırı adıyla, fiyatıyla oradan geliyor.
- * Yerel liste yalnız devir ve misafir yolu için tutuluyor, tazelenecek bir gösterimi yok.
+ * Sunucu sepetinin cevabı benimsenir: yerel niyet listesi ona göre kurulur, sunucuda olmayan yerel satır düşer, adresi
+ * çözülemeyen yerel satır korunur. Paket satırları dokunulmadan kalır, çünkü ekran onları görünümden çizer.
  */
 function adopted(current: CartState, view: MeCartView): CartState {
   const products: CartProductLine[] = [];
@@ -629,9 +444,7 @@ function adopted(current: CartState, view: MeCartView): CartState {
 }
 
 /**
- * MİSAFİRİN cevabı benimsenir. Niyet listesi DOKUNULMADAN kalır — misafirde sepetin tek kaydı odur
- * ve sunucu onu "bilmiyor", yalnız çözüyor. Satırlar yine de tazelenir: fiyat değiştiyse yerel
- * kopyanın eski fiyatı taşıması, checkout özetinde iki farklı sayı demekti.
+ * Misafirin cevabı benimsenir; niyet listesi dokunulmadan kalır, satırlar fiyat değiştiyse tazelenir.
  */
 function resolved(current: CartState, view: MeCartView): CartState {
   const products = current.products.map((product) => {
@@ -655,12 +468,8 @@ function resolved(current: CartState, view: MeCartView): CartState {
 let revision = 0;
 
 /**
- * Yerel değişikliği ANINDA uygular, sonra sunucuya yazar (hesap ekranındaki iyimser-yazım deseni).
- * Ret gelirse ESKİ hâle dönülür ve anahtar `error`a yazılır — kaydedilmemiş bir adedi kaydedilmiş
- * göstermek, müşteriye sepetinde olmayan bir ürünü var gibi okutur.
- *
- * MİSAFİRDE YAZMA YOKTUR, sadece görünüm tazelenir: niyet zaten cihazdadır ve onu bir ağ arızası
- * geri alamaz — geri alınacak bir yazma yok.
+ * Yerel değişiklik anında uygulanır, sonra sunucuya yazılır; ret gelirse eski hâle dönülür ve anahtar `error`a yazılır.
+ * Misafirde yazma yoktur, yalnız görünüm tazelenir.
  */
 function commit(next: CartState, call: (query: CartViewQuery) => Promise<ApiResult<MeCartView>>): void {
   const previous = state;
@@ -676,12 +485,7 @@ function commit(next: CartState, call: (query: CartViewQuery) => Promise<ApiResu
   void call(query).then((result) => {
     if (mine !== revision) return;
     if (result.error !== null) {
-      /* 401 = OTURUM BİTTİ, yazma hatası DEĞİL — `hydrateCart`in aynı ayrımı, burada eksikti
-         (ölçüldü 09.08: iki yol aynı anahtarı iki farklı şeye yoruyordu). Süresi dolmuş oturumla
-         "+" basan müşteri kırmızı bir "eşitlenemedi" uyarısı görüyor ve dokunuşu geri alınıyordu;
-         oysa doğru cevap sepetin CİHAZ sepetine dönmesidir — misafirin sepeti nasıl çalışıyorsa
-         öyle. Değişiklik KORUNUR (`next`), kaynak cihaza düşer, uyarı yazılmaz; görünüm de misafir
-         yolundan yeniden çözülür. */
+      /* 401 oturum bitti demektir, yazma hatası değil: değişiklik korunur, kaynak cihaza düşer ve görünüm misafir yolundan çözülür. */
       if (result.status === 401) {
         publish({ ...next, source: 'device', error: null });
         refreshView();
@@ -698,17 +502,8 @@ function commit(next: CartState, call: (query: CartViewQuery) => Promise<ApiResu
 }
 
 /**
- * Sunucu sepetini okur; misafir sepeti VARSA önce devreder.
- *
- * DEVİR YALNIZ BİR KEZ: `source === 'device'` iken gönderilir. İkinci bir devir aynı satırları
- * sunucudakinin üstüne bir kez daha eklerdi (adetler katlanır — web'de ölçülmüş arıza, 29.07).
- * Devirden sonra yerel liste sunucunun cevabıyla YENİDEN KURULUR, yani "yerel kopya temizlenir"
- * kuralı ayrı bir silme adımı değil, tek yönlü eşitlemenin doğal sonucudur.
- *
- * 401 = MİSAFİR, hata değil (`authorizedFetch` oturumsuzken ağa hiç çıkmaz): sepet cihazda kalır ve
- * görünümü misafir ucundan çözülür. Öteki retler ölçülemedi demektir — yerel sepete DOKUNULMAZ,
- * anahtar `error`a yazılır; sunucuyu okuyamadık diye müşterinin sepetini boşaltmak, olmayan bir
- * bilgiyi bilgi saymak olurdu.
+ * Sunucu sepetini okur, misafir sepeti varsa önce bir kez devreder. 401 misafir demektir; öteki retlerde yerel sepete
+ * dokunulmaz ve anahtar `error`a yazılır.
  */
 async function hydrateCart(query: CartViewQuery): Promise<void> {
   const handover = state.source === 'device' ? intentOf(state) : [];
@@ -747,14 +542,7 @@ async function resolveGuestView(query: CartViewQuery): Promise<void> {
 }
 
 /**
- * Görünümü YENİDEN ÇÖZDÜRÜR — niyet, dil ya da yer değiştiğinde çağrılır.
- *
- * BOŞ NİYET AĞA ÇIKMAZ: kalemi olmayan sepetin görünümü tanım gereği boştur ve sunucuya sormak,
- * uygulamanın her açılışında karşılıksız bir istek demekti.
- *
- * KAPI KAPALIYKEN de çıkmaz (`watchers === 0`): sunucu turunun tek kapısı `useCartSync`tir
- * (dosya künyesi) — ürün/tarif ekranlarının testleri o kapıyı açmıyor ve sepete ekleme onları
- * ağa bağlamamalı.
+ * Görünümü yeniden çözdürür; boş niyet ve kapalı kapı ağa çıkmaz.
  */
 function refreshView(): void {
   if (state.source !== 'server' && intentOf(state).length === 0) {
@@ -820,23 +608,8 @@ function setViewContext(next: ViewContext): void {
 }
 
 /**
- * Sunucu turunu AÇAN kapı — ekran bunu takınca sepet oturumu izlemeye başlar (giriş → devir + okuma,
- * çıkış → temizlik) ve görünümün bağlamını (dil + posta kodu) depoya bağlar. `useCart`tan ayrı
- * durmasının gerekçesi dosya künyesinde.
- *
- * DİL VE YER BURADAN GEÇER, depo onları kendi okumaz: ikisi de HOOK kaynaklı (`useAppLocale`,
- * onboarding deposu) ve modül düzeyinde bir depo hook çağıramaz. Kapı kökte takılı, yani değer
- * değiştiği an burada görünür.
- *
- * TEK YERDE TAKILIR (`app/_layout`). Sayaç (`watchers`) birden çok montajı kaldırır ama ikinci bir
- * çağrı hiçbir şey KAZANDIRMAZ: abonelik zaten tekil, tur zaten açık. İkinci kapı, kapının nerede
- * olduğu sorusunu iki cevaplı yapar.
- *
- * `enabled` KAPIYI KAPATIR, çünkü kök yığın müşterinin alışveriş ağacından İBARET DEĞİL: personel
- * kabuğu ve kimliği TOKEN olan ziyaretçi yolları (geri bildirim · davet) da oradan geçiyor. Onlarda
- * sepet diye bir kavram yok ve kapıyı açmak, oturumsuz bir ziyaretçiyi Supabase oturum altyapısına
- * bağlardı — `use-me.hook` künyesinde ölçümüyle yazılı ders. Kapalıyken hook hiçbir şeye DOKUNMAZ:
- * `getSupabase()` bile çağrılmaz (ölçüldü 28.08: çağrılınca `feedback-routes` testi env istedi).
+ * Sunucu turunu açan kapı: oturumu izler ve dil ile yeri depoya bağlar; tek yerde, kökte takılır. `enabled` kapıyı kapatır,
+ * çünkü personel kabuğu ve jetonlu ziyaretçi yollarında sepet yoktur ve Supabase oturumu açılmamalı.
  */
 export function useCartSync(enabled = true): void {
   const locale = useAppLocale();
@@ -867,16 +640,8 @@ export function addProduct(line: Omit<CartProductLine, 'quantity'>, quantity = 1
 }
 
 /**
- * BİRDEN ÇOK satırı TEK turda ekler — tarifin "Malzemeleri sepete ekle"si.
- *
- * **Neden tek tur** (ölçüldü 09.08): eskiden ekran döngüyle `addProduct` çağırıyordu ve her çağrı
- * ayrı bir istek atıyordu. Sepet sunucuda TEK satırda yaşıyor; eşzamanlı üç istek aynı başlangıcı
- * okuyup üstüne yazınca yalnız sonuncusu kalıyordu — üç malzemeden biri sepete giriyor, üstelik
- * hangisinin girdiği belirsiz oluyordu (bildirim ise "3 kalem eklendi" diyordu). İkinci bir kayıp
- * daha vardı ve o istemcideydi: iyimser yazım sayacı yalnız SON turun cevabını uyguluyor, o cevap
- * da eksik listeyi taşıyınca `adopted` yereldeki öteki satırları eliyordu.
- *
- * Tek tur ikisini birden kapatır: bir kullanıcı eylemi, bir istek, bir cevap.
+ * Birden çok satırı tek turda ekler (tarifin "Malzemeleri sepete ekle"si): sepet sunucuda tek satırda yaşar ve eşzamanlı
+ * ayrı istekler birbirini ezerdi.
  */
 export function addProducts(lines: readonly CartProductLine[]): void {
   let products = state.products;
@@ -902,12 +667,7 @@ export function addProducts(lines: readonly CartProductLine[]): void {
 }
 
 /**
- * Adedi değiştirir. SIFIRA düşen satır sepetten ÇIKAR: "0 adet ürün" diye bir şey yok ve sıfırda
- * duran satır toplamı bozmadan listeyi kirletirdi (v3'ün `−` düğmesi de böyle davranıyor; sunucu
- * ucu da sıfırı silme olarak okur).
- *
- * `id` iki biçimden biri olabilir: ekranların kurduğu yerel kimlik ya da görünüm satırının adres
- * anahtarı (`cartLineId`) — künyesi orada.
+ * Adedi değiştirir; sıfıra düşen satır çıkar. `id` yerel kimlik ya da görünüm satırının adres anahtarıdır (`cartLineId`).
  */
 export function setProductQuantity(id: string, quantity: number): void {
   const found = locate(id);
@@ -949,26 +709,8 @@ export function removeProduct(id: string): void {
 }
 
 /*
-  PAKET KAPILARI SUNUCUYA BAĞLI (20.08) — aşağıdaki üçü varyant kapılarıyla AYNI yoldan geçer:
-  iyimser yazım + `revision` sayacı + 401 dalı.
-
-  ── BURASI BİR TARİH KAYDI: iki engelin ikisi de ödendi ─────────────────────
-  Kapılar bir süre YEREL kaldı ve sebebi ölçülmüştü (21.21, canlı `:3002`):
-
-  1. SATIR ÇÖZÜLEMİYORDU. `getCartView`in paket kapısı (`CartBundlePort`) mobil uçlarda
-     geçilemiyordu — kapıyı besleyecek okuma `apps/web`te ve `server-only`ydi. Kapısız paket satırı
-     `orphanLine`a düşüyordu: `name: ""`, `unitPriceCents: null`, `blocked: true` ve tutar toplama
-     hiç girmiyordu. ÖDENDİ: okuma `@lezzet/application`a terfi etti (`getPackagesByIds`) ve
-     `readCartView` kapıyı geçiyor (`cart-view.ts` künyesi) — vitrin, sepet ve checkout artık aynı
-     paketi aynı stok ve yol kararıyla görüyor.
-
-  2. SATIR AZALTILAMIYOR/SİLİNEMİYORDU. `PATCH`/`DELETE` yolu varyant + parti ile adresliyordu;
-     paket kimliğiyle atılan `DELETE` satırı bulamıyordu. ÖDENDİ: `CartService.setQty`/`removeItem`
-     satır anahtarına geçti (`CartRef` — varyant+parti ya da paket) ve uç paket dalını
-     `?kind=bundle` ile adresliyor (`lib/api/cart.ts` → `linePath`).
-
-  Kayıt duruyor çünkü kararın kendisi buradan okunuyor: paketin sepetteki adresi SLUG DEĞİL UUID'dir
-  ve bu üç kapı o kimliği taşıyor.
+  Paket kapıları varyant kapılarıyla aynı yoldan geçer (iyimser yazım + `revision` + 401 dalı); paketin sepetteki adresi
+  slug değil uuid'dir.
 */
 
 /**
@@ -1010,13 +752,7 @@ export function removeBundle(id: string): void {
 }
 
 /**
- * Kupon kodunu NİYET olarak yazar ve görünümü yeniden çözdürür — kodun geçerliliğini, indirimini ve
- * hangi kampanyanın kazandığını SUNUCU söyler (`view.discount`).
- *
- * İSTEMCİ SÖZLÜĞÜ YOK: eskiden ekran iki demo kodu yerel bir tablodan doğruluyordu; o tablo hem
- * gerçek kuponları tanımıyor hem de tanıdıklarına yanlış indirim veriyordu. Ret sebebi de artık
- * gerçek: `CartCouponFailureEnum` (süresi dolmuş ⟷ asgari sepet ⟷ hakkı bitmiş — üçü farklı şey ve
- * ikincisinde müşteri sepetine ürün ekleyerek kuponu kullanabilir).
+ * Kupon kodunu niyet olarak yazar ve görünümü yeniden çözdürür; geçerliliği ve indirimi sunucu söyler.
  */
 export function applyCoupon(code: string): void {
   const trimmed = code.trim();
@@ -1032,29 +768,14 @@ export function removeCoupon(): void {
 // ── TÜRETİLMİŞ OKUMALAR ─────────────────────────────────────────────────────
 
 /**
- * Sepetteki toplam ADET — yüzen düğmenin ve başlık sayacının okuduğu sayı.
- *
- * SUNUCU SAYAR (`view.itemCount`): başka bir cihazdan eklenmiş kalemler de o sayının içindedir.
- * Görünüm henüz çözülmemişse (kapı kapalı, ağ yok) cihazın kendi niyeti sayılır — sepetinde ürün
- * dururken "0" göstermek, ölçülemeyen değeri sıfır saymak olurdu (CLAUDE §1).
- *
- * PAKET SATIRLARI AYRICA EKLENİR çünkü sunucu sepetine yazılamıyorlar (künye yukarıda) ve
- * görünümde hiç görünmüyorlar; saymamak, müşteriye eksik bir sepet göstermek olurdu.
+ * Sepetteki toplam adet: görünüm varsa sunucunun sayısı (paketler dahil), yoksa cihazın niyeti, çünkü ürün dururken
+ * "0" göstermek ölçülemeyeni sıfır saymak olurdu.
  */
 export function cartCount(cart: CartState): number {
-  /* Görünüm varsa SAYAN ODUR — paketler dahil. Eskiden görünümün sayısına yerel paket adetleri
-     EKLENİYORDU çünkü sunucu paketi hiç görmüyordu; 20.08'de paket sunucuya bağlanınca o toplama
-     çift sayım oldu (künye: `setQty` → `CartRef`). Görünüm yokken (misafirin ilk karesi, ağ turu
-     henüz dönmemiş) niyet sayılır. */
   if (cart.view.lines.length > 0) return cart.view.itemCount;
   const bundles = cart.bundles.reduce((total, line) => total + line.quantity, 0);
   return cart.products.reduce((total, line) => total + line.quantity, bundles);
 }
-
-/* `cartSubtotalCents`/`cartTotalCents` SİLİNDİ (27.08). Künyeleri "tek çağıranı checkout ekranı,
-   kendi görünümüne bağlanınca silinir" diyordu; checkout o görünüme bağlandı (özet artık sunucunun
-   anlık görüntüsünden çiziliyor, 21.08) ve iki kapı çağıransız kaldı. Bir toplamı okumanın ikinci
-   yolu, ayrıştığı gün ekranla kasayı ayırır. Tutar isteyen `cart.view`i okur. */
 
 /** Ekranların okuma seam'i — depo değişince abone ekran yeniden çizilir. YAN ETKİSİZ (künye). */
 export function useCart(): CartState {

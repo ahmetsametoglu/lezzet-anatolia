@@ -5,24 +5,8 @@ import type { CartDiscountReasonSchema, MeCartView } from '@lezzet/types';
 import messages from './discount-label-messages.json';
 
 /*
-  İNDİRİMİN MÜŞTERİYE GÖRÜNEN KÜNYESİ — TEK TÜRETME, İKİ EKRAN.
-
-  Aynı indirim sepette ve sipariş özetinde AYNI adla anılmak zorunda: müşteri sepette "Baklava
-  haftası −6,15 €" görüp bir adım sonra yalnız "İndirim −6,15 €" görürse, iki ekranın aynı
-  indirimden bahsettiğine güvenmesi için sayıyı karşılaştırması gerekir. Türetme iki dosyada
-  yazılsaydı bir gün ayrışırdı (CLAUDE §1) — bu yüzden kural burada, ekranlar yalnız çağırıyor.
-
-  ── AD SUNUCUDA ÇÖZÜLÜR, BURADA DEĞİL ───────────────────────────────────────
-  Kampanyanın müşteri-yüzü adı çok dilli bir alandır (`discount.public_label`, jsonb) ve dile göre
-  çözümü SUNUCUNUN işidir (`cart-view.ts` → `labelOf` → `resolveLocalizedText`). Sözleşme bize
-  çözülmüş tek bir dize getirir (`discount.label`); istemci üç dilli nesneyi hiç görmez. Burada
-  yapılan tek şey, o ad YOKKEN ne yazılacağına karar vermek.
-
-  ── AD YOKSA SEBEP YAZILIR, BOŞLUK DEĞİL ────────────────────────────────────
-  `public_label` doldurulmamış bir kampanya da müşteriye bir şey indiriyor; satırı adsız bırakmak
-  "nereden geldiği belirsiz bir eksi" demekti. O hâlde indirimin SEBEBİ yazılır ("Kampanya · %8",
-  "Size özel · %5") — kampanyanın İÇ adı (`discount.name`) asla: o operasyonun künyesidir, müşteri
-  "Büyük sepet indirimi"ni okumak zorunda değil.
+  İndirimin müşteriye görünen künyesi, sepet ve sipariş özeti için tek türetme. Ad sunucuda çözülür (`discount.label`);
+  ad yoksa kampanyanın iç adı değil indirimin sebebi yazılır.
 */
 
 type Messages = LocalizedCopy<typeof messages>;
@@ -47,14 +31,7 @@ function reasonLabel(reason: DiscountReason, t: Messages): string {
 }
 
 /**
- * Görünümün indirimi → özet satırının künyesi + tutarı. İndirim yoksa `null` (satır hiç çizilmez).
- *
- * Dört hâl, dört farklı doğru:
- * · `applied`  — kupon tuttu: kampanyanın adı varsa o, yoksa müşterinin yazdığı KOD.
- * · `automatic`— kendiliğinden indi: adı varsa o, yoksa sebebi.
- * · `rejected` + yerine inen indirim — kupon tutmadı ama müşteri hak ettiğini KAYBETMEZ
- *   (`appliedInstead`); satır bir kupon denendi diye künyesini yitirmemeli.
- * · geri kalanı — indirim yok.
+ * Görünümün indirimi → özet satırının künyesi ve tutarı; kupon reddedilse de yerine inen indirim adıyla gösterilir. Yoksa `null`.
  */
 export function discountSummaryOf(discount: MeCartView['discount'], locale: Locale): DiscountSummary | null {
   const t: Messages = messages[locale];
@@ -76,15 +53,7 @@ export function discountSummaryOf(discount: MeCartView['discount'], locale: Loca
 }
 
 /**
- * SİPARİŞ ÖZETİNİN indirimi → aynı künye (kullanıcı kararı 21.08).
- *
- * Sepetinkinden AYRI bir kapı, çünkü sözleşmeleri ayrı: sepet indirimin dört hâlini taşır (kupon
- * tuttu / reddedildi / kendiliğinden indi / yok), checkout özeti ise o hâllerin ÇÖZÜLMÜŞ sonucunu
- * taşır — tutar zaten kapsamın payı kadar hesaplanmış, ad zaten dile çözülmüş. Hâlleri ikinci kez
- * burada ayıklamak, sunucunun verdiği kararı istemcide tekrar vermek olurdu.
- *
- * ORTAK olan tek şey `reasonLabel` ve o bilerek paylaşılıyor: adı olmayan bir kampanya sepette
- * "Kampanya · %8" iken özette başka bir şey yazamaz.
+ * Sipariş özetinin indirimi → aynı künye; özet çözülmüş sonucu taşır, sebep cümleleri sepetle paylaşılır.
  */
 export function orderDiscountSummaryOf(
   discount: { amountCents: number; label: string | null; reason: DiscountReason | null } | null,

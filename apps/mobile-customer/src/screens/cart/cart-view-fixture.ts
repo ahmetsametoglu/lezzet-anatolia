@@ -1,14 +1,7 @@
 import type { CartLineGroup, MeCartView, MeCartViewLine } from '@lezzet/types';
 
 /*
-  SEPET GÖRÜNÜMÜ FİKSTÜRÜ — sunucunun çözdüğü `MeCartView`in test karşılığı.
-
-  NEDEN AYRI DOSYA: aynı görünümü İKİ ekran okuyor (sepet ve "Siparişi tamamla") ve ikisi de
-  gruplama kararını sunucudan alıyor. İki testin iki ayrı fikstür yazması, bir gün iki farklı
-  sözleşme şekli demekti — üstelik ayrışan taraf sessizce yeşil kalırdı (katalogdaki
-  `catalog-fixture.ts` ile aynı gerekçe).
-
-  ŞEKİL SÖZLEŞMENİN KENDİSİ (`MeCartView`): alan eklenirse burası DERLENMEZ ve fikstür güncellenir.
+  Sepet görünümü fikstürü: sepet ve "Siparişi tamamla" testleri aynı şekli kullanır, şekil sözleşmenin kendisidir (`MeCartView`).
 */
 
 /** Fikstür satırlarının kimliği — biçim gerçek (uuid), değeri sırayla üretiliyor. */
@@ -17,11 +10,7 @@ function uuid(n: number): string {
 }
 
 /**
- * Grubun YOL karşılığı — sunucunun `cartGroupOf` kararının tersi.
- *
- * Fikstür ikisini birden taşır çünkü sözleşme de taşıyor: ekran GRUBU okur, `route` alanı ise
- * bilginin kendisidir. Tutarsız bir çift yazmak (grup `undeliverable`, yol `local`) testi ekranın
- * hiç göremeyeceği bir hâlde koştururdu.
+ * Grubun yol karşılığı; fikstür ikisini tutarlı taşır ki test ekranın göremeyeceği bir hâlde koşmasın.
  */
 function routeOf(group: CartLineGroup): MeCartViewLine['route'] {
   if (group === 'shipping') return 'shipping';
@@ -31,10 +20,7 @@ function routeOf(group: CartLineGroup): MeCartViewLine['route'] {
 interface CartLineOptions {
   qty?: number;
   /**
-   * `null` = SUNUCU ÇÖZEMEDİ. Sözleşmenin gerçek bir hâli, uydurma bir uç değil: kimliği kataloğun
-   * gerisinde kalmış satır adsız ve fiyatsız döner (`unitPriceCents` ve `lineTotalCents` null,
-   * `blocked` true). Ekran onu "satışa kapandı" diye ayırıyor — fiyatı olan engelli satır
-   * "tükendi"dir ve ikisi aynı şey değildir.
+   * `null` sunucu çözemedi demek: adsız, fiyatsız ve engelli satır, ekran onu "satışa kapandı" diye ayırır.
    */
   unitPriceCents?: number | null;
   blocked?: boolean;
@@ -69,11 +55,7 @@ export function cartViewLine(index: number, name: string, group: CartLineGroup, 
 }
 
 /**
- * Tek PAKET satırı — sözleşmenin öteki dalı (`kind: 'bundle'`).
- *
- * Varyant satırından ayrı bir kapı, çünkü şekli de ayrı: kimliği `bundleId`, boy etiketi yok ve
- * içeriği `contents`ta duruyor. Fikstür bunu taşımıyordu ve sepetin paket davranışları (grup içi
- * sıra, koyu ton, salt-okunur adet) yalnız varyantla sınanabiliyordu.
+ * Tek paket satırı, sözleşmenin öteki dalı (`kind: 'bundle'`).
  */
 export function cartViewBundleLine(index: number, name: string, group: CartLineGroup, options: CartLineOptions = {}): MeCartViewLine {
   const qty = options.qty ?? 1;
@@ -98,11 +80,7 @@ export function cartViewBundleLine(index: number, name: string, group: CartLineG
 }
 
 /**
- * Satırlardan tam görünüm kurar. TOPLAMLAR SATIRLARDAN TÜRETİLİR — sunucu da öyle yapıyor ve
- * elle yazılan bir ara toplam, testi ekranın hiç karşılaşmayacağı bir sepetle koşturur.
- *
- * `undeliverableSubtotalCents` ayrı türetilir (sözleşmenin kendi kuralı): ara toplam sepette
- * DURAN her şeyi sayar, bu alan yalnız gelemeyenleri.
+ * Satırlardan tam görünüm; toplamlar satırlardan türetilir, sunucu da öyle yapar.
  */
 export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView> = {}): MeCartView {
   const subtotalCents = lines.reduce((sum, line) => sum + (line.lineTotalCents ?? 0), 0);

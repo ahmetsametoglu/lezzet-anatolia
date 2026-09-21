@@ -4,14 +4,7 @@ import { discountLabel } from './discount-label';
 import type { CartDiscount } from './cart-types';
 
 /**
- * İndirim satırının etiketi (05.13) — "neden bu para düştü" sorusunun cevabı.
- *
- * Sınanan şey bir YEDEK ZİNCİRİ: kampanyanın müşteriye görünen adı varsa o yazılır; yoksa kuponun
- * kodu; o da yoksa türün kendisi. Zincir olmadan iki uç davranış doğuyordu — ya satır yalnız
- * "İndirim" diyordu (müşteri neyin indiğini bilmiyordu, 29.07 bildirimi), ya da ad eklenince kupon
- * kodunu gösteren eski hâl sessizce kaybolacaktı.
- *
- * DB'ye vurmaz; entegrasyon kökünde durmasının tek sebebi dizin kuralıdır (`vitest.config.ts`).
+ * İndirim etiketinin yedek zinciri: müşteriye görünen ad, yoksa kupon kodu, o da yoksa tür. DB'ye vurmaz.
  */
 const t = {
   discount: 'İndirim',
@@ -92,9 +85,7 @@ describe('discountLabel', () => {
   });
 
   /**
-   * Kullanıcı geri bildirimi (29.07): sepette "İndirim — Baklava haftası" yazarken müşteri bir
-   * kupon deniyor, kupon kaybediyor ve satır "İndirim"e düşüyordu. Para değişmedi, yalnız adı
-   * kayboldu — aynı indirim iki farklı ad. Kuponun reddi, sepetteki indirimin kimliğini silmez.
+   * Kupon kaybettiğinde sepette inen indirimin adı korunur; kuponun reddi indirimin kimliğini silmez.
    */
   it('kupon kaybettiğinde sepetteki indirimin ADI korunur', () => {
     const rejected: CartDiscount = {

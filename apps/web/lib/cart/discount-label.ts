@@ -3,21 +3,12 @@ import { resolveLocalizedText, type CheckoutSummary } from '@lezzet/types';
 import type { CartDiscount } from './cart-types';
 
 /**
- * İndirim satırının ETİKETİ — "neden bu para düştü" sorusunun cevabı (tasarım: "İndirim — HOSGELDIN10").
- *
- * Ekranın kendi karar vermemesi için burada: aynı satır sepette ve ödemede birden görünüyor ve
- * ikisi aynı şeyi söylemek zorunda. İki yerde ayrı yazılsaydı biri kuponu, öbürü yalnız "İndirim"i
- * gösterirdi — bugün olan da buydu.
- *
- * **Karar değil, cümle kurar.** Hangi indirimin indiği motorun, sebebinin ne olduğu sunucunun
- * işidir (`CartDiscount.reason`); burada yalnız o sebep sayfanın sözlüğüyle buluşur.
+ * İndirim satırının etiketi, sepet ve ödeme aynı cümleyi kursun diye burada; karar motorun ve sunucunun, burada yalnız
+ * sebep sayfanın sözlüğüyle buluşur.
  */
 
 /**
- * Sayfanın sözlüğünden gereken parçalar — her sayfa kendi `messages.json`'undan geçirir.
- *
- * Dışa AÇILMAZ: çağıranlar kendi `Messages` tipini veriyor, yapısal uyum yeter. Export edilseydi
- * kullanılmayan bir dışa açık tip olurdu (`knip`).
+ * Sayfanın sözlüğünden gereken parçalar; dışa açılmaz, yapısal uyum yeter.
  */
 interface DiscountLabelCopy {
   /** Satırın adı: "İndirim". */
@@ -72,15 +63,7 @@ function percent(template: string, value: number): string {
 }
 
 /**
- * SİPARİŞ ÖZETİNİN indirimi → aynı künye (kullanıcı kararı 21.08).
- *
- * Sepetinkinden ayrı bir kapı, çünkü sözleşmeleri ayrı: sepet indirimin dört HÂLİNİ taşır (kupon
- * tuttu / reddedildi / kendiliğinden indi / yok), checkout özeti o hâllerin ÇÖZÜLMÜŞ sonucunu —
- * tutar zaten kapsamın payı kadar hesaplanmış, ad zaten dile çözülmüş, kupon kodu ad yerine
- * konmuş. Hâlleri ikinci kez burada ayıklamak, sunucunun verdiği kararı istemcide tekrar vermekti.
- *
- * Ortak olan tek şey SEBEP cümleleri ve onlar bilerek paylaşılıyor: adı olmayan bir kampanya
- * sepette "İndirim — kampanya %8" iken özette başka türlü yazamaz.
+ * Sipariş özetinin indirimi → aynı künye; özet çözülmüş sonucu taşır, sebep cümleleri sepetle paylaşılır.
  */
 export function orderDiscountLabel(discount: CheckoutSummary['discount'], t: DiscountLabelCopy): string {
   if (!discount) return t.discount;

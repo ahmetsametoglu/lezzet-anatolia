@@ -26,64 +26,20 @@ import { fail, ok } from '../../lib/respond';
 import { readPlace } from './catalog';
 
 /*
-  SEPETİN ÇÖZÜLMÜŞ GÖRÜNÜMÜ — İKİ YÜZEY, TEK HESAP.
-
-  Bu dosyanın varlık sebebi bir uç değil, bir DEĞİŞMEZ: aynı sepet webde ve telefonda AYNI tutarı
-  göstermek zorunda. Hesabın sahibi `getCartView` (`@lezzet/application`, terfi 09.08) ve web de
-  onu çağırıyor; burada yapılan tek şey isteği o kapının girdisine çevirmek, dönen görünümü
-  sözleşme şekline indirgemek ve zarflamak. Fiyat, tükendi, yol, teklif tavanı, indirim, asgari
-  sepet, ücretsiz kargo eşiği — hiçbiri burada hesaplanmaz (`STACK §4`).
-
-  İSTEMCİ HESAPLASAYDI NE OLURDU: mobil kendi toplamını çıkarsa aynı sepet iki yüzeyde iki farklı
-  sayı gösterirdi ve hangisinin tahsil edileceğini söyleyecek bir yer kalmazdı. Bu yüzden ad da
-  fiyatı da indirimi de SUNUCU çözer; ekran biçimler.
-
-  ── MİSAFİRİN UCU NEDEN AYRI ────────────────────────────────────────────────
-  Sunucu sepeti `customerId` anahtarlıdır, yani misafirin sunucuda sepeti YOKTUR (web de öyle:
-  satırları tarayıcı taşır). Görünümü yine de sunucu çözmeli — yoksa aynı sepet misafirken bir,
-  girişten sonra başka bir tutar gösterirdi. `POST /cart/view` bu yüzden Bearer'SIZ yaşar:
-  niyet gövdeden gelir, FİYAT gelmez.
+  Sepetin çözülmüş görünümü: aynı sepet web ve telefonda aynı tutarı göstermek zorunda, hesabın sahibi `getCartView`.
+  Burada yalnız istek kapının girdisine çevrilir ve görünüm sözleşme şekline indirgenir; misafir ucu Bearer'sız, niyet gövdeden.
 */
 
 /**
- * `?locale=` — ZORUNLU ve varsayılansız (katalogun `LocaleSchema` künyesi): `resolveLocalizedText`
- * dil verilmezse kanonik sıraya düşer, yani Fransız müşteriye sessizce Türkçe ürün adı gönderirdi.
- *
- * Sepet ailesinin (girişli beş uç + misafir ucu) TEK okuması burasıdır; `cart.ts` bunu çağırır.
- * Bağlam tipi bilinçli GENİŞ (`Context`): yardımcı yalnız sorgu dizesini okur, bağlamdan bir şey
- * OKUMAZ — tek bir Hono kuşağına bağlanması onu iki dosyada birden yazdırırdı.
+ * `?locale=` zorunlu ve varsayılansız, yoksa Fransız müşteriye sessizce Türkçe ad giderdi. Sepet ailesinin tek okuması budur.
  */
 export function localeOf(c: Context): ReturnType<typeof PreferredLanguageEnum.safeParse> {
   return PreferredLanguageEnum.safeParse(c.req.query('locale'));
 }
 
 /**
- * Görünümün TEK kuyruğu — hem girişli sepet hem misafir sepeti buradan geçer.
- *
- * Girdi farkı yalnız iki alandır (`customerId` ve `previousPrices`); geri kalan her şey — yerin
- * çözümü, kapıya geçilen seçenekler, sözleşmeye indirgeme — ORTAK. Ayrı yazılsaydı misafir ile
- * müşteri aynı sepet için farklı depo ya da farklı kupon davranışı görebilirdi.
- *
- * ── PAKET KAPISI ARTIK BESLENİYOR (09.08) ───────────────────────────────────
- * `bundles` seçeneği web'in geçtiği kapının TA KENDİSİDİR (`getPackagesByIds`, terfi 09.08 ile
- * `@lezzet/application`da): stok zinciri, yol kararı (`decideBundleAgainstWarehouse`), KDV ve
- * kargo kısıtı tek yerde duruyor — aynı paket vitrinde "var", sepette "tükendi" diyemez. Arada
- * ikinci bir dönüştürme YOK; tek fark `db`nin bağlanması (kapı `db`yi çağırandan alıyor, port
- * imzası almıyor) ve YER'in kapıya da geçmesi (web'in 19.22'deki aynı kararı: kart, sepet ve
- * checkout aynı yolu görmeli).
- *
- * Öncesi ölçülmüş bir arızaydı (21.21): mobil paket satırını YAZABİLİYOR ama çözecek kapı yoktu —
- * satır kimliğiyle ve ENGELLİ duruyordu (`getCartView` → `orphanLine`): adı boş, fiyatı `null`,
- * toplama hiç girmiyor ve `hasBlocked` doğuyordu. Webden eklenmiş paketler de mobilde öyle
- * görünüyordu.
- *
- * ── KAPIYA GEÇİLMEYEN İKİ SEÇENEK (bilinçli) ────────────────────────────────
- * · `country` / `zoneId` — ayar kapsamının ülke/bölge eksenleri (07.15). İstemciden gelen tek yer
- *   bilgisi POSTA KODUDUR ve `readPlace` ondan yalnız depo kimliklerini çözer; ülkeyi posta kodundan
- *   burada TÜRETMEK, yer çözümünün kuralını ikinci kez (ve mobilde) yazmak olurdu. Bedeli ölçülü ve
- *   dar: ülkeye/bölgeye kapsamlı yazılmış kargo tarifesi ve asgari sepet ayarları mobilde
- *   varsayılana düşer; depo kapsamlı ayarlar ÇALIŞIR. Çözümü terfi ihtiyacıdır (rapora yazıldı),
- *   burada kapatılamaz.
+ * Görünümün tek kuyruğu, girişli ve misafir sepeti buradan geçer; paket kapısı web'inkiyle aynıdır (`getPackagesByIds`).
+ * Ülke ve bölge kapıya geçilmez, çünkü posta kodundan türetmek yer çözümünü ikinci kez yazmak olurdu.
  */
 export async function readCartView(
   db: Db,
@@ -110,12 +66,7 @@ export async function readCartView(
     // eşleme yazmak, sepetin gördüğü paketi vitrinin gösterdiğinden ayırma riski demekti.
     bundles: (bundleIds, bundleLocale, bundlePlace) => getPackagesByIds(db, bundleIds, bundleLocale, bundlePlace),
   });
-  // `parse` süzgeçtir: sunucuda kalan alanlar (KDV oranı, kargolanabilirlik, indirimin kalem
-  // payları) zarfa sızamaz — eşleme onları zaten almıyor, şema ikinci kilit.
-  /* ÜÇÜ BİRDEN DÖNÜYOR (24.08 · MB-63) — ve gerekçe ölçüm: sepet olayları hem ENGELİN sebebini
-     (`cartBlockedAnalyticsReason`, kapının KENDİ görünümünü ister — sözleşme şekli değil) hem de
-     DEPO boyutunu istiyor. İkisi de bu fonksiyonun içinde zaten hesaplanmış durumda; dışarıdan
-     yeniden hesaplatmak, aynı yeri iki kez okumak ya da kuralı ikinci kez yazmak olurdu. */
+  // `parse` süzgeçtir: sunucuda kalan alanlar zarfa sızamaz. Kapının kendi görünümü ve yer de döner, çünkü ölçüm ikisini ister.
   return { body: MeCartViewSchema.parse(toViewBody(view, locale)), source: view, place };
 }
 
@@ -146,10 +97,7 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
         : { ...view.reachableDiscount, label: labelOf(view.reachableDiscount.label, locale) },
     totalCents: view.totalCents,
     itemCount: view.itemCount,
-    /* MOTORUN GİRDİSİ İSTEMCİYE — ama YALNIZ kendiliğinden inen kampanyalar ve KODSUZ.
-       Kupon kuralları `codes` taşıyor; onu göndermek herkese geçerli kupon listesi vermektir
-       (künye: `MeCartDiscountRuleSchema`). Süzgeç BURADA, taşıma katmanında: neyin dışarı
-       çıkacağına sözleşme karar verir, motor değil. */
+    /* Motorun girdisi: yalnız kendiliğinden inen kampanyalar ve kodsuz, çünkü kupon kodu göndermek geçerli kod listesi vermektir. */
     discountRules: view.discountRules
       .filter((rule) => rule.trigger === 'automatic')
       .map((rule) => ({
@@ -165,8 +113,7 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     customerDiscountPercent: view.discountContext.customerDiscountPercent,
     isFirstOrder: view.discountContext.isFirstOrder,
     hasBlocked: view.hasBlocked,
-    // Asgari sepete SAYILMAYAN tutar (10.08) — kapı zaten düşerek hesapladı, burada yalnız taşınıyor
-    // ki ekran "X € şu an gönderilemeyen kalemlerde" diyebilsin. İkinci bir çıkarma YAPILMAZ.
+    // Asgari sepete sayılmayan tutar; kapı zaten düştü, burada yalnız taşınır.
     undeliverableSubtotalCents: view.undeliverableSubtotalCents,
     minBasketOk: view.minBasketOk,
     missingForMinBasketCents: view.missingForMinBasketCents,
@@ -175,19 +122,14 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
     shippingSubtotalCents: view.shippingSubtotalCents,
     shippingTariffCents: view.shippingTariffCents,
     shippingOnly: view.shippingOnly,
-    /* Kargo grubunun ÇÖZÜLMÜŞ ücreti ve eşiğe kalan — kararı motor veriyor (`shippingGroupFee`,
-       `@lezzet/application`), burada yalnız taşınıyor. İstemci `tarife` ile `eşik`i alıp kendi
-       karşılaştırsaydı aynı kural iki yerde yaşardı ve ayrıştığı gün sepette "ücretsiz" yazıp
-       kasada ücret kesilirdi. Web sepeti de aynı kapıyı çağırıyor (`cart-group.tsx`). */
+    /* Kargo grubunun çözülmüş ücreti motordan (`shippingGroupFee`); istemci eşiği kendi karşılaştırsa kural iki yerde yaşardı. */
     shippingGroupFeeCents: fee.feeCents,
     shippingFreeRemainingCents: fee.remainingForFreeCents,
   };
 }
 
 /**
- * Satır — iki tür, iki kimlik. `vatRate` ve `shippable` BİLEREK düşüyor: ilki kargo KDV'sinin
- * oransal bölünmesi için checkout'un işi, ikincisinin taşıdığı karar zaten `route` alanında.
- * Sözleşmenin künyesi (`cart-api.schema.ts`) bu iki düşüşün gerekçesini tutuyor.
+ * Satır, iki tür; `vatRate` ve `shippable` düşer, ilki checkout'un işi, ikincisinin kararı `route`ta.
  */
 function toLineBody(line: CartLine): z.input<typeof MeCartViewSchema>['lines'][number] {
   const view = {
@@ -202,8 +144,7 @@ function toLineBody(line: CartLine): z.input<typeof MeCartViewSchema>['lines'][n
     lineTotalCents: line.lineTotalCents,
     blocked: line.blocked,
     route: line.route,
-    // Grup KAPIDAN gelir, burada `route`tan türetilmez (10.08): türetseydik uç, ekranın yaptığı
-    // hatanın aynısını bir kat aşağıda tekrarlardı — kural `cartGroupOf`ta, cevabı satır taşıyor.
+    // Grup kapıdan gelir, `route`tan türetilmez; kural `cartGroupOf`ta.
     group: line.group,
     availableHere: line.availableHere,
     contents: line.contents,
@@ -241,8 +182,7 @@ function toDiscountBody(discount: CartDiscount, locale: PreferredLanguage): z.in
         status: 'rejected',
         code: discount.code,
         reason: discount.reason,
-        // Kupon tutmasa da sepete inen indirim KAYBOLMAZ — kimliğiyle birlikte taşınır, yoksa özet
-        // satırı sırf bir kupon denendi diye "Baklava haftası"ndan "İndirim"e düşerdi (29.07).
+        // Kupon tutmasa da sepete inen indirim kimliğiyle taşınır ki özet satırı adını kaybetmesin.
         appliedInsteadCents: discount.appliedInsteadCents,
         appliedInstead: discount.appliedInstead
           ? { label: labelOf(discount.appliedInstead.label, locale), reason: discount.appliedInstead.reason }
@@ -259,19 +199,8 @@ function labelOf(label: LocalizedText | null, locale: PreferredLanguage): string
 }
 
 /**
- * MİSAFİRİN GÖRÜNÜM UCU — `POST /cart/view`, Bearer'SIZ.
- *
- * Mount'u router yapar (`v1.route('/cart', cartView)`) ve `bearerAuth`ın ÖNÜNDE olmalı: oturumsuz
- * kullanım = müşteri gezinmesi (02-mimari §4). Sepetini görmek için hesap açtırmak, katalogu
- * Bearer'ın arkasına koymakla aynı hata olurdu.
- *
- * NİYET GÖVDEDEN, FİYAT ASLA: gövde satırın yalnız ADRESİNİ ve adedini taşır — varyant satırında
- * `{variantId, qty, stockId}`, paket satırında `{bundleId, qty}` (21.21). Girişli kullanıcının
- * niyeti ise gövdeden ALINMAZ — onunki sunucudaki sepettir (`/me/cart`).
- *
- * `previousPrices` GEÇİLMEZ ve bu bir eksiklik değil: misafirin çıpası olamaz. Tarayıcıdan/cihazdan
- * gelen bir "önceki fiyat", müşterinin kendi belirlediği fiyat olurdu — zam bildirimi yalnız sunucu
- * sepetinde doğar (DOMAIN §5).
+ * Misafirin görünüm ucu (`POST /cart/view`), Bearer'sız ve `bearerAuth`ın önünde. Gövde yalnız satırın adresini ve adedini
+ * taşır, fiyat gelmez; `previousPrices` geçilmez, çünkü misafirin çıpası olamaz.
  */
 export const cartView = new Hono();
 
@@ -293,17 +222,7 @@ cartView.post('/view', async (c) => {
 });
 
 /**
- * Gövde satırı → niyet — **sepet ailesinin TEK eşlemesi** (misafir görünümü, ekleme ve devir aynı
- * kapıdan geçer; `cart.ts` bunu çağırıp `itemOfEntry` ile saklanan kaleme çevirir).
- *
- * `entryOfItem`in işi DEĞİL: o SAKLANAN satırın türünü kimlik alanının doluluğundan çözmek
- * zorundadır (jsonb'de bayrak yoktur); burada tür ŞEMANIN kendi künyesidir ve `kind` üzerinden
- * DARALTILIR (`MeCartItemWriteSchema` künyesi: `string` birim tip değildir, `bundleId` doluluğuyla
- * daraltma yapılamaz).
- *
- * İKİ TÜR de kabul edilir (21.21): paket satırı ÖNCE yazılamıyordu — paketin uuid'si paket detay
- * sözleşmesinde yoktu ve sonucu sessiz bir eksiklikti (uygulamadan eklenen paket cihazda kalıyor,
- * sunucunun çözdüğü toplama hiç girmiyordu).
+ * Gövde satırından niyete, sepet ailesinin tek eşlemesi; tür şemanın `kind`ından daraltılır.
  */
 export function entryOfWrite(item: z.infer<typeof CartViewBodySchema>['items'][number]): CartEntry {
   return item.kind === 'bundle'
