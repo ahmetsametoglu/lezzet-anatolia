@@ -194,13 +194,13 @@ create index money_movement_account_idx on public.money_movement (account_id, va
 -- Transferin karşı ucu da o hesabın ekstresine düşer.
 create index money_movement_counter_idx on public.money_movement (counter_account_id, value_date desc)
   where counter_account_id is not null;
--- Siparişin tahsilat/iade toplamı (12.2 — `amount_*` cache'inin kaynağı).
+-- Siparişin tahsilat/iade toplamı (`amount_*` önbelleğinin kaynağı).
 create index money_movement_order_idx on public.money_movement (order_id) where order_id is not null;
--- Tedarikçi borcu türetimi (12.3): Σ giriş − Σ ödeme.
+-- Tedarikçi borcu türetimi: Σ giriş − Σ ödeme.
 create index money_movement_supplier_idx on public.money_movement (supplier_id) where supplier_id is not null;
--- Dönem raporları ve muhasebe export'u (12.6/12.7) tarihe göre tarar.
+-- Dönem raporları ve muhasebe export'u tarihe göre tarar.
 create index money_movement_period_idx on public.money_movement (value_date desc, type);
--- Eşleşme kuyruğu (12.4): eşleşmemiş satırlar azınlıktır → kısmi indeks.
+-- Eşleşme kuyruğu: eşleşmemiş satırlar azınlıktır → kısmi indeks.
 create index money_movement_unreconciled_idx on public.money_movement (account_id, value_date)
   where not reconciled;
 -- İzah edilmemiş satır azınlıktır, kuyruk ve sayaç bu kısmi indeksi okur.

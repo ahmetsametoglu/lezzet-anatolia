@@ -23,7 +23,7 @@ create table public.product_feedback (
 
   -- Doğrulanmış alışveriş. `purchase` bağlamında kapı bunu kendisi yazar.
   order_id uuid references public.order (id) on delete set null,
-  -- Alım-sonrası davetten geldiyse (17.2) — davetin tamamlanma ilerlemesi buradan türetilir.
+  -- Alım-sonrası davetten geldiyse; davetin tamamlanma ilerlemesi buradan türetilir.
   feedback_request_id uuid,
 
   context feedback_context not null,

@@ -10,7 +10,7 @@ create type points_reason as enum (
   'feedback_candidate',
   -- Sipariş verme.
   'order',
-  -- Getiren müşteri (17.7 zemini · 17.9 bağlantı) — HESAPSIZ birini müşteri yapmanın ödülü.
+  -- Getiren müşteri: hesapsız birini müşteri yapmanın ödülü.
   'referral',
   -- `referral` yeni müşteri kazandırır, `neighbor` var olan sefere sipariş ekler; tek sebepte iki getirinin cevabı kaybolurdu.
   'neighbor',

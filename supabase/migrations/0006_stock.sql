@@ -80,9 +80,9 @@ create table public.reservation (
 create index reservation_variant_idx on public.reservation (warehouse_id, variant_id);
 -- Sipariş kapanışında toplu silme.
 create index reservation_order_idx on public.reservation (order_id);
--- TTL süpürücüsü (06.4) yalnız süreli satırları tarar — kısmi indeks, tablo büyüdükçe fark açılır.
+-- TTL süpürücüsü yalnız süreli satırları tarar; kısmi indeks, tablo büyüdükçe fark açılır.
 create index reservation_expires_idx on public.reservation (expires_at) where expires_at is not null;
--- Partiye çıpalı miktarın o partinin kullanılabilirinden düşülmesi (FEFO önerisi, 06.5).
+-- Partiye çıpalı miktarın o partinin kullanılabilirinden düşülmesi (FEFO önerisi).
 create index reservation_stock_idx on public.reservation (stock_id) where stock_id is not null;
 
 -- `available_stock` görünümü 0031'de, çünkü depo başına satır sözleşmesi `warehouse` tablosuna cross join ister.

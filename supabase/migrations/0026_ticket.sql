@@ -118,7 +118,7 @@ alter table public.ticket_message enable row level security;
 -- Yazışmanın tek okuma deseni: bir talebin mesajları, zaman sırasıyla.
 create index ticket_message_ticket_idx on public.ticket_message (ticket_id, created_at);
 
--- Çeviri kuyruğu (20.2) — çevrilmemiş mesajlar, en eski önce. Çevrildikçe indeksten düşer.
+-- Çeviri kuyruğu, en eski önce; çevrildikçe indeksten düşer.
 create index ticket_message_untranslated_idx on public.ticket_message (created_at) where translated_at is null;
 
 -- ── Kuyruk görünümü ──────────────────────────────────────────────────────────
@@ -140,10 +140,8 @@ select t.*,
        -- Kuyrukta okunan önizleme; tam metin detayda. Satır sonu ekranda yer açmasın diye
        -- kırpma yapılmaz — kısaltma bir SUNUM kararıdır, veri kapısına ait değildir.
        m.last_body                               as last_message_body,
-       -- **Önizlemenin ÇEVİRİSİ de buradan gelir** (20.2): detay çevrilip kuyruk çevrilmezse
-       -- personel talebi ancak AÇARAK triyaj edebilir — kuyruğun tek işi ise açmadan sıralamaktır.
-       -- Satır satır mesaj tablosuna gitmek 30 satırlık kuyrukta 30 ek tur olurdu; görünüm zaten o
-       -- mesajı okuduğu için iki alan bedavaya geliyor.
+       -- Önizlemenin çevirisi de buradan gelir, çünkü kuyruğun işi talebi açmadan sıralamaktır; görünüm o mesajı zaten okuduğu
+       -- için iki alan ek tur doğurmaz.
        m.last_language                           as last_message_language,
        m.last_translations                       as last_message_translations,
        -- AI bu talepte hiç konuştu mu: operatör devralınca `handled_by` `human`'a döner ama AI'ın mesajı kalır,

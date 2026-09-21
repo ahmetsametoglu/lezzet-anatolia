@@ -2,9 +2,7 @@
 -- olarak eklenseler satırı katalog ve arama çeşitliliğiyle çarpardı. Üçü ham defterden üretilir, ekran ham deftere bağlanmaz.
 
 -- ═══ ÜRÜN KIRILIMI ═══════════════════════════════════════════════════════════
--- **Bu tablonun iki tüketicisi var ve ikincisi kolay gözden kaçar:** yönetici raporu ("çok bakılıp
--- az alınan") ve MÜŞTERİ vitrini (`readShowcase`, 08.9 — bugün katalogdan seçiyor). Vitrin ham
--- deftere bağlansaydı her ana sayfa açılışı bir toplama koşardı.
+-- İki tüketicisi var: yönetici raporu ve müşteri vitrini (`readShowcase`); vitrin ham deftere bağlansa her açılış toplama koşardı.
 create table public.analytics_daily_product (
   day date not null,
   -- FK YOK — defterle aynı gerekçe: silinen ürünün geçmiş sayıları silinmemeli, yoksa mart ayının

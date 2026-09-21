@@ -73,8 +73,7 @@ create table public.warehouse_transfer (
   dispatched_at timestamptz not null default now(),
   received_by uuid,
   received_at timestamptz,
-  -- Sevk kaydının GERİ ALINMASI (19.6). Ayrı alanlar, `received_*`'a bindirilmedi: "kabul edildi"
-  -- ile "hiç çıkmamış" birbirinin yerine geçemez; tek çift alanda tutulsaydı geçmiş okunamazdı.
+  -- Sevk kaydının geri alınması; `received_*`a bindirilmez, çünkü "kabul edildi" ile "hiç çıkmamış" birbirinin yerine geçemez.
   cancelled_by uuid,
   cancelled_at timestamptz,
   -- Gerekçe ZORUNLU değil ama istenen alan: "neden geri alındı" sorusunun cevabı `note`'a
