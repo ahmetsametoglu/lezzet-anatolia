@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { localeAlternates } from '@/lib/seo/alternates';
+import { openGraphOf } from '@/lib/seo/open-graph';
 import { setRequestLocale } from 'next-intl/server';
 import { detectDevice } from '@/lib/device';
 import { listStorefrontPackages } from '@/lib/storefront/packages';
@@ -27,7 +28,14 @@ interface PackagesPageProps {
 export async function generateMetadata({ params }: PackagesPageProps): Promise<Metadata> {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
-  return { title: messages[locale].title, alternates: localeAlternates('/packages', locale) };
+  const t = messages[locale];
+  // Açıklama sayfanın kendi giriş metni: kök layout'un genel cümlesi her sayfada aynı kalırdı.
+  return {
+    title: t.title,
+    description: t.heroBody,
+    alternates: localeAlternates('/packages', locale),
+    openGraph: openGraphOf({ route: '/packages', locale, title: t.title, description: t.heroBody }),
+  };
 }
 
 export default async function PackagesPage({ params, searchParams }: PackagesPageProps) {

@@ -36,7 +36,11 @@ Yani içerik seçili dilde boşsa önce Türkçe, o da boşsa Fransızca, o da b
 
 - Her dil **ayrı URL** altında: `/tr/...`, `/fr/...`, `/de/...`
 - Her sayfada `hreflang` etiketleri: Google'a "bu sayfanın diğer dillerdeki karşılığı şu" bilgisi. Doğru ülkede doğru dil gösterimi bununla olur.
-- `x-default` tanımlanır.
+- `x-default` tanımlanır (Fransızca); sayfa etiketi ve site haritası aynı kaynaktan (`languageAlternates`).
+- Dil önekli adres tek fonksiyondan: `localizedHref`. Kök rota `/fr`dir, `/fr/` değil — sondaki eğik çizgi 308 ile yönlenir.
+- Site haritası saatte bir tazelenir (`revalidate`); derlemede donmaz.
+- Kişiye özel rotalar (`lib/seo/private-routes.ts`) tek listedir: robots.txt taramayı kapatır, ara katman
+  `X-Robots-Tag: noindex` ile dizine eklenmeyi kapatır.
 - Dil seçimi URL'de yaşar; çerezle değil (cookie'siz analitik ilkesiyle de uyumlu).
 
 ---
@@ -71,7 +75,8 @@ Sayfa yapılırken kimse unutmamıştı; sözleşmede yazmıyordu.
   `website`, okunan içerik (tarif) `article`.
 - **`og:url` ile `canonical` AYNI adresi göstermeli.** İkisi ayrışırsa paylaşım aracı bir sayfayı,
   arama motoru başkasını görür. İkisi de yol tablosundan türediği için bu yapısal olarak korunuyor.
-- **Bugün kart üreten sayfalar:** ana sayfa · ürün · paket · tarif listesi ve detayı. Görseli
+- **`og:locale` dil_BÖLGE biçimindedir** (`fr_FR`), `INTL_LOCALE`den türer.
+- **Bugün kart üreten sayfalar:** ana sayfa · ürün · paket listesi ve detayı · tarif listesi ve detayı. Görseli
   olanlar ürün, paket ve tarif (kapak görseli); ana sayfa ve tarif listesi görselsiz başlıyor —
   paylaşıma ayrılmış marka görseli yok (`design/BACKLOG §1` kahraman-görsel ailesi).
 

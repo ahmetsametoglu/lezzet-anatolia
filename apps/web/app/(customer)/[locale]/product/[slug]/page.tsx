@@ -107,7 +107,6 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       {/* Puan yalnız gerçekten varsa yazılır: uydurma bir puan yapısal veride yaptırıma uğrar. */}
       <ProductJsonLd
         product={product}
-        locale={locale as Locale}
         url={localizedUrl('/product/[slug]', locale as Locale, { slug })}
         rating={score.average !== null ? { average: score.average, count: score.totalCount } : null}
       />

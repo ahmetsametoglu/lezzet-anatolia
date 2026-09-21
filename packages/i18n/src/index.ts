@@ -4,12 +4,12 @@ export const PACKAGE = '@lezzet/i18n' as const;
 
 // Dil birimleri kendi modülünde: `notification-copy` ile döngü olmasın.
 import type { Locale } from './locale';
-import { localizedPath, type AppRoute } from './paths';
+import { localizedHref, type AppRoute } from './paths';
 
-export { DEFAULT_LOCALE, LOCALES } from './locale';
+export { DEFAULT_LOCALE, INTL_LOCALE, LOCALES } from './locale';
 export type { Locale } from './locale';
 
-export { CART_LINK_PARAM, PATHNAMES, localizedPath } from './paths';
+export { CART_LINK_PARAM, PATHNAMES, localizedHref, localizedPath } from './paths';
 export type { AppRoute } from './paths';
 
 /**
@@ -28,7 +28,7 @@ export function siteOrigin(): string {
 
 /** Dış dünyaya verilecek tam adres (mail, WhatsApp, paylaşılan bağlantı) — dil öneki dâhil. */
 export function localizedUrl(route: AppRoute, locale: Locale, params: Record<string, string> = {}): string {
-  return `${siteOrigin()}/${locale}${localizedPath(route, locale, params)}`;
+  return `${siteOrigin()}${localizedHref(route, locale, params)}`;
 }
 
 // Bildirim başlığı, cümlesi ve görsel kimliği — iki yüzeyin (native + web) ortak dili.

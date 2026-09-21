@@ -1,8 +1,6 @@
 /**
- * Dil birimleri — paketin EN ALT katmanı (14.15'te `index`ten ayrıldı): `notification-copy` de
- * `index` de bunları okur; tanım index'te kalsaydı ikisi arasında modül döngüsü doğardı
- * (`no-circular` — tip-only da olsa bağ bağdır). Dışarıya karşı değişen bir şey yok: `index`
- * yeniden yayımlar, tüketiciler `@lezzet/i18n`den okumaya devam eder.
+ * Dil birimleri — paketin en alt katmanı: `notification-copy` de `index` de bunları okur, tanım
+ * index'te kalsaydı ikisi arasında modül döngüsü doğardı.
  */
 
 /** Müşteri yüzeyinde desteklenen diller. Operasyon yüzeyi yalnız Türkçedir. */
@@ -11,3 +9,6 @@ export type Locale = (typeof LOCALES)[number];
 
 /** Öneksiz varsayılan (birincil pazar Fransa) — `/connexion` = fr, `/de/...`, `/tr/...`. */
 export const DEFAULT_LOCALE: Locale = 'fr';
+
+/** Dil → ICU yerel kimliği; tarih/sayı biçimleri ve paylaşım kartının `og:locale`i bundan türer. */
+export const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };

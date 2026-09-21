@@ -1,5 +1,5 @@
 import { formatPrice, formatShortDate, formatTime } from '@lezzet/helper';
-import type { Locale } from '@lezzet/i18n';
+import { INTL_LOCALE, type Locale } from '@lezzet/i18n';
 
 /**
  * Vitrin biçimleri — sözleşme HAM cent taşır (`storefront-types`), gösterim burada kurulur; ayrı
@@ -10,9 +10,6 @@ import type { Locale } from '@lezzet/i18n';
  * edemez; buradan yeniden dışa veriliyorlar ki web çağıranları tek yolu kullansın.
  */
 export { formatPrice, formatShortDate, formatTime };
-
-/** Dil → ICU eşlemesi — bu modüldeki tarih/sayı biçimleri bundan türer. */
-const INTL_LOCALE: Record<Locale, string> = { tr: 'tr-TR', fr: 'fr-FR', de: 'de-DE' };
 
 /**
  * Tutarı BİLİNMEYEN satırın değeri — sıfır değil, cevapsızlık.

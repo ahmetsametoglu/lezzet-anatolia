@@ -3,20 +3,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { routing } from './i18n/routing';
 import { cartLinkRedirect } from './lib/cart-link-redirect';
 import { OPERATIONS_PATH_HEADER, isOperationsPath } from './lib/operations-request';
+import { isPrivatePath } from './lib/seo/private-routes';
 import { refreshSession } from './lib/supabase/refresh';
 
 const intlMiddleware = createMiddleware(routing);
 
 /**
- * Üç iş, tek geçiş:
- * - **oturum tazeleme** (her iki yüzey) — çerez yazabilen tek yer burası; gerekçesi
- *   `lib/supabase/refresh.ts`'te. Bu olmadan bir saatlik jeton dolduğunda oturum sessizce çürüyor.
- * - müşteri → next-intl'in locale yönlendirmesi,
- * - operasyon → dizine kapatma + yolu layout'a taşıma. Yetki kontrolü burada DEĞİL: personel rolü
- *   `user_profiles`'tan service-role ile okunur (RLS deny-by-default) ve o anahtarın kenar
- *   paketine girmesi istenmez. Kapı bugün layout'ta (`(operations)/operations/layout.tsx`), tüm
- *   alt sayfaları kapsar. Kenarda oturum ön ELEMESİ hâlâ ayrı bir tur — `BACKLOG §2`; burada
- *   yapılan tazelemedir, karar değil.
+ * Oturum tazeleme (çerez yazabilen tek yer), müşteride dil yönlendirmesi ve özel rotaları dizine
+ * kapatma, operasyonda dizine kapatma ve yolu layout'a taşıma. Yetki kararı burada değil, layout'ta.
  */
 export default async function middleware(request: NextRequest) {
   // Önce tazele: dönen fonksiyon, hangi yanıtı üretirsek üretelim yeni çerezleri ona taşır.
@@ -24,29 +18,28 @@ export default async function middleware(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
 
-  // Sohbetten gelen sepet bağlantısı GERÇEK 307 ile çerez kapısına: sayfa içindeki akış-içi
-  // `redirect()` Next'in Router'ını düşürüyordu (karar ve ölçüm `lib/cart-link-redirect.ts`te).
+  // Sepet bağlantısı gerçek 307 ile çerez kapısına: sayfa içindeki akış-içi `redirect()` Router'ı düşürüyordu.
   const cartLink = cartLinkRedirect(request.nextUrl);
   if (cartLink) return applyAuthCookies(NextResponse.redirect(cartLink));
 
-  if (!isOperationsPath(pathname)) return applyAuthCookies(intlMiddleware(request));
+  if (!isOperationsPath(pathname)) {
+    const response = applyAuthCookies(intlMiddleware(request));
+    // robots.txt taramayı kapatır, dizine eklenmeyi değil: dışarıdan bağ alan özel adres ancak üstbilgiyle dışarıda kalır.
+    if (isPrivatePath(pathname)) response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return response;
+  }
 
-  // Layout'un okuyacağı tek yol kaynağı — sorgu dizesiyle birlikte (operatör "imha geçmişi, bu
-  // çeyrek" ekranından düştüyse giriş sonrası oraya döner, panele değil).
+  // Layout'un okuyacağı yol, sorgu dizesiyle: giriş sonrası operatör düştüğü ekrana döner.
   const headers = new Headers(request.headers);
   headers.set(OPERATIONS_PATH_HEADER, `${pathname}${search}`);
 
   const response = applyAuthCookies(NextResponse.next({ request: { headers } }));
-  // Gövdedeki `robots` meta etiketinden FARKLI olarak üstbilgi her yanıtta taşınır: yönlendirme,
-  // 404, hata ve gövdesiz yanıtlar dahil. İkisi birlikte, dizine düşebilecek tek yanıt bırakmaz.
+  // Üstbilgi meta etiketinden farklı olarak yönlendirme, 404 ve gövdesiz yanıtlarda da taşınır.
   response.headers.set('X-Robots-Tag', 'noindex, nofollow');
   return response;
 }
 
 export const config = {
-  // Müşteri yüzeyi locale yönlendirmesi + operasyon üstbilgileri. HARİÇ: api, auth (OAuth callback
-  // sabit URL), `oauth` (MCP yetkilendirme uçları — adresleri keşif belgesinde YAZILI ve dil öneki
-  // almaz; matcher'a girseydi istemci 307 ile `/fr/oauth/…`e savrulur, kayıt ve jeton POST'u düşerdi),
-  // next iç yolları ve uzantılı dosyalar.
+  // `oauth` hariç: MCP uçlarının adresi keşif belgesinde yazılı, dil önekine yönlenirse jeton POST'u düşer.
   matcher: ['/((?!api|_next|_vercel|auth|oauth|.*\\..*).*)'],
 };

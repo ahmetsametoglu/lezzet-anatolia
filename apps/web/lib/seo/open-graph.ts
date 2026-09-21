@@ -1,34 +1,11 @@
 import type { Metadata } from 'next';
 import { brand } from '@lezzet/brand';
-import { localizedPath, type AppRoute, type Locale } from '@lezzet/i18n';
+import { INTL_LOCALE, localizedHref, type AppRoute, type Locale } from '@lezzet/i18n';
 import type { StorefrontImage } from '@lezzet/application';
 
 /**
- * **Paylaşım kartı (Open Graph)** — `localeAlternates`'in kardeşi ve aynı disiplinde (08.1).
- *
- * ── NEDEN BİR KAPI, DÖRT SAYFAYA DAĞITILMIŞ BLOK DEĞİL ──────────────────────
- * Blok her `generateMetadata`'ya elle yazılsaydı dört kopya doğardı ve aralarındaki fark ilk gün
- * görünmezdi: biri `siteName` yazar öteki yazmaz, biri `locale` geçer öteki geçmez. Paylaşım
- * kartının test edilmesi zor (WhatsApp'ta görünene kadar fark edilmez), yani sessizce ayrışan bir
- * kopya haftalarca yanlış kart üretir. Kapı tek olunca yeni bir sayfa açan kişi de og'yi hreflang
- * gibi otomatik düşünür — sözleşme `SEO_I18N`'de yazılı.
- *
- * ── GÖRSEL YOKSA ALAN HİÇ YAZILMAZ ──────────────────────────────────────────
- * Boş bir `og:image` kartı görselsiz üretmez, KIRIK üretir: paylaşım aracı adresi çeker, alamaz ve
- * bazı istemcilerde kartın tamamını düşürür. Alanı hiç yazmamak, boş yazmaktan iyi
- * (`json-ld.tsx`'in "ne söylenirse doğru söylenir" kuralının aynısı).
- *
- * ── ADRES YOL TABLOSUNDAN TÜRER ─────────────────────────────────────────────
- * `og:url` elle yazılsaydı segment kelimesi dile göre değiştiği için (`/recettes` · `/tarifler`)
- * bir dilde yanlış adrese işaret ederdi. `metadataBase` (layout) göreli adresi mutlaklaştırıyor.
- *
- * ── GÖRSEL CDN KADRAJINDAN (05.37) ──────────────────────────────────────────
- * Kart görseli, operatörün kırpma penceresinde "sohbet kartı" diye önizlediği kare: çerçevenin tek
- * adresi (`frames.chat.src`, 1200 px — önerilen kart ölçüsü 1200×630, oran zaten 1.91:1). Önceden
- * tam boy özgün WebP gidiyordu; kare kaynakta kart üstten alttan rastgele kesiliyordu. Adres
- * `format=auto` taşıyor ve bu tarayıcı-dışı istemcide de güvenli — ölçüldü 10.09: `Accept` başlığında
- * yalnız joker taşıyan çekici `image/jpeg` aldı; WebP/AVIF yalnız onu açıkça kabul edene gidiyor.
- * CDN yoksa (r2.dev tabanı ya da ölçüsüz kaynak) özgün adres.
+ * Paylaşım kartı (Open Graph) — tek kapı, çünkü sayfalara dağılmış kopyalar ancak WhatsApp'ta
+ * görünen biçimde ayrışırdı. Görsel yoksa alan hiç yazılmaz: boş `og:image` kartı kırık üretir.
  */
 interface OpenGraphInput {
   route: AppRoute;
@@ -40,19 +17,9 @@ interface OpenGraphInput {
   description?: string | null;
   /** Çözülmüş görsel künyesi (`imageOf`). Görsel yoksa (`null` ya da `url` boş) alan hiç yazılmaz. */
   image?: StorefrontImage | null;
-  /**
-   * Kartın çerçevesi. Varsayılan `chat` (ürün · paket · tarif); koleksiyon kapağı `band` — o rolün
-   * kırpma penceresi 16:9'u "paylaşım kartı" diye önizliyor, sohbet çerçevesini göstermiyor.
-   */
+  /** Kartın çerçevesi — koleksiyon kapağı `band`, çünkü kırpma penceresi onu paylaşım kartı diye önizliyor. */
   shareFrame?: 'chat' | 'band';
-  /**
-   * Kart TÜRÜ. Varsayılan `website`; okunan içerik (tarif, yazı) `article` verir.
-   *
-   * `product` BİLEREK yok: paylaşımı alışveriş kartı olarak gösterip fiyat/stok beklentisi
-   * doğurur, ve o alanları doğru doldurmak (`og:price`, `availability`) bizim bugün taşımadığımız
-   * bir söz. Ürün sayfası da `website` olarak paylaşılıyor — kart yine ad, açıklama ve fotoğraf
-   * gösteriyor, yalnız satın alma vaadi vermiyor.
-   */
+  /** Kart türü; okunan içerik `article`. `product` yok: fiyat/stok alanlarını doğru doldurma sözü taşımıyoruz. */
   type?: 'website' | 'article';
 }
 
@@ -67,9 +34,10 @@ export function openGraphOf({ route, locale, params = {}, title, description, im
     type,
     title,
     ...(description ? { description } : {}),
-    url: `/${locale}${localizedPath(route, locale, params)}`,
+    url: localizedHref(route, locale, params),
     siteName: brand.name,
-    locale,
+    // Open Graph dil_BÖLGE biçimi bekler (`fr_FR`).
+    locale: INTL_LOCALE[locale].replace('-', '_'),
     ...(imageUrl ? { images: [imageUrl] } : {}),
   };
 }
