@@ -21,29 +21,9 @@ import { optionalCustomerId, type V1Env } from './auth';
 import { localeOf } from './cart-view';
 
 /**
- * Davet karşılaması (21.43) — `GET /api/v1/invite/:code`. Web'in `/[dil]/davet/[code]` sayfasının
- * uygulama karşılığı; ikisi de AYNI kapıyı çağırır (`@lezzet/application` → `readInviteWelcome`).
- *
- * ── AÇIK UÇ ve gerekçesi geri bildirim davetininkiyle aynı soydan ────────────
- * Bağlantıyı açan kişi TANIMLI DEĞİLDİR — davetli henüz müşterimiz değil, hesabı da yok. Bearer
- * istemek daveti kapıda karşılamak yerine kapıyı kilitlemek olurdu (`feedback.ts` künyesindeki
- * aynı ders: davet linki girişsiz açılır).
- *
- * ── AMA KİMLİK VARSA OKUNUR ──────────────────────────────────────────────────
- * `optionalCustomerId` keşif turunun kurduğu zincir: jeton varsa kim olduğu çözülür, yoksa
- * ziyaretçiye düşülür ve 401 HİÇBİR hâlde dönmez. Kimliğin cevabı değiştirdiği iki hâl var ve
- * ikisi de gerçekten oluyor: müşteri KENDİ bağlantısını açar (`self`), ya da zaten müşteriyken
- * bir tanıdığının bağlantısına dokunur (`already_customer`). Kimliği hiç sormasaydık ikisi de
- * "hoş geldin, hesap aç" ekranına düşerdi — zaten hesabı olan birine.
- *
- * ── HİÇBİR HÂL HATA DEĞİL, DÖRDÜ DE 200 ──────────────────────────────────────
- * Tanınmayan kod da 200 döner (`unknown`). Web sayfasının aynı kararı ve gerekçesi orada yazılı:
- * bağlantı WhatsApp'ta kırpılmış olabilir ve 404 vermek, kapıdaki davetliyi geri çevirmektir.
- * Ekran kodu çizmez, ama katalog kapısını açık tutar.
- *
- * **Kod bir SIR DEĞİL ama bir künyedir:** cevap yalnız getirenin adının ilk sözcüğünü taşır
- * (`InviteWelcomeSchema` künyesi); `parse` bu yüzden süzgeç olarak duruyor — motor bir gün fazla
- * alan döndürse bile zarfa giremez.
+ * `GET /api/v1/invite/:code` — web'in davet sayfasıyla aynı kapıyı (`readInviteWelcome`) çağıran açık uç: davetlinin henüz hesabı
+ * yok, ama jeton varsa okunur ki kendi bağlantısını ya da tanıdığınınkini açan müşteri "hesap aç" ekranına düşmesin. Tanınmayan kod
+ * da 200 döner, çünkü bağlantı sohbette kırpılmış olabilir ve 404 kapıdaki davetliyi geri çevirmek olur.
  */
 export const invite = new Hono<AppEnv>();
 
@@ -52,39 +32,28 @@ invite.get('/invite/:code', async (c) => {
   const viewerId = await optionalCustomerId(db, c.req.header('authorization'));
   const welcome = await readInviteWelcome(db, c.req.param('code'), viewerId);
 
-  // Gövde `z.input<…>` ile tiplenir: motorun hâl kümesi sözleşmeden saparsa burası DERLENMEZ
-  // (keşif destesinin kurduğu kilit) — sessiz bir uyumsuzluk yerine derleme hatası.
+  // `z.input<…>` kilidi: motorun hâl kümesi sözleşmeden saparsa sessiz uyumsuzluk yerine derleme hatası çıkar.
   const body: z.input<typeof InviteWelcomeSchema> = welcome;
   return ok(c, InviteWelcomeSchema.parse(body));
 });
 
 /**
- * **Komşu davetinin karşılaması** (21.45) — `GET /api/v1/neighbor/:token`. Web'in
- * `/[dil]/komsu/[token]` sayfasının uygulama karşılığı; ikisi de `readNeighborWelcome`i çağırır.
- *
- * Getiren davetiyle aynı kimlik rejimi (açık uç, jeton varsa okunur) ama **beş hâl**: buradaki
- * davet bir SEFERE çağırıyor, yani seferi geçebilir (`run_closed`) ve kontenjanı dolabilir
- * (`full`). Getiren davetinde ikisinin de karşılığı yok.
- *
- * **Reddedilen hâller de tarih taşır:** "sefer geçti" cümlesi hangi seferin geçtiğini
- * söyleyebilmeli — tarihsiz bir ret, komşuya neyi kaçırdığını söylemez.
+ * `GET /api/v1/neighbor/:token` — getiren davetiyle aynı kimlik rejimi, ama davet bir sefere çağırdığı için seferin geçmesi ve
+ * kontenjanın dolması da hâl. Reddedilen hâller de tarih taşır ki komşuya neyi kaçırdığı söylenebilsin.
  */
 invite.get('/neighbor/:token', async (c) => {
   const db = serviceDb();
   const viewerId = await optionalCustomerId(db, c.req.header('authorization'));
   const welcome = await readNeighborWelcome(db, c.req.param('token'), viewerId);
 
-  /* Motorun hâli `deliveryZoneId` de taşıyor; şemada YOK ve `parse` onu süzüyor — bölge kimliği
-     operasyonun iç künyesidir, komşuya söylenecek şey gündür. Bu yüzden `z.input` kilidi de
-     kurulmuyor: kapının kümesi telin kümesinden BİLEREK geniş. */
+  /* `z.input` kilidi bilerek yok: motorun hâli operasyonun iç künyesi olan `deliveryZoneId`yi de taşıyor ve `parse` onu
+     süzüyor, komşuya söylenecek şey gündür. */
   return ok(c, NeighborWelcomeSchema.parse(welcome));
 });
 
 /**
- * Gövde: iki davetten en az biri. **İkisi birden gelebilir ve bu gerçek bir hâl** — davetli bir
- * arkadaşının bağlantısıyla tanışıp, sonra bir komşusunun sefer davetine tıklayıp, en sonunda
- * hesabını açabilir. İkisi ayrı ayrı yazılsaydı cihaz iki tur atardı ve biri düşerse öteki de
- * yarım kalırdı.
+ * İki davet birden gelebilir (önce bir arkadaşın bağlantısı, sonra bir komşunun sefer daveti); tek istekte gelir ki biri düşerse
+ * öteki yarım kalmasın.
  */
 const ClaimBodySchema = z
   .object({ referralCode: z.string().min(1).optional(), neighborToken: z.string().min(1).optional() })
@@ -106,27 +75,9 @@ async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Res
 }
 
 /**
- * **Bekleyen daveti hesaba bağlar** (21.44) — `POST /api/v1/me/invite/claim`, Bearer'ın ARDINDA.
- *
- * ── NEDEN AYRI BİR UÇ, OTP GÖVDESİ DURURKEN ─────────────────────────────────
- * Kod eskiden yalnız `/auth/otp/verify` gövdesinde taşınıyordu ve o cümle YALNIZ OTP için doğruydu:
- * Google akışı Supabase'e doğrudan gidiyor, profili trigger açıyor ve kodu soran hiçbir çağrı
- * yoktu. Davet bağlantısına tıklayıp *"Google ile devam et"* diyen davetli **sessizce bağsız**
- * kalıyordu — hata yok, log yok, ödül yok; üstelik en olası yol buydu (telefonda oturumu açık
- * Google hesabı). Web aynı boşluğu `auth/callback` rotasında kapattı (17.11); bu, onun mobil ikizi.
- *
- * **Çare iki yolu ayrı ayrı yamamak DEĞİL:** cihazda da tek kapı var artık
- * (`lib/invite/claimPendingInvite`) ve OTP gövdesindeki alan kaldırıldı — iki mekanizma bırakmak,
- * yarın doğacak üçüncü giriş yolunun (WhatsApp) hangisini çağıracağını belirsiz bırakırdı.
- *
- * **Kural burada DEĞİL:** "yeni müşteri" ölçütü (siparişsizlik), kendini-getirme, ilk getiren
- * kazanır ve idempotentlik `@lezzet/application`ın ortak kapısında (`attachReferralOnLogin`).
- * Yutma davranışı da orada (`tryAttachReferral`): davet yüzünden bir giriş akışı düşmez.
- *
- * **Cevap HEP 200 ve hep `true`.** Bağın kurulup kurulmadığı istemciyi ilgilendirmiyor: davetli
- * ekranda bunun için bir şey görmüyor, göstermesi de yanlış olurdu ("davetin geçersiz" demek,
- * kaydolmayı yeni bitirmiş kişiye söylenecek ilk cümle değil). Reddin gerekçesi log'a düşer —
- * "davet neden yazılmadı" sorusunun cevap kaynağı orası.
+ * `POST /api/v1/me/invite/claim` — her giriş yolunun (e-posta kodu, Google) ardından cihazın tek kapısı; kod yalnız OTP gövdesinde
+ * taşınsaydı Google ile giren davetli sessizce bağsız kalırdı. Cevap hep 200 ve `true`: kaydolmayı yeni bitirmiş kişiye "davetin
+ * geçersiz" demek doğru değil, reddin gerekçesi log'a düşer.
  */
 export const inviteClaim = new Hono<CustomerEnv>();
 inviteClaim.use('*', resolveCustomer);
@@ -141,13 +92,8 @@ inviteClaim.post('/claim', async (c) => {
 });
 
 /**
- * Komşu davetini kişiye yazar — web'in `handOffInvitesToCustomer`ındaki `handOffNeighbor`ın ikizi
- * ve AYNI hükümle: **girişi asla düşürmez, ama sessiz de değil.**
- *
- * Ret gerçek ve sık: sefer geçmiş olabilir, kontenjan dolmuş olabilir, kişi kendi bağlantısını
- * açmış olabilir. Üçü de müşteriye burada söylenmez — karşılama ekranı zaten söylemişti; bu çağrı
- * yalnız kaydı kuruyor. Gerekçe log'a düşer, çünkü "davet neden yazılmadı" sorusunun tek cevap
- * kaynağı orası.
+ * Web'deki `handOffNeighbor`ın ikizi: girişi asla düşürmez ve reddi müşteriye söylemez, çünkü karşılama ekranı zaten söyledi.
+ * Gerekçe log'a düşer; "davet neden yazılmadı" sorusunun tek cevap kaynağı orası.
  */
 async function claimNeighbor(customerId: string, token: string): Promise<void> {
   try {
@@ -166,42 +112,23 @@ async function claimNeighbor(customerId: string, token: string): Promise<void> {
 const OpenBodySchema = z.object({ orderId: z.string().uuid() });
 
 /**
- * **Siparişin komşu davetini açar ve paylaşılabilir adresini döner** (21.45) —
- * `POST /api/v1/me/invite/neighbor`. Sipariş tamamlandı ekranının çağırdığı tek uç.
- *
- * ── NEDEN POST, OKUMA GİBİ GÖRÜNÜYOR OLSA DA ────────────────────────────────
- * İlk çağrı daveti ÜRETİR (`openNeighborInvite` idempotent: ikinci çağrı aynısını döner). Yani bu
- * bir yazma. GET yapsaydık, ekranı önizleyen/önyükleyen her şey sessizce satır açardı.
- *
- * **Davet peşinen açılmıyor** ve bu `getOrCreateReferralCode`un aynı kararı: müşterilerin çoğu
- * komşusunu çağırmaz, her siparişe davet satırı yazmak kullanılmayacak kayıt üretmek olurdu.
- *
- * **`inviteUrl: null` ARIZA DEĞİL, meşru hâl:** kargo siparişinde "aynı sefer" diye bir şey yok,
- * kesim saati dolmuş seferde de çağrılacak kimse kalmamıştır. Ekran o hâlde şeridi hiç çizmez.
- * Adresi sunucu üretiyor — üç yüzey kendi adresini kursa, rota adı değiştiği gün ikisi 404'e düşer.
- *
- * **Sipariş başkasınınsa da `null`:** sahiplik kontrolü kapının içinde (`not_owner`) ve dışarıya
- * ayrı bir cevap verilmiyor — "bu sipariş senin değil" demek, olmayan bir siparişin varlığını
- * doğrulamaktır (geri bildirim davetindeki aynı ders).
+ * `POST /api/v1/me/invite/neighbor` — okuma gibi görünse de ilk çağrı daveti üretir, GET olsaydı önyükleyen her şey satır açardı.
+ * `inviteUrl: null` meşru hâldir (kargo siparişi, kesimi geçmiş sefer, başkasının siparişi): ayrı cevap vermek olmayan bir
+ * siparişin varlığını doğrulardı.
  */
 inviteClaim.post('/neighbor', async (c) => {
   const body = OpenBodySchema.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return fail(c, 'invalid_body', 400);
 
-  /* Dil ZORUNLU ve varsayılansız (sepet/checkout ailesiyle aynı okuma): bağlantının dili
-     PAYLAŞANIN dilidir ve sessizce Türkçeye düşmek, Alsaslı bir müşteriye Türkçe bir adres
-     paylaştırmak olurdu. */
+  /* Dil zorunlu ve varsayılansız: bağlantının dili paylaşanın dilidir, sessizce Türkçeye düşmek Alsaslı müşteriye Türkçe adres
+     paylaştırırdı. */
   const locale = localeOf(c);
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
   const db = serviceDb();
   const invite = await tryOpenNeighborInvite(db, { orderId: body.data.orderId, customerId: c.get('customerId') });
-  /* KALAN HAK SUNUCUDA SAYILIR (kullanıcı kararı 21.08 — şeffaflık). Tüketim siparişlerden gelir
-     (iptal olan sayılmaz) ve tavan davet satırında dondurulmuştur; ikisini istemciye taşıyıp orada
-     çıkarmak o iki kuralın ikinci kopyası olurdu (sözleşme künyesi).
-
-     Davet yoksa sayı da yok: `remainingUses: 0` ile `maxUses` tavanı — ekran zaten şeridi hiç
-     çizmiyor, ama sözleşme "bilinmiyor" diye bir hâl taşımıyor ve taşımamalı. */
+  /* Kalan hak sunucuda sayılır: tüketim ve tavan kuralını istemciye taşımak ikinci kopya olurdu. Davet yoksa sayı 0, çünkü
+     sözleşme "bilinmiyor" hâli taşımıyor. */
   const remainingUses = invite === null ? 0 : Math.max(0, invite.maxUses - (await countNeighborInviteUses(db, invite.id)));
   return ok(
     c,
@@ -214,18 +141,8 @@ inviteClaim.post('/neighbor', async (c) => {
 });
 
 /**
- * **Komşu davetinin REDDİ** — `POST /api/v1/me/invite/neighbor/decline` (kullanıcı kararı 21.08).
- *
- * Davetli, kabul ettiği bir daveti geri çevirebilir: artık gün seçicide görünmez ve sipariş ona
- * bağlanmaz. Kabul satırı SİLİNMEZ — ret de olmuş bir olaydır ve **geri alınabilir**: müşteri aynı
- * bağlantıya yeniden tıklarsa kabul öne alınır, ret damgası temizlenir (`acceptNeighborInvite`).
- *
- * **BU ROUTER'DA, `invite`ta DEĞİL:** reddin anahtarı yalnız `inviteId` ve "kim reddediyor"
- * sorusunun cevabı Bearer'dan çözülen müşteridir (`resolveCustomer`). Açık uçta dursaydı kimlik
- * gövdeden gelmek zorunda kalırdı — yani başkasının davetini reddettirmek mümkün olurdu.
- *
- * Kabul etmediği daveti reddetmek 404 döner: ortada reddedilecek kayıt yok. Ekran o hâlde sessiz
- * kalır — kullanıcı zaten görmediği bir şeyi reddetmeye çalışmıyordu.
+ * `POST /api/v1/me/invite/neighbor/decline` — kabul satırı silinmez, ret damgalanır ve aynı bağlantıya yeniden dokunulunca geri
+ * alınır. Bu router'da, çünkü "kim reddediyor" Bearer'dan çözülmeli; açık uçta başkasının davetini reddettirmek mümkün olurdu.
  */
 const DeclineNeighborBodySchema = z.object({ inviteId: z.string().uuid() });
 
