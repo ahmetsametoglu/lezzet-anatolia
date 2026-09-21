@@ -1,47 +1,36 @@
-import 'server-only';
 import { StockService, SupplierProductService, type Db } from '@lezzet/database';
 import { COST_HISTORY_SIZE, replacementCost, type CostBasis } from '@lezzet/domain-core';
 
 /**
- * FİYATIN MALİYET TABANI — okuma tarafı (DOMAIN §"Maliyet ve hedef marj").
- *
- * Karar motorda (`replacementCost`); burada yalnız iki kaynak okunur ve motora verilir:
- *  1. **Alış geçmişi** (`stock`) — tükenmiş partiler dahil, en yeniden eskiye.
- *  2. **Tedarikçi eşlemesindeki son alış** — hiç parti girilmemiş varyantlar için yedek. Bu yedek
- *     olmasaydı, stoğu sıfırlanmış ürünün maliyeti "bilinmiyor"a düşer ve fiyat ekranı marj
- *     gösteremezdi; oysa "geçen sefer kaça aldık" bilgisi duruyor.
- *
- * FİYAT EKRANI VE OTOMATİK FİYAT AYNI TABANI KULLANIR. Ayrılsalardı otomatik fiyatlanan ürün,
- * ekranın kendi marj hesabına göre "marj-altı" görünebilirdi — sistem kendi kararını yanlış bulurdu.
+ * Fiyat kararının maliyet tabanını okur; karar motorda (`replacementCost`). Fiyat ekranı, otomatik fiyat ve müşteri
+ * fiyat kuralı aynı tabanı okur, yoksa sistem kendi hesapladığı fiyatı "marj-altı" bulabilirdi.
  */
 export async function readCostBasis(db: Db, variantIds: readonly string[]): Promise<Map<string, CostBasis>> {
   const ids = [...new Set(variantIds)];
   const result = new Map<string, CostBasis>();
   if (ids.length === 0) return result;
 
-  // Son alış + karşılaştırma penceresi: motorun ihtiyacı kadar satır, fazlası değil.
   const history = await new StockService(db).purchaseHistoryCentsMap(ids, COST_HISTORY_SIZE + 1);
 
+  // Hiç parti girilmemiş varyantın yedeği tedarikçi eşlemesindeki son alıştır, yoksa stoğu sıfırlanan ürünün maliyeti kaybolurdu.
   const missing = ids.filter((id) => !history.has(id));
   const fallback = missing.length > 0 ? await lastPurchaseOf(db, missing) : new Map<string, number>();
 
   for (const id of ids) {
-    const purchases = history.get(id) ?? []; // servis cent döndürüyor (02.9) — çeviri kalmadı
+    const purchases = history.get(id) ?? [];
     if (purchases.length > 0) {
       result.set(id, replacementCost(purchases));
       continue;
     }
     const last = fallback.get(id);
-    // Yedek tek sayıdır: karşılaştıracak geçmişi yok, motor da onu "ok" sayar (bkz. tek alım kuralı).
     result.set(id, last === undefined ? { status: 'unknown' } : replacementCost([last]));
   }
   return result;
 }
 
 /**
- * Tedarikçi eşlemelerinden son alış (**cent**) — birden çok tedarikçi varsa **tercih edilen**, o da
- * yoksa EN DÜŞÜK fiyat. En düşüğü seçmek iyimserlik değil gerçekçilik: yeniden alırken en ucuz
- * tedarikçiye gideriz, fiyat kararının tabanı da o olmalı.
+ * Tedarikçi eşlemelerinden son alış (cent): tercih edilen tedarikçi, yoksa en düşük fiyat, çünkü yeniden alırken en ucuz
+ * tedarikçiye gidilir.
  */
 async function lastPurchaseOf(db: Db, variantIds: string[]): Promise<Map<string, number>> {
   const mappings = await new SupplierProductService(db).listByVariants(variantIds);

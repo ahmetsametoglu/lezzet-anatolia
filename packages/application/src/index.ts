@@ -258,6 +258,7 @@ export type { ProductDetailInput } from './catalog/product';
 export { loadProductContext, listOfferProductIds } from './catalog/product-context';
 export { pricingViewerOf, VISITOR } from './catalog/pricing-viewer';
 export type { PricingViewer } from './catalog/pricing-viewer';
+export { readCostBasis } from './catalog/cost-basis';
 export {
   EMPTY_PRODUCT_CONTEXT,
   frameSourcesOf,

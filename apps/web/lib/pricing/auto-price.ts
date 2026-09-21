@@ -1,7 +1,7 @@
 import 'server-only';
 import { PriceService, ProductService, ProductVariantService, type Db } from '@lezzet/database';
 import { autoPriceCents, targetMarginFor } from '@lezzet/domain-core';
-import { readCostBasis } from './cost-basis';
+import { readCostBasis } from '@lezzet/application';
 import type { Channel } from '@lezzet/types';
 
 /**

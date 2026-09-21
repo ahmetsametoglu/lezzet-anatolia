@@ -16,7 +16,7 @@ import {
 import { costOf, needsExpiryAttention } from '@lezzet/domain-core';
 import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
-import { readCostBasis } from '@/lib/pricing/cost-basis';
+import { readCostBasis } from '@lezzet/application';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { PricesClient } from './prices-client';
 import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows } from './prices-read';

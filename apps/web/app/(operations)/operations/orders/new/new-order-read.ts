@@ -11,6 +11,7 @@ import {
   effectiveChannelOf,
   loadProductContext,
   pricingViewerOf,
+  readCostBasis,
   readDeliveryInputs,
   resolveCheckoutPayment,
   resolveDelivery,
@@ -19,7 +20,6 @@ import {
 import { costOf, targetMarginFor } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Channel, ProductVariant, ProductWithRelations, UserProfile } from '@lezzet/types';
-import { readCostBasis } from '@/lib/pricing/cost-basis';
 import type { AddressPickOption, CustomerPickOption, DeliveryContext, VariantPickRow } from './new-order-types';
 
 /**

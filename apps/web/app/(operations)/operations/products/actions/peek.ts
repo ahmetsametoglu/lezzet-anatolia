@@ -3,7 +3,7 @@
 import { PriceService, ProductService, SettingsService, StockService, serviceDb } from '@lezzet/database';
 import { requireAdmin, requireWarehouseScope } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
-import { readCostBasis } from '@/lib/pricing/cost-basis';
+import { readCostBasis } from '@lezzet/application';
 import { toChannelMaps, toPriceRows, type PriceRow } from '@/lib/pricing/price-rows';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { toLevelRows, type StockLevelRow } from '@/lib/stock/level-rows';
