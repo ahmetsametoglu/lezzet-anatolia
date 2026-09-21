@@ -27,7 +27,7 @@ Gözden geçirmedeki 13 maddenin kararları. "Uygulandı" = Musteri Mobil.dc.htm
 18. **Tükendi örtüsü:** `.72` kendi durağı olur (`scrim-72`, rol: tükendi/pasif foto örtüsü). `.82`'ye çekilmez — .82 metin koruma gradyanının ucudur, işi fotoğrafı okunur kılmak; .72'nin işi fotoğrafı soluklaştırmak.
 19. **"TAKİP" çipi envantere girer:** `accent-leaf #a9c46b` zemin + `ink-deep #15170f` metin (scrim ailesinin rgb(21,23,15) katısı; ikisi de resmî ad alır).
 20. **Küçük duraklar token'a çekildi, yeni durak yok:** çeşit alt-satırı 11,5 (micro) · vitrin/keşif başlığı 20 (h2-sm) · basılı ölçek .97 · alt gradyan 40% → .82. ✅ Uygulandı (paket bandındaki 32% başlangıç kadraj gereği kalır, ucu .82'ye çekildi).
-21. **brand-whatsapp-pure onaylandı:** mobil OTP/paylaşım yeşili `#25d366` = `brand-whatsapp-pure`; operasyondaki `brand-whatsapp #128c4b` ayrı kayıt olarak kalır.
+21. **brand-whatsapp-pure onaylandı:** mobil paylaşım/sohbet yeşili `#25d366` = `brand-whatsapp-pure`; operasyondaki `brand-whatsapp #128c4b` ayrı kayıt olarak kalır.
 22. **Katalog iskeleti kareye çekildi:** 138'lik daire + metin çubukları yerine kart ile birebir kare (`aspect-ratio:1 · yarıçap 20`), grid boşlukları gerçek listeyle aynı (20/14). ✅ Uygulandı.
 23. **Kayıt düzeltmesi:** 2. karardaki "sand-100", envanterdeki ad çakışması nedeniyle **sand-250** adıyla açıldı; tüm referanslar bu adla.
 24. **Font varlıkları:** expo-font ile statik ağırlıklar — **Lora 400·600, Karla 400·600·700**; italik yüklenmez. Fontlar gelene dek sistem fontu (FOUT kabul), metrik yakın fallback: Georgia / system-ui.
