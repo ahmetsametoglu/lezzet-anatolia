@@ -60,14 +60,7 @@ export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, ini
     }
   }
 
-  /**
-   * Anahtarı CÜMLEYE çevirir — kapı artık metin değil anahtar döndürüyor (denetim S1).
-   *
-   * `authErrorMessage` saf bir tablo (sunucuya bağlı değil), o yüzden çeviri burada yapılabiliyor
-   * ve yüzeyin kuralı korunuyor: kapı anahtar döner, cümleyi ekran kurar (08.15). Anahtar bir
-   * şekilde boş gelirse genel e-posta hatasına düşülür — boş bir kırmızı satır göstermek,
-   * müşteriye hiçbir şey söylememektir.
-   */
+  /** Kapının döndüğü anahtarı cümleye çevirir; boş anahtar genel e-posta hatasına düşer, boş kırmızı satır müşteriye hiçbir şey söylemez. */
   const say = (key: AuthErrorKey | null): string => (key ? authErrorMessage(key, locale) : copyErrors.invalidEmail);
 
   const onSubmit = handleSubmit((values) => {

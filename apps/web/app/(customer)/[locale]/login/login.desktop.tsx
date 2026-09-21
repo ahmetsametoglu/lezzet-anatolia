@@ -6,14 +6,10 @@ import { Icon } from '@/components/customer/ui/icons';
 import { GoogleIcon, WhatsAppIcon } from '@/components/customer/auth/provider-icons';
 import type { LoginViewProps } from './login-types';
 
-// Sıcak degrade — tasarımdaki hero image-slot (aile sofrası fotoğrafı) yerine geçici placeholder.
-// Gerçek foto gelince bu arka planı kaldırıp <img>/next<Image> ile değiştir.
-// Kahraman gradyanı — token'lardan kurulur (envanter §0: bal · ara durak · mürekkep).
+// Tasarımdaki aile sofrası fotoğrafının yerini tutan degrade; renkler token'dan (bal · ara durak · mürekkep).
 const HERO_BG = 'linear-gradient(150deg,var(--color-honey) 0%,var(--color-hero-mid) 45%,var(--color-ink) 100%)';
 
-// Masaüstü sunumu — tasarım "Giris Web" / "Giris Kod Web": bölünmüş ekran (sol hero foto + sağ
-// doğrulama paneli). Canvas çerçevesi (1120px/rounded/shadow) chrome'dur, atıldı; ekran pencereyi
-// kaplar. Hero'nun degrade örtüsü/rozet/testimonial'ı gerçek UI, korundu.
+// Bölünmüş ekran: solda kahraman, sağda doğrulama paneli. Tasarımın 1120px çerçevesi canvas'a ait; ekran pencereyi kaplar.
 export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice, isSending, emailInvalid, emailRef, emailField, onSubmit, onBack, onGoogle, onWhatsApp, onVerify, onResend }: LoginViewProps) {
   return (
     <main className="flex min-h-screen bg-cream text-ink">

@@ -6,9 +6,7 @@ import type { OtpResendResult, OtpVerifyResult } from '@/components/customer/aut
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import messages from './messages.json';
 
-// Login tip/sözleşme modülü (view DEĞİL — gerçek view'lar login.desktop/login.mobile). page (server),
-// login-client (mantık) ve sunum varyantları bu tipleri paylaşır. Nötr leaf: value↔type döngüsel
-// importlarını önler (boundaries no-circular).
+// Sayfa, mantık ve iki sunum bu tipleri paylaşır; ayrı yaprak dosya, aralarında döngüsel import doğmasın diye.
 
 /** Arayüz metinleri messages.json'dan TÜRETİLİR (elle interface yok). */
 export type Messages = LocalizedCopy<typeof messages>;

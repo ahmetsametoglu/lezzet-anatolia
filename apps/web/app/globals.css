@@ -1,22 +1,8 @@
 @import 'tailwindcss';
 
 /*
-  İki evrenin tasarım token'ları — kaynak: design/project/Komponent Envanteri - {Musteri,Operasyon}.dc.html §0.
-  Her semantik aile DÖRT katman taşır: metin · koyu · zemin · kenarlık (+ grafik/nokta).
-  KURAL (envanter §0): ham hex yasak — bir ton burada yoksa kodlanmaz, envantere eklenir.
-  Karanlık mod yalnız operasyon yüzeyindedir (dosyanın sonu); müşteri vitrini tek temalıdır.
-
-  ── BU BLOK NEDEN `packages/design-tokens`TEN ÜRETİLMİYOR (karar 07.08) ──────────────────
-  Paket aynı 223 token'ın TS karşılığını taşıyor (mobil Unistyles teması oradan besleniyor) ve
-  `renderThemeCss()` bu bloğun üretilmiş hâlini deterministik verebiliyor. Kurmadık, çünkü üretici
-  KAYIPLI: yalnız `--ad: değer;` satırı basıyor. Bu dosyanın ~200 satırı yorum — her token'ın
-  nerede kullanıldığı, yukarıdaki ham-hex kuralı, tek-mürekkep kararı, yuvarlama istisnaları.
-  Kazanılacak şey makineyle KİLİTLİ bir ikizlik (`packages/design-tokens/src/parity.test.ts` iki
-  yönlü karşılaştırıyor — sessiz ayrışma zaten imkânsız), kaybedilecek şey token'ları okuyan
-  herkesin ilk açtığı dosyadaki dokümantasyon. Takas kötü.
-  Doğru yön TERS: kaynak burası kalsın, TS modülü BURADAN üretilsin — parite testi zaten bir CSS
-  parser'ı taşıyor, aynı parser yorumları da toplayabilir. Karar paketin şeridinde
-  (`docs/talep/musteri-design-tokens-benimseme.md` cevabı).
+  İki evrenin tasarım token'ları; ham hex yasak, bir ton burada yoksa kodlanmaz, envantere eklenir. Blok `packages/design-tokens`ten
+  üretilmez, çünkü üretici yorumları kaybeder; iki kaynağın ayrışmasını `parity.test.ts` iki yönlü kilitler.
 */
 @theme {
   /* Fontlar — next/font değişkenlerine bağlanır (layout.tsx) */
@@ -27,8 +13,8 @@
      TEK MÜREKKEP kararı (envanter §0.5): #3a4147 · #3a3f35 · #333a3e · #4a5257 ·
      #3c4448 · #454d54 → hepsi `ink`. Ayrı bir `slate` token'ı YOK. */
   --color-ink: #343b41; /* başlık, koyu blok zemini, birincil metin */
-  --color-ink-hover: #2b3238; /* koyu hapın üzerine gelinmiş hâli (v1 sepet hapı). Ad native'in ink-deep'inden ayrı — o başka ton, başka rol */
-  --color-ink-deep: #15170f; /* (telefon, 14.09) örtü mürekkebinin katısı — "TAKİP" çipinin metni */
+  --color-ink-hover: #2b3238; /* koyu hapın üzerine gelinmiş hâli; ad native'in `ink-deep`inden ayrı, çünkü o başka ton */
+  --color-ink-deep: #15170f; /* örtü mürekkebinin katısı — "TAKİP" çipinin metni */
   --color-ink-raised: #3f474e; /* koyu bant üstündeki kart zemini */
   --color-ink-raised-line: #565f66; /* koyu bant üstündeki kartın çerçevesi */
   --color-body: #6d7261; /* gövde açıklaması, kart alt satırı */
@@ -45,10 +31,10 @@
   --color-sand-25: #faf6ec; /* sayfa zemini */
   --color-sand-50: #f3efe2; /* ara zemin, gömülü panel, hover */
   --color-sand-100: #f0e9d6; /* vurgulu bölüm, iç ayraç */
-  --color-sand-150: #efdfc2; /* (telefon, 14.09) seçili kart, özet paneli, bildirim zili zemini */
+  --color-sand-150: #efdfc2; /* seçili kart, özet paneli, bildirim zili zemini */
   --color-sand-200: #ece5d2; /* standart çerçeve, kart kenarı */
-  --color-sand-250: #ece3c8; /* (telefon, 14.09) kart zemini, katalog dairesi */
-  --color-sand-275: #e6dfcd; /* başlık ve yer paneli alt çizgisi (v1). sand-250 native'in kart zemini (#ece3c8) — ad çakışmasın */
+  --color-sand-250: #ece3c8; /* kart zemini, katalog dairesi */
+  --color-sand-275: #e6dfcd; /* başlık ve yer paneli alt çizgisi; `sand-250` adı native'in kart zemininde olduğu için ara ad */
   --color-sand-300: #e0d8c2; /* girdi kenarı, 2. çerçeve */
   --color-sand-400: #d8cfb6; /* belirgin çerçeve */
   --color-sand-500: #cdc4a8; /* kesikli çerçeve, boş durum */
@@ -62,11 +48,10 @@
   --color-olive-dark: #4a6121; /* kutu başlığı, hover, basılı */
   --color-olive-bg: #eef2e2; /* yeşil bant, olumlu rozet */
   --color-olive-line: #d7e3bd; /* kutu ve seçili kart çerçevesi */
-  --color-olive-edge: #cddbb0; /* yer hapının çerçevesi (v1 başlık) */
+  --color-olive-edge: #cddbb0; /* yer hapının çerçevesi */
   --color-olive-light: #a9c46b; /* koyu blok üstünde vurgu, ikon */
 
-  /* Terracotta: fırsat/indirim — ve (bugünkü karar) hata/iptal. Ayrı koyu katman
-     yok; `bright` hata metni için. Anlam ayrımı ton farkıyla kurulur. */
+  /* Terracotta: fırsat/indirim ve masaüstünde hata/iptal; ayrı koyu katman yok, anlam ayrımı ton farkıyla kurulur. */
   --color-terracotta: #b05c2e; /* fırsat/indirim vurgusu, eski fiyat üstü */
   --color-terracotta-bg: #f9ede2; /* fırsat kutusu, indirim rozeti */
   --color-terracotta-line: #e8c9b3; /* kutu çerçevesi, hatalı girdi */
@@ -83,16 +68,13 @@
   --color-closed-bg: #f0e9d6; /* kapanmış rozet arkası (= sand-100) */
   --color-closed-line: #c9cdc2; /* pasif çerçeve (= neutral-400) */
 
-  /* Hata — (telefon, 14.09) metin ve zemin; terracotta'ya katılmadı (o fırsat/indirim demek) */
+  /* Hata — metin ve zemin; terracotta'ya katılmadı, çünkü o fırsat/indirim demek */
   --color-error: #a44a3f; /* hata metni, "bu adrese gitmiyor" işareti */
   --color-error-bg: #f4e3e0; /* hata kutusu, işaretin zemini */
 
   /* ── §0.4a Etkileşim durumları ────────────────────────────────────────────
-     Odak halkası ayrı renk taşımaz: 2px zeytin outline, 3px offset.
-     NOT — envanterin §0.4'ü ÜÇ konuyu birden taşıyor (etkileşim durumları · tipografi ölçeği ·
-     köşe yarıçapları); burada üç ayrı bloğa bölündüler. Numara bu yüzden `a/b/c` ekiyle
-     yürüyor: aynı numarayı çıplak taşıyan iki başlık "biri yanlış yazılmış" diye okunuyordu
-     (mobil şeridinin gözlemi, 07.08) — oysa ikisi de doğru, kaynak tek bölüm. */
+     Odak halkası ayrı renk taşımaz: 2px zeytin outline, 3px offset. Envanterin §0.4'ü üç bloğa bölündü; `a/b/c` eki aynı
+     numaralı başlıklar yanlış yazılmış sanılmasın diye. */
   --color-hover-bg: #f3efe2; /* liste/kart hover (= sand-50) */
   --color-disabled-fill: #c9c3b0; /* tükendi/disabled buton zemini */
   --color-disabled-line: #c9cdc2; /* pasif girdi ve çip çerçevesi */
@@ -103,29 +85,22 @@
      ham hex koda dağılmasın diye tek yerde durur. */
   --color-hero-mid: #6f7d3f;
 
-  /* ── Örtü (scrim) — Token Kararlari #5 · (telefon, 14.09) ──────────────────
-     Tek mürekkep (`ink-deep`), dört yoğunluk; opaklık ham yazılmaz. `.72` `.82`ye yuvarlanmaz
-     (#18): biri fotoğrafı SOLDURUR, öteki fotoğrafın üstündeki metni okunur kılar. */
+  /* ── Örtü (scrim) — Token Kararlari #5 ─────────────────────────────────────
+     Tek mürekkep, dört yoğunluk; opaklık ham yazılmaz. `.72` `.82`ye yuvarlanmaz: biri fotoğrafı soldurur, öteki üstündeki
+     metni okunur kılar. */
   --color-scrim-soft: rgba(21, 23, 15, 0.28); /* fotoğrafın üst kenarı, fotoğrafsız bant dairesi */
   --color-scrim: rgba(21, 23, 15, 0.45); /* sayfa örtüsü, yer işaretinin filigranı */
   --color-scrim-72: rgba(21, 23, 15, 0.72); /* tükendi/pasif rozetinin zemini */
   --color-scrim-heavy: rgba(21, 23, 15, 0.82); /* fotoğrafın alt kenarı, üstünde başlık okunur */
 
-  /* ── Marka işaretleri — Token Kararlari #5 · (telefon, 15.09) ─────────────
-     Palete ait değil, temayla dönmez. Giriş ekranının sağlayıcı işaretleri; operasyonun koyu ikon
-     yeşili `brand-whatsapp` ayrı kayıt (ad çarpışmasının künyesi `customer.ts`te). */
+  /* ── Marka işaretleri — Token Kararlari #5 ─────────────────────────────────
+     Palete ait değil, temayla dönmez; operasyonun koyu ikon yeşili `brand-whatsapp` ayrı kayıt (ad çarpışması `customer.ts`te). */
   --color-brand-whatsapp-pure: #25d366; /* giriş: WhatsApp düğmesinin ikonu */
   --color-brand-google: #4285f4; /* giriş: Google düğmesinin "G"si */
 
-  /* ── §0.4b Tipografi ölçeği (aynı envanter bölümü — §0.4a notu) ───────────
-     Envanter: Lora "h1 52/600 · h2 28/600 · kart başlığı 24/600"; Karla "gövde 14-18/400 ·
-     etiket/buton 13-16/700 · üstbaşlık 13-14/600 harf aralıklı büyük harf".
-     KURAL (renk kuralının ölçü karşılığı): ham `text-[NNpx]` YAZILMAZ — bir kademe burada yoksa
-     kodlanmaz, envantere eklenir. BAŞLIK kademelerinde ara değerler (26 · 19 · 17 px) bilerek
-     yuvarlanır — orada ölçü hiyerarşi kurar, kademe çoğaltmak onu görünmez yapar. KONTROL
-     öğelerinde (çip, düğme, rozet) yuvarlama YOK: orada ölçü komşu öğeyle dengeyi belirler,
-     yarım piksel bile satırı bozar (yaşandı — 27.07, katalog süzgeç satırı).
-     `-sm` sonekli kademeler MOBİL karşılıklardır (cihaz forku: `md:` ile büyütme yok). */
+  /* ── §0.4b Tipografi ölçeği ──────────────────────────────────────────────
+     Başlık ara değerleri hiyerarşi için yuvarlanır, kontrol öğelerinde (çip, düğme, rozet) yuvarlanmaz, çünkü orada yarım piksel
+     komşu öğeyle hizayı bozar. `-sm` sonekli kademeler cihaz forkunun mobil karşılıklarıdır, `md:` ile büyütme yok. */
   --text-h1: 52px;
   --text-h1--line-height: 1.15;
   --text-h1--font-weight: 600;
@@ -133,8 +108,7 @@
   --text-h1-sm--line-height: 1.2;
   --text-h1-sm--font-weight: 600;
 
-  /* Sayfa başlığı ("Katalog") — kahraman h1'i ile bölüm h2'si arasında ayrı bir kademe; liste
-     sayfalarının tepesinde durur. Envanter §0.4'te yoktu, Katalog tasarımından geldi (web 38 · mobil 26). */
+  /* Sayfa başlığı ("Katalog"): kahraman h1'i ile bölüm h2'si arasında ayrı kademe, liste sayfalarının tepesinde durur. */
   --text-page-title: 38px;
   --text-page-title--font-weight: 600;
   --text-page-title-sm: 26px;
@@ -165,17 +139,15 @@
      hiyerarşi değil, görsel denge sorusudur — komşu öğeyle aynı hizada durup durmadığını belirler. */
   --text-chip: 14px; /* filtre çipi (K17) */
   --text-chip--font-weight: 700;
-  /* Form alanı etiketi (K34: "üstte etiket 12,5px kalın"). Kendi kademesi olarak durur çünkü gövde
-     ölçeğinin hiçbir durağı 12,5 değil ve alanın üstündeki künye ile içindeki değer aynı boyda
-     olamaz. Ağırlık 600: 700 etiketi girdinin içeriğinden daha yüksek sesli yapıyordu. */
+  /* Form alanı etiketi: gövde ölçeğinin hiçbir durağı 12,5 değil ve alanın üstündeki künye içindeki değerle aynı boyda
+     olamaz. Ağırlık 600, çünkü 700 etiketi girdinin içeriğinden yüksek sesli yapıyordu. */
   --text-field-label: 12.5px;
   --text-field-label--font-weight: 600;
   --text-control: 13.5px; /* süzgeç ve sıralama düğmesi (K17 küçük · K18) */
   --text-control--font-weight: 700;
-  --text-button: 14.5px; /* (telefon, 14.09) native birincil düğmenin etiketi — hap ve blok */
+  --text-button: 14.5px; /* native birincil düğmenin etiketi — hap ve blok */
   --text-button--font-weight: 700;
-  /* Adet seçicinin −/+ imleri. Kendi kademeleri: rakam gövde ölçeğinden (14/13) gelir ama imler bir
-     tık büyüktür — dokunma hedefi rakamdan geniş olmalı. Sepet tasarımından geldi (web 16 · mobil 15). */
+  /* Adet seçicinin −/+ imleri: rakamdan bir tık büyük, çünkü dokunma hedefi rakamdan geniş olmalı. */
   --text-step: 16px;
   --text-step--font-weight: 700;
   --text-step-sm: 15px;
@@ -193,7 +165,7 @@
   --text-eyebrow-sm: 11px;
   --text-eyebrow-sm--font-weight: 600;
   --text-eyebrow-sm--letter-spacing: 0.1em;
-  --text-eyebrow-xs: 10px; /* (telefon, 14.09) native'in üstbaşlığı; masaüstü `eyebrow`u yeni ada geçince taban `eyebrow` bu değeri alır */
+  --text-eyebrow-xs: 10px; /* native'in üstbaşlığı; masaüstü `eyebrow`u yeni ada geçince taban `eyebrow` bu değeri alır */
   --text-eyebrow-xs--font-weight: 700;
   --text-eyebrow-xs--letter-spacing: 0.18em;
   /* Büyük harfli küçük etiket — fotoğraf üstü kart etiketi, bölüm rozeti; kontrol öğesi, yuvarlanmaz. */
@@ -201,9 +173,8 @@
   --text-caps-label--font-weight: 600;
   --text-caps-label--letter-spacing: 0.12em;
 
-  /* (telefon, 14.09) Native'in rozet kademesi (Token Kararlari #16): küçük rozet yalnız ölçü farkı,
-     ağırlık ve aralık `badge`inkinden okunur. Yardımcı satır 12 ve ekran başlığı 17 de native
-     durakları — "başlıkta ara değer yuvarlanır" kuralının bilinçli istisnası (#6: "17 resmîdir"). */
+  /* Native'in rozet kademesi (Token Kararlari #16): küçük rozet yalnız ölçü farkı, ağırlık ve aralık `badge`inkinden okunur.
+     Ekran başlığı 17, başlık yuvarlama kuralının bilinçli istisnası (Token Kararlari #6). */
   --text-badge: 12.5px;
   --text-badge--font-weight: 700;
   --text-badge--letter-spacing: 0.06em;
@@ -217,27 +188,26 @@
   --radius-card: 18px;
   --radius-soft: 14px;
   --radius-pill: 26px;
-  --radius-badge: 12px; /* (telefon, 14.09) rozet, küçük etiket */
-  --radius-control: 16px; /* (telefon, 14.09) buton, girdi, fırsat kartı */
+  --radius-badge: 12px; /* rozet, küçük etiket */
+  --radius-control: 16px; /* buton, girdi, fırsat kartı */
 
-  /* ── v1 hareketleri ve yüzen yüzey gölgeleri (13.09) — kareleri (`@keyframes`) bu bloğun DIŞINDA,
-     `@theme` kapanışının hemen ardında: parite testi bloğu iç içe parantezsiz okur ── */
+  /* ── Hareketler ve yüzen yüzey gölgeleri — kareler (`@keyframes`) `@theme`in dışında, çünkü parite testi
+     bloğu iç içe parantezsiz okur ── */
   --animate-fade-in: fade-in 0.2s ease; /* yer paneli açılışı */
   --animate-pop: pop 0.24s ease; /* bildirim hapı */
-  --animate-sheet-in: sheet-in 0.22s ease; /* mobil çekmecenin alttan girişi (Mobil v1 `sheetIn`) */
+  --animate-sheet-in: sheet-in 0.22s ease; /* mobil çekmecenin alttan girişi */
   --shadow-toast: 0 10px 30px rgb(47 53 58 / 0.3); /* bildirim hapının gölgesi */
-  --shadow-menu: 0 14px 34px rgb(58 65 71 / 0.2); /* açılır menü (v1 hesap menüsü) */
-  --shadow-dialog: 0 24px 64px rgb(47 53 58 / 0.36); /* ortalanmış pencere (v1 masaüstü adres penceresi) */
-  --shadow-sheet: 0 -12px 40px rgb(47 53 58 / 0.28); /* mobil çekmecenin gölgesi (Mobil v1) */
-  --shadow-hard: 3px 3px 0 #343b41; /* sert gölge — native v3'ün imzası; telefon görünümünün yüzen düğmesi (14.09) */
-  --shadow-badge: 0 3px 8px rgba(21, 23, 15, 0.22); /* (telefon, 14.09) fotoğrafın ya da kartın üstünde yüzen rozet */
-  --shadow-soft: 0 1px 3px rgba(58, 65, 71, 0.08); /* (telefon, 14.09) native'in yükseklik gölgesi — anahtar topuzu */
-  --shadow-price: 0 8px 20px rgba(52, 59, 65, 0.28); /* (telefon, 14.09) ürün detayının sarkan fiyat rozeti */
+  --shadow-menu: 0 14px 34px rgb(58 65 71 / 0.2); /* açılır menü (hesap menüsü) */
+  --shadow-dialog: 0 24px 64px rgb(47 53 58 / 0.36); /* ortalanmış pencere (masaüstü adres penceresi) */
+  --shadow-sheet: 0 -12px 40px rgb(47 53 58 / 0.28); /* mobil çekmecenin gölgesi */
+  --shadow-hard: 3px 3px 0 #343b41; /* sert gölge — native'in imzası; telefon görünümünün yüzen düğmesi */
+  --shadow-badge: 0 3px 8px rgba(21, 23, 15, 0.22); /* fotoğrafın ya da kartın üstünde yüzen rozet */
+  --shadow-soft: 0 1px 3px rgba(58, 65, 71, 0.08); /* native'in yükseklik gölgesi — anahtar topuzu */
+  --shadow-price: 0 8px 20px rgba(52, 59, 65, 0.28); /* ürün detayının sarkan fiyat rozeti */
 
   /* ─────────────────────────────────────────────────────────────────────────
-     Operasyon evreni — "Veri Masası" token'ları (admin + depo + kurye).
-     Kaynak: design/project/Komponent Envanteri - Operasyon.dc.html §0.
-     Müşteri evreninden AYRI settir (ops- öneki); ortak renk (olive) bilerek eş değerdedir.
+     Operasyon evreni — "Veri Masası" token'ları (admin + depo + kurye). Müşteri evreninden ayrı set (`ops-` öneki);
+     ortak renk (olive) bilerek eş değerdedir.
      ───────────────────────────────────────────────────────────────────────── */
 
   /* Fontlar — next/font değişkenlerine bağlanır ((operations)/layout.tsx) */
@@ -245,43 +215,9 @@
   --font-ops-mono: var(--font-ibm-plex-mono), ui-monospace, 'Courier New', monospace; /* rakam/fiyat/saat */
   --font-ops-body: var(--font-karla), ui-sans-serif, system-ui, sans-serif; /* gövde */
 
-  /* §0 YAZI ÖLÇEĞİ (operasyon) — karar 28.07.
-     Envanter §0 yalnız font AİLELERİNİ veriyordu, boy vermiyordu; 20 operasyon tasarım dosyası
-     18 farklı boy kullanıyor (12 · 13 · 11,5 · 12,5 · 11 en sık olanlar). Yani ölçek tasarımda da
-     tek parça değildi: her ekran ayrı zamanda çizilmiş, her biri kendi boyunu seçmiş. 18 boy YEDİ
-     role indirgendi; her birleştirme en fazla 1-2 px (ayrıntı: design/BACKLOG §5).
-     Satır yüksekliği ve ağırlık BİLEREK gömülmedi: yoğun tablolarda `leading` yerel karar ve
-     token'a gömmek, hiç `leading` yazmayan yerlerin satır aralığını sessizce değiştirirdi.
-
-     BİR KADEME BÜYÜTÜLDÜ (28.07, kullanıcı kararı): tasarım dosyalarındaki ham boylar 9–22px
-     aralığındaydı ve ekranda küçük kalıyordu. Tüm ölçek ~1px yukarı taşındı; oranlar korundu, yani
-     hiyerarşi aynı. Ölçek TOKEN olduğu için bu tek dosyalık bir değişiklik — 186 yerin tek tek
-     dolaşılması gerekmedi, turun asıl kazancı buydu.
-
-     Yan etki: `micro` 10 → 11px oldu ve rozetler artık tasarımın istediği 11px'e OTURUYOR (eskiden
-     1px küçüktü). Tasarımdan bilinçli sapma; design/BACKLOG §5'te kayıtlı.
-
-     İKİNCİ KEZ BİR KADEME BÜYÜTÜLDÜ (03.08, kullanıcı kararı). Aynı şikâyet yeniden geldi —
-     *"okumakta zorlanıyorum; kimden geldiğini yazan metin bile küçük"* — ve ikinci kez gelmesi
-     teşhisin kendisi: sorun tek bir ekranın seçimlerinde değil, ÖLÇEĞİN kalibrasyonunda. Talepler
-     ekranında çizimin değerleri merdivene DOĞRU eşlenmişti (13 → `base`, 12,5 → `sm`) ve sonuç yine
-     okunmuyordu; yani hata eşlemede değil, eşlemenin hedefindeydi.
-
-     Sebep ölçekte: tasarım dosyaları 1360px genişlikte bir çerçevede çiziliyor, gerçek operasyon
-     ekranı çok daha geniş — aynı piksel değeri orada daha küçük okunuyor. Mock'a sadakat amaç
-     değil, okunabilirlik amaç.
-
-     Yine tüm ölçek ~1px yukarı, oranlar korundu (hiyerarşi aynı). ÖNCE tek bir ekranı elle
-     büyütmüştüm; o yol yanlıştı — Talepler öteki dokuz ekrandan bir kademe büyük kalırdı ve
-     düzeltmeye çalıştığım kaymanın aynısını üretirdi. Token'ı değiştirmek on ekranı birden düzeltir
-     ve tutarlılığı korur; ölçek zaten bunun için token.
-
-     MERDİVENİN ÜSTÜNE İKİ UÇ EKLENDİ (03.08). Yedi basamak METİN içindi; gösterge rakamları
-     (sistem panelinin büyük değerleri, hüküm şeridinin başlığı, sipariş tutarı) hiçbirine
-     sığmıyordu ve o yüzden dokuz yerde HAM px yazılmıştı — 21 · 26 · 28 · 34 · 40. Bunlar okunmayan
-     değil, ÖLÇEKSİZ değerlerdi: merdiven yükselince yerlerinde kaldılar ve aradaki mesafe sessizce
-     kapandı. Rol gerçekten farklı olduğu için basamak eklendi; ham değeri en yakın metin
-     basamağına yamamak hiyerarşiyi bozardı (28px bir başlık değil, bir SAYI). */
+  /* §0 YAZI ÖLÇEĞİ (operasyon) — tasarımdaki 18 ham boy yedi metin rolüne, gösterge rakamları için iki uç basamağa indirildi;
+     ölçek token olduğu için okunabilirlik ayarı tek dosyadan bütün ekranlara gider. Satır yüksekliği ve ağırlık gömülmedi, çünkü
+     yoğun tablolarda `leading` yerel karar ve token'a gömmek onu sessizce değiştirirdi. */
   --text-ops-hero: 36px; /* alarm bandı başlığı      ← 34 · 40 */
   --text-ops-display: 29px; /* büyük gösterge sayısı    ← 26 · 28 */
   --text-ops-title: 25px; /* sayfa başlığı            ← 22 · 24 */
@@ -315,21 +251,16 @@
 
   /* Skala takma adları — kullanımdaki adlar korunur (envanter §0.5 eşlemesi) */
   --color-ops-subtle: #f8f9f5; /* = gray-25 */
-  --color-ops-panel: #f8f9f5; /* = gray-25; sidebar zemini (#f3f4f0 kalktı) */
+  --color-ops-panel: #f8f9f5; /* = gray-25; sidebar zemini */
   --color-ops-line-soft: #f0f1ec; /* = gray-50 */
   --color-ops-line: #e6e7e1; /* = gray-200 */
   --color-ops-line-strong: #d9dbd2; /* = gray-400 */
-  /* İskelet çubuğu AYRI takma ad (15.08): çubuk `ops-card` ZEMİNİNE çizilir, gray-100 ise beyaz kart
-     ÜSTÜ dolgusudur — kart zemininde fark ~%5'e düşüyor ve `animate-pulse` yarıya inince açık modda
-     görünmez oluyordu (koyu modda skala adımları geniş, sorun yoktu). Açıkta 400 kademesi, koyuda
-     bugünkü onaylı görünüm (gray-100) — iki mod ayrı ayarlanabilsin diye takma ad. */
+  /* İskelet çubuğu ayrı takma ad: çubuk `ops-card` zeminine çizilir ve gray-100 açık modda orada görünmez oluyordu. İki mod
+     ayrı ayarlanabilsin diye açıkta 400 kademesi, koyuda gray-100. */
   --color-ops-skeleton: #d9dbd2; /* = gray-400; iskelet çubuğu dolgusu */
   --color-ops-skeleton-soft: #e6e7e1; /* = gray-200; iskelet gradyanının açık ucu */
-  /* `surface-sunken` 15.08'e kadar HİÇ TANIMLI DEĞİLDİ ama 10+ yerde kullanılıyordu (para ekranı
-     kolon zemini, aile diyaloğu, rapor ölçü şeridi, hover dolguları) — Tailwind tanımsız utility'yi
-     üretmez, sınıflar sessizce hiçbir şey yapmıyordu. Kod haklı, envanter eksikti: kartın İÇİNDE
-     hafifçe çukur duran zemin. Açıkta karttan bir kademe koyu, koyuda karttan koyu (çukur içeri
-     gider); iki değer de skaladan, uydurma hex yok. */
+  /* Kartın içinde hafifçe çukur duran zemin (kolon zemini, hover dolguları): açıkta karttan bir kademe koyu, koyuda da karttan
+     koyu, çünkü çukur içeri gider. */
   --color-ops-surface-sunken: #f0f1ec; /* = gray-50 */
 
   /* §0.3 Semantik aileler — metin · koyu · zemin · kenarlık (+ grafik/nokta) */
@@ -351,12 +282,8 @@
   --color-ops-red-line: #e2c4c0; /* kutu çerçevesi, hatalı girdi */
   --color-ops-red-dot: #c2571f; /* bağlantı yok noktası, iade tutarı */
 
-  /* ALARM — DOLU kırmızı bant; sistem sağlığının `kritik`/`izleme durdu` hâli (O20, 18.5).
-     Kendi ailesi çünkü var olan hiçbiri işi görmüyor: `red-bg` kutu zeminidir (açık), `red-dark`
-     metin rengidir ve karanlık temada AÇILIR (#f2c8c3) — zemin olarak kullanılsaydı bant koyu temada
-     soluk pembeye döner, "yüksek sesle görünme" yükümlülüğü kaybolurdu (`OBSERVABILITY §4.1`:
-     e-posta alarmı yok, ekran alarmın yerini tutar). Bant her iki temada da DOLU ve koyu kalır;
-     üzerindeki metin/kutu renkleri bu yüzden ayrı token. */
+  /* ALARM — sistem sağlığının `kritik`/`izleme durdu` hâlinde dolu kırmızı bant; ekran e-posta alarmının yerini tuttuğu için
+     iki temada da dolu ve koyu kalır. `red-bg` açık, `red-dark` karanlıkta açılan bir metin rengi olduğu için kendi ailesi. */
   --color-ops-alarm: #8a3a33; /* bandın kendisi */
   --color-ops-alarm-ink: #ffffff; /* bant üzerindeki başlık ve hüküm */
   --color-ops-alarm-muted: rgba(255, 255, 255, 0.75); /* bant üzerindeki etiket, ölçüm yaşı */
@@ -364,24 +291,15 @@
   --color-ops-alarm-inset-line: rgba(242, 200, 195, 0.34);
   --color-ops-alarm-dot: #f2c8c3; /* nabız atan durum noktası */
 
-  /* PANEL ŞERİDİ — günün TEK yönlendirmesi (09.3, tasarım `Operasyon - Dashboard.dc.html`).
-     Alarm bandıyla aynı gerekçeyle kendi ailesi ve aynı gerekçeyle TERS ÇEVRİLMEZ: sayfanın en
-     yüksek sesli öğesi, bir "kutu" değil. Ama alarm DEĞİL — şerit sakin günü de taşır, tonu
-     içeriğe göre değişen nötr bir zemindir; kırmızı bir bant "her gün bir şey yanlış" der.
-     `ops-ink` kullanılamazdı: o MÜREKKEP rengidir ve karanlıkta açılır (#e9ebe3) — şerit gece
-     beyaz bir levhaya dönerdi. Karanlıkta zemin ters çevrilmek yerine YÜKSELİR (karttan bir kademe
-     açık): koyu sayfada öne çıkmanın yolu daha da koyulaşmak değil, kabarmaktır. Mürekkep ve
-     ikincil metin iki temada AYNI kalır, çünkü zemin iki temada da koyu — bu yüzden karanlık
-     blokta yeniden tanımlanmazlar. */
+  /* PANEL ŞERİDİ — günün tek yönlendirmesi: sayfanın en yüksek sesli öğesi ama alarm değil, sakin günü de taşıyan nötr koyu
+     zemin. `ops-ink` karanlıkta açıldığı için kullanılamaz; karanlıkta zemin ters çevrilmez, karttan bir kademe açığa yükselir. */
   --color-ops-band: #22251f; /* şeridin kendisi */
   --color-ops-band-ink: #f4f5f0; /* şerit üzerindeki başlık */
   --color-ops-band-muted: #a7ada0; /* şerit üzerindeki etiket ve gerekçe */
   --color-ops-band-line: #454a41; /* şerit içindeki ikincil düğmenin çerçevesi */
 
-  /* MARKA renkleri — palete ait değil, kanalların kendi renkleri. Token olarak duruyorlar ki ham
-     hex ikonun/kenarın içinde kalmasın (CLAUDE.md §3) ve karanlık temada da aynı kalsınlar: marka
-     rengi temayla dönmez, döndüğü an marka olmaktan çıkar. Messenger/Instagram 21.08'de geldi
-     (15.15 — sosyal gelen kutusunun kanal kenarı); envanter senkronu design/BACKLOG'da. */
+  /* MARKA renkleri — palete ait değil, kanalların kendi renkleri; karanlık temada da aynı kalırlar, çünkü marka rengi
+     temayla dönmez. */
   --color-brand-whatsapp: #128c4b;
   --color-brand-messenger: #0084ff;
   --color-brand-instagram: #e1306c;
@@ -413,8 +331,7 @@
 
   /* §0.4 Etkileşim durumları — odak halkası ayrı renk taşımaz (2px olive, 2px offset) */
   --color-ops-ink-hover: #33372e; /* koyu butonun hover/active durumu */
-  /* Eşdeğerlik notları AÇIK TEMA için geçerli — karanlıkta iki token da ayrı kademeye kayıyor
-     ve bu bilinçli (koyu bloğun künyesi). Ekini yazmasak "yorum yanlış" diye okunuyordu. */
+  /* Eşdeğerlik notları açık tema için; karanlıkta iki token da bilerek ayrı kademeye kayar (koyu bloğun notu). */
   --color-ops-disabled-fill: #c9ccc3; /* disabled buton zemini (açıkta = gray-600) */
   --color-ops-disabled-text: #8b9086; /* disabled buton/girdi metni (açıkta = muted) */
   --color-ops-row-selected: #eef0ea; /* tablo satırı hover ve seçim (= gray-100) */
@@ -426,10 +343,8 @@
   --radius-ops-btn: 8px;
 }
 
-/* v1 hareketlerinin kareleri (13.09) — `--animate-*` token'ları bunlara bağlı. `@theme`in DIŞINDA
-   durur: parite testi (`packages/design-tokens/src/parity.test.ts`) bloğu iç içe parantezsiz okur;
-   kareler içeride iken okuma ilk `}`de bitiyor, ardındaki bütün token'lar "yok" görünüyordu (13.09
-   akşamı dört test kırmızı). Tailwind v4 üst düzey `@keyframes`i olduğu gibi basar. */
+/* Hareketlerin kareleri; `@theme`in dışında durur, çünkü parite testi bloğu iç içe parantezsiz okur ve içerideki ilk `}`
+   okumayı bitirirdi. */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -467,12 +382,8 @@ body {
   font-family: var(--font-sans);
 }
 
-/* TELEFON GÖRÜNÜMÜNÜN YAZI ÖLÇEĞİ (kullanıcı kararı 14.09) — müşteri yazı kademeleri native'deki gibi
-   bir adım (1px) büyük okunur. Yeni token DEĞİL: tabandaki kademeler telefon çerçevesinin kökünde
-   (`site-frame.mobile.tsx` → `data-type-scale="phone"`) yeniden tanımlanır; çekmeceler de çerçevenin
-   içinde çizildiği için değişkeni devralır. Değerler `@lezzet/design-tokens`ten TÜRER
-   (`customerPhoneTextStepPx` → `flattenPhoneTextTokens`) ve parite testi bloğu iki yönlü kilitler.
-   Yalnız BOYUT: satır yüksekliği, ağırlık ve harf aralığı oranlardır, adımdan etkilenmez. */
+/* Telefon görünümünün yazı ölçeği: müşteri kademeleri telefon çerçevesinin kökünde (`data-type-scale="phone"`) bir adım
+   büyük yeniden tanımlanır. Değerler `@lezzet/design-tokens`ten türer (`flattenPhoneTextTokens`), parite testi bloğu iki yönlü kilitler. */
 [data-type-scale='phone'] {
   --text-h1: 53px;
   --text-h1-sm: 31px;
@@ -513,36 +424,16 @@ body {
   font-family: var(--font-ops-body);
 }
 
-/* KİLİTLİ FORM GÖRÜNÜR OLUR (22.19) — kural TEK YERDE, kontrol başına değil.
-
-   Karar verilmiş bir öneri açıldığında form `<fieldset disabled>` ile sarılıyor ve yazım GERÇEKTEN
-   engelli (native kontroller `fieldset`ten devralır). Ama `fieldset` görsel bir şey yapmaz: operatör
-   arşivdeki bir kararı açıp kutulara yazmayı DENİYOR, hiçbir şey olmuyordu — ekranın söylediği ile
-   sistemin yaptığı ayrışıyordu (ölçüldü 26.08, reddedilmiş bir kampanya dilekçesinde).
-
-   Neden her kontrole prop eklemek yerine burası: `discount-form` künyesinin kendi gerekçesi —
-   *"elle her kontrole `disabled` geçirmek, bir gün eklenen kutuda unutulurdu"*. Aynı mantık görsel
-   için de geçerli; üstelik kural böylece `FormSwitch` ve `BundleItemsEditor` gibi bayrak TAŞIMAYAN
-   kontrolleri de kapsıyor (onlar da `fieldset`in içinde).
-
-   Opaklık ölçülü (0.55): daha koyusu arşiv kaydını okunmaz yapardı — kilitli form hâlâ OKUNMAK
-   için orada. */
+/* KİLİTLİ FORM GÖRÜNÜR OLUR — `<fieldset disabled>` yazımı engeller ama görsel bir şey yapmaz; kural her kontrolde değil
+   burada, bayrak taşımayan kontrolleri de kapsasın diye. Opaklık 0.55'te kalır, çünkü kilitli form hâlâ okunmak için orada. */
 [data-surface='operations'] fieldset:disabled :is(button, input, select, textarea) {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   KARANLIK MOD — yalnız OPERASYON yüzeyi.
-   Kaynak: Komponent Envanteri - Operasyon §0.6. Token ADLARI değişmez, yalnız
-   değerleri yeniden tanımlanır — hiçbir bileşene dokunulmaz (envanterin kuralı).
-   Müşteri yüzeyi bilerek dışarıda: vitrin gündüz krem zemin üstünde kurulu
-   (Komponent Envanteri - Musteri §0.5), karanlık palet tasarlanmadı.
-
-   Uygulama: `<html data-surface="operations" data-theme="dark|light">`. Tercih üç
-   değerlidir (sistem · açık · koyu) ve sidebar'daki anahtarla seçilir; `system` seçili
-   iken işletim sisteminin teması izlenir. Çözüm JS tarafında yapılır (ThemeScript, FOUC
-   olmadan) — CSS burada TEK blok tutar, koyu değerler iki kez yazılmaz.
+   KARANLIK MOD — yalnız operasyon yüzeyi; token adları değişmez, yalnız değerleri yeniden tanımlanır. Tercih
+   (`<html data-theme>`) JS tarafında çözülür ki koyu değerler CSS'te iki kez yazılmasın.
    ═══════════════════════════════════════════════════════════════════════════ */
 [data-surface='operations'][data-theme='dark'] {
   color-scheme: dark;
@@ -605,9 +496,8 @@ body {
   --color-ops-alarm-inset-line: rgba(224, 141, 132, 0.3);
   --color-ops-alarm-dot: #f2c8c3;
 
-  /* Panel şeridi karanlıkta KABARIR (karttan bir kademe açık), koyulaşmaz — sayfa zemini zaten
-     #1b1e18, daha koyu bir şerit görünmez olurdu. Mürekkep/ikincil metin bilerek yok: ikisi de
-     açık temadaki değerini korur, çünkü zemin iki temada da koyu kalıyor. */
+  /* Panel şeridi karanlıkta kabarır (karttan bir kademe açık), çünkü sayfa zemini zaten koyu ve daha koyu şerit görünmez
+     olurdu. Mürekkep ve ikincil metin açık temadaki değerini korur, zemin iki temada da koyu. */
   --color-ops-band: #2f342b;
   --color-ops-band-line: #4a5044;
 
@@ -632,11 +522,8 @@ body {
 
   /* §0.6 Etkileşim — koyu buton açık zemine döner (mürekkep ters) */
   --color-ops-ink-hover: #d3d8ca;
-  /* DEĞERLER DOĞRU, açıktaki eşdeğerlik burada BİLEREK bozulur (ölçüldü 07.08, mobil gözlemi).
-     Açıkta dolgu = gray-600, metin = muted; karanlıkta o eşleme korunsaydı dolgu #757c6d, metin
-     #8f9688 olurdu — birbirine yapışık iki ton, yani okunmayan bir buton. Karanlıkta dolgu bir
-     kademe daha koyuya (= koyu gray-200), metin bir kademe daha açığa (= koyu faint) taşınıyor;
-     korunan şey renk eşleşmesi değil, dolgu ile metin arasındaki KONTRAST. */
+  /* Açıktaki eşdeğerlik burada bilerek bozulur: korunsaydı dolgu ile metin birbirine yapışık iki ton olurdu. Korunan şey
+     renk eşleşmesi değil, dolgu ile metin arasındaki kontrast. */
   --color-ops-disabled-fill: #3c4038; /* karanlıkta = gray-200 */
   --color-ops-disabled-text: #757c6d; /* karanlıkta = faint */
   --color-ops-row-selected: #31352c;
@@ -656,28 +543,17 @@ body {
   }
 }
 
-/* Harita karolarının soluklaştırması (19.20) — tasarımın kendi değerleri
-   (`Depolar - Bolge Haritasi.html`: `.tiles`). Zemin sönükleşir, posta kodu noktaları öne çıkar.
-   Raster karo olduğu için tek filtre yetiyor; vektörde stil katmanlarını yeniden boyamak gerekirdi. */
+/* Harita karolarının soluklaştırması — tasarımın kendi değerleri (`Depolar - Bolge Haritasi.html`: `.tiles`). Raster
+   karo olduğu için tek filtre yetiyor; vektörde stil katmanlarını yeniden boyamak gerekirdi. */
 .ops-map-tiles {
   filter: saturate(0.32) brightness(1.06) contrast(0.94);
 }
 
-/* Harita ipucu (19.20) — noktanın çok satırlı künyesi.
-
-   Stil BURADA, ekranda değil: ipucunun içeriği React ağacının dışında, elle kurulan bir DOM
-   (Leaflet katmana bağlıyor). Tailwind sınıflarıyla yazılmıştı ve ilk turda okunmaz çıktı
-   (kullanıcı 17.08) — kutu daralınca her yerleşim adı ayrı satıra düşüyor, başlıkla gövde
-   ayrışmıyordu. Kendi sınıfına taşınınca hem genişlik açıkça verilebiliyor hem de renkler
-   Leaflet'in kendi `.leaflet-tooltip` kuralıyla eşit özgüllükte yarışmıyor. */
+/* Harita ipucu — içerik React dışında, Leaflet'in elle kurduğu DOM'da olduğu için stil burada. Kendi sınıfında genişlik
+   açıkça verilebiliyor ve renkler Leaflet'in `.leaflet-tooltip` kuralıyla özgüllük yarışına girmiyor. */
 .leaflet-tooltip.ops-map-tip {
-  /* **`width: max-content` bir süs değil, ÖLÇÜLMÜŞ bir kusurun çözümü** (17.08). Yalnız
-     `max-width` verilmişti ve kutu yine daracık çıkıyordu: Leaflet ipucunu `.leaflet-tooltip-pane`
-     içine koyuyor, o pane ise SIFIR genişlikte konumlanmış bir katman. Mutlak konumlu bir kutunun
-     genişliği "kullanılabilir alan"a göre hesaplanır; alan sıfır olunca kutu `min-content`e, yani
-     en uzun TEK KELİMEYE çöküyordu — "Niederschaeffolsheim" bir satır, sonraki ad başka satır.
-     `max-content` doğal genişliği ister, `max-width` onu makul bir yerde keser: kısa künye dar
-     kalır, uzun ad listesi sarmalanır. */
+  /* `width: max-content` gerekli: ipucu sıfır genişlikli `.leaflet-tooltip-pane` içinde durduğu için kutu en uzun tek
+     kelimeye çöküyordu. `max-width` doğal genişliği makul yerde keser, uzun ad listesi sarmalanır. */
   width: max-content;
   max-width: 20rem;
   white-space: normal;
@@ -717,11 +593,8 @@ body {
   min-width: 15rem;
 }
 
-/* Künye ızgarası — CÜMLE DEĞİL, ikon + sayı; ve **iki sütun** (kullanıcı kararı 17.08).
-
-   Önce satır satır cümlelerdi ("3 kişi haber bekliyor", "son soru 1 saat önce") ve okunmadı:
-   operatörün ipucundan istediği bir paragraf değil üç sayı. Tek sütunda ise kart uzayıp inceliyordu;
-   iki sütun hem kartı toparlıyor hem yukarıdaki yerleşim adlarına genişlik bırakıyor. */
+/* Künye ızgarası — cümle değil ikon + sayı ve iki sütun: operatör ipucundan paragraf değil üç sayı istiyor. İki sütun
+   kartı toparlar ve yukarıdaki yerleşim adlarına genişlik bırakır. */
 .ops-map-tip-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
