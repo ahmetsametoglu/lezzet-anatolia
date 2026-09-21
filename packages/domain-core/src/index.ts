@@ -1,6 +1,7 @@
 // Saf karar motoru: DB'siz ve uygulamasız, çünkü birim testi veritabanı olmadan koşmalı; bildiği paketleri
 // `pnpm boundaries` zorlar.
 export * from './pricing/resolve-price';
+export * from './pricing/vat-base';
 export * from './pricing/apply-discount';
 export * from './pricing/bundle-allocation';
 export * from './pricing/bundle-economics';

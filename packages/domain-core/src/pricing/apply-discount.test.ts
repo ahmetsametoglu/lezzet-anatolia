@@ -145,6 +145,13 @@ describe('muafiyetler ve dağıtım', () => {
     expect(r?.lineShares).toEqual([500, 0, 0]);
   });
 
+  it('müşteriye özel fiyatlı kalem kupon dahil hiçbir indirime girmez — ne matrahta ne payda', () => {
+    const lines = [line({ unitPriceCents: 5000 }), line({ variantId: 'ozel', unitPriceCents: 4000, specialPrice: true })];
+    const r = applyBestDiscount(lines, [kupon({ percent: 10 })], { enteredCouponCode: 'BAYRAM15' });
+    expect(r?.amountCents).toBe(500);
+    expect(r?.lineShares).toEqual([500, 0]);
+  });
+
   it('yalnız muaf kalemlerden oluşan sepette indirim yok', () => {
     const lines = [line({ bundleId: 'b1' }), line({ variantId: 'v2', offerStockId: 's1' })];
     expect(applyBestDiscount(lines, [kupon({ trigger: 'automatic', codes: [] })], {})).toBeNull();

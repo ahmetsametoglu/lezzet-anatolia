@@ -1,6 +1,6 @@
 import { addVat, removeVat } from '@lezzet/helper';
 import type { Channel, OrderItem } from '@lezzet/types';
-import { vatBaseOf } from '../pricing/resolve-price';
+import { vatBaseOf } from '../pricing/vat-base';
 
 /**
  * Sipariş kaleminin para hesabı, muhasebe export'u ile kârlılığın ortak zemini. Tutar kanalın kendi tabanındadır

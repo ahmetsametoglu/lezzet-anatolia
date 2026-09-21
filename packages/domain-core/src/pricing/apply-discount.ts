@@ -17,6 +17,13 @@ export interface DiscountableLine {
   bundleId?: string | null;
   /** Dolu → near-expiry teklif satırı: indirime girmez. */
   offerStockId?: string | null;
+  /** Müşteriye özel fiyatlı kalem (`isCustomerPrice`): indirime girmez. */
+  specialPrice?: boolean;
+}
+
+/** Kalem indirim matrahına girer mi; paket, teklif ve müşteriye özel fiyatlı kalem kendi fiyatındadır. */
+export function isDiscountable(line: DiscountableLine): boolean {
+  return !line.bundleId && !line.offerStockId && !line.specialPrice;
 }
 
 /** İndirim kuralı — DB karşılığı `Discount`; motor yalnız karar için gerekli alanları görür. */
@@ -83,8 +90,7 @@ export function applyBestDiscount(
   const now = ctx.now ?? new Date();
   const lineTotals = lines.map((l) => l.unitPriceCents * l.qty);
 
-  // Muaf kalemler matrahtan düşer: paket ve teklif satırı kendi özel fiyatındadır.
-  const eligible = lines.map((l) => !l.bundleId && !l.offerStockId);
+  const eligible = lines.map(isDiscountable);
   const basketCents = lineTotals.reduce((sum, total, i) => (eligible[i] ? sum + total : sum), 0);
   if (basketCents <= 0) return null;
 
@@ -213,7 +219,7 @@ export function findReachableDiscount(
 ): ReachableDiscount | null {
   const now = ctx.now ?? new Date();
   const lineTotals = lines.map((l) => l.unitPriceCents * l.qty);
-  const eligible = lines.map((l) => !l.bundleId && !l.offerStockId);
+  const eligible = lines.map(isDiscountable);
   const basketCents = lineTotals.reduce((sum, total, i) => (eligible[i] ? sum + total : sum), 0);
   if (basketCents <= 0) return null;
 

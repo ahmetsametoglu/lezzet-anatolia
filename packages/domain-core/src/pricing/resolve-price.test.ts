@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { priceIn, resolvePrice, vatBaseOf, type ResolvePriceInput } from './resolve-price';
+import { priceIn, resolvePrice, type ResolvePriceInput } from './resolve-price';
+import { vatBaseOf } from './vat-base';
 
 // DOMAIN §5'teki her dal. Fiyatlar cent; b2c satırları TTC, b2b satırları HT (kanal tabanı).
 const LIST = [
@@ -39,9 +40,19 @@ describe('resolvePrice — müşteriye özel fiyat', () => {
     expect(r).toMatchObject({ sellable: true, unitPriceCents: 1050, source: 'customer', quantityCap: null });
   });
 
-  it('özel fiyat kanal fiyatından pahalı olsa bile geçerlidir (anlaşma anlaşmadır)', () => {
+  it('özel fiyat listeden pahalıysa liste geçerlidir — özel fiyat müşteriyi kötü duruma düşüremez', () => {
     const r = resolvePrice(input({ channel: 'b2b', customerPriceCents: 1350 }));
-    expect(r).toMatchObject({ unitPriceCents: 1350, source: 'customer' });
+    expect(r).toMatchObject({ unitPriceCents: 1200, source: 'channel', strikeCents: null });
+  });
+
+  it('özel fiyat listeye eşitse liste kalır — kalem indirimden çıkarılmaz', () => {
+    const r = resolvePrice(input({ channel: 'b2b', customerPriceCents: 1200 }));
+    expect(r).toMatchObject({ unitPriceCents: 1200, source: 'channel' });
+  });
+
+  it('kazanan özel fiyatın üstü çizili fiyatı listedir', () => {
+    const r = resolvePrice(input({ channel: 'b2b', customerPriceCents: 1050 }));
+    expect(r).toMatchObject({ unitPriceCents: 1050, strikeCents: 1200 });
   });
 
   it('onaysız şirkette özel fiyat da B2C tabanında değerlendirilir', () => {
@@ -75,6 +86,64 @@ describe('resolvePrice — fiyat grubu (B2B alt kademesi, 20.08)', () => {
   it('teklif grup fiyatından da düşükse kazanır — kıyas ödenen fiyattan', () => {
     const r = resolvePrice(input({ channel: 'b2b', groupPercentOff: 5, offer: { unitPriceCents: 990, remainingQty: 3, stockId: 's1' } }));
     expect(r).toMatchObject({ unitPriceCents: 990, source: 'offer', quantityCap: 3 });
+  });
+});
+
+describe('resolvePrice — müşterinin genel fiyat kuralı', () => {
+  it('liste tabanlı kural etkin kanalın listesinden yüzde düşer', () => {
+    const r = resolvePrice(input({ customerRule: { basis: 'list', percent: 10 } }));
+    expect(r).toMatchObject({ unitPriceCents: 1521, source: 'customer_rule', strikeCents: 1690 }); // 16,90 − %10
+  });
+
+  it('alış tabanlı kural B2B\'de maliyete yüzde ekler (HT)', () => {
+    const r = resolvePrice(input({ channel: 'b2b', customerRule: { basis: 'cost', percent: 15 }, costCents: 1000, vatRate: 5.5 }));
+    expect(r).toMatchObject({ unitPriceCents: 1150, source: 'customer_rule', strikeCents: 1200 });
+  });
+
+  it('alış tabanlı kural B2C\'de KDV dahil tabana çevrilir', () => {
+    const r = resolvePrice(input({ customerRule: { basis: 'cost', percent: 30 }, costCents: 1000, vatRate: 5.5 }));
+    expect(r).toMatchObject({ unitPriceCents: 1372, source: 'customer_rule' }); // 13,00 HT × 1,055
+  });
+
+  it('kural fiyatı listeden pahalıysa liste geçerlidir', () => {
+    const r = resolvePrice(input({ channel: 'b2b', customerRule: { basis: 'cost', percent: 50 }, costCents: 1000 }));
+    expect(r).toMatchObject({ unitPriceCents: 1200, source: 'channel', strikeCents: null });
+  });
+
+  it('maliyet bilinmiyorsa alış tabanlı kural uygulanmaz — fiyat uydurulmaz', () => {
+    const r = resolvePrice(input({ channel: 'b2b', customerRule: { basis: 'cost', percent: 10 }, costCents: null }));
+    expect(r).toMatchObject({ unitPriceCents: 1200, source: 'channel' });
+  });
+
+  it('B2C\'de KDV oranı yoksa alış tabanlı kural uygulanmaz', () => {
+    const r = resolvePrice(input({ customerRule: { basis: 'cost', percent: 10 }, costCents: 1000, vatRate: null }));
+    expect(r).toMatchObject({ unitPriceCents: 1690, source: 'channel' });
+  });
+
+  it('grup kuraldan ucuzsa grup kazanır, üstü çizili fiyat yok', () => {
+    const r = resolvePrice(input({ channel: 'b2b', groupPercentOff: 20, customerRule: { basis: 'list', percent: 10 } }));
+    expect(r).toMatchObject({ unitPriceCents: 960, source: 'group', strikeCents: null });
+  });
+
+  it('kural gruptan ucuzsa kural kazanır, üstü çizili fiyat grup fiyatıdır', () => {
+    const r = resolvePrice(input({ channel: 'b2b', groupPercentOff: 5, customerRule: { basis: 'list', percent: 10 } }));
+    expect(r).toMatchObject({ unitPriceCents: 1080, source: 'customer_rule', strikeCents: 1140 });
+  });
+
+  it('ürün bazlı özel fiyat kuraldan ucuzsa o kazanır', () => {
+    const r = resolvePrice(input({ channel: 'b2b', customerPriceCents: 1000, customerRule: { basis: 'list', percent: 10 } }));
+    expect(r).toMatchObject({ unitPriceCents: 1000, source: 'customer' });
+  });
+
+  it('kural ürün bazlı özel fiyattan ucuzsa kural kazanır — ucuz olan geçerlidir', () => {
+    const r = resolvePrice(input({ channel: 'b2b', customerPriceCents: 1150, customerRule: { basis: 'list', percent: 10 } }));
+    expect(r).toMatchObject({ unitPriceCents: 1080, source: 'customer_rule' });
+  });
+
+  it('teklif kural fiyatından ucuzsa teklif kazanır; üstü çizili fiyat kural fiyatıdır', () => {
+    const offer = { unitPriceCents: 900, remainingQty: 2, stockId: 'b1' };
+    const r = resolvePrice(input({ channel: 'b2b', customerRule: { basis: 'list', percent: 10 }, offer }));
+    expect(r).toMatchObject({ unitPriceCents: 900, source: 'offer', strikeCents: 1080 });
   });
 });
 

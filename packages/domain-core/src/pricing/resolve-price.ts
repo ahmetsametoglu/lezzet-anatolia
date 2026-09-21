@@ -1,17 +1,12 @@
-import type { Channel } from '@lezzet/types';
+import type { Channel, CustomerPriceBasis } from '@lezzet/types';
 import { addVat, removeVat } from '@lezzet/helper';
+import { channelPriceForMargin } from './auto-price';
+import { vatBaseOf, type VatBase } from './vat-base';
 
 /**
- * "Bu müşteri bu varyantı kaça alır" sorusunun tek cevap yeri (DOMAIN §5): müşteriye özel fiyat → grup → kanal fiyatı,
- * near-expiry teklif daha düşükse o. Onaysız şirket B2C fiyatı görür, çünkü toptan liste doğrulanmamış kayda açılmaz.
+ * "Bu müşteri bu varyantı kaça alır" sorusunun tek cevap yeri (DOMAIN §5). Müşteriye özel fiyat (ürün bazlı ya da genel
+ * kural) yalnız grup ve liste fiyatından düşükse kazanır, near-expiry teklif ondan da düşükse o; onaysız şirket B2C görür.
  */
-
-/** Kanalın KDV tabanı: B2C dahil (TTC), B2B hariç (HT) — DOMAIN §5. */
-export type VatBase = 'ttc' | 'ht';
-
-export function vatBaseOf(channel: Channel): VatBase {
-  return channel === 'b2c' ? 'ttc' : 'ht';
-}
 
 /** Bir kanalın liste fiyatı (kendi tabanında, cent). */
 export interface ChannelPrice {
@@ -27,6 +22,12 @@ export interface ActiveOffer {
   stockId: string;
 }
 
+/** Müşterinin genel fiyat kuralı: liste fiyatından yüzde indirim ya da alış fiyatı üzerine yüzde pay. */
+export interface CustomerPriceRule {
+  basis: CustomerPriceBasis;
+  percent: number;
+}
+
 export interface ResolvePriceInput {
   /** Müşterinin kanalı (`company_info`dan türer); ziyaretçi `b2c`. */
   channel: Channel;
@@ -36,17 +37,24 @@ export interface ResolvePriceInput {
   channelPrices: ChannelPrice[];
   /** Müşteriye özel fiyat satırı — geçerli kanalda tanımlıysa (cent, kanal tabanında). */
   customerPriceCents?: number | null;
-  /**
-   * Müşterinin fiyat grubunun yüzdesi (`price_group.percent_off`) — B2B listeden düşülür.
-   * YALNIZ etkin kanal `b2b` iken uygulanır: onaysız şirket B2C'ye düştüğünde toptan kademe de
-   * onunla birlikte kapanır (toptan liste doğrulanmamış kayda açılmaz — aynı gerekçe).
-   */
+  /** Müşterinin genel fiyat kuralı; ürün bazlı özel fiyatla aynı basamaktadır. */
+  customerRule?: CustomerPriceRule | null;
+  /** KDV hariç yenileme maliyeti (cent); bilinmiyorsa `null` ve alış tabanlı kural bu varyanta uygulanmaz. */
+  costCents?: number | null;
+  /** Ürünün KDV oranı; alış tabanlı kuralın fiyatı B2C'de KDV dahil tabana çevrilir. */
+  vatRate?: number | null;
+  /** Fiyat grubunun yüzdesi; yalnız etkin kanal `b2b` iken listeden düşülür, onaysız şirkette kademe de kapanır. */
   groupPercentOff?: number | null;
   /** Varyantta açık teklif varsa (fiyat, geçerli kanalın tabanında). */
   offer?: ActiveOffer | null;
 }
 
-export type PriceSource = 'customer' | 'group' | 'channel' | 'offer';
+export type PriceSource = 'customer' | 'customer_rule' | 'group' | 'channel' | 'offer';
+
+/** Fiyat müşteriye özel mi (ürün bazlı ya da genel kural); böyle kalem indirim matrahına girmez. */
+export function isCustomerPrice(source: PriceSource): boolean {
+  return source === 'customer' || source === 'customer_rule';
+}
 
 /** Yüzde düşülmüş tutar (cent, en yakına yuvarlanır) — grup fiyatının tek hesap yeri. */
 export function percentOffCents(amountCents: number, percentOff: number): number {
@@ -70,6 +78,8 @@ export type ResolvedPrice =
       quantityCap: number | null;
       /** Teklif kazandıysa bağlı parti (batch-pinned rezervasyon için); aksi halde null. */
       stockId: string | null;
+      /** Kazanan fiyatın yerine geçtiği fiyat (teklifte teklifsiz fiyat, müşteriye özelde grup ya da liste); yoksa null. */
+      strikeCents: number | null;
     };
 
 export function resolvePrice(input: ResolvePriceInput): ResolvedPrice {
@@ -80,23 +90,21 @@ export function resolvePrice(input: ResolvePriceInput): ResolvedPrice {
 
   const listPrice = channelPrices.find((p) => p.channel === effectiveChannel)?.amountCents ?? null;
 
-  // Kanal fiyatı yoksa ürün satışa kapalıdır — teklif tek başına satış açmaz (teklif normal
-  // fiyatın yerine geçer, yerine kaim olmaz). Grup da açmaz: yüzdenin düşüleceği liste yok.
+  // Kanal fiyatı yoksa ürün satışa kapalıdır: teklif, grup ve müşteri kuralı fiyatın yerine geçer, satış açmaz.
   if (listPrice === null) return { sellable: false, reason: 'no_price_in_channel' };
 
-  // Grup kademesi yalnız B2B'de yaşar (girdi künyesi) — listeden türetilir, ayrı satır değildir.
   const groupPrice =
     effectiveChannel === 'b2b' && groupPercentOff != null ? percentOffCents(listPrice, groupPercentOff) : null;
+  const standard = groupPrice != null ? { price: groupPrice, source: 'group' as const } : { price: listPrice, source: 'channel' as const };
 
-  const base =
-    customerPriceCents != null
-      ? { price: customerPriceCents, source: 'customer' as const }
-      : groupPrice != null
-        ? { price: groupPrice, source: 'group' as const }
-        : { price: listPrice, source: 'channel' as const };
+  const special = cheapest([
+    customerPriceCents != null ? { price: customerPriceCents, source: 'customer' as const } : null,
+    customerRulePrice(input, listPrice, effectiveChannel),
+  ]);
+  // Eşitlikte standart fiyat kalır: müşteriyi öne çıkarmayan özel fiyat, kalemi indirimden de çıkarmamalı.
+  const base = special != null && special.price < standard.price ? special : standard;
 
-  // Teklif çakışması: düşük olan kazanır. Eşitlikte teklif kazanmaz — tavan ve batch-pinned
-  // rezervasyon gereksiz yere devreye girmesin (aynı parayı ödeyen müşteriyi kısıtlamayız).
+  // Eşitlikte teklif kazanmaz, yoksa aynı parayı ödeyen müşteri tavan ve parti çıpasıyla kısıtlanırdı.
   const offerWins = offer != null && offer.unitPriceCents < base.price;
 
   return {
@@ -107,7 +115,26 @@ export function resolvePrice(input: ResolvePriceInput): ResolvedPrice {
     vatBase: vatBaseOf(effectiveChannel),
     quantityCap: offerWins ? offer.remainingQty : null,
     stockId: offerWins ? offer.stockId : null,
+    strikeCents: offerWins ? base.price : base === standard ? null : standard.price,
   };
+}
+
+function customerRulePrice(
+  input: ResolvePriceInput,
+  listPrice: number,
+  effectiveChannel: Channel,
+): { price: number; source: 'customer_rule' } | null {
+  const rule = input.customerRule;
+  if (!rule) return null;
+  if (rule.basis === 'list') return { price: percentOffCents(listPrice, rule.percent), source: 'customer_rule' };
+  // KDV oranı yoksa B2C tabanına çevrilemez; tahmin edilmiş oranla fiyat uydurulmaz.
+  if (vatBaseOf(effectiveChannel) === 'ttc' && input.vatRate == null) return null;
+  const price = channelPriceForMargin(effectiveChannel, input.costCents ?? null, rule.percent, input.vatRate ?? 0);
+  return price == null ? null : { price, source: 'customer_rule' };
+}
+
+function cheapest<T extends { price: number }>(candidates: readonly (T | null)[]): T | null {
+  return candidates.reduce<T | null>((best, c) => (c != null && (best == null || c.price < best.price) ? c : best), null);
 }
 
 /**

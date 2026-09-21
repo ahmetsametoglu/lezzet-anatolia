@@ -1,7 +1,7 @@
 import type { Channel } from '@lezzet/types';
 import { addVat, removeVat } from '@lezzet/helper';
 import { priceForMargin } from './margin';
-import { vatBaseOf } from './resolve-price';
+import { vatBaseOf } from './vat-base';
 
 /**
  * Otomatik fiyat: `auto_price` açık üründe fiyatı maliyetten hedef marja türetir, kanalın tabanına çevirir ve yuvarlar.

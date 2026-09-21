@@ -72,6 +72,10 @@ export type UserRole = z.infer<typeof UserRoleEnum>;
 export const ChallengeReasonEnum = z.enum(['silence', 'delivery_failed']);
 export type ChallengeReason = z.infer<typeof ChallengeReasonEnum>;
 
+/** Müşterinin genel fiyat kuralının tabanı: `list` liste fiyatından yüzde indirim, `cost` alış fiyatı üzerine yüzde pay. */
+export const CustomerPriceBasisEnum = z.enum(['list', 'cost']);
+export type CustomerPriceBasis = z.infer<typeof CustomerPriceBasisEnum>;
+
 /** Personel rolleri (guard/operasyon yüzeyi). Müşteri hariç. */
 export const STAFF_ROLES = ['admin', 'warehouse', 'courier', 'accounting'] as const;
 
