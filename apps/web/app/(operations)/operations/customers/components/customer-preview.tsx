@@ -10,6 +10,7 @@ import { Metric } from '@/components/operation/ui/metric';
 import { CustomerChannels } from '@/components/operation/ui/customer-channels';
 import { Skeleton, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { money, percent, shortDate } from '@/components/operation/ui/format';
+import { priceRuleLabel } from '@/lib/pricing/price-rule-label';
 import { B2B_STATUS_VIEW, GDPR_NOTES, paymentTone, statusHint, statusOf, typeTone } from '../customers-labels';
 import { TYPE_LABEL } from '../customers-url';
 import type { ConsentView, CustomerDetail, CustomerOrderRow, CustomerRow } from '../customers-types';
@@ -253,18 +254,17 @@ export function CustomerPreview({
                   value={<Badge tone={detail.codAllowed ? 'olive' : 'neutral'}>{detail.codAllowed ? 'Açık' : 'Kapalı'}</Badge>}
                 />
                 <Readout
-                  label="İndirim"
-                  // Boş oran ile %0 aynı şey değil: `null` "oranı yok" (liste fiyatı), `0` tanımlı ama sıfır
-                  // bir oran. Ekran ikisini ayrı yazar — birleştirmek fiyat ekranında "oranı tanımlı
-                  // müşteriler" listesini okunamaz hâle getirirdi.
+                  label="Fiyat kuralı"
                   hint={
-                    detail.discountPercent === null
-                      ? 'Genel indirim oranı tanımlı değil — liste fiyatı geçerli.'
-                      : 'Her siparişe uygulanan genel oran; Düzenle formundan değiştirilir.'
+                    detail.priceRuleBasis === null
+                      ? 'Genel fiyat kuralı tanımlı değil — liste fiyatı geçerli.'
+                      : 'Grup ya da listeden ucuzsa geçerli, üstüne indirim uygulanmaz; Düzenle formundan değiştirilir.'
                   }
                   value={
                     <span className="font-ops-mono text-ops-sm font-medium text-ops-ink">
-                      {detail.discountPercent === null ? 'yok' : percent(detail.discountPercent)}
+                      {detail.priceRuleBasis === null || detail.priceRulePercent === null
+                        ? 'yok'
+                        : priceRuleLabel(detail.priceRuleBasis, detail.priceRulePercent)}
                     </span>
                   }
                 />

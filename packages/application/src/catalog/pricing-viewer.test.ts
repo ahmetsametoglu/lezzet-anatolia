@@ -109,13 +109,13 @@ describe('pricingViewerOf', () => {
     // `channel` fiyatın okunacağı liste, `b2bApproved` motorun daraltmada bakacağı gerçek; ikincisini b2c'ye çevirmek bilgiyi silerdi.
     // `groupPercentOff` iki kez null: müşterinin grubu yok ve onaysız şirkette kademe zaten kapalı.
     const customerId = await newCustomer({ company: true, approved: false });
-    expect(await pricingViewerOf(db, customerId)).toEqual({ channel: 'b2c', b2bApproved: false, customerId, groupPercentOff: null });
+    expect(await pricingViewerOf(db, customerId)).toEqual({ channel: 'b2c', b2bApproved: false, customerId, groupPercentOff: null, customerRule: null });
   });
 
   it('ONAYLI şirket b2b kanalına açılır', async () => {
     // Kanal açık ama müşteri hiçbir gruba üye değil — kademe yokluğu `null`dır, sıfır değil.
     const customerId = await newCustomer({ company: true, approved: true });
-    expect(await pricingViewerOf(db, customerId)).toEqual({ channel: 'b2b', b2bApproved: true, customerId, groupPercentOff: null });
+    expect(await pricingViewerOf(db, customerId)).toEqual({ channel: 'b2b', b2bApproved: true, customerId, groupPercentOff: null, customerRule: null });
   });
 
   it('bulunamayan kimlik ZİYARETÇİye düşer — uydurma bir kanal açılmaz', async () => {
@@ -156,6 +156,25 @@ describe('fiyatın görüntüleyen ekseni — vitrin kapısından', () => {
     const customerId = await newCustomer({ company: true, approved: true });
     await new PriceService(db).setPrice({ variantId, channel: 'b2b', customerId, amountCents: OZEL_FIYAT });
     expect(await birimFiyat(customerId)).toBe(OZEL_FIYAT);
+  });
+
+  it('bireysel müşterinin liste tabanlı fiyat kuralı vitrinde fiyata yansır', async () => {
+    const customerId = await newCustomer();
+    await new UserProfileService(db).update({ id: customerId, priceRuleBasis: 'list', priceRulePercent: 10 });
+    expect(await birimFiyat(customerId)).toBe(2_700); // 30,00 − %10
+  });
+
+  it('alış tabanlı fiyat kuralı son alış fiyatına yüzde ekler', async () => {
+    await new StockService(db).insert({
+      warehouseId,
+      variantId,
+      physicalQty: 5,
+      purchasePriceCents: 1_000,
+      expiryDate: new Date(Date.now() + 120 * 86_400_000).toISOString().slice(0, 10),
+    });
+    const customerId = await newCustomer({ company: true, approved: true });
+    await new UserProfileService(db).update({ id: customerId, priceRuleBasis: 'cost', priceRulePercent: 20 });
+    expect(await birimFiyat(customerId)).toBe(1_200); // 10,00 HT + %20, B2B listesi 18,00
   });
 });
 

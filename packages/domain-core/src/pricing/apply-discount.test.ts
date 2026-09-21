@@ -30,22 +30,6 @@ describe('tek-en-büyük kuralı', () => {
     );
     expect(r).toMatchObject({ discountId: 'buyuk', amountCents: 500 }); // %25 × 2000, %10 eklenmez
   });
-
-  it('müşterinin genel oranı da havuzdadır — kupondan büyükse o kazanır', () => {
-    const r = applyBestDiscount([line({ unitPriceCents: 10_000 })], [kupon({ percent: 5 })], {
-      customerDiscountPercent: 12,
-      enteredCouponCode: 'BAYRAM15',
-    });
-    expect(r).toMatchObject({ kind: 'customer_rate', discountId: null, amountCents: 1200 });
-  });
-
-  it('kupon müşteri oranından büyükse kupon kazanır — müşteri oranı KALKAR', () => {
-    const r = applyBestDiscount([line({ unitPriceCents: 10_000 })], [kupon({ percent: 20 })], {
-      customerDiscountPercent: 12,
-      enteredCouponCode: 'BAYRAM15',
-    });
-    expect(r).toMatchObject({ kind: 'coupon', amountCents: 2000 });
-  });
 });
 
 describe('koşullar', () => {

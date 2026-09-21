@@ -1,8 +1,9 @@
-import { DiscountCodeService, DiscountService, OrderService, UserProfileService, type Db, type DiscountUsage } from '@lezzet/database';
+import { DiscountCodeService, DiscountService, OrderService, type Db, type DiscountUsage } from '@lezzet/database';
 import {
   applyBestDiscount,
   checkCouponEligibility,
   findReachableDiscount,
+  isDiscountable,
   type AppliedDiscount,
   type DiscountRule,
   type DiscountableLine,
@@ -43,11 +44,9 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   // karşılaştırır. Tek turda okunur — kural başına sorgu N+1 olurdu.
   const codesByDiscount = await new DiscountCodeService(db).listByDiscounts(pool.map((row) => row.id));
   const usage = await discounts.usageCounts(pool.map((row) => row.id));
-  const customerDiscountPercent = await customerRate(db, input.customerId);
 
   const ctx = {
     customerId: input.customerId,
-    customerDiscountPercent,
     isFirstOrder: await isFirstOrder(db, input.customerId),
     enteredCouponCode: code || null,
     now,
@@ -71,10 +70,10 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
     discount,
     reachable,
     rules,
-    context: { customerDiscountPercent: ctx.customerDiscountPercent ?? null, isFirstOrder: ctx.isFirstOrder },
+    context: { customerDiscountPercent: null, isFirstOrder: ctx.isFirstOrder },
   });
 
-  if (!code) return out(winner ? automatic(winner, pool, customerDiscountPercent) : { status: 'none' });
+  if (!code) return out(winner ? automatic(winner, pool) : { status: 'none' });
 
   // Kod girildi: önce kuponun kendisi teşhis edilir.
   const rejected = (reason: CouponFailure): CartDiscount => ({
@@ -85,7 +84,7 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
     appliedInsteadCents: winner?.amountCents ?? 0,
     // Kazanan indirimin KİMLİĞİ de taşınır: kupon reddedildi diye sepetteki indirim adsız kalmaz.
     appliedInstead: winner
-      ? { reason: reasonOf(winner, pool, customerDiscountPercent), label: publicLabelOf(pool.find((row) => row.id === winner.discountId)) }
+      ? { reason: reasonOf(winner, pool), label: publicLabelOf(pool.find((row) => row.id === winner.discountId)) }
       : null,
     // Paylar ve indirim kimliği de taşınır — yoksa tutar yazılabilir ama sipariş yazılamaz
     // (`order_item.line_discount_amount` toplamı başlıkla eşleşmek ZORUNDA, kısıt veritabanında).
@@ -118,10 +117,10 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   });
 }
 
-function automatic(winner: AppliedDiscount, pool: readonly Discount[], customerPercent: number | null): CartDiscount {
+function automatic(winner: AppliedDiscount, pool: readonly Discount[]): CartDiscount {
   return {
     status: 'automatic',
-    reason: reasonOf(winner, pool, customerPercent),
+    reason: reasonOf(winner, pool),
     amountCents: winner.amountCents,
     lineShares: winner.lineShares,
     discountId: winner.discountId,
@@ -141,20 +140,15 @@ function publicLabelOf(row: Discount | null | undefined): LocalizedText | null {
 /**
  * Kazananın sebebi motorun `kind`ından türer ki ekran ile karar ayrışmasın; oran yalnız bütün sepete inen yüzdede taşınır.
  */
-function reasonOf(winner: AppliedDiscount, pool: readonly Discount[], customerPercent: number | null): DiscountReason {
-  if (winner.kind === 'customer_rate') return { kind: 'customer_rate', percent: customerPercent ?? 0 };
+function reasonOf(winner: AppliedDiscount, pool: readonly Discount[]): DiscountReason {
   const rule = pool.find((row) => row.id === winner.discountId);
   const wholeBasket = rule?.scope === 'cart' && rule.type === 'percent';
   return { kind: 'campaign', percent: wholeBasket ? rule.percent : null };
 }
 
-/**
- * Matrah — muafiyetler motorun kuralıdır ve burada TEKRARLANIR, çünkü teşhis "asgari sepet tuttu
- * mu" sorusunu motor karar vermeden önce sormak zorundadır. Yüklem tek satırdır ve motorunkiyle
- * birebir aynı: paket ve teklif satırı matrahı büyütmez (DOMAIN §5/§13).
- */
+/** Matrah; teşhis "asgari sepet tuttu mu" sorusunu motordan önce sorar, muafiyet yüklemi motorunkidir (`isDiscountable`). */
 function basketOf(lines: readonly DiscountableLine[]): number {
-  return lines.reduce((sum, line) => (line.bundleId || line.offerStockId ? sum : sum + line.unitPriceCents * line.qty), 0);
+  return lines.reduce((sum, line) => (isDiscountable(line) ? sum + line.unitPriceCents * line.qty : sum), 0);
 }
 
 /** DB satırı → motorun sözleşmesi. Kullanım sayıları kayıttan türer, sayaç kolonundan değil. */
@@ -187,12 +181,6 @@ function toRule(
     perCustomerLimit: row.perCustomerLimit,
     usedByCustomerCount: customerId ? (usage?.byCustomer.get(customerId) ?? 0) : 0,
   };
-}
-
-/** Müşterinin genel indirim oranı — o da bir indirim adayıdır, fiyat değil (DOMAIN §5). */
-async function customerRate(db: Db, customerId?: string | null): Promise<number | null> {
-  if (!customerId) return null;
-  return (await new UserProfileService(db).getById(customerId))?.discountPercent ?? null;
 }
 
 /**

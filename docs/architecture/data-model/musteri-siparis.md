@@ -46,7 +46,8 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `credit_enabled` | boolean |  | `false` |
 | `credit_limit` | numeric(10, 2) | • |  |
 | `payment_term_days` | int | • |  |
-| `discount_percent` | numeric(5, 2) | • |  |
+| `price_rule_basis` | public | • |  |
+| `price_rule_percent` | numeric(6, 2) | • |  |
 | `price_group_id` | uuid | • |  |
 | `cod_allowed` | boolean |  | `true` |
 | `marketing_consent` | jsonb |  | `'{}'::jsonb` |
@@ -83,7 +84,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 - **`credit_enabled`** — vadeli (hesaba) sipariş yetkisi — **varsayılan false**, admin elle açar (bkz. `DOMAIN.md §7`)
 - **`credit_limit`** — vade limiti (€) — vade açılırken admin girer; açık bakiye **türetilir** (ödenmemiş `on_account` siparişler), saklanmaz
 - **`payment_term_days`** — vade süresi (gün) — boşsa `Setting` varsayılanı (30); gecikme bundan türetilir
-- **`discount_percent`** — müşteriye genel özel indirim oranı; kanal fiyatına uygulanır (bkz. `DOMAIN.md §5`)
+- **`price_rule_basis` / `price_rule_percent`** — müşterinin genel fiyat kuralı: `list` liste fiyatından yüzde indirim (%0 < p < %100), `cost` alış fiyatı üzerine yüzde pay (p ≥ 0); ikisi birlikte dolu ya da boş (bkz. `DOMAIN.md §5`)
 - **`price_group_id`** — fiyat grubu üyeliği (B2B alt kademesi — `katalog.md › PriceGroup`, 20.08); `restrict` FK, `null` = düz liste
 - **`cod_allowed`** — kapıda ödeme izni (varsayılan true); kötüye kullanımda kapatılır (bkz. `DOMAIN.md §7`)
 - **`roles`** — **dizi**: personel içinde çoklu rol olağandır (depo + muhasebe). `customer` yalnız BAŞINA durabilir — müşteri ↔ personel keskin ayrım, DB kısıtıyla zorlanır (`DOMAIN.md §2`)

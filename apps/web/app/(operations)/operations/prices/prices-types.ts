@@ -1,6 +1,6 @@
 // Fiyat ekranı view-model'leri; kararlar sunucuda verilir ve satırla taşınır ki marjın tanımı tek yerde kalsın.
 // Para cent taşınır (STACK §8); b2c KDV dahil, b2b hariç.
-import type { Channel, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, LocalizedText } from '@lezzet/types';
+import type { Channel, CustomerPriceBasis, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, LocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { PriceRow } from '@/lib/pricing/price-rows';
@@ -30,14 +30,14 @@ export interface CustomerPriceRow {
 }
 
 /**
- * Genel indirim oranı tanımlı müşteri — çözüm sırasının İKİNCİ basamağı. Oran burada yazılmaz,
- * yalnız kimlerde olduğu izlenir (oranın sahibi müşteri kaydıdır).
+ * Genel fiyat kuralı tanımlı müşteri; kural burada yazılmaz, yalnız kimlerde olduğu izlenir (sahibi müşteri kaydıdır).
  */
-export interface DiscountCustomerRow {
+export interface PriceRuleCustomerRow {
   customerId: string;
   customerName: string;
   isCompany: boolean;
-  discountPercent: number;
+  basis: CustomerPriceBasis;
+  percent: number;
 }
 
 /**
@@ -164,7 +164,7 @@ export interface PricesData {
   nextCursor: KeysetCursor | null;
   /** Şu an geçerli TÜM özel fiyatlar — sayfalanmaz (admin'in eliyle büyüyen küme). */
   customerPrices: CustomerPriceRow[];
-  discountCustomers: DiscountCustomerRow[];
+  priceRuleCustomers: PriceRuleCustomerRow[];
   /** Fiyat grupları; sayfalanmaz, operatörün eliyle büyür. */
   priceGroups: PriceGroupRow[];
   /**

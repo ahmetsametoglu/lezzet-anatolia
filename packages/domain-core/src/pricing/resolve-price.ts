@@ -28,6 +28,12 @@ export interface CustomerPriceRule {
   percent: number;
 }
 
+/** Kural geçerli mi: listeden indirim %0 ile %100 arasında (uçlar hariç), alış üzerine pay sıfır ya da pozitif; DB kısıtıyla aynı. */
+export function isValidPriceRule(rule: CustomerPriceRule): boolean {
+  if (!Number.isFinite(rule.percent)) return false;
+  return rule.basis === 'list' ? rule.percent > 0 && rule.percent < 100 : rule.percent >= 0;
+}
+
 export interface ResolvePriceInput {
   /** Müşterinin kanalı (`company_info`dan türer); ziyaretçi `b2c`. */
   channel: Channel;

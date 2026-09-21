@@ -123,8 +123,8 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
    * Genel fiyat kuralı tanımlı müşteriler; kural müşteri kaydında yaşar, fiyat ekranı yalnız kimlerde olduğunu izler.
    * Sayfalanmaz, küme admin'in eliyle büyür.
    */
-  async listWithDiscount(): Promise<UserProfile[]> {
-    return this.getAll({}, { isNotNullFields: ['discount_percent'], orderBy: 'createdAt', orderDirection: 'desc' });
+  async listWithPriceRule(): Promise<UserProfile[]> {
+    return this.getAll({}, { isNotNullFields: ['price_rule_basis'], orderBy: 'createdAt', orderDirection: 'desc' });
   }
 
   /**

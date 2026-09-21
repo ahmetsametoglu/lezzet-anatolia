@@ -314,7 +314,8 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
           vatNumber={selected.vatNumber}
           preferredLanguage={selected.preferredLanguage}
           codAllowed={detail.codAllowed}
-          discountPercent={detail.discountPercent}
+          priceRuleBasis={detail.priceRuleBasis}
+          priceRulePercent={detail.priceRulePercent}
           priceGroupId={detail.priceGroupId}
           priceGroupOptions={detail.priceGroupOptions}
           saving={saving}

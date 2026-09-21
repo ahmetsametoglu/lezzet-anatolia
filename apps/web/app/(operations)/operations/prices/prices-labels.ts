@@ -81,7 +81,7 @@ export const SCOPE_TONE: Record<PriceScope, ChipTone> = {
 export function tabSubtitle(tab: PriceTab, data: PricesData, counts: { rows: number; below: number; missing: number }): string {
   switch (tab) {
     case 'customers':
-      return `${data.customerPrices.length} özel fiyat · ${data.discountCustomers.length} müşteride genel indirim oranı`;
+      return `${data.customerPrices.length} özel fiyat · ${data.priceRuleCustomers.length} müşteride genel fiyat kuralı`;
     case 'coupons':
       return 'Kupon ve otomatik kampanya — indirim motoruna bağlı';
     case 'offers':

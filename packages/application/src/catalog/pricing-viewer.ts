@@ -1,5 +1,5 @@
 import { PriceGroupService, UserProfileService } from '@lezzet/database';
-import { deriveChannel } from '@lezzet/domain-core';
+import { deriveChannel, type CustomerPriceRule } from '@lezzet/domain-core';
 import type { Channel } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -22,10 +22,12 @@ export interface PricingViewer {
    * Fiyat grubunun yüzdesi; ziyaretçide ve grupsuz müşteride `null`. Yüzde burada çözülür ki fiyat okuyan her yer grup tablosuna gitmesin.
    */
   groupPercentOff: number | null;
+  /** Müşterinin genel fiyat kuralı, her iki kanalda uygulanır; yoksa kural yok. */
+  customerRule?: CustomerPriceRule | null;
 }
 
 /** Ziyaretçi — kimliksiz, perakende. Bağlamı olmayan okumaların (boş bağlam) hâli. */
-export const VISITOR: PricingViewer = { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null };
+export const VISITOR: PricingViewer = { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null, customerRule: null };
 
 /**
  * Müşterinin geçerli kanalı: şirket olmak yetmez, onay da gerekir. Sepet ucu profili zaten okuduğu için ayrı fonksiyondur.
@@ -58,5 +60,9 @@ export async function pricingViewerOf(db: SupabaseClient, customerId: string | n
     b2bApproved,
     customerId: profile.id,
     groupPercentOff,
+    customerRule:
+      profile.priceRuleBasis != null && profile.priceRulePercent != null
+        ? { basis: profile.priceRuleBasis, percent: profile.priceRulePercent }
+        : null,
   };
 }

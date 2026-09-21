@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { priceIn, resolvePrice, type ResolvePriceInput } from './resolve-price';
+import { isValidPriceRule, priceIn, resolvePrice, type ResolvePriceInput } from './resolve-price';
 import { vatBaseOf } from './vat-base';
 
 // DOMAIN §5'teki her dal. Fiyatlar cent; b2c satırları TTC, b2b satırları HT (kanal tabanı).
@@ -144,6 +144,20 @@ describe('resolvePrice — müşterinin genel fiyat kuralı', () => {
     const offer = { unitPriceCents: 900, remainingQty: 2, stockId: 'b1' };
     const r = resolvePrice(input({ channel: 'b2b', customerRule: { basis: 'list', percent: 10 }, offer }));
     expect(r).toMatchObject({ unitPriceCents: 900, source: 'offer', strikeCents: 1080 });
+  });
+});
+
+describe('isValidPriceRule — DB kısıtının aynısı', () => {
+  it('listeden indirim uçları dışlar: %0 kural değil, %100 bedava', () => {
+    expect(isValidPriceRule({ basis: 'list', percent: 0 })).toBe(false);
+    expect(isValidPriceRule({ basis: 'list', percent: 100 })).toBe(false);
+    expect(isValidPriceRule({ basis: 'list', percent: 12.5 })).toBe(true);
+  });
+
+  it('alış üzerine pay sıfır olabilir, eksi olamaz', () => {
+    expect(isValidPriceRule({ basis: 'cost', percent: 0 })).toBe(true);
+    expect(isValidPriceRule({ basis: 'cost', percent: -5 })).toBe(false);
+    expect(isValidPriceRule({ basis: 'cost', percent: Number.NaN })).toBe(false);
   });
 });
 

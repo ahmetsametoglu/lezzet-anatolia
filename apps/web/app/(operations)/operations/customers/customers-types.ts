@@ -1,5 +1,5 @@
 import type { B2bApplicationStatus } from '@lezzet/domain-core';
-import type { Address, Consent, CustomerType, KeysetCursor, OrderStatus, PaymentStatus, UserProfile } from '@lezzet/types';
+import type { Address, Consent, CustomerPriceBasis, CustomerType, KeysetCursor, OrderStatus, PaymentStatus, UserProfile } from '@lezzet/types';
 import type { CustomerScope, CustomersUrlState, MarketingChannelFilter } from './customers-url';
 
 // Müşteri ekranının view-model'i: veride duran alan `Pick`lenir, hesaplanan alan yazılır (CLAUDE §1).
@@ -120,7 +120,9 @@ export interface CustomerDetail {
   /** Vade limiti (kuruş); `null` = limit tanımlı değil (sınırsız DEĞİL — tanımsız). */
   creditLimitCents: number | null;
   codAllowed: boolean;
-  discountPercent: number | null;
+  /** Genel fiyat kuralı; ikisi birlikte dolu ya da boş. */
+  priceRuleBasis: CustomerPriceBasis | null;
+  priceRulePercent: number | null;
   /** Fiyat grubu üyeliği; `null` grupsuz, düz B2B liste. */
   priceGroupId: string | null;
   /** Seçenek listesi karta detayla gelir: gruplar Fiyatlar ekranında yönetilir, burada atanır. */
@@ -151,8 +153,9 @@ export type CustomerEditInput = Pick<
   | 'type'
   | 'vatNumber'
   | 'codAllowed'
-  /** Genel indirim oranı (%); `null` = oran kaldırılır (liste fiyatına döner). */
-  | 'discountPercent'
+  /** Genel fiyat kuralı; `null` kuralı kaldırır. */
+  | 'priceRuleBasis'
+  | 'priceRulePercent'
   /** Fiyat grubu üyeliği; `null` = grupsuz (düz B2B liste). */
   | 'priceGroupId'
 >;

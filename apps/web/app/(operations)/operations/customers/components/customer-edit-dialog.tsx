@@ -6,8 +6,16 @@ import { FieldShell } from '@/components/operation/form/field-shell';
 import { Input } from '@/components/operation/form/input';
 import { Select } from '@/components/operation/form/select';
 import { ToggleField } from '@/components/operation/form/toggle';
-import { CustomerTypeEnum, PreferredLanguageEnum, type Country, type CustomerType, type PreferredLanguage } from '@lezzet/types';
+import {
+  CustomerTypeEnum,
+  PreferredLanguageEnum,
+  type Country,
+  type CustomerPriceBasis,
+  type CustomerType,
+  type PreferredLanguage,
+} from '@lezzet/types';
 import { COUNTRY_OPTIONS } from '@/components/operation/ui/labels';
+import { priceRuleError } from '@/lib/pricing/price-rule-label';
 import { TYPE_LABEL } from '../customers-url';
 import type { CustomerEditInput, CustomerRow } from '../customers-types';
 
@@ -26,8 +34,9 @@ interface CustomerEditDialogProps {
   preferredLanguage: PreferredLanguage;
   /** Kapıda ödeme izni — detaydan gelir (satırda taşınmıyor). */
   codAllowed: boolean;
-  /** Genel indirim oranı (%); `null` = oran yok. */
-  discountPercent: number | null;
+  /** Genel fiyat kuralı; ikisi birlikte dolu ya da boş. */
+  priceRuleBasis: CustomerPriceBasis | null;
+  priceRulePercent: number | null;
   /** Fiyat grubu üyeliği; `null` = grupsuz. */
   priceGroupId: string | null;
   /** Grup seçenekleri — gruplar Fiyatlar ekranında yönetilir, burada yalnız ATANIR. */
@@ -43,7 +52,8 @@ export function CustomerEditDialog({
   vatNumber,
   preferredLanguage,
   codAllowed,
-  discountPercent,
+  priceRuleBasis,
+  priceRulePercent,
   priceGroupId,
   priceGroupOptions,
   saving,
@@ -59,9 +69,9 @@ export function CustomerEditDialog({
   const [type, setType] = useState<CustomerType>(row.type);
   const [vat, setVat] = useState(vatNumber ?? '');
   const [cod, setCod] = useState(codAllowed);
-  // Oran METİN tutulur: boş kutu ile sıfır AYRI hâller ve `number` state boşluğu temsil edemez
-  // (vade süresi alanıyla aynı gerekçe).
-  const [discount, setDiscount] = useState(discountPercent === null ? '' : String(discountPercent));
+  // Kuralın yokluğu '' ile temsil edilir (Select string ister); yüzde metin tutulur, çünkü boş kutu sayı state'inde temsil edilemez.
+  const [ruleBasis, setRuleBasis] = useState<CustomerPriceBasis | ''>(priceRuleBasis ?? '');
+  const [rulePercent, setRulePercent] = useState(priceRulePercent === null ? '' : String(priceRulePercent));
   // Grup boşluğu '' ile temsil edilir (Select string ister); kaydederken null'a döner.
   const [group, setGroup] = useState(priceGroupId ?? '');
 
@@ -69,8 +79,8 @@ export function CustomerEditDialog({
   // Her iki kimlik anahtarı da boşsa kayıt bir daha BULUNAMAZ: ne telefonla ne e-postayla. Ad tek
   // başına kimlik değil (iki "Ahmet Yılmaz" olabilir).
   const kimliksiz = phone.trim() === '' && email.trim() === '';
-  const oran = discount.trim() === '' ? null : Number(discount.replace(',', '.'));
-  const oranGecersiz = oran !== null && (!Number.isFinite(oran) || oran < 0 || oran > 100);
+  const kuralYuzde = rulePercent.trim() === '' ? null : Number(rulePercent.replace(',', '.'));
+  const kuralHatasi = ruleBasis ? priceRuleError(ruleBasis, kuralYuzde) : null;
 
   return (
     <Dialog
@@ -90,9 +100,7 @@ export function CustomerEditDialog({
               ? 'Ad girilmeli.'
               : kimliksiz
                 ? 'Telefon veya e-posta girilmeli.'
-                : oranGecersiz
-                  ? 'İndirim oranı %0 ile %100 arasında olmalı.'
-                  : null
+                : kuralHatasi
           }
         />
       }
@@ -110,7 +118,8 @@ export function CustomerEditDialog({
             type,
             vatNumber: vat.trim() || null,
             codAllowed: cod,
-            discountPercent: oran,
+            priceRuleBasis: ruleBasis || null,
+            priceRulePercent: ruleBasis ? kuralYuzde : null,
             priceGroupId: group || null,
           });
         }}
@@ -199,25 +208,38 @@ export function CustomerEditDialog({
             </FieldShell>
           ) : null}
 
-          <FieldShell
-            label="İndirim oranı (%)"
-            className="max-w-[200px]"
-            error={oranGecersiz ? '%0 ile %100 arasında olmalı.' : undefined}
-            // Boş bırakmak oranı KALDIRIR ve bu "%0" ile aynı şey değil: sıfır oranı tanımlı bırakır ve
-            // müşteri fiyat ekranındaki "indirim oranı tanımlı müşteriler" listesinde görünmeye devam
-            // eder. Operatörün "indirimi kaldır" niyeti boş kutudur — action sıfırı da `null`a çevirir.
-            labelAside={<span className="font-ops-body text-ops-xs text-ops-muted">boş = oran yok</span>}
-          >
-            <Input
-              value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
-              inputMode="decimal"
-              mono
-              placeholder="yok"
-              disabled={saving}
-              error={oranGecersiz ? 'x' : undefined}
-            />
-          </FieldShell>
+          <div className="grid grid-cols-[1fr_140px] gap-3">
+            <FieldShell label="Genel fiyat kuralı">
+              <Select
+                value={ruleBasis}
+                onChange={(v) => setRuleBasis(v as CustomerPriceBasis | '')}
+                options={[
+                  { value: '', label: 'Yok — liste fiyatı' },
+                  { value: 'list', label: 'Liste fiyatından indirim' },
+                  { value: 'cost', label: 'Alış fiyatı üzerine pay' },
+                ]}
+              />
+            </FieldShell>
+            {ruleBasis ? (
+              <FieldShell label="Yüzde (%)" error={kuralHatasi ?? undefined}>
+                <Input
+                  value={rulePercent}
+                  onChange={(e) => setRulePercent(e.target.value)}
+                  inputMode="decimal"
+                  mono
+                  disabled={saving}
+                  error={kuralHatasi ? 'x' : undefined}
+                />
+              </FieldShell>
+            ) : null}
+          </div>
+          {ruleBasis ? (
+            <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+              Ürün bazlı özel fiyatla aynı basamaktadır: grup ya da liste fiyatından ucuzsa geçerli olur, vitrinde görünür ve
+              üstüne kupon dahil indirim uygulanmaz.{' '}
+              {ruleBasis === 'cost' ? 'Alış fiyatı bilinmeyen ya da son alışı olağandışı sapan üründe liste fiyatı geçerlidir.' : ''}
+            </span>
+          ) : null}
         </div>
       </form>
     </Dialog>

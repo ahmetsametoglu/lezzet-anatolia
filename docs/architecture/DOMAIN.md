@@ -177,17 +177,22 @@ Kısaca: müşteri-yüzü doğru KDV = bizim işimiz (fiyat); beyan/OSS/iade = m
 
 ### Fiyat çözüm sırası
 
-Bir müşteriye ürünün **birim fiyatı** şu sırayla belirlenir (ilk bulunan kazanır):
+Bir müşteriye ürünün **birim fiyatı** adaylar karşılaştırılarak belirlenir:
 
-1. **Müşteriye özel ürün fiyatı** (varsa) — o müşteri+varyant için elle girilmiş `Price` satırı (customer_id dolu).
-2. **Kanal fiyatı** — B2B veya B2C liste fiyatı.
+1. **Müşteriye özel fiyat** — iki biçimi var: **ürün bazlı** (o müşteri+varyant için elle girilmiş `Price` satırı, customer_id dolu) ve **genel kural** (`Customer.price_rule_*`: liste fiyatından % indirim ya da alış fiyatı üzerine % pay). İkisinden ucuz olan adaydır.
+2. **Fiyat grubu** — onaylı B2B'de listeden grubun yüzdesi düşülür.
+3. **Kanal fiyatı** — B2B veya B2C liste fiyatı.
+
+- **Müşteriye özel fiyat yalnız grup ve kanal fiyatından kesin olarak ucuzsa kazanır;** eşit ya da pahalıysa grup/kanal fiyatı geçerlidir. Özel fiyatın amacı müşteriyi avantajlı kılmaktır, onu klasik müşteriden kötü duruma düşüremez.
+- **Kazanan müşteriye özel fiyat vitrinde, katalogda ve sepette aynı görünür** ve üstüne **kupon dahil hiçbir indirim binmez** (kalem indirim matrahına girmez).
+- **Alış tabanlı kural yenileme maliyetini okur** (aşağıda "Maliyet ve hedef marj"); maliyet bilinmiyorsa ya da son alış aykırıysa o üründe uygulanmaz ve öteki adaylar karşılaştırılır. B2C'de sonuç KDV dahil tabana çevrilir.
+- Personelin elle yazdığı **pazarlık fiyatı** müşteriye özel fiyatın yerine geçer; o kalem indirime açıktır.
 
 - Giriş yapmamış ziyaretçi B2C fiyatını görür. Ürünün ilgili kanalda fiyatı yoksa satışa kapalı görünür.
 - **Şirket kaydı onaylanana kadar B2C fiyatı geçerlidir** (`b2b_approved=false` → kanal `b2b` olsa da perakende fiyat çözülür; gerekçe §10: toptan liste doğrulanmamış kayda açılmaz).
-- **`Customer.discount_percent` bu sıraya girmez** — o bir *indirimdir*, fiyat değil; kupon/kampanyayla aynı havuzda değerlendirilir (aşağıda "İndirim ve kupon").
-- **Near-expiry teklif çakışması — müşteri lehine:** üründe hem açık teklif hem müşteriye özel fiyat varsa **düşük olan** uygulanır. Teklif kazanırsa miktar tavanı ve batch-pinned rezervasyon devreye girer; özel fiyat kazanırsa normal (ürün-toplamı) rezervasyon yürür, tavan yoktur. Özel fiyatlı B2B müşteri kendi anlaşmasından pahalıya almaz.
+- **Near-expiry teklif çakışması — müşteri lehine:** üründe hem açık teklif hem çözülmüş fiyat varsa **düşük olan** uygulanır. Teklif kazanırsa miktar tavanı ve batch-pinned rezervasyon devreye girer; özel fiyat kazanırsa normal (ürün-toplamı) rezervasyon yürür, tavan yoktur. Özel fiyatlı B2B müşteri kendi anlaşmasından pahalıya almaz.
 
-> **Özel fiyatın teknik yükü düşük:** genel indirim tek alan; ürün-bazlı istisna yalnızca gereken yerde bir satır (her ürüne satır gerekmez). Tek maliyet: fiyat "herkese tek sayı" değil, giren müşteriye göre çözülür — zaten B2B/B2C'de öyleydi.
+> **Özel fiyatın teknik yükü düşük:** genel kural tek alan çifti; ürün-bazlı istisna yalnızca gereken yerde bir satır (her ürüne satır gerekmez). Tek maliyet: fiyat "herkese tek sayı" değil, giren müşteriye göre çözülür — zaten B2B/B2C'de öyleydi.
 
 ### Kapıda/elle satışta pazarlıklı fiyat (tek seferlik)
 
@@ -222,8 +227,8 @@ Toptanda "bugün 10 koli alırsan şu fiyat" gündeliktir; kalıcı `Price` sat�
 - **İki tetik:** **kupon** (müşteri kod girer, daima **sepet** düzeyi) ve **otomatik indirim/kampanya** (kod yok; kapsam = sepet / kategori / koleksiyon). Yüzde veya sabit tutar.
 - **Bir kuponun BİRDEN ÇOK kodu olur ve hepsi aynı kotayı paylaşır** (`DiscountCode`, karar 29.07). Sebep dildir: "HOSGELDIN" Türk müşteriye bir şey anlatır, Fransız'a hiçbir şey — aynı kampanya "BIENVENUE" ve "WILLKOMMEN" ile de açılabilmeli. Bunlar üç ayrı kampanya DEĞİLDİR: koşul, değer, tarih ve **kullanım tavanı tektir**; ayrı kural açmak "toplam 100 kullanım" sınırını sessizce 300 yapardı. Kod harf ayrımsız ve **tüm kurallar arasında tekildir** — müşterinin yazdığı kod tek bir kuralı göstermeli. Hangi kapıdan girildiği kullanım kaydına yazılır (`discount_use.discount_code_id`): kotayı bölmez, "hangi dil karşılık buldu" sorusunu yanıtlar.
 - **Üst üste binmez:** birden çok indirim uygun olsa bile **en büyüğü** uygulanır (birleşmez); domain-core müşteriye en iyi tekini seçer.
-- **Müşterinin genel indirim oranı da bu havuzdadır** (`Customer.discount_percent`): kupon/kampanya ile karşılaştırılır, yalnız büyük olan uygulanır — istiflenmez. Gösterim: müşteri ürün sayfasında kendi oranı uygulanmış fiyatı görür (B2B "benim fiyatım" beklentisi); sepette daha büyük bir kupon girilirse motor onu seçer ve müşteri oranını **kaldırır**, sepet özeti hangisinin uygulandığını tek satırda yazar.
-- **Paketler hariç:** `Bundle` fiyatı sabittir — hiçbir genel indirim/kupon uygulanmaz. Near-expiry teklif satırı da kendi özel fiyatındadır; genel indirim binmez.
+- **Müşterinin genel fiyat kuralı bu havuzda değildir** — bir fiyattır (yukarıda "Fiyat çözüm sırası"); kazandığı kalem indirim matrahına girmez.
+- **Paketler hariç:** `Bundle` fiyatı sabittir — hiçbir genel indirim/kupon uygulanmaz. Near-expiry teklif satırı ve müşteriye özel fiyatlı kalem de kendi fiyatındadır; genel indirim binmez.
 - **Koşullar (parametrik):** asgari sepet, ilk sipariş, geçerlilik tarihi, kullanım sınırı.
 - Uygulanan indirim siparişe yazılır (`Order.discount_id` + `discount_amount`); net tutar para hareketine yansır, kâr buna göre türetilir.
 - **Kalemlere dağıtım:** sepet düzeyi indirim sipariş anında kalemlere **oransal dağıtılır** (`OrderItem.line_discount_amount`) — kısmi karşılamada iade tutarı ve kalem KDV'si **indirimli birim fiyattan** hesaplanır; sonradan hesap belirsizliği kalmaz.

@@ -1,5 +1,5 @@
 import { CustomerPhoneService, UserProfileService } from '@lezzet/database';
-import type { UserProfile } from '@lezzet/types';
+import type { CustomerPriceBasis, UserProfile } from '@lezzet/types';
 import { an, type Db, type Kisiler } from './shared';
 import type { Depolar } from './warehouse';
 
@@ -67,7 +67,8 @@ interface SeedKisi {
   /** Vade tavanı, cent (250000 = 2 500 €). */
   creditLimitCents?: number;
   paymentTermDays?: number;
-  discountPercent?: number;
+  priceRuleBasis?: CustomerPriceBasis;
+  priceRulePercent?: number;
   codAllowed?: boolean;
   marketingConsent?: { email?: { granted: boolean; at?: string; source?: string } };
   note?: string;
@@ -94,7 +95,8 @@ const KISILER: SeedKisi[] = [
     creditEnabled: true,
     creditLimitCents: 250000,
     paymentTermDays: 30,
-    discountPercent: 5,
+    priceRuleBasis: 'list',
+    priceRulePercent: 5,
     codAllowed: true,
     marketingConsent: { email: { granted: true, at: an(-120), source: 'b2b-kayit' } },
     note: 'Haftalık düzenli alım; perşembe rotası.',

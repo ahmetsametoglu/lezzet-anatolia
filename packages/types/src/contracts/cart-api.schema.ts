@@ -81,6 +81,7 @@ export type CartCouponFailure = z.infer<typeof CartCouponFailureEnum>;
  */
 export const CartDiscountReasonSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('campaign'), percent: z.number().nullable() }),
+  // BEKLEYEN(K.25): genel indirim oranı artık fiyattır, bu tür üretilmez; native istemci okumayı bırakınca silinir.
   z.object({ kind: z.literal('customer_rate'), percent: z.number() }),
 ]);
 
@@ -184,6 +185,8 @@ export const MeCartViewLineSchema = z.discriminatedUnion('kind', [
      */
     categoryId: z.string().uuid().nullable(),
     collectionIds: z.array(z.string().uuid()),
+    /** Müşteriye özel fiyatlı kalem indirim matrahına girmez (`isDiscountable`); alan yoksa değildir. */
+    specialPrice: z.literal(true).optional(),
     ...CartLineViewShape,
   }),
   z.object({
@@ -230,8 +233,8 @@ export const MeCartViewSchema = z.object({
    * (künye: `MeCartDiscountRuleSchema`). Kupon kuralları bu havuzda YOKTUR.
    */
   discountRules: z.array(MeCartDiscountRuleSchema),
-  /** Müşterinin genel indirim oranı (%) — motorun havuzdaki üçüncü adayı; `null` = yok. */
-  customerDiscountPercent: z.number().nullable(),
+  /** Daima `null`; genel fiyat kuralı fiyata yansır. BEKLEYEN(K.25): native istemci okumayı bırakınca silinir. */
+  customerDiscountPercent: z.null(),
   /** İlk sipariş mi — `firstOrderOnly` kampanyaların yüklemi. */
   isFirstOrder: z.boolean(),
   /**

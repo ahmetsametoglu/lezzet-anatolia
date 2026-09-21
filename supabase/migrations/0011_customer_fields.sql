@@ -1,6 +1,8 @@
 -- Müşterinin ticari alanları ve adres. Ayrı müşteri tablosu yok: müşteri bir roldür, kimlik `user_profiles`ta yaşar ve buraya yalnız
 -- ticari alanlar eklenir, çünkü 1:1 uzantı tablosu her sepet ve ödeme okumasına bir join eklerdi.
 
+create type public.customer_price_basis as enum ('list', 'cost');
+
 alter table public.user_profiles
   -- Doluysa B2B. Kanal (b2b/b2c) SAKLANMAZ, bunun varlığından türetilir (DATA_MODEL türetme ilkesi).
   add column company_info jsonb,
@@ -31,7 +33,17 @@ alter table public.user_profiles
   add column credit_limit numeric(10, 2),
   add column payment_term_days int,                  -- boşsa Setting varsayılanı (30)
 
-  add column discount_percent numeric(5, 2),         -- müşteriye genel indirim oranı (DOMAIN §5)
+  -- Müşterinin genel fiyat kuralı (DOMAIN §5): liste fiyatından yüzde indirim ya da alış fiyatı üzerine yüzde pay; ürün bazlı
+  -- özel fiyatla aynı basamaktadır ve yalnız grup ya da listeden ucuzsa kazanır.
+  add column price_rule_basis public.customer_price_basis,
+  add column price_rule_percent numeric(6, 2),
+  add constraint user_profiles_price_rule_pair check ((price_rule_basis is null) = (price_rule_percent is null)),
+  -- Listeden %0 indirim kural değildir, %100 bedavadır; alış üzerine eksi pay ise maliyetin altında satış olurdu.
+  add constraint user_profiles_price_rule_range check (
+    price_rule_basis is null
+    or (price_rule_basis = 'list' and price_rule_percent > 0 and price_rule_percent < 100)
+    or (price_rule_basis = 'cost' and price_rule_percent >= 0)
+  ),
   -- Fiyat grubu üyeliği (0005 price_group künyesi): B2B alt kademesi. `restrict` — üyesi olan
   -- grup sessizce silinmesin; operatör önce müşterileri taşır.
   add column price_group_id uuid references public.price_group (id) on delete restrict,

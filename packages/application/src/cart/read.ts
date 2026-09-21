@@ -2,7 +2,7 @@ import { ProductService, ProductVariantService, SettingsService, type Db } from 
 import { decideCartAgainstWarehouse, meetsMinBasket, type CartLineInput, type CartLineRoute, type DiscountableLine } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { PreferredLanguage, ProductVariant, ProductWithRelations } from '@lezzet/types';
-import { EMPTY_IMAGE, EMPTY_PRODUCT_CONTEXT, imageOf, toVariant } from '../catalog/map';
+import { EMPTY_IMAGE, EMPTY_PRODUCT_CONTEXT, imageOf, sellingOf, toVariant } from '../catalog/map';
 import type { ProductContext } from '../catalog/map';
 import { loadProductContext } from '../catalog/product-context';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
@@ -178,6 +178,8 @@ export async function getCartView(
     const listPriceCents = view.priceCents;
     const negotiatedCents = opts.priceOverrides?.get(entry.variantId);
     const unitPriceCents = negotiatedCents ?? listPriceCents;
+    // Pazarlık müşteriye özel fiyatın yerine geçer; o kalem eskisi gibi indirime açıktır.
+    const specialPrice = negotiatedCents == null && sellingOf(variant, ctx).specialPrice;
 
     lines.push({
       ...entry,
@@ -188,6 +190,7 @@ export async function getCartView(
       unitPriceCents,
       // Yalnız gerçekten pazarlık edildiyse dolu — eşit sayı yazmak "indirim verildi" der.
       listUnitPriceCents: negotiatedCents != null && negotiatedCents !== listPriceCents ? listPriceCents : undefined,
+      specialPrice: specialPrice || undefined,
       wasCents: offerHolds ? view.wasCents : undefined,
       limitCap: offerHolds && view.limitLabel ? Number(view.limitLabel) : null,
       lineTotalCents: unitPriceCents === null ? null : unitPriceCents * entry.qty,
@@ -220,6 +223,7 @@ export async function getCartView(
       collectionIds: product.collections?.map((row) => row.collectionId) ?? [],
       // Teklif satırı kendi özel fiyatındadır: indirim matrahına GİRMEZ (DOMAIN §5).
       offerStockId: offerHolds ? entry.stockId : null,
+      specialPrice,
     });
   }
 

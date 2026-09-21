@@ -1,4 +1,4 @@
-import { percentOffCents, resolvePrice } from '@lezzet/domain-core';
+import { isCustomerPrice, resolvePrice } from '@lezzet/domain-core';
 import type { ActiveOffer } from '@lezzet/domain-core';
 import { comparisonPrice } from '@lezzet/helper';
 import { cdnImageUrl, publicImageUrl } from '@lezzet/storage';
@@ -144,6 +144,10 @@ export interface ProductContext {
   shippingStock: Map<string, AvailableStockTotal> | null;
   /** Varyanta açık near-expiry teklifi (partiye bağlı indirim, DOMAIN §5). */
   offers: Map<string, ActiveOffer>;
+  /** Güvenilir alış fiyatları (varyant → KDV hariç cent); yalnız alış tabanlı kuralı olan müşteride dolar. */
+  costs: Map<string, number>;
+  /** Ürünün KDV oranı; alış tabanlı kural fiyatını B2C tabanına çevirir. */
+  vatRate: number | null;
 }
 
 /**
@@ -190,6 +194,8 @@ export const EMPTY_PRODUCT_CONTEXT: ProductContext = {
   shippingStock: null,
   networkStock: null,
   offers: new Map(),
+  costs: new Map(),
+  vatRate: null,
 };
 
 /**
@@ -218,22 +224,21 @@ export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
     // B2C'dir), yani motorun kendi daraltması bu listeyle çelişmez.
     channelPrices: listCents != null ? [{ channel: ctx.viewer.channel, amountCents: listCents }] : [],
     customerPriceCents: customerCents,
+    customerRule: ctx.viewer.customerRule ?? null,
+    costCents: ctx.costs.get(variant.id) ?? null,
+    vatRate: ctx.vatRate,
     // Grup yüzdesi viewer'da çözülmüş gelir, fiyata motor uygular.
     groupPercentOff: ctx.viewer.groupPercentOff,
     offer: ctx.offers.get(variant.id) ?? null,
   });
 
   const priceCents = resolved.sellable ? resolved.unitPriceCents : null;
-  // Teklifin yerine geçtiği fiyat, motorun teklifsiz vereceği fiyattır: özel → grup → liste.
-  const withoutOffer =
-    customerCents ??
-    (ctx.viewer.channel === 'b2b' && ctx.viewer.groupPercentOff != null && listCents != null
-      ? percentOffCents(listCents, ctx.viewer.groupPercentOff)
-      : listCents);
   return {
     priceCents,
     // Teklif kazandıysa üstü çizilen, teklifin YERİNE GEÇTİĞİ fiyattır.
-    wasCents: resolved.sellable && resolved.source === 'offer' ? (withoutOffer ?? undefined) : undefined,
+    wasCents: resolved.sellable && resolved.source === 'offer' ? (resolved.strikeCents ?? undefined) : undefined,
+    /** Müşteriye özel fiyat kazandı mı (ürün bazlı ya da genel kural); böyle kalem indirim matrahına girmez. */
+    specialPrice: resolved.sellable && isCustomerPrice(resolved.source),
     // Kıyas fiyatı ÖDENEN fiyattan hesaplanır (teklif kazandıysa indirimli olandan) — müşteri
     // karşılaştırırken bugün ödeyeceği tutarı kıyaslar. Net miktar girilmemişse satır düşer.
     ...comparisonOf(priceCents, variant),

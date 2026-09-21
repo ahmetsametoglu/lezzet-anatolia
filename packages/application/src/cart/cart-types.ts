@@ -31,7 +31,7 @@ export type DiscountReason =
    * `percent` yalnız oran bütün sepet için doğruysa dolar; kategoriye bağlı oran sepetin tamamına inmiş gibi okunmamalı.
    */
   | { kind: 'campaign'; percent: number | null }
-  /** Müşterinin genel indirim oranı — kapsamı tanım gereği bütün sepettir, oran her zaman doğrudur. */
+  // BEKLEYEN(K.25): genel indirim oranı artık fiyattır, bu tür üretilmez; web etiketi ve native istemci bırakınca silinir.
   | { kind: 'customer_rate'; percent: number };
 
 /**
@@ -86,7 +86,7 @@ export interface CartDiscountResult {
    * Kupon kodlarının süzülmesi taşıma katmanının işidir (`mobile-api` → `toViewBody`).
    */
   rules: readonly DiscountRule[];
-  context: { customerDiscountPercent: number | null; isFirstOrder: boolean };
+  context: { customerDiscountPercent: null; isFirstOrder: boolean };
 }
 
 /**
@@ -158,6 +158,8 @@ interface CartLineView {
   listUnitPriceCents?: number | null;
   /** Teklif kazandıysa üstü çizilecek referans. */
   wasCents?: number;
+  /** Müşteriye özel fiyatlı kalem; indirim matrahına girmez. Alan yoksa değildir. */
+  specialPrice?: true;
   /** Teklifin adet tavanı (partide kalan); tavan yoksa null. */
   limitCap: number | null;
   /**
@@ -209,7 +211,7 @@ export interface CartView {
   subtotalCents: number;
   /** Kararı üreten kurallar ve bağlam (`CartDiscountResult.rules`). */
   discountRules: readonly DiscountRule[];
-  discountContext: { customerDiscountPercent: number | null; isFirstOrder: boolean };
+  discountContext: { customerDiscountPercent: null; isFirstOrder: boolean };
   /**
    * Sepete inen indirim ya da kuponun neden inmediği; karar motorundur, kapı yalnız taşır.
    */

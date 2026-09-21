@@ -19,6 +19,7 @@ import { DEFAULT_PAGE_SIZE, type Discount, type DiscountCode, type KeysetCursor 
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readOrderSummary, type OrderSummaryView } from '@/lib/order/summary';
+import { priceRuleError } from '@/lib/pricing/price-rule-label';
 import { notifyB2bDecision } from '@/lib/b2b/application';
 import { readCustomerScorecard, readOverdueCustomerIds, SCORECARD_WINDOW } from '@/lib/customer/scorecard';
 import {
@@ -122,7 +123,8 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
         creditEnabled: profile.creditEnabled,
         creditLimitCents: profile.creditLimitCents,
         codAllowed: profile.codAllowed,
-        discountPercent: profile.discountPercent,
+        priceRuleBasis: profile.priceRuleBasis,
+        priceRulePercent: profile.priceRulePercent,
         priceGroupId: profile.priceGroupId,
         priceGroupOptions: priceGroups.map((g) => ({ id: g.id, name: g.name, percentOff: g.percentOff })),
         addresses: toCustomerAddressRows(addresses),
@@ -247,10 +249,8 @@ export async function updateCustomerAction(customerId: string, input: CustomerEd
     await requireAdmin();
     const name = input.name.trim();
     if (!name) throw new Error('Ad girilmeli.');
-    const oran = input.discountPercent;
-    if (oran !== null && (!Number.isFinite(oran) || oran < 0 || oran > 100)) {
-      throw new Error('İndirim oranı %0 ile %100 arasında olmalı.');
-    }
+    const kuralHatasi = input.priceRuleBasis ? priceRuleError(input.priceRuleBasis, input.priceRulePercent) : null;
+    if (kuralHatasi) throw new Error(kuralHatasi);
 
     await new UserProfileService(serviceDb()).update({
       id: customerId,
@@ -262,7 +262,8 @@ export async function updateCustomerAction(customerId: string, input: CustomerEd
       type: input.type,
       vatNumber: input.vatNumber?.trim() || null,
       codAllowed: input.codAllowed,
-      discountPercent: oran === null || oran === 0 ? null : oran,
+      priceRuleBasis: input.priceRuleBasis,
+      priceRulePercent: input.priceRuleBasis ? input.priceRulePercent : null,
       priceGroupId: input.priceGroupId,
     });
     revalidatePath(CUSTOMERS_PATH);

@@ -1,7 +1,8 @@
 import { PriceService, ProductVariantService, StockService } from '@lezzet/database';
-import type { ActiveOffer } from '@lezzet/domain-core';
+import type { ActiveOffer, CostBasis } from '@lezzet/domain-core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ProductWithRelations } from '@lezzet/types';
+import { readCostBasis } from './cost-basis';
 import type { ProductContext } from './map';
 import type { PricingViewer } from './pricing-viewer';
 import type { PlaceWarehouses } from './storefront-types';
@@ -35,7 +36,7 @@ export async function loadProductContext(
   const variantIds = rows.flatMap((r) => r.variants.filter((v) => v.isActive).map((v) => v.id));
 
   const stocks = new StockService(db);
-  const [prices, stock, shippingStock, networkStock, offerBatches] = await Promise.all([
+  const [prices, stock, shippingStock, networkStock, offerBatches, costBasis] = await Promise.all([
     // Kanal VE kimlik birlikte gider: kimlik olmadan `findApplicableMap` müşteriye özel fiyat
     // satırlarını hiç sorgulamıyor ve motor her zaman `customerPriceCents: null` alıyordu.
     new PriceService(db).findApplicableMap(variantIds, viewer.channel, viewer.customerId),
@@ -59,9 +60,12 @@ export async function loadProductContext(
     warehouseId || shippingWarehouseId
       ? stocks.listOfferBatches(variantIds, warehouseId ?? shippingWarehouseId ?? undefined)
       : Promise.resolve([]),
+    // Alış fiyatı yalnız alış tabanlı kuralı olan müşteride okunur; ziyaretçi ve öteki müşteriler bu sorguyu ödemez.
+    viewer.customerRule?.basis === 'cost' ? readCostBasis(db, variantIds) : Promise.resolve(new Map<string, CostBasis>()),
   ]);
 
   const offers = toOfferMap(offerBatches);
+  const costs = trustedCosts(costBasis);
   for (const row of rows) {
     context.set(row.id, {
       viewer,
@@ -73,6 +77,8 @@ export async function loadProductContext(
       // Yer bilinmiyorsa `stock` zaten ağ toplamı — ikinci bir okumaya gerek yok.
       networkStock: networkStock ?? (warehouseId ? null : stock),
       offers,
+      costs,
+      vatRate: row.vatRate,
     });
   }
   return context;
@@ -102,6 +108,16 @@ function toOfferMap(
     offers.set(b.variantId, { unitPriceCents: b.offerPriceCents, remainingQty: b.physicalQty, stockId: b.id });
   }
   return offers;
+}
+
+/**
+ * Kural fiyatına girecek alış fiyatları: yalnız `ok` taban, çünkü aykırı son alış (tek seferlik ucuz ya da pahalı alım)
+ * müşteri fiyatını bir anda oynatırdı; o varyantta kural uygulanmaz ve öteki adaylar karşılaştırılır.
+ */
+function trustedCosts(basis: ReadonlyMap<string, CostBasis>): Map<string, number> {
+  const costs = new Map<string, number>();
+  for (const [variantId, b] of basis) if (b.status === 'ok') costs.set(variantId, b.costCents);
+  return costs;
 }
 
 /**

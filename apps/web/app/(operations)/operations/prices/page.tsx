@@ -19,13 +19,13 @@ import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readCostBasis } from '@lezzet/application';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { PricesClient } from './prices-client';
-import { toCustomerPriceRows, toDiscountCustomerRows, toDiscountRows } from './prices-read';
+import { toCustomerPriceRows, toDiscountRows, toPriceRuleCustomerRows } from './prices-read';
 import { toChannelMaps, toPriceRows } from '@/lib/pricing/price-rows';
 import { parsePricesUrl, toPriceFilters } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
 import {
   type CustomerPriceRow,
-  type DiscountCustomerRow,
+  type PriceRuleCustomerRow,
   type DiscountRow,
   type HiddenFromStorefront,
   type PriceGroupRow,
@@ -66,7 +66,7 @@ export default async function PricesPage({ searchParams }: PricesPageProps) {
         rows: channels?.rows ?? [],
         nextCursor: channels?.nextCursor ?? null,
         customerPrices: customers?.prices ?? [],
-        discountCustomers: customers?.discounts ?? [],
+        priceRuleCustomers: customers?.rules ?? [],
         priceGroups: customers?.groups ?? [],
         offers: offers ?? [],
         discounts: coupons?.rows ?? [],
@@ -198,13 +198,13 @@ async function readOffersTab(db: Db): Promise<BatchView[]> {
  */
 async function readCustomerTab(
   db: Db,
-): Promise<{ prices: CustomerPriceRow[]; discounts: DiscountCustomerRow[]; groups: PriceGroupRow[] }> {
+): Promise<{ prices: CustomerPriceRow[]; rules: PriceRuleCustomerRow[]; groups: PriceGroupRow[] }> {
   const priceSvc = new PriceService(db);
   const profileSvc = new UserProfileService(db);
 
-  const [rows, discountProfiles, groupRows, groupedProfiles] = await Promise.all([
+  const [rows, ruleProfiles, groupRows, groupedProfiles] = await Promise.all([
     priceSvc.listCustomerPricesNow(),
-    profileSvc.listWithDiscount(),
+    profileSvc.listWithPriceRule(),
     new PriceGroupService(db).listAll(),
     profileSvc.listWithPriceGroup(),
   ]);
@@ -262,7 +262,7 @@ async function readCustomerTab(
       costs: new Map([...costBasis].flatMap(([id, basis]) => (costOf(basis) === null ? [] : [[id, costOf(basis)!] as const]))),
       products: variantContext,
     }),
-    discounts: toDiscountCustomerRows(discountProfiles),
+    rules: toPriceRuleCustomerRows(ruleProfiles),
     groups,
   };
 }

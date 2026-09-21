@@ -47,7 +47,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   for (const id of createdDiscounts.splice(0)) await db.from('discount').delete().eq('id', id);
-  await new UserProfileService(db).update({ id: customerId, discountPercent: null });
+  await new UserProfileService(db).update({ id: customerId, priceRuleBasis: null, priceRulePercent: null });
 });
 
 afterAll(async () => {
@@ -186,13 +186,12 @@ describe('kupon girilmeden', () => {
     expect(result).toMatchObject({ status: 'automatic', amountCents: 8_500 });
   });
 
-  it('müşterinin genel oranı da bir adaydır, fiyat değil', async () => {
-    await new UserProfileService(db).update({ id: customerId, discountPercent: 88 });
+  it('müşterinin genel fiyat kuralı sepet indirimi adayı değildir — fiyata yansır', async () => {
+    await new UserProfileService(db).update({ id: customerId, priceRuleBasis: 'list', priceRulePercent: 88 });
 
     const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId });
 
-    // `discountId: null` → kazanan bir `Discount` satırı değil, müşterinin kendi oranı.
-    expect(result).toMatchObject({ status: 'automatic', amountCents: 8_800, discountId: null });
+    expect(result).not.toMatchObject({ reason: { kind: 'customer_rate' } });
   });
 
   it('kod girilmediğinde KUPON kaynaklı indirim doğmaz', async () => {
@@ -228,14 +227,6 @@ describe('otomatik indirimin sebebi ekrana taşınır', () => {
 
     expect(result).toMatchObject({ status: 'automatic', amountCents: 9_500, reason: { kind: 'campaign', percent: null } });
   });
-
-  it('müşterinin genel oranında sebep "size özel" ve oran her zaman doğrudur', async () => {
-    await new UserProfileService(db).update({ id: customerId, discountPercent: 88 });
-
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId });
-
-    expect(result).toMatchObject({ status: 'automatic', reason: { kind: 'customer_rate', percent: 88 } });
-  });
 });
 
 describe('matrah muafiyetleri sepette de geçerli', () => {
@@ -265,6 +256,18 @@ describe('matrah muafiyetleri sepette de geçerli', () => {
 
     // Ekranda 90 € görünse de indirim matrahı 40 €: eşik tutmuyor. Motorun matrahıyla teşhisin
     // matrahı AYNI yüklemi kullanmalı, yoksa "geçerli" diyen uyarı indirimsiz sepetle biterdi.
+    expect(result).toMatchObject({ status: 'rejected', reason: 'min_basket' });
+  });
+
+  it('asgari sepet ölçütü müşteriye özel fiyatlı kalemi de saymaz', async () => {
+    await coupon(`OZEL${stamp}`, { minBasketCents: 6_000 });
+    const mixed: DiscountableLine[] = [
+      { variantId: 'v1', qty: 1, unitPriceCents: 4_000 },
+      { variantId: 'v2', qty: 1, unitPriceCents: 5_000, specialPrice: true },
+    ];
+
+    const { discount: result } = await resolveCartDiscount(db,{ lines: mixed, customerId, couponCode: `OZEL${stamp}` });
+
     expect(result).toMatchObject({ status: 'rejected', reason: 'min_basket' });
   });
 });

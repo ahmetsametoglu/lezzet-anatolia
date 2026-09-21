@@ -3,7 +3,8 @@
 import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { Table, type Column } from '@/components/operation/ui/table';
-import { money, percent, shortDate } from '@/components/operation/ui/format';
+import { money, shortDate } from '@/components/operation/ui/format';
+import { priceRuleLabel } from '@/lib/pricing/price-rule-label';
 import type { CustomerPriceRow, PricesViewProps } from '../prices-types';
 
 // Müşteriye özel fiyatlar ve genel fiyat kuralları aynı sekmede, çünkü fiyat çözümünde aynı basamaktadırlar.
@@ -71,8 +72,13 @@ export function CustomersTab({ data, onEditCustomerPrice, onEditPriceGroup, navP
         <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
           Fiyat çözüm sırası
         </span>
-        {/* Sıra motorun gerçeğidir (`resolve-price`). */}
-        <Step order={1} label="Müşteriye özel fiyat" note={`${data.customerPrices.length} tanımlı`} active />
+        {/* Sıra motorun gerçeğidir (`resolve-price`): müşteriye özel fiyat ancak grup ya da listeden ucuzsa kazanır. */}
+        <Step
+          order={1}
+          label="Müşteriye özel fiyat"
+          note={`${data.customerPrices.length} ürün · ${data.priceRuleCustomers.length} genel kural`}
+          active
+        />
         <Step order={2} label="Fiyat grubu" note={`${data.priceGroups.length} grup`} />
         <Step order={3} label="Kanal liste fiyatı" note="taban" />
         {/* Ekleme şeridin SAĞINDA (tasarım): kural okunduktan sonra gelen eylem — önce "sıra nasıl
@@ -103,7 +109,7 @@ export function CustomersTab({ data, onEditCustomerPrice, onEditPriceGroup, navP
         footer={
           <>
             <GroupStrip rows={data.priceGroups} onEdit={onEditPriceGroup} />
-            <DiscountStrip rows={data.discountCustomers} />
+            <PriceRuleStrip rows={data.priceRuleCustomers} />
           </>
         }
       />
@@ -170,20 +176,20 @@ function GroupStrip({ rows, onEdit }: { rows: PricesViewProps['data']['priceGrou
 /**
  * Genel fiyat kuralı taşıyan müşteriler; kural müşteri kaydında yazılır, fiyat ekranı yalnız kimlerde olduğunu izler.
  */
-function DiscountStrip({ rows }: { rows: PricesViewProps['data']['discountCustomers'] }) {
+function PriceRuleStrip({ rows }: { rows: PricesViewProps['data']['priceRuleCustomers'] }) {
   if (rows.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-2 border-t border-ops-line bg-ops-subtle px-6 py-3">
       <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
-        Genel indirim oranı
+        Genel fiyat kuralı
       </span>
       {rows.map((r) => (
         <span
           key={r.customerId}
           className="rounded-ops-btn border border-ops-line bg-ops-white px-[11px] py-[5px] font-ops-body text-ops-xs font-medium text-ops-ink"
-          title="Oran müşteri kaydında tutulur — buradan değiştirilmez"
+          title="Kural müşteri kaydında tutulur — buradan değiştirilmez"
         >
-          {r.customerName} · <strong className="font-ops-mono text-ops-olive-dark">{percent(r.discountPercent)}</strong>
+          {r.customerName} · <strong className="font-ops-mono text-ops-olive-dark">{priceRuleLabel(r.basis, r.percent)}</strong>
         </span>
       ))}
     </div>

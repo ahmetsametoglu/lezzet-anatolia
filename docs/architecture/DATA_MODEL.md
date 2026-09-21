@@ -91,6 +91,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `counterparty_kind`: institution, service, employee, other *(carinin türü — kurum, hizmet veren, çalışan, diğer; 13.09)*
 - `country_code`: FR, DE *(faaliyet ülkeleri)*
 - `currency`: EUR
+- `customer_price_basis`: list, cost *(müşterinin genel fiyat kuralının tabanı — liste fiyatından indirim ya da alış üzerine pay)*
 - `customer_type`: individual, company
 - `delivery_type`: route, shipping, pickup *(`pickup` = yerinde satış; mal gitmez, müşteri alır)*
 - `discount_scope`: cart, category, collection
@@ -196,7 +197,7 @@ tabloları (günlük KPI vb.) analitik modülüyle birlikte, soruları netleşin
 - **Ürün skoru türetilir, ama okuma tarafında önbelleklenir** — kaynak daima `Review` (ortalama + sayı); katalog kartı, ürün detayı ve "benzer ürünler" aynı anda puan gösterdiği için her listede agregasyon yapılmaz: onaylı yorum değişiminde tazelenen özet (materialized view ya da `product` üzerinde `rating_avg`/`rating_count` cache) kullanılır. Cache bozulursa kaynaktan yeniden üretilir — `MoneyMovement`/`Order.amount_*` ile aynı desen.
 - **Kategori tek + koleksiyon çoklu** — kategori yapısal (ürün nedir), koleksiyon esnek pazarlama grubu (Bayram/Yeni/İndirimde).
 - **Paket sipariş anında `OrderItem`'lara açılır** — yeni ürün değil; atanmış kalem fiyatlarının toplamı = paket fiyatı; hediye = 0 fiyatlı kalem. Stok/kâr/fatura kalem kalem işler (bkz. `DOMAIN.md §13`).
-- **Fiyat çözüm sırası:** müşteriye özel ürün fiyatı → müşteri indirim oranı → kanal fiyatı; giren müşteriye göre çözülür (bkz. `DOMAIN.md §5`).
+- **Fiyat çözümü:** müşteriye özel fiyat (ürün bazlı satır ya da müşterinin genel fiyat kuralı) yalnız grup ve kanal fiyatından ucuzsa kazanır; giren müşteriye göre çözülür (bkz. `DOMAIN.md §5`).
 - **Ürün kârı doğrudan giderlerden, sipariş kapanışında sabitlenir** (COGS/teslimat/komisyon/paketleme snapshot); şirket kârı ayrı, genel giderle (bkz. `DOMAIN.md §12`).
 - **unit_price sipariş kalemine kopyalanır** — fiyat sabitleme; ana fiyat değişse de sipariş etkilenmez.
 - **Sipariş bir bütün olarak doğar (30.07).** Başlık + kalemler + (indirim inmişse) kullanım kaydı tek transaction'da yazılır (`create_order` RPC); yarısı yazılmış sipariş diye bir hâl yoktur. Öncesi üç ayrı ifadeydi ve yarım kalan yazım "telafi silmesi" ile geri alınıyordu — telafi bir garanti değildir (silme de düşebilir) ve arada bozuk hâl okunabilir durumdadır.

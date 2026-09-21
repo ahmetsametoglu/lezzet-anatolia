@@ -142,8 +142,10 @@ export const UserProfileSchema = z.object({
    */
   creditLimitCents: z.number().int().nullable(),
   paymentTermDays: z.number().int().nullable(),
-  /** Yüzde, para değil. */
-  discountPercent: dbNumeric.nullable(),
+  /** Genel fiyat kuralının tabanı; `null` kural yok. */
+  priceRuleBasis: CustomerPriceBasisEnum.nullable(),
+  /** Genel fiyat kuralının yüzdesi (para değil); taban ile birlikte dolu ya da boş. */
+  priceRulePercent: dbNumeric.nullable(),
   /**
    * Fiyat grubu üyeliği (B2B alt kademesi); `null` grupsuz, düz liste.
    */

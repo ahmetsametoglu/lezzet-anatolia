@@ -60,8 +60,8 @@ export interface DiscountRule {
 
 export interface DiscountContext {
   customerId?: string | null;
-  /** Müşterinin genel indirim oranı — havuza aday olarak girer (yüzde). */
-  customerDiscountPercent?: number | null;
+  /** Daima `null`: genel fiyat kuralı fiyata yansır, indirim adayı değildir. BEKLEYEN(K.25): native istemci bırakınca silinir. */
+  customerDiscountPercent?: null;
   isFirstOrder?: boolean;
   /** Müşterinin girdiği kupon kodu; girilmediyse kupon adayları elenir. */
   enteredCouponCode?: string | null;
@@ -69,13 +69,9 @@ export interface DiscountContext {
   now?: Date;
 }
 
-/** Kazanan adayın türü — kural tetikleyicileri + müşterinin genel oranı (o bir `Discount` satırı değildir). */
-export type DiscountSourceKind = DiscountTrigger | 'customer_rate';
-
 export interface AppliedDiscount {
-  kind: DiscountSourceKind;
-  /** Kural kimliği; müşteri oranında `null` (DB'de karşılığı yok, `Customer` alanıdır). */
-  discountId: string | null;
+  kind: DiscountTrigger;
+  discountId: string;
   amountCents: number;
   /** Kalem sırasına göre paylar — `Σ = amountCents`. Muaf kalemlere 0 düşer. */
   lineShares: number[];
@@ -96,12 +92,7 @@ export function applyBestDiscount(
 
   const candidates: AppliedDiscount[] = [];
 
-  // 1) Müşterinin genel oranı — koşulsuz aday (müşteriye zaten tanınmış).
-  if (ctx.customerDiscountPercent && ctx.customerDiscountPercent > 0) {
-    candidates.push(build('customer_rate', null, percentOf(basketCents, ctx.customerDiscountPercent), eligible));
-  }
-
-  // 2) Kupon ve otomatik kampanyalar — koşulları geçenler.
+  // Kupon ve otomatik kampanyalar — koşulları geçenler.
   for (const rule of rules) {
     if (!isApplicable(rule, ctx, now, basketCents)) continue;
     const inScope = lines.map((line, i) => (eligible[i] ?? false) && matchesScope(line, rule));
@@ -133,8 +124,8 @@ export function applyBestDiscount(
    * ve kısmi iade tutarı yanlış çıkar.
    */
   function build(
-    kind: DiscountSourceKind,
-    discountId: string | null,
+    kind: DiscountTrigger,
+    discountId: string,
     amountCents: number,
     applicable: readonly boolean[],
   ): AppliedDiscount {

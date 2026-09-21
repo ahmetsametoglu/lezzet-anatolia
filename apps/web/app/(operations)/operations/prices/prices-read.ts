@@ -1,7 +1,7 @@
 import { targetMarginFor } from '@lezzet/domain-core';
 import { type Discount, type DiscountCode, type Price, type UserProfile } from '@lezzet/types';
 import type { DiscountUsage } from '@lezzet/database';
-import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow } from './prices-types';
+import { type CustomerPriceRow, type DiscountRow, type PriceRuleCustomerRow } from './prices-types';
 
 // DB satırı → view-model indirgemesi; RSC ve eylemler paylaşır. Kararlar motorda (`domain-core/pricing`), burada yalnız taban
 // çevrilir: b2c KDV dahil, b2b ve maliyet hariç; tabanı karıştırmak marjı KDV oranı kadar şişirir.
@@ -55,21 +55,22 @@ export function toCustomerPriceRows({ rows, profiles, variantTitles, listCents, 
 }
 
 /** Genel indirim oranı tanımlı müşteriler — oran müşteri kaydında yaşar, burada yalnız izlenir. */
-export function toDiscountCustomerRows(profiles: UserProfile[]): DiscountCustomerRow[] {
+export function toPriceRuleCustomerRows(profiles: UserProfile[]): PriceRuleCustomerRow[] {
   return profiles
     .flatMap((profile) =>
-      profile.discountPercent === null || profile.discountPercent === undefined
+      profile.priceRuleBasis == null || profile.priceRulePercent == null
         ? []
         : [
             {
               customerId: profile.id,
               customerName: customerLabel(profile, profile.id),
               isCompany: Boolean(profile.companyInfo),
-              discountPercent: profile.discountPercent,
+              basis: profile.priceRuleBasis,
+              percent: profile.priceRulePercent,
             },
           ],
     )
-    .sort((a, b) => b.discountPercent - a.discountPercent);
+    .sort((a, b) => a.customerName.localeCompare(b.customerName, 'tr'));
 }
 
 interface DiscountRowInput {
