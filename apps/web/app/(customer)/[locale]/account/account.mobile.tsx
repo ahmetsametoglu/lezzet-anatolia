@@ -239,7 +239,7 @@ function PointsSection({ t, copy, locale, points, coupons }: PointsSectionProps)
         <TextAction href="/account/points" label={copy.points.history} />
       </span>
       {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
-      <PhoneCouponList t={t} copy={copy.points} locale={locale} coupons={coupons} />
+      <PhoneCouponList copy={copy.points} locale={locale} coupons={coupons} />
 
       {earnOpen && (
         <Dialog title={copy.points.howToTitle} closeLabel={t.cancel} onClose={closeEarn} placement="sheet">

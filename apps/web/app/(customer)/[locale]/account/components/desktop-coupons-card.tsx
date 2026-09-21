@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
+import accountMessages from '@lezzet/i18n/customer/account';
 import type { CustomerCoupon } from '@lezzet/application';
 import { formatPrice } from '@/lib/storefront/format';
 import type { Messages } from '../account-types';
@@ -36,11 +37,12 @@ interface CouponRowProps {
 
 function CouponRow({ t, locale, coupon }: CouponRowProps) {
   const [copied, setCopied] = useState(false);
+  const copyText = accountMessages[locale].points;
 
   // Asgari sepet koşulu ancak VARSA yazılır: "koşulsuz" diye bir satır eklemek, olmayan bir kuralı
   // müşterinin aklına sokardı.
   const minBasket =
-    coupon.minBasketCents === null ? null : t.couponMinBasket.replace('{amount}', formatPrice(coupon.minBasketCents, locale));
+    coupon.minBasketCents === null ? null : copyText.couponMinBasket.replace('{amount}', formatPrice(coupon.minBasketCents, locale));
 
   const copy = async () => {
     try {
@@ -69,7 +71,7 @@ function CouponRow({ t, locale, coupon }: CouponRowProps) {
         onClick={copy}
         className="flex-none cursor-pointer font-sans text-note font-bold text-olive transition-colors hover:text-olive-dark"
       >
-        {copied ? t.couponCopied : t.couponCopy}
+        {copied ? copyText.couponCopied : copyText.couponCopy}
       </button>
     </div>
   );

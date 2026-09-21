@@ -6,38 +6,36 @@ import type { Locale } from '@lezzet/i18n';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { MobileIcon } from '@/components/customer/ui/mobile-icon';
 import { formatPrice } from '@/lib/storefront/format';
-import type { AccountCopy, Messages } from '../account-types';
+import type { AccountCopy } from '../account-types';
 
 /**
  * Puan kartının içindeki kuponlar, native kupon satırının ikizi. Boş liste hiçbir şey çizmez, çünkü puan kartında "kuponunuz yok"
  * cümlesi gürültü olur.
  */
 interface PhoneCouponListProps {
-  t: Messages;
   copy: AccountCopy['points'];
   locale: Locale;
   coupons: CustomerCoupon[];
 }
 
-export function PhoneCouponList({ t, copy, locale, coupons }: PhoneCouponListProps) {
+export function PhoneCouponList({ copy, locale, coupons }: PhoneCouponListProps) {
   if (coupons.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
       {coupons.map((coupon) => (
-        <CouponRow key={coupon.id} t={t} copy={copy} locale={locale} coupon={coupon} />
+        <CouponRow key={coupon.id} copy={copy} locale={locale} coupon={coupon} />
       ))}
     </div>
   );
 }
 
 interface CouponRowProps {
-  t: Messages;
   copy: AccountCopy['points'];
   locale: Locale;
   coupon: CustomerCoupon;
 }
 
-function CouponRow({ t, copy, locale, coupon }: CouponRowProps) {
+function CouponRow({ copy, locale, coupon }: CouponRowProps) {
   const [copied, setCopied] = useState(false);
   const value =
     coupon.amountCents === null
@@ -45,7 +43,7 @@ function CouponRow({ t, copy, locale, coupon }: CouponRowProps) {
       : copy.couponValue.replace('{value}', formatPrice(coupon.amountCents, locale));
   // Asgari sepet yazılır, çünkü sepette reddedilecek kuponu koşulsuz göstermek yanıltır.
   const minBasket =
-    coupon.minBasketCents === null ? null : t.couponMinBasket.replace('{amount}', formatPrice(coupon.minBasketCents, locale));
+    coupon.minBasketCents === null ? null : copy.couponMinBasket.replace('{amount}', formatPrice(coupon.minBasketCents, locale));
 
   const copyCode = async () => {
     try {
@@ -63,7 +61,7 @@ function CouponRow({ t, copy, locale, coupon }: CouponRowProps) {
       <MobileIcon name="coupon" size={17} className="flex-none text-terracotta" />
       <span className="flex-none font-sans text-note font-bold text-terracotta">{coupon.code}</span>
       <span className="min-w-0 flex-1 font-sans text-helper text-muted">{minBasket === null ? value : `${value} · ${minBasket}`}</span>
-      <TextAction label={copied ? t.couponCopied : t.couponCopy} onClick={() => void copyCode()} />
+      <TextAction label={copied ? copy.couponCopied : copy.couponCopy} onClick={() => void copyCode()} />
     </div>
   );
 }

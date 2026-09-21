@@ -62,6 +62,9 @@
       "converted": "Kupon hesabınıza eklendi ✓",
       "failed": "Puan işlemi tamamlanamadı — yeniden deneyin.",
       "couponPercent": "%{n} indirim",
+      "couponMinBasket": "en az {amount} sepet",
+      "couponCopy": "Kopyala",
+      "couponCopied": "Kopyalandı",
       "howTo": "Nasıl puan kazanırım?",
       "history": "Puan geçmişim",
       "howToTitle": "Puan kazanma yolları"
@@ -207,6 +210,9 @@
       "converted": "Bon ajouté à votre compte ✓",
       "failed": "L’opération sur les points a échoué — réessayez.",
       "couponPercent": "{n} % de remise",
+      "couponMinBasket": "panier minimum {amount}",
+      "couponCopy": "Copier",
+      "couponCopied": "Copié",
       "howTo": "Comment gagner des points ?",
       "history": "Mon historique de points",
       "howToTitle": "Façons de gagner des points"
@@ -352,6 +358,9 @@
       "converted": "Gutschein Ihrem Konto gutgeschrieben ✓",
       "failed": "Die Punkteaktion ist fehlgeschlagen — bitte erneut versuchen.",
       "couponPercent": "{n} % Rabatt",
+      "couponMinBasket": "Mindestbestellwert {amount}",
+      "couponCopy": "Kopieren",
+      "couponCopied": "Kopiert",
       "howTo": "Wie sammle ich Punkte?",
       "history": "Mein Punkteverlauf",
       "howToTitle": "Wege zu Punkten"
