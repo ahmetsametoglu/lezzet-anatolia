@@ -21,33 +21,8 @@ import {
 import messages from '@lezzet/i18n/customer/legal';
 
 /*
-  BİLGİ SAYFALARI (v3 `vStatic`) — TEK ekran, beş belge: teslimat & iade · SSS · gizlilik · satış
-  koşulları · yasal bilgiler.
-
-  ── v3'ÜN VERDİĞİ VE VERMEDİĞİ ──────────────────────────────────────────────
-  Şablon bu ekranı bir İSKELET olarak çiziyor (v3:1128-1136): yapışkan başlık çubuğu (geri + sayfa
-  adı) ve `padding:20px 22px` içinde TEK paragraf. Çubuk ile dolgu buradan BİREBİR alındı. Gövde
-  ise gerçekte tek paragraf değil — altı ila on bölüm, madde listeleri ve dokuz soruluk bir SSS.
-  Bu yüzden gövdenin dokusu, aynı metnin ÇALIŞAN karşılığından (web `legal-page.mobile.tsx`)
-  taşındı; şablona ait bir görsel karar EZİLMEDİ, şablonun boş bıraktığı yer dolduruldu.
-
-  ── METİN NEREDEN ─────────────────────────────────────────────────────────
-  `messages.json` webin `legal` klasöründeki beş `content.json` dosyasından ÜRETİLDİ (üç dil, beş
-  sayfa) — tek cümle elle yazılmadı. Gerekçe ve terfi ihtiyacı `legal-types.ts` künyesinde.
-
-  ── ŞABLONDAN BİLİNÇLİ SAPMALAR ────────────────────────────────────────────
-  1. **"Bu sayfada" gezinmesi YOK.** Web mobilde bölüm başlıklarını yatay bir çip dizisine koyup
-     çapaya kaydırıyor. RN'de çapa diye bir şey yok: her bölümün yerini ölçüp `scrollTo` yazmak
-     gerekirdi ve v3 böyle bir öğe ÇİZMİYOR. Ölçülmemiş bir etkileşimi uydurmaktansa bölümler
-     baştan sona açık duruyor; ihtiyaç raporlandı.
-  2. **Son güncelleme satırı BAŞLIĞIN ALTINDA, gövdenin ilk satırı olarak.** Şablonun çubuğunda
-     yalnız ad var ve oraya ikinci bir satır sıkıştırmak 40 dp'lik çubuğu bozardı. Satırın kendisi
-     atlanamazdı: hukuki metinde hangi sürüme bakıldığı görünmeli (web `legal-types` künyesi).
-  3. **Tarih sözlükte BİÇİMLENMİŞ duruyor** ("1 Temmuz 2026"), ISO + biçimleyici değil. Webin
-     `formatOrderDate`i `apps/web`te yaşıyor ve `@lezzet/helper`a terfi etmedi; altı satırlık bir
-     `Intl` sarmalayıcısını mobilde ikinci kez yazmak, para biçiminde bir kez yaşanan ayrışmanın
-     (helper `format.ts` künyesi) aynısını tarihte açardı. Tarih zaten metinle birlikte değişen bir
-     içerik; sözlükte metnin yanında duruyor. Terfi ihtiyacı raporlandı.
+  Bilgi sayfaları: tek ekran, beş belge. Son güncelleme satırı gövdenin ilk satırıdır, çünkü hukuki
+  metinde hangi sürüme bakıldığı görünmeli ve tasarımın başlık çubuğunda ikinci satıra yer yok.
 */
 
 interface LegalScreenProps {
@@ -55,9 +30,8 @@ interface LegalScreenProps {
   page: string;
 }
 
-/* Şirket künyesi (unvan, SIRET, adres, e-posta …) metne gömülü değil, `{siret}` gibi yer tutucu;
-   değer `@lezzet/brand`den modül yüklenirken BİR kez dolar (15.09) — web'in yasal sayfaları da aynı
-   fonksiyondan geçiyor. */
+/* Şirket künyesi metinde `{siret}` gibi yer tutucudur; değer `@lezzet/brand`den modül yüklenirken
+   bir kez dolar. */
 const LEGAL_MESSAGES = fillBrandFacts(messages);
 
 export function LegalScreen({ page }: LegalScreenProps) {
@@ -102,15 +76,8 @@ export function LegalScreen({ page }: LegalScreenProps) {
   const copy = t.pages[page];
 
   /**
-   * **TUTARLAR AYARDAN, METİNDEN DEĞİL** (18.08 · kullanıcı kararı) — webin teslimat sayfasıyla
-   * aynı hüküm, aynı kurucu (`deliveryTermsLines`). Sayfa bir dönem *"Kargo ücreti 7,90 €'dur"*
-   * diyordu; operatör ayarı değiştirdiği gün sepet yeni sayıyı keser, sayfa eskisini ilan ederdi.
-   *
-   * ── OKUNAMAZSA TEK CÜMLEYE İNER ─────────────────────────────────────────
-   * Web sunucu bileşeni ayarı doğrudan okuyor; burada cihaz ağa çıkıyor ve düşebilir. Tutarlar
-   * kendi bölümünde durduğu için üçüncü bir yol var: bölüm "sepetinizde görürsünüz"e iner ve
-   * sayfanın KURALLARI anlatan kısmı hiç etkilenmez. Yer tutucuyu ham basmak ya da hukuki metinden
-   * paragraf düşürmek gerekmiyor (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+   * Tutarlar metinden değil ayardan gelir: operatör ayarı değiştirince sayfa eski sayıyı ilan etmesin.
+   * Ayar okunamazsa yalnız tutar bölümü tek cümleye iner, kuralları anlatan kısım etkilenmez.
    */
   const sections =
     page !== 'delivery'
@@ -182,11 +149,8 @@ interface LegalNoticeProps {
 }
 
 /**
- * Çıkış bandı — "statik sayfa çıkmaz sokak olmamalı".
- *
- * ROTALANAMAYAN hedef düz metne düşer, gizlenmez: cümlenin yarısını yutmak, okuyanın eksik bir
- * yönlendirme okuması demekti. Bugün sözlükteki hedeflerin hepsi rotalanıyor; dal, sözlüğe yarın
- * yeni bir ad girerse ekranın sessizce boş bir bağlantı çizmemesi için var.
+ * Çıkış bandı: statik sayfa çıkmaz sokak olmamalı. Rotalanamayan hedef gizlenmez, düz metne düşer;
+ * cümlenin yarısını yutmak eksik bir yönlendirme okuturdu.
  */
 function LegalNotice({ notice }: LegalNoticeProps) {
   const router = useRouter();
@@ -250,9 +214,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['card-title-sm'],
     color: theme.colors.ink,
   },
-  /* v3 gövdesi: `400 14px/1.7 'Karla'` · `#6d7261`. Ölçü ve renk birebir (`body-sm` · `body`);
-     satır aralığı ölçekte 1,7 durağı olmadığı için 1,6'ya (`lead--line-height`) çekildi —
-     token paketine yeni bir durak açmak bu şeridin yazma alanı dışında, ihtiyaç raporlandı. */
+  /* Tasarımın 1,7 satır aralığı ölçekte yok; en yakın durak 1,6 (`lead--line-height`). */
   paragraph: {
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
