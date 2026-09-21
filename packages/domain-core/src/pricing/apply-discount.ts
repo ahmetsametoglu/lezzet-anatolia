@@ -60,8 +60,6 @@ export interface DiscountRule {
 
 export interface DiscountContext {
   customerId?: string | null;
-  /** Daima `null`: genel fiyat kuralı fiyata yansır, indirim adayı değildir. BEKLEYEN(K.25): native istemci bırakınca silinir. */
-  customerDiscountPercent?: null;
   isFirstOrder?: boolean;
   /** Müşterinin girdiği kupon kodu; girilmediyse kupon adayları elenir. */
   enteredCouponCode?: string | null;

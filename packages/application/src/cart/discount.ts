@@ -70,7 +70,7 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
     discount,
     reachable,
     rules,
-    context: { customerDiscountPercent: null, isFirstOrder: ctx.isFirstOrder },
+    context: { isFirstOrder: ctx.isFirstOrder },
   });
 
   if (!code) return out(winner ? automatic(winner, pool) : { status: 'none' });

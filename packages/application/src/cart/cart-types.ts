@@ -31,8 +31,7 @@ export type DiscountReason =
    * `percent` yalnız oran bütün sepet için doğruysa dolar; kategoriye bağlı oran sepetin tamamına inmiş gibi okunmamalı.
    */
   | { kind: 'campaign'; percent: number | null }
-  // BEKLEYEN(K.25): genel indirim oranı artık fiyattır, bu tür üretilmez; web etiketi ve native istemci bırakınca silinir.
-  | { kind: 'customer_rate'; percent: number };
+;
 
 /**
  * Sepete inen indirim ya da kuponun reddi. **Görünüm tipidir** — bu dosyada durur çünkü ekran onu
@@ -86,7 +85,7 @@ export interface CartDiscountResult {
    * Kupon kodlarının süzülmesi taşıma katmanının işidir (`mobile-api` → `toViewBody`).
    */
   rules: readonly DiscountRule[];
-  context: { customerDiscountPercent: null; isFirstOrder: boolean };
+  context: { isFirstOrder: boolean };
 }
 
 /**
@@ -211,7 +210,7 @@ export interface CartView {
   subtotalCents: number;
   /** Kararı üreten kurallar ve bağlam (`CartDiscountResult.rules`). */
   discountRules: readonly DiscountRule[];
-  discountContext: { customerDiscountPercent: null; isFirstOrder: boolean };
+  discountContext: { isFirstOrder: boolean };
   /**
    * Sepete inen indirim ya da kuponun neden inmediği; karar motorundur, kapı yalnız taşır.
    */
@@ -263,7 +262,7 @@ export const EMPTY_CART: CartView = {
   /* Boş sepette kural TAŞINMAZ: kalem yokken indirim de yoktur ve okunamamış bir sepette kuralı
      "yok" diye sunmak, ölçülmemişi ölçülmüş göstermek olurdu. İlk gerçek okumada dolar. */
   discountRules: [],
-  discountContext: { customerDiscountPercent: null, isFirstOrder: false },
+  discountContext: { isFirstOrder: false },
   discount: { status: 'none' },
   reachableDiscount: null,
   totalCents: 0,

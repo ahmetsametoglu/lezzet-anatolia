@@ -17,8 +17,6 @@ interface DiscountLabelCopy {
   discountCampaign: string;
   /** Oranı bütün sepete inen kampanya: "kampanya %{percent}". */
   discountCampaignPercent: string;
-  /** Müşterinin genel oranı: "size özel %{percent}". */
-  discountCustomerRate: string;
 }
 
 /**
@@ -49,7 +47,6 @@ export function discountLabel(discount: CartDiscount, t: DiscountLabelCopy, loca
   if (!('reason' in source)) return `${t.discount} — ${source.code}`;
 
   const { reason } = source;
-  if (reason.kind === 'customer_rate') return `${t.discount} — ${percent(t.discountCustomerRate, reason.percent)}`;
   // Oran bilinmiyorsa sebep söylenir, sayı UYDURULMAZ (bkz. `DiscountReason`).
   return `${t.discount} — ${reason.percent == null ? t.discountCampaign : percent(t.discountCampaignPercent, reason.percent)}`;
 }
@@ -70,6 +67,5 @@ export function orderDiscountLabel(discount: CheckoutSummary['discount'], t: Dis
   if (discount.label) return `${t.discount} — ${discount.label}`;
   const reason = discount.reason;
   if (!reason) return t.discount;
-  if (reason.kind === 'customer_rate') return `${t.discount} — ${percent(t.discountCustomerRate, reason.percent)}`;
   return `${t.discount} — ${reason.percent == null ? t.discountCampaign : percent(t.discountCampaignPercent, reason.percent)}`;
 }

@@ -110,7 +110,6 @@ function toViewBody(view: CartView, locale: PreferredLanguage): z.input<typeof M
         collectionId: rule.collectionId ?? null,
         minBasketCents: rule.minBasketCents ?? null,
       })),
-    customerDiscountPercent: view.discountContext.customerDiscountPercent,
     isFirstOrder: view.discountContext.isFirstOrder,
     hasBlocked: view.hasBlocked,
     // Asgari sepete sayılmayan tutar; kapı zaten düştü, burada yalnız taşınır.
@@ -159,6 +158,7 @@ function toLineBody(line: CartLine): z.input<typeof MeCartViewSchema>['lines'][n
         // Kapsam üyeliği YALNIZ varyant satırında: paket kalemleri matraha girmiyor (DOMAIN §13).
         categoryId: line.categoryId,
         collectionIds: [...line.collectionIds],
+        specialPrice: line.specialPrice,
         ...view,
       };
 }

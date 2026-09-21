@@ -348,10 +348,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
 - [ ] (B.2) Rota, teslim günü ve posta kodu olmadan kaydedilebiliyor
 - [ ] (B.3) Native uygulama · sipariş tamamlama — mevcut adres düzenlenemiyor ⟶ MOBİL ŞERİT
 - [ ] (B.4) Native uygulama · dokunmatik geri bildirim (haptic) kapsamı dar ⟶ MOBİL ŞERİT
-- [ ] (B.5) WhatsApp ile giriş — hiç yazılmadı; iki yüzeyde düğme "yakında" diyor. Kapsamı: oturumun WhatsApp kanıtıyla
-  açılması (web + native), e-postası olmayan hesap. Kullanıcı notu 17.09: WhatsApp'la giren müşteride hesap sayfasında
-  "e-postamı bağla" olmalı ve profil çekmecesindeki e-posta alanı salt okunur boş alan olarak kalmamalı. Numara bağlama
-  (`/me/whatsapp`, hesap kartı) hazır; giriş aynı kanıtı kullanır.
 - [ ] (B.6) Native uygulamada online ödeme "henüz açık değil" — anahtar eksik, kod değil
 - [ ] (B.7) Native uygulama · kapsam bilgisi bayat kalıyor — uygulama kapatılmadan tazelenmiyor ⟶ MOBİL ŞERİT
 - [ ] (B.8) Ödeme çekmecesi iptal edilince ikinci deneme kırılıyor — anahtar "yanmış" oluyor
@@ -374,12 +370,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.23) [hedef: operasyon] Ürün formuna **hazırlama adımları** (`product.preparation_steps`), kategori formuna
   **yapay zekâ sorusu** (`category.ai_question`) alanı — iki kolon 20.09'da açıldı ve müşteri ürün sayfası ikisini de
   çiziyor, ama operatörün doldurabileceği bir yer yok; adımlar sıralı üç dilli liste, soru `{n}`/`{w}` yer tutuculu tek metin.
-- [ ] (K.24) [hedef: mobil] Müşteriye özel fiyatlı sepet kalemi indirimden muaf: `apps/mobile-api` `cart-view.ts` satıra
-  `specialPrice`i taşısın, native `cart-store.ts` yerel `applyBestDiscount` çağrısında kaleme `specialPrice: line.specialPrice`
-  versin, `customerDiscountPercent` ve `customer_rate` okumasını bıraksın — genel indirim oranı artık fiyat; sunucu o kaleme
-  indirim uygulamıyor, native önizleme uyguluyor.
-- [ ] (K.25) [hedef: web] K.24 bitince `customer_rate` türü ve `customerDiscountPercent` alanı sözleşmeden (`cart-api.schema`),
-  sepet tiplerinden, motor bağlamından ve web indirim etiketinden silinsin — native uyumluluğu için tutuluyorlar.
 - [ ] (K.7) [hedef: web] Arşivdeki hedefi belirsiz 13 dosya (`not-yonetim-*`, `not-kargo-*`, `not-sepet-*`,
   `not-fiyat-*`, `not-bildirim-*`, `bildirim-*`, `inceleme-*`, `koordinasyon-*`, `ekler-*`, `biriken-*`) gözden geçirilecek.
 - [ ] (K.8) [hedef: paket] `mobile-kit` turunda `screens/login/login-notice.ts` tek başına kaldı (giriş ekranı müşteri

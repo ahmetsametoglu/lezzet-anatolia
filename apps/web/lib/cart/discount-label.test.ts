@@ -10,7 +10,6 @@ const t = {
   discount: 'İndirim',
   discountCampaign: 'kampanya',
   discountCampaignPercent: 'kampanya %{percent}',
-  discountCustomerRate: 'size özel %{percent}',
 };
 
 const withLabel = (label: LocalizedText | null): CartDiscount => ({
@@ -63,19 +62,6 @@ describe('discountLabel', () => {
 
   it('dil verilmezse ad ATLANIR — yanlış dilde basmaktansa hiç basmaz', () => {
     expect(discountLabel(withLabel({ fr: 'Offre de bienvenue' }), t)).toBe('İndirim — kampanya %15');
-  });
-
-  it('müşterinin kendi oranında ad YOKTUR — ortada kampanya yok', () => {
-    const rate: CartDiscount = {
-      status: 'automatic',
-      reason: { kind: 'customer_rate', percent: 8 },
-      amountCents: 800,
-      lineShares: [800],
-      discountId: null,
-      label: null,
-    };
-
-    expect(discountLabel(rate, t, 'tr')).toBe('İndirim — size özel %8');
   });
 
   it('reddedilen kupon sepette indirim BIRAKMADIYSA satır genel adında kalır', () => {

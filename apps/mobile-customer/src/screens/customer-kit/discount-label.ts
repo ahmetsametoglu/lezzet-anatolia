@@ -26,7 +26,6 @@ type DiscountReason = z.infer<typeof CartDiscountReasonSchema>;
 
 /** Kendiliğinden inen indirimin sebebi — kampanyanın İÇ adı değil, müşterinin okuduğu gerekçe. */
 function reasonLabel(reason: DiscountReason, t: Messages): string {
-  if (reason.kind === 'customer_rate') return t.customerRate.replace('{percent}', String(reason.percent));
   return reason.percent === null ? t.campaign : t.campaignPercent.replace('{percent}', String(reason.percent));
 }
 

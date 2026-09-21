@@ -90,7 +90,6 @@ export function cartView(lines: MeCartViewLine[], overrides: Partial<MeCartView>
     discount: { status: 'none' },
     reachableDiscount: null,
   discountRules: [],
-  customerDiscountPercent: null,
   isFirstOrder: false,
     totalCents: subtotalCents,
     itemCount: lines.reduce((sum, line) => sum + line.qty, 0),

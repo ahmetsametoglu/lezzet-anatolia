@@ -116,7 +116,6 @@ const EMPTY_VIEW: MeCartView = {
   itemCount: 0,
   /* Boş sepette kural TAŞINMAZ — kalem yokken indirim de yoktur; ilk gerçek okumada dolar. */
   discountRules: [],
-  customerDiscountPercent: null,
   isFirstOrder: false,
   hasBlocked: false,
   /* Teslim edilemeyen kalemlerin tutarı; boş sepette sıfır, çünkü kalem yok. */
@@ -384,9 +383,11 @@ function settleDiscount(
          `offerStockId` taşımıyor; teklifin işareti `wasCents`in dolu olmasıdır (üstü çizilen
          referans fiyat) ve o an satırın partisi çıpadır. */
       offerStockId: line.kind === 'variant' && line.wasCents !== undefined ? line.stockId : null,
+      // Müşteriye özel fiyatlı kalem de matraha girmez; sunucu aynı işareti taşır.
+      specialPrice: line.kind === 'variant' && line.specialPrice === true,
     })),
     view.discountRules.map((rule) => ({ ...rule, trigger: 'automatic' as const })),
-    { customerDiscountPercent: view.customerDiscountPercent, isFirstOrder: view.isFirstOrder },
+    { isFirstOrder: view.isFirstOrder },
   );
   const cents = winner?.amountCents ?? 0;
 

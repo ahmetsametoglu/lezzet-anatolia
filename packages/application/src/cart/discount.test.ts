@@ -186,14 +186,6 @@ describe('kupon girilmeden', () => {
     expect(result).toMatchObject({ status: 'automatic', amountCents: 8_500 });
   });
 
-  it('müşterinin genel fiyat kuralı sepet indirimi adayı değildir — fiyata yansır', async () => {
-    await new UserProfileService(db).update({ id: customerId, priceRuleBasis: 'list', priceRulePercent: 88 });
-
-    const { discount: result } = await resolveCartDiscount(db,{ lines: basket, customerId });
-
-    expect(result).not.toMatchObject({ reason: { kind: 'customer_rate' } });
-  });
-
   it('kod girilmediğinde KUPON kaynaklı indirim doğmaz', async () => {
     await coupon(`GIRILMEDI${stamp}`);
 
