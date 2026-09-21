@@ -1,5 +1,5 @@
 import { addressTitle } from '@lezzet/address';
-import { formatCompactEuro, formatPrice } from '@lezzet/helper';
+import { formatCompactEuro } from '@lezzet/helper';
 import { LOCALES, type Locale, type LocalizedCopy } from '@lezzet/i18n';
 import type { Country } from '@lezzet/types';
 import { useRouter } from 'expo-router';
@@ -39,6 +39,7 @@ import { ToggleSwitch } from '@/screens/customer-kit/toggle-switch';
 import { LegalLinks } from '@/screens/legal/legal-links';
 import { useAddresses } from '@/screens/customer-kit/use-addresses.hook';
 import { AddressCard } from './address-card';
+import { CouponRow } from './coupon-row';
 import { AccountAddressesSkeleton, AccountPointsSkeleton } from './account-skeleton';
 import { accountData, type AccountData } from './account-fixture';
 import { usePoints } from './use-points.hook';
@@ -418,15 +419,7 @@ export function AccountScreen({
 
             {/* Kuponlar puan kartının içinde: ikisi aynı cüzdanın iki yüzü (kazanılan ↔ harcanabilir). */}
             {coupons.map((coupon) => (
-              <View key={coupon.id} style={styles.couponRow} testID={`account-coupon-${coupon.code}`}>
-                <Icon name="coupon" size={theme.size.inlineIcon} color={theme.colors.terracotta} />
-                <Text style={styles.couponCode}>{coupon.code}</Text>
-                <Text style={styles.couponValue}>
-                  {coupon.amountCents === null
-                    ? t.points.couponPercent.replace('{n}', String(coupon.percent ?? 0))
-                    : t.points.couponValue.replace('{value}', formatPrice(coupon.amountCents, locale))}
-                </Text>
-              </View>
+              <CouponRow key={coupon.id} coupon={coupon} copy={t.points} locale={locale} testID={`account-coupon-${coupon.code}`} />
             ))}
           </View>
         )}
@@ -960,28 +953,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontFamily: theme.font.body[400],
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
-    color: theme.colors.muted,
-  },
-  couponRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.lg,
-    backgroundColor: theme.colors.card,
-    borderWidth: theme.border.hairline,
-    borderStyle: 'dashed',
-    borderColor: theme.colors['olive-line'],
-    borderRadius: theme.radius.badge,
-    paddingVertical: theme.space.lg,
-    paddingHorizontal: theme.space['2xl'],
-  },
-  couponCode: {
-    fontFamily: theme.font.body[theme.text['button--font-weight']],
-    fontSize: theme.text.note,
-    color: theme.colors.terracotta,
-  },
-  couponValue: {
-    fontFamily: theme.font.body[400],
-    fontSize: theme.text.helper,
     color: theme.colors.muted,
   },
   referralRow: {
