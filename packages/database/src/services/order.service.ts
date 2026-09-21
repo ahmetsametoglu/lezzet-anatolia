@@ -57,26 +57,13 @@ import { ilikeContains, ilikeTerm } from '../utils/filter-term';
 import { appToDb, dbToApp } from '../utils/case-transformers';
 import { rpcMoneyToCents, rpcMoneyToEuro } from '../utils/rpc-money';
 
-/**
- * Sipariş listesinin süzgeçleri (09.7). Liste ve sayaç AYNI tipi alır: iki ayrı süzgeç tanımı,
- * "24 sipariş" yazan şeridin altında 19 satır göstermenin en kısa yoludur.
- */
+/** Sipariş listesinin süzgeçleri; liste ve sayaç aynı tipi alır, yoksa başlıktaki sayı listeyle ayrışırdı. */
 export interface OrderListFilters {
   /** Boşsa listenin kendi kümesi (taslak hariç tüm durumlar) geçerlidir. */
   status?: OrderStatus[];
   /**
-   * Depo süzgeci (DOMAIN §17) — **tek uuid değil KÜME**, çünkü üç hâl var:
-   *
-   * - `undefined` → depo-üstü. YALNIZ admin/muhasebe için meşru.
-   * - tek elemanlı dizi → o depo (eski `warehouseId`'nin karşılığı).
-   * - çok elemanlı → **"kapsamımdaki depolar"**. Ortadaki bu hâl tek uuid ile ifade edilemiyordu:
-   *   kapsamı iki depo olan personel "tümü" dediğinde ya tek depo seçmek zorunda kalıyordu ya
-   *   `undefined` göndermek — ikincisi kapsam DIŞI depoların siparişlerini de sayardı.
-   * - boş dizi → hiçbiri (fail-closed; kapsamsız personel hiçbir sipariş görmez).
-   *
-   * Sayaçlar bu süzgeci LİSTEYLE aynı şekilde alır — biri süzülüp öteki süzülmezse başlıkta
-   * "12 sipariş" yazarken listede 4 satır görünür ve operatör kendi ekranına güvenmeyi bırakır.
-   * Bu yüzden süzgeç RPC'nin İÇİNDE uygulanır (`p_warehouse_ids`), dışarıda değil.
+   * Depo süzgeci bir küme: `undefined` depo-üstü (yalnız admin/muhasebe), dolu dizi kapsamdaki depolar, boş dizi hiçbiri.
+   * Sayaçlar listeyle aynı süzgeci RPC'nin içinde alır, yoksa başlık ile liste ayrışırdı.
    */
   warehouseIds?: readonly string[];
   channel?: Channel;
@@ -100,14 +87,12 @@ export interface OrderCounts {
   /** Tutarlar **cent** (02.9 · STACK §8) — RPC euro toplar, çevrim `counts()` sınırında. */
   sum: { totalCents: number; collectedCents: number; refundedCents: number };
   cod: { count: number; totalCents: number; collectedCents: number; refundedCents: number };
-  /** İptal HARİÇ sayılan iş (21.265) — künyesi `OrderCountsRowSchema`da. */
+  /** İptal hariç sayılan iş — künyesi `OrderCountsRowSchema`da. */
   active: { count: number; totalCents: number };
 }
 
 /**
- * Listede görünen durumlar — **taslak hariç**. `draft` yarım kalmış bir checkout'tur: referans
- * numarası bile yoktur, kimse onu hazırlayamaz. Operasyon listesinde görünmesi, terk edilmiş
- * sepetleri iş kuyruğuna karıştırmak olurdu (TTL süpürücüsü onları `cancelled`'a çeker).
+ * Listede görünen durumlar — taslak hariç: yarım kalmış checkout iş kuyruğuna karışmasın (süpürücü onu iptal eder).
  */
 const LISTED_STATUSES = OrderStatusEnum.options.filter((s) => s !== 'draft');
 
@@ -126,10 +111,7 @@ function listedFilters(f: OrderListFilters): Record<string, unknown> {
   };
 }
 
-/**
- * Kapsam boş mu — "hiçbir depo" hâli. Boş dizi `undefined`'dan (depo-üstü) AYRI bir anlamdır ve
- * ikisini karıştırmak kapsamsız personele her şeyi göstermek olurdu. Sorgu hiç atılmaz.
- */
+/** Boş kapsam "hiçbir depo" demektir, depo-üstü değil; karıştırmak kapsamsız personele her şeyi gösterirdi. */
 function emptyScope(f: OrderListFilters): boolean {
   return f.warehouseIds?.length === 0;
 }
@@ -156,13 +138,7 @@ function searchOptions(f: OrderListFilters): { orFilters?: string[]; rangeFilter
  * anahtar sessizce düşerdi (`rpcMoneyToEuro` künyesi).
  */
 const ITEM_MONEY_FIELDS = ['unitPriceCents', 'listUnitPriceCents', 'lineDiscountAmountCents'];
-/**
- * Dışa VERİLİR (01.09): `order_sale` görünümü siparişin para kolonlarını aynen taşıyor ve kendi
- * kopyasını tutuyordu. İki liste aynı içerikti, yani bir gün ayrışacaklardı — ve ayrıştılar:
- * `total` → `ordered_total` ad değişikliğinde muhasebe kopyası güncellenmedi, `order_sale`'den
- * okunan her satır `orderedTotalCents: undefined` ile Zod'dan geçemedi (13 test). Liste artık tek
- * yerde (CLAUDE §1).
- */
+/** Dışa verilir: `order_sale` görünümü aynı para kolonlarını taşır, iki ayrı liste bir gün ayrışırdı. */
 export const ORDER_MONEY_FIELDS = [
   'shippingFeeCents',
   'orderedTotalCents',
@@ -193,10 +169,8 @@ export class OrderItemService extends BaseDbService<OrderItem, OrderItemInsert, 
   }
 
   /**
-   * Çok siparişin kalemleri TEK turda (12.7 export'u) — sipariş başına ayrı sorgu N+1 olurdu.
-   *
-   * Kimlikler öbeklenir: `in(...)` listesi URL'e gömülür, binlerce uuid'lik dönemde istek satırı
-   * sunucu sınırını aşar. Öbek sayısı kadar sorgu, sipariş sayısı kadar değil.
+   * Çok siparişin kalemleri tek turda; kimlikler öbeklenir, çünkü `in(...)` listesi URL'e gömülür ve binlerce
+   * uuid'de istek satırı sınırı aşar.
    */
   async listByOrders(orderIds: readonly string[]): Promise<OrderItem[]> {
     const BATCH_SIZE = 200;
@@ -243,11 +217,7 @@ export class OrderStatusLogService extends BaseDbService<OrderStatusLog, OrderSt
 }
 
 /**
- * Sipariş servisi (07.6) — ORDER_LIFECYCLE.
- *
- * **Karar vermez, satır getirir/yazar** (STACK §4). "Bu geçiş izinli mi", "referans üretilmeli mi",
- * "stok ne olmalı" kararları saf motordadır (`domain-core/order/status-machine`); ikisini birleştiren
- * kapı uygulama katmanındadır (`apps/web/lib/order`).
+ * Sipariş servisi: karar vermez, satır getirir ve yazar; geçiş, referans ve stok soruları motorda cevaplanır.
  */
 export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate> {
   /** Sipariş başlığının para kolonları (hepsi euro numeric); app tarafı cent (STACK §8). */
@@ -261,65 +231,36 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * Sipariş + kalemleri + (indirim varsa) KULLANIM KAYDI — **tek transaction** (`create_order` RPC).
-   *
-   * Üçü tek gerçektir: kalemsiz sipariş anlamsızdır, kullanım kaydı olmayan indirimli sipariş ise
-   * kotayı sessizce delen bir sipariştir. Önceden üç ayrı ifadeydi ve yarım kalan yazım "telafi
-   * silmesi" ile geri alınmaya çalışılıyordu; telafi bir garanti değildir (silme de düşebilir,
-   * süreç arada ölebilir) ve yalnız HATA anında çalışır. Artık ya üçü de yazılır ya hiçbiri —
-   * ve `discount_amount = Σ line_discount_amount` değişmezini COMMIT anında veritabanı denetler
-   * (`order_discount_balance` kısıt tetikleyicisi, 0041). 07.4'ün RPC borcu buydu.
-   *
-   * **KOTA RPC'DE TÜKENİR ve bu bilinçli bir yer seçimi.** Kayıt siparişin KENDİ verisinden türer
-   * (`discount_id` + `discount_amount`), yani çağıranın hatırlamasına bağlı değil. Kapıya (checkout)
-   * yazılsaydı elle sipariş girişi (09.8), WhatsApp ajanı ve kapıda satış aynı şeyi ayrı ayrı
-   * hatırlamak zorunda kalırdı — ve hatırlamayan ilk yol kotayı sessizce delerdi. Açık zaten böyle
-   * doğmuştu: indirim siparişe yazılıyordu, kullanım kaydı hiçbir yerde yazılmıyordu (09.6).
+   * Sipariş, kalemleri ve (indirim varsa) kullanım kaydı tek transaction'da (`create_order`): kullanım kaydı olmayan
+   * indirimli sipariş kotayı sessizce deler. Kota RPC'de tükenir ki sipariş açan her yol aynı kuralı çağıranın hatırlamasına bağlı kalmadan uygulasın.
    */
   async create(
     order: OrderInsert,
     lines: CreateOrderItemInput[],
-    /**
-     * Kuponun hangi KAPISINDAN girildi (`discount_code.id`). Kotayı bölmez — yalnız "hangi dil
-     * karşılık buldu" kırılımı. Otomatik kampanyada ve kodsuz yollarda boş.
-     */
+    /** Kuponun hangi kodundan girildiği; kotayı bölmez, yalnız kırılım içindir. */
     opts: { discountCodeId?: string | null } = {},
   ): Promise<{ order: Order; items: OrderItem[] }> {
     // RPC de reddediyor; buradaki kontrol gidiş-dönüşü boşuna harcamamak için (mesaj aynı).
     if (lines.length === 0) throw new Error('order: kalemsiz sipariş açılamaz');
 
-    // Doğrulama YİNE Zod'da: gövde jsonb olarak gidiyor diye şema atlanmaz, yoksa tipsiz bir
-    // nesne doğrudan tabloya akardı. `appToDb` camelCase→snake_case çevirir — RPC gelen anahtarları
-    // tablonun kolonlarıyla KESİŞTİRDİĞİ için adların birebir tutması şart.
-    //
-    // Para bu yüzden burada euro'ya iner (`rpcMoneyToEuro`, 02.9): `unitPriceCents` olduğu gibi
-    // gitseydi `unit_price_cents` anahtarı üretirdi, öyle bir kolon yok, anahtar sessizce düşerdi.
-    // Bu yolda `not null` kısıtı patladı ve hatayı görünür kıldı — kısıtı olmayan bir kolonda satır
-    // fiyatsız doğar ve hiçbir yerde hata çıkmazdı.
+    // Gövde jsonb gitse de Zod'dan geçer; RPC anahtarları tablonun kolonlarıyla kesiştirdiği için adlar birebir tutmalı.
+    // Para bu yüzden burada euro'ya iner: `unitPriceCents` gibi bir anahtar kolonla eşleşmez ve sessizce düşerdi.
     const orderId = await this.executeRpc<string>('create_order', {
       p_order: appToDb(rpcMoneyToEuro(this.insertSchema.parse(order), ORDER_MONEY_FIELDS)),
       p_items: lines.map((line) => appToDb(rpcMoneyToEuro(CreateOrderItemSchema.parse(line), ITEM_MONEY_FIELDS))),
       p_discount_code_id: opts.discountCodeId ?? null,
     });
 
-    // Yazılan satırı GERİ OKURUZ, gönderdiğimizi yansıtmayız: varsayılanlar (`status`, `created_at`),
-    // tetikleyiciler ve numeric yuvarlaması veritabanının kararıdır. Çağıranın elindeki nesne
-    // veritabanındakiyle aynı olmalı.
-    //
-    // **Kalemlerin sırası artık GİRDİ sırası değil, okuma sırasıdır.** Toplu yazımda dönen dizi girdiyle
-    // hizalıydı; burada ayrı bir okuma var. Kalemi kimliğinden (`variantId`, `bundleId`) tanıyın —
-    // `items[i] ↔ lines[i]` varsayan bir çağıran bir gün yanlış kalemi işler.
+    // Yazılan satır geri okunur, çünkü varsayılanlar ve tetikleyiciler veritabanının kararıdır. Kalem sırası
+    // okuma sırasıdır; kalemi kimliğinden tanıyın.
     const created = await this.getWithItems(orderId);
     if (!created) throw new Error(`[order.create] sipariş yazıldı ama okunamadı: ${orderId}`);
     return created;
   }
 
   /**
-   * **Hazırlık onayı** (06.5): depocunun onayladığı partiler yazılır ve her kalemin
-   * `fulfilled_qty`'si Σ parti olur — ikisi `record_preparation` RPC'sinde bölünemez şekilde.
-   *
-   * Fiili stok BURADA DÜŞMEZ: mal hâlâ depoda/araçta, "ayrılmış" durumdadır. Düşüm teslimde (07.7).
-   * Sipariş edilenden fazlası hazırlanamaz; eksik olabilir (kısmi karşılama).
+   * Hazırlık onayı: onaylanan partiler ve kalemin `fulfilled_qty`'si `record_preparation`da bölünmez yazılır.
+   * Fiili stok burada düşmez, mal hâlâ ayrılmıştır; düşüm teslimdedir.
    */
   async recordPreparation(orderId: string, picks: readonly PreparationPick[]): Promise<PreparationResult> {
     if (picks.length === 0) throw new Error('order: kalem seçimi boş olamaz');
@@ -349,11 +290,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Kapanış** (07.7): kâr kalemleri SABİTLENİR (DOMAIN §12 — "kapanış = `completed`'a geçiş anı").
-   * COGS gerçek maliyettir: tüketilen partilerin kendi alış fiyatından, ortalamadan değil.
-   *
-   * `payment_fee` burada yazılmaz — komisyon oranları para modülüyle (12) gelir; uydurma oranla
-   * doldurmak kârı sessizce yanlış gösterirdi.
+   * Kapanış: kâr kalemleri sabitlenir; mal maliyeti tüketilen partilerin kendi alış fiyatıdır.
    */
   async close(
     orderId: string,
@@ -376,11 +313,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Kalem düzeltmesi** (07.8/07.9): eksik çıkan ya da geri gelen adet. Kalemin `fulfilled_qty`'si,
-   * kalem–parti kaydı, ayrılmış stok ve (teslim sonrası iadede) fiili stok tek transaction'da
-   * tutarlı kalır — yarısı yazılırsa "para iade edildi ama mal ortada yok" hâli doğar.
-   *
-   * Para BURADA YAZILMAZ: iade borcu motorda türetilir, hareketi uygulama kapısı yazar (12.2).
+   * Kalem düzeltmesi: `fulfilled_qty`, kalem–parti kaydı ve stok tek transaction'da tutarlı kalır, yoksa
+   * "para iade edildi ama mal ortada yok" hâli doğar. Para burada yazılmaz.
    */
   async adjustFulfillment(orderId: string, lines: readonly FulfillmentAdjustment[], actorId?: string | null): Promise<FulfillmentResult> {
     if (lines.length === 0) throw new Error('order: düzeltme listesi boş olamaz');
@@ -399,12 +333,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Kapıda tek yazım: düzeltme + teslim** (21.271 · denetim bulgusu 8).
-   *
-   * `adjustFulfillment` + `deliver` ardışık çağrıldığında ikincisi `stale` dönerse birincisi geri
-   * alınmıyordu — yarım bir teslim kalıyordu. RPC ikisini bölünmez yapıyor; künye ve gerekçe
-   * `0020_order_return.sql`de. Düzeltmesiz teslimde `p_lines` boş geçilir ve kapı yalnız teslimi
-   * yazar, yani çağıranın iki ayrı yol tutmasına gerek yok.
+   * Kapıda tek yazım: düzeltme ve teslim bölünmez, yoksa ikincisi `stale` döndüğünde yarım bir teslim kalırdı.
+   * Düzeltmesiz teslimde `p_lines` boş geçilir.
    */
   async deliverWithAdjustments(
     orderId: string,
@@ -437,7 +367,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     orderId: string,
     from: OrderStatus,
     actorId?: string | null,
-    /** İptalin sebebi (07.14) — ekran buna göre farklı cümle kurar; `null` "sebep yazılmadı" demek. */
+    /** İptalin sebebi — ekran buna göre farklı cümle kurar; `null` "sebep yazılmadı" demek. */
     reason?: OrderCancelReason | null,
   ): Promise<CancelResult> {
     const raw = await this.executeRpc('cancel_order', {
@@ -450,15 +380,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Hızlı satış** (07.10): kapı önü tek adım — `draft → completed`. Rezervasyon yok, stok
-   * fiiliden anında düşer; referans ve kâr kalemleri aynı transaction'da yazılır.
-   *
-   * **Tahsilat BURADA YAZILMAZ** (12.2): paranın kaynağı hareket tablosudur. Çağıran satıştan
-   * hemen sonra `recordForOrder` ile tahsilatı yazar — böylece kapı önü nakdi kasanın bakiyesine
-   * de düşer.
-   *
-   * Karar vermez: geçişin izinli olduğuna motor, referansa motor karar verir — parametre olarak
-   * gelirler. RPC yalnız fiziksel gerçeği korur (olmayan mal satılmaz).
+   * Hızlı satış: `draft → completed` tek adımda, stok fiiliden anında düşer. Tahsilat burada yazılmaz;
+   * çağıran hemen ardından hareketi yazar ki nakit kasaya da düşsün.
    */
   async quickSale(input: {
     orderId: string;
@@ -485,9 +408,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     return QuickSaleResultSchema.parse(rpcMoneyToCents(dbToApp(raw), ['cogsAmount']));
   }
 
-  // Kalem–parti eşlemesinin üç okuması BURADAN TAŞINDI (02.8) → `OrderItemBatchService`.
-  // Üçü de ham `this.supabase` ile yazılmıştı; junction tablosu kendi alt sınıfını hak ediyor
-  // (`STACK §6`). Üçü birlikte gitti — birini burada bırakmak aynı tabloyu iki eve bölerdi.
+  // Kalem–parti eşlemesinin okumaları `OrderItemBatchService`te: junction tablosu kendi alt sınıfındadır.
 
   /**
    * Kimlik listesinden siparişler — **toplu okumaların N+1 kalkanı.**
@@ -502,15 +423,9 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * Deponun KAPI SATIŞLARI — en yeni önce, sabit tavan (yerinde satış ekranının "son satışlar"
-   * görünümü, 21.119). Tavan sayfalama değil BİLİNÇLİ SINIRDIR: bu okuma satış ANINDA "az önce
-   * yazdığım kayıt ne oldu, kim yazmış" kontrolüdür; geçmiş dökümü muhasebe/web'in işidir ve
-   * oranın okumaları zaten keyset'lidir.
+   * Deponun kapı satışları, en yeni önce; tavan bilinçli, çünkü bu okuma satış anındaki kontroldür.
    */
-  /**
-   * Günün ödemesi tamamlanmamış siparişleri — M1 tahsilat izleme (21.12). Taslak ve iptal dışarıda:
-   * taslağın referansı bile yok, iptalin tahsil edilecek parası yok.
-   */
+  /** Günün ödemesi tamamlanmamış siparişleri; taslağın referansı, iptalin tahsil edilecek parası yok. */
   listUnpaidByDeliveryDate(date: string): Promise<Order[]> {
     return this.getAll(
       {
@@ -538,17 +453,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
 
   /** Müşterinin sipariş geçmişi — en yeni önce, sonsuz kaydırma. */
   /**
-   * Çift sipariş kalkanı — aynı istek anahtarıyla açılmış sipariş var mı.
-   *
-   * Kısmi unique indeks eşzamanlı iki yazımdan birini zaten reddediyor; bu okuma **tekrar gelen**
-   * isteği (çift tıklama, ağın yeniden denemesi) ikinci sipariş açmadan cevaplamak için.
-   *
-   * **`customerId` ZORUNLU ve bu bir güvenlik kararı** (10.08) — kardeşi `findByReference`ın aynı
-   * hükmü, orada baştan vardı burada YOKTU. Anahtarı İSTEMCİ üretiyor: süzgeçsiz bir okumada
-   * başkasının anahtarını gönderen istemci, o siparişin kimliğini ve tutarını cevap olarak alırdı
-   * — üstelik kendi sepeti hiç işlenmeden. Çakışma kötü niyet gerektirmiyor da: iki istemcinin
-   * aynı anahtarı üretmesi yeter. Süzgeç SORGUYA gömülü, çağıranın sonradan yapacağı bir eşitlik
-   * kontrolüne bırakılmadı — unutan ilk çağıran başkasının siparişini okurdu.
+   * Çift sipariş kalkanı: tekrar gelen isteği cevaplar; `customerId` sorguya gömülü, çünkü anahtarı istemci üretir
+   * ve süzgeçsiz okuma başkasının siparişini döndürürdü.
    */
   async findByIdempotencyKey(key: string, customerId: string): Promise<Order | null> {
     const rows = await this.getAll({ idempotencyKey: key, customerId }, { limit: 1 });
@@ -556,16 +462,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Referans numarasıyla sipariş** — müşteriye gösterilen numaranın (`LA-26-…`) okuma kapısı (21.18).
-   *
-   * Kolon benzersiz (`order_reference_key`, kısmi: `reference_no is not null`), yani tek satır döner.
-   * `findByIdempotencyKey`in birebir deseni: benzersiz bir kolondan tek satır — ikisi de `getAll`
-   * `protected` olduğu için servis dışından kurulamaz ve kurulmamalı da (sorgu servisin işi).
-   *
-   * **`customerId` ZORUNLU ve bu bir güvenlik kararı, kolaylık değil.** Numara müşterinin elindedir
-   * ve tahmin edilebilir bir uzayda yaşamaz, ama süzgeçsiz bir okuma "bu numara var mı" sorusunu
-   * numara deneyen birine cevaplardı. Süzgeç sorguya gömülü: çağıranın sonradan yapacağı bir eşitlik
-   * kontrolüne bırakılsaydı, unutan ilk çağıran başkasının siparişini okurdu.
+   * Referans numarasıyla sipariş (tek satır, kolon benzersiz). `customerId` sorguya gömülüdür: süzgeçsiz okuma
+   * "bu numara var mı" sorusunu numara deneyen birine cevaplardı.
    */
   async findByReference(referenceNo: string, customerId: string): Promise<Order | null> {
     const rows = await this.getAll({ referenceNo, customerId }, { limit: 1 });
@@ -573,12 +471,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Müşterinin ödemesi beklenen kart taslağı** (07.18) — en yenisi, yoksa `null`.
-   *
-   * Ödemesi açılmış (`paymentRef` dolu) ve henüz ne onaylanmış ne iptal edilmiş sipariştir. Sepet
-   * "bekleyen bir ödemeniz var" der, Siparişlerim onu "ödeme bekleniyor" satırıyla gösterir — müşteri
-   * sonucu görmeden yeniden ödeyip iki kez çekim yaşamasın. Ödemesi hiç açılamamış taslak (kimliği
-   * boş) beklenen bir ödeme değildir, bu yüzden süzgeçte.
+   * Müşterinin ödemesi beklenen kart taslağı (ödemesi açılmış, ne onaylı ne iptal); müşteri sonucu görmeden
+   * yeniden ödeyip iki kez çekim yaşamasın.
    */
   async findOpenOnlineDraft(customerId: string): Promise<Order | null> {
     const rows = await this.getAll(
@@ -589,9 +483,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Ödemesi beklenen kart taslakları, verilen andan ÖNCE açılmış olanlar** (07.18) — ödeme
-   * zamanlayıcısının kuyruğu, en eskisi önce. Tavan sayfalama değil emniyet: kuyruk her dakika
-   * boşaltılır ve her satır sağlayıcıya bir soru demek; birikmiş bir kuyruk tek turda sağlayıcıyı boğmasın.
+   * Verilen andan önce açılmış, ödemesi beklenen kart taslakları; ödeme zamanlayıcısının kuyruğu. Tavan emniyettir:
+   * her satır sağlayıcıya bir soru demek.
    */
   listOpenOnlineDraftsBefore(before: string, limit = 50): Promise<Order[]> {
     return this.getAll(
@@ -607,47 +500,24 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Bir komşu davetinden doğan siparişler** (17.10) — davetin kaç kez kullanıldığının TEK kaynağı.
-   *
-   * `neighbor_invite` satırında azalan bir sayaç yok: sipariş iptal olunca sayacın geri alınması
-   * gerekirdi ve bir gün biri unuturdu. Kullanım burada SAYILIR (iptalleri eleme kararı çağıranın:
-   * `countNeighborInviteUses`) — defterin, para hareketlerinin ve kupon kotasının aynı deseni.
-   *
-   * `customerId` süzgeci YOK ve bu kardeşlerinin tersi bir karar, bilerek: soru "bu davet doldu mu",
-   * yani cevabı BAŞKALARININ siparişleri. Kimlik süzgeci konsaydı sayı hep sıfır çıkar, sınır hiç
-   * uygulanmazdı. Kapı dışarıya sipariş içeriği vermiyor — sayan taraf yalnız durumları okuyor.
+   * Bir komşu davetinden doğan siparişler — kullanımın tek kaynağı; azalan sayaç iptalde geri alınmayı unuturdu.
+   * Müşteri süzgeci yok, çünkü soru başkalarının siparişleri; dışarı yalnız durumlar çıkar.
    */
   listByNeighborInvite(neighborInviteId: string): Promise<Order[]> {
     return this.getAll({ neighborInviteId });
   }
 
-  /**
-   * Birden çok davete bağlı siparişler — **tek sorguda** (`in`).
-   *
-   * Davet başına `listByNeighborInvite` çağırmak N+1 olurdu ve bunu okuyan yer hesap ekranıdır:
-   * müşterinin açık davetleri kaç taneyse o kadar tur atardı. Boş dizide sorgu HİÇ atılmaz —
-   * PostgREST'te `in.()` sözdizimi hatasıdır ve boş küme zaten boş sonuç demektir.
-   */
+  /** Birden çok davete bağlı siparişler tek sorguda; boş dizide sorgu atılmaz (`in.()` sözdizimi hatasıdır). */
   listByNeighborInvites(inviteIds: readonly string[]): Promise<Order[]> {
     if (inviteIds.length === 0) return Promise.resolve([]);
     return this.getAll({ neighborInviteId: [...inviteIds] });
   }
 
   /**
-   * Müşterinin AÇIK VADELİ siparişleri — vade pozisyonunun (açık bakiye, gecikme) girdisi (09.9).
-   *
-   * Sayfalanmıyor ve bu bilinçli: küme "ödenmemiş borç"tur, yani doğal tavanı olan bir kümedir ve
-   * TAM olması gerekir — eksik bir sayfa "açık bakiye 200 €" derken gerçek 900 € olurdu ve limit
-   * kararı o yanlış sayı üzerine verilirdi. Süzgeç motorun `isOpenCredit` ölçütüyle birebir:
-   * vadeli + tamamı ödenmemiş + iptal değil.
+   * Müşterinin açık vadeli siparişleri (süzgeç `isOpenCredit` ile aynı); sayfalanmaz, çünkü eksik sayfa açık
+   * bakiyeyi yanlış gösterirdi.
    */
-  /**
-   * Müşterinin ciro ve sipariş sayısı — `customer_order_totals` RPC'si (09.9).
-   *
-   * `counts({ customerIds })` KULLANILAMAZ: orada müşteri süzgeci arama grubunun içindedir ve terim
-   * olmadan hiç uygulanmaz (RPC'nin başındaki not). Ayrıca bu okuma iptal edilen siparişi ciroya
-   * katmaz — vazgeçilen sipariş müşterinin kazandırdığı para değildir.
-   */
+  /** Müşterinin ciro ve sipariş sayısı; iptal edilen sipariş ciroya katılmaz. */
   async customerTotals(customerId: string): Promise<{ orderCount: number; revenueCents: number }> {
     const rows = await this.executeRpc<Array<{ order_count: number; revenue: number }>>('customer_order_totals', {
       p_customer_id: customerId,
@@ -661,16 +531,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * TÜM müşterilerin açık vadeli siparişleri — "kaç müşteride gecikme var" sayacının girdisi (09.9,
-   * dashboard 09.3).
-   *
-   * Küme açık BORÇTUR: doğal tavanı var (ödenince düşer) ve tam olması gerekir. Müşteri başına ayrı
-   * sorgu sormak N+1 olurdu — 312 müşteri için 312 tur.
-   *
-   * BEKLEYEN(09.3): PostgREST'in `max_rows` tavanı (1000) bu okumanın üstünde duruyor. Bugün açık borç
-   * o sayının çok altında, ama aşıldığında "gecikmiş vade" sayacı SESSİZCE eksilir. Dashboard aynı
-   * sayacı isteyince ikisi birlikte tek bir toplama RPC'sine taşınacak — sayaç için satır taşımak
-   * zaten yanlış araç.
+   * Tüm müşterilerin açık vadeli siparişleri, tek sorguda. BEKLEYEN(09.3): PostgREST `max_rows` (1000) aşılınca
+   * gecikme sayacı sessizce eksilir; sayaç bir toplama RPC'sine taşınmalı.
    */
   listOpenCredit(): Promise<Order[]> {
     return this.openCreditQuery({});
@@ -685,10 +547,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     return this.getAll(
       { ...extra, onAccount: true },
       {
-        // `status <> 'cancelled'` ve `paymentStatus <> 'paid'`: PostgREST eşitlik süzgeci "değil"
-        // diyemez, bu yüzden KALAN değerler sayılır. İki liste de ENUM'DAN türetilir — elle yazılsa
-        // beşinci bir ödeme durumu eklendiğinde o durumdaki açık borç, açık bakiyeden ve gecikme
-        // sayacından SESSİZCE düşerdi. İki `or` grubu birbirine VE ile bağlanır (bkz. FilterOptions).
+        // PostgREST "değil" diyemediği için kalan değerler sayılır; listeler enum'dan türer ki yeni durum sessizce düşmesin.
         orderBy: 'createdAt',
         orFilters: [
           OrderStatusEnum.options.filter((s) => s !== 'cancelled').map((s) => `status.eq.${s}`).join(','),
@@ -709,16 +568,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * Müşterinin **gerçekten verdiği** sipariş sayısı — taslak ve iptal HARİÇ (17.11).
-   *
-   * `countForCustomer`dan ayrı olması şart ve sebebi ölçülmüş bir kenar hâl: davet kapısı "bu kişi
-   * bizden hiç alışveriş yaptı mı" diye soruyor ve o soruya **yarıda bırakılmış bir checkout**
-   * (`draft`) ya da **iptal edilmiş bir sipariş** "evet" cevabı veremez. Ham sayımla sorulsaydı,
-   * ödeme adımında vazgeçmiş bir ziyaretçi "zaten müşterimiz" sayılır ve bir daha HİÇ davet
-   * edilemezdi — sessizce, çünkü bir davetin yazılmaması hiçbir yerde hata vermez.
-   *
-   * `returned` DAHİL: iade edilmiş sipariş olmuş bir sipariştir (iptal "hiç olmadı", iade "oldu ve
-   * döndü" — indirim kotası sayımının aynı ayrımı).
+   * Müşterinin gerçekten verdiği sipariş sayısı (taslak ve iptal hariç, iade dahil). Ham sayım yarım kalmış checkout'u
+   * "zaten müşterimiz" sayar ve o kişi bir daha davet edilemezdi.
    */
   countPlacedForCustomer(customerId: string): Promise<number> {
     return this.count({
@@ -728,15 +579,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Bir andan SONRA verilen sipariş sayısı** — kimlik şüphesinin ağırlığını ölçer (04.10).
-   *
-   * Cevaplanmayan bir kimlik sorusu tek başına bir şey söylemez: müşteri kodu unutmuş olabilir,
-   * mesajı görmemiş olabilir. Ama o sorudan SONRA sipariş gelmeye devam ediyorsa ortada bekleyen
-   * bir insan var demektir — ve o siparişler, kimliği doğrulanmamış birinin adına başkasının
-   * kaydına yazılıyordur. Operatörün ekranda gördüğü sayı budur; kapı değil, aciliyet ölçüsü.
-   *
-   * Süzgeç `countPlacedForCustomer` ile AYNI (taslak ve iptal hariç, iade dahil) — iki sayının
-   * farklı şeyleri sayması, ekrandaki "3 sipariş" ile karttaki "2 sipariş"i açıklanamaz kılardı.
+   * Bir andan sonra verilen sipariş sayısı: cevaplanmayan kimlik sorusundan sonra sipariş sürüyorsa aciliyet artar.
+   * Süzgeç `countPlacedForCustomer` ile aynı, iki sayı farklı şeyler saymasın.
    */
   countPlacedForCustomerSince(customerId: string, since: string): Promise<number> {
     return this.count(
@@ -746,18 +590,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Parası ALINMIŞ ve ayakta duran sipariş sayısı** — getiren ödülünün geri alınıp alınmayacağı
-   * buradan sorulur (★ karar 7 · 17.08).
-   *
-   * Getiren ödülünün kaynağı sipariş DEĞİL, getirilen kişinin kimliğidir (`refId = newCustomerId`,
-   * *"aynı kişiyi iki kez getiremezsin"*). O yüzden "bir siparişi iptal oldu" ödülü düşürmeye
-   * yetmez: ödül *"bu kişi gerçekten müşterimiz oldu"* olgusudur ve kişinin ödenmiş başka bir
-   * siparişi kaldıysa olgu sürüyordur. Ölçülmeden yazılsaydı, getirilen müşterinin İKİNCİ
-   * siparişini iptal etmesi getirenin ilk siparişte hak ettiği ödülü silerdi.
-   *
-   * `status` süzgeci şart: iptal edilmiş ama parası henüz iade edilmemiş sipariş `payment_status`
-   * olarak hâlâ `paid` görünür (`statusOf` — iptalde karşılanan tutar 0 sayılır, net tahsilat
-   * ondan büyüktür). Onu saymak, iptal edilmiş bir siparişi "ayakta" kabul etmek olurdu.
+   * Parası alınmış ve ayakta duran sipariş sayısı: getiren ödülü kişiye bağlıdır, ödenmiş başka siparişi kaldıysa ödül
+   * düşmez. İptal edilip parası henüz dönmemiş sipariş `paid` görünür, bu yüzden durum süzgeci şart.
    */
   countPaidForCustomer(customerId: string): Promise<number> {
     return this.count({
@@ -777,14 +611,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Sipariş ekranının listesi** (09.7) — süzgeçli, keyset sayfalı, en yeni önce.
-   *
-   * `listByStatus`'ten farkı sayfalanması ve süzgeç kümesi: o, depo/kurye kuyruğunun dar sorusunu
-   * ("şu durumdakiler, şu gün") yanıtlar; bu, operatörün serbest taramasını.
-   *
-   * ARAMA İKİ EKSENLİDİR ve müşteri ekseni DIŞARIDAN gelir: "müşterinin neyinde aranır" sorusunun
-   * cevabı `UserProfileService.search`'tedir. Buraya kopyalansaydı sipariş araması bir gün telefonu
-   * kapsar, müşteri araması kapsamaz olurdu.
+   * Sipariş ekranının listesi: süzgeçli, keyset sayfalı, en yeni önce. Müşteri ekseninde arama
+   * `UserProfileService.search`ten gelir, kopyası iki aramayı ayrıştırırdı.
    */
   listPage(filters: OrderListFilters = {}, opts: { cursor?: KeysetCursor; limit?: number } = {}): Promise<Page<Order>> {
     if (emptyScope(filters)) return Promise.resolve({ rows: [], nextCursor: null });
@@ -798,22 +626,15 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * Kargo künyesini yazar (07.12) — paketi kapatan kişi etiketi elinde tutar, o yüzden hazırlık
-   * ekranının işi; ayrı bir "sevk" adımı açılmıyor.
-   *
-   * Rota siparişine yazılamaz ve bu kural VERİDE duruyor (`order_carrier_only_shipping`): ekran
-   * unutsa bile yazılamaz. Unutulduğunda müşteri hiç çalışmayacak bir takip bağlantısı görürdü.
+   * Kargo künyesini yazar; hazırlık ekranının işi. Rota siparişine yazılamaz ve kural veride durur
+   * (`order_carrier_only_shipping`).
    */
   setShipment(id: string, carrier: Order['carrier'], trackingNumber: string | null): Promise<Order> {
     return this.update({ id, carrier, trackingNumber });
   }
 
   /**
-   * Sekme sayaçları + alt şerit toplamı — TEK okuma (`order_counts()`).
-   *
-   * Sayılar SÜZGECİN TAMAMINA aittir, yüklenmiş sayfaya değil: sayfadan hesaplanan sekme sayacı
-   * listenin kuyruğunu yutar ve operatör "bugün altı işim var" diye yanlış karar verir. Altı sekme
-   * için altı `HEAD` sayım + üç toplam yerine bir tur.
+   * Sekme sayaçları ve toplam tek okumada (`order_counts()`). Sayılar süzgecin tamamına aittir, yüklenmiş sayfaya değil.
    */
   async counts(filters: OrderListFilters = {}): Promise<OrderCounts> {
     // Kapsam boşsa RPC hiç çağrılmaz: sıfırlar zaten doğru cevap ve sorgu atmanın karşılığı yok.
@@ -861,20 +682,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * Operasyon kuyruğu: duruma (ve varsa güne) göre. Depo/kurye ekranlarının okuması.
-   *
-   * `warehouseId` verilirse yalnız o deponun kuyruğu — depocu başka deponun siparişini görmez (C5)
-   * ve zaten hazırlayamaz: partiler siparişin deposundan seçilir. Verilmezse depo-üstü (admin).
-   *
-   * **Süzgeç TEK depo da olabilir, KÜME de** (25.08): telefondaki depocunun tek deposu vardır, ama
-   * masaüstündeki yöneticinin kapsamı bir listedir (`ctx.warehouseIds`). İkinci bir metot açmak aynı
-   * kuyruğu iki kapıdan okutmak olurdu. Boş dizi = "hiçbiri" (`.in(…, [])`), `undefined` = depo-üstü —
-   * ayrım `CLAUDE §1`'in kuralı ve burada da aynen geçerli.
-   *
-   * **`id` süzgeci kuyruğun ÖLÇÜTLERİNİ değiştirmez** (10.1 · hazırlık kâğıdı): tek bir siparişi
-   * adresleyen çağıran da aynı durum/depo kapısından geçer. Yani kapanmış ya da başka deponun
-   * siparişinin kimliği verilse liste BOŞ döner — "kimlikle istedim, o hâlde bana ver" diye bir
-   * kestirme yok.
+   * Operasyon kuyruğu: duruma ve güne göre; depo süzgecinde boş dizi hiçbiri, `undefined` depo-üstüdür.
+   * `id` süzgeci kuyruğun ölçütlerini değiştirmez, kapanmış siparişin kimliği boş döner.
    */
   listByStatus(
     status: OrderStatus | OrderStatus[],
@@ -884,13 +693,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       warehouseId?: string | readonly string[];
       orderId?: string;
       /**
-       * **Tavan hangi UÇTAN dolsun** (25.08 · ölçüldü). Varsayılan `asc` ve hazırlık kuyruğu için
-       * doğru: en eski sipariş önce hazırlanır, tavana dayanılırsa da bekleyen iş kaybolmaz.
-       *
-       * Ama `limit` ile birlikte kullanan ve sonucu YENİDEN eskiye sıralayan çağıran için tam tersi
-       * doğrudur (`warehouse/returns`): en eski N'i alıp en yeniyi başa koymak, tavana dayanan
-       * ekranın tam da göstermesi gereken satırları pencerenin dışında bırakır — ve bunu sessizce
-       * yapar, çünkü liste dolu görünür.
+       * Tavan hangi uçtan dolsun: hazırlık kuyruğu için en eski önce doğrudur; sonucu yeniye sıralayan çağıran
+       * `desc` ister, yoksa göstermesi gereken satırlar pencerenin dışında kalırdı.
        */
       orderDirection?: 'asc' | 'desc';
     } = {},
@@ -907,16 +711,8 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
-   * **Kuryenin günü** (11.1) — `courierId` ZORUNLUDUR, seçenek değil: "yalnız kendi teslimatları"
-   * kuralı böylece imzada durur, çağıranın süzmeyi hatırlamasına bağlı kalmaz.
-   *
-   * `deliveryRunId` süzgeci (18.08): sefer kapanışı SEFERİN duraklarını sayar, günün değil — iki
-   * rotalı günde ikinci rotanın durakları birinci seferin mutabakatına karışmamalı.
-   *
-   * `deliveryRunIds` (31.08): **araç bir ara depodur** ve içinde birden çok seferin — bugünün de
-   * yarının da — durakları durabilir. Gün ekranı artık GÜNE değil ARACA bakıyor; süzgeç bu yüzden
-   * sefer KÜMESİ alıyor. Kurye süzgeci yine imzada: `listByRuns` de var ama o sahiplik sormuyor
-   * (geçmiş sefer sayacı), buradaki okuma kuryenin kendi ekranıdır.
+   * Kuryenin günü: `courierId` zorunlu, "yalnız kendi teslimatları" kuralı imzada durur. Araç bir ara depo olduğu
+   * için süzgeç sefer kümesi alır; sefer kapanışı günü değil seferin duraklarını sayar.
    */
   listByCourier(
     courierId: string,
@@ -942,25 +738,19 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     );
   }
 
-  /**
-   * Günün ROTA siparişleri — kurye rota seçim ekranının yük sayacı (18.08). Kuryeye süzülmez:
-   * seçilecek rotanın durakları henüz kimsenin değil, seferi başlatan claim eder.
-   */
+  /** Günün rota siparişleri — rota seçim ekranının yük sayacı; kuryeye süzülmez, durakları seferi başlatan alır. */
   listRouteOrdersByDate(date: string): Promise<Order[]> {
     return this.getAll({ deliveryDate: date, deliveryType: 'route' }, { orderBy: 'createdAt', limit: 500 });
   }
 
-  /** Bir küme seferin damgalı siparişleri — geçmiş sefer listesinin durak sayacı (18.08). */
+  /** Bir küme seferin damgalı siparişleri — geçmiş sefer listesinin durak sayacı. */
   listByRuns(runIds: readonly string[]): Promise<Order[]> {
     return this.getAll({ deliveryRunId: [...runIds] });
   }
 
   /**
-   * **Durum ilerletme** — `transition_order_status` RPC'si üzerinden: durum güncellemesi + log satırı
-   * tek transaction'da, üstelik yalnız BEKLENEN kaynaktan (koşullu). Araya biri girmişse yazmaz,
-   * `ok:false` + `stale` döner ve çağıran yeniden karar verir.
-   *
-   * Geçişin izinli olup olmadığı burada SORGULANMAZ — motor karar verir, bu uç kararı uygular.
+   * Durum ilerletme: durum ve log tek transaction'da, yalnız beklenen kaynaktan; araya biri girdiyse `stale` döner.
+   * Geçişin izni burada sorgulanmaz, motor karar verir.
    */
   async transition(input: {
     orderId: string;

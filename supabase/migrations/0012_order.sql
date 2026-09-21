@@ -1,17 +1,12 @@
--- Modül 07 — Sipariş omurgası (07.6): sipariş, kalemleri, kalem-parti eşlemesi, durum geçiş kaydı.
--- Kurallar: ORDER_LIFECYCLE.md (tamamı), DOMAIN §5 (fiyat/indirim), §6 (teslimat), §7 (ödeme), §8 (kısmi).
---
--- İki eksen ayrıdır ve karıştırılmaz: `status` siparişin YOLCULUĞU (ORDER_LIFECYCLE),
--- `payment_status` PARANIN durumu — ikincisi TÜRETİLİR, elle set edilmez (DOMAIN §7, motor 03.6).
+-- Sipariş omurgası: sipariş, kalemleri, kalem–parti eşlemesi, durum geçiş kaydı (kurallar ORDER_LIFECYCLE.md).
+-- `status` siparişin yolculuğu, `payment_status` paranın durumu; ikincisi türetilir, elle yazılmaz.
 
 create type order_status as enum (
   'draft', 'confirmed', 'preparing', 'ready', 'out_for_delivery',
   'delivered', 'completed', 'cancelled', 'returned'
 );
--- *Nereden kapandı* — kanaldan (b2b/b2c) BAĞIMSIZ eksen (CHANNELS §2).
--- `messenger` ve `instagram` 07.09'da geldi (15.23, kullanıcı kararı): sepet o sohbette KURULUYOR
--- ve ödeme sitede tamamlansa bile sipariş sohbetin kanalını taşır — "satışın kapandığı yer,
--- sepetin netleştiği yerdir" (ADR-001'in 07.09 okuması). Sohbetin dokunduğu sepet sohbetin siparişidir.
+-- Nereden kapandı — kanaldan bağımsız eksen. Sohbette kurulan sepetin siparişi, ödeme sitede tamamlansa da
+-- sohbetin kanalını taşır: satışın kapandığı yer sepetin netleştiği yerdir.
 create type order_source as enum ('web', 'whatsapp', 'messenger', 'instagram', 'door', 'manual');
 create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
 /**
@@ -28,15 +23,11 @@ create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
 create type order_cancel_reason as enum ('payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff');
 -- `on_account` (vadeli) BU LİSTEDE DEĞİL: vade bir yöntem değil, siparişin bayrağıdır (DOMAIN §7).
 create type payment_method as enum ('online', 'cash', 'card', 'cheque', 'bank_transfer');
--- "Mal müşteriye NASIL ulaşır" — üç gerçek cevap: bizim aracımız · taşıyıcı · müşterinin kendisi.
--- `pickup` 26.08'de eklendi (kullanıcı kararı): yerinde satışta mal hiç GİTMEZ, müşteri alır —
--- depo kapısında ya da kuryenin arabasından. O güne kadar böyle bir satış varsayılana düşüp
--- `route` yazılıyordu, yani aracımızın gitmediği bir teslimat rota teslimatı sayılıyordu:
--- adressiz, bölgesiz, kuryesiz bir "rota siparişi". Kimse fark etmiyordu çünkü sipariş geçerli
--- görünüyor, yalnız teslimat tipine göre kırılan her rapor onu yanlış kovaya koyuyordu.
+-- Mal müşteriye nasıl ulaşır: bizim aracımız · taşıyıcı · müşterinin kendisi (`pickup`: yerinde satışta mal
+-- gitmez). Varsayılana düşen yerinde satış rota sayılsaydı teslimat tipine göre kırılan her rapor yanılırdı.
 create type delivery_type as enum ('route', 'shipping', 'pickup');
--- Kargo taşıyıcısı (07.12). TANIMLI küme çünkü takip bağlantısı URL kalıbından üretilir; `other`
--- kümeyi kapatmamak için — yeni bir taşıyıcıyla çalışmaya başlamak migration beklememeli.
+-- Kargo taşıyıcısı: tanımlı küme, çünkü takip bağlantısı URL kalıbından üretilir; `other` yeni taşıyıcı
+-- migration beklemesin diye.
 create type carrier as enum ('colissimo', 'chronopost', 'dhl', 'ups', 'other');
 create type vat_treatment as enum ('domestic', 'intra_eu_b2b_reverse_charge');
 -- İade edilen kalemde MALA ne oldu (DOMAIN §8). `goodwill` = mal müşteride kaldı.
@@ -53,47 +44,14 @@ create table public.order (
   is_gift_order boolean not null default false,
 
   status order_status not null default 'draft',
-  -- NEDEN iptal oldu (07.14 · müşteri şeridinin ölçümü). `null` = iptal edilmedi.
-  --
-  -- Kolon bir raporlama süsü değil, MÜŞTERİYE YANLIŞ CÜMLE KURULMASINI engelliyor: onay ekranı
-  -- iptal edilmiş her siparişte "Kartınızdan tahsilat yapılmadı" diyordu ve bu üç yolun ikisinde
-  -- doğru, birinde YANLIŞ — stok kalmadığı için otomatik iade edilen siparişte para GERÇEKTEN
-  -- çekilmiş ve geri verilmişti (`stripe-webhook.ts` → `stripe.refunds.create`). Ekranın ayırt
-  -- edecek sinyali yoktu; `payment_status` da ayırmıyor, çünkü iade dalında tahsilat hiç yazılmıyor
-  -- ve durum `pending` kalıyor.
-  --
-  -- Neden `refund_issued boolean` DEĞİL: o alan yalnız bu ekranın sorusunu cevaplardı. Sebep iki
-  -- soruyu birden cevaplıyor — müşteriye hangi cümle kurulacak VE operasyonun iptal listesindeki
-  -- "neden" sütunu (bugün sipariş kaydından hiç cevaplanamıyor).
-  --
-  -- Para izi AYRI bir sorudur ve bilinçle burada değil: iade dalında ne tahsilat ne iade hareketi
-  -- yazılıyor (`refundAndCancel` künyesi) — defter bakiye olarak doğru, ikisi de yok. Bu kolon
-  -- "para hareket etti mi" demez, "neden iptal oldu" der; `out_of_stock` ile `payment_failed`
-  -- farkı zaten paranın çekilip çekilmediğini söylüyor.
+  -- Neden iptal oldu (`null` = iptal edilmedi): müşteriye doğru cümle kurulur, çünkü stok bitince otomatik
+  -- iade edilen siparişte para çekilip geri verilmiştir ve `payment_status` bunu ayırmaz.
   cancel_reason order_cancel_reason,
-  -- SAĞLAYICIYA İADE damgası (07.14). `null` = sağlayıcı ödemesi iade edilmedi.
-  --
-  -- `cancel_reason`dan AYRI bir kolon, çünkü ikisi AYRI SORULAR ve bir dalda ayrışıyorlar:
-  -- sebep "neden iptal oldu" der, bu "para çekilip geri verildi mi" der. `out_of_stock` dalında
-  -- ikisi çakışıyor (iptalin sebebi de para hareketinin sebebi de aynı), ama webhook'un BİRİNCİ
-  -- iade dalında çakışmıyor: sipariş zaten `superseded` diye iptal edilmiş, sonradan gelen ödeme
-  -- iade ediliyor. Sebebi `out_of_stock`a çevirmek YALAN olurdu (stok kalmıştı), sebepsiz bırakmak
-  -- ise ekranın "tahsilat yapılmadı" demesine yol açıyordu — oysa para çekilmiş ve geri verilmişti.
-  --
-  -- Bu, `settleRefund`'ın yazdığı MÜŞTERİ İADE BORCUNDAN farklıdır: orada mal eksik geldiği için
-  -- müşteriye para borçluyuz ve defterde hareket vardır. Burada sipariş hiç doğmadı; para gelip
-  -- geri gitti, defter net sıfır (`refundAndCancel` künyesi). Damga o net sıfırın izidir.
-  --
-  -- Bayrak değil TARİH: "ne zaman iade edildi" destek konuşmasının ilk sorusudur ("ekstremde
-  -- görünmüyor" diyen müşteriye tarih söylenir), ve boolean onu bir daha cevaplayamaz.
+  -- Sağlayıcıya iade damgası: sebepten ayrı soru ("para çekilip geri verildi mi"), webhook'un geç ödeme iadesinde
+  -- sebep `superseded` kalırken para dönmüştür. Tarih, çünkü destek konuşmasının ilk sorusu "ne zaman"dır.
   provider_refunded_at timestamptz,
-  -- SAĞLAYICIDAKİ ÖDEME KİMLİĞİ (07.18) — Stripe PaymentIntent (`pi_…`); ödeme açılırken yazılır
-  -- (`createCheckoutSession`). Önce yalnız sağlayıcının künyesinde (`metadata.order_id`) duruyordu
-  -- ve siparişe dönüşün TEK yolu webhook'tu: olay gelmezse (tünel kapalı, uç yanlış yapılandırılmış)
-  -- sistem "bu sipariş ödendi mi" diye SORAMIYORDU — taslak süresiz "onaylanıyor"da kalıyor, müşteri
-  -- yeniden ödeyince eski ödeme durdurulamıyordu. Kimlik bizde olunca ödeme sayfası ve 30 dakikalık
-  -- zamanlayıcı sağlayıcıya sorar (`reconcileDraftPayment`), yeni denemede eski ödeme iptal edilir.
-  -- Kısmi unique: bir ödeme tek siparişe bağlanır.
+  -- Sağlayıcıdaki ödeme kimliği (Stripe PaymentIntent): webhook gelmezse ödeme sayfası ve zamanlayıcı "ödendi mi"
+  -- diye bununla sorar, yeni denemede eski ödeme iptal edilir. Kısmi unique: bir ödeme tek siparişe bağlanır.
   payment_ref text,
   -- TÜRETİLİR (net tahsilat vs karşılanan tutar) — elle set edilmez, motor hesaplar (03.6).
   payment_status payment_status not null default 'pending',
@@ -101,12 +59,8 @@ create table public.order (
   -- Vadeli mi: yalnız `credit_enabled` müşteride true; peşin ödemesiz `confirmed` olur (DOMAIN §7).
   on_account boolean not null default false,
 
-  -- **BİR SİPARİŞ TEK DEPODAN ÇIKAR** (DOMAIN §17, istisnasız). Bölünmüş sipariş yoktur; kendi
-  -- deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur — aynı siparişin ikinci
-  -- deposu olmaz. Kaynağı ya adresin posta kodudur (uzaktan sipariş) ya işlemi yapan personelin
-  -- sabit deposudur (kapı önü satış); VARSAYILAN DEPO KAVRAMI YOKTUR.
-  -- `not null` + 0031'deki ertelenmiş kısıt: siparişe yazılan partiler de bu depodan olmak zorunda.
-  -- FK YOK: `warehouse` 0031'de açılır.
+  -- Sipariş tek depodan çıkar ve varsayılan depo yoktur; partilerin bu depodan olduğunu 0031'deki ertelenmiş
+  -- kısıt tutar. FK yok: `warehouse` 0031'de açılır.
   warehouse_id uuid not null,
 
   delivery_type delivery_type not null default 'route',
@@ -114,31 +68,23 @@ create table public.order (
   -- aynı zamanda SNAPSHOT'tır — sonradan bölge sınırı değişse sipariş bozulmaz.
   delivery_zone_id uuid,
   delivery_date date,                                -- rota günü; kargoda null
-  -- Bu sipariş bir KOMŞU DAVETİNDEN mi geldi (17.10). Künye alanı: davetin ödülü buradan doğar ve
-  -- davetin kaç kez kullanıldığı bu kolondan SAYILIR — davet satırında azalan bir sayaç yok, çünkü
-  -- sipariş iptal olunca sayacın da geri alınması gerekirdi ve biri mutlaka unuturdu.
-  -- FK YOK: `neighbor_invite` tablosu 0044'te açılıyor (`delivery_zone_id` ile birebir aynı desen).
+  -- Komşu davetinden mi geldi; kullanım bu kolondan sayılır, azalan sayaç iptalde geri alınmayı unuturdu.
+  -- FK yok: `neighbor_invite` 0044'te açılır.
   neighbor_invite_id uuid,
   address_id uuid references public.address (id) on delete set null,
   -- Adresin sipariş anındaki kopyası: adres sonradan düzeltilse bile sipariş neyi nereye gönderdiğini bilir.
   address_snapshot jsonb,
   courier_id uuid references public.user_profiles (id) on delete set null,
-  -- Hangi GERÇEKLEŞEN seferle gitti (18.08, `docs/feature/sefer.md`). Yalnız `start_delivery_run`
-  -- yazar, teslimle donar — `courier_id` sonradan oynasa da "kim götürdü"nün kanıtlı cevabı budur.
-  -- FK YOK: `delivery_run` 0046'da açılır (`delivery_zone_id` ile birebir aynı desen).
+  -- Hangi gerçekleşen seferle gitti; yalnız `start_delivery_run` yazar, teslimle donar.
+  -- FK yok: `delivery_run` 0046'da açılır.
   delivery_run_id uuid,
   delivery_country country_code not null default 'FR', -- DE B2C → OSS eşiği izlemi (DOMAIN §5)
 
   vat_number_snapshot text,                          -- reverse charge'da o anki geçerli no (denetim kanıtı)
   vat_treatment vat_treatment not null default 'domestic',
 
-  -- SİPARİŞİN DİLİ — müşterinin bu siparişi verirken okuduğu dil (14.5). Sipariş maillerinin dili
-  -- buradan gelir, profilden DEĞİL: profil sonradan değişebilir (hesap ekranından, ya da aynı şirket
-  -- hesabından başka biri sipariş verince) ve o an eski siparişin maili dil değiştirirdi. Aynı gerekçe
-  -- `address_snapshot`'ta da geçerli: siparişe ait olan bilgi siparişte durur.
-  --
-  -- NULL = "bilinmiyor" → okuyan taraf profilin `preferred_language`'ına düşer. Web checkout dolduruyor;
-  -- hızlı satış ve operasyon girişi doldurmuyor — orada müşterinin okuduğu bir yüzey yok, tahmin de yok.
+  -- Siparişin dili: sipariş mailleri profilden değil buradan okunur, profil sonradan değişebilir.
+  -- NULL = bilinmiyor → okuyan taraf profilin diline düşer.
   locale preferred_language,
 
   -- Sistemin ürettiği referans (LA-26-7K4M2P) — resmî fatura no DEĞİL. İLK KALICI DURUMDA üretilir
@@ -151,12 +97,7 @@ create table public.order (
   invoice_no text,                                   -- dış muhasebeden sonradan eşleşir
   delivery_proof jsonb,                              -- imza/foto + onaylayan + zaman (DOMAIN §6)
 
-  -- KARGO KÜNYESİ (07.12) — yalnız `delivery_type = 'shipping'` siparişlerde anlamlı.
-  --
-  -- Taşıyıcı TANIMLI KÜME, serbest metin değil: takip bağlantısını üretmek için URL kalıbı gerekir
-  -- ve serbest metinden çıkmaz — o zaman tasarımın "Kargoyu takip et ↗" düğmesinin karşılığı
-  -- olmazdı. `other` kümeyi kapatmamak için var (yeni taşıyıcı bir migration bekleyemez); o
-  -- seçilince bağlantı gösterilmez, numara düz metin durur.
+  -- Kargo künyesi — yalnız kargo siparişinde anlamlı; `other` seçilince takip bağlantısı gösterilmez.
   carrier carrier,
   tracking_number text,
   -- Rota siparişine kargo künyesi YAZILAMAZ: kendi aracımızla giden malın taşıyıcısı ve takip
@@ -166,36 +107,14 @@ create table public.order (
 
   -- Para (DOMAIN §5). Kargo ücreti KDV'ye tabidir.
   shipping_fee numeric(10, 2) not null default 0,
-  -- ── İKİ TUTAR, İKİ AYRI SORU (kullanıcı kararı 01.09) ────────────────────────────────────────
-  --
-  -- Burada bir zamanlar tek bir `total` vardı ve adı, taşıdığı anlamdan genişti. Sonuç ölçüldü:
-  -- yedi ayrı okuyucu onu "bu siparişin borcu" diye okudu ve eksik giden malın parasını da istedi
-  -- — sipariş listesi, kurye durağı, banka eşleştirme kuyruğu, açık bakiye, toplam bloğu, KDV
-  -- satırı. Aynı siparişe iki ekran iki farklı borç yazıyordu. Alan yanlış değildi; ADI yanlıştı,
-  -- ve genel bir ad her okuyanı kendi sorusunu ona sormaya davet ediyordu.
-  --
-  -- `ordered_total` — SİPARİŞ ANINDA ANLAŞILAN tutar (Σ kalem − indirim + kargo). Bir kez yazılır,
-  -- DONUKTUR. Sahibi olduğu sorular: Stripe ödeme niyeti hangi tutarla açılacak · vade limitinden
-  -- ne düşecek · müşterinin onay mailinde hangi rakam var · anlaşmazlıkta neye bakılacak. Motor
-  -- da hazırlık kesinleşmeden bunu okur (`payment-status.ts` künyesi: kalemlerden yeniden toplamak
-  -- indirim payı dağıtılmamışsa yanlış cevap veriyordu).
-  --
-  -- `revenue_total` — GERÇEKLEŞEN CİRO (giden malın tutarı). Kalemlerden TÜRETİLİR, tetikleyiciyle;
-  -- taslakta 0'dır ve bu doğrudur, henüz hiçbir şey gitmemiştir. Sahibi olduğu sorular: kâr ·
-  -- analitik cirosu · fatura tutarı · ne tahsil edilecek.
-  --
-  -- NEDEN SAKLANIYOR, TÜRETİLMİYOR: rapor tarafı SQL'den okuyor (`analytics_order_revenue`) ve SQL
-  -- TypeScript motorunu çağıramaz. Ciro kolon olarak durmak zorunda — türetmekle çözülmüyor.
-  --
+  -- `ordered_total` sipariş anında anlaşılan tutar, donuktur (ödeme niyeti, vade limiti, onay maili).
+  -- `revenue_total` gerçekleşen ciro, kalemlerden tetikleyiciyle türer; rapor SQL'den okuduğu için saklanır.
   ordered_total numeric(10, 2) not null default 0,
   revenue_total numeric(10, 2) not null default 0,
   discount_id uuid,                                  -- FK YOK: `discount` tablosu 09'da; tek indirim (üst üste binmez)
   discount_amount numeric(10, 2) not null default 0,
-  -- İnen indirimin MÜŞTERİYE GÖRÜNEN adı, sipariş anındaki hâliyle ({"fr":"Offre de bienvenue",...}).
-  -- Neden kopya: kampanya sonradan yeniden adlandırılabilir, süresi dolabilir, silinebilir; ama o
-  -- siparişin maili ve fişi ne dediyse onu demeye devam etmeli. `discount_id` üzerinden okusaydık
-  -- geçmiş bir belgenin metni bugünkü tanıma göre değişirdi. NULL = ad verilmemiş → yüzey genel
-  -- "İndirim / Remise / Rabatt"a düşer.
+  -- İndirimin müşteriye görünen adı, sipariş anındaki hâliyle: kampanya sonradan değişse de belgenin metni değişmemeli.
+  -- NULL = ad verilmemiş → yüzey genel "İndirim" sözcüğüne düşer.
   discount_label jsonb,
   -- CACHE — kaynak `MoneyMovement` (modül 12). Ödeme durumu bunlardan TÜRETİLİR.
   amount_collected numeric(10, 2) not null default 0,
@@ -221,21 +140,8 @@ create index order_status_idx on public.order (warehouse_id, status, delivery_da
 -- Kuryenin günü.
 create index order_courier_idx on public.order (courier_id, delivery_date) where courier_id is not null;
 
--- KANAL DONAR (27.08, `03.12`). Sipariş açılırken müşteri tipinden bir kez türetilir
--- (`deriveChannel`) ve bir daha değişmez: müşteri sonradan şirkete dönse bile GEÇMİŞ siparişin
--- kanalı sabit kalır.
---
--- Kural motorda yazılıydı (`canChangeChannel`, hep `false`) ama SORAN da zorlayan da yoktu —
--- `OrderUpdateSchema` tam `partial()` olduğu için kanal sonradan yazılabilir bir alandı. İhlal
--- eden bir yol bugün YOK; bu yüzden düzeltilen aktif bir arıza değil, **korumasız bir kural**.
---
--- Neden veride de zorlanıyor: kanal `vat_treatment`ı ve fiyat kademesini belirliyor. Kapanmış bir
--- siparişin kanalını oynatmak, parası alınmış bir belgenin vergisini geriye dönük değiştirmek
--- demektir — ve hiçbir yer itiraz etmediği için SESSİZCE olurdu. Şema yalnız kendi kapısından
--- geçeni korur; doğrudan SQL yazan bir betiği (besleme, düzeltme, elle müdahale) yalnız burası
--- durdurur.
---
--- `is distinct from` değil düz `<>`: kolon `not null`, dolayısıyla null dalı yok.
+-- Kanal donar: KDV işlemesini ve fiyat kademesini belirlediği için sonradan değişmesi alınmış paranın vergisini
+-- geriye dönük oynatırdı. Şema kendi kapısını korur; doğrudan SQL yazan betiği yalnız bu tetikleyici durdurur.
 create function public.order_channel_frozen() returns trigger
 language plpgsql
 as $$
@@ -269,30 +175,10 @@ create table public.order_item (
   -- etiketini sessizce boşaltmak, siparişi "tek tek alınmış" gibi göstermek olurdu.
   bundle_id uuid references public.bundle (id) on delete restrict,
   unit_price numeric(10, 2) not null,                -- CHECKOUT BAŞLANGICINDA sabitlenir (DOMAIN §5)
-  -- ── PAZARLIK İZİ (kullanıcı kararı 26.08) ─────────────────────────────────
-  -- Elle sipariş girişinde ve yerinde satışta fiyat alanı LİSTE fiyatıyla dolu gelir; satıcı
-  -- pazarlık ederse üstüne yazar. Bu iki kolon "üstüne yazılmadan ÖNCE ne yazıyordu ve kim
-  -- değiştirdi" sorusunun cevabıdır.
-  --
-  -- **Neden saklanıyor:** yalnız son fiyat yazılsaydı kayıt *"ürün 11,00 €'ya satıldı"* derdi,
-  -- *"1,50 € taviz verildi"* demezdi — ve kâr motoru (12.6) katkıyı ciro üzerinden hesapladığı
-  -- için kapıda verilen kişisel taviz ile planlanmış kampanya indirimi aynı kovaya düşerdi.
-  -- Biri bütçelenmiş bir maliyet, öteki tek tek verilmiş bir karar; ayrılmazlarsa ikisi de
-  -- yönetilemez.
-  --
-  -- **Neden `line_discount_amount` DEĞİL:** o kolon kupon/kampanya havuzunun ve
-  -- `discount_amount = Σ line_discount_amount` ertelenmiş kısıtına giriyor, yani kotayı tüketiyor.
-  -- Pazarlık bir kupon değildir, kotası yoktur ve bir kampanyaya bağlanamaz.
-  --
-  -- **NULLABLE ve anlamı var:** `null` = pazarlık olmadı, liste fiyatı `unit_price`in kendisidir
-  -- (`warehouse_variant_threshold`in "satır yoksa genel kural işler" deseni). Her normal checkout
-  -- kalemine aynı sayıyı ikinci kez yazmak, veriyi büyütüp hiçbir soruya yeni cevap vermezdi.
-  -- Türetme bu yüzden imzalıdır: taviz = `coalesce(list_unit_price, unit_price) − unit_price`;
-  -- eksi çıkabilir ve bu bir hata değildir (acele/az miktar listenin üstüne satılabilir).
+  -- Pazarlık izi: üstüne yazılmadan önceki liste fiyatı; kampanya indirimi ile kişisel taviz ayrı yönetilsin diye
+  -- `line_discount_amount`a girmez (o kotayı tüketir). `null` = pazarlık olmadı; taviz imzalı türetilir.
   list_unit_price numeric(10, 2) check (list_unit_price >= 0),
-  -- Kim değiştirdi. `restrict`: pazarlığı olan bir personel kaydı silinemez — iz sahipsiz kalırsa
-  -- "kim verdi" sorusu cevapsızdır ve kolonun tek varlık sebebi odur. GDPR anonimleştirmesi satırı
-  -- silmez, alanlarını temizler; bu bağ onu engellemez.
+  -- Kim değiştirdi; `restrict`, çünkü iz sahipsiz kalırsa "kim verdi" sorusu cevapsızdır.
   price_set_by uuid references public.user_profiles (id) on delete restrict,
   -- Yarım iz diye bir şey yoktur: ya ikisi de yazılır ya hiçbiri. Tek başına bir liste fiyatı
   -- "birileri indirdi" der ama kimin indirdiğini söylemez — kaydın kendisi soruyu açar, cevabı
@@ -303,17 +189,8 @@ create table public.order_item (
   line_discount_amount numeric(10, 2) not null default 0,
   vat_rate numeric(4, 2) not null,
   return_disposition return_disposition,
-  -- AKIBETİN GEREKÇESİ (04.09) — "stoğa dön"ün ZORUNLU kıldığı beyan.
-  --
-  -- D6 (kurye dönüşü) ekranı `restock` seçildiğinde sebep notunu zorunlu tutuyor ve gerekçesi soğuk
-  -- zincir: geri gelen malın yeniden satılabilir olduğunu birinin BEYAN etmesi gerekir. Ölçüldü
-  -- 04.09: o beyan hiçbir yere yazılmıyordu — `adjust_fulfillment` notu yalnız stok hareketinin
-  -- serbest metnine geçiriyor, o dal ise D6 yolunda (mal hiç çıkmamış dönüş) hiç ateşlenmiyor.
-  -- Yani depocuya zorunlu tutulan cümle ekrandan çıkıp KAYBOLUYORDU.
-  --
-  -- Not stok hareketine değil KALEME yazılır, çünkü beyan malın kendisi hakkında: aynı kalem
-  -- ileride başka bir soruyla (geri çağırma, müşteri itirazı, denetim) açıldığında "neden yeniden
-  -- satılabilir sayıldı" sorusunun cevabı burada durmalı. Stok hareketi o beyanın SONUCU.
+  -- Akıbetin gerekçesi: "stoğa dön"ün zorunlu soğuk zincir beyanı. Kaleme yazılır, çünkü beyan malın kendisi
+  -- hakkındadır ve stok hareketi onun sonucudur.
   return_note text
 );
 create index order_item_order_idx on public.order_item (order_id);
@@ -423,14 +300,8 @@ alter table public.order_item enable row level security;
 alter table public.order_item_batch enable row level security;
 alter table public.order_status_log enable row level security;
 
--- ── Durum geçişi (07.6) ──────────────────────────────────────────────────────
--- NEDEN RPC: iki koşul birden (STACK §13). (a) Eşzamanlılık: iki kişi aynı siparişi aynı anda
--- ilerletebilir (depocu "hazır" derken kurye "yolda" der) — koşullu update olmadan biri diğerini
--- sessizce ezer. (b) Bölünemez yazım: durum + log satırı birlikte yazılmalı; log düşerse teslim anı
--- ve geri bildirim zamanlaması izsiz kalır.
---
--- Fonksiyon geçişin İZİNLİ olup olmadığına KARAR VERMEZ — o motorun işi (domain-core/status-machine).
--- Buradaki tek kural fiziksel gerçektir: kaynağından ilerletebilirsin, başkası ilerlettiyse ilerletemezsin.
+-- Durum geçişi RPC'de: eşzamanlı iki ilerletme birbirini ezmesin ve durum ile log birlikte yazılsın.
+-- Geçişin izni motorundur; buradaki tek kural kaynaktan ilerletebilmektir.
 create or replace function public.transition_order_status(
   p_order_id uuid,
   p_from order_status,
@@ -475,45 +346,8 @@ revoke execute on function public.transition_order_status(uuid, order_status, or
   from public, anon, authenticated;
 
 
--- Sipariş ekranının sekme sayaçları ve alt şerit toplamı — TEK okuma (09.7 · STACK §13).
---
--- Tasarım altı sekme gösteriyor ve her birinin yanında canlı bir sayı var ("Hazırlanıyor 6"), altta
--- da özet şerit ("24 sipariş · toplam 3.842 € · kapıda tahsilat 504,50 €"). Bu sayılar SAYFANIN
--- değil, süzgecin TAMAMININ sayılarıdır: yüklenmiş ilk sayfadan hesaplanan sekme sayacı, listenin
--- kuyruğunu sessizce yutar ve operatör "bugün altı işim var" diye yanlış karar verir.
---
--- Altı sekme için altı `HEAD` sayım + üç toplam için ayrı okumalar = dokuz tur. Burada bir tur.
---
--- FONKSİYON İŞ KURALI TAŞIMAZ (`product_counts` ile aynı çizgi): yalnız mekanik eşleşme ve toplama
--- yapar. Özellikle:
---   · "Açık tutar" formülü (toplam − tahsil + iade) BURADA YOK — üç kolonun toplamı ayrı ayrı
---     dönüyor, formülü motor uyguluyor (`openAmountCents`). Toplama doğrusal olduğu için sonuç
---     birebir aynı; ama kural tek yerde kalıyor.
---   · Vade gecikmesi de yok: o müşterinin `payment_term_days`'ine ve BUGÜNE bağlı bir karardır,
---     satır satır motorda hesaplanır (checkout freniyle aynı tanım). SQL'e kopyalansaydı iki yer
---     bir gün ayrışırdı.
---
--- TASLAK SİPARİŞ SAYILMAZ: `draft` yarım kalmış bir checkout'tur, sipariş değil — operasyon
--- listesinde görünmez, sayacı da şişirmez. (TTL süpürücüsü onları `cancelled`'a çeker.)
--- ARAMA BURADA TANIMLANMAZ: "müşterinin neyinde aranır" (ad · telefon · e-posta) sorusunun cevabı
--- `UserProfileService.search`'te duruyor ve liste de sayaç da AYNI sonucu kullanmalı. Bu yüzden
--- fonksiyon müşteri kimliklerini hazır alır; kendi başına `user_profiles`'a join atıp ölçütü
--- kopyalasaydı sayaç ile listenin bir gün farklı sayı söylemesi kaçınılmazdı.
--- ── Müşterinin ciro ve sipariş sayısı (09.9) ─────────────────────────────────
--- AYRI bir fonksiyon ve bu zorunlu: `order_counts`'un müşteri süzgeci arama grubunun İÇİNDE durur
--- (`p_reference is null or … or customer_id = any(...)`) çünkü sipariş ekranında arama iki eksenlidir
--- ve "referans VEYA müşteri" demek gerekir. Terim olmadan çağrıldığında o grup daima doğru olur, yani
--- müşteri süzgeci hiç uygulanmaz — ölçüldü (30.07): bir müşteri için 28 sipariş / 1777 € döndü, gerçek
--- 10 sipariş. Müşteri kartı o sayıyı ciro diye gösterirse vade limiti işletmenin tamamının cirosuna
--- göre açılır. Süzgeci AND'lemek sipariş ekranının aramasını bozardı; bu yüzden soru ayrı sorulur.
---
--- İPTAL EDİLEN sipariş ciroya GİRMEZ (`order_counts`'un `base`'i yalnız `draft`'ı dışlar): vazgeçilen
--- bir sipariş müşterinin bize kazandırdığı para değildir. İade (`returned`) girer — o satış oldu ve
--- geri döndü, ciro tarihi onu içerir.
--- BEKLEYEN(12.25): sütun adı `revenue` ama taban `ordered_total` — yani SİPARİŞ EDİLEN. 01.09'daki
--- ad ayrımında davranış bilerek DEĞİŞTİRİLMEDİ (o tur yalnız adlandırmaydı); `revenue_total`a
--- geçmek müşteri kartındaki sayıyı oynatır ve iade edilmiş siparişin katkısını sıfırlar — üstteki
--- künyenin "iade girer" kuralıyla çelişir. Karar ölçümüyle ayrı gelecek.
+-- Müşterinin ciro ve sipariş sayısı ayrı fonksiyon, çünkü `order_counts`un müşteri süzgeci terimsiz çağrıda uygulanmaz;
+-- iptal ciroya girmez, iade girer. BEKLEYEN(12.25): sütun `revenue` ama taban `ordered_total`.
 create or replace function public.customer_order_totals(p_customer_id uuid)
 returns table (order_count int, revenue numeric)
 language sql
@@ -526,6 +360,8 @@ as $$
      and o.status <> 'cancelled';
 $$;
 
+-- Sipariş ekranının sekme sayaçları ve alt toplamı tek okumada; sayılar süzgecin tamamına aittir, sayfaya değil.
+-- İş kuralı taşımaz: "açık tutar" ve vade gecikmesi motorda, arama ölçütü `UserProfileService.search`te.
 create or replace function public.order_counts(
   p_reference text default null,
   p_customer_ids uuid[] default null,
@@ -535,15 +371,8 @@ create or replace function public.order_counts(
   p_payment_status text default null,
   p_from date default null,
   p_to date default null,
-  -- Depo süzgeci (DOMAIN §17). **Tek uuid değil KÜME**, çünkü üç hâl var ve ortadaki tek uuid ile
-  -- ifade edilemiyordu: `null` = depo-üstü (admin/muhasebe) · tek elemanlı dizi = o depo ·
-  -- çok elemanlı = "kapsamımdaki depolar". Kapsamı iki depo olan personel "tümü" dediğinde eskiden
-  -- ya tek depo seçmek zorundaydı ya `null` göndermek — ikincisi kapsam DIŞI depoların siparişlerini
-  -- de sayardı.
-  --
-  -- Boş dizi (`'{}'`) hiçbir satırla eşleşmez ve bu DOĞRU davranış: kapsamsız personel hiçbir şey
-  -- görmez (fail-closed). `null` ile boş diziyi karıştırmamak çağıranın sorumluluğu — servis
-  -- tarafında boş dizi zaten erken dönüyor.
+  -- Depo süzgeci bir küme: `null` depo-üstü, dolu dizi kapsamdaki depolar; boş dizi hiçbir satırla eşleşmez
+  -- (kapsamsız personel hiçbir şey görmez).
   p_warehouse_ids uuid[] default null
 )
 returns table (
@@ -556,14 +385,8 @@ returns table (
   cod_total numeric,
   cod_collected numeric,
   cod_refunded numeric,
-  -- ── SAYILAN İŞ: iptal HARİÇ (21.265) ────────────────────────────────────────
-  -- `total`/`sum_total` iptalleri İÇERİYOR ve bu bilerek: `by_status` sayımı iptal sekmesini
-  -- besliyor, orada görünmeleri gerekiyor. Ama panelin "Bugünkü sipariş / Bugünkü ciro" kartları
-  -- bir İŞ ölçüsü — iptal edilmiş sipariş bir iş değil.
-  --
-  -- Ölçülen çelişki (05.09): kartın BAŞLIĞI `total`dan geliyordu (iptal dâhil), hemen altındaki
-  -- depo kırılımı ve 7 günlük çizgi ise iptali eleyen kaynaklardan. Tek kart kendi içinde üç ayrı
-  -- gerçek söylüyordu ve operatör hangisinin doğru olduğunu ayırt edemiyordu.
+  -- Sayılan iş iptal hariç: `by_status` iptal sekmesini beslediği için toplam iptali içerir, ama panelin
+  -- "bugünkü sipariş/ciro" kartı bir iş ölçüsüdür.
   active_count int,
   active_total numeric
 )
@@ -571,8 +394,7 @@ language sql
 stable
 as $$
   with base as (
-    -- Taban SİPARİŞ EDİLEN (`ordered_total`): sayaçlar "bugün ne kadarlık iş var" diyor, "ne kadarı
-    -- gitti" demiyor. Ciroya geçiş ayrı bir karar (BEKLEYEN(12.25), 01.09 ad ayrımı).
+    -- Taban sipariş edilen tutar: sayaçlar "ne kadarlık iş var" der (BEKLEYEN(12.25)).
     select o.status, o.ordered_total as total, o.amount_collected, o.amount_refunded, o.payment_method,
            o.on_account, o.payment_status
     from public.order o
@@ -590,21 +412,8 @@ as $$
         or (p_customer_ids is not null and o.customer_id = any (p_customer_ids))
       )
   ),
-  -- Kapıda tahsilat: peşin ödenmemiş, vadeye de yazılmamış, yöntemi kapı yöntemi olan sipariş.
-  -- Yöntem eşlemesi bir KURAL değil, enum'ın kendi anlamıdır (online = önceden ödendi).
-  --
-  -- ── İPTAL EDİLEN SİPARİŞİN TAHSİLATI YOKTUR (21.265 · ölçüldü 05.09) ──────
-  -- Süzgeç `cancelled`ı elemiyordu ve taban da yalnız `draft`ı eliyor: iptal edilmiş, ödenmemiş
-  -- her sipariş tutarı kadar KALICI BİR HAYALET ALACAK yazıyordu. Motor aynı siparişe "borç yok"
-  -- diyor (`credit.ts:50` `isOpenCredit` → `status <> 'cancelled'`) ama bu toplam "borç var"
-  -- diyordu — iki kaynak aynı soruya iki cevap veriyordu.
-  --
-  -- Üç tüketici birden yanlış okuyordu: panelin "Bekleyen tahsilat" kartı, sipariş ekranının alt
-  -- şeridi ve **sabah brifingi** (`mcp/tools.ts:78` — patronun günü olmayan bir tahsilat maddesiyle
-  -- başlıyordu). Düzeltme TEK yerde, çünkü üçü de bu kovadan okuyor.
-  --
-  -- Düzeltme `base`e DEĞİL bilerek: `by_status` sayımı iptal sekmesini besliyor ve orada iptaller
-  -- GÖRÜNMELİ. Elenmesi gereken şey siparişin varlığı değil, ondan para bekleniyor olması.
+  -- Kapıda tahsilat: peşin ödenmemiş, vadeye yazılmamış, yöntemi kapı yöntemi olan sipariş. İptal edilen
+  -- siparişten para beklenmez; eleme `base`te değil, çünkü iptal sekmesi iptalleri göstermeli.
   cod as (
     select * from base
     where status <> 'cancelled' and payment_status <> 'paid' and not on_account and payment_method in ('cash', 'card')
@@ -631,58 +440,26 @@ revoke execute on function public.order_counts(text, uuid[], text, text, text, t
 grant execute on function public.order_counts(text, uuid[], text, text, text, text, date, date, uuid[]) to service_role;
 
 
--- ═══ SEPET (07.1) ═══
--- Buraya AYRI BİR MIGRATION dosyasından taşındı (02.11 · denetim P2 — aile içi
--- birleştirme). İçerik değişmedi; eski dosya numarasıyla anılmıyor, çünkü o numara artık yok.
+-- ═══ SEPET ═══
 
--- Modül 07 — Sunucu sepeti (07.1). DOMAIN §4 ("sepette hold yok"), §5 (fiyat sabitleme).
---
--- Sepet SUNUCUDA kalıcıdır: müşteri telefondan ekleyip bilgisayardan devam edebilir; sepet kurtarma
--- e-postasının (Faz 2) zemini de budur. Müşteri başına TEK satır — sepet bir liste değil, bir durum.
---
--- **Sepette stok AYRILMAZ.** Rezervasyon checkout başlarken yapılır (DOMAIN §4); sepet yalnız niyet
--- kaydıdır. Bu yüzden burada rezervasyon bağı yok.
---
--- Kalemler jsonb: sepet kalemi bir VARLIK değil, geçici bir seçim. Ayrı tablo açmak her ekleme/çıkarma
--- için satır yönetimi getirir, karşılığında sorgulanabilirlik kazandırır — sepet sorgulanmaz, okunur.
---
--- ── SEPETİN SAHİBİ MÜŞTERİ YA DA SOHBETTİR (15.22 · kullanıcı kararı 07.09) ──
--- Birincil anahtar bir zamanlar `customer_id`nin kendisiydi ("tek satır / müşteri"). Sohbetten sepet
--- kurma kararı bunu değiştirdi: Messenger/Instagram sohbeti KİMLİKSİZ doğar (PSID telefon taşımaz,
--- `0039` künyesi) ve ajanın orada kurduğu sepetin yazılacak bir müşterisi yoktur. Sepet bu yüzden
--- kendi kimliğini aldı; sahibi ya müşteri ya sohbet (`conversation_id`, `0055`te ekleniyor — tablo
--- burada henüz yok). "Tek satır / sahip" kuralı yine şemada: iki kolon da `unique`.
--- Müşteri sepeti bugüne kadarki bütün yollarda (web, mobil, birleştirme, GDPR silmesi) `customer_id`
--- ile anılmaya devam eder — o kapılar değişmedi, yalnız anahtarın adı "birincil" olmaktan çıktı.
+-- Sunucu sepeti: sahibi başına tek satır (müşteri ya da kimliksiz sohbet, ikisi de `unique`); stok ayrılmaz,
+-- rezervasyon checkout'ta yapılır. Kalemler jsonb, çünkü sepet sorgulanmaz, okunur.
 
 create table public.cart (
   id uuid primary key default gen_random_uuid(),
   -- Müşteri sepeti — "tek satır / müşteri" kuralı `unique` ile şemada. `null` = sohbet sepeti.
   customer_id uuid unique references public.user_profiles (id) on delete cascade,
-  -- [{ variantId, qty, unitPrice, stockId, addedAt }] — `unitPrice` **BAĞLAYICI DEĞİLDİR**:
-  -- gösterim ve değişiklik tespiti içindir (DOMAIN §5, karar 27.07). Fiyat CHECKOUT BAŞLANGICINDA
-  -- sabitlenir — stok ayırma ve ödeme oturumuyla aynı 30 dk'lık pencerede. Sepet aylarca
-  -- bekleyebildiği için buradaki fiyatı bağlayıcı saymak, maliyeti oynayan donuk gıdada doğrudan
-  -- zarardır; fiyat düşmüşse de müşteriye fazla ödetir.
+  -- `unitPrice` bağlayıcı değildir, gösterim ve değişiklik tespiti içindir: fiyat checkout başında sabitlenir,
+  -- aylarca bekleyen sepetin fiyatı bağlayıcı sayılsaydı donuk gıdada zarar doğardı.
   items jsonb not null default '[]'::jsonb,
-  -- **Sonraya kaydedilenler** (K35) — sepetten çıkarılmış ama VAZGEÇİLMEMİŞ kalemler.
-  --
-  -- Teslimat yerine gönderilemeyen ürün sepetten silinmez, buraya taşınır: alışveriş ölmez, sepet
-  -- bölünür (tasarım §7). Müşteri yerini değiştirdiğinde ya da bölge genişlediğinde geri alınır.
-  --
-  -- Aynı satırda ve aynı biçimde duruyor çünkü aynı şeyin iki hâli: ikisi de "bu ürünü istiyorum"
-  -- kaydı, ayrımları yalnız BUGÜN alınıp alınamayacağı. Ayrı tablo, aynı kalemi iki yapıda tutmak
-  -- ve aralarında taşırken iki yazma yolu açmak olurdu.
+  -- Sonraya kaydedilenler: teslimat yerine gönderilemeyen ürün silinmez, buraya taşınır. Aynı satırda, çünkü
+  -- ikisi aynı niyetin iki hâli; ayrı tablo iki yazma yolu açardı.
   saved_items jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default now(),
-  -- Sohbet sepeti (0055): kimliksiz sohbetin (Messenger/IG) niyeti. Kolon BURADA, yabancı anahtarı
-  -- 0055'te — `conversation` tablosu bu dosyadan sonra doğuyor (0039); kısıt ancak o doğunca
-  -- bağlanabilir. `unique`: sohbet başına tek sepet, müşteri başına tek sepetle aynı kural.
+  -- Sohbet sepeti: kimliksiz sohbetin niyeti; FK 0055'te, çünkü `conversation` bu dosyadan sonra doğar.
   conversation_id uuid unique,
-  -- Sepete DOKUNAN sohbet (15.23): ajan WhatsApp'ta yazınca ya da bağlantı devralınınca damgalanır;
-  -- checkout siparişin kaynağını bu sohbetin kanalından yazar, sepet boşalınca satırla birlikte
-  -- gider. Sahiplik DEĞİL, iz: müşteri sepeti müşterinin kalır, yalnız "kim dokundu" bilinir.
-  -- Yabancı anahtarı 0055'te (`set null` — sohbet silinse sepet kalır, izi düşer).
+  -- Sepete dokunan sohbet: checkout siparişin kaynağını bu sohbetin kanalından yazar. Sahiplik değil iz;
+  -- FK 0055'te (`set null`).
   source_conversation_id uuid
 );
 

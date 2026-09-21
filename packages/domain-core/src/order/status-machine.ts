@@ -1,23 +1,16 @@
 import type { OrderStatus } from '@lezzet/types';
 
 /**
- * Sipariş durum makinesi — `ORDER_LIFECYCLE.md` birebir (03.1).
- *
- * Sipariş **katı bir zincir değildir**: izin verilen geçişler kümesidir. Aynı varlık iki yoldan
- * geçebilir — tam yol (uzaktan sipariş) ve hızlı satış (kapı önü, tek adımda kapanır).
- *
- * Bu dosya "geçilebilir mi" sorusunun tek cevap yeridir. Stok/para etkileri BURADA YAPILMAZ;
- * geçişin neyi tetiklediği çağıran katmanın işidir (motor karar verir, uygulama uygular).
+ * Sipariş durum makinesi: katı bir zincir değil, izin verilen geçişler kümesi (tam yol ve hızlı satış).
+ * Stok ve para etkileri burada yapılmaz; motor karar verir, uygulama uygular.
  */
 
 /** Bir durumdan gidilebilecek durumlar. Boş dizi = terminal (çıkışı yok). */
 const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
-  // Sepet/oluşturuluyor. İki çıkış: tam yolun başı (`confirmed`) ve hızlı satış (`completed`).
-  // `cancelled`: TTL dolması / terk edilen checkout (DOMAIN §4 — rezervasyon penceresi).
+  // İki çıkış: tam yolun başı ve hızlı satış; `cancelled` terk edilen checkout içindir.
   draft: ['confirmed', 'completed', 'cancelled'],
 
-  // Tam yol ileri gider; `preparing`/`ready` ATLANABİLİR (küçük sipariş, anında hazır) —
-  // ORDER_LIFECYCLE "Atlanabilir adımlar". Atlama iz bırakmaz demek değildir: her geçiş loglanır.
+  // `preparing`/`ready` atlanabilir (küçük sipariş anında hazır); her geçiş yine loglanır.
   confirmed: ['preparing', 'ready', 'out_for_delivery', 'cancelled'],
   preparing: ['ready', 'out_for_delivery', 'cancelled'],
   ready: ['out_for_delivery', 'cancelled'],
@@ -28,8 +21,7 @@ const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   // Teslim sonrası: kapanış ya da iade süreci.
   delivered: ['completed', 'returned'],
 
-  // İade süreci kapanışı — depo aksiyonu + para iadesi bitince sipariş kapanır; kalıcı
-  // `returned`'da kalmaz.
+  // Depo aksiyonu ve para iadesi bitince sipariş kapanır; kalıcı `returned`'da kalmaz.
   returned: ['completed'],
 
   completed: [],
@@ -42,19 +34,8 @@ export function isTerminal(status: OrderStatus): boolean {
 }
 
 /**
- * **Hazırlık kesinleşti mi** — `fulfilled_qty` bir VERDİKT mi, yoksa henüz yazılmamış bir sayı mı?
- *
- * `fulfilled_qty` yalnız hazırlıkta yazılır (`record_preparation`); ondan önce varsayılanı 0'dır.
- * Bu ayrım gözetilmezse onaylanmış her sipariş "hiçbir kalemi karşılanmamış" görünür ve buna
- * dayanan her hesap yanlış çıkar: tahsil edilecek tutar 0'a iner, peşin ödenmiş sipariş "iade
- * bekliyor" olur, ekran "eksik gitti" der. Oysa mal daha hazırlanmamıştır — eksik giden bir şey yok.
- *
- * **Durum tek başına yetmez, üç bölge var:**
- * - `draft`/`confirmed`/`cancelled` → hazırlık HİÇ başlamadı; sayı bir karar değil.
- * - `preparing` → belirsiz bölge: depo hâlâ topluyor olabilir, ya da eksik toplayıp kararı
- *   beklemek için burada bırakmış olabilir (`lib/order/preparation`: "eksik varsa `preparing`'de
- *   kalır"). Ayıran şey KAYIT: bir kalem bile toplanmışsa hazırlık yazılmıştır.
- * - `ready` ve sonrası → hazırlık bitti; sayı kesindir.
+ * `fulfilled_qty` bir hazırlık kararı mı, yoksa henüz yazılmamış varsayılan mı? Ayrılmazsa onaylı her sipariş
+ * "hiç karşılanmamış" görünür; `preparing`de ayıran şey en az bir kalemin toplanmış olmasıdır.
  */
 export function isFulfillmentSettled(status: OrderStatus, lines: readonly { fulfilledQty: number }[]): boolean {
   if (status === 'draft' || status === 'confirmed' || status === 'cancelled') return false;
@@ -69,10 +50,7 @@ export function allowedTransitions(from: OrderStatus): readonly OrderStatus[] {
 
 export type TransitionCheck = { allowed: true } | { allowed: false; reason: 'same_status' | 'terminal' | 'not_allowed' };
 
-/**
- * Geçiş izinli mi. İzin verilmeyen geçiş bir HATA DEĞERİDİR, fırlatma değil (ORDER_LIFECYCLE
- * "Uygulama notu" + STACK §8) — çağıran `{data, error}` sözleşmesine çevirir.
- */
+/** Geçiş izinli mi; izinsiz geçiş fırlatma değil hata değeridir. */
 export function canTransition(from: OrderStatus, to: OrderStatus): TransitionCheck {
   if (from === to) return { allowed: false, reason: 'same_status' };
   if (isTerminal(from)) return { allowed: false, reason: 'terminal' };
@@ -80,14 +58,8 @@ export function canTransition(from: OrderStatus, to: OrderStatus): TransitionChe
 }
 
 /**
- * Geçişin stok etkisi (ORDER_LIFECYCLE "Stok etkileşimi"). Karardır — yazımı çağıran yapar.
- *
- * İncelik: `→ confirmed` her zaman "şimdi ayır" demek DEĞİLDİR. Online ödemede stok checkout
- * başında (sipariş `draft`ken, TTL'li) ayrılmıştır; o durumda `confirmed` geçişi stok tarafında
- * bir şey yapmaz. Bu yüzden çağıran, rezervasyonun zaten var olup olmadığını bildirir.
- *
- * `cancelled`/`returned` etkisi **depoya çıpalıdır**: mal fiziksel olarak depoya girdiğinde işler,
- * kapıda değil (DOMAIN §4). `out_for_delivery → ready` (ulaşılamadı) stoğu HİÇ değiştirmez.
+ * Geçişin stok etkisi; online ödemede stok checkout başında ayrıldığı için `→ confirmed` her zaman ayırma değildir.
+ * `cancelled`/`returned` etkisi mal depoya girdiğinde işler, kapıda değil.
  */
 export type StockEffect =
   | 'none'
@@ -109,32 +81,8 @@ export function stockEffectOf(
 }
 
 /**
- * **Bu geçiş hangi kapıdan yazılır** — düz durum yazımı mı, kendi RPC'si mi?
- *
- * ── NEDEN VAR (denetim 26.08) ────────────────────────────────────────────────
- * Operasyon sipariş detayının "İzinli geçişler" şeridi `allowedTransitions`ı SÜZMEDEN düğmeye
- * çeviriyor ve hepsini düz yazıma (`transition_order_status`) yolluyordu. Ölçüldü: şeritten iptal
- * edilen sipariş `cancelled` görünüyor ama **ayrılmış malı serbest kalmıyordu**; şeritten teslim
- * edilen sipariş `delivered` görünüyor ama **fiili stok hiç düşmüyordu**. İkincisi daha ağır — mal
- * müşteride, sayı depoda. Kapıda/vadeli siparişte rezervasyonun TTL'i olmadığı için süpürücü de o
- * satırı görmüyor: hasar kalıcı, üstelik `cancelled` terminal olduğu için doğru kapı da kapanmış
- * oluyordu.
- *
- * ── AYIRAN ÖLÇÜT: STOK İŞİNİN ZAMANI, VARLIĞI DEĞİL ──────────────────────────
- * İlk yazılışı "stok etkisi varsa kapı ister" idi ve YANLIŞTI — ölçünce çıktı: `→ confirmed`in
- * etkisi `reserve`dir ama ayırma geçişten ÖNCE, ayrı bir adımda yapılır (`reserveOrderStock`), yani
- * o kural bugünkü checkout'u kırardı. Doğru ölçüt şu:
- *
- *   · **önce** yapılan iş (`→ confirmed`: ayırma) → düz kapı doğrudur, geçiş yalnız kaydeder.
- *   · **sonra** yapılan iş (`→ returned`: akıbet depoda işlenince) → düz kapı doğrudur, geçiş
- *     süreci açar.
- *   · **geçişin KENDİSİYLE, aynı transaction'da** yapılan iş → kendi kapısı şarttır. Araya düz
- *     yazım girerse durum ilerler ve stok yazımı HİÇ olmaz; yarım kalmış bir geçiş, hiç olmamış
- *     geçişten beterdir çünkü geri dönüşü de kapatır.
- *
- * `stockEffectOf` bu ayrımı tek başına veremez: `release_on_warehouse_return` değeri iki farklı
- * zamanı birden taşıyor (iptalde geçişle birlikte, iadede sonra). O yüzden kapı adıyla söylenir —
- * ve ad gerçek bir RPC'ye karşılık gelir, uydurma bir sınıflandırmaya değil.
+ * Geçiş hangi kapıdan yazılır: stok işi geçişin kendisiyle aynı transaction'da yapılıyorsa kendi RPC'si şarttır,
+ * yoksa düz yazımla durum ilerler ve stok hiç yazılmazdı.
  */
 export type OrderGate = 'plain' | 'cancel_order' | 'deliver_order' | 'quick_sale';
 
@@ -145,30 +93,14 @@ export function gateFor(from: OrderStatus, to: OrderStatus): OrderGate {
   return 'plain';
 }
 
-/** Düz durum yazımı bu geçiş için YETERSİZ mi — çağıranın tek soracağı soru. */
+/** Düz durum yazımı bu geçiş için yetersiz mi — çağıranın tek soracağı soru. */
 export function needsDedicatedGate(from: OrderStatus, to: OrderStatus): boolean {
   return gateFor(from, to) !== 'plain';
 }
 
 /**
- * **Bu geçişin anı KİMİN** — sahanın mı, ofisin mi, sistemin mi (09.29 · kullanıcı notları 11.09:
- * "sipariş durumu kontrolsüz geçiyor", "web operasyonda sipariş durum geçişleri kısıtlanmalı").
- *
- * `gateFor` "hangi kapıdan" sorusunu cevaplar, bu fonksiyon "kimin anı" sorusunu; ikisi ayrı
- * sorulardır. `ready → out_for_delivery` düz kapıdan geçer ama anı kuryenindir — mal araca yüklenir.
- * Operasyonun sipariş detayı düz kapıdan geçen HER geçişi düğme yapıyordu. 12.09'da ölçülen sonucu:
- * web'den "hazırlandı" denen siparişte kutu mühürlenmediği ve eksik beyan edilmediği için karşılanan
- * adet sıfır kaldı, ödenmiş sipariş tam tutarlık iade borcu taşıdı; aynı zincirin sonundaki
- * "iade → tamamlandı" iade adımını hiç çalıştırmadı.
- *
- * - **Saha:** hazırlık (`preparing`, `ready` — depo uygulaması, kutu ve eksik beyanıyla), araca
- *   yükleme (`out_for_delivery` — kurye; kargoda taşıyıcı takibi), kapıdaki üç sonuç (teslim ·
- *   ulaşılamadı · reddedildi) ve yerinde satış. Bu akışların kendi kapıları stoğu, kutuyu ve parayı
- *   birlikte yazar; web'deki ekranları 07.09'da söküldü.
- * - **Ofis:** iptal (kendi kapısından, "Kararlar" bloğu), teslimden sonra iade süreci (müşteri
- *   şikâyeti) ve kapanış (`→ completed` — nasıl kapanacağı 07.16'da bekliyor, o gelene kadar ofiste).
- * - **Sistem:** taslağın öteki iki çıkışı — onay (ödeme ya da sipariş verme akışı) ve terk edilen
- *   sepetin süpürülmesi.
+ * Geçişin anı kimin: saha (depo ve kurye uygulaması, kapı satışı), ofis (iptal, iade süreci, kapanış) ya da
+ * sistem (taslağın onayı ve süpürülmesi). Düz kapıdan geçen geçiş bile anı sahibinden yazılır.
  */
 export type TransitionOwner = 'field' | 'office' | 'system';
 
@@ -179,29 +111,21 @@ export function transitionOwner(from: OrderStatus, to: OrderStatus): TransitionO
 }
 
 /**
- * **Operasyon ekranının sunabileceği geçişler:** izinli, düz kapıdan geçen ve anı ofisin olan.
- * Sipariş detayının şeridi de liste satırı da süzgeci buradan okur — ayrı yazılsalar bir gün
- * ayrışırlar (26.08'in dersi). İptal burada YOK: ofisindir ama kendi kapısından geçer.
+ * Operasyon ekranının sunabileceği geçişler: izinli, düz kapıdan geçen ve anı ofisin olan. Sipariş detayı
+ * ve liste aynı süzgeci buradan okur; iptal kendi kapısından geçtiği için burada yok.
  */
 export function officeTransitions(from: OrderStatus): OrderStatus[] {
   return allowedTransitions(from).filter((to) => !needsDedicatedGate(from, to) && transitionOwner(from, to) === 'office');
 }
 
-/**
- * `reference_no` bu geçişte üretilir mi — kural: **ilk kalıcı durum** (`confirmed`, hızlı satışta
- * `completed`). Numara rastgeledir ve hacim sızdırmaz (DATA_MODEL Kalıcı kararlar).
- */
+/** `reference_no` ilk kalıcı durumda üretilir (`confirmed`, hızlı satışta `completed`). */
 export function producesReferenceNo(from: OrderStatus, to: OrderStatus): boolean {
   if (from !== 'draft') return false;
   return to === 'confirmed' || to === 'completed';
 }
 
 /**
- * Tam yolun ANA HATTI — sipariş normalde bu adımlardan geçer. Zincir katı değildir (adım
- * atlanabilir), bu yüzden liste bir kural değil bir ÖLÇÜTTÜR: zaman çizelgesi "hangi adım
- * atlandı" sorusunu buna bakarak yanıtlar.
- *
- * `draft` yok (sipariş sayılmaz), `cancelled`/`returned` yok (ana hat değil, sapma).
+ * Tam yolun ana hattı: kural değil ölçüt; zaman çizelgesi atlanan adımı buna bakarak bulur.
  */
 export const MAIN_PATH: readonly OrderStatus[] = [
   'confirmed',
@@ -213,14 +137,8 @@ export const MAIN_PATH: readonly OrderStatus[] = [
 ];
 
 /**
- * İki durum arasında ana hatta ATLANAN adımlar — "hazırlanıyor" hiç yazılmadan `ready`'e geçilmişse
- * o adım atlanmıştır.
- *
- * Zaman çizelgesi atlanan adımı SİLMEZ, gri gösterir: "burada bir şey olmadı" ile "burası hiç
- * yoktu" farklı şeylerdir ve ikincisi, siparişin neden hızlı kapandığını gizler.
- *
- * Ana hat dışına çıkan geçişte (iptal, iade, ulaşılamadı) atlama YOKTUR — sapma bir adım eksikliği
- * değildir.
+ * İki durum arasında ana hatta atlanan adımlar; çizelge onları gri gösterir, çünkü siparişin neden hızlı
+ * kapandığını gizlememeli. Ana hat dışına çıkan geçişte atlama yoktur.
  */
 export function skippedBetween(from: OrderStatus | null, to: OrderStatus): OrderStatus[] {
   const toIndex = MAIN_PATH.indexOf(to);

@@ -1,17 +1,8 @@
--- Modül 07 — Teslim ve kapanış (07.7). ORDER_LIFECYCLE, DOMAIN §4 (stok), §6 (teslim onayı), §12 (kâr).
---
--- İKİ AYRI AN, iki ayrı fonksiyon — `DOMAIN §12` görev satırından ayrılıyor:
---   • **Teslim** (`delivered`): malın fiziksel gerçeği değişir — ayrılmış düşer, fiili düşer.
---   • **Kapanış** (`completed`): kâr kalemleri SABİTLENİR (snapshot). §12 birebir: "kapanış =
---     `completed`'a geçiş anıdır". Teslim ile kapanış arasında iade/kısmi düzeltme olabilir;
---     maliyeti teslimde dondurmak o düzeltmeleri kârın dışında bırakırdı.
---
--- NEDEN RPC (her ikisi de): eşzamanlılık (koşullu geçiş) + bölünemez çok-tablolu yazım.
--- Yarıda kesilirse "stok düştü ama sipariş teslim görünmüyor" gibi elle düzeltilecek hâl doğar.
+-- Teslim ve kapanış iki ayrı an: teslimde malın fiziksel gerçeği değişir, kapanışta kâr kalemleri sabitlenir.
+-- İkisi de RPC, çünkü koşullu geçiş ve çok tablolu yazım yarıda kalırsa elle düzeltilecek hâl doğar.
 
 -- ── Teslim ────────────────────────────────────────────────────────────────────
--- Stok, hazırlıkta yazılan KALEM–PARTİ kaydından düşer (0015): hangi partiden kaç adet çıktığı
--- zaten belli. Rezervasyon da burada biter — mal artık müşterinin.
+-- Stok hazırlıkta yazılan kalem–parti kaydından düşer; rezervasyon da burada biter.
 create or replace function public.deliver_order(
   p_order_id uuid,
   p_actor_id uuid default null,
@@ -39,12 +30,8 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'stale', 'current_status', v_current);
   end if;
 
-  -- Fiili stok düşümü: partiler kilitli okunur, sonra düşülür.
-  --
-  -- **MALIN ÇIKTIĞI AN BURASIDIR ve deftere burada yazılır** (06.14). `record_preparation` yalnız
-  -- kalem–parti eşlemesini kurar, fiili stoğa dokunmaz — yani "hazırlandı" bir çıkış değildir, mal
-  -- hâlâ raftadır. Defter satırı bu yüzden hazırlıkta değil TESLİMDE doğar; okuma katmanının
-  -- yıllarca elle ayırmaya çalıştığı ayrım (`hasLeftShelf`) artık verinin kendisinde.
+  -- Malın çıktığı an burasıdır ve deftere burada yazılır: hazırlık yalnız kalem–parti eşlemesini kurar,
+  -- mal hâlâ raftadır. Partiler kilitli okunup düşülür.
   for v_batch in
     select b.stock_id, sum(b.qty) as qty, max(s.purchase_price) as unit_cost
       from public.order_item_batch b
@@ -83,11 +70,7 @@ end;
 $$;
 
 -- ── Kapanış ───────────────────────────────────────────────────────────────────
--- Kâr kalemleri burada SABİTLENİR (DOMAIN §12): sonradan değişen oran/maliyet geçmiş kârı bozmasın.
--- COGS gerçek maliyettir — tüketilen partilerin kendi alış fiyatından, ortalamadan değil.
---
--- `payment_fee` BURADA HESAPLANMAZ: komisyon oranları para modülüyle (12) gelir; o zamana kadar
--- null kalır. Uydurma bir oranla doldurmak, kârı sessizce yanlış gösterirdi.
+-- Kâr kalemleri sabitlenir; `payment_fee` burada hesaplanmaz, uydurma oran kârı yanlış gösterirdi.
 create or replace function public.close_order(
   p_order_id uuid,
   p_actor_id uuid default null,
@@ -111,15 +94,12 @@ begin
     raise exception 'close_order: sipariş bulunamadı (%)', p_order_id;
   end if;
 
-  -- İki kaynaktan kapanır: normal teslim (`delivered`) ve iade sürecinin bitişi (`returned` —
-  -- ORDER_LIFECYCLE: sipariş kalıcı `returned`'da kalmaz, depo aksiyonu + para iadesi bitince kapanır).
+  -- İki kaynaktan kapanır: normal teslim ve iade sürecinin bitişi.
   if v_current not in ('delivered', 'returned') then
     return jsonb_build_object('ok', false, 'reason', 'stale', 'current_status', v_current);
   end if;
 
-  -- Gerçek COGS: tüketilen partilerin kendi alış fiyatı (DOMAIN §12). İade edilip stoğa dönen mal
-  -- kalem–parti kaydından düşüldüğü için (0020) buraya kendiliğinden girmez; imha/jest edilenin
-  -- maliyeti ise kaydı korunduğu için burada KALIR — kayıp o siparişin kârında görünür.
+  -- Stoğa dönen mal kalem–parti kaydından düştüğü için buraya girmez; imha edilenin maliyeti kalır.
   select coalesce(sum(b.qty * coalesce(s.purchase_price, 0)), 0) into v_cogs
     from public.order_item_batch b
     join public.order_item i on i.id = b.order_item_id

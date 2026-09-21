@@ -16,14 +16,8 @@ import {
 } from '../primitives/enums.schema';
 import { LocalizedTextDraftSchema } from '../primitives/localized-text.schema';
 
-// Order — sipariş omurgası (ORDER_LIFECYCLE, DOMAIN §5–§8).
-//
-// İki eksen ayrıdır: `status` siparişin YOLCULUĞU, `paymentStatus` PARANIN durumu. İkincisi
-// TÜRETİLİR (net tahsilat vs karşılanan tutar) — elle set edilmez, motor hesaplar
-// (`domain-core/payment.derivePaymentStatus`).
-//
-// `channel` müşteri tipinden türetilip sipariş anında SABİTLENİR; `orderSource` ondan bağımsız
-// bir eksendir (*nereden kapandı*). Fiyatlar checkout başlangıcında sabitlenir (DOMAIN §5).
+// İki eksen ayrıdır: `status` siparişin yolculuğu, `paymentStatus` paranın durumu (motor türetir, elle yazılmaz).
+// `channel` sipariş anında sabitlenir; `orderSource` ondan bağımsız bir eksendir.
 
 export const OrderSchema = z.object({
   id: z.string().uuid(),
@@ -34,33 +28,16 @@ export const OrderSchema = z.object({
   isGiftOrder: z.boolean(),
 
   status: OrderStatusEnum,
-  /**
-   * İptalin sebebi — `null` = iptal edilmedi (07.14).
-   *
-   * Onay ekranı iptal edilmiş her siparişte "tahsilat yapılmadı" diyordu ve `out_of_stock`
-   * dalında bu YANLIŞTI: para çekilmiş ve iade edilmişti. `paymentStatus` da ayırmıyor, çünkü o
-   * dalda tahsilat hiç yazılmıyor ve durum `pending` kalıyor.
-   */
+  /** İptalin sebebi — `null` = iptal edilmedi; `paymentStatus` "para çekilip iade edildi" dalını ayırmaz. */
   cancelReason: OrderCancelReasonEnum.nullable(),
   /**
-   * Sağlayıcıya iade damgası — `null` = sağlayıcı ödemesi iade edilmedi (07.14).
-   *
-   * **`cancelReason`dan AYRI, çünkü ayrı sorular:** sebep "neden iptal oldu", bu "para çekilip geri
-   * verildi mi". `out_of_stock` dalında çakışırlar; webhook'un birinci iade dalında ayrışırlar
-   * (sipariş `superseded` iptal edilmiş, sonradan gelen ödeme iade ediliyor) — sebebi
-   * `out_of_stock`a çevirmek yalan olurdu, boş bırakmak ekrana "tahsilat yapılmadı" dedirtiyordu.
-   *
-   * Ekranın "iade edildi mi" sorusu **buradan** cevaplanır, sebepten değil: iki dal da aynı alanı
-   * dolduruyor, yani kural tek.
+   * Sağlayıcıya iade damgası: sebepten ayrı bir soru ("para çekilip geri verildi mi"). Ekranın "iade edildi mi"
+   * sorusu buradan cevaplanır, çünkü iki iade dalı da bu alanı doldurur.
    */
   providerRefundedAt: z.string().datetime({ offset: true }).nullable(),
   /**
-   * Sağlayıcıdaki ödeme kimliği (07.18) — Stripe PaymentIntent (`pi_…`), ödeme açılırken yazılır.
-   * `null` = ödeme açılmadı (kapıda/vadeli ödeme, hızlı satış) ya da açılamadı.
-   *
-   * Önce yalnız sağlayıcının künyesinde duruyordu ve siparişe dönüşün tek yolu webhook'tu: olay
-   * gelmezse sistem "ödendi mi" diye soramıyordu. Ödeme sayfası ve zamanlayıcı artık bununla sorar
-   * (`reconcileDraftPayment`); yeni denemede eski ödeme bununla iptal edilir.
+   * Sağlayıcıdaki ödeme kimliği (Stripe PaymentIntent); `null` = ödeme açılmadı ya da açılamadı. Webhook gelmezse
+   * ödeme sayfası ve zamanlayıcı "ödendi mi" sorusunu bununla sorar.
    */
   paymentRef: z.string().nullable(),
   paymentStatus: PaymentStatusEnum,
@@ -69,10 +46,8 @@ export const OrderSchema = z.object({
   onAccount: z.boolean(),
 
   /**
-   * **Bir sipariş tek depodan çıkar** (DOMAIN §17, istisnasız): bölünmüş sipariş yoktur; kendi
-   * deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur. Kaynağı ya adresin posta
-   * kodudur (uzaktan sipariş) ya işlemi yapan personelin sabit deposudur (kapı önü) — VARSAYILAN
-   * DEPO KAVRAMI YOKTUR. Siparişe yazılan partilerin de bu depodan olduğunu DB kısıtı tutar.
+   * Sipariş tek depodan çıkar ve varsayılan depo yoktur: kaynak adresin posta kodu ya da personelin deposudur.
+   * Partilerin bu depodan olduğunu veritabanı kısıtı tutar.
    */
   warehouseId: z.string().uuid(),
 
@@ -80,26 +55,16 @@ export const OrderSchema = z.object({
   /** Rota-içiyse hangi bölge. Bölge düzenlenebilir olduğu için bu alan aynı zamanda snapshot'tır. */
   deliveryZoneId: z.string().uuid().nullable(),
   deliveryDate: z.string().nullable(),
-  /**
-   * Bu sipariş bir komşu davetinden mi geldi (17.10). Künye alanı: davetin ödülü buradan doğar
-   * (`order/payment.ts` → `finalize`) ve davetin kaç kez kullanıldığı bu kolondan SAYILIR —
-   * davet satırında azalan bir sayaç yok, çünkü sipariş iptal olunca sayacın da geri alınması
-   * gerekirdi ve biri mutlaka unuturdu.
-   */
+  /** Komşu davetinden mi geldi; davetin kullanımı bu kolondan sayılır, azalan sayaç iptalde geri alınmayı unuturdu. */
   neighborInviteId: z.string().uuid().nullable(),
   addressId: z.string().uuid().nullable(),
   /** Adresin sipariş anındaki kopyası — adres sonradan düzeltilse sipariş bozulmaz. */
   addressSnapshot: z.record(z.unknown()).nullable(),
-  /**
-   * Kurye — sipariş yolculuğunda İKİ el yazar: sabah ataması (plan) ve sefer başlangıcı
-   * (`start_delivery_run` seferi süren kuryeyi buraya SENKRONLAR — 18.08, "siparişin kuryesi
-   * seferin kuryesinden gelir"). Sahiplik kapıları bu kolona bakmaya devam eder.
-   */
+  /** Kurye: sabah ataması yazar, sefer başlangıcı seferin kuryesine senkronlar; sahiplik kapıları bu kolona bakar. */
   courierId: z.string().uuid().nullable(),
   /**
-   * Hangi GERÇEKLEŞEN seferle gitti (0046 · `docs/feature/sefer.md`). Yalnız `start_delivery_run`
-   * yazar, teslimle donar — `courierId` sonradan oynasa da "kim götürdü" sorusunun kanıtlı cevabı
-   * `delivery_run.courier_id`dir. `null` = henüz sefere bağlanmadı (ya da kargo/kapı önü).
+   * Hangi gerçekleşen seferle gitti; yalnız `start_delivery_run` yazar, teslimle donar. `null` = henüz sefere
+   * bağlanmadı ya da kargo/kapı önü.
    */
   deliveryRunId: z.string().uuid().nullable(),
   deliveryCountry: CountryEnum,
@@ -107,11 +72,7 @@ export const OrderSchema = z.object({
   vatNumberSnapshot: z.string().nullable(),
   vatTreatment: VatTreatmentEnum,
 
-  /**
-   * Siparişin dili — müşterinin bu siparişi verirken okuduğu dil. Sipariş maillerinin dili buradan
-   * gelir; profil sonradan değişse de bu siparişin metni değişmez (0015). `null` = bilinmiyor →
-   * okuyan taraf profilin `preferredLanguage`'ına düşer.
-   */
+  /** Siparişin dili: sipariş mailleri buradan okunur, profil sonradan değişse de değişmez; `null` → profilin dili. */
   locale: PreferredLanguageEnum.nullable(),
 
   /** Sistemin ürettiği referans (LA-26-7K4M2P) — resmî fatura no DEĞİL; ilk kalıcı durumda üretilir. */
@@ -120,40 +81,20 @@ export const OrderSchema = z.object({
   idempotencyKey: z.string().nullable(),
   invoiceNo: z.string().nullable(),
   deliveryProof: z.record(z.unknown()).nullable(),
-  /**
-   * Kargo künyesi (07.12) — yalnız `deliveryType === 'shipping'` siparişlerde dolu. Rota
-   * siparişinde yazılamaz: kendi aracımızla giden malın taşıyıcısı ve takip numarası yoktur
-   * (kural veritabanında da duruyor — ekran unutsa bile yazılamaz).
-   */
+  /** Kargo künyesi — yalnız kargo siparişinde dolu; rota siparişine yazılamaz ve kural veritabanında da durur. */
   carrier: CarrierEnum.nullable(),
   trackingNumber: z.string().nullable(),
 
   // Para **cent** (02.9 · STACK §8); DB kolonları euro `numeric`, dönüşüm `OrderService.moneyFields`.
   shippingFeeCents: z.number().int(),
   /**
-   * **SİPARİŞ ANINDA ANLAŞILAN tutar** (Σ kalem − indirim + kargo). Bir kez yazılır, DONUKTUR.
-   *
-   * Adı 01.09'da `totalCents`ten değişti ve sebebi ölçülmüştü: genel bir ad, her okuyanı kendi
-   * sorusunu ona sormaya davet ediyordu. Yedi ayrı yer onu "bu siparişin borcu" diye okumuş ve
-   * eksik giden malın parasını da istemişti — aynı siparişe iki ekran iki farklı borç yazıyordu.
-   *
-   * Sahibi olduğu sorular: Stripe ödeme niyeti hangi tutarla açılır · vade limitinden ne düşer ·
-   * müşterinin onay mailinde hangi rakam var · anlaşmazlıkta neye bakılır. Motor da hazırlık
-   * kesinleşmeden BUNU okur (`payment-status.ts`: kalemlerden yeniden toplamak, indirim payı
-   * dağıtılmamışsa yanlış cevap veriyordu).
-   *
-   * "Ne tahsil edilecek" sorusunun cevabı BU DEĞİL — o `derivePaymentStatus`tan çıkar.
+   * Sipariş anında anlaşılan tutar (Σ kalem − indirim + kargo), donuktur: ödeme niyeti, vade limiti ve onay maili
+   * bunu okur. "Ne tahsil edilecek" sorusunun cevabı bu değil, `derivePaymentStatus`tır.
    */
   orderedTotalCents: z.number().int(),
   /**
-   * **GERÇEKLEŞEN CİRO** — giden malın tutarı. Kalemlerden TÜRETİLİR (`resync_order_revenue`
-   * tetikleyicisi, 0012); taslakta 0'dır ve bu doğrudur, henüz hiçbir şey gitmemiştir.
-   *
-   * Bir CACHE'tir ve kaynağı `order_item.fulfilled_qty`dir — `amount_collected` ile aynı desen
-   * (0018): artırılmaz, her yazımda kaynaktan yeniden hesaplanır.
-   *
-   * **Neden saklanıyor, türetilmiyor:** rapor tarafı SQL'den okuyor
-   * (`analytics_order_revenue`) ve SQL TypeScript motorunu çağıramaz.
+   * Gerçekleşen ciro: `fulfilled_qty`den tetikleyiciyle türeyen bir cache, taslakta 0. Saklanır, çünkü rapor
+   * tarafı SQL'den okur.
    */
   revenueTotalCents: z.number().int(),
   discountId: z.string().uuid().nullable(),
@@ -189,7 +130,7 @@ export const OrderInsertSchema = z.object({
   deliveryType: DeliveryTypeEnum.optional(),
   deliveryZoneId: z.string().uuid().nullish(),
   deliveryDate: z.string().nullish(),
-  /** Komşu davetinin künyesi (17.10) — checkout, çerezden gelen daveti burada yazar. */
+  /** Komşu davetinin künyesi — checkout, çerezden gelen daveti burada yazar. */
   neighborInviteId: z.string().uuid().nullish(),
   addressId: z.string().uuid().nullish(),
   addressSnapshot: z.record(z.unknown()).nullish(),
@@ -213,29 +154,15 @@ export const OrderInsertSchema = z.object({
 export type OrderInsert = z.infer<typeof OrderInsertSchema>;
 
 /**
- * `channel` YAZILAMAZ — sipariş açılırken bir kez türetilir (`deriveChannel`) ve DONAR.
- *
- * Kural motorda yazılıydı (`canChangeChannel`, hep `false`) ama 27.08'e kadar onu SORAN da,
- * zorlayan da yoktu: şema tam `partial()` olduğu için kanal sonradan yazılabilir bir alandı.
- * Bugün ihlal eden bir yol yok — yani düzeltilen aktif bir arıza değil, **korumasız bir kural**
- * (`03.12`). Bedeli ihlal edildiği gün ödenirdi: kanal KDV işlemesini (`vat_treatment`) ve fiyat
- * kademesini belirliyor, dolayısıyla kapanmış bir siparişin kanalını değiştirmek parası çoktan
- * alınmış bir belgenin vergisini geriye dönük oynatırdı — sessizce, çünkü hiçbir yer itiraz etmezdi.
- *
- * Şemadan çıkarmak reddi ÇAĞRI YERİNE taşır; ikinci savunma veritabanındadır (`0012_order.sql`,
- * `order_channel_frozen`). İkisi birden var çünkü şema yalnız bu kapıdan geçeni korur, doğrudan
- * SQL yazan bir betiği korumaz.
+ * `channel` yazılamaz: KDV işlemesini ve fiyat kademesini belirlediği için sonradan değişmesi alınmış paranın vergisini
+ * geriye dönük oynatırdı. İkinci savunma veritabanında (`order_channel_frozen`), doğrudan SQL yazan betiğe karşı.
  */
 export const OrderUpdateSchema = OrderSchema.omit({ channel: true }).partial().required({ id: true });
 export type OrderUpdate = z.infer<typeof OrderUpdateSchema>;
 
 /**
- * `order_sale` görünümünün satırı (12.7) — **gerçekleşmiş satış**: teslim edilmiş ya da kapanmış
- * sipariş + satışın olduğu gün. Sipariş kayıt anında değil, gerçekleştiği anda gelirdir.
- *
- * `saleDate` SAKLANMAZ: `OrderStatusLog`'un ilk `delivered`/`completed` kaydından türetilir (0015
- * bunu bilerek böyle kurdu — ayrı `delivered_at` kolonu yok). Muhasebe export'u da (12.7) dönemsel
- * kârlılık da (12.6) bu tarihi okur; iki rapor iki ayrı "satış günü" hesaplamaz.
+ * `order_sale` görünümünün satırı: gerçekleşmiş satış ve satış günü. `saleDate` saklanmaz, durum logunun ilk
+ * `delivered`/`completed` kaydından türer; muhasebe ve kârlılık aynı günü okur.
  */
 export const OrderSaleSchema = OrderSchema.extend({
   /** Siparişin İLK gerçekleşme günü — tam yolda teslim, hızlı satışta kapanış. */
@@ -256,11 +183,8 @@ export const OrderItemSchema = z.object({
   bundleId: z.string().uuid().nullable(),
   unitPriceCents: z.number().int(),
   /**
-   * PAZARLIK İZİ — üstüne yazılmadan önce liste ne diyordu (**cent**). `null` = pazarlık olmadı,
-   * liste fiyatı `unitPriceCents`in kendisidir (0012 künyesi).
-   *
-   * Taviz **imzalı** türetilir: `(listUnitPriceCents ?? unitPriceCents) − unitPriceCents`. Eksi
-   * çıkabilir ve hata değildir — acele ya da az miktar listenin üstüne satılabilir.
+   * Pazarlık izi: üstüne yazılmadan önce liste fiyatı (cent); `null` = pazarlık olmadı. Taviz imzalı türetilir,
+   * eksi çıkabilir.
    */
   listUnitPriceCents: z.number().int().nullable(),
   /** Pazarlığı yapan personel. `listUnitPriceCents` ile birlikte yaşar — yarım iz yoktur (kısıt VERİDE). */
@@ -270,14 +194,7 @@ export const OrderItemSchema = z.object({
   /** ORAN, para değil (5.5 = %5,5) — bu yüzden `…Cents` almaz ve `dbNumeric` kalır. */
   vatRate: dbNumeric,
   returnDisposition: ReturnDispositionEnum.nullable(),
-  /**
-   * Akıbetin GEREKÇESİ — "stoğa dön"ün zorunlu tuttuğu soğuk zincir beyanı (04.09).
-   *
-   * Kolonun sebebi bir kusurdu: D6 ekranı notu zorunlu tutuyor ama not hiçbir yere yazılmıyordu
-   * (`adjust_fulfillment` onu yalnız stok hareketinin serbest metnine geçiriyor, o dal ise dönüş
-   * yolunda hiç ateşlenmiyor). Beyan artık kalemde durur — malın kendisi hakkında bir iddia
-   * olduğu için hareketin değil KALEMİN alanı.
-   */
+  /** Akıbetin gerekçesi — "stoğa dön"ün zorunlu soğuk zincir beyanı; malın kendisi hakkında olduğu için kalemin alanı. */
   returnNote: z.string().nullable(),
 });
 export type OrderItem = z.infer<typeof OrderItemSchema>;
@@ -373,10 +290,7 @@ export const CloseResultSchema = z.object({
 });
 export type CloseResult = z.infer<typeof CloseResultSchema>;
 
-/**
- * `quick_sale` dönüşü (07.10) — kapı önü tek adım. İki "hayır" ayrıdır: `stale` (sipariş artık
- * taslak değil) ve `insufficient_stock` (mal yok — kasiyer ekranına kalan miktar yazılır).
- */
+/** `quick_sale` dönüşü; `stale` sipariş taslak değil, `insufficient_stock` mal yok demektir. */
 export const QuickSaleResultSchema = z.object({
   ok: z.boolean(),
   reason: z.enum(['stale', 'insufficient_stock']).optional(),
@@ -407,12 +321,8 @@ export const FulfillmentAdjustmentSchema = z.object({
 export type FulfillmentAdjustment = z.infer<typeof FulfillmentAdjustmentSchema>;
 
 /**
- * `adjust_fulfillment` dönüşü (07.8) — malın gerçeğinde ne değişti; para tarafı kapıda türetilir.
- *
- * İki "hayır" AYRIDIR: `stale` sipariş artık düzeltilebilir durumda değil demektir; `already_marked`
- * ise kalemin akıbeti ZATEN yazılmış ve gelen istek BAŞKA bir akıbet söylüyor demektir — yani
- * çağıran bayat bir ekrandan yazıyor (kusur, ölçüldü 04.09). İkisini tek ada indirmek, ekrana
- * "araya biri girdi" dedirtip depocuyu yanlış yere bakmaya gönderirdi.
+ * `adjust_fulfillment` dönüşü. `stale` düzeltilemez durum, `already_marked` kalemin akıbeti zaten yazılmış ve istek
+ * bayat bir ekrandan geliyor demektir; ikisini birleştirmek depocuyu yanlış yere bakmaya gönderirdi.
  */
 export const FulfillmentResultSchema = z.object({
   ok: z.boolean(),
@@ -433,15 +343,8 @@ export const FulfillmentResultSchema = z.object({
 export type FulfillmentResult = z.infer<typeof FulfillmentResultSchema>;
 
 /**
- * `deliver_order_with_adjustments` dönüşü (21.271) — **kapıdaki tek yazımın sonucu.**
- *
- * Kurye ekranı düzeltmeyi ve teslimi ardışık iki çağrı olarak yapıyordu; ikincisi `stale` dönünce
- * birincisi geri alınmıyor ve ortada YARIM bir teslim kalıyordu (karşılanan adet düşmüş, müşteriye
- * "eksik karşılandı" haberi gitmiş, teslim yazılmamış). İkisi tek transaction'a alındı.
- *
- * Şema TÜRETİLDİ, elle yazılmadı (CLAUDE §1): dönüş iki fonksiyonun birleşimi olduğu için tipi de
- * öyle — düzeltmenin bütün alanları + teslimin `consumedQty`si. Elle yazsaydık `adjust_fulfillment`
- * bir alan kazandığında burası sessizce geride kalırdı.
+ * `deliver_order_with_adjustments` dönüşü: kapıdaki tek yazımın sonucu. Şema düzeltme sonucundan türetilir,
+ * elle yazılsaydı bir gün geride kalırdı.
  */
 export const DeliverWithAdjustmentsResultSchema = FulfillmentResultSchema.extend({
   /** Fiiliden düşülen toplam adet — `deliver_order`ın kendi sayısı. */
@@ -467,11 +370,8 @@ export const TransitionResultSchema = z.object({
 export type TransitionResult = z.infer<typeof TransitionResultSchema>;
 
 /**
- * `order_counts` RPC'sinin satırı (09.7) — sipariş ekranının sekme sayaçları ve alt şerit toplamı.
- *
- * Tutarlar HAM KOLON toplamıdır: "açık tutar" formülü burada değil, motorda uygulanır
- * (`openAmountCents`). Toplama doğrusal olduğu için sonuç birebir aynı, ama kural tek yerde kalır.
- * RPC euro toplar; cent'e çevrim servis sınırındadır (02.9 · STACK §8).
+ * `order_counts` satırı: sekme sayaçları ve alt toplam. Tutarlar ham kolon toplamıdır, "açık tutar" formülü
+ * motorda kalır; cent'e çevrim servis sınırında.
  */
 export const OrderCountsRowSchema = z.object({
   /** Duruma göre adet — listede görünmeyen durum anahtarı hiç gelmez (sıfırları yazmaz). */
@@ -485,11 +385,7 @@ export const OrderCountsRowSchema = z.object({
   codTotalCents: z.number().int(),
   codCollectedCents: z.number().int(),
   codRefundedCents: z.number().int(),
-  /**
-   * **İptal HARİÇ sayılan iş** (21.265). `total`/`sumTotal` iptalleri içeriyor ve bu bilerek —
-   * `byStatus` iptal sekmesini besliyor. Ama "bugün kaç sipariş / bugün ne kadar ciro" bir İŞ
-   * ölçüsüdür; iptal edilmiş sipariş bir iş değildir. Panelin kartı bu ikisini okuyor.
-   */
+  /** İptal hariç sayılan iş: "bugün kaç sipariş, ne kadar ciro" bir iş ölçüsüdür, iptal iş değildir. */
   activeCount: z.number().int(),
   activeTotalCents: z.number().int(),
 });
