@@ -27,11 +27,7 @@ import { SESSION_ENDED_NOTICE, type LoginNotice } from '@lezzet/mobile-kit/src/s
 import { CodeField } from './code-field';
 import messages from '@lezzet/i18n/customer/login';
 
-/*
-  WhatsApp sağlayıcısı kurulu değil: düğme yerinde durur ve "yakında" der, sahte oturum kurulmaz. Tasarımın "Demo"
-  satırı prototipin notu olduğu için yazılmadı.
-*/
-
+// Tasarımın kod adımındaki "Demo" satırı prototipin notu olduğu için yazılmadı.
 type Messages = LocalizedCopy<typeof messages>;
 
 type LoginStage = 'choose' | 'email' | 'code' | 'verifying' | 'done';
@@ -261,16 +257,6 @@ export function LoginScreen({ onVerified, initialNotice, privacyHref }: LoginScr
                 <Text style={[styles.providerLabel, styles.cardLabel]}>{t.google}</Text>
               </PressableSurface>
               <PressableSurface
-                onPress={() => setNotice(t.whatsappSoon)}
-                feedback="scale"
-                style={[styles.providerButton, styles.cardButton]}
-                accessibilityLabel={t.whatsapp}
-                testID="login-whatsapp"
-              >
-                <Icon name="whatsapp" size={theme.size.inlineIcon} color={theme.colors['brand-whatsapp-pure']} />
-                <Text style={[styles.providerLabel, styles.cardLabel]}>{t.whatsapp}</Text>
-              </PressableSurface>
-              <PressableSurface
                 onPress={() => {
                   setNotice(null);
                   setStage('email');
@@ -437,10 +423,10 @@ const styles = StyleSheet.create((theme, rt) => ({
     lineHeight: theme.text.control * theme.text['lead--line-height'],
     color: theme.colors.body,
   },
-  /* Seçimin üç yolu ve bilgi satırı kadar sabit yer: kısa adımlarda ortalanmış blok oynamasın. */
+  /* Seçimin iki yolu ve bilgi satırı kadar sabit yer: kısa adımlarda ortalanmış blok oynamasın. */
   stepArea: {
     minHeight:
-      theme.space.sm + 3 * PROVIDER_HEIGHT + 2 * theme.space.lg + theme.space.sm + theme.text.note * theme.text['lead--line-height'],
+      theme.space.sm + 2 * PROVIDER_HEIGHT + theme.space.lg + theme.space.sm + theme.text.note * theme.text['lead--line-height'],
   },
   providers: { gap: theme.space.lg, marginTop: theme.space.sm },
   providerButton: {

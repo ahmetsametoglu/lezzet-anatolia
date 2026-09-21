@@ -89,18 +89,6 @@ beforeEach(() => {
 });
 
 describe('hızlı doğrulama', () => {
-  it('seçim aşaması ÜÇ yolu çizer; WhatsApp bilgi verir, oturum kurmaz', async () => {
-    await render(<LoginScreen />);
-
-    expect(screen.getByTestId('login-google')).toBeOnTheScreen();
-    expect(screen.getByTestId('login-whatsapp')).toBeOnTheScreen();
-    expect(screen.getByTestId('login-email')).toBeOnTheScreen();
-
-    await fireEvent.press(screen.getByTestId('login-whatsapp'));
-    expect(screen.getByTestId('login-notice')).toHaveTextContent('WhatsApp ile giriş çok yakında.');
-    expect(mockRouter.back).not.toHaveBeenCalled();
-  });
-
   it('Google yolu tarayıcıyı AÇAR ve ekranda bekleme kurmaz — devamı /auth/callback rotasının', async () => {
     await render(<LoginScreen />);
 
