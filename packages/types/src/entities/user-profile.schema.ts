@@ -3,15 +3,8 @@ import { dbNumeric } from '../primitives/db-numeric';
 import { CountryEnum, CustomerTypeEnum, PreferredLanguageEnum } from '../primitives/enums.schema';
 import { TranslationBagSchema } from '../primitives/user-text.schema';
 
-// Kullanıcı profili (kimlik) — 0001 + 0013 migration ile birebir. TEK tablo: müşteri + personel;
-// ROL ayırır. "customer" bir ROLDÜR, ayrı tablo değil.
-//
-// Ticari alanlar (vade, indirim, kapıda ödeme, şirket künyesi, pazarlama izni) aynı satırdadır:
-// müşteri rolüyle davranan profilin alanlarıdır, personel satırında boş dururlar. 1:1 uzantı tablosu
-// açılmadı — her sepet/checkout okumasına join ekler, kimlik kurulumuna ikinci satır yazımı getirir.
-//
-// Kanal (b2b/b2c) SAKLANMAZ: `companyInfo` varlığından türetilir. Açık bakiye de saklanmaz
-// (ödenmemiş vadeli siparişlerden türetilir).
+// Kullanıcı profili: müşteri ve personel tek tabloda, rolle ayrılır. Ticari alanlar aynı satırdadır, çünkü 1:1 uzantı
+// tablosu her sepet okumasına join eklerdi; kanal ve açık bakiye saklanmaz, türetilir.
 
 /** Şirket künyesi — doluysa profil B2B'dir. SIRET ile resmî kayıttan dolar (FR). */
 export const CompanyInfoSchema = z.object({
@@ -31,7 +24,7 @@ export const ConsentSchema = z.object({
   at: z.string().nullish(),
   source: z.string().nullish(),
 });
-/** Tek kanalın izni — operasyon ekranı bunu ALAN ALAN yeniden yazıyordu (denetim O9). */
+/** Tek kanalın izni. */
 export type Consent = z.infer<typeof ConsentSchema>;
 
 export const MarketingConsentSchema = z.object({
@@ -41,15 +34,8 @@ export const MarketingConsentSchema = z.object({
 export type MarketingConsent = z.infer<typeof MarketingConsentSchema>;
 
 /**
- * Bildirim TÜRÜ bazlı ret (22.08) — `MarketingConsent`ten AYRI ve bu ayrım kasıtlı.
- *
- * Orası KANAL sözlüğü ve `MarketingChannelEnum` onun anahtarlarından türüyor; buraya konan her ad
- * operasyonun "izinli müşteriler" süzgecinde bir kanal olarak belirirdi.
- *
- * **Varsayılan da ters:** pazarlama izni opt-in (anahtar yoksa izin yok), bu opt-out (anahtar yoksa
- * gönderilir). Hukuki ayrım: kampanya açık rıza ister; teslim edilmiş bir siparişin değerlendirme
- * daveti mevcut müşteri ilişkisine dayanır ve gereken şey rıza değil, kolay reddedilebilirliktir.
- * Kolon künyesi (`0011`) aynı gerekçeyi taşıyor.
+ * Bildirim türü bazlı ret, `MarketingConsent`ten ayrı: oradaki her ad izin süzgecinde kanal olarak belirirdi. Varsayılanı
+ * da ters (opt-out), çünkü değerlendirme daveti rıza değil kolay reddedilebilirlik ister.
  */
 export const NotificationConsentSchema = z.object({
   /** Teslim edilmiş siparişin değerlendirme daveti. Yoksa ya da `granted` ise gider. */
@@ -62,48 +48,26 @@ export const NotificationKindEnum = NotificationConsentSchema.keyof();
 export type NotificationKind = z.infer<typeof NotificationKindEnum>;
 
 /**
- * İzin KANALLARI — şemanın kendi anahtarlarından TÜRER (`.keyof()`), elle ikinci bir liste yazılmaz.
- *
- * Gerekçe pratikte yaşandı: kanal listesi ayrı yazılsaydı üçüncü kanal (SMS) eklendiğinde şema
- * büyür, liste unutulur ve "izinli müşteriler" süzgeci yeni kanalı sessizce saymazdı. Türetilmiş
- * hâlde derleme durur.
+ * İzin kanalları şemanın anahtarlarından türer, yoksa yeni kanal eklenince elle yazılmış liste onu sessizce saymazdı.
  */
 export const MarketingChannelEnum = MarketingConsentSchema.keyof();
 export type MarketingChannel = z.infer<typeof MarketingChannelEnum>;
 
 /**
- * `system` BİR YETKİ DEĞİL, BİR BEYANDIR (26.08 · yerinde satış): *"bu satır bir kişi değil."*
- * Hiçbir guard'a uymaz. Var oluş sebebi müşteri okumalarının dışında kalmak — liste ve sayaçlar
- * `roles @> {customer}` ile süzülüyor, yani bu rolü taşıyan satır hepsinden kendiliğinden düşer.
- * Gerekçenin tamamı `0001_auth_user_profiles.sql` künyesinde.
+ * `system` bir yetki değil, "bu satır bir kişi değil" beyanıdır: hiçbir guard'a uymaz ve müşteri süzgecinden düşer.
  */
 export const UserRoleEnum = z.enum(['customer', 'admin', 'warehouse', 'courier', 'accounting', 'system']);
 
 /**
- * **PERSONEL ROLÜ** — atanabilir, ekran gösterir, kapı açar.
- *
- * `UserRole`ün iki değeri personel DEĞİLDİR ve ikisi ayrı sebeple dışarıda: `customer` müşteri
- * eksenidir (kısıt zaten tek başına durmasını şart koşuyor), `system` ise bir kişi bile değildir
- * (yerinde satışın anonim alıcısı, 26.08).
- *
- * **Türetilmiş olması bir kolaylık değil, koruma:** rol listesi üç yerde `Exclude<UserRole,
- * 'customer'>` diye elle yazılıydı ve `system` eklenince üçü birden kırıldı — derleme durdurduğu
- * için kimse yanlış bir etiketle karşılaşmadı. Tek adla toplanınca sonraki rol de aynı kapıdan
- * geçecek (CLAUDE §1: bir bilgi tek yerde yaşar).
+ * Personel rolü: `customer` müşteri eksenidir, `system` kişi bile değildir. Türetilmiştir ki yeni rol tek yerden geçsin.
  */
 export const StaffRoleEnum = UserRoleEnum.exclude(['customer', 'system']);
 export type StaffRole = z.infer<typeof StaffRoleEnum>;
 export type UserRole = z.infer<typeof UserRoleEnum>;
 
 /**
- * **Kimlik sorusunun tetiği** (04.10, DOMAIN §10) — ikisi birbirinin YERİNE GEÇMEZ.
- *
- * `delivery_failed` taşıyıcının BEYANIDIR (numara kapanmış ya da bizi engellemiş): erken tetik,
- * 3 aylık eşiği beklemenin anlamı yok. `silence` yalnız bir İŞARETTİR — yılda bir bayramda sipariş
- * veren sadık müşteri ile devredilmiş hat aynı şekli üretir; bu yüzden kapı değil soru doğurur.
- *
- * Küme burada duruyor çünkü hem motor (`needsChallenge`) hem DB kısıtı aynı iki değeri istiyor;
- * ikinci bir yerde tekrarlansa biri gün gelip ötekinden ayrılırdı (CLAUDE §1).
+ * Kimlik sorusunun tetiği (DOMAIN §10): `delivery_failed` taşıyıcının beyanıdır ve erken tetikler, `silence` yalnız
+ * işarettir. Küme burada, çünkü motor ve DB kısıtı aynı iki değeri ister.
  */
 export const ChallengeReasonEnum = z.enum(['silence', 'delivery_failed']);
 export type ChallengeReason = z.infer<typeof ChallengeReasonEnum>;
@@ -111,31 +75,15 @@ export type ChallengeReason = z.infer<typeof ChallengeReasonEnum>;
 /** Personel rolleri (guard/operasyon yüzeyi). Müşteri hariç. */
 export const STAFF_ROLES = ['admin', 'warehouse', 'courier', 'accounting'] as const;
 
-/*
-  ── `DEV_ADMIN_PROFILE_ID` ve `DEV_BYPASS_AUTH_ID` KALDIRILDI (19.08) ────────────────────────────
-  İkisi de `apps/web/lib/guard.ts`in dev auth bypass'ının kimlikleriydi: biri bypass'ın sahte
-  kullanıcısına, öteki seed'in onun için açtığı gerçek profile aitti. Bypass söküldü (gerekçe
-  guard'ın künyesinde: ölçüldü, oturumsuz `/operations` yerelde 200 dönüyordu), dolayısıyla iki
-  kimlik de sahipsiz kaldı. Yerelde artık gerçek oturum var — aktör kimliği de gerçek personelin.
-
-  04.11'in dersi kaybolmadı, taşındı: auth kimliği ≠ profil kimliği ayrımı `guard.ts`teki
-  `StaffUser` künyesinde yaşıyor ve nöbeti bugün sabit değil, gerçek girişin kendisi tutuyor.
-*/
 
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),
   /**
-   * İki eksen, tek alan (DOMAIN §2): `customer` müşteri eksenidir, diğerleri operasyon rolleri.
-   * Müşteri ↔ personel keskin ayrım (bir arada olamaz); personel içinde çoklu rol olağandır.
-   * Kural DB'de check kısıtıyla zorlanır, saf hâli `domain-core/identity/roles`'ta.
+   * `customer` müşteri eksenidir, diğerleri operasyon rolleri; ikisi bir arada olamaz, personelde çoklu rol olağandır.
    */
   roles: z.array(UserRoleEnum),
   /**
-   * Rolün İKİNCİ EKSENİ: ne yapar (`roles`) × NEREDE yapar (DOMAIN §17). `roles` ile aynı karar,
-   * aynı gerekçe — kapsam okuması guard'ın sıcak yolunda, bağ tablosu her istekte join demekti.
-   *
-   * **Boş dizi = HİÇBİR depo**, "hepsi" değil (fail-closed): depocu/kurye kapsamsız kalırsa kapı
-   * kapanır. Admin/muhasebe depo-ÜSTÜdür; onlarda boş kapsam normaldir ve hiç okunmaz.
+   * Rolün "nerede" ekseni (DOMAIN §17). Boş dizi hiçbir depo demektir, "hepsi" değil; admin ve muhasebe bunu okumaz.
    */
   warehouseIds: z.array(z.string().uuid()),
   type: CustomerTypeEnum,
@@ -154,12 +102,8 @@ export const UserProfileSchema = z.object({
    */
   b2bAppliedAt: z.string().datetime({ offset: true }).nullable(),
   /**
-   * Ret damgası. **`b2bApproved === false` tek başına "bekliyor" DEMEK DEĞİLDİR** — reddedilen
-   * kayıt da o değeri taşır (09.11: ret silmez). Hâl ayrımı için `b2bStatusOf` kullanılır; alanı
-   * doğrudan okuyup çip çizen ekran reddedilene "inceleniyor" der.
-   *
-   * Ret silinmez, ESKİR: aday künyesini düzeltip yeniden başvurursa kuyruğa geri gelir ve ret
-   * kaydı geçmiş olarak durur. Bu alan artık "ne zaman reddedildi"yi göstermek içindir.
+   * Ret damgası; `b2bApproved === false` tek başına "bekliyor" demek değildir, hâl `b2bStatusOf`tan okunur.
+   * Ret silinmez, yeniden başvuruda eskir.
    */
   b2bRejectedAt: z.string().datetime({ offset: true }).nullable(),
   /** Reddi veren personel — `settings.updatedBy` ile aynı izleme ihtiyacı ("kim karar verdi"). */
@@ -167,22 +111,13 @@ export const UserProfileSchema = z.object({
   /** Ret gerekçesi. DB kısıtı damgasız/gerekçesiz reddi yazdırmaz — ikisi birlikte var ya da yok. */
   b2bRejectReason: z.string().nullable(),
   /**
-   * Ret gerekçesinin makine çevirileri (20.2) — gerekçe müşteriye E-POSTAYLA gidiyor, yani
-   * personelin Türkçe cümlesi Fransızca/Almanca konuşan birine ulaşıyor.
-   *
-   * Ayrı bir kaynak-dil kolonu yok: operasyon yüzeyi tek dilli (CLAUDE §2) ve torbada olmayan dil
-   * zaten "orijinal o dilde" demeye yeter — `resolveUserText` bu hâlde orijinale düşer.
+   * Ret gerekçesinin makine çevirileri, çünkü gerekçe müşteriye e-postayla gider; kaynak dil operasyonun tek dilidir.
    */
   b2bRejectReasonTranslations: TranslationBagSchema.nullable(),
   /** Çeviri işi baktı mı — başarısızlıkta da dolar. */
   b2bRejectReasonTranslatedAt: z.string().nullable(),
   /**
-   * "Onay kuyruğunda mı" — **DB üretiyor** (`generated always as … stored`), uygulama YAZMAZ.
-   * Künyesi var + onaylanmamış + (hiç reddedilmemiş veya reddi eskimiş).
-   *
-   * Kural veride duruyor çünkü üç yer birden soruyor: kısmi indeks, kuyruk süzgeci ve
-   * `b2bStatusOf`. Üçüne ayrı yazılsaydı biri gün gelip ayrışırdı ve ayrıştığında hata vermezdi —
-   * yalnız yanlış bir liste üretirdi.
+   * "Onay kuyruğunda mı"; DB üretir, uygulama yazmaz. Kural veride, çünkü kısmi indeks, kuyruk ve `b2bStatusOf` aynı soruyu sorar.
    */
   b2bPending: z.boolean(),
   /** Taslak (WhatsApp telefonuyla otomatik açılan); doğrulanınca false. Birleştirme adayı işareti. */
@@ -194,76 +129,46 @@ export const UserProfileSchema = z.object({
   /** VIES doğrulaması; null = hiç sorulmadı. Reverse charge YALNIZ true'da açılır (DOMAIN §5). */
   vatNumberValid: z.boolean().nullable(),
   /**
-   * Yukarıdaki bayrağın YAŞI — `null` = hiç sorulmadı (bayrakla birlikte).
-   *
-   * Bayrak "doğru mu"yu söyler, damga "ne zaman doğruydu"yu. Ayrımı taşıyan şey şu: bu bayrak
-   * %0 KDV açıyor, yani bayat bir `true` vergi hatasıdır. Damga yalnız KESİN cevapta yazılır —
-   * VIES "meşgulüm" dediğinde ne bayrak ne damga değişir (o bir bilgi değil, bilginin yokluğu).
+   * Bayrağın yaşı; bu bayrak %0 KDV açtığı için bayat `true` vergi hatasıdır. Damga yalnız kesin cevapta yazılır.
    */
   vatNumberCheckedAt: z.string().nullable(),
   creditEnabled: z.boolean(),
   /**
-   * Vade tavanı — **cent** (02.9 dilim: profil ailesi). DB kolonu `credit_limit` euro `numeric`
-   * kalır; dönüşüm sınırda, `UserProfileService.moneyFields` ile (`STACK §8`).
-   *
-   * Adının birimi söylemesi şart: bu alan üç ayrı yerde elle çevriliyordu ve biri
-   * `creditLimit * 100` yazıyordu — 74,17 € → 0,74 € hatasının doğduğu desenin ta kendisi.
+   * Vade tavanı, cent; DB kolonu euro `numeric`, dönüşüm `UserProfileService.moneyFields`te.
    */
   creditLimitCents: z.number().int().nullable(),
   paymentTermDays: z.number().int().nullable(),
-  /** YÜZDE, para değil — 02.9'un kapsamı dışında (`dbNumeric` burada oran taşır). */
+  /** Yüzde, para değil. */
   discountPercent: dbNumeric.nullable(),
   /**
-   * Fiyat grubu üyeliği (`price_group`, 20.08) — B2B alt kademesi (market · restoran/pastane…).
-   * `discountPercent`ten AYRI eksen: o kampanya havuzunda yarışan bir indirimdir, bu fiyatın
-   * kendisidir (çözüm sırası: müşteriye özel → grup → liste). `null` = grupsuz, düz liste.
+   * Fiyat grubu üyeliği (B2B alt kademesi); `null` grupsuz, düz liste.
    */
   priceGroupId: z.string().uuid().nullable(),
   codAllowed: z.boolean(),
   marketingConsent: MarketingConsentSchema,
   notificationConsent: NotificationConsentSchema,
   /**
-   * Tercih sayfasının oturumsuz anahtarı (22.08) — her mailin altbilgisindeki bağ bunu taşır.
-   * `null` = bu profile henüz mail gitmedi; jeton istek üzerine doğar (`referralCode` deseni).
-   *
-   * `referralCode` ile KARIŞTIRILMAZ: o paylaşılmak için var, bu paylaşılmamak için. Aynı dize
-   * ikisini birden yapsaydı, davet bağlantısını gören herkes davet edenin bildirimlerini
-   * kapatabilirdi.
+   * Tercih sayfasının oturumsuz anahtarı; `referralCode` ile karışmaz, çünkü o paylaşılır ve bu paylaşılırsa davet
+   * bağlantısını gören bildirimleri kapatabilirdi.
    */
   notificationToken: z.string().nullable(),
   acquisitionSource: z.record(z.unknown()).nullable(),
   referredBy: z.string().uuid().nullable(),
   /**
-   * Müşterinin davet kodu (17.7) — paylaştığı bağlantının ucundaki dize. `null` = henüz istemedi.
-   *
-   * Kimlik (`id`) KULLANILMAZ: davet bağlantısı WhatsApp'ta ve ekran görüntüsünde dolaşır; orada
-   * bir uuid paylaşmak, başka yerlerde anahtar olan bir alanı herkese açık hâle getirirdi.
+   * Müşterinin davet kodu; `id` kullanılmaz, çünkü davet bağlantısı herkese açık dolaşır.
    */
   referralCode: z.string().nullable(),
 
   /**
-   * **WhatsApp bağlama jetonu** (04.10) — "WhatsApp'ımı bağla" düğmesinin ürettiği, önceden yazılı
-   * mesajın içindeki dize. `null` = bekleyen bağlama yok.
-   *
-   * Numaranın kanıtlanması *"bu hat bu kişide"* der, *"bu kişi ŞU HESAP"* demez. Müşteri
-   * kendiliğinden yazdığında elimizde hesabı gösteren hiçbir şey olmadığı için yeni bir taslak
-   * doğar; jeton o boşluğu kapatır.
-   *
-   * **`referralCode` ile aynı şey DEĞİL:** o paylaşılmak için var ve ömürsüz; bu paylaşılmamak
-   * için var ve dakikalarla ölçülü. Karışırsa ortaya, herkesin gördüğü bir dizeyle kimlik anahtarı
-   * yazdıran bir kapı çıkar.
+   * WhatsApp bağlama jetonu: kanıtlanan numara "bu hat bu kişide" der, "bu kişi şu hesap" demez. Paylaşılmaz ve
+   * dakikalarla ölçülüdür, `referralCode` ile karışırsa herkesin gördüğü dize kimlik yazdırırdı.
    */
   waLinkToken: z.string().nullable(),
   /** Jetonun son geçerlilik anı. Jetonla birlikte var ya da birlikte yok (DB kısıtı). */
   waLinkExpiresAt: z.string().datetime({ offset: true }).nullable(),
 
   /**
-   * **E-posta çapası kanıtlandı** (04.10) — kod e-postaya gitti, müşteri WhatsApp'tan geri yazdı.
-   *
-   * `email is not null` bunun YERİNE geçmez: o kolon elle işlenen DM'de operatörün klavyesinden de
-   * dolabiliyor. "Adresi var" ile "adresi kanıtlandı" iki ayrı gerçek — telefonda yaptığımız
-   * ayrımın aynısı. Üçüncü kanıt yolu (`authUserId`) damga istemez: o kutuya gelen kodla giriş
-   * yapılmıştır. Çapa hâli üçünden TÜRETİLİR (`anchorStateOf`), saklanmaz.
+   * E-posta çapası kanıtlandı; `email` dolu olması yerine geçmez, çünkü operatör de yazabilir. Çapa hâli türetilir (`anchorStateOf`).
    */
   emailAnchoredAt: z.string().datetime({ offset: true }).nullable(),
   /** Doğrulanmayı BEKLEYEN adres — `null` = bekleyen bağlama yok. */
@@ -271,51 +176,27 @@ export const UserProfileSchema = z.object({
   /** Bekleyen adresin istendiği an. Adresle birlikte var ya da birlikte yok (DB kısıtı). */
   anchorEmailAt: z.string().datetime({ offset: true }).nullable(),
   /**
-   * **6 haneli güvenlik kodunun SHA-256 özeti** (04.10) — e-posta bağlamak istemeyene verilen çapa.
-   *
-   * Özet, canlı DB'ye yazma yetkisi olana karşı değil (o zaten cevabı değiştirebilir): **yedek
-   * sızarsa** ortaya (numara, kod) listesi çıkmasın diye. `email_verifications` ile aynı disiplin.
-   *
-   * E-posta çapası kurulunca DÜŞER — iki çapa aynı müşteride bulunmaz (DB kısıtı zorluyor).
+   * 6 haneli güvenlik kodunun SHA-256 özeti, yedek sızarsa (numara, kod) listesi çıkmasın diye; e-posta çapası kurulunca düşer.
    */
   securityCodeHash: z.string().nullable(),
   /** Yanlış deneme sayacı; tavan 5 (DOMAIN §10). Doğru cevapta sıfırlanır. */
   securityCodeAttempts: z.number().int(),
 
   /**
-   * **Bekleyen kimlik sorusu** (04.10) — `null` = sorulmuş bir soru yok, kapılar çapaya göre açık.
-   *
-   * Tetik bir AN'dır, soru ise cevaplanana kadar SÜRER; kolon o süreyi tutuyor. Türetilemiyor,
-   * çünkü tetiğin ölçütü (`customer_phone.last_seen_at`) soruyu doğuran mesajın kendisi tarafından
-   * tazeleniyor — sonradan bakan biri boşluğu göremez (migration 0011 künyesi).
+   * Bekleyen kimlik sorusu; türetilemez, çünkü tetiğin ölçütü soruyu doğuran mesajla tazelenir.
    */
   challengeReason: ChallengeReasonEnum.nullable(),
   /** Sorunun doğduğu an. Sebeple birlikte var ya da birlikte yok (DB kısıtı). */
   challengeRaisedAt: z.string().datetime({ offset: true }).nullable(),
 
   /**
-   * GDPR silme damgası (05.08) — `null` = hiç silinmedi.
-   *
-   * Satır SİLİNMEZ, kimliği boşaltılır: `order` bu profile `restrict` ile bağlı ve sipariş/fatura
-   * kaydı yasal olarak duruyor. Kararın tamamı `anonymize_customer` (0037) içinde, tek yerde.
-   *
-   * **Bayrak değil TARİH:** "ne zaman silindi" denetimde sorulan bir sorudur ve boolean'a
-   * düşürülmüş bir kayıt onu bir daha cevaplayamaz. Ekran bunu okuyup anonim kaydı normal bir
-   * müşteriden ayırabilmeli — adı boş bir satır, silinmiş bir hesap ile yarım kalmış bir taslak
-   * arasında ayrım yapamayan gözde aynı görünür.
+   * GDPR silme tarihi; satır silinmez, kimliği boşaltılır, çünkü sipariş kaydı yasal olarak durur (`anonymize_customer`).
+   * Tarih, çünkü "ne zaman silindi" denetimde sorulur.
    */
   anonymizedAt: z.string().datetime({ offset: true }).nullable(),
 
   /**
-   * **Bu kayıt hangi müşteriye birleştirildi** (09.10); `null` = birleştirilmedi.
-   *
-   * Kayıt SİLİNMEZ, kapanır: `order.customer_id` `restrict` olduğu için silme zaten reddedilirdi.
-   * Ekran bu bağı okuyup *"Bu kayıt X ile birleştirildi"* diyebilir ve operatör eski bağlantıyı
-   * takip edebilir — `anonymizedAt` deseninin ikizi, orada da satır duruyor kimliği boşalıyor.
-   *
-   * **Zincir YASAK** (A→B→C): kapanmış bir kayıt ne hedef ne kaynak olabilir (RPC reddeder).
-   * Zincire izin verseydik "bu kayıt nereye gitti" sorusunun cevabı tek bir ada değil bir yola
-   * dönerdi ve ekran onu gösteremezdi.
+   * Kaydın birleştirildiği müşteri; kayıt silinmez, kapanır. Zincir yasak, yoksa "nereye gitti" tek ad değil bir yol olurdu.
    */
   mergedIntoId: z.string().uuid().nullable(),
   /** Birleştirme anı — bayrak değil TARİH (`anonymizedAt` ile aynı gerekçe). */
@@ -328,13 +209,7 @@ export const UserProfileSchema = z.object({
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 
 /**
- * Birleştirme ÖN İZLEMESİ (09.10) — onay diyaloğunun okuduğu döküm.
- *
- * Taşımanın kendisiyle **aynı sorgudan** türüyor (`preview_customer_merge`): iki ayrı liste bir gün
- * ayrışırsa operatör onayladığından farklı bir şey taşınmış olurdu.
- *
- * **Düşecekler de sayılıyor** ve bu bir dürüstlük kararı: yalnız kazanımı gösteren bir onay ekranı
- * kaybı gizler. Operatör *"3 değerlendirme taşınacak, 1'i düşecek"* cümlesini görmeli.
+ * Birleştirme ön izlemesi, taşımayla aynı sorgudan (`preview_customer_merge`); düşecekler de sayılır ki onay kaybı gizlemesin.
  */
 export const CustomerMergePreviewSchema = z.object({
   orders: z.number().int(),
@@ -355,25 +230,14 @@ export const CustomerMergePreviewSchema = z.object({
   gainsPhone: z.boolean(),
   gainsEmail: z.boolean(),
   /**
-   * **Bu birleştirme getiren ödülünü götürecek mi** (27.08) — kaynağı HEDEF davet etmişse, yani
-   * kayıt kendi kendisinin getireni olacaksa. Ekran bunu onay düğmesinden önce göstermeli:
-   * kayıp müşterinin o an yaptığı bir şeyden değil, BİZİM kayıt düzeltmemizden doğuyor.
-   *
-   * Değer defterdeki ödülün kendisidir; fiilen yazılacak ters satır bakiyeye göre KIRPILIR
-   * (borç yazılmaz), yani gerçek düşüş bundan az olabilir, fazla olamaz. 0 = götürmeyecek.
+   * Kaynağı hedef davet etmişse götürülecek getiren ödülü; ters satır bakiyeye göre kırpılır, gerçek düşüş bundan az olabilir.
    */
   referralRevoked: z.number().int(),
 });
 export type CustomerMergePreview = z.infer<typeof CustomerMergePreviewSchema>;
 
-// id/role/createdAt DB-üretimli/varsayılanlı → insert'te opsiyonel. Ticari alanların hepsi de
-// varsayılanlı ya da nullable: personel profili hiçbirini vermeden açılır.
-//
-// Üç alan YAZILAMAZ, hepsi DB'nin malı: `b2bPending` üretilmiş kolon (Postgres yazmayı reddeder),
-// iki damgayı ise tetikleyici atar. Damgaların DB'de kalması bir tercih değil şart: ikisi
-// birbiriyle karşılaştırılıyor ve ayrı saatlerden gelirlerse aradaki kayma başvurunun hâlini ters
-// çevirebilir. Şemadan çıkarmak bunu ÇAĞRI YERİNDE hata hâline getirir — yoksa yanlış yazan kod
-// ancak veritabanına vardığında öğrenir.
+// Insert'te DB üretimli ve varsayılanlı alanlar opsiyonel. `b2bPending` ve iki damga yazılamaz, DB'nin malıdır: şemadan
+// çıkarılmaları yanlış yazımı çağrı yerinde hata yapar.
 const DB_YAZAR = { b2bPending: true, b2bAppliedAt: true, b2bRejectedAt: true } as const;
 
 export const UserProfileInsertSchema = UserProfileSchema.omit({ createdAt: true, ...DB_YAZAR }).partial();
@@ -400,9 +264,7 @@ export const FindOrCreateInputSchema = z
 export type FindOrCreateInput = z.infer<typeof FindOrCreateInputSchema>;
 
 /**
- * B2B onay kartının AI özeti (09.11c · sınıf 3, 16.08) — TEK cümle, okuma yardımı; karar değil.
- * Şema burada, `packages/ai`'da değil: üreten görev ile okuyan ekran ayrışmasın (emsal:
- * `AnalyticsInsightSchema`).
+ * B2B onay kartının AI özeti: tek cümlelik okuma yardımı, karar değil; şema burada ki üreten ile okuyan ayrışmasın.
  */
 export const B2bAiSummarySchema = z.object({
   /** Sinyallerden türetilmiş tek cümlelik Türkçe okuma — sinyallerde olmayan hiçbir şeyi söylemez. */
