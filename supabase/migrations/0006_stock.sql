@@ -1,65 +1,35 @@
--- Modül 06 — Stok: parti (`stock`) + rezervasyon (`reservation`). Kurallar: DOMAIN §4.
---
--- Temel denklem: KULLANILABİLİR = FİİLİ − AKTİF REZERVASYON. "Ayrılmış toplam" hiçbir yerde
--- SAKLANMAZ; `reservation` satırlarından türetilir (DATA_MODEL kalıcı kararlar: sayaç tutulmaz,
--- kayarsa izi bulunamaz). Bu yüzden burada `reserved_qty` kolonu yoktur — arayan `available_stock`
--- görünümünü okur.
---
--- Atomik ayırma bu dosyada değil, `0007_reserve_stock.sql`'deki RPC'dedir (STACK §13 yazma eşiği:
--- eşzamanlılık yarışı olan yazım RPC'ye ödenir).
--- RLS deny-by-default (0001 deseni); erişim sunucudan service_role ile.
+-- Stok: parti (`stock`) ve rezervasyon (DOMAIN §4). Kullanılabilir = fiili − aktif rezervasyon ve ayrılmış toplam saklanmaz,
+-- rezervasyon satırlarından türetilir; atomik ayırma `0007` RPC'sindedir.
 
 create table public.stock (
   id uuid primary key default gen_random_uuid(),
   -- Stok VARYANT seviyesindedir (satılabilir birim varyanttır). Parti silinmez → restrict.
   variant_id uuid not null references public.product_variant (id) on delete restrict,
-  -- PARTİ BİR DEPODA DURUR (DOMAIN §17). FK YOK: `warehouse` tablosu 0031'de açılır — kolon burada
-  -- doğar, bağ orada kurulur (`intake_id` emsali). `not null` bilinçli: deposuz parti fiziksel
-  -- olarak imkânsızdır, "sonra gireriz" diye bir hâli yoktur.
+  -- Parti bir depoda durur (DOMAIN §17); deposuz parti fiziksel olarak imkânsız. FK 0031'de, `warehouse` orada açılıyor.
   warehouse_id uuid not null,
   physical_qty int not null default 0 check (physical_qty >= 0),
-  -- Partiye GİRİŞTE yazılan miktar — tarihtir, değişmez. `physical_qty` satış/fire ile erirken bu
-  -- durur: "sipariş ettiğim kadar geldi mi" (DOMAIN §16 fark raporu) ve "bu partiden ne kadar
-  -- tüketildi" soruları buna dayanır. Türetilemez: satış, fire ve iade ayrı yerlerde yaşar.
+  -- Girişte yazılan miktar, `physical_qty` eridikçe değişmez: "sipariş ettiğim kadar geldi mi" ve "ne kadarı tüketildi"
+  -- soruları buna dayanır, çünkü satış, fire ve iade ayrı yerlerde yaşar.
   initial_qty int not null default 0 check (initial_qty >= 0),
-  -- Partinin son tarihi. TİPİ üründedir (`product.date_type`): DLC = güvenlik (geçince satılamaz),
-  -- DDM = kalite (geçse de satılır). Kolon adı bu yüzden tipten bağımsız: `expiry_date`.
+  -- Adı tipten bağımsız, çünkü tarihin tipi (DLC güvenlik, DDM kalite) üründe durur (`product.date_type`).
   expiry_date date not null,
-  -- PARTİ NUMARASI — BİZİM kimliğimiz (kullanıcı kararı 03.09): `PRT-STR-26-0031`. Belge ailesinin
-  -- aynı biçimi (IMH/SAY/TRF): önek · depo kodu · yıl · o yıl o depoda sıra. Tetikleyici üretir
-  -- (`stock_set_batch_no`, 0031 — depo kodu orada doğar), elle yazılmaz. `not null`: numarasız parti
-  -- yoktur; before-insert tetikleyicisi kısıttan önce koşar. LOT İLE KARIŞTIRILMAZ: lot tedarikçinin
-  -- üretim numarasıdır ve boş olabilir; parti numarası bizim mal alımımızdır ve hep vardır.
+  -- Bizim parti numaramız (`PRT-STR-26-0031`): önek · depo kodu · yıl · sıra; tetikleyici üretir (`stock_set_batch_no`, 0031).
+  -- Lot ile karıştırılmaz: lot tedarikçinin üretim numarasıdır ve boş olabilir, parti numarası hep vardır.
   batch_no text not null,
   lot_number text,                                   -- tedarikçinin lot no'su — geri çağırma (rappel) eşleşmesi
   -- BİRİM (paket) başına alış maliyeti. Toptan alınıp paketlenirse giriş paket adediyle yapılır
   -- (1 kg → 10 × 100 gr) ve maliyet pakete bölünür; gerçek COGS bu alandan çıkar (DOMAIN §12).
   purchase_price numeric(10, 2) check (purchase_price >= 0),
-  -- Bağlı stok girişi. FK YOK: `stock_intake` tablosu 06.10'da açılır (greenfield — o gün eklenir).
+  -- Bağlı stok girişi; FK yok, `stock_intake` sonraki migration'da açılır.
   intake_id uuid,
-  -- Hangi TEDARİK KALEMİNİN karşılığı (DOMAIN §17, parçalı kabul). FK YOK: `purchase_order_item`
-  -- 0010'da açılır. Tek PO iki depoda parça parça kabul edilebildiği için "sipariş ettiğim kadar
-  -- geldi mi" artık intake üzerinden hesaplanamaz — giriş kalemi hangi PO satırını karşıladığını
-  -- KENDİ taşır. Null: PO'suz doğrudan giriş, ya da transferle doğan parti (kökeni transfer kaydı).
+  -- Karşılanan tedarik kalemi (DOMAIN §17): bir PO iki depoda parça parça kabul edilebildiği için bağı giriş kalemi taşır.
+  -- Boş: PO'suz doğrudan giriş ya da transferle doğan parti; FK 0010'da.
   purchase_order_item_id uuid,
   -- Doluysa bu parti indirimli teklifte (near-expiry). Fiyat çözümünde partiye çıpalı satır olur
   -- ve rezervasyonu `stock_id` ile bu partiye bağlanır (DOMAIN §5).
   offer_price numeric(10, 2) check (offer_price >= 0),
-  -- Depo İÇİ konum (dolap/raf) — `warehouse_id` ile aynı şey değil, iki ayrı çözünürlük:
-  -- hangi tesis (depo) ↔ o tesiste hangi alan. Duplication değil (CLAUDE.md §1).
-  --
-  -- **SERBEST METİNDEN TANIMLI ALANA (17.08, 19.29).** `location text` idi ve `temperature_log`un
-  -- 128. satırdaki üç zararı burada birebir geçerliydi: gruplama yazımla bölünüyordu (`Dolap 1` ≠
-  -- `Dolap-1` → "bu dolapta ne var" eksik cevap verir) ve **olmayan görülemiyordu** ("hangi alan
-  -- boş, hangisi aşırı dolu" sorusu sorulamıyordu).
-  --
-  -- Üçüncü ve asıl sebep `0045`in kendi gerekçesini tamamlıyor: `storage_area.kind` bilerek
-  -- `product_storage_type` ile aynı kelimeleri kullanıyor ve künyesi *"donuk ürün donuk alanda
-  -- durur" cümlesi ancak iki taraf aynı dili konuşursa kurulabilir* diyor. Cümlenin öteki yarısı
-  -- BU kolondur; o gelene kadar tip kümesi hazır ama tüketicisi yoktu.
-  --
-  -- NULLABLE kalıyor: rafı bilinmeden de mal kabul edilir (bugünkü davranış korunur).
-  -- FK YOK: `storage_area` 0045'te açılır — kolon burada doğar, bağ orada kurulur.
+  -- Depo içi alan (dolap/raf); serbest metin gruplamayı yazıma göre bölüyor ve boş alanı gösteremiyordu.
+  -- Boş olabilir, çünkü rafı bilinmeden de mal kabul edilir; FK 0045'te.
   storage_area_id uuid,
   created_at timestamptz not null default now()
 );
@@ -79,9 +49,7 @@ create trigger stock_initial_qty_trg
   before insert on public.stock
   for each row execute function public.stock_set_initial_qty();
 
--- FEFO'nun tek okuma yolu: DEPO İÇİNDE varyantın partileri son tarihe göre artan. Baş kolon artık
--- depo — her okuma bir depoya bakar (depocu kendi deposunu görür, hazırlık siparişin deposundan
--- toplar), depo-üstü tarama yalnız raporun işidir.
+-- FEFO'nun okuma yolu: her okuma bir depoya baktığı için baş kolon depo, sonra varyant ve son tarih.
 create index stock_variant_expiry_idx on public.stock (warehouse_id, variant_id, expiry_date);
 -- Parti numarası benzersiz: etiket okutulunca tek satıra düşer (lotun aksine — lot benzersiz değil).
 create unique index stock_batch_no_key on public.stock (batch_no);
@@ -95,11 +63,8 @@ create table public.reservation (
   -- FK YOK: `order` tablosu 07'de açılır. Sipariş kapanınca satır silinir (teslim/iptal).
   order_id uuid not null,
   variant_id uuid not null references public.product_variant (id) on delete restrict,
-  -- REZERVASYON DEPOYU AÇIKÇA TAŞIR (DOMAIN §17, T1) — türetme ilkesinin gerekçeli istisnası.
-  -- Siparişten türetilemez: normal rezervasyonun partisi yoktur (parti seçimi hazırlıkta) ve bu
-  -- tablonun `order`'a FK'sı yok; türetmek `available_stock`ın sıcak yoluna join eklerdi.
-  -- Yan fayda: `reserve_stock` kilidi depoya daralır, iki depo birbirini beklemez.
-  -- FK YOK: `warehouse` 0031'de açılır. Sipariş deposuyla eşitliği orada ertelenmiş kısıt tutar.
+  -- Rezervasyon depoyu açıkça taşır: normal rezervasyonun partisi yok ve siparişten türetmek `available_stock`ın
+  -- sıcak yoluna join eklerdi. Sipariş deposuyla eşitliği 0031'deki ertelenmiş kısıt tutar.
   warehouse_id uuid not null,
   -- YALNIZ partiye bağlı teklif satırında dolu (batch-pinned). Normal rezervasyon varyant-toplamı
   -- seviyesindedir; parti seçimi hazırlıkta FEFO ile yapılır (DOMAIN §4).
@@ -120,53 +85,16 @@ create index reservation_expires_idx on public.reservation (expires_at) where ex
 -- Partiye çıpalı miktarın o partinin kullanılabilirinden düşülmesi (FEFO önerisi, 06.5).
 create index reservation_stock_idx on public.reservation (stock_id) where stock_id is not null;
 
--- Kullanılabilir stok — TÜRETİLİR, saklanmaz. Süresi dolmuş rezervasyon sayılmaz (cron onu zaten
--- geri bırakır; görünüm cron'u beklemez).
---
--- **GÖRÜNÜM BU DOSYADA DEĞİL, `0031_warehouse.sql`'DE.** Grain'i `(warehouse_id, variant_id)` ve
--- "her aktif depo için bir satır" sözleşmesi `warehouse` tablosuna cross join gerektiriyor; o tablo
--- bu dosyadan sonra doğuyor. Kolon FK'siz doğabilir (yukarıda öyle yaptık) ama görünüm tabloyu
--- BEKLEMEK zorunda — SQL'de "sonra bağlanacak join" diye bir şey yok.
---
--- Görünüm KARAR VERMEZ, olguyu toplar (STACK §13): `expired_dlc_qty` "tarihi geçmiş DLC partilerde
--- ne kadar var" olgusudur; "o yüzden satma" kararı motorundur. Satışa açık miktar isteyen çağıran
--- `available_qty − expired_dlc_qty` alır (parti kırılımı gerekiyorsa `listBatches` + motor).
+-- `available_stock` görünümü 0031'de, çünkü depo başına satır sözleşmesi `warehouse` tablosuna cross join ister.
+-- Görünüm karar vermez: `expired_dlc_qty` olgudur, "satma" kararı motorundur.
 
 alter table public.stock enable row level security;
 alter table public.reservation enable row level security;
 
 
--- ═══ STOK HAREKET DEFTERİ (06.14) ═══
---
--- **NEDEN VAR: stokta hareketin defteri YOKTU ve bedeli üç kez ödendi.**
--- Depodan mal çıkmasının beş yolu var (`deliver_order` · `quick_sale` · `dispatch_transfer` ·
--- `adjust_stock` · `adjust_stock_batch`) ve bunların yalnız ikisi bir olay satırı yazıyordu.
--- Kalanlar stoğu DURUM tablolarından eritiyordu: mal gitti, geriye "gitti" diyen bir kayıt kalmadı.
---
--- Ölçüldü (27.08, iki bağımsız inceleme):
---   · "Çıkışlar" sekmesi dönemdeki çıkış olaylarının küçük bir dilimini görüyordu ve başlığında
---     NEGATİF bir çıkış toplamı yazıyordu (`−13,49 €`) — çünkü iade restoku ve sayım fazlası birer
---     GİRİŞ, ama işaret `qty`'ye gömülü olduğu için aynı toplamda eriyorlardı.
---   · `order_item_batch`ten defter TÜRETİLEMİYOR: zaman damgası yok, `record_preparation` satırları
---     silip yeniden yazıyor (`0015`), iade geriye dönük azaltıyor (`0020`). Yani o tablodan üretilen
---     bir "Ağustos'ta ne çıktı" raporu, Eylül'de gelen bir iadeyle KENDİ GEÇMİŞİNİ DEĞİŞTİRİR.
---   · Parti başına mutabakat bugün tutmuyor ve "doğru süzgeç" şemadan okunamıyor: aynı soruyu soran
---     iki makul sorgu iki farklı sayı veriyor (`returned` siparişleri sayılsın mı, `delivered` mi
---     `completed` mi damgalansın). Cevap sorgunun yazarına bağlı kalıyordu.
---
--- Boşluğun bedeli okuma katmanına bir TELAFİ MAKİNESİ olarak yayılmıştı (`domain-core/stock/history`
--- + `application/warehouse/variant-history`, ~530 satır) ve künyeleri dört ayrı üretim arızası
--- anlatıyor — dördü de "aynı hareketi iki yerde saymak" ya da "hiç sayamamak". Defterde hareket BİR
--- KEZ vardır; o sınıf hata bir daha doğamaz.
---
--- **EVİN KENDİ EMSALİ:** para tarafında `money_movement` TEK defterdir (`0018`) ve künyesi bu
--- arızayı önceden tarif etmiş: *"YÖN ayrı alandır, işaret tutara gömülmez (raporda '− yazılmış
--- giriş' gibi çift-anlamlı satır doğmasın)."* Stok bunu yapmamıştı; ekrandaki negatif çıkış toplamı
--- o kararın birebir öngörülmüş sonucuydu. Burada yön KOLONDA, miktar daima pozitif.
---
--- **`stock_adjustment` BU TABLOYA ERİDİ** (kullanıcı kararı 27.08). "money_movement + ayrıca
--- cash_adjustment" diye bölünmemiş bir evde stok da bölünmez: iki tablo = iki toplam = düzeltilen
--- hâlin ta kendisi. İmha artık defterin bir `kind`'ıdır.
+-- ═══ STOK HAREKET DEFTERİ ═══
+-- Her depo hareketi burada bir kez yazılır; durum tablolarından türetilen geçmiş sonradan gelen iadeyle kendini değiştirir.
+-- Yön kolonda, miktar daima pozitif (`money_movement` gibi), imha da defterin bir `kind`'ıdır.
 
 -- Yön: hareketin fiziksel işareti. `qty` DAİMA pozitif (`money_movement.direction` emsali).
 create type stock_direction as enum ('in', 'out');
@@ -185,42 +113,17 @@ create type stock_movement_kind as enum (
   'count_diff'       -- sayım farkı                         (İKİ YÖNLÜ)
 );
 
--- ── `transfer_loss` diye bir tip YOK ve bu ölçülmüş bir karar (27.08 · KAPANDI 04.09, aşağıda) ──
--- İlk tasarımda vardı (19.6'nın açık borcu: "sevk edildi, hedefe eksik ulaştı"). Yazılamadı, çünkü
--- kaybın bir PARTİSİ yok: kaynak parti `transfer_out` ile zaten düşüldü — oraya ikinci bir çıkış
--- yazmak aynı malı iki kez düşürür ve mutabakatı bozar; hedefte ise o mal için parti hiç doğmadı.
--- Yazılabileceği tek yer bir transit deposudur ve tasarım onu açıkça yasaklıyor (*"sanal transit
--- depo YOKTUR — ekran üçüncü bir envanter icat etmez"*).
---
--- Doğrusu: kayıp bir hareket değil, İKİ HAREKETİN FARKI (`transfer_out` − `transfer_in`) ve o fark
--- zaten kayıtlı (`warehouse_transfer_line.qty` ↔ `received_qty`). Mutabakat da kendiliğinden tutar:
--- mal kaynaktan çıktı (yazıldı), hedefe girmedi (yazılmadı) — iki depo arasında yok oldu, ki fiziksel
--- gerçek de budur. 19.6'nın borcu bu yüzden açık kalmıştı: kaybın kayda dönüşmesi bir defter işi
--- değil, sorumluluk/telafi işi (tedarikçiye mi kurye şirketine mi yazılacağı kararı verilmemiş).
---
--- ── KARAR VERİLDİ (kullanıcı 04.09, 21.248): kayıp ALAN depoya yazılır ────────
--- Sorumluluk alan depodadır ve beyanı o yapar: `receive_transfer` partiyi hedefte SEVK EDİLEN
--- adetle açar (`transfer_in` tam adet — kaynaktan çıkan kadar hedefe girer, defter dengelenir),
--- eksik kalanı aynı transaction'da `adjust_stock_batch` ile `write_off · transfer_shortfall`
--- olarak o partiden düşer ve hareketi `transfer_id` ile transfere bağlar. Yani ne transit depo
--- doğdu ne `transfer_loss` tipi: kaybın partisi ARTIK VAR (hedefte doğan parti), tip yine `write_off`.
--- Sıfır gelen satır da parti açar (sıfır adetle) — lot izi ve kayıp belgesi ona bağlanır. İki depo
--- aynı şirketin, depolar arası fatura yok: kayıp bugünkü imha kayıtlarıyla aynı yoldan maliyetlenir.
+-- `transfer_loss` tipi yok: kaybın partisi alan depoda doğar. `receive_transfer` sevk edilen adetle `transfer_in` yazar,
+-- eksiği aynı işlemde `write_off · transfer_shortfall` olarak o partiden düşer; transit depo yok.
 
--- SEBEP KODU — hareket tipinden AYRI bir seviye ve bu ayrım bilinçli (SAP: hareket tipi 551 +
--- ayrıca reason code). "Çöpe attım" bir hareket tipidir; "neden" onun içinde bir kırılımdır ve
--- ekranın "Neden dağılımı" şeridi tam bunu gösteriyor. Tek enuma çökertseydik ya kırılım kaybolur
--- ya hareket tipi listesi sebep sayısınca şişerdi.
---
--- Eski `stock_adjustment_reason`dan İKİ değer buraya GELMEDİ, çünkü onlar sebep değil hareketti:
--- `count_diff` ve `return_restock` artık birer `kind`.
+-- Sebep kodu hareket tipinden ayrı seviyedir (SAP 551 + reason code): tek enum ya kırılımı kaybeder ya listeyi şişirirdi.
+-- `count_diff` ve `return_restock` sebep değil harekettir, bu yüzden `kind`'dadır.
 create type stock_write_off_reason as enum (
   'expired',   -- DLC geçti → imha
   'damaged',   -- hasar / soğuk zincir kırıldı
   'lost',      -- kayıp (sayımda bulunamadı)
-  -- TRANSFER EKSİĞİ (kullanıcı kararı 04.09, 21.248): sevk edilen geldi diye yazılır, gelmeyen
-  -- ALAN depodan bu sebeple düşülür. Ayrı sebep, çünkü kayıp listesinde "transit kaybı" ile
-  -- "sayımda bulunamadı" ayrı sorulardır: biri nakliyeye, öteki rafa bakar.
+  -- Sevk edilen geldi diye yazılır, gelmeyen alan depodan bu sebeple düşülür. Ayrı sebep, çünkü nakliye kaybı ile
+  -- rafta bulunamayan ayrı sorulardır.
   'transfer_shortfall'
 );
 
@@ -229,10 +132,8 @@ create table public.stock_movement (
   -- Parti: varyant · lot · SKT · alış fiyatı hep ondan okunur. `restrict` — hareketi olan parti
   -- silinemez; defter partinin geçmişidir.
   stock_id uuid not null references public.stock (id) on delete restrict,
-  -- **DEPO SATIRDA DURUR** (`CLAUDE §1`: "okuma depo süzgeçsiz yapılmaz"). Partiden türetilebilir
-  -- ama bu tablo SINIRSIZ büyüyen ve her dönem sorgusuyla taranan tablodur; her okumada bir join,
-  -- süzgecin unutulabildiği yerdir. Değeri çağıran YAZMAZ, aşağıdaki trigger türetir — iki yerde
-  -- tutulan bir gerçek, bir gün ayrışan bir gerçektir.
+  -- Partiden türetilebilir ama sınırsız büyüyen tabloda her okumaya join ve unutulabilir süzgeç eklerdi.
+  -- Değeri çağıran yazmaz, tetikleyici türetir.
   warehouse_id uuid not null,
   direction stock_direction not null,
   -- POZİTİF, DAİMA. Yön ayrı kolonda (`money_movement` kuralı, 0018): işareti miktara gömmek
@@ -246,9 +147,8 @@ create table public.stock_movement (
   unit_cost numeric(10, 2),
   -- **OLAYIN anı** — dönem süzgeci buna bakar ("bu çeyrekte ne çıktı" fiziksel bir sorudur).
   occurred_at timestamptz not null default now(),
-  -- **KAYDIN anı** — defterin SIRASI budur. Ayrım `stock_intake`in `date`/`created_at` ayrımıyla
-  -- birebir aynı (22.28 kararı): "az önce ne yazdım" sorusunu yalnız ikincisi cevaplar; geriye
-  -- dönük girilen bir kayıt `occurred_at` sıralamasında listenin ortasına düşer ve bulunamaz.
+  -- Kaydın anı, defterin sırası budur: geriye dönük girilen kayıt `occurred_at` sırasında listenin ortasına düşer ve
+  -- "az önce ne yazdım" sorusunu yalnız bu cevaplar.
   created_at timestamptz not null default now(),
   actor_id uuid,                                     -- FK yok: personel kimliği auth şemasında
   note text,
@@ -259,9 +159,7 @@ create table public.stock_movement (
   order_id uuid,
   transfer_id uuid,
   intake_id uuid,
-  -- **İPTAL = TERS KAYIT** (SAP 551↔552 deseni). Defter append-only'dir: `cancel_transfer` bugün
-  -- stoğu geri yazıp hiçbir yere satır düşmüyordu, yani "mal çıktı ve döndü" geçmişi yalanlanıyordu.
-  -- Artık iptal, aslını işaret eden yeni bir satırdır; ikisi de görünür.
+  -- İptal ters kayıttır (SAP 551↔552): defter append-only, aslını işaret eden yeni satır iki hareketi de görünür bırakır.
   reverses_id uuid references public.stock_movement (id) on delete restrict,
 
   -- Hareket tipi yönünü BELİRLER — tek istisna sayım farkı, o gerçekten iki yönlüdür.
@@ -334,14 +232,8 @@ comment on table public.stock_movement is
   'Stok hareket defteri (06.14) — append-only. Miktar değiştiren her olay burada bir satırdır; '
   'düzeltme yoktur, iptal ters kayıttır (reverses_id). `stock.physical_qty` bu defterin bakiyesidir.';
 
--- ── Defterin okunabilir yüzü ────────────────────────────────────────────────
---
--- `stock_adjustment_detail`in (09.18) devamı ve aynı gerekçe: ekran lot numarasına VEYA ürün adına
--- göre arıyor, ikisi iki ayrı gömülü kaynakta. PostgREST'in `or=` grubu yalnız üst tablonun
--- kolonlarına bakar — "lot VEYA ürün adı" sorgu kurucuyla ifade edilemiyor (`STACK §13` istisnası).
--- Arama metni görünümün İÇİNDE kuruluyor; ekranın terimi tek düz kolona bakar.
---
--- İç birleştirme satır düşürmez: `stock_id` `not null` + `restrict`.
+-- Ekran lot numarasına veya ürün adına göre arar ve PostgREST'in `or=` grubu gömülü kaynağa bakamaz (`STACK §13` istisnası);
+-- arama metni bu yüzden görünümde tek kolonda kurulur.
 create or replace view public.stock_movement_detail as
 select m.id,
        m.stock_id,
@@ -379,35 +271,18 @@ comment on view public.stock_movement_detail is
   'Hareket defteri + aranabilir metin (06.14, 09.18 devamı). Arama lot · ürün adı (3 dil) · varyant · belge no.';
 
 
--- ═══ SICAKLIK KAYDI (06.7) ═══
--- Buraya AYRI BİR MIGRATION dosyasından taşındı (02.11 · denetim P2 — aile içi
--- birleştirme). İçerik değişmedi; eski dosya numarasıyla anılmıyor, çünkü o numara artık yok.
+-- ═══ SICAKLIK KAYDI ═══
 
--- Modül 06 — Sıcaklık kaydı (06.7). DOMAIN §4 / hijyen denetimi.
---
--- Hijyen denetiminin İLK istediği veri budur: dolabın/aracın sıcaklığı düzenli ölçülmüş mü.
--- Sensör entegrasyonu YOK — günde bir-iki elle giriş yeter. Basit tutulur ki gerçekten girilsin.
---
--- ── NOKTA SERBEST METİNDEN TANIMLI KAYDA GEÇTİ (17.08, kullanıcı kararı) ─────
--- `location text` vardı ve içine hem dolap adı hem araç plakası yazılıyordu. Üç zararı ÖLÇÜLDÜ:
--- ekran noktaları birebir metinle grupluyor (`Dolap 1` ≠ `Dolap-1` ≠ `dolap 1` → geçmiş bölünür),
--- "bu nokta genelde şu kadar okuyor" uyarısı o bölünen geçmişe dayanıyor, ve en ağırı: **ölçülmeyen
--- tespit edilemiyor.** "Dondurucu 2 bugün ölçülmedi" demek için Dondurucu 2'nin var olduğunu bilmek
--- gerek; sistem yalnız yazılanı biliyordu, yazılması gerekeni değil. Denetimin sorduğu tam da bu.
+-- Hijyen kontrolünün ilk istediği veri (DOMAIN §4): dolap ve araç sıcaklığı elle, günde bir-iki kez girilir.
+-- Nokta tanımlı kayıttır, çünkü ölçülmeyen noktayı tespit etmek için var olduğunu bilmek gerekir.
 
 create table public.temperature_log (
   id uuid primary key default gen_random_uuid(),
-  -- HANGİ TESİS (DOMAIN §17): hijyen denetimi tesis bazındadır — denetmen bir depoya gelir ve o
-  -- deponun kayıtlarını ister. FK YOK: `warehouse` 0031'de açılır.
-  -- Araç kaydı da bir depoya yazılır (kaydın alındığı tesis): araç bir güne/kuryeye BAĞLANMAZ (K8)
-  -- ama soğuk zincir kaydının bir tesis sahibi olmak zorundadır, yoksa denetimde sahipsiz kalır.
+  -- Hijyen kontrolü tesis bazındadır; araç kaydı da alındığı tesise yazılır ki soğuk zincir kaydı sahipsiz kalmasın.
+  -- FK 0031'de.
   warehouse_id uuid not null,
-  -- ÖLÇÜM NOKTASI — ikisinden TAM BİRİ dolu. FK YOK: iki tablo da 0045'te açılır (emsal:
-  -- `stock.intake_id` 0006'da FK'siz doğdu, tablosu gelince bağlandı).
-  --
-  -- İki ayrı kolon, tek "tip + kimlik" çifti DEĞİL (kullanıcı kararı 17.08 — iki ayrı tablo):
-  -- polimorfik anahtar veritabanına FK yazdırmaz, yani silinen bir dolabın kayıtları sessizce
-  -- sahipsiz kalırdı. İki kolon + `num_nonnulls` kısıtı hem bağı hem tekilliği veriye yazıyor.
+  -- Ölçüm noktası: ikisinden tam biri dolu. İki kolon, çünkü polimorfik anahtar FK kurdurmaz ve silinen dolabın kayıtları
+  -- sahipsiz kalırdı; FK'ler 0045'te.
   storage_area_id uuid,
   vehicle_id uuid,
   temperature_c numeric(4, 1) not null,              -- −18.5 gibi; donukta negatif normaldir
@@ -417,8 +292,7 @@ create table public.temperature_log (
   constraint temperature_log_one_point check (num_nonnulls(storage_area_id, vehicle_id) = 1)
 );
 
--- Denetim sorgusu: depo + nokta + tarih aralığı ("şu depodaki şu dolabın geçen ayki kayıtları").
--- İki ayrı indeks, çünkü iki ayrı kolonun her birinde satırların yarısı `null`.
+-- Kontrol sorgusu: depo + nokta + tarih aralığı. İki ayrı indeks, çünkü iki kolonun her birinde satırların yarısı `null`.
 create index temperature_log_area_date_idx on public.temperature_log (warehouse_id, storage_area_id, recorded_at desc)
   where storage_area_id is not null;
 create index temperature_log_vehicle_date_idx on public.temperature_log (warehouse_id, vehicle_id, recorded_at desc)

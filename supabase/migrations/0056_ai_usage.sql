@@ -1,29 +1,9 @@
--- ════════════════════════════════════════════════════════════════════════════
--- 0056 — AI KULLANIM DEFTERİ (15.27 · kullanıcı kararı 10.09)
--- ════════════════════════════════════════════════════════════════════════════
---
--- Modele giden her koşu bir satır: hangi görev, hangi model, kaç jeton ve yazıldığı andaki tarifeyle
--- yaklaşık kaç DOLAR (sağlayıcının faturası dolar; euroya çevirmek ikinci bir tahmin katmanı — kur —
--- eklerdi).
---
--- ── NEDEN (ölçüldü 07.09) ───────────────────────────────────────────────────
--- `estimateCost` yazılmıştı ama çağıranı yoktu ve tarife hiçbir yerde durmuyordu: her AI çağrısı
--- bedava görünüyordu — `CLAUDE §1`in "ölçülemeyen değer sıfır değildir" kuralının tam ihlali.
---
--- ── YAZAN TEK KAPI ──────────────────────────────────────────────────────────
--- Satırı koşucunun kancası yazar (`@lezzet/ai` → `setAiUsageRecorder`; kaydedici
--- `@lezzet/application/ai/usage-recorder`, süreç başında web ve backend takar). Çağıranlar (ajan,
--- taslak, çeviri, ses, banka, B2B özeti, analitik) kayıt YAZMAZ: on kopya, on birinci çağıranın
--- unutacağı bir kural olurdu — ve unutulan koşu bedava görünürdü.
---
--- ── MALİYET YAZIM ANINDA DONAR ──────────────────────────────────────────────
--- `cost_usd` o anki tarifeyle (`settings.ai_model_prices_usd`) hesaplanır ve satırda kalır. Okuma
--- anında hesaplansaydı tarife değiştiği gün geçen ayın harcaması bugünün fiyatıyla yeniden yazılırdı.
--- Tarifesi olmayan model ya da ölçümsüz koşu `null` alır — bilinmiyor, sıfır değil.
---
--- ── İŞ KAYDI, TEŞHİS DEĞİL ──────────────────────────────────────────────────
--- `purge_observability` bu tabloya dokunmaz: harcama bir işletme kaydıdır (`OBSERVABILITY §1`), 90
--- günde silinen teşhis izi değil.
+-- AI kullanım defteri: modele giden her koşu bir satır; maliyet, sağlayıcının faturası gibi dolar tutulur.
+
+-- Satırı yalnız koşucunun kancası yazar (`@lezzet/ai` → `setAiUsageRecorder`), çünkü çağıranlar yazsaydı unutulan koşu bedava görünürdü.
+-- `cost_usd` yazım anındaki tarifeyle donar ki tarife değişince geçmiş harcama yeniden yazılmasın; tarifesiz koşu `null` alır.
+
+-- `purge_observability` bu tabloya dokunmaz: harcama işletme kaydıdır, teşhis izi değil.
 
 create table public.ai_usage (
   id uuid primary key default gen_random_uuid(),
@@ -56,12 +36,8 @@ alter table public.ai_usage enable row level security;
 -- Tek okuma deseni: zaman penceresi (günlük özet, "bu ay").
 create index ai_usage_created_idx on public.ai_usage (created_at);
 
--- ── GÜNLÜK ÖZET — okuyanın tek kapısı ────────────────────────────────────────
--- Satırlar veriyle SINIRSIZ büyür (her müşteri mesajı en az bir koşu); ekran ve asistan satır saymaz,
--- bunu okur. Gün PARİS günüdür — işletmenin günü, sunucunun değil (`0028` puan gününün aynı kuralı).
---
--- `unpriced_calls`: maliyeti BİLİNMEYEN koşu sayısı. `cost_usd` toplamı onları içermez ve bu açıkça
--- söylenir; sessizce sıfır saymak harcamayı olduğundan az gösterirdi.
+-- Satırlar sınırsız büyüdüğü için ekran ve asistan bu günlük özeti okur; gün, işletmenin günü olan Paris günüdür.
+-- `unpriced_calls` maliyeti bilinmeyen koşuları sayar, çünkü `cost_usd` toplamı onları içermez.
 create or replace view public.ai_usage_daily as
 select (u.created_at at time zone 'Europe/Paris')::date      as day,
        u.task,

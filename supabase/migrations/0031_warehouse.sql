@@ -1,32 +1,9 @@
--- Modül 19 — Depo ağı (19.1). Kurallar: DOMAIN §17; teknik kararlar DATA_MODEL "Kalıcı kararlar" 01.08.
---
--- Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek bir sayıydı, posta
--- kodu yalnız rota gününü belirlerdi. Bu dosya o varsayımı kaldırır.
---
--- ── NEDEN KOLONLAR BAŞKA DOSYALARDA, TABLO BURADA ────────────────────────────
--- `warehouse_id` kolonları doğdukları tablonun dosyasında FK'siz açıldı (0007 stok, 0012 tedarik,
--- 0015 sipariş, …); bu dosya tabloyu kurar ve TÜM bağları birden bağlar. Emsal `stock.intake_id`:
--- 0006'da FK'siz doğdu, tablosu gelince 0010'da bağlandı. Böylece "depo tablosu stoktan önce yok"
--- sıralama sorunu hiç doğmaz ve ara numaralı dosya (0006_1 gibi) açmak gerekmez.
---
--- Aynı gerekçenin GÖRÜNÜM tarafı da var ve daha katı: kolon FK'siz doğabilir ama görünüm tabloyu
--- BEKLEMEK zorundadır — SQL'de "sonra bağlanacak join" yoktur. Bu yüzden `available_stock` bu
--- dosyada kurulur, doğduğu 0006'da değil.
+-- Depo ağı (DOMAIN §17): `warehouse_id` kolonları kendi tablolarının dosyasında FK'siz doğar, bu dosya tabloyu kurar ve
+-- bağları birden bağlar. `available_stock` da burada, çünkü görünüm kolondan farklı olarak tabloyu beklemek zorunda.
 
 -- ── Depo ────────────────────────────────────────────────────────────────────
--- ── Deponun TÜRÜ — tesis mi, araç mı (kullanıcı kararı 26.08) ───────────────
--- Kurye aracı satılan maldan fazlasını yükleyip gittiği yerde isteyene satabiliyor; pratikte olan
--- bir şey ve modelde karşılığı yoktu. Araç bu yüzden bir DEPO TÜRÜDÜR: yükleme ve akşam dönüşü
--- birer transfer (`dispatch_transfer`/`receive_transfer`), araçtaki mal gerçek partidir — son
--- kullanma, FEFO, soğuk zincir ve belge öneki bedavaya gelir. `0045`in künyesi bu soruyu açık
--- bırakmıştı (*"araç bir depoya mı, bir güne mi, bir kuryeye mi bağlanır"*); cevap: hiçbirine —
--- araç bir YERDİR, tıpkı tesis gibi. Ölçüm noktası kimliği (`vehicle`, 0045) ayrı yaşamaya devam
--- eder: orası aracın soğuk zincirini ölçer, burası içindeki malı sayar.
---
--- **Tür bir etiket değil, üç sorgunun süzgecidir** (aşağıda ve `available_stock_total`'da):
--- araç bölgeye bağlanamaz, kargo deposu olamaz, katalog sözüne giremez. Tek alan olmasaydı bu üç
--- kuralı üç ayrı yer ayrı ayrı hatırlamak zorunda kalırdı — ve hatırlamayan ilki sessizce yanlış
--- cevap verirdi (depo süzgeci unutulan sorgunun tek depolu veride doğru görünmesiyle aynı tuzak).
+-- Kurye aracı da bir depodur: yükleme ve dönüş transferdir, araçtaki mal gerçek partidir. Tür üç sorgunun süzgecidir
+-- (araç bölgeye bağlanamaz, kargo deposu olamaz, katalog sözüne giremez), tek alan olmasa her yer ayrı hatırlardı.
 create type public.warehouse_kind as enum ('facility', 'vehicle');
 
 create table public.warehouse (
@@ -37,41 +14,20 @@ create table public.warehouse (
   name text not null,
   -- Varsayılan `facility`: bugüne kadarki her satır bir tesistir ve araç İSTİSNADIR.
   kind warehouse_kind not null default 'facility',
-  -- Deponun ülkesi — FİZİKSEL tesis nerede duruyor. Bölgenin ülkesiyle karıştırılmamalı: bir bölge
-  -- sınır ötesi olabilir (ADR-002), depo olamaz. KDV'nin de bağlı olduğu alan budur:
-  -- ⚠ DE'de depo açmak "uzaktan satış"ı "yerel satış"a çevirir (DOMAIN §5/§17) — mali danışman şart.
+  -- Fiziksel tesisin ülkesi; bölge sınır ötesi olabilir (ADR-002), depo olamaz. KDV buna bağlıdır: DE'de depo uzaktan
+  -- satışı yerel satışa çevirir (DOMAIN §5/§17).
   country_code country_code not null default 'FR',
   address jsonb,
-  -- ── DEPONUN NOKTASI — KOLON, jsonb'nin İÇİ DEĞİL (11.9) ───────────────────
-  -- Rotanın başlangıç ve bitiş noktası burasıdır: kapalı turun her hesabı bu iki sayıya dayanır.
-  -- `address` jsonb'sinin içine gömülseydi KISIT TAŞIYAMAZDI — tek başına enlem yazan bir yolu
-  -- hiçbir şey engelleyemezdi. Rotanın çıpası için bu kabul edilemez.
-  --
-  -- `geo_precision`/`geo_source` YOK ve bilerek (`address`ten ayrılan tek yer): depo noktası bir
-  -- taramanın çıktısı değil, operatörün haritada ONAYLADIĞI noktadır — kademesi her zaman aynıdır.
-  -- Kolon açmak, hiç değişmeyecek bir değeri her satıra yazmak olurdu. Depo tek haneli sayıda
-  -- satırdır, ömür boyu bir kez girilir ve yanlışlığı HER rotayı bozar; "genelde doğru" yetmez.
-  --
-  -- Nullable: depo noktası girilmeden açılabilir. Ama sessiz kalmaz — nokta yoksa sıralama motoru
-  -- o depo için çalışmayı REDDEDER ve sebebini söyler (`no_start`), varsayılan bir merkez uydurmaz.
+  -- Rotanın başlangıç ve bitiş noktası; jsonb içinde olsa kısıt taşıyamazdı. Hassasiyet kolonu yok, çünkü nokta
+  -- operatörün haritada onayladığı konumdur; boşsa sıralama motoru varsayılan uydurmaz, `no_start` ile reddeder.
   lat numeric(9, 6),
   lng numeric(9, 6),
   -- Kargo çıkış deposu: bölge dışı müşteriler ve rota müşterilerinin kargo dolgusu buradan gider.
   ships_online boolean not null default false,
   is_active boolean not null default true,
   sort_order int not null default 0,
-  -- ── ARAÇ NEREYE BAĞLI: EVİ OLAN TESİS (02.09) ──────────────────────────────
-  -- Araç bir YERDİR ama gezen bir yerdir; sabahları bir tesisten çıkar, akşam ona döner. O tesisin
-  -- panelinin *"aracımda ek olarak ne var"* diyebilmesi için bu bağ ŞART ve türetilemez:
-  --   · transferden türetmek → aracı bir kez KEHL yüklerse ev sessizce değişirdi;
-  --   · kuryenin kapsamından türetmek → kapsam KİŞİYE ait, tesise değil (iki tesise bakan bir
-  --     kurye aracı ikisine birden bağlardı);
-  --   · seferden türetmek → yalnız o günü söyler, aracın evini değil.
-  -- Üçü de "genelde doğru"dur ve depo kararlarında genelde doğru yetmez (`lat/lng` ile aynı yargı).
-  --
-  -- Nullable ve YALNIZ araçta dolu: tesisin evi olmaz. Ev tesis olmak zorunda ("aracın evi araç"
-  -- bir döngüdür) — o kural satır-arası olduğu için tetikleyicide (`delivery_zone`ın emsali).
-  -- `restrict`: aracı olan tesis silinemez; zaten hiçbir depo silinmiyor, kapatılıyor.
+  -- Aracın sabah çıkıp akşam döndüğü tesis: transferden, kuryeden ya da seferden türetmek "genelde doğru" olurdu, yetmez.
+  -- Yalnız araçta dolu ve ev bir tesis olmak zorunda; satır arası kural olduğu için tetikleyicide.
   home_warehouse_id uuid references public.warehouse (id) on delete restrict,
   created_at timestamptz not null default now(),
   -- Araçtan kargo çıkmaz: kargo çıkış deposu bir adrestir, taşıyıcı oraya gelir. Kısıt aynı
@@ -83,10 +39,7 @@ create table public.warehouse (
   constraint warehouse_geo_point check ((lat is null) = (lng is null))
 );
 
--- **ÜLKE BAŞINA EN FAZLA BİR AKTİF KARGO DEPOSU** — kural kayıt kapısında değil BURADA duruyor.
--- Karar dokümanı "tablo-geneli kısıt DB'de zorlanamaz" diyordu; kısmi unique indeks tam olarak bunu
--- yapar ve uygulama unutsa da geçmez. Anahtarın ülke olması bugünü de yarını da karşılar: bugün tek
--- ülke var (tek kargo deposu), DE açıldığında onun kendi kargo deposu olur — kod değişmeden.
+-- Ülke başına en fazla bir aktif kargo deposu; kısmi tekil indeks kuralı uygulama unutsa da tutar.
 create unique index warehouse_single_online on public.warehouse (country_code)
   where ships_online and is_active;
 
@@ -95,23 +48,8 @@ create index warehouse_active_idx on public.warehouse (is_active, sort_order, co
 
 alter table public.warehouse enable row level security;
 
--- ── Araç (K8) — TABLO DÜŞÜRÜLDÜ (02.11, 03.08) ──────────────────────────────
--- `vehicle` burada tanımlıydı: plaka, etiket, aktiflik. Servisi yoktu, `from('vehicle')` hiçbir
--- yerde geçmiyordu, sıfır satır taşıyordu ve hiçbir tasarım sayfası aracı bir VARLIK olarak
--- kullanmıyordu — tasarımlarda "araç" yalnız fiziksel bağlam ("araca yükle").
---
--- Tüketilmeyen tablo, kullanılmayan enum değeriyle aynı sınıftır: okuyan, var olmayan bir
--- kabiliyeti varsayar. Üstelik `knip` bunu YAKALAYAMAZ (SQL ve Zod onun kapsamı dışında), yani
--- ölü şema kendiliğinden hiç görünmez.
---
--- Gerçekten gerekince geri gelir ve o gün doğru soruyu sorarız: araç bir depoya mı, bir güne mi,
--- bir kuryeye mi bağlanır. Bugün cevabı olmayan bir soruyu veride donduruyorduk.
--- Gerekçe: `data-model/depo.md` › Vehicle.
-
--- ── Depo bazlı asgari stok eşiği (C6) ───────────────────────────────────────
--- Varyanttaki `min_stock_qty` VARSAYILAN kalır; bu tablo yalnız İSTİSNA yazar. Fiyatın
--- müşteriye-özel satır deseniyle aynı: satır yoksa genel kural işler. Küresel tek eşik çok depoda
--- yapısal olarak yanlış cevap verir — 20 adet STR'de bol, KEHL'de kritik olabilir.
+-- ── Depo bazlı asgari stok eşiği ─────────────────────────────────────────────
+-- Varyanttaki `min_stock_qty` varsayılandır, burası yalnız istisna yazar; küresel tek eşik çok depoda yanlış cevap verir.
 create table public.warehouse_variant_threshold (
   warehouse_id uuid not null references public.warehouse (id) on delete cascade,
   variant_id uuid not null references public.product_variant (id) on delete cascade,
@@ -120,12 +58,8 @@ create table public.warehouse_variant_threshold (
 );
 alter table public.warehouse_variant_threshold enable row level security;
 
--- ── Depolar arası transfer (K11, T4) ────────────────────────────────────────
--- `draft` YOK: hazırlık ekranı henüz yok ve kullanılmayan enum değeri yalan söyler — sevk anı ilk
--- kalıcı andır (`quick_sale`'in `reference_no`'yu sevk anında üretmesiyle aynı mantık).
--- Bu yüzden `cancelled`'ın anlamı da DARDIR (19.6, `cancel_transfer`): iptal edilen şey her zaman
--- zaten sevk edilmiş bir kayıttır ve yalnız "sevk kaydı hatalıydı, mal hiç çıkmadı" hâlini kapsar.
--- Mal çıkıp geri döndüyse cevap ters yönlü YENİ transferdir — gerekçe fonksiyonun künyesinde.
+-- ── Depolar arası transfer ───────────────────────────────────────────────────
+-- `draft` yok, sevk ilk kalıcı andır. `cancelled` yalnız "sevk kaydı hatalıydı, mal hiç çıkmadı" demektir; mal çıkıp döndüyse ters yönlü yeni transfer yazılır.
 create type transfer_status as enum ('in_transit', 'received', 'cancelled');
 
 create table public.warehouse_transfer (
@@ -147,20 +81,8 @@ create table public.warehouse_transfer (
   -- karışmamalı — `note` sevk anının notudur, bu ise onu iptal eden kararın.
   cancel_reason text,
   note text,
-  /*
-    YAZIMIN KİMLİĞİ (21.263 · kullanıcı kararı 04.09) — "bu sevki zaten yazdım mı?"
-
-    İstemcide üretilir ve İSTEĞİN kimliğidir, transferin değil: rampada cevabı kaybolan bir "araca
-    al" isteği tekrarlandığında aynı anahtarla gelir, aşağıdaki tekil indeks ikinci yazımı
-    reddeder ve `dispatch_transfer` var olan transferin künyesini döndürür. Ölçülen arıza buydu
-    (04.09, Oppo): kurye tekrar dokununca mal araca İKİNCİ kez biniyor, ekran eski sayıyı
-    gösterdiği için kimse görmüyordu.
-
-    Aynı kalıp para defterinde de var (`money_movement.idempotency_key`, 0018) — kullanıcı kararı
-    tek tek değil DESEN olarak çözmekti. `note`a ya da `reference_no`ya binmiyor: `note` sevk
-    anının cümlesidir (04.09'da yön anlamı yüklendi, 21.257) ve `reference_no` insanın okuduğu
-    belge numarasıdır.
-  */
+  -- İsteğin kimliği: tekrarlanan "araca al" isteği aynı anahtarla gelir ve tekil indeks malın araca ikinci kez binmesini
+  -- engeller. `money_movement.idempotency_key` ile aynı desen; `note` ve `reference_no` başka iş görür.
   idempotency_key text,
   created_at timestamptz not null default now(),
   -- Durum ile izler birbirini tutar: `cancelled` damgasız olamaz, damga da başka durumda duramaz.
@@ -172,10 +94,7 @@ create table public.warehouse_transfer (
 -- "Yolda ne var" — sanal transit depo AÇILMADI (T4), bu sorunun kaynağı transfer kaydının kendisi.
 create index warehouse_transfer_status_idx on public.warehouse_transfer (status, dispatched_at desc);
 create index warehouse_transfer_to_idx on public.warehouse_transfer (to_warehouse_id, status);
--- Yazım kimliği (21.263): aynı istek İKİ KEZ sevk yazamaz. Kısmi indeks DEĞİL — anahtarsız sevk
--- (depo ekranından elle transfer, besleme) `null` taşır ve `null`'lar tekil karşılaştırmada
--- birbirine eşit sayılmaz, yani bu kısıta hiç takılmazlar. `on conflict (idempotency_key)` de
--- böylece çıkarım inceliği olmadan hedefleyebiliyor. (Para defterindeki eşinin aynı gerekçesi.)
+-- Aynı istek iki kez sevk yazamaz; kısmi değil, çünkü anahtarsız sevklerin NULL'ları çakışmaz ve `on conflict` hedefleyebilir.
 create unique index warehouse_transfer_idempotency_key on public.warehouse_transfer (idempotency_key);
 
 create table public.warehouse_transfer_line (
@@ -201,17 +120,9 @@ alter table public.warehouse_transfer_line enable row level security;
 alter table public.stock add constraint stock_warehouse_fk
   foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
 
--- ── Parti numarası tetikleyicisi (kullanıcı kararı 03.09) ────────────────────
--- Kolon 0006'da doğdu (`stock.batch_no`), üretimi BURADA: numara depo KODUNU taşıyor
--- (`PRT-STR-26-0031`) ve kod bu dosyada doğuyor. Sayaç belge ailesinin sayacı (`next_document_no`,
--- 0009) — imha/sayım/transfer numaralarıyla aynı seri mantığı: depo başına, yıl başına, atomik.
---
--- NEDEN TETİKLEYİCİ, UYGULAMA DEĞİL: parti üç yoldan doğuyor (mal kabul RPC'si, transfer kabulü
--- RPC'si, tohum) ve yarın dördüncüsü açılabilir. Numara satırın doğduğu yerde verilirse hiçbir yol
--- unutamaz; uygulamada verilseydi ilk unutan yol numarasız parti üretir ve `not null` orada patlardı.
---
--- ELLE VERİLEN NUMARA EZİLMEZ: `new.batch_no` doluysa dokunulmaz (test fikstürü, ileride dış
--- sistemden taşıma). Boşsa üretilir.
+-- ── Parti numarası tetikleyicisi ─────────────────────────────────────────────
+-- Numara depo kodunu taşıdığı için burada üretilir; parti birden çok yoldan doğduğundan tetikleyici hiçbir yolun unutmasına
+-- izin vermez. Elle verilen numara ezilmez.
 create or replace function public.stock_set_batch_no() returns trigger
 language plpgsql
 set search_path = public
@@ -248,9 +159,7 @@ alter table public.temperature_log add constraint temperature_log_warehouse_fk
 alter table public.delivery_zone add constraint delivery_zone_warehouse_fk
   foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
 
--- Hareket defterinin bağları (06.14) — dört kolonu da `0006`'da FK'siz doğdu, çünkü dördünün de
--- tablosu ondan sonra açılıyor (`stock.intake_id` emsali). Hepsi `restrict`: hareketi olan hiçbir
--- belge silinemez — defter append-only ise dayandığı belge de yok olamaz.
+-- Hareket defterinin bağları; hepsi `restrict`, çünkü append-only defterin dayandığı belge yok olamaz.
 alter table public.stock_movement add constraint stock_movement_warehouse_fk
   foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
 alter table public.stock_movement add constraint stock_movement_order_fk
@@ -260,15 +169,9 @@ alter table public.stock_movement add constraint stock_movement_transfer_fk
 alter table public.stock_movement add constraint stock_movement_intake_fk
   foreign key (intake_id) references public.stock_intake (id) on delete restrict;
 
--- ── Bölge bir ARACA bağlanamaz (26.08) ──────────────────────────────────────
--- "Posta kodu → bölge → depo" zincirinin sonu bir ADRES olmak zorundadır: rota o depodan çıkar,
--- mal kabul oraya yapılır, kargo dolgusu oradan gider. Zincir bir araca çözülseydi müşteri
--- siparişi hareket hâlindeki bir yere yazılırdı ve hiçbir ekran bunu fark etmezdi — sipariş
--- geçerli görünür, deposu geçerli görünür, yalnız mal olmayan bir yerde olurdu.
---
--- FK türü ayırt edemez, `check` başka tabloya bakamaz → tetikleyici. Kapsam kontrolünün
--- (`assert_warehouse_ids_exist`) birebir gerekçesi: hata KAYIT ANINDA verilir, yoksa yanlış
--- eşleşme sessiz kalır ve ertesi gün rota ekranında ortaya çıkar.
+-- ── Bölge bir araca bağlanamaz ───────────────────────────────────────────────
+-- Posta kodu zincirinin sonu bir adres olmalı, yoksa sipariş hareket hâlindeki bir yere yazılırdı. FK türü ayırt edemediği
+-- için tetikleyici; hata kayıt anında verilir.
 create or replace function public.assert_zone_warehouse_is_facility() returns trigger
 language plpgsql
 set search_path = public
@@ -289,9 +192,7 @@ create trigger delivery_zone_warehouse_is_facility
   before insert or update of warehouse_id on public.delivery_zone
   for each row execute function public.assert_zone_warehouse_is_facility();
 
--- Aracın EVİ bir tesistir (02.09). Kolon kısıtı "yalnız araçta dolu" der ama işaret ettiği satırın
--- ne olduğunu göremez: kısıt kendi satırını okur, ötekini değil. Araç aracın evi olsaydı zincir
--- kapanır ve "bu aracın malı hangi tesisin" sorusunun cevabı olmazdı.
+-- Aracın evi bir tesistir; kolon kısıtı işaret ettiği satırı göremez ve araç aracın evi olsaydı zincir kapanırdı.
 create or replace function public.assert_home_warehouse_is_facility() returns trigger
 language plpgsql
 set search_path = public
@@ -328,9 +229,7 @@ alter table public.user_profiles add constraint user_profiles_warehouse_scope
     or cardinality(warehouse_ids) >= 1
   );
 
--- Dizi kolonda FK kurulamaz — geçerlilik tetikleyiciyle tutulur. Yazılmayan bir uuid fail-closed
--- davranır (personel hiçbir depo göremez) ama SESSİZ kalırdı: kapsam ataması yapan operatör
--- "kaydettim" der, ertesi gün depocu boş ekrana bakar. Hata kayıt anında verilir.
+-- Dizi kolonda FK kurulamaz; yanlış kimlik fail-closed olsa da sessiz kalırdı, bu yüzden hata kayıt anında verilir.
 create or replace function public.assert_warehouse_ids_exist() returns trigger
 language plpgsql
 set search_path = public
@@ -359,11 +258,8 @@ create trigger user_profiles_warehouse_ids_trg
   before insert or update of warehouse_ids on public.user_profiles
   for each row execute function public.assert_warehouse_ids_exist();
 
--- Ters yön: kapsamda geçen depo silinemez. FK'ler (`restrict`) malı/siparişi olan depoyu zaten
--- korur ama dizi kolonda FK yoktur — boş bir depo silinseydi personelin `warehouse_ids`'inde
--- var olmayan bir kimlik kalırdı. Davranış fail-closed olurdu (kimse bir şey göremez) ama SESSİZ:
--- yukarıdaki tetikleyicinin varlık gerekçesiyle aynı sessizlik, ters yönden. Depo kapatılır
--- (`is_active`), silinmez; silinecekse önce kapsamlardan çıkarılır.
+-- Ters yön: kapsamda geçen depo silinemez, yoksa personelin `warehouse_ids`inde sessizce yok bir kimlik kalırdı.
+-- Depo kapatılır, silinecekse önce kapsamlardan çıkarılır.
 create or replace function public.assert_warehouse_unscoped() returns trigger
 language plpgsql
 set search_path = public
@@ -385,13 +281,8 @@ create trigger warehouse_scope_guard_trg
 create index user_profiles_warehouse_ids_idx on public.user_profiles using gin (warehouse_ids);
 
 -- ── Kullanılabilir stok — grain (depo, varyant) ─────────────────────────────
--- 0006'dan taşındı (dosya başındaki gerekçe). Denklem aynı: KULLANILABİLİR = FİİLİ − AKTİF
--- REZERVASYON; değişen tek şey hesabın DEPO İÇİNDE yapılması. Birleştirilmiş stok kimsenin stoğu
--- değildir: 3 STR'de + 2 KEHL'de duran maldan 5 kişilik sipariş çıkmaz.
---
--- `cross join` bilinçli: "0 da bir cevaptır" sözleşmesi korunuyor — yeni açılan depoda hiç parti
--- olmasa da her varyant için satır döner ve okuyan taraf "bilmiyorum" ile "yok"u ayırt edebilir.
--- Maliyet önemsiz (500 varyant × birkaç depo); depo sayısı büyürse fonksiyona çevrilir.
+-- Kullanılabilir = fiili − aktif rezervasyon, depo içinde; birleştirilmiş stok kimsenin stoğu değildir. `cross join` her
+-- aktif depo için satır döndürür ki okuyan "bilmiyorum" ile "yok"u ayırabilsin.
 create or replace view public.available_stock as
 select
   w.id                                                as warehouse_id,
@@ -421,21 +312,8 @@ left join (
 ) r on r.variant_id = v.id and r.warehouse_id = w.id
 where w.is_active;
 
--- Depo-üstü toplam — AYRI görünüm, bilerek. Satış kararı bunu OKUMAZ (yukarıdaki gerekçe); tedarik
--- önerisi ve "hiçbir depoda yok mu" sorusu (C3: ziyaretçiye 'tükendi' demenin tek meşru dayanağı)
--- buna bakar.
---
--- GERİ ÇAĞIRMA BUNU OKUMAZ: kaynağı `available_stock`, o da yalnız AKTİF depoları sayıyor — kapalı
--- bir depoda duran parti burada görünmez ve rappel'de iz kaybolur. Doğru kaynak `stock` tablosunun
--- kendisidir (parti/lot bazlı, aktiflikten bağımsız); bu görünüm "satılabilir mi / sipariş vermeli
--- miyim" sorusunun cevabıdır ve o sorularda kapalı deponun malı gerçekten sayılmamalıdır.
--- ARAÇLAR BU TOPLAMA GİRMEZ (26.08): görünümün iki tüketicisi de araçtaki malı saymamalı.
--- *Katalog* için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz — yolda, başkasının
--- rotasında. Sayılsaydı vitrin tutulamayacak bir söz verirdi. *Tedarik önerisi* için ise araç
--- stoğu zaten tesisten çıkmış maldır; akşam geri döner, yani ikinci kez sayılırdı ve öneri
--- olduğundan az mal görünmesini engellemek yerine olmayan bir bolluk gösterirdi.
--- Depo bazlı `available_stock` aracı AYNEN gösterir — kuryenin ekranı arabasında ne olduğunu
--- görmek zorunda; ayrım tam da bu yüzden burada, kaynakta değil.
+-- Depo-üstü toplam yalnız "hiç var mı" sorusunun ve tedarik önerisinin; satış kararı ve geri çağırma bunu okumaz.
+-- Araçlar girmez: araçtaki mal siteden alınamaz ve akşam tesise döner, sayılsa söz ya da bolluk yanlış olurdu.
 create or replace view public.available_stock_total as
 select
   a.variant_id,
@@ -447,9 +325,8 @@ from public.available_stock a
 join public.warehouse w on w.id = a.warehouse_id and w.kind = 'facility'
 group by a.variant_id;
 
--- ── Tedarik siparişi ilerlemesi (K6, T5) ────────────────────────────────────
--- PO durumu SAKLANAN SAYAÇ DEĞİL, buradan türer: `receive_intake` artık siparişi koşulsuz kapatmaz.
--- Ölçü `initial_qty` — `physical_qty` satışla erir ve "ne kadar geldi" sorusuna yanlış cevap verir.
+-- ── Tedarik siparişi ilerlemesi ──────────────────────────────────────────────
+-- PO durumu buradan türer; ölçü `initial_qty`, çünkü `physical_qty` satışla erir.
 create or replace view public.purchase_order_progress as
 select
   poi.purchase_order_id,
@@ -467,14 +344,8 @@ left join (
    group by purchase_order_item_id
 ) g on g.purchase_order_item_id = poi.id;
 
--- ── Değişmez: siparişin partileri siparişin deposundan (T10) ────────────────
--- K5 ("bir sipariş tek depodan çıkar") şemada `order.warehouse_id not null` ile yarı yarıya durur;
--- kalan yarısı budur — hazırlıkta yazılan parti başka depodan olamaz. Üç yazım yolu var (hazırlık,
--- hızlı satış, seed) ve kural hepsinde geçerli: uygulamaya bırakılırsa biri unutur, mal bir
--- şehirde sipariş başka şehirde olur.
---
--- ERTELENMİŞ (`order_discount_balance` emsali): sipariş deposu ile partiler AYNI transaction'da
--- yazılabilsin diye — satır sırası kuralı bozmamalı, denetim COMMIT anında yapılır.
+-- ── Değişmez: siparişin partileri siparişin deposundan ─────────────────────────
+-- Her yazım yolunda geçerli olsun diye veride; ertelenmiş, çünkü sipariş deposu ile partiler aynı işlemde yazılır.
 create or replace function public.assert_order_batch_warehouse(p_order_id uuid) returns void
 language plpgsql
 stable
@@ -528,9 +399,7 @@ create constraint trigger order_item_batch_warehouse
   deferrable initially deferred
   for each row execute function public.order_batch_warehouse_check();
 
--- Partinin deposu doğrudan değiştirilirse de aynı denetim koşar. Normal akışta parti depo
--- değiştirmez (transfer hedefte YENİ satır doğurur, T4) — bu tetikleyici onarım betiği ve elle
--- müdahale yolunu kapatır. Değişmezin "veride durması" ancak tüm yollar kapalıyken anlamlıdır.
+-- Partinin deposu doğrudan değişirse de aynı kontrol koşar; onarım betiği ve elle müdahale yolu da kapanır.
 create or replace function public.stock_warehouse_check() returns trigger
 language plpgsql
 set search_path = public
@@ -555,14 +424,8 @@ create constraint trigger stock_warehouse_batches
   deferrable initially deferred
   for each row execute function public.stock_warehouse_check();
 
--- Siparişin deposu sonradan değiştirilirse de aynı denetim koşar — kısıt tek yönlü olsaydı
--- "partiler doğru, sipariş kaydı yanlış" hâli açık kalırdı.
---
--- Rezervasyonlar da BURADAN denetlenir: aşağıdaki `reservation_warehouse_matches_order` yalnız
--- rezervasyon tarafını dinliyor, yani siparişin deposu sonradan değişince sessiz kalırdı. O yol
--- teorik değil — K4 (checkout'ta posta kodu yeniden çözülür) ve K3 (posta kodu değişince sepet
--- yeniden değerlendirilir) tam olarak `order.warehouse_id`'yi güncelleyen yollardır. Ayrışsaydı
--- eski depoda mal kimseye hizmet etmeden kilitli kalır, yeni depoda hiç ayrılmamış olurdu.
+-- Siparişin deposu değişince partiler ve rezervasyonlar da buradan kontrol edilir: posta kodu yeniden çözülünce
+-- depo değişebilir ve eski depoda mal boşuna kilitli kalırdı.
 create or replace function public.order_warehouse_check() returns trigger
 language plpgsql
 set search_path = public
@@ -594,10 +457,8 @@ create constraint trigger order_warehouse_batches
   deferrable initially deferred
   for each row execute function public.order_warehouse_check();
 
--- ── Değişmez: rezervasyonun deposu siparişin deposu (T1) ────────────────────
--- Rezervasyon depoyu AÇIKÇA taşıyor (türetme ilkesinin gerekçeli istisnası, 0006'daki not);
--- bedeli iki alanın ayrışabilmesi, panzehiri bu kısıt. `order` bulunamazsa denetim atlanır:
--- rezervasyonun `order`'a FK'sı yok ve sipariş kapanınca satırlar zaten silinir.
+-- ── Değişmez: rezervasyonun deposu siparişin deposu ──────────────────────────
+-- Rezervasyon depoyu açıkça taşıdığı için iki alan ayrışabilir, bu kısıt panzehiridir; sipariş kapanınca satırlar silinir.
 create or replace function public.reservation_warehouse_check() returns trigger
 language plpgsql
 set search_path = public
@@ -620,31 +481,17 @@ create constraint trigger reservation_warehouse_matches_order
   deferrable initially deferred
   for each row execute function public.reservation_warehouse_check();
 
--- ── Sevk (19.1) ─────────────────────────────────────────────────────────────
--- NEDEN RPC (STACK §13 (b)): bölünemez çok-tablolu yazım — transfer kaydı + satırlar + kaynak
--- partilerin düşümü tek gerçektir. Yarısı yazılırsa "mal düştü ama transfer yok" hâli doğar ve
--- stok elle düzeltilir. (a) koşulu da var: aynı partiyi eşzamanlı satış isteyebilir.
---
--- FİZİKSEL GERÇEK: yola çıkan mal kaynaktan O AN düşer. Sanal "transit depo" yok (T4) — yoldaki
--- mal hiçbir depoda satılamaz, çünkü hiçbir deponun stoğunda değildir.
---
--- ÖLÇÜ FİİLİ DEĞİL KULLANILABİLİR: sevk, müşteriye SÖZ VERİLMİŞ malı götüremez. Fiiliye baksaydık
--- 3 adedi rezerve edilmiş bir parti sevk edilebilir görünürdü; mal gider, sipariş STR'ye bağlı
--- kalır (K5) ve hazırlıkta karşılanamaz — üstelik aynı mal hedefte "serbest" görünüp ikinci kez
--- satılabilirdi. `available_stock` bunu gizler bile: `greatest(fiili − rezerve, 0)` eksiyi sıfır
--- gösterir. Bu yüzden kontrol sevkten ÖNCE ve fiili üzerinden değil kullanılabilir üzerinden yapılır.
--- (`adjust_stock` fiiliye bakar ve bu doğrudur — imha FİZİKSEL KAYIPTIR, olan biteni kaydeder;
--- transfer ise bir karardır ve reddedilebilir.)
---
+-- ── Sevk ────────────────────────────────────────────────────────────────────
+-- Transfer, satırlar ve kaynak düşümü bölünemez (STACK §13); mal kaynaktan o an düşer, transit depo yok. Ölçü kullanılabilir
+-- miktardır, çünkü sevk müşteriye söz verilmiş malı götüremez.
+
 -- p_lines: [{"source_stock_id": uuid, "qty": int}, ...]
 create or replace function public.dispatch_transfer(
   p_to_warehouse_id uuid,
   p_lines jsonb,
   p_actor_id uuid default null,
   p_note text default null,
-  -- Yazımın kimliği (21.263) — künyesi kolonun kendisinde. `null` = korumasız sevk (depo
-  -- ekranından elle transfer, besleme); `null`'lar tekil indekste çakışmadığı için o yol
-  -- aynen çalışır.
+  -- `null` korumasız sevktir (elle transfer, besleme); NULL'lar tekil indekste çakışmaz.
   p_idempotency_key text default null
 ) returns jsonb
 language plpgsql
@@ -668,15 +515,8 @@ begin
     raise exception 'dispatch_transfer: en az bir kalem gerekli';
   end if;
 
-  /*
-    HIZLI YOL — KORUMA DEĞİL (21.263). Bilinen bir anahtar burada erkenden yakalanır ki tekrar
-    eden istek boşuna BELGE NUMARASI yakmasın: `next_document_no` aşağıda sayacı ilerletiyor ve
-    her yeniden denemede depo kâğıt serisinde bir boşluk doğardı.
-
-    Korumanın kendisi bu satır DEĞİL, aşağıdaki `on conflict`tir: burası oku-sonra-yaz, yani aynı
-    ANDA gelen ikinci isteği göremez. Tam da kapatmaya çalıştığımız pencere bu; iki mekanizma bu
-    yüzden birlikte duruyor ve hangisinin ne yaptığı burada yazılı.
-  */
+  -- Hızlı yol, koruma değil: bilinen anahtar erken yakalanır ki tekrar belge numarası yakmasın.
+  -- Eşzamanlı isteği aşağıdaki `on conflict` yakalar.
   if p_idempotency_key is not null then
     select id, reference_no into v_transfer_id, v_reference
       from public.warehouse_transfer where idempotency_key = p_idempotency_key;
@@ -740,12 +580,8 @@ begin
   on conflict (idempotency_key) do nothing
   returning id into v_transfer_id;
 
-  /*
-    ASIL KORUMA BURASI (21.263). Hızlı yolu geçen ama aynı anda gelen ikinci istek indekse takılır
-    ve buraya düşer. **Erken dönmek ZORUNLU**: aşağıdaki kalem döngüsü stoğu DÜŞÜYOR; düşülmezse
-    mal ikinci kez kaynaktan iner ve arıza büyüyerek geri gelir. Yakılan belge numarası burada
-    kaybediliyor — seride boşluk doğar ve bu kabul: numara ucuz, mükerrer stok hareketi değil.
-  */
+  -- Asıl koruma: aynı anda gelen ikinci istek burada erken döner, yoksa aşağıdaki döngü stoğu ikinci kez düşerdi.
+  -- Yakılan belge numarası seride boşluk bırakır ve bu kabul edilir.
   if v_transfer_id is null then
     select id, reference_no into v_transfer_id, v_reference
       from public.warehouse_transfer where idempotency_key = p_idempotency_key;
@@ -782,10 +618,7 @@ begin
     insert into public.warehouse_transfer_line (transfer_id, source_stock_id, qty)
     values (v_transfer_id, v_stock_id, v_qty);
 
-    -- Sevk kaynakta bir ÇIKIŞTIR ve deftere öyle yazılır (06.14). `warehouse_transfer_line` kaydı
-    -- yerinde duruyor ve işi değişmedi — o transferin İÇERİĞİDİR (kaynak/hedef parti eşlemesi);
-    -- defter ise stoğun hareketidir. İkisi aynı olsaydı "bu depodan bu çeyrek ne çıktı" sorusu
-    -- transfer tablosunu da taramak zorunda kalırdı, ki bugünkü hâl tam olarak buydu.
+    -- Sevk kaynakta bir çıkıştır ve deftere yazılır; `warehouse_transfer_line` transferin içeriğidir, defter stoğun hareketi.
     insert into public.stock_movement
       (stock_id, direction, qty, kind, unit_cost, actor_id, reference_no, transfer_id)
     values
@@ -794,47 +627,20 @@ begin
        p_actor_id, v_reference, v_transfer_id);
   end loop;
 
-  -- `deduped` her iki yolda da YAZILIR (21.263): okuyan taraf alanın varlığına değil DEĞERİNE
-  -- baksın. Yalnız tekrar dalında yazılsaydı "alan yok" ile "yeni yazım" aynı şeye benzerdi.
+  -- `deduped` iki yolda da yazılır ki okuyan varlığa değil değere baksın.
   return jsonb_build_object('ok', true, 'transfer_id', v_transfer_id, 'reference_no', v_reference, 'deduped', false);
 end;
 $$;
 
 revoke execute on function public.dispatch_transfer(uuid, jsonb, uuid, text, text) from public, anon, authenticated;
 
--- ── Kabul (19.1) ────────────────────────────────────────────────────────────
--- İkinci fiziksel gerçek an: mal hedef depoda doğar. Parti kimliği KORUNUR (T4) — tarih, lot ve
--- alış fiyatı kaynaktan kopyalanır ki geri çağırma izi ve gerçek COGS transferden etkilenmesin.
--- Hedefte var olan bir partiyle BİRLEŞTİRİLMEZ: birleştirseydik `initial_qty` iki partinin toplamı
--- olur, "bu partiden ne kadar tüketildi" sorusu cevapsız kalırdı.
---
--- Yeni parti `intake_id` ve `purchase_order_item_id` TAŞIMAZ (T5): transfer bir tedarik girişi
--- değildir; tedarik fark raporu PO kalemi ↔ giriş partileri bağından hesaplanır ve transfer onu
--- bozamaz. Kökeni `warehouse_transfer_line.source_stock_id → target_stock_id` bağında durur.
---
--- ── EKSİK KABUL = BEYAN + KAYIP KAYDI (kullanıcı kararı 04.09, 21.248) ──────
--- Eskiden kısmi kabul yalnız `received_qty` ile yazılıyor, fark raporda görünüyordu ve kayıp
--- hiçbir defterde yoktu (`0006`'nın 27.08 notu: "kaybın partisi yok"). Şimdi partinin var:
---   1. Parti hedefte SEVK EDİLEN adetle doğar, `transfer_in` tam adet — kaynaktan çıkan kadar
---      hedefe girer, iki deponun defteri birbirini tutar.
---   2. Eksik kalan (`qty − received_qty`) aynı transaction'da `adjust_stock_batch` ile o partiden
---      düşer: `write_off · p_reason` (varsayılan `transfer_shortfall`; koli hasarlı geldiyse
---      `damaged`), tek IMH belgesi, notu depocunun beyanı; hareketler `transfer_id`ye bağlanır.
---   3. Sıfır gelen satır da parti açar (sıfır adetle): lot izi ve kayıp belgesi bir yere bağlanır.
--- Sorumluluk ALAN depodadır (iki depo aynı şirketin, fatura yok) — beyanı o yapar, kayıp onun
--- hanesine yazılır. Tam kabulde hiçbir düşüm yazılmaz; araç yüklemesi (`takeToVan`) bu kapıyı
--- tam adetle çağırdığı için eksik dalına hiç girmez.
---
--- ── FAZLA KABUL = BEYAN + SAYIM FARKI (kullanıcı kararı 04.09, 21.253) ───────
--- Sevk edilenden FAZLASI reddedilmez (eskiden `raise`): gönderen dört sanıp beş koymuş olabilir ve
--- rampada sayılan gerçek beştir. Kural eksiğin aynası:
---   1. Parti yine SEVK EDİLEN adetle doğar (`transfer_in` tam adet) — iki deponun defteri tutar.
---   2. Fazlası (`received_qty − qty`) aynı transaction'da `adjust_stock_batch` ile o partiye
---      `count_diff · in` olarak eklenir: rampadaki sayım bir sayımdır, belgesi SAY serisinden
---      (alan deponun), notu depocunun beyanı (boşsa sabit cümle — `count_diff · in` not ister).
---   3. Gönderen deponun defterine DOKUNULMAZ: orada fazladan görünen birim bir sonraki sayımda
---      düşer; alan depo beyan eder, gönderen depoya bildirim gider (uygulama katmanı).
---
+-- ── Kabul ───────────────────────────────────────────────────────────────────
+-- Mal hedefte yeni partiyle doğar, tarih, lot ve alış fiyatı kaynaktan kopyalanır; tedarik bağları taşınmaz. Parti daima
+-- sevk edilen adetle açılır ki iki deponun defteri tutsun.
+
+-- Eksik aynı işlemde `write_off` (varsayılan `transfer_shortfall`), fazla `count_diff · in` olarak alan depoya yazılır;
+-- sorumluluk alan depodadır ve gönderenin defterine dokunulmaz.
+
 -- p_lines: [{"line_id": uuid, "received_qty": int}, ...]
 create or replace function public.receive_transfer(
   p_transfer_id uuid,
@@ -860,7 +666,7 @@ declare
   v_short jsonb := '[]'::jsonb;
   v_short_qty int := 0;
   v_short_ref text := null;
-  -- Fazla beyanı (04.09, 21.253): hedefte doğan partiye eklenecek satırlar — eksiğin aynası.
+  -- Hedefte doğan partiye eklenecek fazla satırları.
   v_excess jsonb := '[]'::jsonb;
   v_excess_qty int := 0;
   v_excess_ref text := null;
@@ -896,19 +702,15 @@ begin
     if v_src is null then
       raise exception 'receive_transfer: satır bu transfere ait değil (%)', v_line_id;
     end if;
-    -- Sevk edilenden FAZLASI artık reddedilmez (04.09, 21.253): rampada sayılan gerçektir, fazlası
-    -- döngüden sonra `count_diff · in` ile partiye eklenir — aşağıda.
+    -- Sevk edilenden fazlası reddedilmez, rampada sayılan gerçektir; fazlası döngüden sonra partiye eklenir.
 
-    -- Parti SEVK EDİLEN adetle doğar — sıfır gelende de (04.09): kaybın bağlanacağı parti bu.
-    -- `initial_qty` tetikleyiciden sevk edilen adet olur; "bu partiden ne kadar tüketildi"
-    -- sorusunun doğru tabanı — kayıp da bir tüketimdir.
+    -- Parti sıfır gelende de sevk edilen adetle doğar: kaybın bağlanacağı parti budur ve `initial_qty` tüketimin doğru tabanıdır.
     insert into public.stock (warehouse_id, variant_id, physical_qty, expiry_date, lot_number, purchase_price)
     values (v_to_warehouse_id, v_src.variant_id, v_src.qty, v_src.expiry_date, v_src.lot_number, v_src.purchase_price)
     returning id into v_target_stock_id;
     v_created := v_created + 1;
 
-    -- Hedefte mal DOĞDU: defterin giriş satırı (06.14) — kaynaktan çıkan kadar, eksiksiz. Eksik
-    -- kalan kısım bu satıra değil, döngüden sonraki `write_off`a yazılır (04.09).
+    -- Kaynaktan çıkan kadar giriş satırı; eksik kısım döngüden sonraki `write_off`a yazılır.
     insert into public.stock_movement
       (stock_id, direction, qty, kind, unit_cost, actor_id, transfer_id)
     values
@@ -939,10 +741,7 @@ begin
     end if;
   end loop;
 
-  -- KONUŞULMAMIŞ SATIR KALAMAZ. Eksik satır transferi kapatsaydı mal sessizce buharlaşırdı:
-  -- kaynaktan düşmüş, hedefte doğmamış, "yolda ne var" listesinde de yok (T4'e göre o listenin tek
-  -- kaynağı bu kayıt). "0 geldi" ile "hiç konuşulmadı" ayrı şeylerdir — ilki kayıp beyanıdır ve
-  -- `received_qty = 0` ile yazılır, ikincisi bir eksikliktir ve kabulü bloklar.
+  -- Konuşulmamış satır kalamaz, yoksa mal sessizce buharlaşırdı; "0 geldi" kayıp beyanıdır, "hiç konuşulmadı" kabulü bloklar.
   if exists (
     select 1 from public.warehouse_transfer_line
      where transfer_id = p_transfer_id and received_qty is null
@@ -950,9 +749,7 @@ begin
     raise exception 'receive_transfer: kabul edilmemiş satır var — her satır için miktar (kayıpsa 0) gerekli';
   end if;
 
-  -- EKSİK BEYANI (04.09): tek IMH belgesi, alan deponun serisinden; hareketler transfere bağlanır.
-  -- `adjust_stock_batch` aynı transaction'da koşar — kabul yazılıp kayıp yazılamamış bir hâl yok.
-  -- Sebep boş geçilirse `transfer_shortfall`: imhanın sebebi kısıtla zorunlu, kapı sessiz düşmez.
+  -- Eksik beyanı: tek İMH belgesi, aynı işlemde; sebep boşsa `transfer_shortfall`, çünkü imha sebebi zorunludur.
   if v_short_qty > 0 then
     v_adjust := public.adjust_stock_batch(
       v_short, 'write_off', 'IMH', coalesce(p_reason, 'transfer_shortfall'), p_note, p_actor_id
@@ -963,9 +760,7 @@ begin
      where reference_no = v_short_ref and kind = 'write_off' and transfer_id is null;
   end if;
 
-  -- FAZLA BEYANI (04.09, 21.253): tek SAY belgesi, alan deponun serisinden — rampadaki sayım bir
-  -- sayımdır. `count_diff · in` sebep notu ister; depocu yazmadıysa sabit cümle, uydurulmaz.
-  -- Eksik ve fazla aynı kabulde birlikte olabilir (bir satır eksik, öteki fazla): iki belge.
+  -- Fazla beyanı: tek SAY belgesi; not boşsa sabit cümle. Aynı kabulde eksik ve fazla birlikte iki belge doğurur.
   if v_excess_qty > 0 then
     v_adjust := public.adjust_stock_batch(
       v_excess, 'count_diff', 'SAY', null,
@@ -996,23 +791,9 @@ $$;
 
 revoke execute on function public.receive_transfer(uuid, jsonb, uuid, stock_write_off_reason, text) from public, anon, authenticated;
 
--- ── Sevk kaydının geri alınması (19.6) ──────────────────────────────────────
--- **İki farklı gerçeği ayırıyoruz, çünkü tek düğmeye sıkıştırılırsa stok yalan söyler:**
---
---   1. Sevk kaydı HATALIYDI, mal hiç çıkmadı  → burası. Mal kaynağa geri yazılır, transfer
---      `cancelled` olur. Bu bir DÜZELTMEDİR ve iz bırakır (kim, ne zaman, neden).
---   2. Mal çıktı, sonra geri döndü            → BURASI DEĞİL, ters yönlü YENİ transfer. Mal fiilen
---      iki kez yol gitti; tek kayda indirmek "hiç gitmedi" demek olur ve soğuk zincir geçmişini
---      siler. Ekranın düğmesi bu yüzden "İptal" değil **"Sevk kaydını geri al"** demeli.
---
--- Neden kayıt SİLİNMEZ: transfer bir olay kaydıdır. Silinseydi `reference_no` (kâğıt klasördeki
--- numara) karşılıksız kalırdı ve depocu elindeki belgeyi sistemde bulamazdı.
---
--- Neden hedef depoya değil KAYNAĞA yazılır: mal hiç çıkmadı iddiası bu yolun tanımı. Hedefe
--- yazmak, olmayan bir kabulü uydururdu.
---
--- Parti KİMLİĞİ korunur: miktar orijinal satıra geri eklenir, yeni parti doğmaz. Yeni parti açmak
--- `initial_qty`'yi ve geri çağırma izini bölerdi (T4 ile aynı gerekçe, ters yönü).
+-- ── Sevk kaydının geri alınması ──────────────────────────────────────────────
+-- Yalnız "sevk kaydı hatalıydı, mal hiç çıkmadı" hâli: mal kaynağa, orijinal partiye geri yazılır ve kayıt silinmez ki belge
+-- numarası karşılıksız kalmasın. Mal çıkıp döndüyse ters yönlü yeni transfer yazılır.
 create or replace function public.cancel_transfer(
   p_transfer_id uuid,
   p_actor_id uuid default null,
@@ -1032,8 +813,7 @@ begin
   if v_status is null then
     raise exception 'cancel_transfer: transfer bulunamadı (%)', p_transfer_id;
   end if;
-  -- `received` geri alınmaz: mal hedefte parti olarak DOĞDU, belki satıldı bile. O yolun cevabı
-  -- ters transferdir. `cancelled` de geri alınmaz — ikinci çağrı stoğu iki kez geri yazardı.
+  -- `received` geri alınmaz, mal hedefte doğdu; `cancelled` de alınmaz, ikinci çağrı stoğu iki kez geri yazardı.
   if v_status <> 'in_transit' then
     raise exception 'cancel_transfer: transfer % durumunda, geri alınamaz', v_status;
   end if;
@@ -1057,13 +837,8 @@ begin
   )
   select count(*) into v_restored from geri;
 
-  -- **İPTAL = TERS KAYIT, silme DEĞİL** (06.14 · SAP 551↔552 deseni). Bu RPC eskiden stoğu geri
-  -- yazıp hiçbir yere satır düşmüyordu: mal çıkmış ve dönmüştü ama defterde yalnız çıkışı vardı —
-  -- yani geçmiş yalanlanıyordu ve `physical_qty` deftere göre fazla görünüyordu. Artık her sevk
-  -- satırının karşısına, aslını işaret eden bir giriş satırı doğuyor.
-  --
-  -- Sıra ÖNEMLİ: bu insert yukarıdaki `update`ten SONRA, çünkü ikisi de aynı partiye dokunuyor ve
-  -- defter satırı fiili miktarın düzeltilmiş hâlini anlatıyor.
+  -- İptal ters kayıttır (SAP 551↔552): her sevk satırının karşısına aslını işaret eden giriş doğar.
+  -- Yukarıdaki `update`ten sonra, çünkü defter satırı düzeltilmiş fiili miktarı anlatır.
   insert into public.stock_movement
     (stock_id, direction, qty, kind, unit_cost, actor_id, note, reference_no, transfer_id, reverses_id)
   select tl.source_stock_id, 'in', tl.qty, 'transfer_cancel', s.purchase_price, p_actor_id,

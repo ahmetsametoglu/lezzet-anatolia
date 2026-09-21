@@ -1,20 +1,5 @@
--- Analitik SİNYAL özetleri + iki rapor okuması (13.2 · 13.4 · 13.5).
--- Kurallar `docs/architecture/ANALYTICS.md`; bu dosya 0035'in üstüne "ekranın soramadığı soruları"
--- ekler.
---
--- ── NEDEN AYRI TABLOLAR, NEDEN `analytics_daily`'YE KOLON EKLEMEDİK ──────────
--- `analytics_daily` boyutları gün × tip × rota × depo × kanal × satılabilirlik × terk sebebi. Ürünü
--- ya da arama terimini oraya BOYUT olarak eklemek satır sayısını katalog büyüklüğüyle (ve arama
--- çeşitliliğiyle) ÇARPARDI — ekranın bugün kullandığı huni/ısı/seri okumaları da o şişmiş tabloyu
--- taramak zorunda kalırdı. Üç ayrı soru, üç ayrı doğal tavan:
---   `analytics_daily_product`  gün × ürün          → "çok bakılıp az alınan" (13.4) + vitrin seçkisi (08.9)
---   `analytics_daily_search`   gün × terim × kova  → "aranıp bulunamayan" (13.4)
---   `analytics_daily_source`   gün × kaynak × kmp. → trafik kaynağı + kaynak dönüşümü (13.2)
---
--- Üçü de ham defterden ÜRETİLİR ve ekran ham deftere hiç bağlanmaz (`ANALYTICS §5`). §5 "aranıp
--- bulunamayan listesi ham defterden" diyordu; oradaki kasıt "kaynağı `analytics_daily` DEĞİL"dir.
--- Ham defterden okumayı seçmedik çünkü o okuma ayın tüm bölümünü tarar ve 25 ay dolunca listenin
--- geçmişi sessizce kısalırdı.
+-- Analitik sinyal özetleri (ANALYTICS): ürün, arama terimi ve kaynak ayrı tablolardır, çünkü `analytics_daily`ye boyut
+-- olarak eklenseler satırı katalog ve arama çeşitliliğiyle çarpardı. Üçü ham defterden üretilir, ekran ham deftere bağlanmaz.
 
 -- ═══ ÜRÜN KIRILIMI ═══════════════════════════════════════════════════════════
 -- **Bu tablonun iki tüketicisi var ve ikincisi kolay gözden kaçar:** yönetici raporu ("çok bakılıp
@@ -48,10 +33,7 @@ alter table public.analytics_daily_product enable row level security;
 create index analytics_daily_product_product_idx on public.analytics_daily_product (product_id, day desc);
 
 -- ═══ ARAMA TERİMLERİ ═════════════════════════════════════════════════════════
--- **Kova (`zero_result_kind`) bir BOYUTTUR, bayrak değil** (`ANALYTICS §4`): süzgeç boşluğu SIK bir
--- arayüz sinyali, arama boşluğu SEYREK bir çeşit sinyalidir. Tek listede toplansalardı sık olan
--- seyreği boğardı ve "müşterinin istediği ama bizde olmayan şey" listesi kullanılamaz hâle gelirdi.
--- `null` kova = arama sonuç DÖNDÜ (sıfır değil).
+-- Kova bir boyuttur (`ANALYTICS §4`): sık süzgeç boşluğu seyrek arama boşluğunu boğmasın; `null` kova sonuç döndü demek.
 create type analytics_zero_result_kind as enum ('search', 'filter');
 
 create table public.analytics_daily_search (
@@ -88,10 +70,7 @@ create table public.analytics_daily_source (
 
   session_count integer not null default 0,
   event_count integer not null default 0,
-  -- **Kaynağın DÖNÜŞÜMÜ** — oturumu siparişle biten kaç oturum vardı. Kampanya ROI'sinin
-  -- ciro-bağımsız yarısı: ciro `acquisition_source` üzerinden ilk-temas atfıyla gelir (aşağıdaki
-  -- RPC), bu sayı ise o gün o kaynaktan gelen oturumun kendi dönüşümüdür. İkisi AYNI ŞEY DEĞİL ve
-  -- birbirinin doğrulaması da değil.
+  -- O gün o kaynaktan gelip siparişle biten oturum sayısı; ilk-temas cirosundan (aşağıdaki RPC) ayrı bir sorudur.
   order_session_count integer not null default 0,
 
   updated_at timestamptz not null default now(),
@@ -105,43 +84,8 @@ alter table public.analytics_daily_source enable row level security;
 
 create index analytics_daily_source_day_idx on public.analytics_daily_source (day desc, session_count desc);
 
-/**
- * Ürün kırılımını üretir (idempotent) → yazılan satır sayısı.
- *
- * Ürüne bağlanamayan satırlar DIŞARIDA: kategori/koleksiyon görüntülemeleri ürün sinyali değildir
- * ve toplanırlarsa "ilgi" sıralaması listeleme sayfalarıyla dolar.
- *
- * ── ÜRÜN KİMLİĞİ VARYANTTAN DA ÇÖZÜLÜR (08.56 · 24.08, ölçülerek) ────────────
- * `cart_count` **yapısal olarak sıfırdı** ve sebebi bir hesap hatası değil, üç doğru parçanın
- * birbirine değmemesiydi: `AddToCartIntent` `productId` taşımıyor (bilinçli — `cart-types.ts`
- * künyesi: istemcinin elindeki `CartEntry` ürünü değil VARYANTI tanıyor ve sunucuda doldurmak en
- * sıcak yazma yoluna fazladan bir okuma eklerdi), atıcı bu yüzden `product_id: null` yazıyor, ve
- * bu fonksiyon o satırları `group by`a girmeden eliyordu.
- *
- * **Kararın kendi telafisi yapılmamıştı.** Aynı künye *"ürün kırılımı varyant tablosundan
- * çözülebiliyor"* diyordu — çözüm hiçbir yerde yazılmamıştı. Eksik olan kimliğin taşınması değil,
- * taşınmayan kimliğin yerine konacak okuma.
- *
- * **Düzeltme sıcak yazma yoluna DEĞİL buraya kondu.** İki gerekçe: (1) `AddToCartIntent`e alan
- * eklemek kayıtlı kararı bozardı ve gerekçesi hâlâ geçerli — sepete ekleme en sıcak yazma yolu,
- * kimlik başına bir okuma orada birikir; **günlük bir toplu işte aynı okuma bedelsizdir** ve
- * arama yapılacak yer burasıdır; (2) native uç `product_id`yi kendisi dolduruyor ve `coalesce`'un
- * ilk terimi olarak çalışmaya devam eder — iki yüzey ayrışmaz.
- *
- * **"Geçmiş satırlar da sayılır" bir gerekçe DEĞİL** (kullanıcı düzeltmesi 24.08): proje greenfield,
- * veritabanı sürekli sıfırlanıyor ve kurtarılacak geçmiş yok. İlk yazımda bu üçüncü bir gerekçe
- * olarak yazılmıştı; `CLAUDE.md`'nin greenfield notu ("geriye uyum gözetilmez") ile çelişiyordu ve
- * silindi. Karar değişmiyor — üstteki iki gerekçe tek başına yeterli.
- *
- * **PAKET satırı atfedilmez:** `subject_type = 'bundle'` join'e girmez, `product_id` de boştur, yani
- * satır düşer. Paket bir ürün değil, ürünlerin demeti; birine atfetmek ürün özetini yanlış beslerdi
- * (mobil ucun paket görüntülemesinde verdiği kararla aynı).
- *
- * **Etkisi ölçülmüştü, üç yerde:** yönetim ekranı her ürün için "1.240 → 0" yazıyordu ve yönetici
- * bunu "kimse sepete atmıyor" diye okurdu · `cartRate` payı hep 0 · vitrin seçkisinin sıralaması
- * (`home.ts`) `viewCount + cartCount` diyor ve ikinci terim hiçbir şey yapmıyordu. Üçü de hata
- * vermiyordu — `CLAUDE §1`: *"Ölçülemeyen değer SIFIR değildir."*
- */
+-- Ürün kırılımını üretir (idempotent), yazılan satır sayısını döner. Sepet olayı yalnız varyantı taşıdığı için ürün burada
+-- varyanttan çözülür; sıcak yazma yolundaki bir okumaya göre günlük işte bedelsizdir, paket satırı ise atfedilmez.
 create or replace function public.build_analytics_daily_product(p_day date)
 returns integer
 language plpgsql
@@ -162,8 +106,7 @@ begin
          count(distinct e.session_key)::int,
          now()
     from public.analytics_event e
-    -- Kimliği YAZILMAMIŞ ama çözülebilir satırlar için (08.56): olay varyantı işaret ediyorsa ürünü
-    -- ondan okunur. `left join` çünkü satırların çoğu ürünü zaten taşıyor ve join'e ihtiyacı yok.
+    -- Kimliği yazılmamış satırın ürünü varyanttan okunur; çoğu satır ürünü taşıdığı için `left join`.
     left join public.product_variant v
            on e.subject_type = 'variant' and v.id = e.subject_id
    where e.created_at >= p_day and e.created_at < p_day + 1
@@ -226,14 +169,8 @@ $$;
 comment on function public.build_analytics_daily_search(date) is
   'Bir günün arama terimi özetini üretir (13.4). İdempotent.';
 
-/**
- * Trafik kaynağı özetini üretir (idempotent) → yazılan satır sayısı.
- *
- * **UTM anahtarları KAPALI SÖZLÜKTÜR** (`{source, medium, campaign, content, term}`) ve
- * normalleştirmeyi KAPI yapar (`lib/analytics/record.ts`). Burada `utm->>'utm_source'` aramıyoruz:
- * ham sorgu dizesinin anahtarları deftere hiç girmiyor. Sözlük değişirse iki yer birden değişir ve
- * ikisi de bu künyeye bakar.
- */
+-- Trafik kaynağı özetini üretir (idempotent). UTM anahtarları kapalı sözlüktür ve kapı normalleştirir
+-- (`lib/analytics/record.ts`); sözlük değişirse iki yer birden değişir.
 create or replace function public.build_analytics_daily_source(p_day date)
 returns integer
 language plpgsql
@@ -253,13 +190,8 @@ begin
   )
   insert into public.analytics_daily_source as t
     (day, source, campaign, medium, session_count, event_count, order_session_count, updated_at)
-  -- Sol birleşim ŞART: künyesi olmayan oturum (doğrudan trafik) da sayılmalı — `source is null`
-  -- kovasına düşer. İç birleşim yazsaydık toplam oturum sayısı sessizce küçülür ve her kaynağın
-  -- payı olduğundan büyük görünürdü.
-  -- **UTM ÖNCE, yönlendiren SONRA.** Reklamla gelen ziyaretçi teknik olarak da bir siteden
-  -- yönlendirilmiştir (`instagram.com`) ve o ikinci bilgi kampanya etiketini (`instagram`)
-  -- GÖLGELER: aynı kampanya iki kovaya bölünür, kaynak dökümü de reklam raporuyla tutmaz.
-  -- Sıra `rememberAcquisition`'daki ile aynı olmak zorunda; ters yazılmıştı, test yakaladı.
+  -- Sol birleşim, çünkü künyesiz oturum da sayılmalı. UTM yönlendirenden önce gelir, yoksa reklamla gelen ziyaretçi
+  -- iki kovaya bölünürdü; sıra `rememberAcquisition` ile aynı olmak zorunda.
   select p_day,
          coalesce(s.utm->>'source', s.source),
          s.utm->>'campaign',
@@ -285,17 +217,8 @@ $$;
 comment on function public.build_analytics_daily_source(date) is
   'Bir günün trafik kaynağı özetini üretir (13.2). Doğrudan trafik null kovasında.';
 
-/**
- * Süresi dolmuş oturum künyelerini ve arama özetlerini siler → silinen satır sayıları.
- *
- * **İkisi de ham defterle AYNI 25 ayı yaşar, `analytics_daily` gibi süresiz değil.** Gerekçe ikisi
- * için ayrı:
- *   · `analytics_session` — psödonim bir anahtar taşır; defterin bölümü düşerken künyesinin kalması
- *     "saklama süresi" iddiasını yarım bırakırdı (tablo bölümlenmemiş, o yüzden `delete`).
- *   · `analytics_daily_search` — sistemdeki tek kalıcı serbest metin; süresiz saklamak, ham metnin
- *     ömrünü özet kılığında sonsuza uzatmak olurdu.
- * Sayı ve oran taşıyan öteki özetler (gün/ürün/kaynak) kişisel veri değildir ve süresiz kalır.
- */
+-- Oturum künyelerini ve arama özetlerini ham defterle aynı 25 ayda siler: künye psödonim anahtar, arama özeti tek kalıcı
+-- serbest metindir. Sayı taşıyan öteki özetler kişisel veri değildir ve süresiz kalır.
 create or replace function public.purge_analytics_before(p_day date)
 returns table (sessions integer, searches integer)
 language plpgsql
@@ -317,19 +240,8 @@ comment on function public.purge_analytics_before(date) is
   'Oturum künyelerini ve arama özetlerini saklama süresine göre siler (13.1) — sayı özetleri süresizdir.';
 
 -- ═══ DÖNEM OKUMALARI — TOPLAMA SQL'DE (STACK §13) ═══════════════════════════
-/**
- * Dönemin ürün sinyalleri (13.4 + vitrin seçkisi 08.9).
- *
- * **Neden RPC, neden uygulamada toplamıyoruz:** sıralama ölçütü TÜRETİLMİŞ bir orandır (sepete
- * dönüşüm) ve "en yüksek ilgi, en düşük dönüşüm" ilk N'i ancak tüm dönem toplandıktan sonra bilinir.
- * Uygulamada toplasaydık günler × ürünler kadar satırı çekmek gerekirdi — 141 ürünlük katalogda bir
- * yıllık pencere 50 bin satır eder ve o satırların 49.950'si atılmak için taşınırdı.
- *
- * **`cart_rate` paydası SATILABİLİR görüntülemedir**, toplam değil: stoksuz görüntülenen ürünün
- * sepete girmemesi bir ilgisizlik sinyali değildir. Payda 0 ise oran `null` — sıfır değil
- * (`CLAUDE §1`: ölçülemeyen değer sıfır değildir; sıfır yazsaydık hiç satılabilir görünmemiş ürün
- * listenin başına oturur ve yönetici onu "kimse almıyor" diye okurdu).
- */
+-- RPC, çünkü sıralama türetilmiş bir orandır ve ilk N ancak dönem toplandıktan sonra bilinir. `cart_rate` paydası satılabilir
+-- görüntülemedir ve payda 0 ise oran `null` döner.
 create or replace function public.analytics_product_signals(
   p_from date,
   p_to date,
@@ -371,13 +283,7 @@ $$;
 comment on function public.analytics_product_signals(date, date, integer) is
   'Dönemin ürün sinyalleri (13.4) — ilgi/dönüşüm; vitrin seçkisi de bunu okur (08.9).';
 
-/**
- * Dönemin arama sinyalleri (13.4).
- *
- * `p_zero_only` ile SIFIR SONUÇLU aramalar süzülür — talep/çeşit sinyali. Kova (`zero_result_kind`)
- * gruplamada KALIR: süzgeç boşluğu ile arama boşluğu ayrı raporlanır (`ANALYTICS §4`), tek listede
- * toplansalardı sık olan seyreği boğardı.
- */
+-- Dönemin arama sinyalleri; `p_zero_only` sıfır sonuçluları süzer, kova gruplamada kalır (`ANALYTICS §4`).
 create or replace function public.analytics_search_signals(
   p_from date,
   p_to date,
@@ -411,16 +317,8 @@ comment on function public.analytics_search_signals(date, date, integer, boolean
   'Dönemin arama sinyalleri (13.4) — sıfır-sonuç süzgeci kovayı korur.';
 
 -- ═══ "HANGİ SİPARİŞ CİRO SAYILIR" — TEK TANIM ════════════════════════════════
--- Aşağıdaki üç okuma da (kampanya cirosu · dönem cirosu · segment) aynı soruyu soruyor ve cevabı
--- ÜÇ KEZ yazılsaydı bir gün ayrışırlardı: biri iadeyi düşer öteki düşmez, aynı ekranda iki farklı
--- ciro görünür ve **hiçbiri hata vermez**. Tanım burada, tek yerde.
---
--- Taslak SAYILMAZ (hiç sipariş olmadı), iptal SAYILMAZ (ciro değil), iade SAYILMAZ (parası geri
--- gitmiş bir satış ne kampanyanın getirisi ne dönemin cirosudur).
--- İKİ TUTAR DA TAŞINIR (01.09 ad ayrımı): `ordered_total` sipariş edilen, `revenue_total`
--- gerçekleşen ciro. Bugünkü raporların hepsi SİPARİŞ EDİLENİ okuyor — o tur yalnız adlandırmaydı,
--- davranış bilerek değişmedi. Ciroya geçiş kararı ölçümüyle ayrı gelecek (BEKLEYEN(12.25)); kolon
--- şimdiden burada duruyor ki geçiş tek kelimelik olsun, view'ı yeniden yazmak gerekmesin.
+-- Üç okuma aynı tanımı kullanır ki ayrışmasın: taslak, iptal ve iade sayılmaz. İki tutar taşınır, raporlar bugün
+-- `ordered_total`ı okur; `revenue_total`a geçiş BEKLEYEN(12.25).
 create or replace view public.analytics_order_base as
   select o.id, o.customer_id, o.channel, o.ordered_total, o.revenue_total, o.created_at, o.address_snapshot
     from public.order o
@@ -429,25 +327,8 @@ create or replace view public.analytics_order_base as
 comment on view public.analytics_order_base is
   'Analitik ciro tanımı (13.2 · 13.5) — hangi siparişin ciro sayıldığı TEK yerde; üç okuma da bunu kullanır.';
 
-/**
- * **DÖNEM CİROSU — gün × kanal** (13.2 · operasyon şeridinin isteği 04.08).
- *
- * ── NEDEN AYRI BİR OKUMA, `order_counts` YETMİYOR ───────────────────────────
- * Var olan sayaç tarih süzgecini **TESLİM gününe** uyguluyor (`deliveryFrom/To`); analitiğin sorusu
- * ise **sipariş tarihidir**. İkisi aynı değil: bugün verilen bir sipariş üç gün sonra teslim edilir,
- * yani teslim gününe göre okunan bir "dönem cirosu" kampanya giderinin dönemiyle hiç hizalanmaz.
- * Operasyon şeridi bu yüzden "yaklaşık doğru" bir ciro yazmayı reddetti — doğru yaptı.
- *
- * ── NEDEN GÜN × KANAL, DÜZ TOPLAM DEĞİL ─────────────────────────────────────
- * Tek çağrı üç soruyu birden karşılıyor: dönem toplamı (satırların toplamı), B2C/B2B ayrımı
- * (hero şeridi) ve günlük seri (zaman grafiği + önceki dönemin hayalet çizgisi). Üç ayrı RPC
- * yazsaydık üçü de aynı tanımı tekrarlardı.
- *
- * **Karışık ölçüm yalan söyler** (`ANALYTICS §3`): B2B'nin tek siparişi B2C'nin ortalamasını
- * savurur, o yüzden kanal ayrı satır — toplamak okuyanın kararı.
- *
- * Satır sayısı doğal tavanlı (gün × 2), yani sayfalama gerekmez.
- */
+-- Dönem cirosu, gün × kanal: `order_counts` teslim gününe süzer, analitik sipariş gününü sorar. Kanal ayrı satırdır,
+-- çünkü karışık ölçüm yalan söyler (`ANALYTICS §3`); satır sayısı gün × 2 ile sınırlı.
 create or replace function public.analytics_order_revenue(p_from date, p_to date)
 returns table (
   day date,
@@ -474,25 +355,9 @@ $$;
 comment on function public.analytics_order_revenue(date, date) is
   'Dönem cirosu gün × kanal (13.2) — süzgeç SİPARİŞ tarihinde, teslim gününde değil.';
 
--- ═══ KAMPANYA CİROSU — İLK TEMAS ATFI (13.2) ═════════════════════════════════
-/**
- * Dönemin siparişlerini müşterinin EDİNİM KAYNAĞINA göre toplar.
- *
- * **Bu İLK TEMAS (first-touch) atfıdır ve ölçtüğü şey künyeye yazılmak zorunda:** satır "o dönemde
- * o kampanyanın reklamına tıklayıp sipariş verenler" DEĞİL, "o kampanyanın bize kazandırdığı
- * müşterilerin o dönemde verdiği siparişler"dir. Tekrar siparişler de ilk kaynağa yazılır.
- *
- * **Neden başka türlüsü yok:** oturum anahtarı siparişe YAZILMIYOR (`ANALYTICS §2`) — yazsaydık tek
- * `join` ile anonim defterin tamamı geriye dönük kimliklenirdi. Elimizdeki tek kalıcı bağ, sipariş
- * anında müşteriye kopyalanan `acquisition_source`'tur. Yani bu kısıt mahremiyet kararının bedeli ve
- * bilerek ödeniyor.
- *
- * **Sonuç okunurken:** ROI'nin gider tarafı (`campaignSpend`) DÖNEMİN gideridir, ciro tarafı ise
- * geçmişte kazanılmış müşteriyi de içerir. Yeni kampanyada ciro geç görünür, eski kampanyada gider
- * bittiği hâlde ciro sürer — `new_customers` sütunu tam olarak bu farkı okutmak için var.
- *
- * jsonb anahtarları CAMELCASE: servis katmanı yazarken dönüştürüyor (`checkout-session.ts` künyesi).
- */
+-- ═══ KAMPANYA CİROSU — İLK TEMAS ATFI ═════════════════════════════════════════
+-- Siparişleri müşterinin edinim kaynağına göre toplar: kampanyanın kazandırdığı müşterilerin dönem siparişleri, tekrarlar dahil.
+-- Oturum anahtarı siparişe yazılmadığı için tek bağ `acquisition_source`tur; jsonb anahtarları camelCase.
 create or replace function public.analytics_campaign_revenue(p_from date, p_to date)
 returns table (
   campaign text,
@@ -532,28 +397,8 @@ $$;
 comment on function public.analytics_campaign_revenue(date, date) is
   'Kampanya cirosu — İLK TEMAS atfı (13.2): tekrar siparişler de müşteriyi kazandıran kaynağa yazılır.';
 
-/**
- * **POSTA KODU BAŞINA SİPARİŞ** — "çok soruluyor, az alınıyor" listesinin karşı ucu.
- *
- * ── KULLANICI SORUSU (04.08) ────────────────────────────────────────────────
- * *"İnsanlar bir posta kodu giriyor ve genelde bir şey almadan çıkıyor — sıralamada en üstteki
- * kodu bilebilecek miyim?"* Talep tarafı zaten sayılıyordu (`postal_code_demand`, **bölge içi
- * kodlar dâhil** — 0023'ün kendi künyesi öyle diyor). Eksik olan sipariş tarafıydı.
- *
- * ── YENİ TABLO AÇILMADI ve bu kullanıcının şartıydı ─────────────────────────
- * Sayaç var, sipariş var; ortada olmayan tek şey ikisini yan yana koyan okumaydı. Ayrı bir
- * "çözülme" defteri açmak aynı olguyu üçüncü kez kaydetmek olurdu (`postal_code_demand` anonim
- * sayaç ↔ `zone_notice` kimlikli kişi zaten var).
- *
- * ── ANAHTAR `address_snapshot`, `address` TABLOSU DEĞİL ─────────────────────
- * Adres sonradan düzeltilebilir ya da silinebilir; siparişin nereye gittiği siparişte durur
- * (kolonun kendi gerekçesi). Canlı adresten okusaydık geçmiş dönüşüm oranları bugün değişirdi.
- *
- * ⚠ **DÖNEM SÜZGECİ YOK ve bu bilinçli bir eksiklik:** `postal_code_demand` zaman kırılımı
- * taşımıyor (kod başına tek satır, tek sayı). Siparişi döneme süzüp talebi tüm zamandan alsaydık
- * oran pencere daraldıkça sessizce düşerdi — ve düşüşü bir sinyal sanılırdı. İkisi de TÜM ZAMAN.
- * Zaman kırılımı gerçekten gerekirse sayaç gün boyutu kazanmalı; o ayrı bir karardır.
- */
+-- Posta kodu başına sipariş, `postal_code_demand` talebinin karşı ucu. Anahtar `address_snapshot`, çünkü canlı adres
+-- geçmiş oranı değiştirirdi; talep sayacı zaman kırılımı taşımadığı için iki taraf da tüm zamandır.
 create or replace function public.analytics_postal_code_orders(p_codes text[])
 returns table (postal_code text, order_count integer, revenue_cents bigint)
 language sql
@@ -561,14 +406,7 @@ stable
 security definer
 set search_path = public
 as $$
-  -- ── ANAHTAR camelCase (15.08) ──────────────────────────────────────────────────────────────
-  -- `address_snapshot` jsonb'si artık uygulamanın YAZDIĞI gibi saklanıyor: satır dönüştürücüsü
-  -- kolon adlarını çevirir ama değerin içine inmez (kullanıcı kararı; `case-transformers` künyesi).
-  -- Önceden diskte `postal_code` duruyordu çünkü çevirici jsonb'nin de içine iniyordu.
-  --
-  -- **Bu üç satır değişikliğin en sessiz kırılma noktasıydı:** eski anahtarla sorgu hata vermez,
-  -- `null` döner — `where … is not null` her satırı eler ve fonksiyon boş küme döndürür. Posta kodu
-  -- başına sipariş/ciro sayacı sıfırlanır, hiçbir yerde bir hata görünmez.
+  -- `address_snapshot` uygulamanın yazdığı camelCase anahtarlarla saklanır; yanlış anahtar hata vermez, boş küme döndürür.
   select upper(regexp_replace(o.address_snapshot->>'postalCode', '\s', '', 'g')) as postal_code,
          count(*)::int,
          round(sum(o.ordered_total) * 100)::bigint
@@ -581,19 +419,9 @@ $$;
 comment on function public.analytics_postal_code_orders(text[]) is
   'Posta kodu başına sipariş/ciro (13.4) — talep sayacının karşı ucu; kod normalleştirmesi 0023 ile aynı.';
 
--- ═══ MÜŞTERİ SEGMENTLERİ (13.5) ══════════════════════════════════════════════
-/**
- * Müşteriyi son sipariş tarihi + sipariş sayısından SEGMENTE indirger.
- *
- * **Segment saklanmaz, TÜRETİLİR** ve bu bilinçli: saklanan bir segment kolonu, onu tazeleyen iş bir
- * gün koşmayınca sessizce yanlışa döner ve kimse fark etmez — "uyuyan" listesinde dün sipariş vermiş
- * biri durur. Türetilen segment her okumada doğrudur.
- *
- * Eşikler PARAMETRİK (`CLAUDE §4`): uyuyan sınırı, "yeni" penceresi ve şampiyon sipariş sayısı
- * çağırandan gelir; varsayılanlar 90 / 30 / 3.
- *
- * Sıra önemlidir — `case` ilk eşleşeni alır: champion → new → active → dormant → lost.
- */
+-- ═══ MÜŞTERİ SEGMENTLERİ ═════════════════════════════════════════════════════
+-- Segment türetilir, saklanan segment tazeleme işi koşmayınca sessizce yanlışa döner. Eşikler çağırandan gelir
+-- (90 / 30 / 3); `case` ilk eşleşeni alır.
 create or replace function public.analytics_customer_segments(
   p_reference date default current_date,
   p_dormant_days integer default 90,
@@ -639,15 +467,7 @@ $$;
 comment on function public.analytics_customer_segments(date, integer, integer, integer) is
   'Müşteri segmenti SAYILARI (13.5) — segment türetilir, saklanmaz; eşikler parametrik.';
 
-/**
- * Bir segmentin ÜYELERİ — "analitik kaç der, Müşteriler kim der" köprüsünün kim tarafı
- * (`ANALYTICS §6`). Sayı ile liste AYNI ölçütten çıkmalı, yoksa köprü zaten çalışmıyor demektir;
- * bu yüzden segment `case`'i ikinci kez yazılmadı — üstteki fonksiyonun mantığı tek yerde durur ve
- * bu fonksiyon onu satır düzeyinde tekrar eder.
- *
- * **Sayfalanır** (`CLAUDE §1`: müşteri kümesi veriyle sınırsız büyür). Sıralama son siparişe göre:
- * uyuyan listesinde en yeni uyuyan en üstte, çünkü geri kazanma şansı en yüksek olan odur.
- */
+-- Segmentin üyeleri: sayı ile liste aynı ölçütten çıkmalı. Sayfalanır ve en yeni uyuyan üstte, çünkü geri kazanma şansı en yüksek odur.
 create or replace function public.analytics_segment_members(
   p_segment text,
   p_limit integer default 50,

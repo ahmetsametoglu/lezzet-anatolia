@@ -1,22 +1,7 @@
--- Modül 17 — Ürün geri bildirimi ve ürün skoru (17.1, 17.3). DOMAIN §14.
---
--- **Müşterinin bize VERMEYİ SEÇTİĞİ değerlendirme.** Üç biçim tek varlıkta: yıldız, yazılı yorum,
--- beğen/geç. Ayrımları biçimden ibarettir — müşteri, ürün, tarih, puan kazanımı, "aynı ürüne bir
--- kez" tekilliği, ürün skoruna katkı ve GDPR silme yolu üçünde de aynıdır. `discount`'ın kuponu ve
--- otomatik kampanyayı tek tabloda tutmasıyla aynı gerekçe (0024): iki tablo, aynı yedi alanı iki kez
--- tanımlamak ve skoru iki ayrı yerden toplamak olurdu.
---
--- ── BURASI BEYAN, `analytics_event` İZ ────────────────────────────────────────
--- Beğen/geç bir zamanlar analitik olayı olarak tasarlanmıştı; oraya AİT DEĞİL (29.07 düzeltmesi).
--- Ölçüt basit: kayıt puan kazandırıyor mu, kişiye bağlanıyor mu, "bir kez" kuralı var mı, silme
--- talebinde gitmeli mi — dördü de evet. Bunların hiçbiri, akıp giden ve "kişisel kimlik yok" diye
--- tanımlanmış bir olay defterinde duramaz. Analitiğin "toplu ölçüm, çerez banner'ı gerekmez"
--- iddiası da tam olarak orada kimlik olmamasına dayanır.
---
--- ── MODERASYON METNİN İŞİDİR ─────────────────────────────────────────────────
--- Bir yıldızı ya da bir beğeniyi "reddetmek" anlamsızdır: okunacak bir şey yoktur. Metinsiz kayıt
--- kuyruğa hiç düşmez, doğrudan yayına girer. Kuyruk yalnız insanın okuyacağı bir cümle olduğunda
--- vardır. Metin DÜZENLENMEZ — onay/ret vardır, sansürlü yeniden yazım yoktur (tasarım §6).
+-- Ürün geri bildirimi (DOMAIN §14): yıldız, yorum ve beğen/geç tek varlıkta, çünkü müşteri, tekillik, puan, skor ve silme
+-- yolu üçünde aynıdır. Kimliğe bağlı ve puan kazandıran bir beyan olduğu için analitik olay defterinde duramaz.
+
+-- Moderasyon yalnız metinlidir: metinsiz kayıt doğrudan yayına girer, metin düzenlenmez, yalnız onaylanır ya da reddedilir.
 
 create type review_status as enum ('pending', 'approved', 'rejected');
 -- Değerlendirmenin bağlamı — **kapıları farklıdır**: `purchase` satın alma doğrulaması ister
@@ -51,28 +36,15 @@ create table public.product_feedback (
     rating is not null or vote is not null or length(btrim(coalesce(comment, ''))) > 0
   ),
 
-  -- ── METNİN DİLİ VE ÇEVİRİSİ (20.2) ─────────────────────────────────────────
-  --
-  -- **Eski karar geri alındı** (kullanıcı 03.08). Burada bir zamanlar *"çevrilmez: yorum müşterinin
-  -- kendi cümlesidir"* yazıyordu. Endişe doğruydu ama sonucu yanlıştı: çevirmemek, Fransız bir
-  -- okuyucuya Türkçe bir yorumu OKUYAMAYACAĞI hâlde göstermek demek — yani yorumu hiç göstermemek.
-  -- Doğru çözüm çevirmemek değil, **orijinali korumak ve çeviriyi YANINA koymak**.
-  --
-  -- `language` artık müşterinin site dili DEĞİL, metnin GERÇEKTEN yazıldığı dil — ve
-  -- `preferred_language` enum'u (tr|fr|de) bu işi göremez: müşteri Boşnakça yorum yazabilir.
-  -- Serbest metin + ISO 639 deseni. `null` = tespit henüz koşmadı.
-  --
-  -- Yazan: **yalnız çeviri işi** (`translate-user-text`). Kapı yazmaz — yazma anında elimizdeki tek
-  -- bilgi müşterinin o an baktığı sayfanın dilidir ve o, metnin dili hakkında bir kanıt değildir.
-  -- Yanlış dil etiketi dilsizlikten kötüdür: "bu zaten Fransızca" diyen bir satır asla çevrilmez.
+  -- Metnin gerçekten yazıldığı dil (ISO 639; müşteri Boşnakça yazabilir), `null` tespit henüz koşmadı demek.
+  -- Yalnız çeviri işi yazar, çünkü sayfanın dili metnin dili için kanıt değildir ve yanlış etiket çeviriyi hiç tetiklemez.
   language text check (language ~ '^[a-z]{2,3}$'),
   -- Makine çevirileri {tr?,fr?,de?} — **kaynak dil torbada BULUNMAZ** (orijinal zaten `comment`'te).
   -- Ayrı çeviri tablosu bilinçli reddedildi: kaynak üç ayrı tabloda olduğu için `source_id`
   -- polimorfik, yani FK'siz olurdu — silinen yorumun çevirisi öksüz kalır ve kimse görmez.
   translations jsonb,
-  -- Çeviri işi bu satıra BAKTI MI. **Başarısızlıkta da yazılır** — yoksa çevrilemeyen tek bir satır
-  -- her turda yeniden denenir ve kuyruğun önünü sonsuza dek tıkar. `translations` null + damga dolu
-  -- = denendi, olmadı; okuyan taraf orijinali gösterir.
+  -- Çeviri işi bu satıra baktı mı; başarısızlıkta da yazılır, yoksa çevrilemeyen satır kuyruğu sonsuza dek tıkar.
+  -- Çevirisiz ama damgalı satırda okuyan taraf orijinali gösterir.
   translated_at timestamptz,
   constraint feedback_language_needs_text check (
     length(btrim(coalesce(comment, ''))) > 0 or (language is null and translations is null)
@@ -85,15 +57,8 @@ create table public.product_feedback (
   status review_status not null default 'pending',
   moderated_at timestamptz,
   moderated_by uuid references public.user_profiles (id) on delete set null,
-  -- **Damga İNSANIN kararına aittir.** Üç hâl, üç kural:
-  --   · `pending`      → henüz karar yok, damga da olamaz
-  --   · metinli + karar → kim ne zaman karar verdi yazılı olmalı (iz)
-  --   · metinsiz        → kendiliğinden yayına girdi; kimse karar vermedi, damgası da yok
-  -- Damgayı üçüncü hâlde de zorunlu kılmak, olmayan bir moderatörü kayda geçirmek olurdu.
-  -- **Kısıt `moderated_by`'ı ZORLAMAZ ve bu bilinçlidir:** kolon `on delete set null`'dır (personel
-  -- profili silinince iz null'a döner). `not null` istenseydi bir moderatörü silmek, geçmişteki her
-  -- kararını ihlal hâline getirir ve silmeyi imkânsız kılardı. "Kim" bu yüzden en-iyi-çaba bir izdir;
-  -- YAZILDIĞINI garanti eden yer kapıdır (`moderate(id, status, moderatedBy)` — imzada zorunlu).
+  -- Damga insanın kararına aittir: `pending`te ve metinsiz kayıtta olamaz, metinli kararda zorunludur.
+  -- `moderated_by` zorlanmaz, çünkü personel silinince `set null` olur ve zorunluluk silmeyi imkânsız kılardı.
   constraint feedback_moderation_stamp check (
     case
       when status = 'pending' then moderated_at is null
@@ -106,19 +71,8 @@ create table public.product_feedback (
     length(btrim(coalesce(comment, ''))) > 0 or status = 'approved'
   ),
 
-  -- **"Bu ürün geldi" haberi bu kişiye VERİLDİ Mİ** (17.8 zemini · kullanıcı kararı 03.08).
-  --
-  -- Aday kaydırması bir talep beyanıdır: "bunu isterim". Ürün kataloğa girdiğinde o beyanı yapan
-  -- müşteriye haber vermek, keşif turunun karşılığını ödediği andır — aksi hâlde topladığımız
-  -- talep hiçbir işe yaramaz, yalnız bir panoda durur.
-  --
-  -- **Ayrı tablo AÇILMADI ve açılmamalı:** "kim hangi ürünü istiyor" bilgisi zaten BU satırdadır
-  -- (`customer_id` + `product_id` + `vote='like'`) ve `product_feedback_customer_key` onu kişi
-  -- başına tek satıra indirger. İkinci bir "ilgi" tablosu aynı gerçeği iki yerde tutar ve ikisi bir
-  -- gün ayrışır (CLAUDE §1). Eksik olan tek şey **teslimat muhasebesiydi**, ilginin kendisi değil.
-  --
-  -- `null` = haber verilmedi. Emsal `variant_stock_notice.notified_at` ve `feedback_request`:
-  -- söz bir kez tutulur, ikinci kez duyurmak müşteriye spam'dir.
+  -- "Bu ürün geldi" haberi bu kişiye verildi mi; ilgi zaten bu satırda (`like` + tekillik), ayrı tablo aynı gerçeği iki yerde
+  -- tutardı. `null` haber verilmedi demek, söz bir kez tutulur.
   notified_at timestamptz,
 
   created_at timestamptz not null default now()
@@ -126,21 +80,14 @@ create table public.product_feedback (
 
 alter table public.product_feedback enable row level security;
 
--- Yorumunu DEĞİŞTİREN müşterinin eski çevirisi silinir — yoksa bir okuyucu, müşterinin artık
--- söylemediği bir cümlenin Fransızcasını okurdu. Kural genel fonksiyonda (0011), üç tabloda tek
--- tanım. Moderasyon damgası da aynı sebeple kapıda sıfırlanıyor (`upsertFeedback`).
+-- Yorumunu değiştiren müşterinin eski çevirisi silinir, yoksa okuyucu geri alınmış cümlenin çevirisini okurdu.
 create trigger product_feedback_comment_translation_trg
   before update on public.product_feedback
   for each row
   execute function public.reset_translation_on_text_change('comment', 'translations', 'translated_at');
 
--- **Aynı ürüne bir müşteriden, bağlam başına tek kayıt.** İkinci kez alan müşteri görüşünü
--- GÜNCELLER; aynı kişinin iki yıldızı ortalamayı iki kez etkilerdi. Puan tavanı ("aynı ürüne bir
--- kez puan") da bu tekliğe yaslanır.
---
--- Ziyaretçide (`customer_id` null) tekillik YOKTUR ve olamaz: tekilleştirmek kimlik tutmayı
--- gerektirirdi. Aday panosundaki sayı bu yüzden mutlak bir "kişi" değil ilgi yoğunluğudur —
--- `postal_code_demand` ile aynı bilinçli kabul (0023).
+-- Aynı ürüne bir müşteriden bağlam başına tek kayıt: iki yıldız ortalamayı iki kez etkilerdi ve puan tavanı buna yaslanır.
+-- Ziyaretçide tekillik yok, çünkü kimlik tutmak gerekirdi; aday sayısı bu yüzden kişi değil ilgi yoğunluğudur.
 create unique index product_feedback_customer_key
   on public.product_feedback (customer_id, product_id, context)
   where customer_id is not null;
@@ -151,24 +98,13 @@ create index product_feedback_pending_idx on public.product_feedback (created_at
 -- Ürün sayfasının okuması: o ürünün yayınlanmış YAZILI yorumları, yeniden eskiye.
 create index product_feedback_published_idx on public.product_feedback (product_id, created_at desc)
   where status = 'approved' and comment is not null;
--- **"Bu ürünü isteyen, haberi verilmemiş müşteriler"** — ürün kataloğa girdiğinde süpürülecek küme.
---
--- Süzgeç DÖRT koşulu birden taşıyor ve dördü de gerekli: `candidate` (alım-sonrası beğeni bir
--- talep beyanı değil, yaşanmış bir deneyimdir) · `like` (geçilen ürün istenmemiştir) ·
--- `customer_id is not null` (kime haber vereceğimizi bilmiyorsak liste bir işe yaramaz) ·
--- `notified_at is null` (aynı sözü iki kez tutmak spam'dir).
---
--- Kısmi indeks bilinçli: bu küme tablonun küçük bir dilimidir ve haber verildikçe İNDEKSTEN DÜŞER —
--- yani indeks zamanla küçülür, büyümez.
+-- Ürün kataloğa girince haber verilecek küme: aday, beğeni, kimlikli ve henüz haber verilmemiş. Haber verildikçe satır
+-- indeksten düşer, bu yüzden indeks küçülür.
 create index product_feedback_awaiting_notice_idx
   on public.product_feedback (product_id)
   where context = 'candidate' and vote = 'like' and customer_id is not null and notified_at is null;
 
--- **Çeviri kuyruğu** (20.2): metni olup henüz çeviri işinden geçmemiş yorumlar, en eski önce.
---
--- `notified_idx` ile aynı iyi huy: satır çevrildikçe (damga dolunca) indeksten DÜŞER — kuyruk
--- indeksi tablonun boyuyla değil, işlenmemiş işin boyuyla büyür. Damga başarısızlıkta da yazıldığı
--- için çevrilemeyen bir satır burada sonsuza dek dönüp durmaz.
+-- Çeviri kuyruğu, en eski önce; damga dolunca satır düşer ve indeks işlenmemiş işin boyuyla büyür.
 create index product_feedback_untranslated_idx
   on public.product_feedback (created_at)
   where translated_at is null and comment is not null;
@@ -179,22 +115,8 @@ create index product_feedback_customer_idx on public.product_feedback (customer_
 create index product_feedback_request_idx on public.product_feedback (feedback_request_id) where feedback_request_id is not null;
 
 -- ── Ürün skoru ──────────────────────────────────────────────────────────────
--- **Türetilir, saklanmaz** (DATA_MODEL "türetme ilkesi"): kaynak daima `product_feedback`. Bir
--- `rating_avg` kolonu tutulsaydı, reddedilen bir yorumdan sonra tazelenmeyi unutan tek bir yol
--- ürünün puanını kalıcı olarak yanlış gösterirdi.
---
--- **Görünüm HAM sayıları verir, birleştirmez.** "Yıldız ortalaması + beğeni oranı → tek puan"
--- formülü motorda tek yerde durur (`domain-core/feedback`): katsayı burada gömülü olsaydı, ekranın
--- gösterdiği skorla motorun hesapladığı bir gün ayrışırdı.
---
--- Moderasyon süzgeci reddedilmiş bir yorumun YILDIZINI da dışarıda bırakmak için gerekli — metinsiz
--- kayıtlar zaten hep `approved` doğar.
---
--- **Yalnız `purchase` bağlamı sayılır.** Aday kaydırması bir SATIN ALMA beyanı değildir: ürünü
--- görmemiş, tatmamış birinin "ilgimi çekti"si ile ürünü yiyip beğenenin sözü aynı kefeye konamaz.
--- Üstelik ziyaretçi kaydırması tekilleştirilmiyor — aday evresinde toplanan yüzlerce savurma, ürün
--- satışa geçtiğinde puanını hiç kimse almamışken 4.8 gösterirdi. Aday sinyali kendi panosunda ve
--- kendi ağırlığıyla yaşar (`listCandidateDemand`).
+-- Türetilir, çünkü saklanan ortalama tazelemeyi unutan tek yolla kalıcı yanlışa düşer; birleşik puan formülü motordadır.
+-- Yalnız onaylı `purchase` bağlamı sayılır: aday kaydırması tadılmamış bir ilgidir ve tekilleştirilmez.
 create or replace view public.product_rating as
 select f.product_id,
        round(avg(f.rating) filter (where f.rating is not null), 2) as rating_avg,
@@ -202,28 +124,8 @@ select f.product_id,
        count(*) filter (where f.vote = 'like')                     as like_count,
        count(*) filter (where f.vote = 'dislike')                  as dislike_count,
        count(*) filter (where length(btrim(coalesce(f.comment, ''))) > 0) as comment_count,
-       -- **Yıldız DAĞILIMI** (müşteri şeridinin talebi 04.08) — yorum panelindeki histogram.
-       --
-       -- Ekranda hesaplanamaz ve denenmemeli: liste 10'ar sayfalanıyor, yüklenmiş sayfadan sayılan
-       -- bir dağılım YANLIŞ olur — üstelik yanlışlığı görünmez, çünkü çubuklar hep bir şey gösterir.
-       --
-       -- Ayrı görünüm açılmadı: "bu ürün ne kadar sevildi" sorusunun tek bir cevap yeri olmalı.
-       -- İkinci bir görünüm aynı `where` süzgecini (onaylı + satın alma bağlamı) ikinci kez tanımlar
-       -- ve ikisi bir gün ayrışır — biri aday kaydırmalarını sayarken öteki saymaz, fark de hiçbir
-       -- yerde hata vermez.
-       -- **Beş kolon DEĞİL tek dizi** ve sebebi kozmetik değil: `rating_1_count` gibi bir ad
-       -- uygulamanın snake↔camel dönüştürücüsünden SAĞ ÇIKMIYOR. `snakeToCamel` yalnız `_<harf>`
-       -- eşliyor (`/_([a-z])/`), rakamı görmüyor → `rating_1Count` üretiyor ve şema onu bulamıyor.
-       -- Dönüştürücüyü rakam görecek şekilde düzeltmek de olmaz: ters yönde `line1` → `line_1`
-       -- olur ve `address` tablosu kırılır (bkz. `case-transformers.ts` künyesi).
-       --
-       -- Dizi ayrıca daha dürüst: bu beş sayı bağımsız alanlar değil, TEK bir dağılımın
-       -- parçalarıdır — biri güncellenip öteki unutulamaz.
-       --
-       -- **İndis 0 = 1★ … indis 4 = 5★.** Sıra burada ELLE kurulu ve öyle olmak zorunda: grup
-       -- bağlamında `generate_series` ile üretmek mümkün değil (alt sorgu `f`'in satırlarını
-       -- değil o anki satırı görür). Sırayı bir test sabitliyor — yer değiştirse histogram
-       -- sessizce ters döner ve hiçbir yerde hata vermezdi.
+       -- Yıldız dağılımı burada, çünkü sayfalanmış listeden sayılan histogram yanlış olur. Tek dizi, çünkü `rating_1_count`
+       -- gibi bir ad `snakeToCamel` dönüşümünden sağ çıkmaz; indis 0 = 1★ … 4 = 5★ sırası elle kurulu ve bir test sabitliyor.
        array[
          count(*) filter (where f.rating = 1),
          count(*) filter (where f.rating = 2),
@@ -238,9 +140,3 @@ select f.product_id,
 
 comment on view public.product_rating is
   'Ürün skorunun HAM sayıları — yıldız + beğeni; tek puana çevirme motorda (17.1).';
-
--- ── Aday ürün talep panosu: GÖRÜNÜM YOK ─────────────────────────────────────
--- Burada bir `candidate_demand` görünümü vardı ve KALDIRILDI. Sebebi duplication: panonun sayıları
--- zaten uygulama katmanında hesaplanıyor (`listCandidateDemand`), çünkü sıralama ham beğeniye değil
--- **ağırlıklı** sinyale göredir ve ağırlık kuralı motorda yaşar (`swipeWeight`). Görünüm aynı
--- soruya ikinci ve ağırlıksız bir cevap veriyordu; ikisi bir gün ayrışırdı.

@@ -1,38 +1,14 @@
--- Modül 04 — Kimlik dilimi: TEK kullanıcı profili tablosu + rol (referans proje deseni: user_profiles).
--- Müşteri de bir ROLDÜR — ayrı tablo yok; personel rolleri aynı enum'da. Çok-rol YOK (kullanıcı tek rol).
--- Kapsam bilinçli dar: auth'un (bul-veya-oluştur, bağlama, guard, ilk admin) ihtiyacı olan alanlar.
--- Kredi/pazarlama/şirket alanları ilgili modüllerin migration'larında eklenir.
--- Erişim modeli: tüm okuma/yazma sunucudan service_role ile; RLS deny-by-default (savunma katmanı).
+-- Kimlik: müşteri ve personel tek profil tablosunda, rolle ayrılır; erişim yalnız sunucudan service_role ile, RLS deny-by-default.
 
--- Roller. `customer` MÜŞTERİ eksenidir, diğerleri OPERASYON rolleridir (bkz. aşağıdaki kısıt).
---
--- `system` BİR YETKİ DEĞİL, BİR BEYANDIR (26.08 · yerinde satış): *"bu satır bir kişi değil."*
--- Hiçbir kapı açmaz — guard'lar `admin`/`warehouse`/`courier`/`accounting` arar, bu rol hiçbirine
--- uymaz. Var oluş sebebi tek bir soruya doğru cevap vermek: **müşteri listesi ve sayaçları
--- `roles @> {customer}` ile süzülüyor** (`UserProfileService.CUSTOMERS_ONLY`, beş yerde), yani bu
--- rolü taşıyan satır hepsinden KENDİLİĞİNDEN düşer — hiçbir sorgunun yeni bir kuralı hatırlaması
--- gerekmiyor.
---
--- Alternatifleri elendi: rolsüz satır kısıt yüzünden yazılamıyor (`roles_not_empty`), personel
--- rolü vermek kapı AÇARDI, ayrı bir bayrak ise her müşteri sorgusuna ikinci bir koşul eklemek
--- olurdu — ve ekleyeni unutan ilk sorgu anonim satırı müşteri sayardı.
+-- `system` bir yetki değil, "bu satır bir kişi değil" beyanıdır: hiçbir guard'a uymaz ve `roles @> {customer}` süzgeci
+-- sayesinde müşteri listelerinden kendiliğinden düşer; ayrı bayrak her müşteri sorgusuna hatırlanacak bir koşul eklerdi.
 create type user_role as enum ('customer', 'admin', 'warehouse', 'courier', 'accounting', 'system');
 create type customer_type as enum ('individual', 'company');
 create type preferred_language as enum ('tr', 'fr', 'de');
 create type country_code as enum ('FR', 'DE');
 
--- ============================================================================
--- user_profiles — her kimlik (müşteri + personel) tek tabloda; ROL ayırır (customer varsayılan).
--- auth_user_id NULLABLE: taslak müşteri (WhatsApp/manuel, DOMAIN §10) auth'suz açılır, girişte bağlanır.
--- Personel her zaman auth'ludur. İlk giriş yapan hesap trigger'la admin olur (0002).
---
--- ROL MODELİ (karar 27.07, kullanıcı): iki eksen, tek alan.
---   • Müşteri ↔ personel **keskin ayrımdır**: aynı kişi ikisi birden OLAMAZ.
---   • Personel içinde **çoklu rol** olağandır: depo + muhasebe aynı kişide, patron aynı zamanda admin.
--- Bu yüzden `roles` bir dizidir ve kısıt `customer`ın yalnız BAŞINA durmasını zorlar. Diziyi ayrı
--- bir bağ tablosuna çıkarmadık: rol okuması guard'ın sıcak yoludur (her korumalı istekte), dizi tek
--- satırda gelir; bağ tablosu her istekte join demekti.
--- ============================================================================
+-- Müşteri ile personel keskin ayrılır, personel içinde çoklu rol olağandır; bu yüzden `roles` dizidir ve `customer` yalnız başına durur.
+-- Bağ tablosu yerine dizi, çünkü rol okuması guard'ın her istekteki sıcak yoludur ve join istemez.
 
 create table public.user_profiles (
   id uuid primary key default gen_random_uuid(),
@@ -40,17 +16,13 @@ create table public.user_profiles (
   type customer_type not null default 'individual',
   name text not null default '',
   email text,
-  -- İLETİŞİM numarası (E.164 normalize) — kimlik anahtarı DEĞİL (04.10, 0001). Serbest metinden
-  -- yazılır (hesap kartı, misafir checkout) ve kimlik çözümünde HİÇ okunmaz; doğrulanmış numara
-  -- `customer_phone` satırında yaşar. Benzersiz de değil: aile telefonu meşru bir hâldir.
+  -- İletişim numarasıdır, kimlik anahtarı değil: doğrulanmadan yazılır, kimlik çözümünde okunmaz (anahtar `customer_phone`).
+  -- Benzersiz değil, çünkü aile ya da işyeri telefonu meşrudur.
   phone text,
   preferred_language preferred_language not null default 'fr',
   country country_code not null default 'FR',
-  -- ROLÜN İKİNCİ EKSENİ: ne yapar (`roles`) × NEREDE yapar (DOMAIN §17). `roles` ile aynı karar,
-  -- aynı gerekçe — kapsam okuması guard'ın sıcak yolunda, bağ tablosu her istekte join demekti.
-  -- FK YOK (dizi kolonda zaten kurulamaz): `warehouse` 0031'de açılır, kısıt orada tetikleyiciyle.
-  -- **BOŞ DİZİ = HİÇBİR DEPO**, "hepsi" değil (fail-closed): depocu/kurye kapsamsız kalırsa kapı
-  -- kapanır, sessizce tüm depolara açılmaz. Admin/muhasebe depo-ÜSTÜdür, kapsamı hiç okunmaz.
+  -- Rolün "nerede" ekseni (DOMAIN §17); dizi kolonda FK kurulamadığı için kısıt 0031'de tetikleyiciyle.
+  -- Boş dizi hiçbir depo demektir, "hepsi" değil: kapsamsız kalan depocu ya da kurye için kapı kapanır.
   warehouse_ids uuid[] not null default '{}',
   auth_user_id uuid unique references auth.users (id) on delete set null,
   b2b_approved boolean,                         -- B2B self-servis onayı; B2C/personel'de null
@@ -60,14 +32,7 @@ create table public.user_profiles (
 
 -- E-posta benzersiz (dolu olduğunda). Bul-veya-oluştur buna dayanır.
 create unique index user_profiles_email_key on public.user_profiles (lower(email)) where email is not null;
--- ⚠ `user_profiles_phone_key` KALDIRILDI (04.10). Kaldıran şey bir gevşetme değil, indeksin
--- neye hizmet ettiğinin düzeltilmesiydi: bu kolon doğrulanmadan yazılıyor, dolayısıyla indeks
--- "kimlik anahtarı" değil "bu dizeyi ilk yazan sahiplendi" kuralını zorluyordu. Doğrulanmış numaranın
--- tekilliği artık `customer_phone_active_key`de ve orada doğru soruyu soruyor. Yan sonuç kazanç:
--- aynı iletişim numarasını taşıyan iki müşteri (aile telefonu, işyeri hattı) artık meşru.
--- Rol kümesi kuralı DB'de zorlanır: uygulama unutsa da geçmez.
--- `cardinality` kullanılır, `array_length` DEĞİL: boş dizide array_length NULL döner ve NULL'a
--- düşen bir CHECK "ihlal edilmedi" sayılır — kısıt sessizce delinirdi.
+-- `cardinality`, çünkü boş dizide `array_length` NULL döner ve NULL'a düşen CHECK ihlal sayılmaz.
 alter table public.user_profiles add constraint user_profiles_roles_not_empty check (cardinality(roles) >= 1);
 alter table public.user_profiles add constraint user_profiles_roles_exclusive
   check (not ('customer' = any (roles)) or cardinality(roles) = 1);
@@ -75,87 +40,16 @@ alter table public.user_profiles add constraint user_profiles_roles_exclusive
 -- "Bu role sahip herkes" sorgusu (personel listesi, kurye ataması) — dizi araması GIN ister.
 create index user_profiles_roles_idx on public.user_profiles using gin (roles);
 
--- RLS deny-by-default: politika tanımlanmadıkça anon/authenticated satır göremez; erişim service_role ile.
--- ── YERİNDE SATIŞIN ANONİM ALICISI (26.08 · kullanıcı kararı) ───────────────
--- Sipariş SAHİPSİZ olamaz (`order.customer_id not null`) ama yerinde satışta **kimlik sorulmaz** —
--- ve bu bir ihmal değil, karardır: `customer_phone` künyesi *"operatörün elle yazdığı numara buraya
--- YAZILMAZ, klavyeden geçmek kanıt değildir"* diyor. Kurye bir e-posta yazsaydı daha kötüsü olurdu:
--- aşağıdaki kayıt tetikleyicisi taslağı E-POSTAYLA sahipleniyor ve koşulunda `is_draft` YOK, yani
--- yanlış yazılan bir adresin gerçek sahibi bir gün tanımadığı bir satın alma geçmişini devralırdı.
--- Kullanıcının cümlesi: *"onaylanmamış mail ile geçmiş miras alınamaz; geçmişini önemseyen hesap açsın."*
---
--- TEK SATIR, ÇOĞALTILMAZ. Sefer/gün başına ayrı kayıt açmak düşünüldü ve elendi: sorun birikme
--- değil GÖRÜNME. O kayıtlar da `customer` rolüyle doğar, listede satır olur, "birleştirme adayı"
--- sanılır — tek satırın 500 siparişi yerine 500 satırın birer siparişi olurdu ve "500 müşterimiz
--- var" demek "müşterisi bilinmiyor" demekten daha yanlıştır.
---
--- SABİT KİMLİK, ARAMA DEĞİL: id sabit olduğu için "bul-veya-oluştur" yarışı hiç doğmuyor.
--- `on conflict do nothing` — migration yeniden koşarsa ikinci satır yazılmaz.
+-- Yerinde satışın anonim alıcısı: sipariş sahipsiz olamaz ama yerinde kimlik sorulmaz, elle yazılan e-posta ise
+-- kayıt tetikleyicisiyle gerçek sahibine yabancı bir geçmiş devrederdi. Tek sabit satır, çünkü satış başına kayıt listeyi sahte müşteriyle doldururdu.
 insert into public.user_profiles (id, name, roles, is_draft)
 values ('00000000-0000-4000-8000-00000000d001', 'Yerinde satış (anonim)', array['system']::user_role[], false)
 on conflict (id) do nothing;
 
 alter table public.user_profiles enable row level security;
 
--- ============================================================================
--- customer_phone — KİMLİK ANAHTARI: doğrulanmış telefon numarası (04.10). DOMAIN §10.
---
--- ── AÇIK NEYDİ ──────────────────────────────────────────────────────────────
--- `user_profiles.phone` iki işi birden yapıyordu: **iletişim numarası** (hesap kartından ve misafir
--- checkout formundan serbest metin olarak yazılır) ve **kimlik anahtarı** (yukarıda kaldırılan
--- `user_profiles_phone_key` + bul-veya-oluştur onun üstünde duruyordu). İki iş tek kolonda olunca
--- doğrulanmamış bir dize kimlik kurmaya yetiyordu:
---
---   • **Önceden sahiplenme.** Henüz kayıtlı olmayan bir numarayı formuna yazan kişi onu kilitler.
---     Gerçek sahibi WhatsApp'tan yazdığında `resolveIdentity` konuşmayı o yabancı hesaba bağlar —
---     sonrasında siparişi ve puanı da orada görünür. Sahibi kendi numarasına ulaşamaz (unique
---     indeks + self-servis geri alma yok), her vaka admin birleştirmesine düşer.
---     En sık hâli kötü niyet değil KAZA: eşin/işyerinin numarası, tuşlama hatası, aile telefonu.
---
---   • **Devredilmiş hat.** Operatör karantina süresi dolan numarayı yeniden dağıtır; yeni sahibi
---     WhatsApp'tan yazınca önceki kişinin geçmişini devralır. Kolon modelinde bunun kaydı da yok:
---     "emekliye ayırmak" `null`'lamaktır — o numaranın bir zamanlar kime ait olduğu silinir.
---
--- ── AYRIM ───────────────────────────────────────────────────────────────────
--- DOMAIN §10: *"Doğrulanmamış numara anahtar olmaz. Formdan gelen numara yalnız İLETİŞİM
--- numarasıdır."*
---   `user_profiles.phone`  → iletişim numarası. Serbest metin, benzersiz DEĞİL, kimlik çözümünde
---                            HİÇ okunmaz. Asıl işi adres formunun ön-doldurması (`addressDefaultsOf`).
---   `customer_phone`       → kimlik anahtarı. Satırın VARLIĞI zilyetlik kanıtıdır.
---
--- ── SATIR VARSA DOĞRULANMIŞTIR ──────────────────────────────────────────────
--- `verified_at` nullable DEĞİL ve bu kasıtlı: doğrulanmamış numaranın burada satırı olmaz. Nullable
--- bıraksaydık tablo yine iki işi birden yapardı — kolon modelinin aynı hatası, bir tablo ötede.
--- Bugünkü tek yazıcı imzası doğrulanmış Meta webhook'udur (15.7): o numaradan gelen mesaj, "bu hattı
--- bugün elimde tutuyorum" demektir. Operatörün elle yazdığı numara buraya YAZILMAZ — klavyeden
--- geçmek kanıt değildir.
---
--- **Kanıtın sınırı da yazılı:** zilyetlik gerçektir, BAĞ bayat olabilir. Bu tablo "bu numara bugün
--- kimde" sorusunu cevaplar, "bu numaranın geçmişi kimin" sorusunu değil. İkincisini çapa cevaplar
--- (e-posta ya da 6 haneli kod) ve o 04.10'un ikinci yarısıdır.
---
--- ── NEDEN BURADA, KENDİ MIGRATION'INDA DEĞİL ────────────────────────────────
--- Tablo bir tur `0049` olarak yazıldı ve **koşmadı**: `0040`ın `preview_customer_merge`i (SQL
--- gövdeli, yani oluşturulurken doğrulanan bir fonksiyon) bu tabloyu okuyor ve 0040, 0049'dan önce
--- koşuyor. Ölçüldü — `db:refresh` orada kesildi. Yeri zaten burasıydı: kimlik anahtarı, kimliğin
--- tanımlandığı migration'da ve kaldırılan indeksin hemen altında durunca ayrım tek okumada görünüyor.
---
--- ── BİR NUMARA EN ÇOK BİR AKTİF HESABA ÇIKAR ───────────────────────────────
--- Ürün tercihi değil zorunluluk: gelen mesajı tek bir müşteriye çözemezsek her mesaj cevapsız bir
--- soruya döner. Kısıt `retired_at is null` süzgeçli — emekliye ayrılan satır DURUR (geçmiş silinmez)
--- ama yeni sahibine yol açar. Devredilmiş hattın çözümü tam olarak budur; kolon modelinde aynı şey
--- ancak eski bağı silerek yapılabiliyordu.
---
--- **Ters yön (bir hesap kaç numara taşır) BİLEREK AÇIK** — DOMAIN §10, kullanıcı kararı ertelendi.
--- Meşru çok-numara halleri var (kişisel + işyeri, FR + TR hattı — diasporada yaygın). Yapı iki
--- seçeneği de taşıyor: tavan gerekince `setting` ile konur, şema değişmez.
---
--- ── `retired_at`ın BUGÜN YAZICISI YOK ───────────────────────────────────────
--- Kolon yapısaldır: aşağıdaki kısmi unique indeks onsuz kurulamaz ve indekssiz tablo aynı numarayı
--- iki hesaba bağlardı. Emekliye ayıran yol (3 ay sessizlik · taşıyıcının `failed` beyanı — DOMAIN
--- §10) 04.10'un devamında yazılıyor; gerekçe kolonu (`retired_reason`) o gün, YAZICISIYLA BİRLİKTE
--- doğar — bugün eklenseydi hiçbir zaman dolmayan bir alan olurdu.
--- ============================================================================
+-- Kimlik anahtarı doğrulanmış telefondur (DOMAIN §10); satırın varlığı zilyetlik kanıtıdır, bu yüzden `verified_at` boş olamaz
+-- ve elle yazılan numara buraya girmez. Emekliye ayrılan satır geçmişi silmeden kalır, aktif tekillik yeni sahibine yol açar.
 
 create table public.customer_phone (
   id           uuid primary key default gen_random_uuid(),
@@ -168,9 +62,8 @@ create table public.customer_phone (
   -- Bu numaradan en son ne zaman mesaj geldi — sessizlik tetiğinin (DOMAIN §10, ~3 ay) ölçütü.
   -- Doğrulama anıyla aynı başlar; her gelen mesajda tazelenir.
   last_seen_at timestamptz not null default now(),
-  -- Taşıyıcının SON beyanı: bu numaraya ulaşılamadı (`failed`). ERKEN tetik (DOMAIN §10) — sessizliği
-  -- beklemenin anlamı yok, bağ zaten şüpheli. Tahmin değil beyan olduğu için ayrı kolonda duruyor.
-  -- Soru SORULDUĞUNDA temizlenir: sinyal orada bekleyen bir soruya dönüşmüştür, iki kez sayılmaz.
+  -- Taşıyıcının son "ulaşılamadı" beyanı: sessizliği beklemeden kimlik sorusunu erken tetikler (DOMAIN §10).
+  -- Soru sorulunca temizlenir ki aynı sinyal iki kez sayılmasın.
   delivery_failed_at timestamptz,
   -- Emeklilik: bağ koptu (hat devredildi / taşıyıcı `failed` dedi). Satır SİLİNMEZ.
   retired_at   timestamptz,
@@ -201,18 +94,8 @@ comment on column public.customer_phone.delivery_failed_at is
 comment on column public.customer_phone.retired_at is
   'Bağ koptu (hat devri / taşıyıcı beyanı). Satır silinmez; numara yeni sahibine açılır.';
 
--- ─── "Bu numara şu an görüldü" ───────────────────────────────────────────────
--- Damgayı **veritabanının saati** yazar, uygulamanınki değil. Küçük görünen ama gerçek bir kusuru
--- kapatıyor: `verified_at` ve `last_seen_at` satır doğarken kolon varsayılanından (yani DB saatinden)
--- geliyor; tazeleme uygulamadan `new Date()` ile yazılsaydı iki AYRI saat karışırdı ve aralarındaki
--- kayma kadar **`last_seen_at` GERİYE gidebilirdi**.
---
--- ÖLÇÜLDÜ (25.08): tam pakette test düştü — ilk kanıt 1787685288518, tazelenmiş hâli 1787685288508.
--- 10 milisaniye; ama sessizlik tetiği (~3 ay, DOMAIN §10) tam olarak bu damgadan hesaplanacak ve
--- geriye giden bir damga o hesabı bozar. Testin yakaladığı şey bir kararsızlık değil, iki saatti.
---
--- Emekli satır TAZELENMEZ (`retired_at is null` süzgeci): bağı kopmuş bir numaranın "hâlâ canlı"
--- damgası, emekliliğin kendisini görünmez kılardı.
+-- Damgayı veritabanı saati yazar, çünkü satır DB saatiyle doğuyor ve uygulama saati karışırsa `last_seen_at` geriye gidebilir.
+-- Emekli satır tazelenmez; bağı kopmuş numaranın "hâlâ canlı" damgası emekliliği görünmez kılardı.
 create or replace function public.touch_customer_phone(p_id uuid)
 returns setof public.customer_phone
 language sql
@@ -231,17 +114,8 @@ grant execute on function public.touch_customer_phone(uuid) to service_role;
 comment on function public.touch_customer_phone(uuid) is
   'Kanıt satırının son görülme damgasını DB saatiyle tazeler (04.10). Emekli satıra dokunmaz.';
 
--- ─── "Taşıyıcı ne dedi" ──────────────────────────────────────────────────────
--- Giden mesajın durum olayı (`failed` / `delivered`) → numaranın kimlik künyesi. **Numara ile
--- çağrılır, satır kimliğiyle değil:** taşıyıcının elinde bizim satır kimliğimiz yok, `recipient_id`
--- var — arada bir okuma yapmamak için kapı numarayı kabul ediyor.
---
--- Tek deyim, tek tur: `failed` damgayı basar, başarılı teslim onu SİLER. Silme önemli — taşıyıcının
--- sonraki başarılı teslimi, önceki başarısızlığı gerçekten çürütür; bayat kalan bir damga her
--- dönüşte gereksiz bir kimlik sorusu doğururdu (DOMAIN §10: "cezalandırdığı kitlenin ezici
--- çoğunluğu kendi müşterilerimiz olur").
---
--- Emekli satır güncellenmez: bağı kopmuş numaranın teslim durumu artık kimsenin kimliği değil.
+-- Numarayla çağrılır, çünkü taşıyıcı olayında bizim satır kimliğimiz yok. Başarılı teslim `failed` damgasını siler,
+-- yoksa çürütülmüş bir başarısızlık her dönüşte gereksiz kimlik sorusu doğururdu; emekli satır güncellenmez.
 create or replace function public.mark_customer_phone_delivery(p_phone text, p_failed boolean)
 returns setof public.customer_phone
 language sql

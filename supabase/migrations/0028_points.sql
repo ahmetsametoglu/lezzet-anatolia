@@ -1,19 +1,5 @@
--- Modül 17 — Puan defteri ve sadakat (17.4). DOMAIN §14.
---
--- **Defter (ledger), sayaç değil.** Bakiye = Σ `points`; hiçbir yerde saklanmaz. Bir `balance`
--- kolonu tutulsaydı, iptal edilen bir kazanımdan sonra düzeltmeyi unutan tek bir yol müşterinin
--- bakiyesini kalıcı olarak yanlış gösterirdi — ve bu para gibi bir şeydir, müşteri fark eder.
--- Aynı desen: `MoneyMovement` ↔ hesap bakiyesi, `Reservation` ↔ ayrılmış stok.
---
--- ── İSTİSMAR TAVANI DEFTERİN KENDİSİNDE ─────────────────────────────────────
--- "Aynı ürüne bir kez puan" kuralı `(customer_id, reason, ref_id)` üzerinde kısmi UNIQUE indeksle
--- durur: uygulama katmanı unutsa bile ikinci puan yazılamaz. Kuralı yalnız koda yazmak, ikinci bir
--- yazma yolu açıldığı gün (WhatsApp ajanı, elle giriş, toplu tarama) sessizce delinmesi demekti.
--- Günlük tavan sayımla bakılır — sabit bir kural değil, ayarla değişen bir eşiktir.
---
--- ── PUAN YALNIZ B2C ─────────────────────────────────────────────────────────
--- B2B'nin zaten özel fiyatı var (DOMAIN §14); oyunlaştırma son kullanıcı içindir. Kural motorda
--- (`canEarnPoints`) çünkü müşteri tipini okumak gerekir — şema onu bilmez.
+-- Puan defteri (DOMAIN §14): bakiye Σ `points`tır ve saklanmaz, çünkü düzeltmeyi unutan tek yol onu kalıcı yanlış gösterirdi.
+-- "Aynı kaynağa bir kez" tavanı indekste durur ki yeni bir yazma yolu onu delemesin; puanın yalnız B2C olması motordadır (`canEarnPoints`).
 
 create type points_reason as enum (
   -- Yazılı yorum/yıldız — en değerli beyan, en yüksek puan.
@@ -26,19 +12,10 @@ create type points_reason as enum (
   'order',
   -- Getiren müşteri (17.7 zemini · 17.9 bağlantı) — HESAPSIZ birini müşteri yapmanın ödülü.
   'referral',
-  -- **Komşu daveti (17.10)** — `referral`dan AYRI ve ayrılması şart, çünkü ölçtükleri şey farklı:
-  -- `referral` yeni bir MÜŞTERİ kazandırır, `neighbor` var olan bir SEFERE ikinci bir sipariş
-  -- ekler (aynı bölge, aynı gün → durak başına maliyet düşer). Davet edilen kişi zaten müşterimiz
-  -- de olabilir; o hâlde `referral` hiç doğmaz ama komşu ödülü doğar. Tek sebebe yığılsalardı
-  -- "davet bize ne kazandırdı" sorusunun iki farklı cevabı tek sayının içinde kaybolurdu.
+  -- `referral` yeni müşteri kazandırır, `neighbor` var olan sefere sipariş ekler; tek sebepte iki getirinin cevabı kaybolurdu.
   'neighbor',
-  -- **Günlük ziyaret** — günde bir kez, site/keşif ziyareti için. Öteki sebeplerden AYRI durur ve
-  -- ayrılması şart: onlar "veri bedeli"dir (müşteri bir beyanda bulundu), bu "gelme bedeli"dir
-  -- (müşteri geri döndü). Aynı sebebe yığılsalardı aday panosunu okuyan kişi, ziyaretle beslenen
-  -- puanı bir ürün sinyali sanardı.
-  --
-  -- Oy puanının ürün başına TEK olması bu satırla değişmiyor: her ziyarette yeniden ödemek,
-  -- `signal-quality`'nin bastırmak için var olduğu davranışı satın almak olurdu.
+  -- Günde bir kez ziyaret puanı: beyan bedeli değil gelme bedelidir, ayrı durur ki aday panosunda ürün sinyali sanılmasın.
+  -- Oy puanı yine ürün başına tektir, yoksa bastırılmak istenen davranış satın alınırdı.
   'visit',
   -- Kupona çevirme — NEGATİF satır.
   'redemption',
@@ -74,17 +51,8 @@ create table public.points_entry (
 
 alter table public.points_entry enable row level security;
 
--- **Aynı kaynaktan iki kez puan yok.** `ref_id` boş olan satırlar (elle düzeltme) kapsam dışı:
--- patron aynı müşteriye iki kez jest yapabilmeli.
---
--- **İŞARETE GÖRE İKİ İNDEKS, TEK KURAL DEĞİL (★ karar 7d).** Ödül ile onun geri alınması aynı
--- üçlüyü (`müşteri, sebep, kaynak`) paylaşır — tek indeks olsaydı ters işaretli düzeltme satırı
--- yazılamazdı ve iade edilen bir siparişin ödülü defterde kalırdı. Bölünce ikisi de kendi içinde
--- tekil kalıyor: aynı kaynaktan iki kez ödül YOK, aynı kaynaktan iki kez geri alma da YOK.
---
--- Alternatif, sebep enum'una `*_reversal` türleri eklemekti; seçilmedi çünkü her yeni ödül türü
--- ikinci bir enum elemanı doğururdu (CLAUDE §1 — duplication). Bu hâliyle `ref_id`nin sebebe göre
--- değişen sözleşmesi korunuyor ve `sum(points) where reason='referral'` doğrudan NET etkiyi verir.
+-- Aynı kaynaktan iki kez puan yok; `ref_id` boş elle düzeltme kapsam dışıdır. İşarete göre iki indeks, çünkü ödül ile
+-- geri alınması aynı üçlüyü paylaşır ve tek indeks iadede ters kaydı yazdırmazdı.
 create unique index points_entry_source_key
   on public.points_entry (customer_id, reason, ref_id)
   where ref_id is not null and points > 0;
@@ -93,33 +61,10 @@ create unique index points_entry_reversal_key
   on public.points_entry (customer_id, reason, ref_id)
   where ref_id is not null and points < 0;
 
--- **Günde bir ziyaret puanı** — ve tekilliğin BURADA durması şart.
---
--- Yukarıdaki `points_entry_source_key` bu işi göremez: `ref_id is not null` ile sınırlı ve
--- ziyaretin işaret edeceği bir kaynak satır yok. `ref_id`ye tarihten türetilmiş sentetik bir uuid
--- yazmayı bilerek elemedim — o kolonun sözleşmesi "kaynak satır"dır, içine gerçek olmayan bir
--- kimlik koymak onu okuyan herkesi yanıltırdı.
---
--- Güvence uygulamada DEĞİL veride: `awardPoints` "bugün yazılmış mı" diye baksa bile iki eşzamanlı
--- istek arasına giren üçüncü bir istek iki satır yazardı ve kimse fark etmezdi.
---
--- **Takvim günü, yuvarlanan 24 saat DEĞİL** (kullanıcıya iletildi): yuvarlanan pencere
--- indekslenemez. Fark, 23:50'de kazanıp 00:10'da yeniden kazanabilmek — 10 cent'lik bir sınır için
--- kabul edilebilir, ve garantinin indekste kalması kodda kalmasından değerli.
---
--- **Gün İŞLETMENİN günüdür (Europe/Paris), sunucunun değil** — `earnedToday`'in günlük tavanıyla
--- BİREBİR aynı tanım. İkisi ayrı olsaydı yazın Paris'te 00:00–02:00 arasında tavan sıfırlanmış ama
--- ziyaret puanı henüz açılmamış olurdu: müşteri "günlük hakkım doldu" da göremez, puanı da alamazdı.
---
--- İlk yazımda burada `created_at::date` vardı ve migration **`42P17` ile düştü**: `timestamptz`'den
--- `date`'e cast STABLE'dır (sonuç oturumun `TimeZone` ayarına bağlı), indeks ifadesi olamaz.
--- `at time zone <sabit>` ise IMMUTABLE — çünkü sabit bir dilime çevirmek oturumdan bağımsızdır.
--- Yani engel sandığım şey çözümün ta kendisiymiş; UTC'ye razı olmaya hiç gerek yokmuş.
---
--- ⚠ **`'Europe/Paris'` burada ve `PointsService.BUSINESS_TIME_ZONE`'da AYRI AYRI yazılı** —
--- biri SQL, öteki TypeScript; paylaşılamıyor. İşletme taşınır ya da ikinci şube açılırsa İKİSİ
--- birden değişmeli: yalnız biri değişirse tavan ile ziyaret günü ayrışır ve hiçbir yerde hata
--- vermez, yalnız müşteri gecenin bir saatinde puanını alamaz.
+-- Günde bir ziyaret puanı, tekillik veride: iki eşzamanlı istek uygulama kontrolünü geçerdi, `ref_id`ye sentetik kimlik de
+-- kolonun "kaynak satır" sözleşmesini bozardı. Gün işletmenin günüdür ve `at time zone` sabiti ifadeyi IMMUTABLE yapar.
+
+-- `'Europe/Paris'` burada ve `PointsService.BUSINESS_TIME_ZONE`'da ayrı yazılı; biri değişirse tavan ile ziyaret günü ayrışır.
 create unique index points_entry_visit_day
   on public.points_entry (customer_id, ((created_at at time zone 'Europe/Paris')::date))
   where reason = 'visit';
@@ -140,13 +85,7 @@ select p.customer_id,
        coalesce(sum(p.points), 0)                                   as balance,
        coalesce(sum(p.points) filter (where p.points > 0), 0)        as earned,
        -abs(coalesce(sum(p.points) filter (where p.points < 0), 0))  as spent,
-       -- **Kaç KEZ kupona çevirdi** (operasyon talebi 03.08). `spent` bir muhasebe kaydıdır
-       -- ("240 puan gitti"), bu bir DAVRANIŞTIR ("iki kez ödül aldı") — ekran ikisini ayrı
-       -- okuyor ve çizim bunu istiyor.
-       --
-       -- Ölçüt **sebep**, işaret DEĞİL: negatif satırların hepsi kupon değil, `manual` bir
-       -- düzeltme de negatif olabilir. `points < 0` ile saymak, elle yapılan bir düşümü
-       -- müşterinin kazandığı ödül gibi gösterirdi.
+       -- Kaç kez kupona çevirdi: ölçüt işaret değil sebep, çünkü negatif `manual` düzeltme ödül sayılmamalı.
        count(*) filter (where p.reason = 'redemption')::int          as redemption_count,
        max(p.created_at)                                            as last_activity_at
   from public.points_entry p
@@ -156,53 +95,26 @@ comment on view public.customer_points_balance is
   'Puan bakiyesi — defterden TÜRETİLİR, saklanmaz (17.4).';
 
 -- ── Ayarlar ─────────────────────────────────────────────────────────────────
--- Değerler **parametrik**: hangi aksiyonun kaç puan ettiği bir iş kararıdır ve dağıtım beklemeden
--- değişebilmelidir (STACK §10). Buradaki sayılar makul başlangıçlardır, kutsal değil.
---
--- Ölçek bilinçli: 1 puan = 1 cent. "500 puan = 5 €" müşteriye anlatılabilir bir cümledir; 1 puan =
--- 0,03 € gibi bir oran, kazanımı hesaplanamaz kılardı.
+-- Aksiyonların puanı dağıtım beklemeden değişebilen iş kararıdır; 1 puan = 1 cent, çünkü "500 puan = 5 €" anlatılabilir.
 insert into public.settings (key, value, description) values
   ('points_review',             '20',  'Yazılı yorum/yıldız puanı — en değerli beyan.'),
   ('points_feedback_purchase',  '5',   'Alım-sonrası beğeni puanı (aldığı ürünü değerlendirme).'),
   ('points_feedback_candidate', '2',   'Keşifte aday ürün kaydırma puanı — en ucuz aksiyon.'),
-  -- DEĞER MERDİVENİ (kullanıcı kararı 11.08) — oran bilinçli BEŞ KAT: kalıcı bir müşteri
-  -- kazandırmak, bir seferi doldurmaktan değerli. 500 aynı zamanda çevirme eşiğinin tamıdır
-  -- (`points_redeem_min`), yani hesap ekranının "size de 5 € kupon" sözünü gerçek yapar.
+  -- Kalıcı müşteri kazandırmak seferi doldurmaktan değerli, bu yüzden beş kat; 500 çevirme eşiğinin de tamıdır.
   ('points_referral',           '500', 'Getiren müşteriye puan (17.7 · 17.9) — YENİ müşteri kazandırmanın ödülü.'),
   ('points_neighbor',           '100', 'Komşu daveti puanı (17.10) — var olan bir SEFERE ikinci sipariş eklemenin ödülü.'),
   ('points_visit',              '10',  'Günde bir kez site/keşif ziyareti puanı (≈0,10 €) — geri getirme enstrümanı, veri bedeli değil.'),
-  -- Tavan YALNIZ para ödenmeden yapılabilen eylemleri kapsar (kullanıcı onayı 11.08): giriş +
-  -- keşif oyu, azami 18 puan. Parayla gelen ödüller (yorum, alım-sonrası beğeni, iki davet)
-  -- tavanın DIŞINDADIR — kural motorda (`CAPPED_POINTS_REASONS`). Tavanı YÜKSELTMEK davet
-  -- ödüllerini kurtarmazdı: 500'lük ödül kısmi uygulanmayan tavana yine takılırdı; kurtaran şey
-  -- kapsamın daralmasıydı (kullanıcı onayı 11.08).
-  -- **270 (kullanıcı kararı 15.08)** — tavana tabi azami kazanç bugün 18 puan (giriş 10 +
-  -- 4 aday kart × 2), yani sayı bugünkü davranışı DEĞİŞTİRMİYOR; kart sayısı ya da ziyaret puanı
-  -- büyüdüğünde nefes payı bırakıyor. Değer geçici: kullanıcı *"sonra bakalım gene"* dedi.
+  -- Tavan yalnız para ödenmeden yapılan eylemleri kapsar (`CAPPED_POINTS_REASONS`), parayla gelen ödüller dışındadır.
+  -- 270 bugünkü azami bedava kazancın (18) çok üstündedir, kart ya da ziyaret puanı büyürse pay bırakır.
   ('points_daily_cap',          '270', 'Bir müşterinin GÜNDE kazanabileceği azami puan — YALNIZ bedava eylemler için (istismar freni).'),
   ('points_redeem_min',         '500', 'Kupona çevirmek için asgari puan (500 puan = 5 €).'),
   ('points_cent_value',         '1',   'Bir puanın kuruş değeri. 1 = puan başına 1 cent.')
 -- Global satırın kısmi unique indeksi `scope_id is null` üzerindedir (0013).
 on conflict (key) where scope_id is null do nothing;
 
--- ── Puan → kişisel kupon (17.5) ─────────────────────────────────────────────
--- **Bölünemez:** puan düşümü ile kuponun doğuşu tek transaction'dır (STACK §13 (b)). Ayrı iki
--- yazım olsaydı, ikincisi düştüğünde müşterinin puanı gitmiş ama kuponu doğmamış olurdu — ve bunu
--- fark eden müşteri haklı olarak parasının kaybolduğunu söylerdi.
---
--- **Kod dışarıdan gelir** (`generateReferenceNo` ile aynı sözleşme): rastgelelik motorda, benzersizlik
--- veritabanında. Çakışmada fonksiyon `unique_violation` fırlatır ve çağıran yeni kodla yeniden dener —
--- SQL içinde kod üretmek, müşteriye okunacak alfabeyi ikinci bir yerde tanımlamak olurdu.
---
--- **Kod ayrı satırdır** (`discount_code`, 0031): bir kuponun birden çok kapısı olabilir. Puan
--- çevriminin tek kapısı var ve o kapı DİLSİZ (`locale = null`) — üretilen dize bir dile ait değil,
--- müşteriye özel bir anahtardır. Kod kuraldan SONRA yazılır: bağlanacağı satır olmadan yazılamaz,
--- ve ikisi aynı transaction'da olduğu için yarım bir kupon (kodsuz, dolayısıyla kullanılamaz) ortada
--- kalmaz.
---
--- KARAR BURADA DEĞİL: "çevirebilir mi, karşılığı ne" sorusunu motor yanıtlar (`canRedeem`);
--- fonksiyon yalnız o kararı uygular ve son bir kez bakiyeyi doğrular — arada geçen sürede başka
--- bir çevirme olmuş olabilir.
+-- ── Puan → kişisel kupon ────────────────────────────────────────────────────
+-- Puan düşümü, kupon ve kodu tek işlemdir, yoksa puan gidip kupon doğmayabilirdi. Kod motordan gelir ve çakışmada çağıran
+-- yeniden dener; "çevirebilir mi" kararı motorundur (`canRedeem`), fonksiyon bakiyeyi son kez doğrular.
 create or replace function public.redeem_points(
   p_customer_id uuid,
   p_points int,
@@ -222,10 +134,8 @@ begin
     raise exception 'redeem_points: çevrilecek puan pozitif olmalı';
   end if;
 
-  -- **Müşteri başına serileştirme.** İki eşzamanlı çevirme aynı puanı iki kez harcayamamalı; ama
-  -- bakiye bir SATIR değil bir TOPLAM olduğu için kilitlenecek bir satır da yok (`for update`
-  -- agregatla çalışmaz). Doğru araç advisory kilit: müşterinin kimliği üzerinde, transaction
-  -- boyunca. Farklı müşterilerin çevirmeleri birbirini beklemez.
+  -- Bakiye satır değil toplam olduğundan kilitlenecek satır yok; müşteri kimliğinde advisory kilit eşzamanlı iki çevirmeyi
+  -- sıraya koyar, farklı müşteriler birbirini beklemez.
   perform pg_advisory_xact_lock(hashtextextended(p_customer_id::text, 0));
 
   select coalesce(sum(points), 0) into v_balance
@@ -242,17 +152,8 @@ begin
     name, public_label, trigger, type, amount, scope, customer_id, max_uses, per_customer_limit, is_active
   ) values (
     'Puan çevrimi',
-    /*
-      MÜŞTERİYE GÖRÜNEN AD (23.08) — bir tur burada YOKTU ve sonucu ölçüldü: müşteri kendi
-      puanıyla açtığı kuponu sepette *"İndirim · Kampanya"* diye görüyordu. `name` operasyonun iç
-      etiketidir (Türkçe, listede aranan); vitrinin cümlesi bu alandır ve boşsa yüzey anonim
-      yedeğe düşer (`publicLabel` künyesi).
-
-      Adı burada sabit yazmak bir kopya DEĞİL: bu satırı yazan tek yer RPC'nin kendisi ve indirim
-      operatörün kurduğu bir kampanya değil, müşterinin kendi eyleminin karşılığı. Operatör
-      formundaki zorunluluk (kullanıcı kararı 23.08) bu yolu kapsamıyordu — kapsasaydı puan
-      çevrimi hiç yazılamazdı.
-    */
+    -- Müşteriye görünen ad; `name` iç etikettir ve boş bırakılsa müşteri "Kampanya" görürdü.
+    -- Sabit yazılı, çünkü bu satırı yalnız bu RPC yazar.
     '{"tr":"Puanlarınız","fr":"Vos points","de":"Ihre Punkte"}'::jsonb,
     'coupon',
     -- Sabit tutar: puanın karşılığı EURO'dur, yüzde değil. Yüzde olsaydı aynı puan farklı
@@ -289,23 +190,9 @@ $$;
 
 revoke all on function public.redeem_points(uuid, int, int, int, text) from anon;
 
--- ── Puan tablosu (operasyon) — DÖNEMLİ ──────────────────────────────────────
--- Operasyon talebi (03.08): ekranın başlığında "Son 30 gün ▾" var ama hiçbir okuma dönem almıyordu,
--- o yüzden seçici hiç çizilmemişti — çalışmayan bir süzgeç, olmayandan kötüdür.
---
--- **Neden görünüm değil FONKSİYON:** `customer_points_balance` bir toplamdır ve toplamı dönemle
--- daraltmanın yolu parametredir; görünüm parametre alamaz. Aggregate'i uygulamada yapmak da
--- seçenek değildi: defterin tamamını çekip TS'te toplamak, defter büyüdükçe sessizce yavaşlar
--- (`CLAUDE §1` — veriyle büyüyen küme).
---
--- **Dönemsiz hâl de BURADAN geçer** (`p_since = null`): ekranın "tüm zamanlar" seçeneği ile
--- "son 30 gün" seçeneği aynı kod yolunu kullanır. İki ayrı uç olsaydı biri gün gelip ötekinden
--- farklı bir kural uygular ve fark hiçbir yerde hata vermezdi.
---
--- **`balance` dönem içinde bir DELTA'dır**, cüzdan bakiyesi değil — 30 günlük pencerede "bakiye"
--- diye okunacak bir sayı yok, o dönemde kazanılan eksi harcanan var. Kolon adı ortak kalıyor
--- (ekran aynı tabloyu çiziyor) ama anlamı `p_since` ile değişiyor; künye bunu söylüyor ve
--- ekranın başlığı da zaten dönemi yazıyor.
+-- ── Puan tablosu ─────────────────────────────────────────────────────────────
+-- Fonksiyon, çünkü dönem parametresi gerekir ve defteri uygulamada toplamak veriyle yavaşlardı; dönemsiz hâl de
+-- `p_since = null` ile aynı yoldan geçer. `balance` dönemde bir farktır, cüzdan bakiyesi değil.
 create or replace function public.points_leaderboard(
   p_since timestamptz default null,
   p_limit int default 50

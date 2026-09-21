@@ -1,22 +1,7 @@
--- Modül 16 — Müşteri talebi / şikâyeti (16.1). DOMAIN §15, `data-model/iletisim-geribildirim.md`.
---
--- **Karmaşık ticket sistemi DEĞİL.** Atama, öncelik matrisi, SLA sayacı yok; üç durumlu sade yaşam
--- döngüsü (`open → in_progress → resolved`, yeniden açılabilir). Ölçüt basit: müşteri sorununu
--- kolay iletsin, biz siparişe ve ürüne bağlı net veri görelim.
---
--- ── Bu tablonun YAZMADIĞI iki şey ────────────────────────────────────────────
---
---   • **İade.** Talep iadeyi TETİKLER, sonuçlandırmaz. Para ve stok gerçeği siparişte yaşar
---     (`adjust_fulfillment`, `record_order_movement`); burada yalnız tetiğin ANI durur
---     (`return_triggered_at`). Tutarı buraya da yazmak, aynı parayı iki defterde tutmak olurdu.
---   • **Kuyruk sırası.** "Son mesaj: bugün" `max(ticket_message.created_at)`'tir — tam ve
---     tek-anlamlı, yani türetilir (`ticket_queue` görünümü), kolona kopyalanmaz. Kopyalansaydı bir
---     gün mesaj eklenip damga güncellenmediğinde kuyruk yanlış sıralanır ve kimse fark etmezdi.
---
--- ── İç durum adları müşteriye GÖRÜNMEZ ───────────────────────────────────────
--- `open/in_progress/resolved` bizim dilimizdir; müşteri "Aldık, sıradayız / İlgileniyoruz /
--- Çözüldü" okur. Çeviri yüzeyin işidir, bu yüzden burada tek bir durum kümesi vardır — müşteri ve
--- personel için ayrı iki durum alanı, aynı gerçeğin iki kez yazılması olurdu.
+-- Müşteri talebi (DOMAIN §15): üç durumlu sade döngü, atama ve SLA yok. İade tetiklenir ama parası ve stoğu siparişte yaşar,
+-- kuyruk sırası da son mesajdan türetilir (`ticket_queue`), kolona kopyalanmaz.
+
+-- Durum adları iç dildir, müşteriye yüzey çevirir; iki ayrı durum alanı aynı gerçeği iki kez yazardı.
 
 create type ticket_type as enum ('damaged', 'missing', 'question', 'other');
 create type ticket_status as enum ('open', 'in_progress', 'resolved');
@@ -24,13 +9,8 @@ create type ticket_status as enum ('open', 'in_progress', 'resolved');
 -- detayından geldi" ile "genel formdan gelip sipariş seçti" ikisi de `order_id` dolu bırakır, ama
 -- admin için farklı şeylerdir (birincisinde müşteri neyden şikâyet ettiğini biliyordu).
 create type ticket_source as enum ('order', 'form', 'whatsapp', 'admin');
--- Talebi kim yürütüyor. Faz 1'de hep `human`; alan yine de BAŞTAN var, çünkü sonradan eklenseydi o
--- güne kadarki her talebin geçmişi belirsiz kalırdı (16.5 AI işletme).
---
--- `hybrid` (kullanıcı kararı 16.08): AI cevap YAZMAZ, TASLAK yazar — operatör onaylamadan hiçbir
--- şey müşteriye gitmez (taslağın deposu `ai_draft_reply`). `ai` ise özerktir: cevap kendiliğinden
--- gider, operatör izler/devralır. İki hâli tek `ai` değerine sıkıştırmak, "AI ne yapabilir"
--- sorusunun cevabını satırdan silmek olurdu. Enum'u `conversation.handled_by` de kullanır (0039).
+-- Talebi kim yürütüyor: `hybrid`te AI yalnız taslak yazar ve operatör onaylamadan hiçbir şey gitmez, `ai` özerktir.
+-- İki hâli tek değere sıkıştırmak "AI ne yapabilir" sorusunu satırdan silerdi; enum'u `conversation.handled_by` de kullanır.
 create type ticket_handler as enum ('human', 'hybrid', 'ai');
 -- `ai` üçüncü bir göndericidir: "AI yazdı" bilgisini `admin` içine gömmek, sonradan "bunu kim
 -- söyledi" sorusunu cevapsız bırakırdı. Müşteriye giden metin aynıdır; ayrım iç izlenebilirliktir.
@@ -55,33 +35,20 @@ create table public.ticket (
   status ticket_status not null default 'open',
   handled_by ticket_handler not null default 'human',
 
-  -- ── AI taslağı (16.5'in deposu; UI 16.08'de öne çekildi) ───────────────────
-  -- Hibrit modun bekleyen cevabı. SATIRDA durur, mesaj DEĞİL (20-yapay-zeka §75 kararı): yazışma
-  -- müşteriye görünen defterdir, onaylanmamış taslak oraya giremez. Damga önbellek anahtarıdır —
-  -- son mesajdan SONRA üretildiyse model yeniden çağrılmaz. Motor (16.5) yazar, bugün seed yazar;
-  -- operatör tüketir (cevaba çevirir ya da düzenlemeye alır), tüketilince ikisi birden boşalır.
+  -- Hibrit modun bekleyen cevabı satırda durur, mesaj değil: yazışma müşteriye görünen defterdir. Damga önbellek anahtarıdır,
+  -- son mesajdan sonra üretildiyse model yeniden çağrılmaz; tüketilince ikisi birden boşalır.
   ai_draft_reply text,
   ai_draft_generated_at timestamptz,
 
   -- Kuyrukta ve müşterinin listesinde okunan kısa başlık ("Eksik geldi · Gözleme").
   subject text,
 
-  -- Admin bu talepten iade akışını başlattı. Tutar ve durum BURADAN okunmaz — siparişin iade
-  -- hareketlerinden türetilir. Burada duran tek şey, iadeyi hangi talebin doğurduğudur; bir
-  -- siparişe birden çok talep açılabildiği için o bağ yazılmazsa bilinemez.
+  -- İadeyi hangi talebin doğurduğu; bir siparişe birden çok talep açılabildiği için bu bağ yazılmazsa bilinemez.
+  -- Tutar ve durum siparişin iade hareketlerinden okunur.
   return_triggered_at timestamptz,
 
-  -- OKUNMAMIŞ CEVAP DAMGASI (17.08) — mail gürültüsünü kesen tek veri.
-  --
-  -- Boşsa bekleyen yok; doluysa "şu andan beri müşterinin OKUMADIĞI bir karşı taraf cevabı var".
-  -- Karşı taraf (personel ya da AI) cevap yazınca YALNIZ BOŞSA doldurulur: gecikme ilk okunmamış
-  -- cevaptan sayılsın, her yeni satır saati sıfırlamasın — yoksa hızlı yazan operatör maili
-  -- sonsuza dek erteler. Müşteri yazışmayı okuyunca boşalır (zilin tetiklediği tazeleme de bir
-  -- okumadır), mail gidince de boşalır.
-  --
-  -- Ayrı bir "okundu" damgası AÇILMADI: bu kolon zaten "okunmamış cevap var mı" sorusunun cevabı,
-  -- ikincisi aynı gerçeği iki yerde tutmak olurdu. Okunmamış SAYISI ya da rozet gerektiği gün
-  -- ayrı bir alan tartışılır — bugün ihtiyaç yok.
+  -- Müşterinin okumadığı ilk karşı taraf cevabının anı: yalnız boşsa doldurulur ki her yeni satır mail saatini sıfırlamasın.
+  -- Müşteri okuyunca ya da mail gidince boşalır; ayrı "okundu" damgası aynı gerçeği iki yerde tutardı.
   reply_pending_since timestamptz,
 
   created_at timestamptz not null default now(),
@@ -114,18 +81,12 @@ create index ticket_order_idx on public.ticket (order_id) where order_id is not 
 -- Kuyruğun varsayılan odağı: kapanmamış talepler.
 create index ticket_open_idx on public.ticket (status, created_at desc) where status <> 'resolved';
 create index ticket_conversation_idx on public.ticket (conversation_id) where conversation_id is not null;
--- Cevap maili kuyruğu: dakikada bir koşan süpürge YALNIZ bekleyenlere bakar (17.08). Kısmi indeks,
--- çünkü kümenin normal hâli BOŞ — talepleri baştan sona taramak, hiç bekleyen yokken bile her
--- dakika tam tarama demekti.
+-- Cevap maili süpürgesi yalnız bekleyenlere bakar; kümenin normal hâli boş olduğundan kısmi indeks tam taramayı önler.
 create index ticket_reply_pending_idx on public.ticket (reply_pending_since) where reply_pending_since is not null;
 
 -- ── Yazışma ──────────────────────────────────────────────────────────────────
--- Basit bir mesaj dizisi (müşteri ↔ işletme). Talebin ilk açıklaması da BİR MESAJDIR: ayrı bir
--- `description` kolonu olsaydı "müşterinin anlatımı" ile "müşterinin ilk cevabı" iki ayrı yerde
--- durur, ekran ikisini birleştirmek zorunda kalırdı.
---
--- **İç not yok — bilerek.** Yazılan her şey müşteriye aynen görünür ve ekran bunu söyler. İç notu
--- aynı diziye koymak, bir gün yanlış kutuya yazılmış bir maliyet cümlesinin müşteriye gitmesidir.
+-- Talebin ilk açıklaması da bir mesajdır, ayrı kolon ekranı ikisini birleştirmeye zorlardı. İç not yok, çünkü yanlış kutuya
+-- yazılmış bir iç cümle müşteriye giderdi.
 create table public.ticket_message (
   id uuid primary key default gen_random_uuid(),
   ticket_id uuid not null references public.ticket (id) on delete cascade,
@@ -136,18 +97,8 @@ create table public.ticket_message (
 
   body text not null check (length(btrim(body)) > 0),
 
-  -- ── ÇEVİRİ (20.2) — burada YAZIŞMA İKİ YÖNLÜ, o yüzden çeviri de iki yönlü ─────
-  --
-  -- Yorumdan farkı bu: müşteri kendi dilinde yazar, personel Türkçe okur; personel Türkçe yazar,
-  -- müşteri kendi dilinde okur. Yani her iki taraf da karşısındakinin cümlesini çeviriyle görür.
-  -- Tek yön çevirmek, yazışmanın yarısını sessizce anlaşılmaz bırakırdı.
-  --
-  -- `language` metnin GERÇEK dili (ISO 639; müşteri Boşnakça yazabilir), `translations` yalnız
-  -- makine çevirileri — kaynak dil torbaya girmez, orijinal `body`'de durur. `translated_at`
-  -- başarısızlıkta da yazılır (sonsuz retry yok). Ayrıntılı gerekçe: `0027_product_feedback.sql`.
-  --
-  -- Öteki iki kaynaktaki "metin değişti, çeviriyi düşür" tetikleyicisi BURADA YOK ve gerekmiyor:
-  -- gönderilmiş mesaj değişmez (güncelleyen bir yol yok — yazışma bir defterdir, bir form değil).
+  -- Yazışma iki yönlü olduğu için çeviri de iki yönlüdür; `language` metnin gerçek dili, `translations` yalnız makine
+  -- çevirisi ve `translated_at` başarısızlıkta da yazılır. Gönderilmiş mesaj değişmediği için çeviri düşüren tetikleyici yok.
   language text check (language ~ '^[a-z]{2,3}$'),
   translations jsonb,
   translated_at timestamptz,
@@ -164,39 +115,22 @@ create table public.ticket_message (
 
 alter table public.ticket_message enable row level security;
 
--- Yazışmanın tek okuma deseni: bir talebin mesajları, eskiden yeniye.
+-- Yazışmanın tek okuma deseni: bir talebin mesajları, zaman sırasıyla.
 create index ticket_message_ticket_idx on public.ticket_message (ticket_id, created_at);
 
 -- Çeviri kuyruğu (20.2) — çevrilmemiş mesajlar, en eski önce. Çevrildikçe indeksten düşer.
 create index ticket_message_untranslated_idx on public.ticket_message (created_at) where translated_at is null;
 
 -- ── Kuyruk görünümü ──────────────────────────────────────────────────────────
--- Kuyruğun tek amacı **cevap bekleyeni bekletmemek** — o yüzden sıralama alanı da bekleme alanı da
--- burada türetilir, tabloda saklanmaz.
---
--- `awaiting_reply`: son sözü müşteri söylediyse top bizdedir. Durumdan ÇIKARILAMAZ — `in_progress`
--- bir talepte müşteri yeni bir şey yazmış olabilir de olmayabilir de.
---
--- **Kuyruk TEK sorgudur.** Müşteri adı, sipariş numarası ve son mesajın metni de buradan gelir:
--- ekran onları ayrı ayrı çekseydi 30 satırlık bir kuyruk 90 sorguya çıkardı. Bu alanlar kopya
--- DEĞİL — görünüm her okumada kaynaktan üretir, bayatlayacak bir kopya kalmaz.
+-- Kuyruk tek sorgudur, yoksa 30 satır 90 sorgu olurdu. `awaiting_reply` son sözü müşteri söylediyse doğrudur;
+-- durumdan çıkarılamaz, çünkü `in_progress` talepte müşteri yeni yazmış olabilir.
 create or replace view public.ticket_queue as
 select t.*,
        coalesce(m.last_message_at, t.created_at) as last_message_at,
        coalesce(m.message_count, 0)              as message_count,
        coalesce(m.last_sender = 'customer', false) as awaiting_reply,
-       -- **KUYRUĞUN SIRA ANAHTARI** (21.281) — "cevap bekleyenler ÜSTTE, kendi içlerinde en taze
-       -- önce". Tasarımın kendi dipnotu bu kuralı yazıyor (v3:29) ve kuyruğun işi zaten budur:
-       -- bekleyeni bekletmemek. Yalnız son mesaja göre sıralamak tersini yapıyordu — personel
-       -- cevap verince kart en üste çıkıyor, cevap bekleyen aşağı düşüyordu.
-       --
-       -- TEK SÜTUN, çünkü keyset imleci tek sıralama alanına dayanıyor (`base.service` künyesi:
-       -- `değer + id`). İki ayrı `order by` üç parçalı bir imleç isterdi ve o değişiklik projedeki
-       -- HER sayfalanan listenin altındaki koddan geçerdi. Bekleyen satırlar bir yüzyıl ileri
-       -- alınarak tek bir sıralanabilir damgada birleşiyor: sıra tam, imleç sade.
-       --
-       -- **EKRANA ÇIKMAZ.** Sahte bir tarihtir, olgu değil; sözleşme (`TicketQueueItem`) onu
-       -- taşımaz ve hiçbir yüzey okumaz. Adı da bunu söylüyor: `_sort_at`.
+       -- Sıra anahtarı: cevap bekleyenler üstte, kendi içinde en taze önce. Tek sütun, çünkü keyset imleci tek sıralama
+       -- alanına dayanır; bekleyenler bir yüzyıl ileri alınır, bu yüzden sahte tarihtir ve ekrana çıkmaz.
        (case when coalesce(m.last_sender = 'customer', false)
              then coalesce(m.last_message_at, t.created_at) + interval '100 years'
              else coalesce(m.last_message_at, t.created_at)
@@ -212,10 +146,8 @@ select t.*,
        -- mesajı okuduğu için iki alan bedavaya geliyor.
        m.last_language                           as last_message_language,
        m.last_translations                       as last_message_translations,
-       -- **AI bu talepte HİÇ konuştu mu** (16.5 · operasyon talebi 03.08) — `handled_by`'dan AYRI
-       -- bir soru ve fark kalıcı: operatör devralınca `handled_by` `human`'a döner ama AI'ın yazdığı
-       -- mesaj yerinde kalır. Kalite denetimi tam da o kümeye bakar; `handled_by` ile süzmek onu
-       -- sessizce dışarıda bırakırdı. Bir kez `true` olduktan sonra `false`'a DÖNMEZ (mesaj silinmiyor).
+       -- AI bu talepte hiç konuştu mu: operatör devralınca `handled_by` `human`'a döner ama AI'ın mesajı kalır,
+       -- kalite kontrolü tam o kümeye bakar. Mesaj silinmediği için `true` bir daha `false` olmaz.
        coalesce(m.answered_by_ai, false)         as answered_by_ai,
        c.name                                    as customer_name,
        o.reference_no                            as order_reference_no
@@ -276,10 +208,8 @@ begin
 end;
 $$;
 
--- Cevap + (gerekiyorsa) durum değişimi. `p_new_status` KARAR DEĞİL, kararın taşınmasıdır: hangi
--- cevabın durumu değiştirdiğini motor söyler (`domain-core/support.statusAfterCustomerReply`) —
--- kapanmış talebe yazan müşteri onu yeniden açar, açık talepte durum sabit kalır. Kuralı buraya da
--- yazmak, aynı kararın iki dilde iki kopyası olurdu.
+-- `p_new_status` karar değil, taşınmasıdır: hangi cevabın durumu değiştirdiğine motor karar verir
+-- (`statusAfterCustomerReply`), kuralın SQL kopyası olmasın.
 create or replace function public.reply_ticket(
   p_ticket_id uuid,
   p_sender ticket_sender,
@@ -314,22 +244,9 @@ $$;
 revoke all on function public.create_ticket(uuid, ticket_source, ticket_type, text, uuid, uuid[], uuid, text, text[], uuid, ticket_sender) from anon;
 revoke all on function public.reply_ticket(uuid, ticket_sender, text, text[], uuid, ticket_status) from anon;
 
--- ── Ürün başına ŞİKÂYET YOĞUNLUĞU (16.6 zemini · operasyon talebi 03.08) ─────
--- Geri Bildirim ekranının skor tablosu "şikâyet + düşük skor birleşiyor" diyor: kalite sorunuyla
--- beğeni verisinin yan yana okunduğu yer. Zincir kurulabiliyordu (`order_item_ids` → kalem →
--- varyant → ürün) ama okuma yoktu ve ekranda satır satır kurmak N+1 olurdu.
---
--- **Neden görünüm değil FONKSİYON:** dönem parametresi gerekiyor (ekranın "Son 30 gün" seçicisi) ve
--- görünüm parametre alamaz. `p_since` null ise tüm zamanlar — dönemli ve dönemsiz hâl aynı kod
--- yolundan geçer (`points_leaderboard` ile aynı gerekçe).
---
--- **`count(distinct t.id)` ve bu bir DOĞRULUK kararı:** bir talep aynı üründen üç kalem taşıyabilir;
--- düz `count(*)` onu üç şikâyet sayardı ve tek bir müşteri, tek bir olayla ürünü listenin başına
--- taşırdı. Sorulan şey "kaç şikâyet", "kaç kalem" değil.
---
--- **Yalnız `damaged` ve `missing`:** soru bir KALİTE sinyali. Bir ürün hakkındaki sorunun
--- (`question`) ya da genel bir konunun (`other`) o ürünün kalitesi hakkında söylediği bir şey yok;
--- hepsini saymak, en çok sorulan ürünü en bozuk ürün gibi gösterirdi.
+-- ── Ürün başına şikâyet yoğunluğu ───────────────────────────────────────────────
+-- Fonksiyon, çünkü dönem parametresi gerekir ve görünüm parametre almaz. `count(distinct t.id)` bir talebin üç kalemini
+-- tek şikâyet sayar; yalnız `damaged` ve `missing` sayılır, çünkü soru bir kalite sinyalidir.
 create or replace function public.product_complaint_signal(
   p_since timestamptz default null,
   p_product_ids uuid[] default null

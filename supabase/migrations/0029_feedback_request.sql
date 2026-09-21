@@ -1,23 +1,7 @@
--- Modül 17 — Alım-sonrası geri bildirim daveti (17.2). DOMAIN §14, `design/pages/musteri-geri-bildirim.md`.
---
--- Teslimden ~10 gün sonra giden kişisel davet: "geçen haftaki siparişin nasıldı?" Müşteri aldığı
--- ürünleri kart kart değerlendirir; akış bir dakikadan kısa bitmeli.
---
--- ── TOKEN OTURUM YERİNE GEÇER ───────────────────────────────────────────────
--- Davet e-postadan/WhatsApp'tan gelir ve telefonda tek elle açılır; araya giriş ekranı koymak akışı
--- kırar ve tamamlanma oranını düşürür. Bağlantının kendisi kimlik taşır.
---
--- Bu yüzden `reference_no` ile aynı kural: **rastgele, sıralı değil.** Sıralı üretilseydi bir davet
--- bağlantısından komşusunun siparişine geçilebilirdi.
---
--- ── İLERLEME SAKLANMAZ ──────────────────────────────────────────────────────
--- "2/5 tamamlandı" siparişin ürünleri ile o davetten doğan `product_feedback` kayıtlarından
--- TÜRETİLİR (`feedback_request_progress`). Bir sayaç tutulsaydı, yarıda bırakılıp geri dönülen
--- akışta bir gün gerçekle ayrışırdı — ve müşteri "ben bunu değerlendirmiştim" derdi.
---
--- `completed_at` yine de SAKLANIR ve bu çelişki değil: türetilebilen şey ilerlemedir, akışın
--- SONLANDIĞI an değil. Müşteri her ürünü değerlendirmeden de "bitir" diyebilir; puanın tek kez
--- verilmesini de o damga sağlar.
+-- Alım-sonrası geri bildirim daveti (DOMAIN §14): teslimden sonra giden kişisel bağlantı, giriş ekranı istemez.
+
+-- İlerleme saklanmaz, siparişin ürünleri ile davetten doğan `product_feedback` kayıtlarından türetilir (`feedback_request_progress`).
+-- `completed_at` yine saklanır, çünkü müşteri her ürünü değerlendirmeden bitirebilir ve puan bu damgayla tek kez verilir.
 
 -- Davetin hangi kanaldan gittiği. Müşterinin tercih ettiği kanal değil, DAVETİN kanalı: aynı
 -- müşteriye bir kez e-posta bir kez WhatsApp gidebilir ve hangisinin tamamlandığını bilmek,
@@ -30,14 +14,9 @@ create table public.feedback_request (
   order_id uuid not null references public.order (id) on delete cascade,
   customer_id uuid not null references public.user_profiles (id) on delete cascade,
 
-  -- Davet bağlantısının anahtarı; oturum yerine geçer. **Kriptografik** rastgelelikle üretilir
-  -- (`readableCode` → `crypto.getRandomValues`): öngörülebilir bir token, komşu davetin siparişini
-  -- okumak demektir. Tehdit kaba kuvvet DEĞİL, üretecin iç durumunun geri çözülmesidir.
+  -- Oturum yerine geçen anahtar kriptografik rastgele üretilir (`readableCode`), çünkü öngörülebilir token komşu davetin siparişini açardı.
   token text not null unique,
-  -- **Token'ın ömrü vardır.** Oturum yerine geçen bir anahtar sonsuza kadar geçerli olamaz: mail
-  -- arşivinde, iletilmiş bir mesajda, tarayıcı geçmişinde kalan bağlantı yıllar sonra da açılırdı.
-  -- 90 gün cömerttir (davet 10. günde gider, akış bir dakika sürer) — amaç müşteriyi kısıtlamak
-  -- değil, sızan bir anahtarın ömrünü sınırlamak.
+  -- Sızan bağlantının ömrünü sınırlar; 90 gün, onuncu günde giden ve bir dakikada biten davet için cömert bir paydır.
   expires_at timestamptz not null default (now() + interval '90 days'),
 
   channel feedback_channel not null,
@@ -86,19 +65,8 @@ select r.id as feedback_request_id,
 comment on view public.feedback_request_progress is
   'Davetin ilerlemesi — "2/5" siparişten ve değerlendirmelerden TÜRETİLİR, saklanmaz (17.2).';
 
--- ── Daveti bekleyen siparişler ──────────────────────────────────────────────
--- Tarama işinin (cron) okuduğu küme: teslim edilmiş ve **henüz daveti olmayan** siparişler.
---
--- **Neden görünüm, neden uygulamada süzgeç değil:** iş önce "teslim edilmiş ilk N sipariş"i çekip
--- her biri için "daveti var mı" diye soruyordu. Zaten davet edilmişler pencereyi doldurunca yeni
--- siparişlere sıra GELMİYORDU — üstelik sessizce: iş başarılı biter, ize `{created: 0}` yazar,
--- hiçbir alarm çalmaz. Süzgeç kaynağa taşındığında pencere yalnız GERÇEK adaylarla dolar.
---
--- Sipariş başına iki sorgu (davet var mı + teslim anı) da burada tek turda çözülür.
---
--- **Bekleme süresi burada YOK:** o parametrik bir iş kuralıdır (`feedback_delay_days`) ve motorun
--- işidir (`isDueForFeedback`). Görünüm olguyu verir — "teslim edildi, daveti yok, şu an teslim
--- edilmişti" — kararı vermez.
+-- Süzgeç kaynakta, çünkü uygulamada olsaydı davetli siparişler tarama penceresini doldurur ve yenilere sıra gelmezdi.
+-- Bekleme süresi (`feedback_delay_days`) motorun kararıdır; görünüm yalnız olguyu verir.
 create or replace view public.feedback_due_order as
 select o.id          as order_id,
        o.customer_id,
@@ -117,16 +85,8 @@ select o.id          as order_id,
 comment on view public.feedback_due_order is
   'Daveti bekleyen siparişler — teslim edilmiş, daveti YOK (17.2). Bekleme süresi motorun kararı.';
 
--- ── Ayarlar ─────────────────────────────────────────────────────────────────
--- Bekleme süresi ve dış değerlendirme bağlantısı **parametrik**: ikisi de iş kararıdır ve dağıtım
--- beklemeden değişebilmelidir (STACK §10).
---
--- **Platform ayarda, kodda değil.** Google İşletme Profili ile Trustpilot arasındaki tercih bir
--- pazarlama kararıdır ve zamanla değişebilir; ikisi de "memnun müşteriyi dışarıda değerlendirmeye
--- çağır" kuralının aynı ucuna takılır. Adres + görünen ad ayar olunca geçiş iki satır güncellemedir.
---
--- `review_platform_url` BOŞ başlar ve bu doğru: kayıt açılmadan uydurma bir adrese yönlendirmektense
--- davet hiç gösterilmez (`feedbackOutcomeOf` bunu bilir).
+-- Bekleme süresi ve dış değerlendirme platformu ayardadır, çünkü ikisi de dağıtım beklemeden değişebilen iş kararıdır.
+-- `review_platform_url` boş başlar: kayıt açılmadan uydurma adrese yönlendirmektense davet gösterilmez (`feedbackOutcomeOf`).
 insert into public.settings (key, value, description) values
   ('feedback_delay_days',   '10',       'Teslimden kaç gün sonra geri bildirim daveti gider. Erken sormak "daha açmadım", geç sormak unutulmuş bir deneyim getirir.'),
   ('review_platform_url',   '""',       'Dış değerlendirme bağlantısı (Google İşletme Profili / Trustpilot). BOŞSA akış sonunda davet gösterilmez.'),
