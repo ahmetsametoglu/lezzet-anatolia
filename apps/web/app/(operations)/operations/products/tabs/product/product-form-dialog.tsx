@@ -12,19 +12,12 @@ import { ProductFormPanels, ProductFormTabs, useProductFormFields } from '@/comp
 import { ProductPhotos } from '@/components/operation/form/product-form/photos';
 import { ProductFormSchema, buildDefaults, toActionPayload, type ProductFormValues } from '@/components/operation/form/product-form/schema';
 import type { ProductFormTab } from '@/components/operation/form/product-form/types';
-// Yazan kapıların ÜÇÜ DE ortak (`lib/catalog`): aynı form asistan kuyruğunda da açılıyor ve oradan
-// da kaydediliyor. Bu sekmenin kendi `actions.ts`i bu yüzden kalmadı.
+// Yazan kapılar ortak (`lib/catalog`): aynı form asistan kuyruğunda da açılıp kaydediliyor.
 import { createProductAction, updateProductAction } from '@/lib/catalog/product-actions';
 import { uploadProductImageAction } from '@/lib/catalog/product-photo-actions';
 import { bundlesUsingVariants, type BundleView, type CategoryView, type ProductView } from '../../products-types';
 
-// Ürün oluştur/düzenle — KAP (container): RHF + zodResolver, action'lar, Dialog kabuğu ve footer burada.
-// Alan ELEMANLARI bir kez kurulur (fields), sunum masaüstü düzeninde (.desktop) yerleştirilir.
-// Operasyon web'i masaüstü-yalnız; mobil deneyim native uygulamada (`docs/uygulama`).
-//
-// DİL: form geneli görünmez kip YOK (eski header sekmesi kaldırıldı) — dil, çok dilli alanların
-// yanında GÖRÜNÜR: ad + açıklama aynı sütunda yan yana ⇒ TEK dil kartı (`content`) ikisini sarar.
-// Alan tanımları tek yerde (nameField/descriptionField).
+// Ürün oluştur/düzenle kabı: form durumu, action'lar, dialog kabuğu ve alt bar burada; alanlar ortak gövdeden.
 
 const FORM_ID = 'product-form';
 
@@ -41,7 +34,7 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
   const editing = mode === 'edit' && product !== null;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  // Sekme YEREL durum, URL'e yazılmaz: diyalog içi bir görünüm tercihi, paylaşılabilir bir adres değil.
+  // Sekme yerel durum: diyalog içi görünüm tercihi, paylaşılabilir bir adres değil.
   const [tab, setTab] = useState<ProductFormTab>('product');
 
   const form = useForm<ProductFormValues>({
@@ -50,11 +43,6 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     mode: 'onChange',
   });
   const { control, handleSubmit, formState } = form;
-
-  // AI çeviri kapısı BURADAN KALKTI (12.08): alan türü artık kutunun kendi `field` prop'unda
-  // (`localized-text-field` künyesi). 04.08'de kazanılan ayrım korunuyor — ürün ADI iki kelimelik
-  // bir vitrin metni, SAKLAMA bir yönerge, İÇİNDEKİLER yasal bir liste — yalnız o türü taşıyan
-  // zincir kısaldı: dört alan + varyant editörü kendi türünü kendi söylüyor.
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -68,11 +56,8 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     onClose();
   });
 
-  // Görsel: kaynak 3:2, odak + zoom kırpması form değeri; düzenleme ayrı diyalogda. Kayıt yoksa yükleme
-  // yapılamaz (R2 anahtarı slug'a bağlı) → istem gösterilir. Alt metin AYRI alan değil: boşsa müşteri
-  // yüzeyinde ürün adına düşer (kopya tutulmaz) — bu yüzden formda alt-metin alanı yok.
-  // Galeri (ek fotoğraflar) aynı blokta: kapak büyük, altında şerit. Galeri CANLI yönetilir —
-  // gerekçesi ProductPhotos'ta. Forma SLOT olarak giriyor: canlı yazan bir blok, formun alanı değil.
+  // Kayıt yoksa yükleme yapılamaz (depolama anahtarı ürüne bağlı). Galeri canlı yazdığı için forma
+  // alan olarak değil slot olarak girer.
   const [crop, setCrop] = useImageCrop(form);
   const imageField = (
     <ProductPhotos
@@ -84,8 +69,6 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     />
   );
 
-  // Alan elemanları ORTAK gövdeden (22.14): aynı form asistan kuyruğunda da açılıyor. Burada yalnız
-  // kabın verdikleri var — kategoriler, AI çeviri kapısı ve canlı yazan galeri slotu.
   const fields = useProductFormFields({
     control,
     watch: form.watch,
@@ -93,13 +76,8 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     photosSlot: imageField,
   });
 
-  // Alt bar SOL tarafı = aksiyon bölgesi (zorunlu-alan metni değil): satış durumu kaydetmenin hemen
-  // yanında durur — katalog/paket dialoglarıyla aynı desen.
-  //
-  // ÜRÜN ↔ PAKET BAĞI görünür kılınır. Paket ancak tüm kalemleri satılabilirse satılabilir; ürünü
-  // pasife almak, o ürünü içeren paketleri de vitrinden düşürür. Bağ ekranda hiç yazmıyordu, yani
-  // operatör sonucu ancak sonradan (satış durunca) öğreniyordu. Sayı HER ZAMAN görünür, uyarı ise
-  // yalnız gerçekten zarar verecek anda: satıştaki bir paketi olan ürünü satıştan çıkarırken.
+  // Paket ancak tüm kalemleri satılabilirse satılabilir: ürünü satıştan çıkarmak onu içeren paketleri
+  // de düşürür. Uyarı yalnız satıştaki bir paket etkilenecekken çıkar.
   const usedIn = bundlesUsingVariants(
     bundles,
     (product?.variants ?? []).map((v) => v.id),
@@ -119,13 +97,7 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
       </span>
     );
 
-  // Üç durum TEK seçicide: "Satışta / Pasif / Aday" aynı bilginin değerleri. Önceden yalnız aktiflik
-  // anahtarı vardı ve aday ürün çıkmazdaydı — anahtarı açmak `isActive` yazıyordu ama adaylık onu
-  // ezdiği için ekranda hiçbir şey değişmiyordu. Vaat edilen "Etkinleştir" düğmesinin yerini bu alıyor.
-  //
-  // Seçici BURADA kalır, ortak alan DEĞİLDİR (kullanıcı kararı 11.08): asistan kuyruğu ürünün
-  // içeriğini yazar, satış eksenine dokunmaz — yayına almak bu ekranın kararı ve paket bağı da
-  // (üstteki `bundleNote`) yalnız burada okunuyor.
+  // Durum seçicisi ortak alan değil: asistan kuyruğu içeriği yazar, satışa almak bu ekranın kararıdır.
   const footer = (
     <DialogFooter
       formId={FORM_ID}
@@ -141,9 +113,6 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
             bare
             className="w-[248px]"
             options={[
-              // Etiketler TEK kaynaktan (`PRODUCT_STATUS_LABELS`): seçicideki kelime ile listedeki
-              // rozetin kelimesi ayrışmıştı ("Satışta" ↔ "Aktif"). Açıklama (`title`) burada kalır —
-              // o bir arayüz ipucudur, durumun adı değil.
               { key: 'active', label: PRODUCT_STATUS_LABELS.active, tone: 'olive', title: 'Katalogda görünür ve satılabilir' },
               {
                 key: 'passive',
@@ -165,13 +134,12 @@ export function ProductFormDialog({ mode, product, categories, bundles, onClose 
     />
   );
 
-  // Sekmeler BAŞLIKTA durur — gövde kaydırılırken kaybolmasın. Barın kendisi ortak (`ProductFormTabs`),
-  // yeri kabın kararı: kuyrukta panelin kendi başlık satırına giriyor.
   return (
     <Dialog
       open
       onClose={onClose}
-      maxWidth={1180}
+      maxWidth={1480}
+      maxHeightVh={94}
       title={editing ? 'Ürün düzenle' : 'Yeni ürün'}
       subtitle={editing ? resolveLocalizedText(product.name) || 'Ürün' : 'Zorunlu alanları doldurun; beyanlar sonradan tamamlanabilir'}
       headerAside={<ProductFormTabs value={tab} onChange={setTab} />}

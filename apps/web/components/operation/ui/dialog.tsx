@@ -3,59 +3,41 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Button } from './button';
 
-// Açık dialogların yığını (üst üste açılabilir: ör. ürün formu → görsel düzenleme). Esc yalnız EN
-// ÜSTTEKİ dialogu kapatır; yoksa iç dialog Esc'i dış dialogu da kapatırdı (AnchoredMenu ile aynı dert).
+// Açık dialogların yığını: dialoglar üst üste açılabilir ve Esc yalnız en üsttekini kapatmalı.
 const dialogStack: object[] = [];
 
 /**
- * Operasyon dialogu — Komponent Envanteri O9. Ortalanmış panel: koyu örtü + başlık (başlık/alt +
- * kapat) + kaydırılır gövde + sabit alt bar (footer). Örtüye tıklama / Esc kapatır; panele tıklama
- * yayılmaz. Yıkıcı olmayan formlar (ürün oluştur/düzenle) burada açılır.
- *
- * Ayrışma ÜÇ katmanla kurulur — koyu temada gölge tek başına görünmez: örtü (`ops-scrim`, temayla
- * koyulaşır) + panel zemini (`ops-white` = envanterin "dialog ve girdi zemini"; koyuda kart-altı,
- * yani sayfa ve kart zemininden AÇIK) + 1px kenarlık. Gölge yalnız açık temada iş görür.
+ * Operasyon dialogu — ortalanmış panel: başlık, kaydırılır gövde, sabit alt bar.
+ * Ayrışma örtü + panel zemini + kenarlıkla kurulur, çünkü koyu temada gölge tek başına görünmez.
  */
 interface DialogProps {
   open: boolean;
   onClose: () => void;
   title: string;
-  /**
-   * Başlığın altındaki tek satır. `ReactNode`, çünkü bazı ekranlar burada VURGU istiyor: asistan
-   * kuyruğunda önerinin gerekçesi buraya girdi ve dikkat çeken bir tonda yazılıyor (11.08 — eskiden
-   * gövdenin tepesinde ayrı bir banner'dı, formun alanını yiyordu). Sönük ton varsayılan kalır;
-   * renk veren çağıran kendi span'ını geçirir.
-   */
+  /** Başlığın altındaki tek satır; vurgu isteyen çağıran kendi renkli span'ını geçirir. */
   subtitle?: ReactNode;
   /** Alt bar içeriği (aksiyonlar). Verilmezse alt bar çizilmez. */
   footer?: ReactNode;
-  /**
-   * Başlık satırının SAĞINDA duran sekmeler/kontroller. Uzun formlar tek kolonda duvara döndüğünde
-   * alanlar sekmelere bölünür (ör. ürün: Ürün ↔ Beyan) — sekme başlıkta durur ki gövde kaydırılırken
-   * kaybolmasın. Kapatma düğmesi her koşulda en sağda kalır.
-   */
+  /** Başlık satırının sağındaki sekmeler; başlıkta durur ki gövde kaydırılırken kaybolmasın. */
   headerAside?: ReactNode;
   /** Panel genişliği (CSS max-width). Varsayılan 640px. */
   maxWidth?: number;
-  /**
-   * SABİT yükseklik (px; ekranın %86'sını aşmaz) — sekmeli pencerede gövde sekmeye göre zıplamasın
-   * (14.09 · Para sözlüğü: sekmeler 700 · 774 · 402px arasında gidip geliyordu). Verilmezse içerikten.
-   */
+  /** Sabit yükseklik (px, tavanı aşmaz) — sekmeli pencerede gövde sekmeye göre zıplamasın. */
   height?: number;
+  /** Yükseklik tavanı, ekran yüksekliğinin yüzdesi. Varsayılan 86. */
+  maxHeightVh?: number;
   children: ReactNode;
 }
 
-export function Dialog({ open, onClose, title, subtitle, footer, headerAside, maxWidth = 640, height, children }: DialogProps) {
+export function Dialog({ open, onClose, title, subtitle, footer, headerAside, maxWidth = 640, height, maxHeightVh = 86, children }: DialogProps) {
   const tokenRef = useRef<object>({});
   useEffect(() => {
     if (!open) return;
     const token = tokenRef.current;
     dialogStack.push(token);
     const onKey = (e: KeyboardEvent) => {
-      // Yalnız yığının tepesindeki dialog Esc'e yanıt verir. İçerideki bir kontrol Esc'i kendisi için
-      // kullandıysa (`preventDefault` — ör. Para sözlüğünde satır içi düzenlemeden vazgeçmek) pencere
-      // kapanmaz: React olayları da `document`ta işliyor (App Router kökü), yani kabarmayı kesmek bu
-      // dinleyiciyi DURDURMAZ — sahiplenme işareti tek güvenilir yol (ölçüldü 14.09).
+      // İçerideki kontrol Esc'i sahiplendiyse (`preventDefault`) pencere kapanmaz: React olayları da
+      // `document`ta işlediği için kabarmayı kesmek bu dinleyiciyi durdurmaz.
       if (e.key === 'Escape' && !e.defaultPrevented && dialogStack[dialogStack.length - 1] === token) onClose();
     };
     document.addEventListener('keydown', onKey);
@@ -72,8 +54,12 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAside, ma
     <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-ops-scrim p-6">
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth, height: height === undefined ? undefined : `min(${height}px, 86vh)` }}
-        className="flex max-h-[86vh] w-full flex-col overflow-hidden rounded-ops-dialog border border-ops-line bg-ops-white text-ops-ink shadow-[0_24px_70px_rgba(20,22,18,0.4)]"
+        style={{
+          maxWidth,
+          maxHeight: `${maxHeightVh}vh`,
+          height: height === undefined ? undefined : `min(${height}px, ${maxHeightVh}vh)`,
+        }}
+        className="flex w-full flex-col overflow-hidden rounded-ops-dialog border border-ops-line bg-ops-white text-ops-ink shadow-[0_24px_70px_rgba(20,22,18,0.4)]"
       >
         <div className="flex items-start gap-3 border-b border-ops-line px-6 py-[18px]">
           <div className="mr-auto flex flex-col gap-px">
@@ -91,16 +77,8 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAside, ma
           </button>
         </div>
 
-        {/* ── GÖVDE KAYDIRILIR: `min-h-0 flex-1` ŞART (11.08) ─────────────────
-            İkisi de yoktu ve kaydırma HİÇ ÇALIŞMIYORDU. Sebep flexbox'ın varsayılanı: `flex-col`
-            içindeki bir çocuğun asgari yüksekliği içeriği kadardır (`min-height: auto`), yani
-            `overflow-y-auto` verilse bile kutu taşan içeriğe göre büyüyor ve kaydıracak bir şey
-            kalmıyor. Dışarıdaki `overflow-hidden` de fazlalığı görünmez kılıyor: içerik kesiliyor
-            ama okunamıyor.
-
-            Arıza küçük diyaloglarda görünmüyordu (içerik `86vh`i aşmıyordu); ürün formu kuyruğun
-            içine girince ortaya çıktı. Düzeltme burada, çünkü hata Dialog'un kendisindeydi —
-            çağıran her ekran kazanıyor. */}
+        {/* `min-h-0` şart: flex çocuğunun asgari yüksekliği içeriği kadardır, o olmadan gövde
+            kaydırmak yerine uzar ve taşan kısım görünmeden kesilir. */}
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">{children}</div>
 
         {footer ? <div className="flex items-center gap-2.5 border-t border-ops-line bg-ops-subtle px-6 py-3.5">{footer}</div> : null}
@@ -109,11 +87,7 @@ export function Dialog({ open, onClose, title, subtitle, footer, headerAside, ma
   );
 }
 
-/**
- * Form dialoglarının ortak alt barı: SOLDA aksiyon bölgesi (kayda eşlik eden kontroller — ör. aktif/pasif
- * anahtarı) + varsa hata; SAĞDA İptal/Kaydet. Her dialogda elle kurulmaz (no-duplication) → ürün,
- * katalog ve ileride paket dialogları aynı yerleşimi paylaşır. Kaydet, `formId` ile gövdedeki formu submit eder.
- */
+/** Form dialoglarının ortak alt barı: solda kayda eşlik eden kontroller ve hata, sağda İptal/Kaydet. */
 interface DialogFooterProps {
   /** Kayda eşlik eden aksiyonlar (solda). Zorunlu-alan metni yerine buraya kontrol konur. */
   actions?: ReactNode;
@@ -123,17 +97,11 @@ interface DialogFooterProps {
   formId: string;
   onCancel: () => void;
   submitLabel?: string;
-  /**
-   * Vazgeçme düğmesinin sözü. Varsayılan "İptal" her formda doğru değil: transfer kabulünde
-   * "İptal", sevkiyatı geri almakla karışır (o ayrı bir fiil) — orada "Sonra" denir.
-   */
+  /** Vazgeçme düğmesinin sözü — "İptal" kimi formda ayrı bir fiille karışır (transfer kabulü). */
   cancelLabel?: string;
   /**
-   * Kaydetmenin ENGELİ — dolu string engelin SEBEBİDİR ve düğmenin yanında yazılır.
-   *
-   * Şema geçersizken tarayıcı submit'i zaten yutuyor: düğme etkin görünür, basılır ve HİÇBİR ŞEY
-   * olmaz — geri bildirimin en kötü hâli. Engel varsa düğme kilitlenir ve sebebi söylenir; sebep
-   * gizlenip yalnız kilit gösterilirse operatör neyi düzelteceğini aramak zorunda kalır.
+   * Kaydetmenin engeli; dolu string sebebidir ve düğmenin yanında yazılır. Şema geçersizken submit
+   * sessizce yutulur, bu yüzden düğme kilitlenir ve operatöre neyi düzelteceği söylenir.
    */
   blockedReason?: string | null;
 }
@@ -159,8 +127,7 @@ export function DialogFooter({
           {blockedReason}
         </span>
       ) : null}
-      {/* Düğmeler KÜÇÜLMEZ ve bölünmez; yer darsa kısalan engel cümlesidir (12.24 · ölçüldü: uzun cümlede
-          "Hareketi kaydet" iki satıra bölünüyordu). */}
+      {/* Düğmeler küçülmez ve bölünmez; yer darsa kısalan engel cümlesidir. */}
       <Button variant="secondary" onClick={onCancel} disabled={submitting} className="shrink-0 whitespace-nowrap">
         {cancelLabel}
       </Button>
