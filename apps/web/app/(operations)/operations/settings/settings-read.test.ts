@@ -55,8 +55,7 @@ function profile(over: Partial<UserProfile> & { id: string }): UserProfile {
 }
 
 /*
-  SEÇENEKLİ AYAR (15.30) — yeni sohbetin yürütücüsü. Değer listeden gelir: sözlükte olmayan bir mod
-  satıra yazılsaydı çözücü sessizce fabrika değerine düşer, operatör ekranda başka bir şey görürdü.
+  Seçenekli ayar: değer listeden gelir, sözlükte olmayan bir mod yazılsaydı çözücü sessizce fabrika değerine düşerdi.
 */
 describe('choice türü (15.30)', () => {
   const def = SETTING_BY_KEY.get(CONVERSATION_DEFAULT_HANDLER_KEY)!;
@@ -92,9 +91,7 @@ describe('toSettingRows', () => {
     expect(row.value).toBe(2500);
     expect(row.display).toBe('25,00 €');
     expect(row.changed).toBe(true);
-    // Fabrika değeri 40 € (kullanıcı kararı 10.08 — kapıya teslim tabanı); 0 idi ve o hâlde kural
-    // fiilen kapalıydı. Sayının kendisi sözlükten okunuyor, burada elle yazılmıyor olsaydı bu satır
-    // her ayar değişiminde yeniden düşerdi — kasıtlı: fabrika değerinin değişmesi görülmeli.
+    // Fabrika değeri 40 €; sayı sözlükten değil elle yazılı, çünkü fabrika değerinin değişmesi görülmeli.
     expect(row.fallbackDisplay).toBe('40,00 €');
   });
 
@@ -173,16 +170,8 @@ describe('depo ekseni — arka uç açtı, ekran kabloladı (03.08)', () => {
   });
 
   /**
-   * **KESİM SAATLERİ DEPO EKSENİNDEN ÇIKTI (kullanıcı kararı 17.08).**
-   *
-   * Bu satır 03.08'de `order_cutoff_time` için `warehouse: true` bekliyordu ve gerekçesi `0016`'nın
-   * aday listesiydi ("depolar farklı şehirlerde, kesim saatleri ayrışır"). Karar değişti çünkü iki
-   * eksen birden açıkken `SCOPE_PRIORITY` `warehouse`u `zone`dan daha özgül sayıyor: depoya yazılan
-   * bir saat, bölgeye yazılanı **sessizce** yutuyordu. Kullanıcının cümlesi: *"depo saatini komple
-   * kaldıralım, her rota saatini barındırsın; böylelikle sessiz kapsam tuzağına düşmeyiz."*
-   *
-   * Nöbet iki yönlü: dördü de rota eksenini AÇMAK ve depo eksenini KAPATMAK zorunda. Biri geri
-   * eklenirse tuzak da geri gelir.
+   * Kesim saatleri yalnız rota ekseninde: depo ekseni açıkken `SCOPE_PRIORITY` depoyu daha özgül sayar ve bölgeye yazılan
+   * saati sessizce yutardı. Nöbet iki yönlü: rota ekseni açık, depo ekseni kapalı kalmalı.
    */
   it('günün eşik saatleri YALNIZ rota ekseninde — depo ekseni kapalı (17.08)', () => {
     const rows = toSettingRows({ settings: [], zones: ZONES }).rows;
