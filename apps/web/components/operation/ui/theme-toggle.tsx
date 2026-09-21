@@ -4,13 +4,8 @@ import { useEffect, useState } from 'react';
 import { MonitorIcon, MoonIcon, SunIcon } from './icons';
 
 /**
- * Tema anahtarı — operasyon sidebar'ının dibinde. Üç değerli: sistem · açık · koyu.
- * Karanlık palet yalnız operasyon yüzeyindedir (globals.css §0.6), bu yüzden komponent de burada.
- *
- * Tercih `localStorage`'ta yaşar; uygulama `<html data-theme>` yazılarak yapılır — CSS tek blok
- * tutar, koyu değerler iki kez yazılmaz. İlk boyamadan önce çözüm `ThemeScript` (layout `<head>`)
- * tarafından yapılır; burası yalnız değişimi yönetir, aksi halde sayfa açılışında açık tema
- * bir kare görünür (FOUC).
+ * Tema anahtarı (sistem · açık · koyu) — tercih `localStorage`'ta, uygulama `<html data-theme>` ile.
+ * İlk boyamadaki çözüm `ThemeScript`in işi; burası yalnız değişimi yönetir.
  */
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -22,10 +17,12 @@ function applyTheme(pref: ThemePref): void {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 }
 
+const ICON_SIZE = 18;
+
 const OPTIONS: { value: ThemePref; label: string; icon: React.ReactNode }[] = [
-  { value: 'system', label: 'Sistem', icon: <MonitorIcon /> },
-  { value: 'light', label: 'Açık', icon: <SunIcon /> },
-  { value: 'dark', label: 'Koyu', icon: <MoonIcon /> },
+  { value: 'system', label: 'Sistem', icon: <MonitorIcon size={ICON_SIZE} /> },
+  { value: 'light', label: 'Açık', icon: <SunIcon size={ICON_SIZE} /> },
+  { value: 'dark', label: 'Koyu', icon: <MoonIcon size={ICON_SIZE} /> },
 ];
 
 export function ThemeToggle() {
@@ -64,14 +61,14 @@ export function ThemeToggle() {
               type="button"
               onClick={() => choose(o.value)}
               aria-pressed={on}
+              aria-label={o.label}
               title={o.label}
               className={[
-                'flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-[6px] py-[5px] font-ops-display text-ops-micro font-semibold transition-colors',
+                'flex flex-1 cursor-pointer items-center justify-center rounded-[6px] p-2 transition-colors',
                 on ? 'bg-ops-white text-ops-ink shadow-[0_1px_2px_rgba(20,22,18,0.12)]' : 'text-ops-muted hover:text-ops-body',
               ].join(' ')}
             >
               {o.icon}
-              <span>{o.label}</span>
             </button>
           );
         })}
@@ -81,9 +78,8 @@ export function ThemeToggle() {
 }
 
 /**
- * Boyamadan ÖNCE çalışan tema çözücü — `<head>`e girer, `data-theme`i ilk HTML ile birlikte yazar.
- * Aksi halde koyu tema seçili kullanıcı her sayfa açılışında bir kare açık tema görür.
- * `next/script` değil düz `<script>`: React hidrasyonundan önce çalışması gerekir.
+ * Boyamadan önce çalışan tema çözücü — yoksa koyu tema seçen her açılışta bir kare açık tema görür.
+ * Düz `<script>`, çünkü React hidrasyonundan önce çalışmalı.
  */
 export function ThemeScript() {
   const js = `(function(){try{var p=localStorage.getItem('${THEME_KEY}')||'system';var d=p==='dark'||(p==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';}catch(e){}})();`;
