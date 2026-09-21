@@ -99,7 +99,7 @@ export function LegalScreen({ page }: LegalScreenProps) {
     <View style={styles.screen}>
       {bar}
       <ScrollView contentContainerStyle={styles.content} testID="legal-content">
-        <Text style={styles.updated}>{t.updatedAt}</Text>
+        <Text style={styles.updated}>{copy.updatedAt}</Text>
 
         {sections.map((section) => (
           <LegalSection key={section.heading} section={section} />

@@ -28,7 +28,7 @@ export default async function PrivacyPage({ params }: PrivacyPageProps) {
       document={{
         texture: 'prose',
         title: copy.title,
-        updatedAt: '2026-07-01',
+        updatedAt: '2026-09-21',
         sections: copy.sections,
         notice: {
           text: copy.notice.text,

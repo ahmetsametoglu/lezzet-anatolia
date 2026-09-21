@@ -380,10 +380,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
   geçti ve Fransa'yı da sunucudan soruyor; BAN'ın IP başına kota gerekçesiyle çelişiyor, hangisinin doğru olduğu kullanıcı kararı.
 - [ ] (K.12) [hedef: mobil] Keşif ekranının ortak metni `@lezzet/i18n/customer/discover`tan okunsun — web telefon görünümü aynı
   cümleleri oradan okuyor, native `screens/discover/messages.json` ikinci kopya olarak kaldı.
-- [ ] (K.13) [hedef: müşteri] Gizlilik politikası kişisel veriyi işleyen hizmetleri saysın (lansmandan önce) — web
-  `legal/privacy/content.json` ve native ortak `packages/i18n/src/customer/legal.json` bugün yalnız Hetzner'i anıyor;
-  veritabanı barındırılan Supabase'de (AB bölgesi) duracak, Stripe · Resend · Cloudflare R2 · Sendcloud · Google Maps ·
-  Meta da kişisel veri işliyor (tam liste `docs/architecture/INTEGRATIONS.md`).
 - [~] (K.14) [hedef: web] Gerçek başlangıç beslemesi kuruldu (`scripts/seed-real.ts` + `seed-real/data.ts`, `pnpm db:seed:real`);
   eksikler: aracın geçici plakası (`AA-000-AA`), taslak ürünlerin künyesi ve yeni faturaların kalemleri.
 - [ ] (K.15) [hedef: web] Mal kabulde "birim alış" alanı kaldırılsın ya da salt okunur gösterilsin — fiyat siparişin ve

@@ -2,7 +2,6 @@
   "tr": {
     "back": "Geri",
     "directoryTitle": "Bilgi ve koşullar",
-    "updatedAt": "Son güncelleme: 1 Temmuz 2026",
     "searchPlaceholder": "Soru arayın…",
     "noMatch": "Bu aramaya uyan soru yok.",
     "notFoundTitle": "Cevabını bulamadınız mı?",
@@ -15,6 +14,7 @@
     "pages": {
       "delivery": {
         "title": "Teslimat ve iade",
+        "updatedAt": "Son güncelleme: 1 Temmuz 2026",
         "sections": [
           {
             "heading": "Teslimat bölgemiz",
@@ -108,6 +108,7 @@
       },
       "faq": {
         "title": "Sık sorulan sorular",
+        "updatedAt": "Son güncelleme: 1 Temmuz 2026",
         "sections": [],
         "questions": [
           {
@@ -154,6 +155,7 @@
       },
       "privacy": {
         "title": "Gizlilik politikası",
+        "updatedAt": "Son güncelleme: 21 Eylül 2026",
         "sections": [
           {
             "heading": "Verilerinizden kim sorumlu",
@@ -174,13 +176,17 @@
               "Sipariş: verdiğiniz siparişler, kalemleri, tutarları ve durumları.",
               "İletişim tercihleri: kampanya izinleri ve tercih ettiğiniz dil.",
               "Talepleriniz: bize yazdığınız mesajlar ve eklediğiniz fotoğraflar.",
-              "İşletme müşterisiyseniz: SIRET numaranız ve şirket künyeniz."
+              "İşletme müşterisiyseniz: SIRET numaranız ve şirket künyeniz.",
+              "Mesajlarınız: WhatsApp, Messenger ya da Instagram'dan bize yazdıklarınız; gönderdiğiniz fotoğraflar ve sesli mesajlar dâhil.",
+              "Google ile giriş yaparsanız: Google'ın bize ilettiği adınız ve e-posta adresiniz.",
+              "Bildirimler: izin verdiyseniz, bildirimleri cihazınıza iletebilmek için cihazınızın bildirim jetonu."
             ]
           },
           {
             "heading": "Neden topluyoruz",
             "paragraphs": [
               "Adınız ve adresiniz olmadan sipariş teslim edilemez; e-posta adresiniz olmadan siparişinizin ne durumda olduğunu size söyleyemeyiz. Bu veriler sözleşmenin yerine getirilmesi için işlenir.",
+              "Mesajlarınız yapay zekâ ile işlenir: size kendi dilinizde cevap verebilmek için çevrilir, sesli mesajlar yazıya dökülür ve cevap hazırlanırken yapay zekâdan yardım alınır.",
               "Kampanya iletileri yalnız açıkça izin verdiyseniz gönderilir ve izni istediğiniz an geri alabilirsiniz. İzin kaydı bayrak olarak değil, ne zaman ve nereden verildiği bilgisiyle birlikte saklanır — bu, izin sorulduğunda gösterebileceğimiz kanıttır.",
               "Muhasebe ve yasal yükümlülükler için sipariş ve ödeme kayıtlarını saklamak zorundayız; bunlar izne bağlı değildir."
             ],
@@ -204,9 +210,20 @@
               "Ödeme sağlayıcısı: kart bilgileriniz bize hiç ulaşmaz, doğrudan ödeme sağlayıcısında işlenir.",
               "E-posta gönderim servisi: bildirim e-postalarını iletmek için.",
               "Kargo firması: bölge dışı gönderimlerde adınız ve teslimat adresiniz.",
-              "Adres arama: adres alanına yazdığınız metin, öneri getirebilmek için doğrudan cihazınızdan IGN'in kamuya açık adres servisine (Base Adresse Nationale) gider. Adınız, hesabınız ya da başka bir bilginiz gönderilmez.",
-              "Barındırma: Hetzner Online GmbH (Almanya) — sunucular Avrupa Birliği içindedir."
+              "Adres arama (Fransa): adres alanına yazdığınız metin, öneri getirebilmek için doğrudan cihazınızdan IGN'in kamuya açık adres servisine (Base Adresse Nationale) gider. Adınız, hesabınız ya da başka bir bilginiz gönderilmez.",
+              "Adres arama (Almanya): yazdığınız adres metni, öneri ve doğrulama için sunucumuzdan Google'ın adres servisine gönderilir. Adınız, hesabınız ya da başka bir bilginiz gönderilmez.",
+              "Yapay zekâ servisi: mesajlarınızın çevrilmesi, sesli mesajların yazıya dökülmesi ve cevap hazırlanması için mesajlarınızın içeriği.",
+              "Mesajlaşma platformları: bize WhatsApp, Messenger ya da Instagram'dan (Meta) yazarsanız cevabımız aynı platform üzerinden size ulaşır; yazışma ayrıca kendi sistemimizde saklanır.",
+              "Bildirim servisi: uygulama bildirimlerini cihazınıza iletmek için bildirim jetonu ve bildirimin metni.",
+              "Barındırma ve depolama: sunucularımız Hetzner Online GmbH'de (Almanya), veritabanımız Supabase'dedir; ikisi de Avrupa Birliği içindedir. Eklediğiniz fotoğraflar Cloudflare'in depolama servisinde tutulur."
             ]
+          },
+          {
+            "heading": "Avrupa Birliği dışına aktarım",
+            "paragraphs": [
+              "Ödeme, e-posta, veritabanı, depolama, adres, yapay zekâ, mesajlaşma ve bildirim hizmeti aldığımız sağlayıcıların bir kısmı Amerika Birleşik Devletleri merkezlidir ve verileriniz bu şirketlerce Avrupa Birliği dışında işlenebilir. Bu aktarımlar Avrupa Komisyonu'nun AB–ABD Veri Gizliliği Çerçevesi yeterlilik kararına ya da Komisyon'un onayladığı standart sözleşme maddelerine dayanır."
+            ],
+            "bullets": []
           },
           {
             "heading": "Haklarınız",
@@ -250,6 +267,7 @@
       },
       "sales": {
         "title": "Satış koşulları",
+        "updatedAt": "Son güncelleme: 1 Temmuz 2026",
         "sections": [
           {
             "heading": "Kapsam",
@@ -355,6 +373,7 @@
       },
       "terms": {
         "title": "Yasal bilgiler",
+        "updatedAt": "Son güncelleme: 1 Temmuz 2026",
         "sections": [
           {
             "heading": "Site sahibi",
@@ -437,7 +456,6 @@
   "fr": {
     "back": "Retour",
     "directoryTitle": "Informations et conditions",
-    "updatedAt": "Dernière mise à jour : 1 juillet 2026",
     "searchPlaceholder": "Rechercher une question…",
     "noMatch": "Aucune question ne correspond à cette recherche.",
     "notFoundTitle": "Vous ne trouvez pas votre réponse ?",
@@ -450,6 +468,7 @@
     "pages": {
       "delivery": {
         "title": "Livraison et retours",
+        "updatedAt": "Dernière mise à jour : 1 juillet 2026",
         "sections": [
           {
             "heading": "Notre zone de livraison",
@@ -543,6 +562,7 @@
       },
       "faq": {
         "title": "Questions fréquentes",
+        "updatedAt": "Dernière mise à jour : 1 juillet 2026",
         "sections": [],
         "questions": [
           {
@@ -589,6 +609,7 @@
       },
       "privacy": {
         "title": "Politique de confidentialité",
+        "updatedAt": "Dernière mise à jour : 21 septembre 2026",
         "sections": [
           {
             "heading": "Qui est responsable de vos données",
@@ -609,13 +630,17 @@
               "Commandes : vos commandes, leurs articles, leurs montants et leurs états.",
               "Préférences de communication : vos consentements marketing et votre langue.",
               "Vos demandes : les messages que vous nous envoyez et les photos que vous joignez.",
-              "Si vous êtes un client professionnel : votre numéro SIRET et les informations de votre société."
+              "Si vous êtes un client professionnel : votre numéro SIRET et les informations de votre société.",
+              "Vos messages : ce que vous nous écrivez sur WhatsApp, Messenger ou Instagram, y compris les photos et messages vocaux envoyés.",
+              "Si vous vous connectez avec Google : le nom et l'adresse e-mail que Google nous transmet.",
+              "Notifications : si vous les avez autorisées, le jeton de notification de votre appareil, afin de pouvoir vous les envoyer."
             ]
           },
           {
             "heading": "Pourquoi nous les collectons",
             "paragraphs": [
               "Sans votre nom et votre adresse, une commande ne peut pas être livrée ; sans votre adresse e-mail, nous ne pouvons pas vous informer de l'état de votre commande. Ces données sont traitées pour l'exécution du contrat.",
+              "Vos messages sont traités à l'aide de l'intelligence artificielle : ils sont traduits pour que nous puissions vous répondre dans votre langue, les messages vocaux sont transcrits et la réponse est préparée avec l'aide de l'intelligence artificielle.",
               "Les messages promotionnels ne sont envoyés que si vous y avez expressément consenti, et vous pouvez retirer ce consentement à tout moment. Le consentement n'est pas enregistré comme un simple indicateur mais avec la date et l'origine — c'est la preuve que nous pouvons produire si le consentement est contesté.",
               "Pour la comptabilité et nos obligations légales, nous sommes tenus de conserver les enregistrements de commande et de paiement ; ceux-ci ne dépendent pas du consentement."
             ],
@@ -639,9 +664,20 @@
               "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
               "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
               "Transporteur : votre nom et votre adresse de livraison pour les expéditions hors zone.",
-              "Recherche d'adresse : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre appareil au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
-              "Hébergement : Hetzner Online GmbH (Allemagne) — les serveurs sont situés dans l'Union européenne."
+              "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre appareil au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
+              "Recherche d'adresse (Allemagne) : le texte de l'adresse saisie est envoyé depuis nos serveurs au service d'adresses de Google, pour les suggestions et la vérification. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
+              "Service d'intelligence artificielle : le contenu de vos messages, pour les traduire, transcrire les messages vocaux et préparer les réponses.",
+              "Plateformes de messagerie : si vous nous écrivez sur WhatsApp, Messenger ou Instagram (Meta), notre réponse vous parvient par la même plateforme ; la conversation est aussi conservée dans notre système.",
+              "Service de notifications : le jeton de notification et le texte de la notification, pour acheminer les notifications de l'application vers votre appareil.",
+              "Hébergement et stockage : nos serveurs sont chez Hetzner Online GmbH (Allemagne) et notre base de données chez Supabase, tous deux dans l'Union européenne. Les photos que vous ajoutez sont conservées sur le service de stockage de Cloudflare."
             ]
+          },
+          {
+            "heading": "Transferts hors de l'Union européenne",
+            "paragraphs": [
+              "Une partie des prestataires auxquels nous faisons appel pour le paiement, l'e-mail, la base de données, le stockage, les adresses, l'intelligence artificielle, la messagerie et les notifications est établie aux États-Unis, et vos données peuvent être traitées par eux hors de l'Union européenne. Ces transferts reposent sur la décision d'adéquation de la Commission européenne relative au cadre de protection des données UE–États-Unis (Data Privacy Framework) ou sur les clauses contractuelles types approuvées par la Commission."
+            ],
+            "bullets": []
           },
           {
             "heading": "Vos droits",
@@ -685,6 +721,7 @@
       },
       "sales": {
         "title": "Conditions générales de vente",
+        "updatedAt": "Dernière mise à jour : 1 juillet 2026",
         "sections": [
           {
             "heading": "Champ d'application",
@@ -790,6 +827,7 @@
       },
       "terms": {
         "title": "Mentions légales",
+        "updatedAt": "Dernière mise à jour : 1 juillet 2026",
         "sections": [
           {
             "heading": "Éditeur du site",
@@ -872,7 +910,6 @@
   "de": {
     "back": "Zurück",
     "directoryTitle": "Informationen und Bedingungen",
-    "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
     "searchPlaceholder": "Frage suchen…",
     "noMatch": "Keine Frage passt zu dieser Suche.",
     "notFoundTitle": "Antwort nicht gefunden?",
@@ -885,6 +922,7 @@
     "pages": {
       "delivery": {
         "title": "Lieferung und Rücksendung",
+        "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
         "sections": [
           {
             "heading": "Unser Liefergebiet",
@@ -978,6 +1016,7 @@
       },
       "faq": {
         "title": "Häufige Fragen",
+        "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
         "sections": [],
         "questions": [
           {
@@ -1024,6 +1063,7 @@
       },
       "privacy": {
         "title": "Datenschutzerklärung",
+        "updatedAt": "Zuletzt aktualisiert: 21. September 2026",
         "sections": [
           {
             "heading": "Wer für Ihre Daten verantwortlich ist",
@@ -1044,13 +1084,17 @@
               "Bestellungen: Ihre Bestellungen, deren Artikel, Beträge und Status.",
               "Kommunikationseinstellungen: Ihre Marketing-Einwilligungen und Ihre Sprache.",
               "Ihre Anfragen: die Nachrichten, die Sie uns schreiben, und die Fotos, die Sie anhängen.",
-              "Wenn Sie Geschäftskunde sind: Ihre SIRET-Nummer und Ihre Unternehmensangaben."
+              "Wenn Sie Geschäftskunde sind: Ihre SIRET-Nummer und Ihre Unternehmensangaben.",
+              "Ihre Nachrichten: was Sie uns über WhatsApp, Messenger oder Instagram schreiben, einschließlich gesendeter Fotos und Sprachnachrichten.",
+              "Wenn Sie sich mit Google anmelden: Name und E-Mail-Adresse, die Google uns übermittelt.",
+              "Benachrichtigungen: sofern Sie zugestimmt haben, das Benachrichtigungs-Token Ihres Geräts, damit wir Ihnen Benachrichtigungen senden können."
             ]
           },
           {
             "heading": "Warum wir sie erheben",
             "paragraphs": [
               "Ohne Ihren Namen und Ihre Adresse kann eine Bestellung nicht zugestellt werden; ohne Ihre E-Mail-Adresse können wir Ihnen den Status Ihrer Bestellung nicht mitteilen. Diese Daten werden zur Erfüllung des Vertrags verarbeitet.",
+              "Ihre Nachrichten werden mithilfe künstlicher Intelligenz verarbeitet: Sie werden übersetzt, damit wir Ihnen in Ihrer Sprache antworten können, Sprachnachrichten werden verschriftlicht, und bei der Vorbereitung der Antwort hilft künstliche Intelligenz.",
               "Werbenachrichten senden wir nur, wenn Sie ausdrücklich eingewilligt haben, und Sie können die Einwilligung jederzeit widerrufen. Die Einwilligung wird nicht als bloßes Kennzeichen gespeichert, sondern mit Zeitpunkt und Herkunft — das ist der Nachweis, den wir vorlegen können, wenn die Einwilligung bestritten wird.",
               "Für Buchhaltung und gesetzliche Pflichten sind wir verpflichtet, Bestell- und Zahlungsunterlagen aufzubewahren; diese hängen nicht von einer Einwilligung ab."
             ],
@@ -1074,9 +1118,20 @@
               "Zahlungsdienstleister: Ihre Kartendaten erreichen uns nie, sie werden direkt beim Dienstleister verarbeitet.",
               "E-Mail-Versanddienst: zur Zustellung der Benachrichtigungs-E-Mails.",
               "Versanddienstleister: Ihr Name und Ihre Lieferadresse bei Sendungen außerhalb des Liefergebiets.",
-              "Adresssuche: Der Text, den Sie im Adressfeld eingeben, wird für Vorschläge direkt von Ihrem Gerät an den öffentlichen Adressdienst des IGN (Base Adresse Nationale) gesendet. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt.",
-              "Hosting: Hetzner Online GmbH (Deutschland) — die Server stehen innerhalb der Europäischen Union."
+              "Adresssuche (Frankreich): Der Text, den Sie im Adressfeld eingeben, wird für Vorschläge direkt von Ihrem Gerät an den öffentlichen Adressdienst des IGN (Base Adresse Nationale) gesendet. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt.",
+              "Adresssuche (Deutschland): Der eingegebene Adresstext wird von unseren Servern an den Adressdienst von Google gesendet, um Vorschläge zu liefern und die Adresse zu prüfen. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt.",
+              "KI-Dienst: der Inhalt Ihrer Nachrichten, um sie zu übersetzen, Sprachnachrichten zu verschriftlichen und Antworten vorzubereiten.",
+              "Messaging-Plattformen: Wenn Sie uns über WhatsApp, Messenger oder Instagram (Meta) schreiben, erreicht Sie unsere Antwort über dieselbe Plattform; der Verlauf wird zusätzlich in unserem System gespeichert.",
+              "Benachrichtigungsdienst: Benachrichtigungs-Token und Text der Benachrichtigung, um App-Benachrichtigungen an Ihr Gerät zu übermitteln.",
+              "Hosting und Speicherung: Unsere Server stehen bei der Hetzner Online GmbH (Deutschland), unsere Datenbank liegt bei Supabase – beide innerhalb der Europäischen Union. Von Ihnen hinzugefügte Fotos werden im Speicherdienst von Cloudflare abgelegt."
             ]
+          },
+          {
+            "heading": "Übermittlung außerhalb der Europäischen Union",
+            "paragraphs": [
+              "Ein Teil unserer Dienstleister für Zahlung, E-Mail, Datenbank, Speicherung, Adressen, künstliche Intelligenz, Messaging und Benachrichtigungen hat seinen Sitz in den Vereinigten Staaten; Ihre Daten können von ihnen außerhalb der Europäischen Union verarbeitet werden. Diese Übermittlungen stützen sich auf den Angemessenheitsbeschluss der Europäischen Kommission zum EU-US-Datenschutzrahmen (Data Privacy Framework) oder auf die von der Kommission genehmigten Standardvertragsklauseln."
+            ],
+            "bullets": []
           },
           {
             "heading": "Ihre Rechte",
@@ -1120,6 +1175,7 @@
       },
       "sales": {
         "title": "Allgemeine Geschäftsbedingungen",
+        "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
         "sections": [
           {
             "heading": "Geltungsbereich",
@@ -1225,6 +1281,7 @@
       },
       "terms": {
         "title": "Impressum",
+        "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
         "sections": [
           {
             "heading": "Betreiber der Website",
