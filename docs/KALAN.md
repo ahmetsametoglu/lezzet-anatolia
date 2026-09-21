@@ -2,7 +2,7 @@
 
 Tek liste. Satır = kimlik + ne + (varsa) neden. Biten satır silinir; ilerleme notu yazılmaz.
 Koddaki `BEKLEYEN(<kimlik>)` işareti buradaki bir satıra bağlıdır (`pnpm repo:check` doğrular).
-Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.26). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
+Yeni iş: kimlik `K.<sıradaki sayı>` (son: K.27). Eski kimlikler (`NN.k`, `BACKLOG §n`) korunur.
 `[~]` = başlandı, eksiği altında yazılı. Tarihler ve "kullanıcı kararı" ibareleri eski kayıttan kalmadır.
 
 Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin andığı 25
@@ -35,7 +35,6 @@ Sayım (2026-09-15): açık 88 · kısmi 80 · kapalı ama koddaki işaretin and
   - Eksik: `GET /api/v3/parcels/statuses` taksonominin tamamını veriyor (35 kod, HTTP 200) — ilk yazımın *"kamuya açık liste yok"* varsayımı yanlıştı. Sezgisel (metin araması) tablo gerçek listeye karşı koşturulunca **yedi kod yanlış, on biri tanınmıyor** çıktı; en tehlikelisi `CANCELLATION_FAILED` → `cancelled` (iptal EDİLEMEDİ…
 - [x] (07.13) **Bağlayıcı fiyat sabitlenirken artış SESSİZ uygulanıyor**
   - Görev kapandı; koddaki `BEKLEYEN(07.13)` işaretleri bu satıra bağlı kalır, işaret sökülünce satır silinir.
-- [~] (07.15) **Ayar KAPSAMI sepete/checkout'a bağlanmamış — bölge/kanal/ülke satırları hiç uygulanmıyor** *(uç senaryo hattının İLK CANLI KOŞUSUNUN bulgusu, 08.08 — `edge-min-basket.smoke.ts` kırmızı ve nöbette)*: `SettingsService.get` kapsam çözümü (bölge → kanal → ülke → global) çalışıyor ama `cart/read.ts:82-88` KAPSAMSIZ, `checkout-options.ts:70` `{ channel: undefined }` ile okuyor. Sonuç: b2b asgari sepet (120 €) ve b2b bedava-kargo eşiği (250 €) bireysel değerlerle EZİLİYOR, DE kargo ücreti (12,90 €) ve DE eşiği (90 €) yerine FR değerleri kesiliyor, bölge satırları ölü — seed'in "bölge kanalı ezer" öncelik sınavı hiç koşmuyor. Kablolar mevcut bağlamdan çekilir: `warehouseId` sepete zaten geliyor (1…
 - [ ] (07.16) **Sipariş KAPANIŞINI (`completed`) yazan hiçbir üretim çağıranı yok — iki kulvarda birden** *(ölçüldü 28.08, kargo durum zinciri yazılırken)*
 - [ ] (07.17) **AB ülkelerine kargo satış kanalı — bugün sistem iki ülke tanıyor, üçüncüsünü SESSİZCE Fransa yazıyor** *(kullanıcı kararı 02.09)*
 - [~] (07.18) **Ödeme sonucu gelmezse sistem afallamaz — kart taslağı sağlayıcıya sorularak netleşir** *(kullanıcı bildirimi ve kararı 14.09)*
@@ -400,6 +399,10 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.26) [hedef: web] Yasal metinler iki kopyada: web beş sayfayı kendi `legal/*/content.json`larından, native ortak
   `packages/i18n/src/customer/legal.json`dan okuyor; her metin değişikliği iki yerde ve üç dilde elle yapılıyor, biri
   unutulursa iki yüzey farklı hukuki metin gösterir. Web de ortak sözlükten okumalı (native'e özgü bölümler ayrışarak).
+- [ ] (K.27) [hedef: mobil] Müşteri uygulamasının sepeti ayarları ülkesiz ve bölgesiz okuyor: `mobile-api` `readCartView`
+  yalnız depo kimliğini geçiyor (`api/v1/cart-view.ts`), istemci de yalnız posta kodu gönderiyor. Almanya'daki müşteri
+  sepette FR kargo ücretini görür, checkout DE ücretini keser; bölge asgari sepeti sepette görünmez. Web `readPlaceScope`
+  ile ülke + bölge + depo geçiyor; mağaza yayınından önce.
 - [ ] (K.22) [hedef: web] Künye aynası `preparation_steps`e bölünecek (`15da29f9` alanı açtı). Aynadaki 39 ürünün
   hazırlaması bugün `storage` metninin satırlarında duruyor; satırlar KOŞUL ve ADIM diye ayrılıp adımlar diziye
   taşınacak. Ayrım ölçütü: koşul, uyarı ve "doğaldır" gözlemi saklamada kalır; yalnız müşterinin SIRAYLA yaptığı
