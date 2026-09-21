@@ -35,13 +35,8 @@ import type { BatchView } from '@/lib/stock/batch-types';
 import type { KeysetCursor } from '@lezzet/types';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 
-// Fiyat ekranı (09.5) — yalnız ADMİN. Depo ve kurye maliyet/marj görmez (brief §6); guard bu yüzden
-// `requireAdmin`, sayfa içi bir gizleme değil.
-//
-// OKUMA SEKMEYE BAĞLI: iki sekmenin veri ihtiyacı ortak DEĞİL (kanal fiyatları katalog sayfasını,
-// müşteriye özel ise özel fiyat kümesini okur). Tek okumada birleştirmek, kanal sekmesini açan
-// admin'e hiç bakmadığı müşteri fiyatlarını da ödetirdi — ürünler ekranında ölçülüp düzeltilen
-// hatanın aynısı (09.4 üçüncü durum notu). Sekme değişimi bu yüzden GERÇEK gezinmedir.
+// Yalnız admin: depo ve kurye maliyet ile marj görmez, bu yüzden guard `requireAdmin`dir. Okuma sekmeye bağlıdır,
+// çünkü sekmelerin veri ihtiyacı ortak değil ve tek okuma kanal sekmesini açana müşteri fiyatlarını da ödetirdi.
 
 interface PricesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -121,23 +116,8 @@ async function readChannelTab(
 }
 
 /**
- * **Vitrinde GÖRÜNMEYEN aktif ürün sayısı, kanal başına** (08.46'nın kendi şartı).
- *
- * 08.46'dan beri kanalında fiyatı olmayan ürün katalogdan, anasayfa şeridinden ve site haritasından
- * DÜŞÜYOR. Kazanç açık — müşteri alamayacağı ürünü görmüyor — ama bedeli sessizlik: fiyatı yanlışlıkla
- * silinen ya da hiç girilmemiş bir ürün vitrinden kaybolur ve **hiçbir yerde hata vermez**. Bu sayaç
- * o sessizliğin karşılığıdır; kararın kendisiyle birlikte istenmişti.
- *
- * **Satır sayacından (`PriceCounts.missing`) FARKLI ve ikisi de gerekli:** o, yüklenmiş sayfadaki
- * BOYLARI sayar ("bu ekranda düzeltecek işin var"); bu, katalogun TAMAMINDAKİ ÜRÜNLERİ sayar ("şu an
- * kaç ürün müşteriye görünmüyor"). Sayfa-kapsamlı bir sayaç gizlenmeyi bulmak için listenin sonuna
- * kadar kaydırmayı gerektirirdi — yani uyarı olmazdı.
- *
- * Ölçüt görünümün KENDİSİ: "aktif ürün sayısı − o kanalda listelenen ürün sayısı". İkinci bir kural
- * yazmıyoruz; gizleyen şey neyse sayan da o. Kapsam yeri bilinmeyen okuma (`warehouseId: null`)
- * çünkü soru depoya değil FİYATA dair — katalog süzülmesi de zaten depodan bağımsız.
- *
- * Üç `head` sayımı; satır taşınmaz.
+ * Kanalında fiyatı olmadığı için vitrinden düşen aktif ürün sayısı; fiyatı silinen ürün sessizce kaybolmasın diye.
+ * Ölçüt görünümün kendisidir (aktif ürün − o kanalda listelenen), satır sayacı ise yalnız yüklenmiş sayfayı sayar.
  */
 async function countHiddenFromStorefront(db: Db): Promise<HiddenFromStorefront> {
   const listing = new ProductListingService(db);
@@ -151,11 +131,7 @@ async function countHiddenFromStorefront(db: Db): Promise<HiddenFromStorefront> 
 }
 
 /**
- * Kupon & kampanya sekmesi. Kurallar sayfalanmaz (operatörün eliyle büyüyen küme); yanlarında
- * kullanım sayıları, kapsam hedeflerinin adları ve kişisel kuponların sahipleri gelir — satır
- * kendi başına okunabilsin diye.
- *
- * Koleksiyonlar YALNIZ bu sekmede okunur: kapsam seçicisinin ikinci seçeneği, başka sekmenin işi değil.
+ * Kupon ve kampanya sekmesi; kurallar operatörün eliyle büyüdüğü için sayfalanmaz. Koleksiyonlar yalnız burada okunur.
  */
 async function readCouponsTab(
   db: Db,
@@ -187,11 +163,8 @@ async function readCouponsTab(
 }
 
 /**
- * "Yaklaşan tarihli" sekmesi — karar bekleyen partiler. Türetme STOK EKRANIYLA ORTAK (`toBatchViews`):
- * aynı eşik, aynı karar, tek kaynak. Kopyalansaydı eşik değişince iki ekran farklı şey söylerdi.
- *
- * Partiler SAYFALANMAZ: elde ne varsa o kadar (fiziksel sınır) ve uyarının TAM olması gerekiyor.
- * Fiyat okuması dar — yalnız karar bekleyen boyların liste fiyatı, teklif önerisinin ihtiyacı bu.
+ * Karar bekleyen yaklaşan tarihli partiler; türetme stok ekranıyla ortak (`toBatchViews`) ki eşik iki ekranda aynı kalsın.
+ * Partiler fiziksel olarak sınırlı ve uyarının tam olması gerektiği için sayfalanmaz.
  */
 async function readOffersTab(db: Db): Promise<BatchView[]> {
   const stockSvc = new StockService(db);

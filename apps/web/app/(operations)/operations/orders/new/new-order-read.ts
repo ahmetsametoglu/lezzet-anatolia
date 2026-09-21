@@ -23,17 +23,8 @@ import { readCostBasis } from '@/lib/pricing/cost-basis';
 import type { AddressPickOption, CustomerPickOption, DeliveryContext, VariantPickRow } from './new-order-types';
 
 /**
- * Elle sipariş girişinin okumaları (09.8).
- *
- * **Hiçbiri kural TAŞIMAZ.** Fiyat motorun (`toVariant` → `resolvePrice`), teslimat günü ve ödeme
- * yöntemleri motorun (`resolveDelivery` · `resolveCheckoutPayment`), marj kararı motorun
- * (`isBelowTargetMargin`, ekranda). Buradaki iş o cevapları ekranın alanlarına dağıtmak.
- *
- * **Fiyat neden AYNI motordan okunuyor:** ekran bir sayı gösterip sipariş başka bir sayıdan
- * açılırsa operatör müşteriye söylediği fiyatı tutamaz. Kalem fiyatı, taslak açılırken sepet
- * okumasında bir kez daha çözülüyor (`getCartView`) — ikisi aynı fonksiyona sorduğu sürece aynı
- * cevabı verir. Operatör fiyatı elle değiştirmediği sürece buradan hiçbir sayı sunucuya
- * GÖNDERİLMEZ; gönderilseydi istemcinin yazdığı bir tutar siparişin parasını belirlerdi.
+ * Elle sipariş girişinin okumaları; fiyat, teslimat günü, ödeme yöntemi ve marj kararı motordadır. Fiyat aynı motordan
+ * okunur ki ekranın gösterdiği sayı siparişin açıldığı sayıyla aynı olsun; operatör değiştirmedikçe sunucuya sayı gitmez.
  */
 
 const SEARCH_LIMIT = 20;
@@ -57,15 +48,8 @@ export function toCustomerOption(row: UserProfile): CustomerPickOption {
 }
 
 /**
- * SOHBET KÖPRÜSÜ (15.4) — konuşmadan gelindiğinde müşteriyi önseçili getirir.
- *
- * Operatör sohbette kiminle konuştuğunu zaten biliyor; köprüden geçince o kişiyi bir kez daha
- * aratmak, bilinen bir bilgiyi elle tekrar ettirmektir. Bu yüzden ekranın "hiçbir şey okumam"
- * kuralının TEK istisnası burasıdır (sayfa künyesi): okuma seçime bağlı değil, seçim ZATEN yapılmış.
- *
- * `null` dönen üç hâl aynı sonucu verir ve ekran üçünü ayırt etmez — konuşma yok · kimliğe
- * bağlanmamış (kimliksiz sohbet, 15.16) · profil silinmiş. Üçünde de ekran boş seçiciyle açılır,
- * yani köprü çalışmazsa operatör normal akışa düşer; hiçbir hâlde hata göstermez.
+ * Sohbetten gelindiğinde müşteriyi önseçili getirir; ekranın "seçim yapılmadan okuma yok" kuralının tek istisnası.
+ * Konuşma yoksa, kimliğe bağlı değilse ya da profil silinmişse `null` döner ve ekran boş seçiciyle açılır.
  */
 export async function readConversationCustomer(db: Db, conversationId: string): Promise<CustomerPickOption | null> {
   const conversation = await new ConversationService(db).getById(conversationId);
@@ -92,15 +76,8 @@ export async function readAddressOptions(db: Db, customerId: string): Promise<Ad
 }
 
 /**
- * Adres seçilince açılan bağlam: gün listesi + açık ödeme yöntemleri + vade yetkisi.
- *
- * Ekran bunların HİÇBİRİNİ uydurmaz. Gün bölgeden ve kesim saatinden çıkar, yöntem kümesi kapıda
- * ödeme tavanı ve müşterinin vade yetkisiyle daralır — operatöre kapalı bir yöntemi sunmak, taslak
- * açılırken reddedilecek bir seçim yaptırmak olurdu.
- *
- * Sepet tutarı BURADA sıfır geçiliyor ve bu bilinçli: yöntem kümesini daraltan tavan tutara bağlı
- * ve kalemler henüz girilmemiş olabilir. Kesin kontrol taslak kapısındadır (`payment_not_allowed`);
- * burası operatöre hangi yöntemlerin KONUŞULABİLİR olduğunu gösterir.
+ * Adres seçilince açılan bağlam: gün listesi, açık ödeme yöntemleri ve vade yetkisi; ekran bunları uydurmaz.
+ * Sepet tutarı sıfır geçilir, çünkü kalemler henüz yok; kesin tavan kontrolü taslak kapısındadır (`payment_not_allowed`).
  */
 export async function readDeliveryContext(db: Db, customerId: string, addressId: string): Promise<DeliveryContext | null> {
   const address = (await new AddressService(db).listByCustomer(customerId)).find((a) => a.id === addressId);
@@ -129,16 +106,7 @@ export async function readDeliveryContext(db: Db, customerId: string, addressId:
     deliveryType: delivery.deliveryType,
     availableDates: delivery.availableDates,
     /**
-     * **`online` ÇIKARILIR** (ölçüldü 26.08, tarayıcıda) — masada kart çekilmiyor.
-     *
-     * Motorun listesi müşterinin KENDİ checkout'u içindir ve orada online meşru bir seçenek.
-     * Burada değil: kapı ödeme sağlayıcısını hiç açmıyor (`createPaymentSession: null`), yani
-     * seçilse sipariş `payment_unavailable` ile reddedilirdi. Ekranda dururken kapıda reddedilen
-     * bir seçenek, operatöre sebebi anlaşılmayan bir hata gösterirdi — nitekim gösterdi: liste
-     * sıralı olduğu için `online` İLK seçenekti ve akış tam orada kırıldı.
-     *
-     * Ödeme bağlantısı göndermek ayrı bir iştir (WhatsApp, 15.x) ve o gün buraya kendi düğmesiyle
-     * gelir; bugün olmayan bir yeteneği seçenek diye sunmuyoruz.
+     * `online` çıkarılır: kapı ödeme sağlayıcısını açmadığı için seçilse `payment_unavailable` ile reddedilirdi.
      */
     paymentMethods: options.methods.filter((m) => m !== 'online'),
     creditAvailable: options.creditAvailable,
@@ -149,11 +117,7 @@ export async function readDeliveryContext(db: Db, customerId: string, addressId:
 }
 
 /**
- * Kalem seçicisi — ürün adında arama, sonuç MÜŞTERİYE ÇÖZÜLMÜŞ fiyatla döner.
- *
- * `warehouseId` siparişin deposudur (adresten çözülmüş): stok sayısı ona göre okunur. Boş
- * bırakılabilir — adres henüz seçilmemişse fiyat yine çözülür ama adet **`null`** kalır, yani
- * "bilmiyorum" der. Sıfır yazmak ölçülmemiş bir değeri ölçülmüş gibi göstermek olurdu (CLAUDE §1).
+ * Kalem seçicisi: ürün adında arama, sonuç müşteriye çözülmüş fiyatla döner. Depo bilinmiyorsa adet `null` kalır.
  */
 export async function searchVariantRows(
   db: Db,
@@ -204,11 +168,7 @@ interface VariantPickInput {
 }
 
 /**
- * Seçici satırının SAF kurulumu — kararı motor verdi, burası dağıtıyor.
- *
- * Tek gerçek kuralı `availableQty`nin üç değerli olması: depo bilinmiyorsa **`null`**, yani
- * "bilmiyorum". Sıfır yazmak ölçülmemiş bir değeri ölçülmüş gibi gösterirdi ve operatör elinde mal
- * varken "depoda 0 adet" okurdu (CLAUDE §1 — ölçülemeyen değer sıfır değildir).
+ * Seçici satırının saf kurulumu; `availableQty` depo bilinmiyorsa `null`, çünkü sıfır ölçülmemiş değeri ölçülmüş gösterirdi.
  */
 export function toVariantPickRow(input: VariantPickInput): VariantPickRow {
   return {
@@ -216,7 +176,7 @@ export function toVariantPickRow(input: VariantPickInput): VariantPickRow {
     title: `${resolveLocalizedText(input.product.name)} · ${resolveLocalizedText(input.variant.label)}`,
     listPriceCents: input.priceCents,
     costCents: input.costCents,
-    // Hedef, müşterinin GEÇERLİ kanalına göre çözülür (15.08): toptan hedefi ayrı kurulabilir.
+    // Hedef müşterinin geçerli kanalına göre çözülür; toptan hedefi ayrı kurulabilir.
     targetMarginPercent: targetMarginFor(input.channel, input.product.targetMarginPercent, input.product.targetMarginB2bPercent),
     vatRate: input.product.vatRate,
     availableQty: input.warehouseKnown ? input.availableQty : null,

@@ -9,15 +9,8 @@ import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { toLevelRows, type StockLevelRow } from '@/lib/stock/level-rows';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 
-// Önizleme panelinin BAKIŞ okumaları (16.08, kullanıcı kararı): "Stok" düğmesi artık sayfaya
-// yönlendirmez, ürünün stok özetini DİYALOGDA açar. Okuma tıklamada yapılır (sipariş hızlı
-// bakışının deseni): liste sorgusu her ürünün stok kırılımını taşıyamaz.
-//
-// SATIR STOK EKRANININKİYLE AYNI (16.08, ikinci tur): diyalog artık stok sayfasının ürün geçmişi
-// panelini açıyor, o yüzden okuma da `toLevelRows`tan geçer — kullanılabilir/ayrılmış, depo
-// kırılımı, eşik kararı iki yüzeyde tek kurulumdan çıkar. Depo kapsamı da stok sayfasıyla aynı
-// kapıdan sorulur (`readWarehouseContext`, DOMAIN §17): personel görmediği deponun partisini
-// bakışta da göremez.
+// Önizleme panelinin bakış okumaları tıklamada yapılır, çünkü liste sorgusu her ürünün stok kırılımını taşıyamaz.
+// Satır stok ekranıyla aynı kurulumdan (`toLevelRows`) ve depo kapsamı aynı kapıdan (`readWarehouseContext`) gelir.
 
 export interface ProductStockPeek {
   /** Ürünün boyları — stok ekranının seviye satırıyla BİREBİR aynı kurulum. */
@@ -65,11 +58,8 @@ export async function loadProductStockPeekAction(productId: string): Promise<Act
 }
 
 /**
- * Ürünün fiyat bakışı — "Fiyatlar" düğmesinin diyaloğu. Satırlar fiyat ekranıyla AYNI kurulumdan
- * gelir (`toPriceRows`, `lib/pricing`): marj tanımı ve marj-altı ölçütü iki yüzeyde ayrışamaz.
- *
- * **Yalnız ADMİN** (fiyat ekranının kendi kapısı): depo ve kurye maliyet/marj görmez — ürünler
- * sayfası personele açık olsa da bu okuma değildir; guard farkı bilinçli.
+ * Ürünün fiyat bakışı; satırlar fiyat ekranıyla aynı kurulumdan (`toPriceRows`) gelir ki marj tanımı ayrışmasın.
+ * Yalnız admin, çünkü depo ve kurye maliyet görmez.
  */
 export async function loadProductPricesPeekAction(productId: string): Promise<ActionResult<PriceRow[]>> {
   try {

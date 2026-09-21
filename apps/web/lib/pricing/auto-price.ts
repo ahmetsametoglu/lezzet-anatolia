@@ -5,17 +5,8 @@ import { readCostBasis } from './cost-basis';
 import type { Channel } from '@lezzet/types';
 
 /**
- * OTOMATİK FİYATLANDIRMANIN KABLOSU (DOMAIN §"Maliyet ve hedef marj", 09.5).
- *
- * `Product.auto_price` bir bayraktı: açınca ekran fiyat alanlarını kilitliyor, hedef marjı zorunlu
- * kılıyordu — ama fiyatı hedefe göre güncelleyen hiçbir şey yoktu. Sonuç, sözün TERSİydi: otomatik
- * açmak fiyatı otomatikleştirmiyor, donduruyordu. Bu modül o boşluğu kapatır.
- *
- * Katman: **uygulama** (STACK §4). Karar motorda (`domain-core/autoPriceCents`), satırlar
- * `database`'te; ikisini burası buluşturur. Hesabın bir satırı bile burada tekrarlanmaz.
- *
- * ÜÇ TETİK, TEK YOL: maliyet değişimi (mal kabul), bayrak/hedef değişimi (fiyat diyaloğu) ve elle
- * toplu hizalama aynı fonksiyona iner — üçü ayrı yazılsaydı biri diğerinden farklı fiyat üretirdi.
+ * Otomatik fiyatlandırma: `auto_price` açık ürünün fiyatını maliyetten hedef marja çeker; karar motorda (`autoPriceCents`).
+ * Mal kabul, diyalog kaydı ve toplu hizalama aynı fonksiyona iner ki üç yol farklı fiyat üretmesin.
  */
 
 // Dışa verilmez: tüketicilerin sorusu "kaç fiyat değişti" — satırın kendisi bu modülün içinde kalır.
@@ -42,14 +33,8 @@ interface RepriceOutcome {
 const CHANNELS: readonly Channel[] = ['b2c', 'b2b'];
 
 /**
- * Verilen varyantların otomatik fiyatlarını hedefe çeker; **değişen** satırları döndürür.
- *
- * İki sessiz kural:
- * - **Fiyatı olmayan kanal AÇILMAZ.** Fiyat satırının yokluğu "o kanalda satışa kapalı" demektir
- *   (bkz. `tightestMargin`); otomatik fiyat kapalı bir kanalı kendiliğinden açsaydı ürün, kimsenin
- *   kararı olmadan toptan listesine düşerdi.
- * - **Değişmeyen fiyat YAZILMAZ.** `setPrice` her çağrıda yeni satır ekler (fiyat geçmişi); her mal
- *   kabulde aynı tutarı tekrar yazmak geçmişi anlamsız kopyalarla şişirirdi.
+ * Verilen varyantların otomatik fiyatlarını hedefe çeker ve değişenleri döner. Fiyatı olmayan kanal açılmaz, çünkü
+ * yokluk "satışa kapalı" demektir; değişmeyen fiyat yazılmaz ki fiyat geçmişi kopyalarla şişmesin.
  */
 export async function repriceVariants(db: Db, variantIds: readonly string[]): Promise<RepriceOutcome> {
   const ids = [...new Set(variantIds)];
@@ -96,8 +81,7 @@ export async function repriceVariants(db: Db, variantIds: readonly string[]): Pr
       const current = currentOf(channel).get(variant.id)?.channelPrice;
       if (!current) continue;
 
-      // Kanalın KENDİ hedefi (15.08): B2B'ye özel hedef varsa o, yoksa ortak. Hedefi olmayan
-      // kanala dokunulmaz — yalnız B2B hedefi girilmiş üründe B2C fiyatı elle kalır.
+      // Kanalın kendi hedefi, yoksa ortak hedef; hedefi olmayan kanala dokunulmaz.
       const channelTarget = targetMarginFor(channel, product.targetMarginPercent, product.targetMarginB2bPercent);
       if (channelTarget === null) continue;
 
@@ -129,14 +113,7 @@ export async function repriceProduct(db: Db, productId: string): Promise<Reprice
 }
 
 /**
- * Katalogdaki TÜM otomatik ürünler — elle toplu hizalama.
- *
- * Neden gerekli: diğer iki tetik olaya bağlıdır (mal kabul, diyalog kaydı). Bayrağın motorsuz
- * yaşadığı dönemden kalan ürünler hiçbir olayı beklemeden sapmış durumdadır; onları hedefe çekmek
- * için tek tek diyalog açmak gerekirdi.
- *
- * Sayfalanmaz ama SINIRSIZ da değil: otomatik ürün kümesi katalogla büyür, katalog da admin'in
- * eliyle (CLAUDE.md §1). Tavan aşınırsa çağıran bunu bilir — sessizce kırpılmaz.
+ * Katalogdaki tüm otomatik ürünler, elle toplu hizalama için. Sayfalanmaz ama tavanlıdır; aşılırsa çağıran bilir.
  */
 const AUTO_REPRICE_LIMIT = 500;
 

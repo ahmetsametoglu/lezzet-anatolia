@@ -15,20 +15,12 @@ import { parsePricesUrl, toPriceFilters, PRICES_PATH } from './prices-url';
 import { titleOf } from '@/lib/catalog/title';
 import { type PriceRow, type VariantOption } from './prices-types';
 
-// Fiyat ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
-// `{ data, error }` DÖNER (throw yok) + revalidatePath.
-//
-// Guard `requireAdmin`: fiyat yazmak ve maliyet görmek yönetici işidir (brief §6). Ekranın düğmeyi
-// göstermemesi bir güvence değildir — action kendi kapısını kendi tutar.
+// Guard `requireAdmin`: fiyat yazmak ve maliyet görmek yönetici işidir; ekranın düğmeyi gizlemesi güvence değildir.
 
-// `setChannelPriceAction` + `setAutoPriceAction` LIB'E TAŞINDI (16.08 — `lib/prices/price-actions`):
-// fiyat düzenleme diyaloğu artık ürünler önizlemesinden de açılıyor, eylemleri tek sayfanın malı değil.
+// Kanal fiyatı ve otomatik fiyat eylemleri `lib/prices/price-actions`ta, çünkü fiyat diyaloğu ürünler önizlemesinden de açılır.
 
 /**
- * Katalogdaki tüm otomatik ürünleri hedefe çeker — elle toplu hizalama.
- *
- * Diğer iki tetik olaya bağlıdır (mal kabul, diyalog kaydı); bu, olay beklemeden çalıştırılan
- * bakım eylemidir. Maliyeti değişmiş ama henüz kimsenin açmadığı ürünler burada hizalanır.
+ * Katalogdaki tüm otomatik ürünleri hedefe çeker; olay beklemeden, maliyeti değişmiş ama açılmamış ürünleri hizalar.
  */
 export async function repriceAutoAction(): Promise<ActionResult<{ changed: number; held: number; truncated: boolean }>> {
   try {
@@ -42,12 +34,8 @@ export async function repriceAutoAction(): Promise<ActionResult<{ changed: numbe
 }
 
 /**
- * Müşteriye özel fiyat yazar/günceller. Kanal fiyatıyla AYNI yol (`setPrice`): yeni satır eklenir,
- * eskisi geçmişte kalır. Fark tek bir alanda — `customerId` dolu.
- *
- * Özel fiyatın liste fiyatından YÜKSEK olması engellenmez: nadir ama gerçek bir durum (küçük
- * miktarlı özel üretim, taşıma zorluğu). Ekran uyarır, yol kapatmaz — kural uydurmak, operatörün
- * bildiği bir istisnayı sisteme rağmen yapmasına yol açardı.
+ * Müşteriye özel fiyat yazar: kanal fiyatıyla aynı yol, `customerId` dolu. Listeden yüksek olması engellenmez, çünkü
+ * operatörün bildiği gerçek istisnalar var; ekran uyarır.
  */
 export async function setCustomerPriceAction(
   customerId: string,
@@ -94,16 +82,8 @@ export async function removeCustomerPriceAction(
 }
 
 /**
- * Boy seçicisinin kaynağı — **arama SUNUCUDA**, katalogun tamamı indirilmez.
- *
- * Önce havuz tek seferde çekiliyordu (500 ürün tavanıyla): katalog o tavanı aşınca seçici, eksik
- * olduğunu söylemeden eksik liste gösterirdi — CLAUDE.md §1'in "veriyle büyüyen küme" kuralına
- * aykırı sessiz bir kırpma. Artık yazılan terim aranır; boş terimde hiçbir şey okunmaz.
- *
- * Okuma `listPriceRows`: dar alanlı (beyan/besin metinleri gelmez) ve zaten sorgu süzgecini
- * destekliyor — seçici için ayrı bir okuma yolu açmak, aynı işin ikinci kopyası olurdu.
- * Arama ÜRÜN ADINDA yapılır ve eşleşen ürünün tüm boyları döner; "baklava" yazan, baklavanın
- * boylarını arıyordur.
+ * Boy seçicisinin kaynağı: arama sunucuda, çünkü katalog veriyle büyür ve tavanlı havuz sessizce eksik liste gösterirdi.
+ * Arama ürün adında yapılır ve eşleşen ürünün tüm boyları döner.
  */
 const VARIANT_SEARCH_LIMIT = 20;
 
@@ -114,8 +94,7 @@ export async function searchVariantsAction(term: string): Promise<ActionResult<V
     if (!query) return { data: [], error: null };
 
     const db = serviceDb();
-    // Kod zinciri (23.3): terim bir barkod/SKU/tedarikçi koduysa ürün ORADAN bulunur, ada
-    // bakılmaz — kod kesin kimliktir. Değilse ad araması aynen (`code-search` künyesi).
+    // Terim barkod, SKU ya da tedarikçi koduysa ürün koddan bulunur, çünkü kod kesin kimliktir; değilse ad araması.
     const codeProductId = await productIdOfCode(db, query);
     const page = await new ProductService(db).listPriceRows({
       filters: codeProductId ? { ids: [codeProductId] } : { query },
@@ -207,19 +186,10 @@ export async function loadMorePricesAction(
   }
 }
 
-// `saveDiscountAction` BURADA DEĞİL, `lib/prices/discount-actions.ts`'te (22.10): eylem artık iki
-// yüzeyin ortağı (fiyat ekranı + asistan kuyruğu) ve sayfa klasöründe kalsaydı kuyruk onu kardeş
-// sayfadan import etmek zorunda kalırdı — `STACK §7`'nin yasakladığı bağ. Aynı devir teklif yazma
-// yolunda da yaşandı (`lib/stock/offer-actions`).
+// `saveDiscountAction` `lib/prices/discount-actions.ts`te, çünkü asistan kuyruğu da çağırır ve kardeş sayfadan import yasak.
 
 /**
- * Aktiflik anahtarı. Kural SİLİNMEZ, kapatılır: süresi dolmuş kuponun geçmişi (kimin kullandığı,
- * ne kadar indirim dağıtıldığı) raporun malıdır.
- */
-/**
- * Fiyat grubu yazar/günceller (20.08 — B2B alt kademesi). Yüzde değişimi ANINDA tüm üyelere
- * yansır: grup fiyatı satır değil türetimdir (motor listeden düşer), güncellenecek ikinci bir
- * yer yoktur.
+ * Fiyat grubu yazar; yüzde değişimi anında tüm üyelere yansır, çünkü grup fiyatı saklanmaz, listeden türetilir.
  */
 export async function savePriceGroupAction(
   id: string | null,
