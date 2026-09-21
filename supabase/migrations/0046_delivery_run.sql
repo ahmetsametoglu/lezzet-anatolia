@@ -74,7 +74,7 @@ create index order_delivery_run_idx on public.order (delivery_run_id) where deli
 -- ── Beklenen tahsilat — sefer bazında ────────────────────────────────────────
 -- Fark hangi seferde doğduysa orada görünsün diye; `delivery_run_id` teslimle donduğu için yeniden atama kaydırmaz.
 -- Yalnız kapıda toplanan üç yöntem sayılır, çünkü online ve havale kuryenin eline girmez.
-create or replace view public.delivery_run_collection as
+create or replace view public.delivery_run_collection with (security_invoker = true) as
 select o.delivery_run_id,
        coalesce(sum(m.amount) filter (where o.payment_method = 'cash'), 0)::numeric(12, 2)   as expected_cash,
        coalesce(sum(m.amount) filter (where o.payment_method = 'card'), 0)::numeric(12, 2)   as expected_card,

@@ -42,7 +42,7 @@ create index feedback_request_unsent_idx on public.feedback_request (created_at)
 -- ── İlerleme ────────────────────────────────────────────────────────────────
 -- Siparişteki AYRI ÜRÜN sayısı ile o davetten doğan değerlendirme sayısı. Varyant değil ürün
 -- sayılır: değerlendirme ürün düzeyindedir (aynı ürünün iki boyu tek karttır).
-create or replace view public.feedback_request_progress as
+create or replace view public.feedback_request_progress with (security_invoker = true) as
 select r.id as feedback_request_id,
        r.order_id,
        r.customer_id,
@@ -67,7 +67,7 @@ comment on view public.feedback_request_progress is
 
 -- Süzgeç kaynakta, çünkü uygulamada olsaydı davetli siparişler tarama penceresini doldurur ve yenilere sıra gelmezdi.
 -- Bekleme süresi (`feedback_delay_days`) motorun kararıdır; görünüm yalnız olguyu verir.
-create or replace view public.feedback_due_order as
+create or replace view public.feedback_due_order with (security_invoker = true) as
 select o.id          as order_id,
        o.customer_id,
        o.status,

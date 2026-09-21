@@ -300,7 +300,7 @@ create trigger money_allocation_explains
 -- ── Defter satırı ────────────────────────────────────────────────────────────
 -- Hareket dokunduğu her hesapta bir satır üretir, transfer iki. Aynı kural form önizlemesi için `signedAmountCentsFor`ta
 -- da var, çünkü DB motoru çağıramaz; eşitliği `apps/web/lib/money/movement.test.ts` sınar.
-create or replace view public.account_movement as
+create or replace view public.account_movement with (security_invoker = true) as
 select m.*,
        m.account_id as ledger_account_id,
        case when m.direction = 'in' then m.amount else -m.amount end as signed_amount
@@ -318,7 +318,7 @@ select m.*,
 -- ── Bakiye ───────────────────────────────────────────────────────────────────
 -- Hiç hareketi olmayan hesap da listede görünür (0 bakiyeyle) — `left join`; aksi halde yeni açılan
 -- hesap ekranda hiç çıkmazdı.
-create or replace view public.account_balance as
+create or replace view public.account_balance with (security_invoker = true) as
 select a.id                                        as account_id,
        coalesce(sum(l.signed_amount), 0)::numeric(14, 2) as balance,
        count(l.id)                                 as movement_count
@@ -356,7 +356,7 @@ create trigger money_document_tags_known
 
 -- ── Belgenin açık kalanı ─────────────────────────────────────────────────────
 -- Aynı yöndeki hareketin bağı kapatır, ters yöndekinin bağı yeniden açar; eksiye düşen `open_amount` fazla ödemedir ve gizlenmez.
-create or replace view public.money_document_balance as
+create or replace view public.money_document_balance with (security_invoker = true) as
 select d.id                                                       as document_id,
        d.amount,
        coalesce(sum(case when m.direction = d.direction then a.amount else -a.amount end), 0)::numeric(12, 2) as settled,
@@ -370,7 +370,7 @@ select d.id                                                       as document_id
 -- ── Mal kabulün açık kalanı ──────────────────────────────────────────────────
 -- Faturası girilmemiş kabulün borcu: tutar − bağlı ödemeler. Faturası kabule ya da siparişine girilmişse `has_document`
 -- taşır ve borç belgeden okunur, böylece iki kez sayılmaz; `note` banka satırıyla referans eşleşmesinin anahtarıdır.
-create or replace view public.stock_intake_balance as
+create or replace view public.stock_intake_balance with (security_invoker = true) as
 select i.id                                                       as stock_intake_id,
        i.supplier_id,
        i.date,
@@ -663,7 +663,7 @@ revoke execute on function public.unmatch_bank_movement(uuid) from public, anon,
 -- dışlanmaz (yalnız export süzer), `returned` dışarıdadır.
 
 -- `o.*` görünüm kurulduğu an donar: `order`a eklenen kolon için görünüm drop edilip yeniden kurulmalıdır.
-create or replace view public.order_sale as
+create or replace view public.order_sale with (security_invoker = true) as
 select o.*,
        s.sale_date
   from public."order" o

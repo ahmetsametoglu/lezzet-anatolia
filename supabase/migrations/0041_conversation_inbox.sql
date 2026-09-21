@@ -3,7 +3,7 @@
 
 -- Okunmamış sayacı yok: "okundu" bilgisini yazan yüzey olmadığı için sayaç ilk günden yalan söylerdi; `awaiting_reply` aynı soruyu
 -- yazma yükü olmadan cevaplar.
-create or replace view public.conversation_inbox as
+create or replace view public.conversation_inbox with (security_invoker = true) as
 select c.*,
        -- Kimliksiz konuşmada null: bir hâl, eksik değil.
        u.name                                        as customer_name,
@@ -47,7 +47,7 @@ create index conversation_inbox_at_idx on public.conversation ((coalesce(last_in
 
 -- Gruplama ekranda değil burada: sayfayı gruplamak sonraki sayfaya düşen ikinci sohbeti iki kez gösterir ve sayılar sohbet
 -- sayardı. `person_key` dışarı açık, çünkü süzgeci toplamanın altına iner ve tek kişiyi okumak bütün kutuyu hesaplatmaz.
-create or replace view public.customer_inbox as
+create or replace view public.customer_inbox with (security_invoker = true) as
 select (p.head).*,
        p.person_key,
        p.threads,

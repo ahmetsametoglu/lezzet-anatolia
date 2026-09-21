@@ -1,5 +1,12 @@
 -- Kimlik: müşteri ve personel tek profil tablosunda, rolle ayrılır; erişim yalnız sunucudan service_role ile, RLS deny-by-default.
 
+-- Publishable anahtarın veride işi yok (yalnız auth + broadcast); Supabase varsayılanı ise her yeni
+-- tablo, görünüm ve fonksiyonu anon/authenticated'a açar ve görünüm ile SECURITY DEFINER fonksiyon RLS'i atlar.
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+alter default privileges in schema public revoke all on sequences from anon, authenticated;
+alter default privileges in schema public revoke all on functions from anon, authenticated;
+alter default privileges revoke execute on functions from public;
+
 -- `system` bir yetki değil, "bu satır bir kişi değil" beyanıdır: hiçbir guard'a uymaz ve `roles @> {customer}` süzgeci
 -- sayesinde müşteri listelerinden kendiliğinden düşer; ayrı bayrak her müşteri sorgusuna hatırlanacak bir koşul eklerdi.
 create type user_role as enum ('customer', 'admin', 'warehouse', 'courier', 'accounting', 'system');

@@ -38,7 +38,7 @@ create index ai_usage_created_idx on public.ai_usage (created_at);
 
 -- Satırlar sınırsız büyüdüğü için ekran ve asistan bu günlük özeti okur; gün, işletmenin günü olan Paris günüdür.
 -- `unpriced_calls` maliyeti bilinmeyen koşuları sayar, çünkü `cost_usd` toplamı onları içermez.
-create or replace view public.ai_usage_daily as
+create or replace view public.ai_usage_daily with (security_invoker = true) as
 select (u.created_at at time zone 'Europe/Paris')::date      as day,
        u.task,
        u.model_id,

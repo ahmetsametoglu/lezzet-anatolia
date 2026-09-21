@@ -124,7 +124,7 @@ create index ticket_message_untranslated_idx on public.ticket_message (created_a
 -- ── Kuyruk görünümü ──────────────────────────────────────────────────────────
 -- Kuyruk tek sorgudur, yoksa 30 satır 90 sorgu olurdu. `awaiting_reply` son sözü müşteri söylediyse doğrudur;
 -- durumdan çıkarılamaz, çünkü `in_progress` talepte müşteri yeni yazmış olabilir.
-create or replace view public.ticket_queue as
+create or replace view public.ticket_queue with (security_invoker = true) as
 select t.*,
        coalesce(m.last_message_at, t.created_at) as last_message_at,
        coalesce(m.message_count, 0)              as message_count,

@@ -283,7 +283,7 @@ create index user_profiles_warehouse_ids_idx on public.user_profiles using gin (
 -- ── Kullanılabilir stok — grain (depo, varyant) ─────────────────────────────
 -- Kullanılabilir = fiili − aktif rezervasyon, depo içinde; birleştirilmiş stok kimsenin stoğu değildir. `cross join` her
 -- aktif depo için satır döndürür ki okuyan "bilmiyorum" ile "yok"u ayırabilsin.
-create or replace view public.available_stock as
+create or replace view public.available_stock with (security_invoker = true) as
 select
   w.id                                                as warehouse_id,
   v.id                                                as variant_id,
@@ -314,7 +314,7 @@ where w.is_active;
 
 -- Depo-üstü toplam yalnız "hiç var mı" sorusunun ve tedarik önerisinin; satış kararı ve geri çağırma bunu okumaz.
 -- Araçlar girmez: araçtaki mal siteden alınamaz ve akşam tesise döner, sayılsa söz ya da bolluk yanlış olurdu.
-create or replace view public.available_stock_total as
+create or replace view public.available_stock_total with (security_invoker = true) as
 select
   a.variant_id,
   sum(a.physical_qty)    as physical_qty,
@@ -327,7 +327,7 @@ group by a.variant_id;
 
 -- ── Tedarik siparişi ilerlemesi ──────────────────────────────────────────────
 -- PO durumu buradan türer; ölçü `initial_qty`, çünkü `physical_qty` satışla erir.
-create or replace view public.purchase_order_progress as
+create or replace view public.purchase_order_progress with (security_invoker = true) as
 select
   poi.purchase_order_id,
   poi.id                                                as purchase_order_item_id,

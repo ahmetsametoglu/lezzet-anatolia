@@ -234,7 +234,7 @@ comment on table public.stock_movement is
 
 -- Ekran lot numarasına veya ürün adına göre arar ve PostgREST'in `or=` grubu gömülü kaynağa bakamaz (`STACK §13` istisnası);
 -- arama metni bu yüzden görünümde tek kolonda kurulur.
-create or replace view public.stock_movement_detail as
+create or replace view public.stock_movement_detail with (security_invoker = true) as
 select m.id,
        m.stock_id,
        m.warehouse_id,

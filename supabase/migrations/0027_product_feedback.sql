@@ -117,7 +117,7 @@ create index product_feedback_request_idx on public.product_feedback (feedback_r
 -- ── Ürün skoru ──────────────────────────────────────────────────────────────
 -- Türetilir, çünkü saklanan ortalama tazelemeyi unutan tek yolla kalıcı yanlışa düşer; birleşik puan formülü motordadır.
 -- Yalnız onaylı `purchase` bağlamı sayılır: aday kaydırması tadılmamış bir ilgidir ve tekilleştirilmez.
-create or replace view public.product_rating as
+create or replace view public.product_rating with (security_invoker = true) as
 select f.product_id,
        round(avg(f.rating) filter (where f.rating is not null), 2) as rating_avg,
        count(*) filter (where f.rating is not null)                as rating_count,

@@ -319,7 +319,7 @@ comment on function public.analytics_search_signals(date, date, integer, boolean
 -- ═══ "HANGİ SİPARİŞ CİRO SAYILIR" — TEK TANIM ════════════════════════════════
 -- Üç okuma aynı tanımı kullanır ki ayrışmasın: taslak, iptal ve iade sayılmaz. İki tutar taşınır, raporlar bugün
 -- `ordered_total`ı okur; `revenue_total`a geçiş BEKLEYEN(12.25).
-create or replace view public.analytics_order_base as
+create or replace view public.analytics_order_base with (security_invoker = true) as
   select o.id, o.customer_id, o.channel, o.ordered_total, o.revenue_total, o.created_at, o.address_snapshot
     from public.order o
    where o.status not in ('draft', 'cancelled', 'returned');

@@ -10,7 +10,7 @@
 drop view if exists public.product_listing;
 drop view if exists public.variant_effective_price;
 
-create view public.variant_effective_price as
+create view public.variant_effective_price with (security_invoker = true) as
 with list_price as (
   -- "Geçmiş ve en yeni kazanır" (0005); müşteriye özel satırlar hariç, her kanal kendi satırını getirir.
   select distinct on (p.variant_id, p.channel) p.variant_id, p.channel, p.amount
@@ -64,7 +64,7 @@ select null::uuid                                                       as wareh
 
 -- Kanalında fiyatı olan boyu olmayan ürün listede görünmez (iki INNER join), bu yüzden `sort_price` null olamaz.
 -- Operasyon bu görünümü okumaz, eksik fiyatlı ürünü görmesi gerekir; okuyan taraf kanal ve depo (ya da null) süzer.
-create view public.product_listing as
+create view public.product_listing with (security_invoker = true) as
 with scope as (
   -- Kanallar enum'dan gelir, elle yazılmaz: `channel`e üçüncü bir değer eklendiği gün bu görünüm
   -- kendiliğinden büyür. Elle yazsaydık yeni kanal sessizce listesiz kalırdı.
