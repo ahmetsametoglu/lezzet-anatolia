@@ -4,16 +4,8 @@ import { priceForMargin } from './margin';
 import { vatBaseOf } from './resolve-price';
 
 /**
- * Otomatik fiyatlandırma — `Product.auto_price` açık ürünlerde satış fiyatını maliyetten TÜRETİR
- * (DOMAIN §"Maliyet ve hedef marj": kapalıysa sistem uyarır, açıksa günceller).
- *
- * `priceForMargin` hedef marjı sağlayan **HT** tutarı verir; bu dosyanın eklediği iki şey kanalın
- * kendi tabanı (b2c saklanan fiyat TTC'dir, b2b HT) ve yuvarlama. İkisi olmadan motor DB'ye
- * yazılabilir bir sayı üretmez.
- *
- * **Yuvarlama YUKARI:** aşağı yuvarlamak hedefi kılpayı ıskalar — %40 hedefle 14,03 € çıkan fiyatı
- * 14,00'a indirmek marjı hedefin altına düşürür ve ürün, "otomatik" olduğu hâlde marj-altı
- * uyarısına düşer. Bir kuruş fazla vermek, sistemin kendi kuralını bozmasından iyidir.
+ * Otomatik fiyat: `auto_price` açık üründe fiyatı maliyetten hedef marja türetir, kanalın tabanına çevirir ve yuvarlar.
+ * Yuvarlama yukarı, çünkü aşağı yuvarlanan fiyat hedefi kılpayı ıskalar ve ürün kendi marj-altı uyarısına düşer.
  */
 
 /** Yuvarlama adımı (kuruş). 5 = perakende alışkanlığı; çağıran değiştirebilir. */
@@ -30,10 +22,7 @@ export interface AutoPriceInput {
 }
 
 /**
- * Hedef marjı sağlayan, o kanalda SAKLANACAK fiyat (kuruş).
- *
- * Maliyet yoksa/sıfırsa `null` — otomatik fiyat bir hesaptır, maliyetsiz hesap yoktur. Bu ürünler
- * sessizce 0 € olmaz; fiyatları elle girilmiş hâliyle kalır ve ekran maliyetsizliği zaten söyler.
+ * Hedef marjı sağlayan, o kanalda saklanacak fiyat (kuruş); maliyet yoksa `null`, çünkü maliyetsiz hesap fiyat uydurur.
  */
 export function autoPriceCents(input: AutoPriceInput): number | null {
   const { channel, costCents, targetMarginPercent, vatRate, stepCents = AUTO_PRICE_STEP_CENTS } = input;
@@ -53,29 +42,15 @@ export function autoPriceCents(input: AutoPriceInput): number | null {
 }
 
 /**
- * Saklanan fiyatın HT karşılığı — marj karşılaştırmasının tabanı.
- *
- * Fiyat ekranı da aynı dönüşümü yapıyor; ikisi ayrı yazılsaydı motor "hedefi tutturdum" derken
- * ekran "marj-altı" diyebilirdi. Tek yerde durması, otomatik fiyatın kendi uyarısını
- * tetikleyememesini GARANTİ eder.
+ * Saklanan fiyatın HT karşılığı; ekran ve motor bu tek dönüşümü kullanır ki otomatik fiyat kendi uyarısını tetiklemesin.
  */
 export function revenueHtOf(channel: Channel, amountCents: number, vatRate: number): number {
   return vatBaseOf(channel) === 'ttc' ? removeVat(amountCents, vatRate) : amountCents;
 }
 
 /**
- * `revenueHtOf`'un TERSİ: verilen marjı sağlayan fiyat, kanalın KENDİ tabanında (b2c'ye KDV eklenir).
- *
- * Marj kutusunun fiyatı doldurduğu her yerde (fiyat · teklif · özel fiyat diyalogları) aynı hesap
- * gerekiyordu ve her birinde elle yazılmıştı. Marj bir TANIMDIR (maliyet üzerine markup); tanımı
- * ekranda yeniden yazan yer, bir gün uyarı eşiğinden başka bir sayı üretir.
- *
- * `autoPriceCents`'ten farkı YUVARLAMA: orası DB'ye yazılan fiyattır ve hedefi ıskalamamak için beş
- * kuruşluk adıma YUKARI çıkar; burası operatörün yazdığı yüzdenin birebir karşılığıdır — "%30" yazana
- * %30,4 döndürmek, girdisini görmezden gelmek olurdu.
- *
- * Marj EKSİ olabilir: zararına satmak da bir karardır (tarihi yaklaşan mal, müşteriye özel anlaşma).
- * Fiyat yine de sıfırın altına inmez.
+ * Verilen marjı sağlayan fiyat, kanalın kendi tabanında; `autoPriceCents`ten farkı yuvarlamasızdır, operatörün yazdığı
+ * yüzdenin birebir karşılığıdır. Marj eksi olabilir ama fiyat sıfırın altına inmez.
  */
 export function channelPriceForMargin(
   channel: Channel,

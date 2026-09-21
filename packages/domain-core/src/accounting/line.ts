@@ -3,28 +3,14 @@ import type { Channel, OrderItem } from '@lezzet/types';
 import { vatBaseOf } from '../pricing/resolve-price';
 
 /**
- * Sipariş kaleminin para hesabı — **muhasebe export'u (12.7) ile kârlılığın (12.6) ORTAK zemini.**
- * İki rapor aynı satırı iki ayrı formülle hesaplasaydı bir gün ayrışır ve hangisinin doğru olduğu
- * bilinemezdi.
- *
- * **Kalem tutarı kanalın KENDİ TABANINDADIR** (DOMAIN §5): B2C satırları KDV dahil, B2B satırları
- * KDV hariç. Bu yüzden HT'ye inmek her kanalda aynı işlem DEĞİLDİR — b2c'de KDV çıkarılır, b2b'de
- * tutar zaten HT'dir ve dokunulmaz. Taban `vatBaseOf`'tan sorulur; fiyat motoru da aynı yerden
- * soruyor, iki katman aynı soruya iki cevap veremesin diye.
- *
- * Kâr **her zaman HT üstünden** hesaplanır: KDV ciro değildir, devlet adına tahsil edilir.
+ * Sipariş kaleminin para hesabı, muhasebe export'u ile kârlılığın ortak zemini. Tutar kanalın kendi tabanındadır
+ * (`vatBaseOf`) ve kâr her zaman HT üstünden hesaplanır, çünkü KDV ciro değildir.
  */
 
 export type AccountingLine = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'>;
 
 /**
- * `lineAmountCents`in GERÇEKTEN istediği alanlar — KDV oranı yok, çünkü tutar kanalın kendi
- * tabanındadır ve o hesap KDV'ye hiç dokunmaz (fonksiyonun gövdesi bunu zaten söylüyor).
- *
- * Ayrı tip AÇILDI (30.08) çünkü çağıranı çoğaldı: kurye kapıda geri verilen malın tutardan ne
- * düşeceğini bu fonksiyonla hesaplıyor ve kurye sözleşmesi KDV oranı TAŞIMAZ (tasarım §6 — kurye
- * yalnız tahsil edeceği tutarı görür). `AccountingLine` istemek, taşınmaması gereken bir alanı
- * sözleşmeye sokmak olurdu.
+ * `lineAmountCents`in gerçekten istediği alanlar; KDV oranı yok, çünkü kurye sözleşmesi onu taşımaz.
  */
 export type LineAmountInput = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents'>;
 
@@ -34,8 +20,7 @@ export type LineAmountInput = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPric
  */
 export function lineAmountCents(item: LineAmountInput): number {
   const beforeDiscount = item.unitPriceCents * item.fulfilledQty;
-  // İndirim payı tüm miktar için yazılmıştır; eksik karşılanan kalemde (07.8) oransal düşer —
-  // yoksa yarısı gitmiş bir kalem indirimin tamamını taşır ve satır olduğundan ucuz görünürdü.
+  // İndirim payı eksik karşılanan kalemde oransal düşer, yoksa yarısı gitmiş kalem indirimin tamamını taşırdı.
   const discountShare = item.qty > 0 ? Math.round((item.lineDiscountAmountCents * item.fulfilledQty) / item.qty) : 0;
   return Math.max(0, beforeDiscount - discountShare);
 }
@@ -50,14 +35,8 @@ export interface VatSplit {
 }
 
 /**
- * Kanal tabanındaki bir tutarı TTC/HT/KDV'ye ayırır.
- *
- * **Yön kanaldan gelir:** b2c'de tutar TTC'dir, KDV içinden çıkarılır; b2b'de tutar HT'dir, KDV
- * üstüne eklenir. Tek yön varsaymak B2B satırında KDV'yi İKİ KEZ düşürürdü — HT tutar bir daha
- * "KDV'den arındırılınca" hem ciro hem beyan olduğundan düşük çıkar.
- *
- * `zeroRated` = AB içi B2B reverse charge (`Autoliquidation`): KDV yoktur, tutar zaten HT'dir ve
- * brütü de kendisidir — müşteri vergiyi kendi ülkesinde beyan eder.
+ * Kanal tabanındaki tutarı TTC/HT/KDV'ye ayırır: b2c'de KDV içinden çıkar, b2b'de üstüne eklenir, tek yön B2B'de KDV'yi
+ * iki kez düşürürdü. `zeroRated` AB içi ters yüklemedir, KDV yoktur.
  */
 export function vatSplitOf(amountCents: number, channel: Channel, vatRate: number, zeroRated = false): VatSplit {
   if (zeroRated) return { grossCents: amountCents, netCents: amountCents, vatCents: 0 };

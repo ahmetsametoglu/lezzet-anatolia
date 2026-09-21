@@ -2,25 +2,8 @@ import type { Channel } from '@lezzet/types';
 import { addVat, removeVat } from '@lezzet/helper';
 
 /**
- * Fiyat çözümü — "bu müşteri bu varyantı kaça alır" sorusunun TEK cevap yeri (DOMAIN §5).
- * Saf: DB bilmez, yüzey bilmez. Web, WhatsApp ve kapı önü aynı fonksiyonu çağırır.
- *
- * Sıra (ilk bulunan kazanır): müşteriye özel fiyat → fiyat grubu (B2B, listeden yüzde) → kanal
- * fiyatı. Grup basamağı 20.08'de eklendi (kullanıcı kararı): B2B'nin alt kademeleri (market ·
- * restoran/pastane) arasındaki fark bir İNDİRİM değil FİYATTIR — kampanya havuzuyla yarışmaz.
- *
- * Kapsam: **varyant** fiyatıdır. Paketin (`Bundle`) fiyatı buradan geçmez — paket yalnız B2C'de
- * satılır, tek sayıdır ve TTC tabanındadır (DOMAIN §13); kanal/özel fiyat/teklif boyutu yoktur.
- * Paket açılımı sepete eklenirken yapılır: `allocated_unit_price`'lar kalemlere aktarılır.
- * `Customer.discount_percent` BU SIRAYA GİRMEZ — o bir indirimdir, kupon/kampanyayla aynı
- * havuzda değerlendirilir (03.4 indirim motoru).
- *
- * İki dallanma kuralı:
- * - **Onaysız şirket B2C fiyatı görür.** Kanal `b2b` olsa da `b2bApproved=false` ise perakende
- *   fiyat çözülür — toptan liste doğrulanmamış kayda açılmaz (DOMAIN §10; SIRET herkese açıktır).
- * - **Near-expiry teklif çakışmasında düşük olan kazanır** (müşteri lehine). Teklif kazanırsa
- *   miktar tavanı + batch-pinned rezervasyon devreye girer; özel fiyat kazanırsa normal
- *   (ürün-toplamı) rezervasyon yürür ve tavan yoktur.
+ * "Bu müşteri bu varyantı kaça alır" sorusunun tek cevap yeri (DOMAIN §5): müşteriye özel fiyat → grup → kanal fiyatı,
+ * near-expiry teklif daha düşükse o. Onaysız şirket B2C fiyatı görür, çünkü toptan liste doğrulanmamış kayda açılmaz.
  */
 
 /** Kanalın KDV tabanı: B2C dahil (TTC), B2B hariç (HT) — DOMAIN §5. */
@@ -45,7 +28,7 @@ export interface ActiveOffer {
 }
 
 export interface ResolvePriceInput {
-  /** Müşterinin kanalı — `company_info`'dan türetilir (03.2). Ziyaretçi `b2c`. */
+  /** Müşterinin kanalı (`company_info`dan türer); ziyaretçi `b2c`. */
   channel: Channel;
   /** Şirket kaydı onaylandı mı. `b2c` müşteride anlamsızdır, `true` geçilebilir. */
   b2bApproved: boolean;

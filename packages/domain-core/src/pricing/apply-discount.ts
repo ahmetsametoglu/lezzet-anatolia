@@ -2,19 +2,8 @@ import type { CouponRejection, DiscountScope, DiscountTrigger, DiscountType } fr
 import { distributeDiscount, percentOf } from '@lezzet/helper';
 
 /**
- * İndirim motoru (03.4) — "bu sepete hangi indirim, ne kadar uygulanır" (DOMAIN §5).
- *
- * **Tek-en-büyük kuralı:** birden çok indirim uygun olsa bile yalnız **en büyüğü** uygulanır,
- * birleşmezler. Havuzda üç tür aday vardır: kupon (müşteri kod girer), otomatik kampanya (kod yok)
- * ve **müşterinin genel indirim oranı** (`Customer.discount_percent` — 27.07 kararı: o da bir
- * indirimdir, fiyat değil).
- *
- * **Matrah muafiyetleri** (DOMAIN §5/§13): paket kalemleri (`bundleId` dolu) ve partiye bağlı
- * teklif satırları (`offerStockId` dolu) indirime GİRMEZ — ikisi de kendi özel fiyatındadır.
- * Muaf kalem hem matrahı büyütmez hem de kendisine pay düşmez.
- *
- * Dağıtım: seçilen indirim kalemlere **oransal** paylaştırılır (`distributeDiscount`), artan kuruş
- * en büyük kaleme gider; `Σ pay = indirim` her zaman tutar (STACK §8).
+ * İndirim motoru (DOMAIN §5): uygun adaylardan yalnız en büyüğü uygulanır, birleşmezler. Paket ve teklif kalemleri
+ * kendi özel fiyatındadır, matraha girmez ve pay almaz; seçilen indirim kalemlere oransal dağıtılır (`distributeDiscount`).
  */
 
 /** Sepet kalemi — motor için gereken asgari alanlar (DB karşılığı `OrderItem`/`Cart` satırı). */
@@ -35,19 +24,12 @@ export interface DiscountRule {
   id: string;
   trigger: DiscountTrigger;
   /**
-   * `trigger=coupon` ise kuralın KAPILARI — bir kuponun birden çok kodu olur (dil başına bir tane
-   * gibi) ve **hepsi aynı kuralı, aynı kotayı açar**. Girilen kod herhangi biriyle eşleşirse kupon
-   * tutar; hangisiyle eşleştiği kararı değiştirmez, yalnız kullanım kaydına iz olarak düşer.
-   *
-   * Tek kodlu bir alan olsaydı çok dilli kampanya üç ayrı kural açmak zorunda kalır ve "toplam 100
-   * kullanım" sınırı sessizce 300 olurdu.
+   * Kuponun kodları: hepsi aynı kuralı ve aynı kotayı açar, yoksa çok dilli kampanya kotayı dil sayısıyla çarpardı.
    */
   codes?: readonly string[];
   type: DiscountType;
   /**
-   * Değer İKİ AYRI ALANDA (02.9): tipine uyan dolu, öteki `null`. Tek `value` alanı vardı ve birimi
-   * `type`'a bağlıydı — okuyanın hangi birimde olduğunu ancak komşu alana bakarak anlayabildiği bir
-   * sayı, para hesabında hata kaynağıdır (STACK §8). DB kısıtı da bu ayrımı tutuyor.
+   * Değer iki alanda: tipine uyan dolu, öteki `null`, çünkü birimi komşu alana bağlı bir sayı para hesabında hata kaynağıdır.
    */
   percent?: number | null;
   /** Sabit indirim tutarı — **cent**. */
@@ -156,25 +138,15 @@ export function applyBestDiscount(
 }
 
 /**
- * Kuponun neden geçmediği — künyeleri ve `not_yours` sızdırma kuralı tanımın yanında
- * (`CouponRejectionEnum`, `@lezzet/types`).
- *
- * **Tanım burada DEĞİL, türetiliyor** (`CartLineRoute`un aynı yolu): sebep mobil sözleşmesinde zod
- * olarak da ifade ediliyor ve iki ayrı tanım bir gün ayrışırdı. Motorun dış API'si değişmiyor.
+ * Kuponun neden geçmediği; tanım `@lezzet/types`tan türer ki mobil sözleşmesiyle ayrışmasın.
  */
 export type { CouponRejection };
 
 export type CouponEligibility = { ok: true } | { ok: false; reason: CouponRejection };
 
 /**
- * Kupon bu sepete uygulanabilir mi ve değilse **neden**.
- *
- * Motorun kendi yüklemiyle AYNI kaynaktan gelir (`applyBestDiscount` bunu çağırır): ret sebepleri
- * ayrı yazılsaydı bir gün ekranın söylediği sebeple motorun kararı ayrışırdı — "geçerli" diyen
- * uyarı, indirimsiz kapanan sepet.
- *
- * Kod eşleşmesi burada SORULMAZ: çağıran kuponu zaten koddan buldu. Bu fonksiyon "kod doğru mu"
- * değil, "doğru kod bu sepete yarıyor mu" sorusunu cevaplar.
+ * Kupon bu sepete uygulanabilir mi, değilse neden; motor da bunu çağırır ki ekranın sebebi kararla ayrışmasın.
+ * Kod eşleşmesi burada sorulmaz, çağıran kuponu zaten koddan buldu.
  */
 export function checkCouponEligibility(
   rule: DiscountRule,
@@ -204,11 +176,7 @@ function isApplicable(rule: DiscountRule, ctx: DiscountContext, now: Date, baske
 }
 
 /**
- * Girilen kodun kuralın hangi kapısına denk düştüğü — eşleşme yoksa `null`.
- *
- * Karşılaştırma HARF AYRIMSIZ (DB'nin tekillik indeksi de öyle): müşteri "bayram10" yazdığında
- * "BAYRAM10" tutmalı. Dönen değer kodun kuraldaki YAZILIŞIDIR, müşterinin yazdığı değil — kullanım
- * kaydına ve rapora giden budur.
+ * Girilen kodun kuraldaki yazılışı, harf ayrımsız eşleşir; eşleşme yoksa `null`.
  */
 export function matchedCode(rule: DiscountRule, entered: string | null | undefined): string | null {
   const term = entered?.trim().toUpperCase();
@@ -225,37 +193,8 @@ function matchesScope(line: DiscountableLine, rule: DiscountRule): boolean {
 }
 
 /**
- * **Elinin altındaki indirim** — eşiği tutmadığı için kaçırılan, ama sepeti büyüterek KAZANILABİLİR
- * olan otomatik kampanya (19.08 kullanıcı kararı).
- *
- * Neden ayrı bir kapı: motor bugün bütün adayları hesaplayıp kazananı seçiyor ve **kaybedenleri
- * sessizce atıyor** (`applyBestDiscount` → `candidates.reduce`). Müşteri yalnız sonucu görüyor;
- * hangi kampanyaların yarıştığını, birleşmediklerini, birinin bir adım ötede olduğunu bilmiyor.
- * Kupon için bunun karşılığı yazılmıştı (`outranked` cümlesi), otomatik kampanya için yoktu.
- *
- * ── NEYİ SÖYLER, NEYİ SÖYLEMEZ ──────────────────────────────────────────────
- * **Yalnız EŞİK sebebiyle kaçırılanı** döner. "Daha büyük bir aday kazandı" hâli buraya GİRMEZ ve
- * girmemeli: müşteri orada bir şey kaybetmedi, daha fazlasını aldı — kaybedeni saymak kazanılmış
- * indirimi küçültürdü. Aynı sebeple ötekiler de dışarıda: süresi dolmuş, hakkı bitmiş, kişiye özel
- * ya da ilk-siparişe bağlı bir kural müşterinin **değiştiremeyeceği** bir şeydir; söylemek yalnız
- * "alamadın" demektir. Ölçüt tek: *müşteri sonucu hâlâ değiştirebiliyorsa söyle.*
- *
- * **Kupon adayları dışarıda.** Girilmemiş bir kuponun eşiğini duyurmak, elde olmayan bir kodu ima
- * eder; girilmiş kuponun reddi zaten kendi cümlesine sahip (`CouponFailure`).
- *
- * **Kapsamı boş kural dışarıda.** Kategori/koleksiyon kampanyasının eşiği ancak müşterinin sepetinde
- * o kapsamdan bir kalem VARSA anlamlıdır; yoksa "8 € daha ekleyin" cümlesi neyi ekleyeceğini
- * söylemez ve müşteriyi yanlış yere koşturur.
- *
- * ── TUTAR NASIL KESTİRİLİR ──────────────────────────────────────────────────
- * Eşiğe varıldığı andaki tutar hesaplanır, bugünkü sepetle değil:
- * - **Sepet kapsamı:** matrah eşiğin kendisidir (`minBasketCents`) — müşteri ne eklerse eklesin o
- *   noktada en az bu kadar olur. Yani dönen değer bir ALT SINIRDIR, müşteri daha azını bulmaz.
- * - **Kategori/koleksiyon kapsamı:** matrah BÜYÜMEZ — müşteri eşiği başka ürünle doldurabilir ve
- *   kapsam-içi toplam olduğu yerde kalır. Bugünkü kapsam toplamı kullanılır, bu da kesin sonuçtur.
- *
- * Ve kestirim **kazanana karşı sınanır**: eşiğe varıldığında bugünkünden daha fazlasını vermeyen
- * bir kampanya duyurulmaz — "8 € daha ekleyin" deyip indirimi değiştirmemek, boş bir vaattir.
+ * Eşiği tutmadığı için kaçırılan ama sepeti büyüterek kazanılabilir otomatik kampanya; yalnız müşterinin hâlâ
+ * değiştirebildiği hâl söylenir (kupon ve kapsamı boş kural dışarıda) ve bugünkü kazanandan fazlasını vermeyen duyurulmaz.
  */
 export interface ReachableDiscount {
   discountId: string;
