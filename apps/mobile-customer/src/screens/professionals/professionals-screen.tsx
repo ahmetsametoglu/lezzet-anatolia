@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
+import { whatsappHref } from '@lezzet/brand';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Linking, ScrollView, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   b2bApplicationIssues,
@@ -23,7 +24,6 @@ import { PrimaryButton } from '@lezzet/mobile-kit/src/components/ui/primary-butt
 import { CLIENT_ERROR } from '@lezzet/mobile-kit/src/lib/api/client';
 import { useAppLocale } from '@lezzet/mobile-kit/src/lib/i18n/app-locale';
 import { upperIn } from '@lezzet/mobile-kit/src/lib/i18n/locale';
-import { toastInfo } from '@lezzet/mobile-kit/src/lib/toast/toast-store';
 import { OtpSignInFields } from '@/screens/customer-kit/otp-sign-in-fields';
 import { useOtpSignIn } from '@/screens/customer-kit/use-otp-sign-in.hook';
 import { emToDp } from '@lezzet/mobile-kit/src/theme/parse';
@@ -324,7 +324,7 @@ export function ProfessionalsScreen() {
         />
 
         <PressableSurface
-          onPress={() => toastInfo(t.whatsappSoon)}
+          onPress={() => void Linking.openURL(whatsappHref())}
           feedback="opacity"
           style={styles.whatsappRow}
           accessibilityLabel={t.whatsapp}
