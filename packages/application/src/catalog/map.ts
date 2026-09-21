@@ -31,14 +31,8 @@ import { rotateDaily } from './featured';
 import { VISITOR, type PricingViewer } from './pricing-viewer';
 
 /**
- * DB satırı → vitrin kartı indirgemesi (terfi 21.6; kaynağı `apps/web/lib/storefront/map.ts`).
- *
- * Anasayfa, katalog ve detay AYNI indirgemeyi kullanır; ayrı yazılsa aynı ürün üç ekranda farklı
- * görünebilirdi (no-duplication). Mobil yüzeyin katalog uçları da buraya bağlanacak — bugün
- * ticari bağlamsız çalışıyorlar (fiyat/stok/teklif yok) çünkü bu indirgeme henüz web'deydi.
- *
- * Fiyat kararı BU KATMANDA verilmez: satırlar `PriceService`'ten toplu gelir, karar saf motorda
- * (`domain-core/resolvePrice`) — `database` motora bağlanmaz (STACK §4), birleştirme burada yapılır.
+ * DB satırından vitrin kartına indirgeme; anasayfa, katalog, detay ve mobil aynı indirgemeyi kullanır. Fiyat kararı motordadır
+ * (`resolvePrice`), satırlar servisten toplu gelir.
  */
 
 /** Görsel künyesini karta indirger — anahtar→URL, odak/zoom ve CDN türevleri TEK yerde. */
@@ -50,11 +44,8 @@ export function imageOf(row: ImageMeta): StorefrontImage {
 export const EMPTY_IMAGE: StorefrontImage = { url: null, crop: CROP_CENTER, frames: null };
 
 /**
- * Çerçevenin TEK adresi (`src`) hangi basamaktan. `srcSet`i okuyan tarayıcı seçimde buna bakmaz
- * (genişlik betimleyicili kümede `src` aday değildir); tek adres gereken yerler içindir — `srcset`
- * okumayan istemci ve **paylaşım kartı** (Open Graph, `apps/web/lib/seo/open-graph.ts`). Sohbet kartı
- * ve bant 1200: paylaşım kartının önerilen ölçüsü 1200×630 ve `RATIO_CHAT` zaten 1.91:1. Geniş kart
- * (2:1) de 1200 — kutusu ekran eninde; öteki çerçeveler orta boy.
+ * Çerçevenin tek adresi (`src`) hangi basamaktan: `srcset` okumayan istemci ve paylaşım kartı içindir; 1200 paylaşım
+ * kartının önerilen ölçüsüdür.
  */
 const FRAME_SRC_WIDTH: Record<FrameKey, ImageWidth> = {
   source: 800,
@@ -76,12 +67,8 @@ function frameStepUrl(row: ImageRender, key: FrameKey, width: ImageWidth): strin
 }
 
 /**
- * Çerçeve başına CDN kaynakları (05.37): operatörün odak+zoom kadrajı `cropTrim` ile dört kenar
- * kesrine çevrilir, genişlik merdiveninin her basamağı için adres kurulur. Tek yerde: web `FramedImage`
- * da native API de aynı adresleri alır, aynı dönüşüm paylaşılır (ayrışan basamak ayrı faturadır).
- *
- * `null`: CDN yok (r2.dev tabanı — orada dönüşüm yok) ya da kaynak ölçüsü bilinmiyor (`image_width`
- * boş; dolgu `pnpm images:dims`). İki hâlde de çağıran `url` + CSS yoluyla aynı kareyi çizer.
+ * Çerçeve başına CDN kaynakları: odak+zoom kadrajı `cropTrim` ile kesire çevrilir, web ve native aynı adresleri alır.
+ * CDN yoksa ya da kaynak ölçüsü bilinmiyorsa `null`, çağıran `url` + CSS ile aynı kareyi çizer.
  */
 export function frameSourcesOf(row: ImageRender): ImageFrameSources | null {
   const out: Partial<ImageFrameSources> = {};
@@ -94,8 +81,7 @@ export function frameSourcesOf(row: ImageRender): ImageFrameSources | null {
     }
     out[key] = {
       src: basamaklar.find((b) => b.width === FRAME_SRC_WIDTH[key])!.url,
-      // Biçimin TEK tanımı merkezi kütüphanede (`srcSetOf`, 21.303): native `frameUrlFor` aynı metni geri
-      // açıyor — burada elle kurulsaydı iki uç bir gün farklı ayraç yazardı.
+      // Biçimin tek tanımı `srcSetOf`; native `frameUrlFor` aynı metni açar.
       srcSet: srcSetOf(basamaklar),
     };
   }
@@ -103,15 +89,8 @@ export function frameSourcesOf(row: ImageRender): ImageFrameSources | null {
 }
 
 /**
- * **Küçük resim** (05.37) — kare çerçevenin EN KÜÇÜK basamağı (200 px), operatörün odak+zoom
- * kadrajıyla. Operasyon listelerinin 18–66 px kutuları ve native operasyon satırları (≤ 44 dp, @3x
- * 132 px) için; ölçüldü 10.09: bu yerler 1500–2000 px'lik özgün dosyayı çekiyordu. Adres müşteri
- * yüzeyinin kare@200 basamağıyla BİREBİR aynı — ayrı dönüşüm doğmaz, önbellek paylaşılır.
- *
- * CDN ya da kaynak ölçüsü yoksa özgün dosya (`publicImageUrl`): `frameSourcesOf`in `null` döndüğü
- * koşulun AYNISI ve bu eşlik bilinçli. Küçük resim kadrajlıysa `frames` da doludur; `FramedImage` o
- * hâlde `frames`i çizer, `src`e (bu adrese) bakmaz ve CSS kırpması ikinci kez uygulanmaz. Kadrajsızsa
- * ikisi birden özgün dosyaya düşer ve CSS yolu aynı kareyi keser.
+ * Küçük resim: kare çerçevenin 200 px basamağı, operatörün kadrajıyla; müşteri yüzeyinin kare@200 adresiyle aynı ki önbellek
+ * paylaşılsın. CDN ya da kaynak ölçüsü yoksa özgün dosya.
  */
 export function thumbnailImageUrl(row: ImageRender): string | null {
   return frameStepUrl(row, 'square', IMAGE_WIDTHS[0]) ?? publicImageUrl(row.imageKey, row.imageUpdatedAt);
@@ -125,29 +104,8 @@ export function thumbnailImageUrl(row: ImageRender): string | null {
 export type CatalogCategoryRow = Pick<Category, 'id' | 'slug' | 'name'> & ImageMeta;
 
 /**
- * Kategori kartı — görseli HAVUZDAN, güne göre seçilir (05.23).
- *
- * "Börekler" bir ürün değil bir RAF: su böreği de, kol böreği de aynı raftadır ve hiçbiri tek
- * başına o rafın doğru resmi değildir. Operatör havuza birkaç kare koyar, kart her gün başka
- * birini gösterir.
- *
- * ── HAVUZ = KAPAK + EK FOTOĞRAFLAR ───────────────────────────────────────────
- * Kapak havuzdan ÇIKARILMAZ: o da operatörün seçtiği bir karedir ve dışarıda bırakmak, havuza ilk
- * fotoğraf eklendiği gün kapağı sessizce emekliye ayırmak olurdu. Anahtarı olmayan satır havuza
- * girmez — kapağı henüz yüklenmemiş bir kategori boş kare göstermesin.
- *
- * ── SEÇİM `rotateDaily` İLE, YENİ BİR KURALLA DEĞİL ──────────────────────────
- * Koleksiyon bandı aynı soruyu 08.08'den beri soruyor ve cevabı orada verilmişti: `Math.random()`
- * önbelleği kırar, aynı müşteriye her yenilemede başka vitrin gösterir ve "dün gördüğüm neydi"
- * sorusunu cevapsız bırakır. Kategori kartında üçü de aynen geçerli — ayrıca paylaşım kartı (OG)
- * ile sayfanın kendisi ayrışırdı: linki açan, önizlemede gördüğünden başka bir fotoğrafla
- * karşılaşırdı.
- *
- * Havuz BOŞSA kart bugünkü davranışını aynen sürdürür (kapak) — bu tablo hiçbir ekranı
- * değiştirmeden boş kalabilir.
- *
- * `pool` ve `now` opsiyonel: havuzu okumayan çağıran (ürün detayının kategori rozeti gibi, kart
- * çizmiyor) hiçbir şey değiştirmek zorunda değil; `now` ise testin günü sabitlemesi için.
+ * Kategori kartı: görsel havuzdan (kapak + ek fotoğraflar) güne göre seçilir (`rotateDaily`), çünkü rastgele seçim
+ * önbelleği kırar ve paylaşım kartı ile sayfa ayrışırdı. Havuz boşsa kapak.
  */
 export function toCategory(
   row: CatalogCategoryRow,
@@ -173,30 +131,15 @@ export interface ProductContext {
   variants: ProductVariant[];
   prices: Map<string, { channelPrice: Price | null; customerPrice: Price | null }>;
   /**
-   * Kullanılabilir stok. Tip depo-ÜSTÜ olanı (`AvailableStockTotal`) çünkü iki okumadan da
-   * beslenir: yer belliyse depo satırı (o tip bunun süpersetidir), belirsizse toplam. Okuyan taraf
-   * yalnız `availableQty`ye bakar — hangi okumadan geldiği kararı çağıranındır (DOMAIN §17).
+   * Kullanılabilir stok; yer belliyse depo satırı, belirsizse depo-üstü toplam.
    */
   stock: Map<string, AvailableStockTotal>;
   /**
-   * AĞ genelindeki toplam (19.10) — dördüncü hâli ayırmak için.
-   *
-   * "Yerelde yok + kargoda yok" iki ayrı şey olabilir: ürün başka bir depoda duruyor (soğuk zincir,
-   * o bölgeye gitmiyor) ya da hiçbir yerde yok. İlkinin doğru cümlesi "bölgenizde şu an yok" ve
-   * yanında "gelince haber ver"; ikincisininki "tükendi". Aynı kelimeyle söylemek, gelmeyecek malı
-   * bekletmek ya da gelecek malı kaçırmaktır.
-   *
-   * `null` = yer bilinmiyor; o hâlde `stock` zaten ağ toplamıdır.
+   * Ağ genelindeki toplam: "bölgenizde şu an yok" ile "tükendi" ayrımı için. `null` yer bilinmiyor, `stock` zaten ağ toplamıdır.
    */
   networkStock: Map<string, AvailableStockTotal> | null;
   /**
-   * KARGO deposunun kullanılabiliri (19.10) — `stock`'tan ayrı bir soru.
-   *
-   * "Yerel depoda yok" tek başına **tükendi demek değildir** (C3): ürün kargo deposunda duruyorsa
-   * hâlâ satılabilir, yalnız yolu değişir. Bu harita olmadan yer bilen müşteri, kargoyla
-   * gönderebileceğimiz ürünü "Tükendi" görüyordu — sistem müşteriyi tanıdıkça daha az satıyordu.
-   *
-   * `null` = yer bilinmiyor (o hâlde `stock` zaten ağ-geneli toplam) ya da o ülkeye kargo yok.
+   * Kargo deposunun kullanılabiliri; yerel depoda yok tek başına tükendi demek değildir. `null` yer bilinmiyor ya da kargo yok.
    */
   shippingStock: Map<string, AvailableStockTotal> | null;
   /** Varyanta açık near-expiry teklifi (partiye bağlı indirim, DOMAIN §5). */
@@ -227,12 +170,7 @@ export function stockStatusOf(
 }
 
 /**
- * Bu hâl müşterinin YERİNE teslim edilebilir mi — yerel stok (`available`) ya da kargo (`shipping`).
- * `elsewhere` bu adrese bugün gitmez (soğuk zincir ürünü kargo bölgesinde de böyle görünür),
- * `out_of_stock` hiçbir yere. Yer bilinmiyorsa hâl depo-üstüdür ve cevap "hiç var mı"dır.
- *
- * Tek yerde (10.09): öneri şeridi (`product.ts`), görüntüleme defteri (`analytics/availability.ts`) ve
- * ajanın ürün araçları (`ticket/product-reach.ts`) aynı soruyu soruyor — üç ayrı satırda yazılıydı.
+ * Bu hâl müşterinin yerine teslim edilebilir mi: yerel stok ya da kargo; öneri, görüntüleme defteri ve ajan araçları aynı soruyu sorar.
  */
 export function deliversHere(status: StockStatus): boolean {
   return status === 'available' || status === 'shipping';
@@ -264,20 +202,12 @@ function comparisonOf(priceCents: number | null, variant: Pick<ProductVariant, '
 }
 
 /**
- * Tek varyantın satış künyesi — fiyat, kıyas fiyatı, indirim referansı, adet tavanı ve tükendi.
- *
- * Kart da (ilk varyanttan) detay sayfası da (her varyant için) BU indirgemeyi kullanır. Ayrı
- * yazılsalar aynı ürün iki ekranda farklı fiyatlanabilirdi — kartta indirimli, detayda normal gibi.
- *
- * Karar bu katmanda VERİLMEZ: satırlar servisten toplu gelir, fiyatı saf motor çözer
- * (`domain-core/resolvePrice`), burada yalnız motorun cevabı görünüm alanlarına dağıtılır.
- *
- * Dışa VERİLİR: "kartın gösterdiği fiyat" tek bir yerden gelmeli ve o yerin sınanabilir olması
- * gerekiyor — web'de özeldi, terfide kapı açıldı (yalnız okuma; karar yine motorda).
+ * Tek varyantın satış künyesi (fiyat, kıyas, indirim referansı, tavan, tükendi); kart ve detay aynı indirgemeyi kullanır
+ * ki aynı ürün iki ekranda farklı fiyatlanmasın. Karar motordadır.
  */
 export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
   const priceRows = ctx.prices.get(variant.id);
-  // Servis cent döndürür (02.9 · STACK §8) — motorun istediği birim de bu, dönüşüm kalmadı.
+  // Servis cent döndürür (STACK §8).
   const listCents = priceRows?.channelPrice?.amountCents ?? null;
   const customerCents = priceRows?.customerPrice?.amountCents ?? null;
 
@@ -288,7 +218,7 @@ export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
     // B2C'dir), yani motorun kendi daraltması bu listeyle çelişmez.
     channelPrices: listCents != null ? [{ channel: ctx.viewer.channel, amountCents: listCents }] : [],
     customerPriceCents: customerCents,
-    // Grup kademesi (20.08): yüzde viewer'da çözülmüş gelir, fiyata motor uygular (özel→grup→liste).
+    // Grup yüzdesi viewer'da çözülmüş gelir, fiyata motor uygular.
     groupPercentOff: ctx.viewer.groupPercentOff,
     offer: ctx.offers.get(variant.id) ?? null,
   });
@@ -317,27 +247,8 @@ export function sellingOf(variant: ProductVariant, ctx: ProductContext) {
 }
 
 /**
- * Ürünün BİRİNCİL boyu — kartın fiyatını okuduğu, detayın seçili açması gereken boy (düzeltme 09.08).
- *
- * **Ölçüt EN UCUZ satılabilir boydur, operatörün sırası değil.** Sıra fiyatı bilmiyor ve ölçüldü:
- * 32 çok boylu ürünün **24'ünde** kartta yazan fiyat en ucuz boyunki değildi (bir üründe kart
- * 9,14 € gösteriyordu, 1,57 €'luk boyu vardı). Müşteri pahalı fiyatı görüp geçiyor, ucuz boyun
- * varlığını hiç öğrenmiyordu — hiçbir yerde hata vermeyen, sessiz bir satış kaybı.
- *
- * **`sort_order`'a dokunulmadı** ve dokunulmamalı: o kolon operatörün kararı (*"1 kg'ı öne al"*) ve
- * detayın boy seçicisi, mobil ana ekran ve fikirler şeridi de onu okuyor. Değişen tek şey hangi
- * boyun fiyatının VAAT edildiği; boyların SIRASI değişmiyor. İkisi ayrı sorudur.
- *
- * **Fiyatı olmayan boy birincil olamaz** — olsaydı ürünün fiyatı olduğu hâlde kartı boş görünürdü.
- * Hiçbir boyun fiyatı yoksa ilk boya düşülür: ürün satışa kapalıdır ve kart yine de bir boy adı
- * gösterebilmeli (`unitLabel`), aksi hâlde kart adsız kalırdı.
- *
- * **Eşitlikte gelen sıra korunur** (`<`, `<=` değil) — sıra `sort_order`'dan geliyor ve bu, SQL
- * tarafındaki tie-breaker'ın (`0032_product_listing.sql`) birebir karşılığı. İki taraf aynı boyu
- * seçmezse kartın fiyatı ile sıralamanın kullandığı fiyat ayrışır ve ayrışma sessizdir.
- *
- * Dışa VERİLİR: ölçüt tek yerde dursun — detay sayfasının açılış boyu da buradan okunmalı, yoksa
- * müşteri listede 17 € görüp tıklıyor ve karşısına 33 € çıkıyor (bugünkü hâlden kötü).
+ * Ürünün birincil boyu: en ucuz satılabilir boy, çünkü operatör sırası fiyatı bilmez ve kart ucuz boyu gizlerdi. Fiyatı
+ * olmayan boy birincil olamaz; eşitlikte gelen sıra korunur (`0032` tie-breaker'ı ile aynı).
  */
 export function primaryVariantOf(variants: readonly ProductVariant[], ctx: ProductContext): ProductVariant | null {
   let best: ProductVariant | null = null;
@@ -391,48 +302,23 @@ export function toVariant(
 export type CatalogProductRow = Pick<Product, 'id' | 'slug' | 'name' | 'shippable'> & ImageMeta;
 
 /**
- * Ürünü vitrin kartına indirger.
- *
- * Kanal fiyatı YOKSA ürün satışa kapalıdır (DOMAIN §5): `priceCents` null döner, kart fiyat
- * göstermez ve aksiyonu pasifleşir.
- *
- * `purchaseMode` varyant SAYISINDAN türer: tek varyant listeden eklenir, çok varyantlı detaya
- * götürür (varyant seçimi atlanamaz — `musteri-katalog.md §3`).
- *
- * Tükendi kararı satılabilir varyantların toplam kullanılabilir stoğundan gelir; rezerve edilmiş
- * miktar `availableQty`'de zaten düşülmüştür.
- *
- * Karttaki "Fırsat" hâli near-expiry teklifinden doğar: teklif normal fiyatı YENMİŞSE (motorun
- * kararı) `wasCents` dolar ve kart turuncu etiketi, üstü çizili referansı ve adet sınırını gösterir.
- * Tek fiyat kuralı korunur — üstü çizili değer satın alınabilir bir fiyat değil, referanstır
- * (DOMAIN §5, komponent envanteri K6).
+ * Ürünü vitrin kartına indirger: kanal fiyatı yoksa satışa kapalı, `purchaseMode` varyant sayısından, tükendi toplam
+ * kullanılabilirden. "Fırsat" hâli teklif normal fiyatı yendiğinde `wasCents`ten doğar; üstü çizili değer bir referanstır.
  */
 export function toProduct(
   row: CatalogProductRow,
   locale: PreferredLanguage,
   ctx: ProductContext,
   /**
-   * Ürünün KAPSAM kampanyası — kartın rozeti (23.08). `null` = yok ya da kesit başlığı zaten
-   * söylüyor; ayrımı çağıran yapar (`catalog.ts`), çünkü "başlık söylüyor mu" sorusunun cevabı
-   * okumanın bağlamında yaşar, ürünün kendisinde değil.
+   * Ürünün kapsam kampanyası; `null` yok ya da kesit başlığı zaten söylüyor, ayrımı çağıran yapar.
    */
   campaign: ScopeCampaign | null = null,
   /**
-   * **YALNIZ BURADA DURAN BOYLAR** (kullanıcı bulgusu 02.09) — `CatalogQuery.onlyStockedHere` ile
-   * aynı bayrak, aynı gerekçe: **araç bir vitrin değil, bir yüktür** (`DOMAIN §17`).
-   *
-   * Bayraksız hâl vitrinin kuralıdır ve doğrudur: rafta olmayan boy da kartta sayılır, müşteri
-   * ürünün kaç boyu olduğunu görür. Araçta o cümle YALAN oluyor — kullanıcı cihazda gördü:
-   * *"cevizli baklavanın dört boyunu eklediğimi zannetmiyorum"*, oysa kart "4 boy" diyordu çünkü
-   * sayı KATALOĞUN boylarını sayıyordu; araçta o ürünün yalnız İKİ boyu vardı (12 ve 4 adet).
-   *
-   * Süzgeç yalnız SAYIYI değil satın alma kipini de düzeltiyor: araçta tek boyu kalan ürün artık
-   * "1 boy — dokun, seç" demiyor, doğrudan "kalan N" diyor (`purchaseMode` aynı kümeden türüyor).
+   * Yalnız burada duran boylar: araç bir vitrin değil yüktür (DOMAIN §17), boy sayısı ve satın alma kipi araçtaki kümeden türer.
    */
   onlyStockedHere = false,
 ): StorefrontProduct {
-  // Fiyat, ürünün EN UCUZ aktif boyundan okunur (`primaryVariantOf`) — çok boyluda bu gerçekten
-  // "başlangıç fiyatı"dır. Eskiden ilk boydan okunuyordu ve o boy en ucuz olmak zorunda değildi.
+  // Fiyat en ucuz aktif boydan (`primaryVariantOf`); çok boyluda bu başlangıç fiyatıdır.
   const aktif = ctx.variants.filter((v) => v.isActive);
   const variants = onlyStockedHere ? aktif.filter((v) => (ctx.stock?.get(v.id)?.availableQty ?? 0) > 0) : aktif;
   const primary = primaryVariantOf(variants, ctx);
@@ -464,15 +350,8 @@ export function toProduct(
     stockStatus,
     // Yalnız GERÇEK tükenmede true (bkz. `StockStatus`).
     soldOut: stockStatus === 'out_of_stock',
-    /* FIRSAT KAMPANYAYI YENER (kullanıcı kararı 23.08) — ve karar BURADA veriliyor, ekranda değil.
-       İkisi de aynı satırda hesaplanıyor (`selling.wasCents` ve kapsam kampanyası), yani ayrımı
-       burada yapmamak her yüzeyi aynı `if`i tekrar yazmaya zorlardı — üçüncü yüzey geldiği gün
-       biri unuturdu.
-       Gerekçe: "Fırsat" birim fiyatta GERÇEKTEN düşen, üstü çizili eski fiyatı olan kesin bir
-       indirimdir; kapsam kampanyası ise sepete bağlıdır ve tutarı ancak sepet varken bilinir.
-       Kesin olan, koşullu olanın önüne geçer. Kartta tek rozet yuvası olması bu kararı zorunlu
-       kıldı, ama karar yuvadan bağımsız doğru: iki rozet çizilse bile hangisinin sözü bağlayıcı
-       olduğu söylenmeliydi. */
+    /* Fırsat kampanyayı yener: fırsat birim fiyatta kesin düşüştür, kapsam kampanyası sepete bağlıdır. Karar burada ki her
+       yüzey aynı `if`i yazmasın. */
     campaign: selling?.wasCents === undefined ? campaign : null,
   };
 }

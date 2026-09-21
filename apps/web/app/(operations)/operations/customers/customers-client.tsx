@@ -31,13 +31,8 @@ import type {
   CustomersData,
 } from './customers-types';
 
-// Müşteri ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız; mobil deneyim
-// native uygulamada (`docs/uygulama`).
-//
-// SÜZGEÇ AKIŞI: süzgeç bir client durumu DEĞİL, URL durumudur — kullanıcı değiştirince URL yazılır →
-// RSC yeniden okur → süzülmüş İLK SAYFA gelir. **Burada client-side filtreleme YOK** ve bu, fiyat/stok
-// ekranlarının 09.17'de teşhis edilen hatasından bilinçli sapma: orada client süzgeci `router.replace`
-// ile yazılıyor ve yüklenmiş sayfaları siliyor. Buradaki her süzgeç bir KOLON, yani sunucuya ait.
+// Müşteri ekranı istemci kökü. Süzgeç URL durumudur: değişince RSC süzülmüş ilk sayfayı okur, istemci tarafı süzme yok,
+// çünkü her süzgeç bir kolondur.
 
 interface CustomersClientProps {
   data: CustomersData;
@@ -48,10 +43,7 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
   const router = useRouter();
 
   /**
-   * Süzgeç turu SÜRÜYOR MU. `router.replace` bir RSC okumasıdır (liste + sayaçlar + gecikme kümesi =
-   * üç paralel sorgu) ve dönene kadar ekranda hiçbir karşılık yoktu: liste eski satırlarla duruyor,
-   * tıklanan çip bile aktifleşmiyordu — aktiflik `urlState`'ten, yani sunucudan geliyor. Operatör
-   * bastığının işleyip işlemediğini anlayamıyordu (bağımsız ajan denetimi, 30.07).
+   * Süzgeç turu sürüyor mu; RSC okuması dönene kadar operatör bastığının işlediğini görmeli.
    */
   const [pending, startNav] = useTransition();
 
@@ -70,12 +62,7 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
   const [cursor, setCursor] = useState(data.nextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
   /**
-   * Yazma sonrası yerelde güncellenen satır alanları — kimlik → yama (bkz. aşağıdaki `runWrite`).
-   *
-   * Bildirimi BURADA, `rows`'tan önce: `rows` bir `.map` ile hemen hesaplanıyor ve yamayı okuyor.
-   * Aşağıda dursa çalışma zamanında `Cannot access 'rowPatch' before initialization` verirdi —
-   * tip denetimi bunu görmedi çünkü okuma bir kapanışın (`.map` geri çağrısı) içindeydi ve TS
-   * kapanışları "sonra çalışabilir" sayıp geçiyor. Yaşandı (30.07).
+   * Yazma sonrası yerelde yamanan satır alanları; `rows`tan önce bildirilir, çünkü `rows` hemen hesaplanıp bunu okur.
    */
   const [rowPatch, setRowPatch] = useState<Record<string, Partial<CustomerRow>>>({});
   useEffect(() => {
@@ -93,10 +80,7 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
     setLoadingMore(true);
     void loadMoreCustomersAction(window.location.search, cursor)
       .then(({ data: page }) => {
-        // Hata sessiz: liste olduğu yerde kalır, tetikleyici yeniden denenebilir (sunucu = gerçek).
-        // BEKLEYEN(09.17): düşen sayfa isteği loglanacak — sessiz kalması 09.17'de bir imleç hatasını
-        // aylarca gizledi. İşaret 18.5'i gösteriyordu; o görev KAPANDI ve kapsamında istemci tarafını
-        // bilinçle dışladı — kapanmış göreve asılı bir işaret hiçbir zaman ele alınmaz.
+        // Liste yerinde kalır, tetikleyici yeniden denenebilir. BEKLEYEN(09.17): düşen sayfa isteği loglanacak.
         if (!page) return;
         setExtra((prev) => [...prev, ...page.rows]);
         setCursor(page.nextCursor);
@@ -112,13 +96,7 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   /**
-   * Detay okuması DÜŞTÜYSE sebebi.
-   *
-   * Bir tur bu hata YUTULUYORDU (`if (iptal || !d) return;` — `error` hiç okunmuyordu) ve sonucu
-   * sessiz bir yalandı: `detailLoading` false'a dönüyor, `detail` null kalıyor ve panel elindeki boş
-   * hâlleri gösteriyordu — "Son siparişler: Henüz siparişi yok." Müşterinin 38 siparişi olabilir;
-   * ekran onları olmadığına ikna ediyordu. Aynı dosyadaki diğer iki okuma (sipariş özeti, B2B kartı)
-   * hatayı zaten yüzeye çıkarıyordu; bu okuma o desenden sapmıştı (bağımsız ajan denetimi, 30.07).
+   * Detay okuması düştüyse sebebi; yutulursa panel boş hâlleri gösterip siparişi olan müşteriyi siparişsiz gösterirdi.
    */
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -184,18 +162,8 @@ export function CustomersClient({ data, urlState }: CustomersClientProps) {
     };
   }, [orderDialog]);
 
-  // ── Yazma akışı ──
-  // Yazmadan sonra seçili müşterinin detayı yeniden okunur ve SATIR YERELDE yamalanır.
-  //
-  // **`router.refresh()` BİLİNÇLİ OLARAK ÇAĞRILMIYOR.** Çağrılsaydı RSC yeni bir `data.rows` üretir,
-  // sıfırlama etkisi yüklenmiş sayfaları siler ve seçili müşteri ilk 30 satırda değilse SEÇİM DE
-  // düşerdi: üçüncü sayfadaki bir müşterinin kapıda ödeme iznini kapatan operatör panelini kaybedip
-  // listenin başına dönerdi. 09.17'de teşhis edilen hatanın aynısı, bu kez süzgeç değil yazma
-  // tetikleyicisiyle.
-  //
-  // Karşılığında sayaçlar bayatlamıyor: başlıktaki üç sayı (toplam · taslak · gecikmiş vade) bu
-  // ekrandan yazılan hiçbir alana bağlı değil — vade yetkisi, kapıda ödeme ve indirim oranı üçünü de
-  // oynatmaz. Satırda değişebilen tek şey "Vadeli" rozeti; onu taze detaydan yamalıyoruz.
+  // Yazmadan sonra seçili müşterinin detayı yeniden okunur ve satır yerelde yamanır. `router.refresh()` çağrılmaz, çünkü
+  // yüklenmiş sayfaları ve seçimi silerdi; başlık sayaçları bu ekrandan yazılan alanlara bağlı değil.
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 

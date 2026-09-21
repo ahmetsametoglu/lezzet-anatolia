@@ -2,34 +2,11 @@ import type { B2bApplicationStatus } from '@lezzet/domain-core';
 import type { Address, Consent, CustomerType, KeysetCursor, OrderStatus, PaymentStatus, UserProfile } from '@lezzet/types';
 import type { CustomerScope, CustomersUrlState, MarketingChannelFilter } from './customers-url';
 
-// Müşteri ekranının view-model'i (09.9).
-//
-// ── TÜRETME KURALI BURADA DA GEÇERLİ (düzeltildi 02.08, denetim O9) ──────────
-// Bu dosyanın künyesi bir tur "tipler şemadan türetilmeye ÇALIŞILMAZ burada" diyordu; gerekçesi de
-// yanlış değildi (satır bir `UserProfile` değil, onun indirgenmiş hâlidir) ama **çıkarımı yanlıştı**:
-// indirgeme türetmenin karşıtı değil, `Pick`'in ta kendisi. Sayı iddiayı çürüttü — `CustomerRow`'un
-// on dört alanının **on ikisi** birebir `UserProfile` alanıydı ve elle yeniden yazılmıştı.
-//
-// Kural (`CLAUDE.md §1`) şimdi olduğu gibi uygulanıyor: **`View = Pick<Entity, …> & { türetilen }`**.
-// Kazancı somut: varlığa alan eklenince ekran onu görür, alan tipi değişince (nullable olması gibi)
-// ekran DERLENMEZ — elle kopyada aynı değişiklik sessizce eskir. Bu, müşteri şeridinde yaşandı
-// (`NewAddressInput`, 28.07).
-//
-// Türetilmeyen alanlar hâlâ var ve olmalı: baş harfler addan hesaplanır, "gecikmiş borcu var mı"
-// siparişlerden türer, adres satırı iki kolondan birleşir. Ayrım şu — **veride duran alan Pick'lenir,
-// hesaplanan alan yazılır.**
+// Müşteri ekranının view-model'i: veride duran alan `Pick`lenir, hesaplanan alan yazılır (CLAUDE §1).
 
 /**
- * Liste satırı — tasarımın üç kolonu (Müşteri · Tip · Durum) bunun üstünde kurulur.
- *
- * Varlıktan İNDİRGENİR: roller, depo kapsamı, kredi limiti, pazarlama izni ve edinim kaynağı bu
- * dilimde hiç taşınmaz — liste onları göstermiyor ve otuz satırın yükünü taşımanın karşılığı yok.
- *
- * **`b2bApproved` ARTIK TAŞINMIYOR, yerine `b2bStatus` var.** O alan tek başına iki hâli birden
- * taşıyor (`false` = hem "bekliyor" hem "reddedildi") ve ekran onu doğrudan okuduğu için
- * REDDETTİĞİMİZ başvuru listede hâlâ bizden karar bekliyor görünüyordu (arka uç bildirimi 03.08).
- * Ayrımı motor yapıyor (`b2bStatusOf`) ve satır onun sonucunu taşıyor — aynı karşılaştırmayı
- * ekranda yeniden yazmak, kısmi indeksle sessizce ayrışabilecek ikinci bir kural olurdu.
+ * Liste satırı; varlıktan indirgenir. `b2bApproved` yerine `b2bStatus` taşınır, çünkü `false` hem bekleyeni hem reddedileni
+ * anlatır ve ayrımı motor yapar (`b2bStatusOf`).
  */
 export type CustomerRow = Pick<
   UserProfile,
@@ -45,11 +22,7 @@ export type CustomerRow = Pick<
   | 'vatNumber'
   | 'createdAt'
   /**
-   * GDPR silme damgası (09.10) — `null` = hiç silinmedi.
-   *
-   * **Satırda taşınması ŞART:** silme kaydı silmiyor, kişisel alanları boşaltıyor. Bu alan
-   * okunmazsa silinmiş bir hesap ile yarım kalmış bir taslak müşteri listede **tıpatıp aynı**
-   * görünür (ikisi de adsız) ve operatör silinmiş kaydı yeniden düzenlemeye kalkar.
+   * GDPR silme damgası; satırda şart, yoksa silinmiş hesap yarım taslakla aynı görünürdü.
    */
   | 'anonymizedAt'
 > & {
@@ -58,21 +31,13 @@ export type CustomerRow = Pick<
   /** Avatar baş harfleri — addan TÜRETİLİR, saklanmaz. */
   initials: string;
   /**
-   * Vadesi geçmiş açık borcu VAR MI — listedeki kırmızı "Gecikmiş" rozetinin dayanağı.
-   *
-   * Satırda taşınıyor çünkü tasarım onu LİSTEDE istiyor: gecikmiş müşteriyi bulmak için tek tek
-   * seçip panele bakmak gerekmemeli. Kolon değil karar (`isOverdue`), ama sayfanın açık vadeli
-   * siparişleri zaten tek turda okuyor (başlık sayacı için) — aynı okumadan üretiliyor, ek tur yok.
+   * Vadesi geçmiş açık borç var mı: listedeki "Gecikmiş" rozeti; sayfanın zaten okuduğu açık vadeli siparişlerden türer.
    */
   hasOverdue: boolean;
 };
 
 /**
- * Başlık sayaçları — SUNUCUDAN gelir, yüklenmiş sayfadan türetilmez. Türetilseydi "312 müşteri"
- * yazan şeridin altında 30 satır görünürdü (sipariş ve ürün ekranlarında ölçülüp düzeltilen hata).
- *
- * "Gecikmiş vade" bir kolon DEĞİL, siparişlerden türeyen bir karar (`isOverdue`): açık vadeli
- * siparişlerin tamamı tek turda okunup motora sorulur ve sayılan şey SİPARİŞ değil MÜŞTERİ.
+ * Başlık sayaçları sunucudan gelir, yüklenmiş sayfadan türetilmez; "gecikmiş vade" siparişlerden türeyen müşteri sayısıdır.
  */
 export interface CustomerCounts {
   total: number;
@@ -93,11 +58,7 @@ export interface CustomerOrderRow {
 }
 
 /**
- * Müşterinin adresi — panelde tek satırda okunan hâli.
- *
- * `line` türetilir (`line1` + `line2` birleşir): ekran iki kutu değil bir cümle gösteriyor. Geri
- * kalanı varlıktan gelir; alıcı adı ve teslimat telefonu bu dilimde yok — panel adresi listeliyor,
- * teslimat kurgulamıyor.
+ * Müşterinin adresi, panelde tek satır: `line` `line1` + `line2`den türer.
  */
 export type CustomerAddressRow = Pick<Address, 'id' | 'label' | 'postalCode' | 'city' | 'country' | 'isDefault' | 'isBilling'> & {
   /** `line1` + `line2` — ekran iki kolonu değil, tek okunur adres satırını gösterir. */
@@ -105,10 +66,7 @@ export type CustomerAddressRow = Pick<Address, 'id' | 'label' | 'postalCode' | '
 };
 
 /**
- * Bir pazarlama izninin GÖRÜNÜMÜ — salt okunur (GDPR kanıtı: ne zaman, nereden).
- *
- * Şemanın kendisi (`Consent`): alan alan aynıydı, elle yazılmıştı. İzin kaydı GDPR kanıtıdır —
- * kopyanın bir gün alan düşürmesi, kanıtın eksik gösterilmesi demek.
+ * Pazarlama izninin salt okunur görünümü; şemanın kendisi, çünkü GDPR kanıtının kopyası alan düşürebilirdi.
  */
 export type ConsentView = Consent;
 
@@ -116,7 +74,7 @@ export type ConsentView = Consent;
 export interface PersonalCouponRow {
   id: string;
   name: string;
-  /** Tipine göre biri dolu, öteki `null` (02.9) — birimi komşu bayrağa bakarak anlaşılan sayı yok. */
+  /** Tipine göre biri dolu, öteki `null`. */
   percent: number | null;
   amountCents: number | null;
   codes: string[];
@@ -127,11 +85,7 @@ export interface PersonalCouponRow {
 }
 
 /**
- * Seçili müşterinin türetilmiş bilgisi — SEÇİMLE birlikte okunur, listeyle değil.
- *
- * Liste 30 satır getirirken her satır için bu turu atmak N+1'in en pahalı hâli olurdu; tasarım da bu
- * bilgileri satırda değil önizleme panelinde gösteriyor. Yani "yalnız seçileni oku" bir kısıt değil,
- * tasarımın kendi kararı.
+ * Seçili müşterinin türetilmiş bilgisi, seçimle okunur; liste satır başına bu turu atmamalı.
  */
 export interface CustomerDetail {
   customerId: string;
@@ -167,7 +121,7 @@ export interface CustomerDetail {
   creditLimitCents: number | null;
   codAllowed: boolean;
   discountPercent: number | null;
-  /** Fiyat grubu üyeliği (20.08) — `null` = grupsuz, düz B2B liste. */
+  /** Fiyat grubu üyeliği; `null` grupsuz, düz B2B liste. */
   priceGroupId: string | null;
   /** Seçenek listesi karta detayla gelir: gruplar Fiyatlar ekranında yönetilir, burada atanır. */
   priceGroupOptions: { id: string; name: string; percentOff: number }[];
@@ -185,11 +139,7 @@ export interface CustomerDetail {
 }
 
 /**
- * `Düzenle` formunun girdisi — şemadan türetilen alanların ekran karşılığı.
- *
- * Son iki alan (kapıda ödeme, indirim oranı) bir tur panelde ayrı ayrı yazılıyordu; forma taşındı
- * (kullanıcı kararı 30.07). Aynı formda olmaları tek kaydetme demek: operatör üç ayrı yazma yerine
- * bir kez onaylıyor.
+ * `Düzenle` formunun girdisi; kapıda ödeme ve fiyat kuralı aynı formda tek kayıtla gider.
  */
 export type CustomerEditInput = Pick<
   UserProfile,
@@ -206,9 +156,6 @@ export type CustomerEditInput = Pick<
   /** Fiyat grubu üyeliği; `null` = grupsuz (düz B2B liste). */
   | 'priceGroupId'
 >;
-
-// `B2bCheckView` · `B2bDuplicateRow` 07.09'da `@lezzet/application`a terfi etti (mobil talebi):
-// iki yüzey aynı kartı okuyor, görünüm tipi paketin. Tüketenler doğrudan oradan alır.
 
 /** Vade/limit formunun girdisi. Limit KURUŞ (STACK §8), vade süresi GÜN. */
 export interface CreditFormInput {
@@ -249,32 +196,24 @@ export interface CustomersViewProps {
   detail: CustomerDetail | null;
   detailLoading: boolean;
   /**
-   * Detay okuması düştüyse sebebi. `detail === null` İKİ ayrı durumu temsil ediyor — "henüz gelmedi"
-   * ve "gelemedi" — ve ikisi ekranda ayrı görünmek zorunda: birincisi iskelet, ikincisi hata.
-   * Ayrılmadığı sürece düşen bir okuma, boş hâller aracılığıyla yalan söyler.
+   * Detay okuması düştüyse sebebi; `detail === null` "henüz gelmedi" ile "gelemedi"yi birlikte taşır, ekran ayırmalı.
    */
   detailError: string | null;
   /**
-   * Sipariş KARTINA tıklanınca özet diyaloğunu açar (detay sayfasına GİTMEZ).
-   *
-   * Kartın içindeki sipariş KODU ayrı bir bağdır ve detay sayfasına gider — iki niyet, iki hedef:
-   * "şuna bir bakayım" ekranı kaybetmeden, "bunun üzerinde çalışacağım" tam sayfada. Karar
-   * kullanıcının (30.07).
+   * Sipariş kartı özet diyaloğunu açar; kartın içindeki kod ayrı bağdır ve detay sayfasına gider.
    */
   onOpenOrder: (orderId: string) => void;
   /** Vade/limit diyaloğunu açar. */
   onEditCredit: () => void;
   /**
-   * Müşteri bilgisi düzenleme diyaloğu (tasarım: geniş form). Kapıda ödeme izni ve
-   * indirim oranı da bu formun içinde; panelde canlı kontrol YOK (kullanıcı kararı 30.07).
+   * Müşteri bilgisi düzenleme diyaloğu; kapıda ödeme izni ve fiyat kuralı da bu formda.
    */
   onEdit: () => void;
   /**
-   * B2B kontrol kartı diyaloğunu açar — eski `/operations/b2b-approvals` sayfasının yerine
-   * (kullanıcı kararı 30.07). Yalnız şirket müşterisinde çizilir.
+   * B2B kontrol kartı diyaloğu; yalnız şirket müşterisinde çizilir.
    */
   onOpenB2b: () => void;
-  /** GDPR silme onay diyaloğunu açar (09.10) — zaten silinmiş kayıtta düğme çizilmez. */
+  /** GDPR silme onay diyaloğunu açar; silinmiş kayıtta düğme çizilmez. */
   onGdprDelete: () => void;
   /** Yazma işlemi sürüyor (anahtar/kaydet düğmeleri kilitlenir). */
   saving: boolean;

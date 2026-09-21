@@ -7,32 +7,8 @@ import type { PricingViewer } from './pricing-viewer';
 import type { PlaceWarehouses } from './storefront-types';
 
 /**
- * Bir ürün listesinin fiyat ve stok yan verilerini TOPLU okur (08.10; terfi 21.6 —
- * kaynağı `apps/web/lib/storefront/read-context.ts`).
- *
- * Kart başına sorgu atılmaz: liste kaç ürün olursa olsun sabit sayıda sorgu çalışır — 30 ürünlük
- * katalog sayfası 30 fiyat + 30 stok sorgusu atarsa sayfa açılmaz (`CLAUDE.md`: N+1 kırılır).
- * `findApplicableMap` bu iş için `PriceService`'e eklendi; stokta `getAvailableMap` zaten vardı.
- *
- * ── KİM SORUYOR (`viewer`) ───────────────────────────────────────────────────
- * Fiyat uzun süre `'b2c'` SABİTİYLE okunuyordu. Sabit geçerli bir değerdi, yani hiçbir şey hata
- * vermiyordu — ama iki şey sessizce ölüydü: **onaylanmış B2B müşteri toptan fiyat görmüyordu** ve
- * **müşteriye özel fiyat hiç okunmuyordu** (kimlik verilmeyince `findApplicableMap` o satırları
- * hiç aramıyor).
- *
- * Parametre ZORUNLU ve varsayılansız, tıpkı `place` gibi: varsayılan bıraksaydık argümanı unutan
- * çağrı derlenir ve sessizce perakende okurdu — yani az önce kapattığımız açığın kendisi geri
- * gelirdi, bu kez fark edilmesi daha da zor.
- *
- * ── YER BİLİNİYOR MU (DOMAIN §17) ────────────────────────────────────────────
- * `warehouseId` **null olabilir ve bu normaldir**: posta kodu zorunlu değil (K1), ziyaretçi
- * katalogu yerini söylemeden gezebilir. İki okuma AYRI sözleşmedir:
- *
- * - Yer BELLİ → o deponun kullanılabiliri. Söz kesindir: "var" dediğimiz mal o depodadır.
- * - Yer BELİRSİZ → depo-ÜSTÜ toplam. Burada "var" bir vaat DEĞİL, "yok"un dayanağıdır:
- *   ziyaretçiye "tükendi" demenin tek meşru hâli hiçbir depoda bulunmamasıdır (C3). Toplamı
- *   satılabilir gibi göstermek yanlış olurdu — 3 STR'de + 2 KEHL'de duran maldan 5 kişilik
- *   sipariş çıkmaz — ama "hiç yok mu" sorusunun doğru cevabı odur.
+ * Bir ürün listesinin fiyat ve stok yan verilerini sabit sayıda sorguyla toplu okur; `viewer` zorunludur, yoksa unutan çağrı
+ * sessizce perakende fiyat okurdu. Yer belliyse o deponun kullanılabiliri (söz), belirsizse depo-üstü toplam ("hiç yok mu") okunur.
  */
 export async function loadProductContext(
   db: SupabaseClient,
@@ -42,22 +18,14 @@ export async function loadProductContext(
 ): Promise<Map<string, ProductContext>> {
   const { warehouseId, shippingWarehouseId } = place;
   /**
-   * **YER BİLİNİYOR MU** — üç hâli ayıran ölçüt (19.23).
-   *
-   * `warehouseId` artık YALNIZ rota deposudur (`read-place.ts` künyesi). Rota dışındaki müşteride
-   * o alan `null`, kargo deposu ise DOLUDUR — yani "yer bilinmiyor" ile "yerini biliyorum, orada
-   * rota yok" bu ikiliden türetilebiliyor. Üçüncü bir alan taşımıyoruz: türetilebilen bir şeyin
-   * ikinci kaynağı bir gün ötekiyle çelişir.
+   * Yer biliniyor mu: `warehouseId` yalnız rota deposudur, rota dışındaki müşteride kargo deposu doludur; ikili üç hâli ayırır.
    */
   const yerBiliniyor = warehouseId !== null || shippingWarehouseId !== null;
   const context = new Map<string, ProductContext>();
   if (!rows.length) return context;
 
-  // Sıra BURADA sabitlenir. Kartın fiyatı ürünün EN UCUZ aktif boyundan okunur (`primaryVariantOf`)
-  // ama fiyat EŞİTLİĞİNDE seçim gelen sıraya düşüyor; gömülü ilişkinin dönüş sırası ise PostgREST'te
-  // garantili DEĞİLDİR. Sabitlenmezse aynı fiyatlı iki boydan hangisinin adının kartta yazacağı
-  // istekten isteğe değişirdi. Ölçüt operatörün elindeki sıra, eşitlikte doğuş anı — SQL tarafındaki
-  // tie-breaker'ın (`0032_product_listing.sql`) birebir aynısı.
+  // Sıra burada sabitlenir, çünkü fiyat eşitliğinde birincil boy gelen sıraya düşer ve PostgREST gömülü ilişki sırasını
+  // garanti etmez; ölçüt `0032` tie-breaker'ıyla aynıdır.
   const variantsByProduct = new Map(
     rows.map((r) => [
       r.id,
@@ -71,57 +39,23 @@ export async function loadProductContext(
     // Kanal VE kimlik birlikte gider: kimlik olmadan `findApplicableMap` müşteriye özel fiyat
     // satırlarını hiç sorgulamıyor ve motor her zaman `customerPriceCents: null` alıyordu.
     new PriceService(db).findApplicableMap(variantIds, viewer.channel, viewer.customerId),
-    // ── YEREL HAVUZ: rota deposu · BOŞ · ağ-geneli ───────────────────────────
-    // Rota dışındaki müşteride yerel havuz **BOŞ HARİTA**dır, ağ-geneli DEĞİL (09.08'de düzeltildi):
-    // ona araç gitmiyor, yani "yerelde var" diyebileceğimiz bir depo yok. Ağ-geneline düşseydik
-    // toplam sıfırdan büyük çıkar ve motor yine `local` derdi — hata yer değiştirir, kaybolmazdı.
-    // (Bu tam olarak müşteri şeridinin önerdiği düzeltmenin tek başına neden yetmediğiydi.)
+    // Rota dışındaki müşteride yerel havuz boş haritadır, ağ-geneli değil; ağ toplamına düşse motor yine `local` derdi.
     warehouseId
       ? stocks.getAvailableMap(warehouseId, variantIds)
       : yerBiliniyor
         ? Promise.resolve(new Map())
         : stocks.getNetworkAvailabilityMap(variantIds),
-    // ── KARGO DEPOSU AYRI OKUNUR (19.10) ──────────────────────────────────────
-    // "Yerel depoda yok" tek başına **tükendi demek DEĞİLDİR** (C3): ürün kargo deposunda duruyorsa
-    // hâlâ satılabilir. Bu ikinci harita olmadan sistem müşteriyi tanıdıkça daha AZ satıyordu —
-    // posta kodunu giren müşteri, kargoyla gönderebileceğimiz ürünü "Tükendi" görüyordu.
-    //
-    // Depo-üstü toplam bu soruyu cevaplayamaz: mal Kehl'in ROTA deposunda duruyor olabilir, kargo
-    // deposunda değil. Toplam yalnız "hiçbir yerde yok mu"nun dayanağıdır.
-    //
-    // Yerel depo zaten kargo deposuysa (Strasbourg her ikisi) ikinci okuma atlanır — aynı satırları
-    // iki kez getirmenin karşılığı yok.
+    // Kargo deposu ayrı okunur, çünkü yerel depoda yok tek başına tükendi demek değildir; yerel depo zaten kargo deposuysa
+    // ikinci okuma atlanır.
     shippingWarehouseId && shippingWarehouseId !== warehouseId
       ? stocks.getAvailableMap(shippingWarehouseId, variantIds)
       : Promise.resolve(null),
-    // ── ÜÇÜNCÜ SAYI: AĞ GENELİ (19.10) ────────────────────────────────────────
-    // Dört hâli ayırmak için gerekli. "Yerelde yok + kargoda yok" iki AYRI şey olabilir: ürün
-    // başka bir depoda duruyor olabilir (soğuk zincir, o bölgeye gitmiyor) ya da hiçbir yerde
-    // olmayabilir. İlkinde doğru cümle "bölgenizde şu an yok" ve yanında "gelince haber ver"
-    // (19.12); ikincisinde "tükendi". İkisini aynı kelimeyle söylemek, gelmeyecek malı bekletmek
-    // ya da gelecek malı kaçırmaktır.
-    //
-    // Yer bilinmiyorsa okunmaz: `stock` zaten ağ-geneli toplamdır.
-    // Ağ toplamı yer BİLİNDİĞİNDE okunur (rota içi ya da dışı): "burada yok ama başka depoda var"
-    // (`elsewhere`) ile "hiçbir yerde yok" (`out_of_stock`) ayrımının tek dayanağı. Yer bilinmiyorsa
-    // yerel havuz ZATEN ağ toplamıdır, ikinci kez okumanın karşılığı yok.
+    // Ağ toplamı, yer bilindiğinde "başka depoda var" (`elsewhere`) ile "hiçbir yerde yok" ayrımının tek dayanağıdır;
+    // yer bilinmiyorsa yerel havuz zaten ağ toplamıdır.
     yerBiliniyor ? stocks.getNetworkAvailabilityMap(variantIds) : Promise.resolve(null),
-    // ── TEKLİF TUTARI YALNIZ YER BELLİYKEN ────────────────────────────────────
-    // Yer belliyse o deponun teklifi okunur. Yer BİLİNMİYORSA hiç okunmaz (boş liste): teklif bir
-    // partiye bağlıdır, parti bir depodadır ve ziyaretçinin posta kodu oraya düşmeyebilir —
-    // indirimli fiyatı gösterip checkout'ta yükseltmek verilmiş bir sözü bozmaktır.
-    //
-    // Bu, sıralamayla kartı da HİZALAR: `product_listing` yersiz okumada liste fiyatıyla sıralıyor
-    // (0043). Teklifi burada okusaydık kart 3 € yazar, sıra 30 €'ya göre kurulurdu — ekran kendi
-    // kendisiyle çelişirdi.
-    //
-    // BEKLEYEN(19.7): teklifin VARLIĞI (`has_near_expiry_offer`) posta kodu davetine dönüşecek —
-    // "posta kodunuzu girin, size ulaşabilecek son tarih indirimlerini görün". (İşaret webin
-    // silinen kopyasından taşındı — 21.6 benimsemesi, 08.08.)
-    // **Teklif havuzu = malın GELDİĞİ depo**, rota deposu değil: rota dışındaki müşteriye kargo
-    // deposunun teklifi okunur. Eskiden `warehouseId` kargo hâlinde de dolu olduğu için bu
-    // kendiliğinden doğruydu; alan daraltılınca açıkça yazılması gerekti (yoksa rota dışı müşteri
-    // indirimleri sessizce kaybederdi — düzeltmenin yan hasarı olurdu).
+    // Teklif yalnız yer belliyken, malın geldiği depodan okunur: yer bilinmezken indirimli fiyatı gösterip checkout'ta
+    // yükseltmek sözü bozardı ve kart yersiz sıralamayla (liste fiyatı) çelişirdi.
+    // BEKLEYEN(19.7): teklifin varlığı (`has_near_expiry_offer`) posta kodu davetine dönüşecek.
     warehouseId || shippingWarehouseId
       ? stocks.listOfferBatches(variantIds, warehouseId ?? shippingWarehouseId ?? undefined)
       : Promise.resolve([]),
@@ -145,14 +79,8 @@ export async function loadProductContext(
 }
 
 /**
- * Teklife açık partisi olan ÜRÜNLERİN kimlikleri. Teklif partiye (dolayısıyla varyanta) bağlıdır,
- * vitrin ise ürün listeler — bu okuma o köprüyü kurar.
- *
- * Katalogda "yalnız indirimliler" süzgeci de bunu kullanır: süzme sonuç sayfası ÇEKİLDİKTEN sonra
- * elenerek yapılamaz, yoksa keyset sayfalama ve toplam sayı bozulur (sayfa başına değişken sayıda
- * ürün düşerdi). Kimlikler önden çözülüp sorguya girer.
- *
- * Boş dizi "teklifli ürün yok" demektir — çağıran bunu sonucu daraltmak için kullanır.
+ * Teklife açık partisi olan ürünlerin kimlikleri; "yalnız indirimliler" süzgeci sorguya önden girer, çünkü sayfa
+ * çekildikten sonra elemek keyset sayfalamayı bozar. Boş dizi teklifli ürün yok demektir.
  */
 export async function listOfferProductIds(db: SupabaseClient, warehouseId: string | null): Promise<string[]> {
   const batches = await new StockService(db).listOfferBatches(undefined, warehouseId ?? undefined);
@@ -162,12 +90,8 @@ export async function listOfferProductIds(db: SupabaseClient, warehouseId: strin
 }
 
 /**
- * Teklife açık partiler → varyant başına TEK teklif. Partiler FEFO sırasında gelir (önce süresi
- * dolan), ilk satır kazanır: near-expiry indiriminin sebebi partinin tarihi olduğuna göre önce
- * en acili eritilir (DOMAIN §5).
- *
- * `remainingQty` fiili miktardır. Partiye çıpalanmış rezervasyon burada düşülmez — bu değer yalnız
- * karttaki "en fazla N adet" etiketini besler; gerçek tavan sepete eklemede uygulanır (07).
+ * Teklifli partilerden varyant başına tek teklif, FEFO sırasıyla ilk parti. `remainingQty` fiili miktardır ve yalnız
+ * karttaki etiketi besler; gerçek tavan sepete eklemede uygulanır.
  */
 function toOfferMap(
   batches: Array<{ variantId: string; offerPriceCents: number | null; physicalQty: number; id: string }>,
@@ -181,22 +105,8 @@ function toOfferMap(
 }
 
 /**
- * **BU DEPODA FİİLEN DURAN ürünlerin kimlikleri** (01.09 · kullanıcı kararı).
- *
- * `listOfferProductIds`in kardeşi ve aynı yuvaya girer (`getCatalogData` → `ids`): süzme sayfa
- * ÇEKİLDİKTEN sonra yapılamaz, yoksa keyset sayfalama ve toplam sayı bozulur.
- *
- * ── NEDEN GEREKTİ ───────────────────────────────────────────────────────────
- * Vitrinin kuralı *"katalog süzülmez, işaretlenir"* (DOMAIN §17) ve müşteri için doğru: rafta
- * olmayan ürün de katalogda durur, üstünde "tükendi" yazar. **ARAÇ bir vitrin DEĞİLDİR** — kurye
- * elinde ne varsa onu satar, olmayanı müşteriye "tükendi" diye göstermenin bir karşılığı yok.
- * Kuryenin satış listesi bu yüzden aracın İÇERİĞİDİR, kataloğun tamamı değil (ölçüldü 01.09:
- * araçta 4 kalem varken ekran ana deponun 154 partisini listeliyordu).
- *
- * Sipariş için yüklenmiş mal buraya KENDİLİĞİNDEN girmez: o mal hâlâ tesisin stoğudur ve aracın
- * deposunda bir satırı yoktur (`DOMAIN §17` — "araçta iki tür mal yan yana durur, evleri ayrıdır").
- *
- * Boş dizi "burada hiç mal yok" demektir — çağıran bunu sonucu daraltmak için kullanır.
+ * Bu depoda fiilen duran ürünlerin kimlikleri, çünkü araç bir vitrin değildir ve kuryenin satış listesi aracın içeriğidir.
+ * Sipariş için yüklenmiş mal tesisin stoğu olduğu için girmez; boş dizi burada mal yok demektir.
  */
 export async function listStockedProductIds(db: SupabaseClient, warehouseId: string): Promise<string[]> {
   const batches = await new StockService(db).listInStockDetailed(undefined, [warehouseId]);

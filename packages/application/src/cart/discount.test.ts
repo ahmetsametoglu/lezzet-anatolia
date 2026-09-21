@@ -6,12 +6,8 @@ import type { DiscountableLine } from '@lezzet/domain-core';
 import { resolveCartDiscount, type CartDiscountInput } from './discount';
 
 /**
- * Sepette indirim çözümü (09.6 müşteri tarafı) — "motor hazır, kablo yok" maddesinin kapanışı.
- *
- * Sınanan şey ekranın dört ret hâli: **süresi dolmuş · geçersiz · asgari sepet · otomatik indirim
- * daha büyük**. Ayrıca kupon kaybettiğinde müşterinin kazanan indirimi kaybetmediği.
- *
- * Terfiyle birlikte web'den geldi (aşama 1/3); kapının imzası değişmedi (`db` zaten parametreydi).
+ * Sepette indirim çözümü: ekranın dört ret hâli (süresi dolmuş, geçersiz, asgari sepet, otomatik indirim daha büyük) ve
+ * kupon kaybettiğinde kazanan indirimin korunması.
  */
 const db = serviceDb();
 const discounts = new DiscountService(db);
@@ -62,26 +58,16 @@ afterAll(async () => {
 async function makeDiscount(
   input: Omit<Parameters<DiscountService['insert']>[0], 'publicLabel'> & { publicLabel?: LocalizedText },
 ) {
-  // Müşteriye görünen ad 26.08'den beri ZORUNLU (kısıt veride: `discount_public_label_filled`).
-  // Bu dosyanın ölçtüğü şey indirim SEÇİMİ — etiketi çağrı çağrı yazmak ilgisiz gürültü olurdu;
-  // tek yerden, operatörün iç adından türetiliyor. Etiketi sınayan bir test onu açıkça geçer.
+  // Müşteriye görünen ad veride zorunlu; bu dosya indirim seçimini ölçtüğü için ad iç addan türetilir.
   const row = await discounts.insert({ publicLabel: { tr: input.name }, ...input });
   createdDiscounts.push(row.id);
   return row;
 }
 
 /**
- * Kupon: varsayılan **%90**, koşulsuz, aktif.
- *
- * Yüksek oran bilinçli. Yerel veritabanı bu testin kurduğu satırlardan ibaret değil — operasyon
- * ekranından elle girilmiş aktif bir kampanya olabilir ve tek-en-büyük kuralı gereği kuponu
- * yenebilir. Test o veriyi silemez (kullanıcının); onun yerine kuponu **baskın** yapıyoruz:
- * ölçülen şey kuponun uygulanıp uygulanmadığı, ortamda başka kural olup olmadığı değil.
+ * Kupon: varsayılan %90, koşulsuz, aktif; yüksek oran, çünkü yerel veritabanında elle girilmiş bir kampanya kuponu yenebilir.
  */
-// `overrides` TİPLİ: eskiden `Record<string, unknown>` idi ve yazım hatasını yutuyordu. 02.9'da
-// `minBasket` → `minBasketCents` olunca eski ad sessizce DÜŞTÜ; koşulsuz kalan kupon uygulandı ve
-// iki test "reddedilmeliydi" diye patladı — ama sebebi söylemeden. Derleyicinin göremediği yerde
-// test, kendi kurduğu zemini doğrulamaz.
+// `overrides` tipli, çünkü `Record<string, unknown>` yanlış yazılmış alan adını yutar ve kupon sessizce koşulsuz kalır.
 async function coupon(code: string, overrides: Partial<Parameters<DiscountService['insert']>[0]> = {}) {
   const rule = await makeDiscount({
     name: `Kupon ${code}`,
@@ -91,7 +77,7 @@ async function coupon(code: string, overrides: Partial<Parameters<DiscountServic
     scope: 'cart',
     ...overrides,
   });
-  // Kod artık kuralın kolonu değil, kapısı: kural yazıldıktan sonra eklenir.
+  // Kod kuralın kolonu değil kapısıdır: kural yazıldıktan sonra eklenir.
   await codes.insert({ discountId: rule.id, code, locale: 'tr' });
   return rule;
 }
@@ -221,10 +207,7 @@ describe('kupon girilmeden', () => {
 });
 
 /**
- * Sebep, ekranın "neden bu para düştü" sorusuna verdiği cevaptır — kod girilmeden inen indirimde
- * müşterinin elinde başka ipucu yok. Sınanan asıl şey ORANIN ne zaman taşındığı: yalnız bütün
- * sepete indiğinde. Kapsamı dar bir %95, sepetin tamamına inmiş gibi okunursa müşteriye tutmayacak
- * bir söz verilir.
+ * Oran yalnız bütün sepete inen indirimde taşınır; kapsamı dar oran sepetin tamamına inmiş gibi okunmamalı.
  */
 describe('otomatik indirimin sebebi ekrana taşınır', () => {
   it('sepet kapsamlı yüzde kampanyasında ORAN da taşınır', async () => {

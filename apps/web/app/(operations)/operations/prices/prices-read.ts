@@ -3,18 +3,10 @@ import { type Discount, type DiscountCode, type Price, type UserProfile } from '
 import type { DiscountUsage } from '@lezzet/database';
 import { type CustomerPriceRow, type DiscountCustomerRow, type DiscountRow } from './prices-types';
 
-// DB satırı → view-model indirgemesi. RSC ve server action'lar bunu PAYLAŞIR: ilk sayfa ile sonraki
-// sayfalar aynı şekli üretsin diye tek yerde durur.
-//
-// KARARLAR BURADA SORULUR, BURADA VERİLMEZ: marj tanımı ve marj-altı ölçütü `domain-core/pricing`'in
-// işidir (STACK §4). Bu dosya yalnız veriyi motorun istediği tabana çevirir — ve çevirinin kendisi
-// kritiktir: b2c fiyatı KDV DAHİL, b2b hariç, maliyet hariç. Tabanı karıştırmak marjı KDV oranı
-// kadar şişirir ve zararına satışı kârlı gösterir.
+// DB satırı → view-model indirgemesi; RSC ve eylemler paylaşır. Kararlar motorda (`domain-core/pricing`), burada yalnız taban
+// çevrilir: b2c KDV dahil, b2b ve maliyet hariç; tabanı karıştırmak marjı KDV oranı kadar şişirir.
 
-// `toPriceRows` + `ChannelPriceMaps` LIB'E TAŞINDI (16.08 — `lib/pricing/price-rows`): ürünler
-// önizlemesinin fiyat bakışı diyaloğu da aynı satırı kuruyor; kardeş sayfadan import edilemezdi
-// (STACK §7), kopyalamak marj tanımını iki yerde yaşatırdı.
-/** Profilin ekranda görünen adı — adı boşsa kimlik kaybolmasın diye telefon/e-posta yedeği. */
+// `toPriceRows` `lib/pricing/price-rows`ta, çünkü ürün önizlemesi de aynı satırı kurar ve kardeş sayfadan import yasak.
 function customerLabel(profile: UserProfile | undefined, fallbackId: string): string {
   if (!profile) return 'Silinmiş müşteri';
   return profile.name || profile.phone || profile.email || fallbackId.slice(0, 8);
@@ -50,8 +42,7 @@ export function toCustomerPriceRows({ rows, profiles, variantTitles, listCents, 
         listCents: listCents.get(`${row.variantId}·${row.channel}`) ?? null,
         costCents: costs.get(row.variantId) ?? null,
         vatRate: products.get(row.variantId)?.vatRate ?? 0,
-        // Hedef, satırın KANALINA göre çözülür (15.08): b2b satırı B2B'ye özel hedefi görür.
-        // Diyaloğun karar paneli bu tek sayıyı okur — çözümü buraya koymak paneli kanaldan habersiz bırakır.
+        // Hedef satırın kanalına göre çözülür; diyalog paneli bu tek sayıyı okur.
         targetMarginPercent: targetMarginFor(
           row.channel,
           products.get(row.variantId)?.targetMarginPercent ?? null,
@@ -93,13 +84,8 @@ interface DiscountRowInput {
 }
 
 /**
- * İndirim kurallarını satıra indirger: kimlikler adlara, tutarlar kuruşa, koşullar tek cümleye.
- *
- * **"Yürürlükte mi" KARARI burada verilir ve bu bilinçli bir sınır:** motorun `isApplicable`'ı
- * SEPETE bakar (kod girildi mi, matrah eşiği geçti mi, bu müşteri kaç kez kullandı) — sepetsiz
- * yanıtlanamaz. Ekranın sorusu daha dar: "bu kural bugün hiç uygulanabilir mi". Pasiflik, tarih
- * penceresi ve TOPLAM kullanım tavanı sepetten bağımsızdır; ekran yalnız onları söyler ve
- * söylemediğini iddia etmez.
+ * İndirim kurallarını satıra indirger. "Yürürlükte mi" burada verilir ve dardır: pasiflik, tarih ve toplam kullanım tavanı
+ * sepetten bağımsızdır, motorun `isApplicable`ı ise sepete bakar.
  */
 export function toDiscountRows({ rules, usage, codes, categoryNames, collectionNames, customerNames, now }: DiscountRowInput): DiscountRow[] {
   return rules.map((rule): DiscountRow => {
@@ -135,13 +121,12 @@ export function toDiscountRows({ rules, usage, codes, categoryNames, collectionN
         usedCount: ruleUsage?.byCode.get(code.id) ?? 0,
       })),
       type: rule.type,
-      // Dönüşüm KALMADI (02.9): servis cent döndürüyor, alanlar tipine göre ayrık.
+      // Servis cent döndürür, alanlar tipine göre ayrık.
       percent: rule.percent,
       amountCents: rule.amountCents,
       scope: rule.scope,
       scopeName,
-      // Kimlik de taşınır: ad ekranın, kimlik formun. Yalnız ad taşındığında düzenleme formu hedefi
-      // seçili açamıyordu (`prices-types` künyesi).
+      // Kimlik de taşınır: ad ekranın, kimlik formun; yalnız ad taşınsa form hedefi seçili açamazdı.
       categoryId: rule.categoryId,
       collectionId: rule.collectionId,
       minBasketCents: rule.minBasketCents,

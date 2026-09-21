@@ -1,38 +1,7 @@
--- Modül 09 — Müşteri birleştirme (09.10). DOMAIN §10, operasyon talebi 08.08.
---
--- ── NEDEN GEREKİYOR ─────────────────────────────────────────────────────────
--- Aynı insan sistemde iki kez var: WhatsApp/telefondan yazınca taslak açılıyor (elimizde yalnız
--- numara), sonra aynı kişi siteye girip e-postayla hesap kuruyor. `resolveIdentity` ikisini
--- birleştiremiyor çünkü ortak anahtar yok — birinde telefon var e-posta yok, ötekinde tersi.
--- Kopyayı ENGELLEMEK mümkün değil (iki farklı kanaldan iki farklı anahtarla geliyor); çözüm
--- admin'in birleştirmesi ve bu fonksiyon o eylemin kapısı.
---
--- ── TEK İŞLEM, YARIM BİRLEŞME YOK ───────────────────────────────────────────
--- Bir satır taşınamazsa hiçbiri taşınmamalı. Yarısı taşınmış iki kayıt, hiç birleştirilmemiş iki
--- kayıttan KÖTÜDÜR: artık hangisinin doğru olduğu belli değildir ve operatörün elinde onu
--- anlayacak bir iz yoktur. Fonksiyon gövdesi tek transaction'dır — herhangi bir adım fırlatırsa
--- tamamı geri alınır.
---
--- ── KİMLİK ANAHTARLARI HEDEFE GEÇER — BİRLEŞTİRMENİN ASIL SEBEBİ BU ─────────
--- Operasyonun listesinde yoktu ama işin kalbi burası: taslakta telefon, web kaydında e-posta var.
--- Birleşme sonunda hedef İKİSİNİ de taşımalı, yoksa aynı kişi yarın üçüncü kez taslak açar ve
--- birleştirme hiçbir şey çözmemiş olur. Boş olan alan doldurulur, DOLU olan EZİLMEZ (hedef
--- kazanır — `enrich` ile aynı kural).
---
--- ── ÜÇ ÇAKIŞMA VERİDEN GELİYOR ve sessizce çözülemez ────────────────────────
--- Tekillik indeksleri taşımayı reddedebilir. Üçü de ölçüldü, üçü de aynı ilkeyle çözülüyor —
--- **hedefinki kalır, kaynağınki düşer** (izinlerde ve ticari koşullarda operasyonun verdiği
--- kararın aynısı) — ve üçü de ÖN İZLEMEDE SAYILIYOR: operatör neyin düşeceğini onaydan önce görür.
---   1. `cart` birincil anahtarı `customer_id` — bir müşteri bir sepet. İkisinin de sepeti varsa
---      kaynağınki silinir. İki sepeti birleştirmek, müşterinin hiç kurmadığı bir sepeti uydurmaktır.
---   2. `product_feedback (customer_id, product_id, context)` — ikisi de aynı ürünü değerlendirmişse.
---   3. `points_entry (customer_id, gün) where reason='visit'` — ikisi de aynı gün ziyaret puanı
---      almışsa. Tekillik zaten "aynı gün iki kez sayılmasın" diyor; taşımak onu delerdi.
---
--- ── KAYNAK KAYIT SİLİNMEZ, KAPANIR ──────────────────────────────────────────
--- `order.customer_id` `restrict` — silme zaten reddedilirdi. Kapanış `merged_into_id` ile
--- işaretlenir ve ekran "bu kayıt X ile birleştirildi" diyebilir. `anonymized_at` deseninin ikizi:
--- orada da satır duruyor, kimliği boşalıyor.
+-- Müşteri birleştirme (DOMAIN §10): aynı kişi telefonla taslak, e-postayla hesap açtığında admin birleştirir. Tek işlemdir,
+-- kimlik anahtarları hedefe geçer (dolu olan ezilmez), tekillik çakışmalarında hedefinki kalır ve önizlemede sayılır.
+
+-- Kaynak silinmez, `merged_into_id` ile kapanır, çünkü `order.customer_id` `restrict`tir.
 
 alter table public.user_profiles
   -- **Kendine FK** — hedef kayıt gerçekten var olmalı. `restrict`: birleştirme HEDEFİ olan bir
@@ -53,13 +22,7 @@ create index user_profiles_merged_into_idx on public.user_profiles (merged_into_
 comment on column public.user_profiles.merged_into_id is
   'Bu kayıt hangi müşteriye birleştirildi (09.10). null = birleştirilmedi. Kayıt silinmez, kapanır.';
 
--- ── Ön izleme: onaydan ÖNCE ne olacağını söyler ──────────────────────────────
--- Görev satırının bitti-kriteri "taşınacaklar onaydan önce net" diyor. Sayıları ekranda tek tek
--- saymak beş ayrı okuma olurdu; daha kötüsü, taşımanın kendisiyle AYRI bir listeden türerdi ve iki
--- liste bir gün ayrışınca operatör onayladığından farklı bir şey taşınmış olurdu.
---
--- **Düşecekler de sayılıyor** ve bu bir dürüstlük kararı: yalnız kazanımı gösteren bir onay
--- ekranı, kaybı gizler. Operatör "3 değerlendirme taşınacak, 1'i düşecek" cümlesini görmeli.
+-- Ön izleme taşımayla aynı kaynaktan türer ki onaylanan ile taşınan ayrışmasın; düşecekler de sayılır ki kayıp gizlenmesin.
 create or replace function public.preview_customer_merge(
   p_target_id uuid,
   p_source_id uuid
@@ -76,17 +39,8 @@ create or replace function public.preview_customer_merge(
   cart_dropped boolean,
   gains_phone boolean,
   gains_email boolean,
-  /*
-    **Bu birleştirme getiren ödülünü GÖTÜRECEK Mİ** (27.08) — ve neden önizlemede:
-    kayıp, müşterinin o an yaptığı bir şeyden doğmuyor; birleştirme BİZİM kayıt düzeltmemiz,
-    operatörün eylemi. En sık hâli de kötü niyet değil kaza (aile telefonu, tuşlama hatası).
-    Sessizce alınan puan, doğru olsa bile hakkaniyetsizdir — operatör "bu birleştirme 500 puan
-    götürecek" bilgisiyle karar vermeli.
-
-    Değer, defterdeki ÖDÜLÜN kendisidir. Fiilen yazılacak ters satır bakiyeye göre KIRPILIR
-    (`revokePoints`, kullanıcı kararı 25.08: borç yazılmaz) — yani gerçek düşüş bundan az
-    olabilir, fazla olamaz. Tavan göstermek doğru yön: operatör en kötü hâli görür.
-  */
+  -- Birleştirmenin götüreceği getiren ödülü, operatör karar vermeden görsün diye; gerçek ters satır bakiyeye göre
+  -- kırpılır, bu yüzden değer bir tavandır.
   referral_revoked int
 )
 language sql
@@ -130,15 +84,10 @@ as $$
     (select count(*)::int from pt_cakisan),
     (select exists (select 1 from public.cart where customer_id = p_source_id)
         and exists (select 1 from public.cart where customer_id = p_target_id)),
-    -- Telefon artık kolonda değil KENDİ KAYDINDA (04.10 · 0001) ve soru da değişti: hedefin numarası
-    -- olup olmaması önemsiz — doğrulanmış numaralar TOPLANIR, biri ötekini dışlamaz. Sorulan şey
-    -- "hedef bu birleştirmeyle kimlik anahtarı kazanıyor mu": kaynakta aktif bir numara var mı.
+    -- Hedef bu birleştirmeyle kimlik anahtarı kazanıyor mu: kaynakta aktif doğrulanmış numara var mı.
     (select exists (select 1 from public.customer_phone where customer_id = p_source_id and retired_at is null)),
     (select (select email from hedef) is null and (select email from kaynak) is not null),
-    -- Yalnız KENDİ KENDİNİN getireni olma hâli. Gerçek bir üçüncü kişi getirmişse ödül DURUR:
-    -- o kişi gerçekten müşteri oldu, kaydının sonradan başka kartla birleşmesi getirenin hakkını
-    -- götürmez (`revokeReferralOnUnpaidOrder`ın "olgu sürüyor mu" ölçütüyle aynı akıl).
-    -- Ters satır zaten yazılmışsa (ikinci önizleme) 0 döner — `hasReversalFor`un SQL karşılığı.
+    -- Yalnız kendi kendinin getireni olma hâli; gerçek üçüncü kişinin ödülü durur. Ters satır yazıldıysa 0 döner.
     (select case
        when (select referred_by from public.user_profiles where id = p_source_id) is distinct from p_target_id then 0
        else coalesce((
@@ -153,21 +102,8 @@ comment on function public.preview_customer_merge(uuid, uuid) is
 
 -- ── Birleştirme ─────────────────────────────────────────────────────────────
 /**
- * İki kaydın izin kütüğünü birleştirir — **KISITLAYICI OLAN KAZANIR** (kullanıcı kararı 27.08).
- *
- * Kural tek cümleyle: *birleşmiş kart, iki karttan hiçbirinin yapamadığı bir şeyi yapamaz.*
- * Yani sonuç, iki kaydın izin verdiklerinin KESİŞİMİdir. Aksi hâlde birleştirme bir izin ÜRETİRDİ:
- * hiç onay vermemiş bir kişiye, başka bir kartındaki onay miras kalırdı. İzin GDPR kanıtıdır;
- * kanıt taşınmaz, en fazla dar tutulur.
- *
- * **İki kapının varsayılanı ZIT ve bu yüzden `p_opt_in` var** (`domain-core/messaging`):
- *   · kampanya (`marketing_consent`) OPT-IN — anahtar yoksa izin YOK, sessizlik rıza değildir
- *   · bildirim (`notification_consent`) OPT-OUT — anahtar yoksa gönderilir, gereken şey kolay ret
- * Tek kurala indirseydik ya kampanya izinsiz giderdi ya davet hiç gitmezdi.
- *
- * **Kayıt UYDURULMAZ:** sonuç bir kanalda "izin yok" ise, o kanalın kaydı ya reddeden tarafın
- * satırı OLDUĞU GİBİ alınır (tarihi ve kaynağı korunur) ya da anahtar hiç yazılmaz. Yeni bir
- * `granted:false` satırı imal etmek, verilmemiş bir beyanı belgelemek olurdu.
+ * İki kaydın izin kütüğünü birleştirir: kısıtlayıcı olan kazanır, çünkü birleştirme hiç verilmemiş bir izni üretmemeli.
+ * `p_opt_in` iki kapının zıt varsayılanı içindir; kayıt uydurulmaz, reddeden tarafın satırı olduğu gibi alınır.
  */
 create or replace function public.merge_consent(p_target jsonb, p_source jsonb, p_opt_in boolean)
 returns jsonb
@@ -235,8 +171,7 @@ begin
   select * into v_source from public.user_profiles where id = p_source_id;
   if not found then raise exception 'merge_customers: kaynak bulunamadı (%)', p_source_id; end if;
 
-  -- Personel kaydı birleştirilmez: istihdam kaydıdır ve denetim izleri (`actor_id`) ona bağlı.
-  -- `anonymize_customer` ile aynı sınır.
+  -- Personel kaydı birleştirilmez: istihdam kaydıdır ve işlem izleri (`actor_id`) ona bağlıdır.
   if not ('customer' = any (v_target.roles)) or not ('customer' = any (v_source.roles)) then
     raise exception 'merge_customers: yalnız müşteri kayıtları birleştirilebilir';
   end if;
@@ -254,47 +189,10 @@ begin
     raise exception 'merge_customers: anonimleştirilmiş kayıt birleştirilemez';
   end if;
 
-  /*
-    ── BİR TARAFTA ŞİRKET VARSA BİRLEŞME YOK — İSTİSNASIZ (kullanıcı kararı 27.08) ──────────────
-    Birleştirmenin varlık sebebi *"aynı kişi iki kez kaydolmuş"*tur. Şirket kaydı ile bireysel
-    kayıt ise çoğu zaman KOPYA DEĞİLDİR: lokanta sahibi işletmesi için faturalı/vadeli, evi için
-    normal fiyattan sipariş verir — aynı insan, ama iki ayrı MÜŞTERİ. İkisini tek karta indirmek
-    kopya temizlemek değil, iki gerçek müşteriyi ezmektir.
+  -- Bir tarafta şirket varsa birleşme yok: şirket ve bireysel kayıt çoğu zaman iki ayrı müşteridir ve ticari alanlar
+  -- taşınmazken siparişler taşınırdı. `type` ya da `company_info` şirket diyorsa kapı kapalıdır (fail-closed).
 
-    Somut zarar ölçüldü (27.08): birleştirme on yedi ticari alanın HİÇBİRİNE dokunmuyor —
-    `company_info`, `vat_number`, `credit_enabled`, `credit_limit`, `payment_term_days`,
-    `price_group_id`, `discount_percent`, `cod_allowed` kapanan kayıtta kalıyor. Ama SİPARİŞLER
-    taşınıyor. Yani şirketin ödenmemiş faturaları, vade ayarı olmayan bireysel bir kartın üstüne
-    geçiyordu: borç duruyor, freni gitmiş oluyordu (`checkout-options.ts` limiti müşteri
-    kartından okur). Alanları taşımak da çözüm değildi — iki ayrı tüzel/gerçek kişinin ticari
-    koşulları birleştirilemez, seçilir; ve seçim bir operatör kararıdır, sessiz bir `coalesce`
-    değil. Kullanıcı kararı bu yüzden "hiçbir şekilde" oldu.
-
-    **FAIL-CLOSED, çünkü "şirket mi" sorusunun üretimde İKİ cevabı var ve ayrışabiliyorlar:**
-    `type = 'company'` (çekirdek yol: `checkout-draft`, `pricing-viewer`, `checkout-options`) ve
-    `company_info is not null` (`prices-read`). İkisini bağlayan bir kısıt YOK — besleme bile
-    `type='company'` olup künyesi boş bir kayıt üretiyor (ölçüldü). Tek sinyale bakan bir kapı,
-    ayrışmanın olduğu satırda sessizce açık kalırdı. İkisinden HERHANGİ BİRİ şirket diyorsa kapı
-    kapalıdır — yanlış tarafa düşmek pahalı olan yön belli.
-
-    Not: bu kural `b2b_pending` (onay bekleyen başvuru) vakasını da kendiliğinden kapatır —
-    başvuran kaydın künyesi doludur, dolayısıyla buraya takılır. Ayrıca bir dal yazılmadı;
-    yazılsaydı erişilemez kod olurdu.
-
-    ── TEK İSTİSNA: KAYNAK SAF TASLAKSA (kullanıcı kararı 27.08, şıklı soruldu) ──────────────────
-    Kural "iki GERÇEK kaydı birleştirme" der; saf taslak ikinci bir müşteri değildir. Girişi yok,
-    birleştirilmemiş, şirket künyesi yok — yani ezilecek ticari bir kimlik de yok. Birleştirmenin
-    var olma sebebi zaten tam bu vaka (taslakta telefon, hesapta e-posta).
-
-    İstisna olmasaydı **canlı bir akış kesilirdi** ve bu ölçüldü: `merge_customers`ın üretimdeki
-    tek çağrısı WhatsApp bağlamadır (`whatsapp-link.ts:193`) ve oraya girme koşulu kaynağın saf
-    taslak olmasıdır (`:157`); hedef ise gerçek hesaptır ve ŞİRKET OLABİLİR. Yani şirket hesabı
-    olan müşteri WhatsApp'ını bağlayamaz, jetonu tükenir ve geçmişi ayrı bir taslakta kalırdı.
-
-    İstisna kapıyı gevşetmiyor: kaynağın şirket sinyali taşımadığı aynı koşulda ayrıca sınanıyor,
-    yani "taslak" etiketi şirket künyesini örtemez. Operatörün elle birleştirmesinde ise kaynak
-    taslak olmadığı için kapı tam kapalı kalır.
-  */
+  -- Tek istisna kaynağın saf taslak olmasıdır, çünkü WhatsApp bağlama (`whatsapp-link`) şirket hesabını taslakla birleştirir.
   if (v_target.type = 'company' or v_target.company_info is not null
       or v_source.type = 'company' or v_source.company_info is not null)
      and not (
@@ -357,22 +255,14 @@ begin
   update public.discount_use     set customer_id = p_target_id where customer_id = p_source_id;
   update public.zone_notice      set customer_id = p_target_id where customer_id = p_source_id;
   update public.variant_stock_notice set customer_id = p_target_id where customer_id = p_source_id;
-  -- Doğrulanmış numaralar (04.10 · 0001): kimlik anahtarının KENDİSİ taşınır. Çakışma olamaz —
-  -- tekillik numarada, müşteride değil; aynı aktif numara zaten iki hesapta duramazdı. Emekli
-  -- satırlar da taşınır: kaynağın geçmişi hedefte devam etmeli, kapanmış kayıtta kalmamalı.
+  -- Doğrulanmış numaralar, emekliler dahil, hedefe taşınır; tekillik numarada olduğu için çakışma olamaz.
   update public.customer_phone   set customer_id = p_target_id where customer_id = p_source_id;
   -- Getirdiği kişiler: bağ hedefe geçer, yoksa kaynak kapandığında getiren izi kopuk kalır.
   update public.user_profiles    set referred_by = p_target_id where referred_by = p_source_id;
 
-  -- ── 3) ÖNCE KAYNAK KAPANIR — SIRA ZORUNLU ────────────────────────────────
-  -- Anahtarlar boşaltılır; değerleri `v_source`da zaten duruyor. **Sıra ters olamaz:** hedefe önce
-  -- yazsaydık, kaynak e-postayı hâlâ tutuyorken iki satırda aynı adres bulunur ve
-  -- `user_profiles_email_key` kısmi unique indeksi yazımı REDDEDERDİ. Testle ölçüldü — ilk yazımda
-  -- sıra tersti ve birleştirmenin ASIL işlevi (anahtarın hedefe geçmesi) hiç çalışmıyordu.
-  -- *(Aynı tuzak telefonda da vardı; `user_profiles_phone_key` 04.10'da kalktığı için oradaki
-  -- zorunluluk düştü — ama sıra e-posta yüzünden AYNEN geçerli.)*
-  --
-  -- `referral_code` da düşer: kapanmış bir kaydın davet bağlantısı çalışmamalı.
+  -- ── 3) Önce kaynak kapanır ─────────────────────────────────────────────────
+  -- Sıra zorunlu: hedefe önce yazılsaydı aynı e-posta iki satırda durur ve `user_profiles_email_key` reddederdi.
+  -- `referral_code` da düşer, kapanmış kaydın davet bağlantısı çalışmamalı.
   update public.user_profiles
      set phone          = null,
          email          = null,
@@ -383,37 +273,18 @@ begin
          merged_by      = p_actor_id
    where id = p_source_id;
 
-  -- ── 4) KİMLİK ANAHTARLARI HEDEFE (boş olan dolar, dolu olan EZİLMEZ) ─────
-  -- Birleştirmenin asıl sebebi: taslakta telefon, web kaydında e-posta. Hedef ikisini de taşımazsa
-  -- aynı kişi yarın üçüncü kez taslak açar ve birleştirme hiçbir şey çözmemiş olur.
-  --
-  -- **Telefon burada artık ANAHTAR DEĞİL, iletişim bilgisidir** (04.10 · 0001) — kimlik anahtarı
-  -- yukarıda `customer_phone` satırlarıyla taşındı. Satır yine de duruyor: hedefin iletişim numarası
-  -- boşsa kaynağınki doldurur, doluysa ezilmez. Aynı kural, artık daha küçük bir iddiayla.
-  --
-  -- **İZİNLER `coalesce` DEĞİL, KESİŞİM** (kullanıcı kararı 27.08): kimlik anahtarında "boş olan
-  -- dolar" doğru kuraldır — telefon bir olgudur, kişinin iki numarası olabilir. İzin ise bir
-  -- BEYANDIR ve beyan miras kalmaz. Aynı satırda iki ayrı kural olması bu yüzden tutarsızlık
-  -- değil: taşınan şeylerin cinsi farklı.
+  -- ── 4) Kimlik anahtarları hedefe (boş olan dolar, dolu olan ezilmez) ──────
+  -- İzinler `coalesce` değil kesişimdir, çünkü telefon bir olgu, izin ise miras kalmayan bir beyandır.
   update public.user_profiles
      set phone        = coalesce(v_target.phone, v_source.phone),
          email        = coalesce(v_target.email, v_source.email),
          auth_user_id = coalesce(v_target.auth_user_id, v_source.auth_user_id),
-         -- **KENDİ KENDİNİN GETİRENİ OLAMAZ (27.08).** `nullif` bir temizlik değil, ÖNLEME:
-         -- döngü önce kurulup sonra kırılsaydı, arada okuyan her sorgu (rapor, davet zinciri)
-         -- anlamsız veriyi görürdü. Vaka gerçek ve ölçüldü: kişi kendi taslağını davet eder,
-         -- taslak sipariş verir, sonra birleştirilir — `v_source.referred_by` zaten hedefi
-         -- gösterdiği için `coalesce` onu hedefin kendi alanına taşıyordu.
-         -- Bağ DÜŞÜRÜLÜR, kapanmış kaynağa bırakılmaz: "kim getirdi" sorusunun artık cevabı yok
-         -- ve olmayan bir cevabı uydurmaktansa boş bırakmak doğrudur (`CLAUDE §1`).
-         -- Ödülün geri alınması burada DEĞİL, uygulama katmanındadır (`customer/merge.ts`):
-         -- geri alma bakiyeye göre kırpılıyor ve o kural TypeScript'te yazılı — SQL'de ikinci
-         -- nüshasını açmak, bu oturumda üç kez düzelttiğimiz "kaldırılamayan nüsha"yı gönüllü
-         -- olarak yaratmak olurdu.
+         -- Kendi kendinin getireni olamaz: bağ düşürülür, kapanmış kaynağa bırakılmaz. Ödülün geri alınması uygulama
+         -- katmanındadır (`customer/merge.ts`), kırpma kuralı orada.
          referred_by  = nullif(coalesce(v_target.referred_by, v_source.referred_by), p_target_id),
          marketing_consent    = public.merge_consent(v_target.marketing_consent, v_source.marketing_consent, true),
          notification_consent = public.merge_consent(v_target.notification_consent, v_source.notification_consent, false),
-         -- Auth bağı geldiyse taslaklık düşer: doğrulanmış bir giriş var artık.
+         -- Auth bağı geldiyse taslaklık düşer.
          is_draft     = case when coalesce(v_target.auth_user_id, v_source.auth_user_id) is not null
                              then false else v_target.is_draft end
    where id = p_target_id;

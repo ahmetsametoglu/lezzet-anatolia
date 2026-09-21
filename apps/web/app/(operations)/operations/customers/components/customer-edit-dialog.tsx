@@ -12,22 +12,8 @@ import { TYPE_LABEL } from '../customers-url';
 import type { CustomerEditInput, CustomerRow } from '../customers-types';
 
 /**
- * Müşteri bilgisi düzenleme (tasarım: "Düzenle").
- *
- * **KİMLİK + İLETİŞİM + iki TİCARİ AYAR** (kapıda ödeme izni, genel indirim oranı). O iki ayar bir tur
- * önizleme panelinde canlı kontrol olarak duruyordu; buraya taşındı (kullanıcı kararı 30.07): tasarımda
- * panel onları salt görünüm gösteriyor ve panelde onaylanacak bir form olmadığı için tıklama anında
- * yazılıyordu — geri alınamayan, hiç "Kaydet" görmeyen bir yazma. İkisi de müşteriye dair bir NİYETTİR,
- * yani kimlik bilgisiyle aynı raf; tek formda tek kaydetmeyle giderler.
- *
- * Vade/limit AYRI diyalogda kalır çünkü ayrı karar: karneye bakarak verilir ve üç alanı (yetki, limit,
- * süre) birbirinden ayrılamaz. Türetilmiş değerler (açık bakiye, puan, ciro) hiç düzenlenmez — kaynağı
- * düzeltilir (tasarım §6). Pazarlama izni de yok: izin müşterinin kendi eylemiyle doğar, admin elle
- * izin üretemez (aksi GDPR kanıtını bozar).
- *
- * Telefon ve e-posta KİMLİK anahtarlarıdır ve tekildir. Çakışma kontrolü BURADA YAPILMAZ: kural DB
- * kısıtındadır ve action onu okunur bir hataya çevirir — iki yerde yazılan bir tekillik ölçütü, bir
- * gün ayrışan iki ölçüt demektir.
+ * Müşteri bilgisi düzenleme: kimlik, iletişim ve iki ticari ayar (kapıda ödeme, genel fiyat kuralı) tek formda tek kayıtla.
+ * Vade ayrı diyalogdadır, türetilmiş değerler ve pazarlama izni hiç düzenlenmez; tekillik DB kısıtındadır.
  */
 const FORM_ID = 'customer-edit-form';
 
@@ -173,8 +159,7 @@ export function CustomerEditDialog({
           </FieldShell>
         </div>
 
-        {/* Vergi numarası YALNIZ şirkette: bireysel müşteride anlamı yok ve boş bir kutu "doldurulmalı
-            mı" sorusu doğurur. VIES doğrulaması ayrı bir iştir (09.11) — burada yalnız numara tutulur. */}
+        {/* Vergi numarası yalnız şirkette; bireyselde boş kutu "doldurulmalı mı" sorusu doğururdu. */}
         {type === 'company' ? (
           <FieldShell
             label="Vergi numarası"

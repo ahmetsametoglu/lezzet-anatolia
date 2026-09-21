@@ -7,41 +7,12 @@ import { CartLineRouteEnum, CouponRejectionEnum } from '../primitives/enums.sche
 import { CatalogImageSchema } from './catalog-api.schema';
 
 /**
- * `/api/v1/me/cart` SÖZLEŞMESİ — sunucu sepetinin mobil yüzü.
- *
- * NEDEN VAR: sepet iki yüzeyde PAYLAŞILIR (kullanıcı kararı 09.08) — telefonda doldurulan sepet
- * webde açılır. Paylaşımın kabı zaten vardı (`cart` tablosu, `customerId` anahtarlı — DOMAIN §4/§5);
- * eksik olan mobilin o kaba açılan kapısıydı.
- *
- * ── SÖZLEŞMENİN ÜÇ KARARI ───────────────────────────────────────────────────
- * 1. **GÖVDE FİYAT TAŞIMAZ.** Yazma uçları yalnız satırın ADRESİNİ ve adedini kabul eder. İstemcinin
- *    yazabildiği bir tutar, siparişin parasını belirleyemez; sunucu sepete kendi çözdüğü değeri
- *    yazar (web `cart/actions.ts` künyesindeki aynı hüküm) ve o değer zaten BAĞLAYICI DEĞİLDİR —
- *    bağlayıcı fiyat checkout başlangıcında çözülür (DOMAIN §5).
- * 2. **CEVAP ÇÖZÜLMÜŞ GÖRÜNÜMDÜR** (`MeCartView`, 21.21): ad · fiyat · indirim · yol · tükendi ·
- *    asgari sepet. Hiçbiri istemcide hesaplanmaz — hepsi `getCartView` kuralından gelir
- *    (`@lezzet/application`) ve web sepeti AYNI kapıyı çağırır. İki ayrı yerde hesaplanan bir sepet
- *    toplamı bir gün iki farklı sayı gösterir ve hangisinin tahsil edileceğini söyleyecek bir yer
- *    kalmaz.
- * 3. **CEVAP HER UÇTA GÜNCEL SEPETTİR** (adres uçlarının kararı — `address-api.schema.ts`): yazma
- *    komşu satırı da oynatabilir (aynı satır iki kez eklendiğinde adetler birleşir), tek kaydı
- *    dönmek istemciyi ikinci tura mecbur bırakırdı.
- *
- * SATIRIN KİMLİĞİ BİR ÇİFTTİR: varyant + parti (`stockId`). Teklif satırı normal satırdan ayrı
- * yaşar (DOMAIN §5) — bu yüzden `stockId` bir ayrıntı değil, adresin parçasıdır.
+ * `/api/v1/me/cart` sözleşmesi, sunucu sepetinin mobil yüzü; sepet iki yüzeyde paylaşılır. Gövde fiyat taşımaz, cevap
+ * `getCartView`in çözülmüş görünümüdür ve her uçta güncel sepettir; satırın kimliği varyant + partidir (`stockId`).
  */
 
 /**
- * Cevabın tek satırı — sepet kaleminin `unitPrice`/`addedAt` alanları OMİT edilmiş hâli.
- *
- * `unitPrice` bilerek dışarıda: gösterim fiyatı görünümün işi (karar 2), ve saklanan değer
- * bağlayıcı olmadığı için istemciye bir şey vaat etmez — göndermek, ekranın onu tutar sanmasına
- * davetiye olurdu. `addedAt` de dışarıda: sepet kurtarma zamanlaması SUNUCUNUN sinyalidir, ekranın
- * çizdiği bir bilgi değil.
- *
- * `bundleId` DURUYOR: paket satırı da bu satırla anılır (yazma gövdesi 21.21'den beri paket dalını
- * da kabul ediyor) ve webden eklenmiş bir paket cevapta görünür kalmalı — sözleşmeden düşürmek,
- * mobil istemciye sepetin eksik bir kopyasını doğru diye okuturdu.
+ * Cevabın satırı; `unitPrice` bağlayıcı olmadığı için, `addedAt` sunucunun sinyali olduğu için dışarıda. `bundleId` kalır.
  */
 export const MeCartLineSchema = CartItemSchema.omit({ unitPrice: true, addedAt: true });
 export type MeCartLine = z.infer<typeof MeCartLineSchema>;
@@ -50,24 +21,8 @@ export type MeCartLine = z.infer<typeof MeCartLineSchema>;
 export const MeCartLinesSchema = z.array(MeCartLineSchema);
 
 /**
- * Yazma gövdesi — satırın adresi + adedi. **İKİ TÜR satır vardır ve kimlikleri farklı doğar**
- * (`CartEntry`nin aynı ayrımı, `@lezzet/application`):
- *   varyant satırı → `{variantId, stockId}`; aynı varyantın farklı partisi AYRI satırdır (teklif çıpası).
- *   paket satırı   → `{bundleId}`; paketin varyantı YOKTUR, satılan şey paketin kendisidir (DOMAIN §13).
- *
- * **Birleşim, tek düz nesne DEĞİL** ve tür kendi bayrağını taşır. İki gerekçe:
- * - Tek nesnede dört alan tutulsaydı "paketin partisi" gibi imkânsız hâller yazılabilir kalır ve
- *   "hangisi dolu" kontrolü her çağrı yerine dağılırdı.
- * - Tür kimlik alanının VARLIĞINDAN çıkarılamaz: TypeScript yalnız birim tipli alanlarla daraltma
- *   yapar, `string` birim tip değildir — o yoldan gidilseydi her okuma yerinde elle kontrol gerekirdi.
- *
- * Paket satırı ÖNCE yazılamıyordu (paketin uuid'si detay sözleşmesinde yoktu, yalnız `slug` vardı)
- * ve sonucu sessiz bir eksiklikti: uygulamadan eklenen paket CİHAZDA kalıyor, sunucunun çözdüğü
- * toplama hiç girmiyordu — müşteri sepetinde gördüğü paketi sipariş edemiyordu. `PackageDetailSchema`
- * artık `id` taşıyor (21.21).
- *
- * `stockId` varsayılanı `null`: teklif çıpası OLMAYAN satır normal satıştır ve istemcinin bunu her
- * seferinde yazması, unutulduğu gün sessizce ikinci bir satır açardı.
+ * Yazma gövdesi: varyant satırı `{variantId, stockId}`, paket satırı `{bundleId}`, tür kendi bayrağını taşır.
+ * `stockId` varsayılanı `null`, çünkü unutulduğu gün sessizce ikinci satır açardı.
  */
 export const MeCartItemWriteSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -94,11 +49,7 @@ export const MeCartQtyBodySchema = z.object({
 });
 
 /**
- * Misafir sepetinin DEVRİ — cihazda biriken satırlar giriş anında müşterinin sepetiyle BİRLEŞİR
- * (`CartService.takeOver`): giriş, daha önce eklenmiş bir ürünü sessizce kaybettirmemeli.
- *
- * Tavan bir titizlik değil kapı: gövde istemciden geliyor ve sınırsız bir dizi, tek istekte
- * sepeti şişirmenin en ucuz yolu olurdu. 50 satır, elle doldurulmuş bir sepetin çok üstünde.
+ * Misafir sepetinin devri giriş anında birleşir; tavan, istemciden gelen dizinin sepeti şişirmesini önler.
  */
 export const MAX_CART_TAKEOVER_ITEMS = 50;
 
@@ -107,70 +58,26 @@ export const MeCartTakeOverBodySchema = z.object({
 });
 
 /**
- * EKLEME GÖVDESİ HER ZAMAN BİR LİSTEDİR — tek ürün, bir elemanlı listedir.
- *
- * **Neden liste** (ölçüldü 09.08, tarif ekranı): "Malzemeleri sepete ekle" üç satırı üç AYRI istekle
- * gönderiyordu ve sunucuda ikisi kayboluyordu. Sebep sepetin tek satırda (`cart.items` jsonb)
- * yaşaması: her istek sepeti OKUR, üstüne ekler, geri YAZAR — eşzamanlı üç okuma aynı başlangıcı
- * görür ve son yazan ötekileri siler (klasik kayıp güncelleme). Canlı ölçüm: sırayla üç ekleme → 3
- * satır; eşzamanlı üç ekleme → 1–2 satır, hangisinin kalacağı belirsiz.
- *
- * İstemciyi "istekleri sıraya diz" diye uyarmak çözüm DEĞİLDİ: kural her çağrı yerinde tekrar
- * hatırlanmak zorunda kalırdı ve unutulduğu gün sepet yine sessizce kalem düşürürdü. **Tek kullanıcı
- * eylemi = tek istek**; sepeti bir kez okuyup bir kez yazan tek bir kod yolu kalır ve yarış kaynağında
- * biter.
- *
- * Tavan devrinkiyle aynı (`MAX_CART_TAKEOVER_ITEMS`): ikisi de istemciden gelen bir liste, ikisi de
- * tek istekte sepeti şişirmenin en ucuz yolu olurdu. `min(1)`: boş ekleme bir niyet değildir.
+ * Ekleme gövdesi her zaman listedir: sepet tek satırda (`cart.items` jsonb) yaşadığı için eşzamanlı ayrı istekler
+ * birbirinin yazımını silerdi; tek kullanıcı eylemi tek istektir. Tavan devrinkiyle aynı.
  */
 export const MeCartAddBodySchema = z.object({
   items: z.array(MeCartItemWriteSchema).min(1).max(MAX_CART_TAKEOVER_ITEMS),
 });
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   SEPETİN ÇÖZÜLMÜŞ GÖRÜNÜMÜ — niyetin BUGÜNKÜ karşılığı.
-
-   Yukarısı NİYET (ne istendi: varyant + adet + parti), aşağısı GÖRÜNÜM (o niyetin bugünkü adı,
-   fiyatı, yolu, tavanı). Ayrım gerçek bir kuraldan doğar (DOMAIN §5): sepetteki fiyat BAĞLAYICI
-   DEĞİLDİR — sepet aylarca bekleyebilir, fiyat da stok da o arada değişir. Görünüm bu yüzden her
-   okumada YENİDEN çözülür, niyetin içinde saklanmaz.
-
-   ÇÖZÜMÜ İSTEMCİ YAPMAZ: hesap `getCartView` kuralınındır (`@lezzet/application`) ve iki yüzey de
-   onu çağırır. Mobil kendi toplamını hesaplasaydı aynı sepet telefonda ve webde farklı bir tutar
-   gösterirdi — ve hangisinin tahsil edileceğini söyleyecek bir yer kalmazdı.
-
-   ŞEKİL `CartView`in AYNASI, daraltması: alan adları birebir aynı tutuldu ki uç `z.input<>` ile
-   tiplenip alan alan doğrulansın. Düşenler yalnız sunucuda kalan iki alan (`vatRate` — kargo
-   KDV'sinin oransal bölünmesi checkout'un işi; `shippable` — `route` zaten kararı taşıyor) ve
-   indirimin kalem payları (sipariş yazımının bilgisi, ekranın değil).
-
-   ÇOK DİLLİ METİN SUNUCUDA ÇÖZÜLÜR (katalog sözleşmesinin aynı kuralı): kampanya adı düz string
-   gelir — dil yedek zinciri (seçili → TR → FR → DE) tek yerde yaşamalı.
-   ───────────────────────────────────────────────────────────────────────────── */
+/* Sepetin çözülmüş görünümü: her okumada yeniden çözülür ve çözümü istemci yapmaz (`getCartView`). Şekil `CartView`in
+   aynasıdır; `vatRate`, `shippable` ve indirim payları sunucuda kalır, çok dilli metin sunucuda çözülür. */
 
 /**
- * Kuponun tutmama sebebi — motorun kararları + KAPININ iki kendi hâli.
- *
- * `unknown_code`: böyle bir kod yok. Kişisel kuponun başkasında olması da BURAYA düşer — motorun
- * `not_yours`u müşteriye asla gösterilmez (kodun varlığını doğrulamak olurdu).
- * `outranked`: kupon geçerli ama otomatik indirim / müşteri oranı daha büyük; sepete o uygulandı.
- *
- * Motorun listesinden TÜRER, elle kopyalanmaz: motora yeni bir koşul eklendiğinde ekranın
- * karşılaması gereken hâl de kendiliğinden büyür.
+ * Kuponun tutmama sebebi: motorun kararları + kapının iki hâli. `not_yours` müşteriye `unknown_code` olarak düşer ki
+ * kodun varlığı doğrulanmasın; `outranked` kupon geçerli ama daha büyük indirim uygulandı.
  */
 export const CartCouponFailureEnum = z.enum([...CouponRejectionEnum.options, 'unknown_code', 'outranked']);
 export type CartCouponFailure = z.infer<typeof CartCouponFailureEnum>;
 
 /**
- * Kendiliğinden inen indirimin SEBEBİ — "neden indi" sorusunun cevabı.
- *
- * Kuponda sebep zaten kodun kendisidir; kod girilmeden inen indirimde müşterinin elinde hiçbir
- * ipucu yoktu (29.07 geri bildirimi). **Kampanyanın İÇ ADI kullanılmaz** — o operatörün listede
- * tanıdığı addır, tek dilde yazılır; Fransız müşteriye "Baklava haftası" yazmak olurdu. Sebep bu
- * yüzden TÜRDEN doğar ve cümlesini ekranın kendi sözlüğü kurar.
- *
- * `campaign.percent` YALNIZ oran bütün sepet için doğruysa dolar: kategoriye bağlı bir %15, sepetin
- * tamamına inmiş gibi okunursa müşteriye tutmayacağı bir söz verilir.
+ * Kendiliğinden inen indirimin sebebi; kampanyanın iç adı kullanılmaz, sebep türden doğar. `campaign.percent` yalnız oran
+ * bütün sepet için doğruysa dolar.
  */
 export const CartDiscountReasonSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('campaign'), percent: z.number().nullable() }),
@@ -178,12 +85,7 @@ export const CartDiscountReasonSchema = z.discriminatedUnion('kind', [
 ]);
 
 /**
- * Sepete inen indirim ya da kuponun reddi. Dört hâl ayrık; ekran hangi cümleyi kuracağını
- * `status`tan bilir, tutarı tahmin etmez.
- *
- * `rejected` hâlinde `appliedInsteadCents` taşınır: kupon tutmadı diye müşteri hak ettiği otomatik
- * indirimi KAYBETMEZ. `appliedInstead` onun kimliğidir (ad + sebep) — taşınmasaydı özet satırı
- * "İndirim — Baklava haftası" iken sırf bir kupon denendi diye "İndirim"e düşerdi.
+ * Sepete inen indirim ya da kuponun reddi; `rejected`te kazanan indirim (`appliedInstead`) adıyla taşınır, müşteri onu kaybetmez.
  */
 export const MeCartDiscountSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('none') }),
@@ -210,16 +112,7 @@ export const MeCartDiscountSchema = z.discriminatedUnion('status', [
 ]);
 
 /**
- * **Elinin altındaki indirim** (19.08 kullanıcı kararı) — eşiğe az kalmış, müşterinin sepetini
- * büyüterek kazanabileceği otomatik kampanya.
- *
- * Neden ayrı bir alan, `MeCartDiscountSchema`nın içinde değil: inen indirimle AYNI ANDA var olabilir.
- * Müşteri 3 € indirim alıyor olabilir ve 8 € daha eklerse 4,80 € alacak olabilir; birleşik bir hâle
- * sıkıştırılsaydı bu cümle indirimi olan müşteriye hiç söylenemezdi.
- *
- * **Yalnız EŞİK sebebiyle kaçırılan taşınır.** "Daha büyük bir aday kazandı" hâli motorda eleniyor
- * (`findReachableDiscount` künyesi): müşteri orada bir şey kaybetmedi, daha fazlasını aldı.
- * Söylenmesi kazanılmış indirimi küçültürdü. Alan yoksa söylenecek bir şey de yoktur — ekran susar.
+ * Eşiğe az kalmış kampanya; inen indirimle aynı anda var olabilir, bu yüzden ayrı alan. Yalnız eşik sebebiyle kaçırılan taşınır.
  */
 export const MeCartReachableDiscountSchema = z.object({
   /** Eşiğe kalan tutar (ham cent) — cümlenin "{n} daha ekleyin" parçası. */
@@ -227,9 +120,7 @@ export const MeCartReachableDiscountSchema = z.object({
   /** Eşiğin kendisi (ham cent). */
   minBasketCents: z.number().int().positive(),
   /**
-   * Eşiğe varıldığında inecek indirimin **alt sınırı** (ham cent). Kestirim değil TABANDIR: müşteri
-   * daha azını bulmaz. Sepet kapsamlı kampanyada matrah eşiğin kendisiyle hesaplanır, kapsamlı
-   * kampanyada bugünkü kapsam toplamıyla — ikisi de müşteri lehine yuvarlar.
+   * Eşiğe varıldığında inecek indirimin alt sınırı (cent); müşteri daha azını bulmaz.
    */
   projectedCents: z.number().int().positive(),
   /** Kampanyanın müşteriye görünen adı, seçili dilde; `null` = ad verilmemiş, ekran adsız konuşur. */
@@ -237,25 +128,8 @@ export const MeCartReachableDiscountSchema = z.object({
 });
 
 /**
- * Kalemin düştüğü GRUP — "bu kalem bu adrese nasıl gelir" sorusunun üç cevabı (kullanıcı kararı 10.08).
- *
- * **`route`un yerini almaz, onun EKRANA bakan izdüşümüdür.** Yol dört değerlidir
- * (`CartLineRouteEnum`) ve dördüncüsü (`unavailable`) bir yol değil bir ENGELDİR — sepette
- * `blocked` olarak zaten konuşuyor. Grup yalnız yolu söyler:
- *
- *   `local`         — kapıya teslim: kendi aracımız, ücretsiz. **Soğuk zincir ürün BURADAN gider.**
- *   `shipping`      — NORMAL kargo (soğuk zincir DEĞİL): kargo deposundan, ayrı ödemeli ayrı sipariş.
- *   `undeliverable` — bu adrese HİÇ gelemez: soğuk zincir ürün + rota dışı/deposunda olmayan adres.
- *
- * **NEDEN SÖZLEŞMEDE, ekranda TÜRETİLMİYOR** (ölçülmüş arıza, 10.08): üçüncü hâlin adı yoktu ve her
- * yüzey kendi süzgecini yazıyordu. Mobil sepet `route !== 'shipping'` diyerek teslim edilemeyen
- * kalemi "kapıya teslim" grubuna sokuyordu — ekranda yeşil bir "Siparişi tamamla" duruyor, engel
- * ancak checkout'ta çıkıyordu. Kural artık tek yerde (`cartGroupOf`, `@lezzet/application`) ve cevabı
- * sunucu taşıyor: RN istemcisi sunucu paketlerini import EDEMEZ, yani ona kuralı değil KARARI
- * göndermek zorundayız.
- *
- * **Teslim edilemeyen kalem sepetten silinmez ve müşteriye sildirilmez:** yarın bölge içi bir adres
- * eklerse o kalem ona lazım. Grup bir işarettir, bir çıkarma emri değil.
+ * Kalemin grubu: `local` kapıya teslim, `shipping` kargo, `undeliverable` bu adrese gelemez. Sözleşmede, çünkü RN istemcisi
+ * kuralı import edemez; teslim edilemeyen kalem sepetten silinmez, yalnız işaretlenir.
  */
 export const CartLineGroupEnum = z.enum(['local', 'shipping', 'undeliverable']);
 export type CartLineGroup = z.infer<typeof CartLineGroupEnum>;
@@ -275,9 +149,7 @@ const CartLineViewShape = {
   /** Teklifin adet tavanı (partide kalan); tavan yoksa `null`. */
   limitCap: z.number().int().nullable(),
   /**
-   * **Fiyat ARTTI** — müşteriye açıkça söylenir ve onayı istenir (DOMAIN §5). Düşüşte DOLMAZ:
-   * düşen fiyat sessizce uygulanır, "iyi haber, onaylıyor musunuz?" diye sormak olmayan bir kararı
-   * müşteriye yıkmaktır. Yalnız SUNUCU sepetinde doğar — misafirin niyet listesinde çıpa yoktur.
+   * Fiyat arttı: müşteriye söylenir ve onayı istenir (DOMAIN §5); düşüşte dolmaz. Yalnız sunucu sepetinde doğar.
    */
   priceChange: z.object({ previousCents: z.number().int() }).optional(),
   /** Satır toplamı — fiyat yoksa `null`. Sıfır YAZILMAZ (`CLAUDE §1`). */
@@ -287,18 +159,11 @@ const CartLineViewShape = {
   /** Kalem hangi yoldan gelir; **`null` = yer bilinmiyor** ve o hâlde ayrım YAPILMAZ. */
   route: CartLineRouteEnum.nullable(),
   /**
-   * Kalemin GRUBU — ekran satırı bu alana göre yerleştirir, `route`tan yeniden türetmez
-   * (künyesi `CartLineGroupEnum`de: üçüncü grubun adı yokken her yüzey kendi süzgecini yazdı).
-   *
-   * **`null` YOKTUR ve bu bilinçli:** yer bilinmiyorken bile bir yol vardır — kalem ana grupta
-   * (`local`) durur. Ayrım yapılamadığında satırı gruptan çıkarmak, müşterinin sepetinden sessizce
-   * kalem düşürmek olurdu; bilinmeyen bir yolu "gelemez" diye okumak ise bilmediğimiz bir şeyi
-   * söylemek. `route: null` hâli ekranda hâlâ okunabilir — grup ondan HABER vermez, karar verir.
+   * Kalemin grubu; ekran satırı buna göre yerleştirir. `null` yok, yer bilinmezken kalem ana grupta (`local`) durur.
    */
   group: CartLineGroupEnum,
   /**
-   * Bu yerde ŞU AN kaç adet var. `null` = yol bilinmiyor. **Bir SÖZ DEĞİL, bir sayı**: sepet stok
-   * ayırmaz (DOMAIN §4) — ekran "şu an en fazla 2 adet" der ve buna dayanıp kilitlemez.
+   * Bu yerde şu an kaç adet var; söz değil sayı. `null` yol bilinmiyor.
    */
   availableHere: z.number().int().nullable(),
   /** PAKET satırının salt-okunur içeriği; varyant satırında boş dizi. Düzenlenemez, fiyat taşımaz. */
@@ -306,12 +171,7 @@ const CartLineViewShape = {
 };
 
 /**
- * Sepetin çözülmüş satırı. **İki tür** ve kimlikleri farklı doğar: varyant satırı `{variantId,
- * stockId}` (aynı varyantın farklı partisi AYRI satırdır — teklif çıpası), paket satırı
- * `{bundleId}` (paketin varyantı yoktur, satılan şey paketin kendisidir — DOMAIN §13).
- *
- * Birleşim olarak yazılması bilinçli: tek düz nesnede dört alan tutulsaydı "paketin partisi"
- * gibi imkânsız hâller yazılabilir kalır ve "hangisi dolu" kontrolü her çağrı yerine dağılırdı.
+ * Sepetin çözülmüş satırı: varyant satırı `{variantId, stockId}`, paket satırı `{bundleId}`; birleşim imkânsız hâlleri dışlar.
  */
 export const MeCartViewLineSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -320,12 +180,7 @@ export const MeCartViewLineSchema = z.discriminatedUnion('kind', [
     stockId: StockSchema.shape.id.nullable(),
     qty: CartItemSchema.shape.qty,
     /**
-     * KAMPANYA KAPSAMININ ÜYELİĞİ — satır hangi kategoride, hangi koleksiyonlarda (20.08).
-     *
-     * İstemci indirimi HESAPLAMAZ ama motoru ÇALIŞTIRIR (`applyBestDiscount`, `@lezzet/domain-core`)
-     * ve motorun kapsam süzgeci bu iki alanı istiyor. Taşınmasaydı istemci adet değiştirdiğinde
-     * indirimi tazeleyemez, sunucunun ESKİ tutarını taşımak zorunda kalırdı — ekranda "her basışta
-     * fiyat zıplaması" (kullanıcı 20.08). Alanlar zaten herkese açık katalog bilgisi.
+     * Kampanya kapsamının üyeliği; istemci adet değişince indirimi aynı motorla (`applyBestDiscount`) tazeleyebilsin diye.
      */
     categoryId: z.string().uuid().nullable(),
     collectionIds: z.array(z.string().uuid()),
@@ -341,31 +196,8 @@ export const MeCartViewLineSchema = z.discriminatedUnion('kind', [
 export type MeCartViewLine = z.infer<typeof MeCartViewLineSchema>;
 
 /**
- * Sepet ekranının tek okuma sonucu — HER sepet ucunun cevabı.
- *
- * **Kargo satırı burada YOK ve bu bilinçli:** kargo ücreti teslimat türüne, tür de ADRESE bağlıdır
- * ve adres checkout'ta sorulur. Sepette "Teslimat: Ücretsiz" yazıp checkout'ta 6,90 € çıkarmak,
- * tutulmayan bir söz vermektir. Taşınan şey motorun GİRDİSİ (eşik + tarife + kargo grubunun
- * toplamı); ücreti hesaplayan `shippingGroupFee` iki yüzeyde de aynı motordur.
- */
-/**
- * İSTEMCİNİN MOTORU ÇALIŞTIRABİLMESİ İÇİN KAMPANYA KURALI (20.08) — `DiscountRule`in taşınabilir
- * kesiti.
- *
- * ── NEDEN GÖNDERİLİYOR ──────────────────────────────────────────────────────
- * Adet değiştiğinde toplam ANINDA doğru olmalı (kullanıcı kararı 20.08: *"her basışta fiyatlarda
- * zıplama oluyor, bu hâliyle kabul edilemez"*). İstemci indirimi kendi hesaplarsa iki yüzey
- * ayrışır — o yüzden hesaplamıyor, **aynı motoru** çağırıyor (`applyBestDiscount`,
- * `@lezzet/domain-core`). Motorun ihtiyacı kurallardır; kural gitmezse istemci sunucunun bir
- * önceki tutarını taşımak zorunda kalır ve ekran zıplar.
- *
- * ── KOD TAŞINMAZ ────────────────────────────────────────────────────────────
- * `DiscountRule.codes` BİLEREK dışarıda: kupon kodlarını istemciye göndermek, herkese geçerli kod
- * listesi vermektir. Bu yüzden havuz YALNIZ kendiliğinden inen kampanyaları taşır; kupon
- * uygulanmışsa indirimi yine sunucu söyler ve istemci onu olduğu gibi taşır.
- *
- * Kalan alanların hepsi zaten müşteriye açık: kampanyanın oranı ve eşiği vitrinde ve katalogda
- * yazılı (08.44). Burada gizli bir şey yok, motorun girdisi var.
+ * İstemcinin motoru çalıştırabilmesi için kampanya kuralı, `DiscountRule`in taşınabilir kesiti. `codes` taşınmaz, çünkü
+ * herkese geçerli kod listesi vermek olurdu; kalan alanlar vitrinde zaten açık.
  */
 export const MeCartDiscountRuleSchema = z.object({
   id: z.string().uuid(),
@@ -379,6 +211,9 @@ export const MeCartDiscountRuleSchema = z.object({
 });
 export type MeCartDiscountRule = z.infer<typeof MeCartDiscountRuleSchema>;
 
+/**
+ * Her sepet ucunun cevabı. Kargo ücreti satırı yok, çünkü ücret adrese bağlıdır; taşınan şey motorun girdisidir.
+ */
 export const MeCartViewSchema = z.object({
   lines: z.array(MeCartViewLineSchema),
   /** Kalem toplamı — kargo ve indirim HARİÇ. */
@@ -400,25 +235,11 @@ export const MeCartViewSchema = z.object({
   /** İlk sipariş mi — `firstOrderOnly` kampanyaların yüklemi. */
   isFirstOrder: z.boolean(),
   /**
-   * **SATILAMAZ** satır var mı — tükenmiş ya da satışa kapanmış. "Siparişi tamamla" bunda pasifleşir.
-   *
-   * Anlamı 10.08'de DEĞİŞMEDİ, sınırı yazıldı: teslim edilemeyen kalem (`group: 'undeliverable'`)
-   * buraya GİRMEZ ve düğmeyi kapatmaz. Müşteri gelebilecek kalemleri sipariş eder, gelemeyenler
-   * sepette işaretli bekler (kullanıcı kararı 10.08) — ikisini tek bayrağa toplamak, tek bir soğuk
-   * zincir ürünü yüzünden bütün sepeti kilitlemek olurdu.
+   * Satılamaz satır var mı; "Siparişi tamamla" bunda pasifleşir. Teslim edilemeyen kalem buraya girmez.
    */
   hasBlocked: z.boolean(),
   /**
-   * Bu adrese HİÇ gelemeyen kalemlerin toplamı — **asgari sepete SAYILMAYAN tutar** (kullanıcı
-   * kararı 10.08). `0` = öyle bir kalem yok (ya da hepsinin fiyatı çözülemedi).
-   *
-   * Neden ayrı taşınır: `subtotalCents` sepette DURAN her şeyi sayar (ekran müşterinin sepetini
-   * eksiksiz göstermeli), asgari sepet eşiği ise yalnız SİPARİŞ EDİLEBİLEN kısma bakar. Fark
-   * yazılmasaydı müşteri sipariş edemeyeceği ürünle eşiği geçmiş görünür, kasada geri düşerdi.
-   * Eşik kapıya teslimin kuralıdır; kargonun kendi eşiği ayrı yaşar (`shippingSubtotalCents`).
-   *
-   * Ekran bunu "X € şu an gönderilemeyen kalemlerde" diye YAZABİLİR ama hesaplamaz: `minBasketOk`
-   * ve `missingForMinBasketCents` zaten bu tutar düşülmüş hâlde gelir.
+   * Bu adrese gelemeyen kalemlerin toplamı, asgari sepete sayılmaz; `minBasketOk` ve `missingForMinBasketCents` bunu zaten düşmüştür.
    */
   undeliverableSubtotalCents: z.number().int(),
   /** Asgari sepet tutuyor mu (DOMAIN §6, AYARDAN gelir — ekran eşiği kendi bilmez). */
@@ -435,14 +256,7 @@ export const MeCartViewSchema = z.object({
   /** Sepetin tamamı kargo grubundaysa müşteriye "iki sipariş vereceksiniz" DENMEZ. */
   shippingOnly: z.boolean(),
   /**
-   * KARGO GRUBUNUN ÇÖZÜLMÜŞ ÜCRETİ (10.08) — tarife değil, KARAR: eşik aşıldıysa 0.
-   *
-   * `shippingTariffCents` ile `freeShippingCents` zaten taşınıyordu ama aralarındaki kararı
-   * (`resolveShippingFee`) istemci veremez: o bir İŞ KURALI ve kopyası bir gün sunucununkinden
-   * ayrışırdı — sepette "ücretsiz" yazıp kasada 7,90 € kesmek, ekranın sözünü tutmamasıdır
-   * (CLAUDE §1, `STACK §4`). Sunucu `shippingGroupFee` ile çözüp buraya koyuyor.
-   *
-   * Kargo grubu boşken 0 — ödenecek bir kargo yok.
+   * Kargo grubunun çözülmüş ücreti, eşik aşıldıysa 0; kararı sunucu `shippingGroupFee` ile verir, istemci kopyalamaz.
    */
   shippingGroupFeeCents: z.number().int(),
   /**
@@ -456,15 +270,8 @@ export const MeCartViewSchema = z.object({
 export type MeCartView = z.infer<typeof MeCartViewSchema>;
 
 /**
- * MİSAFİRİN görünüm sorusu — `POST /api/v1/cart/view` gövdesi (oturumsuz, Bearer'sız).
- *
- * NEDEN AYRI BİR UÇ: sunucu sepeti `customerId` anahtarlıdır, yani misafirin sunucuda sepeti YOKTUR
- * (web de öyle: satırları tarayıcı taşır). Ama görünümü yine SUNUCU çözmeli — fiyatı, tükendi
- * kararını ve asgari sepeti istemciye hesaplatmak, aynı sepetin misafirken bir, giriş yapınca başka
- * bir tutar göstermesi demekti.
- *
- * **Niyet gövdeden gelir, fiyat GELMEZ** — kabul edilen tek şey `{variantId, qty, stockId}`.
- * Girişli kullanıcının niyeti ise gövdeden ASLA alınmaz: onunki sunucudaki sepettir.
+ * Misafirin görünüm sorusu (`POST /api/v1/cart/view`): misafirin sunucu sepeti yoktur ama görünümü yine sunucu çözer.
+ * Gövdeden yalnız `{variantId, qty, stockId}` kabul edilir, fiyat gelmez.
  */
 export const CartViewBodySchema = z.object({
   items: z.array(MeCartItemWriteSchema).max(MAX_CART_TAKEOVER_ITEMS),

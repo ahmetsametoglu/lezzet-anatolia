@@ -11,20 +11,8 @@ import type { Discount, DiscountCode, LocalizedText } from '@lezzet/types';
 import type { CartDiscount, CartReachableDiscount, CartDiscountResult, CouponFailure, DiscountReason } from './cart-types';
 
 /**
- * Sepette indirim çözümü (09.6 müşteri tarafı) — **uygulama katmanı orkestrasyonu**. DOMAIN §5.
- *
- * Motor hazırdı, kablo yoktu: kuralları servis getirir, kararı `applyBestDiscount` verir, ikisini
- * burası birleştirir (STACK §4). **Tek-en-büyük kuralı, matrah muafiyetleri ve pay dağıtımı burada
- * TEKRARLANMAZ** — hepsi motorda yaşar.
- *
- * Ekranın dört ret hâli ("süresi dolmuş" · "geçersiz" · "40 € üzeri" · "otomatik indirim daha
- * büyük") buradan çıkar. Sebep motorun kendi yükleminden türer (`checkCouponEligibility`); ayrı
- * yazılsaydı ekranın söylediği sebeple motorun kararı bir gün ayrışırdı.
- *
- * **TERFİ (aşama 1/3)** — kaynağı `apps/web/lib/cart/discount.ts`tı; web kopyası KÖPRÜ.
- * `server-only` koruması DÜŞTÜ ve düşmesi şart: paket taşıma bilmez (Next'e ait hiçbir şey pakete
- * girmez). Kapı zaten `db`yi çağırandan alıyor — sunucu-dışı bir çağıranın elinde service-role
- * istemci zaten yok.
+ * Sepette indirim çözümü (DOMAIN §5): kuralları servis getirir, kararı `applyBestDiscount` verir, burası birleştirir.
+ * Tek-en-büyük kuralı, muafiyetler ve pay dağıtımı motordadır; ret sebebi `checkCouponEligibility`den türer.
  */
 
 export interface CartDiscountInput {
@@ -36,11 +24,8 @@ export interface CartDiscountInput {
 }
 
 /**
- * Sepetin indirimi. Kupon girilmediyse otomatik adaylar (kampanya + müşteri oranı) değerlendirilir;
- * girildiyse önce kuponun kendisi teşhis edilir, sonra havuzun tamamı yarıştırılır.
- *
- * **Kupon geçerli olsa bile kazanmayabilir** — o zaman ret değil, `outranked` döner ve sepete
- * kazanan indirim uygulanır: müşteri hem sebebi görür hem parasını kaybetmez.
+ * Sepetin indirimi: kupon yoksa otomatik adaylar, varsa önce kuponun kendisi teşhis edilir. Geçerli kupon kazanamazsa
+ * `outranked` döner ve kazanan indirim uygulanır.
  */
 export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Promise<CartDiscountResult> {
   const discounts = new DiscountService(db);
@@ -70,12 +55,7 @@ export async function resolveCartDiscount(db: Db, input: CartDiscountInput): Pro
   const rules = pool.map((row) => toRule(row, codesByDiscount.get(row.id) ?? [], usage.get(row.id), input.customerId));
   const winner = applyBestDiscount(input.lines, rules, ctx);
 
-  /*
-    ELİNİN ALTINDAKİ İNDİRİM (19.08 kullanıcı kararı) — kazanandan bağımsız hesaplanır ve KUPON
-    YOLUNDAN da geçer: kuponu reddedilen müşterinin eşiğe bir adım kalmış bir kampanyası olabilir.
-    Motor yalnız eşik sebebiyle kaçırılanı ve yalnız bugünkünden fazlasını vereni döndürüyor
-    (künyesi `findReachableDiscount`'ta); burada eklenen tek şey müşteriye görünen ad.
-  */
+  /* Elinin altındaki indirim kazanandan bağımsız hesaplanır ve kupon yolundan da geçer; eklenen tek şey müşteriye görünen ad. */
   const reach = findReachableDiscount(input.lines, rules, ctx);
   const reachable: CartReachableDiscount | null = reach
     ? {
@@ -150,11 +130,7 @@ function automatic(winner: AppliedDiscount, pool: readonly Discount[], customerP
 }
 
 /**
- * Kampanyanın MÜŞTERİYE görünen adı. İki durumda `null` döner ve yüzey sebebe düşer: kural
- * bulunamadıysa (müşterinin genel oranı — ortada kampanya yoktur) ya da operatör adı yazmadıysa.
- *
- * Boş dilleri olan bir nesne (`{tr:''}`) form artığıdır, ad değildir: hiç yazılmamış gibi sayılır —
- * yoksa yüzey boş bir tire basardı ("İndirim — ").
+ * Kampanyanın müşteriye görünen adı; kural bulunamazsa ya da ad boşsa `null` ve yüzey sebebe düşer. Boş dilli nesne form artığıdır.
  */
 function publicLabelOf(row: Discount | null | undefined): LocalizedText | null {
   const label = row?.publicLabel;
@@ -163,11 +139,7 @@ function publicLabelOf(row: Discount | null | undefined): LocalizedText | null {
 }
 
 /**
- * Kazananın SEBEBİ — motorun `kind`ından türer, ayrıca teşhis edilmez. Sebep ile karar aynı yerden
- * çıkmazsa bir gün ekran "size özel" derken sepete kampanya inmiş olur.
- *
- * Oran yalnız bütün sepete inen yüzde indirimlerde taşınır (`DiscountReason`): kategori/koleksiyon
- * kapsamlı ya da sabit tutarlı kampanyanın "yüzdesi" sepetin tamamı için doğru değildir.
+ * Kazananın sebebi motorun `kind`ından türer ki ekran ile karar ayrışmasın; oran yalnız bütün sepete inen yüzdede taşınır.
  */
 function reasonOf(winner: AppliedDiscount, pool: readonly Discount[], customerPercent: number | null): DiscountReason {
   if (winner.kind === 'customer_rate') return { kind: 'customer_rate', percent: customerPercent ?? 0 };
@@ -198,8 +170,7 @@ function toRule(
     // Kuralın tüm kapıları: girilen kod herhangi biriyle eşleşirse kupon tutar (hepsi aynı kota).
     codes: codes.map((c) => c.code),
     type: row.type,
-    // Dönüşüm KALMADI (02.9): servis cent döndürüyor, motor cent bekliyor. Burada elle
-    // `Math.round(row.value * 100)` yazılıyordu — STACK §8'in açıkça yasakladığı biçim.
+    // Servis cent döndürür, motor cent bekler (STACK §8).
     percent: row.percent,
     amountCents: row.amountCents,
     scope: row.scope,
@@ -225,13 +196,9 @@ async function customerRate(db: Db, customerId?: string | null): Promise<number 
 }
 
 /**
- * İlk sipariş mi — "yalnız ilk siparişe" kuponunun ölçütü. Misafirde **true**: hesabı olmayan
- * müşterinin geçmişi de yoktur; kuponu peşinen reddetmek yeni müşteriyi kapıda çevirmek olurdu.
- * Sipariş oluşurken ölçüt yeniden bakılır (kupon kullanımı orada yazılır).
+ * İlk sipariş mi; misafirde `true`, çünkü hesabı olmayanın geçmişi yoktur. Sipariş oluşurken ölçüt yeniden bakılır.
  */
 async function isFirstOrder(db: Db, customerId?: string | null): Promise<boolean> {
   if (!customerId) return true;
-  // Servis üzerinden (denetim A4): ham `db.from('order')` sayımı `BaseDbService.count` dururken
-  // yazılmıştı ve `{data,error}` funnel'ının dışında kalıyordu.
   return (await new OrderService(db).countForCustomer(customerId)) === 0;
 }

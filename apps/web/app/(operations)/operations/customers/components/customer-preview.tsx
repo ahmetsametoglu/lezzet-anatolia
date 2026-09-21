@@ -15,26 +15,8 @@ import { TYPE_LABEL } from '../customers-url';
 import type { ConsentView, CustomerDetail, CustomerOrderRow, CustomerRow } from '../customers-types';
 
 /**
- * Seçili müşterinin önizleme paneli (web) — tasarımdaki "Müşteri · önizleme".
- *
- * **Yerleşim KART ritmindedir**, kenardan kenara şerit değil: panelin zemini `ops-subtle`, her blok
- * beyaz bir kart, aralarında boşluk var. Bir tur şerit olarak yazılmıştı ve panel tek parça bir
- * listeye dönüşüyordu — bloklar arası nefes tasarımın kendi kararı (ürün önizlemesinin deseni).
- *
- * **PANEL OKUR, YAZMAZ** (kullanıcı kararı 30.07 + tasarım): kapıda ödeme ve indirim oranı burada
- * yalnız BİLGİ — anahtar ve yüzde kutusu `Düzenle` formuna taşındı. Bir tur panele gömülmüşlerdi ve
- * iki sorunu vardı: (1) tasarımda o iki kutu salt görünüm, (2) diyalogsuz yazma "kaydettim mi?"
- * sorusunu doğuruyordu — panelde onaylanacak bir form yok, tıklama anında yazıyordu. Panelin tek
- * yazma yolu artık iki düğme: `Düzenle` ve `Vade / limit`.
- *
- * Türetilmiş değerler HİÇ düzenlenmez: ciro, açık bakiye, puan bakiyesi, gecikme ve karne elle
- * düzeltilemez — kaynağı düzeltilir (tasarım §6).
- *
- * **Pazarlama izni yalnız görüntülenir.** İzin müşterinin açık eylemiyle doğar; admin elle "verildi"
- * yapamaz, aksi GDPR kanıtını bozar (tasarım §6).
- *
- * Sayı kutusu ORTAK (`Metric`): bir tur bu dosyada `Kpi`, mobilde `MobileKpi`, diyalogda `Fact`
- * olarak üç kez yazılmıştı ve üçü aynı sayıyı üç farklı boyda gösteriyordu (CLAUDE.md §1).
+ * Seçili müşterinin önizleme paneli: kart ritminde, panel okur ve yazmaz; yazma yolu `Düzenle` ile `Vade / limit` düğmeleri.
+ * Türetilmiş değerler ve pazarlama izni yalnız görüntülenir (tasarım §6).
  */
 interface CustomerPreviewProps {
   row: CustomerRow | null;
@@ -44,8 +26,7 @@ interface CustomerPreviewProps {
   detailError: string | null;
   saving: boolean;
   /**
-   * Son yazma hatası — GÖSTERİLMEK ZORUNDA: sessizce düşen bir kaydetme, operatörün yazdığını
-   * sandığı bir limittir. Diyalog kapandıktan sonra düşen bir hatanın tek durağı bu şerit.
+   * Son yazma hatası; gösterilmek zorunda, çünkü sessizce düşen kayıt operatörün yazdığını sandığı bir limittir.
    */
   saveError: string | null;
   onOpenOrder: (orderId: string) => void;
@@ -53,7 +34,7 @@ interface CustomerPreviewProps {
   onEdit: () => void;
   /** B2B kontrol kartı diyaloğu — yalnız şirket müşterisinde gösterilir. */
   onOpenB2b: () => void;
-  /** GDPR silme onayını açar (09.10). Zaten silinmiş kayıtta düğme hiç çizilmez. */
+  /** GDPR silme onayını açar; silinmiş kayıtta düğme çizilmez. */
   onGdprDelete: () => void;
 }
 
@@ -79,9 +60,7 @@ export function CustomerPreview({
   }
 
   const status = statusOf(row);
-  // OKUMA DÜŞTÜ: iskelet göstermek "birazdan gelecek" sözü verirdi, gelmeyecek. Boş hâller ise
-  // ("Henüz siparişi yok") düpedüz yanlış olurdu. Kimlik bloğu satırdan geldiği için duruyor —
-  // operatör hangi müşteride hata aldığını görmeli.
+  // Okuma düştüyse iskelet de boş hâl de gösterilmez; kimlik bloğu satırdan geldiği için durur.
   const okumaDustu = !loading && !detail && detailError !== null;
   // Gecikme kutunun RENGİNİ belirler: olive "yolunda", kırmızı "para bekliyor". Zeminsiz bir vade
   // kutusu, tasarımın en çok anlam yüklediği yeri sessiz bırakırdı.
@@ -127,16 +106,13 @@ export function CustomerPreview({
                   tıpatıp aynı görünürdü (ikisi de adsız) ve operatör silinmişi düzenlemeye kalkardı. */}
               {row.anonymizedAt ? <Badge tone="red">{GDPR_NOTES.anonymized}</Badge> : null}
             </div>
-            {/* Sohbet kanalları (15.32) — hangi kanallardan yazdı, en son hangisinden; basınca sohbet
-                yüzen pencerede açılır. Silinmiş kayıtta yok: kişisel alanları boşaltılmış birine yazılmaz. */}
+            {/* Sohbet kanalları; silinmiş kayıtta yok, kişisel alanları boşaltılmış birine yazılmaz. */}
             {row.anonymizedAt ? null : <CustomerChannels customerId={row.id} className="mt-1.5" />}
           </div>
         </div>
 
         {okumaDustu ? (
-          /* OKUMA DÜŞTÜ — iskelet DE boş hâl DE gösterilmez. İskelet "birazdan gelecek" sözü verir
-             (gelmeyecek); boş hâller ise düpedüz yalan söyler ("Henüz siparişi yok" — oysa 38 siparişi
-             olabilir). Üçüncü ve doğru cevap: ne olduğunu söyle ve yeniden seçilebileceğini belli et. */
+          /* Okuma düştü: iskelet sözü tutulmaz, boş hâl yalan söyler; ne olduğunu söyle ve yeniden seçilebildiğini belli et. */
           <div className="flex flex-col gap-1.5 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3.5 py-3" role="alert">
             <span className="font-ops-display text-ops-xs font-semibold text-ops-red">Müşteri bilgisi okunamadı</span>
             <span className="font-ops-body text-ops-sm leading-[1.5] text-ops-red">{detailError}</span>
@@ -147,20 +123,9 @@ export function CustomerPreview({
           </div>
         ) : (
           <>
-            {/* ── Üç ölçü ── Tasarımda TEK SIRA üç kutu: ciro · sipariş · ort. ödeme.
-            **"Gecikme" burada YOK** (kullanıcı kararı 30.07): dördüncü kutu olarak eklenmişti ve iki
-            gerekçeyle düştü. (1) Vade durumu bir alttaki vade/limit kutusunda zaten okunuyor — orada
-            hem rozet hem açık bakiye hem kutunun rengi söylüyor; iki yerde söylenen bir uyarı,
-            operatörün ikisini de saymasına yol açar. (2) Gecikme sayısı KARNE ölçüsüdür ve karnenin
-            yaşadığı yer vade/limit diyaloğu. Limit yazılırken görünmesi gereken sayı, panelde bir
-            vitrin sayısı olmak zorunda değil.
-            Kutular bir SARMAL KARTIN içinde değil: `Metric`in kendi kenarı ve beyaz zemini var,
-            sarılınca kart-içinde-kart oluyordu. */}
+            {/* Üç ölçü tek sırada: ciro, sipariş ve ortalama ödeme; gecikme burada yok, vade kutusu zaten söylüyor. */}
             <div className="grid grid-cols-3 gap-2.5">
-              {/* Beklerken İSKELET, `…` değil: üç noktanın ölçüsü gelen sayıdan farklı ve kutular içerik
-              gelince genişliyordu. Daha kötüsü `Ort. ödeme`de `—` yazmak olurdu — o işaretin bu
-              ekranda GERÇEK bir anlamı var ("tahsilat hareketi yok, ölçülemedi") ve beklemeyi aynı
-              işaretle göstermek iki ayrı durumu tek görüntüye indirmek olurdu (CLAUDE.md §1). */}
+              {/* Beklerken iskelet, çünkü `—` bu ekranda "ölçülemedi" demektir ve beklemeyle karışmamalı. */}
               {loading || !detail ? (
                 <>
                   <SkeletonMetric />
@@ -174,10 +139,8 @@ export function CustomerPreview({
                   <Metric
                     label="Ort. ödeme"
                     value={avgLabel(detail.avgPaymentDays)}
-                    // Pencere YALNIZ bu hücrede geçerli: ciro/sipariş tüm zamanı okur. Başlığa asılsa üçü de
-                    // "son 50 sipariş"ten sanılırdı. Gecikme geçmişi varsa ortalama da uyarı rengine döner:
-                    // "makul" görünen bir ortalamanın içinde bir kez 45 günlük gecikme saklı olabilir — ve
-                    // gecikme kutusu kaldırıldığı için o bilgiyi taşıyan tek işaret bu renk ve ipucu.
+                    // Pencere yalnız bu hücrede geçerli; gecikme geçmişi varsa ortalama uyarı rengine döner, çünkü ortalama
+                    // tek bir uzun gecikmeyi saklayabilir.
                     hint={
                       detail.avgPaymentDays === null
                         ? 'Tahsilat hareketi yok — ölçülemiyor (sıfır değil, bilinmiyor)'
@@ -192,9 +155,7 @@ export function CustomerPreview({
               )}
             </div>
 
-            {/* ── B2B onay ── YALNIZ şirket müşterisinde: bireysel müşteride "onay" diye bir soru yok ve
-            boş bir kutu "bir şey eksik mi" düşündürür. Kutu eski `/operations/b2b-approvals` sayfasının
-            yerini alıyor (kullanıcı kararı 30.07): onay ayrı bir varlık değil, bu müşterinin bir hâli. */}
+            {/* B2B onay kutusu yalnız şirket müşterisinde; onay bu müşterinin bir hâlidir. */}
             {row.type === 'company' ? (
               <div
                 className={`flex flex-wrap items-center gap-2.5 rounded-ops-card border px-3.5 py-3 ${
@@ -221,10 +182,7 @@ export function CustomerPreview({
                   gecikme ? 'border-ops-red-line bg-ops-red-bg' : 'border-ops-olive-line bg-ops-olive-bg'
                 }`}
               >
-                {/* Başlık BÖLÜM ETİKETİ DEĞİL, kutunun adı: tasarımda cümle düzeninde, koyu ve display
-                yazısıyla duruyor. Büyük harfe çevrilip küçültülmüştü ve o kademe "Son siparişler" gibi
-                bölüm etiketlerine ait — kutu başlığıyla bölüm etiketi aynı görünürse ikisinin de ağırlığı
-                kayboluyor. Durum çipi ÇERÇEVELİ: renkli kutunun içinde dolgulu çip zemininde kayboluyor. */}
+                {/* Başlık kutunun adıdır, bölüm etiketi değil; durum çipi çerçevelidir, dolgulu çip renkli kutuda kaybolur. */}
                 <div className="flex items-center gap-2">
                   <span className="mr-auto font-ops-display text-ops-xs font-semibold text-ops-ink">Vade / limit</span>
                   <Badge tone={gecikme ? 'red' : detail.creditEnabled ? 'olive' : 'neutral'} outline>
@@ -349,10 +307,7 @@ export function CustomerPreview({
                       </span>
                       <span className="ml-auto flex flex-none items-center gap-1.5">
                         {a.label ? <Badge tone="neutral">{a.label}</Badge> : null}
-                        {/* İki rol İKİ rozet (08.09): zeytin "malı nereye götürüyoruz", mavi "fatura
-                            nereye kesiliyor". Aynı satır ikisini birden taşıyabilir; B2B onay kartı
-                            bu adresi ölçüyor, operatör hangisi olduğunu burada görmeli. Rolün adı
-                            işini söyler (kullanıcı kararı 08.09): "varsayılan" değil "teslimat". */}
+                        {/* İki rol iki rozet: zeytin teslimat, mavi fatura adresi; aynı satır ikisini birden taşıyabilir. */}
                         {a.isDefault ? <Badge tone="olive">teslimat</Badge> : null}
                         {a.isBilling ? <Badge tone="blue">fatura</Badge> : null}
                       </span>
@@ -445,16 +400,7 @@ export function CustomerPreview({
                   </>
                 ) : (
                   <>
-                    {/* Metin "henüz ölçülmüyor"dan "kaynak bilinmiyor"a döndü (07.08): 13.2 kapandı
-                    ve besleyen gerçekten yazıldı — `rememberAcquisition` checkout'ta çağrılıyor
-                    (`lib/order/checkout-draft.ts:335`), UTM oturum künyesinden ilk siparişte
-                    müşteriye geçiyor. Doğrulandı, bildirime güvenilmedi.
-
-                    Ama "doğrudan gelmiş" de YAZILMAZ: boş alan iki ayrı gerçeği taşıyor — künyesiz
-                    ziyaretçi ya da kaybolmuş künye (oturum tuzu gün dönümünde değişiyor, 23:50'de
-                    tıklayıp 00:10'da sipariş veren müşterinin kaynağı boş kalır). İkisini ayırt
-                    edemiyoruz; edebiliyormuş gibi yazmak ölçemediğimizi ölçmüş göstermek olurdu
-                    (CLAUDE §1). */}
+                    {/* Boş edinim kaynağı "doğrudan geldi" yazılmaz: künyesiz ziyaretçi ile kaybolmuş künye ayırt edilemez. */}
                     <InlineMetric label="Edinim" value={detail.acquisitionSource ?? 'kaynak bilinmiyor'} />
                     {detail.referredByName ? <InlineMetric label="Getiren" value={detail.referredByName} /> : null}
                     <div className="flex flex-col gap-px">
@@ -465,10 +411,8 @@ export function CustomerPreview({
                         <span className="flex items-center gap-1.5">
                           <span className="font-ops-mono text-ops-sm font-medium text-ops-ink">{detail.ticketCount}</span>
                           {detail.openTicketCount > 0 ? <Badge tone="amber">{detail.openTicketCount} açık</Badge> : null}
-                          {/* BEKLEYEN(09.9): talepler ekranı VAR (16.3) ama URL'i müşteri süzgeci
-                        taşımıyor (`tickets-url.ts`: yalnız f+t) — "bu müşterinin talepleri" görünümü
-                        kurulamıyor. Süzgeç doğunca sayı köprüye döner; o güne dek tıklanabilir
-                        yapılmaz — genel kuyruğa açılan bir bağ, yanlış vaat olurdu. */}
+                          {/* BEKLEYEN(09.9): talepler URL'i müşteri süzgeci taşımıyor; o güne dek sayı tıklanabilir yapılmaz,
+                        genel kuyruğa açılan bağ yanlış vaat olurdu. */}
                         </span>
                       )}
                     </div>
@@ -480,7 +424,7 @@ export function CustomerPreview({
         )}
       </div>
 
-      {/* ── Aksiyon şeridi ── Tasarımda dört düğme; ikisi 09.10'a ait. */}
+      {/* ── Aksiyon şeridi ── */}
       <div className="sticky bottom-0 mt-auto flex flex-wrap items-center gap-2 border-t border-ops-line bg-ops-subtle px-5 py-3">
         <Button variant="dark" size="sm" onClick={onEdit} disabled={saving || !detail}>
           Düzenle
@@ -496,9 +440,7 @@ export function CustomerPreview({
             GDPR sil
           </Button>
         )}
-        {/* Birleştir tasarımda BU ŞERİTTE ama arkası yok: siparişleri/puanları taşıyan bir RPC
-            gerekiyor ve o yazılmadı (talep açıldı). Çalışmayan bir düğme "basınca bir şey olur"
-            sözü vermek olurdu, o yüzden hiç çizilmiyor. BEKLEYEN(09.10) */}
+        {/* Birleştir düğmesi arkası olmadığı için çizilmiyor. BEKLEYEN(09.10) */}
         {saveError ? (
           <span className="font-ops-body text-ops-xs font-semibold text-ops-red" role="alert">
             {saveError}
@@ -516,12 +458,7 @@ function avgLabel(days: number | null): string {
 }
 
 /**
- * Bölüm — etiket + içerik, SARMAL KART YOK.
- *
- * Bir tur her bölüm beyaz bir kartın içine alınmıştı ve içindeki satırlar da beyaz kart olduğu için
- * kart-içinde-kart çıkıyordu: iki iç içe çerçeve, ikisi de aynı renkte, hiçbiri bir şey ayırmıyor.
- * Tasarımda etiket panelin zemininde yüzer, KART OLAN yalnız satırların kendisi — böylece "kart" işareti
- * tek anlama gelir: tıklanabilir/ayrı bir kayıt.
+ * Bölüm: etiket panel zemininde yüzer, yalnız satırlar karttır ki "kart" tek anlama gelsin.
  */
 function Section({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
   return (
@@ -535,14 +472,7 @@ function Section({ title, aside, children }: { title: string; aside?: ReactNode;
   );
 }
 
-/**
- * Salt görünüm ayar kutusu — tasarımın "etiket solda, değer sağda" tek satırlık kutusu.
- *
- * Gerekçe `title`'da, kutunun içinde değil: açıklama satırı yazıldığında iki kutu farklı yükseklikte
- * duruyordu ve panel bir metin duvarına dönüyordu. Bilgi kaybolmuyor, ekranı işgal etmiyor.
- */
-/** `Readout` beklerken — aynı kabuk, içi çubuk. Kabuğun ortak olması şart: ayrı bir kutu yükleme
- *  bitince görünüp kaybolan bir çerçeve gibi sıçrar. */
+/** `Readout` beklerken; kabuk ortak, yoksa yükleme bitince çerçeve sıçrardı. */
 function SkeletonCardRow() {
   return (
     <div
@@ -555,6 +485,9 @@ function SkeletonCardRow() {
   );
 }
 
+/**
+ * Salt görünüm ayar kutusu: etiket solda, değer sağda; gerekçe `title`da, yoksa kutular farklı yüksekliğe çıkardı.
+ */
 function Readout({ label, value, hint }: { label: string; value: ReactNode; hint: string }) {
   return (
     <div
@@ -568,10 +501,7 @@ function Readout({ label, value, hint }: { label: string; value: ReactNode; hint
 }
 
 /**
- * Bir iznin ÇİPİ. ÜÇ hâl var ve üçü ayrı: verildi, reddedildi, hiç sorulmadı. Son ikisini
- * birleştirmek GDPR kanıtını bozar — "reddetti" bir beyandır, "sorulmadı" bir boşluktur.
- *
- * Tarih ve kaynak `title`'da: kanıt kaybolmaz ama çip tek satırda kalır (tasarımın istediği hâl).
+ * İznin çipi: verildi, reddedildi, hiç sorulmadı; son ikisini birleştirmek GDPR kanıtını bozar. Tarih ve kaynak `title`da.
  */
 function ConsentChip({ channel, consent }: { channel: string; consent: ConsentView | null }) {
   const durum = consent === null ? 'sorulmadı' : consent.granted ? 'açık' : 'kapalı';
@@ -586,16 +516,8 @@ function ConsentChip({ channel, consent }: { channel: string; consent: ConsentVi
 }
 
 /**
- * Sipariş kartı — İKİ NİYET, iki hedef (kullanıcı kararı 30.07):
- *  · **kart gövdesi** → özet diyaloğu ("şuna bir bakayım", ekran kaybolmadan)
- *  · **sipariş kodu** → detay sayfası ("bunun üzerinde çalışacağım")
- *
- * Kod, tıklanabilir kartın İÇİNDE ayrı bir bağ. `stopPropagation` şart: olmasa tıklama yukarı kabarır
- * ve kod hem sayfaya gider hem diyaloğu açardı. Kart `<button>` değil `<div role="button">` çünkü
- * içinde bir bağ var ve HTML bir düğmenin içine bağ koymayı yasaklıyor.
- *
- * Satır TEK sıra (tasarım): kod · tarih · tutar · ödeme rozeti. Sipariş durumu `title`'da — dört
- * bilgiyi iki satıra bölmek listeyi taramayı zorlaştırıyordu.
+ * Sipariş kartı: gövde özet diyaloğunu, sipariş kodu detay sayfasını açar; kod `stopPropagation` ister ve kart
+ * içinde bağ taşıdığı için `<div role="button">`dur.
  */
 function OrderCard({ order, onOpen }: { order: CustomerOrderRow; onOpen: () => void }) {
   return (

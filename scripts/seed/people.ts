@@ -22,13 +22,8 @@ export async function seedDraftCustomers(db: Db): Promise<void> {
   console.log('▸ TASLAK MÜŞTERİ seed');
   let created = 0;
   for (const c of DRAFT_CUSTOMERS) {
-    // Kimlik ÇÖZÜMÜ (bağlan / oluştur / çakışma) motorun işidir — servis yalnız aday getirir. Seed'in
-    // ona ihtiyacı yok: telefonlar zaten E.164 yazılı ve tek beklenti "varsa dokunma, yoksa taslak aç"
-    // (idempotent). Bu yüzden doğrudan arama + ekleme; iş kuralı burada hesaplanmıyor (STACK §4).
-    //
-    // Varlık ölçütü KANIT DEFTERİ (04.10): bu kayıtlar WhatsApp'tan gelmiş sayılıyor, yani kimlikleri
-    // `customer_phone` satırında yaşıyor. `user_profiles.phone` artık tekil değil — oradan aramak
-    // "zaten var mı" sorusuna güvenilir cevap vermezdi.
+    // Varlık ölçütü kanıt defteridir (`customer_phone`), çünkü `user_profiles.phone` tekil değil; kimlik çözümü motorun işi,
+    // seed yalnız "varsa dokunma, yoksa taslak aç" der.
     if (await phones.findActive(c.phone)) {
       console.log(`  · ${c.name} (zaten var)`);
       continue;
@@ -43,35 +38,11 @@ export async function seedDraftCustomers(db: Db): Promise<void> {
   console.log(`✓ taslak müşteri: ${created} yeni / ${DRAFT_CUSTOMERS.length} tanım`);
 }
 
-// ── Müşteri kartları + personel (04) ─────────────────────────────────────────────────────────────
-//
-// **B2B KAYITLARININ KİMLİĞİ GERÇEK** (kullanıcı isteği 28.08). Şirket adı, SIRET, faaliyet kodu,
-// kuruluş yılı ve KDV numarası **gerçek, kamuya açık kayıtlardan** geliyor: Fransa'da devletin
-// anahtarsız işletme kaydı (`recherche-entreprises.api.gouv.fr` — `societe.com`un da kaynağı),
-// Almanya'da şirketin kendi künye (Impressum) sayfası. Her KDV numarası VIES'te tek tek
-// DOĞRULANDI, uydurulmadı.
-//
-// Sebebi test sağlığı ve ölçüldü: onay kartı artık VIES'i kart açılışında soruyor ve **uydurma
-// numaralar ilk açılışta "Geçersiz" damgalanıyordu** — üç müşterinin üçü de bir turda kırmızıya
-// döndü. Yani seed'in ürettiği hâl dış dünyanın söylediğiyle çelişiyordu ve kartın NORMAL hâli
-// ("Geçerli", "Aktif kayıt") yerelde hiç görülemiyordu. Aynı sebeple SIRET'ler de gerçek: kart
-// künyeyi resmî kayıttan TAZELİYOR, uydurma SIRET'te o yol "kayıt bulunamadı"ya düşüyordu.
-//
-// **KİMLİK GERÇEK, İLETİŞİM KANALI ASLA.** E-posta ve telefon uydurma kalır (`@example.fr`,
-// `@example.de`) — gerçek işletmenin adresine seed'in ya da bir testin mail göndermesi, kimsenin
-// istemediği bir dış etkidir. Ayrım net: kimlik verisi kamuya açık bir kayıttır ve DOĞRULANIR;
-// iletişim kanalı bir kapıdır ve çalınırsa gerçek birine varır.
-//
-// **Olumsuz anlatı gerçek şirkete BAĞLANMAZ.** "Kapıda ödemesi kapatıldı — iki sipariş teslim
-// alınmadı" gibi notlar uydurma BİREYLERDE durur (`b2cKapaliKapida`), gerçek işletmelerde değil.
-// Ticari koşullar (vade, limit, indirim) uydurmadır ve nötrdür; itibarla ilgili hiçbir iddia
-// gerçek bir ada iliştirilmez.
-// Ticari alanlar (vade, limit, kapıda ödeme, KDV no, indirim) checkout'un ödeme seçeneklerini
-// belirler — hepsi aynı satırdadır (user_profiles). Kanal SAKLANMAZ: `companyInfo` varlığından
-// türetilir, o yüzden B2B kartlarında künye dolu, B2C'de null.
-//
-// ADMIN SEED'LENMEZ: 0002 trigger'ı "hiç admin yoksa ilk giren admin olur" der; buraya admin rolü
-// koymak o bootstrap'ı sessizce kapatırdı. Depo/kurye/muhasebe rolleri bootstrap'ı engellemez.
+// ── Müşteri kartları + personel ──────────────────────────────────────────────────────────────────
+// B2B kimliği (ad, SIRET, KDV no) gerçek kamu kayıtlarından ve VIES'te doğrulandı, çünkü kart bunları dış dünyaya sorar;
+// iletişim kanalı uydurmadır (`@example.*`) ki gerçek işletmeye mail gitmesin.
+
+// Olumsuz anlatı gerçek şirkete bağlanmaz. Admin seed'lenmez, çünkü `0002` "hiç admin yoksa ilk giren admin" açılışını kapatırdı.
 
 interface SeedKisi {
   key: string;
@@ -80,9 +51,7 @@ interface SeedKisi {
   phone: string;
   roles: ('customer' | 'admin' | 'warehouse' | 'courier' | 'accounting')[];
   /**
-   * Depo kapsamı (DOMAIN §17) — rolün ikinci ekseni: ne yapar × NEREDE yapar. Depocu ve kurye
-   * kapsamsız OLAMAZ (DB kısıtı); admin ve muhasebe depo-üstüdür, kapsamı hiç okunmaz.
-   * Değer `Depolar` anahtarıdır; gerçek kimlik seed sırasında çözülür.
+   * Depo kapsamı (DOMAIN §17); depocu ve kurye kapsamsız olamaz. Değer `Depolar` anahtarıdır.
    */
   depolar?: (keyof Depolar)[];
   type?: 'individual' | 'company';
@@ -95,7 +64,7 @@ interface SeedKisi {
   vatNumberCheckedAt?: string;
   b2bApproved?: boolean;
   creditEnabled?: boolean;
-  /** Vade tavanı — CENT (02.9 profil dilimi). 250000 = 2.500,00 €. */
+  /** Vade tavanı, cent (250000 = 2 500 €). */
   creditLimitCents?: number;
   paymentTermDays?: number;
   discountPercent?: number;
@@ -159,21 +128,11 @@ const KISILER: SeedKisi[] = [
     // uç bulunmuyor) — künye elle giriliyor ve `isActive` bilerek boş: kartın "Sinyal yok (DE)"
     // hâli buradan doğuyor. Kaynak şirketin kendi künye (Impressum) sayfası, yani kamuya açık.
     companyInfo: { legalName: 'Vihado GmbH & Co. KG', foundedYear: 2019, isActive: true },
-    // ALMAN kaydında gerçek numara ZORUNLU: ters yükümlülüğü (%0 KDV) açan tek yol bu bayrak ve o
-    // dal yalnız DE + b2b + geçerli numarada koşuyor — uydurma numarayla checkout'un reverse charge
-    // dalı yerelde hiç denenemezdi.
-    //
-    // Kaynak şirketin KENDİ künyesi (28.08): `Vihado GmbH & Co. KG · Am Güterbahnhof 1, 77694 Kehl ·
-    // DE315300442 · HRA 705424, AG Freiburg`. Kehl'de gerçek bir gıda işletmesi olması bilinçli —
-    // seed'in sınır ötesi hikâyesi (Kehl deposu, DE rotası, reverse charge) oraya oturuyor.
-    // ⚠ VIES'te DOĞRULANAMADI ve sebebi bizde değil: **Almanya'nın düğümü o gün kapalıydı**
-    // (`MS_UNAVAILABLE`, art arda yedi denemede de). Yani numara kaynağından doğrulandı ama
-    // servisten teyit edilmedi; ilk kart açılışında VIES ayaktaysa kendiliğinden damgalanacak.
-    // Tekrar denemek için: curl -s "https://ec.europa.eu/taxation_customs/vies/rest-api/ms/DE/vat/315300442"
+    // Alman kaydında gerçek numara zorunlu, çünkü ters yükümlülük (%0 KDV) dalı yalnız geçerli numarada koşar; kaynak şirketin
+    // künyesidir (Vihado, Kehl) ve VIES'in DE düğümü kapalıyken doğrulanamadığı için ilk kart açılışında damgalanır.
     vatNumber: 'DE315300442',
     vatNumberValid: true,
-    // BAYAT doğrulama kovası (27.08): geçen yıl doğrulanmış numara. Kart "bayat" der ve sararır —
-    // ters yükümlülüğü açan bayrağın yaşlanabildiği tek yerde bu hâl görülebilsin.
+    // Bayat doğrulama: geçen yıl doğrulanmış numara, kart "bayat" der.
     vatNumberCheckedAt: an(-400),
     b2bApproved: true,
     creditEnabled: true,
@@ -215,69 +174,20 @@ const KISILER: SeedKisi[] = [
     preferredLanguage: 'de',
     codAllowed: true,
   },
-  // — YÖNETİCİ: operasyonun tek admin'i ve seed'in AKTÖRÜ (sipariş geçişleri, kapatılan hata
-  //   kaydı). 21.32'de bunun yanında bir `dev-admin@lezzet.local` satırı daha vardı — webin auth
-  //   bypass'ının gerçek profiliydi ve ondan AYRI durmak zorundaydı, çünkü `.local` uzantılı adres
-  //   `generateLink`ten geçmiyordu (yani o hesap hiç giriş yapamıyordu, zaten yapmasına da gerek
-  //   yoktu: bypass auth'u atlıyordu). Bypass 19.08'de söküldü (`apps/web/lib/guard.ts` künyesi),
-  //   o satır da onunla birlikte gitti. Geriye giriş YAPABİLEN tek admin kaldı — hem web hem mobil
-  //   hızlı-giriş kapılarının yöneticisi bu.
+  // Yönetici: operasyonun tek admin'i ve seed'in aktörü; web ve mobil hızlı girişin yöneticisi.
   { key: 'yonetici', name: 'Selin Kaya', email: 'yonetim@lezzetanatolie.com', phone: '+33600000104', roles: ['admin'], preferredLanguage: 'tr' },
-  // — Personel: operasyon rolleri. Sipariş geçişlerinin AKTÖRÜ ve kuryesi bunlar.
-  // Depocu TEK depoya bağlı: ekranında depo seçici görmez, kendi deposunun kuyruğunu görür.
-  // **Depocu TEK kapsamlı** (düzeltme 22.08, cihazda ölçüldü): 19.25 bir gün depocuya çift kapsam
-  // vermişti (str+colmar) ve mobil depo bölümü ÇOK kapsamlı depocuda kapanıyor — depo seçim listesi
-  // uçtan henüz gelmiyor, ekran bunu dürüstçe söylüyor ama bölüm fiilen kilitli kalıyordu. Günlük
-  // hâl zaten tek depodur (v2: "DEPO · STRASBOURG (SABİT)"). Çok kapsamlı DEPO ROLÜ hâli
-  // kaybolmadı: `muhasebe` (accounting+warehouse, str+kehl) o ekran hâlini taşıyor.
-  //
-  // **Üçüncü deponun depocusu 01.09'da Colmar'dan Bordeaux'ya taşındı** (depo da taşındı —
-  // `warehouse.ts` baş künyesi). Personelsiz bir depo, hazırlık ekranında kalıcı bir "kurulum
-  // eksik" uyarısıdır; o uyarının hâli başka yerde deneniyor, burada gürültü olurdu.
+  // Personel operasyon rolleri, sipariş geçişlerinin aktörü. Depocu tek kapsamlıdır, çünkü mobil depo bölümü çok kapsamlı
+  // depocuda kilitlenir; çok kapsamlı hâl `muhasebe` hesabında denenir.
   { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolie.com', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
   { key: 'depocuBordeaux', name: 'Claire Muller', email: 'depo.bordeaux@lezzetanatolie.com', phone: '+33600000105', roles: ['warehouse'], depolar: ['bdx'], preferredLanguage: 'fr' },
-  // Kapsama ARAÇ da girdi (26.08 · 21.119): yerinde satışın depo çözümü kuryenin kapsamındaki tek
-  // araçtır (01.09'dan beri açık beyanla — `?place=van`); araçsız kuryede satış ekranı hiç açılamaz
-  // (ölçüldü: {str, colmar} kapsamı `400 warehouse_required` veriyordu).
-  //
-  // **Kapsam 01.09'da TEK TESİSE indi ({str, van}) ve bu bir düzeltme.** Kurye rotaları kapsamla
-  // süzülür (11.7 · `startCourierDay` → `warehouseScope`): kapsamda olmayan deponun hattı ekranda
-  // hiç görünmez. Eski kapsam {str, colmar, van} idi ve iki yönden de yanlıştı — Colmar'ın hattı
-  // görünüyordu ama Doğu Hattı (o zaman KEHL'in) GÖRÜNMÜYORDU; oysa Doğu, rota SEÇİMİNİ (K1)
-  // sınamak için Batı ile aynı günlere konmuştu. Yani salı günü tek aday çıkıyor, `route_required`
-  // dalı hiç koşmuyordu. Kullanıcı kararıyla dört hattın dördü de STR'ye bağlanınca (`delivery.ts`)
-  // sorun kaynağında bitti: tek tesis kapsamı dört hattı da görüyor ve salı+cuma iki aday veriyor.
-  //
-  // ── ARAÇ DEPOSU KAPSAMDAN ÇIKTI (21.258 · 06.09) ──────────────────────────
-  // Kapsam `{str, van}` idi. 21.249 aracı SEFERDEN çözmeye geçince (`vehicleWarehouseOf`) dizideki
-  // `van` satırının işi kalmadı — ama zararı sürüyordu: cihazdaki depo seçicisi onu bir seçenek
-  // gibi listeliyor ve 01.09'da düzeltilen arızanın (`?place=van`) zemini de buydu. Kullanıcının
-  // *"bir kişi hem depoya hem araca mı atanır"* sorusunun cevabı ancak bu satır kalkınca "hayır".
-  //
-  // Ölçüldü (06.09) — hiçbir yol kapsamdaki araç deposuna bakmıyor: `listCourierVehicles` aracı
-  // `vehicle.warehouse_id` üstünden süzüyor ve o alan aracın EVİ olan TESİSİ gösteriyor (STR),
-  // araç deposunu değil ("aidiyet değil adres"); yerinde satış kapısı (`salePlaceGuard`) araç
-  // deposunu `vehicleWarehouseOf` ile SEFERDEN alıyor ve kapsama hiç sormuyor; `/van-stock`
-  // `courierVanContext`ten okuyor. Kurye kapsamsız kalmıyor: `str` duruyor (DB kısıtı sağlanıyor).
+  // Kurye kapsamı tek tesis ({str}): kurye rotaları kapsamla süzülür ve dört hattın dördü de STR'ye bağlı. Araç deposu
+  // kapsamda değil, çünkü yerinde satış aracı seferden çözer (`vehicleWarehouseOf`).
   { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolie.com', phone: '+33600000102', roles: ['courier'], depolar: ['str'], preferredLanguage: 'fr' },
-  // Çoklu operasyon rolü olağandır (DOMAIN §2): depo + muhasebe aynı kişide olabilir.
-  // Kapsamı İKİ depo: ekranda kapsamıyla sınırlı depo seçici görür — sistem onun yerine varsayılan
-  // seçmez (C2). Tek depolu bir seed'de bu ekran hiç denenemezdi.
+  // Çoklu operasyon rolü ve iki depo kapsamı: depo seçicinin kapsamla sınırlı hâli burada denenir.
   { key: 'muhasebe', name: 'Ayşe Demir', email: 'muhasebe@lezzetanatolie.com', phone: '+33600000103', roles: ['accounting', 'warehouse'], depolar: ['str', 'kehl'], preferredLanguage: 'tr' },
-  // — YALNIZ İKİNCİ DEPOYU gören personel. Depo kapsamı bir yetki sınırıdır ve o sınır ancak
-  //   kapsamı DAR birisi varsa denenebilir: herkes ana depoyu (ya da ikisini birden) görüyorsa,
-  //   kapsamı hiç uygulamayan bir sorgu da doğru cevap verir. Kehl'e ait kuyruğu, stoğu ve kabul
-  //   bekleyen sevkiyatı bu kişi görmeli; Strasbourg'unkileri GÖRMEMELİ.
+  // Yalnız ikinci depoyu gören personel, çünkü kapsam sınırı ancak kapsamı dar biri varsa denenebilir.
   { key: 'depocuKehl', name: 'Jonas Weber', email: 'depo.kehl@lezzetanatolie.com', phone: '+4978519901', roles: ['warehouse'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
-  // — DÖRT BÖLÜMÜ DE GÖREN HESAP (kullanıcı isteği 30.08). Geliştirme ve tasarım denetimi içindir:
-  //   sekme çubuğunun DÖRT sekmeli hâli, bölümler arası geçiş ve "hepsini gören kullanıcı" ancak
-  //   böyle bir kişi varsa denenebilir — tek rollü hesaplarla çubuk hiç dolu görünmez (tek bölümlü
-  //   kullanıcıda çubuk zaten çizilmez). Gerçek işletmede olağandışıdır ama YASAK da değildir
-  //   (DOMAIN §2: çoklu operasyon rolü olağandır); burada bilinçli olarak abartılmış hâli duruyor.
-  //   Kapsamı kuryeninkiyle aynı. ~~"araç dahil: araçsız kapsamda yerinde satış ekranı
-  //   açılamıyor"~~ — bu gerekçe 21.249'la DÜŞTÜ ve satır 21.258'de kalktı: yerinde satış kapısı
-  //   araç deposunu artık SEFERDEN çözüyor (`salePlaceGuard` → `vehicleWarehouseOf`), kapsamdan
-  //   değil. Kapsamda araç tutmak ekranı açmıyor, yalnız depo seçicisine sahte bir seçenek koyuyordu.
+  // Dört bölümü de gören hesap, sekme çubuğunun dolu hâli için; kapsamı kuryeninkiyle aynı.
   { key: 'hepsi', name: 'Emre Yıldız', email: 'hepsi@lezzetanatolie.com', phone: '+33600000106', roles: ['admin', 'warehouse', 'courier', 'accounting'], depolar: ['str'], preferredLanguage: 'tr' },
   // Sınır ötesi rotanın kuryesi — kapsamı da Kehl. Kurye kapsamsız olamaz (DB kısıtı).
   { key: 'kuryeKehl', name: 'Stefan Bauer', email: 'kurye.kehl@lezzetanatolie.com', phone: '+4978519902', roles: ['courier'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
@@ -288,21 +198,8 @@ const ayniKume = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && [...a].sort().every((v, i) => v === [...b].sort()[i]);
 
 /**
- * **"Zaten var" YETMEZ — kimliğin DOĞRU olduğu da doğrulanır** (mobil şeridin bulgusu 26.08).
- *
- * `findByEmail` bir satır döndürdüğünde seed bugüne dek onu koşulsuz benimsiyordu. Satırın seed'in
- * kendi kişisi olduğu bir VARSAYIMDI ve bir kez yanlış çıktı: `db:refresh` penceresinde basılan dev
- * giriş düğmesi `auth.users`a satır açtı, `0002` trigger'ı boş tabloda **adsız, `{admin}`, kapsamsız**
- * bir profil doğurdu, seed de onu "Marc Lemoine zaten var" diye kabul etti. Kurye hiç doğmadı;
- * ortada kurye e-postalı bir yönetici vardı ve hiçbir yerde hata yoktu.
- *
- * Kapı artık kapandı (dev giriş kimlik yaratmıyor — `@lezzet/application` `auth/dev-login.ts`), ama
- * **profili e-postadan açabilen tek yol o değil**: gerçek OTP akışı da açar, elle yazılan bir satır
- * da. Yani ölçüt kapıda değil BURADA da durmalı — seed'in kişisi seed'in tanımına uymak zorunda.
- *
- * Onarılan alanlar seed'in SAHİP olduğu üç kimlik alanı: ad, roller, depo kapsamı. Sessiz değil,
- * gürültülü: her onarım satır satır basılır, yoksa tuzak yine görünmez kalırdı — yalnız bu sefer
- * seed'in içinde. Sapma yoksa hiç yazılmaz (idempotent).
+ * "Zaten var" yetmez, kimliğin doğru olduğu da doğrulanır: e-postadan açılmış yabancı bir profil seed'in kişisi sanılabilir.
+ * Seed'in sahip olduğu ad, roller ve depo kapsamı onarılır ve her onarım basılır.
  */
 async function onarSapan(profiles: UserProfileService, mevcut: UserProfile, k: SeedKisi, depolar: Depolar): Promise<string[]> {
   const beklenenKapsam = (k.depolar ?? []).map((d) => depolar[d]);
@@ -316,10 +213,8 @@ async function onarSapan(profiles: UserProfileService, mevcut: UserProfile, k: S
   return sapma;
 }
 
-/** Kartları açar (varsa TANIMA UYDURUR) ve `key → profil id` haritasını döner. */
-// **Bu bölüm `base` katmanında HİÇ KOŞMAZ** (kullanıcı kararı 16.08): buradaki altı kişi de uydurma
-// ve `seedStaffLogins` onlara giriş hesabı açıyor — üretime gitseydi bilinen e-postalarla sahte
-// hesaplar açılmış olurdu. Gerçek personeli üretimde operatör kurar. Künye `seed/tier.ts`.
+/** Kartları açar (varsa tanıma uydurur) ve `key → profil id` haritasını döner. */
+// `base` katmanında koşmaz, çünkü uydurma kişilere giriş hesabı açılır; gerçek personeli üretimde operatör kurar.
 export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
   const profiles = new UserProfileService(db);
   const harita: Kisiler = new Map();
@@ -349,50 +244,11 @@ export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
   return harita;
 }
 
-// ── Personelin GİRİŞ hesapları (21.32) ───────────────────────────────────────────────────────────
+// ── Personelin giriş hesapları ───────────────────────────────────────────────────────────────────
 
 /**
- * Personel profillerine `auth.users` satırı açar — yani personel gerçekten GİRİŞ YAPABİLİR olur.
- *
- * ── NEDEN SEED'İN İŞİ ────────────────────────────────────────────────────────
- * `db:refresh` = `supabase db reset && seed`, yani `auth.users` da siliniyor. Bağ elle kurulursa
- * her sıfırlamada kayboluyordu ve operasyon yüzeyi yerelde denenemez hâle geliyordu (kullanıcı
- * bulgusu 11.08: *"operasyon tarafına giriş yapamadım"*). Profil satırları zaten seed'in malı;
- * giriş hesabının da burada doğması, "yenilemeden sonra çalışır" sözünü tek yerde tutuyor.
- *
- * ── ROLLERİ BOZMAZ ──────────────────────────────────────────────────────────
- * Satırı biz bağlamıyoruz, `0002` trigger'ı bağlıyor: yeni auth kullanıcısı e-postayla eşleşen ve
- * `auth_user_id`'si boş olan profili bulup kendine bağlar, rolüne DOKUNMAZ. Ölçüldü (11.08):
- * `kurye@lezzetanatolie.com` bağlandıktan sonra `/me` `roles: ['courier']` döndü, `/courier/day`
- * 200, `/warehouse/preparation` 403. Trigger'ın "ilk hesap admin olur" bootstrap'ı da tetiklenmez:
- * bu fonksiyon `seedKisiler`den SONRA koşar ve o an admin rollü profil zaten vardır.
- *
- * ── BİR MÜŞTERİYE DE AÇILIR (kullanıcı kararı 19.08) ────────────────────────
- * Burada eskiden *"müşteri hesabı AÇILMAZ"* yazıyordu; gerekçesi şuydu: müşterinin girişi OTP
- * akışının kendisidir ve hazır bir auth satırı o akışın yarısını atlatır. Gerekçe hâlâ doğru ama
- * SONUCU yanlıştı — dayandığı sessiz varsayım, dev girişinin müşteri düğmesinin bastığı adresin
- * (kullanıcının kendi adresi) bir müşteri olduğuydu. Değildi: o adres `auth.users`ın en eski
- * satırı, yani `0002`nin *"hiç admin yoksa ilk hesap admin olur"* açılışı onu ADMİN yapmıştı.
- * Yani "Müşteri" düğmesi ta baştan beri operasyona giriyordu (kullanıcı bulgusu 19.08) — 21.32'de
- * personel düğmeleri için ölçülen arızanın aynısı, aynanın öteki yüzü.
- *
- * Bir hesabı seed'lemek OTP yolunu KAPATMIYOR: o yol her yeni e-postayla açık kalıyor ve `0002`
- * artık admin varken `{customer}` doğuruyor. Kazanılan şey, tek tıkla GERÇEK bir müşteri oturumu.
- * Aynı gerekçeyle 21.32 personel düğmelerini seed'e taşımıştı.
- *
- * İdempotent: bağlı profil atlanır, yani seed tekrar tekrar koşabilir.
- *
- * **Ad artık davranıştan dar** — bu fonksiyon personelin yanında bir müşteri hesabı da açıyor.
- * `seedDevLogins`e çevrilmesi `scripts/seed.ts`in import+çağrı satırlarına dokunmayı gerektiriyor
- * ve o dosyada şu an başka şeridin commit'lenmemiş işi duruyor; yol adıyla commit kuralı gereği
- * (CLAUDE §0) oraya dokunulmadı. Dosya boşalınca ad düzeltilecek.
- */
-/**
- * Giriş hesabı açılacak MÜŞTERİ — dev girişinin "Müşteri" düğmesinin bastığı hesap.
- *
- * `b2cSadik` seçildi çünkü müşteri yüzeyinin en DOLU hâlini o gösteriyor: siparişleri, adresi,
- * pazarlama izni ve puan geçmişi var. Boş bir müşteriyle girmek, ekranların yalnız boş hâlini
- * denemek olurdu — `seedObservability` künyesindeki aynı gerekçe.
+ * Personel profillerine ve dev girişinin müşterisine `auth.users` satırı açar ki `db:refresh` sonrası giriş yapılabilsin; bağı
+ * `0002` kurar ve rollere dokunmaz. Müşteri en dolu hâli gösteren `b2cSadik`tir; işlem idempotenttir.
  */
 const GIRIS_ACILAN_MUSTERI = 'claire.weber@example.fr';
 export async function seedStaffLogins(db: Db): Promise<void> {

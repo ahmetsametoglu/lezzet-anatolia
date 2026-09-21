@@ -6,13 +6,8 @@ import { Table, type Column } from '@/components/operation/ui/table';
 import { money, percent, shortDate } from '@/components/operation/ui/format';
 import type { CustomerPriceRow, PricesViewProps } from '../prices-types';
 
-// Müşteriye özel fiyatlar + genel indirim oranları.
-//
-// İkisi AYNI sekmede, çünkü fiyat çözümünde arka arkaya gelen iki basamaktır: önce özel fiyat, sonra
-// indirim oranı, sonra kanal listesi. Ayrı ekranlara bölünseydi "bu müşteri neden bu fiyatı ödüyor"
-// sorusu iki ekran gezmeden yanıtlanamazdı.
-//
-// Liste SAYFALANMAZ: küme veriyle değil admin'in eliyle büyür (her satır ayrı bir pazarlık).
+// Müşteriye özel fiyatlar ve genel fiyat kuralları aynı sekmede, çünkü fiyat çözümünde aynı basamaktadırlar.
+// Sayfalanmaz, küme admin'in eliyle büyür.
 
 export function CustomersTab({ data, onEditCustomerPrice, onEditPriceGroup, navPending }: PricesViewProps) {
   const columns: Column<CustomerPriceRow>[] = [
@@ -76,8 +71,7 @@ export function CustomersTab({ data, onEditCustomerPrice, onEditPriceGroup, navP
         <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
           Fiyat çözüm sırası
         </span>
-        {/* Sıra motorun gerçeğidir (`resolve-price`): özel → grup → liste. Genel indirim oranı bu
-            sırada DEĞİL — o kampanya havuzunda yarışır; alttaki şeritte ayrıca izlenir (20.08). */}
+        {/* Sıra motorun gerçeğidir (`resolve-price`). */}
         <Step order={1} label="Müşteriye özel fiyat" note={`${data.customerPrices.length} tanımlı`} active />
         <Step order={2} label="Fiyat grubu" note={`${data.priceGroups.length} grup`} />
         <Step order={3} label="Kanal liste fiyatı" note="taban" />
@@ -141,9 +135,7 @@ function Step({ order, label, note, active = false }: StepProps) {
 }
 
 /**
- * Fiyat grupları (20.08) — B2B alt kademeleri, tablonun altında bir şerit. Grup BURADAN yönetilir
- * (ad + yüzde + silme); ÜYELİK ise müşteri kartından atanır — üyelik profil kaydında yaşar, iki
- * yazma yeri olsaydı hangisinin kazandığı belirsizleşirdi (DiscountStrip'in aynı kuralı).
+ * Fiyat grupları: grup buradan yönetilir, üyelik müşteri kartından atanır ki iki yazma yeri olmasın.
  */
 function GroupStrip({ rows, onEdit }: { rows: PricesViewProps['data']['priceGroups']; onEdit: PricesViewProps['onEditPriceGroup'] }) {
   return (
@@ -176,9 +168,7 @@ function GroupStrip({ rows, onEdit }: { rows: PricesViewProps['data']['priceGrou
 }
 
 /**
- * Genel indirim oranı taşıyan müşteriler — tablonun altında bir şerit. Oran BURADA YAZILMAZ: sahibi
- * müşteri kaydıdır (`user_profiles.discount_percent`), fiyat ekranı yalnız kimlerde olduğunu izler.
- * Yazma yeri iki olsaydı hangisinin kazandığı belirsizleşirdi.
+ * Genel fiyat kuralı taşıyan müşteriler; kural müşteri kaydında yazılır, fiyat ekranı yalnız kimlerde olduğunu izler.
  */
 function DiscountStrip({ rows }: { rows: PricesViewProps['data']['discountCustomers'] }) {
   if (rows.length === 0) return null;

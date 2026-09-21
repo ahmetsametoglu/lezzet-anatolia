@@ -1,22 +1,12 @@
-// Fiyat ekranı view-model'leri (09.5) — RSC okur, serileştirilebilir bu tiplere indirger; client
-// yalnız bunları görür.
-//
-// KARARLAR SUNUCUDA verilir ve satırla birlikte taşınır: gerçekleşen marj, hedefin altında olup
-// olmadığı, hangi kanalın dar olduğu — hepsi `domain-core/pricing`'in cevabıdır. Client yeniden
-// hesaplasaydı marjın TANIMI iki yerde yaşardı; proje tek tanım kullanır (DOMAIN "hedef marj").
-//
-// Para ekranda hep KURUŞ (cent) taşınır (STACK §8). Kanalın tabanı farklıdır ve bu bilgi satırda
-// yazılıdır: b2c KDV DAHİL, b2b hariç — ikisini aynı sayı sanmak marjı kaydırır.
+// Fiyat ekranı view-model'leri; kararlar sunucuda verilir ve satırla taşınır ki marjın tanımı tek yerde kalsın.
+// Para cent taşınır (STACK §8); b2c KDV dahil, b2b hariç.
 import type { Channel, DiscountScope, DiscountTrigger, DiscountType, KeysetCursor, LocalizedText } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { PriceRow } from '@/lib/pricing/price-rows';
 import type { PriceScope, PriceTab } from './prices-url';
 
-// Fiyat satırı tipleri LIB'E TAŞINDI (16.08): ikinci tüketen doğdu (ürünler önizlemesinin fiyat
-// bakışı) ve kardeş sayfadan yalnız `*-url` import edilir (STACK §7). Buradaki re-export, sayfanın
-// kendi dosyalarının import yollarını korur — tanım tek yerde. (`ChannelPriceCell`i yalnız lib'in
-// kendisi okuyor; burada yeniden verilmez.)
+// Fiyat satırı tipleri `lib/pricing/price-rows`ta; buradaki yeniden ihraç sayfanın import yollarını korur.
 export type { PriceRow } from '@/lib/pricing/price-rows';
 
 /** Müşteriye özel fiyat satırı — çözüm sırasının en üstündeki basamak. */
@@ -51,8 +41,7 @@ export interface DiscountCustomerRow {
 }
 
 /**
- * Fiyat grubu satırı (20.08) — B2B alt kademesi. Üye sayısı profillerden türetilir: "bu grubu
- * silebilir miyim" ve "yüzdeyi değiştirirsem kaç müşteri etkilenir" sorularının cevabı.
+ * Fiyat grubu satırı (B2B alt kademesi); üye sayısı "silebilir miyim" ve "kaç müşteri etkilenir" sorularına cevap verir.
  */
 export interface PriceGroupRow {
   id: string;
@@ -84,24 +73,18 @@ export interface DiscountRow {
   publicLabel: LocalizedText | null;
   trigger: DiscountTrigger;
   /**
-   * Kuponun KAPILARI — bir kuralın birden çok kodu olur (dil başına bir tane gibi) ve hepsi aynı
-   * kotayı açar. Kampanyada boş dizi. Her kod kaç kez tuttuğunu da taşır: liste "hangi dil karşılık
-   * buldu" sorusunu ayrı bir ekrana gitmeden yanıtlar.
+   * Kuponun kodları; hepsi aynı kotayı açar, her kod kaç kez tuttuğunu taşır. Kampanyada boş dizi.
    */
   codes: DiscountCodeRow[];
   type: DiscountType;
-  /** Tipine göre biri dolu, öteki `null` (02.9): yüzde oran, sabit tutar **cent**. */
+  /** Tipine göre biri dolu, öteki `null`: yüzde oran, sabit tutar cent. */
   percent: number | null;
   amountCents: number | null;
   scope: DiscountScope;
   /** Kapsam hedefinin adı ("Baklava"); sepet kapsamında boş. */
   scopeName: string;
   /**
-   * Kapsam hedefinin KİMLİĞİ — satır bir tur yalnız adı taşıyordu ve düzenleme formu hedef kutusunu
-   * boş açıyordu. Sonuç sessiz bir çıkmazdı: kategori/koleksiyon kapsamlı bir kuralı düzenlemeye
-   * açan operatör "Kapsam hedefi seçilmeli" engelini hiç kaldıramıyor, kaydet düğmesi kilitli
-   * kalıyordu (bulundu 10.08, form gövdesi ayrılırken). Ad İNSAN içindir, kimlik FORM içindir;
-   * ikisi ayrı sorulara cevap veriyor ve biri ötekinin yerine geçemez.
+   * Kapsam hedefinin kimliği; ad insan için, kimlik form için. Yalnız ad taşınsa kapsamlı kural düzenlenemezdi.
    */
   categoryId: string | null;
   collectionId: string | null;
@@ -125,11 +108,7 @@ export interface DiscountRow {
   dormantReason: string;
 }
 
-// `DiscountFormInput` BURADA DEĞİL, formun kendi dosyasında
-// (`components/operation/form/discount-form.tsx`, 22.10): girdiyi üreten `discountInputOf` orada ve
-// ikisi tek sözleşmenin iki ucu. Ayrı dosyalarda dururlarsa bir gün biri alan ekler, öteki bilmez.
-// Ayrıca form artık iki yüzeyin ortağı; tipini fiyat ekranının görünüm dosyasında tutmak, ortak bir
-// komponenti bir sayfaya bağımlı kılardı (`STACK §7`).
+// `DiscountFormInput` formun kendi dosyasındadır, çünkü girdiyi üreten `discountInputOf` orada ve form iki yüzeyin ortağı.
 
 /** Kategori seçeneği — süzgeç menüsünü besler (tavanı sınırlı, tek turda gelir). */
 export interface CategoryOption {
@@ -160,10 +139,7 @@ export interface VariantOption {
 }
 
 /**
- * Başlık sayaçları. **Yüklenmiş sayfa üzerinden** hesaplanır ve ekran bunu böyle söyler: marj bir
- * karardır, SQL süzgecine çevrilemez; tüm katalogun marjını saymak katalogun tamamını taşımak
- * demektir. Tam sayım ayrı bir tur (okuma fonksiyonu) — o gelene kadar sayaç, yalan söylemek
- * yerine kapsamını yazar.
+ * Başlık sayaçları, yüklenmiş sayfadan; marj SQL süzgecine çevrilemez ve ekran kapsamını yazar.
  */
 export interface PriceCounts {
   /** Görünen satır sayısı (yüklenmiş sayfalar). */
@@ -174,10 +150,7 @@ export interface PriceCounts {
 }
 
 /**
- * **Vitrinde görünmeyen aktif ürün sayısı, kanal başına** (08.46) — gizlemenin sessiz kalmaması için.
- *
- * `PriceCounts.missing` ile karıştırılmamalı: o yüklenmiş sayfadaki BOYLARI sayar, bu katalogun
- * tamamındaki ÜRÜNLERİ. Yalnız kanal sekmesi okunduğunda dolar; öteki sekmelerde `null`.
+ * Vitrinde görünmeyen aktif ürün sayısı, kanal başına; `PriceCounts.missing` sayfadaki boyları, bu katalogdaki ürünleri sayar.
  */
 export interface HiddenFromStorefront {
   b2c: number;
@@ -192,7 +165,7 @@ export interface PricesData {
   /** Şu an geçerli TÜM özel fiyatlar — sayfalanmaz (admin'in eliyle büyüyen küme). */
   customerPrices: CustomerPriceRow[];
   discountCustomers: DiscountCustomerRow[];
-  /** Fiyat grupları (B2B kademeleri, 20.08) — sayfalanmaz, operatörün eliyle büyür. */
+  /** Fiyat grupları; sayfalanmaz, operatörün eliyle büyür. */
   priceGroups: PriceGroupRow[];
   /**
    * Karar bekleyen TÜM partiler — sayfalanmaz. Stok ekranıyla AYNI kaynaktan (`toBatchViews`) gelir;
@@ -204,7 +177,7 @@ export interface PricesData {
   categories: CategoryOption[];
   /** Kapsam seçicisinin koleksiyon seçenekleri — yalnız kupon sekmesi okunduğunda dolu. */
   collections: CategoryOption[];
-  /** Vitrinde görünmeyen ürün sayısı — yalnız kanal sekmesi okunduğunda dolu (08.46). */
+  /** Vitrinde görünmeyen ürün sayısı; yalnız kanal sekmesinde dolu. */
   hiddenFromStorefront: HiddenFromStorefront | null;
 }
 

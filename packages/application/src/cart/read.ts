@@ -19,16 +19,7 @@ import { resolveCartDiscount } from './discount';
 import { EMPTY_CART, cartGroupOf, cartKey, discountAmountOf, undeliverableTotalOf, type CartEntry, type CartLine, type CartView } from './cart-types';
 
 /**
- * Sepetin PAKET satırı için gereken alanlar — paket okumasının sonucunun sepete bakan yüzü.
- *
- * Paket ÇÖZÜMÜ (stok/kargo/ağırlık/alerjen türetmesi) bu pakette henüz yok: kaynağı
- * `apps/web/lib/storefront/packages.ts` ve terfisi ayrı bir adım (rapora "terfi ihtiyacı" olarak
- * yazıldı). Sepet o güne kadar çözümü KAPIDAN alır; web'in `StorefrontPackageDetail`'i bu şeklin
- * yapısal ikizidir, yani köprü hiçbir dönüştürme yazmadan geçer.
- *
- * Şeklin dar tutulması bilinçli: sepet paketin alerjenini, ağırlığını, kalem görsellerini
- * KULLANMIYOR. Geniş bir tip istemek, paketi hiç okumayan bir çağıranı olmayan alanları
- * doldurmaya zorlardı.
+ * Sepetin paket satırının istediği alanlar; paket çözümü kapıdan gelir. Şekil dar, çünkü sepet alerjen, ağırlık ve kalem görselini kullanmaz.
  */
 export interface CartBundleSource {
   id: string;
@@ -45,17 +36,13 @@ export interface CartBundleSource {
   maxQty: number | null;
   /** Kalemlerin EN YÜKSEK KDV oranı (%) — kargo KDV'sinin oransal bölünmesi için. */
   vatRate: number;
-  /** Soğuk zincir kalemi varsa paketin tamamı rota içi kalır (05.5). */
+  /** Soğuk zincir kalemi varsa paketin tamamı rota içi kalır. */
   inRouteOnly: boolean;
   items: readonly { name: string; qty: number }[];
 }
 
 /**
- * Paket çözümünün KAPISI — sepet paketi kendisi okumaz, çağıran okutur.
- *
- * Verilmezse paket satırı kimliğiyle ve **ENGELLİ** durur (`orphanLine`), yani satıştan kalkmış
- * paketle aynı hâl: sepetten sessizce düşmez, müşteri neyi kaybettiğini görür. Mobil yüzeyde
- * paket akışı açıldığında kapı geçilir; bugün mobilde paket satırı doğmuyor.
+ * Paket çözümünün kapısı; verilmezse paket satırı kimliğiyle ve engelli durur ki sepetten sessizce düşmesin.
  */
 export type CartBundlePort = (
   bundleIds: readonly string[],
@@ -64,28 +51,10 @@ export type CartBundlePort = (
 ) => Promise<readonly CartBundleSource[]>;
 
 /**
- * Sepet okuması (08.4) — NİYETİ bugünkü görünüme çevirir.
+ * Sepet okuması: niyeti bugünkü görünüme çevirir; ad, fiyat, stok ve tavan yeniden çözülür (DOMAIN §5), sorgu sayısı sabittir.
+ * Teklif kalemi eklendiği partiye bağlıdır; parti tükendiyse indirim başka partiye taşınmaz, satır teklifsiz görünür.
  *
- * Girdi yalnız `{variantId, qty, stockId}` üçlüsüdür; ad, fiyat, stok ve tavan burada YENİDEN
- * çözülür. Sebep DOMAIN §5: sepetteki fiyat bağlayıcı değildir, gösterimdir. Sepet aylarca
- * bekleyebilir — fiyat da stok da o arada değişir.
- *
- * Tek turda okur: varyantlar → ürünler → fiyat/stok/teklif bağlamı. Sepette 20 kalem olsa da sorgu
- * sayısı sabittir (kalem başına sorgu N+1 doğurur).
- *
- * **Çıpalı parti kontrolü:** teklif kalemi eklendiği partiye bağlıdır. O parti tükendiyse indirim
- * başka partiye TAŞINMAZ; satır bugünkü çözümde teklifsiz görünür ve fiyatı normale döner
- * (müşteriye checkout'ta bildirilir — 07.4'ün işi).
- *
- * ── TERFİ (aşama 1/3) · WEB'DEN FARKLARI ─────────────────────────────────────
- * Kaynağı `apps/web/lib/cart/read.ts`tı; web kopyası KÖPRÜ olarak duruyor. Kural tarafında hiçbir
- * şey değişmedi — değişen yalnız kapının taşımayla bağını kesen üç şey:
- *   · `db` çağırandan gelir (`serviceDb()` içeride çağrılmıyor) — paketin ortak deseni.
- *   · Paket çözümü `opts.bundles` kapısından gelir (künyesi `CartBundlePort`'ta).
- *   · Ayar kapsamı için görüntüleyen BİR KEZ çözülür ve hem kapsama hem fiyat bağlamına verilir;
- *     web'de aynı profil satırı iki kez okunuyordu (`settingScopeOf` kendi içinde okuyordu).
- *
- * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`).
+ * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`)
  */
 export async function getCartView(
   db: Db,
@@ -100,60 +69,26 @@ export async function getCartView(
     customerId?: string | null;
     couponCode?: string | null;
     /**
-     * Sunucu sepetinde SAKLANAN fiyatlar (`cartKey` → cent). Bugünkü çözümle karşılaştırılır;
-     * artış varsa satır `priceChange` taşır (DOMAIN §5). Verilmezse karşılaştırma yapılmaz —
-     * ziyaretçide saklanan fiyat yoktur.
+     * Sunucu sepetinde saklanan fiyatlar (`cartKey` → cent); artış varsa satır `priceChange` taşır. Ziyaretçide yok.
      */
     previousPrices?: ReadonlyMap<string, number>;
     /**
-     * **PAZARLIKLI FİYATLAR** (09.8) — `variantId` → birim fiyat (cent). Yalnız PERSONEL yolundan
-     * dolar (elle sipariş girişi, yerinde satış); müşteri yüzeyinde her zaman boştur.
-     *
-     * Buraya konmasının sebebi tek bir sayı disiplinidir: fiyat bu okumada çözülüyor ve satır
-     * toplamı, indirim matrahı, KDV kırılımı, kargo eşiği ile siparişin toplamı hep ondan
-     * türüyor. Üstüne yazma daha aşağıda yapılsaydı sipariş kendi toplamıyla çelişirdi.
-     *
-     * **Satışa kapalı ürünü DİRİLTMEZ:** `blocked` ölçütü liste fiyatının varlığıdır, buradaki
-     * sayı değil. Elle fiyat yazarak kapanmış bir ürünü satmak, kapanma kararını sessizce
-     * geçersiz kılardı.
-     *
-     * Paket satırına UYGULANMAZ (anahtar varyant kimliğidir): paketin fiyatı tek sayıdır ve
-     * parçalarına dağıtılmış payların toplamı olmak zorundadır (DOMAIN §13) — bir parçayı elle
-     * indirmek o dengeyi bozar. Pakette pazarlık istenirse paketin kendi fiyatı düzenlenir.
+     * Pazarlıklı fiyatlar (`variantId` → cent), yalnız personel yolundan; satış fiyatı bu okumada tek sayıya iner. Satışa kapalı
+     * ürünü diriltmez ve paket satırına uygulanmaz, çünkü paket fiyatı parçalarının paylarının toplamıdır.
      */
     priceOverrides?: ReadonlyMap<string, number>;
     /**
-     * Müşterinin yerinden çözülen depo (DOMAIN §17). Null = yer bilinmiyor: sepet depo-ÜSTÜ okunur
-     * ve "burada satılmıyor" denmez — yalnız hiçbir depoda yoksa tükendi denir (C3).
-     *
-     * Adlandırılmış alan, konumsal parametre DEĞİL: sepet okumasının imzası zaten üç şey taşıyordu
-     * ve araya girecek dördüncü bir konum, mevcut çağrıları sessizce kaydırırdı.
-     *
-     * Yer bağlamı v2 bunu artık DOLDURUYOR (19.9): çerezden okunan cevap `readPlaceWarehouses` ile
-     * çözülüp geçiliyor. **Boş geçen üç çağrı bilinçli:** sonraya kaydedilenler ve tekrar sipariş
-     * yere göre DARALTILMAMALI — ikisinin de sorusu "bu ürün hâlâ satılıyor mu", "senin deponda var
-     * mı" değil. Depo-üstü okumanın tek meşru kullanımı bu olumsuz cevaptır (C3).
+     * Müşterinin yerinden çözülen rota deposu (DOMAIN §17); `null` yer bilinmiyor, sepet depo-üstü okunur ve yalnız hiçbir
+     * depoda yoksa tükendi denir. Sonraya kaydedilenler ve tekrar sipariş bilerek yere göre daraltılmaz.
      */
     warehouseId?: string | null;
     /**
-     * Ülkenin kargo deposu (19.10) — sepetin "bu kalem kargoyla gelebilir" ayrımı için. `null` =
-     * yer bilinmiyor ya da o ülkeye kargo yok. Satır bazlı grup ayrımı bunu
-     * `decideCartAgainstWarehouse` motoruna veriyor (19.11).
-     *
-     * **Bu cümle 10.08'e kadar YALANDI ve bedeli ağırdı:** alan motora hiç geçmiyordu, `decideRoutes`
-     * imzasında yoktu bile. Künye vaadi yazmış, kod tutmamıştı — ve okuyan taraf künyeye güvenip
-     * kodu bir daha açmadığı için arıza aylarca görünmedi (mobil şeridin cihaz ölçümüyle çıktı).
-     * Bir künye kodun ne yaptığını değil ne YAPMASI GEREKTİĞİNİ anlatmaya başladığı gün, denetimden
-     * kaçan bir yalana dönüşür.
+     * Ülkenin kargo deposu; `decideCartAgainstWarehouse` "bu kalem kargoyla gelebilir" kararı için okur. `null` yer bilinmiyor
+     * ya da o ülkeye kargo yok.
      */
     shippingWarehouseId?: string | null;
     /**
-     * Ayar kapsamının yer eksenleri (07.15) — `warehouseId` zaten yukarıda; ülke ve bölge de
-     * kapsamlı ayar sorabiliyor (DE kargo tarifesi, bölge asgari sepeti).
-     *
-     * **Parametre, çerez okuması DEĞİL** ve bu bilinçli: yeri çözen taraf isteğin sahibi olan
-     * sayfadır. Sepet okuması `cookies()`e bağlansaydı istek dışında (cron, webhook, test)
-     * çağrılamaz hâle gelirdi — ölçüldü, 34 test o yüzden düştü.
+     * Ayar kapsamının yer eksenleri; parametre olarak gelir, çünkü çerez okuması okumayı istek dışında çağrılamaz yapardı.
      */
     country?: string | null;
     zoneId?: string | null;
@@ -165,20 +100,8 @@ export async function getCartView(
   } = {},
 ): Promise<CartView> {
   const settings = new SettingsService(db);
-  // İkisi de DOMAIN §6'ya göre PARAMETRİK — kod sabiti değil, işletme ayarı.
-  //
-  // Anahtarlar ORTAK sabitten gelir (`./settings-keys`): burada `free_shipping_cents` yazıyordu
-  // ve öyle bir ayar hiç yoktu — okuma sessizce varsayılana düşüyor, checkout ise gerçek ayarı
-  // okuyordu. İkisi tesadüfen aynı değerde olduğu için görünmüyordu (29.07).
-  // **KAPSAM ŞART** (07.15): üçü de kapsamsız okunuyordu ve b2b/DE/bölge satırları hiç
-  // uygulanmıyordu — ayar yazılıyor, okunmuyordu. Kapsamı checkout ile AYNI yerden kuruyoruz
-  // (`settingScopeOf`): anahtar ortaklığı 29.07'de yetmemişti, kapsam da ortak olmalı — yoksa
-  // sepette "13 € eşik" yazıp checkout'ta 0 € uygulanır ve müşteri arada ne olduğunu anlamaz.
-  //
-  // Görüntüleyen (kanal + özel fiyat kimliği) BURADA bir kez çözülür: kapsamın kanal ekseni de
-  // fiyat bağlamı da aynı profil satırından çıkıyor. Oturumdan DEĞİL sepete verilen KİMLİKTEN
-  // çözülür — checkout taslağı müşteriyi misafir OTP çerezinden de çözebiliyor ve o yolda oturum
-  // yok; oturuma bağlasaydık misafir olarak doğrulanmış bir B2B müşteri perakende fiyat görürdü.
+  // Eşikler parametrik ve checkout ile aynı anahtar ve kapsamla okunur (`settingScopeOf`), yoksa sepetin gösterdiği eşik kasada
+  // tutmazdı. Görüntüleyen oturumdan değil sepetin kimliğinden bir kez çözülür, misafir OTP yolunda oturum yoktur.
   const viewer = await pricingViewerOf(db, opts.customerId ?? null);
   const scope = settingScopeOf(viewer, {
     country: opts.country,
@@ -186,10 +109,7 @@ export async function getCartView(
     warehouseId: opts.warehouseId,
   });
   /**
-   * Alt sınır İKİ değer olarak okunuyor, çünkü hangisinin geçerli olduğunu sepetin İÇERİĞİ söyler
-   * (kullanıcı kararı 10.08 · `min-basket.ts`): sepetin tamamı kargo grubundaysa tek bir sipariş
-   * doğar ve o siparişin lojistik tabanı yoktur. Seçim satırlar çözüldükten sonra yapılıyor
-   * (`shippingOnly`), okuma ise burada — ayar okuması önbellekli, ikinci tur bedelsiz.
+   * Asgari sepet iki değer okunur, çünkü hangisinin geçerli olduğunu sepetin içeriği söyler (`shippingOnly`).
    */
   const [minBasketRouteCents, minBasketShippingCents, freeShippingCents, shippingTariffCents] = await Promise.all([
     minBasketFor(settings, 'route', scope),
@@ -216,9 +136,7 @@ export async function getCartView(
   };
   const [variants, packageRows] = await Promise.all([
     new ProductVariantService(db).listByIds(variantIds),
-    // Yer paket kapısına da GEÇER (19.22): kart, sepet ve checkout aynı yolu görmeli. Geçmeseydi
-    // paket ağ-geneli okunmaya devam eder ve checkout'un iki kapısı onu yine muaf geçerdi.
-    // Kapı yoksa ya da sepette paket yoksa okuma hiç yapılmaz.
+    // Yer paket kapısına da geçer ki kart, sepet ve checkout aynı yolu görsün; paket yoksa okuma yapılmaz.
     opts.bundles && bundleIds.length > 0 ? opts.bundles(bundleIds, locale, place) : Promise.resolve([]),
   ]);
   const packages = new Map(packageRows.map((p) => [p.id, p]));
@@ -256,11 +174,7 @@ export async function getCartView(
     const view = toVariant(variant, locale, ctx, product.shippable);
     // Sepetteki çıpa bugünkü teklifle uyuşmuyorsa teklif bu satırda GEÇERSİZDİR.
     const offerHolds = entry.stockId !== null && view.stockId === entry.stockId;
-    // ── PAZARLIK (09.8) ─────────────────────────────────────────────────────
-    // Motorun çözdüğü fiyat LİSTEDİR; personel elle bir sayı yazdıysa satış fiyatı odur.
-    // Üstüne yazma BURADA yapılıyor çünkü aşağıdaki her şey — satır toplamı, indirim matrahı,
-    // KDV kırılımı, kargo eşiği, siparişin toplamı — bu tek sayıdan türüyor. Kalem yazımında
-    // (`expandToOrderItems`) yapılsaydı sipariş kendi toplamıyla çelişirdi.
+    // Pazarlık: personel fiyat yazdıysa satış fiyatı odur; burada yazılır ki toplam, indirim matrahı, KDV ve sipariş tek sayıdan türesin.
     const listPriceCents = view.priceCents;
     const negotiatedCents = opts.priceOverrides?.get(entry.variantId);
     const unitPriceCents = negotiatedCents ?? listPriceCents;
@@ -309,32 +223,21 @@ export async function getCartView(
     });
   }
 
-  // ── YOL KARARI: MOTOR VERİR, EKRAN DEĞİL (19.11) ──────────────────────────
-  // `decideCartAgainstWarehouse` 19.3'ten beri yazılıydı ve çağıranı yoktu. Karar burada verilir
-  // çünkü aynı ayrımı checkout da isteyecek (kargo grubu ikinci bir taslak açar) ve iş gerçeğini
-  // ekran hesaplayamaz (`STACK §4`).
-  //
-  // Yer bilinmiyorsa ayrım YAPILMAZ: hangi yoldan geleceğini bilmediğimiz bir kaleme yol atamak,
-  // bilmediğimiz bir şeyi söylemektir. `route` o hâlde null kalır. **Ama "rota deposu yok" ile
-  // "yer bilinmiyor" AYNI ŞEY DEĞİL** — ayrımı `place` taşıyor (`decideRoutes` künyesi).
+  // Yol kararı motordan (`decideCartAgainstWarehouse`); yer bilinmiyorsa `route` null kalır, "rota deposu yok" ile "yer
+  // bilinmiyor" ayrımını `place` taşır.
   const routeByIndex = decideRoutes(lines, context, byVariant, byProduct, place);
   for (const [index, decision] of routeByIndex.entries()) {
     const line = lines[index];
     if (!line) continue;
     line.route = decision.route;
-    // Grup yolun EKRANA ve siparişe bakan izdüşümü; yolla aynı anda, aynı kaynaktan doldurulur —
-    // ayrı zamanlarda türetilen iki cevap bir gün ayrışır (10.08 ölçümü, `cartGroupOf` künyesi).
+    // Grup yolla aynı anda ve aynı kaynaktan doldurulur (`cartGroupOf`).
     line.group = cartGroupOf(line);
     line.availableHere = decision.availableHere;
   }
 
   const subtotalCents = lines.reduce((sum, l) => sum + (l.lineTotalCents ?? 0), 0);
   /**
-   * Bu adrese HİÇ gelemeyen kalemlerin toplamı — asgari sepete SAYILMAZ (kullanıcı kararı 10.08).
-   *
-   * Sayılsaydı müşteri sipariş edemeyeceği bir ürünle eşiği geçmiş görünür ve kasada geri düşerdi;
-   * eşik kapıya teslimin kuralıdır, gelmeyecek malın onunla ilgisi yok. Kalem sepetten SİLİNMEZ —
-   * yalnız eşiğin matrahından düşer.
+   * Bu adrese gelemeyen kalemlerin toplamı asgari sepete sayılmaz; kalem sepetten silinmez, yalnız eşiğin matrahından düşer.
    */
   const undeliverableSubtotalCents = undeliverableTotalOf(lines);
   // Kargo grubunun kendi toplamı — ücretsiz kargo eşiği BUNA bakar (K37).
@@ -362,9 +265,7 @@ export async function getCartView(
     // Sepetin ödenecek hâli — kargo HARİÇ (o adreste belli olur).
     totalCents: Math.max(0, subtotalCents - discountAmountOf(discount)),
     itemCount: lines.reduce((sum, l) => sum + l.qty, 0),
-    /* MOTORUN GİRDİSİ görünümle birlikte taşınır (20.08) — istemci adet değiştirdiğinde indirimi
-       aynı motorla tazelesin, sunucunun eski tutarını taşıyıp ekranda zıplama üretmesin. Künyesi
-       `CartDiscountResult.rules`. */
+    /* Motorun girdisi görünümle taşınır ki istemci adet değişince indirimi aynı motorla tazelesin. */
     discountRules,
     discountContext,
     hasBlocked: lines.some((l) => l.blocked),
@@ -380,52 +281,16 @@ export async function getCartView(
     shippingOnly: hasShipping && !hasLocal,
     undeliverableSubtotalCents,
     /**
-     * Hangi taban geçerli — **sepetin İÇERİĞİ söyler** (kullanıcı kararı 10.08). Tamamı kargo
-     * grubundaysa doğacak tek sipariş kargo siparişidir ve onun lojistik tabanı yoktur; kanal şartı
-     * (toptan) iki değerde de duruyor, çünkü o ticari bir şart ve mesafeyle ilgisi yok.
-     *
-     * Karışık sepette kapıya teslim tabanı yazılır: rota grubu var demektir ve asıl akış odur.
-     * Rota grubunun KENDİ toplamıyla ölçülmesi ayrı bir iş (ekran bugün sepetin tamamına bakıyor);
-     * bu satır yalnız hangi SAYININ geçerli olduğunu düzeltiyor.
+     * Tamamı kargo grubundaysa doğacak tek sipariş kargo siparişidir ve lojistik tabanı yoktur; karışık sepette kapıya
+     * teslim tabanı yazılır.
      */
     ...meets(subtotalCents - undeliverableSubtotalCents, hasShipping && !hasLocal ? minBasketShippingCents : minBasketRouteCents),
   };
 }
 
 /**
- * Satırların yol kararı — motorun girdisini kurar, kararı ona verir.
- *
- * **Paket satırı buradan geçmez ve bu doğru** (19.22): paket bölünmez, yolu BÜTÜNÜ için verilir ve
- * kararı kendi motoru üretir (`decideBundleAgainstWarehouse`, paket kapısında çözülür). Kalemlerini
- * bu süzgece tek tek versek üç kalemli bir paket için üç ayrı yol çıkardı ve hiçbiri paketin cevabı
- * olmazdı. `bundleLine` sonucu taşıyor, yani paket satırının `route`/`availableHere`'i artık dolu —
- * checkout'un iki kapısı onu kendiliğinden yakalıyor.
- *
- * Yolla birlikte **o yolun havuzundaki miktar** da döner (`availableHere`). Motorun kendi
- * `fulfillableQty` alanı bu soruyu cevaplayamıyor: o `min(istenen, mevcut)` — yani 2 adet isteyip
- * 2 adet bulunan satır ile 5 isteyip 2 bulunan satır aynı sayıyı üretir, "tavana dayandım mı"
- * sorusu ondan okunamaz. Hangi havuza bakılacağını yine MOTOR söylüyor (`route`); burada yalnız
- * o havuzun sayısı alınıyor — bir kural değil, bir arama.
- *
- * ── ÇIKIŞ KOŞULU "ROTA DEPOSU YOK" DEĞİL, "İKİ DEPO DA YOK" (10.08) ─────────
- * Fonksiyon bir tur yalnız `warehouseId` alıyordu ve o boşsa boş harita dönüyordu. `warehouseId`
- * boşluğu İKİ ayrı şey demek ve ikisi tek sayılıyordu:
- *
- * - **yer bilinmiyor** — posta kodu hiç yok; iki depo da `null`. Yol atamamak DOĞRU.
- * - **yer biliniyor, rota dışı** — 67380 gibi; rota deposu `null` ama KARGO deposu dolu. Yol
- *   atanmalı, atanmıyordu.
- *
- * Bedeli dardı ama sonucu değildi (mobil şeridin ölçümü, iki yüzeyde birden): boş harita dönünce
- * hiçbir satırın yolu güncellenmiyor, satırlar kuruluş değerinde kalıyordu — `route: null`,
- * `group: 'local'`. Yani rota DIŞINDAKİ her adreste sepet her kalemi "kapıya teslim ediyoruz" diye
- * gösteriyordu; soğuk zincir kalemi de öyle görünüyordu, gerçekte o adrese hiç gelemezken.
- * `undeliverableSubtotalCents` daima 0 kalıyor (asgari sepet matrahı yanlış), `shippingOnly` daima
- * false kalıyordu (salt-kargo sepeti rota sepeti sanılıyor).
- *
- * Motorun kendisi zaten DOĞRUYDU (`decideCartAgainstWarehouse`) — hiç çağrılmıyordu. Aynı dosyanın
- * yer bağlamı künyesi de "bunu motora veriyor" diyordu; kod ile künye ayrışmıştı. İkinci havuz da
- * zaten okunuyor (`product-context`: rota dışında yerel havuz BOŞ HARİTA, kargo havuzu ayrıca
- * çekiliyor), yani düzeltme tek bir parametre ve tek bir koşul — ek sorgu yok.
+ * Satırların yol kararı `decideCartAgainstWarehouse`tan gelir ve o yolun havuzundaki miktar da döner; paket satırı buradan
+ * geçmez. Çıkış koşulu "iki depo da yok"tur, yoksa rota dışında kargo deposu doluyken her kalem kapıya teslim görünürdü.
  */
 function decideRoutes(
   lines: readonly CartLine[],
@@ -469,11 +334,7 @@ function decideRoutes(
 }
 
 /**
- * Fiyat değişimi işareti (DOMAIN §5). **Yalnız ARTIŞ** döner: düşen fiyat sessizce uygulanır.
- *
- * Saklanan fiyat 0 ise karşılaştırma yapılmaz — o, fiyatın "henüz çözülmedi" hâlidir (niyet
- * sunucuya yazılırken 0 girer, çözülen değeri `writeCartAction` üstüne yazar). Sıfırı geçerli bir
- * "önceki fiyat" saymak, her yeni kalemi "zamlandı" diye işaretlerdi.
+ * Fiyat artışı işareti; düşüş sessizce uygulanır. Saklanan 0 "henüz çözülmedi" demektir ve karşılaştırılmaz.
  */
 function priceChangeOf(
   entry: CartEntry,
@@ -523,12 +384,7 @@ function orphanLine(entry: CartEntry): CartLine {
 }
 
 /**
- * Paket satırı. Fiyat paketin KENDİ alanından gelir — kalemlerin toplamı değil (tek fiyat kuralı,
- * DOMAIN §13). Teklif/parti kavramı yok: indirim pakete uygulanmaz, bu yüzden `wasCents` ve
- * `limitCap` daima boştur.
- *
- * Paket bu arada satıştan kalkmışsa (`packages` içinde yok) satır SESSİZCE DÜŞMEZ: kimliğiyle ve
- * engelli olarak durur — müşteri sepetinden bir şeyin kaybolduğunu görmeli.
+ * Paket satırı: fiyat paketin kendi alanından, teklif ve indirim yok. Satıştan kalkmış paket kimliğiyle ve engelli durur.
  */
 function bundleLine(bundleId: string, qty: number, pack: CartBundleSource | undefined): CartLine {
   if (!pack) return orphanLine({ kind: 'bundle', bundleId, qty });
@@ -549,14 +405,8 @@ function bundleLine(bundleId: string, qty: number, pack: CartBundleSource | unde
     limitCap: null,
     lineTotalCents: pack.priceCents * qty,
     blocked: pack.soldOut,
-    // **Yol paketin BÜTÜNÜ için** (19.22) — "paketi ikiye böl" yok (`DOMAIN §13`, K5). Karar
-    // `decideBundleAgainstWarehouse` motorundan geliyor ve paket KAPISINDA çözülüyor
-    // (`storefront/packages.ts`); burada yalnız taşınıyor, ikinci kez hesaplanmıyor — kartla sepet
-    // aynı paket için farklı yol söyleyemesin.
-    //
-    // İki alanın `null` kalması checkout'un iki kapısının (`!== null` süzgeci) paketi MUAF geçmesi
-    // demekti ve iş rezervasyonda, müşteri onaya bastıktan SONRA patlıyordu. Değer akınca kapılar
-    // paketi kendiliğinden yakalıyor: yeni kapı eklenmedi, **mevcut kapı beslendi.**
+    // Yol paketin bütünü için paket kapısında (`decideBundleAgainstWarehouse`) çözülür ve burada yalnız taşınır; dolu olması
+    // checkout kapılarının paketi yakalaması için şart.
     route: pack.route,
     // Paketin grubu da BÜTÜNÜ için: soğuk zincir kalemi taşıyan paket rota dışı adreste
     // `not_shippable_here` döner ve grup onu teslim edilemeyene taşır — parça parça değil.
@@ -566,7 +416,7 @@ function bundleLine(bundleId: string, qty: number, pack: CartBundleSource | unde
     availableHere: pack.maxQty,
     contents: pack.items.map((item) => ({ name: item.name, qty: item.qty })),
     vatRate: pack.vatRate,
-    // Pakette TEK bir soğuk zincir kalemi bile varsa paketin tamamı rota içi kalır (05.5).
+    // Pakette tek bir soğuk zincir kalemi bile varsa paketin tamamı rota içi kalır.
     shippable: !pack.inRouteOnly,
   };
 }

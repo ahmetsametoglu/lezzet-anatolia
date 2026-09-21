@@ -4,40 +4,14 @@ import type { Channel } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Vitrinin **"KİM soruyor"** tarafı (08.10 · DOMAIN §5, §10) — yer çözümünün fiyat eşleniği.
- *
- * O "hangi deponun stoğunu okuyacağım" sorusunu cevaplıyor, bu "hangi fiyatı okuyacağım" sorusunu.
- * İkisi ayrı eksen ve ayrı durmaları şart: aynı müşteri yerini değiştirmeden kanal değiştirebilir
- * (başvurusu onaylanır), yerini değiştirip kanalını koruyabilir.
- *
- * Terfi 21.6 (C): kaynağı `apps/web/lib/storefront/read-viewer.ts`ti, **taşıma-nötr** kısmı olduğu
- * gibi geldi. Web'de kalan tek parça `readPricingViewer`: o oturumu okuyor (çerez) ve `cache()` ile
- * istek başına tekilleştiriyor — ikisi de Next'e bağlı, yani taşıma katmanının işi. Mobil eşleniği
- * Bearer'dan çözülen müşteri kimliğini bu kapıya verir.
- *
- * ── NEDEN YAZILDI ────────────────────────────────────────────────────────────
- * Fiyat uzun süre `'b2c'` SABİTİYLE okunuyordu ve motora `b2bApproved: false` geçiliyordu. Sonucu
- * iki sessiz açıktı:
- *
- * 1. **Onaylanmış B2B müşteri hiçbir yerde toptan fiyat görmüyordu.** Başvuru → kontrol kartı →
- *    onay → "toptan fiyat açılır" zincirinin tamamı son adımda karşılıksız kalıyordu.
- * 2. **Müşteriye özel fiyat hiç uygulanmıyordu.** `findApplicableMap` müşteri kimliği verilmeyince
- *    özel fiyat satırlarını hiç okumuyor; motora her zaman `customerPriceCents: null` gidiyordu.
- *
- * Hiçbiri hata vermiyordu — sabitler geçerli değerlerdi. Bu sınıf açığı ancak "bu değer nereden
- * geliyor" diye sorulunca görünür.
+ * Vitrinin "kim soruyor" tarafı (DOMAIN §5, §10): hangi fiyatın okunacağı, yer çözümünden ayrı eksen. Web oturumdan,
+ * mobil Bearer'dan çözdüğü müşteri kimliğini bu kapıya verir.
  */
 
 export interface PricingViewer {
   /**
-   * Fiyatın okunacağı kanal — **onaysız şirket B2C'dir** (DOMAIN §10: toptan liste doğrulanmamış
-   * kayda açılmaz; SIRET herkese açıktır, şirket künyesi girmek toptancı olmak değildir).
-   *
-   * Daraltma BURADA yapılır çünkü fiyat SATIRI bu kanaldan okunuyor: motora ham kanalı verip
-   * yalnız `b2b` fiyatını okusaydık, onaysız şirkette motor B2C'ye düşer ve elindeki listede B2C
-   * satırı bulamayıp ürünü **"satışa kapalı"** ilan ederdi. Motor aynı daraltmayı kendi içinde
-   * yine yapıyor (`resolvePrice`) — orası ham kanalla çağıran başka yüzeylerin (WhatsApp, kapı
-   * önü) güvencesi; burada kural iki kez uygulanıyor ve iki kez de aynı cevabı veriyor.
+   * Fiyatın okunacağı kanal; onaysız şirket B2C'dir (DOMAIN §10). Daraltma burada, çünkü fiyat satırı bu kanaldan okunur;
+   * motor da aynı daraltmayı yapar.
    */
   channel: Channel;
   /** Motora olduğu gibi geçer; `null` (hiç başvurmamış) onay DEĞİLDİR. */
@@ -45,9 +19,7 @@ export interface PricingViewer {
   /** Müşteriye özel fiyat satırlarının okunacağı kimlik; ziyaretçide `null`. */
   customerId: string | null;
   /**
-   * Fiyat grubunun yüzdesi (20.08) — B2B alt kademesi; motor listeden düşer (özel → grup → liste).
-   * Ziyaretçide ve grupsuz müşteride `null`. Yüzde BURADA çözülür (grup kimliği değil): fiyat
-   * okuyan her yer bir de grup tablosuna gitmesin.
+   * Fiyat grubunun yüzdesi; ziyaretçide ve grupsuz müşteride `null`. Yüzde burada çözülür ki fiyat okuyan her yer grup tablosuna gitmesin.
    */
   groupPercentOff: number | null;
 }
@@ -56,28 +28,18 @@ export interface PricingViewer {
 export const VISITOR: PricingViewer = { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null };
 
 /**
- * Bir MÜŞTERİ KİMLİĞİNDEN görüntüleyen künyesi.
- *
- * Oturumdan ayrı bir kapı olarak duruyor çünkü kimliğin tek kaynağı oturum değil: web'de checkout
- * taslağı müşteriyi misafir OTP çerezinden de çözebiliyor ve o yolda oturum yoktur; mobilde kimlik
- * Bearer'dan gelir. Fiyatı oturuma bağlasaydık, misafir olarak doğrulanmış bir B2B müşteri ödeme
- * adımında perakende fiyat görürdü.
- *
- * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), tıpkı `auth/otp` gibi.
- */
-/**
- * Müşterinin GEÇERLİ kanalı — şirket olmak yetmez, ONAY da gerekir.
- *
- * **Ayrı bir fonksiyon çünkü ikinci çağıranı doğdu (24.08 · MB-63):** sepet ucu ölçüm için kanalı
- * bilmek zorunda ve profili ZATEN okumuş durumda (`resolveCustomer`). `pricingViewerOf`u çağırmak
- * aynı satırı ikinci kez okumak, kuralı elle tekrarlamak ise onaysız şirketin bir gün bir yerde
- * B2B sayılması olurdu — fiyat motoru da aynı daraltmayı uyguluyor (çift kat).
+ * Müşterinin geçerli kanalı: şirket olmak yetmez, onay da gerekir. Sepet ucu profili zaten okuduğu için ayrı fonksiyondur.
  */
 export function effectiveChannelOf(profile: { type: string | null; b2bApproved: boolean | null }): Channel {
   const channel = deriveChannel({ isCompany: profile.type === 'company' });
   return channel === 'b2b' && profile.b2bApproved === true ? 'b2b' : 'b2c';
 }
 
+/**
+ * Müşteri kimliğinden görüntüleyen künyesi; kimliğin tek kaynağı oturum değildir (misafir OTP, mobil Bearer).
+ *
+ * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`)
+ */
 export async function pricingViewerOf(db: SupabaseClient, customerId: string | null): Promise<PricingViewer> {
   if (!customerId) return VISITOR;
   const profile = await new UserProfileService(db).getById(customerId);

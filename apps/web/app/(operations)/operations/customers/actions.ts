@@ -32,11 +32,7 @@ import {
 import { CUSTOMERS_PATH, parseCustomersUrl, toCustomerFilters } from './customers-url';
 import type { CreditFormInput, CustomerDetail, CustomerEditInput, CustomerRow } from './customers-types';
 
-// Müşteri ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
-// `{ data, error }` DÖNER (throw yok) + revalidatePath.
-//
-// Guard `requireAdmin` HER action'da: vade/limit yazmak ve ödeme geçmişini görmek yönetici işidir
-// (tasarım §6). Ekranın düğmeyi göstermemesi bir güvence değildir — action kendi kapısını kendi tutar.
+// Guard `requireAdmin` her eylemde: vade yazmak ve ödeme geçmişini görmek yönetici işidir; ekranın düğmeyi gizlemesi güvence değildir.
 
 /** Önizlemede gösterilen sipariş sayısı — geçmişin TAMAMI değil, "son ne aldı" sorusunun cevabı. */
 const LAST_ORDERS_LIMIT = 5;
@@ -67,15 +63,8 @@ export async function loadMoreCustomersAction(
 }
 
 /**
- * Seçili müşterinin TÜRETİLMİŞ bilgisinin tamamı — karne, vade pozisyonu, adresler, izinler,
- * kuponlar, puan, edinim, talepler ve son siparişler.
- *
- * Seçimle okunur, listeyle değil: liste 30 satır getirirken satır başına bu turu atmak N+1'in en
- * pahalı hâli olurdu. Tasarım da bu bilgileri satırda değil panelde gösteriyor.
- *
- * **Hiçbir kural burada yazılmaz.** Ciro/sayı `order_counts()` agregasından, açık bakiye ve gecikme
- * `creditPosition`'dan, ödeme günü ölçümü `readCustomerScorecard`'tan, puan hakkı `isPointsEligible`'dan
- * gelir. Bu fonksiyonun işi tek turda toplamak.
+ * Seçili müşterinin türetilmiş bilgisinin tamamı, seçimle okunur ki liste satır başına tur atmasın. Kural burada yazılmaz:
+ * ciro `order_counts`tan, vade `creditPosition`dan, karne `readCustomerScorecard`dan, puan hakkı `isPointsEligible`dan gelir.
  */
 export async function readCustomerDetailAction(customerId: string): Promise<ActionResult<CustomerDetail>> {
   try {
@@ -90,10 +79,8 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
     const discounts = new DiscountService(db);
 
     const [totals, recent, scorecard, addresses, coupons, points, ticketCount, openTicketCount, referrer, priceGroups] = await Promise.all([
-      // `counts({ customerIds })` DEĞİL: orada müşteri süzgeci arama grubunun içinde durur ve terim
-      // olmadan hiç uygulanmaz — her müşteri kartı işletmenin TAMAMININ cirosunu gösteriyordu
-      // (ölçüldü 30.07: 28 sipariş / 1777 €, gerçek 10 / 990 €). Bu RPC dar ve doğru soruyu sorar,
-      // iptal edilen siparişi de ciroya katmaz.
+      // `counts({ customerIds })` değil, çünkü orada müşteri süzgeci terimsiz uygulanmaz ve kart işletmenin tüm cirosunu
+      // gösterirdi; bu RPC dar soruyu sorar ve iptali ciroya katmaz.
       orders.customerTotals(customerId),
       orders.listByCustomer(customerId, { limit: LAST_ORDERS_LIMIT }),
       readCustomerScorecard(db, customerId, profile.paymentTermDays),
@@ -107,7 +94,7 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
       // kazandığı yerde (çok talep açmış müşteride) tavana takılıp yalan söylerdi.
       new TicketService(db).countOpenByCustomer(customerId),
       profile.referredBy ? profiles.getById(profile.referredBy) : Promise.resolve(null),
-      // Fiyat grubu seçenekleri (20.08) — kart, üyeliği buradan atar; küme doğal tavanlı, tek tur.
+      // Fiyat grubu seçenekleri; üyelik müşteri kartından atanır.
       new PriceGroupService(db).listAll(),
     ]);
 
@@ -159,11 +146,8 @@ export async function readCustomerDetailAction(customerId: string): Promise<Acti
 }
 
 /**
- * Sipariş ÖZETİ — sipariş kartına tıklanınca açılan diyaloğun verisi.
- *
- * Okuma `lib/order/summary`'de ve orada olması şart: müşteri ekranına özel bir okuma olsaydı ödeme
- * durumunun türetilmesi iki yerde yaşardı. Diyalog bir GÖZ ATMADIR — eylemler (durum geçişi,
- * tahsilat, iade) sipariş detay sayfasında kalır ve diyalog oraya köprü verir.
+ * Sipariş özeti diyaloğunun verisi; okuma `lib/order/summary`de ki ödeme durumu tek yerde türesin. Diyalog bir göz atmadır,
+ * eylemler sipariş detayında kalır.
  */
 export async function readOrderSummaryAction(orderId: string): Promise<ActionResult<OrderSummaryView>> {
   try {
@@ -177,11 +161,7 @@ export async function readOrderSummaryAction(orderId: string): Promise<ActionRes
 }
 
 /**
- * B2B başvurusunun kontrol kartı — diyalog açılınca okunur, seçimle DEĞİL.
- *
- * Dört okuma (profil · adres · teslim bölgeleri · mükerrer adayları) yalnız profesyonel müşteride ve
- * yalnız diyalog açıldığında anlamlı. `CustomerDetail`e katılsaydı her seçimde, her müşteride, hiç
- * açılmayacak bir kart için atılırdı.
+ * B2B başvurusunun kontrol kartı, diyalog açılınca okunur; her seçimde okunsa hiç açılmayacak kart için dört sorgu atılırdı.
  */
 export async function readB2bCheckAction(customerId: string): Promise<ActionResult<B2bCheckView>> {
   try {
@@ -195,18 +175,8 @@ export async function readB2bCheckAction(customerId: string): Promise<ActionResu
 }
 
 /**
- * Kontrol kartının AI özeti (09.11c · sınıf 3, 16.08) — kart okumasından AYRI action ve bilerek:
- * model çağrısı saniye mertebesinde, kartın açılışı onu beklememeli. Diyalog kartı çizer, özet
- * sonradan düşer; AI yoksa kart bugüne kadarki hâliyle kalır ("üretilmiyor" cümlesi).
- *
- * Girdi MOTORUN sinyalleridir (`b2bSignals`) — model kendi kanıtını toplamaz, verilen sinyalleri
- * tek cümleye indirir (sınıf 3 çizgisi: ticari değer uydurulmaz, verilenden türetilir).
- *
- * **Montaj PAKETTE** (`readB2bSummary`, 21.285 · mobil notu 07.09): kart okuması + sinyal
- * eşlemesi + model çağrısı bir tur burada da yazılıydı ve mobil aynı cümleyi isteyince paket
- * kendi nüshasını kurdu. İki nüsha aynıyken bile tehlikeliydi — girdi bir tarafta değişse
- * (mesela mükerrer sayısı unutulsa) aynı başvuru için iki yüzey farklı cümle gösterirdi. Burada
- * kalan yalnız guard ve `ActionResult` sarmalı; tazeleme YOK kararı ve gerekçesi kapının künyesinde.
+ * Kontrol kartının AI özeti, ayrı eylem, çünkü model çağrısı kartın açılışını bekletmemeli. Montaj pakette (`readB2bSummary`)
+ * ki iki yüzey aynı başvuru için aynı cümleyi göstersin; burada yalnız guard ve sonuç sarmalı var.
  */
 export async function b2bSummaryAction(customerId: string): Promise<ActionResult<{ summary: string }>> {
   try {
@@ -223,24 +193,8 @@ export async function b2bSummaryAction(customerId: string): Promise<ActionResult
 }
 
 /**
- * B2B başvurusunu onaylar / reddeder.
- *
- * **Onay YALNIZ toptan fiyatı açar** (tasarımın altına yazdığı kural): vade/limit ayrı bir karardır ve
- * ayrı diyalogda verilir. Burada `creditEnabled`e dokunulmaması bilinçli — onayla birlikte vade açmak,
- * hiç değerlendirilmemiş bir müşteriye limitsiz vade vermek olurdu.
- *
- * **Ret SİLMEZ**: kayıt B2C olarak kalır, müşteri perakende fiyatla alışverişe devam eder.
- * Reddedilen bir başvuruyu silmek, aynı kişinin yarın yeniden başvurmasında geçmişi bilmemek demekti.
- *
- * ── RET ARTIK DAMGALANIYOR (04.08, arka uç bildirimi) ────────────────────────
- * Bir tur ret `setB2bApproval(id, false)` ile yazılıyordu ve o çağrı yalnız `b2bApproved`'ı `false`
- * yapıyordu — yani **ret fiilen kaydedilmiyordu**: aynı değeri hiç karar verilmemiş başvuru da
- * taşıdığı için reddettiğimiz kayıt listede "Onay bekliyor" olarak durmaya devam ediyordu.
- * `rejectB2b` kim/ne zaman/neden damgasını basıyor; gerekçenin zorunluluğunu da tip değil VERİ
- * zorluyor (`user_profiles_b2b_reject_stamp`).
- *
- * **Kararı veren KİŞİ yazılır** (`actorId`): "bu başvuruyu kim reddetti" sorusunun cevabı, ret
- * müşteriye e-postayla gittiği için gerekli — cevabı olmayan bir karar savunulamaz.
+ * B2B başvurusunu onaylar ya da reddeder: onay yalnız toptan fiyatı açar, vade ayrı karardır. Ret silmez, `rejectB2b` kim,
+ * ne zaman ve neden damgasını basar; kararı veren kişi yazılır, çünkü ret müşteriye e-postayla gider.
  */
 export async function setB2bApprovalAction(customerId: string, approved: boolean, reason = ''): Promise<ActionResult> {
   try {
@@ -248,11 +202,7 @@ export async function setB2bApprovalAction(customerId: string, approved: boolean
     const profiles = new UserProfileService(serviceDb());
     if (approved) await profiles.approveB2b(customerId);
     else await profiles.rejectB2b(customerId, { actorId: actor.profileId, reason });
-    // Sonuç başvurana bildirilir (14.10 · arka uç şeridi). Bu satır YAZILANA KADAR gerekçe veride
-    // zorunluydu, üç dile çevriliyordu ve hiçbir okuyucuya ulaşmıyordu — yukarıdaki künyenin
-    // "müşteriye e-postayla gidiyor" sözü karşılıksızdı.
-    //
-    // Beklenmiyor (`void`): mail gitmedi diye kararı geri almak yanlış olurdu; karar zaten yazıldı.
+    // Sonuç başvurana bildirilir; beklenmez, çünkü mail gitmedi diye yazılmış karar geri alınmaz.
     void notifyB2bDecision(customerId, approved);
     revalidatePath(CUSTOMERS_PATH);
     return { data: null, error: null };
@@ -262,16 +212,8 @@ export async function setB2bApprovalAction(customerId: string, approved: boolean
 }
 
 /**
- * Vade yetkisi + limit + vade süresi. ÜÇÜ TEK action'da çünkü tek karardır: vade açmak, "ne kadara
- * kadar ve kaç güne" sorusunu da yanıtlamak demektir.
- *
- * **Limit boş bırakılabilir ama "sınırsız" DEMEK DEĞİL.** Motor (`resolveCheckoutPayment`) tanımsız
- * limiti "önceden onaylanmış tutar yok" sayar: her vadeli sipariş `creditRequiresApproval` ile admin
- * onayına düşer, otomatik geçmez. Ekran bunu böyle yazar — bir tur "sınırsız vade" yazıyordu ve o
- * cümle operatöre çalışmayan bir yetki açtırırdı. Vade KAPALIYSA limit de temizlenir: kapalı bir
- * yetkinin altında duran sayı, bir gün yetki açıldığında kimsenin hatırlamadığı bir limit olurdu.
- *
- * Açık bakiye ve gecikme YAZILMAZ, türetilir (tasarım §6): burada yazılan yalnız üç niyet alanı.
+ * Vade yetkisi, limit ve süre tek karar olduğu için tek eylemde; boş limit "sınırsız" değildir, her vadeli sipariş onaya düşer.
+ * Vade kapanınca limit de temizlenir, açık bakiye ve gecikme yazılmaz, türetilir.
  */
 export async function setCustomerCreditAction(customerId: string, input: CreditFormInput): Promise<ActionResult> {
   try {
@@ -297,21 +239,8 @@ export async function setCustomerCreditAction(customerId: string, input: CreditF
 }
 
 /**
- * Müşteri kimlik/iletişim bilgisi + iki ticari ayar (kapıda ödeme izni, genel indirim oranı).
- *
- * **Kapıda ödeme ve indirim oranı bir tur AYRI action'lardaydı** (`setCodAllowedAction`,
- * `setDiscountPercentAction`) çünkü panelde ayrı ayrı yazılıyorlardı. İkisi de `Düzenle` formuna
- * taşınınca (kullanıcı kararı 30.07) ayrı kalmalarının bir gerekçesi kalmadı: aynı formun üç yazma turu
- * atması, ikincisi düşerse yarısı kaydedilmiş bir form demekti. Tek `update` = tek satır, tek sonuç.
- *
- * Telefon ve e-posta KİMLİK anahtarlarıdır ve tekildir — çakışma DB kısıtından döner ve okunur bir
- * hataya çevrilir (kuralı burada tekrar yazmak, iki yerde yaşayan bir tekillik ölçütü demekti).
- * Boş bırakılan telefon/e-posta `null` yazılır: boş dize bir kimlik anahtarı değildir ve tekillik
- * indeksinde ikinci bir boş dizeyle çakışırdı.
- *
- * İndirimde sıfır ile `null` AYNI ŞEY DEĞİL: `0` "oranı var ama sıfır" der ve müşteri fiyat ekranındaki
- * "indirim oranı tanımlı müşteriler" listesinde görünmeye devam eder; `null` o listeden düşer. Bu yüzden
- * sıfır girilirse oran KALDIRILIR — operatörün "indirimi kaldır" niyeti tam olarak bu.
+ * Müşteri kimliği, iletişimi ve iki ticari ayar (kapıda ödeme izni, genel fiyat kuralı) tek `update`le, yarım kayıt olmasın.
+ * Telefon ve e-posta çakışması DB kısıtından okunur hataya çevrilir; boş kimlik alanı `null` yazılır.
  */
 export async function updateCustomerAction(customerId: string, input: CustomerEditInput): Promise<ActionResult> {
   try {
@@ -344,20 +273,8 @@ export async function updateCustomerAction(customerId: string, input: CustomerEd
 }
 
 /**
- * **GDPR silme** (09.10) — kişisel veriyi boşaltır, kaydı bırakır.
- *
- * Kapı tek çağrı (`anonymize`) ve kuralın tamamı onun içinde; buradaki iş yetkiyi sormak ve hatayı
- * Türkçeye çevirmek. **Fırlatırsa iş YAPILMAMIŞTIR** — o yüzden hata yutulmuyor, ekranda görünüyor.
- *
- * **Satır silinmez, kimliği boşalır:** `order` profile `restrict` ile bağlı, silme zaten
- * veritabanınca reddedilirdi. Fatura kayıtları ve üstündeki ad-adres KALIR (Fransız hukuku faturanın
- * bunları içermesini zorunlu kılıyor). Giden şey adres defteri, talep yazışmaları, bildirim
- * istekleri, puan geçmişi, kişisel fiyat/kupon ve yorum METİNLERİ; ürün PUANI kimliksiz kalır —
- * silinseydi bir müşterinin ayrılması, başkalarının gördüğü ürün skorunu geriye dönük değiştirirdi.
- *
- * **İdempotent ama telafisiz:** ikinci çağrı sessizce çıkar ve damga ilk silmenin tarihinde kalır.
- * Yani "iki kez bastım" zararsız, "yanlış müşteriye bastım" geri alınamaz — onay diyaloğunun
- * ciddiyeti buradan geliyor, ekranın kendi tercihinden değil.
+ * GDPR silme: kural `anonymize` içinde, burada yetki ve hata çevirisi var. Satır silinmez, kimliği boşalır; işlem idempotent
+ * ama telafisizdir, onay diyaloğunun ciddiyeti buradan gelir.
  */
 export async function anonymizeCustomerAction(customerId: string): Promise<ActionResult> {
   try {
