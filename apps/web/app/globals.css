@@ -95,7 +95,7 @@
 
   /* ── Marka işaretleri — Token Kararlari #5 ─────────────────────────────────
      Palete ait değil, temayla dönmez; operasyonun koyu ikon yeşili `brand-whatsapp` ayrı kayıt (ad çarpışması `customer.ts`te). */
-  --color-brand-whatsapp-pure: #25d366; /* giriş: WhatsApp düğmesinin ikonu */
+  --color-brand-whatsapp-pure: #25d366; /* WhatsApp'ın kanonik yeşili */
   --color-brand-google: #4285f4; /* giriş: Google düğmesinin "G"si */
 
   /* ── §0.4b Tipografi ölçeği ──────────────────────────────────────────────

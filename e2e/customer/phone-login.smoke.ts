@@ -5,7 +5,7 @@ const NAV = { waitUntil: 'domcontentloaded' as const };
 
 /** Telefon girişi yalnız `mobile-web`de anlamlı (masaüstü aynı adreste kendi girişini çizer); kod gönderilmez, veritabanına yazılmaz. */
 test.describe('telefon girişi — ziyaretçi', () => {
-  test('Hızlı Doğrulama: üç yol, WhatsApp bilgisi, e-posta adımı', async ({ page }) => {
+  test('Hızlı Doğrulama: Google ve e-posta yolları, e-posta adımı', async ({ page }) => {
     test.skip(test.info().project.name !== 'mobile-web', 'telefon görünümüne özgü');
 
     const res = await page.goto('/fr/connexion', NAV);
@@ -17,8 +17,6 @@ test.describe('telefon girişi — ziyaretçi', () => {
     await expect(page.getByRole('link', { name: 'notre politique de confidentialité' })).toBeVisible();
 
     await expect(page.getByRole('button', { name: 'Continuer avec Google' })).toBeVisible();
-    await page.getByRole('button', { name: 'Continuer avec WhatsApp' }).click();
-    await expect(page.getByText('La connexion avec WhatsApp arrive très bientôt.', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: "Continuer avec l'e-mail" }).click();
     await expect(page.getByRole('textbox', { name: 'Votre adresse e-mail' })).toBeVisible();

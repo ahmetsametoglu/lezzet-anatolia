@@ -3,14 +3,14 @@ import { OtpCodeInput } from '@/components/customer/auth/otp-code-input';
 import { FormInputField } from '@/components/customer/form/form-input-field';
 import { Button } from '@/components/customer/ui/button';
 import { Icon } from '@/components/customer/ui/icons';
-import { GoogleIcon, WhatsAppIcon } from '@/components/customer/auth/provider-icons';
+import { GoogleIcon } from '@/components/customer/auth/provider-icons';
 import type { LoginViewProps } from './login-types';
 
 // Tasarımdaki aile sofrası fotoğrafının yerini tutan degrade; renkler token'dan (bal · ara durak · mürekkep).
 const HERO_BG = 'linear-gradient(150deg,var(--color-honey) 0%,var(--color-hero-mid) 45%,var(--color-ink) 100%)';
 
 // Bölünmüş ekran: solda kahraman, sağda doğrulama paneli. Tasarımın 1120px çerçevesi canvas'a ait; ekran pencereyi kaplar.
-export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice, isSending, emailInvalid, emailRef, emailField, onSubmit, onBack, onGoogle, onWhatsApp, onVerify, onResend }: LoginViewProps) {
+export function LoginDesktop({ t, errors, subtitle, locale, stage, error, isSending, emailInvalid, emailRef, emailField, onSubmit, onBack, onGoogle, onVerify, onResend }: LoginViewProps) {
   return (
     <main className="flex min-h-screen bg-cream text-ink">
       {/* SOL: hero — pencerenin sol panelini kaplar (tasarım 468/1120 ≈ %42) */}
@@ -50,14 +50,9 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
                 <p className="font-sans text-body leading-relaxed text-body">{subtitle}</p>
               </div>
 
-              <div className="flex flex-col gap-2.5">
-                <Button variant="secondary" fullWidth onClick={onGoogle}>
-                  <GoogleIcon /> {t.googleCta}
-                </Button>
-                <Button variant="secondary" fullWidth onClick={onWhatsApp}>
-                  <WhatsAppIcon /> {t.whatsappCta}
-                </Button>
-              </div>
+              <Button variant="secondary" fullWidth onClick={onGoogle}>
+                <GoogleIcon /> {t.googleCta}
+              </Button>
 
               <div className="flex items-center gap-3 font-sans text-note text-sand-600">
                 <span className="h-px flex-1 bg-sand-300" />
@@ -83,7 +78,6 @@ export function LoginDesktop({ t, errors, subtitle, locale, stage, error, notice
               </div>
 
               {error && <p className="text-center font-sans text-note font-semibold text-terracotta-bright">{error}</p>}
-              {notice && <p className="text-center font-sans text-note font-semibold text-olive">{notice}</p>}
 
               <p className="text-center font-sans text-micro leading-relaxed text-muted">
                 {t.consentBefore}

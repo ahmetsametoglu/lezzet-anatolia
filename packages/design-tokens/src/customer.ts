@@ -114,7 +114,7 @@ export const customerScrim = {
    Palete ait değil: üçüncü tarafların kendi renkleri, temayla dönmez. `brand-whatsapp` adı operasyonun koyultulmuş ikon
    yeşilinde (`operations.ts`) olduğu için kanonik yeşil `brand-whatsapp-pure` adını aldı. */
 export const customerBrand = {
-  'brand-whatsapp-pure': '#25d366', // giriş: WhatsApp düğmesinin ikonu
+  'brand-whatsapp-pure': '#25d366', // WhatsApp'ın kanonik yeşili
   'brand-google': '#4285f4', // giriş: Google düğmesinin "G"si
 } as const satisfies Record<string, string>;
 

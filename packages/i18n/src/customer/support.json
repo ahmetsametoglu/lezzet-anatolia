@@ -3,7 +3,7 @@
     "back": "Geri",
     "guest": {
       "title": "Talepleriniz için hızlı doğrulama",
-      "body": "Şifre yok — e-posta, Google veya WhatsApp ile birkaç saniyede doğrulanın.",
+      "body": "Şifre yok — e-posta ya da Google ile birkaç saniyede doğrulanın.",
       "cta": "Hızlı doğrulama"
     },
     "error": {
@@ -117,7 +117,7 @@
     "back": "Retour",
     "guest": {
       "title": "Vérification rapide pour vos demandes",
-      "body": "Pas de mot de passe — e-mail, Google ou WhatsApp en quelques secondes.",
+      "body": "Pas de mot de passe — e-mail ou Google en quelques secondes.",
       "cta": "Vérification rapide"
     },
     "error": {
@@ -231,7 +231,7 @@
     "back": "Zurück",
     "guest": {
       "title": "Schnelle Verifizierung für Ihre Anfragen",
-      "body": "Kein Passwort — mit E-Mail, Google oder WhatsApp in Sekunden.",
+      "body": "Kein Passwort — mit E-Mail oder Google in Sekunden.",
       "cta": "Schnelle Verifizierung"
     },
     "error": {

@@ -529,10 +529,10 @@ E-posta bağlamak istemeyen müşteriye, **aynı konuşmada**, sistemin üretti�
 ### Hesap ve doğrulama (kimlik nasıl kurulur)
 
 - **Hesapsız sipariş yoktur.** Sipariş "misafir" akışıyla başlasa da son adımda müşteri **doğrulanmış bir kimliğe** bağlanır; her sipariş bir hesaba bağlıdır (`Order.customer_id` zorunlu). "Misafir" burada **şifre/profil sürtünmesi olmadan hızlı doğrulama** demektir — hesapsızlık değil.
-- **Doğrulama yöntemleri:**
-  - Önce Google (OAuth) + e-posta + OTP; WhatsApp ile giriş canlı kanal devreye girince (hepsi Faz 1).
+- **Doğrulama yöntemleri:** Google (OAuth) ve e-posta + OTP.
+- **WhatsApp ile giriş yoktur.** Masaüstündeki müşterinin WhatsApp'la ilgisi yok; telefondaki müşterinin cihazında Google ya da posta hesabı zaten açık. Üstelik numara devredilebilen, zayıf bir anahtardır: hesabı yalnız ona dayandırmak yukarıdaki çapa tasarımının koruduğu durumu kendi eliyle üretirdi. WhatsApp bildirim, mesajlaşma ve sipariş kanalıdır; WhatsApp kimliği hesaba **numara bağlamayla** takılır (§10).
 - **Supabase Auth yalnız kimlik/oturum motorudur.** Doğrulama maili (OTP) dahil **tüm e-posta `packages/email`'den default şablonla** gönderilir (Auth "send email" hook → `packages/email`); Supabase'in yerleşik mail şablon/gönderim yapısı **kullanılmaz**.
-- Hangi yoldan girilirse girilsin (Google / e-posta / WhatsApp) kişi **aynı `Customer`'da birleşir** — yukarıdaki bul-veya-oluştur ve `company_info`'dan kanal türetme kuralları aynen geçerli.
+- Hangi yoldan girilirse girilsin (Google / e-posta) kişi **aynı `Customer`'da birleşir**; WhatsApp'tan açılan taslak da numara hesaba bağlanınca aynı kayda birleşir — yukarıdaki bul-veya-oluştur ve `company_info`'dan kanal türetme kuralları aynen geçerli.
 
 ---
 

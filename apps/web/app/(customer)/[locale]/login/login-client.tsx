@@ -34,7 +34,6 @@ interface LoginClientProps {
 export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, initialError = null, device }: LoginClientProps) {
   const [stage, setStage] = useState<Stage>({ kind: 'email' });
   const [error, setError] = useState<string | null>(initialError);
-  const [notice, setNotice] = useState<string | null>(null);
   const [isSending, startSending] = useTransition();
   const resolvedDevice = useDevice(device);
 
@@ -54,7 +53,6 @@ export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, ini
     if (stage.kind === 'code') {
       setStage({ kind: 'email' });
       setError(null);
-      setNotice(null);
     } else {
       history.back();
     }
@@ -65,7 +63,6 @@ export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, ini
 
   const onSubmit = handleSubmit((values) => {
     setError(null);
-    setNotice(null);
     startSending(async () => {
       const { data, errorKey } = await sendEmailOtp(values.email);
       if (!data) {
@@ -94,17 +91,10 @@ export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, ini
 
   async function onGoogle() {
     setError(null);
-    setNotice(null);
     const supabase = createClient();
     const redirectTo = `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`;
     const { error: err } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
     if (err) setError(copyErrors.googleUnavailable);
-  }
-
-  // WhatsApp girişi henüz kurulmadı (modül 15); tasarımdaki buton korunur, tıklamada bilgi verir.
-  function onWhatsApp() {
-    setError(null);
-    setNotice(t.whatsappSoon);
   }
 
   const view: LoginViewProps = {
@@ -114,7 +104,6 @@ export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, ini
     locale,
     stage,
     error,
-    notice,
     isSending,
     emailInvalid: !!errors.email,
     emailRef,
@@ -122,7 +111,6 @@ export function LoginClient({ next, subtitle, locale, t, errors: copyErrors, ini
     onSubmit,
     onBack,
     onGoogle,
-    onWhatsApp,
     onVerify,
     onResend,
   };

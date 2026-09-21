@@ -28,8 +28,6 @@ type Step = 'choose' | 'email';
 export function LoginMobile({ locale, stage, error, isSending, emailInvalid, emailRef, emailField, onSubmit, onBack, onGoogle, onVerify, onResend }: LoginViewProps) {
   const copy: Copy = loginMessages[locale];
   const [step, setStep] = useState<Step>('choose');
-  /** Seçim aşamasının bilgi satırı (WhatsApp "yakında"). */
-  const [notice, setNotice] = useState<string | null>(null);
   /** Adım derinliği (seçim 0, e-posta 1, kod 2) — geçmişteki adım kayıtlarıyla eşleşir. */
   const depth = stage.kind === 'code' ? 2 : step === 'email' ? 1 : 0;
   /** Bu ekranın geçmişe eklediği adım kaydı sayısı. */
@@ -75,8 +73,8 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
         <h1 className="font-serif text-page-title-sm leading-tight text-ink">{copy.title}</h1>
         <p className="font-sans text-control leading-normal font-normal text-body">{copy.body}</p>
 
-        {/* Seçimin üç yolu ve bilgi satırı kadar sabit yer (6 + 3 × 54 + 2 × 10 + 6 + 21): kısa adımlarda ortalanmış blok oynamasın. */}
-        <div className="flex min-h-53.75 flex-col">
+        {/* En uzun adım olan kod adımı kadar sabit yer (iki satırlık gönderim cümlesiyle 158px): adımlar arasında ortalanmış blok oynamasın. */}
+        <div className="flex min-h-39.5 flex-col">
           {stage.kind === 'code' ? (
             <CodeStep email={stage.email} copy={copy} onVerify={onVerify} onResend={onResend} />
           ) : step === 'choose' ? (
@@ -84,27 +82,19 @@ export function LoginMobile({ locale, stage, error, isSending, emailInvalid, ema
               <ProviderButton
                 tone="card"
                 label={copy.google}
-                onClick={() => {
-                  setNotice(null);
-                  onGoogle();
-                }}
+                onClick={onGoogle}
                 mark={
                   <span aria-hidden className="font-sans text-step font-bold text-brand-google">
                     G
                   </span>
                 }
               />
-              <ProviderButton tone="card" label={copy.whatsapp} onClick={() => setNotice(copy.whatsappSoon)} mark={<MobileIcon name="whatsapp" size={17} className="text-brand-whatsapp-pure" />} />
               <ProviderButton
                 tone="olive"
                 label={copy.email}
-                onClick={() => {
-                  setNotice(null);
-                  setStep('email');
-                }}
+                onClick={() => setStep('email')}
                 mark={<MobileIcon name="mail" size={17} />}
               />
-              {notice && <p className="mt-1.5 text-center font-sans text-note font-semibold text-olive-dark">{notice}</p>}
             </div>
           ) : (
             <form onSubmit={onSubmit} noValidate className="mt-1.5 flex flex-col gap-2.5">
@@ -147,7 +137,7 @@ interface ProviderButtonProps {
   label: string;
   /** Sağlayıcının işareti — "G" harfi ya da ikon; renk çağırandan. */
   mark: ReactNode;
-  /** `card` — beyaz, kum çerçeveli (Google · WhatsApp); `olive` — dolu zeytin (E-posta). */
+  /** `card` — beyaz, kum çerçeveli (Google); `olive` — dolu zeytin (E-posta). */
   tone: 'card' | 'olive';
   onClick: () => void;
 }

@@ -27,7 +27,6 @@ export interface LoginViewProps {
   locale: Locale;
   stage: Stage;
   error: string | null;
-  notice: string | null;
   isSending: boolean;
   emailInvalid: boolean;
   emailRef: UseFormRegisterReturn['ref'];
@@ -35,7 +34,6 @@ export interface LoginViewProps {
   onSubmit: FormEventHandler<HTMLFormElement>;
   onBack: () => void;
   onGoogle: () => void;
-  onWhatsApp: () => void;
   onVerify: (code: string) => Promise<OtpVerifyResult>;
   onResend: () => Promise<OtpResendResult>;
 }
