@@ -35,8 +35,7 @@ export function marginHint(row: PriceRow): string {
   if (row.costCents === null) return 'Maliyet bilinmiyor — fiyatlı parti girilmemiş, marj hesaplanamaz.';
   if (row.marginPercent === null) return 'Hiçbir kanalda fiyat yok — marj hesaplanamaz.';
   const channel = row.marginChannel === 'b2b' ? 'B2B' : 'B2C';
-  // Hedef, EN DAR marjın kanalına göre çözülür (15.08): B2B'ye özel hedef varsa ve dar kanal
-  // B2B ise ipucu o hedefi söyler — ortak hedefi söylemek yanlış kıyası doğrularmış gibi olurdu.
+  // Hedef en dar marjın kanalına göre çözülür; ortak hedefi söylemek yanlış kıyası doğrulamış gibi olurdu.
   const effective = targetMarginFor(row.marginChannel ?? 'b2c', row.targetMarginPercent, row.targetMarginB2bPercent);
   const b2bNote = row.marginChannel === 'b2b' && row.targetMarginB2bPercent !== null ? ' (B2B’ye özel)' : '';
   const target = effective === null ? 'hedef yazılmamış' : `hedef ${percent(effective)}${b2bNote}`;
@@ -76,14 +75,8 @@ export const SCOPE_TONE: Record<PriceScope, ChipTone> = {
 };
 
 /**
- * Sekmenin alt başlığı — masaüstü ve telefon AYNI cümleyi kurar.
- *
- * Mobilde sabit bir metin vardı ve her sekmede kanal sayaçlarını yazıyordu: okuma sekmeye bağlı
- * olduğu için "Kupon"da başlık "0 boy yüklendi · 0 marj-altı · 0 fiyatı eksik" diyordu. İki yüzey
- * aynı ekranın başlığını iki ayrı yerde yazarsa, biri sekmeyi unutur.
- *
- * Sayaçlar YÜKLENMİŞ sayfaya aittir ve metin bunu söyler — "3 marj-altı" yazıp katalogun tamamını
- * kastetmek, görülmemiş satırları sessizce yok saymaktı.
+ * Sekmenin alt başlığı, masaüstü ve telefon aynı cümleyi kurar ki biri sekmeyi unutmasın. Sayaçlar yüklenmiş sayfaya aittir ve
+ * metin bunu söyler.
  */
 export function tabSubtitle(tab: PriceTab, data: PricesData, counts: { rows: number; below: number; missing: number }): string {
   switch (tab) {
