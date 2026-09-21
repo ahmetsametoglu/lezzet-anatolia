@@ -73,8 +73,7 @@ mkdir -p temp
 ln -sfn "$SHARED/lezza-cache" temp/lezza-cache
 chown -R "$APP_USER:$APP_USER" "$REL"
 
-# Derlemeden önce: sitemap derleme sırasında veritabanını okur, tablolar hazır olmalı. Yayına geçişten
-# önce kaldığı için "şema kodu bekler" kuralı korunur.
+# Yayına geçişten önce: yeni kod uygulandığında şema hazır olmalı ("şema kodu bekler" kuralı).
 echo "→ migration"
 MANIFEST="$SHARED/migrations.sha256"
 if [ -f "$MANIFEST" ] && ! sha256sum --quiet -c "$MANIFEST"; then

@@ -38,7 +38,7 @@ Yani içerik seçili dilde boşsa önce Türkçe, o da boşsa Fransızca, o da b
 - Her sayfada `hreflang` etiketleri: Google'a "bu sayfanın diğer dillerdeki karşılığı şu" bilgisi. Doğru ülkede doğru dil gösterimi bununla olur.
 - `x-default` tanımlanır (Fransızca); sayfa etiketi ve site haritası aynı kaynaktan (`languageAlternates`).
 - Dil önekli adres tek fonksiyondan: `localizedHref`. Kök rota `/fr`dir, `/fr/` değil — sondaki eğik çizgi 308 ile yönlenir.
-- Site haritası saatte bir tazelenir (`revalidate`); derlemede donmaz.
+- Site haritası istek anında üretilir (`force-dynamic`): derlemede donmaz, derleme veritabanı istemez.
 - Kişiye özel rotalar (`lib/seo/private-routes.ts`) tek listedir: robots.txt taramayı kapatır, ara katman
   `X-Robots-Tag: noindex` ile dizine eklenmeyi kapatır.
 - Dil seçimi URL'de yaşar; çerezle değil (cookie'siz analitik ilkesiyle de uyumlu).

@@ -66,7 +66,7 @@ Tek komut: `bash scripts/deploy.sh` (ayar `.env.deploy`; sunucu kurulumu, env, g
 
 **Derleme neden sunucuda:** derleme anında gömülen genel ortam değişkenleri (`NEXT_PUBLIC_*`) varsa, yerelde derlemek üretim değerlerini geliştirme makinesine getirmeyi zorunlu kılar. Sunucuda derleyince üretim sırları yalnız sunucuda yaşar.
 
-**Migration derlemeden ve yayına geçişten önce:** şema kodu bekler, kod şemayı beklemez; derleme de veritabanını okur (`sitemap.ts` derleme anında üretilir). Migration düşerse eski kod + eski şema ayakta kalır — tutarlı bir durum.
+**Migration yayına geçişten önce:** şema kodu bekler, kod şemayı beklemez. Derleme veritabanı okumaz (site haritası istek anında üretilir). Migration düşerse eski kod + eski şema ayakta kalır — tutarlı bir durum.
 
 **Otomatik olmayan, kasıtlı:** veritabanı sıfırlama ve tohum (seed) verisi yükleme. İkisi de yıkıcı; dağıtım hattına asla girmez, elle çalıştırılır.
 

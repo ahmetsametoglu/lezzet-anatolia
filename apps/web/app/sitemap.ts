@@ -8,8 +8,8 @@ import { languageAlternates } from '@/lib/seo/alternates';
  * özel sayfalar burada yok, `robots.ts` de onları kapatır.
  */
 
-// Harita derlemede donmasın: yeni ürün, paket ve tarif bir saat içinde haritaya girer.
-export const revalidate = 3600;
+// İstek anında üretilir: derlemede üretilseydi besleme öncesindeki boş veriyle donardı; derleme de DB istemez.
+export const dynamic = 'force-dynamic';
 
 /** Harita tavanı — `listActive` varsayılanı editoryal şeridin sınırı, harita ise yayındaki tarifin tamamını ister. */
 const SITEMAP_RECIPE_LIMIT = 200;
