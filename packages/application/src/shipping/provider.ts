@@ -1,13 +1,16 @@
-import { announceShipment, cancelShipment, fetchShipmentParcels, fetchShippingQuotes, listShipments, type SendcloudConfig } from '@lezzet/sendcloud';
+import {
+  announceShipment,
+  cancelShipment,
+  fetchServicePoint,
+  fetchShipmentParcels,
+  fetchShippingQuotes,
+  listShipments,
+  searchServicePoints,
+  type SendcloudConfig,
+} from '@lezzet/sendcloud';
 import type { ShippingRateProvider } from './port';
 
-/**
- * Sendcloud uygulaması — portu gerçek sağlayıcıya bağlar.
- *
- * **Anahtarlar ENV'den ve burada okunuyor**, çağıranlarda değil: üç yüzey (sepet, checkout,
- * hazırlık) aynı anahtarı okusaydı biri env adını yanlış yazdığı gün yalnız o yüzey sessizce
- * sabit tarifeye düşerdi — ve o düşüş hiçbir yerde görünmezdi.
- */
+/** Portun Sendcloud uygulaması. Anahtarlar burada okunur: her yüzey kendisi okusaydı yanlış yazılmış bir env adı tek yüzeyi sessizce sabit tarifeye düşürürdü. */
 export function sendcloudProvider(overrides: Partial<SendcloudConfig> = {}): ShippingRateProvider {
   const config: SendcloudConfig = {
     publicKey: overrides.publicKey ?? process.env.SENDCLOUD_PUBLIC_KEY ?? '',
@@ -21,6 +24,8 @@ export function sendcloudProvider(overrides: Partial<SendcloudConfig> = {}): Shi
     cancel: (providerShipmentId) => cancelShipment(config, providerShipmentId),
     status: (providerShipmentId) => fetchShipmentParcels(config, providerShipmentId),
     listRecent: (args) => listShipments(config, args),
+    servicePoints: (args) => searchServicePoints(config, args),
+    servicePoint: (id) => fetchServicePoint(config, id),
   };
 }
 

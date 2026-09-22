@@ -1,18 +1,8 @@
 import { z } from 'zod';
 
 /**
- * Sendcloud v3 cevaplarının şeması — **TOLERANSLI, çünkü dış dünya bizim sözleşmemiz değil.**
- *
- * İki tolerans kararı ve ikisi de ölçümden geliyor:
- *
- * 1. **Boolish alanlar.** `signature`/`tracked`/`eco_delivery` taşıyıcıya göre bazen `true`, bazen
- *    `"yes"` dizesi geliyor. Katı `z.boolean()` bütün teklifi düşürürdü — bir alanın biçimi
- *    yüzünden fiyat listesini kaybetmek, hiç sormamaktan kötü.
- * 2. **`last_mile` dize olarak alınıyor**, enum olarak değil. Sendcloud yeni bir teslim türü
- *    eklediğinde parse kırılmamalı; bilinmeyen değer UI'da "bilinmiyor"a düşer (`CLAUDE §1`).
- *
- * `.passthrough()` YOK ve bilinçli: tanımadığımız alanı taşımak, onu bir yerde okumaya
- * kalkışacağımız anlamına gelir. Ne kullanıyorsak o yazılı.
+ * Sendcloud v3 cevaplarının şeması, toleranslı: boolean alanlar taşıyıcıya göre `true` ya da `"yes"` gelir ve `last_mile` enum değil
+ * dizedir, yoksa tek bir alanın biçimi bütün teklifi düşürürdü. Kullanmadığımız alan taşınmaz (`passthrough` yok).
  */
 
 /** Sendcloud'un tutarsız boolean'ı — bool, dize ya da sayı gelebilir. */
@@ -48,10 +38,8 @@ export const ShippingOptionSchema = z.object({
       tracked: Boolish,
       eco_delivery: Boolish,
       /**
-       * **ÇOK KOLİ DESTEĞİ — canlı ölçümün en pahalı bulgusu (28.08).** 17 seçeneğin yalnız
-       * 10'unda var; Mondial Relay'in HİÇBİRİNDE yok ve en ucuz üç seçeneğin ikisi o. Çok kutulu
-       * sipariş bu alanla SÜZÜLMEZSE müşteri en ucuzu seçer, etiket satın alma anında sağlayıcı
-       * reddeder ve sipariş sevk edilemez hâlde kalır.
+       * Çok koli desteği. Mondial Relay seçeneklerinin hiçbirinde yok; çok kutulu sipariş bununla süzülmezse sağlayıcı etiketi
+       * satın alma anında reddeder ve sipariş sevk edilemez kalır.
        */
       multicollo: Boolish,
     })
@@ -103,3 +91,22 @@ export const ShipmentResponseSchema = z.object({
   }),
 });
 
+
+/** Teslim noktası ucunun satırı (`servicepoints.sendcloud.sc/api/v2`). Koordinat dize gelir. */
+export const ServicePointSchema = z.object({
+  id: z.union([z.string(), z.number()]),
+  carrier: z.string(),
+  name: z.string().nullish(),
+  street: z.string().nullish(),
+  house_number: z.string().nullish(),
+  postal_code: z.string().nullish(),
+  city: z.string().nullish(),
+  country: z.string(),
+  latitude: z.union([z.string(), z.number()]).nullish(),
+  longitude: z.union([z.string(), z.number()]).nullish(),
+  distance: z.number().nullish(),
+  is_active: Boolish,
+  formatted_opening_times: z.record(z.array(z.string())).nullish(),
+});
+
+export const ServicePointListSchema = z.array(ServicePointSchema);

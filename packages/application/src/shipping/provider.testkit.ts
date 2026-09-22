@@ -1,16 +1,8 @@
 import type { ShippingRateProvider } from './port';
 
 /**
- * **Sahte kargo sağlayıcısı — testin AĞA ÇIKMAMASI için** (`packages/sendcloud/testing` deseninin
- * port düzeyindeki karşılığı).
- *
- * Taban HİÇBİR ucu desteklemez: her metot *"bu testte çağrılmamalı"* diye reddeder ve test yalnız
- * konusunu ilgilendireni doldurur. Bu bir kolaylık değil, bir **denetim**: teklif testinde duyuru
- * çağrılırsa test sessizce geçmez, yüksek sesle düşer.
- *
- * Dosya 28.08'de doğdu — port `status` ve `listRecent` ile büyüyünce dört ayrı test dosyasındaki
- * dört sahte de büyümek zorunda kaldı. Beşinci ucu eklerken aynı düzenlemeyi dördüncü kez yapmak,
- * `CLAUDE §1`in duplication kuralının tam olarak yasakladığı şey.
+ * Sahte kargo sağlayıcısı: her uç "bu testte çağrılmamalı" diye reddeder, test yalnız konusunu doldurur.
+ * Böylece teklif testinde duyuru çağrılırsa test sessizce geçmez, düşer.
  */
 export function providerStub(over: Partial<ShippingRateProvider> = {}): ShippingRateProvider {
   const red =
@@ -23,6 +15,8 @@ export function providerStub(over: Partial<ShippingRateProvider> = {}): Shipping
     cancel: red('iptal'),
     status: red('durum sorgusu'),
     listRecent: red('gönderi listesi'),
+    servicePoints: red('nokta araması'),
+    servicePoint: red('nokta okuması'),
     ...over,
   };
 }

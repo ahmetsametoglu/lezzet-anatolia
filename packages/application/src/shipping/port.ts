@@ -1,27 +1,13 @@
-import type { AnnouncedShipment, ParcelSpec, ParcelStatus, RemoteShipment, ShippingQuote } from '@lezzet/sendcloud';
+import type { AnnouncedShipment, ParcelSpec, ParcelStatus, RemoteShipment, ServicePoint, ShippingQuote } from '@lezzet/sendcloud';
 
 /**
- * **KARGO TARİFESİ PORTU** — sağlayıcı bir UYGULAMADIR, sözleşme değil (`packages/ai` deseni).
- *
- * Uygulama katmanı bu arayüzü çağırır; arkasında bugün Sendcloud var, yarın başkası olabilir ve
- * iş kodu değişmez (`INTEGRATIONS.md`: *"her dış servis agnostik bir arayüzün arkasında yaşar"*).
- *
- * **Tipler `@lezzet/sendcloud`ten ithal ediliyor ve bu bilinçli bir ödün:** ikinci bir dar
- * sözleşme yazmak, iki tipi elle eşlemek ve bir gün ayrışmalarını izlemek demekti (`CLAUDE §1`
- * duplication). Sağlayıcı değiştiği gün bu iki tip pakete taşınır — o gün gelene kadar
- * tek kaynak Sendcloud paketinin kendi yüzeyidir. Ayrışma riski bugün SIFIR, ve gerçek olmayan
- * bir riske karşı yazılan soyutlama ölü koddur.
+ * Kargo sağlayıcısının portu; arkasında bugün Sendcloud var. Tipler bilinçli olarak `@lezzet/sendcloud`ten gelir: ikinci bir
+ * sözleşme iki tipi elle eşlemek olurdu, sağlayıcı değişirse tipler o gün porta taşınır.
  */
 export interface ShippingRateProvider {
   /** Teklif — hiçbir şey yaratmaz, para harcamaz. */
   quote(args: { from: SenderAddress; to: RecipientAddress; parcels: readonly ParcelSpec[] }): Promise<ShippingQuote[]>;
-  /**
-   * **Gönderiyi duyur ve etiketi al — GERÇEK PARA HARCAR.**
-   *
-   * Port'ta ayrı bir metot çünkü çağıranın sorumluluğu bambaşka: teklif serbestçe çağrılabilir,
-   * bu çağrı bir kez ve dikkatle. Yeniden deneme YOK (idempotency anahtarı yok — ikinci çağrı
-   * ikinci koli açar).
-   */
+  /** Gönderiyi duyurur ve etiketi alır — gerçek para harcar; yeniden deneme yok, çünkü ikinci çağrı ikinci koli açar. */
   announce(args: {
     externalReferenceId: string;
     orderNumber?: string;
@@ -34,18 +20,14 @@ export interface ShippingRateProvider {
   }): Promise<AnnouncedShipment>;
   /** Gönderiyi iptal et — 404 başarı sayılır, yolda olan koli reddedilir. */
   cancel(providerShipmentId: string): Promise<void>;
-  /**
-   * **Gönderinin gerçek durumu, KOLİ KOLİ.** Webhook yalnız "değişti" tetikleyicisidir; durumu
-   * bu çağrı söyler ("Option B"). Dizi dönüyor çünkü gönderi, en gerideki kolisi kadar
-   * ilerlemiştir — tek koliye bakan bir okuma çok kolili siparişi erken teslim sayardı.
-   */
+  /** Gönderinin koli koli durumu; tek koliye bakan okuma çok kolili siparişi erken teslim sayardı. */
   status(providerShipmentId: string): Promise<ParcelStatus[]>;
-  /**
-   * **Sağlayıcıdaki gönderiler** — öksüz nöbetinin girdisi ve portun tek "bizden bağımsız"
-   * okuması. `truncated` sessiz kesme olmasın diye var: taranamayan kuyruk, "öksüz yok" diye
-   * okunmamalı.
-   */
+  /** Sağlayıcıdaki gönderiler, öksüz nöbetinin girdisi; `truncated` taranamayan kuyruğun "öksüz yok" diye okunmasını önler. */
   listRecent(args: { announcedAfter?: Date; pageSize?: number; maxPages?: number }): Promise<{ shipments: RemoteShipment[]; truncated: boolean }>;
+  /** Bir taşıyıcının adrese yakın açık teslim noktaları. */
+  servicePoints(args: { countryCode: string; postalCode: string; city?: string; carrierCode: string }): Promise<ServicePoint[]>;
+  /** Tek nokta; yoksa `null`. */
+  servicePoint(id: string): Promise<ServicePoint | null>;
 }
 
 export interface SenderAddress {

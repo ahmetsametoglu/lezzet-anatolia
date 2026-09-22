@@ -2,10 +2,12 @@ export { SendcloudError, isSendcloudError, type SendcloudErrorCode, type Sendclo
 export {
   announceShipment,
   cancelShipment,
+  fetchServicePoint,
   fetchShipmentParcels,
   fetchShippingQuotes,
   listShipments,
   MAX_PARCELS_PER_SHIPMENT,
+  searchServicePoints,
   type AddressSpec,
   type AnnouncedParcel,
   type AnnouncedShipment,
@@ -13,6 +15,7 @@ export {
   type ParcelStatus,
   type RemoteShipment,
   type SendcloudConfig,
+  type ServicePoint,
   type ShippingQuote,
 } from './client';
 export { LAST_MILE, toLastMile, truthy, type LastMile } from './schema';

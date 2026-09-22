@@ -1,5 +1,8 @@
+import type { z } from 'zod';
 import { SendcloudError, classify } from './errors';
 import {
+  ServicePointListSchema,
+  ServicePointSchema,
   ShipmentListResponseSchema,
   ShipmentResponseSchema,
   ShippingOptionsResponseSchema,
@@ -9,24 +12,13 @@ import {
 } from './schema';
 
 /**
- * Sendcloud API v3 istemcisi.
- *
- * ── RESMÎ SDK YOK, REST var (ölçüldü 28.08) ─────────────────────────────────
- * Sendcloud dil bazlı istemci yayımlamıyor. npm'deki `sendcloud`/`sendcloud-client` paketleri
- * **başka bir servise** (`sendcloud.sohu.com`, Çin e-posta servisi) ait ve 9 yıldır güncellenmiyor
- * — yanlış paket kurma tuzağı. Bu dosya o yüzden var.
- *
- * ── v2 KAPALI ───────────────────────────────────────────────────────────────
- * v2 Nisan 2026'da bakım moduna girdi ve yeni kullanıcıya kapalı. Tek yol v3.
- *
- * ── GRAM ve MİLİMETRE — dönüşüm YOK ─────────────────────────────────────────
- * API `weight.unit = "g"` ve `dimensions.unit = "mm"` kabul ediyor (canlı ölçüm 28.08, HTTP 200).
- * Sakladığımız tam sayılar doğrudan tele giriyor. Referans projenin kilogramı ondalıkla taşırken
- * yaşadığı kayan nokta artefaktı (`3 × 0,35 = 1.0499999999999998`, `toFixed(3)` yaması) bizde
- * hiç doğmuyor — çünkü hiç ondalık yok.
+ * Sendcloud API v3 istemcisi; resmî SDK yok ve npm'deki `sendcloud` adlı paketler başka bir servise ait, bu yüzden REST elle.
+ * Ağırlık gram, ölçü milimetre olarak tam sayıyla gider: API ikisini de kabul ediyor, ondalık hiç doğmuyor.
  */
 
 const DEFAULT_BASE = 'https://panel.sendcloud.sc';
+/** Teslim noktaları ayrı bir alan adında ve v2'de; anahtarlar aynı. */
+const SERVICE_POINTS_BASE = 'https://servicepoints.sendcloud.sc';
 
 export interface SendcloudConfig {
   publicKey: string;
@@ -69,7 +61,7 @@ export interface ShippingQuote {
   signature: boolean;
   tracked: boolean;
   ecoDelivery: boolean;
-  /** Çok koli destekliyor mu — çok kutulu siparişte ZORUNLU süzgeç (canlı ölçüm: 17'nin 10'u). */
+  /** Çok koli destekliyor mu; çok kutulu siparişte zorunlu süzgeç, çünkü seçeneklerin bir kısmı desteklemiyor. */
   multicollo: boolean;
 }
 
@@ -93,18 +85,16 @@ export interface AnnouncedShipment {
 const auth = (c: SendcloudConfig): string => `Basic ${Buffer.from(`${c.publicKey}:${c.secretKey}`).toString('base64')}`;
 
 /**
- * Tek atış istek — zaman aşımı + iptal.
- *
- * ⚠ **POST'ta YENİDEN DENEME YOK.** Sendcloud'da idempotency anahtarı yok (dokümanda hiç
- * anılmıyor, 28.08 taraması) — 5xx ya da ağ hatasında POST'u tekrarlamak **ikinci koli açar** ve
- * o gerçek paradır. GET güvenli: sonucu değiştirmez, üç kez denenir.
+ * Tek atış istek, zaman aşımıyla. POST yeniden denenmez: Sendcloud'da idempotency anahtarı yok ve ikinci deneme ikinci koliyi,
+ * yani gerçek parayı açar; GET sonucu değiştirmediği için `request` onu üç kez dener.
  */
 async function once(config: SendcloudConfig, path: string, init: RequestInit & { timeoutMs: number }): Promise<Response> {
   const f = config.fetchImpl ?? fetch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), init.timeoutMs);
   try {
-    return await f(`${config.baseUrl ?? DEFAULT_BASE}${path}`, {
+    const url = path.startsWith('https://') ? path : `${config.baseUrl ?? DEFAULT_BASE}${path}`;
+    return await f(url, {
       ...init,
       signal: controller.signal,
       headers: {
@@ -190,11 +180,8 @@ const parcelBody = (p: ParcelSpec): Record<string, unknown> => ({
 });
 
 /**
- * **Teklif** — `POST /shipping-options` + `calculate_quotes`. Hiçbir şey yaratmaz, para harcamaz.
- *
- * Koliler dizi olarak gidiyor: çok kutulu sipariş TEK teklif çağrısında sorulur ve dönen fiyat
- * gönderinin tamamınındır. Referans proje temsilî tek koli için sorup fiyatı koli sayısıyla
- * ÇARPIYORDU — bizim kolilerimiz farklı boylarda olabildiği için o çarpım yanlış cevap verirdi.
+ * Teklif (`POST /shipping-options`), hiçbir şey yaratmaz. Koliler tek çağrıda dizi olarak gider ve fiyat gönderinin tamamınındır;
+ * tek koli fiyatını koli sayısıyla çarpmak farklı boydaki kolilerde yanlış olurdu.
  */
 export async function fetchShippingQuotes(
   config: SendcloudConfig,
@@ -241,11 +228,8 @@ export async function fetchShippingQuotes(
 }
 
 /**
- * **Gönderi duyur + etiket al** — `POST /api/v3/shipments/announce`. GERÇEK PARA HARCAR.
- *
- * Çok koli (multicollo) tek çağrıda: her koli kendi ağırlığı ve ölçüsüyle dizide, her biri kendi
- * takip numarasını alıyor. **Senkron çağrıda en fazla 15 koli** (doküman) — çağıran bunu
- * denetlemek zorunda; burada da savunmacı bir kapı var.
+ * Gönderiyi duyurur ve etiketi alır (`POST /api/v3/shipments/announce`) — gerçek para harcar. Her koli kendi ölçüsüyle gider ve
+ * kendi takip numarasını alır; senkron çağrıda en fazla 15 koli.
  */
 export async function announceShipment(
   config: SendcloudConfig,
@@ -316,13 +300,91 @@ export async function announceShipment(
   };
 }
 
-/** Senkron duyuruda koli tavanı (doküman 28.08). Aşan sepet ikinci bir gönderi ister. */
+/** Taşıyıcının teslim noktası; koordinat ve saatler yoksa `null`. */
+export interface ServicePoint {
+  id: string;
+  carrierCode: string;
+  name: string;
+  street: string;
+  houseNumber: string | null;
+  postalCode: string;
+  city: string;
+  country: string;
+  latitude: number | null;
+  longitude: number | null;
+  /** Aranan adrese uzaklık (m); tek nokta okumasında yok. */
+  distanceM: number | null;
+  active: boolean;
+  /** Gün numarası ("0" pazartesi) → "09:00 - 12:00" dizileri. */
+  openingTimes: Record<string, string[]> | null;
+}
+
+const coordinate = (raw: string | number | null | undefined): number | null => {
+  const n = typeof raw === 'number' ? raw : raw ? Number(raw) : NaN;
+  return Number.isFinite(n) ? n : null;
+};
+
+function toServicePoint(row: z.infer<typeof ServicePointSchema>): ServicePoint {
+  return {
+    id: String(row.id),
+    carrierCode: row.carrier,
+    name: row.name ?? '',
+    street: row.street ?? '',
+    houseNumber: row.house_number || null,
+    postalCode: row.postal_code ?? '',
+    city: row.city ?? '',
+    country: row.country,
+    latitude: coordinate(row.latitude),
+    longitude: coordinate(row.longitude),
+    distanceM: row.distance ?? null,
+    active: row.is_active == null ? true : truthy(row.is_active),
+    openingTimes: row.formatted_opening_times ?? null,
+  };
+}
+
+/** Bir taşıyıcının adrese yakın AKTİF noktaları, yakından uzağa. Taşıyıcı hesapta etkin değilse sağlayıcı 400 döner. */
+export async function searchServicePoints(
+  config: SendcloudConfig,
+  args: { countryCode: string; postalCode: string; city?: string; carrierCode: string; radiusM?: number },
+): Promise<ServicePoint[]> {
+  // Yarıçapsız arama bir ülkenin bütün noktalarını döndürüyor (DE'de 1000 satır).
+  const query = new URLSearchParams({
+    country: args.countryCode,
+    address: args.city ? `${args.postalCode} ${args.city}` : args.postalCode,
+    carrier: args.carrierCode,
+    radius: String(args.radiusM ?? 10_000),
+  });
+  const json = await request(config, `${SERVICE_POINTS_BASE}/api/v2/service-points/?${query}`, { method: 'GET', timeoutMs: 8_000 });
+  const parsed = ServicePointListSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new SendcloudError({ code: 'parse', message: 'Sendcloud nokta listesi beklenen şekilde değil', detail: parsed.error.issues });
+  }
+  return parsed.data
+    .map(toServicePoint)
+    .filter((p) => p.active)
+    .sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity));
+}
+
+/** Tek nokta — sipariş anında istemcinin söylediği noktanın gerçekten var ve açık olduğunu doğrular. Yoksa `null`. */
+export async function fetchServicePoint(config: SendcloudConfig, id: string): Promise<ServicePoint | null> {
+  // Sondaki eğik çizgi şart: onsuz uç 301 döndürüyor.
+  const res = await once(config, `${SERVICE_POINTS_BASE}/api/v2/service-points/${encodeURIComponent(id)}/`, {
+    method: 'GET',
+    timeoutMs: 8_000,
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new SendcloudError(classify(res.status, await readBody(res)));
+  const parsed = ServicePointSchema.safeParse(await res.json());
+  if (!parsed.success) {
+    throw new SendcloudError({ code: 'parse', message: 'Sendcloud nokta cevabı beklenen şekilde değil', detail: parsed.error.issues });
+  }
+  return toServicePoint(parsed.data);
+}
+
+/** Senkron duyuruda koli tavanı; aşan sepet ikinci bir gönderi ister. */
 export const MAX_PARCELS_PER_SHIPMENT = 15;
 
-/**
- * **Gönderiyi iptal et.** 404 = zaten yok (başarı sayılır), 409 = koli yolda/teslim (reddedilir).
- * İkisini ayırmak önemli: birinde yapacak bir şey yok, ötekinde operatöre haber verilmeli.
- */
+/** Gönderiyi iptal eder: 404 zaten yok demektir ve başarıdır, 409 koli yolda demektir ve operatöre söylenmek üzere fırlatılır. */
 export async function cancelShipment(config: SendcloudConfig, providerShipmentId: string): Promise<void> {
   const res = await once(config, `/api/v3/shipments/${encodeURIComponent(providerShipmentId)}/cancel`, {
     method: 'POST',
@@ -342,16 +404,8 @@ export interface ParcelStatus {
 }
 
 /**
- * **Gönderinin GERÇEK durumu — KOLİ KOLİ** — `GET /api/v3/shipments/{id}`.
- *
- * Webhook yalnız "değişti" tetikleyicisidir; durum buradan okunur (tek taksonomi, "Option B").
- * Gerekçe tasarım kaydında: webhook gövdesinin şeması belgeli değil ve yanlış eşlenen bir durum
- * siparişi yanlış yere taşır.
- *
- * **Dizi dönüyor, tek durum değil — ve bu bir düzeltmedir.** İlk yazım `parcels[0]`ı okuyordu;
- * çok kolili (multicollo) gönderide birinci koli teslim olup ötekiler yoldayken sipariş TESLİM
- * sayılırdı. Gönderi, en gerideki kolisi kadar ilerlemiştir (`aggregateShipmentStatus`) —
- * o kararı verebilmek için kolilerin hepsi lazım.
+ * Gönderinin koli koli gerçek durumu (`GET /api/v3/shipments/{id}`); webhook yalnız "değişti" der, durum buradan okunur.
+ * Dizi döner, çünkü gönderi en gerideki kolisi kadar ilerlemiştir (`aggregateShipmentStatus`).
  */
 export async function fetchShipmentParcels(config: SendcloudConfig, providerShipmentId: string): Promise<ParcelStatus[]> {
   const json = await request(config, `/api/v3/shipments/${encodeURIComponent(providerShipmentId)}`, {
@@ -381,11 +435,8 @@ export interface RemoteShipment {
 }
 
 /**
- * **Sağlayıcıdaki gönderiler** — `GET /api/v3/shipments`, öksüz gönderi nöbetinin girdisi.
- *
- * Sayfalama **`Link` başlığından imleçle** yürüyor (doküman + canlı ölçüm 28.08: gövdede `meta`
- * YOK, yalnız `data`). `maxPages` bir emniyet freni: aşıldığında `truncated: true` döner ve
- * çağıran bunu SÖYLER — sessizce kesilen bir tarama, "hiç öksüz yok" diye okunurdu.
+ * Sağlayıcıdaki gönderiler (`GET /api/v3/shipments`), öksüz nöbetinin girdisi; sayfalama `Link` başlığındaki imleçle yürür.
+ * `maxPages` aşılırsa `truncated` döner: sessizce kesilen tarama "öksüz yok" diye okunurdu.
  */
 export async function listShipments(
   config: SendcloudConfig,
