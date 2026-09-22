@@ -9,7 +9,7 @@ import type { LegalQuestion } from './legal-types';
  * İlk soru kapalı açılır, çünkü telefonda açık bir cevap ekranın yarısını kaplayıp altındaki soruları görünmez yapardı.
  */
 interface PhoneLegalFaqProps {
-  questions: LegalQuestion[];
+  questions: readonly LegalQuestion[];
   t: {
     searchPlaceholder: string;
     noMatch: string;

@@ -12,6 +12,8 @@ export type { Locale } from './locale';
 export { CART_LINK_PARAM, PATHNAMES, localizedHref, localizedPath } from './paths';
 export type { AppRoute } from './paths';
 
+export { copyForSurface, type Surface, type SurfaceCopy } from './surface-copy';
+
 /**
  * Locale-anahtarlı metin nesnesinden seçili dilin şekli: `type M = LocalizedCopy<typeof messages>`. Diller özdeş
  * değilse `[Locale]` birleşimi paritesizliği tipçe yüzeye çıkarır.

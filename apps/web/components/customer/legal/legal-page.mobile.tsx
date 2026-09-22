@@ -1,8 +1,5 @@
 'use client';
 
-import { useLocale } from 'next-intl';
-import type { Locale } from '@lezzet/i18n';
-import legalMessages from '@lezzet/i18n/customer/legal';
 import { TextAction } from '@/components/customer/phone-kit/text-action';
 import { AppBar } from '@/components/customer/ui/app-bar';
 import { BackButton } from '@/components/customer/ui/back-button';
@@ -14,15 +11,13 @@ import type { LegalViewProps } from './legal-view-types';
  * Statik sayfanın telefon dizilişi, native bilgi ekranının ikizi: çubukta sayfanın adı, gövdede güncelleme satırı, bölümler,
  * SSS ve çıkış bandı.
  */
-export function LegalPageMobile({ document: doc, t, updatedLine }: LegalViewProps) {
-  const locale = useLocale() as Locale;
-
+export function LegalPageMobile({ document: doc, t }: LegalViewProps) {
   return (
     <>
       {/* Belgelerin kalıcı evi hesap ekranı; derin bağlantıyla gelen ‹ ile oraya döner. */}
-      <AppBar title={doc.title} left={<BackButton label={legalMessages[locale].back} fallback="/account" />} />
+      <AppBar title={doc.title} left={<BackButton label={t.back} fallback="/account" />} />
       <div className="flex flex-col gap-5.5 px-5.5 pt-5 pb-7.5">
-        <span className="font-sans text-helper text-muted">{updatedLine}</span>
+        <span className="font-sans text-helper text-muted">{doc.updatedLine}</span>
 
         {doc.sections.map((section) => (
           <PhoneLegalSection key={section.id} section={section} />
@@ -43,12 +38,12 @@ function PhoneLegalSection({ section }: PhoneLegalSectionProps) {
     // Çapa hedefi yapışkan çubuğun altında kalmasın.
     <section id={section.id} className="flex scroll-mt-16 flex-col gap-2.5">
       <h2 className="font-serif text-card-title-sm text-ink">{section.heading}</h2>
-      {section.body.map((paragraph) => (
+      {section.paragraphs.map((paragraph) => (
         <p key={paragraph} className="font-sans text-body-sm leading-[1.6] text-body">
           {paragraph}
         </p>
       ))}
-      {section.bullets && (
+      {section.bullets.length > 0 && (
         <ul className="flex flex-col gap-2.5">
           {section.bullets.map((bullet) => (
             <li key={bullet} className="flex gap-2 font-sans text-body-sm leading-[1.6] text-body">

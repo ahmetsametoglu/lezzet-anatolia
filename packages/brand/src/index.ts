@@ -15,15 +15,8 @@ export const brand = {
   /** Ad TEK yerde yazılı (`./name` — native `app.config.ts`in Node'dan okuduğu yaprak dosya). */
   name: BRAND_NAME,
   /**
-   * İşletmenin DIŞARIYA verilen iletişim künyesi (`docs/architecture/BUSINESS_CATALOG.md`).
-   *
-   * Buraya taşındı çünkü üç ayrı yer aynı numarayı yazıyordu: yapılandırılmış veri
-   * (`lib/seo/json-ld`), footer (orada "+33 6 XX XX XX XX" yer tutucusu ASILI KALMIŞTI ve
-   * ziyaretçi ona bakıyordu) ve Professionnels sayfasının WhatsApp köprüsü. Numara değiştiği gün
-   * üçünün de değişmesi gerekir; iki kopya yeter ki biri unutulsun.
-   *
-   * `phoneE164` makinenin (WhatsApp bağı, `tel:`, schema.org), `phoneDisplay` insanın okuduğu.
-   * İkisi ayrı alan çünkü ikisi ayrı biçim: `wa.me` boşluk ve `+` kabul etmez.
+   * Dışarıya verilen iletişim künyesi; `phoneE164` makinenin (WhatsApp, `tel:`, schema.org), `phoneDisplay` insanın okuduğu biçim,
+   * çünkü `wa.me` boşluk ve `+` kabul etmez.
    */
   contact: {
     phoneE164: '+33616990681',
@@ -31,15 +24,7 @@ export const brand = {
     email: 'lezzetanatolie@gmail.com',
   },
   /**
-   * Şirket künyesi — resmî kayıttaki tüzel kişi (INPI/RNE; `docs/architecture/BUSINESS_CATALOG.md`).
-   *
-   * Buraya taşındı çünkü aynı künye iki yerde ayrı yazılıydı ve biri eskimişti: web'in yapılandırılmış
-   * verisi (`lib/seo/json-ld`) 03.08'deki resmî düzeltmeyle Lingolsheim adresini taşıyordu, müşteriye
-   * giden bildirim maillerinin yasal alt satırı (`notify`) ise hâlâ "12 Rue du Marché, 67000 Strasbourg"
-   * yazıyordu (ölçüldü 15.09).
-   *
-   * `name` (marka) ile `legalName` (unvan) AYRI: ziyaretçi markayı arar, yasal kayıt unvanı taşır.
-   * SIREN ve SIRET insanın okuduğu biçimde (üçlü gruplar) — yasal metinler bu biçimi basıyor.
+   * Resmî kayıttaki tüzel kişi. `name` (marka) ile `legalName` (unvan) ayrı, çünkü ziyaretçi markayı arar, yasal kayıt unvanı taşır.
    */
   company: {
     denomination: DENOMINATION,
@@ -51,19 +36,10 @@ export const brand = {
   },
 } as const;
 
-/**
- * Merkezin adres satırı, ÜLKESİZ — "46 rue des Prés, 67380 Lingolsheim". Ülke adı okuyanın dilinde
- * yazılır (Fransa · France · Frankreich), o yüzden satıra gömülmedi. Bildirim mailinin yasal alt satırı
- * (`notify`) ve yasal metinler (`fillBrandFacts`) bu satırı okur.
- */
+/** Merkezin adres satırı, ülkesiz: ülke adı okuyanın dilinde yazılır (Fransa · France · Frankreich), o yüzden satıra gömülmedi. */
 export const companyAddressLine = `${brand.company.address.street}, ${brand.company.address.postalCode} ${brand.company.address.city}`;
 
-/**
- * Yasal metinlerin künye yer tutucuları (15.09). Unvan, SIREN/SIRET, KDV no, adres, e-posta ve
- * telefon web'in yasal sayfalarında ve native yasal ekranda (`content.json` · `legal.json`) ELLE
- * yazılıydı — her biri üç dilde ve iki kopyada; künye değiştiği gün yetmişi aşkın yerin birlikte
- * değişmesi gerekirdi. Metin artık `{siret}` gibi bir yer tutucu taşır, değer buradan gelir.
- */
+/** Yasal metinlerin künye yer tutucuları; metin `{siret}` gibi yer tutucu taşır ki künye değiştiğinde üç dilde elle düzeltilmesin. */
 const LEGAL_FACTS = {
   legalName: brand.company.legalName,
   denomination: brand.company.denomination,
@@ -94,18 +70,8 @@ export function fillBrandFacts<T>(value: T): T {
 }
 
 /**
- * WhatsApp konuşma bağı (15.3). `wa.me` numarayı ARTISIZ ve rakam dışı karaktersiz ister — biçimi
- * çağıranların hatırlamasına bırakmak, bir gün çalışmayan bir bağ demek.
- *
- * **Önceden yazılı metin PARAMETRE, burada kurulmuyor** ve bu bilinçli: metin müşteriye görünen
- * i18n kopyasıdır, sayfanın kendi `messages.json`'unda yaşar (`CLAUDE §2`). Burada kurulsaydı marka
- * paketi üç dilin sözlüğünü taşımak zorunda kalır ve sayfa metnini değiştiren kişi onu bulamazdı.
- * Boş/boşluk metin METİNSİZ bağ üretir — `?text=` ile boş bir parametre göndermek, WhatsApp'ta boş
- * bir taslakla açılan sohbet demek.
- *
- * Yön farkı önemli: bu bağ MÜŞTERİDEN BİZE yazar (numara bizim). Kuryenin "yoldayım" bağı
- * (`domain-core/delivery/on-the-way`) ters yöndedir — numara müşterinindir, metin de bizim
- * ağzımızdan kuruludur. İkisi ayrı kurucu, çünkü ayrı iki cümle kuruyorlar.
+ * Müşteriden bize yazan WhatsApp bağı; `wa.me` numarayı artısız ve rakam dışı karaktersiz ister. Önceden yazılı metin parametredir,
+ * çünkü müşteriye görünen kopya sayfanın kendi sözlüğünde yaşar; boş metin `?text=` göndermez, yoksa sohbet boş taslakla açılır.
  */
 export function whatsappHref(text?: string | null): string {
   const number = brand.contact.phoneE164.replace(/\D/g, '');

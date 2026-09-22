@@ -396,9 +396,6 @@ olarak yazar, gerisini arşivde bırakır; bittiğinde kendi gözden geçirme sa
 - [ ] (K.21) [hedef: web] Sipariş durumu WhatsApp'tan gitmeli — canlıya çıkmadan önce. Hesap sayfasındaki WhatsApp kartı
   müşteriye "WhatsApp'tan sipariş vermek ve siparişinizin durumunu WhatsApp mesajıyla öğrenmek için numaranızı bağlayın"
   diyor; bugün `packages/notify` WhatsApp API sürücüsü her gönderimi `skipped` döndürüyor. İş `15.11`in sürücü yarısı.
-- [ ] (K.26) [hedef: web] Yasal metinler iki kopyada: web beş sayfayı kendi `legal/*/content.json`larından, native ortak
-  `packages/i18n/src/customer/legal.json`dan okuyor; her metin değişikliği iki yerde ve üç dilde elle yapılıyor, biri
-  unutulursa iki yüzey farklı hukuki metin gösterir. Web de ortak sözlükten okumalı (native'e özgü bölümler ayrışarak).
 - [ ] (K.27) [hedef: mobil] Müşteri uygulamasının sepeti ayarları ülkesiz ve bölgesiz okuyor: `mobile-api` `readCartView`
   yalnız depo kimliğini geçiyor (`api/v1/cart-view.ts`), istemci de yalnız posta kodu gönderiyor. Almanya'daki müşteri
   sepette FR kargo ücretini görür, checkout DE ücretini keser; bölge asgari sepeti sepette görünmez. Web `readPlaceScope`

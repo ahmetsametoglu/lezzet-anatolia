@@ -2,25 +2,8 @@ import type { Locale } from '@lezzet/i18n';
 import { formatCompactEuro } from './format';
 
 /*
-  İLAN EDİLEN TUTARLARIN CÜMLEYE DÖNÜŞMESİ — iki yüzeyin ortak kuralı (18.08 · kullanıcı kararı).
-
-  Yasal "Teslimat ve iade" ve "Satış koşulları" sayfalarındaki tutarlar bugüne kadar cümlenin İÇİNE
-  yazılıydı ("Kargo ücreti 7,90 €'dur"). Hepsi `settings` satırıdır; operatör değiştirdiği gün sepet
-  yeni sayıyı keser, sayfa eskisini ilan ederdi. Sayılar artık veriden geliyor ve cümleyi kuran yer
-  BURASI — web sunucu bileşeni ve native ekran aynı satırları üretmek zorunda, yoksa iki yüzey aynı
-  sözleşmenin iki farklı sürümünü gösterir.
-
-  ── TUTARLAR PROZANIN İÇİNE GİRMİYOR, KENDİ BÖLÜMÜNDE ───────────────────────
-  Sebep native tarafın gerçeği: uç düşebilir (çevrimdışı okuma). Sayı paragrafın içine gömülü
-  olsaydı, okuma düştüğünde ya paragrafı komple gizlemek (hukuki metinden cümle düşürmek) ya da
-  `{fee}` diye ham bir yer tutucu basmak gerekirdi. Tutarlar kendi bölümünde durunca üçüncü bir yol
-  açılıyor: bölüm okunamadığında TEK bir cümleye iner ("tutarları sepetinizde görürsünüz") ve
-  sayfanın kuralları anlatan kısmı hiç etkilenmez.
-
-  ── SÖZLÜK ÇAĞIRANDAN ───────────────────────────────────────────────────────
-  Bu dosya tek bir cümle yazmıyor: yer tutucuları dolduruyor. Metin her yüzeyin kendi
-  `content.json`/`messages.json`ında kalır (i18n kuralı), buradaki tek şey DOLGU SIRASI ve hangi
-  hâlde hangi cümlenin seçileceği.
+  İlan edilen tutarları cümleye çeviren, web ile native'in ortak kuralı: iki yüzey aynı satırları üretmezse aynı sözleşmenin iki sürümü
+  görünür. Tutarlar paragrafa gömülmez, kendi bölümünde durur ki okuma düştüğünde yalnız o bölüm tek cümleye insin.
 */
 
 /** Cümleyi kuran taraf için gereken tutarlar — sözleşme tipine bağlanmaz, yapısal okunur. */
@@ -56,11 +39,8 @@ export interface DeliveryTermsCopy {
 }
 
 /**
- * Ülke kodlarını okunur bir listeye çevirir: `['FR','DE']` → "Fransa ve Almanya".
- *
- * `Intl.ListFormat` BİLEREK kullanılmıyor: Hermes'in ICU kapsamı sürümden sürüme değişiyor ve iki
- * ülkelik bir liste için cihaza bağlı bir davranış almak, kazandırdığından çoğunu geri alırdı.
- * Tanınmayan kod OLDUĞU GİBİ yazılır — ad sözlüğü eksikse kodu göstermek, ülkeyi yutmaktan iyidir.
+ * Ülke kodlarını okunur listeye çevirir. `Intl.ListFormat` kullanılmıyor, çünkü Hermes'in ICU kapsamı sürüme göre değişiyor; tanınmayan
+ * kod olduğu gibi yazılır ki ülke yutulmasın.
  */
 export function joinCountries(codes: readonly string[], names: Record<string, string>, and: string): string {
   const labels = codes.map((code) => names[code] ?? code);
@@ -68,10 +48,7 @@ export function joinCountries(codes: readonly string[], names: Record<string, st
   return `${labels.slice(0, -1).join(', ')}${and}${labels[labels.length - 1]}`;
 }
 
-/**
- * "Güncel tutarlar" bölümünün paragrafları. Sıra sabittir: ücret → alt sınırlar → kapıda ödeme →
- * kargo kapsamı. Kargo çıkışı hiç yoksa ülke cümlesi HİÇ kurulmaz — "hiçbir yere" diye yazmayız.
- */
+/** "Güncel tutarlar" bölümünün paragrafları, sabit sırayla; kargo çıkışı hiç yoksa ülke cümlesi kurulmaz, "hiçbir yere" yazılmaz. */
 export function deliveryTermsLines(
   amounts: DeliveryTermsAmounts,
   copy: DeliveryTermsCopy,

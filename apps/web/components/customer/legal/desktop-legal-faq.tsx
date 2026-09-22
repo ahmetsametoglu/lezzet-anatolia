@@ -12,7 +12,7 @@ import type { LegalQuestion } from './legal-types';
  * süzer, çünkü soru kümesi operatörün elle kurduğu, tamamı sayfada duran küçük bir küme.
  */
 interface DesktopLegalFaqProps {
-  questions: LegalQuestion[];
+  questions: readonly LegalQuestion[];
   t: {
     searchPlaceholder: string;
     noMatch: string;

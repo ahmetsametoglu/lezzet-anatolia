@@ -16,14 +16,14 @@ export function LegalHeader({ title, updatedLine }: LegalHeaderProps) {
   return (
     <div className="flex flex-col gap-2">
       <h1 className="font-serif text-page-title text-ink">{title}</h1>
-      {/* Yasal metinde hangi sürümün geçerli olduğu görünür olmalı — içerik envanterinin şartı. */}
+      {/* Yasal metinde hangi sürümün geçerli olduğu görünür olmalı. */}
       <span className="font-sans text-note text-muted">{updatedLine}</span>
     </div>
   );
 }
 
 interface LegalBodyProps {
-  sections: LegalSection[];
+  sections: readonly LegalSection[];
 }
 
 export function LegalBody({ sections }: LegalBodyProps) {
@@ -34,12 +34,12 @@ export function LegalBody({ sections }: LegalBodyProps) {
         // görünür alanın en tepesine düşerse okuyan, atladığı başlığı göremez.
         <section key={section.id} id={section.id} className="flex flex-col gap-2.5 scroll-mt-24">
           <h2 className="font-serif text-card-title text-ink">{section.heading}</h2>
-          {section.body.map((paragraph) => (
+          {section.paragraphs.map((paragraph) => (
             <p key={paragraph} className="font-sans text-body leading-relaxed text-body">
               {paragraph}
             </p>
           ))}
-          {section.bullets && (
+          {section.bullets.length > 0 && (
             <ul className="flex list-disc flex-col gap-1.5 pl-5 font-sans text-body leading-relaxed text-body">
               {section.bullets.map((bullet) => (
                 <li key={bullet}>{bullet}</li>

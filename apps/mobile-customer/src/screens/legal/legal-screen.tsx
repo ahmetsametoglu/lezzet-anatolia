@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { fillBrandFacts } from '@lezzet/brand';
 import { deliveryTermsLines } from '@lezzet/helper';
 
 import { AppBar } from '@/components/ui/app-bar';
@@ -14,11 +13,11 @@ import { useDeliveryTerms } from '@/screens/customer-kit/use-delivery-terms.hook
 import { LegalFaq } from './legal-faq';
 import {
   isLegalPageKey,
+  LEGAL_MESSAGES,
   type LegalNoticeCopy,
   type LegalSectionCopy,
   type Messages,
 } from './legal-types';
-import messages from '@lezzet/i18n/customer/legal';
 
 /*
   Bilgi sayfaları: tek ekran, beş belge. Son güncelleme satırı gövdenin ilk satırıdır, çünkü hukuki
@@ -29,10 +28,6 @@ interface LegalScreenProps {
   /** Rota parametresi — SERBEST metin; tanınmayan değer "bu sayfa yok" bloğuna düşer. */
   page: string;
 }
-
-/* Şirket künyesi metinde `{siret}` gibi yer tutucudur; değer `@lezzet/brand`den modül yüklenirken
-   bir kez dolar. */
-const LEGAL_MESSAGES = fillBrandFacts(messages);
 
 export function LegalScreen({ page }: LegalScreenProps) {
   const locale = useAppLocale();
@@ -50,8 +45,7 @@ export function LegalScreen({ page }: LegalScreenProps) {
     />
   );
 
-  /* Kırık bağlantı SESSİZ kalmaz: boş bir ekran, hatanın kendisini görünmez yapardı. Çıkış SSS —
-     buraya belirli bir soruyla gelen ziyaretçinin gidebileceği tek genel kapı odur. */
+  /* Kırık bağlantı sessiz kalmaz, çünkü boş ekran hatayı görünmez yapardı. Çıkış SSS: belirli bir soruyla gelenin gidebileceği tek genel kapı. */
   if (!isLegalPageKey(page)) {
     return (
       <View style={styles.screen}>
@@ -192,8 +186,7 @@ const styles = StyleSheet.create((theme, rt) => ({
     flex: 1,
     backgroundColor: theme.colors['sand-50'],
   },
-  /* v3: `padding:20px 22px` — dolgu ölçekten AYNEN (5xl · 6xl). Alt nefes cihazın kendi
-     inset'iyle büyür; uzun hukuk metninin son satırı gövde çubuğunun altında kalmasın. */
+  /* Alt nefes cihazın kendi inset'iyle büyür; uzun hukuk metninin son satırı gövde çubuğunun altında kalmasın. */
   content: {
     paddingVertical: theme.space['5xl'],
     paddingHorizontal: theme.space['6xl'],

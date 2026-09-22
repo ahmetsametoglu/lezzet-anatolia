@@ -93,8 +93,8 @@ caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile \
 
 `lezzetanatolie.com` uygulamayı değil künyeli, durağan, üç dilli bir sayfayı gösterir
 (`/var/www/lezzetanatolie`). Metin ve künye repodaki kaynaklardan üretilir: tanıtım ana sayfanın
-`messages.json`'undan, künye `legal/terms/content.json` + `@lezzet/brand`'den, gizlilik politikası
-`legal/privacy/content.json`'dan (`/confidentialite/`, `/de/datenschutz/`, `/tr/gizlilik/` — Google marka
+`messages.json`'undan, künye ortak yasal sözlüğün (`packages/i18n/src/customer/legal.json`) web hâli + `@lezzet/brand`'den, gizlilik
+politikası aynı sözlükten (`/confidentialite/`, `/de/datenschutz/`, `/tr/gizlilik/` — Google marka
 doğrulaması onu bu alan adında ister), sayfaya özgü birkaç satır `scripts/holding-page/messages.json`'dan,
 renkler token'lardan. Künye, gizlilik ya da tanıtım metni değişince yeniden üretilip yüklenir; klasör
 sunucuda tek hamlede değişir.

@@ -17,14 +17,19 @@
         "updatedAt": "Son güncelleme: 1 Temmuz 2026",
         "sections": [
           {
+            "id": "bolge",
             "heading": "Teslimat bölgemiz",
             "paragraphs": [
               "Strasbourg ve çevresindeki adreslere siparişlerinizi kendi soğuk zincir aracımızla, kapınıza kadar getiriyoruz. Adresinizin bölgede olup olmadığını sipariş sırasında posta kodunuzla otomatik görürsünüz; teslimat gününüz bölgenizin takvimine göre sunulur.",
-              "Posta kodunuzu vitrinin üstündeki bölge hapından her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup \"Siparişi tamamla\" adımında sürprizle karşılaşmazsınız."
+              {
+                "web": "Posta kodunuzu sitenin üst şeridinde her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup checkout'ta sürprizle karşılaşmazsınız.",
+                "app": "Posta kodunuzu vitrinin üstündeki bölge hapından her an değiştirebilirsiniz. Bölge dışındaki bir kod girdiğinizde kataloğun size gönderilebilen kısmı işaretlenir — sepete koyup \"Siparişi tamamla\" adımında sürprizle karşılaşmazsınız."
+              }
             ],
             "bullets": []
           },
           {
+            "id": "yollar",
             "heading": "Hangi ürün hangi yolla gelir",
             "paragraphs": [
               "Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz. Bu ürünler kargoya verilemez: soğuk zinciri kargo koşullarında güvenle koruyamayız, koruyamadığımız bir şeyi de taşımayız.",
@@ -34,6 +39,7 @@
             "bullets": []
           },
           {
+            "id": "kargo",
             "heading": "Kargo ile gönderim",
             "paragraphs": [
               "Paketiniz hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında elinizde olur.",
@@ -43,6 +49,7 @@
             "bullets": []
           },
           {
+            "id": "soguk-zincir",
             "heading": "Soğuk zincir",
             "paragraphs": [
               "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir; depomuzda da aracımızda da soğuk zincir bozulmaz. Teslim aldığınızda doğrudan dondurucunuza koymanız yeterlidir. Soğutulmuş ürünler de aynı zincirin içindedir — onlar için de 0–4 °C aralığı yolculuk boyunca korunur, teslim alınca buzdolabına konur.",
@@ -51,6 +58,7 @@
             "bullets": []
           },
           {
+            "id": "iade",
             "heading": "İade koşulları",
             "paragraphs": [
               "Gıda ürünlerinde, soğuk zincirin kırılma riski nedeniyle teslim alınmış ve kabul edilmiş ürünler için genel cayma hakkı uygulanmaz (Fransız tüketici mevzuatı, çabuk bozulan ürünler istisnası).",
@@ -65,6 +73,7 @@
             ]
           },
           {
+            "id": "iade-suresi",
             "heading": "İade nasıl ve ne zaman yapılır",
             "paragraphs": [
               "İade, ödemeyi yaptığınız yönteme yapılır. Kartla ödediyseniz tutar kartınıza geçer; bankanıza bağlı olarak hesabınızda görünmesi birkaç iş günü sürebilir.",
@@ -112,40 +121,55 @@
         "sections": [],
         "questions": [
           {
+            "id": "donmus",
             "question": "Ürünler donmuş mu geliyor?",
             "answer": "Donuk ürünlerimiz üreticisinden şoklanmış olarak gelir ve soğuk zincir bozulmadan kapınıza ulaşır. Soğuk zincir gerektiren ürünleri — donuk ve soğutulmuş — yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere getiriyoruz; bu ürünler kargoya verilemez. Diğer bütün ürünleri ise her adrese kargoyla gönderiyoruz."
           },
           {
+            "id": "asgari-sepet",
             "question": "Minimum sipariş tutarı var mı?",
             "answer": "Yalnız bölge içi teslimatta: kendi aracımızla kapınıza getirdiğimiz siparişlerin bir asgari tutarı vardır ve altında kaldığınızda ne kadar kaldığı sepette yazar. Kargo gönderiminde asgari sipariş tutarı yoktur — orada kargo ücretini zaten siz ödüyorsunuz. Güncel tutarlar Teslimat ve iade sayfasındadır."
           },
           {
+            "id": "teslimat-gunu",
             "question": "Siparişim ne zaman gelir?",
             "answer": "Bölge içindeyseniz teslimat gününüz bölgenizin takvimine göre belirlenir ve siparişi verirken görürsünüz. Kargo gönderimlerinde paket hazırlandıktan sonra Fransa içinde 2-4 iş gününde, yurt dışı adreslerde bir gün fazlasında elinizde olur. Siparişinizin durumunu \"Siparişlerim\" bölümünden takip edebilir, her adımda e-posta alırsınız."
           },
           {
+            "id": "kapida-odeme",
             "question": "Kapıda ödeyebilir miyim?",
             "answer": "Bölge içi teslimatlarda, belirli bir tutara kadar olan siparişlerde kapıda ödeme seçilebilir — nakit ya da kartla; üst sınır Teslimat ve iade sayfasında yazar. Daha yüksek tutarlarda ve tüm kargo gönderimlerinde ödeme sipariş sırasında alınır. Kapıda ödemede bir kalem eksik çıkarsa o kalemin bedeli teslimat anında zaten düşülür — sonradan iade beklemezsiniz."
           },
           {
+            "id": "eksik-kalem",
             "question": "Bir ürün eksik geldi, ne yapmalıyım?",
             "answer": "Bir şey yapmanız gerekmez: kutunuzdan çıkmayan kalemin bedeli otomatik olarak hesaplanır ve iade edilir. Yine de durumu bize anlatmak isterseniz \"Taleplerim\" bölümünden siparişinizi seçip yazabilirsiniz."
           },
           {
+            "id": "toptan",
             "question": "Restoranım için toptan fiyat alabilir miyim?",
             "answer": "Evet. \"Profesyoneller\" sayfasından SIRET numaranızla başvurabilirsiniz; başvurunuz onaylandığında hesabınız işletme hesabına dönüşür ve fiyatlar buna göre görünür. İşletme hesaplarında havale ve çekle ödeme de açılır; ödeme koşullarınız hesabınıza tanımlanır."
           },
           {
+            "id": "alerjen",
             "question": "Alerjen bilgilerini nereden görebilirim?",
             "answer": "Her ürünün sayfasında içindekiler, alerjen bilgisi ve varsa çapraz bulaşma uyarısı yer alır. Bu bilgiler ürünü üreten firmanın beyanına dayanır — ürünlerimizi kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Ciddi bir alerjiniz varsa sipariş öncesi bize yazın; üreticiden teyit alırız."
           },
           {
+            "id": "hesap-gerekli",
             "question": "Sipariş vermek için hesap açmam gerekiyor mu?",
             "answer": "Parola kurmanız gerekmez: sepetinizi doldurup e-posta adresinizle siparişi tamamlayabilirsiniz — size gönderdiğimiz kodu girdiğinizde hesabınız arka planda açılır ve siparişiniz ona bağlanır. Böylece siparişleriniz, adresleriniz ve puanınız saklanır; adresinizi bir daha yazmanız gerekmez ve geçmiş bir siparişinizi \"Siparişlerim\"den tek tuşla tekrarlayabilirsiniz."
           },
           {
-            "question": "Uygulamanın ve e-postaların dilini nasıl değiştiririm?",
-            "answer": "Hesabım sayfasındaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — uygulamayı Türkçe kullanan birinin maillerinin Fransızca gelmesi anlamsız olurdu."
+            "id": "dil",
+            "question": {
+              "web": "Site ve e-postaların dilini nasıl değiştiririm?",
+              "app": "Uygulamanın ve e-postaların dilini nasıl değiştiririm?"
+            },
+            "answer": {
+              "web": "Sitenin üst şeridinden ya da hesap sayfanızdaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — siteyi Türkçe gezen birinin maillerinin Fransızca gelmesi anlamsız olurdu.",
+              "app": "Hesabım sayfasındaki dil satırından değiştirebilirsiniz. Bildirim e-postalarınız da aynı dile geçer — uygulamayı Türkçe kullanan birinin maillerinin Fransızca gelmesi anlamsız olurdu."
+            }
           }
         ],
         "notice": {
@@ -158,6 +182,7 @@
         "updatedAt": "Son güncelleme: 21 Eylül 2026",
         "sections": [
           {
+            "id": "sorumlu",
             "heading": "Verilerinizden kim sorumlu",
             "paragraphs": [
               "Bu sitede toplanan kişisel verilerin sorumlusu {legalName}'tır (SIRET {siret}), {address}, Fransa. Site Lezzet Anatolie markasıyla işletilmektedir.",
@@ -166,23 +191,30 @@
             "bullets": []
           },
           {
+            "id": "hangi-veri",
             "heading": "Hangi verileri topluyoruz",
             "paragraphs": [
               "Yalnız işi yürütmek için gereken verileri topluyoruz. Toplananlar şunlardır:"
             ],
             "bullets": [
               "Kimlik ve iletişim: adınız, e-posta adresiniz, telefon numaranız.",
-              "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da cihazınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için.",
+              {
+                "web": "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da tarayıcınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için.",
+                "app": "Teslimat: kayıtlı adresleriniz ve posta kodunuz. Posta kodu, hesabınız olmasa da cihazınızda saklanır — kataloğun size gönderilebilir kısmını gösterebilmek için."
+              },
               "Sipariş: verdiğiniz siparişler, kalemleri, tutarları ve durumları.",
               "İletişim tercihleri: kampanya izinleri ve tercih ettiğiniz dil.",
               "Talepleriniz: bize yazdığınız mesajlar ve eklediğiniz fotoğraflar.",
               "İşletme müşterisiyseniz: SIRET numaranız ve şirket künyeniz.",
               "Mesajlarınız: WhatsApp, Messenger ya da Instagram'dan bize yazdıklarınız; gönderdiğiniz fotoğraflar ve sesli mesajlar dâhil.",
               "Google ile giriş yaparsanız: Google'ın bize ilettiği adınız ve e-posta adresiniz.",
-              "Bildirimler: izin verdiyseniz, bildirimleri cihazınıza iletebilmek için cihazınızın bildirim jetonu."
+              {
+                "app": "Bildirimler: izin verdiyseniz, bildirimleri cihazınıza iletebilmek için cihazınızın bildirim jetonu."
+              }
             ]
           },
           {
+            "id": "neden",
             "heading": "Neden topluyoruz",
             "paragraphs": [
               "Adınız ve adresiniz olmadan sipariş teslim edilemez; e-posta adresiniz olmadan siparişinizin ne durumda olduğunu size söyleyemeyiz. Bu veriler sözleşmenin yerine getirilmesi için işlenir.",
@@ -193,6 +225,7 @@
             "bullets": []
           },
           {
+            "id": "ne-kadar",
             "heading": "Ne kadar saklıyoruz",
             "paragraphs": [
               "Hesap verileriniz hesabınız açık olduğu sürece saklanır. Hesabınızı dilediğiniz an hesap sayfanızdan kendiniz silebilirsiniz: adınız, e-posta ve telefonunuz, kayıtlı adresleriniz, talep yazışmalarınız, puanlarınız ve kişisel kuponlarınız kaldırılır, giriş bilgileriniz silinir ve bir daha giriş yapamazsınız.",
@@ -202,6 +235,7 @@
             "bullets": []
           },
           {
+            "id": "kiminle",
             "heading": "Kimlerle paylaşıyoruz",
             "paragraphs": [
               "Verilerinizi satmıyoruz. Yalnız işi yürütmek için gereken hizmet sağlayıcılarla paylaşılır:"
@@ -210,22 +244,32 @@
               "Ödeme sağlayıcısı: kart bilgileriniz bize hiç ulaşmaz, doğrudan ödeme sağlayıcısında işlenir.",
               "E-posta gönderim servisi: bildirim e-postalarını iletmek için.",
               "Kargo firması: bölge dışı gönderimlerde adınız ve teslimat adresiniz.",
-              "Adres arama (Fransa): adres alanına yazdığınız metin, öneri getirebilmek için doğrudan cihazınızdan IGN'in kamuya açık adres servisine (Base Adresse Nationale) gider. Adınız, hesabınız ya da başka bir bilginiz gönderilmez.",
+              {
+                "web": "Adres arama (Fransa): adres alanına yazdığınız metin, öneri getirebilmek için doğrudan tarayıcınızdan IGN'in kamuya açık adres servisine (Base Adresse Nationale) gider. Adınız, hesabınız ya da başka bir bilginiz gönderilmez.",
+                "app": "Adres arama (Fransa): adres alanına yazdığınız metin, öneri getirebilmek için doğrudan cihazınızdan IGN'in kamuya açık adres servisine (Base Adresse Nationale) gider. Adınız, hesabınız ya da başka bir bilginiz gönderilmez."
+              },
               "Adres arama (Almanya): yazdığınız adres metni, öneri ve doğrulama için sunucumuzdan Google'ın adres servisine gönderilir. Adınız, hesabınız ya da başka bir bilginiz gönderilmez.",
               "Yapay zekâ servisi: mesajlarınızın çevrilmesi, sesli mesajların yazıya dökülmesi ve cevap hazırlanması için mesajlarınızın içeriği.",
               "Mesajlaşma platformları: bize WhatsApp, Messenger ya da Instagram'dan (Meta) yazarsanız cevabımız aynı platform üzerinden size ulaşır; yazışma ayrıca kendi sistemimizde saklanır.",
-              "Bildirim servisi: uygulama bildirimlerini cihazınıza iletmek için bildirim jetonu ve bildirimin metni.",
+              {
+                "app": "Bildirim servisi: uygulama bildirimlerini cihazınıza iletmek için bildirim jetonu ve bildirimin metni."
+              },
               "Barındırma ve depolama: sunucularımız Hetzner Online GmbH'de (Almanya), veritabanımız Supabase'dedir; ikisi de Avrupa Birliği içindedir. Eklediğiniz fotoğraflar Cloudflare'in depolama servisinde tutulur."
             ]
           },
           {
+            "id": "aktarim",
             "heading": "Avrupa Birliği dışına aktarım",
             "paragraphs": [
-              "Ödeme, e-posta, veritabanı, depolama, adres, yapay zekâ, mesajlaşma ve bildirim hizmeti aldığımız sağlayıcıların bir kısmı Amerika Birleşik Devletleri merkezlidir ve verileriniz bu şirketlerce Avrupa Birliği dışında işlenebilir. Bu aktarımlar Avrupa Komisyonu'nun AB–ABD Veri Gizliliği Çerçevesi yeterlilik kararına ya da Komisyon'un onayladığı standart sözleşme maddelerine dayanır."
+              {
+                "web": "Ödeme, e-posta, veritabanı, depolama, adres, yapay zekâ ve mesajlaşma hizmeti aldığımız sağlayıcıların bir kısmı Amerika Birleşik Devletleri merkezlidir ve verileriniz bu şirketlerce Avrupa Birliği dışında işlenebilir. Bu aktarımlar Avrupa Komisyonu'nun AB–ABD Veri Gizliliği Çerçevesi yeterlilik kararına ya da Komisyon'un onayladığı standart sözleşme maddelerine dayanır.",
+                "app": "Ödeme, e-posta, veritabanı, depolama, adres, yapay zekâ, mesajlaşma ve bildirim hizmeti aldığımız sağlayıcıların bir kısmı Amerika Birleşik Devletleri merkezlidir ve verileriniz bu şirketlerce Avrupa Birliği dışında işlenebilir. Bu aktarımlar Avrupa Komisyonu'nun AB–ABD Veri Gizliliği Çerçevesi yeterlilik kararına ya da Komisyon'un onayladığı standart sözleşme maddelerine dayanır."
+              }
             ],
             "bullets": []
           },
           {
+            "id": "haklariniz",
             "heading": "Haklarınız",
             "paragraphs": [
               "GDPR (AB 2016/679) kapsamında aşağıdaki haklara sahipsiniz. Bunları kullanmak için {email} adresine yazmanız yeterli; talebinize en geç bir ay içinde dönüş yapılır."
@@ -241,11 +285,28 @@
             ]
           },
           {
-            "heading": "Cihazınızda saklananlar",
+            "id": "cerez",
+            "heading": {
+              "web": "Çerezler ve tarayıcı kaydı",
+              "app": "Cihazınızda saklananlar"
+            },
             "paragraphs": [
-              "Uygulama çerez kullanmaz — ne reklam, ne takip, ne de başka türlüsü. Cihazınızda tutulanlar uygulamanın çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu. Oturum bilgisi işletim sisteminin güvenli kasasında saklanır (iOS'ta Anahtar Zinciri, Android'de Keystore).",
-              "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda cihazdaki sepetiniz hesabınıza devredilir ve cihazdan silinir.",
-              "Uygulamanın nasıl kullanıldığını ölçüyoruz: hangi ürünlere bakıldığı, ne arandığı, sepete ne eklendiği ve siparişin nerede yarıda kaldığı. Bu ölçüm için cihazınıza hiçbir şey yazılmaz ve reklam kimliği kullanılmaz — kayıt, isteğiniz sunucuya ulaştığında orada oluşur. Kaydın yanında adınız, e-posta adresiniz ya da hesap numaranız durmaz: istekleri gruplayan anahtar her gün değişen ve ertesi gün saklanmayan bir değerden türetilir, yani sonradan geri hesaplanamaz. Arama kutusuna yazdığınız metin de saklanır — hangi aramaların sonuçsuz kaldığını görebilmek için."
+              {
+                "app": "Uygulama çerez kullanmaz — ne reklam, ne takip, ne de başka türlüsü. Cihazınızda tutulanlar uygulamanın çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu. Oturum bilgisi işletim sisteminin güvenli kasasında saklanır (iOS'ta Anahtar Zinciri, Android'de Keystore)."
+              },
+              {
+                "web": "Reklam veya takip çerezi kullanmıyoruz. Tarayıcınızda tutulanlar sitenin çalışması için gerekli olanlardır: oturumunuz, sepetiniz ve seçtiğiniz posta kodu."
+              },
+              {
+                "web": "Sayfaların ne sıklıkla görüntülendiğini ölçüyoruz, ama bu ölçüm çerezsizdir ve kimliğe bağlanamaz: ziyaretler her gün değişen, ertesi gün atılan bir anahtarla sayılır ve kişiye ait hiçbir kayıt tutulmaz."
+              },
+              {
+                "web": "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda tarayıcıdaki sepetiniz hesabınıza devredilir ve tarayıcıdan silinir.",
+                "app": "Sepetiniz hesap açmadan da korunur; giriş yaptığınızda cihazdaki sepetiniz hesabınıza devredilir ve cihazdan silinir."
+              },
+              {
+                "app": "Uygulamanın nasıl kullanıldığını ölçüyoruz: hangi ürünlere bakıldığı, ne arandığı, sepete ne eklendiği ve siparişin nerede yarıda kaldığı. Bu ölçüm için cihazınıza hiçbir şey yazılmaz ve reklam kimliği kullanılmaz — kayıt, isteğiniz sunucuya ulaştığında orada oluşur. Kaydın yanında adınız, e-posta adresiniz ya da hesap numaranız durmaz: istekleri gruplayan anahtar her gün değişen ve ertesi gün saklanmayan bir değerden türetilir, yani sonradan geri hesaplanamaz. Arama kutusuna yazdığınız metin de saklanır — hangi aramaların sonuçsuz kaldığını görebilmek için."
+              }
             ],
             "bullets": []
           }
@@ -270,6 +331,7 @@
         "updatedAt": "Son güncelleme: 1 Temmuz 2026",
         "sections": [
           {
+            "id": "kapsam",
             "heading": "Kapsam",
             "paragraphs": [
               "Bu koşullar, {legalName} (SIRET {siret} · {address}, Fransa) tarafından Lezzet Anatolie markasıyla bu site üzerinden yapılan tüm satışlara uygulanır. Sipariş vermekle bu koşulları kabul etmiş olursunuz.",
@@ -278,6 +340,7 @@
             "bullets": []
           },
           {
+            "id": "urunler",
             "heading": "Ürünler ve bilgiler",
             "paragraphs": [
               "Sattığımız ürünler dondurulmuş ve raf ömürlü gıdalardır. Ürünleri kendimiz üretmiyor, seçtiğimiz üreticilerden tedarik ediyoruz. Her ürünün sayfasında içindekiler, alerjen bilgisi ve net miktar yer alır; bu bilgiler ürünü üreten firmanın beyanına dayanır.",
@@ -287,6 +350,7 @@
             "bullets": []
           },
           {
+            "id": "siparis",
             "heading": "Siparişin kurulması",
             "paragraphs": [
               "Sipariş, sepetinizi onaylayıp ödeme adımını tamamladığınızda kurulur — kapıda ödemeyi seçtiyseniz bu adımda ödeme yöntemini onaylamanız yeterlidir. Onay ekranını gördüğünüz ve onay e-postanız ulaştığı anda sipariş bizim tarafımızdan da kabul edilmiş sayılır.",
@@ -296,6 +360,7 @@
             "bullets": []
           },
           {
+            "id": "fiyat",
             "heading": "Fiyatlar",
             "paragraphs": [
               "Fiyatlar euro cinsindendir ve yürürlükteki KDV dâhildir. Uygulanan KDV oranı ürün türüne göre değişir.",
@@ -305,6 +370,7 @@
             "bullets": []
           },
           {
+            "id": "odeme",
             "heading": "Ödeme",
             "paragraphs": [
               "Kartla ödeme, güvenli bir ödeme sağlayıcısı üzerinden alınır. Kart bilgileriniz bize hiçbir aşamada ulaşmaz ve tarafımızca saklanmaz.",
@@ -315,6 +381,7 @@
             "bullets": []
           },
           {
+            "id": "teslimat",
             "heading": "Teslimat",
             "paragraphs": [
               "Soğuk zincir gerektiren ürünleri (donuk ve soğutulmuş) yalnız kendi soğutuculu aracımızla, teslimat bölgemizdeki adreslere teslim ediyoruz. Diğer bütün ürünler kargoyla gönderilir — bölge içinde de, bölge dışında da. Teslimat günü ve seçenekleri, adresinizin posta koduna göre sipariş sırasında gösterilir.",
@@ -325,6 +392,7 @@
             "bullets": []
           },
           {
+            "id": "cayma",
             "heading": "Cayma hakkı",
             "paragraphs": [
               "Fransız tüketici mevzuatı uyarınca, çabuk bozulabilen gıda ürünlerinde mesafeli satışın 14 günlük cayma hakkı UYGULANMAZ (Code de la consommation, md. L221-28).",
@@ -333,6 +401,7 @@
             "bullets": []
           },
           {
+            "id": "garanti",
             "heading": "Yasal garantiler",
             "paragraphs": [
               "Ürünlerimiz, Fransız hukukundaki uygunluk garantisi (garantie légale de conformité) ve gizli ayıplara karşı garanti (garantie des vices cachés) kapsamındadır.",
@@ -341,6 +410,7 @@
             "bullets": []
           },
           {
+            "id": "kisisel-veri",
             "heading": "Kişisel veriler",
             "paragraphs": [
               "Siparişiniz için gereken kişisel verilerin nasıl işlendiği gizlilik politikası sayfasında ayrıntılı olarak açıklanmıştır."
@@ -348,6 +418,7 @@
             "bullets": []
           },
           {
+            "id": "uyusmazlik",
             "heading": "Uyuşmazlık ve uygulanacak hukuk",
             "paragraphs": [
               "Bir sorun yaşarsanız bize yazın; talepler \"Taleplerim\" bölümünden açılabilir ve takip edilebilir.",
@@ -376,6 +447,7 @@
         "updatedAt": "Son güncelleme: 1 Temmuz 2026",
         "sections": [
           {
+            "id": "isletme",
             "heading": "Site sahibi",
             "paragraphs": [
               "Bu site, Lezzet Anatolie markasıyla {legalName} tarafından işletilmektedir."
@@ -395,6 +467,7 @@
             ]
           },
           {
+            "id": "yayin",
             "heading": "Yayın sorumlusu",
             "paragraphs": [
               "Yayın sorumlusu Yigit Bilgin'dir ({legalName} başkanı). İçerikle ilgili her talep yukarıdaki e-posta adresine iletilebilir."
@@ -402,6 +475,7 @@
             "bullets": []
           },
           {
+            "id": "barindirma",
             "heading": "Barındırma",
             "paragraphs": [
               "Site, Hetzner Online GmbH tarafından Avrupa Birliği içindeki veri merkezlerinde barındırılmaktadır."
@@ -413,6 +487,7 @@
             ]
           },
           {
+            "id": "fikri-mulkiyet",
             "heading": "Fikri mülkiyet",
             "paragraphs": [
               "Bu sitedeki metinler, ürün fotoğrafları, logo ve tasarım öğeleri site sahibine aittir ve Fransız fikri mülkiyet mevzuatı ile korunmaktadır.",
@@ -421,6 +496,7 @@
             "bullets": []
           },
           {
+            "id": "sorumluluk",
             "heading": "Sorumluluk",
             "paragraphs": [
               "Site içeriğinin güncel ve doğru olması için özen gösterilir. Ürün bilgileri, fiyatlar ve stok durumu değişebilir; sipariş anında sepette görünen bilgi geçerlidir.",
@@ -429,6 +505,7 @@
             "bullets": []
           },
           {
+            "id": "uyusmazlik",
             "heading": "Uygulanacak hukuk",
             "paragraphs": [
               "Bu yasal bilgiler Fransız hukukuna tabidir. Satışa ilişkin koşullar için satış koşulları sayfasına bakınız."
@@ -458,7 +535,7 @@
     "directoryTitle": "Informations et conditions",
     "searchPlaceholder": "Rechercher une question…",
     "noMatch": "Aucune question ne correspond à cette recherche.",
-    "notFoundTitle": "Vous ne trouvez pas votre réponse ?",
+    "notFoundTitle": "Vous ne trouvez pas votre réponse ?",
     "notFoundCta": "Écrivez-nous",
     "missing": {
       "title": "Cette page n'existe pas",
@@ -471,14 +548,19 @@
         "updatedAt": "Dernière mise à jour : 1 juillet 2026",
         "sections": [
           {
+            "id": "bolge",
             "heading": "Notre zone de livraison",
             "paragraphs": [
               "Nous livrons les adresses de Strasbourg et de ses environs avec notre propre véhicule frigorifique, jusqu'à votre porte. Vous voyez automatiquement, au moment de la commande, si votre adresse est dans la zone ; votre jour de livraison dépend du calendrier de votre secteur.",
-              "Vous pouvez changer votre code postal à tout moment depuis la pastille de zone en haut de la vitrine. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
+              {
+                "web": "Vous pouvez changer votre code postal à tout moment dans le bandeau en haut du site. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement.",
+                "app": "Vous pouvez changer votre code postal à tout moment depuis la pastille de zone en haut de la vitrine. Si vous saisissez un code hors zone, la partie du catalogue qui peut vous être expédiée est signalée — vous ne découvrez donc pas le problème au moment du paiement."
+              }
             ],
             "bullets": []
           },
           {
+            "id": "yollar",
             "heading": "Quel produit arrive par quel moyen",
             "paragraphs": [
               "Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Ils ne peuvent pas partir en colis : nous ne pouvons pas garantir la chaîne du froid dans les conditions d'expédition, et nous ne transportons pas ce que nous ne pouvons pas garantir.",
@@ -488,6 +570,7 @@
             "bullets": []
           },
           {
+            "id": "kargo",
             "heading": "Expédition",
             "paragraphs": [
               "Une fois votre colis préparé, comptez 2 à 4 jours ouvrés en France, un jour de plus pour les adresses à l'étranger.",
@@ -497,6 +580,7 @@
             "bullets": []
           },
           {
+            "id": "soguk-zincir",
             "heading": "Chaîne du froid",
             "paragraphs": [
               "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant ; la chaîne du froid n'est rompue ni dans notre entrepôt ni dans notre véhicule. À la réception, il vous suffit de les placer directement au congélateur. Les produits frais font partie de la même chaîne : la plage 0–4 °C est maintenue pendant tout le trajet, et à la réception ils vont au réfrigérateur.",
@@ -505,6 +589,7 @@
             "bullets": []
           },
           {
+            "id": "iade",
             "heading": "Conditions de retour",
             "paragraphs": [
               "Pour les denrées alimentaires, le droit de rétractation général ne s'applique pas aux produits livrés et acceptés, en raison du risque de rupture de la chaîne du froid (exception des biens périssables, code de la consommation).",
@@ -519,6 +604,7 @@
             ]
           },
           {
+            "id": "iade-suresi",
             "heading": "Comment et quand le remboursement est effectué",
             "paragraphs": [
               "Le remboursement est effectué sur le moyen de paiement utilisé. Si vous avez payé par carte, le montant est recrédité sur votre carte ; selon votre banque, quelques jours ouvrés peuvent être nécessaires avant qu'il apparaisse sur votre compte.",
@@ -547,7 +633,7 @@
           "note": "Ces montants constituent la règle générale pour les achats particuliers et correspondent à ce que le système applique aujourd'hui ; s'ils changent, cette page change avec eux. Certaines zones et les comptes professionnels peuvent relever d'un seuil différent — le montant qui vous est appliqué est toujours affiché dans votre panier."
         },
         "notice": {
-          "text": "Vous ne trouvez pas la réponse à votre question ici ?",
+          "text": "Vous ne trouvez pas la réponse à votre question ici ?",
           "links": [
             {
               "label": "Consultez la FAQ",
@@ -566,40 +652,55 @@
         "sections": [],
         "questions": [
           {
-            "question": "Les produits arrivent-ils surgelés ?",
+            "id": "donmus",
+            "question": "Les produits arrivent-ils surgelés ?",
             "answer": "Nos produits surgelés nous parviennent déjà surgelés de leur fabricant et arrivent chez vous sans rupture de la chaîne du froid. Les produits sous chaîne du froid — surgelés et frais — ne voyagent qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison ; ils ne peuvent pas partir en colis. Tous les autres produits, eux, partent par transporteur à n'importe quelle adresse."
           },
           {
-            "question": "Y a-t-il un montant minimum de commande ?",
+            "id": "asgari-sepet",
+            "question": "Y a-t-il un montant minimum de commande ?",
             "answer": "Uniquement pour la livraison dans notre zone : les commandes que nous apportons à votre porte avec notre propre véhicule ont un montant minimum, et si vous êtes en dessous, le montant restant est indiqué dans le panier. Pour l'expédition, il n'y a aucun montant minimum — les frais de port sont déjà à votre charge. Les montants en vigueur figurent sur la page livraison et retours."
           },
           {
-            "question": "Quand ma commande arrive-t-elle ?",
+            "id": "teslimat-gunu",
+            "question": "Quand ma commande arrive-t-elle ?",
             "answer": "Si vous êtes dans la zone, votre jour de livraison dépend du calendrier de votre secteur et vous le voyez au moment de la commande. Pour les expéditions, comptez 2 à 4 jours ouvrés en France une fois le colis préparé, un jour de plus pour les adresses à l'étranger. Vous suivez l'état de votre commande dans « Mes commandes » et recevez un e-mail à chaque étape."
           },
           {
-            "question": "Puis-je payer à la livraison ?",
+            "id": "kapida-odeme",
+            "question": "Puis-je payer à la livraison ?",
             "answer": "Le paiement à la livraison est possible pour les livraisons dans notre zone, jusqu'à un certain montant de commande — en espèces ou par carte ; le plafond en vigueur figure sur la page livraison et retours. Au-delà, et pour toutes les expéditions, le paiement est encaissé au moment de la commande. En paiement à la livraison, si un article manque, son montant est déduit dès la livraison — vous n'attendez pas un remboursement."
           },
           {
-            "question": "Un produit manque dans ma commande, que faire ?",
+            "id": "eksik-kalem",
+            "question": "Un produit manque dans ma commande, que faire ?",
             "answer": "Vous n'avez rien à faire : le montant de l'article absent de votre colis est calculé et remboursé automatiquement. Si vous souhaitez tout de même nous en parler, ouvrez une demande depuis « Mes demandes » en sélectionnant votre commande."
           },
           {
-            "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
+            "id": "toptan",
+            "question": "Puis-je obtenir des tarifs professionnels pour mon restaurant ?",
             "answer": "Oui. Vous pouvez faire votre demande depuis la page « Professionnels » avec votre numéro SIRET ; une fois votre demande validée, votre compte devient un compte professionnel et les prix s'affichent en conséquence. Les comptes professionnels ont également accès au virement et au paiement par chèque ; vos conditions de règlement sont définies sur votre compte."
           },
           {
-            "question": "Où puis-je voir les informations sur les allergènes ?",
+            "id": "alerjen",
+            "question": "Où puis-je voir les informations sur les allergènes ?",
             "answer": "Les ingrédients, les allergènes et, le cas échéant, l'avertissement de contamination croisée figurent sur la fiche de chaque produit. Ces informations proviennent de la déclaration du fabricant — nous ne fabriquons pas nos produits, nous les achetons auprès de producteurs que nous sélectionnons. En cas d'allergie sévère, écrivez-nous avant de commander : nous demandons confirmation au fabricant."
           },
           {
-            "question": "Dois-je créer un compte pour commander ?",
+            "id": "hesap-gerekli",
+            "question": "Dois-je créer un compte pour commander ?",
             "answer": "Vous n'avez pas besoin de créer un mot de passe : remplissez votre panier et finalisez la commande avec votre adresse e-mail — en saisissant le code que nous vous envoyons, votre compte est ouvert en arrière-plan et votre commande y est rattachée. Vos commandes, vos adresses et vos points y sont conservés : vous ne ressaisissez plus votre adresse et vous pouvez relancer une commande passée en un clic depuis « Mes commandes »."
           },
           {
-            "question": "Comment changer la langue de l'application et des e-mails ?",
-            "answer": "Depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui utilise l'application en français reçoive ses messages en turc."
+            "id": "dil",
+            "question": {
+              "web": "Comment changer la langue du site et des e-mails ?",
+              "app": "Comment changer la langue de l'application et des e-mails ?"
+            },
+            "answer": {
+              "web": "Depuis le bandeau en haut du site ou depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui navigue en français reçoive ses messages en turc.",
+              "app": "Depuis la ligne « Langue » de votre compte. Vos e-mails de notification passent dans la même langue — il serait absurde que quelqu'un qui utilise l'application en français reçoive ses messages en turc."
+            }
           }
         ],
         "notice": {
@@ -612,6 +713,7 @@
         "updatedAt": "Dernière mise à jour : 21 septembre 2026",
         "sections": [
           {
+            "id": "sorumlu",
             "heading": "Qui est responsable de vos données",
             "paragraphs": [
               "Le responsable du traitement des données personnelles collectées sur ce site est la société {legalName} (SIRET {siret}), {address}, France, exploitant le site sous le nom commercial Lezzet Anatolie.",
@@ -620,23 +722,30 @@
             "bullets": []
           },
           {
+            "id": "hangi-veri",
             "heading": "Quelles données nous collectons",
             "paragraphs": [
               "Nous ne collectons que les données nécessaires à l'activité. Il s'agit de :"
             ],
             "bullets": [
               "Identité et contact : votre nom, votre adresse e-mail, votre numéro de téléphone.",
-              "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé sur votre appareil même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée.",
+              {
+                "web": "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé dans votre navigateur même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée.",
+                "app": "Livraison : vos adresses enregistrées et votre code postal. Le code postal est conservé sur votre appareil même sans compte — afin de pouvoir vous montrer la partie du catalogue qui peut vous être livrée."
+              },
               "Commandes : vos commandes, leurs articles, leurs montants et leurs états.",
               "Préférences de communication : vos consentements marketing et votre langue.",
               "Vos demandes : les messages que vous nous envoyez et les photos que vous joignez.",
               "Si vous êtes un client professionnel : votre numéro SIRET et les informations de votre société.",
               "Vos messages : ce que vous nous écrivez sur WhatsApp, Messenger ou Instagram, y compris les photos et messages vocaux envoyés.",
               "Si vous vous connectez avec Google : le nom et l'adresse e-mail que Google nous transmet.",
-              "Notifications : si vous les avez autorisées, le jeton de notification de votre appareil, afin de pouvoir vous les envoyer."
+              {
+                "app": "Notifications : si vous les avez autorisées, le jeton de notification de votre appareil, afin de pouvoir vous les envoyer."
+              }
             ]
           },
           {
+            "id": "neden",
             "heading": "Pourquoi nous les collectons",
             "paragraphs": [
               "Sans votre nom et votre adresse, une commande ne peut pas être livrée ; sans votre adresse e-mail, nous ne pouvons pas vous informer de l'état de votre commande. Ces données sont traitées pour l'exécution du contrat.",
@@ -647,6 +756,7 @@
             "bullets": []
           },
           {
+            "id": "ne-kadar",
             "heading": "Combien de temps nous les conservons",
             "paragraphs": [
               "Les données de votre compte sont conservées tant que votre compte est actif. Vous pouvez supprimer votre compte vous-même, à tout moment, depuis votre page compte : votre nom, votre e-mail et votre téléphone, vos adresses enregistrées, vos demandes, vos points et vos bons personnels sont retirés, vos identifiants sont effacés et vous ne pouvez plus vous connecter.",
@@ -656,6 +766,7 @@
             "bullets": []
           },
           {
+            "id": "kiminle",
             "heading": "Avec qui nous les partageons",
             "paragraphs": [
               "Nous ne vendons pas vos données. Elles ne sont partagées qu'avec les prestataires nécessaires à l'activité :"
@@ -664,22 +775,32 @@
               "Prestataire de paiement : vos données de carte ne nous parviennent jamais, elles sont traitées directement chez le prestataire.",
               "Service d'envoi d'e-mails : pour acheminer les e-mails de notification.",
               "Transporteur : votre nom et votre adresse de livraison pour les expéditions hors zone.",
-              "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre appareil au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
+              {
+                "web": "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre navigateur au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
+                "app": "Recherche d'adresse (France) : le texte que vous saisissez dans le champ d'adresse est envoyé directement depuis votre appareil au service public d'adresses de l'IGN (Base Adresse Nationale) afin d'obtenir des suggestions. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis."
+              },
               "Recherche d'adresse (Allemagne) : le texte de l'adresse saisie est envoyé depuis nos serveurs au service d'adresses de Google, pour les suggestions et la vérification. Ni votre nom, ni votre compte, ni aucune autre donnée ne sont transmis.",
               "Service d'intelligence artificielle : le contenu de vos messages, pour les traduire, transcrire les messages vocaux et préparer les réponses.",
               "Plateformes de messagerie : si vous nous écrivez sur WhatsApp, Messenger ou Instagram (Meta), notre réponse vous parvient par la même plateforme ; la conversation est aussi conservée dans notre système.",
-              "Service de notifications : le jeton de notification et le texte de la notification, pour acheminer les notifications de l'application vers votre appareil.",
+              {
+                "app": "Service de notifications : le jeton de notification et le texte de la notification, pour acheminer les notifications de l'application vers votre appareil."
+              },
               "Hébergement et stockage : nos serveurs sont chez Hetzner Online GmbH (Allemagne) et notre base de données chez Supabase, tous deux dans l'Union européenne. Les photos que vous ajoutez sont conservées sur le service de stockage de Cloudflare."
             ]
           },
           {
+            "id": "aktarim",
             "heading": "Transferts hors de l'Union européenne",
             "paragraphs": [
-              "Une partie des prestataires auxquels nous faisons appel pour le paiement, l'e-mail, la base de données, le stockage, les adresses, l'intelligence artificielle, la messagerie et les notifications est établie aux États-Unis, et vos données peuvent être traitées par eux hors de l'Union européenne. Ces transferts reposent sur la décision d'adéquation de la Commission européenne relative au cadre de protection des données UE–États-Unis (Data Privacy Framework) ou sur les clauses contractuelles types approuvées par la Commission."
+              {
+                "web": "Une partie des prestataires auxquels nous faisons appel pour le paiement, l'e-mail, la base de données, le stockage, les adresses, l'intelligence artificielle et la messagerie est établie aux États-Unis, et vos données peuvent être traitées par eux hors de l'Union européenne. Ces transferts reposent sur la décision d'adéquation de la Commission européenne relative au cadre de protection des données UE–États-Unis (Data Privacy Framework) ou sur les clauses contractuelles types approuvées par la Commission.",
+                "app": "Une partie des prestataires auxquels nous faisons appel pour le paiement, l'e-mail, la base de données, le stockage, les adresses, l'intelligence artificielle, la messagerie et les notifications est établie aux États-Unis, et vos données peuvent être traitées par eux hors de l'Union européenne. Ces transferts reposent sur la décision d'adéquation de la Commission européenne relative au cadre de protection des données UE–États-Unis (Data Privacy Framework) ou sur les clauses contractuelles types approuvées par la Commission."
+              }
             ],
             "bullets": []
           },
           {
+            "id": "haklariniz",
             "heading": "Vos droits",
             "paragraphs": [
               "Au titre du RGPD (UE 2016/679), vous disposez des droits suivants. Pour les exercer, il vous suffit d'écrire à {email} ; une réponse vous est apportée dans un délai maximal d'un mois."
@@ -695,18 +816,35 @@
             ]
           },
           {
-            "heading": "Ce qui est conservé sur votre appareil",
+            "id": "cerez",
+            "heading": {
+              "web": "Cookies et stockage navigateur",
+              "app": "Ce qui est conservé sur votre appareil"
+            },
             "paragraphs": [
-              "L'application n'utilise aucun cookie — ni publicitaire, ni traceur, ni d'aucune autre sorte. Ce qui est conservé sur votre appareil est nécessaire au fonctionnement de l'application : votre session, votre panier et le code postal que vous avez choisi. La session est stockée dans le coffre sécurisé du système (Trousseau sur iOS, Keystore sur Android).",
-              "Votre panier est conservé même sans compte ; à la connexion, le panier de votre appareil est transféré vers votre compte puis supprimé de l'appareil.",
-              "Nous mesurons la façon dont l'application est utilisée : quels produits sont consultés, ce qui est recherché, ce qui est ajouté au panier et à quel endroit une commande s'interrompt. Cette mesure n'écrit rien sur votre appareil et n'utilise aucun identifiant publicitaire — l'enregistrement se crée sur nos serveurs, au moment où votre demande y arrive. Ni votre nom, ni votre adresse e-mail, ni votre numéro de compte n'y figurent : la clé qui regroupe les demandes est dérivée d'une valeur qui change chaque jour et n'est pas conservée le lendemain, elle ne peut donc pas être recalculée après coup. Le texte saisi dans la recherche est également conservé — afin de voir quelles recherches restent sans résultat."
+              {
+                "app": "L'application n'utilise aucun cookie — ni publicitaire, ni traceur, ni d'aucune autre sorte. Ce qui est conservé sur votre appareil est nécessaire au fonctionnement de l'application : votre session, votre panier et le code postal que vous avez choisi. La session est stockée dans le coffre sécurisé du système (Trousseau sur iOS, Keystore sur Android)."
+              },
+              {
+                "web": "Nous n'utilisons ni cookies publicitaires ni traceurs. Ce qui est conservé dans votre navigateur est nécessaire au fonctionnement du site : votre session, votre panier et le code postal que vous avez choisi."
+              },
+              {
+                "web": "Nous mesurons la fréquentation des pages, mais cette mesure est sans cookie et ne peut être rattachée à une personne : les visites sont comptées à l'aide d'une clé qui change chaque jour et qui est détruite le lendemain, et aucun enregistrement nominatif n'est conservé."
+              },
+              {
+                "web": "Votre panier est conservé même sans compte ; à la connexion, le panier de votre navigateur est transféré vers votre compte puis supprimé du navigateur.",
+                "app": "Votre panier est conservé même sans compte ; à la connexion, le panier de votre appareil est transféré vers votre compte puis supprimé de l'appareil."
+              },
+              {
+                "app": "Nous mesurons la façon dont l'application est utilisée : quels produits sont consultés, ce qui est recherché, ce qui est ajouté au panier et à quel endroit une commande s'interrompt. Cette mesure n'écrit rien sur votre appareil et n'utilise aucun identifiant publicitaire — l'enregistrement se crée sur nos serveurs, au moment où votre demande y arrive. Ni votre nom, ni votre adresse e-mail, ni votre numéro de compte n'y figurent : la clé qui regroupe les demandes est dérivée d'une valeur qui change chaque jour et n'est pas conservée le lendemain, elle ne peut donc pas être recalculée après coup. Le texte saisi dans la recherche est également conservé — afin de voir quelles recherches restent sans résultat."
+              }
             ],
             "bullets": []
           }
         ],
         "questions": [],
         "notice": {
-          "text": "Vous avez une demande concernant vos données ?",
+          "text": "Vous avez une demande concernant vos données ?",
           "links": [
             {
               "label": "Gérez vos préférences depuis votre compte",
@@ -724,6 +862,7 @@
         "updatedAt": "Dernière mise à jour : 1 juillet 2026",
         "sections": [
           {
+            "id": "kapsam",
             "heading": "Champ d'application",
             "paragraphs": [
               "Les présentes conditions s'appliquent à toutes les ventes réalisées via ce site par la société {legalName} (SIRET {siret} · {address}, France), sous le nom commercial Lezzet Anatolie. En passant commande, vous acceptez ces conditions.",
@@ -732,6 +871,7 @@
             "bullets": []
           },
           {
+            "id": "urunler",
             "heading": "Produits et informations",
             "paragraphs": [
               "Les produits que nous vendons sont des denrées alimentaires surgelées ou de longue conservation. Nous ne les fabriquons pas nous-mêmes : nous les achetons auprès de producteurs que nous sélectionnons. Les ingrédients, les allergènes et la quantité nette figurent sur la fiche de chaque produit ; ces informations proviennent de la déclaration du fabricant.",
@@ -741,6 +881,7 @@
             "bullets": []
           },
           {
+            "id": "siparis",
             "heading": "Formation de la commande",
             "paragraphs": [
               "La commande est formée lorsque vous validez votre panier et finalisez l'étape de paiement — si vous avez choisi le paiement à la livraison, il vous suffit de confirmer le moyen de paiement à cette étape. Dès l'affichage de la page de confirmation et la réception de votre e-mail de confirmation, la commande est également acceptée par nos soins.",
@@ -750,6 +891,7 @@
             "bullets": []
           },
           {
+            "id": "fiyat",
             "heading": "Prix",
             "paragraphs": [
               "Les prix sont indiqués en euros, toutes taxes comprises. Le taux de TVA applicable varie selon le type de produit.",
@@ -759,6 +901,7 @@
             "bullets": []
           },
           {
+            "id": "odeme",
             "heading": "Paiement",
             "paragraphs": [
               "Le paiement par carte est encaissé via un prestataire de paiement sécurisé. Vos données de carte ne nous parviennent à aucun moment et ne sont pas conservées par nos soins.",
@@ -769,6 +912,7 @@
             "bullets": []
           },
           {
+            "id": "teslimat",
             "heading": "Livraison",
             "paragraphs": [
               "Les produits sous chaîne du froid (surgelés et frais) ne sont livrés qu'avec notre propre camion réfrigéré, aux adresses de notre zone de livraison. Tous les autres produits partent par transporteur — dans la zone comme en dehors. Le jour et les options de livraison sont affichés au moment de la commande selon le code postal de votre adresse.",
@@ -779,6 +923,7 @@
             "bullets": []
           },
           {
+            "id": "cayma",
             "heading": "Droit de rétractation",
             "paragraphs": [
               "Conformément au code de la consommation (art. L221-28), le droit de rétractation de 14 jours applicable à la vente à distance NE S'APPLIQUE PAS aux denrées alimentaires susceptibles de se détériorer rapidement.",
@@ -787,6 +932,7 @@
             "bullets": []
           },
           {
+            "id": "garanti",
             "heading": "Garanties légales",
             "paragraphs": [
               "Nos produits bénéficient de la garantie légale de conformité et de la garantie des vices cachés prévues par le droit français.",
@@ -795,6 +941,7 @@
             "bullets": []
           },
           {
+            "id": "kisisel-veri",
             "heading": "Données personnelles",
             "paragraphs": [
               "Le traitement des données personnelles nécessaires à votre commande est détaillé sur la page de politique de confidentialité."
@@ -802,6 +949,7 @@
             "bullets": []
           },
           {
+            "id": "uyusmazlik",
             "heading": "Litiges et droit applicable",
             "paragraphs": [
               "En cas de problème, écrivez-nous ; les demandes peuvent être ouvertes et suivies depuis la rubrique « Mes demandes ».",
@@ -830,6 +978,7 @@
         "updatedAt": "Dernière mise à jour : 1 juillet 2026",
         "sections": [
           {
+            "id": "isletme",
             "heading": "Éditeur du site",
             "paragraphs": [
               "Ce site est édité par la société {legalName}, sous le nom commercial Lezzet Anatolie."
@@ -849,6 +998,7 @@
             ]
           },
           {
+            "id": "yayin",
             "heading": "Directeur de la publication",
             "paragraphs": [
               "Le directeur de la publication est Yigit Bilgin, président de {legalName}. Toute demande relative au contenu peut être adressée à l'adresse e-mail ci-dessus."
@@ -856,6 +1006,7 @@
             "bullets": []
           },
           {
+            "id": "barindirma",
             "heading": "Hébergement",
             "paragraphs": [
               "Le site est hébergé par Hetzner Online GmbH, dans des centres de données situés dans l'Union européenne."
@@ -867,6 +1018,7 @@
             ]
           },
           {
+            "id": "fikri-mulkiyet",
             "heading": "Propriété intellectuelle",
             "paragraphs": [
               "Les textes, photographies de produits, le logo et les éléments graphiques de ce site appartiennent à l'éditeur et sont protégés par le code de la propriété intellectuelle.",
@@ -875,6 +1027,7 @@
             "bullets": []
           },
           {
+            "id": "sorumluluk",
             "heading": "Responsabilité",
             "paragraphs": [
               "Nous veillons à l'exactitude et à l'actualité du contenu du site. Les informations produits, les prix et les disponibilités peuvent évoluer ; l'information affichée dans le panier au moment de la commande fait foi.",
@@ -883,6 +1036,7 @@
             "bullets": []
           },
           {
+            "id": "uyusmazlik",
             "heading": "Droit applicable",
             "paragraphs": [
               "Les présentes mentions légales sont soumises au droit français. Pour les conditions relatives à la vente, veuillez consulter la page des conditions générales de vente."
@@ -925,14 +1079,19 @@
         "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
         "sections": [
           {
+            "id": "bolge",
             "heading": "Unser Liefergebiet",
             "paragraphs": [
               "Adressen in Straßburg und Umgebung beliefern wir mit unserem eigenen Kühlfahrzeug bis vor die Haustür. Ob Ihre Adresse im Liefergebiet liegt, sehen Sie bei der Bestellung automatisch anhand Ihrer Postleitzahl; Ihr Liefertag richtet sich nach dem Kalender Ihres Gebiets.",
-              "Sie können Ihre Postleitzahl jederzeit über die Gebiets-Pille oben in der Vitrine ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — beim Schritt „Bestellung abschließen“ erleben Sie also keine Überraschung."
+              {
+                "web": "Sie können Ihre Postleitzahl jederzeit oben auf der Seite ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — Sie erleben also an der Kasse keine Überraschung.",
+                "app": "Sie können Ihre Postleitzahl jederzeit über die Gebiets-Pille oben in der Vitrine ändern. Geben Sie eine Postleitzahl außerhalb des Gebiets ein, wird der versandfähige Teil des Katalogs gekennzeichnet — beim Schritt „Bestellung abschließen“ erleben Sie also keine Überraschung."
+              }
             ],
             "bullets": []
           },
           {
+            "id": "yollar",
             "heading": "Welches Produkt kommt auf welchem Weg",
             "paragraphs": [
               "Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Sie können nicht als Paket verschickt werden: Unter Versandbedingungen können wir die Kühlkette nicht sicher gewährleisten, und was wir nicht gewährleisten können, transportieren wir nicht.",
@@ -942,6 +1101,7 @@
             "bullets": []
           },
           {
+            "id": "kargo",
             "heading": "Versand",
             "paragraphs": [
               "Nach der Vorbereitung Ihres Pakets rechnen Sie in Frankreich mit 2 bis 4 Werktagen, bei Adressen im Ausland mit einem Tag mehr.",
@@ -951,6 +1111,7 @@
             "bullets": []
           },
           {
+            "id": "soguk-zincir",
             "heading": "Kühlkette",
             "paragraphs": [
               "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller; die Kühlkette wird weder in unserem Lager noch in unserem Fahrzeug unterbrochen. Nach dem Empfang legen Sie sie einfach direkt in Ihren Gefrierschrank. Frischware gehört zur selben Kette: Für sie halten wir den Bereich 0–4 °C über den gesamten Weg ein, und nach dem Empfang kommt sie in den Kühlschrank.",
@@ -959,6 +1120,7 @@
             "bullets": []
           },
           {
+            "id": "iade",
             "heading": "Rücksendebedingungen",
             "paragraphs": [
               "Bei Lebensmitteln gilt für gelieferte und angenommene Ware wegen des Risikos einer unterbrochenen Kühlkette kein allgemeines Widerrufsrecht (Ausnahme für schnell verderbliche Waren).",
@@ -973,6 +1135,7 @@
             ]
           },
           {
+            "id": "iade-suresi",
             "heading": "Wie und wann erstattet wird",
             "paragraphs": [
               "Die Erstattung erfolgt auf das von Ihnen genutzte Zahlungsmittel. Bei Kartenzahlung wird der Betrag Ihrer Karte gutgeschrieben; je nach Bank kann es einige Werktage dauern, bis er auf Ihrem Konto erscheint.",
@@ -1020,40 +1183,55 @@
         "sections": [],
         "questions": [
           {
+            "id": "donmus",
             "question": "Kommen die Produkte gefroren an?",
             "answer": "Unsere tiefgekühlten Produkte erreichen uns bereits schockgefrostet von ihrem Hersteller und kommen ohne Unterbrechung der Kühlkette bei Ihnen an. Produkte mit Kühlkette — Tiefkühl- und Frischware — bringen wir ausschließlich mit unserem eigenen Kühlfahrzeug an Adressen in unserem Liefergebiet; sie können nicht als Paket verschickt werden. Alle übrigen Produkte versenden wir dagegen an jede Adresse."
           },
           {
+            "id": "asgari-sepet",
             "question": "Gibt es einen Mindestbestellwert?",
             "answer": "Nur für die Lieferung in unserem Gebiet: Bestellungen, die wir mit unserem eigenen Fahrzeug an Ihre Tür bringen, haben einen Mindestbestellwert; liegen Sie darunter, sehen Sie den fehlenden Betrag im Warenkorb. Beim Versand gibt es keinen Mindestbestellwert — die Versandkosten tragen Sie ohnehin. Die aktuellen Beträge stehen auf der Seite Lieferung und Rückgabe."
           },
           {
+            "id": "teslimat-gunu",
             "question": "Wann kommt meine Bestellung an?",
             "answer": "Innerhalb des Liefergebiets richtet sich Ihr Liefertag nach dem Kalender Ihres Gebiets, und Sie sehen ihn bei der Bestellung. Beim Versand rechnen Sie nach der Vorbereitung des Pakets mit 2 bis 4 Werktagen in Frankreich, bei Adressen im Ausland mit einem Tag mehr. Den Status verfolgen Sie unter „Meine Bestellungen“ und erhalten bei jedem Schritt eine E-Mail."
           },
           {
+            "id": "kapida-odeme",
             "question": "Kann ich bei Lieferung bezahlen?",
-            "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem Bestellwert von 500 € möglich — bar oder mit Karte. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
+            "answer": "Bei Lieferungen in unserem Gebiet ist Zahlung bei Lieferung bis zu einem bestimmten Bestellwert möglich — bar oder mit Karte; die aktuelle Obergrenze steht auf der Seite Lieferung und Rückgabe. Darüber hinaus und bei allen Versandbestellungen wird die Zahlung bei der Bestellung eingezogen. Fehlt bei Zahlung bei Lieferung ein Artikel, wird sein Betrag bereits bei der Lieferung abgezogen — Sie warten nicht auf eine Erstattung."
           },
           {
+            "id": "eksik-kalem",
             "question": "Ein Produkt fehlt in meiner Bestellung, was tun?",
             "answer": "Sie müssen nichts tun: Der Betrag des in Ihrem Paket fehlenden Artikels wird automatisch berechnet und erstattet. Möchten Sie uns dennoch davon berichten, eröffnen Sie unter „Meine Anfragen“ eine Anfrage und wählen Ihre Bestellung aus."
           },
           {
+            "id": "toptan",
             "question": "Bekomme ich Großhandelspreise für mein Restaurant?",
             "answer": "Ja. Sie können sich über die Seite „Geschäftskunden“ mit Ihrer SIRET-Nummer bewerben; sobald Ihre Anfrage bestätigt ist, wird Ihr Konto zu einem Geschäftskonto und die Preise werden entsprechend angezeigt. Geschäftskonten können zusätzlich per Überweisung und Scheck bezahlen; Ihre Zahlungsbedingungen werden in Ihrem Konto hinterlegt."
           },
           {
+            "id": "alerjen",
             "question": "Wo finde ich Angaben zu Allergenen?",
             "answer": "Zutaten, Allergene und gegebenenfalls der Hinweis auf Kreuzkontamination stehen auf der Seite jedes Produkts. Diese Angaben stammen aus der Deklaration des Herstellers — wir stellen unsere Produkte nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Bei einer schweren Allergie schreiben Sie uns bitte vor der Bestellung; wir holen die Bestätigung beim Hersteller ein."
           },
           {
+            "id": "hesap-gerekli",
             "question": "Brauche ich ein Konto, um zu bestellen?",
             "answer": "Ein Passwort brauchen Sie nicht: Füllen Sie Ihren Warenkorb und schließen Sie die Bestellung mit Ihrer E-Mail-Adresse ab — sobald Sie den zugesandten Code eingeben, wird Ihr Konto im Hintergrund angelegt und Ihre Bestellung damit verknüpft. Ihre Bestellungen, Adressen und Punkte werden dort gespeichert: Sie geben Ihre Adresse nicht erneut ein und können eine frühere Bestellung unter „Meine Bestellungen“ mit einem Klick wiederholen."
           },
           {
-            "question": "Wie ändere ich die Sprache der App und der E-Mails?",
-            "answer": "Über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die App auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt."
+            "id": "dil",
+            "question": {
+              "web": "Wie ändere ich die Sprache der Website und der E-Mails?",
+              "app": "Wie ändere ich die Sprache der App und der E-Mails?"
+            },
+            "answer": {
+              "web": "Oben auf der Seite oder über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die Seite auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt.",
+              "app": "Über die Zeile „Sprache“ in Ihrem Konto. Ihre Benachrichtigungs-E-Mails wechseln in dieselbe Sprache — es wäre unsinnig, wenn jemand die App auf Deutsch nutzt und seine Nachrichten auf Französisch bekommt."
+            }
           }
         ],
         "notice": {
@@ -1066,6 +1244,7 @@
         "updatedAt": "Zuletzt aktualisiert: 21. September 2026",
         "sections": [
           {
+            "id": "sorumlu",
             "heading": "Wer für Ihre Daten verantwortlich ist",
             "paragraphs": [
               "Verantwortlich für die auf dieser Website erhobenen personenbezogenen Daten ist die {legalName} (SIRET {siret}), {address}, Frankreich, die die Website unter dem Handelsnamen Lezzet Anatolie betreibt.",
@@ -1074,23 +1253,30 @@
             "bullets": []
           },
           {
+            "id": "hangi-veri",
             "heading": "Welche Daten wir erheben",
             "paragraphs": [
               "Wir erheben nur die Daten, die für den Geschäftsbetrieb erforderlich sind. Das sind:"
             ],
             "bullets": [
               "Identität und Kontakt: Ihr Name, Ihre E-Mail-Adresse, Ihre Telefonnummer.",
-              "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto auf Ihrem Gerät gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können.",
+              {
+                "web": "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto in Ihrem Browser gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können.",
+                "app": "Lieferung: Ihre gespeicherten Adressen und Ihre Postleitzahl. Die Postleitzahl wird auch ohne Konto auf Ihrem Gerät gespeichert — damit wir Ihnen den für Sie lieferbaren Teil des Katalogs zeigen können."
+              },
               "Bestellungen: Ihre Bestellungen, deren Artikel, Beträge und Status.",
               "Kommunikationseinstellungen: Ihre Marketing-Einwilligungen und Ihre Sprache.",
               "Ihre Anfragen: die Nachrichten, die Sie uns schreiben, und die Fotos, die Sie anhängen.",
               "Wenn Sie Geschäftskunde sind: Ihre SIRET-Nummer und Ihre Unternehmensangaben.",
               "Ihre Nachrichten: was Sie uns über WhatsApp, Messenger oder Instagram schreiben, einschließlich gesendeter Fotos und Sprachnachrichten.",
               "Wenn Sie sich mit Google anmelden: Name und E-Mail-Adresse, die Google uns übermittelt.",
-              "Benachrichtigungen: sofern Sie zugestimmt haben, das Benachrichtigungs-Token Ihres Geräts, damit wir Ihnen Benachrichtigungen senden können."
+              {
+                "app": "Benachrichtigungen: sofern Sie zugestimmt haben, das Benachrichtigungs-Token Ihres Geräts, damit wir Ihnen Benachrichtigungen senden können."
+              }
             ]
           },
           {
+            "id": "neden",
             "heading": "Warum wir sie erheben",
             "paragraphs": [
               "Ohne Ihren Namen und Ihre Adresse kann eine Bestellung nicht zugestellt werden; ohne Ihre E-Mail-Adresse können wir Ihnen den Status Ihrer Bestellung nicht mitteilen. Diese Daten werden zur Erfüllung des Vertrags verarbeitet.",
@@ -1101,6 +1287,7 @@
             "bullets": []
           },
           {
+            "id": "ne-kadar",
             "heading": "Wie lange wir sie speichern",
             "paragraphs": [
               "Ihre Kontodaten werden gespeichert, solange Ihr Konto besteht. Sie können Ihr Konto jederzeit selbst über Ihre Kontoseite löschen: Ihr Name, Ihre E-Mail-Adresse und Telefonnummer, Ihre gespeicherten Adressen, Ihre Anfragen, Ihre Punkte und persönlichen Gutscheine werden entfernt, Ihre Anmeldedaten gelöscht, und eine Anmeldung ist nicht mehr möglich.",
@@ -1110,6 +1297,7 @@
             "bullets": []
           },
           {
+            "id": "kiminle",
             "heading": "Mit wem wir sie teilen",
             "paragraphs": [
               "Wir verkaufen Ihre Daten nicht. Sie werden nur mit den für den Betrieb notwendigen Dienstleistern geteilt:"
@@ -1118,22 +1306,32 @@
               "Zahlungsdienstleister: Ihre Kartendaten erreichen uns nie, sie werden direkt beim Dienstleister verarbeitet.",
               "E-Mail-Versanddienst: zur Zustellung der Benachrichtigungs-E-Mails.",
               "Versanddienstleister: Ihr Name und Ihre Lieferadresse bei Sendungen außerhalb des Liefergebiets.",
-              "Adresssuche (Frankreich): Der Text, den Sie im Adressfeld eingeben, wird für Vorschläge direkt von Ihrem Gerät an den öffentlichen Adressdienst des IGN (Base Adresse Nationale) gesendet. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt.",
+              {
+                "web": "Adresssuche (Frankreich): Der Text, den Sie im Adressfeld eingeben, wird für Vorschläge direkt von Ihrem Browser an den öffentlichen Adressdienst des IGN (Base Adresse Nationale) gesendet. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt.",
+                "app": "Adresssuche (Frankreich): Der Text, den Sie im Adressfeld eingeben, wird für Vorschläge direkt von Ihrem Gerät an den öffentlichen Adressdienst des IGN (Base Adresse Nationale) gesendet. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt."
+              },
               "Adresssuche (Deutschland): Der eingegebene Adresstext wird von unseren Servern an den Adressdienst von Google gesendet, um Vorschläge zu liefern und die Adresse zu prüfen. Weder Ihr Name noch Ihr Konto noch andere Daten werden übermittelt.",
               "KI-Dienst: der Inhalt Ihrer Nachrichten, um sie zu übersetzen, Sprachnachrichten zu verschriftlichen und Antworten vorzubereiten.",
               "Messaging-Plattformen: Wenn Sie uns über WhatsApp, Messenger oder Instagram (Meta) schreiben, erreicht Sie unsere Antwort über dieselbe Plattform; der Verlauf wird zusätzlich in unserem System gespeichert.",
-              "Benachrichtigungsdienst: Benachrichtigungs-Token und Text der Benachrichtigung, um App-Benachrichtigungen an Ihr Gerät zu übermitteln.",
+              {
+                "app": "Benachrichtigungsdienst: Benachrichtigungs-Token und Text der Benachrichtigung, um App-Benachrichtigungen an Ihr Gerät zu übermitteln."
+              },
               "Hosting und Speicherung: Unsere Server stehen bei der Hetzner Online GmbH (Deutschland), unsere Datenbank liegt bei Supabase – beide innerhalb der Europäischen Union. Von Ihnen hinzugefügte Fotos werden im Speicherdienst von Cloudflare abgelegt."
             ]
           },
           {
+            "id": "aktarim",
             "heading": "Übermittlung außerhalb der Europäischen Union",
             "paragraphs": [
-              "Ein Teil unserer Dienstleister für Zahlung, E-Mail, Datenbank, Speicherung, Adressen, künstliche Intelligenz, Messaging und Benachrichtigungen hat seinen Sitz in den Vereinigten Staaten; Ihre Daten können von ihnen außerhalb der Europäischen Union verarbeitet werden. Diese Übermittlungen stützen sich auf den Angemessenheitsbeschluss der Europäischen Kommission zum EU-US-Datenschutzrahmen (Data Privacy Framework) oder auf die von der Kommission genehmigten Standardvertragsklauseln."
+              {
+                "web": "Ein Teil unserer Dienstleister für Zahlung, E-Mail, Datenbank, Speicherung, Adressen, künstliche Intelligenz und Messaging hat seinen Sitz in den Vereinigten Staaten; Ihre Daten können von ihnen außerhalb der Europäischen Union verarbeitet werden. Diese Übermittlungen stützen sich auf den Angemessenheitsbeschluss der Europäischen Kommission zum EU-US-Datenschutzrahmen (Data Privacy Framework) oder auf die von der Kommission genehmigten Standardvertragsklauseln.",
+                "app": "Ein Teil unserer Dienstleister für Zahlung, E-Mail, Datenbank, Speicherung, Adressen, künstliche Intelligenz, Messaging und Benachrichtigungen hat seinen Sitz in den Vereinigten Staaten; Ihre Daten können von ihnen außerhalb der Europäischen Union verarbeitet werden. Diese Übermittlungen stützen sich auf den Angemessenheitsbeschluss der Europäischen Kommission zum EU-US-Datenschutzrahmen (Data Privacy Framework) oder auf die von der Kommission genehmigten Standardvertragsklauseln."
+              }
             ],
             "bullets": []
           },
           {
+            "id": "haklariniz",
             "heading": "Ihre Rechte",
             "paragraphs": [
               "Nach der DSGVO (EU 2016/679) stehen Ihnen die folgenden Rechte zu. Um sie auszuüben, genügt eine Nachricht an {email}; wir antworten spätestens innerhalb eines Monats."
@@ -1149,11 +1347,28 @@
             ]
           },
           {
-            "heading": "Was auf Ihrem Gerät gespeichert wird",
+            "id": "cerez",
+            "heading": {
+              "web": "Cookies und Browser-Speicher",
+              "app": "Was auf Ihrem Gerät gespeichert wird"
+            },
             "paragraphs": [
-              "Die App verwendet keinerlei Cookies — weder Werbe- noch Tracking-Cookies noch sonstige. Was auf Ihrem Gerät gespeichert wird, ist für den Betrieb der App erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl. Die Sitzung liegt im sicheren Speicher des Betriebssystems (Schlüsselbund unter iOS, Keystore unter Android).",
-              "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb vom Gerät in Ihr Konto übernommen und vom Gerät gelöscht.",
-              "Wir messen, wie die App genutzt wird: welche Produkte angesehen werden, wonach gesucht wird, was in den Warenkorb gelegt wird und an welcher Stelle eine Bestellung abbricht. Für diese Messung wird nichts auf Ihrem Gerät gespeichert und keine Werbe-ID verwendet — der Eintrag entsteht auf unseren Servern, sobald Ihre Anfrage dort ankommt. Weder Ihr Name noch Ihre E-Mail-Adresse noch Ihre Kontonummer stehen darin: Der Schlüssel, der Anfragen gruppiert, wird aus einem Wert abgeleitet, der täglich wechselt und am Folgetag nicht aufbewahrt wird, er lässt sich also nachträglich nicht mehr berechnen. Auch der in der Suche eingegebene Text wird gespeichert — damit wir sehen, welche Suchen ohne Ergebnis bleiben."
+              {
+                "app": "Die App verwendet keinerlei Cookies — weder Werbe- noch Tracking-Cookies noch sonstige. Was auf Ihrem Gerät gespeichert wird, ist für den Betrieb der App erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl. Die Sitzung liegt im sicheren Speicher des Betriebssystems (Schlüsselbund unter iOS, Keystore unter Android)."
+              },
+              {
+                "web": "Wir verwenden weder Werbe- noch Tracking-Cookies. Was in Ihrem Browser gespeichert wird, ist für den Betrieb der Website erforderlich: Ihre Sitzung, Ihr Warenkorb und die von Ihnen gewählte Postleitzahl."
+              },
+              {
+                "web": "Wir messen, wie häufig Seiten aufgerufen werden, doch diese Messung kommt ohne Cookies aus und lässt sich keiner Person zuordnen: Besuche werden mit einem Schlüssel gezählt, der täglich wechselt und am Folgetag verworfen wird; ein personenbezogener Eintrag entsteht dabei nicht."
+              },
+              {
+                "web": "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb aus dem Browser in Ihr Konto übernommen und aus dem Browser gelöscht.",
+                "app": "Ihr Warenkorb bleibt auch ohne Konto erhalten; bei der Anmeldung wird der Warenkorb vom Gerät in Ihr Konto übernommen und vom Gerät gelöscht."
+              },
+              {
+                "app": "Wir messen, wie die App genutzt wird: welche Produkte angesehen werden, wonach gesucht wird, was in den Warenkorb gelegt wird und an welcher Stelle eine Bestellung abbricht. Für diese Messung wird nichts auf Ihrem Gerät gespeichert und keine Werbe-ID verwendet — der Eintrag entsteht auf unseren Servern, sobald Ihre Anfrage dort ankommt. Weder Ihr Name noch Ihre E-Mail-Adresse noch Ihre Kontonummer stehen darin: Der Schlüssel, der Anfragen gruppiert, wird aus einem Wert abgeleitet, der täglich wechselt und am Folgetag nicht aufbewahrt wird, er lässt sich also nachträglich nicht mehr berechnen. Auch der in der Suche eingegebene Text wird gespeichert — damit wir sehen, welche Suchen ohne Ergebnis bleiben."
+              }
             ],
             "bullets": []
           }
@@ -1178,6 +1393,7 @@
         "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
         "sections": [
           {
+            "id": "kapsam",
             "heading": "Geltungsbereich",
             "paragraphs": [
               "Diese Bedingungen gelten für alle über diese Website getätigten Verkäufe der {legalName} (SIRET {siret} · {address}, Frankreich) unter dem Handelsnamen Lezzet Anatolie. Mit Ihrer Bestellung erkennen Sie diese Bedingungen an.",
@@ -1186,6 +1402,7 @@
             "bullets": []
           },
           {
+            "id": "urunler",
             "heading": "Produkte und Angaben",
             "paragraphs": [
               "Die von uns verkauften Produkte sind tiefgekühlte und lagerfähige Lebensmittel. Wir stellen sie nicht selbst her, sondern beziehen sie von ausgewählten Herstellern. Zutaten, Allergene und Nettomenge stehen auf der Seite jedes Produkts; diese Angaben stammen aus der Deklaration des Herstellers.",
@@ -1195,6 +1412,7 @@
             "bullets": []
           },
           {
+            "id": "siparis",
             "heading": "Zustandekommen der Bestellung",
             "paragraphs": [
               "Die Bestellung kommt zustande, wenn Sie Ihren Warenkorb bestätigen und den Zahlungsschritt abschließen — bei Zahlung bei Lieferung genügt es, in diesem Schritt das Zahlungsmittel zu bestätigen. Mit der Bestätigungsseite und der Bestätigungs-E-Mail gilt die Bestellung auch von unserer Seite als angenommen.",
@@ -1204,6 +1422,7 @@
             "bullets": []
           },
           {
+            "id": "fiyat",
             "heading": "Preise",
             "paragraphs": [
               "Die Preise verstehen sich in Euro einschließlich der geltenden Mehrwertsteuer. Der anwendbare Steuersatz richtet sich nach der Produktart.",
@@ -1213,6 +1432,7 @@
             "bullets": []
           },
           {
+            "id": "odeme",
             "heading": "Zahlung",
             "paragraphs": [
               "Kartenzahlungen werden über einen sicheren Zahlungsdienstleister eingezogen. Ihre Kartendaten erreichen uns zu keinem Zeitpunkt und werden von uns nicht gespeichert.",
@@ -1223,6 +1443,7 @@
             "bullets": []
           },
           {
+            "id": "teslimat",
             "heading": "Lieferung",
             "paragraphs": [
               "Produkte mit Kühlkette (Tiefkühl- und Frischware) liefern wir ausschließlich mit unserem eigenen Kühlfahrzeug, an Adressen in unserem Liefergebiet. Alle übrigen Produkte gehen per Paket — im Gebiet wie außerhalb. Liefertag und Lieferoptionen werden bei der Bestellung anhand der Postleitzahl Ihrer Adresse angezeigt.",
@@ -1233,6 +1454,7 @@
             "bullets": []
           },
           {
+            "id": "cayma",
             "heading": "Widerrufsrecht",
             "paragraphs": [
               "Nach französischem Verbraucherrecht (Code de la consommation, Art. L221-28) findet das 14-tägige Widerrufsrecht im Fernabsatz auf schnell verderbliche Lebensmittel KEINE ANWENDUNG.",
@@ -1241,6 +1463,7 @@
             "bullets": []
           },
           {
+            "id": "garanti",
             "heading": "Gesetzliche Gewährleistung",
             "paragraphs": [
               "Für unsere Produkte gelten die im französischen Recht vorgesehene Konformitätsgarantie und die Gewährleistung für versteckte Mängel.",
@@ -1249,6 +1472,7 @@
             "bullets": []
           },
           {
+            "id": "kisisel-veri",
             "heading": "Personenbezogene Daten",
             "paragraphs": [
               "Wie die für Ihre Bestellung erforderlichen personenbezogenen Daten verarbeitet werden, ist auf der Seite zur Datenschutzerklärung ausführlich beschrieben."
@@ -1256,6 +1480,7 @@
             "bullets": []
           },
           {
+            "id": "uyusmazlik",
             "heading": "Streitigkeiten und anwendbares Recht",
             "paragraphs": [
               "Bei Problemen schreiben Sie uns; Anfragen können unter „Meine Anfragen“ eröffnet und verfolgt werden.",
@@ -1284,6 +1509,7 @@
         "updatedAt": "Zuletzt aktualisiert: 1. Juli 2026",
         "sections": [
           {
+            "id": "isletme",
             "heading": "Betreiber der Website",
             "paragraphs": [
               "Diese Website wird von der {legalName} unter dem Handelsnamen Lezzet Anatolie betrieben."
@@ -1303,6 +1529,7 @@
             ]
           },
           {
+            "id": "yayin",
             "heading": "Verantwortlich für den Inhalt",
             "paragraphs": [
               "Verantwortlich für den Inhalt ist Yigit Bilgin, Präsident der {legalName}. Anfragen zum Inhalt richten Sie bitte an die oben genannte E-Mail-Adresse."
@@ -1310,6 +1537,7 @@
             "bullets": []
           },
           {
+            "id": "barindirma",
             "heading": "Hosting",
             "paragraphs": [
               "Die Website wird von der Hetzner Online GmbH in Rechenzentren innerhalb der Europäischen Union gehostet."
@@ -1321,6 +1549,7 @@
             ]
           },
           {
+            "id": "fikri-mulkiyet",
             "heading": "Urheberrecht",
             "paragraphs": [
               "Die Texte, Produktfotos, das Logo und die Gestaltungselemente dieser Website gehören dem Betreiber und sind nach französischem Urheberrecht geschützt.",
@@ -1329,6 +1558,7 @@
             "bullets": []
           },
           {
+            "id": "sorumluluk",
             "heading": "Haftung",
             "paragraphs": [
               "Wir achten auf Aktualität und Richtigkeit der Inhalte. Produktangaben, Preise und Verfügbarkeiten können sich ändern; maßgeblich ist die im Warenkorb zum Zeitpunkt der Bestellung angezeigte Information.",
@@ -1337,6 +1567,7 @@
             "bullets": []
           },
           {
+            "id": "uyusmazlik",
             "heading": "Anwendbares Recht",
             "paragraphs": [
               "Dieses Impressum unterliegt französischem Recht. Für die Bedingungen des Kaufs sehen Sie bitte die Seite mit den allgemeinen Geschäftsbedingungen ein."

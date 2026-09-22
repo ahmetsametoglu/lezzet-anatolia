@@ -9,7 +9,7 @@ import type { LegalViewProps } from './legal-view-types';
  * Statik sayfanın masaüstü dizilişi: solda yapışkan "Bu sayfada" kartı, sağda 680px'i geçmeyen metin sütunu, çünkü geniş
  * satırlar uzun hukuki metni okunmaz yapar. SSS'de gezinme sütunu yok; orada gezinme arama kutusu ve akordeonun kendisi.
  */
-export function LegalPageDesktop({ document: doc, t, updatedLine }: LegalViewProps) {
+export function LegalPageDesktop({ document: doc, t }: LegalViewProps) {
   const active = useActiveSection(doc.sections.map((section) => section.id));
   const showToc = doc.texture === 'prose' && doc.sections.length > 1;
 
@@ -38,7 +38,7 @@ export function LegalPageDesktop({ document: doc, t, updatedLine }: LegalViewPro
       )}
 
       <div className="flex max-w-170 flex-1 flex-col gap-5.5">
-        <LegalHeader title={doc.title} updatedLine={updatedLine} />
+        <LegalHeader title={doc.title} updatedLine={doc.updatedLine} />
         <LegalBody sections={doc.sections} />
         {doc.questions && <DesktopLegalFaq questions={doc.questions} t={t} />}
         {doc.notice && <LegalNoticeBand notice={doc.notice} />}

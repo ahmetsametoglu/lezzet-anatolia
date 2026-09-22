@@ -9,6 +9,7 @@ import { brand, fillBrandFacts, whatsappHref } from '../packages/brand/src/index
 import { flattenThemeTokens } from '../packages/design-tokens/src/render-theme-css';
 import { DEFAULT_LOCALE, LOCALES } from '../packages/i18n/src/locale';
 import { PATHNAMES } from '../packages/i18n/src/paths';
+import { copyForSurface } from '../packages/i18n/src/surface-copy';
 
 type Locale = (typeof LOCALES)[number];
 
@@ -19,8 +20,8 @@ interface HomeCopy {
 interface LegalSection {
   id: string;
   heading: string;
-  body?: string[];
-  bullets?: string[];
+  paragraphs: string[];
+  bullets: string[];
 }
 interface LegalCopy {
   title: string;
@@ -43,8 +44,15 @@ const ORIGIN = 'https://lezzetanatolie.com';
 const readJson = <T>(path: string): T => JSON.parse(readFileSync(join(ROOT, path), 'utf8')) as T;
 
 const home = readJson<Record<Locale, HomeCopy>>('apps/web/app/(customer)/[locale]/messages.json');
-const legal = fillBrandFacts(readJson<Record<Locale, LegalCopy>>('apps/web/app/(customer)/[locale]/legal/terms/content.json'));
-const privacy = fillBrandFacts(readJson<Record<Locale, PrivacyCopy>>('apps/web/app/(customer)/[locale]/legal/privacy/content.json'));
+// Yasal metin native ile ortak sözlükten; sayfa bir web sayfası olduğu için web hâli seçilir.
+const legalPages = copyForSurface(
+  readJson<Record<Locale, { pages: { terms: LegalCopy; privacy: PrivacyCopy } }>>('packages/i18n/src/customer/legal.json'),
+  'web',
+);
+const byLocale = <T>(pick: (locale: Locale) => T): Record<Locale, T> =>
+  Object.fromEntries(LOCALES.map((locale) => [locale, pick(locale)])) as Record<Locale, T>;
+const legal = fillBrandFacts(byLocale((locale) => legalPages[locale].pages.terms));
+const privacy = fillBrandFacts(byLocale((locale) => legalPages[locale].pages.privacy));
 const page = readJson<Record<Locale, PageCopy>>('scripts/holding-page/messages.json');
 
 // Token adı değişirse üretim düşer; sayfa sessizce eski tonla kalmaz.
@@ -126,8 +134,8 @@ const renderSections = (sections: LegalSection[], heading: 'h2' | 'h3'): string 
   sections
     .map(
       (s) =>
-        `<section><${heading}>${esc(s.heading)}</${heading}>${(s.body ?? []).map((t) => `<p>${esc(t)}</p>`).join('')}${
-          s.bullets?.length ? `<ul>${s.bullets.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''
+        `<section><${heading}>${esc(s.heading)}</${heading}>${s.paragraphs.map((t) => `<p>${esc(t)}</p>`).join('')}${
+          s.bullets.length ? `<ul>${s.bullets.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''
         }</section>`,
     )
     .join('');

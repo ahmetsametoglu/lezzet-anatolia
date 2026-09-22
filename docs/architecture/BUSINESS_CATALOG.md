@@ -31,7 +31,7 @@ Bu doküman işletmenin künyesini ve ürün kataloğunu tek yerde toplar. Katal
 
 > **Barındırıcı künyesi neden burada:** LCEN md. 6 barındırıcının **unvanını, adresini ve telefonunu**
 > mentions légales'te zorunlu kılıyor — bu bir tercih değil. Künye burada tutuluyor ki sağlayıcı
-> değişirse tek yerden güncellensin; bugün üç dilde `legal/terms/content.json`'a yazılı.
+> değişirse tek yerden güncellensin; metni üç dilde ortak yasal sözlükte (`packages/i18n/src/customer/legal.json`, `terms`).
 >
 > **Sunucu bölgesi: AB içi — kullanıcı doğruladı (03.08.2026).** Yani mentions légales ve gizlilik
 > politikasındaki "sunucular Avrupa Birliği içindedir" cümlesi olgudur, varsayım değil; kişisel veri
