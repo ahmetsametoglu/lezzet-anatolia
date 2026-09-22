@@ -18,7 +18,8 @@ import { PaymentSection } from './components/payment-element';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
 import type { AddressCheckOutcome } from '@lezzet/application';
-import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction, type CheckoutSnapshot } from './actions';
+import type { CheckoutSnapshot } from '@lezzet/application';
+import { checkCheckoutAddressAction, confirmCheckoutAction, loadCheckoutAction } from './actions';
 import { checkoutBlocker, isSeparateOrder, type CheckoutState, type CheckoutViewProps, type Messages } from './checkout-types';
 
 /**

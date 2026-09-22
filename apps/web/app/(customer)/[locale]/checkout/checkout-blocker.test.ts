@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CheckoutSnapshot } from './actions';
+import type { CheckoutSnapshot } from '@lezzet/application';
 import { checkoutBlocker } from './checkout-types';
 
 /**

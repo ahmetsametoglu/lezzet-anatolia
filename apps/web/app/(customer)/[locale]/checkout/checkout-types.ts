@@ -4,7 +4,7 @@ import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 // Ortak ödeme sözlüğü — native ödeme ekranıyla AYNI metin (CLAUDE §2 istisnası, 14.09).
 import type checkoutMessages from '@lezzet/i18n/customer/checkout';
 import { isSplitCart, type CartView } from '@/lib/cart/cart-types';
-import type { CheckoutSnapshot } from './actions';
+import type { CheckoutSnapshot } from '@lezzet/application';
 import type messages from './messages.json';
 
 /** Sayfa metinleri — şekli JSON'un kendisinden TÜRER, elle interface yazılmaz (CLAUDE.md §2). */

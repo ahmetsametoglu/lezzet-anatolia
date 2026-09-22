@@ -44,13 +44,6 @@ import { routing } from '@/i18n/routing';
  */
 
 /**
- * Ekranın bir adımda ihtiyacı olan her şey — şekli artık `@lezzet/application`'da
- * (`order/checkout-snapshot`), okuması da orada. Buradan yeniden ihraç ediliyor ki ekranın
- * (`checkout-client`, `checkout-types`) bugünkü import yolu değişmesin.
- */
-export type { CheckoutSnapshot };
-
-/**
  * Adım verisini çözer. Adres seçilmeden de çağrılır (liste gelsin diye) — o zaman teslimat ve
  * ödeme null döner, çünkü ikisi de adresin cevabıdır ve adres yokken uydurulamaz.
  *
