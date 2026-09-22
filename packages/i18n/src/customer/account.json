@@ -45,15 +45,12 @@
       },
       "since": "{date} tarihinden beri",
       "linked": "Bağlı",
-      "notLinked": "Bağlı değil",
-      "cta": "WhatsApp'ımı bağla",
+      "notLinked": "Henüz bağlı değil",
+      "cta": "Bağla",
       "busy": "Hazırlanıyor…",
-      "hint": "WhatsApp açılır; hazır mesajı göndermeniz yeterli.",
       "message": "Merhaba! Hesabımı WhatsApp numarama bağlamak istiyorum.",
       "relink": "Başka bir numara bağla",
-      "failed": "Bağlantı hazırlanamadı — tekrar deneyin.",
-      "write": "Yazın",
-      "chatHint": "Messenger ya da Instagram'dan yazdığınızda sohbeti hesabınıza bağlamanız için bir bağlantı göndeririz."
+      "failed": "Bağlantı hazırlanamadı — tekrar deneyin."
     },
     "company": {
       "eyebrow": "Onaylı profesyonel hesap",
@@ -202,15 +199,12 @@
       },
       "since": "depuis le {date}",
       "linked": "Relié",
-      "notLinked": "Non relié",
-      "cta": "Rattacher mon WhatsApp",
+      "notLinked": "Pas encore relié",
+      "cta": "Relier",
       "busy": "Préparation…",
-      "hint": "WhatsApp s'ouvre ; il suffit d'envoyer le message pré-rempli.",
       "message": "Bonjour ! Je souhaite rattacher mon compte à mon numéro WhatsApp.",
       "relink": "Rattacher un autre numéro",
-      "failed": "Le lien n'a pas pu être préparé — réessayez.",
-      "write": "Écrire",
-      "chatHint": "Quand vous nous écrivez sur Messenger ou Instagram, nous vous envoyons un lien pour relier la conversation à votre compte."
+      "failed": "Le lien n'a pas pu être préparé — réessayez."
     },
     "company": {
       "eyebrow": "Compte professionnel validé",
@@ -359,15 +353,12 @@
       },
       "since": "seit {date}",
       "linked": "Verknüpft",
-      "notLinked": "Nicht verknüpft",
-      "cta": "Mein WhatsApp verknüpfen",
+      "notLinked": "Noch nicht verknüpft",
+      "cta": "Verknüpfen",
       "busy": "Wird vorbereitet…",
-      "hint": "WhatsApp öffnet sich; senden Sie einfach die vorbereitete Nachricht.",
       "message": "Hallo! Ich möchte mein Konto mit meiner WhatsApp-Nummer verknüpfen.",
       "relink": "Andere Nummer verknüpfen",
-      "failed": "Der Link konnte nicht vorbereitet werden — bitte erneut versuchen.",
-      "write": "Schreiben",
-      "chatHint": "Wenn Sie uns über Messenger oder Instagram schreiben, senden wir Ihnen einen Link, um den Chat mit Ihrem Konto zu verknüpfen."
+      "failed": "Der Link konnte nicht vorbereitet werden — bitte erneut versuchen."
     },
     "company": {
       "eyebrow": "Bestätigtes Geschäftskonto",
