@@ -7,6 +7,7 @@ import type {
   PreparationLineContract,
   PreparationOrderContract,
   DispatchOptionContract,
+  ServicePointSnapshot,
   PreparationPick,
   ShippingBoxOptionContract,
   ShortfallSuggestionContract,
@@ -286,6 +287,9 @@ export type DispatchState =
       parcelCount: number;
       totalWeightG: number;
       homeOnly: boolean;
+      /** Servis ödeme anında seçildi: liste tek satırdır. */
+      fixed: boolean;
+      servicePoint: ServicePointSnapshot | null;
     }
   /** Ön koşul tutmadı — sebebin ADI taşınıyor, ekran ona göre cümle kuruyor. */
   | { phase: 'blocked'; reference: string; reason: string }
@@ -690,9 +694,12 @@ export function usePreparation(): UsePreparationResult {
         }
         const data = result.data;
         if (data.status !== 'ok') {
-          // Ön koşulun ADI taşınıyor: "ölçüsüz mal" tartıya, "tipsiz kutu" seçime, "adressiz
-          // sipariş" yönetime gider — hepsini "olmadı"ya indirmek üç işi tek çıkmaza çevirirdi.
-          setDispatch({ phase: 'blocked', reference, reason: data.status });
+          // Ön koşulun adı taşınır, çünkü her biri başka bir işe gider; seçilen servisin tutmaması alt sebebiyle birlikte.
+          setDispatch({
+            phase: 'blocked',
+            reference,
+            reason: data.status === 'selection_unusable' ? `selection_${data.reason}` : data.status,
+          });
           return;
         }
         setDispatch({
@@ -703,6 +710,8 @@ export function usePreparation(): UsePreparationResult {
           parcelCount: data.parcelCount,
           totalWeightG: data.totalWeightG,
           homeOnly: data.homeOnly,
+          fixed: data.fixed,
+          servicePoint: data.servicePoint,
         });
       })();
 

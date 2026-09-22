@@ -353,6 +353,8 @@
       "sheetTitle": "Hangi servisle gönderelim?",
       "sheetHint": "{n} koli · {kg} kg. Fiyat sunucudan geliyor; seçtiğin an etiket SATIN ALINIR.",
       "homeOnly": "Ücretsiz kargo — koli EVE gider. Teslimat noktası seçenekleri listeden çıkarıldı.",
+      "fixed": "Servisi müşteri ödeme anında seçti — değiştirilemez.",
+      "fixedPoint": "Teslim noktası: {name} · {address}",
       "option": "{carrier} · {price}",
       "optionLead": "{hours} saatte teslim",
       "optionNoLead": "teslim süresi bildirilmiyor",
@@ -378,7 +380,10 @@
         "too_many_parcels": "koli sayısı sağlayıcının tavanını aşıyor",
         "already_announced": "bu sipariş zaten kargoya verilmiş",
         "provider_error": "sağlayıcı cevap vermedi",
-        "network_error": "bağlantı kurulamadı"
+        "network_error": "bağlantı kurulamadı",
+        "selection_not_offered": "müşterinin seçtiği servis bu kolilerle artık sunulmuyor — siparişi operasyona devret",
+        "selection_multicollo": "müşterinin seçtiği servis tek koli taşıyor, kutular birden fazla — kutuları tek koliye topla",
+        "selection_mismatch": "servis siparişte seçili, başka servisle etiket alınamaz"
       }
     }
   },

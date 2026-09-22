@@ -19,6 +19,30 @@ import { LocalizedTextDraftSchema } from '../primitives/localized-text.schema';
 // İki eksen ayrıdır: `status` siparişin yolculuğu, `paymentStatus` paranın durumu (motor türetir, elle yazılmaz).
 // `channel` sipariş anında sabitlenir; `orderSource` ondan bağımsız bir eksendir.
 
+/** Teslim noktasının sipariş anındaki kopyası; kimlik sağlayıcınındır, geri kalanı müşteriye ve depoya gösterilir. */
+export const ServicePointSnapshotSchema = z.object({
+  id: z.string().min(1),
+  carrierCode: z.string().min(1),
+  name: z.string(),
+  street: z.string(),
+  houseNumber: z.string().nullable(),
+  postalCode: z.string(),
+  city: z.string(),
+  country: z.string().length(2),
+});
+export type ServicePointSnapshot = z.infer<typeof ServicePointSnapshotSchema>;
+
+/** Checkout'un koli planı: hangi kutu tipi, içinde ne var, bildirilecek ağırlık (dara dahil). */
+export const ParcelPlanSnapshotSchema = z.array(
+  z.object({
+    shippingBoxId: z.string().uuid(),
+    boxName: z.string(),
+    weightG: z.number().int().nonnegative(),
+    contents: z.array(z.object({ variantId: z.string().uuid(), qty: z.number().int().positive() })),
+  }),
+);
+export type ParcelPlanSnapshot = z.infer<typeof ParcelPlanSnapshotSchema>;
+
 export const OrderSchema = z.object({
   id: z.string().uuid(),
   customerId: z.string().uuid(),
@@ -84,6 +108,10 @@ export const OrderSchema = z.object({
   /** Kargo künyesi — yalnız kargo siparişinde dolu; rota siparişine yazılamaz ve kural veritabanında da durur. */
   carrier: CarrierEnum.nullable(),
   trackingNumber: z.string().nullable(),
+  /** Ödeme anında seçilen kargo servisi (eşik üstünde sistemin seçtiği); depo koliyi bununla bildirir. */
+  shippingOptionCode: z.string().nullable(),
+  servicePoint: ServicePointSnapshotSchema.nullable(),
+  parcelPlan: ParcelPlanSnapshotSchema.nullable(),
 
   // Para **cent** (02.9 · STACK §8); DB kolonları euro `numeric`, dönüşüm `OrderService.moneyFields`.
   shippingFeeCents: z.number().int(),
@@ -146,6 +174,9 @@ export const OrderInsertSchema = z.object({
   orderedTotalCents: z.number().int().nonnegative().optional(),
   deliveryCostCents: z.number().int().nonnegative().nullish(),
   packagingCostCents: z.number().int().nonnegative().nullish(),
+  shippingOptionCode: z.string().min(1).nullish(),
+  servicePoint: ServicePointSnapshotSchema.nullish(),
+  parcelPlan: ParcelPlanSnapshotSchema.nullish(),
   /* `revenueTotalCents` INSERT ŞEMASINDA YOK ve bu bilinçli: kalemlerden türeyen bir cache'i elle
      yazmak, kaynağıyla çelişen bir sayı bırakmanın en kolay yoludur. Tetikleyici (0012) onu
      kalemler yazılınca kendisi kuruyor; taslakta 0 kalması doğru cevaptır. */

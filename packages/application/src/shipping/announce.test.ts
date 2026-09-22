@@ -11,7 +11,7 @@ import {
   WarehouseService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
 import type { AnnouncedShipment, ShippingQuote } from '@lezzet/sendcloud';
 import { quoteOrderShipment } from './dispatch';
 import { countAwaitingHandover, handOverBox, listAwaitingHandover } from './handover';
@@ -330,6 +330,7 @@ describe('announceOrderShipment — duyuru', () => {
     const [box] = (await new OrderBoxService(db).listByOrder(orderId)).filter((b) => b.id === boxId);
     expect(box?.trackingNumber).toBeNull();
     expect(box?.shipmentId).toBeNull();
+    await mustDelete(db, 'error_log', (q) => q.eq('source', 'application-shipping').eq('context->>orderId', orderId));
   });
 });
 
@@ -472,6 +473,124 @@ describe('sevk seçenekleri (quoteOrderShipment · 29.08)', () => {
     // En UCUZ olan elendi ve bu doğru: satın alma anında sağlayıcı onu reddeder ve sipariş
     // sevk edilemez hâlde kalırdı.
     expect(sonuc.options.map((o) => o.code)).toEqual(['cok-koli']);
+  });
+});
+
+describe('siparişteki kargo seçimi — depo servisi yeniden seçmez', () => {
+  const NOKTA = {
+    id: 'sp-42',
+    carrierCode: 'mondial_relay',
+    name: 'Tabac du coin',
+    street: 'Rue de Rivoli',
+    houseNumber: '8',
+    postalCode: '75001',
+    city: 'Paris',
+    country: 'FR',
+  };
+
+  function teklifVeren(options: Array<Partial<ShippingQuote> & { code: string }>): ShippingRateProvider {
+    return providerStub({
+      quote: async () =>
+        options.map((o) => ({
+          carrierCode: 'x', carrierName: 'X', name: o.code, currency: 'EUR', priceCents: 1000,
+          leadTimeHours: null, lastMile: 'home_delivery', signature: false, tracked: true,
+          ecoDelivery: false, multicollo: true, ...o,
+        })) as ShippingQuote[],
+    });
+  }
+
+  async function seciliSiparis(code: string, opts: { point?: boolean; plannedParcels?: number } = {}) {
+    const kurulan = await siparisKur('shipping');
+    const plan = Array.from({ length: opts.plannedParcels ?? 1 }, () => ({
+      shippingBoxId: boxTypeId,
+      boxName: 'Duyuru kutusu',
+      weightG: 1330,
+      contents: [{ variantId, qty: 2 }],
+    }));
+    await db
+      .from('order')
+      .update({ shipping_fee: 5.9, shipping_option_code: code, service_point: opts.point ? NOKTA : null, parcel_plan: plan })
+      .eq('id', kurulan.orderId);
+    return kurulan;
+  }
+
+  it('seçimli siparişte liste YALNIZ o servistir ve depocu değiştiremez', async () => {
+    const { orderId, itemId } = await seciliSiparis('nokta-mr', { point: true });
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    const p = teklifVeren([
+      { code: 'ucuz-eve', priceCents: 450 },
+      { code: 'nokta-mr', priceCents: 690, lastMile: 'service_point' },
+    ]);
+
+    const sonuc = await quoteOrderShipment(db, p, { orderId, warehouseId });
+    if (sonuc.status !== 'ok') throw new Error('teklif bekleniyordu');
+    expect(sonuc.options.map((o) => o.code)).toEqual(['nokta-mr']);
+    expect(sonuc).toMatchObject({ fixed: true, servicePoint: { id: 'sp-42' }, plannedParcelCount: 1 });
+  });
+
+  it('kutu sayısı arttı ve seçilen servis çok koli taşımıyorsa başka servis ÖNERİLMEZ, sebep söylenir', async () => {
+    const { orderId, itemId } = await seciliSiparis('tek-koli', { plannedParcels: 1 });
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 1 });
+    await kutuKur(orderId, { boxNo: 2, itemId, qty: 1 });
+    const p = teklifVeren([
+      { code: 'tek-koli', priceCents: 500, multicollo: false },
+      { code: 'cok-koli', priceCents: 1500, multicollo: true },
+    ]);
+
+    expect(await quoteOrderShipment(db, p, { orderId, warehouseId })).toEqual({
+      status: 'selection_unusable',
+      reason: 'multicollo',
+      parcelCount: 2,
+      plannedParcelCount: 1,
+    });
+  });
+
+  it('seçilen servis artık sunulmuyorsa depo onun yerine başkasını almaz', async () => {
+    const { orderId, itemId } = await seciliSiparis('kalkan-servis');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    const sonuc = await quoteOrderShipment(db, teklifVeren([{ code: 'baska' }]), { orderId, warehouseId });
+    expect(sonuc).toMatchObject({ status: 'selection_unusable', reason: 'not_offered' });
+  });
+
+  it('siparişteki servisten FARKLI kodla etiket alınmaz ve sağlayıcıya çıkılmaz', async () => {
+    const { orderId, itemId } = await seciliSiparis('musterinin-secimi');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    const p = fakeProvider();
+
+    const sonuc = await announceOrderShipment(db, p, { ...girdi(orderId), shippingOptionCode: 'depocunun-secimi' }, fakeUploader().upload);
+    expect(sonuc).toEqual({ status: 'selection_mismatch' });
+    expect(p.calls).toBe(0);
+  });
+
+  it('teslim noktası SİPARİŞTEN gider — istemci göndermese de', async () => {
+    const { orderId, itemId } = await seciliSiparis('nokta-mr', { point: true });
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    const giden: Array<string | undefined> = [];
+    const p = fakeProvider();
+    const izleyen: ShippingRateProvider = {
+      ...p,
+      announce: (args) => {
+        giden.push(args.servicePointId);
+        return p.announce(args);
+      },
+    };
+
+    const sonuc = await announceOrderShipment(db, izleyen, { ...girdi(orderId), shippingOptionCode: 'nokta-mr' }, fakeUploader().upload);
+    expect(sonuc.status).toBe('ok');
+    expect(giden).toEqual(['sp-42']);
+    const [gonderi] = await new ShipmentService(db).listByOrder(orderId);
+    expect(gonderi?.servicePointId).toBe('sp-42');
+  });
+
+  it('etiket alınamazsa hata kaydı düşer — operasyonun sistem ekranında görünür', async () => {
+    const { orderId, itemId } = await seciliSiparis('reddedilen');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+
+    const sonuc = await announceOrderShipment(db, fakeProvider({ throws: true }), { ...girdi(orderId), shippingOptionCode: 'reddedilen' }, fakeUploader().upload);
+    expect(sonuc.status).toBe('provider_error');
+    const { data } = await db.from('error_log').select('id').eq('source', 'application-shipping').eq('context->>orderId', orderId);
+    expect(data).toHaveLength(1);
+    await mustDelete(db, 'error_log', (q) => q.eq('source', 'application-shipping').eq('context->>orderId', orderId));
   });
 });
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CourierReturnBoxSchema, CourierReturnFreeGoodSchema, CourierReturnStayBoxSchema } from './courier-return-api.schema';
 import { DoorCollectionInputSchema } from './courier-api.schema';
-import { FulfillmentAdjustmentSchema, PreparationPickSchema } from '../entities/order.schema';
+import { FulfillmentAdjustmentSchema, PreparationPickSchema, ServicePointSnapshotSchema } from '../entities/order.schema';
 import { ProductDateTypeEnum } from '../entities/product.schema';
 import { AdjustBatchResultSchema, StockDirectionEnum, StockWriteOffReasonEnum } from '../entities/stock-movement.schema';
 import { StorageAreaSchema } from '../entities/storage-point.schema';
@@ -365,6 +365,19 @@ export const DispatchOptionsResponseSchema = z.discriminatedUnion('status', [
      * söylemeyendir: liste boş kaldığında sebep "multicollo eledi" sanılırdı.
      */
     homeOnly: z.boolean(),
+    /** Servis ödeme anında seçildi: liste tek satırdır, depocu değiştiremez. */
+    fixed: z.boolean(),
+    /** Siparişin teslim noktası; eve teslimde `null`. */
+    servicePoint: ServicePointSnapshotSchema.nullable(),
+    /** Checkout'un planladığı koli sayısı; plan yoksa `null`. */
+    plannedParcelCount: z.number().int().positive().nullable(),
+  }),
+  /** Siparişin servisi gerçek kolilerle alınamıyor: artık sunulmuyor ya da çok koli taşımıyor. */
+  z.object({
+    status: z.literal('selection_unusable'),
+    reason: z.enum(['not_offered', 'multicollo']),
+    parcelCount: z.number().int().positive(),
+    plannedParcelCount: z.number().int().positive().nullable(),
   }),
   z.object({ status: z.literal('provider_error'), message: z.string() }),
   ...DispatchBlockSchema.options,
@@ -399,6 +412,8 @@ export const AnnounceShipmentResponseSchema = z.discriminatedUnion('status', [
   /** Zaten duyurulmuş: ikinci duyuru ikinci koli ve gerçek para demek — kapı ONU açmaz. */
   z.object({ status: z.literal('already_announced'), shipmentId: z.string().uuid() }),
   z.object({ status: z.literal('provider_error'), code: z.string(), message: z.string() }),
+  /** Siparişin ödeme anındaki servisinden farklı kod: depo servisi yeniden seçemez. */
+  z.object({ status: z.literal('selection_mismatch') }),
   ...DispatchBlockSchema.options,
 ]);
 export type AnnounceShipmentResponse = z.infer<typeof AnnounceShipmentResponseSchema>;

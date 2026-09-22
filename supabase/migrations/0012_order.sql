@@ -105,6 +105,17 @@ create table public.order (
   -- çalışmayacak bir takip bağlantısı görürdü.
   constraint order_carrier_only_shipping check (delivery_type = 'shipping' or (carrier is null and tracking_number is null)),
 
+  -- Kargo seçimi ödeme anında siparişe yazılır ve depo koliyi bununla bildirir; servisi depo yeniden seçmez.
+  shipping_option_code text,
+  -- Teslim noktasının sipariş anındaki kopyası (kimlik, ad, adres): nokta sonradan kapansa da sipariş nereye gittiğini bilir.
+  service_point jsonb,
+  -- Checkout'un koli planı: depo ekranı bunu önerir, bildirim kapatılan kutularla karşılaştırır.
+  parcel_plan jsonb,
+  constraint order_shipping_choice_only_shipping check (
+    delivery_type = 'shipping' or (shipping_option_code is null and service_point is null and parcel_plan is null)
+  ),
+  constraint order_service_point_needs_option check (service_point is null or shipping_option_code is not null),
+
   -- Para (DOMAIN §5). Kargo ücreti KDV'ye tabidir.
   shipping_fee numeric(10, 2) not null default 0,
   -- `ordered_total` sipariş anında anlaşılan tutar, donuktur (ödeme niyeti, vade limiti, onay maili).

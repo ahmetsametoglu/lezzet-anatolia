@@ -2,19 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DispatchOptionsResponseSchema } from './warehouse-api.schema';
 
 /*
-  SEVK SEÇENEKLERİ SÖZLEŞMESİ — **motorun ürettiği bayrak tele çıkıyor mu.**
-
-  Bu dosya bir Zod alıştırması değil, ölçülmüş bir arızanın nöbetçisi (29.08). `quoteOrderShipment`
-  `homeOnly` bayrağını 29.08'den beri üretiyordu; şemada karşılığı YOKTU ve uçtaki
-  `DispatchOptionsResponseSchema.parse` onu her cevapta **sessizce siliyordu.**
-
-  Sessiz kalmasının sebebi TypeScript'in kendisi: uç `const body: z.input<Schema> = outcome`
-  yazıyor ve fazla-alan denetimi yalnız NESNE SABİTLERİNE uygulanır — bir değişkende duran fazla
-  alan tipe uyar, derleme geçer, alan telde kaybolur. Yani derleyicinin göremediği bir sınır bu ve
-  ancak testle tutulur.
-
-  Bedeli somut: depocu daraltılmış listeye TAM liste diye bakar; liste boşaldığında sebebi
-  taşıyıcıda arar (oysa kural elemiştir) ve elle taşıyıcı girişine erken kaçar.
+  Motorun ürettiği alan şemada yoksa uçtaki `parse` onu sessizce siler ve derleyici bunu göremez (fazla alan denetimi
+  yalnız nesne sabitlerine uygulanır); bu sınır ancak testle tutulur.
 */
 const gecerliSecenek = {
   code: 'colissimo:home',
@@ -34,6 +23,9 @@ describe('DispatchOptionsResponseSchema · homeOnly', () => {
       parcelCount: 1,
       totalWeightG: 3200,
       homeOnly: true,
+      fixed: false,
+      servicePoint: null,
+      plannedParcelCount: null,
     });
 
     expect(sonuc).toMatchObject({ status: 'ok', homeOnly: true });
@@ -60,8 +52,43 @@ describe('DispatchOptionsResponseSchema · homeOnly', () => {
       parcelCount: 1,
       totalWeightG: 3200,
       homeOnly: true,
+      fixed: false,
+      servicePoint: null,
+      plannedParcelCount: null,
     });
 
     expect(sonuc).toMatchObject({ status: 'ok', options: [], homeOnly: true });
+  });
+});
+
+describe('DispatchOptionsResponseSchema · siparişteki seçim', () => {
+  it('sabit servis, teslim noktası ve planlanan koli sayısı parse sonrası hayatta', () => {
+    const nokta = {
+      id: 'sp-42',
+      carrierCode: 'mondial_relay',
+      name: 'Tabac du coin',
+      street: 'Rue de Rivoli',
+      houseNumber: '8',
+      postalCode: '75001',
+      city: 'Paris',
+      country: 'FR',
+    };
+    const sonuc = DispatchOptionsResponseSchema.parse({
+      status: 'ok',
+      options: [gecerliSecenek],
+      parcelCount: 1,
+      totalWeightG: 3200,
+      homeOnly: false,
+      fixed: true,
+      servicePoint: nokta,
+      plannedParcelCount: 1,
+    });
+
+    expect(sonuc).toMatchObject({ fixed: true, servicePoint: nokta, plannedParcelCount: 1 });
+  });
+
+  it('seçilen servisin tutmama sebebi ve iki koli sayısı tele çıkıyor', () => {
+    const sonuc = DispatchOptionsResponseSchema.parse({ status: 'selection_unusable', reason: 'multicollo', parcelCount: 2, plannedParcelCount: 1 });
+    expect(sonuc).toEqual({ status: 'selection_unusable', reason: 'multicollo', parcelCount: 2, plannedParcelCount: 1 });
   });
 });

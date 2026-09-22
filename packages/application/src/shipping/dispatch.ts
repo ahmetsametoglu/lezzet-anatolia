@@ -9,28 +9,13 @@ import {
 } from '@lezzet/database';
 import { homeDeliveryOnly, requiresHomeDelivery } from '@lezzet/domain-core';
 import type { ParcelSpec } from '@lezzet/sendcloud';
-import type { Order, OrderBox, ShippingBox } from '@lezzet/types';
+import type { Order, OrderBox, ServicePointSnapshot, ShippingBox } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RecipientAddress, SenderAddress, ShippingRateProvider } from './port';
 
 /**
- * **SEVK HAZIRLIĞI — duyuru ile teklifin ORTAK zemini** (07.12).
- *
- * ── NEDEN AYRI DOSYA ────────────────────────────────────────────────────────
- * `announceOrderShipment` para harcayan çağrıdan ÖNCE altı ön koşulu ölçüyordu ve kolileri
- * mühürlü kutulardan kuruyordu. Depocuya "hangi servisle gönderelim" diye sormak için AYNI
- * hesabın bir kez daha yapılması gerekti — çünkü seçenekler **gerçek kolilere** göre sorulmalı,
- * plana göre değil: `quoteShipping` kalemlerden kendi planını kurar ve o plan depocunun eline
- * aldığı kartonlarla aynı olmak zorunda değildir. İki ayrı hesap, bir gün "listede gördüğüm
- * seçenek satın alırken reddedildi" demekti.
- *
- * Bu yüzden ön koşullar + koli kurulumu tek yerde (`resolveDispatch`), iki kapı da oradan geçiyor.
- *
- * ── ALICI ADRESİ SİPARİŞTEN OKUNUR, ÇAĞIRANDAN DEĞİL ────────────────────────
- * Adres siparişin kendi anlık görüntüsünde (`addressSnapshot`) duruyor ve gönderi oraya gidecek.
- * İstemciden almak, depocunun telefonunu müşteri adresini kuran taraf yapardı — yanlış yazılmış
- * bir posta kodu hem yanlış tarife hem yanlış teslimat demek. Çağıran yalnız "hangi sipariş"
- * diyor.
+ * Sevkin ortak zemini: duyuru ve depocunun teklifi aynı ön koşulları ve aynı kolileri (mühürlü kutulardan) kullanır, yoksa listede
+ * görülen servis satın alırken reddedilebilirdi. Alıcı adresi siparişin kendi kopyasından okunur, çağırandan alınmaz.
  */
 
 /** Ön koşulların olumsuz cevapları — duyuru ve teklif AYNI kümeyi paylaşır. */
@@ -78,12 +63,8 @@ function senderOf(w: { countryCode: string; address: Record<string, unknown> | n
 }
 
 /**
- * Siparişin adres kopyası → alıcı.
- *
- * **E-posta BİLEREK gönderilmiyor.** Sağlayıcı e-posta gördüğünde kendi takip bildirimlerini
- * yolluyor; müşteriye biz zaten yazıyoruz (`order_out_for_delivery` + mail şablonu) ve ikinci bir
- * kanal aynı olayı iki kez anlatırdı. Telefon gidiyor — taşıyıcının teslimat için aradığı numara
- * odur ve onun karşılığı bizde yok.
+ * Siparişin adres kopyası → alıcı. E-posta gönderilmez: sağlayıcı kendi bildirimlerini yollar ve biz müşteriye zaten yazıyoruz;
+ * telefon gider, çünkü taşıyıcının teslimat için aradığı numara odur.
  */
 function recipientOf(snapshot: Record<string, unknown> | null): DispatchPlan['to'] | null {
   const countryCode = textOf(snapshot, 'country');
@@ -181,33 +162,26 @@ export type DispatchQuoteOutcome =
       }>;
       parcelCount: number;
       totalWeightG: number;
-      /**
-       * **Liste "yalnız adrese teslim"e daraltıldı mı** (kullanıcı kararı 29.08). Ücretsiz kargoda
-       * parayı biz ödüyoruz ve koli EVE gider; ekran bunu SÖYLEMELİ, yoksa depocu listeyi eksik
-       * sanır. Liste boş kaldıysa sebebini de bu bayrak anlatır.
-       */
+      /** Liste ücretsiz kargo yüzünden eve teslime daraltıldı mı; ekran söylemezse depocu listeyi eksik sanar. */
       homeOnly: boolean;
+      /** Servis ödeme anında seçildi: liste tek satırdır ve depocu değiştiremez. */
+      fixed: boolean;
+      /** Siparişin teslim noktası; eve teslimde `null`. */
+      servicePoint: ServicePointSnapshot | null;
+      /** Checkout'un planladığı koli sayısı; plan yoksa `null`. */
+      plannedParcelCount: number | null;
     }
+  /**
+   * Siparişin servisi gerçek kolilerle alınamıyor: sağlayıcı artık sunmuyor ya da koli sayısı arttı ve servis çok koli
+   * taşımıyor. Depocu kutuları birleştirir ya da siparişi operasyona devreder; başka servisi kendisi seçemez.
+   */
+  | { status: 'selection_unusable'; reason: 'not_offered' | 'multicollo'; parcelCount: number; plannedParcelCount: number | null }
   | DispatchBlock
   | { status: 'provider_error'; message: string };
 
 /**
- * **GERÇEK KOLİLER İÇİN TEKLİF** — depocunun servis seçtiği liste.
- *
- * Checkout'un teklifinden (`quoteShipping`) farkı girdisi: orası müşterinin sepetinden bir plan
- * KURAR, burası depoda mühürlenmiş kutuları ÖLÇER. Sevk anında bağlayıcı olan ikincisidir —
- * depocu üç kalemi tek kutuya sığdırmış olabilir, ya da tam tersi.
- *
- * ⚠ **Çok kutulu gönderide `multicollo` desteklemeyen seçenek listeden düşer.** Ölçüldü (28.08):
- * gerçek hesapta seçeneklerin bir kısmı desteklemiyor ve en ucuzların bir bölümü tam o kümede.
- * Süzgeç olmasaydı depocu en ucuzu seçer, satın alma anında sağlayıcı reddeder ve sipariş sevk
- * edilemez hâlde kalırdı.
- *
- * **Fiyatı olmayan VE sıfır olan seçenekler elenir.** `null` = tarife hesaplanamadı; **sıfır ise
- * gerçek bir kargo hizmeti değildir** — sağlayıcı her sorguya ücretsiz "mektup" kanalını da
- * döndürüyor ve ucuzdan sıralı bir listede o daima başa geçer (ölçüldü 28.08: müşteri yüzeyinde
- * tam bu yüzden her siparişte 0,00 € hesaplanıyordu). Depocuya 15 kg'lık koliyi mektup tarifesiyle
- * göndermeyi önermek, reddedilecek bir etiketi satın almaya davet etmek olurdu.
+ * Gerçek koliler için teklif: checkout sepetten plan kurar, bu kapı depoda mühürlenmiş kutuları ölçer ve sevkte bağlayıcı olan budur.
+ * Çok kolide çok koli desteklemeyen, ayrıca fiyatsız ve sıfır fiyatlı seçenekler elenir.
  */
 export async function quoteOrderShipment(
   db: SupabaseClient,
@@ -227,22 +201,25 @@ export async function quoteOrderShipment(
 
   const usable = plan.parcels.length > 1 ? options.filter((o) => o.multicollo) : options;
 
-  /*
-    **ÜCRETSİZ KARGO EVE GİDER** (kullanıcı kararı 29.08) — ve kural BURADA bağlayıcı, checkout'ta
-    değil: müşterinin seçtiği servis kodu hiçbir yere yazılmıyor (ölçüldü), taşıyıcıyı gerçekte bu
-    kapı seçtiriyor. Checkout'a koysaydık kuralı söylemiş ama uygulamamış olurduk — depo yine
-    teslim noktası satın alabilirdi.
-
-    Ölçüt ücretin sıfır olması: müşteri ödemediyse seçim bizimdir ve "ücretsiz kargo" sözü
-    kapıya teslimi kapsar. Müşteri ödüyorsa teslim noktasını KENDİSİ seçebilir — o hâlde bu süzgeç
-    hiç çalışmaz.
-  */
+  // Siparişte seçim varsa o servis kullanılır. Seçimsiz (teklifsiz açılmış) siparişte depocu seçer; ücretsiz kargo o zaman da eve gider.
   const homeOnly = requiresHomeDelivery(plan.order);
-  const izinli = homeOnly ? homeDeliveryOnly(usable) : usable;
+  const plannedParcelCount = plan.order.parcelPlan?.length ?? null;
+  const fixedCode = plan.order.shippingOptionCode;
+  if (fixedCode !== null) {
+    const offered = options.find((o) => o.code === fixedCode && typeof o.priceCents === 'number' && o.priceCents > 0);
+    if (!offered) return { status: 'selection_unusable', reason: 'not_offered', parcelCount: plan.parcels.length, plannedParcelCount };
+    if (!usable.includes(offered)) {
+      return { status: 'selection_unusable', reason: 'multicollo', parcelCount: plan.parcels.length, plannedParcelCount };
+    }
+  }
+  const izinli = fixedCode !== null ? usable.filter((o) => o.code === fixedCode) : homeOnly ? homeDeliveryOnly(usable) : usable;
 
   return {
     status: 'ok',
     homeOnly,
+    fixed: fixedCode !== null,
+    servicePoint: plan.order.servicePoint,
+    plannedParcelCount,
     options: izinli
       .filter((o): o is typeof o & { priceCents: number } => typeof o.priceCents === 'number' && o.priceCents > 0)
       .sort((a, b) => a.priceCents - b.priceCents)

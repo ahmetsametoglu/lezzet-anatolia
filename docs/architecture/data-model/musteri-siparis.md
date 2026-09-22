@@ -270,6 +270,9 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `delivery_proof` | jsonb | • |  |
 | `carrier` | carrier | • |  |
 | `tracking_number` | text | • |  |
+| `shipping_option_code` | text | • |  |
+| `service_point` | jsonb | • |  |
+| `parcel_plan` | jsonb | • |  |
 | `shipping_fee` | numeric(10, 2) |  | `0` |
 | `ordered_total` | numeric(10, 2) |  | `0` |
 | `revenue_total` | numeric(10, 2) |  | `0` |
@@ -304,6 +307,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`neighbor_invite_id`** — bu sipariş bir **komşu davetinden** mi geldi (17.10) — künye; davetin ödülü buradan doğar ve davetin kullanımı bu kolondan **sayılır** (davet satırında sayaç yok)
 - **`address_id`** — teslimat adresi; hızlı satışta null
 - **`address_snapshot`** — sipariş anında adresin kopyası — adres sonradan değişse de sipariş bozulmaz (zone editable olduğu için `delivery_zone_id` de snapshot'tır)
+- **`shipping_option_code` · `service_point` · `parcel_plan`** — kargo seçimi ödeme anında yazılır: eşik altında müşterinin seçtiği servis (seçmediyse eve giden en ucuz), eşik üstünde eve giden en ucuz. Teslim noktası istemciden değil sağlayıcıdan okunan kopyadır. Depo koliyi bu servisle bildirir, başka servis seçemez; gerçek koliler servise uymuyorsa (çok koli taşımıyor, artık sunulmuyor) bildirim durur ve sebebi depo ekranına düşer. `parcel_plan` checkout'un koli planıdır, depo kapattığı kutularla karşılaştırır. Teklif alınamadıysa üçü de boştur ve servisi depo seçer
 - **`courier_id`** — seferi süren kurye — `start_delivery_run` senkronlar (18.08; sahiplik kapıları buradan okur)
 - **`delivery_run_id`** — hangi GERÇEKLEŞEN seferle gitti (0046) — yalnız start yazar, teslimle donar
 - **`delivery_country`** — teslimat ülkesi — DE B2C 10.000€ OSS eşiği izlemi (bkz. `DOMAIN.md §5`)

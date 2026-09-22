@@ -1505,11 +1505,20 @@ function DispatchSheet({ picking }: { picking: ReturnType<typeof usePreparation>
               kg: (state.totalWeightG / 1000).toFixed(1).replace('.', ','),
             })}
           </Text>
-          {/* LİSTE DARALTILDIYSA SÖYLENİR (Faz 2 · kullanıcı kararı 29.08). Ücretsiz kargoda
-              koli eve gider ve nokta seçenekleri sunucuda eleniyor; bayrak olmasa depocu
-              daraltılmış listeye TAM liste diye bakardı — ve seçenekler azaldığında sebebi
-              taşıyıcıda arardı. */}
-          {state.homeOnly ? <Text style={styles.dispatchNotice}>{d.homeOnly}</Text> : null}
+          {/* Liste daraltıldıysa söylenir: sabit servis tek satırdır, ücretsiz kargoda nokta seçenekleri çıkar. */}
+          {state.fixed ? <Text style={styles.dispatchNotice}>{d.fixed}</Text> : null}
+          {state.fixed && state.servicePoint ? (
+            <Text style={styles.dispatchNotice} testID="warehouse-dispatch-point">
+              {fillCopy(d.fixedPoint, {
+                name: state.servicePoint.name,
+                address: [
+                  [state.servicePoint.street, state.servicePoint.houseNumber].filter(Boolean).join(' '),
+                  `${state.servicePoint.postalCode} ${state.servicePoint.city}`,
+                ].join(', '),
+              })}
+            </Text>
+          ) : null}
+          {!state.fixed && state.homeOnly ? <Text style={styles.dispatchNotice}>{d.homeOnly}</Text> : null}
           {/* Boş liste bir HÂL, hata değil: çok kutulu gönderide multicollo süzgeci her şeyi
               elemiş olabilir ve çare elle taşıyıcı girişidir (yedek şerit, 10.9).
 

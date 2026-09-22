@@ -924,6 +924,9 @@ describe('D1 · sevk (kargoya ver)', () => {
       parcelCount: 2,
       totalWeightG: 7400,
       homeOnly: false,
+      fixed: false,
+      servicePoint: null,
+      plannedParcelCount: null,
       options: [
         { code: 'chronopost:classic', carrierName: 'Chronopost', name: 'Classic', priceCents: 1348, leadTimeHours: 72, lastMile: 'home_delivery', tracked: true },
         { code: 'mr:point', carrierName: 'Mondial Relay', name: 'Point', priceCents: 1050, leadTimeHours: null, lastMile: 'service_point', tracked: true },
@@ -969,6 +972,9 @@ describe('D1 · sevk (kargoya ver)', () => {
       parcelCount: 1,
       totalWeightG: 3200,
       homeOnly: true,
+      fixed: false,
+      servicePoint: null,
+      plannedParcelCount: null,
       options: [
         { code: 'colissimo:home', carrierName: 'Colissimo', name: 'Domicile', priceCents: 892, leadTimeHours: 48, lastMile: 'home_delivery', tracked: true },
       ],
@@ -981,7 +987,7 @@ describe('D1 · sevk (kargoya ver)', () => {
 
   it('daraltma listeyi BOŞALTTIYSA sebep taşıyıcıda değil kuralda aranır', async () => {
     await sonKutuyuKapat('shipping');
-    net.dispatchOptions = { status: 'ok', parcelCount: 1, totalWeightG: 3200, homeOnly: true, options: [] };
+    net.dispatchOptions = { status: 'ok', parcelCount: 1, totalWeightG: 3200, homeOnly: true, fixed: false, servicePoint: null, plannedParcelCount: null, options: [] };
     await fireEvent.press(screen.getByTestId('warehouse-dispatch-start'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-sheet')).toBeOnTheScreen());
@@ -996,6 +1002,9 @@ describe('D1 · sevk (kargoya ver)', () => {
       parcelCount: 1,
       totalWeightG: 3200,
       homeOnly: false,
+      fixed: false,
+      servicePoint: null,
+      plannedParcelCount: null,
       options: [
         { code: 'mr:point', carrierName: 'Mondial Relay', name: 'Point', priceCents: 1050, leadTimeHours: null, lastMile: 'service_point', tracked: true },
       ],
@@ -1004,6 +1013,46 @@ describe('D1 · sevk (kargoya ver)', () => {
 
     await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-sheet')).toBeOnTheScreen());
     expect(screen.queryByText(/koli EVE gider/)).toBeNull();
+  });
+
+  it('servis siparişte sabitse "müşteri seçti" ve teslim noktası yazılır; eve daraltma notu çizilmez', async () => {
+    await sonKutuyuKapat('shipping');
+    net.dispatchOptions = {
+      status: 'ok',
+      parcelCount: 1,
+      totalWeightG: 3200,
+      homeOnly: true,
+      fixed: true,
+      servicePoint: {
+        id: 'sp-42',
+        carrierCode: 'mondial_relay',
+        name: 'Tabac du coin',
+        street: 'Rue de Rivoli',
+        houseNumber: '8',
+        postalCode: '75001',
+        city: 'Paris',
+        country: 'FR',
+      },
+      plannedParcelCount: 1,
+      options: [
+        { code: 'mr:point', carrierName: 'Mondial Relay', name: 'Point', priceCents: 1050, leadTimeHours: null, lastMile: 'service_point', tracked: true },
+      ],
+    };
+    await fireEvent.press(screen.getByTestId('warehouse-dispatch-start'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-sheet')).toBeOnTheScreen());
+    expect(screen.getByText(/müşteri ödeme anında seçti/)).toBeOnTheScreen();
+    expect(screen.getByTestId('warehouse-dispatch-point')).toHaveTextContent(/Tabac du coin · Rue de Rivoli 8, 75001 Paris/);
+    expect(screen.queryByText(/koli EVE gider/)).toBeNull();
+  });
+
+  it('seçilen servis kolilerle tutmazsa sebep alt sebebiyle yazılır — depocu kutuları toplar', async () => {
+    await sonKutuyuKapat('shipping');
+    net.dispatchOptions = { status: 'selection_unusable', reason: 'multicollo', parcelCount: 2, plannedParcelCount: 1 };
+    await fireEvent.press(screen.getByTestId('warehouse-dispatch-start'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-blocked')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-dispatch-blocked')).toHaveTextContent(/kutuları tek koliye topla/);
   });
 
   it('ön koşul tutmazsa SEBEP yazılır — "olmadı" değil', async () => {

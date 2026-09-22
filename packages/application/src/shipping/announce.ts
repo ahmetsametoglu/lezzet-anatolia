@@ -1,4 +1,5 @@
 import { OrderBoxService, OrderService, ShipmentEventService, ShipmentService } from '@lezzet/database';
+import { captureError, SOURCES } from '@lezzet/observability';
 import { getR2Private, r2Keys } from '@lezzet/storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isOpenShipment } from './cancel';
@@ -21,6 +22,8 @@ export type AnnounceOutcome =
   /** Zaten duyurulmuş: ikinci duyuru ikinci koli ve GERÇEK PARA demek — kapı onu açmaz. */
   | { status: 'already_announced'; shipmentId: string }
   | { status: 'provider_error'; code: string; message: string }
+  /** Siparişin ödeme anındaki servisinden farklı bir kod geldi: depo servisi yeniden seçemez. */
+  | { status: 'selection_mismatch' }
   /** Ön koşul dalları teklifle ortaktır (`dispatch.ts`); ikinci kopya bir gün ayrışırdı. */
   | DispatchBlock;
 
@@ -32,8 +35,9 @@ export interface AnnounceInput {
   /** Depocunun çalıştığı depo — siparişinki değilse yazım hiç yapılmaz. */
   warehouseId: string;
   shippingOptionCode: string;
+  /** Yalnız seçimsiz siparişte okunur; seçimli siparişin noktası siparişin kendi kopyasıdır. */
   servicePointId?: string;
-  /** Müşteriye gösterilen teklif (cent) — maliyetin ilk kaydı; fatura sonradan düzeltebilir. */
+  /** Gerçek kolilerle alınan teklif (cent): kargo maliyeti bununla düzelir, fatura sonradan kesinleştirir. */
   quotedCents?: number;
 }
 
@@ -53,6 +57,10 @@ export async function announceOrderShipment(
   const resolved = await resolveDispatch(db, { orderId: input.orderId, warehouseId: input.warehouseId });
   if (!resolved.ok) return resolved.block;
   const { order, boxes: ordered, from, to, parcels } = resolved.plan;
+  if (order.shippingOptionCode !== null && input.shippingOptionCode !== order.shippingOptionCode) {
+    return { status: 'selection_mismatch' };
+  }
+  const servicePointId = order.servicePoint?.id ?? input.servicePointId;
 
   const shipments = new ShipmentService(db);
   const mevcut = (await shipments.listByOrder(input.orderId)).find(isOpenShipment);
@@ -72,10 +80,15 @@ export async function announceOrderShipment(
       to,
       parcels,
       shippingOptionCode: input.shippingOptionCode,
-      servicePointId: input.servicePointId,
+      servicePointId,
     });
   } catch (err) {
     const code = (err as { code?: string })?.code ?? 'provider';
+    // Etiket alınamayan koli yola çıkamaz: hata operasyonun sistem ekranına düşer, depo kartı sebebini ayrıca gösterir.
+    await captureError(err, {
+      source: SOURCES.applicationShipping,
+      context: { orderId: input.orderId, code, shippingOptionCode: input.shippingOptionCode },
+    });
     return { status: 'provider_error', code, message: err instanceof Error ? err.message : String(err) };
   }
 
@@ -90,7 +103,7 @@ export async function announceOrderShipment(
     shippingOptionCode: input.shippingOptionCode,
     carrierCode: announced.carrierCode,
     carrierName: announced.carrierName,
-    servicePointId: input.servicePointId ?? null,
+    servicePointId: servicePointId ?? null,
     quotedCents: input.quotedCents ?? null,
   });
 
