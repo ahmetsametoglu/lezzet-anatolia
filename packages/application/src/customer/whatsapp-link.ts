@@ -5,42 +5,21 @@ import { logger } from '@lezzet/observability';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
-  ── WHATSAPP BAĞLAMA (04.10) ─────────────────────────────────────────────────────────────────────
-  Müşterinin hesabını kendi WhatsApp numarasına bağlayan akış. DOMAIN §10.
-
-  ── NEDEN GEREKİYOR: KANIT İLE KİMLİK AYRI İKİ SORU ──────────────────────────────────────────────
-  Gelen bir WhatsApp mesajı numaranın zilyetliğini KANITLAR ("bu hat bu kişide") ama hangi HESAP
-  olduğunu söylemez. Web'den e-postasıyla kaydolmuş bir müşteri bize kendiliğinden yazdığında
-  elimizde onu hesabına bağlayacak hiçbir şey yoktur — yeni bir taslak doğar ve aynı insan sistemde
-  iki kez görünür.
-
-  Jeton o boşluğu kapatır: giriş yapmış müşteriye üretilir, ÖNCEDEN YAZILI mesajın içine konur,
-  müşteri gönderir. Webhook iki şeyi birden görür — **kimden geldiği** (kanıt) ve **jeton** (hesap).
-
-  ── BİZ MESAJ GÖNDERMİYORUZ, PARA DA HARCAMIYORUZ ───────────────────────────────────────────────
-  Akışı müşteri başlatır: `wa.me` bağlantısına basar, kendi WhatsApp'ından gönderir. Ücretli
-  `authentication` şablonu yok, Meta'dan şablon onayı beklemek yok, hız sınırı derdi yok — üstelik
-  gelen mesaj 24 saatlik ücretsiz servis penceresini de açar (DOMAIN §11).
-
-  ── JETON, 6 HANELİ GÜVENLİK KODU DEĞİLDİR ───────────────────────────────────────────────────────
-  DOMAIN §10 *"koddan kimliğe gidilmez, kimlikten koda gidilir"* der ve bu, dönen müşteriye sorulan
-  6 hanelik ÇAPA kodu içindir: o kod kısadır (10⁶) ve gücünü **numaraya bağlı olmaktan** alır.
-  Burada sorgunun yönü zorunlu olarak jetondan kimliğedir — mesaj gelene kadar kimin yazdığını
-  bilmiyoruz. O yüzden güvenlik ENTROPİDEN gelmek zorunda: 12 hane okunabilir alfabe ≈ 60 bit, artı
-  kısa ömür, artı tek kullanım. Tahminle bulunan bir jeton, bulanın NUMARASINI başkasının hesabına
-  yazdırırdı; yani hesap devralma. Kısa bir kod burada asla yeterli olmazdı.
+  Gelen mesaj hattın kimde olduğunu kanıtlar ama hangi hesap olduğunu söylemez; jeton o boşluğu kapatır: giriş yapmış müşteriye
+  üretilir, müşteri kendi sohbetinden gönderir. Sorgu jetondan kimliğe gittiği için güvenlik entropiden gelir (12 hane ≈ 60 bit,
+  kısa ömür, tek kullanım); kısa bir kod hesap devralmaya açık olurdu.
 */
 
-/** Jetonun tanınabilir kabuğu — mesajın içinden bunu arıyoruz. Marka öneki sipariş referansıyla aynı aile. */
+/** Mesajın içinde aranan kabuk; marka öneki sipariş referansıyla aynı aileden. */
 const WA_LINK_MARK = 'LA-WA-';
 
-/** 12 hane × okunabilir alfabe ≈ 60 bit. Uzunluk UX'i bozmuyor: müşteri yazmıyor, hazır mesajda geliyor. */
+/** Uzunluk müşteriyi yormaz, çünkü kodu yazmaz, hazır mesajla ya da kopyalayarak gönderir. */
 const WA_LINK_TOKEN_LENGTH = 12;
 
-/** Ömür: ekranla WhatsApp arasındaki mesafe. Uzun tutmanın hiçbir faydası, kısa tutmanın açık faydası var. */
+/** Ömür yalnız ekrandan sohbete geçme süresi kadar; uzun ömrün faydası yok, sızan kodun açık kalma süresini uzatır. */
 export const WA_LINK_TTL_MS = 15 * 60 * 1000;
 
-/** Tekillik çakışmasında kaç kez yeniden üretilir — pratikte imkânsız, tekrar bir emniyet. */
+/** Tekillik çakışmasında yeniden deneme sınırı; çakışma pratikte olmaz, sınır sonsuz döngüye karşı. */
 const MAX_ATTEMPTS = 5;
 
 /** Mesajın içindeki jeton — yoksa `null`. Büyük/küçük harfe duyarsız: müşterinin klavyesi düzeltebilir. */
@@ -51,21 +30,15 @@ export function waLinkTokenIn(text: string | null | undefined): string | null {
 }
 
 export type StartWhatsappLinkOutcome =
-  /** `code` önceden yazılı mesaja OLDUĞU GİBİ konur (kabuğuyla birlikte). */
+  /** `code` mesaja kabuğuyla birlikte olduğu gibi konur. */
   | { status: 'ok'; code: string; expiresAt: string }
   | { status: 'profile_not_found' }
-  /** Jeton üretilemedi (çakışma tekrarı tükendi) — arıza, sessiz geçmez. */
+  /** Çakışma denemeleri tükendi; arızadır, sessiz geçmez. */
   | { status: 'unavailable' };
 
 /**
- * **Bağlama jetonunu üret** — "WhatsApp'ımı bağla" düğmesinin sunucu yarısı.
- *
- * Her basışta YENİ jeton üretir ve öncekini geçersizler: müşteri bağlantıyı açıp vazgeçmiş,
- * telefonunu değiştirmiş ya da mesajı göndermemiş olabilir. Eskisini yaşatmak, ekranda görünmeyen
- * bir jetonun günlerce geçerli kalması demekti.
- *
- * **Mesaj metni BURADA KURULMAZ** (`whatsappHref` künyesinin aynı kuralı): metin müşteriye görünen
- * i18n kopyasıdır ve sayfanın kendi `messages.json`'unda yaşar. Bu kapı yalnız `code` döner.
+ * Her basış yeni jeton üretir ve öncekini geçersizler; ekranda görünmeyen bir jeton açık kalmasın. Mesaj metni burada kurulmaz,
+ * çünkü müşteriye görünen cümle sözlükte yaşar.
  */
 export async function startWhatsappLink(db: SupabaseClient, customerId: string): Promise<StartWhatsappLinkOutcome> {
   const profiles = new UserProfileService(db);
@@ -79,57 +52,32 @@ export async function startWhatsappLink(db: SupabaseClient, customerId: string):
       await profiles.update({ id: customerId, waLinkToken: token, waLinkExpiresAt: expiresAt });
       return { status: 'ok', code: `${WA_LINK_MARK}${token}`, expiresAt };
     } catch (err) {
-      // Çakışma (23505) → yeniden dene. Başka hata gerçek bir arızadır, yukarı gider.
+      // Yalnız tekillik çakışması yeniden denenir; başka hata gerçek arızadır.
       const message = err instanceof Error ? err.message : String(err);
       if (!message.includes('23505') && !message.includes('user_profiles_wa_link_token_key')) throw err;
     }
   }
 
-  // Jetonun KENDİSİ hiçbir hâlde log'a yazılmaz (CLAUDE §1) — kimlik yeter.
+  // Jeton sırdır, günlüğe yalnız kimlik yazılır.
   logger.warn({ context: 'customer/whatsapp-link', customerId }, 'bağlama jetonu üretilemedi (çakışma tekrarı tükendi)');
   return { status: 'unavailable' };
 }
 
 export type ConsumeWhatsappLinkOutcome =
-  /** Mesajda jeton yok — olağan hâl, gelen mesajların ezici çoğunluğu. */
+  /** Mesajda jeton yok; gelen mesajların olağan hâli. */
   | { status: 'none' }
-  /**
-   * Jeton bulundu ama geçerli değil: süresi dolmuş, zaten kullanılmış ya da hiç var olmamış.
-   * **Üçü tek cevaba düşürüldü** ve bu bilinçli — ayırmak, dışarıdan deneyen birine "bu jeton
-   * vardı ama geç kaldın" demek, yani jetonun varlığını sızdırmak olurdu.
-   */
+  /** Süresi dolmuş, kullanılmış ya da hiç olmamış jeton tek cevaba düşer; ayırmak jetonun varlığını dışarıya sızdırırdı. */
   | { status: 'invalid' }
   /** Bağ kuruldu (ya da zaten vardı, tazelendi). */
   | { status: 'linked'; customerId: string }
-  /**
-   * Numara BAŞKA bir gerçek kayıtta aktifti; bağ o kayıttan ALINDI ve buraya verildi (04.10).
-   *
-   * **Taşınan tek şey KANAL.** Eski kaydın siparişleri, puanları, geçmişi yerinde kalır — birleşme
-   * değil, devir. `DOMAIN §10`: *"Numarayı çıkarmak bir KANALI kapatır, geçmişi geri almaz."*
-   */
+  /** Numara başka bir gerçek kayıttaydı ve buraya devredildi; taşınan yalnız kanaldır, eski kaydın geçmişi yerinde kalır. */
   | { status: 'transferred'; customerId: string; previousHolderId: string }
   /** Numara bir TASLAĞA bağlıydı; taslak hesaba birleştirildi ve bağ hesaba geçti. */
   | { status: 'merged'; customerId: string; mergedId: string };
 
 /**
- * **Gelen mesajdaki jetonu tüket** — webhook'un kimlik çözümünden ÖNCE çağırdığı kapı.
- *
- * Sıra zorunlu: bu kapı önce koşmazsa, kimlik çözümü tanımadığı numara için yeni bir taslak açar ve
- * jeton o taslağa bakar — bağlamak istediğimiz hesap ortada kalırdı.
- *
- * ── TASLAK BİRLEŞTİRME: bu bir kenar durum DEĞİL, EN SIK hâl ────────────────────────────────────
- * Müşteri çoğu zaman önce bize yazar (taslak doğar, numara ona kanıtlanır), sonra siteden hesap
- * açar, sonra "bağla"ya basar. O anda numara zaten taslağa bağlıdır — bağlama başarısız olsaydı
- * akış tam da işe yarayacağı yerde çalışmazdı.
- *
- * Taslağı hesaba birleştirmek, admin'in aynı vakada elle yaptığı şeydir (09.10) — ve buradaki kanıt
- * onunkinden GÜÇLÜDÜR: admin kayıtlara bakıp karar verir, burada müşteri hem oturumunu hem hattını
- * kanıtlamıştır. Yön sabittir: taslak KAYNAK, hesap HEDEF (kapanan taraf her zaman taslaktır).
- *
- * **Sahip gerçek bir kayıtsa BİRLEŞTİRME yok, DEVİR var** (kullanıcı kararı 26.08). İki gerçek
- * kaydı birleştirmek hâlâ yasak — geri alınamaz. Ama numaranın eski kayıtta kalması da bir karardı
- * ve bedeli ağırdı: yeni sahibin siparişleri, adresi, adı **yabancı bir kaydın içine** yazılırdı.
- * Bağ bu yüzden kopuyor, geçmiş ise yerinde kalıyor (ayrıntı gövdedeki künyede).
+ * Webhook bunu kimlik çözümünden önce çağırır; sonra çağırsa tanınmayan numaraya taslak açılır ve bağlanacak hesap ortada kalırdı.
+ * Numara çoğu zaman önce yazışmadan doğan bir taslağa bağlıdır, o yüzden taslak birleştirme olağan yoldur.
  */
 export async function consumeWhatsappLink(db: SupabaseClient, phone: string, text: string | null): Promise<ConsumeWhatsappLinkOutcome> {
   const token = waLinkTokenIn(text);
@@ -145,8 +93,7 @@ export async function consumeWhatsappLink(db: SupabaseClient, phone: string, tex
     return { status: 'invalid' };
   }
 
-  // Jeton her hâlde düşer: TEK KULLANIM bir güvenlik özelliğidir ve başarısız denemede de geçerli.
-  // Kanıt yazımından ÖNCE değil SONRA düşmesi gerekmiyor — iki adım birbirine bağlı değil.
+  // Jeton her hâlde düşer: tek kullanım başarısız denemede de geçerli bir güvenlik özelliğidir.
   await temizle(profiles, profile.id);
   return bindPhoneToAccount(db, { accountId: profile.id, phone, context: 'customer/whatsapp-link' });
 }
@@ -154,15 +101,8 @@ export async function consumeWhatsappLink(db: SupabaseClient, phone: string, tex
 export type BindPhoneOutcome = Exclude<ConsumeWhatsappLinkOutcome, { status: 'none' }>;
 
 /**
- * **Kanıtlanmış numarayı hesaba BAĞLA** — jetonun ardındaki ortak gövde (04.10 · 15.21).
- *
- * İki kapı çağırıyor ve ikisinin kanıtı aynı iki kattan oluşuyor: kişi hesabını açmış (posta
- * kutusuna gelen kodla girdi) ve hattı ŞU AN elinde tutuyor. Fark yalnız hangi yönden geldiği —
- * WhatsApp bağlama jetonu siteden sohbete gider (`consumeWhatsappLink`), sepet bağlantısı sohbetten
- * siteye (`cart/link.ts`). Kural tek yerde: ikinci bir kopya, taslak birleştirme ile kanal devrinin
- * bir gün iki kapıda farklı davranması demekti.
- *
- * `context` log satırının kaynağıdır — hangi kapıdan geldiği teşhiste görünsün.
+ * Kanıtlanmış numarayı hesaba bağlayan ortak gövde: WhatsApp jetonu da sepet bağlantısı da buradan geçer ki taslak birleştirme ve
+ * kanal devri iki kapıda farklı davranmasın. `context` günlükte hangi kapıdan gelindiğini gösterir.
  */
 export async function bindPhoneToAccount(
   db: SupabaseClient,
@@ -180,31 +120,12 @@ export async function bindPhoneToAccount(
   const holder = await profiles.getById(holderId);
   const taslakMi = holder?.isDraft === true && holder.authUserId === null && holder.mergedIntoId === null;
   if (!holder || !taslakMi) {
-    /*
-      ── NUMARA GERÇEK BİR KAYITTAN DEVRALINIYOR (kullanıcı kararı 26.08) ──────────────────────────
-      Bir tur bu hâl `conflict` deyip insana gidiyordu. Kullanıcı daha iyisini gösterdi: **bağı
-      koparan şey bir zaman aşımı değil, OLUMLU bir olay olmalı** — biri çıkıp "bu numara bende"
-      diyor ve bunu kanıtlıyor.
-
-      Kanıt burada iki katlı: bu kişi hem HESABINI açmış (posta kutusuna gelen kodla girdi) hem de
-      hattı ŞU AN elinde tutuyor (jetonu o numaradan gönderdi). Eski bağ ise hattın GEÇMİŞTEKİ bir
-      anına dayanıyor. Hatlar devredilir; taze zilyetlik eski zilyetliği geçer.
-
-      **Birleşme YOK, devir var.** Eski kaydın siparişleri, puanları ve geçmişi yerinde kalıyor;
-      taşınan tek şey kanaldır. Emekli satır da silinmiyor — "bu numara bir zamanlar kimdeydi"
-      sorusu sonradan da cevaplanabilmeli.
-
-      **Bedeli biliyoruz ve kabul ediyoruz:** aile telefonu. Anne hesabına bağlı hattan oğul
-      kaydolup bağlarsa numara oğula geçer ve annenin gelen mesajları artık onda görünür. Geri
-      alınabilir (anne kendi hattından yeniden bağlar) ve hiçbir veri kaybolmaz. Alternatifi her
-      devri insan kuyruğuna almaktı — DOMAIN §10'un uyardığı "bedeli kendi müşterilerimize ödeten
-      kapı" tam olarak o olurdu.
-    */
+    /* Hesabını ve hattı şu an kanıtlayan kişi, hattın geçmişteki sahibinden önce gelir; birleştirme geri alınamadığı için yalnız
+       kanal devredilir ve emekli satır "numara kimdeydi" sorusu için kalır. */
     if (kanit.row) await phones.retire(kanit.row.id);
     const yeni = await phones.recordProof(input.accountId, input.phone);
     if (yeni.status === 'taken') {
-      // Yarış: emeklilik ile yeni yazım arasında başkası kaptı. Sessiz geçilmez — tekrar eden bir
-      // `taken` yarış değil, aynı numaranın iki kimliğe düştüğü gerçek bir arızadır.
+      // Emeklilikle yeni yazım arasında başkası kaptı; tekrar ederse aynı numara iki kimliğe düşmüş demektir.
       logger.warn({ context: input.context, customerId: input.accountId, holderId }, 'bağlama: devir yarışta kaybedildi');
       return { status: 'invalid' };
     }
@@ -212,15 +133,13 @@ export async function bindPhoneToAccount(
     return { status: 'transferred', customerId: input.accountId, previousHolderId: holderId };
   }
 
-  // Taslak → hesap. Kanıt satırı da `merge_customers` içinde taşınıyor (0040), ayrıca yazılmaz.
-  // Servis DEĞİL uygulama kapısı çağrılıyor (`customer/merge.ts`): birleşmenin ödül sonucu SQL'de
-  // yapılamıyor ve doğrudan RPC'ye gitmek onu sessizce atlardı.
+  // Kanıt satırı `merge_customers` içinde taşınır. Uygulama kapısı çağrılır, çünkü birleşmenin ödül sonucu SQL'de yapılamıyor.
   await mergeCustomers(db, { targetId: input.accountId, sourceId: holderId });
   logger.info({ context: input.context, customerId: input.accountId, mergedId: holderId }, 'bağlama: WhatsApp taslağı hesaba birleştirildi');
   return { status: 'merged', customerId: input.accountId, mergedId: holderId };
 }
 
-/** Jetonu düşür — ikisi birlikte gider (DB kısıtı: biri olmadan öteki yazılamaz). */
+/** Jeton ve süresi birlikte düşer; DB kısıtı biri olmadan ötekine izin vermez. */
 function temizle(profiles: UserProfileService, customerId: string): Promise<unknown> {
   return profiles.update({ id: customerId, waLinkToken: null, waLinkExpiresAt: null });
 }
